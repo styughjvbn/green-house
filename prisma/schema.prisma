@@ -1,0 +1,101 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model House {
+  id        Int      @id @default(autoincrement())
+  number    Int      @unique
+  name      String?
+  memo      String?
+  beds      Bed[]
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Bed {
+  id           Int           @id @default(autoincrement())
+  houseId      Int
+  number       Int
+  memo         String?
+  house        House         @relation(fields: [houseId], references: [id])
+  orchidGroups OrchidGroup[]
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+
+  @@unique([houseId, number])
+}
+
+model OrchidGroup {
+  id          Int      @id @default(autoincrement())
+  bedId       Int
+  genus       String
+  varietyName String
+  quantity    Int
+  potSize     String?
+  ageYear     Int?
+  status      String
+  memo        String?
+  bed         Bed      @relation(fields: [bedId], references: [id])
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model WorkRecord {
+  id            Int      @id @default(autoincrement())
+  workType      String
+  workDate      DateTime
+  targetType    String
+  targetId      Int?
+  materialName  String?
+  dilutionRatio String?
+  quantity      String?
+  worker        String?
+  memo          String?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+}
+
+model Customer {
+  id        Int         @id @default(autoincrement())
+  name      String
+  ownerName String?
+  phone     String?
+  address   String?
+  memo      String?
+  slips     SalesSlip[]
+  createdAt DateTime    @default(now())
+  updatedAt DateTime    @updatedAt
+}
+
+model SalesSlip {
+  id            Int             @id @default(autoincrement())
+  slipNumber    String          @unique
+  saleDate      DateTime
+  customerId    Int
+  totalAmount   Int
+  paymentStatus String
+  paymentMethod String?
+  memo          String?
+  customer      Customer        @relation(fields: [customerId], references: [id])
+  items         SalesSlipItem[]
+  createdAt     DateTime        @default(now())
+  updatedAt     DateTime        @updatedAt
+}
+
+model SalesSlipItem {
+  id          Int       @id @default(autoincrement())
+  salesSlipId Int
+  itemName    String
+  genus       String?
+  spec        String?
+  quantity    Int
+  unitPrice   Int
+  amount      Int
+  memo        String?
+  salesSlip   SalesSlip @relation(fields: [salesSlipId], references: [id])
+}
