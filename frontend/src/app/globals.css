@@ -25,3 +25,11 @@ a,
 button {
   min-height: 44px;
 }
+
+button {
+  cursor: pointer;
+}
+
+button:disabled {
+  cursor: not-allowed;
+}
