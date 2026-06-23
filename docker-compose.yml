@@ -1,0 +1,20 @@
+services:
+  db:
+    image: postgres:18
+    container_name: greenhouse-postgres
+    environment:
+      POSTGRES_DB: greenhouse
+      POSTGRES_USER: greenhouse
+      POSTGRES_PASSWORD: greenhouse
+    ports:
+      - "5432:5432"
+    volumes:
+      - greenhouse_postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U greenhouse -d greenhouse"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  greenhouse_postgres_data:
