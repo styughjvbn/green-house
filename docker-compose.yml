@@ -9,7 +9,7 @@ services:
     ports:
       - "5432:5432"
     volumes:
-      - greenhouse_postgres_data:/var/lib/postgresql/data
+      - greenhouse_postgres_18_data:/var/lib/postgresql
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U greenhouse -d greenhouse"]
       interval: 10s
@@ -17,4 +17,4 @@ services:
       retries: 5
 
 volumes:
-  greenhouse_postgres_data:
+  greenhouse_postgres_18_data:
