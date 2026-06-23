@@ -114,3 +114,15 @@ export type FarmStatusZoomData = {
   physicalBeds: PhysicalBed[];
   bedZones: BedZone[];
 };
+
+export type OrchidManagementViewMode = "REAL_DIRECTION" | "ROTATED" | "BY_BED";
+
+export type SelectedBedZone = {
+  type: "BED_ZONE";
+  bedZoneId: number;
+};
+
+export type SelectedOrchidGroup = {
+  type: "ORCHID_GROUP";
+  orchidGroupId: number;
+};
