@@ -27,4 +27,27 @@ public interface OrchidGroupRepository extends JpaRepository<OrchidGroup, Long> 
 		@Param("bedZoneId") Long bedZoneId,
 		@Param("status") String status
 	);
+
+	@Query("""
+		select count(g) from OrchidGroup g
+		join g.bedZone z
+		join z.physicalBed b
+		where b.house.id = :houseId
+		""")
+	long countByHouseId(@Param("houseId") Long houseId);
+
+	@Query("""
+		select count(g) from OrchidGroup g
+		where g.status in ('주의', '이상', '병해충')
+		""")
+	long countWarningStatus();
+
+	@Query("""
+		select count(g) from OrchidGroup g
+		join g.bedZone z
+		join z.physicalBed b
+		where b.house.id = :houseId and g.status in ('주의', '이상', '병해충')
+		""")
+	long countWarningStatusByHouseId(@Param("houseId") Long houseId);
+
 }

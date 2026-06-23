@@ -20,6 +20,7 @@ public class GlobalExceptionHandler {
 	}
 
 	@ExceptionHandler({
+		IllegalArgumentException.class,
 		MethodArgumentNotValidException.class,
 		MissingServletRequestParameterException.class,
 		MethodArgumentTypeMismatchException.class
