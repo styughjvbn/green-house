@@ -12,3 +12,17 @@ export type ApiErrorResponse = {
     details: string[];
   };
 };
+
+export async function fetchApi<T>(path: string): Promise<T> {
+  const response = await fetch(`${API_BASE_URL}${path}`, {
+    cache: "no-store",
+  });
+  const payload = (await response.json()) as ApiResponse<T> | ApiErrorResponse;
+
+  if (!response.ok) {
+    const message = "error" in payload ? payload.error.message : "요청을 처리하지 못했습니다.";
+    throw new Error(message);
+  }
+
+  return (payload as ApiResponse<T>).data;
+}

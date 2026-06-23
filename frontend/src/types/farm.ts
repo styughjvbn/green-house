@@ -56,3 +56,61 @@ export type House = {
   memo: string | null;
   physicalBeds: PhysicalBed[];
 };
+
+export type FarmZoomLevel = "FARM" | "HOUSE" | "PHYSICAL_BED" | "BED_ZONE";
+
+export type FarmStatusTargetType = "HOUSE" | "PHYSICAL_BED" | "BED_ZONE";
+
+export type DashboardSummary = {
+  houseCount: number;
+  physicalBedCount: number;
+  bedZoneCount: number;
+  orchidGroupCount: number;
+  warningCount: number;
+  repotDueCount: number;
+  latestWorkDate: string | null;
+};
+
+export type HouseStatusSummary = {
+  houseId: number;
+  houseNumber: number;
+  houseName: string;
+  orchidGroupCount: number;
+  warningCount: number;
+  repotDueCount: number;
+  latestWorkDate: string | null;
+};
+
+export type FarmStatusMapData = {
+  houses: HouseStatusSummary[];
+};
+
+export type FarmStatusOrchidGroupItem = {
+  orchidGroupId: number;
+  varietyName: string;
+  genus: string | null;
+  quantity: number;
+  status: string;
+  houseId: number;
+  houseNumber: number;
+  physicalBedId: number;
+  physicalBedNumber: number;
+  physicalBedName: string;
+  bedZoneId: number;
+  bedZoneName: string;
+};
+
+export type FarmStatusOrchidGroupList = {
+  targetType: FarmStatusTargetType;
+  targetId: number;
+  targetName: string;
+  items: FarmStatusOrchidGroupItem[];
+};
+
+export type FarmStatusZoomData = {
+  level: Exclude<FarmZoomLevel, "FARM">;
+  houseId: number;
+  houseNumber: number;
+  physicalBeds: PhysicalBed[];
+  bedZones: BedZone[];
+};
