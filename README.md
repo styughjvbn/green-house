@@ -14,6 +14,27 @@ green-house/
 
 ## 로컬 실행
 
+Windows PowerShell에서는 개발 서버를 한 번에 켜고 끌 수 있습니다.
+
+```powershell
+.\scripts\dev-start.ps1
+```
+
+접속 주소:
+
+```text
+frontend: http://localhost:3000
+backend:  http://localhost:8080
+```
+
+종료:
+
+```powershell
+.\scripts\dev-stop.ps1
+```
+
+로그는 `logs/` 디렉터리에 저장됩니다.
+
 ### 1. PostgreSQL 실행
 
 ```bash
