@@ -7,38 +7,45 @@ export const dynamic = "force-dynamic";
 export default async function FarmStatusPage() {
   const summary = await fetchApi<DashboardSummary>("/dashboard/summary");
   const mapData = await fetchApi<FarmStatusMapData>("/farm-status/map");
-  const firstHouse = mapData.houses[0];
+  const firstHouse = mapData.houses.find((house) => house.orchidGroupCount > 0) ?? mapData.houses[0];
   const initialSelection = firstHouse
     ? await fetchApi<FarmStatusOrchidGroupList>(`/farm-status/orchid-groups?targetType=HOUSE&targetId=${firstHouse.houseId}`)
     : null;
   const initialZoom = firstHouse
     ? await fetchApi<FarmStatusZoomData>(`/farm-status/zoom?level=HOUSE&houseId=${firstHouse.houseId}`)
     : null;
+  const todayLabel = new Intl.DateTimeFormat("ko-KR", {
+    timeZone: "Asia/Seoul",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    weekday: "short",
+  }).format(new Date());
 
   return (
-    <main className="space-y-8">
-      <section className="flex flex-col gap-4 rounded-md border border-[#dfe6dc] bg-white p-5 shadow-sm lg:flex-row lg:items-center lg:justify-between">
+    <main className="space-y-6">
+      <section className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
         <div>
-          <p className="text-sm font-semibold text-[#2f6f3e]">농장 현황</p>
-          <h1 className="mt-2 text-3xl font-semibold">전체 동 보기</h1>
-          <p className="mt-2 max-w-3xl text-lg text-[#5c6a60]">
-            15개 동 상태를 한눈에 확인하고, 선택한 범위의 난 묶음을 조회합니다.
-          </p>
+          <h1 className="text-3xl font-semibold tracking-normal text-[#17251b]">농장 현황</h1>
+          <p className="mt-2 text-lg text-[#5d6d62]">전체 농장 구조와 난 묶음 현황을 한눈에 확인하세요.</p>
         </div>
-        <div className="flex flex-wrap gap-2 text-base">
-          <span className="rounded-md border border-[#dfe6dc] px-4 py-2"><span className="mr-2 text-[#1f9c4d]">●</span>정상</span>
-          <span className="rounded-md border border-[#dfe6dc] px-4 py-2"><span className="mr-2 text-[#f59e0b]">●</span>주의</span>
-          <span className="rounded-md border border-[#dfe6dc] px-4 py-2"><span className="mr-2 text-[#ef4444]">●</span>작업 필요</span>
+        <div className="flex flex-wrap items-center gap-2 text-sm text-[#405246]">
+          <span className="relative rounded-md border border-[#d9e2d5] bg-white px-3 py-2 shadow-sm">
+            알림
+            <span className="ml-2 rounded-full bg-[#e63d32] px-1.5 py-0.5 text-xs font-semibold text-white">3</span>
+          </span>
+          <span className="rounded-md border border-[#d9e2d5] bg-white px-3 py-2 shadow-sm">{todayLabel}</span>
+          <span className="rounded-md border border-[#d9e2d5] bg-white px-3 py-2 shadow-sm">24°C 흐림</span>
         </div>
       </section>
 
       <section className="grid gap-4 md:grid-cols-3 xl:grid-cols-6">
-        <SummaryCard label="동 수" value={`${summary.houseCount}개`} tone="green" symbol="⌂" />
-        <SummaryCard label="물리 배드 수" value={`${summary.physicalBedCount}개`} tone="green" symbol="▦" />
-        <SummaryCard label="논리 구역 수" value={`${summary.bedZoneCount}개`} tone="blue" symbol="□" />
-        <SummaryCard label="난 묶음 수" value={`${summary.orchidGroupCount}개`} tone="green" symbol="♧" />
-        <SummaryCard label="분갈이 예정" value={`${summary.repotDueCount}개`} tone="orange" symbol="▣" />
-        <SummaryCard label="상태 이상" value={`${summary.warningCount}개`} tone="red" symbol="△" />
+        <SummaryCard label="동 수" value={`${summary.houseCount}개`} tone="green" symbol="▣" />
+        <SummaryCard label="물리 배드 수" value={`${summary.physicalBedCount}개`} tone="green" symbol="▤" />
+        <SummaryCard label="논리 구역 수" value={`${summary.bedZoneCount}개`} tone="blue" symbol="▥" />
+        <SummaryCard label="난 묶음 수" value={`${summary.orchidGroupCount}개`} tone="green" symbol="●" />
+        <SummaryCard label="분갈이 예정" value={`${summary.repotDueCount}개`} tone="orange" symbol="!" />
+        <SummaryCard label="상태 이상" value={`${summary.warningCount}개`} tone="red" symbol="!" />
       </section>
 
       <FarmStatusMap mapData={mapData} initialSelection={initialSelection} initialZoom={initialZoom} />
@@ -65,13 +72,15 @@ function SummaryCard({
   }[tone];
 
   return (
-    <div className="min-h-28 rounded-md border border-[#dfe6dc] bg-white p-5 shadow-sm">
+    <div className="min-h-28 rounded-lg border border-[#d9e2d5] bg-white p-5 shadow-sm">
       <div className="flex items-start justify-between gap-3">
         <div>
-          <p className="text-base font-medium text-[#4d5b51]">{label}</p>
-          <p className="mt-3 text-3xl font-semibold text-[#1f2a24]">{value}</p>
+          <p className="text-base font-medium text-[#4e6154]">{label}</p>
+          <p className="mt-3 text-3xl font-semibold text-[#17251b]">{value}</p>
         </div>
-        <span className={`text-3xl font-semibold ${toneClass}`}>{symbol}</span>
+        <span className={`flex h-10 w-10 items-center justify-center rounded-md bg-[#f3f7f1] text-2xl font-semibold ${toneClass}`}>
+          {symbol}
+        </span>
       </div>
     </div>
   );
