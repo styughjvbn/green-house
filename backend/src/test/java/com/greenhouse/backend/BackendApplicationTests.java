@@ -569,6 +569,14 @@ class BackendApplicationTests {
 			.andExpect(jsonPath("$.data.id").value(salesSlipId))
 			.andExpect(jsonPath("$.data.totalAmount").value(60000));
 
+		mockMvc.perform(get("/api/sales-slips/{salesSlipId}/print", salesSlipId))
+			.andExpect(status().isOk())
+			.andExpect(jsonPath("$.data.id").value(salesSlipId))
+			.andExpect(jsonPath("$.data.slipNumber").exists())
+			.andExpect(jsonPath("$.data.customer.id").value(customerId))
+			.andExpect(jsonPath("$.data.items", hasSize(2)))
+			.andExpect(jsonPath("$.data.totalAmount").value(60000));
+
 		mockMvc.perform(get("/api/sales-slips")
 				.param("customerId", customerId.toString())
 				.param("from", "2026-06-01")
