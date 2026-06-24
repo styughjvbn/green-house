@@ -436,6 +436,62 @@ GET /api/dashboard/farm-map
 - 논리 구역별 최근 작업일 요약
 ---
 
+## 11. 작업 이력 관리 API
+
+7단계 범위에서는 작업 이력 등록과 조회를 제공한다. 작업 이력 수정/삭제와 작업 유형 관리 API는 이후 단계로 남긴다.
+
+### 작업 이력 목록 조회
+
+```http
+GET /api/work-records?targetType=BED_ZONE&targetId=15&workType=농약&from=2026-06-01&to=2026-06-30
+```
+
+쿼리 파라미터는 모두 선택값이다.
+
+- `targetType`: `FARM`, `HOUSE`, `PHYSICAL_BED`, `BED_ZONE`, `ORCHID_GROUP`
+- `targetId`: `FARM` 외 대상 선택 시 사용
+- `workType`: 기본 작업 유형명
+- `from`, `to`: ISO 날짜
+
+### 작업 이력 등록
+
+```http
+POST /api/work-records
+```
+
+요청:
+
+```json
+{
+  "workType": "농약",
+  "workDate": "2026-06-24",
+  "targetType": "BED_ZONE",
+  "targetId": 15,
+  "materialName": "살균제",
+  "dilutionRatio": "1000배",
+  "quantity": "2L",
+  "worker": "작업자",
+  "memo": "작업 메모"
+}
+```
+
+규칙:
+
+- `workType`, `workDate`, `targetType`은 필수이다.
+- `targetType=FARM`이면 `targetId` 없이 등록할 수 있다.
+- 그 외 대상 유형은 실제 존재하는 `targetId`가 필요하다.
+- 지원 작업 유형이 아니면 검증 오류를 반환한다.
+
+### 기본 작업 유형 조회
+
+```http
+GET /api/work-types
+```
+
+응답은 기본 작업 유형 문자열 목록이다.
+
+---
+
 ## 10. 난 묶음 위치 이동 API
 
 6단계 범위에서는 난 묶음 전체를 다른 논리 구역으로 이동한다. 이동 성공 시 위치 이동 작업 이력이 자동 생성된다.
