@@ -1,0 +1,95 @@
+import type { Customer } from "@/types/farm";
+import type {
+  CreateCustomerPayload,
+  CreateSalesSlipPayload,
+  CustomerForm,
+  SalesItemForm,
+  SalesSlipForm,
+} from "../model/types";
+
+export function createEmptyCustomerForm(): CustomerForm {
+  return {
+    name: "",
+    ownerName: "",
+    phone: "",
+    address: "",
+    memo: "",
+  };
+}
+
+export function createEmptySalesItem(): SalesItemForm {
+  return {
+    itemName: "",
+    genus: "",
+    spec: "",
+    quantity: "1",
+    unitPrice: "0",
+    memo: "",
+  };
+}
+
+export function createInitialSalesForm(customers: Customer[], today = todayIsoDate()): SalesSlipForm {
+  return {
+    saleDate: today,
+    customerId: customers[0] ? String(customers[0].id) : "",
+    paymentStatus: "미입금",
+    salesStatus: "작성중",
+    paymentMethod: "",
+    memo: "",
+    items: [createEmptySalesItem()],
+  };
+}
+
+export function todayIsoDate(): string {
+  return new Date().toISOString().slice(0, 10);
+}
+
+export function calculateSalesItemAmount(item: SalesItemForm): number {
+  return Number(item.quantity || 0) * Number(item.unitPrice || 0);
+}
+
+export function calculateSalesTotal(items: SalesItemForm[]): number {
+  return items.reduce((sum, item) => sum + calculateSalesItemAmount(item), 0);
+}
+
+export function nullableText(value: string): string | null {
+  const trimmed = value.trim();
+  return trimmed.length > 0 ? trimmed : null;
+}
+
+export function toCreateCustomerPayload(form: CustomerForm): CreateCustomerPayload {
+  return {
+    name: form.name,
+    ownerName: nullableText(form.ownerName),
+    phone: nullableText(form.phone),
+    address: nullableText(form.address),
+    memo: nullableText(form.memo),
+  };
+}
+
+export function toCreateSalesSlipPayload(form: SalesSlipForm): CreateSalesSlipPayload {
+  return {
+    saleDate: form.saleDate,
+    customerId: Number(form.customerId),
+    paymentStatus: form.paymentStatus,
+    salesStatus: form.salesStatus,
+    paymentMethod: nullableText(form.paymentMethod),
+    memo: nullableText(form.memo),
+    items: form.items.map((item) => ({
+      itemName: item.itemName,
+      genus: nullableText(item.genus),
+      spec: nullableText(item.spec),
+      quantity: Number(item.quantity),
+      unitPrice: Number(item.unitPrice),
+      memo: nullableText(item.memo),
+    })),
+  };
+}
+
+export function resetSalesSlipFormAfterSave(form: SalesSlipForm): SalesSlipForm {
+  return {
+    ...form,
+    memo: "",
+    items: [createEmptySalesItem()],
+  };
+}

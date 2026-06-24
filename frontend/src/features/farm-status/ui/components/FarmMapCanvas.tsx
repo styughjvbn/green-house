@@ -6,28 +6,14 @@ import type {
   FarmZoomLevel,
   HouseStatusSummary,
   PhysicalBed,
-} from "@/entities/farm/types";
+} from "@/types/farm";
 import type { SelectedTarget } from "../../model/types";
 import { zoomLabel } from "../../lib/farmStatusView";
-import { FarmOverviewLayer } from "./FarmOverviewLayer";
-import { HouseDetailLayer } from "./HouseDetailLayer";
+import FarmOverviewLayer from "./FarmOverviewLayer";
+import HouseDetailLayer from "./HouseDetailLayer";
 import { Legend, MapBackdrop, MapControls } from "./MapChrome";
 
-export function FarmMapCanvas({
-  houses,
-  selectedBedZoneId,
-  selectedHouseId,
-  selectedPhysicalBedId,
-  selectedTarget,
-  zoomData,
-  zoomLevel,
-  onReset,
-  onSelectBedZone,
-  onSelectHouse,
-  onSelectPhysicalBed,
-  onZoomIn,
-  onZoomOut,
-}: {
+type FarmMapCanvasProps = {
   houses: HouseStatusSummary[];
   selectedBedZoneId: number | null;
   selectedHouseId: number | null;
@@ -41,14 +27,32 @@ export function FarmMapCanvas({
   onSelectPhysicalBed: (bed: PhysicalBed) => void;
   onZoomIn: () => void;
   onZoomOut: () => void;
-}) {
+};
+
+export default function FarmMapCanvas({
+  houses,
+  selectedBedZoneId,
+  selectedHouseId,
+  selectedPhysicalBedId,
+  selectedTarget,
+  zoomData,
+  zoomLevel,
+  onReset,
+  onSelectBedZone,
+  onSelectHouse,
+  onSelectPhysicalBed,
+  onZoomIn,
+  onZoomOut,
+}: FarmMapCanvasProps) {
   return (
     <div className="relative min-h-[500px] overflow-hidden rounded-xl border border-[#cdd9c8] bg-[#95b969] p-4 shadow-sm">
       <MapBackdrop />
       <MapControls zoomLevel={zoomLevel} onReset={onReset} onZoomIn={onZoomIn} onZoomOut={onZoomOut} />
       <div className="absolute left-4 top-4 z-20 flex flex-wrap items-center gap-2 rounded-md bg-white/95 px-3 py-2 text-sm font-semibold text-[#29422e] shadow-sm">
         <span>{zoomLevel === "FARM" ? "전체 농장 지도" : `${zoomData?.houseNumber ?? ""}동 상세 지도`}</span>
-        <span className="rounded-full bg-[#eef6e9] px-2 py-0.5 text-xs text-[#39713d]">{zoomLabel(zoomLevel)}</span>
+        <span className="rounded-full bg-[#eef6e9] px-2 py-0.5 text-xs text-[#39713d]">
+          {zoomLabel(zoomLevel)}
+        </span>
       </div>
 
       <div className="relative z-10 h-full pt-24">

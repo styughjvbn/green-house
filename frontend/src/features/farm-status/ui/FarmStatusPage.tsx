@@ -1,17 +1,24 @@
-import type { DashboardSummary, FarmStatusMapData, FarmStatusOrchidGroupList, FarmStatusZoomData } from "@/entities/farm/types";
-import { FarmStatusMap } from "./components/FarmStatusMap";
+import type {
+  DashboardSummary,
+  FarmStatusMapData,
+  FarmStatusOrchidGroupList,
+  FarmStatusZoomData,
+} from "@/types/farm";
+import { FarmStatusMap } from "./FarmStatusMap";
+
+type FarmStatusPageProps = {
+  summary: DashboardSummary;
+  mapData: FarmStatusMapData;
+  initialSelection: FarmStatusOrchidGroupList | null;
+  initialZoom: FarmStatusZoomData | null;
+};
 
 export function FarmStatusPage({
   summary,
   mapData,
   initialSelection,
   initialZoom,
-}: {
-  summary: DashboardSummary;
-  mapData: FarmStatusMapData;
-  initialSelection: FarmStatusOrchidGroupList | null;
-  initialZoom: FarmStatusZoomData | null;
-}) {
+}: FarmStatusPageProps) {
   const todayLabel = new Intl.DateTimeFormat("ko-KR", {
     timeZone: "Asia/Seoul",
     year: "numeric",
@@ -24,16 +31,27 @@ export function FarmStatusPage({
     <main className="space-y-6">
       <section className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
         <div>
-          <h1 className="text-3xl font-semibold tracking-normal text-[#17251b]">농장 현황</h1>
-          <p className="mt-2 text-lg text-[#5d6d62]">전체 농장 구조와 난 묶음 현황을 한눈에 확인하세요.</p>
+          <h1 className="text-3xl font-semibold tracking-normal text-[#17251b]">
+            농장 현황
+          </h1>
+          <p className="mt-2 text-lg text-[#5d6d62]">
+            전체 농장 구조와 난 묶음 현황을 한눈에 확인하세요.
+          </p>
         </div>
+
         <div className="flex flex-wrap items-center gap-2 text-sm text-[#405246]">
           <span className="relative rounded-md border border-[#d9e2d5] bg-white px-3 py-2 shadow-sm">
             알림
-            <span className="ml-2 rounded-full bg-[#e63d32] px-1.5 py-0.5 text-xs font-semibold text-white">3</span>
+            <span className="ml-2 rounded-full bg-[#e63d32] px-1.5 py-0.5 text-xs font-semibold text-white">
+              3
+            </span>
           </span>
-          <span className="rounded-md border border-[#d9e2d5] bg-white px-3 py-2 shadow-sm">{todayLabel}</span>
-          <span className="rounded-md border border-[#d9e2d5] bg-white px-3 py-2 shadow-sm">24°C 흐림</span>
+          <span className="rounded-md border border-[#d9e2d5] bg-white px-3 py-2 shadow-sm">
+            {todayLabel}
+          </span>
+          <span className="rounded-md border border-[#d9e2d5] bg-white px-3 py-2 shadow-sm">
+            24°C 흐림
+          </span>
         </div>
       </section>
 
@@ -46,7 +64,11 @@ export function FarmStatusPage({
         <SummaryCard label="상태 이상" value={`${summary.warningCount}개`} tone="red" symbol="!" />
       </section>
 
-      <FarmStatusMap mapData={mapData} initialSelection={initialSelection} initialZoom={initialZoom} />
+      <FarmStatusMap
+        mapData={mapData}
+        initialSelection={initialSelection}
+        initialZoom={initialZoom}
+      />
     </main>
   );
 }
@@ -76,7 +98,9 @@ function SummaryCard({
           <p className="text-base font-medium text-[#4e6154]">{label}</p>
           <p className="mt-3 text-3xl font-semibold text-[#17251b]">{value}</p>
         </div>
-        <span className={`flex h-10 w-10 items-center justify-center rounded-md bg-[#f3f7f1] text-2xl font-semibold ${toneClass}`}>
+        <span
+          className={`flex h-10 w-10 items-center justify-center rounded-md bg-[#f3f7f1] text-2xl font-semibold ${toneClass}`}
+        >
           {symbol}
         </span>
       </div>

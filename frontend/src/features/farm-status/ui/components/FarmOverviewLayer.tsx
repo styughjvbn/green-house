@@ -1,17 +1,16 @@
 "use client";
 
-import type { HouseStatusSummary } from "@/entities/farm/types";
+import type { HouseStatusSummary } from "@/types/farm";
 import type { SelectedTarget } from "../../model/types";
+import { hasHouseWarning } from "../../lib/farmStatusView";
 
-export function FarmOverviewLayer({
-  houses,
-  selectedTarget,
-  onSelectHouse,
-}: {
+type FarmOverviewLayerProps = {
   houses: HouseStatusSummary[];
   selectedTarget: SelectedTarget | null;
   onSelectHouse: (house: HouseStatusSummary) => void;
-}) {
+};
+
+export default function FarmOverviewLayer({ houses, selectedTarget, onSelectHouse }: FarmOverviewLayerProps) {
   return (
     <div className="grid min-h-[370px] grid-cols-5 items-end gap-2 lg:grid-cols-[repeat(15,minmax(0,1fr))]">
       {houses.map((house) => (
@@ -35,7 +34,7 @@ function HouseSummaryBlock({
   selected: boolean;
   onSelect: () => void;
 }) {
-  const hasWarning = house.warningCount > 0 || house.repotDueCount > 0;
+  const hasWarning = hasHouseWarning(house);
 
   return (
     <button
@@ -45,7 +44,11 @@ function HouseSummaryBlock({
       onClick={onSelect}
       type="button"
     >
-      <div className={`absolute -top-3 left-1/2 flex -translate-x-1/2 items-center gap-1 rounded-md px-2 py-1 text-xs font-semibold text-white shadow ${selected ? "bg-[#246df2]" : "bg-[#155c30]"}`}>
+      <div
+        className={`absolute -top-3 left-1/2 flex -translate-x-1/2 items-center gap-1 rounded-md px-2 py-1 text-xs font-semibold text-white shadow ${
+          selected ? "bg-[#246df2]" : "bg-[#155c30]"
+        }`}
+      >
         {house.houseNumber}동
         <span className={`h-2 w-2 rounded-full ${hasWarning ? "bg-[#ffcc33]" : "bg-[#56d071]"}`} />
       </div>

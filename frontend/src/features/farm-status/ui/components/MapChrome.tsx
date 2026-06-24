@@ -1,6 +1,6 @@
 "use client";
 
-import type { FarmZoomLevel } from "@/entities/farm/types";
+import type { FarmZoomLevel } from "@/types/farm";
 import { zoomLabel } from "../../lib/farmStatusView";
 
 export function MapControls({
@@ -41,15 +41,6 @@ export function Legend() {
   );
 }
 
-function LegendItem({ color, label }: { color: string; label: string }) {
-  return (
-    <span className="flex items-center gap-1.5">
-      <span className={`inline-block h-2.5 w-2.5 rounded-full ${color}`} />
-      {label}
-    </span>
-  );
-}
-
 export function MapBackdrop() {
   return (
     <>
@@ -68,6 +59,15 @@ export function MapBackdrop() {
       <MapTree className="right-16 bottom-8" />
       <MapTree className="left-60 bottom-6" />
     </>
+  );
+}
+
+function LegendItem({ color, label }: { color: string; label: string }) {
+  return (
+    <span className="flex items-center gap-1.5">
+      <span className={`inline-block h-2.5 w-2.5 rounded-full ${color}`} />
+      {label}
+    </span>
   );
 }
 

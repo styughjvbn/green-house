@@ -1,7 +1,11 @@
 "use client";
 
-import type { FarmStatusOrchidGroupItem, FarmStatusOrchidGroupList, HouseStatusSummary } from "@/entities/farm/types";
-import { selectionTitle } from "../../lib/farmStatusView";
+import type {
+  FarmStatusOrchidGroupItem,
+  FarmStatusOrchidGroupList,
+  HouseStatusSummary,
+} from "@/types/farm";
+import { hasHouseWarning, selectionTitle } from "../../lib/farmStatusView";
 
 export function SelectionSummaryPanel({
   selection,
@@ -11,7 +15,7 @@ export function SelectionSummaryPanel({
   selectedHouse: HouseStatusSummary | null;
 }) {
   const items = selection?.items ?? [];
-  const statusLabel = selectedHouse && (selectedHouse.warningCount > 0 || selectedHouse.repotDueCount > 0) ? "주의" : "정상";
+  const statusLabel = hasHouseWarning(selectedHouse) ? "주의" : "정상";
 
   return (
     <aside className="rounded-xl border border-[#d9e2d5] bg-white shadow-sm">

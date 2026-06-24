@@ -1,16 +1,8 @@
 "use client";
 
-import type { BedZone, FarmStatusZoomData, FarmZoomLevel, PhysicalBed } from "@/entities/farm/types";
+import type { BedZone, FarmStatusZoomData, FarmZoomLevel, PhysicalBed } from "@/types/farm";
 
-export function HouseDetailLayer({
-  selectedBedZoneId,
-  selectedHouseId,
-  selectedPhysicalBedId,
-  zoomData,
-  zoomLevel,
-  onSelectBedZone,
-  onSelectPhysicalBed,
-}: {
+type HouseDetailLayerProps = {
   selectedBedZoneId: number | null;
   selectedHouseId: number | null;
   selectedPhysicalBedId: number | null;
@@ -18,7 +10,17 @@ export function HouseDetailLayer({
   zoomLevel: FarmZoomLevel;
   onSelectBedZone: (zone: BedZone) => void;
   onSelectPhysicalBed: (bed: PhysicalBed) => void;
-}) {
+};
+
+export default function HouseDetailLayer({
+  selectedBedZoneId,
+  selectedHouseId,
+  selectedPhysicalBedId,
+  zoomData,
+  zoomLevel,
+  onSelectBedZone,
+  onSelectPhysicalBed,
+}: HouseDetailLayerProps) {
   if (!zoomData || zoomData.houseId !== selectedHouseId) {
     return <div className="rounded-lg bg-white/90 p-6 text-center text-[#4f6255]">동을 선택하면 배드와 구역 지도가 표시됩니다.</div>;
   }
