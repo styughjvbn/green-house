@@ -58,7 +58,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             ))}
           </nav>
         </header>
-        <div className="px-5 py-6 md:px-8 lg:px-10">{children}</div>
+        <div className="app-content px-5 py-6 md:px-8 lg:px-10">{children}</div>
       </div>
     </div>
   );

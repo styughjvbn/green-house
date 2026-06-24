@@ -33,3 +33,45 @@ button {
 button:disabled {
   cursor: not-allowed;
 }
+
+.a5-sheet {
+  width: 148mm;
+  min-height: 210mm;
+}
+
+@page {
+  size: A5 portrait;
+  margin: 0;
+}
+
+@media print {
+  :root {
+    --background: #ffffff;
+  }
+
+  body {
+    background: #ffffff;
+  }
+
+  aside,
+  header,
+  .print-hidden {
+    display: none !important;
+  }
+
+  .app-content {
+    padding: 0 !important;
+  }
+
+  .print-root {
+    max-width: none !important;
+    width: 148mm;
+  }
+
+  .a5-sheet {
+    box-shadow: none !important;
+    min-height: 210mm;
+    padding: 10mm !important;
+    width: 148mm;
+  }
+}
