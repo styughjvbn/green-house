@@ -516,6 +516,51 @@ POST /api/sales-slips
 
 ---
 
+## 13. 판매 전표 출력 API
+
+9단계 범위에서는 판매 전표 A5 출력 화면에 필요한 데이터를 조회한다. 응답 구조는 판매 전표 상세 조회와 동일하며, 프론트엔드는 이 데이터를 A5 레이아웃으로 렌더링한다.
+
+### 판매 전표 출력 데이터 조회
+
+```http
+GET /api/sales-slips/{salesSlipId}/print
+```
+
+응답:
+
+```json
+{
+  "data": {
+    "id": 1,
+    "slipNumber": "S20260624-001",
+    "saleDate": "2026-06-24",
+    "customer": {
+      "id": 1,
+      "name": "거래처명",
+      "ownerName": "대표자",
+      "phone": "010-0000-0000",
+      "address": "주소",
+      "memo": null
+    },
+    "totalAmount": 60000,
+    "paymentStatus": "미입금",
+    "salesStatus": "작성중",
+    "paymentMethod": "현금",
+    "memo": "메모",
+    "items": []
+  },
+  "message": null
+}
+```
+
+규칙:
+
+- 존재하지 않는 전표 ID는 공통 `NOT_FOUND` 에러 응답을 반환한다.
+- 출력 데이터 조회는 데이터를 변경하지 않는다.
+- 브라우저 인쇄 CSS는 프론트엔드에서 적용한다.
+
+---
+
 ## 11. 작업 이력 관리 API
 
 7단계 범위에서는 작업 이력 등록과 조회를 제공한다. 작업 이력 수정/삭제와 작업 유형 관리 API는 이후 단계로 남긴다.
