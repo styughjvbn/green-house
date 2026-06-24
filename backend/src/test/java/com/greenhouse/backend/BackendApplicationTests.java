@@ -506,4 +506,113 @@ class BackendApplicationTests {
 			.andExpect(status().isBadRequest())
 			.andExpect(jsonPath("$.error.code").value("VALIDATION_ERROR"));
 	}
+
+	@Test
+	void createsCustomersAndSalesSlipsWithCalculatedAmounts() throws Exception {
+		var customerResult = mockMvc.perform(post("/api/customers")
+				.contentType(MediaType.APPLICATION_JSON)
+				.content("""
+					{
+					  "name": "테스트 거래처",
+					  "ownerName": "대표",
+					  "phone": "010-0000-0000",
+					  "address": "주소",
+					  "memo": "거래처 메모"
+					}
+					"""))
+			.andExpect(status().isCreated())
+			.andExpect(jsonPath("$.data.name").value("테스트 거래처"))
+			.andReturn();
+		var customerId = Long.valueOf(customerResult.getResponse().getContentAsString().replaceAll(".*\\\"id\\\":(\\d+).*", "$1"));
+
+		mockMvc.perform(get("/api/customers").param("keyword", "테스트"))
+			.andExpect(status().isOk())
+			.andExpect(jsonPath("$.data[0].id").value(customerId));
+
+		var slipResult = mockMvc.perform(post("/api/sales-slips")
+				.contentType(MediaType.APPLICATION_JSON)
+				.content("""
+					{
+					  "saleDate": "2026-06-24",
+					  "customerId": %d,
+					  "paymentStatus": "미입금",
+					  "salesStatus": "작성중",
+					  "paymentMethod": "현금",
+					  "memo": "전표 메모",
+					  "items": [
+					    {
+					      "itemName": "카틀레야 A",
+					      "genus": "카틀레야",
+					      "spec": "4치",
+					      "quantity": 2,
+					      "unitPrice": 15000,
+					      "memo": "품목1"
+					    },
+					    {
+					      "itemName": "덴드로비움 B",
+					      "quantity": 3,
+					      "unitPrice": 10000
+					    }
+					  ]
+					}
+					""".formatted(customerId)))
+			.andExpect(status().isCreated())
+			.andExpect(jsonPath("$.data.customer.id").value(customerId))
+			.andExpect(jsonPath("$.data.totalAmount").value(60000))
+			.andExpect(jsonPath("$.data.items", hasSize(2)))
+			.andExpect(jsonPath("$.data.items[0].amount").value(30000))
+			.andReturn();
+		var salesSlipId = Long.valueOf(slipResult.getResponse().getContentAsString().replaceFirst(".*?\\\"id\\\":(\\d+).*", "$1"));
+
+		mockMvc.perform(get("/api/sales-slips/{salesSlipId}", salesSlipId))
+			.andExpect(status().isOk())
+			.andExpect(jsonPath("$.data.id").value(salesSlipId))
+			.andExpect(jsonPath("$.data.totalAmount").value(60000));
+
+		mockMvc.perform(get("/api/sales-slips")
+				.param("customerId", customerId.toString())
+				.param("from", "2026-06-01")
+				.param("to", "2026-06-30"))
+			.andExpect(status().isOk())
+			.andExpect(jsonPath("$.data[0].id").value(salesSlipId));
+	}
+
+	@Test
+	void returnsValidationErrorsForInvalidSalesRequests() throws Exception {
+		mockMvc.perform(post("/api/customers")
+				.contentType(MediaType.APPLICATION_JSON)
+				.content("{\"name\":\"\"}"))
+			.andExpect(status().isBadRequest())
+			.andExpect(jsonPath("$.error.code").value("VALIDATION_ERROR"));
+
+		mockMvc.perform(post("/api/sales-slips")
+				.contentType(MediaType.APPLICATION_JSON)
+				.content("""
+					{
+					  "saleDate": "2026-06-24",
+					  "customerId": 999999,
+					  "items": [
+					    {
+					      "itemName": "없는 거래처",
+					      "quantity": 1,
+					      "unitPrice": 1000
+					    }
+					  ]
+					}
+					"""))
+			.andExpect(status().isNotFound())
+			.andExpect(jsonPath("$.error.code").value("NOT_FOUND"));
+
+		mockMvc.perform(post("/api/sales-slips")
+				.contentType(MediaType.APPLICATION_JSON)
+				.content("""
+					{
+					  "saleDate": "2026-06-24",
+					  "customerId": 1,
+					  "items": []
+					}
+					"""))
+			.andExpect(status().isBadRequest())
+			.andExpect(jsonPath("$.error.code").value("VALIDATION_ERROR"));
+	}
 }
