@@ -434,3 +434,61 @@ GET /api/dashboard/farm-map
 - 논리 구역 목록
 - 논리 구역별 난 묶음 요약
 - 논리 구역별 최근 작업일 요약
+---
+
+## 9. 난 묶음 변경 API
+
+5단계 범위에서는 난 묶음 생성, 수정, 삭제만 제공한다. 위치 이동은 6단계에서 별도 API로 구현하며, 수정 API에서는 `bedZoneId`를 변경하지 않는다.
+
+### 난 묶음 생성
+
+```http
+POST /api/orchid-groups
+```
+
+요청:
+
+```json
+{
+  "bedZoneId": 15,
+  "genus": "카틀레야",
+  "varietyName": "카틀레야 A",
+  "quantity": 120,
+  "potSize": "4치",
+  "ageYear": 2,
+  "status": "정상",
+  "placementType": "TRAY",
+  "trayCount": 1,
+  "memo": "메모"
+}
+```
+
+규칙:
+
+- `bedZoneId`, `varietyName`, `quantity`, `status`는 필수이다.
+- `quantity`는 1 이상이어야 한다.
+- 생성 위치는 반드시 논리 구역 기준이다.
+- 같은 논리 구역 안의 마지막 `sortOrder` 다음 값으로 생성한다.
+
+### 난 묶음 수정
+
+```http
+PATCH /api/orchid-groups/{orchidGroupId}
+```
+
+요청 필드는 생성과 같지만 `bedZoneId`는 받지 않는다. 품종명, 수량, 상태, 메모 등 상세 정보만 수정한다.
+
+### 난 묶음 삭제
+
+```http
+DELETE /api/orchid-groups/{orchidGroupId}
+```
+
+응답은 공통 성공 응답을 사용한다.
+
+```json
+{
+  "data": null,
+  "message": null
+}
+```
