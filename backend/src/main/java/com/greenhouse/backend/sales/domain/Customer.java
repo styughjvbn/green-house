@@ -37,7 +37,35 @@ public class Customer extends BaseEntity {
 		this.name = name;
 	}
 
+	public Customer(String name, String ownerName, String phone, String address, String memo) {
+		this.name = name;
+		this.ownerName = ownerName;
+		this.phone = phone;
+		this.address = address;
+		this.memo = memo;
+	}
+
 	public Long getId() {
 		return id;
+	}
+
+	public String getName() {
+		return name;
+	}
+
+	public String getOwnerName() {
+		return ownerName;
+	}
+
+	public String getPhone() {
+		return phone;
+	}
+
+	public String getAddress() {
+		return address;
+	}
+
+	public String getMemo() {
+		return memo;
 	}
 }

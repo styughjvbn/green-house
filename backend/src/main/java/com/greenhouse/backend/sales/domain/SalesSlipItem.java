@@ -49,7 +49,62 @@ public class SalesSlipItem {
 	protected SalesSlipItem() {
 	}
 
+	public SalesSlipItem(
+		OrchidGroup orchidGroup,
+		String itemName,
+		String genus,
+		String spec,
+		Integer quantity,
+		Integer unitPrice,
+		String memo
+	) {
+		this.orchidGroup = orchidGroup;
+		this.itemName = itemName;
+		this.genus = genus;
+		this.spec = spec;
+		this.quantity = quantity;
+		this.unitPrice = unitPrice;
+		this.amount = quantity * unitPrice;
+		this.memo = memo;
+	}
+
+	void setSalesSlip(SalesSlip salesSlip) {
+		this.salesSlip = salesSlip;
+	}
+
 	public Long getId() {
 		return id;
+	}
+
+	public OrchidGroup getOrchidGroup() {
+		return orchidGroup;
+	}
+
+	public String getItemName() {
+		return itemName;
+	}
+
+	public String getGenus() {
+		return genus;
+	}
+
+	public String getSpec() {
+		return spec;
+	}
+
+	public Integer getQuantity() {
+		return quantity;
+	}
+
+	public Integer getUnitPrice() {
+		return unitPrice;
+	}
+
+	public Integer getAmount() {
+		return amount;
+	}
+
+	public String getMemo() {
+		return memo;
 	}
 }

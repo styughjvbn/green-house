@@ -55,7 +55,70 @@ public class SalesSlip extends BaseEntity {
 	protected SalesSlip() {
 	}
 
+	public SalesSlip(
+		String slipNumber,
+		LocalDate saleDate,
+		Customer customer,
+		String paymentStatus,
+		String salesStatus,
+		String paymentMethod,
+		String memo
+	) {
+		this.slipNumber = slipNumber;
+		this.saleDate = saleDate;
+		this.customer = customer;
+		this.paymentStatus = paymentStatus;
+		this.salesStatus = salesStatus;
+		this.paymentMethod = paymentMethod;
+		this.memo = memo;
+		this.totalAmount = 0;
+	}
+
+	public void addItem(SalesSlipItem item) {
+		item.setSalesSlip(this);
+		this.items.add(item);
+		this.totalAmount = this.items.stream()
+			.mapToInt(SalesSlipItem::getAmount)
+			.sum();
+	}
+
 	public Long getId() {
 		return id;
+	}
+
+	public String getSlipNumber() {
+		return slipNumber;
+	}
+
+	public LocalDate getSaleDate() {
+		return saleDate;
+	}
+
+	public Customer getCustomer() {
+		return customer;
+	}
+
+	public Integer getTotalAmount() {
+		return totalAmount;
+	}
+
+	public String getPaymentStatus() {
+		return paymentStatus;
+	}
+
+	public String getSalesStatus() {
+		return salesStatus;
+	}
+
+	public String getPaymentMethod() {
+		return paymentMethod;
+	}
+
+	public String getMemo() {
+		return memo;
+	}
+
+	public List<SalesSlipItem> getItems() {
+		return items;
 	}
 }
