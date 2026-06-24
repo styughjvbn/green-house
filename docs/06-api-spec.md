@@ -436,6 +436,86 @@ GET /api/dashboard/farm-map
 - 논리 구역별 최근 작업일 요약
 ---
 
+## 12. 판매 전표 관리 API
+
+8단계 범위에서는 거래처 등록/조회와 판매 전표 생성/조회만 제공한다. A5 출력은 9단계에서 구현한다.
+
+### 거래처 목록 조회
+
+```http
+GET /api/customers?keyword=화원
+```
+
+### 거래처 등록
+
+```http
+POST /api/customers
+```
+
+요청:
+
+```json
+{
+  "name": "거래처명",
+  "ownerName": "대표자",
+  "phone": "010-0000-0000",
+  "address": "주소",
+  "memo": "메모"
+}
+```
+
+### 판매 전표 목록 조회
+
+```http
+GET /api/sales-slips?customerId=1&from=2026-06-01&to=2026-06-30
+```
+
+### 판매 전표 상세 조회
+
+```http
+GET /api/sales-slips/{salesSlipId}
+```
+
+### 판매 전표 생성
+
+```http
+POST /api/sales-slips
+```
+
+요청:
+
+```json
+{
+  "saleDate": "2026-06-24",
+  "customerId": 1,
+  "paymentStatus": "미입금",
+  "salesStatus": "작성중",
+  "paymentMethod": "현금",
+  "memo": "메모",
+  "items": [
+    {
+      "orchidGroupId": null,
+      "itemName": "카틀레야 A",
+      "genus": "카틀레야",
+      "spec": "4치",
+      "quantity": 2,
+      "unitPrice": 15000,
+      "memo": "품목 메모"
+    }
+  ]
+}
+```
+
+규칙:
+
+- `saleDate`, `customerId`, `items`는 필수이다.
+- 품목별 `amount`는 `quantity * unitPrice`로 계산한다.
+- 전표 `totalAmount`는 품목 금액 합계로 계산한다.
+- 전표 번호는 판매일 기준 순번으로 자동 생성한다.
+- 판매 품목은 MVP에서 자유 입력 기반이며, 난 묶음 수량 자동 차감은 하지 않는다.
+
+---
+
 ## 11. 작업 이력 관리 API
 
 7단계 범위에서는 작업 이력 등록과 조회를 제공한다. 작업 이력 수정/삭제와 작업 유형 관리 API는 이후 단계로 남긴다.
