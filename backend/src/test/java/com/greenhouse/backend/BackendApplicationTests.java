@@ -417,4 +417,93 @@ class BackendApplicationTests {
 			.andExpect(status().isBadRequest())
 			.andExpect(jsonPath("$.error.code").value("VALIDATION_ERROR"));
 	}
+
+	@Test
+	void createsAndSearchesWorkRecords() throws Exception {
+		var sampleHouse = houseRepository.findAll().stream()
+			.filter(house -> house.getNumber() == 3)
+			.findFirst()
+			.orElseThrow();
+		var sampleBed = physicalBedRepository.findByHouseIdOrderByDisplayOrderAsc(sampleHouse.getId()).get(1);
+		var sampleZone = bedZoneRepository.findByPhysicalBedIdOrderBySortOrderAsc(sampleBed.getId()).getFirst();
+
+		var createResult = mockMvc.perform(post("/api/work-records")
+				.contentType(MediaType.APPLICATION_JSON)
+				.content("""
+					{
+					  "workType": "농약",
+					  "workDate": "2026-06-24",
+					  "targetType": "BED_ZONE",
+					  "targetId": %d,
+					  "materialName": "살균제",
+					  "dilutionRatio": "1000배",
+					  "quantity": "2L",
+					  "worker": "테스터",
+					  "memo": "작업 이력 테스트"
+					}
+					""".formatted(sampleZone.getId())))
+			.andExpect(status().isCreated())
+			.andExpect(jsonPath("$.data.workType").value("농약"))
+			.andExpect(jsonPath("$.data.workDate").value("2026-06-24"))
+			.andExpect(jsonPath("$.data.targetType").value("BED_ZONE"))
+			.andExpect(jsonPath("$.data.targetId").value(sampleZone.getId()))
+			.andReturn();
+
+		var createdId = Long.valueOf(createResult.getResponse().getContentAsString().replaceAll(".*\\\"id\\\":(\\d+).*", "$1"));
+
+		mockMvc.perform(get("/api/work-records")
+				.param("targetType", "BED_ZONE")
+				.param("targetId", sampleZone.getId().toString())
+				.param("workType", "농약")
+				.param("from", "2026-06-01")
+				.param("to", "2026-06-30"))
+			.andExpect(status().isOk())
+			.andExpect(jsonPath("$.data[0].id").value(createdId))
+			.andExpect(jsonPath("$.data[0].materialName").value("살균제"));
+	}
+
+	@Test
+	void returnsWorkTypesAndValidationErrorsForWorkRecordRequests() throws Exception {
+		mockMvc.perform(get("/api/work-types"))
+			.andExpect(status().isOk())
+			.andExpect(jsonPath("$.data", hasSize(9)))
+			.andExpect(jsonPath("$.data[0]").value("농약"));
+
+		mockMvc.perform(post("/api/work-records")
+				.contentType(MediaType.APPLICATION_JSON)
+				.content("""
+					{
+					  "workType": "지원 안함",
+					  "workDate": "2026-06-24",
+					  "targetType": "FARM"
+					}
+					"""))
+			.andExpect(status().isBadRequest())
+			.andExpect(jsonPath("$.error.code").value("VALIDATION_ERROR"));
+
+		mockMvc.perform(post("/api/work-records")
+				.contentType(MediaType.APPLICATION_JSON)
+				.content("""
+					{
+					  "workType": "비료",
+					  "workDate": "2026-06-24",
+					  "targetType": "BED_ZONE",
+					  "targetId": 999999
+					}
+					"""))
+			.andExpect(status().isNotFound())
+			.andExpect(jsonPath("$.error.code").value("NOT_FOUND"));
+
+		mockMvc.perform(post("/api/work-records")
+				.contentType(MediaType.APPLICATION_JSON)
+				.content("""
+					{
+					  "workType": "비료",
+					  "workDate": "2026-06-24",
+					  "targetType": "BED_ZONE"
+					}
+					"""))
+			.andExpect(status().isBadRequest())
+			.andExpect(jsonPath("$.error.code").value("VALIDATION_ERROR"));
+	}
 }
