@@ -54,6 +54,11 @@ public class SalesController {
 		return ApiResponse.ok(salesService.getSalesSlip(salesSlipId));
 	}
 
+	@GetMapping("/sales-slips/{salesSlipId}/print")
+	public ApiResponse<SalesSlipResponse> getSalesSlipPrintData(@PathVariable Long salesSlipId) {
+		return ApiResponse.ok(salesService.getSalesSlip(salesSlipId));
+	}
+
 	@PostMapping("/sales-slips")
 	@ResponseStatus(HttpStatus.CREATED)
 	public ApiResponse<SalesSlipResponse> createSalesSlip(@Valid @RequestBody SalesSlipCreateRequest request) {
