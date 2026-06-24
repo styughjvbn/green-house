@@ -143,3 +143,37 @@ export type WorkRecord = {
   toBedZoneId: number | null;
   memo: string | null;
 };
+
+export type Customer = {
+  id: number;
+  name: string;
+  ownerName: string | null;
+  phone: string | null;
+  address: string | null;
+  memo: string | null;
+};
+
+export type SalesSlipItem = {
+  id: number;
+  orchidGroupId: number | null;
+  itemName: string;
+  genus: string | null;
+  spec: string | null;
+  quantity: number;
+  unitPrice: number;
+  amount: number;
+  memo: string | null;
+};
+
+export type SalesSlip = {
+  id: number;
+  slipNumber: string;
+  saleDate: string;
+  customer: Customer;
+  totalAmount: number;
+  paymentStatus: string;
+  salesStatus: string;
+  paymentMethod: string | null;
+  memo: string | null;
+  items: SalesSlipItem[];
+};
