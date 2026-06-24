@@ -2,17 +2,22 @@ package com.greenhouse.backend;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.hamcrest.Matchers.hasSize;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import com.greenhouse.backend.farm.repository.BedZoneRepository;
 import com.greenhouse.backend.farm.repository.HouseRepository;
+import com.greenhouse.backend.farm.repository.OrchidGroupRepository;
 import com.greenhouse.backend.farm.repository.PhysicalBedRepository;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
+import org.springframework.http.MediaType;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
 
@@ -32,6 +37,9 @@ class BackendApplicationTests {
 
 	@Autowired
 	private BedZoneRepository bedZoneRepository;
+
+	@Autowired
+	private OrchidGroupRepository orchidGroupRepository;
 
 	@Test
 	void contextLoads() {
@@ -211,5 +219,111 @@ class BackendApplicationTests {
 				.param("level", "HOUSE"))
 			.andExpect(status().isBadRequest())
 			.andExpect(jsonPath("$.error.code").value("VALIDATION_ERROR"));
+	}
+
+	@Test
+	void createsUpdatesAndDeletesOrchidGroup() throws Exception {
+		var sampleHouse = houseRepository.findAll().stream()
+			.filter(house -> house.getNumber() == 3)
+			.findFirst()
+			.orElseThrow();
+		var sampleBed = physicalBedRepository.findByHouseIdOrderByDisplayOrderAsc(sampleHouse.getId()).get(1);
+		var sampleZone = bedZoneRepository.findByPhysicalBedIdOrderBySortOrderAsc(sampleBed.getId()).getFirst();
+		var beforeCount = orchidGroupRepository.search(null, null, sampleZone.getId(), null).size();
+
+		var createResult = mockMvc.perform(post("/api/orchid-groups")
+				.contentType(MediaType.APPLICATION_JSON)
+				.content("""
+					{
+					  "bedZoneId": %d,
+					  "genus": "카틀레야",
+					  "varietyName": "카틀레야 신규",
+					  "quantity": 15,
+					  "potSize": "4치",
+					  "ageYear": 2,
+					  "status": "정상",
+					  "placementType": "TRAY",
+					  "trayCount": 1,
+					  "memo": "테스트 생성"
+					}
+					""".formatted(sampleZone.getId())))
+			.andExpect(status().isCreated())
+			.andExpect(jsonPath("$.data.bedZoneId").value(sampleZone.getId()))
+			.andExpect(jsonPath("$.data.varietyName").value("카틀레야 신규"))
+			.andExpect(jsonPath("$.data.quantity").value(15))
+			.andExpect(jsonPath("$.data.sortOrder").value(beforeCount + 1))
+			.andReturn();
+
+		var responseBody = createResult.getResponse().getContentAsString();
+		var createdId = Long.valueOf(responseBody.replaceAll(".*\\\"id\\\":(\\d+).*", "$1"));
+
+		mockMvc.perform(patch("/api/orchid-groups/{orchidGroupId}", createdId)
+				.contentType(MediaType.APPLICATION_JSON)
+				.content("""
+					{
+					  "genus": "덴드로비움",
+					  "varietyName": "덴드로비움 수정",
+					  "quantity": 22,
+					  "potSize": "5치",
+					  "ageYear": 3,
+					  "status": "주의",
+					  "placementType": "BENCH",
+					  "trayCount": 2,
+					  "memo": "테스트 수정"
+					}
+					"""))
+			.andExpect(status().isOk())
+			.andExpect(jsonPath("$.data.id").value(createdId))
+			.andExpect(jsonPath("$.data.bedZoneId").value(sampleZone.getId()))
+			.andExpect(jsonPath("$.data.varietyName").value("덴드로비움 수정"))
+			.andExpect(jsonPath("$.data.quantity").value(22))
+			.andExpect(jsonPath("$.data.status").value("주의"));
+
+		mockMvc.perform(delete("/api/orchid-groups/{orchidGroupId}", createdId))
+			.andExpect(status().isOk())
+			.andExpect(jsonPath("$.data").doesNotExist());
+
+		assertThat(orchidGroupRepository.existsById(createdId)).isFalse();
+	}
+
+	@Test
+	void returnsValidationErrorsForInvalidOrchidGroupMutations() throws Exception {
+		mockMvc.perform(post("/api/orchid-groups")
+				.contentType(MediaType.APPLICATION_JSON)
+				.content("""
+					{
+					  "bedZoneId": 999999,
+					  "varietyName": "없는 구역",
+					  "quantity": 10,
+					  "status": "정상"
+					}
+					"""))
+			.andExpect(status().isNotFound())
+			.andExpect(jsonPath("$.error.code").value("NOT_FOUND"));
+
+		mockMvc.perform(post("/api/orchid-groups")
+				.contentType(MediaType.APPLICATION_JSON)
+				.content("""
+					{
+					  "bedZoneId": 1,
+					  "varietyName": "",
+					  "quantity": 0,
+					  "status": ""
+					}
+					"""))
+			.andExpect(status().isBadRequest())
+			.andExpect(jsonPath("$.error.code").value("VALIDATION_ERROR"));
+
+		mockMvc.perform(patch("/api/orchid-groups/{orchidGroupId}", 999999)
+				.contentType(MediaType.APPLICATION_JSON)
+				.content("""
+					{
+					  "varietyName": "없는 난 묶음",
+					  "quantity": 1,
+					  "status": "정상"
+					}
+					"""))
+			.andExpect(status().isNotFound())
+			.andExpect(jsonPath("$.error.code").value("NOT_FOUND"));
 	}
 }
