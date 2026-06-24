@@ -60,6 +60,28 @@ public class WorkRecord extends BaseEntity {
 		this.memo = memo;
 	}
 
+	public WorkRecord(
+		String workType,
+		LocalDate workDate,
+		String targetType,
+		Long targetId,
+		String materialName,
+		String dilutionRatio,
+		String quantity,
+		String worker,
+		String memo
+	) {
+		this.workType = workType;
+		this.workDate = workDate;
+		this.targetType = targetType;
+		this.targetId = targetId;
+		this.materialName = materialName;
+		this.dilutionRatio = dilutionRatio;
+		this.quantity = quantity;
+		this.worker = worker;
+		this.memo = memo;
+	}
+
 	public static WorkRecord movement(
 		Long orchidGroupId,
 		Long fromBedZoneId,
@@ -81,6 +103,10 @@ public class WorkRecord extends BaseEntity {
 		return workType;
 	}
 
+	public LocalDate getWorkDate() {
+		return workDate;
+	}
+
 	public String getTargetType() {
 		return targetType;
 	}
@@ -95,5 +121,25 @@ public class WorkRecord extends BaseEntity {
 
 	public Long getToBedZoneId() {
 		return toBedZoneId;
+	}
+
+	public String getMaterialName() {
+		return materialName;
+	}
+
+	public String getDilutionRatio() {
+		return dilutionRatio;
+	}
+
+	public String getQuantity() {
+		return quantity;
+	}
+
+	public String getWorker() {
+		return worker;
+	}
+
+	public String getMemo() {
+		return memo;
 	}
 }
