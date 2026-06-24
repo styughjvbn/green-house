@@ -126,3 +126,20 @@ export type SelectedOrchidGroup = {
   type: "ORCHID_GROUP";
   orchidGroupId: number;
 };
+
+export type WorkRecordTargetType = "FARM" | "HOUSE" | "PHYSICAL_BED" | "BED_ZONE" | "ORCHID_GROUP";
+
+export type WorkRecord = {
+  id: number;
+  workType: string;
+  workDate: string;
+  targetType: WorkRecordTargetType;
+  targetId: number | null;
+  materialName: string | null;
+  dilutionRatio: string | null;
+  quantity: string | null;
+  worker: string | null;
+  fromBedZoneId: number | null;
+  toBedZoneId: number | null;
+  memo: string | null;
+};

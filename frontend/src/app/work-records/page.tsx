@@ -1,13 +1,24 @@
-export default function WorkRecordsPage() {
-  return <PlaceholderPage title="작업 이력" description="농약, 비료, 분갈이, 정리 작업 이력은 이후 단계에서 구현합니다." />;
-}
+import { WorkRecordManager } from "@/components/work-record/work-record-manager";
+import { fetchApi } from "@/lib/api";
+import type { FarmStatusMapData, WorkRecord } from "@/types/farm";
 
-function PlaceholderPage({ title, description }: { title: string; description: string }) {
+export const dynamic = "force-dynamic";
+
+export default async function WorkRecordsPage() {
+  const [records, workTypes, mapData] = await Promise.all([
+    fetchApi<WorkRecord[]>("/work-records"),
+    fetchApi<string[]>("/work-types"),
+    fetchApi<FarmStatusMapData>("/farm-status/map"),
+  ]);
+
   return (
-    <main>
-      <p className="text-sm font-semibold text-[#3d6f91]">{title}</p>
-      <h1 className="mt-2 text-3xl font-semibold">{title}</h1>
-      <p className="mt-3 text-lg text-[#5c6a60]">{description}</p>
+    <main className="space-y-5">
+      <section className="rounded-md border border-[#d7ddd4] bg-white p-4 shadow-sm">
+        <p className="text-sm font-semibold text-[#3d6f91]">작업 이력</p>
+        <h1 className="mt-1 text-2xl font-semibold">작업 이력 관리</h1>
+        <p className="mt-1 text-sm text-[#5c6a60]">농약, 비료, 분갈이, 정리 작업을 대상별로 기록합니다.</p>
+      </section>
+      <WorkRecordManager houses={mapData.houses} initialRecords={records} workTypes={workTypes} />
     </main>
   );
 }
