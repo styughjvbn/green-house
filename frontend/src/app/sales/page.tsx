@@ -1,6 +1,6 @@
-import { SalesManager } from "@/components/sales/sales-manager";
-import { fetchApi } from "@/lib/api";
-import type { Customer, SalesSlip } from "@/types/farm";
+import { SalesManager } from "@/features/sales/ui/SalesManager";
+import { fetchApi } from "@/shared/api/client";
+import type { Customer, SalesSlip } from "@/entities/farm/types";
 
 export const dynamic = "force-dynamic";
 

@@ -1,7 +1,7 @@
 import { notFound } from "next/navigation";
-import { SalesSlipPrintView } from "@/components/print/sales-slip-print-view";
-import { fetchApi } from "@/lib/api";
-import type { SalesSlip } from "@/types/farm";
+import { SalesSlipPrintView } from "@/features/print/ui/SalesSlipPrintView";
+import { fetchApi } from "@/shared/api/client";
+import type { SalesSlip } from "@/entities/farm/types";
 
 type SalesSlipPrintPageProps = {
   params: Promise<{

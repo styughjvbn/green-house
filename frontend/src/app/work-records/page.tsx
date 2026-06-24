@@ -1,6 +1,6 @@
-import { WorkRecordManager } from "@/components/work-record/work-record-manager";
-import { fetchApi } from "@/lib/api";
-import type { FarmStatusMapData, WorkRecord } from "@/types/farm";
+import { WorkRecordManager } from "@/features/work-record/ui/WorkRecordManager";
+import { fetchApi } from "@/shared/api/client";
+import type { FarmStatusMapData, WorkRecord } from "@/entities/farm/types";
 
 export const dynamic = "force-dynamic";
 

@@ -1,6 +1,6 @@
-import { OrchidManagementMap } from "@/components/orchid-group/orchid-management-map";
-import { fetchApi } from "@/lib/api";
-import type { FarmStatusMapData, House } from "@/types/farm";
+import { OrchidManagementMap } from "@/features/orchid-management/ui/OrchidManagementMap";
+import { fetchApi } from "@/shared/api/client";
+import type { FarmStatusMapData, House } from "@/entities/farm/types";
 
 type OrchidGroupsPageProps = {
   searchParams: Promise<{

@@ -1,6 +1,6 @@
 import Link from "next/link";
-import { fetchApi } from "@/lib/api";
-import type { DashboardSummary } from "@/types/farm";
+import { fetchApi } from "@/shared/api/client";
+import type { DashboardSummary } from "@/entities/farm/types";
 
 export const dynamic = "force-dynamic";
 

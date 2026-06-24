@@ -1,6 +1,6 @@
 import Link from "next/link";
-import { fetchApi } from "@/lib/api";
-import type { SalesSlip } from "@/types/farm";
+import { fetchApi } from "@/shared/api/client";
+import type { SalesSlip } from "@/entities/farm/types";
 
 export const dynamic = "force-dynamic";
 
