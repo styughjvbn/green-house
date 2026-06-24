@@ -10,6 +10,9 @@ public interface OrchidGroupRepository extends JpaRepository<OrchidGroup, Long> 
 
 	boolean existsByVarietyName(String varietyName);
 
+	@Query("select coalesce(max(g.sortOrder), 0) from OrchidGroup g where g.bedZone.id = :bedZoneId")
+	int findMaxSortOrderByBedZoneId(@Param("bedZoneId") Long bedZoneId);
+
 	@Query("""
 		select g from OrchidGroup g
 		join fetch g.bedZone z

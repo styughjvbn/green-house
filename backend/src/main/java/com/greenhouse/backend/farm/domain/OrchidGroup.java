@@ -75,6 +75,28 @@ public class OrchidGroup extends BaseEntity {
 		this.sortOrder = sortOrder;
 	}
 
+	public void updateDetails(
+		String genus,
+		String varietyName,
+		Integer quantity,
+		String potSize,
+		Integer ageYear,
+		String status,
+		String placementType,
+		Integer trayCount,
+		String memo
+	) {
+		this.genus = genus;
+		this.varietyName = varietyName;
+		this.quantity = quantity;
+		this.potSize = potSize;
+		this.ageYear = ageYear;
+		this.status = status;
+		this.placementType = placementType;
+		this.trayCount = trayCount;
+		this.memo = memo;
+	}
+
 	public Long getId() {
 		return id;
 	}
