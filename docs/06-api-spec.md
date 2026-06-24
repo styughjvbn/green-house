@@ -436,6 +436,37 @@ GET /api/dashboard/farm-map
 - 논리 구역별 최근 작업일 요약
 ---
 
+## 10. 난 묶음 위치 이동 API
+
+6단계 범위에서는 난 묶음 전체를 다른 논리 구역으로 이동한다. 이동 성공 시 위치 이동 작업 이력이 자동 생성된다.
+
+```http
+PATCH /api/orchid-groups/{orchidGroupId}/move
+```
+
+요청:
+
+```json
+{
+  "toBedZoneId": 16,
+  "worker": "작업자",
+  "memo": "위치 정리"
+}
+```
+
+규칙:
+
+- `toBedZoneId`는 필수이다.
+- 이동 단위는 난 묶음 전체이다.
+- 목적지는 반드시 논리 구역이다.
+- 이동 후 목적 구역의 마지막 `sortOrder` 다음 값으로 배치한다.
+- 이동 성공 시 `work_records`에 `workType=위치 이동`, `targetType=ORCHID_GROUP`, `fromBedZoneId`, `toBedZoneId`를 저장한다.
+- 같은 구역으로 이동 요청하면 위치와 작업 이력은 변경하지 않고 현재 난 묶음 응답을 반환한다.
+
+응답은 `OrchidGroupResponse` 공통 성공 응답을 사용한다.
+
+---
+
 ## 9. 난 묶음 변경 API
 
 5단계 범위에서는 난 묶음 생성, 수정, 삭제만 제공한다. 위치 이동은 6단계에서 별도 API로 구현하며, 수정 API에서는 `bedZoneId`를 변경하지 않는다.
