@@ -13,6 +13,7 @@ import com.greenhouse.backend.farm.repository.BedZoneRepository;
 import com.greenhouse.backend.farm.repository.HouseRepository;
 import com.greenhouse.backend.farm.repository.OrchidGroupRepository;
 import com.greenhouse.backend.farm.repository.PhysicalBedRepository;
+import com.greenhouse.backend.work.repository.WorkRecordRepository;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -40,6 +41,9 @@ class BackendApplicationTests {
 
 	@Autowired
 	private OrchidGroupRepository orchidGroupRepository;
+
+	@Autowired
+	private WorkRecordRepository workRecordRepository;
 
 	@Test
 	void contextLoads() {
@@ -325,5 +329,92 @@ class BackendApplicationTests {
 					"""))
 			.andExpect(status().isNotFound())
 			.andExpect(jsonPath("$.error.code").value("NOT_FOUND"));
+	}
+
+	@Test
+	void movesOrchidGroupAndCreatesMovementWorkRecord() throws Exception {
+		var sampleHouse = houseRepository.findAll().stream()
+			.filter(house -> house.getNumber() == 3)
+			.findFirst()
+			.orElseThrow();
+		var sampleBed = physicalBedRepository.findByHouseIdOrderByDisplayOrderAsc(sampleHouse.getId()).get(1);
+		var zones = bedZoneRepository.findByPhysicalBedIdOrderBySortOrderAsc(sampleBed.getId());
+		var sourceZone = zones.get(0);
+		var targetZone = zones.get(1);
+		var targetBeforeCount = orchidGroupRepository.search(null, null, targetZone.getId(), null).size();
+
+		var createResult = mockMvc.perform(post("/api/orchid-groups")
+				.contentType(MediaType.APPLICATION_JSON)
+				.content("""
+					{
+					  "bedZoneId": %d,
+					  "varietyName": "이동 테스트",
+					  "quantity": 5,
+					  "status": "정상"
+					}
+					""".formatted(sourceZone.getId())))
+			.andExpect(status().isCreated())
+			.andReturn();
+		var createdId = Long.valueOf(createResult.getResponse().getContentAsString().replaceAll(".*\\\"id\\\":(\\d+).*", "$1"));
+
+		mockMvc.perform(patch("/api/orchid-groups/{orchidGroupId}/move", createdId)
+				.contentType(MediaType.APPLICATION_JSON)
+				.content("""
+					{
+					  "toBedZoneId": %d,
+					  "worker": "테스터",
+					  "memo": "이동 테스트 메모"
+					}
+					""".formatted(targetZone.getId())))
+			.andExpect(status().isOk())
+			.andExpect(jsonPath("$.data.id").value(createdId))
+			.andExpect(jsonPath("$.data.bedZoneId").value(targetZone.getId()))
+			.andExpect(jsonPath("$.data.sortOrder").value(targetBeforeCount + 1));
+
+		var movement = workRecordRepository
+			.findTopByTargetTypeAndTargetIdAndWorkTypeOrderByWorkDateDescIdDesc("ORCHID_GROUP", createdId, "위치 이동")
+			.orElseThrow();
+		assertThat(movement.getFromBedZoneId()).isEqualTo(sourceZone.getId());
+		assertThat(movement.getToBedZoneId()).isEqualTo(targetZone.getId());
+
+		mockMvc.perform(delete("/api/orchid-groups/{orchidGroupId}", createdId))
+			.andExpect(status().isOk());
+	}
+
+	@Test
+	void returnsValidationErrorsForInvalidOrchidGroupMove() throws Exception {
+		mockMvc.perform(patch("/api/orchid-groups/{orchidGroupId}/move", 999999)
+				.contentType(MediaType.APPLICATION_JSON)
+				.content("""
+					{
+					  "toBedZoneId": 1
+					}
+					"""))
+			.andExpect(status().isNotFound())
+			.andExpect(jsonPath("$.error.code").value("NOT_FOUND"));
+
+		var sampleHouse = houseRepository.findAll().stream()
+			.filter(house -> house.getNumber() == 3)
+			.findFirst()
+			.orElseThrow();
+		var sampleBed = physicalBedRepository.findByHouseIdOrderByDisplayOrderAsc(sampleHouse.getId()).get(1);
+		var sampleZone = bedZoneRepository.findByPhysicalBedIdOrderBySortOrderAsc(sampleBed.getId()).getFirst();
+		var sampleGroup = orchidGroupRepository.search(null, null, sampleZone.getId(), null).getFirst();
+
+		mockMvc.perform(patch("/api/orchid-groups/{orchidGroupId}/move", sampleGroup.getId())
+				.contentType(MediaType.APPLICATION_JSON)
+				.content("""
+					{
+					  "toBedZoneId": 999999
+					}
+					"""))
+			.andExpect(status().isNotFound())
+			.andExpect(jsonPath("$.error.code").value("NOT_FOUND"));
+
+		mockMvc.perform(patch("/api/orchid-groups/{orchidGroupId}/move", sampleGroup.getId())
+				.contentType(MediaType.APPLICATION_JSON)
+				.content("{}"))
+			.andExpect(status().isBadRequest())
+			.andExpect(jsonPath("$.error.code").value("VALIDATION_ERROR"));
 	}
 }
