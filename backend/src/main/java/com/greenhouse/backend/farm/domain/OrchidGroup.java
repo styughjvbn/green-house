@@ -97,6 +97,11 @@ public class OrchidGroup extends BaseEntity {
 		this.memo = memo;
 	}
 
+	public void moveTo(BedZone bedZone, Integer sortOrder) {
+		this.bedZone = bedZone;
+		this.sortOrder = sortOrder;
+	}
+
 	public Long getId() {
 		return id;
 	}

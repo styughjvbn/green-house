@@ -60,7 +60,40 @@ public class WorkRecord extends BaseEntity {
 		this.memo = memo;
 	}
 
+	public static WorkRecord movement(
+		Long orchidGroupId,
+		Long fromBedZoneId,
+		Long toBedZoneId,
+		String worker,
+		String memo
+	) {
+		WorkRecord workRecord = new WorkRecord("위치 이동", LocalDate.now(), "ORCHID_GROUP", orchidGroupId, worker, memo);
+		workRecord.fromBedZoneId = fromBedZoneId;
+		workRecord.toBedZoneId = toBedZoneId;
+		return workRecord;
+	}
+
 	public Long getId() {
 		return id;
+	}
+
+	public String getWorkType() {
+		return workType;
+	}
+
+	public String getTargetType() {
+		return targetType;
+	}
+
+	public Long getTargetId() {
+		return targetId;
+	}
+
+	public Long getFromBedZoneId() {
+		return fromBedZoneId;
+	}
+
+	public Long getToBedZoneId() {
+		return toBedZoneId;
 	}
 }

@@ -3,6 +3,7 @@ package com.greenhouse.backend.farm.controller;
 import com.greenhouse.backend.common.api.ApiResponse;
 import com.greenhouse.backend.farm.application.OrchidGroupCommandService;
 import com.greenhouse.backend.farm.dto.OrchidGroupCreateRequest;
+import com.greenhouse.backend.farm.dto.OrchidGroupMoveRequest;
 import com.greenhouse.backend.farm.dto.OrchidGroupResponse;
 import com.greenhouse.backend.farm.dto.OrchidGroupUpdateRequest;
 import jakarta.validation.Valid;
@@ -44,5 +45,13 @@ public class OrchidGroupCommandController {
 	public ApiResponse<Void> delete(@PathVariable Long orchidGroupId) {
 		orchidGroupCommandService.delete(orchidGroupId);
 		return ApiResponse.ok(null);
+	}
+
+	@PatchMapping("/{orchidGroupId}/move")
+	public ApiResponse<OrchidGroupResponse> move(
+		@PathVariable Long orchidGroupId,
+		@Valid @RequestBody OrchidGroupMoveRequest request
+	) {
+		return ApiResponse.ok(orchidGroupCommandService.move(orchidGroupId, request));
 	}
 }
