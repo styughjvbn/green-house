@@ -40,6 +40,11 @@ button:disabled {
   cursor: not-allowed;
 }
 
+.full-bleed-header {
+  margin-right: calc(-100vw + 100%);
+  padding-right: calc(1.25rem + 100vw - 100%);
+}
+
 .a5-sheet {
   width: 148mm;
   min-height: 210mm;
