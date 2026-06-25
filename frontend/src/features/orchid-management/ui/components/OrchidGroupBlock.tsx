@@ -1,6 +1,6 @@
 "use client";
 
-import type { DragEvent, MouseEvent } from "react";
+import type { DragEvent, MouseEvent, PointerEvent } from "react";
 import type { OrchidGroup } from "@/entities/farm/types";
 
 export default function OrchidGroupBlock({
@@ -16,10 +16,15 @@ export default function OrchidGroupBlock({
   selected: boolean;
   onDragEnd: () => void;
   onDragStart: () => void;
-  onSelect: (event: MouseEvent<HTMLDivElement>) => void;
+  onSelect: () => void;
 }) {
   const warning =
     orchidGroup.status !== "정상" && orchidGroup.status !== "판매 가능";
+
+  function handleClick(event: MouseEvent<HTMLDivElement>) {
+    event.stopPropagation();
+    onSelect();
+  }
 
   function handleDragStart(event: DragEvent<HTMLDivElement>) {
     event.stopPropagation();
@@ -28,17 +33,26 @@ export default function OrchidGroupBlock({
     onDragStart();
   }
 
+  function handlePointerUp(event: PointerEvent<HTMLDivElement>) {
+    if (event.pointerType === "mouse") {
+      return;
+    }
+    event.stopPropagation();
+    onSelect();
+  }
+
   return (
     <div
-      className={`min-h-16 rounded-md border p-2 shadow-sm transition ${
+      className={`min-h-16 touch-manipulation rounded-md border p-2 shadow-sm transition ${
         selected
           ? "border-[#246df2] bg-[#dcecff] ring-2 ring-[#246df2]"
           : "border-[#82c886] bg-[#bfe2b8] hover:border-[#159447]"
       } ${draggable ? "cursor-grab active:cursor-grabbing" : "cursor-pointer"}`}
       draggable={draggable}
-      onClick={onSelect}
+      onClick={handleClick}
       onDragEnd={onDragEnd}
       onDragStart={handleDragStart}
+      onPointerUp={handlePointerUp}
       role="button"
       tabIndex={0}
       title={draggable ? "드래그해서 다른 구역으로 이동" : undefined}

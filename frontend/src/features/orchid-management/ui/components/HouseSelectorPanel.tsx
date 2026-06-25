@@ -56,7 +56,7 @@ export default function HouseSelectorPanel({
       </div>
 
       <button
-        className="inline-flex h-9 items-center gap-2 rounded-md border border-[#dfe5dc] bg-white px-4 text-sm font-semibold text-[#344138] shadow-sm"
+        className="inline-flex h-9 touch-manipulation items-center gap-2 rounded-md border border-[#dfe5dc] bg-white px-4 text-sm font-semibold text-[#344138] shadow-sm"
         type="button"
       >
         <MoveRight className="h-4 w-4" strokeWidth={1.8} aria-hidden="true" />
@@ -85,7 +85,7 @@ export default function HouseSelectorPanel({
       </label>
 
       <button
-        className={`inline-flex h-9 items-center gap-2 rounded-md px-4 text-sm font-semibold shadow-sm ${
+        className={`inline-flex h-9 touch-manipulation items-center gap-2 rounded-md px-4 text-sm font-semibold shadow-sm ${
           placementEditMode
             ? "bg-[#159447] text-white"
             : "border border-[#dfe5dc] bg-white text-[#344138]"
@@ -98,7 +98,7 @@ export default function HouseSelectorPanel({
       </button>
 
       <button
-        className="inline-flex h-9 items-center gap-2 rounded-md border border-[#dfe5dc] bg-white px-4 text-sm font-semibold text-[#344138] shadow-sm"
+        className="inline-flex h-9 touch-manipulation items-center gap-2 rounded-md border border-[#dfe5dc] bg-white px-4 text-sm font-semibold text-[#344138] shadow-sm"
         type="button"
       >
         <Printer className="h-4 w-4" strokeWidth={1.8} aria-hidden="true" />

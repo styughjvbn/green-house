@@ -21,7 +21,7 @@ export default function ActionButton({
 
   return (
     <button
-      className={`rounded-md px-3 py-2 text-sm font-semibold ${className}`}
+      className={`touch-manipulation rounded-md px-3 py-2 text-sm font-semibold ${className}`}
       disabled={disabled}
       onClick={onClick}
       type="button"
@@ -34,7 +34,7 @@ export default function ActionButton({
 export function DisabledAction({ label }: { label: string }) {
   return (
     <button
-      className="rounded-md border border-[#d7ddd4] bg-white px-3 py-2 text-sm font-semibold text-[#435047] opacity-60"
+      className="touch-manipulation rounded-md border border-[#d7ddd4] bg-white px-3 py-2 text-sm font-semibold text-[#435047] opacity-60"
       disabled
       type="button"
     >

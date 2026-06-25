@@ -1,6 +1,6 @@
 "use client";
 
-import type { DragEvent } from "react";
+import type { DragEvent, PointerEvent } from "react";
 import type { BedZone } from "@/entities/farm/types";
 import type { DragState } from "../../model/types";
 import OrchidGroupBlock from "./OrchidGroupBlock";
@@ -52,9 +52,16 @@ export default function BedZoneBlock({
     await onDropOnBedZone(zone.id);
   }
 
+  function handlePointerUp(event: PointerEvent<HTMLDivElement>) {
+    if (event.pointerType === "mouse" || dragState) {
+      return;
+    }
+    onSelectBedZone(zone.id);
+  }
+
   return (
     <div
-      className={`min-h-[360px] rounded-md border p-2 text-left transition ${
+      className={`min-h-[360px] touch-manipulation rounded-md border p-2 text-left transition ${
         selected
           ? "border-[#246df2] bg-[#f3f7ff] ring-2 ring-[#246df2]"
           : "border-[#d7ddd4] bg-white hover:border-[#159447]"
@@ -62,6 +69,7 @@ export default function BedZoneBlock({
       onClick={() => onSelectBedZone(zone.id)}
       onDragOver={handleDragOver}
       onDrop={(event) => void handleDrop(event)}
+      onPointerUp={handlePointerUp}
       role="button"
       tabIndex={0}
     >
@@ -77,10 +85,7 @@ export default function BedZoneBlock({
             selected={selectedOrchidGroupId === orchidGroup.id}
             onDragEnd={onDragEnd}
             onDragStart={() => onDragStart(orchidGroup.id)}
-            onSelect={(event) => {
-              event.stopPropagation();
-              onSelectOrchidGroup(orchidGroup.id);
-            }}
+            onSelect={() => onSelectOrchidGroup(orchidGroup.id)}
           />
         ))}
         {Array.from({ length: emptySlotCount }, (_, index) => (
