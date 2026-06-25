@@ -48,7 +48,7 @@ export function SalesManager({
             />
           ) : null}
 
-          <div className="grid gap-4 xl:grid-cols-[0.88fr_1.12fr]">
+          <div className="grid gap-4 2xl:grid-cols-[minmax(0,0.88fr)_minmax(0,1.12fr)]">
             <SalesSlipList
               salesSlips={sales.filteredSalesSlips}
               selectedSalesSlipId={sales.selectedSalesSlip?.id ?? null}

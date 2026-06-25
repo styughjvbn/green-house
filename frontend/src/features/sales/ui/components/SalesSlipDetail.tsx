@@ -12,7 +12,7 @@ export function SalesSlipDetail({
 }) {
   if (!salesSlip) {
     return (
-      <section className="rounded-md border border-[#dfe5dc] bg-white p-5 text-sm text-[#5c6a60] shadow-sm">
+      <section className="min-w-0 rounded-md border border-[#dfe5dc] bg-white p-5 text-sm text-[#5c6a60] shadow-sm">
         선택한 전표가 없습니다.
       </section>
     );
@@ -22,10 +22,10 @@ export function SalesSlipDetail({
   const vatAmount = salesSlip.totalAmount - supplyAmount;
 
   return (
-    <section className="rounded-md border border-[#dfe5dc] bg-white p-4 shadow-sm">
-      <div className="flex items-center justify-between gap-3">
+    <section className="min-w-0 rounded-md border border-[#dfe5dc] bg-white p-4 shadow-sm">
+      <div className="flex flex-wrap items-center justify-between gap-3">
         <h2 className="text-xl font-bold text-[#17251b]">전표 상세</h2>
-        <div className="flex gap-2">
+        <div className="flex flex-wrap gap-2">
           <Link
             className="inline-flex h-9 items-center gap-2 rounded-md border border-[#dfe5dc] bg-white px-3 text-sm font-semibold text-[#344138]"
             href={`/print/sales-slips/${salesSlip.id}`}
@@ -44,7 +44,7 @@ export function SalesSlipDetail({
       </div>
 
       <div className="mt-4 rounded-md border border-[#dfe5dc] bg-[#fbfcfa] p-4">
-        <div className="grid gap-4 md:grid-cols-4">
+        <div className="grid gap-4 lg:grid-cols-4">
           <InfoLabel label="전표번호" strong value={salesSlip.slipNumber} />
           <InfoLabel label="판매일자" value={salesSlip.saleDate} />
           <InfoLabel label="입금 상태" value={salesSlip.paymentStatus} />
@@ -111,7 +111,7 @@ export function SalesSlipDetail({
         </div>
       </div>
 
-      <div className="mt-3 grid grid-cols-3 items-center rounded-md border border-[#dfe5dc] bg-white p-4 text-sm">
+      <div className="mt-3 grid gap-3 rounded-md border border-[#dfe5dc] bg-white p-4 text-sm md:grid-cols-3 md:items-center">
         <Amount label="공급가액" value={supplyAmount} />
         <Amount label="부가세" value={vatAmount} />
         <div className="text-right">

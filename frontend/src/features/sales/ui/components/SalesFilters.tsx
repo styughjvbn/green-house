@@ -21,7 +21,7 @@ export function SalesFilters({
 }) {
   return (
     <section className="rounded-md border border-[#dfe5dc] bg-white p-4 shadow-sm">
-      <div className="grid gap-3 xl:grid-cols-[2fr_1.3fr_1.1fr_1.1fr_1.7fr_auto_auto]">
+      <div className="grid gap-3 md:grid-cols-2 2xl:grid-cols-[2fr_1.3fr_1.1fr_1.1fr_1.7fr_auto_auto]">
         <div>
           <p className="mb-2 text-sm font-semibold text-[#344138]">기간</p>
           <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-2">
@@ -88,7 +88,7 @@ export function SalesFilters({
         </label>
 
         <button
-          className="mt-7 inline-flex h-10 items-center justify-center gap-2 rounded-md border border-[#dfe5dc] bg-white px-4 text-sm font-semibold text-[#344138]"
+          className="inline-flex h-10 items-center justify-center gap-2 rounded-md border border-[#dfe5dc] bg-white px-4 text-sm font-semibold text-[#344138] 2xl:mt-7"
           type="button"
           onClick={onReset}
         >
@@ -96,7 +96,7 @@ export function SalesFilters({
           초기화
         </button>
         <button
-          className="mt-7 inline-flex h-10 items-center justify-center gap-2 rounded-md bg-[#159447] px-5 text-sm font-semibold text-white"
+          className="inline-flex h-10 items-center justify-center gap-2 rounded-md bg-[#159447] px-5 text-sm font-semibold text-white 2xl:mt-7"
           type="button"
         >
           <Search className="h-4 w-4" strokeWidth={1.8} aria-hidden="true" />

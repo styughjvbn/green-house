@@ -12,7 +12,7 @@ export function SalesSlipList({
   onSelect: (salesSlipId: number) => void;
 }) {
   return (
-    <section className="rounded-md border border-[#dfe5dc] bg-white p-4 shadow-sm">
+    <section className="min-w-0 rounded-md border border-[#dfe5dc] bg-white p-4 shadow-sm">
       <div className="flex items-center gap-2">
         <h2 className="text-xl font-bold text-[#17251b]">판매 전표 목록</h2>
         <span className="text-sm font-semibold text-[#159447]">
