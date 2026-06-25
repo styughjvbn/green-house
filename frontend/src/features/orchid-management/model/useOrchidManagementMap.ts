@@ -11,29 +11,56 @@ import {
   moveOrchidGroup,
   updateOrchidGroup,
 } from "../api/orchidManagementApi";
-import { findBedZone, findFirstOrchidGroup, findOrchidGroup } from "../lib/orchidManagementUtils";
-import type { DragState, MutationMode, MutationPayload, OrchidSelection, WorkRecordQuickFormState, WorkRecordSummary } from "./types";
+import {
+  findBedZone,
+  findFirstOrchidGroup,
+  findOrchidGroup,
+} from "../lib/orchidManagementUtils";
+import type {
+  DragState,
+  MutationMode,
+  MutationPayload,
+  OrchidSelection,
+  WorkRecordQuickFormState,
+  WorkRecordSummary,
+} from "./types";
 
 export function useOrchidManagementMap(house: House, workTypes: string[]) {
   const router = useRouter();
   const firstOrchidGroup = useMemo(() => findFirstOrchidGroup(house), [house]);
 
   const [selection, setSelection] = useState<OrchidSelection | null>(
-    firstOrchidGroup ? { type: "ORCHID_GROUP", orchidGroupId: firstOrchidGroup.id } : null,
+    firstOrchidGroup
+      ? { type: "ORCHID_GROUP", orchidGroupId: firstOrchidGroup.id }
+      : null,
   );
   const [placementEditMode, setPlacementEditMode] = useState(false);
   const [dragState, setDragState] = useState<DragState>(null);
   const [mutationMode, setMutationMode] = useState<MutationMode>(null);
-  const [workRecordForm, setWorkRecordForm] = useState<WorkRecordQuickFormState>(() => createInitialWorkRecordForm(workTypes, firstOrchidGroup?.id ?? null));
-  const [workRecordSummary, setWorkRecordSummary] = useState<WorkRecordSummary>(() => createEmptyWorkRecordSummary());
-  const [workRecordSummaryLoading, setWorkRecordSummaryLoading] = useState(false);
+  const [workRecordForm, setWorkRecordForm] =
+    useState<WorkRecordQuickFormState>(() =>
+      createInitialWorkRecordForm(workTypes, firstOrchidGroup?.id ?? null),
+    );
+  const [workRecordSummary, setWorkRecordSummary] = useState<WorkRecordSummary>(
+    () => createEmptyWorkRecordSummary(),
+  );
+  const [workRecordSummaryLoading, setWorkRecordSummaryLoading] =
+    useState(false);
   const [workRecordSummaryVersion, setWorkRecordSummaryVersion] = useState(0);
   const [saving, setSaving] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
-  const selectedOrchidGroup = selection?.type === "ORCHID_GROUP" ? findOrchidGroup(house, selection.orchidGroupId) : null;
-  const selectedBedZone = selection?.type === "BED_ZONE" ? findBedZone(house, selection.bedZoneId)?.zone ?? null : null;
-  const resolvedZone = selectedOrchidGroup ? findBedZone(house, selectedOrchidGroup.bedZoneId)?.zone ?? null : selectedBedZone;
+  const selectedOrchidGroup =
+    selection?.type === "ORCHID_GROUP"
+      ? findOrchidGroup(house, selection.orchidGroupId)
+      : null;
+  const selectedBedZone =
+    selection?.type === "BED_ZONE"
+      ? (findBedZone(house, selection.bedZoneId)?.zone ?? null)
+      : null;
+  const resolvedZone = selectedOrchidGroup
+    ? (findBedZone(house, selectedOrchidGroup.bedZoneId)?.zone ?? null)
+    : selectedBedZone;
 
   useEffect(() => {
     let ignore = false;
@@ -48,7 +75,9 @@ export function useOrchidManagementMap(house: House, workTypes: string[]) {
       try {
         const recordGroups = await Promise.all([
           getOrchidWorkRecords("BED_ZONE", resolvedZone.id),
-          ...resolvedZone.orchidGroups.map((orchidGroup) => getOrchidWorkRecords("ORCHID_GROUP", orchidGroup.id)),
+          ...resolvedZone.orchidGroups.map((orchidGroup) =>
+            getOrchidWorkRecords("ORCHID_GROUP", orchidGroup.id),
+          ),
         ]);
         if (!ignore) {
           setWorkRecordSummary(createWorkRecordSummary(recordGroups.flat()));
@@ -105,7 +134,11 @@ export function useOrchidManagementMap(house: House, workTypes: string[]) {
   }
 
   function openWorkRecord() {
-    const targetType = selectedOrchidGroup ? "ORCHID_GROUP" : resolvedZone ? "BED_ZONE" : "HOUSE";
+    const targetType = selectedOrchidGroup
+      ? "ORCHID_GROUP"
+      : resolvedZone
+        ? "BED_ZONE"
+        : "HOUSE";
     const targetId = selectedOrchidGroup?.id ?? resolvedZone?.id ?? house.id;
     setWorkRecordForm((current) => ({
       ...current,
@@ -117,7 +150,10 @@ export function useOrchidManagementMap(house: House, workTypes: string[]) {
     setErrorMessage(null);
   }
 
-  function updateWorkRecordForm<K extends keyof WorkRecordQuickFormState>(field: K, value: WorkRecordQuickFormState[K]) {
+  function updateWorkRecordForm<K extends keyof WorkRecordQuickFormState>(
+    field: K,
+    value: WorkRecordQuickFormState[K],
+  ) {
     setWorkRecordForm((current) => ({ ...current, [field]: value }));
   }
 
@@ -161,13 +197,17 @@ export function useOrchidManagementMap(house: House, workTypes: string[]) {
       return;
     }
     const targetZone = findBedZone(house, toBedZoneId)?.zone;
-    const confirmed = window.confirm(`${draggingGroup.varietyName} 난 묶음을 ${targetZone?.name ?? "선택 구역"}으로 이동할까요?`);
+    const confirmed = window.confirm(
+      `${draggingGroup.varietyName} 난 묶음을 ${targetZone?.name ?? "선택 구역"}으로 이동할까요?`,
+    );
     if (!confirmed) {
       setDragState(null);
       return;
     }
     setSelection({ type: "ORCHID_GROUP", orchidGroupId: draggingGroup.id });
-    await runMutation(async () => moveOrchidGroup(draggingGroup.id, toBedZoneId, "드래그 이동"));
+    await runMutation(async () =>
+      moveOrchidGroup(draggingGroup.id, toBedZoneId, "드래그 이동"),
+    );
     setDragState(null);
   }
 
@@ -176,7 +216,9 @@ export function useOrchidManagementMap(house: House, workTypes: string[]) {
       setErrorMessage("난 묶음을 추가할 구역을 선택하세요.");
       return;
     }
-    await runMutation(async () => createOrchidGroup({ ...payload, bedZoneId: resolvedZone.id }));
+    await runMutation(async () =>
+      createOrchidGroup({ ...payload, bedZoneId: resolvedZone.id }),
+    );
   }
 
   async function handleUpdate(payload: MutationPayload) {
@@ -184,7 +226,9 @@ export function useOrchidManagementMap(house: House, workTypes: string[]) {
       setErrorMessage("수정할 난 묶음을 선택하세요.");
       return;
     }
-    await runMutation(async () => updateOrchidGroup(selectedOrchidGroup.id, payload));
+    await runMutation(async () =>
+      updateOrchidGroup(selectedOrchidGroup.id, payload),
+    );
   }
 
   async function handleMove(toBedZoneId: number, memo: string) {
@@ -192,7 +236,9 @@ export function useOrchidManagementMap(house: House, workTypes: string[]) {
       setErrorMessage("이동할 난 묶음을 선택하세요.");
       return;
     }
-    await runMutation(async () => moveOrchidGroup(selectedOrchidGroup.id, toBedZoneId, memo));
+    await runMutation(async () =>
+      moveOrchidGroup(selectedOrchidGroup.id, toBedZoneId, memo),
+    );
   }
 
   async function handleWorkRecordCreate() {
@@ -223,7 +269,9 @@ export function useOrchidManagementMap(house: House, workTypes: string[]) {
     if (!selectedOrchidGroup) {
       return;
     }
-    const confirmed = window.confirm(`${selectedOrchidGroup.varietyName} 난 묶음을 삭제할까요?`);
+    const confirmed = window.confirm(
+      `${selectedOrchidGroup.varietyName} 난 묶음을 삭제할까요?`,
+    );
     if (!confirmed) {
       return;
     }
@@ -231,11 +279,15 @@ export function useOrchidManagementMap(house: House, workTypes: string[]) {
     setErrorMessage(null);
     try {
       await deleteOrchidGroup(selectedOrchidGroup.id);
-      setSelection(resolvedZone ? { type: "BED_ZONE", bedZoneId: resolvedZone.id } : null);
+      setSelection(
+        resolvedZone ? { type: "BED_ZONE", bedZoneId: resolvedZone.id } : null,
+      );
       setMutationMode(null);
       router.refresh();
     } catch (error) {
-      setErrorMessage(error instanceof Error ? error.message : "요청 중 문제가 발생했습니다.");
+      setErrorMessage(
+        error instanceof Error ? error.message : "요청 중 문제가 발생했습니다.",
+      );
     } finally {
       setSaving(false);
     }
@@ -249,7 +301,9 @@ export function useOrchidManagementMap(house: House, workTypes: string[]) {
       setMutationMode(null);
       router.refresh();
     } catch (error) {
-      setErrorMessage(error instanceof Error ? error.message : "요청 중 문제가 발생했습니다.");
+      setErrorMessage(
+        error instanceof Error ? error.message : "요청 중 문제가 발생했습니다.",
+      );
     } finally {
       setSaving(false);
     }
@@ -291,7 +345,10 @@ export function useOrchidManagementMap(house: House, workTypes: string[]) {
   };
 }
 
-function createInitialWorkRecordForm(workTypes: string[], orchidGroupId: number | null): WorkRecordQuickFormState {
+function createInitialWorkRecordForm(
+  workTypes: string[],
+  orchidGroupId: number | null,
+): WorkRecordQuickFormState {
   return {
     workType: workTypes[0] ?? "농약",
     workDate: new Date().toISOString().slice(0, 10),
@@ -327,9 +384,12 @@ function createWorkRecordSummary(records: WorkRecord[]): WorkRecordSummary {
   return {
     latestRecords: sortedRecords.slice(0, 5),
     latestByType: {
-      pesticide: sortedRecords.find((record) => record.workType === "농약") ?? null,
-      fertilizer: sortedRecords.find((record) => record.workType === "비료") ?? null,
-      repot: sortedRecords.find((record) => record.workType === "분갈이") ?? null,
+      pesticide:
+        sortedRecords.find((record) => record.workType === "농약") ?? null,
+      fertilizer:
+        sortedRecords.find((record) => record.workType === "비료") ?? null,
+      repot:
+        sortedRecords.find((record) => record.workType === "분갈이") ?? null,
     },
   };
 }
@@ -340,4 +400,3 @@ function compareWorkRecordsDesc(a: WorkRecord, b: WorkRecord) {
   }
   return b.id - a.id;
 }
-

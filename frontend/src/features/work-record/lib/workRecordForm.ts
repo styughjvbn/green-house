@@ -1,7 +1,20 @@
-﻿import type { BedZone, HouseStatusSummary, OrchidGroup, PhysicalBed, WorkRecord, WorkRecordTargetType } from "@/entities/farm/types";
-import type { CreateWorkRecordPayload, WorkRecordFormState } from "../model/types";
+﻿import type {
+  BedZone,
+  HouseStatusSummary,
+  OrchidGroup,
+  PhysicalBed,
+  WorkRecord,
+  WorkRecordTargetType,
+} from "@/entities/farm/types";
+import type {
+  CreateWorkRecordPayload,
+  WorkRecordFormState,
+} from "../model/types";
 
-export function createInitialWorkRecordForm(workTypes: string[], houses: HouseStatusSummary[]): WorkRecordFormState {
+export function createInitialWorkRecordForm(
+  workTypes: string[],
+  houses: HouseStatusSummary[],
+): WorkRecordFormState {
   const today = new Date().toISOString().slice(0, 10);
 
   return {
@@ -20,16 +33,31 @@ export function createInitialWorkRecordForm(workTypes: string[], houses: HouseSt
   };
 }
 
-export function resolveSafePhysicalBedId(value: string, physicalBeds: PhysicalBed[]) {
-  return resolveSafeOptionId(value, physicalBeds.map((bed) => bed.id));
+export function resolveSafePhysicalBedId(
+  value: string,
+  physicalBeds: PhysicalBed[],
+) {
+  return resolveSafeOptionId(
+    value,
+    physicalBeds.map((bed) => bed.id),
+  );
 }
 
 export function resolveSafeBedZoneId(value: string, bedZones: BedZone[]) {
-  return resolveSafeOptionId(value, bedZones.map((zone) => zone.id));
+  return resolveSafeOptionId(
+    value,
+    bedZones.map((zone) => zone.id),
+  );
 }
 
-export function resolveSafeOrchidGroupId(value: string, orchidGroups: OrchidGroup[]) {
-  return resolveSafeOptionId(value, orchidGroups.map((group) => group.id));
+export function resolveSafeOrchidGroupId(
+  value: string,
+  orchidGroups: OrchidGroup[],
+) {
+  return resolveSafeOptionId(
+    value,
+    orchidGroups.map((group) => group.id),
+  );
 }
 
 export function getSelectedTargetId(
@@ -54,7 +82,10 @@ export function getSelectedTargetId(
   return null;
 }
 
-export function toCreateWorkRecordPayload(form: WorkRecordFormState, targetId: number | null): CreateWorkRecordPayload {
+export function toCreateWorkRecordPayload(
+  form: WorkRecordFormState,
+  targetId: number | null,
+): CreateWorkRecordPayload {
   return {
     workType: form.workType,
     workDate: form.workDate,
@@ -68,7 +99,9 @@ export function toCreateWorkRecordPayload(form: WorkRecordFormState, targetId: n
   };
 }
 
-export function resetWorkRecordFormAfterSubmit(form: WorkRecordFormState): WorkRecordFormState {
+export function resetWorkRecordFormAfterSubmit(
+  form: WorkRecordFormState,
+): WorkRecordFormState {
   return {
     ...form,
     materialName: "",
@@ -109,4 +142,3 @@ function resolveSafeOptionId(currentValue: string, ids: number[]) {
 function toNullableNumber(value: string) {
   return value ? Number(value) : null;
 }
-

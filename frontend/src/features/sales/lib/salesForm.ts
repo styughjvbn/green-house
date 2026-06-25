@@ -28,7 +28,10 @@ export function createEmptySalesItem(): SalesItemForm {
   };
 }
 
-export function createInitialSalesForm(customers: Customer[], today = todayIsoDate()): SalesSlipForm {
+export function createInitialSalesForm(
+  customers: Customer[],
+  today = todayIsoDate(),
+): SalesSlipForm {
   return {
     saleDate: today,
     customerId: customers[0] ? String(customers[0].id) : "",
@@ -57,7 +60,9 @@ export function nullableText(value: string): string | null {
   return trimmed.length > 0 ? trimmed : null;
 }
 
-export function toCreateCustomerPayload(form: CustomerForm): CreateCustomerPayload {
+export function toCreateCustomerPayload(
+  form: CustomerForm,
+): CreateCustomerPayload {
   return {
     name: form.name,
     ownerName: nullableText(form.ownerName),
@@ -67,7 +72,9 @@ export function toCreateCustomerPayload(form: CustomerForm): CreateCustomerPaylo
   };
 }
 
-export function toCreateSalesSlipPayload(form: SalesSlipForm): CreateSalesSlipPayload {
+export function toCreateSalesSlipPayload(
+  form: SalesSlipForm,
+): CreateSalesSlipPayload {
   return {
     saleDate: form.saleDate,
     customerId: Number(form.customerId),
@@ -86,11 +93,12 @@ export function toCreateSalesSlipPayload(form: SalesSlipForm): CreateSalesSlipPa
   };
 }
 
-export function resetSalesSlipFormAfterSave(form: SalesSlipForm): SalesSlipForm {
+export function resetSalesSlipFormAfterSave(
+  form: SalesSlipForm,
+): SalesSlipForm {
   return {
     ...form,
     memo: "",
     items: [createEmptySalesItem()],
   };
 }
-

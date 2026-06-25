@@ -1,3 +1,5 @@
+import Script from "next/script";
+
 import {
   DEFAULT_FONT_SCALE,
   FONT_SCALE_STORAGE_KEY,
@@ -7,21 +9,21 @@ import {
 
 export function FontScaleInitializer() {
   return (
-    <script
+    <Script
       id="font-scale-initializer"
-      suppressHydrationWarning
+      strategy="beforeInteractive"
       dangerouslySetInnerHTML={{
         __html: `
-        (function () {
-          try {
-            var saved = window.localStorage.getItem("${FONT_SCALE_STORAGE_KEY}");
-            var scale = Number(saved || "${DEFAULT_FONT_SCALE}");
-            if (!Number.isFinite(scale)) scale = ${DEFAULT_FONT_SCALE};
-            scale = Math.min(${MAX_FONT_SCALE}, Math.max(${MIN_FONT_SCALE}, scale));
-            document.documentElement.style.setProperty("--font-scale", String(scale));
-          } catch (error) {}
-        })();
-      `,
+          (function () {
+            try {
+              var saved = window.localStorage.getItem("${FONT_SCALE_STORAGE_KEY}");
+              var scale = Number(saved || "${DEFAULT_FONT_SCALE}");
+              if (!Number.isFinite(scale)) scale = ${DEFAULT_FONT_SCALE};
+              scale = Math.min(${MAX_FONT_SCALE}, Math.max(${MIN_FONT_SCALE}, scale));
+              document.documentElement.style.setProperty("--font-scale", String(scale));
+            } catch (error) {}
+          })();
+        `,
       }}
     />
   );

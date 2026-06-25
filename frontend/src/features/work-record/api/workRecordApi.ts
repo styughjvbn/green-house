@@ -1,12 +1,28 @@
 ﻿import { API_BASE_URL } from "@/shared/api/client";
-import type { BedZone, OrchidGroup, PhysicalBed, WorkRecord } from "@/entities/farm/types";
-import type { CreateWorkRecordPayload, WorkRecordTargetOptions } from "../model/types";
+import type {
+  BedZone,
+  OrchidGroup,
+  PhysicalBed,
+  WorkRecord,
+} from "@/entities/farm/types";
+import type {
+  CreateWorkRecordPayload,
+  WorkRecordTargetOptions,
+} from "../model/types";
 
-export async function getWorkRecordTargetOptions(houseId: string): Promise<WorkRecordTargetOptions> {
+export async function getWorkRecordTargetOptions(
+  houseId: string,
+): Promise<WorkRecordTargetOptions> {
   const [bedsResponse, zonesResponse, groupsResponse] = await Promise.all([
-    fetch(`${API_BASE_URL}/physical-beds?houseId=${houseId}`, { cache: "no-store" }),
-    fetch(`${API_BASE_URL}/bed-zones?houseId=${houseId}`, { cache: "no-store" }),
-    fetch(`${API_BASE_URL}/orchid-groups?houseId=${houseId}`, { cache: "no-store" }),
+    fetch(`${API_BASE_URL}/physical-beds?houseId=${houseId}`, {
+      cache: "no-store",
+    }),
+    fetch(`${API_BASE_URL}/bed-zones?houseId=${houseId}`, {
+      cache: "no-store",
+    }),
+    fetch(`${API_BASE_URL}/orchid-groups?houseId=${houseId}`, {
+      cache: "no-store",
+    }),
   ]);
 
   if (!bedsResponse.ok || !zonesResponse.ok || !groupsResponse.ok) {
@@ -26,7 +42,9 @@ export async function getWorkRecordTargetOptions(houseId: string): Promise<WorkR
   };
 }
 
-export async function createWorkRecord(payload: CreateWorkRecordPayload): Promise<WorkRecord> {
+export async function createWorkRecord(
+  payload: CreateWorkRecordPayload,
+): Promise<WorkRecord> {
   const response = await fetch(`${API_BASE_URL}/work-records`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
@@ -41,4 +59,3 @@ export async function createWorkRecord(payload: CreateWorkRecordPayload): Promis
 
   return body.data as WorkRecord;
 }
-

@@ -10,7 +10,13 @@ type TextFieldProps = {
   value: string;
 };
 
-export function TextField({ label, onChange, required = false, type = "text", value }: TextFieldProps) {
+export function TextField({
+  label,
+  onChange,
+  required = false,
+  type = "text",
+  value,
+}: TextFieldProps) {
   return (
     <label className="block">
       <span className="text-sm font-semibold text-[#435047]">{label}</span>
@@ -32,7 +38,12 @@ type SelectFieldProps = {
   value: string;
 };
 
-export function SelectField({ children, label, onChange, value }: SelectFieldProps) {
+export function SelectField({
+  children,
+  label,
+  onChange,
+  value,
+}: SelectFieldProps) {
   return (
     <label className="block">
       <span className="text-sm font-semibold text-[#435047]">{label}</span>

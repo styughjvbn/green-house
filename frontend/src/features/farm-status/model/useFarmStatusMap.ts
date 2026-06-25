@@ -10,11 +10,18 @@ import type {
   HouseStatusSummary,
   PhysicalBed,
 } from "@/entities/farm/types";
-import { fetchFarmStatusHouseZoom, fetchFarmStatusOrchidGroups } from "../api/farmStatusApi";
+import {
+  fetchFarmStatusHouseZoom,
+  fetchFarmStatusOrchidGroups,
+} from "../api/farmStatusApi";
 import { getNextZoomLevel, getPreviousZoomLevel } from "../lib/farmStatusView";
 import type { FarmStatusMapProps, SelectedTarget } from "./types";
 
-export function useFarmStatusMap({ mapData, initialSelection, initialZoom }: FarmStatusMapProps) {
+export function useFarmStatusMap({
+  mapData,
+  initialSelection,
+  initialZoom,
+}: FarmStatusMapProps) {
   const initialHouseId =
     initialZoom?.houseId ??
     mapData.houses.find((house) => house.orchidGroupCount > 0)?.houseId ??
@@ -22,22 +29,35 @@ export function useFarmStatusMap({ mapData, initialSelection, initialZoom }: Far
     null;
 
   const [zoomLevel, setZoomLevel] = useState<FarmZoomLevel>("FARM");
-  const [selectedHouseId, setSelectedHouseId] = useState<number | null>(initialHouseId);
-  const [selectedTarget, setSelectedTarget] = useState<SelectedTarget | null>(
-    initialSelection ? { type: initialSelection.targetType, id: initialSelection.targetId } : null,
+  const [selectedHouseId, setSelectedHouseId] = useState<number | null>(
+    initialHouseId,
   );
-  const [selection, setSelection] = useState<FarmStatusOrchidGroupList | null>(initialSelection);
-  const [zoomData, setZoomData] = useState<FarmStatusZoomData | null>(initialZoom);
+  const [selectedTarget, setSelectedTarget] = useState<SelectedTarget | null>(
+    initialSelection
+      ? { type: initialSelection.targetType, id: initialSelection.targetId }
+      : null,
+  );
+  const [selection, setSelection] = useState<FarmStatusOrchidGroupList | null>(
+    initialSelection,
+  );
+  const [zoomData, setZoomData] = useState<FarmStatusZoomData | null>(
+    initialZoom,
+  );
   const [loading, setLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   const selectedHouse = useMemo(
-    () => mapData.houses.find((house) => house.houseId === selectedHouseId) ?? mapData.houses[0] ?? null,
+    () =>
+      mapData.houses.find((house) => house.houseId === selectedHouseId) ??
+      mapData.houses[0] ??
+      null,
     [mapData.houses, selectedHouseId],
   );
 
-  const selectedPhysicalBedId = selectedTarget?.type === "PHYSICAL_BED" ? selectedTarget.id : null;
-  const selectedBedZoneId = selectedTarget?.type === "BED_ZONE" ? selectedTarget.id : null;
+  const selectedPhysicalBedId =
+    selectedTarget?.type === "PHYSICAL_BED" ? selectedTarget.id : null;
+  const selectedBedZoneId =
+    selectedTarget?.type === "BED_ZONE" ? selectedTarget.id : null;
 
   async function runRequest(task: () => Promise<void>) {
     setLoading(true);
@@ -45,7 +65,9 @@ export function useFarmStatusMap({ mapData, initialSelection, initialZoom }: Far
     try {
       await task();
     } catch (error) {
-      setErrorMessage(error instanceof Error ? error.message : "요청 중 문제가 발생했습니다.");
+      setErrorMessage(
+        error instanceof Error ? error.message : "요청 중 문제가 발생했습니다.",
+      );
     } finally {
       setLoading(false);
     }
@@ -57,7 +79,10 @@ export function useFarmStatusMap({ mapData, initialSelection, initialZoom }: Far
     setSelection(data);
   }
 
-  async function loadHouseZoom(houseId: number, nextLevel: FarmZoomLevel = "HOUSE") {
+  async function loadHouseZoom(
+    houseId: number,
+    nextLevel: FarmZoomLevel = "HOUSE",
+  ) {
     const data = await fetchFarmStatusHouseZoom(houseId);
     setSelectedHouseId(houseId);
     setZoomData(data);
@@ -108,7 +133,9 @@ export function useFarmStatusMap({ mapData, initialSelection, initialZoom }: Far
     const nextLevel = getPreviousZoomLevel(zoomLevel);
     setZoomLevel(nextLevel);
     if (nextLevel === "FARM") {
-      setSelectedTarget(selectedHouseId ? { type: "HOUSE", id: selectedHouseId } : null);
+      setSelectedTarget(
+        selectedHouseId ? { type: "HOUSE", id: selectedHouseId } : null,
+      );
     }
   }
 
@@ -138,4 +165,3 @@ export function useFarmStatusMap({ mapData, initialSelection, initialZoom }: Far
     resetToFarm,
   };
 }
-

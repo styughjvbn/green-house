@@ -4,11 +4,18 @@
   HouseStatusSummary,
 } from "@/entities/farm/types";
 
-export const farmStatusZoomOrder: FarmZoomLevel[] = ["FARM", "HOUSE", "PHYSICAL_BED", "BED_ZONE"];
+export const farmStatusZoomOrder: FarmZoomLevel[] = [
+  "FARM",
+  "HOUSE",
+  "PHYSICAL_BED",
+  "BED_ZONE",
+];
 
 export function getNextZoomLevel(current: FarmZoomLevel): FarmZoomLevel {
   const currentIndex = farmStatusZoomOrder.indexOf(current);
-  return farmStatusZoomOrder[Math.min(currentIndex + 1, farmStatusZoomOrder.length - 1)];
+  return farmStatusZoomOrder[
+    Math.min(currentIndex + 1, farmStatusZoomOrder.length - 1)
+  ];
 }
 
 export function getPreviousZoomLevel(current: FarmZoomLevel): FarmZoomLevel {
@@ -41,4 +48,3 @@ export function selectionTitle(
 export function hasHouseWarning(house: HouseStatusSummary | null): boolean {
   return Boolean(house && (house.warningCount > 0 || house.repotDueCount > 0));
 }
-

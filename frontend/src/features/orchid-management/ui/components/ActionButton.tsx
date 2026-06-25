@@ -20,7 +20,12 @@ export default function ActionButton({
       : "border border-[#d7ddd4] bg-white text-[#435047]";
 
   return (
-    <button className={`rounded-md px-3 py-2 text-sm font-semibold ${className}`} disabled={disabled} onClick={onClick} type="button">
+    <button
+      className={`rounded-md px-3 py-2 text-sm font-semibold ${className}`}
+      disabled={disabled}
+      onClick={onClick}
+      type="button"
+    >
       {label}
     </button>
   );
@@ -28,7 +33,11 @@ export default function ActionButton({
 
 export function DisabledAction({ label }: { label: string }) {
   return (
-    <button className="rounded-md border border-[#d7ddd4] bg-white px-3 py-2 text-sm font-semibold text-[#435047] opacity-60" disabled type="button">
+    <button
+      className="rounded-md border border-[#d7ddd4] bg-white px-3 py-2 text-sm font-semibold text-[#435047] opacity-60"
+      disabled
+      type="button"
+    >
       {label}
     </button>
   );

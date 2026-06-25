@@ -56,12 +56,42 @@ export function FarmStatusPage({
       </section>
 
       <section className="grid gap-4 md:grid-cols-3 xl:grid-cols-6">
-        <SummaryCard label="동 수" value={`${summary.houseCount}개`} tone="green" symbol="▣" />
-        <SummaryCard label="물리 배드 수" value={`${summary.physicalBedCount}개`} tone="green" symbol="▤" />
-        <SummaryCard label="논리 구역 수" value={`${summary.bedZoneCount}개`} tone="blue" symbol="▥" />
-        <SummaryCard label="난 묶음 수" value={`${summary.orchidGroupCount}개`} tone="green" symbol="●" />
-        <SummaryCard label="분갈이 예정" value={`${summary.repotDueCount}개`} tone="orange" symbol="!" />
-        <SummaryCard label="상태 이상" value={`${summary.warningCount}개`} tone="red" symbol="!" />
+        <SummaryCard
+          label="동 수"
+          value={`${summary.houseCount}개`}
+          tone="green"
+          symbol="▣"
+        />
+        <SummaryCard
+          label="물리 배드 수"
+          value={`${summary.physicalBedCount}개`}
+          tone="green"
+          symbol="▤"
+        />
+        <SummaryCard
+          label="논리 구역 수"
+          value={`${summary.bedZoneCount}개`}
+          tone="blue"
+          symbol="▥"
+        />
+        <SummaryCard
+          label="난 묶음 수"
+          value={`${summary.orchidGroupCount}개`}
+          tone="green"
+          symbol="●"
+        />
+        <SummaryCard
+          label="분갈이 예정"
+          value={`${summary.repotDueCount}개`}
+          tone="orange"
+          symbol="!"
+        />
+        <SummaryCard
+          label="상태 이상"
+          value={`${summary.warningCount}개`}
+          tone="red"
+          symbol="!"
+        />
       </section>
 
       <FarmStatusMap

@@ -16,16 +16,33 @@ export function MapControls({
 }) {
   return (
     <div className="absolute bottom-16 left-4 z-20 flex flex-col gap-2">
-      <button aria-label="확대" className="flex h-9 w-9 items-center justify-center rounded-md bg-white text-xl font-semibold text-[#2b3a2f] shadow" onClick={onZoomIn} type="button">
+      <button
+        aria-label="확대"
+        className="flex h-9 w-9 items-center justify-center rounded-md bg-white text-xl font-semibold text-[#2b3a2f] shadow"
+        onClick={onZoomIn}
+        type="button"
+      >
         +
       </button>
-      <button aria-label="축소" className="flex h-9 w-9 items-center justify-center rounded-md bg-white text-xl font-semibold text-[#2b3a2f] shadow" onClick={onZoomOut} type="button">
+      <button
+        aria-label="축소"
+        className="flex h-9 w-9 items-center justify-center rounded-md bg-white text-xl font-semibold text-[#2b3a2f] shadow"
+        onClick={onZoomOut}
+        type="button"
+      >
         -
       </button>
-      <button aria-label="전체 보기" className="flex h-9 w-9 items-center justify-center rounded-md bg-white text-sm font-semibold text-[#2b3a2f] shadow" onClick={onReset} type="button">
+      <button
+        aria-label="전체 보기"
+        className="flex h-9 w-9 items-center justify-center rounded-md bg-white text-sm font-semibold text-[#2b3a2f] shadow"
+        onClick={onReset}
+        type="button"
+      >
         ⌖
       </button>
-      <span className="rounded-md bg-white px-2 py-1 text-center text-xs font-semibold text-[#405246] shadow">{zoomLabel(zoomLevel)}</span>
+      <span className="rounded-md bg-white px-2 py-1 text-center text-xs font-semibold text-[#405246] shadow">
+        {zoomLabel(zoomLevel)}
+      </span>
     </div>
   );
 }
@@ -45,19 +62,19 @@ export function MapBackdrop() {
   return (
     <>
       <div className="absolute inset-0 bg-[linear-gradient(135deg,rgba(255,255,255,0.22),rgba(255,255,255,0)_38%)]" />
-      <div className="absolute -left-6 right-[-20px] top-24 h-10 rotate-[-4deg] bg-[#d7aa5d]" />
-      <div className="absolute -left-6 right-[-20px] top-27 h-4 rotate-[-4deg] bg-[#f0d59a]" />
-      <div className="absolute left-8 top-8 h-16 w-32 rotate-[-12deg] rounded-md border border-[#cfd6cf] bg-[#ecefe9] shadow-md">
+      <div className="absolute top-24 right-[-20px] -left-6 h-10 rotate-[-4deg] bg-[#d7aa5d]" />
+      <div className="absolute top-27 right-[-20px] -left-6 h-4 rotate-[-4deg] bg-[#f0d59a]" />
+      <div className="absolute top-8 left-8 h-16 w-32 rotate-[-12deg] rounded-md border border-[#cfd6cf] bg-[#ecefe9] shadow-md">
         <div className="grid h-full grid-cols-4 gap-px p-2 opacity-70">
           {Array.from({ length: 12 }, (_, index) => (
             <span key={index} className="bg-white" />
           ))}
         </div>
       </div>
-      <MapTree className="left-8 bottom-10" />
-      <MapTree className="right-12 top-10" />
+      <MapTree className="bottom-10 left-8" />
+      <MapTree className="top-10 right-12" />
       <MapTree className="right-16 bottom-8" />
-      <MapTree className="left-60 bottom-6" />
+      <MapTree className="bottom-6 left-60" />
     </>
   );
 }
@@ -80,4 +97,3 @@ function MapTree({ className }: { className: string }) {
     </div>
   );
 }
-

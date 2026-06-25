@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Geist } from "next/font/google";
 import { FontScaleInitializer } from "@/features/settings";
+import { DEFAULT_FONT_SCALE } from "@/features/settings/lib/fontScale";
 import { AppShell } from "@/widgets/app-shell/AppShell";
 import "./globals.css";
 
@@ -20,9 +21,17 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="ko" className={`${geistSans.variable} h-full antialiased`}>
-      <FontScaleInitializer />
+    <html
+      lang="ko"
+      className={`${geistSans.variable} h-full antialiased`}
+      style={
+        {
+          "--font-scale": String(DEFAULT_FONT_SCALE),
+        } as React.CSSProperties
+      }
+    >
       <body className="min-h-full bg-[#f7f8f6] text-[#1f2a24]">
+        <FontScaleInitializer />
         <AppShell>{children}</AppShell>
       </body>
     </html>

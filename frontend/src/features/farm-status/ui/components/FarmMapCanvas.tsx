@@ -47,9 +47,18 @@ export default function FarmMapCanvas({
   return (
     <div className="relative min-h-[500px] overflow-hidden rounded-xl border border-[#cdd9c8] bg-[#95b969] p-4 shadow-sm">
       <MapBackdrop />
-      <MapControls zoomLevel={zoomLevel} onReset={onReset} onZoomIn={onZoomIn} onZoomOut={onZoomOut} />
-      <div className="absolute left-4 top-4 z-20 flex flex-wrap items-center gap-2 rounded-md bg-white/95 px-3 py-2 text-sm font-semibold text-[#29422e] shadow-sm">
-        <span>{zoomLevel === "FARM" ? "전체 농장 지도" : `${zoomData?.houseNumber ?? ""}동 상세 지도`}</span>
+      <MapControls
+        zoomLevel={zoomLevel}
+        onReset={onReset}
+        onZoomIn={onZoomIn}
+        onZoomOut={onZoomOut}
+      />
+      <div className="absolute top-4 left-4 z-20 flex flex-wrap items-center gap-2 rounded-md bg-white/95 px-3 py-2 text-sm font-semibold text-[#29422e] shadow-sm">
+        <span>
+          {zoomLevel === "FARM"
+            ? "전체 농장 지도"
+            : `${zoomData?.houseNumber ?? ""}동 상세 지도`}
+        </span>
         <span className="rounded-full bg-[#eef6e9] px-2 py-0.5 text-xs text-[#39713d]">
           {zoomLabel(zoomLevel)}
         </span>
@@ -57,7 +66,11 @@ export default function FarmMapCanvas({
 
       <div className="relative z-10 h-full pt-24">
         {zoomLevel === "FARM" ? (
-          <FarmOverviewLayer houses={houses} selectedTarget={selectedTarget} onSelectHouse={onSelectHouse} />
+          <FarmOverviewLayer
+            houses={houses}
+            selectedTarget={selectedTarget}
+            onSelectHouse={onSelectHouse}
+          />
         ) : (
           <HouseDetailLayer
             selectedBedZoneId={selectedBedZoneId}
@@ -75,4 +88,3 @@ export default function FarmMapCanvas({
     </div>
   );
 }
-

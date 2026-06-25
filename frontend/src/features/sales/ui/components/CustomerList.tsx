@@ -25,12 +25,15 @@ export function CustomerList({
             type="button"
           >
             <span className="font-semibold">{customer.name}</span>
-            {customer.phone ? <span className="ml-2 text-[#5c6a60]">{customer.phone}</span> : null}
+            {customer.phone ? (
+              <span className="ml-2 text-[#5c6a60]">{customer.phone}</span>
+            ) : null}
           </button>
         ))}
-        {customers.length === 0 ? <p className="text-sm text-[#5c6a60]">등록된 거래처가 없습니다.</p> : null}
+        {customers.length === 0 ? (
+          <p className="text-sm text-[#5c6a60]">등록된 거래처가 없습니다.</p>
+        ) : null}
       </div>
     </section>
   );
 }
-

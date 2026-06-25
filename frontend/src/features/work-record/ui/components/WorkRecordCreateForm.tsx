@@ -1,7 +1,12 @@
 ﻿"use client";
 
 import type { FormEvent } from "react";
-import type { BedZone, HouseStatusSummary, OrchidGroup, PhysicalBed } from "@/entities/farm/types";
+import type {
+  BedZone,
+  HouseStatusSummary,
+  OrchidGroup,
+  PhysicalBed,
+} from "@/entities/farm/types";
 import type { WorkRecordFormState } from "../../model/types";
 import { SelectField, TextField } from "./FormFields";
 import { TargetSelectorFields } from "./TargetSelectorFields";
@@ -18,7 +23,10 @@ type WorkRecordCreateFormProps = {
   safePhysicalBedId: string;
   saving: boolean;
   workTypes: string[];
-  onChange: <K extends keyof WorkRecordFormState>(field: K, value: WorkRecordFormState[K]) => void;
+  onChange: <K extends keyof WorkRecordFormState>(
+    field: K,
+    value: WorkRecordFormState[K],
+  ) => void;
   onSubmit: (event: FormEvent<HTMLFormElement>) => void;
 };
 
@@ -46,14 +54,24 @@ export function WorkRecordCreateForm({
 
       <form className="mt-4 space-y-3" onSubmit={onSubmit}>
         <div className="grid grid-cols-2 gap-3">
-          <SelectField label="작업 유형" value={form.workType} onChange={(value) => onChange("workType", value)}>
+          <SelectField
+            label="작업 유형"
+            value={form.workType}
+            onChange={(value) => onChange("workType", value)}
+          >
             {workTypes.map((workType) => (
               <option key={workType} value={workType}>
                 {workType}
               </option>
             ))}
           </SelectField>
-          <TextField label="작업일" required type="date" value={form.workDate} onChange={(value) => onChange("workDate", value)} />
+          <TextField
+            label="작업일"
+            required
+            type="date"
+            value={form.workDate}
+            onChange={(value) => onChange("workDate", value)}
+          />
         </div>
 
         <TargetSelectorFields
@@ -69,13 +87,29 @@ export function WorkRecordCreateForm({
         />
 
         <div className="grid grid-cols-2 gap-3">
-          <TextField label="자재명" value={form.materialName} onChange={(value) => onChange("materialName", value)} />
-          <TextField label="희석 배수" value={form.dilutionRatio} onChange={(value) => onChange("dilutionRatio", value)} />
+          <TextField
+            label="자재명"
+            value={form.materialName}
+            onChange={(value) => onChange("materialName", value)}
+          />
+          <TextField
+            label="희석 배수"
+            value={form.dilutionRatio}
+            onChange={(value) => onChange("dilutionRatio", value)}
+          />
         </div>
 
         <div className="grid grid-cols-2 gap-3">
-          <TextField label="수량" value={form.quantity} onChange={(value) => onChange("quantity", value)} />
-          <TextField label="작업자" value={form.worker} onChange={(value) => onChange("worker", value)} />
+          <TextField
+            label="수량"
+            value={form.quantity}
+            onChange={(value) => onChange("quantity", value)}
+          />
+          <TextField
+            label="작업자"
+            value={form.worker}
+            onChange={(value) => onChange("worker", value)}
+          />
         </div>
 
         <label className="block">
@@ -87,13 +121,20 @@ export function WorkRecordCreateForm({
           />
         </label>
 
-        {errorMessage ? <p className="rounded-md bg-[#fff1ec] p-3 text-sm text-[#9b341e]">{errorMessage}</p> : null}
+        {errorMessage ? (
+          <p className="rounded-md bg-[#fff1ec] p-3 text-sm text-[#9b341e]">
+            {errorMessage}
+          </p>
+        ) : null}
 
-        <button className="w-full rounded-md bg-[#159447] px-4 py-3 text-sm font-semibold text-white disabled:opacity-60" disabled={saving} type="submit">
+        <button
+          className="w-full rounded-md bg-[#159447] px-4 py-3 text-sm font-semibold text-white disabled:opacity-60"
+          disabled={saving}
+          type="submit"
+        >
           {saving ? "저장 중" : "작업 이력 저장"}
         </button>
       </form>
     </section>
   );
 }
-

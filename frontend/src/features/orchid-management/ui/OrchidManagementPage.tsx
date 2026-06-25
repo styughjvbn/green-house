@@ -7,7 +7,11 @@ type OrchidManagementPageProps = {
   workTypes: string[];
 };
 
-export function OrchidManagementPage({ mapData, house, workTypes }: OrchidManagementPageProps) {
+export function OrchidManagementPage({
+  mapData,
+  house,
+  workTypes,
+}: OrchidManagementPageProps) {
   if (!house) {
     return (
       <main className="space-y-4">
@@ -27,7 +31,8 @@ export function OrchidManagementPage({ mapData, house, workTypes }: OrchidManage
           <p className="text-sm font-semibold text-[#3d6f91]">난 묶음 관리</p>
           <h1 className="mt-1 text-2xl font-semibold">동 상세맵 작업 화면</h1>
           <p className="mt-1 max-w-3xl text-sm text-[#5c6a60]">
-            선택한 동의 상세 지도를 확인하고 난 묶음 위치를 조회합니다. 데이터 변경은 다음 단계에서 연결합니다.
+            선택한 동의 상세 지도를 확인하고 난 묶음 위치를 조회합니다. 데이터
+            변경은 다음 단계에서 연결합니다.
           </p>
         </div>
         <div className="flex flex-wrap gap-2 rounded-md border border-[#d7ddd4] bg-[#f8faf7] px-3 py-2 text-sm">
@@ -42,7 +47,11 @@ export function OrchidManagementPage({ mapData, house, workTypes }: OrchidManage
           </span>
         </div>
       </section>
-      <OrchidManagementMap mapData={mapData} house={house} workTypes={workTypes} />
+      <OrchidManagementMap
+        mapData={mapData}
+        house={house}
+        workTypes={workTypes}
+      />
     </main>
   );
 }

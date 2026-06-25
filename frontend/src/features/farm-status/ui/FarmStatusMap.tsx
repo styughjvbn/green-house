@@ -3,7 +3,11 @@
 import { useFarmStatusMap } from "../model/useFarmStatusMap";
 import type { FarmStatusMapProps } from "../model/types";
 import FarmMapCanvas from "./components/FarmMapCanvas";
-import { OrchidGroupTable, RecentWorkSummary, SelectionSummaryPanel } from "./components/StatusPanels";
+import {
+  OrchidGroupTable,
+  RecentWorkSummary,
+  SelectionSummaryPanel,
+} from "./components/StatusPanels";
 
 export function FarmStatusMap(props: FarmStatusMapProps) {
   const { mapData } = props;
@@ -41,11 +45,17 @@ export function FarmStatusMap(props: FarmStatusMapProps) {
           />
         </section>
 
-        <SelectionSummaryPanel selection={map.selection} selectedHouse={map.selectedHouse} />
+        <SelectionSummaryPanel
+          selection={map.selection}
+          selectedHouse={map.selectedHouse}
+        />
       </div>
 
       <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_400px]">
-        <OrchidGroupTable selection={map.selection} selectedHouse={map.selectedHouse} />
+        <OrchidGroupTable
+          selection={map.selection}
+          selectedHouse={map.selectedHouse}
+        />
         <RecentWorkSummary />
       </div>
     </div>

@@ -1,4 +1,9 @@
-﻿import type { BedZone, House, OrchidGroup, PhysicalBed } from "@/entities/farm/types";
+﻿import type {
+  BedZone,
+  House,
+  OrchidGroup,
+  PhysicalBed,
+} from "@/entities/farm/types";
 
 export function nullableText(value: string): string | null {
   const trimmed = value.trim();
@@ -21,10 +26,15 @@ export function findFirstOrchidGroup(house: House): OrchidGroup | null {
   return null;
 }
 
-export function findOrchidGroup(house: House, orchidGroupId: number): OrchidGroup | null {
+export function findOrchidGroup(
+  house: House,
+  orchidGroupId: number,
+): OrchidGroup | null {
   for (const bed of house.physicalBeds) {
     for (const zone of bed.bedZones) {
-      const orchidGroup = zone.orchidGroups.find((item) => item.id === orchidGroupId);
+      const orchidGroup = zone.orchidGroups.find(
+        (item) => item.id === orchidGroupId,
+      );
       if (orchidGroup) {
         return orchidGroup;
       }
@@ -33,7 +43,10 @@ export function findOrchidGroup(house: House, orchidGroupId: number): OrchidGrou
   return null;
 }
 
-export function findBedZone(house: House, bedZoneId: number): { bed: PhysicalBed; zone: BedZone } | null {
+export function findBedZone(
+  house: House,
+  bedZoneId: number,
+): { bed: PhysicalBed; zone: BedZone } | null {
   for (const bed of house.physicalBeds) {
     for (const zone of bed.bedZones) {
       if (zone.id === bedZoneId) {
@@ -43,4 +56,3 @@ export function findBedZone(house: House, bedZoneId: number): { bed: PhysicalBed
   }
   return null;
 }
-

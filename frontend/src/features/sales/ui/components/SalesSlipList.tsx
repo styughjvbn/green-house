@@ -26,10 +26,14 @@ export function SalesSlipList({ salesSlips }: { salesSlips: SalesSlip[] }) {
           <tbody>
             {salesSlips.map((slip) => (
               <tr key={slip.id} className="bg-[#f8faf7]">
-                <td className="rounded-l-md px-3 py-3 font-semibold">{slip.slipNumber}</td>
+                <td className="rounded-l-md px-3 py-3 font-semibold">
+                  {slip.slipNumber}
+                </td>
                 <td className="px-3 py-3">{slip.saleDate}</td>
                 <td className="px-3 py-3">{slip.customer.name}</td>
-                <td className="px-3 py-3 text-right">{slip.totalAmount.toLocaleString()}원</td>
+                <td className="px-3 py-3 text-right">
+                  {slip.totalAmount.toLocaleString()}원
+                </td>
                 <td className="px-3 py-3">
                   {slip.paymentStatus} / {slip.salesStatus}
                 </td>
@@ -46,7 +50,10 @@ export function SalesSlipList({ salesSlips }: { salesSlips: SalesSlip[] }) {
             ))}
             {salesSlips.length === 0 ? (
               <tr>
-                <td className="rounded-md bg-[#f8faf7] px-3 py-8 text-center text-[#5c6a60]" colSpan={7}>
+                <td
+                  className="rounded-md bg-[#f8faf7] px-3 py-8 text-center text-[#5c6a60]"
+                  colSpan={7}
+                >
                   아직 판매 전표가 없습니다.
                 </td>
               </tr>
@@ -57,4 +64,3 @@ export function SalesSlipList({ salesSlips }: { salesSlips: SalesSlip[] }) {
     </section>
   );
 }
-

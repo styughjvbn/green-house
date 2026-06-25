@@ -40,8 +40,14 @@ export default function PhysicalBedBlock({
             placementEditMode={placementEditMode}
             saving={saving}
             zone={zone}
-            selected={selection?.type === "BED_ZONE" && selection.bedZoneId === zone.id}
-            selectedOrchidGroupId={selection?.type === "ORCHID_GROUP" ? selection.orchidGroupId : null}
+            selected={
+              selection?.type === "BED_ZONE" && selection.bedZoneId === zone.id
+            }
+            selectedOrchidGroupId={
+              selection?.type === "ORCHID_GROUP"
+                ? selection.orchidGroupId
+                : null
+            }
             onDragEnd={onDragEnd}
             onDragStart={onDragStart}
             onDropOnBedZone={onDropOnBedZone}
@@ -54,4 +60,3 @@ export default function PhysicalBedBlock({
     </div>
   );
 }
-

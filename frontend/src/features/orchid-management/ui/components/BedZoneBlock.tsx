@@ -55,7 +55,9 @@ export default function BedZoneBlock({
   return (
     <div
       className={`min-h-[360px] rounded-md border p-2 text-left transition ${
-        selected ? "border-[#246df2] bg-[#f3f7ff] ring-2 ring-[#246df2]" : "border-[#d7ddd4] bg-white hover:border-[#159447]"
+        selected
+          ? "border-[#246df2] bg-[#f3f7ff] ring-2 ring-[#246df2]"
+          : "border-[#d7ddd4] bg-white hover:border-[#159447]"
       } ${dropActive ? "border-[#159447] bg-[#eef7ec] ring-2 ring-[#159447]" : ""}`}
       onClick={() => onSelectBedZone(zone.id)}
       onDragOver={handleDragOver}
@@ -63,7 +65,9 @@ export default function BedZoneBlock({
       role="button"
       tabIndex={0}
     >
-      <p className="text-center text-base font-semibold">{zone.side === "LEFT" ? "좌" : "우"}</p>
+      <p className="text-center text-base font-semibold">
+        {zone.side === "LEFT" ? "좌" : "우"}
+      </p>
       <div className="mt-2 space-y-2">
         {zone.orchidGroups.map((orchidGroup) => (
           <OrchidGroupBlock
@@ -80,7 +84,10 @@ export default function BedZoneBlock({
           />
         ))}
         {Array.from({ length: emptySlotCount }, (_, index) => (
-          <div key={index} className="min-h-12 rounded-md border border-dashed border-[#d7ddd4] bg-[#f0f1ef]" />
+          <div
+            key={index}
+            className="min-h-12 rounded-md border border-dashed border-[#d7ddd4] bg-[#f0f1ef]"
+          />
         ))}
       </div>
     </div>

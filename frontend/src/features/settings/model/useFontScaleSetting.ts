@@ -12,13 +12,21 @@ export function useFontScaleSetting() {
     if (typeof window === "undefined") {
       return DEFAULT_FONT_SCALE;
     }
-    return normalizeFontScale(Number(window.localStorage.getItem(FONT_SCALE_STORAGE_KEY)));
+    return normalizeFontScale(
+      Number(window.localStorage.getItem(FONT_SCALE_STORAGE_KEY)),
+    );
   });
 
   useEffect(() => {
     const normalizedScale = normalizeFontScale(fontScale);
-    document.documentElement.style.setProperty("--font-scale", String(normalizedScale));
-    window.localStorage.setItem(FONT_SCALE_STORAGE_KEY, String(normalizedScale));
+    document.documentElement.style.setProperty(
+      "--font-scale",
+      String(normalizedScale),
+    );
+    window.localStorage.setItem(
+      FONT_SCALE_STORAGE_KEY,
+      String(normalizedScale),
+    );
   }, [fontScale]);
 
   function updateFontScale(value: number) {

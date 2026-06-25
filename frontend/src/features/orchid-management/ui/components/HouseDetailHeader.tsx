@@ -22,14 +22,18 @@ export default function HouseDetailHeader({
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <p className="text-sm font-semibold text-[#3d6f91]">선택한 동</p>
-          <h1 className="mt-1 text-2xl font-semibold">{house.number}동 상세 보기</h1>
+          <h1 className="mt-1 text-2xl font-semibold">
+            {house.number}동 상세 보기
+          </h1>
         </div>
         <div className="flex flex-wrap gap-2">
           {viewModes.map((mode) => (
             <button
               key={mode.value}
               className={`rounded-md px-3 py-1.5 text-sm font-semibold ${
-                viewMode === mode.value ? "bg-[#159447] text-white" : "border border-[#d7ddd4] bg-white text-[#435047]"
+                viewMode === mode.value
+                  ? "bg-[#159447] text-white"
+                  : "border border-[#d7ddd4] bg-white text-[#435047]"
               }`}
               onClick={() => onViewModeChange(mode.value)}
               type="button"
@@ -47,4 +51,3 @@ export default function HouseDetailHeader({
     </section>
   );
 }
-

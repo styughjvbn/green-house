@@ -18,7 +18,8 @@ export default function OrchidGroupBlock({
   onDragStart: () => void;
   onSelect: (event: MouseEvent<HTMLDivElement>) => void;
 }) {
-  const warning = orchidGroup.status !== "정상" && orchidGroup.status !== "판매 가능";
+  const warning =
+    orchidGroup.status !== "정상" && orchidGroup.status !== "판매 가능";
 
   function handleDragStart(event: DragEvent<HTMLDivElement>) {
     event.stopPropagation();
@@ -30,7 +31,9 @@ export default function OrchidGroupBlock({
   return (
     <div
       className={`min-h-16 rounded-md border p-2 shadow-sm transition ${
-        selected ? "border-[#246df2] bg-[#dcecff] ring-2 ring-[#246df2]" : "border-[#82c886] bg-[#bfe2b8] hover:border-[#159447]"
+        selected
+          ? "border-[#246df2] bg-[#dcecff] ring-2 ring-[#246df2]"
+          : "border-[#82c886] bg-[#bfe2b8] hover:border-[#159447]"
       } ${draggable ? "cursor-grab active:cursor-grabbing" : "cursor-pointer"}`}
       draggable={draggable}
       onClick={onSelect}
@@ -46,7 +49,12 @@ export default function OrchidGroupBlock({
       </div>
       <p className="mt-0.5 text-xs font-semibold">{orchidGroup.quantity}분</p>
       <p className="mt-0.5 text-xs text-[#435047]">
-        {[orchidGroup.potSize, orchidGroup.ageYear ? `${orchidGroup.ageYear}년생` : null].filter(Boolean).join(" · ")}
+        {[
+          orchidGroup.potSize,
+          orchidGroup.ageYear ? `${orchidGroup.ageYear}년생` : null,
+        ]
+          .filter(Boolean)
+          .join(" · ")}
       </p>
     </div>
   );

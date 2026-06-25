@@ -1,6 +1,9 @@
 import { API_BASE_URL, fetchApi } from "@/shared/api/client";
 import type { Customer, SalesSlip } from "@/entities/farm/types";
-import type { CreateCustomerPayload, CreateSalesSlipPayload } from "../model/types";
+import type {
+  CreateCustomerPayload,
+  CreateSalesSlipPayload,
+} from "../model/types";
 
 type ApiSuccess<T> = {
   data: T;
@@ -13,12 +16,20 @@ type ApiFailure = {
   };
 };
 
-async function requestJson<T>(path: string, init: RequestInit, fallbackMessage: string): Promise<T> {
+async function requestJson<T>(
+  path: string,
+  init: RequestInit,
+  fallbackMessage: string,
+): Promise<T> {
   const response = await fetch(`${API_BASE_URL}${path}`, init);
   const payload = (await response.json()) as ApiSuccess<T> | ApiFailure;
 
   if (!response.ok) {
-    throw new Error("error" in payload ? payload.error?.message ?? fallbackMessage : fallbackMessage);
+    throw new Error(
+      "error" in payload
+        ? (payload.error?.message ?? fallbackMessage)
+        : fallbackMessage,
+    );
   }
 
   return (payload as ApiSuccess<T>).data;
@@ -32,7 +43,9 @@ export function getSalesSlips() {
   return fetchApi<SalesSlip[]>("/sales-slips");
 }
 
-export function createCustomer(payload: CreateCustomerPayload): Promise<Customer> {
+export function createCustomer(
+  payload: CreateCustomerPayload,
+): Promise<Customer> {
   return requestJson<Customer>(
     "/customers",
     {
@@ -44,7 +57,9 @@ export function createCustomer(payload: CreateCustomerPayload): Promise<Customer
   );
 }
 
-export function createSalesSlip(payload: CreateSalesSlipPayload): Promise<SalesSlip> {
+export function createSalesSlip(
+  payload: CreateSalesSlipPayload,
+): Promise<SalesSlip> {
   return requestJson<SalesSlip>(
     "/sales-slips",
     {

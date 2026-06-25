@@ -56,4 +56,3 @@ export type CreateSalesSlipPayload = {
     memo: string | null;
   }>;
 };
-

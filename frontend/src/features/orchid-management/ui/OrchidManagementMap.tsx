@@ -10,15 +10,24 @@ import HouseSelectorPanel from "./components/HouseSelectorPanel";
 import MapLegend from "./components/MapLegend";
 import OrchidSelectionPanel from "./components/OrchidSelectionPanel";
 
-export function OrchidManagementMap({ mapData, house, workTypes }: OrchidManagementMapProps) {
-  const [viewMode, setViewMode] = useState<OrchidManagementViewMode>("REAL_DIRECTION");
+export function OrchidManagementMap({
+  mapData,
+  house,
+  workTypes,
+}: OrchidManagementMapProps) {
+  const [viewMode, setViewMode] =
+    useState<OrchidManagementViewMode>("REAL_DIRECTION");
   const orchidManagement = useOrchidManagementMap(house, workTypes);
 
   return (
     <div className="grid gap-4 2xl:grid-cols-[260px_minmax(0,1fr)_330px]">
       <HouseSelectorPanel houses={mapData.houses} selectedHouseId={house.id} />
       <section className="space-y-3">
-        <HouseDetailHeader house={house} viewMode={viewMode} onViewModeChange={setViewMode} />
+        <HouseDetailHeader
+          house={house}
+          viewMode={viewMode}
+          onViewModeChange={setViewMode}
+        />
         <HouseDetailMap
           dragState={orchidManagement.dragState}
           house={house}
@@ -56,7 +65,9 @@ export function OrchidManagementMap({ mapData, house, workTypes }: OrchidManagem
         onOpenEdit={orchidManagement.actions.openEdit}
         onOpenMove={orchidManagement.actions.openMove}
         onOpenWorkRecord={orchidManagement.actions.openWorkRecord}
-        onTogglePlacementEditMode={orchidManagement.actions.togglePlacementEditMode}
+        onTogglePlacementEditMode={
+          orchidManagement.actions.togglePlacementEditMode
+        }
         onUpdateWorkRecordForm={orchidManagement.actions.updateWorkRecordForm}
         onWorkRecordCreate={orchidManagement.actions.workRecordCreate}
         placementEditMode={orchidManagement.placementEditMode}
@@ -64,4 +75,3 @@ export function OrchidManagementMap({ mapData, house, workTypes }: OrchidManagem
     </div>
   );
 }
-

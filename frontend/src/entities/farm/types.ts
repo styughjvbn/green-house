@@ -127,7 +127,12 @@ export type SelectedOrchidGroup = {
   orchidGroupId: number;
 };
 
-export type WorkRecordTargetType = "FARM" | "HOUSE" | "PHYSICAL_BED" | "BED_ZONE" | "ORCHID_GROUP";
+export type WorkRecordTargetType =
+  | "FARM"
+  | "HOUSE"
+  | "PHYSICAL_BED"
+  | "BED_ZONE"
+  | "ORCHID_GROUP";
 
 export type WorkRecord = {
   id: number;

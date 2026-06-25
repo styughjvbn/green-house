@@ -25,13 +25,20 @@ export function SelectionSummaryPanel({
             <span className="rounded-md bg-[#256ff0] px-3 py-1.5 text-sm font-semibold text-white">
               {selection?.targetName ?? selectedHouse?.houseName ?? "선택 없음"}
             </span>
-            <span className={`rounded-full px-2.5 py-1 text-xs font-semibold ${statusLabel === "정상" ? "bg-[#e8f7e8] text-[#16853b]" : "bg-[#fff3da] text-[#b76600]"}`}>
+            <span
+              className={`rounded-full px-2.5 py-1 text-xs font-semibold ${statusLabel === "정상" ? "bg-[#e8f7e8] text-[#16853b]" : "bg-[#fff3da] text-[#b76600]"}`}
+            >
               {statusLabel}
             </span>
           </div>
-          <h2 className="mt-3 text-xl font-semibold text-[#17251b]">{selectionTitle(selection, selectedHouse)}</h2>
+          <h2 className="mt-3 text-xl font-semibold text-[#17251b]">
+            {selectionTitle(selection, selectedHouse)}
+          </h2>
         </div>
-        <a className="rounded-md border border-[#d2dcd0] bg-[#f8faf7] px-3 py-2 text-xs font-semibold text-[#34503b]" href="/orchid-groups">
+        <a
+          className="rounded-md border border-[#d2dcd0] bg-[#f8faf7] px-3 py-2 text-xs font-semibold text-[#34503b]"
+          href="/orchid-groups"
+        >
           관리에서 수정
         </a>
       </div>
@@ -40,7 +47,11 @@ export function SelectionSummaryPanel({
         <PanelMetric label="물리 배드" value="3개" />
         <PanelMetric label="논리 구역" value="6개" />
         <PanelMetric label="난 묶음" value={`${items.length}개`} />
-        <PanelMetric label="최근 작업" value={selectedHouse?.latestWorkDate ?? "없음"} compact />
+        <PanelMetric
+          label="최근 작업"
+          value={selectedHouse?.latestWorkDate ?? "없음"}
+          compact
+        />
       </div>
 
       <div className="flex gap-2 border-b border-[#edf1ea] p-3">
@@ -69,10 +80,17 @@ export function OrchidGroupTable({
     <section className="rounded-xl border border-[#d9e2d5] bg-white p-4 shadow-sm">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
-          <h2 className="text-lg font-semibold text-[#17251b]">{selectionTitle(selection, selectedHouse)}</h2>
-          <p className="mt-1 text-xs text-[#66736a]">현재 선택한 범위에 배치된 난 묶음입니다.</p>
+          <h2 className="text-lg font-semibold text-[#17251b]">
+            {selectionTitle(selection, selectedHouse)}
+          </h2>
+          <p className="mt-1 text-xs text-[#66736a]">
+            현재 선택한 범위에 배치된 난 묶음입니다.
+          </p>
         </div>
-        <a className="rounded-md bg-[#1f8f48] px-3 py-2 text-xs font-semibold text-white" href="/orchid-groups">
+        <a
+          className="rounded-md bg-[#1f8f48] px-3 py-2 text-xs font-semibold text-white"
+          href="/orchid-groups"
+        >
           난 묶음 관리
         </a>
       </div>
@@ -98,7 +116,10 @@ export function RecentWorkSummary() {
       <h2 className="text-lg font-semibold text-[#17251b]">최근 작업 요약</h2>
       <div className="mt-3 grid grid-cols-2 gap-2">
         {rows.map(([label, value]) => (
-          <div key={label} className="rounded-md bg-[#f7f9f5] px-3 py-2 text-sm">
+          <div
+            key={label}
+            className="rounded-md bg-[#f7f9f5] px-3 py-2 text-sm"
+          >
             <p className="font-medium text-[#425348]">{label}</p>
             <p className="mt-1 text-xs text-[#68766d]">{value}</p>
           </div>
@@ -110,7 +131,11 @@ export function RecentWorkSummary() {
 
 function OrchidMiniTable({ items }: { items: FarmStatusOrchidGroupItem[] }) {
   if (items.length === 0) {
-    return <p className="rounded-md bg-[#f7f9f5] p-4 text-center text-sm text-[#6a766d]">선택한 범위에 난 묶음이 없습니다.</p>;
+    return (
+      <p className="rounded-md bg-[#f7f9f5] p-4 text-center text-sm text-[#6a766d]">
+        선택한 범위에 난 묶음이 없습니다.
+      </p>
+    );
   }
 
   return (
@@ -129,8 +154,12 @@ function OrchidMiniTable({ items }: { items: FarmStatusOrchidGroupItem[] }) {
             <td className="rounded-l-md px-2 py-2 text-[#4f6255]">
               {item.physicalBedName} {item.bedZoneName}
             </td>
-            <td className="px-2 py-2 font-semibold text-[#1e2d23]">{item.varietyName}</td>
-            <td className="px-2 py-2 text-right text-[#1e2d23]">{item.quantity}</td>
+            <td className="px-2 py-2 font-semibold text-[#1e2d23]">
+              {item.varietyName}
+            </td>
+            <td className="px-2 py-2 text-right text-[#1e2d23]">
+              {item.quantity}
+            </td>
             <td className="rounded-r-md px-2 py-2">
               <StatusBadge status={item.status} />
             </td>
@@ -141,18 +170,40 @@ function OrchidMiniTable({ items }: { items: FarmStatusOrchidGroupItem[] }) {
   );
 }
 
-function PanelMetric({ label, value, compact = false }: { label: string; value: string; compact?: boolean }) {
+function PanelMetric({
+  label,
+  value,
+  compact = false,
+}: {
+  label: string;
+  value: string;
+  compact?: boolean;
+}) {
   return (
     <div className="border-r border-[#edf1ea] px-2 py-3 last:border-r-0">
       <p className="text-[11px] font-semibold text-[#7a877e]">{label}</p>
-      <p className={`mt-1 font-semibold text-[#17251b] ${compact ? "text-xs" : "text-base"}`}>{value}</p>
+      <p
+        className={`mt-1 font-semibold text-[#17251b] ${compact ? "text-xs" : "text-base"}`}
+      >
+        {value}
+      </p>
     </div>
   );
 }
 
-function DisabledTab({ active = false, label }: { active?: boolean; label: string }) {
+function DisabledTab({
+  active = false,
+  label,
+}: {
+  active?: boolean;
+  label: string;
+}) {
   return (
-    <button className={`rounded-md px-3 py-2 text-xs font-semibold ${active ? "bg-[#256ff0] text-white" : "bg-[#eef4ed] text-[#48604f]"}`} disabled type="button">
+    <button
+      className={`rounded-md px-3 py-2 text-xs font-semibold ${active ? "bg-[#256ff0] text-white" : "bg-[#eef4ed] text-[#48604f]"}`}
+      disabled
+      type="button"
+    >
       {label}
     </button>
   );
@@ -160,6 +211,11 @@ function DisabledTab({ active = false, label }: { active?: boolean; label: strin
 
 function StatusBadge({ status }: { status: string }) {
   const isNormal = status === "정상";
-  return <span className={`rounded-full px-2 py-0.5 text-[11px] font-semibold ${isNormal ? "bg-[#e8f7e8] text-[#16853b]" : "bg-[#fff0df] text-[#c15b10]"}`}>{status}</span>;
+  return (
+    <span
+      className={`rounded-full px-2 py-0.5 text-[11px] font-semibold ${isNormal ? "bg-[#e8f7e8] text-[#16853b]" : "bg-[#fff0df] text-[#c15b10]"}`}
+    >
+      {status}
+    </span>
+  );
 }
-

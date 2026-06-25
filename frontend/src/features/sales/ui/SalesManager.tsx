@@ -7,7 +7,10 @@ import { CustomerList } from "./components/CustomerList";
 import { SalesSlipCreateForm } from "./components/SalesSlipCreateForm";
 import { SalesSlipList } from "./components/SalesSlipList";
 
-export function SalesManager({ initialCustomers, initialSalesSlips }: SalesManagerProps) {
+export function SalesManager({
+  initialCustomers,
+  initialSalesSlips,
+}: SalesManagerProps) {
   const sales = useSalesManager(initialCustomers, initialSalesSlips);
 
   return (

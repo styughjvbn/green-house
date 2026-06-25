@@ -15,4 +15,3 @@ export type FarmStatusMapProps = {
   initialSelection: FarmStatusOrchidGroupList | null;
   initialZoom: FarmStatusZoomData | null;
 };
-
