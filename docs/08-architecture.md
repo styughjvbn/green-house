@@ -11,10 +11,10 @@
 - Next.js
 - TypeScript
 - Tailwind CSS
-- React Hook Form
-- Zod
-- 드래그 앤 드롭 라이브러리
-  - 후보: dnd-kit
+- lucide-react 아이콘
+- HTML5 Drag and Drop API
+
+현재 MVP 구현은 React Hook Form, Zod, dnd-kit을 사용하지 않고 React 상태와 브라우저 기본 드래그 앤 드롭으로 구성한다. 입력 검증은 백엔드 Bean Validation과 프론트의 기본 필수 입력을 조합한다.
 
 ### Backend
 
@@ -22,8 +22,9 @@
 - Java 21
 - Spring Data JPA
 - Bean Validation
-- Spring Security, 초기에는 간단한 로그인 수준
 - PostgreSQL
+
+현재 MVP 구현에서는 인증/권한을 적용하지 않는다. Spring Security 기반 로그인은 운영 전 별도 단계로 둔다.
 
 ### Infra
 
