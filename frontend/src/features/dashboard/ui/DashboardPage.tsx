@@ -20,14 +20,6 @@ export function DashboardPage(props: DashboardPageProps) {
 
   return (
     <main className="space-y-4">
-      <section>
-        <h1 className="text-2xl font-bold text-[#17251b]">
-          안녕하세요, 관리자님! <span className="text-[#39b85b]">🌱</span>
-        </h1>
-        <p className="mt-1 text-sm text-[#5c6a60]">
-          오늘도 건강한 난 농장을 만들어가세요.
-        </p>
-      </section>
 
       <SummaryCards
         bedZoneDetail={summaryCards.bedZones}
