@@ -46,6 +46,7 @@ export function useWorkRecordManager({
   const [selectedRecordId, setSelectedRecordId] = useState<number | null>(
     initialRecords[0]?.id ?? null,
   );
+  const [detailOpen, setDetailOpen] = useState(Boolean(initialRecords[0]));
   const [showCreateForm, setShowCreateForm] = useState(false);
   const [saving, setSaving] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
@@ -131,6 +132,15 @@ export function useWorkRecordManager({
     setFilters(createInitialWorkRecordFilters());
   }
 
+  function selectRecord(recordId: number) {
+    setSelectedRecordId(recordId);
+    setDetailOpen(true);
+  }
+
+  function closeDetail() {
+    setDetailOpen(false);
+  }
+
   async function submitWorkRecord(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setSaving(true);
@@ -142,6 +152,7 @@ export function useWorkRecordManager({
       );
       setRecords((current) => [createdRecord, ...current]);
       setSelectedRecordId(createdRecord.id);
+      setDetailOpen(true);
       setShowCreateForm(false);
       setForm((current) => resetWorkRecordFormAfterSubmit(current));
     } catch (error) {
@@ -159,6 +170,7 @@ export function useWorkRecordManager({
     selectedRecord,
     form,
     filters,
+    detailOpen,
     showCreateForm,
     saving,
     errorMessage,
@@ -168,7 +180,8 @@ export function useWorkRecordManager({
     safePhysicalBedId,
     safeBedZoneId,
     safeOrchidGroupId,
-    selectRecord: setSelectedRecordId,
+    selectRecord,
+    closeDetail,
     setShowCreateForm,
     updateFilters,
     resetFilters,

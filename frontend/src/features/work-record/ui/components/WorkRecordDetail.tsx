@@ -8,11 +8,26 @@ import {
   formatTargetType,
 } from "../../lib/workRecordForm";
 
-export function WorkRecordDetail({ record }: { record: WorkRecord | null }) {
+type WorkRecordDetailProps = {
+  record: WorkRecord | null;
+  onClose: () => void;
+};
+
+export function WorkRecordDetail({ onClose, record }: WorkRecordDetailProps) {
   if (!record) {
     return (
       <aside className="rounded-md border border-[#dfe5dc] bg-white p-5 text-sm text-[#5c6a60] shadow-sm">
-        선택한 작업 이력이 없습니다.
+        <div className="flex items-center justify-between gap-3">
+          <span>선택한 작업 이력이 없습니다.</span>
+          <button
+            className="h-8 w-8 rounded-md text-[#6a766e]"
+            type="button"
+            aria-label="닫기"
+            onClick={onClose}
+          >
+            <X className="h-4 w-4" strokeWidth={1.8} aria-hidden="true" />
+          </button>
+        </div>
       </aside>
     );
   }
@@ -25,6 +40,7 @@ export function WorkRecordDetail({ record }: { record: WorkRecord | null }) {
           className="h-8 w-8 rounded-md text-[#6a766e]"
           type="button"
           aria-label="닫기"
+          onClick={onClose}
         >
           <X className="h-4 w-4" strokeWidth={1.8} aria-hidden="true" />
         </button>
@@ -38,17 +54,25 @@ export function WorkRecordDetail({ record }: { record: WorkRecord | null }) {
       </div>
 
       <dl className="mt-6 space-y-5 text-sm">
-        <DetailRow label="대상 유형" value={formatTargetType(record.targetType)} />
+        <DetailRow
+          label="대상 유형"
+          value={formatTargetType(record.targetType)}
+        />
         <DetailRow label="세부 대상" value={formatTarget(record)} />
         <DetailRow label="약제 / 자재" value={record.materialName ?? "-"} />
-        <DetailRow label="농도 / 희석배수" value={record.dilutionRatio ?? "-"} />
+        <DetailRow
+          label="농도 / 희석배수"
+          value={record.dilutionRatio ?? "-"}
+        />
         <DetailRow label="수량" value={record.quantity ?? "-"} />
         <DetailRow label="작업자" value={record.worker ?? "-"} />
         {record.fromBedZoneId || record.toBedZoneId ? (
           <>
             <DetailRow
               label="이전 위치"
-              value={record.fromBedZoneId ? `구역 #${record.fromBedZoneId}` : "-"}
+              value={
+                record.fromBedZoneId ? `구역 #${record.fromBedZoneId}` : "-"
+              }
             />
             <DetailRow
               label="새 위치"
@@ -111,7 +135,9 @@ function DetailRow({
   return (
     <div className="grid grid-cols-[90px_minmax(0,1fr)] gap-4">
       <dt className="text-[#6a766e]">{label}</dt>
-      <dd className={`font-semibold text-[#344138] ${multiline ? "whitespace-pre-line" : ""}`}>
+      <dd
+        className={`font-semibold text-[#344138] ${multiline ? "whitespace-pre-line" : ""}`}
+      >
         {value}
       </dd>
     </div>

@@ -41,13 +41,26 @@ export function WorkRecordManager(props: WorkRecordManagerProps) {
         />
       ) : null}
 
-      <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_300px]">
+      <div
+        className={`grid gap-4 ${
+          manager.detailOpen
+            ? "xl:grid-cols-[minmax(0,1fr)_400px]"
+            : "xl:grid-cols-1"
+        }`}
+      >
         <WorkRecordList
           records={manager.filteredRecords}
-          selectedRecordId={manager.selectedRecord?.id ?? null}
+          selectedRecordId={
+            manager.detailOpen ? (manager.selectedRecord?.id ?? null) : null
+          }
           onSelect={manager.selectRecord}
         />
-        <WorkRecordDetail record={manager.selectedRecord} />
+        {manager.detailOpen ? (
+          <WorkRecordDetail
+            record={manager.selectedRecord}
+            onClose={manager.closeDetail}
+          />
+        ) : null}
       </div>
     </div>
   );
