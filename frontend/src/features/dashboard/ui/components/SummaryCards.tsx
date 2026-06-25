@@ -57,11 +57,11 @@ function SummaryCard({
   const color = toneText(accent);
 
   return (
-    <div className="min-h-32 rounded-lg border border-[#dfe5dc] bg-white p-4 shadow-sm">
+    <div className="min-h-20 rounded-lg border border-[#dfe5dc] bg-white p-4 shadow-sm">
       <div className="flex items-start justify-between gap-3">
         <div>
           <p className="text-sm font-semibold text-[#435047]">{label}</p>
-          <p className="mt-3 text-3xl font-bold text-[#17251b]">
+          <p className="mt-1 text-3xl font-bold text-[#17251b]">
             <span className={color}>{value}</span>
             <span className="ml-1 text-sm font-medium text-[#344138]">{unit}</span>
           </p>
@@ -69,7 +69,7 @@ function SummaryCard({
         <Icon className={`h-8 w-8 ${color}`} strokeWidth={1.8} aria-hidden="true" />
       </div>
       {detail ? (
-        <div className="mt-5 flex justify-between gap-2 text-xs font-semibold">
+        <div className="mt-2 flex justify-between gap-2 text-xs font-semibold">
           {detail.map(([name, count, tone]) => (
             <span key={name} className={toneText(tone)}>
               {name} {count}
@@ -77,7 +77,7 @@ function SummaryCard({
           ))}
         </div>
       ) : (
-        <div className="mt-5 flex items-center justify-between text-xs font-semibold">
+        <div className="mt-2 flex items-center justify-between text-xs font-semibold">
           <span className="text-[#5c6a60]">지난주 대비</span>
           <span className="text-[#159447]">▲ {change}</span>
         </div>
