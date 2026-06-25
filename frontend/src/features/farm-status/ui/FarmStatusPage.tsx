@@ -4,7 +4,6 @@
   FarmStatusOrchidGroupList,
   FarmStatusZoomData,
 } from "@/entities/farm/types";
-import { PageHeader } from "@/widgets/page-header";
 import { FarmStatusMap } from "./FarmStatusMap";
 
 type FarmStatusPageProps = {
@@ -22,8 +21,6 @@ export function FarmStatusPage({
 }: FarmStatusPageProps) {
   return (
     <main className="space-y-5">
-      <PageHeader title="농장 현황" description="전체 농장 구조와 난 묶음 현황을 한눈에 확인하세요." />
-
       <section className="grid gap-4 md:grid-cols-3 xl:grid-cols-6">
         <SummaryCard
           label="동 수"

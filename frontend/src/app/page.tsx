@@ -1,6 +1,5 @@
 import Link from "next/link";
 import { fetchApi } from "@/shared/api/client";
-import { PageHeader } from "@/widgets/page-header";
 import type { DashboardSummary } from "@/entities/farm/types";
 
 export const dynamic = "force-dynamic";
@@ -41,8 +40,6 @@ export default async function DashboardPage() {
 
   return (
     <main className="space-y-8">
-      <PageHeader title="대시보드" description="전체 농장 구조와 난 묶음 분포를 조회합니다." />
-
       <section className="grid gap-4 md:grid-cols-4">
         {summaryItems.map((item) => (
           <div
