@@ -11,22 +11,22 @@ import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 @Configuration
 public class CorsConfig implements WebMvcConfigurer {
 
-	private final String[] frontendOrigins;
+	private final String[] frontendOriginPatterns;
 
-	public CorsConfig(@Value("${app.cors.frontend-origins:http://localhost:3000}") String frontendOrigins) {
-		this.frontendOrigins = parseOrigins(frontendOrigins);
+	public CorsConfig(@Value("${app.cors.frontend-origin-patterns:http://localhost:*}") String frontendOriginPatterns) {
+		this.frontendOriginPatterns = parseOrigins(frontendOriginPatterns);
 	}
 
 	@Override
 	public void addCorsMappings(CorsRegistry registry) {
 		registry.addMapping("/api/**")
-			.allowedOrigins(frontendOrigins)
+			.allowedOriginPatterns(frontendOriginPatterns)
 			.allowedMethods("GET", "POST", "PATCH", "DELETE", "OPTIONS")
 			.allowedHeaders("*")
 			.allowCredentials(false)
 			.maxAge(3600);
 		registry.addMapping("/actuator/**")
-			.allowedOrigins(frontendOrigins)
+			.allowedOriginPatterns(frontendOriginPatterns)
 			.allowedMethods("GET", "OPTIONS")
 			.allowedHeaders("*")
 			.allowCredentials(false)
