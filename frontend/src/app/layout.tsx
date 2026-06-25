@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Geist } from "next/font/google";
+import { FontScaleInitializer } from "@/features/settings";
 import { AppShell } from "@/widgets/app-shell/AppShell";
 import "./globals.css";
 
@@ -20,6 +21,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="ko" className={`${geistSans.variable} h-full antialiased`}>
+      <FontScaleInitializer />
       <body className="min-h-full bg-[#f7f8f6] text-[#1f2a24]">
         <AppShell>{children}</AppShell>
       </body>

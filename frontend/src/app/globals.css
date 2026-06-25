@@ -3,6 +3,8 @@
 :root {
   --background: #f7f8f6;
   --foreground: #1f2a24;
+  --font-scale: 1;
+  font-size: calc(16px * var(--font-scale));
 }
 
 @theme inline {
