@@ -3,30 +3,52 @@
 import type { WorkRecordManagerProps } from "../model/types";
 import { useWorkRecordManager } from "../model/useWorkRecordManager";
 import { WorkRecordCreateForm } from "./components/WorkRecordCreateForm";
+import { WorkRecordDetail } from "./components/WorkRecordDetail";
+import { WorkRecordFilters } from "./components/WorkRecordFilters";
 import { WorkRecordList } from "./components/WorkRecordList";
+import { WorkRecordToolbar } from "./components/WorkRecordToolbar";
 
 export function WorkRecordManager(props: WorkRecordManagerProps) {
   const manager = useWorkRecordManager(props);
 
   return (
-    <div className="grid gap-5 xl:grid-cols-[420px_minmax(0,1fr)]">
-      <WorkRecordCreateForm
-        bedZones={manager.bedZones}
-        errorMessage={manager.errorMessage}
-        form={manager.form}
-        houses={props.houses}
-        orchidGroups={manager.orchidGroups}
-        physicalBeds={manager.physicalBeds}
-        safeBedZoneId={manager.safeBedZoneId}
-        safeOrchidGroupId={manager.safeOrchidGroupId}
-        safePhysicalBedId={manager.safePhysicalBedId}
-        saving={manager.saving}
+    <div className="space-y-4">
+      <WorkRecordFilters
+        filters={manager.filters}
         workTypes={props.workTypes}
-        onChange={manager.updateForm}
-        onSubmit={manager.submitWorkRecord}
+        onChange={manager.updateFilters}
+        onReset={manager.resetFilters}
+      />
+      <WorkRecordToolbar
+        onCreate={() => manager.setShowCreateForm((current) => !current)}
       />
 
-      <WorkRecordList records={manager.records} />
+      {manager.showCreateForm ? (
+        <WorkRecordCreateForm
+          bedZones={manager.bedZones}
+          errorMessage={manager.errorMessage}
+          form={manager.form}
+          houses={props.houses}
+          orchidGroups={manager.orchidGroups}
+          physicalBeds={manager.physicalBeds}
+          safeBedZoneId={manager.safeBedZoneId}
+          safeOrchidGroupId={manager.safeOrchidGroupId}
+          safePhysicalBedId={manager.safePhysicalBedId}
+          saving={manager.saving}
+          workTypes={props.workTypes}
+          onChange={manager.updateForm}
+          onSubmit={manager.submitWorkRecord}
+        />
+      ) : null}
+
+      <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_300px]">
+        <WorkRecordList
+          records={manager.filteredRecords}
+          selectedRecordId={manager.selectedRecord?.id ?? null}
+          onSelect={manager.selectRecord}
+        />
+        <WorkRecordDetail record={manager.selectedRecord} />
+      </div>
     </div>
   );
 }

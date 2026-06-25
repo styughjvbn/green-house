@@ -12,7 +12,9 @@ import {
   getWorkRecordTargetOptions,
 } from "../api/workRecordApi";
 import {
+  createInitialWorkRecordFilters,
   createInitialWorkRecordForm,
+  filterWorkRecords,
   getSelectedTargetId,
   resetWorkRecordFormAfterSubmit,
   resolveSafeBedZoneId,
@@ -20,7 +22,11 @@ import {
   resolveSafePhysicalBedId,
   toCreateWorkRecordPayload,
 } from "../lib/workRecordForm";
-import type { WorkRecordFormState, WorkRecordManagerProps } from "./types";
+import type {
+  WorkRecordFilterState,
+  WorkRecordFormState,
+  WorkRecordManagerProps,
+} from "./types";
 
 export function useWorkRecordManager({
   initialRecords,
@@ -34,6 +40,13 @@ export function useWorkRecordManager({
   const [form, setForm] = useState<WorkRecordFormState>(() =>
     createInitialWorkRecordForm(workTypes, houses),
   );
+  const [filters, setFilters] = useState<WorkRecordFilterState>(() =>
+    createInitialWorkRecordFilters(),
+  );
+  const [selectedRecordId, setSelectedRecordId] = useState<number | null>(
+    initialRecords[0]?.id ?? null,
+  );
+  const [showCreateForm, setShowCreateForm] = useState(false);
   const [saving, setSaving] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
@@ -58,6 +71,15 @@ export function useWorkRecordManager({
       ),
     [form, safePhysicalBedId, safeBedZoneId, safeOrchidGroupId],
   );
+  const filteredRecords = useMemo(
+    () => filterWorkRecords(records, filters),
+    [records, filters],
+  );
+  const selectedRecord =
+    records.find((record) => record.id === selectedRecordId) ??
+    filteredRecords[0] ??
+    records[0] ??
+    null;
 
   useEffect(() => {
     if (!form.houseId) {
@@ -98,6 +120,17 @@ export function useWorkRecordManager({
     setForm((current) => ({ ...current, [field]: value }));
   }
 
+  function updateFilters<K extends keyof WorkRecordFilterState>(
+    field: K,
+    value: WorkRecordFilterState[K],
+  ) {
+    setFilters((current) => ({ ...current, [field]: value }));
+  }
+
+  function resetFilters() {
+    setFilters(createInitialWorkRecordFilters());
+  }
+
   async function submitWorkRecord(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setSaving(true);
@@ -108,6 +141,8 @@ export function useWorkRecordManager({
         toCreateWorkRecordPayload(form, selectedTargetId),
       );
       setRecords((current) => [createdRecord, ...current]);
+      setSelectedRecordId(createdRecord.id);
+      setShowCreateForm(false);
       setForm((current) => resetWorkRecordFormAfterSubmit(current));
     } catch (error) {
       setErrorMessage(
@@ -120,7 +155,11 @@ export function useWorkRecordManager({
 
   return {
     records,
+    filteredRecords,
+    selectedRecord,
     form,
+    filters,
+    showCreateForm,
     saving,
     errorMessage,
     physicalBeds,
@@ -129,6 +168,10 @@ export function useWorkRecordManager({
     safePhysicalBedId,
     safeBedZoneId,
     safeOrchidGroupId,
+    selectRecord: setSelectedRecordId,
+    setShowCreateForm,
+    updateFilters,
+    resetFilters,
     updateForm,
     submitWorkRecord,
   };

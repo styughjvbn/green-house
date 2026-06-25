@@ -45,3 +45,12 @@ export type CreateWorkRecordPayload = {
   worker: string | null;
   memo: string | null;
 };
+
+export type WorkRecordFilterState = {
+  targetType: "" | WorkRecordTargetType;
+  workType: string;
+  from: string;
+  to: string;
+  worker: string;
+  keyword: string;
+};
