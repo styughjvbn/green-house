@@ -198,9 +198,11 @@ export function formatTargetType(targetType: WorkRecordTargetType) {
 }
 
 export function formatMaterialSummary(record: WorkRecord) {
-  return [record.materialName, record.dilutionRatio, record.quantity]
-    .filter(Boolean)
-    .join(" / ") || "-";
+  return (
+    [record.materialName, record.dilutionRatio, record.quantity]
+      .filter(Boolean)
+      .join(" / ") || "-"
+  );
 }
 
 function resolveSafeOptionId(currentValue: string, ids: number[]) {

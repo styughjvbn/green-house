@@ -81,7 +81,8 @@ export function SalesSlipList({
 }
 
 function StatusBadge({ value }: { value: string }) {
-  const tone = value === "미입금" ? "orange" : value === "작성중" ? "blue" : "green";
+  const tone =
+    value === "미입금" ? "orange" : value === "작성중" ? "blue" : "green";
   const classes = {
     blue: "bg-[#e6f0ff] text-[#246df2]",
     green: "bg-[#e7f7e8] text-[#16853b]",

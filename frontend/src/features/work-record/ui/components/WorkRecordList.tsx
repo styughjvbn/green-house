@@ -1,10 +1,7 @@
 "use client";
 
 import type { WorkRecord } from "@/entities/farm/types";
-import {
-  formatTarget,
-  formatTargetType,
-} from "../../lib/workRecordForm";
+import { formatTarget, formatTargetType } from "../../lib/workRecordForm";
 
 type WorkRecordListProps = {
   records: WorkRecord[];
@@ -57,7 +54,9 @@ export function WorkRecordList({
                   <td className="px-3 py-3">{formatTarget(record)}</td>
                   <td className="px-3 py-3">{record.materialName ?? "-"}</td>
                   <td className="px-3 py-3">
-                    {[record.dilutionRatio, record.quantity].filter(Boolean).join(" / ") || "-"}
+                    {[record.dilutionRatio, record.quantity]
+                      .filter(Boolean)
+                      .join(" / ") || "-"}
                   </td>
                   <td className="px-3 py-3">{record.worker ?? "-"}</td>
                   <td className="px-3 py-3">{record.memo ?? "-"}</td>
@@ -93,11 +92,36 @@ export function WorkRecordList({
           전체 {records.length}건
         </span>
         <div className="flex items-center gap-2">
-          <button className="h-9 w-9 rounded-md border border-[#dfe5dc]" type="button">‹</button>
-          <button className="h-9 w-9 rounded-md bg-[#159447] font-bold text-white" type="button">1</button>
-          <button className="h-9 w-9 rounded-md border border-[#dfe5dc]" type="button">2</button>
-          <button className="h-9 w-9 rounded-md border border-[#dfe5dc]" type="button">3</button>
-          <button className="h-9 w-9 rounded-md border border-[#dfe5dc]" type="button">›</button>
+          <button
+            className="h-9 w-9 rounded-md border border-[#dfe5dc]"
+            type="button"
+          >
+            ‹
+          </button>
+          <button
+            className="h-9 w-9 rounded-md bg-[#159447] font-bold text-white"
+            type="button"
+          >
+            1
+          </button>
+          <button
+            className="h-9 w-9 rounded-md border border-[#dfe5dc]"
+            type="button"
+          >
+            2
+          </button>
+          <button
+            className="h-9 w-9 rounded-md border border-[#dfe5dc]"
+            type="button"
+          >
+            3
+          </button>
+          <button
+            className="h-9 w-9 rounded-md border border-[#dfe5dc]"
+            type="button"
+          >
+            ›
+          </button>
         </div>
         <span className="rounded-md border border-[#dfe5dc] px-4 py-2 text-[#344138]">
           페이지당 10개

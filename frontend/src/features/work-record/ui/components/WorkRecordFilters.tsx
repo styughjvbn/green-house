@@ -20,8 +20,8 @@ export function WorkRecordFilters({
   onReset: () => void;
 }) {
   const selectedTargetLabel =
-    targetOptions.find((option) => option.value === filters.targetType)?.label ??
-    "전체 농장";
+    targetOptions.find((option) => option.value === filters.targetType)
+      ?.label ?? "전체 농장";
 
   return (
     <section className="rounded-md border border-[#dfe5dc] bg-white p-4 shadow-sm">
@@ -39,96 +39,100 @@ export function WorkRecordFilters({
           ))}
         </FilterSelect>
 
-          <div>
-            <p className="mb-2 text-sm font-semibold text-[#344138]">기간</p>
-            <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-2">
-              <input
-                className="h-10 rounded-md border border-[#cfd8cc] px-3 text-sm"
-                type="date"
-                value={filters.from}
-                onChange={(event) => onChange("from", event.target.value)}
-              />
-              <span className="text-[#7a8680]">~</span>
-              <input
-                className="h-10 rounded-md border border-[#cfd8cc] px-3 text-sm"
-                type="date"
-                value={filters.to}
-                onChange={(event) => onChange("to", event.target.value)}
-              />
-            </div>
+        <div>
+          <p className="mb-2 text-sm font-semibold text-[#344138]">기간</p>
+          <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-2">
+            <input
+              className="h-10 rounded-md border border-[#cfd8cc] px-3 text-sm"
+              type="date"
+              value={filters.from}
+              onChange={(event) => onChange("from", event.target.value)}
+            />
+            <span className="text-[#7a8680]">~</span>
+            <input
+              className="h-10 rounded-md border border-[#cfd8cc] px-3 text-sm"
+              type="date"
+              value={filters.to}
+              onChange={(event) => onChange("to", event.target.value)}
+            />
           </div>
-
-          <label>
-            <span className="mb-2 block text-sm font-semibold text-[#344138]">
-              작업자
-            </span>
-            <input
-              className="h-10 w-full rounded-md border border-[#cfd8cc] px-3 text-sm"
-              placeholder="전체"
-              value={filters.worker}
-              onChange={(event) => onChange("worker", event.target.value)}
-            />
-          </label>
-
-          <label>
-            <span className="mb-2 block text-sm font-semibold text-[#344138]">
-              키워드
-            </span>
-            <input
-              className="h-10 w-full rounded-md border border-[#cfd8cc] px-3 text-sm"
-              placeholder="약제명, 메모 검색"
-              value={filters.keyword}
-              onChange={(event) => onChange("keyword", event.target.value)}
-            />
-          </label>
-
-          <button
-            className="mt-7 inline-flex h-10 items-center justify-center gap-2 rounded-md bg-[#159447] px-6 text-sm font-semibold text-white"
-            type="button"
-          >
-            <Search className="h-4 w-4" strokeWidth={1.8} aria-hidden="true" />
-            검색
-          </button>
-          <button
-            className="mt-7 inline-flex h-10 items-center justify-center gap-2 rounded-md border border-[#dfe5dc] bg-white px-5 text-sm font-semibold text-[#344138]"
-            type="button"
-            onClick={onReset}
-          >
-            <RefreshCw className="h-4 w-4" strokeWidth={1.8} aria-hidden="true" />
-            초기화
-          </button>
         </div>
 
-        <details className="group mt-3 rounded-md border border-[#e6ebe3] bg-[#fbfcfa]">
-          <summary className="flex cursor-pointer list-none items-center justify-between gap-3 px-3 py-2 text-sm font-bold text-[#344138]">
-            <span>
-              대상 선택
-              <span className="ml-2 rounded-full bg-[#eef7ec] px-2 py-0.5 text-xs text-[#159447]">
-                {selectedTargetLabel}
-              </span>
+        <label>
+          <span className="mb-2 block text-sm font-semibold text-[#344138]">
+            작업자
+          </span>
+          <input
+            className="h-10 w-full rounded-md border border-[#cfd8cc] px-3 text-sm"
+            placeholder="전체"
+            value={filters.worker}
+            onChange={(event) => onChange("worker", event.target.value)}
+          />
+        </label>
+
+        <label>
+          <span className="mb-2 block text-sm font-semibold text-[#344138]">
+            키워드
+          </span>
+          <input
+            className="h-10 w-full rounded-md border border-[#cfd8cc] px-3 text-sm"
+            placeholder="약제명, 메모 검색"
+            value={filters.keyword}
+            onChange={(event) => onChange("keyword", event.target.value)}
+          />
+        </label>
+
+        <button
+          className="mt-7 inline-flex h-10 items-center justify-center gap-2 rounded-md bg-[#159447] px-6 text-sm font-semibold text-white"
+          type="button"
+        >
+          <Search className="h-4 w-4" strokeWidth={1.8} aria-hidden="true" />
+          검색
+        </button>
+        <button
+          className="mt-7 inline-flex h-10 items-center justify-center gap-2 rounded-md border border-[#dfe5dc] bg-white px-5 text-sm font-semibold text-[#344138]"
+          type="button"
+          onClick={onReset}
+        >
+          <RefreshCw className="h-4 w-4" strokeWidth={1.8} aria-hidden="true" />
+          초기화
+        </button>
+      </div>
+
+      <details className="group mt-3 rounded-md border border-[#e6ebe3] bg-[#fbfcfa]">
+        <summary className="flex cursor-pointer list-none items-center justify-between gap-3 px-3 py-2 text-sm font-bold text-[#344138]">
+          <span>
+            대상 선택
+            <span className="ml-2 rounded-full bg-[#eef7ec] px-2 py-0.5 text-xs text-[#159447]">
+              {selectedTargetLabel}
             </span>
-            <ChevronDown className="h-4 w-4 transition group-open:rotate-180" strokeWidth={1.8} aria-hidden="true" />
-          </summary>
-          <div className="border-t border-[#e6ebe3] px-3 py-3">
-            <div className="grid gap-2 md:grid-cols-5">
-              {targetOptions.map((option) => (
-                <label
-                  key={option.value}
-                  className="flex h-9 items-center gap-2 rounded-md border border-[#dfe5dc] bg-white px-3 text-sm font-semibold text-[#344138]"
-                >
-                  <input
-                    checked={filters.targetType === option.value}
-                    className="accent-[#159447]"
-                    name="targetTypeFilter"
-                    type="radio"
-                    onChange={() => onChange("targetType", option.value)}
-                  />
-                  {option.label}
-                </label>
-              ))}
-            </div>
+          </span>
+          <ChevronDown
+            className="h-4 w-4 transition group-open:rotate-180"
+            strokeWidth={1.8}
+            aria-hidden="true"
+          />
+        </summary>
+        <div className="border-t border-[#e6ebe3] px-3 py-3">
+          <div className="grid gap-2 md:grid-cols-5">
+            {targetOptions.map((option) => (
+              <label
+                key={option.value}
+                className="flex h-9 items-center gap-2 rounded-md border border-[#dfe5dc] bg-white px-3 text-sm font-semibold text-[#344138]"
+              >
+                <input
+                  checked={filters.targetType === option.value}
+                  className="accent-[#159447]"
+                  name="targetTypeFilter"
+                  type="radio"
+                  onChange={() => onChange("targetType", option.value)}
+                />
+                {option.label}
+              </label>
+            ))}
           </div>
-        </details>
+        </div>
+      </details>
     </section>
   );
 }

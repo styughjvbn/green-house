@@ -117,12 +117,12 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     <div className="flex min-h-screen bg-[#f7f8f5]">
       <aside className="hidden w-44 shrink-0 bg-[#003b1f] px-2 py-4 lg:block">
         <div className="flex items-center gap-3 px-2 py-2">
-          <div className="flex h-10 w-10 shrink-0 items-center justify-center ">
+          <div className="flex h-10 w-10 shrink-0 items-center justify-center">
             <img src="/flower.png" alt="Logo" className="h-10 w-10" />
           </div>
 
           <div>
-            <p className="text-base font-semibold leading-none text-white">
+            <p className="text-base leading-none font-semibold text-white">
               난 농장
             </p>
             <p className="mt-2 text-xs text-[#c8d8cd]">관리 시스템</p>

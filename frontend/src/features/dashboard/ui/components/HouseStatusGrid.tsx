@@ -1,6 +1,10 @@
 import Link from "next/link";
 import type { HouseStatusSummary } from "@/entities/farm/types";
-import { dotClass, getHouseTone, houseToneClass } from "../../lib/dashboardView";
+import {
+  dotClass,
+  getHouseTone,
+  houseToneClass,
+} from "../../lib/dashboardView";
 import { DashboardLegend, DashboardPanel } from "./DashboardPanel";
 
 export function HouseStatusGrid({ houses }: { houses: HouseStatusSummary[] }) {
@@ -25,13 +29,18 @@ export function HouseStatusGrid({ houses }: { houses: HouseStatusSummary[] }) {
               className={`relative flex h-16 items-center justify-center rounded-t-2xl border text-lg font-bold ${houseToneClass(tone)}`}
               href={`/orchid-groups?houseId=${house.houseId}`}
             >
-              <span className={`absolute top-2 h-2 w-2 rounded-full ${dotClass(tone)}`} />
+              <span
+                className={`absolute top-2 h-2 w-2 rounded-full ${dotClass(tone)}`}
+              />
               {house.houseNumber}동
             </Link>
           );
         })}
       </div>
-      <Link className="mt-4 flex h-10 items-center justify-center rounded-md border border-[#dfe5dc] text-sm font-semibold text-[#344138]" href="/farm-status">
+      <Link
+        className="mt-4 flex h-10 items-center justify-center rounded-md border border-[#dfe5dc] text-sm font-semibold text-[#344138]"
+        href="/farm-status"
+      >
         농장 현황 전체 보기
       </Link>
     </DashboardPanel>

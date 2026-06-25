@@ -2,11 +2,7 @@
 
 import { Download, List, Plus } from "lucide-react";
 
-export function WorkRecordToolbar({
-  onCreate,
-}: {
-  onCreate: () => void;
-}) {
+export function WorkRecordToolbar({ onCreate }: { onCreate: () => void }) {
   return (
     <section className="flex flex-wrap items-center justify-between gap-3">
       <div className="flex gap-2">

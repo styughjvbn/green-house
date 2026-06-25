@@ -12,7 +12,13 @@ import {
   toCreateCustomerPayload,
   toCreateSalesSlipPayload,
 } from "../lib/salesForm";
-import type { CustomerForm, SalesFilterState, SalesItemForm, SalesSlipForm, SalesTab } from "./types";
+import type {
+  CustomerForm,
+  SalesFilterState,
+  SalesItemForm,
+  SalesSlipForm,
+  SalesTab,
+} from "./types";
 
 export function useSalesManager(
   initialCustomers: Customer[],

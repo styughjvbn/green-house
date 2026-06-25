@@ -7,27 +7,42 @@ export function createDashboardViewModel({
   summary,
   workRecords,
 }: DashboardPageProps) {
-  const warningHouses = mapData.houses.filter((house) => house.warningCount > 0);
+  const warningHouses = mapData.houses.filter(
+    (house) => house.warningCount > 0,
+  );
 
   return {
     recentSalesSlips: salesSlips.slice(0, 5),
     recentWorkRecords: workRecords.slice(0, 5),
     salesTotal: salesSlips.reduce((sum, slip) => sum + slip.totalAmount, 0),
-    unpaidCount: salesSlips.filter((slip) => slip.paymentStatus === "미입금").length,
+    unpaidCount: salesSlips.filter((slip) => slip.paymentStatus === "미입금")
+      .length,
     warningHouses,
     summaryCards: {
       houses: [
-        ["정상", Math.max(summary.houseCount - warningHouses.length, 0), "green"],
+        [
+          "정상",
+          Math.max(summary.houseCount - warningHouses.length, 0),
+          "green",
+        ],
         ["주의", warningHouses.length, "orange"],
         ["이상", summary.warningCount, "red"],
       ] as SummaryDetail,
       physicalBeds: [
-        ["정상", Math.max(summary.physicalBedCount - summary.warningCount, 0), "green"],
+        [
+          "정상",
+          Math.max(summary.physicalBedCount - summary.warningCount, 0),
+          "green",
+        ],
         ["주의", summary.warningCount, "orange"],
         ["이상", 0, "red"],
       ] as SummaryDetail,
       bedZones: [
-        ["정상", Math.max(summary.bedZoneCount - summary.warningCount, 0), "green"],
+        [
+          "정상",
+          Math.max(summary.bedZoneCount - summary.warningCount, 0),
+          "green",
+        ],
         ["주의", summary.warningCount, "orange"],
         ["이상", 0, "red"],
       ] as SummaryDetail,

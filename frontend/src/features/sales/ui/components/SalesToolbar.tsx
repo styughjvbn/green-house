@@ -40,8 +40,8 @@ export function SalesToolbar({
           type="button"
           onClick={onCreateSlip}
         >
-          <Plus className="h-4 w-4" strokeWidth={1.8} aria-hidden="true" />
-          새 판매 전표 등록
+          <Plus className="h-4 w-4" strokeWidth={1.8} aria-hidden="true" />새
+          판매 전표 등록
         </button>
       </div>
     </section>

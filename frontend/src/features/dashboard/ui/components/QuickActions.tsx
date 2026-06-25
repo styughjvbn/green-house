@@ -24,8 +24,16 @@ export function QuickActions() {
     <DashboardPanel title="빠른 작업">
       <div className="grid grid-cols-3 gap-3">
         {actions.map(([label, href, Icon, tone]) => (
-          <Link key={label} className="flex min-h-24 flex-col items-center justify-center gap-2 rounded-md border border-[#dfe5dc] bg-white text-sm font-semibold text-[#344138] hover:bg-[#eef7ec]" href={href}>
-            <Icon className={`h-8 w-8 ${tone === "blue" ? "text-[#246df2]" : "text-[#159447]"}`} strokeWidth={1.8} aria-hidden="true" />
+          <Link
+            key={label}
+            className="flex min-h-24 flex-col items-center justify-center gap-2 rounded-md border border-[#dfe5dc] bg-white text-sm font-semibold text-[#344138] hover:bg-[#eef7ec]"
+            href={href}
+          >
+            <Icon
+              className={`h-8 w-8 ${tone === "blue" ? "text-[#246df2]" : "text-[#159447]"}`}
+              strokeWidth={1.8}
+              aria-hidden="true"
+            />
             {label}
           </Link>
         ))}

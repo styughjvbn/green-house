@@ -34,7 +34,11 @@ export function DashboardMetric({
   return (
     <div className="border-r border-[#edf0ec] p-3 last:border-r-0">
       <p className="text-xs text-[#6a766e]">{label}</p>
-      <p className={`mt-1 font-bold ${warning ? "text-[#e52d2d]" : "text-[#17251b]"}`}>{value}</p>
+      <p
+        className={`mt-1 font-bold ${warning ? "text-[#e52d2d]" : "text-[#17251b]"}`}
+      >
+        {value}
+      </p>
     </div>
   );
 }

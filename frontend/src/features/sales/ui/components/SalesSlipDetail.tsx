@@ -5,7 +5,11 @@ import Link from "next/link";
 import { Copy, Printer } from "lucide-react";
 import type { SalesSlip } from "@/entities/farm/types";
 
-export function SalesSlipDetail({ salesSlip }: { salesSlip: SalesSlip | null }) {
+export function SalesSlipDetail({
+  salesSlip,
+}: {
+  salesSlip: SalesSlip | null;
+}) {
   if (!salesSlip) {
     return (
       <section className="rounded-md border border-[#dfe5dc] bg-white p-5 text-sm text-[#5c6a60] shadow-sm">
@@ -71,7 +75,9 @@ export function SalesSlipDetail({ salesSlip }: { salesSlip: SalesSlip | null }) 
             <thead className="bg-[#fbfcfa] text-[#435047]">
               <tr>
                 <th className="px-3 py-3 text-left font-semibold">No.</th>
-                <th className="px-3 py-3 text-left font-semibold">품종명 / 속</th>
+                <th className="px-3 py-3 text-left font-semibold">
+                  품종명 / 속
+                </th>
                 <th className="px-3 py-3 text-left font-semibold">규격</th>
                 <th className="px-3 py-3 text-right font-semibold">수량</th>
                 <th className="px-3 py-3 text-right font-semibold">단가</th>
@@ -85,12 +91,18 @@ export function SalesSlipDetail({ salesSlip }: { salesSlip: SalesSlip | null }) 
                   <td className="px-3 py-3">{index + 1}</td>
                   <td className="px-3 py-3">
                     <p className="font-semibold">{item.itemName}</p>
-                    <p className="text-xs text-[#6a766e]">{item.genus ?? "-"}</p>
+                    <p className="text-xs text-[#6a766e]">
+                      {item.genus ?? "-"}
+                    </p>
                   </td>
                   <td className="px-3 py-3">{item.spec ?? "-"}</td>
                   <td className="px-3 py-3 text-right">{item.quantity}</td>
-                  <td className="px-3 py-3 text-right">{item.unitPrice.toLocaleString()}</td>
-                  <td className="px-3 py-3 text-right">{item.amount.toLocaleString()}</td>
+                  <td className="px-3 py-3 text-right">
+                    {item.unitPrice.toLocaleString()}
+                  </td>
+                  <td className="px-3 py-3 text-right">
+                    {item.amount.toLocaleString()}
+                  </td>
                   <td className="px-3 py-3">{item.memo ?? "-"}</td>
                 </tr>
               ))}
@@ -133,13 +145,7 @@ function InfoLabel({
   );
 }
 
-function InfoBox({
-  children,
-  title,
-}: {
-  children: ReactNode;
-  title: string;
-}) {
+function InfoBox({ children, title }: { children: ReactNode; title: string }) {
   return (
     <div className="rounded-md border border-[#dfe5dc] p-4">
       <h3 className="font-bold text-[#17251b]">{title}</h3>

@@ -20,7 +20,6 @@ export function DashboardPage(props: DashboardPageProps) {
 
   return (
     <main className="space-y-4">
-
       <SummaryCards
         bedZoneDetail={summaryCards.bedZones}
         houseDetail={summaryCards.houses}
