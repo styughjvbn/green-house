@@ -1,5 +1,6 @@
 import Link from "next/link";
 import type { SalesSlip } from "@/entities/farm/types";
+import { PageHeader } from "@/widgets/page-header";
 
 type PrintPageProps = {
   salesSlips: SalesSlip[];
@@ -8,14 +9,7 @@ type PrintPageProps = {
 export function PrintPage({ salesSlips }: PrintPageProps) {
   return (
     <main className="space-y-5">
-      <section className="rounded-md border border-[#d7ddd4] bg-white p-4 shadow-sm">
-        <p className="text-sm font-semibold text-[#3d6f91]">출력</p>
-        <h1 className="mt-1 text-2xl font-semibold">A5 출력물</h1>
-        <p className="mt-1 text-sm text-[#5c6a60]">
-          판매 전표를 A5 기준으로 출력합니다. 구역/배드 관리표와 작업 이력
-          출력은 다음 범위에서 연결합니다.
-        </p>
-      </section>
+      <PageHeader title="출력" description="판매 전표를 A5 기준으로 출력합니다." />
 
       <section className="rounded-md border border-[#d7ddd4] bg-white p-4 shadow-sm">
         <div className="flex items-center justify-between">

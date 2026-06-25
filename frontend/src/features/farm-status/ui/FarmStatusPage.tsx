@@ -4,6 +4,7 @@
   FarmStatusOrchidGroupList,
   FarmStatusZoomData,
 } from "@/entities/farm/types";
+import { PageHeader } from "@/widgets/page-header";
 import { FarmStatusMap } from "./FarmStatusMap";
 
 type FarmStatusPageProps = {
@@ -19,41 +20,9 @@ export function FarmStatusPage({
   initialSelection,
   initialZoom,
 }: FarmStatusPageProps) {
-  const todayLabel = new Intl.DateTimeFormat("ko-KR", {
-    timeZone: "Asia/Seoul",
-    year: "numeric",
-    month: "2-digit",
-    day: "2-digit",
-    weekday: "short",
-  }).format(new Date());
-
   return (
-    <main className="space-y-6">
-      <section className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
-        <div>
-          <h1 className="text-3xl font-semibold tracking-normal text-[#17251b]">
-            농장 현황
-          </h1>
-          <p className="mt-2 text-lg text-[#5d6d62]">
-            전체 농장 구조와 난 묶음 현황을 한눈에 확인하세요.
-          </p>
-        </div>
-
-        <div className="flex flex-wrap items-center gap-2 text-sm text-[#405246]">
-          <span className="relative rounded-md border border-[#d9e2d5] bg-white px-3 py-2 shadow-sm">
-            알림
-            <span className="ml-2 rounded-full bg-[#e63d32] px-1.5 py-0.5 text-xs font-semibold text-white">
-              3
-            </span>
-          </span>
-          <span className="rounded-md border border-[#d9e2d5] bg-white px-3 py-2 shadow-sm">
-            {todayLabel}
-          </span>
-          <span className="rounded-md border border-[#d9e2d5] bg-white px-3 py-2 shadow-sm">
-            24°C 흐림
-          </span>
-        </div>
-      </section>
+    <main className="space-y-5">
+      <PageHeader title="농장 현황" description="전체 농장 구조와 난 묶음 현황을 한눈에 확인하세요." />
 
       <section className="grid gap-4 md:grid-cols-3 xl:grid-cols-6">
         <SummaryCard

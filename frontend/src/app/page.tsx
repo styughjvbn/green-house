@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { fetchApi } from "@/shared/api/client";
+import { PageHeader } from "@/widgets/page-header";
 import type { DashboardSummary } from "@/entities/farm/types";
 
 export const dynamic = "force-dynamic";
@@ -40,14 +41,7 @@ export default async function DashboardPage() {
 
   return (
     <main className="space-y-8">
-      <section className="space-y-2">
-        <p className="text-sm font-semibold text-[#3d6f91]">대시보드</p>
-        <h1 className="text-3xl font-semibold">농장 운영 상태</h1>
-        <p className="max-w-3xl text-lg text-[#5c6a60]">
-          전체 농장 구조와 난 묶음 분포를 조회합니다. 데이터 변경 작업은 전용
-          관리 화면에서 진행합니다.
-        </p>
-      </section>
+      <PageHeader title="대시보드" description="전체 농장 구조와 난 묶음 분포를 조회합니다." />
 
       <section className="grid gap-4 md:grid-cols-4">
         {summaryItems.map((item) => (
