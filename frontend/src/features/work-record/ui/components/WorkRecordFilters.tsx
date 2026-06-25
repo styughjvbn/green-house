@@ -1,7 +1,7 @@
 "use client";
 
 import type { ReactNode } from "react";
-import { RefreshCw, Search } from "lucide-react";
+import { ChevronDown, RefreshCw, Search } from "lucide-react";
 import type { WorkRecordTargetType } from "@/entities/farm/types";
 import type { WorkRecordFilterState } from "../../model/types";
 
@@ -19,50 +19,25 @@ export function WorkRecordFilters({
   ) => void;
   onReset: () => void;
 }) {
-  return (
-    <div className="space-y-3">
-      <section className="rounded-md border border-[#dfe5dc] bg-white p-4 shadow-sm">
-        <p className="text-sm font-bold text-[#344138]">대상 선택</p>
-        <div className="mt-3 grid gap-3 md:grid-cols-5">
-          {targetOptions.map((option) => (
-            <label
-              key={option.value}
-              className="flex h-9 items-center gap-2 text-sm font-semibold text-[#344138]"
-            >
-              <input
-                checked={filters.targetType === option.value}
-                className="accent-[#159447]"
-                name="targetTypeFilter"
-                type="radio"
-                onChange={() => onChange("targetType", option.value)}
-              />
-              {option.label}
-            </label>
-          ))}
-        </div>
-        <button
-          className="mt-3 rounded-md border border-[#94c49a] px-5 py-2 text-sm font-semibold text-[#159447]"
-          type="button"
-          onClick={() => onChange("targetType", "")}
-        >
-          선택 초기화
-        </button>
-      </section>
+  const selectedTargetLabel =
+    targetOptions.find((option) => option.value === filters.targetType)?.label ??
+    "전체 농장";
 
-      <section className="rounded-md border border-[#dfe5dc] bg-white p-4 shadow-sm">
-        <div className="grid gap-3 xl:grid-cols-[1.1fr_2fr_1.1fr_1.4fr_auto_auto]">
-          <FilterSelect
-            label="작업 유형"
-            value={filters.workType}
-            onChange={(value) => onChange("workType", value)}
-          >
-            <option value="">전체</option>
-            {workTypes.map((workType) => (
-              <option key={workType} value={workType}>
-                {workType}
-              </option>
-            ))}
-          </FilterSelect>
+  return (
+    <section className="rounded-md border border-[#dfe5dc] bg-white p-4 shadow-sm">
+      <div className="grid gap-3 xl:grid-cols-[1.1fr_2fr_1.1fr_1.4fr_auto_auto]">
+        <FilterSelect
+          label="작업 유형"
+          value={filters.workType}
+          onChange={(value) => onChange("workType", value)}
+        >
+          <option value="">전체</option>
+          {workTypes.map((workType) => (
+            <option key={workType} value={workType}>
+              {workType}
+            </option>
+          ))}
+        </FilterSelect>
 
           <div>
             <p className="mb-2 text-sm font-semibold text-[#344138]">기간</p>
@@ -123,8 +98,38 @@ export function WorkRecordFilters({
             초기화
           </button>
         </div>
-      </section>
-    </div>
+
+        <details className="group mt-3 rounded-md border border-[#e6ebe3] bg-[#fbfcfa]">
+          <summary className="flex cursor-pointer list-none items-center justify-between gap-3 px-3 py-2 text-sm font-bold text-[#344138]">
+            <span>
+              대상 선택
+              <span className="ml-2 rounded-full bg-[#eef7ec] px-2 py-0.5 text-xs text-[#159447]">
+                {selectedTargetLabel}
+              </span>
+            </span>
+            <ChevronDown className="h-4 w-4 transition group-open:rotate-180" strokeWidth={1.8} aria-hidden="true" />
+          </summary>
+          <div className="border-t border-[#e6ebe3] px-3 py-3">
+            <div className="grid gap-2 md:grid-cols-5">
+              {targetOptions.map((option) => (
+                <label
+                  key={option.value}
+                  className="flex h-9 items-center gap-2 rounded-md border border-[#dfe5dc] bg-white px-3 text-sm font-semibold text-[#344138]"
+                >
+                  <input
+                    checked={filters.targetType === option.value}
+                    className="accent-[#159447]"
+                    name="targetTypeFilter"
+                    type="radio"
+                    onChange={() => onChange("targetType", option.value)}
+                  />
+                  {option.label}
+                </label>
+              ))}
+            </div>
+          </div>
+        </details>
+    </section>
   );
 }
 
