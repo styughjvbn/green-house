@@ -43,7 +43,6 @@ export default function OrchidSelectionPanel({
   onOpenEdit,
   onOpenMove,
   onOpenWorkRecord,
-  onTogglePlacementEditMode,
   onUpdateWorkRecordForm,
   onWorkRecordCreate,
 }: {
@@ -122,13 +121,8 @@ export default function OrchidSelectionPanel({
                 danger
                 disabled={saving}
               />
-              <ActionButton
-                label={placementEditMode ? "배치 수정 종료" : "배치 수정 시작"}
-                onClick={onTogglePlacementEditMode}
-              />
               <ActionButton label="다른 위치로 이동" onClick={onOpenMove} />
               <ActionButton label="작업 기록 추가" onClick={onOpenWorkRecord} />
-              <DisabledAction label="출력" />
             </div>
           </div>
         ) : (

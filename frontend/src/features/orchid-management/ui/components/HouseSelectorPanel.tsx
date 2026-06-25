@@ -1,35 +1,24 @@
 "use client";
 
-import { List, MoveRight, Pencil, Printer } from "lucide-react";
+import { Pencil } from "lucide-react";
 import { useRouter } from "next/navigation";
 import type {
   House,
   HouseStatusSummary,
-  OrchidManagementViewMode,
 } from "@/entities/farm/types";
-
-const viewModes: Array<{ value: OrchidManagementViewMode; label: string }> = [
-  { value: "REAL_DIRECTION", label: "실제 방향" },
-  { value: "ROTATED", label: "회전 보기" },
-  { value: "BY_BED", label: "배드별 보기" },
-];
 
 export default function HouseSelectorPanel({
   house,
   houses,
   placementEditMode,
   selectedHouseId,
-  viewMode,
   onTogglePlacementEditMode,
-  onViewModeChange,
 }: {
   house: House;
   houses: HouseStatusSummary[];
   placementEditMode: boolean;
   selectedHouseId: number;
-  viewMode: OrchidManagementViewMode;
   onTogglePlacementEditMode: () => void;
-  onViewModeChange: (viewMode: OrchidManagementViewMode) => void;
 }) {
   const router = useRouter();
 
@@ -55,54 +44,19 @@ export default function HouseSelectorPanel({
         </select>
       </div>
 
-      <button
-        className="inline-flex h-9 touch-manipulation items-center gap-2 rounded-md border border-[#dfe5dc] bg-white px-4 text-sm font-semibold text-[#344138] shadow-sm"
-        type="button"
-      >
-        <MoveRight className="h-4 w-4" strokeWidth={1.8} aria-hidden="true" />
-        다른 동으로 이동
-      </button>
-
       <div className="min-w-3 flex-1" />
 
-      <label className="inline-flex h-9 items-center gap-2 rounded-md border border-[#dfe5dc] bg-white px-3 text-sm font-semibold text-[#344138] shadow-sm">
-        <List className="h-4 w-4" strokeWidth={1.8} aria-hidden="true" />
-        <span>보기 모드</span>
-        <select
-          aria-label="보기 모드"
-          className="max-w-24 bg-transparent text-sm font-semibold outline-none"
-          value={viewMode}
-          onChange={(event) =>
-            onViewModeChange(event.target.value as OrchidManagementViewMode)
-          }
-        >
-          {viewModes.map((mode) => (
-            <option key={mode.value} value={mode.value}>
-              {mode.label}
-            </option>
-          ))}
-        </select>
-      </label>
-
       <button
-        className={`inline-flex h-9 touch-manipulation items-center gap-2 rounded-md px-4 text-sm font-semibold shadow-sm ${
+        className={`inline-flex h-9 touch-manipulation items-center gap-2 rounded-md px-4 text-sm font-semibold shadow-sm border border-[#dfe5dc] ${
           placementEditMode
             ? "bg-[#159447] text-white"
-            : "border border-[#dfe5dc] bg-white text-[#344138]"
+            : "bg-white text-[#344138]"
         }`}
         type="button"
         onClick={onTogglePlacementEditMode}
       >
         <Pencil className="h-4 w-4" strokeWidth={1.8} aria-hidden="true" />
         배치 수정 모드
-      </button>
-
-      <button
-        className="inline-flex h-9 touch-manipulation items-center gap-2 rounded-md border border-[#dfe5dc] bg-white px-4 text-sm font-semibold text-[#344138] shadow-sm"
-        type="button"
-      >
-        <Printer className="h-4 w-4" strokeWidth={1.8} aria-hidden="true" />
-        출력
       </button>
 
       <div className="flex h-9 items-center gap-5 rounded-md border border-[#e2e7df] bg-white px-4 text-xs font-semibold text-[#435047] shadow-sm">
