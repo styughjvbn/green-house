@@ -1,4 +1,4 @@
-﻿import { API_BASE_URL } from "@/shared/api/client";
+import { API_BASE_URL, fetchApi } from "@/shared/api/client";
 import type { Customer, SalesSlip } from "@/entities/farm/types";
 import type { CreateCustomerPayload, CreateSalesSlipPayload } from "../model/types";
 
@@ -24,6 +24,14 @@ async function requestJson<T>(path: string, init: RequestInit, fallbackMessage: 
   return (payload as ApiSuccess<T>).data;
 }
 
+export function getCustomers() {
+  return fetchApi<Customer[]>("/customers");
+}
+
+export function getSalesSlips() {
+  return fetchApi<SalesSlip[]>("/sales-slips");
+}
+
 export function createCustomer(payload: CreateCustomerPayload): Promise<Customer> {
   return requestJson<Customer>(
     "/customers",
@@ -47,4 +55,3 @@ export function createSalesSlip(payload: CreateSalesSlipPayload): Promise<SalesS
     "판매 전표를 저장하지 못했습니다.",
   );
 }
-
