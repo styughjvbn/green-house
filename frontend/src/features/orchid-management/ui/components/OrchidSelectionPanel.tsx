@@ -75,54 +75,23 @@ export default function OrchidSelectionPanel({
         <p className="text-sm font-semibold text-[#3d6f91]">선택한 난 묶음</p>
         {selectedOrchidGroup ? (
           <div className="mt-3">
-            <div className="rounded-md border border-[#e1e6df] bg-[#fbfcfa] p-3">
-              <div className="flex items-start gap-3">
-                <span
-                  className={`mt-1 h-2.5 w-2.5 shrink-0 rounded-full ${getStatusDotClass(selectedOrchidGroup.status)}`}
-                />
-                <div className="min-w-0 flex-1">
-                  <h2 className="truncate text-base font-bold text-[#17251b]">
-                    {selectedOrchidGroup.varietyName}
-                  </h2>
-                  <p className="mt-0.5 text-xs font-semibold text-[#5c6a60]">
-                    {selectedOrchidGroup.quantity}분
-                    {selectedOrchidGroup.genus
-                      ? ` · ${selectedOrchidGroup.genus}`
-                      : ""}
-                  </p>
-                </div>
+            <div className="flex gap-3">
+              <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-md bg-[#d8edd5] text-2xl">
+                ●
               </div>
-
-              <dl className="mt-3 grid grid-cols-[68px_minmax(0,1fr)] gap-x-3 gap-y-2 text-xs">
-                <DetailItem label="상태" value={selectedOrchidGroup.status} />
-                <DetailItem
-                  label="위치"
-                  value={`${selectedOrchidGroup.houseNumber}동 · ${selectedOrchidGroup.physicalBedNumber}배드 · ${selectedOrchidGroup.bedZoneName}`}
-                />
-                <DetailItem
-                  label="화분"
-                  value={selectedOrchidGroup.potSize ?? "-"}
-                />
-                <DetailItem
-                  label="나이"
-                  value={
-                    selectedOrchidGroup.ageYear
-                      ? `${selectedOrchidGroup.ageYear}년생`
-                      : "-"
-                  }
-                />
-                <DetailItem
-                  label="배치"
-                  value={formatPlacement(selectedOrchidGroup)}
-                />
-                <DetailItem
-                  label="비고"
-                  value={selectedOrchidGroup.memo ?? "-"}
-                />
-              </dl>
-              <p className="mt-2 text-[11px] text-[#7a8680]">
-                입고일 정보는 아직 등록되지 않았습니다.
-              </p>
+              <div>
+                <h2 className="text-lg font-semibold">
+                  {selectedOrchidGroup.varietyName}
+                </h2>
+                <p className="mt-0.5 text-sm text-[#435047]">
+                  {selectedOrchidGroup.quantity}분
+                </p>
+                <p className="mt-0.5 text-sm text-[#246df2]">
+                  {selectedOrchidGroup.houseNumber}동 &gt;{" "}
+                  {selectedOrchidGroup.physicalBedNumber}배드 &gt;{" "}
+                  {selectedOrchidGroup.bedZoneName}
+                </p>
+              </div>
             </div>
             <div className="mt-3 grid gap-2">
               <ActionButton
@@ -266,36 +235,6 @@ export function SelectedZoneInfo({
       )}
     </section>
   );
-}
-
-function DetailItem({ label, value }: { label: string; value: string }) {
-  return (
-    <>
-      <dt className="font-semibold text-[#6a766e]">{label}</dt>
-      <dd className="min-w-0 truncate font-semibold text-[#26352b]">{value}</dd>
-    </>
-  );
-}
-
-function formatPlacement(orchidGroup: OrchidGroup) {
-  const details = [
-    orchidGroup.placementType,
-    orchidGroup.trayCount ? `트레이 ${orchidGroup.trayCount}개` : null,
-  ]
-    .filter(Boolean)
-    .join(" · ");
-
-  return details || "-";
-}
-
-function getStatusDotClass(status: string) {
-  if (status === "정상" || status === "판매 가능") {
-    return "bg-[#159447]";
-  }
-  if (status.includes("주의")) {
-    return "bg-[#f59e0b]";
-  }
-  return "bg-[#e52d2d]";
 }
 
 function WorkRecordSummaryView({
