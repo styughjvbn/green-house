@@ -4,6 +4,7 @@ import { FontScaleInitializer } from "@/features/settings";
 import { DEFAULT_FONT_SCALE } from "@/features/settings/lib/fontScale";
 import { AppShell } from "@/widgets/app-shell/AppShell";
 import "./globals.css";
+import "leaflet/dist/leaflet.css";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",

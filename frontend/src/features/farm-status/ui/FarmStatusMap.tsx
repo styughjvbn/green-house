@@ -24,7 +24,6 @@ export function FarmStatusMap(props: FarmStatusMapProps) {
           ) : null}
           <FarmMapCanvas
             houses={mapData.houses}
-            loading={map.loading}
             selectedBedZoneId={map.selectedBedZoneId}
             selectedHouseId={map.selectedHouseId}
             selectedPhysicalBedId={map.selectedPhysicalBedId}
