@@ -5,6 +5,7 @@ import type {
   OrchidGroup,
   SelectedBedZone,
   SelectedOrchidGroup,
+  WorkRecord,
   WorkRecordTargetType,
 } from "@/entities/farm/types";
 
@@ -63,6 +64,15 @@ export type WorkRecordQuickPayload = {
   quantity: string | null;
   worker: string | null;
   memo: string | null;
+};
+
+export type WorkRecordSummary = {
+  latestRecords: WorkRecord[];
+  latestByType: {
+    pesticide: WorkRecord | null;
+    fertilizer: WorkRecord | null;
+    repot: WorkRecord | null;
+  };
 };
 
 export type OrchidManagementMapProps = {

@@ -44,6 +44,8 @@ export function OrchidManagementMap({ mapData, house, workTypes }: OrchidManagem
         selectedBedZone={orchidManagement.selectedBedZone}
         selectedOrchidGroup={orchidManagement.selectedOrchidGroup}
         workRecordForm={orchidManagement.workRecordForm}
+        workRecordSummary={orchidManagement.workRecordSummary}
+        workRecordSummaryLoading={orchidManagement.workRecordSummaryLoading}
         workTypes={workTypes}
         onCancelMutation={orchidManagement.actions.cancelMutation}
         onCreate={orchidManagement.actions.create}

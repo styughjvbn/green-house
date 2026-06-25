@@ -1,5 +1,5 @@
 import { API_BASE_URL, fetchApi } from "@/shared/api/client";
-import type { FarmStatusMapData, House, WorkRecord } from "@/entities/farm/types";
+import type { FarmStatusMapData, House, WorkRecord, WorkRecordTargetType } from "@/entities/farm/types";
 import type { MutationPayload, WorkRecordQuickPayload } from "../model/types";
 
 type ApiErrorPayload = {
@@ -62,6 +62,14 @@ export function getHouse(houseId: number) {
 
 export function getOrchidWorkTypes() {
   return fetchApi<string[]>("/work-types");
+}
+
+export function getOrchidWorkRecords(targetType: WorkRecordTargetType, targetId: number | null) {
+  const params = new URLSearchParams({ targetType });
+  if (targetId !== null) {
+    params.set("targetId", String(targetId));
+  }
+  return fetchApi<WorkRecord[]>(`/work-records?${params.toString()}`);
 }
 
 export async function createOrchidWorkRecord(payload: WorkRecordQuickPayload): Promise<WorkRecord> {

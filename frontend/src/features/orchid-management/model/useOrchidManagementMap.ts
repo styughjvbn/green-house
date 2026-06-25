@@ -1,11 +1,18 @@
 ﻿"use client";
 
 import { useRouter } from "next/navigation";
-import { useMemo, useState } from "react";
-import type { House } from "@/entities/farm/types";
-import { createOrchidGroup, createOrchidWorkRecord, deleteOrchidGroup, moveOrchidGroup, updateOrchidGroup } from "../api/orchidManagementApi";
+import { useEffect, useMemo, useState } from "react";
+import type { House, WorkRecord } from "@/entities/farm/types";
+import {
+  createOrchidGroup,
+  createOrchidWorkRecord,
+  deleteOrchidGroup,
+  getOrchidWorkRecords,
+  moveOrchidGroup,
+  updateOrchidGroup,
+} from "../api/orchidManagementApi";
 import { findBedZone, findFirstOrchidGroup, findOrchidGroup } from "../lib/orchidManagementUtils";
-import type { DragState, MutationMode, MutationPayload, OrchidSelection, WorkRecordQuickFormState } from "./types";
+import type { DragState, MutationMode, MutationPayload, OrchidSelection, WorkRecordQuickFormState, WorkRecordSummary } from "./types";
 
 export function useOrchidManagementMap(house: House, workTypes: string[]) {
   const router = useRouter();
@@ -18,12 +25,51 @@ export function useOrchidManagementMap(house: House, workTypes: string[]) {
   const [dragState, setDragState] = useState<DragState>(null);
   const [mutationMode, setMutationMode] = useState<MutationMode>(null);
   const [workRecordForm, setWorkRecordForm] = useState<WorkRecordQuickFormState>(() => createInitialWorkRecordForm(workTypes, firstOrchidGroup?.id ?? null));
+  const [workRecordSummary, setWorkRecordSummary] = useState<WorkRecordSummary>(() => createEmptyWorkRecordSummary());
+  const [workRecordSummaryLoading, setWorkRecordSummaryLoading] = useState(false);
+  const [workRecordSummaryVersion, setWorkRecordSummaryVersion] = useState(0);
   const [saving, setSaving] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   const selectedOrchidGroup = selection?.type === "ORCHID_GROUP" ? findOrchidGroup(house, selection.orchidGroupId) : null;
   const selectedBedZone = selection?.type === "BED_ZONE" ? findBedZone(house, selection.bedZoneId)?.zone ?? null : null;
   const resolvedZone = selectedOrchidGroup ? findBedZone(house, selectedOrchidGroup.bedZoneId)?.zone ?? null : selectedBedZone;
+
+  useEffect(() => {
+    let ignore = false;
+
+    async function loadWorkRecordSummary() {
+      if (!resolvedZone) {
+        setWorkRecordSummary(createEmptyWorkRecordSummary());
+        return;
+      }
+
+      setWorkRecordSummaryLoading(true);
+      try {
+        const recordGroups = await Promise.all([
+          getOrchidWorkRecords("BED_ZONE", resolvedZone.id),
+          ...resolvedZone.orchidGroups.map((orchidGroup) => getOrchidWorkRecords("ORCHID_GROUP", orchidGroup.id)),
+        ]);
+        if (!ignore) {
+          setWorkRecordSummary(createWorkRecordSummary(recordGroups.flat()));
+        }
+      } catch {
+        if (!ignore) {
+          setWorkRecordSummary(createEmptyWorkRecordSummary());
+        }
+      } finally {
+        if (!ignore) {
+          setWorkRecordSummaryLoading(false);
+        }
+      }
+    }
+
+    void loadWorkRecordSummary();
+
+    return () => {
+      ignore = true;
+    };
+  }, [resolvedZone, workRecordSummaryVersion]);
 
   function selectBedZone(bedZoneId: number) {
     setSelection({ type: "BED_ZONE", bedZoneId });
@@ -169,6 +215,7 @@ export function useOrchidManagementMap(house: House, workTypes: string[]) {
         quantity: "",
         memo: "",
       }));
+      setWorkRecordSummaryVersion((current) => current + 1);
     });
   }
 
@@ -219,6 +266,8 @@ export function useOrchidManagementMap(house: House, workTypes: string[]) {
     selectedOrchidGroup,
     selection,
     workRecordForm,
+    workRecordSummary,
+    workRecordSummaryLoading,
     actions: {
       cancelMutation: () => setMutationMode(null),
       create: handleCreate,
@@ -259,5 +308,36 @@ function createInitialWorkRecordForm(workTypes: string[], orchidGroupId: number 
 function nullableText(value: string) {
   const trimmed = value.trim();
   return trimmed.length > 0 ? trimmed : null;
+}
+
+function createEmptyWorkRecordSummary(): WorkRecordSummary {
+  return {
+    latestRecords: [],
+    latestByType: {
+      pesticide: null,
+      fertilizer: null,
+      repot: null,
+    },
+  };
+}
+
+function createWorkRecordSummary(records: WorkRecord[]): WorkRecordSummary {
+  const sortedRecords = [...records].sort(compareWorkRecordsDesc);
+
+  return {
+    latestRecords: sortedRecords.slice(0, 5),
+    latestByType: {
+      pesticide: sortedRecords.find((record) => record.workType === "농약") ?? null,
+      fertilizer: sortedRecords.find((record) => record.workType === "비료") ?? null,
+      repot: sortedRecords.find((record) => record.workType === "분갈이") ?? null,
+    },
+  };
+}
+
+function compareWorkRecordsDesc(a: WorkRecord, b: WorkRecord) {
+  if (a.workDate !== b.workDate) {
+    return b.workDate.localeCompare(a.workDate);
+  }
+  return b.id - a.id;
 }
 

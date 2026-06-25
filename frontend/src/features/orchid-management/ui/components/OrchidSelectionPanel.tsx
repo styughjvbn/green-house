@@ -1,8 +1,8 @@
 ﻿"use client";
 
-import type { BedZone, House, HouseStatusSummary, OrchidGroup } from "@/entities/farm/types";
+import type { BedZone, House, HouseStatusSummary, OrchidGroup, WorkRecord } from "@/entities/farm/types";
 import { findBedZone } from "../../lib/orchidManagementUtils";
-import type { MutationMode, MutationPayload, WorkRecordQuickFormState } from "../../model/types";
+import type { MutationMode, MutationPayload, WorkRecordQuickFormState, WorkRecordSummary } from "../../model/types";
 import ActionButton, { DisabledAction } from "./ActionButton";
 import InfoMetric from "./InfoMetric";
 import OrchidGroupForm from "./OrchidGroupForm";
@@ -20,6 +20,8 @@ export default function OrchidSelectionPanel({
   selectedBedZone,
   selectedOrchidGroup,
   workRecordForm,
+  workRecordSummary,
+  workRecordSummaryLoading,
   workTypes,
   onCancelMutation,
   onCreate,
@@ -44,6 +46,8 @@ export default function OrchidSelectionPanel({
   selectedBedZone: BedZone | null;
   selectedOrchidGroup: OrchidGroup | null;
   workRecordForm: WorkRecordQuickFormState;
+  workRecordSummary: WorkRecordSummary;
+  workRecordSummaryLoading: boolean;
   workTypes: string[];
   onCancelMutation: () => void;
   onCreate: (payload: MutationPayload) => Promise<void>;
@@ -153,11 +157,7 @@ export default function OrchidSelectionPanel({
             </div>
             <div className="mt-3 border-t border-[#e1e6df] pt-3">
               <p className="font-semibold">최근 작업 요약</p>
-              <dl className="mt-2 space-y-1 text-xs text-[#5c6a60]">
-                <div className="flex justify-between"><dt>최근 농약</dt><dd>다음 단계에서 연결</dd></div>
-                <div className="flex justify-between"><dt>최근 비료</dt><dd>다음 단계에서 연결</dd></div>
-                <div className="flex justify-between"><dt>최근 분갈이</dt><dd>다음 단계에서 연결</dd></div>
-              </dl>
+              <WorkRecordSummaryView loading={workRecordSummaryLoading} summary={workRecordSummary} />
             </div>
           </>
         ) : (
@@ -166,5 +166,61 @@ export default function OrchidSelectionPanel({
       </section>
     </aside>
   );
+}
+
+function WorkRecordSummaryView({ loading, summary }: { loading: boolean; summary: WorkRecordSummary }) {
+  if (loading) {
+    return <p className="mt-2 rounded-md bg-[#f5f7f3] p-2 text-xs text-[#5c6a60]">최근 작업 확인 중</p>;
+  }
+
+  return (
+    <div className="mt-2 space-y-3">
+      <dl className="space-y-1 text-xs text-[#5c6a60]">
+        <SummaryRow label="최근 농약" record={summary.latestByType.pesticide} />
+        <SummaryRow label="최근 비료" record={summary.latestByType.fertilizer} />
+        <SummaryRow label="최근 분갈이" record={summary.latestByType.repot} />
+      </dl>
+
+      {summary.latestRecords.length > 0 ? (
+        <ul className="space-y-1">
+          {summary.latestRecords.map((record) => (
+            <li key={record.id} className="rounded-md border border-[#e1e6df] bg-[#fbfcfa] px-2 py-1.5 text-xs">
+              <div className="flex items-center justify-between gap-2">
+                <span className="font-semibold text-[#17251b]">{record.workType}</span>
+                <span className="text-[#5c6a60]">{record.workDate}</span>
+              </div>
+              <p className="mt-0.5 truncate text-[#5c6a60]">{formatWorkRecordDetail(record)}</p>
+            </li>
+          ))}
+        </ul>
+      ) : (
+        <p className="rounded-md bg-[#f5f7f3] p-2 text-xs text-[#5c6a60]">등록된 작업 기록 없음</p>
+      )}
+    </div>
+  );
+}
+
+function SummaryRow({ label, record }: { label: string; record: WorkRecord | null }) {
+  return (
+    <div className="flex justify-between gap-3">
+      <dt>{label}</dt>
+      <dd className="font-semibold text-[#17251b]">{record ? record.workDate : "없음"}</dd>
+    </div>
+  );
+}
+
+function formatWorkRecordDetail(record: WorkRecord) {
+  const details = [record.materialName, record.quantity, record.worker, record.memo].filter(Boolean);
+  return details.length > 0 ? details.join(" · ") : formatWorkTarget(record);
+}
+
+function formatWorkTarget(record: WorkRecord) {
+  if (record.targetType === "BED_ZONE") {
+    return "구역 기록";
+  }
+  if (record.targetType === "ORCHID_GROUP") {
+    return `난 묶음 #${record.targetId}`;
+  }
+  return "작업 기록";
 }
 
