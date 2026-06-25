@@ -2,11 +2,12 @@
 
 import type { BedZone, House, HouseStatusSummary, OrchidGroup } from "@/entities/farm/types";
 import { findBedZone } from "../../lib/orchidManagementUtils";
-import type { MutationMode, MutationPayload } from "../../model/types";
+import type { MutationMode, MutationPayload, WorkRecordQuickFormState } from "../../model/types";
 import ActionButton, { DisabledAction } from "./ActionButton";
 import InfoMetric from "./InfoMetric";
 import OrchidGroupForm from "./OrchidGroupForm";
 import OrchidMovePanel from "./OrchidMovePanel";
+import OrchidWorkRecordForm from "./OrchidWorkRecordForm";
 
 export default function OrchidSelectionPanel({
   errorMessage,
@@ -18,6 +19,8 @@ export default function OrchidSelectionPanel({
   saving,
   selectedBedZone,
   selectedOrchidGroup,
+  workRecordForm,
+  workTypes,
   onCancelMutation,
   onCreate,
   onDelete,
@@ -26,7 +29,10 @@ export default function OrchidSelectionPanel({
   onOpenCreate,
   onOpenEdit,
   onOpenMove,
+  onOpenWorkRecord,
   onTogglePlacementEditMode,
+  onUpdateWorkRecordForm,
+  onWorkRecordCreate,
 }: {
   errorMessage: string | null;
   house: House;
@@ -37,6 +43,8 @@ export default function OrchidSelectionPanel({
   saving: boolean;
   selectedBedZone: BedZone | null;
   selectedOrchidGroup: OrchidGroup | null;
+  workRecordForm: WorkRecordQuickFormState;
+  workTypes: string[];
   onCancelMutation: () => void;
   onCreate: (payload: MutationPayload) => Promise<void>;
   onDelete: () => Promise<void>;
@@ -45,7 +53,10 @@ export default function OrchidSelectionPanel({
   onOpenCreate: () => void;
   onOpenEdit: () => void;
   onOpenMove: () => void;
+  onOpenWorkRecord: () => void;
   onTogglePlacementEditMode: () => void;
+  onUpdateWorkRecordForm: <K extends keyof WorkRecordQuickFormState>(field: K, value: WorkRecordQuickFormState[K]) => void;
+  onWorkRecordCreate: () => Promise<void>;
 }) {
   const zone = selectedOrchidGroup ? findBedZone(house, selectedOrchidGroup.bedZoneId)?.zone ?? null : selectedBedZone;
   const totalQuantity = zone?.orchidGroups.reduce((sum, orchidGroup) => sum + orchidGroup.quantity, 0) ?? 0;
@@ -72,7 +83,7 @@ export default function OrchidSelectionPanel({
               <ActionButton label="난 묶음 삭제" onClick={onDelete} danger disabled={saving} />
               <ActionButton label={placementEditMode ? "배치 수정 종료" : "배치 수정 시작"} onClick={onTogglePlacementEditMode} />
               <ActionButton label="다른 위치로 이동" onClick={onOpenMove} />
-              <DisabledAction label="작업 기록 추가" />
+              <ActionButton label="작업 기록 추가" onClick={onOpenWorkRecord} />
               <DisabledAction label="출력" />
             </div>
           </div>
@@ -111,6 +122,19 @@ export default function OrchidSelectionPanel({
           selectedOrchidGroup={selectedOrchidGroup}
           onCancel={onCancelMutation}
           onMove={onMove}
+        />
+      ) : null}
+
+      {mutationMode === "WORK_RECORD" ? (
+        <OrchidWorkRecordForm
+          form={workRecordForm}
+          resolvedZone={resolvedZone}
+          saving={saving}
+          selectedOrchidGroup={selectedOrchidGroup}
+          workTypes={workTypes}
+          onCancel={onCancelMutation}
+          onChange={onUpdateWorkRecordForm}
+          onSubmit={onWorkRecordCreate}
         />
       ) : null}
 

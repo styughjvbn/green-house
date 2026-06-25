@@ -3,11 +3,11 @@
 import { useRouter } from "next/navigation";
 import { useMemo, useState } from "react";
 import type { House } from "@/entities/farm/types";
-import { createOrchidGroup, deleteOrchidGroup, moveOrchidGroup, updateOrchidGroup } from "../api/orchidManagementApi";
+import { createOrchidGroup, createOrchidWorkRecord, deleteOrchidGroup, moveOrchidGroup, updateOrchidGroup } from "../api/orchidManagementApi";
 import { findBedZone, findFirstOrchidGroup, findOrchidGroup } from "../lib/orchidManagementUtils";
-import type { DragState, MutationMode, MutationPayload, OrchidSelection } from "./types";
+import type { DragState, MutationMode, MutationPayload, OrchidSelection, WorkRecordQuickFormState } from "./types";
 
-export function useOrchidManagementMap(house: House) {
+export function useOrchidManagementMap(house: House, workTypes: string[]) {
   const router = useRouter();
   const firstOrchidGroup = useMemo(() => findFirstOrchidGroup(house), [house]);
 
@@ -17,6 +17,7 @@ export function useOrchidManagementMap(house: House) {
   const [placementEditMode, setPlacementEditMode] = useState(false);
   const [dragState, setDragState] = useState<DragState>(null);
   const [mutationMode, setMutationMode] = useState<MutationMode>(null);
+  const [workRecordForm, setWorkRecordForm] = useState<WorkRecordQuickFormState>(() => createInitialWorkRecordForm(workTypes, firstOrchidGroup?.id ?? null));
   const [saving, setSaving] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
@@ -55,6 +56,23 @@ export function useOrchidManagementMap(house: House) {
       setMutationMode("MOVE");
       setErrorMessage(null);
     }
+  }
+
+  function openWorkRecord() {
+    const targetType = selectedOrchidGroup ? "ORCHID_GROUP" : resolvedZone ? "BED_ZONE" : "HOUSE";
+    const targetId = selectedOrchidGroup?.id ?? resolvedZone?.id ?? house.id;
+    setWorkRecordForm((current) => ({
+      ...current,
+      workType: current.workType || workTypes[0] || "농약",
+      targetType,
+      targetId,
+    }));
+    setMutationMode("WORK_RECORD");
+    setErrorMessage(null);
+  }
+
+  function updateWorkRecordForm<K extends keyof WorkRecordQuickFormState>(field: K, value: WorkRecordQuickFormState[K]) {
+    setWorkRecordForm((current) => ({ ...current, [field]: value }));
   }
 
   function togglePlacementEditMode() {
@@ -131,6 +149,29 @@ export function useOrchidManagementMap(house: House) {
     await runMutation(async () => moveOrchidGroup(selectedOrchidGroup.id, toBedZoneId, memo));
   }
 
+  async function handleWorkRecordCreate() {
+    await runMutation(async () => {
+      await createOrchidWorkRecord({
+        workType: workRecordForm.workType,
+        workDate: workRecordForm.workDate,
+        targetType: workRecordForm.targetType,
+        targetId: workRecordForm.targetId,
+        materialName: nullableText(workRecordForm.materialName),
+        dilutionRatio: nullableText(workRecordForm.dilutionRatio),
+        quantity: nullableText(workRecordForm.quantity),
+        worker: nullableText(workRecordForm.worker),
+        memo: nullableText(workRecordForm.memo),
+      });
+      setWorkRecordForm((current) => ({
+        ...current,
+        materialName: "",
+        dilutionRatio: "",
+        quantity: "",
+        memo: "",
+      }));
+    });
+  }
+
   async function handleDelete() {
     if (!selectedOrchidGroup) {
       return;
@@ -177,6 +218,7 @@ export function useOrchidManagementMap(house: House) {
     selectedBedZone,
     selectedOrchidGroup,
     selection,
+    workRecordForm,
     actions: {
       cancelMutation: () => setMutationMode(null),
       create: handleCreate,
@@ -189,11 +231,33 @@ export function useOrchidManagementMap(house: House) {
       openCreate,
       openEdit,
       openMove,
+      openWorkRecord,
       selectBedZone,
       selectOrchidGroup,
       startDrag,
       togglePlacementEditMode,
+      updateWorkRecordForm,
+      workRecordCreate: handleWorkRecordCreate,
     },
   };
+}
+
+function createInitialWorkRecordForm(workTypes: string[], orchidGroupId: number | null): WorkRecordQuickFormState {
+  return {
+    workType: workTypes[0] ?? "농약",
+    workDate: new Date().toISOString().slice(0, 10),
+    targetType: orchidGroupId ? "ORCHID_GROUP" : "HOUSE",
+    targetId: orchidGroupId,
+    materialName: "",
+    dilutionRatio: "",
+    quantity: "",
+    worker: "",
+    memo: "",
+  };
+}
+
+function nullableText(value: string) {
+  const trimmed = value.trim();
+  return trimmed.length > 0 ? trimmed : null;
 }
 

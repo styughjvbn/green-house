@@ -1,8 +1,16 @@
-﻿import type { BedZone, FarmStatusMapData, House, OrchidGroup, SelectedBedZone, SelectedOrchidGroup } from "@/entities/farm/types";
+import type {
+  BedZone,
+  FarmStatusMapData,
+  House,
+  OrchidGroup,
+  SelectedBedZone,
+  SelectedOrchidGroup,
+  WorkRecordTargetType,
+} from "@/entities/farm/types";
 
 export type OrchidSelection = SelectedBedZone | SelectedOrchidGroup;
 
-export type MutationMode = "CREATE" | "EDIT" | "MOVE" | null;
+export type MutationMode = "CREATE" | "EDIT" | "MOVE" | "WORK_RECORD" | null;
 
 export type DragState = {
   orchidGroupId: number;
@@ -33,9 +41,34 @@ export type MutationPayload = {
   memo: string | null;
 };
 
+export type WorkRecordQuickFormState = {
+  workType: string;
+  workDate: string;
+  targetType: WorkRecordTargetType;
+  targetId: number | null;
+  materialName: string;
+  dilutionRatio: string;
+  quantity: string;
+  worker: string;
+  memo: string;
+};
+
+export type WorkRecordQuickPayload = {
+  workType: string;
+  workDate: string;
+  targetType: WorkRecordTargetType;
+  targetId: number | null;
+  materialName: string | null;
+  dilutionRatio: string | null;
+  quantity: string | null;
+  worker: string | null;
+  memo: string | null;
+};
+
 export type OrchidManagementMapProps = {
   mapData: FarmStatusMapData;
   house: House;
+  workTypes: string[];
 };
 
 export type OrchidMutationContext = {
@@ -43,4 +76,3 @@ export type OrchidMutationContext = {
   selectedBedZone: BedZone | null;
   resolvedZone: BedZone | null;
 };
-

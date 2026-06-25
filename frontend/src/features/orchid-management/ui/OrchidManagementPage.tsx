@@ -4,9 +4,10 @@ import { OrchidManagementMap } from "./OrchidManagementMap";
 type OrchidManagementPageProps = {
   mapData: FarmStatusMapData;
   house: House | null;
+  workTypes: string[];
 };
 
-export function OrchidManagementPage({ mapData, house }: OrchidManagementPageProps) {
+export function OrchidManagementPage({ mapData, house, workTypes }: OrchidManagementPageProps) {
   if (!house) {
     return (
       <main className="space-y-4">
@@ -41,7 +42,7 @@ export function OrchidManagementPage({ mapData, house }: OrchidManagementPagePro
           </span>
         </div>
       </section>
-      <OrchidManagementMap mapData={mapData} house={house} />
+      <OrchidManagementMap mapData={mapData} house={house} workTypes={workTypes} />
     </main>
   );
 }

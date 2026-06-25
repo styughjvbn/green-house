@@ -1,6 +1,6 @@
 import { API_BASE_URL, fetchApi } from "@/shared/api/client";
-import type { FarmStatusMapData, House } from "@/entities/farm/types";
-import type { MutationPayload } from "../model/types";
+import type { FarmStatusMapData, House, WorkRecord } from "@/entities/farm/types";
+import type { MutationPayload, WorkRecordQuickPayload } from "../model/types";
 
 type ApiErrorPayload = {
   error?: {
@@ -58,6 +58,23 @@ export function getOrchidManagementMap() {
 
 export function getHouse(houseId: number) {
   return fetchApi<House>(`/houses/${houseId}`);
+}
+
+export function getOrchidWorkTypes() {
+  return fetchApi<string[]>("/work-types");
+}
+
+export async function createOrchidWorkRecord(payload: WorkRecordQuickPayload): Promise<WorkRecord> {
+  const response = await fetch(`${API_BASE_URL}/work-records`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload),
+  });
+  const body = await readJson(response);
+  if (!response.ok) {
+    throw new Error(resolveErrorMessage(body, "작업 이력을 저장하지 못했습니다."));
+  }
+  return (body as { data: WorkRecord }).data;
 }
 
 export async function fetchHouse(houseId: number): Promise<House> {

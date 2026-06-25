@@ -3,7 +3,9 @@ export { OrchidManagementMap } from "./ui/OrchidManagementMap";
 
 export {
   getHouse,
+  getOrchidWorkTypes,
   getOrchidManagementMap,
+  createOrchidWorkRecord,
   fetchHouse,
   createOrchidGroup,
   updateOrchidGroup,
