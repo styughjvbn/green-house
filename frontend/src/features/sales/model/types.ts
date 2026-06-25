@@ -56,3 +56,14 @@ export type CreateSalesSlipPayload = {
     memo: string | null;
   }>;
 };
+
+export type SalesTab = "SLIPS" | "CUSTOMERS";
+
+export type SalesFilterState = {
+  from: string;
+  to: string;
+  customerId: string;
+  paymentStatus: string;
+  salesStatus: string;
+  keyword: string;
+};

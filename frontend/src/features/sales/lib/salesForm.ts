@@ -1,8 +1,9 @@
-﻿import type { Customer } from "@/entities/farm/types";
+import type { Customer, SalesSlip } from "@/entities/farm/types";
 import type {
   CreateCustomerPayload,
   CreateSalesSlipPayload,
   CustomerForm,
+  SalesFilterState,
   SalesItemForm,
   SalesSlipForm,
 } from "../model/types";
@@ -43,8 +44,62 @@ export function createInitialSalesForm(
   };
 }
 
+export function createInitialSalesFilters(
+  today = todayIsoDate(),
+): SalesFilterState {
+  const from = new Date(today);
+  from.setDate(from.getDate() - 30);
+
+  return {
+    from: from.toISOString().slice(0, 10),
+    to: today,
+    customerId: "",
+    paymentStatus: "",
+    salesStatus: "",
+    keyword: "",
+  };
+}
+
 export function todayIsoDate(): string {
   return new Date().toISOString().slice(0, 10);
+}
+
+export function filterSalesSlips(
+  salesSlips: SalesSlip[],
+  filters: SalesFilterState,
+): SalesSlip[] {
+  const keyword = filters.keyword.trim().toLowerCase();
+
+  return salesSlips.filter((slip) => {
+    if (filters.from && slip.saleDate < filters.from) {
+      return false;
+    }
+    if (filters.to && slip.saleDate > filters.to) {
+      return false;
+    }
+    if (filters.customerId && String(slip.customer.id) !== filters.customerId) {
+      return false;
+    }
+    if (filters.paymentStatus && slip.paymentStatus !== filters.paymentStatus) {
+      return false;
+    }
+    if (filters.salesStatus && slip.salesStatus !== filters.salesStatus) {
+      return false;
+    }
+    if (!keyword) {
+      return true;
+    }
+
+    return [
+      slip.slipNumber,
+      slip.customer.name,
+      slip.customer.ownerName,
+      slip.customer.phone,
+      slip.memo,
+    ]
+      .filter(Boolean)
+      .some((value) => value?.toLowerCase().includes(keyword));
+  });
 }
 
 export function calculateSalesItemAmount(item: SalesItemForm): number {

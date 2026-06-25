@@ -6,11 +6,13 @@ import {
   createEmptyCustomerForm,
   createEmptySalesItem,
   createInitialSalesForm,
+  createInitialSalesFilters,
+  filterSalesSlips,
   resetSalesSlipFormAfterSave,
   toCreateCustomerPayload,
   toCreateSalesSlipPayload,
 } from "../lib/salesForm";
-import type { CustomerForm, SalesItemForm, SalesSlipForm } from "./types";
+import type { CustomerForm, SalesFilterState, SalesItemForm, SalesSlipForm, SalesTab } from "./types";
 
 export function useSalesManager(
   initialCustomers: Customer[],
@@ -24,6 +26,14 @@ export function useSalesManager(
   const [salesForm, setSalesForm] = useState<SalesSlipForm>(() =>
     createInitialSalesForm(initialCustomers),
   );
+  const [activeTab, setActiveTab] = useState<SalesTab>("SLIPS");
+  const [filters, setFilters] = useState<SalesFilterState>(() =>
+    createInitialSalesFilters(),
+  );
+  const [showCreateSlip, setShowCreateSlip] = useState(false);
+  const [selectedSlipId, setSelectedSlipId] = useState<number | null>(
+    initialSalesSlips[0]?.id ?? null,
+  );
   const [savingCustomer, setSavingCustomer] = useState(false);
   const [savingSlip, setSavingSlip] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
@@ -32,6 +42,15 @@ export function useSalesManager(
     () => calculateSalesTotal(salesForm.items),
     [salesForm.items],
   );
+  const filteredSalesSlips = useMemo(
+    () => filterSalesSlips(salesSlips, filters),
+    [salesSlips, filters],
+  );
+  const selectedSalesSlip =
+    salesSlips.find((salesSlip) => salesSlip.id === selectedSlipId) ??
+    filteredSalesSlips[0] ??
+    salesSlips[0] ??
+    null;
 
   function updateCustomerForm<K extends keyof CustomerForm>(
     field: K,
@@ -45,6 +64,17 @@ export function useSalesManager(
     value: SalesSlipForm[K],
   ) {
     setSalesForm((current) => ({ ...current, [field]: value }));
+  }
+
+  function updateFilters<K extends keyof SalesFilterState>(
+    field: K,
+    value: SalesFilterState[K],
+  ) {
+    setFilters((current) => ({ ...current, [field]: value }));
+  }
+
+  function resetFilters() {
+    setFilters(createInitialSalesFilters());
   }
 
   function updateItem(
@@ -112,6 +142,8 @@ export function useSalesManager(
         toCreateSalesSlipPayload(salesForm),
       );
       setSalesSlips((current) => [salesSlip, ...current]);
+      setSelectedSlipId(salesSlip.id);
+      setShowCreateSlip(false);
       setSalesForm((current) => resetSalesSlipFormAfterSave(current));
     } catch (error) {
       setErrorMessage(
@@ -125,8 +157,13 @@ export function useSalesManager(
   return {
     customers,
     salesSlips,
+    filteredSalesSlips,
+    selectedSalesSlip,
     customerForm,
+    activeTab,
+    filters,
     salesForm,
+    showCreateSlip,
     savingCustomer,
     savingSlip,
     errorMessage,
@@ -134,7 +171,12 @@ export function useSalesManager(
     addSalesItem,
     removeSalesItem,
     selectCustomer,
+    selectSalesSlip: setSelectedSlipId,
+    setActiveTab,
+    setShowCreateSlip,
+    resetFilters,
     updateCustomerForm,
+    updateFilters,
     updateSalesForm,
     updateItem,
     handleCreateCustomer,
