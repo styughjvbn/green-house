@@ -1,5 +1,4 @@
-﻿import type {
-  DashboardSummary,
+import type {
   FarmStatusMapData,
   FarmStatusOrchidGroupList,
   FarmStatusZoomData,
@@ -7,7 +6,6 @@
 import { FarmStatusMap } from "./FarmStatusMap";
 
 type FarmStatusPageProps = {
-  summary: DashboardSummary;
   mapData: FarmStatusMapData;
   initialSelection: FarmStatusOrchidGroupList | null;
   initialZoom: FarmStatusZoomData | null;

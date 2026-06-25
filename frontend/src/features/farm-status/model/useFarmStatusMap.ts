@@ -108,12 +108,16 @@ export function useFarmStatusMap({
   }
 
   async function handleSelectPhysicalBed(bed: PhysicalBed) {
-    setZoomLevel("PHYSICAL_BED");
+    if (zoomLevel !== "PHYSICAL_BED") {
+      setZoomLevel("PHYSICAL_BED");
+    }
     await runRequest(() => loadSelection("PHYSICAL_BED", bed.id));
   }
 
   async function handleSelectBedZone(zone: BedZone) {
-    setZoomLevel("BED_ZONE");
+    if (zoomLevel !== "BED_ZONE") {
+      setZoomLevel("BED_ZONE");
+    }
     await runRequest(() => loadSelection("BED_ZONE", zone.id));
   }
 
@@ -123,6 +127,10 @@ export function useFarmStatusMap({
       return;
     }
     if (nextLevel !== "FARM" && selectedHouseId) {
+      if (zoomData?.houseId === selectedHouseId) {
+        setZoomLevel(nextLevel);
+        return;
+      }
       await runRequest(() => loadHouseZoom(selectedHouseId, nextLevel));
       return;
     }

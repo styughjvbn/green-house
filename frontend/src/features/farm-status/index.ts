@@ -2,7 +2,6 @@ export { FarmStatusPage } from "./ui/FarmStatusPage";
 export { FarmStatusMap } from "./ui/FarmStatusMap";
 
 export {
-  getDashboardSummary,
   getFarmStatusMap,
   getFarmStatusOrchidGroups,
   getFarmStatusHouseZoom,

@@ -1,7 +1,6 @@
 ﻿import { API_BASE_URL } from "@/shared/api/client";
 import { fetchApi } from "@/shared/api/client";
 import type {
-  DashboardSummary,
   FarmStatusMapData,
   FarmStatusOrchidGroupList,
   FarmStatusTargetType,

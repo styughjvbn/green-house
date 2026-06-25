@@ -22,14 +22,9 @@ export function FarmStatusMap(props: FarmStatusMapProps) {
               {map.errorMessage}
             </div>
           ) : null}
-          {map.loading ? (
-            <div className="rounded-md border border-[#d7ddd4] bg-white p-3 text-sm text-[#5c6a60]">
-              불러오는 중입니다.
-            </div>
-          ) : null}
-
           <FarmMapCanvas
             houses={mapData.houses}
+            loading={map.loading}
             selectedBedZoneId={map.selectedBedZoneId}
             selectedHouseId={map.selectedHouseId}
             selectedPhysicalBedId={map.selectedPhysicalBedId}

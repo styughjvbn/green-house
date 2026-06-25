@@ -15,6 +15,7 @@ import { Legend, MapBackdrop, MapControls } from "./MapChrome";
 
 type FarmMapCanvasProps = {
   houses: HouseStatusSummary[];
+  loading: boolean;
   selectedBedZoneId: number | null;
   selectedHouseId: number | null;
   selectedPhysicalBedId: number | null;
@@ -31,6 +32,7 @@ type FarmMapCanvasProps = {
 
 export default function FarmMapCanvas({
   houses,
+  loading,
   selectedBedZoneId,
   selectedHouseId,
   selectedPhysicalBedId,
@@ -85,6 +87,11 @@ export default function FarmMapCanvas({
       </div>
 
       <Legend />
+      {loading ? (
+        <div className="pointer-events-none absolute right-4 bottom-4 z-30 rounded-md bg-white/90 px-3 py-2 text-sm font-semibold text-[#4f6255] shadow-sm">
+          불러오는 중
+        </div>
+      ) : null}
     </div>
   );
 }
