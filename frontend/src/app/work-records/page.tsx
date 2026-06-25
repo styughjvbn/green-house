@@ -13,12 +13,6 @@ export default async function WorkRecordsPage() {
 
   return (
     <main className="space-y-5">
-      <section className="flex items-end gap-5">
-        <h1 className="text-2xl font-bold text-[#17251b]">작업 이력</h1>
-        <p className="pb-1 text-sm text-[#5c6a60]">
-          농약, 비료, 분갈이, 정리 작업 등의 작업 이력을 등록하고 관리합니다.
-        </p>
-      </section>
       <WorkRecordManager
         houses={mapData.houses}
         initialRecords={records}

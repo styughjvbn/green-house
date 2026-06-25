@@ -47,7 +47,7 @@ export default function FarmMapCanvas({
   onZoomOut,
 }: FarmMapCanvasProps) {
   return (
-    <div className="relative min-h-[500px] overflow-hidden rounded-xl border border-[#cdd9c8] bg-[#95b969] p-4 shadow-sm">
+    <div className="relative min-h-[600px] overflow-hidden rounded-xl border border-[#cdd9c8] bg-[#95b969] p-4 shadow-sm">
       <MapBackdrop />
       <MapControls
         zoomLevel={zoomLevel}
