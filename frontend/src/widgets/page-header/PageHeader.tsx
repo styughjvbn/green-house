@@ -24,7 +24,7 @@ export function PageHeader({
   }).format(new Date());
 
   return (
-    <header className="full-bleed-header flex min-h-10 items-center justify-between gap-4 border-b border-[#edf0ec] bg-white px-4 py-3 shadow-[0_1px_8px_rgba(31,42,36,0.04)] md:px-5">
+    <header className="flex min-h-10 items-center justify-between gap-4 border-b border-[#edf0ec] bg-white px-4 py-3 shadow-[0_1px_8px_rgba(31,42,36,0.04)] md:px-5">
       <div className="flex min-w-0 items-end gap-2">
         <h1 className="truncate text-xl font-bold text-[#17251b]">{title}</h1>
         <p className="truncate text-sm text-[#7a8680]">{description}</p>
