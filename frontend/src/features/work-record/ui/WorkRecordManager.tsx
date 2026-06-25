@@ -49,10 +49,16 @@ export function WorkRecordManager(props: WorkRecordManagerProps) {
         }`}
       >
         <WorkRecordList
-          records={manager.filteredRecords}
+          currentPage={manager.currentPage}
+          pageSize={manager.pageSize}
+          records={manager.paginatedRecords}
           selectedRecordId={
             manager.detailOpen ? (manager.selectedRecord?.id ?? null) : null
           }
+          totalPages={manager.totalPages}
+          totalRecords={manager.filteredRecords.length}
+          onPageChange={manager.changePage}
+          onPageSizeChange={manager.changePageSize}
           onSelect={manager.selectRecord}
         />
         {manager.detailOpen ? (

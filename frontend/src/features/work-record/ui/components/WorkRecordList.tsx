@@ -4,16 +4,30 @@ import type { WorkRecord } from "@/entities/farm/types";
 import { formatTarget, formatTargetType } from "../../lib/workRecordForm";
 
 type WorkRecordListProps = {
+  currentPage: number;
+  pageSize: number;
   records: WorkRecord[];
   selectedRecordId: number | null;
+  totalPages: number;
+  totalRecords: number;
+  onPageChange: (page: number) => void;
+  onPageSizeChange: (pageSize: number) => void;
   onSelect: (recordId: number) => void;
 };
 
 export function WorkRecordList({
+  currentPage,
+  pageSize,
   records,
   selectedRecordId,
+  totalPages,
+  totalRecords,
+  onPageChange,
+  onPageSizeChange,
   onSelect,
 }: WorkRecordListProps) {
+  const visiblePages = getVisiblePages(currentPage, totalPages);
+
   return (
     <section className="rounded-md border border-[#dfe5dc] bg-white p-4 shadow-sm">
       <div className="overflow-x-auto">
@@ -89,46 +103,69 @@ export function WorkRecordList({
       </div>
       <div className="mt-4 flex items-center justify-between text-sm">
         <span className="rounded-md border border-[#dfe5dc] px-4 py-2 text-[#344138]">
-          전체 {records.length}건
+          전체 {totalRecords}건
         </span>
         <div className="flex items-center gap-2">
           <button
-            className="h-9 w-9 rounded-md border border-[#dfe5dc]"
+            className="h-9 w-9 rounded-md border border-[#dfe5dc] disabled:opacity-40"
             type="button"
+            disabled={currentPage === 1}
+            onClick={() => onPageChange(currentPage - 1)}
           >
             ‹
           </button>
+          {visiblePages.map((page) => (
+            <button
+              key={page}
+              className={`h-9 w-9 rounded-md border font-bold ${
+                page === currentPage
+                  ? "border-[#159447] bg-[#159447] text-white"
+                  : "border-[#dfe5dc] text-[#344138]"
+              }`}
+              type="button"
+              onClick={() => onPageChange(page)}
+            >
+              {page}
+            </button>
+          ))}
           <button
-            className="h-9 w-9 rounded-md bg-[#159447] font-bold text-white"
+            className="h-9 w-9 rounded-md border border-[#dfe5dc] disabled:opacity-40"
             type="button"
-          >
-            1
-          </button>
-          <button
-            className="h-9 w-9 rounded-md border border-[#dfe5dc]"
-            type="button"
-          >
-            2
-          </button>
-          <button
-            className="h-9 w-9 rounded-md border border-[#dfe5dc]"
-            type="button"
-          >
-            3
-          </button>
-          <button
-            className="h-9 w-9 rounded-md border border-[#dfe5dc]"
-            type="button"
+            disabled={currentPage === totalPages}
+            onClick={() => onPageChange(currentPage + 1)}
           >
             ›
           </button>
         </div>
-        <span className="rounded-md border border-[#dfe5dc] px-4 py-2 text-[#344138]">
-          페이지당 10개
-        </span>
+        <label className="inline-flex items-center gap-2 rounded-md border border-[#dfe5dc] px-3 py-2 text-[#344138]">
+          <span>페이지당</span>
+          <select
+            className="bg-white font-bold outline-none"
+            value={pageSize}
+            onChange={(event) => onPageSizeChange(Number(event.target.value))}
+          >
+            {[5, 10, 20, 50].map((size) => (
+              <option key={size} value={size}>
+                {size}개
+              </option>
+            ))}
+          </select>
+        </label>
       </div>
     </section>
   );
+}
+
+function getVisiblePages(currentPage: number, totalPages: number) {
+  const maxVisibleCount = 5;
+  const halfCount = Math.floor(maxVisibleCount / 2);
+  const startPage = Math.max(
+    1,
+    Math.min(currentPage - halfCount, totalPages - maxVisibleCount + 1),
+  );
+  const visibleCount = Math.min(maxVisibleCount, totalPages);
+
+  return Array.from({ length: visibleCount }, (_, index) => startPage + index);
 }
 
 function WorkTypeBadge({ workType }: { workType: string }) {
