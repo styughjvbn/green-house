@@ -55,6 +55,7 @@ export function OrchidManagementMap({
         mutationMode={orchidManagement.mutationMode}
         resolvedZone={orchidManagement.resolvedZone}
         saving={orchidManagement.saving}
+        selectedBedZone={orchidManagement.selectedBedZone}
         selectedOrchidGroup={orchidManagement.selectedOrchidGroup}
         workRecordForm={orchidManagement.workRecordForm}
         workTypes={workTypes}
@@ -67,6 +68,7 @@ export function OrchidManagementMap({
         onOpenEdit={orchidManagement.actions.openEdit}
         onOpenMove={orchidManagement.actions.openMove}
         onOpenWorkRecord={orchidManagement.actions.openWorkRecord}
+        onSelectOrchidGroup={orchidManagement.actions.selectOrchidGroup}
         onTogglePlacementEditMode={
           orchidManagement.actions.togglePlacementEditMode
         }

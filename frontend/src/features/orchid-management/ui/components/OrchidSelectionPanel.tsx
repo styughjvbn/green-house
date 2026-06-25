@@ -1,5 +1,6 @@
 ﻿"use client";
 
+import type { ReactNode } from "react";
 import type {
   BedZone,
   House,
@@ -7,6 +8,7 @@ import type {
   OrchidGroup,
   WorkRecord,
 } from "@/entities/farm/types";
+import { Edit2, Trash2 } from "lucide-react";
 import { findBedZone } from "../../lib/orchidManagementUtils";
 import type {
   MutationMode,
@@ -28,6 +30,7 @@ export default function OrchidSelectionPanel({
   placementEditMode,
   resolvedZone,
   saving,
+  selectedBedZone,
   selectedOrchidGroup,
   workRecordForm,
   workTypes,
@@ -40,6 +43,7 @@ export default function OrchidSelectionPanel({
   onOpenEdit,
   onOpenMove,
   onOpenWorkRecord,
+  onSelectOrchidGroup,
   onUpdateWorkRecordForm,
   onWorkRecordCreate,
 }: {
@@ -50,6 +54,7 @@ export default function OrchidSelectionPanel({
   placementEditMode: boolean;
   resolvedZone: BedZone | null;
   saving: boolean;
+  selectedBedZone: BedZone | null;
   selectedOrchidGroup: OrchidGroup | null;
   workRecordForm: WorkRecordQuickFormState;
   workTypes: string[];
@@ -62,6 +67,7 @@ export default function OrchidSelectionPanel({
   onOpenEdit: () => void;
   onOpenMove: () => void;
   onOpenWorkRecord: () => void;
+  onSelectOrchidGroup: (orchidGroupId: number) => void;
   onTogglePlacementEditMode: () => void;
   onUpdateWorkRecordForm: <K extends keyof WorkRecordQuickFormState>(
     field: K,
@@ -69,45 +75,98 @@ export default function OrchidSelectionPanel({
   ) => void;
   onWorkRecordCreate: () => Promise<void>;
 }) {
+  const zone = selectedOrchidGroup
+    ? (findBedZone(house, selectedOrchidGroup.bedZoneId)?.zone ?? null)
+    : selectedBedZone;
+  const orchidGroups = zone?.orchidGroups ?? [];
+
   return (
     <aside className="space-y-3">
       <section className="rounded-md border border-[#d7ddd4] bg-white p-3 shadow-sm">
-        <p className="text-sm font-semibold text-[#3d6f91]">선택한 난 묶음</p>
-        {selectedOrchidGroup ? (
+        <div className="flex items-center justify-between gap-3">
+          <p className="text-sm font-semibold text-[#17251b]">
+            선택한 난 묶음 목록 ({orchidGroups.length}개)
+          </p>
+        </div>
+
+        {zone ? (
           <div className="mt-3">
-            <div className="flex gap-3">
-              <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-md bg-[#d8edd5] text-2xl">
-                ●
-              </div>
-              <div>
-                <h2 className="text-lg font-semibold">
-                  {selectedOrchidGroup.varietyName}
-                </h2>
-                <p className="mt-0.5 text-sm text-[#435047]">
-                  {selectedOrchidGroup.quantity}분
+            <div className="space-y-2">
+              {orchidGroups.map((orchidGroup) => {
+                const selected = orchidGroup.id === selectedOrchidGroup?.id;
+
+                return (
+                  <div
+                    key={orchidGroup.id}
+                    className={`cursor-pointer rounded-md border p-3 transition hover:border-[#159447] ${
+                      selected
+                        ? "border-[#b9d0ff] bg-[#f5f8ff]"
+                        : "border-[#e1e6df] bg-white"
+                    }`}
+                    onClick={() => onSelectOrchidGroup(orchidGroup.id)}
+                  >
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="min-w-0">
+                        <div className="flex items-center gap-2">
+                          <span
+                            className={`h-2.5 w-2.5 shrink-0 rounded-full ${getStatusDotClass(orchidGroup.status)}`}
+                          />
+                          <p className="truncate text-sm font-bold text-[#17251b]">
+                            {orchidGroup.varietyName}
+                          </p>
+                        </div>
+                        <p className="mt-1 text-xs font-semibold text-[#344138]">
+                          {orchidGroup.quantity}분
+                        </p>
+                        <p className="mt-0.5 text-[11px] text-[#6a766e]">
+                          {formatOrchidMeta(orchidGroup)}
+                        </p>
+                      </div>
+
+                      <div className="flex shrink-0 items-center gap-1.5">
+                        <StatusBadge value={orchidGroup.status} />
+                        <IconAction
+                          label="수정"
+                          onClick={onOpenEdit}
+                          disabled={!selected}
+                        >
+                          <Edit2
+                            className="h-4 w-4"
+                            strokeWidth={1.8}
+                            aria-hidden="true"
+                          />
+                        </IconAction>
+                        <IconAction
+                          label="삭제"
+                          onClick={onDelete}
+                          disabled={!selected || saving}
+                        >
+                          <Trash2
+                            className="h-4 w-4"
+                            strokeWidth={1.8}
+                            aria-hidden="true"
+                          />
+                        </IconAction>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+              {orchidGroups.length === 0 ? (
+                <p className="rounded-md bg-[#f5f7f3] p-3 text-sm text-[#5c6a60]">
+                  이 구역에 등록된 난 묶음이 없습니다.
                 </p>
-                <p className="mt-0.5 text-sm text-[#246df2]">
-                  {selectedOrchidGroup.houseNumber}동 &gt;{" "}
-                  {selectedOrchidGroup.physicalBedNumber}배드 &gt;{" "}
-                  {selectedOrchidGroup.bedZoneName}
-                </p>
-              </div>
+              ) : null}
             </div>
-            <div className="mt-3 grid gap-2">
+
+            <div className="mt-3 grid grid-cols-3 gap-2">
               <ActionButton
                 label="난 묶음 추가"
                 onClick={onOpenCreate}
                 primary
               />
-              <ActionButton label="난 묶음 수정" onClick={onOpenEdit} />
-              <ActionButton
-                label="난 묶음 삭제"
-                onClick={onDelete}
-                danger
-                disabled={saving}
-              />
-              <ActionButton label="다른 위치로 이동" onClick={onOpenMove} />
               <ActionButton label="작업 기록 추가" onClick={onOpenWorkRecord} />
+              <ActionButton label="다른 위치로 이동" onClick={onOpenMove} />
             </div>
           </div>
         ) : (
@@ -235,6 +294,67 @@ export function SelectedZoneInfo({
       )}
     </section>
   );
+}
+
+function IconAction({
+  children,
+  disabled = false,
+  label,
+  onClick,
+}: {
+  children: ReactNode;
+  disabled?: boolean;
+  label: string;
+  onClick: () => void;
+}) {
+  return (
+    <button
+      aria-label={label}
+      className="flex h-8 w-8 items-center justify-center rounded-md border border-[#dfe5dc] text-[#435047] disabled:opacity-40"
+      disabled={disabled}
+      type="button"
+      onClick={(event) => {
+        event.stopPropagation();
+        onClick();
+      }}
+    >
+      {children}
+    </button>
+  );
+}
+
+function StatusBadge({ value }: { value: string }) {
+  const className =
+    value === "정상" || value === "판매 가능"
+      ? "bg-[#e6f7e8] text-[#159447]"
+      : value.includes("주의")
+        ? "bg-[#fff1d6] text-[#d88400]"
+        : "bg-[#ffe7e7] text-[#d72d2d]";
+
+  return (
+    <span className={`rounded-md px-2 py-1 text-[11px] font-bold ${className}`}>
+      {value}
+    </span>
+  );
+}
+
+function formatOrchidMeta(orchidGroup: OrchidGroup) {
+  return [
+    orchidGroup.potSize,
+    orchidGroup.ageYear ? `${orchidGroup.ageYear}년생` : null,
+  ]
+    .filter(Boolean)
+    .join(" · ");
+}
+
+function getStatusDotClass(status: string) {
+  if (status === "정상" || status === "판매 가능") {
+    return "bg-[#159447]";
+  }
+  if (status.includes("주의")) {
+    return "bg-[#f59e0b]";
+  }
+  return "bg-[#e52d2d]";
 }
 
 function WorkRecordSummaryView({
