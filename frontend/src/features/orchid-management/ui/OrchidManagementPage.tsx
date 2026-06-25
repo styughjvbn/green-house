@@ -24,19 +24,6 @@ export function OrchidManagementPage({
 
   return (
     <main className="space-y-4">
-      <section className="flex justify-end">
-        <div className="flex flex-wrap gap-2 rounded-md border border-[#d7ddd4] bg-white px-3 py-2 text-sm shadow-sm">
-          <span>
-            <span className="mr-2 text-[#159447]">●</span>정상
-          </span>
-          <span>
-            <span className="mr-2 text-[#f59e0b]">●</span>주의
-          </span>
-          <span>
-            <span className="mr-2 text-[#e52d2d]">●</span>이상
-          </span>
-        </div>
-      </section>
       <OrchidManagementMap
         mapData={mapData}
         house={house}

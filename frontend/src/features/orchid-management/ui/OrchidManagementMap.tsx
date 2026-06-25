@@ -4,10 +4,8 @@ import { useState } from "react";
 import type { OrchidManagementViewMode } from "@/entities/farm/types";
 import { useOrchidManagementMap } from "../model/useOrchidManagementMap";
 import type { OrchidManagementMapProps } from "../model/types";
-import HouseDetailHeader from "./components/HouseDetailHeader";
 import HouseDetailMap from "./components/HouseDetailMap";
 import HouseSelectorPanel from "./components/HouseSelectorPanel";
-import MapLegend from "./components/MapLegend";
 import OrchidSelectionPanel from "./components/OrchidSelectionPanel";
 
 export function OrchidManagementMap({
@@ -20,12 +18,17 @@ export function OrchidManagementMap({
   const orchidManagement = useOrchidManagementMap(house, workTypes);
 
   return (
-    <div className="grid gap-4 2xl:grid-cols-[260px_minmax(0,1fr)_330px]">
-      <HouseSelectorPanel houses={mapData.houses} selectedHouseId={house.id} />
+    <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_330px]">
       <section className="space-y-3">
-        <HouseDetailHeader
+        <HouseSelectorPanel
           house={house}
+          houses={mapData.houses}
+          placementEditMode={orchidManagement.placementEditMode}
+          selectedHouseId={house.id}
           viewMode={viewMode}
+          onTogglePlacementEditMode={
+            orchidManagement.actions.togglePlacementEditMode
+          }
           onViewModeChange={setViewMode}
         />
         <HouseDetailMap
@@ -41,7 +44,6 @@ export function OrchidManagementMap({
           onSelectBedZone={orchidManagement.actions.selectBedZone}
           onSelectOrchidGroup={orchidManagement.actions.selectOrchidGroup}
         />
-        <MapLegend />
       </section>
       <OrchidSelectionPanel
         errorMessage={orchidManagement.errorMessage}
