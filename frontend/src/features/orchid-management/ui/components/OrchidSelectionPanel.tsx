@@ -1,6 +1,6 @@
-"use client";
+﻿"use client";
 
-import type { BedZone, House, HouseStatusSummary, OrchidGroup } from "@/types/farm";
+import type { BedZone, House, HouseStatusSummary, OrchidGroup } from "@/entities/farm/types";
 import { findBedZone } from "../../lib/orchidManagementUtils";
 import type { MutationMode, MutationPayload } from "../../model/types";
 import ActionButton, { DisabledAction } from "./ActionButton";
@@ -133,3 +133,4 @@ export default function OrchidSelectionPanel({
     </aside>
   );
 }
+

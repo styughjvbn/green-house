@@ -1,6 +1,6 @@
-"use client";
+﻿"use client";
 
-import type { WorkRecord } from "@/types/farm";
+import type { WorkRecord } from "@/entities/farm/types";
 import { formatTarget } from "../../lib/workRecordForm";
 
 type WorkRecordListProps = {
@@ -54,3 +54,4 @@ export function WorkRecordList({ records }: WorkRecordListProps) {
     </section>
   );
 }
+

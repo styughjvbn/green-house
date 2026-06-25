@@ -1,6 +1,6 @@
-"use client";
+﻿"use client";
 
-import type { HouseStatusSummary } from "@/types/farm";
+import type { HouseStatusSummary } from "@/entities/farm/types";
 import type { SelectedTarget } from "../../model/types";
 import { hasHouseWarning } from "../../lib/farmStatusView";
 
@@ -58,3 +58,4 @@ function HouseSummaryBlock({
     </button>
   );
 }
+

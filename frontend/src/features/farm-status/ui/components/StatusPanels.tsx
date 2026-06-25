@@ -1,10 +1,10 @@
-"use client";
+﻿"use client";
 
 import type {
   FarmStatusOrchidGroupItem,
   FarmStatusOrchidGroupList,
   HouseStatusSummary,
-} from "@/types/farm";
+} from "@/entities/farm/types";
 import { hasHouseWarning, selectionTitle } from "../../lib/farmStatusView";
 
 export function SelectionSummaryPanel({
@@ -162,3 +162,4 @@ function StatusBadge({ status }: { status: string }) {
   const isNormal = status === "정상";
   return <span className={`rounded-full px-2 py-0.5 text-[11px] font-semibold ${isNormal ? "bg-[#e8f7e8] text-[#16853b]" : "bg-[#fff0df] text-[#c15b10]"}`}>{status}</span>;
 }
+

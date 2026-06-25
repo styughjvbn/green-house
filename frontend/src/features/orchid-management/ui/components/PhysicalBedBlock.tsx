@@ -1,6 +1,6 @@
-"use client";
+﻿"use client";
 
-import type { PhysicalBed } from "@/types/farm";
+import type { PhysicalBed } from "@/entities/farm/types";
 import type { OrchidSelection } from "../../model/types";
 import BedZoneBlock from "./BedZoneBlock";
 
@@ -33,3 +33,4 @@ export default function PhysicalBedBlock({
     </div>
   );
 }
+

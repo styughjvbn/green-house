@@ -1,4 +1,4 @@
-import type { BedZone, HouseStatusSummary, OrchidGroup, PhysicalBed, WorkRecord, WorkRecordTargetType } from "@/types/farm";
+﻿import type { BedZone, HouseStatusSummary, OrchidGroup, PhysicalBed, WorkRecord, WorkRecordTargetType } from "@/entities/farm/types";
 import type { CreateWorkRecordPayload, WorkRecordFormState } from "../model/types";
 
 export function createInitialWorkRecordForm(workTypes: string[], houses: HouseStatusSummary[]): WorkRecordFormState {
@@ -109,3 +109,4 @@ function resolveSafeOptionId(currentValue: string, ids: number[]) {
 function toNullableNumber(value: string) {
   return value ? Number(value) : null;
 }
+

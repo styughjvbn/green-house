@@ -1,6 +1,6 @@
-"use client";
+﻿"use client";
 
-import type { BedZone, FarmStatusZoomData, FarmZoomLevel, PhysicalBed } from "@/types/farm";
+import type { BedZone, FarmStatusZoomData, FarmZoomLevel, PhysicalBed } from "@/entities/farm/types";
 
 type HouseDetailLayerProps = {
   selectedBedZoneId: number | null;
@@ -123,3 +123,4 @@ function BedZoneMapBlock({
     </button>
   );
 }
+

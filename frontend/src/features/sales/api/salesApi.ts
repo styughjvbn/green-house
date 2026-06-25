@@ -1,5 +1,5 @@
-import { API_BASE_URL } from "@/lib/api";
-import type { Customer, SalesSlip } from "@/types/farm";
+﻿import { API_BASE_URL } from "@/shared/api/client";
+import type { Customer, SalesSlip } from "@/entities/farm/types";
 import type { CreateCustomerPayload, CreateSalesSlipPayload } from "../model/types";
 
 type ApiSuccess<T> = {
@@ -47,3 +47,4 @@ export function createSalesSlip(payload: CreateSalesSlipPayload): Promise<SalesS
     "판매 전표를 저장하지 못했습니다.",
   );
 }
+

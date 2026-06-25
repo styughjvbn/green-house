@@ -1,4 +1,4 @@
-import type { Customer, SalesSlip } from "@/types/farm";
+﻿import type { Customer, SalesSlip } from "@/entities/farm/types";
 
 export type SalesManagerProps = {
   initialCustomers: Customer[];
@@ -56,3 +56,4 @@ export type CreateSalesSlipPayload = {
     memo: string | null;
   }>;
 };
+

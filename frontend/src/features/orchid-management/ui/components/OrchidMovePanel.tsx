@@ -1,7 +1,7 @@
-"use client";
+﻿"use client";
 
 import { FormEvent, useEffect, useState } from "react";
-import type { House, HouseStatusSummary, OrchidGroup } from "@/types/farm";
+import type { House, HouseStatusSummary, OrchidGroup } from "@/entities/farm/types";
 import { fetchHouse } from "../../api/orchidManagementApi";
 
 export default function OrchidMovePanel({
@@ -136,3 +136,4 @@ export default function OrchidMovePanel({
     </section>
   );
 }
+

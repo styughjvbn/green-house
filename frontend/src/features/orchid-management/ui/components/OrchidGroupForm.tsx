@@ -1,7 +1,7 @@
-"use client";
+﻿"use client";
 
 import { FormEvent, useState } from "react";
-import type { BedZone, OrchidGroup } from "@/types/farm";
+import type { BedZone, OrchidGroup } from "@/entities/farm/types";
 import { nullableNumber, nullableText } from "../../lib/orchidManagementUtils";
 import type { MutationPayload, OrchidFormState } from "../../model/types";
 import TextField from "./TextField";
@@ -97,3 +97,4 @@ export default function OrchidGroupForm({
     </section>
   );
 }
+

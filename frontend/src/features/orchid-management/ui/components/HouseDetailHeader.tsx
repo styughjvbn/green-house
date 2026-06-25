@@ -1,6 +1,6 @@
-"use client";
+﻿"use client";
 
-import type { House, OrchidManagementViewMode } from "@/types/farm";
+import type { House, OrchidManagementViewMode } from "@/entities/farm/types";
 
 export default function HouseDetailHeader({
   house,
@@ -47,3 +47,4 @@ export default function HouseDetailHeader({
     </section>
   );
 }
+

@@ -1,4 +1,4 @@
-import type { Customer } from "@/types/farm";
+﻿import type { Customer } from "@/entities/farm/types";
 import type {
   CreateCustomerPayload,
   CreateSalesSlipPayload,
@@ -93,3 +93,4 @@ export function resetSalesSlipFormAfterSave(form: SalesSlipForm): SalesSlipForm 
     items: [createEmptySalesItem()],
   };
 }
+

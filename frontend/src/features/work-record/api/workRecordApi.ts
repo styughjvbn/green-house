@@ -1,5 +1,5 @@
-import { API_BASE_URL } from "@/lib/api";
-import type { BedZone, OrchidGroup, PhysicalBed, WorkRecord } from "@/types/farm";
+﻿import { API_BASE_URL } from "@/shared/api/client";
+import type { BedZone, OrchidGroup, PhysicalBed, WorkRecord } from "@/entities/farm/types";
 import type { CreateWorkRecordPayload, WorkRecordTargetOptions } from "../model/types";
 
 export async function getWorkRecordTargetOptions(houseId: string): Promise<WorkRecordTargetOptions> {
@@ -41,3 +41,4 @@ export async function createWorkRecord(payload: CreateWorkRecordPayload): Promis
 
   return body.data as WorkRecord;
 }
+

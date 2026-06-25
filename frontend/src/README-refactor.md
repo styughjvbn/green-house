@@ -14,16 +14,16 @@
 
 ```text
 components/farm-map/farm-status-map.tsx
-→ features/farm-status/ui/components/* 로 분리
+→ features/farm-status/ui/*, features/farm-status/model/* 로 분리
 
 components/orchid-group/orchid-management-map.tsx
-→ features/orchid-management/ui/OrchidManagementMap.tsx
+→ features/orchid-management/{api,lib,model,ui} 로 분리
 
 components/sales/sales-manager.tsx
-→ features/sales/ui/SalesManager.tsx
+→ features/sales/{api,lib,model,ui} 로 분리
 
 components/work-record/work-record-manager.tsx
-→ features/work-record/ui/WorkRecordManager.tsx
+→ features/work-record/{api,lib,model,ui} 로 분리
 
 components/print/sales-slip-print-view.tsx
 → features/print/ui/SalesSlipPrintView.tsx
@@ -37,6 +37,8 @@ lib/api.ts
 types/farm.ts
 → entities/farm/types.ts
 ```
+
+기존 `components/`, `lib/api.ts`, `types/farm.ts` 호환 파일은 제거했고, import는 새 계층 경로로 통일했다.
 
 ## 농장 현황 기능 구조
 

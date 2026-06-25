@@ -1,7 +1,7 @@
-"use client";
+﻿"use client";
 
 import { useState } from "react";
-import type { OrchidManagementViewMode } from "@/types/farm";
+import type { OrchidManagementViewMode } from "@/entities/farm/types";
 import { useOrchidManagementMap } from "../model/useOrchidManagementMap";
 import type { OrchidManagementMapProps } from "../model/types";
 import HouseDetailHeader from "./components/HouseDetailHeader";
@@ -48,3 +48,4 @@ export function OrchidManagementMap({ mapData, house }: OrchidManagementMapProps
     </div>
   );
 }
+

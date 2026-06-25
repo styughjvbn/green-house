@@ -1,8 +1,8 @@
-import type {
+﻿import type {
   FarmStatusOrchidGroupList,
   FarmZoomLevel,
   HouseStatusSummary,
-} from "@/types/farm";
+} from "@/entities/farm/types";
 
 export const farmStatusZoomOrder: FarmZoomLevel[] = ["FARM", "HOUSE", "PHYSICAL_BED", "BED_ZONE"];
 
@@ -41,3 +41,4 @@ export function selectionTitle(
 export function hasHouseWarning(house: HouseStatusSummary | null): boolean {
   return Boolean(house && (house.warningCount > 0 || house.repotDueCount > 0));
 }
+

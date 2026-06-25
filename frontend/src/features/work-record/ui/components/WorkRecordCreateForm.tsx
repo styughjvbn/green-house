@@ -1,7 +1,7 @@
-"use client";
+﻿"use client";
 
 import type { FormEvent } from "react";
-import type { BedZone, HouseStatusSummary, OrchidGroup, PhysicalBed } from "@/types/farm";
+import type { BedZone, HouseStatusSummary, OrchidGroup, PhysicalBed } from "@/entities/farm/types";
 import type { WorkRecordFormState } from "../../model/types";
 import { SelectField, TextField } from "./FormFields";
 import { TargetSelectorFields } from "./TargetSelectorFields";
@@ -96,3 +96,4 @@ export function WorkRecordCreateForm({
     </section>
   );
 }
+

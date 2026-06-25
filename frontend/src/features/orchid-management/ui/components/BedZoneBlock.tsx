@@ -1,6 +1,6 @@
-"use client";
+﻿"use client";
 
-import type { BedZone } from "@/types/farm";
+import type { BedZone } from "@/entities/farm/types";
 import OrchidGroupBlock from "./OrchidGroupBlock";
 
 export default function BedZoneBlock({
@@ -47,3 +47,4 @@ export default function BedZoneBlock({
     </div>
   );
 }
+

@@ -1,7 +1,7 @@
-"use client";
+﻿"use client";
 
 import { FormEvent, useEffect, useMemo, useState } from "react";
-import type { BedZone, OrchidGroup, PhysicalBed, WorkRecord } from "@/types/farm";
+import type { BedZone, OrchidGroup, PhysicalBed, WorkRecord } from "@/entities/farm/types";
 import { createWorkRecord, getWorkRecordTargetOptions } from "../api/workRecordApi";
 import {
   createInitialWorkRecordForm,
@@ -95,3 +95,4 @@ export function useWorkRecordManager({ initialRecords, houses, workTypes }: Work
     submitWorkRecord,
   };
 }
+

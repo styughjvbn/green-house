@@ -1,5 +1,5 @@
-import { API_BASE_URL } from "@/lib/api";
-import type { House } from "@/types/farm";
+﻿import { API_BASE_URL } from "@/shared/api/client";
+import type { House } from "@/entities/farm/types";
 import type { MutationPayload } from "../model/types";
 
 type ApiErrorPayload = {
@@ -72,3 +72,4 @@ async function submitOrchidMutation(path: string, method: "POST" | "PATCH", payl
     throw new Error(resolveErrorMessage(body, "저장하지 못했습니다."));
   }
 }
+

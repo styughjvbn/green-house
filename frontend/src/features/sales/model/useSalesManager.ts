@@ -1,5 +1,5 @@
-import { FormEvent, useMemo, useState } from "react";
-import type { Customer, SalesSlip } from "@/types/farm";
+﻿import { FormEvent, useMemo, useState } from "react";
+import type { Customer, SalesSlip } from "@/entities/farm/types";
 import { createCustomer, createSalesSlip } from "../api/salesApi";
 import {
   calculateSalesTotal,
@@ -107,3 +107,4 @@ export function useSalesManager(initialCustomers: Customer[], initialSalesSlips:
     handleCreateSalesSlip,
   };
 }
+

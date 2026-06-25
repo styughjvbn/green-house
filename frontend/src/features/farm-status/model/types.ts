@@ -1,9 +1,9 @@
-import type {
+﻿import type {
   FarmStatusMapData,
   FarmStatusOrchidGroupList,
   FarmStatusTargetType,
   FarmStatusZoomData,
-} from "@/types/farm";
+} from "@/entities/farm/types";
 
 export type SelectedTarget = {
   type: FarmStatusTargetType;
@@ -15,3 +15,4 @@ export type FarmStatusMapProps = {
   initialSelection: FarmStatusOrchidGroupList | null;
   initialZoom: FarmStatusZoomData | null;
 };
+

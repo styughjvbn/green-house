@@ -1,6 +1,6 @@
-"use client";
+﻿"use client";
 
-import type { BedZone, HouseStatusSummary, OrchidGroup, PhysicalBed, WorkRecordTargetType } from "@/types/farm";
+import type { BedZone, HouseStatusSummary, OrchidGroup, PhysicalBed, WorkRecordTargetType } from "@/entities/farm/types";
 import type { WorkRecordFormState } from "../../model/types";
 import { SelectField } from "./FormFields";
 
@@ -79,3 +79,4 @@ export function TargetSelectorFields({
     </>
   );
 }
+

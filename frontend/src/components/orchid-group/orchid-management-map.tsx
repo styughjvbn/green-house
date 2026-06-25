@@ -1,1 +1,0 @@
-export { OrchidManagementMap } from "@/features/orchid-management/ui/OrchidManagementMap";

@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import type {
   BedZone,
@@ -6,7 +6,7 @@ import type {
   FarmZoomLevel,
   HouseStatusSummary,
   PhysicalBed,
-} from "@/types/farm";
+} from "@/entities/farm/types";
 import type { SelectedTarget } from "../../model/types";
 import { zoomLabel } from "../../lib/farmStatusView";
 import FarmOverviewLayer from "./FarmOverviewLayer";
@@ -75,3 +75,4 @@ export default function FarmMapCanvas({
     </div>
   );
 }
+

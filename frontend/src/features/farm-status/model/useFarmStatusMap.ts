@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useMemo, useState } from "react";
 import type {
@@ -9,7 +9,7 @@ import type {
   FarmZoomLevel,
   HouseStatusSummary,
   PhysicalBed,
-} from "@/types/farm";
+} from "@/entities/farm/types";
 import { fetchFarmStatusHouseZoom, fetchFarmStatusOrchidGroups } from "../api/farmStatusApi";
 import { getNextZoomLevel, getPreviousZoomLevel } from "../lib/farmStatusView";
 import type { FarmStatusMapProps, SelectedTarget } from "./types";
@@ -138,3 +138,4 @@ export function useFarmStatusMap({ mapData, initialSelection, initialZoom }: Far
     resetToFarm,
   };
 }
+

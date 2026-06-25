@@ -1,4 +1,4 @@
-import type { BedZone, FarmStatusMapData, House, OrchidGroup, SelectedBedZone, SelectedOrchidGroup } from "@/types/farm";
+﻿import type { BedZone, FarmStatusMapData, House, OrchidGroup, SelectedBedZone, SelectedOrchidGroup } from "@/entities/farm/types";
 
 export type OrchidSelection = SelectedBedZone | SelectedOrchidGroup;
 
@@ -38,3 +38,4 @@ export type OrchidMutationContext = {
   selectedBedZone: BedZone | null;
   resolvedZone: BedZone | null;
 };
+

@@ -1,7 +1,7 @@
-"use client";
+﻿"use client";
 
 import type { MouseEvent } from "react";
-import type { OrchidGroup } from "@/types/farm";
+import type { OrchidGroup } from "@/entities/farm/types";
 
 export default function OrchidGroupBlock({
   orchidGroup,
@@ -34,3 +34,4 @@ export default function OrchidGroupBlock({
     </div>
   );
 }
+

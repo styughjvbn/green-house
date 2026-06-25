@@ -1,6 +1,6 @@
-"use client";
+﻿"use client";
 
-import type { FarmZoomLevel } from "@/types/farm";
+import type { FarmZoomLevel } from "@/entities/farm/types";
 import { zoomLabel } from "../../lib/farmStatusView";
 
 export function MapControls({
@@ -80,3 +80,4 @@ function MapTree({ className }: { className: string }) {
     </div>
   );
 }
+

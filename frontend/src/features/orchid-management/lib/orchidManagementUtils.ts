@@ -1,4 +1,4 @@
-import type { BedZone, House, OrchidGroup, PhysicalBed } from "@/types/farm";
+﻿import type { BedZone, House, OrchidGroup, PhysicalBed } from "@/entities/farm/types";
 
 export function nullableText(value: string): string | null {
   const trimmed = value.trim();
@@ -43,3 +43,4 @@ export function findBedZone(house: House, bedZoneId: number): { bed: PhysicalBed
   }
   return null;
 }
+

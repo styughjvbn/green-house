@@ -1,6 +1,6 @@
-"use client";
+﻿"use client";
 
-import type { House } from "@/types/farm";
+import type { House } from "@/entities/farm/types";
 import type { OrchidSelection } from "../../model/types";
 import PhysicalBedBlock from "./PhysicalBedBlock";
 
@@ -31,3 +31,4 @@ export default function HouseDetailMap({
     </section>
   );
 }
+

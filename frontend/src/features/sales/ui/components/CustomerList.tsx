@@ -1,4 +1,4 @@
-import type { Customer } from "@/types/farm";
+﻿import type { Customer } from "@/entities/farm/types";
 
 export function CustomerList({
   customers,
@@ -33,3 +33,4 @@ export function CustomerList({
     </section>
   );
 }
+

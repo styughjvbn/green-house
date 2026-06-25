@@ -1,12 +1,12 @@
-import { API_BASE_URL } from "@/lib/api";
-import { fetchApi } from "@/lib/api";
+﻿import { API_BASE_URL } from "@/shared/api/client";
+import { fetchApi } from "@/shared/api/client";
 import type {
   DashboardSummary,
   FarmStatusMapData,
   FarmStatusOrchidGroupList,
   FarmStatusTargetType,
   FarmStatusZoomData,
-} from "@/types/farm";
+} from "@/entities/farm/types";
 
 type ApiPayload<T> = {
   data: T;

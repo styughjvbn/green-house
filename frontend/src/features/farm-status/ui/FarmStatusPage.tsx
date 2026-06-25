@@ -1,9 +1,9 @@
-import type {
+﻿import type {
   DashboardSummary,
   FarmStatusMapData,
   FarmStatusOrchidGroupList,
   FarmStatusZoomData,
-} from "@/types/farm";
+} from "@/entities/farm/types";
 import { FarmStatusMap } from "./FarmStatusMap";
 
 type FarmStatusPageProps = {

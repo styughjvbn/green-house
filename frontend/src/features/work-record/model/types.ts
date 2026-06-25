@@ -1,4 +1,4 @@
-import type { BedZone, HouseStatusSummary, OrchidGroup, PhysicalBed, WorkRecord, WorkRecordTargetType } from "@/types/farm";
+﻿import type { BedZone, HouseStatusSummary, OrchidGroup, PhysicalBed, WorkRecord, WorkRecordTargetType } from "@/entities/farm/types";
 
 export type WorkRecordManagerProps = {
   initialRecords: WorkRecord[];
@@ -38,3 +38,4 @@ export type CreateWorkRecordPayload = {
   worker: string | null;
   memo: string | null;
 };
+

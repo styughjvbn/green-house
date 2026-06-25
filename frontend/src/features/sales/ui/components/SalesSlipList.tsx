@@ -1,5 +1,5 @@
-import Link from "next/link";
-import type { SalesSlip } from "@/types/farm";
+﻿import Link from "next/link";
+import type { SalesSlip } from "@/entities/farm/types";
 
 export function SalesSlipList({ salesSlips }: { salesSlips: SalesSlip[] }) {
   return (
@@ -57,3 +57,4 @@ export function SalesSlipList({ salesSlips }: { salesSlips: SalesSlip[] }) {
     </section>
   );
 }
+

@@ -1,7 +1,7 @@
-"use client";
+﻿"use client";
 
 import Link from "next/link";
-import type { HouseStatusSummary } from "@/types/farm";
+import type { HouseStatusSummary } from "@/entities/farm/types";
 
 export default function HouseSelectorPanel({ houses, selectedHouseId }: { houses: HouseStatusSummary[]; selectedHouseId: number }) {
   return (
@@ -35,3 +35,4 @@ export default function HouseSelectorPanel({ houses, selectedHouseId }: { houses
     </aside>
   );
 }
+

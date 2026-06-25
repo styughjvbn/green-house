@@ -1,5 +1,5 @@
-import type { FormEvent } from "react";
-import type { Customer } from "@/types/farm";
+﻿import type { FormEvent } from "react";
+import type { Customer } from "@/entities/farm/types";
 import type { SalesItemForm, SalesSlipForm } from "../../model/types";
 import { SelectField, TextField } from "./FormFields";
 import { SalesSlipItemEditor } from "./SalesSlipItemEditor";
@@ -94,3 +94,4 @@ export function SalesSlipCreateForm({
     </form>
   );
 }
+

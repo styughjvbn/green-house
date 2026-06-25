@@ -1,8 +1,8 @@
-"use client";
+﻿"use client";
 
 import { useRouter } from "next/navigation";
 import { useMemo, useState } from "react";
-import type { House } from "@/types/farm";
+import type { House } from "@/entities/farm/types";
 import { createOrchidGroup, deleteOrchidGroup, moveOrchidGroup, updateOrchidGroup } from "../api/orchidManagementApi";
 import { findBedZone, findFirstOrchidGroup, findOrchidGroup } from "../lib/orchidManagementUtils";
 import type { MutationMode, MutationPayload, OrchidSelection } from "./types";
@@ -137,3 +137,4 @@ export function useOrchidManagementMap(house: House) {
     },
   };
 }
+
