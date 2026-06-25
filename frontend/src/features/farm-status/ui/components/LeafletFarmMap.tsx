@@ -185,11 +185,11 @@ export default function LeafletFarmMap({
   }, [map, onReset]);
 
   return (
-    <div className="relative min-h-[560px] overflow-hidden rounded-xl border border-[#cdd9c8] bg-[#95b969] shadow-sm">
+    <div className="relative min-h-[600px] overflow-hidden rounded-xl border border-[#cdd9c8] bg-[#95b969] shadow-sm">
       <MapContainer
         attributionControl={false}
         center={toLatLng({ x: WORLD_WIDTH / 2, y: WORLD_HEIGHT / 2 })}
-        className="h-[560px] w-full bg-[#95b969]"
+        className="farm-leaflet-map h-[600px] w-full bg-[#a6c77a]"
         crs={CRS.Simple}
         doubleClickZoom={false}
         maxBounds={FARM_BOUNDS}

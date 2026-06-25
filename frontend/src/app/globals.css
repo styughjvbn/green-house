@@ -77,3 +77,7 @@ button:disabled {
     width: 148mm;
   }
 }
+
+.farm-leaflet-map.leaflet-container {
+  background: #9fbe72;
+}
