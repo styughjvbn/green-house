@@ -1,20 +1,18 @@
 ﻿"use client";
 
-import { useState } from "react";
-import type { OrchidManagementViewMode } from "@/entities/farm/types";
 import { useOrchidManagementMap } from "../model/useOrchidManagementMap";
 import type { OrchidManagementMapProps } from "../model/types";
 import HouseDetailMap from "./components/HouseDetailMap";
 import HouseSelectorPanel from "./components/HouseSelectorPanel";
-import OrchidSelectionPanel from "./components/OrchidSelectionPanel";
+import OrchidSelectionPanel, {
+  SelectedZoneInfo,
+} from "./components/OrchidSelectionPanel";
 
 export function OrchidManagementMap({
   mapData,
   house,
   workTypes,
 }: OrchidManagementMapProps) {
-  const [viewMode, setViewMode] =
-    useState<OrchidManagementViewMode>("REAL_DIRECTION");
   const orchidManagement = useOrchidManagementMap(house, workTypes);
 
   return (
@@ -25,11 +23,9 @@ export function OrchidManagementMap({
           houses={mapData.houses}
           placementEditMode={orchidManagement.placementEditMode}
           selectedHouseId={house.id}
-          viewMode={viewMode}
           onTogglePlacementEditMode={
             orchidManagement.actions.togglePlacementEditMode
           }
-          onViewModeChange={setViewMode}
         />
         <HouseDetailMap
           dragState={orchidManagement.dragState}
@@ -44,6 +40,13 @@ export function OrchidManagementMap({
           onSelectBedZone={orchidManagement.actions.selectBedZone}
           onSelectOrchidGroup={orchidManagement.actions.selectOrchidGroup}
         />
+        <SelectedZoneInfo
+          house={house}
+          selectedBedZone={orchidManagement.selectedBedZone}
+          selectedOrchidGroup={orchidManagement.selectedOrchidGroup}
+          workRecordSummary={orchidManagement.workRecordSummary}
+          workRecordSummaryLoading={orchidManagement.workRecordSummaryLoading}
+        />
       </section>
       <OrchidSelectionPanel
         errorMessage={orchidManagement.errorMessage}
@@ -52,11 +55,8 @@ export function OrchidManagementMap({
         mutationMode={orchidManagement.mutationMode}
         resolvedZone={orchidManagement.resolvedZone}
         saving={orchidManagement.saving}
-        selectedBedZone={orchidManagement.selectedBedZone}
         selectedOrchidGroup={orchidManagement.selectedOrchidGroup}
         workRecordForm={orchidManagement.workRecordForm}
-        workRecordSummary={orchidManagement.workRecordSummary}
-        workRecordSummaryLoading={orchidManagement.workRecordSummaryLoading}
         workTypes={workTypes}
         onCancelMutation={orchidManagement.actions.cancelMutation}
         onCreate={orchidManagement.actions.create}

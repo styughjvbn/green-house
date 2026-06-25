@@ -59,6 +59,8 @@ export type House = {
 
 export type FarmZoomLevel = "FARM" | "HOUSE" | "PHYSICAL_BED" | "BED_ZONE";
 
+export type OrchidManagementViewMode = "REAL_DIRECTION" | "ROTATED" | "BY_BED";
+
 export type FarmStatusTargetType = "HOUSE" | "PHYSICAL_BED" | "BED_ZONE";
 
 export type DashboardSummary = {

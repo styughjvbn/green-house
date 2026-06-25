@@ -2,10 +2,7 @@
 
 import { Pencil } from "lucide-react";
 import { useRouter } from "next/navigation";
-import type {
-  House,
-  HouseStatusSummary,
-} from "@/entities/farm/types";
+import type { House, HouseStatusSummary } from "@/entities/farm/types";
 
 export default function HouseSelectorPanel({
   house,
@@ -47,7 +44,7 @@ export default function HouseSelectorPanel({
       <div className="min-w-3 flex-1" />
 
       <button
-        className={`inline-flex h-9 touch-manipulation items-center gap-2 rounded-md px-4 text-sm font-semibold shadow-sm border border-[#dfe5dc] ${
+        className={`inline-flex h-9 touch-manipulation items-center gap-2 rounded-md border border-[#dfe5dc] px-4 text-sm font-semibold shadow-sm ${
           placementEditMode
             ? "bg-[#159447] text-white"
             : "bg-white text-[#344138]"
