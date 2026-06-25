@@ -100,43 +100,7 @@ PrintSalesSlipUseCase
 
 ## 4. 프론트엔드 구조
 
-```text
-frontend
- ├─ app/
- ├─ components/
- │   ├─ layout/
- │   ├─ farm-map/
- │   ├─ orchid-group/
- │   ├─ work-record/
- │   ├─ sales/
- │   └─ print/
- ├─ features/
- │   ├─ farm/
- │   ├─ work/
- │   └─ sales/
- ├─ lib/
- └─ types/
-```
-
-### 주요 컴포넌트
-
-```text
-FarmStatusMap
-FarmOverviewLayer
-HouseSummaryBlock
-OrchidManagementMap
-HouseDetailMap
-PhysicalBedBlock
-BedZoneBlock
-OrchidGroupBlock
-SelectionSummaryPanel
-BedZoneDetailPanel
-OrchidGroupForm
-MoveConfirmDialog
-WorkRecordForm
-SalesSlipForm
-PrintLayout
-```
+[프론트엔드-구조 참고](../../green-house/frontend\src\README.md)
 
 ### 농장맵 상태 관리
 
