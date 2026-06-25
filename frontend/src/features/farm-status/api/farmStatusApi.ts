@@ -59,10 +59,6 @@ export async function fetchFarmStatusHouseZoom(
   );
 }
 
-export function getDashboardSummary() {
-  return fetchApi<DashboardSummary>("/dashboard/summary");
-}
-
 export function getFarmStatusMap() {
   return fetchApi<FarmStatusMapData>("/farm-status/map");
 }

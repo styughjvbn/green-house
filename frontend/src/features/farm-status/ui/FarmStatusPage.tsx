@@ -14,7 +14,6 @@ type FarmStatusPageProps = {
 };
 
 export function FarmStatusPage({
-  summary,
   mapData,
   initialSelection,
   initialZoom,

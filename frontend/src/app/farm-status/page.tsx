@@ -1,6 +1,5 @@
 import {
   FarmStatusPage,
-  getDashboardSummary,
   getFarmStatusHouseZoom,
   getFarmStatusMap,
   getFarmStatusOrchidGroups,
@@ -9,7 +8,6 @@ import {
 export const dynamic = "force-dynamic";
 
 export default async function Page() {
-  const summary = await getDashboardSummary();
   const mapData = await getFarmStatusMap();
   const firstHouse =
     mapData.houses.find((house) => house.orchidGroupCount > 0) ??
@@ -23,7 +21,6 @@ export default async function Page() {
 
   return (
     <FarmStatusPage
-      summary={summary}
       mapData={mapData}
       initialSelection={initialSelection}
       initialZoom={initialZoom}
