@@ -1,7 +1,5 @@
 import { notFound } from "next/navigation";
-import { SalesSlipPrintView } from "@/features/print/ui/SalesSlipPrintView";
-import { fetchApi } from "@/shared/api/client";
-import type { SalesSlip } from "@/entities/farm/types";
+import { getSalesSlipPrintData, SalesSlipPrintView } from "@/features/print";
 
 type SalesSlipPrintPageProps = {
   params: Promise<{
@@ -11,7 +9,7 @@ type SalesSlipPrintPageProps = {
 
 export const dynamic = "force-dynamic";
 
-export default async function SalesSlipPrintPage({ params }: SalesSlipPrintPageProps) {
+export default async function Page({ params }: SalesSlipPrintPageProps) {
   const { salesSlipId } = await params;
   const parsedId = Number(salesSlipId);
 
@@ -19,7 +17,7 @@ export default async function SalesSlipPrintPage({ params }: SalesSlipPrintPageP
     notFound();
   }
 
-  const slip = await fetchApi<SalesSlip>(`/sales-slips/${parsedId}/print`);
+  const slip = await getSalesSlipPrintData(parsedId);
 
   return <SalesSlipPrintView slip={slip} />;
 }
