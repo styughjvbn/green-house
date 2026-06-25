@@ -1,27 +1,44 @@
-﻿"use client";
+"use client";
 
-import type { MouseEvent } from "react";
+import type { DragEvent, MouseEvent } from "react";
 import type { OrchidGroup } from "@/entities/farm/types";
 
 export default function OrchidGroupBlock({
+  draggable,
   orchidGroup,
   selected,
+  onDragEnd,
+  onDragStart,
   onSelect,
 }: {
+  draggable: boolean;
   orchidGroup: OrchidGroup;
   selected: boolean;
+  onDragEnd: () => void;
+  onDragStart: () => void;
   onSelect: (event: MouseEvent<HTMLDivElement>) => void;
 }) {
   const warning = orchidGroup.status !== "정상" && orchidGroup.status !== "판매 가능";
 
+  function handleDragStart(event: DragEvent<HTMLDivElement>) {
+    event.stopPropagation();
+    event.dataTransfer.effectAllowed = "move";
+    event.dataTransfer.setData("text/plain", String(orchidGroup.id));
+    onDragStart();
+  }
+
   return (
     <div
-      className={`min-h-16 cursor-pointer rounded-md border p-2 shadow-sm transition ${
+      className={`min-h-16 rounded-md border p-2 shadow-sm transition ${
         selected ? "border-[#246df2] bg-[#dcecff] ring-2 ring-[#246df2]" : "border-[#82c886] bg-[#bfe2b8] hover:border-[#159447]"
-      }`}
+      } ${draggable ? "cursor-grab active:cursor-grabbing" : "cursor-pointer"}`}
+      draggable={draggable}
       onClick={onSelect}
+      onDragEnd={onDragEnd}
+      onDragStart={handleDragStart}
       role="button"
       tabIndex={0}
+      title={draggable ? "드래그해서 다른 구역으로 이동" : undefined}
     >
       <div className="flex items-start justify-between gap-2">
         <p className="text-sm font-semibold">{orchidGroup.varietyName}</p>
@@ -34,4 +51,3 @@ export default function OrchidGroupBlock({
     </div>
   );
 }
-

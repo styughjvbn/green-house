@@ -1,17 +1,31 @@
 ﻿"use client";
 
 import type { PhysicalBed } from "@/entities/farm/types";
-import type { OrchidSelection } from "../../model/types";
+import type { DragState, OrchidSelection } from "../../model/types";
 import BedZoneBlock from "./BedZoneBlock";
 
 export default function PhysicalBedBlock({
   bed,
+  dragState,
+  placementEditMode,
+  saving,
   selection,
+  onDragEnd,
+  onDragStart,
+  onDropOnBedZone,
+  onEnterDropZone,
   onSelectBedZone,
   onSelectOrchidGroup,
 }: {
   bed: PhysicalBed;
+  dragState: DragState;
+  placementEditMode: boolean;
+  saving: boolean;
   selection: OrchidSelection | null;
+  onDragEnd: () => void;
+  onDragStart: (orchidGroupId: number) => void;
+  onDropOnBedZone: (bedZoneId: number) => Promise<void>;
+  onEnterDropZone: (bedZoneId: number) => void;
   onSelectBedZone: (bedZoneId: number) => void;
   onSelectOrchidGroup: (orchidGroupId: number) => void;
 }) {
@@ -22,9 +36,16 @@ export default function PhysicalBedBlock({
         {bed.bedZones.map((zone) => (
           <BedZoneBlock
             key={zone.id}
+            dragState={dragState}
+            placementEditMode={placementEditMode}
+            saving={saving}
             zone={zone}
             selected={selection?.type === "BED_ZONE" && selection.bedZoneId === zone.id}
             selectedOrchidGroupId={selection?.type === "ORCHID_GROUP" ? selection.orchidGroupId : null}
+            onDragEnd={onDragEnd}
+            onDragStart={onDragStart}
+            onDropOnBedZone={onDropOnBedZone}
+            onEnterDropZone={onEnterDropZone}
             onSelectBedZone={onSelectBedZone}
             onSelectOrchidGroup={onSelectOrchidGroup}
           />

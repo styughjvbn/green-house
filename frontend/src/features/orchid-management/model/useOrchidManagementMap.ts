@@ -5,7 +5,7 @@ import { useMemo, useState } from "react";
 import type { House } from "@/entities/farm/types";
 import { createOrchidGroup, deleteOrchidGroup, moveOrchidGroup, updateOrchidGroup } from "../api/orchidManagementApi";
 import { findBedZone, findFirstOrchidGroup, findOrchidGroup } from "../lib/orchidManagementUtils";
-import type { MutationMode, MutationPayload, OrchidSelection } from "./types";
+import type { DragState, MutationMode, MutationPayload, OrchidSelection } from "./types";
 
 export function useOrchidManagementMap(house: House) {
   const router = useRouter();
@@ -14,6 +14,8 @@ export function useOrchidManagementMap(house: House) {
   const [selection, setSelection] = useState<OrchidSelection | null>(
     firstOrchidGroup ? { type: "ORCHID_GROUP", orchidGroupId: firstOrchidGroup.id } : null,
   );
+  const [placementEditMode, setPlacementEditMode] = useState(false);
+  const [dragState, setDragState] = useState<DragState>(null);
   const [mutationMode, setMutationMode] = useState<MutationMode>(null);
   const [saving, setSaving] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
@@ -53,6 +55,56 @@ export function useOrchidManagementMap(house: House) {
       setMutationMode("MOVE");
       setErrorMessage(null);
     }
+  }
+
+  function togglePlacementEditMode() {
+    setPlacementEditMode((current) => !current);
+    setDragState(null);
+    setMutationMode(null);
+  }
+
+  function startDrag(orchidGroupId: number) {
+    if (!placementEditMode || saving) {
+      return;
+    }
+    setSelection({ type: "ORCHID_GROUP", orchidGroupId });
+    setDragState({ orchidGroupId, overBedZoneId: null });
+    setErrorMessage(null);
+  }
+
+  function enterDropZone(bedZoneId: number) {
+    if (!dragState) {
+      return;
+    }
+    setDragState({ ...dragState, overBedZoneId: bedZoneId });
+  }
+
+  function endDrag() {
+    setDragState(null);
+  }
+
+  async function dropOnBedZone(toBedZoneId: number) {
+    if (!dragState) {
+      return;
+    }
+    const draggingGroup = findOrchidGroup(house, dragState.orchidGroupId);
+    if (!draggingGroup) {
+      setDragState(null);
+      return;
+    }
+    if (draggingGroup.bedZoneId === toBedZoneId) {
+      setDragState(null);
+      return;
+    }
+    const targetZone = findBedZone(house, toBedZoneId)?.zone;
+    const confirmed = window.confirm(`${draggingGroup.varietyName} 난 묶음을 ${targetZone?.name ?? "선택 구역"}으로 이동할까요?`);
+    if (!confirmed) {
+      setDragState(null);
+      return;
+    }
+    setSelection({ type: "ORCHID_GROUP", orchidGroupId: draggingGroup.id });
+    await runMutation(async () => moveOrchidGroup(draggingGroup.id, toBedZoneId, "드래그 이동"));
+    setDragState(null);
   }
 
   async function handleCreate(payload: MutationPayload) {
@@ -117,7 +169,9 @@ export function useOrchidManagementMap(house: House) {
 
   return {
     errorMessage,
+    dragState,
     mutationMode,
+    placementEditMode,
     resolvedZone,
     saving,
     selectedBedZone,
@@ -127,13 +181,18 @@ export function useOrchidManagementMap(house: House) {
       cancelMutation: () => setMutationMode(null),
       create: handleCreate,
       delete: handleDelete,
+      dropOnBedZone,
       edit: handleUpdate,
+      endDrag,
+      enterDropZone,
       move: handleMove,
       openCreate,
       openEdit,
       openMove,
       selectBedZone,
       selectOrchidGroup,
+      startDrag,
+      togglePlacementEditMode,
     },
   };
 }

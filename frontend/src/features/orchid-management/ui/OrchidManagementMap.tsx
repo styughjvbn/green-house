@@ -20,8 +20,15 @@ export function OrchidManagementMap({ mapData, house }: OrchidManagementMapProps
       <section className="space-y-3">
         <HouseDetailHeader house={house} viewMode={viewMode} onViewModeChange={setViewMode} />
         <HouseDetailMap
+          dragState={orchidManagement.dragState}
           house={house}
+          placementEditMode={orchidManagement.placementEditMode}
+          saving={orchidManagement.saving}
           selection={orchidManagement.selection}
+          onDragEnd={orchidManagement.actions.endDrag}
+          onDragStart={orchidManagement.actions.startDrag}
+          onDropOnBedZone={orchidManagement.actions.dropOnBedZone}
+          onEnterDropZone={orchidManagement.actions.enterDropZone}
           onSelectBedZone={orchidManagement.actions.selectBedZone}
           onSelectOrchidGroup={orchidManagement.actions.selectOrchidGroup}
         />
@@ -44,6 +51,8 @@ export function OrchidManagementMap({ mapData, house }: OrchidManagementMapProps
         onOpenCreate={orchidManagement.actions.openCreate}
         onOpenEdit={orchidManagement.actions.openEdit}
         onOpenMove={orchidManagement.actions.openMove}
+        onTogglePlacementEditMode={orchidManagement.actions.togglePlacementEditMode}
+        placementEditMode={orchidManagement.placementEditMode}
       />
     </div>
   );

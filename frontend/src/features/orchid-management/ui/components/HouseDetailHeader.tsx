@@ -42,7 +42,7 @@ export default function HouseDetailHeader({
       <div className="mt-3 flex flex-wrap gap-2 rounded-md border border-[#b9d0ff] bg-[#f3f7ff] px-3 py-2 text-sm font-semibold text-[#246df2]">
         <span>보기 모드에서 난 묶음 추가, 수정, 삭제가 가능합니다.</span>
         <span className="text-[#b4c2dc]">|</span>
-        <span>위치 이동은 다음 단계에서 연결합니다.</span>
+        <span>배치 수정 시작 후 같은 동 안에서 드래그 이동할 수 있습니다.</span>
       </div>
     </section>
   );

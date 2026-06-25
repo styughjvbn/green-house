@@ -1,17 +1,31 @@
 ﻿"use client";
 
 import type { House } from "@/entities/farm/types";
-import type { OrchidSelection } from "../../model/types";
+import type { DragState, OrchidSelection } from "../../model/types";
 import PhysicalBedBlock from "./PhysicalBedBlock";
 
 export default function HouseDetailMap({
+  dragState,
   house,
+  placementEditMode,
+  saving,
   selection,
+  onDragEnd,
+  onDragStart,
+  onDropOnBedZone,
+  onEnterDropZone,
   onSelectBedZone,
   onSelectOrchidGroup,
 }: {
+  dragState: DragState;
   house: House;
+  placementEditMode: boolean;
+  saving: boolean;
   selection: OrchidSelection | null;
+  onDragEnd: () => void;
+  onDragStart: (orchidGroupId: number) => void;
+  onDropOnBedZone: (bedZoneId: number) => Promise<void>;
+  onEnterDropZone: (bedZoneId: number) => void;
   onSelectBedZone: (bedZoneId: number) => void;
   onSelectOrchidGroup: (orchidGroupId: number) => void;
 }) {
@@ -22,7 +36,14 @@ export default function HouseDetailMap({
           <PhysicalBedBlock
             key={bed.id}
             bed={bed}
+            dragState={dragState}
+            placementEditMode={placementEditMode}
+            saving={saving}
             selection={selection}
+            onDragEnd={onDragEnd}
+            onDragStart={onDragStart}
+            onDropOnBedZone={onDropOnBedZone}
+            onEnterDropZone={onEnterDropZone}
             onSelectBedZone={onSelectBedZone}
             onSelectOrchidGroup={onSelectOrchidGroup}
           />

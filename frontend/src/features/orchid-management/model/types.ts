@@ -4,6 +4,11 @@ export type OrchidSelection = SelectedBedZone | SelectedOrchidGroup;
 
 export type MutationMode = "CREATE" | "EDIT" | "MOVE" | null;
 
+export type DragState = {
+  orchidGroupId: number;
+  overBedZoneId: number | null;
+} | null;
+
 export type OrchidFormState = {
   genus: string;
   varietyName: string;

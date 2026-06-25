@@ -13,6 +13,7 @@ export default function OrchidSelectionPanel({
   house,
   houses,
   mutationMode,
+  placementEditMode,
   resolvedZone,
   saving,
   selectedBedZone,
@@ -25,11 +26,13 @@ export default function OrchidSelectionPanel({
   onOpenCreate,
   onOpenEdit,
   onOpenMove,
+  onTogglePlacementEditMode,
 }: {
   errorMessage: string | null;
   house: House;
   houses: HouseStatusSummary[];
   mutationMode: MutationMode;
+  placementEditMode: boolean;
   resolvedZone: BedZone | null;
   saving: boolean;
   selectedBedZone: BedZone | null;
@@ -42,6 +45,7 @@ export default function OrchidSelectionPanel({
   onOpenCreate: () => void;
   onOpenEdit: () => void;
   onOpenMove: () => void;
+  onTogglePlacementEditMode: () => void;
 }) {
   const zone = selectedOrchidGroup ? findBedZone(house, selectedOrchidGroup.bedZoneId)?.zone ?? null : selectedBedZone;
   const totalQuantity = zone?.orchidGroups.reduce((sum, orchidGroup) => sum + orchidGroup.quantity, 0) ?? 0;
@@ -66,6 +70,7 @@ export default function OrchidSelectionPanel({
               <ActionButton label="난 묶음 추가" onClick={onOpenCreate} primary />
               <ActionButton label="난 묶음 수정" onClick={onOpenEdit} />
               <ActionButton label="난 묶음 삭제" onClick={onDelete} danger disabled={saving} />
+              <ActionButton label={placementEditMode ? "배치 수정 종료" : "배치 수정 시작"} onClick={onTogglePlacementEditMode} />
               <ActionButton label="다른 위치로 이동" onClick={onOpenMove} />
               <DisabledAction label="작업 기록 추가" />
               <DisabledAction label="출력" />
@@ -80,6 +85,11 @@ export default function OrchidSelectionPanel({
           </div>
         )}
         {errorMessage ? <p className="mt-3 rounded-md border border-[#f1b0a0] bg-[#fff1ec] p-2 text-xs text-[#9b341e]">{errorMessage}</p> : null}
+        {placementEditMode ? (
+          <p className="mt-3 rounded-md border border-[#b9d0ff] bg-[#f3f7ff] p-2 text-xs font-semibold text-[#246df2]">
+            배치 수정 중: 난 묶음을 다른 좌/우 구역으로 드래그하세요.
+          </p>
+        ) : null}
       </section>
 
       {mutationMode === "CREATE" || mutationMode === "EDIT" ? (
