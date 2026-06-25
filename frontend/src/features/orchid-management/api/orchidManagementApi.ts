@@ -1,5 +1,5 @@
-﻿import { API_BASE_URL } from "@/shared/api/client";
-import type { House } from "@/entities/farm/types";
+import { API_BASE_URL, fetchApi } from "@/shared/api/client";
+import type { FarmStatusMapData, House } from "@/entities/farm/types";
 import type { MutationPayload } from "../model/types";
 
 type ApiErrorPayload = {
@@ -52,6 +52,14 @@ export async function moveOrchidGroup(orchidGroupId: number, toBedZoneId: number
   }
 }
 
+export function getOrchidManagementMap() {
+  return fetchApi<FarmStatusMapData>("/farm-status/map");
+}
+
+export function getHouse(houseId: number) {
+  return fetchApi<House>(`/houses/${houseId}`);
+}
+
 export async function fetchHouse(houseId: number): Promise<House> {
   const response = await fetch(`${API_BASE_URL}/houses/${houseId}`, { cache: "no-store" });
   const payload = await readJson(response);
@@ -72,4 +80,3 @@ async function submitOrchidMutation(path: string, method: "POST" | "PATCH", payl
     throw new Error(resolveErrorMessage(body, "저장하지 못했습니다."));
   }
 }
-
