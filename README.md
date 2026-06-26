@@ -131,3 +131,42 @@ cd frontend
 npm run lint
 npm run build
 ```
+
+## External access through a single forwarded port
+
+If the external port forwards to the frontend only, for example:
+
+```text
+external 3112 -> internal 80
+```
+
+run the services like this:
+
+```powershell
+docker compose up -d db
+cd backend
+.\gradlew.bat bootRun
+```
+
+In another shell:
+
+```powershell
+cd frontend
+npm run build
+npm run start -- -p 80
+```
+
+Open:
+
+```text
+http://<server-host>:3112
+```
+
+The browser calls `/api/*` on the same forwarded frontend origin. Next.js rewrites those requests to the internal backend at `http://localhost:8080/api/*`.
+
+Override the internal backend URL if needed:
+
+```powershell
+$env:BACKEND_API_URL="http://127.0.0.1:8080/api"
+npm run start -- -p 80
+```

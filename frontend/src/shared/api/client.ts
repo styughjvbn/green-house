@@ -1,8 +1,9 @@
 export const API_BASE_URL =
-  process.env.NEXT_PUBLIC_API_BASE_URL ??
-  (typeof window === "undefined"
-    ? "http://localhost:8080/api"
-    : `${window.location.protocol}//${window.location.hostname}:8080/api`);
+  typeof window === "undefined"
+    ? (process.env.API_BASE_URL ??
+      process.env.NEXT_PUBLIC_API_BASE_URL ??
+      "http://localhost:8080/api")
+    : (process.env.NEXT_PUBLIC_API_BASE_URL ?? "/api");
 
 export type ApiResponse<T> = {
   data: T;
