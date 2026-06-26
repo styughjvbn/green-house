@@ -9,6 +9,7 @@ import com.greenhouse.backend.farm.dto.OrchidGroupUpdateRequest;
 import com.greenhouse.backend.farm.repository.BedZoneRepository;
 import com.greenhouse.backend.farm.repository.OrchidGroupRepository;
 import com.greenhouse.backend.work.domain.WorkRecord;
+import com.greenhouse.backend.work.application.WorkTypeService;
 import com.greenhouse.backend.work.repository.WorkRecordRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -20,15 +21,18 @@ public class OrchidGroupCommandService {
 	private final BedZoneRepository bedZoneRepository;
 	private final OrchidGroupRepository orchidGroupRepository;
 	private final WorkRecordRepository workRecordRepository;
+	private final WorkTypeService workTypeService;
 
 	public OrchidGroupCommandService(
 		BedZoneRepository bedZoneRepository,
 		OrchidGroupRepository orchidGroupRepository,
-		WorkRecordRepository workRecordRepository
+		WorkRecordRepository workRecordRepository,
+		WorkTypeService workTypeService
 	) {
 		this.bedZoneRepository = bedZoneRepository;
 		this.orchidGroupRepository = orchidGroupRepository;
 		this.workRecordRepository = workRecordRepository;
+		this.workTypeService = workTypeService;
 	}
 
 	public OrchidGroupResponse create(OrchidGroupCreateRequest request) {
@@ -97,6 +101,7 @@ public class OrchidGroupCommandService {
 		int nextSortOrder = orchidGroupRepository.findMaxSortOrderByBedZoneId(toBedZone.getId()) + 1;
 		orchidGroup.moveTo(toBedZone, nextSortOrder);
 		workRecordRepository.save(WorkRecord.movement(
+			workTypeService.getMovementType(),
 			orchidGroup.getId(),
 			fromBedZoneId,
 			toBedZone.getId(),

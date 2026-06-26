@@ -6,7 +6,7 @@ import jakarta.validation.constraints.Size;
 import java.time.LocalDate;
 
 public record WorkRecordCreateRequest(
-	@NotBlank @Size(max = 50) String workType,
+	@NotNull Long workTypeId,
 	@NotNull LocalDate workDate,
 	@NotBlank @Size(max = 50) String targetType,
 	Long targetId,
