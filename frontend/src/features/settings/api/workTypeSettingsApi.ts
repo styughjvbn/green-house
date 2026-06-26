@@ -8,7 +8,9 @@ type WorkTypePayload = {
 };
 
 export async function getSettingWorkTypes() {
-  return request<WorkType[]>("/work-types?includeInactive=true");
+  return normalizeWorkTypes(
+    await request<unknown>("/work-types?includeInactive=true"),
+  );
 }
 
 export async function createSettingWorkType(payload: WorkTypePayload) {
@@ -54,4 +56,27 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
   }
 
   return body.data as T;
+}
+
+function normalizeWorkTypes(value: unknown): WorkType[] {
+  if (!Array.isArray(value)) {
+    return [];
+  }
+
+  return value.map((item, index) => {
+    if (typeof item === "string") {
+      return {
+        id: -(index + 1),
+        code: `LEGACY_${index + 1}`,
+        name: item,
+        template: "MEMO",
+        defaultType: true,
+        systemType: false,
+        active: true,
+        sortOrder: index + 1,
+      };
+    }
+
+    return item as WorkType;
+  });
 }

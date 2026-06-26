@@ -146,7 +146,7 @@ export function WorkTypeSettingsSection() {
       <div className="mt-5 space-y-2">
         {workTypes.map((workType, index) => (
           <div
-            key={workType.id}
+            key={getWorkTypeKey(workType, index)}
             className="grid gap-2 rounded-md border border-[#edf0ec] bg-[#fbfcfa] p-3 lg:grid-cols-[minmax(0,1fr)_180px_110px_100px]"
           >
             <input
@@ -208,6 +208,10 @@ export function WorkTypeSettingsSection() {
       </div>
     </section>
   );
+}
+
+function getWorkTypeKey(workType: WorkType, index: number) {
+  return `${workType.id ?? workType.code ?? workType.name ?? "work-type"}-${index}`;
 }
 
 function TemplateSelect({
