@@ -109,14 +109,16 @@ MVP에서는 `placement_type`, `tray_count`를 선택 필드로 둔다.
 
 ### work_types
 
-MVP에서는 enum 또는 문자열로 시작할 수 있으나, MVP 이후 커스텀 작업 유형을 위해 테이블로 확장 가능하게 둔다.
+작업 유형은 기본 제공 유형과 커스텀 유형을 함께 관리하기 위해 테이블로 둔다.
 
 | 컬럼 | 타입 | 설명 |
 |---|---|---|
 | id | BIGSERIAL PK | 작업 유형 ID |
 | code | VARCHAR UNIQUE | 작업 유형 코드 |
 | name | VARCHAR | 작업 유형명 |
+| template | VARCHAR | 입력/표시 템플릿 |
 | is_default | BOOLEAN | 기본 제공 여부 |
+| is_system | BOOLEAN | 시스템 생성 전용 여부 |
 | is_active | BOOLEAN | 활성 여부 |
 | sort_order | INTEGER | 표시 순서 |
 | created_at | TIMESTAMP | 생성일 |
@@ -141,7 +143,8 @@ MVP에서는 enum 또는 문자열로 시작할 수 있으나, MVP 이후 커스
 | 컬럼 | 타입 | 설명 |
 |---|---|---|
 | id | BIGSERIAL PK | 작업 이력 ID |
-| work_type | VARCHAR | 작업 유형 |
+| work_type_id | BIGINT NULL FK | 작업 유형 ID |
+| work_type | VARCHAR | 작업 유형명 스냅샷 |
 | work_date | DATE | 작업일 |
 | target_type | VARCHAR | 대상 유형 |
 | target_id | BIGINT NULL | 대상 ID |
