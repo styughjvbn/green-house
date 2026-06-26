@@ -7,6 +7,7 @@ import type {
   SelectedOrchidGroup,
   WorkRecord,
   WorkRecordTargetType,
+  WorkType,
 } from "@/entities/farm/types";
 
 export type OrchidSelection = SelectedBedZone | SelectedOrchidGroup;
@@ -43,7 +44,7 @@ export type MutationPayload = {
 };
 
 export type WorkRecordQuickFormState = {
-  workType: string;
+  workTypeId: string;
   workDate: string;
   targetType: WorkRecordTargetType;
   targetId: number | null;
@@ -55,7 +56,7 @@ export type WorkRecordQuickFormState = {
 };
 
 export type WorkRecordQuickPayload = {
-  workType: string;
+  workTypeId: number;
   workDate: string;
   targetType: WorkRecordTargetType;
   targetId: number | null;
@@ -78,7 +79,7 @@ export type WorkRecordSummary = {
 export type OrchidManagementMapProps = {
   mapData: FarmStatusMapData;
   house: House;
-  workTypes: string[];
+  workTypes: WorkType[];
 };
 
 export type OrchidMutationContext = {

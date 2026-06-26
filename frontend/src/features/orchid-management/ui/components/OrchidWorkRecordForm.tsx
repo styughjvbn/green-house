@@ -1,7 +1,13 @@
 "use client";
 
 import type { FormEvent } from "react";
-import type { BedZone, OrchidGroup } from "@/entities/farm/types";
+import type { BedZone, OrchidGroup, WorkType } from "@/entities/farm/types";
+import {
+  findWorkType,
+  getManualWorkTypes,
+  getWorkRecordFieldLabel,
+  isVisibleWorkRecordField,
+} from "@/entities/farm/workTypes";
 import type { WorkRecordQuickFormState } from "../../model/types";
 import TextField, { SelectField } from "./TextField";
 
@@ -10,7 +16,7 @@ type OrchidWorkRecordFormProps = {
   resolvedZone: BedZone | null;
   saving: boolean;
   selectedOrchidGroup: OrchidGroup | null;
-  workTypes: string[];
+  workTypes: WorkType[];
   onCancel: () => void;
   onChange: <K extends keyof WorkRecordQuickFormState>(
     field: K,
@@ -29,6 +35,9 @@ export default function OrchidWorkRecordForm({
   onChange,
   onSubmit,
 }: OrchidWorkRecordFormProps) {
+  const manualWorkTypes = getManualWorkTypes(workTypes);
+  const selectedWorkType = findWorkType(workTypes, Number(form.workTypeId));
+  const template = selectedWorkType?.template ?? null;
   const targetLabel = selectedOrchidGroup
     ? `${selectedOrchidGroup.varietyName} / ${selectedOrchidGroup.quantity}분`
     : (resolvedZone?.name ?? "선택 대상");
@@ -58,12 +67,12 @@ export default function OrchidWorkRecordForm({
         <div className="grid grid-cols-2 gap-2">
           <SelectField
             label="작업 유형"
-            value={form.workType}
-            onChange={(value) => onChange("workType", value)}
+            value={form.workTypeId}
+            onChange={(value) => onChange("workTypeId", value)}
           >
-            {workTypes.map((workType) => (
-              <option key={workType} value={workType}>
-                {workType}
+            {manualWorkTypes.map((workType) => (
+              <option key={workType.id} value={workType.id}>
+                {workType.name}
               </option>
             ))}
           </SelectField>
@@ -75,41 +84,60 @@ export default function OrchidWorkRecordForm({
             onChange={(value) => onChange("workDate", value)}
           />
         </div>
+
+        {isVisibleWorkRecordField(template, "materialName") ||
+        isVisibleWorkRecordField(template, "dilutionRatio") ? (
+          <div className="grid grid-cols-2 gap-2">
+            {isVisibleWorkRecordField(template, "materialName") ? (
+              <TextField
+                label={getWorkRecordFieldLabel(template, "materialName")}
+                value={form.materialName}
+                onChange={(value) => onChange("materialName", value)}
+              />
+            ) : null}
+            {isVisibleWorkRecordField(template, "dilutionRatio") ? (
+              <TextField
+                label={getWorkRecordFieldLabel(template, "dilutionRatio")}
+                value={form.dilutionRatio}
+                onChange={(value) => onChange("dilutionRatio", value)}
+              />
+            ) : null}
+          </div>
+        ) : null}
+
         <div className="grid grid-cols-2 gap-2">
-          <TextField
-            label="자재명"
-            value={form.materialName}
-            onChange={(value) => onChange("materialName", value)}
-          />
-          <TextField
-            label="희석 배수"
-            value={form.dilutionRatio}
-            onChange={(value) => onChange("dilutionRatio", value)}
-          />
+          {isVisibleWorkRecordField(template, "quantity") ? (
+            <TextField
+              label={getWorkRecordFieldLabel(template, "quantity")}
+              value={form.quantity}
+              onChange={(value) => onChange("quantity", value)}
+            />
+          ) : null}
+          {isVisibleWorkRecordField(template, "worker") ? (
+            <TextField
+              label={getWorkRecordFieldLabel(template, "worker")}
+              value={form.worker}
+              onChange={(value) => onChange("worker", value)}
+            />
+          ) : null}
         </div>
-        <div className="grid grid-cols-2 gap-2">
-          <TextField
-            label="수량"
-            value={form.quantity}
-            onChange={(value) => onChange("quantity", value)}
-          />
-          <TextField
-            label="작업자"
-            value={form.worker}
-            onChange={(value) => onChange("worker", value)}
-          />
-        </div>
-        <label className="block">
-          <span className="text-sm font-semibold text-[#435047]">메모</span>
-          <textarea
-            className="mt-1 min-h-20 w-full rounded-md border border-[#cfd8cc] px-3 py-2 text-sm"
-            value={form.memo}
-            onChange={(event) => onChange("memo", event.target.value)}
-          />
-        </label>
+
+        {isVisibleWorkRecordField(template, "memo") ? (
+          <label className="block">
+            <span className="text-sm font-semibold text-[#435047]">
+              {getWorkRecordFieldLabel(template, "memo")}
+            </span>
+            <textarea
+              className="mt-1 min-h-20 w-full rounded-md border border-[#cfd8cc] px-3 py-2 text-sm"
+              value={form.memo}
+              onChange={(event) => onChange("memo", event.target.value)}
+            />
+          </label>
+        ) : null}
+
         <button
           className="w-full rounded-md bg-[#246df2] px-3 py-2 text-sm font-semibold text-white disabled:opacity-60"
-          disabled={saving}
+          disabled={saving || !form.workTypeId}
           type="submit"
         >
           {saving ? "저장 중" : "작업 기록 저장"}

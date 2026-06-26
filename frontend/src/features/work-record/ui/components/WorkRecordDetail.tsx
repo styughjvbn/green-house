@@ -1,53 +1,54 @@
 "use client";
 
 import { X } from "lucide-react";
-import type { WorkRecord } from "@/entities/farm/types";
+import type { WorkRecord, WorkType } from "@/entities/farm/types";
 import {
-  formatMaterialSummary,
-  formatTarget,
-  formatTargetType,
-} from "../../lib/workRecordForm";
+  getRecordTemplate,
+  getWorkRecordFieldLabel,
+  getWorkTypeTemplateConfig,
+  getWorkTypeTemplateLabel,
+} from "@/entities/farm/workTypes";
+import { formatTarget, formatTargetType } from "../../lib/workRecordForm";
 
 type WorkRecordDetailProps = {
   record: WorkRecord | null;
+  workTypes: WorkType[];
   onClose: () => void;
 };
 
-export function WorkRecordDetail({ onClose, record }: WorkRecordDetailProps) {
+export function WorkRecordDetail({
+  onClose,
+  record,
+  workTypes,
+}: WorkRecordDetailProps) {
   if (!record) {
     return (
       <aside className="rounded-md border border-[#dfe5dc] bg-white p-5 text-sm text-[#5c6a60] shadow-sm">
         <div className="flex items-center justify-between gap-3">
           <span>선택한 작업 이력이 없습니다.</span>
-          <button
-            className="h-8 w-8 rounded-md text-[#6a766e]"
-            type="button"
-            aria-label="닫기"
-            onClick={onClose}
-          >
-            <X className="h-4 w-4" strokeWidth={1.8} aria-hidden="true" />
-          </button>
+          <CloseButton onClose={onClose} />
         </div>
       </aside>
     );
   }
 
+  const template = getRecordTemplate(record, workTypes);
+  const fields = getWorkTypeTemplateConfig(template).fields;
+
   return (
     <aside className="rounded-md border border-[#dfe5dc] bg-white p-5 shadow-sm">
       <div className="flex items-center justify-between gap-3">
         <h2 className="text-lg font-bold text-[#17251b]">작업 이력 상세</h2>
-        <button
-          className="h-8 w-8 rounded-md text-[#6a766e]"
-          type="button"
-          aria-label="닫기"
-          onClick={onClose}
-        >
-          <X className="h-4 w-4" strokeWidth={1.8} aria-hidden="true" />
-        </button>
+        <CloseButton onClose={onClose} />
       </div>
 
       <div className="mt-5">
-        <WorkTypePill workType={record.workType} />
+        <span className="inline-flex rounded-md bg-[#dff3e2] px-3 py-1.5 text-sm font-bold text-[#159447]">
+          {record.workType}
+        </span>
+        <p className="mt-2 text-xs font-semibold text-[#6a766e]">
+          {getWorkTypeTemplateLabel(template)}
+        </p>
         <p className="mt-4 text-2xl font-bold text-[#17251b]">
           {record.workDate}
         </p>
@@ -58,15 +59,33 @@ export function WorkRecordDetail({ onClose, record }: WorkRecordDetailProps) {
           label="대상 유형"
           value={formatTargetType(record.targetType)}
         />
-        <DetailRow label="세부 대상" value={formatTarget(record)} />
-        <DetailRow label="약제 / 자재" value={record.materialName ?? "-"} />
-        <DetailRow
-          label="농도 / 희석배수"
-          value={record.dilutionRatio ?? "-"}
-        />
-        <DetailRow label="수량" value={record.quantity ?? "-"} />
-        <DetailRow label="작업자" value={record.worker ?? "-"} />
-        {record.fromBedZoneId || record.toBedZoneId ? (
+        <DetailRow label="대상" value={formatTarget(record)} />
+
+        {fields.includes("materialName") ? (
+          <DetailRow
+            label={getWorkRecordFieldLabel(template, "materialName")}
+            value={record.materialName ?? "-"}
+          />
+        ) : null}
+        {fields.includes("dilutionRatio") ? (
+          <DetailRow
+            label={getWorkRecordFieldLabel(template, "dilutionRatio")}
+            value={record.dilutionRatio ?? "-"}
+          />
+        ) : null}
+        {fields.includes("quantity") ? (
+          <DetailRow
+            label={getWorkRecordFieldLabel(template, "quantity")}
+            value={record.quantity ?? "-"}
+          />
+        ) : null}
+        {fields.includes("worker") ? (
+          <DetailRow
+            label={getWorkRecordFieldLabel(template, "worker")}
+            value={record.worker ?? "-"}
+          />
+        ) : null}
+        {template === "MOVEMENT" ? (
           <>
             <DetailRow
               label="이전 위치"
@@ -75,51 +94,40 @@ export function WorkRecordDetail({ onClose, record }: WorkRecordDetailProps) {
               }
             />
             <DetailRow
-              label="새 위치"
+              label="이동 위치"
               value={record.toBedZoneId ? `구역 #${record.toBedZoneId}` : "-"}
             />
           </>
         ) : null}
-        <DetailRow label="메모" value={record.memo ?? "-"} multiline />
+        {fields.includes("memo") ? (
+          <DetailRow
+            label={getWorkRecordFieldLabel(template, "memo")}
+            value={record.memo ?? "-"}
+            multiline
+          />
+        ) : null}
       </dl>
 
-      <div className="mt-6 border-t border-[#edf0ec] pt-5">
-        <DetailRow label="등록일" value={record.workDate} />
-        <DetailRow label="수정일" value={record.workDate} />
-      </div>
-
-      <div className="mt-7 grid grid-cols-2 gap-3">
-        <button
-          className="rounded-md border border-[#94c49a] px-4 py-2.5 text-sm font-semibold text-[#159447]"
-          type="button"
-        >
-          수정
-        </button>
-        <button
-          className="rounded-md border border-[#efb3b3] px-4 py-2.5 text-sm font-semibold text-[#e52d2d]"
-          type="button"
-        >
-          삭제
-        </button>
-      </div>
-
       <button
-        className="mt-5 w-full rounded-md border border-[#dfe5dc] px-4 py-3 text-sm font-semibold text-[#344138]"
+        className="mt-7 w-full rounded-md border border-[#dfe5dc] px-4 py-3 text-sm font-semibold text-[#344138]"
         type="button"
       >
         작업 이력 출력 (A5)
       </button>
-
-      <p className="sr-only">{formatMaterialSummary(record)}</p>
     </aside>
   );
 }
 
-function WorkTypePill({ workType }: { workType: string }) {
+function CloseButton({ onClose }: { onClose: () => void }) {
   return (
-    <span className="inline-flex rounded-md bg-[#dff3e2] px-3 py-1.5 text-sm font-bold text-[#159447]">
-      {workType}
-    </span>
+    <button
+      className="h-8 w-8 rounded-md text-[#6a766e]"
+      type="button"
+      aria-label="닫기"
+      onClick={onClose}
+    >
+      <X className="h-4 w-4" strokeWidth={1.8} aria-hidden="true" />
+    </button>
   );
 }
 

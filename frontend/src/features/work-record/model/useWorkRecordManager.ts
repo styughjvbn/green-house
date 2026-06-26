@@ -167,7 +167,7 @@ export function useWorkRecordManager({
 
     try {
       const createdRecord = await createWorkRecord(
-        toCreateWorkRecordPayload(form, selectedTargetId),
+        toCreateWorkRecordPayload(form, selectedTargetId, workTypes),
       );
       setRecords((current) => [createdRecord, ...current]);
       setSelectedRecordId(createdRecord.id);

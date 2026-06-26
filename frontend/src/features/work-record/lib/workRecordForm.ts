@@ -5,7 +5,12 @@
   PhysicalBed,
   WorkRecord,
   WorkRecordTargetType,
+  WorkType,
 } from "@/entities/farm/types";
+import {
+  getManualWorkTypes,
+  isVisibleWorkRecordField,
+} from "@/entities/farm/workTypes";
 import type {
   CreateWorkRecordPayload,
   WorkRecordFilterState,
@@ -13,13 +18,14 @@ import type {
 } from "../model/types";
 
 export function createInitialWorkRecordForm(
-  workTypes: string[],
+  workTypes: WorkType[],
   houses: HouseStatusSummary[],
 ): WorkRecordFormState {
   const today = new Date().toISOString().slice(0, 10);
+  const firstWorkType = getManualWorkTypes(workTypes)[0] ?? workTypes[0];
 
   return {
-    workType: workTypes[0] ?? "농약",
+    workTypeId: firstWorkType ? String(firstWorkType.id) : "",
     workDate: today,
     targetType: "FARM",
     houseId: houses[0] ? String(houses[0].houseId) : "",
@@ -86,17 +92,33 @@ export function getSelectedTargetId(
 export function toCreateWorkRecordPayload(
   form: WorkRecordFormState,
   targetId: number | null,
+  workTypes: WorkType[],
 ): CreateWorkRecordPayload {
+  const workType = workTypes.find(
+    (candidate) => String(candidate.id) === form.workTypeId,
+  );
+  const template = workType?.template ?? null;
+
   return {
-    workType: form.workType,
+    workTypeId: Number(form.workTypeId),
     workDate: form.workDate,
     targetType: form.targetType,
     targetId,
-    materialName: nullableText(form.materialName),
-    dilutionRatio: nullableText(form.dilutionRatio),
-    quantity: nullableText(form.quantity),
-    worker: nullableText(form.worker),
-    memo: nullableText(form.memo),
+    materialName: isVisibleWorkRecordField(template, "materialName")
+      ? nullableText(form.materialName)
+      : null,
+    dilutionRatio: isVisibleWorkRecordField(template, "dilutionRatio")
+      ? nullableText(form.dilutionRatio)
+      : null,
+    quantity: isVisibleWorkRecordField(template, "quantity")
+      ? nullableText(form.quantity)
+      : null,
+    worker: isVisibleWorkRecordField(template, "worker")
+      ? nullableText(form.worker)
+      : null,
+    memo: isVisibleWorkRecordField(template, "memo")
+      ? nullableText(form.memo)
+      : null,
   };
 }
 
@@ -160,6 +182,7 @@ export function filterWorkRecords(
       record.dilutionRatio,
       record.quantity,
       record.memo,
+      record.workType,
       formatTarget(record),
     ]
       .filter(Boolean)

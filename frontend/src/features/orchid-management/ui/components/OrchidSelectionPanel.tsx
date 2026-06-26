@@ -7,6 +7,7 @@ import type {
   HouseStatusSummary,
   OrchidGroup,
   WorkRecord,
+  WorkType,
 } from "@/entities/farm/types";
 import { Edit2, Trash2 } from "lucide-react";
 import { findBedZone } from "../../lib/orchidManagementUtils";
@@ -57,7 +58,7 @@ export default function OrchidSelectionPanel({
   selectedBedZone: BedZone | null;
   selectedOrchidGroup: OrchidGroup | null;
   workRecordForm: WorkRecordQuickFormState;
-  workTypes: string[];
+  workTypes: WorkType[];
   onCancelMutation: () => void;
   onCreate: (payload: MutationPayload) => Promise<void>;
   onDelete: () => Promise<void>;

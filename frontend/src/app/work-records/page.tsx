@@ -1,13 +1,17 @@
 import { WorkRecordManager } from "@/features/work-record/ui/WorkRecordManager";
 import { fetchApi } from "@/shared/api/client";
-import type { FarmStatusMapData, WorkRecord } from "@/entities/farm/types";
+import type {
+  FarmStatusMapData,
+  WorkRecord,
+  WorkType,
+} from "@/entities/farm/types";
 
 export const dynamic = "force-dynamic";
 
 export default async function WorkRecordsPage() {
   const [records, workTypes, mapData] = await Promise.all([
     fetchApi<WorkRecord[]>("/work-records"),
-    fetchApi<string[]>("/work-types"),
+    fetchApi<WorkType[]>("/work-types"),
     fetchApi<FarmStatusMapData>("/farm-status/map"),
   ]);
 

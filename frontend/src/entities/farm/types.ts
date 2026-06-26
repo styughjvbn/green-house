@@ -134,9 +134,31 @@ export type WorkRecordTargetType =
   | "BED_ZONE"
   | "ORCHID_GROUP";
 
+export type WorkTypeTemplate =
+  | "PESTICIDE"
+  | "FERTILIZER"
+  | "REPOT"
+  | "CLEANUP"
+  | "STATUS"
+  | "MEMO"
+  | "MOVEMENT";
+
+export type WorkType = {
+  id: number;
+  code: string;
+  name: string;
+  template: WorkTypeTemplate;
+  defaultType: boolean;
+  systemType: boolean;
+  active: boolean;
+  sortOrder: number;
+};
+
 export type WorkRecord = {
   id: number;
+  workTypeId: number | null;
   workType: string;
+  workTypeTemplate: WorkTypeTemplate | null;
   workDate: string;
   targetType: WorkRecordTargetType;
   targetId: number | null;
