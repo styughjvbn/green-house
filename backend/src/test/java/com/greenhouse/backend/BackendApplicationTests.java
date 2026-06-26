@@ -2,6 +2,7 @@ package com.greenhouse.backend;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.hamcrest.Matchers.hasSize;
+import static org.hamcrest.Matchers.greaterThanOrEqualTo;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
@@ -14,6 +15,7 @@ import com.greenhouse.backend.farm.repository.HouseRepository;
 import com.greenhouse.backend.farm.repository.OrchidGroupRepository;
 import com.greenhouse.backend.farm.repository.PhysicalBedRepository;
 import com.greenhouse.backend.work.repository.WorkRecordRepository;
+import com.greenhouse.backend.work.repository.WorkTypeRepository;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -45,6 +47,9 @@ class BackendApplicationTests {
 	@Autowired
 	private WorkRecordRepository workRecordRepository;
 
+	@Autowired
+	private WorkTypeRepository workTypeRepository;
+
 	@Test
 	void contextLoads() {
 	}
@@ -54,6 +59,7 @@ class BackendApplicationTests {
 		assertThat(houseRepository.count()).isEqualTo(15);
 		assertThat(physicalBedRepository.count()).isEqualTo(45);
 		assertThat(bedZoneRepository.count()).isEqualTo(90);
+		assertThat(workTypeRepository.count()).isGreaterThanOrEqualTo(9);
 	}
 
 	@Test
@@ -372,7 +378,11 @@ class BackendApplicationTests {
 			.andExpect(jsonPath("$.data.sortOrder").value(targetBeforeCount + 1));
 
 		var movement = workRecordRepository
-			.findTopByTargetTypeAndTargetIdAndWorkTypeOrderByWorkDateDescIdDesc("ORCHID_GROUP", createdId, "위치 이동")
+			.findTopByTargetTypeAndTargetIdAndWorkTypeOrderByWorkDateDescIdDesc(
+				"ORCHID_GROUP",
+				createdId,
+				workTypeRepository.findByCode("MOVEMENT").orElseThrow().getName()
+			)
 			.orElseThrow();
 		assertThat(movement.getFromBedZoneId()).isEqualTo(sourceZone.getId());
 		assertThat(movement.getToBedZoneId()).isEqualTo(targetZone.getId());
@@ -426,12 +436,13 @@ class BackendApplicationTests {
 			.orElseThrow();
 		var sampleBed = physicalBedRepository.findByHouseIdOrderByDisplayOrderAsc(sampleHouse.getId()).get(1);
 		var sampleZone = bedZoneRepository.findByPhysicalBedIdOrderBySortOrderAsc(sampleBed.getId()).getFirst();
+		var pesticideType = workTypeRepository.findByCode("PESTICIDE").orElseThrow();
 
 		var createResult = mockMvc.perform(post("/api/work-records")
 				.contentType(MediaType.APPLICATION_JSON)
 				.content("""
 					{
-					  "workType": "농약",
+					  "workTypeId": %d,
 					  "workDate": "2026-06-24",
 					  "targetType": "BED_ZONE",
 					  "targetId": %d,
@@ -441,9 +452,11 @@ class BackendApplicationTests {
 					  "worker": "테스터",
 					  "memo": "작업 이력 테스트"
 					}
-					""".formatted(sampleZone.getId())))
+					""".formatted(pesticideType.getId(), sampleZone.getId())))
 			.andExpect(status().isCreated())
 			.andExpect(jsonPath("$.data.workType").value("농약"))
+			.andExpect(jsonPath("$.data.workTypeId").value(pesticideType.getId()))
+			.andExpect(jsonPath("$.data.workTypeTemplate").value("PESTICIDE"))
 			.andExpect(jsonPath("$.data.workDate").value("2026-06-24"))
 			.andExpect(jsonPath("$.data.targetType").value("BED_ZONE"))
 			.andExpect(jsonPath("$.data.targetId").value(sampleZone.getId()))
@@ -464,31 +477,21 @@ class BackendApplicationTests {
 
 	@Test
 	void returnsWorkTypesAndValidationErrorsForWorkRecordRequests() throws Exception {
+		var fertilizerType = workTypeRepository.findByCode("FERTILIZER").orElseThrow();
+
 		mockMvc.perform(get("/api/work-types"))
 			.andExpect(status().isOk())
-			.andExpect(jsonPath("$.data", hasSize(9)))
-			.andExpect(jsonPath("$.data[0]").value("농약"));
+			.andExpect(jsonPath("$.data", hasSize(greaterThanOrEqualTo(9))))
+			.andExpect(jsonPath("$.data[0].name").value("농약"))
+			.andExpect(jsonPath("$.data[0].template").value("PESTICIDE"));
 
 		mockMvc.perform(post("/api/work-records")
 				.contentType(MediaType.APPLICATION_JSON)
 				.content("""
 					{
-					  "workType": "지원 안함",
+					  "workTypeId": 999999,
 					  "workDate": "2026-06-24",
 					  "targetType": "FARM"
-					}
-					"""))
-			.andExpect(status().isBadRequest())
-			.andExpect(jsonPath("$.error.code").value("VALIDATION_ERROR"));
-
-		mockMvc.perform(post("/api/work-records")
-				.contentType(MediaType.APPLICATION_JSON)
-				.content("""
-					{
-					  "workType": "비료",
-					  "workDate": "2026-06-24",
-					  "targetType": "BED_ZONE",
-					  "targetId": 999999
 					}
 					"""))
 			.andExpect(status().isNotFound())
@@ -498,11 +501,81 @@ class BackendApplicationTests {
 				.contentType(MediaType.APPLICATION_JSON)
 				.content("""
 					{
-					  "workType": "비료",
+					  "workTypeId": %d,
+					  "workDate": "2026-06-24",
+					  "targetType": "BED_ZONE",
+					  "targetId": 999999
+					}
+					""".formatted(fertilizerType.getId())))
+			.andExpect(status().isNotFound())
+			.andExpect(jsonPath("$.error.code").value("NOT_FOUND"));
+
+		mockMvc.perform(post("/api/work-records")
+				.contentType(MediaType.APPLICATION_JSON)
+				.content("""
+					{
+					  "workTypeId": %d,
 					  "workDate": "2026-06-24",
 					  "targetType": "BED_ZONE"
 					}
+					""".formatted(fertilizerType.getId())))
+			.andExpect(status().isBadRequest())
+			.andExpect(jsonPath("$.error.code").value("VALIDATION_ERROR"));
+	}
+
+	@Test
+	void managesCustomWorkTypesAndRejectsInactiveTypeForCreate() throws Exception {
+		var createResult = mockMvc.perform(post("/api/work-types")
+				.contentType(MediaType.APPLICATION_JSON)
+				.content("""
+					{
+					  "name": "테스트 작업",
+					  "template": "MEMO"
+					}
 					"""))
+			.andExpect(status().isCreated())
+			.andExpect(jsonPath("$.data.name").value("테스트 작업"))
+			.andExpect(jsonPath("$.data.template").value("MEMO"))
+			.andExpect(jsonPath("$.data.active").value(true))
+			.andReturn();
+		var workTypeId = Long.valueOf(createResult.getResponse().getContentAsString().replaceAll(".*\\\"id\\\":(\\d+).*", "$1"));
+
+		mockMvc.perform(patch("/api/work-types/{workTypeId}", workTypeId)
+				.contentType(MediaType.APPLICATION_JSON)
+				.content("""
+					{
+					  "name": "테스트 작업 수정",
+					  "template": "STATUS",
+					  "active": false
+					}
+					"""))
+			.andExpect(status().isOk())
+			.andExpect(jsonPath("$.data.name").value("테스트 작업 수정"))
+			.andExpect(jsonPath("$.data.template").value("STATUS"))
+			.andExpect(jsonPath("$.data.active").value(false));
+
+		mockMvc.perform(get("/api/work-types").param("includeInactive", "true"))
+			.andExpect(status().isOk())
+			.andExpect(jsonPath("$.data[?(@.id == %d)]".formatted(workTypeId), hasSize(1)));
+
+		mockMvc.perform(patch("/api/work-types/reorder")
+				.contentType(MediaType.APPLICATION_JSON)
+				.content("""
+					{
+					  "orderedIds": [%d]
+					}
+					""".formatted(workTypeId)))
+			.andExpect(status().isOk());
+
+		mockMvc.perform(post("/api/work-records")
+				.contentType(MediaType.APPLICATION_JSON)
+				.content("""
+					{
+					  "workTypeId": %d,
+					  "workDate": "2026-06-24",
+					  "targetType": "FARM"
+					}
+					""".formatted(workTypeId)))
 			.andExpect(status().isBadRequest())
 			.andExpect(jsonPath("$.error.code").value("VALIDATION_ERROR"));
 	}

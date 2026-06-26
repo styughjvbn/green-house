@@ -3,9 +3,12 @@ package com.greenhouse.backend.work.domain;
 import com.greenhouse.backend.common.domain.BaseEntity;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
+import jakarta.persistence.FetchType;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
+import jakarta.persistence.JoinColumn;
+import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
 import java.time.LocalDate;
 
@@ -19,6 +22,10 @@ public class WorkRecord extends BaseEntity {
 
 	@Column(name = "work_type", nullable = false)
 	private String workType;
+
+	@ManyToOne(fetch = FetchType.LAZY)
+	@JoinColumn(name = "work_type_id")
+	private WorkType workTypeRef;
 
 	@Column(name = "work_date", nullable = false)
 	private LocalDate workDate;
@@ -51,17 +58,8 @@ public class WorkRecord extends BaseEntity {
 	protected WorkRecord() {
 	}
 
-	public WorkRecord(String workType, LocalDate workDate, String targetType, Long targetId, String worker, String memo) {
-		this.workType = workType;
-		this.workDate = workDate;
-		this.targetType = targetType;
-		this.targetId = targetId;
-		this.worker = worker;
-		this.memo = memo;
-	}
-
 	public WorkRecord(
-		String workType,
+		WorkType workTypeRef,
 		LocalDate workDate,
 		String targetType,
 		Long targetId,
@@ -71,7 +69,8 @@ public class WorkRecord extends BaseEntity {
 		String worker,
 		String memo
 	) {
-		this.workType = workType;
+		this.workTypeRef = workTypeRef;
+		this.workType = workTypeRef.getName();
 		this.workDate = workDate;
 		this.targetType = targetType;
 		this.targetId = targetId;
@@ -83,13 +82,24 @@ public class WorkRecord extends BaseEntity {
 	}
 
 	public static WorkRecord movement(
+		WorkType movementType,
 		Long orchidGroupId,
 		Long fromBedZoneId,
 		Long toBedZoneId,
 		String worker,
 		String memo
 	) {
-		WorkRecord workRecord = new WorkRecord("위치 이동", LocalDate.now(), "ORCHID_GROUP", orchidGroupId, worker, memo);
+		WorkRecord workRecord = new WorkRecord(
+			movementType,
+			LocalDate.now(),
+			"ORCHID_GROUP",
+			orchidGroupId,
+			null,
+			null,
+			null,
+			worker,
+			memo
+		);
 		workRecord.fromBedZoneId = fromBedZoneId;
 		workRecord.toBedZoneId = toBedZoneId;
 		return workRecord;
@@ -101,6 +111,10 @@ public class WorkRecord extends BaseEntity {
 
 	public String getWorkType() {
 		return workType;
+	}
+
+	public WorkType getWorkTypeRef() {
+		return workTypeRef;
 	}
 
 	public LocalDate getWorkDate() {

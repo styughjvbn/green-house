@@ -1,10 +1,10 @@
-import type { FarmStatusMapData, House } from "@/entities/farm/types";
+import type { FarmStatusMapData, House, WorkType } from "@/entities/farm/types";
 import { OrchidManagementMap } from "./OrchidManagementMap";
 
 type OrchidManagementPageProps = {
   mapData: FarmStatusMapData;
   house: House | null;
-  workTypes: string[];
+  workTypes: WorkType[];
 };
 
 export function OrchidManagementPage({

@@ -104,9 +104,11 @@ v2 추가 작업 유형:
 위치 이동
 ```
 
-향후 확장:
+현재 구현:
 
-- 사용자가 직접 작업 유형을 추가/수정/비활성화할 수 있는 구조로 확장한다.
+- 사용자가 설정 화면에서 작업 유형을 추가/수정/비활성화/정렬할 수 있다.
+- 작업 유형은 템플릿(`PESTICIDE`, `FERTILIZER`, `REPOT`, `CLEANUP`, `STATUS`, `MEMO`, `MOVEMENT`)을 선택한다.
+- `위치 이동`은 시스템 작업 유형으로 유지한다.
 
 ---
 
@@ -191,6 +193,8 @@ POST /api/orchid-groups/{orchidGroupId}/move
 PATCH /api/orchid-groups/reorder
 GET /api/work-types
 POST /api/work-types
+PATCH /api/work-types/{workTypeId}
+PATCH /api/work-types/reorder
 PATCH /api/sales-slips/{salesSlipId}/status
 ```
 

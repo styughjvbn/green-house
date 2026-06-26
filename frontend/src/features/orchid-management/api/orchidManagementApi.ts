@@ -4,6 +4,7 @@ import type {
   House,
   WorkRecord,
   WorkRecordTargetType,
+  WorkType,
 } from "@/entities/farm/types";
 import type { MutationPayload, WorkRecordQuickPayload } from "../model/types";
 
@@ -85,7 +86,7 @@ export function getHouse(houseId: number) {
 }
 
 export function getOrchidWorkTypes() {
-  return fetchApi<string[]>("/work-types");
+  return fetchApi<WorkType[]>("/work-types");
 }
 
 export function getOrchidWorkRecords(

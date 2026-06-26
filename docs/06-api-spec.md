@@ -228,39 +228,18 @@ DELETE /api/work-records/{workRecordId}
 
 ## 5. 작업 유형 API
 
-MVP에서는 기본 작업 유형을 코드 또는 enum으로 제공할 수 있다.
+작업 유형은 `work_types` 테이블로 관리한다. 기본 유형은 seed로 제공하고, 커스텀 유형은 설정 화면에서 생성/수정/비활성/정렬한다.
 
-### 작업 유형 목록 조회
-
-```http
-GET /api/work-types
-```
-
-현재 MVP 구현에서는 기본 작업 유형 목록 조회만 제공한다.
-
-MVP 이후 사용자 정의 작업 유형을 지원하기 위해 다음 API를 고려한다.
-
-### 작업 유형 생성 - MVP 이후
+제공 API:
 
 ```http
+GET /api/work-types?includeInactive=false
 POST /api/work-types
+PATCH /api/work-types/{workTypeId}
+PATCH /api/work-types/reorder
 ```
 
-요청 예시:
-
-```json
-{
-  "name": "차광막 정리",
-  "code": "CUSTOM_SHADE_CLEANUP",
-  "sortOrder": 20
-}
-```
-
-### 작업 유형 비활성화 - MVP 이후
-
-```http
-PATCH /api/work-types/{workTypeId}/deactivate
-```
+작업 유형 템플릿은 입력 필드와 목록/상세 표시값을 결정한다. 상세 요청/응답 예시는 `11. 작업 이력 관리 API`를 따른다.
 
 ---
 
@@ -566,7 +545,7 @@ GET /api/sales-slips/{salesSlipId}/print
 
 ## 11. 작업 이력 관리 API
 
-7단계 범위에서는 작업 이력 등록과 조회를 제공한다. 작업 이력 수정/삭제와 작업 유형 관리 API는 이후 단계로 남긴다.
+7단계 범위에서는 작업 이력 등록과 조회를 제공한다. 작업 유형은 기본 제공 유형과 커스텀 유형을 함께 사용하며, 설정 화면에서 관리한다. 작업 이력 수정/삭제 API는 이후 단계로 남긴다.
 
 ### 작업 이력 목록 조회
 
@@ -578,7 +557,7 @@ GET /api/work-records?targetType=BED_ZONE&targetId=15&workType=농약&from=2026-
 
 - `targetType`: `FARM`, `HOUSE`, `PHYSICAL_BED`, `BED_ZONE`, `ORCHID_GROUP`
 - `targetId`: `FARM` 외 대상 선택 시 사용
-- `workType`: 기본 작업 유형명
+- `workType`: 작업 유형명. 비활성 작업 유형의 기존 이력 조회에도 사용한다.
 - `from`, `to`: ISO 날짜
 
 ### 작업 이력 등록
@@ -591,7 +570,7 @@ POST /api/work-records
 
 ```json
 {
-  "workType": "농약",
+  "workTypeId": 1,
   "workDate": "2026-06-24",
   "targetType": "BED_ZONE",
   "targetId": 15,
@@ -605,18 +584,78 @@ POST /api/work-records
 
 규칙:
 
-- `workType`, `workDate`, `targetType`은 필수이다.
+- `workTypeId`, `workDate`, `targetType`은 필수이다.
 - `targetType=FARM`이면 `targetId` 없이 등록할 수 있다.
 - 그 외 대상 유형은 실제 존재하는 `targetId`가 필요하다.
-- 지원 작업 유형이 아니면 검증 오류를 반환한다.
+- 비활성 또는 시스템 작업 유형은 일반 작업 기록 생성에 사용할 수 없다.
+- 응답에는 `workTypeId`, 작업 유형명 스냅샷 `workType`, `workTypeTemplate`을 포함한다.
 
-### 기본 작업 유형 조회
+### 작업 유형 목록 조회
 
 ```http
-GET /api/work-types
+GET /api/work-types?includeInactive=false
 ```
 
-응답은 기본 작업 유형 문자열 목록이다.
+응답은 작업 유형 객체 목록이다.
+
+```json
+{
+  "data": [
+    {
+      "id": 1,
+      "code": "PESTICIDE",
+      "name": "농약",
+      "template": "PESTICIDE",
+      "defaultType": true,
+      "systemType": false,
+      "active": true,
+      "sortOrder": 1
+    }
+  ],
+  "message": null
+}
+```
+
+### 작업 유형 생성
+
+```http
+POST /api/work-types
+```
+
+```json
+{
+  "name": "관수",
+  "template": "MEMO"
+}
+```
+
+### 작업 유형 수정
+
+```http
+PATCH /api/work-types/{workTypeId}
+```
+
+```json
+{
+  "name": "관수",
+  "template": "STATUS",
+  "active": true
+}
+```
+
+### 작업 유형 정렬
+
+```http
+PATCH /api/work-types/reorder
+```
+
+```json
+{
+  "orderedIds": [1, 2, 3]
+}
+```
+
+작업 유형 템플릿 값은 `PESTICIDE`, `FERTILIZER`, `REPOT`, `CLEANUP`, `STATUS`, `MEMO`, `MOVEMENT`이다. `MOVEMENT`는 시스템 유형으로 일반 생성 폼에서는 선택하지 않는다.
 
 ---
 

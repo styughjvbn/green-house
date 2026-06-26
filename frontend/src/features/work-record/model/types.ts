@@ -5,16 +5,17 @@
   PhysicalBed,
   WorkRecord,
   WorkRecordTargetType,
+  WorkType,
 } from "@/entities/farm/types";
 
 export type WorkRecordManagerProps = {
   initialRecords: WorkRecord[];
   houses: HouseStatusSummary[];
-  workTypes: string[];
+  workTypes: WorkType[];
 };
 
 export type WorkRecordFormState = {
-  workType: string;
+  workTypeId: string;
   workDate: string;
   targetType: WorkRecordTargetType;
   houseId: string;
@@ -35,7 +36,7 @@ export type WorkRecordTargetOptions = {
 };
 
 export type CreateWorkRecordPayload = {
-  workType: string;
+  workTypeId: number;
   workDate: string;
   targetType: WorkRecordTargetType;
   targetId: number | null;

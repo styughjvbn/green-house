@@ -2,7 +2,12 @@
 
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
-import type { House, WorkRecord } from "@/entities/farm/types";
+import type { House, WorkRecord, WorkType } from "@/entities/farm/types";
+import {
+  findWorkType,
+  getManualWorkTypes,
+  isVisibleWorkRecordField,
+} from "@/entities/farm/workTypes";
 import {
   createOrchidGroup,
   createOrchidWorkRecord,
@@ -25,7 +30,7 @@ import type {
   WorkRecordSummary,
 } from "./types";
 
-export function useOrchidManagementMap(house: House, workTypes: string[]) {
+export function useOrchidManagementMap(house: House, workTypes: WorkType[]) {
   const router = useRouter();
   const firstOrchidGroup = useMemo(() => findFirstOrchidGroup(house), [house]);
 
@@ -142,7 +147,9 @@ export function useOrchidManagementMap(house: House, workTypes: string[]) {
     const targetId = selectedOrchidGroup?.id ?? resolvedZone?.id ?? house.id;
     setWorkRecordForm((current) => ({
       ...current,
-      workType: current.workType || workTypes[0] || "농약",
+      workTypeId:
+        current.workTypeId ||
+        String(getManualWorkTypes(workTypes)[0]?.id ?? workTypes[0]?.id ?? ""),
       targetType,
       targetId,
     }));
@@ -244,15 +251,11 @@ export function useOrchidManagementMap(house: House, workTypes: string[]) {
   async function handleWorkRecordCreate() {
     await runMutation(async () => {
       await createOrchidWorkRecord({
-        workType: workRecordForm.workType,
+        workTypeId: Number(workRecordForm.workTypeId),
         workDate: workRecordForm.workDate,
         targetType: workRecordForm.targetType,
         targetId: workRecordForm.targetId,
-        materialName: nullableText(workRecordForm.materialName),
-        dilutionRatio: nullableText(workRecordForm.dilutionRatio),
-        quantity: nullableText(workRecordForm.quantity),
-        worker: nullableText(workRecordForm.worker),
-        memo: nullableText(workRecordForm.memo),
+        ...toVisibleWorkRecordFields(workRecordForm, workTypes),
       });
       setWorkRecordForm((current) => ({
         ...current,
@@ -346,11 +349,13 @@ export function useOrchidManagementMap(house: House, workTypes: string[]) {
 }
 
 function createInitialWorkRecordForm(
-  workTypes: string[],
+  workTypes: WorkType[],
   orchidGroupId: number | null,
 ): WorkRecordQuickFormState {
+  const firstWorkType = getManualWorkTypes(workTypes)[0] ?? workTypes[0];
+
   return {
-    workType: workTypes[0] ?? "농약",
+    workTypeId: firstWorkType ? String(firstWorkType.id) : "",
     workDate: new Date().toISOString().slice(0, 10),
     targetType: orchidGroupId ? "ORCHID_GROUP" : "HOUSE",
     targetId: orchidGroupId,
@@ -359,6 +364,32 @@ function createInitialWorkRecordForm(
     quantity: "",
     worker: "",
     memo: "",
+  };
+}
+
+function toVisibleWorkRecordFields(
+  form: WorkRecordQuickFormState,
+  workTypes: WorkType[],
+) {
+  const workType = findWorkType(workTypes, Number(form.workTypeId));
+  const template = workType?.template ?? null;
+
+  return {
+    materialName: isVisibleWorkRecordField(template, "materialName")
+      ? nullableText(form.materialName)
+      : null,
+    dilutionRatio: isVisibleWorkRecordField(template, "dilutionRatio")
+      ? nullableText(form.dilutionRatio)
+      : null,
+    quantity: isVisibleWorkRecordField(template, "quantity")
+      ? nullableText(form.quantity)
+      : null,
+    worker: isVisibleWorkRecordField(template, "worker")
+      ? nullableText(form.worker)
+      : null,
+    memo: isVisibleWorkRecordField(template, "memo")
+      ? nullableText(form.memo)
+      : null,
   };
 }
 

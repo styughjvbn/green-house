@@ -15,6 +15,7 @@ export function WorkRecordManager(props: WorkRecordManagerProps) {
     <div className="space-y-4">
       <WorkRecordFilters
         filters={manager.filters}
+        records={manager.records}
         workTypes={props.workTypes}
         onChange={manager.updateFilters}
         onReset={manager.resetFilters}
@@ -57,6 +58,7 @@ export function WorkRecordManager(props: WorkRecordManagerProps) {
           }
           totalPages={manager.totalPages}
           totalRecords={manager.filteredRecords.length}
+          workTypes={props.workTypes}
           onPageChange={manager.changePage}
           onPageSizeChange={manager.changePageSize}
           onSelect={manager.selectRecord}
@@ -64,6 +66,7 @@ export function WorkRecordManager(props: WorkRecordManagerProps) {
         {manager.detailOpen ? (
           <WorkRecordDetail
             record={manager.selectedRecord}
+            workTypes={props.workTypes}
             onClose={manager.closeDetail}
           />
         ) : null}

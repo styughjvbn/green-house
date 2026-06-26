@@ -7,6 +7,7 @@ import {
   MIN_FONT_SCALE,
 } from "../lib/fontScale";
 import { useFontScaleSetting } from "../model/useFontScaleSetting";
+import { WorkTypeSettingsSection } from "./WorkTypeSettingsSection";
 
 export function SettingsPage() {
   const { fontScale, resetFontScale, updateFontScale } = useFontScaleSetting();
@@ -72,6 +73,7 @@ export function SettingsPage() {
           </button>
         </div>
       </section>
+      <WorkTypeSettingsSection />
     </main>
   );
 }

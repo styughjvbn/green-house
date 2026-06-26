@@ -2,17 +2,23 @@
 
 import type { ReactNode } from "react";
 import { ChevronDown, RefreshCw, Search } from "lucide-react";
-import type { WorkRecordTargetType } from "@/entities/farm/types";
+import type {
+  WorkRecord,
+  WorkRecordTargetType,
+  WorkType,
+} from "@/entities/farm/types";
 import type { WorkRecordFilterState } from "../../model/types";
 
 export function WorkRecordFilters({
   filters,
+  records,
   workTypes,
   onChange,
   onReset,
 }: {
   filters: WorkRecordFilterState;
-  workTypes: string[];
+  records: WorkRecord[];
+  workTypes: WorkType[];
   onChange: <K extends keyof WorkRecordFilterState>(
     field: K,
     value: WorkRecordFilterState[K],
@@ -22,6 +28,12 @@ export function WorkRecordFilters({
   const selectedTargetLabel =
     targetOptions.find((option) => option.value === filters.targetType)
       ?.label ?? "전체 농장";
+  const workTypeNames = Array.from(
+    new Set([
+      ...workTypes.map((workType) => workType.name),
+      ...records.map((record) => record.workType),
+    ]),
+  ).filter(Boolean);
 
   return (
     <section className="rounded-md border border-[#dfe5dc] bg-white p-4 shadow-sm">
@@ -32,7 +44,7 @@ export function WorkRecordFilters({
           onChange={(value) => onChange("workType", value)}
         >
           <option value="">전체</option>
-          {workTypes.map((workType) => (
+          {workTypeNames.map((workType) => (
             <option key={workType} value={workType}>
               {workType}
             </option>
@@ -76,7 +88,7 @@ export function WorkRecordFilters({
           </span>
           <input
             className="h-10 w-full rounded-md border border-[#cfd8cc] px-3 text-sm"
-            placeholder="약제명, 메모 검색"
+            placeholder="자재명, 메모 검색"
             value={filters.keyword}
             onChange={(event) => onChange("keyword", event.target.value)}
           />
