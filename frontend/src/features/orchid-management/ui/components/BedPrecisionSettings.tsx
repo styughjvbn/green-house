@@ -214,6 +214,16 @@ function SegmentEditor({
               <option value="END">끝</option>
               <option value="CUSTOM">사용자</option>
             </select>
+            <input
+              aria-label="구간 순서"
+              className={`${inputClass} w-16`}
+              min={1}
+              type="number"
+              value={segment.sortOrder}
+              onChange={(event) =>
+                onChange({ ...segment, sortOrder: Number(event.target.value) })
+              }
+            />
             <button
               className="grid h-8 w-8 place-items-center rounded border border-[#e0c5c5] text-[#c44747]"
               type="button"
@@ -300,27 +310,56 @@ function CapacityEditor({
   onRemove: () => void;
 }) {
   return (
-    <div className="grid gap-1 rounded border border-[#e5e9e5] bg-white p-2 md:grid-cols-[1fr_0.8fr_0.9fr_0.6fr_auto_auto]">
-      <select
-        className={inputClass}
-        value={capacity.placementType}
-        onChange={(event) =>
-          onChange({ ...capacity, placementType: event.target.value })
-        }
-      >
-        <option value="TRAY_15">15구 판</option>
-        <option value="TRAY_20">20구 판</option>
-        <option value="TRAY_24">24구 판</option>
-        <option value="SINGLE_POT">단독 화분</option>
-        <option value="HANGING">행잉</option>
-        <option value="CUSTOM:기타">기타</option>
-      </select>
+    <div className="grid gap-1 rounded border border-[#e5e9e5] bg-white p-2 md:grid-cols-[1fr_0.7fr_0.8fr_0.55fr_1fr_auto_auto]">
+      <div className="space-y-1">
+        <select
+          className={`${inputClass} w-full`}
+          value={resolveCapacityType(capacity.placementType)}
+          onChange={(event) =>
+            onChange({
+              ...capacity,
+              placementType:
+                event.target.value === "CUSTOM"
+                  ? "CUSTOM:"
+                  : event.target.value,
+            })
+          }
+        >
+          <option value="TRAY_15">15구 판</option>
+          <option value="TRAY_20">20구 판</option>
+          <option value="TRAY_24">24구 판</option>
+          <option value="SINGLE_POT">단독 화분</option>
+          <option value="HANGING">행잉</option>
+          <option value="CUSTOM">기타</option>
+        </select>
+        {capacity.placementType.startsWith("CUSTOM:") ? (
+          <input
+            className={`${inputClass} w-full`}
+            placeholder="기타 규격명"
+            value={capacity.placementType.slice(7)}
+            onChange={(event) =>
+              onChange({
+                ...capacity,
+                placementType: `CUSTOM:${event.target.value}`,
+              })
+            }
+          />
+        ) : null}
+      </div>
       <input
         className={inputClass}
         placeholder="화분 크기(전체)"
         value={capacity.potSize ?? ""}
         onChange={(event) =>
           onChange({ ...capacity, potSize: event.target.value || null })
+        }
+      />
+      <input
+        className={inputClass}
+        placeholder="제약 메모"
+        value={capacity.memo ?? ""}
+        onChange={(event) =>
+          onChange({ ...capacity, memo: event.target.value || null })
         }
       />
       <select
@@ -381,6 +420,9 @@ function createCapacity(): BedZoneSegmentCapacity {
     allowed: true,
     memo: null,
   };
+}
+function resolveCapacityType(value: string) {
+  return value.startsWith("CUSTOM:") ? "CUSTOM" : value;
 }
 function updateSegment(
   setter: React.Dispatch<React.SetStateAction<BedZonePlacementProfile | null>>,
