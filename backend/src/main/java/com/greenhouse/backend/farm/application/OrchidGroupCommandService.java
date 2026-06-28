@@ -58,6 +58,7 @@ public class OrchidGroupCommandService {
 			normalizeRequired(request.status()),
 			normalize(request.placementType()),
 			request.trayCount(),
+			request.splitPlacementAllowed(),
 			normalize(request.memo())
 		);
 		return OrchidGroupResponse.from(orchidGroupRepository.save(orchidGroup));
@@ -75,6 +76,7 @@ public class OrchidGroupCommandService {
 			normalizeRequired(request.status()),
 			normalize(request.placementType()),
 			request.trayCount(),
+			request.splitPlacementAllowed(),
 			normalize(request.memo())
 		);
 		return OrchidGroupResponse.from(orchidGroup);

@@ -53,6 +53,10 @@ public class BedZone extends BaseEntity {
 	@OrderBy("sortOrder ASC")
 	private List<OrchidGroup> orchidGroups = new ArrayList<>();
 
+	@OneToMany(mappedBy = "bedZone", cascade = jakarta.persistence.CascadeType.ALL, orphanRemoval = true)
+	@OrderBy("sortOrder ASC")
+	private List<BedZoneSegment> segments = new ArrayList<>();
+
 	protected BedZone() {
 	}
 
@@ -103,4 +107,11 @@ public class BedZone extends BaseEntity {
 	public List<OrchidGroup> getOrchidGroups() {
 		return orchidGroups;
 	}
+
+	public void addSegment(BedZoneSegment segment) {
+		segments.add(segment);
+		segment.setBedZone(this);
+	}
+
+	public List<BedZoneSegment> getSegments() { return segments; }
 }
