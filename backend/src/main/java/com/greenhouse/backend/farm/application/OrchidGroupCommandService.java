@@ -22,17 +22,20 @@ public class OrchidGroupCommandService {
 	private final OrchidGroupRepository orchidGroupRepository;
 	private final WorkRecordRepository workRecordRepository;
 	private final WorkTypeService workTypeService;
+	private final PlacementRecommendationService placementRecommendationService;
 
 	public OrchidGroupCommandService(
 		BedZoneRepository bedZoneRepository,
 		OrchidGroupRepository orchidGroupRepository,
 		WorkRecordRepository workRecordRepository,
-		WorkTypeService workTypeService
+		WorkTypeService workTypeService,
+		PlacementRecommendationService placementRecommendationService
 	) {
 		this.bedZoneRepository = bedZoneRepository;
 		this.orchidGroupRepository = orchidGroupRepository;
 		this.workRecordRepository = workRecordRepository;
 		this.workTypeService = workTypeService;
+		this.placementRecommendationService = placementRecommendationService;
 	}
 
 	public OrchidGroupResponse create(OrchidGroupCreateRequest request) {
@@ -96,12 +99,24 @@ public class OrchidGroupCommandService {
 			.orElseThrow(() -> new NotFoundException("논리 구역을 찾을 수 없습니다."));
 
 		Long fromBedZoneId = orchidGroup.getBedZone().getId();
-		if (fromBedZoneId.equals(toBedZone.getId())) {
+		boolean precisePlacement = request.placements() != null && !request.placements().isEmpty();
+		if (fromBedZoneId.equals(toBedZone.getId()) && !precisePlacement) {
 			return OrchidGroupResponse.from(orchidGroup);
 		}
 
-		int nextSortOrder = orchidGroupRepository.findMaxSortOrderByBedZoneId(toBedZone.getId()) + 1;
-		orchidGroup.moveTo(toBedZone, nextSortOrder);
+		if (precisePlacement) {
+			var placements = placementRecommendationService.validateAndCreatePlacements(
+				orchidGroup, toBedZone, request.placementMode(), request.placements(),
+				request.reorganizeDueDate(), normalize(request.memo())
+			);
+			orchidGroup.replaceSegmentPlacements(placements);
+		} else {
+			orchidGroup.replaceSegmentPlacements(java.util.List.of());
+		}
+		if (!fromBedZoneId.equals(toBedZone.getId())) {
+			int nextSortOrder = orchidGroupRepository.findMaxSortOrderByBedZoneId(toBedZone.getId()) + 1;
+			orchidGroup.moveTo(toBedZone, nextSortOrder);
+		}
 		workRecordRepository.save(WorkRecord.movement(
 			workTypeService.getMovementType(),
 			orchidGroup.getId(),
