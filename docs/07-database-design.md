@@ -292,6 +292,46 @@ CREATE INDEX idx_sales_slip_items_orchid_group_id ON sales_slip_items(orchid_gro
 ## 5. JPA 구현 메모
 
 - `workType`, `status`, `genus`, `paymentStatus`, `salesStatus`, `targetType`, `zoneType`, `side`는 초기에는 문자열 또는 Enum 중 선택한다.
+
+---
+
+## 배드 정밀 배치 테이블
+
+### bed_zone_segments
+
+| 컬럼 | 타입 | 설명 |
+|---|---|---|
+| id | BIGSERIAL PK | 구간 ID |
+| bed_zone_id | BIGINT FK | 논리 구역 |
+| name | VARCHAR | 구간명 |
+| segment_type | VARCHAR | START/MIDDLE/END/CUSTOM |
+| sort_order | INTEGER | 표시 순서 |
+| memo | TEXT NULL | 간섭 메모 |
+
+### bed_zone_segment_capacities
+
+| 컬럼 | 타입 | 설명 |
+|---|---|---|
+| bed_zone_segment_id | BIGINT FK | 배드 구간 |
+| placement_type | VARCHAR | 판/화분 배치 규격 |
+| pot_size | VARCHAR NULL | 화분 크기, NULL은 공통 |
+| capacity_mode | VARCHAR | 배치 모드 |
+| capacity_value | INTEGER | 수용 가능한 점유 단위 |
+| is_allowed | BOOLEAN | 배치 허용 여부 |
+
+### orchid_group_segment_placements
+
+| 컬럼 | 타입 | 설명 |
+|---|---|---|
+| orchid_group_id | BIGINT FK | 난 묶음 |
+| bed_zone_segment_id | BIGINT FK | 실제 배치 구간 |
+| quantity | INTEGER | 구간 배치 수량 |
+| tray_count | INTEGER NULL | 판/점유 단위 수 |
+| placement_mode | VARCHAR | 확정 배치 모드 |
+| reorganize_due_date | DATE NULL | 임시 배치 재정리일 |
+| memo | TEXT NULL | 배치 메모 |
+
+`orchid_groups.split_placement_allowed`를 nullable BOOLEAN으로 추가한다. 기존 데이터의 NULL은 false로 해석한다.
 - `PhysicalBed.displayOrder`는 실제 농장의 좌→우 순서를 보존한다. 화면에서 회전 보기를 제공하더라도 데이터의 기준 순서는 변경하지 않는다.
 - 운영 안정성을 위해 Java enum을 사용하는 편이 안전하다.
 - 단, 현장 용어가 자주 바뀔 수 있는 항목은 별도 코드 테이블로 확장할 수 있다.

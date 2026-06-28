@@ -720,6 +720,42 @@ POST /api/orchid-groups
 규칙:
 
 - `bedZoneId`, `varietyName`, `quantity`, `status`는 필수이다.
+
+---
+
+## 배드 정밀 배치 API
+
+### 배치 프로필
+
+- `GET /api/bed-zones/{bedZoneId}/placement-profile`
+- `PUT /api/bed-zones/{bedZoneId}/placement-profile`
+
+논리 구역의 구간과 규격·화분 크기·배치 모드별 수용량을 조회하거나 일괄 저장한다. 실제 배치가 있는 구간은 삭제할 수 없다.
+
+### 배치 추천
+
+- `GET /api/orchid-groups/{orchidGroupId}/placement-recommendations?houseId=...`
+
+추천 상태, 필요 배치 모드, 목적 구역, 구간별 수량·점유 단위와 경고를 반환한다.
+
+### 정밀 이동
+
+기존 `PATCH /api/orchid-groups/{orchidGroupId}/move` 요청에 다음 필드를 추가한다.
+
+```json
+{
+  "toBedZoneId": 10,
+  "placementMode": "STANDARD",
+  "placements": [
+    { "segmentId": 50, "quantity": 96, "trayCount": 4 }
+  ],
+  "reorganizeDueDate": null,
+  "worker": "관리자",
+  "memo": "추천 배치"
+}
+```
+
+수용량이 변경된 경우 `409 CAPACITY_CONFLICT`를 반환한다. 기존 단순 이동 요청은 구간 미지정 이동으로 호환한다.
 - `quantity`는 1 이상이어야 한다.
 - 생성 위치는 반드시 논리 구역 기준이다.
 - 같은 논리 구역 안의 마지막 `sortOrder` 다음 값으로 생성한다.
