@@ -48,6 +48,11 @@ const pageMeta = [
     description: "라벨, 전표, 문서를 출력하세요.",
   },
   {
+    href: "/inventory",
+    title: "품종/자재 관리",
+    description: "난 품종과 농약, 비료, 자재 정보를 등록하고 관리하세요.",
+  },
+  {
     href: "/settings",
     title: "설정",
     description: "시스템 설정을 관리하세요.",
