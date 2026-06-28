@@ -7,6 +7,7 @@ import HouseSelectorPanel from "./components/HouseSelectorPanel";
 import OrchidSelectionPanel, {
   SelectedZoneInfo,
 } from "./components/OrchidSelectionPanel";
+import BedPrecisionSettings from "./components/BedPrecisionSettings";
 
 export function OrchidManagementMap({
   mapData,
@@ -47,12 +48,13 @@ export function OrchidManagementMap({
           workRecordSummary={orchidManagement.workRecordSummary}
           workRecordSummaryLoading={orchidManagement.workRecordSummaryLoading}
         />
+        <BedPrecisionSettings zone={orchidManagement.resolvedZone} />
       </section>
       <OrchidSelectionPanel
         errorMessage={orchidManagement.errorMessage}
         house={house}
-        houses={mapData.houses}
         mutationMode={orchidManagement.mutationMode}
+        preferredMoveZoneId={orchidManagement.preferredMoveZoneId}
         resolvedZone={orchidManagement.resolvedZone}
         saving={orchidManagement.saving}
         selectedBedZone={orchidManagement.selectedBedZone}
