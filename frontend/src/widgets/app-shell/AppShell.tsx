@@ -4,7 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { PageHeader } from "@/widgets/page-header";
 import {
-  Boxes,
+  BarChart3,
   ClipboardList,
   Flower2,
   Home,
@@ -48,6 +48,17 @@ const pageMeta = [
     description: "라벨, 전표, 문서를 출력하세요.",
   },
   {
+    href: "/analytics",
+    title: "분석",
+    description:
+      "출하, 판매, 농장 현황 데이터를 분석하여 운영 의사결정을 도와드립니다.",
+  },
+  {
+    href: "/inventory",
+    title: "품종/자재 관리",
+    description: "난 품종과 농약, 비료, 자재 정보를 등록하고 관리하세요.",
+  },
+  {
     href: "/settings",
     title: "설정",
     description: "시스템 설정을 관리하세요.",
@@ -78,6 +89,7 @@ const navigation: {
   { href: "/orchid-groups", label: "난 묶음 관리", icon: Flower2 },
   { href: "/work-records", label: "작업 이력", icon: ClipboardList },
   { href: "/sales", label: "판매 관리", icon: ShoppingBag },
+  { href: "/analytics", label: "분석", icon: BarChart3 },
   { href: "/print", label: "출력", icon: Printer },
   { href: "/inventory", label: "품종/자재 관리", icon: PackageCheck },
   { href: "/settings", label: "설정", icon: Settings },

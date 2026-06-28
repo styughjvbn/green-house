@@ -90,9 +90,7 @@ export default function OrchidMovePanel({
     <section className="rounded-md border border-[#b9d0ff] bg-white p-3 shadow-sm">
       <div className="flex items-start justify-between gap-3">
         <div>
-          <p className="text-sm font-semibold text-[#246df2]">
-            다른 위치로 이동
-          </p>
+          <p className="text-sm font-semibold text-[#246df2]">위치 이동</p>
           <h3 className="mt-1 text-base font-semibold">
             {selectedOrchidGroup.varietyName}
           </h3>
