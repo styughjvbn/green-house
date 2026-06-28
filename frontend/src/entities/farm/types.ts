@@ -2,6 +2,26 @@ export type BedZoneSide = "LEFT" | "RIGHT" | "CUSTOM" | "HANGING";
 
 export type BedZoneType = "DEFAULT" | "CUSTOM" | "HANGING" | "TRAY" | "GRID";
 
+export type PlacementCapacityMode =
+  | "SPACIOUS"
+  | "STANDARD"
+  | "EXPANDED"
+  | "COMPRESSED"
+  | "TEMPORARY";
+
+export type BedZoneSegmentType = "START" | "MIDDLE" | "END" | "CUSTOM";
+
+export type OrchidGroupSegmentPlacement = {
+  id: number;
+  segmentId: number;
+  segmentName: string;
+  quantity: number;
+  trayCount: number | null;
+  placementMode: PlacementCapacityMode;
+  reorganizeDueDate: string | null;
+  memo: string | null;
+};
+
 export type OrchidGroup = {
   id: number;
   bedZoneId: number;
@@ -13,11 +33,81 @@ export type OrchidGroup = {
   status: string;
   placementType: string | null;
   trayCount: number | null;
+  splitPlacementAllowed: boolean;
+  segmentPlacements: OrchidGroupSegmentPlacement[];
   sortOrder: number;
   memo: string | null;
   houseNumber: number;
   physicalBedNumber: number;
   bedZoneName: string;
+};
+
+export type BedZoneSegmentCapacity = {
+  id: number | null;
+  placementType: string;
+  potSize: string | null;
+  capacityMode: PlacementCapacityMode;
+  capacityValue: number;
+  allowed: boolean;
+  memo: string | null;
+};
+
+export type BedZoneSegment = {
+  id: number | null;
+  name: string;
+  segmentType: BedZoneSegmentType;
+  sortOrder: number;
+  memo: string | null;
+  capacities: BedZoneSegmentCapacity[];
+};
+
+export type BedZonePlacementProfile = {
+  bedZoneId: number;
+  bedZoneName: string;
+  houseNumber: number;
+  physicalBedNumber: number;
+  hasUnassignedGroups: boolean;
+  segments: BedZoneSegment[];
+};
+
+export type PlacementRecommendationStatus =
+  | "RECOMMENDED"
+  | "POSSIBLE"
+  | "WARNING"
+  | "UNAVAILABLE";
+
+export type PlacementRecommendationAllocation = {
+  segmentId: number;
+  segmentName: string;
+  quantity: number;
+  occupancyUnits: number;
+  remainingUnits: number;
+};
+
+export type PlacementRecommendationCandidate = {
+  bedZoneId: number;
+  bedZoneName: string;
+  houseId: number;
+  houseNumber: number;
+  physicalBedId: number;
+  physicalBedNumber: number;
+  status: PlacementRecommendationStatus;
+  requiredMode: PlacementCapacityMode | null;
+  allocations: PlacementRecommendationAllocation[];
+  warnings: string[];
+};
+
+export type PlacementRecommendation = {
+  orchidGroupId: number;
+  varietyName: string;
+  requirement: {
+    placementType: string;
+    potSize: string | null;
+    quantity: number;
+    occupancyUnits: number;
+    splitAllowed: boolean;
+  };
+  candidates: PlacementRecommendationCandidate[];
 };
 
 export type BedZone = {

@@ -28,6 +28,7 @@ export type OrchidFormState = {
   status: string;
   placementType: string;
   trayCount: string;
+  splitPlacementAllowed: boolean;
   memo: string;
 };
 
@@ -40,7 +41,20 @@ export type MutationPayload = {
   status: string;
   placementType: string | null;
   trayCount: number | null;
+  splitPlacementAllowed: boolean;
   memo: string | null;
+};
+
+export type PreciseMovePayload = {
+  toBedZoneId: number;
+  placementMode: import("@/entities/farm/types").PlacementCapacityMode;
+  placements: {
+    segmentId: number;
+    quantity: number;
+    trayCount: number | null;
+  }[];
+  reorganizeDueDate: string | null;
+  memo: string;
 };
 
 export type WorkRecordQuickFormState = {
