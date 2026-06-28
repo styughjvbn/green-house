@@ -9,7 +9,7 @@ import type {
   WorkRecord,
   WorkType,
 } from "@/entities/farm/types";
-import { Edit2, Trash2 } from "lucide-react";
+import { Edit2, Trash2, Clipboard, Move } from "lucide-react";
 import { findBedZone } from "../../lib/orchidManagementUtils";
 import type {
   MutationMode,
@@ -162,12 +162,21 @@ export default function OrchidSelectionPanel({
 
             <div className="mt-3 grid grid-cols-3 gap-2">
               <ActionButton
+                icon={<Edit2 className="h-4 w-4" />}
                 label="난 묶음 추가"
                 onClick={onOpenCreate}
                 primary
               />
-              <ActionButton label="작업 기록 추가" onClick={onOpenWorkRecord} />
-              <ActionButton label="다른 위치로 이동" onClick={onOpenMove} />
+              <ActionButton
+                icon={<Clipboard className="h-4 w-4" />}
+                label="작업 기록 추가"
+                onClick={onOpenWorkRecord}
+              />
+              <ActionButton
+                icon={<Move className="h-4 w-4" />}
+                label="위치 이동"
+                onClick={onOpenMove}
+              />
             </div>
           </div>
         ) : (

@@ -16,7 +16,7 @@ export function OrchidManagementMap({
   const orchidManagement = useOrchidManagementMap(house, workTypes);
 
   return (
-    <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_330px]">
+    <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_440px]">
       <section className="space-y-3">
         <HouseSelectorPanel
           house={house}
