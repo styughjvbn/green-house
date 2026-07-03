@@ -56,7 +56,13 @@ public class AuctionImportService {
 		List<NormalizedImportRow> normalizedRows = new ArrayList<>();
 		boolean hasErrors = false;
 		try (var reader = new StringReader(decodeCsv(file.getBytes()))) {
-			var format = CSVFormat.DEFAULT.builder().setHeader().setSkipHeaderRecord(true).setIgnoreEmptyLines(true).setTrim(true).get();
+			var format = CSVFormat.DEFAULT.builder()
+				.setHeader()
+				.setSkipHeaderRecord(true)
+				.setAllowMissingColumnNames(true)
+				.setIgnoreEmptyLines(true)
+				.setTrim(true)
+				.get();
 			for (CSVRecord record : format.parse(reader)) {
 				Map<String, String> raw = sanitize(record.toMap());
 				ImportRow row = new ImportRow((int) record.getRecordNumber() + 1, json(raw));
@@ -138,12 +144,12 @@ public class AuctionImportService {
 	private AuctionAttemptStatus attemptStatus(int sold, boolean failed, boolean returned) { if (returned) return AuctionAttemptStatus.RETURN_INFERRED; if (failed) return AuctionAttemptStatus.FAILED; return sold > 0 ? AuctionAttemptStatus.SOLD : AuctionAttemptStatus.FAILED; }
 
 	private AuctionImportData normalize(Map<String, String> row) {
-		String typeValue = value(row, "구분", "유형", "type");
+		String typeValue = value(row, "구분", "유형", "분류", "분류 (출하, 경매)", "type");
 		LocalDate shipmentDate = parseDate(required(row, "출하일자", "출하일", "shipmentDate"));
 		String market = required(row, "경매장", "auctionMarket", "market");
 		String variety = required(row, "품종명", "품종", "varietyName");
 		String item = value(row, "품목명", "품목", "itemName");
-		LocalDate auctionDate = parseOptionalDate(value(row, "경매일자", "경매일", "auctionDate"));
+		LocalDate auctionDate = parseOptionalDate(value(row, "경매일자", "경매일", "일자", "auctionDate"));
 		RowType type = contains(typeValue, "출하")
 			? RowType.SHIPMENT
 			: contains(typeValue, "경매") || auctionDate != null ? RowType.AUCTION : RowType.SHIPMENT;
@@ -155,7 +161,14 @@ public class AuctionImportService {
 		return new AuctionImportData(type, shipmentDate, auctionDate, market, item.isBlank() ? variety : item, variety, nullable(value(row, "등급", "출하등급", "경매등급", "grade")), parseOptionalInt(value(row, "상자", "상자수", "boxes")), quantity, unitPrice, amount, nullable(value(row, "비고", "메모", "note")));
 	}
 
-	private Map<String, String> sanitize(Map<String, String> values) { Map<String, String> result = new LinkedHashMap<>(); values.forEach((key, value) -> result.put(key.replace("\ufeff", "").trim(), value == null ? "" : value.trim())); return result; }
+	private Map<String, String> sanitize(Map<String, String> values) {
+		Map<String, String> result = new LinkedHashMap<>();
+		values.forEach((key, value) -> {
+			String normalizedKey = key.replace("\ufeff", "").trim();
+			if (!normalizedKey.isBlank()) result.put(normalizedKey, value == null ? "" : value.trim());
+		});
+		return result;
+	}
 	private String decodeCsv(byte[] bytes) {
 		try {
 			return decode(bytes, StandardCharsets.UTF_8);
