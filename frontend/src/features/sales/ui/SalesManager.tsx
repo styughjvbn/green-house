@@ -9,10 +9,14 @@ import { SalesSlipCreateForm } from "./components/SalesSlipCreateForm";
 import { SalesSlipDetail } from "./components/SalesSlipDetail";
 import { SalesSlipList } from "./components/SalesSlipList";
 import { SalesToolbar } from "./components/SalesToolbar";
+import { AuctionSettlementView } from "./AuctionSettlementView";
+import { AuctionTrackingView } from "./AuctionTrackingView";
 
 export function SalesManager({
   initialCustomers,
   initialSalesSlips,
+  initialAuctionLots,
+  initialAuctionSummary,
 }: SalesManagerProps) {
   const sales = useSalesManager(initialCustomers, initialSalesSlips);
 
@@ -57,6 +61,13 @@ export function SalesManager({
             <SalesSlipDetail salesSlip={sales.selectedSalesSlip} />
           </div>
         </>
+      ) : sales.activeTab === "AUCTION" ? (
+        <AuctionTrackingView
+          initialLots={initialAuctionLots}
+          initialSummary={initialAuctionSummary}
+        />
+      ) : sales.activeTab === "SETTLEMENT" ? (
+        <AuctionSettlementView lots={initialAuctionLots} />
       ) : (
         <div className="grid gap-4 xl:grid-cols-[420px_minmax(0,1fr)]">
           <CustomerCreateForm
