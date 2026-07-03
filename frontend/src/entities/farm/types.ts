@@ -358,7 +358,7 @@ export type AuctionLot = {
   itemName: string;
   varietyName: string;
   shipmentGrade: string | null;
-  boxes: number;
+  boxes: number | null;
   shippedQuantity: number;
   soldQuantity: number;
   waitingQuantity: number;

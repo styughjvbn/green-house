@@ -26,7 +26,7 @@ public class AuctionShipmentLot extends BaseEntity {
 	@Column(name = "item_name", nullable = false) private String itemName;
 	@Column(name = "variety_name", nullable = false) private String varietyName;
 	@Column(name = "shipment_grade") private String shipmentGrade;
-	@Column(nullable = false) private Integer boxes;
+	@Column private Integer boxes;
 	@Column(name = "shipped_quantity", nullable = false) private Integer shippedQuantity;
 	@Column(name = "sold_quantity", nullable = false) private Integer soldQuantity;
 	@Column(name = "waiting_quantity", nullable = false) private Integer waitingQuantity;

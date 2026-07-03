@@ -88,7 +88,7 @@ public class AuctionImportService {
 				shipmentRepository.save(shipment);
 			}
 			shipmentRepository.flush();
-			List<AuctionShipmentLot> lots = lotRepository.findAllByOrderByIdDesc();
+			List<AuctionShipmentLot> lots = lotRepository.findAllByShipmentImportBatchIdOrderByIdDesc(batch.getId());
 			for (NormalizedImportRow normalized : normalizedRows) {
 				if (normalized.data().type() != RowType.AUCTION) continue;
 				if (!matchAuctionRow(normalized, lots)) hasErrors = true;
@@ -114,13 +114,32 @@ public class AuctionImportService {
 
 	private boolean matchAuctionRow(NormalizedImportRow normalized, List<AuctionShipmentLot> lots) {
 		AuctionImportData data = normalized.data();
-		List<AuctionShipmentLot> base = lots.stream().filter(lot -> lot.getShipment().getShipmentDate().equals(data.shipmentDate()) && lot.getShipment().getAuctionMarket().equalsIgnoreCase(data.market()) && lot.getVarietyName().equalsIgnoreCase(data.varietyName())).toList();
-		List<AuctionShipmentLot> exact = data.grade() == null ? List.of() : base.stream().filter(lot -> Objects.equals(lot.getShipmentGrade(), data.grade())).toList();
-		AuctionShipmentLot lot;
-		AuctionInspectionStatus inspection;
-		if (exact.size() == 1) { lot = exact.getFirst(); inspection = AuctionInspectionStatus.AUTO_MATCHED; }
-		else if (base.size() == 1) { lot = base.getFirst(); inspection = AuctionInspectionStatus.CORRECTED_MATCH; }
-		else {
+		List<AuctionShipmentLot> base = lots.stream()
+			.filter(lot -> Objects.equals(lot.getShipment().getShipmentDate(), data.shipmentDate()))
+			.filter(lot -> sameText(lot.getShipment().getAuctionMarket(), data.market()))
+			.filter(lot -> sameText(lot.getVarietyName(), data.varietyName()))
+			.toList();
+		List<AuctionShipmentLot> exact = base.stream()
+			.filter(lot -> sameNullableText(lot.getShipmentGrade(), data.grade()))
+			.filter(lot -> sameText(lot.getItemName(), data.itemName()))
+			.toList();
+		AuctionShipmentLot lot = pickSingle(exact);
+		AuctionInspectionStatus inspection = AuctionInspectionStatus.AUTO_MATCHED;
+		if (lot == null) {
+			List<AuctionShipmentLot> gradeMatched = base.stream()
+				.filter(value -> sameNullableText(value.getShipmentGrade(), data.grade()))
+				.toList();
+			lot = pickSingle(gradeMatched);
+			if (lot != null) inspection = AuctionInspectionStatus.CORRECTED_MATCH;
+		}
+		if (lot == null) {
+			List<AuctionShipmentLot> openLots = base.stream()
+				.filter(value -> value.getWaitingQuantity() >= data.quantity())
+				.toList();
+			lot = pickSingle(openLots);
+			inspection = AuctionInspectionStatus.CORRECTED_MATCH;
+		}
+		if (lot == null) {
 			normalized.row().error(base.isEmpty() ? AuctionInspectionStatus.MATCH_FAILED : AuctionInspectionStatus.MANUAL_REVIEW, base.isEmpty() ? "일치하는 출하 lot이 없습니다." : "복수 출하 lot 후보가 있어 수동 확인이 필요합니다.");
 			return false;
 		}
@@ -132,10 +151,9 @@ public class AuctionImportService {
 		if (attempt == null) {
 			attempt = new AuctionAttempt(data.auctionDate(), lot.getAttempts().size() + 1, attemptStatus(sold, failed, returnInferred), failed ? data.note() : null, null);
 			lot.addAttempt(attempt);
-		} else if (sold > 0 && attempt.getAttemptStatus() == AuctionAttemptStatus.FAILED) {
-			attempt.updateStatus(AuctionAttemptStatus.PARTIALLY_SOLD);
 		}
 		attempt.addResultLine(new AuctionResultLine(data.auctionDate(), data.grade(), data.quantity(), data.unitPrice(), data.amount(), data.note(), returnInferred ? AuctionInspectionStatus.RETURN_INFERRED : inspection, normalized.row()));
+		attempt.recalculateStatus();
 		lot.applyResult(sold, returned, failed, returnInferred);
 		normalized.row().matched("AUCTION_LOT", lot.getId(), returnInferred ? AuctionInspectionStatus.RETURN_INFERRED : inspection);
 		return true;
@@ -144,21 +162,25 @@ public class AuctionImportService {
 	private AuctionAttemptStatus attemptStatus(int sold, boolean failed, boolean returned) { if (returned) return AuctionAttemptStatus.RETURN_INFERRED; if (failed) return AuctionAttemptStatus.FAILED; return sold > 0 ? AuctionAttemptStatus.SOLD : AuctionAttemptStatus.FAILED; }
 
 	private AuctionImportData normalize(Map<String, String> row) {
-		String typeValue = value(row, "구분", "유형", "분류", "분류 (출하, 경매)", "type");
-		LocalDate shipmentDate = parseDate(required(row, "출하일자", "출하일", "shipmentDate"));
-		String market = required(row, "경매장", "auctionMarket", "market");
-		String variety = required(row, "품종명", "품종", "varietyName");
-		String item = value(row, "품목명", "품목", "itemName");
-		LocalDate auctionDate = parseOptionalDate(value(row, "경매일자", "경매일", "일자", "auctionDate"));
-		RowType type = contains(typeValue, "출하")
-			? RowType.SHIPMENT
-			: contains(typeValue, "경매") || auctionDate != null ? RowType.AUCTION : RowType.SHIPMENT;
-		if (type == RowType.AUCTION && auctionDate == null) throw new IllegalArgumentException("경매 행의 경매일자가 없습니다.");
+		String typeValue = normalizeText(value(row, "구분", "유형", "분류", "분류 (출하, 경매)", "type"));
+		RowType type = contains(typeValue, "경매") ? RowType.AUCTION : RowType.SHIPMENT;
+		LocalDate shipmentDate;
+		LocalDate auctionDate;
+		if (type == RowType.SHIPMENT) {
+			shipmentDate = parseDate(required(row, "일자", "출하일자", "출하일", "shipmentDate"));
+			auctionDate = null;
+		} else {
+			auctionDate = parseDate(required(row, "일자", "경매일자", "경매일", "auctionDate"));
+			shipmentDate = parseDate(required(row, "출하일자", "출하일", "shipmentDate"));
+		}
+		String market = normalizeMarket(required(row, "경매장", "auctionMarket", "market"));
+		String variety = normalizeText(required(row, "품종명", "품종", "varietyName"));
+		String item = normalizeText(value(row, "품목명", "품목", "itemName"));
 		int quantity = parseInt(required(row, "분수량", "수량", "quantity"));
 		int unitPrice = parseOptionalInt(value(row, "단가", "unitPrice"));
 		int amount = parseOptionalInt(value(row, "금액", "amount"));
 		if (amount == 0 && unitPrice > 0) amount = quantity * unitPrice;
-		return new AuctionImportData(type, shipmentDate, auctionDate, market, item.isBlank() ? variety : item, variety, nullable(value(row, "등급", "출하등급", "경매등급", "grade")), parseOptionalInt(value(row, "상자", "상자수", "boxes")), quantity, unitPrice, amount, nullable(value(row, "비고", "메모", "note")));
+		return new AuctionImportData(type, shipmentDate, auctionDate, market, item.isBlank() ? variety : item, variety, nullable(normalizeText(value(row, "등급", "출하등급", "경매등급", "grade"))), parseOptionalInteger(value(row, "상자", "상자수", "boxes")), quantity, unitPrice, amount, nullable(value(row, "비고", "메모", "note")), nullable(value(row, "유찰횟수", "failedHistory")));
 	}
 
 	private Map<String, String> sanitize(Map<String, String> values) {
@@ -187,17 +209,38 @@ public class AuctionImportService {
 			.decode(ByteBuffer.wrap(bytes))
 			.toString();
 	}
-	private String value(Map<String, String> row, String... aliases) { for (String alias : aliases) { for (var entry : row.entrySet()) if (entry.getKey().equalsIgnoreCase(alias)) return entry.getValue().trim(); } return ""; }
+	private String value(Map<String, String> row, String... aliases) {
+		for (String alias : aliases) {
+			for (var entry : row.entrySet()) {
+				if (entry.getKey().equalsIgnoreCase(alias) && !entry.getValue().isBlank()) return entry.getValue().trim();
+			}
+		}
+		return "";
+	}
 	private String required(Map<String, String> row, String... aliases) { String result = value(row, aliases); if (result.isBlank()) throw new IllegalArgumentException(aliases[0] + " 값이 없습니다."); return result; }
 	private LocalDate parseDate(String value) { String normalized = value.trim().replaceAll("\\s", "").replace('.', '-').replace('/', '-'); for (DateTimeFormatter formatter : List.of(DateTimeFormatter.ISO_LOCAL_DATE, DateTimeFormatter.ofPattern("yyyy-M-d", Locale.KOREA))) { try { return LocalDate.parse(normalized, formatter); } catch (DateTimeParseException ignored) { } } throw new IllegalArgumentException("날짜 형식이 올바르지 않습니다: " + value); }
 	private LocalDate parseOptionalDate(String value) { return value.isBlank() ? null : parseDate(value); }
 	private int parseInt(String value) { try { return Integer.parseInt(value.replace(",", "").trim()); } catch (NumberFormatException exception) { throw new IllegalArgumentException("숫자 형식이 올바르지 않습니다: " + value); } }
 	private int parseOptionalInt(String value) { return value.isBlank() ? 0 : parseInt(value); }
+	private Integer parseOptionalInteger(String value) { return value == null || value.isBlank() ? null : parseInt(value); }
 	private boolean contains(String value, String token) { return value != null && value.contains(token); }
 	private String nullable(String value) { return value == null || value.isBlank() ? null : value.trim(); }
+	private String normalizeText(String value) { return value == null ? "" : value.replace("\ufeff", "").replace('\u00a0', ' ').trim().replaceAll("\\s+", " "); }
+	private String normalizeMarket(String value) {
+		return switch (normalizeText(value)) {
+			case "음성공판장" -> "음성";
+			case "양재공판장" -> "양재";
+			case "고양공판장" -> "고양";
+			case "부산공판장" -> "부산";
+			default -> normalizeText(value);
+		};
+	}
+	private boolean sameText(String left, String right) { return normalizeText(left).equalsIgnoreCase(normalizeText(right)); }
+	private boolean sameNullableText(String left, String right) { return Objects.equals(nullable(normalizeText(left)), nullable(normalizeText(right))); }
+	private AuctionShipmentLot pickSingle(List<AuctionShipmentLot> lots) { return lots.size() == 1 ? lots.getFirst() : null; }
 	private String json(Object value) { try { return objectMapper.writeValueAsString(value); } catch (Exception exception) { throw new IllegalArgumentException("원본 행을 JSON으로 변환하지 못했습니다.", exception); } }
 
 	private enum RowType { SHIPMENT, AUCTION }
 	private record NormalizedImportRow(ImportRow row, AuctionImportData data) { }
-	private record AuctionImportData(RowType type, LocalDate shipmentDate, LocalDate auctionDate, String market, String itemName, String varietyName, String grade, Integer boxes, Integer quantity, Integer unitPrice, Integer amount, String note) { }
+	private record AuctionImportData(RowType type, LocalDate shipmentDate, LocalDate auctionDate, String market, String itemName, String varietyName, String grade, Integer boxes, Integer quantity, Integer unitPrice, Integer amount, String note, String failedHistory) { }
 }

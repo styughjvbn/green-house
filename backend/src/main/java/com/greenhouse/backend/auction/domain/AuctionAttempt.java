@@ -33,6 +33,16 @@ public class AuctionAttempt extends BaseEntity {
 	void setShipmentLot(AuctionShipmentLot lot) { shipmentLot = lot; }
 	public void addResultLine(AuctionResultLine line) { resultLines.add(line); line.setAuctionAttempt(this); }
 	public void updateStatus(AuctionAttemptStatus status) { attemptStatus = status; }
+	public void recalculateStatus() {
+		boolean hasSold = resultLines.stream().anyMatch(line -> line.getAmount() > 0);
+		boolean hasFailed = resultLines.stream().anyMatch(line -> line.getAmount() == 0);
+		boolean hasReturn = resultLines.stream()
+			.anyMatch(line -> line.getInspectionStatus() == AuctionInspectionStatus.RETURN_INFERRED);
+		if (hasReturn) attemptStatus = AuctionAttemptStatus.RETURN_INFERRED;
+		else if (hasSold && hasFailed) attemptStatus = AuctionAttemptStatus.PARTIALLY_SOLD;
+		else if (hasSold) attemptStatus = AuctionAttemptStatus.SOLD;
+		else attemptStatus = AuctionAttemptStatus.FAILED;
+	}
 	public Long getId() { return id; }
 	public AuctionShipmentLot getShipmentLot() { return shipmentLot; }
 	public LocalDate getAuctionDate() { return auctionDate; }

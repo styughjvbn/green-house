@@ -78,13 +78,30 @@ class AuctionTrackingTests {
 	void importsOperationalHeadersWithTrailingBlankColumn() {
 		var batch = importService.importCsv(csv("""
 			"분류 (출하, 경매)",일자,출하일자,유찰횟수,품목명,품종명,등급,상자,분수량,단가,금액,비고,경매장,검수,
-			출하,,2026-07-05,0,난,카틀레야 A,특,2,20,0,0,,음성,정상,
+			출하,2026-07-05,,,난,카틀레야 A,특,2,20,0,0,,음성공판장,정상,
 			경매,2026-07-07,2026-07-05,0,난,카틀레야 A,특,0,20,10000,200000,,음성,정상,
 			"""));
 
 		assertThat(batch.status().name()).isEqualTo("COMPLETED");
 		assertThat(batch.rowCount()).isEqualTo(2);
 		assertThat(trackingService.getLots(null, null, null, null, null, null, null, null, null, null).getFirst().soldQuantity()).isEqualTo(20);
+	}
+
+	@Test
+	void matchesAuctionRowsOnlyWithinCurrentImportBatch() {
+		importService.importCsv(csv("""
+			구분,출하일자,경매일자,경매장,품종명,등급,상자,분수량,단가,금액,비고
+			출하,2026-06-10,,음성,중복 품종,A,1,10,0,0,
+			"""));
+
+		var secondBatch = importService.importCsv(csv("""
+			구분,출하일자,경매일자,경매장,품종명,등급,상자,분수량,단가,금액,비고
+			출하,2026-06-10,,음성,중복 품종,A,1,10,0,0,
+			경매,2026-06-10,2026-06-12,음성,중복 품종,A,,10,1000,10000,
+			"""));
+
+		assertThat(importService.getRows(secondBatch.id()).getLast().validationStatus())
+			.isEqualTo(AuctionInspectionStatus.AUTO_MATCHED);
 	}
 
 	@Test

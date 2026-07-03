@@ -59,7 +59,7 @@ export function AuctionLotDetail({
             <TimelineItem
               date={lot.shipmentDate}
               title={`경매장 출하 ${lot.shippedQuantity.toLocaleString()}분`}
-              description={`${lot.boxes.toLocaleString()}상자 · 출하등급 ${lot.shipmentGrade || "미지정"}`}
+              description={`${lot.boxes == null ? "상자 수 미상" : `${lot.boxes.toLocaleString()}상자`} · 출하등급 ${lot.shipmentGrade || "미지정"}`}
             />
             {lot.attempts.map((attempt) => (
               <TimelineItem
