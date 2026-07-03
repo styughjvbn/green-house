@@ -348,7 +348,7 @@ CREATE INDEX idx_sales_slip_items_orchid_group_id ON sales_slip_items(orchid_gro
 | `import_batches` | `file_name`, `row_count`, `status` | CSV 가져오기 단위 |
 | `import_rows` | `import_batch_id`, `row_number`, `raw_data_json`, `normalized_data_json`, `validation_status`, `matched_entity_type`, `matched_entity_id`, `error_message` | 원본 행과 검수 결과 보존 |
 | `auction_shipments` | `shipment_date`, `auction_market`, `status`, `import_batch_id` | 출하일·경매장 묶음 |
-| `auction_shipment_lots` | `shipment_id`, `item_name`, `variety_name`, `shipment_grade`, `boxes`, `shipped_quantity`, `sold_quantity`, `waiting_quantity`, `returned_quantity`, `current_status`, `source_row_id` | 실제 추적 lot |
+| `auction_shipment_lots` | `shipment_id`, `item_name`, `variety_name`, `shipment_grade`, `boxes`(NULL 허용), `shipped_quantity`, `sold_quantity`, `waiting_quantity`, `returned_quantity`, `current_status`, `source_row_id` | 실제 추적 lot |
 | `auction_attempts` | `shipment_lot_id`, `auction_date`, `attempt_no`, `attempt_status`, `failed_reason` | 경매 시도 |
 | `auction_result_lines` | `auction_attempt_id`, `auction_date`, `auction_grade`, `quantity`, `unit_price`, `amount`, `inspection_status`, `raw_row_id` | 단가별 경매 결과 |
 | `auction_lot_status_history` | `shipment_lot_id`, `previous_status`, `new_status`, `changed_at`, `reason`, `worker`, `memo` | 상태·보정 이력 |
