@@ -1,0 +1,16 @@
+package com.greenhouse.backend.auction.domain;
+
+public enum AuctionLotStatus {
+	SHIPPED,
+	WAITING,
+	IN_PROGRESS,
+	SOLD,
+	PARTIALLY_SOLD,
+	FAILED,
+	REAUCTION_WAITING,
+	RETURN_INFERRED,
+	RETURNED,
+	QUANTITY_MISMATCH,
+	REVIEW_REQUIRED,
+	CANCELLED
+}
