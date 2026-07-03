@@ -1,6 +1,14 @@
 import { API_BASE_URL, fetchApi } from "@/shared/api/client";
 import type { Customer, SalesSlip } from "@/entities/farm/types";
 import type {
+  AuctionImportBatch,
+  AuctionImportRow,
+  AuctionLot,
+  AuctionLotStatus,
+  AuctionTrackingSummary,
+} from "@/entities/farm/types";
+import type {
+  AuctionFilterState,
   CreateCustomerPayload,
   CreateSalesSlipPayload,
 } from "../model/types";
@@ -41,6 +49,91 @@ export function getCustomers() {
 
 export function getSalesSlips() {
   return fetchApi<SalesSlip[]>("/sales-slips");
+}
+
+export function getAuctionLots(filters?: Partial<AuctionFilterState>) {
+  const params = new URLSearchParams();
+  Object.entries(filters ?? {}).forEach(([key, value]) => {
+    if (value !== "" && value !== false && value != null) {
+      params.set(key, String(value));
+    }
+  });
+  const query = params.size > 0 ? `?${params}` : "";
+  return fetchApi<AuctionLot[]>(`/auction-lots${query}`);
+}
+
+export function getAuctionTrackingSummary() {
+  return fetchApi<AuctionTrackingSummary>("/auction-tracking/summary");
+}
+
+export function uploadAuctionCsv(file: File): Promise<AuctionImportBatch> {
+  const formData = new FormData();
+  formData.append("file", file);
+  return requestJson<AuctionImportBatch>(
+    "/auction-imports",
+    { method: "POST", body: formData },
+    "CSV 파일을 가져오지 못했습니다.",
+  );
+}
+
+export function getAuctionImportRows(batchId: number) {
+  return fetchApi<AuctionImportRow[]>(`/auction-imports/${batchId}/rows`);
+}
+
+export function confirmAuctionReturn(
+  lotId: number,
+  payload: { worker: string | null; memo: string | null },
+) {
+  return requestJson<AuctionLot>(
+    `/auction-lots/${lotId}/confirm-return`,
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    },
+    "반환 상태를 확정하지 못했습니다.",
+  );
+}
+
+export function adjustAuctionQuantity(
+  lotId: number,
+  payload: {
+    soldQuantity: number;
+    waitingQuantity: number;
+    returnedQuantity: number;
+    worker: string | null;
+    memo: string | null;
+  },
+) {
+  return requestJson<AuctionLot>(
+    `/auction-lots/${lotId}/adjust-quantity`,
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    },
+    "수량을 보정하지 못했습니다.",
+  );
+}
+
+export function changeAuctionLotStatus(
+  lotId: number,
+  payload: {
+    status: AuctionLotStatus;
+    reason: string;
+    worker: string | null;
+    memo: string | null;
+  },
+) {
+  return requestJson<AuctionLot>(
+    `/auction-lots/${lotId}/status`,
+    {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    },
+    "상태를 변경하지 못했습니다.",
+  );
 }
 
 export function createCustomer(

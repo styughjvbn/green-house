@@ -3,6 +3,8 @@
 export type SalesManagerProps = {
   initialCustomers: Customer[];
   initialSalesSlips: SalesSlip[];
+  initialAuctionLots: import("@/entities/farm/types").AuctionLot[];
+  initialAuctionSummary: import("@/entities/farm/types").AuctionTrackingSummary;
 };
 
 export type CustomerForm = {
@@ -57,7 +59,20 @@ export type CreateSalesSlipPayload = {
   }>;
 };
 
-export type SalesTab = "SLIPS" | "CUSTOMERS";
+export type SalesTab = "SLIPS" | "AUCTION" | "SETTLEMENT" | "CUSTOMERS";
+
+export type AuctionFilterState = {
+  from: string;
+  to: string;
+  market: string;
+  variety: string;
+  grade: string;
+  status: string;
+  keyword: string;
+  reviewOnly: boolean;
+  returnOnly: boolean;
+  waitingOnly: boolean;
+};
 
 export type SalesFilterState = {
   from: string;

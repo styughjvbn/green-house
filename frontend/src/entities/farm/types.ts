@@ -294,3 +294,111 @@ export type SalesSlip = {
   memo: string | null;
   items: SalesSlipItem[];
 };
+
+export type AuctionLotStatus =
+  | "SHIPPED"
+  | "WAITING"
+  | "IN_PROGRESS"
+  | "SOLD"
+  | "PARTIALLY_SOLD"
+  | "FAILED"
+  | "REAUCTION_WAITING"
+  | "RETURN_INFERRED"
+  | "RETURNED"
+  | "QUANTITY_MISMATCH"
+  | "REVIEW_REQUIRED"
+  | "CANCELLED";
+
+export type AuctionInspectionStatus =
+  | "NORMAL"
+  | "AUTO_MATCHED"
+  | "CORRECTED_MATCH"
+  | "MANUAL_REVIEW"
+  | "MATCH_FAILED"
+  | "QUANTITY_MISMATCH"
+  | "RETURN_INFERRED"
+  | "SOURCE_ERROR";
+
+export type AuctionResultLine = {
+  id: number;
+  auctionDate: string;
+  auctionGrade: string | null;
+  quantity: number;
+  unitPrice: number;
+  amount: number;
+  note: string | null;
+  inspectionStatus: AuctionInspectionStatus;
+  rawRowId: number | null;
+};
+
+export type AuctionAttempt = {
+  id: number;
+  auctionDate: string;
+  attemptNo: number;
+  attemptStatus: string;
+  failedReason: string | null;
+  memo: string | null;
+  resultLines: AuctionResultLine[];
+};
+
+export type AuctionStatusHistory = {
+  id: number;
+  previousStatus: AuctionLotStatus | null;
+  newStatus: AuctionLotStatus;
+  changedAt: string;
+  reason: string;
+  worker: string | null;
+  memo: string | null;
+};
+
+export type AuctionLot = {
+  id: number;
+  shipmentDate: string;
+  auctionMarket: string;
+  itemName: string;
+  varietyName: string;
+  shipmentGrade: string | null;
+  boxes: number;
+  shippedQuantity: number;
+  soldQuantity: number;
+  waitingQuantity: number;
+  returnedQuantity: number;
+  currentStatus: AuctionLotStatus;
+  latestAuctionDate: string | null;
+  failedCount: number;
+  totalAmount: number;
+  inspectionStatus: AuctionInspectionStatus;
+  memo: string | null;
+  attempts: AuctionAttempt[];
+  statusHistory: AuctionStatusHistory[];
+};
+
+export type AuctionTrackingSummary = {
+  lotCount: number;
+  shippedQuantity: number;
+  soldQuantity: number;
+  waitingQuantity: number;
+  returnedQuantity: number;
+  reviewRequiredCount: number;
+  totalAmount: number;
+};
+
+export type AuctionImportBatch = {
+  id: number;
+  fileName: string;
+  rowCount: number;
+  status: string;
+  memo: string | null;
+  importedAt: string;
+};
+
+export type AuctionImportRow = {
+  id: number;
+  rowNumber: number;
+  rawDataJson: string;
+  normalizedDataJson: string | null;
+  validationStatus: AuctionInspectionStatus;
+  matchedEntityType: string | null;
+  matchedEntityId: number | null;
+  errorMessage: string | null;
+};
