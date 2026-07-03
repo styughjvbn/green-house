@@ -338,3 +338,28 @@ CREATE INDEX idx_sales_slip_items_orchid_group_id ON sales_slip_items(orchid_gro
 - 작업 유형은 MVP 이후 커스텀 추가 가능성이 높으므로 `work_types` 테이블 전환을 고려한다.
 - 난 묶음 이동은 `OrchidGroup.bedZone` 변경과 `WorkRecord` 생성이 하나의 트랜잭션 안에서 처리되어야 한다.
 - 판매 수량 차감 기능이 추가되면 전표 상태 변경, 난 묶음 수량 변경, 재고 변동 이력을 하나의 트랜잭션으로 처리해야 한다.
+
+---
+
+## 6. 출하·경매 추적 테이블
+
+| 테이블 | 핵심 컬럼 | 역할 |
+|---|---|---|
+| `import_batches` | `file_name`, `row_count`, `status` | CSV 가져오기 단위 |
+| `import_rows` | `import_batch_id`, `row_number`, `raw_data_json`, `normalized_data_json`, `validation_status`, `matched_entity_type`, `matched_entity_id`, `error_message` | 원본 행과 검수 결과 보존 |
+| `auction_shipments` | `shipment_date`, `auction_market`, `status`, `import_batch_id` | 출하일·경매장 묶음 |
+| `auction_shipment_lots` | `shipment_id`, `item_name`, `variety_name`, `shipment_grade`, `boxes`, `shipped_quantity`, `sold_quantity`, `waiting_quantity`, `returned_quantity`, `current_status`, `source_row_id` | 실제 추적 lot |
+| `auction_attempts` | `shipment_lot_id`, `auction_date`, `attempt_no`, `attempt_status`, `failed_reason` | 경매 시도 |
+| `auction_result_lines` | `auction_attempt_id`, `auction_date`, `auction_grade`, `quantity`, `unit_price`, `amount`, `inspection_status`, `raw_row_id` | 단가별 경매 결과 |
+| `auction_lot_status_history` | `shipment_lot_id`, `previous_status`, `new_status`, `changed_at`, `reason`, `worker`, `memo` | 상태·보정 이력 |
+
+권장 인덱스:
+
+```sql
+CREATE INDEX idx_auction_shipments_date_market ON auction_shipments(shipment_date, auction_market);
+CREATE INDEX idx_auction_lots_business_key ON auction_shipment_lots(variety_name, shipment_grade, current_status);
+CREATE INDEX idx_auction_attempts_lot_date ON auction_attempts(shipment_lot_id, auction_date);
+CREATE INDEX idx_import_rows_batch_status ON import_rows(import_batch_id, validation_status);
+```
+
+현재는 JPA `ddl-auto`로 스키마를 생성한다. 운영 데이터 이식 전 마이그레이션 도구와 가져오기 배치 중복 방지 키를 추가해야 한다.

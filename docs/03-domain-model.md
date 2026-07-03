@@ -308,3 +308,24 @@ MVP 이후에는 판매 품목이 특정 난 묶음과 연결될 수 있다.
 | 판매 전표 | 판매 내역을 기록하고 출력하는 문서 |
 | 판매 품목 | 판매 전표에 포함되는 개별 품목 |
 | 거래처 | 난을 구매하는 고객 또는 업체 |
+
+---
+
+## 14. 출하·경매 추적 도메인
+
+기존 `SalesSlip`은 직접 판매 증빙으로 유지하고, 경매 출하는 별도 lot으로 추적한다.
+
+```text
+ImportBatch 1 ─ N ImportRow
+AuctionShipment 1 ─ N AuctionShipmentLot
+AuctionShipmentLot 1 ─ N AuctionAttempt 1 ─ N AuctionResultLine
+AuctionShipmentLot 1 ─ N AuctionLotStatusHistory
+```
+
+- `AuctionShipmentLot`: 출하 수량, 판매 수량, 경매장 대기 수량, 반환 수량의 기준 단위
+- `AuctionAttempt`: 유찰과 재경매를 포함한 경매 시도
+- `AuctionResultLine`: 단가별 실제 경매 결과 원본 행
+- `ImportRow`: CSV 원본과 정규화 결과, 자동 매칭 상태 보존
+- `AuctionLotStatusHistory`: 반환 확인, 수량 보정, 수동 상태 변경 이력
+
+자동 매칭은 `출하일 + 품종 + 등급 + 경매장`을 우선하고, 등급 누락 시 `출하일 + 품종 + 경매장`을 사용한다. 후보가 둘 이상이면 임의 선택하지 않고 확인 필요로 둔다.

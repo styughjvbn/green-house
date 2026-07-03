@@ -782,3 +782,64 @@ DELETE /api/orchid-groups/{orchidGroupId}
   "message": null
 }
 ```
+
+---
+
+## 14. 출하·경매 추적 API
+
+### CSV 가져오기
+
+```http
+POST /api/auction-imports
+Content-Type: multipart/form-data
+
+GET /api/auction-imports/{importBatchId}
+GET /api/auction-imports/{importBatchId}/rows
+```
+
+업로드 필드명은 `file`이다. UTF-8 CSV 원본과 정규화 JSON을 저장하고 출하·경매 행을 자동 매칭한다.
+
+### lot 조회
+
+```http
+GET /api/auction-lots?from=&to=&market=&variety=&grade=&status=&reviewOnly=&returnOnly=&waitingOnly=&keyword=
+GET /api/auction-lots/{lotId}
+GET /api/auction-lots/{lotId}/timeline
+GET /api/auction-tracking/summary
+```
+
+`reviewOnly`는 매칭 실패, 수량 불일치, 반환 추정 등 운영자 확인 대상을 반환한다. `returnOnly`는 반환 추정, `waitingOnly`는 재경매 대기 lot을 조회한다.
+
+### 반환 확인
+
+```http
+POST /api/auction-lots/{lotId}/confirm-return
+```
+
+현재 대기 수량을 반환 수량으로 이동하고 상태 이력을 생성한다.
+
+### 수량 보정
+
+```http
+POST /api/auction-lots/{lotId}/adjust-quantity
+```
+
+```json
+{
+  "soldQuantity": 50,
+  "waitingQuantity": 30,
+  "returnedQuantity": 20,
+  "worker": "관리자",
+  "memo": "현장 확인"
+}
+```
+
+판매 + 대기 + 반환 수량은 출하 수량과 같아야 한다.
+
+### 상태 변경
+
+```http
+PATCH /api/auction-lots/{lotId}/status
+```
+
+상태, 변경 사유, 작업자, 메모를 받고 상태 이력을 생성한다. 수동 매칭, 재고 자동 이동, 정산 생성 API는 아직 제공하지 않는다.
