@@ -15,7 +15,11 @@ import com.greenhouse.backend.auction.repository.AuctionShipmentRepository;
 import com.greenhouse.backend.auction.repository.ImportBatchRepository;
 import com.greenhouse.backend.auction.repository.ImportRowRepository;
 import com.greenhouse.backend.common.exception.NotFoundException;
-import java.io.InputStreamReader;
+import java.io.StringReader;
+import java.nio.ByteBuffer;
+import java.nio.charset.CharacterCodingException;
+import java.nio.charset.Charset;
+import java.nio.charset.CodingErrorAction;
 import java.nio.charset.StandardCharsets;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
@@ -51,7 +55,7 @@ public class AuctionImportService {
 		ImportBatch batch = new ImportBatch(Objects.requireNonNullElse(file.getOriginalFilename(), "auction.csv"));
 		List<NormalizedImportRow> normalizedRows = new ArrayList<>();
 		boolean hasErrors = false;
-		try (var reader = new InputStreamReader(file.getInputStream(), StandardCharsets.UTF_8)) {
+		try (var reader = new StringReader(decodeCsv(file.getBytes()))) {
 			var format = CSVFormat.DEFAULT.builder().setHeader().setSkipHeaderRecord(true).setIgnoreEmptyLines(true).setTrim(true).get();
 			for (CSVRecord record : format.parse(reader)) {
 				Map<String, String> raw = sanitize(record.toMap());
@@ -152,6 +156,24 @@ public class AuctionImportService {
 	}
 
 	private Map<String, String> sanitize(Map<String, String> values) { Map<String, String> result = new LinkedHashMap<>(); values.forEach((key, value) -> result.put(key.replace("\ufeff", "").trim(), value == null ? "" : value.trim())); return result; }
+	private String decodeCsv(byte[] bytes) {
+		try {
+			return decode(bytes, StandardCharsets.UTF_8);
+		} catch (CharacterCodingException ignored) {
+			try {
+				return decode(bytes, Charset.forName("MS949"));
+			} catch (CharacterCodingException exception) {
+				throw new IllegalArgumentException("CSV 문자 인코딩을 확인해주세요. UTF-8 또는 CP949 파일만 지원합니다.");
+			}
+		}
+	}
+	private String decode(byte[] bytes, Charset charset) throws CharacterCodingException {
+		return charset.newDecoder()
+			.onMalformedInput(CodingErrorAction.REPORT)
+			.onUnmappableCharacter(CodingErrorAction.REPORT)
+			.decode(ByteBuffer.wrap(bytes))
+			.toString();
+	}
 	private String value(Map<String, String> row, String... aliases) { for (String alias : aliases) { for (var entry : row.entrySet()) if (entry.getKey().equalsIgnoreCase(alias)) return entry.getValue().trim(); } return ""; }
 	private String required(Map<String, String> row, String... aliases) { String result = value(row, aliases); if (result.isBlank()) throw new IllegalArgumentException(aliases[0] + " 값이 없습니다."); return result; }
 	private LocalDate parseDate(String value) { String normalized = value.trim().replaceAll("\\s", "").replace('.', '-').replace('/', '-'); for (DateTimeFormatter formatter : List.of(DateTimeFormatter.ISO_LOCAL_DATE, DateTimeFormatter.ofPattern("yyyy-M-d", Locale.KOREA))) { try { return LocalDate.parse(normalized, formatter); } catch (DateTimeParseException ignored) { } } throw new IllegalArgumentException("날짜 형식이 올바르지 않습니다: " + value); }

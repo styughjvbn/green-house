@@ -12,6 +12,7 @@ import com.greenhouse.backend.auction.domain.AuctionLotStatus;
 import com.greenhouse.backend.auction.dto.AuctionLotAdjustmentRequest;
 import com.greenhouse.backend.auction.dto.AuctionLotReturnRequest;
 import com.greenhouse.backend.auction.repository.AuctionShipmentLotRepository;
+import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -55,6 +56,22 @@ class AuctionTrackingTests {
 			.andExpect(status().isOk())
 			.andExpect(jsonPath("$.data.length()").value(3))
 			.andExpect(jsonPath("$.data[1].validationStatus").value("AUTO_MATCHED"));
+	}
+
+	@Test
+	void importsCp949CsvExportedByExcel() {
+		String content = "구분,출하일자,경매일자,경매장,품종명,등급,상자,분수량,단가,금액,비고\n"
+			+ "출하,2026-07-03,,음성 경매장,카틀레야,A,1,10,0,0,\n";
+		var file = new MockMultipartFile(
+			"file",
+			"auction-cp949.csv",
+			"text/csv",
+			content.getBytes(Charset.forName("MS949")));
+
+		var batch = importService.importCsv(file);
+
+		assertThat(batch.status().name()).isEqualTo("COMPLETED");
+		assertThat(batch.rowCount()).isEqualTo(1);
 	}
 
 	@Test

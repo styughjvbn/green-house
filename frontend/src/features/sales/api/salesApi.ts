@@ -21,6 +21,7 @@ type ApiSuccess<T> = {
 type ApiFailure = {
   error?: {
     message?: string;
+    details?: string[];
   };
 };
 
@@ -33,11 +34,9 @@ async function requestJson<T>(
   const payload = (await response.json()) as ApiSuccess<T> | ApiFailure;
 
   if (!response.ok) {
-    throw new Error(
-      "error" in payload
-        ? (payload.error?.message ?? fallbackMessage)
-        : fallbackMessage,
-    );
+    const apiError = "error" in payload ? payload.error : undefined;
+    const detail = apiError?.details?.find(Boolean);
+    throw new Error(detail ?? apiError?.message ?? fallbackMessage);
   }
 
   return (payload as ApiSuccess<T>).data;
