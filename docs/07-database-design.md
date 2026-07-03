@@ -363,3 +363,5 @@ CREATE INDEX idx_import_rows_batch_status ON import_rows(import_batch_id, valida
 ```
 
 현재는 JPA `ddl-auto`로 스키마를 생성한다. 운영 데이터 이식 전 마이그레이션 도구와 가져오기 배치 중복 방지 키를 추가해야 한다.
+
+기존 DB는 nullable 완화가 자동 반영되지 않을 수 있으므로 1회 `ALTER TABLE auction_shipment_lots ALTER COLUMN boxes DROP NOT NULL;`을 적용한다.
