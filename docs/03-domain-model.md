@@ -316,7 +316,6 @@ MVP 이후에는 판매 품목이 특정 난 묶음과 연결될 수 있다.
 기존 `SalesSlip`은 직접 판매 증빙으로 유지하고, 경매 출하는 별도 lot으로 추적한다.
 
 ```text
-ImportBatch 1 ─ N ImportRow
 AuctionShipment 1 ─ N AuctionShipmentLot
 AuctionShipmentLot 1 ─ N AuctionAttempt 1 ─ N AuctionResultLine
 AuctionShipmentLot 1 ─ N AuctionLotStatusHistory
@@ -324,10 +323,7 @@ AuctionShipmentLot 1 ─ N AuctionLotStatusHistory
 
 - `AuctionShipmentLot`: 출하 수량, 판매 수량, 경매장 대기 수량, 반환 수량의 기준 단위
 - `AuctionAttempt`: 유찰과 재경매를 포함한 경매 시도
-- `AuctionResultLine`: 단가별 실제 경매 결과 원본 행
-- `ImportRow`: CSV 원본과 정규화 결과, 자동 매칭 상태 보존
+- `AuctionResultLine`: 단가별 실제 경매 결과 행
 - `AuctionLotStatusHistory`: 반환 확인, 수량 보정, 수동 상태 변경 이력
-
-자동 매칭은 `출하일 + 품종 + 등급 + 경매장`을 우선하고, 등급 누락 시 `출하일 + 품종 + 경매장`을 사용한다. 후보가 둘 이상이면 임의 선택하지 않고 확인 필요로 둔다.
 
 경매 출하 전표는 `SalesSlip.salesType=AUCTION`으로 구분한다. 하나의 `AuctionShipment`는 최대 하나의 판매 전표와 연결되고, 각 전표 품목은 `AuctionShipmentLot`과 연결된다. 일반 판매는 `DIRECT`이며 기존 데이터의 판매 유형 NULL도 일반 판매로 해석한다.

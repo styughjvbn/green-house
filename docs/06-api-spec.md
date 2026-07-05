@@ -787,25 +787,6 @@ DELETE /api/orchid-groups/{orchidGroupId}
 
 ## 14. 출하·경매 추적 API
 
-### CSV 가져오기
-
-```http
-POST /api/auction-imports
-Content-Type: multipart/form-data
-
-GET /api/auction-imports/{importBatchId}
-GET /api/auction-imports/{importBatchId}/rows
-```
-
-업로드 필드명은 `file`이다. UTF-8 CSV 원본과 정규화 JSON을 저장하고 출하·경매 행을 자동 매칭한다.
-
-운영 CSV 날짜 규칙:
-
-- 출하 행: `일자`를 출하일로 사용한다.
-- 경매 행: `일자`를 경매일, `출하일자`를 원래 출하일로 사용한다.
-- UTF-8과 CP949, 마지막 빈 헤더를 허용한다.
-- 자동 매칭 후보는 현재 가져오기 배치에서 생성한 lot으로 제한한다.
-
 ### lot 조회
 
 ```http

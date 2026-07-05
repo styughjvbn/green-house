@@ -345,12 +345,10 @@ CREATE INDEX idx_sales_slip_items_orchid_group_id ON sales_slip_items(orchid_gro
 
 | 테이블 | 핵심 컬럼 | 역할 |
 |---|---|---|
-| `import_batches` | `file_name`, `row_count`, `status` | CSV 가져오기 단위 |
-| `import_rows` | `import_batch_id`, `row_number`, `raw_data_json`, `normalized_data_json`, `validation_status`, `matched_entity_type`, `matched_entity_id`, `error_message` | 원본 행과 검수 결과 보존 |
-| `auction_shipments` | `shipment_date`, `auction_market`, `status`, `import_batch_id` | 출하일·경매장 묶음 |
-| `auction_shipment_lots` | `shipment_id`, `item_name`, `variety_name`, `shipment_grade`, `boxes`(NULL 허용), `shipped_quantity`, `sold_quantity`, `waiting_quantity`, `returned_quantity`, `current_status`, `source_row_id` | 실제 추적 lot |
+| `auction_shipments` | `shipment_date`, `auction_market`, `status` | 출하일·경매장 묶음 |
+| `auction_shipment_lots` | `shipment_id`, `item_name`, `variety_name`, `shipment_grade`, `boxes`(NULL 허용), `shipped_quantity`, `sold_quantity`, `waiting_quantity`, `returned_quantity`, `current_status` | 실제 추적 lot |
 | `auction_attempts` | `shipment_lot_id`, `auction_date`, `attempt_no`, `attempt_status`, `failed_reason` | 경매 시도 |
-| `auction_result_lines` | `auction_attempt_id`, `auction_date`, `auction_grade`, `quantity`, `unit_price`, `amount`, `inspection_status`, `raw_row_id` | 단가별 경매 결과 |
+| `auction_result_lines` | `auction_attempt_id`, `auction_date`, `auction_grade`, `quantity`, `unit_price`, `amount`, `inspection_status` | 단가별 경매 결과 |
 | `auction_lot_status_history` | `shipment_lot_id`, `previous_status`, `new_status`, `changed_at`, `reason`, `worker`, `memo` | 상태·보정 이력 |
 
 권장 인덱스:
@@ -359,10 +357,9 @@ CREATE INDEX idx_sales_slip_items_orchid_group_id ON sales_slip_items(orchid_gro
 CREATE INDEX idx_auction_shipments_date_market ON auction_shipments(shipment_date, auction_market);
 CREATE INDEX idx_auction_lots_business_key ON auction_shipment_lots(variety_name, shipment_grade, current_status);
 CREATE INDEX idx_auction_attempts_lot_date ON auction_attempts(shipment_lot_id, auction_date);
-CREATE INDEX idx_import_rows_batch_status ON import_rows(import_batch_id, validation_status);
 ```
 
-현재는 JPA `ddl-auto`로 스키마를 생성한다. 운영 데이터 이식 전 마이그레이션 도구와 가져오기 배치 중복 방지 키를 추가해야 한다.
+CSV Import 기능 제거에 따라 `import_batches`, `import_rows` 테이블과 경매 테이블의 원본 행 연결 컬럼을 제거한다.
 
 기존 DB는 nullable 완화가 자동 반영되지 않을 수 있으므로 1회 `ALTER TABLE auction_shipment_lots ALTER COLUMN boxes DROP NOT NULL;`을 적용한다.
 
