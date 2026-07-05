@@ -45,7 +45,7 @@ class AuctionTrackingTests {
 
 		assertThat(batch.rowCount()).isEqualTo(3);
 		assertThat(lotRepository.count()).isEqualTo(1);
-		var lot = trackingService.getLots(null, null, null, null, null, null, null, null, null, null).getFirst();
+		var lot = trackingService.getLots(null, null, null, null, null, null, null, null, null, null, 0, 20).content().getFirst();
 		assertThat(lot.currentStatus()).isEqualTo(AuctionLotStatus.SOLD);
 		assertThat(lot.soldQuantity()).isEqualTo(100);
 		assertThat(lot.waitingQuantity()).isZero();
@@ -56,6 +56,14 @@ class AuctionTrackingTests {
 			.andExpect(status().isOk())
 			.andExpect(jsonPath("$.data.length()").value(3))
 			.andExpect(jsonPath("$.data[1].validationStatus").value("AUTO_MATCHED"));
+
+		mockMvc.perform(get("/api/auction-lots").param("page", "0").param("size", "1"))
+			.andExpect(status().isOk())
+			.andExpect(jsonPath("$.data.content.length()").value(1))
+			.andExpect(jsonPath("$.data.page").value(0))
+			.andExpect(jsonPath("$.data.size").value(1))
+			.andExpect(jsonPath("$.data.totalElements").value(1))
+			.andExpect(jsonPath("$.data.totalPages").value(1));
 	}
 
 	@Test
@@ -84,7 +92,7 @@ class AuctionTrackingTests {
 
 		assertThat(batch.status().name()).isEqualTo("COMPLETED");
 		assertThat(batch.rowCount()).isEqualTo(2);
-		assertThat(trackingService.getLots(null, null, null, null, null, null, null, null, null, null).getFirst().soldQuantity()).isEqualTo(20);
+		assertThat(trackingService.getLots(null, null, null, null, null, null, null, null, null, null, 0, 20).content().getFirst().soldQuantity()).isEqualTo(20);
 	}
 
 	@Test
@@ -125,7 +133,7 @@ class AuctionTrackingTests {
 			출하,2026-06-01,,양재,호접란 A,A,5,50,0,0,
 			경매,2026-06-01,2026-06-03,양재,호접란 A,A,0,50,0,0,유찰
 			"""));
-		var lot = trackingService.getLots(null, null, null, null, null, null, null, null, null, null).getFirst();
+		var lot = trackingService.getLots(null, null, null, null, null, null, null, null, null, null, 0, 20).content().getFirst();
 
 		var returned = trackingService.confirmReturn(lot.id(), new AuctionLotReturnRequest("관리자", "농장 도착"));
 		assertThat(returned.currentStatus()).isEqualTo(AuctionLotStatus.RETURNED);

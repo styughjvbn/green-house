@@ -4,6 +4,7 @@ import com.greenhouse.backend.auction.application.AuctionImportService;
 import com.greenhouse.backend.auction.application.AuctionTrackingService;
 import com.greenhouse.backend.auction.domain.AuctionLotStatus;
 import com.greenhouse.backend.auction.dto.AuctionLotAdjustmentRequest;
+import com.greenhouse.backend.auction.dto.AuctionLotPageResponse;
 import com.greenhouse.backend.auction.dto.AuctionLotResponse;
 import com.greenhouse.backend.auction.dto.AuctionLotReturnRequest;
 import com.greenhouse.backend.auction.dto.AuctionLotStatusRequest;
@@ -47,8 +48,8 @@ public class AuctionTrackingController {
 	public ApiResponse<List<ImportRowResponse>> getImportRows(@PathVariable Long id) { return ApiResponse.ok(importService.getRows(id)); }
 
 	@GetMapping("/auction-lots")
-	public ApiResponse<List<AuctionLotResponse>> getLots(@RequestParam(required = false) LocalDate from, @RequestParam(required = false) LocalDate to, @RequestParam(required = false) String market, @RequestParam(required = false) String variety, @RequestParam(required = false) String grade, @RequestParam(required = false) AuctionLotStatus status, @RequestParam(required = false) Boolean reviewOnly, @RequestParam(required = false) Boolean returnOnly, @RequestParam(required = false) Boolean waitingOnly, @RequestParam(required = false) String keyword) {
-		return ApiResponse.ok(trackingService.getLots(from, to, market, variety, grade, status, reviewOnly, returnOnly, waitingOnly, keyword));
+	public ApiResponse<AuctionLotPageResponse> getLots(@RequestParam(required = false) LocalDate from, @RequestParam(required = false) LocalDate to, @RequestParam(required = false) String market, @RequestParam(required = false) String variety, @RequestParam(required = false) String grade, @RequestParam(required = false) AuctionLotStatus status, @RequestParam(required = false) Boolean reviewOnly, @RequestParam(required = false) Boolean returnOnly, @RequestParam(required = false) Boolean waitingOnly, @RequestParam(required = false) String keyword, @RequestParam(defaultValue = "0") int page, @RequestParam(defaultValue = "20") int size) {
+		return ApiResponse.ok(trackingService.getLots(from, to, market, variety, grade, status, reviewOnly, returnOnly, waitingOnly, keyword, page, size));
 	}
 
 	@GetMapping("/auction-lots/{id}")
