@@ -42,9 +42,9 @@ export function AuctionLotDetail({
             <button
               className="inline-flex h-8 items-center gap-1.5 rounded-md border border-[#d7ded5] px-3 text-xs font-semibold disabled:opacity-50"
               type="button"
-              disabled={loading || lot.waitingQuantity === 0}
+              disabled={loading || lot.returnConfirmableQuantity === 0}
               onClick={() => {
-                setReturnQuantity(lot.waitingQuantity);
+                setReturnQuantity(lot.returnConfirmableQuantity);
                 setShowReturnConfirmation((current) => !current);
               }}
             >
@@ -70,7 +70,7 @@ export function AuctionLotDetail({
               className="mt-1 block h-9 w-36 rounded-md border border-[#d8c7a8] bg-white px-3 text-right text-sm"
               type="number"
               min={1}
-              max={lot.waitingQuantity}
+              max={lot.returnConfirmableQuantity}
               required
               value={returnQuantity}
               onChange={(event) =>
@@ -79,10 +79,14 @@ export function AuctionLotDetail({
             />
           </label>
           <div className="min-w-40 text-xs text-[#6b5b44]">
-            <p>현재 대기 {lot.waitingQuantity.toLocaleString()}분</p>
+            <p>
+              반환 확인 대상 {lot.returnConfirmableQuantity.toLocaleString()}분
+            </p>
             <p className="mt-1 font-bold">
               변경 상태:{" "}
-              {returnQuantity === lot.waitingQuantity ? "반환완료" : "부분반환"}
+              {returnQuantity === lot.returnConfirmableQuantity
+                ? "반환완료"
+                : "부분반환"}
             </p>
           </div>
           <button
@@ -91,7 +95,7 @@ export function AuctionLotDetail({
             disabled={
               loading ||
               returnQuantity < 1 ||
-              returnQuantity > lot.waitingQuantity
+              returnQuantity > lot.returnConfirmableQuantity
             }
           >
             반환 확인 저장

@@ -95,7 +95,7 @@ export function useAuctionTracking(
   async function confirmReturn(returnedQuantity: number) {
     if (!selectedLot) return;
     const result =
-      returnedQuantity === selectedLot.waitingQuantity
+      returnedQuantity === selectedLot.returnConfirmableQuantity
         ? "반환완료"
         : "부분반환";
     if (

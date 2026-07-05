@@ -66,8 +66,8 @@ public class AuctionTrackingService {
 	public AuctionLotResponse confirmReturn(Long id, AuctionLotReturnRequest request) {
 		var lot = findLot(id);
 		if (!List.of(AuctionLotStatus.RETURN_INFERRED, AuctionLotStatus.PARTIALLY_RETURNED).contains(lot.getCurrentStatus())) throw new IllegalArgumentException("반환추정 또는 부분반환 상태에서만 반환을 확인할 수 있습니다.");
-		if (lot.getWaitingQuantity() <= 0) throw new IllegalArgumentException("반환할 대기 수량이 없습니다.");
-		int quantity = request.returnedQuantity() == null ? lot.getWaitingQuantity() : request.returnedQuantity();
+		if (lot.getReturnConfirmableQuantity() <= 0) throw new IllegalArgumentException("확인할 반환 수량이 없습니다.");
+		int quantity = request.returnedQuantity() == null ? lot.getReturnConfirmableQuantity() : request.returnedQuantity();
 		lot.confirmReturn(quantity, normalize(request.worker()), normalize(request.memo()));
 		return AuctionLotResponse.from(lot);
 	}

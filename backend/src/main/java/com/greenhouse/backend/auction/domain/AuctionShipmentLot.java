@@ -58,11 +58,22 @@ public class AuctionShipmentLot extends BaseEntity {
 	}
 	public void confirmReturn(Integer quantity, String worker, String memo) {
 		if (quantity == null || quantity < 1) throw new IllegalArgumentException("반환 확인 수량은 1 이상이어야 합니다.");
-		if (quantity > waitingQuantity) throw new IllegalArgumentException("반환 확인 수량이 대기 수량보다 많습니다.");
-		returnedQuantity += quantity;
-		waitingQuantity -= quantity;
+		int confirmableQuantity = getReturnConfirmableQuantity();
+		if (quantity > confirmableQuantity) throw new IllegalArgumentException("반환 확인 수량이 확인 가능한 수량보다 많습니다.");
+		if (currentStatus == AuctionLotStatus.RETURN_INFERRED && returnedQuantity > 0) {
+			int unconfirmedQuantity = returnedQuantity - quantity;
+			returnedQuantity = quantity;
+			waitingQuantity += unconfirmedQuantity;
+		} else {
+			returnedQuantity += quantity;
+			waitingQuantity -= quantity;
+		}
 		AuctionLotStatus next = waitingQuantity == 0 ? AuctionLotStatus.RETURNED : AuctionLotStatus.PARTIALLY_RETURNED;
 		changeStatus(next, next == AuctionLotStatus.RETURNED ? "반환 완료" : "부분 반환 확인", worker, memo);
+	}
+	public Integer getReturnConfirmableQuantity() {
+		if (currentStatus == AuctionLotStatus.RETURN_INFERRED && returnedQuantity > 0) return returnedQuantity;
+		return waitingQuantity;
 	}
 	public void adjustQuantities(Integer sold, Integer waiting, Integer returned, String worker, String memo) {
 		if (sold + waiting + returned != shippedQuantity) throw new IllegalArgumentException("판매·대기·반환 수량 합계가 출하 수량과 다릅니다.");

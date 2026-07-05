@@ -380,6 +380,7 @@ export type AuctionLot = {
   soldQuantity: number;
   waitingQuantity: number;
   returnedQuantity: number;
+  returnConfirmableQuantity: number;
   currentStatus: AuctionLotStatus;
   latestAuctionDate: string | null;
   failedCount: number;
