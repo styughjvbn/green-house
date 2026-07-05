@@ -1,8 +1,6 @@
 import { API_BASE_URL, fetchApi } from "@/shared/api/client";
 import type { Customer, SalesSlip } from "@/entities/farm/types";
 import type {
-  AuctionImportBatch,
-  AuctionImportRow,
   AuctionLot,
   AuctionLotPage,
   AuctionLotStatus,
@@ -75,20 +73,6 @@ export function getAuctionLots(
 
 export function getAuctionTrackingSummary() {
   return fetchApi<AuctionTrackingSummary>("/auction-tracking/summary");
-}
-
-export function uploadAuctionCsv(file: File): Promise<AuctionImportBatch> {
-  const formData = new FormData();
-  formData.append("file", file);
-  return requestJson<AuctionImportBatch>(
-    "/auction-imports",
-    { method: "POST", body: formData },
-    "CSV 파일을 가져오지 못했습니다.",
-  );
-}
-
-export function getAuctionImportRows(batchId: number) {
-  return fetchApi<AuctionImportRow[]>(`/auction-imports/${batchId}/rows`);
 }
 
 export function confirmAuctionReturn(

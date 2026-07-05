@@ -1,11 +1,9 @@
-import { FileUp } from "lucide-react";
 import type {
   AuctionLotPage,
   AuctionTrackingSummary,
 } from "@/entities/farm/types";
 import { useAuctionTracking } from "../model/useAuctionTracking";
 import { AuctionFilters } from "./components/AuctionFilters";
-import { AuctionImportPanel } from "./components/AuctionImportPanel";
 import { AuctionLotDetail } from "./components/AuctionLotDetail";
 import { AuctionLotList } from "./components/AuctionLotList";
 import { AuctionSummaryCards } from "./components/AuctionSummaryCards";
@@ -21,25 +19,6 @@ export function AuctionTrackingView({
 
   return (
     <div className="space-y-3">
-      <div className="flex justify-end">
-        <button
-          className="inline-flex h-9 items-center gap-2 rounded-md border border-[#d8e0d7] bg-white px-3 text-sm font-semibold shadow-sm"
-          type="button"
-          onClick={() => tracking.setImportOpen(!tracking.importOpen)}
-        >
-          <FileUp className="h-4 w-4" />
-          CSV 가져오기
-        </button>
-      </div>
-      {tracking.importOpen ? (
-        <AuctionImportPanel
-          batch={tracking.importBatch}
-          rows={tracking.importRows}
-          loading={tracking.loading}
-          onClose={() => tracking.setImportOpen(false)}
-          onImport={tracking.importCsv}
-        />
-      ) : null}
       <AuctionSummaryCards summary={tracking.summary} />
       <AuctionFilters
         filters={tracking.filters}

@@ -345,7 +345,6 @@ export type AuctionResultLine = {
   amount: number;
   note: string | null;
   inspectionStatus: AuctionInspectionStatus;
-  rawRowId: number | null;
 };
 
 export type AuctionAttempt = {
@@ -406,24 +405,4 @@ export type AuctionTrackingSummary = {
   returnedQuantity: number;
   reviewRequiredCount: number;
   totalAmount: number;
-};
-
-export type AuctionImportBatch = {
-  id: number;
-  fileName: string;
-  rowCount: number;
-  status: string;
-  memo: string | null;
-  importedAt: string;
-};
-
-export type AuctionImportRow = {
-  id: number;
-  rowNumber: number;
-  rawDataJson: string;
-  normalizedDataJson: string | null;
-  validationStatus: AuctionInspectionStatus;
-  matchedEntityType: string | null;
-  matchedEntityId: number | null;
-  errorMessage: string | null;
 };

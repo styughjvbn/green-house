@@ -1,7 +1,5 @@
 import { FormEvent, useMemo, useState } from "react";
 import type {
-  AuctionImportBatch,
-  AuctionImportRow,
   AuctionLot,
   AuctionLotPage,
   AuctionTrackingSummary,
@@ -9,10 +7,8 @@ import type {
 import {
   adjustAuctionQuantity,
   confirmAuctionReturn,
-  getAuctionImportRows,
   getAuctionLots,
   getAuctionTrackingSummary,
-  uploadAuctionCsv,
 } from "../api/salesApi";
 import type { AuctionFilterState } from "./types";
 
@@ -39,11 +35,6 @@ export function useAuctionTracking(
   const [selectedId, setSelectedId] = useState<number | null>(
     initialPage.content[0]?.id ?? null,
   );
-  const [importOpen, setImportOpen] = useState(false);
-  const [importBatch, setImportBatch] = useState<AuctionImportBatch | null>(
-    null,
-  );
-  const [importRows, setImportRows] = useState<AuctionImportRow[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -101,22 +92,6 @@ export function useAuctionTracking(
     await refresh(filters, 0, size);
   }
 
-  async function importCsv(file: File) {
-    setLoading(true);
-    setError(null);
-    try {
-      const batch = await uploadAuctionCsv(file);
-      const rows = await getAuctionImportRows(batch.id);
-      setImportBatch(batch);
-      setImportRows(rows);
-      await refresh();
-    } catch (caught) {
-      setError(toMessage(caught));
-    } finally {
-      setLoading(false);
-    }
-  }
-
   async function confirmReturn() {
     if (!selectedLot) return;
     if (!window.confirm("현재 대기 수량을 반환 완료로 확정할까요?")) return;
@@ -172,19 +147,14 @@ export function useAuctionTracking(
     summary,
     filters,
     selectedLot,
-    importOpen,
-    importBatch,
-    importRows,
     loading,
     error,
     updateFilter,
     setSelectedId,
-    setImportOpen,
     refresh,
     resetFilters,
     changePage,
     changePageSize,
-    importCsv,
     confirmReturn,
     adjustQuantity,
   };
