@@ -829,7 +829,7 @@ POST /api/auction-lots/{lotId}/confirm-return
 }
 ```
 
-`반환추정` 또는 `부분반환` 상태에서 호출한다. 확인 수량이 현재 대기 수량보다 적으면 `PARTIALLY_RETURNED`, 같으면 `RETURNED`로 변경하고 상태 이력을 생성한다. 수량을 생략하면 현재 대기 수량 전체를 확인하는 기존 요청과 호환한다.
+`반환추정` 또는 `부분반환` 상태에서 호출한다. lot 조회 응답의 `returnConfirmableQuantity`가 현재 확인 가능한 수량이다. 확인 수량이 이 값보다 적으면 `PARTIALLY_RETURNED`, 같으면 `RETURNED`로 변경하고 상태 이력을 생성한다. 수량을 생략하면 확인 가능한 수량 전체를 처리한다.
 
 ### 수량 보정
 
