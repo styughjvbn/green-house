@@ -15,19 +15,19 @@ public interface SalesSlipRepository extends JpaRepository<SalesSlip, Long> {
 
 	boolean existsByAuctionShipmentId(Long auctionShipmentId);
 
-	@EntityGraph(attributePaths = {"customer", "auctionShipment", "items", "items.orchidGroup", "items.auctionShipmentLot"})
+	@EntityGraph(attributePaths = {"partner", "auctionShipment", "auctionShipment.auctionHouse", "items", "items.orchidGroup", "items.auctionShipmentLot"})
 	Optional<SalesSlip> findWithDetailsById(Long id);
 
 	@Query("""
 		select s from SalesSlip s
-		join fetch s.customer c
-		where (:customerId is null or c.id = :customerId)
+		join fetch s.partner p
+		where (:partnerId is null or p.id = :partnerId)
 			and (:from is null or s.saleDate >= :from)
 			and (:to is null or s.saleDate <= :to)
 		order by s.saleDate desc, s.id desc
 		""")
 	List<SalesSlip> search(
-		@Param("customerId") Long customerId,
+		@Param("partnerId") Long partnerId,
 		@Param("from") LocalDate from,
 		@Param("to") LocalDate to
 	);

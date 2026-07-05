@@ -2,6 +2,7 @@ package com.greenhouse.backend.sales.domain;
 
 import com.greenhouse.backend.auction.domain.AuctionShipment;
 import com.greenhouse.backend.common.domain.BaseEntity;
+import com.greenhouse.backend.partner.domain.BusinessPartner;
 import jakarta.persistence.CascadeType;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
@@ -42,8 +43,8 @@ public class SalesSlip extends BaseEntity {
 	private AuctionShipment auctionShipment;
 
 	@ManyToOne(fetch = FetchType.LAZY, optional = false)
-	@JoinColumn(name = "customer_id", nullable = false)
-	private Customer customer;
+	@JoinColumn(name = "partner_id", nullable = false)
+	private BusinessPartner partner;
 
 	@Column(name = "total_amount", nullable = false)
 	private Integer totalAmount;
@@ -71,7 +72,7 @@ public class SalesSlip extends BaseEntity {
 		LocalDate saleDate,
 		SalesType salesType,
 		AuctionShipment auctionShipment,
-		Customer customer,
+		BusinessPartner partner,
 		String paymentStatus,
 		String salesStatus,
 		String paymentMethod,
@@ -81,7 +82,7 @@ public class SalesSlip extends BaseEntity {
 		this.saleDate = saleDate;
 		this.salesType = salesType;
 		this.auctionShipment = auctionShipment;
-		this.customer = customer;
+		this.partner = partner;
 		this.paymentStatus = paymentStatus;
 		this.salesStatus = salesStatus;
 		this.paymentMethod = paymentMethod;
@@ -117,8 +118,8 @@ public class SalesSlip extends BaseEntity {
 		return auctionShipment;
 	}
 
-	public Customer getCustomer() {
-		return customer;
+	public BusinessPartner getPartner() {
+		return partner;
 	}
 
 	public Integer getTotalAmount() {

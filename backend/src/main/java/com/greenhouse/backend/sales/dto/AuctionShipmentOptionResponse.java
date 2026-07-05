@@ -7,6 +7,7 @@ import java.util.List;
 public record AuctionShipmentOptionResponse(
 	Long id,
 	LocalDate shipmentDate,
+	Long auctionHouseId,
 	String auctionMarket,
 	List<Lot> lots
 ) {
@@ -14,6 +15,7 @@ public record AuctionShipmentOptionResponse(
 		return new AuctionShipmentOptionResponse(
 			shipment.getId(),
 			shipment.getShipmentDate(),
+			shipment.getAuctionHouse().getId(),
 			shipment.getAuctionMarket(),
 			shipment.getLots().stream()
 				.map(lot -> new Lot(

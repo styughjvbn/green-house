@@ -4,16 +4,15 @@ import com.greenhouse.backend.auction.domain.AuctionShipment;
 import com.greenhouse.backend.auction.repository.AuctionShipmentRepository;
 import com.greenhouse.backend.common.exception.NotFoundException;
 import com.greenhouse.backend.farm.repository.OrchidGroupRepository;
-import com.greenhouse.backend.sales.domain.Customer;
+import com.greenhouse.backend.partner.domain.BusinessPartner;
+import com.greenhouse.backend.partner.domain.PartnerType;
+import com.greenhouse.backend.partner.repository.BusinessPartnerRepository;
 import com.greenhouse.backend.sales.domain.SalesSlip;
 import com.greenhouse.backend.sales.domain.SalesSlipItem;
 import com.greenhouse.backend.sales.domain.SalesType;
 import com.greenhouse.backend.sales.dto.AuctionShipmentOptionResponse;
-import com.greenhouse.backend.sales.dto.CustomerCreateRequest;
-import com.greenhouse.backend.sales.dto.CustomerResponse;
 import com.greenhouse.backend.sales.dto.SalesSlipCreateRequest;
 import com.greenhouse.backend.sales.dto.SalesSlipResponse;
-import com.greenhouse.backend.sales.repository.CustomerRepository;
 import com.greenhouse.backend.sales.repository.SalesSlipRepository;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
@@ -25,49 +24,26 @@ import org.springframework.transaction.annotation.Transactional;
 @Transactional
 public class SalesService {
 
-	private final CustomerRepository customerRepository;
+	private final BusinessPartnerRepository partnerRepository;
 	private final SalesSlipRepository salesSlipRepository;
 	private final OrchidGroupRepository orchidGroupRepository;
 	private final AuctionShipmentRepository auctionShipmentRepository;
 
 	public SalesService(
-		CustomerRepository customerRepository,
+		BusinessPartnerRepository partnerRepository,
 		SalesSlipRepository salesSlipRepository,
 		OrchidGroupRepository orchidGroupRepository,
 		AuctionShipmentRepository auctionShipmentRepository
 	) {
-		this.customerRepository = customerRepository;
+		this.partnerRepository = partnerRepository;
 		this.salesSlipRepository = salesSlipRepository;
 		this.orchidGroupRepository = orchidGroupRepository;
 		this.auctionShipmentRepository = auctionShipmentRepository;
 	}
 
 	@Transactional(readOnly = true)
-	public List<CustomerResponse> getCustomers(String keyword) {
-		if (keyword == null || keyword.isBlank()) {
-			return customerRepository.findAll().stream()
-				.map(CustomerResponse::from)
-				.toList();
-		}
-		return customerRepository.findByNameContainingIgnoreCaseOrderByNameAsc(keyword.trim()).stream()
-			.map(CustomerResponse::from)
-			.toList();
-	}
-
-	public CustomerResponse createCustomer(CustomerCreateRequest request) {
-		Customer customer = new Customer(
-			normalizeRequired(request.name()),
-			normalize(request.ownerName()),
-			normalize(request.phone()),
-			normalize(request.address()),
-			normalize(request.memo())
-		);
-		return CustomerResponse.from(customerRepository.save(customer));
-	}
-
-	@Transactional(readOnly = true)
-	public List<SalesSlipResponse> getSalesSlips(Long customerId, LocalDate from, LocalDate to) {
-		return salesSlipRepository.search(customerId, from, to).stream()
+	public List<SalesSlipResponse> getSalesSlips(Long partnerId, LocalDate from, LocalDate to) {
+		return salesSlipRepository.search(partnerId, from, to).stream()
 			.map(SalesSlipResponse::from)
 			.toList();
 	}
@@ -90,15 +66,18 @@ public class SalesService {
 	public SalesSlipResponse createSalesSlip(SalesSlipCreateRequest request) {
 		SalesType salesType = request.salesType() == null ? SalesType.DIRECT : request.salesType();
 		if (salesType == SalesType.AUCTION) return createAuctionSalesSlip(request);
-		if (request.customerId() == null) throw new IllegalArgumentException("일반 판매는 거래처를 선택해야 합니다.");
+		if (request.partnerId() == null) throw new IllegalArgumentException("일반 판매는 거래처를 선택해야 합니다.");
 		if (request.items().isEmpty()) throw new IllegalArgumentException("일반 판매 품목을 한 개 이상 입력해야 합니다.");
-		Customer customer = findCustomer(request.customerId());
+		BusinessPartner partner = findPartner(request.partnerId());
+		if (partner.getPartnerType() == PartnerType.AUCTION_HOUSE) {
+			throw new IllegalArgumentException("경매장 거래처는 경매 판매 전표에서 사용해야 합니다.");
+		}
 		SalesSlip salesSlip = new SalesSlip(
 			createSlipNumber(request.saleDate(), salesType),
 			request.saleDate(),
 			salesType,
 			null,
-			customer,
+			partner,
 			defaultText(request.paymentStatus(), "미입금"),
 			defaultText(request.salesStatus(), "작성중"),
 			normalize(request.paymentMethod()),
@@ -126,16 +105,16 @@ public class SalesService {
 		AuctionShipment shipment = auctionShipmentRepository.findWithLotsById(request.auctionShipmentId())
 			.orElseThrow(() -> new NotFoundException("경매 출하 기록을 찾을 수 없습니다."));
 		if (shipment.getLots().isEmpty()) throw new IllegalArgumentException("출하 lot이 없는 경매 출하 기록입니다.");
-		Customer customer = request.customerId() == null
-			? customerRepository.findByNameIgnoreCase(shipment.getAuctionMarket())
-				.orElseGet(() -> customerRepository.save(new Customer(shipment.getAuctionMarket(), null, null, null, "경매장 자동 생성")))
-			: findCustomer(request.customerId());
+		BusinessPartner partner = shipment.getAuctionHouse();
+		if (request.partnerId() != null && !request.partnerId().equals(partner.getId())) {
+			throw new IllegalArgumentException("선택한 거래처가 출하 기록의 경매장과 다릅니다.");
+		}
 		SalesSlip salesSlip = new SalesSlip(
 			createSlipNumber(shipment.getShipmentDate(), SalesType.AUCTION),
 			shipment.getShipmentDate(),
 			SalesType.AUCTION,
 			shipment,
-			customer,
+			partner,
 			"정산 대기",
 			"출하 완료",
 			"경매 정산",
@@ -152,9 +131,11 @@ public class SalesService {
 		return SalesSlipResponse.from(salesSlipRepository.save(salesSlip));
 	}
 
-	private Customer findCustomer(Long customerId) {
-		return customerRepository.findById(customerId)
+	private BusinessPartner findPartner(Long partnerId) {
+		BusinessPartner partner = partnerRepository.findById(partnerId)
 			.orElseThrow(() -> new NotFoundException("거래처를 찾을 수 없습니다."));
+		if (!partner.isActive()) throw new IllegalArgumentException("비활성 거래처는 사용할 수 없습니다.");
+		return partner;
 	}
 
 	private String createSlipNumber(LocalDate saleDate, SalesType salesType) {

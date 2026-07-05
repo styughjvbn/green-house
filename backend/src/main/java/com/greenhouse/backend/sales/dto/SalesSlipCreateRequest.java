@@ -11,7 +11,7 @@ import com.greenhouse.backend.sales.domain.SalesType;
 public record SalesSlipCreateRequest(
 	@NotNull LocalDate saleDate,
 	SalesType salesType,
-	Long customerId,
+	Long partnerId,
 	Long auctionShipmentId,
 	@Size(max = 50) String paymentStatus,
 	@Size(max = 50) String salesStatus,

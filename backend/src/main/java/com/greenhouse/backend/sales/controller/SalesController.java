@@ -2,8 +2,6 @@ package com.greenhouse.backend.sales.controller;
 
 import com.greenhouse.backend.common.api.ApiResponse;
 import com.greenhouse.backend.sales.application.SalesService;
-import com.greenhouse.backend.sales.dto.CustomerCreateRequest;
-import com.greenhouse.backend.sales.dto.CustomerResponse;
 import com.greenhouse.backend.sales.dto.AuctionShipmentOptionResponse;
 import com.greenhouse.backend.sales.dto.SalesSlipCreateRequest;
 import com.greenhouse.backend.sales.dto.SalesSlipResponse;
@@ -30,24 +28,13 @@ public class SalesController {
 		this.salesService = salesService;
 	}
 
-	@GetMapping("/customers")
-	public ApiResponse<List<CustomerResponse>> getCustomers(@RequestParam(required = false) String keyword) {
-		return ApiResponse.ok(salesService.getCustomers(keyword));
-	}
-
-	@PostMapping("/customers")
-	@ResponseStatus(HttpStatus.CREATED)
-	public ApiResponse<CustomerResponse> createCustomer(@Valid @RequestBody CustomerCreateRequest request) {
-		return ApiResponse.ok(salesService.createCustomer(request));
-	}
-
 	@GetMapping("/sales-slips")
 	public ApiResponse<List<SalesSlipResponse>> getSalesSlips(
-		@RequestParam(required = false) Long customerId,
+		@RequestParam(required = false) Long partnerId,
 		@RequestParam(required = false) LocalDate from,
 		@RequestParam(required = false) LocalDate to
 	) {
-		return ApiResponse.ok(salesService.getSalesSlips(customerId, from, to));
+		return ApiResponse.ok(salesService.getSalesSlips(partnerId, from, to));
 	}
 
 	@GetMapping("/sales-slips/{salesSlipId}")
