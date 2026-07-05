@@ -1,5 +1,6 @@
 package com.greenhouse.backend.sales.domain;
 
+import com.greenhouse.backend.auction.domain.AuctionShipmentLot;
 import com.greenhouse.backend.farm.domain.OrchidGroup;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
@@ -27,6 +28,10 @@ public class SalesSlipItem {
 	@JoinColumn(name = "orchid_group_id")
 	private OrchidGroup orchidGroup;
 
+	@ManyToOne(fetch = FetchType.LAZY)
+	@JoinColumn(name = "auction_shipment_lot_id", unique = true)
+	private AuctionShipmentLot auctionShipmentLot;
+
 	@Column(name = "item_name", nullable = false)
 	private String itemName;
 
@@ -51,6 +56,7 @@ public class SalesSlipItem {
 
 	public SalesSlipItem(
 		OrchidGroup orchidGroup,
+		AuctionShipmentLot auctionShipmentLot,
 		String itemName,
 		String genus,
 		String spec,
@@ -59,6 +65,7 @@ public class SalesSlipItem {
 		String memo
 	) {
 		this.orchidGroup = orchidGroup;
+		this.auctionShipmentLot = auctionShipmentLot;
 		this.itemName = itemName;
 		this.genus = genus;
 		this.spec = spec;
@@ -78,6 +85,10 @@ public class SalesSlipItem {
 
 	public OrchidGroup getOrchidGroup() {
 		return orchidGroup;
+	}
+
+	public AuctionShipmentLot getAuctionShipmentLot() {
+		return auctionShipmentLot;
 	}
 
 	public String getItemName() {

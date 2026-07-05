@@ -6,14 +6,17 @@ import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
 import java.time.LocalDate;
 import java.util.List;
+import com.greenhouse.backend.sales.domain.SalesType;
 
 public record SalesSlipCreateRequest(
 	@NotNull LocalDate saleDate,
-	@NotNull Long customerId,
+	SalesType salesType,
+	Long customerId,
+	Long auctionShipmentId,
 	@Size(max = 50) String paymentStatus,
 	@Size(max = 50) String salesStatus,
 	@Size(max = 50) String paymentMethod,
 	@Size(max = 1000) String memo,
-	@NotEmpty List<@Valid SalesSlipItemRequest> items
+	@NotNull List<@Valid SalesSlipItemRequest> items
 ) {
 }
