@@ -30,7 +30,7 @@ public interface AuctionShipmentLotRepository extends JpaRepository<AuctionShipm
 			  and (:variety = '' or lower(lot.varietyName) like lower(concat('%', :variety, '%')))
 			  and (:grade = '' or lot.shipmentGrade = :grade)
 			  and (:status is null or lot.currentStatus = :status)
-			  and (:returnOnly = false or lot.currentStatus = :returnStatus)
+			  and (:returnOnly = false or lot.currentStatus in :returnStatuses)
 			  and (:waitingOnly = false or lot.currentStatus in :waitingStatuses)
 			  and (:reviewOnly = false or lot.currentStatus in :reviewStatuses or exists (
 			    select line.id from AuctionResultLine line
@@ -47,7 +47,7 @@ public interface AuctionShipmentLotRepository extends JpaRepository<AuctionShipm
 			  and (:variety = '' or lower(lot.varietyName) like lower(concat('%', :variety, '%')))
 			  and (:grade = '' or lot.shipmentGrade = :grade)
 			  and (:status is null or lot.currentStatus = :status)
-			  and (:returnOnly = false or lot.currentStatus = :returnStatus)
+			  and (:returnOnly = false or lot.currentStatus in :returnStatuses)
 			  and (:waitingOnly = false or lot.currentStatus in :waitingStatuses)
 			  and (:reviewOnly = false or lot.currentStatus in :reviewStatuses or exists (
 			    select line.id from AuctionResultLine line
@@ -66,7 +66,7 @@ public interface AuctionShipmentLotRepository extends JpaRepository<AuctionShipm
 		@Param("returnOnly") boolean returnOnly,
 		@Param("waitingOnly") boolean waitingOnly,
 		@Param("keyword") String keyword,
-		@Param("returnStatus") AuctionLotStatus returnStatus,
+		@Param("returnStatuses") List<AuctionLotStatus> returnStatuses,
 		@Param("waitingStatuses") List<AuctionLotStatus> waitingStatuses,
 		@Param("reviewStatuses") List<AuctionLotStatus> reviewStatuses,
 		@Param("reviewInspections") List<AuctionInspectionStatus> reviewInspections,
@@ -79,7 +79,7 @@ public interface AuctionShipmentLotRepository extends JpaRepository<AuctionShipm
 		  coalesce(sum(lot.sold_quantity), 0) as soldQuantity,
 		  coalesce(sum(lot.waiting_quantity), 0) as waitingQuantity,
 		  coalesce(sum(lot.returned_quantity), 0) as returnedQuantity,
-		  coalesce(sum(case when lot.current_status in ('REVIEW_REQUIRED', 'QUANTITY_MISMATCH', 'RETURN_INFERRED')
+		  coalesce(sum(case when lot.current_status in ('REVIEW_REQUIRED', 'QUANTITY_MISMATCH', 'RETURN_INFERRED', 'PARTIALLY_RETURNED')
 		    or exists (select 1 from auction_result_lines line join auction_attempts attempt on attempt.id = line.auction_attempt_id
 		      where attempt.shipment_lot_id = lot.id and line.inspection_status in ('MANUAL_REVIEW', 'MATCH_FAILED', 'QUANTITY_MISMATCH', 'RETURN_INFERRED', 'SOURCE_ERROR'))
 		    then 1 else 0 end), 0) as reviewRequiredCount,

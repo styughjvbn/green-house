@@ -39,9 +39,9 @@ public class AuctionTrackingService {
 			Boolean.TRUE.equals(returnOnly),
 			Boolean.TRUE.equals(waitingOnly),
 			normalizeOrEmpty(keyword),
-			AuctionLotStatus.RETURN_INFERRED,
+			List.of(AuctionLotStatus.RETURN_INFERRED, AuctionLotStatus.PARTIALLY_RETURNED),
 			List.of(AuctionLotStatus.REAUCTION_WAITING, AuctionLotStatus.WAITING),
-			List.of(AuctionLotStatus.REVIEW_REQUIRED, AuctionLotStatus.QUANTITY_MISMATCH, AuctionLotStatus.RETURN_INFERRED),
+			List.of(AuctionLotStatus.REVIEW_REQUIRED, AuctionLotStatus.QUANTITY_MISMATCH, AuctionLotStatus.RETURN_INFERRED, AuctionLotStatus.PARTIALLY_RETURNED),
 			List.of(AuctionInspectionStatus.MANUAL_REVIEW, AuctionInspectionStatus.MATCH_FAILED, AuctionInspectionStatus.QUANTITY_MISMATCH, AuctionInspectionStatus.RETURN_INFERRED, AuctionInspectionStatus.SOURCE_ERROR),
 			pageable)
 			.map(AuctionLotResponse::from);
@@ -65,8 +65,10 @@ public class AuctionTrackingService {
 	@Transactional
 	public AuctionLotResponse confirmReturn(Long id, AuctionLotReturnRequest request) {
 		var lot = findLot(id);
+		if (!List.of(AuctionLotStatus.RETURN_INFERRED, AuctionLotStatus.PARTIALLY_RETURNED).contains(lot.getCurrentStatus())) throw new IllegalArgumentException("반환추정 또는 부분반환 상태에서만 반환을 확인할 수 있습니다.");
 		if (lot.getWaitingQuantity() <= 0) throw new IllegalArgumentException("반환할 대기 수량이 없습니다.");
-		lot.confirmReturn(normalize(request.worker()), normalize(request.memo()));
+		int quantity = request.returnedQuantity() == null ? lot.getWaitingQuantity() : request.returnedQuantity();
+		lot.confirmReturn(quantity, normalize(request.worker()), normalize(request.memo()));
 		return AuctionLotResponse.from(lot);
 	}
 
