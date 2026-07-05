@@ -25,9 +25,8 @@ public class AuctionResultLine extends BaseEntity {
 	@Column(nullable = false) private Integer amount;
 	@Column(columnDefinition = "text") private String note;
 	@Enumerated(EnumType.STRING) @Column(name = "inspection_status", nullable = false) private AuctionInspectionStatus inspectionStatus;
-	@ManyToOne(fetch = FetchType.LAZY) @JoinColumn(name = "raw_row_id") private ImportRow rawRow;
 	protected AuctionResultLine() { }
-	public AuctionResultLine(LocalDate date, String grade, Integer quantity, Integer unitPrice, Integer amount, String note, AuctionInspectionStatus inspectionStatus, ImportRow rawRow) { auctionDate = date; auctionGrade = grade; this.quantity = quantity; this.unitPrice = unitPrice; this.amount = amount; this.note = note; this.inspectionStatus = inspectionStatus; this.rawRow = rawRow; }
+	public AuctionResultLine(LocalDate date, String grade, Integer quantity, Integer unitPrice, Integer amount, String note, AuctionInspectionStatus inspectionStatus) { auctionDate = date; auctionGrade = grade; this.quantity = quantity; this.unitPrice = unitPrice; this.amount = amount; this.note = note; this.inspectionStatus = inspectionStatus; }
 	void setAuctionAttempt(AuctionAttempt attempt) { auctionAttempt = attempt; }
 	public Long getId() { return id; }
 	public AuctionAttempt getAuctionAttempt() { return auctionAttempt; }
@@ -38,5 +37,4 @@ public class AuctionResultLine extends BaseEntity {
 	public Integer getAmount() { return amount; }
 	public String getNote() { return note; }
 	public AuctionInspectionStatus getInspectionStatus() { return inspectionStatus; }
-	public ImportRow getRawRow() { return rawRow; }
 }

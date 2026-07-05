@@ -24,17 +24,15 @@ public class AuctionShipment extends BaseEntity {
 	@Column(name = "auction_market", nullable = false) private String auctionMarket;
 	@Column(nullable = false) private String status;
 	@Column(columnDefinition = "text") private String memo;
-	@ManyToOne(fetch = FetchType.LAZY) @JoinColumn(name = "import_batch_id") private ImportBatch importBatch;
 	@OneToMany(mappedBy = "shipment", cascade = CascadeType.ALL, orphanRemoval = true) private List<AuctionShipmentLot> lots = new ArrayList<>();
 
 	protected AuctionShipment() { }
-	public AuctionShipment(LocalDate shipmentDate, String auctionMarket, ImportBatch importBatch) { this.shipmentDate = shipmentDate; this.auctionMarket = auctionMarket; this.importBatch = importBatch; this.status = "SHIPPED"; }
+	public AuctionShipment(LocalDate shipmentDate, String auctionMarket) { this.shipmentDate = shipmentDate; this.auctionMarket = auctionMarket; this.status = "SHIPPED"; }
 	public void addLot(AuctionShipmentLot lot) { lots.add(lot); lot.setShipment(this); }
 	public Long getId() { return id; }
 	public LocalDate getShipmentDate() { return shipmentDate; }
 	public String getAuctionMarket() { return auctionMarket; }
 	public String getStatus() { return status; }
 	public String getMemo() { return memo; }
-	public ImportBatch getImportBatch() { return importBatch; }
 	public List<AuctionShipmentLot> getLots() { return lots; }
 }

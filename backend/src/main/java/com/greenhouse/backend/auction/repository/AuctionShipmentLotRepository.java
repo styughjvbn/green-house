@@ -18,9 +18,6 @@ public interface AuctionShipmentLotRepository extends JpaRepository<AuctionShipm
 	List<AuctionShipmentLot> findAllByOrderByIdDesc();
 
 	@EntityGraph(attributePaths = "shipment")
-	List<AuctionShipmentLot> findAllByShipmentImportBatchIdOrderByIdDesc(Long importBatchId);
-
-	@EntityGraph(attributePaths = {"shipment", "sourceRow"})
 	Optional<AuctionShipmentLot> findWithDetailsById(Long id);
 
 	@Query(

@@ -33,15 +33,14 @@ public class AuctionShipmentLot extends BaseEntity {
 	@Column(name = "returned_quantity", nullable = false) private Integer returnedQuantity;
 	@Enumerated(EnumType.STRING) @Column(name = "current_status", nullable = false) private AuctionLotStatus currentStatus;
 	@Column(columnDefinition = "text") private String memo;
-	@ManyToOne(fetch = FetchType.LAZY) @JoinColumn(name = "source_row_id") private ImportRow sourceRow;
 	@OneToMany(mappedBy = "shipmentLot", cascade = CascadeType.ALL, orphanRemoval = true) @OrderBy("auctionDate ASC, attemptNo ASC") private List<AuctionAttempt> attempts = new ArrayList<>();
 	@OneToMany(mappedBy = "shipmentLot", cascade = CascadeType.ALL, orphanRemoval = true) @OrderBy("changedAt ASC") private List<AuctionLotStatusHistory> statusHistory = new ArrayList<>();
 
 	protected AuctionShipmentLot() { }
-	public AuctionShipmentLot(String itemName, String varietyName, String grade, Integer boxes, Integer quantity, ImportRow sourceRow) {
+	public AuctionShipmentLot(String itemName, String varietyName, String grade, Integer boxes, Integer quantity) {
 		this.itemName = itemName; this.varietyName = varietyName; this.shipmentGrade = grade; this.boxes = boxes;
 		this.shippedQuantity = quantity; this.soldQuantity = 0; this.waitingQuantity = quantity; this.returnedQuantity = 0;
-		this.currentStatus = AuctionLotStatus.WAITING; this.sourceRow = sourceRow;
+		this.currentStatus = AuctionLotStatus.WAITING;
 	}
 	void setShipment(AuctionShipment shipment) { this.shipment = shipment; }
 	public void addAttempt(AuctionAttempt attempt) { attempts.add(attempt); attempt.setShipmentLot(this); }
@@ -81,7 +80,6 @@ public class AuctionShipmentLot extends BaseEntity {
 	public Integer getReturnedQuantity() { return returnedQuantity; }
 	public AuctionLotStatus getCurrentStatus() { return currentStatus; }
 	public String getMemo() { return memo; }
-	public ImportRow getSourceRow() { return sourceRow; }
 	public List<AuctionAttempt> getAttempts() { return attempts; }
 	public List<AuctionLotStatusHistory> getStatusHistory() { return statusHistory; }
 }
