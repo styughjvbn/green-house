@@ -824,12 +824,13 @@ POST /api/auction-lots/{lotId}/confirm-return
 ```json
 {
   "returnedQuantity": 20,
+  "returnDate": "2026-06-08",
   "worker": "관리자",
   "memo": "일부 도착 확인"
 }
 ```
 
-`반환추정` 또는 `부분반환` 상태에서 호출한다. lot 조회 응답의 `returnConfirmableQuantity`가 현재 확인 가능한 수량이다. 확인 수량이 이 값보다 적으면 `PARTIALLY_RETURNED`, 같으면 `RETURNED`로 변경하고 상태 이력을 생성한다. 수량을 생략하면 확인 가능한 수량 전체를 처리한다.
+`재경매대기`, `반환추정` 또는 `부분반환` 상태에서 호출한다. `returnDate`는 사용자가 확인한 실제 반환일이며 필수다. lot 조회 응답의 `returnConfirmableQuantity`가 현재 확인 가능한 수량이다. 확인 수량이 이 값보다 적으면 `PARTIALLY_RETURNED`, 같으면 `RETURNED`로 변경하고 상태 이력을 생성한다. 수량을 생략하면 확인 가능한 수량 전체를 처리한다. 마지막 확정 반환일은 lot 응답의 `returnConfirmedDate`로 제공한다.
 
 ### 수량 보정
 
