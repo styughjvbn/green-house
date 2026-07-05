@@ -43,7 +43,7 @@ export function SalesSlipPrintView({ slip }: SalesSlipPrintViewProps) {
                 Green House
               </p>
               <h2 className="mt-1 text-3xl font-bold tracking-normal">
-                판매 전표
+                {slip.salesType === "AUCTION" ? "경매 출하 전표" : "판매 전표"}
               </h2>
             </div>
             <div className="text-right text-sm">

@@ -7,6 +7,7 @@ import type {
   AuctionLotPage,
   AuctionLotStatus,
   AuctionTrackingSummary,
+  AuctionShipmentOption,
 } from "@/entities/farm/types";
 import type {
   AuctionFilterState,
@@ -49,6 +50,10 @@ export function getCustomers() {
 
 export function getSalesSlips() {
   return fetchApi<SalesSlip[]>("/sales-slips");
+}
+
+export function getAuctionShipmentOptions() {
+  return fetchApi<AuctionShipmentOption[]>("/sales-slips/auction-shipments");
 }
 
 export function getAuctionLots(

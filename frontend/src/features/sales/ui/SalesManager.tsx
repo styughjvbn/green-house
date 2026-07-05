@@ -39,15 +39,19 @@ export function SalesManager({
 
           {sales.showCreateSlip ? (
             <SalesSlipCreateForm
+              auctionShipments={sales.auctionShipments}
               customers={sales.customers}
               errorMessage={sales.errorMessage}
               form={sales.salesForm}
               saving={sales.savingSlip}
+              loadingAuctionShipments={sales.loadingAuctionShipments}
               totalAmount={sales.totalAmount}
               onAddItem={sales.addSalesItem}
               onChange={sales.updateSalesForm}
               onRemoveItem={sales.removeSalesItem}
               onSubmit={sales.handleCreateSalesSlip}
+              onSalesTypeChange={sales.selectSalesType}
+              onAuctionShipmentChange={sales.selectAuctionShipment}
               onUpdateItem={sales.updateItem}
             />
           ) : null}

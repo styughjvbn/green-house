@@ -273,6 +273,7 @@ export type Customer = {
 export type SalesSlipItem = {
   id: number;
   orchidGroupId: number | null;
+  auctionShipmentLotId: number | null;
   itemName: string;
   genus: string | null;
   spec: string | null;
@@ -286,6 +287,9 @@ export type SalesSlip = {
   id: number;
   slipNumber: string;
   saleDate: string;
+  salesType: "DIRECT" | "AUCTION";
+  auctionShipmentId: number | null;
+  auctionMarket: string | null;
   customer: Customer;
   totalAmount: number;
   paymentStatus: string;
@@ -293,6 +297,19 @@ export type SalesSlip = {
   paymentMethod: string | null;
   memo: string | null;
   items: SalesSlipItem[];
+};
+
+export type AuctionShipmentOption = {
+  id: number;
+  shipmentDate: string;
+  auctionMarket: string;
+  lots: Array<{
+    id: number;
+    itemName: string;
+    varietyName: string;
+    shipmentGrade: string | null;
+    shippedQuantity: number;
+  }>;
 };
 
 export type AuctionLotStatus =

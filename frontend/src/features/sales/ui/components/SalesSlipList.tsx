@@ -26,6 +26,7 @@ export function SalesSlipList({
             <tr>
               <th className="px-3 py-3 font-semibold">전표번호</th>
               <th className="px-3 py-3 font-semibold">판매일자</th>
+              <th className="px-3 py-3 font-semibold">판매 유형</th>
               <th className="px-3 py-3 font-semibold">거래처</th>
               <th className="px-3 py-3 text-right font-semibold">총 금액</th>
               <th className="px-3 py-3 font-semibold">입금 상태</th>
@@ -48,6 +49,9 @@ export function SalesSlipList({
                     {slip.slipNumber}
                   </td>
                   <td className="px-3 py-3">{slip.saleDate}</td>
+                  <td className="px-3 py-3">
+                    {slip.salesType === "AUCTION" ? "경매" : "일반"}
+                  </td>
                   <td className="px-3 py-3 font-semibold">
                     {slip.customer.name}
                   </td>
@@ -67,7 +71,7 @@ export function SalesSlipList({
               <tr>
                 <td
                   className="px-3 py-12 text-center text-[#5c6a60]"
-                  colSpan={6}
+                  colSpan={7}
                 >
                   조건에 맞는 판매 전표가 없습니다.
                 </td>

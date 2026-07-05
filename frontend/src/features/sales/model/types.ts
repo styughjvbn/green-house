@@ -25,8 +25,10 @@ export type SalesItemForm = {
 };
 
 export type SalesSlipForm = {
+  salesType: "DIRECT" | "AUCTION";
   saleDate: string;
   customerId: string;
+  auctionShipmentId: string;
   paymentStatus: string;
   salesStatus: string;
   paymentMethod: string;
@@ -43,8 +45,10 @@ export type CreateCustomerPayload = {
 };
 
 export type CreateSalesSlipPayload = {
+  salesType: "DIRECT" | "AUCTION";
   saleDate: string;
-  customerId: number;
+  customerId: number | null;
+  auctionShipmentId: number | null;
   paymentStatus: string;
   salesStatus: string;
   paymentMethod: string | null;
