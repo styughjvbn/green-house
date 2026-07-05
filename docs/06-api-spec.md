@@ -867,3 +867,30 @@ PATCH /api/auction-lots/{lotId}/status
 ```
 
 상태, 변경 사유, 작업자, 메모를 받고 상태 이력을 생성한다. 수동 매칭, 재고 자동 이동, 정산 생성 API는 아직 제공하지 않는다.
+
+### 경매 출하 전표 후보
+
+```http
+GET /api/sales-slips/auction-shipments
+```
+
+아직 판매 전표와 연결되지 않은 출하 기록과 포함 lot을 반환한다.
+
+### 경매 출하 전표 생성
+
+```http
+POST /api/sales-slips
+```
+
+```json
+{
+  "salesType": "AUCTION",
+  "saleDate": "2026-07-05",
+  "auctionShipmentId": 10,
+  "customerId": null,
+  "memo": "음성 출하",
+  "items": []
+}
+```
+
+서버는 출하일을 판매일로 사용하고 경매장 거래처를 자동 생성·재사용한다. lot별 품목을 출하 수량과 0원 단가로 구성한다. 일반 판매는 `salesType=DIRECT`이며 기존 요청처럼 유형을 생략해도 된다.

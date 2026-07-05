@@ -365,3 +365,13 @@ CREATE INDEX idx_import_rows_batch_status ON import_rows(import_batch_id, valida
 현재는 JPA `ddl-auto`로 스키마를 생성한다. 운영 데이터 이식 전 마이그레이션 도구와 가져오기 배치 중복 방지 키를 추가해야 한다.
 
 기존 DB는 nullable 완화가 자동 반영되지 않을 수 있으므로 1회 `ALTER TABLE auction_shipment_lots ALTER COLUMN boxes DROP NOT NULL;`을 적용한다.
+
+### 판매 전표 경매 연결
+
+```text
+sales_slips.sales_type                 DIRECT | AUCTION, 기존 NULL은 DIRECT
+sales_slips.auction_shipment_id        nullable unique FK
+sales_slip_items.auction_shipment_lot_id nullable unique FK
+```
+
+경매 출하 기록과 lot은 판매 전표에 중복 연결하지 않는다. 경매 전표 최초 금액은 0원이며 정산 결과 자동 반영은 별도 트랜잭션 설계 후 추가한다.
