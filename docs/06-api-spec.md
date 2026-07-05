@@ -821,7 +821,15 @@ GET /api/auction-tracking/summary
 POST /api/auction-lots/{lotId}/confirm-return
 ```
 
-현재 대기 수량을 반환 수량으로 이동하고 상태 이력을 생성한다.
+```json
+{
+  "returnedQuantity": 20,
+  "worker": "관리자",
+  "memo": "일부 도착 확인"
+}
+```
+
+`반환추정` 또는 `부분반환` 상태에서 호출한다. 확인 수량이 현재 대기 수량보다 적으면 `PARTIALLY_RETURNED`, 같으면 `RETURNED`로 변경하고 상태 이력을 생성한다. 수량을 생략하면 현재 대기 수량 전체를 확인하는 기존 요청과 호환한다.
 
 ### 수량 보정
 

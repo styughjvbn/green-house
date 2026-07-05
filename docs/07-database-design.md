@@ -372,3 +372,5 @@ sales_slip_items.auction_shipment_lot_id nullable unique FK
 ```
 
 경매 출하 기록과 lot은 판매 전표에 중복 연결하지 않는다. 경매 전표 최초 금액은 0원이며 정산 결과 자동 반영은 별도 트랜잭션 설계 후 추가한다.
+
+`auction_shipment_lots.current_status`에는 반환 관련 상태로 `RETURN_INFERRED`, `PARTIALLY_RETURNED`, `RETURNED`를 저장한다. 부분반환 시 `returned_quantity`만 증가하고 잔여 수량은 `waiting_quantity`에 유지한다.
