@@ -70,11 +70,15 @@ class AuctionTrackingTests {
 	@Test
 	void confirmsReturnAndAdjustsQuantitiesWithHistory() {
 		var lot = createLot(LocalDate.of(2026, 6, 1), "양재", "호접란 A", "A", 50);
-		addResult(lot, LocalDate.of(2026, 6, 3), 1, 50, 0, "유찰", AuctionAttemptStatus.FAILED);
-		lot.applyResult(0, 0, true, false);
+		lot.applyResult(0, 0, false, true);
 		lotRepository.flush();
 
-		var returned = trackingService.confirmReturn(lot.getId(), new AuctionLotReturnRequest("관리자", "농장 도착"));
+		var partial = trackingService.confirmReturn(lot.getId(), new AuctionLotReturnRequest(20, "관리자", "일부 도착"));
+		assertThat(partial.currentStatus()).isEqualTo(AuctionLotStatus.PARTIALLY_RETURNED);
+		assertThat(partial.returnedQuantity()).isEqualTo(20);
+		assertThat(partial.waitingQuantity()).isEqualTo(30);
+
+		var returned = trackingService.confirmReturn(lot.getId(), new AuctionLotReturnRequest(null, "관리자", "나머지 도착"));
 		assertThat(returned.currentStatus()).isEqualTo(AuctionLotStatus.RETURNED);
 		assertThat(returned.returnedQuantity()).isEqualTo(50);
 
