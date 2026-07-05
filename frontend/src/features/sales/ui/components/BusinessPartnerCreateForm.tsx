@@ -1,18 +1,18 @@
-import type { FormEvent } from "react";
-import type { CustomerForm } from "../../model/types";
+﻿import type { FormEvent } from "react";
+import type { BusinessPartnerForm } from "../../model/types";
 import { TextField } from "./FormFields";
 
-export function CustomerCreateForm({
+export function BusinessPartnerCreateForm({
   form,
   saving,
   onChange,
   onSubmit,
 }: {
-  form: CustomerForm;
+  form: BusinessPartnerForm;
   saving: boolean;
-  onChange: <K extends keyof CustomerForm>(
+  onChange: <K extends keyof BusinessPartnerForm>(
     field: K,
-    value: CustomerForm[K],
+    value: BusinessPartnerForm[K],
   ) => void;
   onSubmit: (event: FormEvent<HTMLFormElement>) => void;
 }) {
@@ -24,6 +24,23 @@ export function CustomerCreateForm({
       <p className="text-sm font-semibold text-[#3d6f91]">거래처</p>
       <h2 className="mt-1 text-xl font-semibold">거래처 등록</h2>
       <div className="mt-4 space-y-3">
+        <label className="block text-sm font-semibold text-[#415047]">
+          거래처 유형
+          <select
+            className="mt-1 h-10 w-full rounded-md border border-[#cfd7cd] bg-white px-3 text-sm"
+            value={form.partnerType}
+            onChange={(event) =>
+              onChange(
+                "partnerType",
+                event.target.value as BusinessPartnerForm["partnerType"],
+              )
+            }
+          >
+            <option value="WHOLESALE">도매</option>
+            <option value="RETAIL">소매</option>
+            <option value="AUCTION_HOUSE">경매장</option>
+          </select>
+        </label>
         <TextField
           label="거래처명"
           required

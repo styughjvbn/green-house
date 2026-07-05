@@ -1,9 +1,9 @@
-"use client";
+﻿"use client";
 
 import { useSalesManager } from "../model/useSalesManager";
 import type { SalesManagerProps } from "../model/types";
-import { CustomerCreateForm } from "./components/CustomerCreateForm";
-import { CustomerList } from "./components/CustomerList";
+import { BusinessPartnerCreateForm } from "./components/BusinessPartnerCreateForm";
+import { BusinessPartnerList } from "./components/BusinessPartnerList";
 import { SalesFilters } from "./components/SalesFilters";
 import { SalesSlipCreateForm } from "./components/SalesSlipCreateForm";
 import { SalesSlipDetail } from "./components/SalesSlipDetail";
@@ -13,12 +13,12 @@ import { AuctionSettlementView } from "./AuctionSettlementView";
 import { AuctionTrackingView } from "./AuctionTrackingView";
 
 export function SalesManager({
-  initialCustomers,
+  initialBusinessPartners,
   initialSalesSlips,
   initialAuctionPage,
   initialAuctionSummary,
 }: SalesManagerProps) {
-  const sales = useSalesManager(initialCustomers, initialSalesSlips);
+  const sales = useSalesManager(initialBusinessPartners, initialSalesSlips);
 
   return (
     <div className="space-y-4">
@@ -31,7 +31,7 @@ export function SalesManager({
       {sales.activeTab === "SLIPS" ? (
         <>
           <SalesFilters
-            customers={sales.customers}
+            partners={sales.partners}
             filters={sales.filters}
             onChange={sales.updateFilters}
             onReset={sales.resetFilters}
@@ -40,7 +40,7 @@ export function SalesManager({
           {sales.showCreateSlip ? (
             <SalesSlipCreateForm
               auctionShipments={sales.auctionShipments}
-              customers={sales.customers}
+              partners={sales.partners}
               errorMessage={sales.errorMessage}
               form={sales.salesForm}
               saving={sales.savingSlip}
@@ -74,16 +74,16 @@ export function SalesManager({
         <AuctionSettlementView lots={initialAuctionPage.content} />
       ) : (
         <div className="grid gap-4 xl:grid-cols-[420px_minmax(0,1fr)]">
-          <CustomerCreateForm
-            form={sales.customerForm}
-            saving={sales.savingCustomer}
-            onChange={sales.updateCustomerForm}
-            onSubmit={sales.handleCreateCustomer}
+          <BusinessPartnerCreateForm
+            form={sales.partnerForm}
+            saving={sales.savingBusinessPartner}
+            onChange={sales.updateBusinessPartnerForm}
+            onSubmit={sales.handleCreateBusinessPartner}
           />
-          <CustomerList
-            customers={sales.customers}
-            selectedCustomerId={sales.salesForm.customerId}
-            onSelectCustomer={sales.selectCustomer}
+          <BusinessPartnerList
+            partners={sales.partners}
+            selectedBusinessPartnerId={sales.salesForm.partnerId}
+            onSelectBusinessPartner={sales.selectBusinessPartner}
           />
         </div>
       )}

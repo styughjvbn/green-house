@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import type { SalesSlip } from "@/entities/farm/types";
 
@@ -53,7 +53,7 @@ export function SalesSlipList({
                     {slip.salesType === "AUCTION" ? "경매" : "일반"}
                   </td>
                   <td className="px-3 py-3 font-semibold">
-                    {slip.customer.name}
+                    {slip.partner.name}
                   </td>
                   <td className="px-3 py-3 text-right">
                     {slip.totalAmount.toLocaleString()}

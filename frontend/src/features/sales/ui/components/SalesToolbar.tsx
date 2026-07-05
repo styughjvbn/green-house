@@ -31,9 +31,9 @@ export function SalesToolbar({
           onClick={() => onTabChange("SETTLEMENT")}
         />
         <TabButton
-          active={activeTab === "CUSTOMERS"}
+          active={activeTab === "PARTNERS"}
           label="거래처 관리"
-          onClick={() => onTabChange("CUSTOMERS")}
+          onClick={() => onTabChange("PARTNERS")}
         />
       </div>
 

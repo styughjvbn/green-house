@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import type { ReactNode } from "react";
 import Link from "next/link";
@@ -60,11 +60,11 @@ export function SalesSlipDetail({
 
       <div className="mt-3 grid gap-3 lg:grid-cols-2">
         <InfoBox title="거래처 정보">
-          <Description label="거래처명" value={salesSlip.customer.name} />
-          <Description label="대표자명" value={salesSlip.customer.ownerName} />
-          <Description label="연락처" value={salesSlip.customer.phone} />
-          <Description label="주소" value={salesSlip.customer.address} />
-          <Description label="메모" value={salesSlip.customer.memo} />
+          <Description label="거래처명" value={salesSlip.partner.name} />
+          <Description label="대표자명" value={salesSlip.partner.ownerName} />
+          <Description label="연락처" value={salesSlip.partner.phone} />
+          <Description label="주소" value={salesSlip.partner.address} />
+          <Description label="메모" value={salesSlip.partner.memo} />
         </InfoBox>
 
         <InfoBox title="전표 정보">

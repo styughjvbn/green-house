@@ -1,4 +1,4 @@
-import Link from "next/link";
+﻿import Link from "next/link";
 import type { SalesSlip } from "@/entities/farm/types";
 
 type PrintPageProps = {
@@ -33,7 +33,7 @@ export function PrintPage({ salesSlips }: PrintPageProps) {
                     {slip.slipNumber}
                   </td>
                   <td className="px-3 py-3">{slip.saleDate}</td>
-                  <td className="px-3 py-3">{slip.customer.name}</td>
+                  <td className="px-3 py-3">{slip.partner.name}</td>
                   <td className="px-3 py-3 text-right">
                     {slip.totalAmount.toLocaleString()}원
                   </td>

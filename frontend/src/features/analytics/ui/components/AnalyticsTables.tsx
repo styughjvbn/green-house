@@ -1,4 +1,4 @@
-import Link from "next/link";
+﻿import Link from "next/link";
 import { AlertTriangle, CircleCheck, Info, TrendingUp } from "lucide-react";
 import type { SalesSlip } from "@/entities/farm/types";
 import { Panel } from "./AnalyticsCharts";
@@ -45,7 +45,7 @@ export function SlipTable({
                       {slip.slipNumber}
                     </Link>
                   </td>
-                  <td className="px-2 py-2">{slip.customer.name}</td>
+                  <td className="px-2 py-2">{slip.partner.name}</td>
                   <td className="px-2 py-2">{slip.saleDate}</td>
                   <td className="px-2 py-2">{formatWon(slip.totalAmount)}</td>
                   {unpaid ? (

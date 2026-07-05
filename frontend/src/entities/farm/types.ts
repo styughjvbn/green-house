@@ -1,4 +1,4 @@
-export type BedZoneSide = "LEFT" | "RIGHT" | "CUSTOM" | "HANGING";
+﻿export type BedZoneSide = "LEFT" | "RIGHT" | "CUSTOM" | "HANGING";
 
 export type BedZoneType = "DEFAULT" | "CUSTOM" | "HANGING" | "TRAY" | "GRID";
 
@@ -261,13 +261,17 @@ export type WorkRecord = {
   memo: string | null;
 };
 
-export type Customer = {
+export type PartnerType = "WHOLESALE" | "RETAIL" | "AUCTION_HOUSE";
+
+export type BusinessPartner = {
   id: number;
   name: string;
+  partnerType: PartnerType;
   ownerName: string | null;
   phone: string | null;
   address: string | null;
   memo: string | null;
+  active: boolean;
 };
 
 export type SalesSlipItem = {
@@ -290,7 +294,7 @@ export type SalesSlip = {
   salesType: "DIRECT" | "AUCTION";
   auctionShipmentId: number | null;
   auctionMarket: string | null;
-  customer: Customer;
+  partner: BusinessPartner;
   totalAmount: number;
   paymentStatus: string;
   salesStatus: string;
@@ -302,6 +306,7 @@ export type SalesSlip = {
 export type AuctionShipmentOption = {
   id: number;
   shipmentDate: string;
+  auctionHouseId: number;
   auctionMarket: string;
   lots: Array<{
     id: number;

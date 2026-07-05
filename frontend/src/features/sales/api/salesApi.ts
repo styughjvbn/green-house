@@ -1,5 +1,5 @@
-import { API_BASE_URL, fetchApi } from "@/shared/api/client";
-import type { Customer, SalesSlip } from "@/entities/farm/types";
+﻿import { API_BASE_URL, fetchApi } from "@/shared/api/client";
+import type { BusinessPartner, SalesSlip } from "@/entities/farm/types";
 import type {
   AuctionLot,
   AuctionLotPage,
@@ -9,7 +9,7 @@ import type {
 } from "@/entities/farm/types";
 import type {
   AuctionFilterState,
-  CreateCustomerPayload,
+  CreateBusinessPartnerPayload,
   CreateSalesSlipPayload,
 } from "../model/types";
 
@@ -42,8 +42,8 @@ async function requestJson<T>(
   return (payload as ApiSuccess<T>).data;
 }
 
-export function getCustomers() {
-  return fetchApi<Customer[]>("/customers");
+export function getBusinessPartners() {
+  return fetchApi<BusinessPartner[]>("/business-partners");
 }
 
 export function getSalesSlips() {
@@ -136,11 +136,11 @@ export function changeAuctionLotStatus(
   );
 }
 
-export function createCustomer(
-  payload: CreateCustomerPayload,
-): Promise<Customer> {
-  return requestJson<Customer>(
-    "/customers",
+export function createBusinessPartner(
+  payload: CreateBusinessPartnerPayload,
+): Promise<BusinessPartner> {
+  return requestJson<BusinessPartner>(
+    "/business-partners",
     {
       method: "POST",
       headers: { "Content-Type": "application/json" },

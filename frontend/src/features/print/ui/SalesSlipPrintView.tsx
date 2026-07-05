@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import Link from "next/link";
 import type { SalesSlip } from "@/entities/farm/types";
@@ -55,14 +55,14 @@ export function SalesSlipPrintView({ slip }: SalesSlipPrintViewProps) {
         </header>
 
         <section className="mt-5 grid grid-cols-2 gap-3 text-sm">
-          <InfoBox label="거래처" value={slip.customer.name} />
-          <InfoBox label="대표자" value={slip.customer.ownerName ?? "-"} />
-          <InfoBox label="전화번호" value={slip.customer.phone ?? "-"} />
+          <InfoBox label="거래처" value={slip.partner.name} />
+          <InfoBox label="대표자" value={slip.partner.ownerName ?? "-"} />
+          <InfoBox label="전화번호" value={slip.partner.phone ?? "-"} />
           <InfoBox label="결제 방법" value={slip.paymentMethod ?? "-"} />
           <InfoBox
             className="col-span-2"
             label="주소"
-            value={slip.customer.address ?? "-"}
+            value={slip.partner.address ?? "-"}
           />
         </section>
 

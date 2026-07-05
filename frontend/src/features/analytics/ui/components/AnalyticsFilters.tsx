@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { CalendarDays, RotateCcw, Search } from "lucide-react";
 import type { AnalyticsFilters as FilterValues } from "../../model/types";
@@ -9,14 +9,14 @@ const controlClass =
 export function AnalyticsFilters({
   values,
   varieties,
-  customers,
+  partners,
   onChange,
   onApply,
   onReset,
 }: {
   values: FilterValues;
   varieties: string[];
-  customers: string[];
+  partners: string[];
   onChange: (key: keyof FilterValues, value: string) => void;
   onApply: () => void;
   onReset: () => void;
@@ -74,9 +74,9 @@ export function AnalyticsFilters({
         />
         <FilterSelect
           label="거래처"
-          value={values.customer}
-          options={["전체", ...customers]}
-          onChange={(value) => onChange("customer", value)}
+          value={values.partner}
+          options={["전체", ...partners]}
+          onChange={(value) => onChange("partner", value)}
         />
         <FilterSelect
           label="상태"

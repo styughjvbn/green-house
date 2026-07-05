@@ -1,17 +1,17 @@
-"use client";
+﻿"use client";
 
 import type { ReactNode } from "react";
 import { RefreshCw, Search } from "lucide-react";
-import type { Customer } from "@/entities/farm/types";
+import type { BusinessPartner } from "@/entities/farm/types";
 import type { SalesFilterState } from "../../model/types";
 
 export function SalesFilters({
-  customers,
+  partners,
   filters,
   onChange,
   onReset,
 }: {
-  customers: Customer[];
+  partners: BusinessPartner[];
   filters: SalesFilterState;
   onChange: <K extends keyof SalesFilterState>(
     field: K,
@@ -43,13 +43,13 @@ export function SalesFilters({
 
         <FilterSelect
           label="거래처"
-          value={filters.customerId}
-          onChange={(value) => onChange("customerId", value)}
+          value={filters.partnerId}
+          onChange={(value) => onChange("partnerId", value)}
         >
           <option value="">전체 거래처</option>
-          {customers.map((customer) => (
-            <option key={customer.id} value={customer.id}>
-              {customer.name}
+          {partners.map((partner) => (
+            <option key={partner.id} value={partner.id}>
+              {partner.name}
             </option>
           ))}
         </FilterSelect>

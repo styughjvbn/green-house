@@ -1,12 +1,15 @@
 ﻿import type { FormEvent } from "react";
-import type { AuctionShipmentOption, Customer } from "@/entities/farm/types";
+import type {
+  AuctionShipmentOption,
+  BusinessPartner,
+} from "@/entities/farm/types";
 import type { SalesItemForm, SalesSlipForm } from "../../model/types";
 import { SelectField, TextField } from "./FormFields";
 import { SalesSlipItemEditor } from "./SalesSlipItemEditor";
 
 export function SalesSlipCreateForm({
   auctionShipments,
-  customers,
+  partners,
   errorMessage,
   form,
   saving,
@@ -21,7 +24,7 @@ export function SalesSlipCreateForm({
   onUpdateItem,
 }: {
   auctionShipments: AuctionShipmentOption[];
-  customers: Customer[];
+  partners: BusinessPartner[];
   errorMessage: string | null;
   form: SalesSlipForm;
   saving: boolean;
@@ -82,15 +85,17 @@ export function SalesSlipCreateForm({
             />
             <SelectField
               label="거래처"
-              value={form.customerId}
-              onChange={(value) => onChange("customerId", value)}
+              value={form.partnerId}
+              onChange={(value) => onChange("partnerId", value)}
             >
               <option value="">선택</option>
-              {customers.map((customer) => (
-                <option key={customer.id} value={customer.id}>
-                  {customer.name}
-                </option>
-              ))}
+              {partners
+                .filter((partner) => partner.partnerType !== "AUCTION_HOUSE")
+                .map((partner) => (
+                  <option key={partner.id} value={partner.id}>
+                    {partner.name}
+                  </option>
+                ))}
             </SelectField>
             <SelectField
               label="입금 상태"
@@ -163,7 +168,7 @@ export function SalesSlipCreateForm({
           disabled={
             saving ||
             (form.salesType === "DIRECT"
-              ? !form.customerId
+              ? !form.partnerId
               : !form.auctionShipmentId)
           }
           type="submit"

@@ -1,4 +1,4 @@
-import type {
+﻿import type {
   DashboardSummary,
   FarmStatusMapData,
   SalesSlip,
@@ -27,7 +27,7 @@ export type AnalyticsViewModel = {
   saleableQuantity: number;
   monthlySales: RankedValue[];
   varietySales: RankedValue[];
-  customerSales: RankedValue[];
+  partnerSales: RankedValue[];
   paymentBreakdown: RankedValue[];
   recentSlips: SalesSlip[];
   unpaidSlips: SalesSlip[];
@@ -40,5 +40,5 @@ export type AnalyticsFilters = {
   bed: string;
   zone: string;
   variety: string;
-  customer: string;
+  partner: string;
 };
