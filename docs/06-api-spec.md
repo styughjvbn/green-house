@@ -809,13 +809,30 @@ GET /api/auction-imports/{importBatchId}/rows
 ### lot 조회
 
 ```http
-GET /api/auction-lots?from=&to=&market=&variety=&grade=&status=&reviewOnly=&returnOnly=&waitingOnly=&keyword=
+GET /api/auction-lots?from=&to=&market=&variety=&grade=&status=&reviewOnly=&returnOnly=&waitingOnly=&keyword=&page=0&size=20
 GET /api/auction-lots/{lotId}
 GET /api/auction-lots/{lotId}/timeline
 GET /api/auction-tracking/summary
 ```
 
 `reviewOnly`는 매칭 실패, 수량 불일치, 반환 추정 등 운영자 확인 대상을 반환한다. `returnOnly`는 반환 추정, `waitingOnly`는 재경매 대기 lot을 조회한다.
+
+목록은 서버 페이지네이션을 사용한다. `page`는 0부터 시작하고 `size`는 기본 20, 최대 100이다.
+
+```json
+{
+  "data": {
+    "content": [],
+    "page": 0,
+    "size": 20,
+    "totalElements": 1156,
+    "totalPages": 58
+  },
+  "message": null
+}
+```
+
+요약 API는 페이지와 무관한 전체 데이터 집계이며, 전체 lot 엔티티를 적재하지 않고 DB 집계 쿼리를 사용한다.
 
 ### 반환 확인
 
