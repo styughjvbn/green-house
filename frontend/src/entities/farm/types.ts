@@ -373,6 +373,14 @@ export type AuctionLot = {
   statusHistory: AuctionStatusHistory[];
 };
 
+export type AuctionLotPage = {
+  content: AuctionLot[];
+  page: number;
+  size: number;
+  totalElements: number;
+  totalPages: number;
+};
+
 export type AuctionTrackingSummary = {
   lotCount: number;
   shippedQuantity: number;

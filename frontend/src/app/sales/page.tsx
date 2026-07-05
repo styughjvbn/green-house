@@ -9,7 +9,7 @@ import {
 export const dynamic = "force-dynamic";
 
 export default async function Page() {
-  const [customers, salesSlips, auctionLots, auctionSummary] =
+  const [customers, salesSlips, auctionPage, auctionSummary] =
     await Promise.all([
       getCustomers(),
       getSalesSlips(),
@@ -21,7 +21,7 @@ export default async function Page() {
     <SalesPage
       customers={customers}
       salesSlips={salesSlips}
-      auctionLots={auctionLots}
+      auctionPage={auctionPage}
       auctionSummary={auctionSummary}
     />
   );

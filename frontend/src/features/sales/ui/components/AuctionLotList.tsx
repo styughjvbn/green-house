@@ -7,19 +7,31 @@ import {
 
 export function AuctionLotList({
   lots,
+  page,
+  pageSize,
+  totalElements,
+  totalPages,
   selectedId,
   onSelect,
+  onPageChange,
+  onPageSizeChange,
 }: {
   lots: AuctionLot[];
+  page: number;
+  pageSize: number;
+  totalElements: number;
+  totalPages: number;
   selectedId: number | null;
   onSelect: (id: number) => void;
+  onPageChange: (page: number) => void;
+  onPageSizeChange: (size: number) => void;
 }) {
   return (
     <section className="min-w-0 rounded-md border border-[#dfe5dc] bg-white shadow-sm">
       <div className="flex items-center justify-between border-b border-[#e7ebe5] px-4 py-3">
         <h2 className="text-base font-bold text-[#17251b]">출하 lot 목록</h2>
         <span className="text-xs font-semibold text-[#159447]">
-          {lots.length}건
+          총 {totalElements.toLocaleString()}건
         </span>
       </div>
       <div className="max-h-[590px] overflow-auto">
@@ -103,7 +115,81 @@ export function AuctionLotList({
           </tbody>
         </table>
       </div>
+      <Pagination
+        page={page}
+        pageSize={pageSize}
+        totalPages={totalPages}
+        onPageChange={onPageChange}
+        onPageSizeChange={onPageSizeChange}
+      />
     </section>
+  );
+}
+
+function Pagination({
+  page,
+  pageSize,
+  totalPages,
+  onPageChange,
+  onPageSizeChange,
+}: {
+  page: number;
+  pageSize: number;
+  totalPages: number;
+  onPageChange: (page: number) => void;
+  onPageSizeChange: (size: number) => void;
+}) {
+  const start = Math.max(1, Math.min(page - 2, totalPages - 4));
+  const pages = Array.from(
+    { length: Math.min(5, totalPages) },
+    (_, index) => start + index,
+  );
+
+  return (
+    <div className="flex flex-wrap items-center justify-between gap-2 border-t border-[#e7ebe5] px-3 py-2.5">
+      <div className="flex items-center gap-1">
+        <button
+          className="h-8 rounded border border-[#d9e0d8] px-2 text-xs font-semibold disabled:opacity-40"
+          type="button"
+          disabled={page <= 1}
+          onClick={() => onPageChange(page - 1)}
+        >
+          이전
+        </button>
+        {pages.map((value) => (
+          <button
+            key={value}
+            className={`h-8 min-w-8 rounded px-2 text-xs font-bold ${value === page ? "bg-[#159447] text-white" : "border border-[#d9e0d8] bg-white"}`}
+            type="button"
+            onClick={() => onPageChange(value)}
+          >
+            {value}
+          </button>
+        ))}
+        <button
+          className="h-8 rounded border border-[#d9e0d8] px-2 text-xs font-semibold disabled:opacity-40"
+          type="button"
+          disabled={page >= totalPages}
+          onClick={() => onPageChange(page + 1)}
+        >
+          다음
+        </button>
+      </div>
+      <label className="flex items-center gap-2 text-xs font-semibold text-[#58665c]">
+        페이지당
+        <select
+          className="h-8 rounded border border-[#d9e0d8] bg-white px-2"
+          value={pageSize}
+          onChange={(event) => onPageSizeChange(Number(event.target.value))}
+        >
+          {[20, 50, 100].map((size) => (
+            <option key={size} value={size}>
+              {size}개
+            </option>
+          ))}
+        </select>
+      </label>
+    </div>
   );
 }
 

@@ -4,6 +4,7 @@ import type {
   AuctionImportBatch,
   AuctionImportRow,
   AuctionLot,
+  AuctionLotPage,
   AuctionLotStatus,
   AuctionTrackingSummary,
 } from "@/entities/farm/types";
@@ -50,15 +51,21 @@ export function getSalesSlips() {
   return fetchApi<SalesSlip[]>("/sales-slips");
 }
 
-export function getAuctionLots(filters?: Partial<AuctionFilterState>) {
+export function getAuctionLots(
+  filters?: Partial<AuctionFilterState>,
+  page = 0,
+  size = 20,
+) {
   const params = new URLSearchParams();
   Object.entries(filters ?? {}).forEach(([key, value]) => {
     if (value !== "" && value !== false && value != null) {
       params.set(key, String(value));
     }
   });
+  params.set("page", String(page));
+  params.set("size", String(size));
   const query = params.size > 0 ? `?${params}` : "";
-  return fetchApi<AuctionLot[]>(`/auction-lots${query}`);
+  return fetchApi<AuctionLotPage>(`/auction-lots${query}`);
 }
 
 export function getAuctionTrackingSummary() {

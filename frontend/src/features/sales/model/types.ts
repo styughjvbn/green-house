@@ -3,7 +3,7 @@
 export type SalesManagerProps = {
   initialCustomers: Customer[];
   initialSalesSlips: SalesSlip[];
-  initialAuctionLots: import("@/entities/farm/types").AuctionLot[];
+  initialAuctionPage: import("@/entities/farm/types").AuctionLotPage;
   initialAuctionSummary: import("@/entities/farm/types").AuctionTrackingSummary;
 };
 

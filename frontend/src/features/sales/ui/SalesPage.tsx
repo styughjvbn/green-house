@@ -1,5 +1,5 @@
 import type {
-  AuctionLot,
+  AuctionLotPage,
   AuctionTrackingSummary,
   Customer,
   SalesSlip,
@@ -9,14 +9,14 @@ import { SalesManager } from "./SalesManager";
 type SalesPageProps = {
   customers: Customer[];
   salesSlips: SalesSlip[];
-  auctionLots: AuctionLot[];
+  auctionPage: AuctionLotPage;
   auctionSummary: AuctionTrackingSummary;
 };
 
 export function SalesPage({
   customers,
   salesSlips,
-  auctionLots,
+  auctionPage,
   auctionSummary,
 }: SalesPageProps) {
   return (
@@ -24,7 +24,7 @@ export function SalesPage({
       <SalesManager
         initialCustomers={customers}
         initialSalesSlips={salesSlips}
-        initialAuctionLots={auctionLots}
+        initialAuctionPage={auctionPage}
         initialAuctionSummary={auctionSummary}
       />
     </main>

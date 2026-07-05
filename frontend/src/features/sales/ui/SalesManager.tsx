@@ -15,7 +15,7 @@ import { AuctionTrackingView } from "./AuctionTrackingView";
 export function SalesManager({
   initialCustomers,
   initialSalesSlips,
-  initialAuctionLots,
+  initialAuctionPage,
   initialAuctionSummary,
 }: SalesManagerProps) {
   const sales = useSalesManager(initialCustomers, initialSalesSlips);
@@ -63,11 +63,11 @@ export function SalesManager({
         </>
       ) : sales.activeTab === "AUCTION" ? (
         <AuctionTrackingView
-          initialLots={initialAuctionLots}
+          initialPage={initialAuctionPage}
           initialSummary={initialAuctionSummary}
         />
       ) : sales.activeTab === "SETTLEMENT" ? (
-        <AuctionSettlementView lots={initialAuctionLots} />
+        <AuctionSettlementView lots={initialAuctionPage.content} />
       ) : (
         <div className="grid gap-4 xl:grid-cols-[420px_minmax(0,1fr)]">
           <CustomerCreateForm

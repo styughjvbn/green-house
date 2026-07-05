@@ -1,5 +1,8 @@
 import { FileUp } from "lucide-react";
-import type { AuctionLot, AuctionTrackingSummary } from "@/entities/farm/types";
+import type {
+  AuctionLotPage,
+  AuctionTrackingSummary,
+} from "@/entities/farm/types";
 import { useAuctionTracking } from "../model/useAuctionTracking";
 import { AuctionFilters } from "./components/AuctionFilters";
 import { AuctionImportPanel } from "./components/AuctionImportPanel";
@@ -8,13 +11,13 @@ import { AuctionLotList } from "./components/AuctionLotList";
 import { AuctionSummaryCards } from "./components/AuctionSummaryCards";
 
 export function AuctionTrackingView({
-  initialLots,
+  initialPage,
   initialSummary,
 }: {
-  initialLots: AuctionLot[];
+  initialPage: AuctionLotPage;
   initialSummary: AuctionTrackingSummary;
 }) {
-  const tracking = useAuctionTracking(initialLots, initialSummary);
+  const tracking = useAuctionTracking(initialPage, initialSummary);
 
   return (
     <div className="space-y-3">
@@ -53,8 +56,14 @@ export function AuctionTrackingView({
       <div className="grid min-w-0 gap-3 2xl:grid-cols-[minmax(0,1.15fr)_minmax(420px,0.85fr)]">
         <AuctionLotList
           lots={tracking.lots}
+          page={tracking.page}
+          pageSize={tracking.pageSize}
+          totalElements={tracking.totalElements}
+          totalPages={tracking.totalPages}
           selectedId={tracking.selectedLot?.id ?? null}
           onSelect={tracking.setSelectedId}
+          onPageChange={tracking.changePage}
+          onPageSizeChange={tracking.changePageSize}
         />
         <AuctionLotDetail
           lot={tracking.selectedLot}

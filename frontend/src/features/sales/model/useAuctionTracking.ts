@@ -3,6 +3,7 @@ import type {
   AuctionImportBatch,
   AuctionImportRow,
   AuctionLot,
+  AuctionLotPage,
   AuctionTrackingSummary,
 } from "@/entities/farm/types";
 import {
@@ -29,14 +30,14 @@ const emptyFilters: AuctionFilterState = {
 };
 
 export function useAuctionTracking(
-  initialLots: AuctionLot[],
+  initialPage: AuctionLotPage,
   initialSummary: AuctionTrackingSummary,
 ) {
-  const [lots, setLots] = useState(initialLots);
+  const [pageResult, setPageResult] = useState(initialPage);
   const [summary, setSummary] = useState(initialSummary);
   const [filters, setFilters] = useState(emptyFilters);
   const [selectedId, setSelectedId] = useState<number | null>(
-    initialLots[0]?.id ?? null,
+    initialPage.content[0]?.id ?? null,
   );
   const [importOpen, setImportOpen] = useState(false);
   const [importBatch, setImportBatch] = useState<AuctionImportBatch | null>(
@@ -47,8 +48,11 @@ export function useAuctionTracking(
   const [error, setError] = useState<string | null>(null);
 
   const selectedLot = useMemo(
-    () => lots.find((lot) => lot.id === selectedId) ?? lots[0] ?? null,
-    [lots, selectedId],
+    () =>
+      pageResult.content.find((lot) => lot.id === selectedId) ??
+      pageResult.content[0] ??
+      null,
+    [pageResult.content, selectedId],
   );
 
   function updateFilter<K extends keyof AuctionFilterState>(
@@ -58,20 +62,24 @@ export function useAuctionTracking(
     setFilters((current) => ({ ...current, [field]: value }));
   }
 
-  async function refresh(nextFilters = filters) {
+  async function refresh(
+    nextFilters = filters,
+    nextPage = 0,
+    nextSize = pageResult.size,
+  ) {
     setLoading(true);
     setError(null);
     try {
-      const [nextLots, nextSummary] = await Promise.all([
-        getAuctionLots(nextFilters),
+      const [nextPageResult, nextSummary] = await Promise.all([
+        getAuctionLots(nextFilters, nextPage, nextSize),
         getAuctionTrackingSummary(),
       ]);
-      setLots(nextLots);
+      setPageResult(nextPageResult);
       setSummary(nextSummary);
       setSelectedId((current) =>
-        nextLots.some((lot) => lot.id === current)
+        nextPageResult.content.some((lot) => lot.id === current)
           ? current
-          : (nextLots[0]?.id ?? null),
+          : (nextPageResult.content[0]?.id ?? null),
       );
     } catch (caught) {
       setError(toMessage(caught));
@@ -83,6 +91,14 @@ export function useAuctionTracking(
   async function resetFilters() {
     setFilters(emptyFilters);
     await refresh(emptyFilters);
+  }
+
+  async function changePage(page: number) {
+    await refresh(filters, page - 1, pageResult.size);
+  }
+
+  async function changePageSize(size: number) {
+    await refresh(filters, 0, size);
   }
 
   async function importCsv(file: File) {
@@ -132,9 +148,12 @@ export function useAuctionTracking(
     setError(null);
     try {
       const changed = await request();
-      setLots((current) =>
-        current.map((lot) => (lot.id === changed.id ? changed : lot)),
-      );
+      setPageResult((current) => ({
+        ...current,
+        content: current.content.map((lot) =>
+          lot.id === changed.id ? changed : lot,
+        ),
+      }));
       setSelectedId(changed.id);
       setSummary(await getAuctionTrackingSummary());
     } catch (caught) {
@@ -145,7 +164,11 @@ export function useAuctionTracking(
   }
 
   return {
-    lots,
+    lots: pageResult.content,
+    page: pageResult.page + 1,
+    pageSize: pageResult.size,
+    totalElements: pageResult.totalElements,
+    totalPages: Math.max(1, pageResult.totalPages),
     summary,
     filters,
     selectedLot,
@@ -159,6 +182,8 @@ export function useAuctionTracking(
     setImportOpen,
     refresh,
     resetFilters,
+    changePage,
+    changePageSize,
     importCsv,
     confirmReturn,
     adjustQuantity,

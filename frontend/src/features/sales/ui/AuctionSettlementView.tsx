@@ -35,7 +35,8 @@ export function AuctionSettlementView({ lots }: { lots: AuctionLot[] }) {
       <div>
         <h2 className="text-lg font-bold">경매장 정산 요약</h2>
         <p className="mt-1 text-sm text-[#68756c]">
-          판매 완료 결과 기준 조회용 집계. 정산 확정과 전표 생성은 후속 범위.
+          현재 불러온 페이지 기준 참고 집계. 정산 확정과 전체 기간 집계는 후속
+          범위.
         </p>
       </div>
       <div className="mt-4 overflow-x-auto">
