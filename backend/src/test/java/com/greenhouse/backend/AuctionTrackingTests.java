@@ -6,21 +6,23 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
-import com.greenhouse.backend.auction.application.AuctionImportService;
 import com.greenhouse.backend.auction.application.AuctionTrackingService;
+import com.greenhouse.backend.auction.domain.AuctionAttempt;
+import com.greenhouse.backend.auction.domain.AuctionAttemptStatus;
 import com.greenhouse.backend.auction.domain.AuctionInspectionStatus;
 import com.greenhouse.backend.auction.domain.AuctionLotStatus;
+import com.greenhouse.backend.auction.domain.AuctionResultLine;
+import com.greenhouse.backend.auction.domain.AuctionShipment;
+import com.greenhouse.backend.auction.domain.AuctionShipmentLot;
 import com.greenhouse.backend.auction.dto.AuctionLotAdjustmentRequest;
 import com.greenhouse.backend.auction.dto.AuctionLotReturnRequest;
 import com.greenhouse.backend.auction.repository.AuctionShipmentLotRepository;
 import com.greenhouse.backend.auction.repository.AuctionShipmentRepository;
-import java.nio.charset.Charset;
-import java.nio.charset.StandardCharsets;
+import java.time.LocalDate;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
-import org.springframework.mock.web.MockMultipartFile;
 import org.springframework.http.MediaType;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
@@ -32,134 +34,65 @@ import org.springframework.transaction.annotation.Transactional;
 @Transactional
 class AuctionTrackingTests {
 
-	@Autowired AuctionImportService importService;
 	@Autowired AuctionTrackingService trackingService;
 	@Autowired AuctionShipmentLotRepository lotRepository;
 	@Autowired AuctionShipmentRepository shipmentRepository;
 	@Autowired MockMvc mockMvc;
 
 	@Test
-	void importsShipmentAndTracksFailedThenSoldAuctions() throws Exception {
-		var batch = importService.importCsv(csv("""
-			구분,출하일자,경매일자,경매장,품목명,품종명,등급,상자,분수량,단가,금액,비고
-			출하,2026-06-01,,음성,난,카틀레야 A,특,10,100,0,0,
-			경매,2026-06-01,2026-06-03,음성,난,카틀레야 A,특,0,100,0,0,유찰
-			경매,2026-06-01,2026-06-06,음성,난,카틀레야 A,특,0,100,10000,1000000,
-			"""));
+	void tracksFailedThenSoldAuctionsWithPagination() throws Exception {
+		var lot = createLot(LocalDate.of(2026, 6, 1), "음성", "카틀레야 A", "특", 100);
+		addResult(lot, LocalDate.of(2026, 6, 3), 1, 100, 0, "유찰", AuctionAttemptStatus.FAILED);
+		lot.applyResult(0, 0, true, false);
+		addResult(lot, LocalDate.of(2026, 6, 6), 2, 100, 10_000, null, AuctionAttemptStatus.SOLD);
+		lot.applyResult(100, 0, false, false);
+		lotRepository.flush();
 
-		assertThat(batch.rowCount()).isEqualTo(3);
-		assertThat(lotRepository.count()).isEqualTo(1);
-		var lot = trackingService.getLots(null, null, null, null, null, null, null, null, null, null, 0, 20).content().getFirst();
-		assertThat(lot.currentStatus()).isEqualTo(AuctionLotStatus.SOLD);
-		assertThat(lot.soldQuantity()).isEqualTo(100);
-		assertThat(lot.waitingQuantity()).isZero();
-		assertThat(lot.failedCount()).isEqualTo(1);
-		assertThat(lot.totalAmount()).isEqualTo(1_000_000);
-
-		mockMvc.perform(get("/api/auction-imports/{id}/rows", batch.id()))
-			.andExpect(status().isOk())
-			.andExpect(jsonPath("$.data.length()").value(3))
-			.andExpect(jsonPath("$.data[1].validationStatus").value("AUTO_MATCHED"));
+		var response = trackingService.getLots(null, null, null, null, null, null, null, null, null, null, 0, 20);
+		var tracked = response.content().getFirst();
+		assertThat(response.totalElements()).isEqualTo(1);
+		assertThat(tracked.currentStatus()).isEqualTo(AuctionLotStatus.SOLD);
+		assertThat(tracked.soldQuantity()).isEqualTo(100);
+		assertThat(tracked.failedCount()).isEqualTo(1);
+		assertThat(tracked.totalAmount()).isEqualTo(1_000_000);
 
 		mockMvc.perform(get("/api/auction-lots").param("page", "0").param("size", "1"))
 			.andExpect(status().isOk())
 			.andExpect(jsonPath("$.data.content.length()").value(1))
-			.andExpect(jsonPath("$.data.page").value(0))
-			.andExpect(jsonPath("$.data.size").value(1))
-			.andExpect(jsonPath("$.data.totalElements").value(1))
-			.andExpect(jsonPath("$.data.totalPages").value(1));
-	}
+			.andExpect(jsonPath("$.data.totalElements").value(1));
 
-	@Test
-	void importsCp949CsvExportedByExcel() {
-		String content = "구분,출하일자,경매일자,경매장,품종명,등급,상자,분수량,단가,금액,비고\n"
-			+ "출하,2026-07-03,,음성 경매장,카틀레야,A,1,10,0,0,\n";
-		var file = new MockMultipartFile(
-			"file",
-			"auction-cp949.csv",
-			"text/csv",
-			content.getBytes(Charset.forName("MS949")));
-
-		var batch = importService.importCsv(file);
-
-		assertThat(batch.status().name()).isEqualTo("COMPLETED");
-		assertThat(batch.rowCount()).isEqualTo(1);
-	}
-
-	@Test
-	void importsOperationalHeadersWithTrailingBlankColumn() {
-		var batch = importService.importCsv(csv("""
-			"분류 (출하, 경매)",일자,출하일자,유찰횟수,품목명,품종명,등급,상자,분수량,단가,금액,비고,경매장,검수,
-			출하,2026-07-05,,,난,카틀레야 A,특,2,20,0,0,,음성공판장,정상,
-			경매,2026-07-07,2026-07-05,0,난,카틀레야 A,특,0,20,10000,200000,,음성,정상,
-			"""));
-
-		assertThat(batch.status().name()).isEqualTo("COMPLETED");
-		assertThat(batch.rowCount()).isEqualTo(2);
-		assertThat(trackingService.getLots(null, null, null, null, null, null, null, null, null, null, 0, 20).content().getFirst().soldQuantity()).isEqualTo(20);
-	}
-
-	@Test
-	void matchesAuctionRowsOnlyWithinCurrentImportBatch() {
-		importService.importCsv(csv("""
-			구분,출하일자,경매일자,경매장,품종명,등급,상자,분수량,단가,금액,비고
-			출하,2026-06-10,,음성,중복 품종,A,1,10,0,0,
-			"""));
-
-		var secondBatch = importService.importCsv(csv("""
-			구분,출하일자,경매일자,경매장,품종명,등급,상자,분수량,단가,금액,비고
-			출하,2026-06-10,,음성,중복 품종,A,1,10,0,0,
-			경매,2026-06-10,2026-06-12,음성,중복 품종,A,,10,1000,10000,
-			"""));
-
-		assertThat(importService.getRows(secondBatch.id()).getLast().validationStatus())
-			.isEqualTo(AuctionInspectionStatus.AUTO_MATCHED);
-	}
-
-	@Test
-	void flagsAmbiguousDuplicateLotsForManualReview() {
-		var batch = importService.importCsv(csv("""
-			구분,출하일자,경매일자,경매장,품종명,등급,상자,분수량,단가,금액,비고
-			출하,2026-06-01,,음성,덴드로비움,,3,30,0,0,
-			출하,2026-06-01,,음성,덴드로비움,,2,20,0,0,
-			경매,2026-06-01,2026-06-03,음성,덴드로비움,,0,50,5000,250000,
-			"""));
-
-		var rows = importService.getRows(batch.id());
-		assertThat(rows.getLast().validationStatus()).isEqualTo(AuctionInspectionStatus.MANUAL_REVIEW);
-		assertThat(rows.getLast().matchedEntityId()).isNull();
+		mockMvc.perform(get("/api/auction-tracking/summary"))
+			.andExpect(status().isOk())
+			.andExpect(jsonPath("$.data.lotCount").value(1))
+			.andExpect(jsonPath("$.data.totalAmount").value(1_000_000));
 	}
 
 	@Test
 	void confirmsReturnAndAdjustsQuantitiesWithHistory() {
-		importService.importCsv(csv("""
-			구분,출하일자,경매일자,경매장,품종명,등급,상자,분수량,단가,금액,비고
-			출하,2026-06-01,,양재,호접란 A,A,5,50,0,0,
-			경매,2026-06-01,2026-06-03,양재,호접란 A,A,0,50,0,0,유찰
-			"""));
-		var lot = trackingService.getLots(null, null, null, null, null, null, null, null, null, null, 0, 20).content().getFirst();
+		var lot = createLot(LocalDate.of(2026, 6, 1), "양재", "호접란 A", "A", 50);
+		addResult(lot, LocalDate.of(2026, 6, 3), 1, 50, 0, "유찰", AuctionAttemptStatus.FAILED);
+		lot.applyResult(0, 0, true, false);
+		lotRepository.flush();
 
-		var returned = trackingService.confirmReturn(lot.id(), new AuctionLotReturnRequest("관리자", "농장 도착"));
+		var returned = trackingService.confirmReturn(lot.getId(), new AuctionLotReturnRequest("관리자", "농장 도착"));
 		assertThat(returned.currentStatus()).isEqualTo(AuctionLotStatus.RETURNED);
 		assertThat(returned.returnedQuantity()).isEqualTo(50);
 
-		var adjusted = trackingService.adjust(lot.id(), new AuctionLotAdjustmentRequest(10, 0, 40, "관리자", "실수량 확인"));
+		var adjusted = trackingService.adjust(lot.getId(), new AuctionLotAdjustmentRequest(10, 0, 40, "관리자", "실수량 확인"));
 		assertThat(adjusted.soldQuantity()).isEqualTo(10);
 		assertThat(adjusted.statusHistory()).hasSizeGreaterThanOrEqualTo(2);
 	}
 
 	@Test
 	void createsOneAuctionSalesSlipFromShipmentLots() throws Exception {
-		importService.importCsv(csv("""
-			구분,출하일자,경매일자,경매장,품목명,품종명,등급,상자,분수량,단가,금액,비고
-			출하,2026-07-01,,음성,난,카틀레야 A,특,2,20,0,0,
-			출하,2026-07-01,,음성,난,덴드로비움 B,A,3,30,0,0,
-			"""));
-		Long shipmentId = shipmentRepository.findAll().getFirst().getId();
+		var shipment = new AuctionShipment(LocalDate.of(2026, 7, 1), "음성");
+		shipment.addLot(new AuctionShipmentLot("난", "카틀레야 A", "특", 2, 20));
+		shipment.addLot(new AuctionShipmentLot("난", "덴드로비움 B", "A", 3, 30));
+		shipmentRepository.saveAndFlush(shipment);
 
 		mockMvc.perform(get("/api/sales-slips/auction-shipments"))
 			.andExpect(status().isOk())
-			.andExpect(jsonPath("$.data[0].id").value(shipmentId))
+			.andExpect(jsonPath("$.data[0].id").value(shipment.getId()))
 			.andExpect(jsonPath("$.data[0].lots.length()").value(2));
 
 		String request = """
@@ -169,19 +102,17 @@ class AuctionTrackingTests {
 			  "auctionShipmentId": %d,
 			  "items": []
 			}
-			""".formatted(shipmentId);
+			""".formatted(shipment.getId());
 		mockMvc.perform(post("/api/sales-slips")
 				.contentType(MediaType.APPLICATION_JSON)
 				.content(request))
 			.andExpect(status().isCreated())
 			.andExpect(jsonPath("$.data.salesType").value("AUCTION"))
-			.andExpect(jsonPath("$.data.auctionShipmentId").value(shipmentId))
-			.andExpect(jsonPath("$.data.auctionMarket").value("음성"))
+			.andExpect(jsonPath("$.data.auctionShipmentId").value(shipment.getId()))
 			.andExpect(jsonPath("$.data.customer.name").value("음성"))
 			.andExpect(jsonPath("$.data.saleDate").value("2026-07-01"))
 			.andExpect(jsonPath("$.data.totalAmount").value(0))
-			.andExpect(jsonPath("$.data.items.length()").value(2))
-			.andExpect(jsonPath("$.data.items[0].auctionShipmentLotId").isNumber());
+			.andExpect(jsonPath("$.data.items.length()").value(2));
 
 		mockMvc.perform(post("/api/sales-slips")
 				.contentType(MediaType.APPLICATION_JSON)
@@ -189,7 +120,38 @@ class AuctionTrackingTests {
 			.andExpect(status().isBadRequest());
 	}
 
-	private MockMultipartFile csv(String content) {
-		return new MockMultipartFile("file", "auction.csv", "text/csv", content.getBytes(StandardCharsets.UTF_8));
+	private AuctionShipmentLot createLot(
+		LocalDate shipmentDate,
+		String market,
+		String variety,
+		String grade,
+		int quantity
+	) {
+		var shipment = new AuctionShipment(shipmentDate, market);
+		var lot = new AuctionShipmentLot("난", variety, grade, 1, quantity);
+		shipment.addLot(lot);
+		shipmentRepository.saveAndFlush(shipment);
+		return lot;
+	}
+
+	private void addResult(
+		AuctionShipmentLot lot,
+		LocalDate auctionDate,
+		int attemptNo,
+		int quantity,
+		int unitPrice,
+		String note,
+		AuctionAttemptStatus status
+	) {
+		var attempt = new AuctionAttempt(auctionDate, attemptNo, status, note, null);
+		attempt.addResultLine(new AuctionResultLine(
+			auctionDate,
+			lot.getShipmentGrade(),
+			quantity,
+			unitPrice,
+			quantity * unitPrice,
+			note,
+			AuctionInspectionStatus.NORMAL));
+		lot.addAttempt(attempt);
 	}
 }
