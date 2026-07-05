@@ -30,6 +30,13 @@ const inspectionLabels: Record<AuctionInspectionStatus, string> = {
   SOURCE_ERROR: "원본오류",
 };
 
+const attemptStatusLabels: Record<string, string> = {
+  SOLD: "낙찰",
+  FAILED: "유찰",
+  PARTIALLY_SOLD: "부분 낙찰",
+  RETURN_INFERRED: "반환 추정",
+};
+
 export const auctionStatusOptions = Object.entries(statusLabels) as Array<
   [AuctionLotStatus, string]
 >;
@@ -40,6 +47,10 @@ export function auctionStatusLabel(status: AuctionLotStatus) {
 
 export function auctionInspectionLabel(status: AuctionInspectionStatus) {
   return inspectionLabels[status];
+}
+
+export function auctionAttemptStatusLabel(status: string) {
+  return attemptStatusLabels[status] ?? status;
 }
 
 export function auctionStatusTone(status: AuctionLotStatus) {
