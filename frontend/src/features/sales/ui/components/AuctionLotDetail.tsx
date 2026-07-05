@@ -1,4 +1,4 @@
-import type { FormEvent } from "react";
+import { useState, type FormEvent } from "react";
 import { RotateCcw } from "lucide-react";
 import type { AuctionLot } from "@/entities/farm/types";
 import { auctionInspectionLabel } from "../../lib/auctionDisplay";
@@ -12,9 +12,12 @@ export function AuctionLotDetail({
 }: {
   lot: AuctionLot | null;
   loading: boolean;
-  onConfirmReturn: () => void;
+  onConfirmReturn: (returnedQuantity: number) => Promise<void>;
   onAdjust: (event: FormEvent<HTMLFormElement>) => void;
 }) {
+  const [showReturnConfirmation, setShowReturnConfirmation] = useState(false);
+  const [returnQuantity, setReturnQuantity] = useState(1);
+
   if (!lot) {
     return (
       <section className="rounded-md border border-[#dfe5dc] bg-white p-8 text-center text-sm text-[#6c786f]">
@@ -34,17 +37,67 @@ export function AuctionLotDetail({
         </div>
         <div className="flex items-center gap-2">
           <StatusBadge status={lot.currentStatus} />
-          <button
-            className="inline-flex h-8 items-center gap-1.5 rounded-md border border-[#d7ded5] px-3 text-xs font-semibold disabled:opacity-50"
-            type="button"
-            disabled={loading || lot.waitingQuantity === 0}
-            onClick={onConfirmReturn}
-          >
-            <RotateCcw className="h-3.5 w-3.5" />
-            반환 확인
-          </button>
+          {lot.currentStatus === "RETURN_INFERRED" ||
+          lot.currentStatus === "PARTIALLY_RETURNED" ? (
+            <button
+              className="inline-flex h-8 items-center gap-1.5 rounded-md border border-[#d7ded5] px-3 text-xs font-semibold disabled:opacity-50"
+              type="button"
+              disabled={loading || lot.waitingQuantity === 0}
+              onClick={() => {
+                setReturnQuantity(lot.waitingQuantity);
+                setShowReturnConfirmation((current) => !current);
+              }}
+            >
+              <RotateCcw className="h-3.5 w-3.5" />
+              반환 확인
+            </button>
+          ) : null}
         </div>
       </header>
+
+      {showReturnConfirmation ? (
+        <form
+          className="flex flex-wrap items-end gap-3 border-b border-[#e7ebe5] bg-[#fff9ed] px-4 py-3"
+          onSubmit={async (event) => {
+            event.preventDefault();
+            await onConfirmReturn(returnQuantity);
+            setShowReturnConfirmation(false);
+          }}
+        >
+          <label className="text-xs font-semibold text-[#5a4932]">
+            반환 확인 수량
+            <input
+              className="mt-1 block h-9 w-36 rounded-md border border-[#d8c7a8] bg-white px-3 text-right text-sm"
+              type="number"
+              min={1}
+              max={lot.waitingQuantity}
+              required
+              value={returnQuantity}
+              onChange={(event) =>
+                setReturnQuantity(Number(event.target.value))
+              }
+            />
+          </label>
+          <div className="min-w-40 text-xs text-[#6b5b44]">
+            <p>현재 대기 {lot.waitingQuantity.toLocaleString()}분</p>
+            <p className="mt-1 font-bold">
+              변경 상태:{" "}
+              {returnQuantity === lot.waitingQuantity ? "반환완료" : "부분반환"}
+            </p>
+          </div>
+          <button
+            className="h-9 rounded-md bg-[#159447] px-4 text-sm font-bold text-white disabled:opacity-50"
+            type="submit"
+            disabled={
+              loading ||
+              returnQuantity < 1 ||
+              returnQuantity > lot.waitingQuantity
+            }
+          >
+            반환 확인 저장
+          </button>
+        </form>
+      ) : null}
 
       <div className="grid gap-3 p-4 lg:grid-cols-[minmax(0,1fr)_300px]">
         <div>

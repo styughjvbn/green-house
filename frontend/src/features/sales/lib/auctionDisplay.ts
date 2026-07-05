@@ -12,6 +12,7 @@ const statusLabels: Record<AuctionLotStatus, string> = {
   FAILED: "유찰",
   REAUCTION_WAITING: "재경매대기",
   RETURN_INFERRED: "반환추정",
+  PARTIALLY_RETURNED: "부분반환",
   RETURNED: "반환완료",
   QUANTITY_MISMATCH: "수량불일치",
   REVIEW_REQUIRED: "확인필요",
@@ -44,7 +45,12 @@ export function auctionInspectionLabel(status: AuctionInspectionStatus) {
 export function auctionStatusTone(status: AuctionLotStatus) {
   if (["SOLD", "RETURNED"].includes(status)) return "green";
   if (
-    ["RETURN_INFERRED", "QUANTITY_MISMATCH", "REVIEW_REQUIRED"].includes(status)
+    [
+      "RETURN_INFERRED",
+      "PARTIALLY_RETURNED",
+      "QUANTITY_MISMATCH",
+      "REVIEW_REQUIRED",
+    ].includes(status)
   )
     return "red";
   if (["FAILED", "REAUCTION_WAITING", "PARTIALLY_SOLD"].includes(status))

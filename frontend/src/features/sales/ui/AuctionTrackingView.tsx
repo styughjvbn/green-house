@@ -45,6 +45,7 @@ export function AuctionTrackingView({
           onPageSizeChange={tracking.changePageSize}
         />
         <AuctionLotDetail
+          key={tracking.selectedLot?.id ?? "empty"}
           lot={tracking.selectedLot}
           loading={tracking.loading}
           onConfirmReturn={tracking.confirmReturn}

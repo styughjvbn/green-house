@@ -77,7 +77,11 @@ export function getAuctionTrackingSummary() {
 
 export function confirmAuctionReturn(
   lotId: number,
-  payload: { worker: string | null; memo: string | null },
+  payload: {
+    returnedQuantity: number;
+    worker: string | null;
+    memo: string | null;
+  },
 ) {
   return requestJson<AuctionLot>(
     `/auction-lots/${lotId}/confirm-return`,
