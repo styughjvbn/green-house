@@ -1,6 +1,14 @@
 ﻿import { FormEvent, useMemo, useState } from "react";
-import type { Customer, SalesSlip } from "@/entities/farm/types";
-import { createCustomer, createSalesSlip } from "../api/salesApi";
+import type {
+  AuctionShipmentOption,
+  Customer,
+  SalesSlip,
+} from "@/entities/farm/types";
+import {
+  createCustomer,
+  createSalesSlip,
+  getAuctionShipmentOptions,
+} from "../api/salesApi";
 import {
   calculateSalesTotal,
   createEmptyCustomerForm,
@@ -42,11 +50,18 @@ export function useSalesManager(
   );
   const [savingCustomer, setSavingCustomer] = useState(false);
   const [savingSlip, setSavingSlip] = useState(false);
+  const [auctionShipments, setAuctionShipments] = useState<
+    AuctionShipmentOption[]
+  >([]);
+  const [loadingAuctionShipments, setLoadingAuctionShipments] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   const totalAmount = useMemo(
-    () => calculateSalesTotal(salesForm.items),
-    [salesForm.items],
+    () =>
+      salesForm.salesType === "AUCTION"
+        ? 0
+        : calculateSalesTotal(salesForm.items),
+    [salesForm.items, salesForm.salesType],
   );
   const filteredSalesSlips = useMemo(
     () => filterSalesSlips(salesSlips, filters),
@@ -81,6 +96,44 @@ export function useSalesManager(
 
   function resetFilters() {
     setFilters(createInitialSalesFilters());
+  }
+
+  async function selectSalesType(salesType: SalesSlipForm["salesType"]) {
+    updateSalesForm("salesType", salesType);
+    if (salesType !== "AUCTION" || auctionShipments.length > 0) return;
+    setLoadingAuctionShipments(true);
+    setErrorMessage(null);
+    try {
+      const options = await getAuctionShipmentOptions();
+      setAuctionShipments(options);
+      const first = options[0];
+      if (first) {
+        setSalesForm((current) => ({
+          ...current,
+          auctionShipmentId: String(first.id),
+          saleDate: first.shipmentDate,
+        }));
+      }
+    } catch (error) {
+      setErrorMessage(
+        error instanceof Error
+          ? error.message
+          : "출하 기록을 조회하지 못했습니다.",
+      );
+    } finally {
+      setLoadingAuctionShipments(false);
+    }
+  }
+
+  function selectAuctionShipment(shipmentId: string) {
+    const shipment = auctionShipments.find(
+      (option) => String(option.id) === shipmentId,
+    );
+    setSalesForm((current) => ({
+      ...current,
+      auctionShipmentId: shipmentId,
+      saleDate: shipment?.shipmentDate ?? current.saleDate,
+    }));
   }
 
   function updateItem(
@@ -148,6 +201,13 @@ export function useSalesManager(
         toCreateSalesSlipPayload(salesForm),
       );
       setSalesSlips((current) => [salesSlip, ...current]);
+      if (salesSlip.auctionShipmentId) {
+        setAuctionShipments((current) =>
+          current.filter(
+            (shipment) => shipment.id !== salesSlip.auctionShipmentId,
+          ),
+        );
+      }
       setSelectedSlipId(salesSlip.id);
       setShowCreateSlip(false);
       setSalesForm((current) => resetSalesSlipFormAfterSave(current));
@@ -172,12 +232,16 @@ export function useSalesManager(
     showCreateSlip,
     savingCustomer,
     savingSlip,
+    auctionShipments,
+    loadingAuctionShipments,
     errorMessage,
     totalAmount,
     addSalesItem,
     removeSalesItem,
     selectCustomer,
     selectSalesSlip: setSelectedSlipId,
+    selectSalesType,
+    selectAuctionShipment,
     setActiveTab,
     setShowCreateSlip,
     resetFilters,

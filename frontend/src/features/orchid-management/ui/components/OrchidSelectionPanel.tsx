@@ -4,7 +4,6 @@ import type { ReactNode } from "react";
 import type {
   BedZone,
   House,
-  HouseStatusSummary,
   OrchidGroup,
   WorkRecord,
   WorkType,
@@ -14,6 +13,7 @@ import { findBedZone } from "../../lib/orchidManagementUtils";
 import type {
   MutationMode,
   MutationPayload,
+  PreciseMovePayload,
   WorkRecordQuickFormState,
   WorkRecordSummary,
 } from "../../model/types";
@@ -26,8 +26,8 @@ import OrchidWorkRecordForm from "./OrchidWorkRecordForm";
 export default function OrchidSelectionPanel({
   errorMessage,
   house,
-  houses,
   mutationMode,
+  preferredMoveZoneId,
   placementEditMode,
   resolvedZone,
   saving,
@@ -50,8 +50,8 @@ export default function OrchidSelectionPanel({
 }: {
   errorMessage: string | null;
   house: House;
-  houses: HouseStatusSummary[];
   mutationMode: MutationMode;
+  preferredMoveZoneId: number | null;
   placementEditMode: boolean;
   resolvedZone: BedZone | null;
   saving: boolean;
@@ -63,7 +63,7 @@ export default function OrchidSelectionPanel({
   onCreate: (payload: MutationPayload) => Promise<void>;
   onDelete: () => Promise<void>;
   onEdit: (payload: MutationPayload) => Promise<void>;
-  onMove: (toBedZoneId: number, memo: string) => Promise<void>;
+  onMove: (payload: PreciseMovePayload) => Promise<void>;
   onOpenCreate: () => void;
   onOpenEdit: () => void;
   onOpenMove: () => void;
@@ -218,8 +218,7 @@ export default function OrchidSelectionPanel({
 
       {mutationMode === "MOVE" && selectedOrchidGroup ? (
         <OrchidMovePanel
-          currentHouse={house}
-          houses={houses}
+          preferredBedZoneId={preferredMoveZoneId}
           saving={saving}
           selectedOrchidGroup={selectedOrchidGroup}
           onCancel={onCancelMutation}

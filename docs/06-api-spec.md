@@ -720,6 +720,42 @@ POST /api/orchid-groups
 규칙:
 
 - `bedZoneId`, `varietyName`, `quantity`, `status`는 필수이다.
+
+---
+
+## 배드 정밀 배치 API
+
+### 배치 프로필
+
+- `GET /api/bed-zones/{bedZoneId}/placement-profile`
+- `PUT /api/bed-zones/{bedZoneId}/placement-profile`
+
+논리 구역의 구간과 규격·화분 크기·배치 모드별 수용량을 조회하거나 일괄 저장한다. 실제 배치가 있는 구간은 삭제할 수 없다.
+
+### 배치 추천
+
+- `GET /api/orchid-groups/{orchidGroupId}/placement-recommendations?houseId=...`
+
+추천 상태, 필요 배치 모드, 목적 구역, 구간별 수량·점유 단위와 경고를 반환한다.
+
+### 정밀 이동
+
+기존 `PATCH /api/orchid-groups/{orchidGroupId}/move` 요청에 다음 필드를 추가한다.
+
+```json
+{
+  "toBedZoneId": 10,
+  "placementMode": "STANDARD",
+  "placements": [
+    { "segmentId": 50, "quantity": 96, "trayCount": 4 }
+  ],
+  "reorganizeDueDate": null,
+  "worker": "관리자",
+  "memo": "추천 배치"
+}
+```
+
+수용량이 변경된 경우 `409 CAPACITY_CONFLICT`를 반환한다. 기존 단순 이동 요청은 구간 미지정 이동으로 호환한다.
 - `quantity`는 1 이상이어야 한다.
 - 생성 위치는 반드시 논리 구역 기준이다.
 - 같은 논리 구역 안의 마지막 `sortOrder` 다음 값으로 생성한다.
@@ -746,3 +782,105 @@ DELETE /api/orchid-groups/{orchidGroupId}
   "message": null
 }
 ```
+
+---
+
+## 14. 출하·경매 추적 API
+
+### lot 조회
+
+```http
+GET /api/auction-lots?from=&to=&market=&variety=&grade=&status=&reviewOnly=&returnOnly=&waitingOnly=&keyword=&page=0&size=20
+GET /api/auction-lots/{lotId}
+GET /api/auction-lots/{lotId}/timeline
+GET /api/auction-tracking/summary
+```
+
+`reviewOnly`는 매칭 실패, 수량 불일치, 반환 추정 등 운영자 확인 대상을 반환한다. `returnOnly`는 반환 추정, `waitingOnly`는 재경매 대기 lot을 조회한다.
+
+목록은 서버 페이지네이션을 사용한다. `page`는 0부터 시작하고 `size`는 기본 20, 최대 100이다.
+
+```json
+{
+  "data": {
+    "content": [],
+    "page": 0,
+    "size": 20,
+    "totalElements": 1156,
+    "totalPages": 58
+  },
+  "message": null
+}
+```
+
+요약 API는 페이지와 무관한 전체 데이터 집계이며, 전체 lot 엔티티를 적재하지 않고 DB 집계 쿼리를 사용한다.
+
+### 반환 확인
+
+```http
+POST /api/auction-lots/{lotId}/confirm-return
+```
+
+```json
+{
+  "returnedQuantity": 20,
+  "returnDate": "2026-06-08",
+  "worker": "관리자",
+  "memo": "일부 도착 확인"
+}
+```
+
+`재경매대기`, `반환추정` 또는 `부분반환` 상태에서 호출한다. `returnDate`는 사용자가 확인한 실제 반환일이며 필수다. lot 조회 응답의 `returnConfirmableQuantity`가 현재 확인 가능한 수량이다. 확인 수량이 이 값보다 적으면 `PARTIALLY_RETURNED`, 같으면 `RETURNED`로 변경하고 상태 이력을 생성한다. 수량을 생략하면 확인 가능한 수량 전체를 처리한다. 마지막 확정 반환일은 lot 응답의 `returnConfirmedDate`로 제공한다.
+
+### 수량 보정
+
+```http
+POST /api/auction-lots/{lotId}/adjust-quantity
+```
+
+```json
+{
+  "soldQuantity": 50,
+  "waitingQuantity": 30,
+  "returnedQuantity": 20,
+  "worker": "관리자",
+  "memo": "현장 확인"
+}
+```
+
+판매 + 대기 + 반환 수량은 출하 수량과 같아야 한다.
+
+### 상태 변경
+
+```http
+PATCH /api/auction-lots/{lotId}/status
+```
+
+상태, 변경 사유, 작업자, 메모를 받고 상태 이력을 생성한다. 수동 매칭, 재고 자동 이동, 정산 생성 API는 아직 제공하지 않는다.
+
+### 경매 출하 전표 후보
+
+```http
+GET /api/sales-slips/auction-shipments
+```
+
+아직 판매 전표와 연결되지 않은 출하 기록과 포함 lot을 반환한다.
+
+### 경매 출하 전표 생성
+
+```http
+POST /api/sales-slips
+```
+
+```json
+{
+  "salesType": "AUCTION",
+  "saleDate": "2026-07-05",
+  "auctionShipmentId": 10,
+  "customerId": null,
+  "memo": "음성 출하",
+  "items": []
+}
+```
+
+서버는 출하일을 판매일로 사용하고 경매장 거래처를 자동 생성·재사용한다. lot별 품목을 출하 수량과 0원 단가로 구성한다. 일반 판매는 `salesType=DIRECT`이며 기존 요청처럼 유형을 생략해도 된다.

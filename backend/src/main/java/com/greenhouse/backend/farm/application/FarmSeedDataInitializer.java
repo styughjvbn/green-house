@@ -2,6 +2,8 @@ package com.greenhouse.backend.farm.application;
 
 import com.greenhouse.backend.farm.domain.BedZone;
 import com.greenhouse.backend.farm.domain.BedZoneSide;
+import com.greenhouse.backend.farm.domain.BedZoneSegment;
+import com.greenhouse.backend.farm.domain.BedZoneSegmentType;
 import com.greenhouse.backend.farm.domain.House;
 import com.greenhouse.backend.farm.domain.OrchidGroup;
 import com.greenhouse.backend.farm.domain.PhysicalBed;
@@ -41,6 +43,18 @@ public class FarmSeedDataInitializer implements CommandLineRunner {
 		if (!orchidGroupRepository.existsByVarietyName("카틀레야 A")) {
 			seedSampleOrchidGroups();
 		}
+
+		bedZoneRepository.findAll().stream()
+			.filter(zone -> zone.getSegments().isEmpty())
+			.forEach(this::addDefaultSegments);
+	}
+
+	private void addDefaultSegments(BedZone zone) {
+		zone.addSegment(new BedZoneSegment("앞 구간", BedZoneSegmentType.START, 1, null));
+		zone.addSegment(new BedZoneSegment("중간1", BedZoneSegmentType.MIDDLE, 2, null));
+		zone.addSegment(new BedZoneSegment("중간2", BedZoneSegmentType.MIDDLE, 3, null));
+		zone.addSegment(new BedZoneSegment("중간3", BedZoneSegmentType.MIDDLE, 4, null));
+		zone.addSegment(new BedZoneSegment("끝 구간", BedZoneSegmentType.END, 5, null));
 	}
 
 	private List<House> createFarmStructure() {

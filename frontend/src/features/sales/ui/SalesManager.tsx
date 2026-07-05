@@ -9,10 +9,14 @@ import { SalesSlipCreateForm } from "./components/SalesSlipCreateForm";
 import { SalesSlipDetail } from "./components/SalesSlipDetail";
 import { SalesSlipList } from "./components/SalesSlipList";
 import { SalesToolbar } from "./components/SalesToolbar";
+import { AuctionSettlementView } from "./AuctionSettlementView";
+import { AuctionTrackingView } from "./AuctionTrackingView";
 
 export function SalesManager({
   initialCustomers,
   initialSalesSlips,
+  initialAuctionPage,
+  initialAuctionSummary,
 }: SalesManagerProps) {
   const sales = useSalesManager(initialCustomers, initialSalesSlips);
 
@@ -35,15 +39,19 @@ export function SalesManager({
 
           {sales.showCreateSlip ? (
             <SalesSlipCreateForm
+              auctionShipments={sales.auctionShipments}
               customers={sales.customers}
               errorMessage={sales.errorMessage}
               form={sales.salesForm}
               saving={sales.savingSlip}
+              loadingAuctionShipments={sales.loadingAuctionShipments}
               totalAmount={sales.totalAmount}
               onAddItem={sales.addSalesItem}
               onChange={sales.updateSalesForm}
               onRemoveItem={sales.removeSalesItem}
               onSubmit={sales.handleCreateSalesSlip}
+              onSalesTypeChange={sales.selectSalesType}
+              onAuctionShipmentChange={sales.selectAuctionShipment}
               onUpdateItem={sales.updateItem}
             />
           ) : null}
@@ -57,6 +65,13 @@ export function SalesManager({
             <SalesSlipDetail salesSlip={sales.selectedSalesSlip} />
           </div>
         </>
+      ) : sales.activeTab === "AUCTION" ? (
+        <AuctionTrackingView
+          initialPage={initialAuctionPage}
+          initialSummary={initialAuctionSummary}
+        />
+      ) : sales.activeTab === "SETTLEMENT" ? (
+        <AuctionSettlementView lots={initialAuctionPage.content} />
       ) : (
         <div className="grid gap-4 xl:grid-cols-[420px_minmax(0,1fr)]">
           <CustomerCreateForm

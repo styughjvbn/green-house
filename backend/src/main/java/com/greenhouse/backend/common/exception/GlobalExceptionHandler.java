@@ -12,6 +12,11 @@ import org.springframework.web.method.annotation.MethodArgumentTypeMismatchExcep
 
 @RestControllerAdvice
 public class GlobalExceptionHandler {
+	@ExceptionHandler(CapacityConflictException.class)
+	ResponseEntity<ErrorResponse> handleCapacityConflict(CapacityConflictException exception) {
+		return ResponseEntity.status(HttpStatus.CONFLICT)
+			.body(ErrorResponse.of("CAPACITY_CONFLICT", exception.getMessage(), List.of()));
+	}
 
 	@ExceptionHandler(NotFoundException.class)
 	ResponseEntity<ErrorResponse> handleNotFound(NotFoundException exception) {

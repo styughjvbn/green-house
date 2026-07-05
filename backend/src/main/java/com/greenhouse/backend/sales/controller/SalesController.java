@@ -4,6 +4,7 @@ import com.greenhouse.backend.common.api.ApiResponse;
 import com.greenhouse.backend.sales.application.SalesService;
 import com.greenhouse.backend.sales.dto.CustomerCreateRequest;
 import com.greenhouse.backend.sales.dto.CustomerResponse;
+import com.greenhouse.backend.sales.dto.AuctionShipmentOptionResponse;
 import com.greenhouse.backend.sales.dto.SalesSlipCreateRequest;
 import com.greenhouse.backend.sales.dto.SalesSlipResponse;
 import jakarta.validation.Valid;
@@ -52,6 +53,11 @@ public class SalesController {
 	@GetMapping("/sales-slips/{salesSlipId}")
 	public ApiResponse<SalesSlipResponse> getSalesSlip(@PathVariable Long salesSlipId) {
 		return ApiResponse.ok(salesService.getSalesSlip(salesSlipId));
+	}
+
+	@GetMapping("/sales-slips/auction-shipments")
+	public ApiResponse<List<AuctionShipmentOptionResponse>> getAuctionShipmentOptions() {
+		return ApiResponse.ok(salesService.getAuctionShipmentOptions());
 	}
 
 	@GetMapping("/sales-slips/{salesSlipId}/print")

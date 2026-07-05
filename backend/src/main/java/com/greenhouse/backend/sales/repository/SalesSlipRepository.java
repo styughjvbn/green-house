@@ -13,7 +13,9 @@ public interface SalesSlipRepository extends JpaRepository<SalesSlip, Long> {
 
 	long countBySaleDate(LocalDate saleDate);
 
-	@EntityGraph(attributePaths = {"customer", "items", "items.orchidGroup"})
+	boolean existsByAuctionShipmentId(Long auctionShipmentId);
+
+	@EntityGraph(attributePaths = {"customer", "auctionShipment", "items", "items.orchidGroup", "items.auctionShipmentLot"})
 	Optional<SalesSlip> findWithDetailsById(Long id);
 
 	@Query("""

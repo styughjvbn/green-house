@@ -10,6 +10,11 @@ import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
+import jakarta.persistence.CascadeType;
+import jakarta.persistence.OneToMany;
+import jakarta.persistence.OrderBy;
+import java.util.ArrayList;
+import java.util.List;
 
 @Entity
 @Table(name = "orchid_groups")
@@ -46,11 +51,18 @@ public class OrchidGroup extends BaseEntity {
 	@Column(name = "tray_count")
 	private Integer trayCount;
 
+	@Column(name = "split_placement_allowed")
+	private Boolean splitPlacementAllowed;
+
 	@Column(name = "sort_order", nullable = false)
 	private Integer sortOrder;
 
 	@Column(columnDefinition = "text")
 	private String memo;
+
+	@OneToMany(mappedBy = "orchidGroup", cascade = CascadeType.ALL, orphanRemoval = true)
+	@OrderBy("id ASC")
+	private List<OrchidGroupSegmentPlacement> segmentPlacements = new ArrayList<>();
 
 	protected OrchidGroup() {
 	}
@@ -73,6 +85,7 @@ public class OrchidGroup extends BaseEntity {
 		this.ageYear = ageYear;
 		this.status = status;
 		this.sortOrder = sortOrder;
+		this.splitPlacementAllowed = false;
 	}
 
 	public void updateDetails(
@@ -84,6 +97,7 @@ public class OrchidGroup extends BaseEntity {
 		String status,
 		String placementType,
 		Integer trayCount,
+		Boolean splitPlacementAllowed,
 		String memo
 	) {
 		this.genus = genus;
@@ -94,6 +108,7 @@ public class OrchidGroup extends BaseEntity {
 		this.status = status;
 		this.placementType = placementType;
 		this.trayCount = trayCount;
+		this.splitPlacementAllowed = Boolean.TRUE.equals(splitPlacementAllowed);
 		this.memo = memo;
 	}
 
@@ -141,6 +156,18 @@ public class OrchidGroup extends BaseEntity {
 	public Integer getTrayCount() {
 		return trayCount;
 	}
+
+	public Boolean getSplitPlacementAllowed() { return Boolean.TRUE.equals(splitPlacementAllowed); }
+
+	public void replaceSegmentPlacements(List<OrchidGroupSegmentPlacement> placements) {
+		segmentPlacements.clear();
+		placements.forEach(placement -> {
+			segmentPlacements.add(placement);
+			placement.setOrchidGroup(this);
+		});
+	}
+
+	public List<OrchidGroupSegmentPlacement> getSegmentPlacements() { return segmentPlacements; }
 
 	public Integer getSortOrder() {
 		return sortOrder;

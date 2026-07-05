@@ -292,9 +292,85 @@ CREATE INDEX idx_sales_slip_items_orchid_group_id ON sales_slip_items(orchid_gro
 ## 5. JPA 구현 메모
 
 - `workType`, `status`, `genus`, `paymentStatus`, `salesStatus`, `targetType`, `zoneType`, `side`는 초기에는 문자열 또는 Enum 중 선택한다.
+
+---
+
+## 배드 정밀 배치 테이블
+
+### bed_zone_segments
+
+| 컬럼 | 타입 | 설명 |
+|---|---|---|
+| id | BIGSERIAL PK | 구간 ID |
+| bed_zone_id | BIGINT FK | 논리 구역 |
+| name | VARCHAR | 구간명 |
+| segment_type | VARCHAR | START/MIDDLE/END/CUSTOM |
+| sort_order | INTEGER | 표시 순서 |
+| memo | TEXT NULL | 간섭 메모 |
+
+### bed_zone_segment_capacities
+
+| 컬럼 | 타입 | 설명 |
+|---|---|---|
+| bed_zone_segment_id | BIGINT FK | 배드 구간 |
+| placement_type | VARCHAR | 판/화분 배치 규격 |
+| pot_size | VARCHAR NULL | 화분 크기, NULL은 공통 |
+| capacity_mode | VARCHAR | 배치 모드 |
+| capacity_value | INTEGER | 수용 가능한 점유 단위 |
+| is_allowed | BOOLEAN | 배치 허용 여부 |
+
+### orchid_group_segment_placements
+
+| 컬럼 | 타입 | 설명 |
+|---|---|---|
+| orchid_group_id | BIGINT FK | 난 묶음 |
+| bed_zone_segment_id | BIGINT FK | 실제 배치 구간 |
+| quantity | INTEGER | 구간 배치 수량 |
+| tray_count | INTEGER NULL | 판/점유 단위 수 |
+| placement_mode | VARCHAR | 확정 배치 모드 |
+| reorganize_due_date | DATE NULL | 임시 배치 재정리일 |
+| memo | TEXT NULL | 배치 메모 |
+
+`orchid_groups.split_placement_allowed`를 nullable BOOLEAN으로 추가한다. 기존 데이터의 NULL은 false로 해석한다.
 - `PhysicalBed.displayOrder`는 실제 농장의 좌→우 순서를 보존한다. 화면에서 회전 보기를 제공하더라도 데이터의 기준 순서는 변경하지 않는다.
 - 운영 안정성을 위해 Java enum을 사용하는 편이 안전하다.
 - 단, 현장 용어가 자주 바뀔 수 있는 항목은 별도 코드 테이블로 확장할 수 있다.
 - 작업 유형은 MVP 이후 커스텀 추가 가능성이 높으므로 `work_types` 테이블 전환을 고려한다.
 - 난 묶음 이동은 `OrchidGroup.bedZone` 변경과 `WorkRecord` 생성이 하나의 트랜잭션 안에서 처리되어야 한다.
 - 판매 수량 차감 기능이 추가되면 전표 상태 변경, 난 묶음 수량 변경, 재고 변동 이력을 하나의 트랜잭션으로 처리해야 한다.
+
+---
+
+## 6. 출하·경매 추적 테이블
+
+| 테이블 | 핵심 컬럼 | 역할 |
+|---|---|---|
+| `auction_shipments` | `shipment_date`, `auction_market`, `status` | 출하일·경매장 묶음 |
+| `auction_shipment_lots` | `shipment_id`, `item_name`, `variety_name`, `shipment_grade`, `boxes`(NULL 허용), `shipped_quantity`, `sold_quantity`, `waiting_quantity`, `returned_quantity`, `current_status` | 실제 추적 lot |
+| `auction_attempts` | `shipment_lot_id`, `auction_date`, `attempt_no`, `attempt_status`, `failed_reason` | 경매 시도 |
+| `auction_result_lines` | `auction_attempt_id`, `auction_date`, `auction_grade`, `quantity`, `unit_price`, `amount`, `inspection_status` | 단가별 경매 결과 |
+| `auction_lot_status_history` | `shipment_lot_id`, `previous_status`, `new_status`, `changed_at`, `reason`, `worker`, `memo` | 상태·보정 이력 |
+
+권장 인덱스:
+
+```sql
+CREATE INDEX idx_auction_shipments_date_market ON auction_shipments(shipment_date, auction_market);
+CREATE INDEX idx_auction_lots_business_key ON auction_shipment_lots(variety_name, shipment_grade, current_status);
+CREATE INDEX idx_auction_attempts_lot_date ON auction_attempts(shipment_lot_id, auction_date);
+```
+
+CSV Import 기능 제거에 따라 `import_batches`, `import_rows` 테이블과 경매 테이블의 원본 행 연결 컬럼을 제거한다.
+
+기존 DB는 nullable 완화가 자동 반영되지 않을 수 있으므로 1회 `ALTER TABLE auction_shipment_lots ALTER COLUMN boxes DROP NOT NULL;`을 적용한다.
+
+### 판매 전표 경매 연결
+
+```text
+sales_slips.sales_type                 DIRECT | AUCTION, 기존 NULL은 DIRECT
+sales_slips.auction_shipment_id        nullable unique FK
+sales_slip_items.auction_shipment_lot_id nullable unique FK
+```
+
+경매 출하 기록과 lot은 판매 전표에 중복 연결하지 않는다. 경매 전표 최초 금액은 0원이며 정산 결과 자동 반영은 별도 트랜잭션 설계 후 추가한다.
+
+`auction_shipment_lots.current_status`에는 반환 관련 상태로 `RETURN_INFERRED`, `PARTIALLY_RETURNED`, `RETURNED`를 저장한다. 기존 반환추정 데이터는 추정 수량이 `returned_quantity`에 저장될 수 있으므로 API에서 `returnConfirmableQuantity`로 확인 대상을 정규화한다. 부분반환 확정 시 확정 수량은 `returned_quantity`, 잔여 수량은 `waiting_quantity`에 저장한다. 사용자가 확인한 마지막 실제 반환일은 nullable `return_confirmed_date`에 저장한다.

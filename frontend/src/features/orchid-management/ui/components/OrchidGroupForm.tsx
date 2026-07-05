@@ -30,10 +30,14 @@ export default function OrchidGroupForm({
     status: initialValue?.status ?? "정상",
     placementType: initialValue?.placementType ?? "",
     trayCount: initialValue?.trayCount ? String(initialValue.trayCount) : "",
+    splitPlacementAllowed: initialValue?.splitPlacementAllowed ?? false,
     memo: initialValue?.memo ?? "",
   }));
 
-  function updateField(field: keyof OrchidFormState, value: string) {
+  function updateField<K extends keyof OrchidFormState>(
+    field: K,
+    value: OrchidFormState[K],
+  ) {
     setForm((current) => ({ ...current, [field]: value }));
   }
 
@@ -48,6 +52,7 @@ export default function OrchidGroupForm({
       status: form.status.trim(),
       placementType: nullableText(form.placementType),
       trayCount: nullableNumber(form.trayCount),
+      splitPlacementAllowed: form.splitPlacementAllowed,
       memo: nullableText(form.memo),
     });
   }
@@ -119,18 +124,60 @@ export default function OrchidGroupForm({
           </select>
         </label>
         <div className="grid grid-cols-2 gap-2">
+          <label className="block">
+            <span className="text-sm font-semibold text-[#435047]">
+              배치 규격
+            </span>
+            <select
+              className="mt-1 w-full rounded-md border border-[#cfd8cc] px-2 py-1.5 text-sm"
+              value={resolvePlacementSelectValue(form.placementType)}
+              onChange={(event) =>
+                updateField(
+                  "placementType",
+                  event.target.value === "CUSTOM"
+                    ? "CUSTOM:"
+                    : event.target.value,
+                )
+              }
+            >
+              <option value="">선택</option>
+              <option value="TRAY_15">15구 판</option>
+              <option value="TRAY_20">20구 판</option>
+              <option value="TRAY_24">24구 판</option>
+              <option value="SINGLE_POT">단독 화분</option>
+              <option value="HANGING">행잉</option>
+              <option value="CUSTOM">기타</option>
+            </select>
+          </label>
           <TextField
-            label="배치 유형"
-            value={form.placementType}
-            onChange={(value) => updateField("placementType", value)}
-          />
-          <TextField
-            label="트레이 수"
+            label="판/점유 단위 수"
+            required={usesTrayUnits(form.placementType)}
             type="number"
             value={form.trayCount}
             onChange={(value) => updateField("trayCount", value)}
           />
         </div>
+        {form.placementType.startsWith("CUSTOM:") ? (
+          <TextField
+            label="기타 배치 규격명"
+            required
+            value={form.placementType.slice(7)}
+            onChange={(value) =>
+              updateField("placementType", `CUSTOM:${value}`)
+            }
+          />
+        ) : null}
+        <label className="flex items-center gap-2 rounded-md border border-[#dbe1da] bg-[#f8faf7] px-3 py-2 text-sm font-semibold text-[#435047]">
+          <input
+            checked={form.splitPlacementAllowed}
+            className="accent-[#159447]"
+            type="checkbox"
+            onChange={(event) =>
+              updateField("splitPlacementAllowed", event.target.checked)
+            }
+          />
+          여러 구간에 나누어 배치 가능
+        </label>
         <label className="block">
           <span className="text-sm font-semibold text-[#435047]">메모</span>
           <textarea
@@ -149,4 +196,12 @@ export default function OrchidGroupForm({
       </form>
     </section>
   );
+}
+
+function resolvePlacementSelectValue(value: string) {
+  return value.startsWith("CUSTOM:") ? "CUSTOM" : value;
+}
+
+function usesTrayUnits(value: string) {
+  return value.startsWith("TRAY_") || value.startsWith("CUSTOM:");
 }

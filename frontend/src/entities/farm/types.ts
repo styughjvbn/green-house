@@ -2,6 +2,26 @@ export type BedZoneSide = "LEFT" | "RIGHT" | "CUSTOM" | "HANGING";
 
 export type BedZoneType = "DEFAULT" | "CUSTOM" | "HANGING" | "TRAY" | "GRID";
 
+export type PlacementCapacityMode =
+  | "SPACIOUS"
+  | "STANDARD"
+  | "EXPANDED"
+  | "COMPRESSED"
+  | "TEMPORARY";
+
+export type BedZoneSegmentType = "START" | "MIDDLE" | "END" | "CUSTOM";
+
+export type OrchidGroupSegmentPlacement = {
+  id: number;
+  segmentId: number;
+  segmentName: string;
+  quantity: number;
+  trayCount: number | null;
+  placementMode: PlacementCapacityMode;
+  reorganizeDueDate: string | null;
+  memo: string | null;
+};
+
 export type OrchidGroup = {
   id: number;
   bedZoneId: number;
@@ -13,11 +33,81 @@ export type OrchidGroup = {
   status: string;
   placementType: string | null;
   trayCount: number | null;
+  splitPlacementAllowed: boolean;
+  segmentPlacements: OrchidGroupSegmentPlacement[];
   sortOrder: number;
   memo: string | null;
   houseNumber: number;
   physicalBedNumber: number;
   bedZoneName: string;
+};
+
+export type BedZoneSegmentCapacity = {
+  id: number | null;
+  placementType: string;
+  potSize: string | null;
+  capacityMode: PlacementCapacityMode;
+  capacityValue: number;
+  allowed: boolean;
+  memo: string | null;
+};
+
+export type BedZoneSegment = {
+  id: number | null;
+  name: string;
+  segmentType: BedZoneSegmentType;
+  sortOrder: number;
+  memo: string | null;
+  capacities: BedZoneSegmentCapacity[];
+};
+
+export type BedZonePlacementProfile = {
+  bedZoneId: number;
+  bedZoneName: string;
+  houseNumber: number;
+  physicalBedNumber: number;
+  hasUnassignedGroups: boolean;
+  segments: BedZoneSegment[];
+};
+
+export type PlacementRecommendationStatus =
+  | "RECOMMENDED"
+  | "POSSIBLE"
+  | "WARNING"
+  | "UNAVAILABLE";
+
+export type PlacementRecommendationAllocation = {
+  segmentId: number;
+  segmentName: string;
+  quantity: number;
+  occupancyUnits: number;
+  remainingUnits: number;
+};
+
+export type PlacementRecommendationCandidate = {
+  bedZoneId: number;
+  bedZoneName: string;
+  houseId: number;
+  houseNumber: number;
+  physicalBedId: number;
+  physicalBedNumber: number;
+  status: PlacementRecommendationStatus;
+  requiredMode: PlacementCapacityMode | null;
+  allocations: PlacementRecommendationAllocation[];
+  warnings: string[];
+};
+
+export type PlacementRecommendation = {
+  orchidGroupId: number;
+  varietyName: string;
+  requirement: {
+    placementType: string;
+    potSize: string | null;
+    quantity: number;
+    occupancyUnits: number;
+    splitAllowed: boolean;
+  };
+  candidates: PlacementRecommendationCandidate[];
 };
 
 export type BedZone = {
@@ -183,6 +273,7 @@ export type Customer = {
 export type SalesSlipItem = {
   id: number;
   orchidGroupId: number | null;
+  auctionShipmentLotId: number | null;
   itemName: string;
   genus: string | null;
   spec: string | null;
@@ -196,6 +287,9 @@ export type SalesSlip = {
   id: number;
   slipNumber: string;
   saleDate: string;
+  salesType: "DIRECT" | "AUCTION";
+  auctionShipmentId: number | null;
+  auctionMarket: string | null;
   customer: Customer;
   totalAmount: number;
   paymentStatus: string;
@@ -203,4 +297,115 @@ export type SalesSlip = {
   paymentMethod: string | null;
   memo: string | null;
   items: SalesSlipItem[];
+};
+
+export type AuctionShipmentOption = {
+  id: number;
+  shipmentDate: string;
+  auctionMarket: string;
+  lots: Array<{
+    id: number;
+    itemName: string;
+    varietyName: string;
+    shipmentGrade: string | null;
+    shippedQuantity: number;
+  }>;
+};
+
+export type AuctionLotStatus =
+  | "SHIPPED"
+  | "WAITING"
+  | "IN_PROGRESS"
+  | "SOLD"
+  | "PARTIALLY_SOLD"
+  | "FAILED"
+  | "REAUCTION_WAITING"
+  | "RETURN_INFERRED"
+  | "PARTIALLY_RETURNED"
+  | "RETURNED"
+  | "QUANTITY_MISMATCH"
+  | "REVIEW_REQUIRED"
+  | "CANCELLED";
+
+export type AuctionInspectionStatus =
+  | "NORMAL"
+  | "AUTO_MATCHED"
+  | "CORRECTED_MATCH"
+  | "MANUAL_REVIEW"
+  | "MATCH_FAILED"
+  | "QUANTITY_MISMATCH"
+  | "RETURN_INFERRED"
+  | "SOURCE_ERROR";
+
+export type AuctionResultLine = {
+  id: number;
+  auctionDate: string;
+  auctionGrade: string | null;
+  quantity: number;
+  unitPrice: number;
+  amount: number;
+  note: string | null;
+  inspectionStatus: AuctionInspectionStatus;
+};
+
+export type AuctionAttempt = {
+  id: number;
+  auctionDate: string;
+  attemptNo: number;
+  attemptStatus: string;
+  failedReason: string | null;
+  memo: string | null;
+  resultLines: AuctionResultLine[];
+};
+
+export type AuctionStatusHistory = {
+  id: number;
+  previousStatus: AuctionLotStatus | null;
+  newStatus: AuctionLotStatus;
+  changedAt: string;
+  reason: string;
+  worker: string | null;
+  memo: string | null;
+};
+
+export type AuctionLot = {
+  id: number;
+  shipmentDate: string;
+  auctionMarket: string;
+  itemName: string;
+  varietyName: string;
+  shipmentGrade: string | null;
+  boxes: number | null;
+  shippedQuantity: number;
+  soldQuantity: number;
+  waitingQuantity: number;
+  returnedQuantity: number;
+  returnConfirmableQuantity: number;
+  returnConfirmedDate: string | null;
+  currentStatus: AuctionLotStatus;
+  latestAuctionDate: string | null;
+  failedCount: number;
+  totalAmount: number;
+  inspectionStatus: AuctionInspectionStatus;
+  memo: string | null;
+  attempts: AuctionAttempt[];
+  statusHistory: AuctionStatusHistory[];
+};
+
+export type AuctionLotPage = {
+  content: AuctionLot[];
+  page: number;
+  size: number;
+  totalElements: number;
+  totalPages: number;
+};
+
+export type AuctionTrackingSummary = {
+  lotCount: number;
+  shippedQuantity: number;
+  soldQuantity: number;
+  waitingQuantity: number;
+  returnedQuantity: number;
+  reviewRequiredCount: number;
+  totalAmount: number;
 };

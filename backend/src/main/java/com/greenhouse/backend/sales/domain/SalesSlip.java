@@ -1,9 +1,12 @@
 package com.greenhouse.backend.sales.domain;
 
+import com.greenhouse.backend.auction.domain.AuctionShipment;
 import com.greenhouse.backend.common.domain.BaseEntity;
 import jakarta.persistence.CascadeType;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
 import jakarta.persistence.FetchType;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
@@ -29,6 +32,14 @@ public class SalesSlip extends BaseEntity {
 
 	@Column(name = "sale_date", nullable = false)
 	private LocalDate saleDate;
+
+	@Enumerated(EnumType.STRING)
+	@Column(name = "sales_type")
+	private SalesType salesType;
+
+	@ManyToOne(fetch = FetchType.LAZY)
+	@JoinColumn(name = "auction_shipment_id", unique = true)
+	private AuctionShipment auctionShipment;
 
 	@ManyToOne(fetch = FetchType.LAZY, optional = false)
 	@JoinColumn(name = "customer_id", nullable = false)
@@ -58,6 +69,8 @@ public class SalesSlip extends BaseEntity {
 	public SalesSlip(
 		String slipNumber,
 		LocalDate saleDate,
+		SalesType salesType,
+		AuctionShipment auctionShipment,
 		Customer customer,
 		String paymentStatus,
 		String salesStatus,
@@ -66,6 +79,8 @@ public class SalesSlip extends BaseEntity {
 	) {
 		this.slipNumber = slipNumber;
 		this.saleDate = saleDate;
+		this.salesType = salesType;
+		this.auctionShipment = auctionShipment;
 		this.customer = customer;
 		this.paymentStatus = paymentStatus;
 		this.salesStatus = salesStatus;
@@ -92,6 +107,14 @@ public class SalesSlip extends BaseEntity {
 
 	public LocalDate getSaleDate() {
 		return saleDate;
+	}
+
+	public SalesType getSalesType() {
+		return salesType == null ? SalesType.DIRECT : salesType;
+	}
+
+	public AuctionShipment getAuctionShipment() {
+		return auctionShipment;
 	}
 
 	public Customer getCustomer() {

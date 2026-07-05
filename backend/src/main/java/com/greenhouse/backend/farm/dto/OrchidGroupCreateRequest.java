@@ -15,6 +15,7 @@ public record OrchidGroupCreateRequest(
 	@NotBlank @Size(max = 50) String status,
 	@Size(max = 50) String placementType,
 	@Min(0) Integer trayCount,
+	Boolean splitPlacementAllowed,
 	@Size(max = 1000) String memo
 ) {
 }

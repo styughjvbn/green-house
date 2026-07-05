@@ -44,8 +44,14 @@ export function SalesSlipDetail({
       </div>
 
       <div className="mt-4 rounded-md border border-[#dfe5dc] bg-[#fbfcfa] p-4">
-        <div className="grid gap-4 lg:grid-cols-4">
+        <div className="grid gap-4 lg:grid-cols-5">
           <InfoLabel label="전표번호" strong value={salesSlip.slipNumber} />
+          <InfoLabel
+            label="판매 유형"
+            value={
+              salesSlip.salesType === "AUCTION" ? "경매 판매" : "일반 판매"
+            }
+          />
           <InfoLabel label="판매일자" value={salesSlip.saleDate} />
           <InfoLabel label="입금 상태" value={salesSlip.paymentStatus} />
           <InfoLabel label="판매 상태" value={salesSlip.salesStatus} />
@@ -62,6 +68,7 @@ export function SalesSlipDetail({
         </InfoBox>
 
         <InfoBox title="전표 정보">
+          <Description label="경매장" value={salesSlip.auctionMarket} />
           <Description label="결제 방식" value={salesSlip.paymentMethod} />
           <Description label="담당자" value="관리자" />
           <Description label="메모" value={salesSlip.memo} />

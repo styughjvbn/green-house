@@ -2,6 +2,7 @@ package com.greenhouse.backend.farm.controller;
 
 import com.greenhouse.backend.common.api.ApiResponse;
 import com.greenhouse.backend.farm.application.OrchidGroupCommandService;
+import com.greenhouse.backend.farm.application.PlacementRecommendationService;
 import com.greenhouse.backend.farm.dto.OrchidGroupCreateRequest;
 import com.greenhouse.backend.farm.dto.OrchidGroupMoveRequest;
 import com.greenhouse.backend.farm.dto.OrchidGroupResponse;
@@ -9,6 +10,8 @@ import com.greenhouse.backend.farm.dto.OrchidGroupUpdateRequest;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.DeleteMapping;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -22,9 +25,19 @@ import org.springframework.web.bind.annotation.RestController;
 public class OrchidGroupCommandController {
 
 	private final OrchidGroupCommandService orchidGroupCommandService;
+	private final PlacementRecommendationService placementRecommendationService;
 
-	public OrchidGroupCommandController(OrchidGroupCommandService orchidGroupCommandService) {
+	public OrchidGroupCommandController(OrchidGroupCommandService orchidGroupCommandService, PlacementRecommendationService placementRecommendationService) {
 		this.orchidGroupCommandService = orchidGroupCommandService;
+		this.placementRecommendationService = placementRecommendationService;
+	}
+
+	@GetMapping("/{orchidGroupId}/placement-recommendations")
+	public ApiResponse<com.greenhouse.backend.farm.dto.PlacementRecommendationResponse> recommendations(
+		@PathVariable Long orchidGroupId,
+		@RequestParam(required = false) Long houseId
+	) {
+		return ApiResponse.ok(placementRecommendationService.recommend(orchidGroupId, houseId));
 	}
 
 	@PostMapping

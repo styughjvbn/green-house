@@ -34,8 +34,10 @@ export function createInitialSalesForm(
   today = todayIsoDate(),
 ): SalesSlipForm {
   return {
+    salesType: "DIRECT",
     saleDate: today,
     customerId: customers[0] ? String(customers[0].id) : "",
+    auctionShipmentId: "",
     paymentStatus: "미입금",
     salesStatus: "작성중",
     paymentMethod: "",
@@ -131,13 +133,16 @@ export function toCreateSalesSlipPayload(
   form: SalesSlipForm,
 ): CreateSalesSlipPayload {
   return {
+    salesType: form.salesType,
     saleDate: form.saleDate,
-    customerId: Number(form.customerId),
+    customerId: form.salesType === "DIRECT" ? Number(form.customerId) : null,
+    auctionShipmentId:
+      form.salesType === "AUCTION" ? Number(form.auctionShipmentId) : null,
     paymentStatus: form.paymentStatus,
     salesStatus: form.salesStatus,
     paymentMethod: nullableText(form.paymentMethod),
     memo: nullableText(form.memo),
-    items: form.items.map((item) => ({
+    items: (form.salesType === "DIRECT" ? form.items : []).map((item) => ({
       itemName: item.itemName,
       genus: nullableText(item.genus),
       spec: nullableText(item.spec),
@@ -153,6 +158,8 @@ export function resetSalesSlipFormAfterSave(
 ): SalesSlipForm {
   return {
     ...form,
+    salesType: "DIRECT",
+    auctionShipmentId: "",
     memo: "",
     items: [createEmptySalesItem()],
   };

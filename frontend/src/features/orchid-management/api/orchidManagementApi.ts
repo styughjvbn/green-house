@@ -5,8 +5,14 @@ import type {
   WorkRecord,
   WorkRecordTargetType,
   WorkType,
+  BedZonePlacementProfile,
+  PlacementRecommendation,
 } from "@/entities/farm/types";
-import type { MutationPayload, WorkRecordQuickPayload } from "../model/types";
+import type {
+  MutationPayload,
+  PreciseMovePayload,
+  WorkRecordQuickPayload,
+} from "../model/types";
 
 type ApiErrorPayload = {
   error?: {
@@ -57,24 +63,52 @@ export async function deleteOrchidGroup(orchidGroupId: number): Promise<void> {
 
 export async function moveOrchidGroup(
   orchidGroupId: number,
-  toBedZoneId: number,
-  memo: string,
+  payload: PreciseMovePayload,
 ): Promise<void> {
   const response = await fetch(
     `${API_BASE_URL}/orchid-groups/${orchidGroupId}/move`,
     {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        toBedZoneId,
-        memo: memo.trim() || null,
-      }),
+      body: JSON.stringify({ ...payload, memo: payload.memo.trim() || null }),
     },
   );
   const body = await readJson(response);
   if (!response.ok) {
     throw new Error(resolveErrorMessage(body, "이동하지 못했습니다."));
   }
+}
+
+export function getBedZonePlacementProfile(bedZoneId: number) {
+  return fetchApi<BedZonePlacementProfile>(
+    `/bed-zones/${bedZoneId}/placement-profile`,
+  );
+}
+
+export async function saveBedZonePlacementProfile(
+  profile: BedZonePlacementProfile,
+): Promise<BedZonePlacementProfile> {
+  const response = await fetch(
+    `${API_BASE_URL}/bed-zones/${profile.bedZoneId}/placement-profile`,
+    {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ segments: profile.segments }),
+    },
+  );
+  const body = await readJson(response);
+  if (!response.ok) {
+    throw new Error(
+      resolveErrorMessage(body, "배드 정밀 설정을 저장하지 못했습니다."),
+    );
+  }
+  return (body as { data: BedZonePlacementProfile }).data;
+}
+
+export function getPlacementRecommendations(orchidGroupId: number) {
+  return fetchApi<PlacementRecommendation>(
+    `/orchid-groups/${orchidGroupId}/placement-recommendations`,
+  );
 }
 
 export function getOrchidManagementMap() {

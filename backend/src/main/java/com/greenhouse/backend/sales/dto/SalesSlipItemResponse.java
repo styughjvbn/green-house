@@ -5,6 +5,7 @@ import com.greenhouse.backend.sales.domain.SalesSlipItem;
 public record SalesSlipItemResponse(
 	Long id,
 	Long orchidGroupId,
+	Long auctionShipmentLotId,
 	String itemName,
 	String genus,
 	String spec,
@@ -18,6 +19,7 @@ public record SalesSlipItemResponse(
 		return new SalesSlipItemResponse(
 			item.getId(),
 			item.getOrchidGroup() == null ? null : item.getOrchidGroup().getId(),
+			item.getAuctionShipmentLot() == null ? null : item.getAuctionShipmentLot().getId(),
 			item.getItemName(),
 			item.getGenus(),
 			item.getSpec(),

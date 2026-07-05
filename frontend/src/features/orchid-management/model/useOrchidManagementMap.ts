@@ -26,6 +26,7 @@ import type {
   MutationMode,
   MutationPayload,
   OrchidSelection,
+  PreciseMovePayload,
   WorkRecordQuickFormState,
   WorkRecordSummary,
 } from "./types";
@@ -42,6 +43,9 @@ export function useOrchidManagementMap(house: House, workTypes: WorkType[]) {
   const [placementEditMode, setPlacementEditMode] = useState(false);
   const [dragState, setDragState] = useState<DragState>(null);
   const [mutationMode, setMutationMode] = useState<MutationMode>(null);
+  const [preferredMoveZoneId, setPreferredMoveZoneId] = useState<number | null>(
+    null,
+  );
   const [workRecordForm, setWorkRecordForm] =
     useState<WorkRecordQuickFormState>(() =>
       createInitialWorkRecordForm(workTypes, firstOrchidGroup?.id ?? null),
@@ -133,6 +137,7 @@ export function useOrchidManagementMap(house: House, workTypes: WorkType[]) {
 
   function openMove() {
     if (selectedOrchidGroup) {
+      setPreferredMoveZoneId(null);
       setMutationMode("MOVE");
       setErrorMessage(null);
     }
@@ -199,22 +204,9 @@ export function useOrchidManagementMap(house: House, workTypes: WorkType[]) {
       setDragState(null);
       return;
     }
-    if (draggingGroup.bedZoneId === toBedZoneId) {
-      setDragState(null);
-      return;
-    }
-    const targetZone = findBedZone(house, toBedZoneId)?.zone;
-    const confirmed = window.confirm(
-      `${draggingGroup.varietyName} 난 묶음을 ${targetZone?.name ?? "선택 구역"}으로 이동할까요?`,
-    );
-    if (!confirmed) {
-      setDragState(null);
-      return;
-    }
     setSelection({ type: "ORCHID_GROUP", orchidGroupId: draggingGroup.id });
-    await runMutation(async () =>
-      moveOrchidGroup(draggingGroup.id, toBedZoneId, "드래그 이동"),
-    );
+    setPreferredMoveZoneId(toBedZoneId);
+    setMutationMode("MOVE");
     setDragState(null);
   }
 
@@ -238,13 +230,13 @@ export function useOrchidManagementMap(house: House, workTypes: WorkType[]) {
     );
   }
 
-  async function handleMove(toBedZoneId: number, memo: string) {
+  async function handleMove(payload: PreciseMovePayload) {
     if (!selectedOrchidGroup) {
       setErrorMessage("이동할 난 묶음을 선택하세요.");
       return;
     }
     await runMutation(async () =>
-      moveOrchidGroup(selectedOrchidGroup.id, toBedZoneId, memo),
+      moveOrchidGroup(selectedOrchidGroup.id, payload),
     );
   }
 
@@ -316,6 +308,7 @@ export function useOrchidManagementMap(house: House, workTypes: WorkType[]) {
     errorMessage,
     dragState,
     mutationMode,
+    preferredMoveZoneId,
     placementEditMode,
     resolvedZone,
     saving,
