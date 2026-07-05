@@ -2,6 +2,7 @@ package com.greenhouse.backend;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -12,6 +13,7 @@ import com.greenhouse.backend.auction.domain.AuctionLotStatus;
 import com.greenhouse.backend.auction.dto.AuctionLotAdjustmentRequest;
 import com.greenhouse.backend.auction.dto.AuctionLotReturnRequest;
 import com.greenhouse.backend.auction.repository.AuctionShipmentLotRepository;
+import com.greenhouse.backend.auction.repository.AuctionShipmentRepository;
 import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
 import org.junit.jupiter.api.Test;
@@ -19,6 +21,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.mock.web.MockMultipartFile;
+import org.springframework.http.MediaType;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.transaction.annotation.Transactional;
@@ -32,6 +35,7 @@ class AuctionTrackingTests {
 	@Autowired AuctionImportService importService;
 	@Autowired AuctionTrackingService trackingService;
 	@Autowired AuctionShipmentLotRepository lotRepository;
+	@Autowired AuctionShipmentRepository shipmentRepository;
 	@Autowired MockMvc mockMvc;
 
 	@Test
@@ -142,6 +146,47 @@ class AuctionTrackingTests {
 		var adjusted = trackingService.adjust(lot.id(), new AuctionLotAdjustmentRequest(10, 0, 40, "관리자", "실수량 확인"));
 		assertThat(adjusted.soldQuantity()).isEqualTo(10);
 		assertThat(adjusted.statusHistory()).hasSizeGreaterThanOrEqualTo(2);
+	}
+
+	@Test
+	void createsOneAuctionSalesSlipFromShipmentLots() throws Exception {
+		importService.importCsv(csv("""
+			구분,출하일자,경매일자,경매장,품목명,품종명,등급,상자,분수량,단가,금액,비고
+			출하,2026-07-01,,음성,난,카틀레야 A,특,2,20,0,0,
+			출하,2026-07-01,,음성,난,덴드로비움 B,A,3,30,0,0,
+			"""));
+		Long shipmentId = shipmentRepository.findAll().getFirst().getId();
+
+		mockMvc.perform(get("/api/sales-slips/auction-shipments"))
+			.andExpect(status().isOk())
+			.andExpect(jsonPath("$.data[0].id").value(shipmentId))
+			.andExpect(jsonPath("$.data[0].lots.length()").value(2));
+
+		String request = """
+			{
+			  "saleDate": "2026-07-05",
+			  "salesType": "AUCTION",
+			  "auctionShipmentId": %d,
+			  "items": []
+			}
+			""".formatted(shipmentId);
+		mockMvc.perform(post("/api/sales-slips")
+				.contentType(MediaType.APPLICATION_JSON)
+				.content(request))
+			.andExpect(status().isCreated())
+			.andExpect(jsonPath("$.data.salesType").value("AUCTION"))
+			.andExpect(jsonPath("$.data.auctionShipmentId").value(shipmentId))
+			.andExpect(jsonPath("$.data.auctionMarket").value("음성"))
+			.andExpect(jsonPath("$.data.customer.name").value("음성"))
+			.andExpect(jsonPath("$.data.saleDate").value("2026-07-01"))
+			.andExpect(jsonPath("$.data.totalAmount").value(0))
+			.andExpect(jsonPath("$.data.items.length()").value(2))
+			.andExpect(jsonPath("$.data.items[0].auctionShipmentLotId").isNumber());
+
+		mockMvc.perform(post("/api/sales-slips")
+				.contentType(MediaType.APPLICATION_JSON)
+				.content(request))
+			.andExpect(status().isBadRequest());
 	}
 
 	private MockMultipartFile csv(String content) {
