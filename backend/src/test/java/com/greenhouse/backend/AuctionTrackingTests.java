@@ -73,19 +73,37 @@ class AuctionTrackingTests {
 		lot.applyResult(0, 50, false, true);
 		lotRepository.flush();
 
-		var partial = trackingService.confirmReturn(lot.getId(), new AuctionLotReturnRequest(20, "관리자", "일부 도착"));
+		var partial = trackingService.confirmReturn(lot.getId(), new AuctionLotReturnRequest(20, LocalDate.of(2026, 6, 8), "관리자", "일부 도착"));
 		assertThat(partial.currentStatus()).isEqualTo(AuctionLotStatus.PARTIALLY_RETURNED);
 		assertThat(partial.returnedQuantity()).isEqualTo(20);
 		assertThat(partial.waitingQuantity()).isEqualTo(30);
 		assertThat(partial.returnConfirmableQuantity()).isEqualTo(30);
+		assertThat(partial.returnConfirmedDate()).isEqualTo(LocalDate.of(2026, 6, 8));
 
-		var returned = trackingService.confirmReturn(lot.getId(), new AuctionLotReturnRequest(null, "관리자", "나머지 도착"));
+		var returned = trackingService.confirmReturn(lot.getId(), new AuctionLotReturnRequest(null, LocalDate.of(2026, 6, 9), "관리자", "나머지 도착"));
 		assertThat(returned.currentStatus()).isEqualTo(AuctionLotStatus.RETURNED);
 		assertThat(returned.returnedQuantity()).isEqualTo(50);
 
 		var adjusted = trackingService.adjust(lot.getId(), new AuctionLotAdjustmentRequest(10, 0, 40, "관리자", "실수량 확인"));
 		assertThat(adjusted.soldQuantity()).isEqualTo(10);
 		assertThat(adjusted.statusHistory()).hasSizeGreaterThanOrEqualTo(2);
+	}
+
+	@Test
+	void confirmsReturnFromReauctionWaiting() {
+		var lot = createLot(LocalDate.of(2026, 6, 1), "화성", "카틀레야 B", "A", 30);
+		lot.applyResult(0, 0, true, false);
+		lotRepository.flush();
+
+		var returned = trackingService.confirmReturn(
+			lot.getId(),
+			new AuctionLotReturnRequest(30, LocalDate.of(2026, 6, 10), "관리자", "재경매 없이 반환")
+		);
+
+		assertThat(returned.currentStatus()).isEqualTo(AuctionLotStatus.RETURNED);
+		assertThat(returned.returnedQuantity()).isEqualTo(30);
+		assertThat(returned.waitingQuantity()).isZero();
+		assertThat(returned.returnConfirmedDate()).isEqualTo(LocalDate.of(2026, 6, 10));
 	}
 
 	@Test
