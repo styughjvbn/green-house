@@ -17,6 +17,7 @@ import jakarta.persistence.OrderBy;
 import jakarta.persistence.Table;
 import java.util.ArrayList;
 import java.util.List;
+import java.time.LocalDate;
 
 @Entity
 @Table(name = "auction_shipment_lots")
@@ -31,6 +32,7 @@ public class AuctionShipmentLot extends BaseEntity {
 	@Column(name = "sold_quantity", nullable = false) private Integer soldQuantity;
 	@Column(name = "waiting_quantity", nullable = false) private Integer waitingQuantity;
 	@Column(name = "returned_quantity", nullable = false) private Integer returnedQuantity;
+	@Column(name = "return_confirmed_date") private LocalDate returnConfirmedDate;
 	@Enumerated(EnumType.STRING) @Column(name = "current_status", nullable = false) private AuctionLotStatus currentStatus;
 	@Column(columnDefinition = "text") private String memo;
 	@OneToMany(mappedBy = "shipmentLot", cascade = CascadeType.ALL, orphanRemoval = true) @OrderBy("auctionDate ASC, attemptNo ASC") private List<AuctionAttempt> attempts = new ArrayList<>();
@@ -56,8 +58,9 @@ public class AuctionShipmentLot extends BaseEntity {
 		else next = AuctionLotStatus.IN_PROGRESS;
 		changeStatus(next, "경매 결과 반영", null, null);
 	}
-	public void confirmReturn(Integer quantity, String worker, String memo) {
+	public void confirmReturn(Integer quantity, LocalDate returnDate, String worker, String memo) {
 		if (quantity == null || quantity < 1) throw new IllegalArgumentException("반환 확인 수량은 1 이상이어야 합니다.");
+		if (returnDate == null) throw new IllegalArgumentException("반환 확인 날짜는 필수입니다.");
 		int confirmableQuantity = getReturnConfirmableQuantity();
 		if (quantity > confirmableQuantity) throw new IllegalArgumentException("반환 확인 수량이 확인 가능한 수량보다 많습니다.");
 		if (currentStatus == AuctionLotStatus.RETURN_INFERRED && returnedQuantity > 0) {
@@ -68,6 +71,7 @@ public class AuctionShipmentLot extends BaseEntity {
 			returnedQuantity += quantity;
 			waitingQuantity -= quantity;
 		}
+		returnConfirmedDate = returnDate;
 		AuctionLotStatus next = waitingQuantity == 0 ? AuctionLotStatus.RETURNED : AuctionLotStatus.PARTIALLY_RETURNED;
 		changeStatus(next, next == AuctionLotStatus.RETURNED ? "반환 완료" : "부분 반환 확인", worker, memo);
 	}
@@ -96,6 +100,7 @@ public class AuctionShipmentLot extends BaseEntity {
 	public Integer getSoldQuantity() { return soldQuantity; }
 	public Integer getWaitingQuantity() { return waitingQuantity; }
 	public Integer getReturnedQuantity() { return returnedQuantity; }
+	public LocalDate getReturnConfirmedDate() { return returnConfirmedDate; }
 	public AuctionLotStatus getCurrentStatus() { return currentStatus; }
 	public String getMemo() { return memo; }
 	public List<AuctionAttempt> getAttempts() { return attempts; }

@@ -79,6 +79,7 @@ export function confirmAuctionReturn(
   lotId: number,
   payload: {
     returnedQuantity: number;
+    returnDate: string;
     worker: string | null;
     memo: string | null;
   },

@@ -15,12 +15,16 @@ export function AuctionLotDetail({
 }: {
   lot: AuctionLot | null;
   loading: boolean;
-  onConfirmReturn: (returnedQuantity: number) => Promise<void>;
+  onConfirmReturn: (
+    returnedQuantity: number,
+    returnDate: string,
+  ) => Promise<void>;
   onAdjust: (event: FormEvent<HTMLFormElement>) => void;
 }) {
   const [showReturnConfirmation, setShowReturnConfirmation] = useState(false);
   const [showQuantityAdjustment, setShowQuantityAdjustment] = useState(false);
   const [returnQuantity, setReturnQuantity] = useState(1);
+  const [returnDate, setReturnDate] = useState("");
 
   if (!lot) {
     return (
@@ -63,7 +67,8 @@ export function AuctionLotDetail({
             <SlidersHorizontal className="h-3.5 w-3.5" />
             {showQuantityAdjustment ? "보정 닫기" : "수량 보정"}
           </button>
-          {lot.currentStatus === "RETURN_INFERRED" ||
+          {lot.currentStatus === "REAUCTION_WAITING" ||
+          lot.currentStatus === "RETURN_INFERRED" ||
           lot.currentStatus === "PARTIALLY_RETURNED" ? (
             <button
               className="inline-flex h-8 items-center gap-1.5 rounded-md border border-[#d7ded5] px-3 text-xs font-semibold disabled:opacity-50"
@@ -71,11 +76,22 @@ export function AuctionLotDetail({
               disabled={loading || lot.returnConfirmableQuantity === 0}
               onClick={() => {
                 setReturnQuantity(lot.returnConfirmableQuantity);
+                setReturnDate(
+                  [...lot.attempts]
+                    .reverse()
+                    .find(
+                      (attempt) => attempt.attemptStatus === "RETURN_INFERRED",
+                    )?.auctionDate ??
+                    lot.latestAuctionDate ??
+                    lot.shipmentDate,
+                );
                 setShowReturnConfirmation((current) => !current);
               }}
             >
               <RotateCcw className="h-3.5 w-3.5" />
-              반환 확인
+              {lot.currentStatus === "REAUCTION_WAITING"
+                ? "반환 처리"
+                : "반환 확인"}
             </button>
           ) : null}
         </div>
@@ -86,7 +102,7 @@ export function AuctionLotDetail({
           className="flex flex-wrap items-end gap-3 border-b border-[#e7ebe5] bg-[#fff9ed] px-4 py-3"
           onSubmit={async (event) => {
             event.preventDefault();
-            await onConfirmReturn(returnQuantity);
+            await onConfirmReturn(returnQuantity, returnDate);
             setShowReturnConfirmation(false);
           }}
         >
@@ -102,6 +118,16 @@ export function AuctionLotDetail({
               onChange={(event) =>
                 setReturnQuantity(Number(event.target.value))
               }
+            />
+          </label>
+          <label className="text-xs font-semibold text-[#5a4932]">
+            반환 날짜
+            <input
+              className="mt-1 block h-9 w-40 rounded-md border border-[#d8c7a8] bg-white px-3 text-sm"
+              type="date"
+              required
+              value={returnDate}
+              onChange={(event) => setReturnDate(event.target.value)}
             />
           </label>
           <div className="min-w-40 text-xs text-[#6b5b44]">
@@ -121,7 +147,8 @@ export function AuctionLotDetail({
             disabled={
               loading ||
               returnQuantity < 1 ||
-              returnQuantity > lot.returnConfirmableQuantity
+              returnQuantity > lot.returnConfirmableQuantity ||
+              !returnDate
             }
           >
             반환 확인 저장
@@ -150,17 +177,19 @@ export function AuctionLotDetail({
               const soldQuantity = attempt.resultLines
                 .filter((line) => line.amount > 0)
                 .reduce((sum, line) => sum + line.quantity, 0);
+              const attemptTitle =
+                attempt.attemptStatus === "RETURN_INFERRED"
+                  ? "반환 추정"
+                  : `${attempt.attemptNo}차 경매 · ${auctionAttemptStatusLabel(attempt.attemptStatus)}`;
 
               return (
                 <TimelineItem
                   key={attempt.id}
                   date={attempt.auctionDate}
+                  alert={attempt.attemptStatus === "RETURN_INFERRED"}
                   title={
                     <span className="inline-flex items-center gap-2">
-                      <span>
-                        {attempt.attemptNo}차 경매 ·{" "}
-                        {auctionAttemptStatusLabel(attempt.attemptStatus)}
-                      </span>
+                      <span>{attemptTitle}</span>
                       {soldQuantity > 0 ? (
                         <span className="text-[11px] font-medium text-[#159447]">
                           {soldQuantity.toLocaleString()}분 판매
@@ -181,6 +210,9 @@ export function AuctionLotDetail({
                                   단가 {line.unitPrice.toLocaleString()}원 ·
                                   총액 {line.amount.toLocaleString()}원
                                 </>
+                              ) : attempt.attemptStatus ===
+                                "RETURN_INFERRED" ? (
+                                "반환"
                               ) : (
                                 "유찰"
                               )}
@@ -289,13 +321,17 @@ function TimelineItem({
   date,
   title,
   description,
+  alert = false,
 }: {
   date: string;
   title: ReactNode;
   description: ReactNode;
+  alert?: boolean;
 }) {
   return (
-    <li className="relative rounded-md border border-[#e5e9e3] px-3 py-2 before:absolute before:top-4 before:-left-[23px] before:h-2.5 before:w-2.5 before:rounded-full before:bg-[#159447]">
+    <li
+      className={`relative rounded-md border border-[#e5e9e3] px-3 py-2 before:absolute before:top-4 before:-left-[23px] before:h-2.5 before:w-2.5 before:rounded-full ${alert ? "before:bg-[#dc2626]" : "before:bg-[#159447]"}`}
+    >
       <div className="flex flex-wrap justify-between gap-2">
         <strong className="text-sm">{title}</strong>
         <time className="text-xs text-[#68756c]">{date}</time>

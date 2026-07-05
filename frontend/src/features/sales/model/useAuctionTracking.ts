@@ -92,7 +92,7 @@ export function useAuctionTracking(
     await refresh(filters, 0, size);
   }
 
-  async function confirmReturn(returnedQuantity: number) {
+  async function confirmReturn(returnedQuantity: number, returnDate: string) {
     if (!selectedLot) return;
     const result =
       returnedQuantity === selectedLot.returnConfirmableQuantity
@@ -100,13 +100,14 @@ export function useAuctionTracking(
         : "부분반환";
     if (
       !window.confirm(
-        `${returnedQuantity.toLocaleString()}분을 확인하여 ${result} 상태로 변경할까요?`,
+        `반환 수량 ${returnedQuantity.toLocaleString()}분, 반환 날짜 ${returnDate}가 맞습니까?\n확인하면 ${result} 상태로 변경됩니다.`,
       )
     )
       return;
     await mutate(() =>
       confirmAuctionReturn(selectedLot.id, {
         returnedQuantity,
+        returnDate,
         worker: null,
         memo: "판매 관리 화면에서 반환 확인",
       }),
