@@ -31,14 +31,14 @@ public class AuctionTrackingService {
 		var result = lotRepository.search(
 			from,
 			to,
-			normalize(market),
-			normalize(variety),
-			normalize(grade),
+			normalizeOrEmpty(market),
+			normalizeOrEmpty(variety),
+			normalizeOrEmpty(grade),
 			status,
 			Boolean.TRUE.equals(reviewOnly),
 			Boolean.TRUE.equals(returnOnly),
 			Boolean.TRUE.equals(waitingOnly),
-			normalize(keyword),
+			normalizeOrEmpty(keyword),
 			AuctionLotStatus.RETURN_INFERRED,
 			List.of(AuctionLotStatus.REAUCTION_WAITING, AuctionLotStatus.WAITING),
 			List.of(AuctionLotStatus.REVIEW_REQUIRED, AuctionLotStatus.QUANTITY_MISMATCH, AuctionLotStatus.RETURN_INFERRED),
@@ -87,4 +87,5 @@ public class AuctionTrackingService {
 	private com.greenhouse.backend.auction.domain.AuctionShipmentLot findLot(Long id) { return lotRepository.findWithDetailsById(id).orElseThrow(() -> new NotFoundException("경매 출하 lot을 찾을 수 없습니다.")); }
 	private boolean blank(String value) { return value == null || value.isBlank(); }
 	private String normalize(String value) { return blank(value) ? null : value.trim(); }
+	private String normalizeOrEmpty(String value) { return blank(value) ? "" : value.trim(); }
 }

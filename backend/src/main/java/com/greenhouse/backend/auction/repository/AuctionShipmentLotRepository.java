@@ -29,9 +29,9 @@ public interface AuctionShipmentLotRepository extends JpaRepository<AuctionShipm
 			join fetch lot.shipment shipment
 			where (:fromDate is null or shipment.shipmentDate >= :fromDate)
 			  and (:toDate is null or shipment.shipmentDate <= :toDate)
-			  and (:market is null or lower(shipment.auctionMarket) = lower(:market))
-			  and (:variety is null or lower(lot.varietyName) like lower(concat('%', :variety, '%')))
-			  and (:grade is null or lot.shipmentGrade = :grade)
+			  and (:market = '' or lower(shipment.auctionMarket) = lower(:market))
+			  and (:variety = '' or lower(lot.varietyName) like lower(concat('%', :variety, '%')))
+			  and (:grade = '' or lot.shipmentGrade = :grade)
 			  and (:status is null or lot.currentStatus = :status)
 			  and (:returnOnly = false or lot.currentStatus = :returnStatus)
 			  and (:waitingOnly = false or lot.currentStatus in :waitingStatuses)
@@ -39,16 +39,16 @@ public interface AuctionShipmentLotRepository extends JpaRepository<AuctionShipm
 			    select line.id from AuctionResultLine line
 			    where line.auctionAttempt.shipmentLot = lot and line.inspectionStatus in :reviewInspections
 			  ))
-			  and (:keyword is null or lower(concat(concat(concat(lot.itemName, ' '), lot.varietyName), concat(' ', shipment.auctionMarket))) like lower(concat('%', :keyword, '%')))
+			  and (:keyword = '' or lower(concat(concat(concat(lot.itemName, ' '), lot.varietyName), concat(' ', shipment.auctionMarket))) like lower(concat('%', :keyword, '%')))
 			""",
 		countQuery = """
 			select count(lot) from AuctionShipmentLot lot
 			join lot.shipment shipment
 			where (:fromDate is null or shipment.shipmentDate >= :fromDate)
 			  and (:toDate is null or shipment.shipmentDate <= :toDate)
-			  and (:market is null or lower(shipment.auctionMarket) = lower(:market))
-			  and (:variety is null or lower(lot.varietyName) like lower(concat('%', :variety, '%')))
-			  and (:grade is null or lot.shipmentGrade = :grade)
+			  and (:market = '' or lower(shipment.auctionMarket) = lower(:market))
+			  and (:variety = '' or lower(lot.varietyName) like lower(concat('%', :variety, '%')))
+			  and (:grade = '' or lot.shipmentGrade = :grade)
 			  and (:status is null or lot.currentStatus = :status)
 			  and (:returnOnly = false or lot.currentStatus = :returnStatus)
 			  and (:waitingOnly = false or lot.currentStatus in :waitingStatuses)
@@ -56,7 +56,7 @@ public interface AuctionShipmentLotRepository extends JpaRepository<AuctionShipm
 			    select line.id from AuctionResultLine line
 			    where line.auctionAttempt.shipmentLot = lot and line.inspectionStatus in :reviewInspections
 			  ))
-			  and (:keyword is null or lower(concat(concat(concat(lot.itemName, ' '), lot.varietyName), concat(' ', shipment.auctionMarket))) like lower(concat('%', :keyword, '%')))
+			  and (:keyword = '' or lower(concat(concat(concat(lot.itemName, ' '), lot.varietyName), concat(' ', shipment.auctionMarket))) like lower(concat('%', :keyword, '%')))
 			""")
 	Page<AuctionShipmentLot> search(
 		@Param("fromDate") LocalDate from,
