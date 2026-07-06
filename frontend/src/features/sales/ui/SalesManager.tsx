@@ -1,11 +1,12 @@
 "use client";
 
 import type { FormEvent } from "react";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useSalesManager } from "../model/useSalesManager";
 import type { SalesManagerProps } from "../model/types";
 import { BusinessPartnerCreateForm } from "./components/BusinessPartnerCreateForm";
+import { BusinessPartnerFilters } from "./components/BusinessPartnerFilters";
 import { BusinessPartnerList } from "./components/BusinessPartnerList";
 import { PartnerSettlementSettingsSection } from "./components/PartnerSettlementSettingsSection";
 import { SalesFilters } from "./components/SalesFilters";
@@ -23,6 +24,7 @@ export function SalesManager({
   initialAuctionSettlements,
 }: SalesManagerProps) {
   const sales = useSalesManager(initialBusinessPartners, initialSalesSlips);
+  const [showCreatePartner, setShowCreatePartner] = useState(false);
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
@@ -59,6 +61,15 @@ export function SalesManager({
     const created = await sales.handleCreateSalesSlip(event);
     if (created) {
       updateCreateSlip(false);
+    }
+  }
+
+  async function handleCreateBusinessPartner(
+    event: FormEvent<HTMLFormElement>,
+  ) {
+    const created = await sales.handleCreateBusinessPartner(event);
+    if (created) {
+      setShowCreatePartner(false);
     }
   }
 
@@ -110,25 +121,42 @@ export function SalesManager({
       ) : sales.activeTab === "SETTLEMENT" ? (
         <AuctionSettlementView initialSettlements={initialAuctionSettlements} />
       ) : (
-        <div className="grid gap-4 xl:grid-cols-[420px_minmax(0,1fr)]">
-          <BusinessPartnerCreateForm
-            form={sales.partnerForm}
-            saving={sales.savingBusinessPartner}
-            onChange={sales.updateBusinessPartnerForm}
-            onSubmit={sales.handleCreateBusinessPartner}
+        <>
+          <BusinessPartnerFilters
+            filters={sales.partnerFilters}
+            onChange={sales.updatePartnerFilters}
+            onReset={sales.resetPartnerFilters}
           />
-          <div className="space-y-4">
+          <div className="grid gap-4 xl:grid-cols-[420px_minmax(0,1fr)]">
             <BusinessPartnerList
-              partners={sales.partners}
-              selectedBusinessPartnerId={sales.selectedPartnerId}
-              onSelectBusinessPartner={sales.selectBusinessPartner}
+              partners={sales.filteredBusinessPartners}
+              selectedBusinessPartnerId={
+                showCreatePartner ? null : sales.selectedPartnerId
+              }
+              onSelectBusinessPartner={(partnerId) => {
+                setShowCreatePartner(false);
+                sales.selectBusinessPartner(partnerId);
+              }}
+              onCreateBusinessPartner={() => setShowCreatePartner(true)}
             />
-            <PartnerSettlementSettingsSection
-              key={sales.selectedBusinessPartner?.id ?? "empty"}
-              partner={sales.selectedBusinessPartner}
-            />
+            <div className="space-y-4">
+              {showCreatePartner ? (
+                <BusinessPartnerCreateForm
+                  form={sales.partnerForm}
+                  saving={sales.savingBusinessPartner}
+                  onChange={sales.updateBusinessPartnerForm}
+                  onSubmit={handleCreateBusinessPartner}
+                />
+              ) : null}
+              <PartnerSettlementSettingsSection
+                key={sales.selectedBusinessPartner?.id ?? "empty"}
+                partner={
+                  showCreatePartner ? null : sales.selectedBusinessPartner
+                }
+              />
+            </div>
           </div>
-        </div>
+        </>
       )}
     </div>
   );

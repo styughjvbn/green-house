@@ -5,14 +5,17 @@ import {
   calculateSalesTotal,
   createEmptyBusinessPartnerForm,
   createEmptySalesItem,
-  createInitialSalesForm,
+  createInitialBusinessPartnerFilters,
   createInitialSalesFilters,
+  createInitialSalesForm,
+  filterBusinessPartners,
   filterSalesSlips,
   resetSalesSlipFormAfterSave,
   toCreateBusinessPartnerPayload,
   toCreateSalesSlipPayload,
 } from "../lib/salesForm";
 import type {
+  BusinessPartnerFilterState,
   BusinessPartnerForm,
   SalesFilterState,
   SalesItemForm,
@@ -38,6 +41,10 @@ export function useSalesManager(
   const [filters, setFilters] = useState<SalesFilterState>(() =>
     createInitialSalesFilters(),
   );
+  const [partnerFilters, setPartnerFilters] =
+    useState<BusinessPartnerFilterState>(() =>
+      createInitialBusinessPartnerFilters(),
+    );
   const [showCreateSlip, setShowCreateSlip] = useState(false);
   const [selectedSlipId, setSelectedSlipId] = useState<number | null>(
     initialSalesSlips[0]?.id ?? null,
@@ -56,6 +63,10 @@ export function useSalesManager(
   const filteredSalesSlips = useMemo(
     () => filterSalesSlips(salesSlips, filters),
     [salesSlips, filters],
+  );
+  const filteredBusinessPartners = useMemo(
+    () => filterBusinessPartners(partners, partnerFilters),
+    [partners, partnerFilters],
   );
   const selectedSalesSlip =
     filteredSalesSlips.find((salesSlip) => salesSlip.id === selectedSlipId) ??
@@ -85,8 +96,19 @@ export function useSalesManager(
     setFilters((current) => ({ ...current, [field]: value }));
   }
 
+  function updatePartnerFilters<K extends keyof BusinessPartnerFilterState>(
+    field: K,
+    value: BusinessPartnerFilterState[K],
+  ) {
+    setPartnerFilters((current) => ({ ...current, [field]: value }));
+  }
+
   function resetFilters() {
     setFilters(createInitialSalesFilters());
+  }
+
+  function resetPartnerFilters() {
+    setPartnerFilters(createInitialBusinessPartnerFilters());
   }
 
   function selectSalesType(salesType: SalesSlipForm["salesType"]) {
@@ -167,10 +189,12 @@ export function useSalesManager(
         }));
       }
       setBusinessPartnerForm(createEmptyBusinessPartnerForm());
+      return true;
     } catch (error) {
       setErrorMessage(
         error instanceof Error ? error.message : "요청 중 문제가 발생했습니다.",
       );
+      return false;
     } finally {
       setSavingBusinessPartner(false);
     }
@@ -208,6 +232,7 @@ export function useSalesManager(
 
   return {
     partners,
+    filteredBusinessPartners,
     salesSlips,
     filteredSalesSlips,
     selectedSalesSlip,
@@ -216,6 +241,7 @@ export function useSalesManager(
     partnerForm,
     activeTab,
     filters,
+    partnerFilters,
     salesForm,
     showCreateSlip,
     savingBusinessPartner,
@@ -230,8 +256,10 @@ export function useSalesManager(
     setActiveTab,
     setShowCreateSlip,
     resetFilters,
+    resetPartnerFilters,
     updateBusinessPartnerForm,
     updateFilters,
+    updatePartnerFilters,
     updateSalesForm,
     updateItem,
     updateSalesSlip,

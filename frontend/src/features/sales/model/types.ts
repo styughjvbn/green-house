@@ -1,4 +1,4 @@
-﻿import type { BusinessPartner, SalesSlip } from "@/entities/farm/types";
+import type { BusinessPartner, SalesSlip } from "@/entities/farm/types";
 
 import type { AuctionSettlement } from "@/entities/farm/types";
 
@@ -88,5 +88,11 @@ export type SalesFilterState = {
   partnerId: string;
   paymentStatus: string;
   salesStatus: string;
+  keyword: string;
+};
+
+export type BusinessPartnerFilterState = {
+  partnerType: string;
+  active: string;
   keyword: string;
 };

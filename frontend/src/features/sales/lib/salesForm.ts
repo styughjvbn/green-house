@@ -1,8 +1,9 @@
-﻿import type { BusinessPartner, SalesSlip } from "@/entities/farm/types";
+import type { BusinessPartner, SalesSlip } from "@/entities/farm/types";
 import type {
+  BusinessPartnerFilterState,
+  BusinessPartnerForm,
   CreateBusinessPartnerPayload,
   CreateSalesSlipPayload,
-  BusinessPartnerForm,
   SalesFilterState,
   SalesItemForm,
   SalesSlipForm,
@@ -60,6 +61,14 @@ export function createInitialSalesFilters(): SalesFilterState {
   };
 }
 
+export function createInitialBusinessPartnerFilters(): BusinessPartnerFilterState {
+  return {
+    partnerType: "",
+    active: "",
+    keyword: "",
+  };
+}
+
 export function todayIsoDate(): string {
   return new Date().toISOString().slice(0, 10);
 }
@@ -96,6 +105,38 @@ export function filterSalesSlips(
       slip.partner.ownerName,
       slip.partner.phone,
       slip.memo,
+    ]
+      .filter(Boolean)
+      .some((value) => value?.toLowerCase().includes(keyword));
+  });
+}
+
+export function filterBusinessPartners(
+  partners: BusinessPartner[],
+  filters: BusinessPartnerFilterState,
+): BusinessPartner[] {
+  const keyword = filters.keyword.trim().toLowerCase();
+
+  return partners.filter((partner) => {
+    if (filters.partnerType && partner.partnerType !== filters.partnerType) {
+      return false;
+    }
+    if (filters.active) {
+      const active = filters.active === "ACTIVE";
+      if (partner.active !== active) {
+        return false;
+      }
+    }
+    if (!keyword) {
+      return true;
+    }
+
+    return [
+      partner.name,
+      partner.ownerName,
+      partner.phone,
+      partner.address,
+      partner.memo,
     ]
       .filter(Boolean)
       .some((value) => value?.toLowerCase().includes(keyword));
