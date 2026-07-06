@@ -235,6 +235,12 @@ export function useSalesManager(
     }
   }
 
+  function updateSalesSlip(salesSlip: SalesSlip) {
+    setSalesSlips((current) =>
+      current.map((item) => (item.id === salesSlip.id ? salesSlip : item)),
+    );
+  }
+
   return {
     partners,
     salesSlips,
@@ -266,6 +272,7 @@ export function useSalesManager(
     updateFilters,
     updateSalesForm,
     updateItem,
+    updateSalesSlip,
     handleCreateBusinessPartner,
     handleCreateSalesSlip,
   };

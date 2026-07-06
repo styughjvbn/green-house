@@ -6,7 +6,11 @@ import type {
   AuctionSettlement,
   AuctionSettlementStatus,
 } from "@/entities/farm/types";
-import { rebuildAuctionSettlement } from "../api/salesApi";
+import {
+  confirmAuctionSettlementPayment,
+  rebuildAuctionSettlement,
+} from "../api/salesApi";
+import { ManualPaymentPanel } from "./components/ManualPaymentPanel";
 
 export function AuctionSettlementView({
   initialSettlements,
@@ -152,7 +156,14 @@ export function AuctionSettlementView({
           </div>
         </section>
 
-        <SettlementDetail settlement={selected} />
+        <SettlementDetail
+          settlement={selected}
+          onUpdate={(updated) =>
+            setSettlements((current) =>
+              current.map((item) => (item.id === updated.id ? updated : item)),
+            )
+          }
+        />
       </div>
     </div>
   );
@@ -160,8 +171,10 @@ export function AuctionSettlementView({
 
 function SettlementDetail({
   settlement,
+  onUpdate,
 }: {
   settlement: AuctionSettlement | null;
+  onUpdate: (settlement: AuctionSettlement) => void;
 }) {
   if (!settlement) {
     return (
@@ -232,6 +245,19 @@ function SettlementDetail({
           </table>
         </div>
       </div>
+
+      <ManualPaymentPanel
+        key={settlement.id}
+        targetType="AUCTION_SETTLEMENT"
+        targetId={settlement.id}
+        remainingAmount={settlement.remainingAmount}
+        expectedPaymentDate={settlement.expectedPaymentDate}
+        onConfirm={async (payload) => {
+          onUpdate(
+            await confirmAuctionSettlementPayment(settlement.id, payload),
+          );
+        }}
+      />
     </section>
   );
 }

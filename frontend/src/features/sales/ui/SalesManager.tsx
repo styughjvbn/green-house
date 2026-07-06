@@ -64,7 +64,10 @@ export function SalesManager({
               selectedSalesSlipId={sales.selectedSalesSlip?.id ?? null}
               onSelect={sales.selectSalesSlip}
             />
-            <SalesSlipDetail salesSlip={sales.selectedSalesSlip} />
+            <SalesSlipDetail
+              salesSlip={sales.selectedSalesSlip}
+              onPaymentConfirmed={sales.updateSalesSlip}
+            />
           </div>
         </>
       ) : sales.activeTab === "AUCTION" ? (

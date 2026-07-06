@@ -2,6 +2,8 @@
 export { SalesManager } from "./ui/SalesManager";
 
 export {
+  confirmAuctionSettlementPayment,
+  confirmSalesSlipPayment,
   getBusinessPartners,
   getSalesSlips,
   getAuctionShipmentOptions,
@@ -11,6 +13,7 @@ export {
   rebuildAuctionSettlement,
   createBusinessPartner,
   getPartnerSettlementSettings,
+  getPaymentEvents,
   updatePartnerSettlementSettings,
   createSalesSlip,
 } from "./api/salesApi";

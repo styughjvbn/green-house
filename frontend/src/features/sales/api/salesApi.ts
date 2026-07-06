@@ -1,6 +1,7 @@
 ﻿import { API_BASE_URL, fetchApi } from "@/shared/api/client";
 import type {
   BusinessPartner,
+  PartnerPaymentEvent,
   PartnerSettlementSettings,
   SalesSlip,
 } from "@/entities/farm/types";
@@ -108,6 +109,56 @@ export function rebuildAuctionSettlement(
     { method: "POST" },
     "경매 정산을 다시 계산하지 못했습니다.",
   );
+}
+
+export type ManualPaymentPayload = {
+  amount: number;
+  paymentDate: string;
+  paymentMethod: string | null;
+  depositorName: string | null;
+  worker: string | null;
+  memo: string | null;
+};
+
+export function confirmAuctionSettlementPayment(
+  settlementId: number,
+  payload: ManualPaymentPayload,
+) {
+  return requestJson<AuctionSettlement>(
+    `/auction-settlements/${settlementId}/confirm-payment`,
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    },
+    "입금을 확인하지 못했습니다.",
+  );
+}
+
+export function confirmSalesSlipPayment(
+  salesSlipId: number,
+  payload: ManualPaymentPayload,
+) {
+  return requestJson<SalesSlip>(
+    `/sales-slips/${salesSlipId}/confirm-payment`,
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    },
+    "입금을 확인하지 못했습니다.",
+  );
+}
+
+export function getPaymentEvents(
+  targetType: "SALES_SLIP" | "AUCTION_SETTLEMENT",
+  targetId: number,
+) {
+  const params = new URLSearchParams({
+    targetType,
+    targetId: String(targetId),
+  });
+  return fetchApi<PartnerPaymentEvent[]>(`/partner-payment-events?${params}`);
 }
 
 export function confirmAuctionReturn(
