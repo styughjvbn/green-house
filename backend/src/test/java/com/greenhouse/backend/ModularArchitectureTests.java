@@ -21,11 +21,11 @@ class ModularArchitectureTests {
 	private static final Map<String, Set<String>> ALLOWED_DEPENDENCIES = Map.of(
 		"common", Set.of(),
 		"farm", Set.of("common", "work"),
-		"work", Set.of("common", "farm"),
+		"work", Set.of("common"),
 		"partner", Set.of("common"),
 		"sales", Set.of("common", "auction", "farm", "partner", "settlement"),
 		"auction", Set.of("common", "partner"),
-		"settlement", Set.of("common", "auction", "partner", "sales"),
+		"settlement", Set.of("common", "auction", "partner"),
 		"dashboard", Set.of("common", "farm"),
 		"print", Set.of("common", "sales"));
 	private static final Pattern MODULE_IMPORT = Pattern.compile(
@@ -70,6 +70,15 @@ class ModularArchitectureTests {
 	}
 
 	@Test
+	void declaredModuleDependenciesAreAcyclic() {
+		for (String module : MODULES) {
+			assertThat(reaches(module, module, new java.util.HashSet<>()))
+				.as("Cyclic module dependency starting at %s", module)
+				.isFalse();
+		}
+	}
+
+	@Test
 	void layersDoNotReferenceForbiddenInnerLayers() throws IOException {
 		assertNoImports("domain", ".dto.", ".repository.", ".application.", ".controller.");
 		assertNoImports("repository", ".dto.", ".application.", ".controller.");
@@ -95,5 +104,13 @@ class ModularArchitectureTests {
 		try (Stream<Path> files = Files.walk(root)) {
 			return files.filter(path -> path.toString().endsWith(".java")).toList();
 		}
+	}
+
+	private boolean reaches(String current, String target, Set<String> visited) {
+		if (!visited.add(current)) return false;
+		for (String dependency : ALLOWED_DEPENDENCIES.get(current)) {
+			if (dependency.equals(target) || reaches(dependency, target, visited)) return true;
+		}
+		return false;
 	}
 }
