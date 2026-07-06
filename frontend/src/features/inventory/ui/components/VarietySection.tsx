@@ -13,10 +13,12 @@ import {
 export function VarietySection({
   varieties,
   selectedId,
+  loadingGroups = false,
   onSelect,
 }: {
   varieties: Variety[];
   selectedId: number;
+  loadingGroups?: boolean;
   onSelect: (id: number) => void;
 }) {
   const [genus, setGenus] = useState("전체");
@@ -215,6 +217,7 @@ export function VarietySection({
                 <DetailRow label="품종코드" value={selected.code} />
                 <DetailRow label="속" value={selected.genus} />
                 <DetailRow label="품종명" value={selected.name} />
+                <DetailRow label="별칭" value={selected.alias || "-"} />
                 <DetailRow label="기본 화분 크기" value={selected.potSize} />
                 <DetailRow label="특징/설명" value={selected.description} />
                 <DetailRow
@@ -235,11 +238,29 @@ export function VarietySection({
                 <DetailRow label="수정일" value={selected.updatedAt} />
               </dl>
             </div>
+            <div className="mt-4 grid gap-2 sm:grid-cols-2 xl:grid-cols-4">
+              <SummaryCard
+                label="보유 묶음 수"
+                value={`${selected.connectedGroupCount}개`}
+              />
+              <SummaryCard
+                label="총 보유 수량"
+                value={`${selected.totalQuantity}분`}
+              />
+              <SummaryCard
+                label="판매 가능 수량"
+                value={`${selected.saleableQuantity}분`}
+              />
+              <SummaryCard
+                label="최근 작업일"
+                value={selected.recentWorkDate ?? "-"}
+              />
+            </div>
             <div className="mt-4 border-t border-[#dce2dc] pt-3">
               <h3 className="text-xs font-bold">
                 연결된 난 묶음{" "}
                 <span className="text-[#159447]">
-                  ({selected.connectedGroups.length}개)
+                  ({selected.connectedGroupCount}개)
                 </span>
               </h3>
               <div className="mt-2 overflow-x-auto">
@@ -268,9 +289,20 @@ export function VarietySection({
                           <td className="px-2 py-1.5">{group.location}</td>
                           <td className="px-2 py-1.5">{group.quantity}</td>
                           <td className="px-2 py-1.5">{group.status}</td>
-                          <td className="px-2 py-1.5">{group.latestWork}</td>
+                          <td className="px-2 py-1.5">
+                            {group.latestWork ?? "-"}
+                          </td>
                         </tr>
                       ))
+                    ) : loadingGroups ? (
+                      <tr>
+                        <td
+                          className="px-2 py-6 text-center text-[#758078]"
+                          colSpan={4}
+                        >
+                          불러오는 중
+                        </td>
+                      </tr>
                     ) : (
                       <tr>
                         <td
@@ -289,5 +321,14 @@ export function VarietySection({
         ) : null}
       </div>
     </>
+  );
+}
+
+function SummaryCard({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="rounded-md border border-[#e1e6e1] bg-[#fbfcfa] px-3 py-2">
+      <p className="text-[11px] text-[#68756d]">{label}</p>
+      <strong className="mt-1 block text-sm">{value}</strong>
+    </div>
   );
 }
