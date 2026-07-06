@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { Suspense } from "react";
 import { Geist } from "next/font/google";
 import { FontScaleInitializer } from "@/features/settings";
 import { DEFAULT_FONT_SCALE } from "@/features/settings/lib/fontScale";
@@ -33,7 +34,9 @@ export default function RootLayout({
     >
       <body className="min-h-full bg-[#f7f8f6] text-[#1f2a24]">
         <FontScaleInitializer />
-        <AppShell>{children}</AppShell>
+        <Suspense fallback={children}>
+          <AppShell>{children}</AppShell>
+        </Suspense>
       </body>
     </html>
   );

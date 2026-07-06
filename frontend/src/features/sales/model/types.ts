@@ -32,7 +32,6 @@ export type SalesSlipForm = {
   salesType: "DIRECT" | "AUCTION";
   saleDate: string;
   partnerId: string;
-  auctionShipmentId: string;
   paymentStatus: string;
   salesStatus: string;
   paymentMethod: string;

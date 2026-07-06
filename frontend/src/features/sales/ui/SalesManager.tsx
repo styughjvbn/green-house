@@ -2,7 +2,7 @@
 
 import { useEffect } from "react";
 import { useSearchParams } from "next/navigation";
-import { Download, Plus } from "lucide-react";
+import { Plus } from "lucide-react";
 import { useSalesManager } from "../model/useSalesManager";
 import type { SalesManagerProps } from "../model/types";
 import { BusinessPartnerCreateForm } from "./components/BusinessPartnerCreateForm";
@@ -66,19 +66,16 @@ export function SalesManager({
 
           {sales.showCreateSlip ? (
             <SalesSlipCreateForm
-              auctionShipments={sales.auctionShipments}
               partners={sales.partners}
               errorMessage={sales.errorMessage}
               form={sales.salesForm}
               saving={sales.savingSlip}
-              loadingAuctionShipments={sales.loadingAuctionShipments}
               totalAmount={sales.totalAmount}
               onAddItem={sales.addSalesItem}
               onChange={sales.updateSalesForm}
               onRemoveItem={sales.removeSalesItem}
               onSubmit={sales.handleCreateSalesSlip}
               onSalesTypeChange={sales.selectSalesType}
-              onAuctionShipmentChange={sales.selectAuctionShipment}
               onUpdateItem={sales.updateItem}
             />
           ) : null}

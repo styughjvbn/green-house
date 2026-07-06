@@ -1,14 +1,6 @@
-﻿import { FormEvent, useMemo, useState } from "react";
-import type {
-  AuctionShipmentOption,
-  BusinessPartner,
-  SalesSlip,
-} from "@/entities/farm/types";
-import {
-  createBusinessPartner,
-  createSalesSlip,
-  getAuctionShipmentOptions,
-} from "../api/salesApi";
+import { FormEvent, useMemo, useState } from "react";
+import type { BusinessPartner, SalesSlip } from "@/entities/farm/types";
+import { createBusinessPartner, createSalesSlip } from "../api/salesApi";
 import {
   calculateSalesTotal,
   createEmptyBusinessPartnerForm,
@@ -55,18 +47,11 @@ export function useSalesManager(
   );
   const [savingBusinessPartner, setSavingBusinessPartner] = useState(false);
   const [savingSlip, setSavingSlip] = useState(false);
-  const [auctionShipments, setAuctionShipments] = useState<
-    AuctionShipmentOption[]
-  >([]);
-  const [loadingAuctionShipments, setLoadingAuctionShipments] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   const totalAmount = useMemo(
-    () =>
-      salesForm.salesType === "AUCTION"
-        ? 0
-        : calculateSalesTotal(salesForm.items),
-    [salesForm.items, salesForm.salesType],
+    () => calculateSalesTotal(salesForm.items),
+    [salesForm.items],
   );
   const filteredSalesSlips = useMemo(
     () => filterSalesSlips(salesSlips, filters),
@@ -104,41 +89,29 @@ export function useSalesManager(
     setFilters(createInitialSalesFilters());
   }
 
-  async function selectSalesType(salesType: SalesSlipForm["salesType"]) {
-    updateSalesForm("salesType", salesType);
-    if (salesType !== "AUCTION" || auctionShipments.length > 0) return;
-    setLoadingAuctionShipments(true);
-    setErrorMessage(null);
-    try {
-      const options = await getAuctionShipmentOptions();
-      setAuctionShipments(options);
-      const first = options[0];
-      if (first) {
-        setSalesForm((current) => ({
-          ...current,
-          auctionShipmentId: String(first.id),
-          saleDate: first.shipmentDate,
-        }));
-      }
-    } catch (error) {
-      setErrorMessage(
-        error instanceof Error
-          ? error.message
-          : "출하 기록을 조회하지 못했습니다.",
-      );
-    } finally {
-      setLoadingAuctionShipments(false);
-    }
-  }
-
-  function selectAuctionShipment(shipmentId: string) {
-    const shipment = auctionShipments.find(
-      (option) => String(option.id) === shipmentId,
+  function selectSalesType(salesType: SalesSlipForm["salesType"]) {
+    const auctionPartner = partners.find(
+      (partner) => partner.partnerType === "AUCTION_HOUSE",
+    );
+    const directPartner = partners.find(
+      (partner) => partner.partnerType !== "AUCTION_HOUSE",
     );
     setSalesForm((current) => ({
       ...current,
-      auctionShipmentId: shipmentId,
-      saleDate: shipment?.shipmentDate ?? current.saleDate,
+      salesType,
+      partnerId:
+        salesType === "AUCTION"
+          ? auctionPartner
+            ? String(auctionPartner.id)
+            : ""
+          : directPartner
+            ? String(directPartner.id)
+            : current.partnerId,
+      paymentStatus: salesType === "AUCTION" ? "정산 대기" : "미입금",
+      salesStatus: salesType === "AUCTION" ? "출하 완료" : "작성중",
+      paymentMethod: salesType === "AUCTION" ? "경매 정산" : "",
+      items:
+        current.items.length > 0 ? current.items : [createEmptySalesItem()],
     }));
   }
 
@@ -171,10 +144,7 @@ export function useSalesManager(
 
   function selectBusinessPartner(partnerId: number) {
     setSelectedPartnerId(partnerId);
-    const partner = partners.find((item) => item.id === partnerId);
-    if (partner?.partnerType !== "AUCTION_HOUSE") {
-      updateSalesForm("partnerId", String(partnerId));
-    }
+    updateSalesForm("partnerId", String(partnerId));
   }
 
   async function handleCreateBusinessPartner(
@@ -216,13 +186,6 @@ export function useSalesManager(
         toCreateSalesSlipPayload(salesForm),
       );
       setSalesSlips((current) => [salesSlip, ...current]);
-      if (salesSlip.auctionShipmentId) {
-        setAuctionShipments((current) =>
-          current.filter(
-            (shipment) => shipment.id !== salesSlip.auctionShipmentId,
-          ),
-        );
-      }
       setSelectedSlipId(salesSlip.id);
       setShowCreateSlip(false);
       setSalesForm((current) => resetSalesSlipFormAfterSave(current));
@@ -255,8 +218,6 @@ export function useSalesManager(
     showCreateSlip,
     savingBusinessPartner,
     savingSlip,
-    auctionShipments,
-    loadingAuctionShipments,
     errorMessage,
     totalAmount,
     addSalesItem,
@@ -264,7 +225,6 @@ export function useSalesManager(
     selectBusinessPartner,
     selectSalesSlip: setSelectedSlipId,
     selectSalesType,
-    selectAuctionShipment,
     setActiveTab,
     setShowCreateSlip,
     resetFilters,

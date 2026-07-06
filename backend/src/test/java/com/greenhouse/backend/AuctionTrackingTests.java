@@ -45,7 +45,7 @@ class AuctionTrackingTests {
 
 	@Test
 	void tracksFailedThenSoldAuctionsWithPagination() throws Exception {
-		var lot = createLot(LocalDate.of(2026, 6, 1), "음성", "카틀레야 A", "특", 100);
+		var lot = createLot(LocalDate.of(2026, 6, 1), "태성", "카틀레야 A", "특", 100);
 		addResult(lot, LocalDate.of(2026, 6, 3), 1, 100, 0, "유찰", AuctionAttemptStatus.FAILED);
 		lot.applyResult(0, 0, true, false);
 		addResult(lot, LocalDate.of(2026, 6, 6), 2, 100, 10_000, null, AuctionAttemptStatus.SOLD);
@@ -73,29 +73,38 @@ class AuctionTrackingTests {
 
 	@Test
 	void confirmsReturnAndAdjustsQuantitiesWithHistory() {
-		var lot = createLot(LocalDate.of(2026, 6, 1), "양재", "호접란 A", "A", 50);
+		var lot = createLot(LocalDate.of(2026, 6, 1), "양재", "심비디움 A", "A", 50);
 		lot.applyResult(0, 50, false, true);
 		lotRepository.flush();
 
-		var partial = trackingService.confirmReturn(lot.getId(), new AuctionLotReturnRequest(20, LocalDate.of(2026, 6, 8), "관리자", "일부 도착"));
+		var partial = trackingService.confirmReturn(
+			lot.getId(),
+			new AuctionLotReturnRequest(20, LocalDate.of(2026, 6, 8), "관리자", "일부 반환")
+		);
 		assertThat(partial.currentStatus()).isEqualTo(AuctionLotStatus.PARTIALLY_RETURNED);
 		assertThat(partial.returnedQuantity()).isEqualTo(20);
 		assertThat(partial.waitingQuantity()).isEqualTo(30);
 		assertThat(partial.returnConfirmableQuantity()).isEqualTo(30);
 		assertThat(partial.returnConfirmedDate()).isEqualTo(LocalDate.of(2026, 6, 8));
 
-		var returned = trackingService.confirmReturn(lot.getId(), new AuctionLotReturnRequest(null, LocalDate.of(2026, 6, 9), "관리자", "나머지 도착"));
+		var returned = trackingService.confirmReturn(
+			lot.getId(),
+			new AuctionLotReturnRequest(null, LocalDate.of(2026, 6, 9), "관리자", "나머지 반환")
+		);
 		assertThat(returned.currentStatus()).isEqualTo(AuctionLotStatus.RETURNED);
 		assertThat(returned.returnedQuantity()).isEqualTo(50);
 
-		var adjusted = trackingService.adjust(lot.getId(), new AuctionLotAdjustmentRequest(10, 0, 40, "관리자", "실수량 확인"));
+		var adjusted = trackingService.adjust(
+			lot.getId(),
+			new AuctionLotAdjustmentRequest(10, 0, 40, "관리자", "수량 보정")
+		);
 		assertThat(adjusted.soldQuantity()).isEqualTo(10);
 		assertThat(adjusted.statusHistory()).hasSizeGreaterThanOrEqualTo(2);
 	}
 
 	@Test
 	void confirmsReturnFromReauctionWaiting() {
-		var lot = createLot(LocalDate.of(2026, 6, 1), "화성", "카틀레야 B", "A", 30);
+		var lot = createLot(LocalDate.of(2026, 6, 1), "수원", "카틀레야 B", "A", 30);
 		lot.applyResult(0, 0, true, false);
 		lotRepository.flush();
 
@@ -111,42 +120,46 @@ class AuctionTrackingTests {
 	}
 
 	@Test
-	void createsOneAuctionSalesSlipFromShipmentLots() throws Exception {
-		var auctionHouse = createAuctionHouse("음성");
-		var shipment = new AuctionShipment(LocalDate.of(2026, 7, 1), auctionHouse);
-		shipment.addLot(new AuctionShipmentLot("난", "카틀레야 A", "특", 2, 20));
-		shipment.addLot(new AuctionShipmentLot("난", "덴드로비움 B", "A", 3, 30));
-		shipmentRepository.saveAndFlush(shipment);
-
-		mockMvc.perform(get("/api/sales-slips/auction-shipments"))
-			.andExpect(status().isOk())
-			.andExpect(jsonPath("$.data[0].id").value(shipment.getId()))
-			.andExpect(jsonPath("$.data[0].lots.length()").value(2));
-
+	void createsAuctionShipmentAndLotsWhenAuctionSalesSlipIsCreated() throws Exception {
+		var auctionHouse = createAuctionHouse("태성");
 		String request = """
 			{
 			  "saleDate": "2026-07-05",
 			  "salesType": "AUCTION",
-			  "auctionShipmentId": %d,
-			  "items": []
+			  "partnerId": %d,
+			  "items": [
+			    {
+			      "itemName": "카틀레야 A",
+			      "genus": "절화",
+			      "spec": "특",
+			      "quantity": 20,
+			      "unitPrice": 0
+			    },
+			    {
+			      "itemName": "덴드로비움 B",
+			      "genus": "절화",
+			      "spec": "A",
+			      "quantity": 30,
+			      "unitPrice": 0
+			    }
+			  ]
 			}
-			""".formatted(shipment.getId());
+			""".formatted(auctionHouse.getId());
+
 		mockMvc.perform(post("/api/sales-slips")
 				.contentType(MediaType.APPLICATION_JSON)
 				.content(request))
 			.andExpect(status().isCreated())
 			.andExpect(jsonPath("$.data.salesType").value("AUCTION"))
-			.andExpect(jsonPath("$.data.auctionShipmentId").value(shipment.getId()))
-			.andExpect(jsonPath("$.data.partner.name").value("음성"))
+			.andExpect(jsonPath("$.data.auctionShipmentId").isNumber())
+			.andExpect(jsonPath("$.data.partner.name").value("태성"))
 			.andExpect(jsonPath("$.data.partner.partnerType").value("AUCTION_HOUSE"))
-			.andExpect(jsonPath("$.data.saleDate").value("2026-07-01"))
+			.andExpect(jsonPath("$.data.saleDate").value("2026-07-05"))
 			.andExpect(jsonPath("$.data.totalAmount").value(0))
 			.andExpect(jsonPath("$.data.items.length()").value(2));
 
-		mockMvc.perform(post("/api/sales-slips")
-				.contentType(MediaType.APPLICATION_JSON)
-				.content(request))
-			.andExpect(status().isBadRequest());
+		assertThat(shipmentRepository.findAll()).hasSize(1);
+		assertThat(lotRepository.findAll()).hasSize(2);
 	}
 
 	private AuctionShipmentLot createLot(
@@ -157,7 +170,7 @@ class AuctionTrackingTests {
 		int quantity
 	) {
 		var shipment = new AuctionShipment(shipmentDate, createAuctionHouse(market));
-		var lot = new AuctionShipmentLot("난", variety, grade, 1, quantity);
+		var lot = new AuctionShipmentLot("절화", variety, grade, 1, quantity);
 		shipment.addLot(lot);
 		shipmentRepository.saveAndFlush(shipment);
 		return lot;
@@ -186,7 +199,8 @@ class AuctionTrackingTests {
 			unitPrice,
 			quantity * unitPrice,
 			note,
-			AuctionInspectionStatus.NORMAL));
+			AuctionInspectionStatus.NORMAL
+		));
 		lot.addAttempt(attempt);
 	}
 }

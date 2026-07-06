@@ -21,18 +21,18 @@ export function SalesSlipItemEditor({
     <div className="rounded-md border border-[#d7ddd4] bg-[#f8faf7] p-3">
       <div className="grid gap-3 md:grid-cols-[minmax(0,1.2fr)_1fr_1fr_90px_110px_110px]">
         <TextField
-          label="품목명"
+          label="품종명"
           required
           value={item.itemName}
           onChange={(value) => onChange(index, "itemName", value)}
         />
         <TextField
-          label="속명"
+          label="품목명"
           value={item.genus}
           onChange={(value) => onChange(index, "genus", value)}
         />
         <TextField
-          label="규격"
+          label="등급/규격"
           value={item.spec}
           onChange={(value) => onChange(index, "spec", value)}
         />
@@ -59,7 +59,7 @@ export function SalesSlipItemEditor({
       </div>
       <div className="mt-2 flex gap-2">
         <TextField
-          label="품목 메모"
+          label="항목 메모"
           value={item.memo}
           onChange={(value) => onChange(index, "memo", value)}
         />
