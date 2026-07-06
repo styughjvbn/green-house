@@ -3,6 +3,7 @@ package com.greenhouse.backend;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -44,10 +45,35 @@ class AuctionSettlementTests {
 		var auctionHouse = partnerRepository.saveAndFlush(
 			new BusinessPartner("정산 경매장", PartnerType.AUCTION_HOUSE, null, null, null, null));
 		LocalDate auctionDate = LocalDate.of(2026, 7, 3);
+		mockMvc.perform(get("/api/business-partners/{partnerId}/settlement-settings", auctionHouse.getId()))
+			.andExpect(status().isOk())
+			.andExpect(jsonPath("$.data.settlementUnit").value("AUCTION_DATE"))
+			.andExpect(jsonPath("$.data.paymentDelayDays").value(0));
+
+		mockMvc.perform(put("/api/business-partners/{partnerId}/settlement-settings", auctionHouse.getId())
+				.contentType("application/json")
+				.content("""
+					{
+					  "settlementUnit": "AUCTION_DATE",
+					  "paymentDelayDays": 3,
+					  "paymentDayMode": "BUSINESS_DAY",
+					  "autoMatchEnabled": true,
+					  "autoSettleEnabled": false,
+					  "amountTolerance": 1000,
+					  "depositorAliases": [" 정산경매 ", "정산경매"],
+					  "allowPrepayment": false,
+					  "creditAutoApplyEnabled": false,
+					  "ruleJson": {"auctionDays": ["MON", "THU"]},
+					  "memo": "경매장 설정"
+					}
+					"""))
+			.andExpect(status().isOk())
+			.andExpect(jsonPath("$.data.depositorAliases.length()").value(1))
+			.andExpect(jsonPath("$.data.ruleJson.auctionDays[0]").value("MON"));
 
 		createResult(auctionHouse, LocalDate.of(2026, 7, 1), auctionDate, "카틀레야", 10, 12_000);
-		createResult(auctionHouse, LocalDate.of(2026, 7, 2), auctionDate, "호접란", 5, 20_000);
-		createResult(auctionHouse, LocalDate.of(2026, 7, 2), auctionDate, "유찰란", 3, 0);
+		createResult(auctionHouse, LocalDate.of(2026, 7, 2), auctionDate, "덴드로비움", 5, 20_000);
+		createResult(auctionHouse, LocalDate.of(2026, 7, 2), auctionDate, "신비디움", 3, 0);
 
 		var rebuilt = settlementService.rebuild(auctionHouse.getId(), auctionDate);
 
@@ -55,6 +81,7 @@ class AuctionSettlementTests {
 		assertThat(rebuilt.grossAmount()).isEqualTo(220_000L);
 		assertThat(rebuilt.expectedDepositAmount()).isEqualTo(220_000L);
 		assertThat(rebuilt.remainingAmount()).isEqualTo(220_000L);
+		assertThat(rebuilt.expectedPaymentDate()).isEqualTo(LocalDate.of(2026, 7, 8));
 		assertThat(rebuilt.lines()).hasSize(2);
 		assertThat(rebuilt.lines()).extracting(line -> line.shipmentDate())
 			.containsExactlyInAnyOrder(LocalDate.of(2026, 7, 1), LocalDate.of(2026, 7, 2));
