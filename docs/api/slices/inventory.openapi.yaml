@@ -1,0 +1,745 @@
+openapi: 3.1.0
+info:
+  title: Greenhouse API Slice - 품종/입고 관리
+  version: 0.0.1
+  description: 품종 조회/수정과 입고 기록 관리 API
+servers:
+- url: http://localhost:8080
+  description: Generated server url
+paths:
+  /api/varieties:
+    get:
+      tags:
+      - variety-controller
+      operationId: getVarieties
+      parameters:
+      - name: keyword
+        in: query
+        required: false
+        schema:
+          type: string
+      - name: genus
+        in: query
+        required: false
+        schema:
+          type: string
+      - name: saleEnabled
+        in: query
+        required: false
+        schema:
+          type: boolean
+      - name: active
+        in: query
+        required: false
+        schema:
+          type: boolean
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponseListVarietyResponse'
+    post:
+      tags:
+      - variety-controller
+      operationId: create_1
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/VarietyCreateRequest'
+        required: true
+      responses:
+        '201':
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponseVarietyResponse'
+  /api/varieties/{varietyId}:
+    get:
+      tags:
+      - variety-controller
+      operationId: getVariety
+      parameters:
+      - name: varietyId
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: int64
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponseVarietyResponse'
+    patch:
+      tags:
+      - variety-controller
+      operationId: update_2
+      parameters:
+      - name: varietyId
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: int64
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/VarietyUpdateRequest'
+        required: true
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponseVarietyResponse'
+  /api/varieties/{varietyId}/deactivate:
+    patch:
+      tags:
+      - variety-controller
+      operationId: deactivate
+      parameters:
+      - name: varietyId
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: int64
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponseVarietyResponse'
+  /api/varieties/{varietyId}/orchid-groups:
+    get:
+      tags:
+      - variety-controller
+      operationId: getOrchidGroups_1
+      parameters:
+      - name: varietyId
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: int64
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponseListVarietyConnectedOrchidGroupResponse'
+  /api/inbound-records:
+    get:
+      tags:
+      - inbound-record-controller
+      operationId: getInboundRecords
+      parameters:
+      - name: from
+        in: query
+        required: false
+        schema:
+          type: string
+          format: date
+      - name: to
+        in: query
+        required: false
+        schema:
+          type: string
+          format: date
+      - name: inboundType
+        in: query
+        required: false
+        schema:
+          type: string
+          enum:
+          - FLASK_SEEDLING
+          - POTTED_SEEDLING
+          - PRODUCT_POT
+          - SAMPLE
+          - ETC
+      - name: status
+        in: query
+        required: false
+        schema:
+          type: string
+          enum:
+          - TEMP_STORED
+          - POTTING_PENDING
+          - POTTED
+          - PLACED
+          - CANCELED
+      - name: variety
+        in: query
+        required: false
+        schema:
+          type: string
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponseListInboundRecordResponse'
+    post:
+      tags:
+      - inbound-record-controller
+      operationId: create_3
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/InboundRecordCreateRequest'
+        required: true
+      responses:
+        '201':
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponseInboundRecordResponse'
+  /api/inbound-records/{inboundRecordId}:
+    get:
+      tags:
+      - inbound-record-controller
+      operationId: getInboundRecord
+      parameters:
+      - name: inboundRecordId
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: int64
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponseInboundRecordResponse'
+    patch:
+      tags:
+      - inbound-record-controller
+      operationId: update_4
+      parameters:
+      - name: inboundRecordId
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: int64
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/InboundRecordUpdateRequest'
+        required: true
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponseInboundRecordResponse'
+  /api/inbound-records/{inboundRecordId}/potting:
+    post:
+      tags:
+      - inbound-record-controller
+      operationId: potting
+      parameters:
+      - name: inboundRecordId
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: int64
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/InboundRecordPottingRequest'
+        required: true
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponseInboundRecordResponse'
+  /api/inbound-records/{inboundRecordId}/cancel:
+    post:
+      tags:
+      - inbound-record-controller
+      operationId: cancel
+      parameters:
+      - name: inboundRecordId
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: int64
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/InboundRecordCancelRequest'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponseInboundRecordResponse'
+components:
+  schemas:
+    ApiResponseInboundRecordResponse:
+      type: object
+      properties:
+        data:
+          $ref: '#/components/schemas/InboundRecordResponse'
+        message:
+          type: string
+    ApiResponseListInboundRecordResponse:
+      type: object
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/InboundRecordResponse'
+        message:
+          type: string
+    ApiResponseListVarietyConnectedOrchidGroupResponse:
+      type: object
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/VarietyConnectedOrchidGroupResponse'
+        message:
+          type: string
+    ApiResponseListVarietyResponse:
+      type: object
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/VarietyResponse'
+        message:
+          type: string
+    ApiResponseVarietyResponse:
+      type: object
+      properties:
+        data:
+          $ref: '#/components/schemas/VarietyResponse'
+        message:
+          type: string
+    InboundNewVarietyRequest:
+      type: object
+      properties:
+        genus:
+          type: string
+          maxLength: 100
+          minLength: 0
+        name:
+          type: string
+          maxLength: 150
+          minLength: 0
+        defaultPotSize:
+          type: string
+          maxLength: 50
+          minLength: 0
+        memo:
+          type: string
+          maxLength: 1000
+          minLength: 0
+      required:
+      - genus
+      - name
+    InboundRecordCancelRequest:
+      type: object
+      properties:
+        memo:
+          type: string
+          maxLength: 1000
+          minLength: 0
+    InboundRecordCreateRequest:
+      type: object
+      properties:
+        inboundDate:
+          type: string
+          format: date
+        inboundType:
+          type: string
+          enum:
+          - FLASK_SEEDLING
+          - POTTED_SEEDLING
+          - PRODUCT_POT
+          - SAMPLE
+          - ETC
+        varietyId:
+          type: integer
+          format: int64
+        newVariety:
+          $ref: '#/components/schemas/InboundNewVarietyRequest'
+        bottleCount:
+          type: integer
+          format: int32
+          minimum: 1
+        estimatedQuantity:
+          type: integer
+          format: int32
+          minimum: 1
+        actualQuantity:
+          type: integer
+          format: int32
+          minimum: 1
+        tempLocation:
+          type: string
+          maxLength: 255
+          minLength: 0
+        pottingDueDate:
+          type: string
+          format: date
+        potSize:
+          type: string
+          maxLength: 50
+          minLength: 0
+        ageYear:
+          type: integer
+          format: int32
+          minimum: 0
+        growthStage:
+          type: string
+          maxLength: 100
+          minLength: 0
+        placementType:
+          type: string
+          maxLength: 100
+          minLength: 0
+        trayCount:
+          type: integer
+          format: int32
+          minimum: 0
+        bedZoneId:
+          type: integer
+          format: int64
+        status:
+          type: string
+          enum:
+          - TEMP_STORED
+          - POTTING_PENDING
+          - POTTED
+          - PLACED
+          - CANCELED
+        worker:
+          type: string
+          maxLength: 50
+          minLength: 0
+        memo:
+          type: string
+          maxLength: 1000
+          minLength: 0
+      required:
+      - inboundDate
+      - inboundType
+    InboundRecordPottingRequest:
+      type: object
+      properties:
+        pottingDate:
+          type: string
+          format: date
+        actualQuantity:
+          type: integer
+          format: int32
+          minimum: 1
+        potSize:
+          type: string
+          maxLength: 50
+          minLength: 0
+        ageYear:
+          type: integer
+          format: int32
+          minimum: 0
+        growthStage:
+          type: string
+          maxLength: 100
+          minLength: 0
+        placementType:
+          type: string
+          maxLength: 100
+          minLength: 0
+        trayCount:
+          type: integer
+          format: int32
+          minimum: 0
+        bedZoneId:
+          type: integer
+          format: int64
+        worker:
+          type: string
+          maxLength: 50
+          minLength: 0
+        memo:
+          type: string
+          maxLength: 1000
+          minLength: 0
+      required:
+      - actualQuantity
+      - bedZoneId
+      - pottingDate
+    InboundRecordResponse:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: int64
+        inboundDate:
+          type: string
+          format: date
+        inboundType:
+          type: string
+        varietyId:
+          type: integer
+          format: int64
+        genus:
+          type: string
+        varietyName:
+          type: string
+        status:
+          type: string
+        bottleCount:
+          type: integer
+          format: int32
+        estimatedQuantity:
+          type: integer
+          format: int32
+        actualQuantity:
+          type: integer
+          format: int32
+        tempLocation:
+          type: string
+        pottingDueDate:
+          type: string
+          format: date
+        pottingDate:
+          type: string
+          format: date
+        potSize:
+          type: string
+        ageYear:
+          type: integer
+          format: int32
+        growthStage:
+          type: string
+        placementType:
+          type: string
+        trayCount:
+          type: integer
+          format: int32
+        bedZoneId:
+          type: integer
+          format: int64
+        currentLocation:
+          type: string
+        createdOrchidGroupId:
+          type: integer
+          format: int64
+        worker:
+          type: string
+        memo:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+    InboundRecordUpdateRequest:
+      type: object
+      properties:
+        inboundDate:
+          type: string
+          format: date
+        bottleCount:
+          type: integer
+          format: int32
+          minimum: 1
+        estimatedQuantity:
+          type: integer
+          format: int32
+          minimum: 1
+        actualQuantity:
+          type: integer
+          format: int32
+          minimum: 1
+        tempLocation:
+          type: string
+          maxLength: 255
+          minLength: 0
+        pottingDueDate:
+          type: string
+          format: date
+        potSize:
+          type: string
+          maxLength: 50
+          minLength: 0
+        ageYear:
+          type: integer
+          format: int32
+          minimum: 0
+        growthStage:
+          type: string
+          maxLength: 100
+          minLength: 0
+        placementType:
+          type: string
+          maxLength: 100
+          minLength: 0
+        trayCount:
+          type: integer
+          format: int32
+          minimum: 0
+        worker:
+          type: string
+          maxLength: 50
+          minLength: 0
+        memo:
+          type: string
+          maxLength: 1000
+          minLength: 0
+      required:
+      - inboundDate
+    VarietyConnectedOrchidGroupResponse:
+      type: object
+      properties:
+        orchidGroupId:
+          type: integer
+          format: int64
+        location:
+          type: string
+        quantity:
+          type: integer
+          format: int32
+        status:
+          type: string
+        latestWorkDate:
+          type: string
+          format: date
+    VarietyCreateRequest:
+      type: object
+      properties:
+        genus:
+          type: string
+          maxLength: 100
+          minLength: 0
+        name:
+          type: string
+          maxLength: 150
+          minLength: 0
+        alias:
+          type: string
+          maxLength: 150
+          minLength: 0
+        defaultPotSize:
+          type: string
+          maxLength: 50
+          minLength: 0
+        saleEnabled:
+          type: boolean
+        description:
+          type: string
+          maxLength: 2000
+          minLength: 0
+        memo:
+          type: string
+          maxLength: 2000
+          minLength: 0
+      required:
+      - genus
+      - name
+    VarietyResponse:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: int64
+        code:
+          type: string
+        genus:
+          type: string
+        name:
+          type: string
+        alias:
+          type: string
+        defaultPotSize:
+          type: string
+        saleEnabled:
+          type: boolean
+        active:
+          type: boolean
+        description:
+          type: string
+        memo:
+          type: string
+        connectedGroupCount:
+          type: integer
+          format: int64
+        totalQuantity:
+          type: integer
+          format: int64
+        saleableQuantity:
+          type: integer
+          format: int64
+        recentInboundDate:
+          type: string
+          format: date
+        recentWorkDate:
+          type: string
+          format: date
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+    VarietyUpdateRequest:
+      type: object
+      properties:
+        genus:
+          type: string
+          maxLength: 100
+          minLength: 0
+        name:
+          type: string
+          maxLength: 150
+          minLength: 0
+        alias:
+          type: string
+          maxLength: 150
+          minLength: 0
+        defaultPotSize:
+          type: string
+          maxLength: 50
+          minLength: 0
+        saleEnabled:
+          type: boolean
+        description:
+          type: string
+          maxLength: 2000
+          minLength: 0
+        memo:
+          type: string
+          maxLength: 2000
+          minLength: 0
+      required:
+      - genus
+      - name

@@ -7,7 +7,7 @@
 
 - 기준 명세: `docs/api/openapi.yaml`
 - OpenAPI 버전: `3.1.0`
-- 현재 구현 API: `47` operations / `39` path entries
+- 현재 구현 API: `60` operations / `48` path entries
 - schema 수: `87`
 - Base URL: `/api`
 - 공통 응답: `ApiResponse*` 래퍼 사용

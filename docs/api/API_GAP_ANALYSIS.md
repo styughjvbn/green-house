@@ -5,8 +5,8 @@
 ## 기준
 
 - 실제 구현 기준: `docs/api/openapi.yaml`
-- 실제 구현 operations: `47`
-- 실제 구현 path entries: `39`
+- 실제 구현 operations: `60`
+- 실제 구현 path entries: `48`
 - 과거 md/추가안에서 수집한 endpoint 후보: `69`
 - 후보 중 OpenAPI와 매칭되는 endpoint: `44`
 - 후보 중 OpenAPI에 없는 endpoint: `25`
