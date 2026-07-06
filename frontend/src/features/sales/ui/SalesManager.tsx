@@ -1,5 +1,7 @@
-﻿"use client";
+"use client";
 
+import { useEffect } from "react";
+import { useSearchParams } from "next/navigation";
 import { useSalesManager } from "../model/useSalesManager";
 import type { SalesManagerProps } from "../model/types";
 import { BusinessPartnerCreateForm } from "./components/BusinessPartnerCreateForm";
@@ -9,7 +11,6 @@ import { SalesFilters } from "./components/SalesFilters";
 import { SalesSlipCreateForm } from "./components/SalesSlipCreateForm";
 import { SalesSlipDetail } from "./components/SalesSlipDetail";
 import { SalesSlipList } from "./components/SalesSlipList";
-import { SalesToolbar } from "./components/SalesToolbar";
 import { AuctionSettlementView } from "./AuctionSettlementView";
 import { AuctionTrackingView } from "./AuctionTrackingView";
 
@@ -21,15 +22,27 @@ export function SalesManager({
   initialAuctionSettlements,
 }: SalesManagerProps) {
   const sales = useSalesManager(initialBusinessPartners, initialSalesSlips);
+  const searchParams = useSearchParams();
+  const activeTab = searchParams.get("tab") ?? "SLIPS";
+  const createSlip = searchParams.get("createSlip") === "1";
+
+  useEffect(() => {
+    if (
+      activeTab === "SLIPS" ||
+      activeTab === "AUCTION" ||
+      activeTab === "SETTLEMENT" ||
+      activeTab === "PARTNERS"
+    ) {
+      sales.setActiveTab(activeTab);
+    }
+  }, [activeTab, sales]);
+
+  useEffect(() => {
+    sales.setShowCreateSlip(createSlip);
+  }, [createSlip, sales]);
 
   return (
     <div className="space-y-4">
-      <SalesToolbar
-        activeTab={sales.activeTab}
-        onCreateSlip={() => sales.setShowCreateSlip((current) => !current)}
-        onTabChange={sales.setActiveTab}
-      />
-
       {sales.activeTab === "SLIPS" ? (
         <>
           <SalesFilters

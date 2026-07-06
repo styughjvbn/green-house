@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useSearchParams } from "next/navigation";
 import { PageHeader } from "@/widgets/page-header";
 import {
   BarChart3,
@@ -25,12 +25,12 @@ const pageMeta = [
   {
     href: "/farm-status",
     title: "농장 현황",
-    description: "전체 농장 구조와 난 묶음 현황을 한눈에 확인하세요.",
+    description: "전체 농장 구조와 묶음 현황을 한눈에 확인하세요.",
   },
   {
     href: "/orchid-groups",
     title: "난 묶음 관리",
-    description: "난 묶음 정보를 등록하고 관리하세요.",
+    description: "난 묶음의 위치와 상태를 등록하고 관리하세요.",
   },
   {
     href: "/work-records",
@@ -45,25 +45,25 @@ const pageMeta = [
   {
     href: "/print",
     title: "출력",
-    description: "라벨, 전표, 문서를 출력하세요.",
+    description: "출하표, 전표, 문서를 출력하세요.",
   },
   {
     href: "/analytics",
     title: "분석",
-    description:
-      "출하, 판매, 농장 현황 데이터를 분석하여 운영 의사결정을 도와드립니다.",
+    description: "출하, 판매, 농장 현황 데이터를 분석하세요.",
   },
   {
     href: "/inventory",
     title: "품종/자재 관리",
-    description: "난 품종과 농약, 비료, 자재 정보를 등록하고 관리하세요.",
+    description: "품종과 자재, 비료 정보를 등록하고 관리하세요.",
   },
   {
     href: "/settings",
     title: "설정",
-    description: "시스템 설정을 관리하세요.",
+    description: "서비스 설정을 관리하세요.",
   },
 ];
+
 function getCurrentPageMeta(pathname: string) {
   return (
     pageMeta.find((item) => {
@@ -73,8 +73,8 @@ function getCurrentPageMeta(pathname: string) {
 
       return pathname === item.href || pathname.startsWith(`${item.href}/`);
     }) ?? {
-      title: "난 농장 관리",
-      description: "난 농장 관리 시스템",
+      title: "판매 관리",
+      description: "판매 관리 시스템입니다.",
     }
   );
 }
@@ -121,9 +121,35 @@ function NavItem({
   );
 }
 
+function SalesSubNavItem({
+  href,
+  label,
+  active,
+}: {
+  href: string;
+  label: string;
+  active: boolean;
+}) {
+  return (
+    <Link
+      href={href}
+      className={`block rounded-md px-3 py-2 text-sm font-medium transition ${
+        active
+          ? "bg-white/12 text-white"
+          : "text-[#c8d8cd] hover:bg-white/10 hover:text-white"
+      }`}
+    >
+      {label}
+    </Link>
+  );
+}
+
 export function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
+  const searchParams = useSearchParams();
   const currentPage = getCurrentPageMeta(pathname);
+  const salesTab = searchParams.get("tab") ?? "SLIPS";
+  const isSalesPage = pathname.startsWith("/sales");
 
   return (
     <div className="flex min-h-screen bg-[#f7f8f5]">
@@ -143,13 +169,43 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
         <nav className="mt-8 space-y-3">
           {navigation.map((item) => (
-            <NavItem
-              key={item.href}
-              href={item.href}
-              label={item.label}
-              icon={item.icon}
-              active={pathname === item.href}
-            />
+            <div key={item.href}>
+              <NavItem
+                href={item.href}
+                label={item.label}
+                icon={item.icon}
+                active={
+                  item.href === "/sales"
+                    ? pathname.startsWith("/sales")
+                    : pathname === item.href
+                }
+              />
+
+              {item.href === "/sales" && pathname.startsWith("/sales") ? (
+                <div className="mt-2 space-y-1 pl-3">
+                  <SalesSubNavItem
+                    href="/sales?tab=SLIPS"
+                    label="판매 전표"
+                    active={salesTab === "SLIPS"}
+                  />
+                  <SalesSubNavItem
+                    href="/sales?tab=AUCTION"
+                    label="출하·경매 추적"
+                    active={salesTab === "AUCTION"}
+                  />
+                  <SalesSubNavItem
+                    href="/sales?tab=SETTLEMENT"
+                    label="경매 정산"
+                    active={salesTab === "SETTLEMENT"}
+                  />
+                  <SalesSubNavItem
+                    href="/sales?tab=PARTNERS"
+                    label="거래처 관리"
+                    active={salesTab === "PARTNERS"}
+                  />
+                </div>
+              ) : null}
+            </div>
           ))}
         </nav>
       </aside>
@@ -161,7 +217,10 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           <nav className="mt-3 flex gap-2 overflow-x-auto">
             {navigation.map((item) => {
               const Icon = item.icon;
-              const active = pathname === item.href;
+              const active =
+                item.href === "/sales"
+                  ? pathname.startsWith("/sales")
+                  : pathname === item.href;
 
               return (
                 <Link
@@ -179,7 +238,31 @@ export function AppShell({ children }: { children: React.ReactNode }) {
               );
             })}
           </nav>
+
+          {isSalesPage ? (
+            <div className="mt-3 flex gap-2 overflow-x-auto">
+              {[
+                ["SLIPS", "판매 전표"],
+                ["AUCTION", "출하·경매 추적"],
+                ["SETTLEMENT", "경매 정산"],
+                ["PARTNERS", "거래처 관리"],
+              ].map(([tab, label]) => (
+                <Link
+                  key={tab}
+                  href={`/sales?tab=${tab}`}
+                  className={`shrink-0 rounded-md px-3 py-2 text-sm font-medium ${
+                    salesTab === tab
+                      ? "bg-[#dcefe1] text-[#1c5f33]"
+                      : "bg-[#f0f3ef] text-[#435047]"
+                  }`}
+                >
+                  {label}
+                </Link>
+              ))}
+            </div>
+          ) : null}
         </header>
+
         <PageHeader
           title={currentPage.title}
           description={currentPage.description}
