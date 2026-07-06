@@ -414,3 +414,45 @@ export type AuctionTrackingSummary = {
   reviewRequiredCount: number;
   totalAmount: number;
 };
+
+export type AuctionSettlementStatus =
+  | "CREATED"
+  | "PAYMENT_WAITING"
+  | "PARTIALLY_PAID"
+  | "PAID"
+  | "AMOUNT_MISMATCH"
+  | "REVIEW_REQUIRED"
+  | "CANCELLED";
+
+export type AuctionSettlementLine = {
+  id: number;
+  auctionResultLineId: number;
+  auctionShipmentLotId: number;
+  shipmentDate: string;
+  varietyName: string;
+  shipmentGrade: string | null;
+  quantity: number;
+  unitPrice: number;
+  amount: number;
+  status: "UNPAID" | "PAID" | "PARTIALLY_PAID" | "EXCLUDED" | "REVIEW_REQUIRED";
+};
+
+export type AuctionSettlement = {
+  id: number;
+  auctionHouseId: number;
+  auctionHouseName: string;
+  auctionDate: string;
+  resultReceivedAt: string | null;
+  expectedPaymentDate: string | null;
+  grossAmount: number;
+  feeAmount: number;
+  deductionAmount: number;
+  expectedDepositAmount: number;
+  paidAmount: number;
+  remainingAmount: number;
+  status: AuctionSettlementStatus;
+  memo: string | null;
+  confirmedAt: string | null;
+  confirmedBy: string | null;
+  lines: AuctionSettlementLine[];
+};

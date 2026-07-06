@@ -17,6 +17,7 @@ export function SalesManager({
   initialSalesSlips,
   initialAuctionPage,
   initialAuctionSummary,
+  initialAuctionSettlements,
 }: SalesManagerProps) {
   const sales = useSalesManager(initialBusinessPartners, initialSalesSlips);
 
@@ -71,7 +72,7 @@ export function SalesManager({
           initialSummary={initialAuctionSummary}
         />
       ) : sales.activeTab === "SETTLEMENT" ? (
-        <AuctionSettlementView lots={initialAuctionPage.content} />
+        <AuctionSettlementView initialSettlements={initialAuctionSettlements} />
       ) : (
         <div className="grid gap-4 xl:grid-cols-[420px_minmax(0,1fr)]">
           <BusinessPartnerCreateForm

@@ -1,10 +1,13 @@
 ﻿import type { BusinessPartner, SalesSlip } from "@/entities/farm/types";
 
+import type { AuctionSettlement } from "@/entities/farm/types";
+
 export type SalesManagerProps = {
   initialBusinessPartners: BusinessPartner[];
   initialSalesSlips: SalesSlip[];
   initialAuctionPage: import("@/entities/farm/types").AuctionLotPage;
   initialAuctionSummary: import("@/entities/farm/types").AuctionTrackingSummary;
+  initialAuctionSettlements: AuctionSettlement[];
 };
 
 export type BusinessPartnerForm = {

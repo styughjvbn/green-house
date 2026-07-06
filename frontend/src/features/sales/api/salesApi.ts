@@ -6,6 +6,8 @@ import type {
   AuctionLotStatus,
   AuctionTrackingSummary,
   AuctionShipmentOption,
+  AuctionSettlement,
+  AuctionSettlementStatus,
 } from "@/entities/farm/types";
 import type {
   AuctionFilterState,
@@ -73,6 +75,35 @@ export function getAuctionLots(
 
 export function getAuctionTrackingSummary() {
   return fetchApi<AuctionTrackingSummary>("/auction-tracking/summary");
+}
+
+export function getAuctionSettlements(filters?: {
+  auctionHouseId?: number;
+  from?: string;
+  to?: string;
+  status?: AuctionSettlementStatus;
+}) {
+  const params = new URLSearchParams();
+  Object.entries(filters ?? {}).forEach(([key, value]) => {
+    if (value != null && value !== "") params.set(key, String(value));
+  });
+  const query = params.size > 0 ? `?${params}` : "";
+  return fetchApi<AuctionSettlement[]>(`/auction-settlements${query}`);
+}
+
+export function rebuildAuctionSettlement(
+  auctionHouseId: number,
+  auctionDate: string,
+) {
+  const params = new URLSearchParams({
+    auctionHouseId: String(auctionHouseId),
+    auctionDate,
+  });
+  return requestJson<AuctionSettlement>(
+    `/auction-settlements/rebuild?${params}`,
+    { method: "POST" },
+    "경매 정산을 다시 계산하지 못했습니다.",
+  );
 }
 
 export function confirmAuctionReturn(

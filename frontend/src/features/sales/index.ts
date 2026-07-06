@@ -7,6 +7,8 @@ export {
   getAuctionShipmentOptions,
   getAuctionLots,
   getAuctionTrackingSummary,
+  getAuctionSettlements,
+  rebuildAuctionSettlement,
   createBusinessPartner,
   createSalesSlip,
 } from "./api/salesApi";
