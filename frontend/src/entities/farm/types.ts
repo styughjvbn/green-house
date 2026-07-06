@@ -375,11 +375,17 @@ export type AuctionResultLine = {
   inspectionStatus: AuctionInspectionStatus;
 };
 
+export type AuctionAttemptStatus =
+  | "SOLD"
+  | "FAILED"
+  | "PARTIALLY_SOLD"
+  | "RETURN_INFERRED";
+
 export type AuctionAttempt = {
   id: number;
   auctionDate: string;
   attemptNo: number;
-  attemptStatus: string;
+  attemptStatus: AuctionAttemptStatus;
   failedReason: string | null;
   memo: string | null;
   resultLines: AuctionResultLine[];

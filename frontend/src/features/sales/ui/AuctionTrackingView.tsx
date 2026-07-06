@@ -48,6 +48,7 @@ export function AuctionTrackingView({
           key={tracking.selectedLot?.id ?? "empty"}
           lot={tracking.selectedLot}
           loading={tracking.loading}
+          onAddResult={tracking.addResult}
           onConfirmReturn={tracking.confirmReturn}
           onAdjust={tracking.adjustQuantity}
         />

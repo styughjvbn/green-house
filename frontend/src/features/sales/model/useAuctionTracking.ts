@@ -7,10 +7,15 @@ import type {
 import {
   adjustAuctionQuantity,
   confirmAuctionReturn,
+  createAuctionResult,
   getAuctionLots,
   getAuctionTrackingSummary,
 } from "../api/salesApi";
 import type { AuctionFilterState } from "./types";
+import type {
+  AuctionAttemptStatus,
+  AuctionInspectionStatus,
+} from "@/entities/farm/types";
 
 const emptyFilters: AuctionFilterState = {
   from: "",
@@ -129,6 +134,32 @@ export function useAuctionTracking(
     );
   }
 
+  async function addResult(payload: {
+    auctionDate: string;
+    attemptStatus: AuctionAttemptStatus;
+    failedReason: string | null;
+    memo: string | null;
+    resultLines?: Array<{
+      auctionGrade: string | null;
+      quantity: number;
+      unitPrice: number;
+      note: string | null;
+      inspectionStatus: AuctionInspectionStatus | null;
+    }>;
+  }) {
+    if (!selectedLot) return;
+    await mutate(() =>
+      createAuctionResult(selectedLot.id, {
+        auctionDate: payload.auctionDate,
+        attemptNo: null,
+        attemptStatus: payload.attemptStatus,
+        failedReason: payload.failedReason,
+        memo: payload.memo,
+        resultLines: payload.resultLines,
+      }),
+    );
+  }
+
   async function mutate(request: () => Promise<AuctionLot>) {
     setLoading(true);
     setError(null);
@@ -168,6 +199,7 @@ export function useAuctionTracking(
     changePageSize,
     confirmReturn,
     adjustQuantity,
+    addResult,
   };
 }
 

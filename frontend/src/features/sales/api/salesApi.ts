@@ -7,6 +7,8 @@ import type {
 } from "@/entities/farm/types";
 import type {
   AuctionLot,
+  AuctionAttemptStatus,
+  AuctionInspectionStatus,
   AuctionLotPage,
   AuctionLotStatus,
   AuctionTrackingSummary,
@@ -199,6 +201,34 @@ export function adjustAuctionQuantity(
       body: JSON.stringify(payload),
     },
     "수량을 보정하지 못했습니다.",
+  );
+}
+
+export function createAuctionResult(
+  lotId: number,
+  payload: {
+    auctionDate: string;
+    attemptNo: number | null;
+    attemptStatus: AuctionAttemptStatus;
+    failedReason: string | null;
+    memo: string | null;
+    resultLines?: Array<{
+      auctionGrade: string | null;
+      quantity: number;
+      unitPrice: number;
+      note: string | null;
+      inspectionStatus: AuctionInspectionStatus | null;
+    }>;
+  },
+) {
+  return requestJson<AuctionLot>(
+    `/auction-lots/${lotId}/results`,
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    },
+    "경매 결과를 저장하지 못했습니다.",
   );
 }
 
