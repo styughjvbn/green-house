@@ -205,6 +205,55 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                   />
                 </div>
               ) : null}
+
+              {item.href === "/analytics" &&
+              pathname.startsWith("/analytics") ? (
+                <div className="mt-2 space-y-1 pl-3">
+                  <SalesSubNavItem
+                    href="/analytics?tab=SALES"
+                    label="매출/출하"
+                    active={salesTab === "SALES"}
+                  />
+                  <SalesSubNavItem
+                    href="/analytics?tab=VARIETY"
+                    label="품종 분석"
+                    active={salesTab === "VARIETY"}
+                  />
+                  <SalesSubNavItem
+                    href="/analytics?tab=CUSTOMER"
+                    label="거래처 분석"
+                    active={salesTab === "CUSTOMER"}
+                  />
+                  <SalesSubNavItem
+                    href="/analytics?tab=SPACE"
+                    label="농장 공간"
+                    active={salesTab === "SPACE"}
+                  />
+                  <SalesSubNavItem
+                    href="/analytics?tab=WORK"
+                    label="작업/상태"
+                    active={salesTab === "WORK"}
+                  />
+                </div>
+              ) : null}
+
+              {item.href === "/inventory" &&
+              pathname.startsWith("/inventory") ? (
+                <div className="mt-2 space-y-1 pl-3">
+                  <Link
+                    href="/inventory#variety-management"
+                    className="block rounded-md px-3 py-2 text-sm font-medium text-[#c8d8cd] hover:bg-white/10 hover:text-white"
+                  >
+                    품종 관리
+                  </Link>
+                  <Link
+                    href="/inventory#material-management"
+                    className="block rounded-md px-3 py-2 text-sm font-medium text-[#c8d8cd] hover:bg-white/10 hover:text-white"
+                  >
+                    자재 관리
+                  </Link>
+                </div>
+              ) : null}
             </div>
           ))}
         </nav>
@@ -259,6 +308,47 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                   {label}
                 </Link>
               ))}
+            </div>
+          ) : null}
+
+          {pathname.startsWith("/analytics") ? (
+            <div className="mt-3 flex gap-2 overflow-x-auto">
+              {[
+                ["SALES", "매출/출하"],
+                ["VARIETY", "품종 분석"],
+                ["CUSTOMER", "거래처 분석"],
+                ["SPACE", "농장 공간"],
+                ["WORK", "작업/상태"],
+              ].map(([tab, label]) => (
+                <Link
+                  key={tab}
+                  href={`/analytics?tab=${tab}`}
+                  className={`shrink-0 rounded-md px-3 py-2 text-sm font-medium ${
+                    salesTab === tab
+                      ? "bg-[#dcefe1] text-[#1c5f33]"
+                      : "bg-[#f0f3ef] text-[#435047]"
+                  }`}
+                >
+                  {label}
+                </Link>
+              ))}
+            </div>
+          ) : null}
+
+          {pathname.startsWith("/inventory") ? (
+            <div className="mt-3 flex gap-2 overflow-x-auto">
+              <Link
+                href="/inventory#variety-management"
+                className="shrink-0 rounded-md bg-[#dcefe1] px-3 py-2 text-sm font-medium text-[#1c5f33]"
+              >
+                품종 관리
+              </Link>
+              <Link
+                href="/inventory#material-management"
+                className="shrink-0 rounded-md bg-[#f0f3ef] px-3 py-2 text-sm font-medium text-[#435047]"
+              >
+                자재 관리
+              </Link>
             </div>
           ) : null}
         </header>

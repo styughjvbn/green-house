@@ -1,7 +1,8 @@
-﻿"use client";
+"use client";
 
-import { Download, ChevronDown } from "lucide-react";
+import { ChevronDown, Download } from "lucide-react";
 import { useMemo, useState } from "react";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { createAnalyticsViewModel } from "../lib/analyticsView";
 import type {
   AnalyticsFilters,
@@ -11,14 +12,6 @@ import type {
 import { AnalyticsFilters as FilterBar } from "./components/AnalyticsFilters";
 import { AnalyticsSummary } from "./components/AnalyticsSummary";
 import { AnalyticsTabContent } from "./components/AnalyticsTabContent";
-
-const TABS: { id: AnalyticsTab; label: string }[] = [
-  { id: "SALES", label: "매출/출하" },
-  { id: "VARIETY", label: "품종 분석" },
-  { id: "CUSTOMER", label: "거래처 분석" },
-  { id: "SPACE", label: "농장 공간" },
-  { id: "WORK", label: "작업/상태" },
-];
 
 const DEFAULT_FILTERS: AnalyticsFilters = {
   dateFrom: "2026-01-01",
@@ -30,8 +23,19 @@ const DEFAULT_FILTERS: AnalyticsFilters = {
   partner: "전체",
 };
 
+const ANALYTICS_TABS: { id: AnalyticsTab; label: string }[] = [
+  { id: "SALES", label: "매출/출하" },
+  { id: "VARIETY", label: "품종 분석" },
+  { id: "CUSTOMER", label: "거래처 분석" },
+  { id: "SPACE", label: "농장 공간" },
+  { id: "WORK", label: "작업/상태" },
+];
+
 export function AnalyticsPage(props: AnalyticsPageProps) {
-  const [tab, setTab] = useState<AnalyticsTab>("SALES");
+  const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
+  const tab = (searchParams.get("tab") as AnalyticsTab | null) ?? "SALES";
   const [draftFilters, setDraftFilters] = useState(DEFAULT_FILTERS);
   const [filters, setFilters] = useState(DEFAULT_FILTERS);
   const varieties = useMemo(
@@ -100,16 +104,26 @@ export function AnalyticsPage(props: AnalyticsPageProps) {
     URL.revokeObjectURL(link.href);
   };
 
+  function updateTab(nextTab: AnalyticsTab) {
+    const params = new URLSearchParams(searchParams.toString());
+    params.set("tab", nextTab);
+    router.push(`${pathname}?${params.toString()}`);
+  }
+
   return (
     <main className="min-w-0 space-y-4">
       <div className="flex flex-wrap items-end justify-between gap-3 border-b border-[#d8ded8]">
         <nav className="flex max-w-full overflow-x-auto">
-          {TABS.map((item) => (
+          {ANALYTICS_TABS.map((item) => (
             <button
-              className={`shrink-0 border-b-2 px-5 py-3 text-sm font-semibold ${tab === item.id ? "border-[#159447] text-[#16843d]" : "border-transparent text-[#667169]"}`}
+              className={`shrink-0 border-b-2 px-5 py-3 text-sm font-semibold ${
+                tab === item.id
+                  ? "border-[#159447] text-[#16843d]"
+                  : "border-transparent text-[#667169]"
+              }`}
               key={item.id}
               type="button"
-              onClick={() => setTab(item.id)}
+              onClick={() => updateTab(item.id)}
             >
               {item.label}
             </button>
@@ -142,7 +156,7 @@ export function AnalyticsPage(props: AnalyticsPageProps) {
         saleable={view.saleableQuantity}
         warning={props.summary.warningCount}
         repotDue={props.summary.repotDueCount}
-        onSelectTab={setTab}
+        onSelectTab={updateTab}
       />
       <AnalyticsTabContent tab={tab} props={filteredProps} view={view} />
     </main>

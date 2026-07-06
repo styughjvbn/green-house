@@ -49,7 +49,7 @@ export function InventoryPage() {
         code: `NEW-${String(id).padStart(4, "0")}`,
         genus: secondary,
         name,
-        potSize: "미지정",
+        potSize: "미등록",
         saleEnabled: true,
         status: "ACTIVE",
         description: "",
@@ -62,6 +62,7 @@ export function InventoryPage() {
       setSelectedVarietyId(id);
       return;
     }
+
     const id = Math.max(...materials.map((item) => item.id)) + 1;
     const item: Material = {
       id,
@@ -69,9 +70,9 @@ export function InventoryPage() {
       category: "자재",
       name,
       manufacturer: secondary,
-      specification: "미지정",
+      specification: "미등록",
       stockQuantity: "0",
-      storageLocation: "미지정",
+      storageLocation: "미등록",
       usage: "",
       status: "ACTIVE",
       registeredAt: new Date().toISOString().slice(0, 10),
@@ -82,35 +83,19 @@ export function InventoryPage() {
 
   return (
     <main className="min-w-0 space-y-3">
-      <div className="flex flex-wrap items-center justify-between gap-3 border-b border-[#d8ded8]">
-        <div className="flex self-end">
-          <button
-            className="border-b-2 border-[#159447] px-5 py-3 text-sm font-bold text-[#16843d]"
-            type="button"
-          >
-            품종 관리
-          </button>
-          <button
-            className="px-5 py-3 text-sm font-semibold text-[#5e6a62]"
-            type="button"
-            onClick={() =>
-              document
-                .getElementById("material-management")
-                ?.scrollIntoView({ behavior: "smooth" })
-            }
-          >
-            자재 관리
-          </button>
-        </div>
-        <div className="flex gap-2 pb-2">
-          <button
-            className="flex items-center gap-2 rounded-md border border-[#d5dcd6] bg-white px-4 py-2 text-sm font-semibold shadow-sm"
-            type="button"
-            onClick={exportCsv}
-          >
-            <Download className="h-4 w-4" />
-            엑셀 다운로드
-          </button>
+      <div className="flex justify-end">
+        <button
+          className="flex items-center gap-2 rounded-md border border-[#d5dcd6] bg-white px-4 py-2 text-sm font-semibold shadow-sm"
+          type="button"
+          onClick={exportCsv}
+        >
+          <Download className="h-4 w-4" />
+          내보내기
+        </button>
+      </div>
+
+      <div id="variety-management">
+        <div className="flex justify-end">
           <button
             className="flex items-center gap-2 rounded-md bg-[#159447] px-4 py-2 text-sm font-semibold text-white shadow-sm"
             type="button"
@@ -119,13 +104,12 @@ export function InventoryPage() {
             <Plus className="h-4 w-4" />새 품종 등록
           </button>
         </div>
+        <VarietySection
+          varieties={varieties}
+          selectedId={selectedVarietyId}
+          onSelect={setSelectedVarietyId}
+        />
       </div>
-
-      <VarietySection
-        varieties={varieties}
-        selectedId={selectedVarietyId}
-        onSelect={setSelectedVarietyId}
-      />
 
       <div id="material-management">
         <div className="flex justify-end">
