@@ -141,22 +141,21 @@ repository → dto 의존 금지
 
 ## 허용
 
-초기에는 같은 서버/DB를 사용하므로 application 간 호출은 허용한다.
-
-```text
-sales.application → partner.repository
-sales.application → auction.repository
-sales.application → farm.repository
-sales.application → settlement.application
-```
-
-단, 추후 아래 방향으로 줄인다.
+모듈 간 호출은 소유 모듈의 application API를 통해서만 허용한다.
 
 ```text
 sales.application → partner.application
 sales.application → auction.application
 sales.application → farm.application
 sales.application → settlement.application
+```
+
+다른 모듈의 repository 직접 호출은 금지한다.
+
+```text
+sales.application → partner.repository 금지
+settlement.application → auction.repository 금지
+dashboard.application → farm.repository 금지
 ```
 
 ---
@@ -697,8 +696,10 @@ GET /api/partners/{partnerId}/balance-summary
 - 판매전표 출력 조회를 sales에서 print 모듈로 분리
 - 난 묶음 조회와 명령 컨트롤러 분리
 - SalesService를 조회, 생성 조정, 직접판매, 경매판매, 번호 생성으로 분해
+- 타 모듈 repository 직접 참조를 소유 모듈 application API 호출로 치환
+- 경매 결과 조회 repository를 settlement에서 auction으로 이동
 - package-info.java로 모듈 책임 명시
-- 모듈 의존성과 레이어 금지 규칙을 검증하는 테스트 추가
+- 모듈 의존성, 순환, 레이어 및 repository 소유권 규칙 검증 테스트 추가
 
 API 호환
 - 기존 API 경로와 응답 계약 유지
@@ -722,3 +723,13 @@ print      -> common, sales
 `work → farm`은 `WorkTargetValidator` 포트의 farm 구현체로 역전했다. 난 묶음 이동 작업 기록은 farm이 `MovementWorkRecorder` application API만 호출한다.
 
 일반 판매 입금 유스케이스는 sales가 소유하고, settlement의 `PaymentLedgerService`, `PartnerBalanceService`를 호출한다. settlement는 sales 도메인·리포지토리를 참조하지 않는다. 전체 허용 의존성은 DAG이며 아키텍처 테스트가 순환 추가를 차단한다.
+
+모듈 간 조회 경계:
+
+```text
+farm       -> FarmMetricsReader, OrchidGroupReader
+partner    -> BusinessPartnerReader
+auction    -> AuctionDataReader
+```
+
+현재 application API는 기존 동작 보존을 위해 일부 도메인 엔티티를 반환한다. 모듈 독립 배포가 필요해질 때 전용 DTO 또는 포트로 축소한다.
