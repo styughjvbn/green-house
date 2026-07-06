@@ -19,7 +19,7 @@ docs/api/slices/*.openapi.yaml
 | `work.openapi.yaml` | 작업 유형, 작업 이력 |
 | `partner.openapi.yaml` | 거래처, 정산 설정 |
 | `sales.openapi.yaml` | 판매 전표, 경매 판매 전표 |
-| `auction.openapi.yaml` | 경매 lot, 상태 변경, 반환 확인, 수량 보정, 정산 |
+| `auction.openapi.yaml` | 경매 lot, 결과 입력, 상태 변경, 반환 확인, 수량 보정, 정산 |
 | `payment.openapi.yaml` | 입금 확인, 거래처 잔액, 입금 이벤트 |
 
 ## 3. 판매/경매 API 규칙
@@ -40,6 +40,13 @@ docs/api/slices/*.openapi.yaml
 - `auctionShipmentId`는 생성 요청에서 사용하지 않음
 
 즉, 현재 기준 경매 흐름은 `기존 출하 기록 선택 후 전표 생성`이 아니라 `전표 생성 시 출하 기록과 lot 동시 생성`이다.
+
+경매 결과 입력:
+
+- `POST /api/auction-lots/{id}/results`
+- `attemptStatus`는 `SOLD`, `PARTIALLY_SOLD`, `FAILED`, `RETURN_INFERRED`
+- `SOLD`, `PARTIALLY_SOLD`는 `resultLines` 필요
+- `FAILED`, `RETURN_INFERRED`는 서버가 대기 수량 기준 결과 행을 자동 생성
 
 ## 4. 공통 응답
 

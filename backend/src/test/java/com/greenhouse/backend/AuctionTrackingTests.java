@@ -15,6 +15,8 @@ import com.greenhouse.backend.auction.domain.AuctionResultLine;
 import com.greenhouse.backend.auction.domain.AuctionShipment;
 import com.greenhouse.backend.auction.domain.AuctionShipmentLot;
 import com.greenhouse.backend.auction.dto.AuctionLotAdjustmentRequest;
+import com.greenhouse.backend.auction.dto.AuctionLotResultLineRequest;
+import com.greenhouse.backend.auction.dto.AuctionLotResultRequest;
 import com.greenhouse.backend.auction.dto.AuctionLotReturnRequest;
 import com.greenhouse.backend.auction.repository.AuctionShipmentLotRepository;
 import com.greenhouse.backend.auction.repository.AuctionShipmentRepository;
@@ -160,6 +162,65 @@ class AuctionTrackingTests {
 
 		assertThat(shipmentRepository.findAll()).hasSize(1);
 		assertThat(lotRepository.findAll()).hasSize(2);
+	}
+
+	@Test
+	void recordsManualAuctionResults() throws Exception {
+		var soldLot = createLot(LocalDate.of(2026, 7, 1), "양재", "카틀레야 A", "특", 100);
+		var partialLot = createLot(LocalDate.of(2026, 7, 1), "양재", "덴드로비움 B", "A", 80);
+		var returnLot = createLot(LocalDate.of(2026, 7, 1), "양재", "호접란 C", "A", 30);
+
+		var soldResponse = trackingService.addResult(
+			soldLot.getId(),
+			new AuctionLotResultRequest(
+				LocalDate.of(2026, 7, 3),
+				null,
+				AuctionAttemptStatus.SOLD,
+				null,
+				"수동 입력",
+				java.util.List.of(
+					new AuctionLotResultLineRequest("특", 60, 12000, null, AuctionInspectionStatus.NORMAL),
+					new AuctionLotResultLineRequest("특", 40, 11500, null, AuctionInspectionStatus.NORMAL)
+				)
+			)
+		);
+		assertThat(soldResponse.currentStatus()).isEqualTo(AuctionLotStatus.SOLD);
+		assertThat(soldResponse.totalAmount()).isEqualTo(1_180_000);
+		assertThat(soldResponse.attempts()).hasSize(1);
+
+		var partialResponse = trackingService.addResult(
+			partialLot.getId(),
+			new AuctionLotResultRequest(
+				LocalDate.of(2026, 7, 4),
+				1,
+				AuctionAttemptStatus.PARTIALLY_SOLD,
+				"잔량 유찰",
+				null,
+				java.util.List.of(
+					new AuctionLotResultLineRequest("A", 30, 9000, null, AuctionInspectionStatus.NORMAL)
+				)
+			)
+		);
+		assertThat(partialResponse.currentStatus()).isEqualTo(AuctionLotStatus.PARTIALLY_SOLD);
+		assertThat(partialResponse.waitingQuantity()).isEqualTo(50);
+		assertThat(partialResponse.attempts().getFirst().attemptStatus()).isEqualTo(AuctionAttemptStatus.PARTIALLY_SOLD);
+		assertThat(partialResponse.attempts().getFirst().resultLines()).hasSize(2);
+
+		mockMvc.perform(post("/api/auction-lots/" + returnLot.getId() + "/results")
+				.contentType(MediaType.APPLICATION_JSON)
+				.content("""
+					{
+					  "auctionDate": "2026-07-05",
+					  "attemptStatus": "RETURN_INFERRED",
+					  "failedReason": "반환 추정 등록",
+					  "memo": "수동 확인 대기"
+					}
+					"""))
+			.andExpect(status().isOk())
+			.andExpect(jsonPath("$.data.currentStatus").value("RETURN_INFERRED"))
+			.andExpect(jsonPath("$.data.returnedQuantity").value(30))
+			.andExpect(jsonPath("$.data.returnConfirmableQuantity").value(30))
+			.andExpect(jsonPath("$.data.attempts[0].attemptStatus").value("RETURN_INFERRED"));
 	}
 
 	private AuctionShipmentLot createLot(

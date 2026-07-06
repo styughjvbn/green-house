@@ -86,6 +86,13 @@ AuctionShipmentLot
   └─ AuctionLotStatusHistory
 ```
 
+현재 운영 입력 방식:
+
+- 경매 판매 전표 저장 시 `AuctionShipmentLot` 생성
+- 출하 후 `POST /api/auction-lots/{id}/results` 로 수동 경매 결과 입력
+- 낙찰/부분 낙찰/유찰/반환 추정을 lot 단위로 기록
+- 반환 추정 후 실제 반환일은 `confirm-return`으로 확정
+
 ## 6. AuctionLot 상태
 
 - `WAITING`

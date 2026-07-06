@@ -4,6 +4,7 @@ import com.greenhouse.backend.auction.application.AuctionTrackingService;
 import com.greenhouse.backend.auction.domain.AuctionLotStatus;
 import com.greenhouse.backend.auction.dto.AuctionLotAdjustmentRequest;
 import com.greenhouse.backend.auction.dto.AuctionLotPageResponse;
+import com.greenhouse.backend.auction.dto.AuctionLotResultRequest;
 import com.greenhouse.backend.auction.dto.AuctionLotResponse;
 import com.greenhouse.backend.auction.dto.AuctionLotReturnRequest;
 import com.greenhouse.backend.auction.dto.AuctionLotStatusRequest;
@@ -46,6 +47,9 @@ public class AuctionTrackingController {
 
 	@PostMapping("/auction-lots/{id}/adjust-quantity")
 	public ApiResponse<AuctionLotResponse> adjust(@PathVariable Long id, @Valid @RequestBody AuctionLotAdjustmentRequest request) { return ApiResponse.ok(trackingService.adjust(id, request)); }
+
+	@PostMapping("/auction-lots/{id}/results")
+	public ApiResponse<AuctionLotResponse> addResult(@PathVariable Long id, @Valid @RequestBody AuctionLotResultRequest request) { return ApiResponse.ok(trackingService.addResult(id, request)); }
 
 	@PatchMapping("/auction-lots/{id}/status")
 	public ApiResponse<AuctionLotResponse> changeStatus(@PathVariable Long id, @Valid @RequestBody AuctionLotStatusRequest request) { return ApiResponse.ok(trackingService.changeStatus(id, request)); }

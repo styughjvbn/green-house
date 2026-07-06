@@ -456,6 +456,31 @@ paths:
             '*/*':
               schema:
                 $ref: "#/components/schemas/ApiResponseAuctionLotResponse"
+  /api/auction-lots/{id}/results:
+    post:
+      tags:
+      - auction-tracking-controller
+      operationId: addResult
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: int64
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AuctionLotResultRequest"
+        required: true
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/ApiResponseAuctionLotResponse"
   /api/work-types/{workTypeId}:
     patch:
       tags:
@@ -2011,6 +2036,71 @@ components:
           type: array
           items:
             $ref: "#/components/schemas/AuctionSettlementLineResponse"
+    AuctionLotResultLineRequest:
+      type: object
+      properties:
+        auctionGrade:
+          type: string
+          maxLength: 100
+          minLength: 0
+        quantity:
+          type: integer
+          format: int32
+          minimum: 1
+        unitPrice:
+          type: integer
+          format: int32
+          minimum: 0
+        note:
+          type: string
+          maxLength: 1000
+          minLength: 0
+        inspectionStatus:
+          type: string
+          enum:
+          - NORMAL
+          - AUTO_MATCHED
+          - CORRECTED_MATCH
+          - MANUAL_REVIEW
+          - MATCH_FAILED
+          - QUANTITY_MISMATCH
+          - RETURN_INFERRED
+          - SOURCE_ERROR
+      required:
+      - quantity
+      - unitPrice
+    AuctionLotResultRequest:
+      type: object
+      properties:
+        auctionDate:
+          type: string
+          format: date
+        attemptNo:
+          type: integer
+          format: int32
+          minimum: 1
+        attemptStatus:
+          type: string
+          enum:
+          - SOLD
+          - FAILED
+          - PARTIALLY_SOLD
+          - RETURN_INFERRED
+        failedReason:
+          type: string
+          maxLength: 200
+          minLength: 0
+        memo:
+          type: string
+          maxLength: 1000
+          minLength: 0
+        resultLines:
+          type: array
+          items:
+            $ref: "#/components/schemas/AuctionLotResultLineRequest"
+      required:
+      - attemptStatus
+      - auctionDate
     AuctionLotReturnRequest:
       type: object
       properties:
