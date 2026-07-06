@@ -1,23 +1,36 @@
-﻿"use client";
+"use client";
 
+import { Plus } from "lucide-react";
 import type { SalesSlip } from "@/entities/farm/types";
 
 export function SalesSlipList({
   salesSlips,
   selectedSalesSlipId,
   onSelect,
+  onCreateSalesSlip,
 }: {
   salesSlips: SalesSlip[];
   selectedSalesSlipId: number | null;
   onSelect: (salesSlipId: number) => void;
+  onCreateSalesSlip: () => void;
 }) {
   return (
     <section className="min-w-0 rounded-md border border-[#dfe5dc] bg-white p-4 shadow-sm">
-      <div className="flex items-center gap-2">
-        <h2 className="text-xl font-bold text-[#17251b]">판매 전표 목록</h2>
-        <span className="text-sm font-semibold text-[#159447]">
-          총 {salesSlips.length}건
-        </span>
+      <div className="flex items-start justify-between gap-3">
+        <div className="flex items-center gap-2">
+          <h2 className="text-xl font-bold text-[#17251b]">판매 전표 목록</h2>
+          <span className="text-sm font-semibold text-[#159447]">
+            총 {salesSlips.length}건
+          </span>
+        </div>
+        <button
+          className="inline-flex h-10 items-center gap-2 rounded-md bg-[#159447] px-4 text-sm font-semibold text-white shadow-sm"
+          type="button"
+          onClick={onCreateSalesSlip}
+        >
+          <Plus className="h-4 w-4" strokeWidth={1.8} aria-hidden="true" />
+          판매 전표 등록
+        </button>
       </div>
 
       <div className="mt-4 overflow-x-auto">
