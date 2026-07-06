@@ -82,7 +82,7 @@ v2.2 문서에서는 화면 역할을 더 명확히 분리한다. `농장 현황
 | `03-domain-model.md` | 도메인 개념, 용어, 규칙, 관계 정의 |
 | `04-feature-spec.md` | 기능정의서 |
 | `05-ui-ux-spec.md` | 화면/사용자 경험 정의 |
-| `06-api-spec.md` | REST API 명세 초안 |
+| `/api` | API 관련 문서 |
 | `07-database-design.md` | 데이터베이스 설계 초안 |
 | `08-architecture.md` | 시스템 아키텍처 및 모듈 구조 |
 | `09-development-plan.md` | 구현 단계, Codex 작업 단위, 완료 기준 |

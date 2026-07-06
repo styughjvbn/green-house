@@ -1,0 +1,764 @@
+openapi: 3.1.0
+info:
+  title: Greenhouse API Slice - 출하·경매 추적/정산
+  version: v0
+  description: 경매 lot 조회·상태 변경·반환 확인·수량 보정·경매 정산 API
+servers:
+- url: http://localhost:8080
+  description: Generated server url
+paths:
+  /api/auction-settlements/rebuild:
+    post:
+      tags:
+      - auction-settlement-controller
+      operationId: rebuild
+      parameters:
+      - name: auctionHouseId
+        in: query
+        required: true
+        schema:
+          type: integer
+          format: int64
+      - name: auctionDate
+        in: query
+        required: true
+        schema:
+          type: string
+          format: date
+      responses:
+        '200':
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/ApiResponseAuctionSettlementResponse'
+  /api/auction-lots/{id}/confirm-return:
+    post:
+      tags:
+      - auction-tracking-controller
+      operationId: confirmReturn
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: int64
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AuctionLotReturnRequest'
+        required: true
+      responses:
+        '200':
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/ApiResponseAuctionLotResponse'
+  /api/auction-lots/{id}/adjust-quantity:
+    post:
+      tags:
+      - auction-tracking-controller
+      operationId: adjust
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: int64
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AuctionLotAdjustmentRequest'
+        required: true
+      responses:
+        '200':
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/ApiResponseAuctionLotResponse'
+  /api/auction-lots/{id}/status:
+    patch:
+      tags:
+      - auction-tracking-controller
+      operationId: changeStatus
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: int64
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AuctionLotStatusRequest'
+        required: true
+      responses:
+        '200':
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/ApiResponseAuctionLotResponse'
+  /api/auction-tracking/summary:
+    get:
+      tags:
+      - auction-tracking-controller
+      operationId: getSummary_1
+      responses:
+        '200':
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/ApiResponseAuctionTrackingSummaryResponse'
+  /api/auction-settlements:
+    get:
+      tags:
+      - auction-settlement-controller
+      operationId: getSettlements
+      parameters:
+      - name: auctionHouseId
+        in: query
+        required: false
+        schema:
+          type: integer
+          format: int64
+      - name: from
+        in: query
+        required: false
+        schema:
+          type: string
+          format: date
+      - name: to
+        in: query
+        required: false
+        schema:
+          type: string
+          format: date
+      - name: status
+        in: query
+        required: false
+        schema:
+          type: string
+          enum:
+          - CREATED
+          - PAYMENT_WAITING
+          - PARTIALLY_PAID
+          - PAID
+          - AMOUNT_MISMATCH
+          - REVIEW_REQUIRED
+          - CANCELLED
+      responses:
+        '200':
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/ApiResponseListAuctionSettlementResponse'
+  /api/auction-settlements/{settlementId}:
+    get:
+      tags:
+      - auction-settlement-controller
+      operationId: getSettlement
+      parameters:
+      - name: settlementId
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: int64
+      responses:
+        '200':
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/ApiResponseAuctionSettlementResponse'
+  /api/auction-lots:
+    get:
+      tags:
+      - auction-tracking-controller
+      operationId: getLots
+      parameters:
+      - name: from
+        in: query
+        required: false
+        schema:
+          type: string
+          format: date
+      - name: to
+        in: query
+        required: false
+        schema:
+          type: string
+          format: date
+      - name: market
+        in: query
+        required: false
+        schema:
+          type: string
+      - name: variety
+        in: query
+        required: false
+        schema:
+          type: string
+      - name: grade
+        in: query
+        required: false
+        schema:
+          type: string
+      - name: status
+        in: query
+        required: false
+        schema:
+          type: string
+          enum:
+          - SHIPPED
+          - WAITING
+          - IN_PROGRESS
+          - SOLD
+          - PARTIALLY_SOLD
+          - FAILED
+          - REAUCTION_WAITING
+          - RETURN_INFERRED
+          - PARTIALLY_RETURNED
+          - RETURNED
+          - QUANTITY_MISMATCH
+          - REVIEW_REQUIRED
+          - CANCELLED
+      - name: reviewOnly
+        in: query
+        required: false
+        schema:
+          type: boolean
+      - name: returnOnly
+        in: query
+        required: false
+        schema:
+          type: boolean
+      - name: waitingOnly
+        in: query
+        required: false
+        schema:
+          type: boolean
+      - name: keyword
+        in: query
+        required: false
+        schema:
+          type: string
+      - name: page
+        in: query
+        required: false
+        schema:
+          type: integer
+          format: int32
+          default: 0
+      - name: size
+        in: query
+        required: false
+        schema:
+          type: integer
+          format: int32
+          default: 20
+      responses:
+        '200':
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/ApiResponseAuctionLotPageResponse'
+  /api/auction-lots/{id}:
+    get:
+      tags:
+      - auction-tracking-controller
+      operationId: getLot
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: int64
+      responses:
+        '200':
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/ApiResponseAuctionLotResponse'
+  /api/auction-lots/{id}/timeline:
+    get:
+      tags:
+      - auction-tracking-controller
+      operationId: getTimeline
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: int64
+      responses:
+        '200':
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/ApiResponseAuctionLotResponse'
+components:
+  schemas:
+    ApiResponseAuctionLotPageResponse:
+      type: object
+      properties:
+        data:
+          $ref: '#/components/schemas/AuctionLotPageResponse'
+        message:
+          type: string
+    ApiResponseAuctionLotResponse:
+      type: object
+      properties:
+        data:
+          $ref: '#/components/schemas/AuctionLotResponse'
+        message:
+          type: string
+    ApiResponseAuctionSettlementResponse:
+      type: object
+      properties:
+        data:
+          $ref: '#/components/schemas/AuctionSettlementResponse'
+        message:
+          type: string
+    ApiResponseAuctionTrackingSummaryResponse:
+      type: object
+      properties:
+        data:
+          $ref: '#/components/schemas/AuctionTrackingSummaryResponse'
+        message:
+          type: string
+    ApiResponseListAuctionSettlementResponse:
+      type: object
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/AuctionSettlementResponse'
+        message:
+          type: string
+    AuctionAttemptResponse:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: int64
+        auctionDate:
+          type: string
+          format: date
+        attemptNo:
+          type: integer
+          format: int32
+        attemptStatus:
+          type: string
+          enum:
+          - SOLD
+          - FAILED
+          - PARTIALLY_SOLD
+          - RETURN_INFERRED
+        failedReason:
+          type: string
+        memo:
+          type: string
+        resultLines:
+          type: array
+          items:
+            $ref: '#/components/schemas/AuctionResultLineResponse'
+    AuctionLotAdjustmentRequest:
+      type: object
+      properties:
+        soldQuantity:
+          type: integer
+          format: int32
+          minimum: 0
+        waitingQuantity:
+          type: integer
+          format: int32
+          minimum: 0
+        returnedQuantity:
+          type: integer
+          format: int32
+          minimum: 0
+        worker:
+          type: string
+          maxLength: 100
+          minLength: 0
+        memo:
+          type: string
+          maxLength: 1000
+          minLength: 0
+      required:
+      - returnedQuantity
+      - soldQuantity
+      - waitingQuantity
+    AuctionLotPageResponse:
+      type: object
+      properties:
+        content:
+          type: array
+          items:
+            $ref: '#/components/schemas/AuctionLotResponse'
+        page:
+          type: integer
+          format: int32
+        size:
+          type: integer
+          format: int32
+        totalElements:
+          type: integer
+          format: int64
+        totalPages:
+          type: integer
+          format: int32
+    AuctionLotResponse:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: int64
+        shipmentDate:
+          type: string
+          format: date
+        auctionMarket:
+          type: string
+        itemName:
+          type: string
+        varietyName:
+          type: string
+        shipmentGrade:
+          type: string
+        boxes:
+          type: integer
+          format: int32
+        shippedQuantity:
+          type: integer
+          format: int32
+        soldQuantity:
+          type: integer
+          format: int32
+        waitingQuantity:
+          type: integer
+          format: int32
+        returnedQuantity:
+          type: integer
+          format: int32
+        returnConfirmableQuantity:
+          type: integer
+          format: int32
+        returnConfirmedDate:
+          type: string
+          format: date
+        currentStatus:
+          type: string
+          enum:
+          - SHIPPED
+          - WAITING
+          - IN_PROGRESS
+          - SOLD
+          - PARTIALLY_SOLD
+          - FAILED
+          - REAUCTION_WAITING
+          - RETURN_INFERRED
+          - PARTIALLY_RETURNED
+          - RETURNED
+          - QUANTITY_MISMATCH
+          - REVIEW_REQUIRED
+          - CANCELLED
+        latestAuctionDate:
+          type: string
+          format: date
+        failedCount:
+          type: integer
+          format: int32
+        totalAmount:
+          type: integer
+          format: int32
+        inspectionStatus:
+          type: string
+          enum:
+          - NORMAL
+          - AUTO_MATCHED
+          - CORRECTED_MATCH
+          - MANUAL_REVIEW
+          - MATCH_FAILED
+          - QUANTITY_MISMATCH
+          - RETURN_INFERRED
+          - SOURCE_ERROR
+        memo:
+          type: string
+        attempts:
+          type: array
+          items:
+            $ref: '#/components/schemas/AuctionAttemptResponse'
+        statusHistory:
+          type: array
+          items:
+            $ref: '#/components/schemas/AuctionStatusHistoryResponse'
+    AuctionLotReturnRequest:
+      type: object
+      properties:
+        returnedQuantity:
+          type: integer
+          format: int32
+          minimum: 1
+        returnDate:
+          type: string
+          format: date
+        worker:
+          type: string
+          maxLength: 100
+          minLength: 0
+        memo:
+          type: string
+          maxLength: 1000
+          minLength: 0
+      required:
+      - returnDate
+    AuctionLotStatusRequest:
+      type: object
+      properties:
+        status:
+          type: string
+          enum:
+          - SHIPPED
+          - WAITING
+          - IN_PROGRESS
+          - SOLD
+          - PARTIALLY_SOLD
+          - FAILED
+          - REAUCTION_WAITING
+          - RETURN_INFERRED
+          - PARTIALLY_RETURNED
+          - RETURNED
+          - QUANTITY_MISMATCH
+          - REVIEW_REQUIRED
+          - CANCELLED
+        reason:
+          type: string
+          maxLength: 200
+          minLength: 0
+        worker:
+          type: string
+          maxLength: 100
+          minLength: 0
+        memo:
+          type: string
+          maxLength: 1000
+          minLength: 0
+      required:
+      - reason
+      - status
+    AuctionResultLineResponse:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: int64
+        auctionDate:
+          type: string
+          format: date
+        auctionGrade:
+          type: string
+        quantity:
+          type: integer
+          format: int32
+        unitPrice:
+          type: integer
+          format: int32
+        amount:
+          type: integer
+          format: int32
+        note:
+          type: string
+        inspectionStatus:
+          type: string
+          enum:
+          - NORMAL
+          - AUTO_MATCHED
+          - CORRECTED_MATCH
+          - MANUAL_REVIEW
+          - MATCH_FAILED
+          - QUANTITY_MISMATCH
+          - RETURN_INFERRED
+          - SOURCE_ERROR
+    AuctionSettlementLineResponse:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: int64
+        auctionResultLineId:
+          type: integer
+          format: int64
+        auctionShipmentLotId:
+          type: integer
+          format: int64
+        shipmentDate:
+          type: string
+          format: date
+        varietyName:
+          type: string
+        shipmentGrade:
+          type: string
+        quantity:
+          type: integer
+          format: int32
+        unitPrice:
+          type: integer
+          format: int32
+        amount:
+          type: integer
+          format: int64
+        status:
+          type: string
+          enum:
+          - UNPAID
+          - PAID
+          - PARTIALLY_PAID
+          - EXCLUDED
+          - REVIEW_REQUIRED
+    AuctionSettlementResponse:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: int64
+        auctionHouseId:
+          type: integer
+          format: int64
+        auctionHouseName:
+          type: string
+        auctionDate:
+          type: string
+          format: date
+        resultReceivedAt:
+          type: string
+          format: date-time
+        expectedPaymentDate:
+          type: string
+          format: date
+        grossAmount:
+          type: integer
+          format: int64
+        feeAmount:
+          type: integer
+          format: int64
+        deductionAmount:
+          type: integer
+          format: int64
+        expectedDepositAmount:
+          type: integer
+          format: int64
+        paidAmount:
+          type: integer
+          format: int64
+        remainingAmount:
+          type: integer
+          format: int64
+        status:
+          type: string
+          enum:
+          - CREATED
+          - PAYMENT_WAITING
+          - PARTIALLY_PAID
+          - PAID
+          - AMOUNT_MISMATCH
+          - REVIEW_REQUIRED
+          - CANCELLED
+        memo:
+          type: string
+        confirmedAt:
+          type: string
+          format: date-time
+        confirmedBy:
+          type: string
+        lines:
+          type: array
+          items:
+            $ref: '#/components/schemas/AuctionSettlementLineResponse'
+    AuctionStatusHistoryResponse:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: int64
+        previousStatus:
+          type: string
+          enum:
+          - SHIPPED
+          - WAITING
+          - IN_PROGRESS
+          - SOLD
+          - PARTIALLY_SOLD
+          - FAILED
+          - REAUCTION_WAITING
+          - RETURN_INFERRED
+          - PARTIALLY_RETURNED
+          - RETURNED
+          - QUANTITY_MISMATCH
+          - REVIEW_REQUIRED
+          - CANCELLED
+        newStatus:
+          type: string
+          enum:
+          - SHIPPED
+          - WAITING
+          - IN_PROGRESS
+          - SOLD
+          - PARTIALLY_SOLD
+          - FAILED
+          - REAUCTION_WAITING
+          - RETURN_INFERRED
+          - PARTIALLY_RETURNED
+          - RETURNED
+          - QUANTITY_MISMATCH
+          - REVIEW_REQUIRED
+          - CANCELLED
+        changedAt:
+          type: string
+          format: date-time
+        reason:
+          type: string
+        worker:
+          type: string
+        memo:
+          type: string
+    AuctionTrackingSummaryResponse:
+      type: object
+      properties:
+        lotCount:
+          type: integer
+          format: int32
+        shippedQuantity:
+          type: integer
+          format: int32
+        soldQuantity:
+          type: integer
+          format: int32
+        waitingQuantity:
+          type: integer
+          format: int32
+        returnedQuantity:
+          type: integer
+          format: int32
+        reviewRequiredCount:
+          type: integer
+          format: int32
+        totalAmount:
+          type: integer
+          format: int32

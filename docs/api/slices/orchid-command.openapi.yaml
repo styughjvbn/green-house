@@ -1,0 +1,647 @@
+openapi: 3.1.0
+info:
+  title: Greenhouse API Slice - 난 묶음 명령/정밀 배치
+  version: v0
+  description: 난 묶음 생성·수정·삭제·이동, 정밀 배치 프로필, 배치 추천 API
+servers:
+- url: http://localhost:8080
+  description: Generated server url
+paths:
+  /api/bed-zones/{bedZoneId}/placement-profile:
+    get:
+      tags:
+      - bed-placement-controller
+      operationId: get_1
+      parameters:
+      - name: bedZoneId
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: int64
+      responses:
+        '200':
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/ApiResponseBedZonePlacementProfileResponse'
+    put:
+      tags:
+      - bed-placement-controller
+      operationId: update_1
+      parameters:
+      - name: bedZoneId
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: int64
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/BedZonePlacementProfileRequest'
+        required: true
+      responses:
+        '200':
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/ApiResponseBedZonePlacementProfileResponse'
+  /api/orchid-groups:
+    post:
+      tags:
+      - orchid-group-command-controller
+      operationId: create_1
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/OrchidGroupCreateRequest'
+        required: true
+      responses:
+        '201':
+          description: Created
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/ApiResponseOrchidGroupResponse'
+  /api/orchid-groups/{orchidGroupId}:
+    delete:
+      tags:
+      - orchid-group-command-controller
+      operationId: delete
+      parameters:
+      - name: orchidGroupId
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: int64
+      responses:
+        '200':
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/ApiResponseVoid'
+    patch:
+      tags:
+      - orchid-group-command-controller
+      operationId: update_2
+      parameters:
+      - name: orchidGroupId
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: int64
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/OrchidGroupUpdateRequest'
+        required: true
+      responses:
+        '200':
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/ApiResponseOrchidGroupResponse'
+  /api/orchid-groups/{orchidGroupId}/move:
+    patch:
+      tags:
+      - orchid-group-command-controller
+      operationId: move
+      parameters:
+      - name: orchidGroupId
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: int64
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/OrchidGroupMoveRequest'
+        required: true
+      responses:
+        '200':
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/ApiResponseOrchidGroupResponse'
+  /api/orchid-groups/{orchidGroupId}/placement-recommendations:
+    get:
+      tags:
+      - orchid-group-command-controller
+      operationId: recommendations
+      parameters:
+      - name: orchidGroupId
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: int64
+      - name: houseId
+        in: query
+        required: false
+        schema:
+          type: integer
+          format: int64
+      responses:
+        '200':
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/ApiResponsePlacementRecommendationResponse'
+components:
+  schemas:
+    ApiResponseBedZonePlacementProfileResponse:
+      type: object
+      properties:
+        data:
+          $ref: '#/components/schemas/BedZonePlacementProfileResponse'
+        message:
+          type: string
+    ApiResponseOrchidGroupResponse:
+      type: object
+      properties:
+        data:
+          $ref: '#/components/schemas/OrchidGroupResponse'
+        message:
+          type: string
+    ApiResponsePlacementRecommendationResponse:
+      type: object
+      properties:
+        data:
+          $ref: '#/components/schemas/PlacementRecommendationResponse'
+        message:
+          type: string
+    ApiResponseVoid:
+      type: object
+      properties:
+        data: {}
+        message:
+          type: string
+    BedZoneCapacityRequest:
+      type: object
+      properties:
+        placementType:
+          type: string
+          maxLength: 100
+          minLength: 0
+        potSize:
+          type: string
+          maxLength: 50
+          minLength: 0
+        capacityMode:
+          type: string
+          enum:
+          - SPACIOUS
+          - STANDARD
+          - EXPANDED
+          - COMPRESSED
+          - TEMPORARY
+        capacityValue:
+          type: integer
+          format: int32
+          minimum: 0
+        allowed:
+          type: boolean
+        memo:
+          type: string
+          maxLength: 1000
+          minLength: 0
+      required:
+      - allowed
+      - capacityMode
+      - capacityValue
+      - placementType
+    BedZoneCapacityResponse:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: int64
+        placementType:
+          type: string
+        potSize:
+          type: string
+        capacityMode:
+          type: string
+          enum:
+          - SPACIOUS
+          - STANDARD
+          - EXPANDED
+          - COMPRESSED
+          - TEMPORARY
+        capacityValue:
+          type: integer
+          format: int32
+        allowed:
+          type: boolean
+        memo:
+          type: string
+    BedZonePlacementProfileRequest:
+      type: object
+      properties:
+        segments:
+          type: array
+          items:
+            $ref: '#/components/schemas/BedZoneSegmentRequest'
+          minItems: 1
+      required:
+      - segments
+    BedZonePlacementProfileResponse:
+      type: object
+      properties:
+        bedZoneId:
+          type: integer
+          format: int64
+        bedZoneName:
+          type: string
+        houseNumber:
+          type: integer
+          format: int32
+        physicalBedNumber:
+          type: integer
+          format: int32
+        hasUnassignedGroups:
+          type: boolean
+        segments:
+          type: array
+          items:
+            $ref: '#/components/schemas/BedZoneSegmentResponse'
+    BedZoneSegmentRequest:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: int64
+        name:
+          type: string
+          maxLength: 100
+          minLength: 0
+        segmentType:
+          type: string
+          enum:
+          - START
+          - MIDDLE
+          - END
+          - CUSTOM
+        sortOrder:
+          type: integer
+          format: int32
+          minimum: 1
+        memo:
+          type: string
+          maxLength: 1000
+          minLength: 0
+        capacities:
+          type: array
+          items:
+            $ref: '#/components/schemas/BedZoneCapacityRequest'
+      required:
+      - capacities
+      - name
+      - segmentType
+      - sortOrder
+    BedZoneSegmentResponse:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: int64
+        name:
+          type: string
+        segmentType:
+          type: string
+          enum:
+          - START
+          - MIDDLE
+          - END
+          - CUSTOM
+        sortOrder:
+          type: integer
+          format: int32
+        memo:
+          type: string
+        capacities:
+          type: array
+          items:
+            $ref: '#/components/schemas/BedZoneCapacityResponse'
+    OrchidGroupCreateRequest:
+      type: object
+      properties:
+        bedZoneId:
+          type: integer
+          format: int64
+        genus:
+          type: string
+          maxLength: 100
+          minLength: 0
+        varietyName:
+          type: string
+          maxLength: 150
+          minLength: 0
+        quantity:
+          type: integer
+          format: int32
+          minimum: 1
+        potSize:
+          type: string
+          maxLength: 50
+          minLength: 0
+        ageYear:
+          type: integer
+          format: int32
+          minimum: 0
+        status:
+          type: string
+          maxLength: 50
+          minLength: 0
+        placementType:
+          type: string
+          maxLength: 50
+          minLength: 0
+        trayCount:
+          type: integer
+          format: int32
+          minimum: 0
+        splitPlacementAllowed:
+          type: boolean
+        memo:
+          type: string
+          maxLength: 1000
+          minLength: 0
+      required:
+      - bedZoneId
+      - quantity
+      - status
+      - varietyName
+    OrchidGroupMovePlacementRequest:
+      type: object
+      properties:
+        segmentId:
+          type: integer
+          format: int64
+        quantity:
+          type: integer
+          format: int32
+          minimum: 1
+        trayCount:
+          type: integer
+          format: int32
+          minimum: 1
+      required:
+      - quantity
+      - segmentId
+    OrchidGroupMoveRequest:
+      type: object
+      properties:
+        toBedZoneId:
+          type: integer
+          format: int64
+        placementMode:
+          type: string
+          enum:
+          - SPACIOUS
+          - STANDARD
+          - EXPANDED
+          - COMPRESSED
+          - TEMPORARY
+        placements:
+          type: array
+          items:
+            $ref: '#/components/schemas/OrchidGroupMovePlacementRequest'
+        reorganizeDueDate:
+          type: string
+          format: date
+        worker:
+          type: string
+          maxLength: 100
+          minLength: 0
+        memo:
+          type: string
+          maxLength: 1000
+          minLength: 0
+      required:
+      - toBedZoneId
+    OrchidGroupResponse:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: int64
+        bedZoneId:
+          type: integer
+          format: int64
+        genus:
+          type: string
+        varietyName:
+          type: string
+        quantity:
+          type: integer
+          format: int32
+        potSize:
+          type: string
+        ageYear:
+          type: integer
+          format: int32
+        status:
+          type: string
+        placementType:
+          type: string
+        trayCount:
+          type: integer
+          format: int32
+        splitPlacementAllowed:
+          type: boolean
+        segmentPlacements:
+          type: array
+          items:
+            $ref: '#/components/schemas/OrchidGroupSegmentPlacementResponse'
+        sortOrder:
+          type: integer
+          format: int32
+        memo:
+          type: string
+        houseNumber:
+          type: integer
+          format: int32
+        physicalBedNumber:
+          type: integer
+          format: int32
+        bedZoneName:
+          type: string
+    OrchidGroupSegmentPlacementResponse:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: int64
+        segmentId:
+          type: integer
+          format: int64
+        segmentName:
+          type: string
+        quantity:
+          type: integer
+          format: int32
+        trayCount:
+          type: integer
+          format: int32
+        placementMode:
+          type: string
+          enum:
+          - SPACIOUS
+          - STANDARD
+          - EXPANDED
+          - COMPRESSED
+          - TEMPORARY
+        reorganizeDueDate:
+          type: string
+          format: date
+        memo:
+          type: string
+    OrchidGroupUpdateRequest:
+      type: object
+      properties:
+        genus:
+          type: string
+          maxLength: 100
+          minLength: 0
+        varietyName:
+          type: string
+          maxLength: 150
+          minLength: 0
+        quantity:
+          type: integer
+          format: int32
+          minimum: 1
+        potSize:
+          type: string
+          maxLength: 50
+          minLength: 0
+        ageYear:
+          type: integer
+          format: int32
+          minimum: 0
+        status:
+          type: string
+          maxLength: 50
+          minLength: 0
+        placementType:
+          type: string
+          maxLength: 50
+          minLength: 0
+        trayCount:
+          type: integer
+          format: int32
+          minimum: 0
+        splitPlacementAllowed:
+          type: boolean
+        memo:
+          type: string
+          maxLength: 1000
+          minLength: 0
+      required:
+      - quantity
+      - status
+      - varietyName
+    PlacementRecommendationAllocationResponse:
+      type: object
+      properties:
+        segmentId:
+          type: integer
+          format: int64
+        segmentName:
+          type: string
+        quantity:
+          type: integer
+          format: int32
+        occupancyUnits:
+          type: integer
+          format: int32
+        remainingUnits:
+          type: integer
+          format: int32
+    PlacementRecommendationCandidateResponse:
+      type: object
+      properties:
+        bedZoneId:
+          type: integer
+          format: int64
+        bedZoneName:
+          type: string
+        houseId:
+          type: integer
+          format: int64
+        houseNumber:
+          type: integer
+          format: int32
+        physicalBedId:
+          type: integer
+          format: int64
+        physicalBedNumber:
+          type: integer
+          format: int32
+        status:
+          type: string
+          enum:
+          - RECOMMENDED
+          - POSSIBLE
+          - WARNING
+          - UNAVAILABLE
+        requiredMode:
+          type: string
+          enum:
+          - SPACIOUS
+          - STANDARD
+          - EXPANDED
+          - COMPRESSED
+          - TEMPORARY
+        allocations:
+          type: array
+          items:
+            $ref: '#/components/schemas/PlacementRecommendationAllocationResponse'
+        warnings:
+          type: array
+          items:
+            type: string
+    PlacementRecommendationResponse:
+      type: object
+      properties:
+        orchidGroupId:
+          type: integer
+          format: int64
+        varietyName:
+          type: string
+        requirement:
+          $ref: '#/components/schemas/PlacementRequirementResponse'
+        candidates:
+          type: array
+          items:
+            $ref: '#/components/schemas/PlacementRecommendationCandidateResponse'
+    PlacementRequirementResponse:
+      type: object
+      properties:
+        placementType:
+          type: string
+        potSize:
+          type: string
+        quantity:
+          type: integer
+          format: int32
+        occupancyUnits:
+          type: integer
+          format: int32
+        splitAllowed:
+          type: boolean

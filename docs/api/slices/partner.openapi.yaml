@@ -1,0 +1,269 @@
+openapi: 3.1.0
+info:
+  title: Greenhouse API Slice - 거래처
+  version: v0
+  description: 거래처 조회·등록과 거래처 정산 설정 API
+servers:
+- url: http://localhost:8080
+  description: Generated server url
+paths:
+  /api/business-partners/{partnerId}/settlement-settings:
+    get:
+      tags:
+      - partner-settlement-settings-controller
+      operationId: get
+      parameters:
+      - name: partnerId
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: int64
+      responses:
+        '200':
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/ApiResponsePartnerSettlementSettingsResponse'
+    put:
+      tags:
+      - partner-settlement-settings-controller
+      operationId: update
+      parameters:
+      - name: partnerId
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: int64
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PartnerSettlementSettingsRequest'
+        required: true
+      responses:
+        '200':
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/ApiResponsePartnerSettlementSettingsResponse'
+  /api/business-partners:
+    get:
+      tags:
+      - business-partner-controller
+      operationId: getPartners
+      parameters:
+      - name: keyword
+        in: query
+        required: false
+        schema:
+          type: string
+      - name: partnerType
+        in: query
+        required: false
+        schema:
+          type: string
+          enum:
+          - WHOLESALE
+          - RETAIL
+          - AUCTION_HOUSE
+      responses:
+        '200':
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/ApiResponseListBusinessPartnerResponse'
+    post:
+      tags:
+      - business-partner-controller
+      operationId: create_2
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/BusinessPartnerCreateRequest'
+        required: true
+      responses:
+        '201':
+          description: Created
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/ApiResponseBusinessPartnerResponse'
+components:
+  schemas:
+    ApiResponseBusinessPartnerResponse:
+      type: object
+      properties:
+        data:
+          $ref: '#/components/schemas/BusinessPartnerResponse'
+        message:
+          type: string
+    ApiResponseListBusinessPartnerResponse:
+      type: object
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/BusinessPartnerResponse'
+        message:
+          type: string
+    ApiResponsePartnerSettlementSettingsResponse:
+      type: object
+      properties:
+        data:
+          $ref: '#/components/schemas/PartnerSettlementSettingsResponse'
+        message:
+          type: string
+    BusinessPartnerCreateRequest:
+      type: object
+      properties:
+        name:
+          type: string
+          maxLength: 150
+          minLength: 0
+        partnerType:
+          type: string
+          enum:
+          - WHOLESALE
+          - RETAIL
+          - AUCTION_HOUSE
+        ownerName:
+          type: string
+          maxLength: 100
+          minLength: 0
+        phone:
+          type: string
+          maxLength: 50
+          minLength: 0
+        address:
+          type: string
+          maxLength: 1000
+          minLength: 0
+        memo:
+          type: string
+          maxLength: 1000
+          minLength: 0
+      required:
+      - name
+      - partnerType
+    BusinessPartnerResponse:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: int64
+        name:
+          type: string
+        partnerType:
+          type: string
+          enum:
+          - WHOLESALE
+          - RETAIL
+          - AUCTION_HOUSE
+        ownerName:
+          type: string
+        phone:
+          type: string
+        address:
+          type: string
+        memo:
+          type: string
+        active:
+          type: boolean
+    PartnerSettlementSettingsRequest:
+      type: object
+      properties:
+        settlementUnit:
+          type: string
+          enum:
+          - SALES_SLIP
+          - MONTHLY_BATCH
+          - AUCTION_DATE
+        paymentDelayDays:
+          type: integer
+          format: int32
+          minimum: 0
+        paymentDayMode:
+          type: string
+          enum:
+          - CALENDAR_DAY
+          - BUSINESS_DAY
+        autoMatchEnabled:
+          type: boolean
+        autoSettleEnabled:
+          type: boolean
+        amountTolerance:
+          type: integer
+          format: int64
+          minimum: 0
+        depositorAliases:
+          type: array
+          items:
+            type: string
+            maxLength: 100
+            minLength: 0
+        allowPrepayment:
+          type: boolean
+        creditAutoApplyEnabled:
+          type: boolean
+        ruleJson:
+          type: object
+          additionalProperties: {}
+        memo:
+          type: string
+          maxLength: 1000
+          minLength: 0
+      required:
+      - amountTolerance
+      - depositorAliases
+      - paymentDayMode
+      - paymentDelayDays
+      - settlementUnit
+    PartnerSettlementSettingsResponse:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: int64
+        partnerId:
+          type: integer
+          format: int64
+        settlementUnit:
+          type: string
+          enum:
+          - SALES_SLIP
+          - MONTHLY_BATCH
+          - AUCTION_DATE
+        paymentDelayDays:
+          type: integer
+          format: int32
+        paymentDayMode:
+          type: string
+          enum:
+          - CALENDAR_DAY
+          - BUSINESS_DAY
+        autoMatchEnabled:
+          type: boolean
+        autoSettleEnabled:
+          type: boolean
+        amountTolerance:
+          type: integer
+          format: int64
+        depositorAliases:
+          type: array
+          items:
+            type: string
+        allowPrepayment:
+          type: boolean
+        creditAutoApplyEnabled:
+          type: boolean
+        ruleJson:
+          type: object
+          additionalProperties: {}
+        memo:
+          type: string

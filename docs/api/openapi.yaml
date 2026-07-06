@@ -1,0 +1,3074 @@
+openapi: 3.1.0
+info:
+  title: OpenAPI definition
+  version: v0
+servers:
+- url: http://localhost:8080
+  description: Generated server url
+paths:
+  /api/business-partners/{partnerId}/settlement-settings:
+    get:
+      tags:
+      - partner-settlement-settings-controller
+      operationId: get
+      parameters:
+      - name: partnerId
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: int64
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/ApiResponsePartnerSettlementSettingsResponse"
+    put:
+      tags:
+      - partner-settlement-settings-controller
+      operationId: update
+      parameters:
+      - name: partnerId
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: int64
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PartnerSettlementSettingsRequest"
+        required: true
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/ApiResponsePartnerSettlementSettingsResponse"
+  /api/bed-zones/{bedZoneId}/placement-profile:
+    get:
+      tags:
+      - bed-placement-controller
+      operationId: get_1
+      parameters:
+      - name: bedZoneId
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: int64
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/ApiResponseBedZonePlacementProfileResponse"
+    put:
+      tags:
+      - bed-placement-controller
+      operationId: update_1
+      parameters:
+      - name: bedZoneId
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: int64
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/BedZonePlacementProfileRequest"
+        required: true
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/ApiResponseBedZonePlacementProfileResponse"
+  /api/work-types:
+    get:
+      tags:
+      - work-record-controller
+      operationId: getWorkTypes
+      parameters:
+      - name: includeInactive
+        in: query
+        required: false
+        schema:
+          type: boolean
+          default: false
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/ApiResponseListWorkTypeResponse"
+    post:
+      tags:
+      - work-record-controller
+      operationId: createWorkType
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/WorkTypeCreateRequest"
+        required: true
+      responses:
+        "201":
+          description: Created
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/ApiResponseWorkTypeResponse"
+  /api/work-records:
+    get:
+      tags:
+      - work-record-controller
+      operationId: getWorkRecords
+      parameters:
+      - name: targetType
+        in: query
+        required: false
+        schema:
+          type: string
+      - name: targetId
+        in: query
+        required: false
+        schema:
+          type: integer
+          format: int64
+      - name: workType
+        in: query
+        required: false
+        schema:
+          type: string
+      - name: from
+        in: query
+        required: false
+        schema:
+          type: string
+          format: date
+      - name: to
+        in: query
+        required: false
+        schema:
+          type: string
+          format: date
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/ApiResponseListWorkRecordResponse"
+    post:
+      tags:
+      - work-record-controller
+      operationId: create
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/WorkRecordCreateRequest"
+        required: true
+      responses:
+        "201":
+          description: Created
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/ApiResponseWorkRecordResponse"
+  /api/sales-slips:
+    get:
+      tags:
+      - sales-controller
+      operationId: getSalesSlips
+      parameters:
+      - name: partnerId
+        in: query
+        required: false
+        schema:
+          type: integer
+          format: int64
+      - name: from
+        in: query
+        required: false
+        schema:
+          type: string
+          format: date
+      - name: to
+        in: query
+        required: false
+        schema:
+          type: string
+          format: date
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/ApiResponseListSalesSlipResponse"
+    post:
+      tags:
+      - sales-controller
+      operationId: createSalesSlip
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SalesSlipCreateRequest"
+        required: true
+      responses:
+        "201":
+          description: Created
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/ApiResponseSalesSlipResponse"
+  /api/sales-slips/{salesSlipId}/confirm-payment:
+    post:
+      tags:
+      - payment-controller
+      operationId: confirmSalesSlipPayment
+      parameters:
+      - name: salesSlipId
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: int64
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ManualPaymentRequest"
+        required: true
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/ApiResponseSalesSlipResponse"
+  /api/orchid-groups:
+    get:
+      tags:
+      - farm-structure-controller
+      operationId: getOrchidGroups
+      parameters:
+      - name: houseId
+        in: query
+        required: false
+        schema:
+          type: integer
+          format: int64
+      - name: physicalBedId
+        in: query
+        required: false
+        schema:
+          type: integer
+          format: int64
+      - name: bedZoneId
+        in: query
+        required: false
+        schema:
+          type: integer
+          format: int64
+      - name: status
+        in: query
+        required: false
+        schema:
+          type: string
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/ApiResponseListOrchidGroupResponse"
+    post:
+      tags:
+      - orchid-group-command-controller
+      operationId: create_1
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/OrchidGroupCreateRequest"
+        required: true
+      responses:
+        "201":
+          description: Created
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/ApiResponseOrchidGroupResponse"
+  /api/business-partners:
+    get:
+      tags:
+      - business-partner-controller
+      operationId: getPartners
+      parameters:
+      - name: keyword
+        in: query
+        required: false
+        schema:
+          type: string
+      - name: partnerType
+        in: query
+        required: false
+        schema:
+          type: string
+          enum:
+          - WHOLESALE
+          - RETAIL
+          - AUCTION_HOUSE
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/ApiResponseListBusinessPartnerResponse"
+    post:
+      tags:
+      - business-partner-controller
+      operationId: create_2
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/BusinessPartnerCreateRequest"
+        required: true
+      responses:
+        "201":
+          description: Created
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/ApiResponseBusinessPartnerResponse"
+  /api/auction-settlements/{settlementId}/confirm-payment:
+    post:
+      tags:
+      - payment-controller
+      operationId: confirmAuctionPayment
+      parameters:
+      - name: settlementId
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: int64
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ManualPaymentRequest"
+        required: true
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/ApiResponseAuctionSettlementResponse"
+  /api/auction-settlements/rebuild:
+    post:
+      tags:
+      - auction-settlement-controller
+      operationId: rebuild
+      parameters:
+      - name: auctionHouseId
+        in: query
+        required: true
+        schema:
+          type: integer
+          format: int64
+      - name: auctionDate
+        in: query
+        required: true
+        schema:
+          type: string
+          format: date
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/ApiResponseAuctionSettlementResponse"
+  /api/auction-lots/{id}/confirm-return:
+    post:
+      tags:
+      - auction-tracking-controller
+      operationId: confirmReturn
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: int64
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AuctionLotReturnRequest"
+        required: true
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/ApiResponseAuctionLotResponse"
+  /api/auction-lots/{id}/adjust-quantity:
+    post:
+      tags:
+      - auction-tracking-controller
+      operationId: adjust
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: int64
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AuctionLotAdjustmentRequest"
+        required: true
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/ApiResponseAuctionLotResponse"
+  /api/work-types/{workTypeId}:
+    patch:
+      tags:
+      - work-record-controller
+      operationId: updateWorkType
+      parameters:
+      - name: workTypeId
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: int64
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/WorkTypeUpdateRequest"
+        required: true
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/ApiResponseWorkTypeResponse"
+  /api/work-types/reorder:
+    patch:
+      tags:
+      - work-record-controller
+      operationId: reorderWorkTypes
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/WorkTypeReorderRequest"
+        required: true
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/ApiResponseListWorkTypeResponse"
+  /api/orchid-groups/{orchidGroupId}:
+    delete:
+      tags:
+      - orchid-group-command-controller
+      operationId: delete
+      parameters:
+      - name: orchidGroupId
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: int64
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/ApiResponseVoid"
+    patch:
+      tags:
+      - orchid-group-command-controller
+      operationId: update_2
+      parameters:
+      - name: orchidGroupId
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: int64
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/OrchidGroupUpdateRequest"
+        required: true
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/ApiResponseOrchidGroupResponse"
+  /api/orchid-groups/{orchidGroupId}/move:
+    patch:
+      tags:
+      - orchid-group-command-controller
+      operationId: move
+      parameters:
+      - name: orchidGroupId
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: int64
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/OrchidGroupMoveRequest"
+        required: true
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/ApiResponseOrchidGroupResponse"
+  /api/auction-lots/{id}/status:
+    patch:
+      tags:
+      - auction-tracking-controller
+      operationId: changeStatus
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: int64
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AuctionLotStatusRequest"
+        required: true
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/ApiResponseAuctionLotResponse"
+  /api/sales-slips/{salesSlipId}:
+    get:
+      tags:
+      - sales-controller
+      operationId: getSalesSlip
+      parameters:
+      - name: salesSlipId
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: int64
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/ApiResponseSalesSlipResponse"
+  /api/sales-slips/{salesSlipId}/print:
+    get:
+      tags:
+      - sales-controller
+      operationId: getSalesSlipPrintData
+      parameters:
+      - name: salesSlipId
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: int64
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/ApiResponseSalesSlipResponse"
+  /api/sales-slips/auction-shipments:
+    get:
+      tags:
+      - sales-controller
+      operationId: getAuctionShipmentOptions
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/ApiResponseListAuctionShipmentOptionResponse"
+  /api/physical-beds:
+    get:
+      tags:
+      - farm-structure-controller
+      operationId: getPhysicalBeds
+      parameters:
+      - name: houseId
+        in: query
+        required: true
+        schema:
+          type: integer
+          format: int64
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/ApiResponseListPhysicalBedResponse"
+  /api/physical-beds/{physicalBedId}:
+    get:
+      tags:
+      - farm-structure-controller
+      operationId: getPhysicalBed
+      parameters:
+      - name: physicalBedId
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: int64
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/ApiResponsePhysicalBedResponse"
+  /api/partner-payment-events:
+    get:
+      tags:
+      - payment-controller
+      operationId: getEvents
+      parameters:
+      - name: partnerId
+        in: query
+        required: false
+        schema:
+          type: integer
+          format: int64
+      - name: targetType
+        in: query
+        required: false
+        schema:
+          type: string
+          enum:
+          - SALES_SLIP
+          - AUCTION_SETTLEMENT
+          - NONE
+      - name: targetId
+        in: query
+        required: false
+        schema:
+          type: integer
+          format: int64
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/ApiResponseListPartnerPaymentEventResponse"
+  /api/orchid-groups/{orchidGroupId}/placement-recommendations:
+    get:
+      tags:
+      - orchid-group-command-controller
+      operationId: recommendations
+      parameters:
+      - name: orchidGroupId
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: int64
+      - name: houseId
+        in: query
+        required: false
+        schema:
+          type: integer
+          format: int64
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/ApiResponsePlacementRecommendationResponse"
+  /api/houses:
+    get:
+      tags:
+      - farm-structure-controller
+      operationId: getHouses
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/ApiResponseListHouseResponse"
+  /api/houses/{houseId}:
+    get:
+      tags:
+      - farm-structure-controller
+      operationId: getHouse
+      parameters:
+      - name: houseId
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: int64
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/ApiResponseHouseResponse"
+  /api/farm-status/zoom:
+    get:
+      tags:
+      - farm-status-controller
+      operationId: getZoom
+      parameters:
+      - name: level
+        in: query
+        required: true
+        schema:
+          type: string
+          enum:
+          - HOUSE
+          - PHYSICAL_BED
+          - BED_ZONE
+      - name: houseId
+        in: query
+        required: false
+        schema:
+          type: integer
+          format: int64
+      - name: physicalBedId
+        in: query
+        required: false
+        schema:
+          type: integer
+          format: int64
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/ApiResponseFarmStatusZoomResponse"
+  /api/farm-status/orchid-groups:
+    get:
+      tags:
+      - farm-status-controller
+      operationId: getOrchidGroups_1
+      parameters:
+      - name: targetType
+        in: query
+        required: true
+        schema:
+          type: string
+          enum:
+          - HOUSE
+          - PHYSICAL_BED
+          - BED_ZONE
+      - name: targetId
+        in: query
+        required: true
+        schema:
+          type: integer
+          format: int64
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/ApiResponseFarmStatusOrchidGroupListResponse"
+  /api/farm-status/map:
+    get:
+      tags:
+      - farm-status-controller
+      operationId: getMap
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/ApiResponseFarmStatusMapResponse"
+  /api/dashboard/summary:
+    get:
+      tags:
+      - dashboard-controller
+      operationId: getSummary
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/ApiResponseDashboardSummaryResponse"
+  /api/business-partners/{partnerId}/balance-summary:
+    get:
+      tags:
+      - payment-controller
+      operationId: getBalance
+      parameters:
+      - name: partnerId
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: int64
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/ApiResponsePartnerBalanceSummaryResponse"
+  /api/bed-zones:
+    get:
+      tags:
+      - farm-structure-controller
+      operationId: getBedZones
+      parameters:
+      - name: houseId
+        in: query
+        required: false
+        schema:
+          type: integer
+          format: int64
+      - name: physicalBedId
+        in: query
+        required: false
+        schema:
+          type: integer
+          format: int64
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/ApiResponseListBedZoneResponse"
+  /api/bed-zones/{bedZoneId}:
+    get:
+      tags:
+      - farm-structure-controller
+      operationId: getBedZone
+      parameters:
+      - name: bedZoneId
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: int64
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/ApiResponseBedZoneResponse"
+  /api/auction-tracking/summary:
+    get:
+      tags:
+      - auction-tracking-controller
+      operationId: getSummary_1
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/ApiResponseAuctionTrackingSummaryResponse"
+  /api/auction-settlements:
+    get:
+      tags:
+      - auction-settlement-controller
+      operationId: getSettlements
+      parameters:
+      - name: auctionHouseId
+        in: query
+        required: false
+        schema:
+          type: integer
+          format: int64
+      - name: from
+        in: query
+        required: false
+        schema:
+          type: string
+          format: date
+      - name: to
+        in: query
+        required: false
+        schema:
+          type: string
+          format: date
+      - name: status
+        in: query
+        required: false
+        schema:
+          type: string
+          enum:
+          - CREATED
+          - PAYMENT_WAITING
+          - PARTIALLY_PAID
+          - PAID
+          - AMOUNT_MISMATCH
+          - REVIEW_REQUIRED
+          - CANCELLED
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/ApiResponseListAuctionSettlementResponse"
+  /api/auction-settlements/{settlementId}:
+    get:
+      tags:
+      - auction-settlement-controller
+      operationId: getSettlement
+      parameters:
+      - name: settlementId
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: int64
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/ApiResponseAuctionSettlementResponse"
+  /api/auction-lots:
+    get:
+      tags:
+      - auction-tracking-controller
+      operationId: getLots
+      parameters:
+      - name: from
+        in: query
+        required: false
+        schema:
+          type: string
+          format: date
+      - name: to
+        in: query
+        required: false
+        schema:
+          type: string
+          format: date
+      - name: market
+        in: query
+        required: false
+        schema:
+          type: string
+      - name: variety
+        in: query
+        required: false
+        schema:
+          type: string
+      - name: grade
+        in: query
+        required: false
+        schema:
+          type: string
+      - name: status
+        in: query
+        required: false
+        schema:
+          type: string
+          enum:
+          - SHIPPED
+          - WAITING
+          - IN_PROGRESS
+          - SOLD
+          - PARTIALLY_SOLD
+          - FAILED
+          - REAUCTION_WAITING
+          - RETURN_INFERRED
+          - PARTIALLY_RETURNED
+          - RETURNED
+          - QUANTITY_MISMATCH
+          - REVIEW_REQUIRED
+          - CANCELLED
+      - name: reviewOnly
+        in: query
+        required: false
+        schema:
+          type: boolean
+      - name: returnOnly
+        in: query
+        required: false
+        schema:
+          type: boolean
+      - name: waitingOnly
+        in: query
+        required: false
+        schema:
+          type: boolean
+      - name: keyword
+        in: query
+        required: false
+        schema:
+          type: string
+      - name: page
+        in: query
+        required: false
+        schema:
+          type: integer
+          format: int32
+          default: 0
+      - name: size
+        in: query
+        required: false
+        schema:
+          type: integer
+          format: int32
+          default: 20
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/ApiResponseAuctionLotPageResponse"
+  /api/auction-lots/{id}:
+    get:
+      tags:
+      - auction-tracking-controller
+      operationId: getLot
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: int64
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/ApiResponseAuctionLotResponse"
+  /api/auction-lots/{id}/timeline:
+    get:
+      tags:
+      - auction-tracking-controller
+      operationId: getTimeline
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: int64
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/ApiResponseAuctionLotResponse"
+components:
+  schemas:
+    PartnerSettlementSettingsRequest:
+      type: object
+      properties:
+        settlementUnit:
+          type: string
+          enum:
+          - SALES_SLIP
+          - MONTHLY_BATCH
+          - AUCTION_DATE
+        paymentDelayDays:
+          type: integer
+          format: int32
+          minimum: 0
+        paymentDayMode:
+          type: string
+          enum:
+          - CALENDAR_DAY
+          - BUSINESS_DAY
+        autoMatchEnabled:
+          type: boolean
+        autoSettleEnabled:
+          type: boolean
+        amountTolerance:
+          type: integer
+          format: int64
+          minimum: 0
+        depositorAliases:
+          type: array
+          items:
+            type: string
+            maxLength: 100
+            minLength: 0
+        allowPrepayment:
+          type: boolean
+        creditAutoApplyEnabled:
+          type: boolean
+        ruleJson:
+          type: object
+          additionalProperties: {}
+        memo:
+          type: string
+          maxLength: 1000
+          minLength: 0
+      required:
+      - amountTolerance
+      - depositorAliases
+      - paymentDayMode
+      - paymentDelayDays
+      - settlementUnit
+    ApiResponsePartnerSettlementSettingsResponse:
+      type: object
+      properties:
+        data:
+          $ref: "#/components/schemas/PartnerSettlementSettingsResponse"
+        message:
+          type: string
+    PartnerSettlementSettingsResponse:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: int64
+        partnerId:
+          type: integer
+          format: int64
+        settlementUnit:
+          type: string
+          enum:
+          - SALES_SLIP
+          - MONTHLY_BATCH
+          - AUCTION_DATE
+        paymentDelayDays:
+          type: integer
+          format: int32
+        paymentDayMode:
+          type: string
+          enum:
+          - CALENDAR_DAY
+          - BUSINESS_DAY
+        autoMatchEnabled:
+          type: boolean
+        autoSettleEnabled:
+          type: boolean
+        amountTolerance:
+          type: integer
+          format: int64
+        depositorAliases:
+          type: array
+          items:
+            type: string
+        allowPrepayment:
+          type: boolean
+        creditAutoApplyEnabled:
+          type: boolean
+        ruleJson:
+          type: object
+          additionalProperties: {}
+        memo:
+          type: string
+    BedZoneCapacityRequest:
+      type: object
+      properties:
+        placementType:
+          type: string
+          maxLength: 100
+          minLength: 0
+        potSize:
+          type: string
+          maxLength: 50
+          minLength: 0
+        capacityMode:
+          type: string
+          enum:
+          - SPACIOUS
+          - STANDARD
+          - EXPANDED
+          - COMPRESSED
+          - TEMPORARY
+        capacityValue:
+          type: integer
+          format: int32
+          minimum: 0
+        allowed:
+          type: boolean
+        memo:
+          type: string
+          maxLength: 1000
+          minLength: 0
+      required:
+      - allowed
+      - capacityMode
+      - capacityValue
+      - placementType
+    BedZonePlacementProfileRequest:
+      type: object
+      properties:
+        segments:
+          type: array
+          items:
+            $ref: "#/components/schemas/BedZoneSegmentRequest"
+          minItems: 1
+      required:
+      - segments
+    BedZoneSegmentRequest:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: int64
+        name:
+          type: string
+          maxLength: 100
+          minLength: 0
+        segmentType:
+          type: string
+          enum:
+          - START
+          - MIDDLE
+          - END
+          - CUSTOM
+        sortOrder:
+          type: integer
+          format: int32
+          minimum: 1
+        memo:
+          type: string
+          maxLength: 1000
+          minLength: 0
+        capacities:
+          type: array
+          items:
+            $ref: "#/components/schemas/BedZoneCapacityRequest"
+      required:
+      - capacities
+      - name
+      - segmentType
+      - sortOrder
+    ApiResponseBedZonePlacementProfileResponse:
+      type: object
+      properties:
+        data:
+          $ref: "#/components/schemas/BedZonePlacementProfileResponse"
+        message:
+          type: string
+    BedZoneCapacityResponse:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: int64
+        placementType:
+          type: string
+        potSize:
+          type: string
+        capacityMode:
+          type: string
+          enum:
+          - SPACIOUS
+          - STANDARD
+          - EXPANDED
+          - COMPRESSED
+          - TEMPORARY
+        capacityValue:
+          type: integer
+          format: int32
+        allowed:
+          type: boolean
+        memo:
+          type: string
+    BedZonePlacementProfileResponse:
+      type: object
+      properties:
+        bedZoneId:
+          type: integer
+          format: int64
+        bedZoneName:
+          type: string
+        houseNumber:
+          type: integer
+          format: int32
+        physicalBedNumber:
+          type: integer
+          format: int32
+        hasUnassignedGroups:
+          type: boolean
+        segments:
+          type: array
+          items:
+            $ref: "#/components/schemas/BedZoneSegmentResponse"
+    BedZoneSegmentResponse:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: int64
+        name:
+          type: string
+        segmentType:
+          type: string
+          enum:
+          - START
+          - MIDDLE
+          - END
+          - CUSTOM
+        sortOrder:
+          type: integer
+          format: int32
+        memo:
+          type: string
+        capacities:
+          type: array
+          items:
+            $ref: "#/components/schemas/BedZoneCapacityResponse"
+    WorkTypeCreateRequest:
+      type: object
+      properties:
+        name:
+          type: string
+          maxLength: 50
+          minLength: 0
+        template:
+          type: string
+          enum:
+          - PESTICIDE
+          - FERTILIZER
+          - REPOT
+          - CLEANUP
+          - STATUS
+          - MEMO
+          - MOVEMENT
+      required:
+      - name
+      - template
+    ApiResponseWorkTypeResponse:
+      type: object
+      properties:
+        data:
+          $ref: "#/components/schemas/WorkTypeResponse"
+        message:
+          type: string
+    WorkTypeResponse:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: int64
+        code:
+          type: string
+        name:
+          type: string
+        template:
+          type: string
+          enum:
+          - PESTICIDE
+          - FERTILIZER
+          - REPOT
+          - CLEANUP
+          - STATUS
+          - MEMO
+          - MOVEMENT
+        defaultType:
+          type: boolean
+        systemType:
+          type: boolean
+        active:
+          type: boolean
+        sortOrder:
+          type: integer
+          format: int32
+    WorkRecordCreateRequest:
+      type: object
+      properties:
+        workTypeId:
+          type: integer
+          format: int64
+        workDate:
+          type: string
+          format: date
+        targetType:
+          type: string
+          maxLength: 50
+          minLength: 0
+        targetId:
+          type: integer
+          format: int64
+        materialName:
+          type: string
+          maxLength: 100
+          minLength: 0
+        dilutionRatio:
+          type: string
+          maxLength: 50
+          minLength: 0
+        quantity:
+          type: string
+          maxLength: 50
+          minLength: 0
+        worker:
+          type: string
+          maxLength: 50
+          minLength: 0
+        memo:
+          type: string
+          maxLength: 1000
+          minLength: 0
+      required:
+      - targetType
+      - workDate
+      - workTypeId
+    ApiResponseWorkRecordResponse:
+      type: object
+      properties:
+        data:
+          $ref: "#/components/schemas/WorkRecordResponse"
+        message:
+          type: string
+    WorkRecordResponse:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: int64
+        workTypeId:
+          type: integer
+          format: int64
+        workType:
+          type: string
+        workTypeTemplate:
+          type: string
+          enum:
+          - PESTICIDE
+          - FERTILIZER
+          - REPOT
+          - CLEANUP
+          - STATUS
+          - MEMO
+          - MOVEMENT
+        workDate:
+          type: string
+          format: date
+        targetType:
+          type: string
+        targetId:
+          type: integer
+          format: int64
+        materialName:
+          type: string
+        dilutionRatio:
+          type: string
+        quantity:
+          type: string
+        worker:
+          type: string
+        fromBedZoneId:
+          type: integer
+          format: int64
+        toBedZoneId:
+          type: integer
+          format: int64
+        memo:
+          type: string
+    SalesSlipCreateRequest:
+      type: object
+      properties:
+        saleDate:
+          type: string
+          format: date
+        salesType:
+          type: string
+          enum:
+          - DIRECT
+          - AUCTION
+        partnerId:
+          type: integer
+          format: int64
+        auctionShipmentId:
+          type: integer
+          format: int64
+        paymentStatus:
+          type: string
+          maxLength: 50
+          minLength: 0
+        salesStatus:
+          type: string
+          maxLength: 50
+          minLength: 0
+        paymentMethod:
+          type: string
+          maxLength: 50
+          minLength: 0
+        memo:
+          type: string
+          maxLength: 1000
+          minLength: 0
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/SalesSlipItemRequest"
+      required:
+      - items
+      - saleDate
+    SalesSlipItemRequest:
+      type: object
+      properties:
+        orchidGroupId:
+          type: integer
+          format: int64
+        itemName:
+          type: string
+          maxLength: 150
+          minLength: 0
+        genus:
+          type: string
+          maxLength: 100
+          minLength: 0
+        spec:
+          type: string
+          maxLength: 100
+          minLength: 0
+        quantity:
+          type: integer
+          format: int32
+          minimum: 1
+        unitPrice:
+          type: integer
+          format: int32
+          minimum: 0
+        memo:
+          type: string
+          maxLength: 1000
+          minLength: 0
+      required:
+      - itemName
+      - quantity
+      - unitPrice
+    ApiResponseSalesSlipResponse:
+      type: object
+      properties:
+        data:
+          $ref: "#/components/schemas/SalesSlipResponse"
+        message:
+          type: string
+    BusinessPartnerResponse:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: int64
+        name:
+          type: string
+        partnerType:
+          type: string
+          enum:
+          - WHOLESALE
+          - RETAIL
+          - AUCTION_HOUSE
+        ownerName:
+          type: string
+        phone:
+          type: string
+        address:
+          type: string
+        memo:
+          type: string
+        active:
+          type: boolean
+    SalesSlipItemResponse:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: int64
+        orchidGroupId:
+          type: integer
+          format: int64
+        auctionShipmentLotId:
+          type: integer
+          format: int64
+        itemName:
+          type: string
+        genus:
+          type: string
+        spec:
+          type: string
+        quantity:
+          type: integer
+          format: int32
+        unitPrice:
+          type: integer
+          format: int32
+        amount:
+          type: integer
+          format: int32
+        memo:
+          type: string
+    SalesSlipResponse:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: int64
+        slipNumber:
+          type: string
+        saleDate:
+          type: string
+          format: date
+        salesType:
+          type: string
+          enum:
+          - DIRECT
+          - AUCTION
+        auctionShipmentId:
+          type: integer
+          format: int64
+        auctionMarket:
+          type: string
+        partner:
+          $ref: "#/components/schemas/BusinessPartnerResponse"
+        totalAmount:
+          type: integer
+          format: int32
+        expectedPaymentDate:
+          type: string
+          format: date
+        paidAmount:
+          type: integer
+          format: int64
+        remainingAmount:
+          type: integer
+          format: int64
+        paymentStatus:
+          type: string
+        salesStatus:
+          type: string
+        paymentMethod:
+          type: string
+        memo:
+          type: string
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/SalesSlipItemResponse"
+    ManualPaymentRequest:
+      type: object
+      properties:
+        amount:
+          type: integer
+          format: int64
+        paymentDate:
+          type: string
+          format: date
+        paymentMethod:
+          type: string
+          maxLength: 30
+          minLength: 0
+        depositorName:
+          type: string
+          maxLength: 100
+          minLength: 0
+        worker:
+          type: string
+          maxLength: 100
+          minLength: 0
+        memo:
+          type: string
+          maxLength: 1000
+          minLength: 0
+      required:
+      - amount
+      - paymentDate
+    OrchidGroupCreateRequest:
+      type: object
+      properties:
+        bedZoneId:
+          type: integer
+          format: int64
+        genus:
+          type: string
+          maxLength: 100
+          minLength: 0
+        varietyName:
+          type: string
+          maxLength: 150
+          minLength: 0
+        quantity:
+          type: integer
+          format: int32
+          minimum: 1
+        potSize:
+          type: string
+          maxLength: 50
+          minLength: 0
+        ageYear:
+          type: integer
+          format: int32
+          minimum: 0
+        status:
+          type: string
+          maxLength: 50
+          minLength: 0
+        placementType:
+          type: string
+          maxLength: 50
+          minLength: 0
+        trayCount:
+          type: integer
+          format: int32
+          minimum: 0
+        splitPlacementAllowed:
+          type: boolean
+        memo:
+          type: string
+          maxLength: 1000
+          minLength: 0
+      required:
+      - bedZoneId
+      - quantity
+      - status
+      - varietyName
+    ApiResponseOrchidGroupResponse:
+      type: object
+      properties:
+        data:
+          $ref: "#/components/schemas/OrchidGroupResponse"
+        message:
+          type: string
+    OrchidGroupResponse:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: int64
+        bedZoneId:
+          type: integer
+          format: int64
+        genus:
+          type: string
+        varietyName:
+          type: string
+        quantity:
+          type: integer
+          format: int32
+        potSize:
+          type: string
+        ageYear:
+          type: integer
+          format: int32
+        status:
+          type: string
+        placementType:
+          type: string
+        trayCount:
+          type: integer
+          format: int32
+        splitPlacementAllowed:
+          type: boolean
+        segmentPlacements:
+          type: array
+          items:
+            $ref: "#/components/schemas/OrchidGroupSegmentPlacementResponse"
+        sortOrder:
+          type: integer
+          format: int32
+        memo:
+          type: string
+        houseNumber:
+          type: integer
+          format: int32
+        physicalBedNumber:
+          type: integer
+          format: int32
+        bedZoneName:
+          type: string
+    OrchidGroupSegmentPlacementResponse:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: int64
+        segmentId:
+          type: integer
+          format: int64
+        segmentName:
+          type: string
+        quantity:
+          type: integer
+          format: int32
+        trayCount:
+          type: integer
+          format: int32
+        placementMode:
+          type: string
+          enum:
+          - SPACIOUS
+          - STANDARD
+          - EXPANDED
+          - COMPRESSED
+          - TEMPORARY
+        reorganizeDueDate:
+          type: string
+          format: date
+        memo:
+          type: string
+    BusinessPartnerCreateRequest:
+      type: object
+      properties:
+        name:
+          type: string
+          maxLength: 150
+          minLength: 0
+        partnerType:
+          type: string
+          enum:
+          - WHOLESALE
+          - RETAIL
+          - AUCTION_HOUSE
+        ownerName:
+          type: string
+          maxLength: 100
+          minLength: 0
+        phone:
+          type: string
+          maxLength: 50
+          minLength: 0
+        address:
+          type: string
+          maxLength: 1000
+          minLength: 0
+        memo:
+          type: string
+          maxLength: 1000
+          minLength: 0
+      required:
+      - name
+      - partnerType
+    ApiResponseBusinessPartnerResponse:
+      type: object
+      properties:
+        data:
+          $ref: "#/components/schemas/BusinessPartnerResponse"
+        message:
+          type: string
+    ApiResponseAuctionSettlementResponse:
+      type: object
+      properties:
+        data:
+          $ref: "#/components/schemas/AuctionSettlementResponse"
+        message:
+          type: string
+    AuctionSettlementLineResponse:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: int64
+        auctionResultLineId:
+          type: integer
+          format: int64
+        auctionShipmentLotId:
+          type: integer
+          format: int64
+        shipmentDate:
+          type: string
+          format: date
+        varietyName:
+          type: string
+        shipmentGrade:
+          type: string
+        quantity:
+          type: integer
+          format: int32
+        unitPrice:
+          type: integer
+          format: int32
+        amount:
+          type: integer
+          format: int64
+        status:
+          type: string
+          enum:
+          - UNPAID
+          - PAID
+          - PARTIALLY_PAID
+          - EXCLUDED
+          - REVIEW_REQUIRED
+    AuctionSettlementResponse:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: int64
+        auctionHouseId:
+          type: integer
+          format: int64
+        auctionHouseName:
+          type: string
+        auctionDate:
+          type: string
+          format: date
+        resultReceivedAt:
+          type: string
+          format: date-time
+        expectedPaymentDate:
+          type: string
+          format: date
+        grossAmount:
+          type: integer
+          format: int64
+        feeAmount:
+          type: integer
+          format: int64
+        deductionAmount:
+          type: integer
+          format: int64
+        expectedDepositAmount:
+          type: integer
+          format: int64
+        paidAmount:
+          type: integer
+          format: int64
+        remainingAmount:
+          type: integer
+          format: int64
+        status:
+          type: string
+          enum:
+          - CREATED
+          - PAYMENT_WAITING
+          - PARTIALLY_PAID
+          - PAID
+          - AMOUNT_MISMATCH
+          - REVIEW_REQUIRED
+          - CANCELLED
+        memo:
+          type: string
+        confirmedAt:
+          type: string
+          format: date-time
+        confirmedBy:
+          type: string
+        lines:
+          type: array
+          items:
+            $ref: "#/components/schemas/AuctionSettlementLineResponse"
+    AuctionLotReturnRequest:
+      type: object
+      properties:
+        returnedQuantity:
+          type: integer
+          format: int32
+          minimum: 1
+        returnDate:
+          type: string
+          format: date
+        worker:
+          type: string
+          maxLength: 100
+          minLength: 0
+        memo:
+          type: string
+          maxLength: 1000
+          minLength: 0
+      required:
+      - returnDate
+    ApiResponseAuctionLotResponse:
+      type: object
+      properties:
+        data:
+          $ref: "#/components/schemas/AuctionLotResponse"
+        message:
+          type: string
+    AuctionAttemptResponse:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: int64
+        auctionDate:
+          type: string
+          format: date
+        attemptNo:
+          type: integer
+          format: int32
+        attemptStatus:
+          type: string
+          enum:
+          - SOLD
+          - FAILED
+          - PARTIALLY_SOLD
+          - RETURN_INFERRED
+        failedReason:
+          type: string
+        memo:
+          type: string
+        resultLines:
+          type: array
+          items:
+            $ref: "#/components/schemas/AuctionResultLineResponse"
+    AuctionLotResponse:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: int64
+        shipmentDate:
+          type: string
+          format: date
+        auctionMarket:
+          type: string
+        itemName:
+          type: string
+        varietyName:
+          type: string
+        shipmentGrade:
+          type: string
+        boxes:
+          type: integer
+          format: int32
+        shippedQuantity:
+          type: integer
+          format: int32
+        soldQuantity:
+          type: integer
+          format: int32
+        waitingQuantity:
+          type: integer
+          format: int32
+        returnedQuantity:
+          type: integer
+          format: int32
+        returnConfirmableQuantity:
+          type: integer
+          format: int32
+        returnConfirmedDate:
+          type: string
+          format: date
+        currentStatus:
+          type: string
+          enum:
+          - SHIPPED
+          - WAITING
+          - IN_PROGRESS
+          - SOLD
+          - PARTIALLY_SOLD
+          - FAILED
+          - REAUCTION_WAITING
+          - RETURN_INFERRED
+          - PARTIALLY_RETURNED
+          - RETURNED
+          - QUANTITY_MISMATCH
+          - REVIEW_REQUIRED
+          - CANCELLED
+        latestAuctionDate:
+          type: string
+          format: date
+        failedCount:
+          type: integer
+          format: int32
+        totalAmount:
+          type: integer
+          format: int32
+        inspectionStatus:
+          type: string
+          enum:
+          - NORMAL
+          - AUTO_MATCHED
+          - CORRECTED_MATCH
+          - MANUAL_REVIEW
+          - MATCH_FAILED
+          - QUANTITY_MISMATCH
+          - RETURN_INFERRED
+          - SOURCE_ERROR
+        memo:
+          type: string
+        attempts:
+          type: array
+          items:
+            $ref: "#/components/schemas/AuctionAttemptResponse"
+        statusHistory:
+          type: array
+          items:
+            $ref: "#/components/schemas/AuctionStatusHistoryResponse"
+    AuctionResultLineResponse:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: int64
+        auctionDate:
+          type: string
+          format: date
+        auctionGrade:
+          type: string
+        quantity:
+          type: integer
+          format: int32
+        unitPrice:
+          type: integer
+          format: int32
+        amount:
+          type: integer
+          format: int32
+        note:
+          type: string
+        inspectionStatus:
+          type: string
+          enum:
+          - NORMAL
+          - AUTO_MATCHED
+          - CORRECTED_MATCH
+          - MANUAL_REVIEW
+          - MATCH_FAILED
+          - QUANTITY_MISMATCH
+          - RETURN_INFERRED
+          - SOURCE_ERROR
+    AuctionStatusHistoryResponse:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: int64
+        previousStatus:
+          type: string
+          enum:
+          - SHIPPED
+          - WAITING
+          - IN_PROGRESS
+          - SOLD
+          - PARTIALLY_SOLD
+          - FAILED
+          - REAUCTION_WAITING
+          - RETURN_INFERRED
+          - PARTIALLY_RETURNED
+          - RETURNED
+          - QUANTITY_MISMATCH
+          - REVIEW_REQUIRED
+          - CANCELLED
+        newStatus:
+          type: string
+          enum:
+          - SHIPPED
+          - WAITING
+          - IN_PROGRESS
+          - SOLD
+          - PARTIALLY_SOLD
+          - FAILED
+          - REAUCTION_WAITING
+          - RETURN_INFERRED
+          - PARTIALLY_RETURNED
+          - RETURNED
+          - QUANTITY_MISMATCH
+          - REVIEW_REQUIRED
+          - CANCELLED
+        changedAt:
+          type: string
+          format: date-time
+        reason:
+          type: string
+        worker:
+          type: string
+        memo:
+          type: string
+    AuctionLotAdjustmentRequest:
+      type: object
+      properties:
+        soldQuantity:
+          type: integer
+          format: int32
+          minimum: 0
+        waitingQuantity:
+          type: integer
+          format: int32
+          minimum: 0
+        returnedQuantity:
+          type: integer
+          format: int32
+          minimum: 0
+        worker:
+          type: string
+          maxLength: 100
+          minLength: 0
+        memo:
+          type: string
+          maxLength: 1000
+          minLength: 0
+      required:
+      - returnedQuantity
+      - soldQuantity
+      - waitingQuantity
+    WorkTypeUpdateRequest:
+      type: object
+      properties:
+        name:
+          type: string
+          maxLength: 50
+          minLength: 0
+        template:
+          type: string
+          enum:
+          - PESTICIDE
+          - FERTILIZER
+          - REPOT
+          - CLEANUP
+          - STATUS
+          - MEMO
+          - MOVEMENT
+        active:
+          type: boolean
+      required:
+      - name
+      - template
+    WorkTypeReorderRequest:
+      type: object
+      properties:
+        orderedIds:
+          type: array
+          items:
+            type: integer
+            format: int64
+          minItems: 1
+      required:
+      - orderedIds
+    ApiResponseListWorkTypeResponse:
+      type: object
+      properties:
+        data:
+          type: array
+          items:
+            $ref: "#/components/schemas/WorkTypeResponse"
+        message:
+          type: string
+    OrchidGroupUpdateRequest:
+      type: object
+      properties:
+        genus:
+          type: string
+          maxLength: 100
+          minLength: 0
+        varietyName:
+          type: string
+          maxLength: 150
+          minLength: 0
+        quantity:
+          type: integer
+          format: int32
+          minimum: 1
+        potSize:
+          type: string
+          maxLength: 50
+          minLength: 0
+        ageYear:
+          type: integer
+          format: int32
+          minimum: 0
+        status:
+          type: string
+          maxLength: 50
+          minLength: 0
+        placementType:
+          type: string
+          maxLength: 50
+          minLength: 0
+        trayCount:
+          type: integer
+          format: int32
+          minimum: 0
+        splitPlacementAllowed:
+          type: boolean
+        memo:
+          type: string
+          maxLength: 1000
+          minLength: 0
+      required:
+      - quantity
+      - status
+      - varietyName
+    OrchidGroupMovePlacementRequest:
+      type: object
+      properties:
+        segmentId:
+          type: integer
+          format: int64
+        quantity:
+          type: integer
+          format: int32
+          minimum: 1
+        trayCount:
+          type: integer
+          format: int32
+          minimum: 1
+      required:
+      - quantity
+      - segmentId
+    OrchidGroupMoveRequest:
+      type: object
+      properties:
+        toBedZoneId:
+          type: integer
+          format: int64
+        placementMode:
+          type: string
+          enum:
+          - SPACIOUS
+          - STANDARD
+          - EXPANDED
+          - COMPRESSED
+          - TEMPORARY
+        placements:
+          type: array
+          items:
+            $ref: "#/components/schemas/OrchidGroupMovePlacementRequest"
+        reorganizeDueDate:
+          type: string
+          format: date
+        worker:
+          type: string
+          maxLength: 100
+          minLength: 0
+        memo:
+          type: string
+          maxLength: 1000
+          minLength: 0
+      required:
+      - toBedZoneId
+    AuctionLotStatusRequest:
+      type: object
+      properties:
+        status:
+          type: string
+          enum:
+          - SHIPPED
+          - WAITING
+          - IN_PROGRESS
+          - SOLD
+          - PARTIALLY_SOLD
+          - FAILED
+          - REAUCTION_WAITING
+          - RETURN_INFERRED
+          - PARTIALLY_RETURNED
+          - RETURNED
+          - QUANTITY_MISMATCH
+          - REVIEW_REQUIRED
+          - CANCELLED
+        reason:
+          type: string
+          maxLength: 200
+          minLength: 0
+        worker:
+          type: string
+          maxLength: 100
+          minLength: 0
+        memo:
+          type: string
+          maxLength: 1000
+          minLength: 0
+      required:
+      - reason
+      - status
+    ApiResponseListWorkRecordResponse:
+      type: object
+      properties:
+        data:
+          type: array
+          items:
+            $ref: "#/components/schemas/WorkRecordResponse"
+        message:
+          type: string
+    ApiResponseListSalesSlipResponse:
+      type: object
+      properties:
+        data:
+          type: array
+          items:
+            $ref: "#/components/schemas/SalesSlipResponse"
+        message:
+          type: string
+    ApiResponseListAuctionShipmentOptionResponse:
+      type: object
+      properties:
+        data:
+          type: array
+          items:
+            $ref: "#/components/schemas/AuctionShipmentOptionResponse"
+        message:
+          type: string
+    AuctionShipmentOptionResponse:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: int64
+        shipmentDate:
+          type: string
+          format: date
+        auctionHouseId:
+          type: integer
+          format: int64
+        auctionMarket:
+          type: string
+        lots:
+          type: array
+          items:
+            $ref: "#/components/schemas/Lot"
+    Lot:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: int64
+        itemName:
+          type: string
+        varietyName:
+          type: string
+        shipmentGrade:
+          type: string
+        shippedQuantity:
+          type: integer
+          format: int32
+    ApiResponseListPhysicalBedResponse:
+      type: object
+      properties:
+        data:
+          type: array
+          items:
+            $ref: "#/components/schemas/PhysicalBedResponse"
+        message:
+          type: string
+    BedZoneResponse:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: int64
+        physicalBedId:
+          type: integer
+          format: int64
+        physicalBedNumber:
+          type: integer
+          format: int32
+        houseId:
+          type: integer
+          format: int64
+        houseNumber:
+          type: integer
+          format: int32
+        name:
+          type: string
+        side:
+          type: string
+          enum:
+          - LEFT
+          - RIGHT
+          - CUSTOM
+          - HANGING
+        zoneType:
+          type: string
+          enum:
+          - DEFAULT
+          - CUSTOM
+          - HANGING
+          - TRAY
+          - GRID
+        sortOrder:
+          type: integer
+          format: int32
+        active:
+          type: boolean
+        memo:
+          type: string
+        orchidGroups:
+          type: array
+          items:
+            $ref: "#/components/schemas/OrchidGroupResponse"
+    PhysicalBedResponse:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: int64
+        houseId:
+          type: integer
+          format: int64
+        houseNumber:
+          type: integer
+          format: int32
+        number:
+          type: integer
+          format: int32
+        displayOrder:
+          type: integer
+          format: int32
+        lengthCm:
+          type: integer
+          format: int32
+        widthCm:
+          type: integer
+          format: int32
+        wireCount:
+          type: integer
+          format: int32
+        supportIntervalCm:
+          type: integer
+          format: int32
+        memo:
+          type: string
+        bedZones:
+          type: array
+          items:
+            $ref: "#/components/schemas/BedZoneResponse"
+    ApiResponsePhysicalBedResponse:
+      type: object
+      properties:
+        data:
+          $ref: "#/components/schemas/PhysicalBedResponse"
+        message:
+          type: string
+    ApiResponseListPartnerPaymentEventResponse:
+      type: object
+      properties:
+        data:
+          type: array
+          items:
+            $ref: "#/components/schemas/PartnerPaymentEventResponse"
+        message:
+          type: string
+    PartnerPaymentEventResponse:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: int64
+        partnerId:
+          type: integer
+          format: int64
+        partnerName:
+          type: string
+        eventType:
+          type: string
+          enum:
+          - PAYMENT_RECEIVED
+          - PAYMENT_ALLOCATED
+          - PREPAYMENT_RECEIVED
+          - CREDIT_APPLIED
+          - CREDIT_REFUND
+          - AUTO_MATCH_CANDIDATE
+          - AUTO_MATCH_CONFIRMED
+          - MANUAL_MATCH_CONFIRMED
+          - MATCH_REJECTED
+          - PAYMENT_UNLINKED
+          - ADJUSTMENT
+        eventDate:
+          type: string
+          format: date
+        amount:
+          type: integer
+          format: int64
+        unappliedAmount:
+          type: integer
+          format: int64
+        targetType:
+          type: string
+          enum:
+          - SALES_SLIP
+          - AUCTION_SETTLEMENT
+          - NONE
+        targetId:
+          type: integer
+          format: int64
+        parentEventId:
+          type: integer
+          format: int64
+        paymentMethod:
+          type: string
+        depositorName:
+          type: string
+        description:
+          type: string
+        status:
+          type: string
+          enum:
+          - UNAPPLIED
+          - PARTIALLY_APPLIED
+          - FULLY_APPLIED
+          - CANDIDATE
+          - CONFIRMED
+          - REJECTED
+          - CANCELLED
+        memo:
+          type: string
+        createdBy:
+          type: string
+    ApiResponseListOrchidGroupResponse:
+      type: object
+      properties:
+        data:
+          type: array
+          items:
+            $ref: "#/components/schemas/OrchidGroupResponse"
+        message:
+          type: string
+    ApiResponsePlacementRecommendationResponse:
+      type: object
+      properties:
+        data:
+          $ref: "#/components/schemas/PlacementRecommendationResponse"
+        message:
+          type: string
+    PlacementRecommendationAllocationResponse:
+      type: object
+      properties:
+        segmentId:
+          type: integer
+          format: int64
+        segmentName:
+          type: string
+        quantity:
+          type: integer
+          format: int32
+        occupancyUnits:
+          type: integer
+          format: int32
+        remainingUnits:
+          type: integer
+          format: int32
+    PlacementRecommendationCandidateResponse:
+      type: object
+      properties:
+        bedZoneId:
+          type: integer
+          format: int64
+        bedZoneName:
+          type: string
+        houseId:
+          type: integer
+          format: int64
+        houseNumber:
+          type: integer
+          format: int32
+        physicalBedId:
+          type: integer
+          format: int64
+        physicalBedNumber:
+          type: integer
+          format: int32
+        status:
+          type: string
+          enum:
+          - RECOMMENDED
+          - POSSIBLE
+          - WARNING
+          - UNAVAILABLE
+        requiredMode:
+          type: string
+          enum:
+          - SPACIOUS
+          - STANDARD
+          - EXPANDED
+          - COMPRESSED
+          - TEMPORARY
+        allocations:
+          type: array
+          items:
+            $ref: "#/components/schemas/PlacementRecommendationAllocationResponse"
+        warnings:
+          type: array
+          items:
+            type: string
+    PlacementRecommendationResponse:
+      type: object
+      properties:
+        orchidGroupId:
+          type: integer
+          format: int64
+        varietyName:
+          type: string
+        requirement:
+          $ref: "#/components/schemas/PlacementRequirementResponse"
+        candidates:
+          type: array
+          items:
+            $ref: "#/components/schemas/PlacementRecommendationCandidateResponse"
+    PlacementRequirementResponse:
+      type: object
+      properties:
+        placementType:
+          type: string
+        potSize:
+          type: string
+        quantity:
+          type: integer
+          format: int32
+        occupancyUnits:
+          type: integer
+          format: int32
+        splitAllowed:
+          type: boolean
+    ApiResponseListHouseResponse:
+      type: object
+      properties:
+        data:
+          type: array
+          items:
+            $ref: "#/components/schemas/HouseResponse"
+        message:
+          type: string
+    HouseResponse:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: int64
+        number:
+          type: integer
+          format: int32
+        name:
+          type: string
+        memo:
+          type: string
+        physicalBeds:
+          type: array
+          items:
+            $ref: "#/components/schemas/PhysicalBedResponse"
+    ApiResponseHouseResponse:
+      type: object
+      properties:
+        data:
+          $ref: "#/components/schemas/HouseResponse"
+        message:
+          type: string
+    ApiResponseFarmStatusZoomResponse:
+      type: object
+      properties:
+        data:
+          $ref: "#/components/schemas/FarmStatusZoomResponse"
+        message:
+          type: string
+    FarmStatusZoomResponse:
+      type: object
+      properties:
+        level:
+          type: string
+          enum:
+          - HOUSE
+          - PHYSICAL_BED
+          - BED_ZONE
+        houseId:
+          type: integer
+          format: int64
+        houseNumber:
+          type: integer
+          format: int32
+        physicalBeds:
+          type: array
+          items:
+            $ref: "#/components/schemas/PhysicalBedResponse"
+        bedZones:
+          type: array
+          items:
+            $ref: "#/components/schemas/BedZoneResponse"
+    ApiResponseFarmStatusOrchidGroupListResponse:
+      type: object
+      properties:
+        data:
+          $ref: "#/components/schemas/FarmStatusOrchidGroupListResponse"
+        message:
+          type: string
+    FarmStatusOrchidGroupItemResponse:
+      type: object
+      properties:
+        orchidGroupId:
+          type: integer
+          format: int64
+        varietyName:
+          type: string
+        genus:
+          type: string
+        quantity:
+          type: integer
+          format: int32
+        status:
+          type: string
+        houseId:
+          type: integer
+          format: int64
+        houseNumber:
+          type: integer
+          format: int32
+        physicalBedId:
+          type: integer
+          format: int64
+        physicalBedNumber:
+          type: integer
+          format: int32
+        physicalBedName:
+          type: string
+        bedZoneId:
+          type: integer
+          format: int64
+        bedZoneName:
+          type: string
+    FarmStatusOrchidGroupListResponse:
+      type: object
+      properties:
+        targetType:
+          type: string
+          enum:
+          - HOUSE
+          - PHYSICAL_BED
+          - BED_ZONE
+        targetId:
+          type: integer
+          format: int64
+        targetName:
+          type: string
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/FarmStatusOrchidGroupItemResponse"
+    ApiResponseFarmStatusMapResponse:
+      type: object
+      properties:
+        data:
+          $ref: "#/components/schemas/FarmStatusMapResponse"
+        message:
+          type: string
+    FarmStatusMapResponse:
+      type: object
+      properties:
+        houses:
+          type: array
+          items:
+            $ref: "#/components/schemas/HouseStatusSummaryResponse"
+    HouseStatusSummaryResponse:
+      type: object
+      properties:
+        houseId:
+          type: integer
+          format: int64
+        houseNumber:
+          type: integer
+          format: int32
+        houseName:
+          type: string
+        orchidGroupCount:
+          type: integer
+          format: int64
+        warningCount:
+          type: integer
+          format: int64
+        repotDueCount:
+          type: integer
+          format: int64
+        latestWorkDate:
+          type: string
+    ApiResponseDashboardSummaryResponse:
+      type: object
+      properties:
+        data:
+          $ref: "#/components/schemas/DashboardSummaryResponse"
+        message:
+          type: string
+    DashboardSummaryResponse:
+      type: object
+      properties:
+        houseCount:
+          type: integer
+          format: int64
+        physicalBedCount:
+          type: integer
+          format: int64
+        bedZoneCount:
+          type: integer
+          format: int64
+        orchidGroupCount:
+          type: integer
+          format: int64
+        warningCount:
+          type: integer
+          format: int64
+        repotDueCount:
+          type: integer
+          format: int64
+        latestWorkDate:
+          type: string
+    ApiResponseListBusinessPartnerResponse:
+      type: object
+      properties:
+        data:
+          type: array
+          items:
+            $ref: "#/components/schemas/BusinessPartnerResponse"
+        message:
+          type: string
+    ApiResponsePartnerBalanceSummaryResponse:
+      type: object
+      properties:
+        data:
+          $ref: "#/components/schemas/PartnerBalanceSummaryResponse"
+        message:
+          type: string
+    PartnerBalanceSummaryResponse:
+      type: object
+      properties:
+        partnerId:
+          type: integer
+          format: int64
+        partnerName:
+          type: string
+        creditBalance:
+          type: integer
+          format: int64
+        unappliedPaymentAmount:
+          type: integer
+          format: int64
+        receivableBalance:
+          type: integer
+          format: int64
+    ApiResponseListBedZoneResponse:
+      type: object
+      properties:
+        data:
+          type: array
+          items:
+            $ref: "#/components/schemas/BedZoneResponse"
+        message:
+          type: string
+    ApiResponseBedZoneResponse:
+      type: object
+      properties:
+        data:
+          $ref: "#/components/schemas/BedZoneResponse"
+        message:
+          type: string
+    ApiResponseAuctionTrackingSummaryResponse:
+      type: object
+      properties:
+        data:
+          $ref: "#/components/schemas/AuctionTrackingSummaryResponse"
+        message:
+          type: string
+    AuctionTrackingSummaryResponse:
+      type: object
+      properties:
+        lotCount:
+          type: integer
+          format: int32
+        shippedQuantity:
+          type: integer
+          format: int32
+        soldQuantity:
+          type: integer
+          format: int32
+        waitingQuantity:
+          type: integer
+          format: int32
+        returnedQuantity:
+          type: integer
+          format: int32
+        reviewRequiredCount:
+          type: integer
+          format: int32
+        totalAmount:
+          type: integer
+          format: int32
+    ApiResponseListAuctionSettlementResponse:
+      type: object
+      properties:
+        data:
+          type: array
+          items:
+            $ref: "#/components/schemas/AuctionSettlementResponse"
+        message:
+          type: string
+    ApiResponseAuctionLotPageResponse:
+      type: object
+      properties:
+        data:
+          $ref: "#/components/schemas/AuctionLotPageResponse"
+        message:
+          type: string
+    AuctionLotPageResponse:
+      type: object
+      properties:
+        content:
+          type: array
+          items:
+            $ref: "#/components/schemas/AuctionLotResponse"
+        page:
+          type: integer
+          format: int32
+        size:
+          type: integer
+          format: int32
+        totalElements:
+          type: integer
+          format: int64
+        totalPages:
+          type: integer
+          format: int32
+    ApiResponseVoid:
+      type: object
+      properties:
+        data: {}
+        message:
+          type: string

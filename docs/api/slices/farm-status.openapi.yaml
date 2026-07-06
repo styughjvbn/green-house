@@ -1,0 +1,411 @@
+openapi: 3.1.0
+info:
+  title: Greenhouse API Slice - 농장 현황
+  version: v0
+  description: 농장 현황 지도, 줌 단계, 선택 대상 난 묶음, 대시보드 요약 API
+servers:
+- url: http://localhost:8080
+  description: Generated server url
+paths:
+  /api/farm-status/zoom:
+    get:
+      tags:
+      - farm-status-controller
+      operationId: getZoom
+      parameters:
+      - name: level
+        in: query
+        required: true
+        schema:
+          type: string
+          enum:
+          - HOUSE
+          - PHYSICAL_BED
+          - BED_ZONE
+      - name: houseId
+        in: query
+        required: false
+        schema:
+          type: integer
+          format: int64
+      - name: physicalBedId
+        in: query
+        required: false
+        schema:
+          type: integer
+          format: int64
+      responses:
+        '200':
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/ApiResponseFarmStatusZoomResponse'
+  /api/farm-status/orchid-groups:
+    get:
+      tags:
+      - farm-status-controller
+      operationId: getOrchidGroups_1
+      parameters:
+      - name: targetType
+        in: query
+        required: true
+        schema:
+          type: string
+          enum:
+          - HOUSE
+          - PHYSICAL_BED
+          - BED_ZONE
+      - name: targetId
+        in: query
+        required: true
+        schema:
+          type: integer
+          format: int64
+      responses:
+        '200':
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/ApiResponseFarmStatusOrchidGroupListResponse'
+  /api/farm-status/map:
+    get:
+      tags:
+      - farm-status-controller
+      operationId: getMap
+      responses:
+        '200':
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/ApiResponseFarmStatusMapResponse'
+  /api/dashboard/summary:
+    get:
+      tags:
+      - dashboard-controller
+      operationId: getSummary
+      responses:
+        '200':
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/ApiResponseDashboardSummaryResponse'
+components:
+  schemas:
+    ApiResponseDashboardSummaryResponse:
+      type: object
+      properties:
+        data:
+          $ref: '#/components/schemas/DashboardSummaryResponse'
+        message:
+          type: string
+    ApiResponseFarmStatusMapResponse:
+      type: object
+      properties:
+        data:
+          $ref: '#/components/schemas/FarmStatusMapResponse'
+        message:
+          type: string
+    ApiResponseFarmStatusOrchidGroupListResponse:
+      type: object
+      properties:
+        data:
+          $ref: '#/components/schemas/FarmStatusOrchidGroupListResponse'
+        message:
+          type: string
+    ApiResponseFarmStatusZoomResponse:
+      type: object
+      properties:
+        data:
+          $ref: '#/components/schemas/FarmStatusZoomResponse'
+        message:
+          type: string
+    BedZoneResponse:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: int64
+        physicalBedId:
+          type: integer
+          format: int64
+        physicalBedNumber:
+          type: integer
+          format: int32
+        houseId:
+          type: integer
+          format: int64
+        houseNumber:
+          type: integer
+          format: int32
+        name:
+          type: string
+        side:
+          type: string
+          enum:
+          - LEFT
+          - RIGHT
+          - CUSTOM
+          - HANGING
+        zoneType:
+          type: string
+          enum:
+          - DEFAULT
+          - CUSTOM
+          - HANGING
+          - TRAY
+          - GRID
+        sortOrder:
+          type: integer
+          format: int32
+        active:
+          type: boolean
+        memo:
+          type: string
+        orchidGroups:
+          type: array
+          items:
+            $ref: '#/components/schemas/OrchidGroupResponse'
+    DashboardSummaryResponse:
+      type: object
+      properties:
+        houseCount:
+          type: integer
+          format: int64
+        physicalBedCount:
+          type: integer
+          format: int64
+        bedZoneCount:
+          type: integer
+          format: int64
+        orchidGroupCount:
+          type: integer
+          format: int64
+        warningCount:
+          type: integer
+          format: int64
+        repotDueCount:
+          type: integer
+          format: int64
+        latestWorkDate:
+          type: string
+    FarmStatusMapResponse:
+      type: object
+      properties:
+        houses:
+          type: array
+          items:
+            $ref: '#/components/schemas/HouseStatusSummaryResponse'
+    FarmStatusOrchidGroupItemResponse:
+      type: object
+      properties:
+        orchidGroupId:
+          type: integer
+          format: int64
+        varietyName:
+          type: string
+        genus:
+          type: string
+        quantity:
+          type: integer
+          format: int32
+        status:
+          type: string
+        houseId:
+          type: integer
+          format: int64
+        houseNumber:
+          type: integer
+          format: int32
+        physicalBedId:
+          type: integer
+          format: int64
+        physicalBedNumber:
+          type: integer
+          format: int32
+        physicalBedName:
+          type: string
+        bedZoneId:
+          type: integer
+          format: int64
+        bedZoneName:
+          type: string
+    FarmStatusOrchidGroupListResponse:
+      type: object
+      properties:
+        targetType:
+          type: string
+          enum:
+          - HOUSE
+          - PHYSICAL_BED
+          - BED_ZONE
+        targetId:
+          type: integer
+          format: int64
+        targetName:
+          type: string
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/FarmStatusOrchidGroupItemResponse'
+    FarmStatusZoomResponse:
+      type: object
+      properties:
+        level:
+          type: string
+          enum:
+          - HOUSE
+          - PHYSICAL_BED
+          - BED_ZONE
+        houseId:
+          type: integer
+          format: int64
+        houseNumber:
+          type: integer
+          format: int32
+        physicalBeds:
+          type: array
+          items:
+            $ref: '#/components/schemas/PhysicalBedResponse'
+        bedZones:
+          type: array
+          items:
+            $ref: '#/components/schemas/BedZoneResponse'
+    HouseStatusSummaryResponse:
+      type: object
+      properties:
+        houseId:
+          type: integer
+          format: int64
+        houseNumber:
+          type: integer
+          format: int32
+        houseName:
+          type: string
+        orchidGroupCount:
+          type: integer
+          format: int64
+        warningCount:
+          type: integer
+          format: int64
+        repotDueCount:
+          type: integer
+          format: int64
+        latestWorkDate:
+          type: string
+    OrchidGroupResponse:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: int64
+        bedZoneId:
+          type: integer
+          format: int64
+        genus:
+          type: string
+        varietyName:
+          type: string
+        quantity:
+          type: integer
+          format: int32
+        potSize:
+          type: string
+        ageYear:
+          type: integer
+          format: int32
+        status:
+          type: string
+        placementType:
+          type: string
+        trayCount:
+          type: integer
+          format: int32
+        splitPlacementAllowed:
+          type: boolean
+        segmentPlacements:
+          type: array
+          items:
+            $ref: '#/components/schemas/OrchidGroupSegmentPlacementResponse'
+        sortOrder:
+          type: integer
+          format: int32
+        memo:
+          type: string
+        houseNumber:
+          type: integer
+          format: int32
+        physicalBedNumber:
+          type: integer
+          format: int32
+        bedZoneName:
+          type: string
+    OrchidGroupSegmentPlacementResponse:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: int64
+        segmentId:
+          type: integer
+          format: int64
+        segmentName:
+          type: string
+        quantity:
+          type: integer
+          format: int32
+        trayCount:
+          type: integer
+          format: int32
+        placementMode:
+          type: string
+          enum:
+          - SPACIOUS
+          - STANDARD
+          - EXPANDED
+          - COMPRESSED
+          - TEMPORARY
+        reorganizeDueDate:
+          type: string
+          format: date
+        memo:
+          type: string
+    PhysicalBedResponse:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: int64
+        houseId:
+          type: integer
+          format: int64
+        houseNumber:
+          type: integer
+          format: int32
+        number:
+          type: integer
+          format: int32
+        displayOrder:
+          type: integer
+          format: int32
+        lengthCm:
+          type: integer
+          format: int32
+        widthCm:
+          type: integer
+          format: int32
+        wireCount:
+          type: integer
+          format: int32
+        supportIntervalCm:
+          type: integer
+          format: int32
+        memo:
+          type: string
+        bedZones:
+          type: array
+          items:
+            $ref: '#/components/schemas/BedZoneResponse'
