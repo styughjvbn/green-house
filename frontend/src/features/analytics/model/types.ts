@@ -1,6 +1,8 @@
-﻿import type {
+import type {
+  BusinessPartner,
   DashboardSummary,
   FarmStatusMapData,
+  PartnerBalanceSummary,
   SalesSlip,
   WorkRecord,
 } from "@/entities/farm/types";
@@ -8,6 +10,8 @@
 export type AnalyticsTab = "SALES" | "VARIETY" | "CUSTOMER" | "SPACE" | "WORK";
 
 export type AnalyticsPageProps = {
+  businessPartners: BusinessPartner[];
+  partnerBalances: PartnerBalanceSummary[];
   mapData: FarmStatusMapData;
   salesSlips: SalesSlip[];
   summary: DashboardSummary;
@@ -20,6 +24,20 @@ export type RankedValue = {
   secondary?: string;
 };
 
+export type PartnerAnalyticsStat = {
+  partnerId: number;
+  partnerName: string;
+  partnerType: BusinessPartner["partnerType"];
+  totalSales: number;
+  transactionCount: number;
+  unpaidAmount: number;
+  paidAmount: number;
+  receivableBalance: number;
+  creditBalance: number;
+  unappliedPaymentAmount: number;
+  latestSaleDate: string | null;
+};
+
 export type AnalyticsViewModel = {
   currentMonthSales: number;
   shippedQuantity: number;
@@ -28,6 +46,7 @@ export type AnalyticsViewModel = {
   monthlySales: RankedValue[];
   varietySales: RankedValue[];
   partnerSales: RankedValue[];
+  partnerStats: PartnerAnalyticsStat[];
   paymentBreakdown: RankedValue[];
   recentSlips: SalesSlip[];
   unpaidSlips: SalesSlip[];

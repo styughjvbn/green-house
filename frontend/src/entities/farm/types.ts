@@ -516,3 +516,11 @@ export type PartnerPaymentEvent = {
   memo: string | null;
   createdBy: string | null;
 };
+
+export type PartnerBalanceSummary = {
+  partnerId: number;
+  partnerName: string;
+  creditBalance: number;
+  unappliedPaymentAmount: number;
+  receivableBalance: number;
+};

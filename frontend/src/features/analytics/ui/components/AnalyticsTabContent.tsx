@@ -1,6 +1,7 @@
 ﻿import Link from "next/link";
 import type {
   AnalyticsPageProps,
+  PartnerAnalyticsStat,
   AnalyticsTab,
   AnalyticsViewModel,
   RankedValue,
@@ -31,8 +32,8 @@ export function AnalyticsTabContent({
   if (tab === "CUSTOMER")
     return (
       <BusinessPartnerTab
+        partnerStats={view.partnerStats}
         values={view.partnerSales}
-        unpaid={view.unpaidAmount}
       />
     );
   if (tab === "SPACE") return <SpaceTab props={props} />;
@@ -118,31 +119,51 @@ function VarietyTab({
 }
 
 function BusinessPartnerTab({
+  partnerStats,
   values,
-  unpaid,
 }: {
+  partnerStats: PartnerAnalyticsStat[];
   values: RankedValue[];
-  unpaid: number;
 }) {
   return (
     <div className="grid gap-3 xl:grid-cols-[0.85fr_1.15fr]">
       <RankingChart title="거래처별 매출" values={values} />
       <Panel title="거래처 성과">
         <div className="mt-3 space-y-2">
-          {values.map((item, index) => (
+          {partnerStats.length ? (
+            partnerStats.slice(0, 10).map((item) => (
+              <Link
+                className="grid grid-cols-[minmax(0,1.1fr)_7rem_6rem_5rem_6rem] items-center rounded-md border border-[#e1e6e1] px-4 py-3 text-xs hover:bg-[#f3f9f3]"
+                href={`/sales?tab=PARTNERS`}
+                key={item.partnerId}
+              >
+                <div className="min-w-0">
+                  <strong className="block truncate">{item.partnerName}</strong>
+                  <span className="text-[10px] text-[#6b776f]">
+                    {partnerTypeLabel(item.partnerType)}
+                    {item.latestSaleDate
+                      ? ` · 최근 ${item.latestSaleDate}`
+                      : ""}
+                  </span>
+                </div>
+                <span>{formatWon(item.totalSales)}</span>
+                <span className="text-[#cf5a33]">
+                  미수 {formatWon(item.receivableBalance)}
+                </span>
+                <span>{item.transactionCount}건</span>
+                <span className="text-right text-[#5b6660]">
+                  입금 {formatWon(item.paidAmount)}
+                </span>
+              </Link>
+            ))
+          ) : (
             <Link
-              className="grid grid-cols-[minmax(0,1fr)_7rem_6rem_5rem] items-center rounded-md border border-[#e1e6e1] px-4 py-3 text-xs hover:bg-[#f3f9f3]"
-              href={`/sales?partner=${encodeURIComponent(item.label)}`}
-              key={item.label}
+              className="flex h-24 items-center justify-center rounded-md border border-dashed border-[#d7ded8] text-xs text-[#6b776f]"
+              href="/sales?tab=PARTNERS"
             >
-              <strong>{item.label}</strong>
-              <span>{formatWon(item.value)}</span>
-              <span className="text-[#cf5a33]">
-                미입금 {formatWon(index === 0 ? unpaid : 0)}
-              </span>
-              <span>{Math.max(8 - index, 1)}회 거래</span>
+              거래 데이터 없음
             </Link>
-          ))}
+          )}
         </div>
       </Panel>
     </div>
@@ -271,5 +292,15 @@ function Metric({ label, value }: { label: string; value: string }) {
       <span>{label}</span>
       <strong>{value}</strong>
     </div>
+  );
+}
+
+function partnerTypeLabel(type: PartnerAnalyticsStat["partnerType"]) {
+  return (
+    {
+      WHOLESALE: "도매",
+      RETAIL: "소매",
+      AUCTION_HOUSE: "경매장",
+    }[type] ?? type
   );
 }

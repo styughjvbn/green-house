@@ -1,7 +1,8 @@
-﻿import type { SalesSlip } from "@/entities/farm/types";
+import type { SalesSlip } from "@/entities/farm/types";
 import type {
   AnalyticsPageProps,
   AnalyticsViewModel,
+  PartnerAnalyticsStat,
   RankedValue,
 } from "../model/types";
 
@@ -24,6 +25,7 @@ export function createAnalyticsViewModel(
     (slip) => !isPaymentCompleted(slip.paymentStatus),
   );
   const unpaidAmount = sum(unpaidSlips.map(getUnpaidAmount));
+  const partnerStats = buildPartnerStats(props);
 
   return {
     currentMonthSales,
@@ -37,6 +39,7 @@ export function createAnalyticsViewModel(
     monthlySales: buildMonthlySales(sortedSlips),
     varietySales: aggregateItems(sortedSlips),
     partnerSales: aggregateBusinessPartners(sortedSlips),
+    partnerStats,
     paymentBreakdown: buildPaymentBreakdown(sortedSlips),
     recentSlips: sortedSlips.slice(0, 5),
     unpaidSlips: unpaidSlips.slice(0, 5),
@@ -47,8 +50,9 @@ function buildMonthlySales(slips: SalesSlip[]): RankedValue[] {
   const values = new Map(MONTH_LABELS.map((label) => [label, 0]));
   for (const slip of slips) {
     const month = `${Number(slip.saleDate.slice(5, 7))}월`;
-    if (values.has(month))
+    if (values.has(month)) {
       values.set(month, (values.get(month) ?? 0) + slip.totalAmount);
+    }
   }
   const actual = [...values.values()];
   const hasData = actual.some((value) => value > 0);
@@ -82,12 +86,7 @@ function aggregateBusinessPartners(slips: SalesSlip[]): RankedValue[] {
       (values.get(slip.partner.name) ?? 0) + slip.totalAmount,
     );
   }
-  return ranked(values, [
-    ["행복한 화원", 920000],
-    ["새봄 난원", 680000],
-    ["자연이네 꽃집", 540000],
-    ["초록 정원", 310000],
-  ]);
+  return ranked(values, []);
 }
 
 function buildPaymentBreakdown(slips: SalesSlip[]): RankedValue[] {
@@ -100,16 +99,65 @@ function buildPaymentBreakdown(slips: SalesSlip[]): RankedValue[] {
         : "미입금";
     values.set(label, (values.get(label) ?? 0) + slip.totalAmount);
   }
-  if (values.size === 0)
+  if (values.size === 0) {
     return [
       { label: "입금 완료", value: 1623000 },
       { label: "부분 입금", value: 651000 },
       { label: "미입금", value: 376000 },
     ];
+  }
   return ["입금 완료", "부분 입금", "미입금"].map((label) => ({
     label,
     value: values.get(label) ?? 0,
   }));
+}
+
+function buildPartnerStats(props: AnalyticsPageProps): PartnerAnalyticsStat[] {
+  const salesByPartner = new Map<number, SalesSlip[]>();
+  for (const slip of props.salesSlips) {
+    const current = salesByPartner.get(slip.partner.id) ?? [];
+    current.push(slip);
+    salesByPartner.set(slip.partner.id, current);
+  }
+
+  return props.businessPartners
+    .map((partner) => {
+      const slips = salesByPartner.get(partner.id) ?? [];
+      const balance = props.partnerBalances.find(
+        (item) => item.partnerId === partner.id,
+      );
+      const latestSaleDate =
+        slips
+          .map((slip) => slip.saleDate)
+          .sort((left, right) => right.localeCompare(left))[0] ?? null;
+
+      return {
+        partnerId: partner.id,
+        partnerName: partner.name,
+        partnerType: partner.partnerType,
+        totalSales: sum(slips.map((slip) => slip.totalAmount)),
+        transactionCount: slips.length,
+        unpaidAmount: sum(slips.map((slip) => slip.remainingAmount)),
+        paidAmount: sum(slips.map((slip) => slip.paidAmount)),
+        receivableBalance: balance?.receivableBalance ?? 0,
+        creditBalance: balance?.creditBalance ?? 0,
+        unappliedPaymentAmount: balance?.unappliedPaymentAmount ?? 0,
+        latestSaleDate,
+      };
+    })
+    .filter(
+      (item) =>
+        item.transactionCount > 0 ||
+        item.receivableBalance > 0 ||
+        item.creditBalance > 0 ||
+        item.unappliedPaymentAmount > 0,
+    )
+    .sort((left, right) => {
+      if (right.totalSales !== left.totalSales) {
+        return right.totalSales - left.totalSales;
+      }
+      return right.transactionCount - left.transactionCount;
+    });
 }
 
 function ranked(values: Map<string, number>, fallback: [string, number][]) {
@@ -121,7 +169,7 @@ function ranked(values: Map<string, number>, fallback: [string, number][]) {
 }
 
 function getUnpaidAmount(slip: SalesSlip) {
-  return isPaymentCompleted(slip.paymentStatus) ? 0 : slip.totalAmount;
+  return slip.remainingAmount > 0 ? slip.remainingAmount : 0;
 }
 
 function isPaymentCompleted(status: string) {
