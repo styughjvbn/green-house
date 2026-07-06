@@ -1,27 +1,27 @@
 ﻿import { FormEvent, useMemo, useState } from "react";
 import type {
   AuctionShipmentOption,
-  Customer,
+  BusinessPartner,
   SalesSlip,
 } from "@/entities/farm/types";
 import {
-  createCustomer,
+  createBusinessPartner,
   createSalesSlip,
   getAuctionShipmentOptions,
 } from "../api/salesApi";
 import {
   calculateSalesTotal,
-  createEmptyCustomerForm,
+  createEmptyBusinessPartnerForm,
   createEmptySalesItem,
   createInitialSalesForm,
   createInitialSalesFilters,
   filterSalesSlips,
   resetSalesSlipFormAfterSave,
-  toCreateCustomerPayload,
+  toCreateBusinessPartnerPayload,
   toCreateSalesSlipPayload,
 } from "../lib/salesForm";
 import type {
-  CustomerForm,
+  BusinessPartnerForm,
   SalesFilterState,
   SalesItemForm,
   SalesSlipForm,
@@ -29,16 +29,18 @@ import type {
 } from "./types";
 
 export function useSalesManager(
-  initialCustomers: Customer[],
+  initialBusinessPartners: BusinessPartner[],
   initialSalesSlips: SalesSlip[],
 ) {
-  const [customers, setCustomers] = useState<Customer[]>(initialCustomers);
+  const [partners, setBusinessPartners] = useState<BusinessPartner[]>(
+    initialBusinessPartners,
+  );
   const [salesSlips, setSalesSlips] = useState<SalesSlip[]>(initialSalesSlips);
-  const [customerForm, setCustomerForm] = useState<CustomerForm>(
-    createEmptyCustomerForm(),
+  const [partnerForm, setBusinessPartnerForm] = useState<BusinessPartnerForm>(
+    createEmptyBusinessPartnerForm(),
   );
   const [salesForm, setSalesForm] = useState<SalesSlipForm>(() =>
-    createInitialSalesForm(initialCustomers),
+    createInitialSalesForm(initialBusinessPartners),
   );
   const [activeTab, setActiveTab] = useState<SalesTab>("SLIPS");
   const [filters, setFilters] = useState<SalesFilterState>(() =>
@@ -48,7 +50,7 @@ export function useSalesManager(
   const [selectedSlipId, setSelectedSlipId] = useState<number | null>(
     initialSalesSlips[0]?.id ?? null,
   );
-  const [savingCustomer, setSavingCustomer] = useState(false);
+  const [savingBusinessPartner, setSavingBusinessPartner] = useState(false);
   const [savingSlip, setSavingSlip] = useState(false);
   const [auctionShipments, setAuctionShipments] = useState<
     AuctionShipmentOption[]
@@ -68,16 +70,15 @@ export function useSalesManager(
     [salesSlips, filters],
   );
   const selectedSalesSlip =
-    salesSlips.find((salesSlip) => salesSlip.id === selectedSlipId) ??
+    filteredSalesSlips.find((salesSlip) => salesSlip.id === selectedSlipId) ??
     filteredSalesSlips[0] ??
-    salesSlips[0] ??
     null;
 
-  function updateCustomerForm<K extends keyof CustomerForm>(
+  function updateBusinessPartnerForm<K extends keyof BusinessPartnerForm>(
     field: K,
-    value: CustomerForm[K],
+    value: BusinessPartnerForm[K],
   ) {
-    setCustomerForm((current) => ({ ...current, [field]: value }));
+    setBusinessPartnerForm((current) => ({ ...current, [field]: value }));
   }
 
   function updateSalesForm<K extends keyof SalesSlipForm>(
@@ -163,31 +164,35 @@ export function useSalesManager(
     }));
   }
 
-  function selectCustomer(customerId: number) {
-    updateSalesForm("customerId", String(customerId));
+  function selectBusinessPartner(partnerId: number) {
+    updateSalesForm("partnerId", String(partnerId));
   }
 
-  async function handleCreateCustomer(event: FormEvent<HTMLFormElement>) {
+  async function handleCreateBusinessPartner(
+    event: FormEvent<HTMLFormElement>,
+  ) {
     event.preventDefault();
-    setSavingCustomer(true);
+    setSavingBusinessPartner(true);
     setErrorMessage(null);
 
     try {
-      const customer = await createCustomer(
-        toCreateCustomerPayload(customerForm),
+      const partner = await createBusinessPartner(
+        toCreateBusinessPartnerPayload(partnerForm),
       );
-      setCustomers((current) => [...current, customer]);
-      setSalesForm((current) => ({
-        ...current,
-        customerId: String(customer.id),
-      }));
-      setCustomerForm(createEmptyCustomerForm());
+      setBusinessPartners((current) => [...current, partner]);
+      if (partner.partnerType !== "AUCTION_HOUSE") {
+        setSalesForm((current) => ({
+          ...current,
+          partnerId: String(partner.id),
+        }));
+      }
+      setBusinessPartnerForm(createEmptyBusinessPartnerForm());
     } catch (error) {
       setErrorMessage(
         error instanceof Error ? error.message : "요청 중 문제가 발생했습니다.",
       );
     } finally {
-      setSavingCustomer(false);
+      setSavingBusinessPartner(false);
     }
   }
 
@@ -221,16 +226,16 @@ export function useSalesManager(
   }
 
   return {
-    customers,
+    partners,
     salesSlips,
     filteredSalesSlips,
     selectedSalesSlip,
-    customerForm,
+    partnerForm,
     activeTab,
     filters,
     salesForm,
     showCreateSlip,
-    savingCustomer,
+    savingBusinessPartner,
     savingSlip,
     auctionShipments,
     loadingAuctionShipments,
@@ -238,18 +243,18 @@ export function useSalesManager(
     totalAmount,
     addSalesItem,
     removeSalesItem,
-    selectCustomer,
+    selectBusinessPartner,
     selectSalesSlip: setSelectedSlipId,
     selectSalesType,
     selectAuctionShipment,
     setActiveTab,
     setShowCreateSlip,
     resetFilters,
-    updateCustomerForm,
+    updateBusinessPartnerForm,
     updateFilters,
     updateSalesForm,
     updateItem,
-    handleCreateCustomer,
+    handleCreateBusinessPartner,
     handleCreateSalesSlip,
   };
 }

@@ -581,12 +581,13 @@ class BackendApplicationTests {
 	}
 
 	@Test
-	void createsCustomersAndSalesSlipsWithCalculatedAmounts() throws Exception {
-		var customerResult = mockMvc.perform(post("/api/customers")
+	void createsBusinessPartnersAndSalesSlipsWithCalculatedAmounts() throws Exception {
+		var partnerResult = mockMvc.perform(post("/api/business-partners")
 				.contentType(MediaType.APPLICATION_JSON)
 				.content("""
 					{
 					  "name": "테스트 거래처",
+					  "partnerType": "WHOLESALE",
 					  "ownerName": "대표",
 					  "phone": "010-0000-0000",
 					  "address": "주소",
@@ -596,18 +597,20 @@ class BackendApplicationTests {
 			.andExpect(status().isCreated())
 			.andExpect(jsonPath("$.data.name").value("테스트 거래처"))
 			.andReturn();
-		var customerId = Long.valueOf(customerResult.getResponse().getContentAsString().replaceAll(".*\\\"id\\\":(\\d+).*", "$1"));
+		var partnerId = Long.valueOf(partnerResult.getResponse().getContentAsString().replaceAll(".*\\\"id\\\":(\\d+).*", "$1"));
 
-		mockMvc.perform(get("/api/customers").param("keyword", "테스트"))
+		mockMvc.perform(get("/api/business-partners").param("keyword", "테스트"))
 			.andExpect(status().isOk())
-			.andExpect(jsonPath("$.data[0].id").value(customerId));
+			.andExpect(jsonPath("$.data[0].id").value(partnerId))
+			.andExpect(jsonPath("$.data[0].partnerType").value("WHOLESALE"))
+			.andExpect(jsonPath("$.data[0].active").value(true));
 
 		var slipResult = mockMvc.perform(post("/api/sales-slips")
 				.contentType(MediaType.APPLICATION_JSON)
 				.content("""
 					{
 					  "saleDate": "2026-06-24",
-					  "customerId": %d,
+					  "partnerId": %d,
 					  "paymentStatus": "미입금",
 					  "salesStatus": "작성중",
 					  "paymentMethod": "현금",
@@ -628,9 +631,9 @@ class BackendApplicationTests {
 					    }
 					  ]
 					}
-					""".formatted(customerId)))
+					""".formatted(partnerId)))
 			.andExpect(status().isCreated())
-			.andExpect(jsonPath("$.data.customer.id").value(customerId))
+			.andExpect(jsonPath("$.data.partner.id").value(partnerId))
 			.andExpect(jsonPath("$.data.totalAmount").value(60000))
 			.andExpect(jsonPath("$.data.items", hasSize(2)))
 			.andExpect(jsonPath("$.data.items[0].amount").value(30000))
@@ -646,12 +649,12 @@ class BackendApplicationTests {
 			.andExpect(status().isOk())
 			.andExpect(jsonPath("$.data.id").value(salesSlipId))
 			.andExpect(jsonPath("$.data.slipNumber").exists())
-			.andExpect(jsonPath("$.data.customer.id").value(customerId))
+			.andExpect(jsonPath("$.data.partner.id").value(partnerId))
 			.andExpect(jsonPath("$.data.items", hasSize(2)))
 			.andExpect(jsonPath("$.data.totalAmount").value(60000));
 
 		mockMvc.perform(get("/api/sales-slips")
-				.param("customerId", customerId.toString())
+				.param("partnerId", partnerId.toString())
 				.param("from", "2026-06-01")
 				.param("to", "2026-06-30"))
 			.andExpect(status().isOk())
@@ -660,9 +663,9 @@ class BackendApplicationTests {
 
 	@Test
 	void returnsValidationErrorsForInvalidSalesRequests() throws Exception {
-		mockMvc.perform(post("/api/customers")
+		mockMvc.perform(post("/api/business-partners")
 				.contentType(MediaType.APPLICATION_JSON)
-				.content("{\"name\":\"\"}"))
+				.content("{\"name\":\"\",\"partnerType\":\"WHOLESALE\"}"))
 			.andExpect(status().isBadRequest())
 			.andExpect(jsonPath("$.error.code").value("VALIDATION_ERROR"));
 
@@ -671,7 +674,7 @@ class BackendApplicationTests {
 				.content("""
 					{
 					  "saleDate": "2026-06-24",
-					  "customerId": 999999,
+					  "partnerId": 999999,
 					  "items": [
 					    {
 					      "itemName": "없는 거래처",
@@ -689,7 +692,7 @@ class BackendApplicationTests {
 				.content("""
 					{
 					  "saleDate": "2026-06-24",
-					  "customerId": 1,
+					  "partnerId": 1,
 					  "items": []
 					}
 					"""))

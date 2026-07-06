@@ -1,4 +1,4 @@
-import type { SalesSlip } from "@/entities/farm/types";
+﻿import type { SalesSlip } from "@/entities/farm/types";
 import type {
   AnalyticsPageProps,
   AnalyticsViewModel,
@@ -36,7 +36,7 @@ export function createAnalyticsViewModel(
     saleableQuantity: Math.max(props.summary.orchidGroupCount * 32, 0),
     monthlySales: buildMonthlySales(sortedSlips),
     varietySales: aggregateItems(sortedSlips),
-    customerSales: aggregateCustomers(sortedSlips),
+    partnerSales: aggregateBusinessPartners(sortedSlips),
     paymentBreakdown: buildPaymentBreakdown(sortedSlips),
     recentSlips: sortedSlips.slice(0, 5),
     unpaidSlips: unpaidSlips.slice(0, 5),
@@ -74,12 +74,12 @@ function aggregateItems(slips: SalesSlip[]): RankedValue[] {
   ]);
 }
 
-function aggregateCustomers(slips: SalesSlip[]): RankedValue[] {
+function aggregateBusinessPartners(slips: SalesSlip[]): RankedValue[] {
   const values = new Map<string, number>();
   for (const slip of slips) {
     values.set(
-      slip.customer.name,
-      (values.get(slip.customer.name) ?? 0) + slip.totalAmount,
+      slip.partner.name,
+      (values.get(slip.partner.name) ?? 0) + slip.totalAmount,
     );
   }
   return ranked(values, [

@@ -1,4 +1,4 @@
-# Frontend src Guide
+﻿# Frontend src Guide
 
 `frontend/src`는 Next.js App Router 위에서 기능 중심 구조로 관리한다.
 
@@ -29,17 +29,17 @@ src/
 예시:
 
 ```ts
-import { getCustomers, getSalesSlips, SalesPage } from "@/features/sales";
+import { getBusinessPartners, getSalesSlips, SalesPage } from "@/features/sales";
 
 export const dynamic = "force-dynamic";
 
 export default async function Page() {
-  const [customers, salesSlips] = await Promise.all([
-    getCustomers(),
+  const [partners, salesSlips] = await Promise.all([
+    getBusinessPartners(),
     getSalesSlips(),
   ]);
 
-  return <SalesPage customers={customers} salesSlips={salesSlips} />;
+  return <SalesPage partners={partners} salesSlips={salesSlips} />;
 }
 ```
 

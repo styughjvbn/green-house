@@ -1,4 +1,4 @@
-import Link from "next/link";
+﻿import Link from "next/link";
 import type {
   AnalyticsPageProps,
   AnalyticsTab,
@@ -30,7 +30,10 @@ export function AnalyticsTabContent({
     );
   if (tab === "CUSTOMER")
     return (
-      <CustomerTab values={view.customerSales} unpaid={view.unpaidAmount} />
+      <BusinessPartnerTab
+        values={view.partnerSales}
+        unpaid={view.unpaidAmount}
+      />
     );
   if (tab === "SPACE") return <SpaceTab props={props} />;
   return <WorkTab props={props} />;
@@ -114,7 +117,7 @@ function VarietyTab({
   );
 }
 
-function CustomerTab({
+function BusinessPartnerTab({
   values,
   unpaid,
 }: {
@@ -129,7 +132,7 @@ function CustomerTab({
           {values.map((item, index) => (
             <Link
               className="grid grid-cols-[minmax(0,1fr)_7rem_6rem_5rem] items-center rounded-md border border-[#e1e6e1] px-4 py-3 text-xs hover:bg-[#f3f9f3]"
-              href={`/sales?customer=${encodeURIComponent(item.label)}`}
+              href={`/sales?partner=${encodeURIComponent(item.label)}`}
               key={item.label}
             >
               <strong>{item.label}</strong>

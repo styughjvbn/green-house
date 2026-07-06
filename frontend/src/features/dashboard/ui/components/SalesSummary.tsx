@@ -1,4 +1,4 @@
-import Link from "next/link";
+﻿import Link from "next/link";
 import type { SalesSlip } from "@/entities/farm/types";
 import { getPaymentStatusLabel } from "../../lib/dashboardView";
 import { DashboardMetric, DashboardPanel } from "./DashboardPanel";
@@ -43,9 +43,7 @@ export function SalesSummary({
             <span className="font-semibold text-[#344138]">
               {slip.slipNumber}
             </span>
-            <span className="truncate text-[#5c6a60]">
-              {slip.customer.name}
-            </span>
+            <span className="truncate text-[#5c6a60]">{slip.partner.name}</span>
             <span className="text-right font-bold">
               {slip.totalAmount.toLocaleString()}원
             </span>

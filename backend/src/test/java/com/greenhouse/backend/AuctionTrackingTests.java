@@ -18,6 +18,9 @@ import com.greenhouse.backend.auction.dto.AuctionLotAdjustmentRequest;
 import com.greenhouse.backend.auction.dto.AuctionLotReturnRequest;
 import com.greenhouse.backend.auction.repository.AuctionShipmentLotRepository;
 import com.greenhouse.backend.auction.repository.AuctionShipmentRepository;
+import com.greenhouse.backend.partner.domain.BusinessPartner;
+import com.greenhouse.backend.partner.domain.PartnerType;
+import com.greenhouse.backend.partner.repository.BusinessPartnerRepository;
 import java.time.LocalDate;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -37,6 +40,7 @@ class AuctionTrackingTests {
 	@Autowired AuctionTrackingService trackingService;
 	@Autowired AuctionShipmentLotRepository lotRepository;
 	@Autowired AuctionShipmentRepository shipmentRepository;
+	@Autowired BusinessPartnerRepository partnerRepository;
 	@Autowired MockMvc mockMvc;
 
 	@Test
@@ -108,7 +112,8 @@ class AuctionTrackingTests {
 
 	@Test
 	void createsOneAuctionSalesSlipFromShipmentLots() throws Exception {
-		var shipment = new AuctionShipment(LocalDate.of(2026, 7, 1), "음성");
+		var auctionHouse = createAuctionHouse("음성");
+		var shipment = new AuctionShipment(LocalDate.of(2026, 7, 1), auctionHouse);
 		shipment.addLot(new AuctionShipmentLot("난", "카틀레야 A", "특", 2, 20));
 		shipment.addLot(new AuctionShipmentLot("난", "덴드로비움 B", "A", 3, 30));
 		shipmentRepository.saveAndFlush(shipment);
@@ -132,7 +137,8 @@ class AuctionTrackingTests {
 			.andExpect(status().isCreated())
 			.andExpect(jsonPath("$.data.salesType").value("AUCTION"))
 			.andExpect(jsonPath("$.data.auctionShipmentId").value(shipment.getId()))
-			.andExpect(jsonPath("$.data.customer.name").value("음성"))
+			.andExpect(jsonPath("$.data.partner.name").value("음성"))
+			.andExpect(jsonPath("$.data.partner.partnerType").value("AUCTION_HOUSE"))
 			.andExpect(jsonPath("$.data.saleDate").value("2026-07-01"))
 			.andExpect(jsonPath("$.data.totalAmount").value(0))
 			.andExpect(jsonPath("$.data.items.length()").value(2));
@@ -150,11 +156,17 @@ class AuctionTrackingTests {
 		String grade,
 		int quantity
 	) {
-		var shipment = new AuctionShipment(shipmentDate, market);
+		var shipment = new AuctionShipment(shipmentDate, createAuctionHouse(market));
 		var lot = new AuctionShipmentLot("난", variety, grade, 1, quantity);
 		shipment.addLot(lot);
 		shipmentRepository.saveAndFlush(shipment);
 		return lot;
+	}
+
+	private BusinessPartner createAuctionHouse(String name) {
+		return partnerRepository.saveAndFlush(
+			new BusinessPartner(name, PartnerType.AUCTION_HOUSE, null, null, null, null)
+		);
 	}
 
 	private void addResult(

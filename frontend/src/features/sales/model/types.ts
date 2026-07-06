@@ -1,14 +1,15 @@
-﻿import type { Customer, SalesSlip } from "@/entities/farm/types";
+﻿import type { BusinessPartner, SalesSlip } from "@/entities/farm/types";
 
 export type SalesManagerProps = {
-  initialCustomers: Customer[];
+  initialBusinessPartners: BusinessPartner[];
   initialSalesSlips: SalesSlip[];
   initialAuctionPage: import("@/entities/farm/types").AuctionLotPage;
   initialAuctionSummary: import("@/entities/farm/types").AuctionTrackingSummary;
 };
 
-export type CustomerForm = {
+export type BusinessPartnerForm = {
   name: string;
+  partnerType: import("@/entities/farm/types").PartnerType;
   ownerName: string;
   phone: string;
   address: string;
@@ -27,7 +28,7 @@ export type SalesItemForm = {
 export type SalesSlipForm = {
   salesType: "DIRECT" | "AUCTION";
   saleDate: string;
-  customerId: string;
+  partnerId: string;
   auctionShipmentId: string;
   paymentStatus: string;
   salesStatus: string;
@@ -36,8 +37,9 @@ export type SalesSlipForm = {
   items: SalesItemForm[];
 };
 
-export type CreateCustomerPayload = {
+export type CreateBusinessPartnerPayload = {
   name: string;
+  partnerType: import("@/entities/farm/types").PartnerType;
   ownerName: string | null;
   phone: string | null;
   address: string | null;
@@ -47,7 +49,7 @@ export type CreateCustomerPayload = {
 export type CreateSalesSlipPayload = {
   salesType: "DIRECT" | "AUCTION";
   saleDate: string;
-  customerId: number | null;
+  partnerId: number | null;
   auctionShipmentId: number | null;
   paymentStatus: string;
   salesStatus: string;
@@ -63,7 +65,7 @@ export type CreateSalesSlipPayload = {
   }>;
 };
 
-export type SalesTab = "SLIPS" | "AUCTION" | "SETTLEMENT" | "CUSTOMERS";
+export type SalesTab = "SLIPS" | "AUCTION" | "SETTLEMENT" | "PARTNERS";
 
 export type AuctionFilterState = {
   from: string;
@@ -81,7 +83,7 @@ export type AuctionFilterState = {
 export type SalesFilterState = {
   from: string;
   to: string;
-  customerId: string;
+  partnerId: string;
   paymentStatus: string;
   salesStatus: string;
   keyword: string;

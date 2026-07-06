@@ -4,6 +4,7 @@ import com.greenhouse.backend.sales.domain.SalesSlip;
 import java.time.LocalDate;
 import java.util.List;
 import com.greenhouse.backend.sales.domain.SalesType;
+import com.greenhouse.backend.partner.dto.BusinessPartnerResponse;
 
 public record SalesSlipResponse(
 	Long id,
@@ -12,7 +13,7 @@ public record SalesSlipResponse(
 	SalesType salesType,
 	Long auctionShipmentId,
 	String auctionMarket,
-	CustomerResponse customer,
+	BusinessPartnerResponse partner,
 	Integer totalAmount,
 	String paymentStatus,
 	String salesStatus,
@@ -29,7 +30,7 @@ public record SalesSlipResponse(
 			salesSlip.getSalesType(),
 			salesSlip.getAuctionShipment() == null ? null : salesSlip.getAuctionShipment().getId(),
 			salesSlip.getAuctionShipment() == null ? null : salesSlip.getAuctionShipment().getAuctionMarket(),
-			CustomerResponse.from(salesSlip.getCustomer()),
+			BusinessPartnerResponse.from(salesSlip.getPartner()),
 			salesSlip.getTotalAmount(),
 			salesSlip.getPaymentStatus(),
 			salesSlip.getSalesStatus(),

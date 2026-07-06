@@ -1,12 +1,12 @@
-export { SalesPage } from "./ui/SalesPage";
+﻿export { SalesPage } from "./ui/SalesPage";
 export { SalesManager } from "./ui/SalesManager";
 
 export {
-  getCustomers,
+  getBusinessPartners,
   getSalesSlips,
   getAuctionShipmentOptions,
   getAuctionLots,
   getAuctionTrackingSummary,
-  createCustomer,
+  createBusinessPartner,
   createSalesSlip,
 } from "./api/salesApi";

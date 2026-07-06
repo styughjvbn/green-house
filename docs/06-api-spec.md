@@ -1,4 +1,4 @@
-# API 명세서 초안 v2.2
+﻿# API 명세서 초안 v2.2
 
 ## 1. 공통 규칙
 
@@ -248,19 +248,19 @@ PATCH /api/work-types/reorder
 ### 거래처 목록 조회
 
 ```http
-GET /api/customers?keyword=화원
+GET /api/business-partners?keyword=화원&partnerType=WHOLESALE
 ```
 
 ### 거래처 생성
 
 ```http
-POST /api/customers
+POST /api/business-partners
 ```
 
 ### 판매 전표 목록 조회
 
 ```http
-GET /api/sales-slips?customerId=1&from=2026-01-01&to=2026-12-31
+GET /api/sales-slips?partnerId=1&from=2026-01-01&to=2026-12-31
 ```
 
 ### 판매 전표 생성
@@ -274,7 +274,7 @@ POST /api/sales-slips
 ```json
 {
   "saleDate": "2026-06-20",
-  "customerId": 1,
+  "partnerId": 1,
   "paymentStatus": "미입금",
   "salesStatus": "작성중",
   "paymentMethod": null,
@@ -425,13 +425,13 @@ GET /api/dashboard/farm-map
 ### 거래처 목록 조회
 
 ```http
-GET /api/customers?keyword=화원
+GET /api/business-partners?keyword=화원&partnerType=WHOLESALE
 ```
 
 ### 거래처 등록
 
 ```http
-POST /api/customers
+POST /api/business-partners
 ```
 
 요청:
@@ -439,6 +439,7 @@ POST /api/customers
 ```json
 {
   "name": "거래처명",
+  "partnerType": "WHOLESALE",
   "ownerName": "대표자",
   "phone": "010-0000-0000",
   "address": "주소",
@@ -449,7 +450,7 @@ POST /api/customers
 ### 판매 전표 목록 조회
 
 ```http
-GET /api/sales-slips?customerId=1&from=2026-06-01&to=2026-06-30
+GET /api/sales-slips?partnerId=1&from=2026-06-01&to=2026-06-30
 ```
 
 ### 판매 전표 상세 조회
@@ -469,7 +470,7 @@ POST /api/sales-slips
 ```json
 {
   "saleDate": "2026-06-24",
-  "customerId": 1,
+  "partnerId": 1,
   "paymentStatus": "미입금",
   "salesStatus": "작성중",
   "paymentMethod": "현금",
@@ -490,7 +491,7 @@ POST /api/sales-slips
 
 규칙:
 
-- `saleDate`, `customerId`, `items`는 필수이다.
+- `saleDate`, `partnerId`, `items`는 필수이다.
 - 품목별 `amount`는 `quantity * unitPrice`로 계산한다.
 - 전표 `totalAmount`는 품목 금액 합계로 계산한다.
 - 전표 번호는 판매일 기준 순번으로 자동 생성한다.
@@ -516,7 +517,7 @@ GET /api/sales-slips/{salesSlipId}/print
     "id": 1,
     "slipNumber": "S20260624-001",
     "saleDate": "2026-06-24",
-    "customer": {
+    "partner": {
       "id": 1,
       "name": "거래처명",
       "ownerName": "대표자",
@@ -877,10 +878,10 @@ POST /api/sales-slips
   "salesType": "AUCTION",
   "saleDate": "2026-07-05",
   "auctionShipmentId": 10,
-  "customerId": null,
+  "partnerId": null,
   "memo": "음성 출하",
   "items": []
 }
 ```
 
-서버는 출하일을 판매일로 사용하고 경매장 거래처를 자동 생성·재사용한다. lot별 품목을 출하 수량과 0원 단가로 구성한다. 일반 판매는 `salesType=DIRECT`이며 기존 요청처럼 유형을 생략해도 된다.
+서버는 출하일을 판매일로 사용하고 출하 기록의 `auction_house_id` 거래처를 전표에 연결한다. lot별 품목을 출하 수량과 0원 단가로 구성한다. 일반 판매는 `salesType=DIRECT`이며 기존 요청처럼 유형을 생략해도 된다.

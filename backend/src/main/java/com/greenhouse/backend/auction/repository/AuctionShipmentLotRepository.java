@@ -14,10 +14,10 @@ import com.greenhouse.backend.auction.domain.AuctionInspectionStatus;
 import com.greenhouse.backend.auction.domain.AuctionLotStatus;
 
 public interface AuctionShipmentLotRepository extends JpaRepository<AuctionShipmentLot, Long> {
-	@EntityGraph(attributePaths = "shipment")
+	@EntityGraph(attributePaths = {"shipment", "shipment.auctionHouse"})
 	List<AuctionShipmentLot> findAllByOrderByIdDesc();
 
-	@EntityGraph(attributePaths = "shipment")
+	@EntityGraph(attributePaths = {"shipment", "shipment.auctionHouse"})
 	Optional<AuctionShipmentLot> findWithDetailsById(Long id);
 
 	@Query(
@@ -26,7 +26,7 @@ public interface AuctionShipmentLotRepository extends JpaRepository<AuctionShipm
 			join fetch lot.shipment shipment
 			where (:fromDate is null or shipment.shipmentDate >= :fromDate)
 			  and (:toDate is null or shipment.shipmentDate <= :toDate)
-			  and (:market = '' or lower(shipment.auctionMarket) = lower(:market))
+			  and (:market = '' or lower(shipment.auctionHouse.name) = lower(:market))
 			  and (:variety = '' or lower(lot.varietyName) like lower(concat('%', :variety, '%')))
 			  and (:grade = '' or lot.shipmentGrade = :grade)
 			  and (:status is null or lot.currentStatus = :status)
@@ -36,14 +36,14 @@ public interface AuctionShipmentLotRepository extends JpaRepository<AuctionShipm
 			    select line.id from AuctionResultLine line
 			    where line.auctionAttempt.shipmentLot = lot and line.inspectionStatus in :reviewInspections
 			  ))
-			  and (:keyword = '' or lower(concat(concat(concat(lot.itemName, ' '), lot.varietyName), concat(' ', shipment.auctionMarket))) like lower(concat('%', :keyword, '%')))
+			  and (:keyword = '' or lower(concat(concat(concat(lot.itemName, ' '), lot.varietyName), concat(' ', shipment.auctionHouse.name))) like lower(concat('%', :keyword, '%')))
 			""",
 		countQuery = """
 			select count(lot) from AuctionShipmentLot lot
 			join lot.shipment shipment
 			where (:fromDate is null or shipment.shipmentDate >= :fromDate)
 			  and (:toDate is null or shipment.shipmentDate <= :toDate)
-			  and (:market = '' or lower(shipment.auctionMarket) = lower(:market))
+			  and (:market = '' or lower(shipment.auctionHouse.name) = lower(:market))
 			  and (:variety = '' or lower(lot.varietyName) like lower(concat('%', :variety, '%')))
 			  and (:grade = '' or lot.shipmentGrade = :grade)
 			  and (:status is null or lot.currentStatus = :status)
@@ -53,7 +53,7 @@ public interface AuctionShipmentLotRepository extends JpaRepository<AuctionShipm
 			    select line.id from AuctionResultLine line
 			    where line.auctionAttempt.shipmentLot = lot and line.inspectionStatus in :reviewInspections
 			  ))
-			  and (:keyword = '' or lower(concat(concat(concat(lot.itemName, ' '), lot.varietyName), concat(' ', shipment.auctionMarket))) like lower(concat('%', :keyword, '%')))
+			  and (:keyword = '' or lower(concat(concat(concat(lot.itemName, ' '), lot.varietyName), concat(' ', shipment.auctionHouse.name))) like lower(concat('%', :keyword, '%')))
 			""")
 	Page<AuctionShipmentLot> search(
 		@Param("fromDate") LocalDate from,

@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { Download, ChevronDown } from "lucide-react";
 import { useMemo, useState } from "react";
@@ -27,7 +27,7 @@ const DEFAULT_FILTERS: AnalyticsFilters = {
   bed: "전체",
   zone: "전체",
   variety: "전체",
-  customer: "전체",
+  partner: "전체",
 };
 
 export function AnalyticsPage(props: AnalyticsPageProps) {
@@ -44,8 +44,8 @@ export function AnalyticsPage(props: AnalyticsPageProps) {
     ],
     [props.salesSlips],
   );
-  const customers = useMemo(
-    () => [...new Set(props.salesSlips.map((slip) => slip.customer.name))],
+  const partners = useMemo(
+    () => [...new Set(props.salesSlips.map((slip) => slip.partner.name))],
     [props.salesSlips],
   );
   const filteredProps = useMemo(
@@ -55,8 +55,8 @@ export function AnalyticsPage(props: AnalyticsPageProps) {
         (slip) =>
           slip.saleDate >= filters.dateFrom &&
           slip.saleDate <= filters.dateTo &&
-          (filters.customer === "전체" ||
-            slip.customer.name === filters.customer) &&
+          (filters.partner === "전체" ||
+            slip.partner.name === filters.partner) &&
           (filters.variety === "전체" ||
             slip.items.some((item) => item.itemName === filters.variety)),
       ),
@@ -83,7 +83,7 @@ export function AnalyticsPage(props: AnalyticsPageProps) {
       ...filteredProps.salesSlips.map((slip) =>
         [
           slip.slipNumber,
-          slip.customer.name,
+          slip.partner.name,
           slip.saleDate,
           slip.totalAmount,
           slip.paymentStatus,
@@ -128,7 +128,7 @@ export function AnalyticsPage(props: AnalyticsPageProps) {
       <FilterBar
         values={draftFilters}
         varieties={varieties}
-        customers={customers}
+        partners={partners}
         onChange={(key, value) =>
           setDraftFilters((current) => ({ ...current, [key]: value }))
         }

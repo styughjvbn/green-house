@@ -1,4 +1,4 @@
-# 데이터베이스 설계 문서 v2
+﻿# 데이터베이스 설계 문서 v2
 
 ## 1. 설계 원칙
 
@@ -168,16 +168,18 @@ BED_ZONE
 ORCHID_GROUP
 ```
 
-### customers
+### business_partners
 
 | 컬럼 | 타입 | 설명 |
 |---|---|---|
 | id | BIGSERIAL PK | 거래처 ID |
 | name | VARCHAR | 거래처명 |
+| partner_type | VARCHAR | `WHOLESALE`, `RETAIL`, `AUCTION_HOUSE` |
 | owner_name | VARCHAR | 대표자명 |
 | phone | VARCHAR | 연락처 |
 | address | TEXT | 주소 |
 | memo | TEXT | 메모 |
+| is_active | BOOLEAN | 사용 여부 |
 | created_at | TIMESTAMP | 생성일 |
 | updated_at | TIMESTAMP | 수정일 |
 
@@ -188,7 +190,9 @@ ORCHID_GROUP
 | id | BIGSERIAL PK | 판매 전표 ID |
 | slip_number | VARCHAR UNIQUE | 전표번호 |
 | sale_date | DATE | 판매일 |
-| customer_id | BIGINT FK | 거래처 ID |
+| sales_type | VARCHAR | `DIRECT`, `AUCTION` |
+| partner_id | BIGINT FK | 거래처 ID |
+| auction_shipment_id | BIGINT UNIQUE FK, NULL | 경매 출하 ID |
 | total_amount | INTEGER | 총 금액 |
 | payment_status | VARCHAR | 입금 상태 |
 | sales_status | VARCHAR | 판매 상태 |
@@ -282,7 +286,7 @@ CREATE INDEX idx_work_records_target ON work_records(target_type, target_id);
 CREATE INDEX idx_work_records_type_date ON work_records(work_type, work_date);
 CREATE INDEX idx_work_records_from_zone ON work_records(from_bed_zone_id);
 CREATE INDEX idx_work_records_to_zone ON work_records(to_bed_zone_id);
-CREATE INDEX idx_sales_slips_customer_id ON sales_slips(customer_id);
+CREATE INDEX idx_sales_slips_partner_id ON sales_slips(partner_id);
 CREATE INDEX idx_sales_slips_sale_date ON sales_slips(sale_date);
 CREATE INDEX idx_sales_slip_items_orchid_group_id ON sales_slip_items(orchid_group_id);
 ```
@@ -345,7 +349,7 @@ CREATE INDEX idx_sales_slip_items_orchid_group_id ON sales_slip_items(orchid_gro
 
 | 테이블 | 핵심 컬럼 | 역할 |
 |---|---|---|
-| `auction_shipments` | `shipment_date`, `auction_market`, `status` | 출하일·경매장 묶음 |
+| `auction_shipments` | `shipment_date`, `auction_house_id`, `status` | 출하일·경매장 거래처 묶음 |
 | `auction_shipment_lots` | `shipment_id`, `item_name`, `variety_name`, `shipment_grade`, `boxes`(NULL 허용), `shipped_quantity`, `sold_quantity`, `waiting_quantity`, `returned_quantity`, `current_status` | 실제 추적 lot |
 | `auction_attempts` | `shipment_lot_id`, `auction_date`, `attempt_no`, `attempt_status`, `failed_reason` | 경매 시도 |
 | `auction_result_lines` | `auction_attempt_id`, `auction_date`, `auction_grade`, `quantity`, `unit_price`, `amount`, `inspection_status` | 단가별 경매 결과 |
@@ -354,7 +358,7 @@ CREATE INDEX idx_sales_slip_items_orchid_group_id ON sales_slip_items(orchid_gro
 권장 인덱스:
 
 ```sql
-CREATE INDEX idx_auction_shipments_date_market ON auction_shipments(shipment_date, auction_market);
+CREATE INDEX idx_auction_shipments_date_house ON auction_shipments(shipment_date, auction_house_id);
 CREATE INDEX idx_auction_lots_business_key ON auction_shipment_lots(variety_name, shipment_grade, current_status);
 CREATE INDEX idx_auction_attempts_lot_date ON auction_attempts(shipment_lot_id, auction_date);
 ```
@@ -367,9 +371,13 @@ CSV Import 기능 제거에 따라 `import_batches`, `import_rows` 테이블과 
 
 ```text
 sales_slips.sales_type                 DIRECT | AUCTION, 기존 NULL은 DIRECT
+sales_slips.partner_id                 business_partners FK
 sales_slips.auction_shipment_id        nullable unique FK
 sales_slip_items.auction_shipment_lot_id nullable unique FK
+auction_shipments.auction_house_id     business_partners FK (`AUCTION_HOUSE`)
 ```
+
+기존 개발 DB의 seed 데이터를 유지하면서 전환할 때는 `scripts/migrate-business-partners.sql`을 1회 실행한다. 새 DB는 JPA 스키마 생성 결과를 그대로 사용한다.
 
 경매 출하 기록과 lot은 판매 전표에 중복 연결하지 않는다. 경매 전표 최초 금액은 0원이며 정산 결과 자동 반영은 별도 트랜잭션 설계 후 추가한다.
 

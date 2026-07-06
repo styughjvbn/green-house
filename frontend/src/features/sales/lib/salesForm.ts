@@ -1,16 +1,17 @@
-import type { Customer, SalesSlip } from "@/entities/farm/types";
+﻿import type { BusinessPartner, SalesSlip } from "@/entities/farm/types";
 import type {
-  CreateCustomerPayload,
+  CreateBusinessPartnerPayload,
   CreateSalesSlipPayload,
-  CustomerForm,
+  BusinessPartnerForm,
   SalesFilterState,
   SalesItemForm,
   SalesSlipForm,
 } from "../model/types";
 
-export function createEmptyCustomerForm(): CustomerForm {
+export function createEmptyBusinessPartnerForm(): BusinessPartnerForm {
   return {
     name: "",
+    partnerType: "WHOLESALE",
     ownerName: "",
     phone: "",
     address: "",
@@ -30,13 +31,16 @@ export function createEmptySalesItem(): SalesItemForm {
 }
 
 export function createInitialSalesForm(
-  customers: Customer[],
+  partners: BusinessPartner[],
   today = todayIsoDate(),
 ): SalesSlipForm {
+  const directPartner = partners.find(
+    (partner) => partner.partnerType !== "AUCTION_HOUSE",
+  );
   return {
     salesType: "DIRECT",
     saleDate: today,
-    customerId: customers[0] ? String(customers[0].id) : "",
+    partnerId: directPartner ? String(directPartner.id) : "",
     auctionShipmentId: "",
     paymentStatus: "미입금",
     salesStatus: "작성중",
@@ -46,16 +50,11 @@ export function createInitialSalesForm(
   };
 }
 
-export function createInitialSalesFilters(
-  today = todayIsoDate(),
-): SalesFilterState {
-  const from = new Date(today);
-  from.setDate(from.getDate() - 30);
-
+export function createInitialSalesFilters(): SalesFilterState {
   return {
-    from: from.toISOString().slice(0, 10),
-    to: today,
-    customerId: "",
+    from: "",
+    to: "",
+    partnerId: "",
     paymentStatus: "",
     salesStatus: "",
     keyword: "",
@@ -79,7 +78,7 @@ export function filterSalesSlips(
     if (filters.to && slip.saleDate > filters.to) {
       return false;
     }
-    if (filters.customerId && String(slip.customer.id) !== filters.customerId) {
+    if (filters.partnerId && String(slip.partner.id) !== filters.partnerId) {
       return false;
     }
     if (filters.paymentStatus && slip.paymentStatus !== filters.paymentStatus) {
@@ -94,9 +93,9 @@ export function filterSalesSlips(
 
     return [
       slip.slipNumber,
-      slip.customer.name,
-      slip.customer.ownerName,
-      slip.customer.phone,
+      slip.partner.name,
+      slip.partner.ownerName,
+      slip.partner.phone,
       slip.memo,
     ]
       .filter(Boolean)
@@ -117,11 +116,12 @@ export function nullableText(value: string): string | null {
   return trimmed.length > 0 ? trimmed : null;
 }
 
-export function toCreateCustomerPayload(
-  form: CustomerForm,
-): CreateCustomerPayload {
+export function toCreateBusinessPartnerPayload(
+  form: BusinessPartnerForm,
+): CreateBusinessPartnerPayload {
   return {
     name: form.name,
+    partnerType: form.partnerType,
     ownerName: nullableText(form.ownerName),
     phone: nullableText(form.phone),
     address: nullableText(form.address),
@@ -135,7 +135,7 @@ export function toCreateSalesSlipPayload(
   return {
     salesType: form.salesType,
     saleDate: form.saleDate,
-    customerId: form.salesType === "DIRECT" ? Number(form.customerId) : null,
+    partnerId: form.salesType === "DIRECT" ? Number(form.partnerId) : null,
     auctionShipmentId:
       form.salesType === "AUCTION" ? Number(form.auctionShipmentId) : null,
     paymentStatus: form.paymentStatus,
