@@ -8,9 +8,7 @@ import com.greenhouse.backend.farm.dto.OrchidGroupResponse;
 import com.greenhouse.backend.farm.dto.OrchidGroupUpdateRequest;
 import com.greenhouse.backend.farm.repository.BedZoneRepository;
 import com.greenhouse.backend.farm.repository.OrchidGroupRepository;
-import com.greenhouse.backend.work.domain.WorkRecord;
-import com.greenhouse.backend.work.application.WorkTypeService;
-import com.greenhouse.backend.work.repository.WorkRecordRepository;
+import com.greenhouse.backend.work.application.MovementWorkRecorder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -20,21 +18,18 @@ public class OrchidGroupCommandService {
 
 	private final BedZoneRepository bedZoneRepository;
 	private final OrchidGroupRepository orchidGroupRepository;
-	private final WorkRecordRepository workRecordRepository;
-	private final WorkTypeService workTypeService;
+	private final MovementWorkRecorder movementWorkRecorder;
 	private final PlacementRecommendationService placementRecommendationService;
 
 	public OrchidGroupCommandService(
 		BedZoneRepository bedZoneRepository,
 		OrchidGroupRepository orchidGroupRepository,
-		WorkRecordRepository workRecordRepository,
-		WorkTypeService workTypeService,
+		MovementWorkRecorder movementWorkRecorder,
 		PlacementRecommendationService placementRecommendationService
 	) {
 		this.bedZoneRepository = bedZoneRepository;
 		this.orchidGroupRepository = orchidGroupRepository;
-		this.workRecordRepository = workRecordRepository;
-		this.workTypeService = workTypeService;
+		this.movementWorkRecorder = movementWorkRecorder;
 		this.placementRecommendationService = placementRecommendationService;
 	}
 
@@ -117,14 +112,12 @@ public class OrchidGroupCommandService {
 			int nextSortOrder = orchidGroupRepository.findMaxSortOrderByBedZoneId(toBedZone.getId()) + 1;
 			orchidGroup.moveTo(toBedZone, nextSortOrder);
 		}
-		workRecordRepository.save(WorkRecord.movement(
-			workTypeService.getMovementType(),
+		movementWorkRecorder.record(
 			orchidGroup.getId(),
 			fromBedZoneId,
 			toBedZone.getId(),
 			normalize(request.worker()),
-			normalize(request.memo())
-		));
+			normalize(request.memo()));
 		return OrchidGroupResponse.from(orchidGroup);
 	}
 

@@ -1,10 +1,5 @@
 package com.greenhouse.backend.work.application;
 
-import com.greenhouse.backend.common.exception.NotFoundException;
-import com.greenhouse.backend.farm.repository.BedZoneRepository;
-import com.greenhouse.backend.farm.repository.HouseRepository;
-import com.greenhouse.backend.farm.repository.OrchidGroupRepository;
-import com.greenhouse.backend.farm.repository.PhysicalBedRepository;
 import com.greenhouse.backend.work.domain.WorkRecord;
 import com.greenhouse.backend.work.dto.WorkRecordCreateRequest;
 import com.greenhouse.backend.work.dto.WorkRecordResponse;
@@ -20,25 +15,16 @@ public class WorkRecordService {
 
 	private final WorkRecordRepository workRecordRepository;
 	private final WorkTypeService workTypeService;
-	private final HouseRepository houseRepository;
-	private final PhysicalBedRepository physicalBedRepository;
-	private final BedZoneRepository bedZoneRepository;
-	private final OrchidGroupRepository orchidGroupRepository;
+	private final WorkTargetValidator workTargetValidator;
 
 	public WorkRecordService(
 		WorkRecordRepository workRecordRepository,
 		WorkTypeService workTypeService,
-		HouseRepository houseRepository,
-		PhysicalBedRepository physicalBedRepository,
-		BedZoneRepository bedZoneRepository,
-		OrchidGroupRepository orchidGroupRepository
+		WorkTargetValidator workTargetValidator
 	) {
 		this.workRecordRepository = workRecordRepository;
 		this.workTypeService = workTypeService;
-		this.houseRepository = houseRepository;
-		this.physicalBedRepository = physicalBedRepository;
-		this.bedZoneRepository = bedZoneRepository;
-		this.orchidGroupRepository = orchidGroupRepository;
+		this.workTargetValidator = workTargetValidator;
 	}
 
 	@Transactional(readOnly = true)
@@ -83,22 +69,7 @@ public class WorkRecordService {
 
 	private void validateTarget(String targetType, Long targetId) {
 		String normalizedTargetType = normalizeRequired(targetType);
-		if ("FARM".equals(normalizedTargetType)) {
-			return;
-		}
-		if (targetId == null) {
-			throw new IllegalArgumentException("Work target id is required.");
-		}
-		boolean exists = switch (normalizedTargetType) {
-			case "HOUSE" -> houseRepository.existsById(targetId);
-			case "PHYSICAL_BED" -> physicalBedRepository.existsById(targetId);
-			case "BED_ZONE" -> bedZoneRepository.existsById(targetId);
-			case "ORCHID_GROUP" -> orchidGroupRepository.existsById(targetId);
-			default -> throw new IllegalArgumentException("Unsupported work target.");
-		};
-		if (!exists) {
-			throw new NotFoundException("Work target not found.");
-		}
+		workTargetValidator.validate(normalizedTargetType, targetId);
 	}
 
 	private String normalize(String value) {
