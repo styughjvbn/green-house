@@ -10,7 +10,6 @@ export function SalesTrendChart({ values }: { values: RankedValue[] }) {
     <Panel title="월별 매출 추이">
       <div className="mt-2 flex items-center gap-4 text-[10px] text-[#68746d]">
         <Legend color="#159447" label="매출(원)" />
-        <Legend color="#cbd2cd" label="전년 매출(원)" />
       </div>
       <div className="relative mt-2 h-48">
         <div className="absolute inset-0 flex flex-col justify-between">
@@ -37,13 +36,6 @@ export function SalesTrendChart({ values }: { values: RankedValue[] }) {
           viewBox="0 0 100 100"
           aria-label="월별 매출 선 그래프"
         >
-          <polyline
-            fill="none"
-            points="8,72 26,82 45,48 63,52 82,77 100,60"
-            stroke="#cbd2cd"
-            strokeDasharray="2 2"
-            strokeWidth="1"
-          />
           <polyline
             fill="none"
             points={points}

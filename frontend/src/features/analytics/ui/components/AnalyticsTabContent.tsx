@@ -51,7 +51,7 @@ function SalesTab({ view }: { view: AnalyticsViewModel }) {
       <div className="grid gap-3 xl:grid-cols-[1fr_0.9fr_1fr]">
         <SlipTable title="미입금 전표 TOP 5" slips={view.unpaidSlips} unpaid />
         <SlipTable title="최근 출고 완료 전표" slips={view.recentSlips} />
-        <InsightsPanel />
+        <InsightsPanel items={view.salesInsights} />
       </div>
     </div>
   );

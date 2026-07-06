@@ -24,6 +24,13 @@ export type RankedValue = {
   secondary?: string;
 };
 
+export type SalesInsight = {
+  tone: "green" | "red" | "orange" | "blue";
+  text: string;
+  actionLabel?: string;
+  actionHref?: string;
+};
+
 export type PartnerAnalyticsStat = {
   partnerId: number;
   partnerName: string;
@@ -49,6 +56,7 @@ export type AnalyticsViewModel = {
   partnerStats: PartnerAnalyticsStat[];
   paymentBreakdown: RankedValue[];
   recentSlips: SalesSlip[];
+  salesInsights: SalesInsight[];
   unpaidSlips: SalesSlip[];
 };
 

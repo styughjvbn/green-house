@@ -1,12 +1,11 @@
 import type { SalesSlip } from "@/entities/farm/types";
 import type {
   AnalyticsPageProps,
+  SalesInsight,
   AnalyticsViewModel,
   PartnerAnalyticsStat,
   RankedValue,
 } from "../model/types";
-
-const MONTH_LABELS = ["1월", "2월", "3월", "4월", "5월", "6월"];
 
 export function createAnalyticsViewModel(
   props: AnalyticsPageProps,
@@ -42,24 +41,27 @@ export function createAnalyticsViewModel(
     partnerStats,
     paymentBreakdown: buildPaymentBreakdown(sortedSlips),
     recentSlips: sortedSlips.slice(0, 5),
+    salesInsights: buildSalesInsights({
+      partnerStats,
+      salesSlips: sortedSlips,
+      unpaidAmount,
+    }),
     unpaidSlips: unpaidSlips.slice(0, 5),
   };
 }
 
 function buildMonthlySales(slips: SalesSlip[]): RankedValue[] {
-  const values = new Map(MONTH_LABELS.map((label) => [label, 0]));
+  const monthKeys = buildRecentMonthKeys(slips, 6);
+  const values = new Map(monthKeys.map((key) => [key, 0]));
   for (const slip of slips) {
-    const month = `${Number(slip.saleDate.slice(5, 7))}월`;
+    const month = slip.saleDate.slice(0, 7);
     if (values.has(month)) {
       values.set(month, (values.get(month) ?? 0) + slip.totalAmount);
     }
   }
-  const actual = [...values.values()];
-  const hasData = actual.some((value) => value > 0);
-  const fallback = [1800000, 3000000, 2950000, 2300000, 2100000, 2650000];
-  return MONTH_LABELS.map((label, index) => ({
-    label,
-    value: hasData ? (values.get(label) ?? 0) : fallback[index],
+  return monthKeys.map((key) => ({
+    label: `${Number(key.slice(5, 7))}월`,
+    value: values.get(key) ?? 0,
   }));
 }
 
@@ -101,9 +103,9 @@ function buildPaymentBreakdown(slips: SalesSlip[]): RankedValue[] {
   }
   if (values.size === 0) {
     return [
-      { label: "입금 완료", value: 1623000 },
-      { label: "부분 입금", value: 651000 },
-      { label: "미입금", value: 376000 },
+      { label: "입금 완료", value: 0 },
+      { label: "부분 입금", value: 0 },
+      { label: "미입금", value: 0 },
     ];
   }
   return ["입금 완료", "부분 입금", "미입금"].map((label) => ({
@@ -160,6 +162,88 @@ function buildPartnerStats(props: AnalyticsPageProps): PartnerAnalyticsStat[] {
     });
 }
 
+function buildSalesInsights({
+  partnerStats,
+  salesSlips,
+  unpaidAmount,
+}: {
+  partnerStats: PartnerAnalyticsStat[];
+  salesSlips: SalesSlip[];
+  unpaidAmount: number;
+}): SalesInsight[] {
+  const insights: SalesInsight[] = [];
+  const monthKeys = buildRecentMonthKeys(salesSlips, 2);
+  const [previousMonthKey, currentMonthKey] = monthKeys;
+  const previousMonthSales = sum(
+    salesSlips
+      .filter((slip) => slip.saleDate.startsWith(previousMonthKey))
+      .map((slip) => slip.totalAmount),
+  );
+  const currentMonthSales = sum(
+    salesSlips
+      .filter((slip) => slip.saleDate.startsWith(currentMonthKey))
+      .map((slip) => slip.totalAmount),
+  );
+  const previousMonthQty = sum(
+    salesSlips
+      .filter((slip) => slip.saleDate.startsWith(previousMonthKey))
+      .flatMap((slip) => slip.items.map((item) => item.quantity)),
+  );
+  const currentMonthQty = sum(
+    salesSlips
+      .filter((slip) => slip.saleDate.startsWith(currentMonthKey))
+      .flatMap((slip) => slip.items.map((item) => item.quantity)),
+  );
+  const topPartner = partnerStats[0];
+  const unpaidCount = salesSlips.filter(
+    (slip) => slip.remainingAmount > 0,
+  ).length;
+
+  if (currentMonthKey) {
+    insights.push({
+      tone: currentMonthSales >= previousMonthSales ? "green" : "orange",
+      text:
+        previousMonthSales > 0
+          ? `${formatMonthLabel(currentMonthKey)} 매출 ${formatSignedRate(changeRate(previousMonthSales, currentMonthSales))}`
+          : `${formatMonthLabel(currentMonthKey)} 매출 ${currentMonthSales.toLocaleString()}원`,
+    });
+    insights.push({
+      tone: currentMonthQty >= previousMonthQty ? "blue" : "orange",
+      text:
+        previousMonthQty > 0
+          ? `${formatMonthLabel(currentMonthKey)} 출하 ${formatSignedRate(changeRate(previousMonthQty, currentMonthQty))}`
+          : `${formatMonthLabel(currentMonthKey)} 출하 ${currentMonthQty.toLocaleString()}분`,
+    });
+  }
+
+  if (topPartner) {
+    insights.push({
+      tone: "green",
+      text: `최다 거래처 ${topPartner.partnerName} · 매출 ${topPartner.totalSales.toLocaleString()}원`,
+      actionLabel: "거래처 보기",
+      actionHref: "/analytics?tab=CUSTOMER",
+    });
+  }
+
+  if (unpaidCount > 0 || unpaidAmount > 0) {
+    insights.push({
+      tone: "red",
+      text: `미입금 전표 ${unpaidCount}건 · 미수 ${unpaidAmount.toLocaleString()}원`,
+      actionLabel: "판매 관리",
+      actionHref: "/sales",
+    });
+  }
+
+  if (!insights.length) {
+    insights.push({
+      tone: "blue",
+      text: "표시할 판매 데이터가 없습니다.",
+    });
+  }
+
+  return insights.slice(0, 4);
+}
+
 function ranked(values: Map<string, number>, fallback: [string, number][]) {
   const source = values.size ? [...values.entries()] : fallback;
   return source
@@ -178,4 +262,34 @@ function isPaymentCompleted(status: string) {
 
 function sum(values: number[]) {
   return values.reduce((total, value) => total + value, 0);
+}
+
+function buildRecentMonthKeys(slips: SalesSlip[], length: number) {
+  const base = slips[0]?.saleDate
+    ? new Date(`${slips[0].saleDate}T00:00:00`)
+    : new Date();
+  const year = base.getFullYear();
+  const month = base.getMonth();
+  return Array.from({ length }, (_, index) => {
+    const date = new Date(year, month - (length - 1 - index), 1);
+    const y = date.getFullYear();
+    const m = String(date.getMonth() + 1).padStart(2, "0");
+    return `${y}-${m}`;
+  });
+}
+
+function changeRate(previous: number, current: number) {
+  if (previous === 0) {
+    return current > 0 ? 100 : 0;
+  }
+  return ((current - previous) / previous) * 100;
+}
+
+function formatSignedRate(value: number) {
+  const sign = value > 0 ? "증가" : value < 0 ? "감소" : "유지";
+  return `${Math.abs(value).toFixed(1)}% ${sign}`;
+}
+
+function formatMonthLabel(monthKey: string) {
+  return `${Number(monthKey.slice(5, 7))}월`;
 }
