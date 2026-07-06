@@ -70,9 +70,8 @@ export function useSalesManager(
     [salesSlips, filters],
   );
   const selectedSalesSlip =
-    salesSlips.find((salesSlip) => salesSlip.id === selectedSlipId) ??
+    filteredSalesSlips.find((salesSlip) => salesSlip.id === selectedSlipId) ??
     filteredSalesSlips[0] ??
-    salesSlips[0] ??
     null;
 
   function updateBusinessPartnerForm<K extends keyof BusinessPartnerForm>(

@@ -50,15 +50,10 @@ export function createInitialSalesForm(
   };
 }
 
-export function createInitialSalesFilters(
-  today = todayIsoDate(),
-): SalesFilterState {
-  const from = new Date(today);
-  from.setDate(from.getDate() - 30);
-
+export function createInitialSalesFilters(): SalesFilterState {
   return {
-    from: from.toISOString().slice(0, 10),
-    to: today,
+    from: "",
+    to: "",
     partnerId: "",
     paymentStatus: "",
     salesStatus: "",
