@@ -1,0 +1,84 @@
+package com.greenhouse.backend.farm.controller;
+
+import com.greenhouse.backend.common.api.ApiResponse;
+import com.greenhouse.backend.farm.application.InboundRecordService;
+import com.greenhouse.backend.farm.domain.InboundStatus;
+import com.greenhouse.backend.farm.domain.InboundType;
+import com.greenhouse.backend.farm.dto.InboundRecordCancelRequest;
+import com.greenhouse.backend.farm.dto.InboundRecordCreateRequest;
+import com.greenhouse.backend.farm.dto.InboundRecordPottingRequest;
+import com.greenhouse.backend.farm.dto.InboundRecordResponse;
+import com.greenhouse.backend.farm.dto.InboundRecordUpdateRequest;
+import jakarta.validation.Valid;
+import java.time.LocalDate;
+import java.util.List;
+import org.springframework.http.HttpStatus;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PatchMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.ResponseStatus;
+import org.springframework.web.bind.annotation.RestController;
+
+@RestController
+@RequestMapping("/api/inbound-records")
+public class InboundRecordController {
+
+	private final InboundRecordService inboundRecordService;
+
+	public InboundRecordController(InboundRecordService inboundRecordService) {
+		this.inboundRecordService = inboundRecordService;
+	}
+
+	@GetMapping
+	public ApiResponse<List<InboundRecordResponse>> getInboundRecords(
+		@RequestParam(required = false) LocalDate from,
+		@RequestParam(required = false) LocalDate to,
+		@RequestParam(required = false) InboundType inboundType,
+		@RequestParam(required = false) InboundStatus status,
+		@RequestParam(required = false) String variety
+	) {
+		return ApiResponse.ok(inboundRecordService.getInboundRecords(from, to, inboundType, status, variety));
+	}
+
+	@GetMapping("/{inboundRecordId}")
+	public ApiResponse<InboundRecordResponse> getInboundRecord(@PathVariable Long inboundRecordId) {
+		return ApiResponse.ok(inboundRecordService.getInboundRecord(inboundRecordId));
+	}
+
+	@PostMapping
+	@ResponseStatus(HttpStatus.CREATED)
+	public ApiResponse<InboundRecordResponse> create(@Valid @RequestBody InboundRecordCreateRequest request) {
+		return ApiResponse.ok(inboundRecordService.create(request));
+	}
+
+	@PatchMapping("/{inboundRecordId}")
+	public ApiResponse<InboundRecordResponse> update(
+		@PathVariable Long inboundRecordId,
+		@Valid @RequestBody InboundRecordUpdateRequest request
+	) {
+		return ApiResponse.ok(inboundRecordService.update(inboundRecordId, request));
+	}
+
+	@PostMapping("/{inboundRecordId}/potting")
+	public ApiResponse<InboundRecordResponse> potting(
+		@PathVariable Long inboundRecordId,
+		@Valid @RequestBody InboundRecordPottingRequest request
+	) {
+		return ApiResponse.ok(inboundRecordService.potting(inboundRecordId, request));
+	}
+
+	@PostMapping("/{inboundRecordId}/cancel")
+	public ApiResponse<InboundRecordResponse> cancel(
+		@PathVariable Long inboundRecordId,
+		@RequestBody(required = false) InboundRecordCancelRequest request
+	) {
+		return ApiResponse.ok(inboundRecordService.cancel(
+			inboundRecordId,
+			request == null ? new InboundRecordCancelRequest(null) : request
+		));
+	}
+}

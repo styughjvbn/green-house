@@ -90,6 +90,12 @@ public class WorkTypeService {
 	}
 
 	@Transactional(readOnly = true)
+	public WorkType getByCode(String code) {
+		return workTypeRepository.findByCode(code)
+			.orElseThrow(() -> new NotFoundException("Work type not found."));
+	}
+
+	@Transactional(readOnly = true)
 	public WorkTypeTemplate resolveTemplate(WorkType workType, String snapshotName) {
 		if (workType != null) {
 			return workType.getTemplate();

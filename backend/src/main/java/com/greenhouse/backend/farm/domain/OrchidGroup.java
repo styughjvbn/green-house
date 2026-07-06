@@ -28,6 +28,14 @@ public class OrchidGroup extends BaseEntity {
 	@JoinColumn(name = "bed_zone_id", nullable = false)
 	private BedZone bedZone;
 
+	@ManyToOne(fetch = FetchType.LAZY)
+	@JoinColumn(name = "variety_id")
+	private Variety variety;
+
+	@ManyToOne(fetch = FetchType.LAZY)
+	@JoinColumn(name = "inbound_record_id")
+	private InboundRecord inboundRecord;
+
 	private String genus;
 
 	@Column(name = "variety_name", nullable = false)
@@ -117,12 +125,28 @@ public class OrchidGroup extends BaseEntity {
 		this.sortOrder = sortOrder;
 	}
 
+	public void assignVariety(Variety variety) {
+		this.variety = variety;
+	}
+
+	public void assignInboundRecord(InboundRecord inboundRecord) {
+		this.inboundRecord = inboundRecord;
+	}
+
 	public Long getId() {
 		return id;
 	}
 
 	public BedZone getBedZone() {
 		return bedZone;
+	}
+
+	public Variety getVariety() {
+		return variety;
+	}
+
+	public InboundRecord getInboundRecord() {
+		return inboundRecord;
 	}
 
 	public String getGenus() {

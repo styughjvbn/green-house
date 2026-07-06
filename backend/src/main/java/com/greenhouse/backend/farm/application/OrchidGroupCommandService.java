@@ -8,6 +8,7 @@ import com.greenhouse.backend.farm.dto.OrchidGroupResponse;
 import com.greenhouse.backend.farm.dto.OrchidGroupUpdateRequest;
 import com.greenhouse.backend.farm.repository.BedZoneRepository;
 import com.greenhouse.backend.farm.repository.OrchidGroupRepository;
+import com.greenhouse.backend.farm.repository.VarietyRepository;
 import com.greenhouse.backend.work.application.MovementWorkRecorder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -18,17 +19,20 @@ public class OrchidGroupCommandService {
 
 	private final BedZoneRepository bedZoneRepository;
 	private final OrchidGroupRepository orchidGroupRepository;
+	private final VarietyRepository varietyRepository;
 	private final MovementWorkRecorder movementWorkRecorder;
 	private final PlacementRecommendationService placementRecommendationService;
 
 	public OrchidGroupCommandService(
 		BedZoneRepository bedZoneRepository,
 		OrchidGroupRepository orchidGroupRepository,
+		VarietyRepository varietyRepository,
 		MovementWorkRecorder movementWorkRecorder,
 		PlacementRecommendationService placementRecommendationService
 	) {
 		this.bedZoneRepository = bedZoneRepository;
 		this.orchidGroupRepository = orchidGroupRepository;
+		this.varietyRepository = varietyRepository;
 		this.movementWorkRecorder = movementWorkRecorder;
 		this.placementRecommendationService = placementRecommendationService;
 	}
@@ -59,6 +63,7 @@ public class OrchidGroupCommandService {
 			request.splitPlacementAllowed(),
 			normalize(request.memo())
 		);
+		resolveVariety(request.genus(), request.varietyName()).ifPresent(orchidGroup::assignVariety);
 		return OrchidGroupResponse.from(orchidGroupRepository.save(orchidGroup));
 	}
 
@@ -77,6 +82,7 @@ public class OrchidGroupCommandService {
 			request.splitPlacementAllowed(),
 			normalize(request.memo())
 		);
+		orchidGroup.assignVariety(resolveVariety(request.genus(), request.varietyName()).orElse(null));
 		return OrchidGroupResponse.from(orchidGroup);
 	}
 
@@ -135,5 +141,14 @@ public class OrchidGroupCommandService {
 			throw new IllegalArgumentException("필수 문자열 값은 비워둘 수 없습니다.");
 		}
 		return normalized;
+	}
+
+	private java.util.Optional<com.greenhouse.backend.farm.domain.Variety> resolveVariety(String genus, String varietyName) {
+		String normalizedGenus = normalize(genus);
+		String normalizedVarietyName = normalize(varietyName);
+		if (normalizedGenus == null || normalizedVarietyName == null) {
+			return java.util.Optional.empty();
+		}
+		return varietyRepository.findByGenusAndName(normalizedGenus, normalizedVarietyName);
 	}
 }

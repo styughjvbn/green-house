@@ -2,6 +2,7 @@ package com.greenhouse.backend.work.repository;
 
 import com.greenhouse.backend.work.domain.WorkRecord;
 import java.time.LocalDate;
+import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -31,5 +32,17 @@ public interface WorkRecordRepository extends JpaRepository<WorkRecord, Long> {
 		@Param("workType") String workType,
 		@Param("from") LocalDate from,
 		@Param("to") LocalDate to
+	);
+
+	@Query("""
+		select w.targetId as targetId, max(w.workDate) as latestWorkDate
+		from WorkRecord w
+		where w.targetType = :targetType
+			and w.targetId in :targetIds
+		group by w.targetId
+		""")
+	List<WorkDateRow> findLatestWorkDates(
+		@Param("targetType") String targetType,
+		@Param("targetIds") Collection<Long> targetIds
 	);
 }

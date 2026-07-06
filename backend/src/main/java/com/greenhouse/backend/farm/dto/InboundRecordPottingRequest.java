@@ -1,0 +1,20 @@
+package com.greenhouse.backend.farm.dto;
+
+import jakarta.validation.constraints.Min;
+import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Size;
+import java.time.LocalDate;
+
+public record InboundRecordPottingRequest(
+	@NotNull LocalDate pottingDate,
+	@NotNull @Min(1) Integer actualQuantity,
+	@Size(max = 50) String potSize,
+	@Min(0) Integer ageYear,
+	@Size(max = 100) String growthStage,
+	@Size(max = 100) String placementType,
+	@Min(0) Integer trayCount,
+	@NotNull Long bedZoneId,
+	@Size(max = 50) String worker,
+	@Size(max = 1000) String memo
+) {
+}

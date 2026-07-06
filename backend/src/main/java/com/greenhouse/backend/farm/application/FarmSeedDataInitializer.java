@@ -7,9 +7,11 @@ import com.greenhouse.backend.farm.domain.BedZoneSegmentType;
 import com.greenhouse.backend.farm.domain.House;
 import com.greenhouse.backend.farm.domain.OrchidGroup;
 import com.greenhouse.backend.farm.domain.PhysicalBed;
+import com.greenhouse.backend.farm.domain.Variety;
 import com.greenhouse.backend.farm.repository.BedZoneRepository;
 import com.greenhouse.backend.farm.repository.HouseRepository;
 import com.greenhouse.backend.farm.repository.OrchidGroupRepository;
+import com.greenhouse.backend.farm.repository.VarietyRepository;
 import java.util.ArrayList;
 import java.util.List;
 import org.springframework.boot.CommandLineRunner;
@@ -22,15 +24,18 @@ public class FarmSeedDataInitializer implements CommandLineRunner {
 	private final HouseRepository houseRepository;
 	private final BedZoneRepository bedZoneRepository;
 	private final OrchidGroupRepository orchidGroupRepository;
+	private final VarietyRepository varietyRepository;
 
 	public FarmSeedDataInitializer(
 		HouseRepository houseRepository,
 		BedZoneRepository bedZoneRepository,
-		OrchidGroupRepository orchidGroupRepository
+		OrchidGroupRepository orchidGroupRepository,
+		VarietyRepository varietyRepository
 	) {
 		this.houseRepository = houseRepository;
 		this.bedZoneRepository = bedZoneRepository;
 		this.orchidGroupRepository = orchidGroupRepository;
+		this.varietyRepository = varietyRepository;
 	}
 
 	@Override
@@ -76,10 +81,22 @@ public class FarmSeedDataInitializer implements CommandLineRunner {
 		BedZone sampleZone = bedZoneRepository.findSeedZone(3, 2, BedZoneSide.LEFT)
 			.orElseThrow(() -> new IllegalStateException("Sample seed zone was not created."));
 
-		orchidGroupRepository.saveAll(List.of(
-			new OrchidGroup(sampleZone, "카틀레야", "카틀레야 A", 120, "4치", 2, "정상", 1),
-			new OrchidGroup(sampleZone, "카틀레야", "카틀레야 B", 80, "5치", 3, "개화중", 2),
-			new OrchidGroup(sampleZone, "덴드로비움", "덴드로비움 C", 200, "3.5치", 1, "판매 가능", 3)
-		));
+		if (varietyRepository.count() == 0) {
+			varietyRepository.saveAll(List.of(
+				new Variety("VAR-0001", "카틀레야", "카틀레야 A", null, "4치", true, true, "대표 카틀레야 품종", null),
+				new Variety("VAR-0002", "카틀레야", "카틀레야 B", null, "5치", true, true, "개화 관리 품종", null),
+				new Variety("VAR-0003", "덴드로비움", "덴드로비움 C", null, "3.5치", true, true, "초기 생육 품종", null)
+			));
+		}
+		var varieties = varietyRepository.findAll().stream()
+			.collect(java.util.stream.Collectors.toMap(Variety::getName, variety -> variety));
+
+		var groupA = new OrchidGroup(sampleZone, "카틀레야", "카틀레야 A", 120, "4치", 2, "정상", 1);
+		groupA.assignVariety(varieties.get("카틀레야 A"));
+		var groupB = new OrchidGroup(sampleZone, "카틀레야", "카틀레야 B", 80, "5치", 3, "개화중", 2);
+		groupB.assignVariety(varieties.get("카틀레야 B"));
+		var groupC = new OrchidGroup(sampleZone, "덴드로비움", "덴드로비움 C", 200, "3.5치", 1, "판매 가능", 3);
+		groupC.assignVariety(varieties.get("덴드로비움 C"));
+		orchidGroupRepository.saveAll(List.of(groupA, groupB, groupC));
 	}
 }

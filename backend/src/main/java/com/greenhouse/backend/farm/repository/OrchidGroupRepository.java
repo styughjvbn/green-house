@@ -53,4 +53,14 @@ public interface OrchidGroupRepository extends JpaRepository<OrchidGroup, Long> 
 		""")
 	long countWarningStatusByHouseId(@Param("houseId") Long houseId);
 
+	@Query("""
+		select g from OrchidGroup g
+		join fetch g.bedZone z
+		join fetch z.physicalBed b
+		join fetch b.house h
+		where g.variety.id = :varietyId
+		order by h.number asc, b.displayOrder asc, z.sortOrder asc, g.sortOrder asc
+		""")
+	List<OrchidGroup> findByVarietyIdOrderByLocation(@Param("varietyId") Long varietyId);
+
 }
