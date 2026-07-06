@@ -712,11 +712,13 @@ common     -> 없음
 partner    -> common
 auction    -> common, partner
 farm       -> common, work
-work       -> common, farm
+work       -> common
 sales      -> common, auction, farm, partner, settlement
-settlement -> common, auction, partner, sales
+settlement -> common, auction, partner
 dashboard  -> common, farm
 print      -> common, sales
 ```
 
-`farm ↔ work`, `sales ↔ settlement`의 상호 의존은 현재 엔티티 관계와 트랜잭션 유스케이스 때문에 유지한다. 다음 경계 강화 단계에서는 repository 직접 참조를 각 모듈의 application API로 교체하고, 양방향 의존을 이벤트 또는 전용 포트로 줄인다.
+`work → farm`은 `WorkTargetValidator` 포트의 farm 구현체로 역전했다. 난 묶음 이동 작업 기록은 farm이 `MovementWorkRecorder` application API만 호출한다.
+
+일반 판매 입금 유스케이스는 sales가 소유하고, settlement의 `PaymentLedgerService`, `PartnerBalanceService`를 호출한다. settlement는 sales 도메인·리포지토리를 참조하지 않는다. 전체 허용 의존성은 DAG이며 아키텍처 테스트가 순환 추가를 차단한다.
