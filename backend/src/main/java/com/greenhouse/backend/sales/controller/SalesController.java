@@ -2,10 +2,12 @@ package com.greenhouse.backend.sales.controller;
 
 import com.greenhouse.backend.common.api.ApiResponse;
 import com.greenhouse.backend.sales.application.SalesQueryService;
+import com.greenhouse.backend.sales.application.SalesPaymentService;
 import com.greenhouse.backend.sales.application.SalesSlipCreationService;
 import com.greenhouse.backend.sales.dto.AuctionShipmentOptionResponse;
 import com.greenhouse.backend.sales.dto.SalesSlipCreateRequest;
 import com.greenhouse.backend.sales.dto.SalesSlipResponse;
+import com.greenhouse.backend.settlement.dto.ManualPaymentRequest;
 import jakarta.validation.Valid;
 import java.time.LocalDate;
 import java.util.List;
@@ -25,13 +27,16 @@ public class SalesController {
 
 	private final SalesQueryService salesQueryService;
 	private final SalesSlipCreationService salesSlipCreationService;
+	private final SalesPaymentService salesPaymentService;
 
 	public SalesController(
 		SalesQueryService salesQueryService,
-		SalesSlipCreationService salesSlipCreationService
+		SalesSlipCreationService salesSlipCreationService,
+		SalesPaymentService salesPaymentService
 	) {
 		this.salesQueryService = salesQueryService;
 		this.salesSlipCreationService = salesSlipCreationService;
+		this.salesPaymentService = salesPaymentService;
 	}
 
 	@GetMapping("/sales-slips")
@@ -57,5 +62,13 @@ public class SalesController {
 	@ResponseStatus(HttpStatus.CREATED)
 	public ApiResponse<SalesSlipResponse> createSalesSlip(@Valid @RequestBody SalesSlipCreateRequest request) {
 		return ApiResponse.ok(salesSlipCreationService.create(request));
+	}
+
+	@PostMapping("/sales-slips/{salesSlipId}/confirm-payment")
+	public ApiResponse<SalesSlipResponse> confirmPayment(
+		@PathVariable Long salesSlipId,
+		@Valid @RequestBody ManualPaymentRequest request
+	) {
+		return ApiResponse.ok(salesPaymentService.confirmPayment(salesSlipId, request));
 	}
 }

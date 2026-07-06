@@ -12,6 +12,7 @@ import com.greenhouse.backend.sales.dto.SalesSlipCreateRequest;
 import com.greenhouse.backend.sales.dto.SalesSlipResponse;
 import com.greenhouse.backend.sales.repository.SalesSlipRepository;
 import com.greenhouse.backend.settlement.application.ExpectedPaymentDateCalculator;
+import com.greenhouse.backend.settlement.application.PartnerBalanceService;
 import org.springframework.stereotype.Service;
 
 @Service
@@ -21,19 +22,22 @@ public class DirectSalesSlipCreator {
 	private final OrchidGroupRepository orchidGroupRepository;
 	private final ExpectedPaymentDateCalculator paymentDateCalculator;
 	private final SalesSlipNumberGenerator numberGenerator;
+	private final PartnerBalanceService partnerBalanceService;
 
 	public DirectSalesSlipCreator(
 		BusinessPartnerRepository partnerRepository,
 		SalesSlipRepository salesSlipRepository,
 		OrchidGroupRepository orchidGroupRepository,
 		ExpectedPaymentDateCalculator paymentDateCalculator,
-		SalesSlipNumberGenerator numberGenerator
+		SalesSlipNumberGenerator numberGenerator,
+		PartnerBalanceService partnerBalanceService
 	) {
 		this.partnerRepository = partnerRepository;
 		this.salesSlipRepository = salesSlipRepository;
 		this.orchidGroupRepository = orchidGroupRepository;
 		this.paymentDateCalculator = paymentDateCalculator;
 		this.numberGenerator = numberGenerator;
+		this.partnerBalanceService = partnerBalanceService;
 	}
 
 	public SalesSlipResponse create(SalesSlipCreateRequest request) {
@@ -68,7 +72,10 @@ public class DirectSalesSlipCreator {
 			item.unitPrice(),
 			SalesTextNormalizer.normalize(item.memo()))));
 		salesSlip.updateExpectedPaymentDate(paymentDateCalculator.calculate(partner, request.saleDate()));
-		return SalesSlipResponse.from(salesSlipRepository.save(salesSlip));
+		var saved = salesSlipRepository.save(salesSlip);
+		partnerBalanceService.updateReceivable(
+			partner.getId(), salesSlipRepository.sumDirectReceivableByPartnerId(partner.getId()), null);
+		return SalesSlipResponse.from(saved);
 	}
 
 	private BusinessPartner findPartner(Long partnerId) {
