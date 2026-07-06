@@ -382,3 +382,12 @@ auction_shipments.auction_house_id     business_partners FK (`AUCTION_HOUSE`)
 경매 출하 기록과 lot은 판매 전표에 중복 연결하지 않는다. 경매 전표 최초 금액은 0원이며 정산 결과 자동 반영은 별도 트랜잭션 설계 후 추가한다.
 
 `auction_shipment_lots.current_status`에는 반환 관련 상태로 `RETURN_INFERRED`, `PARTIALLY_RETURNED`, `RETURNED`를 저장한다. 기존 반환추정 데이터는 추정 수량이 `returned_quantity`에 저장될 수 있으므로 API에서 `returnConfirmableQuantity`로 확인 대상을 정규화한다. 부분반환 확정 시 확정 수량은 `returned_quantity`, 잔여 수량은 `waiting_quantity`에 저장한다. 사용자가 확인한 마지막 실제 반환일은 nullable `return_confirmed_date`에 저장한다.
+
+### 경매 정산
+
+| 테이블 | 핵심 컬럼 | 역할 |
+|---|---|---|
+| `auction_settlements` | `auction_house_id`, `auction_date`, 금액·상태 컬럼 | 경매장·경매일 정산 묶음 |
+| `auction_settlement_lines` | `settlement_id`, `auction_result_line_id`, `auction_shipment_lot_id` | 실제 낙찰 결과 연결 |
+
+`auction_settlements`는 `(auction_house_id, auction_date)`를 유일키로 사용한다. `auction_settlement_lines.auction_result_line_id`도 유일하며 한 낙찰 결과가 여러 정산에 포함되지 않도록 한다. 전표와 정산은 직접 FK로 연결하지 않고 `SalesSlipItem → AuctionShipmentLot → AuctionAttempt → AuctionResultLine → AuctionSettlementLine` 경로로 조회한다.

@@ -857,7 +857,7 @@ POST /api/auction-lots/{lotId}/adjust-quantity
 PATCH /api/auction-lots/{lotId}/status
 ```
 
-상태, 변경 사유, 작업자, 메모를 받고 상태 이력을 생성한다. 수동 매칭, 재고 자동 이동, 정산 생성 API는 아직 제공하지 않는다.
+상태, 변경 사유, 작업자, 메모를 받고 상태 이력을 생성한다. 수동 매칭과 재고 자동 이동은 아직 제공하지 않는다.
 
 ### 경매 출하 전표 후보
 
@@ -885,3 +885,13 @@ POST /api/sales-slips
 ```
 
 서버는 출하일을 판매일로 사용하고 출하 기록의 `auction_house_id` 거래처를 전표에 연결한다. lot별 품목을 출하 수량과 0원 단가로 구성한다. 일반 판매는 `salesType=DIRECT`이며 기존 요청처럼 유형을 생략해도 된다.
+
+## 15. 경매 정산 API
+
+```http
+GET /api/auction-settlements?auctionHouseId=&from=&to=&status=
+GET /api/auction-settlements/{settlementId}
+POST /api/auction-settlements/rebuild?auctionHouseId=1&auctionDate=2026-07-03
+```
+
+정산은 경매장과 경매일 조합으로 한 건만 생성한다. `amount > 0`인 경매 결과만 정산 행으로 연결하며 재구성 요청은 기존 행을 중복 생성하지 않는다. 현재 수수료와 공제액은 0원, 예상 입금일은 경매일로 초기화한다. 입금 확인과 정산 설정은 후속 단계에서 구현한다.
