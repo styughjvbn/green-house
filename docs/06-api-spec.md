@@ -922,3 +922,25 @@ PUT /api/business-partners/{partnerId}/settlement-settings
 ```
 
 입금자명 후보는 공백 제거 후 중복을 제거한다. `ruleJson`은 경매장별 결과 수신·파싱 규칙 확장용이며 현재 자동 수신 기능에서는 사용하지 않는다.
+
+## 17. 수동 입금 API
+
+```http
+POST /api/auction-settlements/{settlementId}/confirm-payment
+POST /api/sales-slips/{salesSlipId}/confirm-payment
+GET /api/partner-payment-events?partnerId=&targetType=&targetId=
+GET /api/business-partners/{partnerId}/balance-summary
+```
+
+```json
+{
+  "amount": 300000,
+  "paymentDate": "2026-07-06",
+  "paymentMethod": "계좌이체",
+  "depositorName": "양재화훼",
+  "worker": "관리자",
+  "memo": "수동 확인"
+}
+```
+
+입금 확인은 `PAYMENT_RECEIVED`와 `MANUAL_MATCH_CONFIRMED` 이벤트를 함께 생성한다. 잔액보다 작은 금액은 부분입금, 잔액과 같은 금액은 완납으로 처리한다. 잔액 초과 입금은 예치금 기능 도입 전까지 거절한다. 경매 판매전표 입금은 전표가 아니라 경매 정산에서 처리한다.
