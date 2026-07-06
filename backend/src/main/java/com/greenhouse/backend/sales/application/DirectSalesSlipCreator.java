@@ -1,10 +1,10 @@
 package com.greenhouse.backend.sales.application;
 
 import com.greenhouse.backend.common.exception.NotFoundException;
-import com.greenhouse.backend.farm.repository.OrchidGroupRepository;
+import com.greenhouse.backend.farm.application.OrchidGroupReader;
 import com.greenhouse.backend.partner.domain.BusinessPartner;
 import com.greenhouse.backend.partner.domain.PartnerType;
-import com.greenhouse.backend.partner.repository.BusinessPartnerRepository;
+import com.greenhouse.backend.partner.application.BusinessPartnerReader;
 import com.greenhouse.backend.sales.domain.SalesSlip;
 import com.greenhouse.backend.sales.domain.SalesSlipItem;
 import com.greenhouse.backend.sales.domain.SalesType;
@@ -17,24 +17,24 @@ import org.springframework.stereotype.Service;
 
 @Service
 public class DirectSalesSlipCreator {
-	private final BusinessPartnerRepository partnerRepository;
+	private final BusinessPartnerReader partnerReader;
 	private final SalesSlipRepository salesSlipRepository;
-	private final OrchidGroupRepository orchidGroupRepository;
+	private final OrchidGroupReader orchidGroupReader;
 	private final ExpectedPaymentDateCalculator paymentDateCalculator;
 	private final SalesSlipNumberGenerator numberGenerator;
 	private final PartnerBalanceService partnerBalanceService;
 
 	public DirectSalesSlipCreator(
-		BusinessPartnerRepository partnerRepository,
+		BusinessPartnerReader partnerReader,
 		SalesSlipRepository salesSlipRepository,
-		OrchidGroupRepository orchidGroupRepository,
+		OrchidGroupReader orchidGroupReader,
 		ExpectedPaymentDateCalculator paymentDateCalculator,
 		SalesSlipNumberGenerator numberGenerator,
 		PartnerBalanceService partnerBalanceService
 	) {
-		this.partnerRepository = partnerRepository;
+		this.partnerReader = partnerReader;
 		this.salesSlipRepository = salesSlipRepository;
-		this.orchidGroupRepository = orchidGroupRepository;
+		this.orchidGroupReader = orchidGroupReader;
 		this.paymentDateCalculator = paymentDateCalculator;
 		this.numberGenerator = numberGenerator;
 		this.partnerBalanceService = partnerBalanceService;
@@ -43,7 +43,7 @@ public class DirectSalesSlipCreator {
 	public SalesSlipResponse create(SalesSlipCreateRequest request) {
 		if (request.partnerId() == null) throw new IllegalArgumentException("일반 판매는 거래처를 선택해야 합니다.");
 		if (request.items().isEmpty()) throw new IllegalArgumentException("일반 판매 품목을 한 개 이상 입력해야 합니다.");
-		BusinessPartner partner = findPartner(request.partnerId());
+		BusinessPartner partner = partnerReader.getActive(request.partnerId());
 		if (partner.getPartnerType() == PartnerType.AUCTION_HOUSE) {
 			throw new IllegalArgumentException("경매장 거래처는 경매 판매 전표에서 사용해야 합니다.");
 		}
@@ -62,7 +62,7 @@ public class DirectSalesSlipCreator {
 		request.items().forEach(item -> salesSlip.addItem(new SalesSlipItem(
 			item.orchidGroupId() == null
 				? null
-				: orchidGroupRepository.findById(item.orchidGroupId())
+				: orchidGroupReader.findById(item.orchidGroupId())
 					.orElseThrow(() -> new NotFoundException("난 묶음을 찾을 수 없습니다.")),
 			null,
 			SalesTextNormalizer.required(item.itemName()),
@@ -76,12 +76,5 @@ public class DirectSalesSlipCreator {
 		partnerBalanceService.updateReceivable(
 			partner.getId(), salesSlipRepository.sumDirectReceivableByPartnerId(partner.getId()), null);
 		return SalesSlipResponse.from(saved);
-	}
-
-	private BusinessPartner findPartner(Long partnerId) {
-		BusinessPartner partner = partnerRepository.findById(partnerId)
-			.orElseThrow(() -> new NotFoundException("거래처를 찾을 수 없습니다."));
-		if (!partner.isActive()) throw new IllegalArgumentException("비활성 거래처는 사용할 수 없습니다.");
-		return partner;
 	}
 }

@@ -1,7 +1,6 @@
 package com.greenhouse.backend.settlement.application;
 
-import com.greenhouse.backend.common.exception.NotFoundException;
-import com.greenhouse.backend.partner.repository.BusinessPartnerRepository;
+import com.greenhouse.backend.partner.application.BusinessPartnerReader;
 import com.greenhouse.backend.settlement.domain.PartnerBalanceSummary;
 import com.greenhouse.backend.settlement.domain.PartnerPaymentEvent;
 import com.greenhouse.backend.settlement.dto.PartnerBalanceSummaryResponse;
@@ -13,14 +12,14 @@ import org.springframework.transaction.annotation.Transactional;
 @Transactional
 public class PartnerBalanceService {
 	private final PartnerBalanceSummaryRepository balanceRepository;
-	private final BusinessPartnerRepository partnerRepository;
+	private final BusinessPartnerReader partnerReader;
 
 	public PartnerBalanceService(
 		PartnerBalanceSummaryRepository balanceRepository,
-		BusinessPartnerRepository partnerRepository
+		BusinessPartnerReader partnerReader
 	) {
 		this.balanceRepository = balanceRepository;
-		this.partnerRepository = partnerRepository;
+		this.partnerReader = partnerReader;
 	}
 
 	public void updateReceivable(Long partnerId, Long receivableBalance, PartnerPaymentEvent lastPaymentEvent) {
@@ -41,8 +40,7 @@ public class PartnerBalanceService {
 
 	private PartnerBalanceSummary findOrCreate(Long partnerId) {
 		return balanceRepository.findByPartnerId(partnerId).orElseGet(() -> {
-			var partner = partnerRepository.findById(partnerId)
-				.orElseThrow(() -> new NotFoundException("거래처를 찾을 수 없습니다."));
+			var partner = partnerReader.get(partnerId);
 			return balanceRepository.save(new PartnerBalanceSummary(partner));
 		});
 	}

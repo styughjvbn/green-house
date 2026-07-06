@@ -1,4 +1,4 @@
-package com.greenhouse.backend.settlement.repository;
+package com.greenhouse.backend.auction.repository;
 
 import com.greenhouse.backend.auction.domain.AuctionResultLine;
 import java.time.LocalDate;
@@ -8,7 +8,7 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
-public interface SettlementResultLineRepository extends JpaRepository<AuctionResultLine, Long> {
+public interface AuctionResultLineRepository extends JpaRepository<AuctionResultLine, Long> {
 	@EntityGraph(attributePaths = {"auctionAttempt", "auctionAttempt.shipmentLot", "auctionAttempt.shipmentLot.shipment", "auctionAttempt.shipmentLot.shipment.auctionHouse"})
 	@Query("""
 		select line from AuctionResultLine line

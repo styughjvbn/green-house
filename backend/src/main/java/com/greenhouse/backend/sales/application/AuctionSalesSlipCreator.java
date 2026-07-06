@@ -1,8 +1,7 @@
 package com.greenhouse.backend.sales.application;
 
+import com.greenhouse.backend.auction.application.AuctionDataReader;
 import com.greenhouse.backend.auction.domain.AuctionShipment;
-import com.greenhouse.backend.auction.repository.AuctionShipmentRepository;
-import com.greenhouse.backend.common.exception.NotFoundException;
 import com.greenhouse.backend.partner.domain.BusinessPartner;
 import com.greenhouse.backend.sales.domain.SalesSlip;
 import com.greenhouse.backend.sales.domain.SalesSlipItem;
@@ -15,16 +14,16 @@ import org.springframework.stereotype.Service;
 @Service
 public class AuctionSalesSlipCreator {
 	private final SalesSlipRepository salesSlipRepository;
-	private final AuctionShipmentRepository auctionShipmentRepository;
+	private final AuctionDataReader auctionDataReader;
 	private final SalesSlipNumberGenerator numberGenerator;
 
 	public AuctionSalesSlipCreator(
 		SalesSlipRepository salesSlipRepository,
-		AuctionShipmentRepository auctionShipmentRepository,
+		AuctionDataReader auctionDataReader,
 		SalesSlipNumberGenerator numberGenerator
 	) {
 		this.salesSlipRepository = salesSlipRepository;
-		this.auctionShipmentRepository = auctionShipmentRepository;
+		this.auctionDataReader = auctionDataReader;
 		this.numberGenerator = numberGenerator;
 	}
 
@@ -33,8 +32,7 @@ public class AuctionSalesSlipCreator {
 		if (salesSlipRepository.existsByAuctionShipmentId(request.auctionShipmentId())) {
 			throw new IllegalArgumentException("이미 판매 전표가 생성된 경매 출하 기록입니다.");
 		}
-		AuctionShipment shipment = auctionShipmentRepository.findWithLotsById(request.auctionShipmentId())
-			.orElseThrow(() -> new NotFoundException("경매 출하 기록을 찾을 수 없습니다."));
+		AuctionShipment shipment = auctionDataReader.getShipmentWithLots(request.auctionShipmentId());
 		if (shipment.getLots().isEmpty()) throw new IllegalArgumentException("출하 lot이 없는 경매 출하 기록입니다.");
 		BusinessPartner partner = shipment.getAuctionHouse();
 		if (request.partnerId() != null && !request.partnerId().equals(partner.getId())) {

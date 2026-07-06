@@ -1,14 +1,14 @@
 package com.greenhouse.backend.settlement.application;
 
+import com.greenhouse.backend.auction.application.AuctionDataReader;
 import com.greenhouse.backend.auction.domain.AuctionResultLine;
 import com.greenhouse.backend.common.exception.NotFoundException;
+import com.greenhouse.backend.partner.application.BusinessPartnerReader;
 import com.greenhouse.backend.partner.domain.PartnerType;
-import com.greenhouse.backend.partner.repository.BusinessPartnerRepository;
 import com.greenhouse.backend.settlement.domain.AuctionSettlement;
 import com.greenhouse.backend.settlement.domain.AuctionSettlementStatus;
 import com.greenhouse.backend.settlement.dto.AuctionSettlementResponse;
 import com.greenhouse.backend.settlement.repository.AuctionSettlementRepository;
-import com.greenhouse.backend.settlement.repository.SettlementResultLineRepository;
 import java.time.LocalDate;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -19,19 +19,19 @@ import org.springframework.transaction.annotation.Transactional;
 @Transactional
 public class AuctionSettlementService {
 	private final AuctionSettlementRepository settlementRepository;
-	private final SettlementResultLineRepository resultLineRepository;
-	private final BusinessPartnerRepository partnerRepository;
+	private final AuctionDataReader auctionDataReader;
+	private final BusinessPartnerReader partnerReader;
 	private final ExpectedPaymentDateCalculator paymentDateCalculator;
 
 	public AuctionSettlementService(
 		AuctionSettlementRepository settlementRepository,
-		SettlementResultLineRepository resultLineRepository,
-		BusinessPartnerRepository partnerRepository,
+		AuctionDataReader auctionDataReader,
+		BusinessPartnerReader partnerReader,
 		ExpectedPaymentDateCalculator paymentDateCalculator
 	) {
 		this.settlementRepository = settlementRepository;
-		this.resultLineRepository = resultLineRepository;
-		this.partnerRepository = partnerRepository;
+		this.auctionDataReader = auctionDataReader;
+		this.partnerReader = partnerReader;
 		this.paymentDateCalculator = paymentDateCalculator;
 	}
 
@@ -55,21 +55,20 @@ public class AuctionSettlementService {
 	}
 
 	public AuctionSettlementResponse rebuild(Long auctionHouseId, LocalDate auctionDate) {
-		var auctionHouse = partnerRepository.findById(auctionHouseId)
-			.orElseThrow(() -> new NotFoundException("경매장을 찾을 수 없습니다."));
+		var auctionHouse = partnerReader.get(auctionHouseId);
 		if (auctionHouse.getPartnerType() != PartnerType.AUCTION_HOUSE) {
 			throw new IllegalArgumentException("경매장 유형 거래처만 정산할 수 있습니다.");
 		}
 		var settlement = settlementRepository.findByAuctionHouseIdAndAuctionDate(auctionHouseId, auctionDate)
 			.orElseGet(() -> new AuctionSettlement(auctionHouse, auctionDate));
-		settlement.synchronizeLines(resultLineRepository.findSoldLines(auctionHouseId, auctionDate));
+		settlement.synchronizeLines(auctionDataReader.getSoldResultLines(auctionHouseId, auctionDate));
 		settlement.updateExpectedPaymentDate(paymentDateCalculator.calculate(auctionHouse, auctionDate));
 		return AuctionSettlementResponse.from(settlementRepository.save(settlement));
 	}
 
 	public int rebuildExistingResults() {
 		var grouped = new LinkedHashMap<SettlementKey, List<AuctionResultLine>>();
-		resultLineRepository.findAllSoldLines().stream()
+		auctionDataReader.getAllSoldResultLines().stream()
 			.collect(java.util.stream.Collectors.groupingBy(
 				line -> new SettlementKey(
 					line.getAuctionAttempt().getShipmentLot().getShipment().getAuctionHouse().getId(),

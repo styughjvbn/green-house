@@ -1,6 +1,6 @@
 package com.greenhouse.backend.sales.application;
 
-import com.greenhouse.backend.auction.repository.AuctionShipmentRepository;
+import com.greenhouse.backend.auction.application.AuctionDataReader;
 import com.greenhouse.backend.common.exception.NotFoundException;
 import com.greenhouse.backend.sales.dto.AuctionShipmentOptionResponse;
 import com.greenhouse.backend.sales.dto.SalesSlipResponse;
@@ -14,14 +14,14 @@ import org.springframework.transaction.annotation.Transactional;
 @Transactional(readOnly = true)
 public class SalesQueryService {
 	private final SalesSlipRepository salesSlipRepository;
-	private final AuctionShipmentRepository auctionShipmentRepository;
+	private final AuctionDataReader auctionDataReader;
 
 	public SalesQueryService(
 		SalesSlipRepository salesSlipRepository,
-		AuctionShipmentRepository auctionShipmentRepository
+		AuctionDataReader auctionDataReader
 	) {
 		this.salesSlipRepository = salesSlipRepository;
-		this.auctionShipmentRepository = auctionShipmentRepository;
+		this.auctionDataReader = auctionDataReader;
 	}
 
 	public List<SalesSlipResponse> getSalesSlips(Long partnerId, LocalDate from, LocalDate to) {
@@ -37,7 +37,7 @@ public class SalesQueryService {
 	}
 
 	public List<AuctionShipmentOptionResponse> getAuctionShipmentOptions() {
-		return auctionShipmentRepository.findAllByOrderByShipmentDateDescIdDesc().stream()
+		return auctionDataReader.getShipmentsNewestFirst().stream()
 			.filter(shipment -> !salesSlipRepository.existsByAuctionShipmentId(shipment.getId()))
 			.map(AuctionShipmentOptionResponse::from)
 			.toList();
