@@ -85,13 +85,14 @@ export function SalesSlipCreateForm({
           onChange={(value) => onChange("partnerId", value)}
         >
           <option value="">선택</option>
-          {(form.salesType === "AUCTION" ? auctionPartners : directPartners).map(
-            (partner) => (
-              <option key={partner.id} value={partner.id}>
-                {partner.name}
-              </option>
-            ),
-          )}
+          {(form.salesType === "AUCTION"
+            ? auctionPartners
+            : directPartners
+          ).map((partner) => (
+            <option key={partner.id} value={partner.id}>
+              {partner.name}
+            </option>
+          ))}
         </SelectField>
         <SelectField
           label="입금 상태"

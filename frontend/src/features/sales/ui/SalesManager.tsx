@@ -1,7 +1,8 @@
 "use client";
 
+import type { FormEvent } from "react";
 import { useEffect } from "react";
-import { useSearchParams } from "next/navigation";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { Plus } from "lucide-react";
 import { useSalesManager } from "../model/useSalesManager";
 import type { SalesManagerProps } from "../model/types";
@@ -23,6 +24,8 @@ export function SalesManager({
   initialAuctionSettlements,
 }: SalesManagerProps) {
   const sales = useSalesManager(initialBusinessPartners, initialSalesSlips);
+  const router = useRouter();
+  const pathname = usePathname();
   const searchParams = useSearchParams();
   const activeTab = searchParams.get("tab") ?? "SLIPS";
   const createSlip = searchParams.get("createSlip") === "1";
@@ -42,6 +45,24 @@ export function SalesManager({
     sales.setShowCreateSlip(createSlip);
   }, [createSlip, sales]);
 
+  function updateCreateSlip(nextOpen: boolean) {
+    const params = new URLSearchParams(searchParams.toString());
+    params.set("tab", "SLIPS");
+    if (nextOpen) {
+      params.set("createSlip", "1");
+    } else {
+      params.delete("createSlip");
+    }
+    router.replace(`${pathname}?${params.toString()}`);
+  }
+
+  async function handleCreateSalesSlip(event: FormEvent<HTMLFormElement>) {
+    const created = await sales.handleCreateSalesSlip(event);
+    if (created) {
+      updateCreateSlip(false);
+    }
+  }
+
   return (
     <div className="space-y-4">
       {sales.activeTab === "SLIPS" ? (
@@ -50,7 +71,7 @@ export function SalesManager({
             <button
               className="inline-flex h-10 items-center gap-2 rounded-md bg-[#159447] px-4 text-sm font-semibold text-white shadow-sm"
               type="button"
-              onClick={() => sales.setShowCreateSlip((current) => !current)}
+              onClick={() => updateCreateSlip(!sales.showCreateSlip)}
             >
               <Plus className="h-4 w-4" strokeWidth={1.8} aria-hidden="true" />
               판매 전표 등록
@@ -74,7 +95,7 @@ export function SalesManager({
               onAddItem={sales.addSalesItem}
               onChange={sales.updateSalesForm}
               onRemoveItem={sales.removeSalesItem}
-              onSubmit={sales.handleCreateSalesSlip}
+              onSubmit={handleCreateSalesSlip}
               onSalesTypeChange={sales.selectSalesType}
               onUpdateItem={sales.updateItem}
             />

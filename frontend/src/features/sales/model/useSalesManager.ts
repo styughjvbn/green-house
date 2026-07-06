@@ -189,10 +189,12 @@ export function useSalesManager(
       setSelectedSlipId(salesSlip.id);
       setShowCreateSlip(false);
       setSalesForm((current) => resetSalesSlipFormAfterSave(current));
+      return true;
     } catch (error) {
       setErrorMessage(
         error instanceof Error ? error.message : "요청 중 문제가 발생했습니다.",
       );
+      return false;
     } finally {
       setSavingSlip(false);
     }
