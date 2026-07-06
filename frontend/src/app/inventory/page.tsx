@@ -8,7 +8,12 @@ import { fetchApi } from "@/shared/api/client";
 
 export const dynamic = "force-dynamic";
 
-export default async function Page() {
+export default async function Page({
+  searchParams,
+}: {
+  searchParams?: Promise<{ tab?: string }>;
+}) {
+  const resolvedSearchParams = searchParams ? await searchParams : undefined;
   const [varieties, inboundRecords, houses] = await Promise.all([
     getVarieties(),
     getInboundRecords(),
@@ -17,6 +22,7 @@ export default async function Page() {
 
   return (
     <InventoryPage
+      initialActiveTab={resolvedSearchParams?.tab}
       houses={houses}
       initialInboundRecords={inboundRecords}
       initialVarieties={varieties}

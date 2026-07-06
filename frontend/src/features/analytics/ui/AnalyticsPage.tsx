@@ -23,14 +23,6 @@ const DEFAULT_FILTERS: AnalyticsFilters = {
   partner: "전체",
 };
 
-const ANALYTICS_TABS: { id: AnalyticsTab; label: string }[] = [
-  { id: "SALES", label: "매출/출하" },
-  { id: "VARIETY", label: "품종 분석" },
-  { id: "CUSTOMER", label: "거래처 분석" },
-  { id: "SPACE", label: "농장 공간" },
-  { id: "WORK", label: "작업/상태" },
-];
-
 export function AnalyticsPage(props: AnalyticsPageProps) {
   const router = useRouter();
   const pathname = usePathname();
@@ -113,22 +105,6 @@ export function AnalyticsPage(props: AnalyticsPageProps) {
   return (
     <main className="min-w-0 space-y-4">
       <div className="flex flex-wrap items-end justify-between gap-3 border-b border-[#d8ded8]">
-        <nav className="flex max-w-full overflow-x-auto">
-          {ANALYTICS_TABS.map((item) => (
-            <button
-              className={`shrink-0 border-b-2 px-5 py-3 text-sm font-semibold ${
-                tab === item.id
-                  ? "border-[#159447] text-[#16843d]"
-                  : "border-transparent text-[#667169]"
-              }`}
-              key={item.id}
-              type="button"
-              onClick={() => updateTab(item.id)}
-            >
-              {item.label}
-            </button>
-          ))}
-        </nav>
         <button
           className="mb-2 flex items-center gap-2 rounded-md bg-[#159447] px-4 py-2 text-xs font-semibold text-white"
           type="button"

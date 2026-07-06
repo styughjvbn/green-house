@@ -240,18 +240,21 @@ export function AppShell({ children }: { children: React.ReactNode }) {
               {item.href === "/inventory" &&
               pathname.startsWith("/inventory") ? (
                 <div className="mt-2 space-y-1 pl-3">
-                  <Link
-                    href="/inventory#variety-management"
-                    className="block rounded-md px-3 py-2 text-sm font-medium text-[#c8d8cd] hover:bg-white/10 hover:text-white"
-                  >
-                    품종 관리
-                  </Link>
-                  <Link
-                    href="/inventory#material-management"
-                    className="block rounded-md px-3 py-2 text-sm font-medium text-[#c8d8cd] hover:bg-white/10 hover:text-white"
-                  >
-                    자재 관리
-                  </Link>
+                  <SalesSubNavItem
+                    href="/inventory?tab=VARIETY"
+                    label="품종 관리"
+                    active={salesTab === "VARIETY"}
+                  />
+                  <SalesSubNavItem
+                    href="/inventory?tab=INBOUND"
+                    label="입고 관리"
+                    active={salesTab === "INBOUND"}
+                  />
+                  <SalesSubNavItem
+                    href="/inventory?tab=MATERIAL"
+                    label="자재 관리"
+                    active={salesTab === "MATERIAL"}
+                  />
                 </div>
               ) : null}
             </div>
@@ -337,18 +340,23 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
           {pathname.startsWith("/inventory") ? (
             <div className="mt-3 flex gap-2 overflow-x-auto">
-              <Link
-                href="/inventory#variety-management"
-                className="shrink-0 rounded-md bg-[#dcefe1] px-3 py-2 text-sm font-medium text-[#1c5f33]"
-              >
-                품종 관리
-              </Link>
-              <Link
-                href="/inventory#material-management"
-                className="shrink-0 rounded-md bg-[#f0f3ef] px-3 py-2 text-sm font-medium text-[#435047]"
-              >
-                자재 관리
-              </Link>
+              {[
+                ["VARIETY", "품종 관리"],
+                ["INBOUND", "입고 관리"],
+                ["MATERIAL", "자재 관리"],
+              ].map(([tab, label]) => (
+                <Link
+                  key={tab}
+                  href={`/inventory?tab=${tab}`}
+                  className={`shrink-0 rounded-md px-3 py-2 text-sm font-medium ${
+                    salesTab === tab
+                      ? "bg-[#dcefe1] text-[#1c5f33]"
+                      : "bg-[#f0f3ef] text-[#435047]"
+                  }`}
+                >
+                  {label}
+                </Link>
+              ))}
             </div>
           ) : null}
         </header>

@@ -1,6 +1,7 @@
 "use client";
 
 import { Download, Plus } from "lucide-react";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useState } from "react";
 import type { House } from "@/entities/farm/types";
 import {
@@ -19,17 +20,26 @@ import { MaterialSection } from "./components/MaterialSection";
 import { VarietySection } from "./components/VarietySection";
 
 export function InventoryPage({
+  initialActiveTab,
   houses,
   initialInboundRecords,
   initialVarieties,
 }: {
+  initialActiveTab?: string;
   houses: House[];
   initialInboundRecords: InboundRecord[];
   initialVarieties: Variety[];
 }) {
+  const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
   const [activeTab, setActiveTab] = useState<
     "VARIETY" | "INBOUND" | "MATERIAL"
-  >("VARIETY");
+  >(
+    initialActiveTab === "INBOUND" || initialActiveTab === "MATERIAL"
+      ? initialActiveTab
+      : "VARIETY",
+  );
   const [inboundRecords, setInboundRecords] = useState(initialInboundRecords);
   const [varieties, setVarieties] = useState(initialVarieties);
   const [materials, setMaterials] = useState(INITIAL_MATERIALS);
@@ -66,6 +76,15 @@ export function InventoryPage({
       active = false;
     };
   }, [selectedVarietyId]);
+
+  useEffect(() => {
+    const tab = searchParams.get("tab");
+    if (tab === "VARIETY" || tab === "INBOUND" || tab === "MATERIAL") {
+      setActiveTab(tab);
+      return;
+    }
+    setActiveTab("VARIETY");
+  }, [searchParams]);
 
   const exportCsv = () => {
     const rows = [
@@ -129,31 +148,14 @@ export function InventoryPage({
     setSelectedMaterialId(id);
   };
 
+  const updateTab = (nextTab: "VARIETY" | "INBOUND" | "MATERIAL") => {
+    const params = new URLSearchParams(searchParams.toString());
+    params.set("tab", nextTab);
+    router.replace(`${pathname}?${params.toString()}`);
+  };
+
   return (
     <main className="min-w-0 space-y-3">
-      <nav className="flex flex-wrap items-end gap-6 border-b border-[#d7ddd8]">
-        {[
-          ["VARIETY", "품종"],
-          ["INBOUND", "입고"],
-          ["MATERIAL", "자재"],
-        ].map(([value, label]) => (
-          <button
-            className={`border-b-2 px-1 pb-2 text-sm font-semibold ${
-              activeTab === value
-                ? "border-[#159447] text-[#16843d]"
-                : "border-transparent text-[#617067]"
-            }`}
-            key={value}
-            type="button"
-            onClick={() =>
-              setActiveTab(value as "VARIETY" | "INBOUND" | "MATERIAL")
-            }
-          >
-            {label}
-          </button>
-        ))}
-      </nav>
-
       <div className="flex justify-end">
         <button
           className="flex items-center gap-2 rounded-md border border-[#d5dcd6] bg-white px-4 py-2 text-sm font-semibold shadow-sm"
@@ -197,7 +199,7 @@ export function InventoryPage({
             <button
               className="flex items-center gap-2 rounded-md border border-[#d7ddd8] px-4 py-2 text-sm font-semibold text-[#8a968e]"
               type="button"
-              onClick={() => setActiveTab("INBOUND")}
+              onClick={() => updateTab("INBOUND")}
             >
               <Plus className="h-4 w-4" />새 입고 등록
             </button>
