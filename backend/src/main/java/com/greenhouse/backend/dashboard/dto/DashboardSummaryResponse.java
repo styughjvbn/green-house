@@ -1,4 +1,4 @@
-package com.greenhouse.backend.farm.dto;
+package com.greenhouse.backend.dashboard.dto;
 
 public record DashboardSummaryResponse(
 	long houseCount,
@@ -8,5 +8,4 @@ public record DashboardSummaryResponse(
 	long warningCount,
 	long repotDueCount,
 	String latestWorkDate
-) {
-}
+) { }

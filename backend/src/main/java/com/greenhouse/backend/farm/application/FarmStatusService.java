@@ -4,7 +4,6 @@ import com.greenhouse.backend.common.exception.NotFoundException;
 import com.greenhouse.backend.farm.domain.FarmStatusTargetType;
 import com.greenhouse.backend.farm.domain.FarmZoomLevel;
 import com.greenhouse.backend.farm.dto.BedZoneResponse;
-import com.greenhouse.backend.farm.dto.DashboardSummaryResponse;
 import com.greenhouse.backend.farm.dto.FarmStatusMapResponse;
 import com.greenhouse.backend.farm.dto.FarmStatusOrchidGroupItemResponse;
 import com.greenhouse.backend.farm.dto.FarmStatusOrchidGroupListResponse;
@@ -38,18 +37,6 @@ public class FarmStatusService {
 		this.physicalBedRepository = physicalBedRepository;
 		this.bedZoneRepository = bedZoneRepository;
 		this.orchidGroupRepository = orchidGroupRepository;
-	}
-
-	public DashboardSummaryResponse getDashboardSummary() {
-		return new DashboardSummaryResponse(
-			houseRepository.count(),
-			physicalBedRepository.count(),
-			bedZoneRepository.count(),
-			orchidGroupRepository.count(),
-			orchidGroupRepository.countWarningStatus(),
-			0,
-			null
-		);
 	}
 
 	public FarmStatusMapResponse getMap() {
