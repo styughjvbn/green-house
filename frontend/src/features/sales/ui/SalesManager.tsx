@@ -2,6 +2,7 @@
 
 import { useEffect } from "react";
 import { useSearchParams } from "next/navigation";
+import { Download, Plus } from "lucide-react";
 import { useSalesManager } from "../model/useSalesManager";
 import type { SalesManagerProps } from "../model/types";
 import { BusinessPartnerCreateForm } from "./components/BusinessPartnerCreateForm";
@@ -45,6 +46,17 @@ export function SalesManager({
     <div className="space-y-4">
       {sales.activeTab === "SLIPS" ? (
         <>
+          <div className="flex justify-end gap-3">
+            <button
+              className="inline-flex h-10 items-center gap-2 rounded-md bg-[#159447] px-4 text-sm font-semibold text-white shadow-sm"
+              type="button"
+              onClick={() => sales.setShowCreateSlip((current) => !current)}
+            >
+              <Plus className="h-4 w-4" strokeWidth={1.8} aria-hidden="true" />
+              판매 전표 등록
+            </button>
+          </div>
+
           <SalesFilters
             partners={sales.partners}
             filters={sales.filters}
