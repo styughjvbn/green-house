@@ -74,16 +74,24 @@ export function PartnerSettlementSettingsSection({
 
     return {
       settlementUnit: {
-        enabled: true,
-        reason: "",
+        enabled: isAuctionHouse,
+        reason: isAuctionHouse
+          ? ""
+          : "비경매 거래처는 현재 판매 전표 단위 정산만 사용",
       } satisfies DisabledFeature,
       monthlySettlement: {
-        enabled: !isAuctionHouse,
-        reason: "경매장 정산은 현재 경매일 단위만 동작",
+        enabled: false,
+        reason: isAuctionHouse
+          ? "경매장 정산은 현재 경매일 단위만 동작"
+          : "월 정산 자동화 미구현",
       } satisfies DisabledFeature,
       salesSlipSettlement: {
         enabled: !isAuctionHouse,
         reason: "경매장 정산은 현재 경매일 단위만 동작",
+      } satisfies DisabledFeature,
+      auctionDateSettlement: {
+        enabled: isAuctionHouse,
+        reason: "비경매 거래처에는 사용하지 않음",
       } satisfies DisabledFeature,
       autoMatch: {
         enabled: false,
@@ -119,6 +127,10 @@ export function PartnerSettlementSettingsSection({
 
   function updateSettlementUnit(nextUnit: SettlementUnit) {
     if (!partner) return;
+    if (partner.partnerType !== "AUCTION_HOUSE") {
+      update("settlementUnit", "SALES_SLIP");
+      return;
+    }
     if (
       partner.partnerType === "AUCTION_HOUSE" &&
       nextUnit !== "AUCTION_DATE"
@@ -210,6 +222,7 @@ export function PartnerSettlementSettingsSection({
               <select
                 className={controlClass}
                 value={settings.settlementUnit}
+                disabled={!disabledFeatures.settlementUnit.enabled}
                 onChange={(event) =>
                   updateSettlementUnit(event.target.value as SettlementUnit)
                 }
@@ -226,13 +239,18 @@ export function PartnerSettlementSettingsSection({
                 >
                   월 정산 단위
                 </option>
-                <option value="AUCTION_DATE">경매일 단위</option>
+                <option
+                  value="AUCTION_DATE"
+                  disabled={!disabledFeatures.auctionDateSettlement.enabled}
+                >
+                  경매일 단위
+                </option>
               </select>
-              {partner.partnerType === "AUCTION_HOUSE" ? (
-                <FieldHint tone="muted">
-                  {disabledFeatures.monthlySettlement.reason}
-                </FieldHint>
-              ) : null}
+              <FieldHint tone="muted">
+                {partner.partnerType === "AUCTION_HOUSE"
+                  ? disabledFeatures.monthlySettlement.reason
+                  : disabledFeatures.settlementUnit.reason}
+              </FieldHint>
             </Field>
             <Field label="입금 지연일">
               <input
