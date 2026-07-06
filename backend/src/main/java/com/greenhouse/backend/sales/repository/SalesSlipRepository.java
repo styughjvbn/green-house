@@ -31,4 +31,12 @@ public interface SalesSlipRepository extends JpaRepository<SalesSlip, Long> {
 		@Param("from") LocalDate from,
 		@Param("to") LocalDate to
 	);
+
+	@Query("""
+		select coalesce(sum(coalesce(s.remainingAmount, s.totalAmount)), 0)
+		from SalesSlip s
+		where s.partner.id = :partnerId
+		  and (s.salesType is null or s.salesType = com.greenhouse.backend.sales.domain.SalesType.DIRECT)
+		""")
+	Long sumDirectReceivableByPartnerId(@Param("partnerId") Long partnerId);
 }

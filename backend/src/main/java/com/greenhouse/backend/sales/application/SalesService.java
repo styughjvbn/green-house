@@ -14,6 +14,7 @@ import com.greenhouse.backend.sales.dto.AuctionShipmentOptionResponse;
 import com.greenhouse.backend.sales.dto.SalesSlipCreateRequest;
 import com.greenhouse.backend.sales.dto.SalesSlipResponse;
 import com.greenhouse.backend.sales.repository.SalesSlipRepository;
+import com.greenhouse.backend.settlement.application.ExpectedPaymentDateCalculator;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
@@ -28,17 +29,20 @@ public class SalesService {
 	private final SalesSlipRepository salesSlipRepository;
 	private final OrchidGroupRepository orchidGroupRepository;
 	private final AuctionShipmentRepository auctionShipmentRepository;
+	private final ExpectedPaymentDateCalculator paymentDateCalculator;
 
 	public SalesService(
 		BusinessPartnerRepository partnerRepository,
 		SalesSlipRepository salesSlipRepository,
 		OrchidGroupRepository orchidGroupRepository,
-		AuctionShipmentRepository auctionShipmentRepository
+		AuctionShipmentRepository auctionShipmentRepository,
+		ExpectedPaymentDateCalculator paymentDateCalculator
 	) {
 		this.partnerRepository = partnerRepository;
 		this.salesSlipRepository = salesSlipRepository;
 		this.orchidGroupRepository = orchidGroupRepository;
 		this.auctionShipmentRepository = auctionShipmentRepository;
+		this.paymentDateCalculator = paymentDateCalculator;
 	}
 
 	@Transactional(readOnly = true)
@@ -96,6 +100,7 @@ public class SalesService {
 			item.unitPrice(),
 			normalize(item.memo())
 		)));
+		salesSlip.updateExpectedPaymentDate(paymentDateCalculator.calculate(partner, request.saleDate()));
 		return SalesSlipResponse.from(salesSlipRepository.save(salesSlip));
 	}
 

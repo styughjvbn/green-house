@@ -128,6 +128,16 @@ public class AuctionSettlement extends BaseEntity {
 		this.expectedPaymentDate = expectedPaymentDate;
 	}
 
+	public void recordPayment(Long amount, String worker) {
+		if (amount <= 0) throw new IllegalArgumentException("입금액은 0원보다 커야 합니다.");
+		if (amount > remainingAmount) throw new IllegalArgumentException("입금액은 현재 잔액을 초과할 수 없습니다.");
+		this.paidAmount += amount;
+		this.remainingAmount = Math.max(0L, expectedDepositAmount - paidAmount);
+		this.status = remainingAmount == 0 ? AuctionSettlementStatus.PAID : AuctionSettlementStatus.PARTIALLY_PAID;
+		this.confirmedAt = LocalDateTime.now();
+		this.confirmedBy = worker;
+	}
+
 	private void addLine(AuctionSettlementLine line) {
 		line.setSettlement(this);
 		lines.add(line);

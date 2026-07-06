@@ -49,6 +49,15 @@ public class SalesSlip extends BaseEntity {
 	@Column(name = "total_amount", nullable = false)
 	private Integer totalAmount;
 
+	@Column(name = "expected_payment_date")
+	private LocalDate expectedPaymentDate;
+
+	@Column(name = "paid_amount")
+	private Long paidAmount;
+
+	@Column(name = "remaining_amount")
+	private Long remainingAmount;
+
 	@Column(name = "payment_status", nullable = false)
 	private String paymentStatus;
 
@@ -88,6 +97,9 @@ public class SalesSlip extends BaseEntity {
 		this.paymentMethod = paymentMethod;
 		this.memo = memo;
 		this.totalAmount = 0;
+		this.expectedPaymentDate = saleDate;
+		this.paidAmount = 0L;
+		this.remainingAmount = 0L;
 	}
 
 	public void addItem(SalesSlipItem item) {
@@ -96,6 +108,19 @@ public class SalesSlip extends BaseEntity {
 		this.totalAmount = this.items.stream()
 			.mapToInt(SalesSlipItem::getAmount)
 			.sum();
+		this.remainingAmount = Math.max(0L, this.totalAmount.longValue() - getPaidAmount());
+	}
+
+	public void updateExpectedPaymentDate(LocalDate expectedPaymentDate) {
+		this.expectedPaymentDate = expectedPaymentDate;
+	}
+
+	public void recordPayment(Long amount) {
+		if (amount <= 0) throw new IllegalArgumentException("입금액은 0원보다 커야 합니다.");
+		if (amount > getRemainingAmount()) throw new IllegalArgumentException("입금액은 현재 잔액을 초과할 수 없습니다.");
+		this.paidAmount = getPaidAmount() + amount;
+		this.remainingAmount = Math.max(0L, totalAmount.longValue() - paidAmount);
+		this.paymentStatus = remainingAmount == 0 ? "입금 완료" : "부분입금";
 	}
 
 	public Long getId() {
@@ -124,6 +149,18 @@ public class SalesSlip extends BaseEntity {
 
 	public Integer getTotalAmount() {
 		return totalAmount;
+	}
+
+	public LocalDate getExpectedPaymentDate() {
+		return expectedPaymentDate == null ? saleDate : expectedPaymentDate;
+	}
+
+	public Long getPaidAmount() {
+		return paidAmount == null ? 0L : paidAmount;
+	}
+
+	public Long getRemainingAmount() {
+		return remainingAmount == null ? totalAmount.longValue() : remainingAmount;
 	}
 
 	public String getPaymentStatus() {
