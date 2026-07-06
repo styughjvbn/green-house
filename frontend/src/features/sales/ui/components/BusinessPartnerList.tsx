@@ -6,7 +6,7 @@ export function BusinessPartnerList({
   onSelectBusinessPartner,
 }: {
   partners: BusinessPartner[];
-  selectedBusinessPartnerId: string;
+  selectedBusinessPartnerId: number | null;
   onSelectBusinessPartner: (partnerId: number) => void;
 }) {
   return (
@@ -17,7 +17,7 @@ export function BusinessPartnerList({
           <button
             key={partner.id}
             className={`w-full rounded-md border px-3 py-2 text-left text-sm ${
-              selectedBusinessPartnerId === String(partner.id)
+              selectedBusinessPartnerId === partner.id
                 ? "border-[#159447] bg-[#eef7ec]"
                 : "border-[#d7ddd4] bg-white"
             }`}

@@ -4,11 +4,15 @@ import type { ReactNode } from "react";
 import Link from "next/link";
 import { Copy, Printer } from "lucide-react";
 import type { SalesSlip } from "@/entities/farm/types";
+import { confirmSalesSlipPayment } from "../../api/salesApi";
+import { ManualPaymentPanel } from "./ManualPaymentPanel";
 
 export function SalesSlipDetail({
   salesSlip,
+  onPaymentConfirmed,
 }: {
   salesSlip: SalesSlip | null;
+  onPaymentConfirmed: (salesSlip: SalesSlip) => void;
 }) {
   if (!salesSlip) {
     return (
@@ -129,6 +133,23 @@ export function SalesSlipDetail({
           </p>
         </div>
       </div>
+
+      {salesSlip.salesType === "DIRECT" ? (
+        <div className="mt-3 rounded-md border border-[#dfe5dc]">
+          <ManualPaymentPanel
+            key={salesSlip.id}
+            targetType="SALES_SLIP"
+            targetId={salesSlip.id}
+            remainingAmount={salesSlip.remainingAmount}
+            expectedPaymentDate={salesSlip.expectedPaymentDate}
+            onConfirm={async (payload) => {
+              onPaymentConfirmed(
+                await confirmSalesSlipPayment(salesSlip.id, payload),
+              );
+            }}
+          />
+        </div>
+      ) : null}
     </section>
   );
 }

@@ -1,6 +1,7 @@
 ﻿import {
   getAuctionLots,
   getAuctionTrackingSummary,
+  getAuctionSettlements,
   getBusinessPartners,
   getSalesSlips,
   SalesPage,
@@ -9,14 +10,19 @@
 export const dynamic = "force-dynamic";
 
 export default async function Page() {
-  const [partners, salesSlips, auctionPage, auctionSummary] = await Promise.all(
-    [
-      getBusinessPartners(),
-      getSalesSlips(),
-      getAuctionLots(),
-      getAuctionTrackingSummary(),
-    ],
-  );
+  const [
+    partners,
+    salesSlips,
+    auctionPage,
+    auctionSummary,
+    auctionSettlements,
+  ] = await Promise.all([
+    getBusinessPartners(),
+    getSalesSlips(),
+    getAuctionLots(),
+    getAuctionTrackingSummary(),
+    getAuctionSettlements(),
+  ]);
 
   return (
     <SalesPage
@@ -24,6 +30,7 @@ export default async function Page() {
       salesSlips={salesSlips}
       auctionPage={auctionPage}
       auctionSummary={auctionSummary}
+      auctionSettlements={auctionSettlements}
     />
   );
 }

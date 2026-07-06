@@ -194,6 +194,9 @@ ORCHID_GROUP
 | partner_id | BIGINT FK | 거래처 ID |
 | auction_shipment_id | BIGINT UNIQUE FK, NULL | 경매 출하 ID |
 | total_amount | INTEGER | 총 금액 |
+| expected_payment_date | DATE, NULL | 입금 예정일 |
+| paid_amount | BIGINT, NULL | 누적 입금액, 기존 NULL은 0 |
+| remaining_amount | BIGINT, NULL | 미입금 잔액, 기존 NULL은 총액 |
 | payment_status | VARCHAR | 입금 상태 |
 | sales_status | VARCHAR | 판매 상태 |
 | payment_method | VARCHAR | 결제 방식 |
@@ -382,3 +385,19 @@ auction_shipments.auction_house_id     business_partners FK (`AUCTION_HOUSE`)
 경매 출하 기록과 lot은 판매 전표에 중복 연결하지 않는다. 경매 전표 최초 금액은 0원이며 정산 결과 자동 반영은 별도 트랜잭션 설계 후 추가한다.
 
 `auction_shipment_lots.current_status`에는 반환 관련 상태로 `RETURN_INFERRED`, `PARTIALLY_RETURNED`, `RETURNED`를 저장한다. 기존 반환추정 데이터는 추정 수량이 `returned_quantity`에 저장될 수 있으므로 API에서 `returnConfirmableQuantity`로 확인 대상을 정규화한다. 부분반환 확정 시 확정 수량은 `returned_quantity`, 잔여 수량은 `waiting_quantity`에 저장한다. 사용자가 확인한 마지막 실제 반환일은 nullable `return_confirmed_date`에 저장한다.
+
+### 경매 정산
+
+| 테이블 | 핵심 컬럼 | 역할 |
+|---|---|---|
+| `partner_settlement_settings` | `partner_id`, 정산 단위·지연일·자동 처리 설정 | 거래처별 정산 정책 |
+| `partner_payment_events` | `partner_id`, 이벤트·대상·금액·상태 | 입금 발생과 수동 연결 이력 |
+| `partner_balance_summaries` | `partner_id`, 예치금·미배정액·미수금 | 거래처별 결제 잔액 요약 |
+| `auction_settlements` | `auction_house_id`, `auction_date`, 금액·상태 컬럼 | 경매장·경매일 정산 묶음 |
+| `auction_settlement_lines` | `settlement_id`, `auction_result_line_id`, `auction_shipment_lot_id` | 실제 낙찰 결과 연결 |
+
+`auction_settlements`는 `(auction_house_id, auction_date)`를 유일키로 사용한다. `auction_settlement_lines.auction_result_line_id`도 유일하며 한 낙찰 결과가 여러 정산에 포함되지 않도록 한다. 전표와 정산은 직접 FK로 연결하지 않고 `SalesSlipItem → AuctionShipmentLot → AuctionAttempt → AuctionResultLine → AuctionSettlementLine` 경로로 조회한다.
+
+`partner_settlement_settings.partner_id`는 유일 FK다. `depositor_aliases`와 `rule_json`은 JSONB로 저장한다. 경매 정산 재구성 시 `payment_delay_days`와 `payment_day_mode`를 적용해 `expected_payment_date`를 갱신한다. 영업일 계산은 현재 토·일만 제외하며 공휴일 달력은 후속 범위다.
+
+수동 입금 확인은 실제 입금인 `PAYMENT_RECEIVED`와 부모 입금을 가리키는 `MANUAL_MATCH_CONFIRMED`를 한 트랜잭션에서 저장한다. `target_type`은 `SALES_SLIP`, `AUCTION_SETTLEMENT`, `NONE` 중 하나다. `partner_balance_summaries.receivable_balance`는 일반 판매전표의 현재 잔액 합계이며 경매 정산 잔액은 별도로 집계한다.

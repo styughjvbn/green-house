@@ -4,6 +4,7 @@ import { useSalesManager } from "../model/useSalesManager";
 import type { SalesManagerProps } from "../model/types";
 import { BusinessPartnerCreateForm } from "./components/BusinessPartnerCreateForm";
 import { BusinessPartnerList } from "./components/BusinessPartnerList";
+import { PartnerSettlementSettingsSection } from "./components/PartnerSettlementSettingsSection";
 import { SalesFilters } from "./components/SalesFilters";
 import { SalesSlipCreateForm } from "./components/SalesSlipCreateForm";
 import { SalesSlipDetail } from "./components/SalesSlipDetail";
@@ -17,6 +18,7 @@ export function SalesManager({
   initialSalesSlips,
   initialAuctionPage,
   initialAuctionSummary,
+  initialAuctionSettlements,
 }: SalesManagerProps) {
   const sales = useSalesManager(initialBusinessPartners, initialSalesSlips);
 
@@ -62,7 +64,10 @@ export function SalesManager({
               selectedSalesSlipId={sales.selectedSalesSlip?.id ?? null}
               onSelect={sales.selectSalesSlip}
             />
-            <SalesSlipDetail salesSlip={sales.selectedSalesSlip} />
+            <SalesSlipDetail
+              salesSlip={sales.selectedSalesSlip}
+              onPaymentConfirmed={sales.updateSalesSlip}
+            />
           </div>
         </>
       ) : sales.activeTab === "AUCTION" ? (
@@ -71,7 +76,7 @@ export function SalesManager({
           initialSummary={initialAuctionSummary}
         />
       ) : sales.activeTab === "SETTLEMENT" ? (
-        <AuctionSettlementView lots={initialAuctionPage.content} />
+        <AuctionSettlementView initialSettlements={initialAuctionSettlements} />
       ) : (
         <div className="grid gap-4 xl:grid-cols-[420px_minmax(0,1fr)]">
           <BusinessPartnerCreateForm
@@ -80,11 +85,17 @@ export function SalesManager({
             onChange={sales.updateBusinessPartnerForm}
             onSubmit={sales.handleCreateBusinessPartner}
           />
-          <BusinessPartnerList
-            partners={sales.partners}
-            selectedBusinessPartnerId={sales.salesForm.partnerId}
-            onSelectBusinessPartner={sales.selectBusinessPartner}
-          />
+          <div className="space-y-4">
+            <BusinessPartnerList
+              partners={sales.partners}
+              selectedBusinessPartnerId={sales.selectedPartnerId}
+              onSelectBusinessPartner={sales.selectBusinessPartner}
+            />
+            <PartnerSettlementSettingsSection
+              key={sales.selectedBusinessPartner?.id ?? "empty"}
+              partner={sales.selectedBusinessPartner}
+            />
+          </div>
         </div>
       )}
     </div>

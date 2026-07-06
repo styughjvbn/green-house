@@ -1,6 +1,7 @@
 ﻿import type {
   AuctionLotPage,
   AuctionTrackingSummary,
+  AuctionSettlement,
   BusinessPartner,
   SalesSlip,
 } from "@/entities/farm/types";
@@ -11,6 +12,7 @@ type SalesPageProps = {
   salesSlips: SalesSlip[];
   auctionPage: AuctionLotPage;
   auctionSummary: AuctionTrackingSummary;
+  auctionSettlements: AuctionSettlement[];
 };
 
 export function SalesPage({
@@ -18,6 +20,7 @@ export function SalesPage({
   salesSlips,
   auctionPage,
   auctionSummary,
+  auctionSettlements,
 }: SalesPageProps) {
   return (
     <main className="space-y-5">
@@ -26,6 +29,7 @@ export function SalesPage({
         initialSalesSlips={salesSlips}
         initialAuctionPage={auctionPage}
         initialAuctionSummary={auctionSummary}
+        initialAuctionSettlements={auctionSettlements}
       />
     </main>
   );

@@ -274,6 +274,25 @@ export type BusinessPartner = {
   active: boolean;
 };
 
+export type SettlementUnit = "SALES_SLIP" | "MONTHLY_BATCH" | "AUCTION_DATE";
+export type PaymentDayMode = "CALENDAR_DAY" | "BUSINESS_DAY";
+
+export type PartnerSettlementSettings = {
+  id: number;
+  partnerId: number;
+  settlementUnit: SettlementUnit;
+  paymentDelayDays: number;
+  paymentDayMode: PaymentDayMode;
+  autoMatchEnabled: boolean;
+  autoSettleEnabled: boolean;
+  amountTolerance: number;
+  depositorAliases: string[];
+  allowPrepayment: boolean;
+  creditAutoApplyEnabled: boolean;
+  ruleJson: Record<string, unknown> | null;
+  memo: string | null;
+};
+
 export type SalesSlipItem = {
   id: number;
   orchidGroupId: number | null;
@@ -296,6 +315,9 @@ export type SalesSlip = {
   auctionMarket: string | null;
   partner: BusinessPartner;
   totalAmount: number;
+  expectedPaymentDate: string;
+  paidAmount: number;
+  remainingAmount: number;
   paymentStatus: string;
   salesStatus: string;
   paymentMethod: string | null;
@@ -413,4 +435,78 @@ export type AuctionTrackingSummary = {
   returnedQuantity: number;
   reviewRequiredCount: number;
   totalAmount: number;
+};
+
+export type AuctionSettlementStatus =
+  | "CREATED"
+  | "PAYMENT_WAITING"
+  | "PARTIALLY_PAID"
+  | "PAID"
+  | "AMOUNT_MISMATCH"
+  | "REVIEW_REQUIRED"
+  | "CANCELLED";
+
+export type AuctionSettlementLine = {
+  id: number;
+  auctionResultLineId: number;
+  auctionShipmentLotId: number;
+  shipmentDate: string;
+  varietyName: string;
+  shipmentGrade: string | null;
+  quantity: number;
+  unitPrice: number;
+  amount: number;
+  status: "UNPAID" | "PAID" | "PARTIALLY_PAID" | "EXCLUDED" | "REVIEW_REQUIRED";
+};
+
+export type AuctionSettlement = {
+  id: number;
+  auctionHouseId: number;
+  auctionHouseName: string;
+  auctionDate: string;
+  resultReceivedAt: string | null;
+  expectedPaymentDate: string | null;
+  grossAmount: number;
+  feeAmount: number;
+  deductionAmount: number;
+  expectedDepositAmount: number;
+  paidAmount: number;
+  remainingAmount: number;
+  status: AuctionSettlementStatus;
+  memo: string | null;
+  confirmedAt: string | null;
+  confirmedBy: string | null;
+  lines: AuctionSettlementLine[];
+};
+
+export type PaymentTargetType = "SALES_SLIP" | "AUCTION_SETTLEMENT" | "NONE";
+
+export type PartnerPaymentEvent = {
+  id: number;
+  partnerId: number;
+  partnerName: string;
+  eventType:
+    | "PAYMENT_RECEIVED"
+    | "PAYMENT_ALLOCATED"
+    | "PREPAYMENT_RECEIVED"
+    | "CREDIT_APPLIED"
+    | "CREDIT_REFUND"
+    | "AUTO_MATCH_CANDIDATE"
+    | "AUTO_MATCH_CONFIRMED"
+    | "MANUAL_MATCH_CONFIRMED"
+    | "MATCH_REJECTED"
+    | "PAYMENT_UNLINKED"
+    | "ADJUSTMENT";
+  eventDate: string;
+  amount: number;
+  unappliedAmount: number;
+  targetType: PaymentTargetType;
+  targetId: number;
+  parentEventId: number | null;
+  paymentMethod: string | null;
+  depositorName: string | null;
+  description: string | null;
+  status: string;
+  memo: string | null;
+  createdBy: string | null;
 };

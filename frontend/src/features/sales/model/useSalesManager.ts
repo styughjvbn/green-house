@@ -50,6 +50,9 @@ export function useSalesManager(
   const [selectedSlipId, setSelectedSlipId] = useState<number | null>(
     initialSalesSlips[0]?.id ?? null,
   );
+  const [selectedPartnerId, setSelectedPartnerId] = useState<number | null>(
+    initialBusinessPartners[0]?.id ?? null,
+  );
   const [savingBusinessPartner, setSavingBusinessPartner] = useState(false);
   const [savingSlip, setSavingSlip] = useState(false);
   const [auctionShipments, setAuctionShipments] = useState<
@@ -73,6 +76,8 @@ export function useSalesManager(
     filteredSalesSlips.find((salesSlip) => salesSlip.id === selectedSlipId) ??
     filteredSalesSlips[0] ??
     null;
+  const selectedBusinessPartner =
+    partners.find((partner) => partner.id === selectedPartnerId) ?? null;
 
   function updateBusinessPartnerForm<K extends keyof BusinessPartnerForm>(
     field: K,
@@ -165,7 +170,11 @@ export function useSalesManager(
   }
 
   function selectBusinessPartner(partnerId: number) {
-    updateSalesForm("partnerId", String(partnerId));
+    setSelectedPartnerId(partnerId);
+    const partner = partners.find((item) => item.id === partnerId);
+    if (partner?.partnerType !== "AUCTION_HOUSE") {
+      updateSalesForm("partnerId", String(partnerId));
+    }
   }
 
   async function handleCreateBusinessPartner(
@@ -180,6 +189,7 @@ export function useSalesManager(
         toCreateBusinessPartnerPayload(partnerForm),
       );
       setBusinessPartners((current) => [...current, partner]);
+      setSelectedPartnerId(partner.id);
       if (partner.partnerType !== "AUCTION_HOUSE") {
         setSalesForm((current) => ({
           ...current,
@@ -225,11 +235,19 @@ export function useSalesManager(
     }
   }
 
+  function updateSalesSlip(salesSlip: SalesSlip) {
+    setSalesSlips((current) =>
+      current.map((item) => (item.id === salesSlip.id ? salesSlip : item)),
+    );
+  }
+
   return {
     partners,
     salesSlips,
     filteredSalesSlips,
     selectedSalesSlip,
+    selectedPartnerId,
+    selectedBusinessPartner,
     partnerForm,
     activeTab,
     filters,
@@ -254,6 +272,7 @@ export function useSalesManager(
     updateFilters,
     updateSalesForm,
     updateItem,
+    updateSalesSlip,
     handleCreateBusinessPartner,
     handleCreateSalesSlip,
   };

@@ -857,7 +857,7 @@ POST /api/auction-lots/{lotId}/adjust-quantity
 PATCH /api/auction-lots/{lotId}/status
 ```
 
-상태, 변경 사유, 작업자, 메모를 받고 상태 이력을 생성한다. 수동 매칭, 재고 자동 이동, 정산 생성 API는 아직 제공하지 않는다.
+상태, 변경 사유, 작업자, 메모를 받고 상태 이력을 생성한다. 수동 매칭과 재고 자동 이동은 아직 제공하지 않는다.
 
 ### 경매 출하 전표 후보
 
@@ -885,3 +885,62 @@ POST /api/sales-slips
 ```
 
 서버는 출하일을 판매일로 사용하고 출하 기록의 `auction_house_id` 거래처를 전표에 연결한다. lot별 품목을 출하 수량과 0원 단가로 구성한다. 일반 판매는 `salesType=DIRECT`이며 기존 요청처럼 유형을 생략해도 된다.
+
+## 15. 경매 정산 API
+
+```http
+GET /api/auction-settlements?auctionHouseId=&from=&to=&status=
+GET /api/auction-settlements/{settlementId}
+POST /api/auction-settlements/rebuild?auctionHouseId=1&auctionDate=2026-07-03
+```
+
+정산은 경매장과 경매일 조합으로 한 건만 생성한다. `amount > 0`인 경매 결과만 정산 행으로 연결하며 재구성 요청은 기존 행을 중복 생성하지 않는다. 현재 수수료와 공제액은 0원이다. 예상 입금일은 거래처 정산 설정의 지연일과 달력일·영업일 계산 방식으로 정한다.
+
+## 16. 거래처 정산 설정 API
+
+```http
+GET /api/business-partners/{partnerId}/settlement-settings
+PUT /api/business-partners/{partnerId}/settlement-settings
+```
+
+설정이 없으면 최초 조회 시 기본 설정을 생성한다. 경매장은 `AUCTION_DATE`, 다른 거래처는 `SALES_SLIP`이 기본 정산 단위다.
+
+```json
+{
+  "settlementUnit": "AUCTION_DATE",
+  "paymentDelayDays": 3,
+  "paymentDayMode": "BUSINESS_DAY",
+  "autoMatchEnabled": true,
+  "autoSettleEnabled": false,
+  "amountTolerance": 1000,
+  "depositorAliases": ["양재화훼", "양재경매"],
+  "allowPrepayment": false,
+  "creditAutoApplyEnabled": false,
+  "ruleJson": { "auctionDays": ["MON", "THU"] },
+  "memo": null
+}
+```
+
+입금자명 후보는 공백 제거 후 중복을 제거한다. `ruleJson`은 경매장별 결과 수신·파싱 규칙 확장용이며 현재 자동 수신 기능에서는 사용하지 않는다.
+
+## 17. 수동 입금 API
+
+```http
+POST /api/auction-settlements/{settlementId}/confirm-payment
+POST /api/sales-slips/{salesSlipId}/confirm-payment
+GET /api/partner-payment-events?partnerId=&targetType=&targetId=
+GET /api/business-partners/{partnerId}/balance-summary
+```
+
+```json
+{
+  "amount": 300000,
+  "paymentDate": "2026-07-06",
+  "paymentMethod": "계좌이체",
+  "depositorName": "양재화훼",
+  "worker": "관리자",
+  "memo": "수동 확인"
+}
+```
+
+입금 확인은 `PAYMENT_RECEIVED`와 `MANUAL_MATCH_CONFIRMED` 이벤트를 함께 생성한다. 잔액보다 작은 금액은 부분입금, 잔액과 같은 금액은 완납으로 처리한다. 잔액 초과 입금은 예치금 기능 도입 전까지 거절한다. 경매 판매전표 입금은 전표가 아니라 경매 정산에서 처리한다.

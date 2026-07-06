@@ -1,11 +1,18 @@
 ﻿import { API_BASE_URL, fetchApi } from "@/shared/api/client";
-import type { BusinessPartner, SalesSlip } from "@/entities/farm/types";
+import type {
+  BusinessPartner,
+  PartnerPaymentEvent,
+  PartnerSettlementSettings,
+  SalesSlip,
+} from "@/entities/farm/types";
 import type {
   AuctionLot,
   AuctionLotPage,
   AuctionLotStatus,
   AuctionTrackingSummary,
   AuctionShipmentOption,
+  AuctionSettlement,
+  AuctionSettlementStatus,
 } from "@/entities/farm/types";
 import type {
   AuctionFilterState,
@@ -73,6 +80,85 @@ export function getAuctionLots(
 
 export function getAuctionTrackingSummary() {
   return fetchApi<AuctionTrackingSummary>("/auction-tracking/summary");
+}
+
+export function getAuctionSettlements(filters?: {
+  auctionHouseId?: number;
+  from?: string;
+  to?: string;
+  status?: AuctionSettlementStatus;
+}) {
+  const params = new URLSearchParams();
+  Object.entries(filters ?? {}).forEach(([key, value]) => {
+    if (value != null && value !== "") params.set(key, String(value));
+  });
+  const query = params.size > 0 ? `?${params}` : "";
+  return fetchApi<AuctionSettlement[]>(`/auction-settlements${query}`);
+}
+
+export function rebuildAuctionSettlement(
+  auctionHouseId: number,
+  auctionDate: string,
+) {
+  const params = new URLSearchParams({
+    auctionHouseId: String(auctionHouseId),
+    auctionDate,
+  });
+  return requestJson<AuctionSettlement>(
+    `/auction-settlements/rebuild?${params}`,
+    { method: "POST" },
+    "경매 정산을 다시 계산하지 못했습니다.",
+  );
+}
+
+export type ManualPaymentPayload = {
+  amount: number;
+  paymentDate: string;
+  paymentMethod: string | null;
+  depositorName: string | null;
+  worker: string | null;
+  memo: string | null;
+};
+
+export function confirmAuctionSettlementPayment(
+  settlementId: number,
+  payload: ManualPaymentPayload,
+) {
+  return requestJson<AuctionSettlement>(
+    `/auction-settlements/${settlementId}/confirm-payment`,
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    },
+    "입금을 확인하지 못했습니다.",
+  );
+}
+
+export function confirmSalesSlipPayment(
+  salesSlipId: number,
+  payload: ManualPaymentPayload,
+) {
+  return requestJson<SalesSlip>(
+    `/sales-slips/${salesSlipId}/confirm-payment`,
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    },
+    "입금을 확인하지 못했습니다.",
+  );
+}
+
+export function getPaymentEvents(
+  targetType: "SALES_SLIP" | "AUCTION_SETTLEMENT",
+  targetId: number,
+) {
+  const params = new URLSearchParams({
+    targetType,
+    targetId: String(targetId),
+  });
+  return fetchApi<PartnerPaymentEvent[]>(`/partner-payment-events?${params}`);
 }
 
 export function confirmAuctionReturn(
@@ -147,6 +233,27 @@ export function createBusinessPartner(
       body: JSON.stringify(payload),
     },
     "거래처를 저장하지 못했습니다.",
+  );
+}
+
+export function getPartnerSettlementSettings(partnerId: number) {
+  return fetchApi<PartnerSettlementSettings>(
+    `/business-partners/${partnerId}/settlement-settings`,
+  );
+}
+
+export function updatePartnerSettlementSettings(
+  partnerId: number,
+  payload: Omit<PartnerSettlementSettings, "id" | "partnerId">,
+) {
+  return requestJson<PartnerSettlementSettings>(
+    `/business-partners/${partnerId}/settlement-settings`,
+    {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    },
+    "정산 설정을 저장하지 못했습니다.",
   );
 }
 
