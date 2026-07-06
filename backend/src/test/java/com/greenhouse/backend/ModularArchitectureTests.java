@@ -30,6 +30,8 @@ class ModularArchitectureTests {
 		"print", Set.of("common", "sales"));
 	private static final Pattern MODULE_IMPORT = Pattern.compile(
 		"import com\\.greenhouse\\.backend\\.([a-z]+)\\.");
+	private static final Pattern REPOSITORY_IMPORT = Pattern.compile(
+		"import com\\.greenhouse\\.backend\\.([a-z]+)\\.repository\\.");
 
 	@Test
 	void moduleRootsAndLayersAreExplicit() throws IOException {
@@ -75,6 +77,20 @@ class ModularArchitectureTests {
 			assertThat(reaches(module, module, new java.util.HashSet<>()))
 				.as("Cyclic module dependency starting at %s", module)
 				.isFalse();
+		}
+	}
+
+	@Test
+	void repositoriesAreAccessedOnlyInsideOwningModule() throws IOException {
+		for (String module : MODULES) {
+			for (Path source : javaSources(SOURCE_ROOT.resolve(module))) {
+				var matcher = REPOSITORY_IMPORT.matcher(Files.readString(source));
+				while (matcher.find()) {
+					assertThat(matcher.group(1))
+						.as("Cross-module repository access %s -> %s in %s", module, matcher.group(1), source)
+						.isEqualTo(module);
+				}
+			}
 		}
 	}
 
