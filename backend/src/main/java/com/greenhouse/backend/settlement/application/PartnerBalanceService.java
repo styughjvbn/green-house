@@ -43,7 +43,7 @@ public class PartnerBalanceService {
 		return balanceRepository.findByPartnerId(partnerId).orElseGet(() -> {
 			var partner = partnerRepository.findById(partnerId)
 				.orElseThrow(() -> new NotFoundException("거래처를 찾을 수 없습니다."));
-			return new PartnerBalanceSummary(partner);
+			return balanceRepository.save(new PartnerBalanceSummary(partner));
 		});
 	}
 }
