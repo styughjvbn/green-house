@@ -233,39 +233,142 @@ function SpaceTab({ props }: { props: AnalyticsPageProps }) {
 }
 
 function WorkTab({ props }: { props: AnalyticsPageProps }) {
+  const sortedRecords = [...props.workRecords].sort((left, right) =>
+    right.workDate.localeCompare(left.workDate),
+  );
   const counts = new Map<string, number>();
-  props.workRecords.forEach((record) =>
+  sortedRecords.forEach((record) =>
     counts.set(record.workType, (counts.get(record.workType) ?? 0) + 1),
   );
-  const values = [...counts].map(([label, value]) => ({ label, value }));
+  const values = [...counts]
+    .map(([label, value]) => ({ label, value }))
+    .sort((left, right) => right.value - left.value);
+  const movementCount = sortedRecords.filter(
+    (record) => record.workTypeTemplate === "MOVEMENT",
+  ).length;
+  const statusCount = sortedRecords.filter(
+    (record) => record.workTypeTemplate === "STATUS",
+  ).length;
+  const latestWorkDate = sortedRecords[0]?.workDate ?? null;
+  const reviewHouses = props.mapData.houses
+    .filter((house) => requiresReview(house.latestWorkDate))
+    .sort((left, right) => {
+      const leftDate = left.latestWorkDate ?? "";
+      const rightDate = right.latestWorkDate ?? "";
+      return leftDate.localeCompare(rightDate);
+    });
+  const warningHouses = [...props.mapData.houses]
+    .filter((house) => house.warningCount > 0)
+    .sort((left, right) => right.warningCount - left.warningCount)
+    .slice(0, 5);
+
   return (
-    <div className="grid gap-3 xl:grid-cols-[0.75fr_1.25fr]">
-      <RankingChart
-        title="작업 유형별 실행 건수"
-        values={
-          values.length ? values : [{ label: "작업 기록 없음", value: 0 }]
-        }
-      />
-      <Panel title="최근 작업 및 상태">
+    <div className="space-y-3">
+      <div className="grid gap-3 xl:grid-cols-[0.78fr_1.22fr]">
+        <RankingChart
+          title="작업 유형별 실행 건수"
+          values={
+            values.length ? values : [{ label: "작업 기록 없음", value: 0 }]
+          }
+        />
+        <Panel title="작업 현황 요약">
+          <div className="mt-3 grid gap-2 sm:grid-cols-2 xl:grid-cols-4">
+            <Metric
+              label="전체 작업 기록"
+              value={`${sortedRecords.length}건`}
+            />
+            <Metric label="최근 작업일" value={latestWorkDate ?? "-"} />
+            <Metric label="위치 이동 기록" value={`${movementCount}건`} />
+            <Metric label="상태 기록" value={`${statusCount}건`} />
+          </div>
+          <div className="mt-3 grid gap-3 xl:grid-cols-[1fr_1fr]">
+            <div className="rounded-md border border-[#e1e6e1] p-3">
+              <div className="flex items-center justify-between">
+                <h3 className="text-xs font-bold">점검 필요 동</h3>
+                <span className="text-[11px] text-[#d07b15]">
+                  {reviewHouses.length}개
+                </span>
+              </div>
+              <div className="mt-2 space-y-2">
+                {reviewHouses.length ? (
+                  reviewHouses.slice(0, 5).map((house) => (
+                    <Link
+                      className="flex items-center justify-between rounded-md bg-[#fbfcfa] px-3 py-2 text-xs hover:bg-[#f3f9f3]"
+                      href={`/farm-status?houseId=${house.houseId}`}
+                      key={house.houseId}
+                    >
+                      <span>{house.houseNumber}동</span>
+                      <span className="text-[#6b776f]">
+                        {house.latestWorkDate ?? "작업 기록 없음"}
+                      </span>
+                    </Link>
+                  ))
+                ) : (
+                  <p className="rounded-md bg-[#fbfcfa] px-3 py-2 text-xs text-[#6b776f]">
+                    최근 작업 누락 동 없음
+                  </p>
+                )}
+              </div>
+            </div>
+            <div className="rounded-md border border-[#e1e6e1] p-3">
+              <div className="flex items-center justify-between">
+                <h3 className="text-xs font-bold">상태 이상 동</h3>
+                <span className="text-[11px] text-[#d63c50]">
+                  {props.summary.warningCount}건
+                </span>
+              </div>
+              <div className="mt-2 space-y-2">
+                {warningHouses.length ? (
+                  warningHouses.map((house) => (
+                    <Link
+                      className="flex items-center justify-between rounded-md bg-[#fbfcfa] px-3 py-2 text-xs hover:bg-[#fdf4f5]"
+                      href={`/farm-status?houseId=${house.houseId}`}
+                      key={house.houseId}
+                    >
+                      <span>{house.houseNumber}동</span>
+                      <span className="font-semibold text-[#d63c50]">
+                        이상 {house.warningCount}건
+                      </span>
+                    </Link>
+                  ))
+                ) : (
+                  <p className="rounded-md bg-[#fbfcfa] px-3 py-2 text-xs text-[#6b776f]">
+                    상태 이상 동 없음
+                  </p>
+                )}
+              </div>
+            </div>
+          </div>
+        </Panel>
+      </div>
+      <Panel title="최근 작업 기록">
         <div className="mt-3 overflow-x-auto">
-          <table className="w-full min-w-[600px] text-xs">
+          <table className="w-full min-w-[760px] text-xs">
             <thead className="bg-[#f7f9f6]">
               <tr>
-                {["작업일", "작업 유형", "대상", "작업자", "메모"].map(
-                  (label) => (
-                    <th className="px-3 py-2 text-left" key={label}>
-                      {label}
-                    </th>
-                  ),
-                )}
+                {[
+                  "작업일",
+                  "작업 유형",
+                  "대상",
+                  "작업 내용",
+                  "작업자",
+                  "메모",
+                ].map((label) => (
+                  <th className="px-3 py-2 text-left" key={label}>
+                    {label}
+                  </th>
+                ))}
               </tr>
             </thead>
             <tbody>
-              {props.workRecords.slice(0, 10).map((record) => (
+              {sortedRecords.slice(0, 10).map((record) => (
                 <tr className="border-b border-[#e5e9e5]" key={record.id}>
                   <td className="px-3 py-2">{record.workDate}</td>
                   <td className="px-3 py-2 font-semibold">{record.workType}</td>
-                  <td className="px-3 py-2">{record.targetType}</td>
+                  <td className="px-3 py-2">
+                    {formatTargetType(record.targetType)}
+                  </td>
+                  <td className="px-3 py-2">{formatWorkContent(record)}</td>
                   <td className="px-3 py-2">{record.worker ?? "-"}</td>
                   <td className="max-w-52 truncate px-3 py-2">
                     {record.memo ?? "-"}
@@ -303,4 +406,38 @@ function partnerTypeLabel(type: PartnerAnalyticsStat["partnerType"]) {
       AUCTION_HOUSE: "경매장",
     }[type] ?? type
   );
+}
+
+function requiresReview(latestWorkDate: string | null) {
+  if (!latestWorkDate) return true;
+  const latest = new Date(`${latestWorkDate}T00:00:00`);
+  const threshold = new Date();
+  threshold.setDate(threshold.getDate() - 30);
+  return latest < threshold;
+}
+
+function formatTargetType(
+  targetType: AnalyticsPageProps["workRecords"][number]["targetType"],
+) {
+  return (
+    {
+      HOUSE: "동",
+      PHYSICAL_BED: "배드",
+      BED_ZONE: "구역",
+      ORCHID_GROUP: "난 묶음",
+      FARM: "농장",
+    }[targetType] ?? targetType
+  );
+}
+
+function formatWorkContent(record: AnalyticsPageProps["workRecords"][number]) {
+  const parts = [
+    record.materialName,
+    record.dilutionRatio ? `희석 ${record.dilutionRatio}` : null,
+    record.quantity ? `수량 ${record.quantity}` : null,
+    record.fromBedZoneId && record.toBedZoneId
+      ? `${record.fromBedZoneId}→${record.toBedZoneId}`
+      : null,
+  ].filter(Boolean);
+  return parts.length ? parts.join(" · ") : "-";
 }
