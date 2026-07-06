@@ -4,7 +4,6 @@ import com.greenhouse.backend.common.api.ApiResponse;
 import com.greenhouse.backend.farm.application.FarmQueryService;
 import com.greenhouse.backend.farm.dto.BedZoneResponse;
 import com.greenhouse.backend.farm.dto.HouseResponse;
-import com.greenhouse.backend.farm.dto.OrchidGroupResponse;
 import com.greenhouse.backend.farm.dto.PhysicalBedResponse;
 import java.util.List;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -56,13 +55,4 @@ public class FarmStructureController {
 		return ApiResponse.ok(farmQueryService.getBedZone(bedZoneId));
 	}
 
-	@GetMapping("/orchid-groups")
-	public ApiResponse<List<OrchidGroupResponse>> getOrchidGroups(
-		@RequestParam(required = false) Long houseId,
-		@RequestParam(required = false) Long physicalBedId,
-		@RequestParam(required = false) Long bedZoneId,
-		@RequestParam(required = false) String status
-	) {
-		return ApiResponse.ok(farmQueryService.getOrchidGroups(houseId, physicalBedId, bedZoneId, status));
-	}
 }

@@ -50,6 +50,14 @@ password: greenhouse
 port: 5432
 ```
 
+DB 스키마는 Flyway가 관리합니다.
+
+```text
+backend/src/main/resources/db/migration/
+```
+
+새 DB에는 V1부터 순서대로 적용됩니다. 기존 개발 DB는 최초 기동 시 v1 baseline을 등록하고 Hibernate가 엔티티와 스키마를 검증합니다. 엔티티 변경 시 `ddl-auto`를 사용하지 말고 다음 버전의 마이그레이션을 추가해야 합니다.
+
 ### 2. 백엔드 실행
 
 ```bash

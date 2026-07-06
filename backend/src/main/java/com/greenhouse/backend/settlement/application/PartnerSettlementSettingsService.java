@@ -1,7 +1,6 @@
 package com.greenhouse.backend.settlement.application;
 
-import com.greenhouse.backend.common.exception.NotFoundException;
-import com.greenhouse.backend.partner.repository.BusinessPartnerRepository;
+import com.greenhouse.backend.partner.application.BusinessPartnerReader;
 import com.greenhouse.backend.settlement.domain.PartnerSettlementSettings;
 import com.greenhouse.backend.settlement.dto.PartnerSettlementSettingsRequest;
 import com.greenhouse.backend.settlement.dto.PartnerSettlementSettingsResponse;
@@ -13,14 +12,14 @@ import org.springframework.transaction.annotation.Transactional;
 @Transactional
 public class PartnerSettlementSettingsService {
 	private final PartnerSettlementSettingsRepository settingsRepository;
-	private final BusinessPartnerRepository partnerRepository;
+	private final BusinessPartnerReader partnerReader;
 
 	public PartnerSettlementSettingsService(
 		PartnerSettlementSettingsRepository settingsRepository,
-		BusinessPartnerRepository partnerRepository
+		BusinessPartnerReader partnerReader
 	) {
 		this.settingsRepository = settingsRepository;
-		this.partnerRepository = partnerRepository;
+		this.partnerReader = partnerReader;
 	}
 
 	public PartnerSettlementSettingsResponse getOrCreate(Long partnerId) {
@@ -39,8 +38,7 @@ public class PartnerSettlementSettingsService {
 
 	private PartnerSettlementSettings findOrCreate(Long partnerId) {
 		return settingsRepository.findByPartnerId(partnerId).orElseGet(() -> {
-			var partner = partnerRepository.findById(partnerId)
-				.orElseThrow(() -> new NotFoundException("거래처를 찾을 수 없습니다."));
+			var partner = partnerReader.get(partnerId);
 			return settingsRepository.save(new PartnerSettlementSettings(partner));
 		});
 	}

@@ -1,7 +1,7 @@
 package com.greenhouse.backend.settlement.controller;
 
 import com.greenhouse.backend.common.api.ApiResponse;
-import com.greenhouse.backend.sales.dto.SalesSlipResponse;
+import com.greenhouse.backend.settlement.application.PartnerBalanceService;
 import com.greenhouse.backend.settlement.application.PaymentService;
 import com.greenhouse.backend.settlement.domain.PaymentTargetType;
 import com.greenhouse.backend.settlement.dto.AuctionSettlementResponse;
@@ -22,9 +22,11 @@ import org.springframework.web.bind.annotation.RestController;
 @RequestMapping("/api")
 public class PaymentController {
 	private final PaymentService paymentService;
+	private final PartnerBalanceService partnerBalanceService;
 
-	public PaymentController(PaymentService paymentService) {
+	public PaymentController(PaymentService paymentService, PartnerBalanceService partnerBalanceService) {
 		this.paymentService = paymentService;
+		this.partnerBalanceService = partnerBalanceService;
 	}
 
 	@PostMapping("/auction-settlements/{settlementId}/confirm-payment")
@@ -33,14 +35,6 @@ public class PaymentController {
 		@Valid @RequestBody ManualPaymentRequest request
 	) {
 		return ApiResponse.ok(paymentService.confirmAuctionPayment(settlementId, request));
-	}
-
-	@PostMapping("/sales-slips/{salesSlipId}/confirm-payment")
-	public ApiResponse<SalesSlipResponse> confirmSalesSlipPayment(
-		@PathVariable Long salesSlipId,
-		@Valid @RequestBody ManualPaymentRequest request
-	) {
-		return ApiResponse.ok(paymentService.confirmSalesSlipPayment(salesSlipId, request));
 	}
 
 	@GetMapping("/partner-payment-events")
@@ -54,6 +48,6 @@ public class PaymentController {
 
 	@GetMapping("/business-partners/{partnerId}/balance-summary")
 	public ApiResponse<PartnerBalanceSummaryResponse> getBalance(@PathVariable Long partnerId) {
-		return ApiResponse.ok(paymentService.getBalance(partnerId));
+		return ApiResponse.ok(partnerBalanceService.getBalance(partnerId));
 	}
 }
