@@ -34,16 +34,30 @@ export function SalesSlipList({
       </div>
 
       <div className="mt-4 overflow-x-auto">
-        <table className="w-full min-w-[650px] border-collapse text-left text-sm">
+        <table className="w-full min-w-[720px] border-collapse text-left text-sm">
           <thead className="border-y border-[#dfe5dc] text-[#435047]">
             <tr>
-              <th className="px-3 py-3 font-semibold">전표번호</th>
-              <th className="px-3 py-3 font-semibold">판매일자</th>
-              <th className="px-3 py-3 font-semibold">판매 유형</th>
-              <th className="px-3 py-3 font-semibold">거래처</th>
-              <th className="px-3 py-3 text-right font-semibold">총 금액</th>
-              <th className="px-3 py-3 font-semibold">입금 상태</th>
-              <th className="px-3 py-3 font-semibold">판매 상태</th>
+              <th className="px-3 py-3 font-semibold whitespace-nowrap">
+                전표번호
+              </th>
+              <th className="px-3 py-3 font-semibold whitespace-nowrap">
+                판매일자
+              </th>
+              <th className="px-3 py-3 font-semibold whitespace-nowrap">
+                판매 유형
+              </th>
+              <th className="px-3 py-3 font-semibold whitespace-nowrap">
+                거래처
+              </th>
+              <th className="px-3 py-3 text-right font-semibold whitespace-nowrap">
+                총 금액
+              </th>
+              <th className="px-3 py-3 font-semibold whitespace-nowrap">
+                입금 상태
+              </th>
+              <th className="px-3 py-3 font-semibold whitespace-nowrap">
+                판매 상태
+              </th>
             </tr>
           </thead>
           <tbody>
@@ -58,17 +72,21 @@ export function SalesSlipList({
                   }`}
                   onClick={() => onSelect(slip.id)}
                 >
-                  <td className="px-3 py-3 font-bold text-[#159447]">
+                  <td className="px-3 py-3 font-bold whitespace-nowrap text-[#159447]">
                     {slip.slipNumber}
                   </td>
-                  <td className="px-3 py-3">{slip.saleDate}</td>
-                  <td className="px-3 py-3">
+                  <td className="px-3 py-3 whitespace-nowrap">
+                    {slip.saleDate}
+                  </td>
+                  <td className="px-3 py-3 whitespace-nowrap">
                     {slip.salesType === "AUCTION" ? "경매" : "일반"}
                   </td>
-                  <td className="px-3 py-3 font-semibold">
-                    {slip.partner.name}
+                  <td className="max-w-[180px] px-3 py-3 font-semibold">
+                    <span className="block truncate" title={slip.partner.name}>
+                      {slip.partner.name}
+                    </span>
                   </td>
-                  <td className="px-3 py-3 text-right">
+                  <td className="px-3 py-3 text-right whitespace-nowrap">
                     {slip.totalAmount.toLocaleString()}
                   </td>
                   <td className="px-3 py-3">
@@ -107,7 +125,9 @@ function StatusBadge({ value }: { value: string }) {
   }[tone];
 
   return (
-    <span className={`rounded-md px-2.5 py-1 text-xs font-bold ${classes}`}>
+    <span
+      className={`inline-flex rounded-md px-2.5 py-1 text-xs font-bold whitespace-nowrap ${classes}`}
+    >
       {value}
     </span>
   );
