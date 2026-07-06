@@ -2,6 +2,7 @@ import type {
   BusinessPartner,
   DashboardSummary,
   FarmStatusMapData,
+  House,
   PartnerBalanceSummary,
   SalesSlip,
   WorkRecord,
@@ -9,9 +10,10 @@ import type {
 import { fetchApi } from "@/shared/api/client";
 
 export async function getAnalyticsData() {
-  const [businessPartners, summary, mapData, workRecords, salesSlips] =
+  const [businessPartners, houses, summary, mapData, workRecords, salesSlips] =
     await Promise.all([
       fetchApi<BusinessPartner[]>("/business-partners"),
+      fetchApi<House[]>("/houses"),
       fetchApi<DashboardSummary>("/dashboard/summary"),
       fetchApi<FarmStatusMapData>("/farm-status/map"),
       fetchApi<WorkRecord[]>("/work-records"),
@@ -28,6 +30,7 @@ export async function getAnalyticsData() {
 
   return {
     businessPartners,
+    houses,
     mapData,
     partnerBalances,
     salesSlips,

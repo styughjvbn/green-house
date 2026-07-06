@@ -2,6 +2,7 @@ import type {
   BusinessPartner,
   DashboardSummary,
   FarmStatusMapData,
+  House,
   PartnerBalanceSummary,
   SalesSlip,
   WorkRecord,
@@ -11,6 +12,7 @@ export type AnalyticsTab = "SALES" | "VARIETY" | "CUSTOMER" | "SPACE" | "WORK";
 
 export type AnalyticsPageProps = {
   businessPartners: BusinessPartner[];
+  houses: House[];
   partnerBalances: PartnerBalanceSummary[];
   mapData: FarmStatusMapData;
   salesSlips: SalesSlip[];

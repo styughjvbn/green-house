@@ -171,16 +171,64 @@ function BusinessPartnerTab({
 }
 
 function SpaceTab({ props }: { props: AnalyticsPageProps }) {
-  const max = Math.max(
-    ...props.mapData.houses.map((house) => house.orchidGroupCount),
-    1,
+  const houseSpaceStats = props.houses
+    .map((house) => {
+      const totalZones = house.physicalBeds.reduce(
+        (sum, bed) => sum + bed.bedZones.length,
+        0,
+      );
+      const usedZones = house.physicalBeds.reduce(
+        (sum, bed) =>
+          sum +
+          bed.bedZones.filter((zone) => zone.orchidGroups.length > 0).length,
+        0,
+      );
+      const orchidGroupCount = house.physicalBeds.reduce(
+        (sum, bed) =>
+          sum +
+          bed.bedZones.reduce(
+            (zoneSum, zone) => zoneSum + zone.orchidGroups.length,
+            0,
+          ),
+        0,
+      );
+      const summary = props.mapData.houses.find(
+        (item) => item.houseId === house.id,
+      );
+      return {
+        houseId: house.id,
+        houseNumber: house.number,
+        totalZones,
+        usedZones,
+        emptyZones: Math.max(totalZones - usedZones, 0),
+        orchidGroupCount,
+        usageRate:
+          totalZones > 0 ? Math.round((usedZones / totalZones) * 100) : 0,
+        warningCount: summary?.warningCount ?? 0,
+        latestWorkDate: summary?.latestWorkDate ?? null,
+      };
+    })
+    .sort((left, right) => left.houseNumber - right.houseNumber);
+  const totalZones = houseSpaceStats.reduce(
+    (sum, house) => sum + house.totalZones,
+    0,
   );
+  const usedZones = houseSpaceStats.reduce(
+    (sum, house) => sum + house.usedZones,
+    0,
+  );
+  const emptyZones = Math.max(totalZones - usedZones, 0);
+  const highestUsageHouse = [...houseSpaceStats].sort(
+    (left, right) => right.usageRate - left.usageRate,
+  )[0];
+  const mostWarningsHouse = [...houseSpaceStats].sort(
+    (left, right) => right.warningCount - left.warningCount,
+  )[0];
   return (
     <div className="grid gap-3 xl:grid-cols-[1.25fr_0.75fr]">
       <Panel title="동별 공간 사용 현황">
         <div className="mt-3 grid gap-2 sm:grid-cols-3 lg:grid-cols-5">
-          {props.mapData.houses.map((house) => {
-            const rate = Math.round((house.orchidGroupCount / max) * 100);
+          {houseSpaceStats.map((house) => {
             return (
               <Link
                 className="rounded-md border border-[#dce2dc] p-3 hover:border-[#159447]"
@@ -189,42 +237,50 @@ function SpaceTab({ props }: { props: AnalyticsPageProps }) {
               >
                 <div className="flex justify-between text-xs">
                   <strong>{house.houseNumber}동</strong>
-                  <span>{rate}%</span>
+                  <span>{house.usageRate}%</span>
                 </div>
                 <div className="mt-3 h-2 overflow-hidden rounded bg-[#edf0ed]">
                   <div
                     className="h-full bg-[#49a760]"
-                    style={{ width: `${rate}%` }}
+                    style={{ width: `${house.usageRate}%` }}
                   />
                 </div>
                 <p className="mt-2 text-[10px] text-[#68746d]">
-                  난 묶음 {house.orchidGroupCount} · 이상 {house.warningCount}
+                  사용 {house.usedZones}/{house.totalZones} · 빈 구역{" "}
+                  {house.emptyZones}
                 </p>
               </Link>
             );
           })}
         </div>
       </Panel>
-      <Panel title="빈 구역 및 상태 이상">
+      <Panel title="공간 요약">
         <div className="mt-3 space-y-3">
-          <Metric
-            label="전체 논리 구역"
-            value={`${props.summary.bedZoneCount}개`}
-          />
-          <Metric
-            label="사용 중 구역"
-            value={`${Math.min(props.summary.bedZoneCount, props.summary.orchidGroupCount)}개`}
-          />
-          <Metric
-            label="빈 구역"
-            value={`${Math.max(props.summary.bedZoneCount - props.summary.orchidGroupCount, 0)}개`}
-          />
+          <Metric label="전체 논리 구역" value={`${totalZones}개`} />
+          <Metric label="사용 중 구역" value={`${usedZones}개`} />
+          <Metric label="빈 구역" value={`${emptyZones}개`} />
           <Metric label="상태 이상" value={`${props.summary.warningCount}건`} />
+          <Metric
+            label="최고 사용 동"
+            value={
+              highestUsageHouse
+                ? `${highestUsageHouse.houseNumber}동 ${highestUsageHouse.usageRate}%`
+                : "-"
+            }
+          />
+          <Metric
+            label="주의 집중 동"
+            value={
+              mostWarningsHouse && mostWarningsHouse.warningCount > 0
+                ? `${mostWarningsHouse.houseNumber}동 ${mostWarningsHouse.warningCount}건`
+                : "-"
+            }
+          />
           <Link
             className="flex h-9 items-center justify-center rounded-md bg-[#159447] text-xs font-semibold text-white"
             href="/orchid-groups"
           >
-            빈 구역 보기
+            난 묶음 관리 보기
           </Link>
         </div>
       </Panel>
