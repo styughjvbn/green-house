@@ -124,6 +124,10 @@ public class AuctionSettlement extends BaseEntity {
 		else status = lines.isEmpty() ? AuctionSettlementStatus.CREATED : AuctionSettlementStatus.PAYMENT_WAITING;
 	}
 
+	public void updateExpectedPaymentDate(LocalDate expectedPaymentDate) {
+		this.expectedPaymentDate = expectedPaymentDate;
+	}
+
 	private void addLine(AuctionSettlementLine line) {
 		line.setSettlement(this);
 		lines.add(line);
