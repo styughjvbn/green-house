@@ -1,15 +1,27 @@
 "use client";
 
-import { useEffect, useState, type FormEvent, type ReactNode } from "react";
+import {
+  useEffect,
+  useMemo,
+  useState,
+  type FormEvent,
+  type ReactNode,
+} from "react";
 import { Save } from "lucide-react";
 import type {
   BusinessPartner,
   PartnerSettlementSettings,
+  SettlementUnit,
 } from "@/entities/farm/types";
 import {
   getPartnerSettlementSettings,
   updatePartnerSettlementSettings,
 } from "../../api/salesApi";
+
+type DisabledFeature = {
+  enabled: boolean;
+  reason: string;
+};
 
 export function PartnerSettlementSettingsSection({
   partner,
@@ -26,35 +38,73 @@ export function PartnerSettlementSettingsSection({
   const [message, setMessage] = useState<string | null>(null);
 
   useEffect(() => {
-    if (!partner) {
-      return;
-    }
+    if (!partner) return;
 
     let active = true;
-    getPartnerSettlementSettings(partner.id)
-      .then((result) => {
+    void (async () => {
+      setLoading(true);
+      setMessage(null);
+      try {
+        const result = await getPartnerSettlementSettings(partner.id);
         if (!active) return;
         setSettings(result);
         setAliases(result.depositorAliases.join(", "));
         setRuleJson(
           result.ruleJson ? JSON.stringify(result.ruleJson, null, 2) : "",
         );
-      })
-      .catch((error) => {
-        if (active) {
-          setMessage(
-            error instanceof Error
-              ? error.message
-              : "설정을 불러오지 못했습니다.",
-          );
-        }
-      })
-      .finally(() => {
+      } catch (error) {
+        if (!active) return;
+        setMessage(
+          error instanceof Error
+            ? error.message
+            : "설정을 불러오지 못했습니다.",
+        );
+      } finally {
         if (active) setLoading(false);
-      });
+      }
+    })();
 
     return () => {
       active = false;
+    };
+  }, [partner]);
+
+  const disabledFeatures = useMemo(() => {
+    const isAuctionHouse = partner?.partnerType === "AUCTION_HOUSE";
+
+    return {
+      settlementUnit: {
+        enabled: true,
+        reason: "",
+      } satisfies DisabledFeature,
+      monthlySettlement: {
+        enabled: !isAuctionHouse,
+        reason: "경매장 정산은 현재 경매일 단위만 동작",
+      } satisfies DisabledFeature,
+      salesSlipSettlement: {
+        enabled: !isAuctionHouse,
+        reason: "경매장 정산은 현재 경매일 단위만 동작",
+      } satisfies DisabledFeature,
+      autoMatch: {
+        enabled: false,
+        reason: "자동 매칭 로직 미구현",
+      } satisfies DisabledFeature,
+      autoSettle: {
+        enabled: false,
+        reason: "자동 정산 완료 처리 미구현",
+      } satisfies DisabledFeature,
+      prepayment: {
+        enabled: false,
+        reason: "예치금/선입금 처리 미구현",
+      } satisfies DisabledFeature,
+      autoCreditApply: {
+        enabled: false,
+        reason: "예치금 자동 차감 미구현",
+      } satisfies DisabledFeature,
+      ruleJson: {
+        enabled: false,
+        reason: "경매 결과 자동 수신/파싱 미구현",
+      } satisfies DisabledFeature,
     };
   }, [partner]);
 
@@ -65,6 +115,18 @@ export function PartnerSettlementSettingsSection({
     setSettings((current) =>
       current ? { ...current, [key]: value } : current,
     );
+  }
+
+  function updateSettlementUnit(nextUnit: SettlementUnit) {
+    if (!partner) return;
+    if (
+      partner.partnerType === "AUCTION_HOUSE" &&
+      nextUnit !== "AUCTION_DATE"
+    ) {
+      setMessage("경매장 정산은 현재 경매일 단위만 지원합니다.");
+      return;
+    }
+    update("settlementUnit", nextUnit);
   }
 
   async function save(event: FormEvent<HTMLFormElement>) {
@@ -149,17 +211,28 @@ export function PartnerSettlementSettingsSection({
                 className={controlClass}
                 value={settings.settlementUnit}
                 onChange={(event) =>
-                  update(
-                    "settlementUnit",
-                    event.target
-                      .value as PartnerSettlementSettings["settlementUnit"],
-                  )
+                  updateSettlementUnit(event.target.value as SettlementUnit)
                 }
               >
-                <option value="SALES_SLIP">판매 전표 단위</option>
-                <option value="MONTHLY_BATCH">월 정산 단위</option>
+                <option
+                  value="SALES_SLIP"
+                  disabled={!disabledFeatures.salesSlipSettlement.enabled}
+                >
+                  판매 전표 단위
+                </option>
+                <option
+                  value="MONTHLY_BATCH"
+                  disabled={!disabledFeatures.monthlySettlement.enabled}
+                >
+                  월 정산 단위
+                </option>
                 <option value="AUCTION_DATE">경매일 단위</option>
               </select>
+              {partner.partnerType === "AUCTION_HOUSE" ? (
+                <FieldHint tone="muted">
+                  {disabledFeatures.monthlySettlement.reason}
+                </FieldHint>
+              ) : null}
             </Field>
             <Field label="입금 지연일">
               <input
@@ -216,21 +289,29 @@ export function PartnerSettlementSettingsSection({
             <Toggle
               label="자동 매칭 사용"
               checked={settings.autoMatchEnabled}
+              disabled={!disabledFeatures.autoMatch.enabled}
+              reason={disabledFeatures.autoMatch.reason}
               onChange={(checked) => update("autoMatchEnabled", checked)}
             />
             <Toggle
               label="자동 정산 완료"
               checked={settings.autoSettleEnabled}
+              disabled={!disabledFeatures.autoSettle.enabled}
+              reason={disabledFeatures.autoSettle.reason}
               onChange={(checked) => update("autoSettleEnabled", checked)}
             />
             <Toggle
               label="선입금 허용"
               checked={settings.allowPrepayment}
+              disabled={!disabledFeatures.prepayment.enabled}
+              reason={disabledFeatures.prepayment.reason}
               onChange={(checked) => update("allowPrepayment", checked)}
             />
             <Toggle
               label="선입금 자동 차감"
               checked={settings.creditAutoApplyEnabled}
+              disabled={!disabledFeatures.autoCreditApply.enabled}
+              reason={disabledFeatures.autoCreditApply.reason}
               onChange={(checked) => update("creditAutoApplyEnabled", checked)}
             />
           </div>
@@ -240,10 +321,14 @@ export function PartnerSettlementSettingsSection({
               <summary className="cursor-pointer text-sm font-semibold">
                 경매 결과 수신·파싱 규칙
               </summary>
+              <FieldHint tone="muted" className="mt-2">
+                {disabledFeatures.ruleJson.reason}
+              </FieldHint>
               <textarea
-                className="mt-3 min-h-36 w-full rounded-md border border-[#ccd5ca] p-3 font-mono text-xs"
+                className="mt-3 min-h-36 w-full rounded-md border border-[#ccd5ca] bg-[#f5f7f4] p-3 font-mono text-xs text-[#748178] disabled:cursor-not-allowed"
                 value={ruleJson}
                 placeholder={'{"auctionDays":["MON","THU"]}'}
+                disabled
                 onChange={(event) => setRuleJson(event.target.value)}
               />
             </details>
@@ -267,7 +352,7 @@ export function PartnerSettlementSettingsSection({
 }
 
 const controlClass =
-  "mt-1 h-9 w-full rounded-md border border-[#ccd5ca] bg-white px-3 text-sm";
+  "mt-1 h-9 w-full rounded-md border border-[#ccd5ca] bg-white px-3 text-sm disabled:cursor-not-allowed disabled:bg-[#f5f7f4] disabled:text-[#748178]";
 
 function Field({ label, children }: { label: string; children: ReactNode }) {
   return (
@@ -278,23 +363,55 @@ function Field({ label, children }: { label: string; children: ReactNode }) {
   );
 }
 
+function FieldHint({
+  children,
+  tone = "muted",
+  className = "",
+}: {
+  children: ReactNode;
+  tone?: "muted" | "warning";
+  className?: string;
+}) {
+  return (
+    <p
+      className={`mt-1 text-[11px] ${
+        tone === "warning" ? "text-[#c26a1a]" : "text-[#7a867d]"
+      } ${className}`}
+    >
+      {children}
+    </p>
+  );
+}
+
 function Toggle({
   label,
   checked,
   onChange,
+  disabled = false,
+  reason,
 }: {
   label: string;
   checked: boolean;
   onChange: (checked: boolean) => void;
+  disabled?: boolean;
+  reason?: string;
 }) {
   return (
-    <label className="flex items-center gap-2 text-xs font-semibold text-[#526057]">
-      <input
-        type="checkbox"
-        checked={checked}
-        onChange={(event) => onChange(event.target.checked)}
-      />
-      {label}
-    </label>
+    <div>
+      <label
+        className={`flex items-center gap-2 text-xs font-semibold ${
+          disabled ? "text-[#8a958d]" : "text-[#526057]"
+        }`}
+      >
+        <input
+          type="checkbox"
+          checked={checked}
+          disabled={disabled}
+          onChange={(event) => onChange(event.target.checked)}
+        />
+        {label}
+      </label>
+      {disabled && reason ? <FieldHint>{reason}</FieldHint> : null}
+    </div>
   );
 }
