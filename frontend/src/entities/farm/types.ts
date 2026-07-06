@@ -274,6 +274,25 @@ export type BusinessPartner = {
   active: boolean;
 };
 
+export type SettlementUnit = "SALES_SLIP" | "MONTHLY_BATCH" | "AUCTION_DATE";
+export type PaymentDayMode = "CALENDAR_DAY" | "BUSINESS_DAY";
+
+export type PartnerSettlementSettings = {
+  id: number;
+  partnerId: number;
+  settlementUnit: SettlementUnit;
+  paymentDelayDays: number;
+  paymentDayMode: PaymentDayMode;
+  autoMatchEnabled: boolean;
+  autoSettleEnabled: boolean;
+  amountTolerance: number;
+  depositorAliases: string[];
+  allowPrepayment: boolean;
+  creditAutoApplyEnabled: boolean;
+  ruleJson: Record<string, unknown> | null;
+  memo: string | null;
+};
+
 export type SalesSlipItem = {
   id: number;
   orchidGroupId: number | null;

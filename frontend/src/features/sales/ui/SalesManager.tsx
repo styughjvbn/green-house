@@ -4,6 +4,7 @@ import { useSalesManager } from "../model/useSalesManager";
 import type { SalesManagerProps } from "../model/types";
 import { BusinessPartnerCreateForm } from "./components/BusinessPartnerCreateForm";
 import { BusinessPartnerList } from "./components/BusinessPartnerList";
+import { PartnerSettlementSettingsSection } from "./components/PartnerSettlementSettingsSection";
 import { SalesFilters } from "./components/SalesFilters";
 import { SalesSlipCreateForm } from "./components/SalesSlipCreateForm";
 import { SalesSlipDetail } from "./components/SalesSlipDetail";
@@ -81,11 +82,17 @@ export function SalesManager({
             onChange={sales.updateBusinessPartnerForm}
             onSubmit={sales.handleCreateBusinessPartner}
           />
-          <BusinessPartnerList
-            partners={sales.partners}
-            selectedBusinessPartnerId={sales.salesForm.partnerId}
-            onSelectBusinessPartner={sales.selectBusinessPartner}
-          />
+          <div className="space-y-4">
+            <BusinessPartnerList
+              partners={sales.partners}
+              selectedBusinessPartnerId={sales.selectedPartnerId}
+              onSelectBusinessPartner={sales.selectBusinessPartner}
+            />
+            <PartnerSettlementSettingsSection
+              key={sales.selectedBusinessPartner?.id ?? "empty"}
+              partner={sales.selectedBusinessPartner}
+            />
+          </div>
         </div>
       )}
     </div>

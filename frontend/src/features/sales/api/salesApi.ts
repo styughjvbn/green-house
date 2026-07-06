@@ -1,5 +1,9 @@
 ﻿import { API_BASE_URL, fetchApi } from "@/shared/api/client";
-import type { BusinessPartner, SalesSlip } from "@/entities/farm/types";
+import type {
+  BusinessPartner,
+  PartnerSettlementSettings,
+  SalesSlip,
+} from "@/entities/farm/types";
 import type {
   AuctionLot,
   AuctionLotPage,
@@ -178,6 +182,27 @@ export function createBusinessPartner(
       body: JSON.stringify(payload),
     },
     "거래처를 저장하지 못했습니다.",
+  );
+}
+
+export function getPartnerSettlementSettings(partnerId: number) {
+  return fetchApi<PartnerSettlementSettings>(
+    `/business-partners/${partnerId}/settlement-settings`,
+  );
+}
+
+export function updatePartnerSettlementSettings(
+  partnerId: number,
+  payload: Omit<PartnerSettlementSettings, "id" | "partnerId">,
+) {
+  return requestJson<PartnerSettlementSettings>(
+    `/business-partners/${partnerId}/settlement-settings`,
+    {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    },
+    "정산 설정을 저장하지 못했습니다.",
   );
 }
 

@@ -10,5 +10,7 @@ export {
   getAuctionSettlements,
   rebuildAuctionSettlement,
   createBusinessPartner,
+  getPartnerSettlementSettings,
+  updatePartnerSettlementSettings,
   createSalesSlip,
 } from "./api/salesApi";
