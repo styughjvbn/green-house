@@ -387,7 +387,10 @@ auction_shipments.auction_house_id     business_partners FK (`AUCTION_HOUSE`)
 
 | 테이블 | 핵심 컬럼 | 역할 |
 |---|---|---|
+| `partner_settlement_settings` | `partner_id`, 정산 단위·지연일·자동 처리 설정 | 거래처별 정산 정책 |
 | `auction_settlements` | `auction_house_id`, `auction_date`, 금액·상태 컬럼 | 경매장·경매일 정산 묶음 |
 | `auction_settlement_lines` | `settlement_id`, `auction_result_line_id`, `auction_shipment_lot_id` | 실제 낙찰 결과 연결 |
 
 `auction_settlements`는 `(auction_house_id, auction_date)`를 유일키로 사용한다. `auction_settlement_lines.auction_result_line_id`도 유일하며 한 낙찰 결과가 여러 정산에 포함되지 않도록 한다. 전표와 정산은 직접 FK로 연결하지 않고 `SalesSlipItem → AuctionShipmentLot → AuctionAttempt → AuctionResultLine → AuctionSettlementLine` 경로로 조회한다.
+
+`partner_settlement_settings.partner_id`는 유일 FK다. `depositor_aliases`와 `rule_json`은 JSONB로 저장한다. 경매 정산 재구성 시 `payment_delay_days`와 `payment_day_mode`를 적용해 `expected_payment_date`를 갱신한다. 영업일 계산은 현재 토·일만 제외하며 공휴일 달력은 후속 범위다.

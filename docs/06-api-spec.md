@@ -894,4 +894,31 @@ GET /api/auction-settlements/{settlementId}
 POST /api/auction-settlements/rebuild?auctionHouseId=1&auctionDate=2026-07-03
 ```
 
-정산은 경매장과 경매일 조합으로 한 건만 생성한다. `amount > 0`인 경매 결과만 정산 행으로 연결하며 재구성 요청은 기존 행을 중복 생성하지 않는다. 현재 수수료와 공제액은 0원, 예상 입금일은 경매일로 초기화한다. 입금 확인과 정산 설정은 후속 단계에서 구현한다.
+정산은 경매장과 경매일 조합으로 한 건만 생성한다. `amount > 0`인 경매 결과만 정산 행으로 연결하며 재구성 요청은 기존 행을 중복 생성하지 않는다. 현재 수수료와 공제액은 0원이다. 예상 입금일은 거래처 정산 설정의 지연일과 달력일·영업일 계산 방식으로 정한다.
+
+## 16. 거래처 정산 설정 API
+
+```http
+GET /api/business-partners/{partnerId}/settlement-settings
+PUT /api/business-partners/{partnerId}/settlement-settings
+```
+
+설정이 없으면 최초 조회 시 기본 설정을 생성한다. 경매장은 `AUCTION_DATE`, 다른 거래처는 `SALES_SLIP`이 기본 정산 단위다.
+
+```json
+{
+  "settlementUnit": "AUCTION_DATE",
+  "paymentDelayDays": 3,
+  "paymentDayMode": "BUSINESS_DAY",
+  "autoMatchEnabled": true,
+  "autoSettleEnabled": false,
+  "amountTolerance": 1000,
+  "depositorAliases": ["양재화훼", "양재경매"],
+  "allowPrepayment": false,
+  "creditAutoApplyEnabled": false,
+  "ruleJson": { "auctionDays": ["MON", "THU"] },
+  "memo": null
+}
+```
+
+입금자명 후보는 공백 제거 후 중복을 제거한다. `ruleJson`은 경매장별 결과 수신·파싱 규칙 확장용이며 현재 자동 수신 기능에서는 사용하지 않는다.
