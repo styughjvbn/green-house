@@ -1,13 +1,14 @@
-﻿"use client";
+"use client";
 
+import { useState } from "react";
 import { useOrchidManagementMap } from "../model/useOrchidManagementMap";
 import type { OrchidManagementMapProps } from "../model/types";
+import BedPrecisionSettings from "./components/BedPrecisionSettings";
 import HouseDetailMap from "./components/HouseDetailMap";
 import HouseSelectorPanel from "./components/HouseSelectorPanel";
 import OrchidSelectionPanel, {
   SelectedZoneInfo,
 } from "./components/OrchidSelectionPanel";
-import BedPrecisionSettings from "./components/BedPrecisionSettings";
 
 export function OrchidManagementMap({
   mapData,
@@ -15,6 +16,7 @@ export function OrchidManagementMap({
   workTypes,
 }: OrchidManagementMapProps) {
   const orchidManagement = useOrchidManagementMap(house, workTypes);
+  const [showScale, setShowScale] = useState(true);
 
   return (
     <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_440px]">
@@ -24,9 +26,11 @@ export function OrchidManagementMap({
           houses={mapData.houses}
           placementEditMode={orchidManagement.placementEditMode}
           selectedHouseId={house.id}
+          showScale={showScale}
           onTogglePlacementEditMode={
             orchidManagement.actions.togglePlacementEditMode
           }
+          onToggleScale={() => setShowScale((current) => !current)}
         />
         <HouseDetailMap
           dragState={orchidManagement.dragState}
@@ -34,6 +38,7 @@ export function OrchidManagementMap({
           placementEditMode={orchidManagement.placementEditMode}
           saving={orchidManagement.saving}
           selection={orchidManagement.selection}
+          showScale={showScale}
           onDragEnd={orchidManagement.actions.endDrag}
           onDragStart={orchidManagement.actions.startDrag}
           onDropOnBedZone={orchidManagement.actions.dropOnBedZone}

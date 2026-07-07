@@ -45,10 +45,10 @@ export default function OrchidGroupBlock({
 
   return (
     <div
-      className={`${compact ? "min-h-11 px-2 py-1.5" : "min-h-16 p-2"} touch-manipulation rounded-md border shadow-sm transition ${
+      className={`${compact ? "min-h-11 px-5 py-4" : "min-h-16 p-3"} touch-manipulation border transition ${
         selected
-          ? "border-[#246df2] bg-[#dcecff] ring-2 ring-[#246df2]"
-          : "border-[#82c886] bg-[#bfe2b8] hover:border-[#159447]"
+          ? "border-[#246df2] bg-[#dcecff]"
+          : "border-[#c8ddc2] bg-[#e4f2d8] hover:border-[#159447]"
       } ${draggable ? "cursor-grab active:cursor-grabbing" : "cursor-pointer"}`}
       draggable={draggable}
       onClick={handleClick}
@@ -60,16 +60,22 @@ export default function OrchidGroupBlock({
       title={draggable ? "드래그해 다른 구역으로 이동" : undefined}
     >
       <div className="flex items-start justify-between gap-2">
-        <p className={`${compact ? "text-xs" : "text-sm"} font-semibold`}>
+        <p
+          className={`${compact ? "text-[15px]" : "text-sm"} font-bold text-[#1e2b21]`}
+        >
           {orchidGroup.varietyName}
         </p>
-        <span className={warning ? "text-[#f59e0b]" : "text-[#159447]"}>
-          {warning ? "!" : "●"}
-        </span>
+        <span
+          className={`mt-0.5 inline-block h-4 w-4 rounded-full ${
+            warning ? "bg-[#f59e0b]" : "bg-[#16a34a]"
+          }`}
+        />
       </div>
-      <p className="mt-0.5 text-xs font-semibold">{orchidGroup.quantity}분</p>
+      <p className="mt-7 text-[15px] font-bold text-[#1e2b21]">
+        {orchidGroup.quantity}분
+      </p>
       {!compact ? (
-        <p className="mt-0.5 text-xs text-[#435047]">
+        <p className="mt-1 text-xs text-[#435047]">
           {[
             orchidGroup.potSize,
             orchidGroup.ageYear ? `${orchidGroup.ageYear}년생` : null,

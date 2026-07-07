@@ -16,7 +16,7 @@ export function OrchidManagementPage({
     return (
       <main className="space-y-4">
         <div className="rounded-md border border-[#d7ddd4] bg-white p-5 text-sm text-[#5c6a60]">
-          표시할 동 데이터가 없습니다.
+          표시할 데이터가 없습니다.
         </div>
       </main>
     );

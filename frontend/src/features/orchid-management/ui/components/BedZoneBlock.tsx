@@ -12,6 +12,7 @@ export default function BedZoneBlock({
   dragState,
   placementEditMode,
   saving,
+  showScale,
   zone,
   selected,
   selectedOrchidGroupId,
@@ -26,6 +27,7 @@ export default function BedZoneBlock({
   dragState: DragState;
   placementEditMode: boolean;
   saving: boolean;
+  showScale: boolean;
   zone: BedZone;
   selected: boolean;
   selectedOrchidGroupId: number | null;
@@ -66,7 +68,7 @@ export default function BedZoneBlock({
 
   return (
     <div
-      className={`touch-manipulation rounded-xl border p-2 text-left transition ${
+      className={`touch-manipulation rounded-l border p-2 text-left transition ${
         selected
           ? "border-[#246df2] bg-[#f4f8ff] ring-2 ring-[#246df2]/20"
           : "border-[#d9e1d8] bg-white hover:border-[#159447]"
@@ -78,40 +80,38 @@ export default function BedZoneBlock({
       role="button"
       tabIndex={0}
     >
-      <div className="mb-2">
-        <p className="text-center text-2xl font-bold text-[#243126]">
-          {zone.side === "LEFT" ? "좌" : "우"}
-        </p>
-      </div>
-
-      <div className="flex gap-2">
-        <div className="relative w-8 shrink-0" style={{ height: MAP_HEIGHT }}>
-          <div className="absolute top-2 bottom-0 left-5 w-px border-l border-dashed border-[#cfd7d0]" />
-          {marks.map((mark) => (
-            <div
-              key={mark.value}
-              className="absolute inset-x-0"
-              style={{ top: `${mark.top}%` }}
-            >
-              <span className="absolute left-0 -translate-x-full -translate-y-1/2 text-xs font-semibold text-[#6f7b72]">
-                {mark.value}
-              </span>
-              <span className="absolute top-1/2 left-4 h-px w-2 -translate-y-1/2 bg-[#bfc8c0]" />
-            </div>
-          ))}
-        </div>
+      <div className="flex gap-0">
+        {showScale ? (
+          <div className="relative w-1 shrink-0 py-2" style={{ height: MAP_HEIGHT-4 }}>
+            {marks.map((mark) => (
+              <div
+                key={mark.value}
+                className="absolute inset-x-0"
+                style={{ top: `${mark.top}%` }}
+              >
+                <span className="absolute left-0 -translate-x-full -translate-y-1/2 text-[10px] font-semibold text-[#6f7b72]">
+                  {mark.value}
+                </span>
+              </div>
+            ))}
+          </div>
+        ) : null}
 
         <div
-          className="relative min-w-0 flex-1 overflow-hidden rounded-xl border border-[#e4e8e4] bg-white"
+          className="relative min-w-0 flex-1 overflow-hidden border border-[#e4e8e4] bg-white"
           style={{ height: MAP_HEIGHT }}
         >
-          {marks.slice(1, -1).map((mark) => (
-            <div
-              key={`guide-${mark.value}`}
-              className="absolute inset-x-0 border-t border-dashed border-[#e5e7e4]"
-              style={{ top: `${mark.top}%` }}
-            />
-          ))}
+          {showScale
+            ? marks
+                .slice(1, -1)
+                .map((mark) => (
+                  <div
+                    key={`guide-${mark.value}`}
+                    className="absolute inset-x-0 border-t border-dashed border-[#e5e7e4]"
+                    style={{ top: `${mark.top}%` }}
+                  />
+                ))
+            : null}
 
           {zone.orchidGroups.map((orchidGroup) => {
             const start = orchidGroup.startPosition ?? 0;
@@ -126,7 +126,7 @@ export default function BedZoneBlock({
             return (
               <div
                 key={orchidGroup.id}
-                className="absolute inset-x-1"
+                className="absolute inset-x-0"
                 style={{ top: `${top}%`, height: `${height}%` }}
               >
                 <OrchidGroupBlock

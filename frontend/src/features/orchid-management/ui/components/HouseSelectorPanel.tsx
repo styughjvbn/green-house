@@ -9,13 +9,17 @@ export default function HouseSelectorPanel({
   houses,
   placementEditMode,
   selectedHouseId,
+  showScale,
   onTogglePlacementEditMode,
+  onToggleScale,
 }: {
   house: House;
   houses: HouseStatusSummary[];
   placementEditMode: boolean;
   selectedHouseId: number;
+  showScale: boolean;
   onTogglePlacementEditMode: () => void;
+  onToggleScale: () => void;
 }) {
   const router = useRouter();
 
@@ -42,7 +46,19 @@ export default function HouseSelectorPanel({
       </div>
 
       <div className="min-w-3 flex-1" />
-
+      <div className="mb-3 flex items-center justify-between gap-3">
+        <button
+          className={`rounded-md border px-3 py-1.5 text-xs font-semibold transition ${
+            showScale
+              ? "border-[#159447] bg-[#edf8ef] text-[#14753b]"
+              : "border-[#d7ddd4] bg-white text-[#566359]"
+          }`}
+          onClick={onToggleScale}
+          type="button"
+        >
+          {showScale ? "눈금 끄기" : "눈금 켜기"}
+        </button>
+      </div>
       <button
         className={`inline-flex h-9 touch-manipulation items-center gap-2 rounded-md border border-[#dfe5dc] px-4 text-sm font-semibold shadow-sm ${
           placementEditMode

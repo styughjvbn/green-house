@@ -10,6 +10,7 @@ export default function HouseDetailMap({
   placementEditMode,
   saving,
   selection,
+  showScale,
   onDragEnd,
   onDragStart,
   onDropOnBedZone,
@@ -22,6 +23,7 @@ export default function HouseDetailMap({
   placementEditMode: boolean;
   saving: boolean;
   selection: OrchidSelection | null;
+  showScale: boolean;
   onDragEnd: () => void;
   onDragStart: (orchidGroupId: number) => void;
   onDropOnBedZone: (bedZoneId: number) => Promise<void>;
@@ -40,6 +42,7 @@ export default function HouseDetailMap({
             placementEditMode={placementEditMode}
             saving={saving}
             selection={selection}
+            showScale={showScale}
             onDragEnd={onDragEnd}
             onDragStart={onDragStart}
             onDropOnBedZone={onDropOnBedZone}
