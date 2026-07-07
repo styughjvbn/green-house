@@ -7,7 +7,7 @@
 
 - 기준 명세: `docs/api/openapi.yaml`
 - OpenAPI 버전: `3.1.0`
-- 현재 구현 API: `68` operations / `51` path entries
+- 현재 구현 API: `67` operations / `50` path entries
 - schema 수: `109`
 - Base URL: `/api`
 - 공통 응답: `ApiResponse*` 래퍼 사용
@@ -60,8 +60,8 @@
 - slice: `docs/api/slices/orchid-command.openapi.yaml`
 - package 후보: `com.greenhouse.backend.farm`
 - controller tags: `orchid-group-command-controller`, `bed-placement-controller`
-- 역할: 난 묶음 생성·수정·삭제·이동, 정밀 배치 프로필, 배치 추천 API
-- operations: 7
+- 역할: 난 묶음 생성·수정·삭제·이동, 정밀 배치 프로필 API
+- operations: 6
 
 | Method | Path | Operation | Request | Response |
 |---|---|---|---|---|
@@ -71,7 +71,6 @@
 | `DELETE` | `/api/orchid-groups/{orchidGroupId}` | `delete` | `-` | `200:ApiResponseVoid` |
 | `PATCH` | `/api/orchid-groups/{orchidGroupId}` | `update_2` | `OrchidGroupUpdateRequest` | `200:ApiResponseOrchidGroupResponse` |
 | `PATCH` | `/api/orchid-groups/{orchidGroupId}/move` | `move` | `OrchidGroupMoveRequest` | `200:ApiResponseOrchidGroupResponse` |
-| `GET` | `/api/orchid-groups/{orchidGroupId}/placement-recommendations` | `recommendations` | `-` | `200:ApiResponsePlacementRecommendationResponse` |
 
 ### 작업 이력
 

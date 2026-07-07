@@ -218,6 +218,7 @@ export default function OrchidSelectionPanel({
 
       {mutationMode === "MOVE" && selectedOrchidGroup ? (
         <OrchidMovePanel
+          house={house}
           preferredBedZoneId={preferredMoveZoneId}
           saving={saving}
           selectedOrchidGroup={selectedOrchidGroup}

@@ -47,13 +47,13 @@ export type MutationPayload = {
 
 export type PreciseMovePayload = {
   toBedZoneId: number;
-  placementMode: import("@/entities/farm/types").PlacementCapacityMode;
-  placements: {
+  placementMode?: import("@/entities/farm/types").PlacementCapacityMode | null;
+  placements?: {
     segmentId: number;
     quantity: number;
     trayCount: number | null;
   }[];
-  reorganizeDueDate: string | null;
+  reorganizeDueDate?: string | null;
   memo: string;
 };
 

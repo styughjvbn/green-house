@@ -70,46 +70,6 @@ export type BedZonePlacementProfile = {
   segments: BedZoneSegment[];
 };
 
-export type PlacementRecommendationStatus =
-  | "RECOMMENDED"
-  | "POSSIBLE"
-  | "WARNING"
-  | "UNAVAILABLE";
-
-export type PlacementRecommendationAllocation = {
-  segmentId: number;
-  segmentName: string;
-  quantity: number;
-  occupancyUnits: number;
-  remainingUnits: number;
-};
-
-export type PlacementRecommendationCandidate = {
-  bedZoneId: number;
-  bedZoneName: string;
-  houseId: number;
-  houseNumber: number;
-  physicalBedId: number;
-  physicalBedNumber: number;
-  status: PlacementRecommendationStatus;
-  requiredMode: PlacementCapacityMode | null;
-  allocations: PlacementRecommendationAllocation[];
-  warnings: string[];
-};
-
-export type PlacementRecommendation = {
-  orchidGroupId: number;
-  varietyName: string;
-  requirement: {
-    placementType: string;
-    potSize: string | null;
-    quantity: number;
-    occupancyUnits: number;
-    splitAllowed: boolean;
-  };
-  candidates: PlacementRecommendationCandidate[];
-};
-
 export type BedZone = {
   id: number;
   physicalBedId: number;

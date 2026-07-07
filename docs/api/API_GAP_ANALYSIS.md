@@ -5,11 +5,11 @@
 ## 기준
 
 - 실제 구현 기준: `docs/api/openapi.yaml`
-- 실제 구현 operations: `68`
-- 실제 구현 path entries: `51`
+- 실제 구현 operations: `67`
+- 실제 구현 path entries: `50`
 - 과거 md/추가안에서 수집한 endpoint 후보: `69`
-- 후보 중 OpenAPI와 매칭되는 endpoint: `44`
-- 후보 중 OpenAPI에 없는 endpoint: `25`
+- 후보 중 OpenAPI와 매칭되는 endpoint: `43`
+- 후보 중 OpenAPI에 없는 endpoint: `26`
 
 ## 판단 규칙
 
@@ -45,7 +45,6 @@
 - `DELETE /api/orchid-groups/{orchidGroupId}`
 - `PATCH /api/orchid-groups/{orchidGroupId}`
 - `PATCH /api/orchid-groups/{orchidGroupId}/move`
-- `GET /api/orchid-groups/{orchidGroupId}/placement-recommendations`
 
 ### 작업 이력
 
@@ -183,7 +182,6 @@
 
 - `GET /api/bed-zones/{bedZoneId}/placement-profile` — `bed-placement-controller`
 - `PUT /api/bed-zones/{bedZoneId}/placement-profile` — `bed-placement-controller`
-- `GET /api/orchid-groups/{orchidGroupId}/placement-recommendations` — `orchid-group-command-controller`
 
 ## Codex 작업 시 주의
 

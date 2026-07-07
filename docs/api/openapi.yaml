@@ -1240,31 +1240,6 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ApiResponseListPartnerPaymentEventResponse"
-  /api/orchid-groups/{orchidGroupId}/placement-recommendations:
-    get:
-      tags:
-      - orchid-group-query-controller
-      operationId: getPlacementRecommendations
-      parameters:
-      - name: orchidGroupId
-        in: path
-        required: true
-        schema:
-          type: integer
-          format: int64
-      - name: houseId
-        in: query
-        required: false
-        schema:
-          type: integer
-          format: int64
-      responses:
-        "200":
-          description: OK
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ApiResponsePlacementRecommendationResponse"
   /api/houses:
     get:
       tags:
@@ -3851,102 +3826,6 @@ components:
             $ref: "#/components/schemas/OrchidGroupResponse"
         message:
           type: string
-    ApiResponsePlacementRecommendationResponse:
-      type: object
-      properties:
-        data:
-          $ref: "#/components/schemas/PlacementRecommendationResponse"
-        message:
-          type: string
-    PlacementRecommendationAllocationResponse:
-      type: object
-      properties:
-        segmentId:
-          type: integer
-          format: int64
-        segmentName:
-          type: string
-        quantity:
-          type: integer
-          format: int32
-        occupancyUnits:
-          type: integer
-          format: int32
-        remainingUnits:
-          type: integer
-          format: int32
-    PlacementRecommendationCandidateResponse:
-      type: object
-      properties:
-        bedZoneId:
-          type: integer
-          format: int64
-        bedZoneName:
-          type: string
-        houseId:
-          type: integer
-          format: int64
-        houseNumber:
-          type: integer
-          format: int32
-        physicalBedId:
-          type: integer
-          format: int64
-        physicalBedNumber:
-          type: integer
-          format: int32
-        status:
-          type: string
-          enum:
-          - RECOMMENDED
-          - POSSIBLE
-          - WARNING
-          - UNAVAILABLE
-        requiredMode:
-          type: string
-          enum:
-          - SPACIOUS
-          - STANDARD
-          - EXPANDED
-          - COMPRESSED
-          - TEMPORARY
-        allocations:
-          type: array
-          items:
-            $ref: "#/components/schemas/PlacementRecommendationAllocationResponse"
-        warnings:
-          type: array
-          items:
-            type: string
-    PlacementRecommendationResponse:
-      type: object
-      properties:
-        orchidGroupId:
-          type: integer
-          format: int64
-        varietyName:
-          type: string
-        requirement:
-          $ref: "#/components/schemas/PlacementRequirementResponse"
-        candidates:
-          type: array
-          items:
-            $ref: "#/components/schemas/PlacementRecommendationCandidateResponse"
-    PlacementRequirementResponse:
-      type: object
-      properties:
-        placementType:
-          type: string
-        potSize:
-          type: string
-        quantity:
-          type: integer
-          format: int32
-        occupancyUnits:
-          type: integer
-          format: int32
-        splitAllowed:
-          type: boolean
     ApiResponseMaterialPageResponse:
       type: object
       properties:

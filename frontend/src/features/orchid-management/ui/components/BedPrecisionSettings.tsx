@@ -140,7 +140,7 @@ export default function BedPrecisionSettings({
           ) : null}
           {current?.hasUnassignedGroups ? (
             <p className="mb-3 rounded-md border border-[#f0d299] bg-[#fff8e8] p-2 text-xs text-[#9a6611]">
-              구간 미지정 난 묶음이 있어 이 구역은 추천 후보에서 제외됩니다.
+              구간 미지정 난 묶음이 있어 먼저 실제 배치 구간을 정리해야 합니다.
             </p>
           ) : null}
           <div className="space-y-2">

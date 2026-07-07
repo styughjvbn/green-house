@@ -6,7 +6,6 @@ import type {
   WorkRecordTargetType,
   WorkType,
   BedZonePlacementProfile,
-  PlacementRecommendation,
 } from "@/entities/farm/types";
 import type {
   MutationPayload,
@@ -103,12 +102,6 @@ export async function saveBedZonePlacementProfile(
     );
   }
   return (body as { data: BedZonePlacementProfile }).data;
-}
-
-export function getPlacementRecommendations(orchidGroupId: number) {
-  return fetchApi<PlacementRecommendation>(
-    `/orchid-groups/${orchidGroupId}/placement-recommendations`,
-  );
 }
 
 export function getOrchidManagementMap() {
