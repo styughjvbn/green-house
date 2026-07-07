@@ -48,10 +48,11 @@ House
 난 묶음은 현재 시스템의 핵심 관리 단위다.
 
 - 모든 난 묶음은 반드시 하나의 품종 마스터와 연결된다.
-- 품종명, 속, 수량, 화분 크기, 연차, 상태, 메모를 가진다.
+- 품종명, 속, 수량, 예약 수량, 화분 크기, 초기 년생, 상태, 메모를 가진다.
 - 하나의 논리 구역 또는 세그먼트에 배치된다.
 - 같은 구역 안에서 표시 순서를 가진다.
 - 이동 시 위치 이동 작업 이력이 자동 생성된다.
+- 가용 수량은 `수량 - 예약 수량`으로 계산한다.
 
 ### Variety
 
@@ -121,7 +122,7 @@ WorkType 1 ─ N WorkRecord
 ## 3. 거래처·판매 도메인
 
 ```text
-BusinessPartner 1 ─ N SalesSlip 1 ─ N SalesSlipItem
+BusinessPartner 1 ─ N SalesSlip 1 ─ N SalesSlipItem 1 ─ N SalesSlipItemAllocation
 ```
 
 ### BusinessPartner
@@ -152,9 +153,26 @@ BusinessPartner 1 ─ N SalesSlip 1 ─ N SalesSlipItem
 - 수량
 - 단가
 - 금액
-- 선택적으로 난 묶음과 연결 가능
+- 하나 이상의 난 묶음 배분과 연결된다.
 
-전표 생성 시점에 바로 재고 차감하지 않는다. 재고 연동은 출고 완료 또는 판매 확정 기준으로 확장한다.
+### SalesSlipItemAllocation
+
+판매 품목과 난 묶음 사이의 배분 연결이다.
+
+- 하나의 판매 품목은 여러 난 묶음에 나눠 배분할 수 있다.
+- 배분 수량 합계는 품목 수량과 같아야 한다.
+- 판매 품목의 품종명과 난 묶음 품종명이 일치해야 한다.
+- 전표 저장 시 배분 수량만큼 난 묶음 `reservedQuantity`를 증가시킨다.
+
+### SalesInventoryMovement
+
+판매 전표로 인한 예약/해제/출고 이력이다.
+
+- `SALES_RESERVE`
+- `SALES_RELEASE`
+- `SALES_OUTBOUND`
+
+전표 저장 시점에 바로 재고 차감하지 않는다. 전표 저장은 예약만 반영하고, 실제 수량 차감은 출고 완료 시점에 처리한다.
 
 ## 4. 경매 추적 도메인
 

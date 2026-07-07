@@ -92,6 +92,8 @@
 - `GET /api/sales-slips/auction-shipments`
 - `GET /api/sales-slips/{salesSlipId}`
 - `GET /api/sales-slips/{salesSlipId}/print`
+- `PATCH /api/sales-slips/{salesSlipId}/sales-status`
+- `GET /api/sales/orchid-groups/search`
 
 ### 출하·경매 추적/정산
 

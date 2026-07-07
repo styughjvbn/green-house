@@ -2,109 +2,180 @@ openapi: 3.1.0
 info:
   title: Greenhouse API Slice - 판매 전표
   version: v0
-  description: 판매 전표 조회·생성·출력, 경매 출하 전표 후보 API
+  description: 판매 전표, 경매 출하 전표, 판매용 난 묶음 조회 API
 servers:
-- url: http://localhost:8080
-  description: Generated server url
+  - url: http://localhost:8080
+    description: Local server
 paths:
   /api/sales-slips:
     get:
-      tags:
-      - sales-controller
+      tags: [sales-controller]
       operationId: getSalesSlips
       parameters:
-      - name: partnerId
-        in: query
-        required: false
-        schema:
-          type: integer
-          format: int64
-      - name: from
-        in: query
-        required: false
-        schema:
-          type: string
-          format: date
-      - name: to
-        in: query
-        required: false
-        schema:
-          type: string
-          format: date
+        - name: partnerId
+          in: query
+          required: false
+          schema:
+            type: integer
+            format: int64
+        - name: from
+          in: query
+          required: false
+          schema:
+            type: string
+            format: date
+        - name: to
+          in: query
+          required: false
+          schema:
+            type: string
+            format: date
       responses:
-        '200':
+        "200":
           description: OK
           content:
-            '*/*':
+            "*/*":
               schema:
-                $ref: '#/components/schemas/ApiResponseListSalesSlipResponse'
+                $ref: "#/components/schemas/ApiResponseListSalesSlipResponse"
     post:
-      tags:
-      - sales-controller
+      tags: [sales-controller]
       operationId: createSalesSlip
       requestBody:
+        required: true
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/SalesSlipCreateRequest'
-        required: true
+              $ref: "#/components/schemas/SalesSlipCreateRequest"
       responses:
-        '201':
+        "201":
           description: Created
           content:
-            '*/*':
+            "*/*":
               schema:
-                $ref: '#/components/schemas/ApiResponseSalesSlipResponse'
+                $ref: "#/components/schemas/ApiResponseSalesSlipResponse"
   /api/sales-slips/{salesSlipId}:
     get:
-      tags:
-      - sales-controller
+      tags: [sales-controller]
       operationId: getSalesSlip
       parameters:
-      - name: salesSlipId
-        in: path
-        required: true
-        schema:
-          type: integer
-          format: int64
+        - name: salesSlipId
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int64
       responses:
-        '200':
+        "200":
           description: OK
           content:
-            '*/*':
+            "*/*":
               schema:
-                $ref: '#/components/schemas/ApiResponseSalesSlipResponse'
+                $ref: "#/components/schemas/ApiResponseSalesSlipResponse"
   /api/sales-slips/{salesSlipId}/print:
     get:
-      tags:
-      - sales-controller
+      tags: [sales-controller]
       operationId: getSalesSlipPrintData
       parameters:
-      - name: salesSlipId
-        in: path
-        required: true
-        schema:
-          type: integer
-          format: int64
+        - name: salesSlipId
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int64
       responses:
-        '200':
+        "200":
           description: OK
           content:
-            '*/*':
+            "*/*":
               schema:
-                $ref: '#/components/schemas/ApiResponseSalesSlipResponse'
+                $ref: "#/components/schemas/ApiResponseSalesSlipResponse"
+  /api/sales-slips/{salesSlipId}/confirm-payment:
+    post:
+      tags: [sales-controller]
+      operationId: confirmPayment
+      parameters:
+        - name: salesSlipId
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int64
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ManualPaymentRequest"
+      responses:
+        "200":
+          description: OK
+          content:
+            "*/*":
+              schema:
+                $ref: "#/components/schemas/ApiResponseSalesSlipResponse"
+  /api/sales-slips/{salesSlipId}/sales-status:
+    patch:
+      tags: [sales-controller]
+      operationId: updateSalesStatus
+      parameters:
+        - name: salesSlipId
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int64
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SalesSlipStatusUpdateRequest"
+      responses:
+        "200":
+          description: OK
+          content:
+            "*/*":
+              schema:
+                $ref: "#/components/schemas/ApiResponseSalesSlipResponse"
   /api/sales-slips/auction-shipments:
     get:
-      tags:
-      - sales-controller
+      tags: [sales-controller]
       operationId: getAuctionShipmentOptions
       responses:
-        '200':
+        "200":
           description: OK
           content:
-            '*/*':
+            "*/*":
               schema:
-                $ref: '#/components/schemas/ApiResponseListAuctionShipmentOptionResponse'
+                $ref: "#/components/schemas/ApiResponseListAuctionShipmentOptionResponse"
+  /api/sales/orchid-groups/search:
+    get:
+      tags: [sales-controller]
+      operationId: searchSalesOrchidGroups
+      parameters:
+        - name: keyword
+          in: query
+          required: false
+          schema:
+            type: string
+        - name: varietyId
+          in: query
+          required: false
+          schema:
+            type: integer
+            format: int64
+        - name: status
+          in: query
+          required: false
+          schema:
+            type: string
+      responses:
+        "200":
+          description: OK
+          content:
+            "*/*":
+              schema:
+                $ref: "#/components/schemas/ApiResponseListSalesOrchidGroupSearchResponse"
 components:
   schemas:
     ApiResponseListAuctionShipmentOptionResponse:
@@ -113,25 +184,54 @@ components:
         data:
           type: array
           items:
-            $ref: '#/components/schemas/AuctionShipmentOptionResponse'
+            $ref: "#/components/schemas/AuctionShipmentOptionResponse"
         message:
           type: string
+          nullable: true
+    ApiResponseListSalesOrchidGroupSearchResponse:
+      type: object
+      properties:
+        data:
+          type: array
+          items:
+            $ref: "#/components/schemas/SalesOrchidGroupSearchResponse"
+        message:
+          type: string
+          nullable: true
     ApiResponseListSalesSlipResponse:
       type: object
       properties:
         data:
           type: array
           items:
-            $ref: '#/components/schemas/SalesSlipResponse'
+            $ref: "#/components/schemas/SalesSlipResponse"
         message:
           type: string
+          nullable: true
     ApiResponseSalesSlipResponse:
       type: object
       properties:
         data:
-          $ref: '#/components/schemas/SalesSlipResponse'
+          $ref: "#/components/schemas/SalesSlipResponse"
         message:
           type: string
+          nullable: true
+    AuctionShipmentLotOption:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: int64
+        itemName:
+          type: string
+        varietyName:
+          type: string
+        shipmentGrade:
+          type: string
+          nullable: true
+        shippedQuantity:
+          type: integer
+          format: int32
     AuctionShipmentOptionResponse:
       type: object
       properties:
@@ -149,7 +249,7 @@ components:
         lots:
           type: array
           items:
-            $ref: '#/components/schemas/Lot'
+            $ref: "#/components/schemas/AuctionShipmentLotOption"
     BusinessPartnerResponse:
       type: object
       properties:
@@ -160,35 +260,90 @@ components:
           type: string
         partnerType:
           type: string
-          enum:
-          - WHOLESALE
-          - RETAIL
-          - AUCTION_HOUSE
+          enum: [WHOLESALE, RETAIL, AUCTION_HOUSE]
         ownerName:
           type: string
+          nullable: true
         phone:
           type: string
+          nullable: true
         address:
           type: string
+          nullable: true
         memo:
           type: string
+          nullable: true
         active:
           type: boolean
-    Lot:
+    ManualPaymentRequest:
+      type: object
+      properties:
+        amount:
+          type: integer
+          format: int64
+          minimum: 1
+        paymentDate:
+          type: string
+          format: date
+        paymentMethod:
+          type: string
+          maxLength: 50
+          nullable: true
+        depositorName:
+          type: string
+          maxLength: 100
+          nullable: true
+        worker:
+          type: string
+          maxLength: 100
+          nullable: true
+        memo:
+          type: string
+          maxLength: 1000
+          nullable: true
+      required: [amount, paymentDate]
+    SalesOrchidGroupSearchResponse:
       type: object
       properties:
         id:
           type: integer
           format: int64
-        itemName:
-          type: string
+        varietyId:
+          type: integer
+          format: int64
+          nullable: true
         varietyName:
           type: string
-        shipmentGrade:
+        genus:
           type: string
-        shippedQuantity:
+          nullable: true
+        status:
+          type: string
+          nullable: true
+        quantity:
           type: integer
           format: int32
+        reservedQuantity:
+          type: integer
+          format: int32
+        availableQuantity:
+          type: integer
+          format: int32
+        potSize:
+          type: string
+          nullable: true
+        ageYear:
+          type: integer
+          format: int32
+          nullable: true
+        houseNumber:
+          type: integer
+          format: int32
+        physicalBedNumber:
+          type: integer
+          format: int32
+        bedZoneName:
+          type: string
     SalesSlipCreateRequest:
       type: object
       properties:
@@ -197,56 +352,86 @@ components:
           format: date
         salesType:
           type: string
-          enum:
-          - DIRECT
-          - AUCTION
+          enum: [DIRECT, AUCTION]
         partnerId:
           type: integer
           format: int64
+          nullable: true
         auctionShipmentId:
           type: integer
           format: int64
+          nullable: true
         paymentStatus:
           type: string
           maxLength: 50
-          minLength: 0
+          nullable: true
         salesStatus:
           type: string
           maxLength: 50
-          minLength: 0
+          nullable: true
         paymentMethod:
           type: string
           maxLength: 50
-          minLength: 0
+          nullable: true
         memo:
           type: string
           maxLength: 1000
-          minLength: 0
+          nullable: true
         items:
           type: array
           items:
-            $ref: '#/components/schemas/SalesSlipItemRequest'
-      required:
-      - items
-      - saleDate
-    SalesSlipItemRequest:
+            $ref: "#/components/schemas/SalesSlipItemRequest"
+      required: [saleDate, items]
+    SalesSlipItemAllocationRequest:
       type: object
       properties:
         orchidGroupId:
           type: integer
           format: int64
+        quantity:
+          type: integer
+          format: int32
+          minimum: 1
+      required: [orchidGroupId, quantity]
+    SalesSlipItemAllocationResponse:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: int64
+        orchidGroupId:
+          type: integer
+          format: int64
+        varietyName:
+          type: string
+        allocatedQuantity:
+          type: integer
+          format: int32
+        availableQuantity:
+          type: integer
+          format: int32
+        houseNumber:
+          type: integer
+          format: int32
+        physicalBedNumber:
+          type: integer
+          format: int32
+        bedZoneName:
+          type: string
+    SalesSlipItemRequest:
+      type: object
+      properties:
         itemName:
           type: string
           maxLength: 150
-          minLength: 0
         genus:
           type: string
           maxLength: 100
-          minLength: 0
+          nullable: true
         spec:
           type: string
           maxLength: 100
-          minLength: 0
+          nullable: true
         quantity:
           type: integer
           format: int32
@@ -258,29 +443,30 @@ components:
         memo:
           type: string
           maxLength: 1000
-          minLength: 0
-      required:
-      - itemName
-      - quantity
-      - unitPrice
+          nullable: true
+        allocations:
+          type: array
+          items:
+            $ref: "#/components/schemas/SalesSlipItemAllocationRequest"
+      required: [itemName, quantity, unitPrice, allocations]
     SalesSlipItemResponse:
       type: object
       properties:
         id:
           type: integer
           format: int64
-        orchidGroupId:
-          type: integer
-          format: int64
         auctionShipmentLotId:
           type: integer
           format: int64
+          nullable: true
         itemName:
           type: string
         genus:
           type: string
+          nullable: true
         spec:
           type: string
+          nullable: true
         quantity:
           type: integer
           format: int32
@@ -292,6 +478,11 @@ components:
           format: int32
         memo:
           type: string
+          nullable: true
+        allocations:
+          type: array
+          items:
+            $ref: "#/components/schemas/SalesSlipItemAllocationResponse"
     SalesSlipResponse:
       type: object
       properties:
@@ -305,22 +496,23 @@ components:
           format: date
         salesType:
           type: string
-          enum:
-          - DIRECT
-          - AUCTION
+          enum: [DIRECT, AUCTION]
         auctionShipmentId:
           type: integer
           format: int64
+          nullable: true
         auctionMarket:
           type: string
+          nullable: true
         partner:
-          $ref: '#/components/schemas/BusinessPartnerResponse'
+          $ref: "#/components/schemas/BusinessPartnerResponse"
         totalAmount:
           type: integer
           format: int32
         expectedPaymentDate:
           type: string
           format: date
+          nullable: true
         paidAmount:
           type: integer
           format: int64
@@ -333,9 +525,22 @@ components:
           type: string
         paymentMethod:
           type: string
+          nullable: true
         memo:
           type: string
+          nullable: true
         items:
           type: array
           items:
-            $ref: '#/components/schemas/SalesSlipItemResponse'
+            $ref: "#/components/schemas/SalesSlipItemResponse"
+    SalesSlipStatusUpdateRequest:
+      type: object
+      properties:
+        salesStatus:
+          type: string
+          maxLength: 50
+        memo:
+          type: string
+          maxLength: 1000
+          nullable: true
+      required: [salesStatus]
