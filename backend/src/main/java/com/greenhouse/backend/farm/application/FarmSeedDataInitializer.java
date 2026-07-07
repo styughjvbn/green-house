@@ -5,11 +5,13 @@ import com.greenhouse.backend.farm.domain.BedZoneSide;
 import com.greenhouse.backend.farm.domain.BedZoneSegment;
 import com.greenhouse.backend.farm.domain.BedZoneSegmentType;
 import com.greenhouse.backend.farm.domain.House;
+import com.greenhouse.backend.farm.domain.Material;
 import com.greenhouse.backend.farm.domain.OrchidGroup;
 import com.greenhouse.backend.farm.domain.PhysicalBed;
 import com.greenhouse.backend.farm.domain.Variety;
 import com.greenhouse.backend.farm.repository.BedZoneRepository;
 import com.greenhouse.backend.farm.repository.HouseRepository;
+import com.greenhouse.backend.farm.repository.MaterialRepository;
 import com.greenhouse.backend.farm.repository.OrchidGroupRepository;
 import com.greenhouse.backend.farm.repository.VarietyRepository;
 import java.util.ArrayList;
@@ -25,17 +27,20 @@ public class FarmSeedDataInitializer implements CommandLineRunner {
 	private final BedZoneRepository bedZoneRepository;
 	private final OrchidGroupRepository orchidGroupRepository;
 	private final VarietyRepository varietyRepository;
+	private final MaterialRepository materialRepository;
 
 	public FarmSeedDataInitializer(
 		HouseRepository houseRepository,
 		BedZoneRepository bedZoneRepository,
 		OrchidGroupRepository orchidGroupRepository,
-		VarietyRepository varietyRepository
+		VarietyRepository varietyRepository,
+		MaterialRepository materialRepository
 	) {
 		this.houseRepository = houseRepository;
 		this.bedZoneRepository = bedZoneRepository;
 		this.orchidGroupRepository = orchidGroupRepository;
 		this.varietyRepository = varietyRepository;
+		this.materialRepository = materialRepository;
 	}
 
 	@Override
@@ -47,6 +52,10 @@ public class FarmSeedDataInitializer implements CommandLineRunner {
 
 		if (!orchidGroupRepository.existsByVarietyName("카틀레야 A")) {
 			seedSampleOrchidGroups();
+		}
+
+		if (materialRepository.count() == 0) {
+			seedSampleMaterials();
 		}
 
 		bedZoneRepository.findAll().stream()
@@ -98,5 +107,13 @@ public class FarmSeedDataInitializer implements CommandLineRunner {
 		var groupC = new OrchidGroup(sampleZone, "덴드로비움", "덴드로비움 C", 200, "3.5치", 1, "판매 가능", 3);
 		groupC.assignVariety(varieties.get("덴드로비움 C"));
 		orchidGroupRepository.saveAll(List.of(groupA, groupB, groupC));
+	}
+
+	private void seedSampleMaterials() {
+		materialRepository.saveAll(List.of(
+			new Material("MAT-0001", "농약", "응애 약제", "그린팜", "500ml", "2병", "창고 A", "해충 관리 희석 사용", true),
+			new Material("MAT-0002", "비료", "개화 비료", "농원케어", "1kg", "3포", "창고 B", "개화기 주기 사용", true),
+			new Material("MAT-0003", "자재", "20구 트레이", "원예자재", "20구", "12개", "선반 C", "포트 작업용", true)
+		));
 	}
 }

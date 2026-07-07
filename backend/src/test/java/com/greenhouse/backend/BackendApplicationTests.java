@@ -13,6 +13,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import com.greenhouse.backend.farm.repository.BedZoneRepository;
 import com.greenhouse.backend.farm.repository.HouseRepository;
 import com.greenhouse.backend.farm.repository.InboundRecordRepository;
+import com.greenhouse.backend.farm.repository.MaterialRepository;
 import com.greenhouse.backend.farm.repository.OrchidGroupRepository;
 import com.greenhouse.backend.farm.repository.PhysicalBedRepository;
 import com.greenhouse.backend.farm.repository.VarietyRepository;
@@ -59,6 +60,9 @@ class BackendApplicationTests {
 	@Autowired
 	private InboundRecordRepository inboundRecordRepository;
 
+	@Autowired
+	private MaterialRepository materialRepository;
+
 	@Test
 	void contextLoads() {
 	}
@@ -70,6 +74,7 @@ class BackendApplicationTests {
 		assertThat(bedZoneRepository.count()).isEqualTo(90);
 		assertThat(workTypeRepository.count()).isGreaterThanOrEqualTo(11);
 		assertThat(varietyRepository.count()).isGreaterThanOrEqualTo(3);
+		assertThat(materialRepository.count()).isGreaterThanOrEqualTo(3);
 	}
 
 	@Test
@@ -191,6 +196,32 @@ class BackendApplicationTests {
 		mockMvc.perform(patch("/api/varieties/{varietyId}/deactivate", created.getId()))
 			.andExpect(status().isOk())
 			.andExpect(jsonPath("$.data.active").value(false));
+	}
+
+	@Test
+	void updatesVariety() throws Exception {
+		var sampleVariety = varietyRepository.findAll().stream()
+			.filter(variety -> variety.getName().equals("카틀레야 A"))
+			.findFirst()
+			.orElseThrow();
+
+		mockMvc.perform(patch("/api/varieties/{varietyId}", sampleVariety.getId())
+				.contentType(MediaType.APPLICATION_JSON)
+				.content("""
+					{
+					  "genus": "카틀레야",
+					  "name": "카틀레야 A 수정",
+					  "alias": "수정 별칭",
+					  "defaultPotSize": "4.5치",
+					  "saleEnabled": false,
+					  "description": "수정 설명",
+					  "memo": "수정 메모"
+					}
+					"""))
+			.andExpect(status().isOk())
+			.andExpect(jsonPath("$.data.name").value("카틀레야 A 수정"))
+			.andExpect(jsonPath("$.data.alias").value("수정 별칭"))
+			.andExpect(jsonPath("$.data.saleEnabled").value(false));
 	}
 
 	@Test
@@ -322,6 +353,106 @@ class BackendApplicationTests {
 			.andExpect(jsonPath("$.data.status").value("CANCELED"));
 
 		assertThat(inboundRecordRepository.count()).isGreaterThanOrEqualTo(4);
+	}
+
+	@Test
+	void updatesInboundRecord() throws Exception {
+		var sampleVariety = varietyRepository.findAll().stream()
+			.filter(variety -> variety.getName().equals("카틀레야 A"))
+			.findFirst()
+			.orElseThrow();
+
+		var createResult = mockMvc.perform(post("/api/inbound-records")
+				.contentType(MediaType.APPLICATION_JSON)
+				.content("""
+					{
+					  "inboundDate": "2026-07-01",
+					  "inboundType": "FLASK_SEEDLING",
+					  "varietyId": %d,
+					  "bottleCount": 3,
+					  "estimatedQuantity": 120,
+					  "tempLocation": "기존 위치"
+					}
+					""".formatted(sampleVariety.getId())))
+			.andExpect(status().isCreated())
+			.andReturn();
+
+		var inboundRecordId = Long.valueOf(createResult.getResponse().getContentAsString().replaceAll(".*\\\"id\\\":(\\d+).*", "$1"));
+
+		mockMvc.perform(patch("/api/inbound-records/{inboundRecordId}", inboundRecordId)
+				.contentType(MediaType.APPLICATION_JSON)
+				.content("""
+					{
+					  "inboundDate": "2026-07-02",
+					  "bottleCount": 4,
+					  "estimatedQuantity": 150,
+					  "actualQuantity": 140,
+					  "tempLocation": "수정 위치",
+					  "pottingDueDate": "2026-07-10",
+					  "potSize": "3치",
+					  "ageYear": 1,
+					  "growthStage": "유묘",
+					  "placementType": "TRAY",
+					  "trayCount": 2,
+					  "worker": "관리자",
+					  "memo": "수정 메모"
+					}
+					"""))
+			.andExpect(status().isOk())
+			.andExpect(jsonPath("$.data.inboundDate").value("2026-07-02"))
+			.andExpect(jsonPath("$.data.bottleCount").value(4))
+			.andExpect(jsonPath("$.data.actualQuantity").value(140))
+			.andExpect(jsonPath("$.data.tempLocation").value("수정 위치"));
+	}
+
+	@Test
+	void createsUpdatesAndDeactivatesMaterial() throws Exception {
+		mockMvc.perform(get("/api/materials"))
+			.andExpect(status().isOk())
+			.andExpect(jsonPath("$.data.length()").value(greaterThanOrEqualTo(3)))
+			.andExpect(jsonPath("$.data[0].code").exists());
+
+		var createResult = mockMvc.perform(post("/api/materials")
+				.contentType(MediaType.APPLICATION_JSON)
+				.content("""
+					{
+					  "category": "자재",
+					  "name": "새 자재",
+					  "manufacturer": "테스트 제조사",
+					  "specification": "10개입",
+					  "stockQuantity": "5개",
+					  "storageLocation": "창고 Z",
+					  "usage": "테스트 사용"
+					}
+					"""))
+			.andExpect(status().isCreated())
+			.andExpect(jsonPath("$.data.name").value("새 자재"))
+			.andExpect(jsonPath("$.data.active").value(true))
+			.andReturn();
+
+		var materialId = Long.valueOf(createResult.getResponse().getContentAsString().replaceAll(".*\\\"id\\\":(\\d+).*", "$1"));
+
+		mockMvc.perform(patch("/api/materials/{materialId}", materialId)
+				.contentType(MediaType.APPLICATION_JSON)
+				.content("""
+					{
+					  "category": "농약",
+					  "name": "수정 자재",
+					  "manufacturer": "수정 제조사",
+					  "specification": "20개입",
+					  "stockQuantity": "8개",
+					  "storageLocation": "창고 Y",
+					  "usage": "수정 사용"
+					}
+					"""))
+			.andExpect(status().isOk())
+			.andExpect(jsonPath("$.data.category").value("농약"))
+			.andExpect(jsonPath("$.data.name").value("수정 자재"))
+			.andExpect(jsonPath("$.data.stockQuantity").value("8개"));
+
+		mockMvc.perform(patch("/api/materials/{materialId}/deactivate", materialId))
+			.andExpect(status().isOk())
+			.andExpect(jsonPath("$.data.active").value(false));
 	}
 
 	@Test
