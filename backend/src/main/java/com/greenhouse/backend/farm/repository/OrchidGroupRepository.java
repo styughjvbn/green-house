@@ -66,4 +66,6 @@ public interface OrchidGroupRepository extends JpaRepository<OrchidGroup, Long> 
 
 	List<OrchidGroup> findByVarietyIsNull();
 
+	List<OrchidGroup> findByBedZoneIdOrderBySortOrderAsc(Long bedZoneId);
+
 }

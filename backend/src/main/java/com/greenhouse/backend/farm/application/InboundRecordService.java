@@ -45,6 +45,7 @@ public class InboundRecordService {
 	private final OrchidGroupRepository orchidGroupRepository;
 	private final SystemWorkRecorder systemWorkRecorder;
 	private final SystemWorkCleanupService systemWorkCleanupService;
+	private final OrchidPlacementPolicy orchidPlacementPolicy;
 
 	@Transactional(readOnly = true)
 	public InboundRecordPageResponse getInboundRecords(
@@ -158,6 +159,7 @@ public class InboundRecordService {
 			throw new IllegalArgumentException("이미 난 묶음이 생성된 입고 기록입니다.");
 		}
 		BedZone bedZone = findBedZone(request.bedZoneId());
+		OrchidPlacementPolicy.PlacementRange placementRange = orchidPlacementPolicy.findFirstAvailableSingleSlot(bedZone);
 		OrchidGroup orchidGroup = new OrchidGroup(
 				bedZone,
 				inboundRecord.getVariety().getGenus(),
@@ -167,8 +169,8 @@ public class InboundRecordService {
 				request.ageYear(),
 				DEFAULT_ORCHID_STATUS,
 				orchidGroupRepository.findMaxSortOrderByBedZoneId(bedZone.getId()) + 1,
-				null,
-				null);
+				placementRange.startPosition(),
+				placementRange.endPosition());
 		orchidGroup.updateDetails(
 				inboundRecord.getVariety().getGenus(),
 				inboundRecord.getVariety().getName(),
@@ -179,8 +181,8 @@ public class InboundRecordService {
 				normalize(request.placementType()),
 				request.trayCount(),
 				false,
-				null,
-				null,
+				placementRange.startPosition(),
+				placementRange.endPosition(),
 				normalize(request.memo()));
 		orchidGroup.assignVariety(inboundRecord.getVariety());
 		orchidGroup.assignInboundRecord(inboundRecord);
@@ -306,6 +308,7 @@ public class InboundRecordService {
 	}
 
 	private OrchidGroup createPlacedOrchidGroup(Variety variety, InboundRecordCreateRequest request, BedZone bedZone) {
+		OrchidPlacementPolicy.PlacementRange placementRange = orchidPlacementPolicy.findFirstAvailableSingleSlot(bedZone);
 		OrchidGroup orchidGroup = new OrchidGroup(
 				bedZone,
 				variety.getGenus(),
@@ -315,8 +318,8 @@ public class InboundRecordService {
 				request.ageYear(),
 				DEFAULT_ORCHID_STATUS,
 				orchidGroupRepository.findMaxSortOrderByBedZoneId(bedZone.getId()) + 1,
-				null,
-				null);
+				placementRange.startPosition(),
+				placementRange.endPosition());
 		orchidGroup.updateDetails(
 				variety.getGenus(),
 				variety.getName(),
@@ -327,8 +330,8 @@ public class InboundRecordService {
 				normalize(request.placementType()),
 				request.trayCount(),
 				false,
-				null,
-				null,
+				placementRange.startPosition(),
+				placementRange.endPosition(),
 				normalize(request.memo()));
 		return orchidGroup;
 	}
