@@ -4,6 +4,7 @@ import type {
   BusinessPartnerForm,
   CreateBusinessPartnerPayload,
   CreateSalesSlipPayload,
+  SalesAllocationForm,
   SalesFilterState,
   SalesItemForm,
   SalesSlipForm,
@@ -20,6 +21,17 @@ export function createEmptyBusinessPartnerForm(): BusinessPartnerForm {
   };
 }
 
+export function createEmptySalesAllocation(): SalesAllocationForm {
+  return {
+    orchidGroupId: "",
+    varietyName: "",
+    genus: "",
+    locationLabel: "",
+    availableQuantity: 0,
+    quantity: "1",
+  };
+}
+
 export function createEmptySalesItem(): SalesItemForm {
   return {
     itemName: "",
@@ -28,6 +40,7 @@ export function createEmptySalesItem(): SalesItemForm {
     quantity: "1",
     unitPrice: "0",
     memo: "",
+    allocations: [],
   };
 }
 
@@ -80,24 +93,15 @@ export function filterSalesSlips(
   const keyword = filters.keyword.trim().toLowerCase();
 
   return salesSlips.filter((slip) => {
-    if (filters.from && slip.saleDate < filters.from) {
+    if (filters.from && slip.saleDate < filters.from) return false;
+    if (filters.to && slip.saleDate > filters.to) return false;
+    if (filters.partnerId && String(slip.partner.id) !== filters.partnerId)
       return false;
-    }
-    if (filters.to && slip.saleDate > filters.to) {
+    if (filters.paymentStatus && slip.paymentStatus !== filters.paymentStatus)
       return false;
-    }
-    if (filters.partnerId && String(slip.partner.id) !== filters.partnerId) {
+    if (filters.salesStatus && slip.salesStatus !== filters.salesStatus)
       return false;
-    }
-    if (filters.paymentStatus && slip.paymentStatus !== filters.paymentStatus) {
-      return false;
-    }
-    if (filters.salesStatus && slip.salesStatus !== filters.salesStatus) {
-      return false;
-    }
-    if (!keyword) {
-      return true;
-    }
+    if (!keyword) return true;
 
     return [
       slip.slipNumber,
@@ -118,18 +122,13 @@ export function filterBusinessPartners(
   const keyword = filters.keyword.trim().toLowerCase();
 
   return partners.filter((partner) => {
-    if (filters.partnerType && partner.partnerType !== filters.partnerType) {
+    if (filters.partnerType && partner.partnerType !== filters.partnerType)
       return false;
-    }
     if (filters.active) {
       const active = filters.active === "ACTIVE";
-      if (partner.active !== active) {
-        return false;
-      }
+      if (partner.active !== active) return false;
     }
-    if (!keyword) {
-      return true;
-    }
+    if (!keyword) return true;
 
     return [
       partner.name,
@@ -145,6 +144,13 @@ export function filterBusinessPartners(
 
 export function calculateSalesItemAmount(item: SalesItemForm): number {
   return Number(item.quantity || 0) * Number(item.unitPrice || 0);
+}
+
+export function calculateSalesItemAllocated(item: SalesItemForm): number {
+  return item.allocations.reduce(
+    (sum, allocation) => sum + Number(allocation.quantity || 0),
+    0,
+  );
 }
 
 export function calculateSalesTotal(items: SalesItemForm[]): number {
@@ -188,6 +194,10 @@ export function toCreateSalesSlipPayload(
       quantity: Number(item.quantity),
       unitPrice: Number(item.unitPrice),
       memo: nullableText(item.memo),
+      allocations: item.allocations.map((allocation) => ({
+        orchidGroupId: Number(allocation.orchidGroupId),
+        quantity: Number(allocation.quantity),
+      })),
     })),
   };
 }

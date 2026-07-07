@@ -91,7 +91,10 @@ export function SalesManager({
               form={sales.salesForm}
               saving={sales.savingSlip}
               totalAmount={sales.totalAmount}
+              onAddAllocation={sales.addAllocation}
               onAddItem={sales.addSalesItem}
+              onAllocationChange={sales.updateAllocation}
+              onAllocationRemove={sales.removeAllocation}
               onChange={sales.updateSalesForm}
               onRemoveItem={sales.removeSalesItem}
               onSubmit={handleCreateSalesSlip}
@@ -109,6 +112,8 @@ export function SalesManager({
             />
             <SalesSlipDetail
               salesSlip={sales.selectedSalesSlip}
+              updatingSalesStatus={sales.updatingSlipStatus}
+              onCompleteSalesSlip={sales.handleCompleteSalesSlip}
               onPaymentConfirmed={sales.updateSalesSlip}
             />
           </div>

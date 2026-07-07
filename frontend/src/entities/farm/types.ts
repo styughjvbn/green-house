@@ -247,7 +247,6 @@ export type PartnerSettlementSettings = {
 
 export type SalesSlipItem = {
   id: number;
-  orchidGroupId: number | null;
   auctionShipmentLotId: number | null;
   itemName: string;
   genus: string | null;
@@ -256,6 +255,34 @@ export type SalesSlipItem = {
   unitPrice: number;
   amount: number;
   memo: string | null;
+  allocations: SalesSlipItemAllocation[];
+};
+
+export type SalesSlipItemAllocation = {
+  id: number;
+  orchidGroupId: number;
+  varietyName: string;
+  allocatedQuantity: number;
+  availableQuantity: number;
+  houseNumber: number;
+  physicalBedNumber: number;
+  bedZoneName: string;
+};
+
+export type SalesOrchidGroupOption = {
+  id: number;
+  varietyId: number | null;
+  varietyName: string;
+  genus: string;
+  status: string;
+  quantity: number;
+  reservedQuantity: number;
+  availableQuantity: number;
+  potSize: string | null;
+  ageYear: number | null;
+  houseNumber: number;
+  physicalBedNumber: number;
+  bedZoneName: string;
 };
 
 export type SalesSlip = {

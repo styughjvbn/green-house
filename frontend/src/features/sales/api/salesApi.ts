@@ -3,6 +3,7 @@ import type {
   BusinessPartner,
   PartnerPaymentEvent,
   PartnerSettlementSettings,
+  SalesOrchidGroupOption,
   SalesSlip,
 } from "@/entities/farm/types";
 import type {
@@ -57,6 +58,16 @@ export function getBusinessPartners() {
 
 export function getSalesSlips() {
   return fetchApi<SalesSlip[]>("/sales-slips");
+}
+
+export function searchSalesOrchidGroups(keyword: string, varietyId?: number) {
+  const params = new URLSearchParams();
+  if (keyword.trim()) params.set("keyword", keyword.trim());
+  if (varietyId != null) params.set("varietyId", String(varietyId));
+  const query = params.size > 0 ? `?${params}` : "";
+  return fetchApi<SalesOrchidGroupOption[]>(
+    `/sales/orchid-groups/search${query}`,
+  );
 }
 
 export function getAuctionShipmentOptions() {
@@ -298,5 +309,23 @@ export function createSalesSlip(
       body: JSON.stringify(payload),
     },
     "판매 전표를 저장하지 못했습니다.",
+  );
+}
+
+export function changeSalesSlipStatus(
+  salesSlipId: number,
+  payload: {
+    salesStatus: string;
+    memo: string | null;
+  },
+) {
+  return requestJson<SalesSlip>(
+    `/sales-slips/${salesSlipId}/sales-status`,
+    {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    },
+    "판매 상태를 변경하지 못했습니다.",
   );
 }

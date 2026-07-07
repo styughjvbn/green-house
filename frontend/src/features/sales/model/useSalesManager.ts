@@ -1,6 +1,14 @@
 import { FormEvent, useMemo, useState } from "react";
-import type { BusinessPartner, SalesSlip } from "@/entities/farm/types";
-import { createBusinessPartner, createSalesSlip } from "../api/salesApi";
+import type {
+  BusinessPartner,
+  SalesOrchidGroupOption,
+  SalesSlip,
+} from "@/entities/farm/types";
+import {
+  changeSalesSlipStatus,
+  createBusinessPartner,
+  createSalesSlip,
+} from "../api/salesApi";
 import {
   calculateSalesTotal,
   createEmptyBusinessPartnerForm,
@@ -17,6 +25,7 @@ import {
 import type {
   BusinessPartnerFilterState,
   BusinessPartnerForm,
+  SalesAllocationForm,
   SalesFilterState,
   SalesItemForm,
   SalesSlipForm,
@@ -54,6 +63,7 @@ export function useSalesManager(
   );
   const [savingBusinessPartner, setSavingBusinessPartner] = useState(false);
   const [savingSlip, setSavingSlip] = useState(false);
+  const [updatingSlipStatus, setUpdatingSlipStatus] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   const totalAmount = useMemo(
@@ -164,6 +174,83 @@ export function useSalesManager(
     }));
   }
 
+  function addAllocation(index: number, orchidGroup: SalesOrchidGroupOption) {
+    setSalesForm((current) => ({
+      ...current,
+      items: current.items.map((item, itemIndex) => {
+        if (itemIndex !== index) return item;
+
+        const existingIndex = item.allocations.findIndex(
+          (allocation) => Number(allocation.orchidGroupId) === orchidGroup.id,
+        );
+        const nextAllocation = {
+          orchidGroupId: String(orchidGroup.id),
+          varietyName: orchidGroup.varietyName,
+          genus: orchidGroup.genus,
+          locationLabel: `${orchidGroup.houseNumber}동 ${orchidGroup.physicalBedNumber}배드 ${orchidGroup.bedZoneName}`,
+          availableQuantity: orchidGroup.availableQuantity,
+          quantity: "1",
+        };
+
+        return {
+          ...item,
+          itemName: item.itemName || orchidGroup.varietyName,
+          genus: item.genus || orchidGroup.genus,
+          allocations:
+            existingIndex >= 0
+              ? item.allocations.map((allocation, allocationIndex) =>
+                  allocationIndex === existingIndex
+                    ? {
+                        ...allocation,
+                        availableQuantity: orchidGroup.availableQuantity,
+                      }
+                    : allocation,
+                )
+              : [...item.allocations, nextAllocation],
+        };
+      }),
+    }));
+  }
+
+  function updateAllocation(
+    index: number,
+    allocationIndex: number,
+    field: keyof SalesAllocationForm,
+    value: string,
+  ) {
+    setSalesForm((current) => ({
+      ...current,
+      items: current.items.map((item, itemIndex) =>
+        itemIndex === index
+          ? {
+              ...item,
+              allocations: item.allocations.map((allocation, currentIndex) =>
+                currentIndex === allocationIndex
+                  ? { ...allocation, [field]: value }
+                  : allocation,
+              ),
+            }
+          : item,
+      ),
+    }));
+  }
+
+  function removeAllocation(index: number, allocationIndex: number) {
+    setSalesForm((current) => ({
+      ...current,
+      items: current.items.map((item, itemIndex) =>
+        itemIndex === index
+          ? {
+              ...item,
+              allocations: item.allocations.filter(
+                (_, currentIndex) => currentIndex !== allocationIndex,
+              ),
+            }
+          : item,
+      ),
+    }));
+  }
+
   function selectBusinessPartner(partnerId: number) {
     setSelectedPartnerId(partnerId);
     updateSalesForm("partnerId", String(partnerId));
@@ -224,6 +311,27 @@ export function useSalesManager(
     }
   }
 
+  async function handleCompleteSalesSlip(salesSlipId: number) {
+    setUpdatingSlipStatus(true);
+    setErrorMessage(null);
+    try {
+      const current = salesSlips.find((item) => item.id === salesSlipId);
+      const nextStatus =
+        current?.salesType === "AUCTION" ? "출하 완료" : "출고 완료";
+      const updated = await changeSalesSlipStatus(salesSlipId, {
+        salesStatus: nextStatus,
+        memo: null,
+      });
+      updateSalesSlip(updated);
+    } catch (error) {
+      setErrorMessage(
+        error instanceof Error ? error.message : "상태를 변경하지 못했습니다.",
+      );
+    } finally {
+      setUpdatingSlipStatus(false);
+    }
+  }
+
   function updateSalesSlip(salesSlip: SalesSlip) {
     setSalesSlips((current) =>
       current.map((item) => (item.id === salesSlip.id ? salesSlip : item)),
@@ -246,9 +354,12 @@ export function useSalesManager(
     showCreateSlip,
     savingBusinessPartner,
     savingSlip,
+    updatingSlipStatus,
     errorMessage,
     totalAmount,
+    addAllocation,
     addSalesItem,
+    removeAllocation,
     removeSalesItem,
     selectBusinessPartner,
     selectSalesSlip: setSelectedSlipId,
@@ -257,12 +368,14 @@ export function useSalesManager(
     setShowCreateSlip,
     resetFilters,
     resetPartnerFilters,
+    updateAllocation,
     updateBusinessPartnerForm,
     updateFilters,
     updatePartnerFilters,
     updateSalesForm,
     updateItem,
     updateSalesSlip,
+    handleCompleteSalesSlip,
     handleCreateBusinessPartner,
     handleCreateSalesSlip,
   };

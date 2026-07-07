@@ -1,6 +1,13 @@
 import type { FormEvent } from "react";
-import type { BusinessPartner } from "@/entities/farm/types";
-import type { SalesItemForm, SalesSlipForm } from "../../model/types";
+import type {
+  BusinessPartner,
+  SalesOrchidGroupOption,
+} from "@/entities/farm/types";
+import type {
+  SalesAllocationForm,
+  SalesItemForm,
+  SalesSlipForm,
+} from "../../model/types";
 import { SelectField, TextField } from "./FormFields";
 import { SalesSlipItemEditor } from "./SalesSlipItemEditor";
 
@@ -11,6 +18,9 @@ export function SalesSlipCreateForm({
   saving,
   totalAmount,
   onAddItem,
+  onAddAllocation,
+  onAllocationChange,
+  onAllocationRemove,
   onChange,
   onRemoveItem,
   onSubmit,
@@ -23,6 +33,14 @@ export function SalesSlipCreateForm({
   saving: boolean;
   totalAmount: number;
   onAddItem: () => void;
+  onAddAllocation: (index: number, orchidGroup: SalesOrchidGroupOption) => void;
+  onAllocationChange: (
+    index: number,
+    allocationIndex: number,
+    field: keyof SalesAllocationForm,
+    value: string,
+  ) => void;
+  onAllocationRemove: (index: number, allocationIndex: number) => void;
   onChange: <K extends keyof SalesSlipForm>(
     field: K,
     value: SalesSlipForm[K],
@@ -157,6 +175,9 @@ export function SalesSlipCreateForm({
             item={item}
             index={index}
             canRemove={form.items.length > 1}
+            onAddAllocation={onAddAllocation}
+            onAllocationChange={onAllocationChange}
+            onAllocationRemove={onAllocationRemove}
             onChange={onUpdateItem}
             onRemove={onRemoveItem}
           />

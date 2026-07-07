@@ -1,22 +1,36 @@
-import type { BusinessPartner, SalesSlip } from "@/entities/farm/types";
-
-import type { AuctionSettlement } from "@/entities/farm/types";
+import type {
+  AuctionLotPage,
+  AuctionTrackingSummary,
+  AuctionSettlement,
+  BusinessPartner,
+  PartnerType,
+  SalesSlip,
+} from "@/entities/farm/types";
 
 export type SalesManagerProps = {
   initialBusinessPartners: BusinessPartner[];
   initialSalesSlips: SalesSlip[];
-  initialAuctionPage: import("@/entities/farm/types").AuctionLotPage;
-  initialAuctionSummary: import("@/entities/farm/types").AuctionTrackingSummary;
+  initialAuctionPage: AuctionLotPage;
+  initialAuctionSummary: AuctionTrackingSummary;
   initialAuctionSettlements: AuctionSettlement[];
 };
 
 export type BusinessPartnerForm = {
   name: string;
-  partnerType: import("@/entities/farm/types").PartnerType;
+  partnerType: PartnerType;
   ownerName: string;
   phone: string;
   address: string;
   memo: string;
+};
+
+export type SalesAllocationForm = {
+  orchidGroupId: string;
+  varietyName: string;
+  genus: string;
+  locationLabel: string;
+  availableQuantity: number;
+  quantity: string;
 };
 
 export type SalesItemForm = {
@@ -26,6 +40,7 @@ export type SalesItemForm = {
   quantity: string;
   unitPrice: string;
   memo: string;
+  allocations: SalesAllocationForm[];
 };
 
 export type SalesSlipForm = {
@@ -41,7 +56,7 @@ export type SalesSlipForm = {
 
 export type CreateBusinessPartnerPayload = {
   name: string;
-  partnerType: import("@/entities/farm/types").PartnerType;
+  partnerType: PartnerType;
   ownerName: string | null;
   phone: string | null;
   address: string | null;
@@ -64,6 +79,10 @@ export type CreateSalesSlipPayload = {
     quantity: number;
     unitPrice: number;
     memo: string | null;
+    allocations: Array<{
+      orchidGroupId: number;
+      quantity: number;
+    }>;
   }>;
 };
 

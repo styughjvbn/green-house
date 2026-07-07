@@ -1,17 +1,21 @@
-﻿"use client";
+"use client";
 
 import type { ReactNode } from "react";
 import Link from "next/link";
-import { Copy, Printer } from "lucide-react";
+import { Copy, Printer, Truck } from "lucide-react";
 import type { SalesSlip } from "@/entities/farm/types";
 import { confirmSalesSlipPayment } from "../../api/salesApi";
 import { ManualPaymentPanel } from "./ManualPaymentPanel";
 
 export function SalesSlipDetail({
   salesSlip,
+  updatingSalesStatus,
+  onCompleteSalesSlip,
   onPaymentConfirmed,
 }: {
   salesSlip: SalesSlip | null;
+  updatingSalesStatus: boolean;
+  onCompleteSalesSlip: (salesSlipId: number) => Promise<void>;
   onPaymentConfirmed: (salesSlip: SalesSlip) => void;
 }) {
   if (!salesSlip) {
@@ -24,12 +28,26 @@ export function SalesSlipDetail({
 
   const supplyAmount = Math.round(salesSlip.totalAmount / 1.1);
   const vatAmount = salesSlip.totalAmount - supplyAmount;
+  const canComplete =
+    salesSlip.salesStatus !== "출고 완료" &&
+    salesSlip.salesStatus !== "출하 완료";
 
   return (
     <section className="min-w-0 rounded-md border border-[#dfe5dc] bg-white p-4 shadow-sm">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <h2 className="text-xl font-bold text-[#17251b]">전표 상세</h2>
         <div className="flex flex-wrap gap-2">
+          {canComplete ? (
+            <button
+              className="inline-flex h-9 items-center gap-2 rounded-md bg-[#159447] px-3 text-sm font-semibold text-white disabled:opacity-60"
+              disabled={updatingSalesStatus}
+              type="button"
+              onClick={() => void onCompleteSalesSlip(salesSlip.id)}
+            >
+              <Truck className="h-4 w-4" strokeWidth={1.8} aria-hidden="true" />
+              {salesSlip.salesType === "AUCTION" ? "출하 완료" : "출고 완료"}
+            </button>
+          ) : null}
           <Link
             className="inline-flex h-9 items-center gap-2 rounded-md border border-[#dfe5dc] bg-white px-3 text-sm font-semibold text-[#344138]"
             href={`/print/sales-slips/${salesSlip.id}`}
@@ -82,7 +100,7 @@ export function SalesSlipDetail({
       <div className="mt-4">
         <h3 className="text-base font-bold text-[#17251b]">판매 품목</h3>
         <div className="mt-2 overflow-x-auto rounded-md border border-[#dfe5dc]">
-          <table className="w-full min-w-[640px] border-collapse text-sm">
+          <table className="w-full min-w-[760px] border-collapse text-sm">
             <thead className="bg-[#fbfcfa] text-[#435047]">
               <tr>
                 <th className="px-3 py-3 text-left font-semibold">No.</th>
@@ -93,12 +111,18 @@ export function SalesSlipDetail({
                 <th className="px-3 py-3 text-right font-semibold">수량</th>
                 <th className="px-3 py-3 text-right font-semibold">단가</th>
                 <th className="px-3 py-3 text-right font-semibold">금액</th>
+                <th className="px-3 py-3 text-left font-semibold">
+                  배분 난 묶음
+                </th>
                 <th className="px-3 py-3 text-left font-semibold">메모</th>
               </tr>
             </thead>
             <tbody>
               {salesSlip.items.map((item, index) => (
-                <tr key={item.id} className="border-t border-[#edf0ec]">
+                <tr
+                  key={item.id}
+                  className="border-t border-[#edf0ec] align-top"
+                >
                   <td className="px-3 py-3">{index + 1}</td>
                   <td className="px-3 py-3">
                     <p className="font-semibold">{item.itemName}</p>
@@ -113,6 +137,26 @@ export function SalesSlipDetail({
                   </td>
                   <td className="px-3 py-3 text-right">
                     {item.amount.toLocaleString()}
+                  </td>
+                  <td className="px-3 py-3">
+                    <div className="space-y-2">
+                      {item.allocations.map((allocation) => (
+                        <div
+                          key={allocation.id}
+                          className="rounded-md bg-[#f6f8f5] px-2 py-2"
+                        >
+                          <p className="font-semibold text-[#17251b]">
+                            {allocation.varietyName}{" "}
+                            {allocation.allocatedQuantity}분
+                          </p>
+                          <p className="text-xs text-[#6a766e]">
+                            {allocation.houseNumber}동{" "}
+                            {allocation.physicalBedNumber}
+                            배드 {allocation.bedZoneName}
+                          </p>
+                        </div>
+                      ))}
+                    </div>
                   </td>
                   <td className="px-3 py-3">{item.memo ?? "-"}</td>
                 </tr>
