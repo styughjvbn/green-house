@@ -12,26 +12,18 @@ import com.greenhouse.backend.sales.domain.SalesType;
 import com.greenhouse.backend.sales.dto.SalesSlipCreateRequest;
 import com.greenhouse.backend.sales.dto.SalesSlipResponse;
 import com.greenhouse.backend.sales.repository.SalesSlipRepository;
+
+import lombok.RequiredArgsConstructor;
+
 import org.springframework.stereotype.Service;
 
 @Service
+@RequiredArgsConstructor
 public class AuctionSalesSlipCreator {
 	private final SalesSlipRepository salesSlipRepository;
 	private final AuctionShipmentCreator auctionShipmentCreator;
 	private final BusinessPartnerReader partnerReader;
 	private final SalesSlipNumberGenerator numberGenerator;
-
-	public AuctionSalesSlipCreator(
-		SalesSlipRepository salesSlipRepository,
-		AuctionShipmentCreator auctionShipmentCreator,
-		BusinessPartnerReader partnerReader,
-		SalesSlipNumberGenerator numberGenerator
-	) {
-		this.salesSlipRepository = salesSlipRepository;
-		this.auctionShipmentCreator = auctionShipmentCreator;
-		this.partnerReader = partnerReader;
-		this.numberGenerator = numberGenerator;
-	}
 
 	public SalesSlipResponse create(SalesSlipCreateRequest request) {
 		if (request.partnerId() == null) {
@@ -48,43 +40,39 @@ public class AuctionSalesSlipCreator {
 
 		var shipment = new AuctionShipment(request.saleDate(), partner);
 		request.items().forEach(item -> shipment.addLot(new AuctionShipmentLot(
-			SalesTextNormalizer.required(
-				item.genus() == null || item.genus().isBlank()
-					? item.itemName()
-					: item.genus()
-			),
-			SalesTextNormalizer.required(item.itemName()),
-			SalesTextNormalizer.normalize(item.spec()),
-			null,
-			item.quantity()
-		)));
+				SalesTextNormalizer.required(
+						item.genus() == null || item.genus().isBlank()
+								? item.itemName()
+								: item.genus()),
+				SalesTextNormalizer.required(item.itemName()),
+				SalesTextNormalizer.normalize(item.spec()),
+				null,
+				item.quantity())));
 		AuctionShipment savedShipment = auctionShipmentCreator.save(shipment);
 
 		var salesSlip = new SalesSlip(
-			numberGenerator.generate(savedShipment.getShipmentDate(), SalesType.AUCTION),
-			savedShipment.getShipmentDate(),
-			SalesType.AUCTION,
-			savedShipment,
-			partner,
-			SalesTextNormalizer.defaultText(request.paymentStatus(), "정산 대기"),
-			SalesTextNormalizer.defaultText(request.salesStatus(), "출하 완료"),
-			SalesTextNormalizer.defaultText(request.paymentMethod(), "경매 정산"),
-			SalesTextNormalizer.normalize(request.memo())
-		);
+				numberGenerator.generate(savedShipment.getShipmentDate(), SalesType.AUCTION),
+				savedShipment.getShipmentDate(),
+				SalesType.AUCTION,
+				savedShipment,
+				partner,
+				SalesTextNormalizer.defaultText(request.paymentStatus(), "정산 대기"),
+				SalesTextNormalizer.defaultText(request.salesStatus(), "출하 완료"),
+				SalesTextNormalizer.defaultText(request.paymentMethod(), "경매 정산"),
+				SalesTextNormalizer.normalize(request.memo()));
 
 		for (int index = 0; index < request.items().size(); index++) {
 			var item = request.items().get(index);
 			var lot = savedShipment.getLots().get(index);
 			salesSlip.addItem(new SalesSlipItem(
-				null,
-				lot,
-				SalesTextNormalizer.required(item.itemName()),
-				SalesTextNormalizer.normalize(item.genus()),
-				SalesTextNormalizer.normalize(item.spec()),
-				item.quantity(),
-				item.unitPrice(),
-				SalesTextNormalizer.normalize(item.memo())
-			));
+					null,
+					lot,
+					SalesTextNormalizer.required(item.itemName()),
+					SalesTextNormalizer.normalize(item.genus()),
+					SalesTextNormalizer.normalize(item.spec()),
+					item.quantity(),
+					item.unitPrice(),
+					SalesTextNormalizer.normalize(item.memo())));
 		}
 
 		return SalesSlipResponse.from(salesSlipRepository.save(salesSlip));

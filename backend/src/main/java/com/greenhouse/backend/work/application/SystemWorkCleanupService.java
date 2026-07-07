@@ -1,11 +1,15 @@
 package com.greenhouse.backend.work.application;
 
 import com.greenhouse.backend.work.repository.WorkRecordRepository;
+
+import lombok.RequiredArgsConstructor;
+
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 @Service
 @Transactional
+@RequiredArgsConstructor
 public class SystemWorkCleanupService {
 
 	private static final String INBOUND_RECORD_TARGET_TYPE = "INBOUND_RECORD";
@@ -13,15 +17,10 @@ public class SystemWorkCleanupService {
 
 	private final WorkRecordRepository workRecordRepository;
 
-	public SystemWorkCleanupService(WorkRecordRepository workRecordRepository) {
-		this.workRecordRepository = workRecordRepository;
-	}
-
 	public void deleteAutoInboundCreateRecords(Long inboundRecordId) {
 		workRecordRepository.deleteByTargetTypeAndTargetIdAndWorkTypeCode(
-			INBOUND_RECORD_TARGET_TYPE,
-			inboundRecordId,
-			INBOUND_WORK_TYPE_CODE
-		);
+				INBOUND_RECORD_TARGET_TYPE,
+				inboundRecordId,
+				INBOUND_WORK_TYPE_CODE);
 	}
 }

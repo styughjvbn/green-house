@@ -15,23 +15,23 @@ public class GlobalExceptionHandler {
 	@ExceptionHandler(CapacityConflictException.class)
 	ResponseEntity<ErrorResponse> handleCapacityConflict(CapacityConflictException exception) {
 		return ResponseEntity.status(HttpStatus.CONFLICT)
-			.body(ErrorResponse.of("CAPACITY_CONFLICT", exception.getMessage(), List.of()));
+				.body(ErrorResponse.of("CAPACITY_CONFLICT", exception.getMessage(), List.of()));
 	}
 
 	@ExceptionHandler(NotFoundException.class)
 	ResponseEntity<ErrorResponse> handleNotFound(NotFoundException exception) {
 		return ResponseEntity.status(HttpStatus.NOT_FOUND)
-			.body(ErrorResponse.of("NOT_FOUND", exception.getMessage(), List.of()));
+				.body(ErrorResponse.of("NOT_FOUND", exception.getMessage(), List.of()));
 	}
 
 	@ExceptionHandler({
-		IllegalArgumentException.class,
-		MethodArgumentNotValidException.class,
-		MissingServletRequestParameterException.class,
-		MethodArgumentTypeMismatchException.class
+			IllegalArgumentException.class,
+			MethodArgumentNotValidException.class,
+			MissingServletRequestParameterException.class,
+			MethodArgumentTypeMismatchException.class
 	})
 	ResponseEntity<ErrorResponse> handleValidation(Exception exception) {
 		return ResponseEntity.badRequest()
-			.body(ErrorResponse.of("VALIDATION_ERROR", "요청 값이 올바르지 않습니다.", List.of(exception.getMessage())));
+				.body(ErrorResponse.of("VALIDATION_ERROR", "요청 값이 올바르지 않습니다.", List.of(exception.getMessage())));
 	}
 }

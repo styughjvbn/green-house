@@ -12,7 +12,12 @@ import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import lombok.AccessLevel;
 
+@Getter
+@NoArgsConstructor(access = AccessLevel.PROTECTED)
 @Entity
 @Table(name = "bed_zone_segment_capacities")
 public class BedZoneSegmentCapacity extends BaseEntity {
@@ -44,10 +49,8 @@ public class BedZoneSegmentCapacity extends BaseEntity {
 	@Column(columnDefinition = "text")
 	private String memo;
 
-	protected BedZoneSegmentCapacity() {
-	}
-
-	public BedZoneSegmentCapacity(String placementType, String potSize, PlacementCapacityMode capacityMode, Integer capacityValue, Boolean allowed, String memo) {
+	public BedZoneSegmentCapacity(String placementType, String potSize, PlacementCapacityMode capacityMode,
+			Integer capacityValue, Boolean allowed, String memo) {
 		this.placementType = placementType;
 		this.potSize = potSize;
 		this.capacityMode = capacityMode;
@@ -56,13 +59,7 @@ public class BedZoneSegmentCapacity extends BaseEntity {
 		this.memo = memo;
 	}
 
-	void setSegment(BedZoneSegment segment) { this.segment = segment; }
-	public Long getId() { return id; }
-	public BedZoneSegment getSegment() { return segment; }
-	public String getPlacementType() { return placementType; }
-	public String getPotSize() { return potSize; }
-	public PlacementCapacityMode getCapacityMode() { return capacityMode; }
-	public Integer getCapacityValue() { return capacityValue; }
-	public Boolean getAllowed() { return allowed; }
-	public String getMemo() { return memo; }
+	void setSegment(BedZoneSegment segment) {
+		this.segment = segment;
+	}
 }

@@ -9,6 +9,8 @@ import com.greenhouse.backend.settlement.dto.ManualPaymentRequest;
 import com.greenhouse.backend.settlement.dto.PartnerBalanceSummaryResponse;
 import com.greenhouse.backend.settlement.dto.PartnerPaymentEventResponse;
 import jakarta.validation.Valid;
+import lombok.RequiredArgsConstructor;
+
 import java.util.List;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -20,29 +22,23 @@ import org.springframework.web.bind.annotation.RestController;
 
 @RestController
 @RequestMapping("/api")
+@RequiredArgsConstructor
 public class PaymentController {
 	private final PaymentService paymentService;
 	private final PartnerBalanceService partnerBalanceService;
 
-	public PaymentController(PaymentService paymentService, PartnerBalanceService partnerBalanceService) {
-		this.paymentService = paymentService;
-		this.partnerBalanceService = partnerBalanceService;
-	}
-
 	@PostMapping("/auction-settlements/{settlementId}/confirm-payment")
 	public ApiResponse<AuctionSettlementResponse> confirmAuctionPayment(
-		@PathVariable Long settlementId,
-		@Valid @RequestBody ManualPaymentRequest request
-	) {
+			@PathVariable Long settlementId,
+			@Valid @RequestBody ManualPaymentRequest request) {
 		return ApiResponse.ok(paymentService.confirmAuctionPayment(settlementId, request));
 	}
 
 	@GetMapping("/partner-payment-events")
 	public ApiResponse<List<PartnerPaymentEventResponse>> getEvents(
-		@RequestParam(required = false) Long partnerId,
-		@RequestParam(required = false) PaymentTargetType targetType,
-		@RequestParam(required = false) Long targetId
-	) {
+			@RequestParam(required = false) Long partnerId,
+			@RequestParam(required = false) PaymentTargetType targetType,
+			@RequestParam(required = false) Long targetId) {
 		return ApiResponse.ok(paymentService.getEvents(partnerId, targetType, targetId));
 	}
 

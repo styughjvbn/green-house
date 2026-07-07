@@ -4,5 +4,6 @@ import java.time.LocalDate;
 
 public interface WorkDateRow {
 	Long getTargetId();
+
 	LocalDate getLatestWorkDate();
 }

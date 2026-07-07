@@ -10,9 +10,15 @@ import jakarta.persistence.Id;
 import jakarta.persistence.OneToMany;
 import jakarta.persistence.OrderBy;
 import jakarta.persistence.Table;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import lombok.AccessLevel;
+
 import java.util.ArrayList;
 import java.util.List;
 
+@Getter
+@NoArgsConstructor(access = AccessLevel.PROTECTED)
 @Entity
 @Table(name = "houses")
 public class House extends BaseEntity {
@@ -34,9 +40,6 @@ public class House extends BaseEntity {
 	@OrderBy("displayOrder ASC")
 	private List<PhysicalBed> physicalBeds = new ArrayList<>();
 
-	protected House() {
-	}
-
 	public House(Integer number, String name) {
 		this.number = number;
 		this.name = name;
@@ -45,25 +48,5 @@ public class House extends BaseEntity {
 	public void addPhysicalBed(PhysicalBed physicalBed) {
 		this.physicalBeds.add(physicalBed);
 		physicalBed.setHouse(this);
-	}
-
-	public Long getId() {
-		return id;
-	}
-
-	public Integer getNumber() {
-		return number;
-	}
-
-	public String getName() {
-		return name;
-	}
-
-	public String getMemo() {
-		return memo;
-	}
-
-	public List<PhysicalBed> getPhysicalBeds() {
-		return physicalBeds;
 	}
 }

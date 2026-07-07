@@ -12,8 +12,14 @@ import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import lombok.AccessLevel;
+
 import java.time.LocalDate;
 
+@Getter
+@NoArgsConstructor(access = AccessLevel.PROTECTED)
 @Entity
 @Table(name = "inbound_records")
 public class InboundRecord extends BaseEntity {
@@ -84,28 +90,24 @@ public class InboundRecord extends BaseEntity {
 	@Column(columnDefinition = "text")
 	private String memo;
 
-	protected InboundRecord() {
-	}
-
 	public InboundRecord(
-		LocalDate inboundDate,
-		InboundType inboundType,
-		Variety variety,
-		InboundStatus status,
-		Integer bottleCount,
-		Integer estimatedQuantity,
-		Integer actualQuantity,
-		String tempLocation,
-		LocalDate pottingDueDate,
-		String potSize,
-		Integer ageYear,
-		String growthStage,
-		String placementType,
-		Integer trayCount,
-		BedZone bedZone,
-		String worker,
-		String memo
-	) {
+			LocalDate inboundDate,
+			InboundType inboundType,
+			Variety variety,
+			InboundStatus status,
+			Integer bottleCount,
+			Integer estimatedQuantity,
+			Integer actualQuantity,
+			String tempLocation,
+			LocalDate pottingDueDate,
+			String potSize,
+			Integer ageYear,
+			String growthStage,
+			String placementType,
+			Integer trayCount,
+			BedZone bedZone,
+			String worker,
+			String memo) {
 		this.inboundDate = inboundDate;
 		this.inboundType = inboundType;
 		this.variety = variety;
@@ -126,20 +128,19 @@ public class InboundRecord extends BaseEntity {
 	}
 
 	public void updateMetadata(
-		LocalDate inboundDate,
-		Integer bottleCount,
-		Integer estimatedQuantity,
-		Integer actualQuantity,
-		String tempLocation,
-		LocalDate pottingDueDate,
-		String potSize,
-		Integer ageYear,
-		String growthStage,
-		String placementType,
-		Integer trayCount,
-		String worker,
-		String memo
-	) {
+			LocalDate inboundDate,
+			Integer bottleCount,
+			Integer estimatedQuantity,
+			Integer actualQuantity,
+			String tempLocation,
+			LocalDate pottingDueDate,
+			String potSize,
+			Integer ageYear,
+			String growthStage,
+			String placementType,
+			Integer trayCount,
+			String worker,
+			String memo) {
 		this.inboundDate = inboundDate;
 		this.bottleCount = bottleCount;
 		this.estimatedQuantity = estimatedQuantity;
@@ -172,85 +173,5 @@ public class InboundRecord extends BaseEntity {
 		if (memo != null && !memo.isBlank()) {
 			this.memo = memo.trim();
 		}
-	}
-
-	public Long getId() {
-		return id;
-	}
-
-	public LocalDate getInboundDate() {
-		return inboundDate;
-	}
-
-	public InboundType getInboundType() {
-		return inboundType;
-	}
-
-	public Variety getVariety() {
-		return variety;
-	}
-
-	public InboundStatus getStatus() {
-		return status;
-	}
-
-	public Integer getBottleCount() {
-		return bottleCount;
-	}
-
-	public Integer getEstimatedQuantity() {
-		return estimatedQuantity;
-	}
-
-	public Integer getActualQuantity() {
-		return actualQuantity;
-	}
-
-	public String getTempLocation() {
-		return tempLocation;
-	}
-
-	public LocalDate getPottingDueDate() {
-		return pottingDueDate;
-	}
-
-	public LocalDate getPottingDate() {
-		return pottingDate;
-	}
-
-	public String getPotSize() {
-		return potSize;
-	}
-
-	public Integer getAgeYear() {
-		return ageYear;
-	}
-
-	public String getGrowthStage() {
-		return growthStage;
-	}
-
-	public String getPlacementType() {
-		return placementType;
-	}
-
-	public Integer getTrayCount() {
-		return trayCount;
-	}
-
-	public BedZone getBedZone() {
-		return bedZone;
-	}
-
-	public OrchidGroup getCreatedOrchidGroup() {
-		return createdOrchidGroup;
-	}
-
-	public String getWorker() {
-		return worker;
-	}
-
-	public String getMemo() {
-		return memo;
 	}
 }

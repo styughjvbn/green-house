@@ -9,23 +9,22 @@ import jakarta.validation.constraints.Size;
 import java.time.LocalDate;
 
 public record InboundRecordCreateRequest(
-	@NotNull LocalDate inboundDate,
-	@NotNull InboundType inboundType,
-	Long varietyId,
-	@Valid InboundNewVarietyRequest newVariety,
-	@Min(1) Integer bottleCount,
-	@Min(1) Integer estimatedQuantity,
-	@Min(1) Integer actualQuantity,
-	@Size(max = 255) String tempLocation,
-	LocalDate pottingDueDate,
-	@Size(max = 50) String potSize,
-	@Min(0) Integer ageYear,
-	@Size(max = 100) String growthStage,
-	@Size(max = 100) String placementType,
-	@Min(0) Integer trayCount,
-	Long bedZoneId,
-	InboundStatus status,
-	@Size(max = 50) String worker,
-	@Size(max = 1000) String memo
-) {
+		@NotNull LocalDate inboundDate,
+		@NotNull InboundType inboundType,
+		Long varietyId,
+		@Valid InboundNewVarietyRequest newVariety,
+		@Min(1) Integer bottleCount,
+		@Min(1) Integer estimatedQuantity,
+		@Min(1) Integer actualQuantity,
+		@Size(max = 255) String tempLocation,
+		LocalDate pottingDueDate,
+		@Size(max = 50) String potSize,
+		@Min(0) Integer ageYear,
+		@Size(max = 100) String growthStage,
+		@Size(max = 100) String placementType,
+		@Min(0) Integer trayCount,
+		Long bedZoneId,
+		InboundStatus status,
+		@Size(max = 50) String worker,
+		@Size(max = 1000) String memo) {
 }

@@ -14,25 +14,24 @@ public interface BedZoneRepository extends JpaRepository<BedZone, Long> {
 	List<BedZone> findByPhysicalBedIdOrderBySortOrderAsc(Long physicalBedId);
 
 	@Query("""
-		select z from BedZone z
-		join z.physicalBed b
-		where b.house.id = :houseId
-		order by b.displayOrder asc, z.sortOrder asc
-		""")
+			select z from BedZone z
+			join z.physicalBed b
+			where b.house.id = :houseId
+			order by b.displayOrder asc, z.sortOrder asc
+			""")
 	List<BedZone> findByHouseId(@Param("houseId") Long houseId);
 
-	@EntityGraph(attributePaths = {"physicalBed", "physicalBed.house", "orchidGroups"})
+	@EntityGraph(attributePaths = { "physicalBed", "physicalBed.house", "orchidGroups" })
 	Optional<BedZone> findWithDetailsById(Long id);
 
 	@Query("""
-		select z from BedZone z
-		join z.physicalBed b
-		join b.house h
-		where h.number = :houseNumber and b.number = :physicalBedNumber and z.side = :side
-		""")
+			select z from BedZone z
+			join z.physicalBed b
+			join b.house h
+			where h.number = :houseNumber and b.number = :physicalBedNumber and z.side = :side
+			""")
 	Optional<BedZone> findSeedZone(
-		@Param("houseNumber") Integer houseNumber,
-		@Param("physicalBedNumber") Integer physicalBedNumber,
-		@Param("side") BedZoneSide side
-	);
+			@Param("houseNumber") Integer houseNumber,
+			@Param("physicalBedNumber") Integer physicalBedNumber,
+			@Param("side") BedZoneSide side);
 }

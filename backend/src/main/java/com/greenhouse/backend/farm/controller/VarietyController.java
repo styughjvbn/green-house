@@ -8,6 +8,8 @@ import com.greenhouse.backend.farm.dto.VarietyPageResponse;
 import com.greenhouse.backend.farm.dto.VarietyResponse;
 import com.greenhouse.backend.farm.dto.VarietyUpdateRequest;
 import jakarta.validation.Valid;
+import lombok.RequiredArgsConstructor;
+
 import java.util.List;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.DeleteMapping;
@@ -23,22 +25,18 @@ import org.springframework.web.bind.annotation.RestController;
 
 @RestController
 @RequestMapping("/api/varieties")
+@RequiredArgsConstructor
 public class VarietyController {
 	private final VarietyService varietyService;
 
-	public VarietyController(VarietyService varietyService) {
-		this.varietyService = varietyService;
-	}
-
 	@GetMapping
 	public ApiResponse<VarietyPageResponse> getVarieties(
-		@RequestParam(required = false) String keyword,
-		@RequestParam(required = false) String genus,
-		@RequestParam(required = false) Boolean saleEnabled,
-		@RequestParam(required = false) Boolean active,
-		@RequestParam(defaultValue = "0") int page,
-		@RequestParam(defaultValue = "10") int size
-	) {
+			@RequestParam(required = false) String keyword,
+			@RequestParam(required = false) String genus,
+			@RequestParam(required = false) Boolean saleEnabled,
+			@RequestParam(required = false) Boolean active,
+			@RequestParam(defaultValue = "0") int page,
+			@RequestParam(defaultValue = "10") int size) {
 		return ApiResponse.ok(varietyService.getVarieties(keyword, genus, saleEnabled, active, page, size));
 	}
 
@@ -55,9 +53,8 @@ public class VarietyController {
 
 	@PatchMapping("/{varietyId}")
 	public ApiResponse<VarietyResponse> update(
-		@PathVariable Long varietyId,
-		@Valid @RequestBody VarietyUpdateRequest request
-	) {
+			@PathVariable Long varietyId,
+			@Valid @RequestBody VarietyUpdateRequest request) {
 		return ApiResponse.ok(varietyService.update(varietyId, request));
 	}
 

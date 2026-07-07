@@ -10,6 +10,6 @@ public interface PhysicalBedRepository extends JpaRepository<PhysicalBed, Long> 
 
 	List<PhysicalBed> findByHouseIdOrderByDisplayOrderAsc(Long houseId);
 
-	@EntityGraph(attributePaths = {"house", "bedZones"})
+	@EntityGraph(attributePaths = { "house", "bedZones" })
 	Optional<PhysicalBed> findWithHouseAndBedZonesById(Long id);
 }

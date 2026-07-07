@@ -11,22 +11,21 @@ import org.springframework.data.repository.query.Param;
 public interface MaterialRepository extends JpaRepository<Material, Long> {
 
 	@Query("""
-		select material from Material material
-		where (:keyword = ''
-			or lower(material.code) like lower(concat('%', :keyword, '%'))
-			or lower(material.name) like lower(concat('%', :keyword, '%')))
-		  and (:category = '' or material.category = :category)
-		  and (:manufacturer = '' or lower(coalesce(material.manufacturer, '')) like lower(concat('%', :manufacturer, '%')))
-		  and (:active is null or material.active = :active)
-		order by material.active desc, material.category, material.name
-		""")
+			select material from Material material
+			where (:keyword = ''
+				or lower(material.code) like lower(concat('%', :keyword, '%'))
+				or lower(material.name) like lower(concat('%', :keyword, '%')))
+			  and (:category = '' or material.category = :category)
+			  and (:manufacturer = '' or lower(coalesce(material.manufacturer, '')) like lower(concat('%', :manufacturer, '%')))
+			  and (:active is null or material.active = :active)
+			order by material.active desc, material.category, material.name
+			""")
 	Page<Material> search(
-		@Param("keyword") String keyword,
-		@Param("category") String category,
-		@Param("manufacturer") String manufacturer,
-		@Param("active") Boolean active,
-		Pageable pageable
-	);
+			@Param("keyword") String keyword,
+			@Param("category") String category,
+			@Param("manufacturer") String manufacturer,
+			@Param("active") Boolean active,
+			Pageable pageable);
 
 	Optional<Material> findTopByOrderByIdDesc();
 }

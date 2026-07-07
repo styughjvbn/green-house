@@ -15,28 +15,28 @@ public interface SalesSlipRepository extends JpaRepository<SalesSlip, Long> {
 
 	boolean existsByAuctionShipmentId(Long auctionShipmentId);
 
-	@EntityGraph(attributePaths = {"partner", "auctionShipment", "auctionShipment.auctionHouse", "items", "items.orchidGroup", "items.auctionShipmentLot"})
+	@EntityGraph(attributePaths = { "partner", "auctionShipment", "auctionShipment.auctionHouse", "items",
+			"items.orchidGroup", "items.auctionShipmentLot" })
 	Optional<SalesSlip> findWithDetailsById(Long id);
 
 	@Query("""
-		select s from SalesSlip s
-		join fetch s.partner p
-		where (:partnerId is null or p.id = :partnerId)
-			and (:from is null or s.saleDate >= :from)
-			and (:to is null or s.saleDate <= :to)
-		order by s.saleDate desc, s.id desc
-		""")
+			select s from SalesSlip s
+			join fetch s.partner p
+			where (:partnerId is null or p.id = :partnerId)
+				and (:from is null or s.saleDate >= :from)
+				and (:to is null or s.saleDate <= :to)
+			order by s.saleDate desc, s.id desc
+			""")
 	List<SalesSlip> search(
-		@Param("partnerId") Long partnerId,
-		@Param("from") LocalDate from,
-		@Param("to") LocalDate to
-	);
+			@Param("partnerId") Long partnerId,
+			@Param("from") LocalDate from,
+			@Param("to") LocalDate to);
 
 	@Query("""
-		select coalesce(sum(coalesce(s.remainingAmount, s.totalAmount)), 0)
-		from SalesSlip s
-		where s.partner.id = :partnerId
-		  and (s.salesType is null or s.salesType = com.greenhouse.backend.sales.domain.SalesType.DIRECT)
-		""")
+			select coalesce(sum(coalesce(s.remainingAmount, s.totalAmount)), 0)
+			from SalesSlip s
+			where s.partner.id = :partnerId
+			  and (s.salesType is null or s.salesType = com.greenhouse.backend.sales.domain.SalesType.DIRECT)
+			""")
 	Long sumDirectReceivableByPartnerId(@Param("partnerId") Long partnerId);
 }

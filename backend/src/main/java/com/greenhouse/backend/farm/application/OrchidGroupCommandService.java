@@ -11,11 +11,15 @@ import com.greenhouse.backend.farm.repository.InboundRecordRepository;
 import com.greenhouse.backend.farm.repository.OrchidGroupRepository;
 import com.greenhouse.backend.farm.repository.VarietyRepository;
 import com.greenhouse.backend.work.application.MovementWorkRecorder;
+
+import lombok.RequiredArgsConstructor;
+
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 @Service
 @Transactional
+@RequiredArgsConstructor
 public class OrchidGroupCommandService {
 
 	private final BedZoneRepository bedZoneRepository;
@@ -25,67 +29,48 @@ public class OrchidGroupCommandService {
 	private final MovementWorkRecorder movementWorkRecorder;
 	private final PlacementRecommendationService placementRecommendationService;
 
-	public OrchidGroupCommandService(
-		BedZoneRepository bedZoneRepository,
-		OrchidGroupRepository orchidGroupRepository,
-		InboundRecordRepository inboundRecordRepository,
-		VarietyRepository varietyRepository,
-		MovementWorkRecorder movementWorkRecorder,
-		PlacementRecommendationService placementRecommendationService
-	) {
-		this.bedZoneRepository = bedZoneRepository;
-		this.orchidGroupRepository = orchidGroupRepository;
-		this.inboundRecordRepository = inboundRecordRepository;
-		this.varietyRepository = varietyRepository;
-		this.movementWorkRecorder = movementWorkRecorder;
-		this.placementRecommendationService = placementRecommendationService;
-	}
-
 	public OrchidGroupResponse create(OrchidGroupCreateRequest request) {
 		var bedZone = bedZoneRepository.findWithDetailsById(request.bedZoneId())
-			.orElseThrow(() -> new NotFoundException("논리 구역을 찾을 수 없습니다."));
+				.orElseThrow(() -> new NotFoundException("논리 구역을 찾을 수 없습니다."));
 		int nextSortOrder = orchidGroupRepository.findMaxSortOrderByBedZoneId(bedZone.getId()) + 1;
 		var orchidGroup = new OrchidGroup(
-			bedZone,
-			normalize(request.genus()),
-			normalizeRequired(request.varietyName()),
-			request.quantity(),
-			normalize(request.potSize()),
-			request.ageYear(),
-			normalizeRequired(request.status()),
-			nextSortOrder
-		);
+				bedZone,
+				normalize(request.genus()),
+				normalizeRequired(request.varietyName()),
+				request.quantity(),
+				normalize(request.potSize()),
+				request.ageYear(),
+				normalizeRequired(request.status()),
+				nextSortOrder);
 		orchidGroup.updateDetails(
-			normalize(request.genus()),
-			normalizeRequired(request.varietyName()),
-			request.quantity(),
-			normalize(request.potSize()),
-			request.ageYear(),
-			normalizeRequired(request.status()),
-			normalize(request.placementType()),
-			request.trayCount(),
-			request.splitPlacementAllowed(),
-			normalize(request.memo())
-		);
+				normalize(request.genus()),
+				normalizeRequired(request.varietyName()),
+				request.quantity(),
+				normalize(request.potSize()),
+				request.ageYear(),
+				normalizeRequired(request.status()),
+				normalize(request.placementType()),
+				request.trayCount(),
+				request.splitPlacementAllowed(),
+				normalize(request.memo()));
 		resolveVariety(request.genus(), request.varietyName()).ifPresent(orchidGroup::assignVariety);
 		return OrchidGroupResponse.from(orchidGroupRepository.save(orchidGroup));
 	}
 
 	public OrchidGroupResponse update(Long orchidGroupId, OrchidGroupUpdateRequest request) {
 		var orchidGroup = orchidGroupRepository.findById(orchidGroupId)
-			.orElseThrow(() -> new NotFoundException("난 묶음을 찾을 수 없습니다."));
+				.orElseThrow(() -> new NotFoundException("난 묶음을 찾을 수 없습니다."));
 		orchidGroup.updateDetails(
-			normalize(request.genus()),
-			normalizeRequired(request.varietyName()),
-			request.quantity(),
-			normalize(request.potSize()),
-			request.ageYear(),
-			normalizeRequired(request.status()),
-			normalize(request.placementType()),
-			request.trayCount(),
-			request.splitPlacementAllowed(),
-			normalize(request.memo())
-		);
+				normalize(request.genus()),
+				normalizeRequired(request.varietyName()),
+				request.quantity(),
+				normalize(request.potSize()),
+				request.ageYear(),
+				normalizeRequired(request.status()),
+				normalize(request.placementType()),
+				request.trayCount(),
+				request.splitPlacementAllowed(),
+				normalize(request.memo()));
 		orchidGroup.assignVariety(resolveVariety(request.genus(), request.varietyName()).orElse(null));
 		return OrchidGroupResponse.from(orchidGroup);
 	}
@@ -100,9 +85,9 @@ public class OrchidGroupCommandService {
 
 	public OrchidGroupResponse move(Long orchidGroupId, OrchidGroupMoveRequest request) {
 		var orchidGroup = orchidGroupRepository.findById(orchidGroupId)
-			.orElseThrow(() -> new NotFoundException("난 묶음을 찾을 수 없습니다."));
+				.orElseThrow(() -> new NotFoundException("난 묶음을 찾을 수 없습니다."));
 		var toBedZone = bedZoneRepository.findWithDetailsById(request.toBedZoneId())
-			.orElseThrow(() -> new NotFoundException("논리 구역을 찾을 수 없습니다."));
+				.orElseThrow(() -> new NotFoundException("논리 구역을 찾을 수 없습니다."));
 
 		Long fromBedZoneId = orchidGroup.getBedZone().getId();
 		boolean precisePlacement = request.placements() != null && !request.placements().isEmpty();
@@ -112,9 +97,8 @@ public class OrchidGroupCommandService {
 
 		if (precisePlacement) {
 			var placements = placementRecommendationService.validateAndCreatePlacements(
-				orchidGroup, toBedZone, request.placementMode(), request.placements(),
-				request.reorganizeDueDate(), normalize(request.memo())
-			);
+					orchidGroup, toBedZone, request.placementMode(), request.placements(),
+					request.reorganizeDueDate(), normalize(request.memo()));
 			orchidGroup.replaceSegmentPlacements(placements);
 		} else {
 			orchidGroup.replaceSegmentPlacements(java.util.List.of());
@@ -124,11 +108,11 @@ public class OrchidGroupCommandService {
 			orchidGroup.moveTo(toBedZone, nextSortOrder);
 		}
 		movementWorkRecorder.record(
-			orchidGroup.getId(),
-			fromBedZoneId,
-			toBedZone.getId(),
-			normalize(request.worker()),
-			normalize(request.memo()));
+				orchidGroup.getId(),
+				fromBedZoneId,
+				toBedZone.getId(),
+				normalize(request.worker()),
+				normalize(request.memo()));
 		return OrchidGroupResponse.from(orchidGroup);
 	}
 
@@ -148,7 +132,8 @@ public class OrchidGroupCommandService {
 		return normalized;
 	}
 
-	private java.util.Optional<com.greenhouse.backend.farm.domain.Variety> resolveVariety(String genus, String varietyName) {
+	private java.util.Optional<com.greenhouse.backend.farm.domain.Variety> resolveVariety(String genus,
+			String varietyName) {
 		String normalizedGenus = normalize(genus);
 		String normalizedVarietyName = normalize(varietyName);
 		if (normalizedGenus == null || normalizedVarietyName == null) {

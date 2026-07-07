@@ -9,11 +9,10 @@ import jakarta.validation.constraints.Size;
 import java.util.List;
 
 public record BedZoneSegmentRequest(
-	Long id,
-	@NotBlank @Size(max = 100) String name,
-	@NotNull BedZoneSegmentType segmentType,
-	@NotNull @Min(1) Integer sortOrder,
-	@Size(max = 1000) String memo,
-	@NotNull List<@Valid BedZoneCapacityRequest> capacities
-) {
+		Long id,
+		@NotBlank @Size(max = 100) String name,
+		@NotNull BedZoneSegmentType segmentType,
+		@NotNull @Min(1) Integer sortOrder,
+		@Size(max = 1000) String memo,
+		@NotNull List<@Valid BedZoneCapacityRequest> capacities) {
 }

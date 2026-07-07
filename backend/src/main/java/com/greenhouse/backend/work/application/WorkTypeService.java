@@ -8,6 +8,9 @@ import com.greenhouse.backend.work.dto.WorkTypeReorderRequest;
 import com.greenhouse.backend.work.dto.WorkTypeResponse;
 import com.greenhouse.backend.work.dto.WorkTypeUpdateRequest;
 import com.greenhouse.backend.work.repository.WorkTypeRepository;
+
+import lombok.RequiredArgsConstructor;
+
 import java.util.List;
 import java.util.UUID;
 import org.springframework.stereotype.Service;
@@ -15,36 +18,32 @@ import org.springframework.transaction.annotation.Transactional;
 
 @Service
 @Transactional
+@RequiredArgsConstructor
 public class WorkTypeService {
 
 	private final WorkTypeRepository workTypeRepository;
 
-	public WorkTypeService(WorkTypeRepository workTypeRepository) {
-		this.workTypeRepository = workTypeRepository;
-	}
-
 	@Transactional(readOnly = true)
 	public List<WorkTypeResponse> getWorkTypes(boolean includeInactive) {
 		List<WorkType> workTypes = includeInactive
-			? workTypeRepository.findAllByOrderBySortOrderAscIdAsc()
-			: workTypeRepository.findAllByActiveTrueOrderBySortOrderAscIdAsc();
+				? workTypeRepository.findAllByOrderBySortOrderAscIdAsc()
+				: workTypeRepository.findAllByActiveTrueOrderBySortOrderAscIdAsc();
 		return workTypes.stream()
-			.map(WorkTypeResponse::from)
-			.toList();
+				.map(WorkTypeResponse::from)
+				.toList();
 	}
 
 	public WorkTypeResponse create(WorkTypeCreateRequest request) {
 		String name = normalizeRequired(request.name());
 		validateUniqueName(name, null);
 		WorkType workType = new WorkType(
-			"CUSTOM_" + UUID.randomUUID().toString().replace("-", "").substring(0, 12).toUpperCase(),
-			name,
-			request.template(),
-			false,
-			false,
-			true,
-			nextSortOrder()
-		);
+				"CUSTOM_" + UUID.randomUUID().toString().replace("-", "").substring(0, 12).toUpperCase(),
+				name,
+				request.template(),
+				false,
+				false,
+				true,
+				nextSortOrder());
 		return WorkTypeResponse.from(workTypeRepository.save(workType));
 	}
 
@@ -64,14 +63,14 @@ public class WorkTypeService {
 		for (int index = 0; index < request.orderedIds().size(); index++) {
 			Long id = request.orderedIds().get(index);
 			WorkType workType = workTypes.stream()
-				.filter(candidate -> candidate.getId().equals(id))
-				.findFirst()
-				.orElseThrow(() -> new NotFoundException("Work type not found."));
+					.filter(candidate -> candidate.getId().equals(id))
+					.findFirst()
+					.orElseThrow(() -> new NotFoundException("Work type not found."));
 			workType.changeSortOrder(index + 1);
 		}
 		return workTypeRepository.findAllByOrderBySortOrderAscIdAsc().stream()
-			.map(WorkTypeResponse::from)
-			.toList();
+				.map(WorkTypeResponse::from)
+				.toList();
 	}
 
 	@Transactional(readOnly = true)
@@ -86,13 +85,13 @@ public class WorkTypeService {
 	@Transactional(readOnly = true)
 	public WorkType getMovementType() {
 		return workTypeRepository.findByCode(WorkType.MOVEMENT_CODE)
-			.orElseThrow(() -> new NotFoundException("Movement work type not found."));
+				.orElseThrow(() -> new NotFoundException("Movement work type not found."));
 	}
 
 	@Transactional(readOnly = true)
 	public WorkType getByCode(String code) {
 		return workTypeRepository.findByCode(code)
-			.orElseThrow(() -> new NotFoundException("Work type not found."));
+				.orElseThrow(() -> new NotFoundException("Work type not found."));
 	}
 
 	@Transactional(readOnly = true)
@@ -101,8 +100,8 @@ public class WorkTypeService {
 			return workType.getTemplate();
 		}
 		return workTypeRepository.findByName(snapshotName)
-			.map(WorkType::getTemplate)
-			.orElse(null);
+				.map(WorkType::getTemplate)
+				.orElse(null);
 	}
 
 	private WorkType getById(Long id) {
@@ -110,14 +109,14 @@ public class WorkTypeService {
 			throw new IllegalArgumentException("Work type id is required.");
 		}
 		return workTypeRepository.findById(id)
-			.orElseThrow(() -> new NotFoundException("Work type not found."));
+				.orElseThrow(() -> new NotFoundException("Work type not found."));
 	}
 
 	private int nextSortOrder() {
 		return workTypeRepository.findAllByOrderBySortOrderAscIdAsc().stream()
-			.mapToInt(WorkType::getSortOrder)
-			.max()
-			.orElse(0) + 1;
+				.mapToInt(WorkType::getSortOrder)
+				.max()
+				.orElse(0) + 1;
 	}
 
 	private void validateUniqueName(String name, Long id) {

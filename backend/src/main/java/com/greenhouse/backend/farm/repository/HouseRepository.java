@@ -9,6 +9,6 @@ public interface HouseRepository extends JpaRepository<House, Long> {
 
 	boolean existsByNumber(Integer number);
 
-	@EntityGraph(attributePaths = {"physicalBeds"})
+	@EntityGraph(attributePaths = { "physicalBeds" })
 	Optional<House> findWithPhysicalBedsById(Long id);
 }

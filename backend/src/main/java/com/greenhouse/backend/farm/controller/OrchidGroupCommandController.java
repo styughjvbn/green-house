@@ -7,6 +7,8 @@ import com.greenhouse.backend.farm.dto.OrchidGroupMoveRequest;
 import com.greenhouse.backend.farm.dto.OrchidGroupResponse;
 import com.greenhouse.backend.farm.dto.OrchidGroupUpdateRequest;
 import jakarta.validation.Valid;
+import lombok.RequiredArgsConstructor;
+
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
@@ -19,13 +21,10 @@ import org.springframework.web.bind.annotation.RestController;
 
 @RestController
 @RequestMapping("/api/orchid-groups")
+@RequiredArgsConstructor
 public class OrchidGroupCommandController {
 
 	private final OrchidGroupCommandService orchidGroupCommandService;
-
-	public OrchidGroupCommandController(OrchidGroupCommandService orchidGroupCommandService) {
-		this.orchidGroupCommandService = orchidGroupCommandService;
-	}
 
 	@PostMapping
 	@ResponseStatus(HttpStatus.CREATED)
@@ -35,9 +34,8 @@ public class OrchidGroupCommandController {
 
 	@PatchMapping("/{orchidGroupId}")
 	public ApiResponse<OrchidGroupResponse> update(
-		@PathVariable Long orchidGroupId,
-		@Valid @RequestBody OrchidGroupUpdateRequest request
-	) {
+			@PathVariable Long orchidGroupId,
+			@Valid @RequestBody OrchidGroupUpdateRequest request) {
 		return ApiResponse.ok(orchidGroupCommandService.update(orchidGroupId, request));
 	}
 
@@ -49,9 +47,8 @@ public class OrchidGroupCommandController {
 
 	@PatchMapping("/{orchidGroupId}/move")
 	public ApiResponse<OrchidGroupResponse> move(
-		@PathVariable Long orchidGroupId,
-		@Valid @RequestBody OrchidGroupMoveRequest request
-	) {
+			@PathVariable Long orchidGroupId,
+			@Valid @RequestBody OrchidGroupMoveRequest request) {
 		return ApiResponse.ok(orchidGroupCommandService.move(orchidGroupId, request));
 	}
 }

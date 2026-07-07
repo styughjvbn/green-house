@@ -16,10 +16,16 @@ import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.OneToMany;
 import jakarta.persistence.Table;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import lombok.AccessLevel;
+
 import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
 
+@Getter
+@NoArgsConstructor(access = AccessLevel.PROTECTED)
 @Entity
 @Table(name = "sales_slips")
 public class SalesSlip extends BaseEntity {
@@ -73,20 +79,16 @@ public class SalesSlip extends BaseEntity {
 	@OneToMany(mappedBy = "salesSlip", cascade = CascadeType.ALL, orphanRemoval = true)
 	private List<SalesSlipItem> items = new ArrayList<>();
 
-	protected SalesSlip() {
-	}
-
 	public SalesSlip(
-		String slipNumber,
-		LocalDate saleDate,
-		SalesType salesType,
-		AuctionShipment auctionShipment,
-		BusinessPartner partner,
-		String paymentStatus,
-		String salesStatus,
-		String paymentMethod,
-		String memo
-	) {
+			String slipNumber,
+			LocalDate saleDate,
+			SalesType salesType,
+			AuctionShipment auctionShipment,
+			BusinessPartner partner,
+			String paymentStatus,
+			String salesStatus,
+			String paymentMethod,
+			String memo) {
 		this.slipNumber = slipNumber;
 		this.saleDate = saleDate;
 		this.salesType = salesType;
@@ -106,8 +108,8 @@ public class SalesSlip extends BaseEntity {
 		item.setSalesSlip(this);
 		this.items.add(item);
 		this.totalAmount = this.items.stream()
-			.mapToInt(SalesSlipItem::getAmount)
-			.sum();
+				.mapToInt(SalesSlipItem::getAmount)
+				.sum();
 		this.remainingAmount = Math.max(0L, this.totalAmount.longValue() - getPaidAmount());
 	}
 
@@ -116,70 +118,12 @@ public class SalesSlip extends BaseEntity {
 	}
 
 	public void recordPayment(Long amount) {
-		if (amount <= 0) throw new IllegalArgumentException("입금액은 0원보다 커야 합니다.");
-		if (amount > getRemainingAmount()) throw new IllegalArgumentException("입금액은 현재 잔액을 초과할 수 없습니다.");
+		if (amount <= 0)
+			throw new IllegalArgumentException("입금액은 0원보다 커야 합니다.");
+		if (amount > getRemainingAmount())
+			throw new IllegalArgumentException("입금액은 현재 잔액을 초과할 수 없습니다.");
 		this.paidAmount = getPaidAmount() + amount;
 		this.remainingAmount = Math.max(0L, totalAmount.longValue() - paidAmount);
 		this.paymentStatus = remainingAmount == 0 ? "입금 완료" : "부분입금";
-	}
-
-	public Long getId() {
-		return id;
-	}
-
-	public String getSlipNumber() {
-		return slipNumber;
-	}
-
-	public LocalDate getSaleDate() {
-		return saleDate;
-	}
-
-	public SalesType getSalesType() {
-		return salesType == null ? SalesType.DIRECT : salesType;
-	}
-
-	public AuctionShipment getAuctionShipment() {
-		return auctionShipment;
-	}
-
-	public BusinessPartner getPartner() {
-		return partner;
-	}
-
-	public Integer getTotalAmount() {
-		return totalAmount;
-	}
-
-	public LocalDate getExpectedPaymentDate() {
-		return expectedPaymentDate == null ? saleDate : expectedPaymentDate;
-	}
-
-	public Long getPaidAmount() {
-		return paidAmount == null ? 0L : paidAmount;
-	}
-
-	public Long getRemainingAmount() {
-		return remainingAmount == null ? totalAmount.longValue() : remainingAmount;
-	}
-
-	public String getPaymentStatus() {
-		return paymentStatus;
-	}
-
-	public String getSalesStatus() {
-		return salesStatus;
-	}
-
-	public String getPaymentMethod() {
-		return paymentMethod;
-	}
-
-	public String getMemo() {
-		return memo;
-	}
-
-	public List<SalesSlipItem> getItems() {
-		return items;
 	}
 }

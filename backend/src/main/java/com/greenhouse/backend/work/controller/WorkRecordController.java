@@ -10,6 +10,8 @@ import com.greenhouse.backend.work.dto.WorkTypeReorderRequest;
 import com.greenhouse.backend.work.dto.WorkTypeResponse;
 import com.greenhouse.backend.work.dto.WorkTypeUpdateRequest;
 import jakarta.validation.Valid;
+import lombok.RequiredArgsConstructor;
+
 import java.time.LocalDate;
 import java.util.List;
 import org.springframework.http.HttpStatus;
@@ -25,24 +27,19 @@ import org.springframework.web.bind.annotation.RestController;
 
 @RestController
 @RequestMapping("/api")
+@RequiredArgsConstructor
 public class WorkRecordController {
 
 	private final WorkRecordService workRecordService;
 	private final WorkTypeService workTypeService;
 
-	public WorkRecordController(WorkRecordService workRecordService, WorkTypeService workTypeService) {
-		this.workRecordService = workRecordService;
-		this.workTypeService = workTypeService;
-	}
-
 	@GetMapping("/work-records")
 	public ApiResponse<List<WorkRecordResponse>> getWorkRecords(
-		@RequestParam(required = false) String targetType,
-		@RequestParam(required = false) Long targetId,
-		@RequestParam(required = false) String workType,
-		@RequestParam(required = false) LocalDate from,
-		@RequestParam(required = false) LocalDate to
-	) {
+			@RequestParam(required = false) String targetType,
+			@RequestParam(required = false) Long targetId,
+			@RequestParam(required = false) String workType,
+			@RequestParam(required = false) LocalDate from,
+			@RequestParam(required = false) LocalDate to) {
 		return ApiResponse.ok(workRecordService.getWorkRecords(targetType, targetId, workType, from, to));
 	}
 
@@ -54,8 +51,7 @@ public class WorkRecordController {
 
 	@GetMapping("/work-types")
 	public ApiResponse<List<WorkTypeResponse>> getWorkTypes(
-		@RequestParam(defaultValue = "false") boolean includeInactive
-	) {
+			@RequestParam(defaultValue = "false") boolean includeInactive) {
 		return ApiResponse.ok(workTypeService.getWorkTypes(includeInactive));
 	}
 
@@ -67,9 +63,8 @@ public class WorkRecordController {
 
 	@PatchMapping("/work-types/{workTypeId}")
 	public ApiResponse<WorkTypeResponse> updateWorkType(
-		@PathVariable Long workTypeId,
-		@Valid @RequestBody WorkTypeUpdateRequest request
-	) {
+			@PathVariable Long workTypeId,
+			@Valid @RequestBody WorkTypeUpdateRequest request) {
 		return ApiResponse.ok(workTypeService.update(workTypeId, request));
 	}
 

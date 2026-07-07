@@ -15,9 +15,15 @@ import jakarta.persistence.ManyToOne;
 import jakarta.persistence.OneToMany;
 import jakarta.persistence.OrderBy;
 import jakarta.persistence.Table;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import lombok.AccessLevel;
+
 import java.util.ArrayList;
 import java.util.List;
 
+@Getter
+@NoArgsConstructor(access = AccessLevel.PROTECTED)
 @Entity
 @Table(name = "bed_zone_segments")
 public class BedZoneSegment extends BaseEntity {
@@ -47,9 +53,6 @@ public class BedZoneSegment extends BaseEntity {
 	@OrderBy("capacityMode ASC")
 	private List<BedZoneSegmentCapacity> capacities = new ArrayList<>();
 
-	protected BedZoneSegment() {
-	}
-
 	public BedZoneSegment(String name, BedZoneSegmentType segmentType, Integer sortOrder, String memo) {
 		this.name = name;
 		this.segmentType = segmentType;
@@ -77,12 +80,4 @@ public class BedZoneSegment extends BaseEntity {
 		capacities.add(capacity);
 		capacity.setSegment(this);
 	}
-
-	public Long getId() { return id; }
-	public BedZone getBedZone() { return bedZone; }
-	public String getName() { return name; }
-	public BedZoneSegmentType getSegmentType() { return segmentType; }
-	public Integer getSortOrder() { return sortOrder; }
-	public String getMemo() { return memo; }
-	public List<BedZoneSegmentCapacity> getCapacities() { return capacities; }
 }

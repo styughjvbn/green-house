@@ -9,7 +9,12 @@ import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import lombok.AccessLevel;
 
+@Getter
+@NoArgsConstructor(access = AccessLevel.PROTECTED)
 @Entity
 @Table(name = "work_types")
 public class WorkType extends BaseEntity {
@@ -42,18 +47,14 @@ public class WorkType extends BaseEntity {
 	@Column(name = "sort_order", nullable = false)
 	private int sortOrder;
 
-	protected WorkType() {
-	}
-
 	public WorkType(
-		String code,
-		String name,
-		WorkTypeTemplate template,
-		boolean defaultType,
-		boolean systemType,
-		boolean active,
-		int sortOrder
-	) {
+			String code,
+			String name,
+			WorkTypeTemplate template,
+			boolean defaultType,
+			boolean systemType,
+			boolean active,
+			int sortOrder) {
 		this.code = code;
 		this.name = name;
 		this.template = template;
@@ -73,37 +74,5 @@ public class WorkType extends BaseEntity {
 
 	public void changeSortOrder(int sortOrder) {
 		this.sortOrder = sortOrder;
-	}
-
-	public Long getId() {
-		return id;
-	}
-
-	public String getCode() {
-		return code;
-	}
-
-	public String getName() {
-		return name;
-	}
-
-	public WorkTypeTemplate getTemplate() {
-		return template;
-	}
-
-	public boolean isDefaultType() {
-		return defaultType;
-	}
-
-	public boolean isSystemType() {
-		return systemType;
-	}
-
-	public boolean isActive() {
-		return active;
-	}
-
-	public int getSortOrder() {
-		return sortOrder;
 	}
 }

@@ -14,14 +14,17 @@ import jakarta.persistence.OneToMany;
 import jakarta.persistence.OrderBy;
 import jakarta.persistence.Table;
 import jakarta.persistence.UniqueConstraint;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import lombok.AccessLevel;
 import java.util.ArrayList;
 import java.util.List;
 
+@Getter
+@NoArgsConstructor(access = AccessLevel.PROTECTED)
 @Entity
-@Table(
-	name = "physical_beds",
-	uniqueConstraints = @UniqueConstraint(name = "uk_physical_beds_house_number", columnNames = {"house_id", "number"})
-)
+@Table(name = "physical_beds", uniqueConstraints = @UniqueConstraint(name = "uk_physical_beds_house_number", columnNames = {
+		"house_id", "number" }))
 public class PhysicalBed extends BaseEntity {
 
 	@Id
@@ -57,9 +60,6 @@ public class PhysicalBed extends BaseEntity {
 	@OrderBy("sortOrder ASC")
 	private List<BedZone> bedZones = new ArrayList<>();
 
-	protected PhysicalBed() {
-	}
-
 	public PhysicalBed(Integer number, Integer displayOrder) {
 		this.number = number;
 		this.displayOrder = displayOrder;
@@ -72,45 +72,5 @@ public class PhysicalBed extends BaseEntity {
 	public void addBedZone(BedZone bedZone) {
 		this.bedZones.add(bedZone);
 		bedZone.setPhysicalBed(this);
-	}
-
-	public Long getId() {
-		return id;
-	}
-
-	public House getHouse() {
-		return house;
-	}
-
-	public Integer getNumber() {
-		return number;
-	}
-
-	public Integer getDisplayOrder() {
-		return displayOrder;
-	}
-
-	public Integer getLengthCm() {
-		return lengthCm;
-	}
-
-	public Integer getWidthCm() {
-		return widthCm;
-	}
-
-	public Integer getWireCount() {
-		return wireCount;
-	}
-
-	public Integer getSupportIntervalCm() {
-		return supportIntervalCm;
-	}
-
-	public String getMemo() {
-		return memo;
-	}
-
-	public List<BedZone> getBedZones() {
-		return bedZones;
 	}
 }

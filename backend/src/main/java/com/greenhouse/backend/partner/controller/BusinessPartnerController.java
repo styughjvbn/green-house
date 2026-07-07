@@ -6,6 +6,8 @@ import com.greenhouse.backend.partner.domain.PartnerType;
 import com.greenhouse.backend.partner.dto.BusinessPartnerCreateRequest;
 import com.greenhouse.backend.partner.dto.BusinessPartnerResponse;
 import jakarta.validation.Valid;
+import lombok.RequiredArgsConstructor;
+
 import java.util.List;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -18,18 +20,14 @@ import org.springframework.web.bind.annotation.RestController;
 
 @RestController
 @RequestMapping("/api/business-partners")
+@RequiredArgsConstructor
 public class BusinessPartnerController {
 	private final BusinessPartnerService service;
 
-	public BusinessPartnerController(BusinessPartnerService service) {
-		this.service = service;
-	}
-
 	@GetMapping
 	public ApiResponse<List<BusinessPartnerResponse>> getPartners(
-		@RequestParam(required = false) String keyword,
-		@RequestParam(required = false) PartnerType partnerType
-	) {
+			@RequestParam(required = false) String keyword,
+			@RequestParam(required = false) PartnerType partnerType) {
 		return ApiResponse.ok(service.getPartners(keyword, partnerType));
 	}
 

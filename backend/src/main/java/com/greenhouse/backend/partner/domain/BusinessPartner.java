@@ -9,7 +9,12 @@ import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import lombok.AccessLevel;
 
+@Getter
+@NoArgsConstructor(access = AccessLevel.PROTECTED)
 @Entity
 @Table(name = "business_partners")
 public class BusinessPartner extends BaseEntity {
@@ -39,17 +44,13 @@ public class BusinessPartner extends BaseEntity {
 	@Column(name = "is_active", nullable = false)
 	private boolean active;
 
-	protected BusinessPartner() {
-	}
-
 	public BusinessPartner(
-		String name,
-		PartnerType partnerType,
-		String ownerName,
-		String phone,
-		String address,
-		String memo
-	) {
+			String name,
+			PartnerType partnerType,
+			String ownerName,
+			String phone,
+			String address,
+			String memo) {
 		this.name = name;
 		this.partnerType = partnerType;
 		this.ownerName = ownerName;
@@ -58,13 +59,4 @@ public class BusinessPartner extends BaseEntity {
 		this.memo = memo;
 		this.active = true;
 	}
-
-	public Long getId() { return id; }
-	public String getName() { return name; }
-	public PartnerType getPartnerType() { return partnerType; }
-	public String getOwnerName() { return ownerName; }
-	public String getPhone() { return phone; }
-	public String getAddress() { return address; }
-	public String getMemo() { return memo; }
-	public boolean isActive() { return active; }
 }

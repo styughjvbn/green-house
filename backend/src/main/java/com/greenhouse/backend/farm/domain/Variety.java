@@ -7,7 +7,12 @@ import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import lombok.AccessLevel;
 
+@Getter
+@NoArgsConstructor(access = AccessLevel.PROTECTED)
 @Entity
 @Table(name = "varieties")
 public class Variety extends BaseEntity {
@@ -43,20 +48,16 @@ public class Variety extends BaseEntity {
 	@Column(columnDefinition = "text")
 	private String memo;
 
-	protected Variety() {
-	}
-
 	public Variety(
-		String code,
-		String genus,
-		String name,
-		String alias,
-		String defaultPotSize,
-		boolean saleEnabled,
-		boolean active,
-		String description,
-		String memo
-	) {
+			String code,
+			String genus,
+			String name,
+			String alias,
+			String defaultPotSize,
+			boolean saleEnabled,
+			boolean active,
+			String description,
+			String memo) {
 		this.code = code;
 		this.genus = genus;
 		this.name = name;
@@ -69,14 +70,13 @@ public class Variety extends BaseEntity {
 	}
 
 	public void update(
-		String genus,
-		String name,
-		String alias,
-		String defaultPotSize,
-		boolean saleEnabled,
-		String description,
-		String memo
-	) {
+			String genus,
+			String name,
+			String alias,
+			String defaultPotSize,
+			boolean saleEnabled,
+			String description,
+			String memo) {
 		this.genus = genus;
 		this.name = name;
 		this.alias = alias;
@@ -88,45 +88,5 @@ public class Variety extends BaseEntity {
 
 	public void deactivate() {
 		this.active = false;
-	}
-
-	public Long getId() {
-		return id;
-	}
-
-	public String getCode() {
-		return code;
-	}
-
-	public String getGenus() {
-		return genus;
-	}
-
-	public String getName() {
-		return name;
-	}
-
-	public String getAlias() {
-		return alias;
-	}
-
-	public String getDefaultPotSize() {
-		return defaultPotSize;
-	}
-
-	public boolean isSaleEnabled() {
-		return saleEnabled;
-	}
-
-	public boolean isActive() {
-		return active;
-	}
-
-	public String getDescription() {
-		return description;
-	}
-
-	public String getMemo() {
-		return memo;
 	}
 }

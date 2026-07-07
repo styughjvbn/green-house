@@ -7,6 +7,8 @@ import com.greenhouse.backend.farm.dto.MaterialPageResponse;
 import com.greenhouse.backend.farm.dto.MaterialResponse;
 import com.greenhouse.backend.farm.dto.MaterialUpdateRequest;
 import jakarta.validation.Valid;
+import lombok.RequiredArgsConstructor;
+
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -21,23 +23,19 @@ import org.springframework.web.bind.annotation.RestController;
 
 @RestController
 @RequestMapping("/api/materials")
+@RequiredArgsConstructor
 public class MaterialController {
 
 	private final MaterialService materialService;
 
-	public MaterialController(MaterialService materialService) {
-		this.materialService = materialService;
-	}
-
 	@GetMapping
 	public ApiResponse<MaterialPageResponse> getMaterials(
-		@RequestParam(required = false) String keyword,
-		@RequestParam(required = false) String category,
-		@RequestParam(required = false) String manufacturer,
-		@RequestParam(required = false) Boolean active,
-		@RequestParam(defaultValue = "0") int page,
-		@RequestParam(defaultValue = "10") int size
-	) {
+			@RequestParam(required = false) String keyword,
+			@RequestParam(required = false) String category,
+			@RequestParam(required = false) String manufacturer,
+			@RequestParam(required = false) Boolean active,
+			@RequestParam(defaultValue = "0") int page,
+			@RequestParam(defaultValue = "10") int size) {
 		return ApiResponse.ok(materialService.getMaterials(keyword, category, manufacturer, active, page, size));
 	}
 
@@ -54,9 +52,8 @@ public class MaterialController {
 
 	@PatchMapping("/{materialId}")
 	public ApiResponse<MaterialResponse> update(
-		@PathVariable Long materialId,
-		@Valid @RequestBody MaterialUpdateRequest request
-	) {
+			@PathVariable Long materialId,
+			@Valid @RequestBody MaterialUpdateRequest request) {
 		return ApiResponse.ok(materialService.update(materialId, request));
 	}
 

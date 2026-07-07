@@ -5,22 +5,18 @@ import com.greenhouse.backend.settlement.domain.PartnerBalanceSummary;
 import com.greenhouse.backend.settlement.domain.PartnerPaymentEvent;
 import com.greenhouse.backend.settlement.dto.PartnerBalanceSummaryResponse;
 import com.greenhouse.backend.settlement.repository.PartnerBalanceSummaryRepository;
+
+import lombok.RequiredArgsConstructor;
+
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 @Service
 @Transactional
+@RequiredArgsConstructor
 public class PartnerBalanceService {
 	private final PartnerBalanceSummaryRepository balanceRepository;
 	private final BusinessPartnerReader partnerReader;
-
-	public PartnerBalanceService(
-		PartnerBalanceSummaryRepository balanceRepository,
-		BusinessPartnerReader partnerReader
-	) {
-		this.balanceRepository = balanceRepository;
-		this.partnerReader = partnerReader;
-	}
 
 	public void updateReceivable(Long partnerId, Long receivableBalance, PartnerPaymentEvent lastPaymentEvent) {
 		var summary = findOrCreate(partnerId);

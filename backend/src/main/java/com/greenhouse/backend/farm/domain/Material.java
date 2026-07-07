@@ -7,7 +7,12 @@ import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import lombok.AccessLevel;
 
+@Getter
+@NoArgsConstructor(access = AccessLevel.PROTECTED)
 @Entity
 @Table(name = "materials")
 public class Material extends BaseEntity {
@@ -43,20 +48,16 @@ public class Material extends BaseEntity {
 	@Column(name = "is_active", nullable = false)
 	private boolean active;
 
-	protected Material() {
-	}
-
 	public Material(
-		String code,
-		String category,
-		String name,
-		String manufacturer,
-		String specification,
-		String stockQuantity,
-		String storageLocation,
-		String usage,
-		boolean active
-	) {
+			String code,
+			String category,
+			String name,
+			String manufacturer,
+			String specification,
+			String stockQuantity,
+			String storageLocation,
+			String usage,
+			boolean active) {
 		this.code = code;
 		this.category = category;
 		this.name = name;
@@ -69,14 +70,13 @@ public class Material extends BaseEntity {
 	}
 
 	public void update(
-		String category,
-		String name,
-		String manufacturer,
-		String specification,
-		String stockQuantity,
-		String storageLocation,
-		String usage
-	) {
+			String category,
+			String name,
+			String manufacturer,
+			String specification,
+			String stockQuantity,
+			String storageLocation,
+			String usage) {
 		this.category = category;
 		this.name = name;
 		this.manufacturer = manufacturer;
@@ -88,45 +88,5 @@ public class Material extends BaseEntity {
 
 	public void deactivate() {
 		this.active = false;
-	}
-
-	public Long getId() {
-		return id;
-	}
-
-	public String getCode() {
-		return code;
-	}
-
-	public String getCategory() {
-		return category;
-	}
-
-	public String getName() {
-		return name;
-	}
-
-	public String getManufacturer() {
-		return manufacturer;
-	}
-
-	public String getSpecification() {
-		return specification;
-	}
-
-	public String getStockQuantity() {
-		return stockQuantity;
-	}
-
-	public String getStorageLocation() {
-		return storageLocation;
-	}
-
-	public String getUsage() {
-		return usage;
-	}
-
-	public boolean isActive() {
-		return active;
 	}
 }

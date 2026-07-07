@@ -14,9 +14,15 @@ import jakarta.persistence.ManyToOne;
 import jakarta.persistence.OneToMany;
 import jakarta.persistence.OrderBy;
 import jakarta.persistence.Table;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import lombok.AccessLevel;
+
 import java.util.ArrayList;
 import java.util.List;
 
+@Getter
+@NoArgsConstructor(access = AccessLevel.PROTECTED)
 @Entity
 @Table(name = "bed_zones")
 public class BedZone extends BaseEntity {
@@ -57,9 +63,6 @@ public class BedZone extends BaseEntity {
 	@OrderBy("sortOrder ASC")
 	private List<BedZoneSegment> segments = new ArrayList<>();
 
-	protected BedZone() {
-	}
-
 	public BedZone(String name, BedZoneSide side, Integer sortOrder) {
 		this.name = name;
 		this.side = side;
@@ -72,46 +75,8 @@ public class BedZone extends BaseEntity {
 		this.physicalBed = physicalBed;
 	}
 
-	public Long getId() {
-		return id;
-	}
-
-	public PhysicalBed getPhysicalBed() {
-		return physicalBed;
-	}
-
-	public String getName() {
-		return name;
-	}
-
-	public BedZoneSide getSide() {
-		return side;
-	}
-
-	public BedZoneType getZoneType() {
-		return zoneType;
-	}
-
-	public Integer getSortOrder() {
-		return sortOrder;
-	}
-
-	public Boolean getActive() {
-		return active;
-	}
-
-	public String getMemo() {
-		return memo;
-	}
-
-	public List<OrchidGroup> getOrchidGroups() {
-		return orchidGroups;
-	}
-
 	public void addSegment(BedZoneSegment segment) {
 		segments.add(segment);
 		segment.setBedZone(this);
 	}
-
-	public List<BedZoneSegment> getSegments() { return segments; }
 }

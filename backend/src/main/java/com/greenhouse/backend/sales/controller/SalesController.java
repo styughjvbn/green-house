@@ -9,6 +9,8 @@ import com.greenhouse.backend.sales.dto.SalesSlipCreateRequest;
 import com.greenhouse.backend.sales.dto.SalesSlipResponse;
 import com.greenhouse.backend.settlement.dto.ManualPaymentRequest;
 import jakarta.validation.Valid;
+import lombok.RequiredArgsConstructor;
+
 import java.time.LocalDate;
 import java.util.List;
 import org.springframework.http.HttpStatus;
@@ -23,28 +25,18 @@ import org.springframework.web.bind.annotation.RestController;
 
 @RestController
 @RequestMapping("/api")
+@RequiredArgsConstructor
 public class SalesController {
 
 	private final SalesQueryService salesQueryService;
 	private final SalesSlipCreationService salesSlipCreationService;
 	private final SalesPaymentService salesPaymentService;
 
-	public SalesController(
-		SalesQueryService salesQueryService,
-		SalesSlipCreationService salesSlipCreationService,
-		SalesPaymentService salesPaymentService
-	) {
-		this.salesQueryService = salesQueryService;
-		this.salesSlipCreationService = salesSlipCreationService;
-		this.salesPaymentService = salesPaymentService;
-	}
-
 	@GetMapping("/sales-slips")
 	public ApiResponse<List<SalesSlipResponse>> getSalesSlips(
-		@RequestParam(required = false) Long partnerId,
-		@RequestParam(required = false) LocalDate from,
-		@RequestParam(required = false) LocalDate to
-	) {
+			@RequestParam(required = false) Long partnerId,
+			@RequestParam(required = false) LocalDate from,
+			@RequestParam(required = false) LocalDate to) {
 		return ApiResponse.ok(salesQueryService.getSalesSlips(partnerId, from, to));
 	}
 
@@ -66,9 +58,8 @@ public class SalesController {
 
 	@PostMapping("/sales-slips/{salesSlipId}/confirm-payment")
 	public ApiResponse<SalesSlipResponse> confirmPayment(
-		@PathVariable Long salesSlipId,
-		@Valid @RequestBody ManualPaymentRequest request
-	) {
+			@PathVariable Long salesSlipId,
+			@Valid @RequestBody ManualPaymentRequest request) {
 		return ApiResponse.ok(salesPaymentService.confirmPayment(salesSlipId, request));
 	}
 }

@@ -10,8 +10,14 @@ import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import lombok.AccessLevel;
+
 import java.time.LocalDate;
 
+@Getter
+@NoArgsConstructor(access = AccessLevel.PROTECTED)
 @Entity
 @Table(name = "work_records")
 public class WorkRecord extends BaseEntity {
@@ -55,20 +61,16 @@ public class WorkRecord extends BaseEntity {
 	@Column(columnDefinition = "text")
 	private String memo;
 
-	protected WorkRecord() {
-	}
-
 	public WorkRecord(
-		WorkType workTypeRef,
-		LocalDate workDate,
-		String targetType,
-		Long targetId,
-		String materialName,
-		String dilutionRatio,
-		String quantity,
-		String worker,
-		String memo
-	) {
+			WorkType workTypeRef,
+			LocalDate workDate,
+			String targetType,
+			Long targetId,
+			String materialName,
+			String dilutionRatio,
+			String quantity,
+			String worker,
+			String memo) {
 		this.workTypeRef = workTypeRef;
 		this.workType = workTypeRef.getName();
 		this.workDate = workDate;
@@ -82,78 +84,24 @@ public class WorkRecord extends BaseEntity {
 	}
 
 	public static WorkRecord movement(
-		WorkType movementType,
-		Long orchidGroupId,
-		Long fromBedZoneId,
-		Long toBedZoneId,
-		String worker,
-		String memo
-	) {
+			WorkType movementType,
+			Long orchidGroupId,
+			Long fromBedZoneId,
+			Long toBedZoneId,
+			String worker,
+			String memo) {
 		WorkRecord workRecord = new WorkRecord(
-			movementType,
-			LocalDate.now(),
-			"ORCHID_GROUP",
-			orchidGroupId,
-			null,
-			null,
-			null,
-			worker,
-			memo
-		);
+				movementType,
+				LocalDate.now(),
+				"ORCHID_GROUP",
+				orchidGroupId,
+				null,
+				null,
+				null,
+				worker,
+				memo);
 		workRecord.fromBedZoneId = fromBedZoneId;
 		workRecord.toBedZoneId = toBedZoneId;
 		return workRecord;
-	}
-
-	public Long getId() {
-		return id;
-	}
-
-	public String getWorkType() {
-		return workType;
-	}
-
-	public WorkType getWorkTypeRef() {
-		return workTypeRef;
-	}
-
-	public LocalDate getWorkDate() {
-		return workDate;
-	}
-
-	public String getTargetType() {
-		return targetType;
-	}
-
-	public Long getTargetId() {
-		return targetId;
-	}
-
-	public Long getFromBedZoneId() {
-		return fromBedZoneId;
-	}
-
-	public Long getToBedZoneId() {
-		return toBedZoneId;
-	}
-
-	public String getMaterialName() {
-		return materialName;
-	}
-
-	public String getDilutionRatio() {
-		return dilutionRatio;
-	}
-
-	public String getQuantity() {
-		return quantity;
-	}
-
-	public String getWorker() {
-		return worker;
-	}
-
-	public String getMemo() {
-		return memo;
 	}
 }

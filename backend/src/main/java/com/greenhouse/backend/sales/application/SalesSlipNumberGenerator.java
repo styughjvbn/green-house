@@ -2,17 +2,17 @@ package com.greenhouse.backend.sales.application;
 
 import com.greenhouse.backend.sales.domain.SalesType;
 import com.greenhouse.backend.sales.repository.SalesSlipRepository;
+
+import lombok.RequiredArgsConstructor;
+
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 import org.springframework.stereotype.Component;
 
 @Component
+@RequiredArgsConstructor
 public class SalesSlipNumberGenerator {
 	private final SalesSlipRepository salesSlipRepository;
-
-	public SalesSlipNumberGenerator(SalesSlipRepository salesSlipRepository) {
-		this.salesSlipRepository = salesSlipRepository;
-	}
 
 	public String generate(LocalDate saleDate, SalesType salesType) {
 		long sequence = salesSlipRepository.countBySaleDate(saleDate) + 1;

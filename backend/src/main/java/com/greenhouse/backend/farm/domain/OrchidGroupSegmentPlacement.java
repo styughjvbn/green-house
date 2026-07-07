@@ -12,8 +12,14 @@ import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import lombok.AccessLevel;
+
 import java.time.LocalDate;
 
+@Getter
+@NoArgsConstructor(access = AccessLevel.PROTECTED)
 @Entity
 @Table(name = "orchid_group_segment_placements")
 public class OrchidGroupSegmentPlacement extends BaseEntity {
@@ -46,10 +52,8 @@ public class OrchidGroupSegmentPlacement extends BaseEntity {
 	@Column(columnDefinition = "text")
 	private String memo;
 
-	protected OrchidGroupSegmentPlacement() {
-	}
-
-	public OrchidGroupSegmentPlacement(BedZoneSegment segment, Integer quantity, Integer trayCount, PlacementCapacityMode placementMode, LocalDate reorganizeDueDate, String memo) {
+	public OrchidGroupSegmentPlacement(BedZoneSegment segment, Integer quantity, Integer trayCount,
+			PlacementCapacityMode placementMode, LocalDate reorganizeDueDate, String memo) {
 		this.segment = segment;
 		this.quantity = quantity;
 		this.trayCount = trayCount;
@@ -58,13 +62,7 @@ public class OrchidGroupSegmentPlacement extends BaseEntity {
 		this.memo = memo;
 	}
 
-	void setOrchidGroup(OrchidGroup orchidGroup) { this.orchidGroup = orchidGroup; }
-	public Long getId() { return id; }
-	public OrchidGroup getOrchidGroup() { return orchidGroup; }
-	public BedZoneSegment getSegment() { return segment; }
-	public Integer getQuantity() { return quantity; }
-	public Integer getTrayCount() { return trayCount; }
-	public PlacementCapacityMode getPlacementMode() { return placementMode; }
-	public LocalDate getReorganizeDueDate() { return reorganizeDueDate; }
-	public String getMemo() { return memo; }
+	void setOrchidGroup(OrchidGroup orchidGroup) {
+		this.orchidGroup = orchidGroup;
+	}
 }

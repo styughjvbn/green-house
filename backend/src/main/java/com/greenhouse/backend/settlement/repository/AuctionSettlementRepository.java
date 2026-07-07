@@ -13,21 +13,23 @@ import org.springframework.data.repository.query.Param;
 public interface AuctionSettlementRepository extends JpaRepository<AuctionSettlement, Long> {
 	Optional<AuctionSettlement> findByAuctionHouseIdAndAuctionDate(Long auctionHouseId, LocalDate auctionDate);
 
-	@EntityGraph(attributePaths = {"auctionHouse", "lines", "lines.auctionResultLine", "lines.auctionShipmentLot", "lines.auctionShipmentLot.shipment"})
+	@EntityGraph(attributePaths = { "auctionHouse", "lines", "lines.auctionResultLine", "lines.auctionShipmentLot",
+			"lines.auctionShipmentLot.shipment" })
 	@Query("""
-		select distinct settlement from AuctionSettlement settlement
-		where (:auctionHouseId is null or settlement.auctionHouse.id = :auctionHouseId)
-		  and (:fromDate is null or settlement.auctionDate >= :fromDate)
-		  and (:toDate is null or settlement.auctionDate <= :toDate)
-		  and (:status is null or settlement.status = :status)
-		order by settlement.auctionDate desc, settlement.id desc
-		""")
+			select distinct settlement from AuctionSettlement settlement
+			where (:auctionHouseId is null or settlement.auctionHouse.id = :auctionHouseId)
+			  and (:fromDate is null or settlement.auctionDate >= :fromDate)
+			  and (:toDate is null or settlement.auctionDate <= :toDate)
+			  and (:status is null or settlement.status = :status)
+			order by settlement.auctionDate desc, settlement.id desc
+			""")
 	List<AuctionSettlement> search(
-		@Param("auctionHouseId") Long auctionHouseId,
-		@Param("fromDate") LocalDate from,
-		@Param("toDate") LocalDate to,
-		@Param("status") AuctionSettlementStatus status);
+			@Param("auctionHouseId") Long auctionHouseId,
+			@Param("fromDate") LocalDate from,
+			@Param("toDate") LocalDate to,
+			@Param("status") AuctionSettlementStatus status);
 
-	@EntityGraph(attributePaths = {"auctionHouse", "lines", "lines.auctionResultLine", "lines.auctionShipmentLot", "lines.auctionShipmentLot.shipment"})
+	@EntityGraph(attributePaths = { "auctionHouse", "lines", "lines.auctionResultLine", "lines.auctionShipmentLot",
+			"lines.auctionShipmentLot.shipment" })
 	Optional<AuctionSettlement> findWithDetailsById(Long id);
 }

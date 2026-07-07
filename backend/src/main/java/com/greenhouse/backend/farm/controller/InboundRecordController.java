@@ -11,6 +11,8 @@ import com.greenhouse.backend.farm.dto.InboundRecordPottingRequest;
 import com.greenhouse.backend.farm.dto.InboundRecordResponse;
 import com.greenhouse.backend.farm.dto.InboundRecordUpdateRequest;
 import jakarta.validation.Valid;
+import lombok.RequiredArgsConstructor;
+
 import java.time.LocalDate;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.DeleteMapping;
@@ -26,25 +28,22 @@ import org.springframework.web.bind.annotation.RestController;
 
 @RestController
 @RequestMapping("/api/inbound-records")
+@RequiredArgsConstructor
 public class InboundRecordController {
 
 	private final InboundRecordService inboundRecordService;
 
-	public InboundRecordController(InboundRecordService inboundRecordService) {
-		this.inboundRecordService = inboundRecordService;
-	}
-
 	@GetMapping
 	public ApiResponse<InboundRecordPageResponse> getInboundRecords(
-		@RequestParam(required = false) LocalDate from,
-		@RequestParam(required = false) LocalDate to,
-		@RequestParam(required = false) InboundType inboundType,
-		@RequestParam(required = false) InboundStatus status,
-		@RequestParam(required = false) String variety,
-		@RequestParam(defaultValue = "0") int page,
-		@RequestParam(defaultValue = "10") int size
-	) {
-		return ApiResponse.ok(inboundRecordService.getInboundRecords(from, to, inboundType, status, variety, page, size));
+			@RequestParam(required = false) LocalDate from,
+			@RequestParam(required = false) LocalDate to,
+			@RequestParam(required = false) InboundType inboundType,
+			@RequestParam(required = false) InboundStatus status,
+			@RequestParam(required = false) String variety,
+			@RequestParam(defaultValue = "0") int page,
+			@RequestParam(defaultValue = "10") int size) {
+		return ApiResponse
+				.ok(inboundRecordService.getInboundRecords(from, to, inboundType, status, variety, page, size));
 	}
 
 	@GetMapping("/{inboundRecordId}")
@@ -60,29 +59,25 @@ public class InboundRecordController {
 
 	@PatchMapping("/{inboundRecordId}")
 	public ApiResponse<InboundRecordResponse> update(
-		@PathVariable Long inboundRecordId,
-		@Valid @RequestBody InboundRecordUpdateRequest request
-	) {
+			@PathVariable Long inboundRecordId,
+			@Valid @RequestBody InboundRecordUpdateRequest request) {
 		return ApiResponse.ok(inboundRecordService.update(inboundRecordId, request));
 	}
 
 	@PostMapping("/{inboundRecordId}/potting")
 	public ApiResponse<InboundRecordResponse> potting(
-		@PathVariable Long inboundRecordId,
-		@Valid @RequestBody InboundRecordPottingRequest request
-	) {
+			@PathVariable Long inboundRecordId,
+			@Valid @RequestBody InboundRecordPottingRequest request) {
 		return ApiResponse.ok(inboundRecordService.potting(inboundRecordId, request));
 	}
 
 	@PostMapping("/{inboundRecordId}/cancel")
 	public ApiResponse<InboundRecordResponse> cancel(
-		@PathVariable Long inboundRecordId,
-		@RequestBody(required = false) InboundRecordCancelRequest request
-	) {
+			@PathVariable Long inboundRecordId,
+			@RequestBody(required = false) InboundRecordCancelRequest request) {
 		return ApiResponse.ok(inboundRecordService.cancel(
-			inboundRecordId,
-			request == null ? new InboundRecordCancelRequest(null) : request
-		));
+				inboundRecordId,
+				request == null ? new InboundRecordCancelRequest(null) : request));
 	}
 
 	@DeleteMapping("/{inboundRecordId}")

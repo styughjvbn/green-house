@@ -6,8 +6,7 @@ import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
 
 public record WorkTypeUpdateRequest(
-	@NotBlank @Size(max = 50) String name,
-	@NotNull WorkTypeTemplate template,
-	boolean active
-) {
+		@NotBlank @Size(max = 50) String name,
+		@NotNull WorkTypeTemplate template,
+		boolean active) {
 }

@@ -10,12 +10,17 @@ import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import lombok.AccessLevel;
 import jakarta.persistence.CascadeType;
 import jakarta.persistence.OneToMany;
 import jakarta.persistence.OrderBy;
 import java.util.ArrayList;
 import java.util.List;
 
+@Getter
+@NoArgsConstructor(access = AccessLevel.PROTECTED)
 @Entity
 @Table(name = "orchid_groups")
 public class OrchidGroup extends BaseEntity {
@@ -72,19 +77,15 @@ public class OrchidGroup extends BaseEntity {
 	@OrderBy("id ASC")
 	private List<OrchidGroupSegmentPlacement> segmentPlacements = new ArrayList<>();
 
-	protected OrchidGroup() {
-	}
-
 	public OrchidGroup(
-		BedZone bedZone,
-		String genus,
-		String varietyName,
-		Integer quantity,
-		String potSize,
-		Integer ageYear,
-		String status,
-		Integer sortOrder
-	) {
+			BedZone bedZone,
+			String genus,
+			String varietyName,
+			Integer quantity,
+			String potSize,
+			Integer ageYear,
+			String status,
+			Integer sortOrder) {
 		this.bedZone = bedZone;
 		this.genus = genus;
 		this.varietyName = varietyName;
@@ -97,17 +98,16 @@ public class OrchidGroup extends BaseEntity {
 	}
 
 	public void updateDetails(
-		String genus,
-		String varietyName,
-		Integer quantity,
-		String potSize,
-		Integer ageYear,
-		String status,
-		String placementType,
-		Integer trayCount,
-		Boolean splitPlacementAllowed,
-		String memo
-	) {
+			String genus,
+			String varietyName,
+			Integer quantity,
+			String potSize,
+			Integer ageYear,
+			String status,
+			String placementType,
+			Integer trayCount,
+			Boolean splitPlacementAllowed,
+			String memo) {
 		this.genus = genus;
 		this.varietyName = varietyName;
 		this.quantity = quantity;
@@ -133,71 +133,11 @@ public class OrchidGroup extends BaseEntity {
 		this.inboundRecord = inboundRecord;
 	}
 
-	public Long getId() {
-		return id;
-	}
-
-	public BedZone getBedZone() {
-		return bedZone;
-	}
-
-	public Variety getVariety() {
-		return variety;
-	}
-
-	public InboundRecord getInboundRecord() {
-		return inboundRecord;
-	}
-
-	public String getGenus() {
-		return genus;
-	}
-
-	public String getVarietyName() {
-		return varietyName;
-	}
-
-	public Integer getQuantity() {
-		return quantity;
-	}
-
-	public String getPotSize() {
-		return potSize;
-	}
-
-	public Integer getAgeYear() {
-		return ageYear;
-	}
-
-	public String getStatus() {
-		return status;
-	}
-
-	public String getPlacementType() {
-		return placementType;
-	}
-
-	public Integer getTrayCount() {
-		return trayCount;
-	}
-
-	public Boolean getSplitPlacementAllowed() { return Boolean.TRUE.equals(splitPlacementAllowed); }
-
 	public void replaceSegmentPlacements(List<OrchidGroupSegmentPlacement> placements) {
 		segmentPlacements.clear();
 		placements.forEach(placement -> {
 			segmentPlacements.add(placement);
 			placement.setOrchidGroup(this);
 		});
-	}
-
-	public List<OrchidGroupSegmentPlacement> getSegmentPlacements() { return segmentPlacements; }
-
-	public Integer getSortOrder() {
-		return sortOrder;
-	}
-
-	public String getMemo() {
-		return memo;
 	}
 }

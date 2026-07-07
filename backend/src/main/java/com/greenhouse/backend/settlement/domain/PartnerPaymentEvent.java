@@ -14,19 +14,23 @@ import jakarta.persistence.Index;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import lombok.AccessLevel;
+
 import java.time.LocalDate;
 import java.time.LocalTime;
 import java.util.Map;
 import org.hibernate.annotations.JdbcTypeCode;
 import org.hibernate.type.SqlTypes;
 
+@Getter
+@NoArgsConstructor(access = AccessLevel.PROTECTED)
 @Entity
-@Table(
-	name = "partner_payment_events",
-	indexes = {
+@Table(name = "partner_payment_events", indexes = {
 		@Index(name = "idx_partner_payment_partner_date", columnList = "partner_id,event_date"),
 		@Index(name = "idx_partner_payment_target", columnList = "target_type,target_id")
-	})
+})
 public class PartnerPaymentEvent extends BaseEntity {
 	@Id
 	@GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -101,23 +105,20 @@ public class PartnerPaymentEvent extends BaseEntity {
 	@Column(name = "created_by")
 	private String createdBy;
 
-	protected PartnerPaymentEvent() { }
-
 	private PartnerPaymentEvent(
-		BusinessPartner partner,
-		PaymentEventType eventType,
-		LocalDate eventDate,
-		Long amount,
-		PaymentTargetType targetType,
-		Long targetId,
-		PartnerPaymentEvent parentEvent,
-		String paymentMethod,
-		String depositorName,
-		String description,
-		PaymentEventStatus status,
-		String memo,
-		String createdBy
-	) {
+			BusinessPartner partner,
+			PaymentEventType eventType,
+			LocalDate eventDate,
+			Long amount,
+			PaymentTargetType targetType,
+			Long targetId,
+			PartnerPaymentEvent parentEvent,
+			String paymentMethod,
+			String depositorName,
+			String description,
+			PaymentEventStatus status,
+			String memo,
+			String createdBy) {
 		this.partner = partner;
 		this.eventType = eventType;
 		this.eventDate = eventDate;
@@ -135,42 +136,25 @@ public class PartnerPaymentEvent extends BaseEntity {
 	}
 
 	public static PartnerPaymentEvent received(
-		BusinessPartner partner,
-		LocalDate eventDate,
-		Long amount,
-		PaymentTargetType targetType,
-		Long targetId,
-		String paymentMethod,
-		String depositorName,
-		String memo,
-		String createdBy
-	) {
+			BusinessPartner partner,
+			LocalDate eventDate,
+			Long amount,
+			PaymentTargetType targetType,
+			Long targetId,
+			String paymentMethod,
+			String depositorName,
+			String memo,
+			String createdBy) {
 		return new PartnerPaymentEvent(
-			partner, PaymentEventType.PAYMENT_RECEIVED, eventDate, amount, targetType, targetId, null,
-			paymentMethod, depositorName, "수동 입금 확인", PaymentEventStatus.FULLY_APPLIED, memo, createdBy);
+				partner, PaymentEventType.PAYMENT_RECEIVED, eventDate, amount, targetType, targetId, null,
+				paymentMethod, depositorName, "수동 입금 확인", PaymentEventStatus.FULLY_APPLIED, memo, createdBy);
 	}
 
 	public static PartnerPaymentEvent manualMatch(PartnerPaymentEvent receivedEvent) {
 		return new PartnerPaymentEvent(
-			receivedEvent.partner, PaymentEventType.MANUAL_MATCH_CONFIRMED, receivedEvent.eventDate,
-			receivedEvent.amount, receivedEvent.targetType, receivedEvent.targetId, receivedEvent,
-			receivedEvent.paymentMethod, receivedEvent.depositorName, "수동 입금 연결",
-			PaymentEventStatus.CONFIRMED, receivedEvent.memo, receivedEvent.createdBy);
+				receivedEvent.partner, PaymentEventType.MANUAL_MATCH_CONFIRMED, receivedEvent.eventDate,
+				receivedEvent.amount, receivedEvent.targetType, receivedEvent.targetId, receivedEvent,
+				receivedEvent.paymentMethod, receivedEvent.depositorName, "수동 입금 연결",
+				PaymentEventStatus.CONFIRMED, receivedEvent.memo, receivedEvent.createdBy);
 	}
-
-	public Long getId() { return id; }
-	public BusinessPartner getPartner() { return partner; }
-	public PaymentEventType getEventType() { return eventType; }
-	public LocalDate getEventDate() { return eventDate; }
-	public Long getAmount() { return amount; }
-	public Long getUnappliedAmount() { return unappliedAmount; }
-	public PaymentTargetType getTargetType() { return targetType; }
-	public Long getTargetId() { return targetId; }
-	public PartnerPaymentEvent getParentEvent() { return parentEvent; }
-	public String getPaymentMethod() { return paymentMethod; }
-	public String getDepositorName() { return depositorName; }
-	public String getDescription() { return description; }
-	public PaymentEventStatus getStatus() { return status; }
-	public String getMemo() { return memo; }
-	public String getCreatedBy() { return createdBy; }
 }

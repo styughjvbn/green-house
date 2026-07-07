@@ -11,7 +11,12 @@ import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import lombok.AccessLevel;
 
+@Getter
+@NoArgsConstructor(access = AccessLevel.PROTECTED)
 @Entity
 @Table(name = "sales_slip_items")
 public class SalesSlipItem {
@@ -51,19 +56,15 @@ public class SalesSlipItem {
 	@Column(columnDefinition = "text")
 	private String memo;
 
-	protected SalesSlipItem() {
-	}
-
 	public SalesSlipItem(
-		OrchidGroup orchidGroup,
-		AuctionShipmentLot auctionShipmentLot,
-		String itemName,
-		String genus,
-		String spec,
-		Integer quantity,
-		Integer unitPrice,
-		String memo
-	) {
+			OrchidGroup orchidGroup,
+			AuctionShipmentLot auctionShipmentLot,
+			String itemName,
+			String genus,
+			String spec,
+			Integer quantity,
+			Integer unitPrice,
+			String memo) {
 		this.orchidGroup = orchidGroup;
 		this.auctionShipmentLot = auctionShipmentLot;
 		this.itemName = itemName;
@@ -77,45 +78,5 @@ public class SalesSlipItem {
 
 	void setSalesSlip(SalesSlip salesSlip) {
 		this.salesSlip = salesSlip;
-	}
-
-	public Long getId() {
-		return id;
-	}
-
-	public OrchidGroup getOrchidGroup() {
-		return orchidGroup;
-	}
-
-	public AuctionShipmentLot getAuctionShipmentLot() {
-		return auctionShipmentLot;
-	}
-
-	public String getItemName() {
-		return itemName;
-	}
-
-	public String getGenus() {
-		return genus;
-	}
-
-	public String getSpec() {
-		return spec;
-	}
-
-	public Integer getQuantity() {
-		return quantity;
-	}
-
-	public Integer getUnitPrice() {
-		return unitPrice;
-	}
-
-	public Integer getAmount() {
-		return amount;
-	}
-
-	public String getMemo() {
-		return memo;
 	}
 }

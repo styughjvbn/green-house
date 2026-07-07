@@ -17,6 +17,10 @@ import jakarta.persistence.ManyToOne;
 import jakarta.persistence.OneToMany;
 import jakarta.persistence.Table;
 import jakarta.persistence.UniqueConstraint;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import lombok.AccessLevel;
+
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
@@ -26,13 +30,11 @@ import java.util.Set;
 import org.hibernate.annotations.JdbcTypeCode;
 import org.hibernate.type.SqlTypes;
 
+@Getter
+@NoArgsConstructor(access = AccessLevel.PROTECTED)
 @Entity
-@Table(
-	name = "auction_settlements",
-	uniqueConstraints = @UniqueConstraint(
-		name = "uk_auction_settlement_house_date",
-		columnNames = {"auction_house_id", "auction_date"})
-)
+@Table(name = "auction_settlements", uniqueConstraints = @UniqueConstraint(name = "uk_auction_settlement_house_date", columnNames = {
+		"auction_house_id", "auction_date" }))
 public class AuctionSettlement extends BaseEntity {
 	@Id
 	@GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -89,8 +91,6 @@ public class AuctionSettlement extends BaseEntity {
 	@OneToMany(mappedBy = "settlement", cascade = CascadeType.ALL, orphanRemoval = true)
 	private List<AuctionSettlementLine> lines = new ArrayList<>();
 
-	protected AuctionSettlement() { }
-
 	public AuctionSettlement(BusinessPartner auctionHouse, LocalDate auctionDate) {
 		this.auctionHouse = auctionHouse;
 		this.auctionDate = auctionDate;
@@ -108,20 +108,23 @@ public class AuctionSettlement extends BaseEntity {
 		Set<Long> resultIds = new HashSet<>(resultLines.stream().map(AuctionResultLine::getId).toList());
 		lines.removeIf(line -> !resultIds.contains(line.getAuctionResultLine().getId()));
 		Set<Long> existingIds = new HashSet<>(lines.stream()
-			.map(line -> line.getAuctionResultLine().getId())
-			.toList());
+				.map(line -> line.getAuctionResultLine().getId())
+				.toList());
 		resultLines.stream()
-			.filter(line -> !existingIds.contains(line.getId()))
-			.map(AuctionSettlementLine::new)
-			.forEach(this::addLine);
+				.filter(line -> !existingIds.contains(line.getId()))
+				.map(AuctionSettlementLine::new)
+				.forEach(this::addLine);
 
 		grossAmount = lines.stream().mapToLong(AuctionSettlementLine::getAmount).sum();
 		expectedDepositAmount = Math.max(0L, grossAmount - feeAmount - deductionAmount);
 		remainingAmount = Math.max(0L, expectedDepositAmount - paidAmount);
 		resultReceivedAt = LocalDateTime.now();
-		if (paidAmount > 0 && remainingAmount > 0) status = AuctionSettlementStatus.PARTIALLY_PAID;
-		else if (paidAmount > 0 && remainingAmount == 0) status = AuctionSettlementStatus.PAID;
-		else status = lines.isEmpty() ? AuctionSettlementStatus.CREATED : AuctionSettlementStatus.PAYMENT_WAITING;
+		if (paidAmount > 0 && remainingAmount > 0)
+			status = AuctionSettlementStatus.PARTIALLY_PAID;
+		else if (paidAmount > 0 && remainingAmount == 0)
+			status = AuctionSettlementStatus.PAID;
+		else
+			status = lines.isEmpty() ? AuctionSettlementStatus.CREATED : AuctionSettlementStatus.PAYMENT_WAITING;
 	}
 
 	public void updateExpectedPaymentDate(LocalDate expectedPaymentDate) {
@@ -129,8 +132,10 @@ public class AuctionSettlement extends BaseEntity {
 	}
 
 	public void recordPayment(Long amount, String worker) {
-		if (amount <= 0) throw new IllegalArgumentException("입금액은 0원보다 커야 합니다.");
-		if (amount > remainingAmount) throw new IllegalArgumentException("입금액은 현재 잔액을 초과할 수 없습니다.");
+		if (amount <= 0)
+			throw new IllegalArgumentException("입금액은 0원보다 커야 합니다.");
+		if (amount > remainingAmount)
+			throw new IllegalArgumentException("입금액은 현재 잔액을 초과할 수 없습니다.");
 		this.paidAmount += amount;
 		this.remainingAmount = Math.max(0L, expectedDepositAmount - paidAmount);
 		this.status = remainingAmount == 0 ? AuctionSettlementStatus.PAID : AuctionSettlementStatus.PARTIALLY_PAID;
@@ -142,21 +147,4 @@ public class AuctionSettlement extends BaseEntity {
 		line.setSettlement(this);
 		lines.add(line);
 	}
-
-	public Long getId() { return id; }
-	public BusinessPartner getAuctionHouse() { return auctionHouse; }
-	public LocalDate getAuctionDate() { return auctionDate; }
-	public LocalDateTime getResultReceivedAt() { return resultReceivedAt; }
-	public LocalDate getExpectedPaymentDate() { return expectedPaymentDate; }
-	public Long getGrossAmount() { return grossAmount; }
-	public Long getFeeAmount() { return feeAmount; }
-	public Long getDeductionAmount() { return deductionAmount; }
-	public Long getExpectedDepositAmount() { return expectedDepositAmount; }
-	public Long getPaidAmount() { return paidAmount; }
-	public Long getRemainingAmount() { return remainingAmount; }
-	public AuctionSettlementStatus getStatus() { return status; }
-	public String getMemo() { return memo; }
-	public LocalDateTime getConfirmedAt() { return confirmedAt; }
-	public String getConfirmedBy() { return confirmedBy; }
-	public List<AuctionSettlementLine> getLines() { return lines; }
 }

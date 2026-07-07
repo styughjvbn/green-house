@@ -5,50 +5,47 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 
 public record VarietyResponse(
-	Long id,
-	String code,
-	String genus,
-	String name,
-	String alias,
-	String defaultPotSize,
-	boolean saleEnabled,
-	boolean active,
-	String description,
-	String memo,
-	long connectedGroupCount,
-	long totalQuantity,
-	long saleableQuantity,
-	LocalDate recentInboundDate,
-	LocalDate recentWorkDate,
-	LocalDateTime createdAt,
-	LocalDateTime updatedAt
-) {
-	public static VarietyResponse from(
-		Variety variety,
+		Long id,
+		String code,
+		String genus,
+		String name,
+		String alias,
+		String defaultPotSize,
+		boolean saleEnabled,
+		boolean active,
+		String description,
+		String memo,
 		long connectedGroupCount,
 		long totalQuantity,
 		long saleableQuantity,
 		LocalDate recentInboundDate,
-		LocalDate recentWorkDate
-	) {
+		LocalDate recentWorkDate,
+		LocalDateTime createdAt,
+		LocalDateTime updatedAt) {
+	public static VarietyResponse from(
+			Variety variety,
+			long connectedGroupCount,
+			long totalQuantity,
+			long saleableQuantity,
+			LocalDate recentInboundDate,
+			LocalDate recentWorkDate) {
 		return new VarietyResponse(
-			variety.getId(),
-			variety.getCode(),
-			variety.getGenus(),
-			variety.getName(),
-			variety.getAlias(),
-			variety.getDefaultPotSize(),
-			variety.isSaleEnabled(),
-			variety.isActive(),
-			variety.getDescription(),
-			variety.getMemo(),
-			connectedGroupCount,
-			totalQuantity,
-			saleableQuantity,
-			recentInboundDate,
-			recentWorkDate,
-			variety.getCreatedAt(),
-			variety.getUpdatedAt()
-		);
+				variety.getId(),
+				variety.getCode(),
+				variety.getGenus(),
+				variety.getName(),
+				variety.getAlias(),
+				variety.getDefaultPotSize(),
+				variety.isSaleEnabled(),
+				variety.isActive(),
+				variety.getDescription(),
+				variety.getMemo(),
+				connectedGroupCount,
+				totalQuantity,
+				saleableQuantity,
+				recentInboundDate,
+				recentWorkDate,
+				variety.getCreatedAt(),
+				variety.getUpdatedAt());
 	}
 }

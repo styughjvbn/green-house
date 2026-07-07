@@ -20,24 +20,24 @@ public class CorsConfig implements WebMvcConfigurer {
 	@Override
 	public void addCorsMappings(CorsRegistry registry) {
 		registry.addMapping("/api/**")
-			.allowedOriginPatterns(frontendOriginPatterns)
-			.allowedMethods("GET", "POST", "PATCH", "DELETE", "OPTIONS")
-			.allowedHeaders("*")
-			.allowCredentials(false)
-			.maxAge(3600);
+				.allowedOriginPatterns(frontendOriginPatterns)
+				.allowedMethods("GET", "POST", "PATCH", "DELETE", "OPTIONS")
+				.allowedHeaders("*")
+				.allowCredentials(false)
+				.maxAge(3600);
 		registry.addMapping("/actuator/**")
-			.allowedOriginPatterns(frontendOriginPatterns)
-			.allowedMethods("GET", "OPTIONS")
-			.allowedHeaders("*")
-			.allowCredentials(false)
-			.maxAge(3600);
+				.allowedOriginPatterns(frontendOriginPatterns)
+				.allowedMethods("GET", "OPTIONS")
+				.allowedHeaders("*")
+				.allowCredentials(false)
+				.maxAge(3600);
 	}
 
 	private String[] parseOrigins(String origins) {
 		List<String> parsedOrigins = Arrays.stream(origins.split(","))
-			.map(String::trim)
-			.filter(origin -> !origin.isBlank())
-			.toList();
+				.map(String::trim)
+				.filter(origin -> !origin.isBlank())
+				.toList();
 
 		return parsedOrigins.toArray(String[]::new);
 	}

@@ -11,10 +11,16 @@ import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.OneToOne;
 import jakarta.persistence.Table;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import lombok.AccessLevel;
+
 import java.util.Map;
 import org.hibernate.annotations.JdbcTypeCode;
 import org.hibernate.type.SqlTypes;
 
+@Getter
+@NoArgsConstructor(access = AccessLevel.PROTECTED)
 @Entity
 @Table(name = "partner_balance_summaries")
 public class PartnerBalanceSummary extends BaseEntity {
@@ -35,6 +41,7 @@ public class PartnerBalanceSummary extends BaseEntity {
 	@Column(name = "receivable_balance", nullable = false)
 	private Long receivableBalance;
 
+	@Getter(AccessLevel.NONE)
 	@OneToOne(fetch = FetchType.LAZY)
 	@JoinColumn(name = "last_payment_event_id")
 	private PartnerPaymentEvent lastPaymentEvent;
@@ -42,8 +49,6 @@ public class PartnerBalanceSummary extends BaseEntity {
 	@JdbcTypeCode(SqlTypes.JSON)
 	@Column(name = "summary_json", columnDefinition = "jsonb")
 	private Map<String, Object> summaryJson;
-
-	protected PartnerBalanceSummary() { }
 
 	public PartnerBalanceSummary(BusinessPartner partner) {
 		this.partner = partner;
@@ -54,12 +59,7 @@ public class PartnerBalanceSummary extends BaseEntity {
 
 	public void updateReceivableBalance(Long receivableBalance, PartnerPaymentEvent lastPaymentEvent) {
 		this.receivableBalance = Math.max(0L, receivableBalance);
-		if (lastPaymentEvent != null) this.lastPaymentEvent = lastPaymentEvent;
+		if (lastPaymentEvent != null)
+			this.lastPaymentEvent = lastPaymentEvent;
 	}
-
-	public Long getId() { return id; }
-	public BusinessPartner getPartner() { return partner; }
-	public Long getCreditBalance() { return creditBalance; }
-	public Long getUnappliedPaymentAmount() { return unappliedPaymentAmount; }
-	public Long getReceivableBalance() { return receivableBalance; }
 }

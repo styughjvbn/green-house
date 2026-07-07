@@ -9,16 +9,16 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
 public interface PartnerPaymentEventRepository extends JpaRepository<PartnerPaymentEvent, Long> {
-	@EntityGraph(attributePaths = {"partner", "parentEvent"})
+	@EntityGraph(attributePaths = { "partner", "parentEvent" })
 	@Query("""
-		select event from PartnerPaymentEvent event
-		where (:partnerId is null or event.partner.id = :partnerId)
-		  and (:targetType is null or event.targetType = :targetType)
-		  and (:targetId is null or event.targetId = :targetId)
-		order by event.eventDate desc, event.id desc
-		""")
+			select event from PartnerPaymentEvent event
+			where (:partnerId is null or event.partner.id = :partnerId)
+			  and (:targetType is null or event.targetType = :targetType)
+			  and (:targetId is null or event.targetId = :targetId)
+			order by event.eventDate desc, event.id desc
+			""")
 	List<PartnerPaymentEvent> search(
-		@Param("partnerId") Long partnerId,
-		@Param("targetType") PaymentTargetType targetType,
-		@Param("targetId") Long targetId);
+			@Param("partnerId") Long partnerId,
+			@Param("targetType") PaymentTargetType targetType,
+			@Param("targetId") Long targetId);
 }

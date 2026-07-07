@@ -14,6 +14,9 @@ import com.greenhouse.backend.farm.repository.HouseRepository;
 import com.greenhouse.backend.farm.repository.MaterialRepository;
 import com.greenhouse.backend.farm.repository.OrchidGroupRepository;
 import com.greenhouse.backend.farm.repository.VarietyRepository;
+
+import lombok.RequiredArgsConstructor;
+
 import java.util.ArrayList;
 import java.util.List;
 import org.springframework.boot.CommandLineRunner;
@@ -21,6 +24,7 @@ import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
 @Component
+@RequiredArgsConstructor
 public class FarmSeedDataInitializer implements CommandLineRunner {
 
 	private final HouseRepository houseRepository;
@@ -28,20 +32,6 @@ public class FarmSeedDataInitializer implements CommandLineRunner {
 	private final OrchidGroupRepository orchidGroupRepository;
 	private final VarietyRepository varietyRepository;
 	private final MaterialRepository materialRepository;
-
-	public FarmSeedDataInitializer(
-		HouseRepository houseRepository,
-		BedZoneRepository bedZoneRepository,
-		OrchidGroupRepository orchidGroupRepository,
-		VarietyRepository varietyRepository,
-		MaterialRepository materialRepository
-	) {
-		this.houseRepository = houseRepository;
-		this.bedZoneRepository = bedZoneRepository;
-		this.orchidGroupRepository = orchidGroupRepository;
-		this.varietyRepository = varietyRepository;
-		this.materialRepository = materialRepository;
-	}
 
 	@Override
 	@Transactional
@@ -59,8 +49,8 @@ public class FarmSeedDataInitializer implements CommandLineRunner {
 		}
 
 		bedZoneRepository.findAll().stream()
-			.filter(zone -> zone.getSegments().isEmpty())
-			.forEach(this::addDefaultSegments);
+				.filter(zone -> zone.getSegments().isEmpty())
+				.forEach(this::addDefaultSegments);
 	}
 
 	private void addDefaultSegments(BedZone zone) {
@@ -88,17 +78,16 @@ public class FarmSeedDataInitializer implements CommandLineRunner {
 
 	private void seedSampleOrchidGroups() {
 		BedZone sampleZone = bedZoneRepository.findSeedZone(3, 2, BedZoneSide.LEFT)
-			.orElseThrow(() -> new IllegalStateException("Sample seed zone was not created."));
+				.orElseThrow(() -> new IllegalStateException("Sample seed zone was not created."));
 
 		if (varietyRepository.count() == 0) {
 			varietyRepository.saveAll(List.of(
-				new Variety("VAR-0001", "카틀레야", "카틀레야 A", null, "4치", true, true, "대표 카틀레야 품종", null),
-				new Variety("VAR-0002", "카틀레야", "카틀레야 B", null, "5치", true, true, "개화 관리 품종", null),
-				new Variety("VAR-0003", "덴드로비움", "덴드로비움 C", null, "3.5치", true, true, "초기 생육 품종", null)
-			));
+					new Variety("VAR-0001", "카틀레야", "카틀레야 A", null, "4치", true, true, "대표 카틀레야 품종", null),
+					new Variety("VAR-0002", "카틀레야", "카틀레야 B", null, "5치", true, true, "개화 관리 품종", null),
+					new Variety("VAR-0003", "덴드로비움", "덴드로비움 C", null, "3.5치", true, true, "초기 생육 품종", null)));
 		}
 		var varieties = varietyRepository.findAll().stream()
-			.collect(java.util.stream.Collectors.toMap(Variety::getName, variety -> variety));
+				.collect(java.util.stream.Collectors.toMap(Variety::getName, variety -> variety));
 
 		var groupA = new OrchidGroup(sampleZone, "카틀레야", "카틀레야 A", 120, "4치", 2, "정상", 1);
 		groupA.assignVariety(varieties.get("카틀레야 A"));
@@ -111,9 +100,8 @@ public class FarmSeedDataInitializer implements CommandLineRunner {
 
 	private void seedSampleMaterials() {
 		materialRepository.saveAll(List.of(
-			new Material("MAT-0001", "농약", "응애 약제", "그린팜", "500ml", "2병", "창고 A", "해충 관리 희석 사용", true),
-			new Material("MAT-0002", "비료", "개화 비료", "농원케어", "1kg", "3포", "창고 B", "개화기 주기 사용", true),
-			new Material("MAT-0003", "자재", "20구 트레이", "원예자재", "20구", "12개", "선반 C", "포트 작업용", true)
-		));
+				new Material("MAT-0001", "농약", "응애 약제", "그린팜", "500ml", "2병", "창고 A", "해충 관리 희석 사용", true),
+				new Material("MAT-0002", "비료", "개화 비료", "농원케어", "1kg", "3포", "창고 B", "개화기 주기 사용", true),
+				new Material("MAT-0003", "자재", "20구 트레이", "원예자재", "20구", "12개", "선반 C", "포트 작업용", true)));
 	}
 }
