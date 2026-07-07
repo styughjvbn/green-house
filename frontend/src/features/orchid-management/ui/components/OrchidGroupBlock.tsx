@@ -75,7 +75,7 @@ export default function OrchidGroupBlock({
             orchidGroup.ageYear ? `${orchidGroup.ageYear}년생` : null,
           ]
             .filter(Boolean)
-            .join(" · ")}
+            .join(" / ")}
         </p>
       ) : null}
     </div>

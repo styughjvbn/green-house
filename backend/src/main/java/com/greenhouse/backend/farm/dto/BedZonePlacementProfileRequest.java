@@ -5,5 +5,5 @@ import jakarta.validation.constraints.NotEmpty;
 import java.util.List;
 
 public record BedZonePlacementProfileRequest(
-		@NotEmpty List<@Valid BedZoneSegmentRequest> segments) {
+		@NotEmpty List<@Valid BedZoneCapacityRequest> capacities) {
 }

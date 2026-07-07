@@ -3,21 +3,13 @@ package com.greenhouse.backend;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
-import com.greenhouse.backend.common.exception.CapacityConflictException;
-import com.greenhouse.backend.farm.application.BedPlacementProfileService;
 import com.greenhouse.backend.farm.application.OrchidGroupCommandService;
-import com.greenhouse.backend.farm.domain.PlacementCapacityMode;
-import com.greenhouse.backend.farm.dto.BedZoneCapacityRequest;
-import com.greenhouse.backend.farm.dto.BedZonePlacementProfileRequest;
-import com.greenhouse.backend.farm.dto.BedZoneSegmentRequest;
-import com.greenhouse.backend.farm.dto.OrchidGroupMovePlacementRequest;
 import com.greenhouse.backend.farm.dto.OrchidGroupMoveRequest;
 import com.greenhouse.backend.farm.dto.OrchidGroupUpdateRequest;
 import com.greenhouse.backend.farm.repository.BedZoneRepository;
 import com.greenhouse.backend.farm.repository.OrchidGroupRepository;
 import com.greenhouse.backend.work.repository.WorkRecordRepository;
 import java.math.BigDecimal;
-import java.util.List;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -33,7 +25,6 @@ class BedPlacementTests {
 	@Autowired BedZoneRepository bedZoneRepository;
 	@Autowired OrchidGroupRepository orchidGroupRepository;
 	@Autowired WorkRecordRepository workRecordRepository;
-	@Autowired BedPlacementProfileService profileService;
 	@Autowired OrchidGroupCommandService commandService;
 
 	private Long groupId;
@@ -44,133 +35,60 @@ class BedPlacementTests {
 		var group = orchidGroupRepository.findAll().getFirst();
 		groupId = group.getId();
 		commandService.update(groupId, new OrchidGroupUpdateRequest(
-			group.getVariety().getId(), group.getQuantity(), group.getPotSize(), group.getAgeYear(),
-			group.getStatus(), "TRAY_20", 8, true, group.getMemo()
-		));
+				group.getVariety().getId(),
+				group.getQuantity(),
+				group.getPotSize(),
+				group.getAgeYear(),
+				group.getStatus(),
+				group.getPlacementType(),
+				group.getTrayCount(),
+				group.getSplitPlacementAllowed(),
+				group.getStartPosition(),
+				group.getEndPosition(),
+				group.getMemo()));
 		targetZoneId = bedZoneRepository.findAll().stream()
-			.filter(zone -> zone.getOrchidGroups().isEmpty())
-			.findFirst()
-			.orElseThrow()
-			.getId();
-		configureTarget(4);
+				.filter(zone -> zone.getOrchidGroups().isEmpty())
+				.findFirst()
+				.orElseThrow()
+				.getId();
 	}
 
 	@Test
-	void acceptsPreciseSplitPlacementAtStandardMode() {
-		var profile = profileService.getProfile(targetZoneId);
-		Long first = profile.segments().getFirst().id();
-		Long second = profile.segments().get(1).id();
-
+	void movesWithDirectPositionRange() {
 		var moved = commandService.move(groupId, new OrchidGroupMoveRequest(
-			targetZoneId,
-			PlacementCapacityMode.STANDARD,
-			List.of(
-				new OrchidGroupMovePlacementRequest(first, 60, 4),
-				new OrchidGroupMovePlacementRequest(second, 60, 4)
-			),
-			null,
-			null,
-			"정밀 배치"
-		));
+				targetZoneId,
+				BigDecimal.ZERO,
+				BigDecimal.valueOf(8),
+				null,
+				"직접 배치"));
 
 		assertThat(moved.bedZoneId()).isEqualTo(targetZoneId);
-		assertThat(moved.segmentPlacements()).hasSize(2);
-		assertThat(moved.segmentPlacements()).extracting(item -> item.trayCount()).containsExactly(4, 4);
+		assertThat(moved.startPosition()).isEqualTo(BigDecimal.ZERO.setScale(2));
+		assertThat(moved.endPosition()).isEqualTo(BigDecimal.valueOf(8).setScale(2));
 	}
 
 	@Test
-	void rejectsMoveThatExceedsSegmentCapacity() {
-		Long segmentId = profileService.getProfile(targetZoneId).segments().getFirst().id();
-
+	void rejectsInvalidPositionRange() {
 		assertThatThrownBy(() -> commandService.move(groupId, new OrchidGroupMoveRequest(
-			targetZoneId,
-			PlacementCapacityMode.STANDARD,
-			List.of(new OrchidGroupMovePlacementRequest(segmentId, 120, 8)),
-			null,
-			null,
-			null
-		))).isInstanceOf(CapacityConflictException.class);
+				targetZoneId,
+				BigDecimal.valueOf(10),
+				BigDecimal.valueOf(8),
+				null,
+				null)))
+				.isInstanceOf(IllegalArgumentException.class);
 	}
 
 	@Test
-	void temporaryPlacementRequiresReorganizeDate() {
-		Long first = profileService.getProfile(targetZoneId).segments().getFirst().id();
-		Long second = profileService.getProfile(targetZoneId).segments().get(1).id();
-
-		assertThatThrownBy(() -> commandService.move(groupId, new OrchidGroupMoveRequest(
-			targetZoneId,
-			PlacementCapacityMode.TEMPORARY,
-			List.of(
-				new OrchidGroupMovePlacementRequest(first, 60, 4),
-				new OrchidGroupMovePlacementRequest(second, 60, 4)
-			),
-			null,
-			null,
-			null
-		))).isInstanceOf(IllegalArgumentException.class);
-	}
-
-	@Test
-	void confirmsPreciseMoveAndCreatesMovementRecord() {
-		var profile = profileService.getProfile(targetZoneId);
-		Long first = profile.segments().getFirst().id();
-		Long second = profile.segments().get(1).id();
+	void createsMovementRecordWhenZoneChanges() {
 		long before = workRecordRepository.count();
 
-		var moved = commandService.move(groupId, new OrchidGroupMoveRequest(
-			targetZoneId,
-			PlacementCapacityMode.STANDARD,
-			List.of(
-				new OrchidGroupMovePlacementRequest(first, 60, 4),
-				new OrchidGroupMovePlacementRequest(second, 60, 4)
-			),
-			null,
-			"관리자",
-			"정밀 배치"
-		));
+		commandService.move(groupId, new OrchidGroupMoveRequest(
+				targetZoneId,
+				BigDecimal.ZERO,
+				BigDecimal.valueOf(8),
+				"관리자",
+				"이동"));
 
-		assertThat(moved.bedZoneId()).isEqualTo(targetZoneId);
-		assertThat(moved.segmentPlacements()).hasSize(2);
 		assertThat(workRecordRepository.count()).isEqualTo(before + 1);
-	}
-
-	private void configureTarget(int capacity) {
-		var profile = profileService.getProfile(targetZoneId);
-		var segments = profile.segments().stream().map(segment -> new BedZoneSegmentRequest(
-			segment.id(),
-			segment.name(),
-			segment.segmentType(),
-			segment.sortOrder(),
-			segment.startPosition(),
-			segment.endPosition(),
-			segment.memo(),
-			segment.sortOrder() <= 2
-				? List.of(
-					new BedZoneCapacityRequest(
-						"TRAY_20",
-						null,
-						PlacementCapacityMode.STANDARD,
-						capacity,
-						spanOf(segment),
-						true,
-						null
-					),
-					new BedZoneCapacityRequest(
-						"TRAY_20",
-						null,
-						PlacementCapacityMode.TEMPORARY,
-						capacity,
-						spanOf(segment),
-						true,
-						null
-					)
-				)
-				: List.of()
-		)).toList();
-		profileService.updateProfile(targetZoneId, new BedZonePlacementProfileRequest(segments));
-	}
-
-	private BigDecimal spanOf(com.greenhouse.backend.farm.dto.BedZoneSegmentResponse segment) {
-		return segment.endPosition().subtract(segment.startPosition());
 	}
 }

@@ -21,7 +21,7 @@ public interface BedZoneRepository extends JpaRepository<BedZone, Long> {
 			""")
 	List<BedZone> findByHouseId(@Param("houseId") Long houseId);
 
-	@EntityGraph(attributePaths = { "physicalBed", "physicalBed.house", "orchidGroups" })
+	@EntityGraph(attributePaths = { "physicalBed", "physicalBed.house", "orchidGroups", "capacities" })
 	Optional<BedZone> findWithDetailsById(Long id);
 
 	@Query("""

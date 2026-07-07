@@ -1,15 +1,11 @@
 "use client";
 
-import type {
-  BedZonePlacementProfile,
-  PhysicalBed,
-} from "@/entities/farm/types";
+import type { PhysicalBed } from "@/entities/farm/types";
 import type { DragState, OrchidSelection } from "../../model/types";
 import BedZoneBlock from "./BedZoneBlock";
 
 export default function PhysicalBedBlock({
   bed,
-  profiles,
   dragState,
   placementEditMode,
   saving,
@@ -22,7 +18,6 @@ export default function PhysicalBedBlock({
   onSelectOrchidGroup,
 }: {
   bed: PhysicalBed;
-  profiles: Record<number, BedZonePlacementProfile>;
   dragState: DragState;
   placementEditMode: boolean;
   saving: boolean;
@@ -44,7 +39,6 @@ export default function PhysicalBedBlock({
             dragState={dragState}
             maxPosition={bed.positionUnitCount}
             placementEditMode={placementEditMode}
-            profile={profiles[zone.id] ?? null}
             saving={saving}
             zone={zone}
             selected={

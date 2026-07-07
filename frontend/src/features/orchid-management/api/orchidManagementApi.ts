@@ -1,12 +1,12 @@
 import { API_BASE_URL, fetchApi } from "@/shared/api/client";
 import type {
+  BedZonePlacementProfile,
   FarmStatusMapData,
   House,
+  VarietyOption,
   WorkRecord,
   WorkRecordTargetType,
   WorkType,
-  BedZonePlacementProfile,
-  VarietyOption,
 } from "@/entities/farm/types";
 import type {
   MutationPayload,
@@ -93,7 +93,7 @@ export async function saveBedZonePlacementProfile(
     {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ segments: profile.segments }),
+      body: JSON.stringify({ capacities: profile.capacities }),
     },
   );
   const body = await readJson(response);
@@ -186,7 +186,7 @@ export async function fetchHouse(houseId: number): Promise<House> {
   const payload = await readJson(response);
   if (!response.ok) {
     throw new Error(
-      resolveErrorMessage(payload, "목적 동을 불러오지 못했습니다."),
+      resolveErrorMessage(payload, "대상 동을 불러오지 못했습니다."),
     );
   }
   return (payload as { data: House }).data;

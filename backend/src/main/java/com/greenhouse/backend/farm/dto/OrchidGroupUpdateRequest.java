@@ -4,6 +4,8 @@ import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
+import jakarta.validation.constraints.DecimalMin;
+import java.math.BigDecimal;
 
 public record OrchidGroupUpdateRequest(
 		@NotNull Long varietyId,
@@ -14,5 +16,7 @@ public record OrchidGroupUpdateRequest(
 		@Size(max = 50) String placementType,
 		@Min(0) Integer trayCount,
 		Boolean splitPlacementAllowed,
+		@DecimalMin(value = "0.0") BigDecimal startPosition,
+		@DecimalMin(value = "0.0", inclusive = false) BigDecimal endPosition,
 		@Size(max = 1000) String memo) {
 }

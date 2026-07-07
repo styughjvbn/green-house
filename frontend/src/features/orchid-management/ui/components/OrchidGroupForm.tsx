@@ -52,6 +52,12 @@ export default function OrchidGroupForm({
     placementType: initialValue?.placementType ?? "",
     trayCount: initialValue?.trayCount ? String(initialValue.trayCount) : "",
     splitPlacementAllowed: initialValue?.splitPlacementAllowed ?? false,
+    startPosition:
+      initialValue?.startPosition != null
+        ? String(initialValue.startPosition)
+        : "",
+    endPosition:
+      initialValue?.endPosition != null ? String(initialValue.endPosition) : "",
     memo: initialValue?.memo ?? "",
   }));
 
@@ -88,6 +94,8 @@ export default function OrchidGroupForm({
       placementType: nullableText(form.placementType),
       trayCount: nullableNumber(form.trayCount),
       splitPlacementAllowed: form.splitPlacementAllowed,
+      startPosition: nullableNumber(form.startPosition),
+      endPosition: nullableNumber(form.endPosition),
       memo: nullableText(form.memo),
     });
   }
@@ -130,8 +138,8 @@ export default function OrchidGroupForm({
         <div className="rounded-md border border-[#dbe1da] bg-[#f8faf7] px-3 py-2 text-xs text-[#435047]">
           <p className="font-semibold">선택 품종</p>
           <p className="mt-1">
-            {form.varietyName || "선택 안됨"}
-            {form.genus ? ` · ${form.genus}` : ""}
+            {form.varietyName || "선택 안 됨"}
+            {form.genus ? ` / ${form.genus}` : ""}
           </p>
         </div>
         <div className="grid grid-cols-2 gap-2">
@@ -143,7 +151,7 @@ export default function OrchidGroupForm({
             onChange={(value) => updateField("quantity", value)}
           />
           <TextField
-            label="년생"
+            label="연생"
             type="number"
             value={form.ageYear}
             onChange={(value) => updateField("ageYear", value)}
@@ -170,6 +178,20 @@ export default function OrchidGroupForm({
           </label>
         </div>
         <div className="grid grid-cols-2 gap-2">
+          <TextField
+            label="시작 위치"
+            type="number"
+            value={form.startPosition}
+            onChange={(value) => updateField("startPosition", value)}
+          />
+          <TextField
+            label="종료 위치"
+            type="number"
+            value={form.endPosition}
+            onChange={(value) => updateField("endPosition", value)}
+          />
+        </div>
+        <div className="grid grid-cols-2 gap-2">
           <label className="block">
             <span className="text-sm font-semibold text-[#435047]">
               배치 규격
@@ -187,16 +209,16 @@ export default function OrchidGroupForm({
               }
             >
               <option value="">선택</option>
-              <option value="TRAY_15">15구 판</option>
-              <option value="TRAY_20">20구 판</option>
-              <option value="TRAY_24">24구 판</option>
+              <option value="TRAY_15">15구 트레이</option>
+              <option value="TRAY_20">20구 트레이</option>
+              <option value="TRAY_24">24구 트레이</option>
               <option value="SINGLE_POT">단독 화분</option>
               <option value="HANGING">행잉</option>
               <option value="CUSTOM">기타</option>
             </select>
           </label>
           <TextField
-            label="판/점유 단위 수"
+            label="판 수"
             required={usesTrayUnits(form.placementType)}
             type="number"
             value={form.trayCount}
@@ -222,7 +244,7 @@ export default function OrchidGroupForm({
               updateField("splitPlacementAllowed", event.target.checked)
             }
           />
-          여러 구간에 나누어 배치 가능
+          여러 구간으로 나눠 배치 가능
         </label>
         <label className="block">
           <span className="text-sm font-semibold text-[#435047]">메모</span>
@@ -237,7 +259,7 @@ export default function OrchidGroupForm({
           disabled={saving || !targetZone || !form.varietyId}
           type="submit"
         >
-          {saving ? "저장 중" : "저장"}
+          {saving ? "저장 중..." : "저장"}
         </button>
       </form>
     </section>

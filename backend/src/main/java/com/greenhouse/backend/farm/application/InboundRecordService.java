@@ -166,7 +166,9 @@ public class InboundRecordService {
 				firstNonBlank(request.potSize(), inboundRecord.getPotSize()),
 				request.ageYear(),
 				DEFAULT_ORCHID_STATUS,
-				orchidGroupRepository.findMaxSortOrderByBedZoneId(bedZone.getId()) + 1);
+				orchidGroupRepository.findMaxSortOrderByBedZoneId(bedZone.getId()) + 1,
+				null,
+				null);
 		orchidGroup.updateDetails(
 				inboundRecord.getVariety().getGenus(),
 				inboundRecord.getVariety().getName(),
@@ -177,6 +179,8 @@ public class InboundRecordService {
 				normalize(request.placementType()),
 				request.trayCount(),
 				false,
+				null,
+				null,
 				normalize(request.memo()));
 		orchidGroup.assignVariety(inboundRecord.getVariety());
 		orchidGroup.assignInboundRecord(inboundRecord);
@@ -310,7 +314,9 @@ public class InboundRecordService {
 				normalize(request.potSize()),
 				request.ageYear(),
 				DEFAULT_ORCHID_STATUS,
-				orchidGroupRepository.findMaxSortOrderByBedZoneId(bedZone.getId()) + 1);
+				orchidGroupRepository.findMaxSortOrderByBedZoneId(bedZone.getId()) + 1,
+				null,
+				null);
 		orchidGroup.updateDetails(
 				variety.getGenus(),
 				variety.getName(),
@@ -321,6 +327,8 @@ public class InboundRecordService {
 				normalize(request.placementType()),
 				request.trayCount(),
 				false,
+				null,
+				null,
 				normalize(request.memo()));
 		return orchidGroup;
 	}

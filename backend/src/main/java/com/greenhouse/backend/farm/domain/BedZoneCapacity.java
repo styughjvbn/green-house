@@ -12,24 +12,24 @@ import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
+import java.math.BigDecimal;
+import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
-import lombok.AccessLevel;
-import java.math.BigDecimal;
 
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 @Entity
-@Table(name = "bed_zone_segment_capacities")
-public class BedZoneSegmentCapacity extends BaseEntity {
+@Table(name = "bed_zone_capacities")
+public class BedZoneCapacity extends BaseEntity {
 
 	@Id
 	@GeneratedValue(strategy = GenerationType.IDENTITY)
 	private Long id;
 
 	@ManyToOne(fetch = FetchType.LAZY, optional = false)
-	@JoinColumn(name = "bed_zone_segment_id", nullable = false)
-	private BedZoneSegment segment;
+	@JoinColumn(name = "bed_zone_id", nullable = false)
+	private BedZone bedZone;
 
 	@Column(name = "placement_type", nullable = false, length = 100)
 	private String placementType;
@@ -41,11 +41,11 @@ public class BedZoneSegmentCapacity extends BaseEntity {
 	@Column(name = "capacity_mode", nullable = false, length = 20)
 	private PlacementCapacityMode capacityMode;
 
+	@Column(name = "unit_span", precision = 6, scale = 2, nullable = false)
+	private BigDecimal unitSpan;
+
 	@Column(name = "capacity_value", nullable = false)
 	private Integer capacityValue;
-
-	@Column(name = "unit_span", precision = 6, scale = 2)
-	private BigDecimal unitSpan;
 
 	@Column(name = "is_allowed", nullable = false)
 	private Boolean allowed;
@@ -53,18 +53,24 @@ public class BedZoneSegmentCapacity extends BaseEntity {
 	@Column(columnDefinition = "text")
 	private String memo;
 
-	public BedZoneSegmentCapacity(String placementType, String potSize, PlacementCapacityMode capacityMode,
-			Integer capacityValue, BigDecimal unitSpan, Boolean allowed, String memo) {
+	public BedZoneCapacity(
+			String placementType,
+			String potSize,
+			PlacementCapacityMode capacityMode,
+			BigDecimal unitSpan,
+			Integer capacityValue,
+			Boolean allowed,
+			String memo) {
 		this.placementType = placementType;
 		this.potSize = potSize;
 		this.capacityMode = capacityMode;
-		this.capacityValue = capacityValue;
 		this.unitSpan = unitSpan;
+		this.capacityValue = capacityValue;
 		this.allowed = allowed;
 		this.memo = memo;
 	}
 
-	void setSegment(BedZoneSegment segment) {
-		this.segment = segment;
+	void setBedZone(BedZone bedZone) {
+		this.bedZone = bedZone;
 	}
 }

@@ -1,6 +1,6 @@
 package com.greenhouse.backend.farm.dto;
 
-import com.greenhouse.backend.farm.domain.BedZoneSegmentCapacity;
+import com.greenhouse.backend.farm.domain.BedZoneCapacity;
 import com.greenhouse.backend.farm.domain.PlacementCapacityMode;
 import java.math.BigDecimal;
 
@@ -9,13 +9,19 @@ public record BedZoneCapacityResponse(
 		String placementType,
 		String potSize,
 		PlacementCapacityMode capacityMode,
-		Integer capacityValue,
 		BigDecimal unitSpan,
+		Integer capacityValue,
 		Boolean allowed,
 		String memo) {
-	public static BedZoneCapacityResponse from(BedZoneSegmentCapacity capacity) {
+	public static BedZoneCapacityResponse from(BedZoneCapacity capacity) {
 		return new BedZoneCapacityResponse(
-				capacity.getId(), capacity.getPlacementType(), capacity.getPotSize(), capacity.getCapacityMode(),
-				capacity.getCapacityValue(), capacity.getUnitSpan(), capacity.getAllowed(), capacity.getMemo());
+				capacity.getId(),
+				capacity.getPlacementType(),
+				capacity.getPotSize(),
+				capacity.getCapacityMode(),
+				capacity.getUnitSpan(),
+				capacity.getCapacityValue(),
+				capacity.getAllowed(),
+				capacity.getMemo());
 	}
 }

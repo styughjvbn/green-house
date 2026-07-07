@@ -20,6 +20,8 @@ import lombok.AccessLevel;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.LinkedHashSet;
+import java.util.Set;
 
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
@@ -60,8 +62,8 @@ public class BedZone extends BaseEntity {
 	private List<OrchidGroup> orchidGroups = new ArrayList<>();
 
 	@OneToMany(mappedBy = "bedZone", cascade = jakarta.persistence.CascadeType.ALL, orphanRemoval = true)
-	@OrderBy("sortOrder ASC")
-	private List<BedZoneSegment> segments = new ArrayList<>();
+	@OrderBy("capacityMode ASC")
+	private Set<BedZoneCapacity> capacities = new LinkedHashSet<>();
 
 	public BedZone(String name, BedZoneSide side, Integer sortOrder) {
 		this.name = name;
@@ -75,8 +77,13 @@ public class BedZone extends BaseEntity {
 		this.physicalBed = physicalBed;
 	}
 
-	public void addSegment(BedZoneSegment segment) {
-		segments.add(segment);
-		segment.setBedZone(this);
+	public void replaceCapacities(List<BedZoneCapacity> nextCapacities) {
+		capacities.clear();
+		nextCapacities.forEach(this::addCapacity);
+	}
+
+	public void addCapacity(BedZoneCapacity capacity) {
+		capacities.add(capacity);
+		capacity.setBedZone(this);
 	}
 }

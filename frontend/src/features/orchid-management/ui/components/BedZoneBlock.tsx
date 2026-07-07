@@ -1,23 +1,16 @@
 "use client";
 
 import type { DragEvent, PointerEvent } from "react";
-import type {
-  BedZone,
-  BedZonePlacementProfile,
-  BedZoneSegment,
-  OrchidGroup,
-} from "@/entities/farm/types";
+import type { BedZone } from "@/entities/farm/types";
 import type { DragState } from "../../model/types";
 import OrchidGroupBlock from "./OrchidGroupBlock";
 
 const MAP_HEIGHT = 420;
-const FALLBACK_SEGMENT_HEIGHT = 72;
 
 export default function BedZoneBlock({
   maxPosition,
   dragState,
   placementEditMode,
-  profile,
   saving,
   zone,
   selected,
@@ -32,7 +25,6 @@ export default function BedZoneBlock({
   maxPosition: number | null;
   dragState: DragState;
   placementEditMode: boolean;
-  profile: BedZonePlacementProfile | null;
   saving: boolean;
   zone: BedZone;
   selected: boolean;
@@ -45,11 +37,8 @@ export default function BedZoneBlock({
   onSelectOrchidGroup: (orchidGroupId: number) => void;
 }) {
   const dropActive = dragState?.overBedZoneId === zone.id;
-  const resolvedMaxPosition = resolveMaxPosition(
-    profile?.positionUnitCount ?? maxPosition,
-  );
+  const resolvedMaxPosition = maxPosition && maxPosition > 0 ? maxPosition : 28;
   const marks = buildMarks(resolvedMaxPosition);
-  const segments = resolveSegments(profile, resolvedMaxPosition, zone.side);
 
   function handleDragOver(event: DragEvent<HTMLDivElement>) {
     if (!placementEditMode || !dragState || saving) {
@@ -124,55 +113,31 @@ export default function BedZoneBlock({
             />
           ))}
 
-          {segments.map((segment, index) => {
-            const top = positionPercent(
-              segment.startPosition,
-              resolvedMaxPosition,
-            );
-            const bottom = positionPercent(
-              segment.endPosition,
-              resolvedMaxPosition,
-            );
-            const groups = groupsForSegment(
-              zone.orchidGroups,
-              segment,
-              segments,
-              index,
+          {zone.orchidGroups.map((orchidGroup) => {
+            const start = orchidGroup.startPosition ?? 0;
+            const end =
+              orchidGroup.endPosition ?? orchidGroup.startPosition ?? 0;
+            const top = toPercent(start, resolvedMaxPosition);
+            const height = Math.max(
+              toPercent(end, resolvedMaxPosition) - top,
+              12,
             );
 
             return (
               <div
-                key={segment.id ?? `${segment.name}-${index}`}
-                className="absolute inset-x-1 rounded-lg border border-transparent bg-transparent"
-                style={{
-                  top: `${top}%`,
-                  height: `${Math.max(bottom - top, minimumHeightPercent())}%`,
-                }}
+                key={orchidGroup.id}
+                className="absolute inset-x-1"
+                style={{ top: `${top}%`, height: `${height}%` }}
               >
-                <div className="h-full rounded-lg bg-[#f7faf7] px-2 py-2">
-                  <div className="rounded-lg bg-[#eef8ef] px-2 py-1 text-[#2f8a45] shadow-sm">
-                    <p className="text-sm font-bold">{segment.name}</p>
-                    <p className="mt-0.5 text-sm font-semibold text-[#4a5950]">
-                      {formatPosition(segment.startPosition)} -{" "}
-                      {formatPosition(segment.endPosition)}
-                    </p>
-                  </div>
-
-                  <div className="mt-2 flex flex-col gap-1">
-                    {groups.map((orchidGroup) => (
-                      <OrchidGroupBlock
-                        key={orchidGroup.id}
-                        compact
-                        draggable={placementEditMode && !saving}
-                        orchidGroup={orchidGroup}
-                        selected={selectedOrchidGroupId === orchidGroup.id}
-                        onDragEnd={onDragEnd}
-                        onDragStart={() => onDragStart(orchidGroup.id)}
-                        onSelect={() => onSelectOrchidGroup(orchidGroup.id)}
-                      />
-                    ))}
-                  </div>
-                </div>
+                <OrchidGroupBlock
+                  compact
+                  draggable={placementEditMode && !saving}
+                  orchidGroup={orchidGroup}
+                  selected={selectedOrchidGroupId === orchidGroup.id}
+                  onDragEnd={onDragEnd}
+                  onDragStart={() => onDragStart(orchidGroup.id)}
+                  onSelect={() => onSelectOrchidGroup(orchidGroup.id)}
+                />
               </div>
             );
           })}
@@ -188,10 +153,6 @@ export default function BedZoneBlock({
   );
 }
 
-function resolveMaxPosition(value: number | null) {
-  return value && value > 0 ? value : 28;
-}
-
 function buildMarks(maxPosition: number) {
   const step = maxPosition / 4;
   return [0, 1, 2, 3, 4].map((index) => {
@@ -203,64 +164,9 @@ function buildMarks(maxPosition: number) {
   });
 }
 
-function resolveSegments(
-  profile: BedZonePlacementProfile | null,
-  maxPosition: number,
-  side: BedZone["side"],
-) {
-  if (profile?.segments.length) {
-    return [...profile.segments].sort(
-      (a, b) => a.startPosition - b.startPosition || a.sortOrder - b.sortOrder,
-    );
+function toPercent(value: number, maxPosition: number) {
+  if (maxPosition === 0) {
+    return 0;
   }
-
-  return [
-    {
-      id: null,
-      name: `${side === "LEFT" ? "A" : "B"} 구간`,
-      segmentType: "CUSTOM" as const,
-      sortOrder: 1,
-      startPosition: 0,
-      endPosition: maxPosition,
-      memo: null,
-      capacities: [],
-    },
-  ];
-}
-
-function groupsForSegment(
-  orchidGroups: OrchidGroup[],
-  segment: BedZoneSegment,
-  segments: BedZoneSegment[],
-  segmentIndex: number,
-) {
-  const matched = orchidGroups.filter((orchidGroup) =>
-    orchidGroup.segmentPlacements.some(
-      (placement) => placement.segmentId === segment.id,
-    ),
-  );
-
-  if (matched.length > 0) {
-    return matched;
-  }
-
-  if (segments.length === 1 || segmentIndex > 0) {
-    return [];
-  }
-
-  return orchidGroups.filter(
-    (orchidGroup) => orchidGroup.segmentPlacements.length === 0,
-  );
-}
-
-function positionPercent(value: number, maxPosition: number) {
-  return maxPosition === 0 ? 0 : (value / maxPosition) * 100;
-}
-
-function minimumHeightPercent() {
-  return (FALLBACK_SEGMENT_HEIGHT / MAP_HEIGHT) * 100;
-}
-
-function formatPosition(value: number) {
-  return Number.isInteger(value) ? String(value) : value.toFixed(1);
+  return (value / maxPosition) * 100;
 }

@@ -5,6 +5,7 @@ import { MapPin } from "lucide-react";
 import type { House, OrchidGroup } from "@/entities/farm/types";
 import { findBedZone } from "../../lib/orchidManagementUtils";
 import type { PreciseMovePayload } from "../../model/types";
+import TextField from "./TextField";
 
 type DestinationOption = {
   bedZoneId: number;
@@ -27,6 +28,16 @@ export default function OrchidMovePanel({
   onMove: (payload: PreciseMovePayload) => Promise<void>;
 }) {
   const [selectedZoneId, setSelectedZoneId] = useState<number | null>(null);
+  const [startPosition, setStartPosition] = useState(
+    selectedOrchidGroup.startPosition != null
+      ? String(selectedOrchidGroup.startPosition)
+      : "",
+  );
+  const [endPosition, setEndPosition] = useState(
+    selectedOrchidGroup.endPosition != null
+      ? String(selectedOrchidGroup.endPosition)
+      : "",
+  );
   const [memo, setMemo] = useState("");
 
   const currentZone = findBedZone(house, selectedOrchidGroup.bedZoneId);
@@ -59,6 +70,8 @@ export default function OrchidMovePanel({
 
     void onMove({
       toBedZoneId: resolvedZoneId,
+      startPosition: toNullableNumber(startPosition),
+      endPosition: toNullableNumber(endPosition),
       memo,
     });
   }
@@ -109,6 +122,21 @@ export default function OrchidMovePanel({
           </select>
         </label>
 
+        <div className="grid grid-cols-2 gap-2">
+          <TextField
+            label="시작 위치"
+            type="number"
+            value={startPosition}
+            onChange={setStartPosition}
+          />
+          <TextField
+            label="종료 위치"
+            type="number"
+            value={endPosition}
+            onChange={setEndPosition}
+          />
+        </div>
+
         {resolvedZoneId ? (
           <div className="rounded-md border border-[#dce2dc] bg-[#fbfcfa] p-2 text-xs text-[#4a5650]">
             <div className="flex items-center gap-2 font-semibold text-[#17251b]">
@@ -139,7 +167,7 @@ export default function OrchidMovePanel({
           disabled={saving || !resolvedZoneId}
           type="submit"
         >
-          {saving ? "이동 중" : "이동 저장"}
+          {saving ? "이동 중..." : "이동 저장"}
         </button>
 
         {destinationOptions.length === 0 ? (
@@ -159,4 +187,9 @@ function InfoItem({ label, value }: { label: string; value: string }) {
       <strong className="mt-1 block text-[#27332b]">{value}</strong>
     </div>
   );
+}
+
+function toNullableNumber(value: string) {
+  const trimmed = value.trim();
+  return trimmed.length > 0 ? Number(trimmed) : null;
 }

@@ -17,6 +17,7 @@ import jakarta.persistence.CascadeType;
 import jakarta.persistence.OneToMany;
 import jakarta.persistence.OrderBy;
 import java.util.ArrayList;
+import java.math.BigDecimal;
 import java.util.List;
 
 @Getter
@@ -73,9 +74,11 @@ public class OrchidGroup extends BaseEntity {
 	@Column(columnDefinition = "text")
 	private String memo;
 
-	@OneToMany(mappedBy = "orchidGroup", cascade = CascadeType.ALL, orphanRemoval = true)
-	@OrderBy("id ASC")
-	private List<OrchidGroupSegmentPlacement> segmentPlacements = new ArrayList<>();
+	@Column(name = "start_position", precision = 6, scale = 2)
+	private BigDecimal startPosition;
+
+	@Column(name = "end_position", precision = 6, scale = 2)
+	private BigDecimal endPosition;
 
 	public OrchidGroup(
 			BedZone bedZone,
@@ -85,7 +88,9 @@ public class OrchidGroup extends BaseEntity {
 			String potSize,
 			Integer ageYear,
 			String status,
-			Integer sortOrder) {
+			Integer sortOrder,
+			BigDecimal startPosition,
+			BigDecimal endPosition) {
 		this.bedZone = bedZone;
 		this.genus = genus;
 		this.varietyName = varietyName;
@@ -95,6 +100,8 @@ public class OrchidGroup extends BaseEntity {
 		this.status = status;
 		this.sortOrder = sortOrder;
 		this.splitPlacementAllowed = false;
+		this.startPosition = startPosition;
+		this.endPosition = endPosition;
 	}
 
 	public void updateDetails(
@@ -107,6 +114,8 @@ public class OrchidGroup extends BaseEntity {
 			String placementType,
 			Integer trayCount,
 			Boolean splitPlacementAllowed,
+			BigDecimal startPosition,
+			BigDecimal endPosition,
 			String memo) {
 		this.genus = genus;
 		this.varietyName = varietyName;
@@ -117,12 +126,16 @@ public class OrchidGroup extends BaseEntity {
 		this.placementType = placementType;
 		this.trayCount = trayCount;
 		this.splitPlacementAllowed = Boolean.TRUE.equals(splitPlacementAllowed);
+		this.startPosition = startPosition;
+		this.endPosition = endPosition;
 		this.memo = memo;
 	}
 
-	public void moveTo(BedZone bedZone, Integer sortOrder) {
+	public void moveTo(BedZone bedZone, Integer sortOrder, BigDecimal startPosition, BigDecimal endPosition) {
 		this.bedZone = bedZone;
 		this.sortOrder = sortOrder;
+		this.startPosition = startPosition;
+		this.endPosition = endPosition;
 	}
 
 	public void assignVariety(Variety variety) {
@@ -135,13 +148,5 @@ public class OrchidGroup extends BaseEntity {
 
 	public void assignInboundRecord(InboundRecord inboundRecord) {
 		this.inboundRecord = inboundRecord;
-	}
-
-	public void replaceSegmentPlacements(List<OrchidGroupSegmentPlacement> placements) {
-		segmentPlacements.clear();
-		placements.forEach(placement -> {
-			segmentPlacements.add(placement);
-			placement.setOrchidGroup(this);
-		});
 	}
 }

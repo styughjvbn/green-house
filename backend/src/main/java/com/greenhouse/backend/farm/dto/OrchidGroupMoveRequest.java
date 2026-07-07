@@ -1,17 +1,14 @@
 package com.greenhouse.backend.farm.dto;
 
+import jakarta.validation.constraints.DecimalMin;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
-import jakarta.validation.Valid;
-import com.greenhouse.backend.farm.domain.PlacementCapacityMode;
-import java.time.LocalDate;
-import java.util.List;
+import java.math.BigDecimal;
 
 public record OrchidGroupMoveRequest(
 		@NotNull Long toBedZoneId,
-		PlacementCapacityMode placementMode,
-		List<@Valid OrchidGroupMovePlacementRequest> placements,
-		LocalDate reorganizeDueDate,
+		@DecimalMin(value = "0.0") BigDecimal startPosition,
+		@DecimalMin(value = "0.0", inclusive = false) BigDecimal endPosition,
 		@Size(max = 100) String worker,
 		@Size(max = 1000) String memo) {
 }

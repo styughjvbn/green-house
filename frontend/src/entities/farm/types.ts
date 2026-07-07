@@ -9,19 +9,6 @@ export type PlacementCapacityMode =
   | "COMPRESSED"
   | "TEMPORARY";
 
-export type BedZoneSegmentType = "START" | "MIDDLE" | "END" | "CUSTOM";
-
-export type OrchidGroupSegmentPlacement = {
-  id: number;
-  segmentId: number;
-  segmentName: string;
-  quantity: number;
-  trayCount: number | null;
-  placementMode: PlacementCapacityMode;
-  reorganizeDueDate: string | null;
-  memo: string | null;
-};
-
 export type OrchidGroup = {
   id: number;
   bedZoneId: number;
@@ -35,7 +22,8 @@ export type OrchidGroup = {
   placementType: string | null;
   trayCount: number | null;
   splitPlacementAllowed: boolean;
-  segmentPlacements: OrchidGroupSegmentPlacement[];
+  startPosition: number | null;
+  endPosition: number | null;
   sortOrder: number;
   memo: string | null;
   houseNumber: number;
@@ -51,7 +39,7 @@ export type VarietyOption = {
   active: boolean;
 };
 
-export type BedZoneSegmentCapacity = {
+export type BedZoneCapacity = {
   id: number | null;
   placementType: string;
   potSize: string | null;
@@ -62,17 +50,6 @@ export type BedZoneSegmentCapacity = {
   memo: string | null;
 };
 
-export type BedZoneSegment = {
-  id: number | null;
-  name: string;
-  segmentType: BedZoneSegmentType;
-  sortOrder: number;
-  startPosition: number;
-  endPosition: number;
-  memo: string | null;
-  capacities: BedZoneSegmentCapacity[];
-};
-
 export type BedZonePlacementProfile = {
   bedZoneId: number;
   bedZoneName: string;
@@ -80,8 +57,7 @@ export type BedZonePlacementProfile = {
   physicalBedNumber: number;
   positionUnitCount: number | null;
   positionUnitLabel: string | null;
-  hasUnassignedGroups: boolean;
-  segments: BedZoneSegment[];
+  capacities: BedZoneCapacity[];
 };
 
 export type BedZone = {

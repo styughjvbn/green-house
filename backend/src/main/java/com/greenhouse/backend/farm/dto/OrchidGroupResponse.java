@@ -1,6 +1,7 @@
 package com.greenhouse.backend.farm.dto;
 
 import com.greenhouse.backend.farm.domain.OrchidGroup;
+import java.math.BigDecimal;
 
 public record OrchidGroupResponse(
 		Long id,
@@ -15,7 +16,8 @@ public record OrchidGroupResponse(
 		String placementType,
 		Integer trayCount,
 		Boolean splitPlacementAllowed,
-		java.util.List<OrchidGroupSegmentPlacementResponse> segmentPlacements,
+		BigDecimal startPosition,
+		BigDecimal endPosition,
 		Integer sortOrder,
 		String memo,
 		Integer houseNumber,
@@ -40,7 +42,8 @@ public record OrchidGroupResponse(
 				orchidGroup.getPlacementType(),
 				orchidGroup.getTrayCount(),
 				orchidGroup.getSplitPlacementAllowed(),
-				orchidGroup.getSegmentPlacements().stream().map(OrchidGroupSegmentPlacementResponse::from).toList(),
+				orchidGroup.getStartPosition(),
+				orchidGroup.getEndPosition(),
 				orchidGroup.getSortOrder(),
 				orchidGroup.getMemo(),
 				house.getNumber(),
