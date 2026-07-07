@@ -276,9 +276,14 @@ export function SelectedZoneInfo({
       <div className="flex items-center justify-between gap-3">
         <p className="text-base font-semibold">선택한 구역 정보</p>
         {zone ? (
-          <span className="rounded-md bg-[#e6f0ff] px-2 py-1 text-sm font-semibold text-[#246df2]">
-            {zone.name}
-          </span>
+          <div className="flex items-center gap-2">
+            <span className="text-sm font-semibold text-[#5c6a60]">
+              {zone.houseNumber}동 {zone.physicalBedNumber}다이
+            </span>
+            <span className="rounded-md bg-[#e6f0ff] px-2 py-1 text-sm font-semibold text-[#246df2]">
+              {zone.name}
+            </span>
+          </div>
         ) : null}
       </div>
       {zone ? (

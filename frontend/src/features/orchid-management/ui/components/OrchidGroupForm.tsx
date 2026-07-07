@@ -110,6 +110,11 @@ export default function OrchidGroupForm({
           <h3 className="mt-1 text-base font-semibold">
             {targetZone?.name ?? "구역 선택 필요"}
           </h3>
+          {targetZone ? (
+            <p className="mt-1 text-xs font-semibold text-[#5c6a60]">
+              {targetZone.houseNumber}동 {targetZone.physicalBedNumber}배드
+            </p>
+          ) : null}
         </div>
         <button
           className="rounded-md border border-[#d7ddd4] px-2 py-1.5 text-xs font-semibold"
