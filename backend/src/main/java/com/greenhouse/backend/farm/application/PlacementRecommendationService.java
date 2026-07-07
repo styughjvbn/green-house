@@ -22,6 +22,8 @@ import com.greenhouse.backend.farm.repository.OrchidGroupSegmentPlacementReposit
 import lombok.RequiredArgsConstructor;
 
 import java.time.LocalDate;
+import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.HashSet;
@@ -108,7 +110,7 @@ public class PlacementRecommendationService {
 				.anyMatch(item -> !item.getId().equals(group.getId()) && item.getSegmentPlacements().isEmpty())) {
 			return unavailable(zone, "구간이 지정되지 않은 기존 난 묶음이 있습니다.");
 		}
-		List<BedZoneSegment> segments = segmentRepository.findByBedZoneIdOrderBySortOrderAsc(zone.getId());
+		List<BedZoneSegment> segments = segmentRepository.findByBedZoneIdOrderByPosition(zone.getId());
 		if (segments.isEmpty())
 			return unavailable(zone, "배드 구간 설정이 없습니다.");
 		for (PlacementCapacityMode mode : PlacementCapacityMode.values()) {
@@ -176,9 +178,9 @@ public class PlacementRecommendationService {
 	private int availableUnits(BedZoneSegment segment, OrchidGroup excludedGroup, String placementType, String potSize,
 			PlacementCapacityMode mode) {
 		BedZoneSegmentCapacity target = findCapacity(segment, placementType, potSize, mode);
-		if (target == null || !target.getAllowed() || target.getCapacityValue() <= 0)
+		if (target == null || !target.getAllowed() || target.getCapacityValue() <= 0 || target.getUnitSpan() == null)
 			return 0;
-		double occupiedRatio = 0;
+		BigDecimal remainingLength = segmentLength(segment);
 		for (OrchidGroupSegmentPlacement placement : placementRepository.findBySegmentId(segment.getId())) {
 			if (placement.getOrchidGroup().getId().equals(excludedGroup.getId()))
 				continue;
@@ -188,13 +190,17 @@ public class PlacementRecommendationService {
 				return 0;
 			BedZoneSegmentCapacity occupiedCapacity = findCapacity(segment, occupiedType, occupiedGroup.getPotSize(),
 					mode);
-			if (occupiedCapacity == null || !occupiedCapacity.getAllowed() || occupiedCapacity.getCapacityValue() <= 0)
+			if (occupiedCapacity == null || !occupiedCapacity.getAllowed() || occupiedCapacity.getCapacityValue() <= 0
+					|| occupiedCapacity.getUnitSpan() == null)
 				return 0;
-			int occupiedUnits = usesTrayUnits(occupiedType) ? Objects.requireNonNullElse(placement.getTrayCount(), 0)
+			int occupiedCount = usesTrayUnits(occupiedType) ? Objects.requireNonNullElse(placement.getTrayCount(), 0)
 					: placement.getQuantity();
-			occupiedRatio += (double) occupiedUnits / occupiedCapacity.getCapacityValue();
+			remainingLength = remainingLength.subtract(requiredLength(occupiedCapacity, occupiedCount));
 		}
-		return Math.max(0, (int) Math.floor(target.getCapacityValue() * Math.max(0, 1 - occupiedRatio)));
+		if (remainingLength.signum() <= 0) {
+			return 0;
+		}
+		return availableCount(target, remainingLength);
 	}
 
 	private BedZoneSegmentCapacity findCapacity(BedZoneSegment segment, String placementType, String potSize,
@@ -272,6 +278,22 @@ public class PlacementRecommendationService {
 	private int requiredUnits(OrchidGroup group) {
 		String type = requirePlacementType(group);
 		return usesTrayUnits(type) ? requireTrayCount(group.getTrayCount()) : group.getQuantity();
+	}
+
+	private BigDecimal segmentLength(BedZoneSegment segment) {
+		return segment.getEndPosition().subtract(segment.getStartPosition());
+	}
+
+	private BigDecimal requiredLength(BedZoneSegmentCapacity capacity, int itemCount) {
+		return capacity.getUnitSpan()
+				.multiply(BigDecimal.valueOf(itemCount))
+				.divide(BigDecimal.valueOf(capacity.getCapacityValue()), 4, RoundingMode.HALF_UP);
+	}
+
+	private int availableCount(BedZoneSegmentCapacity capacity, BigDecimal remainingLength) {
+		BigDecimal unitPerItem = capacity.getUnitSpan()
+				.divide(BigDecimal.valueOf(capacity.getCapacityValue()), 4, RoundingMode.HALF_UP);
+		return remainingLength.divide(unitPerItem, 0, RoundingMode.FLOOR).intValue();
 	}
 
 	private int requireTrayCount(Integer value) {

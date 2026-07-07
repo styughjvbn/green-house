@@ -1,6 +1,7 @@
 package com.greenhouse.backend.farm.dto;
 
 import com.greenhouse.backend.farm.domain.PhysicalBed;
+import java.math.BigDecimal;
 import java.util.List;
 
 public record PhysicalBedResponse(
@@ -13,6 +14,8 @@ public record PhysicalBedResponse(
 		Integer widthCm,
 		Integer wireCount,
 		Integer supportIntervalCm,
+		BigDecimal positionUnitCount,
+		String positionUnitLabel,
 		String memo,
 		List<BedZoneResponse> bedZones) {
 
@@ -28,6 +31,8 @@ public record PhysicalBedResponse(
 				physicalBed.getWidthCm(),
 				physicalBed.getWireCount(),
 				physicalBed.getSupportIntervalCm(),
+				physicalBed.getPositionUnitCount(),
+				physicalBed.getPositionUnitLabel(),
 				physicalBed.getMemo(),
 				physicalBed.getBedZones().stream().map(BedZoneResponse::from).toList());
 	}

@@ -12,7 +12,12 @@ import org.springframework.data.repository.query.Param;
 
 public interface BedZoneSegmentRepository extends JpaRepository<BedZoneSegment, Long> {
 	@EntityGraph(attributePaths = { "capacities", "bedZone", "bedZone.physicalBed", "bedZone.physicalBed.house" })
-	List<BedZoneSegment> findByBedZoneIdOrderBySortOrderAsc(Long bedZoneId);
+	@Query("""
+			select s from BedZoneSegment s
+			where s.bedZone.id = :bedZoneId
+			order by s.startPosition asc, s.sortOrder asc
+			""")
+	List<BedZoneSegment> findByBedZoneIdOrderByPosition(@Param("bedZoneId") Long bedZoneId);
 
 	@Lock(LockModeType.PESSIMISTIC_WRITE)
 	@Query("select s from BedZoneSegment s where s.id = :id")

@@ -14,11 +14,11 @@ import com.greenhouse.backend.farm.repository.HouseRepository;
 import com.greenhouse.backend.farm.repository.MaterialRepository;
 import com.greenhouse.backend.farm.repository.OrchidGroupRepository;
 import com.greenhouse.backend.farm.repository.VarietyRepository;
-
-import lombok.RequiredArgsConstructor;
-
+import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.util.ArrayList;
 import java.util.List;
+import lombok.RequiredArgsConstructor;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
@@ -61,11 +61,17 @@ public class FarmSeedDataInitializer implements CommandLineRunner {
 	}
 
 	private void addDefaultSegments(BedZone zone) {
-		zone.addSegment(new BedZoneSegment("앞 구간", BedZoneSegmentType.START, 1, null));
-		zone.addSegment(new BedZoneSegment("중간1", BedZoneSegmentType.MIDDLE, 2, null));
-		zone.addSegment(new BedZoneSegment("중간2", BedZoneSegmentType.MIDDLE, 3, null));
-		zone.addSegment(new BedZoneSegment("중간3", BedZoneSegmentType.MIDDLE, 4, null));
-		zone.addSegment(new BedZoneSegment("끝 구간", BedZoneSegmentType.END, 5, null));
+		BigDecimal total = zone.getPhysicalBed().getPositionUnitCount();
+		BigDecimal step = total.divide(BigDecimal.valueOf(5), 2, RoundingMode.HALF_UP);
+		zone.addSegment(new BedZoneSegment("앞 구간", BedZoneSegmentType.START, 1, BigDecimal.ZERO, step, null));
+		zone.addSegment(new BedZoneSegment("중간1", BedZoneSegmentType.MIDDLE, 2, step,
+				step.multiply(BigDecimal.valueOf(2)), null));
+		zone.addSegment(new BedZoneSegment("중간2", BedZoneSegmentType.MIDDLE, 3,
+				step.multiply(BigDecimal.valueOf(2)), step.multiply(BigDecimal.valueOf(3)), null));
+		zone.addSegment(new BedZoneSegment("중간3", BedZoneSegmentType.MIDDLE, 4,
+				step.multiply(BigDecimal.valueOf(3)), step.multiply(BigDecimal.valueOf(4)), null));
+		zone.addSegment(new BedZoneSegment("끝 구간", BedZoneSegmentType.END, 5,
+				step.multiply(BigDecimal.valueOf(4)), total, null));
 	}
 
 	private List<House> createFarmStructure() {
@@ -74,6 +80,9 @@ public class FarmSeedDataInitializer implements CommandLineRunner {
 			House house = new House(houseNumber, houseNumber + "동");
 			for (int bedNumber = 1; bedNumber <= 3; bedNumber++) {
 				PhysicalBed physicalBed = new PhysicalBed(bedNumber, bedNumber);
+				physicalBed.updatePositionUnits(
+						bedNumber == 3 ? BigDecimal.valueOf(28) : BigDecimal.valueOf(24),
+						"치");
 				physicalBed.addBedZone(new BedZone(bedNumber + "배드 좌", BedZoneSide.LEFT, 1));
 				physicalBed.addBedZone(new BedZone(bedNumber + "배드 우", BedZoneSide.RIGHT, 2));
 				house.addPhysicalBed(physicalBed);
@@ -107,8 +116,8 @@ public class FarmSeedDataInitializer implements CommandLineRunner {
 
 	private void seedSampleMaterials() {
 		materialRepository.saveAll(List.of(
-				new Material("MAT-0001", "농약", "응애 약제", "그린팜", "500ml", "2병", "창고 A", "해충 관리 희석 사용", true),
+				new Material("MAT-0001", "농약", "응애 약제", "그린팜", "500ml", "2병", "창고 A", "응애 관리 희석 사용", true),
 				new Material("MAT-0002", "비료", "개화 비료", "농원케어", "1kg", "3포", "창고 B", "개화기 주기 사용", true),
-				new Material("MAT-0003", "자재", "20구 트레이", "원예자재", "20구", "12개", "선반 C", "포트 작업용", true)));
+				new Material("MAT-0003", "자재", "20구 트레이", "원예자재", "20구", "12개", "선반 C", "분갈이 작업용", true)));
 	}
 }

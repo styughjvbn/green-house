@@ -17,6 +17,7 @@ import jakarta.persistence.UniqueConstraint;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.AccessLevel;
+import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -53,6 +54,12 @@ public class PhysicalBed extends BaseEntity {
 	@Column(name = "support_interval_cm")
 	private Integer supportIntervalCm;
 
+	@Column(name = "position_unit_count", precision = 6, scale = 2)
+	private BigDecimal positionUnitCount;
+
+	@Column(name = "position_unit_label", length = 50)
+	private String positionUnitLabel;
+
 	@Column(columnDefinition = "text")
 	private String memo;
 
@@ -63,6 +70,11 @@ public class PhysicalBed extends BaseEntity {
 	public PhysicalBed(Integer number, Integer displayOrder) {
 		this.number = number;
 		this.displayOrder = displayOrder;
+	}
+
+	public void updatePositionUnits(BigDecimal positionUnitCount, String positionUnitLabel) {
+		this.positionUnitCount = positionUnitCount;
+		this.positionUnitLabel = positionUnitLabel;
 	}
 
 	void setHouse(House house) {

@@ -19,6 +19,7 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.AccessLevel;
 
+import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -46,6 +47,12 @@ public class BedZoneSegment extends BaseEntity {
 	@Column(name = "sort_order", nullable = false)
 	private Integer sortOrder;
 
+	@Column(name = "start_position", precision = 6, scale = 2)
+	private BigDecimal startPosition;
+
+	@Column(name = "end_position", precision = 6, scale = 2)
+	private BigDecimal endPosition;
+
 	@Column(columnDefinition = "text")
 	private String memo;
 
@@ -53,10 +60,13 @@ public class BedZoneSegment extends BaseEntity {
 	@OrderBy("capacityMode ASC")
 	private List<BedZoneSegmentCapacity> capacities = new ArrayList<>();
 
-	public BedZoneSegment(String name, BedZoneSegmentType segmentType, Integer sortOrder, String memo) {
+	public BedZoneSegment(String name, BedZoneSegmentType segmentType, Integer sortOrder, BigDecimal startPosition,
+			BigDecimal endPosition, String memo) {
 		this.name = name;
 		this.segmentType = segmentType;
 		this.sortOrder = sortOrder;
+		this.startPosition = startPosition;
+		this.endPosition = endPosition;
 		this.memo = memo;
 	}
 
@@ -64,10 +74,13 @@ public class BedZoneSegment extends BaseEntity {
 		this.bedZone = bedZone;
 	}
 
-	public void update(String name, BedZoneSegmentType segmentType, Integer sortOrder, String memo) {
+	public void update(String name, BedZoneSegmentType segmentType, Integer sortOrder, BigDecimal startPosition,
+			BigDecimal endPosition, String memo) {
 		this.name = name;
 		this.segmentType = segmentType;
 		this.sortOrder = sortOrder;
+		this.startPosition = startPosition;
+		this.endPosition = endPosition;
 		this.memo = memo;
 	}
 

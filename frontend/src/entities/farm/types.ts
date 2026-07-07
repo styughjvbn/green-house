@@ -57,6 +57,7 @@ export type BedZoneSegmentCapacity = {
   potSize: string | null;
   capacityMode: PlacementCapacityMode;
   capacityValue: number;
+  unitSpan: number;
   allowed: boolean;
   memo: string | null;
 };
@@ -66,6 +67,8 @@ export type BedZoneSegment = {
   name: string;
   segmentType: BedZoneSegmentType;
   sortOrder: number;
+  startPosition: number;
+  endPosition: number;
   memo: string | null;
   capacities: BedZoneSegmentCapacity[];
 };
@@ -75,6 +78,8 @@ export type BedZonePlacementProfile = {
   bedZoneName: string;
   houseNumber: number;
   physicalBedNumber: number;
+  positionUnitCount: number | null;
+  positionUnitLabel: string | null;
   hasUnassignedGroups: boolean;
   segments: BedZoneSegment[];
 };
@@ -104,6 +109,8 @@ export type PhysicalBed = {
   widthCm: number | null;
   wireCount: number | null;
   supportIntervalCm: number | null;
+  positionUnitCount: number | null;
+  positionUnitLabel: string | null;
   memo: string | null;
   bedZones: BedZone[];
 };

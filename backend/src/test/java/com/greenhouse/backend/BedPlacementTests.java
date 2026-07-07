@@ -16,6 +16,7 @@ import com.greenhouse.backend.farm.dto.OrchidGroupUpdateRequest;
 import com.greenhouse.backend.farm.repository.BedZoneRepository;
 import com.greenhouse.backend.farm.repository.OrchidGroupRepository;
 import com.greenhouse.backend.work.repository.WorkRecordRepository;
+import java.math.BigDecimal;
 import java.util.List;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -140,6 +141,8 @@ class BedPlacementTests {
 			segment.name(),
 			segment.segmentType(),
 			segment.sortOrder(),
+			segment.startPosition(),
+			segment.endPosition(),
 			segment.memo(),
 			segment.sortOrder() <= 2
 				? List.of(
@@ -148,6 +151,7 @@ class BedPlacementTests {
 						null,
 						PlacementCapacityMode.STANDARD,
 						capacity,
+						spanOf(segment),
 						true,
 						null
 					),
@@ -156,6 +160,7 @@ class BedPlacementTests {
 						null,
 						PlacementCapacityMode.TEMPORARY,
 						capacity,
+						spanOf(segment),
 						true,
 						null
 					)
@@ -163,5 +168,9 @@ class BedPlacementTests {
 				: List.of()
 		)).toList();
 		profileService.updateProfile(targetZoneId, new BedZonePlacementProfileRequest(segments));
+	}
+
+	private BigDecimal spanOf(com.greenhouse.backend.farm.dto.BedZoneSegmentResponse segment) {
+		return segment.endPosition().subtract(segment.startPosition());
 	}
 }

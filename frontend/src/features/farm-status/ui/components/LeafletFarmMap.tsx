@@ -789,6 +789,8 @@ function createVisualOnlyBeds(
     widthCm: null,
     wireCount: null,
     supportIntervalCm: null,
+    positionUnitCount: bedNumber === 3 ? 28 : 24,
+    positionUnitLabel: "칸",
     memo: null,
     bedZones: [
       {

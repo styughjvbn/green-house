@@ -4,6 +4,7 @@ import type { DragEvent, MouseEvent, PointerEvent } from "react";
 import type { OrchidGroup } from "@/entities/farm/types";
 
 export default function OrchidGroupBlock({
+  compact = false,
   draggable,
   orchidGroup,
   selected,
@@ -11,6 +12,7 @@ export default function OrchidGroupBlock({
   onDragStart,
   onSelect,
 }: {
+  compact?: boolean;
   draggable: boolean;
   orchidGroup: OrchidGroup;
   selected: boolean;
@@ -43,7 +45,7 @@ export default function OrchidGroupBlock({
 
   return (
     <div
-      className={`min-h-16 touch-manipulation rounded-md border p-2 shadow-sm transition ${
+      className={`${compact ? "min-h-11 px-2 py-1.5" : "min-h-16 p-2"} touch-manipulation rounded-md border shadow-sm transition ${
         selected
           ? "border-[#246df2] bg-[#dcecff] ring-2 ring-[#246df2]"
           : "border-[#82c886] bg-[#bfe2b8] hover:border-[#159447]"
@@ -55,21 +57,27 @@ export default function OrchidGroupBlock({
       onPointerUp={handlePointerUp}
       role="button"
       tabIndex={0}
-      title={draggable ? "드래그해서 다른 구역으로 이동" : undefined}
+      title={draggable ? "드래그해 다른 구역으로 이동" : undefined}
     >
       <div className="flex items-start justify-between gap-2">
-        <p className="text-sm font-semibold">{orchidGroup.varietyName}</p>
-        <span className={warning ? "text-[#f59e0b]" : "text-[#159447]"}>●</span>
+        <p className={`${compact ? "text-xs" : "text-sm"} font-semibold`}>
+          {orchidGroup.varietyName}
+        </p>
+        <span className={warning ? "text-[#f59e0b]" : "text-[#159447]"}>
+          {warning ? "!" : "●"}
+        </span>
       </div>
       <p className="mt-0.5 text-xs font-semibold">{orchidGroup.quantity}분</p>
-      <p className="mt-0.5 text-xs text-[#435047]">
-        {[
-          orchidGroup.potSize,
-          orchidGroup.ageYear ? `${orchidGroup.ageYear}년생` : null,
-        ]
-          .filter(Boolean)
-          .join(" · ")}
-      </p>
+      {!compact ? (
+        <p className="mt-0.5 text-xs text-[#435047]">
+          {[
+            orchidGroup.potSize,
+            orchidGroup.ageYear ? `${orchidGroup.ageYear}년생` : null,
+          ]
+            .filter(Boolean)
+            .join(" · ")}
+        </p>
+      ) : null}
     </div>
   );
 }

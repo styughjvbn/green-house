@@ -15,6 +15,7 @@ import jakarta.persistence.Table;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.AccessLevel;
+import java.math.BigDecimal;
 
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
@@ -43,6 +44,9 @@ public class BedZoneSegmentCapacity extends BaseEntity {
 	@Column(name = "capacity_value", nullable = false)
 	private Integer capacityValue;
 
+	@Column(name = "unit_span", precision = 6, scale = 2)
+	private BigDecimal unitSpan;
+
 	@Column(name = "is_allowed", nullable = false)
 	private Boolean allowed;
 
@@ -50,11 +54,12 @@ public class BedZoneSegmentCapacity extends BaseEntity {
 	private String memo;
 
 	public BedZoneSegmentCapacity(String placementType, String potSize, PlacementCapacityMode capacityMode,
-			Integer capacityValue, Boolean allowed, String memo) {
+			Integer capacityValue, BigDecimal unitSpan, Boolean allowed, String memo) {
 		this.placementType = placementType;
 		this.potSize = potSize;
 		this.capacityMode = capacityMode;
 		this.capacityValue = capacityValue;
+		this.unitSpan = unitSpan;
 		this.allowed = allowed;
 		this.memo = memo;
 	}

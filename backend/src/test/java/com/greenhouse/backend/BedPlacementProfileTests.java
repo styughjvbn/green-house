@@ -14,6 +14,7 @@ import com.greenhouse.backend.farm.dto.BedZonePlacementProfileRequest;
 import com.greenhouse.backend.farm.dto.BedZoneSegmentRequest;
 import com.greenhouse.backend.farm.repository.BedZoneRepository;
 import com.greenhouse.backend.farm.repository.BedZoneSegmentRepository;
+import java.math.BigDecimal;
 import java.util.List;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -57,11 +58,12 @@ class BedPlacementProfileTests {
 		Long zoneId = bedZoneRepository.findAll().getFirst().getId();
 		var profile = profileService.getProfile(zoneId);
 		var segments = profile.segments().stream().map(segment -> new BedZoneSegmentRequest(
-			segment.id(), segment.name(), segment.segmentType(), segment.sortOrder(), segment.memo(),
+			segment.id(), segment.name(), segment.segmentType(), segment.sortOrder(),
+			segment.startPosition(), segment.endPosition(), segment.memo(),
 			segment.sortOrder() == 1 ? List.of(
-				capacity(PlacementCapacityMode.SPACIOUS, 3),
-				capacity(PlacementCapacityMode.STANDARD, 4),
-				capacity(PlacementCapacityMode.EXPANDED, 5)
+				capacity(PlacementCapacityMode.SPACIOUS, 3, spanOf(segment)),
+				capacity(PlacementCapacityMode.STANDARD, 4, spanOf(segment)),
+				capacity(PlacementCapacityMode.EXPANDED, 5, spanOf(segment))
 			) : List.of()
 		)).toList();
 
@@ -77,8 +79,12 @@ class BedPlacementProfileTests {
 		var profile = profileService.getProfile(zoneId);
 		var first = profile.segments().getFirst();
 		var request = new BedZonePlacementProfileRequest(List.of(new BedZoneSegmentRequest(
-			first.id(), first.name(), first.segmentType(), 1, null,
-			List.of(capacity(PlacementCapacityMode.STANDARD, 5), capacity(PlacementCapacityMode.EXPANDED, 4))
+			first.id(), first.name(), first.segmentType(), 1,
+			first.startPosition(), first.endPosition(), null,
+			List.of(
+				capacity(PlacementCapacityMode.STANDARD, 5, spanOf(first)),
+				capacity(PlacementCapacityMode.EXPANDED, 4, spanOf(first))
+			)
 		)));
 
 		assertThatThrownBy(() -> profileService.updateProfile(zoneId, request))
@@ -86,7 +92,11 @@ class BedPlacementProfileTests {
 			.hasMessageContaining("작을 수 없습니다");
 	}
 
-	private BedZoneCapacityRequest capacity(PlacementCapacityMode mode, int value) {
-		return new BedZoneCapacityRequest("TRAY_20", null, mode, value, true, null);
+	private BedZoneCapacityRequest capacity(PlacementCapacityMode mode, int value, BigDecimal unitSpan) {
+		return new BedZoneCapacityRequest("TRAY_20", null, mode, value, unitSpan, true, null);
+	}
+
+	private BigDecimal spanOf(com.greenhouse.backend.farm.dto.BedZoneSegmentResponse segment) {
+		return segment.endPosition().subtract(segment.startPosition());
 	}
 }
