@@ -14,7 +14,7 @@ export default function HouseDetailHeader({
   const viewModes: Array<{ value: OrchidManagementViewMode; label: string }> = [
     { value: "REAL_DIRECTION", label: "실제 방향 보기" },
     { value: "ROTATED", label: "회전 보기" },
-    { value: "BY_BED", label: "배드별 보기" },
+    { value: "BY_BED", label: "다이별 보기" },
   ];
 
   return (

@@ -60,8 +60,8 @@ public class FarmSeedDataInitializer implements CommandLineRunner {
 			for (int bedNumber = 1; bedNumber <= 3; bedNumber++) {
 				PhysicalBed physicalBed = new PhysicalBed(bedNumber, bedNumber);
 				physicalBed.updatePositionUnits(bedNumber == 3 ? BigDecimal.valueOf(28) : BigDecimal.valueOf(24), "치");
-				physicalBed.addBedZone(new BedZone(bedNumber + "배드 좌", BedZoneSide.LEFT, 1));
-				physicalBed.addBedZone(new BedZone(bedNumber + "배드 우", BedZoneSide.RIGHT, 2));
+				physicalBed.addBedZone(new BedZone(bedNumber + "다이 좌", BedZoneSide.LEFT, 1));
+				physicalBed.addBedZone(new BedZone(bedNumber + "다이 우", BedZoneSide.RIGHT, 2));
 				house.addPhysicalBed(physicalBed);
 			}
 			houses.add(house);

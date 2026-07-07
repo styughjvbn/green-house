@@ -154,7 +154,7 @@ public class VarietyService {
 		var bedZone = orchidGroup.getBedZone();
 		var physicalBed = bedZone.getPhysicalBed();
 		var house = physicalBed.getHouse();
-		return "%d동-%d배드 %s".formatted(house.getNumber(), physicalBed.getNumber(), bedZone.getName());
+		return "%d동-%d다이 %s".formatted(house.getNumber(), physicalBed.getNumber(), bedZone.getName());
 	}
 
 	private String nextCode() {

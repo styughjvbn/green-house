@@ -142,7 +142,7 @@ public class OrchidGroupCommandService {
 		}
 		BigDecimal maxPosition = bedZone.getPhysicalBed().getPositionUnitCount();
 		if (maxPosition != null && endPosition.compareTo(maxPosition) > 0) {
-			throw new IllegalArgumentException("종료 위치는 배드 기준 치수를 넘을 수 없습니다.");
+			throw new IllegalArgumentException("종료 위치는 다이 기준 치수를 넘을 수 없습니다.");
 		}
 	}
 

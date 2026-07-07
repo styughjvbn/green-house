@@ -48,7 +48,7 @@ export default function OrchidMovePanel({
           .filter((zone) => zone.id !== selectedOrchidGroup.bedZoneId)
           .map((zone) => ({
             bedZoneId: zone.id,
-            label: `${house.number}동 ${bed.number}배드 ${zone.name}`,
+            label: `${house.number}동 ${bed.number}다이 ${zone.name}`,
           })),
       ),
     [house, selectedOrchidGroup.bedZoneId],
@@ -99,7 +99,7 @@ export default function OrchidMovePanel({
           label="현재 위치"
           value={
             currentZone
-              ? `${house.number}동 ${currentZone.bed.number}배드 ${currentZone.zone.name}`
+              ? `${house.number}동 ${currentZone.bed.number}다이 ${currentZone.zone.name}`
               : "확인 불가"
           }
         />

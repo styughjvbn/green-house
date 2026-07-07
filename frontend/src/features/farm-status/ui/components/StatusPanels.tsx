@@ -44,7 +44,7 @@ export function SelectionSummaryPanel({
       </div>
 
       <div className="grid grid-cols-4 border-b border-[#edf1ea] text-center">
-        <PanelMetric label="물리 배드" value="3개" />
+        <PanelMetric label="다이" value="3개" />
         <PanelMetric label="논리 구역" value="6개" />
         <PanelMetric label="난 묶음" value={`${items.length}개`} />
         <PanelMetric
@@ -56,7 +56,7 @@ export function SelectionSummaryPanel({
 
       <div className="flex gap-2 border-b border-[#edf1ea] p-3">
         <DisabledTab active label="선택 범위" />
-        <DisabledTab label="배드별 보기" />
+        <DisabledTab label="다이별 보기" />
         <DisabledTab label="구역별 보기" />
       </div>
 
@@ -142,7 +142,7 @@ function OrchidMiniTable({ items }: { items: FarmStatusOrchidGroupItem[] }) {
     <table className="w-full border-separate border-spacing-y-1.5 text-left text-xs">
       <thead className="text-[#657269]">
         <tr>
-          <th className="px-2 font-semibold">배드/구역</th>
+          <th className="px-2 font-semibold">다이/구역</th>
           <th className="px-2 font-semibold">품종명</th>
           <th className="px-2 text-right font-semibold">수량</th>
           <th className="px-2 font-semibold">상태</th>

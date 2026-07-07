@@ -99,7 +99,7 @@ export async function saveBedZonePlacementProfile(
   const body = await readJson(response);
   if (!response.ok) {
     throw new Error(
-      resolveErrorMessage(body, "배드 정밀 설정을 저장하지 못했습니다."),
+      resolveErrorMessage(body, "다이 정밀 설정을 저장하지 못했습니다."),
     );
   }
   return (body as { data: BedZonePlacementProfile }).data;

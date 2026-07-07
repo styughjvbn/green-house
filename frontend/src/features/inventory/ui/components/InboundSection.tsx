@@ -1204,7 +1204,7 @@ function flattenZones(houses: House[]) {
     house.physicalBeds.flatMap((bed) =>
       bed.bedZones.map((zone) => ({
         id: zone.id,
-        label: `${house.number}동 ${bed.number}배드 ${zone.name}`,
+        label: `${house.number}동 ${bed.number}다이 ${zone.name}`,
       })),
     ),
   );

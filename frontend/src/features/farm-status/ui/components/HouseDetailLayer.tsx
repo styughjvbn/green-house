@@ -29,7 +29,7 @@ export default function HouseDetailLayer({
   if (!zoomData || zoomData.houseId !== selectedHouseId) {
     return (
       <div className="rounded-lg bg-white/90 p-6 text-center text-[#4f6255]">
-        동을 선택하면 배드와 구역 지도가 표시됩니다.
+        동을 선택하면 다이와 구역 지도가 표시됩니다.
       </div>
     );
   }
@@ -42,7 +42,7 @@ export default function HouseDetailLayer({
             {zoomData.houseNumber}동
           </p>
           <h3 className="text-xl font-semibold text-[#17251b]">
-            물리 배드 / 논리 구역
+            다이 / 논리 구역
           </h3>
         </div>
         <div className="flex gap-2 text-xs font-semibold">
@@ -99,7 +99,7 @@ function PhysicalBedMapBlock({
         onClick={() => onSelectPhysicalBed(bed)}
         type="button"
       >
-        <span>{bed.number}배드</span>
+        <span>{bed.number}다이</span>
         <span>
           {bed.bedZones.reduce(
             (sum, zone) => sum + zone.orchidGroups.length,

@@ -30,7 +30,7 @@ public record FarmStatusOrchidGroupItemResponse(
 				house.getNumber(),
 				physicalBed.getId(),
 				physicalBed.getNumber(),
-				physicalBed.getNumber() + "배드",
+				physicalBed.getNumber() + "다이",
 				bedZone.getId(),
 				bedZone.getName());
 	}

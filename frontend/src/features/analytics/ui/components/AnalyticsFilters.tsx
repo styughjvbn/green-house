@@ -55,9 +55,9 @@ export function AnalyticsFilters({
           onChange={(value) => onChange("house", value)}
         />
         <FilterSelect
-          label="물리 배드"
+          label="다이"
           value={values.bed}
-          options={["전체", "1배드", "2배드", "3배드"]}
+          options={["전체", "1다이", "2다이", "3다이"]}
           onChange={(value) => onChange("bed", value)}
         />
         <FilterSelect

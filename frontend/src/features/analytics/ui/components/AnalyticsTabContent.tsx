@@ -478,7 +478,7 @@ function formatTargetType(
   return (
     {
       HOUSE: "동",
-      PHYSICAL_BED: "배드",
+      PHYSICAL_BED: "다이",
       BED_ZONE: "구역",
       ORCHID_GROUP: "난 묶음",
       FARM: "농장",

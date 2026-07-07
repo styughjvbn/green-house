@@ -155,7 +155,7 @@ const targetOptions: Array<{
 }> = [
   { label: "전체 농장", value: "" },
   { label: "동", value: "HOUSE" },
-  { label: "물리 배드", value: "PHYSICAL_BED" },
+  { label: "다이", value: "PHYSICAL_BED" },
   { label: "논리 구역", value: "BED_ZONE" },
   { label: "난 묶음", value: "ORCHID_GROUP" },
 ];

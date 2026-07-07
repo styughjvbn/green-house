@@ -97,7 +97,7 @@ export default function BedPrecisionSettings({
           onClick={() => setExpanded((value) => !value)}
         >
           <Settings2 className="h-4 w-4 shrink-0 text-[#16843d]" />
-          <span className="text-sm font-bold">배드 정밀 설정</span>
+          <span className="text-sm font-bold">다이 정밀 설정</span>
           <span className="truncate text-xs text-[#6a766e]">
             {zone.name} / 규칙 {profile?.capacities.length ?? 0}개
           </span>

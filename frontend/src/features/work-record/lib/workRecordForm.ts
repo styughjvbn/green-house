@@ -202,7 +202,7 @@ export function formatTarget(record: WorkRecord) {
 
   const label = {
     HOUSE: "동",
-    PHYSICAL_BED: "배드",
+    PHYSICAL_BED: "다이",
     BED_ZONE: "구역",
     ORCHID_GROUP: "난 묶음",
   }[record.targetType];
@@ -214,7 +214,7 @@ export function formatTargetType(targetType: WorkRecordTargetType) {
   return {
     FARM: "전체 농장",
     HOUSE: "동",
-    PHYSICAL_BED: "물리 배드",
+    PHYSICAL_BED: "다이",
     BED_ZONE: "논리 구역",
     ORCHID_GROUP: "난 묶음",
   }[targetType];

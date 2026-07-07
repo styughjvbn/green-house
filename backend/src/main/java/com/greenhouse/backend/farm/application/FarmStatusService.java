@@ -72,7 +72,7 @@ public class FarmStatusService {
 					throw new IllegalArgumentException("physicalBedId is required.");
 				}
 				var physicalBed = physicalBedRepository.findById(physicalBedId)
-						.orElseThrow(() -> new NotFoundException("물리 배드를 찾을 수 없습니다."));
+						.orElseThrow(() -> new NotFoundException("물리 다이를 찾을 수 없습니다."));
 				var zones = bedZoneRepository.findByPhysicalBedIdOrderBySortOrderAsc(physicalBedId).stream()
 						.map(BedZoneResponse::from)
 						.toList();
@@ -92,11 +92,11 @@ public class FarmStatusService {
 					.map(house -> house.getNumber() + "동")
 					.orElseThrow(() -> new NotFoundException("동을 찾을 수 없습니다."));
 			case PHYSICAL_BED -> physicalBedRepository.findById(targetId)
-					.map(physicalBed -> physicalBed.getHouse().getNumber() + "동 " + physicalBed.getNumber() + "배드")
-					.orElseThrow(() -> new NotFoundException("물리 배드를 찾을 수 없습니다."));
+					.map(physicalBed -> physicalBed.getHouse().getNumber() + "동 " + physicalBed.getNumber() + "다이")
+					.orElseThrow(() -> new NotFoundException("다이를 찾을 수 없습니다."));
 			case BED_ZONE -> bedZoneRepository.findById(targetId)
 					.map(bedZone -> bedZone.getPhysicalBed().getHouse().getNumber() + "동 "
-							+ bedZone.getPhysicalBed().getNumber() + "배드 " + bedZone.getName())
+							+ bedZone.getPhysicalBed().getNumber() + "다이 " + bedZone.getName())
 					.orElseThrow(() -> new NotFoundException("논리 구역을 찾을 수 없습니다."));
 		};
 	}

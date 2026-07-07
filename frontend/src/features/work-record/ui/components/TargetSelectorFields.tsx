@@ -47,7 +47,7 @@ export function TargetSelectorFields({
       >
         <option value="FARM">전체 농장</option>
         <option value="HOUSE">동</option>
-        <option value="PHYSICAL_BED">물리 배드</option>
+        <option value="PHYSICAL_BED">다이</option>
         <option value="BED_ZONE">논리 구역</option>
         <option value="ORCHID_GROUP">난 묶음</option>
       </SelectField>
@@ -68,13 +68,13 @@ export function TargetSelectorFields({
 
       {form.targetType === "PHYSICAL_BED" ? (
         <SelectField
-          label="배드"
+          label="다이"
           value={safePhysicalBedId}
           onChange={(value) => onChange("physicalBedId", value)}
         >
           {physicalBeds.map((bed) => (
             <option key={bed.id} value={bed.id}>
-              {bed.number}배드
+              {bed.number}다이
             </option>
           ))}
         </SelectField>
@@ -88,7 +88,7 @@ export function TargetSelectorFields({
         >
           {bedZones.map((zone) => (
             <option key={zone.id} value={zone.id}>
-              {zone.physicalBedNumber}배드 {zone.side === "LEFT" ? "좌" : "우"}
+              {zone.physicalBedNumber}다이 {zone.side === "LEFT" ? "좌" : "우"}
             </option>
           ))}
         </SelectField>
@@ -102,7 +102,7 @@ export function TargetSelectorFields({
         >
           {orchidGroups.map((group) => (
             <option key={group.id} value={group.id}>
-              {group.physicalBedNumber}배드 {group.bedZoneName} /{" "}
+              {group.physicalBedNumber}다이 {group.bedZoneName} /{" "}
               {group.varietyName}
             </option>
           ))}

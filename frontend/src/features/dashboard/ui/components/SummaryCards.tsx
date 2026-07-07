@@ -37,7 +37,7 @@ export function SummaryCards({
       <SummaryCard
         detail={physicalBedDetail}
         icon={Map}
-        label="전체 물리 배드 수"
+        label="전체 다이 수"
         value={`${summary.physicalBedCount}`}
         unit="개"
       />

@@ -63,7 +63,7 @@ public record InboundRecordResponse(
 
 	private static String formatLocation(BedZone bedZone, String tempLocation) {
 		if (bedZone != null) {
-			return "%d동-%d배드 %s".formatted(
+			return "%d동-%d다이 %s".formatted(
 					bedZone.getPhysicalBed().getHouse().getNumber(),
 					bedZone.getPhysicalBed().getNumber(),
 					bedZone.getName());

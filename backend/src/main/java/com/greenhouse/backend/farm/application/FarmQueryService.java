@@ -48,7 +48,7 @@ public class FarmQueryService {
 	public PhysicalBedResponse getPhysicalBed(Long physicalBedId) {
 		return physicalBedRepository.findWithHouseAndBedZonesById(physicalBedId)
 				.map(PhysicalBedResponse::from)
-				.orElseThrow(() -> new NotFoundException("물리 배드를 찾을 수 없습니다."));
+				.orElseThrow(() -> new NotFoundException("다이를 찾을 수 없습니다."));
 	}
 
 	public List<BedZoneResponse> getBedZones(Long houseId, Long physicalBedId) {

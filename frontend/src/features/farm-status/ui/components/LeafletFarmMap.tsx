@@ -586,7 +586,7 @@ function FarmBedFeature({
       <Marker
         icon={createSmallLabelIcon({
           background: selected ? "#246df2" : "#28713f",
-          text: `${bed.number}배드`,
+          text: `${bed.number}다이`,
           width: 48,
         })}
         interactive={false}
@@ -799,7 +799,7 @@ function createVisualOnlyBeds(
         physicalBedNumber: bedNumber,
         houseId,
         houseNumber,
-        name: `${bedNumber}배드 좌`,
+        name: `${bedNumber}다이 좌`,
         side: "LEFT",
         zoneType: "DEFAULT",
         sortOrder: 1,
@@ -813,7 +813,7 @@ function createVisualOnlyBeds(
         physicalBedNumber: bedNumber,
         houseId,
         houseNumber,
-        name: `${bedNumber}배드 우`,
+        name: `${bedNumber}다이 우`,
         side: "RIGHT",
         zoneType: "DEFAULT",
         sortOrder: 2,

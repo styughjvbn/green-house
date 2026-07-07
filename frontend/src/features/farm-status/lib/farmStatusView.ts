@@ -27,7 +27,7 @@ export function zoomLabel(level: FarmZoomLevel): string {
   return {
     FARM: "전체",
     HOUSE: "동",
-    PHYSICAL_BED: "배드",
+    PHYSICAL_BED: "다이",
     BED_ZONE: "구역",
   }[level];
 }
