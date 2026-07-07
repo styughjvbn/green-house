@@ -13,6 +13,7 @@ export const INITIAL_MATERIALS: Material[] = [
     usage: "예방 및 치료용 살포",
     status: "ACTIVE",
     registeredAt: "2026-01-05",
+    updatedAt: "2026-01-05",
   },
   {
     id: 2,
@@ -26,6 +27,7 @@ export const INITIAL_MATERIALS: Material[] = [
     usage: "살균제",
     status: "ACTIVE",
     registeredAt: "2026-01-05",
+    updatedAt: "2026-01-05",
   },
   {
     id: 3,
@@ -39,6 +41,7 @@ export const INITIAL_MATERIALS: Material[] = [
     usage: "생육기 액비",
     status: "ACTIVE",
     registeredAt: "2026-01-06",
+    updatedAt: "2026-01-06",
   },
   {
     id: 4,
@@ -52,6 +55,7 @@ export const INITIAL_MATERIALS: Material[] = [
     usage: "개화 전 사용",
     status: "ACTIVE",
     registeredAt: "2026-02-10",
+    updatedAt: "2026-02-10",
   },
   {
     id: 5,
@@ -65,5 +69,6 @@ export const INITIAL_MATERIALS: Material[] = [
     usage: "분갈이",
     status: "INACTIVE",
     registeredAt: "2026-03-02",
+    updatedAt: "2026-03-02",
   },
 ];

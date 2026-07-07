@@ -1,8 +1,8 @@
 "use client";
 
-import { ChevronLeft, ChevronRight, Pencil } from "lucide-react";
+import { ChevronLeft, ChevronRight, Pencil, Plus } from "lucide-react";
 import { useMemo, useState } from "react";
-import type { Variety } from "../../model/types";
+import type { Variety, VarietyPayload } from "../../model/types";
 import {
   DetailRow,
   Field,
@@ -15,11 +15,17 @@ export function VarietySection({
   selectedId,
   loadingGroups = false,
   onSelect,
+  onCreate,
+  onUpdate,
+  onDeactivate,
 }: {
   varieties: Variety[];
   selectedId: number;
   loadingGroups?: boolean;
   onSelect: (id: number) => void;
+  onCreate: () => void;
+  onUpdate: (varietyId: number, payload: VarietyPayload) => Promise<void>;
+  onDeactivate: (varietyId: number) => Promise<void>;
 }) {
   const [genus, setGenus] = useState("전체");
   const [keyword, setKeyword] = useState("");
@@ -31,6 +37,16 @@ export function VarietySection({
     () => ["전체", ...new Set(varieties.map((item) => item.genus))],
     [varieties],
   );
+  const [editing, setEditing] = useState(false);
+  const [form, setForm] = useState<VarietyPayload>({
+    genus: selected?.genus ?? "",
+    name: selected?.name ?? "",
+    alias: selected?.alias ?? "",
+    defaultPotSize: selected?.potSize ?? "",
+    saleEnabled: selected?.saleEnabled ?? true,
+    description: selected?.description ?? "",
+    memo: selected?.memo ?? "",
+  });
   const filtered = varieties.filter(
     (item) =>
       (genus === "전체" || item.genus === genus) &&
@@ -107,12 +123,21 @@ export function VarietySection({
 
       <div className="mt-3 grid min-w-0 gap-3 2xl:grid-cols-[minmax(0,1.15fr)_minmax(25rem,1fr)]">
         <section className="min-w-0 rounded-md border border-[#dce2dc] bg-white p-3 shadow-sm">
-          <h2 className="text-sm font-bold">
-            품종 목록{" "}
-            <span className="ml-2 text-xs font-semibold text-[#159447]">
-              (총 {filtered.length}개)
-            </span>
-          </h2>
+          <div className="flex items-center justify-between gap-3">
+            <h2 className="text-sm font-bold">
+              품종 목록{" "}
+              <span className="ml-2 text-xs font-semibold text-[#159447]">
+                (총 {filtered.length}개)
+              </span>
+            </h2>
+            <button
+              className="flex items-center gap-2 rounded-md bg-[#159447] px-3 py-2 text-xs font-semibold text-white shadow-sm"
+              type="button"
+              onClick={onCreate}
+            >
+              <Plus className="h-3.5 w-3.5" />새 품종 등록
+            </button>
+          </div>
           <div className="mt-3 overflow-x-auto">
             <table className="w-full min-w-[680px] border-collapse text-xs">
               <thead className="border-y border-[#dce2dc] bg-[#f7f9f6] text-[#536057]">
@@ -140,7 +165,10 @@ export function VarietySection({
                   <tr
                     className={`cursor-pointer border-b border-[#e5e9e5] hover:bg-[#f3f9f3] ${item.id === selected?.id ? "bg-[#eaf7eb]" : ""}`}
                     key={item.id}
-                    onClick={() => onSelect(item.id)}
+                    onClick={() => {
+                      setEditing(false);
+                      onSelect(item.id);
+                    }}
                   >
                     <td className="px-3 py-2 font-semibold text-[#16793a]">
                       {item.code}
@@ -201,42 +229,183 @@ export function VarietySection({
           <section className="min-w-0 rounded-md border border-[#dce2dc] bg-white p-4 shadow-sm">
             <div className="flex items-center justify-between">
               <h2 className="text-sm font-bold">품종 상세 정보</h2>
-              <button
-                className="flex items-center gap-1 rounded border border-[#d7ddd8] px-3 py-1.5 text-xs font-semibold"
-                type="button"
-              >
-                <Pencil className="h-3.5 w-3.5" />
-                수정
-              </button>
+              <div className="flex items-center gap-2">
+                {selected.status === "ACTIVE" ? (
+                  <button
+                    className="rounded border border-[#e2c8c8] px-3 py-1.5 text-xs font-semibold text-[#a14545]"
+                    type="button"
+                    onClick={() => void onDeactivate(selected.id)}
+                  >
+                    비활성화
+                  </button>
+                ) : null}
+                <button
+                  className="flex items-center gap-1 rounded border border-[#d7ddd8] px-3 py-1.5 text-xs font-semibold"
+                  type="button"
+                  onClick={() => {
+                    if (editing) {
+                      setEditing(false);
+                      return;
+                    }
+
+                    setForm({
+                      genus: selected.genus,
+                      name: selected.name,
+                      alias: selected.alias,
+                      defaultPotSize: selected.potSize,
+                      saleEnabled: selected.saleEnabled,
+                      description: selected.description,
+                      memo: selected.memo,
+                    });
+                    setEditing(true);
+                  }}
+                >
+                  <Pencil className="h-3.5 w-3.5" />
+                  {editing ? "취소" : "수정"}
+                </button>
+              </div>
             </div>
             <div className="mt-3 grid gap-4 sm:grid-cols-[9rem_minmax(0,1fr)]">
               <div className="flex aspect-square items-center justify-center rounded-md border border-[#d9e0d9] bg-[#eff7ed] text-[#159447]">
                 <span className="text-5xl">✿</span>
               </div>
-              <dl className="space-y-1">
-                <DetailRow label="품종코드" value={selected.code} />
-                <DetailRow label="속" value={selected.genus} />
-                <DetailRow label="품종명" value={selected.name} />
-                <DetailRow label="별칭" value={selected.alias || "-"} />
-                <DetailRow label="기본 화분 크기" value={selected.potSize} />
-                <DetailRow label="특징/설명" value={selected.description} />
-                <DetailRow
-                  label="판매 사용"
-                  value={
-                    <StatusBadge
-                      active={selected.saleEnabled}
-                      labels={["사용", "미사용"]}
+              {editing ? (
+                <form
+                  className="grid gap-3"
+                  onSubmit={(event) => {
+                    event.preventDefault();
+                    void onUpdate(selected.id, form).then(() =>
+                      setEditing(false),
+                    );
+                  }}
+                >
+                  <DetailRow label="품종코드" value={selected.code} />
+                  <Field label="속">
+                    <input
+                      className={inputClass}
+                      required
+                      value={form.genus}
+                      onChange={(event) =>
+                        setForm((current) => ({
+                          ...current,
+                          genus: event.target.value,
+                        }))
+                      }
                     />
-                  }
-                />
-                <DetailRow
-                  label="상태"
-                  value={<StatusBadge active={selected.status === "ACTIVE"} />}
-                />
-                <DetailRow label="메모" value={selected.memo} />
-                <DetailRow label="등록일" value={selected.registeredAt} />
-                <DetailRow label="수정일" value={selected.updatedAt} />
-              </dl>
+                  </Field>
+                  <Field label="품종명">
+                    <input
+                      className={inputClass}
+                      required
+                      value={form.name}
+                      onChange={(event) =>
+                        setForm((current) => ({
+                          ...current,
+                          name: event.target.value,
+                        }))
+                      }
+                    />
+                  </Field>
+                  <Field label="별칭">
+                    <input
+                      className={inputClass}
+                      value={form.alias}
+                      onChange={(event) =>
+                        setForm((current) => ({
+                          ...current,
+                          alias: event.target.value,
+                        }))
+                      }
+                    />
+                  </Field>
+                  <Field label="기본 화분 크기">
+                    <input
+                      className={inputClass}
+                      value={form.defaultPotSize}
+                      onChange={(event) =>
+                        setForm((current) => ({
+                          ...current,
+                          defaultPotSize: event.target.value,
+                        }))
+                      }
+                    />
+                  </Field>
+                  <label className="flex items-center gap-2 text-sm font-semibold text-[#425047]">
+                    <input
+                      checked={form.saleEnabled}
+                      type="checkbox"
+                      onChange={(event) =>
+                        setForm((current) => ({
+                          ...current,
+                          saleEnabled: event.target.checked,
+                        }))
+                      }
+                    />
+                    판매 사용
+                  </label>
+                  <label className="space-y-1 text-xs font-semibold text-[#425047]">
+                    <span>특징/설명</span>
+                    <textarea
+                      className="min-h-20 w-full rounded-md border border-[#d7ddd8] bg-white px-3 py-2 text-sm outline-none focus:border-[#159447] focus:ring-1 focus:ring-[#159447]"
+                      value={form.description}
+                      onChange={(event) =>
+                        setForm((current) => ({
+                          ...current,
+                          description: event.target.value,
+                        }))
+                      }
+                    />
+                  </label>
+                  <label className="space-y-1 text-xs font-semibold text-[#425047]">
+                    <span>메모</span>
+                    <textarea
+                      className="min-h-20 w-full rounded-md border border-[#d7ddd8] bg-white px-3 py-2 text-sm outline-none focus:border-[#159447] focus:ring-1 focus:ring-[#159447]"
+                      value={form.memo}
+                      onChange={(event) =>
+                        setForm((current) => ({
+                          ...current,
+                          memo: event.target.value,
+                        }))
+                      }
+                    />
+                  </label>
+                  <div className="flex justify-end">
+                    <button
+                      className="rounded-md bg-[#159447] px-4 py-2 text-sm font-semibold text-white"
+                      type="submit"
+                    >
+                      저장
+                    </button>
+                  </div>
+                </form>
+              ) : (
+                <dl className="space-y-1">
+                  <DetailRow label="품종코드" value={selected.code} />
+                  <DetailRow label="속" value={selected.genus} />
+                  <DetailRow label="품종명" value={selected.name} />
+                  <DetailRow label="별칭" value={selected.alias || "-"} />
+                  <DetailRow label="기본 화분 크기" value={selected.potSize} />
+                  <DetailRow label="특징/설명" value={selected.description} />
+                  <DetailRow
+                    label="판매 사용"
+                    value={
+                      <StatusBadge
+                        active={selected.saleEnabled}
+                        labels={["사용", "미사용"]}
+                      />
+                    }
+                  />
+                  <DetailRow
+                    label="상태"
+                    value={
+                      <StatusBadge active={selected.status === "ACTIVE"} />
+                    }
+                  />
+                  <DetailRow label="메모" value={selected.memo} />
+                  <DetailRow label="등록일" value={selected.registeredAt} />
+                  <DetailRow label="수정일" value={selected.updatedAt} />
+                </dl>
+              )}
             </div>
             <div className="mt-4 grid gap-2 sm:grid-cols-2 xl:grid-cols-4">
               <SummaryCard

@@ -39,6 +39,16 @@ export interface VarietyPayload {
   memo: string;
 }
 
+export interface MaterialPayload {
+  category: "농약" | "비료" | "자재";
+  name: string;
+  manufacturer: string;
+  specification: string;
+  stockQuantity: string;
+  storageLocation: string;
+  usage: string;
+}
+
 export type InboundType =
   | "FLASK_SEEDLING"
   | "POTTED_SEEDLING"
@@ -107,6 +117,22 @@ export interface InboundRecordPayload {
   memo?: string;
 }
 
+export interface InboundRecordUpdatePayload {
+  inboundDate: string;
+  bottleCount?: number;
+  estimatedQuantity?: number;
+  actualQuantity?: number;
+  tempLocation?: string;
+  pottingDueDate?: string;
+  potSize?: string;
+  ageYear?: number;
+  growthStage?: string;
+  placementType?: string;
+  trayCount?: number;
+  worker?: string;
+  memo?: string;
+}
+
 export interface InboundPottingPayload {
   pottingDate: string;
   actualQuantity: number;
@@ -132,4 +158,5 @@ export interface Material {
   usage: string;
   status: InventoryStatus;
   registeredAt: string;
+  updatedAt: string;
 }

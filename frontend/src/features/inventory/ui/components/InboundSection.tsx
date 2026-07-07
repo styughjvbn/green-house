@@ -10,6 +10,7 @@ import type {
   InboundRecordPayload,
   InboundStatus,
   InboundType,
+  InboundRecordUpdatePayload,
   Variety,
 } from "../../model/types";
 import { DetailRow, Field, inputClass } from "./InventoryPrimitives";
@@ -36,6 +37,8 @@ export function InboundSection({
   varieties,
   selectedId,
   onSelect,
+  onOpenCreate,
+  onUpdate,
   onCreate,
   onPotting,
   onCancel,
@@ -45,6 +48,11 @@ export function InboundSection({
   varieties: Variety[];
   selectedId: number;
   onSelect: (id: number) => void;
+  onOpenCreate: () => void;
+  onUpdate: (
+    inboundRecordId: number,
+    payload: InboundRecordUpdatePayload,
+  ) => Promise<void>;
   onCreate: (payload: InboundRecordPayload) => Promise<void>;
   onPotting: (
     inboundRecordId: number,
@@ -58,6 +66,10 @@ export function InboundSection({
   const [dialog, setDialog] = useState<"create" | "potting" | "cancel" | null>(
     null,
   );
+  const [editing, setEditing] = useState(false);
+  const [editForm, setEditForm] = useState<InboundRecordUpdatePayload>({
+    inboundDate: "",
+  });
 
   const selected =
     inboundRecords.find((item) => item.id === selectedId) ?? inboundRecords[0];
@@ -125,22 +137,33 @@ export function InboundSection({
           초기화
         </button>
         <button
-          className="flex h-9 items-center justify-center gap-2 rounded-md bg-[#159447] px-4 text-sm font-semibold text-white"
+          className="h-9 rounded-md bg-[#159447] px-6 text-sm font-semibold text-white"
           type="button"
-          onClick={() => setDialog("create")}
         >
-          <Plus className="h-4 w-4" />새 입고 등록
+          검색
         </button>
       </div>
 
       <div className="mt-3 grid min-w-0 gap-3 2xl:grid-cols-[minmax(0,1.15fr)_minmax(24rem,0.95fr)]">
         <section className="min-w-0 rounded-md border border-[#dce2dc] bg-white p-3 shadow-sm">
-          <h2 className="text-sm font-bold">
-            입고 목록
-            <span className="ml-2 text-xs font-semibold text-[#159447]">
-              총 {filtered.length}건
-            </span>
-          </h2>
+          <div className="flex items-center justify-between gap-3">
+            <h2 className="text-sm font-bold">
+              입고 목록
+              <span className="ml-2 text-xs font-semibold text-[#159447]">
+                총 {filtered.length}건
+              </span>
+            </h2>
+            <button
+              className="flex items-center gap-2 rounded-md bg-[#159447] px-3 py-2 text-xs font-semibold text-white shadow-sm"
+              type="button"
+              onClick={() => {
+                onOpenCreate();
+                setDialog("create");
+              }}
+            >
+              <Plus className="h-3.5 w-3.5" />새 입고 등록
+            </button>
+          </div>
           <div className="mt-3 overflow-x-auto">
             <table className="w-full min-w-[880px] text-xs">
               <thead className="border-y border-[#dce2dc] bg-[#f7f9f6] text-[#536057]">
@@ -169,7 +192,10 @@ export function InboundSection({
                   <tr
                     key={item.id}
                     className={`cursor-pointer border-b border-[#e5e9e5] hover:bg-[#f3f9f3] ${item.id === selected?.id ? "bg-[#eaf7eb]" : ""}`}
-                    onClick={() => onSelect(item.id)}
+                    onClick={() => {
+                      setEditing(false);
+                      onSelect(item.id);
+                    }}
                   >
                     <td className="px-3 py-2">{item.inboundDate}</td>
                     <td className="px-3 py-2">
@@ -199,6 +225,33 @@ export function InboundSection({
             <div className="flex flex-wrap items-center justify-between gap-2">
               <h2 className="text-sm font-bold">입고 상세</h2>
               <div className="flex flex-wrap gap-2">
+                {selected.status !== "CANCELED" ? (
+                  <button
+                    className="flex items-center gap-1 rounded-md border border-[#d7ddd8] px-3 py-1.5 text-xs font-semibold"
+                    type="button"
+                    onClick={() => {
+                      setEditing((current) => !current);
+                      setEditForm({
+                        inboundDate: selected.inboundDate,
+                        bottleCount: selected.bottleCount ?? undefined,
+                        estimatedQuantity:
+                          selected.estimatedQuantity ?? undefined,
+                        actualQuantity: selected.actualQuantity ?? undefined,
+                        tempLocation: selected.tempLocation ?? undefined,
+                        pottingDueDate: selected.pottingDueDate ?? undefined,
+                        potSize: selected.potSize ?? undefined,
+                        ageYear: selected.ageYear ?? undefined,
+                        growthStage: selected.growthStage ?? undefined,
+                        placementType: selected.placementType ?? undefined,
+                        trayCount: selected.trayCount ?? undefined,
+                        worker: selected.worker ?? undefined,
+                        memo: selected.memo ?? undefined,
+                      });
+                    }}
+                  >
+                    수정
+                  </button>
+                ) : null}
                 {selected.inboundType === "FLASK_SEEDLING" &&
                 !selected.createdOrchidGroupId &&
                 selected.status !== "CANCELED" ? (
@@ -223,37 +276,237 @@ export function InboundSection({
                 ) : null}
               </div>
             </div>
-            <dl className="mt-3 space-y-1">
-              <DetailRow label="입고일" value={selected.inboundDate} />
-              <DetailRow
-                label="입고 유형"
-                value={INBOUND_TYPE_LABELS[selected.inboundType]}
-              />
-              <DetailRow label="속" value={selected.genus} />
-              <DetailRow label="품종명" value={selected.varietyName} />
-              <DetailRow
-                label="상태"
-                value={INBOUND_STATUS_LABELS[selected.status]}
-              />
-              <DetailRow label="병 수" value={selected.bottleCount} />
-              <DetailRow label="예상 수량" value={selected.estimatedQuantity} />
-              <DetailRow label="실제 수량" value={selected.actualQuantity} />
-              <DetailRow label="임시 위치" value={selected.tempLocation} />
-              <DetailRow label="현재 위치" value={selected.currentLocation} />
-              <DetailRow label="포트 예정일" value={selected.pottingDueDate} />
-              <DetailRow label="포트 작업일" value={selected.pottingDate} />
-              <DetailRow label="화분 크기" value={selected.potSize} />
-              <DetailRow label="연차" value={selected.ageYear} />
-              <DetailRow label="생육 단계" value={selected.growthStage} />
-              <DetailRow label="배치 형태" value={selected.placementType} />
-              <DetailRow label="판 수" value={selected.trayCount} />
-              <DetailRow label="작업자" value={selected.worker} />
-              <DetailRow
-                label="생성 난 묶음"
-                value={selected.createdOrchidGroupId ?? "-"}
-              />
-              <DetailRow label="메모" value={selected.memo} />
-            </dl>
+            {editing ? (
+              <form
+                className="mt-3 grid gap-3 md:grid-cols-2"
+                onSubmit={(event) => {
+                  event.preventDefault();
+                  void onUpdate(selected.id, editForm).then(() =>
+                    setEditing(false),
+                  );
+                }}
+              >
+                <DetailRow
+                  label="입고 유형"
+                  value={INBOUND_TYPE_LABELS[selected.inboundType]}
+                />
+                <DetailRow
+                  label="품종명"
+                  value={`${selected.genus} / ${selected.varietyName}`}
+                />
+                <Field label="입고일">
+                  <input
+                    className={inputClass}
+                    required
+                    type="date"
+                    value={editForm.inboundDate}
+                    onChange={(event) =>
+                      setEditForm((current) => ({
+                        ...current,
+                        inboundDate: event.target.value,
+                      }))
+                    }
+                  />
+                </Field>
+                <Field label="병 수">
+                  <input
+                    className={inputClass}
+                    type="number"
+                    value={editForm.bottleCount ?? ""}
+                    onChange={(event) =>
+                      setEditForm((current) => ({
+                        ...current,
+                        bottleCount: toOptionalNumber(event.target.value),
+                      }))
+                    }
+                  />
+                </Field>
+                <Field label="예상 수량">
+                  <input
+                    className={inputClass}
+                    type="number"
+                    value={editForm.estimatedQuantity ?? ""}
+                    onChange={(event) =>
+                      setEditForm((current) => ({
+                        ...current,
+                        estimatedQuantity: toOptionalNumber(event.target.value),
+                      }))
+                    }
+                  />
+                </Field>
+                <Field label="실제 수량">
+                  <input
+                    className={inputClass}
+                    type="number"
+                    value={editForm.actualQuantity ?? ""}
+                    onChange={(event) =>
+                      setEditForm((current) => ({
+                        ...current,
+                        actualQuantity: toOptionalNumber(event.target.value),
+                      }))
+                    }
+                  />
+                </Field>
+                <Field label="임시 위치">
+                  <input
+                    className={inputClass}
+                    value={editForm.tempLocation ?? ""}
+                    onChange={(event) =>
+                      setEditForm((current) => ({
+                        ...current,
+                        tempLocation: event.target.value,
+                      }))
+                    }
+                  />
+                </Field>
+                <Field label="포트 예정일">
+                  <input
+                    className={inputClass}
+                    type="date"
+                    value={editForm.pottingDueDate ?? ""}
+                    onChange={(event) =>
+                      setEditForm((current) => ({
+                        ...current,
+                        pottingDueDate: event.target.value || undefined,
+                      }))
+                    }
+                  />
+                </Field>
+                <Field label="화분 크기">
+                  <input
+                    className={inputClass}
+                    value={editForm.potSize ?? ""}
+                    onChange={(event) =>
+                      setEditForm((current) => ({
+                        ...current,
+                        potSize: event.target.value,
+                      }))
+                    }
+                  />
+                </Field>
+                <Field label="연차">
+                  <input
+                    className={inputClass}
+                    type="number"
+                    value={editForm.ageYear ?? ""}
+                    onChange={(event) =>
+                      setEditForm((current) => ({
+                        ...current,
+                        ageYear: toOptionalNumber(event.target.value),
+                      }))
+                    }
+                  />
+                </Field>
+                <Field label="생육 단계">
+                  <input
+                    className={inputClass}
+                    value={editForm.growthStage ?? ""}
+                    onChange={(event) =>
+                      setEditForm((current) => ({
+                        ...current,
+                        growthStage: event.target.value,
+                      }))
+                    }
+                  />
+                </Field>
+                <Field label="배치 형태">
+                  <input
+                    className={inputClass}
+                    value={editForm.placementType ?? ""}
+                    onChange={(event) =>
+                      setEditForm((current) => ({
+                        ...current,
+                        placementType: event.target.value,
+                      }))
+                    }
+                  />
+                </Field>
+                <Field label="판 수">
+                  <input
+                    className={inputClass}
+                    type="number"
+                    value={editForm.trayCount ?? ""}
+                    onChange={(event) =>
+                      setEditForm((current) => ({
+                        ...current,
+                        trayCount: toOptionalNumber(event.target.value),
+                      }))
+                    }
+                  />
+                </Field>
+                <Field label="작업자">
+                  <input
+                    className={inputClass}
+                    value={editForm.worker ?? ""}
+                    onChange={(event) =>
+                      setEditForm((current) => ({
+                        ...current,
+                        worker: event.target.value,
+                      }))
+                    }
+                  />
+                </Field>
+                <label className="space-y-1 text-xs font-semibold text-[#425047] md:col-span-2">
+                  <span>메모</span>
+                  <textarea
+                    className="min-h-20 w-full rounded-md border border-[#d7ddd8] bg-white px-3 py-2 text-sm outline-none focus:border-[#159447] focus:ring-1 focus:ring-[#159447]"
+                    value={editForm.memo ?? ""}
+                    onChange={(event) =>
+                      setEditForm((current) => ({
+                        ...current,
+                        memo: event.target.value,
+                      }))
+                    }
+                  />
+                </label>
+                <div className="flex justify-end md:col-span-2">
+                  <button
+                    className="rounded-md bg-[#159447] px-4 py-2 text-sm font-semibold text-white"
+                    type="submit"
+                  >
+                    저장
+                  </button>
+                </div>
+              </form>
+            ) : (
+              <dl className="mt-3 space-y-1">
+                <DetailRow label="입고일" value={selected.inboundDate} />
+                <DetailRow
+                  label="입고 유형"
+                  value={INBOUND_TYPE_LABELS[selected.inboundType]}
+                />
+                <DetailRow label="속" value={selected.genus} />
+                <DetailRow label="품종명" value={selected.varietyName} />
+                <DetailRow
+                  label="상태"
+                  value={INBOUND_STATUS_LABELS[selected.status]}
+                />
+                <DetailRow label="병 수" value={selected.bottleCount} />
+                <DetailRow
+                  label="예상 수량"
+                  value={selected.estimatedQuantity}
+                />
+                <DetailRow label="실제 수량" value={selected.actualQuantity} />
+                <DetailRow label="임시 위치" value={selected.tempLocation} />
+                <DetailRow label="현재 위치" value={selected.currentLocation} />
+                <DetailRow
+                  label="포트 예정일"
+                  value={selected.pottingDueDate}
+                />
+                <DetailRow label="포트 작업일" value={selected.pottingDate} />
+                <DetailRow label="화분 크기" value={selected.potSize} />
+                <DetailRow label="연차" value={selected.ageYear} />
+                <DetailRow label="생육 단계" value={selected.growthStage} />
+                <DetailRow label="배치 형태" value={selected.placementType} />
+                <DetailRow label="판 수" value={selected.trayCount} />
+                <DetailRow label="작업자" value={selected.worker} />
+                <DetailRow
+                  label="생성 난 묶음"
+                  value={selected.createdOrchidGroupId ?? "-"}
+                />
+                <DetailRow label="메모" value={selected.memo} />
+              </dl>
+            )}
           </section>
         ) : null}
       </div>
@@ -847,6 +1100,11 @@ function flattenZones(houses: House[]) {
 }
 
 function toNumber(value: string) {
+  if (!value.trim()) return undefined;
+  return Number(value);
+}
+
+function toOptionalNumber(value: string) {
   if (!value.trim()) return undefined;
   return Number(value);
 }

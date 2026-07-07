@@ -4,6 +4,9 @@ import type {
   InboundPottingPayload,
   InboundRecord,
   InboundRecordPayload,
+  InboundRecordUpdatePayload,
+  Material,
+  MaterialPayload,
   Variety,
   VarietyPayload,
 } from "../model/types";
@@ -76,6 +79,21 @@ type InboundRecordResponse = {
   updatedAt: string;
 };
 
+type MaterialResponse = {
+  id: number;
+  code: string;
+  category: Material["category"];
+  name: string;
+  manufacturer: string | null;
+  specification: string | null;
+  stockQuantity: string | null;
+  storageLocation: string | null;
+  usage: string | null;
+  active: boolean;
+  createdAt: string;
+  updatedAt: string;
+};
+
 async function requestJson<T>(
   path: string,
   init: RequestInit,
@@ -128,6 +146,68 @@ export function createVariety(payload: VarietyPayload) {
   ).then(toVariety);
 }
 
+export function updateVariety(varietyId: number, payload: VarietyPayload) {
+  return requestJson<VarietyResponse>(
+    `/varieties/${varietyId}`,
+    {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    },
+    "품종을 수정하지 못했습니다.",
+  ).then(toVariety);
+}
+
+export function deactivateVariety(varietyId: number) {
+  return requestJson<VarietyResponse>(
+    `/varieties/${varietyId}/deactivate`,
+    {
+      method: "PATCH",
+    },
+    "품종을 비활성화하지 못했습니다.",
+  ).then(toVariety);
+}
+
+export function getMaterials() {
+  return fetchApi<MaterialResponse[]>("/materials").then((items) =>
+    items.map(toMaterial),
+  );
+}
+
+export function createMaterial(payload: MaterialPayload) {
+  return requestJson<MaterialResponse>(
+    "/materials",
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    },
+    "자재를 등록하지 못했습니다.",
+  ).then(toMaterial);
+}
+
+export function updateMaterial(materialId: number, payload: MaterialPayload) {
+  return requestJson<MaterialResponse>(
+    `/materials/${materialId}`,
+    {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    },
+    "자재를 수정하지 못했습니다.",
+  ).then(toMaterial);
+}
+
+export function deactivateMaterial(materialId: number) {
+  return requestJson<MaterialResponse>(
+    `/materials/${materialId}/deactivate`,
+    {
+      method: "PATCH",
+    },
+    "자재를 비활성화하지 못했습니다.",
+  ).then(toMaterial);
+}
+
 export function getInboundRecords() {
   return fetchApi<InboundRecordResponse[]>("/inbound-records").then((items) =>
     items.map(toInboundRecord),
@@ -143,6 +223,21 @@ export function createInboundRecord(payload: InboundRecordPayload) {
       body: JSON.stringify(payload),
     },
     "입고 기록을 등록하지 못했습니다.",
+  ).then(toInboundRecord);
+}
+
+export function updateInboundRecord(
+  inboundRecordId: number,
+  payload: InboundRecordUpdatePayload,
+) {
+  return requestJson<InboundRecordResponse>(
+    `/inbound-records/${inboundRecordId}`,
+    {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    },
+    "입고 기록을 수정하지 못했습니다.",
   ).then(toInboundRecord);
 }
 
@@ -223,5 +318,22 @@ function toInboundRecord(item: InboundRecordResponse): InboundRecord {
     memo: item.memo,
     createdAt: item.createdAt,
     updatedAt: item.updatedAt,
+  };
+}
+
+function toMaterial(item: MaterialResponse): Material {
+  return {
+    id: item.id,
+    code: item.code,
+    category: item.category,
+    name: item.name,
+    manufacturer: item.manufacturer ?? "",
+    specification: item.specification ?? "",
+    stockQuantity: item.stockQuantity ?? "",
+    storageLocation: item.storageLocation ?? "",
+    usage: item.usage ?? "",
+    status: item.active ? "ACTIVE" : "INACTIVE",
+    registeredAt: item.createdAt.slice(0, 10),
+    updatedAt: item.updatedAt.slice(0, 10),
   };
 }

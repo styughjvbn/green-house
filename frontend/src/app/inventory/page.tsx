@@ -1,6 +1,7 @@
 import type { House } from "@/entities/farm/types";
 import {
   getInboundRecords,
+  getMaterials,
   getVarieties,
   InventoryPage,
 } from "@/features/inventory";
@@ -14,9 +15,10 @@ export default async function Page({
   searchParams?: Promise<{ tab?: string }>;
 }) {
   const resolvedSearchParams = searchParams ? await searchParams : undefined;
-  const [varieties, inboundRecords, houses] = await Promise.all([
+  const [varieties, inboundRecords, materials, houses] = await Promise.all([
     getVarieties(),
     getInboundRecords(),
+    getMaterials(),
     fetchApi<House[]>("/houses"),
   ]);
 
@@ -25,6 +27,7 @@ export default async function Page({
       initialActiveTab={resolvedSearchParams?.tab}
       houses={houses}
       initialInboundRecords={inboundRecords}
+      initialMaterials={materials}
       initialVarieties={varieties}
     />
   );
