@@ -10,6 +10,7 @@ import {
   createVariety,
   deactivateMaterial,
   deactivateVariety,
+  deleteInboundRecord,
   deleteMaterial,
   deleteVariety,
   getVarietyOrchidGroups,
@@ -198,6 +199,10 @@ export function InventoryPage({
           onOpenCreate={() => updateTab("INBOUND")}
           onPotting={async (inboundRecordId, payload) => {
             await potInboundRecord(inboundRecordId, payload);
+            router.refresh();
+          }}
+          onDelete={async (inboundRecordId) => {
+            await deleteInboundRecord(inboundRecordId);
             router.refresh();
           }}
           onSelect={setSelectedInboundId}

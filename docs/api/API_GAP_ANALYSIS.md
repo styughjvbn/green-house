@@ -5,7 +5,7 @@
 ## 기준
 
 - 실제 구현 기준: `docs/api/openapi.yaml`
-- 실제 구현 operations: `67`
+- 실제 구현 operations: `68`
 - 실제 구현 path entries: `51`
 - 과거 md/추가안에서 수집한 endpoint 후보: `69`
 - 후보 중 OpenAPI와 매칭되는 endpoint: `44`
@@ -62,6 +62,7 @@
 - `POST /api/inbound-records`
 - `GET /api/inbound-records/{inboundRecordId}`
 - `PATCH /api/inbound-records/{inboundRecordId}`
+- `DELETE /api/inbound-records/{inboundRecordId}`
 - `POST /api/inbound-records/{inboundRecordId}/cancel`
 - `POST /api/inbound-records/{inboundRecordId}/potting`
 - `GET /api/materials`

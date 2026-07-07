@@ -1056,6 +1056,24 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ApiResponseInboundRecordResponse"
+    delete:
+      tags:
+      - inbound-record-controller
+      operationId: delete
+      parameters:
+      - name: inboundRecordId
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: int64
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiResponseVoid"
   /api/auction-lots/{id}/status:
     patch:
       tags:

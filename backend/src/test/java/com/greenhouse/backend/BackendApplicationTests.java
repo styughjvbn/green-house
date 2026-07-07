@@ -409,6 +409,50 @@ class BackendApplicationTests {
 	}
 
 	@Test
+	void deletesCanceledInboundRecordAndRemovesAutoWorkRecord() throws Exception {
+		var sampleVariety = varietyRepository.findAll().stream()
+			.filter(variety -> variety.getName().equals("카틀레야 A"))
+			.findFirst()
+			.orElseThrow();
+
+		var createResult = mockMvc.perform(post("/api/inbound-records")
+				.contentType(MediaType.APPLICATION_JSON)
+				.content("""
+					{
+					  "inboundDate": "2026-07-08",
+					  "inboundType": "FLASK_SEEDLING",
+					  "varietyId": %d,
+					  "bottleCount": 3,
+					  "estimatedQuantity": 120,
+					  "tempLocation": "삭제 테스트"
+					}
+					""".formatted(sampleVariety.getId())))
+			.andExpect(status().isCreated())
+			.andReturn();
+
+		var inboundRecordId = Long.valueOf(createResult.getResponse().getContentAsString().replaceAll(".*\\\"id\\\":(\\d+).*", "$1"));
+
+		assertThat(workRecordRepository.search("INBOUND_RECORD", inboundRecordId, "입고", null, null)).hasSize(1);
+
+		mockMvc.perform(post("/api/inbound-records/{inboundRecordId}/cancel", inboundRecordId)
+				.contentType(MediaType.APPLICATION_JSON)
+				.content("""
+					{
+					  "memo": "오입력"
+					}
+					"""))
+			.andExpect(status().isOk())
+			.andExpect(jsonPath("$.data.status").value("CANCELED"));
+
+		mockMvc.perform(delete("/api/inbound-records/{inboundRecordId}", inboundRecordId))
+			.andExpect(status().isOk())
+			.andExpect(jsonPath("$.data").doesNotExist());
+
+		assertThat(inboundRecordRepository.existsById(inboundRecordId)).isFalse();
+		assertThat(workRecordRepository.search("INBOUND_RECORD", inboundRecordId, "입고", null, null)).isEmpty();
+	}
+
+	@Test
 	void createsUpdatesAndDeactivatesMaterial() throws Exception {
 		mockMvc.perform(get("/api/materials"))
 			.andExpect(status().isOk())

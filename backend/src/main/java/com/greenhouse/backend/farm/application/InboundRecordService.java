@@ -18,6 +18,7 @@ import com.greenhouse.backend.farm.repository.BedZoneRepository;
 import com.greenhouse.backend.farm.repository.InboundRecordRepository;
 import com.greenhouse.backend.farm.repository.OrchidGroupRepository;
 import com.greenhouse.backend.farm.repository.VarietyRepository;
+import com.greenhouse.backend.work.application.SystemWorkCleanupService;
 import com.greenhouse.backend.work.application.SystemWorkRecorder;
 import java.time.LocalDate;
 import org.springframework.data.domain.PageRequest;
@@ -32,25 +33,29 @@ public class InboundRecordService {
 	private static final String DEFAULT_ORCHID_STATUS = "정상";
 	private static final String INBOUND_WORK_TYPE_CODE = "INBOUND";
 	private static final String POTTING_WORK_TYPE_CODE = "POTTING";
+	private static final String INBOUND_RECORD_TARGET_TYPE = "INBOUND_RECORD";
 
 	private final InboundRecordRepository inboundRecordRepository;
 	private final VarietyRepository varietyRepository;
 	private final BedZoneRepository bedZoneRepository;
 	private final OrchidGroupRepository orchidGroupRepository;
 	private final SystemWorkRecorder systemWorkRecorder;
+	private final SystemWorkCleanupService systemWorkCleanupService;
 
 	public InboundRecordService(
 		InboundRecordRepository inboundRecordRepository,
 		VarietyRepository varietyRepository,
 		BedZoneRepository bedZoneRepository,
 		OrchidGroupRepository orchidGroupRepository,
-		SystemWorkRecorder systemWorkRecorder
+		SystemWorkRecorder systemWorkRecorder,
+		SystemWorkCleanupService systemWorkCleanupService
 	) {
 		this.inboundRecordRepository = inboundRecordRepository;
 		this.varietyRepository = varietyRepository;
 		this.bedZoneRepository = bedZoneRepository;
 		this.orchidGroupRepository = orchidGroupRepository;
 		this.systemWorkRecorder = systemWorkRecorder;
+		this.systemWorkCleanupService = systemWorkCleanupService;
 	}
 
 	@Transactional(readOnly = true)
@@ -125,8 +130,8 @@ public class InboundRecordService {
 		recordWork(
 			INBOUND_WORK_TYPE_CODE,
 			saved.getInboundDate(),
-			saved.getCreatedOrchidGroup() == null ? "VARIETY" : "ORCHID_GROUP",
-			saved.getCreatedOrchidGroup() == null ? saved.getVariety().getId() : saved.getCreatedOrchidGroup().getId(),
+			INBOUND_RECORD_TARGET_TYPE,
+			saved.getId(),
 			saved.getVariety().getName(),
 			resolveWorkQuantity(saved.getInboundType(), saved.getBottleCount(), saved.getActualQuantity(), saved.getEstimatedQuantity()),
 			saved.getWorker(),
@@ -231,6 +236,18 @@ public class InboundRecordService {
 		}
 		inboundRecord.cancel(normalize(request.memo()));
 		return InboundRecordResponse.from(inboundRecord);
+	}
+
+	public void delete(Long inboundRecordId) {
+		InboundRecord inboundRecord = findInboundRecord(inboundRecordId);
+		if (inboundRecord.getStatus() != InboundStatus.CANCELED) {
+			throw new IllegalArgumentException("취소된 입고 기록만 삭제할 수 있습니다.");
+		}
+		if (inboundRecord.getCreatedOrchidGroup() != null) {
+			throw new IllegalArgumentException("난 묶음이 생성된 입고 기록은 삭제할 수 없습니다.");
+		}
+		systemWorkCleanupService.deleteAutoInboundCreateRecords(inboundRecordId);
+		inboundRecordRepository.delete(inboundRecord);
 	}
 
 	public LocalDate getLatestInboundDate(Long varietyId) {

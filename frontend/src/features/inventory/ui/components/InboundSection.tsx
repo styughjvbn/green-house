@@ -44,6 +44,7 @@ export function InboundSection({
   onCreate,
   onPotting,
   onCancel,
+  onDelete,
 }: {
   pageData: InventoryPageResult<InboundRecord>;
   houses: House[];
@@ -61,6 +62,7 @@ export function InboundSection({
     payload: InboundPottingPayload,
   ) => Promise<void>;
   onCancel: (inboundRecordId: number, memo?: string) => Promise<void>;
+  onDelete: (inboundRecordId: number) => Promise<void>;
 }) {
   const router = useRouter();
   const pathname = usePathname();
@@ -365,6 +367,22 @@ export function InboundSection({
                     onClick={() => setDialog("cancel")}
                   >
                     입고 취소
+                  </button>
+                ) : null}
+                {selected.status === "CANCELED" ? (
+                  <button
+                    className="rounded-md border border-[#e2c8c8] px-3 py-1.5 text-xs font-semibold text-[#a14545]"
+                    type="button"
+                    onClick={() => {
+                      if (!window.confirm("취소된 입고 기록을 삭제할까요?")) {
+                        return;
+                      }
+                      void onDelete(selected.id).catch((error: Error) => {
+                        window.alert(error.message);
+                      });
+                    }}
+                  >
+                    삭제
                   </button>
                 ) : null}
               </div>

@@ -325,6 +325,16 @@ export function cancelInboundRecord(inboundRecordId: number, memo?: string) {
   ).then(toInboundRecord);
 }
 
+export function deleteInboundRecord(inboundRecordId: number) {
+  return requestJson<null>(
+    `/inbound-records/${inboundRecordId}`,
+    {
+      method: "DELETE",
+    },
+    "입고 기록을 삭제하지 못했습니다.",
+  );
+}
+
 function toVariety(item: VarietyResponse): Variety {
   return {
     id: item.id,
