@@ -127,6 +127,10 @@ public class OrchidGroup extends BaseEntity {
 
 	public void assignVariety(Variety variety) {
 		this.variety = variety;
+		if (variety != null) {
+			this.genus = variety.getGenus();
+			this.varietyName = variety.getName();
+		}
 	}
 
 	public void assignInboundRecord(InboundRecord inboundRecord) {

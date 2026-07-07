@@ -667,6 +667,13 @@ class BackendApplicationTests {
 			.orElseThrow();
 		var sampleBed = physicalBedRepository.findByHouseIdOrderByDisplayOrderAsc(sampleHouse.getId()).get(1);
 		var sampleZone = bedZoneRepository.findByPhysicalBedIdOrderBySortOrderAsc(sampleBed.getId()).getFirst();
+		var sampleVariety = varietyRepository.findAll().stream()
+			.findFirst()
+			.orElseThrow();
+		var updateVariety = varietyRepository.findAll().stream()
+			.skip(1)
+			.findFirst()
+			.orElseThrow();
 		var beforeCount = orchidGroupRepository.search(null, null, sampleZone.getId(), null).size();
 
 		var createResult = mockMvc.perform(post("/api/orchid-groups")
@@ -674,8 +681,7 @@ class BackendApplicationTests {
 				.content("""
 					{
 					  "bedZoneId": %d,
-					  "genus": "카틀레야",
-					  "varietyName": "카틀레야 신규",
+					  "varietyId": %d,
 					  "quantity": 15,
 					  "potSize": "4치",
 					  "ageYear": 2,
@@ -684,10 +690,11 @@ class BackendApplicationTests {
 					  "trayCount": 1,
 					  "memo": "테스트 생성"
 					}
-					""".formatted(sampleZone.getId())))
+					""".formatted(sampleZone.getId(), sampleVariety.getId())))
 			.andExpect(status().isCreated())
 			.andExpect(jsonPath("$.data.bedZoneId").value(sampleZone.getId()))
-			.andExpect(jsonPath("$.data.varietyName").value("카틀레야 신규"))
+			.andExpect(jsonPath("$.data.varietyId").value(sampleVariety.getId()))
+			.andExpect(jsonPath("$.data.varietyName").value(sampleVariety.getName()))
 			.andExpect(jsonPath("$.data.quantity").value(15))
 			.andExpect(jsonPath("$.data.sortOrder").value(beforeCount + 1))
 			.andReturn();
@@ -699,8 +706,7 @@ class BackendApplicationTests {
 				.contentType(MediaType.APPLICATION_JSON)
 				.content("""
 					{
-					  "genus": "덴드로비움",
-					  "varietyName": "덴드로비움 수정",
+					  "varietyId": %d,
 					  "quantity": 22,
 					  "potSize": "5치",
 					  "ageYear": 3,
@@ -709,11 +715,12 @@ class BackendApplicationTests {
 					  "trayCount": 2,
 					  "memo": "테스트 수정"
 					}
-					"""))
+					""".formatted(updateVariety.getId())))
 			.andExpect(status().isOk())
 			.andExpect(jsonPath("$.data.id").value(createdId))
 			.andExpect(jsonPath("$.data.bedZoneId").value(sampleZone.getId()))
-			.andExpect(jsonPath("$.data.varietyName").value("덴드로비움 수정"))
+			.andExpect(jsonPath("$.data.varietyId").value(updateVariety.getId()))
+			.andExpect(jsonPath("$.data.varietyName").value(updateVariety.getName()))
 			.andExpect(jsonPath("$.data.quantity").value(22))
 			.andExpect(jsonPath("$.data.status").value("주의"));
 
@@ -728,7 +735,6 @@ class BackendApplicationTests {
 	@Transactional
 	void deletesOrchidGroupEvenWhenInboundRecordReferencesIt() throws Exception {
 		var sampleVariety = varietyRepository.findAll().stream()
-			.filter(variety -> variety.getName().equals("카틀레야 A"))
 			.findFirst()
 			.orElseThrow();
 		var sampleHouse = houseRepository.findAll().stream()
@@ -777,16 +783,20 @@ class BackendApplicationTests {
 
 	@Test
 	void returnsValidationErrorsForInvalidOrchidGroupMutations() throws Exception {
+		var sampleVariety = varietyRepository.findAll().stream()
+			.findFirst()
+			.orElseThrow();
+
 		mockMvc.perform(post("/api/orchid-groups")
 				.contentType(MediaType.APPLICATION_JSON)
 				.content("""
 					{
 					  "bedZoneId": 999999,
-					  "varietyName": "없는 구역",
+					  "varietyId": %d,
 					  "quantity": 10,
 					  "status": "정상"
 					}
-					"""))
+					""".formatted(sampleVariety.getId())))
 			.andExpect(status().isNotFound())
 			.andExpect(jsonPath("$.error.code").value("NOT_FOUND"));
 
@@ -795,7 +805,6 @@ class BackendApplicationTests {
 				.content("""
 					{
 					  "bedZoneId": 1,
-					  "varietyName": "",
 					  "quantity": 0,
 					  "status": ""
 					}
@@ -807,11 +816,11 @@ class BackendApplicationTests {
 				.contentType(MediaType.APPLICATION_JSON)
 				.content("""
 					{
-					  "varietyName": "없는 난 묶음",
+					  "varietyId": %d,
 					  "quantity": 1,
 					  "status": "정상"
 					}
-					"""))
+					""".formatted(sampleVariety.getId())))
 			.andExpect(status().isNotFound())
 			.andExpect(jsonPath("$.error.code").value("NOT_FOUND"));
 	}
@@ -826,6 +835,9 @@ class BackendApplicationTests {
 		var zones = bedZoneRepository.findByPhysicalBedIdOrderBySortOrderAsc(sampleBed.getId());
 		var sourceZone = zones.get(0);
 		var targetZone = zones.get(1);
+		var sampleVariety = varietyRepository.findAll().stream()
+			.findFirst()
+			.orElseThrow();
 		var targetBeforeCount = orchidGroupRepository.search(null, null, targetZone.getId(), null).size();
 
 		var createResult = mockMvc.perform(post("/api/orchid-groups")
@@ -833,11 +845,11 @@ class BackendApplicationTests {
 				.content("""
 					{
 					  "bedZoneId": %d,
-					  "varietyName": "이동 테스트",
+					  "varietyId": %d,
 					  "quantity": 5,
 					  "status": "정상"
 					}
-					""".formatted(sourceZone.getId())))
+					""".formatted(sourceZone.getId(), sampleVariety.getId())))
 			.andExpect(status().isCreated())
 			.andReturn();
 		var createdId = Long.valueOf(createResult.getResponse().getContentAsString().replaceAll(".*\\\"id\\\":(\\d+).*", "$1"));

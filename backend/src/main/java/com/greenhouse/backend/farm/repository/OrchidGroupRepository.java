@@ -64,4 +64,6 @@ public interface OrchidGroupRepository extends JpaRepository<OrchidGroup, Long> 
 
 	boolean existsByVarietyId(Long varietyId);
 
+	List<OrchidGroup> findByVarietyIsNull();
+
 }

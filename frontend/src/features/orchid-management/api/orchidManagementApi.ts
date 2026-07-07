@@ -6,6 +6,7 @@ import type {
   WorkRecordTargetType,
   WorkType,
   BedZonePlacementProfile,
+  VarietyOption,
 } from "@/entities/farm/types";
 import type {
   MutationPayload,
@@ -106,6 +107,40 @@ export async function saveBedZonePlacementProfile(
 
 export function getOrchidManagementMap() {
   return fetchApi<FarmStatusMapData>("/farm-status/map");
+}
+
+type VarietySearchResponse = {
+  content: Array<{
+    id: number;
+    genus: string;
+    name: string;
+    defaultPotSize: string | null;
+    active: boolean;
+  }>;
+};
+
+export async function searchOrchidVarieties(
+  keyword: string,
+): Promise<VarietyOption[]> {
+  const params = new URLSearchParams({
+    active: "true",
+    size: "20",
+  });
+  if (keyword.trim()) {
+    params.set("keyword", keyword.trim());
+  }
+
+  const result = await fetchApi<VarietySearchResponse>(
+    `/varieties?${params.toString()}`,
+  );
+
+  return result.content.map((item) => ({
+    id: item.id,
+    genus: item.genus,
+    name: item.name,
+    defaultPotSize: item.defaultPotSize,
+    active: item.active,
+  }));
 }
 
 export function getHouse(houseId: number) {

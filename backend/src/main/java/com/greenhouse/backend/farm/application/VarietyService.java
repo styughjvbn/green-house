@@ -83,6 +83,8 @@ public class VarietyService {
 				request.saleEnabled() == null || request.saleEnabled(),
 				normalize(request.description()),
 				normalize(request.memo()));
+		orchidGroupRepository.findByVarietyIdOrderByLocation(varietyId)
+				.forEach(group -> group.assignVariety(variety));
 		return toResponse(variety);
 	}
 

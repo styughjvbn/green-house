@@ -51,6 +51,13 @@ public class FarmSeedDataInitializer implements CommandLineRunner {
 		bedZoneRepository.findAll().stream()
 				.filter(zone -> zone.getSegments().isEmpty())
 				.forEach(this::addDefaultSegments);
+
+		orchidGroupRepository.findByVarietyIsNull().forEach(this::bindExistingVariety);
+	}
+
+	private void bindExistingVariety(OrchidGroup orchidGroup) {
+		varietyRepository.findByGenusAndName(orchidGroup.getGenus(), orchidGroup.getVarietyName())
+				.ifPresent(orchidGroup::assignVariety);
 	}
 
 	private void addDefaultSegments(BedZone zone) {

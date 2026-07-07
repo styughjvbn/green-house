@@ -117,7 +117,10 @@ export function AnalyticsSummary({
   );
 }
 
-export function formatWon(value: number) {
+export function formatWon(value: number | null | undefined) {
+  if (value == null || Number.isNaN(value)) {
+    return "-";
+  }
   return `${value.toLocaleString()}원`;
 }
 

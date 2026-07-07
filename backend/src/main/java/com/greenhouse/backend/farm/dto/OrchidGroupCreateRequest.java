@@ -7,8 +7,7 @@ import jakarta.validation.constraints.Size;
 
 public record OrchidGroupCreateRequest(
 		@NotNull Long bedZoneId,
-		@Size(max = 100) String genus,
-		@NotBlank @Size(max = 150) String varietyName,
+		@NotNull Long varietyId,
 		@NotNull @Min(1) Integer quantity,
 		@Size(max = 50) String potSize,
 		@Min(0) Integer ageYear,

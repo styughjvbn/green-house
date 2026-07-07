@@ -5,6 +5,7 @@ import com.greenhouse.backend.farm.domain.OrchidGroup;
 public record OrchidGroupResponse(
 		Long id,
 		Long bedZoneId,
+		Long varietyId,
 		String genus,
 		String varietyName,
 		Integer quantity,
@@ -25,11 +26,13 @@ public record OrchidGroupResponse(
 		var bedZone = orchidGroup.getBedZone();
 		var physicalBed = bedZone.getPhysicalBed();
 		var house = physicalBed.getHouse();
+		var variety = orchidGroup.getVariety();
 		return new OrchidGroupResponse(
 				orchidGroup.getId(),
 				bedZone.getId(),
-				orchidGroup.getGenus(),
-				orchidGroup.getVarietyName(),
+				variety != null ? variety.getId() : null,
+				variety != null ? variety.getGenus() : orchidGroup.getGenus(),
+				variety != null ? variety.getName() : orchidGroup.getVarietyName(),
 				orchidGroup.getQuantity(),
 				orchidGroup.getPotSize(),
 				orchidGroup.getAgeYear(),

@@ -25,6 +25,7 @@ export type OrchidGroupSegmentPlacement = {
 export type OrchidGroup = {
   id: number;
   bedZoneId: number;
+  varietyId: number | null;
   genus: string | null;
   varietyName: string;
   quantity: number;
@@ -40,6 +41,14 @@ export type OrchidGroup = {
   houseNumber: number;
   physicalBedNumber: number;
   bedZoneName: string;
+};
+
+export type VarietyOption = {
+  id: number;
+  genus: string;
+  name: string;
+  defaultPotSize: string | null;
+  active: boolean;
 };
 
 export type BedZoneSegmentCapacity = {

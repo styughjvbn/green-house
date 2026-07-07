@@ -1,10 +1,15 @@
-﻿"use client";
+"use client";
 
-import { FormEvent, useState } from "react";
-import type { BedZone, OrchidGroup } from "@/entities/farm/types";
+import { FormEvent, useMemo, useState } from "react";
+import type {
+  BedZone,
+  OrchidGroup,
+  VarietyOption,
+} from "@/entities/farm/types";
 import { nullableNumber, nullableText } from "../../lib/orchidManagementUtils";
 import type { MutationPayload, OrchidFormState } from "../../model/types";
 import TextField from "./TextField";
+import VarietySearchSelect from "./VarietySearchSelect";
 
 export default function OrchidGroupForm({
   initialValue,
@@ -21,7 +26,23 @@ export default function OrchidGroupForm({
   onCancel: () => void;
   onSubmit: (payload: MutationPayload) => Promise<void>;
 }) {
+  const initialVariety = useMemo<VarietyOption | null>(
+    () =>
+      initialValue?.varietyId != null
+        ? {
+            id: initialValue.varietyId,
+            genus: initialValue.genus ?? "",
+            name: initialValue.varietyName,
+            defaultPotSize: initialValue.potSize,
+            active: true,
+          }
+        : null,
+    [initialValue],
+  );
+
   const [form, setForm] = useState<OrchidFormState>(() => ({
+    varietyId: initialValue?.varietyId ? String(initialValue.varietyId) : "",
+    varietyQuery: "",
     genus: initialValue?.genus ?? "",
     varietyName: initialValue?.varietyName ?? "",
     quantity: initialValue ? String(initialValue.quantity) : "1",
@@ -41,11 +62,25 @@ export default function OrchidGroupForm({
     setForm((current) => ({ ...current, [field]: value }));
   }
 
+  function handleSelectVariety(option: VarietyOption) {
+    setForm((current) => ({
+      ...current,
+      varietyId: String(option.id),
+      varietyQuery: option.name,
+      genus: option.genus,
+      varietyName: option.name,
+      potSize: current.potSize || option.defaultPotSize || "",
+    }));
+  }
+
   function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    if (!form.varietyId) {
+      return;
+    }
+
     void onSubmit({
-      genus: nullableText(form.genus),
-      varietyName: form.varietyName.trim(),
+      varietyId: Number(form.varietyId),
       quantity: Number(form.quantity),
       potSize: nullableText(form.potSize),
       ageYear: nullableNumber(form.ageYear),
@@ -77,31 +112,35 @@ export default function OrchidGroupForm({
         </button>
       </div>
       <form className="mt-3 space-y-2" onSubmit={handleSubmit}>
-        <TextField
-          label="품종명"
-          required
-          value={form.varietyName}
-          onChange={(value) => updateField("varietyName", value)}
+        <VarietySearchSelect
+          disabled={saving}
+          selectedVariety={
+            form.varietyId
+              ? {
+                  id: Number(form.varietyId),
+                  genus: form.genus,
+                  name: form.varietyName,
+                  defaultPotSize: form.potSize || null,
+                  active: true,
+                }
+              : initialVariety
+          }
+          onSelect={handleSelectVariety}
         />
+        <div className="rounded-md border border-[#dbe1da] bg-[#f8faf7] px-3 py-2 text-xs text-[#435047]">
+          <p className="font-semibold">선택 품종</p>
+          <p className="mt-1">
+            {form.varietyName || "선택 안됨"}
+            {form.genus ? ` · ${form.genus}` : ""}
+          </p>
+        </div>
         <div className="grid grid-cols-2 gap-2">
-          <TextField
-            label="속명"
-            value={form.genus}
-            onChange={(value) => updateField("genus", value)}
-          />
           <TextField
             label="수량"
             required
             type="number"
             value={form.quantity}
             onChange={(value) => updateField("quantity", value)}
-          />
-        </div>
-        <div className="grid grid-cols-2 gap-2">
-          <TextField
-            label="화분 크기"
-            value={form.potSize}
-            onChange={(value) => updateField("potSize", value)}
           />
           <TextField
             label="년생"
@@ -110,19 +149,26 @@ export default function OrchidGroupForm({
             onChange={(value) => updateField("ageYear", value)}
           />
         </div>
-        <label className="block">
-          <span className="text-sm font-semibold text-[#435047]">상태</span>
-          <select
-            className="mt-1 w-full rounded-md border border-[#cfd8cc] px-2 py-1.5 text-sm"
-            value={form.status}
-            onChange={(event) => updateField("status", event.target.value)}
-          >
-            <option value="정상">정상</option>
-            <option value="주의">주의</option>
-            <option value="이상">이상</option>
-            <option value="판매 가능">판매 가능</option>
-          </select>
-        </label>
+        <div className="grid grid-cols-2 gap-2">
+          <TextField
+            label="화분 크기"
+            value={form.potSize}
+            onChange={(value) => updateField("potSize", value)}
+          />
+          <label className="block">
+            <span className="text-sm font-semibold text-[#435047]">상태</span>
+            <select
+              className="mt-1 w-full rounded-md border border-[#cfd8cc] px-2 py-1.5 text-sm"
+              value={form.status}
+              onChange={(event) => updateField("status", event.target.value)}
+            >
+              <option value="정상">정상</option>
+              <option value="주의">주의</option>
+              <option value="이상">이상</option>
+              <option value="판매 가능">판매 가능</option>
+            </select>
+          </label>
+        </div>
         <div className="grid grid-cols-2 gap-2">
           <label className="block">
             <span className="text-sm font-semibold text-[#435047]">
@@ -188,7 +234,7 @@ export default function OrchidGroupForm({
         </label>
         <button
           className="w-full rounded-md bg-[#159447] px-3 py-2 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-60"
-          disabled={saving || !targetZone}
+          disabled={saving || !targetZone || !form.varietyId}
           type="submit"
         >
           {saving ? "저장 중" : "저장"}

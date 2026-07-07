@@ -43,7 +43,7 @@ class BedPlacementTests {
 		var group = orchidGroupRepository.findAll().getFirst();
 		groupId = group.getId();
 		commandService.update(groupId, new OrchidGroupUpdateRequest(
-			group.getGenus(), group.getVarietyName(), group.getQuantity(), group.getPotSize(), group.getAgeYear(),
+			group.getVariety().getId(), group.getQuantity(), group.getPotSize(), group.getAgeYear(),
 			group.getStatus(), "TRAY_20", 8, true, group.getMemo()
 		));
 		targetZoneId = bedZoneRepository.findAll().stream()

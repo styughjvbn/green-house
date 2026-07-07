@@ -20,6 +20,8 @@ export type DragState = {
 } | null;
 
 export type OrchidFormState = {
+  varietyId: string;
+  varietyQuery: string;
   genus: string;
   varietyName: string;
   quantity: string;
@@ -33,8 +35,7 @@ export type OrchidFormState = {
 };
 
 export type MutationPayload = {
-  genus: string | null;
-  varietyName: string;
+  varietyId: number;
   quantity: number;
   potSize: string | null;
   ageYear: number | null;
