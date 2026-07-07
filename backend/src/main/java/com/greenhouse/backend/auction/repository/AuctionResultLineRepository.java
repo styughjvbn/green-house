@@ -9,19 +9,21 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
 public interface AuctionResultLineRepository extends JpaRepository<AuctionResultLine, Long> {
-	@EntityGraph(attributePaths = {"auctionAttempt", "auctionAttempt.shipmentLot", "auctionAttempt.shipmentLot.shipment", "auctionAttempt.shipmentLot.shipment.auctionHouse"})
+	@EntityGraph(attributePaths = { "auctionAttempt", "auctionAttempt.shipmentLot",
+			"auctionAttempt.shipmentLot.shipment", "auctionAttempt.shipmentLot.shipment.auctionHouse" })
 	@Query("""
-		select line from AuctionResultLine line
-		where line.amount > 0
-		  and line.auctionDate = :auctionDate
-		  and line.auctionAttempt.shipmentLot.shipment.auctionHouse.id = :auctionHouseId
-		order by line.id
-		""")
+			select line from AuctionResultLine line
+			where line.amount > 0
+			  and line.auctionDate = :auctionDate
+			  and line.auctionAttempt.shipmentLot.shipment.auctionHouse.id = :auctionHouseId
+			order by line.id
+			""")
 	List<AuctionResultLine> findSoldLines(
-		@Param("auctionHouseId") Long auctionHouseId,
-		@Param("auctionDate") LocalDate auctionDate);
+			@Param("auctionHouseId") Long auctionHouseId,
+			@Param("auctionDate") LocalDate auctionDate);
 
-	@EntityGraph(attributePaths = {"auctionAttempt", "auctionAttempt.shipmentLot", "auctionAttempt.shipmentLot.shipment", "auctionAttempt.shipmentLot.shipment.auctionHouse"})
+	@EntityGraph(attributePaths = { "auctionAttempt", "auctionAttempt.shipmentLot",
+			"auctionAttempt.shipmentLot.shipment", "auctionAttempt.shipmentLot.shipment.auctionHouse" })
 	@Query("select line from AuctionResultLine line where line.amount > 0 order by line.auctionDate, line.id")
 	List<AuctionResultLine> findAllSoldLines();
 }

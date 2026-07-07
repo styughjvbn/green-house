@@ -26,6 +26,9 @@ dependencies {
 	implementation("org.flywaydb:flyway-database-postgresql")
 	// OpenAPI + Swagger UI
 	implementation("org.springdoc:springdoc-openapi-starter-webmvc-ui:3.0.3")
+    // Lombok
+    compileOnly("org.projectlombok:lombok")
+    annotationProcessor("org.projectlombok:lombok")
 
 	runtimeOnly("org.postgresql:postgresql")
 	
@@ -36,6 +39,9 @@ dependencies {
 	testImplementation("org.springframework.boot:spring-boot-starter-validation-test")
 	testImplementation("org.springframework.boot:spring-boot-starter-webmvc-test")
 	testRuntimeOnly("org.junit.platform:junit-platform-launcher")
+	// Lombok
+	testCompileOnly("org.projectlombok:lombok")
+    testAnnotationProcessor("org.projectlombok:lombok")
 }
 
 tasks.withType<Test> {
