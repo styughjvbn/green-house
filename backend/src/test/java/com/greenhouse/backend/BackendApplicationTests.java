@@ -17,8 +17,10 @@ import com.greenhouse.backend.farm.repository.MaterialRepository;
 import com.greenhouse.backend.farm.repository.OrchidGroupRepository;
 import com.greenhouse.backend.farm.repository.PhysicalBedRepository;
 import com.greenhouse.backend.farm.repository.VarietyRepository;
+import com.greenhouse.backend.farm.dto.OrchidGroupResponse;
 import com.greenhouse.backend.work.repository.WorkRecordRepository;
 import com.greenhouse.backend.work.repository.WorkTypeRepository;
+import java.time.LocalDate;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -787,6 +789,48 @@ class BackendApplicationTests {
 				.get()
 				.extracting(record -> record.getCreatedOrchidGroup())
 				.isNull();
+	}
+
+	@Test
+	@Transactional
+	void calculatesOrchidGroupAgeYearFromInboundDate() throws Exception {
+		var sampleVariety = varietyRepository.findAll().stream()
+				.findFirst()
+				.orElseThrow();
+		var sampleHouse = houseRepository.findAll().stream()
+				.filter(house -> house.getNumber() == 3)
+				.findFirst()
+				.orElseThrow();
+		var sampleBed = physicalBedRepository.findByHouseIdOrderByDisplayOrderAsc(sampleHouse.getId()).get(1);
+		var sampleZone = bedZoneRepository.findByPhysicalBedIdOrderBySortOrderAsc(sampleBed.getId()).getFirst();
+		LocalDate inboundDate = LocalDate.now().minusYears(2).minusDays(1);
+
+		var createResult = mockMvc.perform(post("/api/inbound-records")
+				.contentType(MediaType.APPLICATION_JSON)
+				.content("""
+						{
+						  "inboundDate": "%s",
+						  "inboundType": "PRODUCT_POT",
+						  "varietyId": %d,
+						  "actualQuantity": 40,
+						  "potSize": "4인치",
+						  "ageYear": 1,
+						  "placementType": "TRAY",
+						  "trayCount": 1,
+						  "bedZoneId": %d,
+						  "worker": "관리자"
+						}
+						""".formatted(inboundDate, sampleVariety.getId(), sampleZone.getId())))
+				.andExpect(status().isCreated())
+				.andExpect(jsonPath("$.data.createdOrchidGroupId").isNumber())
+				.andReturn();
+
+		var createdOrchidGroupId = Long.valueOf(
+				createResult.getResponse().getContentAsString().replaceAll(".*\\\"createdOrchidGroupId\\\":(\\d+).*",
+						"$1"));
+
+		assertThat(OrchidGroupResponse.from(orchidGroupRepository.findById(createdOrchidGroupId).orElseThrow()).ageYear())
+				.isEqualTo(3);
 	}
 
 	@Test

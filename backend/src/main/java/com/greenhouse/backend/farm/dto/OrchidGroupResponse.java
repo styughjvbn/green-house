@@ -2,6 +2,8 @@ package com.greenhouse.backend.farm.dto;
 
 import com.greenhouse.backend.farm.domain.OrchidGroup;
 import java.math.BigDecimal;
+import java.time.LocalDate;
+import java.time.temporal.ChronoUnit;
 
 public record OrchidGroupResponse(
 		Long id,
@@ -37,7 +39,7 @@ public record OrchidGroupResponse(
 				variety != null ? variety.getName() : orchidGroup.getVarietyName(),
 				orchidGroup.getQuantity(),
 				orchidGroup.getPotSize(),
-				orchidGroup.getAgeYear(),
+				calculateAgeYear(orchidGroup),
 				orchidGroup.getStatus(),
 				orchidGroup.getPlacementType(),
 				orchidGroup.getTrayCount(),
@@ -49,5 +51,22 @@ public record OrchidGroupResponse(
 				house.getNumber(),
 				physicalBed.getNumber(),
 				bedZone.getName());
+	}
+
+	private static Integer calculateAgeYear(OrchidGroup orchidGroup) {
+		Integer baseAgeYear = orchidGroup.getAgeYear();
+		if (baseAgeYear == null) {
+			return null;
+		}
+
+		LocalDate referenceDate = orchidGroup.getInboundRecord() != null
+				? orchidGroup.getInboundRecord().getInboundDate()
+				: orchidGroup.getCreatedAt() != null ? orchidGroup.getCreatedAt().toLocalDate() : null;
+		if (referenceDate == null) {
+			return baseAgeYear;
+		}
+
+		long elapsedYears = ChronoUnit.YEARS.between(referenceDate, LocalDate.now());
+		return baseAgeYear + Math.max(0, Math.toIntExact(elapsedYears));
 	}
 }

@@ -495,7 +495,7 @@ export function InboundSection({
                     }
                   />
                 </Field>
-                <Field label="연차">
+                <Field label="초기 년생">
                   <input
                     className={inputClass}
                     type="number"
@@ -606,7 +606,7 @@ export function InboundSection({
                 />
                 <DetailRow label="포트 작업일" value={selected.pottingDate} />
                 <DetailRow label="화분 크기" value={selected.potSize} />
-                <DetailRow label="연차" value={selected.ageYear} />
+                <DetailRow label="초기 년생" value={selected.ageYear} />
                 <DetailRow label="생육 단계" value={selected.growthStage} />
                 <DetailRow label="배치 형태" value={selected.placementType} />
                 <DetailRow label="판 수" value={selected.trayCount} />
@@ -868,7 +868,7 @@ function InboundCreateDialog({
                 onChange={(event) => setPotSize(event.target.value)}
               />
             </Field>
-            <Field label="연차">
+            <Field label="초기 년생">
               <input
                 className={inputClass}
                 type="number"
@@ -1028,7 +1028,7 @@ function InboundPottingDialog({
             onChange={(event) => setPotSize(event.target.value)}
           />
         </Field>
-        <Field label="연차">
+        <Field label="초기 년생">
           <input
             className={inputClass}
             type="number"

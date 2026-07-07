@@ -156,7 +156,7 @@ export default function OrchidGroupForm({
             onChange={(value) => updateField("quantity", value)}
           />
           <TextField
-            label="연생"
+            label="초기 년생"
             type="number"
             value={form.ageYear}
             onChange={(value) => updateField("ageYear", value)}
