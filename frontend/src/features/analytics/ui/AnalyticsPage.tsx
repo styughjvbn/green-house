@@ -73,28 +73,6 @@ export function AnalyticsPage(props: AnalyticsPageProps) {
     setDraftFilters(DEFAULT_FILTERS);
     setFilters(DEFAULT_FILTERS);
   };
-  const exportCsv = () => {
-    const rows = [
-      "전표번호,거래처,판매일,금액,입금상태",
-      ...filteredProps.salesSlips.map((slip) =>
-        [
-          slip.slipNumber,
-          slip.partner.name,
-          slip.saleDate,
-          slip.totalAmount,
-          slip.paymentStatus,
-        ].join(","),
-      ),
-    ];
-    const blob = new Blob([`\uFEFF${rows.join("\n")}`], {
-      type: "text/csv;charset=utf-8",
-    });
-    const link = document.createElement("a");
-    link.href = URL.createObjectURL(blob);
-    link.download = "농장-분석.csv";
-    link.click();
-    URL.revokeObjectURL(link.href);
-  };
 
   function updateTab(nextTab: AnalyticsTab) {
     const params = new URLSearchParams(searchParams.toString());
@@ -104,17 +82,6 @@ export function AnalyticsPage(props: AnalyticsPageProps) {
 
   return (
     <main className="min-w-0 space-y-4">
-      <div className="flex flex-wrap items-end justify-between gap-3 border-b border-[#d8ded8]">
-        <button
-          className="mb-2 flex items-center gap-2 rounded-md bg-[#159447] px-4 py-2 text-xs font-semibold text-white"
-          type="button"
-          onClick={exportCsv}
-        >
-          <Download className="h-4 w-4" />
-          내보내기
-          <ChevronDown className="h-3.5 w-3.5" />
-        </button>
-      </div>
       <FilterBar
         values={draftFilters}
         varieties={varieties}
