@@ -10,15 +10,10 @@ import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
+import java.math.BigDecimal;
+import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
-import lombok.AccessLevel;
-import jakarta.persistence.CascadeType;
-import jakarta.persistence.OneToMany;
-import jakarta.persistence.OrderBy;
-import java.util.ArrayList;
-import java.math.BigDecimal;
-import java.util.List;
 
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
@@ -49,6 +44,9 @@ public class OrchidGroup extends BaseEntity {
 
 	@Column(nullable = false)
 	private Integer quantity;
+
+	@Column(name = "reserved_quantity", nullable = false)
+	private Integer reservedQuantity;
 
 	@Column(name = "pot_size")
 	private String potSize;
@@ -95,6 +93,7 @@ public class OrchidGroup extends BaseEntity {
 		this.genus = genus;
 		this.varietyName = varietyName;
 		this.quantity = quantity;
+		this.reservedQuantity = 0;
 		this.potSize = potSize;
 		this.ageYear = ageYear;
 		this.status = status;
@@ -148,5 +147,43 @@ public class OrchidGroup extends BaseEntity {
 
 	public void assignInboundRecord(InboundRecord inboundRecord) {
 		this.inboundRecord = inboundRecord;
+	}
+
+	public int getAvailableQuantity() {
+		return Math.max(0, quantity - reservedQuantity);
+	}
+
+	public void reserve(Integer reserveQuantity) {
+		validatePositiveQuantity(reserveQuantity, "예약 수량");
+		if (getAvailableQuantity() < reserveQuantity) {
+			throw new IllegalArgumentException("난 묶음 가용 수량이 부족합니다.");
+		}
+		this.reservedQuantity += reserveQuantity;
+	}
+
+	public void releaseReserved(Integer releaseQuantity) {
+		validatePositiveQuantity(releaseQuantity, "예약 해제 수량");
+		if (reservedQuantity < releaseQuantity) {
+			throw new IllegalArgumentException("예약 해제 수량이 현재 예약 수량보다 많습니다.");
+		}
+		this.reservedQuantity -= releaseQuantity;
+	}
+
+	public void outboundReserved(Integer outboundQuantity) {
+		validatePositiveQuantity(outboundQuantity, "출고 수량");
+		if (reservedQuantity < outboundQuantity) {
+			throw new IllegalArgumentException("예약 수량보다 많은 출고를 처리할 수 없습니다.");
+		}
+		if (quantity < outboundQuantity) {
+			throw new IllegalArgumentException("난 묶음 수량이 부족합니다.");
+		}
+		this.reservedQuantity -= outboundQuantity;
+		this.quantity -= outboundQuantity;
+	}
+
+	private void validatePositiveQuantity(Integer value, String label) {
+		if (value == null || value < 1) {
+			throw new IllegalArgumentException(label + "은 1 이상이어야 합니다.");
+		}
 	}
 }

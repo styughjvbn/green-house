@@ -16,13 +16,12 @@ import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.OneToMany;
 import jakarta.persistence.Table;
-import lombok.Getter;
-import lombok.NoArgsConstructor;
-import lombok.AccessLevel;
-
 import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
+import lombok.AccessLevel;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
 
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
@@ -107,10 +106,7 @@ public class SalesSlip extends BaseEntity {
 	public void addItem(SalesSlipItem item) {
 		item.setSalesSlip(this);
 		this.items.add(item);
-		this.totalAmount = this.items.stream()
-				.mapToInt(SalesSlipItem::getAmount)
-				.sum();
-		this.remainingAmount = Math.max(0L, this.totalAmount.longValue() - getPaidAmount());
+		recalculateAmounts();
 	}
 
 	public void updateExpectedPaymentDate(LocalDate expectedPaymentDate) {
@@ -118,12 +114,27 @@ public class SalesSlip extends BaseEntity {
 	}
 
 	public void recordPayment(Long amount) {
-		if (amount <= 0)
-			throw new IllegalArgumentException("입금액은 0원보다 커야 합니다.");
-		if (amount > getRemainingAmount())
-			throw new IllegalArgumentException("입금액은 현재 잔액을 초과할 수 없습니다.");
+		if (amount <= 0) {
+			throw new IllegalArgumentException("입금액은 0보다 커야 합니다.");
+		}
+		if (amount > getRemainingAmount()) {
+			throw new IllegalArgumentException("입금액이 현재 잔액을 초과할 수 없습니다.");
+		}
 		this.paidAmount = getPaidAmount() + amount;
 		this.remainingAmount = Math.max(0L, totalAmount.longValue() - paidAmount);
 		this.paymentStatus = remainingAmount == 0 ? "입금 완료" : "부분입금";
+	}
+
+	public void updateSalesStatus(String salesStatus) {
+		this.salesStatus = salesStatus;
+	}
+
+	public boolean isOutboundCompleted() {
+		return "출고 완료".equals(salesStatus) || "출하 완료".equals(salesStatus);
+	}
+
+	private void recalculateAmounts() {
+		this.totalAmount = this.items.stream().mapToInt(SalesSlipItem::getAmount).sum();
+		this.remainingAmount = Math.max(0L, this.totalAmount.longValue() - getPaidAmount());
 	}
 }

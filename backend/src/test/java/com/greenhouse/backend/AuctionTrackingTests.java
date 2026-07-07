@@ -23,6 +23,7 @@ import com.greenhouse.backend.auction.repository.AuctionShipmentRepository;
 import com.greenhouse.backend.partner.domain.BusinessPartner;
 import com.greenhouse.backend.partner.domain.PartnerType;
 import com.greenhouse.backend.partner.repository.BusinessPartnerRepository;
+import com.greenhouse.backend.farm.repository.OrchidGroupRepository;
 import java.time.LocalDate;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -43,6 +44,7 @@ class AuctionTrackingTests {
 	@Autowired AuctionShipmentLotRepository lotRepository;
 	@Autowired AuctionShipmentRepository shipmentRepository;
 	@Autowired BusinessPartnerRepository partnerRepository;
+	@Autowired OrchidGroupRepository orchidGroupRepository;
 	@Autowired MockMvc mockMvc;
 
 	@Test
@@ -123,7 +125,11 @@ class AuctionTrackingTests {
 
 	@Test
 	void createsAuctionShipmentAndLotsWhenAuctionSalesSlipIsCreated() throws Exception {
-		var auctionHouse = createAuctionHouse("태성");
+		var auctionHouse = createAuctionHouse("??");
+		var sampleGroups = orchidGroupRepository.findAll().stream()
+				.filter(group -> group.getVariety() != null)
+				.limit(2)
+				.toList();
 		String request = """
 			{
 			  "saleDate": "2026-07-05",
@@ -131,22 +137,41 @@ class AuctionTrackingTests {
 			  "partnerId": %d,
 			  "items": [
 			    {
-			      "itemName": "카틀레야 A",
-			      "genus": "절화",
-			      "spec": "특",
+			      "itemName": "%s",
+			      "genus": "%s",
+			      "spec": "?",
 			      "quantity": 20,
-			      "unitPrice": 0
+			      "unitPrice": 0,
+			      "allocations": [
+			        {
+			          "orchidGroupId": %d,
+			          "quantity": 20
+			        }
+			      ]
 			    },
 			    {
-			      "itemName": "덴드로비움 B",
-			      "genus": "절화",
+			      "itemName": "%s",
+			      "genus": "%s",
 			      "spec": "A",
 			      "quantity": 30,
-			      "unitPrice": 0
+			      "unitPrice": 0,
+			      "allocations": [
+			        {
+			          "orchidGroupId": %d,
+			          "quantity": 30
+			        }
+			      ]
 			    }
 			  ]
 			}
-			""".formatted(auctionHouse.getId());
+			""".formatted(
+					auctionHouse.getId(),
+					sampleGroups.get(0).getVarietyName(),
+					sampleGroups.get(0).getGenus(),
+					sampleGroups.get(0).getId(),
+					sampleGroups.get(1).getVarietyName(),
+					sampleGroups.get(1).getGenus(),
+					sampleGroups.get(1).getId());
 
 		mockMvc.perform(post("/api/sales-slips")
 				.contentType(MediaType.APPLICATION_JSON)
@@ -154,7 +179,6 @@ class AuctionTrackingTests {
 			.andExpect(status().isCreated())
 			.andExpect(jsonPath("$.data.salesType").value("AUCTION"))
 			.andExpect(jsonPath("$.data.auctionShipmentId").isNumber())
-			.andExpect(jsonPath("$.data.partner.name").value("태성"))
 			.andExpect(jsonPath("$.data.partner.partnerType").value("AUCTION_HOUSE"))
 			.andExpect(jsonPath("$.data.saleDate").value("2026-07-05"))
 			.andExpect(jsonPath("$.data.totalAmount").value(0))

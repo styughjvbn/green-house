@@ -1300,25 +1300,32 @@ class BackendApplicationTests {
 
 	@Test
 	void createsBusinessPartnersAndSalesSlipsWithCalculatedAmounts() throws Exception {
+		var sampleGroups = orchidGroupRepository.findAll().stream()
+				.filter(group -> group.getVariety() != null)
+				.limit(2)
+				.toList();
+		var firstGroup = sampleGroups.get(0);
+		var secondGroup = sampleGroups.get(1);
+
 		var partnerResult = mockMvc.perform(post("/api/business-partners")
 				.contentType(MediaType.APPLICATION_JSON)
 				.content("""
 						{
-						  "name": "테스트 거래처",
+						  "name": "??? ???",
 						  "partnerType": "WHOLESALE",
-						  "ownerName": "대표",
+						  "ownerName": "???",
 						  "phone": "010-0000-0000",
-						  "address": "주소",
-						  "memo": "거래처 메모"
+						  "address": "??",
+						  "memo": "??? ??"
 						}
 						"""))
 				.andExpect(status().isCreated())
-				.andExpect(jsonPath("$.data.name").value("테스트 거래처"))
+				.andExpect(jsonPath("$.data.name").value("??? ???"))
 				.andReturn();
 		var partnerId = Long
 				.valueOf(partnerResult.getResponse().getContentAsString().replaceAll(".*\\\"id\\\":(\\d+).*", "$1"));
 
-		mockMvc.perform(get("/api/business-partners").param("keyword", "테스트"))
+		mockMvc.perform(get("/api/business-partners").param("keyword", "???"))
 				.andExpect(status().isOk())
 				.andExpect(jsonPath("$.data[0].id").value(partnerId))
 				.andExpect(jsonPath("$.data[0].partnerType").value("WHOLESALE"))
@@ -1330,32 +1337,53 @@ class BackendApplicationTests {
 						{
 						  "saleDate": "2026-06-24",
 						  "partnerId": %d,
-						  "paymentStatus": "미입금",
-						  "salesStatus": "작성중",
-						  "paymentMethod": "현금",
-						  "memo": "전표 메모",
+						  "paymentStatus": "???",
+						  "salesStatus": "???",
+						  "paymentMethod": "??",
+						  "memo": "?? ??",
 						  "items": [
 						    {
-						      "itemName": "카틀레야 A",
-						      "genus": "카틀레야",
-						      "spec": "4치",
+						      "itemName": "%s",
+						      "genus": "%s",
+						      "spec": "4?",
 						      "quantity": 2,
 						      "unitPrice": 15000,
-						      "memo": "품목1"
+						      "memo": "??1",
+						      "allocations": [
+						        {
+						          "orchidGroupId": %d,
+						          "quantity": 2
+						        }
+						      ]
 						    },
 						    {
-						      "itemName": "덴드로비움 B",
+						      "itemName": "%s",
+						      "genus": "%s",
 						      "quantity": 3,
-						      "unitPrice": 10000
+						      "unitPrice": 10000,
+						      "allocations": [
+						        {
+						          "orchidGroupId": %d,
+						          "quantity": 3
+						        }
+						      ]
 						    }
 						  ]
 						}
-						""".formatted(partnerId)))
+						""".formatted(
+								partnerId,
+								firstGroup.getVarietyName(),
+								firstGroup.getGenus(),
+								firstGroup.getId(),
+								secondGroup.getVarietyName(),
+								secondGroup.getGenus(),
+								secondGroup.getId())))
 				.andExpect(status().isCreated())
 				.andExpect(jsonPath("$.data.partner.id").value(partnerId))
 				.andExpect(jsonPath("$.data.totalAmount").value(60000))
 				.andExpect(jsonPath("$.data.items", hasSize(2)))
 				.andExpect(jsonPath("$.data.items[0].amount").value(30000))
+				.andExpect(jsonPath("$.data.items[0].allocations[0].orchidGroupId").value(firstGroup.getId()))
 				.andReturn();
 		var salesSlipId = Long
 				.valueOf(slipResult.getResponse().getContentAsString().replaceFirst(".*?\\\"id\\\":(\\d+).*", "$1"));
@@ -1363,7 +1391,8 @@ class BackendApplicationTests {
 		mockMvc.perform(get("/api/sales-slips/{salesSlipId}", salesSlipId))
 				.andExpect(status().isOk())
 				.andExpect(jsonPath("$.data.id").value(salesSlipId))
-				.andExpect(jsonPath("$.data.totalAmount").value(60000));
+				.andExpect(jsonPath("$.data.totalAmount").value(60000))
+				.andExpect(jsonPath("$.data.items[1].allocations[0].orchidGroupId").value(secondGroup.getId()));
 
 		mockMvc.perform(get("/api/sales-slips/{salesSlipId}/print", salesSlipId))
 				.andExpect(status().isOk())
@@ -1383,6 +1412,11 @@ class BackendApplicationTests {
 
 	@Test
 	void returnsValidationErrorsForInvalidSalesRequests() throws Exception {
+		var sampleGroup = orchidGroupRepository.findAll().stream()
+				.filter(group -> group.getVariety() != null)
+				.findFirst()
+				.orElseThrow();
+
 		mockMvc.perform(post("/api/business-partners")
 				.contentType(MediaType.APPLICATION_JSON)
 				.content("{\"name\":\"\",\"partnerType\":\"WHOLESALE\"}"))
@@ -1397,13 +1431,19 @@ class BackendApplicationTests {
 						  "partnerId": 999999,
 						  "items": [
 						    {
-						      "itemName": "없는 거래처",
+						      "itemName": "%s",
 						      "quantity": 1,
-						      "unitPrice": 1000
+						      "unitPrice": 1000,
+						      "allocations": [
+						        {
+						          "orchidGroupId": %d,
+						          "quantity": 1
+						        }
+						      ]
 						    }
 						  ]
 						}
-						"""))
+						""".formatted(sampleGroup.getVarietyName(), sampleGroup.getId())))
 				.andExpect(status().isNotFound())
 				.andExpect(jsonPath("$.error.code").value("NOT_FOUND"));
 

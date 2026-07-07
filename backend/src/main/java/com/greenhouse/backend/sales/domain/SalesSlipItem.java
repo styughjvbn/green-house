@@ -1,7 +1,7 @@
 package com.greenhouse.backend.sales.domain;
 
 import com.greenhouse.backend.auction.domain.AuctionShipmentLot;
-import com.greenhouse.backend.farm.domain.OrchidGroup;
+import jakarta.persistence.CascadeType;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.FetchType;
@@ -10,10 +10,13 @@ import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
+import jakarta.persistence.OneToMany;
 import jakarta.persistence.Table;
+import java.util.ArrayList;
+import java.util.List;
+import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
-import lombok.AccessLevel;
 
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
@@ -30,12 +33,11 @@ public class SalesSlipItem {
 	private SalesSlip salesSlip;
 
 	@ManyToOne(fetch = FetchType.LAZY)
-	@JoinColumn(name = "orchid_group_id")
-	private OrchidGroup orchidGroup;
-
-	@ManyToOne(fetch = FetchType.LAZY)
 	@JoinColumn(name = "auction_shipment_lot_id", unique = true)
 	private AuctionShipmentLot auctionShipmentLot;
+
+	@OneToMany(mappedBy = "salesSlipItem", cascade = CascadeType.ALL, orphanRemoval = true)
+	private List<SalesSlipItemAllocation> allocations = new ArrayList<>();
 
 	@Column(name = "item_name", nullable = false)
 	private String itemName;
@@ -57,7 +59,6 @@ public class SalesSlipItem {
 	private String memo;
 
 	public SalesSlipItem(
-			OrchidGroup orchidGroup,
 			AuctionShipmentLot auctionShipmentLot,
 			String itemName,
 			String genus,
@@ -65,7 +66,6 @@ public class SalesSlipItem {
 			Integer quantity,
 			Integer unitPrice,
 			String memo) {
-		this.orchidGroup = orchidGroup;
 		this.auctionShipmentLot = auctionShipmentLot;
 		this.itemName = itemName;
 		this.genus = genus;
@@ -78,5 +78,10 @@ public class SalesSlipItem {
 
 	void setSalesSlip(SalesSlip salesSlip) {
 		this.salesSlip = salesSlip;
+	}
+
+	public void addAllocation(SalesSlipItemAllocation allocation) {
+		allocation.setSalesSlipItem(this);
+		this.allocations.add(allocation);
 	}
 }

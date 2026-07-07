@@ -8,13 +8,12 @@ import com.greenhouse.backend.partner.domain.BusinessPartner;
 import com.greenhouse.backend.partner.domain.PartnerType;
 import com.greenhouse.backend.sales.domain.SalesSlip;
 import com.greenhouse.backend.sales.domain.SalesSlipItem;
+import com.greenhouse.backend.sales.domain.SalesSlipItemAllocation;
 import com.greenhouse.backend.sales.domain.SalesType;
 import com.greenhouse.backend.sales.dto.SalesSlipCreateRequest;
 import com.greenhouse.backend.sales.dto.SalesSlipResponse;
 import com.greenhouse.backend.sales.repository.SalesSlipRepository;
-
 import lombok.RequiredArgsConstructor;
-
 import org.springframework.stereotype.Service;
 
 @Service
@@ -24,13 +23,15 @@ public class AuctionSalesSlipCreator {
 	private final AuctionShipmentCreator auctionShipmentCreator;
 	private final BusinessPartnerReader partnerReader;
 	private final SalesSlipNumberGenerator numberGenerator;
+	private final SalesSlipAllocationFactory salesSlipAllocationFactory;
+	private final SalesSlipInventoryService salesSlipInventoryService;
 
 	public SalesSlipResponse create(SalesSlipCreateRequest request) {
 		if (request.partnerId() == null) {
 			throw new IllegalArgumentException("경매 판매는 경매장을 선택해야 합니다.");
 		}
 		if (request.items().isEmpty()) {
-			throw new IllegalArgumentException("경매 판매는 1개 이상의 lot 항목이 필요합니다.");
+			throw new IllegalArgumentException("경매 판매는 1개 이상의 lot 품목이 필요합니다.");
 		}
 
 		BusinessPartner partner = partnerReader.getActive(request.partnerId());
@@ -40,10 +41,7 @@ public class AuctionSalesSlipCreator {
 
 		var shipment = new AuctionShipment(request.saleDate(), partner);
 		request.items().forEach(item -> shipment.addLot(new AuctionShipmentLot(
-				SalesTextNormalizer.required(
-						item.genus() == null || item.genus().isBlank()
-								? item.itemName()
-								: item.genus()),
+				SalesTextNormalizer.required(item.genus() == null || item.genus().isBlank() ? item.itemName() : item.genus()),
 				SalesTextNormalizer.required(item.itemName()),
 				SalesTextNormalizer.normalize(item.spec()),
 				null,
@@ -62,19 +60,29 @@ public class AuctionSalesSlipCreator {
 				SalesTextNormalizer.normalize(request.memo()));
 
 		for (int index = 0; index < request.items().size(); index++) {
-			var item = request.items().get(index);
+			var requestItem = request.items().get(index);
 			var lot = savedShipment.getLots().get(index);
-			salesSlip.addItem(new SalesSlipItem(
-					null,
+			var baseItem = salesSlipAllocationFactory.createItem(requestItem);
+			var salesSlipItem = new SalesSlipItem(
 					lot,
-					SalesTextNormalizer.required(item.itemName()),
-					SalesTextNormalizer.normalize(item.genus()),
-					SalesTextNormalizer.normalize(item.spec()),
-					item.quantity(),
-					item.unitPrice(),
-					SalesTextNormalizer.normalize(item.memo())));
+					baseItem.getItemName(),
+					baseItem.getGenus(),
+					baseItem.getSpec(),
+					baseItem.getQuantity(),
+					baseItem.getUnitPrice(),
+					baseItem.getMemo());
+			for (SalesSlipItemAllocation allocation : baseItem.getAllocations()) {
+				salesSlipItem.addAllocation(
+						new SalesSlipItemAllocation(allocation.getOrchidGroup(), allocation.getAllocatedQuantity()));
+			}
+			salesSlip.addItem(salesSlipItem);
 		}
 
-		return SalesSlipResponse.from(salesSlipRepository.save(salesSlip));
+		var saved = salesSlipRepository.save(salesSlip);
+		salesSlipInventoryService.reserve(saved);
+		if (saved.isOutboundCompleted()) {
+			salesSlipInventoryService.outbound(saved);
+		}
+		return SalesSlipResponse.from(saved);
 	}
 }

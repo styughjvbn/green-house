@@ -1,10 +1,10 @@
 package com.greenhouse.backend.sales.dto;
 
 import com.greenhouse.backend.sales.domain.SalesSlipItem;
+import java.util.List;
 
 public record SalesSlipItemResponse(
 		Long id,
-		Long orchidGroupId,
 		Long auctionShipmentLotId,
 		String itemName,
 		String genus,
@@ -12,12 +12,12 @@ public record SalesSlipItemResponse(
 		Integer quantity,
 		Integer unitPrice,
 		Integer amount,
-		String memo) {
+		String memo,
+		List<SalesSlipItemAllocationResponse> allocations) {
 
 	public static SalesSlipItemResponse from(SalesSlipItem item) {
 		return new SalesSlipItemResponse(
 				item.getId(),
-				item.getOrchidGroup() == null ? null : item.getOrchidGroup().getId(),
 				item.getAuctionShipmentLot() == null ? null : item.getAuctionShipmentLot().getId(),
 				item.getItemName(),
 				item.getGenus(),
@@ -25,6 +25,7 @@ public record SalesSlipItemResponse(
 				item.getQuantity(),
 				item.getUnitPrice(),
 				item.getAmount(),
-				item.getMemo());
+				item.getMemo(),
+				item.getAllocations().stream().map(SalesSlipItemAllocationResponse::from).toList());
 	}
 }

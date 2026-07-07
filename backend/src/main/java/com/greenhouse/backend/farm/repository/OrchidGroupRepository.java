@@ -2,6 +2,7 @@ package com.greenhouse.backend.farm.repository;
 
 import com.greenhouse.backend.farm.domain.OrchidGroup;
 import java.util.List;
+import java.util.Optional;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
@@ -68,4 +69,33 @@ public interface OrchidGroupRepository extends JpaRepository<OrchidGroup, Long> 
 
 	List<OrchidGroup> findByBedZoneIdOrderBySortOrderAsc(Long bedZoneId);
 
+	@Query("""
+			select g from OrchidGroup g
+			join fetch g.bedZone z
+			join fetch z.physicalBed b
+			join fetch b.house h
+			left join fetch g.variety v
+			where (:keyword is null
+				or lower(g.varietyName) like lower(concat('%', :keyword, '%'))
+				or lower(coalesce(g.genus, '')) like lower(concat('%', :keyword, '%'))
+				or lower(concat(cast(h.number as string), '동 ', cast(b.number as string), '배드 ', z.name)) like lower(concat('%', :keyword, '%')))
+			  and (:varietyId is null or v.id = :varietyId)
+			  and (:status is null or g.status = :status)
+			  and (g.quantity - g.reservedQuantity) > 0
+			order by h.number asc, b.displayOrder asc, z.sortOrder asc, g.sortOrder asc
+			""")
+	List<OrchidGroup> searchSellable(
+			@Param("keyword") String keyword,
+			@Param("varietyId") Long varietyId,
+			@Param("status") String status);
+
+	@Query("""
+			select g from OrchidGroup g
+			left join fetch g.variety
+			left join fetch g.bedZone z
+			left join fetch z.physicalBed b
+			left join fetch b.house
+			where g.id = :orchidGroupId
+			""")
+	Optional<OrchidGroup> findDetailById(@Param("orchidGroupId") Long orchidGroupId);
 }
