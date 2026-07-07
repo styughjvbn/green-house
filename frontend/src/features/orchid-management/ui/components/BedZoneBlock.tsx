@@ -93,7 +93,7 @@ export default function BedZoneBlock({
                 style={{ top: `${mark.top}%` }}
               >
                 <span className="absolute left-0 -translate-x-full -translate-y-1/2 text-[10px] font-semibold text-[#6f7b72]">
-                  {mark.value}
+                  {resolvedMaxPosition - mark.value}
                 </span>
               </div>
             ))}
@@ -120,9 +120,12 @@ export default function BedZoneBlock({
             const start = orchidGroup.startPosition ?? 0;
             const end =
               orchidGroup.endPosition ?? orchidGroup.startPosition ?? 0;
-            const top = toPercent(start, resolvedMaxPosition);
+            const top = toPercent(
+              resolvedMaxPosition - end,
+              resolvedMaxPosition,
+            );
             const height = Math.max(
-              toPercent(end, resolvedMaxPosition) - top,
+              toPercent(end - start, resolvedMaxPosition),
               0,
             );
             const heightPx = (height / 100) * MAP_HEIGHT;

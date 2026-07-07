@@ -3,6 +3,7 @@
 import type { ReactNode } from "react";
 
 type ActionButtonProps = {
+  active?: boolean;
   danger?: boolean;
   disabled?: boolean;
   icon?: ReactNode;
@@ -12,6 +13,7 @@ type ActionButtonProps = {
 };
 
 export default function ActionButton({
+  active = false,
   danger = false,
   disabled = false,
   icon,
@@ -21,7 +23,7 @@ export default function ActionButton({
 }: ActionButtonProps) {
   const className = danger
     ? "border border-[#e0b3aa] bg-white text-[#b43b24]"
-    : primary
+    : active || primary
       ? "border border-[#159447] bg-[#159447] text-white"
       : "border border-[#d7ddd4] bg-white text-[#435047]";
 

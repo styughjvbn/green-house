@@ -165,17 +165,19 @@ export default function OrchidSelectionPanel({
                 icon={<Edit2 className="h-4 w-4" />}
                 label="난 묶음 추가"
                 onClick={onOpenCreate}
-                primary
+                active={mutationMode === "CREATE"}
               />
               <ActionButton
                 icon={<Clipboard className="h-4 w-4" />}
                 label="작업 기록 추가"
                 onClick={onOpenWorkRecord}
+                active={mutationMode === "WORK_RECORD"}
               />
               <ActionButton
                 icon={<Move className="h-4 w-4" />}
                 label="위치 이동"
                 onClick={onOpenMove}
+                active={mutationMode === "MOVE"}
               />
             </div>
           </div>
@@ -185,7 +187,11 @@ export default function OrchidSelectionPanel({
               구역을 선택한 뒤 난 묶음을 추가할 수 있습니다.
             </p>
             <button
-              className="mt-3 w-full rounded-md bg-[#159447] px-3 py-2 text-sm font-semibold text-white"
+              className={`mt-3 w-full rounded-md px-3 py-2 text-sm font-semibold transition ${
+                mutationMode === "CREATE"
+                  ? "border border-[#159447] bg-[#159447] text-white"
+                  : "border border-[#d7ddd4] bg-white text-[#435047]"
+              }`}
               onClick={onOpenCreate}
               type="button"
             >

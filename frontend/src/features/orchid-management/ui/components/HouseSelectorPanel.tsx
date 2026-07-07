@@ -1,6 +1,6 @@
 "use client";
 
-import { Pencil } from "lucide-react";
+import { Pencil, Ruler } from "lucide-react";
 import { useRouter } from "next/navigation";
 import type { House, HouseStatusSummary } from "@/entities/farm/types";
 
@@ -46,19 +46,16 @@ export default function HouseSelectorPanel({
       </div>
 
       <div className="min-w-3 flex-1" />
-      <div className="mb-3 flex items-center justify-between gap-3">
-        <button
-          className={`rounded-md border px-3 py-1.5 text-xs font-semibold transition ${
-            showScale
-              ? "border-[#159447] bg-[#edf8ef] text-[#14753b]"
-              : "border-[#d7ddd4] bg-white text-[#566359]"
-          }`}
-          onClick={onToggleScale}
-          type="button"
-        >
-          {showScale ? "눈금 끄기" : "눈금 켜기"}
-        </button>
-      </div>
+      <button
+        className={`inline-flex h-9 touch-manipulation items-center gap-2 rounded-md border border-[#dfe5dc] px-4 text-sm font-semibold shadow-sm ${
+          showScale ? "bg-[#159447] text-white" : "bg-white text-[#344138]"
+        }`}
+        onClick={onToggleScale}
+        type="button"
+      >
+        <Ruler className="h-4 w-4" strokeWidth={1.8} aria-hidden="true" />
+        {showScale ? "눈금 끄기" : "눈금 켜기"}
+      </button>
       <button
         className={`inline-flex h-9 touch-manipulation items-center gap-2 rounded-md border border-[#dfe5dc] px-4 text-sm font-semibold shadow-sm ${
           placementEditMode
