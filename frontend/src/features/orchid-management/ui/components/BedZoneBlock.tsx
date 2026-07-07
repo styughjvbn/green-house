@@ -82,7 +82,10 @@ export default function BedZoneBlock({
     >
       <div className="flex gap-0">
         {showScale ? (
-          <div className="relative w-1 shrink-0 py-2" style={{ height: MAP_HEIGHT-4 }}>
+          <div
+            className="relative w-1 shrink-0 py-2"
+            style={{ height: MAP_HEIGHT - 4 }}
+          >
             {marks.map((mark) => (
               <div
                 key={mark.value}
@@ -120,8 +123,9 @@ export default function BedZoneBlock({
             const top = toPercent(start, resolvedMaxPosition);
             const height = Math.max(
               toPercent(end, resolvedMaxPosition) - top,
-              12,
+              0,
             );
+            const heightPx = (height / 100) * MAP_HEIGHT;
 
             return (
               <div
@@ -130,8 +134,8 @@ export default function BedZoneBlock({
                 style={{ top: `${top}%`, height: `${height}%` }}
               >
                 <OrchidGroupBlock
-                  compact
                   draggable={placementEditMode && !saving}
+                  heightPx={heightPx}
                   orchidGroup={orchidGroup}
                   selected={selectedOrchidGroupId === orchidGroup.id}
                   onDragEnd={onDragEnd}
