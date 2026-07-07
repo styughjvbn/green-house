@@ -2,7 +2,7 @@ openapi: 3.1.0
 info:
   title: Greenhouse API Slice - 품종/입고 관리
   version: 0.0.1
-  description: 품종 조회/수정과 입고 기록 관리 API
+  description: 품종 CRUD, 자재 CRUD, 입고 기록 관리 API
 servers:
 - url: http://localhost:8080
   description: Generated server url
@@ -138,6 +138,118 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ApiResponseListVarietyConnectedOrchidGroupResponse'
+  /api/materials:
+    get:
+      tags:
+      - material-controller
+      operationId: getMaterials
+      parameters:
+      - name: keyword
+        in: query
+        required: false
+        schema:
+          type: string
+      - name: category
+        in: query
+        required: false
+        schema:
+          type: string
+      - name: manufacturer
+        in: query
+        required: false
+        schema:
+          type: string
+      - name: active
+        in: query
+        required: false
+        schema:
+          type: boolean
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponseListMaterialResponse'
+    post:
+      tags:
+      - material-controller
+      operationId: create_3
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/MaterialCreateRequest'
+        required: true
+      responses:
+        '201':
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponseMaterialResponse'
+  /api/materials/{materialId}:
+    get:
+      tags:
+      - material-controller
+      operationId: getMaterial
+      parameters:
+      - name: materialId
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: int64
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponseMaterialResponse'
+    patch:
+      tags:
+      - material-controller
+      operationId: update_4
+      parameters:
+      - name: materialId
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: int64
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/MaterialUpdateRequest'
+        required: true
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponseMaterialResponse'
+  /api/materials/{materialId}/deactivate:
+    patch:
+      tags:
+      - material-controller
+      operationId: deactivate_1
+      parameters:
+      - name: materialId
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: int64
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponseMaterialResponse'
   /api/inbound-records:
     get:
       tags:
@@ -193,7 +305,7 @@ paths:
     post:
       tags:
       - inbound-record-controller
-      operationId: create_3
+      operationId: create_4
       requestBody:
         content:
           application/json:
@@ -229,7 +341,7 @@ paths:
     patch:
       tags:
       - inbound-record-controller
-      operationId: update_4
+      operationId: update_5
       parameters:
       - name: inboundRecordId
         in: path
@@ -335,11 +447,27 @@ components:
             $ref: '#/components/schemas/VarietyResponse'
         message:
           type: string
+    ApiResponseListMaterialResponse:
+      type: object
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/MaterialResponse'
+        message:
+          type: string
     ApiResponseVarietyResponse:
       type: object
       properties:
         data:
           $ref: '#/components/schemas/VarietyResponse'
+        message:
+          type: string
+    ApiResponseMaterialResponse:
+      type: object
+      properties:
+        data:
+          $ref: '#/components/schemas/MaterialResponse'
         message:
           type: string
     InboundNewVarietyRequest:
@@ -618,6 +746,104 @@ components:
           minLength: 0
       required:
       - inboundDate
+    MaterialCreateRequest:
+      type: object
+      properties:
+        category:
+          type: string
+          maxLength: 50
+          minLength: 0
+        name:
+          type: string
+          maxLength: 150
+          minLength: 0
+        manufacturer:
+          type: string
+          maxLength: 150
+          minLength: 0
+        specification:
+          type: string
+          maxLength: 150
+          minLength: 0
+        stockQuantity:
+          type: string
+          maxLength: 50
+          minLength: 0
+        storageLocation:
+          type: string
+          maxLength: 150
+          minLength: 0
+        usage:
+          type: string
+          maxLength: 2000
+          minLength: 0
+      required:
+      - category
+      - name
+    MaterialUpdateRequest:
+      type: object
+      properties:
+        category:
+          type: string
+          maxLength: 50
+          minLength: 0
+        name:
+          type: string
+          maxLength: 150
+          minLength: 0
+        manufacturer:
+          type: string
+          maxLength: 150
+          minLength: 0
+        specification:
+          type: string
+          maxLength: 150
+          minLength: 0
+        stockQuantity:
+          type: string
+          maxLength: 50
+          minLength: 0
+        storageLocation:
+          type: string
+          maxLength: 150
+          minLength: 0
+        usage:
+          type: string
+          maxLength: 2000
+          minLength: 0
+      required:
+      - category
+      - name
+    MaterialResponse:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: int64
+        code:
+          type: string
+        category:
+          type: string
+        name:
+          type: string
+        manufacturer:
+          type: string
+        specification:
+          type: string
+        stockQuantity:
+          type: string
+        storageLocation:
+          type: string
+        usage:
+          type: string
+        active:
+          type: boolean
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
     VarietyConnectedOrchidGroupResponse:
       type: object
       properties:

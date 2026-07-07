@@ -5,8 +5,8 @@
 ## 기준
 
 - 실제 구현 기준: `docs/api/openapi.yaml`
-- 실제 구현 operations: `60`
-- 실제 구현 path entries: `48`
+- 실제 구현 operations: `65`
+- 실제 구현 path entries: `51`
 - 과거 md/추가안에서 수집한 endpoint 후보: `69`
 - 후보 중 OpenAPI와 매칭되는 endpoint: `44`
 - 후보 중 OpenAPI에 없는 endpoint: `25`
@@ -55,6 +55,26 @@
 - `POST /api/work-types`
 - `PATCH /api/work-types/reorder`
 - `PATCH /api/work-types/{workTypeId}`
+
+### 품종/입고/자재
+
+- `GET /api/inbound-records`
+- `POST /api/inbound-records`
+- `GET /api/inbound-records/{inboundRecordId}`
+- `PATCH /api/inbound-records/{inboundRecordId}`
+- `POST /api/inbound-records/{inboundRecordId}/cancel`
+- `POST /api/inbound-records/{inboundRecordId}/potting`
+- `GET /api/materials`
+- `POST /api/materials`
+- `GET /api/materials/{materialId}`
+- `PATCH /api/materials/{materialId}`
+- `PATCH /api/materials/{materialId}/deactivate`
+- `GET /api/varieties`
+- `POST /api/varieties`
+- `GET /api/varieties/{varietyId}`
+- `PATCH /api/varieties/{varietyId}`
+- `PATCH /api/varieties/{varietyId}/deactivate`
+- `GET /api/varieties/{varietyId}/orchid-groups`
 
 ### 거래처
 
