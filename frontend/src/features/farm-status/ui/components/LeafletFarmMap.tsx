@@ -71,7 +71,7 @@ type DetailSource = {
 
 const WORLD_WIDTH = 1900;
 const WORLD_HEIGHT = 900;
-const INITIAL_ZOOM = -0.35;
+const INITIAL_ZOOM = -0.7;
 const MIN_ZOOM = -0.7;
 const MAX_ZOOM = 3.15;
 
@@ -95,54 +95,54 @@ const LEVEL_RANK: Record<FarmZoomLevel, number> = {
 };
 
 const HOUSE_LAYOUT: FarmHouseGeometry[] = [
-  { houseNumber: 1, x: 120, y: 430, width: HOUSE_WIDTH, height: HOUSE_HEIGHT },
-  { houseNumber: 2, x: 230, y: 430, width: HOUSE_WIDTH, height: HOUSE_HEIGHT },
-  { houseNumber: 3, x: 340, y: 430, width: HOUSE_WIDTH, height: HOUSE_HEIGHT },
-  { houseNumber: 4, x: 450, y: 430, width: HOUSE_WIDTH, height: HOUSE_HEIGHT },
-  { houseNumber: 5, x: 560, y: 260, width: HOUSE_WIDTH, height: HOUSE_HEIGHT },
-  { houseNumber: 6, x: 670, y: 260, width: HOUSE_WIDTH, height: HOUSE_HEIGHT },
-  { houseNumber: 7, x: 780, y: 260, width: HOUSE_WIDTH, height: HOUSE_HEIGHT },
-  { houseNumber: 8, x: 890, y: 260, width: HOUSE_WIDTH, height: HOUSE_HEIGHT },
-  { houseNumber: 9, x: 1000, y: 260, width: HOUSE_WIDTH, height: HOUSE_HEIGHT },
+  { houseNumber: 1, x: 120, y: 380, width: HOUSE_WIDTH, height: HOUSE_HEIGHT },
+  { houseNumber: 2, x: 230, y: 380, width: HOUSE_WIDTH, height: HOUSE_HEIGHT },
+  { houseNumber: 3, x: 340, y: 380, width: HOUSE_WIDTH, height: HOUSE_HEIGHT },
+  { houseNumber: 4, x: 450, y: 380, width: HOUSE_WIDTH, height: HOUSE_HEIGHT },
+  { houseNumber: 5, x: 560, y: 210, width: HOUSE_WIDTH, height: HOUSE_HEIGHT+170 },
+  { houseNumber: 6, x: 670, y: 210, width: HOUSE_WIDTH, height: HOUSE_HEIGHT+170 },
+  { houseNumber: 7, x: 780, y: 210, width: HOUSE_WIDTH, height: HOUSE_HEIGHT+170 },
+  { houseNumber: 8, x: 890, y: 210, width: HOUSE_WIDTH, height: HOUSE_HEIGHT+170 },
+  { houseNumber: 9, x: 1000, y: 210, width: HOUSE_WIDTH, height: HOUSE_HEIGHT+170 },
   {
     houseNumber: 10,
     x: 1110,
-    y: 260,
+    y: 210,
     width: HOUSE_WIDTH,
-    height: HOUSE_HEIGHT,
+    height: HOUSE_HEIGHT+170,
   },
   {
     houseNumber: 11,
     x: 1220,
-    y: 260,
+    y: 210,
     width: HOUSE_WIDTH,
-    height: HOUSE_HEIGHT,
+    height: HOUSE_HEIGHT+170,
   },
   {
     houseNumber: 12,
     x: 1330,
-    y: 390,
+    y: 380,
     width: HOUSE_WIDTH,
     height: HOUSE_HEIGHT,
   },
   {
     houseNumber: 13,
     x: 1440,
-    y: 390,
+    y: 380,
     width: HOUSE_WIDTH,
     height: HOUSE_HEIGHT,
   },
   {
     houseNumber: 14,
     x: 1550,
-    y: 390,
+    y: 380,
     width: HOUSE_WIDTH,
     height: HOUSE_HEIGHT,
   },
   {
     houseNumber: 15,
     x: 1660,
-    y: 390,
+    y: 380,
     width: HOUSE_WIDTH,
     height: HOUSE_HEIGHT,
   },
@@ -840,7 +840,7 @@ function getBedGeometries(
     bed,
     rect: {
       number: bed.number,
-      x: houseRect.x + paddingX + index * (bedWidth + gap),
+      x: houseRect.x + paddingX + (2 - index) * (bedWidth + gap),
       y: houseRect.y + topPadding,
       width: bedWidth,
       height: bedHeight,
@@ -856,7 +856,7 @@ function getZoneGeometries(
   const zoneWidth = (bedRect.width - gap) / 2;
   const sortedZones = [...zones].sort((a, b) => {
     const sideOrder = (side: string) =>
-      side === "LEFT" ? 0 : side === "RIGHT" ? 1 : 2;
+      side === "RIGHT" ? 0 : side === "LEFT" ? 1 : 2;
     return sideOrder(a.side) - sideOrder(b.side);
   });
 
@@ -880,23 +880,41 @@ function getLevelByMapZoom(zoom: number): FarmZoomLevel {
 }
 
 function boundsOf(rect: Rect): LatLngBoundsExpression {
-  const top = WORLD_HEIGHT - rect.y;
-  const bottom = WORLD_HEIGHT - rect.y - rect.height;
+  const rotated = rotateRect(rect);
+  const top = WORLD_HEIGHT - rotated.y;
+  const bottom = WORLD_HEIGHT - rotated.y - rotated.height;
 
   return [
-    [bottom, rect.x],
-    [top, rect.x + rect.width],
+    [bottom, rotated.x],
+    [top, rotated.x + rotated.width],
   ];
 }
 
 function toLatLng(point: { x: number; y: number }): LatLngExpression {
-  return [WORLD_HEIGHT - point.y, point.x];
+  const rotated = rotatePoint(point);
+  return [WORLD_HEIGHT - rotated.y, rotated.x];
 }
 
 function toPolyline(
   points: Array<{ x: number; y: number }>,
 ): LatLngExpression[] {
   return points.map(toLatLng);
+}
+
+function rotatePoint(point: { x: number; y: number }) {
+  return {
+    x: WORLD_WIDTH - point.x,
+    y: WORLD_HEIGHT - point.y,
+  };
+}
+
+function rotateRect(rect: Rect): Rect {
+  return {
+    x: WORLD_WIDTH - rect.x - rect.width,
+    y: WORLD_HEIGHT - rect.y - rect.height,
+    width: rect.width,
+    height: rect.height,
+  };
 }
 
 function stopLeafletClick(event: LeafletMouseEvent) {
