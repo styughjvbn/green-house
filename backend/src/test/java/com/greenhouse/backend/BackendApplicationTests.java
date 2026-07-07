@@ -681,6 +681,57 @@ class BackendApplicationTests {
 	}
 
 	@Test
+	@Transactional
+	void deletesOrchidGroupEvenWhenInboundRecordReferencesIt() throws Exception {
+		var sampleVariety = varietyRepository.findAll().stream()
+			.filter(variety -> variety.getName().equals("카틀레야 A"))
+			.findFirst()
+			.orElseThrow();
+		var sampleHouse = houseRepository.findAll().stream()
+			.filter(house -> house.getNumber() == 3)
+			.findFirst()
+			.orElseThrow();
+		var sampleBed = physicalBedRepository.findByHouseIdOrderByDisplayOrderAsc(sampleHouse.getId()).get(1);
+		var sampleZone = bedZoneRepository.findByPhysicalBedIdOrderBySortOrderAsc(sampleBed.getId()).getFirst();
+
+		var createResult = mockMvc.perform(post("/api/inbound-records")
+				.contentType(MediaType.APPLICATION_JSON)
+				.content("""
+					{
+					  "inboundDate": "2026-07-04",
+					  "inboundType": "PRODUCT_POT",
+					  "varietyId": %d,
+					  "actualQuantity": 60,
+					  "potSize": "4치",
+					  "ageYear": 2,
+					  "placementType": "TRAY",
+					  "trayCount": 2,
+					  "bedZoneId": %d,
+					  "worker": "관리자",
+					  "memo": "상품분 입고"
+					}
+					""".formatted(sampleVariety.getId(), sampleZone.getId())))
+			.andExpect(status().isCreated())
+			.andExpect(jsonPath("$.data.createdOrchidGroupId").isNumber())
+			.andReturn();
+
+		var inboundRecordId = Long.valueOf(createResult.getResponse().getContentAsString().replaceAll(".*\\\"id\\\":(\\d+).*", "$1"));
+		var createdOrchidGroupId = Long.valueOf(
+			createResult.getResponse().getContentAsString().replaceAll(".*\\\"createdOrchidGroupId\\\":(\\d+).*", "$1")
+		);
+
+		mockMvc.perform(delete("/api/orchid-groups/{orchidGroupId}", createdOrchidGroupId))
+			.andExpect(status().isOk())
+			.andExpect(jsonPath("$.data").doesNotExist());
+
+		assertThat(orchidGroupRepository.existsById(createdOrchidGroupId)).isFalse();
+		assertThat(inboundRecordRepository.findWithDetailsById(inboundRecordId))
+			.get()
+			.extracting(record -> record.getCreatedOrchidGroup())
+			.isNull();
+	}
+
+	@Test
 	void returnsValidationErrorsForInvalidOrchidGroupMutations() throws Exception {
 		mockMvc.perform(post("/api/orchid-groups")
 				.contentType(MediaType.APPLICATION_JSON)

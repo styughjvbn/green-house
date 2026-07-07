@@ -7,6 +7,7 @@ import com.greenhouse.backend.farm.dto.OrchidGroupMoveRequest;
 import com.greenhouse.backend.farm.dto.OrchidGroupResponse;
 import com.greenhouse.backend.farm.dto.OrchidGroupUpdateRequest;
 import com.greenhouse.backend.farm.repository.BedZoneRepository;
+import com.greenhouse.backend.farm.repository.InboundRecordRepository;
 import com.greenhouse.backend.farm.repository.OrchidGroupRepository;
 import com.greenhouse.backend.farm.repository.VarietyRepository;
 import com.greenhouse.backend.work.application.MovementWorkRecorder;
@@ -19,6 +20,7 @@ public class OrchidGroupCommandService {
 
 	private final BedZoneRepository bedZoneRepository;
 	private final OrchidGroupRepository orchidGroupRepository;
+	private final InboundRecordRepository inboundRecordRepository;
 	private final VarietyRepository varietyRepository;
 	private final MovementWorkRecorder movementWorkRecorder;
 	private final PlacementRecommendationService placementRecommendationService;
@@ -26,12 +28,14 @@ public class OrchidGroupCommandService {
 	public OrchidGroupCommandService(
 		BedZoneRepository bedZoneRepository,
 		OrchidGroupRepository orchidGroupRepository,
+		InboundRecordRepository inboundRecordRepository,
 		VarietyRepository varietyRepository,
 		MovementWorkRecorder movementWorkRecorder,
 		PlacementRecommendationService placementRecommendationService
 	) {
 		this.bedZoneRepository = bedZoneRepository;
 		this.orchidGroupRepository = orchidGroupRepository;
+		this.inboundRecordRepository = inboundRecordRepository;
 		this.varietyRepository = varietyRepository;
 		this.movementWorkRecorder = movementWorkRecorder;
 		this.placementRecommendationService = placementRecommendationService;
@@ -90,6 +94,7 @@ public class OrchidGroupCommandService {
 		if (!orchidGroupRepository.existsById(orchidGroupId)) {
 			throw new NotFoundException("난 묶음을 찾을 수 없습니다.");
 		}
+		inboundRecordRepository.clearCreatedOrchidGroup(orchidGroupId);
 		orchidGroupRepository.deleteById(orchidGroupId);
 	}
 
