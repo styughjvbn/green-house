@@ -213,6 +213,7 @@ export default function OrchidSelectionPanel({
 
       {mutationMode === "CREATE" || mutationMode === "EDIT" ? (
         <OrchidGroupForm
+          house={house}
           initialValue={mutationMode === "EDIT" ? selectedOrchidGroup : null}
           mode={mutationMode}
           saving={saving}

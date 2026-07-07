@@ -3,16 +3,22 @@
 import { FormEvent, useMemo, useState } from "react";
 import type {
   BedZone,
+  House,
   OrchidGroup,
   VarietyOption,
 } from "@/entities/farm/types";
-import { nullableNumber, nullableText } from "../../lib/orchidManagementUtils";
+import {
+  findFirstAvailableSingleSlot,
+  nullableNumber,
+  nullableText,
+} from "../../lib/orchidManagementUtils";
 import type { MutationPayload, OrchidFormState } from "../../model/types";
 import TextField from "./TextField";
 import VarietySearchSelect from "./VarietySearchSelect";
 
 export default function OrchidGroupForm({
   initialValue,
+  house,
   mode,
   saving,
   targetZone,
@@ -20,6 +26,7 @@ export default function OrchidGroupForm({
   onSubmit,
 }: {
   initialValue: OrchidGroup | null;
+  house: House;
   mode: "CREATE" | "EDIT";
   saving: boolean;
   targetZone: BedZone | null;
@@ -40,6 +47,14 @@ export default function OrchidGroupForm({
     [initialValue],
   );
 
+  const defaultPlacement = useMemo(
+    () =>
+      mode === "CREATE" && targetZone
+        ? findFirstAvailableSingleSlot(house, targetZone.id)
+        : null,
+    [house, mode, targetZone],
+  );
+
   const [form, setForm] = useState<OrchidFormState>(() => ({
     varietyId: initialValue?.varietyId ? String(initialValue.varietyId) : "",
     varietyQuery: "",
@@ -55,9 +70,15 @@ export default function OrchidGroupForm({
     startPosition:
       initialValue?.startPosition != null
         ? String(initialValue.startPosition)
-        : "",
+        : defaultPlacement != null
+          ? String(defaultPlacement.startPosition)
+          : "",
     endPosition:
-      initialValue?.endPosition != null ? String(initialValue.endPosition) : "",
+      initialValue?.endPosition != null
+        ? String(initialValue.endPosition)
+        : defaultPlacement != null
+          ? String(defaultPlacement.endPosition)
+          : "",
     memo: initialValue?.memo ?? "",
   }));
 

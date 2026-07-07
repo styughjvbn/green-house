@@ -56,3 +56,47 @@ export function findBedZone(
   }
   return null;
 }
+
+export function findFirstAvailableSingleSlot(
+  house: House,
+  bedZoneId: number,
+): { startPosition: number; endPosition: number } | null {
+  const resolved = findBedZone(house, bedZoneId);
+  if (!resolved || resolved.bed.positionUnitCount == null) {
+    return null;
+  }
+
+  const positionedGroups = [...resolved.zone.orchidGroups]
+    .filter(
+      (orchidGroup) =>
+        orchidGroup.startPosition != null && orchidGroup.endPosition != null,
+    )
+    .sort((a, b) => {
+      const startCompare = (a.startPosition ?? 0) - (b.startPosition ?? 0);
+      return startCompare !== 0 ? startCompare : a.sortOrder - b.sortOrder;
+    });
+
+  let cursor = 0;
+  for (const orchidGroup of positionedGroups) {
+    const start = orchidGroup.startPosition ?? 0;
+    const end = orchidGroup.endPosition ?? start;
+    if (start - cursor >= 1) {
+      return {
+        startPosition: cursor,
+        endPosition: cursor + 1,
+      };
+    }
+    if (end > cursor) {
+      cursor = end;
+    }
+  }
+
+  if ((resolved.bed.positionUnitCount ?? 0) - cursor >= 1) {
+    return {
+      startPosition: cursor,
+      endPosition: cursor + 1,
+    };
+  }
+
+  return null;
+}
