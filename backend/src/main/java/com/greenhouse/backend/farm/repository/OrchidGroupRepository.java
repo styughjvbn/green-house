@@ -63,4 +63,6 @@ public interface OrchidGroupRepository extends JpaRepository<OrchidGroup, Long> 
 		""")
 	List<OrchidGroup> findByVarietyIdOrderByLocation(@Param("varietyId") Long varietyId);
 
+	boolean existsByVarietyId(Long varietyId);
+
 }

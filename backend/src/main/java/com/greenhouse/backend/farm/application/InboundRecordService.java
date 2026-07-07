@@ -10,6 +10,7 @@ import com.greenhouse.backend.farm.domain.Variety;
 import com.greenhouse.backend.farm.dto.InboundNewVarietyRequest;
 import com.greenhouse.backend.farm.dto.InboundRecordCancelRequest;
 import com.greenhouse.backend.farm.dto.InboundRecordCreateRequest;
+import com.greenhouse.backend.farm.dto.InboundRecordPageResponse;
 import com.greenhouse.backend.farm.dto.InboundRecordPottingRequest;
 import com.greenhouse.backend.farm.dto.InboundRecordResponse;
 import com.greenhouse.backend.farm.dto.InboundRecordUpdateRequest;
@@ -19,7 +20,8 @@ import com.greenhouse.backend.farm.repository.OrchidGroupRepository;
 import com.greenhouse.backend.farm.repository.VarietyRepository;
 import com.greenhouse.backend.work.application.SystemWorkRecorder;
 import java.time.LocalDate;
-import java.util.List;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -52,22 +54,27 @@ public class InboundRecordService {
 	}
 
 	@Transactional(readOnly = true)
-	public List<InboundRecordResponse> getInboundRecords(
+	public InboundRecordPageResponse getInboundRecords(
 		LocalDate from,
 		LocalDate to,
 		InboundType inboundType,
 		InboundStatus status,
-		String varietyKeyword
+		String varietyKeyword,
+		int page,
+		int size
 	) {
-		return inboundRecordRepository.search(
+		validatePageRequest(page, size);
+		return InboundRecordPageResponse.from(inboundRecordRepository.search(
 				from,
 				to,
 				inboundType,
 				status,
-				normalize(varietyKeyword) == null ? "" : normalize(varietyKeyword)
-			).stream()
-			.map(InboundRecordResponse::from)
-			.toList();
+				normalize(varietyKeyword) == null ? "" : normalize(varietyKeyword),
+				PageRequest.of(page, size, Sort.by(
+					Sort.Order.desc("inboundDate"),
+					Sort.Order.desc("id")
+				))
+			).map(InboundRecordResponse::from));
 	}
 
 	@Transactional(readOnly = true)
@@ -401,5 +408,14 @@ public class InboundRecordService {
 			throw new IllegalArgumentException("필수 문자열 값은 비워둘 수 없습니다.");
 		}
 		return normalized;
+	}
+
+	private void validatePageRequest(int page, int size) {
+		if (page < 0) {
+			throw new IllegalArgumentException("페이지 번호는 0 이상이어야 합니다.");
+		}
+		if (size < 1 || size > 100) {
+			throw new IllegalArgumentException("페이지 크기는 1~100이어야 합니다.");
+		}
 	}
 }

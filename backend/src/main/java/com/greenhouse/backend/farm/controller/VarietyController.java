@@ -4,11 +4,13 @@ import com.greenhouse.backend.common.api.ApiResponse;
 import com.greenhouse.backend.farm.application.VarietyService;
 import com.greenhouse.backend.farm.dto.VarietyConnectedOrchidGroupResponse;
 import com.greenhouse.backend.farm.dto.VarietyCreateRequest;
+import com.greenhouse.backend.farm.dto.VarietyPageResponse;
 import com.greenhouse.backend.farm.dto.VarietyResponse;
 import com.greenhouse.backend.farm.dto.VarietyUpdateRequest;
 import jakarta.validation.Valid;
 import java.util.List;
 import org.springframework.http.HttpStatus;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -29,13 +31,15 @@ public class VarietyController {
 	}
 
 	@GetMapping
-	public ApiResponse<List<VarietyResponse>> getVarieties(
+	public ApiResponse<VarietyPageResponse> getVarieties(
 		@RequestParam(required = false) String keyword,
 		@RequestParam(required = false) String genus,
 		@RequestParam(required = false) Boolean saleEnabled,
-		@RequestParam(required = false) Boolean active
+		@RequestParam(required = false) Boolean active,
+		@RequestParam(defaultValue = "0") int page,
+		@RequestParam(defaultValue = "10") int size
 	) {
-		return ApiResponse.ok(varietyService.getVarieties(keyword, genus, saleEnabled, active));
+		return ApiResponse.ok(varietyService.getVarieties(keyword, genus, saleEnabled, active, page, size));
 	}
 
 	@GetMapping("/{varietyId}")
@@ -60,6 +64,12 @@ public class VarietyController {
 	@PatchMapping("/{varietyId}/deactivate")
 	public ApiResponse<VarietyResponse> deactivate(@PathVariable Long varietyId) {
 		return ApiResponse.ok(varietyService.deactivate(varietyId));
+	}
+
+	@DeleteMapping("/{varietyId}")
+	public ApiResponse<Void> delete(@PathVariable Long varietyId) {
+		varietyService.delete(varietyId);
+		return ApiResponse.ok(null);
 	}
 
 	@GetMapping("/{varietyId}/orchid-groups")

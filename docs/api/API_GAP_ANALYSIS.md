@@ -5,7 +5,7 @@
 ## 기준
 
 - 실제 구현 기준: `docs/api/openapi.yaml`
-- 실제 구현 operations: `65`
+- 실제 구현 operations: `67`
 - 실제 구현 path entries: `51`
 - 과거 md/추가안에서 수집한 endpoint 후보: `69`
 - 후보 중 OpenAPI와 매칭되는 endpoint: `44`
@@ -68,11 +68,13 @@
 - `POST /api/materials`
 - `GET /api/materials/{materialId}`
 - `PATCH /api/materials/{materialId}`
+- `DELETE /api/materials/{materialId}`
 - `PATCH /api/materials/{materialId}/deactivate`
 - `GET /api/varieties`
 - `POST /api/varieties`
 - `GET /api/varieties/{varietyId}`
 - `PATCH /api/varieties/{varietyId}`
+- `DELETE /api/varieties/{varietyId}`
 - `PATCH /api/varieties/{varietyId}/deactivate`
 - `GET /api/varieties/{varietyId}/orchid-groups`
 

@@ -3,11 +3,12 @@ package com.greenhouse.backend.farm.controller;
 import com.greenhouse.backend.common.api.ApiResponse;
 import com.greenhouse.backend.farm.application.MaterialService;
 import com.greenhouse.backend.farm.dto.MaterialCreateRequest;
+import com.greenhouse.backend.farm.dto.MaterialPageResponse;
 import com.greenhouse.backend.farm.dto.MaterialResponse;
 import com.greenhouse.backend.farm.dto.MaterialUpdateRequest;
 import jakarta.validation.Valid;
-import java.util.List;
 import org.springframework.http.HttpStatus;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -29,13 +30,15 @@ public class MaterialController {
 	}
 
 	@GetMapping
-	public ApiResponse<List<MaterialResponse>> getMaterials(
+	public ApiResponse<MaterialPageResponse> getMaterials(
 		@RequestParam(required = false) String keyword,
 		@RequestParam(required = false) String category,
 		@RequestParam(required = false) String manufacturer,
-		@RequestParam(required = false) Boolean active
+		@RequestParam(required = false) Boolean active,
+		@RequestParam(defaultValue = "0") int page,
+		@RequestParam(defaultValue = "10") int size
 	) {
-		return ApiResponse.ok(materialService.getMaterials(keyword, category, manufacturer, active));
+		return ApiResponse.ok(materialService.getMaterials(keyword, category, manufacturer, active, page, size));
 	}
 
 	@GetMapping("/{materialId}")
@@ -60,5 +63,11 @@ public class MaterialController {
 	@PatchMapping("/{materialId}/deactivate")
 	public ApiResponse<MaterialResponse> deactivate(@PathVariable Long materialId) {
 		return ApiResponse.ok(materialService.deactivate(materialId));
+	}
+
+	@DeleteMapping("/{materialId}")
+	public ApiResponse<Void> delete(@PathVariable Long materialId) {
+		materialService.delete(materialId);
+		return ApiResponse.ok(null);
 	}
 }

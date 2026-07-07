@@ -3,10 +3,12 @@ package com.greenhouse.backend.farm.application;
 import com.greenhouse.backend.common.exception.NotFoundException;
 import com.greenhouse.backend.farm.domain.Material;
 import com.greenhouse.backend.farm.dto.MaterialCreateRequest;
+import com.greenhouse.backend.farm.dto.MaterialPageResponse;
 import com.greenhouse.backend.farm.dto.MaterialResponse;
 import com.greenhouse.backend.farm.dto.MaterialUpdateRequest;
 import com.greenhouse.backend.farm.repository.MaterialRepository;
-import java.util.List;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -21,20 +23,26 @@ public class MaterialService {
 	}
 
 	@Transactional(readOnly = true)
-	public List<MaterialResponse> getMaterials(
+	public MaterialPageResponse getMaterials(
 		String keyword,
 		String category,
 		String manufacturer,
-		Boolean active
+		Boolean active,
+		int page,
+		int size
 	) {
-		return materialRepository.search(
+		validatePageRequest(page, size);
+		return MaterialPageResponse.from(materialRepository.search(
 				normalize(keyword) == null ? "" : normalize(keyword),
 				normalize(category) == null ? "" : normalize(category),
 				normalize(manufacturer) == null ? "" : normalize(manufacturer),
-				active
-			).stream()
-			.map(MaterialResponse::from)
-			.toList();
+				active,
+				PageRequest.of(page, size, Sort.by(
+					Sort.Order.desc("active"),
+					Sort.Order.asc("category"),
+					Sort.Order.asc("name")
+				))
+			).map(MaterialResponse::from));
 	}
 
 	@Transactional(readOnly = true)
@@ -77,6 +85,10 @@ public class MaterialService {
 		return MaterialResponse.from(material);
 	}
 
+	public void delete(Long materialId) {
+		materialRepository.delete(findMaterial(materialId));
+	}
+
 	private Material findMaterial(Long materialId) {
 		return materialRepository.findById(materialId)
 			.orElseThrow(() -> new NotFoundException("자재를 찾을 수 없습니다."));
@@ -103,5 +115,14 @@ public class MaterialService {
 			throw new IllegalArgumentException("필수 문자열 값은 비워둘 수 없습니다.");
 		}
 		return normalized;
+	}
+
+	private void validatePageRequest(int page, int size) {
+		if (page < 0) {
+			throw new IllegalArgumentException("페이지 번호는 0 이상이어야 합니다.");
+		}
+		if (size < 1 || size > 100) {
+			throw new IllegalArgumentException("페이지 크기는 1~100이어야 합니다.");
+		}
 	}
 }

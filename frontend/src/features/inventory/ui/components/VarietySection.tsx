@@ -1,8 +1,13 @@
 "use client";
 
-import { ChevronLeft, ChevronRight, Pencil, Plus } from "lucide-react";
+import { ChevronLeft, ChevronRight, Pencil, Plus, Trash2 } from "lucide-react";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useMemo, useState } from "react";
-import type { Variety, VarietyPayload } from "../../model/types";
+import type {
+  InventoryPageResult,
+  Variety,
+  VarietyPayload,
+} from "../../model/types";
 import {
   DetailRow,
   Field,
@@ -11,31 +16,39 @@ import {
 } from "./InventoryPrimitives";
 
 export function VarietySection({
-  varieties,
+  pageData,
+  connectedGroups,
   selectedId,
   loadingGroups = false,
   onSelect,
   onCreate,
   onUpdate,
   onDeactivate,
+  onDelete,
 }: {
-  varieties: Variety[];
+  pageData: InventoryPageResult<Variety>;
+  connectedGroups: Variety["connectedGroups"];
   selectedId: number;
   loadingGroups?: boolean;
   onSelect: (id: number) => void;
   onCreate: () => void;
   onUpdate: (varietyId: number, payload: VarietyPayload) => Promise<void>;
   onDeactivate: (varietyId: number) => Promise<void>;
+  onDelete: (varietyId: number) => Promise<void>;
 }) {
-  const [genus, setGenus] = useState("전체");
-  const [keyword, setKeyword] = useState("");
-  const [status, setStatus] = useState("전체");
-  const [sale, setSale] = useState("전체");
+  const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
+  const keyword = searchParams.get("varietyKeyword") ?? "";
+  const genus = searchParams.get("varietyGenus") ?? "전체";
+  const status = searchParams.get("varietyStatus") ?? "전체";
+  const sale = searchParams.get("varietySale") ?? "전체";
   const selected =
-    varieties.find((item) => item.id === selectedId) ?? varieties[0];
+    pageData.content.find((item) => item.id === selectedId) ??
+    pageData.content[0];
   const genera = useMemo(
-    () => ["전체", ...new Set(varieties.map((item) => item.genus))],
-    [varieties],
+    () => ["전체", ...new Set(pageData.content.map((item) => item.genus))],
+    [pageData.content],
   );
   const [editing, setEditing] = useState(false);
   const [form, setForm] = useState<VarietyPayload>({
@@ -47,29 +60,51 @@ export function VarietySection({
     description: selected?.description ?? "",
     memo: selected?.memo ?? "",
   });
-  const filtered = varieties.filter(
-    (item) =>
-      (genus === "전체" || item.genus === genus) &&
-      (!keyword || `${item.code} ${item.name}`.includes(keyword)) &&
-      (status === "전체" || item.status === status) &&
-      (sale === "전체" || item.saleEnabled === (sale === "사용")),
-  );
 
-  const reset = () => {
-    setGenus("전체");
-    setKeyword("");
-    setStatus("전체");
-    setSale("전체");
+  const pageNumbers = buildPageNumbers(pageData.page, pageData.totalPages);
+
+  const updateParams = (updater: (params: URLSearchParams) => void) => {
+    const params = new URLSearchParams(searchParams.toString());
+    updater(params);
+    router.replace(`${pathname}?${params.toString()}`);
   };
 
   return (
     <>
-      <div className="grid gap-3 rounded-md border border-[#dce2dc] bg-white p-3 shadow-sm md:grid-cols-2 xl:grid-cols-[1fr_1.1fr_1fr_1fr_auto_auto] xl:items-end">
+      <form
+        className="grid gap-3 rounded-md border border-[#dce2dc] bg-white p-3 shadow-sm md:grid-cols-2 xl:grid-cols-[1fr_1.1fr_1fr_1fr_auto_auto] xl:items-end"
+        onSubmit={(event) => {
+          event.preventDefault();
+          const formData = new FormData(event.currentTarget);
+
+          updateParams((params) => {
+            setQueryParam(params, "varietyGenus", formData.get("varietyGenus"));
+            setQueryParam(
+              params,
+              "varietyKeyword",
+              formData.get("varietyKeyword"),
+            );
+            setQueryParam(
+              params,
+              "varietyStatus",
+              formData.get("varietyStatus"),
+              "전체",
+            );
+            setQueryParam(
+              params,
+              "varietySale",
+              formData.get("varietySale"),
+              "전체",
+            );
+            params.set("varietyPage", "0");
+          });
+        }}
+      >
         <Field label="속">
           <select
             className={inputClass}
-            value={genus}
-            onChange={(event) => setGenus(event.target.value)}
+            defaultValue={genus}
+            name="varietyGenus"
           >
             {genera.map((value) => (
               <option key={value}>{value}</option>
@@ -79,16 +114,16 @@ export function VarietySection({
         <Field label="품종명">
           <input
             className={inputClass}
+            defaultValue={keyword}
+            name="varietyKeyword"
             placeholder="품종명을 입력하세요"
-            value={keyword}
-            onChange={(event) => setKeyword(event.target.value)}
           />
         </Field>
         <Field label="상태">
           <select
             className={inputClass}
-            value={status}
-            onChange={(event) => setStatus(event.target.value)}
+            defaultValue={status}
+            name="varietyStatus"
           >
             <option>전체</option>
             <option value="ACTIVE">활성</option>
@@ -96,11 +131,7 @@ export function VarietySection({
           </select>
         </Field>
         <Field label="판매 사용">
-          <select
-            className={inputClass}
-            value={sale}
-            onChange={(event) => setSale(event.target.value)}
-          >
+          <select className={inputClass} defaultValue={sale} name="varietySale">
             <option>전체</option>
             <option>사용</option>
             <option>미사용</option>
@@ -109,17 +140,27 @@ export function VarietySection({
         <button
           className="h-9 rounded-md border border-[#d7ddd8] px-4 text-sm font-semibold"
           type="button"
-          onClick={reset}
+          onClick={() => {
+            updateParams((params) => {
+              [
+                "varietyGenus",
+                "varietyKeyword",
+                "varietyStatus",
+                "varietySale",
+              ].forEach((key) => params.delete(key));
+              params.set("varietyPage", "0");
+            });
+          }}
         >
           초기화
         </button>
         <button
           className="h-9 rounded-md bg-[#159447] px-6 text-sm font-semibold text-white"
-          type="button"
+          type="submit"
         >
           검색
         </button>
-      </div>
+      </form>
 
       <div className="mt-3 grid min-w-0 gap-3 2xl:grid-cols-[minmax(0,1.15fr)_minmax(25rem,1fr)]">
         <section className="min-w-0 rounded-md border border-[#dce2dc] bg-white p-3 shadow-sm">
@@ -127,7 +168,7 @@ export function VarietySection({
             <h2 className="text-sm font-bold">
               품종 목록{" "}
               <span className="ml-2 text-xs font-semibold text-[#159447]">
-                (총 {filtered.length}개)
+                (총 {pageData.totalElements}개)
               </span>
             </h2>
             <button
@@ -161,7 +202,7 @@ export function VarietySection({
                 </tr>
               </thead>
               <tbody>
-                {filtered.map((item) => (
+                {pageData.content.map((item) => (
                   <tr
                     className={`cursor-pointer border-b border-[#e5e9e5] hover:bg-[#f3f9f3] ${item.id === selected?.id ? "bg-[#eaf7eb]" : ""}`}
                     key={item.id}
@@ -191,36 +232,60 @@ export function VarietySection({
               </tbody>
             </table>
           </div>
-          <div className="mt-3 flex items-center justify-between">
-            <div className="flex gap-1">
+          <div className="mt-3 flex items-center justify-between gap-3">
+            <div className="flex items-center gap-1">
               <button
-                className="grid h-8 w-8 place-items-center rounded border border-[#d7ddd8]"
+                className="grid h-8 w-8 place-items-center rounded border border-[#d7ddd8] disabled:opacity-40"
+                disabled={pageData.page === 0}
                 type="button"
+                onClick={() =>
+                  updateParams((params) => {
+                    params.set("varietyPage", String(pageData.page - 1));
+                  })
+                }
               >
                 <ChevronLeft className="h-4 w-4" />
               </button>
+              {pageNumbers.map((pageNumber) => (
+                <button
+                  key={pageNumber}
+                  className={`h-8 min-w-8 rounded px-2 text-xs ${pageNumber === pageData.page ? "bg-[#159447] font-bold text-white" : "border border-[#d7ddd8]"}`}
+                  type="button"
+                  onClick={() =>
+                    updateParams((params) => {
+                      params.set("varietyPage", String(pageNumber));
+                    })
+                  }
+                >
+                  {pageNumber + 1}
+                </button>
+              ))}
               <button
-                className="h-8 min-w-8 rounded bg-[#159447] px-2 text-xs font-bold text-white"
+                className="grid h-8 w-8 place-items-center rounded border border-[#d7ddd8] disabled:opacity-40"
+                disabled={pageData.page >= pageData.totalPages - 1}
                 type="button"
-              >
-                1
-              </button>
-              <button
-                className="h-8 min-w-8 rounded border border-[#d7ddd8] px-2 text-xs"
-                type="button"
-              >
-                2
-              </button>
-              <button
-                className="grid h-8 w-8 place-items-center rounded border border-[#d7ddd8]"
-                type="button"
+                onClick={() =>
+                  updateParams((params) => {
+                    params.set("varietyPage", String(pageData.page + 1));
+                  })
+                }
               >
                 <ChevronRight className="h-4 w-4" />
               </button>
             </div>
-            <select className="h-8 rounded border border-[#d7ddd8] px-3 text-xs">
-              <option>10개씩 보기</option>
-              <option>20개씩 보기</option>
+            <select
+              className="h-8 rounded border border-[#d7ddd8] px-3 text-xs"
+              value={String(pageData.size)}
+              onChange={(event) =>
+                updateParams((params) => {
+                  params.set("varietySize", event.target.value);
+                  params.set("varietyPage", "0");
+                })
+              }
+            >
+              <option value="10">10개씩 보기</option>
+              <option value="20">20개씩 보기</option>
+              <option value="50">50개씩 보기</option>
             </select>
           </div>
         </section>
@@ -230,11 +295,28 @@ export function VarietySection({
             <div className="flex items-center justify-between">
               <h2 className="text-sm font-bold">품종 상세 정보</h2>
               <div className="flex items-center gap-2">
+                <button
+                  className="rounded border border-[#e2c8c8] px-3 py-1.5 text-xs font-semibold text-[#a14545]"
+                  type="button"
+                  onClick={() => {
+                    if (!window.confirm("이 품종을 삭제할까요?")) return;
+                    void onDelete(selected.id).catch((error: Error) => {
+                      window.alert(error.message);
+                    });
+                  }}
+                >
+                  <Trash2 className="mr-1 inline h-3.5 w-3.5" />
+                  삭제
+                </button>
                 {selected.status === "ACTIVE" ? (
                   <button
                     className="rounded border border-[#e2c8c8] px-3 py-1.5 text-xs font-semibold text-[#a14545]"
                     type="button"
-                    onClick={() => void onDeactivate(selected.id)}
+                    onClick={() =>
+                      void onDeactivate(selected.id).catch((error: Error) => {
+                        window.alert(error.message);
+                      })
+                    }
                   >
                     비활성화
                   </button>
@@ -274,9 +356,11 @@ export function VarietySection({
                   className="grid gap-3"
                   onSubmit={(event) => {
                     event.preventDefault();
-                    void onUpdate(selected.id, form).then(() =>
-                      setEditing(false),
-                    );
+                    void onUpdate(selected.id, form)
+                      .then(() => setEditing(false))
+                      .catch((error: Error) => {
+                        window.alert(error.message);
+                      });
                   }}
                 >
                   <DetailRow label="품종코드" value={selected.code} />
@@ -449,8 +533,8 @@ export function VarietySection({
                     </tr>
                   </thead>
                   <tbody>
-                    {selected.connectedGroups.length ? (
-                      selected.connectedGroups.map((group) => (
+                    {connectedGroups.length ? (
+                      connectedGroups.map((group) => (
                         <tr
                           className="border-b border-[#e4e8e4]"
                           key={group.id}
@@ -500,4 +584,31 @@ function SummaryCard({ label, value }: { label: string; value: string }) {
       <strong className="mt-1 block text-sm">{value}</strong>
     </div>
   );
+}
+
+function setQueryParam(
+  params: URLSearchParams,
+  key: string,
+  value: FormDataEntryValue | null,
+  emptyValue = "전체",
+) {
+  const normalized = typeof value === "string" ? value.trim() : "";
+
+  if (!normalized || normalized === emptyValue) {
+    params.delete(key);
+    return;
+  }
+
+  params.set(key, normalized);
+}
+
+function buildPageNumbers(currentPage: number, totalPages: number) {
+  if (totalPages <= 0) {
+    return [0];
+  }
+
+  const start = Math.max(0, currentPage - 2);
+  const end = Math.min(totalPages, start + 5);
+
+  return Array.from({ length: end - start }, (_, index) => start + index);
 }

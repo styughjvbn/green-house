@@ -1,8 +1,9 @@
 package com.greenhouse.backend.farm.repository;
 
 import com.greenhouse.backend.farm.domain.Variety;
-import java.util.List;
 import java.util.Optional;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
@@ -19,11 +20,12 @@ public interface VarietyRepository extends JpaRepository<Variety, Long> {
 			and (:active is null or v.active = :active)
 		order by v.active desc, v.genus asc, v.name asc
 		""")
-	List<Variety> search(
+	Page<Variety> search(
 		@Param("keyword") String keyword,
 		@Param("genus") String genus,
 		@Param("saleEnabled") Boolean saleEnabled,
-		@Param("active") Boolean active
+		@Param("active") Boolean active,
+		Pageable pageable
 	);
 
 	Optional<Variety> findTopByOrderByIdDesc();

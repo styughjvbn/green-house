@@ -33,13 +33,27 @@ paths:
         required: false
         schema:
           type: boolean
+      - name: page
+        in: query
+        required: false
+        schema:
+          type: integer
+          format: int32
+          default: 0
+      - name: size
+        in: query
+        required: false
+        schema:
+          type: integer
+          format: int32
+          default: 10
       responses:
         '200':
           description: OK
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ApiResponseListVarietyResponse'
+                $ref: '#/components/schemas/ApiResponseVarietyPageResponse'
     post:
       tags:
       - variety-controller
@@ -100,6 +114,24 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ApiResponseVarietyResponse'
+    delete:
+      tags:
+      - variety-controller
+      operationId: delete_1
+      parameters:
+      - name: varietyId
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: int64
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponseVoid'
   /api/varieties/{varietyId}/deactivate:
     patch:
       tags:
@@ -164,13 +196,27 @@ paths:
         required: false
         schema:
           type: boolean
+      - name: page
+        in: query
+        required: false
+        schema:
+          type: integer
+          format: int32
+          default: 0
+      - name: size
+        in: query
+        required: false
+        schema:
+          type: integer
+          format: int32
+          default: 10
       responses:
         '200':
           description: OK
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ApiResponseListMaterialResponse'
+                $ref: '#/components/schemas/ApiResponseMaterialPageResponse'
     post:
       tags:
       - material-controller
@@ -231,6 +277,24 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ApiResponseMaterialResponse'
+    delete:
+      tags:
+      - material-controller
+      operationId: delete_2
+      parameters:
+      - name: materialId
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: int64
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponseVoid'
   /api/materials/{materialId}/deactivate:
     patch:
       tags:
@@ -295,13 +359,27 @@ paths:
         required: false
         schema:
           type: string
+      - name: page
+        in: query
+        required: false
+        schema:
+          type: integer
+          format: int32
+          default: 0
+      - name: size
+        in: query
+        required: false
+        schema:
+          type: integer
+          format: int32
+          default: 10
       responses:
         '200':
           description: OK
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ApiResponseListInboundRecordResponse'
+                $ref: '#/components/schemas/ApiResponseInboundRecordPageResponse'
     post:
       tags:
       - inbound-record-controller
@@ -420,13 +498,11 @@ components:
           $ref: '#/components/schemas/InboundRecordResponse'
         message:
           type: string
-    ApiResponseListInboundRecordResponse:
+    ApiResponseInboundRecordPageResponse:
       type: object
       properties:
         data:
-          type: array
-          items:
-            $ref: '#/components/schemas/InboundRecordResponse'
+          $ref: '#/components/schemas/InboundRecordPageResponse'
         message:
           type: string
     ApiResponseListVarietyConnectedOrchidGroupResponse:
@@ -438,22 +514,18 @@ components:
             $ref: '#/components/schemas/VarietyConnectedOrchidGroupResponse'
         message:
           type: string
-    ApiResponseListVarietyResponse:
+    ApiResponseVarietyPageResponse:
       type: object
       properties:
         data:
-          type: array
-          items:
-            $ref: '#/components/schemas/VarietyResponse'
+          $ref: '#/components/schemas/VarietyPageResponse'
         message:
           type: string
-    ApiResponseListMaterialResponse:
+    ApiResponseMaterialPageResponse:
       type: object
       properties:
         data:
-          type: array
-          items:
-            $ref: '#/components/schemas/MaterialResponse'
+          $ref: '#/components/schemas/MaterialPageResponse'
         message:
           type: string
     ApiResponseVarietyResponse:
@@ -470,6 +542,31 @@ components:
           $ref: '#/components/schemas/MaterialResponse'
         message:
           type: string
+    ApiResponseVoid:
+      type: object
+      properties:
+        data: {}
+        message:
+          type: string
+    InboundRecordPageResponse:
+      type: object
+      properties:
+        content:
+          type: array
+          items:
+            $ref: '#/components/schemas/InboundRecordResponse'
+        page:
+          type: integer
+          format: int32
+        size:
+          type: integer
+          format: int32
+        totalElements:
+          type: integer
+          format: int64
+        totalPages:
+          type: integer
+          format: int32
     InboundNewVarietyRequest:
       type: object
       properties:
@@ -844,6 +941,25 @@ components:
         updatedAt:
           type: string
           format: date-time
+    MaterialPageResponse:
+      type: object
+      properties:
+        content:
+          type: array
+          items:
+            $ref: '#/components/schemas/MaterialResponse'
+        page:
+          type: integer
+          format: int32
+        size:
+          type: integer
+          format: int32
+        totalElements:
+          type: integer
+          format: int64
+        totalPages:
+          type: integer
+          format: int32
     VarietyConnectedOrchidGroupResponse:
       type: object
       properties:
@@ -937,6 +1053,25 @@ components:
         updatedAt:
           type: string
           format: date-time
+    VarietyPageResponse:
+      type: object
+      properties:
+        content:
+          type: array
+          items:
+            $ref: '#/components/schemas/VarietyResponse'
+        page:
+          type: integer
+          format: int32
+        size:
+          type: integer
+          format: int32
+        totalElements:
+          type: integer
+          format: int64
+        totalPages:
+          type: integer
+          format: int32
     VarietyUpdateRequest:
       type: object
       properties:

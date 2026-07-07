@@ -5,6 +5,7 @@ import com.greenhouse.backend.farm.domain.OrchidGroup;
 import com.greenhouse.backend.farm.domain.Variety;
 import com.greenhouse.backend.farm.dto.VarietyConnectedOrchidGroupResponse;
 import com.greenhouse.backend.farm.dto.VarietyCreateRequest;
+import com.greenhouse.backend.farm.dto.VarietyPageResponse;
 import com.greenhouse.backend.farm.dto.VarietyResponse;
 import com.greenhouse.backend.farm.dto.VarietyUpdateRequest;
 import com.greenhouse.backend.farm.repository.InboundRecordRepository;
@@ -15,6 +16,8 @@ import java.time.LocalDate;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -39,20 +42,26 @@ public class VarietyService {
 	}
 
 	@Transactional(readOnly = true)
-	public List<VarietyResponse> getVarieties(
+	public VarietyPageResponse getVarieties(
 		String keyword,
 		String genus,
 		Boolean saleEnabled,
-		Boolean active
+		Boolean active,
+		int page,
+		int size
 	) {
-		return varietyRepository.search(
+		validatePageRequest(page, size);
+		return VarietyPageResponse.from(varietyRepository.search(
 				normalize(keyword) == null ? "" : normalize(keyword),
 				normalize(genus) == null ? "" : normalize(genus),
 				saleEnabled,
-				active
-			).stream()
-			.map(this::toResponse)
-			.toList();
+				active,
+				PageRequest.of(page, size, Sort.by(
+					Sort.Order.desc("active"),
+					Sort.Order.asc("genus"),
+					Sort.Order.asc("name")
+				))
+			).map(this::toResponse));
 	}
 
 	@Transactional(readOnly = true)
@@ -93,6 +102,14 @@ public class VarietyService {
 		var variety = findVariety(varietyId);
 		variety.deactivate();
 		return toResponse(variety);
+	}
+
+	public void delete(Long varietyId) {
+		var variety = findVariety(varietyId);
+		if (orchidGroupRepository.existsByVarietyId(varietyId) || inboundRecordRepository.existsByVarietyId(varietyId)) {
+			throw new IllegalArgumentException("연결된 난 묶음 또는 입고 기록이 있는 품종은 삭제할 수 없습니다.");
+		}
+		varietyRepository.delete(variety);
 	}
 
 	@Transactional(readOnly = true)
@@ -173,5 +190,14 @@ public class VarietyService {
 			throw new IllegalArgumentException("필수 문자열 값은 비워둘 수 없습니다.");
 		}
 		return normalized;
+	}
+
+	private void validatePageRequest(int page, int size) {
+		if (page < 0) {
+			throw new IllegalArgumentException("페이지 번호는 0 이상이어야 합니다.");
+		}
+		if (size < 1 || size > 100) {
+			throw new IllegalArgumentException("페이지 크기는 1~100이어야 합니다.");
+		}
 	}
 }

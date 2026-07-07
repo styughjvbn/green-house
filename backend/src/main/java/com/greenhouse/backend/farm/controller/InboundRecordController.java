@@ -6,12 +6,12 @@ import com.greenhouse.backend.farm.domain.InboundStatus;
 import com.greenhouse.backend.farm.domain.InboundType;
 import com.greenhouse.backend.farm.dto.InboundRecordCancelRequest;
 import com.greenhouse.backend.farm.dto.InboundRecordCreateRequest;
+import com.greenhouse.backend.farm.dto.InboundRecordPageResponse;
 import com.greenhouse.backend.farm.dto.InboundRecordPottingRequest;
 import com.greenhouse.backend.farm.dto.InboundRecordResponse;
 import com.greenhouse.backend.farm.dto.InboundRecordUpdateRequest;
 import jakarta.validation.Valid;
 import java.time.LocalDate;
-import java.util.List;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
@@ -34,14 +34,16 @@ public class InboundRecordController {
 	}
 
 	@GetMapping
-	public ApiResponse<List<InboundRecordResponse>> getInboundRecords(
+	public ApiResponse<InboundRecordPageResponse> getInboundRecords(
 		@RequestParam(required = false) LocalDate from,
 		@RequestParam(required = false) LocalDate to,
 		@RequestParam(required = false) InboundType inboundType,
 		@RequestParam(required = false) InboundStatus status,
-		@RequestParam(required = false) String variety
+		@RequestParam(required = false) String variety,
+		@RequestParam(defaultValue = "0") int page,
+		@RequestParam(defaultValue = "10") int size
 	) {
-		return ApiResponse.ok(inboundRecordService.getInboundRecords(from, to, inboundType, status, variety));
+		return ApiResponse.ok(inboundRecordService.getInboundRecords(from, to, inboundType, status, variety, page, size));
 	}
 
 	@GetMapping("/{inboundRecordId}")

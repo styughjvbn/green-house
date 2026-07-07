@@ -1,12 +1,14 @@
 "use client";
 
 import type { House } from "@/entities/farm/types";
-import { Plus, Scissors, X } from "lucide-react";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
+import { ChevronLeft, ChevronRight, Plus, Scissors, X } from "lucide-react";
 import type { ReactNode } from "react";
 import { useState } from "react";
 import type {
   InboundPottingPayload,
   InboundRecord,
+  InventoryPageResult,
   InboundRecordPayload,
   InboundStatus,
   InboundType,
@@ -32,7 +34,7 @@ const INBOUND_STATUS_LABELS: Record<InboundStatus, string> = {
 };
 
 export function InboundSection({
-  inboundRecords,
+  pageData,
   houses,
   varieties,
   selectedId,
@@ -43,7 +45,7 @@ export function InboundSection({
   onPotting,
   onCancel,
 }: {
-  inboundRecords: InboundRecord[];
+  pageData: InventoryPageResult<InboundRecord>;
   houses: House[];
   varieties: Variety[];
   selectedId: number;
@@ -60,9 +62,16 @@ export function InboundSection({
   ) => Promise<void>;
   onCancel: (inboundRecordId: number, memo?: string) => Promise<void>;
 }) {
-  const [keyword, setKeyword] = useState("");
-  const [status, setStatus] = useState<InboundStatus | "ALL">("ALL");
-  const [inboundType, setInboundType] = useState<InboundType | "ALL">("ALL");
+  const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
+  const keyword = searchParams.get("inboundKeyword") ?? "";
+  const status = (searchParams.get("inboundStatus") ?? "ALL") as
+    | InboundStatus
+    | "ALL";
+  const inboundType = (searchParams.get("inboundType") ?? "ALL") as
+    | InboundType
+    | "ALL";
   const [dialog, setDialog] = useState<"create" | "potting" | "cancel" | null>(
     null,
   );
@@ -72,26 +81,53 @@ export function InboundSection({
   });
 
   const selected =
-    inboundRecords.find((item) => item.id === selectedId) ?? inboundRecords[0];
+    pageData.content.find((item) => item.id === selectedId) ??
+    pageData.content[0];
 
-  const filtered = inboundRecords.filter(
-    (item) =>
-      (status === "ALL" || item.status === status) &&
-      (inboundType === "ALL" || item.inboundType === inboundType) &&
-      (!keyword ||
-        `${item.varietyName} ${item.currentLocation ?? ""}`.includes(keyword)),
-  );
+  const pageNumbers = buildPageNumbers(pageData.page, pageData.totalPages);
+
+  const updateParams = (updater: (params: URLSearchParams) => void) => {
+    const params = new URLSearchParams(searchParams.toString());
+    updater(params);
+    router.replace(`${pathname}?${params.toString()}`);
+  };
 
   return (
     <>
-      <div className="grid gap-3 rounded-md border border-[#dce2dc] bg-white p-3 shadow-sm md:grid-cols-2 xl:grid-cols-[1fr_1fr_1fr_auto_auto] xl:items-end">
+      <form
+        className="grid gap-3 rounded-md border border-[#dce2dc] bg-white p-3 shadow-sm md:grid-cols-2 xl:grid-cols-[1fr_1fr_1fr_auto_auto] xl:items-end"
+        onSubmit={(event) => {
+          event.preventDefault();
+          const formData = new FormData(event.currentTarget);
+
+          updateParams((params) => {
+            setQueryParam(
+              params,
+              "inboundType",
+              formData.get("inboundType"),
+              "ALL",
+            );
+            setQueryParam(
+              params,
+              "inboundStatus",
+              formData.get("inboundStatus"),
+              "ALL",
+            );
+            setQueryParam(
+              params,
+              "inboundKeyword",
+              formData.get("inboundKeyword"),
+              "",
+            );
+            params.set("inboundPage", "0");
+          });
+        }}
+      >
         <Field label="입고 유형">
           <select
             className={inputClass}
-            value={inboundType}
-            onChange={(event) =>
-              setInboundType(event.target.value as InboundType | "ALL")
-            }
+            defaultValue={inboundType}
+            name="inboundType"
           >
             <option value="ALL">전체</option>
             {Object.entries(INBOUND_TYPE_LABELS).map(([value, label]) => (
@@ -104,10 +140,8 @@ export function InboundSection({
         <Field label="상태">
           <select
             className={inputClass}
-            value={status}
-            onChange={(event) =>
-              setStatus(event.target.value as InboundStatus | "ALL")
-            }
+            defaultValue={status}
+            name="inboundStatus"
           >
             <option value="ALL">전체</option>
             {Object.entries(INBOUND_STATUS_LABELS).map(([value, label]) => (
@@ -120,29 +154,32 @@ export function InboundSection({
         <Field label="품종명">
           <input
             className={inputClass}
+            defaultValue={keyword}
+            name="inboundKeyword"
             placeholder="품종명, 위치"
-            value={keyword}
-            onChange={(event) => setKeyword(event.target.value)}
           />
         </Field>
         <button
           className="h-9 rounded-md border border-[#d7ddd8] px-4 text-sm font-semibold"
           type="button"
           onClick={() => {
-            setKeyword("");
-            setStatus("ALL");
-            setInboundType("ALL");
+            updateParams((params) => {
+              ["inboundKeyword", "inboundStatus", "inboundType"].forEach(
+                (key) => params.delete(key),
+              );
+              params.set("inboundPage", "0");
+            });
           }}
         >
           초기화
         </button>
         <button
           className="h-9 rounded-md bg-[#159447] px-6 text-sm font-semibold text-white"
-          type="button"
+          type="submit"
         >
           검색
         </button>
-      </div>
+      </form>
 
       <div className="mt-3 grid min-w-0 gap-3 2xl:grid-cols-[minmax(0,1.15fr)_minmax(24rem,0.95fr)]">
         <section className="min-w-0 rounded-md border border-[#dce2dc] bg-white p-3 shadow-sm">
@@ -150,7 +187,7 @@ export function InboundSection({
             <h2 className="text-sm font-bold">
               입고 목록
               <span className="ml-2 text-xs font-semibold text-[#159447]">
-                총 {filtered.length}건
+                총 {pageData.totalElements}건
               </span>
             </h2>
             <button
@@ -188,7 +225,7 @@ export function InboundSection({
                 </tr>
               </thead>
               <tbody>
-                {filtered.map((item) => (
+                {pageData.content.map((item) => (
                   <tr
                     key={item.id}
                     className={`cursor-pointer border-b border-[#e5e9e5] hover:bg-[#f3f9f3] ${item.id === selected?.id ? "bg-[#eaf7eb]" : ""}`}
@@ -217,6 +254,62 @@ export function InboundSection({
                 ))}
               </tbody>
             </table>
+          </div>
+          <div className="mt-3 flex items-center justify-between gap-3">
+            <div className="flex items-center gap-1">
+              <button
+                className="grid h-8 w-8 place-items-center rounded border border-[#d7ddd8] disabled:opacity-40"
+                disabled={pageData.page === 0}
+                type="button"
+                onClick={() =>
+                  updateParams((params) => {
+                    params.set("inboundPage", String(pageData.page - 1));
+                  })
+                }
+              >
+                <ChevronLeft className="h-4 w-4" />
+              </button>
+              {pageNumbers.map((pageNumber) => (
+                <button
+                  key={pageNumber}
+                  className={`h-8 min-w-8 rounded px-2 text-xs ${pageNumber === pageData.page ? "bg-[#159447] font-bold text-white" : "border border-[#d7ddd8]"}`}
+                  type="button"
+                  onClick={() =>
+                    updateParams((params) => {
+                      params.set("inboundPage", String(pageNumber));
+                    })
+                  }
+                >
+                  {pageNumber + 1}
+                </button>
+              ))}
+              <button
+                className="grid h-8 w-8 place-items-center rounded border border-[#d7ddd8] disabled:opacity-40"
+                disabled={pageData.page >= pageData.totalPages - 1}
+                type="button"
+                onClick={() =>
+                  updateParams((params) => {
+                    params.set("inboundPage", String(pageData.page + 1));
+                  })
+                }
+              >
+                <ChevronRight className="h-4 w-4" />
+              </button>
+            </div>
+            <select
+              className="h-8 rounded border border-[#d7ddd8] px-3 text-xs"
+              value={String(pageData.size)}
+              onChange={(event) =>
+                updateParams((params) => {
+                  params.set("inboundSize", event.target.value);
+                  params.set("inboundPage", "0");
+                })
+              }
+            >
+              <option value="10">10개씩 보기</option>
+              <option value="20">20개씩 보기</option>
+              <option value="50">50개씩 보기</option>
+            </select>
           </div>
         </section>
 
@@ -1107,4 +1200,31 @@ function toNumber(value: string) {
 function toOptionalNumber(value: string) {
   if (!value.trim()) return undefined;
   return Number(value);
+}
+
+function setQueryParam(
+  params: URLSearchParams,
+  key: string,
+  value: FormDataEntryValue | null,
+  emptyValue = "",
+) {
+  const normalized = typeof value === "string" ? value.trim() : "";
+
+  if (!normalized || normalized === emptyValue) {
+    params.delete(key);
+    return;
+  }
+
+  params.set(key, normalized);
+}
+
+function buildPageNumbers(currentPage: number, totalPages: number) {
+  if (totalPages <= 0) {
+    return [0];
+  }
+
+  const start = Math.max(0, currentPage - 2);
+  const end = Math.min(totalPages, start + 5);
+
+  return Array.from({ length: end - start }, (_, index) => start + index);
 }

@@ -10,7 +10,8 @@ import {
   createVariety,
   deactivateMaterial,
   deactivateVariety,
-  getVarieties,
+  deleteMaterial,
+  deleteVariety,
   getVarietyOrchidGroups,
   potInboundRecord,
   updateInboundRecord,
@@ -20,6 +21,7 @@ import {
 import type {
   InboundRecord,
   InboundRecordUpdatePayload,
+  InventoryPageResult,
   Material,
   MaterialPayload,
   Variety,
@@ -33,33 +35,36 @@ import { VarietySection } from "./components/VarietySection";
 export function InventoryPage({
   initialActiveTab,
   houses,
-  initialInboundRecords,
-  initialMaterials,
-  initialVarieties,
+  initialInboundPage,
+  initialMaterialPage,
+  initialVarietyPage,
+  varietyOptions,
 }: {
   initialActiveTab?: string;
   houses: House[];
-  initialInboundRecords: InboundRecord[];
-  initialMaterials: Material[];
-  initialVarieties: Variety[];
+  initialInboundPage: InventoryPageResult<InboundRecord>;
+  initialMaterialPage: InventoryPageResult<Material>;
+  initialVarietyPage: InventoryPageResult<Variety>;
+  varietyOptions: Variety[];
 }) {
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
-  const [inboundRecords, setInboundRecords] = useState(initialInboundRecords);
-  const [varieties, setVarieties] = useState(initialVarieties);
-  const [materials, setMaterials] = useState(initialMaterials);
   const [selectedInboundId, setSelectedInboundId] = useState(
-    initialInboundRecords[0]?.id ?? 0,
+    initialInboundPage.content[0]?.id ?? 0,
   );
   const [selectedVarietyId, setSelectedVarietyId] = useState(
-    initialVarieties[0]?.id ?? 0,
+    initialVarietyPage.content[0]?.id ?? 0,
   );
   const [selectedMaterialId, setSelectedMaterialId] = useState(
-    initialMaterials[0]?.id ?? 0,
+    initialMaterialPage.content[0]?.id ?? 0,
   );
   const [dialog, setDialog] = useState<"variety" | "material" | null>(null);
   const [loadingGroups, setLoadingGroups] = useState(false);
+  const [selectedConnectedGroups, setSelectedConnectedGroups] = useState<
+    Variety["connectedGroups"]
+  >([]);
+
   const activeTab = useMemo<"VARIETY" | "INBOUND" | "MATERIAL">(() => {
     const tab = searchParams.get("tab");
 
@@ -76,23 +81,20 @@ export function InventoryPage({
 
   useEffect(() => {
     if (!selectedVarietyId) return;
+
     let active = true;
+
     void (async () => {
       setLoadingGroups(true);
       try {
         const groups = await getVarietyOrchidGroups(selectedVarietyId);
         if (!active) return;
-        setVarieties((current) =>
-          current.map((item) =>
-            item.id === selectedVarietyId
-              ? { ...item, connectedGroups: groups }
-              : item,
-          ),
-        );
+        setSelectedConnectedGroups(groups);
       } finally {
         if (active) setLoadingGroups(false);
       }
     })();
+
     return () => {
       active = false;
     };
@@ -105,67 +107,59 @@ export function InventoryPage({
   };
 
   const handleCreateVariety = async (payload: VarietyPayload) => {
-    const item = await createVariety(payload);
-    setVarieties((current) => [item, ...current]);
-    setSelectedVarietyId(item.id);
+    const created = await createVariety(payload);
+    setSelectedVarietyId(created.id);
+    router.refresh();
   };
 
   const handleUpdateVariety = async (
     varietyId: number,
     payload: VarietyPayload,
   ) => {
-    const updated = await updateVariety(varietyId, payload);
-    setVarieties((current) =>
-      current.map((item) =>
-        item.id === varietyId ? { ...item, ...updated } : item,
-      ),
-    );
+    await updateVariety(varietyId, payload);
+    router.refresh();
   };
 
   const handleDeactivateVariety = async (varietyId: number) => {
-    const updated = await deactivateVariety(varietyId);
-    setVarieties((current) =>
-      current.map((item) =>
-        item.id === varietyId ? { ...item, ...updated } : item,
-      ),
-    );
+    await deactivateVariety(varietyId);
+    router.refresh();
+  };
+
+  const handleDeleteVariety = async (varietyId: number) => {
+    await deleteVariety(varietyId);
+    router.refresh();
   };
 
   const handleCreateMaterial = async (payload: MaterialPayload) => {
-    const item = await createMaterial(payload);
-    setMaterials((current) => [item, ...current]);
-    setSelectedMaterialId(item.id);
+    const created = await createMaterial(payload);
+    setSelectedMaterialId(created.id);
+    router.refresh();
   };
 
   const handleUpdateMaterial = async (
     materialId: number,
     payload: MaterialPayload,
   ) => {
-    const updated = await updateMaterial(materialId, payload);
-    setMaterials((current) =>
-      current.map((item) =>
-        item.id === materialId ? { ...item, ...updated } : item,
-      ),
-    );
+    await updateMaterial(materialId, payload);
+    router.refresh();
   };
 
   const handleDeactivateMaterial = async (materialId: number) => {
-    const updated = await deactivateMaterial(materialId);
-    setMaterials((current) =>
-      current.map((item) =>
-        item.id === materialId ? { ...item, ...updated } : item,
-      ),
-    );
+    await deactivateMaterial(materialId);
+    router.refresh();
+  };
+
+  const handleDeleteMaterial = async (materialId: number) => {
+    await deleteMaterial(materialId);
+    router.refresh();
   };
 
   const handleUpdateInboundRecord = async (
     inboundRecordId: number,
     payload: InboundRecordUpdatePayload,
   ) => {
-    const updated = await updateInboundRecord(inboundRecordId, payload);
-    setInboundRecords((current) =>
-      current.map((item) => (item.id === inboundRecordId ? updated : item)),
-    );
+    await updateInboundRecord(inboundRecordId, payload);
+    router.refresh();
   };
 
   return (
@@ -173,13 +167,15 @@ export function InventoryPage({
       {activeTab === "VARIETY" ? (
         <div id="variety-management">
           <VarietySection
-            varieties={varieties}
-            selectedId={selectedVarietyId}
+            connectedGroups={selectedConnectedGroups}
             loadingGroups={loadingGroups}
-            onSelect={setSelectedVarietyId}
+            pageData={initialVarietyPage}
+            selectedId={selectedVarietyId}
             onCreate={() => setDialog("variety")}
-            onUpdate={handleUpdateVariety}
             onDeactivate={handleDeactivateVariety}
+            onDelete={handleDeleteVariety}
+            onSelect={setSelectedVarietyId}
+            onUpdate={handleUpdateVariety}
           />
         </div>
       ) : null}
@@ -187,48 +183,38 @@ export function InventoryPage({
       {activeTab === "INBOUND" ? (
         <InboundSection
           houses={houses}
-          inboundRecords={inboundRecords}
+          pageData={initialInboundPage}
           selectedId={selectedInboundId}
-          varieties={varieties}
-          onSelect={setSelectedInboundId}
-          onOpenCreate={() => updateTab("INBOUND")}
-          onUpdate={handleUpdateInboundRecord}
+          varieties={varietyOptions}
+          onCancel={async (inboundRecordId, memo) => {
+            await cancelInboundRecord(inboundRecordId, memo);
+            router.refresh();
+          }}
           onCreate={async (payload) => {
             const created = await createInboundRecord(payload);
-            setInboundRecords((current) => [created, ...current]);
             setSelectedInboundId(created.id);
-            if (!payload.varietyId && payload.newVariety) {
-              setVarieties(await getVarieties());
-            }
+            router.refresh();
           }}
+          onOpenCreate={() => updateTab("INBOUND")}
           onPotting={async (inboundRecordId, payload) => {
-            const updated = await potInboundRecord(inboundRecordId, payload);
-            setInboundRecords((current) =>
-              current.map((item) =>
-                item.id === inboundRecordId ? updated : item,
-              ),
-            );
+            await potInboundRecord(inboundRecordId, payload);
+            router.refresh();
           }}
-          onCancel={async (inboundRecordId, memo) => {
-            const updated = await cancelInboundRecord(inboundRecordId, memo);
-            setInboundRecords((current) =>
-              current.map((item) =>
-                item.id === inboundRecordId ? updated : item,
-              ),
-            );
-          }}
+          onSelect={setSelectedInboundId}
+          onUpdate={handleUpdateInboundRecord}
         />
       ) : null}
 
       {activeTab === "MATERIAL" ? (
         <div id="material-management">
           <MaterialSection
-            materials={materials}
+            pageData={initialMaterialPage}
             selectedId={selectedMaterialId}
-            onSelect={setSelectedMaterialId}
             onCreate={() => setDialog("material")}
-            onUpdate={handleUpdateMaterial}
             onDeactivate={handleDeactivateMaterial}
+            onDelete={handleDeleteMaterial}
+            onSelect={setSelectedMaterialId}
+            onUpdate={handleUpdateMaterial}
           />
         </div>
       ) : null}

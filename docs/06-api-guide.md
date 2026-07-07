@@ -16,7 +16,7 @@ docs/api/slices/*.openapi.yaml
 | `farm-structure.openapi.yaml` | 하우스, 물리 배드, 논리 구역, 난 묶음 조회 |
 | `farm-status.openapi.yaml` | 농장 현황 맵, 선택 범위 조회, 대시보드 요약 |
 | `orchid-command.openapi.yaml` | 난 묶음 생성, 수정, 이동, 배치 |
-| `inventory.openapi.yaml` | 품종 CRUD, 자재 CRUD, 입고 기록 생성/수정/포트작업/취소 |
+| `inventory.openapi.yaml` | 품종 CRUD/삭제, 자재 CRUD/삭제, 입고 기록 생성/수정/포트작업/취소, 목록 페이지네이션 |
 | `work.openapi.yaml` | 작업 유형, 작업 이력 |
 | `partner.openapi.yaml` | 거래처, 정산 설정 |
 | `sales.openapi.yaml` | 판매 전표, 경매 판매 전표 |

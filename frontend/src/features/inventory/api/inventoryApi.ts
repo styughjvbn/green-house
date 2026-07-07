@@ -2,6 +2,7 @@ import { API_BASE_URL, fetchApi } from "@/shared/api/client";
 import type {
   ConnectedOrchidGroup,
   InboundPottingPayload,
+  InventoryPageResult,
   InboundRecord,
   InboundRecordPayload,
   InboundRecordUpdatePayload,
@@ -41,6 +42,14 @@ type VarietyResponse = {
   recentWorkDate: string | null;
   createdAt: string;
   updatedAt: string;
+};
+
+type PageResponse<T> = {
+  content: T[];
+  page: number;
+  size: number;
+  totalElements: number;
+  totalPages: number;
 };
 
 type VarietyConnectedGroupResponse = {
@@ -112,10 +121,38 @@ async function requestJson<T>(
   return (payload as ApiSuccess<T>).data;
 }
 
-export function getVarieties() {
-  return fetchApi<VarietyResponse[]>("/varieties").then((items) =>
-    items.map(toVariety),
-  );
+type VarietyQuery = {
+  keyword?: string;
+  genus?: string;
+  saleEnabled?: boolean;
+  active?: boolean;
+  page?: number;
+  size?: number;
+};
+
+type MaterialQuery = {
+  keyword?: string;
+  category?: string;
+  manufacturer?: string;
+  active?: boolean;
+  page?: number;
+  size?: number;
+};
+
+type InboundQuery = {
+  from?: string;
+  to?: string;
+  inboundType?: InboundRecord["inboundType"];
+  status?: InboundRecord["status"];
+  variety?: string;
+  page?: number;
+  size?: number;
+};
+
+export function getVarieties(query: VarietyQuery = {}) {
+  return fetchApi<PageResponse<VarietyResponse>>(
+    `/varieties${toQueryString(query)}`,
+  ).then((result) => mapPage(result, toVariety));
 }
 
 export function getVarietyOrchidGroups(varietyId: number) {
@@ -168,10 +205,20 @@ export function deactivateVariety(varietyId: number) {
   ).then(toVariety);
 }
 
-export function getMaterials() {
-  return fetchApi<MaterialResponse[]>("/materials").then((items) =>
-    items.map(toMaterial),
+export function deleteVariety(varietyId: number) {
+  return requestJson<null>(
+    `/varieties/${varietyId}`,
+    {
+      method: "DELETE",
+    },
+    "품종을 삭제하지 못했습니다.",
   );
+}
+
+export function getMaterials(query: MaterialQuery = {}) {
+  return fetchApi<PageResponse<MaterialResponse>>(
+    `/materials${toQueryString(query)}`,
+  ).then((result) => mapPage(result, toMaterial));
 }
 
 export function createMaterial(payload: MaterialPayload) {
@@ -208,10 +255,20 @@ export function deactivateMaterial(materialId: number) {
   ).then(toMaterial);
 }
 
-export function getInboundRecords() {
-  return fetchApi<InboundRecordResponse[]>("/inbound-records").then((items) =>
-    items.map(toInboundRecord),
+export function deleteMaterial(materialId: number) {
+  return requestJson<null>(
+    `/materials/${materialId}`,
+    {
+      method: "DELETE",
+    },
+    "자재를 삭제하지 못했습니다.",
   );
+}
+
+export function getInboundRecords(query: InboundQuery = {}) {
+  return fetchApi<PageResponse<InboundRecordResponse>>(
+    `/inbound-records${toQueryString(query)}`,
+  ).then((result) => mapPage(result, toInboundRecord));
 }
 
 export function createInboundRecord(payload: InboundRecordPayload) {
@@ -336,4 +393,43 @@ function toMaterial(item: MaterialResponse): Material {
     registeredAt: item.createdAt.slice(0, 10),
     updatedAt: item.updatedAt.slice(0, 10),
   };
+}
+
+function mapPage<TSource, TTarget>(
+  result: PageResponse<TSource> | TSource[],
+  mapper: (item: TSource) => TTarget,
+): InventoryPageResult<TTarget> {
+  if (Array.isArray(result)) {
+    return {
+      content: result.map(mapper),
+      page: 0,
+      size: result.length,
+      totalElements: result.length,
+      totalPages: result.length ? 1 : 0,
+    };
+  }
+
+  return {
+    content: result.content.map(mapper),
+    page: result.page,
+    size: result.size,
+    totalElements: result.totalElements,
+    totalPages: result.totalPages,
+  };
+}
+
+function toQueryString(
+  query: Record<string, string | number | boolean | undefined>,
+) {
+  const params = new URLSearchParams();
+
+  Object.entries(query).forEach(([key, value]) => {
+    if (value === undefined || value === null || value === "") {
+      return;
+    }
+    params.set(key, String(value));
+  });
+
+  const serialized = params.toString();
+  return serialized ? `?${serialized}` : "";
 }

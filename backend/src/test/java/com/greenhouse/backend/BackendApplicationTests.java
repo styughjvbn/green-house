@@ -153,8 +153,10 @@ class BackendApplicationTests {
 
 		mockMvc.perform(get("/api/varieties"))
 			.andExpect(status().isOk())
-			.andExpect(jsonPath("$.data.length()").value(greaterThanOrEqualTo(3)))
-			.andExpect(jsonPath("$.data[0].code").exists());
+			.andExpect(jsonPath("$.data.content.length()").value(greaterThanOrEqualTo(3)))
+			.andExpect(jsonPath("$.data.content[0].code").exists())
+			.andExpect(jsonPath("$.data.page").value(0))
+			.andExpect(jsonPath("$.data.size").value(10));
 
 		mockMvc.perform(get("/api/varieties/{varietyId}", sampleVariety.getId()))
 			.andExpect(status().isOk())
@@ -303,7 +305,8 @@ class BackendApplicationTests {
 
 		mockMvc.perform(get("/api/inbound-records").param("status", "PLACED"))
 			.andExpect(status().isOk())
-			.andExpect(jsonPath("$.data.length()").value(greaterThanOrEqualTo(2)));
+			.andExpect(jsonPath("$.data.content.length()").value(greaterThanOrEqualTo(2)))
+			.andExpect(jsonPath("$.data.page").value(0));
 
 		mockMvc.perform(post("/api/inbound-records")
 				.contentType(MediaType.APPLICATION_JSON)
@@ -409,8 +412,10 @@ class BackendApplicationTests {
 	void createsUpdatesAndDeactivatesMaterial() throws Exception {
 		mockMvc.perform(get("/api/materials"))
 			.andExpect(status().isOk())
-			.andExpect(jsonPath("$.data.length()").value(greaterThanOrEqualTo(3)))
-			.andExpect(jsonPath("$.data[0].code").exists());
+			.andExpect(jsonPath("$.data.content.length()").value(greaterThanOrEqualTo(3)))
+			.andExpect(jsonPath("$.data.content[0].code").exists())
+			.andExpect(jsonPath("$.data.page").value(0))
+			.andExpect(jsonPath("$.data.size").value(10));
 
 		var createResult = mockMvc.perform(post("/api/materials")
 				.contentType(MediaType.APPLICATION_JSON)
@@ -453,6 +458,59 @@ class BackendApplicationTests {
 		mockMvc.perform(patch("/api/materials/{materialId}/deactivate", materialId))
 			.andExpect(status().isOk())
 			.andExpect(jsonPath("$.data.active").value(false));
+	}
+
+	@Test
+	void deletesUnreferencedVarietyAndRejectsReferencedVarietyDelete() throws Exception {
+		var referencedVariety = varietyRepository.findAll().stream()
+			.filter(variety -> variety.getName().equals("카틀레야 A"))
+			.findFirst()
+			.orElseThrow();
+
+		mockMvc.perform(delete("/api/varieties/{varietyId}", referencedVariety.getId()))
+			.andExpect(status().isBadRequest())
+			.andExpect(jsonPath("$.error.code").value("VALIDATION_ERROR"));
+
+		var createResult = mockMvc.perform(post("/api/varieties")
+				.contentType(MediaType.APPLICATION_JSON)
+				.content("""
+					{
+					  "genus": "호접란",
+					  "name": "삭제 테스트 품종"
+					}
+					"""))
+			.andExpect(status().isCreated())
+			.andReturn();
+
+		var varietyId = Long.valueOf(createResult.getResponse().getContentAsString().replaceAll(".*\\\"id\\\":(\\d+).*", "$1"));
+
+		mockMvc.perform(delete("/api/varieties/{varietyId}", varietyId))
+			.andExpect(status().isOk())
+			.andExpect(jsonPath("$.data").doesNotExist());
+
+		assertThat(varietyRepository.existsById(varietyId)).isFalse();
+	}
+
+	@Test
+	void deletesMaterial() throws Exception {
+		var createResult = mockMvc.perform(post("/api/materials")
+				.contentType(MediaType.APPLICATION_JSON)
+				.content("""
+					{
+					  "category": "비료",
+					  "name": "삭제 테스트 자재"
+					}
+					"""))
+			.andExpect(status().isCreated())
+			.andReturn();
+
+		var materialId = Long.valueOf(createResult.getResponse().getContentAsString().replaceAll(".*\\\"id\\\":(\\d+).*", "$1"));
+
+		mockMvc.perform(delete("/api/materials/{materialId}", materialId))
+			.andExpect(status().isOk())
+			.andExpect(jsonPath("$.data").doesNotExist());
+
+		assertThat(materialRepository.existsById(materialId)).isFalse();
 	}
 
 	@Test

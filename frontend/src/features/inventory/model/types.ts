@@ -1,5 +1,13 @@
 export type InventoryStatus = "ACTIVE" | "INACTIVE";
 
+export interface InventoryPageResult<T> {
+  content: T[];
+  page: number;
+  size: number;
+  totalElements: number;
+  totalPages: number;
+}
+
 export interface Variety {
   id: number;
   code: string;

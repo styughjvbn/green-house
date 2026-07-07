@@ -7,7 +7,7 @@
 
 - 기준 명세: `docs/api/openapi.yaml`
 - OpenAPI 버전: `3.1.0`
-- 현재 구현 API: `65` operations / `51` path entries
+- 현재 구현 API: `67` operations / `51` path entries
 - schema 수: `109`
 - Base URL: `/api`
 - 공통 응답: `ApiResponse*` 래퍼 사용
@@ -95,26 +95,28 @@
 - slice: `docs/api/slices/inventory.openapi.yaml`
 - package 후보: `com.greenhouse.backend.farm`
 - controller tags: `variety-controller`, `material-controller`, `inbound-record-controller`
-- 역할: 품종 CRUD, 자재 CRUD, 입고 기록 생성·수정·포트 작업·취소 API
-- operations: 17
+- 역할: 품종 CRUD/삭제, 자재 CRUD/삭제, 입고 기록 생성·수정·포트 작업·취소 API
+- operations: 19
 
 | Method | Path | Operation | Request | Response |
 |---|---|---|---|---|
-| `GET` | `/api/inbound-records` | `getInboundRecords` | `-` | `200:ApiResponseListInboundRecordResponse` |
+| `GET` | `/api/inbound-records` | `getInboundRecords` | `-` | `200:ApiResponseInboundRecordPageResponse` |
 | `POST` | `/api/inbound-records` | `create_4` | `InboundRecordCreateRequest` | `201:ApiResponseInboundRecordResponse` |
 | `GET` | `/api/inbound-records/{inboundRecordId}` | `getInboundRecord` | `-` | `200:ApiResponseInboundRecordResponse` |
 | `PATCH` | `/api/inbound-records/{inboundRecordId}` | `update_5` | `InboundRecordUpdateRequest` | `200:ApiResponseInboundRecordResponse` |
 | `POST` | `/api/inbound-records/{inboundRecordId}/cancel` | `cancel` | `InboundRecordCancelRequest` | `200:ApiResponseInboundRecordResponse` |
 | `POST` | `/api/inbound-records/{inboundRecordId}/potting` | `potting` | `InboundRecordPottingRequest` | `200:ApiResponseInboundRecordResponse` |
-| `GET` | `/api/materials` | `getMaterials` | `-` | `200:ApiResponseListMaterialResponse` |
+| `GET` | `/api/materials` | `getMaterials` | `-` | `200:ApiResponseMaterialPageResponse` |
 | `POST` | `/api/materials` | `create_3` | `MaterialCreateRequest` | `201:ApiResponseMaterialResponse` |
 | `GET` | `/api/materials/{materialId}` | `getMaterial` | `-` | `200:ApiResponseMaterialResponse` |
 | `PATCH` | `/api/materials/{materialId}` | `update_4` | `MaterialUpdateRequest` | `200:ApiResponseMaterialResponse` |
+| `DELETE` | `/api/materials/{materialId}` | `delete_2` | `-` | `200:ApiResponseVoid` |
 | `PATCH` | `/api/materials/{materialId}/deactivate` | `deactivate_1` | `-` | `200:ApiResponseMaterialResponse` |
-| `GET` | `/api/varieties` | `getVarieties` | `-` | `200:ApiResponseListVarietyResponse` |
+| `GET` | `/api/varieties` | `getVarieties` | `-` | `200:ApiResponseVarietyPageResponse` |
 | `POST` | `/api/varieties` | `create_1` | `VarietyCreateRequest` | `201:ApiResponseVarietyResponse` |
 | `GET` | `/api/varieties/{varietyId}` | `getVariety` | `-` | `200:ApiResponseVarietyResponse` |
 | `PATCH` | `/api/varieties/{varietyId}` | `update_2` | `VarietyUpdateRequest` | `200:ApiResponseVarietyResponse` |
+| `DELETE` | `/api/varieties/{varietyId}` | `delete_1` | `-` | `200:ApiResponseVoid` |
 | `PATCH` | `/api/varieties/{varietyId}/deactivate` | `deactivate` | `-` | `200:ApiResponseVarietyResponse` |
 | `GET` | `/api/varieties/{varietyId}/orchid-groups` | `getOrchidGroups_1` | `-` | `200:ApiResponseListVarietyConnectedOrchidGroupResponse` |
 
