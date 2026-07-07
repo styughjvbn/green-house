@@ -122,12 +122,10 @@ API를 수정하거나 호출 코드를 작성할 때는 다음 순서로 확인
 API를 추가하거나 수정한 경우 다음 순서로 갱신한다.
 
 1. Controller, Request/Response DTO, validation, 테스트를 먼저 수정한다.
-2. OpenAPI를 재생성한다.
-3. 필요한 경우 도메인별 slice를 갱신한다.
-4. API가 새 도메인에 해당하면 `docs/api/API_INDEX.md`에 위치만 추가한다.
-5. 도메인 규칙이 바뀐 경우에만 `docs/api/DOMAIN_RULES.md`를 수정한다.
-6. 과거 초안과 구현 차이가 바뀌면 `docs/api/API_GAP_ANALYSIS.md`를 수정한다.
-7. API 사용 방식 자체가 바뀐 경우 `docs/06-api-guide.md`를 수정한다.
+2. API가 새 도메인에 해당하면 `docs/api/API_INDEX.md`에 위치만 추가한다.
+3. 도메인 규칙이 바뀐 경우에만 `docs/api/DOMAIN_RULES.md`를 수정한다.
+4. 과거 초안과 구현 차이가 바뀌면 `docs/api/API_GAP_ANALYSIS.md`를 수정한다.
+5. API 사용 방식 자체가 바뀐 경우 `docs/06-api-guide.md`를 수정한다.
 
 ---
 
@@ -168,6 +166,7 @@ API를 추가하거나 수정한 경우 다음 순서로 갱신한다.
 ## 테스트와 결과 보고
 
 - 빌드 또는 테스트가 가능하면 변경 후 반드시 실행한다.
+- 프론트엔드 검증은 프론트엔드 폴더에서 `npm run check` 를 실행한다.
 - 실행하지 못한 테스트는 PR 또는 작업 결과에 명시한다.
 - 데이터 마이그레이션, 정산, 입금, 수량 변경 로직은 테스트 없이 완료 처리하지 않는다.
 

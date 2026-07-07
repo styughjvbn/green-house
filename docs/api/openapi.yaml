@@ -2347,14 +2347,9 @@ components:
         bedZoneId:
           type: integer
           format: int64
-        genus:
-          type: string
-          maxLength: 100
-          minLength: 0
-        varietyName:
-          type: string
-          maxLength: 150
-          minLength: 0
+        varietyId:
+          type: integer
+          format: int64
         quantity:
           type: integer
           format: int32
@@ -2389,7 +2384,7 @@ components:
       - bedZoneId
       - quantity
       - status
-      - varietyName
+      - varietyId
     ApiResponseOrchidGroupResponse:
       type: object
       properties:
@@ -2404,6 +2399,9 @@ components:
           type: integer
           format: int64
         bedZoneId:
+          type: integer
+          format: int64
+        varietyId:
           type: integer
           format: int64
         genus:
@@ -3339,14 +3337,9 @@ components:
     OrchidGroupUpdateRequest:
       type: object
       properties:
-        genus:
-          type: string
-          maxLength: 100
-          minLength: 0
-        varietyName:
-          type: string
-          maxLength: 150
-          minLength: 0
+        varietyId:
+          type: integer
+          format: int64
         quantity:
           type: integer
           format: int32
@@ -3380,7 +3373,7 @@ components:
       required:
       - quantity
       - status
-      - varietyName
+      - varietyId
     OrchidGroupMovePlacementRequest:
       type: object
       properties:
