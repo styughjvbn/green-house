@@ -40,63 +40,77 @@ def run(args: list[str]) -> None:
 
 
 def write_apply_scripts(private_output_dir: Path) -> None:
-    """Write small helper scripts for applying private seeds outside Flyway."""
+    """Write small helper scripts for applying private seeds outside Flyway.
+
+    The scripts copy SQL files into the PostgreSQL container first and run
+    psql -f there. This avoids Windows PowerShell pipe encoding corruption
+    for UTF-8 Korean text.
+    """
     ps1 = private_output_dir / "apply_private_seeds.ps1"
     sh = private_output_dir / "apply_private_seeds.sh"
 
-    ps1.write_text(
-        """# Apply private seed SQL files outside Flyway.\n"
-        "# Usage from project root:\n"
-        "#   powershell -ExecutionPolicy Bypass -File scripts/seed/generated-private/apply_private_seeds.ps1\n"
-        "\n"
-        "$ErrorActionPreference = 'Stop'\n"
-        "$DbUser = $env:GREENHOUSE_DB_USER\n"
-        "$DbName = $env:GREENHOUSE_DB_NAME\n"
-        "if ([string]::IsNullOrWhiteSpace($DbUser)) { $DbUser = 'greenhouse' }\n"
-        "if ([string]::IsNullOrWhiteSpace($DbName)) { $DbName = 'greenhouse' }\n"
-        "$Dir = Split-Path -Parent $MyInvocation.MyCommand.Path\n"
-        "$Files = @(\n"
-        "  'seed_varieties_from_sales_sources.sql',\n"
-        "  'seed_business_partners.sql',\n"
-        "  'seed_auction_2025_2026.sql',\n"
-        "  'seed_direct_sales_2026.sql'\n"
-        ")\n"
-        "foreach ($File in $Files) {\n"
-        "  $Path = Join-Path $Dir $File\n"
-        "  Write-Host \"Applying $Path\"\n"
-        "  Get-Content $Path | docker compose exec -T db psql -v ON_ERROR_STOP=1 -U $DbUser -d $DbName\n"
-        "}\n"
-        """,
-        encoding="utf-8",
-    )
+    ps1_lines = [
+        "# Apply private seed SQL files outside Flyway.",
+        "# Usage from project root:",
+        "#   powershell -ExecutionPolicy Bypass -File scripts/seed/generated-private/apply_private_seeds.ps1",
+        "",
+        "$ErrorActionPreference = 'Stop'",
+        "$DbUser = $env:GREENHOUSE_DB_USER",
+        "$DbName = $env:GREENHOUSE_DB_NAME",
+        "if ([string]::IsNullOrWhiteSpace($DbUser)) { $DbUser = 'greenhouse' }",
+        "if ([string]::IsNullOrWhiteSpace($DbName)) { $DbName = 'greenhouse' }",
+        "$Dir = Split-Path -Parent $MyInvocation.MyCommand.Path",
+        "$ContainerDir = '/tmp/greenhouse-private-seeds'",
+        "docker compose exec -T db sh -c \"mkdir -p $ContainerDir\"",
+        "$Files = @(",
+        "  'seed_varieties_from_sales_sources.sql',",
+        "  'seed_business_partners.sql',",
+        "  'seed_auction_2025_2026.sql',",
+        "  'seed_direct_sales_2026.sql'",
+        ")",
+        "foreach ($File in $Files) {",
+        "  $Path = Join-Path $Dir $File",
+        "  $ContainerPath = \"${ContainerDir}/$File\"",
+        "  Write-Host \"Applying $Path\"",
+        "  docker compose cp $Path \"db:$ContainerPath\"",
+        "  docker compose exec -T db psql -v ON_ERROR_STOP=1 -U $DbUser -d $DbName -f $ContainerPath",
+        "}",
+        "",
+    ]
 
-    sh.write_text(
-        """#!/usr/bin/env bash\n"
-        "set -euo pipefail\n"
-        "\n"
-        "# Apply private seed SQL files outside Flyway.\n"
-        "# Usage from project root:\n"
-        "#   bash scripts/seed/generated-private/apply_private_seeds.sh\n"
-        "\n"
-        "DB_USER=\"${GREENHOUSE_DB_USER:-greenhouse}\"\n"
-        "DB_NAME=\"${GREENHOUSE_DB_NAME:-greenhouse}\"\n"
-        "DIR=\"$(cd \"$(dirname \"${BASH_SOURCE[0]}\")\" && pwd)\"\n"
-        "FILES=(\n"
-        "  seed_varieties_from_sales_sources.sql\n"
-        "  seed_business_partners.sql\n"
-        "  seed_auction_2025_2026.sql\n"
-        "  seed_direct_sales_2026.sql\n"
-        ")\n"
-        "\n"
-        "for file in \"${FILES[@]}\"; do\n"
-        "  echo \"Applying ${DIR}/${file}\"\n"
-        "  docker compose exec -T db psql -v ON_ERROR_STOP=1 -U \"${DB_USER}\" -d \"${DB_NAME}\" < \"${DIR}/${file}\"\n"
-        "done\n"
-        """,
-        encoding="utf-8",
-    )
+    sh_lines = [
+        "#!/usr/bin/env bash",
+        "set -euo pipefail",
+        "",
+        "# Apply private seed SQL files outside Flyway.",
+        "# Usage from project root:",
+        "#   bash scripts/seed/generated-private/apply_private_seeds.sh",
+        "",
+        'DB_USER="${GREENHOUSE_DB_USER:-greenhouse}"',
+        'DB_NAME="${GREENHOUSE_DB_NAME:-greenhouse}"',
+        'DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"',
+        'CONTAINER_DIR="/tmp/greenhouse-private-seeds"',
+        'docker compose exec -T db sh -c "mkdir -p ${CONTAINER_DIR}"',
+        "FILES=(",
+        "  seed_varieties_from_sales_sources.sql",
+        "  seed_business_partners.sql",
+        "  seed_auction_2025_2026.sql",
+        "  seed_direct_sales_2026.sql",
+        ")",
+        "",
+        'for file in "${FILES[@]}"; do',
+        '  host_path="${DIR}/${file}"',
+        '  container_path="${CONTAINER_DIR}/${file}"',
+        '  echo "Applying ${host_path}"',
+        '  docker compose cp "${host_path}" "db:${container_path}"',
+        '  docker compose exec -T db psql -v ON_ERROR_STOP=1 -U "${DB_USER}" -d "${DB_NAME}" -f "${container_path}"',
+        "done",
+        "",
+    ]
+
+    ps1.write_text("\n".join(ps1_lines), encoding="utf-8")
+    sh.write_text("\n".join(sh_lines), encoding="utf-8")
     sh.chmod(0o755)
-
 
 def main() -> None:
     parser = argparse.ArgumentParser(

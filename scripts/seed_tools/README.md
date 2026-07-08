@@ -32,8 +32,12 @@ scripts/seed/
 
 프로젝트 루트에서 실행합니다.
 
-```powershell
-python scripts/seed_tools/generate_all_seeds.py --auction-csv "scripts/seed_tools/raw/2025-2026-경매출하.csv" --direct-csv "scripts/seed_tools/raw/2024-2026-일반판매.csv" --migration-output-dir "scripts/seed_tools/generated" --private-output-dir "scripts/seed_tools/generated-private"
+```bash
+python scripts/seed/generate_all_seeds.py \
+  --auction-csv "scripts/seed/input/2026 내수 출하 완 - 추출용.csv" \
+  --direct-csv "scripts/seed/input/2026 일반 판매.csv" \
+  --migration-output-dir "backend/src/main/resources/db/migration" \
+  --private-output-dir "scripts/seed/generated-private"
 ```
 
 생성 결과:
@@ -64,13 +68,13 @@ scripts/seed/generated-private/
 PowerShell:
 
 ```powershell
-powershell -ExecutionPolicy Bypass -File .\scripts\seed_tools\generated-private\apply_private_seeds.ps1
+powershell -ExecutionPolicy Bypass -File .\scripts\seed\generated-private\apply_private_seeds.ps1
 ```
 
 Bash:
 
 ```bash
-bash scripts/seed_tools/generated-private/apply_private_seeds.sh
+bash scripts/seed/generated-private/apply_private_seeds.sh
 ```
 
 DB 유저/DB명이 `greenhouse`가 아니면 환경변수로 지정합니다.
