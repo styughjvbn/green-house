@@ -1,23 +1,27 @@
 "use client";
 
-import { useMemo, useState } from "react";
 import Link from "next/link";
-import type { SalesSlip } from "@/entities/farm/types";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
+import type { SalesSlipPage } from "@/features/sales/model/types";
 import { PaginationControls } from "@/shared/ui/PaginationControls";
 
 type PrintPageProps = {
-  salesSlips: SalesSlip[];
+  salesSlipPage: SalesSlipPage;
 };
 
-export function PrintPage({ salesSlips }: PrintPageProps) {
-  const [page, setPage] = useState(0);
-  const [pageSize, setPageSize] = useState(10);
-  const totalPages = Math.max(1, Math.ceil(salesSlips.length / pageSize));
-  const visiblePage = Math.min(page, totalPages - 1);
-  const paginatedSalesSlips = useMemo(() => {
-    const start = visiblePage * pageSize;
-    return salesSlips.slice(start, start + pageSize);
-  }, [pageSize, salesSlips, visiblePage]);
+export function PrintPage({ salesSlipPage }: PrintPageProps) {
+  const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
+  const totalPages = Math.max(1, salesSlipPage.totalPages);
+  const visiblePage = Math.min(salesSlipPage.page, totalPages - 1);
+
+  function updatePage(nextPage: number, nextSize = salesSlipPage.size) {
+    const params = new URLSearchParams(searchParams.toString());
+    params.set("page", String(nextPage));
+    params.set("size", String(nextSize));
+    router.push(`${pathname}?${params.toString()}`);
+  }
 
   return (
     <main className="space-y-5">
@@ -25,7 +29,7 @@ export function PrintPage({ salesSlips }: PrintPageProps) {
         <div className="flex items-center justify-between">
           <h2 className="text-xl font-semibold">판매 전표 출력</h2>
           <span className="rounded-full bg-[#eef7ec] px-3 py-1 text-sm font-semibold text-[#246b38]">
-            {salesSlips.length}건
+            {salesSlipPage.totalElements}건
           </span>
         </div>
         <div className="mt-3 overflow-x-auto">
@@ -40,7 +44,7 @@ export function PrintPage({ salesSlips }: PrintPageProps) {
               </tr>
             </thead>
             <tbody>
-              {paginatedSalesSlips.map((slip) => (
+              {salesSlipPage.content.map((slip) => (
                 <tr key={slip.id} className="bg-[#f8faf7]">
                   <td className="rounded-l-md px-3 py-3 font-semibold">
                     {slip.slipNumber}
@@ -60,14 +64,13 @@ export function PrintPage({ salesSlips }: PrintPageProps) {
                   </td>
                 </tr>
               ))}
-              {paginatedSalesSlips.length === 0 ? (
+              {salesSlipPage.content.length === 0 ? (
                 <tr>
                   <td
                     className="rounded-md bg-[#f8faf7] px-3 py-8 text-center text-[#5c6a60]"
                     colSpan={5}
                   >
-                    출력할 판매 전표가 없습니다. 판매 관리에서 전표를 먼저
-                    등록하세요.
+                    출력할 판매 전표가 없습니다.
                   </td>
                 </tr>
               ) : null}
@@ -79,14 +82,11 @@ export function PrintPage({ salesSlips }: PrintPageProps) {
             nextLabel="다음"
             pageCount={totalPages}
             pageIndex={visiblePage}
-            pageSize={pageSize}
+            pageSize={salesSlipPage.size}
             pageSizeOptions={[10, 20, 50]}
             previousLabel="이전"
-            onPageChange={setPage}
-            onPageSizeChange={(nextPageSize) => {
-              setPageSize(nextPageSize);
-              setPage(0);
-            }}
+            onPageChange={(nextPage) => updatePage(nextPage)}
+            onPageSizeChange={(nextPageSize) => updatePage(0, nextPageSize)}
           />
         </div>
       </section>
