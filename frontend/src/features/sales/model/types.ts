@@ -11,6 +11,7 @@ export type SalesTab = "SLIPS" | "AUCTION" | "SETTLEMENT" | "PARTNERS";
 
 export type SalesManagerProps = {
   activeTab: SalesTab;
+  initialShowCreateSlip?: boolean;
   initialBusinessPartners?: BusinessPartner[];
   initialSalesSlips?: SalesSlip[];
   initialAuctionPage?: AuctionLotPage;

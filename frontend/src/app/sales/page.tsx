@@ -17,9 +17,14 @@ export default async function Page({
 }) {
   const resolvedSearchParams = searchParams ? await searchParams : undefined;
   const requestedTab = resolvedSearchParams?.tab;
+  const requestedCreateSlip = resolvedSearchParams?.createSlip;
   const activeTab = normalizeSalesTab(
     Array.isArray(requestedTab) ? requestedTab[0] : requestedTab,
   );
+  const createSlip =
+    (Array.isArray(requestedCreateSlip)
+      ? requestedCreateSlip[0]
+      : requestedCreateSlip) === "1";
 
   if (activeTab === "AUCTION") {
     const [auctionPage, auctionSummary] = await Promise.all([
@@ -30,6 +35,7 @@ export default async function Page({
     return (
       <SalesPage
         activeTab={activeTab}
+        createSlip={createSlip}
         auctionPage={auctionPage}
         auctionSummary={auctionSummary}
       />
@@ -42,6 +48,7 @@ export default async function Page({
     return (
       <SalesPage
         activeTab={activeTab}
+        createSlip={createSlip}
         auctionSettlements={auctionSettlements}
       />
     );
@@ -50,7 +57,13 @@ export default async function Page({
   if (activeTab === "PARTNERS") {
     const partners = await getBusinessPartners();
 
-    return <SalesPage activeTab={activeTab} partners={partners} />;
+    return (
+      <SalesPage
+        activeTab={activeTab}
+        createSlip={createSlip}
+        partners={partners}
+      />
+    );
   }
 
   const [partners, salesSlips] = await Promise.all([
@@ -61,6 +74,7 @@ export default async function Page({
   return (
     <SalesPage
       activeTab={activeTab}
+      createSlip={createSlip}
       partners={partners}
       salesSlips={salesSlips}
     />

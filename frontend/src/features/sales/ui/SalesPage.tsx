@@ -10,6 +10,7 @@ import { SalesManager } from "./SalesManager";
 
 type SalesPageProps = {
   activeTab: SalesTab;
+  createSlip?: boolean;
   partners?: BusinessPartner[];
   salesSlips?: SalesSlip[];
   auctionPage?: AuctionLotPage;
@@ -19,6 +20,7 @@ type SalesPageProps = {
 
 export function SalesPage({
   activeTab,
+  createSlip = false,
   partners,
   salesSlips,
   auctionPage,
@@ -29,6 +31,7 @@ export function SalesPage({
     <main className="space-y-5">
       <SalesManager
         activeTab={activeTab}
+        initialShowCreateSlip={createSlip}
         initialBusinessPartners={partners}
         initialSalesSlips={salesSlips}
         initialAuctionPage={auctionPage}

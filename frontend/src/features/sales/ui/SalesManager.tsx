@@ -22,6 +22,7 @@ import { SalesSlipList } from "./components/SalesSlipList";
 
 export function SalesManager({
   activeTab,
+  initialShowCreateSlip = false,
   initialBusinessPartners,
   initialSalesSlips,
   initialAuctionPage,
@@ -31,6 +32,7 @@ export function SalesManager({
   const sales = useSalesManager(
     initialBusinessPartners ?? [],
     initialSalesSlips ?? [],
+    initialShowCreateSlip,
   );
   const [showCreatePartner, setShowCreatePartner] = useState(false);
   const router = useRouter();
@@ -70,12 +72,13 @@ export function SalesManager({
   }
 
   function handleToggleCreateSalesSlip() {
-    if (!sales.showCreateSlip) {
+    const nextOpen = !sales.showCreateSlip;
+    if (nextOpen) {
       sales.startCreateSalesSlip();
     } else {
       sales.cancelSalesSlipEditing();
     }
-    updateCreateSlip(!sales.showCreateSlip);
+    updateCreateSlip(nextOpen);
   }
 
   function handleEditSalesSlip(salesSlipId: number) {

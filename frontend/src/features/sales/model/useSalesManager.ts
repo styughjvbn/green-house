@@ -36,6 +36,7 @@ import type {
 export function useSalesManager(
   initialBusinessPartners: BusinessPartner[],
   initialSalesSlips: SalesSlip[],
+  initialShowCreateSlip = false,
 ) {
   const [partners, setBusinessPartners] = useState<BusinessPartner[]>(
     initialBusinessPartners,
@@ -54,7 +55,7 @@ export function useSalesManager(
     useState<BusinessPartnerFilterState>(() =>
       createInitialBusinessPartnerFilters(),
     );
-  const [showCreateSlip, setShowCreateSlip] = useState(false);
+  const [showCreateSlip, setShowCreateSlip] = useState(initialShowCreateSlip);
   const [editingSlipId, setEditingSlipId] = useState<number | null>(null);
   const [selectedSlipId, setSelectedSlipId] = useState<number | null>(
     initialSalesSlips[0]?.id ?? null,
@@ -352,13 +353,8 @@ export function useSalesManager(
   function startCreateSalesSlip() {
     setEditingSlipId(null);
     setErrorMessage(null);
-    setShowCreateSlip((current) => {
-      const next = !current;
-      if (next) {
-        setSalesForm(createInitialSalesForm(partners));
-      }
-      return next;
-    });
+    setSalesForm(createInitialSalesForm(partners));
+    setShowCreateSlip(true);
   }
 
   function startEditSalesSlip(salesSlipId: number) {
