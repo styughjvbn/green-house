@@ -48,6 +48,21 @@ public class SalesSlipInventoryService {
 		}
 	}
 
+	public void cancelReserve(SalesSlip salesSlip) {
+		for (SalesSlipItem item : salesSlip.getItems()) {
+			for (SalesSlipItemAllocation allocation : item.getAllocations()) {
+				OrchidGroup orchidGroup = allocation.getOrchidGroup();
+				orchidGroup.releaseReserved(allocation.getAllocatedQuantity());
+				salesInventoryMovementRepository.save(buildMovement(
+						orchidGroup,
+						salesSlip,
+						item,
+						SalesInventoryMovementType.SALES_CANCEL_RESERVE,
+						-allocation.getAllocatedQuantity()));
+			}
+		}
+	}
+
 	public void releaseForEdit(SalesSlip salesSlip) {
 		for (SalesSlipItem item : salesSlip.getItems()) {
 			for (SalesSlipItemAllocation allocation : item.getAllocations()) {
@@ -67,6 +82,21 @@ public class SalesSlipInventoryService {
 						item,
 						SalesInventoryMovementType.SALES_OUTBOUND,
 						-allocation.getAllocatedQuantity()));
+			}
+		}
+	}
+
+	public void cancelOutbound(SalesSlip salesSlip) {
+		for (SalesSlipItem item : salesSlip.getItems()) {
+			for (SalesSlipItemAllocation allocation : item.getAllocations()) {
+				OrchidGroup orchidGroup = allocation.getOrchidGroup();
+				orchidGroup.restoreOutbound(allocation.getAllocatedQuantity());
+				salesInventoryMovementRepository.save(buildMovement(
+						orchidGroup,
+						salesSlip,
+						item,
+						SalesInventoryMovementType.SALES_CANCEL_OUTBOUND,
+						allocation.getAllocatedQuantity()));
 			}
 		}
 	}

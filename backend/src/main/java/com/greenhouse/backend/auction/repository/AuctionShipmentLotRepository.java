@@ -14,6 +14,8 @@ import com.greenhouse.backend.auction.domain.AuctionInspectionStatus;
 import com.greenhouse.backend.auction.domain.AuctionLotStatus;
 
 public interface AuctionShipmentLotRepository extends JpaRepository<AuctionShipmentLot, Long> {
+	boolean existsByShipmentIdAndCurrentStatusNot(Long shipmentId, AuctionLotStatus status);
+
 	@EntityGraph(attributePaths = { "shipment", "shipment.auctionHouse" })
 	List<AuctionShipmentLot> findAllByOrderByIdDesc();
 

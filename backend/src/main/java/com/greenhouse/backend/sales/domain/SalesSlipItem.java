@@ -109,4 +109,8 @@ public class SalesSlipItem {
 	public void assignAuctionShipmentLot(AuctionShipmentLot auctionShipmentLot) {
 		this.auctionShipmentLot = auctionShipmentLot;
 	}
+
+	public void clearAuctionShipmentLot() {
+		this.auctionShipmentLot = null;
+	}
 }

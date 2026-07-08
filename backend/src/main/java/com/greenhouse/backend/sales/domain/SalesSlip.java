@@ -152,8 +152,16 @@ public class SalesSlip extends BaseEntity {
 		this.salesStatus = salesStatus;
 	}
 
+	public boolean isCanceled() {
+		return "취소".equals(salesStatus);
+	}
+
 	public void assignAuctionShipment(AuctionShipment auctionShipment) {
 		this.auctionShipment = auctionShipment;
+	}
+
+	public void clearAuctionShipment() {
+		this.auctionShipment = null;
 	}
 
 	public boolean isOutboundCompleted() {

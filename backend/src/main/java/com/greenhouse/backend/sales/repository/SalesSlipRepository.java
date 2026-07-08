@@ -39,6 +39,7 @@ public interface SalesSlipRepository extends JpaRepository<SalesSlip, Long> {
 			from SalesSlip s
 			where s.partner.id = :partnerId
 			  and (s.salesType is null or s.salesType = com.greenhouse.backend.sales.domain.SalesType.DIRECT)
+			  and s.salesStatus <> '취소'
 			""")
 	Long sumDirectReceivableByPartnerId(@Param("partnerId") Long partnerId);
 }

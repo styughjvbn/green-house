@@ -11,6 +11,13 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
 public interface AuctionSettlementRepository extends JpaRepository<AuctionSettlement, Long> {
+	@Query("""
+			select count(line) > 0
+			from AuctionSettlementLine line
+			where line.auctionShipmentLot.shipment.id = :shipmentId
+			""")
+	boolean existsByAuctionShipmentId(@Param("shipmentId") Long shipmentId);
+
 	Optional<AuctionSettlement> findByAuctionHouseIdAndAuctionDate(Long auctionHouseId, LocalDate auctionDate);
 
 	@EntityGraph(attributePaths = { "auctionHouse", "lines", "lines.auctionResultLine", "lines.auctionShipmentLot",

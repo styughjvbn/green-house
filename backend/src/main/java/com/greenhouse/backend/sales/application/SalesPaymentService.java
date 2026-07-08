@@ -28,6 +28,9 @@ public class SalesPaymentService {
 		if (salesSlip.getSalesType() != SalesType.DIRECT) {
 			throw new IllegalArgumentException("경매 판매전표는 경매장 정산에서 입금을 확인해야 합니다.");
 		}
+		if (salesSlip.isCanceled()) {
+			throw new IllegalArgumentException("취소된 전표는 입금을 확인할 수 없습니다.");
+		}
 
 		salesSlip.recordPayment(request.amount());
 		var saved = salesSlipRepository.save(salesSlip);

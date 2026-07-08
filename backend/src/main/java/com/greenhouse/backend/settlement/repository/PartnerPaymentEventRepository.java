@@ -9,6 +9,8 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
 public interface PartnerPaymentEventRepository extends JpaRepository<PartnerPaymentEvent, Long> {
+	boolean existsByTargetTypeAndTargetId(PaymentTargetType targetType, Long targetId);
+
 	@EntityGraph(attributePaths = { "partner", "parentEvent" })
 	@Query("""
 			select event from PartnerPaymentEvent event

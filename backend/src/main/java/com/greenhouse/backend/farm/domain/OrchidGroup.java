@@ -181,6 +181,11 @@ public class OrchidGroup extends BaseEntity {
 		this.quantity -= outboundQuantity;
 	}
 
+	public void restoreOutbound(Integer restoreQuantity) {
+		validatePositiveQuantity(restoreQuantity, "출고 복구 수량");
+		this.quantity += restoreQuantity;
+	}
+
 	private void validatePositiveQuantity(Integer value, String label) {
 		if (value == null || value < 1) {
 			throw new IllegalArgumentException(label + "은 1 이상이어야 합니다.");
