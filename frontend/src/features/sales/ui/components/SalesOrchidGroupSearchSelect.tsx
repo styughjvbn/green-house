@@ -137,13 +137,7 @@ export function SalesOrchidGroupSearchSelect({
 
             <div className="grid min-h-0 flex-1 gap-0 lg:grid-cols-[280px_minmax(0,1fr)]">
               <aside className="border-b border-[#e1e7df] bg-[#f8faf7] p-4 lg:border-r lg:border-b-0">
-                <form
-                  className="space-y-3"
-                  onSubmit={(event) => {
-                    event.preventDefault();
-                    void load();
-                  }}
-                >
+                <div className="space-y-3">
                   <label className="block space-y-1">
                     <span className="text-xs font-semibold text-[#425047]">
                       검색어
@@ -154,11 +148,18 @@ export function SalesOrchidGroupSearchSelect({
                         value={keyword}
                         placeholder="품종명, 속, 위치"
                         onChange={(event) => setKeyword(event.target.value)}
+                        onKeyDown={(event) => {
+                          if (event.key === "Enter") {
+                            event.preventDefault();
+                            void load();
+                          }
+                        }}
                       />
                       <button
                         className="flex h-9 w-9 items-center justify-center rounded-md bg-[#159447] text-white"
-                        type="submit"
+                        type="button"
                         aria-label="검색"
+                        onClick={() => void load()}
                       >
                         <Search className="h-4 w-4" />
                       </button>
@@ -182,7 +183,7 @@ export function SalesOrchidGroupSearchSelect({
                       <option value="이상">이상</option>
                     </select>
                   </label>
-                </form>
+                </div>
 
                 <div className="mt-4">
                   <div className="mb-2 flex items-center justify-between">
