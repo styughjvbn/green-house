@@ -1,21 +1,24 @@
-﻿import type {
+import type {
   AuctionLotPage,
-  AuctionTrackingSummary,
   AuctionSettlement,
+  AuctionTrackingSummary,
   BusinessPartner,
   SalesSlip,
 } from "@/entities/farm/types";
+import type { SalesTab } from "../model/types";
 import { SalesManager } from "./SalesManager";
 
 type SalesPageProps = {
-  partners: BusinessPartner[];
-  salesSlips: SalesSlip[];
-  auctionPage: AuctionLotPage;
-  auctionSummary: AuctionTrackingSummary;
-  auctionSettlements: AuctionSettlement[];
+  activeTab: SalesTab;
+  partners?: BusinessPartner[];
+  salesSlips?: SalesSlip[];
+  auctionPage?: AuctionLotPage;
+  auctionSummary?: AuctionTrackingSummary;
+  auctionSettlements?: AuctionSettlement[];
 };
 
 export function SalesPage({
+  activeTab,
   partners,
   salesSlips,
   auctionPage,
@@ -25,6 +28,7 @@ export function SalesPage({
   return (
     <main className="space-y-5">
       <SalesManager
+        activeTab={activeTab}
         initialBusinessPartners={partners}
         initialSalesSlips={salesSlips}
         initialAuctionPage={auctionPage}

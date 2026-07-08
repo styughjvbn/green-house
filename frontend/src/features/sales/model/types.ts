@@ -7,12 +7,15 @@ import type {
   SalesSlip,
 } from "@/entities/farm/types";
 
+export type SalesTab = "SLIPS" | "AUCTION" | "SETTLEMENT" | "PARTNERS";
+
 export type SalesManagerProps = {
-  initialBusinessPartners: BusinessPartner[];
-  initialSalesSlips: SalesSlip[];
-  initialAuctionPage: AuctionLotPage;
-  initialAuctionSummary: AuctionTrackingSummary;
-  initialAuctionSettlements: AuctionSettlement[];
+  activeTab: SalesTab;
+  initialBusinessPartners?: BusinessPartner[];
+  initialSalesSlips?: SalesSlip[];
+  initialAuctionPage?: AuctionLotPage;
+  initialAuctionSummary?: AuctionTrackingSummary;
+  initialAuctionSettlements?: AuctionSettlement[];
 };
 
 export type BusinessPartnerForm = {
@@ -87,8 +90,6 @@ export type CreateSalesSlipPayload = {
     }>;
   }>;
 };
-
-export type SalesTab = "SLIPS" | "AUCTION" | "SETTLEMENT" | "PARTNERS";
 
 export type AuctionFilterState = {
   from: string;

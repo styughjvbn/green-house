@@ -3,8 +3,14 @@
 import type { FormEvent } from "react";
 import { useEffect, useState } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
+import type {
+  AuctionLotPage,
+  AuctionTrackingSummary,
+} from "@/entities/farm/types";
 import { useSalesManager } from "../model/useSalesManager";
 import type { SalesManagerProps } from "../model/types";
+import { AuctionSettlementView } from "./AuctionSettlementView";
+import { AuctionTrackingView } from "./AuctionTrackingView";
 import { BusinessPartnerCreateForm } from "./components/BusinessPartnerCreateForm";
 import { BusinessPartnerFilters } from "./components/BusinessPartnerFilters";
 import { BusinessPartnerList } from "./components/BusinessPartnerList";
@@ -13,34 +19,24 @@ import { SalesFilters } from "./components/SalesFilters";
 import { SalesSlipCreateForm } from "./components/SalesSlipCreateForm";
 import { SalesSlipDetail } from "./components/SalesSlipDetail";
 import { SalesSlipList } from "./components/SalesSlipList";
-import { AuctionSettlementView } from "./AuctionSettlementView";
-import { AuctionTrackingView } from "./AuctionTrackingView";
 
 export function SalesManager({
+  activeTab,
   initialBusinessPartners,
   initialSalesSlips,
   initialAuctionPage,
   initialAuctionSummary,
   initialAuctionSettlements,
 }: SalesManagerProps) {
-  const sales = useSalesManager(initialBusinessPartners, initialSalesSlips);
+  const sales = useSalesManager(
+    initialBusinessPartners ?? [],
+    initialSalesSlips ?? [],
+  );
   const [showCreatePartner, setShowCreatePartner] = useState(false);
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
-  const activeTab = searchParams.get("tab") ?? "SLIPS";
   const createSlip = searchParams.get("createSlip") === "1";
-
-  useEffect(() => {
-    if (
-      activeTab === "SLIPS" ||
-      activeTab === "AUCTION" ||
-      activeTab === "SETTLEMENT" ||
-      activeTab === "PARTNERS"
-    ) {
-      sales.setActiveTab(activeTab);
-    }
-  }, [activeTab, sales]);
 
   useEffect(() => {
     sales.setShowCreateSlip(createSlip);
@@ -87,9 +83,13 @@ export function SalesManager({
     updateCreateSlip(true);
   }
 
+  const auctionPage = initialAuctionPage ?? createEmptyAuctionPage();
+  const auctionSummary = initialAuctionSummary ?? createEmptyAuctionSummary();
+  const auctionSettlements = initialAuctionSettlements ?? [];
+
   return (
     <div className="space-y-4">
-      {sales.activeTab === "SLIPS" ? (
+      {activeTab === "SLIPS" ? (
         <>
           <SalesFilters
             partners={sales.partners}
@@ -148,13 +148,13 @@ export function SalesManager({
             />
           </div>
         </>
-      ) : sales.activeTab === "AUCTION" ? (
+      ) : activeTab === "AUCTION" ? (
         <AuctionTrackingView
-          initialPage={initialAuctionPage}
-          initialSummary={initialAuctionSummary}
+          initialPage={auctionPage}
+          initialSummary={auctionSummary}
         />
-      ) : sales.activeTab === "SETTLEMENT" ? (
-        <AuctionSettlementView initialSettlements={initialAuctionSettlements} />
+      ) : activeTab === "SETTLEMENT" ? (
+        <AuctionSettlementView initialSettlements={auctionSettlements} />
       ) : (
         <>
           <BusinessPartnerFilters
@@ -204,4 +204,26 @@ export function SalesManager({
       )}
     </div>
   );
+}
+
+function createEmptyAuctionPage(): AuctionLotPage {
+  return {
+    content: [],
+    totalElements: 0,
+    totalPages: 1,
+    size: 20,
+    page: 0,
+  };
+}
+
+function createEmptyAuctionSummary(): AuctionTrackingSummary {
+  return {
+    lotCount: 0,
+    shippedQuantity: 0,
+    soldQuantity: 0,
+    waitingQuantity: 0,
+    returnedQuantity: 0,
+    reviewRequiredCount: 0,
+    totalAmount: 0,
+  };
 }

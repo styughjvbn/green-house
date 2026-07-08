@@ -31,7 +31,6 @@ import type {
   SalesFilterState,
   SalesItemForm,
   SalesSlipForm,
-  SalesTab,
 } from "./types";
 
 export function useSalesManager(
@@ -48,7 +47,6 @@ export function useSalesManager(
   const [salesForm, setSalesForm] = useState<SalesSlipForm>(() =>
     createInitialSalesForm(initialBusinessPartners),
   );
-  const [activeTab, setActiveTab] = useState<SalesTab>("SLIPS");
   const [filters, setFilters] = useState<SalesFilterState>(() =>
     createInitialSalesFilters(),
   );
@@ -442,7 +440,6 @@ export function useSalesManager(
     selectedPartnerId,
     selectedBusinessPartner,
     partnerForm,
-    activeTab,
     filters,
     partnerFilters,
     salesForm,
@@ -460,7 +457,6 @@ export function useSalesManager(
     selectBusinessPartner,
     selectSalesSlip: setSelectedSlipId,
     selectSalesType,
-    setActiveTab,
     setShowCreateSlip,
     startCreateSalesSlip,
     startEditSalesSlip,
