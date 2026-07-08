@@ -75,12 +75,12 @@ public interface OrchidGroupRepository extends JpaRepository<OrchidGroup, Long> 
 			join fetch z.physicalBed b
 			join fetch b.house h
 			left join fetch g.variety v
-			where (:keyword is null
+			where (:keyword = ''
 				or lower(g.varietyName) like lower(concat('%', :keyword, '%'))
 				or lower(coalesce(g.genus, '')) like lower(concat('%', :keyword, '%'))
 				or lower(concat(cast(h.number as string), '동 ', cast(b.number as string), '배드 ', z.name)) like lower(concat('%', :keyword, '%')))
 			  and (:varietyId is null or v.id = :varietyId)
-			  and (:status is null or g.status = :status)
+			  and (:status = '' or g.status = :status)
 			  and (g.quantity - g.reservedQuantity) > 0
 			order by h.number asc, b.displayOrder asc, z.sortOrder asc, g.sortOrder asc
 			""")

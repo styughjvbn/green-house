@@ -15,8 +15,8 @@ public class SalesOrchidGroupQueryService {
 	private final OrchidGroupReader orchidGroupReader;
 
 	public List<SalesOrchidGroupSearchResponse> search(String keyword, Long varietyId, String status) {
-		String normalizedKeyword = keyword == null || keyword.isBlank() ? null : keyword.trim();
-		String normalizedStatus = status == null || status.isBlank() ? null : status.trim();
+		String normalizedKeyword = keyword == null || keyword.isBlank() ? "" : keyword.trim();
+		String normalizedStatus = status == null || status.isBlank() ? "" : status.trim();
 		return orchidGroupReader.searchSellable(normalizedKeyword, varietyId, normalizedStatus).stream()
 				.map(SalesOrchidGroupSearchResponse::from)
 				.toList();
