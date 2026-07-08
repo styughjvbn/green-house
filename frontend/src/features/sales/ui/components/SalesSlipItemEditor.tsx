@@ -91,6 +91,10 @@ export function SalesSlipItemEditor({
           </div>
           <div className="w-full max-w-[360px]">
             <SalesOrchidGroupSearchSelect
+              initialKeyword={item.itemName}
+              selectedIds={item.allocations.map(
+                (allocation) => allocation.orchidGroupId,
+              )}
               onSelect={(orchidGroup) => onAddAllocation(index, orchidGroup)}
             />
           </div>
