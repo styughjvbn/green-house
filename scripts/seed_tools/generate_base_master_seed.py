@@ -149,14 +149,7 @@ SELECT
     NULL,
     NULL,
     NULL,
-    CASE
-        WHEN houses.number = 8 AND bed_number = 3 THEN 26
-        WHEN houses.number BETWEEN 1 AND 4 THEN 22
-        WHEN houses.number BETWEEN 5 AND 8 THEN 28
-        WHEN houses.number = 9 THEN 24
-        WHEN houses.number BETWEEN 10 AND 11 THEN 28
-        WHEN houses.number BETWEEN 12 AND 15 THEN 21
-    END,
+    CASE WHEN bed_number = 3 THEN 28.00 ELSE 24.00 END,
     '치',
     houses.id
 FROM houses

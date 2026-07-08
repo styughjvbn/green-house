@@ -5,17 +5,8 @@
 Policy:
 - Public Flyway migration output contains only non-sensitive base master data.
 - Real sales/auction-derived data is generated as private SQL without Flyway version prefixes.
-
-Recommended repo layout:
-  backend/src/main/resources/db/migration/
-    V1__initial_schema.sql
-    V2__seed_base_master_data.sql
-
-  scripts/seed/generated-private/   # .gitignore
-    seed_varieties_from_sales_sources.sql
-    seed_business_partners.sql
-    seed_auction_2025_2026.sql
-    seed_direct_sales_2026.sql
+- Varieties are managed through an editable JSON file. The JSON is extracted once from source CSVs,
+  then can be manually edited when real orchid-group input reveals new varieties.
 """
 
 from __future__ import annotations
@@ -40,12 +31,7 @@ def run(args: list[str]) -> None:
 
 
 def write_apply_scripts(private_output_dir: Path) -> None:
-    """Write small helper scripts for applying private seeds outside Flyway.
-
-    The scripts copy SQL files into the PostgreSQL container first and run
-    psql -f there. This avoids Windows PowerShell pipe encoding corruption
-    for UTF-8 Korean text.
-    """
+    """Write small helper scripts for applying private seeds outside Flyway."""
     ps1 = private_output_dir / "apply_private_seeds.ps1"
     sh = private_output_dir / "apply_private_seeds.sh"
 
@@ -66,10 +52,12 @@ def write_apply_scripts(private_output_dir: Path) -> None:
         "  'seed_varieties_from_sales_sources.sql',",
         "  'seed_business_partners.sql',",
         "  'seed_auction_2025_2026.sql',",
-        "  'seed_direct_sales_2026.sql'",
+        "  'seed_direct_sales_2026.sql',",
+        "  'seed_orchid_groups.sql'",
         ")",
         "foreach ($File in $Files) {",
         "  $Path = Join-Path $Dir $File",
+        "  if (-not (Test-Path $Path)) { Write-Host \"Skipping missing optional seed $File\"; continue }",
         "  $ContainerPath = \"${ContainerDir}/$File\"",
         "  Write-Host \"Applying $Path\"",
         "  docker compose cp $Path \"db:$ContainerPath\"",
@@ -96,10 +84,12 @@ def write_apply_scripts(private_output_dir: Path) -> None:
         "  seed_business_partners.sql",
         "  seed_auction_2025_2026.sql",
         "  seed_direct_sales_2026.sql",
+        "  seed_orchid_groups.sql",
         ")",
         "",
         'for file in "${FILES[@]}"; do',
         '  host_path="${DIR}/${file}"',
+        '  if [ ! -f "${host_path}" ]; then echo "Skipping missing optional seed ${file}"; continue; fi',
         '  container_path="${CONTAINER_DIR}/${file}"',
         '  echo "Applying ${host_path}"',
         '  docker compose cp "${host_path}" "db:${container_path}"',
@@ -111,6 +101,7 @@ def write_apply_scripts(private_output_dir: Path) -> None:
     ps1.write_text("\n".join(ps1_lines), encoding="utf-8")
     sh.write_text("\n".join(sh_lines), encoding="utf-8")
     sh.chmod(0o755)
+
 
 def main() -> None:
     parser = argparse.ArgumentParser(
@@ -138,6 +129,16 @@ def main() -> None:
         type=Path,
         help="Deprecated. Use --private-output-dir. Kept only for old command compatibility.",
     )
+    parser.add_argument(
+        "--varieties-json",
+        type=Path,
+        help="Editable varieties JSON path. Defaults to <private-output-dir>/varieties.json.",
+    )
+    parser.add_argument(
+        "--refresh-varieties-json",
+        action="store_true",
+        help="Regenerate varieties JSON from source CSVs, overwriting manual edits. Use carefully.",
+    )
     parser.add_argument("--skip-base-master", action="store_true", help="Do not generate V2__seed_base_master_data.sql")
     parser.add_argument("--dev-reset", action="store_true", help="Emit destructive reset clauses for local reruns of private seeds")
     parser.add_argument("--no-apply-scripts", action="store_true", help="Do not write apply_private_seeds helper scripts")
@@ -150,10 +151,9 @@ def main() -> None:
     migration_output_dir.mkdir(parents=True, exist_ok=True)
     private_output_dir.mkdir(parents=True, exist_ok=True)
 
-    # Public Flyway seed: safe to commit.
     base_sql = migration_output_dir / "V2__seed_base_master_data.sql"
 
-    # Private SQL files: do not put in Flyway migration folder; do not commit real data.
+    varieties_json = args.varieties_json or (private_output_dir / "varieties.json")
     varieties_sql = private_output_dir / "seed_varieties_from_sales_sources.sql"
     business_sql = private_output_dir / "seed_business_partners.sql"
     auction_sql = private_output_dir / "seed_auction_2025_2026.sql"
@@ -170,13 +170,28 @@ def main() -> None:
             str(base_sql),
         ])
 
+    if args.refresh_varieties_json or not varieties_json.exists():
+        run([
+            sys.executable,
+            str(script_dir / "generate_varieties_json.py"),
+            "--auction-csv",
+            str(args.auction_csv),
+            "--direct-csv",
+            str(args.direct_csv),
+            "--output",
+            str(varieties_json),
+            "--review",
+            str(varieties_review),
+        ])
+    else:
+        print(f"Using existing varieties JSON: {varieties_json}")
+        print("Use --refresh-varieties-json only when you intentionally want to overwrite it from CSV sources.")
+
     varieties_cmd = [
         sys.executable,
         str(script_dir / "generate_varieties_seed.py"),
-        "--auction-csv",
-        str(args.auction_csv),
-        "--direct-csv",
-        str(args.direct_csv),
+        "--varieties-json",
+        str(varieties_json),
         "--output",
         str(varieties_sql),
         "--review",
@@ -235,6 +250,9 @@ def main() -> None:
         print("- skipped base master seed")
     else:
         print("-", base_sql)
+
+    print("\nEditable private master file. Do not commit if it contains real farm data:")
+    print("-", varieties_json)
 
     print("\nPrivate seed files. Do not commit these if they contain real data:")
     print("-", varieties_sql)
