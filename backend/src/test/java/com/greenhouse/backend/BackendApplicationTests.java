@@ -1591,4 +1591,132 @@ class BackendApplicationTests {
 		assertThat(orchidGroupRepository.findById(thirdGroup.getId()).orElseThrow().getReservedQuantity())
 				.isEqualTo(thirdReservedBefore + 4);
 	}
+
+	@Test
+	void cancelsDraftDirectSalesSlipAndReleasesReservations() throws Exception {
+		var sampleGroup = orchidGroupRepository.findAll().stream()
+				.filter(group -> group.getVariety() != null)
+				.findFirst()
+				.orElseThrow();
+		var reservedBefore = orchidGroupRepository.findById(sampleGroup.getId()).orElseThrow().getReservedQuantity();
+
+		var partnerResult = mockMvc.perform(post("/api/business-partners")
+				.contentType(MediaType.APPLICATION_JSON)
+				.content("""
+						{
+						  "name": "취소 테스트 거래처",
+						  "partnerType": "WHOLESALE"
+						}
+						"""))
+				.andExpect(status().isCreated())
+				.andReturn();
+		var partnerId = Long.valueOf(partnerResult.getResponse().getContentAsString().replaceAll(".*\\\"id\\\":(\\d+).*", "$1"));
+
+		var createResult = mockMvc.perform(post("/api/sales-slips")
+				.contentType(MediaType.APPLICATION_JSON)
+				.content("""
+						{
+						  "saleDate": "2026-07-08",
+						  "partnerId": %d,
+						  "salesStatus": "작성중",
+						  "items": [
+						    {
+						      "itemName": "%s",
+						      "genus": "%s",
+						      "quantity": 4,
+						      "unitPrice": 1000,
+						      "allocations": [
+						        {
+						          "orchidGroupId": %d,
+						          "quantity": 4
+						        }
+						      ]
+						    }
+						  ]
+						}
+						""".formatted(partnerId, sampleGroup.getVarietyName(), sampleGroup.getGenus(), sampleGroup.getId())))
+				.andExpect(status().isCreated())
+				.andReturn();
+		var salesSlipId = Long.valueOf(createResult.getResponse().getContentAsString().replaceFirst(".*?\\\"id\\\":(\\d+).*", "$1"));
+
+		assertThat(orchidGroupRepository.findById(sampleGroup.getId()).orElseThrow().getReservedQuantity())
+				.isEqualTo(reservedBefore + 4);
+
+		mockMvc.perform(patch("/api/sales-slips/{salesSlipId}/sales-status", salesSlipId)
+				.contentType(MediaType.APPLICATION_JSON)
+				.content("""
+						{
+						  "salesStatus": "취소"
+						}
+						"""))
+				.andExpect(status().isOk())
+				.andExpect(jsonPath("$.data.salesStatus").value("취소"));
+
+		assertThat(orchidGroupRepository.findById(sampleGroup.getId()).orElseThrow().getReservedQuantity())
+				.isEqualTo(reservedBefore);
+	}
+
+	@Test
+	void cancelsCompletedDirectSalesSlipAndRestoresQuantity() throws Exception {
+		var sampleGroup = orchidGroupRepository.findAll().stream()
+				.filter(group -> group.getVariety() != null)
+				.findFirst()
+				.orElseThrow();
+		var quantityBefore = orchidGroupRepository.findById(sampleGroup.getId()).orElseThrow().getQuantity();
+
+		var partnerResult = mockMvc.perform(post("/api/business-partners")
+				.contentType(MediaType.APPLICATION_JSON)
+				.content("""
+						{
+						  "name": "출고 취소 거래처",
+						  "partnerType": "WHOLESALE"
+						}
+						"""))
+				.andExpect(status().isCreated())
+				.andReturn();
+		var partnerId = Long.valueOf(partnerResult.getResponse().getContentAsString().replaceAll(".*\\\"id\\\":(\\d+).*", "$1"));
+
+		var createResult = mockMvc.perform(post("/api/sales-slips")
+				.contentType(MediaType.APPLICATION_JSON)
+				.content("""
+						{
+						  "saleDate": "2026-07-08",
+						  "partnerId": %d,
+						  "salesStatus": "출고 완료",
+						  "items": [
+						    {
+						      "itemName": "%s",
+						      "genus": "%s",
+						      "quantity": 3,
+						      "unitPrice": 1000,
+						      "allocations": [
+						        {
+						          "orchidGroupId": %d,
+						          "quantity": 3
+						        }
+						      ]
+						    }
+						  ]
+						}
+						""".formatted(partnerId, sampleGroup.getVarietyName(), sampleGroup.getGenus(), sampleGroup.getId())))
+				.andExpect(status().isCreated())
+				.andReturn();
+		var salesSlipId = Long.valueOf(createResult.getResponse().getContentAsString().replaceFirst(".*?\\\"id\\\":(\\d+).*", "$1"));
+
+		assertThat(orchidGroupRepository.findById(sampleGroup.getId()).orElseThrow().getQuantity())
+				.isEqualTo(quantityBefore - 3);
+
+		mockMvc.perform(patch("/api/sales-slips/{salesSlipId}/sales-status", salesSlipId)
+				.contentType(MediaType.APPLICATION_JSON)
+				.content("""
+						{
+						  "salesStatus": "취소"
+						}
+						"""))
+				.andExpect(status().isOk())
+				.andExpect(jsonPath("$.data.salesStatus").value("취소"));
+
+		assertThat(orchidGroupRepository.findById(sampleGroup.getId()).orElseThrow().getQuantity())
+				.isEqualTo(quantityBefore);
+	}
 }

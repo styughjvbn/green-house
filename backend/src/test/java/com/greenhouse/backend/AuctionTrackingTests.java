@@ -255,6 +255,129 @@ class AuctionTrackingTests {
 	}
 
 	@Test
+	void cancelsCompletedAuctionSalesSlipAndRemovesShipmentWhenNoAuctionProgressExists() throws Exception {
+		var auctionHouse = createAuctionHouse("양재");
+		var sampleGroup = orchidGroupRepository.findAll().stream()
+				.filter(group -> group.getVariety() != null)
+				.findFirst()
+				.orElseThrow();
+
+		var createResult = mockMvc.perform(post("/api/sales-slips")
+				.contentType(MediaType.APPLICATION_JSON)
+				.content("""
+					{
+					  "saleDate": "2026-07-08",
+					  "salesType": "AUCTION",
+					  "partnerId": %d,
+					  "salesStatus": "출하 완료",
+					  "items": [
+					    {
+					      "itemName": "%s",
+					      "genus": "%s",
+					      "quantity": 10,
+					      "unitPrice": 0,
+					      "allocations": [
+					        {
+					          "orchidGroupId": %d,
+					          "quantity": 10
+					        }
+					      ]
+					    }
+					  ]
+					}
+					""".formatted(
+						auctionHouse.getId(),
+						sampleGroup.getVarietyName(),
+						sampleGroup.getGenus(),
+						sampleGroup.getId())))
+				.andExpect(status().isCreated())
+				.andExpect(jsonPath("$.data.auctionShipmentId").isNumber())
+				.andReturn();
+
+		var salesSlipId = Long.valueOf(
+				createResult.getResponse().getContentAsString().replaceFirst(".*?\\\"id\\\":(\\d+).*", "$1"));
+
+		mockMvc.perform(patch("/api/sales-slips/{salesSlipId}/sales-status", salesSlipId)
+				.contentType(MediaType.APPLICATION_JSON)
+				.content("""
+					{
+					  "salesStatus": "취소"
+					}
+					"""))
+			.andExpect(status().isOk())
+			.andExpect(jsonPath("$.data.salesStatus").value("취소"))
+			.andExpect(jsonPath("$.data.auctionShipmentId").value(nullValue()));
+
+		assertThat(shipmentRepository.findAll()).isEmpty();
+		assertThat(lotRepository.findAll()).isEmpty();
+	}
+
+	@Test
+	void rejectsAuctionSalesSlipCancelWhenAuctionResultAlreadyExists() throws Exception {
+		var auctionHouse = createAuctionHouse("수원");
+		var sampleGroup = orchidGroupRepository.findAll().stream()
+				.filter(group -> group.getVariety() != null)
+				.findFirst()
+				.orElseThrow();
+
+		var createResult = mockMvc.perform(post("/api/sales-slips")
+				.contentType(MediaType.APPLICATION_JSON)
+				.content("""
+					{
+					  "saleDate": "2026-07-08",
+					  "salesType": "AUCTION",
+					  "partnerId": %d,
+					  "salesStatus": "출하 완료",
+					  "items": [
+					    {
+					      "itemName": "%s",
+					      "genus": "%s",
+					      "quantity": 10,
+					      "unitPrice": 0,
+					      "allocations": [
+					        {
+					          "orchidGroupId": %d,
+					          "quantity": 10
+					        }
+					      ]
+					    }
+					  ]
+					}
+					""".formatted(
+						auctionHouse.getId(),
+						sampleGroup.getVarietyName(),
+						sampleGroup.getGenus(),
+						sampleGroup.getId())))
+				.andExpect(status().isCreated())
+				.andReturn();
+		var salesSlipId = Long.valueOf(
+				createResult.getResponse().getContentAsString().replaceFirst(".*?\\\"id\\\":(\\d+).*", "$1"));
+		var createdLot = lotRepository.findAll().getFirst();
+
+		trackingService.addResult(
+			createdLot.getId(),
+			new AuctionLotResultRequest(
+				LocalDate.of(2026, 7, 9),
+				1,
+				AuctionAttemptStatus.FAILED,
+				"유찰",
+				null,
+				null
+			)
+		);
+
+		mockMvc.perform(patch("/api/sales-slips/{salesSlipId}/sales-status", salesSlipId)
+				.contentType(MediaType.APPLICATION_JSON)
+				.content("""
+					{
+					  "salesStatus": "취소"
+					}
+					"""))
+			.andExpect(status().isBadRequest())
+			.andExpect(jsonPath("$.error.code").value("VALIDATION_ERROR"));
+	}
+
+	@Test
 	void recordsManualAuctionResults() throws Exception {
 		var soldLot = createLot(LocalDate.of(2026, 7, 1), "양재", "카틀레야 A", "특", 100);
 		var partialLot = createLot(LocalDate.of(2026, 7, 1), "양재", "덴드로비움 B", "A", 80);
