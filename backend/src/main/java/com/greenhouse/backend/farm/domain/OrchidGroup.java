@@ -153,6 +153,10 @@ public class OrchidGroup extends BaseEntity {
 		return Math.max(0, quantity - reservedQuantity);
 	}
 
+	public boolean isVisibleInActiveViews() {
+		return quantity != null && quantity > 0;
+	}
+
 	public void reserve(Integer reserveQuantity) {
 		validatePositiveQuantity(reserveQuantity, "예약 수량");
 		if (getAvailableQuantity() < reserveQuantity) {

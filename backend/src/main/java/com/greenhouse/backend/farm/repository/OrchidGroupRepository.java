@@ -23,6 +23,7 @@ public interface OrchidGroupRepository extends JpaRepository<OrchidGroup, Long> 
 				and (:physicalBedId is null or b.id = :physicalBedId)
 				and (:bedZoneId is null or z.id = :bedZoneId)
 				and (:status is null or g.status = :status)
+				and g.quantity > 0
 			order by h.number asc, b.displayOrder asc, z.sortOrder asc, g.sortOrder asc
 			""")
 	List<OrchidGroup> search(
@@ -36,12 +37,14 @@ public interface OrchidGroupRepository extends JpaRepository<OrchidGroup, Long> 
 			join g.bedZone z
 			join z.physicalBed b
 			where b.house.id = :houseId
+			  and g.quantity > 0
 			""")
 	long countByHouseId(@Param("houseId") Long houseId);
 
 	@Query("""
 			select count(g) from OrchidGroup g
 			where g.status in ('주의', '이상', '병해충')
+			  and g.quantity > 0
 			""")
 	long countWarningStatus();
 
@@ -49,7 +52,7 @@ public interface OrchidGroupRepository extends JpaRepository<OrchidGroup, Long> 
 			select count(g) from OrchidGroup g
 			join g.bedZone z
 			join z.physicalBed b
-			where b.house.id = :houseId and g.status in ('주의', '이상', '병해충')
+			where b.house.id = :houseId and g.status in ('주의', '이상', '병해충') and g.quantity > 0
 			""")
 	long countWarningStatusByHouseId(@Param("houseId") Long houseId);
 
@@ -59,6 +62,7 @@ public interface OrchidGroupRepository extends JpaRepository<OrchidGroup, Long> 
 			join fetch z.physicalBed b
 			join fetch b.house h
 			where g.variety.id = :varietyId
+			  and g.quantity > 0
 			order by h.number asc, b.displayOrder asc, z.sortOrder asc, g.sortOrder asc
 			""")
 	List<OrchidGroup> findByVarietyIdOrderByLocation(@Param("varietyId") Long varietyId);
@@ -67,7 +71,7 @@ public interface OrchidGroupRepository extends JpaRepository<OrchidGroup, Long> 
 
 	List<OrchidGroup> findByVarietyIsNull();
 
-	List<OrchidGroup> findByBedZoneIdOrderBySortOrderAsc(Long bedZoneId);
+	List<OrchidGroup> findByBedZoneIdAndQuantityGreaterThanOrderBySortOrderAsc(Long bedZoneId, Integer quantity);
 
 	@Query("""
 			select g from OrchidGroup g

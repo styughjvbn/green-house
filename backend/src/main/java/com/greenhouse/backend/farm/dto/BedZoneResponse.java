@@ -34,6 +34,9 @@ public record BedZoneResponse(
 				bedZone.getSortOrder(),
 				bedZone.getActive(),
 				bedZone.getMemo(),
-				bedZone.getOrchidGroups().stream().map(OrchidGroupResponse::from).toList());
+				bedZone.getOrchidGroups().stream()
+						.filter(orchidGroup -> orchidGroup.getQuantity() != null && orchidGroup.getQuantity() > 0)
+						.map(OrchidGroupResponse::from)
+						.toList());
 	}
 }

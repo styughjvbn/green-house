@@ -49,7 +49,9 @@ public class OrchidPlacementPolicy {
 		}
 
 		BigDecimal cursor = BigDecimal.ZERO.setScale(2);
-		List<OrchidGroup> positionedGroups = orchidGroupRepository.findByBedZoneIdOrderBySortOrderAsc(bedZone.getId())
+		List<OrchidGroup> positionedGroups = orchidGroupRepository.findByBedZoneIdAndQuantityGreaterThanOrderBySortOrderAsc(
+						bedZone.getId(),
+						0)
 				.stream()
 				.filter(group -> group.getStartPosition() != null && group.getEndPosition() != null)
 				.sorted(Comparator.comparing(OrchidGroup::getStartPosition).thenComparing(OrchidGroup::getSortOrder))
@@ -74,7 +76,8 @@ public class OrchidPlacementPolicy {
 	}
 
 	private void validateNoOverlap(BedZone bedZone, BigDecimal startPosition, BigDecimal endPosition, Long excludeOrchidGroupId) {
-		for (OrchidGroup group : orchidGroupRepository.findByBedZoneIdOrderBySortOrderAsc(bedZone.getId())) {
+		for (OrchidGroup group :
+				orchidGroupRepository.findByBedZoneIdAndQuantityGreaterThanOrderBySortOrderAsc(bedZone.getId(), 0)) {
 			if (excludeOrchidGroupId != null && excludeOrchidGroupId.equals(group.getId())) {
 				continue;
 			}
