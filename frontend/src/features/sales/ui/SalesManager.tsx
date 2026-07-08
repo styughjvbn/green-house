@@ -1,8 +1,7 @@
 "use client";
 
 import type { FormEvent } from "react";
-import { useEffect, useState } from "react";
-import { usePathname, useRouter, useSearchParams } from "next/navigation";
+import { useState } from "react";
 import type {
   AuctionLotPage,
   AuctionTrackingSummary,
@@ -35,31 +34,9 @@ export function SalesManager({
     initialShowCreateSlip,
   );
   const [showCreatePartner, setShowCreatePartner] = useState(false);
-  const router = useRouter();
-  const pathname = usePathname();
-  const searchParams = useSearchParams();
-  const createSlip = searchParams.get("createSlip") === "1";
-
-  useEffect(() => {
-    sales.setShowCreateSlip(createSlip);
-  }, [createSlip, sales]);
-
-  function updateCreateSlip(nextOpen: boolean) {
-    const params = new URLSearchParams(searchParams.toString());
-    params.set("tab", "SLIPS");
-    if (nextOpen) {
-      params.set("createSlip", "1");
-    } else {
-      params.delete("createSlip");
-    }
-    router.replace(`${pathname}?${params.toString()}`);
-  }
 
   async function handleCreateSalesSlip(event: FormEvent<HTMLFormElement>) {
-    const created = await sales.handleCreateSalesSlip(event);
-    if (created) {
-      updateCreateSlip(false);
-    }
+    await sales.handleCreateSalesSlip(event);
   }
 
   async function handleCreateBusinessPartner(
@@ -78,12 +55,10 @@ export function SalesManager({
     } else {
       sales.cancelSalesSlipEditing();
     }
-    updateCreateSlip(nextOpen);
   }
 
   function handleEditSalesSlip(salesSlipId: number) {
     sales.startEditSalesSlip(salesSlipId);
-    updateCreateSlip(true);
   }
 
   const auctionPage = initialAuctionPage ?? createEmptyAuctionPage();
@@ -115,7 +90,6 @@ export function SalesManager({
               onAllocationRemove={sales.removeAllocation}
               onCancel={() => {
                 sales.cancelSalesSlipEditing();
-                updateCreateSlip(false);
               }}
               onChange={sales.updateSalesForm}
               onRemoveItem={sales.removeSalesItem}
