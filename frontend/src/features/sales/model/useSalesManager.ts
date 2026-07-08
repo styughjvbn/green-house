@@ -8,6 +8,7 @@ import {
   changeSalesSlipStatus,
   createBusinessPartner,
   createSalesSlip,
+  updateSalesSlip as requestUpdateSalesSlip,
 } from "../api/salesApi";
 import {
   calculateSalesTotal,
@@ -19,6 +20,7 @@ import {
   filterBusinessPartners,
   filterSalesSlips,
   resetSalesSlipFormAfterSave,
+  toSalesSlipForm,
   toCreateBusinessPartnerPayload,
   toCreateSalesSlipPayload,
 } from "../lib/salesForm";
@@ -55,6 +57,7 @@ export function useSalesManager(
       createInitialBusinessPartnerFilters(),
     );
   const [showCreateSlip, setShowCreateSlip] = useState(false);
+  const [editingSlipId, setEditingSlipId] = useState<number | null>(null);
   const [selectedSlipId, setSelectedSlipId] = useState<number | null>(
     initialSalesSlips[0]?.id ?? null,
   );
@@ -293,13 +296,22 @@ export function useSalesManager(
     setErrorMessage(null);
 
     try {
-      const salesSlip = await createSalesSlip(
-        toCreateSalesSlipPayload(salesForm),
+      const payload = toCreateSalesSlipPayload(salesForm);
+      const salesSlip =
+        editingSlipId == null
+          ? await createSalesSlip(payload)
+          : await requestUpdateSalesSlip(editingSlipId, payload);
+      setSalesSlips((current) =>
+        editingSlipId == null
+          ? [salesSlip, ...current]
+          : current.map((item) =>
+              item.id === salesSlip.id ? salesSlip : item,
+            ),
       );
-      setSalesSlips((current) => [salesSlip, ...current]);
       setSelectedSlipId(salesSlip.id);
       setShowCreateSlip(false);
       setSalesForm((current) => resetSalesSlipFormAfterSave(current));
+      setEditingSlipId(null);
       return true;
     } catch (error) {
       setErrorMessage(
@@ -309,6 +321,35 @@ export function useSalesManager(
     } finally {
       setSavingSlip(false);
     }
+  }
+
+  function startCreateSalesSlip() {
+    setEditingSlipId(null);
+    setErrorMessage(null);
+    setShowCreateSlip((current) => {
+      const next = !current;
+      if (next) {
+        setSalesForm(createInitialSalesForm(partners));
+      }
+      return next;
+    });
+  }
+
+  function startEditSalesSlip(salesSlipId: number) {
+    const salesSlip = salesSlips.find((item) => item.id === salesSlipId);
+    if (!salesSlip) return;
+    setEditingSlipId(salesSlipId);
+    setSelectedSlipId(salesSlipId);
+    setSalesForm(toSalesSlipForm(salesSlip));
+    setShowCreateSlip(true);
+    setErrorMessage(null);
+  }
+
+  function cancelSalesSlipEditing() {
+    setEditingSlipId(null);
+    setShowCreateSlip(false);
+    setSalesForm(createInitialSalesForm(partners));
+    setErrorMessage(null);
   }
 
   async function handleCompleteSalesSlip(salesSlipId: number) {
@@ -352,6 +393,7 @@ export function useSalesManager(
     partnerFilters,
     salesForm,
     showCreateSlip,
+    editingSlipId,
     savingBusinessPartner,
     savingSlip,
     updatingSlipStatus,
@@ -366,6 +408,9 @@ export function useSalesManager(
     selectSalesType,
     setActiveTab,
     setShowCreateSlip,
+    startCreateSalesSlip,
+    startEditSalesSlip,
+    cancelSalesSlipEditing,
     resetFilters,
     resetPartnerFilters,
     updateAllocation,

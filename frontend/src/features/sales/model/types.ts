@@ -54,6 +54,8 @@ export type SalesSlipForm = {
   items: SalesItemForm[];
 };
 
+export type SalesSlipFormMode = "create" | "edit";
+
 export type CreateBusinessPartnerPayload = {
   name: string;
   partnerType: PartnerType;

@@ -215,3 +215,32 @@ export function resetSalesSlipFormAfterSave(
     items: [createEmptySalesItem()],
   };
 }
+
+export function toSalesSlipForm(salesSlip: SalesSlip): SalesSlipForm {
+  return {
+    salesType: salesSlip.salesType,
+    saleDate: salesSlip.saleDate,
+    partnerId: String(salesSlip.partner.id),
+    paymentStatus: salesSlip.paymentStatus,
+    salesStatus: salesSlip.salesStatus,
+    paymentMethod: salesSlip.paymentMethod ?? "",
+    memo: salesSlip.memo ?? "",
+    items: salesSlip.items.map((item) => ({
+      itemName: item.itemName,
+      genus: item.genus ?? "",
+      spec: item.spec ?? "",
+      quantity: String(item.quantity),
+      unitPrice: String(item.unitPrice),
+      memo: item.memo ?? "",
+      allocations: item.allocations.map((allocation) => ({
+        orchidGroupId: String(allocation.orchidGroupId),
+        varietyName: allocation.varietyName,
+        genus: item.genus ?? "",
+        locationLabel: `${allocation.houseNumber}동 ${allocation.physicalBedNumber}배드 ${allocation.bedZoneName}`,
+        availableQuantity:
+          allocation.availableQuantity + allocation.allocatedQuantity,
+        quantity: String(allocation.allocatedQuantity),
+      })),
+    })),
+  };
+}

@@ -89,12 +89,14 @@ export function SalesManager({
               partners={sales.partners}
               errorMessage={sales.errorMessage}
               form={sales.salesForm}
+              mode={sales.editingSlipId == null ? "create" : "edit"}
               saving={sales.savingSlip}
               totalAmount={sales.totalAmount}
               onAddAllocation={sales.addAllocation}
               onAddItem={sales.addSalesItem}
               onAllocationChange={sales.updateAllocation}
               onAllocationRemove={sales.removeAllocation}
+              onCancel={sales.cancelSalesSlipEditing}
               onChange={sales.updateSalesForm}
               onRemoveItem={sales.removeSalesItem}
               onSubmit={handleCreateSalesSlip}
@@ -108,11 +110,12 @@ export function SalesManager({
               salesSlips={sales.filteredSalesSlips}
               selectedSalesSlipId={sales.selectedSalesSlip?.id ?? null}
               onSelect={sales.selectSalesSlip}
-              onCreateSalesSlip={() => updateCreateSlip(!sales.showCreateSlip)}
+              onCreateSalesSlip={sales.startCreateSalesSlip}
             />
             <SalesSlipDetail
               salesSlip={sales.selectedSalesSlip}
               updatingSalesStatus={sales.updatingSlipStatus}
+              onEditSalesSlip={sales.startEditSalesSlip}
               onCompleteSalesSlip={sales.handleCompleteSalesSlip}
               onPaymentConfirmed={sales.updateSalesSlip}
             />

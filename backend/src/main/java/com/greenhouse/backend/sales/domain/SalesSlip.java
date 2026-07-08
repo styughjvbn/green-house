@@ -109,6 +109,29 @@ public class SalesSlip extends BaseEntity {
 		recalculateAmounts();
 	}
 
+	public void replaceItems(List<SalesSlipItem> items) {
+		this.items.clear();
+		items.forEach(this::addItem);
+		recalculateAmounts();
+	}
+
+	public void refreshAmounts() {
+		recalculateAmounts();
+	}
+
+	public void updateDraftInfo(
+			LocalDate saleDate,
+			BusinessPartner partner,
+			String paymentStatus,
+			String paymentMethod,
+			String memo) {
+		this.saleDate = saleDate;
+		this.partner = partner;
+		this.paymentStatus = paymentStatus;
+		this.paymentMethod = paymentMethod;
+		this.memo = memo;
+	}
+
 	public void updateExpectedPaymentDate(LocalDate expectedPaymentDate) {
 		this.expectedPaymentDate = expectedPaymentDate;
 	}

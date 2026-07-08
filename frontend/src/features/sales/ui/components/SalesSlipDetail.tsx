@@ -2,7 +2,7 @@
 
 import type { ReactNode } from "react";
 import Link from "next/link";
-import { Copy, Printer, Truck } from "lucide-react";
+import { Copy, Pencil, Printer, Truck } from "lucide-react";
 import type { SalesSlip } from "@/entities/farm/types";
 import { confirmSalesSlipPayment } from "../../api/salesApi";
 import { ManualPaymentPanel } from "./ManualPaymentPanel";
@@ -10,11 +10,13 @@ import { ManualPaymentPanel } from "./ManualPaymentPanel";
 export function SalesSlipDetail({
   salesSlip,
   updatingSalesStatus,
+  onEditSalesSlip,
   onCompleteSalesSlip,
   onPaymentConfirmed,
 }: {
   salesSlip: SalesSlip | null;
   updatingSalesStatus: boolean;
+  onEditSalesSlip: (salesSlipId: number) => void;
   onCompleteSalesSlip: (salesSlipId: number) => Promise<void>;
   onPaymentConfirmed: (salesSlip: SalesSlip) => void;
 }) {
@@ -31,12 +33,30 @@ export function SalesSlipDetail({
   const canComplete =
     salesSlip.salesStatus !== "출고 완료" &&
     salesSlip.salesStatus !== "출하 완료";
+  const canEdit =
+    salesSlip.salesType === "DIRECT" &&
+    salesSlip.salesStatus === "작성중" &&
+    salesSlip.paidAmount === 0;
 
   return (
     <section className="min-w-0 rounded-md border border-[#dfe5dc] bg-white p-4 shadow-sm">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <h2 className="text-xl font-bold text-[#17251b]">전표 상세</h2>
         <div className="flex flex-wrap gap-2">
+          {canEdit ? (
+            <button
+              className="inline-flex h-9 items-center gap-2 rounded-md border border-[#dfe5dc] bg-white px-3 text-sm font-semibold text-[#344138]"
+              type="button"
+              onClick={() => onEditSalesSlip(salesSlip.id)}
+            >
+              <Pencil
+                className="h-4 w-4"
+                strokeWidth={1.8}
+                aria-hidden="true"
+              />
+              전표 수정
+            </button>
+          ) : null}
           {canComplete ? (
             <button
               className="inline-flex h-9 items-center gap-2 rounded-md bg-[#159447] px-3 text-sm font-semibold text-white disabled:opacity-60"

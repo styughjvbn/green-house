@@ -84,4 +84,25 @@ public class SalesSlipItem {
 		allocation.setSalesSlipItem(this);
 		this.allocations.add(allocation);
 	}
+
+	public void updateDetails(
+			String itemName,
+			String genus,
+			String spec,
+			Integer quantity,
+			Integer unitPrice,
+			String memo) {
+		this.itemName = itemName;
+		this.genus = genus;
+		this.spec = spec;
+		this.quantity = quantity;
+		this.unitPrice = unitPrice;
+		this.amount = quantity * unitPrice;
+		this.memo = memo;
+	}
+
+	public void replaceAllocations(List<SalesSlipItemAllocation> allocations) {
+		this.allocations.clear();
+		allocations.forEach(this::addAllocation);
+	}
 }

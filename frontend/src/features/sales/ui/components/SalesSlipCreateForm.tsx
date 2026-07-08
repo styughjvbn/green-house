@@ -7,6 +7,7 @@ import type {
   SalesAllocationForm,
   SalesItemForm,
   SalesSlipForm,
+  SalesSlipFormMode,
 } from "../../model/types";
 import { SelectField, TextField } from "./FormFields";
 import { SalesSlipItemEditor } from "./SalesSlipItemEditor";
@@ -15,12 +16,14 @@ export function SalesSlipCreateForm({
   partners,
   errorMessage,
   form,
+  mode,
   saving,
   totalAmount,
   onAddItem,
   onAddAllocation,
   onAllocationChange,
   onAllocationRemove,
+  onCancel,
   onChange,
   onRemoveItem,
   onSubmit,
@@ -30,6 +33,7 @@ export function SalesSlipCreateForm({
   partners: BusinessPartner[];
   errorMessage: string | null;
   form: SalesSlipForm;
+  mode: SalesSlipFormMode;
   saving: boolean;
   totalAmount: number;
   onAddItem: () => void;
@@ -41,6 +45,7 @@ export function SalesSlipCreateForm({
     value: string,
   ) => void;
   onAllocationRemove: (index: number, allocationIndex: number) => void;
+  onCancel: () => void;
   onChange: <K extends keyof SalesSlipForm>(
     field: K,
     value: SalesSlipForm[K],
@@ -69,7 +74,9 @@ export function SalesSlipCreateForm({
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <p className="text-sm font-semibold text-[#3d6f91]">판매 전표</p>
-          <h2 className="mt-1 text-xl font-semibold">새 판매 전표</h2>
+          <h2 className="mt-1 text-xl font-semibold">
+            {mode === "edit" ? "판매 전표 수정" : "새 판매 전표"}
+          </h2>
         </div>
         <div className="rounded-md bg-[#eef7ec] px-3 py-2 text-sm font-semibold text-[#246b38]">
           합계 {totalAmount.toLocaleString()}원
@@ -79,11 +86,13 @@ export function SalesSlipCreateForm({
       <div className="mt-4 flex w-fit rounded-md border border-[#cfd8cc] bg-[#f6f8f5] p-1">
         <TypeButton
           active={form.salesType === "DIRECT"}
+          disabled={mode === "edit"}
           label="일반 판매"
           onClick={() => onSalesTypeChange("DIRECT")}
         />
         <TypeButton
           active={form.salesType === "AUCTION"}
+          disabled={mode === "edit"}
           label="경매 판매"
           onClick={() => onSalesTypeChange("AUCTION")}
         />
@@ -114,6 +123,7 @@ export function SalesSlipCreateForm({
         </SelectField>
         <SelectField
           label="입금 상태"
+          disabled={mode === "edit"}
           value={form.paymentStatus}
           onChange={(value) => onChange("paymentStatus", value)}
         >
@@ -132,6 +142,7 @@ export function SalesSlipCreateForm({
         </SelectField>
         <SelectField
           label="판매 상태"
+          disabled
           value={form.salesStatus}
           onChange={(value) => onChange("salesStatus", value)}
         >
@@ -199,10 +210,21 @@ export function SalesSlipCreateForm({
         >
           {saving
             ? "저장 중"
-            : form.salesType === "AUCTION"
-              ? "경매 출하 전표 저장"
-              : "판매 전표 저장"}
+            : mode === "edit"
+              ? "판매 전표 수정"
+              : form.salesType === "AUCTION"
+                ? "경매 출하 전표 저장"
+                : "판매 전표 저장"}
         </button>
+        {mode === "edit" ? (
+          <button
+            className="rounded-md border border-[#d7ddd4] px-4 py-2 text-sm font-semibold"
+            onClick={onCancel}
+            type="button"
+          >
+            취소
+          </button>
+        ) : null}
       </div>
 
       {errorMessage ? (
@@ -216,10 +238,12 @@ export function SalesSlipCreateForm({
 
 function TypeButton({
   active,
+  disabled = false,
   label,
   onClick,
 }: {
   active: boolean;
+  disabled?: boolean;
   label: string;
   onClick: () => void;
 }) {
@@ -227,7 +251,8 @@ function TypeButton({
     <button
       className={`h-8 rounded px-4 text-sm font-bold ${
         active ? "bg-[#159447] text-white shadow-sm" : "text-[#526158]"
-      }`}
+      } disabled:cursor-not-allowed disabled:opacity-60`}
+      disabled={disabled}
       type="button"
       onClick={onClick}
     >

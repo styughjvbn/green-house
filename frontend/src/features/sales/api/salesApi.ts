@@ -60,6 +60,21 @@ export function getSalesSlips() {
   return fetchApi<SalesSlip[]>("/sales-slips");
 }
 
+export function updateSalesSlip(
+  salesSlipId: number,
+  payload: CreateSalesSlipPayload,
+) {
+  return requestJson<SalesSlip>(
+    `/sales-slips/${salesSlipId}`,
+    {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    },
+    "판매 전표를 수정하지 못했습니다.",
+  );
+}
+
 export function searchSalesOrchidGroups(keyword: string, varietyId?: number) {
   const params = new URLSearchParams();
   if (keyword.trim()) params.set("keyword", keyword.trim());

@@ -7,6 +7,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -1458,5 +1459,136 @@ class BackendApplicationTests {
 						"""))
 				.andExpect(status().isBadRequest())
 				.andExpect(jsonPath("$.error.code").value("VALIDATION_ERROR"));
+	}
+
+	@Test
+	void updatesDraftDirectSalesSlipAndRecalculatesReservations() throws Exception {
+		var groups = orchidGroupRepository.findAll().stream()
+				.filter(group -> group.getVariety() != null)
+				.limit(3)
+				.toList();
+		var firstGroup = orchidGroupRepository.findById(groups.get(0).getId()).orElseThrow();
+		var secondGroup = orchidGroupRepository.findById(groups.get(1).getId()).orElseThrow();
+		var thirdGroup = orchidGroupRepository.findById(groups.get(2).getId()).orElseThrow();
+		var firstReservedBefore = firstGroup.getReservedQuantity();
+		var secondReservedBefore = secondGroup.getReservedQuantity();
+		var thirdReservedBefore = thirdGroup.getReservedQuantity();
+		var partnerResult = mockMvc.perform(post("/api/business-partners")
+				.contentType(MediaType.APPLICATION_JSON)
+				.content("""
+						{
+						  "name": "Update Test Partner",
+						  "partnerType": "WHOLESALE"
+						}
+						"""))
+				.andExpect(status().isCreated())
+				.andReturn();
+		var partnerId = Long
+				.valueOf(partnerResult.getResponse().getContentAsString().replaceAll(".*\\\"id\\\":(\\d+).*", "$1"));
+
+		var createResult = mockMvc.perform(post("/api/sales-slips")
+				.contentType(MediaType.APPLICATION_JSON)
+				.content("""
+						{
+						  "saleDate": "2026-07-08",
+						  "partnerId": %d,
+						  "items": [
+						    {
+						      "itemName": "%s",
+						      "genus": "%s",
+						      "quantity": 2,
+						      "unitPrice": 1000,
+						      "allocations": [
+						        {
+						          "orchidGroupId": %d,
+						          "quantity": 2
+						        }
+						      ]
+						    },
+						    {
+						      "itemName": "%s",
+						      "genus": "%s",
+						      "quantity": 3,
+						      "unitPrice": 2000,
+						      "allocations": [
+						        {
+						          "orchidGroupId": %d,
+						          "quantity": 3
+						        }
+						      ]
+						    }
+						  ]
+						}
+						""".formatted(
+								partnerId,
+								firstGroup.getVarietyName(),
+								firstGroup.getGenus(),
+								firstGroup.getId(),
+								secondGroup.getVarietyName(),
+								secondGroup.getGenus(),
+								secondGroup.getId())))
+				.andExpect(status().isCreated())
+				.andReturn();
+		var salesSlipId = Long
+				.valueOf(createResult.getResponse().getContentAsString().replaceFirst(".*?\\\"id\\\":(\\d+).*", "$1"));
+
+		assertThat(orchidGroupRepository.findById(firstGroup.getId()).orElseThrow().getReservedQuantity())
+				.isEqualTo(firstReservedBefore + 2);
+		assertThat(orchidGroupRepository.findById(secondGroup.getId()).orElseThrow().getReservedQuantity())
+				.isEqualTo(secondReservedBefore + 3);
+
+		mockMvc.perform(put("/api/sales-slips/{salesSlipId}", salesSlipId)
+				.contentType(MediaType.APPLICATION_JSON)
+				.content("""
+						{
+						  "saleDate": "2026-07-09",
+						  "partnerId": %d,
+						  "items": [
+						    {
+						      "itemName": "%s",
+						      "genus": "%s",
+						      "quantity": 1,
+						      "unitPrice": 3000,
+						      "allocations": [
+						        {
+						          "orchidGroupId": %d,
+						          "quantity": 1
+						        }
+						      ]
+						    },
+						    {
+						      "itemName": "%s",
+						      "genus": "%s",
+						      "quantity": 4,
+						      "unitPrice": 1500,
+						      "allocations": [
+						        {
+						          "orchidGroupId": %d,
+						          "quantity": 4
+						        }
+						      ]
+						    }
+						  ]
+						}
+						""".formatted(
+								partnerId,
+								firstGroup.getVarietyName(),
+								firstGroup.getGenus(),
+								firstGroup.getId(),
+								thirdGroup.getVarietyName(),
+								thirdGroup.getGenus(),
+								thirdGroup.getId())))
+				.andExpect(status().isOk())
+				.andExpect(jsonPath("$.data.saleDate").value("2026-07-09"))
+				.andExpect(jsonPath("$.data.totalAmount").value(9000))
+				.andExpect(jsonPath("$.data.items[0].allocations[0].orchidGroupId").value(firstGroup.getId()))
+				.andExpect(jsonPath("$.data.items[1].allocations[0].orchidGroupId").value(thirdGroup.getId()));
+
+		assertThat(orchidGroupRepository.findById(firstGroup.getId()).orElseThrow().getReservedQuantity())
+				.isEqualTo(firstReservedBefore + 1);
+		assertThat(orchidGroupRepository.findById(secondGroup.getId()).orElseThrow().getReservedQuantity())
+				.isEqualTo(secondReservedBefore);
+		assertThat(orchidGroupRepository.findById(thirdGroup.getId()).orElseThrow().getReservedQuantity())
+				.isEqualTo(thirdReservedBefore + 4);
 	}
 }
