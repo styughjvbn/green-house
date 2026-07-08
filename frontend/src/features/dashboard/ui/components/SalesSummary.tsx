@@ -1,5 +1,5 @@
-﻿import Link from "next/link";
-import type { SalesSlip } from "@/entities/farm/types";
+import Link from "next/link";
+import type { AnalyticsSlipSummary } from "@/features/analytics/model/types";
 import { getPaymentStatusLabel } from "../../lib/dashboardView";
 import { DashboardMetric, DashboardPanel } from "./DashboardPanel";
 
@@ -8,7 +8,7 @@ export function SalesSummary({
   totalAmount,
   unpaidCount,
 }: {
-  salesSlips: SalesSlip[];
+  salesSlips: AnalyticsSlipSummary[];
   totalAmount: number;
   unpaidCount: number;
 }) {
@@ -43,12 +43,16 @@ export function SalesSummary({
             <span className="font-semibold text-[#344138]">
               {slip.slipNumber}
             </span>
-            <span className="truncate text-[#5c6a60]">{slip.partner.name}</span>
+            <span className="truncate text-[#5c6a60]">{slip.partnerName}</span>
             <span className="text-right font-bold">
               {slip.totalAmount.toLocaleString()}원
             </span>
             <span
-              className={`rounded-md px-2 py-1 text-center text-xs font-bold ${slip.paymentStatus === "미입금" ? "bg-[#fff1d6] text-[#d88400]" : "bg-[#e7f7e8] text-[#16853b]"}`}
+              className={`rounded-md px-2 py-1 text-center text-xs font-bold ${
+                slip.paymentStatus === "미입금"
+                  ? "bg-[#fff1d6] text-[#d88400]"
+                  : "bg-[#e7f7e8] text-[#16853b]"
+              }`}
             >
               {getPaymentStatusLabel(slip)}
             </span>

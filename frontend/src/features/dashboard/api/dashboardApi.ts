@@ -1,23 +1,25 @@
 import type {
   DashboardSummary,
   FarmStatusMapData,
-  SalesSlip,
-  WorkRecord,
 } from "@/entities/farm/types";
+import type {
+  SalesAnalyticsData,
+  WorkAnalyticsData,
+} from "@/features/analytics/model/types";
 import { fetchApi } from "@/shared/api/client";
 
 export async function getDashboardData() {
-  const [summary, mapData, workRecords, salesSlips] = await Promise.all([
+  const [summary, mapData, salesAnalytics, workAnalytics] = await Promise.all([
     fetchApi<DashboardSummary>("/dashboard/summary"),
     fetchApi<FarmStatusMapData>("/farm-status/map"),
-    fetchApi<WorkRecord[]>("/work-records"),
-    fetchApi<SalesSlip[]>("/sales-slips"),
+    fetchApi<SalesAnalyticsData>("/analytics/sales"),
+    fetchApi<WorkAnalyticsData>("/analytics/work"),
   ]);
 
   return {
     mapData,
-    salesSlips,
+    salesAnalytics,
     summary,
-    workRecords,
+    workAnalytics,
   };
 }

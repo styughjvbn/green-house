@@ -1,22 +1,22 @@
-import type { SalesSlip, WorkRecord } from "@/entities/farm/types";
+import type { WorkRecord } from "@/entities/farm/types";
+import type { AnalyticsSlipSummary } from "@/features/analytics/model/types";
 import type { DashboardPageProps, DashboardTone } from "../model/types";
 
 export function createDashboardViewModel({
   mapData,
-  salesSlips,
+  salesAnalytics,
   summary,
-  workRecords,
+  workAnalytics,
 }: DashboardPageProps) {
   const warningHouses = mapData.houses.filter(
     (house) => house.warningCount > 0,
   );
 
   return {
-    recentSalesSlips: salesSlips.slice(0, 5),
-    recentWorkRecords: workRecords.slice(0, 5),
-    salesTotal: salesSlips.reduce((sum, slip) => sum + slip.totalAmount, 0),
-    unpaidCount: salesSlips.filter((slip) => slip.paymentStatus === "미입금")
-      .length,
+    recentSalesSlips: salesAnalytics.recentSlips.slice(0, 5),
+    recentWorkRecords: workAnalytics.recentRecords.slice(0, 5),
+    salesTotal: salesAnalytics.currentMonthSales,
+    unpaidCount: salesAnalytics.unpaidSlips.length,
     warningHouses,
     summaryCards: {
       houses: [
@@ -53,16 +53,12 @@ export function createDashboardViewModel({
 export type SummaryDetail = Array<[string, number, DashboardTone]>;
 
 export function getHouseTone(warningCount: number): DashboardTone {
-  if (warningCount > 1) {
-    return "red";
-  }
-  if (warningCount > 0) {
-    return "orange";
-  }
+  if (warningCount > 1) return "red";
+  if (warningCount > 0) return "orange";
   return "green";
 }
 
-export function getPaymentStatusLabel(slip: SalesSlip) {
+export function getPaymentStatusLabel(slip: AnalyticsSlipSummary) {
   return slip.paymentStatus === "미입금" ? "미입금" : "입금";
 }
 

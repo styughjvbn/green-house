@@ -1,15 +1,17 @@
 import type {
   DashboardSummary,
   FarmStatusMapData,
-  SalesSlip,
-  WorkRecord,
 } from "@/entities/farm/types";
+import type {
+  SalesAnalyticsData,
+  WorkAnalyticsData,
+} from "@/features/analytics/model/types";
 
 export type DashboardPageProps = {
   mapData: FarmStatusMapData;
-  salesSlips: SalesSlip[];
+  salesAnalytics: SalesAnalyticsData;
   summary: DashboardSummary;
-  workRecords: WorkRecord[];
+  workAnalytics: WorkAnalyticsData;
 };
 
 export type DashboardTone = "green" | "orange" | "red";
