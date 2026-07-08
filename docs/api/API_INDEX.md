@@ -146,6 +146,7 @@
 | Method | Path | Operation | Request | Response |
 |---|---|---|---|---|
 | `GET` | `/api/sales-slips` | `getSalesSlips` | `-` | `200:ApiResponseListSalesSlipResponse` |
+| `GET` | `/api/sales-slips/page` | `getSalesSlipPage` | `-` | `200:ApiResponseSalesSlipPageResponse` |
 | `POST` | `/api/sales-slips` | `createSalesSlip` | `SalesSlipCreateRequest` | `201:ApiResponseSalesSlipResponse` |
 | `GET` | `/api/sales-slips/auction-shipments` | `getAuctionShipmentOptions` | `-` | `200:ApiResponseListAuctionShipmentOptionResponse` |
 | `GET` | `/api/sales-slips/{salesSlipId}` | `getSalesSlip` | `-` | `200:ApiResponseSalesSlipResponse` |

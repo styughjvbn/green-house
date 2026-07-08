@@ -94,6 +94,65 @@ paths:
             "*/*":
               schema:
                 $ref: "#/components/schemas/ApiResponseSalesSlipResponse"
+  /api/sales-slips/page:
+    get:
+      tags: [sales-controller]
+      operationId: getSalesSlipPage
+      parameters:
+        - name: partnerId
+          in: query
+          required: false
+          schema:
+            type: integer
+            format: int64
+        - name: from
+          in: query
+          required: false
+          schema:
+            type: string
+            format: date
+        - name: to
+          in: query
+          required: false
+          schema:
+            type: string
+            format: date
+        - name: paymentStatus
+          in: query
+          required: false
+          schema:
+            type: string
+        - name: salesStatus
+          in: query
+          required: false
+          schema:
+            type: string
+        - name: keyword
+          in: query
+          required: false
+          schema:
+            type: string
+        - name: page
+          in: query
+          required: false
+          schema:
+            type: integer
+            format: int32
+            default: 0
+        - name: size
+          in: query
+          required: false
+          schema:
+            type: integer
+            format: int32
+            default: 10
+      responses:
+        "200":
+          description: OK
+          content:
+            "*/*":
+              schema:
+                $ref: "#/components/schemas/ApiResponseSalesSlipPageResponse"
   /api/sales-slips/{salesSlipId}/print:
     get:
       tags: [sales-controller]
@@ -236,6 +295,14 @@ components:
       properties:
         data:
           $ref: "#/components/schemas/SalesSlipResponse"
+        message:
+          type: string
+          nullable: true
+    ApiResponseSalesSlipPageResponse:
+      type: object
+      properties:
+        data:
+          $ref: "#/components/schemas/SalesSlipPageResponse"
         message:
           type: string
           nullable: true
@@ -556,6 +623,71 @@ components:
           type: array
           items:
             $ref: "#/components/schemas/SalesSlipItemResponse"
+    SalesSlipListItemResponse:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: int64
+        slipNumber:
+          type: string
+        saleDate:
+          type: string
+          format: date
+        salesType:
+          type: string
+          enum: [DIRECT, AUCTION]
+        auctionShipmentId:
+          type: integer
+          format: int64
+          nullable: true
+        auctionMarket:
+          type: string
+          nullable: true
+        partner:
+          $ref: "#/components/schemas/BusinessPartnerResponse"
+        totalAmount:
+          type: integer
+          format: int32
+        expectedPaymentDate:
+          type: string
+          format: date
+          nullable: true
+        paidAmount:
+          type: integer
+          format: int64
+        remainingAmount:
+          type: integer
+          format: int64
+        paymentStatus:
+          type: string
+        salesStatus:
+          type: string
+        paymentMethod:
+          type: string
+          nullable: true
+        memo:
+          type: string
+          nullable: true
+    SalesSlipPageResponse:
+      type: object
+      properties:
+        content:
+          type: array
+          items:
+            $ref: "#/components/schemas/SalesSlipListItemResponse"
+        page:
+          type: integer
+          format: int32
+        size:
+          type: integer
+          format: int32
+        totalElements:
+          type: integer
+          format: int64
+        totalPages:
+          type: integer
+          format: int32
     SalesSlipStatusUpdateRequest:
       type: object
       properties:

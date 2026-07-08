@@ -10,6 +10,7 @@ import com.greenhouse.backend.sales.application.SalesSlipUpdateService;
 import com.greenhouse.backend.sales.dto.AuctionShipmentOptionResponse;
 import com.greenhouse.backend.sales.dto.SalesOrchidGroupSearchResponse;
 import com.greenhouse.backend.sales.dto.SalesSlipCreateRequest;
+import com.greenhouse.backend.sales.dto.SalesSlipPageResponse;
 import com.greenhouse.backend.sales.dto.SalesSlipResponse;
 import com.greenhouse.backend.sales.dto.SalesSlipStatusUpdateRequest;
 import com.greenhouse.backend.settlement.dto.ManualPaymentRequest;
@@ -47,6 +48,20 @@ public class SalesController {
 			@RequestParam(required = false) LocalDate from,
 			@RequestParam(required = false) LocalDate to) {
 		return ApiResponse.ok(salesQueryService.getSalesSlips(partnerId, from, to));
+	}
+
+	@GetMapping("/sales-slips/page")
+	public ApiResponse<SalesSlipPageResponse> getSalesSlipPage(
+			@RequestParam(required = false) Long partnerId,
+			@RequestParam(required = false) LocalDate from,
+			@RequestParam(required = false) LocalDate to,
+			@RequestParam(required = false) String paymentStatus,
+			@RequestParam(required = false) String salesStatus,
+			@RequestParam(required = false) String keyword,
+			@RequestParam(defaultValue = "0") int page,
+			@RequestParam(defaultValue = "10") int size) {
+		return ApiResponse.ok(salesQueryService.getSalesSlipPage(
+				partnerId, from, to, paymentStatus, salesStatus, keyword, page, size));
 	}
 
 	@GetMapping("/sales-slips/{salesSlipId}")
