@@ -1,11 +1,24 @@
-﻿import Link from "next/link";
+"use client";
+
+import { useMemo, useState } from "react";
+import Link from "next/link";
 import type { SalesSlip } from "@/entities/farm/types";
+import { PaginationControls } from "@/shared/ui/PaginationControls";
 
 type PrintPageProps = {
   salesSlips: SalesSlip[];
 };
 
 export function PrintPage({ salesSlips }: PrintPageProps) {
+  const [page, setPage] = useState(0);
+  const [pageSize, setPageSize] = useState(10);
+  const totalPages = Math.max(1, Math.ceil(salesSlips.length / pageSize));
+  const visiblePage = Math.min(page, totalPages - 1);
+  const paginatedSalesSlips = useMemo(() => {
+    const start = visiblePage * pageSize;
+    return salesSlips.slice(start, start + pageSize);
+  }, [pageSize, salesSlips, visiblePage]);
+
   return (
     <main className="space-y-5">
       <section className="rounded-md border border-[#d7ddd4] bg-white p-4 shadow-sm">
@@ -27,7 +40,7 @@ export function PrintPage({ salesSlips }: PrintPageProps) {
               </tr>
             </thead>
             <tbody>
-              {salesSlips.map((slip) => (
+              {paginatedSalesSlips.map((slip) => (
                 <tr key={slip.id} className="bg-[#f8faf7]">
                   <td className="rounded-l-md px-3 py-3 font-semibold">
                     {slip.slipNumber}
@@ -47,7 +60,7 @@ export function PrintPage({ salesSlips }: PrintPageProps) {
                   </td>
                 </tr>
               ))}
-              {salesSlips.length === 0 ? (
+              {paginatedSalesSlips.length === 0 ? (
                 <tr>
                   <td
                     className="rounded-md bg-[#f8faf7] px-3 py-8 text-center text-[#5c6a60]"
@@ -60,6 +73,21 @@ export function PrintPage({ salesSlips }: PrintPageProps) {
               ) : null}
             </tbody>
           </table>
+        </div>
+        <div className="mt-4">
+          <PaginationControls
+            nextLabel="다음"
+            pageCount={totalPages}
+            pageIndex={visiblePage}
+            pageSize={pageSize}
+            pageSizeOptions={[10, 20, 50]}
+            previousLabel="이전"
+            onPageChange={setPage}
+            onPageSizeChange={(nextPageSize) => {
+              setPageSize(nextPageSize);
+              setPage(0);
+            }}
+          />
         </div>
       </section>
     </main>
