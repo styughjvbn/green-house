@@ -367,7 +367,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           description={currentPage.description}
         />
 
-        <main className="app-content px-5 py-6 md:px-8 lg:px-6">
+        <main className="app-content px-4 py-4 md:px-8 lg:px-6">
           {children}
         </main>
       </div>

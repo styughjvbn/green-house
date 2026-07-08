@@ -95,7 +95,7 @@ function SummaryCard({
   const color = toneText(accent);
 
   return (
-    <div className="min-h-20 rounded-lg border border-[#dfe5dc] bg-white p-4 shadow-sm">
+    <div className="min-h-20 rounded-lg border border-[#dfe5dc] bg-white p-3 shadow-sm">
       <div className="flex items-start justify-between gap-3">
         <div>
           <p className="text-sm font-semibold text-[#435047]">{label}</p>
