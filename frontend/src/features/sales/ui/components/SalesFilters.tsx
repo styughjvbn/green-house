@@ -61,8 +61,9 @@ export function SalesFilters({
         >
           <option value="">전체</option>
           <option value="작성중">작성중</option>
-          <option value="판매 확정">판매 확정</option>
+          <option value="출하 완료">출하 완료</option>
           <option value="출고 완료">출고 완료</option>
+          <option value="취소">취소</option>
         </FilterSelect>
 
         <FilterSelect

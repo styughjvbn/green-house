@@ -132,6 +132,7 @@ export function SalesManager({
             <SalesSlipDetail
               salesSlip={sales.selectedSalesSlip}
               updatingSalesStatus={sales.updatingSlipStatus}
+              onCancelSalesSlip={sales.handleCancelSalesSlip}
               onEditSalesSlip={handleEditSalesSlip}
               onCompleteSalesSlip={sales.handleCompleteSalesSlip}
               onPaymentConfirmed={sales.updateSalesSlip}

@@ -117,11 +117,18 @@ export function SalesSlipList({
 
 function StatusBadge({ value }: { value: string }) {
   const tone =
-    value === "미입금" ? "orange" : value === "작성중" ? "blue" : "green";
+    value === "미입금"
+      ? "orange"
+      : value === "작성중"
+        ? "blue"
+        : value === "취소"
+          ? "gray"
+          : "green";
   const classes = {
     blue: "bg-[#e6f0ff] text-[#246df2]",
     green: "bg-[#e7f7e8] text-[#16853b]",
     orange: "bg-[#fff1d6] text-[#d88400]",
+    gray: "bg-[#eef1ee] text-[#657169]",
   }[tone];
 
   return (

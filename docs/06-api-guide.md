@@ -37,10 +37,12 @@ docs/api/slices/*.openapi.yaml
 - `salesType = AUCTION`
 - `partnerId`는 `AUCTION_HOUSE` 거래처여야 함
 - `items` 필수
-- 서버가 전표 저장 시 `AuctionShipment`와 `AuctionShipmentLot`를 생성
+- `salesStatus = 작성중 | 출하 완료`
+- `작성중` 저장 시에는 allocation 예약만 반영
+- `출하 완료` 시 `AuctionShipment`, `AuctionShipmentLot` 생성
 - `auctionShipmentId`는 생성 요청에서 사용하지 않음
 
-즉, 현재 기준 경매 흐름은 `기존 출하 기록 선택 후 전표 생성`이 아니라 `전표 생성 시 출하 기록과 lot 동시 생성`이다.
+즉, 현재 기준 경매 흐름은 `기존 출하 기록 선택 후 전표 생성`이 아니라 `전표를 먼저 저장하고 출하 완료 시 출하 기록과 lot 생성`이다.
 
 경매 결과 입력:
 

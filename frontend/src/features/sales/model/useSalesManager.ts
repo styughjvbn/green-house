@@ -373,6 +373,24 @@ export function useSalesManager(
     }
   }
 
+  async function handleCancelSalesSlip(salesSlipId: number) {
+    setUpdatingSlipStatus(true);
+    setErrorMessage(null);
+    try {
+      const updated = await changeSalesSlipStatus(salesSlipId, {
+        salesStatus: "취소",
+        memo: null,
+      });
+      updateSalesSlip(updated);
+    } catch (error) {
+      setErrorMessage(
+        error instanceof Error ? error.message : "전표를 취소하지 못했습니다.",
+      );
+    } finally {
+      setUpdatingSlipStatus(false);
+    }
+  }
+
   function updateSalesSlip(salesSlip: SalesSlip) {
     setSalesSlips((current) =>
       current.map((item) => (item.id === salesSlip.id ? salesSlip : item)),
@@ -421,6 +439,7 @@ export function useSalesManager(
     updateItem,
     updateSalesSlip,
     handleCompleteSalesSlip,
+    handleCancelSalesSlip,
     handleCreateBusinessPartner,
     handleCreateSalesSlip,
   };

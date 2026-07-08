@@ -2,7 +2,7 @@
 
 import type { ReactNode } from "react";
 import Link from "next/link";
-import { Copy, Pencil, Printer, Truck } from "lucide-react";
+import { Ban, Copy, Pencil, Printer, Truck } from "lucide-react";
 import type { SalesSlip } from "@/entities/farm/types";
 import { confirmSalesSlipPayment } from "../../api/salesApi";
 import { ManualPaymentPanel } from "./ManualPaymentPanel";
@@ -10,12 +10,14 @@ import { ManualPaymentPanel } from "./ManualPaymentPanel";
 export function SalesSlipDetail({
   salesSlip,
   updatingSalesStatus,
+  onCancelSalesSlip,
   onEditSalesSlip,
   onCompleteSalesSlip,
   onPaymentConfirmed,
 }: {
   salesSlip: SalesSlip | null;
   updatingSalesStatus: boolean;
+  onCancelSalesSlip: (salesSlipId: number) => Promise<void>;
   onEditSalesSlip: (salesSlipId: number) => void;
   onCompleteSalesSlip: (salesSlipId: number) => Promise<void>;
   onPaymentConfirmed: (salesSlip: SalesSlip) => void;
@@ -32,11 +34,13 @@ export function SalesSlipDetail({
   const vatAmount = salesSlip.totalAmount - supplyAmount;
   const canComplete =
     salesSlip.salesStatus !== "출고 완료" &&
-    salesSlip.salesStatus !== "출하 완료";
+    salesSlip.salesStatus !== "출하 완료" &&
+    salesSlip.salesStatus !== "취소";
   const canEdit =
     salesSlip.salesType === "DIRECT" &&
     salesSlip.salesStatus === "작성중" &&
     salesSlip.paidAmount === 0;
+  const canCancel = salesSlip.salesStatus !== "취소";
 
   return (
     <section className="min-w-0 rounded-md border border-[#dfe5dc] bg-white p-4 shadow-sm">
@@ -66,6 +70,25 @@ export function SalesSlipDetail({
             >
               <Truck className="h-4 w-4" strokeWidth={1.8} aria-hidden="true" />
               {salesSlip.salesType === "AUCTION" ? "출하 완료" : "출고 완료"}
+            </button>
+          ) : null}
+          {canCancel ? (
+            <button
+              className="inline-flex h-9 items-center gap-2 rounded-md border border-[#f0cfc7] bg-white px-3 text-sm font-semibold text-[#a64835] disabled:opacity-60"
+              disabled={updatingSalesStatus}
+              type="button"
+              onClick={() => {
+                if (
+                  window.confirm(
+                    "이 전표를 취소하시겠습니까? 취소 후 되돌릴 수 없습니다.",
+                  )
+                ) {
+                  void onCancelSalesSlip(salesSlip.id);
+                }
+              }}
+            >
+              <Ban className="h-4 w-4" strokeWidth={1.8} aria-hidden="true" />
+              전표 취소
             </button>
           ) : null}
           <Link
@@ -198,7 +221,7 @@ export function SalesSlipDetail({
         </div>
       </div>
 
-      {salesSlip.salesType === "DIRECT" ? (
+      {salesSlip.salesType === "DIRECT" && salesSlip.salesStatus !== "취소" ? (
         <div className="mt-3 rounded-md border border-[#dfe5dc]">
           <ManualPaymentPanel
             key={salesSlip.id}
