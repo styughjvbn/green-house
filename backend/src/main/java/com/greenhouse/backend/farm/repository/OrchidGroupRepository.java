@@ -20,14 +20,19 @@ public interface OrchidGroupRepository extends JpaRepository<OrchidGroup, Long> 
 			join fetch z.physicalBed b
 			join fetch b.house h
 			where (:houseId is null or h.id = :houseId)
-				and (:physicalBedId is null or b.id = :physicalBedId)
-				and (:bedZoneId is null or z.id = :bedZoneId)
-				and (:status is null or g.status = :status)
-				and g.quantity > 0
+			    and (:keyword = ''
+			        or lower(g.varietyName) like concat('%', lower(:keyword), '%')
+			        or lower(coalesce(g.genus, '')) like concat('%', lower(:keyword), '%')
+			        or lower(coalesce(g.memo, '')) like concat('%', lower(:keyword), '%'))
+			    and (:physicalBedId is null or b.id = :physicalBedId)
+			    and (:bedZoneId is null or z.id = :bedZoneId)
+			    and (:status is null or g.status = :status)
+			    and g.quantity > 0
 			order by h.number asc, b.displayOrder asc, z.sortOrder asc, g.sortOrder asc
 			""")
 	List<OrchidGroup> search(
 			@Param("houseId") Long houseId,
+			@Param("keyword") String keyword,
 			@Param("physicalBedId") Long physicalBedId,
 			@Param("bedZoneId") Long bedZoneId,
 			@Param("status") String status);

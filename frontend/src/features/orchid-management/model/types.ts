@@ -90,9 +90,15 @@ export type WorkRecordSummary = {
   };
 };
 
+export type OrchidManagementSearchState = {
+  keyword: string;
+  status: string;
+};
+
 export type OrchidManagementMapProps = {
   mapData: FarmStatusMapData;
   house: House;
+  initialSelectedOrchidGroupId: number | null;
   workTypes: WorkType[];
 };
 

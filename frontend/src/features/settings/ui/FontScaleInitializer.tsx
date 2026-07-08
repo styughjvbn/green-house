@@ -1,5 +1,3 @@
-import Script from "next/script";
-
 import {
   DEFAULT_FONT_SCALE,
   FONT_SCALE_STORAGE_KEY,
@@ -9,9 +7,7 @@ import {
 
 export function FontScaleInitializer() {
   return (
-    <Script
-      id="font-scale-initializer"
-      strategy="beforeInteractive"
+    <script
       dangerouslySetInnerHTML={{
         __html: `
           (function () {

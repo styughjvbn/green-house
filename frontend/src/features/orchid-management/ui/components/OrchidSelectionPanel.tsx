@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import type { ReactNode } from "react";
 import type {
@@ -25,6 +25,8 @@ import OrchidWorkRecordForm from "./OrchidWorkRecordForm";
 
 export default function OrchidSelectionPanel({
   errorMessage,
+  filteredOrchidGroupIds,
+  hasActiveSearch,
   house,
   mutationMode,
   preferredMoveZoneId,
@@ -49,6 +51,8 @@ export default function OrchidSelectionPanel({
   onWorkRecordCreate,
 }: {
   errorMessage: string | null;
+  filteredOrchidGroupIds: Set<number>;
+  hasActiveSearch: boolean;
   house: House;
   mutationMode: MutationMode;
   preferredMoveZoneId: number | null;
@@ -80,13 +84,20 @@ export default function OrchidSelectionPanel({
     ? (findBedZone(house, selectedOrchidGroup.bedZoneId)?.zone ?? null)
     : selectedBedZone;
   const orchidGroups = zone?.orchidGroups ?? [];
+  const matchedCount = orchidGroups.filter((orchidGroup) =>
+    filteredOrchidGroupIds.has(orchidGroup.id),
+  ).length;
 
   return (
     <aside className="space-y-3">
       <section className="rounded-md border border-[#d7ddd4] bg-white p-3 shadow-sm">
         <div className="flex items-center justify-between gap-3">
           <p className="text-sm font-semibold text-[#17251b]">
-            선택한 난 묶음 목록 ({orchidGroups.length}개)
+            선택한 난 묶음 목록 (
+            {hasActiveSearch
+              ? `${matchedCount}/${orchidGroups.length}`
+              : orchidGroups.length}
+            개)
           </p>
         </div>
 
@@ -95,22 +106,33 @@ export default function OrchidSelectionPanel({
             <div className="space-y-2">
               {orchidGroups.map((orchidGroup) => {
                 const selected = orchidGroup.id === selectedOrchidGroup?.id;
+                const matched = filteredOrchidGroupIds.has(orchidGroup.id);
 
                 return (
                   <div
                     key={orchidGroup.id}
-                    className={`cursor-pointer rounded-md border p-3 transition hover:border-[#159447] ${
-                      selected
-                        ? "border-[#b9d0ff] bg-[#f5f8ff]"
-                        : "border-[#e1e6df] bg-white"
-                    }`}
-                    onClick={() => onSelectOrchidGroup(orchidGroup.id)}
+                    className={`rounded-md border p-3 transition ${
+                      matched ? "cursor-pointer hover:border-[#159447]" : ""
+                    } ${
+                      !matched
+                        ? "border-[#e5e8e4] bg-[#f2f4f1] opacity-75"
+                        : selected
+                          ? "border-[#b9d0ff] bg-[#f5f8ff]"
+                          : "border-[#e1e6df] bg-white"
+                    } ${selected ? "ring-1 ring-[#b9d0ff]/40" : ""}`}
+                    onClick={() =>
+                      matched ? onSelectOrchidGroup(orchidGroup.id) : undefined
+                    }
                   >
                     <div className="flex items-start justify-between gap-3">
                       <div className="min-w-0">
                         <div className="flex items-center gap-2">
                           <span
-                            className={`h-2.5 w-2.5 shrink-0 rounded-full ${getStatusDotClass(orchidGroup.status)}`}
+                            className={`h-2.5 w-2.5 shrink-0 rounded-full ${
+                              matched
+                                ? getStatusDotClass(orchidGroup.status)
+                                : "bg-[#a6ada6]"
+                            }`}
                           />
                           <p className="truncate text-sm font-bold text-[#17251b]">
                             {orchidGroup.varietyName}
@@ -125,11 +147,14 @@ export default function OrchidSelectionPanel({
                       </div>
 
                       <div className="flex shrink-0 items-center gap-1.5">
-                        <StatusBadge value={orchidGroup.status} />
+                        <StatusBadge
+                          muted={!matched}
+                          value={orchidGroup.status}
+                        />
                         <IconAction
                           label="수정"
                           onClick={onOpenEdit}
-                          disabled={!selected}
+                          disabled={!matched || !selected}
                         >
                           <Edit2
                             className="h-4 w-4"
@@ -140,7 +165,7 @@ export default function OrchidSelectionPanel({
                         <IconAction
                           label="삭제"
                           onClick={onDelete}
-                          disabled={!selected || saving}
+                          disabled={!matched || !selected || saving}
                         >
                           <Trash2
                             className="h-4 w-4"
@@ -156,6 +181,11 @@ export default function OrchidSelectionPanel({
               {orchidGroups.length === 0 ? (
                 <p className="rounded-md bg-[#f5f7f3] p-3 text-sm text-[#5c6a60]">
                   이 구역에 등록된 난 묶음이 없습니다.
+                </p>
+              ) : hasActiveSearch && matchedCount === 0 ? (
+                <p className="rounded-md border border-[#e4e8e2] bg-[#f6f8f5] p-3 text-sm text-[#5c6a60]">
+                  필터에 맞는 난 묶음이 없습니다. 회색 항목은 필터 제외
+                  상태입니다.
                 </p>
               ) : null}
             </div>
@@ -345,9 +375,16 @@ function IconAction({
   );
 }
 
-function StatusBadge({ value }: { value: string }) {
-  const className =
-    value === "정상" || value === "판매 가능"
+function StatusBadge({
+  muted = false,
+  value,
+}: {
+  muted?: boolean;
+  value: string;
+}) {
+  const className = muted
+    ? "bg-[#e9ece8] text-[#7d857d]"
+    : value === "정상" || value === "판매 가능"
       ? "bg-[#e6f7e8] text-[#159447]"
       : value.includes("주의")
         ? "bg-[#fff1d6] text-[#d88400]"

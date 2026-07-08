@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import Link from "next/link";
 import { usePathname, useSearchParams } from "next/navigation";
 import { PageHeader } from "@/widgets/page-header";
@@ -156,7 +157,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       <aside className="hidden w-44 shrink-0 bg-[#003b1f] px-2 py-4 lg:block">
         <div className="flex items-center gap-3 px-2 py-2">
           <div className="flex h-10 w-10 shrink-0 items-center justify-center">
-            <img src="/flower.png" alt="Logo" className="h-10 w-10" />
+            <Image src="/flower.png" alt="Logo" width={40} height={40} />
           </div>
 
           <div>

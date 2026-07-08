@@ -26,6 +26,7 @@ export type OrchidGroup = {
   endPosition: number | null;
   sortOrder: number;
   memo: string | null;
+  houseId: number;
   houseNumber: number;
   physicalBedNumber: number;
   bedZoneName: string;

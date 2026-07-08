@@ -1,6 +1,5 @@
 "use client";
 
-import { ChevronDown, Download } from "lucide-react";
 import { useMemo, useState } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { createAnalyticsViewModel } from "../lib/analyticsView";

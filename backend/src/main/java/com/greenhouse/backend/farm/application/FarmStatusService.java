@@ -105,9 +105,9 @@ public class FarmStatusService {
 			FarmStatusTargetType targetType,
 			Long targetId) {
 		return switch (targetType) {
-			case HOUSE -> orchidGroupRepository.search(targetId, null, null, null);
-			case PHYSICAL_BED -> orchidGroupRepository.search(null, targetId, null, null);
-			case BED_ZONE -> orchidGroupRepository.search(null, null, targetId, null);
+			case HOUSE -> orchidGroupRepository.search(targetId, "", null, null, null);
+			case PHYSICAL_BED -> orchidGroupRepository.search(null, "", targetId, null, null);
+			case BED_ZONE -> orchidGroupRepository.search(null, "", null, targetId, null);
 		};
 	}
 }

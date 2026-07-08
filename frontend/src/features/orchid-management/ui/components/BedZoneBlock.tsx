@@ -10,6 +10,7 @@ const MAP_HEIGHT = 420;
 export default function BedZoneBlock({
   maxPosition,
   dragState,
+  filteredOrchidGroupIds,
   placementEditMode,
   saving,
   showScale,
@@ -25,6 +26,7 @@ export default function BedZoneBlock({
 }: {
   maxPosition: number | null;
   dragState: DragState;
+  filteredOrchidGroupIds: Set<number>;
   placementEditMode: boolean;
   saving: boolean;
   showScale: boolean;
@@ -117,6 +119,7 @@ export default function BedZoneBlock({
             : null}
 
           {zone.orchidGroups.map((orchidGroup) => {
+            const matched = filteredOrchidGroupIds.has(orchidGroup.id);
             const start = orchidGroup.startPosition ?? 0;
             const end =
               orchidGroup.endPosition ?? orchidGroup.startPosition ?? 0;
@@ -137,8 +140,9 @@ export default function BedZoneBlock({
                 style={{ top: `${top}%`, height: `${height}%` }}
               >
                 <OrchidGroupBlock
-                  draggable={placementEditMode && !saving}
+                  draggable={matched && placementEditMode && !saving}
                   heightPx={heightPx}
+                  muted={!matched}
                   orchidGroup={orchidGroup}
                   selected={selectedOrchidGroupId === orchidGroup.id}
                   onDragEnd={onDragEnd}

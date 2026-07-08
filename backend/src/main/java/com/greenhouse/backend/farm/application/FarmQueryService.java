@@ -73,8 +73,14 @@ public class FarmQueryService {
 				.orElseThrow(() -> new NotFoundException("논리 구역을 찾을 수 없습니다."));
 	}
 
-	public List<OrchidGroupResponse> getOrchidGroups(Long houseId, Long physicalBedId, Long bedZoneId, String status) {
-		return orchidGroupRepository.search(houseId, physicalBedId, bedZoneId, status).stream()
+	public List<OrchidGroupResponse> getOrchidGroups(
+			Long houseId,
+			String keyword,
+			Long physicalBedId,
+			Long bedZoneId,
+			String status) {
+		return orchidGroupRepository
+				.search(houseId, keyword == null ? "" : keyword.trim(), physicalBedId, bedZoneId, status).stream()
 				.map(OrchidGroupResponse::from)
 				.toList();
 	}

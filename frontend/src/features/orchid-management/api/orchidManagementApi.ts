@@ -3,6 +3,7 @@ import type {
   BedZonePlacementProfile,
   FarmStatusMapData,
   House,
+  OrchidGroup,
   VarietyOption,
   WorkRecord,
   WorkRecordTargetType,
@@ -107,6 +108,24 @@ export async function saveBedZonePlacementProfile(
 
 export function getOrchidManagementMap() {
   return fetchApi<FarmStatusMapData>("/farm-status/map");
+}
+
+export function searchOrchidGroups({
+  keyword,
+  status,
+}: {
+  keyword: string;
+  status: string;
+}) {
+  const params = new URLSearchParams();
+  if (keyword.trim()) {
+    params.set("keyword", keyword.trim());
+  }
+  if (status.trim()) {
+    params.set("status", status.trim());
+  }
+  const query = params.toString();
+  return fetchApi<OrchidGroup[]>(`/orchid-groups${query ? `?${query}` : ""}`);
 }
 
 type VarietySearchResponse = {

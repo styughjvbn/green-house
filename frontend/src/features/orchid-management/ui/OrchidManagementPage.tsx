@@ -4,12 +4,14 @@ import { OrchidManagementMap } from "./OrchidManagementMap";
 type OrchidManagementPageProps = {
   mapData: FarmStatusMapData;
   house: House | null;
+  initialSelectedOrchidGroupId: number | null;
   workTypes: WorkType[];
 };
 
 export function OrchidManagementPage({
   mapData,
   house,
+  initialSelectedOrchidGroupId,
   workTypes,
 }: OrchidManagementPageProps) {
   if (!house) {
@@ -25,8 +27,10 @@ export function OrchidManagementPage({
   return (
     <main className="space-y-4">
       <OrchidManagementMap
+        key={`${house.id}-${initialSelectedOrchidGroupId ?? "default"}`}
         mapData={mapData}
         house={house}
+        initialSelectedOrchidGroupId={initialSelectedOrchidGroupId}
         workTypes={workTypes}
       />
     </main>

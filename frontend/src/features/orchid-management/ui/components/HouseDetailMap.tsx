@@ -6,6 +6,7 @@ import PhysicalBedBlock from "./PhysicalBedBlock";
 
 export default function HouseDetailMap({
   dragState,
+  filteredOrchidGroupIds,
   house,
   placementEditMode,
   saving,
@@ -19,6 +20,7 @@ export default function HouseDetailMap({
   onSelectOrchidGroup,
 }: {
   dragState: DragState;
+  filteredOrchidGroupIds: Set<number>;
   house: House;
   placementEditMode: boolean;
   saving: boolean;
@@ -39,6 +41,7 @@ export default function HouseDetailMap({
             key={bed.id}
             bed={bed}
             dragState={dragState}
+            filteredOrchidGroupIds={filteredOrchidGroupIds}
             placementEditMode={placementEditMode}
             saving={saving}
             selection={selection}

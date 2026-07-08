@@ -8,6 +8,7 @@ import {
 type OrchidGroupsPageProps = {
   searchParams: Promise<{
     houseId?: string;
+    orchidGroupId?: string;
   }>;
 };
 
@@ -23,6 +24,7 @@ export default async function Page({ searchParams }: OrchidGroupsPageProps) {
     mapData.houses.find((house) => house.orchidGroupCount > 0) ??
     mapData.houses[0];
   const requestedHouseId = Number(params.houseId);
+  const requestedOrchidGroupId = Number(params.orchidGroupId);
   const selectedHouseId =
     Number.isFinite(requestedHouseId) && requestedHouseId > 0
       ? requestedHouseId
@@ -31,6 +33,11 @@ export default async function Page({ searchParams }: OrchidGroupsPageProps) {
 
   return (
     <OrchidManagementPage
+      initialSelectedOrchidGroupId={
+        Number.isFinite(requestedOrchidGroupId) && requestedOrchidGroupId > 0
+          ? requestedOrchidGroupId
+          : null
+      }
       mapData={mapData}
       house={house}
       workTypes={workTypes}

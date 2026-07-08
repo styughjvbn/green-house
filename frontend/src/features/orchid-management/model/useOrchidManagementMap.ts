@@ -2,7 +2,12 @@
 
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
-import type { House, WorkRecord, WorkType } from "@/entities/farm/types";
+import type {
+  House,
+  OrchidGroup,
+  WorkRecord,
+  WorkType,
+} from "@/entities/farm/types";
 import {
   findWorkType,
   getManualWorkTypes,
@@ -14,6 +19,7 @@ import {
   deleteOrchidGroup,
   getOrchidWorkRecords,
   moveOrchidGroup,
+  searchOrchidGroups,
   updateOrchidGroup,
 } from "../api/orchidManagementApi";
 import {
@@ -23,6 +29,7 @@ import {
 } from "../lib/orchidManagementUtils";
 import type {
   DragState,
+  OrchidManagementSearchState,
   MutationMode,
   MutationPayload,
   OrchidSelection,
@@ -31,18 +38,38 @@ import type {
   WorkRecordSummary,
 } from "./types";
 
-export function useOrchidManagementMap(house: House, workTypes: WorkType[]) {
+export function useOrchidManagementMap(
+  house: House,
+  workTypes: WorkType[],
+  initialSelectedOrchidGroupId: number | null,
+) {
   const router = useRouter();
   const firstOrchidGroup = useMemo(() => findFirstOrchidGroup(house), [house]);
+  const initialOrchidGroup = useMemo(
+    () =>
+      initialSelectedOrchidGroupId
+        ? findOrchidGroup(house, initialSelectedOrchidGroupId)
+        : null,
+    [house, initialSelectedOrchidGroupId],
+  );
 
   const [selection, setSelection] = useState<OrchidSelection | null>(
-    firstOrchidGroup
-      ? { type: "ORCHID_GROUP", orchidGroupId: firstOrchidGroup.id }
-      : null,
+    initialOrchidGroup
+      ? { type: "ORCHID_GROUP", orchidGroupId: initialOrchidGroup.id }
+      : firstOrchidGroup
+        ? { type: "ORCHID_GROUP", orchidGroupId: firstOrchidGroup.id }
+        : null,
   );
   const [placementEditMode, setPlacementEditMode] = useState(false);
   const [dragState, setDragState] = useState<DragState>(null);
   const [mutationMode, setMutationMode] = useState<MutationMode>(null);
+  const [searchFilters, setSearchFilters] =
+    useState<OrchidManagementSearchState>({
+      keyword: "",
+      status: "",
+    });
+  const [searchResults, setSearchResults] = useState<OrchidGroup[]>([]);
+  const [searchLoading, setSearchLoading] = useState(false);
   const [preferredMoveZoneId, setPreferredMoveZoneId] = useState<number | null>(
     null,
   );
@@ -70,6 +97,73 @@ export function useOrchidManagementMap(house: House, workTypes: WorkType[]) {
   const resolvedZone = selectedOrchidGroup
     ? (findBedZone(house, selectedOrchidGroup.bedZoneId)?.zone ?? null)
     : selectedBedZone;
+  const currentHouseOrchidGroupIds = useMemo(
+    () => collectCurrentHouseOrchidGroupIds(house),
+    [house],
+  );
+  const hasActiveSearch = useMemo(
+    () =>
+      searchFilters.keyword.trim().length > 0 ||
+      searchFilters.status.length > 0,
+    [searchFilters],
+  );
+  const filteredOrchidGroupIds = useMemo(() => {
+    if (!hasActiveSearch) {
+      return currentHouseOrchidGroupIds;
+    }
+    return new Set(
+      searchResults
+        .filter((orchidGroup) => orchidGroup.houseNumber === house.number)
+        .map((orchidGroup) => orchidGroup.id),
+    );
+  }, [
+    currentHouseOrchidGroupIds,
+    hasActiveSearch,
+    house.number,
+    searchResults,
+  ]);
+
+  useEffect(() => {
+    let ignore = false;
+
+    async function loadSearchResults() {
+      if (!hasActiveSearch) {
+        setSearchResults([]);
+        setSearchLoading(false);
+        return;
+      }
+
+      setSearchLoading(true);
+      try {
+        const results = await searchOrchidGroups(searchFilters);
+        if (!ignore) {
+          setSearchResults(results);
+        }
+      } catch {
+        if (!ignore) {
+          setSearchResults([]);
+        }
+      } finally {
+        if (!ignore) {
+          setSearchLoading(false);
+        }
+      }
+    }
+
+    const timeout = window.setTimeout(() => {
+      void loadSearchResults();
+    }, 250);
+
+    return () => {
+      ignore = true;
+      window.clearTimeout(timeout);
+    };
+  }, [hasActiveSearch, searchFilters]);
+
+  const totalOrchidGroupCount = useMemo(
+    () => currentHouseOrchidGroupIds.size,
+    [currentHouseOrchidGroupIds],
+  );
 
   useEffect(() => {
     let ignore = false;
@@ -167,6 +261,26 @@ export function useOrchidManagementMap(house: House, workTypes: WorkType[]) {
     value: WorkRecordQuickFormState[K],
   ) {
     setWorkRecordForm((current) => ({ ...current, [field]: value }));
+  }
+
+  function updateSearchFilter<K extends keyof OrchidManagementSearchState>(
+    field: K,
+    value: OrchidManagementSearchState[K],
+  ) {
+    setSearchFilters((current) => ({ ...current, [field]: value }));
+  }
+
+  function resetSearch() {
+    setSearchFilters({
+      keyword: "",
+      status: "",
+    });
+  }
+
+  function moveToOrchidGroup(orchidGroup: OrchidGroup) {
+    router.push(
+      `/orchid-groups?houseId=${orchidGroup.houseId}&orchidGroupId=${orchidGroup.id}`,
+    );
   }
 
   function togglePlacementEditMode() {
@@ -307,14 +421,20 @@ export function useOrchidManagementMap(house: House, workTypes: WorkType[]) {
   return {
     errorMessage,
     dragState,
+    filteredOrchidGroupIds,
+    hasActiveSearch,
     mutationMode,
     preferredMoveZoneId,
     placementEditMode,
     resolvedZone,
     saving,
+    searchFilters,
+    searchLoading,
+    searchResults,
     selectedBedZone,
     selectedOrchidGroup,
     selection,
+    totalOrchidGroupCount,
     workRecordForm,
     workRecordSummary,
     workRecordSummaryLoading,
@@ -326,19 +446,32 @@ export function useOrchidManagementMap(house: House, workTypes: WorkType[]) {
       edit: handleUpdate,
       endDrag,
       enterDropZone,
+      moveToOrchidGroup,
       move: handleMove,
       openCreate,
       openEdit,
       openMove,
       openWorkRecord,
+      resetSearch,
       selectBedZone,
       selectOrchidGroup,
       startDrag,
       togglePlacementEditMode,
+      updateSearchFilter,
       updateWorkRecordForm,
       workRecordCreate: handleWorkRecordCreate,
     },
   };
+}
+
+function collectCurrentHouseOrchidGroupIds(house: House) {
+  return new Set(
+    house.physicalBeds.flatMap((bed) =>
+      bed.bedZones.flatMap((zone) =>
+        zone.orchidGroups.map((orchidGroup) => orchidGroup.id),
+      ),
+    ),
+  );
 }
 
 function createInitialWorkRecordForm(

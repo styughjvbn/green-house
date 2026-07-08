@@ -6,16 +6,22 @@ import type { OrchidManagementMapProps } from "../model/types";
 import BedPrecisionSettings from "./components/BedPrecisionSettings";
 import HouseDetailMap from "./components/HouseDetailMap";
 import HouseSelectorPanel from "./components/HouseSelectorPanel";
+import OrchidSearchPanel from "./components/OrchidSearchPanel";
 import OrchidSelectionPanel, {
   SelectedZoneInfo,
 } from "./components/OrchidSelectionPanel";
 
 export function OrchidManagementMap({
+  initialSelectedOrchidGroupId,
   mapData,
   house,
   workTypes,
 }: OrchidManagementMapProps) {
-  const orchidManagement = useOrchidManagementMap(house, workTypes);
+  const orchidManagement = useOrchidManagementMap(
+    house,
+    workTypes,
+    initialSelectedOrchidGroupId,
+  );
   const [showScale, setShowScale] = useState(true);
 
   return (
@@ -34,6 +40,7 @@ export function OrchidManagementMap({
         />
         <HouseDetailMap
           dragState={orchidManagement.dragState}
+          filteredOrchidGroupIds={orchidManagement.filteredOrchidGroupIds}
           house={house}
           placementEditMode={orchidManagement.placementEditMode}
           saving={orchidManagement.saving}
@@ -55,34 +62,52 @@ export function OrchidManagementMap({
         />
         <BedPrecisionSettings zone={orchidManagement.resolvedZone} />
       </section>
-      <OrchidSelectionPanel
-        errorMessage={orchidManagement.errorMessage}
-        house={house}
-        mutationMode={orchidManagement.mutationMode}
-        preferredMoveZoneId={orchidManagement.preferredMoveZoneId}
-        resolvedZone={orchidManagement.resolvedZone}
-        saving={orchidManagement.saving}
-        selectedBedZone={orchidManagement.selectedBedZone}
-        selectedOrchidGroup={orchidManagement.selectedOrchidGroup}
-        workRecordForm={orchidManagement.workRecordForm}
-        workTypes={workTypes}
-        onCancelMutation={orchidManagement.actions.cancelMutation}
-        onCreate={orchidManagement.actions.create}
-        onDelete={orchidManagement.actions.delete}
-        onEdit={orchidManagement.actions.edit}
-        onMove={orchidManagement.actions.move}
-        onOpenCreate={orchidManagement.actions.openCreate}
-        onOpenEdit={orchidManagement.actions.openEdit}
-        onOpenMove={orchidManagement.actions.openMove}
-        onOpenWorkRecord={orchidManagement.actions.openWorkRecord}
-        onSelectOrchidGroup={orchidManagement.actions.selectOrchidGroup}
-        onTogglePlacementEditMode={
-          orchidManagement.actions.togglePlacementEditMode
-        }
-        onUpdateWorkRecordForm={orchidManagement.actions.updateWorkRecordForm}
-        onWorkRecordCreate={orchidManagement.actions.workRecordCreate}
-        placementEditMode={orchidManagement.placementEditMode}
-      />
+      <div className="space-y-3">
+        <OrchidSearchPanel
+          currentHouseId={house.id}
+          currentSelectedOrchidGroupId={
+            orchidManagement.selectedOrchidGroup?.id ?? null
+          }
+          filteredCount={orchidManagement.searchResults.length}
+          filters={orchidManagement.searchFilters}
+          hasActiveSearch={orchidManagement.hasActiveSearch}
+          loading={orchidManagement.searchLoading}
+          results={orchidManagement.searchResults}
+          onClear={orchidManagement.actions.resetSearch}
+          onSelectResult={orchidManagement.actions.moveToOrchidGroup}
+          onUpdateFilter={orchidManagement.actions.updateSearchFilter}
+        />
+        <OrchidSelectionPanel
+          errorMessage={orchidManagement.errorMessage}
+          filteredOrchidGroupIds={orchidManagement.filteredOrchidGroupIds}
+          hasActiveSearch={orchidManagement.hasActiveSearch}
+          house={house}
+          mutationMode={orchidManagement.mutationMode}
+          preferredMoveZoneId={orchidManagement.preferredMoveZoneId}
+          resolvedZone={orchidManagement.resolvedZone}
+          saving={orchidManagement.saving}
+          selectedBedZone={orchidManagement.selectedBedZone}
+          selectedOrchidGroup={orchidManagement.selectedOrchidGroup}
+          workRecordForm={orchidManagement.workRecordForm}
+          workTypes={workTypes}
+          onCancelMutation={orchidManagement.actions.cancelMutation}
+          onCreate={orchidManagement.actions.create}
+          onDelete={orchidManagement.actions.delete}
+          onEdit={orchidManagement.actions.edit}
+          onMove={orchidManagement.actions.move}
+          onOpenCreate={orchidManagement.actions.openCreate}
+          onOpenEdit={orchidManagement.actions.openEdit}
+          onOpenMove={orchidManagement.actions.openMove}
+          onOpenWorkRecord={orchidManagement.actions.openWorkRecord}
+          onSelectOrchidGroup={orchidManagement.actions.selectOrchidGroup}
+          onTogglePlacementEditMode={
+            orchidManagement.actions.togglePlacementEditMode
+          }
+          onUpdateWorkRecordForm={orchidManagement.actions.updateWorkRecordForm}
+          onWorkRecordCreate={orchidManagement.actions.workRecordCreate}
+          placementEditMode={orchidManagement.placementEditMode}
+        />
+      </div>
     </div>
   );
 }

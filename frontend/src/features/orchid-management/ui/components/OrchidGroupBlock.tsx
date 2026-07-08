@@ -6,6 +6,7 @@ import type { OrchidGroup } from "@/entities/farm/types";
 export default function OrchidGroupBlock({
   draggable,
   heightPx,
+  muted,
   orchidGroup,
   selected,
   onDragEnd,
@@ -14,6 +15,7 @@ export default function OrchidGroupBlock({
 }: {
   draggable: boolean;
   heightPx: number;
+  muted: boolean;
   orchidGroup: OrchidGroup;
   selected: boolean;
   onDragEnd: () => void;
@@ -32,10 +34,17 @@ export default function OrchidGroupBlock({
 
   function handleClick(event: MouseEvent<HTMLDivElement>) {
     event.stopPropagation();
+    if (muted) {
+      return;
+    }
     onSelect();
   }
 
   function handleDragStart(event: DragEvent<HTMLDivElement>) {
+    if (muted) {
+      event.preventDefault();
+      return;
+    }
     event.stopPropagation();
     event.dataTransfer.effectAllowed = "move";
     event.dataTransfer.setData("text/plain", String(orchidGroup.id));
@@ -47,16 +56,27 @@ export default function OrchidGroupBlock({
       return;
     }
     event.stopPropagation();
+    if (muted) {
+      return;
+    }
     onSelect();
   }
 
   return (
     <div
       className={`h-full touch-manipulation border transition ${
-        selected
-          ? "border-[#246df2] bg-[#dcecff]"
-          : "border-[#c8ddc2] bg-[#e4f2d8] hover:border-[#159447]"
-      } ${draggable ? "cursor-grab active:cursor-grabbing" : "cursor-pointer"}`}
+        muted
+          ? "border-[#d6d8d4] bg-[#ebeeea] text-[#8a928a] opacity-80"
+          : selected
+            ? "border-[#246df2] bg-[#dcecff]"
+            : "border-[#c8ddc2] bg-[#e4f2d8] hover:border-[#159447]"
+      } ${selected ? "ring-1 ring-[#246df2]/20" : ""} ${
+        muted
+          ? "cursor-default"
+          : draggable
+            ? "cursor-grab active:cursor-grabbing"
+            : "cursor-pointer"
+      }`}
       draggable={draggable}
       onClick={handleClick}
       onDragEnd={onDragEnd}
@@ -71,7 +91,11 @@ export default function OrchidGroupBlock({
           <div className="flex h-full items-center justify-end px-1">
             <span
               className={`inline-block h-2 w-2 rounded-full ${
-                warning ? "bg-[#f59e0b]" : "bg-[#16a34a]"
+                muted
+                  ? "bg-[#9aa39a]"
+                  : warning
+                    ? "bg-[#f59e0b]"
+                    : "bg-[#16a34a]"
               }`}
             />
           </div>
@@ -85,7 +109,11 @@ export default function OrchidGroupBlock({
             </p>
             <span
               className={`inline-block h-2 w-2 rounded-full ${
-                warning ? "bg-[#f59e0b]" : "bg-[#16a34a]"
+                muted
+                  ? "bg-[#9aa39a]"
+                  : warning
+                    ? "bg-[#f59e0b]"
+                    : "bg-[#16a34a]"
               }`}
             />
           </div>
@@ -97,7 +125,11 @@ export default function OrchidGroupBlock({
               </p>
               <span
                 className={`mt-0.5 inline-block h-2 w-2 rounded-full ${
-                  warning ? "bg-[#f59e0b]" : "bg-[#16a34a]"
+                  muted
+                    ? "bg-[#9aa39a]"
+                    : warning
+                      ? "bg-[#f59e0b]"
+                      : "bg-[#16a34a]"
                 }`}
               />
             </div>

@@ -21,9 +21,10 @@ public class OrchidGroupQueryController {
 	@GetMapping
 	public ApiResponse<List<OrchidGroupResponse>> getOrchidGroups(
 			@RequestParam(required = false) Long houseId,
+			@RequestParam(required = false) String keyword,
 			@RequestParam(required = false) Long physicalBedId,
 			@RequestParam(required = false) Long bedZoneId,
 			@RequestParam(required = false) String status) {
-		return ApiResponse.ok(farmQueryService.getOrchidGroups(houseId, physicalBedId, bedZoneId, status));
+		return ApiResponse.ok(farmQueryService.getOrchidGroups(houseId, keyword, physicalBedId, bedZoneId, status));
 	}
 }

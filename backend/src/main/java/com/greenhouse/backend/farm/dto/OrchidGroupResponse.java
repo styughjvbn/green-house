@@ -22,6 +22,7 @@ public record OrchidGroupResponse(
 		BigDecimal endPosition,
 		Integer sortOrder,
 		String memo,
+		Long houseId,
 		Integer houseNumber,
 		Integer physicalBedNumber,
 		String bedZoneName) {
@@ -48,6 +49,7 @@ public record OrchidGroupResponse(
 				orchidGroup.getEndPosition(),
 				orchidGroup.getSortOrder(),
 				orchidGroup.getMemo(),
+				house.getId(),
 				house.getNumber(),
 				physicalBed.getNumber(),
 				bedZone.getName());

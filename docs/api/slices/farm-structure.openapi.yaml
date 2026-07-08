@@ -19,6 +19,11 @@ paths:
         schema:
           type: integer
           format: int64
+      - name: keyword
+        in: query
+        required: false
+        schema:
+          type: string
       - name: physicalBedId
         in: query
         required: false
@@ -317,6 +322,9 @@ components:
           format: int32
         memo:
           type: string
+        houseId:
+          type: integer
+          format: int64
         houseNumber:
           type: integer
           format: int32

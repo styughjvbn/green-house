@@ -30,7 +30,7 @@ class OrchidGroupIntegrationTests extends AbstractBackendIntegrationTest {
 				.skip(1)
 				.findFirst()
 				.orElseThrow();
-		var beforeCount = orchidGroupRepository.search(null, null, sampleZone.getId(), null).size();
+		var beforeCount = orchidGroupRepository.search(null, null, null, sampleZone.getId(), null).size();
 
 		var createResult = mockMvc.perform(post("/api/orchid-groups")
 				.contentType(MediaType.APPLICATION_JSON)
@@ -407,7 +407,7 @@ class OrchidGroupIntegrationTests extends AbstractBackendIntegrationTest {
 		var sampleVariety = varietyRepository.findAll().stream()
 				.findFirst()
 				.orElseThrow();
-		var targetBeforeCount = orchidGroupRepository.search(null, null, targetZone.getId(), null).size();
+		var targetBeforeCount = orchidGroupRepository.search(null, null, null, targetZone.getId(), null).size();
 
 		var createResult = mockMvc.perform(post("/api/orchid-groups")
 				.contentType(MediaType.APPLICATION_JSON)
@@ -473,7 +473,7 @@ class OrchidGroupIntegrationTests extends AbstractBackendIntegrationTest {
 				.orElseThrow();
 		var sampleBed = physicalBedRepository.findByHouseIdOrderByDisplayOrderAsc(sampleHouse.getId()).get(1);
 		var sampleZone = bedZoneRepository.findByPhysicalBedIdOrderBySortOrderAsc(sampleBed.getId()).getFirst();
-		var sampleGroup = orchidGroupRepository.search(null, null, sampleZone.getId(), null).getFirst();
+		var sampleGroup = orchidGroupRepository.search(null, null, null, sampleZone.getId(), null).getFirst();
 
 		mockMvc.perform(patch("/api/orchid-groups/{orchidGroupId}/move", sampleGroup.getId())
 				.contentType(MediaType.APPLICATION_JSON)
