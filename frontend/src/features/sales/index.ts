@@ -5,6 +5,8 @@ export {
   confirmAuctionSettlementPayment,
   confirmSalesSlipPayment,
   getBusinessPartners,
+  getSalesSlip,
+  getSalesSlipPage,
   getSalesSlips,
   getAuctionShipmentOptions,
   getAuctionLots,

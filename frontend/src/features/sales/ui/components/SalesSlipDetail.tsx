@@ -8,6 +8,7 @@ import { confirmSalesSlipPayment } from "../../api/salesApi";
 import { ManualPaymentPanel } from "./ManualPaymentPanel";
 
 export function SalesSlipDetail({
+  loading = false,
   salesSlip,
   updatingSalesStatus,
   onCancelSalesSlip,
@@ -15,6 +16,7 @@ export function SalesSlipDetail({
   onCompleteSalesSlip,
   onPaymentConfirmed,
 }: {
+  loading?: boolean;
   salesSlip: SalesSlip | null;
   updatingSalesStatus: boolean;
   onCancelSalesSlip: (salesSlipId: number) => Promise<void>;
@@ -22,6 +24,14 @@ export function SalesSlipDetail({
   onCompleteSalesSlip: (salesSlipId: number) => Promise<void>;
   onPaymentConfirmed: (salesSlip: SalesSlip) => void;
 }) {
+  if (loading) {
+    return (
+      <section className="min-w-0 rounded-md border border-[#dfe5dc] bg-white p-5 text-sm text-[#5c6a60] shadow-sm">
+        전표 상세를 불러오는 중입니다.
+      </section>
+    );
+  }
+
   if (!salesSlip) {
     return (
       <section className="min-w-0 rounded-md border border-[#dfe5dc] bg-white p-5 text-sm text-[#5c6a60] shadow-sm">

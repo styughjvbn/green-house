@@ -13,10 +13,20 @@ export type SalesManagerProps = {
   activeTab: SalesTab;
   initialShowCreateSlip?: boolean;
   initialBusinessPartners?: BusinessPartner[];
-  initialSalesSlips?: SalesSlip[];
+  initialSalesSlipPage?: SalesSlipPage;
   initialAuctionPage?: AuctionLotPage;
   initialAuctionSummary?: AuctionTrackingSummary;
   initialAuctionSettlements?: AuctionSettlement[];
+};
+
+export type SalesSlipListItem = Omit<SalesSlip, "items">;
+
+export type SalesSlipPage = {
+  content: SalesSlipListItem[];
+  page: number;
+  size: number;
+  totalElements: number;
+  totalPages: number;
 };
 
 export type BusinessPartnerForm = {

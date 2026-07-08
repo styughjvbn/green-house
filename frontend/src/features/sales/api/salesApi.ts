@@ -21,6 +21,8 @@ import type {
   AuctionFilterState,
   CreateBusinessPartnerPayload,
   CreateSalesSlipPayload,
+  SalesFilterState,
+  SalesSlipPage,
 } from "../model/types";
 
 type ApiSuccess<T> = {
@@ -58,6 +60,24 @@ export function getBusinessPartners() {
 
 export function getSalesSlips() {
   return fetchApi<SalesSlip[]>("/sales-slips");
+}
+
+export function getSalesSlipPage(
+  filters?: Partial<SalesFilterState>,
+  page = 0,
+  size = 10,
+) {
+  const params = new URLSearchParams();
+  Object.entries(filters ?? {}).forEach(([key, value]) => {
+    if (value != null && value !== "") params.set(key, String(value));
+  });
+  params.set("page", String(page));
+  params.set("size", String(size));
+  return fetchApi<SalesSlipPage>(`/sales-slips/page?${params}`);
+}
+
+export function getSalesSlip(salesSlipId: number) {
+  return fetchApi<SalesSlip>(`/sales-slips/${salesSlipId}`);
 }
 
 export function updateSalesSlip(

@@ -23,14 +23,14 @@ export function SalesManager({
   activeTab,
   initialShowCreateSlip = false,
   initialBusinessPartners,
-  initialSalesSlips,
+  initialSalesSlipPage,
   initialAuctionPage,
   initialAuctionSummary,
   initialAuctionSettlements,
 }: SalesManagerProps) {
   const sales = useSalesManager(
     initialBusinessPartners ?? [],
-    initialSalesSlips ?? [],
+    initialSalesSlipPage,
     initialShowCreateSlip,
   );
   const [showCreatePartner, setShowCreatePartner] = useState(false);
@@ -58,7 +58,7 @@ export function SalesManager({
   }
 
   function handleEditSalesSlip(salesSlipId: number) {
-    sales.startEditSalesSlip(salesSlipId);
+    void sales.startEditSalesSlip(salesSlipId);
   }
 
   const auctionPage = initialAuctionPage ?? createEmptyAuctionPage();
@@ -106,7 +106,7 @@ export function SalesManager({
               salesSlips={sales.paginatedSalesSlips}
               selectedSalesSlipId={sales.selectedSalesSlip?.id ?? null}
               totalPages={sales.salesSlipTotalPages}
-              totalSalesSlips={sales.filteredSalesSlips.length}
+              totalSalesSlips={sales.salesSlipTotalElements}
               onSelect={sales.selectSalesSlip}
               onCreateSalesSlip={handleToggleCreateSalesSlip}
               onPageChange={sales.setSalesSlipPage}
@@ -116,6 +116,7 @@ export function SalesManager({
               }}
             />
             <SalesSlipDetail
+              loading={sales.loadingSalesSlipDetail}
               salesSlip={sales.selectedSalesSlip}
               updatingSalesStatus={sales.updatingSlipStatus}
               onCancelSalesSlip={sales.handleCancelSalesSlip}

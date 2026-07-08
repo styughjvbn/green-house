@@ -1,8 +1,8 @@
 "use client";
 
 import { Plus } from "lucide-react";
-import type { SalesSlip } from "@/entities/farm/types";
 import { PaginationControls } from "@/shared/ui/PaginationControls";
+import type { SalesSlipListItem } from "../../model/types";
 
 export function SalesSlipList({
   currentPage,
@@ -18,7 +18,7 @@ export function SalesSlipList({
 }: {
   currentPage: number;
   pageSize: number;
-  salesSlips: SalesSlip[];
+  salesSlips: SalesSlipListItem[];
   selectedSalesSlipId: number | null;
   totalPages: number;
   totalSalesSlips: number;

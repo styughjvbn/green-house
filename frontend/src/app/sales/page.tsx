@@ -3,7 +3,7 @@ import {
   getAuctionSettlements,
   getAuctionTrackingSummary,
   getBusinessPartners,
-  getSalesSlips,
+  getSalesSlipPage,
   SalesPage,
 } from "@/features/sales";
 import type { SalesTab } from "@/features/sales/model/types";
@@ -68,7 +68,7 @@ export default async function Page({
 
   const [partners, salesSlips] = await Promise.all([
     getBusinessPartners(),
-    getSalesSlips(),
+    getSalesSlipPage(),
   ]);
 
   return (
@@ -76,7 +76,7 @@ export default async function Page({
       activeTab={activeTab}
       createSlip={createSlip}
       partners={partners}
-      salesSlips={salesSlips}
+      salesSlipPage={salesSlips}
     />
   );
 }
