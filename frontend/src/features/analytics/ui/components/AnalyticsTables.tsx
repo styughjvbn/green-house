@@ -1,7 +1,6 @@
 import Link from "next/link";
 import { AlertTriangle, Info, TrendingUp } from "lucide-react";
-import type { SalesSlip } from "@/entities/farm/types";
-import type { SalesInsight } from "../../model/types";
+import type { AnalyticsSlipSummary, SalesInsight } from "../../model/types";
 import { Panel } from "./AnalyticsCharts";
 import { formatWon } from "./AnalyticsSummary";
 
@@ -11,7 +10,7 @@ export function SlipTable({
   unpaid = false,
 }: {
   title: string;
-  slips: SalesSlip[];
+  slips: AnalyticsSlipSummary[];
   unpaid?: boolean;
 }) {
   return (
@@ -46,7 +45,7 @@ export function SlipTable({
                       {slip.slipNumber}
                     </Link>
                   </td>
-                  <td className="px-2 py-2">{slip.partner.name}</td>
+                  <td className="px-2 py-2">{slip.partnerName}</td>
                   <td className="px-2 py-2">{slip.saleDate}</td>
                   <td className="px-2 py-2">{formatWon(slip.totalAmount)}</td>
                   {unpaid ? (

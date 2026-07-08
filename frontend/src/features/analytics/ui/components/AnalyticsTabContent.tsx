@@ -289,23 +289,12 @@ function SpaceTab({ props }: { props: AnalyticsPageProps }) {
 }
 
 function WorkTab({ props }: { props: AnalyticsPageProps }) {
-  const sortedRecords = [...props.workRecords].sort((left, right) =>
-    right.workDate.localeCompare(left.workDate),
-  );
-  const counts = new Map<string, number>();
-  sortedRecords.forEach((record) =>
-    counts.set(record.workType, (counts.get(record.workType) ?? 0) + 1),
-  );
-  const values = [...counts]
-    .map(([label, value]) => ({ label, value }))
-    .sort((left, right) => right.value - left.value);
-  const movementCount = sortedRecords.filter(
-    (record) => record.workTypeTemplate === "MOVEMENT",
-  ).length;
-  const statusCount = sortedRecords.filter(
-    (record) => record.workTypeTemplate === "STATUS",
-  ).length;
-  const latestWorkDate = sortedRecords[0]?.workDate ?? null;
+  const workAnalytics = props.workAnalytics;
+  const values = workAnalytics?.workTypeCounts ?? [];
+  const sortedRecords = workAnalytics?.recentRecords ?? [];
+  const movementCount = workAnalytics?.movementCount ?? 0;
+  const statusCount = workAnalytics?.statusCount ?? 0;
+  const latestWorkDate = workAnalytics?.latestWorkDate ?? null;
   const reviewHouses = props.mapData.houses
     .filter((house) => requiresReview(house.latestWorkDate))
     .sort((left, right) => {
@@ -331,7 +320,7 @@ function WorkTab({ props }: { props: AnalyticsPageProps }) {
           <div className="mt-3 grid gap-2 sm:grid-cols-2 xl:grid-cols-4">
             <Metric
               label="전체 작업 기록"
-              value={`${sortedRecords.length}건`}
+              value={`${workAnalytics?.totalCount ?? 0}건`}
             />
             <Metric label="최근 작업일" value={latestWorkDate ?? "-"} />
             <Metric label="위치 이동 기록" value={`${movementCount}건`} />

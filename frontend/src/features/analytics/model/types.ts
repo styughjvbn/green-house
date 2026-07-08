@@ -4,19 +4,22 @@ import type {
   FarmStatusMapData,
   House,
   PartnerBalanceSummary,
-  SalesSlip,
   WorkRecord,
 } from "@/entities/farm/types";
 
 export type AnalyticsTab = "SALES" | "VARIETY" | "CUSTOMER" | "SPACE" | "WORK";
 
 export type AnalyticsPageProps = {
+  activeTab?: AnalyticsTab;
   businessPartners: BusinessPartner[];
   houses: House[];
   partnerBalances: PartnerBalanceSummary[];
   mapData: FarmStatusMapData;
-  salesSlips: SalesSlip[];
+  partnerAnalytics: PartnerAnalyticsData | null;
+  salesAnalytics: SalesAnalyticsData | null;
+  salesSlips: AnalyticsSlipSummary[];
   summary: DashboardSummary;
+  workAnalytics: WorkAnalyticsData | null;
   workRecords: WorkRecord[];
 };
 
@@ -47,6 +50,45 @@ export type PartnerAnalyticsStat = {
   latestSaleDate: string | null;
 };
 
+export type AnalyticsSlipSummary = {
+  id: number;
+  slipNumber: string;
+  saleDate: string;
+  partnerName: string;
+  totalAmount: number;
+  paidAmount: number;
+  remainingAmount: number;
+  paymentStatus: string;
+  salesStatus: string;
+};
+
+export type SalesAnalyticsData = {
+  currentMonthSales: number;
+  shippedQuantity: number;
+  unpaidAmount: number;
+  monthlySales: RankedValue[];
+  varietySales: RankedValue[];
+  partnerSales: RankedValue[];
+  paymentBreakdown: RankedValue[];
+  recentSlips: AnalyticsSlipSummary[];
+  unpaidSlips: AnalyticsSlipSummary[];
+  salesInsights: SalesInsight[];
+};
+
+export type PartnerAnalyticsData = {
+  partnerStats: PartnerAnalyticsStat[];
+  partnerSales: RankedValue[];
+};
+
+export type WorkAnalyticsData = {
+  totalCount: number;
+  movementCount: number;
+  statusCount: number;
+  latestWorkDate: string | null;
+  workTypeCounts: RankedValue[];
+  recentRecords: WorkRecord[];
+};
+
 export type AnalyticsViewModel = {
   currentMonthSales: number;
   shippedQuantity: number;
@@ -57,9 +99,9 @@ export type AnalyticsViewModel = {
   partnerSales: RankedValue[];
   partnerStats: PartnerAnalyticsStat[];
   paymentBreakdown: RankedValue[];
-  recentSlips: SalesSlip[];
+  recentSlips: AnalyticsSlipSummary[];
   salesInsights: SalesInsight[];
-  unpaidSlips: SalesSlip[];
+  unpaidSlips: AnalyticsSlipSummary[];
 };
 
 export type AnalyticsFilters = {

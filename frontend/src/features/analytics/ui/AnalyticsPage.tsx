@@ -12,49 +12,40 @@ import { AnalyticsFilters as FilterBar } from "./components/AnalyticsFilters";
 import { AnalyticsSummary } from "./components/AnalyticsSummary";
 import { AnalyticsTabContent } from "./components/AnalyticsTabContent";
 
+const ALL_LABEL = "전체";
+
 const DEFAULT_FILTERS: AnalyticsFilters = {
   dateFrom: "2026-01-01",
   dateTo: "2026-12-31",
-  house: "전체",
-  bed: "전체",
-  zone: "전체",
-  variety: "전체",
-  partner: "전체",
+  house: ALL_LABEL,
+  bed: ALL_LABEL,
+  zone: ALL_LABEL,
+  variety: ALL_LABEL,
+  partner: ALL_LABEL,
 };
 
 export function AnalyticsPage(props: AnalyticsPageProps) {
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
-  const tab = (searchParams.get("tab") as AnalyticsTab | null) ?? "SALES";
+  const tab =
+    props.activeTab ??
+    (searchParams.get("tab") as AnalyticsTab | null) ??
+    "SALES";
   const [draftFilters, setDraftFilters] = useState(DEFAULT_FILTERS);
   const [filters, setFilters] = useState(DEFAULT_FILTERS);
+  const view = useMemo(() => createAnalyticsViewModel(props), [props]);
   const varieties = useMemo(
-    () => [
-      ...new Set(
-        props.salesSlips.flatMap((slip) =>
-          slip.items.map((item) => item.itemName),
-        ),
-      ),
-    ],
-    [props.salesSlips],
+    () => view.varietySales.map((item) => item.label),
+    [view.varietySales],
   );
   const partners = useMemo(
-    () => [...new Set(props.salesSlips.map((slip) => slip.partner.name))],
-    [props.salesSlips],
+    () => view.partnerSales.map((item) => item.label),
+    [view.partnerSales],
   );
   const filteredProps = useMemo(
     () => ({
       ...props,
-      salesSlips: props.salesSlips.filter(
-        (slip) =>
-          slip.saleDate >= filters.dateFrom &&
-          slip.saleDate <= filters.dateTo &&
-          (filters.partner === "전체" ||
-            slip.partner.name === filters.partner) &&
-          (filters.variety === "전체" ||
-            slip.items.some((item) => item.itemName === filters.variety)),
-      ),
       workRecords: props.workRecords.filter(
         (record) =>
           record.workDate >= filters.dateFrom &&
@@ -62,10 +53,6 @@ export function AnalyticsPage(props: AnalyticsPageProps) {
       ),
     }),
     [filters, props],
-  );
-  const view = useMemo(
-    () => createAnalyticsViewModel(filteredProps),
-    [filteredProps],
   );
 
   const reset = () => {
