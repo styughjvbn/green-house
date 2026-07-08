@@ -6,6 +6,8 @@ type OrchidManagementPageProps = {
   mapData: FarmStatusMapData;
   house: House | null;
   initialSelectedOrchidGroupId: number | null;
+  initialSelectedPhysicalBedId?: number | null;
+  initialSelectedBedZoneId?: number | null;
   initialSearchFilters?: OrchidManagementSearchState;
   workTypes: WorkType[];
 };
@@ -14,6 +16,8 @@ export function OrchidManagementPage({
   mapData,
   house,
   initialSelectedOrchidGroupId,
+  initialSelectedPhysicalBedId,
+  initialSelectedBedZoneId,
   initialSearchFilters,
   workTypes,
 }: OrchidManagementPageProps) {
@@ -30,7 +34,14 @@ export function OrchidManagementPage({
   return (
     <main className="space-y-4">
       <OrchidManagementMap
-        key={`${house.id}-${initialSelectedOrchidGroupId ?? "default"}`}
+        key={[
+          house.id,
+          initialSelectedOrchidGroupId ?? "group-default",
+          initialSelectedPhysicalBedId ?? "bed-default",
+          initialSelectedBedZoneId ?? "zone-default",
+        ].join("-")}
+        initialSelectedBedZoneId={initialSelectedBedZoneId}
+        initialSelectedPhysicalBedId={initialSelectedPhysicalBedId}
         initialSearchFilters={initialSearchFilters}
         mapData={mapData}
         house={house}

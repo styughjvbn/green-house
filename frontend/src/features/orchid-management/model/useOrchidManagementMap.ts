@@ -24,6 +24,7 @@ import {
 } from "../api/orchidManagementApi";
 import {
   findBedZone,
+  findFirstBedZoneInPhysicalBed,
   findFirstOrchidGroup,
   findOrchidGroup,
 } from "../lib/orchidManagementUtils";
@@ -42,6 +43,8 @@ export function useOrchidManagementMap(
   house: House,
   workTypes: WorkType[],
   initialSelectedOrchidGroupId: number | null,
+  initialSelectedPhysicalBedId: number | null,
+  initialSelectedBedZoneId: number | null,
   initialSearchFilters?: OrchidManagementSearchState,
 ) {
   const router = useRouter();
@@ -53,13 +56,24 @@ export function useOrchidManagementMap(
         : null,
     [house, initialSelectedOrchidGroupId],
   );
+  const initialBedZone = useMemo(() => {
+    if (initialSelectedBedZoneId) {
+      return findBedZone(house, initialSelectedBedZoneId)?.zone ?? null;
+    }
+    if (initialSelectedPhysicalBedId) {
+      return findFirstBedZoneInPhysicalBed(house, initialSelectedPhysicalBedId);
+    }
+    return null;
+  }, [house, initialSelectedBedZoneId, initialSelectedPhysicalBedId]);
 
   const [selection, setSelection] = useState<OrchidSelection | null>(
     initialOrchidGroup
       ? { type: "ORCHID_GROUP", orchidGroupId: initialOrchidGroup.id }
-      : firstOrchidGroup
-        ? { type: "ORCHID_GROUP", orchidGroupId: firstOrchidGroup.id }
-        : null,
+      : initialBedZone
+        ? { type: "BED_ZONE", bedZoneId: initialBedZone.id }
+        : firstOrchidGroup
+          ? { type: "ORCHID_GROUP", orchidGroupId: firstOrchidGroup.id }
+          : null,
   );
   const [placementEditMode, setPlacementEditMode] = useState(false);
   const [dragState, setDragState] = useState<DragState>(null);

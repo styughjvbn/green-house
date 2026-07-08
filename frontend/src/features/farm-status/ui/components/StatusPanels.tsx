@@ -16,6 +16,7 @@ export function SelectionSummaryPanel({
 }) {
   const items = selection?.items ?? [];
   const statusLabel = hasHouseWarning(selectedHouse) ? "주의" : "정상";
+  const managementHref = createManagementHref(selection, selectedHouse);
 
   return (
     <aside className="rounded-xl border border-[#d9e2d5] bg-white shadow-sm">
@@ -37,7 +38,7 @@ export function SelectionSummaryPanel({
         </div>
         <a
           className="rounded-md border border-[#d2dcd0] bg-[#f8faf7] px-3 py-2 text-xs font-semibold text-[#34503b]"
-          href="/orchid-groups"
+          href={managementHref}
         >
           관리에서 수정
         </a>
@@ -65,6 +66,40 @@ export function SelectionSummaryPanel({
       </div>
     </aside>
   );
+}
+
+function createManagementHref(
+  selection: FarmStatusOrchidGroupList | null,
+  selectedHouse: HouseStatusSummary | null,
+) {
+  const params = new URLSearchParams();
+  const houseId = resolveHouseId(selection, selectedHouse);
+
+  if (houseId != null) {
+    params.set("houseId", String(houseId));
+  }
+
+  if (selection?.targetType === "PHYSICAL_BED") {
+    params.set("physicalBedId", String(selection.targetId));
+  }
+
+  if (selection?.targetType === "BED_ZONE") {
+    params.set("bedZoneId", String(selection.targetId));
+  }
+
+  const query = params.toString();
+  return query ? `/orchid-groups?${query}` : "/orchid-groups";
+}
+
+function resolveHouseId(
+  selection: FarmStatusOrchidGroupList | null,
+  selectedHouse: HouseStatusSummary | null,
+) {
+  if (selection?.targetType === "HOUSE") {
+    return selection.targetId;
+  }
+
+  return selection?.items[0]?.houseId ?? selectedHouse?.houseId ?? null;
 }
 
 export function OrchidGroupTable({

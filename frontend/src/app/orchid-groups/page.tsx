@@ -9,6 +9,8 @@ type OrchidGroupsPageProps = {
   searchParams: Promise<{
     houseId?: string;
     orchidGroupId?: string;
+    physicalBedId?: string;
+    bedZoneId?: string;
     searchKeyword?: string;
     searchStatus?: string;
   }>;
@@ -27,6 +29,8 @@ export default async function Page({ searchParams }: OrchidGroupsPageProps) {
     mapData.houses[0];
   const requestedHouseId = Number(params.houseId);
   const requestedOrchidGroupId = Number(params.orchidGroupId);
+  const requestedPhysicalBedId = Number(params.physicalBedId);
+  const requestedBedZoneId = Number(params.bedZoneId);
   const selectedHouseId =
     Number.isFinite(requestedHouseId) && requestedHouseId > 0
       ? requestedHouseId
@@ -38,6 +42,16 @@ export default async function Page({ searchParams }: OrchidGroupsPageProps) {
       initialSelectedOrchidGroupId={
         Number.isFinite(requestedOrchidGroupId) && requestedOrchidGroupId > 0
           ? requestedOrchidGroupId
+          : null
+      }
+      initialSelectedPhysicalBedId={
+        Number.isFinite(requestedPhysicalBedId) && requestedPhysicalBedId > 0
+          ? requestedPhysicalBedId
+          : null
+      }
+      initialSelectedBedZoneId={
+        Number.isFinite(requestedBedZoneId) && requestedBedZoneId > 0
+          ? requestedBedZoneId
           : null
       }
       initialSearchFilters={{

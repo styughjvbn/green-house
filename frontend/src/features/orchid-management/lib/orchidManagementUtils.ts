@@ -57,6 +57,14 @@ export function findBedZone(
   return null;
 }
 
+export function findFirstBedZoneInPhysicalBed(
+  house: House,
+  physicalBedId: number,
+): BedZone | null {
+  const bed = house.physicalBeds.find((item) => item.id === physicalBedId);
+  return bed?.bedZones[0] ?? null;
+}
+
 export function findFirstAvailableSingleSlot(
   house: House,
   bedZoneId: number,
