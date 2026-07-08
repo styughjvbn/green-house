@@ -1,7 +1,9 @@
 package com.greenhouse.backend;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.hamcrest.Matchers.nullValue;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -124,7 +126,7 @@ class AuctionTrackingTests {
 	}
 
 	@Test
-	void createsAuctionShipmentAndLotsWhenAuctionSalesSlipIsCreated() throws Exception {
+	void createsAuctionShipmentAndLotsWhenAuctionSalesSlipIsCreatedAsCompleted() throws Exception {
 		var auctionHouse = createAuctionHouse("??");
 		var sampleGroups = orchidGroupRepository.findAll().stream()
 				.filter(group -> group.getVariety() != null)
@@ -135,6 +137,7 @@ class AuctionTrackingTests {
 			  "saleDate": "2026-07-05",
 			  "salesType": "AUCTION",
 			  "partnerId": %d,
+			  "salesStatus": "출하 완료",
 			  "items": [
 			    {
 			      "itemName": "%s",
@@ -186,6 +189,69 @@ class AuctionTrackingTests {
 
 		assertThat(shipmentRepository.findAll()).hasSize(1);
 		assertThat(lotRepository.findAll()).hasSize(2);
+	}
+
+	@Test
+	void createsDraftAuctionSalesSlipWithoutShipmentAndMaterializesOnCompletion() throws Exception {
+		var auctionHouse = createAuctionHouse("양재");
+		var sampleGroup = orchidGroupRepository.findAll().stream()
+				.filter(group -> group.getVariety() != null)
+				.findFirst()
+				.orElseThrow();
+
+		var createResult = mockMvc.perform(post("/api/sales-slips")
+				.contentType(MediaType.APPLICATION_JSON)
+				.content("""
+					{
+					  "saleDate": "2026-07-08",
+					  "salesType": "AUCTION",
+					  "partnerId": %d,
+					  "salesStatus": "작성중",
+					  "items": [
+					    {
+					      "itemName": "%s",
+					      "genus": "%s",
+					      "quantity": 10,
+					      "unitPrice": 0,
+					      "allocations": [
+					        {
+					          "orchidGroupId": %d,
+					          "quantity": 10
+					        }
+					      ]
+					    }
+					  ]
+					}
+					""".formatted(
+						auctionHouse.getId(),
+						sampleGroup.getVarietyName(),
+						sampleGroup.getGenus(),
+						sampleGroup.getId())))
+				.andExpect(status().isCreated())
+				.andExpect(jsonPath("$.data.salesStatus").value("작성중"))
+				.andExpect(jsonPath("$.data.auctionShipmentId").value(nullValue()))
+				.andReturn();
+
+		var salesSlipId = Long.valueOf(
+				createResult.getResponse().getContentAsString().replaceFirst(".*?\\\"id\\\":(\\d+).*", "$1"));
+
+		assertThat(shipmentRepository.findAll()).isEmpty();
+		assertThat(lotRepository.findAll()).isEmpty();
+
+		mockMvc.perform(patch("/api/sales-slips/{salesSlipId}/sales-status", salesSlipId)
+				.contentType(MediaType.APPLICATION_JSON)
+				.content("""
+					{
+					  "salesStatus": "출하 완료"
+					}
+					"""))
+			.andExpect(status().isOk())
+			.andExpect(jsonPath("$.data.salesStatus").value("출하 완료"))
+			.andExpect(jsonPath("$.data.auctionShipmentId").isNumber())
+			.andExpect(jsonPath("$.data.items[0].auctionShipmentLotId").isNumber());
+
+		assertThat(shipmentRepository.findAll()).hasSize(1);
+		assertThat(lotRepository.findAll()).hasSize(1);
 	}
 
 	@Test

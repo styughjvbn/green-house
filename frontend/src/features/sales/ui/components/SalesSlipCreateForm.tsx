@@ -142,7 +142,7 @@ export function SalesSlipCreateForm({
         </SelectField>
         <SelectField
           label="판매 상태"
-          disabled
+          disabled={mode === "edit"}
           value={form.salesStatus}
           onChange={(value) => onChange("salesStatus", value)}
         >
@@ -175,7 +175,7 @@ export function SalesSlipCreateForm({
 
       {form.salesType === "AUCTION" ? (
         <div className="mt-3 rounded-md bg-[#f6f8f5] p-4 text-sm text-[#66736a]">
-          전표 저장 시 경매장 출하 기록과 lot가 같이 생성됩니다.
+          작성중 저장 후 출하 완료 처리하면 경매장 출하 기록과 lot가 생성됩니다.
         </div>
       ) : null}
 

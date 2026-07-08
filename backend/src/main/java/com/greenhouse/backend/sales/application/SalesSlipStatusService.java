@@ -14,6 +14,7 @@ import org.springframework.transaction.annotation.Transactional;
 public class SalesSlipStatusService {
 
 	private final SalesSlipRepository salesSlipRepository;
+	private final AuctionShipmentMaterializer auctionShipmentMaterializer;
 	private final SalesSlipInventoryService salesSlipInventoryService;
 
 	public SalesSlipResponse updateStatus(Long salesSlipId, SalesSlipStatusUpdateRequest request) {
@@ -25,6 +26,7 @@ public class SalesSlipStatusService {
 
 		salesSlip.updateSalesStatus(request.salesStatus());
 		if (salesSlip.isOutboundCompleted()) {
+			auctionShipmentMaterializer.materialize(salesSlip);
 			salesSlipInventoryService.outbound(salesSlip);
 		}
 		return SalesSlipResponse.from(salesSlip);

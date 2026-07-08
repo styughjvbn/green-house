@@ -1,14 +1,9 @@
 package com.greenhouse.backend.sales.application;
 
-import com.greenhouse.backend.auction.application.AuctionShipmentCreator;
-import com.greenhouse.backend.auction.domain.AuctionShipment;
-import com.greenhouse.backend.auction.domain.AuctionShipmentLot;
 import com.greenhouse.backend.partner.application.BusinessPartnerReader;
 import com.greenhouse.backend.partner.domain.BusinessPartner;
 import com.greenhouse.backend.partner.domain.PartnerType;
 import com.greenhouse.backend.sales.domain.SalesSlip;
-import com.greenhouse.backend.sales.domain.SalesSlipItem;
-import com.greenhouse.backend.sales.domain.SalesSlipItemAllocation;
 import com.greenhouse.backend.sales.domain.SalesType;
 import com.greenhouse.backend.sales.dto.SalesSlipCreateRequest;
 import com.greenhouse.backend.sales.dto.SalesSlipResponse;
@@ -20,11 +15,11 @@ import org.springframework.stereotype.Service;
 @RequiredArgsConstructor
 public class AuctionSalesSlipCreator {
 	private final SalesSlipRepository salesSlipRepository;
-	private final AuctionShipmentCreator auctionShipmentCreator;
 	private final BusinessPartnerReader partnerReader;
 	private final SalesSlipNumberGenerator numberGenerator;
 	private final SalesSlipAllocationFactory salesSlipAllocationFactory;
 	private final SalesSlipInventoryService salesSlipInventoryService;
+	private final AuctionShipmentMaterializer auctionShipmentMaterializer;
 
 	public SalesSlipResponse create(SalesSlipCreateRequest request) {
 		if (request.partnerId() == null) {
@@ -39,48 +34,23 @@ public class AuctionSalesSlipCreator {
 			throw new IllegalArgumentException("경매 판매는 경매장 거래처만 선택할 수 있습니다.");
 		}
 
-		var shipment = new AuctionShipment(request.saleDate(), partner);
-		request.items().forEach(item -> shipment.addLot(new AuctionShipmentLot(
-				SalesTextNormalizer.required(item.genus() == null || item.genus().isBlank() ? item.itemName() : item.genus()),
-				SalesTextNormalizer.required(item.itemName()),
-				SalesTextNormalizer.normalize(item.spec()),
-				null,
-				item.quantity())));
-		AuctionShipment savedShipment = auctionShipmentCreator.save(shipment);
-
 		var salesSlip = new SalesSlip(
-				numberGenerator.generate(savedShipment.getShipmentDate(), SalesType.AUCTION),
-				savedShipment.getShipmentDate(),
+				numberGenerator.generate(request.saleDate(), SalesType.AUCTION),
+				request.saleDate(),
 				SalesType.AUCTION,
-				savedShipment,
+				null,
 				partner,
 				SalesTextNormalizer.defaultText(request.paymentStatus(), "정산 대기"),
-				SalesTextNormalizer.defaultText(request.salesStatus(), "출하 완료"),
+				SalesTextNormalizer.defaultText(request.salesStatus(), "작성중"),
 				SalesTextNormalizer.defaultText(request.paymentMethod(), "경매 정산"),
 				SalesTextNormalizer.normalize(request.memo()));
 
-		for (int index = 0; index < request.items().size(); index++) {
-			var requestItem = request.items().get(index);
-			var lot = savedShipment.getLots().get(index);
-			var baseItem = salesSlipAllocationFactory.createItem(requestItem);
-			var salesSlipItem = new SalesSlipItem(
-					lot,
-					baseItem.getItemName(),
-					baseItem.getGenus(),
-					baseItem.getSpec(),
-					baseItem.getQuantity(),
-					baseItem.getUnitPrice(),
-					baseItem.getMemo());
-			for (SalesSlipItemAllocation allocation : baseItem.getAllocations()) {
-				salesSlipItem.addAllocation(
-						new SalesSlipItemAllocation(allocation.getOrchidGroup(), allocation.getAllocatedQuantity()));
-			}
-			salesSlip.addItem(salesSlipItem);
-		}
+		request.items().forEach(item -> salesSlip.addItem(salesSlipAllocationFactory.createItem(item)));
 
 		var saved = salesSlipRepository.save(salesSlip);
 		salesSlipInventoryService.reserve(saved);
 		if (saved.isOutboundCompleted()) {
+			auctionShipmentMaterializer.materialize(saved);
 			salesSlipInventoryService.outbound(saved);
 		}
 		return SalesSlipResponse.from(saved);

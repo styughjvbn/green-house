@@ -105,4 +105,8 @@ public class SalesSlipItem {
 		this.allocations.clear();
 		allocations.forEach(this::addAllocation);
 	}
+
+	public void assignAuctionShipmentLot(AuctionShipmentLot auctionShipmentLot) {
+		this.auctionShipmentLot = auctionShipmentLot;
+	}
 }

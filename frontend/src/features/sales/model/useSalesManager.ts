@@ -143,7 +143,7 @@ export function useSalesManager(
             ? String(directPartner.id)
             : current.partnerId,
       paymentStatus: salesType === "AUCTION" ? "정산 대기" : "미입금",
-      salesStatus: salesType === "AUCTION" ? "출하 완료" : "작성중",
+      salesStatus: "작성중",
       paymentMethod: salesType === "AUCTION" ? "경매 정산" : "",
       items:
         current.items.length > 0 ? current.items : [createEmptySalesItem()],
