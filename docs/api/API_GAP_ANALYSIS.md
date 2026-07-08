@@ -89,6 +89,7 @@
 
 - `GET /api/sales-slips`
 - `POST /api/sales-slips`
+- `PUT /api/sales-slips/{salesSlipId}`
 - `GET /api/sales-slips/auction-shipments`
 - `GET /api/sales-slips/{salesSlipId}`
 - `GET /api/sales-slips/{salesSlipId}/print`

@@ -71,6 +71,29 @@ paths:
             "*/*":
               schema:
                 $ref: "#/components/schemas/ApiResponseSalesSlipResponse"
+    put:
+      tags: [sales-controller]
+      operationId: updateSalesSlip
+      parameters:
+        - name: salesSlipId
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int64
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SalesSlipCreateRequest"
+      responses:
+        "200":
+          description: OK
+          content:
+            "*/*":
+              schema:
+                $ref: "#/components/schemas/ApiResponseSalesSlipResponse"
   /api/sales-slips/{salesSlipId}/print:
     get:
       tags: [sales-controller]
