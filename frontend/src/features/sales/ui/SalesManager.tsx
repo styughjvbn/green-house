@@ -73,6 +73,20 @@ export function SalesManager({
     }
   }
 
+  function handleToggleCreateSalesSlip() {
+    if (!sales.showCreateSlip) {
+      sales.startCreateSalesSlip();
+    } else {
+      sales.cancelSalesSlipEditing();
+    }
+    updateCreateSlip(!sales.showCreateSlip);
+  }
+
+  function handleEditSalesSlip(salesSlipId: number) {
+    sales.startEditSalesSlip(salesSlipId);
+    updateCreateSlip(true);
+  }
+
   return (
     <div className="space-y-4">
       {sales.activeTab === "SLIPS" ? (
@@ -96,7 +110,10 @@ export function SalesManager({
               onAddItem={sales.addSalesItem}
               onAllocationChange={sales.updateAllocation}
               onAllocationRemove={sales.removeAllocation}
-              onCancel={sales.cancelSalesSlipEditing}
+              onCancel={() => {
+                sales.cancelSalesSlipEditing();
+                updateCreateSlip(false);
+              }}
               onChange={sales.updateSalesForm}
               onRemoveItem={sales.removeSalesItem}
               onSubmit={handleCreateSalesSlip}
@@ -110,12 +127,12 @@ export function SalesManager({
               salesSlips={sales.filteredSalesSlips}
               selectedSalesSlipId={sales.selectedSalesSlip?.id ?? null}
               onSelect={sales.selectSalesSlip}
-              onCreateSalesSlip={sales.startCreateSalesSlip}
+              onCreateSalesSlip={handleToggleCreateSalesSlip}
             />
             <SalesSlipDetail
               salesSlip={sales.selectedSalesSlip}
               updatingSalesStatus={sales.updatingSlipStatus}
-              onEditSalesSlip={sales.startEditSalesSlip}
+              onEditSalesSlip={handleEditSalesSlip}
               onCompleteSalesSlip={sales.handleCompleteSalesSlip}
               onPaymentConfirmed={sales.updateSalesSlip}
             />
