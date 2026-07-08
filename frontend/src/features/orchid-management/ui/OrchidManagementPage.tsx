@@ -1,10 +1,12 @@
 import type { FarmStatusMapData, House, WorkType } from "@/entities/farm/types";
+import type { OrchidManagementSearchState } from "../model/types";
 import { OrchidManagementMap } from "./OrchidManagementMap";
 
 type OrchidManagementPageProps = {
   mapData: FarmStatusMapData;
   house: House | null;
   initialSelectedOrchidGroupId: number | null;
+  initialSearchFilters?: OrchidManagementSearchState;
   workTypes: WorkType[];
 };
 
@@ -12,6 +14,7 @@ export function OrchidManagementPage({
   mapData,
   house,
   initialSelectedOrchidGroupId,
+  initialSearchFilters,
   workTypes,
 }: OrchidManagementPageProps) {
   if (!house) {
@@ -28,6 +31,7 @@ export function OrchidManagementPage({
     <main className="space-y-4">
       <OrchidManagementMap
         key={`${house.id}-${initialSelectedOrchidGroupId ?? "default"}`}
+        initialSearchFilters={initialSearchFilters}
         mapData={mapData}
         house={house}
         initialSelectedOrchidGroupId={initialSelectedOrchidGroupId}

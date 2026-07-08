@@ -9,6 +9,8 @@ type OrchidGroupsPageProps = {
   searchParams: Promise<{
     houseId?: string;
     orchidGroupId?: string;
+    searchKeyword?: string;
+    searchStatus?: string;
   }>;
 };
 
@@ -38,6 +40,10 @@ export default async function Page({ searchParams }: OrchidGroupsPageProps) {
           ? requestedOrchidGroupId
           : null
       }
+      initialSearchFilters={{
+        keyword: params.searchKeyword ?? "",
+        status: params.searchStatus ?? "",
+      }}
       mapData={mapData}
       house={house}
       workTypes={workTypes}

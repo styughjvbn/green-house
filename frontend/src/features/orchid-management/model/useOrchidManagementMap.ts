@@ -42,6 +42,7 @@ export function useOrchidManagementMap(
   house: House,
   workTypes: WorkType[],
   initialSelectedOrchidGroupId: number | null,
+  initialSearchFilters?: OrchidManagementSearchState,
 ) {
   const router = useRouter();
   const firstOrchidGroup = useMemo(() => findFirstOrchidGroup(house), [house]);
@@ -65,8 +66,8 @@ export function useOrchidManagementMap(
   const [mutationMode, setMutationMode] = useState<MutationMode>(null);
   const [searchFilters, setSearchFilters] =
     useState<OrchidManagementSearchState>({
-      keyword: "",
-      status: "",
+      keyword: initialSearchFilters?.keyword ?? "",
+      status: initialSearchFilters?.status ?? "",
     });
   const [searchResults, setSearchResults] = useState<OrchidGroup[]>([]);
   const [searchLoading, setSearchLoading] = useState(false);
@@ -278,9 +279,23 @@ export function useOrchidManagementMap(
   }
 
   function moveToOrchidGroup(orchidGroup: OrchidGroup) {
-    router.push(
-      `/orchid-groups?houseId=${orchidGroup.houseId}&orchidGroupId=${orchidGroup.id}`,
-    );
+    if (orchidGroup.houseId === house.id) {
+      setSelection({ type: "ORCHID_GROUP", orchidGroupId: orchidGroup.id });
+      setMutationMode(null);
+      return;
+    }
+
+    const params = new URLSearchParams({
+      houseId: String(orchidGroup.houseId),
+      orchidGroupId: String(orchidGroup.id),
+    });
+    if (searchFilters.keyword.trim()) {
+      params.set("searchKeyword", searchFilters.keyword.trim());
+    }
+    if (searchFilters.status) {
+      params.set("searchStatus", searchFilters.status);
+    }
+    router.push(`/orchid-groups?${params}`);
   }
 
   function togglePlacementEditMode() {

@@ -99,6 +99,7 @@ export type OrchidManagementMapProps = {
   mapData: FarmStatusMapData;
   house: House;
   initialSelectedOrchidGroupId: number | null;
+  initialSearchFilters?: OrchidManagementSearchState;
   workTypes: WorkType[];
 };
 

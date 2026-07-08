@@ -13,6 +13,7 @@ import OrchidSelectionPanel, {
 
 export function OrchidManagementMap({
   initialSelectedOrchidGroupId,
+  initialSearchFilters,
   mapData,
   house,
   workTypes,
@@ -21,6 +22,7 @@ export function OrchidManagementMap({
     house,
     workTypes,
     initialSelectedOrchidGroupId,
+    initialSearchFilters,
   );
   const [showScale, setShowScale] = useState(true);
 
