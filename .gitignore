@@ -23,3 +23,12 @@ pnpm-debug.log*
 hs_err_pid*
 replay_pid*
 temp/
+
+scripts/seed_tools/__pycache__/
+# private seed input data
+scripts/seed_tools/raw/*.csv
+scripts/seed_tools/raw/*.xlsx
+scripts/seed_tools/raw/*.zip
+
+# generated private seed data
+scripts/seed_tools/generated-private/
