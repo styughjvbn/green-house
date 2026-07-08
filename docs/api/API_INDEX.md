@@ -147,10 +147,14 @@
 |---|---|---|---|---|
 | `GET` | `/api/sales-slips` | `getSalesSlips` | `-` | `200:ApiResponseListSalesSlipResponse` |
 | `GET` | `/api/sales-slips/page` | `getSalesSlipPage` | `-` | `200:ApiResponseSalesSlipPageResponse` |
+| `GET` | `/api/analytics/sales` | `getSalesAnalytics` | `-` | `200:ApiResponseSalesAnalyticsResponse` |
+| `GET` | `/api/analytics/partners` | `getPartnerAnalytics` | `-` | `200:ApiResponsePartnerAnalyticsResponse` |
+| `GET` | `/api/analytics/work` | `getWorkAnalytics` | `-` | `200:ApiResponseWorkAnalyticsResponse` |
 | `POST` | `/api/sales-slips` | `createSalesSlip` | `SalesSlipCreateRequest` | `201:ApiResponseSalesSlipResponse` |
 | `GET` | `/api/sales-slips/auction-shipments` | `getAuctionShipmentOptions` | `-` | `200:ApiResponseListAuctionShipmentOptionResponse` |
 | `GET` | `/api/sales-slips/{salesSlipId}` | `getSalesSlip` | `-` | `200:ApiResponseSalesSlipResponse` |
 | `GET` | `/api/sales-slips/{salesSlipId}/print` | `getSalesSlipPrintData` | `-` | `200:ApiResponseSalesSlipResponse` |
+| `GET` | `/api/sales-slips/print` | `getPrintableSalesSlips` | `-` | `200:ApiResponseSalesSlipPageResponse` |
 
 ### 출하·경매 추적/정산
 

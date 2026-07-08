@@ -1,0 +1,315 @@
+openapi: 3.1.0
+info:
+  title: Greenhouse API Slice - Analytics
+  version: v0
+  description: 분석 화면 전용 집계 API
+servers:
+  - url: http://localhost:8080
+    description: Local server
+paths:
+  /api/analytics/sales:
+    get:
+      tags: [analytics-controller]
+      operationId: getSalesAnalytics
+      parameters:
+        - name: from
+          in: query
+          required: false
+          schema:
+            type: string
+            format: date
+        - name: to
+          in: query
+          required: false
+          schema:
+            type: string
+            format: date
+      responses:
+        "200":
+          description: OK
+          content:
+            "*/*":
+              schema:
+                $ref: "#/components/schemas/ApiResponseSalesAnalyticsResponse"
+  /api/analytics/partners:
+    get:
+      tags: [analytics-controller]
+      operationId: getPartnerAnalytics
+      parameters:
+        - name: from
+          in: query
+          required: false
+          schema:
+            type: string
+            format: date
+        - name: to
+          in: query
+          required: false
+          schema:
+            type: string
+            format: date
+      responses:
+        "200":
+          description: OK
+          content:
+            "*/*":
+              schema:
+                $ref: "#/components/schemas/ApiResponsePartnerAnalyticsResponse"
+  /api/analytics/work:
+    get:
+      tags: [analytics-controller]
+      operationId: getWorkAnalytics
+      parameters:
+        - name: from
+          in: query
+          required: false
+          schema:
+            type: string
+            format: date
+        - name: to
+          in: query
+          required: false
+          schema:
+            type: string
+            format: date
+      responses:
+        "200":
+          description: OK
+          content:
+            "*/*":
+              schema:
+                $ref: "#/components/schemas/ApiResponseWorkAnalyticsResponse"
+components:
+  schemas:
+    ApiResponseSalesAnalyticsResponse:
+      type: object
+      properties:
+        data:
+          $ref: "#/components/schemas/SalesAnalyticsResponse"
+        message:
+          type: string
+          nullable: true
+    ApiResponsePartnerAnalyticsResponse:
+      type: object
+      properties:
+        data:
+          $ref: "#/components/schemas/PartnerAnalyticsResponse"
+        message:
+          type: string
+          nullable: true
+    ApiResponseWorkAnalyticsResponse:
+      type: object
+      properties:
+        data:
+          $ref: "#/components/schemas/WorkAnalyticsResponse"
+        message:
+          type: string
+          nullable: true
+    AnalyticsRankedValueResponse:
+      type: object
+      properties:
+        label:
+          type: string
+        value:
+          type: integer
+          format: int64
+        secondary:
+          type: string
+          nullable: true
+    AnalyticsSlipSummaryResponse:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: int64
+        slipNumber:
+          type: string
+        saleDate:
+          type: string
+          format: date
+        partnerName:
+          type: string
+        totalAmount:
+          type: integer
+          format: int32
+        paidAmount:
+          type: integer
+          format: int64
+        remainingAmount:
+          type: integer
+          format: int64
+        paymentStatus:
+          type: string
+        salesStatus:
+          type: string
+    AnalyticsInsightResponse:
+      type: object
+      properties:
+        tone:
+          type: string
+        text:
+          type: string
+        actionLabel:
+          type: string
+          nullable: true
+        actionHref:
+          type: string
+          nullable: true
+    SalesAnalyticsResponse:
+      type: object
+      properties:
+        currentMonthSales:
+          type: integer
+          format: int64
+        shippedQuantity:
+          type: integer
+          format: int64
+        unpaidAmount:
+          type: integer
+          format: int64
+        monthlySales:
+          type: array
+          items:
+            $ref: "#/components/schemas/AnalyticsRankedValueResponse"
+        varietySales:
+          type: array
+          items:
+            $ref: "#/components/schemas/AnalyticsRankedValueResponse"
+        partnerSales:
+          type: array
+          items:
+            $ref: "#/components/schemas/AnalyticsRankedValueResponse"
+        paymentBreakdown:
+          type: array
+          items:
+            $ref: "#/components/schemas/AnalyticsRankedValueResponse"
+        recentSlips:
+          type: array
+          items:
+            $ref: "#/components/schemas/AnalyticsSlipSummaryResponse"
+        unpaidSlips:
+          type: array
+          items:
+            $ref: "#/components/schemas/AnalyticsSlipSummaryResponse"
+        salesInsights:
+          type: array
+          items:
+            $ref: "#/components/schemas/AnalyticsInsightResponse"
+    PartnerAnalyticsStatResponse:
+      type: object
+      properties:
+        partnerId:
+          type: integer
+          format: int64
+        partnerName:
+          type: string
+        partnerType:
+          type: string
+          enum: [WHOLESALE, RETAIL, AUCTION_HOUSE]
+        totalSales:
+          type: integer
+          format: int64
+        transactionCount:
+          type: integer
+          format: int64
+        unpaidAmount:
+          type: integer
+          format: int64
+        paidAmount:
+          type: integer
+          format: int64
+        receivableBalance:
+          type: integer
+          format: int64
+        creditBalance:
+          type: integer
+          format: int64
+        unappliedPaymentAmount:
+          type: integer
+          format: int64
+        latestSaleDate:
+          type: string
+          format: date
+          nullable: true
+    PartnerAnalyticsResponse:
+      type: object
+      properties:
+        partnerStats:
+          type: array
+          items:
+            $ref: "#/components/schemas/PartnerAnalyticsStatResponse"
+        partnerSales:
+          type: array
+          items:
+            $ref: "#/components/schemas/AnalyticsRankedValueResponse"
+    WorkRecordResponse:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: int64
+        workTypeId:
+          type: integer
+          format: int64
+          nullable: true
+        workType:
+          type: string
+        workTypeTemplate:
+          type: string
+          nullable: true
+        workDate:
+          type: string
+          format: date
+        targetType:
+          type: string
+        targetId:
+          type: integer
+          format: int64
+          nullable: true
+        materialName:
+          type: string
+          nullable: true
+        dilutionRatio:
+          type: string
+          nullable: true
+        quantity:
+          type: string
+          nullable: true
+        worker:
+          type: string
+          nullable: true
+        fromBedZoneId:
+          type: integer
+          format: int64
+          nullable: true
+        toBedZoneId:
+          type: integer
+          format: int64
+          nullable: true
+        memo:
+          type: string
+          nullable: true
+    WorkAnalyticsResponse:
+      type: object
+      properties:
+        totalCount:
+          type: integer
+          format: int64
+        movementCount:
+          type: integer
+          format: int64
+        statusCount:
+          type: integer
+          format: int64
+        latestWorkDate:
+          type: string
+          format: date
+          nullable: true
+        workTypeCounts:
+          type: array
+          items:
+            $ref: "#/components/schemas/AnalyticsRankedValueResponse"
+        recentRecords:
+          type: array
+          items:
+            $ref: "#/components/schemas/WorkRecordResponse"
