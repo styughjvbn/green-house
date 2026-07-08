@@ -2,17 +2,30 @@
 
 import { Plus } from "lucide-react";
 import type { SalesSlip } from "@/entities/farm/types";
+import { PaginationControls } from "@/shared/ui/PaginationControls";
 
 export function SalesSlipList({
+  currentPage,
+  pageSize,
   salesSlips,
   selectedSalesSlipId,
+  totalPages,
+  totalSalesSlips,
   onSelect,
   onCreateSalesSlip,
+  onPageChange,
+  onPageSizeChange,
 }: {
+  currentPage: number;
+  pageSize: number;
   salesSlips: SalesSlip[];
   selectedSalesSlipId: number | null;
+  totalPages: number;
+  totalSalesSlips: number;
   onSelect: (salesSlipId: number) => void;
   onCreateSalesSlip: () => void;
+  onPageChange: (pageIndex: number) => void;
+  onPageSizeChange: (pageSize: number) => void;
 }) {
   return (
     <section className="min-w-0 rounded-md border border-[#dfe5dc] bg-white p-4 shadow-sm">
@@ -20,7 +33,7 @@ export function SalesSlipList({
         <div className="flex items-center gap-2">
           <h2 className="text-xl font-bold text-[#17251b]">판매 전표 목록</h2>
           <span className="text-sm font-semibold text-[#159447]">
-            총 {salesSlips.length}건
+            총 {totalSalesSlips}건
           </span>
         </div>
         <button
@@ -110,6 +123,18 @@ export function SalesSlipList({
             ) : null}
           </tbody>
         </table>
+      </div>
+      <div className="mt-4">
+        <PaginationControls
+          nextLabel="다음"
+          pageCount={totalPages}
+          pageIndex={currentPage}
+          pageSize={pageSize}
+          pageSizeOptions={[10, 20, 50]}
+          previousLabel="이전"
+          onPageChange={onPageChange}
+          onPageSizeChange={onPageSizeChange}
+        />
       </div>
     </section>
   );

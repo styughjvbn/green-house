@@ -1,16 +1,29 @@
 import { Plus } from "lucide-react";
 import type { BusinessPartner } from "@/entities/farm/types";
+import { PaginationControls } from "@/shared/ui/PaginationControls";
 
 export function BusinessPartnerList({
+  currentPage,
+  pageSize,
   partners,
   selectedBusinessPartnerId,
+  totalPages,
+  totalPartners,
   onSelectBusinessPartner,
   onCreateBusinessPartner,
+  onPageChange,
+  onPageSizeChange,
 }: {
+  currentPage: number;
+  pageSize: number;
   partners: BusinessPartner[];
   selectedBusinessPartnerId: number | null;
+  totalPages: number;
+  totalPartners: number;
   onSelectBusinessPartner: (partnerId: number) => void;
   onCreateBusinessPartner: () => void;
+  onPageChange: (pageIndex: number) => void;
+  onPageSizeChange: (pageSize: number) => void;
 }) {
   return (
     <section className="rounded-md border border-[#d7ddd4] bg-white p-4 shadow-sm">
@@ -18,7 +31,7 @@ export function BusinessPartnerList({
         <div className="flex items-center gap-2">
           <h2 className="text-xl font-bold text-[#17251b]">거래처 목록</h2>
           <span className="text-sm font-semibold text-[#159447]">
-            총 {partners.length}건
+            총 {totalPartners}건
           </span>
         </div>
         <button
@@ -54,6 +67,18 @@ export function BusinessPartnerList({
         {partners.length === 0 ? (
           <p className="text-sm text-[#5c6a60]">등록된 거래처가 없습니다.</p>
         ) : null}
+      </div>
+      <div className="mt-4">
+        <PaginationControls
+          nextLabel="다음"
+          pageCount={totalPages}
+          pageIndex={currentPage}
+          pageSize={pageSize}
+          pageSizeOptions={[10, 20, 50]}
+          previousLabel="이전"
+          onPageChange={onPageChange}
+          onPageSizeChange={onPageSizeChange}
+        />
       </div>
     </section>
   );

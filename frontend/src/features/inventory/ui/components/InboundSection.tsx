@@ -1,8 +1,9 @@
 "use client";
 
 import type { House } from "@/entities/farm/types";
+import { PaginationControls } from "@/shared/ui/PaginationControls";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import { ChevronLeft, ChevronRight, Plus, Scissors, X } from "lucide-react";
+import { Plus, Scissors, X } from "lucide-react";
 import type { ReactNode } from "react";
 import { useState } from "react";
 import type {
@@ -85,8 +86,6 @@ export function InboundSection({
   const selected =
     pageData.content.find((item) => item.id === selectedId) ??
     pageData.content[0];
-
-  const pageNumbers = buildPageNumbers(pageData.page, pageData.totalPages);
 
   const updateParams = (updater: (params: URLSearchParams) => void) => {
     const params = new URLSearchParams(searchParams.toString());
@@ -258,60 +257,25 @@ export function InboundSection({
             </table>
           </div>
           <div className="mt-3 flex items-center justify-between gap-3">
-            <div className="flex items-center gap-1">
-              <button
-                className="grid h-8 w-8 place-items-center rounded border border-[#d7ddd8] disabled:opacity-40"
-                disabled={pageData.page === 0}
-                type="button"
-                onClick={() =>
-                  updateParams((params) => {
-                    params.set("inboundPage", String(pageData.page - 1));
-                  })
-                }
-              >
-                <ChevronLeft className="h-4 w-4" />
-              </button>
-              {pageNumbers.map((pageNumber) => (
-                <button
-                  key={pageNumber}
-                  className={`h-8 min-w-8 rounded px-2 text-xs ${pageNumber === pageData.page ? "bg-[#159447] font-bold text-white" : "border border-[#d7ddd8]"}`}
-                  type="button"
-                  onClick={() =>
-                    updateParams((params) => {
-                      params.set("inboundPage", String(pageNumber));
-                    })
-                  }
-                >
-                  {pageNumber + 1}
-                </button>
-              ))}
-              <button
-                className="grid h-8 w-8 place-items-center rounded border border-[#d7ddd8] disabled:opacity-40"
-                disabled={pageData.page >= pageData.totalPages - 1}
-                type="button"
-                onClick={() =>
-                  updateParams((params) => {
-                    params.set("inboundPage", String(pageData.page + 1));
-                  })
-                }
-              >
-                <ChevronRight className="h-4 w-4" />
-              </button>
-            </div>
-            <select
-              className="h-8 rounded border border-[#d7ddd8] px-3 text-xs"
-              value={String(pageData.size)}
-              onChange={(event) =>
+            <PaginationControls
+              nextLabel="다음"
+              pageCount={pageData.totalPages}
+              pageIndex={pageData.page}
+              pageSize={pageData.size}
+              pageSizeOptions={[10, 20, 50]}
+              previousLabel="이전"
+              onPageChange={(pageIndex) =>
                 updateParams((params) => {
-                  params.set("inboundSize", event.target.value);
+                  params.set("inboundPage", String(pageIndex));
+                })
+              }
+              onPageSizeChange={(pageSize) =>
+                updateParams((params) => {
+                  params.set("inboundSize", String(pageSize));
                   params.set("inboundPage", "0");
                 })
               }
-            >
-              <option value="10">10개씩 보기</option>
-              <option value="20">20개씩 보기</option>
-              <option value="50">50개씩 보기</option>
-            </select>
+            />
           </div>
         </section>
 
@@ -1234,15 +1198,4 @@ function setQueryParam(
   }
 
   params.set(key, normalized);
-}
-
-function buildPageNumbers(currentPage: number, totalPages: number) {
-  if (totalPages <= 0) {
-    return [0];
-  }
-
-  const start = Math.max(0, currentPage - 2);
-  const end = Math.min(totalPages, start + 5);
-
-  return Array.from({ length: end - start }, (_, index) => start + index);
 }

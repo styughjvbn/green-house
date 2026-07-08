@@ -6,6 +6,7 @@ import type {
   AuctionSettlement,
   AuctionSettlementStatus,
 } from "@/entities/farm/types";
+import { PaginationControls } from "@/shared/ui/PaginationControls";
 import {
   confirmAuctionSettlementPayment,
   rebuildAuctionSettlement,
@@ -21,6 +22,8 @@ export function AuctionSettlementView({
   const [selectedId, setSelectedId] = useState<number | null>(
     initialSettlements[0]?.id ?? null,
   );
+  const [page, setPage] = useState(0);
+  const [pageSize, setPageSize] = useState(10);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const selected =
@@ -40,6 +43,12 @@ export function AuctionSettlementView({
     }),
     [settlements],
   );
+  const totalPages = Math.max(1, Math.ceil(settlements.length / pageSize));
+  const visiblePage = Math.min(page, totalPages - 1);
+  const paginatedSettlements = useMemo(() => {
+    const start = visiblePage * pageSize;
+    return settlements.slice(start, start + pageSize);
+  }, [pageSize, settlements, visiblePage]);
 
   async function rebuildSelected() {
     if (!selected) return;
@@ -117,7 +126,7 @@ export function AuctionSettlementView({
                 </tr>
               </thead>
               <tbody>
-                {settlements.map((settlement) => (
+                {paginatedSettlements.map((settlement) => (
                   <tr
                     key={settlement.id}
                     className={`cursor-pointer border-t border-[#edf0ec] ${selected?.id === settlement.id ? "bg-[#eef7ec]" : "hover:bg-[#fafbf9]"}`}
@@ -141,7 +150,7 @@ export function AuctionSettlementView({
                     </td>
                   </tr>
                 ))}
-                {settlements.length === 0 ? (
+                {paginatedSettlements.length === 0 ? (
                   <tr>
                     <td
                       colSpan={6}
@@ -153,6 +162,21 @@ export function AuctionSettlementView({
                 ) : null}
               </tbody>
             </table>
+          </div>
+          <div className="border-t border-[#e5e9e3] px-4 py-3">
+            <PaginationControls
+              nextLabel="다음"
+              pageCount={totalPages}
+              pageIndex={visiblePage}
+              pageSize={pageSize}
+              pageSizeOptions={[10, 20, 50]}
+              previousLabel="이전"
+              onPageChange={setPage}
+              onPageSizeChange={(nextPageSize) => {
+                setPageSize(nextPageSize);
+                setPage(0);
+              }}
+            />
           </div>
         </section>
 

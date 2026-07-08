@@ -124,10 +124,19 @@ export function SalesManager({
 
           <div className="grid gap-4 2xl:grid-cols-[minmax(0,0.88fr)_minmax(0,1.12fr)]">
             <SalesSlipList
-              salesSlips={sales.filteredSalesSlips}
+              currentPage={sales.salesSlipCurrentPage}
+              pageSize={sales.salesSlipPageSize}
+              salesSlips={sales.paginatedSalesSlips}
               selectedSalesSlipId={sales.selectedSalesSlip?.id ?? null}
+              totalPages={sales.salesSlipTotalPages}
+              totalSalesSlips={sales.filteredSalesSlips.length}
               onSelect={sales.selectSalesSlip}
               onCreateSalesSlip={handleToggleCreateSalesSlip}
+              onPageChange={sales.setSalesSlipPage}
+              onPageSizeChange={(pageSize) => {
+                sales.setSalesSlipPageSize(pageSize);
+                sales.setSalesSlipPage(0);
+              }}
             />
             <SalesSlipDetail
               salesSlip={sales.selectedSalesSlip}
@@ -155,15 +164,24 @@ export function SalesManager({
           />
           <div className="grid gap-4 xl:grid-cols-[420px_minmax(0,1fr)]">
             <BusinessPartnerList
-              partners={sales.filteredBusinessPartners}
+              currentPage={sales.partnerCurrentPage}
+              pageSize={sales.partnerPageSize}
+              partners={sales.paginatedBusinessPartners}
               selectedBusinessPartnerId={
                 showCreatePartner ? null : sales.selectedPartnerId
               }
+              totalPages={sales.partnerTotalPages}
+              totalPartners={sales.filteredBusinessPartners.length}
               onSelectBusinessPartner={(partnerId) => {
                 setShowCreatePartner(false);
                 sales.selectBusinessPartner(partnerId);
               }}
               onCreateBusinessPartner={() => setShowCreatePartner(true)}
+              onPageChange={sales.setPartnerPage}
+              onPageSizeChange={(pageSize) => {
+                sales.setPartnerPageSize(pageSize);
+                sales.setPartnerPage(0);
+              }}
             />
             <div className="space-y-4">
               {showCreatePartner ? (

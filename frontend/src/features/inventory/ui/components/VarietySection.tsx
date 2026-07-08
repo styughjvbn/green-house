@@ -1,8 +1,9 @@
 "use client";
 
-import { ChevronLeft, ChevronRight, Pencil, Plus, Trash2 } from "lucide-react";
+import { Pencil, Plus, Trash2 } from "lucide-react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useMemo, useState } from "react";
+import { PaginationControls } from "@/shared/ui/PaginationControls";
 import type {
   InventoryPageResult,
   Variety,
@@ -60,8 +61,6 @@ export function VarietySection({
     description: selected?.description ?? "",
     memo: selected?.memo ?? "",
   });
-
-  const pageNumbers = buildPageNumbers(pageData.page, pageData.totalPages);
 
   const updateParams = (updater: (params: URLSearchParams) => void) => {
     const params = new URLSearchParams(searchParams.toString());
@@ -233,60 +232,25 @@ export function VarietySection({
             </table>
           </div>
           <div className="mt-3 flex items-center justify-between gap-3">
-            <div className="flex items-center gap-1">
-              <button
-                className="grid h-8 w-8 place-items-center rounded border border-[#d7ddd8] disabled:opacity-40"
-                disabled={pageData.page === 0}
-                type="button"
-                onClick={() =>
-                  updateParams((params) => {
-                    params.set("varietyPage", String(pageData.page - 1));
-                  })
-                }
-              >
-                <ChevronLeft className="h-4 w-4" />
-              </button>
-              {pageNumbers.map((pageNumber) => (
-                <button
-                  key={pageNumber}
-                  className={`h-8 min-w-8 rounded px-2 text-xs ${pageNumber === pageData.page ? "bg-[#159447] font-bold text-white" : "border border-[#d7ddd8]"}`}
-                  type="button"
-                  onClick={() =>
-                    updateParams((params) => {
-                      params.set("varietyPage", String(pageNumber));
-                    })
-                  }
-                >
-                  {pageNumber + 1}
-                </button>
-              ))}
-              <button
-                className="grid h-8 w-8 place-items-center rounded border border-[#d7ddd8] disabled:opacity-40"
-                disabled={pageData.page >= pageData.totalPages - 1}
-                type="button"
-                onClick={() =>
-                  updateParams((params) => {
-                    params.set("varietyPage", String(pageData.page + 1));
-                  })
-                }
-              >
-                <ChevronRight className="h-4 w-4" />
-              </button>
-            </div>
-            <select
-              className="h-8 rounded border border-[#d7ddd8] px-3 text-xs"
-              value={String(pageData.size)}
-              onChange={(event) =>
+            <PaginationControls
+              nextLabel="다음"
+              pageCount={pageData.totalPages}
+              pageIndex={pageData.page}
+              pageSize={pageData.size}
+              pageSizeOptions={[10, 20, 50]}
+              previousLabel="이전"
+              onPageChange={(pageIndex) =>
                 updateParams((params) => {
-                  params.set("varietySize", event.target.value);
+                  params.set("varietyPage", String(pageIndex));
+                })
+              }
+              onPageSizeChange={(pageSize) =>
+                updateParams((params) => {
+                  params.set("varietySize", String(pageSize));
                   params.set("varietyPage", "0");
                 })
               }
-            >
-              <option value="10">10개씩 보기</option>
-              <option value="20">20개씩 보기</option>
-              <option value="50">50개씩 보기</option>
-            </select>
+            />
           </div>
         </section>
 
@@ -600,15 +564,4 @@ function setQueryParam(
   }
 
   params.set(key, normalized);
-}
-
-function buildPageNumbers(currentPage: number, totalPages: number) {
-  if (totalPages <= 0) {
-    return [0];
-  }
-
-  const start = Math.max(0, currentPage - 2);
-  const end = Math.min(totalPages, start + 5);
-
-  return Array.from({ length: end - start }, (_, index) => start + index);
 }

@@ -64,6 +64,10 @@ export function useSalesManager(
   const [selectedPartnerId, setSelectedPartnerId] = useState<number | null>(
     initialBusinessPartners[0]?.id ?? null,
   );
+  const [salesSlipPage, setSalesSlipPage] = useState(0);
+  const [salesSlipPageSize, setSalesSlipPageSize] = useState(10);
+  const [partnerPage, setPartnerPage] = useState(0);
+  const [partnerPageSize, setPartnerPageSize] = useState(10);
   const [savingBusinessPartner, setSavingBusinessPartner] = useState(false);
   const [savingSlip, setSavingSlip] = useState(false);
   const [updatingSlipStatus, setUpdatingSlipStatus] = useState(false);
@@ -81,6 +85,24 @@ export function useSalesManager(
     () => filterBusinessPartners(partners, partnerFilters),
     [partners, partnerFilters],
   );
+  const salesSlipTotalPages = Math.max(
+    1,
+    Math.ceil(filteredSalesSlips.length / salesSlipPageSize),
+  );
+  const visibleSalesSlipPage = Math.min(salesSlipPage, salesSlipTotalPages - 1);
+  const paginatedSalesSlips = useMemo(() => {
+    const start = visibleSalesSlipPage * salesSlipPageSize;
+    return filteredSalesSlips.slice(start, start + salesSlipPageSize);
+  }, [filteredSalesSlips, salesSlipPageSize, visibleSalesSlipPage]);
+  const partnerTotalPages = Math.max(
+    1,
+    Math.ceil(filteredBusinessPartners.length / partnerPageSize),
+  );
+  const visiblePartnerPage = Math.min(partnerPage, partnerTotalPages - 1);
+  const paginatedBusinessPartners = useMemo(() => {
+    const start = visiblePartnerPage * partnerPageSize;
+    return filteredBusinessPartners.slice(start, start + partnerPageSize);
+  }, [filteredBusinessPartners, partnerPageSize, visiblePartnerPage]);
   const selectedSalesSlip =
     filteredSalesSlips.find((salesSlip) => salesSlip.id === selectedSlipId) ??
     filteredSalesSlips[0] ??
@@ -106,6 +128,7 @@ export function useSalesManager(
     field: K,
     value: SalesFilterState[K],
   ) {
+    setSalesSlipPage(0);
     setFilters((current) => ({ ...current, [field]: value }));
   }
 
@@ -113,14 +136,17 @@ export function useSalesManager(
     field: K,
     value: BusinessPartnerFilterState[K],
   ) {
+    setPartnerPage(0);
     setPartnerFilters((current) => ({ ...current, [field]: value }));
   }
 
   function resetFilters() {
+    setSalesSlipPage(0);
     setFilters(createInitialSalesFilters());
   }
 
   function resetPartnerFilters() {
+    setPartnerPage(0);
     setPartnerFilters(createInitialBusinessPartnerFilters());
   }
 
@@ -272,6 +298,7 @@ export function useSalesManager(
       );
       setBusinessPartners((current) => [...current, partner]);
       setSelectedPartnerId(partner.id);
+      setPartnerPage(0);
       if (partner.partnerType !== "AUCTION_HOUSE") {
         setSalesForm((current) => ({
           ...current,
@@ -309,6 +336,7 @@ export function useSalesManager(
             ),
       );
       setSelectedSlipId(salesSlip.id);
+      setSalesSlipPage(0);
       setShowCreateSlip(false);
       setSalesForm((current) => resetSalesSlipFormAfterSave(current));
       setEditingSlipId(null);
@@ -400,8 +428,16 @@ export function useSalesManager(
   return {
     partners,
     filteredBusinessPartners,
+    paginatedBusinessPartners,
     salesSlips,
     filteredSalesSlips,
+    paginatedSalesSlips,
+    salesSlipCurrentPage: visibleSalesSlipPage,
+    salesSlipPageSize,
+    salesSlipTotalPages,
+    partnerCurrentPage: visiblePartnerPage,
+    partnerPageSize,
+    partnerTotalPages,
     selectedSalesSlip,
     selectedPartnerId,
     selectedBusinessPartner,
@@ -431,6 +467,10 @@ export function useSalesManager(
     cancelSalesSlipEditing,
     resetFilters,
     resetPartnerFilters,
+    setSalesSlipPage,
+    setSalesSlipPageSize,
+    setPartnerPage,
+    setPartnerPageSize,
     updateAllocation,
     updateBusinessPartnerForm,
     updateFilters,
