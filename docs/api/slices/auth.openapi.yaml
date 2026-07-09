@@ -1,0 +1,79 @@
+openapi: 3.1.0
+info:
+  title: Green House Auth API
+  version: 1.0.0
+paths:
+  /api/auth/login:
+    post:
+      tags: [auth-controller]
+      summary: 세션 로그인
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/LoginRequest"
+      responses:
+        "200":
+          description: 로그인 성공
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiResponseAuthenticatedUserResponse"
+  /api/auth/me:
+    get:
+      tags: [auth-controller]
+      summary: 현재 로그인 사용자 조회
+      responses:
+        "200":
+          description: 현재 사용자
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiResponseAuthenticatedUserResponse"
+  /api/auth/logout:
+    post:
+      tags: [auth-controller]
+      summary: 세션 로그아웃
+      responses:
+        "200":
+          description: 로그아웃 성공
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiResponseVoid"
+components:
+  schemas:
+    LoginRequest:
+      type: object
+      required: [username, password]
+      properties:
+        username:
+          type: string
+        password:
+          type: string
+          format: password
+    AuthenticatedUserResponse:
+      type: object
+      properties:
+        username:
+          type: string
+        role:
+          type: string
+          enum: [ADMIN, WORKER]
+    ApiResponseAuthenticatedUserResponse:
+      type: object
+      properties:
+        data:
+          $ref: "#/components/schemas/AuthenticatedUserResponse"
+        message:
+          type: string
+          nullable: true
+    ApiResponseVoid:
+      type: object
+      properties:
+        data:
+          nullable: true
+        message:
+          type: string
+          nullable: true
