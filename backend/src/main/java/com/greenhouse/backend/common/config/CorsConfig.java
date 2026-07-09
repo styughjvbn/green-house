@@ -23,13 +23,13 @@ public class CorsConfig implements WebMvcConfigurer {
 				.allowedOriginPatterns(frontendOriginPatterns)
 				.allowedMethods("GET", "POST", "PATCH", "DELETE", "OPTIONS")
 				.allowedHeaders("*")
-				.allowCredentials(false)
+				.allowCredentials(true)
 				.maxAge(3600);
 		registry.addMapping("/actuator/**")
 				.allowedOriginPatterns(frontendOriginPatterns)
 				.allowedMethods("GET", "OPTIONS")
 				.allowedHeaders("*")
-				.allowCredentials(false)
+				.allowCredentials(true)
 				.maxAge(3600);
 	}
 

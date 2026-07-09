@@ -25,6 +25,12 @@ server:
   port: ${SERVER_PORT:8080}
 
 app:
+  auth:
+    enabled: ${AUTH_ENABLED:true}
+    admin-username: ${ADMIN_USERNAME:admin}
+    admin-password: ${ADMIN_PASSWORD:admin}
+    worker-username: ${WORKER_USERNAME:worker}
+    worker-password: ${WORKER_PASSWORD:worker}
   cors:
     frontend-origin-patterns: "${FRONTEND_ORIGIN_PATTERNS:${FRONTEND_ORIGINS:${FRONTEND_ORIGIN:http://localhost:*,http://127.0.0.1:*,http://192.168.0.201:*,http://192.168.0.*:*}}}"
 
