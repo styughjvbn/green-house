@@ -16,12 +16,15 @@ export async function getWorkRecordTargetOptions(
   const [bedsResponse, zonesResponse, groupsResponse] = await Promise.all([
     fetch(`${API_BASE_URL}/physical-beds?houseId=${houseId}`, {
       cache: "no-store",
+      credentials: "include",
     }),
     fetch(`${API_BASE_URL}/bed-zones?houseId=${houseId}`, {
       cache: "no-store",
+      credentials: "include",
     }),
     fetch(`${API_BASE_URL}/orchid-groups?houseId=${houseId}`, {
       cache: "no-store",
+      credentials: "include",
     }),
   ]);
 
@@ -47,6 +50,7 @@ export async function createWorkRecord(
 ): Promise<WorkRecord> {
   const response = await fetch(`${API_BASE_URL}/work-records`, {
     method: "POST",
+    credentials: "include",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(payload),
   });

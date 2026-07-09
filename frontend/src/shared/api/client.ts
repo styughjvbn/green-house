@@ -18,9 +18,22 @@ export type ApiErrorResponse = {
   };
 };
 
+async function buildRequestHeaders(): Promise<HeadersInit> {
+  if (typeof window !== "undefined") {
+    return {};
+  }
+
+  const { cookies } = await import("next/headers");
+  const cookieHeader = (await cookies()).toString();
+  return cookieHeader ? { Cookie: cookieHeader } : {};
+}
+
 export async function fetchApi<T>(path: string): Promise<T> {
+  const headers = await buildRequestHeaders();
   const response = await fetch(`${API_BASE_URL}${path}`, {
     cache: "no-store",
+    credentials: "include",
+    headers,
   });
   const payload = (await response.json()) as ApiResponse<T> | ApiErrorResponse;
 

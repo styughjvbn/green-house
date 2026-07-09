@@ -54,7 +54,7 @@ export async function updateOrchidGroup(
 export async function deleteOrchidGroup(orchidGroupId: number): Promise<void> {
   const response = await fetch(
     `${API_BASE_URL}/orchid-groups/${orchidGroupId}`,
-    { method: "DELETE" },
+    { method: "DELETE", credentials: "include" },
   );
   if (!response.ok) {
     const body = await readJson(response);
@@ -70,6 +70,7 @@ export async function moveOrchidGroup(
     `${API_BASE_URL}/orchid-groups/${orchidGroupId}/move`,
     {
       method: "PATCH",
+      credentials: "include",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ ...payload, memo: payload.memo.trim() || null }),
     },
@@ -93,6 +94,7 @@ export async function saveBedZonePlacementProfile(
     `${API_BASE_URL}/bed-zones/${profile.bedZoneId}/placement-profile`,
     {
       method: "PUT",
+      credentials: "include",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ capacities: profile.capacities }),
     },
@@ -186,6 +188,7 @@ export async function createOrchidWorkRecord(
 ): Promise<WorkRecord> {
   const response = await fetch(`${API_BASE_URL}/work-records`, {
     method: "POST",
+    credentials: "include",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(payload),
   });
@@ -201,6 +204,7 @@ export async function createOrchidWorkRecord(
 export async function fetchHouse(houseId: number): Promise<House> {
   const response = await fetch(`${API_BASE_URL}/houses/${houseId}`, {
     cache: "no-store",
+    credentials: "include",
   });
   const payload = await readJson(response);
   if (!response.ok) {
@@ -218,6 +222,7 @@ async function submitOrchidMutation(
 ): Promise<void> {
   const response = await fetch(`${API_BASE_URL}${path}`, {
     method,
+    credentials: "include",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(payload),
   });

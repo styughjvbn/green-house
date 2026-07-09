@@ -42,7 +42,10 @@ async function requestJson<T>(
   init: RequestInit,
   fallbackMessage: string,
 ): Promise<T> {
-  const response = await fetch(`${API_BASE_URL}${path}`, init);
+  const response = await fetch(`${API_BASE_URL}${path}`, {
+    ...init,
+    credentials: "include",
+  });
   const payload = (await response.json()) as ApiSuccess<T> | ApiFailure;
 
   if (!response.ok) {

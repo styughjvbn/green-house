@@ -33,7 +33,7 @@ export async function fetchFarmStatusOrchidGroups(
 ): Promise<FarmStatusOrchidGroupList> {
   const response = await fetch(
     `${API_BASE_URL}/farm-status/orchid-groups?targetType=${type}&targetId=${id}`,
-    { cache: "no-store" },
+    { cache: "no-store", credentials: "include" },
   );
 
   return readJson<FarmStatusOrchidGroupList>(
@@ -49,6 +49,7 @@ export async function fetchFarmStatusHouseZoom(
     `${API_BASE_URL}/farm-status/zoom?level=HOUSE&houseId=${houseId}`,
     {
       cache: "no-store",
+      credentials: "include",
     },
   );
 

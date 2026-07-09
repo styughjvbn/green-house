@@ -3,6 +3,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { usePathname, useSearchParams } from "next/navigation";
+import { SessionUserPanel } from "@/features/auth/ui/SessionUserPanel";
 import { PageHeader } from "@/widgets/page-header";
 import {
   BarChart3,
@@ -148,13 +149,17 @@ function SalesSubNavItem({
 export function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const searchParams = useSearchParams();
+  if (pathname === "/login") {
+    return <>{children}</>;
+  }
+
   const currentPage = getCurrentPageMeta(pathname);
   const salesTab = searchParams.get("tab") ?? "SLIPS";
   const isSalesPage = pathname.startsWith("/sales");
 
   return (
     <div className="flex min-h-screen bg-[#f7f8f5]">
-      <aside className="hidden w-44 shrink-0 bg-[#003b1f] px-2 py-4 lg:block">
+      <aside className="hidden w-44 shrink-0 flex-col bg-[#003b1f] px-2 py-4 lg:flex">
         <div className="flex items-center gap-3 px-2 py-2">
           <div className="flex h-10 w-10 shrink-0 items-center justify-center">
             <Image src="/flower.png" alt="Logo" width={40} height={40} />
@@ -168,7 +173,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           </div>
         </div>
 
-        <nav className="mt-8 space-y-3">
+        <nav className="mt-8 flex-1 space-y-3">
           {navigation.map((item) => (
             <div key={item.href}>
               <NavItem
@@ -261,6 +266,8 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             </div>
           ))}
         </nav>
+
+        <SessionUserPanel />
       </aside>
 
       <div className="min-w-0 flex-1">
