@@ -1,0 +1,14 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: green-house-config
+  namespace: green-house
+data:
+  DATABASE_URL: jdbc:postgresql://green-house-postgres-host:5432/greenhouse
+  DATABASE_USERNAME: greenhouse
+  FRONTEND_ORIGIN_PATTERNS: https://green-house.sjw-project.site
+  BACKEND_API_URL: http://green-house-backend:8080/api
+  NEXT_PUBLIC_API_BASE_URL: /api
+  SPRING_PROFILES_ACTIVE: prod
+  JPA_DDL_AUTO: validate
+  AUTH_ENABLED: "true"

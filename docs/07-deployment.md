@@ -29,22 +29,28 @@ npm run dev
 ### Backend
 
 ```text
-SPRING_DATASOURCE_URL
-SPRING_DATASOURCE_USERNAME
-SPRING_DATASOURCE_PASSWORD
+DATABASE_URL
+DATABASE_USERNAME
+DATABASE_PASSWORD
 SPRING_PROFILES_ACTIVE
-FILE_STORAGE_PATH
+JPA_DDL_AUTO
+FRONTEND_ORIGIN_PATTERNS
+AUTH_ENABLED
 ```
 
 인증을 적용하는 경우 다음 값을 별도로 관리한다.
 
 ```text
-JWT_SECRET 또는 SESSION_SECRET
+ADMIN_USERNAME
+ADMIN_PASSWORD
+WORKER_USERNAME
+WORKER_PASSWORD
 ```
 
 ### Frontend
 
 ```text
+BACKEND_API_URL
 NEXT_PUBLIC_API_BASE_URL
 ```
 
@@ -79,6 +85,37 @@ PostgreSQL
 ```
 
 외부 접속이 필요하면 HTTPS를 적용한다. 내부망 전용으로 쓸 경우에도 DB 백업은 반드시 분리 보관한다.
+
+### mini-pc k3s 배포
+
+mini-pc k3s 운영 환경은 `k8s/base/` 매니페스트를 기준으로 한다.
+
+```text
+Traefik Ingress
+ ├─ /api, /api-docs, /swagger-ui → backend
+ └─ / → frontend
+
+PostgreSQL
+ └─ mini-pc host PostgreSQL
+```
+
+도메인은 `https://green-house.sjw-project.site/`를 사용한다. DB는 k3s 내부 Pod로 띄우지 않고 host PostgreSQL을 `Service`/`Endpoints`로 참조한다.
+
+적용 전 확인:
+
+- `k8s/base/secret.yaml`의 운영 비밀번호 변경
+- `k8s/base/postgres-host-service.yaml`의 host PostgreSQL IP 확인
+- backend/frontend 이미지 태그 변경
+- Traefik TLS secret 이름 확인
+
+이미지는 GHCR private package로 발행한다. `.github/workflows/publish-ghcr.yml`은 backend와 frontend 이미지를 각각 빌드해 다음 이름으로 push한다.
+
+```text
+ghcr.io/<owner>/<repo>-backend
+ghcr.io/<owner>/<repo>-frontend
+```
+
+태그는 branch, git tag, `sha-<commit>`, 기본 브랜치의 `latest`를 사용한다. private image를 k3s에서 pull하려면 `green-house` namespace에 `ghcr-secret`을 먼저 생성한다.
 
 ## 5. 백업
 
