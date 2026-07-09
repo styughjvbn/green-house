@@ -51,6 +51,7 @@ WORKER_PASSWORD
 
 ```text
 BACKEND_API_URL
+API_BASE_URL
 NEXT_PUBLIC_API_BASE_URL
 ```
 
@@ -92,7 +93,7 @@ mini-pc k3s 운영 환경은 `k8s/base/` 매니페스트를 기준으로 한다.
 
 ```text
 Traefik Ingress
- ├─ /api, /api-docs, /swagger-ui → backend
+ ├─ /api → backend
  └─ / → frontend
 
 PostgreSQL
@@ -107,6 +108,7 @@ PostgreSQL
 - `k8s/base/postgres-host-service.yaml`의 host PostgreSQL IP 확인
 - backend/frontend 이미지 태그 변경
 - Traefik TLS secret 이름 확인
+- 운영 환경에서 Swagger/OpenAPI 비활성화 확인
 
 이미지는 GHCR private package로 발행한다. `.github/workflows/publish-ghcr.yml`은 backend와 frontend 이미지를 각각 빌드해 다음 이름으로 push한다.
 

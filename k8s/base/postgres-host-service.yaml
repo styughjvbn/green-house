@@ -17,7 +17,7 @@ metadata:
 subsets:
   - addresses:
       # mini-pc host PostgreSQL address. Change this before apply if different.
-      - ip: 192.168.0.201
+      - ip: 192.168.0.16
     ports:
       - name: postgres
         port: 5432

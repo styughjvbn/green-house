@@ -96,6 +96,7 @@ public class SecurityConfig {
 			String message
 	) throws IOException {
 		response.setStatus(status.value());
+		response.setCharacterEncoding("UTF-8");
 		response.setContentType(MediaType.APPLICATION_JSON_VALUE);
 		response.getWriter().write("""
 				{"error":{"code":"%s","message":"%s","details":[]}}

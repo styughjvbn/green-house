@@ -8,7 +8,10 @@ data:
   DATABASE_USERNAME: greenhouse
   FRONTEND_ORIGIN_PATTERNS: https://green-house.sjw-project.site
   BACKEND_API_URL: http://green-house-backend:8080/api
+  API_BASE_URL: http://green-house-backend:8080/api
   NEXT_PUBLIC_API_BASE_URL: /api
   SPRING_PROFILES_ACTIVE: prod
   JPA_DDL_AUTO: validate
   AUTH_ENABLED: "true"
+  SPRINGDOC_API_DOCS_ENABLED: "false"
+  SPRINGDOC_SWAGGER_UI_ENABLED: "false"

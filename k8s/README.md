@@ -50,5 +50,7 @@ kubectl apply -k k8s/base
 
 ## 라우팅
 
-- `/api`, `/api-docs`, `/swagger-ui` -> backend
+- `/api` -> backend
 - `/` -> frontend
+
+운영 k3s 설정에서는 `SPRINGDOC_API_DOCS_ENABLED=false`, `SPRINGDOC_SWAGGER_UI_ENABLED=false`로 Swagger/OpenAPI 공개를 막는다.
