@@ -31,13 +31,17 @@ class AuthIntegrationTests {
 						.contentType(MediaType.APPLICATION_JSON)
 						.content("""
 								{"username":"admin","password":"admin"}
-								"""))
+				"""))
 				.andExpect(status().isOk())
 				.andExpect(jsonPath("$.data.username").value("admin"))
 				.andExpect(jsonPath("$.data.role").value("ADMIN"))
 				.andExpect(result -> {
 					if (result.getRequest().getSession(false) == null) {
 						throw new AssertionError("No session created");
+					}
+					String setCookie = result.getResponse().getHeader("Set-Cookie");
+					if (setCookie == null || !setCookie.contains("Max-Age=604800")) {
+						throw new AssertionError("Session cookie max age is not seven days");
 					}
 				});
 	}

@@ -28,16 +28,19 @@ public class AuthController {
 
 	private final AuthenticationManager authenticationManager;
 	private final AuthService authService;
+	private final AuthProperties authProperties;
 
-	public AuthController(AuthenticationManager authenticationManager, AuthService authService) {
+	public AuthController(AuthenticationManager authenticationManager, AuthService authService, AuthProperties authProperties) {
 		this.authenticationManager = authenticationManager;
 		this.authService = authService;
+		this.authProperties = authProperties;
 	}
 
 	@PostMapping("/login")
 	public ApiResponse<AuthenticatedUserResponse> login(
 			@Valid @RequestBody LoginRequest request,
-			HttpServletRequest servletRequest
+			HttpServletRequest servletRequest,
+			HttpServletResponse response
 	) {
 		Authentication authentication = authenticationManager.authenticate(
 				new UsernamePasswordAuthenticationToken(request.username(), request.password())
@@ -48,6 +51,13 @@ public class AuthController {
 
 		HttpSession session = servletRequest.getSession(true);
 		session.setAttribute(HttpSessionSecurityContextRepository.SPRING_SECURITY_CONTEXT_KEY, context);
+		int maxAgeSeconds = Math.toIntExact(authProperties.sessionTimeout().toSeconds());
+		session.setMaxInactiveInterval(maxAgeSeconds);
+		response.addHeader(
+				"Set-Cookie",
+				"JSESSIONID=%s; Path=/; Max-Age=%d; HttpOnly; SameSite=Lax"
+						.formatted(session.getId(), maxAgeSeconds)
+		);
 
 		return ApiResponse.ok(authService.toResponse(authentication));
 	}
