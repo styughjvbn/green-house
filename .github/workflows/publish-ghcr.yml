@@ -16,6 +16,10 @@ permissions:
 env:
   REGISTRY: ghcr.io
 
+concurrency:
+  group: publish-images-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   publish:
     name: Build and push images
