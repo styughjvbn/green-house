@@ -29,6 +29,22 @@ async function buildRequestHeaders(): Promise<HeadersInit> {
   return cookieHeader ? { Cookie: cookieHeader } : {};
 }
 
+async function redirectToLogin() {
+  if (typeof window !== "undefined") {
+    window.location.assign("/login");
+    return;
+  }
+
+  const { redirect } = await import("next/navigation");
+  redirect("/login");
+}
+
+export async function handleAuthExpired(response: Response) {
+  if (response.status === 401 || response.status === 403) {
+    await redirectToLogin();
+  }
+}
+
 export async function fetchApi<T>(path: string): Promise<T> {
   const headers = await buildRequestHeaders();
   const response = await fetch(`${API_BASE_URL}${path}`, {
@@ -36,6 +52,7 @@ export async function fetchApi<T>(path: string): Promise<T> {
     credentials: "include",
     headers,
   });
+  await handleAuthExpired(response);
   const payload = (await response.json()) as ApiResponse<T> | ApiErrorResponse;
 
   if (!response.ok) {
