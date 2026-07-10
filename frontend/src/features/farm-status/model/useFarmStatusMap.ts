@@ -1,6 +1,6 @@
 ﻿"use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import type {
   BedZone,
   FarmStatusOrchidGroupList,
@@ -8,14 +8,29 @@ import type {
   FarmStatusZoomData,
   FarmZoomLevel,
   HouseStatusSummary,
+  OrchidGroup,
   PhysicalBed,
 } from "@/entities/farm/types";
 import {
   fetchFarmStatusHouseZoom,
   fetchFarmStatusOrchidGroups,
+  searchFarmStatusOrchidGroups,
 } from "../api/farmStatusApi";
 import { getNextZoomLevel, getPreviousZoomLevel } from "../lib/farmStatusView";
-import type { FarmStatusMapProps, SelectedTarget } from "./types";
+import type {
+  FarmStatusFilterMatches,
+  FarmStatusMapProps,
+  FarmStatusSearchState,
+  SelectedFarmStatusOrchidGroup,
+  SelectedTarget,
+} from "./types";
+
+const EMPTY_FILTER_MATCHES: FarmStatusFilterMatches = {
+  bedZoneIds: new Set<number>(),
+  houseIds: new Set<number>(),
+  orchidGroupIds: new Set<number>(),
+  physicalBedKeys: new Set<string>(),
+};
 
 export function useFarmStatusMap({
   mapData,
@@ -40,9 +55,16 @@ export function useFarmStatusMap({
   const [selection, setSelection] = useState<FarmStatusOrchidGroupList | null>(
     initialSelection,
   );
+  const [selectedOrchidGroup, setSelectedOrchidGroup] =
+    useState<SelectedFarmStatusOrchidGroup | null>(null);
   const [zoomData, setZoomData] = useState<FarmStatusZoomData | null>(
     initialZoom,
   );
+  const [searchFilters, setSearchFilters] = useState<FarmStatusSearchState>({
+    keyword: "",
+    status: "",
+  });
+  const [searchResults, setSearchResults] = useState<OrchidGroup[]>([]);
   const [loading, setLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
@@ -58,6 +80,53 @@ export function useFarmStatusMap({
     selectedTarget?.type === "PHYSICAL_BED" ? selectedTarget.id : null;
   const selectedBedZoneId =
     selectedTarget?.type === "BED_ZONE" ? selectedTarget.id : null;
+  const hasActiveSearch =
+    searchFilters.keyword.trim().length > 0 ||
+    searchFilters.status.trim().length > 0;
+  const filterMatches = useMemo(() => {
+    if (!hasActiveSearch) {
+      return EMPTY_FILTER_MATCHES;
+    }
+
+    return {
+      bedZoneIds: new Set(searchResults.map((group) => group.bedZoneId)),
+      houseIds: new Set(searchResults.map((group) => group.houseId)),
+      orchidGroupIds: new Set(searchResults.map((group) => group.id)),
+      physicalBedKeys: new Set(
+        searchResults.map(
+          (group) => `${group.houseId}:${group.physicalBedNumber}`,
+        ),
+      ),
+    };
+  }, [hasActiveSearch, searchResults]);
+
+  useEffect(() => {
+    if (!hasActiveSearch) {
+      return;
+    }
+
+    let ignore = false;
+    searchFarmStatusOrchidGroups(searchFilters)
+      .then((results) => {
+        if (!ignore) {
+          setSearchResults(results);
+        }
+      })
+      .catch((error) => {
+        if (!ignore) {
+          setErrorMessage(
+            error instanceof Error
+              ? error.message
+              : "검색 결과를 불러오지 못했습니다.",
+          );
+          setSearchResults([]);
+        }
+      });
+
+    return () => {
+      ignore = true;
+    };
+  }, [hasActiveSearch, searchFilters]);
 
   async function runRequest(task: () => Promise<void>) {
     setLoading(true);
@@ -77,6 +146,7 @@ export function useFarmStatusMap({
     const data = await fetchFarmStatusOrchidGroups(type, id);
     setSelectedTarget({ type, id });
     setSelection(data);
+    setSelectedOrchidGroup(null);
   }
 
   async function loadHouseZoom(
@@ -101,6 +171,7 @@ export function useFarmStatusMap({
 
       setSelectedTarget({ type: "HOUSE", id: house.houseId });
       setSelection(selectionData);
+      setSelectedOrchidGroup(null);
       setSelectedHouseId(house.houseId);
       setZoomData(houseZoomData);
       setZoomLevel(nextLevel);
@@ -149,9 +220,81 @@ export function useFarmStatusMap({
 
   function resetToFarm() {
     setZoomLevel("FARM");
+    setSelectedOrchidGroup(null);
     if (selectedHouseId) {
       setSelectedTarget({ type: "HOUSE", id: selectedHouseId });
     }
+  }
+
+  async function handleSelectOrchidGroup(group: SelectedFarmStatusOrchidGroup) {
+    await runRequest(async () => {
+      const selectionData = await fetchFarmStatusOrchidGroups(
+        "BED_ZONE",
+        group.bedZoneId,
+      );
+
+      setSelectedOrchidGroup(group);
+      setSelectedTarget({ type: "BED_ZONE", id: group.bedZoneId });
+      setSelection(selectionData);
+      if (selectedHouseId !== group.houseId) {
+        setSelectedHouseId(group.houseId);
+      }
+    });
+  }
+
+  async function handleSelectSearchResult(group: OrchidGroup) {
+    await runRequest(async () => {
+      const [selectionData, houseZoomData] = await Promise.all([
+        fetchFarmStatusOrchidGroups("BED_ZONE", group.bedZoneId),
+        fetchFarmStatusHouseZoom(group.houseId),
+      ]);
+
+      setSelectedHouseId(group.houseId);
+      setSelectedTarget({ type: "BED_ZONE", id: group.bedZoneId });
+      setSelection(selectionData);
+      setZoomData(houseZoomData);
+      setSelectedOrchidGroup({
+        ageYear: group.ageYear,
+        endPosition: group.endPosition,
+        orchidGroupId: group.id,
+        varietyName: group.varietyName,
+        genus: group.genus,
+        memo: group.memo,
+        placementType: group.placementType,
+        potSize: group.potSize,
+        quantity: group.quantity,
+        sortOrder: group.sortOrder,
+        splitPlacementAllowed: group.splitPlacementAllowed,
+        startPosition: group.startPosition,
+        status: group.status,
+        trayCount: group.trayCount,
+        varietyId: group.varietyId,
+        houseId: group.houseId,
+        houseNumber: group.houseNumber,
+        physicalBedId:
+          findPhysicalBedId(
+            mapData.houses,
+            group.houseId,
+            group.physicalBedNumber,
+          ) ?? 0,
+        physicalBedNumber: group.physicalBedNumber,
+        physicalBedName: `${group.physicalBedNumber}배드`,
+        bedZoneId: group.bedZoneId,
+        bedZoneName: group.bedZoneName,
+      });
+    });
+  }
+
+  function updateSearchFilter<K extends keyof FarmStatusSearchState>(
+    field: K,
+    value: FarmStatusSearchState[K],
+  ) {
+    setSearchFilters((current) => ({ ...current, [field]: value }));
+  }
+
+  function clearSearch() {
+    setSearchFilters({ keyword: "", status: "" });
+    setSearchResults([]);
   }
 
   return {
@@ -160,16 +303,36 @@ export function useFarmStatusMap({
     selectedBedZoneId,
     selectedHouse,
     selectedHouseId,
+    selectedOrchidGroup,
     selectedPhysicalBedId,
     selectedTarget,
     selection,
+    filterMatches,
+    hasActiveSearch,
+    searchFilters,
+    searchLoading: loading,
+    searchResults,
     zoomData,
     zoomLevel,
+    clearSearch,
     handleSelectBedZone,
     handleSelectHouse,
+    handleSelectOrchidGroup,
     handleSelectPhysicalBed,
+    handleSelectSearchResult,
     handleZoomIn,
     handleZoomOut,
     resetToFarm,
+    updateSearchFilter,
   };
+}
+
+function findPhysicalBedId(
+  houses: HouseStatusSummary[],
+  houseId: number,
+  physicalBedNumber: number,
+) {
+  return houses
+    .find((house) => house.houseId === houseId)
+    ?.physicalBeds.find((bed) => bed.number === physicalBedNumber)?.id;
 }

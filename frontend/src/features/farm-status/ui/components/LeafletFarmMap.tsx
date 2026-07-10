@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
@@ -23,16 +23,24 @@ import type {
   FarmStatusZoomData,
   FarmZoomLevel,
   HouseStatusSummary,
+  OrchidGroup,
   PhysicalBed,
 } from "@/entities/farm/types";
-import type { SelectedTarget } from "../../model/types";
+import type {
+  FarmStatusFilterMatches,
+  SelectedFarmStatusOrchidGroup,
+  SelectedTarget,
+} from "../../model/types";
 import { hasHouseWarning } from "../../lib/farmStatusView";
 import { zoomLabel } from "../../lib/farmStatusView";
 
 type LeafletFarmMapProps = {
+  filterMatches: FarmStatusFilterMatches;
+  hasActiveSearch: boolean;
   houses: HouseStatusSummary[];
   selectedBedZoneId: number | null;
   selectedHouseId: number | null;
+  selectedOrchidGroup: SelectedFarmStatusOrchidGroup | null;
   selectedPhysicalBedId: number | null;
   selectedTarget: SelectedTarget | null;
   zoomData: FarmStatusZoomData | null;
@@ -40,6 +48,7 @@ type LeafletFarmMapProps = {
   onReset: () => void;
   onSelectBedZone: (zone: BedZone) => void;
   onSelectHouse: (house: HouseStatusSummary) => void;
+  onSelectOrchidGroup: (group: SelectedFarmStatusOrchidGroup) => void;
   onSelectPhysicalBed: (bed: PhysicalBed) => void;
   onZoomIn: () => void;
   onZoomOut: () => void;
@@ -75,8 +84,7 @@ const INITIAL_ZOOM = -0.7;
 const MIN_ZOOM = -0.7;
 const MAX_ZOOM = 3.15;
 
-const HOUSE_WIDTH = 88;
-const HOUSE_HEIGHT = 430;
+const HOUSE_WIDTH = 124;
 
 const BED_VISIBLE_ZOOM = 0.7;
 const ZONE_VISIBLE_ZOOM = 1.55;
@@ -94,94 +102,13 @@ const LEVEL_RANK: Record<FarmZoomLevel, number> = {
   BED_ZONE: 3,
 };
 
-const HOUSE_LAYOUT: FarmHouseGeometry[] = [
-  { houseNumber: 15, x: 120, y: 380, width: HOUSE_WIDTH, height: HOUSE_HEIGHT },
-  { houseNumber: 14, x: 230, y: 380, width: HOUSE_WIDTH, height: HOUSE_HEIGHT },
-  { houseNumber: 13, x: 340, y: 380, width: HOUSE_WIDTH, height: HOUSE_HEIGHT },
-  { houseNumber: 12, x: 450, y: 380, width: HOUSE_WIDTH, height: HOUSE_HEIGHT },
-  {
-    houseNumber: 11,
-    x: 560,
-    y: 210,
-    width: HOUSE_WIDTH,
-    height: HOUSE_HEIGHT + 170,
-  },
-  {
-    houseNumber: 10,
-    x: 670,
-    y: 210,
-    width: HOUSE_WIDTH,
-    height: HOUSE_HEIGHT + 170,
-  },
-  {
-    houseNumber: 9,
-    x: 780,
-    y: 210,
-    width: HOUSE_WIDTH,
-    height: HOUSE_HEIGHT + 170,
-  },
-  {
-    houseNumber: 8,
-    x: 890,
-    y: 210,
-    width: HOUSE_WIDTH,
-    height: HOUSE_HEIGHT + 170,
-  },
-  {
-    houseNumber: 7,
-    x: 1000,
-    y: 210,
-    width: HOUSE_WIDTH,
-    height: HOUSE_HEIGHT + 170,
-  },
-  {
-    houseNumber: 6,
-    x: 1110,
-    y: 210,
-    width: HOUSE_WIDTH,
-    height: HOUSE_HEIGHT + 170,
-  },
-  {
-    houseNumber: 5,
-    x: 1220,
-    y: 210,
-    width: HOUSE_WIDTH,
-    height: HOUSE_HEIGHT + 170,
-  },
-  {
-    houseNumber: 4,
-    x: 1330,
-    y: 380,
-    width: HOUSE_WIDTH,
-    height: HOUSE_HEIGHT,
-  },
-  {
-    houseNumber: 3,
-    x: 1440,
-    y: 380,
-    width: HOUSE_WIDTH,
-    height: HOUSE_HEIGHT,
-  },
-  {
-    houseNumber: 2,
-    x: 1550,
-    y: 380,
-    width: HOUSE_WIDTH,
-    height: HOUSE_HEIGHT,
-  },
-  {
-    houseNumber: 1,
-    x: 1660,
-    y: 380,
-    width: HOUSE_WIDTH,
-    height: HOUSE_HEIGHT,
-  },
-];
-
 export default function LeafletFarmMap({
+  filterMatches,
+  hasActiveSearch,
   houses,
   selectedBedZoneId,
   selectedHouseId,
+  selectedOrchidGroup,
   selectedPhysicalBedId,
   selectedTarget,
   zoomData,
@@ -189,6 +116,7 @@ export default function LeafletFarmMap({
   onReset,
   onSelectBedZone,
   onSelectHouse,
+  onSelectOrchidGroup,
   onSelectPhysicalBed,
   onZoomIn,
   onZoomOut,
@@ -202,6 +130,10 @@ export default function LeafletFarmMap({
     houses.forEach((house) => items.set(house.houseNumber, house));
     return items;
   }, [houses]);
+  const scaledHouseLayout = useMemo(
+    () => getScaledHouseLayout(houses),
+    [houses],
+  );
 
   const resetMap = useCallback(() => {
     map?.setView(
@@ -214,12 +146,30 @@ export default function LeafletFarmMap({
     onReset();
   }, [map, onReset]);
 
+  useEffect(() => {
+    if (!map || !selectedOrchidGroup) {
+      return;
+    }
+
+    const center = findOrchidGroupCenter(
+      selectedOrchidGroup.orchidGroupId,
+      scaledHouseLayout,
+      houseByNumber,
+      zoomData,
+    );
+    if (!center) {
+      return;
+    }
+
+    map.panTo(toLatLng(center), { animate: true, duration: 0.35 });
+  }, [houseByNumber, map, scaledHouseLayout, selectedOrchidGroup, zoomData]);
+
   return (
-    <div className="relative min-h-[600px] overflow-hidden rounded-xl border border-[#cdd9c8] bg-[#95b969] shadow-sm">
+    <div className="relative min-h-0 flex-1 overflow-hidden rounded-xl border border-[#cdd9c8] bg-[#95b969] shadow-sm">
       <MapContainer
         attributionControl={false}
         center={toLatLng({ x: WORLD_WIDTH / 2, y: WORLD_HEIGHT / 2 })}
-        className="farm-leaflet-map h-[600px] w-full bg-[#a6c77a]"
+        className="farm-leaflet-map h-full w-full bg-[#a6c77a]"
         crs={CRS.Simple}
         doubleClickZoom={false}
         maxBounds={FARM_BOUNDS}
@@ -241,7 +191,7 @@ export default function LeafletFarmMap({
           onZoomOut={onZoomOut}
         />
         <FarmBackgroundLayer />
-        {HOUSE_LAYOUT.map((geometry) => {
+        {scaledHouseLayout.map((geometry) => {
           const house = houseByNumber.get(geometry.houseNumber);
           if (!house) return null;
 
@@ -249,15 +199,19 @@ export default function LeafletFarmMap({
             <FarmHouseFeature
               key={house.houseId}
               geometry={geometry}
+              filterMatches={filterMatches}
+              hasActiveSearch={hasActiveSearch}
               house={house}
               mapZoom={mapZoom}
               selectedBedZoneId={selectedBedZoneId}
               selectedHouseId={selectedHouseId}
+              selectedOrchidGroup={selectedOrchidGroup}
               selectedPhysicalBedId={selectedPhysicalBedId}
               selectedTarget={selectedTarget}
               zoomData={zoomData}
               onSelectBedZone={onSelectBedZone}
               onSelectHouse={onSelectHouse}
+              onSelectOrchidGroup={onSelectOrchidGroup}
               onSelectPhysicalBed={onSelectPhysicalBed}
             />
           );
@@ -375,7 +329,7 @@ function FarmMapOverlay({
           onClick={resetMap}
           type="button"
         >
-          ⌖
+          ⌂
         </button>
       </div>
 
@@ -409,8 +363,8 @@ function FarmBackgroundLayer() {
           { x: 0, y: 260 },
           { x: 510, y: 130 },
           { x: 1300, y: 130 },
-          { x: 1900, y: 250 },
-          { x: 1900, y: 310 },
+          { x: WORLD_WIDTH, y: 250 },
+          { x: WORLD_WIDTH, y: 310 },
           { x: 1300, y: 190 },
           { x: 510, y: 190 },
           { x: 0, y: 320 },
@@ -428,8 +382,8 @@ function FarmBackgroundLayer() {
           { x: 0, y: 292 },
           { x: 520, y: 160 },
           { x: 1300, y: 160 },
-          { x: 1900, y: 280 },
-          { x: 1900, y: 302 },
+          { x: WORLD_WIDTH, y: 280 },
+          { x: WORLD_WIDTH, y: 302 },
           { x: 1300, y: 182 },
           { x: 520, y: 182 },
           { x: 0, y: 314 },
@@ -456,33 +410,43 @@ function FarmBackgroundLayer() {
 
 function FarmHouseFeature({
   geometry,
+  filterMatches,
+  hasActiveSearch,
   house,
   mapZoom,
   selectedBedZoneId,
   selectedHouseId,
+  selectedOrchidGroup,
   selectedPhysicalBedId,
   selectedTarget,
   zoomData,
   onSelectBedZone,
   onSelectHouse,
+  onSelectOrchidGroup,
   onSelectPhysicalBed,
 }: {
   geometry: FarmHouseGeometry;
+  filterMatches: FarmStatusFilterMatches;
+  hasActiveSearch: boolean;
   house: HouseStatusSummary;
   mapZoom: number;
   selectedBedZoneId: number | null;
   selectedHouseId: number | null;
+  selectedOrchidGroup: SelectedFarmStatusOrchidGroup | null;
   selectedPhysicalBedId: number | null;
   selectedTarget: SelectedTarget | null;
   zoomData: FarmStatusZoomData | null;
   onSelectBedZone: (zone: BedZone) => void;
   onSelectHouse: (house: HouseStatusSummary) => void;
+  onSelectOrchidGroup: (group: SelectedFarmStatusOrchidGroup) => void;
   onSelectPhysicalBed: (bed: PhysicalBed) => void;
 }) {
   const selected =
     selectedHouseId === house.houseId ||
     (selectedTarget?.type === "HOUSE" && selectedTarget.id === house.houseId);
   const warning = hasHouseWarning(house);
+  const matched = !hasActiveSearch || filterMatches.houseIds.has(house.houseId);
+  const mutedOpacity = matched ? 1 : 0.34;
   const showBeds = mapZoom >= BED_VISIBLE_ZOOM;
   const showZones = mapZoom >= ZONE_VISIBLE_ZOOM;
   const showOrchids = mapZoom >= ORCHID_VISIBLE_ZOOM;
@@ -500,10 +464,16 @@ function FarmHouseFeature({
           },
         }}
         pathOptions={{
-          color: selected ? "#1d6ff2" : warning ? "#f59e0b" : "#6e9169",
-          fillColor: selected ? "#dcecff" : "#f7f8f5",
-          fillOpacity: selected ? 0.94 : 0.88,
-          opacity: 1,
+          color: matched
+            ? selected
+              ? "#1d6ff2"
+              : warning
+                ? "#f59e0b"
+                : "#6e9169"
+            : "#9aa19a",
+          fillColor: matched ? (selected ? "#dcecff" : "#f7f8f5") : "#e4e6e3",
+          fillOpacity: matched ? (selected ? 0.94 : 0.88) : 0.72,
+          opacity: mutedOpacity,
           weight: selected ? 5 : 2,
         }}
       />
@@ -511,7 +481,7 @@ function FarmHouseFeature({
       <Marker
         icon={createLabelIcon({
           background: selected ? "#246df2" : warning ? "#b76600" : "#155c30",
-          text: `${house.houseNumber}동`,
+          text: String(house.houseNumber) + "동",
           width: 54,
         })}
         interactive={false}
@@ -526,7 +496,7 @@ function FarmHouseFeature({
         <Marker
           icon={createBottomMetricIcon({
             status: warning ? "주의" : "정상",
-            text: `${house.orchidGroupCount}묶음`,
+            text: String(house.orchidGroupCount) + "묶음",
             warning,
           })}
           interactive={false}
@@ -544,8 +514,11 @@ function FarmHouseFeature({
               key={`${house.houseId}-${bed.number}`}
               bed={bed}
               detailSource={detailSource}
+              filterMatches={filterMatches}
+              hasActiveSearch={hasActiveSearch}
               rect={rect}
               selectedBedZoneId={selectedBedZoneId}
+              selectedOrchidGroup={selectedOrchidGroup}
               selectedPhysicalBedId={selectedPhysicalBedId}
               showOrchids={showOrchids}
               showZones={showZones}
@@ -558,6 +531,7 @@ function FarmHouseFeature({
                 onSelectHouse(house);
               }}
               onSelectBedZone={onSelectBedZone}
+              onSelectOrchidGroup={onSelectOrchidGroup}
             />
           ))
         : null}
@@ -568,27 +542,39 @@ function FarmHouseFeature({
 function FarmBedFeature({
   bed,
   detailSource,
+  filterMatches,
+  hasActiveSearch,
   rect,
   selectedBedZoneId,
+  selectedOrchidGroup,
   selectedPhysicalBedId,
   showOrchids,
   showZones,
   onSelectBed,
   onSelectBedZone,
+  onSelectOrchidGroup,
 }: {
   bed: PhysicalBed;
   detailSource: DetailSource;
+  filterMatches: FarmStatusFilterMatches;
+  hasActiveSearch: boolean;
   rect: VisualBedGeometry;
   selectedBedZoneId: number | null;
+  selectedOrchidGroup: SelectedFarmStatusOrchidGroup | null;
   selectedPhysicalBedId: number | null;
   showOrchids: boolean;
   showZones: boolean;
   onSelectBed: (bed: PhysicalBed) => void;
   onSelectBedZone: (zone: BedZone) => void;
+  onSelectOrchidGroup: (group: SelectedFarmStatusOrchidGroup) => void;
 }) {
   const selected =
     selectedPhysicalBedId === bed.id ||
     bed.bedZones.some((zone) => zone.id === selectedBedZoneId);
+  const matched =
+    !hasActiveSearch ||
+    filterMatches.physicalBedKeys.has(`${bed.houseId}:${bed.number}`);
+  const mutedOpacity = matched ? 1 : 0.34;
   const zoneGeometries = getZoneGeometries(rect, bed.bedZones);
   const groupCount = bed.bedZones.reduce(
     (sum, zone) => sum + zone.orchidGroups.length,
@@ -606,17 +592,17 @@ function FarmBedFeature({
           },
         }}
         pathOptions={{
-          color: selected ? "#1976f3" : "#9fb49a",
-          fillColor: selected ? "#e7f0ff" : "#dbe9d1",
-          fillOpacity: 0.96,
-          opacity: 1,
+          color: matched ? (selected ? "#1976f3" : "#9fb49a") : "#9aa19a",
+          fillColor: matched ? (selected ? "#e7f0ff" : "#dbe9d1") : "#e4e6e3",
+          fillOpacity: matched ? 0.96 : 0.72,
+          opacity: mutedOpacity,
           weight: selected ? 4 : 2,
         }}
       />
       <Marker
         icon={createSmallLabelIcon({
           background: selected ? "#246df2" : "#28713f",
-          text: `${bed.number}다이`,
+          text: String(bed.number) + "다이",
           width: 48,
         })}
         interactive={false}
@@ -625,7 +611,7 @@ function FarmBedFeature({
       />
       {!showZones ? (
         <Marker
-          icon={createTinyBadgeIcon(`${groupCount}묶음`)}
+          icon={createTinyBadgeIcon(String(groupCount) + "묶음")}
           interactive={false}
           keyboard={false}
           position={toLatLng({
@@ -640,11 +626,15 @@ function FarmBedFeature({
             <FarmZoneFeature
               key={`${bed.id}-${zone.side}-${zone.id}`}
               detailSource={detailSource}
+              filterMatches={filterMatches}
+              hasActiveSearch={hasActiveSearch}
+              selectedOrchidGroupId={selectedOrchidGroup?.orchidGroupId ?? null}
               selected={selectedBedZoneId === zone.id}
               showOrchids={showOrchids}
               zone={zone}
               zoneRect={zoneRect}
               onSelectBedZone={onSelectBedZone}
+              onSelectOrchidGroup={onSelectOrchidGroup}
             />
           ))
         : null}
@@ -654,20 +644,30 @@ function FarmBedFeature({
 
 function FarmZoneFeature({
   detailSource,
+  filterMatches,
+  hasActiveSearch,
+  selectedOrchidGroupId,
   selected,
   showOrchids,
   zone,
   zoneRect,
   onSelectBedZone,
+  onSelectOrchidGroup,
 }: {
   detailSource: DetailSource;
+  filterMatches: FarmStatusFilterMatches;
+  hasActiveSearch: boolean;
+  selectedOrchidGroupId: number | null;
   selected: boolean;
   showOrchids: boolean;
   zone: BedZone;
   zoneRect: VisualZoneGeometry;
   onSelectBedZone: (zone: BedZone) => void;
+  onSelectOrchidGroup: (group: SelectedFarmStatusOrchidGroup) => void;
 }) {
   const hasGroups = zone.orchidGroups.length > 0;
+  const matched = !hasActiveSearch || filterMatches.bedZoneIds.has(zone.id);
+  const mutedOpacity = matched ? 1 : 0.34;
   const sideLabel =
     zone.side === "LEFT" ? "좌" : zone.side === "RIGHT" ? "우" : zone.side;
 
@@ -684,10 +684,22 @@ function FarmZoneFeature({
           },
         }}
         pathOptions={{
-          color: selected ? "#1976f3" : hasGroups ? "#2e9d4d" : "#8fa88b",
-          fillColor: selected ? "#dbeafe" : hasGroups ? "#cde6c4" : "#eef2ea",
-          fillOpacity: 0.98,
-          opacity: 1,
+          color: matched
+            ? selected
+              ? "#1976f3"
+              : hasGroups
+                ? "#2e9d4d"
+                : "#8fa88b"
+            : "#9aa19a",
+          fillColor: matched
+            ? selected
+              ? "#dbeafe"
+              : hasGroups
+                ? "#cde6c4"
+                : "#eef2ea"
+            : "#e4e6e3",
+          fillOpacity: matched ? 0.98 : 0.72,
+          opacity: mutedOpacity,
           weight: selected ? 4 : 2,
         }}
       />
@@ -703,19 +715,120 @@ function FarmZoneFeature({
           y: zoneRect.y + 16,
         })}
       />
-      {showOrchids && hasGroups ? (
-        <Marker
-          icon={createOrchidPreviewIcon(zone)}
-          interactive={false}
-          keyboard={false}
-          position={toLatLng({
-            x: zoneRect.x + zoneRect.width / 2,
-            y: zoneRect.y + zoneRect.height / 2,
-          })}
-        />
-      ) : null}
+      {showOrchids && hasGroups
+        ? getOrchidBlockGeometries(zoneRect, zone).map(({ group, rect }) => {
+            const selectedGroup = selectedOrchidGroupId === group.id;
+            const matchedGroup =
+              !hasActiveSearch || filterMatches.orchidGroupIds.has(group.id);
+
+            return (
+              <Rectangle
+                key={group.id}
+                bounds={boundsOf(rect)}
+                eventHandlers={{
+                  click: (event) => {
+                    stopLeafletClick(event);
+                    onSelectOrchidGroup(toFarmStatusItem(group, zone));
+                  },
+                }}
+                pathOptions={{
+                  color: matchedGroup
+                    ? selectedGroup
+                      ? "#1d6ff2"
+                      : "#17813a"
+                    : "#9aa19a",
+                  fillColor: matchedGroup
+                    ? selectedGroup
+                      ? "#dbeafe"
+                      : "#2e9d4d"
+                    : "#bfc5bf",
+                  fillOpacity: matchedGroup
+                    ? selectedGroup
+                      ? 0.96
+                      : 0.82
+                    : 0.68,
+                  opacity: matchedGroup ? 1 : 0.38,
+                  weight: selectedGroup ? 3 : 1.5,
+                }}
+              />
+            );
+          })
+        : null}
+      {showOrchids && hasGroups
+        ? getOrchidBlockGeometries(zoneRect, zone).map(({ group, rect }) => (
+            <Marker
+              key={`${group.id}-label`}
+              icon={createOrchidBlockIcon(
+                group,
+                !hasActiveSearch || filterMatches.orchidGroupIds.has(group.id),
+              )}
+              interactive={false}
+              keyboard={false}
+              position={toLatLng({
+                x: rect.x + rect.width / 2,
+                y: rect.y + rect.height / 2,
+              })}
+            />
+          ))
+        : null}
     </>
   );
+}
+
+function getOrchidBlockGeometries(zoneRect: VisualZoneGeometry, zone: BedZone) {
+  const groups = [...zone.orchidGroups].sort((a, b) => {
+    const aStart = a.startPosition ?? a.sortOrder;
+    const bStart = b.startPosition ?? b.sortOrder;
+    return aStart - bStart;
+  });
+  const gap = 3;
+  const top = zoneRect.y + 34;
+  const availableHeight = zoneRect.height - 44;
+  const blockHeight = Math.max(
+    18,
+    (availableHeight - gap * Math.max(0, groups.length - 1)) /
+      Math.max(1, groups.length),
+  );
+
+  return groups.map((group, index) => ({
+    group,
+    rect: {
+      x: zoneRect.x + 2,
+      y: top + index * (blockHeight + gap),
+      width: zoneRect.width - 4,
+      height: Math.min(blockHeight, availableHeight),
+    },
+  }));
+}
+
+function toFarmStatusItem(
+  group: OrchidGroup,
+  zone: BedZone,
+): SelectedFarmStatusOrchidGroup {
+  return {
+    ageYear: group.ageYear,
+    orchidGroupId: group.id,
+    varietyName: group.varietyName,
+    genus: group.genus,
+    endPosition: group.endPosition,
+    memo: group.memo,
+    placementType: group.placementType,
+    potSize: group.potSize,
+    quantity: group.quantity,
+    sortOrder: group.sortOrder,
+    splitPlacementAllowed: group.splitPlacementAllowed,
+    startPosition: group.startPosition,
+    status: group.status,
+    trayCount: group.trayCount,
+    varietyId: group.varietyId,
+    houseId: group.houseId,
+    houseNumber: group.houseNumber,
+    physicalBedId: zone.physicalBedId,
+    physicalBedNumber: group.physicalBedNumber,
+    physicalBedName: `${group.physicalBedNumber}다이`,
+    bedZoneId: zone.id,
+    bedZoneName: zone.name,
+  };
 }
 
 function TreeCluster({ x, y }: { x: number; y: number }) {
@@ -795,6 +908,90 @@ function getHouseDetailSource(
   };
 }
 
+function findOrchidGroupCenter(
+  orchidGroupId: number,
+  houseLayout: FarmHouseGeometry[],
+  houseByNumber: Map<number, HouseStatusSummary>,
+  zoomData: FarmStatusZoomData | null,
+) {
+  for (const geometry of houseLayout) {
+    const house = houseByNumber.get(geometry.houseNumber);
+    if (!house) continue;
+
+    const detailSource = getHouseDetailSource(house, zoomData);
+    const bedGeometries = getBedGeometries(geometry, detailSource.physicalBeds);
+
+    for (const { bed, rect } of bedGeometries) {
+      const zoneGeometries = getZoneGeometries(rect, bed.bedZones);
+
+      for (const { zone, zoneRect } of zoneGeometries) {
+        const orchidGeometry = getOrchidBlockGeometries(zoneRect, zone).find(
+          ({ group }) => group.id === orchidGroupId,
+        );
+
+        if (orchidGeometry) {
+          return {
+            x: orchidGeometry.rect.x + orchidGeometry.rect.width / 2,
+            y: orchidGeometry.rect.y + orchidGeometry.rect.height / 2,
+          };
+        }
+      }
+    }
+  }
+
+  return null;
+}
+
+function getScaledHouseLayout(
+  houses: HouseStatusSummary[],
+): FarmHouseGeometry[] {
+  const orderedHouses = [...houses].sort(
+    (a, b) => b.houseNumber - a.houseNumber,
+  );
+  const lengthByHouse = new Map<number, number>();
+
+  orderedHouses.forEach((house) => {
+    lengthByHouse.set(house.houseNumber, getMaxPhysicalBedLength(house));
+  });
+
+  const values = [...lengthByHouse.values()];
+  const minValue = Math.min(...values);
+  const maxValue = Math.max(...values);
+  const minHeight = 360;
+  const maxHeight = 650;
+  const houseBottom = 810;
+
+  const horizontalGap = 2;
+  const totalWidth =
+    orderedHouses.length * HOUSE_WIDTH +
+    Math.max(0, orderedHouses.length - 1) * horizontalGap;
+  const startX = (WORLD_WIDTH - totalWidth) / 2;
+
+  return orderedHouses.map((house, index) => {
+    const value = lengthByHouse.get(house.houseNumber) ?? minValue;
+    const ratio =
+      maxValue === minValue ? 0.5 : (value - minValue) / (maxValue - minValue);
+    const height = Math.round(minHeight + ratio * (maxHeight - minHeight));
+
+    return {
+      houseNumber: house.houseNumber,
+      x: startX + index * (HOUSE_WIDTH + horizontalGap),
+      width: HOUSE_WIDTH,
+      y: houseBottom - height,
+      height,
+    };
+  });
+}
+
+function getMaxPhysicalBedLength(house: HouseStatusSummary | undefined) {
+  const values =
+    house?.physicalBeds
+      .map((bed) => Number(bed.positionUnitCount ?? bed.lengthCm ?? 0))
+      .filter((value) => Number.isFinite(value) && value > 0) ?? [];
+
+  return Math.max(1, ...values);
+}
+
 function sortPhysicalBeds(beds: PhysicalBed[]) {
   return [...beds].sort((a, b) => {
     const aOrder =
@@ -829,7 +1026,7 @@ function createVisualOnlyBeds(
         physicalBedNumber: bedNumber,
         houseId,
         houseNumber,
-        name: `${bedNumber}다이 좌`,
+        name: String(bedNumber) + "다이 좌",
         side: "LEFT",
         zoneType: "DEFAULT",
         sortOrder: 1,
@@ -843,7 +1040,7 @@ function createVisualOnlyBeds(
         physicalBedNumber: bedNumber,
         houseId,
         houseNumber,
-        name: `${bedNumber}다이 우`,
+        name: String(bedNumber) + "다이 우",
         side: "RIGHT",
         zoneType: "DEFAULT",
         sortOrder: 2,
@@ -859,10 +1056,10 @@ function getBedGeometries(
   houseRect: FarmHouseGeometry,
   beds: PhysicalBed[],
 ): Array<{ bed: PhysicalBed; rect: VisualBedGeometry }> {
-  const paddingX = 14;
+  const paddingX = 3;
   const topPadding = 34;
   const bottomPadding = 24;
-  const gap = 10;
+  const gap = 3;
   const bedWidth = (houseRect.width - paddingX * 2 - gap * 2) / 3;
   const bedHeight = houseRect.height - topPadding - bottomPadding;
 
@@ -882,7 +1079,7 @@ function getZoneGeometries(
   bedRect: VisualBedGeometry,
   zones: BedZone[],
 ): Array<{ zone: BedZone; zoneRect: VisualZoneGeometry }> {
-  const gap = 4;
+  const gap = 2;
   const zoneWidth = (bedRect.width - gap) / 2;
   const sortedZones = [...zones].sort((a, b) => {
     const sideOrder = (side: string) =>
@@ -1013,7 +1210,6 @@ function createTinyBadgeIcon(text: string) {
 }
 
 function createBottomMetricIcon({
-  status,
   text,
   warning,
 }: {
@@ -1025,9 +1221,28 @@ function createBottomMetricIcon({
 
   return divIcon({
     className: "",
-    html: `<div style="display:flex;align-items:center;gap:5px;border-radius:999px;background:rgba(255,255,255,.92);color:#274731;font-size:10px;font-weight:800;line-height:18px;padding:0 7px;box-shadow:0 1px 4px rgba(20,50,20,.18);white-space:nowrap;"><span style="width:9px;height:9px;border-radius:999px;background:${dot};display:inline-block;"></span>${escapeHtml(text)}<span style="color:#718071;font-weight:700;">${escapeHtml(status)}</span></div>`,
+    html: `<div style="display:flex;align-items:center;gap:4px;border-radius:999px;background:rgba(255,255,255,.94);color:#2f3d34;font-size:10px;font-weight:800;line-height:18px;padding:0 7px;box-shadow:0 1px 4px rgba(20,50,20,.18);white-space:nowrap;"><span style="width:6px;height:6px;border-radius:999px;background:${dot};display:inline-block;"></span>${escapeHtml(text)}</div>`,
     iconAnchor: [36, 9],
     iconSize: [72, 18],
+  });
+}
+
+function createOrchidBlockIcon(group: OrchidGroup, matched: boolean) {
+  const bg = matched
+    ? group.status === "정상"
+      ? "#1f8f48"
+      : "#f59e0b"
+    : "#9aa19a";
+  const title =
+    group.varietyName.length > 7
+      ? `${group.varietyName.slice(0, 7)}...`
+      : group.varietyName;
+
+  return divIcon({
+    className: "",
+    html: `<div style="width:96px;height:32px;border-radius:7px;background:${bg};color:white;padding:4px 7px;box-shadow:0 2px 6px rgba(20,50,20,.22);line-height:1.15;box-sizing:border-box;"><div style="font-size:11px;font-weight:800;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${escapeHtml(title)}</div><div style="font-size:10px;font-weight:700;opacity:.95;">${group.quantity}분</div></div>`,
+    iconAnchor: [48, 16],
+    iconSize: [96, 32],
   });
 }
 
@@ -1039,7 +1254,7 @@ function createOrchidPreviewIcon(zone: BedZone) {
 
   return divIcon({
     className: "",
-    html: `<div style="max-width:84px;border-radius:7px;background:${bg};color:white;font-size:9px;font-weight:800;line-height:1.2;padding:5px 6px;text-align:center;box-shadow:0 2px 6px rgba(20,50,20,.22);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${escapeHtml(title)}<br/><span style="font-size:8px;opacity:.9;">${zone.orchidGroups.length}묶음</span></div>`,
+    html: `<div style="width:84px;height:36px;border-radius:8px;background:${bg};color:white;padding:5px 7px;box-shadow:0 2px 6px rgba(20,50,20,.22);box-sizing:border-box;"><div style="font-size:11px;font-weight:800;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${escapeHtml(title)}</div><div style="font-size:9px;font-weight:700;opacity:.9;">${zone.orchidGroups.length}묶음</div></div>`,
     iconAnchor: [42, 18],
     iconSize: [84, 36],
   });
