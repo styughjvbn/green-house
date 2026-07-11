@@ -16,7 +16,11 @@ import {
   positionToStartCell,
   startCellToPosition,
 } from "../../lib/orchidManagementUtils";
-import type { MutationPayload, OrchidFormState } from "../../model/types";
+import type {
+  MapCellRangePick,
+  MutationPayload,
+  OrchidFormState,
+} from "../../model/types";
 import TextField from "./TextField";
 import VarietySearchSelect from "./VarietySearchSelect";
 
@@ -26,7 +30,9 @@ export default function OrchidGroupForm({
   mode,
   saving,
   targetZone,
+  mapCellRangePick,
   onCancel,
+  onStartMapCellRangePick,
   onSubmit,
 }: {
   initialValue: OrchidGroup | null;
@@ -34,7 +40,13 @@ export default function OrchidGroupForm({
   mode: "CREATE" | "EDIT";
   saving: boolean;
   targetZone: BedZone | null;
+  mapCellRangePick: MapCellRangePick;
   onCancel: () => void;
+  onStartMapCellRangePick: (options: {
+    endCell: string;
+    startCell: string;
+    targetBedZoneId: number;
+  }) => void;
   onSubmit: (payload: MutationPayload) => Promise<void>;
 }) {
   const initialVariety = useMemo<VarietyOption | null>(
@@ -85,6 +97,25 @@ export default function OrchidGroupForm({
           : "",
     memo: initialValue?.memo ?? "",
   }));
+  const [ignoredMapPickVersion, setIgnoredMapPickVersion] = useState(0);
+  const rangePickActive =
+    mapCellRangePick.active &&
+    targetZone != null &&
+    mapCellRangePick.targetBedZoneId === targetZone.id;
+  const mapPickedRange =
+    targetZone != null &&
+    mapCellRangePick.targetBedZoneId === targetZone.id &&
+    mapCellRangePick.startCell != null &&
+    mapCellRangePick.endCell != null &&
+    mapCellRangePick.version > ignoredMapPickVersion
+      ? {
+          startPosition: String(mapCellRangePick.startCell),
+          endPosition: String(mapCellRangePick.endCell),
+        }
+      : null;
+  const startPositionValue =
+    mapPickedRange?.startPosition ?? form.startPosition;
+  const endPositionValue = mapPickedRange?.endPosition ?? form.endPosition;
 
   function updateField<K extends keyof OrchidFormState>(
     field: K,
@@ -119,8 +150,8 @@ export default function OrchidGroupForm({
       placementType: nullableText(form.placementType),
       trayCount: null,
       splitPlacementAllowed: form.splitPlacementAllowed,
-      startPosition: startCellToPosition(form.startPosition),
-      endPosition: endCellToPosition(form.endPosition),
+      startPosition: startCellToPosition(startPositionValue),
+      endPosition: endCellToPosition(endPositionValue),
       memo: nullableText(form.memo),
     });
   }
@@ -210,22 +241,47 @@ export default function OrchidGroupForm({
             </select>
           </label>
         </div>
-        <div className="grid grid-cols-2 gap-2">
+        <div className="grid grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-end gap-2">
           <TextField
             label="시작 칸"
             min={1}
             step={1}
             type="number"
-            value={form.startPosition}
-            onChange={(value) => updateField("startPosition", value)}
+            value={startPositionValue}
+            onChange={(value) => {
+              setIgnoredMapPickVersion(mapCellRangePick.version);
+              updateField("startPosition", value);
+            }}
           />
+          <button
+            className={`mb-px h-[34px] rounded-md border px-3 text-xs font-semibold transition ${
+              rangePickActive
+                ? "border-[#159447] bg-[#159447] text-white"
+                : "border-[#cfd8cc] bg-white text-[#36513d] hover:bg-[#f3f8f2]"
+            }`}
+            disabled={!targetZone || saving}
+            type="button"
+            onClick={() => {
+              if (!targetZone) return;
+              onStartMapCellRangePick({
+                targetBedZoneId: targetZone.id,
+                startCell: startPositionValue,
+                endCell: endPositionValue,
+              });
+            }}
+          >
+            맵에서 지정
+          </button>
           <TextField
             label="끝 칸"
             min={1}
             step={1}
             type="number"
-            value={form.endPosition}
-            onChange={(value) => updateField("endPosition", value)}
+            value={endPositionValue}
+            onChange={(value) => {
+              setIgnoredMapPickVersion(mapCellRangePick.version);
+              updateField("endPosition", value);
+            }}
           />
         </div>
         <div>

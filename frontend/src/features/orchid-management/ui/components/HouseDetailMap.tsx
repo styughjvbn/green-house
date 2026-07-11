@@ -1,7 +1,11 @@
 "use client";
 
 import type { House } from "@/entities/farm/types";
-import type { DragState, OrchidSelection } from "../../model/types";
+import type {
+  DragState,
+  MapCellRangePick,
+  OrchidSelection,
+} from "../../model/types";
 import PhysicalBedBlock from "./PhysicalBedBlock";
 
 export default function HouseDetailMap({
@@ -13,10 +17,12 @@ export default function HouseDetailMap({
   saving,
   selection,
   showScale,
+  cellRangePick,
   onDragEnd,
   onDragStart,
   onDropOnBedZone,
   onEnterDropZone,
+  onPickCellRange,
   onSelectBedZone,
   onSelectOrchidGroup,
 }: {
@@ -28,10 +34,12 @@ export default function HouseDetailMap({
   saving: boolean;
   selection: OrchidSelection | null;
   showScale: boolean;
+  cellRangePick: MapCellRangePick;
   onDragEnd: () => void;
   onDragStart: (orchidGroupId: number) => void;
   onDropOnBedZone: (bedZoneId: number) => Promise<void>;
   onEnterDropZone: (bedZoneId: number) => void;
+  onPickCellRange: (bedZoneId: number, cell: number) => void;
   onSelectBedZone: (bedZoneId: number) => void;
   onSelectOrchidGroup: (orchidGroupId: number) => void;
 }) {
@@ -49,10 +57,12 @@ export default function HouseDetailMap({
             saving={saving}
             selection={selection}
             showScale={showScale}
+            cellRangePick={cellRangePick}
             onDragEnd={onDragEnd}
             onDragStart={onDragStart}
             onDropOnBedZone={onDropOnBedZone}
             onEnterDropZone={onEnterDropZone}
+            onPickCellRange={onPickCellRange}
             onSelectBedZone={onSelectBedZone}
             onSelectOrchidGroup={onSelectOrchidGroup}
           />

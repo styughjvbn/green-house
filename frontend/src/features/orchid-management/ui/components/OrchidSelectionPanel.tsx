@@ -12,6 +12,7 @@ import { Copy, Edit2, Trash2, Clipboard, Move } from "lucide-react";
 import { findBedZone } from "../../lib/orchidManagementUtils";
 import type {
   MutationMode,
+  MapCellRangePick,
   MutationPayload,
   PreciseMovePayload,
   WorkRecordQuickFormState,
@@ -39,6 +40,7 @@ export default function OrchidSelectionPanel({
   selectedOrchidGroup,
   workRecordForm,
   workTypes,
+  mapCellRangePick,
   onCancelMutation,
   onClearCopiedOrchidGroup,
   onCopyOrchidGroup,
@@ -52,6 +54,7 @@ export default function OrchidSelectionPanel({
   onOpenPaste,
   onOpenWorkRecord,
   onSelectOrchidGroup,
+  onStartMapCellRangePick,
   onUpdateWorkRecordForm,
   onWorkRecordCreate,
 }: {
@@ -70,6 +73,7 @@ export default function OrchidSelectionPanel({
   selectedOrchidGroup: OrchidGroup | null;
   workRecordForm: WorkRecordQuickFormState;
   workTypes: WorkType[];
+  mapCellRangePick: MapCellRangePick;
   onCancelMutation: () => void;
   onClearCopiedOrchidGroup: () => void;
   onCopyOrchidGroup: (orchidGroupId: number) => void;
@@ -83,6 +87,11 @@ export default function OrchidSelectionPanel({
   onOpenPaste: () => void;
   onOpenWorkRecord: () => void;
   onSelectOrchidGroup: (orchidGroupId: number) => void;
+  onStartMapCellRangePick: (options: {
+    endCell: string;
+    startCell: string;
+    targetBedZoneId: number;
+  }) => void;
   onTogglePlacementEditMode: () => void;
   onUpdateWorkRecordForm: <K extends keyof WorkRecordQuickFormState>(
     field: K,
@@ -302,8 +311,10 @@ export default function OrchidSelectionPanel({
           }
           mode={mutationMode}
           saving={saving}
+          mapCellRangePick={mapCellRangePick}
           targetZone={resolvedZone}
           onCancel={onCancelMutation}
+          onStartMapCellRangePick={onStartMapCellRangePick}
           onSubmit={mutationMode === "EDIT" ? onEdit : onCreate}
         />
       ) : null}
@@ -313,8 +324,10 @@ export default function OrchidSelectionPanel({
           house={house}
           preferredBedZoneId={preferredMoveZoneId}
           saving={saving}
+          mapCellRangePick={mapCellRangePick}
           selectedOrchidGroup={selectedOrchidGroup}
           onCancel={onCancelMutation}
+          onStartMapCellRangePick={onStartMapCellRangePick}
           onMove={onMove}
         />
       ) : null}

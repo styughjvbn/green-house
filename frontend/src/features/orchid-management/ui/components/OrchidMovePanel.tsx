@@ -10,7 +10,7 @@ import {
   positionToStartCell,
   startCellToPosition,
 } from "../../lib/orchidManagementUtils";
-import type { PreciseMovePayload } from "../../model/types";
+import type { MapCellRangePick, PreciseMovePayload } from "../../model/types";
 import TextField from "./TextField";
 
 type DestinationOption = {
@@ -22,15 +22,23 @@ export default function OrchidMovePanel({
   house,
   preferredBedZoneId,
   saving,
+  mapCellRangePick,
   selectedOrchidGroup,
   onCancel,
+  onStartMapCellRangePick,
   onMove,
 }: {
   house: House;
   preferredBedZoneId: number | null;
   saving: boolean;
+  mapCellRangePick: MapCellRangePick;
   selectedOrchidGroup: OrchidGroup;
   onCancel: () => void;
+  onStartMapCellRangePick: (options: {
+    endCell: string;
+    startCell: string;
+    targetBedZoneId: number;
+  }) => void;
   onMove: (payload: PreciseMovePayload) => Promise<void>;
 }) {
   const [selectedZoneId, setSelectedZoneId] = useState<number | null>(null);
@@ -44,6 +52,7 @@ export default function OrchidMovePanel({
       ? positionToEndCell(selectedOrchidGroup.endPosition)
       : "",
   );
+  const [ignoredMapPickVersion, setIgnoredMapPickVersion] = useState(0);
   const [memo, setMemo] = useState("");
 
   const currentZone = findBedZone(house, selectedOrchidGroup.bedZoneId);
@@ -69,6 +78,23 @@ export default function OrchidMovePanel({
     destinationOptions.some((option) => option.bedZoneId === selectedZoneId)
       ? selectedZoneId
       : fallbackZoneId;
+  const rangePickActive =
+    mapCellRangePick.active &&
+    resolvedZoneId != null &&
+    mapCellRangePick.targetBedZoneId === resolvedZoneId;
+  const mapPickedRange =
+    resolvedZoneId != null &&
+    mapCellRangePick.targetBedZoneId === resolvedZoneId &&
+    mapCellRangePick.startCell != null &&
+    mapCellRangePick.endCell != null &&
+    mapCellRangePick.version > ignoredMapPickVersion
+      ? {
+          startPosition: String(mapCellRangePick.startCell),
+          endPosition: String(mapCellRangePick.endCell),
+        }
+      : null;
+  const startPositionValue = mapPickedRange?.startPosition ?? startPosition;
+  const endPositionValue = mapPickedRange?.endPosition ?? endPosition;
 
   function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -76,8 +102,8 @@ export default function OrchidMovePanel({
 
     void onMove({
       toBedZoneId: resolvedZoneId,
-      startPosition: startCellToPosition(startPosition),
-      endPosition: endCellToPosition(endPosition),
+      startPosition: startCellToPosition(startPositionValue),
+      endPosition: endCellToPosition(endPositionValue),
       memo,
     });
   }
@@ -128,22 +154,47 @@ export default function OrchidMovePanel({
           </select>
         </label>
 
-        <div className="grid grid-cols-2 gap-2">
+        <div className="grid grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-end gap-2">
           <TextField
             label="시작 칸"
             min={1}
             step={1}
             type="number"
-            value={startPosition}
-            onChange={setStartPosition}
+            value={startPositionValue}
+            onChange={(value) => {
+              setIgnoredMapPickVersion(mapCellRangePick.version);
+              setStartPosition(value);
+            }}
           />
+          <button
+            className={`mb-px h-[34px] rounded-md border px-3 text-xs font-semibold transition ${
+              rangePickActive
+                ? "border-[#246df2] bg-[#246df2] text-white"
+                : "border-[#cfd8cc] bg-white text-[#36513d] hover:bg-[#f3f8f2]"
+            }`}
+            disabled={!resolvedZoneId || saving}
+            type="button"
+            onClick={() => {
+              if (!resolvedZoneId) return;
+              onStartMapCellRangePick({
+                targetBedZoneId: resolvedZoneId,
+                startCell: startPositionValue,
+                endCell: endPositionValue,
+              });
+            }}
+          >
+            맵에서 지정
+          </button>
           <TextField
             label="끝 칸"
             min={1}
             step={1}
             type="number"
-            value={endPosition}
-            onChange={setEndPosition}
+            value={endPositionValue}
+            onChange={(value) => {
+              setIgnoredMapPickVersion(mapCellRangePick.version);
+              setEndPosition(value);
+            }}
           />
         </div>
 

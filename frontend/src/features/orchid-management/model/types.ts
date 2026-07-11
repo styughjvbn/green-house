@@ -19,6 +19,14 @@ export type DragState = {
   overBedZoneId: number | null;
 } | null;
 
+export type MapCellRangePick = {
+  active: boolean;
+  targetBedZoneId: number | null;
+  startCell: number | null;
+  endCell: number | null;
+  version: number;
+};
+
 export type OrchidFormState = {
   varietyId: string;
   varietyQuery: string;
