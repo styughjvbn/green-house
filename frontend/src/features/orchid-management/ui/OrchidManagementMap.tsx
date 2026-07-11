@@ -68,7 +68,7 @@ export function OrchidManagementMap({
           workRecordSummary={orchidManagement.workRecordSummary}
           workRecordSummaryLoading={orchidManagement.workRecordSummaryLoading}
         />
-        <BedPrecisionSettings zone={orchidManagement.resolvedZone} />
+        {/* <BedPrecisionSettings zone={orchidManagement.resolvedZone} /> 26.07.11 비활성화*/}
       </section>
       <div className="space-y-3">
         <OrchidSearchPanel
