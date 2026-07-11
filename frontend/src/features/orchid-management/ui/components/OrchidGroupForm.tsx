@@ -9,8 +9,12 @@ import type {
 } from "@/entities/farm/types";
 import {
   findFirstAvailableSingleSlot,
+  endCellToPosition,
   nullableNumber,
   nullableText,
+  positionToEndCell,
+  positionToStartCell,
+  startCellToPosition,
 } from "../../lib/orchidManagementUtils";
 import type { MutationPayload, OrchidFormState } from "../../model/types";
 import TextField from "./TextField";
@@ -69,13 +73,13 @@ export default function OrchidGroupForm({
     splitPlacementAllowed: initialValue?.splitPlacementAllowed ?? false,
     startPosition:
       initialValue?.startPosition != null
-        ? String(initialValue.startPosition)
+        ? positionToStartCell(initialValue.startPosition)
         : defaultPlacement != null
           ? String(defaultPlacement.startPosition)
           : "",
     endPosition:
       initialValue?.endPosition != null
-        ? String(initialValue.endPosition)
+        ? positionToEndCell(initialValue.endPosition)
         : defaultPlacement != null
           ? String(defaultPlacement.endPosition)
           : "",
@@ -115,8 +119,8 @@ export default function OrchidGroupForm({
       placementType: nullableText(form.placementType),
       trayCount: null,
       splitPlacementAllowed: form.splitPlacementAllowed,
-      startPosition: nullableNumber(form.startPosition),
-      endPosition: nullableNumber(form.endPosition),
+      startPosition: startCellToPosition(form.startPosition),
+      endPosition: endCellToPosition(form.endPosition),
       memo: nullableText(form.memo),
     });
   }
@@ -184,8 +188,7 @@ export default function OrchidGroupForm({
           />
         </div>
         <div className="grid grid-cols-2 gap-2">
-          <TextField
-            label="화분 크기"
+          <PotSizeField
             value={form.potSize}
             onChange={(value) => updateField("potSize", value)}
           />
@@ -205,13 +208,17 @@ export default function OrchidGroupForm({
         </div>
         <div className="grid grid-cols-2 gap-2">
           <TextField
-            label="시작 위치"
+            label="시작 칸"
+            min={1}
+            step={1}
             type="number"
             value={form.startPosition}
             onChange={(value) => updateField("startPosition", value)}
           />
           <TextField
-            label="종료 위치"
+            label="끝 칸"
+            min={1}
+            step={1}
             type="number"
             value={form.endPosition}
             onChange={(value) => updateField("endPosition", value)}
@@ -277,4 +284,68 @@ export default function OrchidGroupForm({
 
 function resolvePlacementSelectValue(value: string) {
   return value.startsWith("CUSTOM:") ? "CUSTOM" : value;
+}
+
+function PotSizeField({
+  onChange,
+  value,
+}: {
+  onChange: (value: string) => void;
+  value: string;
+}) {
+  const { amount, unit } = parsePotSize(value);
+
+  return (
+    <label className="block">
+      <span className="text-sm font-semibold text-[#435047]">화분 크기</span>
+      <div className="mt-1 flex overflow-hidden rounded-md border border-[#cfd8cc] bg-white">
+        <input
+          className="min-w-0 flex-1 px-2 py-1.5 text-sm outline-none"
+          value={amount}
+          onChange={(event) =>
+            onChange(formatPotSize(event.target.value, unit))
+          }
+        />
+        <select
+          aria-label="화분 크기 단위"
+          className="border-l border-[#cfd8cc] bg-[#f8faf7] px-2 py-1.5 text-sm font-semibold text-[#26352c] outline-none"
+          value={unit}
+          onChange={(event) =>
+            onChange(formatPotSize(amount, event.target.value))
+          }
+        >
+          <option value={'"'}>&quot;</option>
+          <option value="cm">cm</option>
+        </select>
+      </div>
+    </label>
+  );
+}
+
+function parsePotSize(value: string) {
+  const trimmed = value.trim();
+
+  if (trimmed.toLowerCase().endsWith("cm")) {
+    return {
+      amount: trimmed.slice(0, -2).trim(),
+      unit: "cm",
+    };
+  }
+
+  if (trimmed.endsWith('"')) {
+    return {
+      amount: trimmed.slice(0, -1).trim(),
+      unit: '"',
+    };
+  }
+
+  return {
+    amount: trimmed,
+    unit: '"',
+  };
+}
+
+function formatPotSize(amount: string, unit: string) {
+  const trimmed = amount.trim();
+  return trimmed ? `${trimmed}${unit}` : "";
 }
