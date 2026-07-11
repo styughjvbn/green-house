@@ -51,9 +51,7 @@ export function InboundCreateDialog({
   const [pottingDueDate, setPottingDueDate] = useState("");
   const [potSize, setPotSize] = useState("");
   const [ageYear, setAgeYear] = useState("");
-  const [growthStage, setGrowthStage] = useState("");
   const [placementType, setPlacementType] = useState("");
-  const [trayCount, setTrayCount] = useState("");
   const [bedZoneId, setBedZoneId] = useState("");
   const [worker, setWorker] = useState("");
   const [memo, setMemo] = useState("");
@@ -94,9 +92,7 @@ export function InboundCreateDialog({
             pottingDueDate: pottingDueDate || undefined,
             potSize: potSize.trim() || undefined,
             ageYear: toNumber(ageYear),
-            growthStage: growthStage.trim() || undefined,
             placementType: placementType.trim() || undefined,
-            trayCount: toNumber(trayCount),
             bedZoneId: toNumber(bedZoneId),
             worker: worker.trim() || undefined,
             memo: memo.trim() || undefined,
@@ -234,26 +230,11 @@ export function InboundCreateDialog({
                 onChange={(event) => setAgeYear(event.target.value)}
               />
             </Field>
-            <Field label="생육 단계">
-              <input
-                className={inputClass}
-                value={growthStage}
-                onChange={(event) => setGrowthStage(event.target.value)}
-              />
-            </Field>
             <Field label="배치 형태">
               <input
                 className={inputClass}
                 value={placementType}
                 onChange={(event) => setPlacementType(event.target.value)}
-              />
-            </Field>
-            <Field label="판 수">
-              <input
-                className={inputClass}
-                type="number"
-                value={trayCount}
-                onChange={(event) => setTrayCount(event.target.value)}
               />
             </Field>
             <Field label="배치 위치">
@@ -429,9 +410,7 @@ export function InboundPottingDialog({
   const [actualQuantity, setActualQuantity] = useState("");
   const [potSize, setPotSize] = useState("");
   const [ageYear, setAgeYear] = useState("");
-  const [growthStage, setGrowthStage] = useState("");
   const [placementType, setPlacementType] = useState("");
-  const [trayCount, setTrayCount] = useState("");
   const [bedZoneId, setBedZoneId] = useState("");
   const [worker, setWorker] = useState("");
   const [memo, setMemo] = useState("");
@@ -451,9 +430,7 @@ export function InboundPottingDialog({
             actualQuantity: Number(actualQuantity),
             potSize: potSize.trim() || undefined,
             ageYear: toNumber(ageYear),
-            growthStage: growthStage.trim() || undefined,
             placementType: placementType.trim() || undefined,
-            trayCount: toNumber(trayCount),
             bedZoneId: Number(bedZoneId),
             worker: worker.trim() || undefined,
             memo: memo.trim() || undefined,
@@ -496,26 +473,11 @@ export function InboundPottingDialog({
             onChange={(event) => setAgeYear(event.target.value)}
           />
         </Field>
-        <Field label="생육 단계">
-          <input
-            className={inputClass}
-            value={growthStage}
-            onChange={(event) => setGrowthStage(event.target.value)}
-          />
-        </Field>
         <Field label="배치 형태">
           <input
             className={inputClass}
             value={placementType}
             onChange={(event) => setPlacementType(event.target.value)}
-          />
-        </Field>
-        <Field label="판 수">
-          <input
-            className={inputClass}
-            type="number"
-            value={trayCount}
-            onChange={(event) => setTrayCount(event.target.value)}
           />
         </Field>
         <Field label="배치 위치">

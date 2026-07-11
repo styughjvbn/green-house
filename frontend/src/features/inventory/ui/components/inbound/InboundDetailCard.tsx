@@ -237,18 +237,6 @@ function InboundEditForm({
           }
         />
       </Field>
-      <Field label="생육 단계">
-        <input
-          className={inputClass}
-          value={editForm.growthStage ?? ""}
-          onChange={(event) =>
-            onChange((current) => ({
-              ...current,
-              growthStage: event.target.value,
-            }))
-          }
-        />
-      </Field>
       <Field label="배치 형태">
         <input
           className={inputClass}
@@ -257,19 +245,6 @@ function InboundEditForm({
             onChange((current) => ({
               ...current,
               placementType: event.target.value,
-            }))
-          }
-        />
-      </Field>
-      <Field label="판 수">
-        <input
-          className={inputClass}
-          type="number"
-          value={editForm.trayCount ?? ""}
-          onChange={(event) =>
-            onChange((current) => ({
-              ...current,
-              trayCount: toOptionalNumber(event.target.value),
             }))
           }
         />
@@ -331,9 +306,7 @@ function InboundDetailView({ record }: { record: InboundRecord }) {
       <DetailRow label="포트 작업일" value={record.pottingDate} />
       <DetailRow label="화분 크기" value={record.potSize} />
       <DetailRow label="초기 년생" value={record.ageYear} />
-      <DetailRow label="생육 단계" value={record.growthStage} />
       <DetailRow label="배치 형태" value={record.placementType} />
-      <DetailRow label="판 수" value={record.trayCount} />
       <DetailRow label="작업자" value={record.worker} />
       <DetailRow
         label="생성 난 묶음"
