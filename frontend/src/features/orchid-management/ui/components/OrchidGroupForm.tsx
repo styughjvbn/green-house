@@ -261,17 +261,6 @@ export default function OrchidGroupForm({
             }
           />
         ) : null}
-        <label className="flex items-center gap-2 rounded-md border border-[#dbe1da] bg-[#f8faf7] px-3 py-2 text-sm font-semibold text-[#435047]">
-          <input
-            checked={form.splitPlacementAllowed}
-            className="accent-[#159447]"
-            type="checkbox"
-            onChange={(event) =>
-              updateField("splitPlacementAllowed", event.target.checked)
-            }
-          />
-          여러 구간으로 나눠 배치 가능
-        </label>
         <label className="block">
           <span className="text-sm font-semibold text-[#435047]">메모</span>
           <textarea
