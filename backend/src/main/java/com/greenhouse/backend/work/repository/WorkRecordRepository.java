@@ -45,14 +45,14 @@ public interface WorkRecordRepository extends JpaRepository<WorkRecord, Long> {
 			@Param("targetIds") Collection<Long> targetIds);
 
 	@Modifying(clearAutomatically = true, flushAutomatically = true)
-	@Query("""
-			delete from WorkRecord w
-			where w.targetType = :targetType
-				and w.targetId = :targetId
-				and w.workTypeRef.code = :workTypeCode
-			""")
-	int deleteByTargetTypeAndTargetIdAndWorkTypeCode(
-			@Param("targetType") String targetType,
-			@Param("targetId") Long targetId,
+	@Query(value = """
+			delete from work_records
+			where details ->> 'inboundRecordId' = cast(:inboundRecordId as text)
+				and work_type_id in (
+					select id from work_types where code = :workTypeCode
+				)
+			""", nativeQuery = true)
+	int deleteByDetailsInboundRecordIdAndWorkTypeCode(
+			@Param("inboundRecordId") Long inboundRecordId,
 			@Param("workTypeCode") String workTypeCode);
 }

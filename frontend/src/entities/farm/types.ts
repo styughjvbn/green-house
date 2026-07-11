@@ -212,6 +212,7 @@ export type WorkRecord = {
   worker: string | null;
   fromBedZoneId: number | null;
   toBedZoneId: number | null;
+  details: Record<string, unknown> | null;
   memo: string | null;
 };
 

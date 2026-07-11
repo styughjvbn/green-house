@@ -24,6 +24,8 @@ import com.greenhouse.backend.work.application.SystemWorkRecorder;
 import lombok.RequiredArgsConstructor;
 
 import java.time.LocalDate;
+import java.util.LinkedHashMap;
+import java.util.Map;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
@@ -37,7 +39,7 @@ public class InboundRecordService {
 	private static final String DEFAULT_ORCHID_STATUS = "정상";
 	private static final String INBOUND_WORK_TYPE_CODE = "INBOUND";
 	private static final String POTTING_WORK_TYPE_CODE = "POTTING";
-	private static final String INBOUND_RECORD_TARGET_TYPE = "INBOUND_RECORD";
+	private static final String FARM_TARGET_TYPE = "FARM";
 
 	private final InboundRecordRepository inboundRecordRepository;
 	private final VarietyRepository varietyRepository;
@@ -113,15 +115,16 @@ public class InboundRecordService {
 			saved.markPottingPending(status);
 		}
 		recordWork(
-				INBOUND_WORK_TYPE_CODE,
-				saved.getInboundDate(),
-				INBOUND_RECORD_TARGET_TYPE,
-				saved.getId(),
-				saved.getVariety().getName(),
-				resolveWorkQuantity(saved.getInboundType(), saved.getBottleCount(), saved.getActualQuantity(),
-						saved.getEstimatedQuantity()),
-				saved.getWorker(),
-				saved.getMemo());
+					INBOUND_WORK_TYPE_CODE,
+					saved.getInboundDate(),
+					FARM_TARGET_TYPE,
+					null,
+					saved.getVariety().getName(),
+					resolveWorkQuantity(saved.getInboundType(), saved.getBottleCount(), saved.getActualQuantity(),
+							saved.getEstimatedQuantity()),
+					saved.getWorker(),
+					inboundWorkMemo(saved),
+					inboundWorkDetails(saved));
 		return InboundRecordResponse.from(findInboundRecord(saved.getId()));
 	}
 
@@ -210,7 +213,8 @@ public class InboundRecordService {
 				inboundRecord.getVariety().getName(),
 				String.valueOf(request.actualQuantity()),
 				normalize(request.worker()),
-				normalize(request.memo()));
+				normalize(request.memo()),
+				pottingWorkDetails(inboundRecord, orchidGroup, request));
 		return InboundRecordResponse.from(findInboundRecord(inboundRecord.getId()));
 	}
 
@@ -345,6 +349,19 @@ public class InboundRecordService {
 			String quantity,
 			String worker,
 			String memo) {
+		recordWork(workTypeCode, workDate, targetType, targetId, materialName, quantity, worker, memo, null);
+	}
+
+	private void recordWork(
+			String workTypeCode,
+			LocalDate workDate,
+			String targetType,
+			Long targetId,
+			String materialName,
+			String quantity,
+			String worker,
+			String memo,
+			Map<String, Object> details) {
 		systemWorkRecorder.record(
 				workTypeCode,
 				workDate,
@@ -353,7 +370,91 @@ public class InboundRecordService {
 				normalize(materialName),
 				normalize(quantity),
 				normalize(worker),
-				normalize(memo));
+				normalize(memo),
+				details);
+	}
+
+	private Map<String, Object> inboundWorkDetails(InboundRecord record) {
+		Map<String, Object> details = new LinkedHashMap<>();
+		putDetail(details, "inboundRecordId", record.getId());
+		putDetail(details, "inboundType", record.getInboundType());
+		putDetail(details, "status", record.getStatus());
+		putDetail(details, "varietyId", record.getVariety().getId());
+		putDetail(details, "genus", record.getVariety().getGenus());
+		putDetail(details, "varietyName", record.getVariety().getName());
+		putDetail(details, "bottleCount", record.getBottleCount());
+		putDetail(details, "estimatedQuantity", record.getEstimatedQuantity());
+		putDetail(details, "actualQuantity", record.getActualQuantity());
+		putDetail(details, "tempLocation", record.getTempLocation());
+		putDetail(details, "pottingDueDate", record.getPottingDueDate());
+		putDetail(details, "potSize", record.getPotSize());
+		putDetail(details, "ageYear", record.getAgeYear());
+		putDetail(details, "growthStage", record.getGrowthStage());
+		putDetail(details, "placementType", record.getPlacementType());
+		putDetail(details, "trayCount", record.getTrayCount());
+		putDetail(details, "bedZoneId", record.getBedZone() == null ? null : record.getBedZone().getId());
+		putDetail(details, "orchidGroupId",
+				record.getCreatedOrchidGroup() == null ? null : record.getCreatedOrchidGroup().getId());
+		return details;
+	}
+
+	private String inboundWorkMemo(InboundRecord record) {
+		String autoMemo = String.join("\n",
+				"입고 유형: " + formatInboundType(record.getInboundType()),
+				"품종: " + record.getVariety().getName(),
+				"병수: " + formatBottleCount(record.getBottleCount()),
+				"상태: " + formatInboundStatus(record.getStatus()));
+		return appendMemo(record.getMemo(), autoMemo);
+	}
+
+	private String formatInboundType(InboundType inboundType) {
+		return switch (inboundType) {
+			case FLASK_SEEDLING -> "유리병 모종";
+			case POTTED_SEEDLING -> "포트 모종";
+			case PRODUCT_POT -> "상품분";
+			case SAMPLE -> "샘플";
+			case ETC -> "기타";
+		};
+	}
+
+	private String formatInboundStatus(InboundStatus status) {
+		return switch (status) {
+			case TEMP_STORED -> "임시보관";
+			case POTTING_PENDING -> "포트작업대기";
+			case POTTED -> "포트작업완료";
+			case PLACED -> "배치완료";
+			case CANCELED -> "취소";
+		};
+	}
+
+	private String formatBottleCount(Integer bottleCount) {
+		return bottleCount == null ? "-" : bottleCount + "병";
+	}
+
+	private Map<String, Object> pottingWorkDetails(
+			InboundRecord inboundRecord,
+			OrchidGroup orchidGroup,
+			InboundRecordPottingRequest request) {
+		Map<String, Object> details = new LinkedHashMap<>();
+		putDetail(details, "inboundRecordId", inboundRecord.getId());
+		putDetail(details, "orchidGroupId", orchidGroup.getId());
+		putDetail(details, "varietyId", inboundRecord.getVariety().getId());
+		putDetail(details, "genus", inboundRecord.getVariety().getGenus());
+		putDetail(details, "varietyName", inboundRecord.getVariety().getName());
+		putDetail(details, "actualQuantity", request.actualQuantity());
+		putDetail(details, "potSize", firstNonBlank(request.potSize(), inboundRecord.getPotSize()));
+		putDetail(details, "ageYear", request.ageYear());
+		putDetail(details, "growthStage", normalize(request.growthStage()));
+		putDetail(details, "placementType", normalize(request.placementType()));
+		putDetail(details, "trayCount", request.trayCount());
+		putDetail(details, "bedZoneId", request.bedZoneId());
+		return details;
+	}
+
+	private void putDetail(Map<String, Object> details, String key, Object value) {
+		if (value != null) {
+			details.put(key, value);
+		}
 	}
 
 	private int resolveQuantity(Integer actualQuantity, Integer estimatedQuantity) {

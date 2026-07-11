@@ -34,6 +34,7 @@ export function WorkRecordDetail({
 
   const template = getRecordTemplate(record, workTypes);
   const fields = getWorkTypeTemplateConfig(template).fields;
+  const detailEntries = formatDetailEntries(record.details);
 
   return (
     <aside className="rounded-md border border-[#dfe5dc] bg-white p-5 shadow-sm">
@@ -106,6 +107,18 @@ export function WorkRecordDetail({
             multiline
           />
         ) : null}
+        {detailEntries.length ? (
+          <>
+            <dt className="pt-2 text-sm font-bold text-[#17251b]">추가 정보</dt>
+            {detailEntries.map((entry) => (
+              <DetailRow
+                key={entry.key}
+                label={entry.label}
+                value={entry.value}
+              />
+            ))}
+          </>
+        ) : null}
       </dl>
 
       <button
@@ -151,3 +164,74 @@ function DetailRow({
     </div>
   );
 }
+
+function formatDetailEntries(details: Record<string, unknown> | null) {
+  if (!details) {
+    return [];
+  }
+
+  return Object.entries(details)
+    .map(([key, value]) => {
+      const formatted = formatDetailValue(key, value);
+      return formatted
+        ? {
+            key,
+            label: DETAIL_LABELS[key] ?? key,
+            value: formatted,
+          }
+        : null;
+    })
+    .filter((entry): entry is { key: string; label: string; value: string } =>
+      Boolean(entry),
+    );
+}
+
+function formatDetailValue(key: string, value: unknown) {
+  if (value === null || value === undefined || value === "") {
+    return null;
+  }
+  if (key === "inboundType" && typeof value === "string") {
+    return INBOUND_TYPE_LABELS[value] ?? value;
+  }
+  if (key === "status" && typeof value === "string") {
+    return INBOUND_STATUS_LABELS[value] ?? value;
+  }
+  return String(value);
+}
+
+const DETAIL_LABELS: Record<string, string> = {
+  actualQuantity: "실제 수량",
+  ageYear: "년생",
+  bedZoneId: "구역 ID",
+  bottleCount: "병 수",
+  estimatedQuantity: "예상 수량",
+  genus: "속명",
+  growthStage: "생육 단계",
+  inboundRecordId: "입고 기록 ID",
+  inboundType: "입고 유형",
+  orchidGroupId: "난 묶음 ID",
+  placementType: "배치 규격",
+  potSize: "화분 크기",
+  pottingDueDate: "포트 예정일",
+  status: "상태",
+  tempLocation: "임시 위치",
+  trayCount: "판수",
+  varietyId: "품종 ID",
+  varietyName: "품종",
+};
+
+const INBOUND_TYPE_LABELS: Record<string, string> = {
+  FLASK_SEEDLING: "유리병 모종",
+  POTTED_SEEDLING: "포트 모종",
+  PRODUCT_POT: "상품분",
+  SAMPLE: "샘플",
+  ETC: "기타",
+};
+
+const INBOUND_STATUS_LABELS: Record<string, string> = {
+  TEMP_STORED: "임시보관",
+  POTTING_PENDING: "포트작업대기",
+  POTTED: "포트작업완료",
+  PLACED: "배치완료",
+  CANCELED: "취소",
+};

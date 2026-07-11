@@ -49,8 +49,8 @@ public class WorkTypeService {
 
 	public WorkTypeResponse update(Long id, WorkTypeUpdateRequest request) {
 		WorkType workType = getById(id);
-		if (workType.isSystemType()) {
-			throw new IllegalArgumentException("System work type cannot be changed.");
+		if (!workType.isSettingsEditable()) {
+			throw new IllegalArgumentException("Work type cannot be changed.");
 		}
 		String name = normalizeRequired(request.name());
 		validateUniqueName(name, id);
@@ -76,7 +76,7 @@ public class WorkTypeService {
 	@Transactional(readOnly = true)
 	public WorkType getActiveForCreate(Long workTypeId) {
 		WorkType workType = getById(workTypeId);
-		if (!workType.isActive() || workType.isSystemType()) {
+		if (!workType.isManualCreateAllowed()) {
 			throw new IllegalArgumentException("Work type is not available for manual records.");
 		}
 		return workType;
