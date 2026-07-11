@@ -3,6 +3,8 @@
 import type { House } from "@/entities/farm/types";
 import { X } from "lucide-react";
 import type { ReactNode } from "react";
+import type { CSSObjectWithLabel, SingleValue } from "react-select";
+import Select from "react-select";
 import { useState } from "react";
 import type {
   InboundPottingPayload,
@@ -60,6 +62,10 @@ export function InboundCreateDialog({
 
   const zoneOptions = flattenZones(houses);
   const flaskType = inboundType === "FLASK_SEEDLING";
+  const selectedVariety =
+    varieties.find((variety) => variety.id === varietyId) ??
+    varieties[0] ??
+    null;
 
   return (
     <DialogShell title="새 입고 등록" onClose={onClose}>
@@ -70,7 +76,8 @@ export function InboundCreateDialog({
           void onSubmit({
             inboundDate,
             inboundType,
-            varietyId: varietyMode === "existing" ? varietyId : undefined,
+            varietyId:
+              varietyMode === "existing" ? selectedVariety?.id : undefined,
             newVariety:
               varietyMode === "new"
                 ? {
@@ -133,19 +140,11 @@ export function InboundCreateDialog({
           </select>
         </Field>
         {varietyMode === "existing" ? (
-          <Field label="품종">
-            <select
-              className={inputClass}
-              value={varietyId}
-              onChange={(event) => setVarietyId(Number(event.target.value))}
-            >
-              {varieties.map((item) => (
-                <option key={item.id} value={item.id}>
-                  {item.genus} / {item.name}
-                </option>
-              ))}
-            </select>
-          </Field>
+          <VarietySearchField
+            selectedVariety={selectedVariety}
+            varieties={varieties}
+            onSelect={(variety) => setVarietyId(variety.id)}
+          />
         ) : (
           <div className="grid gap-3 md:col-span-2 md:grid-cols-3">
             <Field label="새 속">
@@ -308,6 +307,108 @@ export function InboundCreateDialog({
     </DialogShell>
   );
 }
+
+type VarietySelectOption = {
+  label: string;
+  value: number;
+  variety: Variety;
+};
+
+function VarietySearchField({
+  selectedVariety,
+  varieties,
+  onSelect,
+}: {
+  selectedVariety: Variety | null;
+  varieties: Variety[];
+  onSelect: (variety: Variety) => void;
+}) {
+  const options = varieties.map(toVarietyOption);
+  const selectedOption = selectedVariety
+    ? toVarietyOption(selectedVariety)
+    : null;
+
+  function handleChange(option: SingleValue<VarietySelectOption>) {
+    if (!option) {
+      return;
+    }
+    onSelect(option.variety);
+  }
+
+  return (
+    <label className="space-y-1 text-xs font-semibold text-[#425047]">
+      <span>품종</span>
+      <Select<VarietySelectOption, false>
+        isClearable={false}
+        noOptionsMessage={() => "검색 결과가 없습니다."}
+        options={options}
+        placeholder="품종명 또는 속명 검색"
+        styles={selectStyles}
+        value={selectedOption}
+        onChange={handleChange}
+      />
+    </label>
+  );
+}
+
+function toVarietyOption(variety: Variety): VarietySelectOption {
+  return {
+    label: `${variety.name} ${variety.genus}`,
+    value: variety.id,
+    variety,
+  };
+}
+
+const selectStyles = {
+  control: (base: CSSObjectWithLabel, state: { isFocused: boolean }) => ({
+    ...base,
+    minHeight: 38,
+    borderRadius: 6,
+    borderColor: state.isFocused ? "#159447" : "#d7ddd8",
+    boxShadow: state.isFocused ? "0 0 0 1px #159447" : "none",
+    "&:hover": {
+      borderColor: state.isFocused ? "#159447" : "#d7ddd8",
+    },
+  }),
+  valueContainer: (base: CSSObjectWithLabel) => ({
+    ...base,
+    padding: "0 10px",
+  }),
+  placeholder: (base: CSSObjectWithLabel) => ({
+    ...base,
+    color: "#7d887f",
+    fontSize: 14,
+  }),
+  input: (base: CSSObjectWithLabel) => ({
+    ...base,
+    fontSize: 14,
+  }),
+  singleValue: (base: CSSObjectWithLabel) => ({
+    ...base,
+    color: "#17251b",
+    fontSize: 14,
+    fontWeight: 600,
+  }),
+  menu: (base: CSSObjectWithLabel) => ({
+    ...base,
+    borderRadius: 8,
+    overflow: "hidden",
+    zIndex: 40,
+  }),
+  option: (
+    base: CSSObjectWithLabel,
+    state: { isSelected: boolean; isFocused: boolean },
+  ) => ({
+    ...base,
+    backgroundColor: state.isSelected
+      ? "#eaf7eb"
+      : state.isFocused
+        ? "#f3f9f3"
+        : "#ffffff",
+    color: "#17251b",
+    padding: "8px 12px",
+  }),
+} satisfies Record<string, unknown>;
 
 export function InboundPottingDialog({
   open,
