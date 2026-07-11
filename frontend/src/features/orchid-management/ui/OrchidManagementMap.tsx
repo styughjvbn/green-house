@@ -57,7 +57,9 @@ export function OrchidManagementMap({
           onDropOnBedZone={orchidManagement.actions.dropOnBedZone}
           onEnterDropZone={orchidManagement.actions.enterDropZone}
           onSelectBedZone={orchidManagement.actions.selectBedZone}
-          onSelectOrchidGroup={orchidManagement.actions.selectOrchidGroup}
+          onSelectOrchidGroup={
+            orchidManagement.actions.selectOrchidGroupForEdit
+          }
         />
         <SelectedZoneInfo
           house={house}

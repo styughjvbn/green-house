@@ -228,6 +228,12 @@ export function useOrchidManagementMap(
     setMutationMode(null);
   }
 
+  function selectOrchidGroupForEdit(orchidGroupId: number) {
+    setSelection({ type: "ORCHID_GROUP", orchidGroupId });
+    setMutationMode("EDIT");
+    setErrorMessage(null);
+  }
+
   function openCreate() {
     if (resolvedZone) {
       setMutationMode("CREATE");
@@ -484,6 +490,7 @@ export function useOrchidManagementMap(
       resetSearch,
       selectBedZone,
       selectOrchidGroup,
+      selectOrchidGroupForEdit,
       startDrag,
       togglePlacementEditMode,
       updateSearchFilter,
