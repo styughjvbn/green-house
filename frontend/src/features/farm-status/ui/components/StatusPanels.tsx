@@ -28,7 +28,7 @@ export function SelectionSummaryPanel({
   const managementHref = createManagementHref(selection, selectedHouse);
 
   return (
-    <aside className="min-h-0 flex-1 overflow-auto rounded-xl border border-[#d9e2d5] bg-white shadow-sm">
+    <aside className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-xl border border-[#d9e2d5] bg-white shadow-sm">
       <div className="flex items-start justify-between gap-3 border-b border-[#edf1ea] p-4">
         <div>
           <div className="flex flex-wrap items-center gap-2">
@@ -71,7 +71,7 @@ export function SelectionSummaryPanel({
         </div>
       ) : null}
 
-      <div className="p-3">
+      <div className="min-h-0 flex-1 p-3">
         {selectedOrchidGroup ? (
           <SelectedOrchidDetail selectedOrchidGroup={selectedOrchidGroup} />
         ) : (
@@ -88,7 +88,7 @@ function SelectedOrchidDetail({
   selectedOrchidGroup: SelectedFarmStatusOrchidGroup;
 }) {
   return (
-    <div className="rounded-lg border border-[#cfd9cc] bg-[#f8faf7] p-4">
+    <div className="h-full overflow-y-auto rounded-lg border border-[#cfd9cc] bg-[#f8faf7] p-4">
       <div className="flex items-start justify-between gap-3">
         <div>
           <p className="text-xs font-semibold text-[#718078]">선택한 난 묶음</p>
@@ -110,15 +110,6 @@ function SelectedOrchidDetail({
           value={`${selectedOrchidGroup.quantity}분`}
         />
         <DetailMetric
-          label="동"
-          value={`${selectedOrchidGroup.houseNumber}동`}
-        />
-        <DetailMetric
-          label="배드"
-          value={selectedOrchidGroup.physicalBedName}
-        />
-        <DetailMetric label="구역" value={selectedOrchidGroup.bedZoneName} />
-        <DetailMetric
           label="초기 년생"
           value={formatOptionalNumber(selectedOrchidGroup.ageYear, "년생")}
         />
@@ -131,30 +122,12 @@ function SelectedOrchidDetail({
           value={selectedOrchidGroup.placementType ?? "-"}
         />
         <DetailMetric
-          label="판 수"
-          value={formatOptionalNumber(selectedOrchidGroup.trayCount, "판")}
-        />
-        <DetailMetric
           label="시작 위치"
           value={formatOptionalNumber(selectedOrchidGroup.startPosition, "")}
         />
         <DetailMetric
           label="종료 위치"
           value={formatOptionalNumber(selectedOrchidGroup.endPosition, "")}
-        />
-        <DetailMetric
-          label="분할 배치"
-          value={
-            selectedOrchidGroup.splitPlacementAllowed == null
-              ? "-"
-              : selectedOrchidGroup.splitPlacementAllowed
-                ? "허용"
-                : "불가"
-          }
-        />
-        <DetailMetric
-          label="품종 ID"
-          value={formatOptionalNumber(selectedOrchidGroup.varietyId, "")}
         />
       </div>
       {selectedOrchidGroup.memo ? (
@@ -165,13 +138,6 @@ function SelectedOrchidDetail({
           </p>
         </div>
       ) : null}
-
-      <a
-        className="mt-4 inline-flex w-full justify-center rounded-md bg-[#1f8f48] px-3 py-2 text-sm font-semibold text-white"
-        href={`/orchid-groups?houseId=${selectedOrchidGroup.houseId}&physicalBedId=${selectedOrchidGroup.physicalBedId}&bedZoneId=${selectedOrchidGroup.bedZoneId}`}
-      >
-        관리에서 확인
-      </a>
     </div>
   );
 }
@@ -185,7 +151,7 @@ function OrchidGroupList({
 }) {
   if (items.length === 0) {
     return (
-      <div className="rounded-lg border border-dashed border-[#cfd9cc] bg-[#f8faf7] p-4 text-sm text-[#5f6d64]">
+      <div className="h-full rounded-lg border border-dashed border-[#cfd9cc] bg-[#f8faf7] p-4 text-sm text-[#5f6d64]">
         <p className="font-semibold text-[#26352c]">난 묶음 목록</p>
         <p className="mt-2 text-xs leading-5">
           현재 선택한 범위에 배치된 난 묶음이 없습니다.
@@ -195,14 +161,14 @@ function OrchidGroupList({
   }
 
   return (
-    <div className="rounded-lg border border-[#cfd9cc] bg-[#f8faf7]">
+    <div className="flex h-full min-h-0 flex-col rounded-lg border border-[#cfd9cc] bg-[#f8faf7]">
       <div className="flex items-center justify-between border-b border-[#e4ebe1] px-3 py-2">
         <p className="text-sm font-semibold text-[#26352c]">난 묶음 목록</p>
         <span className="text-xs font-semibold text-[#718078]">
           {items.length}개
         </span>
       </div>
-      <div className="max-h-[360px] overflow-y-auto bg-white">
+      <div className="min-h-0 flex-1 overflow-y-auto bg-white">
         {items.map((item) => (
           <button
             key={item.orchidGroupId}
