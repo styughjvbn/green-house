@@ -6,6 +6,7 @@ import jakarta.validation.Valid;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
+import java.math.BigDecimal;
 import java.time.LocalDate;
 
 public record InboundRecordCreateRequest(
@@ -13,7 +14,7 @@ public record InboundRecordCreateRequest(
 		@NotNull InboundType inboundType,
 		Long varietyId,
 		@Valid InboundNewVarietyRequest newVariety,
-		@Min(1) Integer bottleCount,
+		@Min(0) Integer bottleCount,
 		@Min(1) Integer estimatedQuantity,
 		@Min(1) Integer actualQuantity,
 		@Size(max = 255) String tempLocation,
@@ -24,6 +25,8 @@ public record InboundRecordCreateRequest(
 		@Size(max = 100) String placementType,
 		@Min(0) Integer trayCount,
 		Long bedZoneId,
+		BigDecimal startPosition,
+		BigDecimal endPosition,
 		InboundStatus status,
 		@Size(max = 50) String worker,
 		@Size(max = 1000) String memo) {

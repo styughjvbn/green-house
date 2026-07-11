@@ -21,11 +21,12 @@ import com.greenhouse.backend.farm.repository.VarietyRepository;
 import com.greenhouse.backend.work.application.SystemWorkCleanupService;
 import com.greenhouse.backend.work.application.SystemWorkRecorder;
 
-import lombok.RequiredArgsConstructor;
-
+import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.LinkedHashMap;
 import java.util.Map;
+import lombok.RequiredArgsConstructor;
+
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
@@ -162,7 +163,10 @@ public class InboundRecordService {
 			throw new IllegalArgumentException("이미 난 묶음이 생성된 입고 기록입니다.");
 		}
 		BedZone bedZone = findBedZone(request.bedZoneId());
-		OrchidPlacementPolicy.PlacementRange placementRange = orchidPlacementPolicy.findFirstAvailableSingleSlot(bedZone);
+		OrchidPlacementPolicy.PlacementRange placementRange = resolvePlacementRange(
+				bedZone,
+				request.startPosition(),
+				request.endPosition());
 		OrchidGroup orchidGroup = new OrchidGroup(
 				bedZone,
 				inboundRecord.getVariety().getGenus(),
@@ -253,8 +257,8 @@ public class InboundRecordService {
 			throw new IllegalArgumentException("품종을 선택하거나 새 품종을 입력해야 합니다.");
 		}
 		if (request.inboundType() == InboundType.FLASK_SEEDLING) {
-			if (request.bottleCount() == null || request.estimatedQuantity() == null) {
-				throw new IllegalArgumentException("유리병 모종은 병 수와 예상 수량이 필요합니다.");
+			if (request.estimatedQuantity() == null) {
+				throw new IllegalArgumentException("유리병 모종은 예상 수량이 필요합니다.");
 			}
 			if (status == InboundStatus.POTTING_PENDING && request.pottingDueDate() == null) {
 				throw new IllegalArgumentException("포트 작업 대기 상태는 예정일이 필요합니다.");
@@ -312,7 +316,10 @@ public class InboundRecordService {
 	}
 
 	private OrchidGroup createPlacedOrchidGroup(Variety variety, InboundRecordCreateRequest request, BedZone bedZone) {
-		OrchidPlacementPolicy.PlacementRange placementRange = orchidPlacementPolicy.findFirstAvailableSingleSlot(bedZone);
+		OrchidPlacementPolicy.PlacementRange placementRange = resolvePlacementRange(
+				bedZone,
+				request.startPosition(),
+				request.endPosition());
 		OrchidGroup orchidGroup = new OrchidGroup(
 				bedZone,
 				variety.getGenus(),
@@ -338,6 +345,19 @@ public class InboundRecordService {
 				placementRange.endPosition(),
 				normalize(request.memo()));
 		return orchidGroup;
+	}
+
+	private OrchidPlacementPolicy.PlacementRange resolvePlacementRange(
+			BedZone bedZone,
+			BigDecimal requestedStartPosition,
+			BigDecimal requestedEndPosition) {
+		if (requestedStartPosition == null && requestedEndPosition == null) {
+			return orchidPlacementPolicy.findFirstAvailableSingleSlot(bedZone);
+		}
+		BigDecimal startPosition = orchidPlacementPolicy.normalizeNumber(requestedStartPosition);
+		BigDecimal endPosition = orchidPlacementPolicy.normalizeNumber(requestedEndPosition);
+		orchidPlacementPolicy.validatePlacement(bedZone, startPosition, endPosition, null);
+		return new OrchidPlacementPolicy.PlacementRange(startPosition, endPosition);
 	}
 
 	private void recordWork(
