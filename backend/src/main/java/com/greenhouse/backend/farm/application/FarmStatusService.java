@@ -41,7 +41,10 @@ public class FarmStatusService {
 						orchidGroupRepository.countByHouseId(house.getId()),
 						orchidGroupRepository.countWarningStatusByHouseId(house.getId()),
 						0,
-						null))
+						null,
+						physicalBedRepository.findByHouseIdOrderByDisplayOrderAsc(house.getId()).stream()
+								.map(PhysicalBedResponse::from)
+								.toList()))
 				.toList();
 		return new FarmStatusMapResponse(houses);
 	}

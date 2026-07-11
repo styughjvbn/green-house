@@ -1,5 +1,7 @@
 package com.greenhouse.backend.farm.dto;
 
+import java.util.List;
+
 public record HouseStatusSummaryResponse(
 		Long houseId,
 		Integer houseNumber,
@@ -7,5 +9,6 @@ public record HouseStatusSummaryResponse(
 		long orchidGroupCount,
 		long warningCount,
 		long repotDueCount,
-		String latestWorkDate) {
+		String latestWorkDate,
+		List<PhysicalBedResponse> physicalBeds) {
 }

@@ -124,6 +124,7 @@ export type HouseStatusSummary = {
   warningCount: number;
   repotDueCount: number;
   latestWorkDate: string | null;
+  physicalBeds: PhysicalBed[];
 };
 
 export type FarmStatusMapData = {
