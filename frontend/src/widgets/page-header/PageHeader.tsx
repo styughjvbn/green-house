@@ -14,7 +14,7 @@ type PageHeaderProps = {
 export function PageHeader({
   title,
   description,
-  notificationCount = 3,
+  notificationCount = 0,
   temperatureLabel = "24째C",
   children,
 }: PageHeaderProps) {
@@ -35,16 +35,16 @@ export function PageHeader({
         </div>
 
         <div className="flex shrink-0 items-center gap-3 text-sm text-[#4f5d55]">
-          <div className="relative flex h-8 w-8 items-center justify-center text-[#718078]">
+          {/* <div className="relative flex h-8 w-8 items-center justify-center text-[#718078]">
             <Bell className="h-5 w-5" strokeWidth={1.8} aria-hidden="true" />
             {notificationCount > 0 ? (
               <span className="absolute top-0 right-0 flex h-4 min-w-4 items-center justify-center rounded-full bg-[#ef2f2f] px-1 text-[10px] leading-none font-bold text-white">
                 {notificationCount}
               </span>
-            ) : null}
+            ) : null} TODO: 알림 기능 구현 전 비활성화
           </div>
 
-          <span className="hidden h-6 w-px bg-[#d7ddd4] sm:block" />
+          <span className="hidden h-6 w-px bg-[#d7ddd4] sm:block" /> */}
 
           <div className="hidden items-center gap-2 sm:flex">
             <CalendarDays
@@ -55,7 +55,7 @@ export function PageHeader({
             <span>{todayLabel}</span>
           </div>
 
-          <span className="hidden h-6 w-px bg-[#d7ddd4] md:block" />
+          {/* <span className="hidden h-6 w-px bg-[#d7ddd4] md:block" />
 
           <div className="hidden items-center gap-2 md:flex">
             <CloudSun
@@ -66,7 +66,7 @@ export function PageHeader({
             <span className="font-semibold text-[#2f3a34]">
               {temperatureLabel}
             </span>
-          </div>
+          </div> TODO: 온실 내부 온도 연동 전 비활성화*/}
         </div>
       </div>
 

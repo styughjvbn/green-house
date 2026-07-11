@@ -159,7 +159,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
   return (
     <div className="flex min-h-screen bg-[#f7f8f5]">
-      <aside className="hidden w-44 shrink-0 flex-col bg-[#003b1f] px-2 py-4 lg:flex">
+      <aside className="sticky top-0 hidden h-screen w-44 shrink-0 flex-col bg-[#003b1f] px-2 py-4 lg:flex">
         <div className="flex items-center gap-3 px-2 py-2">
           <div className="flex h-10 w-10 shrink-0 items-center justify-center">
             <Image src="/flower.png" alt="Logo" width={40} height={40} />
@@ -173,7 +173,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           </div>
         </div>
 
-        <nav className="mt-8 flex-1 space-y-3">
+        <nav className="mt-8 min-h-0 flex-1 space-y-3 overflow-y-auto pr-1">
           {navigation.map((item) => (
             <div key={item.href}>
               <NavItem
