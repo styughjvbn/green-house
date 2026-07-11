@@ -8,6 +8,7 @@ export default function OrchidGroupBlock({
   heightPx,
   muted,
   orchidGroup,
+  positionLabel,
   selected,
   onDragEnd,
   onDragStart,
@@ -17,6 +18,7 @@ export default function OrchidGroupBlock({
   heightPx: number;
   muted: boolean;
   orchidGroup: OrchidGroup;
+  positionLabel: string | null;
   selected: boolean;
   onDragEnd: () => void;
   onDragStart: () => void;
@@ -28,6 +30,7 @@ export default function OrchidGroupBlock({
   const detailText = [
     orchidGroup.ageYear ? `${orchidGroup.ageYear}년생` : null,
     orchidGroup.potSize,
+    positionLabel,
   ]
     .filter(Boolean)
     .join(" / ");

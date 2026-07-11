@@ -3,6 +3,7 @@
 import type { DragEvent, PointerEvent } from "react";
 import type { BedZone } from "@/entities/farm/types";
 import type { DragState } from "../../model/types";
+import { formatCellRange } from "../../lib/orchidManagementUtils";
 import OrchidGroupBlock from "./OrchidGroupBlock";
 
 const MAP_HEIGHT = 420;
@@ -85,8 +86,8 @@ export default function BedZoneBlock({
       <div className="flex gap-0">
         {showScale ? (
           <div
-            className="relative w-1 shrink-0 py-2"
-            style={{ height: MAP_HEIGHT - 4 }}
+            className="relative w-1 shrink-0 py-5"
+            style={{ height: MAP_HEIGHT - 10 }}
           >
             {marks.map((mark) => (
               <div
@@ -95,7 +96,7 @@ export default function BedZoneBlock({
                 style={{ top: `${mark.top}%` }}
               >
                 <span className="absolute left-0 -translate-x-full -translate-y-1/2 text-[10px] font-semibold text-[#6f7b72]">
-                  {resolvedMaxPosition - mark.value}
+                  {formatScaleLabel(resolvedMaxPosition, mark.value)}
                 </span>
               </div>
             ))}
@@ -144,6 +145,7 @@ export default function BedZoneBlock({
                   heightPx={heightPx}
                   muted={!matched}
                   orchidGroup={orchidGroup}
+                  positionLabel={formatCellRange(orchidGroup)}
                   selected={selectedOrchidGroupId === orchidGroup.id}
                   onDragEnd={onDragEnd}
                   onDragStart={() => onDragStart(orchidGroup.id)}
@@ -180,4 +182,14 @@ function toPercent(value: number, maxPosition: number) {
     return 0;
   }
   return (value / maxPosition) * 100;
+}
+
+function formatScaleLabel(maxPosition: number, boundaryValue: number) {
+  if (boundaryValue <= 0) {
+    return maxPosition;
+  }
+  if (boundaryValue >= maxPosition) {
+    return 1;
+  }
+  return maxPosition - boundaryValue + 1;
 }
