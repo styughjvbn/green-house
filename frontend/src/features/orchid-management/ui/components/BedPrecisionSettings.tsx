@@ -247,6 +247,7 @@ function CapacityEditor({
           onChange({ ...capacity, placementType: event.target.value })
         }
       >
+        <option value="TRAY_12">12구 트레이</option>
         <option value="TRAY_15">15구 트레이</option>
         <option value="TRAY_20">20구 트레이</option>
         <option value="TRAY_24">24구 트레이</option>

@@ -11,6 +11,9 @@ import OrchidSelectionPanel, {
   SelectedZoneInfo,
 } from "./components/OrchidSelectionPanel";
 
+const VARIETY_COLOR_STORAGE_KEY =
+  "orchid-management:distinguish-variety-colors";
+
 export function OrchidManagementMap({
   initialSelectedOrchidGroupId,
   initialSelectedPhysicalBedId,
@@ -29,11 +32,25 @@ export function OrchidManagementMap({
     initialSearchFilters,
   );
   const [showScale, setShowScale] = useState(true);
+  const [distinguishVarietyColors, setDistinguishVarietyColors] = useState(
+    () =>
+      typeof window !== "undefined" &&
+      window.localStorage.getItem(VARIETY_COLOR_STORAGE_KEY) === "true",
+  );
+
+  function toggleVarietyColors() {
+    setDistinguishVarietyColors((current) => {
+      const next = !current;
+      window.localStorage.setItem(VARIETY_COLOR_STORAGE_KEY, String(next));
+      return next;
+    });
+  }
 
   return (
     <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_440px]">
       <section className="space-y-3">
         <HouseSelectorPanel
+          distinguishVarietyColors={distinguishVarietyColors}
           house={house}
           houses={mapData.houses}
           placementEditMode={orchidManagement.placementEditMode}
@@ -42,9 +59,11 @@ export function OrchidManagementMap({
           onTogglePlacementEditMode={
             orchidManagement.actions.togglePlacementEditMode
           }
+          onToggleVarietyColors={toggleVarietyColors}
           onToggleScale={() => setShowScale((current) => !current)}
         />
         <HouseDetailMap
+          distinguishVarietyColors={distinguishVarietyColors}
           dragState={orchidManagement.dragState}
           filteredOrchidGroupIds={orchidManagement.filteredOrchidGroupIds}
           house={house}
@@ -57,7 +76,9 @@ export function OrchidManagementMap({
           onDropOnBedZone={orchidManagement.actions.dropOnBedZone}
           onEnterDropZone={orchidManagement.actions.enterDropZone}
           onSelectBedZone={orchidManagement.actions.selectBedZone}
-          onSelectOrchidGroup={orchidManagement.actions.selectOrchidGroup}
+          onSelectOrchidGroup={
+            orchidManagement.actions.selectOrchidGroupForEdit
+          }
         />
         <SelectedZoneInfo
           house={house}
@@ -66,7 +87,7 @@ export function OrchidManagementMap({
           workRecordSummary={orchidManagement.workRecordSummary}
           workRecordSummaryLoading={orchidManagement.workRecordSummaryLoading}
         />
-        <BedPrecisionSettings zone={orchidManagement.resolvedZone} />
+        {/* <BedPrecisionSettings zone={orchidManagement.resolvedZone} /> 26.07.11 비활성화*/}
       </section>
       <div className="space-y-3">
         <OrchidSearchPanel
@@ -84,11 +105,13 @@ export function OrchidManagementMap({
           onUpdateFilter={orchidManagement.actions.updateSearchFilter}
         />
         <OrchidSelectionPanel
+          copiedOrchidGroup={orchidManagement.copiedOrchidGroup}
           errorMessage={orchidManagement.errorMessage}
           filteredOrchidGroupIds={orchidManagement.filteredOrchidGroupIds}
           hasActiveSearch={orchidManagement.hasActiveSearch}
           house={house}
           mutationMode={orchidManagement.mutationMode}
+          pasteSourceOrchidGroup={orchidManagement.pasteSourceOrchidGroup}
           preferredMoveZoneId={orchidManagement.preferredMoveZoneId}
           resolvedZone={orchidManagement.resolvedZone}
           saving={orchidManagement.saving}
@@ -97,6 +120,10 @@ export function OrchidManagementMap({
           workRecordForm={orchidManagement.workRecordForm}
           workTypes={workTypes}
           onCancelMutation={orchidManagement.actions.cancelMutation}
+          onClearCopiedOrchidGroup={
+            orchidManagement.actions.clearCopiedOrchidGroup
+          }
+          onCopyOrchidGroup={orchidManagement.actions.copyOrchidGroup}
           onCreate={orchidManagement.actions.create}
           onDelete={orchidManagement.actions.delete}
           onEdit={orchidManagement.actions.edit}
@@ -104,6 +131,7 @@ export function OrchidManagementMap({
           onOpenCreate={orchidManagement.actions.openCreate}
           onOpenEdit={orchidManagement.actions.openEdit}
           onOpenMove={orchidManagement.actions.openMove}
+          onOpenPaste={orchidManagement.actions.openPaste}
           onOpenWorkRecord={orchidManagement.actions.openWorkRecord}
           onSelectOrchidGroup={orchidManagement.actions.selectOrchidGroup}
           onTogglePlacementEditMode={

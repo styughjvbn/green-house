@@ -15,6 +15,44 @@ export function nullableNumber(value: string): number | null {
   return trimmed.length > 0 ? Number(trimmed) : null;
 }
 
+export function positionToStartCell(value: number | null | undefined): string {
+  return value == null ? "" : formatPositionCell(value + 1);
+}
+
+export function positionToEndCell(value: number | null | undefined): string {
+  return value == null ? "" : formatPositionCell(value);
+}
+
+export function startCellToPosition(value: string): number | null {
+  const cell = nullableNumber(value);
+  return cell == null ? null : cell - 1;
+}
+
+export function endCellToPosition(value: string): number | null {
+  return nullableNumber(value);
+}
+
+export function formatCellRange({
+  endPosition,
+  startPosition,
+}: {
+  endPosition: number | null | undefined;
+  startPosition: number | null | undefined;
+}) {
+  const startCell = positionToStartCell(startPosition);
+  const endCell = positionToEndCell(endPosition);
+
+  if (!startCell || !endCell) {
+    return null;
+  }
+
+  return `${startCell}-${endCell}칸`;
+}
+
+function formatPositionCell(value: number) {
+  return Number.isInteger(value) ? String(value) : String(value);
+}
+
 export function findFirstOrchidGroup(house: House): OrchidGroup | null {
   for (const bed of house.physicalBeds) {
     for (const zone of bed.bedZones) {
@@ -90,7 +128,7 @@ export function findFirstAvailableSingleSlot(
     const end = orchidGroup.endPosition ?? start;
     if (start - cursor >= 1) {
       return {
-        startPosition: cursor,
+        startPosition: cursor + 1,
         endPosition: cursor + 1,
       };
     }
@@ -101,7 +139,7 @@ export function findFirstAvailableSingleSlot(
 
   if ((resolved.bed.positionUnitCount ?? 0) - cursor >= 1) {
     return {
-      startPosition: cursor,
+      startPosition: cursor + 1,
       endPosition: cursor + 1,
     };
   }

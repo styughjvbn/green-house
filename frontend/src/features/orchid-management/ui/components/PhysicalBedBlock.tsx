@@ -6,6 +6,7 @@ import BedZoneBlock from "./BedZoneBlock";
 
 export default function PhysicalBedBlock({
   bed,
+  distinguishVarietyColors,
   dragState,
   filteredOrchidGroupIds,
   placementEditMode,
@@ -20,6 +21,7 @@ export default function PhysicalBedBlock({
   onSelectOrchidGroup,
 }: {
   bed: PhysicalBed;
+  distinguishVarietyColors: boolean;
   dragState: DragState;
   filteredOrchidGroupIds: Set<number>;
   placementEditMode: boolean;
@@ -39,6 +41,7 @@ export default function PhysicalBedBlock({
         {bed.bedZones.map((zone) => (
           <BedZoneBlock
             key={zone.id}
+            distinguishVarietyColors={distinguishVarietyColors}
             dragState={dragState}
             filteredOrchidGroupIds={filteredOrchidGroupIds}
             maxPosition={bed.positionUnitCount}

@@ -78,6 +78,10 @@ export function useOrchidManagementMap(
   const [placementEditMode, setPlacementEditMode] = useState(false);
   const [dragState, setDragState] = useState<DragState>(null);
   const [mutationMode, setMutationMode] = useState<MutationMode>(null);
+  const [copiedOrchidGroup, setCopiedOrchidGroup] =
+    useState<OrchidGroup | null>(null);
+  const [pasteSourceOrchidGroup, setPasteSourceOrchidGroup] =
+    useState<OrchidGroup | null>(null);
   const [searchFilters, setSearchFilters] =
     useState<OrchidManagementSearchState>({
       keyword: initialSearchFilters?.keyword ?? "",
@@ -221,15 +225,25 @@ export function useOrchidManagementMap(
   function selectBedZone(bedZoneId: number) {
     setSelection({ type: "BED_ZONE", bedZoneId });
     setMutationMode(null);
+    setPasteSourceOrchidGroup(null);
   }
 
   function selectOrchidGroup(orchidGroupId: number) {
     setSelection({ type: "ORCHID_GROUP", orchidGroupId });
     setMutationMode(null);
+    setPasteSourceOrchidGroup(null);
+  }
+
+  function selectOrchidGroupForEdit(orchidGroupId: number) {
+    setSelection({ type: "ORCHID_GROUP", orchidGroupId });
+    setMutationMode("EDIT");
+    setPasteSourceOrchidGroup(null);
+    setErrorMessage(null);
   }
 
   function openCreate() {
     if (resolvedZone) {
+      setPasteSourceOrchidGroup(null);
       setMutationMode("CREATE");
       setErrorMessage(null);
       return;
@@ -239,13 +253,42 @@ export function useOrchidManagementMap(
 
   function openEdit() {
     if (selectedOrchidGroup) {
+      setPasteSourceOrchidGroup(null);
       setMutationMode("EDIT");
       setErrorMessage(null);
     }
   }
 
+  function copyOrchidGroup(orchidGroupId: number) {
+    const orchidGroup = findOrchidGroup(house, orchidGroupId);
+    if (orchidGroup) {
+      setCopiedOrchidGroup(orchidGroup);
+      setPasteSourceOrchidGroup(null);
+      setErrorMessage(null);
+    }
+  }
+
+  function clearCopiedOrchidGroup() {
+    setCopiedOrchidGroup(null);
+    setPasteSourceOrchidGroup(null);
+    if (mutationMode === "CREATE") {
+      setMutationMode(null);
+    }
+  }
+
+  function openPaste() {
+    if (copiedOrchidGroup && resolvedZone) {
+      setPasteSourceOrchidGroup(copiedOrchidGroup);
+      setMutationMode("CREATE");
+      setErrorMessage(null);
+      return;
+    }
+    setErrorMessage("붙여넣을 구역과 복사한 난 묶음을 확인하세요.");
+  }
+
   function openMove() {
     if (selectedOrchidGroup) {
+      setPasteSourceOrchidGroup(null);
       setPreferredMoveZoneId(null);
       setMutationMode("MOVE");
       setErrorMessage(null);
@@ -268,6 +311,7 @@ export function useOrchidManagementMap(
       targetId,
     }));
     setMutationMode("WORK_RECORD");
+    setPasteSourceOrchidGroup(null);
     setErrorMessage(null);
   }
 
@@ -296,6 +340,7 @@ export function useOrchidManagementMap(
     if (orchidGroup.houseId === house.id) {
       setSelection({ type: "ORCHID_GROUP", orchidGroupId: orchidGroup.id });
       setMutationMode(null);
+      setPasteSourceOrchidGroup(null);
       return;
     }
 
@@ -316,6 +361,7 @@ export function useOrchidManagementMap(
     setPlacementEditMode((current) => !current);
     setDragState(null);
     setMutationMode(null);
+    setPasteSourceOrchidGroup(null);
   }
 
   function startDrag(orchidGroupId: number) {
@@ -350,6 +396,7 @@ export function useOrchidManagementMap(
     setSelection({ type: "ORCHID_GROUP", orchidGroupId: draggingGroup.id });
     setPreferredMoveZoneId(toBedZoneId);
     setMutationMode("MOVE");
+    setPasteSourceOrchidGroup(null);
     setDragState(null);
   }
 
@@ -437,6 +484,7 @@ export function useOrchidManagementMap(
     try {
       await action();
       setMutationMode(null);
+      setPasteSourceOrchidGroup(null);
       router.refresh();
     } catch (error) {
       setErrorMessage(
@@ -449,6 +497,8 @@ export function useOrchidManagementMap(
 
   return {
     errorMessage,
+    copiedOrchidGroup,
+    pasteSourceOrchidGroup,
     dragState,
     filteredOrchidGroupIds,
     hasActiveSearch,
@@ -468,7 +518,12 @@ export function useOrchidManagementMap(
     workRecordSummary,
     workRecordSummaryLoading,
     actions: {
-      cancelMutation: () => setMutationMode(null),
+      cancelMutation: () => {
+        setMutationMode(null);
+        setPasteSourceOrchidGroup(null);
+      },
+      clearCopiedOrchidGroup,
+      copyOrchidGroup,
       create: handleCreate,
       delete: handleDelete,
       dropOnBedZone,
@@ -480,10 +535,12 @@ export function useOrchidManagementMap(
       openCreate,
       openEdit,
       openMove,
+      openPaste,
       openWorkRecord,
       resetSearch,
       selectBedZone,
       selectOrchidGroup,
+      selectOrchidGroupForEdit,
       startDrag,
       togglePlacementEditMode,
       updateSearchFilter,
