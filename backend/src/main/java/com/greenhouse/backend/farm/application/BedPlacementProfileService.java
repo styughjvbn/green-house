@@ -23,7 +23,7 @@ import org.springframework.transaction.annotation.Transactional;
 @RequiredArgsConstructor
 public class BedPlacementProfileService {
 
-	private static final Set<String> FIXED_TYPES = Set.of("TRAY_15", "TRAY_20", "TRAY_24", "SINGLE_POT", "HANGING");
+	private static final Set<String> FIXED_TYPES = Set.of("TRAY_12", "TRAY_15", "TRAY_20", "TRAY_24", "SINGLE_POT", "HANGING");
 
 	private final BedZoneRepository bedZoneRepository;
 

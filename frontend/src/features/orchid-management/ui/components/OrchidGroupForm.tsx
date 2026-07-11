@@ -113,7 +113,7 @@ export default function OrchidGroupForm({
       ageYear: nullableNumber(form.ageYear),
       status: form.status.trim(),
       placementType: nullableText(form.placementType),
-      trayCount: nullableNumber(form.trayCount),
+      trayCount: null,
       splitPlacementAllowed: form.splitPlacementAllowed,
       startPosition: nullableNumber(form.startPosition),
       endPosition: nullableNumber(form.endPosition),
@@ -217,7 +217,7 @@ export default function OrchidGroupForm({
             onChange={(value) => updateField("endPosition", value)}
           />
         </div>
-        <div className="grid grid-cols-2 gap-2">
+        <div>
           <label className="block">
             <span className="text-sm font-semibold text-[#435047]">
               배치 규격
@@ -235,6 +235,7 @@ export default function OrchidGroupForm({
               }
             >
               <option value="">선택</option>
+              <option value="TRAY_12">12구 트레이</option>
               <option value="TRAY_15">15구 트레이</option>
               <option value="TRAY_20">20구 트레이</option>
               <option value="TRAY_24">24구 트레이</option>
@@ -243,13 +244,6 @@ export default function OrchidGroupForm({
               <option value="CUSTOM">기타</option>
             </select>
           </label>
-          <TextField
-            label="판 수"
-            required={usesTrayUnits(form.placementType)}
-            type="number"
-            value={form.trayCount}
-            onChange={(value) => updateField("trayCount", value)}
-          />
         </div>
         {form.placementType.startsWith("CUSTOM:") ? (
           <TextField
@@ -283,8 +277,4 @@ export default function OrchidGroupForm({
 
 function resolvePlacementSelectValue(value: string) {
   return value.startsWith("CUSTOM:") ? "CUSTOM" : value;
-}
-
-function usesTrayUnits(value: string) {
-  return value.startsWith("TRAY_") || value.startsWith("CUSTOM:");
 }
