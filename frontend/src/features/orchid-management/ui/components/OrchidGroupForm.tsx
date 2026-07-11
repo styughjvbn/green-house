@@ -72,13 +72,13 @@ export default function OrchidGroupForm({
     trayCount: initialValue?.trayCount ? String(initialValue.trayCount) : "",
     splitPlacementAllowed: initialValue?.splitPlacementAllowed ?? false,
     startPosition:
-      initialValue?.startPosition != null
+      mode === "EDIT" && initialValue?.startPosition != null
         ? positionToStartCell(initialValue.startPosition)
         : defaultPlacement != null
           ? String(defaultPlacement.startPosition)
           : "",
     endPosition:
-      initialValue?.endPosition != null
+      mode === "EDIT" && initialValue?.endPosition != null
         ? positionToEndCell(initialValue.endPosition)
         : defaultPlacement != null
           ? String(defaultPlacement.endPosition)
@@ -130,7 +130,11 @@ export default function OrchidGroupForm({
       <div className="flex items-start justify-between gap-3">
         <div>
           <p className="text-sm font-semibold text-[#246df2]">
-            {mode === "CREATE" ? "난 묶음 추가" : "난 묶음 수정"}
+            {mode === "CREATE"
+              ? initialValue
+                ? "난 묶음 복사"
+                : "난 묶음 추가"
+              : "난 묶음 수정"}
           </p>
           <h3 className="mt-1 text-base font-semibold">
             {targetZone?.name ?? "구역 선택 필요"}

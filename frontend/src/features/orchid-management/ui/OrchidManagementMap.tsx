@@ -86,11 +86,13 @@ export function OrchidManagementMap({
           onUpdateFilter={orchidManagement.actions.updateSearchFilter}
         />
         <OrchidSelectionPanel
+          copiedOrchidGroup={orchidManagement.copiedOrchidGroup}
           errorMessage={orchidManagement.errorMessage}
           filteredOrchidGroupIds={orchidManagement.filteredOrchidGroupIds}
           hasActiveSearch={orchidManagement.hasActiveSearch}
           house={house}
           mutationMode={orchidManagement.mutationMode}
+          pasteSourceOrchidGroup={orchidManagement.pasteSourceOrchidGroup}
           preferredMoveZoneId={orchidManagement.preferredMoveZoneId}
           resolvedZone={orchidManagement.resolvedZone}
           saving={orchidManagement.saving}
@@ -99,6 +101,10 @@ export function OrchidManagementMap({
           workRecordForm={orchidManagement.workRecordForm}
           workTypes={workTypes}
           onCancelMutation={orchidManagement.actions.cancelMutation}
+          onClearCopiedOrchidGroup={
+            orchidManagement.actions.clearCopiedOrchidGroup
+          }
+          onCopyOrchidGroup={orchidManagement.actions.copyOrchidGroup}
           onCreate={orchidManagement.actions.create}
           onDelete={orchidManagement.actions.delete}
           onEdit={orchidManagement.actions.edit}
@@ -106,6 +112,7 @@ export function OrchidManagementMap({
           onOpenCreate={orchidManagement.actions.openCreate}
           onOpenEdit={orchidManagement.actions.openEdit}
           onOpenMove={orchidManagement.actions.openMove}
+          onOpenPaste={orchidManagement.actions.openPaste}
           onOpenWorkRecord={orchidManagement.actions.openWorkRecord}
           onSelectOrchidGroup={orchidManagement.actions.selectOrchidGroup}
           onTogglePlacementEditMode={

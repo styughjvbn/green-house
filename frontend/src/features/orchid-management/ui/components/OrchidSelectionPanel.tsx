@@ -8,7 +8,7 @@ import type {
   WorkRecord,
   WorkType,
 } from "@/entities/farm/types";
-import { Edit2, Trash2, Clipboard, Move } from "lucide-react";
+import { Copy, Edit2, Trash2, Clipboard, Move } from "lucide-react";
 import { findBedZone } from "../../lib/orchidManagementUtils";
 import type {
   MutationMode,
@@ -24,11 +24,13 @@ import OrchidMovePanel from "./OrchidMovePanel";
 import OrchidWorkRecordForm from "./OrchidWorkRecordForm";
 
 export default function OrchidSelectionPanel({
+  copiedOrchidGroup,
   errorMessage,
   filteredOrchidGroupIds,
   hasActiveSearch,
   house,
   mutationMode,
+  pasteSourceOrchidGroup,
   preferredMoveZoneId,
   placementEditMode,
   resolvedZone,
@@ -38,6 +40,8 @@ export default function OrchidSelectionPanel({
   workRecordForm,
   workTypes,
   onCancelMutation,
+  onClearCopiedOrchidGroup,
+  onCopyOrchidGroup,
   onCreate,
   onDelete,
   onEdit,
@@ -45,16 +49,19 @@ export default function OrchidSelectionPanel({
   onOpenCreate,
   onOpenEdit,
   onOpenMove,
+  onOpenPaste,
   onOpenWorkRecord,
   onSelectOrchidGroup,
   onUpdateWorkRecordForm,
   onWorkRecordCreate,
 }: {
+  copiedOrchidGroup: OrchidGroup | null;
   errorMessage: string | null;
   filteredOrchidGroupIds: Set<number>;
   hasActiveSearch: boolean;
   house: House;
   mutationMode: MutationMode;
+  pasteSourceOrchidGroup: OrchidGroup | null;
   preferredMoveZoneId: number | null;
   placementEditMode: boolean;
   resolvedZone: BedZone | null;
@@ -64,6 +71,8 @@ export default function OrchidSelectionPanel({
   workRecordForm: WorkRecordQuickFormState;
   workTypes: WorkType[];
   onCancelMutation: () => void;
+  onClearCopiedOrchidGroup: () => void;
+  onCopyOrchidGroup: (orchidGroupId: number) => void;
   onCreate: (payload: MutationPayload) => Promise<void>;
   onDelete: () => Promise<void>;
   onEdit: (payload: MutationPayload) => Promise<void>;
@@ -71,6 +80,7 @@ export default function OrchidSelectionPanel({
   onOpenCreate: () => void;
   onOpenEdit: () => void;
   onOpenMove: () => void;
+  onOpenPaste: () => void;
   onOpenWorkRecord: () => void;
   onSelectOrchidGroup: (orchidGroupId: number) => void;
   onTogglePlacementEditMode: () => void;
@@ -100,6 +110,31 @@ export default function OrchidSelectionPanel({
             개)
           </p>
         </div>
+        {copiedOrchidGroup ? (
+          <div className="mt-3 flex items-center justify-between gap-2 rounded-md border border-[#dbe8d8] bg-[#f5faf3] px-3 py-2 text-xs">
+            <span className="min-w-0 truncate font-semibold text-[#34503b]">
+              복사됨: {copiedOrchidGroup.varietyName} /{" "}
+              {copiedOrchidGroup.quantity}분
+            </span>
+            <div className="flex shrink-0 items-center gap-1.5">
+              <button
+                className="rounded-md bg-[#159447] px-2.5 py-1.5 font-semibold text-white disabled:cursor-not-allowed disabled:opacity-50"
+                disabled={!zone}
+                onClick={onOpenPaste}
+                type="button"
+              >
+                붙여넣기
+              </button>
+              <button
+                className="rounded-md border border-[#cfd8cc] bg-white px-2.5 py-1.5 font-semibold text-[#435047]"
+                onClick={onClearCopiedOrchidGroup}
+                type="button"
+              >
+                Clear
+              </button>
+            </div>
+          </div>
+        ) : null}
 
         {zone ? (
           <div className="mt-3">
@@ -152,6 +187,17 @@ export default function OrchidSelectionPanel({
                           value={orchidGroup.status}
                         />
                         <IconAction
+                          label="복사"
+                          onClick={() => onCopyOrchidGroup(orchidGroup.id)}
+                          disabled={!matched}
+                        >
+                          <Copy
+                            className="h-4 w-4"
+                            strokeWidth={1.8}
+                            aria-hidden="true"
+                          />
+                        </IconAction>
+                        <IconAction
                           label="수정"
                           onClick={onOpenEdit}
                           disabled={!matched || !selected}
@@ -195,7 +241,7 @@ export default function OrchidSelectionPanel({
                 icon={<Edit2 className="h-4 w-4" />}
                 label="난 묶음 추가"
                 onClick={onOpenCreate}
-                active={mutationMode === "CREATE"}
+                active={mutationMode === "CREATE" && !pasteSourceOrchidGroup}
               />
               <ActionButton
                 icon={<Clipboard className="h-4 w-4" />}
@@ -246,10 +292,14 @@ export default function OrchidSelectionPanel({
           key={
             mutationMode === "EDIT"
               ? `edit-${selectedOrchidGroup?.id ?? "none"}`
-              : `create-${resolvedZone?.id ?? "none"}`
+              : `create-${resolvedZone?.id ?? "none"}-${pasteSourceOrchidGroup?.id ?? "empty"}`
           }
           house={house}
-          initialValue={mutationMode === "EDIT" ? selectedOrchidGroup : null}
+          initialValue={
+            mutationMode === "EDIT"
+              ? selectedOrchidGroup
+              : pasteSourceOrchidGroup
+          }
           mode={mutationMode}
           saving={saving}
           targetZone={resolvedZone}

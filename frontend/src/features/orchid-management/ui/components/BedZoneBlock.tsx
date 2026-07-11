@@ -87,10 +87,7 @@ export default function BedZoneBlock({
     >
       <div className="flex gap-0">
         {showScale ? (
-          <div
-            className="relative w-5 shrink-0"
-            style={{ height: MAP_HEIGHT }}
-          >
+          <div className="relative w-5 shrink-0" style={{ height: MAP_HEIGHT }}>
             {scaleMarks.map((mark) => (
               <div
                 key={mark.label}
