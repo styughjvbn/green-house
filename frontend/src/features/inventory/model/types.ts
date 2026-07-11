@@ -120,6 +120,8 @@ export interface InboundRecordPayload {
   placementType?: string;
   trayCount?: number;
   bedZoneId?: number;
+  startPosition?: number;
+  endPosition?: number;
   status?: InboundStatus;
   worker?: string;
   memo?: string;
@@ -150,6 +152,8 @@ export interface InboundPottingPayload {
   placementType?: string;
   trayCount?: number;
   bedZoneId: number;
+  startPosition?: number;
+  endPosition?: number;
   worker?: string;
   memo?: string;
 }

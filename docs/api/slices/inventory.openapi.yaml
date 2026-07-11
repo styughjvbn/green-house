@@ -675,6 +675,10 @@ components:
         bedZoneId:
           type: integer
           format: int64
+        startPosition:
+          type: number
+        endPosition:
+          type: number
         status:
           type: string
           enum:
@@ -727,6 +731,10 @@ components:
         bedZoneId:
           type: integer
           format: int64
+        startPosition:
+          type: number
+        endPosition:
+          type: number
         worker:
           type: string
           maxLength: 50

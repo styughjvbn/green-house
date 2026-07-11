@@ -13,13 +13,13 @@ import type {
   InboundType,
   Variety,
 } from "../../../model/types";
-import {
-  flattenZones,
-  INBOUND_TYPE_LABELS,
-  toNumber,
-} from "../../../lib/inboundUi";
+import { INBOUND_TYPE_LABELS, toNumber } from "../../../lib/inboundUi";
 import { Field, inputClass } from "../InventoryPrimitives";
 import { PotSizeInput } from "../PotSizeInput";
+import {
+  InboundPlacementField,
+  type InboundPlacementSelection,
+} from "./InboundPlacementPicker";
 
 export function InboundCreateDialog({
   open,
@@ -53,13 +53,14 @@ export function InboundCreateDialog({
   const [potSize, setPotSize] = useState("");
   const [ageYear, setAgeYear] = useState("");
   const [placementType, setPlacementType] = useState("");
-  const [bedZoneId, setBedZoneId] = useState("");
+  const [placement, setPlacement] = useState<InboundPlacementSelection | null>(
+    null,
+  );
   const [worker, setWorker] = useState("");
   const [memo, setMemo] = useState("");
 
   if (!open) return null;
 
-  const zoneOptions = flattenZones(houses);
   const flaskType = inboundType === "FLASK_SEEDLING";
   const selectedVariety =
     varieties.find((variety) => variety.id === varietyId) ??
@@ -72,6 +73,10 @@ export function InboundCreateDialog({
         className="mt-4 grid gap-3 md:grid-cols-2"
         onSubmit={(event) => {
           event.preventDefault();
+          if (!flaskType && !placement) {
+            window.alert("배치 위치를 선택해주세요.");
+            return;
+          }
           void onSubmit({
             inboundDate,
             inboundType,
@@ -94,7 +99,9 @@ export function InboundCreateDialog({
             potSize: potSize.trim() || undefined,
             ageYear: toNumber(ageYear),
             placementType: placementType.trim() || undefined,
-            bedZoneId: toNumber(bedZoneId),
+            bedZoneId: placement?.bedZoneId,
+            startPosition: placement?.startPosition,
+            endPosition: placement?.endPosition,
             worker: worker.trim() || undefined,
             memo: memo.trim() || undefined,
           });
@@ -234,21 +241,11 @@ export function InboundCreateDialog({
                 onChange={(event) => setPlacementType(event.target.value)}
               />
             </Field>
-            <Field label="배치 위치">
-              <select
-                className={inputClass}
-                required
-                value={bedZoneId}
-                onChange={(event) => setBedZoneId(event.target.value)}
-              >
-                <option value="">선택</option>
-                {zoneOptions.map((zone) => (
-                  <option key={zone.id} value={zone.id}>
-                    {zone.label}
-                  </option>
-                ))}
-              </select>
-            </Field>
+            <InboundPlacementField
+              houses={houses}
+              value={placement}
+              onChange={setPlacement}
+            />
           </>
         )}
         <Field label="작업자">
@@ -408,13 +405,13 @@ export function InboundPottingDialog({
   const [potSize, setPotSize] = useState("");
   const [ageYear, setAgeYear] = useState("");
   const [placementType, setPlacementType] = useState("");
-  const [bedZoneId, setBedZoneId] = useState("");
+  const [placement, setPlacement] = useState<InboundPlacementSelection | null>(
+    null,
+  );
   const [worker, setWorker] = useState("");
   const [memo, setMemo] = useState("");
 
   if (!open || !record) return null;
-
-  const zoneOptions = flattenZones(houses);
 
   return (
     <DialogShell title="포트 작업 등록" onClose={onClose}>
@@ -422,13 +419,19 @@ export function InboundPottingDialog({
         className="mt-4 grid gap-3 md:grid-cols-2"
         onSubmit={(event) => {
           event.preventDefault();
+          if (!placement) {
+            window.alert("배치 위치를 선택해주세요.");
+            return;
+          }
           void onSubmit({
             pottingDate,
             actualQuantity: Number(actualQuantity),
             potSize: potSize.trim() || undefined,
             ageYear: toNumber(ageYear),
             placementType: placementType.trim() || undefined,
-            bedZoneId: Number(bedZoneId),
+            bedZoneId: placement?.bedZoneId ?? 0,
+            startPosition: placement?.startPosition,
+            endPosition: placement?.endPosition,
             worker: worker.trim() || undefined,
             memo: memo.trim() || undefined,
           });
@@ -471,21 +474,11 @@ export function InboundPottingDialog({
             onChange={(event) => setPlacementType(event.target.value)}
           />
         </Field>
-        <Field label="배치 위치">
-          <select
-            className={inputClass}
-            required
-            value={bedZoneId}
-            onChange={(event) => setBedZoneId(event.target.value)}
-          >
-            <option value="">선택</option>
-            {zoneOptions.map((zone) => (
-              <option key={zone.id} value={zone.id}>
-                {zone.label}
-              </option>
-            ))}
-          </select>
-        </Field>
+        <InboundPlacementField
+          houses={houses}
+          value={placement}
+          onChange={setPlacement}
+        />
         <Field label="작업자">
           <input
             className={inputClass}

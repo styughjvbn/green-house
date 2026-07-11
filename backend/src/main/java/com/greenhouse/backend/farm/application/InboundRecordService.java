@@ -21,9 +21,9 @@ import com.greenhouse.backend.farm.repository.VarietyRepository;
 import com.greenhouse.backend.work.application.SystemWorkCleanupService;
 import com.greenhouse.backend.work.application.SystemWorkRecorder;
 
-import lombok.RequiredArgsConstructor;
-
+import java.math.BigDecimal;
 import java.time.LocalDate;
+import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
@@ -159,7 +159,10 @@ public class InboundRecordService {
 			throw new IllegalArgumentException("이미 난 묶음이 생성된 입고 기록입니다.");
 		}
 		BedZone bedZone = findBedZone(request.bedZoneId());
-		OrchidPlacementPolicy.PlacementRange placementRange = orchidPlacementPolicy.findFirstAvailableSingleSlot(bedZone);
+		OrchidPlacementPolicy.PlacementRange placementRange = resolvePlacementRange(
+				bedZone,
+				request.startPosition(),
+				request.endPosition());
 		OrchidGroup orchidGroup = new OrchidGroup(
 				bedZone,
 				inboundRecord.getVariety().getGenus(),
@@ -308,7 +311,10 @@ public class InboundRecordService {
 	}
 
 	private OrchidGroup createPlacedOrchidGroup(Variety variety, InboundRecordCreateRequest request, BedZone bedZone) {
-		OrchidPlacementPolicy.PlacementRange placementRange = orchidPlacementPolicy.findFirstAvailableSingleSlot(bedZone);
+		OrchidPlacementPolicy.PlacementRange placementRange = resolvePlacementRange(
+				bedZone,
+				request.startPosition(),
+				request.endPosition());
 		OrchidGroup orchidGroup = new OrchidGroup(
 				bedZone,
 				variety.getGenus(),
@@ -334,6 +340,19 @@ public class InboundRecordService {
 				placementRange.endPosition(),
 				normalize(request.memo()));
 		return orchidGroup;
+	}
+
+	private OrchidPlacementPolicy.PlacementRange resolvePlacementRange(
+			BedZone bedZone,
+			BigDecimal requestedStartPosition,
+			BigDecimal requestedEndPosition) {
+		if (requestedStartPosition == null && requestedEndPosition == null) {
+			return orchidPlacementPolicy.findFirstAvailableSingleSlot(bedZone);
+		}
+		BigDecimal startPosition = orchidPlacementPolicy.normalizeNumber(requestedStartPosition);
+		BigDecimal endPosition = orchidPlacementPolicy.normalizeNumber(requestedEndPosition);
+		orchidPlacementPolicy.validatePlacement(bedZone, startPosition, endPosition, null);
+		return new OrchidPlacementPolicy.PlacementRange(startPosition, endPosition);
 	}
 
 	private void recordWork(
