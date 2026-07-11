@@ -142,11 +142,32 @@ export function useFarmStatusMap({
     }
   }
 
-  async function loadSelection(type: FarmStatusTargetType, id: number) {
-    const data = await fetchFarmStatusOrchidGroups(type, id);
+  async function loadSelectionInHouse({
+    type,
+    id,
+    houseId,
+    nextLevel,
+  }: {
+    type: FarmStatusTargetType;
+    id: number;
+    houseId: number;
+    nextLevel: FarmZoomLevel;
+  }) {
+    const shouldLoadHouseZoom =
+      selectedHouseId !== houseId || zoomData?.houseId !== houseId;
+    const [selectionData, houseZoomData] = await Promise.all([
+      fetchFarmStatusOrchidGroups(type, id),
+      shouldLoadHouseZoom
+        ? fetchFarmStatusHouseZoom(houseId)
+        : Promise.resolve(zoomData),
+    ]);
+
+    setSelectedHouseId(houseId);
     setSelectedTarget({ type, id });
-    setSelection(data);
+    setSelection(selectionData);
     setSelectedOrchidGroup(null);
+    setZoomData(houseZoomData);
+    setZoomLevel(nextLevel);
   }
 
   async function loadHouseZoom(
@@ -179,17 +200,25 @@ export function useFarmStatusMap({
   }
 
   async function handleSelectPhysicalBed(bed: PhysicalBed) {
-    if (zoomLevel !== "PHYSICAL_BED") {
-      setZoomLevel("PHYSICAL_BED");
-    }
-    await runRequest(() => loadSelection("PHYSICAL_BED", bed.id));
+    await runRequest(() =>
+      loadSelectionInHouse({
+        type: "PHYSICAL_BED",
+        id: bed.id,
+        houseId: bed.houseId,
+        nextLevel: "PHYSICAL_BED",
+      }),
+    );
   }
 
   async function handleSelectBedZone(zone: BedZone) {
-    if (zoomLevel !== "BED_ZONE") {
-      setZoomLevel("BED_ZONE");
-    }
-    await runRequest(() => loadSelection("BED_ZONE", zone.id));
+    await runRequest(() =>
+      loadSelectionInHouse({
+        type: "BED_ZONE",
+        id: zone.id,
+        houseId: zone.houseId,
+        nextLevel: "BED_ZONE",
+      }),
+    );
   }
 
   async function handleZoomIn() {
