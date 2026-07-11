@@ -5,6 +5,7 @@ import type {
   HouseStatusSummary,
   PhysicalBed,
 } from "@/entities/farm/types";
+import { getOrchidVarietyColor } from "@/entities/farm/orchidColors";
 import type {
   FarmStatusFilterMatches,
   SelectedFarmStatusOrchidGroup,
@@ -36,7 +37,6 @@ import {
   createSmallLabelIcon,
   createTinyBadgeIcon,
   createZoneLabelIcon,
-  getOrchidVarietyColor,
   stopLeafletClick,
 } from "./icons";
 
