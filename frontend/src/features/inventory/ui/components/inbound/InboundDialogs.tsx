@@ -20,6 +20,7 @@ import {
   InboundPlacementField,
   type InboundPlacementSelection,
 } from "./InboundPlacementPicker";
+import { InboundPlacementTypeField } from "./InboundPlacementTypeField";
 
 export function InboundCreateDialog({
   open,
@@ -234,17 +235,17 @@ export function InboundCreateDialog({
                 onChange={(event) => setAgeYear(event.target.value)}
               />
             </Field>
-            <Field label="배치 형태">
-              <input
-                className={inputClass}
-                value={placementType}
-                onChange={(event) => setPlacementType(event.target.value)}
-              />
-            </Field>
             <InboundPlacementField
               houses={houses}
               value={placement}
-              onChange={setPlacement}
+              onChange={(nextPlacement) => {
+                setPlacement(nextPlacement);
+                setPlacementType("");
+              }}
+            />
+            <InboundPlacementTypeField
+              value={placementType}
+              onChange={setPlacementType}
             />
           </>
         )}
@@ -467,17 +468,17 @@ export function InboundPottingDialog({
             onChange={(event) => setAgeYear(event.target.value)}
           />
         </Field>
-        <Field label="배치 형태">
-          <input
-            className={inputClass}
-            value={placementType}
-            onChange={(event) => setPlacementType(event.target.value)}
-          />
-        </Field>
         <InboundPlacementField
           houses={houses}
           value={placement}
-          onChange={setPlacement}
+          onChange={(nextPlacement) => {
+            setPlacement(nextPlacement);
+            setPlacementType("");
+          }}
+        />
+        <InboundPlacementTypeField
+          value={placementType}
+          onChange={setPlacementType}
         />
         <Field label="작업자">
           <input

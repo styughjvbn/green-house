@@ -666,6 +666,7 @@ components:
           minLength: 0
         placementType:
           type: string
+          description: 난 묶음 배치 규격과 같은 placementType 문자열을 입고 시점 기준으로 보존하는 스냅샷 값
           maxLength: 100
           minLength: 0
         trayCount:
@@ -722,6 +723,7 @@ components:
           minLength: 0
         placementType:
           type: string
+          description: 난 묶음 배치 규격과 같은 placementType 문자열을 포트 작업 시점 기준으로 보존하는 스냅샷 값
           maxLength: 100
           minLength: 0
         trayCount:
@@ -793,6 +795,7 @@ components:
           type: string
         placementType:
           type: string
+          description: 입고 또는 포트 작업 시점에 선택된 배치 규격 스냅샷 값
         trayCount:
           type: integer
           format: int32
@@ -853,6 +856,7 @@ components:
           minLength: 0
         placementType:
           type: string
+          description: 기존 입고 기록에 보존된 배치 규격 스냅샷 값
           maxLength: 100
           minLength: 0
         trayCount:
