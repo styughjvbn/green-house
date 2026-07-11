@@ -5,6 +5,7 @@ import type { DragState, OrchidSelection } from "../../model/types";
 import PhysicalBedBlock from "./PhysicalBedBlock";
 
 export default function HouseDetailMap({
+  distinguishVarietyColors,
   dragState,
   filteredOrchidGroupIds,
   house,
@@ -19,6 +20,7 @@ export default function HouseDetailMap({
   onSelectBedZone,
   onSelectOrchidGroup,
 }: {
+  distinguishVarietyColors: boolean;
   dragState: DragState;
   filteredOrchidGroupIds: Set<number>;
   house: House;
@@ -40,6 +42,7 @@ export default function HouseDetailMap({
           <PhysicalBedBlock
             key={bed.id}
             bed={bed}
+            distinguishVarietyColors={distinguishVarietyColors}
             dragState={dragState}
             filteredOrchidGroupIds={filteredOrchidGroupIds}
             placementEditMode={placementEditMode}

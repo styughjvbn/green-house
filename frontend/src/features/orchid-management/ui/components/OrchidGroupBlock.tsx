@@ -1,9 +1,11 @@
 "use client";
 
 import type { DragEvent, MouseEvent, PointerEvent } from "react";
+import { getOrchidVarietyColor } from "@/entities/farm/orchidColors";
 import type { OrchidGroup } from "@/entities/farm/types";
 
 export default function OrchidGroupBlock({
+  distinguishVarietyColors,
   draggable,
   heightPx,
   muted,
@@ -14,6 +16,7 @@ export default function OrchidGroupBlock({
   onDragStart,
   onSelect,
 }: {
+  distinguishVarietyColors: boolean;
   draggable: boolean;
   heightPx: number;
   muted: boolean;
@@ -27,6 +30,12 @@ export default function OrchidGroupBlock({
   const warning =
     orchidGroup.status !== "정상" && orchidGroup.status !== "판매 가능";
   const density = resolveDensity(heightPx);
+  const varietyColor =
+    distinguishVarietyColors && !muted && !selected
+      ? getOrchidVarietyColor(orchidGroup)
+      : null;
+  const titleTextClass = varietyColor ? "text-white" : "text-[#1e2b21]";
+  const detailTextClass = varietyColor ? "text-white/85" : "text-[#435047]";
   const detailText = [
     orchidGroup.ageYear ? `${orchidGroup.ageYear}년생` : null,
     orchidGroup.potSize,
@@ -68,11 +77,13 @@ export default function OrchidGroupBlock({
   return (
     <div
       className={`h-full touch-manipulation border transition ${
-        muted
-          ? "border-[#d6d8d4] bg-[#ebeeea] text-[#8a928a] opacity-80"
-          : selected
-            ? "border-[#246df2] bg-[#dcecff]"
-            : "border-[#c8ddc2] bg-[#e4f2d8] hover:border-[#159447]"
+        varietyColor
+          ? "text-white hover:brightness-95"
+          : muted
+            ? "border-[#d6d8d4] bg-[#ebeeea] text-[#8a928a] opacity-80"
+            : selected
+              ? "border-[#246df2] bg-[#dcecff]"
+              : "border-[#c8ddc2] bg-[#e4f2d8] hover:border-[#159447]"
       } ${selected ? "ring-1 ring-[#246df2]/20" : ""} ${
         muted
           ? "cursor-default"
@@ -86,6 +97,14 @@ export default function OrchidGroupBlock({
       onDragStart={handleDragStart}
       onPointerUp={handlePointerUp}
       role="button"
+      style={
+        varietyColor
+          ? {
+              backgroundColor: varietyColor.fill,
+              borderColor: varietyColor.border,
+            }
+          : undefined
+      }
       tabIndex={0}
       title={draggable ? "드래그해 다른 구역으로 이동" : undefined}
     >
@@ -104,10 +123,12 @@ export default function OrchidGroupBlock({
           </div>
         ) : density === "tiny" ? (
           <div className="flex h-full items-center gap-2">
-            <p className="min-w-0 flex-1 truncate text-sm font-bold text-[#1e2b21]">
+            <p
+              className={`min-w-0 flex-1 truncate text-sm font-bold ${titleTextClass}`}
+            >
               {orchidGroup.varietyName}
             </p>
-            <p className="shrink-0 text-xs font-bold text-[#1e2b21]">
+            <p className={`shrink-0 text-xs font-bold ${titleTextClass}`}>
               {orchidGroup.quantity}분
             </p>
             <span
@@ -123,7 +144,7 @@ export default function OrchidGroupBlock({
         ) : (
           <>
             <div className="flex items-start justify-between gap-2">
-              <p className="truncate text-sm font-bold text-[#1e2b21]">
+              <p className={`truncate text-sm font-bold ${titleTextClass}`}>
                 {orchidGroup.varietyName}
               </p>
               <span
@@ -137,11 +158,13 @@ export default function OrchidGroupBlock({
               />
             </div>
             <div className="mt-auto">
-              <p className="text-xs font-bold text-[#1e2b21]">
+              <p className={`text-xs font-bold ${titleTextClass}`}>
                 {orchidGroup.quantity}분
               </p>
               {detailText ? (
-                <p className="mt-1 text-xs text-[#435047]">{detailText}</p>
+                <p className={`mt-1 text-xs ${detailTextClass}`}>
+                  {detailText}
+                </p>
               ) : null}
             </div>
           </>

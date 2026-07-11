@@ -10,6 +10,7 @@ const MAP_HEIGHT = 590;
 
 export default function BedZoneBlock({
   maxPosition,
+  distinguishVarietyColors,
   dragState,
   filteredOrchidGroupIds,
   placementEditMode,
@@ -26,6 +27,7 @@ export default function BedZoneBlock({
   onSelectOrchidGroup,
 }: {
   maxPosition: number | null;
+  distinguishVarietyColors: boolean;
   dragState: DragState;
   filteredOrchidGroupIds: Set<number>;
   placementEditMode: boolean;
@@ -148,6 +150,7 @@ export default function BedZoneBlock({
                 style={{ top: `${top}%`, height: `${height}%` }}
               >
                 <OrchidGroupBlock
+                  distinguishVarietyColors={distinguishVarietyColors}
                   draggable={matched && placementEditMode && !saving}
                   heightPx={heightPx}
                   muted={!matched}

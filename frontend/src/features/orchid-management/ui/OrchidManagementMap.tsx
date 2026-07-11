@@ -11,6 +11,9 @@ import OrchidSelectionPanel, {
   SelectedZoneInfo,
 } from "./components/OrchidSelectionPanel";
 
+const VARIETY_COLOR_STORAGE_KEY =
+  "orchid-management:distinguish-variety-colors";
+
 export function OrchidManagementMap({
   initialSelectedOrchidGroupId,
   initialSelectedPhysicalBedId,
@@ -29,11 +32,25 @@ export function OrchidManagementMap({
     initialSearchFilters,
   );
   const [showScale, setShowScale] = useState(true);
+  const [distinguishVarietyColors, setDistinguishVarietyColors] = useState(
+    () =>
+      typeof window !== "undefined" &&
+      window.localStorage.getItem(VARIETY_COLOR_STORAGE_KEY) === "true",
+  );
+
+  function toggleVarietyColors() {
+    setDistinguishVarietyColors((current) => {
+      const next = !current;
+      window.localStorage.setItem(VARIETY_COLOR_STORAGE_KEY, String(next));
+      return next;
+    });
+  }
 
   return (
     <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_440px]">
       <section className="space-y-3">
         <HouseSelectorPanel
+          distinguishVarietyColors={distinguishVarietyColors}
           house={house}
           houses={mapData.houses}
           placementEditMode={orchidManagement.placementEditMode}
@@ -42,9 +59,11 @@ export function OrchidManagementMap({
           onTogglePlacementEditMode={
             orchidManagement.actions.togglePlacementEditMode
           }
+          onToggleVarietyColors={toggleVarietyColors}
           onToggleScale={() => setShowScale((current) => !current)}
         />
         <HouseDetailMap
+          distinguishVarietyColors={distinguishVarietyColors}
           dragState={orchidManagement.dragState}
           filteredOrchidGroupIds={orchidManagement.filteredOrchidGroupIds}
           house={house}

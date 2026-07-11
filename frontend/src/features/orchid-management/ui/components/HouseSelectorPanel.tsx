@@ -1,24 +1,28 @@
 "use client";
 
-import { Pencil, Ruler } from "lucide-react";
+import { Palette, Pencil, Ruler } from "lucide-react";
 import { useRouter } from "next/navigation";
 import type { House, HouseStatusSummary } from "@/entities/farm/types";
 
 export default function HouseSelectorPanel({
   house,
   houses,
+  distinguishVarietyColors,
   placementEditMode,
   selectedHouseId,
   showScale,
   onTogglePlacementEditMode,
+  onToggleVarietyColors,
   onToggleScale,
 }: {
   house: House;
   houses: HouseStatusSummary[];
+  distinguishVarietyColors: boolean;
   placementEditMode: boolean;
   selectedHouseId: number;
   showScale: boolean;
   onTogglePlacementEditMode: () => void;
+  onToggleVarietyColors: () => void;
   onToggleScale: () => void;
 }) {
   const router = useRouter();
@@ -46,6 +50,21 @@ export default function HouseSelectorPanel({
       </div>
 
       <div className="min-w-3 flex-1" />
+      <button
+        aria-pressed={distinguishVarietyColors}
+        className={`inline-flex h-8 touch-manipulation items-center gap-2 rounded-md border border-[#dfe5dc] px-4 text-sm font-semibold shadow-sm ${
+          distinguishVarietyColors
+            ? "bg-[#2f7f77] text-white"
+            : "bg-white text-[#344138]"
+        }`}
+        onClick={onToggleVarietyColors}
+        type="button"
+      >
+        <Palette className="h-4 w-4" strokeWidth={1.8} aria-hidden="true" />
+        <span>
+          난 묶음 색상 구별 {distinguishVarietyColors ? "끄기" : "켜기"}
+        </span>
+      </button>
       <button
         className={`inline-flex h-8 touch-manipulation items-center gap-2 rounded-md border border-[#dfe5dc] px-4 text-sm font-semibold shadow-sm ${
           showScale ? "bg-[#159447] text-white" : "bg-white text-[#344138]"
