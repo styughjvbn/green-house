@@ -7,7 +7,7 @@ import java.time.LocalDate;
 
 public record InboundRecordUpdateRequest(
 		@NotNull LocalDate inboundDate,
-		@Min(1) Integer bottleCount,
+		@Min(0) Integer bottleCount,
 		@Min(1) Integer estimatedQuantity,
 		@Min(1) Integer actualQuantity,
 		@Size(max = 255) String tempLocation,

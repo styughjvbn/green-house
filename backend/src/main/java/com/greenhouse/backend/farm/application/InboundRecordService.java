@@ -249,8 +249,8 @@ public class InboundRecordService {
 			throw new IllegalArgumentException("품종을 선택하거나 새 품종을 입력해야 합니다.");
 		}
 		if (request.inboundType() == InboundType.FLASK_SEEDLING) {
-			if (request.bottleCount() == null || request.estimatedQuantity() == null) {
-				throw new IllegalArgumentException("유리병 모종은 병 수와 예상 수량이 필요합니다.");
+			if (request.estimatedQuantity() == null) {
+				throw new IllegalArgumentException("유리병 모종은 예상 수량이 필요합니다.");
 			}
 			if (status == InboundStatus.POTTING_PENDING && request.pottingDueDate() == null) {
 				throw new IllegalArgumentException("포트 작업 대기 상태는 예정일이 필요합니다.");

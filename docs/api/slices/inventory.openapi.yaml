@@ -636,7 +636,7 @@ components:
         bottleCount:
           type: integer
           format: int32
-          minimum: 1
+          minimum: 0
         estimatedQuantity:
           type: integer
           format: int32
@@ -815,7 +815,7 @@ components:
         bottleCount:
           type: integer
           format: int32
-          minimum: 1
+          minimum: 0
         estimatedQuantity:
           type: integer
           format: int32
