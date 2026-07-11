@@ -8,11 +8,15 @@ export function FarmMapOverlay({
   map,
   mapZoom,
   resetMap,
+  distinguishVarietyColors,
+  onToggleVarietyColors,
 }: {
   currentLevel: FarmZoomLevel;
   map: LeafletMap | null;
   mapZoom: number;
   resetMap: () => void;
+  distinguishVarietyColors: boolean;
+  onToggleVarietyColors: () => void;
 }) {
   const zoomIn = () => map?.setZoom(Math.min(MAX_ZOOM, map.getZoom() + 0.45));
   const zoomOut = () => map?.setZoom(Math.max(MIN_ZOOM, map.getZoom() - 0.45));
@@ -55,6 +59,19 @@ export function FarmMapOverlay({
           ⌂
         </button>
       </div>
+
+      <button
+        aria-pressed={distinguishVarietyColors}
+        className={`absolute top-4 right-4 z-[1000] rounded-md px-3 py-2 text-sm font-semibold shadow-sm transition ${
+          distinguishVarietyColors
+            ? "bg-[#2f7f77] text-white hover:bg-[#286d66]"
+            : "bg-white/95 text-[#29422e] hover:bg-[#f4f7f2]"
+        }`}
+        onClick={onToggleVarietyColors}
+        type="button"
+      >
+        난 묶음 색상 구별 {distinguishVarietyColors ? "끄기" : "켜기"}
+      </button>
 
       <div className="pointer-events-none absolute bottom-4 left-16 z-[1000] flex flex-wrap gap-3 rounded-md bg-white/95 px-3 py-2 text-xs shadow">
         <LegendItem color="bg-[#20a64d]" label="정상" />

@@ -79,6 +79,8 @@ export default function LeafletFarmMap({
 }: LeafletFarmMapProps) {
   const [map, setMap] = useState<LeafletMap | null>(null);
   const [mapZoom, setMapZoom] = useState(INITIAL_ZOOM);
+  const [distinguishVarietyColors, setDistinguishVarietyColors] =
+    useState(false);
   const currentLevel = getLevelByMapZoom(mapZoom);
 
   const houseByNumber = useMemo(() => {
@@ -159,6 +161,7 @@ export default function LeafletFarmMap({
               hasActiveSearch={hasActiveSearch}
               house={house}
               mapZoom={mapZoom}
+              distinguishVarietyColors={distinguishVarietyColors}
               selectedBedZoneId={selectedBedZoneId}
               selectedHouseId={selectedHouseId}
               selectedOrchidGroup={selectedOrchidGroup}
@@ -179,6 +182,10 @@ export default function LeafletFarmMap({
         map={map}
         mapZoom={mapZoom}
         resetMap={resetMap}
+        distinguishVarietyColors={distinguishVarietyColors}
+        onToggleVarietyColors={() =>
+          setDistinguishVarietyColors((current) => !current)
+        }
       />
     </div>
   );
