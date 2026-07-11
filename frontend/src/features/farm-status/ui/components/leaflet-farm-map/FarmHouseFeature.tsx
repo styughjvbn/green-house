@@ -151,6 +151,7 @@ export function FarmHouseFeature({
               filterMatches={filterMatches}
               hasActiveSearch={hasActiveSearch}
               distinguishVarietyColors={distinguishVarietyColors}
+              mapZoom={mapZoom}
               rect={rect}
               selectedBedZoneId={selectedBedZoneId}
               selectedOrchidGroup={selectedOrchidGroup}
@@ -180,6 +181,7 @@ function FarmBedFeature({
   filterMatches,
   hasActiveSearch,
   distinguishVarietyColors,
+  mapZoom,
   rect,
   selectedBedZoneId,
   selectedOrchidGroup,
@@ -195,6 +197,7 @@ function FarmBedFeature({
   filterMatches: FarmStatusFilterMatches;
   hasActiveSearch: boolean;
   distinguishVarietyColors: boolean;
+  mapZoom: number;
   rect: VisualBedGeometry;
   selectedBedZoneId: number | null;
   selectedOrchidGroup: SelectedFarmStatusOrchidGroup | null;
@@ -266,6 +269,7 @@ function FarmBedFeature({
               filterMatches={filterMatches}
               hasActiveSearch={hasActiveSearch}
               distinguishVarietyColors={distinguishVarietyColors}
+              mapZoom={mapZoom}
               selectedOrchidGroupId={selectedOrchidGroup?.orchidGroupId ?? null}
               selected={selectedBedZoneId === zone.id}
               showOrchids={showOrchids}
@@ -285,6 +289,7 @@ function FarmZoneFeature({
   filterMatches,
   hasActiveSearch,
   distinguishVarietyColors,
+  mapZoom,
   selectedOrchidGroupId,
   selected,
   showOrchids,
@@ -297,6 +302,7 @@ function FarmZoneFeature({
   filterMatches: FarmStatusFilterMatches;
   hasActiveSearch: boolean;
   distinguishVarietyColors: boolean;
+  mapZoom: number;
   selectedOrchidGroupId: number | null;
   selected: boolean;
   showOrchids: boolean;
@@ -405,6 +411,7 @@ function FarmZoneFeature({
                 group,
                 !hasActiveSearch || filterMatches.orchidGroupIds.has(group.id),
                 distinguishVarietyColors,
+                mapZoom,
               )}
               interactive={false}
               keyboard={false}

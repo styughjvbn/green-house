@@ -88,23 +88,41 @@ export function createOrchidBlockIcon(
   group: OrchidGroup,
   matched: boolean,
   distinguishVarietyColors: boolean,
+  mapZoom: number,
 ) {
   const bg = matched
     ? distinguishVarietyColors
       ? getOrchidVarietyColor(group).fill
       : "#1f8f48"
     : "#9aa19a";
+  const compact = mapZoom <= 2;
+  const width = compact ? 46 : 96;
+  const height = compact ? 32 : 46;
   const title =
-    group.varietyName.length > 7
-      ? `${group.varietyName.slice(0, 7)}...`
-      : group.varietyName;
+    compact && group.varietyName.length > 3
+      ? `${group.varietyName.slice(0, 3)}...`
+      : group.varietyName.length > 7
+        ? `${group.varietyName.slice(0, 7)}...`
+        : group.varietyName;
+  const meta = [formatAgeYear(group.ageYear), group.potSize]
+    .filter(Boolean)
+    .join(" · ");
+  const detailHtml =
+    !compact && meta
+      ? `<div style="font-size:9px;font-weight:700;opacity:.9;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${escapeHtml(meta)}</div>`
+      : "";
+  const quantityText = compact ? String(group.quantity) : `${group.quantity}분`;
 
   return divIcon({
     className: "",
-    html: `<div style="width:96px;height:32px;border-radius:7px;background:${bg};color:white;padding:4px 7px;box-shadow:0 2px 6px rgba(20,50,20,.22);line-height:1.15;box-sizing:border-box;"><div style="font-size:11px;font-weight:800;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${escapeHtml(title)}</div><div style="font-size:10px;font-weight:700;opacity:.95;">${group.quantity}분</div></div>`,
-    iconAnchor: [48, 16],
-    iconSize: [96, 32],
+    html: `<div style="width:${width}px;height:${height}px;border-radius:7px;background:${bg};color:white;padding:${compact ? "4px 5px" : "4px 7px"};box-shadow:0 2px 6px rgba(20,50,20,.22);line-height:1.12;box-sizing:border-box;"><div style="font-size:${compact ? 10 : 11}px;font-weight:800;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${escapeHtml(title)}</div>${detailHtml}<div style="font-size:10px;font-weight:700;opacity:.95;">${escapeHtml(quantityText)}</div></div>`,
+    iconAnchor: [width / 2, height / 2],
+    iconSize: [width, height],
   });
+}
+
+function formatAgeYear(ageYear: number | null) {
+  return ageYear == null ? null : `${ageYear}년생`;
 }
 
 export function getOrchidVarietyColor(group: OrchidGroup) {
