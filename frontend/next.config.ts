@@ -7,6 +7,11 @@ const backendApiUrl = (
 ).replace(/\/$/, "");
 
 const nextConfig: NextConfig = {
+  logging: {
+    fetches: {
+      fullUrl: true,
+    },
+  },
   output: "standalone",
   async rewrites() {
     return [
