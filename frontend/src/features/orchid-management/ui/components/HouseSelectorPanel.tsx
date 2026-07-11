@@ -66,7 +66,7 @@ export default function HouseSelectorPanel({
         onClick={onTogglePlacementEditMode}
       >
         <Pencil className="h-4 w-4" strokeWidth={1.8} aria-hidden="true" />
-        배치 수정 모드
+        {placementEditMode ? "배치 수정 끄기" : "배치 수정 켜기"}
       </button>
 
       <div className="flex h-9 items-center gap-5 rounded-md border border-[#e2e7df] bg-white px-4 text-xs font-semibold text-[#435047] shadow-sm">
