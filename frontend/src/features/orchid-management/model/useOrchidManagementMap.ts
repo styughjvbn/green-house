@@ -28,6 +28,7 @@ import {
   findFirstOrchidGroup,
   findOrchidGroup,
 } from "../lib/orchidManagementUtils";
+import { useOrchidClipboard } from "./OrchidClipboardContext";
 import type {
   DragState,
   OrchidManagementSearchState,
@@ -78,10 +79,14 @@ export function useOrchidManagementMap(
   const [placementEditMode, setPlacementEditMode] = useState(false);
   const [dragState, setDragState] = useState<DragState>(null);
   const [mutationMode, setMutationMode] = useState<MutationMode>(null);
-  const [copiedOrchidGroup, setCopiedOrchidGroup] =
-    useState<OrchidGroup | null>(null);
-  const [pasteSourceOrchidGroup, setPasteSourceOrchidGroup] =
-    useState<OrchidGroup | null>(null);
+  const {
+    copiedOrchidGroup,
+    pasteSourceOrchidGroup,
+    copyOrchidGroup: copyToClipboard,
+    clearCopiedOrchidGroup: clearClipboard,
+    clearPasteSource,
+    openPaste: openClipboardPaste,
+  } = useOrchidClipboard();
   const [searchFilters, setSearchFilters] =
     useState<OrchidManagementSearchState>({
       keyword: initialSearchFilters?.keyword ?? "",
@@ -225,25 +230,25 @@ export function useOrchidManagementMap(
   function selectBedZone(bedZoneId: number) {
     setSelection({ type: "BED_ZONE", bedZoneId });
     setMutationMode(null);
-    setPasteSourceOrchidGroup(null);
+    clearPasteSource();
   }
 
   function selectOrchidGroup(orchidGroupId: number) {
     setSelection({ type: "ORCHID_GROUP", orchidGroupId });
     setMutationMode(null);
-    setPasteSourceOrchidGroup(null);
+    clearPasteSource();
   }
 
   function selectOrchidGroupForEdit(orchidGroupId: number) {
     setSelection({ type: "ORCHID_GROUP", orchidGroupId });
     setMutationMode("EDIT");
-    setPasteSourceOrchidGroup(null);
+    clearPasteSource();
     setErrorMessage(null);
   }
 
   function openCreate() {
     if (resolvedZone) {
-      setPasteSourceOrchidGroup(null);
+      clearPasteSource();
       setMutationMode("CREATE");
       setErrorMessage(null);
       return;
@@ -253,7 +258,7 @@ export function useOrchidManagementMap(
 
   function openEdit() {
     if (selectedOrchidGroup) {
-      setPasteSourceOrchidGroup(null);
+      clearPasteSource();
       setMutationMode("EDIT");
       setErrorMessage(null);
     }
@@ -262,23 +267,20 @@ export function useOrchidManagementMap(
   function copyOrchidGroup(orchidGroupId: number) {
     const orchidGroup = findOrchidGroup(house, orchidGroupId);
     if (orchidGroup) {
-      setCopiedOrchidGroup(orchidGroup);
-      setPasteSourceOrchidGroup(null);
+      copyToClipboard(orchidGroup);
       setErrorMessage(null);
     }
   }
 
   function clearCopiedOrchidGroup() {
-    setCopiedOrchidGroup(null);
-    setPasteSourceOrchidGroup(null);
+    clearClipboard();
     if (mutationMode === "CREATE") {
       setMutationMode(null);
     }
   }
 
   function openPaste() {
-    if (copiedOrchidGroup && resolvedZone) {
-      setPasteSourceOrchidGroup(copiedOrchidGroup);
+    if (resolvedZone && openClipboardPaste()) {
       setMutationMode("CREATE");
       setErrorMessage(null);
       return;
@@ -288,7 +290,7 @@ export function useOrchidManagementMap(
 
   function openMove() {
     if (selectedOrchidGroup) {
-      setPasteSourceOrchidGroup(null);
+      clearPasteSource();
       setPreferredMoveZoneId(null);
       setMutationMode("MOVE");
       setErrorMessage(null);
@@ -311,7 +313,7 @@ export function useOrchidManagementMap(
       targetId,
     }));
     setMutationMode("WORK_RECORD");
-    setPasteSourceOrchidGroup(null);
+    clearPasteSource();
     setErrorMessage(null);
   }
 
@@ -340,7 +342,7 @@ export function useOrchidManagementMap(
     if (orchidGroup.houseId === house.id) {
       setSelection({ type: "ORCHID_GROUP", orchidGroupId: orchidGroup.id });
       setMutationMode(null);
-      setPasteSourceOrchidGroup(null);
+      clearPasteSource();
       return;
     }
 
@@ -361,7 +363,7 @@ export function useOrchidManagementMap(
     setPlacementEditMode((current) => !current);
     setDragState(null);
     setMutationMode(null);
-    setPasteSourceOrchidGroup(null);
+    clearPasteSource();
   }
 
   function startDrag(orchidGroupId: number) {
@@ -396,7 +398,7 @@ export function useOrchidManagementMap(
     setSelection({ type: "ORCHID_GROUP", orchidGroupId: draggingGroup.id });
     setPreferredMoveZoneId(toBedZoneId);
     setMutationMode("MOVE");
-    setPasteSourceOrchidGroup(null);
+    clearPasteSource();
     setDragState(null);
   }
 
@@ -484,7 +486,7 @@ export function useOrchidManagementMap(
     try {
       await action();
       setMutationMode(null);
-      setPasteSourceOrchidGroup(null);
+      clearPasteSource();
       router.refresh();
     } catch (error) {
       setErrorMessage(
@@ -520,7 +522,7 @@ export function useOrchidManagementMap(
     actions: {
       cancelMutation: () => {
         setMutationMode(null);
-        setPasteSourceOrchidGroup(null);
+        clearPasteSource();
       },
       clearCopiedOrchidGroup,
       copyOrchidGroup,
