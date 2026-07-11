@@ -99,7 +99,11 @@ export function isVisibleWorkRecordField(
 
 export function getManualWorkTypes(workTypes: WorkType[]) {
   return workTypes.filter(
-    (workType) => workType.active && !workType.systemType,
+    (workType) =>
+      workType.active &&
+      !workType.systemType &&
+      workType.code !== "INBOUND" &&
+      workType.code !== "POTTING",
   );
 }
 
@@ -122,6 +126,11 @@ export function formatWorkRecordContent(
   record: WorkRecord,
   workTypes: WorkType[] = [],
 ) {
+  const detailSummary = formatDetailsSummary(record);
+  if (detailSummary) {
+    return detailSummary;
+  }
+
   const template = getRecordTemplate(record, workTypes);
   const fields = getWorkTypeTemplateConfig(template).fields.filter(
     (field) => field !== "memo" && field !== "worker",
@@ -143,4 +152,84 @@ export function formatWorkRecordContent(
   }
 
   return details.join(" / ") || record.memo || "-";
+}
+
+function formatDetailsSummary(record: WorkRecord) {
+  if (!record.details) {
+    return null;
+  }
+
+  if (record.workType === "입고") {
+    return [
+      formatDetail(
+        "입고 유형",
+        formatInboundType(readDetail(record, "inboundType")),
+      ),
+      formatDetail("품종", readDetail(record, "varietyName")),
+      formatInboundQuantity(record),
+      formatDetail("화분", readDetail(record, "potSize")),
+      formatDetail("임시 위치", readDetail(record, "tempLocation")),
+    ]
+      .filter(Boolean)
+      .join(" / ");
+  }
+
+  if (record.workType === "포트 작업") {
+    return [
+      formatDetail("품종", readDetail(record, "varietyName")),
+      formatDetail("수량", readDetail(record, "actualQuantity")),
+      formatDetail("화분", readDetail(record, "potSize")),
+    ]
+      .filter(Boolean)
+      .join(" / ");
+  }
+
+  return null;
+}
+
+function formatInboundQuantity(record: WorkRecord) {
+  const bottleCount = readDetail(record, "bottleCount");
+  if (bottleCount) {
+    return formatDetail("수량", `${bottleCount}병`);
+  }
+
+  const actualQuantity = readDetail(record, "actualQuantity");
+  if (actualQuantity) {
+    return formatDetail("수량", `${actualQuantity}분`);
+  }
+
+  const estimatedQuantity = readDetail(record, "estimatedQuantity");
+  if (estimatedQuantity) {
+    return formatDetail("예상 수량", `${estimatedQuantity}분`);
+  }
+
+  return null;
+}
+
+function formatDetail(label: string, value: string | null) {
+  return value ? `${label} ${value}` : null;
+}
+
+function readDetail(record: WorkRecord, key: string) {
+  const value = record.details?.[key];
+  if (value === null || value === undefined || value === "") {
+    return null;
+  }
+  return String(value);
+}
+
+function formatInboundType(value: string | null) {
+  if (!value) {
+    return null;
+  }
+
+  return (
+    {
+      FLASK_SEEDLING: "유리병 모종",
+      POTTED_SEEDLING: "포트 모종",
+      PRODUCT_POT: "상품분",
+      SAMPLE: "샘플",
+      ETC: "기타",
+    }[value] ?? value
+  );
 }

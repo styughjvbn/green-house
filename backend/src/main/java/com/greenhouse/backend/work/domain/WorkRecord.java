@@ -15,6 +15,9 @@ import lombok.NoArgsConstructor;
 import lombok.AccessLevel;
 
 import java.time.LocalDate;
+import java.util.Map;
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
 
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
@@ -58,6 +61,10 @@ public class WorkRecord extends BaseEntity {
 	@Column(name = "to_bed_zone_id")
 	private Long toBedZoneId;
 
+	@JdbcTypeCode(SqlTypes.JSON)
+	@Column(columnDefinition = "jsonb")
+	private Map<String, Object> details;
+
 	@Column(columnDefinition = "text")
 	private String memo;
 
@@ -71,6 +78,20 @@ public class WorkRecord extends BaseEntity {
 			String quantity,
 			String worker,
 			String memo) {
+		this(workTypeRef, workDate, targetType, targetId, materialName, dilutionRatio, quantity, worker, memo, null);
+	}
+
+	public WorkRecord(
+			WorkType workTypeRef,
+			LocalDate workDate,
+			String targetType,
+			Long targetId,
+			String materialName,
+			String dilutionRatio,
+			String quantity,
+			String worker,
+			String memo,
+			Map<String, Object> details) {
 		this.workTypeRef = workTypeRef;
 		this.workType = workTypeRef.getName();
 		this.workDate = workDate;
@@ -81,6 +102,7 @@ public class WorkRecord extends BaseEntity {
 		this.quantity = quantity;
 		this.worker = worker;
 		this.memo = memo;
+		this.details = details;
 	}
 
 	public static WorkRecord movement(

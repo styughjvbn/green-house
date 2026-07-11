@@ -144,69 +144,94 @@ export function WorkTypeSettingsSection() {
       ) : null}
 
       <div className="mt-5 space-y-2">
-        {workTypes.map((workType, index) => (
-          <div
-            key={getWorkTypeKey(workType, index)}
-            className="grid gap-2 rounded-md border border-[#edf0ec] bg-[#fbfcfa] p-3 lg:grid-cols-[minmax(0,1fr)_180px_110px_100px]"
-          >
-            <input
-              className="rounded-md border border-[#cfd8cc] bg-white px-3 py-2 text-sm font-semibold disabled:bg-[#f0f2ef] disabled:text-[#6a766e]"
-              disabled={saving || workType.systemType}
-              value={workType.name}
-              onChange={(event) =>
-                setWorkTypes((current) =>
-                  current.map((candidate) =>
-                    candidate.id === workType.id
-                      ? { ...candidate, name: event.target.value }
-                      : candidate,
-                  ),
-                )
-              }
-              onBlur={(event) =>
-                updateWorkType(workType, { name: event.target.value.trim() })
-              }
-            />
-            <TemplateSelect
-              disabled={saving || workType.systemType}
-              value={workType.template}
-              onChange={(template) => updateWorkType(workType, { template })}
-            />
-            <button
-              className={`rounded-md border px-3 py-2 text-sm font-semibold ${
-                workType.active
-                  ? "border-[#94c49a] bg-[#eef7ec] text-[#246b38]"
-                  : "border-[#d7ddd4] bg-white text-[#6a766e]"
-              } disabled:opacity-50`}
-              type="button"
-              disabled={saving || workType.systemType}
-              onClick={() =>
-                updateWorkType(workType, { active: !workType.active })
-              }
+        {workTypes.map((workType, index) => {
+          const editable = isEditableWorkType(workType);
+
+          return (
+            <div
+              key={getWorkTypeKey(workType, index)}
+              className="grid gap-2 rounded-md border border-[#edf0ec] bg-[#fbfcfa] p-3 lg:grid-cols-[minmax(0,1fr)_180px_110px_100px]"
             >
-              {workType.active ? "사용" : "미사용"}
-            </button>
-            <div className="flex gap-1">
+              <div>
+                <input
+                  className="w-full rounded-md border border-[#cfd8cc] bg-white px-3 py-2 text-sm font-semibold disabled:bg-[#f0f2ef] disabled:text-[#6a766e]"
+                  disabled={saving || !editable}
+                  value={workType.name}
+                  onChange={(event) =>
+                    setWorkTypes((current) =>
+                      current.map((candidate) =>
+                        candidate.id === workType.id
+                          ? { ...candidate, name: event.target.value }
+                          : candidate,
+                      ),
+                    )
+                  }
+                  onBlur={(event) =>
+                    editable
+                      ? updateWorkType(workType, {
+                          name: event.target.value.trim(),
+                        })
+                      : undefined
+                  }
+                />
+                {!editable ? (
+                  <p className="mt-1 text-xs font-semibold text-[#7a8680]">
+                    자동 생성 작업 유형
+                  </p>
+                ) : null}
+              </div>
+              <TemplateSelect
+                disabled={saving || !editable}
+                value={workType.template}
+                onChange={(template) => updateWorkType(workType, { template })}
+              />
               <button
-                className="h-10 flex-1 rounded-md border border-[#d7ddd4] disabled:opacity-40"
+                className={`rounded-md border px-3 py-2 text-sm font-semibold ${
+                  workType.active
+                    ? "border-[#94c49a] bg-[#eef7ec] text-[#246b38]"
+                    : "border-[#d7ddd4] bg-white text-[#6a766e]"
+                } disabled:opacity-50`}
                 type="button"
-                disabled={saving || index === 0}
-                onClick={() => move(workType, -1)}
+                disabled={saving || !editable}
+                onClick={() =>
+                  updateWorkType(workType, { active: !workType.active })
+                }
               >
-                <ArrowUp className="mx-auto h-4 w-4" aria-hidden="true" />
+                {workType.active ? "사용" : "미사용"}
               </button>
-              <button
-                className="h-10 flex-1 rounded-md border border-[#d7ddd4] disabled:opacity-40"
-                type="button"
-                disabled={saving || index === workTypes.length - 1}
-                onClick={() => move(workType, 1)}
-              >
-                <ArrowDown className="mx-auto h-4 w-4" aria-hidden="true" />
-              </button>
+              <div className="flex gap-1">
+                <button
+                  className="h-10 flex-1 rounded-md border border-[#d7ddd4] disabled:opacity-40"
+                  type="button"
+                  disabled={saving || !editable || index === 0}
+                  onClick={() => move(workType, -1)}
+                >
+                  <ArrowUp className="mx-auto h-4 w-4" aria-hidden="true" />
+                </button>
+                <button
+                  className="h-10 flex-1 rounded-md border border-[#d7ddd4] disabled:opacity-40"
+                  type="button"
+                  disabled={
+                    saving || !editable || index === workTypes.length - 1
+                  }
+                  onClick={() => move(workType, 1)}
+                >
+                  <ArrowDown className="mx-auto h-4 w-4" aria-hidden="true" />
+                </button>
+              </div>
             </div>
-          </div>
-        ))}
+          );
+        })}
       </div>
     </section>
+  );
+}
+
+function isEditableWorkType(workType: WorkType) {
+  return (
+    !workType.systemType &&
+    workType.code !== "INBOUND" &&
+    workType.code !== "POTTING"
   );
 }
 

@@ -48,7 +48,8 @@ public class WorkRecordService {
 				normalize(request.dilutionRatio()),
 				normalize(request.quantity()),
 				normalize(request.worker()),
-				normalize(request.memo()));
+				normalize(request.memo()),
+				request.details());
 		return toResponse(workRecordRepository.save(workRecord));
 	}
 

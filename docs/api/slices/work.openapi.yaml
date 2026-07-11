@@ -214,6 +214,9 @@ components:
           type: string
           maxLength: 1000
           minLength: 0
+        details:
+          type: object
+          additionalProperties: true
       required:
       - targetType
       - workDate
@@ -261,6 +264,9 @@ components:
         toBedZoneId:
           type: integer
           format: int64
+        details:
+          type: object
+          additionalProperties: true
         memo:
           type: string
     WorkTypeCreateRequest:
