@@ -25,7 +25,7 @@ export default function HouseSelectorPanel({
 
   return (
     <section className="flex flex-wrap items-center gap-3 rounded-md border border-[#e2e7df] bg-white px-3 py-2 shadow-sm">
-      <div className="flex h-9 overflow-hidden rounded-md border border-[#dfe5dc] bg-white">
+      <div className="flex h-8 overflow-hidden rounded-md border border-[#dfe5dc] bg-white">
         <span className="flex items-center border-r border-[#e6ebe3] bg-[#fbfcfa] px-3 text-xs font-semibold text-[#66746b]">
           현재 동 선택
         </span>
@@ -47,7 +47,7 @@ export default function HouseSelectorPanel({
 
       <div className="min-w-3 flex-1" />
       <button
-        className={`inline-flex h-9 touch-manipulation items-center gap-2 rounded-md border border-[#dfe5dc] px-4 text-sm font-semibold shadow-sm ${
+        className={`inline-flex h-8 touch-manipulation items-center gap-2 rounded-md border border-[#dfe5dc] px-4 text-sm font-semibold shadow-sm ${
           showScale ? "bg-[#159447] text-white" : "bg-white text-[#344138]"
         }`}
         onClick={onToggleScale}
@@ -57,7 +57,7 @@ export default function HouseSelectorPanel({
         {showScale ? "눈금 끄기" : "눈금 켜기"}
       </button>
       <button
-        className={`inline-flex h-9 touch-manipulation items-center gap-2 rounded-md border border-[#dfe5dc] px-4 text-sm font-semibold shadow-sm ${
+        className={`inline-flex h-8 touch-manipulation items-center gap-2 rounded-md border border-[#dfe5dc] px-4 text-sm font-semibold shadow-sm ${
           placementEditMode
             ? "bg-[#159447] text-white"
             : "bg-white text-[#344138]"
@@ -69,7 +69,7 @@ export default function HouseSelectorPanel({
         {placementEditMode ? "배치 수정 끄기" : "배치 수정 켜기"}
       </button>
 
-      <div className="flex h-9 items-center gap-5 rounded-md border border-[#e2e7df] bg-white px-4 text-xs font-semibold text-[#435047] shadow-sm">
+      <div className="flex h-8 items-center gap-5 rounded-md border border-[#e2e7df] bg-white px-4 text-xs font-semibold text-[#435047] shadow-sm">
         <StatusDot color="#159447" label="정상" />
         <StatusDot color="#f59e0b" label="주의" />
         <StatusDot color="#e52d2d" label="이상" />
