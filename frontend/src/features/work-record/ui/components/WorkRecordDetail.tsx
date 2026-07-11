@@ -120,13 +120,6 @@ export function WorkRecordDetail({
           </>
         ) : null}
       </dl>
-
-      <button
-        className="mt-7 w-full rounded-md border border-[#dfe5dc] px-4 py-3 text-sm font-semibold text-[#344138]"
-        type="button"
-      >
-        작업 이력 출력 (A5)
-      </button>
     </aside>
   );
 }
