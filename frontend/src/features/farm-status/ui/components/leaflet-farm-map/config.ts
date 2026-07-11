@@ -12,6 +12,7 @@ export const HOUSE_WIDTH = 124;
 export const BED_VISIBLE_ZOOM = -0.3;
 export const ZONE_VISIBLE_ZOOM = 0.5;
 export const ORCHID_VISIBLE_ZOOM = 1.3;
+export const WHEEL_PX_PER_ZOOM_LEVEL = 180;
 
 export const FARM_BOUNDS: LatLngBoundsExpression = [
   [0, 0],

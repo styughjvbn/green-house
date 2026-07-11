@@ -28,6 +28,7 @@ import {
   INITIAL_ZOOM,
   MAX_ZOOM,
   MIN_ZOOM,
+  WHEEL_PX_PER_ZOOM_LEVEL,
   WORLD_HEIGHT,
   WORLD_WIDTH,
 } from "./leaflet-farm-map/config";
@@ -132,7 +133,7 @@ export default function LeafletFarmMap({
         maxZoom={MAX_ZOOM}
         minZoom={MIN_ZOOM}
         scrollWheelZoom
-        wheelPxPerZoomLevel={95}
+        wheelPxPerZoomLevel={WHEEL_PX_PER_ZOOM_LEVEL}
         zoom={INITIAL_ZOOM}
         zoomControl={false}
         zoomDelta={0.35}
