@@ -21,9 +21,12 @@ import com.greenhouse.backend.farm.repository.VarietyRepository;
 import com.greenhouse.backend.work.application.SystemWorkCleanupService;
 import com.greenhouse.backend.work.application.SystemWorkRecorder;
 
+import java.math.BigDecimal;
+import java.time.LocalDate;
+import java.util.LinkedHashMap;
+import java.util.Map;
 import lombok.RequiredArgsConstructor;
 
-import java.time.LocalDate;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
@@ -37,7 +40,7 @@ public class InboundRecordService {
 	private static final String DEFAULT_ORCHID_STATUS = "정상";
 	private static final String INBOUND_WORK_TYPE_CODE = "INBOUND";
 	private static final String POTTING_WORK_TYPE_CODE = "POTTING";
-	private static final String INBOUND_RECORD_TARGET_TYPE = "INBOUND_RECORD";
+	private static final String FARM_TARGET_TYPE = "FARM";
 
 	private final InboundRecordRepository inboundRecordRepository;
 	private final VarietyRepository varietyRepository;
@@ -113,15 +116,16 @@ public class InboundRecordService {
 			saved.markPottingPending(status);
 		}
 		recordWork(
-				INBOUND_WORK_TYPE_CODE,
-				saved.getInboundDate(),
-				INBOUND_RECORD_TARGET_TYPE,
-				saved.getId(),
-				saved.getVariety().getName(),
-				resolveWorkQuantity(saved.getInboundType(), saved.getBottleCount(), saved.getActualQuantity(),
-						saved.getEstimatedQuantity()),
-				saved.getWorker(),
-				saved.getMemo());
+					INBOUND_WORK_TYPE_CODE,
+					saved.getInboundDate(),
+					FARM_TARGET_TYPE,
+					null,
+					saved.getVariety().getName(),
+					resolveWorkQuantity(saved.getInboundType(), saved.getBottleCount(), saved.getActualQuantity(),
+							saved.getEstimatedQuantity()),
+					saved.getWorker(),
+					inboundWorkMemo(saved),
+					inboundWorkDetails(saved));
 		return InboundRecordResponse.from(findInboundRecord(saved.getId()));
 	}
 
@@ -159,7 +163,10 @@ public class InboundRecordService {
 			throw new IllegalArgumentException("이미 난 묶음이 생성된 입고 기록입니다.");
 		}
 		BedZone bedZone = findBedZone(request.bedZoneId());
-		OrchidPlacementPolicy.PlacementRange placementRange = orchidPlacementPolicy.findFirstAvailableSingleSlot(bedZone);
+		OrchidPlacementPolicy.PlacementRange placementRange = resolvePlacementRange(
+				bedZone,
+				request.startPosition(),
+				request.endPosition());
 		OrchidGroup orchidGroup = new OrchidGroup(
 				bedZone,
 				inboundRecord.getVariety().getGenus(),
@@ -210,7 +217,8 @@ public class InboundRecordService {
 				inboundRecord.getVariety().getName(),
 				String.valueOf(request.actualQuantity()),
 				normalize(request.worker()),
-				normalize(request.memo()));
+				normalize(request.memo()),
+				pottingWorkDetails(inboundRecord, orchidGroup, request));
 		return InboundRecordResponse.from(findInboundRecord(inboundRecord.getId()));
 	}
 
@@ -249,8 +257,8 @@ public class InboundRecordService {
 			throw new IllegalArgumentException("품종을 선택하거나 새 품종을 입력해야 합니다.");
 		}
 		if (request.inboundType() == InboundType.FLASK_SEEDLING) {
-			if (request.bottleCount() == null || request.estimatedQuantity() == null) {
-				throw new IllegalArgumentException("유리병 모종은 병 수와 예상 수량이 필요합니다.");
+			if (request.estimatedQuantity() == null) {
+				throw new IllegalArgumentException("유리병 모종은 예상 수량이 필요합니다.");
 			}
 			if (status == InboundStatus.POTTING_PENDING && request.pottingDueDate() == null) {
 				throw new IllegalArgumentException("포트 작업 대기 상태는 예정일이 필요합니다.");
@@ -308,7 +316,10 @@ public class InboundRecordService {
 	}
 
 	private OrchidGroup createPlacedOrchidGroup(Variety variety, InboundRecordCreateRequest request, BedZone bedZone) {
-		OrchidPlacementPolicy.PlacementRange placementRange = orchidPlacementPolicy.findFirstAvailableSingleSlot(bedZone);
+		OrchidPlacementPolicy.PlacementRange placementRange = resolvePlacementRange(
+				bedZone,
+				request.startPosition(),
+				request.endPosition());
 		OrchidGroup orchidGroup = new OrchidGroup(
 				bedZone,
 				variety.getGenus(),
@@ -336,6 +347,19 @@ public class InboundRecordService {
 		return orchidGroup;
 	}
 
+	private OrchidPlacementPolicy.PlacementRange resolvePlacementRange(
+			BedZone bedZone,
+			BigDecimal requestedStartPosition,
+			BigDecimal requestedEndPosition) {
+		if (requestedStartPosition == null && requestedEndPosition == null) {
+			return orchidPlacementPolicy.findFirstAvailableSingleSlot(bedZone);
+		}
+		BigDecimal startPosition = orchidPlacementPolicy.normalizeNumber(requestedStartPosition);
+		BigDecimal endPosition = orchidPlacementPolicy.normalizeNumber(requestedEndPosition);
+		orchidPlacementPolicy.validatePlacement(bedZone, startPosition, endPosition, null);
+		return new OrchidPlacementPolicy.PlacementRange(startPosition, endPosition);
+	}
+
 	private void recordWork(
 			String workTypeCode,
 			LocalDate workDate,
@@ -345,6 +369,19 @@ public class InboundRecordService {
 			String quantity,
 			String worker,
 			String memo) {
+		recordWork(workTypeCode, workDate, targetType, targetId, materialName, quantity, worker, memo, null);
+	}
+
+	private void recordWork(
+			String workTypeCode,
+			LocalDate workDate,
+			String targetType,
+			Long targetId,
+			String materialName,
+			String quantity,
+			String worker,
+			String memo,
+			Map<String, Object> details) {
 		systemWorkRecorder.record(
 				workTypeCode,
 				workDate,
@@ -353,7 +390,91 @@ public class InboundRecordService {
 				normalize(materialName),
 				normalize(quantity),
 				normalize(worker),
-				normalize(memo));
+				normalize(memo),
+				details);
+	}
+
+	private Map<String, Object> inboundWorkDetails(InboundRecord record) {
+		Map<String, Object> details = new LinkedHashMap<>();
+		putDetail(details, "inboundRecordId", record.getId());
+		putDetail(details, "inboundType", record.getInboundType());
+		putDetail(details, "status", record.getStatus());
+		putDetail(details, "varietyId", record.getVariety().getId());
+		putDetail(details, "genus", record.getVariety().getGenus());
+		putDetail(details, "varietyName", record.getVariety().getName());
+		putDetail(details, "bottleCount", record.getBottleCount());
+		putDetail(details, "estimatedQuantity", record.getEstimatedQuantity());
+		putDetail(details, "actualQuantity", record.getActualQuantity());
+		putDetail(details, "tempLocation", record.getTempLocation());
+		putDetail(details, "pottingDueDate", record.getPottingDueDate());
+		putDetail(details, "potSize", record.getPotSize());
+		putDetail(details, "ageYear", record.getAgeYear());
+		putDetail(details, "growthStage", record.getGrowthStage());
+		putDetail(details, "placementType", record.getPlacementType());
+		putDetail(details, "trayCount", record.getTrayCount());
+		putDetail(details, "bedZoneId", record.getBedZone() == null ? null : record.getBedZone().getId());
+		putDetail(details, "orchidGroupId",
+				record.getCreatedOrchidGroup() == null ? null : record.getCreatedOrchidGroup().getId());
+		return details;
+	}
+
+	private String inboundWorkMemo(InboundRecord record) {
+		String autoMemo = String.join("\n",
+				"입고 유형: " + formatInboundType(record.getInboundType()),
+				"품종: " + record.getVariety().getName(),
+				"병수: " + formatBottleCount(record.getBottleCount()),
+				"상태: " + formatInboundStatus(record.getStatus()));
+		return appendMemo(record.getMemo(), autoMemo);
+	}
+
+	private String formatInboundType(InboundType inboundType) {
+		return switch (inboundType) {
+			case FLASK_SEEDLING -> "유리병 모종";
+			case POTTED_SEEDLING -> "포트 모종";
+			case PRODUCT_POT -> "상품분";
+			case SAMPLE -> "샘플";
+			case ETC -> "기타";
+		};
+	}
+
+	private String formatInboundStatus(InboundStatus status) {
+		return switch (status) {
+			case TEMP_STORED -> "임시보관";
+			case POTTING_PENDING -> "포트작업대기";
+			case POTTED -> "포트작업완료";
+			case PLACED -> "배치완료";
+			case CANCELED -> "취소";
+		};
+	}
+
+	private String formatBottleCount(Integer bottleCount) {
+		return bottleCount == null ? "-" : bottleCount + "병";
+	}
+
+	private Map<String, Object> pottingWorkDetails(
+			InboundRecord inboundRecord,
+			OrchidGroup orchidGroup,
+			InboundRecordPottingRequest request) {
+		Map<String, Object> details = new LinkedHashMap<>();
+		putDetail(details, "inboundRecordId", inboundRecord.getId());
+		putDetail(details, "orchidGroupId", orchidGroup.getId());
+		putDetail(details, "varietyId", inboundRecord.getVariety().getId());
+		putDetail(details, "genus", inboundRecord.getVariety().getGenus());
+		putDetail(details, "varietyName", inboundRecord.getVariety().getName());
+		putDetail(details, "actualQuantity", request.actualQuantity());
+		putDetail(details, "potSize", firstNonBlank(request.potSize(), inboundRecord.getPotSize()));
+		putDetail(details, "ageYear", request.ageYear());
+		putDetail(details, "growthStage", normalize(request.growthStage()));
+		putDetail(details, "placementType", normalize(request.placementType()));
+		putDetail(details, "trayCount", request.trayCount());
+		putDetail(details, "bedZoneId", request.bedZoneId());
+		return details;
+	}
+
+	private void putDetail(Map<String, Object> details, String key, Object value) {
+		if (value != null) {
+			details.put(key, value);
+		}
 	}
 
 	private int resolveQuantity(Integer actualQuantity, Integer estimatedQuantity) {

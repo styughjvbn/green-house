@@ -4,14 +4,18 @@ import type { ReactNode } from "react";
 
 export default function TextField({
   label,
+  min,
   onChange,
   required = false,
+  step,
   type = "text",
   value,
 }: {
   label: string;
+  min?: number;
   onChange: (value: string) => void;
   required?: boolean;
+  step?: number;
   type?: "date" | "number" | "text";
   value: string;
 }) {
@@ -20,8 +24,9 @@ export default function TextField({
       <span className="text-sm font-semibold text-[#435047]">{label}</span>
       <input
         className="mt-1 w-full rounded-md border border-[#cfd8cc] px-2 py-1.5 text-sm"
-        min={type === "number" ? 0 : undefined}
+        min={type === "number" ? (min ?? 0) : undefined}
         required={required}
+        step={type === "number" ? step : undefined}
         type={type}
         value={value}
         onChange={(event) => onChange(event.target.value)}

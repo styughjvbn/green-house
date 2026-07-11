@@ -41,24 +41,3 @@ export default function ActionButton({
     </button>
   );
 }
-
-export function DisabledAction({
-  icon,
-  label,
-}: {
-  icon?: ReactNode;
-  label: string;
-}) {
-  return (
-    <button
-      className="inline-flex h-8 min-h-0 touch-manipulation items-center justify-center gap-1.5 rounded-md border border-[#d7ddd4] bg-white px-3 py-0 text-sm leading-none font-semibold text-[#435047] opacity-60"
-      disabled
-      type="button"
-    >
-      {icon ? (
-        <span className="flex size-4 items-center justify-center">{icon}</span>
-      ) : null}
-      <span>{label}</span>
-    </button>
-  );
-}

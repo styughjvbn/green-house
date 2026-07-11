@@ -111,6 +111,8 @@ class FarmStructureIntegrationTests extends AbstractBackendIntegrationTest {
 				.andExpect(status().isOk())
 				.andExpect(jsonPath("$.data.houses", hasSize(15)))
 				.andExpect(jsonPath("$.data.houses[0].houseNumber").value(1))
+				.andExpect(jsonPath("$.data.houses[0].physicalBeds", hasSize(3)))
+				.andExpect(jsonPath("$.data.houses[0].physicalBeds[0].positionUnitCount").exists())
 				.andExpect(jsonPath("$.data.houses[2].houseNumber").value(3))
 				.andExpect(jsonPath("$.data.houses[2].orchidGroupCount").value(3));
 	}

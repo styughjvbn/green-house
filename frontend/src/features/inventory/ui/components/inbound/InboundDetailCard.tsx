@@ -12,6 +12,8 @@ import {
   toOptionalNumber,
 } from "../../../lib/inboundUi";
 import { DetailRow, Field, inputClass } from "../InventoryPrimitives";
+import { PotSizeInput } from "../PotSizeInput";
+import { InboundPlacementTypeField } from "./InboundPlacementTypeField";
 
 export function InboundDetailCard({
   record,
@@ -212,18 +214,16 @@ function InboundEditForm({
           }
         />
       </Field>
-      <Field label="화분 크기">
-        <input
-          className={inputClass}
-          value={editForm.potSize ?? ""}
-          onChange={(event) =>
-            onChange((current) => ({
-              ...current,
-              potSize: event.target.value,
-            }))
-          }
-        />
-      </Field>
+      <PotSizeInput
+        label="화분 크기"
+        value={editForm.potSize ?? ""}
+        onChange={(value) =>
+          onChange((current) => ({
+            ...current,
+            potSize: value,
+          }))
+        }
+      />
       <Field label="초기 년생">
         <input
           className={inputClass}
@@ -237,43 +237,15 @@ function InboundEditForm({
           }
         />
       </Field>
-      <Field label="생육 단계">
-        <input
-          className={inputClass}
-          value={editForm.growthStage ?? ""}
-          onChange={(event) =>
-            onChange((current) => ({
-              ...current,
-              growthStage: event.target.value,
-            }))
-          }
-        />
-      </Field>
-      <Field label="배치 형태">
-        <input
-          className={inputClass}
-          value={editForm.placementType ?? ""}
-          onChange={(event) =>
-            onChange((current) => ({
-              ...current,
-              placementType: event.target.value,
-            }))
-          }
-        />
-      </Field>
-      <Field label="판 수">
-        <input
-          className={inputClass}
-          type="number"
-          value={editForm.trayCount ?? ""}
-          onChange={(event) =>
-            onChange((current) => ({
-              ...current,
-              trayCount: toOptionalNumber(event.target.value),
-            }))
-          }
-        />
-      </Field>
+      <InboundPlacementTypeField
+        value={editForm.placementType ?? ""}
+        onChange={(value) =>
+          onChange((current) => ({
+            ...current,
+            placementType: value,
+          }))
+        }
+      />
       <Field label="작업자">
         <input
           className={inputClass}
@@ -331,9 +303,7 @@ function InboundDetailView({ record }: { record: InboundRecord }) {
       <DetailRow label="포트 작업일" value={record.pottingDate} />
       <DetailRow label="화분 크기" value={record.potSize} />
       <DetailRow label="초기 년생" value={record.ageYear} />
-      <DetailRow label="생육 단계" value={record.growthStage} />
-      <DetailRow label="배치 형태" value={record.placementType} />
-      <DetailRow label="판 수" value={record.trayCount} />
+      <DetailRow label="배치 규격" value={record.placementType} />
       <DetailRow label="작업자" value={record.worker} />
       <DetailRow
         label="생성 난 묶음"

@@ -20,6 +20,8 @@ import lombok.AccessLevel;
 public class WorkType extends BaseEntity {
 
 	public static final String MOVEMENT_CODE = "MOVEMENT";
+	public static final String INBOUND_CODE = "INBOUND";
+	public static final String POTTING_CODE = "POTTING";
 
 	@Id
 	@GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -74,5 +76,18 @@ public class WorkType extends BaseEntity {
 
 	public void changeSortOrder(int sortOrder) {
 		this.sortOrder = sortOrder;
+	}
+
+	public boolean isManualCreateAllowed() {
+		return active
+				&& !systemType
+				&& !INBOUND_CODE.equals(code)
+				&& !POTTING_CODE.equals(code);
+	}
+
+	public boolean isSettingsEditable() {
+		return !systemType
+				&& !INBOUND_CODE.equals(code)
+				&& !POTTING_CODE.equals(code);
 	}
 }

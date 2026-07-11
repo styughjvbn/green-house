@@ -5,6 +5,7 @@ import type {
   FarmStatusOrchidGroupList,
   FarmStatusTargetType,
   FarmStatusZoomData,
+  OrchidGroup,
 } from "@/entities/farm/types";
 
 type ApiPayload<T> = {
@@ -76,4 +77,23 @@ export function getFarmStatusHouseZoom(houseId: number) {
   return fetchApi<FarmStatusZoomData>(
     `/farm-status/zoom?level=HOUSE&houseId=${houseId}`,
   );
+}
+
+export function searchFarmStatusOrchidGroups({
+  keyword,
+  status,
+}: {
+  keyword: string;
+  status: string;
+}) {
+  const params = new URLSearchParams();
+  if (keyword.trim()) {
+    params.set("keyword", keyword.trim());
+  }
+  if (status.trim()) {
+    params.set("status", status.trim());
+  }
+
+  const query = params.toString();
+  return fetchApi<OrchidGroup[]>(`/orchid-groups${query ? `?${query}` : ""}`);
 }

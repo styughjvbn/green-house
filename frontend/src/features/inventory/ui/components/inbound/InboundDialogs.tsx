@@ -3,6 +3,8 @@
 import type { House } from "@/entities/farm/types";
 import { X } from "lucide-react";
 import type { ReactNode } from "react";
+import type { CSSObjectWithLabel, SingleValue } from "react-select";
+import Select from "react-select";
 import { useState } from "react";
 import type {
   InboundPottingPayload,
@@ -11,12 +13,14 @@ import type {
   InboundType,
   Variety,
 } from "../../../model/types";
-import {
-  flattenZones,
-  INBOUND_TYPE_LABELS,
-  toNumber,
-} from "../../../lib/inboundUi";
+import { INBOUND_TYPE_LABELS, toNumber } from "../../../lib/inboundUi";
 import { Field, inputClass } from "../InventoryPrimitives";
+import { PotSizeInput } from "../PotSizeInput";
+import {
+  InboundPlacementField,
+  type InboundPlacementSelection,
+} from "./InboundPlacementPicker";
+import { InboundPlacementTypeField } from "./InboundPlacementTypeField";
 
 export function InboundCreateDialog({
   open,
@@ -49,17 +53,20 @@ export function InboundCreateDialog({
   const [pottingDueDate, setPottingDueDate] = useState("");
   const [potSize, setPotSize] = useState("");
   const [ageYear, setAgeYear] = useState("");
-  const [growthStage, setGrowthStage] = useState("");
   const [placementType, setPlacementType] = useState("");
-  const [trayCount, setTrayCount] = useState("");
-  const [bedZoneId, setBedZoneId] = useState("");
+  const [placement, setPlacement] = useState<InboundPlacementSelection | null>(
+    null,
+  );
   const [worker, setWorker] = useState("");
   const [memo, setMemo] = useState("");
 
   if (!open) return null;
 
-  const zoneOptions = flattenZones(houses);
   const flaskType = inboundType === "FLASK_SEEDLING";
+  const selectedVariety =
+    varieties.find((variety) => variety.id === varietyId) ??
+    varieties[0] ??
+    null;
 
   return (
     <DialogShell title="새 입고 등록" onClose={onClose}>
@@ -67,10 +74,15 @@ export function InboundCreateDialog({
         className="mt-4 grid gap-3 md:grid-cols-2"
         onSubmit={(event) => {
           event.preventDefault();
+          if (!flaskType && !placement) {
+            window.alert("배치 위치를 선택해주세요.");
+            return;
+          }
           void onSubmit({
             inboundDate,
             inboundType,
-            varietyId: varietyMode === "existing" ? varietyId : undefined,
+            varietyId:
+              varietyMode === "existing" ? selectedVariety?.id : undefined,
             newVariety:
               varietyMode === "new"
                 ? {
@@ -87,10 +99,10 @@ export function InboundCreateDialog({
             pottingDueDate: pottingDueDate || undefined,
             potSize: potSize.trim() || undefined,
             ageYear: toNumber(ageYear),
-            growthStage: growthStage.trim() || undefined,
             placementType: placementType.trim() || undefined,
-            trayCount: toNumber(trayCount),
-            bedZoneId: toNumber(bedZoneId),
+            bedZoneId: placement?.bedZoneId,
+            startPosition: placement?.startPosition,
+            endPosition: placement?.endPosition,
             worker: worker.trim() || undefined,
             memo: memo.trim() || undefined,
           });
@@ -133,19 +145,11 @@ export function InboundCreateDialog({
           </select>
         </Field>
         {varietyMode === "existing" ? (
-          <Field label="품종">
-            <select
-              className={inputClass}
-              value={varietyId}
-              onChange={(event) => setVarietyId(Number(event.target.value))}
-            >
-              {varieties.map((item) => (
-                <option key={item.id} value={item.id}>
-                  {item.genus} / {item.name}
-                </option>
-              ))}
-            </select>
-          </Field>
+          <VarietySearchField
+            selectedVariety={selectedVariety}
+            varieties={varieties}
+            onSelect={(variety) => setVarietyId(variety.id)}
+          />
         ) : (
           <div className="grid gap-3 md:col-span-2 md:grid-cols-3">
             <Field label="새 속">
@@ -164,13 +168,11 @@ export function InboundCreateDialog({
                 onChange={(event) => setNewName(event.target.value)}
               />
             </Field>
-            <Field label="기본 화분">
-              <input
-                className={inputClass}
-                value={newPotSize}
-                onChange={(event) => setNewPotSize(event.target.value)}
-              />
-            </Field>
+            <PotSizeInput
+              label="기본 화분"
+              value={newPotSize}
+              onChange={setNewPotSize}
+            />
           </div>
         )}
         {flaskType ? (
@@ -220,13 +222,11 @@ export function InboundCreateDialog({
                 onChange={(event) => setActualQuantity(event.target.value)}
               />
             </Field>
-            <Field label="화분 크기">
-              <input
-                className={inputClass}
-                value={potSize}
-                onChange={(event) => setPotSize(event.target.value)}
-              />
-            </Field>
+            <PotSizeInput
+              label="화분 크기"
+              value={potSize}
+              onChange={setPotSize}
+            />
             <Field label="초기 년생">
               <input
                 className={inputClass}
@@ -235,43 +235,18 @@ export function InboundCreateDialog({
                 onChange={(event) => setAgeYear(event.target.value)}
               />
             </Field>
-            <Field label="생육 단계">
-              <input
-                className={inputClass}
-                value={growthStage}
-                onChange={(event) => setGrowthStage(event.target.value)}
-              />
-            </Field>
-            <Field label="배치 형태">
-              <input
-                className={inputClass}
-                value={placementType}
-                onChange={(event) => setPlacementType(event.target.value)}
-              />
-            </Field>
-            <Field label="판 수">
-              <input
-                className={inputClass}
-                type="number"
-                value={trayCount}
-                onChange={(event) => setTrayCount(event.target.value)}
-              />
-            </Field>
-            <Field label="배치 위치">
-              <select
-                className={inputClass}
-                required
-                value={bedZoneId}
-                onChange={(event) => setBedZoneId(event.target.value)}
-              >
-                <option value="">선택</option>
-                {zoneOptions.map((zone) => (
-                  <option key={zone.id} value={zone.id}>
-                    {zone.label}
-                  </option>
-                ))}
-              </select>
-            </Field>
+            <InboundPlacementField
+              houses={houses}
+              value={placement}
+              onChange={(nextPlacement) => {
+                setPlacement(nextPlacement);
+                setPlacementType("");
+              }}
+            />
+            <InboundPlacementTypeField
+              value={placementType}
+              onChange={setPlacementType}
+            />
           </>
         )}
         <Field label="작업자">
@@ -309,6 +284,108 @@ export function InboundCreateDialog({
   );
 }
 
+type VarietySelectOption = {
+  label: string;
+  value: number;
+  variety: Variety;
+};
+
+function VarietySearchField({
+  selectedVariety,
+  varieties,
+  onSelect,
+}: {
+  selectedVariety: Variety | null;
+  varieties: Variety[];
+  onSelect: (variety: Variety) => void;
+}) {
+  const options = varieties.map(toVarietyOption);
+  const selectedOption = selectedVariety
+    ? toVarietyOption(selectedVariety)
+    : null;
+
+  function handleChange(option: SingleValue<VarietySelectOption>) {
+    if (!option) {
+      return;
+    }
+    onSelect(option.variety);
+  }
+
+  return (
+    <label className="space-y-1 text-xs font-semibold text-[#425047]">
+      <span>품종</span>
+      <Select<VarietySelectOption, false>
+        isClearable={false}
+        noOptionsMessage={() => "검색 결과가 없습니다."}
+        options={options}
+        placeholder="품종명 또는 속명 검색"
+        styles={selectStyles}
+        value={selectedOption}
+        onChange={handleChange}
+      />
+    </label>
+  );
+}
+
+function toVarietyOption(variety: Variety): VarietySelectOption {
+  return {
+    label: `${variety.name} ${variety.genus}`,
+    value: variety.id,
+    variety,
+  };
+}
+
+const selectStyles = {
+  control: (base: CSSObjectWithLabel, state: { isFocused: boolean }) => ({
+    ...base,
+    minHeight: 38,
+    borderRadius: 6,
+    borderColor: state.isFocused ? "#159447" : "#d7ddd8",
+    boxShadow: state.isFocused ? "0 0 0 1px #159447" : "none",
+    "&:hover": {
+      borderColor: state.isFocused ? "#159447" : "#d7ddd8",
+    },
+  }),
+  valueContainer: (base: CSSObjectWithLabel) => ({
+    ...base,
+    padding: "0 10px",
+  }),
+  placeholder: (base: CSSObjectWithLabel) => ({
+    ...base,
+    color: "#7d887f",
+    fontSize: 14,
+  }),
+  input: (base: CSSObjectWithLabel) => ({
+    ...base,
+    fontSize: 14,
+  }),
+  singleValue: (base: CSSObjectWithLabel) => ({
+    ...base,
+    color: "#17251b",
+    fontSize: 14,
+    fontWeight: 600,
+  }),
+  menu: (base: CSSObjectWithLabel) => ({
+    ...base,
+    borderRadius: 8,
+    overflow: "hidden",
+    zIndex: 40,
+  }),
+  option: (
+    base: CSSObjectWithLabel,
+    state: { isSelected: boolean; isFocused: boolean },
+  ) => ({
+    ...base,
+    backgroundColor: state.isSelected
+      ? "#eaf7eb"
+      : state.isFocused
+        ? "#f3f9f3"
+        : "#ffffff",
+    color: "#17251b",
+    padding: "8px 12px",
+  }),
+} satisfies Record<string, unknown>;
+
 export function InboundPottingDialog({
   open,
   record,
@@ -328,16 +405,14 @@ export function InboundPottingDialog({
   const [actualQuantity, setActualQuantity] = useState("");
   const [potSize, setPotSize] = useState("");
   const [ageYear, setAgeYear] = useState("");
-  const [growthStage, setGrowthStage] = useState("");
   const [placementType, setPlacementType] = useState("");
-  const [trayCount, setTrayCount] = useState("");
-  const [bedZoneId, setBedZoneId] = useState("");
+  const [placement, setPlacement] = useState<InboundPlacementSelection | null>(
+    null,
+  );
   const [worker, setWorker] = useState("");
   const [memo, setMemo] = useState("");
 
   if (!open || !record) return null;
-
-  const zoneOptions = flattenZones(houses);
 
   return (
     <DialogShell title="포트 작업 등록" onClose={onClose}>
@@ -345,15 +420,19 @@ export function InboundPottingDialog({
         className="mt-4 grid gap-3 md:grid-cols-2"
         onSubmit={(event) => {
           event.preventDefault();
+          if (!placement) {
+            window.alert("배치 위치를 선택해주세요.");
+            return;
+          }
           void onSubmit({
             pottingDate,
             actualQuantity: Number(actualQuantity),
             potSize: potSize.trim() || undefined,
             ageYear: toNumber(ageYear),
-            growthStage: growthStage.trim() || undefined,
             placementType: placementType.trim() || undefined,
-            trayCount: toNumber(trayCount),
-            bedZoneId: Number(bedZoneId),
+            bedZoneId: placement?.bedZoneId ?? 0,
+            startPosition: placement?.startPosition,
+            endPosition: placement?.endPosition,
             worker: worker.trim() || undefined,
             memo: memo.trim() || undefined,
           });
@@ -380,13 +459,7 @@ export function InboundPottingDialog({
             onChange={(event) => setActualQuantity(event.target.value)}
           />
         </Field>
-        <Field label="화분 크기">
-          <input
-            className={inputClass}
-            value={potSize}
-            onChange={(event) => setPotSize(event.target.value)}
-          />
-        </Field>
+        <PotSizeInput label="화분 크기" value={potSize} onChange={setPotSize} />
         <Field label="초기 년생">
           <input
             className={inputClass}
@@ -395,43 +468,18 @@ export function InboundPottingDialog({
             onChange={(event) => setAgeYear(event.target.value)}
           />
         </Field>
-        <Field label="생육 단계">
-          <input
-            className={inputClass}
-            value={growthStage}
-            onChange={(event) => setGrowthStage(event.target.value)}
-          />
-        </Field>
-        <Field label="배치 형태">
-          <input
-            className={inputClass}
-            value={placementType}
-            onChange={(event) => setPlacementType(event.target.value)}
-          />
-        </Field>
-        <Field label="판 수">
-          <input
-            className={inputClass}
-            type="number"
-            value={trayCount}
-            onChange={(event) => setTrayCount(event.target.value)}
-          />
-        </Field>
-        <Field label="배치 위치">
-          <select
-            className={inputClass}
-            required
-            value={bedZoneId}
-            onChange={(event) => setBedZoneId(event.target.value)}
-          >
-            <option value="">선택</option>
-            {zoneOptions.map((zone) => (
-              <option key={zone.id} value={zone.id}>
-                {zone.label}
-              </option>
-            ))}
-          </select>
-        </Field>
+        <InboundPlacementField
+          houses={houses}
+          value={placement}
+          onChange={(nextPlacement) => {
+            setPlacement(nextPlacement);
+            setPlacementType("");
+          }}
+        />
+        <InboundPlacementTypeField
+          value={placementType}
+          onChange={setPlacementType}
+        />
         <Field label="작업자">
           <input
             className={inputClass}

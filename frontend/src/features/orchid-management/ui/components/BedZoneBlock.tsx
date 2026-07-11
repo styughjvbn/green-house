@@ -3,12 +3,14 @@
 import type { DragEvent, PointerEvent } from "react";
 import type { BedZone } from "@/entities/farm/types";
 import type { DragState } from "../../model/types";
+import { formatCellRange } from "../../lib/orchidManagementUtils";
 import OrchidGroupBlock from "./OrchidGroupBlock";
 
-const MAP_HEIGHT = 420;
+const MAP_HEIGHT = 590;
 
 export default function BedZoneBlock({
   maxPosition,
+  distinguishVarietyColors,
   dragState,
   filteredOrchidGroupIds,
   placementEditMode,
@@ -25,6 +27,7 @@ export default function BedZoneBlock({
   onSelectOrchidGroup,
 }: {
   maxPosition: number | null;
+  distinguishVarietyColors: boolean;
   dragState: DragState;
   filteredOrchidGroupIds: Set<number>;
   placementEditMode: boolean;
@@ -42,7 +45,9 @@ export default function BedZoneBlock({
 }) {
   const dropActive = dragState?.overBedZoneId === zone.id;
   const resolvedMaxPosition = maxPosition && maxPosition > 0 ? maxPosition : 28;
-  const marks = buildMarks(resolvedMaxPosition);
+  const scaleMarks = buildScaleMarks(resolvedMaxPosition);
+  const guideLines = buildGuideLines(resolvedMaxPosition);
+  const cellHeight = MAP_HEIGHT / resolvedMaxPosition;
 
   function handleDragOver(event: DragEvent<HTMLDivElement>) {
     if (!placementEditMode || !dragState || saving) {
@@ -84,19 +89,24 @@ export default function BedZoneBlock({
     >
       <div className="flex gap-0">
         {showScale ? (
-          <div
-            className="relative w-1 shrink-0 py-2"
-            style={{ height: MAP_HEIGHT - 4 }}
-          >
-            {marks.map((mark) => (
+          <div className="relative w-5 shrink-0" style={{ height: MAP_HEIGHT }}>
+            {scaleMarks.map((mark) => (
               <div
-                key={mark.value}
-                className="absolute inset-x-0"
+                key={mark.label}
+                className="absolute right-1 flex w-8 items-center justify-end gap-0.5"
                 style={{ top: `${mark.top}%` }}
               >
-                <span className="absolute left-0 -translate-x-full -translate-y-1/2 text-[10px] font-semibold text-[#6f7b72]">
-                  {resolvedMaxPosition - mark.value}
+                <span className="text-[11px] font-bold text-[#2d5a3b]">
+                  {mark.label}
                 </span>
+                <div
+                  className="relative w-1 shrink-0"
+                  style={{ height: cellHeight }}
+                >
+                  <span className="absolute top-0 left-0 h-full w-[2px] bg-[#d9e2d7]" />
+                  <span className="absolute top-0 left-0 h-[2px] w-full bg-[#d9e2d7]" />
+                  <span className="absolute bottom-0 left-0 h-[2px] w-full bg-[#d9e2d7]" />
+                </div>
               </div>
             ))}
           </div>
@@ -107,15 +117,15 @@ export default function BedZoneBlock({
           style={{ height: MAP_HEIGHT }}
         >
           {showScale
-            ? marks
-                .slice(1, -1)
-                .map((mark) => (
-                  <div
-                    key={`guide-${mark.value}`}
-                    className="absolute inset-x-0 border-t border-dashed border-[#e5e7e4]"
-                    style={{ top: `${mark.top}%` }}
-                  />
-                ))
+            ? guideLines.map((line) => (
+                <div
+                  key={`guide-${line.boundary}`}
+                  className={`absolute inset-x-0 border-t ${
+                    line.major ? "border-[#d9e2d7]" : "border-[#edf1ec]"
+                  }`}
+                  style={{ top: `${line.top}%` }}
+                />
+              ))
             : null}
 
           {zone.orchidGroups.map((orchidGroup) => {
@@ -140,10 +150,12 @@ export default function BedZoneBlock({
                 style={{ top: `${top}%`, height: `${height}%` }}
               >
                 <OrchidGroupBlock
+                  distinguishVarietyColors={distinguishVarietyColors}
                   draggable={matched && placementEditMode && !saving}
                   heightPx={heightPx}
                   muted={!matched}
                   orchidGroup={orchidGroup}
+                  positionLabel={formatCellRange(orchidGroup)}
                   selected={selectedOrchidGroupId === orchidGroup.id}
                   onDragEnd={onDragEnd}
                   onDragStart={() => onDragStart(orchidGroup.id)}
@@ -154,7 +166,7 @@ export default function BedZoneBlock({
           })}
 
           {!zone.orchidGroups.length ? (
-            <div className="absolute inset-x-2 top-3 rounded-lg border border-dashed border-[#d8ded8] bg-[#f6f7f5] px-3 py-3 text-center text-xs font-medium text-[#8a948c]">
+            <div className="absolute inset-x-2 top-2 rounded-lg border border-dashed border-[#d8ded8] bg-[#f6f7f5] px-3 py-3 text-center text-xs font-medium text-[#8a948c]">
               빈 구역
             </div>
           ) : null}
@@ -164,20 +176,36 @@ export default function BedZoneBlock({
   );
 }
 
-function buildMarks(maxPosition: number) {
-  const step = maxPosition / 4;
-  return [0, 1, 2, 3, 4].map((index) => {
-    const value = Math.round(step * index);
-    return {
-      value,
-      top: maxPosition === 0 ? 0 : (value / maxPosition) * 100,
-    };
-  });
-}
-
 function toPercent(value: number, maxPosition: number) {
   if (maxPosition === 0) {
     return 0;
   }
   return (value / maxPosition) * 100;
+}
+
+function buildScaleMarks(maxPosition: number) {
+  const labels = new Set<number>([maxPosition]);
+  for (let value = 5; value < maxPosition; value += 5) {
+    labels.add(value);
+  }
+
+  return [...labels]
+    .sort((a, b) => b - a)
+    .map((label) => ({
+      label,
+      top: toPercent(maxPosition - label, maxPosition),
+    }));
+}
+
+function buildGuideLines(maxPosition: number) {
+  return Array.from({ length: maxPosition - 1 }, (_, index) => {
+    const boundary = index + 1;
+    const label = maxPosition - boundary;
+
+    return {
+      boundary,
+      major: label > 0 && label % 5 === 0,
+      top: toPercent(boundary, maxPosition),
+    };
+  });
 }

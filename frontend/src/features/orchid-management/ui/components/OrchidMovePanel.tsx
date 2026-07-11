@@ -3,7 +3,13 @@
 import { FormEvent, useMemo, useState } from "react";
 import { MapPin } from "lucide-react";
 import type { House, OrchidGroup } from "@/entities/farm/types";
-import { findBedZone } from "../../lib/orchidManagementUtils";
+import {
+  endCellToPosition,
+  findBedZone,
+  positionToEndCell,
+  positionToStartCell,
+  startCellToPosition,
+} from "../../lib/orchidManagementUtils";
 import type { PreciseMovePayload } from "../../model/types";
 import TextField from "./TextField";
 
@@ -30,12 +36,12 @@ export default function OrchidMovePanel({
   const [selectedZoneId, setSelectedZoneId] = useState<number | null>(null);
   const [startPosition, setStartPosition] = useState(
     selectedOrchidGroup.startPosition != null
-      ? String(selectedOrchidGroup.startPosition)
+      ? positionToStartCell(selectedOrchidGroup.startPosition)
       : "",
   );
   const [endPosition, setEndPosition] = useState(
     selectedOrchidGroup.endPosition != null
-      ? String(selectedOrchidGroup.endPosition)
+      ? positionToEndCell(selectedOrchidGroup.endPosition)
       : "",
   );
   const [memo, setMemo] = useState("");
@@ -70,8 +76,8 @@ export default function OrchidMovePanel({
 
     void onMove({
       toBedZoneId: resolvedZoneId,
-      startPosition: toNullableNumber(startPosition),
-      endPosition: toNullableNumber(endPosition),
+      startPosition: startCellToPosition(startPosition),
+      endPosition: endCellToPosition(endPosition),
       memo,
     });
   }
@@ -124,13 +130,17 @@ export default function OrchidMovePanel({
 
         <div className="grid grid-cols-2 gap-2">
           <TextField
-            label="시작 위치"
+            label="시작 칸"
+            min={1}
+            step={1}
             type="number"
             value={startPosition}
             onChange={setStartPosition}
           />
           <TextField
-            label="종료 위치"
+            label="끝 칸"
+            min={1}
+            step={1}
             type="number"
             value={endPosition}
             onChange={setEndPosition}
@@ -187,9 +197,4 @@ function InfoItem({ label, value }: { label: string; value: string }) {
       <strong className="mt-1 block text-[#27332b]">{value}</strong>
     </div>
   );
-}
-
-function toNullableNumber(value: string) {
-  const trimmed = value.trim();
-  return trimmed.length > 0 ? Number(trimmed) : null;
 }

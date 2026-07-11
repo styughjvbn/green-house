@@ -4,6 +4,7 @@ import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
 import java.time.LocalDate;
+import java.util.Map;
 
 public record WorkRecordCreateRequest(
 		@NotNull Long workTypeId,
@@ -14,5 +15,6 @@ public record WorkRecordCreateRequest(
 		@Size(max = 50) String dilutionRatio,
 		@Size(max = 50) String quantity,
 		@Size(max = 50) String worker,
-		@Size(max = 1000) String memo) {
+		@Size(max = 1000) String memo,
+		Map<String, Object> details) {
 }
