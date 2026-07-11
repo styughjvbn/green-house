@@ -6,7 +6,6 @@ import { WorkRecordCreateForm } from "./components/WorkRecordCreateForm";
 import { WorkRecordDetail } from "./components/WorkRecordDetail";
 import { WorkRecordFilters } from "./components/WorkRecordFilters";
 import { WorkRecordList } from "./components/WorkRecordList";
-import { WorkRecordToolbar } from "./components/WorkRecordToolbar";
 
 export function WorkRecordManager(props: WorkRecordManagerProps) {
   const manager = useWorkRecordManager(props);
@@ -20,10 +19,6 @@ export function WorkRecordManager(props: WorkRecordManagerProps) {
         onChange={manager.updateFilters}
         onReset={manager.resetFilters}
       />
-      <WorkRecordToolbar
-        onCreate={() => manager.setShowCreateForm((current) => !current)}
-      />
-
       {manager.showCreateForm ? (
         <WorkRecordCreateForm
           bedZones={manager.bedZones}
@@ -59,6 +54,7 @@ export function WorkRecordManager(props: WorkRecordManagerProps) {
           totalPages={manager.totalPages}
           totalRecords={manager.filteredRecords.length}
           workTypes={props.workTypes}
+          onCreate={() => manager.setShowCreateForm((current) => !current)}
           onPageChange={manager.changePage}
           onPageSizeChange={manager.changePageSize}
           onSelect={manager.selectRecord}

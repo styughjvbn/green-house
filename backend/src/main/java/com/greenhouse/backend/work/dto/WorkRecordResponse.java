@@ -3,6 +3,7 @@ package com.greenhouse.backend.work.dto;
 import com.greenhouse.backend.work.domain.WorkRecord;
 import com.greenhouse.backend.work.domain.WorkTypeTemplate;
 import java.time.LocalDate;
+import java.util.Map;
 
 public record WorkRecordResponse(
 		Long id,
@@ -18,6 +19,7 @@ public record WorkRecordResponse(
 		String worker,
 		Long fromBedZoneId,
 		Long toBedZoneId,
+		Map<String, Object> details,
 		String memo) {
 
 	public static WorkRecordResponse from(WorkRecord workRecord, WorkTypeTemplate template) {
@@ -35,6 +37,7 @@ public record WorkRecordResponse(
 				workRecord.getWorker(),
 				workRecord.getFromBedZoneId(),
 				workRecord.getToBedZoneId(),
+				workRecord.getDetails(),
 				workRecord.getMemo());
 	}
 }
