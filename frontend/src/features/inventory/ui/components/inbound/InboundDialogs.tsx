@@ -19,6 +19,7 @@ import {
   toNumber,
 } from "../../../lib/inboundUi";
 import { Field, inputClass } from "../InventoryPrimitives";
+import { PotSizeInput } from "../PotSizeInput";
 
 export function InboundCreateDialog({
   open,
@@ -159,13 +160,11 @@ export function InboundCreateDialog({
                 onChange={(event) => setNewName(event.target.value)}
               />
             </Field>
-            <Field label="기본 화분">
-              <input
-                className={inputClass}
-                value={newPotSize}
-                onChange={(event) => setNewPotSize(event.target.value)}
-              />
-            </Field>
+            <PotSizeInput
+              label="기본 화분"
+              value={newPotSize}
+              onChange={setNewPotSize}
+            />
           </div>
         )}
         {flaskType ? (
@@ -215,13 +214,11 @@ export function InboundCreateDialog({
                 onChange={(event) => setActualQuantity(event.target.value)}
               />
             </Field>
-            <Field label="화분 크기">
-              <input
-                className={inputClass}
-                value={potSize}
-                onChange={(event) => setPotSize(event.target.value)}
-              />
-            </Field>
+            <PotSizeInput
+              label="화분 크기"
+              value={potSize}
+              onChange={setPotSize}
+            />
             <Field label="초기 년생">
               <input
                 className={inputClass}
@@ -458,13 +455,7 @@ export function InboundPottingDialog({
             onChange={(event) => setActualQuantity(event.target.value)}
           />
         </Field>
-        <Field label="화분 크기">
-          <input
-            className={inputClass}
-            value={potSize}
-            onChange={(event) => setPotSize(event.target.value)}
-          />
-        </Field>
+        <PotSizeInput label="화분 크기" value={potSize} onChange={setPotSize} />
         <Field label="초기 년생">
           <input
             className={inputClass}

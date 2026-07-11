@@ -15,6 +15,7 @@ import {
   inputClass,
   StatusBadge,
 } from "./InventoryPrimitives";
+import { PotSizeInput } from "./PotSizeInput";
 
 export function VarietySection({
   pageData,
@@ -366,18 +367,16 @@ export function VarietySection({
                       }
                     />
                   </Field>
-                  <Field label="기본 화분 크기">
-                    <input
-                      className={inputClass}
-                      value={form.defaultPotSize}
-                      onChange={(event) =>
-                        setForm((current) => ({
-                          ...current,
-                          defaultPotSize: event.target.value,
-                        }))
-                      }
-                    />
-                  </Field>
+                  <PotSizeInput
+                    label="기본 화분 크기"
+                    value={form.defaultPotSize}
+                    onChange={(value) =>
+                      setForm((current) => ({
+                        ...current,
+                        defaultPotSize: value,
+                      }))
+                    }
+                  />
                   <label className="flex items-center gap-2 text-sm font-semibold text-[#425047]">
                     <input
                       checked={form.saleEnabled}

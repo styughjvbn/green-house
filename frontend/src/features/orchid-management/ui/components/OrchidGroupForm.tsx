@@ -305,9 +305,10 @@ function PotSizeField({
       <div className="mt-1 flex overflow-hidden rounded-md border border-[#cfd8cc] bg-white">
         <input
           className="min-w-0 flex-1 px-2 py-1.5 text-sm outline-none"
+          inputMode="decimal"
           value={amount}
           onChange={(event) =>
-            onChange(formatPotSize(event.target.value, unit))
+            onChange(formatPotSize(toNumericInput(event.target.value), unit))
           }
         />
         <select
@@ -331,20 +332,20 @@ function parsePotSize(value: string) {
 
   if (trimmed.toLowerCase().endsWith("cm")) {
     return {
-      amount: trimmed.slice(0, -2).trim(),
+      amount: toNumericInput(trimmed.slice(0, -2).trim()),
       unit: "cm",
     };
   }
 
   if (trimmed.endsWith('"')) {
     return {
-      amount: trimmed.slice(0, -1).trim(),
+      amount: toNumericInput(trimmed.slice(0, -1).trim()),
       unit: '"',
     };
   }
 
   return {
-    amount: trimmed,
+    amount: toNumericInput(trimmed),
     unit: '"',
   };
 }
@@ -352,4 +353,12 @@ function parsePotSize(value: string) {
 function formatPotSize(amount: string, unit: string) {
   const trimmed = amount.trim();
   return trimmed ? `${trimmed}${unit}` : "";
+}
+
+function toNumericInput(value: string) {
+  const numeric = value.replace(/[^\d.]/g, "");
+  const [integerPart, ...decimalParts] = numeric.split(".");
+  return decimalParts.length
+    ? `${integerPart}.${decimalParts.join("")}`
+    : integerPart;
 }

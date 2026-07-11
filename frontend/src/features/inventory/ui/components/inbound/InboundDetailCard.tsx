@@ -12,6 +12,7 @@ import {
   toOptionalNumber,
 } from "../../../lib/inboundUi";
 import { DetailRow, Field, inputClass } from "../InventoryPrimitives";
+import { PotSizeInput } from "../PotSizeInput";
 
 export function InboundDetailCard({
   record,
@@ -212,18 +213,16 @@ function InboundEditForm({
           }
         />
       </Field>
-      <Field label="화분 크기">
-        <input
-          className={inputClass}
-          value={editForm.potSize ?? ""}
-          onChange={(event) =>
-            onChange((current) => ({
-              ...current,
-              potSize: event.target.value,
-            }))
-          }
-        />
-      </Field>
+      <PotSizeInput
+        label="화분 크기"
+        value={editForm.potSize ?? ""}
+        onChange={(value) =>
+          onChange((current) => ({
+            ...current,
+            potSize: value,
+          }))
+        }
+      />
       <Field label="초기 년생">
         <input
           className={inputClass}
