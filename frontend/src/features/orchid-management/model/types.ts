@@ -10,7 +10,21 @@ import type {
   WorkType,
 } from "@/entities/farm/types";
 
-export type OrchidSelection = SelectedBedZone | SelectedOrchidGroup;
+export type SelectedHouse = {
+  type: "HOUSE";
+  houseId: number;
+};
+
+export type SelectedPhysicalBed = {
+  type: "PHYSICAL_BED";
+  physicalBedId: number;
+};
+
+export type OrchidSelection =
+  | SelectedHouse
+  | SelectedPhysicalBed
+  | SelectedBedZone
+  | SelectedOrchidGroup;
 
 export type MutationMode = "CREATE" | "EDIT" | "MOVE" | "WORK_RECORD" | null;
 

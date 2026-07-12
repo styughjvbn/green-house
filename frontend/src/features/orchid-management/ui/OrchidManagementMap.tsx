@@ -155,6 +155,7 @@ export function OrchidManagementMap({
           house={house}
           houses={mapData.houses}
           placementEditMode={orchidManagement.placementEditMode}
+          selected={orchidManagement.selection?.type === "HOUSE"}
           selectedHouseId={house.id}
           showScale={showScale}
           onTogglePlacementEditMode={() => {
@@ -163,6 +164,10 @@ export function OrchidManagementMap({
           }}
           onToggleVarietyColors={toggleVarietyColors}
           onToggleScale={() => setShowScale((current) => !current)}
+          onSelectHouse={() => {
+            clearMapCellRangePick();
+            orchidManagement.actions.selectHouse();
+          }}
         />
         <HouseDetailMap
           distinguishVarietyColors={distinguishVarietyColors}
@@ -183,6 +188,10 @@ export function OrchidManagementMap({
             clearMapCellRangePick();
             orchidManagement.actions.selectBedZone(bedZoneId);
           }}
+          onSelectPhysicalBed={(physicalBedId) => {
+            clearMapCellRangePick();
+            orchidManagement.actions.selectPhysicalBed(physicalBedId);
+          }}
           onSelectOrchidGroup={(orchidGroupId) => {
             clearMapCellRangePick();
             orchidManagement.actions.selectOrchidGroupForEdit(orchidGroupId);
@@ -192,6 +201,8 @@ export function OrchidManagementMap({
           house={house}
           selectedBedZone={orchidManagement.selectedBedZone}
           selectedOrchidGroup={orchidManagement.selectedOrchidGroup}
+          selectedPhysicalBed={orchidManagement.selectedPhysicalBed}
+          selection={orchidManagement.selection}
           workRecordSummary={orchidManagement.workRecordSummary}
           workRecordSummaryLoading={orchidManagement.workRecordSummaryLoading}
         />
@@ -231,6 +242,8 @@ export function OrchidManagementMap({
           saving={orchidManagement.saving}
           selectedBedZone={orchidManagement.selectedBedZone}
           selectedOrchidGroup={orchidManagement.selectedOrchidGroup}
+          selectedPhysicalBed={orchidManagement.selectedPhysicalBed}
+          selection={orchidManagement.selection}
           workRecordForm={orchidManagement.workRecordForm}
           workTypes={workTypes}
           mapCellRangePick={mapCellRangePick}

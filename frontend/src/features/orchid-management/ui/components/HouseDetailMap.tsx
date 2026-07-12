@@ -24,6 +24,7 @@ export default function HouseDetailMap({
   onEnterDropZone,
   onPickCellRange,
   onSelectBedZone,
+  onSelectPhysicalBed,
   onSelectOrchidGroup,
 }: {
   distinguishVarietyColors: boolean;
@@ -41,6 +42,7 @@ export default function HouseDetailMap({
   onEnterDropZone: (bedZoneId: number) => void;
   onPickCellRange: (bedZoneId: number, cell: number) => void;
   onSelectBedZone: (bedZoneId: number) => void;
+  onSelectPhysicalBed: (physicalBedId: number) => void;
   onSelectOrchidGroup: (orchidGroupId: number) => void;
 }) {
   return (
@@ -64,6 +66,7 @@ export default function HouseDetailMap({
             onEnterDropZone={onEnterDropZone}
             onPickCellRange={onPickCellRange}
             onSelectBedZone={onSelectBedZone}
+            onSelectPhysicalBed={onSelectPhysicalBed}
             onSelectOrchidGroup={onSelectOrchidGroup}
           />
         ))}

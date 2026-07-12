@@ -24,6 +24,7 @@ export default function PhysicalBedBlock({
   onEnterDropZone,
   onPickCellRange,
   onSelectBedZone,
+  onSelectPhysicalBed,
   onSelectOrchidGroup,
 }: {
   bed: PhysicalBed;
@@ -41,11 +42,31 @@ export default function PhysicalBedBlock({
   onEnterDropZone: (bedZoneId: number) => void;
   onPickCellRange: (bedZoneId: number, cell: number) => void;
   onSelectBedZone: (bedZoneId: number) => void;
+  onSelectPhysicalBed: (physicalBedId: number) => void;
   onSelectOrchidGroup: (orchidGroupId: number) => void;
 }) {
+  const selected =
+    selection?.type === "PHYSICAL_BED" && selection.physicalBedId === bed.id;
+
   return (
-    <div className="rounded-md border border-[#cfe0cc] bg-[#f7faf6] p-2">
-      <div className="mt-2 grid grid-cols-2 gap-2">
+    <div
+      className={`cursor-pointer rounded-md border p-2 transition ${
+        selected
+          ? "border-[#246df2] bg-[#f4f8ff] ring-2 ring-[#246df2]/20"
+          : "border-[#cfe0cc] bg-[#f7faf6] hover:border-[#159447]"
+      }`}
+      role="button"
+      tabIndex={0}
+      onClick={() => onSelectPhysicalBed(bed.id)}
+      onKeyDown={(event) => {
+        if (event.key === "Enter" || event.key === " ") {
+          event.preventDefault();
+          onSelectPhysicalBed(bed.id);
+        }
+      }}
+    >
+      <p className="px-2 text-center text-sm font-semibold">{bed.number}다이</p>
+      <div className="mt-1 grid grid-cols-2 gap-2">
         {bed.bedZones.map((zone) => (
           <BedZoneBlock
             key={zone.id}

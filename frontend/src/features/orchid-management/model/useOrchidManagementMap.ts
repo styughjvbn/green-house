@@ -6,6 +6,7 @@ import type {
   House,
   OrchidGroup,
   WorkRecord,
+  WorkRecordTargetType,
   WorkType,
 } from "@/entities/farm/types";
 import {
@@ -24,9 +25,9 @@ import {
 } from "../api/orchidManagementApi";
 import {
   findBedZone,
-  findFirstBedZoneInPhysicalBed,
   findFirstOrchidGroup,
   findOrchidGroup,
+  findPhysicalBed,
 } from "../lib/orchidManagementUtils";
 import { useOrchidClipboard } from "./OrchidClipboardContext";
 import type {
@@ -57,24 +58,31 @@ export function useOrchidManagementMap(
         : null,
     [house, initialSelectedOrchidGroupId],
   );
-  const initialBedZone = useMemo(() => {
-    if (initialSelectedBedZoneId) {
-      return findBedZone(house, initialSelectedBedZoneId)?.zone ?? null;
-    }
-    if (initialSelectedPhysicalBedId) {
-      return findFirstBedZoneInPhysicalBed(house, initialSelectedPhysicalBedId);
-    }
-    return null;
-  }, [house, initialSelectedBedZoneId, initialSelectedPhysicalBedId]);
+  const initialPhysicalBed = useMemo(
+    () =>
+      initialSelectedPhysicalBedId
+        ? findPhysicalBed(house, initialSelectedPhysicalBedId)
+        : null,
+    [house, initialSelectedPhysicalBedId],
+  );
+  const initialBedZone = useMemo(
+    () =>
+      initialSelectedBedZoneId
+        ? (findBedZone(house, initialSelectedBedZoneId)?.zone ?? null)
+        : null,
+    [house, initialSelectedBedZoneId],
+  );
 
   const [selection, setSelection] = useState<OrchidSelection | null>(
     initialOrchidGroup
       ? { type: "ORCHID_GROUP", orchidGroupId: initialOrchidGroup.id }
       : initialBedZone
         ? { type: "BED_ZONE", bedZoneId: initialBedZone.id }
-        : firstOrchidGroup
-          ? { type: "ORCHID_GROUP", orchidGroupId: firstOrchidGroup.id }
-          : null,
+        : initialPhysicalBed
+          ? { type: "PHYSICAL_BED", physicalBedId: initialPhysicalBed.id }
+          : firstOrchidGroup
+            ? { type: "ORCHID_GROUP", orchidGroupId: firstOrchidGroup.id }
+            : null,
   );
   const [placementEditMode, setPlacementEditMode] = useState(false);
   const [dragState, setDragState] = useState<DragState>(null);
@@ -117,6 +125,10 @@ export function useOrchidManagementMap(
   const selectedBedZone =
     selection?.type === "BED_ZONE"
       ? (findBedZone(house, selection.bedZoneId)?.zone ?? null)
+      : null;
+  const selectedPhysicalBed =
+    selection?.type === "PHYSICAL_BED"
+      ? findPhysicalBed(house, selection.physicalBedId)
       : null;
   const resolvedZone = selectedOrchidGroup
     ? (findBedZone(house, selectedOrchidGroup.bedZoneId)?.zone ?? null)
@@ -188,24 +200,42 @@ export function useOrchidManagementMap(
     () => currentHouseOrchidGroupIds.size,
     [currentHouseOrchidGroupIds],
   );
+  const workRecordSummaryTarget = useMemo(
+    () =>
+      resolveWorkRecordTarget({
+        houseId: house.id,
+        resolvedZoneId: resolvedZone?.id ?? null,
+        selectedOrchidGroupId: selectedOrchidGroup?.id ?? null,
+        selection,
+      }),
+    [house.id, resolvedZone?.id, selectedOrchidGroup?.id, selection],
+  );
 
   useEffect(() => {
     let ignore = false;
 
     async function loadWorkRecordSummary() {
-      if (!resolvedZone) {
+      if (!workRecordSummaryTarget.id) {
         setWorkRecordSummary(createEmptyWorkRecordSummary());
         return;
       }
 
       setWorkRecordSummaryLoading(true);
       try {
-        const recordGroups = await Promise.all([
-          getOrchidWorkRecords("BED_ZONE", resolvedZone.id),
-          ...resolvedZone.orchidGroups.map((orchidGroup) =>
-            getOrchidWorkRecords("ORCHID_GROUP", orchidGroup.id),
-          ),
-        ]);
+        const recordGroups =
+          workRecordSummaryTarget.type === "BED_ZONE" && resolvedZone
+            ? await Promise.all([
+                getOrchidWorkRecords("BED_ZONE", resolvedZone.id),
+                ...resolvedZone.orchidGroups.map((orchidGroup) =>
+                  getOrchidWorkRecords("ORCHID_GROUP", orchidGroup.id),
+                ),
+              ])
+            : [
+                await getOrchidWorkRecords(
+                  workRecordSummaryTarget.type,
+                  workRecordSummaryTarget.id,
+                ),
+              ];
         if (!ignore) {
           setWorkRecordSummary(createWorkRecordSummary(recordGroups.flat()));
         }
@@ -225,10 +255,22 @@ export function useOrchidManagementMap(
     return () => {
       ignore = true;
     };
-  }, [resolvedZone, workRecordSummaryVersion]);
+  }, [resolvedZone, workRecordSummaryTarget, workRecordSummaryVersion]);
 
   function selectBedZone(bedZoneId: number) {
     setSelection({ type: "BED_ZONE", bedZoneId });
+    setMutationMode(null);
+    clearPasteSource();
+  }
+
+  function selectPhysicalBed(physicalBedId: number) {
+    setSelection({ type: "PHYSICAL_BED", physicalBedId });
+    setMutationMode(null);
+    clearPasteSource();
+  }
+
+  function selectHouse() {
+    setSelection({ type: "HOUSE", houseId: house.id });
     setMutationMode(null);
     clearPasteSource();
   }
@@ -294,19 +336,19 @@ export function useOrchidManagementMap(
   }
 
   function openWorkRecord() {
-    const targetType = selectedOrchidGroup
-      ? "ORCHID_GROUP"
-      : resolvedZone
-        ? "BED_ZONE"
-        : "HOUSE";
-    const targetId = selectedOrchidGroup?.id ?? resolvedZone?.id ?? house.id;
+    const target = resolveWorkRecordTarget({
+      houseId: house.id,
+      resolvedZoneId: resolvedZone?.id ?? null,
+      selectedOrchidGroupId: selectedOrchidGroup?.id ?? null,
+      selection,
+    });
     setWorkRecordForm((current) => ({
       ...current,
       workTypeId:
         current.workTypeId ||
         String(getManualWorkTypes(workTypes)[0]?.id ?? workTypes[0]?.id ?? ""),
-      targetType,
-      targetId,
+      targetType: target.type,
+      targetId: target.id,
     }));
     setMutationMode("WORK_RECORD");
     clearPasteSource();
@@ -510,6 +552,7 @@ export function useOrchidManagementMap(
     searchLoading,
     searchResults,
     selectedBedZone,
+    selectedPhysicalBed,
     selectedOrchidGroup,
     selection,
     totalOrchidGroupCount,
@@ -538,6 +581,8 @@ export function useOrchidManagementMap(
       openWorkRecord,
       resetSearch,
       selectBedZone,
+      selectHouse,
+      selectPhysicalBed,
       selectOrchidGroup,
       selectOrchidGroupForEdit,
       startDrag,
@@ -557,6 +602,29 @@ function collectCurrentHouseOrchidGroupIds(house: House) {
       ),
     ),
   );
+}
+
+function resolveWorkRecordTarget({
+  houseId,
+  resolvedZoneId,
+  selectedOrchidGroupId,
+  selection,
+}: {
+  houseId: number;
+  resolvedZoneId: number | null;
+  selectedOrchidGroupId: number | null;
+  selection: OrchidSelection | null;
+}): { type: WorkRecordTargetType; id: number | null } {
+  if (selectedOrchidGroupId) {
+    return { type: "ORCHID_GROUP", id: selectedOrchidGroupId };
+  }
+  if (selection?.type === "BED_ZONE" && resolvedZoneId) {
+    return { type: "BED_ZONE", id: resolvedZoneId };
+  }
+  if (selection?.type === "PHYSICAL_BED") {
+    return { type: "PHYSICAL_BED", id: selection.physicalBedId };
+  }
+  return { type: "HOUSE", id: houseId };
 }
 
 function createInitialWorkRecordForm(

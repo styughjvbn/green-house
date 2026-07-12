@@ -107,7 +107,8 @@ export default function BedZoneBlock({
           ? "border-[#246df2] bg-[#f4f8ff] ring-2 ring-[#246df2]/20"
           : "border-[#d9e1d8] bg-white hover:border-[#159447]"
       } ${dropActive || rangePickActive ? "border-[#159447] bg-[#eef7ec] ring-2 ring-[#159447]/20" : ""}`}
-      onClick={() => {
+      onClick={(event) => {
+        event.stopPropagation();
         if (!cellRangePick.active) {
           onSelectBedZone(zone.id);
         }

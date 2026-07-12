@@ -191,6 +191,13 @@ export function findBedZone(
   return null;
 }
 
+export function findPhysicalBed(
+  house: House,
+  physicalBedId: number,
+): PhysicalBed | null {
+  return house.physicalBeds.find((bed) => bed.id === physicalBedId) ?? null;
+}
+
 export function findFirstBedZoneInPhysicalBed(
   house: House,
   physicalBedId: number,

@@ -5,6 +5,7 @@ import type {
   BedZone,
   House,
   OrchidGroup,
+  PhysicalBed,
   WorkRecord,
   WorkType,
 } from "@/entities/farm/types";
@@ -14,6 +15,7 @@ import type {
   MutationMode,
   MapCellRangePick,
   MutationPayload,
+  OrchidSelection,
   PreciseMovePayload,
   WorkRecordQuickFormState,
   WorkRecordSummary,
@@ -38,6 +40,8 @@ export default function OrchidSelectionPanel({
   saving,
   selectedBedZone,
   selectedOrchidGroup,
+  selectedPhysicalBed,
+  selection,
   workRecordForm,
   workTypes,
   mapCellRangePick,
@@ -72,6 +76,8 @@ export default function OrchidSelectionPanel({
   saving: boolean;
   selectedBedZone: BedZone | null;
   selectedOrchidGroup: OrchidGroup | null;
+  selectedPhysicalBed: PhysicalBed | null;
+  selection: OrchidSelection | null;
   workRecordForm: WorkRecordQuickFormState;
   workTypes: WorkType[];
   mapCellRangePick: MapCellRangePick;
@@ -112,10 +118,31 @@ export default function OrchidSelectionPanel({
   const zone = selectedOrchidGroup
     ? (findBedZone(house, selectedOrchidGroup.bedZoneId)?.zone ?? null)
     : selectedBedZone;
-  const orchidGroups = zone?.orchidGroups ?? [];
+  const selectedHouse = selection?.type === "HOUSE";
+  const orchidGroups = selectedOrchidGroup
+    ? (zone?.orchidGroups ?? [])
+    : zone
+      ? zone.orchidGroups
+      : selectedPhysicalBed
+        ? selectedPhysicalBed.bedZones.flatMap(
+            (bedZone) => bedZone.orchidGroups,
+          )
+        : selectedHouse
+          ? house.physicalBeds.flatMap((bed) =>
+              bed.bedZones.flatMap((bedZone) => bedZone.orchidGroups),
+            )
+          : [];
   const matchedCount = orchidGroups.filter((orchidGroup) =>
     filteredOrchidGroupIds.has(orchidGroup.id),
   ).length;
+  const listTargetLabel = zone
+    ? "이 구역"
+    : selectedPhysicalBed
+      ? "이 다이"
+      : selectedHouse
+        ? "이 동"
+        : "선택 대상";
+  const hasListTarget = Boolean(zone || selectedPhysicalBed || selectedHouse);
 
   return (
     <aside className="space-y-3">
@@ -166,7 +193,7 @@ export default function OrchidSelectionPanel({
           </div>
         ) : null}
 
-        {zone ? (
+        {hasListTarget ? (
           <div className="mt-3">
             <div className="space-y-2">
               {orchidGroups.map((orchidGroup) => {
@@ -256,7 +283,7 @@ export default function OrchidSelectionPanel({
               })}
               {orchidGroups.length === 0 ? (
                 <p className="rounded-md bg-[#f5f7f3] p-3 text-sm text-[#5c6a60]">
-                  이 구역에 등록된 난 묶음이 없습니다.
+                  {listTargetLabel}에 등록된 난 묶음이 없습니다.
                 </p>
               ) : hasActiveSearch && matchedCount === 0 ? (
                 <p className="rounded-md border border-[#e4e8e2] bg-[#f6f8f5] p-3 text-sm text-[#5c6a60]">
@@ -278,13 +305,15 @@ export default function OrchidSelectionPanel({
                 label="위치 이동"
                 onClick={onOpenMove}
                 active={mutationMode === "MOVE"}
+                disabled={!selectedOrchidGroup}
               />
             </div>
           </div>
         ) : (
           <div className="mt-3">
             <p className="text-sm text-[#5c6a60]">
-              구역을 선택하면 해당 구역의 난 묶음 목록을 볼 수 있습니다.
+              동, 다이, 구역을 선택하면 해당 범위의 난 묶음 목록을 볼 수
+              있습니다.
             </p>
           </div>
         )}
@@ -341,9 +370,12 @@ export default function OrchidSelectionPanel({
       {mutationMode === "WORK_RECORD" ? (
         <OrchidWorkRecordForm
           form={workRecordForm}
+          house={house}
           resolvedZone={resolvedZone}
           saving={saving}
           selectedOrchidGroup={selectedOrchidGroup}
+          selectedPhysicalBed={selectedPhysicalBed}
+          selection={selection}
           workTypes={workTypes}
           onCancel={onCancelMutation}
           onChange={onUpdateWorkRecordForm}
@@ -358,49 +390,99 @@ export function SelectedZoneInfo({
   house,
   selectedBedZone,
   selectedOrchidGroup,
+  selectedPhysicalBed,
+  selection,
   workRecordSummary,
   workRecordSummaryLoading,
 }: {
   house: House;
   selectedBedZone: BedZone | null;
   selectedOrchidGroup: OrchidGroup | null;
+  selectedPhysicalBed: PhysicalBed | null;
+  selection: OrchidSelection | null;
   workRecordSummary: WorkRecordSummary;
   workRecordSummaryLoading: boolean;
 }) {
   const zone = selectedOrchidGroup
     ? (findBedZone(house, selectedOrchidGroup.bedZoneId)?.zone ?? null)
     : selectedBedZone;
+  const selectedHouse = selection?.type === "HOUSE";
+  const physicalBed = zone
+    ? (house.physicalBeds.find((bed) => bed.id === zone.physicalBedId) ?? null)
+    : selectedPhysicalBed;
+  const targetLabel = selectedOrchidGroup
+    ? "선택한 난 묶음"
+    : zone
+      ? "선택한 구역"
+      : physicalBed
+        ? "선택한 다이"
+        : selectedHouse
+          ? "선택한 동"
+          : null;
+  const targetName = selectedOrchidGroup
+    ? selectedOrchidGroup.varietyName
+    : zone
+      ? zone.name
+      : physicalBed
+        ? `${physicalBed.number}다이`
+        : selectedHouse
+          ? `${house.number}동`
+          : null;
+  const targetContext = zone
+    ? `${zone.houseNumber}동 ${zone.physicalBedNumber}다이`
+    : physicalBed
+      ? `${house.number}동`
+      : selectedHouse
+        ? house.name
+        : null;
+  const targetGroups = selectedOrchidGroup
+    ? [selectedOrchidGroup]
+    : zone
+      ? zone.orchidGroups
+      : physicalBed
+        ? physicalBed.bedZones.flatMap((bedZone) => bedZone.orchidGroups)
+        : selectedHouse
+          ? house.physicalBeds.flatMap((bed) =>
+              bed.bedZones.flatMap((bedZone) => bedZone.orchidGroups),
+            )
+          : [];
   const totalQuantity =
-    zone?.orchidGroups.reduce(
-      (sum, orchidGroup) => sum + orchidGroup.quantity,
-      0,
-    ) ?? 0;
+    targetGroups.reduce((sum, orchidGroup) => sum + orchidGroup.quantity, 0) ??
+    0;
+  const zoneCount = physicalBed
+    ? physicalBed.bedZones.length
+    : selectedHouse
+      ? house.physicalBeds.reduce((sum, bed) => sum + bed.bedZones.length, 0)
+      : zone
+        ? 1
+        : 0;
 
   return (
     <section className="rounded-md border border-[#d7ddd4] bg-white p-2.5 shadow-sm">
-      {zone ? (
+      {targetLabel && targetName ? (
         <div className="flex flex-col gap-3 xl:flex-row xl:items-center">
           <div className="shrink-0 xl:w-44">
-            <p className="text-xs font-semibold text-[#6f7b72]">선택한 구역</p>
+            <p className="text-xs font-semibold text-[#6f7b72]">
+              {targetLabel}
+            </p>
             <div className="mt-1 flex flex-wrap items-center gap-1.5">
-              <span className="text-sm font-semibold text-[#5c6a60]">
-                {zone.houseNumber}동 {zone.physicalBedNumber}다이
-              </span>
+              {targetContext ? (
+                <span className="text-sm font-semibold text-[#5c6a60]">
+                  {targetContext}
+                </span>
+              ) : null}
               <span className="rounded-md bg-[#e6f0ff] px-2 py-1 text-sm font-semibold text-[#246df2]">
-                {zone.name}
+                {targetName}
               </span>
             </div>
           </div>
 
           <div className="grid shrink-0 grid-cols-4 gap-2 text-center xl:w-72">
-            <InfoMetric
-              label="난 묶음 수"
-              value={`${zone.orchidGroups.length}개`}
-            />
+            <InfoMetric label="난 묶음 수" value={`${targetGroups.length}개`} />
             <InfoMetric label="총 수량" value={`${totalQuantity}분`} />
             <InfoMetric
-              label="빈 공간"
-              value={`${Math.max(0, 5 - zone.orchidGroups.length)}칸`}
+              label={zone || selectedOrchidGroup ? "구역 수" : "하위 구역"}
+              value={`${zoneCount}개`}
             />
             <InfoMetric label="상태" value="정상" />
           </div>
