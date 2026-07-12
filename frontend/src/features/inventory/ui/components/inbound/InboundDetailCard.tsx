@@ -150,19 +150,6 @@ function InboundEditForm({
           }
         />
       </Field>
-      <Field label="병 수">
-        <input
-          className={inputClass}
-          type="number"
-          value={editForm.bottleCount ?? ""}
-          onChange={(event) =>
-            onChange((current) => ({
-              ...current,
-              bottleCount: toOptionalNumber(event.target.value),
-            }))
-          }
-        />
-      </Field>
       <Field label="예상 수량">
         <input
           className={inputClass}
@@ -294,7 +281,6 @@ function InboundDetailView({ record }: { record: InboundRecord }) {
       <DetailRow label="속" value={record.genus} />
       <DetailRow label="품종명" value={record.varietyName} />
       <DetailRow label="상태" value={INBOUND_STATUS_LABELS[record.status]} />
-      <DetailRow label="병 수" value={record.bottleCount} />
       <DetailRow label="예상 수량" value={record.estimatedQuantity} />
       <DetailRow label="실제 수량" value={record.actualQuantity} />
       <DetailRow label="임시 위치" value={record.tempLocation} />

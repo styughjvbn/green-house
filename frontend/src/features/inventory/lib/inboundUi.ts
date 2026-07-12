@@ -27,7 +27,6 @@ export function createInboundEditForm(
 ): InboundRecordUpdatePayload {
   return {
     inboundDate: record.inboundDate,
-    bottleCount: record.bottleCount ?? undefined,
     estimatedQuantity: record.estimatedQuantity ?? undefined,
     actualQuantity: record.actualQuantity ?? undefined,
     tempLocation: record.tempLocation ?? undefined,

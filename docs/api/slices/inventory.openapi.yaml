@@ -71,6 +71,18 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ApiResponseVarietyResponse'
+  /api/varieties/genera:
+    get:
+      tags:
+      - variety-controller
+      operationId: getGenera
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponseListString'
   /api/varieties/{varietyId}:
     get:
       tags:
@@ -530,6 +542,15 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/VarietyConnectedOrchidGroupResponse'
+        message:
+          type: string
+    ApiResponseListString:
+      type: object
+      properties:
+        data:
+          type: array
+          items:
+            type: string
         message:
           type: string
     ApiResponseVarietyPageResponse:
