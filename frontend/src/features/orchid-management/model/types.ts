@@ -26,6 +26,11 @@ export type OrchidSelection =
   | SelectedBedZone
   | SelectedOrchidGroup;
 
+export type OrchidListSelection =
+  | SelectedHouse
+  | SelectedPhysicalBed
+  | SelectedBedZone;
+
 export type MutationMode = "CREATE" | "EDIT" | "MOVE" | "WORK_RECORD" | null;
 
 export type DragState = {

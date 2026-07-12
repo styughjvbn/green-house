@@ -239,6 +239,7 @@ export function OrchidManagementMap({
           filteredOrchidGroupIds={orchidManagement.filteredOrchidGroupIds}
           hasActiveSearch={orchidManagement.hasActiveSearch}
           house={house}
+          listSelection={orchidManagement.listSelection}
           mutationMode={orchidManagement.mutationMode}
           pasteSourceOrchidGroup={orchidManagement.pasteSourceOrchidGroup}
           preferredMoveZoneId={orchidManagement.preferredMoveZoneId}

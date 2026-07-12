@@ -35,6 +35,7 @@ import type {
   OrchidManagementSearchState,
   MutationMode,
   MutationPayload,
+  OrchidListSelection,
   OrchidSelection,
   PreciseMovePayload,
   WorkRecordQuickFormState,
@@ -76,6 +77,15 @@ export function useOrchidManagementMap(
   const [selection, setSelection] = useState<OrchidSelection | null>(
     initialOrchidGroup
       ? { type: "ORCHID_GROUP", orchidGroupId: initialOrchidGroup.id }
+      : initialBedZone
+        ? { type: "BED_ZONE", bedZoneId: initialBedZone.id }
+        : initialPhysicalBed
+          ? { type: "PHYSICAL_BED", physicalBedId: initialPhysicalBed.id }
+          : { type: "HOUSE", houseId: house.id },
+  );
+  const [listSelection, setListSelection] = useState<OrchidListSelection>(() =>
+    initialOrchidGroup
+      ? { type: "BED_ZONE", bedZoneId: initialOrchidGroup.bedZoneId }
       : initialBedZone
         ? { type: "BED_ZONE", bedZoneId: initialBedZone.id }
         : initialPhysicalBed
@@ -257,18 +267,21 @@ export function useOrchidManagementMap(
 
   function selectBedZone(bedZoneId: number) {
     setSelection({ type: "BED_ZONE", bedZoneId });
+    setListSelection({ type: "BED_ZONE", bedZoneId });
     setMutationMode(null);
     clearPasteSource();
   }
 
   function selectPhysicalBed(physicalBedId: number) {
     setSelection({ type: "PHYSICAL_BED", physicalBedId });
+    setListSelection({ type: "PHYSICAL_BED", physicalBedId });
     setMutationMode(null);
     clearPasteSource();
   }
 
   function selectHouse() {
     setSelection({ type: "HOUSE", houseId: house.id });
+    setListSelection({ type: "HOUSE", houseId: house.id });
     setMutationMode(null);
     clearPasteSource();
   }
@@ -541,6 +554,7 @@ export function useOrchidManagementMap(
     dragState,
     filteredOrchidGroupIds,
     hasActiveSearch,
+    listSelection,
     mutationMode,
     preferredMoveZoneId,
     placementEditMode,

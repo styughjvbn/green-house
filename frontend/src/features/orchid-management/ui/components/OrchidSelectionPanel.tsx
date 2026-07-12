@@ -15,6 +15,7 @@ import type {
   MutationMode,
   MapCellRangePick,
   MutationPayload,
+  OrchidListSelection,
   OrchidSelection,
   PreciseMovePayload,
   WorkRecordQuickFormState,
@@ -32,6 +33,7 @@ export default function OrchidSelectionPanel({
   filteredOrchidGroupIds,
   hasActiveSearch,
   house,
+  listSelection,
   mutationMode,
   pasteSourceOrchidGroup,
   preferredMoveZoneId,
@@ -68,6 +70,7 @@ export default function OrchidSelectionPanel({
   filteredOrchidGroupIds: Set<number>;
   hasActiveSearch: boolean;
   house: House;
+  listSelection: OrchidListSelection;
   mutationMode: MutationMode;
   pasteSourceOrchidGroup: OrchidGroup | null;
   preferredMoveZoneId: number | null;
@@ -115,34 +118,37 @@ export default function OrchidSelectionPanel({
   ) => void;
   onWorkRecordCreate: () => Promise<void>;
 }) {
-  const zone = selectedOrchidGroup
-    ? (findBedZone(house, selectedOrchidGroup.bedZoneId)?.zone ?? null)
-    : selectedBedZone;
-  const selectedHouse = selection?.type === "HOUSE";
-  const orchidGroups = selectedOrchidGroup
-    ? (zone?.orchidGroups ?? [])
-    : zone
-      ? zone.orchidGroups
-      : selectedPhysicalBed
-        ? selectedPhysicalBed.bedZones.flatMap(
-            (bedZone) => bedZone.orchidGroups,
+  const listZone =
+    listSelection.type === "BED_ZONE"
+      ? (findBedZone(house, listSelection.bedZoneId)?.zone ?? null)
+      : null;
+  const listPhysicalBed =
+    listSelection.type === "PHYSICAL_BED"
+      ? (house.physicalBeds.find(
+          (bed) => bed.id === listSelection.physicalBedId,
+        ) ?? null)
+      : null;
+  const selectedHouse = listSelection.type === "HOUSE";
+  const orchidGroups = listZone
+    ? listZone.orchidGroups
+    : listPhysicalBed
+      ? listPhysicalBed.bedZones.flatMap((bedZone) => bedZone.orchidGroups)
+      : selectedHouse
+        ? house.physicalBeds.flatMap((bed) =>
+            bed.bedZones.flatMap((bedZone) => bedZone.orchidGroups),
           )
-        : selectedHouse
-          ? house.physicalBeds.flatMap((bed) =>
-              bed.bedZones.flatMap((bedZone) => bedZone.orchidGroups),
-            )
-          : [];
+        : [];
   const matchedCount = orchidGroups.filter((orchidGroup) =>
     filteredOrchidGroupIds.has(orchidGroup.id),
   ).length;
-  const listTargetLabel = zone
+  const listTargetLabel = listZone
     ? "이 구역"
-    : selectedPhysicalBed
+    : listPhysicalBed
       ? "이 다이"
       : selectedHouse
         ? "이 동"
         : "선택 대상";
-  const hasListTarget = Boolean(zone || selectedPhysicalBed || selectedHouse);
+  const hasListTarget = Boolean(listZone || listPhysicalBed || selectedHouse);
 
   return (
     <aside className="space-y-3">
@@ -176,7 +182,7 @@ export default function OrchidSelectionPanel({
             <div className="flex shrink-0 items-center gap-1.5">
               <button
                 className="rounded-md bg-[#159447] px-2.5 py-1.5 font-semibold text-white disabled:cursor-not-allowed disabled:opacity-50"
-                disabled={!zone}
+                disabled={!resolvedZone}
                 onClick={onOpenPaste}
                 type="button"
               >
