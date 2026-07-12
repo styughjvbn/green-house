@@ -5,7 +5,6 @@ import type { BedZone } from "@/entities/farm/types";
 import type { DragState, MapCellRangePick } from "../../model/types";
 import {
   buildOccupiedCells,
-  clampCellRangeToAvailable,
   formatCellRange,
   resolveGroupCellRange,
 } from "../../lib/orchidManagementUtils";
@@ -122,7 +121,7 @@ export default function BedZoneBlock({
       <div className="flex gap-0">
         {showScale ? (
           <div
-            className="grid w-5 shrink-0"
+            className="grid w-3 shrink-0"
             style={{
               height: MAP_HEIGHT,
               gridTemplateRows: `repeat(${resolvedMaxPosition}, minmax(0, 1fr))`,
@@ -133,9 +132,23 @@ export default function BedZoneBlock({
                 key={cell}
                 className="flex min-h-0 items-start justify-end gap-0.5"
               >
-                <span className="text-[11px] font-bold text-[#2d5a3b]">
-                  {isScaleLabelCell(cell, resolvedMaxPosition) ? cell : ""}
-                </span>
+                {isScaleLabelCell(cell, resolvedMaxPosition) ? (
+                  <div className="flex -translate-x-2 items-center">
+                    <span className="text-[11px] font-bold text-[#2d5a3b]">
+                      {cell}
+                    </span>
+                    <div
+                      className="relative w-1 shrink-0"
+                      style={{ height: cellHeight }}
+                    >
+                      <span className="absolute top-0 left-0 h-full w-[2px] bg-[#d9e2d7]" />
+                      <span className="absolute top-0 left-0 h-[2px] w-full bg-[#d9e2d7]" />
+                      <span className="absolute bottom-0 left-0 h-[2px] w-full bg-[#d9e2d7]" />
+                    </div>
+                  </div>
+                ) : (
+                  ""
+                )}
               </div>
             ))}
           </div>
@@ -189,19 +202,10 @@ export default function BedZoneBlock({
                     pickedStartCell == null ||
                     (pickedEndCell != null &&
                       pickedStartCell !== pickedEndCell);
-                  const nextRange = clampCellRangeToAvailable({
-                    startCell: selectingStart ? cell : pickedStartCell,
-                    endCell: cell,
-                    occupiedCells,
-                  });
-                  if (!nextRange) {
+                  if (selectingStart && occupiedCells.has(cell)) {
                     return;
                   }
-                  const nextCell =
-                    !selectingStart && cell < pickedStartCell
-                      ? nextRange.startCell
-                      : nextRange.endCell;
-                  onPickCellRange(zone.id, nextCell);
+                  onPickCellRange(zone.id, cell);
                 }}
               />
             );
