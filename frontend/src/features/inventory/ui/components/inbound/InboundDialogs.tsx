@@ -46,7 +46,6 @@ export function InboundCreateDialog({
   const [newGenus, setNewGenus] = useState("");
   const [newName, setNewName] = useState("");
   const [newPotSize, setNewPotSize] = useState("");
-  const [bottleCount, setBottleCount] = useState("");
   const [estimatedQuantity, setEstimatedQuantity] = useState("");
   const [actualQuantity, setActualQuantity] = useState("");
   const [tempLocation, setTempLocation] = useState("");
@@ -92,7 +91,6 @@ export function InboundCreateDialog({
                     memo,
                   }
                 : undefined,
-            bottleCount: toNumber(bottleCount),
             estimatedQuantity: toNumber(estimatedQuantity),
             actualQuantity: toNumber(actualQuantity),
             tempLocation: tempLocation.trim() || undefined,
@@ -177,15 +175,6 @@ export function InboundCreateDialog({
         )}
         {flaskType ? (
           <>
-            <Field label="유리병 수">
-              <input
-                className={inputClass}
-                required
-                type="number"
-                value={bottleCount}
-                onChange={(event) => setBottleCount(event.target.value)}
-              />
-            </Field>
             <Field label="예상 수량">
               <input
                 className={inputClass}
