@@ -24,6 +24,7 @@ export default function HouseDetailMap({
   onEnterDropZone,
   onPickCellRange,
   onSelectBedZone,
+  onSelectHouse,
   onSelectPhysicalBed,
   onSelectOrchidGroup,
 }: {
@@ -42,11 +43,15 @@ export default function HouseDetailMap({
   onEnterDropZone: (bedZoneId: number) => void;
   onPickCellRange: (bedZoneId: number, cell: number) => void;
   onSelectBedZone: (bedZoneId: number) => void;
+  onSelectHouse: () => void;
   onSelectPhysicalBed: (physicalBedId: number) => void;
   onSelectOrchidGroup: (orchidGroupId: number) => void;
 }) {
   return (
-    <section className="rounded-md border border-[#d7ddd4] bg-white p-3 shadow-sm">
+    <section
+      className="cursor-pointer rounded-md border border-[#d7ddd4] bg-white p-3 shadow-sm"
+      onClick={onSelectHouse}
+    >
       <div className="grid gap-3 xl:grid-cols-3">
         {house.physicalBeds.map((bed) => (
           <PhysicalBedBlock

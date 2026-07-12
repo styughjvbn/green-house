@@ -57,7 +57,10 @@ export default function PhysicalBedBlock({
       }`}
       role="button"
       tabIndex={0}
-      onClick={() => onSelectPhysicalBed(bed.id)}
+      onClick={(event) => {
+        event.stopPropagation();
+        onSelectPhysicalBed(bed.id);
+      }}
       onKeyDown={(event) => {
         if (event.key === "Enter" || event.key === " ") {
           event.preventDefault();

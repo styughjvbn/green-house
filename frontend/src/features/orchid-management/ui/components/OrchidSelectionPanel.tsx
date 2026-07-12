@@ -149,7 +149,7 @@ export default function OrchidSelectionPanel({
       <section className="rounded-md border border-[#d7ddd4] bg-white p-3 shadow-sm">
         <div className="flex items-center justify-between gap-3">
           <p className="text-sm font-semibold text-[#17251b]">
-            선택한 난 묶음 목록 (
+            난 묶음 목록 (
             {hasActiveSearch
               ? `${matchedCount}/${orchidGroups.length}`
               : orchidGroups.length}
@@ -195,7 +195,7 @@ export default function OrchidSelectionPanel({
 
         {hasListTarget ? (
           <div className="mt-3">
-            <div className="space-y-2">
+            <div className="max-h-[520px] space-y-2 overflow-y-auto pr-1">
               {orchidGroups.map((orchidGroup) => {
                 const selected = orchidGroup.id === selectedOrchidGroup?.id;
                 const matched = filteredOrchidGroupIds.has(orchidGroup.id);

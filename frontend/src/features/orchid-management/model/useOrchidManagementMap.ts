@@ -80,9 +80,7 @@ export function useOrchidManagementMap(
         ? { type: "BED_ZONE", bedZoneId: initialBedZone.id }
         : initialPhysicalBed
           ? { type: "PHYSICAL_BED", physicalBedId: initialPhysicalBed.id }
-          : firstOrchidGroup
-            ? { type: "ORCHID_GROUP", orchidGroupId: firstOrchidGroup.id }
-            : null,
+          : { type: "HOUSE", houseId: house.id },
   );
   const [placementEditMode, setPlacementEditMode] = useState(false);
   const [dragState, setDragState] = useState<DragState>(null);

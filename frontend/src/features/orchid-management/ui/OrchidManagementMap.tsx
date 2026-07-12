@@ -188,6 +188,10 @@ export function OrchidManagementMap({
             clearMapCellRangePick();
             orchidManagement.actions.selectBedZone(bedZoneId);
           }}
+          onSelectHouse={() => {
+            clearMapCellRangePick();
+            orchidManagement.actions.selectHouse();
+          }}
           onSelectPhysicalBed={(physicalBedId) => {
             clearMapCellRangePick();
             orchidManagement.actions.selectPhysicalBed(physicalBedId);
