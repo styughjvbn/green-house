@@ -1,9 +1,14 @@
 "use client";
 
-import type { DragEvent, MouseEvent, PointerEvent } from "react";
+import type { DragEvent, PointerEvent } from "react";
 import type { BedZone } from "@/entities/farm/types";
 import type { DragState, MapCellRangePick } from "../../model/types";
-import { formatCellRange } from "../../lib/orchidManagementUtils";
+import {
+  buildOccupiedCells,
+  clampCellRangeToAvailable,
+  formatCellRange,
+  resolveGroupCellRange,
+} from "../../lib/orchidManagementUtils";
 import OrchidGroupBlock from "./OrchidGroupBlock";
 
 const MAP_HEIGHT = 590;
@@ -49,9 +54,8 @@ export default function BedZoneBlock({
 }) {
   const dropActive = dragState?.overBedZoneId === zone.id;
   const resolvedMaxPosition = maxPosition && maxPosition > 0 ? maxPosition : 28;
-  const scaleMarks = buildScaleMarks(resolvedMaxPosition);
-  const guideLines = buildGuideLines(resolvedMaxPosition);
   const cellHeight = MAP_HEIGHT / resolvedMaxPosition;
+  const cells = buildCells(resolvedMaxPosition);
   const rangePickActive =
     cellRangePick.active && cellRangePick.targetBedZoneId === zone.id;
   const pickedStartCell =
@@ -65,6 +69,11 @@ export default function BedZoneBlock({
           end: Math.max(pickedStartCell, pickedEndCell),
         }
       : null;
+  const occupiedCells = buildOccupiedCells(
+    zone.orchidGroups,
+    cellRangePick.excludeOrchidGroupId,
+    resolvedMaxPosition,
+  );
 
   function handleDragOver(event: DragEvent<HTMLDivElement>) {
     if (!placementEditMode || !dragState || saving) {
@@ -90,22 +99,6 @@ export default function BedZoneBlock({
     onSelectBedZone(zone.id);
   }
 
-  function handlePickCell(event: MouseEvent<HTMLDivElement>) {
-    if (!rangePickActive) {
-      return;
-    }
-    event.preventDefault();
-    event.stopPropagation();
-    const rect = event.currentTarget.getBoundingClientRect();
-    const y = Math.min(Math.max(event.clientY - rect.top, 0), rect.height - 1);
-    const cellFromTop = Math.floor(y / (rect.height / resolvedMaxPosition));
-    const cell = Math.min(
-      Math.max(resolvedMaxPosition - cellFromTop, 1),
-      resolvedMaxPosition,
-    );
-    onPickCellRange(zone.id, cell);
-  }
-
   return (
     <div
       className={`touch-manipulation rounded-l border p-2 text-left transition ${
@@ -126,57 +119,91 @@ export default function BedZoneBlock({
     >
       <div className="flex gap-0">
         {showScale ? (
-          <div className="relative w-5 shrink-0" style={{ height: MAP_HEIGHT }}>
-            {scaleMarks.map((mark) => (
+          <div
+            className="grid w-5 shrink-0"
+            style={{
+              height: MAP_HEIGHT,
+              gridTemplateRows: `repeat(${resolvedMaxPosition}, minmax(0, 1fr))`,
+            }}
+          >
+            {cells.map((cell) => (
               <div
-                key={mark.label}
-                className="absolute right-1 flex w-8 items-center justify-end gap-0.5"
-                style={{ top: `${mark.top}%` }}
+                key={cell}
+                className="flex min-h-0 items-start justify-end gap-0.5"
               >
                 <span className="text-[11px] font-bold text-[#2d5a3b]">
-                  {mark.label}
+                  {isScaleLabelCell(cell, resolvedMaxPosition) ? cell : ""}
                 </span>
-                <div
-                  className="relative w-1 shrink-0"
-                  style={{ height: cellHeight }}
-                >
-                  <span className="absolute top-0 left-0 h-full w-[2px] bg-[#d9e2d7]" />
-                  <span className="absolute top-0 left-0 h-[2px] w-full bg-[#d9e2d7]" />
-                  <span className="absolute bottom-0 left-0 h-[2px] w-full bg-[#d9e2d7]" />
-                </div>
               </div>
             ))}
           </div>
         ) : null}
 
         <div
-          className={`relative min-w-0 flex-1 overflow-hidden border border-[#e4e8e4] bg-white ${
+          className={`relative grid min-w-0 flex-1 overflow-hidden border border-[#e4e8e4] bg-white ${
             rangePickActive ? "cursor-crosshair" : ""
           }`}
-          style={{ height: MAP_HEIGHT }}
-          onClick={handlePickCell}
+          style={{
+            height: MAP_HEIGHT,
+            gridTemplateRows: `repeat(${resolvedMaxPosition}, minmax(0, 1fr))`,
+          }}
         >
-          {showScale
-            ? guideLines.map((line) => (
-                <div
-                  key={`guide-${line.boundary}`}
-                  className={`absolute inset-x-0 border-t ${
-                    line.major ? "border-[#d9e2d7]" : "border-[#edf1ec]"
-                  }`}
-                  style={{ top: `${line.top}%` }}
-                />
-              ))
-            : null}
+          {cells.map((cell) => {
+            const selectedCell =
+              pickedRange != null &&
+              cell >= pickedRange.start &&
+              cell <= pickedRange.end;
+            const occupiedCell = occupiedCells.has(cell);
+            const boundary = resolvedMaxPosition - cell + 1;
+            const major = isScaleLabelCell(cell, resolvedMaxPosition);
+            const cellClass = `z-0 border-t ${
+              major ? "border-[#d9e2d7]" : "border-[#edf1ec]"
+            } ${
+              selectedCell
+                ? "bg-[#159447]/20"
+                : occupiedCell
+                  ? "bg-[#eef1ed]"
+                  : "bg-transparent"
+            }`;
+            const cellStyle = {
+              gridColumn: "1",
+              gridRow: `${boundary} / ${boundary + 1}`,
+            };
 
-          {pickedRange ? (
-            <div
-              className="pointer-events-none absolute inset-x-0 z-10 border-y border-[#159447] bg-[#159447]/20"
-              style={{
-                top: `${toPercent(resolvedMaxPosition - pickedRange.end, resolvedMaxPosition)}%`,
-                height: `${toPercent(pickedRange.end - pickedRange.start + 1, resolvedMaxPosition)}%`,
-              }}
-            />
-          ) : null}
+            return (
+              <div
+                key={cell}
+                className={`${cellClass} appearance-none p-0 transition ${
+                  rangePickActive ? "hover:bg-[#159447]/15" : ""
+                }`}
+                style={cellStyle}
+                onClick={(event) => {
+                  if (!rangePickActive) {
+                    return;
+                  }
+                  event.preventDefault();
+                  event.stopPropagation();
+                  const selectingStart =
+                    pickedStartCell == null ||
+                    (pickedEndCell != null &&
+                      pickedStartCell !== pickedEndCell);
+                  const nextRange = clampCellRangeToAvailable({
+                    startCell: selectingStart ? cell : pickedStartCell,
+                    endCell: cell,
+                    occupiedCells,
+                  });
+                  if (!nextRange) {
+                    return;
+                  }
+                  const nextCell =
+                    !selectingStart && cell < pickedStartCell
+                      ? nextRange.startCell
+                      : nextRange.endCell;
+                  onPickCellRange(zone.id, nextCell);
+                }}
+              />
+            );
+          })}
 
           {rangePickActive && !pickedRange ? (
             <div className="pointer-events-none absolute inset-x-2 top-2 z-20 rounded-md border border-dashed border-[#159447] bg-white/90 px-2 py-1 text-center text-xs font-bold text-[#167c3a]">
@@ -186,24 +213,27 @@ export default function BedZoneBlock({
 
           {zone.orchidGroups.map((orchidGroup) => {
             const matched = filteredOrchidGroupIds.has(orchidGroup.id);
-            const start = orchidGroup.startPosition ?? 0;
-            const end =
-              orchidGroup.endPosition ?? orchidGroup.startPosition ?? 0;
-            const top = toPercent(
-              resolvedMaxPosition - end,
-              resolvedMaxPosition,
-            );
-            const height = Math.max(
-              toPercent(end - start, resolvedMaxPosition),
-              0,
-            );
-            const heightPx = (height / 100) * MAP_HEIGHT;
+            const range = resolveGroupCellRange({
+              startPosition: orchidGroup.startPosition,
+              endPosition: orchidGroup.endPosition,
+              maxCell: resolvedMaxPosition,
+            });
+            const gridRowStart = resolvedMaxPosition - range.endCell + 1;
+            const gridRowEnd = resolvedMaxPosition - range.startCell + 2;
+            const heightPx = (range.endCell - range.startCell + 1) * cellHeight;
 
             return (
               <div
                 key={orchidGroup.id}
-                className="absolute inset-x-0"
-                style={{ top: `${top}%`, height: `${height}%` }}
+                className={`z-10 min-h-0 ${
+                  rangePickActive
+                    ? "pointer-events-none"
+                    : "pointer-events-auto"
+                }`}
+                style={{
+                  gridRow: `${gridRowStart} / ${gridRowEnd}`,
+                  gridColumn: "1",
+                }}
               >
                 <OrchidGroupBlock
                   distinguishVarietyColors={distinguishVarietyColors}
@@ -232,36 +262,10 @@ export default function BedZoneBlock({
   );
 }
 
-function toPercent(value: number, maxPosition: number) {
-  if (maxPosition === 0) {
-    return 0;
-  }
-  return (value / maxPosition) * 100;
+function buildCells(maxPosition: number) {
+  return Array.from({ length: maxPosition }, (_, index) => maxPosition - index);
 }
 
-function buildScaleMarks(maxPosition: number) {
-  const labels = new Set<number>([maxPosition]);
-  for (let value = 5; value < maxPosition; value += 5) {
-    labels.add(value);
-  }
-
-  return [...labels]
-    .sort((a, b) => b - a)
-    .map((label) => ({
-      label,
-      top: toPercent(maxPosition - label, maxPosition),
-    }));
-}
-
-function buildGuideLines(maxPosition: number) {
-  return Array.from({ length: maxPosition - 1 }, (_, index) => {
-    const boundary = index + 1;
-    const label = maxPosition - boundary;
-
-    return {
-      boundary,
-      major: label > 0 && label % 5 === 0,
-      top: toPercent(boundary, maxPosition),
-    };
-  });
+function isScaleLabelCell(cell: number, maxCell: number) {
+  return cell === maxCell || cell % 5 === 0;
 }

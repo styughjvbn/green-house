@@ -8,12 +8,15 @@ import type {
   VarietyOption,
 } from "@/entities/farm/types";
 import {
+  buildOccupiedCells,
   findFirstAvailableSingleSlot,
   endCellToPosition,
+  normalizeAvailableCellRange,
   nullableNumber,
   nullableText,
   positionToEndCell,
   positionToStartCell,
+  resolveMaxCell,
   startCellToPosition,
 } from "../../lib/orchidManagementUtils";
 import type {
@@ -33,6 +36,7 @@ export default function OrchidGroupForm({
   mapCellRangePick,
   onCancel,
   onStartMapCellRangePick,
+  onSyncMapCellRangePick,
   onSubmit,
 }: {
   initialValue: OrchidGroup | null;
@@ -44,6 +48,15 @@ export default function OrchidGroupForm({
   onCancel: () => void;
   onStartMapCellRangePick: (options: {
     endCell: string;
+    excludeOrchidGroupId?: number | null;
+    maxCell: number;
+    startCell: string;
+    targetBedZoneId: number;
+  }) => void;
+  onSyncMapCellRangePick: (options: {
+    endCell: string;
+    excludeOrchidGroupId?: number | null;
+    maxCell: number;
     startCell: string;
     targetBedZoneId: number;
   }) => void;
@@ -97,6 +110,21 @@ export default function OrchidGroupForm({
           : "",
     memo: initialValue?.memo ?? "",
   }));
+  const maxCell = useMemo(
+    () => resolveMaxCell(house, targetZone?.id ?? null),
+    [house, targetZone],
+  );
+  const excludedOrchidGroupId =
+    mode === "EDIT" ? (initialValue?.id ?? null) : null;
+  const occupiedCells = useMemo(
+    () =>
+      buildOccupiedCells(
+        targetZone?.orchidGroups ?? [],
+        excludedOrchidGroupId,
+        maxCell,
+      ),
+    [excludedOrchidGroupId, maxCell, targetZone],
+  );
   const [ignoredMapPickVersion, setIgnoredMapPickVersion] = useState(0);
   const rangePickActive =
     mapCellRangePick.active &&
@@ -124,6 +152,41 @@ export default function OrchidGroupForm({
     setForm((current) => ({ ...current, [field]: value }));
   }
 
+  function updateStartCell(value: string) {
+    setIgnoredMapPickVersion(mapCellRangePick.version);
+    updateField("startPosition", value);
+  }
+
+  function updateEndCell(value: string) {
+    setIgnoredMapPickVersion(mapCellRangePick.version);
+    updateField("endPosition", value);
+  }
+
+  function commitCellRange() {
+    if (!targetZone) {
+      return;
+    }
+    const range = normalizeAvailableCellRange({
+      startCell: startPositionValue,
+      endCell: endPositionValue,
+      maxCell,
+      occupiedCells,
+    });
+    setIgnoredMapPickVersion(mapCellRangePick.version);
+    setForm((current) => ({
+      ...current,
+      startPosition: String(range.startCell),
+      endPosition: String(range.endCell),
+    }));
+    onSyncMapCellRangePick({
+      targetBedZoneId: targetZone.id,
+      excludeOrchidGroupId: excludedOrchidGroupId,
+      maxCell,
+      startCell: String(range.startCell),
+      endCell: String(range.endCell),
+    });
+  }
+
   function handleSelectVariety(option: VarietyOption) {
     setForm((current) => ({
       ...current,
@@ -140,6 +203,12 @@ export default function OrchidGroupForm({
     if (!form.varietyId) {
       return;
     }
+    const range = normalizeAvailableCellRange({
+      startCell: startPositionValue,
+      endCell: endPositionValue,
+      maxCell,
+      occupiedCells,
+    });
 
     void onSubmit({
       varietyId: Number(form.varietyId),
@@ -150,8 +219,8 @@ export default function OrchidGroupForm({
       placementType: nullableText(form.placementType),
       trayCount: null,
       splitPlacementAllowed: form.splitPlacementAllowed,
-      startPosition: startCellToPosition(startPositionValue),
-      endPosition: endCellToPosition(endPositionValue),
+      startPosition: startCellToPosition(String(range.startCell)),
+      endPosition: endCellToPosition(String(range.endCell)),
       memo: nullableText(form.memo),
     });
   }
@@ -241,18 +310,7 @@ export default function OrchidGroupForm({
             </select>
           </label>
         </div>
-        <div className="grid grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-end gap-2">
-          <TextField
-            label="시작 칸"
-            min={1}
-            step={1}
-            type="number"
-            value={startPositionValue}
-            onChange={(value) => {
-              setIgnoredMapPickVersion(mapCellRangePick.version);
-              updateField("startPosition", value);
-            }}
-          />
+        <div className="grid grid-cols-[auto_minmax(0,1fr)_minmax(0,1fr)] items-end gap-2">
           <button
             className={`mb-px h-[34px] rounded-md border px-3 text-xs font-semibold transition ${
               rangePickActive
@@ -265,6 +323,9 @@ export default function OrchidGroupForm({
               if (!targetZone) return;
               onStartMapCellRangePick({
                 targetBedZoneId: targetZone.id,
+                excludeOrchidGroupId:
+                  mode === "EDIT" ? (initialValue?.id ?? null) : null,
+                maxCell,
                 startCell: startPositionValue,
                 endCell: endPositionValue,
               });
@@ -273,15 +334,24 @@ export default function OrchidGroupForm({
             맵에서 지정
           </button>
           <TextField
+            label="시작 칸"
+            max={maxCell}
+            min={1}
+            step={1}
+            type="number"
+            value={startPositionValue}
+            onBlur={commitCellRange}
+            onChange={updateStartCell}
+          />
+          <TextField
             label="끝 칸"
+            max={maxCell}
             min={1}
             step={1}
             type="number"
             value={endPositionValue}
-            onChange={(value) => {
-              setIgnoredMapPickVersion(mapCellRangePick.version);
-              updateField("endPosition", value);
-            }}
+            onBlur={commitCellRange}
+            onChange={updateEndCell}
           />
         </div>
         <div>

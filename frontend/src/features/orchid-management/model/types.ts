@@ -21,6 +21,7 @@ export type DragState = {
 
 export type MapCellRangePick = {
   active: boolean;
+  excludeOrchidGroupId: number | null;
   targetBedZoneId: number | null;
   startCell: number | null;
   endCell: number | null;

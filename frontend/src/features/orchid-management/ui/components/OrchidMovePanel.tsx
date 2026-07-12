@@ -4,10 +4,13 @@ import { FormEvent, useMemo, useState } from "react";
 import { MapPin } from "lucide-react";
 import type { House, OrchidGroup } from "@/entities/farm/types";
 import {
+  buildOccupiedCells,
   endCellToPosition,
   findBedZone,
+  normalizeAvailableCellRange,
   positionToEndCell,
   positionToStartCell,
+  resolveMaxCell,
   startCellToPosition,
 } from "../../lib/orchidManagementUtils";
 import type { MapCellRangePick, PreciseMovePayload } from "../../model/types";
@@ -26,6 +29,7 @@ export default function OrchidMovePanel({
   selectedOrchidGroup,
   onCancel,
   onStartMapCellRangePick,
+  onSyncMapCellRangePick,
   onMove,
 }: {
   house: House;
@@ -36,6 +40,15 @@ export default function OrchidMovePanel({
   onCancel: () => void;
   onStartMapCellRangePick: (options: {
     endCell: string;
+    excludeOrchidGroupId?: number | null;
+    maxCell: number;
+    startCell: string;
+    targetBedZoneId: number;
+  }) => void;
+  onSyncMapCellRangePick: (options: {
+    endCell: string;
+    excludeOrchidGroupId?: number | null;
+    maxCell: number;
     startCell: string;
     targetBedZoneId: number;
   }) => void;
@@ -82,6 +95,21 @@ export default function OrchidMovePanel({
     mapCellRangePick.active &&
     resolvedZoneId != null &&
     mapCellRangePick.targetBedZoneId === resolvedZoneId;
+  const maxCell = useMemo(
+    () => resolveMaxCell(house, resolvedZoneId),
+    [house, resolvedZoneId],
+  );
+  const occupiedCells = useMemo(
+    () =>
+      buildOccupiedCells(
+        resolvedZoneId
+          ? (findBedZone(house, resolvedZoneId)?.zone.orchidGroups ?? [])
+          : [],
+        null,
+        maxCell,
+      ),
+    [house, maxCell, resolvedZoneId],
+  );
   const mapPickedRange =
     resolvedZoneId != null &&
     mapCellRangePick.targetBedZoneId === resolvedZoneId &&
@@ -99,13 +127,50 @@ export default function OrchidMovePanel({
   function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (!resolvedZoneId) return;
+    const range = normalizeAvailableCellRange({
+      startCell: startPositionValue,
+      endCell: endPositionValue,
+      maxCell,
+      occupiedCells,
+    });
 
     void onMove({
       toBedZoneId: resolvedZoneId,
-      startPosition: startCellToPosition(startPositionValue),
-      endPosition: endCellToPosition(endPositionValue),
+      startPosition: startCellToPosition(String(range.startCell)),
+      endPosition: endCellToPosition(String(range.endCell)),
       memo,
     });
+  }
+
+  function commitCellRange() {
+    if (!resolvedZoneId) {
+      return;
+    }
+    const range = normalizeAvailableCellRange({
+      startCell: startPositionValue,
+      endCell: endPositionValue,
+      maxCell,
+      occupiedCells,
+    });
+    setIgnoredMapPickVersion(mapCellRangePick.version);
+    setStartPosition(String(range.startCell));
+    setEndPosition(String(range.endCell));
+    onSyncMapCellRangePick({
+      targetBedZoneId: resolvedZoneId,
+      maxCell,
+      startCell: String(range.startCell),
+      endCell: String(range.endCell),
+    });
+  }
+
+  function updateStartCell(value: string) {
+    setIgnoredMapPickVersion(mapCellRangePick.version);
+    setStartPosition(value);
+  }
+
+  function updateEndCell(value: string) {
+    setIgnoredMapPickVersion(mapCellRangePick.version);
+    setEndPosition(value);
   }
 
   return (
@@ -154,18 +219,7 @@ export default function OrchidMovePanel({
           </select>
         </label>
 
-        <div className="grid grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-end gap-2">
-          <TextField
-            label="시작 칸"
-            min={1}
-            step={1}
-            type="number"
-            value={startPositionValue}
-            onChange={(value) => {
-              setIgnoredMapPickVersion(mapCellRangePick.version);
-              setStartPosition(value);
-            }}
-          />
+        <div className="grid grid-cols-[auto_minmax(0,1fr)_minmax(0,1fr)] items-end gap-2">
           <button
             className={`mb-px h-[34px] rounded-md border px-3 text-xs font-semibold transition ${
               rangePickActive
@@ -178,6 +232,7 @@ export default function OrchidMovePanel({
               if (!resolvedZoneId) return;
               onStartMapCellRangePick({
                 targetBedZoneId: resolvedZoneId,
+                maxCell,
                 startCell: startPositionValue,
                 endCell: endPositionValue,
               });
@@ -186,15 +241,24 @@ export default function OrchidMovePanel({
             맵에서 지정
           </button>
           <TextField
+            label="시작 칸"
+            max={maxCell}
+            min={1}
+            step={1}
+            type="number"
+            value={startPositionValue}
+            onBlur={commitCellRange}
+            onChange={updateStartCell}
+          />
+          <TextField
             label="끝 칸"
+            max={maxCell}
             min={1}
             step={1}
             type="number"
             value={endPositionValue}
-            onChange={(value) => {
-              setIgnoredMapPickVersion(mapCellRangePick.version);
-              setEndPosition(value);
-            }}
+            onBlur={commitCellRange}
+            onChange={updateEndCell}
           />
         </div>
 

@@ -55,6 +55,7 @@ export default function OrchidSelectionPanel({
   onOpenWorkRecord,
   onSelectOrchidGroup,
   onStartMapCellRangePick,
+  onSyncMapCellRangePick,
   onUpdateWorkRecordForm,
   onWorkRecordCreate,
 }: {
@@ -89,6 +90,15 @@ export default function OrchidSelectionPanel({
   onSelectOrchidGroup: (orchidGroupId: number) => void;
   onStartMapCellRangePick: (options: {
     endCell: string;
+    excludeOrchidGroupId?: number | null;
+    maxCell: number;
+    startCell: string;
+    targetBedZoneId: number;
+  }) => void;
+  onSyncMapCellRangePick: (options: {
+    endCell: string;
+    excludeOrchidGroupId?: number | null;
+    maxCell: number;
     startCell: string;
     targetBedZoneId: number;
   }) => void;
@@ -315,6 +325,7 @@ export default function OrchidSelectionPanel({
           targetZone={resolvedZone}
           onCancel={onCancelMutation}
           onStartMapCellRangePick={onStartMapCellRangePick}
+          onSyncMapCellRangePick={onSyncMapCellRangePick}
           onSubmit={mutationMode === "EDIT" ? onEdit : onCreate}
         />
       ) : null}
@@ -328,6 +339,7 @@ export default function OrchidSelectionPanel({
           selectedOrchidGroup={selectedOrchidGroup}
           onCancel={onCancelMutation}
           onStartMapCellRangePick={onStartMapCellRangePick}
+          onSyncMapCellRangePick={onSyncMapCellRangePick}
           onMove={onMove}
         />
       ) : null}

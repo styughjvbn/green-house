@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useSyncExternalStore } from "react";
+import { normalizeCellRange } from "../lib/orchidManagementUtils";
 import { useOrchidManagementMap } from "../model/useOrchidManagementMap";
 import type {
   MapCellRangePick,
@@ -44,6 +45,7 @@ export function OrchidManagementMap({
   );
   const [mapCellRangePick, setMapCellRangePick] = useState<MapCellRangePick>({
     active: false,
+    excludeOrchidGroupId: null,
     targetBedZoneId: null,
     startCell: null,
     endCell: null,
@@ -57,24 +59,53 @@ export function OrchidManagementMap({
   }
 
   function startMapCellRangePick({
+    excludeOrchidGroupId,
     targetBedZoneId,
   }: {
     endCell: string;
+    excludeOrchidGroupId?: number | null;
+    maxCell: number;
     startCell: string;
     targetBedZoneId: number;
   }) {
     setMapCellRangePick((current) => ({
       active: true,
+      excludeOrchidGroupId: excludeOrchidGroupId ?? null,
       targetBedZoneId,
       startCell: null,
       endCell: null,
-      version: current.version,
+      version: current.version + 1,
+    }));
+  }
+
+  function syncMapCellRangePick({
+    endCell,
+    excludeOrchidGroupId,
+    maxCell,
+    startCell,
+    targetBedZoneId,
+  }: {
+    endCell: string;
+    excludeOrchidGroupId?: number | null;
+    maxCell: number;
+    startCell: string;
+    targetBedZoneId: number;
+  }) {
+    const range = normalizeCellRange(startCell, endCell, maxCell);
+    setMapCellRangePick((current) => ({
+      active: false,
+      excludeOrchidGroupId: excludeOrchidGroupId ?? null,
+      targetBedZoneId,
+      startCell: range.startCell,
+      endCell: range.endCell,
+      version: current.version + 1,
     }));
   }
 
   function clearMapCellRangePick() {
     setMapCellRangePick((current) => ({
       active: false,
+      excludeOrchidGroupId: null,
       targetBedZoneId: null,
       startCell: null,
       endCell: null,
@@ -102,6 +133,7 @@ export function OrchidManagementMap({
 
       return {
         active: false,
+        excludeOrchidGroupId: current.excludeOrchidGroupId,
         targetBedZoneId: bedZoneId,
         startCell: Math.min(current.startCell, cell),
         endCell: Math.max(current.startCell, cell),
@@ -247,6 +279,7 @@ export function OrchidManagementMap({
             orchidManagement.actions.selectOrchidGroup(orchidGroupId);
           }}
           onStartMapCellRangePick={startMapCellRangePick}
+          onSyncMapCellRangePick={syncMapCellRangePick}
           onTogglePlacementEditMode={() => {
             clearMapCellRangePick();
             orchidManagement.actions.togglePlacementEditMode();

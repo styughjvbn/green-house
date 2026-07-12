@@ -111,15 +111,13 @@ export default function OrchidGroupBlock({
       <div className={`flex h-full flex-col ${paddingClass(density)}`}>
         {density === "dot" ? (
           <div className="flex h-full items-center justify-end px-1">
-            <span
-              className={`inline-block h-2 w-2 rounded-full ${
-                muted
-                  ? "bg-[#9aa39a]"
-                  : warning
-                    ? "bg-[#f59e0b]"
-                    : "bg-[#16a34a]"
-              }`}
-            />
+            {warning || muted ? (
+              <span
+                className={`inline-block h-2 w-2 rounded-full ${
+                  muted ? "bg-[#9aa39a]" : "bg-[#f59e0b]"
+                }`}
+              />
+            ) : null}
           </div>
         ) : density === "tiny" ? (
           <div className="flex h-full items-center gap-2">
@@ -131,15 +129,13 @@ export default function OrchidGroupBlock({
             <p className={`shrink-0 text-xs font-bold ${titleTextClass}`}>
               {orchidGroup.quantity}분
             </p>
-            <span
-              className={`inline-block h-2 w-2 rounded-full ${
-                muted
-                  ? "bg-[#9aa39a]"
-                  : warning
-                    ? "bg-[#f59e0b]"
-                    : "bg-[#16a34a]"
-              }`}
-            />
+            {warning || muted ? (
+              <span
+                className={`inline-block h-2 w-2 rounded-full ${
+                  muted ? "bg-[#9aa39a]" : "bg-[#f59e0b]"
+                }`}
+              />
+            ) : null}
           </div>
         ) : (
           <>
@@ -147,15 +143,13 @@ export default function OrchidGroupBlock({
               <p className={`truncate text-sm font-bold ${titleTextClass}`}>
                 {orchidGroup.varietyName}
               </p>
-              <span
-                className={`mt-0.5 inline-block h-2 w-2 rounded-full ${
-                  muted
-                    ? "bg-[#9aa39a]"
-                    : warning
-                      ? "bg-[#f59e0b]"
-                      : "bg-[#16a34a]"
-                }`}
-              />
+              {warning || muted ? (
+                <span
+                  className={`mt-0.5 inline-block h-2 w-2 rounded-full ${
+                    muted ? "bg-[#9aa39a]" : "bg-[#f59e0b]"
+                  }`}
+                />
+              ) : null}
             </div>
             <div className="mt-auto">
               <p className={`text-xs font-bold ${titleTextClass}`}>
