@@ -1,4 +1,3 @@
-sql
 -- Correct physical bed position unit counts and labels.
 -- Maps beds by house number and bed number instead of assuming house IDs.
 
