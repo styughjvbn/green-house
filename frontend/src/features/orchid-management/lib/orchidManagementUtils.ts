@@ -99,7 +99,7 @@ export function buildOccupiedCells(
   return cells;
 }
 
-export function clampCellRangeToAvailable({
+export function rangeHasOccupiedCell({
   endCell,
   occupiedCells,
   startCell,
@@ -108,63 +108,12 @@ export function clampCellRangeToAvailable({
   occupiedCells: Set<number>;
   startCell: number;
 }) {
-  if (occupiedCells.has(startCell)) {
-    return null;
-  }
-  if (startCell === endCell) {
-    return { startCell, endCell };
-  }
-
-  const direction = endCell > startCell ? 1 : -1;
-  let lastAvailable = startCell;
-  for (
-    let cell = startCell + direction;
-    direction > 0 ? cell <= endCell : cell >= endCell;
-    cell += direction
-  ) {
+  for (let cell = startCell; cell <= endCell; cell += 1) {
     if (occupiedCells.has(cell)) {
-      break;
+      return true;
     }
-    lastAvailable = cell;
   }
-
-  return {
-    startCell: Math.min(startCell, lastAvailable),
-    endCell: Math.max(startCell, lastAvailable),
-  };
-}
-
-export function normalizeAvailableCellRange({
-  endCell,
-  maxCell,
-  occupiedCells,
-  startCell,
-}: {
-  endCell: string;
-  maxCell: number;
-  occupiedCells: Set<number>;
-  startCell: string;
-}) {
-  const parsedStart = parseCell(startCell);
-  const parsedEnd = parseCell(endCell);
-  const fallback = parsedStart ?? parsedEnd ?? 1;
-  const rawStart = clampCell(parsedStart ?? fallback, 1, maxCell);
-  const rawEnd = clampCell(parsedEnd ?? rawStart, 1, maxCell);
-  const requestedStart = rawStart;
-  const requestedEnd = rawEnd < requestedStart ? requestedStart : rawEnd;
-  const start = occupiedCells.has(requestedStart)
-    ? findNearestAvailableCell(requestedStart, occupiedCells, maxCell)
-    : requestedStart;
-  if (start == null) {
-    return { startCell: requestedStart, endCell: requestedEnd };
-  }
-  return (
-    clampCellRangeToAvailable({
-      startCell: start,
-      endCell: Math.max(start, requestedEnd),
-      occupiedCells,
-    }) ?? { startCell: start, endCell: start }
-  );
+  return false;
 }
 
 export function formatCellRange({
@@ -198,24 +147,6 @@ function parseCell(value: string) {
 
 function clampCell(value: number, min: number, max: number) {
   return Math.min(Math.max(value, min), max);
-}
-
-function findNearestAvailableCell(
-  cell: number,
-  occupiedCells: Set<number>,
-  maxCell: number,
-) {
-  for (let current = cell + 1; current <= maxCell; current += 1) {
-    if (!occupiedCells.has(current)) {
-      return current;
-    }
-  }
-  for (let current = cell - 1; current >= 1; current -= 1) {
-    if (!occupiedCells.has(current)) {
-      return current;
-    }
-  }
-  return null;
 }
 
 export function findFirstOrchidGroup(house: House): OrchidGroup | null {

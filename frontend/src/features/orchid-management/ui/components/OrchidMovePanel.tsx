@@ -7,8 +7,9 @@ import {
   buildOccupiedCells,
   endCellToPosition,
   findBedZone,
-  normalizeAvailableCellRange,
+  normalizeCellRange,
   positionToEndCell,
+  rangeHasOccupiedCell,
   positionToStartCell,
   resolveMaxCell,
   startCellToPosition,
@@ -123,16 +124,25 @@ export default function OrchidMovePanel({
       : null;
   const startPositionValue = mapPickedRange?.startPosition ?? startPosition;
   const endPositionValue = mapPickedRange?.endPosition ?? endPosition;
+  const normalizedRange = normalizeCellRange(
+    startPositionValue,
+    endPositionValue,
+    maxCell,
+  );
+  const rangeBlocked = rangeHasOccupiedCell({
+    startCell: normalizedRange.startCell,
+    endCell: normalizedRange.endCell,
+    occupiedCells,
+  });
 
   function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (!resolvedZoneId) return;
-    const range = normalizeAvailableCellRange({
-      startCell: startPositionValue,
-      endCell: endPositionValue,
+    const range = normalizeCellRange(
+      startPositionValue,
+      endPositionValue,
       maxCell,
-      occupiedCells,
-    });
+    );
 
     void onMove({
       toBedZoneId: resolvedZoneId,
@@ -146,12 +156,11 @@ export default function OrchidMovePanel({
     if (!resolvedZoneId) {
       return;
     }
-    const range = normalizeAvailableCellRange({
-      startCell: startPositionValue,
-      endCell: endPositionValue,
+    const range = normalizeCellRange(
+      startPositionValue,
+      endPositionValue,
       maxCell,
-      occupiedCells,
-    });
+    );
     setIgnoredMapPickVersion(mapCellRangePick.version);
     setStartPosition(String(range.startCell));
     setEndPosition(String(range.endCell));
@@ -261,6 +270,12 @@ export default function OrchidMovePanel({
             onChange={updateEndCell}
           />
         </div>
+
+        {rangeBlocked ? (
+          <p className="rounded-md border border-[#f0d299] bg-[#fff8e8] px-3 py-2 text-xs font-semibold text-[#96650f]">
+            선택 범위 중간에 이미 배치된 난 묶음이 있습니다.
+          </p>
+        ) : null}
 
         {resolvedZoneId ? (
           <div className="rounded-md border border-[#dce2dc] bg-[#fbfcfa] p-2 text-xs text-[#4a5650]">

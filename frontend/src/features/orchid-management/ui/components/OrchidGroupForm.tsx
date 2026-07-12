@@ -12,10 +12,11 @@ import {
   findFirstAvailableSingleSlot,
   findBedZone,
   endCellToPosition,
-  normalizeAvailableCellRange,
+  normalizeCellRange,
   nullableNumber,
   nullableText,
   positionToEndCell,
+  rangeHasOccupiedCell,
   positionToStartCell,
   resolveMaxCell,
   startCellToPosition,
@@ -153,6 +154,16 @@ export default function OrchidGroupForm({
   const startPositionValue =
     mapPickedRange?.startPosition ?? form.startPosition;
   const endPositionValue = mapPickedRange?.endPosition ?? form.endPosition;
+  const normalizedRange = normalizeCellRange(
+    startPositionValue,
+    endPositionValue,
+    maxCell,
+  );
+  const rangeBlocked = rangeHasOccupiedCell({
+    startCell: normalizedRange.startCell,
+    endCell: normalizedRange.endCell,
+    occupiedCells,
+  });
 
   function updateField<K extends keyof OrchidFormState>(
     field: K,
@@ -175,12 +186,11 @@ export default function OrchidGroupForm({
     if (!activeZone) {
       return;
     }
-    const range = normalizeAvailableCellRange({
-      startCell: startPositionValue,
-      endCell: endPositionValue,
+    const range = normalizeCellRange(
+      startPositionValue,
+      endPositionValue,
       maxCell,
-      occupiedCells,
-    });
+    );
     setIgnoredMapPickVersion(mapCellRangePick.version);
     setForm((current) => ({
       ...current,
@@ -212,12 +222,11 @@ export default function OrchidGroupForm({
     if (!form.varietyId || !activeZone) {
       return;
     }
-    const range = normalizeAvailableCellRange({
-      startCell: startPositionValue,
-      endCell: endPositionValue,
+    const range = normalizeCellRange(
+      startPositionValue,
+      endPositionValue,
       maxCell,
-      occupiedCells,
-    });
+    );
 
     void onSubmit({
       bedZoneId: activeZone.id,
@@ -369,6 +378,11 @@ export default function OrchidGroupForm({
             onChange={updateEndCell}
           />
         </div>
+        {rangeBlocked ? (
+          <p className="rounded-md border border-[#f0d299] bg-[#fff8e8] px-3 py-2 text-xs font-semibold text-[#96650f]">
+            선택 범위 중간에 이미 배치된 난 묶음이 있습니다.
+          </p>
+        ) : null}
         <div>
           <label className="block">
             <span className="text-sm font-semibold text-[#435047]">
