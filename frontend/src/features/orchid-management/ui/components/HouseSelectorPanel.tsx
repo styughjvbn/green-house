@@ -1,6 +1,6 @@
 "use client";
 
-import { Palette, Pencil, Ruler } from "lucide-react";
+import { Palette, Pencil, Plus, Ruler } from "lucide-react";
 import { useRouter } from "next/navigation";
 import type { House, HouseStatusSummary } from "@/entities/farm/types";
 
@@ -8,24 +8,28 @@ export default function HouseSelectorPanel({
   house,
   houses,
   distinguishVarietyColors,
+  createActive,
   placementEditMode,
   selected,
   selectedHouseId,
   showScale,
   onTogglePlacementEditMode,
   onToggleVarietyColors,
+  onOpenCreate,
   onToggleScale,
   onSelectHouse,
 }: {
   house: House;
   houses: HouseStatusSummary[];
   distinguishVarietyColors: boolean;
+  createActive: boolean;
   placementEditMode: boolean;
   selected: boolean;
   selectedHouseId: number;
   showScale: boolean;
   onTogglePlacementEditMode: () => void;
   onToggleVarietyColors: () => void;
+  onOpenCreate: () => void;
   onToggleScale: () => void;
   onSelectHouse: () => void;
 }) {
@@ -58,6 +62,17 @@ export default function HouseSelectorPanel({
           ))}
         </select>
       </div>
+
+      <button
+        className={`inline-flex h-8 touch-manipulation items-center gap-2 rounded-md border border-[#dfe5dc] px-4 text-sm font-semibold shadow-sm ${
+          createActive ? "bg-[#159447] text-white" : "bg-white text-[#344138]"
+        }`}
+        onClick={onOpenCreate}
+        type="button"
+      >
+        <Plus className="h-4 w-4" strokeWidth={1.8} aria-hidden="true" />난 묶음
+        추가
+      </button>
 
       <div className="min-w-3 flex-1" />
       <button

@@ -300,13 +300,22 @@ export function useOrchidManagementMap(
   }
 
   function openCreate() {
+    if (mutationMode === "CREATE" && !pasteSourceOrchidGroup) {
+      setMutationMode(null);
+      return;
+    }
     clearPasteSource();
+    setSelection(listSelection);
     setMutationMode("CREATE");
     setErrorMessage(null);
   }
 
   function openEdit() {
     if (selectedOrchidGroup) {
+      if (mutationMode === "EDIT") {
+        setMutationMode(null);
+        return;
+      }
       clearPasteSource();
       setMutationMode("EDIT");
       setErrorMessage(null);
@@ -329,7 +338,13 @@ export function useOrchidManagementMap(
   }
 
   function openPaste() {
+    if (mutationMode === "CREATE" && pasteSourceOrchidGroup) {
+      setMutationMode(null);
+      clearPasteSource();
+      return;
+    }
     if (openClipboardPaste()) {
+      setSelection(listSelection);
       setMutationMode("CREATE");
       setErrorMessage(null);
       return;
@@ -339,6 +354,10 @@ export function useOrchidManagementMap(
 
   function openMove() {
     if (selectedOrchidGroup) {
+      if (mutationMode === "MOVE") {
+        setMutationMode(null);
+        return;
+      }
       clearPasteSource();
       setPreferredMoveZoneId(null);
       setMutationMode("MOVE");
@@ -347,6 +366,10 @@ export function useOrchidManagementMap(
   }
 
   function openWorkRecord() {
+    if (mutationMode === "WORK_RECORD") {
+      setMutationMode(null);
+      return;
+    }
     const target = resolveWorkRecordTarget({
       houseId: house.id,
       resolvedZoneId: resolvedZone?.id ?? null,

@@ -151,6 +151,10 @@ export function OrchidManagementMap({
     <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_440px]">
       <section className="space-y-3">
         <HouseSelectorPanel
+          createActive={
+            orchidManagement.mutationMode === "CREATE" &&
+            !orchidManagement.pasteSourceOrchidGroup
+          }
           distinguishVarietyColors={distinguishVarietyColors}
           house={house}
           houses={mapData.houses}
@@ -164,6 +168,10 @@ export function OrchidManagementMap({
           }}
           onToggleVarietyColors={toggleVarietyColors}
           onToggleScale={() => setShowScale((current) => !current)}
+          onOpenCreate={() => {
+            clearMapCellRangePick();
+            orchidManagement.actions.openCreate();
+          }}
           onSelectHouse={() => {
             clearMapCellRangePick();
             orchidManagement.actions.selectHouse();
@@ -276,10 +284,6 @@ export function OrchidManagementMap({
           onMove={async (payload) => {
             await orchidManagement.actions.move(payload);
             clearMapCellRangePick();
-          }}
-          onOpenCreate={() => {
-            clearMapCellRangePick();
-            orchidManagement.actions.openCreate();
           }}
           onOpenEdit={() => {
             clearMapCellRangePick();
