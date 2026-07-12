@@ -40,6 +40,11 @@ public class VarietyController {
 		return ApiResponse.ok(varietyService.getVarieties(keyword, genus, saleEnabled, active, page, size));
 	}
 
+	@GetMapping("/genera")
+	public ApiResponse<List<String>> getGenera() {
+		return ApiResponse.ok(varietyService.getGenera());
+	}
+
 	@GetMapping("/{varietyId}")
 	public ApiResponse<VarietyResponse> getVariety(@PathVariable Long varietyId) {
 		return ApiResponse.ok(varietyService.getVariety(varietyId));

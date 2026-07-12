@@ -20,6 +20,7 @@ import { PotSizeInput } from "./PotSizeInput";
 export function VarietySection({
   pageData,
   connectedGroups,
+  genera,
   selectedId,
   loadingGroups = false,
   onSelect,
@@ -30,6 +31,7 @@ export function VarietySection({
 }: {
   pageData: InventoryPageResult<Variety>;
   connectedGroups: Variety["connectedGroups"];
+  genera: string[];
   selectedId: number;
   loadingGroups?: boolean;
   onSelect: (id: number) => void;
@@ -48,10 +50,7 @@ export function VarietySection({
   const selected =
     pageData.content.find((item) => item.id === selectedId) ??
     pageData.content[0];
-  const genera = useMemo(
-    () => ["전체", ...new Set(pageData.content.map((item) => item.genus))],
-    [pageData.content],
-  );
+  const genusOptions = useMemo(() => ["전체", ...new Set(genera)], [genera]);
   const [editing, setEditing] = useState(false);
   const [form, setForm] = useState<VarietyPayload>({
     genus: selected?.genus ?? "",
@@ -106,7 +105,7 @@ export function VarietySection({
             defaultValue={genus}
             name="varietyGenus"
           >
-            {genera.map((value) => (
+            {genusOptions.map((value) => (
               <option key={value}>{value}</option>
             ))}
           </select>
