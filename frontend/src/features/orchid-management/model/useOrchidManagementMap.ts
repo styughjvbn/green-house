@@ -247,13 +247,9 @@ export function useOrchidManagementMap(
   }
 
   function openCreate() {
-    if (resolvedZone) {
-      clearPasteSource();
-      setMutationMode("CREATE");
-      setErrorMessage(null);
-      return;
-    }
-    setErrorMessage("먼저 구역을 선택하세요.");
+    clearPasteSource();
+    setMutationMode("CREATE");
+    setErrorMessage(null);
   }
 
   function openEdit() {
@@ -280,7 +276,7 @@ export function useOrchidManagementMap(
   }
 
   function openPaste() {
-    if (resolvedZone && openClipboardPaste()) {
+    if (openClipboardPaste()) {
       setMutationMode("CREATE");
       setErrorMessage(null);
       return;
@@ -403,12 +399,13 @@ export function useOrchidManagementMap(
   }
 
   async function handleCreate(payload: MutationPayload) {
-    if (!resolvedZone) {
-      setErrorMessage("난 묶음을 추가할 구역을 선택하세요.");
+    if (!payload.bedZoneId) {
+      setErrorMessage("난 묶음을 추가할 위치를 선택하세요.");
       return;
     }
+    const { bedZoneId, ...createPayload } = payload;
     await runMutation(async () =>
-      createOrchidGroup({ ...payload, bedZoneId: resolvedZone.id }),
+      createOrchidGroup({ ...createPayload, bedZoneId }),
     );
   }
 

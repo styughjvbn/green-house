@@ -10,6 +10,7 @@ import type {
 import {
   buildOccupiedCells,
   findFirstAvailableSingleSlot,
+  findBedZone,
   endCellToPosition,
   normalizeAvailableCellRange,
   nullableNumber,
@@ -51,7 +52,7 @@ export default function OrchidGroupForm({
     excludeOrchidGroupId?: number | null;
     maxCell: number;
     startCell: string;
-    targetBedZoneId: number;
+    targetBedZoneId: number | null;
   }) => void;
   onSyncMapCellRangePick: (options: {
     endCell: string;
@@ -76,12 +77,18 @@ export default function OrchidGroupForm({
     [initialValue],
   );
 
+  const mapTargetZone =
+    mode === "CREATE" && mapCellRangePick.targetBedZoneId != null
+      ? (findBedZone(house, mapCellRangePick.targetBedZoneId)?.zone ?? null)
+      : null;
+  const activeZone = mapTargetZone ?? targetZone;
+
   const defaultPlacement = useMemo(
     () =>
-      mode === "CREATE" && targetZone
-        ? findFirstAvailableSingleSlot(house, targetZone.id)
+      mode === "CREATE" && activeZone
+        ? findFirstAvailableSingleSlot(house, activeZone.id)
         : null,
-    [house, mode, targetZone],
+    [activeZone, house, mode],
   );
 
   const [form, setForm] = useState<OrchidFormState>(() => ({
@@ -111,28 +118,30 @@ export default function OrchidGroupForm({
     memo: initialValue?.memo ?? "",
   }));
   const maxCell = useMemo(
-    () => resolveMaxCell(house, targetZone?.id ?? null),
-    [house, targetZone],
+    () => resolveMaxCell(house, activeZone?.id ?? null),
+    [activeZone, house],
   );
   const excludedOrchidGroupId =
     mode === "EDIT" ? (initialValue?.id ?? null) : null;
   const occupiedCells = useMemo(
     () =>
       buildOccupiedCells(
-        targetZone?.orchidGroups ?? [],
+        activeZone?.orchidGroups ?? [],
         excludedOrchidGroupId,
         maxCell,
       ),
-    [excludedOrchidGroupId, maxCell, targetZone],
+    [activeZone, excludedOrchidGroupId, maxCell],
   );
   const [ignoredMapPickVersion, setIgnoredMapPickVersion] = useState(0);
   const rangePickActive =
     mapCellRangePick.active &&
-    targetZone != null &&
-    mapCellRangePick.targetBedZoneId === targetZone.id;
+    (mode === "CREATE"
+      ? mapCellRangePick.targetBedZoneId == null ||
+        mapCellRangePick.targetBedZoneId === activeZone?.id
+      : mapCellRangePick.targetBedZoneId === activeZone?.id);
   const mapPickedRange =
-    targetZone != null &&
-    mapCellRangePick.targetBedZoneId === targetZone.id &&
+    activeZone != null &&
+    mapCellRangePick.targetBedZoneId === activeZone.id &&
     mapCellRangePick.startCell != null &&
     mapCellRangePick.endCell != null &&
     mapCellRangePick.version > ignoredMapPickVersion
@@ -163,7 +172,7 @@ export default function OrchidGroupForm({
   }
 
   function commitCellRange() {
-    if (!targetZone) {
+    if (!activeZone) {
       return;
     }
     const range = normalizeAvailableCellRange({
@@ -179,7 +188,7 @@ export default function OrchidGroupForm({
       endPosition: String(range.endCell),
     }));
     onSyncMapCellRangePick({
-      targetBedZoneId: targetZone.id,
+      targetBedZoneId: activeZone.id,
       excludeOrchidGroupId: excludedOrchidGroupId,
       maxCell,
       startCell: String(range.startCell),
@@ -200,7 +209,7 @@ export default function OrchidGroupForm({
 
   function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    if (!form.varietyId) {
+    if (!form.varietyId || !activeZone) {
       return;
     }
     const range = normalizeAvailableCellRange({
@@ -211,6 +220,7 @@ export default function OrchidGroupForm({
     });
 
     void onSubmit({
+      bedZoneId: activeZone.id,
       varietyId: Number(form.varietyId),
       quantity: Number(form.quantity),
       potSize: nullableText(form.potSize),
@@ -237,11 +247,15 @@ export default function OrchidGroupForm({
               : "난 묶음 수정"}
           </p>
           <h3 className="mt-1 text-base font-semibold">
-            {targetZone?.name ?? "구역 선택 필요"}
+            {activeZone?.name ?? "맵에서 위치 지정"}
           </h3>
-          {targetZone ? (
+          {activeZone ? (
             <p className="mt-1 text-xs font-semibold text-[#5c6a60]">
-              {targetZone.houseNumber}동 {targetZone.physicalBedNumber}배드
+              {activeZone.houseNumber}동 {activeZone.physicalBedNumber}배드
+            </p>
+          ) : mode === "CREATE" ? (
+            <p className="mt-1 text-xs font-semibold text-[#5c6a60]">
+              맵에서 지정 버튼을 누른 뒤 빈 칸을 선택하세요.
             </p>
           ) : null}
         </div>
@@ -317,12 +331,13 @@ export default function OrchidGroupForm({
                 ? "border-[#159447] bg-[#159447] text-white"
                 : "border-[#cfd8cc] bg-white text-[#36513d] hover:bg-[#f3f8f2]"
             }`}
-            disabled={!targetZone || saving}
+            disabled={saving || (mode === "EDIT" && !activeZone)}
             type="button"
             onClick={() => {
-              if (!targetZone) return;
+              if (mode === "EDIT" && !activeZone) return;
               onStartMapCellRangePick({
-                targetBedZoneId: targetZone.id,
+                targetBedZoneId:
+                  mode === "CREATE" ? null : (activeZone?.id ?? null),
                 excludeOrchidGroupId:
                   mode === "EDIT" ? (initialValue?.id ?? null) : null,
                 maxCell,
@@ -402,7 +417,7 @@ export default function OrchidGroupForm({
         </label>
         <button
           className="w-full rounded-md bg-[#159447] px-3 py-2 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-60"
-          disabled={saving || !targetZone || !form.varietyId}
+          disabled={saving || !activeZone || !form.varietyId}
           type="submit"
         >
           {saving ? "저장 중..." : "저장"}

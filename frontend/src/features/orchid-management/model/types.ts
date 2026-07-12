@@ -46,6 +46,7 @@ export type OrchidFormState = {
 };
 
 export type MutationPayload = {
+  bedZoneId?: number;
   varietyId: number;
   quantity: number;
   potSize: string | null;

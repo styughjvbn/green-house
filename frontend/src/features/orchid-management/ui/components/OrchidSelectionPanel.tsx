@@ -93,7 +93,7 @@ export default function OrchidSelectionPanel({
     excludeOrchidGroupId?: number | null;
     maxCell: number;
     startCell: string;
-    targetBedZoneId: number;
+    targetBedZoneId: number | null;
   }) => void;
   onSyncMapCellRangePick: (options: {
     endCell: string;
@@ -128,6 +128,17 @@ export default function OrchidSelectionPanel({
               : orchidGroups.length}
             개)
           </p>
+          <button
+            className={`rounded-md px-3 py-1.5 text-xs font-semibold transition ${
+              mutationMode === "CREATE" && !pasteSourceOrchidGroup
+                ? "border border-[#159447] bg-[#159447] text-white"
+                : "border border-[#d7ddd4] bg-white text-[#435047] hover:border-[#159447]"
+            }`}
+            onClick={onOpenCreate}
+            type="button"
+          >
+            난 묶음 추가
+          </button>
         </div>
         {copiedOrchidGroup ? (
           <div className="mt-3 flex items-center justify-between gap-2 rounded-md border border-[#dbe8d8] bg-[#f5faf3] px-3 py-2 text-xs">
@@ -255,13 +266,7 @@ export default function OrchidSelectionPanel({
               ) : null}
             </div>
 
-            <div className="mt-3 grid grid-cols-3 gap-2">
-              <ActionButton
-                icon={<Edit2 className="h-4 w-4" />}
-                label="난 묶음 추가"
-                onClick={onOpenCreate}
-                active={mutationMode === "CREATE" && !pasteSourceOrchidGroup}
-              />
+            <div className="mt-3 grid grid-cols-2 gap-2">
               <ActionButton
                 icon={<Clipboard className="h-4 w-4" />}
                 label="작업 기록 추가"
@@ -279,19 +284,8 @@ export default function OrchidSelectionPanel({
         ) : (
           <div className="mt-3">
             <p className="text-sm text-[#5c6a60]">
-              구역을 선택한 뒤 난 묶음을 추가할 수 있습니다.
+              구역을 선택하면 해당 구역의 난 묶음 목록을 볼 수 있습니다.
             </p>
-            <button
-              className={`mt-3 w-full rounded-md px-3 py-2 text-sm font-semibold transition ${
-                mutationMode === "CREATE"
-                  ? "border border-[#159447] bg-[#159447] text-white"
-                  : "border border-[#d7ddd4] bg-white text-[#435047]"
-              }`}
-              onClick={onOpenCreate}
-              type="button"
-            >
-              난 묶음 추가
-            </button>
           </div>
         )}
         {errorMessage ? (

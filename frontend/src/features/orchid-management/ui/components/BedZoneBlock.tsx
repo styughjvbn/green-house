@@ -57,7 +57,9 @@ export default function BedZoneBlock({
   const cellHeight = MAP_HEIGHT / resolvedMaxPosition;
   const cells = buildCells(resolvedMaxPosition);
   const rangePickActive =
-    cellRangePick.active && cellRangePick.targetBedZoneId === zone.id;
+    cellRangePick.active &&
+    (cellRangePick.targetBedZoneId == null ||
+      cellRangePick.targetBedZoneId === zone.id);
   const pickedStartCell =
     cellRangePick.targetBedZoneId === zone.id ? cellRangePick.startCell : null;
   const pickedEndCell =

@@ -59,14 +59,14 @@ export function OrchidManagementMap({
   }
 
   function startMapCellRangePick({
-    excludeOrchidGroupId,
     targetBedZoneId,
+    excludeOrchidGroupId,
   }: {
     endCell: string;
     excludeOrchidGroupId?: number | null;
     maxCell: number;
     startCell: string;
-    targetBedZoneId: number;
+    targetBedZoneId: number | null;
   }) {
     setMapCellRangePick((current) => ({
       active: true,
@@ -115,7 +115,11 @@ export function OrchidManagementMap({
 
   function pickMapCellRange(bedZoneId: number, cell: number) {
     setMapCellRangePick((current) => {
-      if (!current.active || current.targetBedZoneId !== bedZoneId) {
+      if (!current.active) {
+        return current;
+      }
+      const targetBedZoneId = current.targetBedZoneId ?? bedZoneId;
+      if (targetBedZoneId !== bedZoneId) {
         return current;
       }
 
@@ -125,6 +129,7 @@ export function OrchidManagementMap({
       ) {
         return {
           ...current,
+          targetBedZoneId,
           startCell: cell,
           endCell: cell,
           version: current.version + 1,
@@ -134,7 +139,7 @@ export function OrchidManagementMap({
       return {
         active: false,
         excludeOrchidGroupId: current.excludeOrchidGroupId,
-        targetBedZoneId: bedZoneId,
+        targetBedZoneId,
         startCell: Math.min(current.startCell, cell),
         endCell: Math.max(current.startCell, cell),
         version: current.version + 1,
