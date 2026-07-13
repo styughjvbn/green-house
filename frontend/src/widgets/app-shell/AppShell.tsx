@@ -447,6 +447,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           <PageHeader
             title={currentPage.title}
             description={currentPage.description}
+            collapsed={sidebarCollapsed}
           />
 
           {children}
