@@ -164,6 +164,7 @@ export default function OrchidGroupForm({
     endCell: normalizedRange.endCell,
     occupiedCells,
   });
+  const submitBlocked = mode === "EDIT" && rangeBlocked;
 
   function updateField<K extends keyof OrchidFormState>(
     field: K,
@@ -219,7 +220,7 @@ export default function OrchidGroupForm({
 
   function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    if (!form.varietyId || !activeZone) {
+    if (!form.varietyId || !activeZone || submitBlocked) {
       return;
     }
     const range = normalizeCellRange(
@@ -431,7 +432,7 @@ export default function OrchidGroupForm({
         </label>
         <button
           className="w-full rounded-md bg-[#159447] px-3 py-2 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-60"
-          disabled={saving || !activeZone || !form.varietyId}
+          disabled={saving || !activeZone || !form.varietyId || submitBlocked}
           type="submit"
         >
           {saving ? "저장 중..." : "저장"}

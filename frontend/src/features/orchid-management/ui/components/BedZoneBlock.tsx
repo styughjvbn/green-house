@@ -225,9 +225,34 @@ export default function BedZoneBlock({
               endPosition: orchidGroup.endPosition,
               maxCell: resolvedMaxPosition,
             });
-            const gridRowStart = resolvedMaxPosition - range.endCell + 1;
-            const gridRowEnd = resolvedMaxPosition - range.startCell + 2;
-            const heightPx = (range.endCell - range.startCell + 1) * cellHeight;
+            const previewRange =
+              cellRangePick.excludeOrchidGroupId === orchidGroup.id &&
+              cellRangePick.targetBedZoneId === zone.id &&
+              cellRangePick.startCell != null &&
+              cellRangePick.endCell != null
+                ? {
+                    startCell: Math.min(
+                      cellRangePick.startCell,
+                      cellRangePick.endCell,
+                    ),
+                    endCell: Math.max(
+                      cellRangePick.startCell,
+                      cellRangePick.endCell,
+                    ),
+                  }
+                : null;
+            const previewMoved =
+              previewRange != null &&
+              (previewRange.startCell !== range.startCell ||
+                previewRange.endCell !== range.endCell);
+            const displayRange = previewMoved ? previewRange : range;
+            const rangePickExcluded =
+              cellRangePick.excludeOrchidGroupId === orchidGroup.id &&
+              (rangePickActive || previewMoved);
+            const gridRowStart = resolvedMaxPosition - displayRange.endCell + 1;
+            const gridRowEnd = resolvedMaxPosition - displayRange.startCell + 2;
+            const heightPx =
+              (displayRange.endCell - displayRange.startCell + 1) * cellHeight;
 
             return (
               <div
@@ -236,6 +261,8 @@ export default function BedZoneBlock({
                   rangePickActive
                     ? "pointer-events-none"
                     : "pointer-events-auto"
+                } ${rangePickExcluded ? "opacity-30" : ""} ${
+                  rangePickExcluded ? "transition-opacity" : ""
                 }`}
                 style={{
                   gridRow: `${gridRowStart} / ${gridRowEnd}`,
@@ -248,7 +275,11 @@ export default function BedZoneBlock({
                   heightPx={heightPx}
                   muted={!matched}
                   orchidGroup={orchidGroup}
-                  positionLabel={formatCellRange(orchidGroup)}
+                  positionLabel={
+                    previewMoved
+                      ? `${displayRange.startCell}-${displayRange.endCell}칸`
+                      : formatCellRange(orchidGroup)
+                  }
                   selected={selectedOrchidGroupId === orchidGroup.id}
                   onDragEnd={onDragEnd}
                   onDragStart={() => onDragStart(orchidGroup.id)}
