@@ -1,27 +1,16 @@
 "use client";
 
 import type { House } from "@/entities/farm/types";
-import type {
-  DragState,
-  MapCellRangePick,
-  OrchidSelection,
-} from "../../model/types";
+import type { MapCellRangePick, OrchidSelection } from "../../model/types";
 import PhysicalBedBlock from "./PhysicalBedBlock";
 
 export default function HouseDetailMap({
   distinguishVarietyColors,
-  dragState,
   filteredOrchidGroupIds,
   house,
-  placementEditMode,
-  saving,
   selection,
   showScale,
   cellRangePick,
-  onDragEnd,
-  onDragStart,
-  onDropOnBedZone,
-  onEnterDropZone,
   onPickCellRange,
   onSelectBedZone,
   onSelectHouse,
@@ -29,18 +18,11 @@ export default function HouseDetailMap({
   onSelectOrchidGroup,
 }: {
   distinguishVarietyColors: boolean;
-  dragState: DragState;
   filteredOrchidGroupIds: Set<number>;
   house: House;
-  placementEditMode: boolean;
-  saving: boolean;
   selection: OrchidSelection | null;
   showScale: boolean;
   cellRangePick: MapCellRangePick;
-  onDragEnd: () => void;
-  onDragStart: (orchidGroupId: number) => void;
-  onDropOnBedZone: (bedZoneId: number) => Promise<void>;
-  onEnterDropZone: (bedZoneId: number) => void;
   onPickCellRange: (bedZoneId: number, cell: number) => void;
   onSelectBedZone: (bedZoneId: number) => void;
   onSelectHouse: () => void;
@@ -58,17 +40,10 @@ export default function HouseDetailMap({
             key={bed.id}
             bed={bed}
             distinguishVarietyColors={distinguishVarietyColors}
-            dragState={dragState}
             filteredOrchidGroupIds={filteredOrchidGroupIds}
-            placementEditMode={placementEditMode}
-            saving={saving}
             selection={selection}
             showScale={showScale}
             cellRangePick={cellRangePick}
-            onDragEnd={onDragEnd}
-            onDragStart={onDragStart}
-            onDropOnBedZone={onDropOnBedZone}
-            onEnterDropZone={onEnterDropZone}
             onPickCellRange={onPickCellRange}
             onSelectBedZone={onSelectBedZone}
             onSelectPhysicalBed={onSelectPhysicalBed}

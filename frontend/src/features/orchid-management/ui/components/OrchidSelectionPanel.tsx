@@ -9,6 +9,10 @@ import type {
   WorkRecord,
   WorkType,
 } from "@/entities/farm/types";
+import {
+  FarmPlacementPickerDialog,
+  type FarmPlacementSelection,
+} from "@/entities/farm/ui/FarmPlacementPicker";
 import { Copy, Edit2, Trash2, Clipboard, Move } from "lucide-react";
 import { findBedZone } from "../../lib/orchidManagementUtils";
 import type {
@@ -24,7 +28,6 @@ import type {
 import ActionButton from "./ActionButton";
 import InfoMetric from "./InfoMetric";
 import OrchidGroupForm from "./OrchidGroupForm";
-import OrchidMovePanel from "./OrchidMovePanel";
 import OrchidWorkRecordForm from "./OrchidWorkRecordForm";
 
 export default function OrchidSelectionPanel({
@@ -33,11 +36,10 @@ export default function OrchidSelectionPanel({
   filteredOrchidGroupIds,
   hasActiveSearch,
   house,
+  placementHouses,
   listSelection,
   mutationMode,
   pasteSourceOrchidGroup,
-  preferredMoveZoneId,
-  placementEditMode,
   resolvedZone,
   saving,
   selectedBedZone,
@@ -69,11 +71,10 @@ export default function OrchidSelectionPanel({
   filteredOrchidGroupIds: Set<number>;
   hasActiveSearch: boolean;
   house: House;
+  placementHouses: House[];
   listSelection: OrchidListSelection;
   mutationMode: MutationMode;
   pasteSourceOrchidGroup: OrchidGroup | null;
-  preferredMoveZoneId: number | null;
-  placementEditMode: boolean;
   resolvedZone: BedZone | null;
   saving: boolean;
   selectedBedZone: BedZone | null;
@@ -109,7 +110,6 @@ export default function OrchidSelectionPanel({
     startCell: string;
     targetBedZoneId: number;
   }) => void;
-  onTogglePlacementEditMode: () => void;
   onUpdateWorkRecordForm: <K extends keyof WorkRecordQuickFormState>(
     field: K,
     value: WorkRecordQuickFormState[K],
@@ -324,11 +324,6 @@ export default function OrchidSelectionPanel({
               {errorMessage}
             </p>
           ) : null}
-          {placementEditMode ? (
-            <p className="mt-3 rounded-md border border-[#b9d0ff] bg-[#f3f7ff] p-2 text-xs font-semibold text-[#246df2]">
-              배치 수정 중: 난 묶음을 다른 좌/우 구역으로 드래그하세요.
-            </p>
-          ) : null}
         </section>
       ) : null}
 
@@ -357,16 +352,23 @@ export default function OrchidSelectionPanel({
       ) : null}
 
       {mutationMode === "MOVE" && selectedOrchidGroup ? (
-        <OrchidMovePanel
-          house={house}
-          preferredBedZoneId={preferredMoveZoneId}
-          saving={saving}
-          mapCellRangePick={mapCellRangePick}
-          selectedOrchidGroup={selectedOrchidGroup}
-          onCancel={onCancelMutation}
-          onStartMapCellRangePick={onStartMapCellRangePick}
-          onSyncMapCellRangePick={onSyncMapCellRangePick}
-          onMove={onMove}
+        <FarmPlacementPickerDialog
+          dialogDescription="이동할 동과 구역을 고른 뒤 시작 칸과 끝 칸을 지정하세요."
+          dialogTitle="난 묶음 위치 이동"
+          excludeOrchidGroupId={selectedOrchidGroup.id}
+          houses={placementHouses}
+          initialValue={toPlacementSelection(selectedOrchidGroup)}
+          submitDisabled={saving}
+          submitLabel={saving ? "이동 중..." : "이동 저장"}
+          onClose={onCancelMutation}
+          onSelect={(value) => {
+            void onMove({
+              toBedZoneId: value.bedZoneId,
+              startPosition: value.startPosition,
+              endPosition: value.endPosition,
+              memo: "",
+            });
+          }}
         />
       ) : null}
 
@@ -721,6 +723,28 @@ function formatWorkRecordDetail(record: WorkRecord) {
     record.memo,
   ].filter(Boolean);
   return details.length > 0 ? details.join(" · ") : formatWorkTarget(record);
+}
+
+function toPlacementSelection(
+  orchidGroup: OrchidGroup,
+): FarmPlacementSelection {
+  const startCell =
+    orchidGroup.startPosition != null
+      ? Math.floor(orchidGroup.startPosition) + 1
+      : 1;
+  const endCell =
+    orchidGroup.endPosition != null
+      ? Math.ceil(orchidGroup.endPosition)
+      : startCell;
+
+  return {
+    bedZoneId: orchidGroup.bedZoneId,
+    startCell,
+    endCell,
+    startPosition: startCell - 1,
+    endPosition: endCell,
+    label: `${orchidGroup.houseNumber}동 ${orchidGroup.physicalBedNumber}다이 ${orchidGroup.bedZoneName} ${startCell}-${endCell}칸`,
+  };
 }
 
 function formatWorkTarget(record: WorkRecord) {

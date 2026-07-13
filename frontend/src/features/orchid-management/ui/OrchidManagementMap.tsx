@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useSyncExternalStore } from "react";
+import { useMemo, useState, useSyncExternalStore } from "react";
 import { normalizeCellRange } from "../lib/orchidManagementUtils";
 import { useOrchidManagementMap } from "../model/useOrchidManagementMap";
 import type {
@@ -38,6 +38,17 @@ export function OrchidManagementMap({
     initialSearchFilters,
   );
   const [showScale, setShowScale] = useState(true);
+  const placementHouses = useMemo(
+    () =>
+      mapData.houses.map((item) => ({
+        id: item.houseId,
+        number: item.houseNumber,
+        name: item.houseName,
+        memo: null,
+        physicalBeds: item.physicalBeds,
+      })),
+    [mapData.houses],
+  );
   const distinguishVarietyColors = useSyncExternalStore(
     subscribeVarietyColorPreference,
     getVarietyColorPreference,
@@ -158,14 +169,9 @@ export function OrchidManagementMap({
           distinguishVarietyColors={distinguishVarietyColors}
           house={house}
           houses={mapData.houses}
-          placementEditMode={orchidManagement.placementEditMode}
           selected={orchidManagement.selection?.type === "HOUSE"}
           selectedHouseId={house.id}
           showScale={showScale}
-          onTogglePlacementEditMode={() => {
-            clearMapCellRangePick();
-            orchidManagement.actions.togglePlacementEditMode();
-          }}
           onToggleVarietyColors={toggleVarietyColors}
           onToggleScale={() => setShowScale((current) => !current)}
           onOpenCreate={() => {
@@ -179,18 +185,11 @@ export function OrchidManagementMap({
         />
         <HouseDetailMap
           distinguishVarietyColors={distinguishVarietyColors}
-          dragState={orchidManagement.dragState}
           filteredOrchidGroupIds={orchidManagement.filteredOrchidGroupIds}
           house={house}
-          placementEditMode={orchidManagement.placementEditMode}
-          saving={orchidManagement.saving}
           selection={orchidManagement.selection}
           showScale={showScale}
           cellRangePick={mapCellRangePick}
-          onDragEnd={orchidManagement.actions.endDrag}
-          onDragStart={orchidManagement.actions.startDrag}
-          onDropOnBedZone={orchidManagement.actions.dropOnBedZone}
-          onEnterDropZone={orchidManagement.actions.enterDropZone}
           onPickCellRange={pickMapCellRange}
           onSelectBedZone={(bedZoneId) => {
             clearMapCellRangePick();
@@ -247,10 +246,10 @@ export function OrchidManagementMap({
           filteredOrchidGroupIds={orchidManagement.filteredOrchidGroupIds}
           hasActiveSearch={orchidManagement.hasActiveSearch}
           house={house}
+          placementHouses={placementHouses}
           listSelection={orchidManagement.listSelection}
           mutationMode={orchidManagement.mutationMode}
           pasteSourceOrchidGroup={orchidManagement.pasteSourceOrchidGroup}
-          preferredMoveZoneId={orchidManagement.preferredMoveZoneId}
           resolvedZone={orchidManagement.resolvedZone}
           saving={orchidManagement.saving}
           selectedBedZone={orchidManagement.selectedBedZone}
@@ -307,16 +306,11 @@ export function OrchidManagementMap({
           }}
           onStartMapCellRangePick={startMapCellRangePick}
           onSyncMapCellRangePick={syncMapCellRangePick}
-          onTogglePlacementEditMode={() => {
-            clearMapCellRangePick();
-            orchidManagement.actions.togglePlacementEditMode();
-          }}
           onUpdateWorkRecordForm={orchidManagement.actions.updateWorkRecordForm}
           onWorkRecordCreate={async () => {
             await orchidManagement.actions.workRecordCreate();
             clearMapCellRangePick();
           }}
-          placementEditMode={orchidManagement.placementEditMode}
         />
       </div>
     </div>

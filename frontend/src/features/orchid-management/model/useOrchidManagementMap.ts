@@ -31,7 +31,6 @@ import {
 } from "../lib/orchidManagementUtils";
 import { useOrchidClipboard } from "./OrchidClipboardContext";
 import type {
-  DragState,
   OrchidManagementSearchState,
   MutationMode,
   MutationPayload,
@@ -92,8 +91,6 @@ export function useOrchidManagementMap(
           ? { type: "PHYSICAL_BED", physicalBedId: initialPhysicalBed.id }
           : { type: "HOUSE", houseId: house.id },
   );
-  const [placementEditMode, setPlacementEditMode] = useState(false);
-  const [dragState, setDragState] = useState<DragState>(null);
   const [mutationMode, setMutationMode] = useState<MutationMode>(null);
   const {
     copiedOrchidGroup,
@@ -110,9 +107,6 @@ export function useOrchidManagementMap(
     });
   const [searchResults, setSearchResults] = useState<OrchidGroup[]>([]);
   const [searchLoading, setSearchLoading] = useState(false);
-  const [preferredMoveZoneId, setPreferredMoveZoneId] = useState<number | null>(
-    null,
-  );
   const [workRecordForm, setWorkRecordForm] =
     useState<WorkRecordQuickFormState>(() =>
       createInitialWorkRecordForm(workTypes, firstOrchidGroup?.id ?? null),
@@ -359,7 +353,6 @@ export function useOrchidManagementMap(
         return;
       }
       clearPasteSource();
-      setPreferredMoveZoneId(null);
       setMutationMode("MOVE");
       setErrorMessage(null);
     }
@@ -429,49 +422,6 @@ export function useOrchidManagementMap(
       params.set("searchStatus", searchFilters.status);
     }
     router.push(`/orchid-groups?${params}`);
-  }
-
-  function togglePlacementEditMode() {
-    setPlacementEditMode((current) => !current);
-    setDragState(null);
-    setMutationMode(null);
-    clearPasteSource();
-  }
-
-  function startDrag(orchidGroupId: number) {
-    if (!placementEditMode || saving) {
-      return;
-    }
-    setSelection({ type: "ORCHID_GROUP", orchidGroupId });
-    setDragState({ orchidGroupId, overBedZoneId: null });
-    setErrorMessage(null);
-  }
-
-  function enterDropZone(bedZoneId: number) {
-    if (!dragState) {
-      return;
-    }
-    setDragState({ ...dragState, overBedZoneId: bedZoneId });
-  }
-
-  function endDrag() {
-    setDragState(null);
-  }
-
-  async function dropOnBedZone(toBedZoneId: number) {
-    if (!dragState) {
-      return;
-    }
-    const draggingGroup = findOrchidGroup(house, dragState.orchidGroupId);
-    if (!draggingGroup) {
-      setDragState(null);
-      return;
-    }
-    setSelection({ type: "ORCHID_GROUP", orchidGroupId: draggingGroup.id });
-    setPreferredMoveZoneId(toBedZoneId);
-    setMutationMode("MOVE");
-    clearPasteSource();
-    setDragState(null);
   }
 
   async function handleCreate(payload: MutationPayload) {
@@ -574,13 +524,10 @@ export function useOrchidManagementMap(
     errorMessage,
     copiedOrchidGroup,
     pasteSourceOrchidGroup,
-    dragState,
     filteredOrchidGroupIds,
     hasActiveSearch,
     listSelection,
     mutationMode,
-    preferredMoveZoneId,
-    placementEditMode,
     resolvedZone,
     saving,
     searchFilters,
@@ -603,10 +550,7 @@ export function useOrchidManagementMap(
       copyOrchidGroup,
       create: handleCreate,
       delete: handleDelete,
-      dropOnBedZone,
       edit: handleUpdate,
-      endDrag,
-      enterDropZone,
       moveToOrchidGroup,
       move: handleMove,
       openCreate,
@@ -620,8 +564,6 @@ export function useOrchidManagementMap(
       selectPhysicalBed,
       selectOrchidGroup,
       selectOrchidGroupForEdit,
-      startDrag,
-      togglePlacementEditMode,
       updateSearchFilter,
       updateWorkRecordForm,
       workRecordCreate: handleWorkRecordCreate,

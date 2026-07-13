@@ -33,11 +33,6 @@ export type OrchidListSelection =
 
 export type MutationMode = "CREATE" | "EDIT" | "MOVE" | "WORK_RECORD" | null;
 
-export type DragState = {
-  orchidGroupId: number;
-  overBedZoneId: number | null;
-} | null;
-
 export type MapCellRangePick = {
   active: boolean;
   excludeOrchidGroupId: number | null;

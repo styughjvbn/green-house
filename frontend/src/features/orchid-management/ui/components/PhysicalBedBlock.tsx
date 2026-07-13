@@ -1,27 +1,16 @@
 "use client";
 
 import type { PhysicalBed } from "@/entities/farm/types";
-import type {
-  DragState,
-  MapCellRangePick,
-  OrchidSelection,
-} from "../../model/types";
+import type { MapCellRangePick, OrchidSelection } from "../../model/types";
 import BedZoneBlock from "./BedZoneBlock";
 
 export default function PhysicalBedBlock({
   bed,
   distinguishVarietyColors,
-  dragState,
   filteredOrchidGroupIds,
-  placementEditMode,
-  saving,
   selection,
   showScale,
   cellRangePick,
-  onDragEnd,
-  onDragStart,
-  onDropOnBedZone,
-  onEnterDropZone,
   onPickCellRange,
   onSelectBedZone,
   onSelectPhysicalBed,
@@ -29,17 +18,10 @@ export default function PhysicalBedBlock({
 }: {
   bed: PhysicalBed;
   distinguishVarietyColors: boolean;
-  dragState: DragState;
   filteredOrchidGroupIds: Set<number>;
-  placementEditMode: boolean;
-  saving: boolean;
   selection: OrchidSelection | null;
   showScale: boolean;
   cellRangePick: MapCellRangePick;
-  onDragEnd: () => void;
-  onDragStart: (orchidGroupId: number) => void;
-  onDropOnBedZone: (bedZoneId: number) => Promise<void>;
-  onEnterDropZone: (bedZoneId: number) => void;
   onPickCellRange: (bedZoneId: number, cell: number) => void;
   onSelectBedZone: (bedZoneId: number) => void;
   onSelectPhysicalBed: (physicalBedId: number) => void;
@@ -74,11 +56,8 @@ export default function PhysicalBedBlock({
           <BedZoneBlock
             key={zone.id}
             distinguishVarietyColors={distinguishVarietyColors}
-            dragState={dragState}
             filteredOrchidGroupIds={filteredOrchidGroupIds}
             maxPosition={bed.positionUnitCount}
-            placementEditMode={placementEditMode}
-            saving={saving}
             showScale={showScale}
             cellRangePick={cellRangePick}
             zone={zone}
@@ -90,10 +69,6 @@ export default function PhysicalBedBlock({
                 ? selection.orchidGroupId
                 : null
             }
-            onDragEnd={onDragEnd}
-            onDragStart={onDragStart}
-            onDropOnBedZone={onDropOnBedZone}
-            onEnterDropZone={onEnterDropZone}
             onPickCellRange={onPickCellRange}
             onSelectBedZone={onSelectBedZone}
             onSelectOrchidGroup={onSelectOrchidGroup}

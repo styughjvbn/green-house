@@ -1,8 +1,8 @@
 "use client";
 
-import type { DragEvent, PointerEvent } from "react";
+import type { PointerEvent } from "react";
 import type { BedZone } from "@/entities/farm/types";
-import type { DragState, MapCellRangePick } from "../../model/types";
+import type { MapCellRangePick } from "../../model/types";
 import {
   buildOccupiedCells,
   formatCellRange,
@@ -15,43 +15,28 @@ const MAP_HEIGHT = 590;
 export default function BedZoneBlock({
   maxPosition,
   distinguishVarietyColors,
-  dragState,
   filteredOrchidGroupIds,
-  placementEditMode,
-  saving,
   showScale,
   cellRangePick,
   zone,
   selected,
   selectedOrchidGroupId,
-  onDragEnd,
-  onDragStart,
-  onDropOnBedZone,
-  onEnterDropZone,
   onPickCellRange,
   onSelectBedZone,
   onSelectOrchidGroup,
 }: {
   maxPosition: number | null;
   distinguishVarietyColors: boolean;
-  dragState: DragState;
   filteredOrchidGroupIds: Set<number>;
-  placementEditMode: boolean;
-  saving: boolean;
   showScale: boolean;
   cellRangePick: MapCellRangePick;
   zone: BedZone;
   selected: boolean;
   selectedOrchidGroupId: number | null;
-  onDragEnd: () => void;
-  onDragStart: (orchidGroupId: number) => void;
-  onDropOnBedZone: (bedZoneId: number) => Promise<void>;
-  onEnterDropZone: (bedZoneId: number) => void;
   onPickCellRange: (bedZoneId: number, cell: number) => void;
   onSelectBedZone: (bedZoneId: number) => void;
   onSelectOrchidGroup: (orchidGroupId: number) => void;
 }) {
-  const dropActive = dragState?.overBedZoneId === zone.id;
   const resolvedMaxPosition = maxPosition && maxPosition > 0 ? maxPosition : 28;
   const cellHeight = MAP_HEIGHT / resolvedMaxPosition;
   const cells = buildCells(resolvedMaxPosition);
@@ -76,25 +61,8 @@ export default function BedZoneBlock({
     resolvedMaxPosition,
   );
 
-  function handleDragOver(event: DragEvent<HTMLDivElement>) {
-    if (!placementEditMode || !dragState || saving) {
-      return;
-    }
-    event.preventDefault();
-    onEnterDropZone(zone.id);
-  }
-
-  async function handleDrop(event: DragEvent<HTMLDivElement>) {
-    if (!placementEditMode || !dragState || saving) {
-      return;
-    }
-    event.preventDefault();
-    event.stopPropagation();
-    await onDropOnBedZone(zone.id);
-  }
-
   function handlePointerUp(event: PointerEvent<HTMLDivElement>) {
-    if (event.pointerType === "mouse" || dragState || cellRangePick.active) {
+    if (event.pointerType === "mouse" || cellRangePick.active) {
       return;
     }
     onSelectBedZone(zone.id);
@@ -106,15 +74,13 @@ export default function BedZoneBlock({
         selected
           ? "border-[#246df2] bg-[#f4f8ff] ring-2 ring-[#246df2]/20"
           : "border-[#d9e1d8] bg-white hover:border-[#159447]"
-      } ${dropActive || rangePickActive ? "border-[#159447] bg-[#eef7ec] ring-2 ring-[#159447]/20" : ""}`}
+      } ${rangePickActive ? "border-[#159447] bg-[#eef7ec] ring-2 ring-[#159447]/20" : ""}`}
       onClick={(event) => {
         event.stopPropagation();
         if (!cellRangePick.active) {
           onSelectBedZone(zone.id);
         }
       }}
-      onDragOver={handleDragOver}
-      onDrop={(event) => void handleDrop(event)}
       onPointerUp={handlePointerUp}
       role="button"
       tabIndex={0}
@@ -271,7 +237,6 @@ export default function BedZoneBlock({
               >
                 <OrchidGroupBlock
                   distinguishVarietyColors={distinguishVarietyColors}
-                  draggable={matched && placementEditMode && !saving}
                   heightPx={heightPx}
                   muted={!matched}
                   orchidGroup={orchidGroup}
@@ -281,8 +246,6 @@ export default function BedZoneBlock({
                       : formatCellRange(orchidGroup)
                   }
                   selected={selectedOrchidGroupId === orchidGroup.id}
-                  onDragEnd={onDragEnd}
-                  onDragStart={() => onDragStart(orchidGroup.id)}
                   onSelect={() => onSelectOrchidGroup(orchidGroup.id)}
                 />
               </div>
