@@ -12,7 +12,7 @@ export function FarmStatusMap(props: FarmStatusMapProps) {
 
   return (
     <div className="h-full min-h-0">
-      <div className="grid h-full gap-4 lg:grid-cols-[minmax(0,1fr)_clamp(350px,32%,440px)]">
+      <div className="grid h-full gap-4 lg:grid-cols-[minmax(0,1fr)_clamp(280px,28%,440px)]">
         <section className="flex min-h-0 flex-col gap-3">
           {map.errorMessage ? (
             <div className="rounded-md border border-[#c25a3c] bg-[#fff1ec] p-3 text-sm text-[#8f2f19]">

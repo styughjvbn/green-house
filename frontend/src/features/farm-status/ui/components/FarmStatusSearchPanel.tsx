@@ -45,7 +45,7 @@ export function FarmStatusSearchPanel({
 
   return (
     <section className="rounded-xl border border-[#d9e2d5] bg-white p-3 shadow-sm">
-      <div className="grid gap-2 lg:grid-cols-[minmax(0,1fr)_150px_auto]">
+      <div className="grid gap-2 lg:grid-cols-[minmax(0,1fr)_95px_auto]">
         <label className="relative block">
           <Search
             aria-hidden="true"
