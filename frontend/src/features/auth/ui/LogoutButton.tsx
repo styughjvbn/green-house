@@ -23,7 +23,7 @@ export function LogoutButton({ variant = "header" }: LogoutButtonProps) {
       onClick={handleLogout}
       className={
         variant === "sidebar"
-          ? "mt-3 flex h-8 w-full items-center justify-center gap-1 rounded-md bg-white/10 px-2 text-xs font-medium text-white hover:bg-white/15"
+          ? "mt-3 flex h-8 w-full items-center justify-center gap-1 overflow-hidden rounded-md bg-white/10 px-2 text-xs font-medium whitespace-nowrap text-white hover:bg-white/15"
           : "flex h-8 items-center gap-1 rounded-md border border-[#d7ddd4] px-2 text-xs font-medium text-[#4f5d55] hover:bg-[#f5f7f4]"
       }
     >
