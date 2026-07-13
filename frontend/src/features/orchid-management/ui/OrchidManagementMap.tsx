@@ -159,8 +159,8 @@ export function OrchidManagementMap({
   }
 
   return (
-    <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_440px]">
-      <section className="space-y-3">
+    <div className="grid h-full min-h-0 gap-4 lg:grid-cols-[minmax(0,1fr)_440px]">
+      <section className="min-h-0 space-y-3 pr-1">
         <HouseSelectorPanel
           createActive={
             orchidManagement.mutationMode === "CREATE" &&
@@ -219,7 +219,7 @@ export function OrchidManagementMap({
         />
         {/* <BedPrecisionSettings zone={orchidManagement.resolvedZone} /> 26.07.11 비활성화*/}
       </section>
-      <div className="space-y-3">
+      <div className="min-h-0 space-y-3 overflow-y-auto pr-1">
         <OrchidSearchPanel
           currentHouseId={house.id}
           currentSelectedOrchidGroupId={

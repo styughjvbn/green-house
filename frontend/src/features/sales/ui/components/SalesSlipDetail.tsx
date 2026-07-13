@@ -26,7 +26,7 @@ export function SalesSlipDetail({
 }) {
   if (loading) {
     return (
-      <section className="min-w-0 rounded-md border border-[#dfe5dc] bg-white p-5 text-sm text-[#5c6a60] shadow-sm">
+      <section className="min-h-0 min-w-0 overflow-y-auto rounded-md border border-[#dfe5dc] bg-white p-5 text-sm text-[#5c6a60] shadow-sm">
         전표 상세를 불러오는 중입니다.
       </section>
     );
@@ -34,7 +34,7 @@ export function SalesSlipDetail({
 
   if (!salesSlip) {
     return (
-      <section className="min-w-0 rounded-md border border-[#dfe5dc] bg-white p-5 text-sm text-[#5c6a60] shadow-sm">
+      <section className="min-h-0 min-w-0 overflow-y-auto rounded-md border border-[#dfe5dc] bg-white p-5 text-sm text-[#5c6a60] shadow-sm">
         선택한 전표가 없습니다.
       </section>
     );
@@ -53,7 +53,7 @@ export function SalesSlipDetail({
   const canCancel = salesSlip.salesStatus !== "취소";
 
   return (
-    <section className="min-w-0 rounded-md border border-[#dfe5dc] bg-white p-4 shadow-sm">
+    <section className="min-h-0 min-w-0 overflow-y-auto rounded-md border border-[#dfe5dc] bg-white p-4 shadow-sm">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <h2 className="text-xl font-bold text-[#17251b]">전표 상세</h2>
         <div className="flex flex-wrap gap-2">

@@ -66,7 +66,7 @@ export function SalesManager({
   const auctionSettlements = initialAuctionSettlements ?? [];
 
   return (
-    <div className="space-y-4">
+    <div className="flex h-full min-h-0 flex-col gap-4">
       {activeTab === "SLIPS" ? (
         <>
           <SalesFilters
@@ -99,7 +99,7 @@ export function SalesManager({
             />
           ) : null}
 
-          <div className="grid gap-4 2xl:grid-cols-[minmax(0,0.88fr)_minmax(0,1.12fr)]">
+          <div className="grid min-h-0 flex-1 gap-4 2xl:grid-cols-[minmax(0,0.88fr)_minmax(0,1.12fr)]">
             <SalesSlipList
               currentPage={sales.salesSlipCurrentPage}
               pageSize={sales.salesSlipPageSize}

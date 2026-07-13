@@ -270,7 +270,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         <SessionUserPanel />
       </aside>
 
-      <div className="min-w-0 flex-1">
+      <div className="app-shell-main min-w-0 flex-1">
         <header className="border-b border-[#d7ddd4] bg-white px-4 py-4 lg:hidden">
           <p className="text-xl font-semibold">난 농장 관리</p>
 
@@ -369,12 +369,12 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           ) : null}
         </header>
 
-        <PageHeader
-          title={currentPage.title}
-          description={currentPage.description}
-        />
-
         <main className="app-content px-4 py-4 md:px-8 lg:px-6">
+          <PageHeader
+            title={currentPage.title}
+            description={currentPage.description}
+          />
+
           {children}
         </main>
       </div>

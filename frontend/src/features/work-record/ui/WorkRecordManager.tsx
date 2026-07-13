@@ -11,7 +11,7 @@ export function WorkRecordManager(props: WorkRecordManagerProps) {
   const manager = useWorkRecordManager(props);
 
   return (
-    <div className="space-y-4">
+    <div className="flex h-full min-h-0 flex-col gap-4">
       <WorkRecordFilters
         filters={manager.filters}
         records={manager.records}
@@ -38,7 +38,7 @@ export function WorkRecordManager(props: WorkRecordManagerProps) {
       ) : null}
 
       <div
-        className={`grid gap-4 ${
+        className={`grid min-h-0 flex-1 gap-4 ${
           manager.detailOpen
             ? "xl:grid-cols-[minmax(0,1fr)_400px]"
             : "xl:grid-cols-1"

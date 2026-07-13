@@ -23,7 +23,7 @@ export function WorkRecordDetail({
 }: WorkRecordDetailProps) {
   if (!record) {
     return (
-      <aside className="rounded-md border border-[#dfe5dc] bg-white p-5 text-sm text-[#5c6a60] shadow-sm">
+      <aside className="min-h-0 overflow-y-auto rounded-md border border-[#dfe5dc] bg-white p-5 text-sm text-[#5c6a60] shadow-sm">
         <div className="flex items-center justify-between gap-3">
           <span>선택한 작업 이력이 없습니다.</span>
           <CloseButton onClose={onClose} />
@@ -37,7 +37,7 @@ export function WorkRecordDetail({
   const detailEntries = formatDetailEntries(record.details);
 
   return (
-    <aside className="rounded-md border border-[#dfe5dc] bg-white p-5 shadow-sm">
+    <aside className="min-h-0 overflow-y-auto rounded-md border border-[#dfe5dc] bg-white p-5 shadow-sm">
       <div className="flex items-center justify-between gap-3">
         <h2 className="text-lg font-bold text-[#17251b]">작업 이력 상세</h2>
         <CloseButton onClose={onClose} />

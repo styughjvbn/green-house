@@ -28,7 +28,7 @@ export function SalesSlipList({
   onPageSizeChange: (pageSize: number) => void;
 }) {
   return (
-    <section className="min-w-0 rounded-md border border-[#dfe5dc] bg-white p-4 shadow-sm">
+    <section className="flex min-h-0 min-w-0 flex-col rounded-md border border-[#dfe5dc] bg-white p-4 shadow-sm">
       <div className="flex items-start justify-between gap-3">
         <div className="flex items-center gap-2">
           <h2 className="text-xl font-bold text-[#17251b]">판매 전표 목록</h2>
@@ -46,7 +46,7 @@ export function SalesSlipList({
         </button>
       </div>
 
-      <div className="mt-4 overflow-x-auto">
+      <div className="mt-4 min-h-0 flex-1 overflow-auto">
         <table className="w-full min-w-[720px] border-collapse text-left text-sm">
           <thead className="border-y border-[#dfe5dc] text-[#435047]">
             <tr>

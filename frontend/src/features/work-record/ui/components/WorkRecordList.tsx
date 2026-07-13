@@ -34,7 +34,7 @@ export function WorkRecordList({
   onSelect,
 }: WorkRecordListProps) {
   return (
-    <section className="rounded-md border border-[#dfe5dc] bg-white p-4 shadow-sm">
+    <section className="flex min-h-0 flex-col rounded-md border border-[#dfe5dc] bg-white p-4 shadow-sm">
       <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
         <div>
           <h2 className="text-lg font-bold text-[#17251b]">작업 이력 목록</h2>
@@ -49,7 +49,7 @@ export function WorkRecordList({
           작업 이력 등록
         </button>
       </div>
-      <div className="overflow-x-auto">
+      <div className="min-h-0 flex-1 overflow-auto">
         <table className="w-full min-w-[760px] border-collapse text-left text-sm">
           <thead className="border-y border-[#dfe5dc] text-[#435047]">
             <tr>
