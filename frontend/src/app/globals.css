@@ -3,6 +3,7 @@
 :root {
   --background: #f7f8f6;
   --foreground: #1f2a24;
+  --app-viewport-height: 100dvh;
   --font-scale: 1;
   font-size: calc(16px * var(--font-scale));
 }
@@ -26,6 +27,19 @@ body {
   background: var(--background);
   color: var(--foreground);
   font-family: var(--font-geist-sans), Arial, Helvetica, sans-serif;
+}
+
+.app-shell-root {
+  min-height: var(--app-viewport-height);
+}
+
+.app-shell-sidebar {
+  height: var(--app-viewport-height);
+}
+
+.pwa-fixed-viewport,
+.pwa-fixed-viewport body {
+  min-height: var(--app-viewport-height);
 }
 
 a,

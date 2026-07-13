@@ -158,8 +158,8 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const isSalesPage = pathname.startsWith("/sales");
 
   return (
-    <div className="flex min-h-screen bg-[#f7f8f5]">
-      <aside className="sticky top-0 hidden h-screen w-44 shrink-0 flex-col bg-[#003b1f] px-2 py-4 lg:flex">
+    <div className="app-shell-root flex bg-[#f7f8f5]">
+      <aside className="app-shell-sidebar sticky top-0 hidden w-44 shrink-0 flex-col bg-[#003b1f] px-2 py-4 lg:flex">
         <div className="flex items-center gap-3 px-2 py-2">
           <div className="flex h-10 w-10 shrink-0 items-center justify-center">
             <Image src="/flower.png" alt="Logo" width={40} height={40} />
