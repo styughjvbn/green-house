@@ -3,6 +3,7 @@ import {
   getInboundRecords,
   getMaterials,
   getVarieties,
+  getVarietyGenera,
   InventoryPage,
 } from "@/features/inventory";
 import { fetchApi } from "@/shared/api/client";
@@ -55,72 +56,79 @@ export default async function Page({
   const inboundPage = readNumberParam(resolvedSearchParams, "inboundPage", 0);
   const inboundSize = readNumberParam(resolvedSearchParams, "inboundSize", 10);
 
-  const [varieties, varietyOptions, inboundRecords, materials, houses] =
-    await Promise.all([
-      getVarieties({
-        keyword: varietyKeyword,
-        genus: varietyGenus,
-        saleEnabled:
-          varietySale === "사용"
-            ? true
-            : varietySale === "미사용"
-              ? false
-              : undefined,
-        active:
-          varietyStatus === "ACTIVE"
-            ? true
-            : varietyStatus === "INACTIVE"
-              ? false
-              : undefined,
-        page: varietyPage,
-        size: varietySize,
-      }),
-      getVarieties({
-        active: true,
-        page: 0,
-        size: 100,
-      }),
-      getInboundRecords({
-        inboundType:
-          inboundType && inboundType !== "ALL"
-            ? (inboundType as
-                | "FLASK_SEEDLING"
-                | "POTTED_SEEDLING"
-                | "PRODUCT_POT"
-                | "SAMPLE"
-                | "ETC")
+  const [
+    varieties,
+    varietyGenera,
+    varietyOptions,
+    inboundRecords,
+    materials,
+    houses,
+  ] = await Promise.all([
+    getVarieties({
+      keyword: varietyKeyword,
+      genus: varietyGenus,
+      saleEnabled:
+        varietySale === "사용"
+          ? true
+          : varietySale === "미사용"
+            ? false
             : undefined,
-        status:
-          inboundStatus && inboundStatus !== "ALL"
-            ? (inboundStatus as
-                | "TEMP_STORED"
-                | "POTTING_PENDING"
-                | "POTTED"
-                | "PLACED"
-                | "CANCELED")
+      active:
+        varietyStatus === "ACTIVE"
+          ? true
+          : varietyStatus === "INACTIVE"
+            ? false
             : undefined,
-        variety: inboundKeyword,
-        page: inboundPage,
-        size: inboundSize,
-      }),
-      getMaterials({
-        keyword: materialKeyword,
-        category:
-          materialCategory && materialCategory !== "전체"
-            ? materialCategory
+      page: varietyPage,
+      size: varietySize,
+    }),
+    getVarietyGenera(),
+    getVarieties({
+      active: true,
+      page: 0,
+      size: 100,
+    }),
+    getInboundRecords({
+      inboundType:
+        inboundType && inboundType !== "ALL"
+          ? (inboundType as
+              | "FLASK_SEEDLING"
+              | "POTTED_SEEDLING"
+              | "PRODUCT_POT"
+              | "SAMPLE"
+              | "ETC")
+          : undefined,
+      status:
+        inboundStatus && inboundStatus !== "ALL"
+          ? (inboundStatus as
+              | "TEMP_STORED"
+              | "POTTING_PENDING"
+              | "POTTED"
+              | "PLACED"
+              | "CANCELED")
+          : undefined,
+      variety: inboundKeyword,
+      page: inboundPage,
+      size: inboundSize,
+    }),
+    getMaterials({
+      keyword: materialKeyword,
+      category:
+        materialCategory && materialCategory !== "전체"
+          ? materialCategory
+          : undefined,
+      manufacturer: materialManufacturer,
+      active:
+        materialStatus === "ACTIVE"
+          ? true
+          : materialStatus === "INACTIVE"
+            ? false
             : undefined,
-        manufacturer: materialManufacturer,
-        active:
-          materialStatus === "ACTIVE"
-            ? true
-            : materialStatus === "INACTIVE"
-              ? false
-              : undefined,
-        page: materialPage,
-        size: materialSize,
-      }),
-      fetchApi<House[]>("/houses"),
-    ]);
+      page: materialPage,
+      size: materialSize,
+    }),
+    fetchApi<House[]>("/houses"),
+  ]);
 
   return (
     <InventoryPage
@@ -129,6 +137,7 @@ export default async function Page({
       initialInboundPage={inboundRecords}
       initialMaterialPage={materials}
       initialVarietyPage={varieties}
+      varietyGenera={varietyGenera}
       varietyOptions={varietyOptions.content}
     />
   );

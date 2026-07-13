@@ -158,6 +158,10 @@ export function getVarieties(query: VarietyQuery = {}) {
   ).then((result) => mapPage(result, toVariety));
 }
 
+export function getVarietyGenera() {
+  return fetchApi<string[]>("/varieties/genera");
+}
+
 export function getVarietyOrchidGroups(varietyId: number) {
   return fetchApi<VarietyConnectedGroupResponse[]>(
     `/varieties/${varietyId}/orchid-groups`,

@@ -2,6 +2,7 @@
 
 import { Bell, CalendarDays, CloudSun } from "lucide-react";
 import type { ReactNode } from "react";
+import { useSyncExternalStore } from "react";
 
 type PageHeaderProps = {
   title: string;
@@ -18,13 +19,11 @@ export function PageHeader({
   temperatureLabel = "24째C",
   children,
 }: PageHeaderProps) {
-  const todayLabel = new Intl.DateTimeFormat("ko-KR", {
-    timeZone: "Asia/Seoul",
-    year: "numeric",
-    month: "2-digit",
-    day: "2-digit",
-    weekday: "short",
-  }).format(new Date());
+  const todayLabel = useSyncExternalStore(
+    subscribeDateLabel,
+    getTodayLabel,
+    getServerDateLabel,
+  );
 
   return (
     <header className="border-b border-[#edf0ec] bg-white shadow-[0_1px_8px_rgba(31,42,36,0.04)]">
@@ -75,4 +74,22 @@ export function PageHeader({
       ) : null}
     </header>
   );
+}
+
+function subscribeDateLabel() {
+  return () => {};
+}
+
+function getServerDateLabel() {
+  return "";
+}
+
+function getTodayLabel() {
+  return new Intl.DateTimeFormat("ko-KR", {
+    timeZone: "Asia/Seoul",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    weekday: "short",
+  }).format(new Date());
 }

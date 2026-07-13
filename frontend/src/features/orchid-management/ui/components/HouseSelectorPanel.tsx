@@ -1,6 +1,6 @@
 "use client";
 
-import { Palette, Pencil, Ruler } from "lucide-react";
+import { Palette, Plus, Ruler } from "lucide-react";
 import { useRouter } from "next/navigation";
 import type { House, HouseStatusSummary } from "@/entities/farm/types";
 
@@ -8,31 +8,41 @@ export default function HouseSelectorPanel({
   house,
   houses,
   distinguishVarietyColors,
-  placementEditMode,
+  createActive,
+  selected,
   selectedHouseId,
   showScale,
-  onTogglePlacementEditMode,
   onToggleVarietyColors,
+  onOpenCreate,
   onToggleScale,
+  onSelectHouse,
 }: {
   house: House;
   houses: HouseStatusSummary[];
   distinguishVarietyColors: boolean;
-  placementEditMode: boolean;
+  createActive: boolean;
+  selected: boolean;
   selectedHouseId: number;
   showScale: boolean;
-  onTogglePlacementEditMode: () => void;
   onToggleVarietyColors: () => void;
+  onOpenCreate: () => void;
   onToggleScale: () => void;
+  onSelectHouse: () => void;
 }) {
   const router = useRouter();
 
   return (
     <section className="flex flex-wrap items-center gap-3 rounded-md border border-[#e2e7df] bg-white px-3 py-2 shadow-sm">
       <div className="flex h-8 overflow-hidden rounded-md border border-[#dfe5dc] bg-white">
-        <span className="flex items-center border-r border-[#e6ebe3] bg-[#fbfcfa] px-3 text-xs font-semibold text-[#66746b]">
+        <button
+          className={`flex items-center border-r border-[#e6ebe3] px-3 text-xs font-semibold hover:bg-[#f0f5ee] ${
+            selected ? "bg-[#246df2] text-white" : "bg-[#fbfcfa] text-[#66746b]"
+          }`}
+          type="button"
+          onClick={onSelectHouse}
+        >
           현재 동 선택
-        </span>
+        </button>
         <select
           aria-label="현재 동 선택"
           className="h-full min-w-28 bg-white px-3 text-sm font-semibold text-[#17251b] outline-none"
@@ -48,6 +58,17 @@ export default function HouseSelectorPanel({
           ))}
         </select>
       </div>
+
+      <button
+        className={`inline-flex h-8 touch-manipulation items-center gap-2 rounded-md border border-[#dfe5dc] px-4 text-sm font-semibold shadow-sm ${
+          createActive ? "bg-[#159447] text-white" : "bg-white text-[#344138]"
+        }`}
+        onClick={onOpenCreate}
+        type="button"
+      >
+        <Plus className="h-4 w-4" strokeWidth={1.8} aria-hidden="true" />난 묶음
+        추가
+      </button>
 
       <div className="min-w-3 flex-1" />
       <button
@@ -75,19 +96,6 @@ export default function HouseSelectorPanel({
         <Ruler className="h-4 w-4" strokeWidth={1.8} aria-hidden="true" />
         {showScale ? "눈금 끄기" : "눈금 켜기"}
       </button>
-      <button
-        className={`inline-flex h-8 touch-manipulation items-center gap-2 rounded-md border border-[#dfe5dc] px-4 text-sm font-semibold shadow-sm ${
-          placementEditMode
-            ? "bg-[#159447] text-white"
-            : "bg-white text-[#344138]"
-        }`}
-        type="button"
-        onClick={onTogglePlacementEditMode}
-      >
-        <Pencil className="h-4 w-4" strokeWidth={1.8} aria-hidden="true" />
-        {placementEditMode ? "배치 수정 끄기" : "배치 수정 켜기"}
-      </button>
-
       <div className="flex h-8 items-center gap-5 rounded-md border border-[#e2e7df] bg-white px-4 text-xs font-semibold text-[#435047] shadow-sm">
         <StatusDot color="#159447" label="정상" />
         <StatusDot color="#f59e0b" label="주의" />

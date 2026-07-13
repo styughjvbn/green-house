@@ -72,9 +72,7 @@ export function InboundListCard({
                   {INBOUND_TYPE_LABELS[item.inboundType]}
                 </td>
                 <td className="px-3 py-2 font-semibold">{item.varietyName}</td>
-                <td className="px-3 py-2">
-                  {item.estimatedQuantity ?? item.bottleCount ?? "-"}
-                </td>
+                <td className="px-3 py-2">{item.estimatedQuantity ?? "-"}</td>
                 <td className="px-3 py-2">{item.actualQuantity ?? "-"}</td>
                 <td className="px-3 py-2">{item.currentLocation ?? "-"}</td>
                 <td className="px-3 py-2">

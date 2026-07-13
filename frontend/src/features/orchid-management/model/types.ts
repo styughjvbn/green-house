@@ -10,14 +10,37 @@ import type {
   WorkType,
 } from "@/entities/farm/types";
 
-export type OrchidSelection = SelectedBedZone | SelectedOrchidGroup;
+export type SelectedHouse = {
+  type: "HOUSE";
+  houseId: number;
+};
+
+export type SelectedPhysicalBed = {
+  type: "PHYSICAL_BED";
+  physicalBedId: number;
+};
+
+export type OrchidSelection =
+  | SelectedHouse
+  | SelectedPhysicalBed
+  | SelectedBedZone
+  | SelectedOrchidGroup;
+
+export type OrchidListSelection =
+  | SelectedHouse
+  | SelectedPhysicalBed
+  | SelectedBedZone;
 
 export type MutationMode = "CREATE" | "EDIT" | "MOVE" | "WORK_RECORD" | null;
 
-export type DragState = {
-  orchidGroupId: number;
-  overBedZoneId: number | null;
-} | null;
+export type MapCellRangePick = {
+  active: boolean;
+  excludeOrchidGroupId: number | null;
+  targetBedZoneId: number | null;
+  startCell: number | null;
+  endCell: number | null;
+  version: number;
+};
 
 export type OrchidFormState = {
   varietyId: string;
@@ -37,6 +60,7 @@ export type OrchidFormState = {
 };
 
 export type MutationPayload = {
+  bedZoneId?: number;
   varietyId: number;
   quantity: number;
   potSize: string | null;

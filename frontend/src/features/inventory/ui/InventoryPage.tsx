@@ -39,6 +39,7 @@ export function InventoryPage({
   initialInboundPage,
   initialMaterialPage,
   initialVarietyPage,
+  varietyGenera,
   varietyOptions,
 }: {
   initialActiveTab?: string;
@@ -46,6 +47,7 @@ export function InventoryPage({
   initialInboundPage: InventoryPageResult<InboundRecord>;
   initialMaterialPage: InventoryPageResult<Material>;
   initialVarietyPage: InventoryPageResult<Variety>;
+  varietyGenera: string[];
   varietyOptions: Variety[];
 }) {
   const router = useRouter();
@@ -172,6 +174,7 @@ export function InventoryPage({
             loadingGroups={loadingGroups}
             pageData={initialVarietyPage}
             selectedId={selectedVarietyId}
+            genera={varietyGenera}
             onCreate={() => setDialog("variety")}
             onDeactivate={handleDeactivateVariety}
             onDelete={handleDeleteVariety}

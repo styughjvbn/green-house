@@ -59,6 +59,11 @@ public class VarietyService {
 		return toResponse(findVariety(varietyId));
 	}
 
+	@Transactional(readOnly = true)
+	public List<String> getGenera() {
+		return varietyRepository.findDistinctGenera();
+	}
+
 	public VarietyResponse create(VarietyCreateRequest request) {
 		var variety = new Variety(
 				nextCode(),

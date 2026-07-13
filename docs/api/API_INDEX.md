@@ -114,6 +114,7 @@
 | `PATCH` | `/api/materials/{materialId}/deactivate` | `deactivate_1` | `-` | `200:ApiResponseMaterialResponse` |
 | `GET` | `/api/varieties` | `getVarieties` | `-` | `200:ApiResponseVarietyPageResponse` |
 | `POST` | `/api/varieties` | `create_1` | `VarietyCreateRequest` | `201:ApiResponseVarietyResponse` |
+| `GET` | `/api/varieties/genera` | `getGenera` | `-` | `200:ApiResponseListString` |
 | `GET` | `/api/varieties/{varietyId}` | `getVariety` | `-` | `200:ApiResponseVarietyResponse` |
 | `PATCH` | `/api/varieties/{varietyId}` | `update_2` | `VarietyUpdateRequest` | `200:ApiResponseVarietyResponse` |
 | `DELETE` | `/api/varieties/{varietyId}` | `delete_1` | `-` | `200:ApiResponseVoid` |

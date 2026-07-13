@@ -3,16 +3,21 @@
 set -Eeuo pipefail
 
 NO_DB=false
+LAN=false
 
 while [[ $# -gt 0 ]]; do
     case "$1" in
+        --lan)
+            LAN=true
+            shift
+            ;;
         --no-db)
             NO_DB=true
             shift
             ;;
         *)
             echo "Unknown option: $1" >&2
-            echo "Usage: $0 [--no-db]" >&2
+            echo "Usage: $0 [--no-db] [--lan]" >&2
             exit 1
             ;;
     esac
@@ -80,6 +85,9 @@ require_command curl
 require_command ss
 require_command docker
 require_command npm
+if [[ "$LAN" == true ]]; then
+    require_command ip
+fi
 
 cd "$ROOT"
 
@@ -139,9 +147,15 @@ else
     (
         cd "${ROOT}/frontend"
 
-        nohup npm run dev \
-            >"$FRONTEND_OUT" \
-            2>"$FRONTEND_ERR" &
+        if [[ "$LAN" == true ]]; then
+            nohup npm run dev -- --hostname 0.0.0.0 \
+                >"$FRONTEND_OUT" \
+                2>"$FRONTEND_ERR" &
+        else
+            nohup npm run dev \
+                >"$FRONTEND_OUT" \
+                2>"$FRONTEND_ERR" &
+        fi
 
         echo "$!" >"$FRONTEND_PID_FILE"
     )
@@ -162,5 +176,21 @@ fi
 echo
 echo "Development servers are running."
 echo "Frontend: http://localhost:3000"
+if [[ "$LAN" == true ]]; then
+    LAN_IP="$(
+        ip -4 -o addr show scope global \
+            | awk '{print $4}' \
+            | cut -d/ -f1 \
+            | grep '^192\.168\.0\.' \
+            | head -n 1 \
+            || true
+    )"
+
+    if [[ -n "$LAN_IP" ]]; then
+        echo "LAN:      http://${LAN_IP}:3000"
+    else
+        echo "LAN:      frontend is bound to 0.0.0.0, but no 192.168.0.* IP was found"
+    fi
+fi
 echo "Backend:  http://localhost:8080"
 echo "Logs:     ${LOGS}"

@@ -1,6 +1,7 @@
 package com.greenhouse.backend.farm.repository;
 
 import com.greenhouse.backend.farm.domain.Variety;
+import java.util.List;
 import java.util.Optional;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -30,4 +31,7 @@ public interface VarietyRepository extends JpaRepository<Variety, Long> {
 	Optional<Variety> findTopByOrderByIdDesc();
 
 	Optional<Variety> findByGenusAndName(String genus, String name);
+
+	@Query("select distinct v.genus from Variety v order by v.genus asc")
+	List<String> findDistinctGenera();
 }

@@ -1,21 +1,33 @@
 "use client";
 
 import type { FormEvent } from "react";
-import type { BedZone, OrchidGroup, WorkType } from "@/entities/farm/types";
+import type {
+  BedZone,
+  House,
+  OrchidGroup,
+  PhysicalBed,
+  WorkType,
+} from "@/entities/farm/types";
 import {
   findWorkType,
   getManualWorkTypes,
   getWorkRecordFieldLabel,
   isVisibleWorkRecordField,
 } from "@/entities/farm/workTypes";
-import type { WorkRecordQuickFormState } from "../../model/types";
+import type {
+  OrchidSelection,
+  WorkRecordQuickFormState,
+} from "../../model/types";
 import TextField, { SelectField } from "./TextField";
 
 type OrchidWorkRecordFormProps = {
   form: WorkRecordQuickFormState;
+  house: House;
   resolvedZone: BedZone | null;
   saving: boolean;
   selectedOrchidGroup: OrchidGroup | null;
+  selectedPhysicalBed: PhysicalBed | null;
+  selection: OrchidSelection | null;
   workTypes: WorkType[];
   onCancel: () => void;
   onChange: <K extends keyof WorkRecordQuickFormState>(
@@ -27,9 +39,12 @@ type OrchidWorkRecordFormProps = {
 
 export default function OrchidWorkRecordForm({
   form,
+  house,
   resolvedZone,
   saving,
   selectedOrchidGroup,
+  selectedPhysicalBed,
+  selection,
   workTypes,
   onCancel,
   onChange,
@@ -40,7 +55,13 @@ export default function OrchidWorkRecordForm({
   const template = selectedWorkType?.template ?? null;
   const targetLabel = selectedOrchidGroup
     ? `${selectedOrchidGroup.varietyName} / ${selectedOrchidGroup.quantity}분`
-    : (resolvedZone?.name ?? "선택 대상");
+    : resolvedZone
+      ? `${resolvedZone.physicalBedNumber}다이 ${resolvedZone.name}`
+      : selectedPhysicalBed
+        ? `${house.number}동 ${selectedPhysicalBed.number}다이`
+        : selection?.type === "HOUSE"
+          ? `${house.number}동`
+          : "선택 대상";
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();

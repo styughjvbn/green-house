@@ -32,6 +32,90 @@ export function endCellToPosition(value: string): number | null {
   return nullableNumber(value);
 }
 
+export function resolveMaxCell(house: House, bedZoneId: number | null) {
+  const bed = house.physicalBeds.find((item) =>
+    item.bedZones.some((zone) => zone.id === bedZoneId),
+  );
+  return Math.max(1, Math.floor(bed?.positionUnitCount ?? 28));
+}
+
+export function normalizeCellRange(
+  startCell: string,
+  endCell: string,
+  maxCell: number,
+) {
+  const start = parseCell(startCell);
+  const end = parseCell(endCell);
+  const fallback = start ?? end ?? 1;
+  const first = clampCell(start ?? fallback, 1, maxCell);
+  const last = clampCell(end ?? first, 1, maxCell);
+  return {
+    startCell: Math.min(first, last),
+    endCell: Math.max(first, last),
+  };
+}
+
+export function resolveGroupCellRange({
+  endPosition,
+  maxCell,
+  startPosition,
+}: {
+  endPosition: number | null | undefined;
+  maxCell: number;
+  startPosition: number | null | undefined;
+}) {
+  const startCell = clampCell(Math.floor(startPosition ?? 0) + 1, 1, maxCell);
+  const endCell = clampCell(
+    Math.ceil(endPosition ?? startPosition ?? startCell),
+    1,
+    maxCell,
+  );
+
+  return {
+    startCell: Math.min(startCell, endCell),
+    endCell: Math.max(startCell, endCell),
+  };
+}
+
+export function buildOccupiedCells(
+  orchidGroups: OrchidGroup[],
+  excludeOrchidGroupId: number | null,
+  maxCell: number,
+) {
+  const cells = new Set<number>();
+  orchidGroups.forEach((orchidGroup) => {
+    if (orchidGroup.id === excludeOrchidGroupId) {
+      return;
+    }
+    const range = resolveGroupCellRange({
+      startPosition: orchidGroup.startPosition,
+      endPosition: orchidGroup.endPosition,
+      maxCell,
+    });
+    for (let cell = range.startCell; cell <= range.endCell; cell += 1) {
+      cells.add(cell);
+    }
+  });
+  return cells;
+}
+
+export function rangeHasOccupiedCell({
+  endCell,
+  occupiedCells,
+  startCell,
+}: {
+  endCell: number;
+  occupiedCells: Set<number>;
+  startCell: number;
+}) {
+  for (let cell = startCell; cell <= endCell; cell += 1) {
+    if (occupiedCells.has(cell)) {
+      return true;
+    }
+  }
+  return false;
+}
+
 export function formatCellRange({
   endPosition,
   startPosition,
@@ -51,6 +135,18 @@ export function formatCellRange({
 
 function formatPositionCell(value: number) {
   return Number.isInteger(value) ? String(value) : String(value);
+}
+
+function parseCell(value: string) {
+  const cell = Number(value);
+  if (!Number.isFinite(cell)) {
+    return null;
+  }
+  return Math.floor(cell);
+}
+
+function clampCell(value: number, min: number, max: number) {
+  return Math.min(Math.max(value, min), max);
 }
 
 export function findFirstOrchidGroup(house: House): OrchidGroup | null {
@@ -93,6 +189,13 @@ export function findBedZone(
     }
   }
   return null;
+}
+
+export function findPhysicalBed(
+  house: House,
+  physicalBedId: number,
+): PhysicalBed | null {
+  return house.physicalBeds.find((bed) => bed.id === physicalBedId) ?? null;
 }
 
 export function findFirstBedZoneInPhysicalBed(
