@@ -29,7 +29,7 @@ export default function ActionButton({
 
   return (
     <button
-      className={`inline-flex h-8 min-h-0 touch-manipulation items-center justify-center gap-1.5 rounded-md px-3 py-0 text-sm leading-none font-semibold transition hover:brightness-95 disabled:cursor-not-allowed disabled:opacity-60 ${className}`}
+      className={`inline-flex h-8 min-h-0 touch-manipulation items-center justify-center gap-1.5 rounded-md px-3 py-0 text-xs leading-none font-semibold transition hover:brightness-95 disabled:cursor-not-allowed disabled:opacity-60 ${className}`}
       disabled={disabled}
       onClick={onClick}
       type="button"

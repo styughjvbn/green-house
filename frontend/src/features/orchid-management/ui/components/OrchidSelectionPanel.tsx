@@ -6,7 +6,6 @@ import type {
   House,
   OrchidGroup,
   PhysicalBed,
-  WorkRecord,
   WorkType,
 } from "@/entities/farm/types";
 import {
@@ -23,10 +22,8 @@ import type {
   OrchidSelection,
   PreciseMovePayload,
   WorkRecordQuickFormState,
-  WorkRecordSummary,
 } from "../../model/types";
 import ActionButton from "./ActionButton";
-import InfoMetric from "./InfoMetric";
 import OrchidGroupForm from "./OrchidGroupForm";
 import OrchidWorkRecordForm from "./OrchidWorkRecordForm";
 
@@ -147,14 +144,14 @@ export default function OrchidSelectionPanel({
         ? "이 동"
         : "선택 대상";
   const hasListTarget = Boolean(listZone || listPhysicalBed || selectedHouse);
-  const compactList = mutationMode != null && selectedOrchidGroup != null;
-  const hideList = mutationMode === "CREATE";
+  const compactList = mutationMode === "MOVE" && selectedOrchidGroup != null;
+  const hideList = mutationMode === "CREATE" || mutationMode === "EDIT";
 
   return (
-    <aside className="space-y-3">
+    <aside className="flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto">
       {!hideList ? (
-        <section className="rounded-md border border-[#d7ddd4] bg-white p-3 shadow-sm">
-          <div className="flex items-center justify-between gap-3">
+        <section className="flex min-h-0 flex-1 flex-col rounded-md border border-[#d7ddd4] bg-white p-3 shadow-sm">
+          <div className="flex shrink-0 items-center justify-between gap-3">
             <p className="text-sm font-semibold text-[#17251b]">
               난 묶음 목록 (
               {hasActiveSearch
@@ -190,10 +187,10 @@ export default function OrchidSelectionPanel({
           ) : null}
 
           {hasListTarget ? (
-            <div className="mt-3">
+            <div className="mt-3 flex min-h-0 flex-1 flex-col">
               <div
                 className={`space-y-2 overflow-y-auto pr-1 ${
-                  compactList ? "max-h-28" : "max-h-[520px]"
+                  compactList ? "max-h-28 shrink-0" : "min-h-0 flex-1"
                 }`}
               >
                 {orchidGroups.map((orchidGroup) => {
@@ -295,7 +292,7 @@ export default function OrchidSelectionPanel({
                 ) : null}
               </div>
 
-              <div className="mt-3 grid grid-cols-2 gap-2">
+              <div className="mt-3 grid shrink-0 grid-cols-2 gap-2">
                 <ActionButton
                   icon={<Clipboard className="h-4 w-4" />}
                   label="작업 기록 추가"
@@ -304,7 +301,7 @@ export default function OrchidSelectionPanel({
                 />
                 <ActionButton
                   icon={<Move className="h-4 w-4" />}
-                  label="위치 이동"
+                  label="자리 이동"
                   onClick={onOpenMove}
                   active={mutationMode === "MOVE"}
                   disabled={!selectedOrchidGroup}
@@ -312,7 +309,7 @@ export default function OrchidSelectionPanel({
               </div>
             </div>
           ) : (
-            <div className="mt-3">
+            <div className="mt-3 shrink-0">
               <p className="text-sm text-[#5c6a60]">
                 동, 다이, 구역을 선택하면 해당 범위의 난 묶음 목록을 볼 수
                 있습니다.
@@ -320,7 +317,7 @@ export default function OrchidSelectionPanel({
             </div>
           )}
           {errorMessage ? (
-            <p className="mt-3 rounded-md border border-[#f1b0a0] bg-[#fff1ec] p-2 text-xs text-[#9b341e]">
+            <p className="mt-3 shrink-0 rounded-md border border-[#f1b0a0] bg-[#fff1ec] p-2 text-xs text-[#9b341e]">
               {errorMessage}
             </p>
           ) : null}
@@ -388,127 +385,6 @@ export default function OrchidSelectionPanel({
         />
       ) : null}
     </aside>
-  );
-}
-
-export function SelectedZoneInfo({
-  house,
-  selectedBedZone,
-  selectedOrchidGroup,
-  selectedPhysicalBed,
-  selection,
-  workRecordSummary,
-  workRecordSummaryLoading,
-}: {
-  house: House;
-  selectedBedZone: BedZone | null;
-  selectedOrchidGroup: OrchidGroup | null;
-  selectedPhysicalBed: PhysicalBed | null;
-  selection: OrchidSelection | null;
-  workRecordSummary: WorkRecordSummary;
-  workRecordSummaryLoading: boolean;
-}) {
-  const zone = selectedOrchidGroup
-    ? (findBedZone(house, selectedOrchidGroup.bedZoneId)?.zone ?? null)
-    : selectedBedZone;
-  const selectedHouse = selection?.type === "HOUSE";
-  const physicalBed = zone
-    ? (house.physicalBeds.find((bed) => bed.id === zone.physicalBedId) ?? null)
-    : selectedPhysicalBed;
-  const targetLabel = selectedOrchidGroup
-    ? "선택한 난 묶음"
-    : zone
-      ? "선택한 구역"
-      : physicalBed
-        ? "선택한 다이"
-        : selectedHouse
-          ? "선택한 동"
-          : null;
-  const targetName = selectedOrchidGroup
-    ? selectedOrchidGroup.varietyName
-    : zone
-      ? zone.name
-      : physicalBed
-        ? `${physicalBed.number}다이`
-        : selectedHouse
-          ? `${house.number}동`
-          : null;
-  const targetContext = zone
-    ? `${zone.houseNumber}동 ${zone.physicalBedNumber}다이`
-    : physicalBed
-      ? `${house.number}동`
-      : selectedHouse
-        ? house.name
-        : null;
-  const targetGroups = selectedOrchidGroup
-    ? [selectedOrchidGroup]
-    : zone
-      ? zone.orchidGroups
-      : physicalBed
-        ? physicalBed.bedZones.flatMap((bedZone) => bedZone.orchidGroups)
-        : selectedHouse
-          ? house.physicalBeds.flatMap((bed) =>
-              bed.bedZones.flatMap((bedZone) => bedZone.orchidGroups),
-            )
-          : [];
-  const totalQuantity =
-    targetGroups.reduce((sum, orchidGroup) => sum + orchidGroup.quantity, 0) ??
-    0;
-  const zoneCount = physicalBed
-    ? physicalBed.bedZones.length
-    : selectedHouse
-      ? house.physicalBeds.reduce((sum, bed) => sum + bed.bedZones.length, 0)
-      : zone
-        ? 1
-        : 0;
-
-  return (
-    <section className="rounded-md border border-[#d7ddd4] bg-white p-2.5 shadow-sm">
-      {targetLabel && targetName ? (
-        <div className="flex flex-col gap-3 xl:flex-row xl:items-center">
-          <div className="shrink-0 xl:w-44">
-            <p className="text-xs font-semibold text-[#6f7b72]">
-              {targetLabel}
-            </p>
-            <div className="mt-1 flex flex-wrap items-center gap-1.5">
-              {targetContext ? (
-                <span className="text-sm font-semibold text-[#5c6a60]">
-                  {targetContext}
-                </span>
-              ) : null}
-              <span className="rounded-md bg-[#e6f0ff] px-2 py-1 text-sm font-semibold text-[#246df2]">
-                {targetName}
-              </span>
-            </div>
-          </div>
-
-          <div className="grid shrink-0 grid-cols-4 gap-2 text-center xl:w-72">
-            <InfoMetric label="난 묶음 수" value={`${targetGroups.length}개`} />
-            <InfoMetric label="총 수량" value={`${totalQuantity}분`} />
-            <InfoMetric
-              label={zone || selectedOrchidGroup ? "구역 수" : "하위 구역"}
-              value={`${zoneCount}개`}
-            />
-            <InfoMetric label="상태" value="정상" />
-          </div>
-
-          <div className="min-w-0 flex-1 border-t border-[#e1e6df] pt-2 xl:border-t-0 xl:border-l xl:pt-0 xl:pl-3">
-            <p className="text-xs font-semibold text-[#17251b]">
-              최근 작업 요약
-            </p>
-            <WorkRecordSummaryView
-              compact
-              loading={workRecordSummaryLoading}
-              summary={workRecordSummary}
-            />
-          </div>
-        </div>
-      ) : (
-        <p className="text-sm text-[#5c6a60]">
-          구역 또는 난 묶음을 선택하세요.
-        </p>
-      )}
-    </section>
   );
 }
 
@@ -580,151 +456,6 @@ function getStatusDotClass(status: string) {
   return "bg-[#e52d2d]";
 }
 
-function WorkRecordSummaryView({
-  compact = false,
-  loading,
-  summary,
-}: {
-  compact?: boolean;
-  loading: boolean;
-  summary: WorkRecordSummary;
-}) {
-  if (loading) {
-    return (
-      <p className="mt-1 rounded-md bg-[#f5f7f3] p-2 text-xs text-[#5c6a60]">
-        최근 작업 확인 중
-      </p>
-    );
-  }
-
-  if (compact) {
-    return (
-      <div className="mt-1 grid gap-2 xl:grid-cols-[210px_minmax(0,1fr)]">
-        <dl className="grid grid-cols-3 gap-1 text-[11px] text-[#5c6a60]">
-          <SummaryRow
-            compact
-            label="농약"
-            record={summary.latestByType.pesticide}
-          />
-          <SummaryRow
-            compact
-            label="비료"
-            record={summary.latestByType.fertilizer}
-          />
-          <SummaryRow
-            compact
-            label="분갈이"
-            record={summary.latestByType.repot}
-          />
-        </dl>
-        <RecentWorkList compact records={summary.latestRecords.slice(0, 3)} />
-      </div>
-    );
-  }
-
-  return (
-    <div className="mt-2 space-y-3">
-      <dl className="space-y-1 text-xs text-[#5c6a60]">
-        <SummaryRow label="최근 농약" record={summary.latestByType.pesticide} />
-        <SummaryRow
-          label="최근 비료"
-          record={summary.latestByType.fertilizer}
-        />
-        <SummaryRow label="최근 분갈이" record={summary.latestByType.repot} />
-      </dl>
-
-      {summary.latestRecords.length > 0 ? (
-        <RecentWorkList records={summary.latestRecords} />
-      ) : (
-        <p className="rounded-md bg-[#f5f7f3] p-2 text-xs text-[#5c6a60]">
-          등록된 작업 기록 없음
-        </p>
-      )}
-    </div>
-  );
-}
-
-function RecentWorkList({
-  compact = false,
-  records,
-}: {
-  compact?: boolean;
-  records: WorkRecord[];
-}) {
-  if (records.length === 0) {
-    return (
-      <p className="rounded-md bg-[#f5f7f3] p-2 text-xs text-[#5c6a60]">
-        등록된 작업 기록 없음
-      </p>
-    );
-  }
-
-  return (
-    <ul className={compact ? "grid gap-1 md:grid-cols-3" : "space-y-1"}>
-      {records.map((record) => (
-        <li
-          key={record.id}
-          className={`rounded-md border border-[#e1e6df] bg-[#fbfcfa] text-xs ${
-            compact ? "px-2 py-1" : "px-2 py-1.5"
-          }`}
-        >
-          <div className="flex items-center justify-between gap-2">
-            <span className="truncate font-semibold text-[#17251b]">
-              {record.workType}
-            </span>
-            <span className="shrink-0 text-[#5c6a60]">{record.workDate}</span>
-          </div>
-          {!compact ? (
-            <p className="mt-0.5 truncate text-[#5c6a60]">
-              {formatWorkRecordDetail(record)}
-            </p>
-          ) : null}
-        </li>
-      ))}
-    </ul>
-  );
-}
-
-function SummaryRow({
-  compact = false,
-  label,
-  record,
-}: {
-  compact?: boolean;
-  label: string;
-  record: WorkRecord | null;
-}) {
-  if (compact) {
-    return (
-      <div className="rounded-md bg-[#f5f7f3] px-2 py-1">
-        <dt>{label}</dt>
-        <dd className="mt-0.5 truncate font-semibold text-[#17251b]">
-          {record ? record.workDate : "없음"}
-        </dd>
-      </div>
-    );
-  }
-
-  return (
-    <div className="flex justify-between gap-3">
-      <dt>{label}</dt>
-      <dd className="font-semibold text-[#17251b]">
-        {record ? record.workDate : "없음"}
-      </dd>
-    </div>
-  );
-}
-
-function formatWorkRecordDetail(record: WorkRecord) {
-  const details = [
-    record.materialName,
-    record.quantity,
-    record.worker,
-    record.memo,
-  ].filter(Boolean);
-  return details.length > 0 ? details.join(" · ") : formatWorkTarget(record);
-}
-
 function toPlacementSelection(
   orchidGroup: OrchidGroup,
 ): FarmPlacementSelection {
@@ -745,14 +476,4 @@ function toPlacementSelection(
     endPosition: endCell,
     label: `${orchidGroup.houseNumber}동 ${orchidGroup.physicalBedNumber}다이 ${orchidGroup.bedZoneName} ${startCell}-${endCell}칸`,
   };
-}
-
-function formatWorkTarget(record: WorkRecord) {
-  if (record.targetType === "BED_ZONE") {
-    return "구역 기록";
-  }
-  if (record.targetType === "ORCHID_GROUP") {
-    return `난 묶음 #${record.targetId}`;
-  }
-  return "작업 기록";
 }

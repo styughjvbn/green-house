@@ -32,7 +32,7 @@ export default function PhysicalBedBlock({
 
   return (
     <div
-      className={`cursor-pointer rounded-md border p-2 transition ${
+      className={`flex h-full min-h-0 cursor-pointer flex-col rounded-md border p-2 transition ${
         selected
           ? "border-[#246df2] bg-[#f4f8ff] ring-2 ring-[#246df2]/20"
           : "border-[#cfe0cc] bg-[#f7faf6] hover:border-[#159447]"
@@ -50,8 +50,10 @@ export default function PhysicalBedBlock({
         }
       }}
     >
-      <p className="px-2 text-center text-sm font-semibold">{bed.number}다이</p>
-      <div className="mt-1 grid grid-cols-2 gap-2">
+      <p className="shrink-0 px-2 text-center text-sm font-semibold">
+        {bed.number}다이
+      </p>
+      <div className="mt-1 grid min-h-0 flex-1 grid-cols-2 gap-2">
         {bed.bedZones.map((zone) => (
           <BedZoneBlock
             key={zone.id}
