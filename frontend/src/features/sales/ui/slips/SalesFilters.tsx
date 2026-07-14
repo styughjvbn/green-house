@@ -77,7 +77,7 @@ export function SalesFilters({
           onChange={(value) => onChange("keyword", value)}
         />
 
-        <SalesFilterResetButton className="lg:mt-7" onClick={onReset} />
+        <SalesFilterResetButton className="lg:mt-6" onClick={onReset} />
       </SalesFilterGrid>
     </SalesFilterPanel>
   );

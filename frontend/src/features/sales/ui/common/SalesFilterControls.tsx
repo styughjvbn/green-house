@@ -9,10 +9,10 @@ export function SalesFilterPanel({
   footer?: ReactNode;
 }) {
   return (
-    <section className="rounded-md border border-[#dfe5dc] bg-white p-4 shadow-sm">
+    <section className="rounded-md border border-[#dfe5dc] bg-white p-3 shadow-sm">
       {children}
       {footer ? (
-        <div className="mt-3 flex flex-wrap gap-4 border-t border-[#edf0ec] pt-3 text-sm font-semibold text-[#46544a]">
+        <div className="mt-2 flex flex-wrap gap-4 border-t border-[#edf0ec] pt-2 text-sm font-semibold text-[#46544a]">
           {footer}
         </div>
       ) : null}
@@ -27,7 +27,7 @@ export function SalesFilterGrid({
   children: ReactNode;
   className: string;
 }) {
-  return <div className={`grid gap-3 ${className}`}>{children}</div>;
+  return <div className={`grid gap-2 ${className}`}>{children}</div>;
 }
 
 export function SalesFilterField({
@@ -39,7 +39,7 @@ export function SalesFilterField({
 }) {
   return (
     <label>
-      <span className="mb-2 block text-sm font-semibold text-[#344138]">
+      <span className="mb-1 block text-sm font-semibold text-[#344138]">
         {label}
       </span>
       {children}
@@ -63,7 +63,7 @@ export function SalesFilterInput({
   return (
     <SalesFilterField label={label}>
       <input
-        className="h-10 w-full rounded-md border border-[#cfd8cc] px-3 text-sm"
+        className="h-10 w-full rounded-md border border-[#cfd8cc] px-2 text-sm"
         placeholder={placeholder}
         type={type}
         value={value}
@@ -87,7 +87,7 @@ export function SalesFilterSelect({
   return (
     <SalesFilterField label={label}>
       <select
-        className="h-10 w-full rounded-md border border-[#cfd8cc] bg-white px-3 text-sm"
+        className="h-10 w-full rounded-md border border-[#cfd8cc] bg-white px-2 text-sm"
         value={value}
         onChange={(event) => onChange(event.target.value)}
       >
@@ -110,12 +110,12 @@ export function SalesFilterDateRange({
 }) {
   return (
     <div>
-      <span className="mb-2 block text-sm font-semibold text-[#344138]">
+      <span className="mb-1 block text-sm font-semibold text-[#344138]">
         기간
       </span>
       <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-2">
         <input
-          className="h-10 min-w-0 rounded-md border border-[#cfd8cc] px-3 text-sm"
+          className="h-10 min-w-0 rounded-md border border-[#cfd8cc] px-2 text-sm"
           aria-label="시작일"
           type="date"
           value={from}
@@ -123,7 +123,7 @@ export function SalesFilterDateRange({
         />
         <span className="text-[#7a8680]">~</span>
         <input
-          className="h-10 min-w-0 rounded-md border border-[#cfd8cc] px-3 text-sm"
+          className="h-10 min-w-0 rounded-md border border-[#cfd8cc] px-2 text-sm"
           aria-label="종료일"
           type="date"
           value={to}
