@@ -35,21 +35,14 @@ export function SalesSlipItemEditor({
   const allocatedQuantity = calculateSalesItemAllocated(item);
   const quantity = Number(item.quantity || 0);
   const allocationMatched = quantity === allocatedQuantity;
+  const varietyLabel =
+    [item.genus, item.itemName].filter(Boolean).join(" / ") ||
+    "난 묶음 선택 후 자동 입력";
 
   return (
     <div className="rounded-md border border-[#d7ddd4] bg-[#f8faf7] p-3">
       <div className="grid gap-3 md:grid-cols-[minmax(0,1.2fr)_1fr_1fr_90px_110px_110px]">
-        <TextField
-          label="품종명"
-          required
-          value={item.itemName}
-          onChange={(value) => onChange(index, "itemName", value)}
-        />
-        <TextField
-          label="속"
-          value={item.genus}
-          onChange={(value) => onChange(index, "genus", value)}
-        />
+        <ReadonlyField label="품종명 / 속" value={varietyLabel} />
         <TextField
           label="등급/규격"
           value={item.spec}
@@ -92,6 +85,8 @@ export function SalesSlipItemEditor({
           <div className="w-full max-w-[360px]">
             <SalesOrchidGroupSearchSelect
               initialKeyword={item.itemName}
+              requiredGenus={item.genus}
+              requiredVarietyName={item.itemName}
               selectedIds={item.allocations.map(
                 (allocation) => allocation.orchidGroupId,
               )}
@@ -162,6 +157,17 @@ export function SalesSlipItemEditor({
           </button>
         ) : null}
       </div>
+    </div>
+  );
+}
+
+function ReadonlyField({ label, value }: { label: string; value: string }) {
+  return (
+    <div>
+      <p className="text-sm font-semibold text-[#435047]">{label}</p>
+      <p className="mt-1 flex h-10 items-center rounded-md border border-[#cfd8cc] bg-[#eef2ed] px-3 text-sm font-semibold text-[#26352c]">
+        {value}
+      </p>
     </div>
   );
 }
