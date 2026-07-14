@@ -5,6 +5,7 @@ import type {
   BedZone,
   House,
   OrchidGroup,
+  OrchidGroupWorkHistory,
   PhysicalBed,
   WorkRecord,
 } from "@/entities/farm/types";
@@ -20,6 +21,8 @@ export default function SelectedZoneInfo({
   selection,
   workRecordSummary,
   workRecordSummaryLoading,
+  orchidGroupHistory,
+  orchidGroupHistoryLoading,
 }: {
   house: House;
   selectedBedZone: BedZone | null;
@@ -28,6 +31,8 @@ export default function SelectedZoneInfo({
   selection: OrchidSelection | null;
   workRecordSummary: WorkRecordSummary;
   workRecordSummaryLoading: boolean;
+  orchidGroupHistory: OrchidGroupWorkHistory[];
+  orchidGroupHistoryLoading: boolean;
 }) {
   const zone = selectedOrchidGroup
     ? (findBedZone(house, selectedOrchidGroup.bedZoneId)?.zone ?? null)
@@ -125,8 +130,72 @@ export default function SelectedZoneInfo({
           구역 또는 난 묶음을 선택하세요.
         </p>
       )}
+      {selectedOrchidGroup ? (
+        <OrchidGroupHistoryView
+          history={orchidGroupHistory}
+          loading={orchidGroupHistoryLoading}
+        />
+      ) : null}
     </section>
   );
+}
+
+function OrchidGroupHistoryView({
+  history,
+  loading,
+}: {
+  history: OrchidGroupWorkHistory[];
+  loading: boolean;
+}) {
+  return (
+    <div className="mt-3 border-t border-[#e1e6df] pt-3">
+      <div className="flex items-center justify-between gap-3">
+        <h3 className="text-sm font-bold text-[#344138]">난 묶음 작업 이력</h3>
+        <span className="text-xs text-[#6f7b72]">
+          최근 {Math.min(history.length, 5)}건
+        </span>
+      </div>
+      {loading ? (
+        <p className="mt-2 text-xs text-[#5c6a60]">통합 이력 확인 중</p>
+      ) : history.length === 0 ? (
+        <p className="mt-2 text-xs text-[#5c6a60]">
+          표시할 통합 이력이 없습니다.
+        </p>
+      ) : (
+        <ul className="mt-2 grid gap-2 lg:grid-cols-2 xl:grid-cols-3">
+          {history.slice(0, 5).map((item) => (
+            <li
+              key={`${item.sourceKind}-${item.workOperationId ?? item.legacyWorkRecordId}`}
+              className="rounded-md border border-[#dfe5dc] bg-[#fbfcfa] p-2.5 text-xs"
+            >
+              <div className="flex items-center justify-between gap-2">
+                <span className="font-bold text-[#17251b]">{item.title}</span>
+                <span className="shrink-0 text-[#5c6a60]">{item.workDate}</span>
+              </div>
+              <p className="mt-1 text-[#435047]">
+                {item.propagated ? "동 전체 작업에서 적용" : "직접 등록"}
+              </p>
+              {item.locationSnapshot ? (
+                <p className="mt-1 text-[#6a766e]">
+                  당시 {formatLocation(item.locationSnapshot)}
+                  {item.locationSnapshot.houseId !==
+                    item.currentLocation.houseId ||
+                  item.locationSnapshot.bedZoneId !==
+                    item.currentLocation.bedZoneId
+                    ? ` · 현재 ${formatLocation(item.currentLocation)}`
+                    : ""}
+                </p>
+              ) : null}
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
+  );
+}
+
+function formatLocation(location: OrchidGroupWorkHistory["currentLocation"]) {
+  return `${location.houseNumber}동 ${location.physicalBedNumber}다이 ${location.bedZoneName}`;
 }
 
 function WorkRecordSummaryView({

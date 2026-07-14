@@ -5,6 +5,7 @@ import { useEffect, useMemo, useState } from "react";
 import type {
   House,
   OrchidGroup,
+  OrchidGroupWorkHistory,
   WorkRecord,
   WorkRecordTargetType,
   WorkType,
@@ -19,6 +20,7 @@ import {
   createOrchidWorkRecord,
   deleteOrchidGroup,
   getOrchidWorkRecords,
+  getOrchidGroupWorkHistory,
   moveOrchidGroup,
   searchOrchidGroups,
   updateOrchidGroup,
@@ -117,6 +119,10 @@ export function useOrchidManagementMap(
   const [workRecordSummaryLoading, setWorkRecordSummaryLoading] =
     useState(false);
   const [workRecordSummaryVersion, setWorkRecordSummaryVersion] = useState(0);
+  const [orchidGroupHistoryState, setOrchidGroupHistoryState] = useState<{
+    orchidGroupId: number;
+    items: OrchidGroupWorkHistory[];
+  } | null>(null);
   const [saving, setSaving] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
@@ -258,6 +264,35 @@ export function useOrchidManagementMap(
       ignore = true;
     };
   }, [resolvedZone, workRecordSummaryTarget, workRecordSummaryVersion]);
+
+  useEffect(() => {
+    let ignore = false;
+    if (!selectedOrchidGroup) {
+      return;
+    }
+
+    void getOrchidGroupWorkHistory(selectedOrchidGroup.id)
+      .then((history) => {
+        if (!ignore) {
+          setOrchidGroupHistoryState({
+            orchidGroupId: selectedOrchidGroup.id,
+            items: history,
+          });
+        }
+      })
+      .catch(() => {
+        if (!ignore) {
+          setOrchidGroupHistoryState({
+            orchidGroupId: selectedOrchidGroup.id,
+            items: [],
+          });
+        }
+      });
+
+    return () => {
+      ignore = true;
+    };
+  }, [selectedOrchidGroup, workRecordSummaryVersion]);
 
   function selectBedZone(bedZoneId: number) {
     setSelection({ type: "BED_ZONE", bedZoneId });
@@ -541,6 +576,14 @@ export function useOrchidManagementMap(
     workRecordForm,
     workRecordSummary,
     workRecordSummaryLoading,
+    orchidGroupHistory:
+      selectedOrchidGroup &&
+      orchidGroupHistoryState?.orchidGroupId === selectedOrchidGroup.id
+        ? orchidGroupHistoryState.items
+        : [],
+    orchidGroupHistoryLoading:
+      Boolean(selectedOrchidGroup) &&
+      orchidGroupHistoryState?.orchidGroupId !== selectedOrchidGroup?.id,
     actions: {
       cancelMutation: () => {
         setMutationMode(null);

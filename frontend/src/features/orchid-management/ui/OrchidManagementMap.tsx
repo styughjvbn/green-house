@@ -217,6 +217,8 @@ export function OrchidManagementMap({
           selection={orchidManagement.selection}
           workRecordSummary={orchidManagement.workRecordSummary}
           workRecordSummaryLoading={orchidManagement.workRecordSummaryLoading}
+          orchidGroupHistory={orchidManagement.orchidGroupHistory}
+          orchidGroupHistoryLoading={orchidManagement.orchidGroupHistoryLoading}
         />
         {/* <BedPrecisionSettings zone={orchidManagement.resolvedZone} /> 26.07.11 비활성화*/}
       </section>
