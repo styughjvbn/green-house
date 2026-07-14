@@ -11,9 +11,8 @@ import BedPrecisionSettings from "./components/BedPrecisionSettings";
 import HouseDetailMap from "./components/HouseDetailMap";
 import HouseSelectorPanel from "./components/HouseSelectorPanel";
 import OrchidSearchPanel from "./components/OrchidSearchPanel";
-import OrchidSelectionPanel, {
-  SelectedZoneInfo,
-} from "./components/OrchidSelectionPanel";
+import OrchidSelectionPanel from "./components/OrchidSelectionPanel";
+import SelectedZoneInfo from "./components/SelectedZoneInfo";
 
 const VARIETY_COLOR_STORAGE_KEY =
   "orchid-management:distinguish-variety-colors";
@@ -159,8 +158,8 @@ export function OrchidManagementMap({
   }
 
   return (
-    <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_440px]">
-      <section className="space-y-3">
+    <div className="grid h-full min-h-0 gap-4 lg:grid-cols-[minmax(0,1fr)_clamp(280px,28%,440px)]">
+      <section className="flex h-full min-h-0 flex-col gap-3">
         <HouseSelectorPanel
           createActive={
             orchidManagement.mutationMode === "CREATE" &&
@@ -183,31 +182,33 @@ export function OrchidManagementMap({
             orchidManagement.actions.selectHouse();
           }}
         />
-        <HouseDetailMap
-          distinguishVarietyColors={distinguishVarietyColors}
-          filteredOrchidGroupIds={orchidManagement.filteredOrchidGroupIds}
-          house={house}
-          selection={orchidManagement.selection}
-          showScale={showScale}
-          cellRangePick={mapCellRangePick}
-          onPickCellRange={pickMapCellRange}
-          onSelectBedZone={(bedZoneId) => {
-            clearMapCellRangePick();
-            orchidManagement.actions.selectBedZone(bedZoneId);
-          }}
-          onSelectHouse={() => {
-            clearMapCellRangePick();
-            orchidManagement.actions.selectHouse();
-          }}
-          onSelectPhysicalBed={(physicalBedId) => {
-            clearMapCellRangePick();
-            orchidManagement.actions.selectPhysicalBed(physicalBedId);
-          }}
-          onSelectOrchidGroup={(orchidGroupId) => {
-            clearMapCellRangePick();
-            orchidManagement.actions.selectOrchidGroupForEdit(orchidGroupId);
-          }}
-        />
+        <div className="min-h-0 flex-1">
+          <HouseDetailMap
+            distinguishVarietyColors={distinguishVarietyColors}
+            filteredOrchidGroupIds={orchidManagement.filteredOrchidGroupIds}
+            house={house}
+            selection={orchidManagement.selection}
+            showScale={showScale}
+            cellRangePick={mapCellRangePick}
+            onPickCellRange={pickMapCellRange}
+            onSelectBedZone={(bedZoneId) => {
+              clearMapCellRangePick();
+              orchidManagement.actions.selectBedZone(bedZoneId);
+            }}
+            onSelectHouse={() => {
+              clearMapCellRangePick();
+              orchidManagement.actions.selectHouse();
+            }}
+            onSelectPhysicalBed={(physicalBedId) => {
+              clearMapCellRangePick();
+              orchidManagement.actions.selectPhysicalBed(physicalBedId);
+            }}
+            onSelectOrchidGroup={(orchidGroupId) => {
+              clearMapCellRangePick();
+              orchidManagement.actions.selectOrchidGroupForEdit(orchidGroupId);
+            }}
+          />
+        </div>
         <SelectedZoneInfo
           house={house}
           selectedBedZone={orchidManagement.selectedBedZone}
@@ -219,7 +220,7 @@ export function OrchidManagementMap({
         />
         {/* <BedPrecisionSettings zone={orchidManagement.resolvedZone} /> 26.07.11 비활성화*/}
       </section>
-      <div className="space-y-3">
+      <div className="flex h-full min-h-0 flex-col gap-3">
         <OrchidSearchPanel
           currentHouseId={house.id}
           currentSelectedOrchidGroupId={

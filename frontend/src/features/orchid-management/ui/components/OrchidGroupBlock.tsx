@@ -59,7 +59,7 @@ export default function OrchidGroupBlock({
 
   return (
     <div
-      className={`h-full touch-manipulation border transition ${
+      className={`h-full w-full min-w-0 touch-manipulation overflow-hidden border transition ${
         varietyColor
           ? "text-white hover:brightness-95"
           : muted
@@ -83,7 +83,7 @@ export default function OrchidGroupBlock({
       }
       tabIndex={0}
     >
-      <div className={`flex h-full flex-col ${paddingClass(density)}`}>
+      <div className={`flex h-full min-w-0 flex-col ${paddingClass(density)}`}>
         {density === "dot" ? (
           <div className="flex h-full items-center justify-end px-1">
             {warning || muted ? (
@@ -95,7 +95,7 @@ export default function OrchidGroupBlock({
             ) : null}
           </div>
         ) : density === "tiny" ? (
-          <div className="flex h-full items-center gap-2">
+          <div className="flex h-full min-w-0 items-center gap-2">
             <p
               className={`min-w-0 flex-1 truncate text-sm font-bold ${titleTextClass}`}
             >
@@ -114,8 +114,10 @@ export default function OrchidGroupBlock({
           </div>
         ) : (
           <>
-            <div className="flex items-start justify-between gap-2">
-              <p className={`truncate text-sm font-bold ${titleTextClass}`}>
+            <div className="flex min-w-0 items-start justify-between gap-2">
+              <p
+                className={`min-w-0 truncate text-sm font-bold ${titleTextClass}`}
+              >
                 {orchidGroup.varietyName}
               </p>
               {warning || muted ? (

@@ -7,11 +7,7 @@ const backendApiUrl = (
 ).replace(/\/$/, "");
 
 const nextConfig: NextConfig = {
-  allowedDevOrigins: [
-    "192.168.0.2",
-    "192.168.0.2:3000",
-  ],
-
+  allowedDevOrigins: ["192.168.0.2", "192.168.0.2:3000"],
   logging: {
     fetches: {
       fullUrl: true,

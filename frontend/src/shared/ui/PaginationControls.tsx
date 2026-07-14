@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import ReactPaginate from "react-paginate";
 
 type PaginationControlsProps = {
@@ -23,6 +24,8 @@ export function PaginationControls({
   onPageChange,
   onPageSizeChange,
 }: PaginationControlsProps) {
+  const pageRangeDisplayed = useResponsivePageRange();
+
   return (
     <div className="flex w-full flex-wrap items-center justify-between gap-3">
       <ReactPaginate
@@ -37,7 +40,7 @@ export function PaginationControls({
         pageCount={pageCount}
         pageLinkClassName="inline-flex h-8 min-w-8 items-center justify-center rounded border border-[#d7ddd8] px-2 text-xs text-[#344138]"
         marginPagesDisplayed={1}
-        pageRangeDisplayed={5}
+        pageRangeDisplayed={pageRangeDisplayed}
         previousClassName="h-8"
         previousLabel={previousLabel}
         previousLinkClassName="inline-flex h-8 min-w-8 items-center justify-center rounded border border-[#d7ddd8] px-2 text-xs font-semibold text-[#344138]"
@@ -64,4 +67,25 @@ export function PaginationControls({
       ) : null}
     </div>
   );
+}
+
+function useResponsivePageRange() {
+  const [pageRangeDisplayed, setPageRangeDisplayed] = useState(5);
+
+  useEffect(() => {
+    const lgRangeQuery = window.matchMedia(
+      "(min-width: 64rem) and (max-width: 79.999rem)",
+    );
+
+    function syncPageRange() {
+      setPageRangeDisplayed(lgRangeQuery.matches ? 2 : 5);
+    }
+
+    syncPageRange();
+    lgRangeQuery.addEventListener("change", syncPageRange);
+
+    return () => lgRangeQuery.removeEventListener("change", syncPageRange);
+  }, []);
+
+  return pageRangeDisplayed;
 }

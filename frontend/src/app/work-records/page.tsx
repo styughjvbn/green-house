@@ -16,7 +16,7 @@ export default async function WorkRecordsPage() {
   ]);
 
   return (
-    <main className="space-y-5">
+    <main className="h-full min-h-0">
       <WorkRecordManager
         houses={mapData.houses}
         initialRecords={records}

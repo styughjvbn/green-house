@@ -32,7 +32,7 @@ export function OrchidManagementPage({
   }
 
   return (
-    <main className="space-y-4">
+    <main className="h-full min-h-0">
       <OrchidManagementMap
         key={[
           house.id,

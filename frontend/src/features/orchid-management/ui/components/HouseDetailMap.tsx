@@ -31,10 +31,10 @@ export default function HouseDetailMap({
 }) {
   return (
     <section
-      className="cursor-pointer rounded-md border border-[#d7ddd4] bg-white p-3 shadow-sm"
+      className="h-full min-h-0 cursor-pointer overflow-hidden rounded-md border border-[#d7ddd4] bg-white p-3 shadow-sm"
       onClick={onSelectHouse}
     >
-      <div className="grid gap-3 xl:grid-cols-3">
+      <div className="grid h-full min-h-0 gap-3 lg:grid-cols-3">
         {house.physicalBeds.map((bed) => (
           <PhysicalBedBlock
             key={bed.id}

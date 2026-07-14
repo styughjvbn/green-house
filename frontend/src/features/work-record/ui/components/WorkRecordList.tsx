@@ -34,7 +34,7 @@ export function WorkRecordList({
   onSelect,
 }: WorkRecordListProps) {
   return (
-    <section className="rounded-md border border-[#dfe5dc] bg-white p-4 shadow-sm">
+    <section className="flex min-h-0 flex-col rounded-md border border-[#dfe5dc] bg-white p-4 shadow-sm">
       <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
         <div>
           <h2 className="text-lg font-bold text-[#17251b]">작업 이력 목록</h2>
@@ -49,16 +49,15 @@ export function WorkRecordList({
           작업 이력 등록
         </button>
       </div>
-      <div className="overflow-x-auto">
-        <table className="w-full min-w-[760px] border-collapse text-left text-sm">
+      <div className="min-h-0 flex-1 overflow-auto">
+        <table className="w-full min-w-[730px] border-collapse text-left text-sm">
           <thead className="border-y border-[#dfe5dc] text-[#435047]">
             <tr>
-              <th className="px-3 py-3 font-semibold">작업일</th>
-              <th className="px-3 py-3 font-semibold">작업 유형</th>
-              <th className="px-3 py-3 font-semibold">대상</th>
-              <th className="px-3 py-3 font-semibold">작업 내용</th>
-              <th className="px-3 py-3 font-semibold">작업자</th>
-              <th className="px-3 py-3 text-center font-semibold">보기</th>
+              <th className="px-3 py-2 font-semibold">작업일</th>
+              <th className="px-3 py-2 font-semibold">작업 유형</th>
+              <th className="px-3 py-2 font-semibold">대상</th>
+              <th className="px-3 py-2 font-semibold">작업 내용</th>
+              <th className="px-3 py-2 font-semibold">작업자</th>
             </tr>
           </thead>
           <tbody>
@@ -73,28 +72,22 @@ export function WorkRecordList({
                   }`}
                   onClick={() => onSelect(record.id)}
                 >
-                  <td className="px-3 py-3 font-bold">{record.workDate}</td>
-                  <td className="px-3 py-3">
+                  <td className="px-1 py-2 font-bold">
+                    {formatShortDate(record.workDate)}
+                  </td>
+                  <td className="px-1 py-2">
                     <WorkTypeBadge workType={record.workType} />
                   </td>
-                  <td className="px-3 py-3">
+                  <td className="px-1 py-2">
                     <p>{formatTargetType(record.targetType)}</p>
                     <p className="text-xs text-[#6a766e]">
                       {formatTarget(record)}
                     </p>
                   </td>
-                  <td className="px-3 py-3">
+                  <td className="px-1 py-2">
                     {formatWorkRecordContent(record, workTypes)}
                   </td>
-                  <td className="px-3 py-3">{record.worker ?? "-"}</td>
-                  <td className="px-3 py-3 text-center">
-                    <button
-                      className="h-8 w-8 rounded-md border border-[#dfe5dc] text-[#5c6a60]"
-                      type="button"
-                    >
-                      ...
-                    </button>
-                  </td>
+                  <td className="px-1 py-2">{record.worker ?? "-"}</td>
                 </tr>
               );
             })}
@@ -130,6 +123,10 @@ export function WorkRecordList({
       </div>
     </section>
   );
+}
+
+function formatShortDate(date: string) {
+  return date.length === 10 ? date.slice(2) : date;
 }
 
 function WorkTypeBadge({ workType }: { workType: string }) {

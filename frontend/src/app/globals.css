@@ -20,7 +20,7 @@
 
 html {
   overflow-x: hidden;
-  overflow-y: scroll;
+  overflow-y: auto;
 }
 
 body {
@@ -30,16 +30,65 @@ body {
 }
 
 .app-shell-root {
-  min-height: var(--app-viewport-height);
+  height: var(--app-viewport-height);
+  overflow: hidden;
 }
 
 .app-shell-sidebar {
   height: var(--app-viewport-height);
 }
 
+.app-shell-main {
+  display: flex;
+  min-height: 0;
+  flex-direction: column;
+}
+
+.app-content {
+  min-height: 0;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  overflow-y: auto;
+}
+
+.app-content > header {
+  margin: -1rem -1rem 1rem;
+  flex: 0 0 auto;
+}
+
+.app-content > main {
+  min-width: 0;
+  flex: 1 1 auto;
+}
+
+.scrollbar-hidden {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+.scrollbar-hidden::-webkit-scrollbar {
+  display: none;
+}
+
+@media (min-width: 48rem) {
+  .app-content > header {
+    margin-right: -2rem;
+    margin-left: -2rem;
+  }
+}
+
+@media (min-width: 64rem) {
+  .app-content > header {
+    margin-right: -1.5rem;
+    margin-left: -1.5rem;
+  }
+}
+
 .pwa-fixed-viewport,
 .pwa-fixed-viewport body {
-  min-height: var(--app-viewport-height);
+  height: var(--app-viewport-height);
+  overflow: hidden;
 }
 
 a,

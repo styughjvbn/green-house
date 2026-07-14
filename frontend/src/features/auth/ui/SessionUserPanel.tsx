@@ -27,17 +27,17 @@ export function SessionUserPanel() {
   }, []);
 
   return (
-    <div className="mt-auto border-t border-white/10 pt-3">
-      <div className="rounded-md bg-white/8 p-3 text-[#dcebe0]">
+    <div className="mt-auto min-w-0 border-t border-white/10 pt-3">
+      <div className="min-w-0 overflow-hidden rounded-md bg-white/8 p-3 text-[#dcebe0]">
         <div className="flex items-center gap-2">
           <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-white/10">
             <UserRound className="h-4 w-4" aria-hidden="true" />
           </div>
           <div className="min-w-0">
-            <p className="truncate text-sm font-semibold text-white">
+            <p className="truncate text-sm font-semibold whitespace-nowrap text-white">
               {user?.username ?? "로그인 계정"}
             </p>
-            <p className="mt-0.5 text-xs text-[#b9cbbf]">
+            <p className="mt-0.5 truncate text-xs whitespace-nowrap text-[#b9cbbf]">
               {user ? getRoleLabel(user.role) : "권한 확인 중"}
             </p>
           </div>

@@ -71,7 +71,7 @@ export default function OrchidGroupForm({
             id: initialValue.varietyId,
             genus: initialValue.genus ?? "",
             name: initialValue.varietyName,
-            defaultPotSize: initialValue.potSize,
+            defaultPotSize: null,
             active: true,
           }
         : null,
@@ -118,6 +118,9 @@ export default function OrchidGroupForm({
           : "",
     memo: initialValue?.memo ?? "",
   }));
+  const [selectedVariety, setSelectedVariety] = useState<VarietyOption | null>(
+    initialVariety,
+  );
   const maxCell = useMemo(
     () => resolveMaxCell(house, activeZone?.id ?? null),
     [activeZone, house],
@@ -208,6 +211,7 @@ export default function OrchidGroupForm({
   }
 
   function handleSelectVariety(option: VarietyOption) {
+    setSelectedVariety(option);
     setForm((current) => ({
       ...current,
       varietyId: String(option.id),
@@ -280,26 +284,9 @@ export default function OrchidGroupForm({
       <form className="mt-3 space-y-2" onSubmit={handleSubmit}>
         <VarietySearchSelect
           disabled={saving}
-          selectedVariety={
-            form.varietyId
-              ? {
-                  id: Number(form.varietyId),
-                  genus: form.genus,
-                  name: form.varietyName,
-                  defaultPotSize: form.potSize || null,
-                  active: true,
-                }
-              : initialVariety
-          }
+          selectedVariety={selectedVariety}
           onSelect={handleSelectVariety}
         />
-        <div className="rounded-md border border-[#dbe1da] bg-[#f8faf7] px-3 py-2 text-xs text-[#435047]">
-          <p className="font-semibold">선택 품종</p>
-          <p className="mt-1">
-            {form.varietyName || "선택 안 됨"}
-            {form.genus ? ` / ${form.genus}` : ""}
-          </p>
-        </div>
         <div className="grid grid-cols-2 gap-2">
           <TextField
             label="수량"
@@ -460,7 +447,7 @@ function PotSizeField({
       <span className="text-sm font-semibold text-[#435047]">화분 크기</span>
       <div className="mt-1 flex overflow-hidden rounded-md border border-[#cfd8cc] bg-white">
         <input
-          className="min-w-0 flex-1 px-2 py-1.5 text-sm outline-none"
+          className="min-w-0 flex-1 px-2 py-1 text-sm outline-none"
           inputMode="decimal"
           value={amount}
           onChange={(event) =>
@@ -469,7 +456,7 @@ function PotSizeField({
         />
         <select
           aria-label="화분 크기 단위"
-          className="border-l border-[#cfd8cc] bg-[#f8faf7] px-2 py-1.5 text-sm font-semibold text-[#26352c] outline-none"
+          className="border-l border-[#cfd8cc] bg-[#f8faf7] px-2 py-1 text-sm font-semibold text-[#26352c] outline-none"
           value={unit}
           onChange={(event) =>
             onChange(formatPotSize(amount, event.target.value))

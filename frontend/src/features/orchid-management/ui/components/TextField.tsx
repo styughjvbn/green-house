@@ -27,7 +27,7 @@ export default function TextField({
     <label className="block">
       <span className="text-sm font-semibold text-[#435047]">{label}</span>
       <input
-        className="mt-1 w-full rounded-md border border-[#cfd8cc] px-2 py-1.5 text-sm"
+        className="w-full rounded-md border border-[#cfd8cc] px-2 py-1 text-sm"
         max={type === "number" ? max : undefined}
         min={type === "number" ? (min ?? 0) : undefined}
         required={required}
@@ -56,7 +56,7 @@ export function SelectField({
     <label className="block">
       <span className="text-sm font-semibold text-[#435047]">{label}</span>
       <select
-        className="mt-1 w-full rounded-md border border-[#cfd8cc] px-2 py-1.5 text-sm"
+        className="w-full rounded-md border border-[#cfd8cc] px-2 py-1 text-sm"
         value={value}
         onChange={(event) => onChange(event.target.value)}
       >

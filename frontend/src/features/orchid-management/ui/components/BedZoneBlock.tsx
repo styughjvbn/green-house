@@ -10,7 +10,7 @@ import {
 } from "../../lib/orchidManagementUtils";
 import OrchidGroupBlock from "./OrchidGroupBlock";
 
-const MAP_HEIGHT = 590;
+const DENSITY_REFERENCE_HEIGHT = 590;
 
 export default function BedZoneBlock({
   maxPosition,
@@ -38,7 +38,7 @@ export default function BedZoneBlock({
   onSelectOrchidGroup: (orchidGroupId: number) => void;
 }) {
   const resolvedMaxPosition = maxPosition && maxPosition > 0 ? maxPosition : 28;
-  const cellHeight = MAP_HEIGHT / resolvedMaxPosition;
+  const densityCellHeight = DENSITY_REFERENCE_HEIGHT / resolvedMaxPosition;
   const cells = buildCells(resolvedMaxPosition);
   const rangePickActive =
     cellRangePick.active &&
@@ -70,7 +70,7 @@ export default function BedZoneBlock({
 
   return (
     <div
-      className={`touch-manipulation rounded-l border p-2 text-left transition ${
+      className={`flex h-full min-h-0 touch-manipulation flex-col rounded-l border p-2 text-left transition ${
         selected
           ? "border-[#246df2] bg-[#f4f8ff] ring-2 ring-[#246df2]/20"
           : "border-[#d9e1d8] bg-white hover:border-[#159447]"
@@ -85,12 +85,11 @@ export default function BedZoneBlock({
       role="button"
       tabIndex={0}
     >
-      <div className="flex gap-0">
+      <div className="flex min-h-0 flex-1 gap-0">
         {showScale ? (
           <div
-            className="grid w-3 shrink-0"
+            className="grid h-full w-3 shrink-0"
             style={{
-              height: MAP_HEIGHT,
               gridTemplateRows: `repeat(${resolvedMaxPosition}, minmax(0, 1fr))`,
             }}
           >
@@ -100,17 +99,14 @@ export default function BedZoneBlock({
                 className="flex min-h-0 items-start justify-end gap-0.5"
               >
                 {isScaleLabelCell(cell, resolvedMaxPosition) ? (
-                  <div className="flex -translate-x-2 items-center">
+                  <div className="flex h-full -translate-x-2 items-center">
                     <span className="text-[11px] font-bold text-[#2d5a3b]">
                       {cell}
                     </span>
-                    <div
-                      className="relative w-1 shrink-0"
-                      style={{ height: cellHeight }}
-                    >
-                      <span className="absolute top-0 left-0 h-full w-[2px] bg-[#d9e2d7]" />
-                      <span className="absolute top-0 left-0 h-[2px] w-full bg-[#d9e2d7]" />
-                      <span className="absolute bottom-0 left-0 h-[2px] w-full bg-[#d9e2d7]" />
+                    <div className="relative h-full w-1 shrink-0">
+                      <span className="absolute top-0 left-0 h-full w-[1px] bg-[#d9e2d7]" />
+                      <span className="absolute top-0 left-0 h-[1px] w-full bg-[#d9e2d7]" />
+                      <span className="absolute bottom-0 left-0 h-[1px] w-full bg-[#d9e2d7]" />
                     </div>
                   </div>
                 ) : (
@@ -122,11 +118,10 @@ export default function BedZoneBlock({
         ) : null}
 
         <div
-          className={`relative grid min-w-0 flex-1 overflow-hidden border border-[#e4e8e4] bg-white ${
+          className={`relative grid h-full min-w-0 flex-1 overflow-hidden border border-[#e4e8e4] bg-white ${
             rangePickActive ? "cursor-crosshair" : ""
           }`}
           style={{
-            height: MAP_HEIGHT,
             gridTemplateRows: `repeat(${resolvedMaxPosition}, minmax(0, 1fr))`,
           }}
         >
@@ -218,12 +213,13 @@ export default function BedZoneBlock({
             const gridRowStart = resolvedMaxPosition - displayRange.endCell + 1;
             const gridRowEnd = resolvedMaxPosition - displayRange.startCell + 2;
             const heightPx =
-              (displayRange.endCell - displayRange.startCell + 1) * cellHeight;
+              (displayRange.endCell - displayRange.startCell + 1) *
+              densityCellHeight;
 
             return (
               <div
                 key={orchidGroup.id}
-                className={`z-10 min-h-0 ${
+                className={`z-10 min-h-0 min-w-0 ${
                   rangePickActive
                     ? "pointer-events-none"
                     : "pointer-events-auto"
@@ -251,12 +247,6 @@ export default function BedZoneBlock({
               </div>
             );
           })}
-
-          {!zone.orchidGroups.length ? (
-            <div className="absolute inset-x-2 top-2 rounded-lg border border-dashed border-[#d8ded8] bg-[#f6f7f5] px-3 py-3 text-center text-xs font-medium text-[#8a948c]">
-              빈 구역
-            </div>
-          ) : null}
         </div>
       </div>
     </div>

@@ -73,7 +73,7 @@ export default function OrchidWorkRecordForm({
       <div className="flex items-start justify-between gap-3">
         <div>
           <p className="text-sm font-semibold text-[#246df2]">작업 기록 추가</p>
-          <h3 className="mt-1 text-lg font-semibold">{targetLabel}</h3>
+          <h3 className="text-lg font-semibold">{targetLabel}</h3>
         </div>
         <button
           className="rounded-md border border-[#d7ddd4] px-2 py-1 text-xs font-semibold"
@@ -84,7 +84,7 @@ export default function OrchidWorkRecordForm({
         </button>
       </div>
 
-      <form className="mt-3 space-y-3" onSubmit={handleSubmit}>
+      <form className="mt-1 space-y-1" onSubmit={handleSubmit}>
         <div className="grid grid-cols-2 gap-2">
           <SelectField
             label="작업 유형"

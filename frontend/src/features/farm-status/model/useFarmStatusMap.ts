@@ -106,25 +106,34 @@ export function useFarmStatusMap({
     }
 
     let ignore = false;
-    searchFarmStatusOrchidGroups(searchFilters)
-      .then((results) => {
-        if (!ignore) {
-          setSearchResults(results);
-        }
-      })
-      .catch((error) => {
-        if (!ignore) {
-          setErrorMessage(
-            error instanceof Error
-              ? error.message
-              : "검색 결과를 불러오지 못했습니다.",
-          );
-          setSearchResults([]);
-        }
-      });
+    const timeout = window.setTimeout(() => {
+      setLoading(true);
+      searchFarmStatusOrchidGroups(searchFilters)
+        .then((results) => {
+          if (!ignore) {
+            setSearchResults(results);
+          }
+        })
+        .catch((error) => {
+          if (!ignore) {
+            setErrorMessage(
+              error instanceof Error
+                ? error.message
+                : "검색 결과를 불러오지 못했습니다.",
+            );
+            setSearchResults([]);
+          }
+        })
+        .finally(() => {
+          if (!ignore) {
+            setLoading(false);
+          }
+        });
+    }, 0);
 
     return () => {
       ignore = true;
+      window.clearTimeout(timeout);
     };
   }, [hasActiveSearch, searchFilters]);
 

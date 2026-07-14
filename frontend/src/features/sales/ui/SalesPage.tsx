@@ -27,7 +27,7 @@ export function SalesPage({
   auctionSettlements,
 }: SalesPageProps) {
   return (
-    <main className="space-y-5">
+    <main className="h-full min-h-0">
       <SalesManager
         activeTab={activeTab}
         initialShowCreateSlip={createSlip}

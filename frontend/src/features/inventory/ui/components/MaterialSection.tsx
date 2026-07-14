@@ -3,18 +3,29 @@
 import { Pencil, Plus, Trash2 } from "lucide-react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useMemo, useState } from "react";
-import { PaginationControls } from "@/shared/ui/PaginationControls";
+import type { ColumnDef } from "@tanstack/react-table";
+import { formatShortDate } from "@/shared/lib/dateFormat";
+import { DataTable } from "@/shared/ui/DataTable";
+import {
+  DetailActionButton,
+  DetailCard,
+  DetailHeader,
+} from "@/shared/ui/DetailCard";
+import {
+  FilterField,
+  FilterGrid,
+  FilterPanel,
+  FilterResetButton,
+  FilterSearchButton,
+} from "@/shared/ui/FilterControls";
+import { TabSplit, TabStack } from "@/shared/ui/TabLayout";
+import { StatusBadge } from "@/shared/ui/StatusBadge";
 import type {
   InventoryPageResult,
   Material,
   MaterialPayload,
 } from "../../model/types";
-import {
-  DetailRow,
-  Field,
-  inputClass,
-  StatusBadge,
-} from "./InventoryPrimitives";
+import { DetailRow, Field, inputClass } from "./InventoryPrimitives";
 
 export function MaterialSection({
   pageData,
@@ -57,6 +68,45 @@ export function MaterialSection({
     storageLocation: selected?.storageLocation ?? "",
     usage: selected?.usage ?? "",
   });
+  const columns = useMemo<ColumnDef<Material, unknown>[]>(
+    () => [
+      {
+        accessorKey: "code",
+        header: "자재코드",
+        size: 110,
+        meta: { cellClassName: "font-semibold text-[#16793a]" },
+      },
+      { accessorKey: "category", header: "종류", size: 90 },
+      {
+        accessorKey: "name",
+        header: "자재명",
+        size: 180,
+        meta: { cellClassName: "font-semibold" },
+      },
+      { accessorKey: "manufacturer", header: "제조사", size: 130 },
+      { accessorKey: "specification", header: "규격/용량", size: 140 },
+      { accessorKey: "storageLocation", header: "보관 위치", size: 130 },
+      {
+        accessorKey: "status",
+        header: "상태",
+        cell: ({ row }) => (
+          <StatusBadge
+            tone={row.original.status === "ACTIVE" ? "green" : "gray"}
+          >
+            {row.original.status === "ACTIVE" ? "활성" : "비활성"}
+          </StatusBadge>
+        ),
+        size: 90,
+      },
+      {
+        accessorKey: "registeredAt",
+        header: "등록일",
+        cell: ({ row }) => formatShortDate(row.original.registeredAt),
+        size: 100,
+      },
+    ],
+    [],
+  );
   const updateParams = (updater: (params: URLSearchParams) => void) => {
     const params = new URLSearchParams(searchParams.toString());
     updater(params);
@@ -64,9 +114,9 @@ export function MaterialSection({
   };
 
   return (
-    <>
+    <TabStack>
       <form
-        className="grid gap-3 rounded-md border border-[#dce2dc] bg-white p-3 shadow-sm md:grid-cols-2 xl:grid-cols-[1fr_1.1fr_1.1fr_1fr_auto_auto] xl:items-end"
+        className="shrink-0"
         onSubmit={(event) => {
           event.preventDefault();
           const formData = new FormData(event.currentTarget);
@@ -100,219 +150,165 @@ export function MaterialSection({
           });
         }}
       >
-        <Field label="자재 종류">
-          <select
-            className={inputClass}
-            defaultValue={category}
-            name="materialCategory"
-          >
-            {categories.map((value) => (
-              <option key={value}>{value}</option>
-            ))}
-          </select>
-        </Field>
-        <Field label="자재명">
-          <input
-            className={inputClass}
-            defaultValue={keyword}
-            name="materialKeyword"
-            placeholder="자재명을 입력하세요"
-          />
-        </Field>
-        <Field label="제조사">
-          <input
-            className={inputClass}
-            defaultValue={manufacturer}
-            name="materialManufacturer"
-            placeholder="제조사를 입력하세요"
-          />
-        </Field>
-        <Field label="상태">
-          <select
-            className={inputClass}
-            defaultValue={status}
-            name="materialStatus"
-          >
-            <option>전체</option>
-            <option value="ACTIVE">활성</option>
-            <option value="INACTIVE">비활성</option>
-          </select>
-        </Field>
-        <button
-          className="h-9 rounded-md border border-[#d7ddd8] px-4 text-sm font-semibold"
-          type="button"
-          onClick={() => {
-            updateParams((params) => {
-              [
-                "materialCategory",
-                "materialKeyword",
-                "materialManufacturer",
-                "materialStatus",
-              ].forEach((key) => params.delete(key));
-              params.set("materialPage", "0");
-            });
-          }}
-        >
-          초기화
-        </button>
-        <button
-          className="h-9 rounded-md bg-[#159447] px-6 text-sm font-semibold text-white"
-          type="submit"
-        >
-          검색
-        </button>
+        <FilterPanel>
+          <FilterGrid className="md:grid-cols-2 lg:grid-cols-[1fr_1.1fr_1.1fr_1fr_auto_auto] lg:items-end">
+            <FilterField label="자재 종류">
+              <select
+                className={inputClass}
+                defaultValue={category}
+                name="materialCategory"
+              >
+                {categories.map((value) => (
+                  <option key={value}>{value}</option>
+                ))}
+              </select>
+            </FilterField>
+            <FilterField label="자재명">
+              <input
+                className={inputClass}
+                defaultValue={keyword}
+                name="materialKeyword"
+                placeholder="자재명을 입력하세요"
+              />
+            </FilterField>
+            <FilterField label="제조사">
+              <input
+                className={inputClass}
+                defaultValue={manufacturer}
+                name="materialManufacturer"
+                placeholder="제조사를 입력하세요"
+              />
+            </FilterField>
+            <FilterField label="상태">
+              <select
+                className={inputClass}
+                defaultValue={status}
+                name="materialStatus"
+              >
+                <option>전체</option>
+                <option value="ACTIVE">활성</option>
+                <option value="INACTIVE">비활성</option>
+              </select>
+            </FilterField>
+            <FilterResetButton
+              className="h-9 lg:mt-5"
+              onClick={() => {
+                updateParams((params) => {
+                  [
+                    "materialCategory",
+                    "materialKeyword",
+                    "materialManufacturer",
+                    "materialStatus",
+                  ].forEach((key) => params.delete(key));
+                  params.set("materialPage", "0");
+                });
+              }}
+            />
+            <FilterSearchButton className="h-9 lg:mt-5" />
+          </FilterGrid>
+        </FilterPanel>
       </form>
 
-      <div className="mt-3 grid min-w-0 gap-3 2xl:grid-cols-[minmax(0,1fr)_22rem]">
-        <section className="min-w-0 rounded-md border border-[#dce2dc] bg-white p-3 shadow-sm">
-          <div className="flex items-center justify-between gap-3">
-            <h2 className="text-sm font-bold">
-              자재 목록{" "}
-              <span className="ml-2 text-xs text-[#159447]">
-                (총 {pageData.totalElements}개)
-              </span>
-            </h2>
+      <TabSplit columns="lg:grid-cols-[minmax(0,1fr)_22rem]" gap="gap-3">
+        <DataTable
+          actions={
             <button
-              className="flex items-center gap-2 rounded-md bg-[#159447] px-3 py-2 text-xs font-semibold text-white shadow-sm"
+              className="inline-flex h-9 items-center gap-2 rounded-md bg-[#159447] px-3 text-xs font-semibold whitespace-nowrap text-white shadow-sm"
               type="button"
               onClick={onCreate}
             >
-              <Plus className="h-3.5 w-3.5" />새 자재 등록
+              <Plus className="h-4 w-4" strokeWidth={1.8} aria-hidden="true" />
+              새 자재 등록
             </button>
-          </div>
-          <div className="mt-3 overflow-x-auto">
-            <table className="w-full min-w-[850px] text-xs">
-              <thead className="border-y border-[#dce2dc] bg-[#f7f9f6] text-[#536057]">
-                <tr>
-                  {[
-                    "자재코드",
-                    "종류",
-                    "자재명",
-                    "제조사",
-                    "규격/용량",
-                    "보관 위치",
-                    "상태",
-                    "등록일",
-                  ].map((label) => (
-                    <th
-                      className="px-3 py-2 text-left font-semibold"
-                      key={label}
-                    >
-                      {label}
-                    </th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody>
-                {pageData.content.map((item) => (
-                  <tr
-                    className={`cursor-pointer border-t border-[#e4e8e4] hover:bg-[#f3f9f3] ${item.id === selected?.id ? "bg-[#eaf7eb]" : ""}`}
-                    key={item.id}
-                    onClick={() => {
-                      setEditing(false);
-                      onSelect(item.id);
-                    }}
-                  >
-                    <td className="px-3 py-2 font-semibold text-[#16793a]">
-                      {item.code}
-                    </td>
-                    <td className="px-3 py-2">{item.category}</td>
-                    <td className="px-3 py-2 font-semibold">{item.name}</td>
-                    <td className="px-3 py-2">{item.manufacturer}</td>
-                    <td className="px-3 py-2">{item.specification}</td>
-                    <td className="px-3 py-2">{item.storageLocation}</td>
-                    <td className="px-3 py-2">
-                      <StatusBadge active={item.status === "ACTIVE"} />
-                    </td>
-                    <td className="px-3 py-2">{item.registeredAt}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-          <div className="mt-3 flex items-center justify-between gap-3">
-            <PaginationControls
-              nextLabel="다음"
-              pageCount={pageData.totalPages}
-              pageIndex={pageData.page}
-              pageSize={pageData.size}
-              pageSizeOptions={[10, 20, 50]}
-              previousLabel="이전"
-              onPageChange={(pageIndex) =>
-                updateParams((params) => {
-                  params.set("materialPage", String(pageIndex));
-                })
-              }
-              onPageSizeChange={(pageSize) =>
-                updateParams((params) => {
-                  params.set("materialSize", String(pageSize));
-                  params.set("materialPage", "0");
-                })
-              }
-            />
-          </div>
-        </section>
+          }
+          columns={columns}
+          data={pageData.content}
+          emptyMessage="조건에 맞는 자재가 없습니다."
+          getRowId={(row) => String(row.id)}
+          pageIndex={pageData.page}
+          pageSize={pageData.size}
+          pageSizeOptions={[10, 20, 50]}
+          selectedRowId={selected == null ? null : String(selected.id)}
+          settingsKey="inventory.materials"
+          title="자재 목록"
+          totalLabel={`총 ${pageData.totalElements.toLocaleString()}개`}
+          totalPages={pageData.totalPages}
+          onPageChange={(pageIndex) =>
+            updateParams((params) => {
+              params.set("materialPage", String(pageIndex));
+            })
+          }
+          onPageSizeChange={(pageSize) =>
+            updateParams((params) => {
+              params.set("materialSize", String(pageSize));
+              params.set("materialPage", "0");
+            })
+          }
+          onRowClick={(row) => {
+            setEditing(false);
+            onSelect(row.id);
+          }}
+        />
 
         {selected ? (
-          <aside className="min-w-0 rounded-md border border-[#dce2dc] bg-white p-4 shadow-sm">
-            <div className="flex items-center justify-between">
-              <h2 className="text-sm font-bold">자재 상세 정보</h2>
-              <div className="flex items-center gap-2">
-                <button
-                  className="rounded border border-[#e2c8c8] px-3 py-1.5 text-xs font-semibold text-[#a14545]"
-                  type="button"
-                  onClick={() => {
-                    if (!window.confirm("이 자재를 삭제할까요?")) return;
-                    void onDelete(selected.id).catch((error: Error) => {
-                      window.alert(error.message);
-                    });
-                  }}
-                >
-                  <Trash2 className="mr-1 inline h-3.5 w-3.5" />
-                  삭제
-                </button>
-                {selected.status === "ACTIVE" ? (
-                  <button
-                    className="rounded border border-[#e2c8c8] px-3 py-1.5 text-xs font-semibold text-[#a14545]"
-                    type="button"
-                    onClick={() =>
-                      void onDeactivate(selected.id).catch((error: Error) => {
+          <DetailCard>
+            <DetailHeader
+              eyebrow="자재 상세"
+              title={selected.name}
+              actions={
+                <>
+                  <DetailActionButton
+                    icon={Trash2}
+                    tone="danger"
+                    onClick={() => {
+                      if (!window.confirm("이 자재를 삭제할까요?")) return;
+                      void onDelete(selected.id).catch((error: Error) => {
                         window.alert(error.message);
-                      })
-                    }
+                      });
+                    }}
                   >
-                    비활성화
-                  </button>
-                ) : null}
-                <button
-                  className="flex items-center gap-1 rounded border border-[#d7ddd8] px-3 py-1.5 text-xs font-semibold"
-                  type="button"
-                  onClick={() => {
-                    if (editing) {
-                      setEditing(false);
-                      return;
-                    }
+                    삭제
+                  </DetailActionButton>
+                  {selected.status === "ACTIVE" ? (
+                    <DetailActionButton
+                      tone="danger"
+                      onClick={() =>
+                        void onDeactivate(selected.id).catch((error: Error) => {
+                          window.alert(error.message);
+                        })
+                      }
+                    >
+                      비활성화
+                    </DetailActionButton>
+                  ) : null}
+                  <DetailActionButton
+                    icon={Pencil}
+                    onClick={() => {
+                      if (editing) {
+                        setEditing(false);
+                        return;
+                      }
 
-                    setForm({
-                      category: selected.category,
-                      name: selected.name,
-                      manufacturer: selected.manufacturer,
-                      specification: selected.specification,
-                      stockQuantity: selected.stockQuantity,
-                      storageLocation: selected.storageLocation,
-                      usage: selected.usage,
-                    });
-                    setEditing(true);
-                  }}
-                >
-                  <Pencil className="h-3.5 w-3.5" />
-                  {editing ? "취소" : "수정"}
-                </button>
-              </div>
-            </div>
+                      setForm({
+                        category: selected.category,
+                        name: selected.name,
+                        manufacturer: selected.manufacturer,
+                        specification: selected.specification,
+                        stockQuantity: selected.stockQuantity,
+                        storageLocation: selected.storageLocation,
+                        usage: selected.usage,
+                      });
+                      setEditing(true);
+                    }}
+                  >
+                    {editing ? "취소" : "수정"}
+                  </DetailActionButton>
+                </>
+              }
+            />
             {editing ? (
               <form
-                className="mt-3 grid gap-3"
+                className="grid gap-3 p-4"
                 onSubmit={(event) => {
                   event.preventDefault();
                   void onUpdate(selected.id, form)
@@ -424,7 +420,7 @@ export function MaterialSection({
                 </div>
               </form>
             ) : (
-              <dl className="mt-3 space-y-1">
+              <dl className="mt-3 space-y-1 px-4 pb-3">
                 <DetailRow label="자재코드" value={selected.code} />
                 <DetailRow label="종류" value={selected.category} />
                 <DetailRow label="자재명" value={selected.name} />
@@ -435,16 +431,22 @@ export function MaterialSection({
                 <DetailRow label="보관 위치" value={selected.storageLocation} />
                 <DetailRow
                   label="상태"
-                  value={<StatusBadge active={selected.status === "ACTIVE"} />}
+                  value={
+                    <StatusBadge
+                      tone={selected.status === "ACTIVE" ? "green" : "gray"}
+                    >
+                      {selected.status === "ACTIVE" ? "활성" : "비활성"}
+                    </StatusBadge>
+                  }
                 />
                 <DetailRow label="등록일" value={selected.registeredAt} />
                 <DetailRow label="수정일" value={selected.updatedAt} />
               </dl>
             )}
-          </aside>
+          </DetailCard>
         ) : null}
-      </div>
-    </>
+      </TabSplit>
+    </TabStack>
   );
 }
 
