@@ -19,6 +19,11 @@ export function WorkRecordManager(props: WorkRecordManagerProps) {
         onChange={manager.updateFilters}
         onReset={manager.resetFilters}
       />
+      {manager.errorMessage && !manager.showCreateForm ? (
+        <div className="rounded-md border border-[#c25a3c] bg-[#fff1ec] p-3 text-sm text-[#8f2f19]">
+          {manager.errorMessage}
+        </div>
+      ) : null}
       {manager.showCreateForm ? (
         <WorkRecordCreateForm
           bedZones={manager.bedZones}
@@ -62,8 +67,10 @@ export function WorkRecordManager(props: WorkRecordManagerProps) {
         />
         {manager.detailOpen ? (
           <WorkRecordDetail
+            canceling={manager.canceling}
             record={manager.selectedRecord}
             workTypes={props.workTypes}
+            onCancel={manager.cancelSelectedRecord}
             onClose={manager.closeDetail}
           />
         ) : null}

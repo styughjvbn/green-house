@@ -8,6 +8,7 @@ import type {
   WorkRecord,
 } from "@/entities/farm/types";
 import {
+  cancelWorkRecord,
   createWorkRecord,
   getWorkRecordTargetOptions,
 } from "../api/workRecordApi";
@@ -51,6 +52,7 @@ export function useWorkRecordManager({
   const [pageSize, setPageSize] = useState(10);
   const [showCreateForm, setShowCreateForm] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [canceling, setCanceling] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   const safePhysicalBedId = resolveSafePhysicalBedId(
@@ -184,6 +186,35 @@ export function useWorkRecordManager({
     }
   }
 
+  async function cancelSelectedRecord(cancelReason: string | null) {
+    if (selectedRecordId == null) {
+      return;
+    }
+
+    setCanceling(true);
+    setErrorMessage(null);
+
+    try {
+      await cancelWorkRecord({ workRecordId: selectedRecordId, cancelReason });
+      setRecords((current) => {
+        const nextRecords = current.filter(
+          (record) => record.id !== selectedRecordId,
+        );
+        const nextSelectedRecordId = nextRecords[0]?.id ?? null;
+        setSelectedRecordId(nextSelectedRecordId);
+        setDetailOpen(Boolean(nextSelectedRecordId));
+        return nextRecords;
+      });
+      setCurrentPage(1);
+    } catch (error) {
+      setErrorMessage(
+        error instanceof Error ? error.message : "요청 중 문제가 발생했습니다.",
+      );
+    } finally {
+      setCanceling(false);
+    }
+  }
+
   return {
     records,
     filteredRecords,
@@ -197,6 +228,7 @@ export function useWorkRecordManager({
     totalPages,
     showCreateForm,
     saving,
+    canceling,
     errorMessage,
     physicalBeds,
     bedZones,
@@ -213,5 +245,6 @@ export function useWorkRecordManager({
     resetFilters,
     updateForm,
     submitWorkRecord,
+    cancelSelectedRecord,
   };
 }

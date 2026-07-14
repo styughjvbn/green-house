@@ -1,6 +1,6 @@
 "use client";
 
-import { ChevronDown, ChevronUp, X } from "lucide-react";
+import { Ban, ChevronDown, ChevronUp, X } from "lucide-react";
 import { useState } from "react";
 import type { WorkRecord, WorkType } from "@/entities/farm/types";
 import {
@@ -12,12 +12,16 @@ import {
 import { formatTarget, formatTargetType } from "../../lib/workRecordForm";
 
 type WorkRecordDetailProps = {
+  canceling: boolean;
   record: WorkRecord | null;
   workTypes: WorkType[];
+  onCancel: (cancelReason: string | null) => void;
   onClose: () => void;
 };
 
 export function WorkRecordDetail({
+  canceling,
+  onCancel,
   onClose,
   record,
   workTypes,
@@ -43,7 +47,33 @@ export function WorkRecordDetail({
     <aside className="min-h-0 overflow-y-auto rounded-md border border-[#dfe5dc] bg-white p-5 shadow-sm">
       <div className="flex items-center justify-between gap-3">
         <h2 className="text-lg font-bold text-[#17251b]">작업 이력 상세</h2>
-        <CloseButton onClose={onClose} />
+        <div className="flex items-center gap-2">
+          {record.status !== "CANCELED" ? (
+            <button
+              className="inline-flex h-8 items-center gap-1.5 rounded-md border border-[#e8b6aa] bg-[#fff4f1] px-2.5 text-xs font-bold text-[#9b341f] disabled:opacity-60"
+              disabled={canceling}
+              type="button"
+              onClick={() => {
+                const reason = window.prompt(
+                  "작업 이력 취소 사유를 입력하세요. 비워두면 사유 없이 취소됩니다.",
+                  "",
+                );
+                if (reason == null) {
+                  return;
+                }
+                onCancel(reason.trim() || null);
+              }}
+            >
+              <Ban
+                className="h-3.5 w-3.5"
+                strokeWidth={1.8}
+                aria-hidden="true"
+              />
+              {canceling ? "취소 중" : "취소 처리"}
+            </button>
+          ) : null}
+          <CloseButton onClose={onClose} />
+        </div>
       </div>
 
       <div className="mt-5">

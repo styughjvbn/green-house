@@ -1,8 +1,10 @@
 package com.greenhouse.backend.work.dto;
 
 import com.greenhouse.backend.work.domain.WorkRecord;
+import com.greenhouse.backend.work.domain.WorkRecordStatus;
 import com.greenhouse.backend.work.domain.WorkTypeTemplate;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.Map;
 
 public record WorkRecordResponse(
@@ -20,7 +22,10 @@ public record WorkRecordResponse(
 		Long fromBedZoneId,
 		Long toBedZoneId,
 		Map<String, Object> details,
-		String memo) {
+		String memo,
+		WorkRecordStatus status,
+		LocalDateTime canceledAt,
+		String cancelReason) {
 
 	public static WorkRecordResponse from(WorkRecord workRecord, WorkTypeTemplate template) {
 		return new WorkRecordResponse(
@@ -38,6 +43,9 @@ public record WorkRecordResponse(
 				workRecord.getFromBedZoneId(),
 				workRecord.getToBedZoneId(),
 				workRecord.getDetails(),
-				workRecord.getMemo());
+				workRecord.getMemo(),
+				workRecord.getStatus(),
+				workRecord.getCanceledAt(),
+				workRecord.getCancelReason());
 	}
 }

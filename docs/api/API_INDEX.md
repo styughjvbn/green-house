@@ -7,8 +7,8 @@
 
 - 기준 명세: `docs/api/openapi.yaml`
 - OpenAPI 버전: `3.1.0`
-- 현재 구현 API: `67` operations / `50` path entries
-- schema 수: `109`
+- 현재 구현 API: `68` operations / `51` path entries
+- schema 수: `110`
 - Base URL: `/api`
 - 공통 응답: `ApiResponse*` 래퍼 사용
 
@@ -61,7 +61,7 @@
 - package 후보: `com.greenhouse.backend.farm`
 - controller tags: `orchid-group-command-controller`, `bed-placement-controller`
 - 역할: 난 묶음 생성·수정·삭제·이동, 정밀 배치 프로필 API
-- operations: 6
+- operations: 7
 
 | Method | Path | Operation | Request | Response |
 |---|---|---|---|---|
@@ -84,6 +84,7 @@
 |---|---|---|---|---|
 | `GET` | `/api/work-records` | `getWorkRecords` | `-` | `200:ApiResponseListWorkRecordResponse` |
 | `POST` | `/api/work-records` | `create` | `WorkRecordCreateRequest` | `201:ApiResponseWorkRecordResponse` |
+| `PATCH` | `/api/work-records/{workRecordId}/cancel` | `cancel_1` | `WorkRecordCancelRequest` | `200:ApiResponseWorkRecordResponse` |
 | `GET` | `/api/work-types` | `getWorkTypes` | `-` | `200:ApiResponseListWorkTypeResponse` |
 | `POST` | `/api/work-types` | `createWorkType` | `WorkTypeCreateRequest` | `201:ApiResponseWorkTypeResponse` |
 | `PATCH` | `/api/work-types/reorder` | `reorderWorkTypes` | `WorkTypeReorderRequest` | `200:ApiResponseListWorkTypeResponse` |

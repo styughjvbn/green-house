@@ -214,6 +214,9 @@ export type WorkRecord = {
   toBedZoneId: number | null;
   details: Record<string, unknown> | null;
   memo: string | null;
+  status: "ACTIVE" | "CANCELED";
+  canceledAt: string | null;
+  cancelReason: string | null;
 };
 
 export type PartnerType = "WHOLESALE" | "RETAIL" | "AUCTION_HOUSE";

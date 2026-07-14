@@ -1,6 +1,7 @@
 package com.greenhouse.backend.work.application;
 
 import com.greenhouse.backend.work.repository.WorkRecordRepository;
+import com.greenhouse.backend.work.domain.WorkRecordStatus;
 
 import lombok.RequiredArgsConstructor;
 
@@ -22,7 +23,7 @@ public class WorkRecordMetricsReader {
 		if (targetIds == null || targetIds.isEmpty()) {
 			return Map.of();
 		}
-		return workRecordRepository.findLatestWorkDates(targetType, targetIds).stream()
+		return workRecordRepository.findLatestWorkDates(targetType, targetIds, WorkRecordStatus.ACTIVE).stream()
 				.collect(Collectors.toMap(WorkDateRow::getTargetId, WorkDateRow::getLatestWorkDate));
 	}
 }

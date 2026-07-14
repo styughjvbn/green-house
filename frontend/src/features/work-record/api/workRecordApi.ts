@@ -63,3 +63,29 @@ export async function createWorkRecord(
 
   return body.data as WorkRecord;
 }
+
+export async function cancelWorkRecord({
+  cancelReason,
+  workRecordId,
+}: {
+  cancelReason: string | null;
+  workRecordId: number;
+}): Promise<WorkRecord> {
+  const response = await fetch(
+    `${API_BASE_URL}/work-records/${workRecordId}/cancel`,
+    {
+      method: "PATCH",
+      credentials: "include",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ cancelReason }),
+    },
+  );
+
+  const body = await response.json();
+
+  if (!response.ok) {
+    throw new Error(body?.error?.message ?? "작업 이력을 취소하지 못했습니다.");
+  }
+
+  return body.data as WorkRecord;
+}

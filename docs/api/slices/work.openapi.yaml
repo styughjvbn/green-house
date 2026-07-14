@@ -77,6 +77,11 @@ paths:
         schema:
           type: string
           format: date
+      - name: includeCanceled
+        in: query
+        required: false
+        schema:
+          type: boolean
       responses:
         '200':
           description: OK
@@ -97,6 +102,31 @@ paths:
       responses:
         '201':
           description: Created
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/ApiResponseWorkRecordResponse'
+  /api/work-records/{workRecordId}/cancel:
+    patch:
+      tags:
+      - work-record-controller
+      operationId: cancel_1
+      parameters:
+      - name: workRecordId
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: int64
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/WorkRecordCancelRequest'
+        required: true
+      responses:
+        '200':
+          description: OK
           content:
             '*/*':
               schema:
@@ -178,6 +208,13 @@ components:
           $ref: '#/components/schemas/WorkTypeResponse'
         message:
           type: string
+    WorkRecordCancelRequest:
+      type: object
+      properties:
+        cancelReason:
+          type: string
+          maxLength: 1000
+          minLength: 0
     WorkRecordCreateRequest:
       type: object
       properties:
@@ -268,6 +305,16 @@ components:
           type: object
           additionalProperties: true
         memo:
+          type: string
+        status:
+          type: string
+          enum:
+          - ACTIVE
+          - CANCELED
+        canceledAt:
+          type: string
+          format: date-time
+        cancelReason:
           type: string
     WorkTypeCreateRequest:
       type: object
