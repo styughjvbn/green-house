@@ -3,7 +3,10 @@
 import { useMemo, useState } from "react";
 import type { ColumnDef } from "@tanstack/react-table";
 import { RefreshCw } from "lucide-react";
-import type { AuctionSettlement } from "@/entities/farm/types";
+import type {
+  AuctionSettlement,
+  AuctionSettlementLine,
+} from "@/entities/farm/types";
 import { formatShortDate } from "@/shared/lib/dateFormat";
 import { DataTable } from "@/shared/ui/DataTable";
 import {
@@ -23,6 +26,45 @@ import {
   SalesDetailSummary,
 } from "../common/SalesDetailCard";
 import { AuctionSettlementStatusBadge } from "../common/SalesStatusBadge";
+
+const settlementLineColumns: ColumnDef<AuctionSettlementLine, unknown>[] = [
+  {
+    accessorKey: "shipmentDate",
+    header: "출하일",
+    cell: ({ row }) => formatShortDate(row.original.shipmentDate),
+    size: 100,
+    meta: { hideable: false },
+  },
+  {
+    id: "varietyGrade",
+    header: "품종·등급",
+    cell: ({ row }) =>
+      `${row.original.varietyName} · ${row.original.shipmentGrade || "-"}`,
+    size: 180,
+    meta: { cellClassName: "font-semibold" },
+  },
+  {
+    accessorKey: "quantity",
+    header: "수량",
+    cell: ({ row }) => `${row.original.quantity.toLocaleString()}분`,
+    size: 90,
+    meta: { align: "right" },
+  },
+  {
+    accessorKey: "unitPrice",
+    header: "단가",
+    cell: ({ row }) => `${row.original.unitPrice.toLocaleString()}원`,
+    size: 110,
+    meta: { align: "right" },
+  },
+  {
+    accessorKey: "amount",
+    header: "금액",
+    cell: ({ row }) => `${row.original.amount.toLocaleString()}원`,
+    size: 120,
+    meta: { align: "right", cellClassName: "font-semibold" },
+  },
+];
 
 export function AuctionSettlementView({
   initialSettlements,
@@ -245,46 +287,15 @@ function SettlementDetail({
       />
 
       <div className="px-4 py-3">
-        <div className="mb-2 flex items-center justify-between">
-          <h4 className="text-sm font-bold">포함 경매 결과</h4>
-          <span className="text-xs text-[#68756c]">
-            {settlement.lines.length.toLocaleString()}건
-          </span>
-        </div>
-        <div className="overflow-x-auto">
-          <table className="w-full min-w-[620px] text-xs">
-            <thead className="bg-[#f7f9f6] text-[#66736a]">
-              <tr>
-                <th className="px-2 py-2 text-left">출하일</th>
-                <th className="px-2 py-2 text-left">품종·등급</th>
-                <th className="px-2 py-2 text-right">수량</th>
-                <th className="px-2 py-2 text-right">단가</th>
-                <th className="px-2 py-2 text-right">금액</th>
-              </tr>
-            </thead>
-            <tbody>
-              {settlement.lines.map((line) => (
-                <tr key={line.id} className="border-t border-[#edf0ec]">
-                  <td className="px-2 py-2">
-                    {formatShortDate(line.shipmentDate)}
-                  </td>
-                  <td className="px-2 py-2 font-semibold">
-                    {line.varietyName} · {line.shipmentGrade || "-"}
-                  </td>
-                  <td className="px-2 py-2 text-right">
-                    {line.quantity.toLocaleString()}분
-                  </td>
-                  <td className="px-2 py-2 text-right">
-                    {line.unitPrice.toLocaleString()}원
-                  </td>
-                  <td className="px-2 py-2 text-right font-semibold">
-                    {line.amount.toLocaleString()}원
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+        <DataTable
+          columns={settlementLineColumns}
+          data={settlement.lines}
+          emptyMessage="포함된 경매 결과가 없습니다."
+          getRowId={(row) => String(row.id)}
+          settingsKey="sales.settlementDetail.lines"
+          title="포함 경매 결과"
+          totalLabel={`총 ${settlement.lines.length.toLocaleString()}건`}
+        />
       </div>
 
       <ManualPaymentPanel
