@@ -286,11 +286,18 @@ export function VarietySection({
                   {selected.status === "ACTIVE" ? (
                     <DetailActionButton
                       tone="danger"
-                      onClick={() =>
+                      onClick={() => {
+                        if (
+                          !window.confirm(
+                            `${selected.name} 품종을 비활성화할까요?`,
+                          )
+                        ) {
+                          return;
+                        }
                         void onDeactivate(selected.id).catch((error: Error) => {
                           window.alert(error.message);
-                        })
-                      }
+                        });
+                      }}
                     >
                       비활성화
                     </DetailActionButton>
