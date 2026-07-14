@@ -10,8 +10,13 @@ import { PaginationControls } from "@/shared/ui/PaginationControls";
 import {
   confirmAuctionSettlementPayment,
   rebuildAuctionSettlement,
-} from "../api/salesApi";
-import { ManualPaymentPanel } from "./components/ManualPaymentPanel";
+} from "../../api/salesApi";
+import { ManualPaymentPanel } from "./ManualPaymentPanel";
+import {
+  SalesTabError,
+  SalesTabSplit,
+  SalesTabStack,
+} from "../common/SalesTabLayout";
 
 export function AuctionSettlementView({
   initialSettlements,
@@ -74,7 +79,7 @@ export function AuctionSettlementView({
   }
 
   return (
-    <div className="space-y-3">
+    <SalesTabStack>
       <section className="flex flex-wrap items-center justify-between gap-3 rounded-md border border-[#dfe5dc] bg-white px-4 py-3 shadow-sm">
         <div>
           <h2 className="text-base font-bold">경매장 정산</h2>
@@ -99,13 +104,12 @@ export function AuctionSettlementView({
         </div>
       </section>
 
-      {error ? (
-        <p className="rounded-md border border-[#efc6c2] bg-[#fff2f0] px-3 py-2 text-sm text-[#b33d35]">
-          {error}
-        </p>
-      ) : null}
+      <SalesTabError message={error} />
 
-      <div className="grid min-w-0 gap-3 2xl:grid-cols-[minmax(0,0.9fr)_minmax(480px,1.1fr)]">
+      <SalesTabSplit
+        columns="lg:grid-cols-[minmax(0,0.9fr)_minmax(480px,1.1fr)]"
+        gap="gap-3"
+      >
         <section className="min-w-0 rounded-md border border-[#dfe5dc] bg-white shadow-sm">
           <header className="border-b border-[#e5e9e3] px-4 py-3">
             <h3 className="text-sm font-bold">정산 목록</h3>
@@ -188,8 +192,8 @@ export function AuctionSettlementView({
             )
           }
         />
-      </div>
-    </div>
+      </SalesTabSplit>
+    </SalesTabStack>
   );
 }
 

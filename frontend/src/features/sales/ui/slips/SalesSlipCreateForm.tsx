@@ -9,7 +9,7 @@ import type {
   SalesSlipForm,
   SalesSlipFormMode,
 } from "../../model/types";
-import { SelectField, TextField } from "./FormFields";
+import { SelectField, TextField } from "../common/FormFields";
 import { SalesSlipItemEditor } from "./SalesSlipItemEditor";
 
 export function SalesSlipCreateForm({

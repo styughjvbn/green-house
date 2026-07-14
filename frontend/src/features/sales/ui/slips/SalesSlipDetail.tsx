@@ -5,7 +5,7 @@ import Link from "next/link";
 import { Ban, Copy, Pencil, Printer, Truck } from "lucide-react";
 import type { SalesSlip } from "@/entities/farm/types";
 import { confirmSalesSlipPayment } from "../../api/salesApi";
-import { ManualPaymentPanel } from "./ManualPaymentPanel";
+import { ManualPaymentPanel } from "../auction/ManualPaymentPanel";
 
 export function SalesSlipDetail({
   loading = false,
@@ -119,8 +119,7 @@ export function SalesSlipDetail({
       </div>
 
       <div className="mt-4 rounded-md border border-[#dfe5dc] bg-[#fbfcfa] p-4">
-        <div className="grid gap-4 lg:grid-cols-5">
-          <InfoLabel label="전표번호" strong value={salesSlip.slipNumber} />
+        <div className="grid gap-4 lg:grid-cols-4">
           <InfoLabel
             label="판매 유형"
             value={

@@ -2,11 +2,16 @@ import type {
   AuctionLotPage,
   AuctionTrackingSummary,
 } from "@/entities/farm/types";
-import { useAuctionTracking } from "../model/useAuctionTracking";
-import { AuctionFilters } from "./components/AuctionFilters";
-import { AuctionLotDetail } from "./components/AuctionLotDetail";
-import { AuctionLotList } from "./components/AuctionLotList";
-import { AuctionSummaryCards } from "./components/AuctionSummaryCards";
+import { useAuctionTracking } from "../../model/useAuctionTracking";
+import { AuctionFilters } from "./AuctionFilters";
+import { AuctionLotDetail } from "./AuctionLotDetail";
+import { AuctionLotList } from "./AuctionLotList";
+import { AuctionSummaryCards } from "./AuctionSummaryCards";
+import {
+  SalesTabError,
+  SalesTabSplit,
+  SalesTabStack,
+} from "../common/SalesTabLayout";
 
 export function AuctionTrackingView({
   initialPage,
@@ -18,7 +23,7 @@ export function AuctionTrackingView({
   const tracking = useAuctionTracking(initialPage, initialSummary);
 
   return (
-    <div className="space-y-3">
+    <SalesTabStack>
       <AuctionSummaryCards summary={tracking.summary} />
       <AuctionFilters
         filters={tracking.filters}
@@ -27,12 +32,11 @@ export function AuctionTrackingView({
         onSearch={() => tracking.refresh()}
         onReset={tracking.resetFilters}
       />
-      {tracking.error ? (
-        <p className="rounded-md border border-[#f0c7c3] bg-[#fff1ef] px-3 py-2 text-sm font-semibold text-[#b83e35]">
-          {tracking.error}
-        </p>
-      ) : null}
-      <div className="grid min-w-0 gap-3 2xl:grid-cols-[minmax(0,1.15fr)_minmax(420px,0.85fr)]">
+      <SalesTabError message={tracking.error} />
+      <SalesTabSplit
+        columns="lg:grid-cols-[minmax(0,1.15fr)_minmax(420px,0.85fr)]"
+        gap="gap-3"
+      >
         <AuctionLotList
           lots={tracking.lots}
           page={tracking.page}
@@ -52,7 +56,7 @@ export function AuctionTrackingView({
           onConfirmReturn={tracking.confirmReturn}
           onAdjust={tracking.adjustQuantity}
         />
-      </div>
-    </div>
+      </SalesTabSplit>
+    </SalesTabStack>
   );
 }

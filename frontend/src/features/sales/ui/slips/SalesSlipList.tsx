@@ -51,9 +51,6 @@ export function SalesSlipList({
           <thead className="border-y border-[#dfe5dc] text-[#435047]">
             <tr>
               <th className="px-3 py-3 font-semibold whitespace-nowrap">
-                전표번호
-              </th>
-              <th className="px-3 py-3 font-semibold whitespace-nowrap">
                 판매일자
               </th>
               <th className="px-3 py-3 font-semibold whitespace-nowrap">
@@ -85,9 +82,6 @@ export function SalesSlipList({
                   }`}
                   onClick={() => onSelect(slip.id)}
                 >
-                  <td className="px-3 py-3 font-bold whitespace-nowrap text-[#159447]">
-                    {slip.slipNumber}
-                  </td>
                   <td className="px-3 py-3 whitespace-nowrap">
                     {slip.saleDate}
                   </td>

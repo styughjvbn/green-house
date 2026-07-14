@@ -1,6 +1,6 @@
 ﻿import type { FormEvent } from "react";
 import type { BusinessPartnerForm } from "../../model/types";
-import { TextField } from "./FormFields";
+import { TextField } from "../common/FormFields";
 
 export function BusinessPartnerCreateForm({
   form,

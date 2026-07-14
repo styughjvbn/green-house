@@ -4,7 +4,7 @@ import {
   calculateSalesItemAmount,
 } from "../../lib/salesForm";
 import type { SalesAllocationForm, SalesItemForm } from "../../model/types";
-import { TextField } from "./FormFields";
+import { TextField } from "../common/FormFields";
 import { SalesOrchidGroupSearchSelect } from "./SalesOrchidGroupSearchSelect";
 
 export function SalesSlipItemEditor({
