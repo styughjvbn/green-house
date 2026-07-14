@@ -1,252 +1,289 @@
 package com.greenhouse.backend.analytics.repository;
 
+import static com.greenhouse.backend.partner.domain.QBusinessPartner.businessPartner;
+import static com.greenhouse.backend.sales.domain.QSalesSlip.salesSlip;
+import static com.greenhouse.backend.sales.domain.QSalesSlipItem.salesSlipItem;
+import static com.greenhouse.backend.settlement.domain.QPartnerBalanceSummary.partnerBalanceSummary;
+import static com.greenhouse.backend.work.domain.QWorkRecord.workRecord;
+import static com.greenhouse.backend.work.domain.QWorkType.workType;
+
 import com.greenhouse.backend.analytics.dto.AnalyticsSlipSummaryResponse;
 import com.greenhouse.backend.analytics.dto.PartnerAnalyticsStatResponse;
 import com.greenhouse.backend.work.domain.WorkRecord;
 import com.greenhouse.backend.work.domain.WorkRecordStatus;
+import com.greenhouse.backend.work.domain.WorkTypeTemplate;
+import com.querydsl.core.Tuple;
+import com.querydsl.core.types.Projections;
+import com.querydsl.core.types.dsl.BooleanExpression;
+import com.querydsl.core.types.dsl.NumberExpression;
+import com.querydsl.jpa.impl.JPAQueryFactory;
+import jakarta.persistence.EntityManager;
 import java.time.LocalDate;
 import java.util.List;
-import jakarta.persistence.EntityManager;
-import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Repository;
 
 @Repository
-@RequiredArgsConstructor
 public class SalesAnalyticsRepository {
 
-	private final EntityManager entityManager;
+	private final JPAQueryFactory queryFactory;
+
+	public SalesAnalyticsRepository(EntityManager entityManager) {
+		this.queryFactory = new JPAQueryFactory(entityManager);
+	}
 
 	public Long sumSales(LocalDate from, LocalDate to) {
-		return entityManager.createQuery("""
-				select coalesce(sum(s.totalAmount), 0)
-				from SalesSlip s
-				where s.saleDate between :from and :to
-					and s.salesStatus <> '취소'
-				""", Long.class)
-				.setParameter("from", from)
-				.setParameter("to", to)
-				.getSingleResult();
+		return nullToZero(queryFactory
+				.select(salesSlip.totalAmount.sum().longValue())
+				.from(salesSlip)
+				.where(saleDateBetween(from, to), activeSalesSlip())
+				.fetchOne());
 	}
 
 	public Long sumShippedQuantity(LocalDate from, LocalDate to) {
-		return entityManager.createQuery("""
-				select coalesce(sum(i.quantity), 0)
-				from SalesSlipItem i
-				join i.salesSlip s
-				where s.saleDate between :from and :to
-					and s.salesStatus <> '취소'
-				""", Long.class)
-				.setParameter("from", from)
-				.setParameter("to", to)
-				.getSingleResult();
+		return nullToZero(queryFactory
+				.select(salesSlipItem.quantity.sum().longValue())
+				.from(salesSlipItem)
+				.join(salesSlipItem.salesSlip, salesSlip)
+				.where(saleDateBetween(from, to), activeSalesSlip())
+				.fetchOne());
 	}
 
 	public Long sumUnpaidAmount(LocalDate from, LocalDate to) {
-		return entityManager.createQuery("""
-				select coalesce(sum(s.remainingAmount), 0)
-				from SalesSlip s
-				where s.saleDate between :from and :to
-					and s.salesStatus <> '취소'
-					and s.remainingAmount > 0
-				""", Long.class)
-				.setParameter("from", from)
-				.setParameter("to", to)
-				.getSingleResult();
+		return nullToZero(queryFactory
+				.select(salesSlip.remainingAmount.sum())
+				.from(salesSlip)
+				.where(saleDateBetween(from, to), activeSalesSlip(), salesSlip.remainingAmount.gt(0L))
+				.fetchOne());
 	}
 
 	public List<Object[]> monthlySales(LocalDate from, LocalDate to) {
-		return entityManager.createQuery("""
-				select year(s.saleDate), month(s.saleDate), coalesce(sum(s.totalAmount), 0)
-				from SalesSlip s
-				where s.saleDate between :from and :to
-					and s.salesStatus <> '취소'
-				group by year(s.saleDate), month(s.saleDate)
-				order by year(s.saleDate), month(s.saleDate)
-				""", Object[].class)
-				.setParameter("from", from)
-				.setParameter("to", to)
-				.getResultList();
+		var year = salesSlip.saleDate.year();
+		var month = salesSlip.saleDate.month();
+		var totalAmount = salesSlip.totalAmount.sum().longValue();
+		return queryFactory
+				.select(year, month, totalAmount)
+				.from(salesSlip)
+				.where(saleDateBetween(from, to), activeSalesSlip())
+				.groupBy(year, month)
+				.orderBy(year.asc(), month.asc())
+				.fetch()
+				.stream()
+				.map(tuple -> new Object[] { tuple.get(year), tuple.get(month), nullToZero(tuple.get(totalAmount)) })
+				.toList();
 	}
 
 	public List<Object[]> varietySales(LocalDate from, LocalDate to, int limit) {
-		return entityManager.createQuery("""
-				select i.itemName, coalesce(sum(i.amount), 0)
-				from SalesSlipItem i
-				join i.salesSlip s
-				where s.saleDate between :from and :to
-					and s.salesStatus <> '취소'
-				group by i.itemName
-				order by coalesce(sum(i.amount), 0) desc
-				""", Object[].class)
-				.setParameter("from", from)
-				.setParameter("to", to)
-				.setMaxResults(limit)
-				.getResultList();
+		var amount = salesSlipItem.amount.sum().longValue();
+		return queryFactory
+				.select(salesSlipItem.itemName, amount)
+				.from(salesSlipItem)
+				.join(salesSlipItem.salesSlip, salesSlip)
+				.where(saleDateBetween(from, to), activeSalesSlip())
+				.groupBy(salesSlipItem.itemName)
+				.orderBy(amount.desc())
+				.limit(limit)
+				.fetch()
+				.stream()
+				.map(tuple -> new Object[] { tuple.get(salesSlipItem.itemName), nullToZero(tuple.get(amount)) })
+				.toList();
 	}
 
 	public List<Object[]> partnerSales(LocalDate from, LocalDate to, int limit) {
-		return entityManager.createQuery("""
-				select p.name, coalesce(sum(s.totalAmount), 0)
-				from SalesSlip s
-				join s.partner p
-				where s.saleDate between :from and :to
-					and s.salesStatus <> '취소'
-				group by p.name
-				order by coalesce(sum(s.totalAmount), 0) desc
-				""", Object[].class)
-				.setParameter("from", from)
-				.setParameter("to", to)
-				.setMaxResults(limit)
-				.getResultList();
+		var totalAmount = salesSlip.totalAmount.sum().longValue();
+		return queryFactory
+				.select(businessPartner.name, totalAmount)
+				.from(salesSlip)
+				.join(salesSlip.partner, businessPartner)
+				.where(saleDateBetween(from, to), activeSalesSlip())
+				.groupBy(businessPartner.name)
+				.orderBy(totalAmount.desc())
+				.limit(limit)
+				.fetch()
+				.stream()
+				.map(tuple -> new Object[] { tuple.get(businessPartner.name), nullToZero(tuple.get(totalAmount)) })
+				.toList();
 	}
 
 	public List<Object[]> paymentBreakdown(LocalDate from, LocalDate to) {
-		return entityManager.createQuery("""
-				select s.paymentStatus, coalesce(sum(s.totalAmount), 0)
-				from SalesSlip s
-				where s.saleDate between :from and :to
-					and s.salesStatus <> '취소'
-				group by s.paymentStatus
-				""", Object[].class)
-				.setParameter("from", from)
-				.setParameter("to", to)
-				.getResultList();
+		var totalAmount = salesSlip.totalAmount.sum().longValue();
+		return queryFactory
+				.select(salesSlip.paymentStatus, totalAmount)
+				.from(salesSlip)
+				.where(saleDateBetween(from, to), activeSalesSlip())
+				.groupBy(salesSlip.paymentStatus)
+				.fetch()
+				.stream()
+				.map(tuple -> new Object[] { tuple.get(salesSlip.paymentStatus), nullToZero(tuple.get(totalAmount)) })
+				.toList();
 	}
 
 	public List<AnalyticsSlipSummaryResponse> recentSlips(LocalDate from, LocalDate to, int limit) {
-		return entityManager.createQuery("""
-				select new com.greenhouse.backend.analytics.dto.AnalyticsSlipSummaryResponse(
-					s.id, s.slipNumber, s.saleDate, p.name, s.totalAmount, s.paidAmount, s.remainingAmount,
-					s.paymentStatus, s.salesStatus)
-				from SalesSlip s
-				join s.partner p
-				where s.saleDate between :from and :to
-					and s.salesStatus <> '취소'
-				order by s.saleDate desc, s.id desc
-				""", AnalyticsSlipSummaryResponse.class)
-				.setParameter("from", from)
-				.setParameter("to", to)
-				.setMaxResults(limit)
-				.getResultList();
+		return slipSummaryQuery(from, to)
+				.orderBy(salesSlip.saleDate.desc(), salesSlip.id.desc())
+				.limit(limit)
+				.fetch();
 	}
 
 	public List<AnalyticsSlipSummaryResponse> unpaidSlips(LocalDate from, LocalDate to, int limit) {
-		return entityManager.createQuery("""
-				select new com.greenhouse.backend.analytics.dto.AnalyticsSlipSummaryResponse(
-					s.id, s.slipNumber, s.saleDate, p.name, s.totalAmount, s.paidAmount, s.remainingAmount,
-					s.paymentStatus, s.salesStatus)
-				from SalesSlip s
-				join s.partner p
-				where s.saleDate between :from and :to
-					and s.salesStatus <> '취소'
-					and s.remainingAmount > 0
-				order by s.remainingAmount desc, s.saleDate desc
-				""", AnalyticsSlipSummaryResponse.class)
-				.setParameter("from", from)
-				.setParameter("to", to)
-				.setMaxResults(limit)
-				.getResultList();
+		return slipSummaryQuery(from, to)
+				.where(salesSlip.remainingAmount.gt(0L))
+				.orderBy(salesSlip.remainingAmount.desc(), salesSlip.saleDate.desc())
+				.limit(limit)
+				.fetch();
 	}
 
 	public List<PartnerAnalyticsStatResponse> partnerStats(LocalDate from, LocalDate to) {
-		return entityManager.createQuery("""
-				select new com.greenhouse.backend.analytics.dto.PartnerAnalyticsStatResponse(
-					p.id,
-					p.name,
-					p.partnerType,
-					coalesce(sum(s.totalAmount), 0),
-					count(s.id),
-					coalesce(sum(s.remainingAmount), 0),
-					coalesce(sum(s.paidAmount), 0),
-					coalesce(b.receivableBalance, 0),
-					coalesce(b.creditBalance, 0),
-					coalesce(b.unappliedPaymentAmount, 0),
-					max(s.saleDate))
-				from BusinessPartner p
-				left join SalesSlip s on s.partner = p and s.saleDate between :from and :to and s.salesStatus <> '취소'
-				left join PartnerBalanceSummary b on b.partner = p
-				group by p.id, p.name, p.partnerType, b.receivableBalance, b.creditBalance, b.unappliedPaymentAmount
-				having count(s.id) > 0
-					or coalesce(b.receivableBalance, 0) > 0
-					or coalesce(b.creditBalance, 0) > 0
-					or coalesce(b.unappliedPaymentAmount, 0) > 0
-				order by coalesce(sum(s.totalAmount), 0) desc, count(s.id) desc
-				""", PartnerAnalyticsStatResponse.class)
-				.setParameter("from", from)
-				.setParameter("to", to)
-				.getResultList();
+		var totalSales = salesSlip.totalAmount.sum().longValue();
+		var transactionCount = salesSlip.id.count();
+		var unpaidAmount = salesSlip.remainingAmount.sum();
+		var paidAmount = salesSlip.paidAmount.sum();
+		var latestSaleDate = salesSlip.saleDate.max();
+		return queryFactory
+				.select(
+						businessPartner.id,
+						businessPartner.name,
+						businessPartner.partnerType,
+						totalSales,
+						transactionCount,
+						unpaidAmount,
+						paidAmount,
+						partnerBalanceSummary.receivableBalance,
+						partnerBalanceSummary.creditBalance,
+						partnerBalanceSummary.unappliedPaymentAmount,
+						latestSaleDate)
+				.from(businessPartner)
+				.leftJoin(salesSlip).on(
+						salesSlip.partner.eq(businessPartner),
+						saleDateBetween(from, to),
+						activeSalesSlip())
+				.leftJoin(partnerBalanceSummary).on(partnerBalanceSummary.partner.eq(businessPartner))
+				.groupBy(
+						businessPartner.id,
+						businessPartner.name,
+						businessPartner.partnerType,
+						partnerBalanceSummary.receivableBalance,
+						partnerBalanceSummary.creditBalance,
+						partnerBalanceSummary.unappliedPaymentAmount)
+				.having(
+						transactionCount.gt(0L)
+								.or(partnerBalanceSummary.receivableBalance.coalesce(0L).gt(0L))
+								.or(partnerBalanceSummary.creditBalance.coalesce(0L).gt(0L))
+								.or(partnerBalanceSummary.unappliedPaymentAmount.coalesce(0L).gt(0L)))
+				.orderBy(totalSales.desc(), transactionCount.desc())
+				.fetch()
+				.stream()
+				.map(tuple -> partnerStat(tuple, totalSales, transactionCount, unpaidAmount, paidAmount, latestSaleDate))
+				.toList();
 	}
 
 	public Long countWorkRecords(LocalDate from, LocalDate to) {
-		return entityManager.createQuery("""
-				select count(w.id)
-				from WorkRecord w
-				where w.workDate between :from and :to
-					and w.status = :activeStatus
-				""", Long.class)
-				.setParameter("from", from)
-				.setParameter("to", to)
-				.setParameter("activeStatus", WorkRecordStatus.ACTIVE)
-				.getSingleResult();
+		return nullToZero(queryFactory
+				.select(workRecord.id.count())
+				.from(workRecord)
+				.where(workDateBetween(from, to), activeWorkRecord())
+				.fetchOne());
 	}
 
 	public Long countWorkRecordsByTemplate(LocalDate from, LocalDate to, String template) {
-		return entityManager.createQuery("""
-				select count(w.id)
-				from WorkRecord w
-				left join w.workTypeRef wt
-				where w.workDate between :from and :to
-					and w.status = :activeStatus
-					and wt.template = :template
-				""", Long.class)
-				.setParameter("from", from)
-				.setParameter("to", to)
-				.setParameter("activeStatus", WorkRecordStatus.ACTIVE)
-				.setParameter("template", com.greenhouse.backend.work.domain.WorkTypeTemplate.valueOf(template))
-				.getSingleResult();
+		return nullToZero(queryFactory
+				.select(workRecord.id.count())
+				.from(workRecord)
+				.leftJoin(workRecord.workTypeRef, workType)
+				.where(
+						workDateBetween(from, to),
+						activeWorkRecord(),
+						workType.template.eq(WorkTypeTemplate.valueOf(template)))
+				.fetchOne());
 	}
 
 	public LocalDate latestWorkDate(LocalDate from, LocalDate to) {
-		return entityManager.createQuery("""
-				select max(w.workDate)
-				from WorkRecord w
-				where w.workDate between :from and :to
-					and w.status = :activeStatus
-				""", LocalDate.class)
-				.setParameter("from", from)
-				.setParameter("to", to)
-				.setParameter("activeStatus", WorkRecordStatus.ACTIVE)
-				.getSingleResult();
+		return queryFactory
+				.select(workRecord.workDate.max())
+				.from(workRecord)
+				.where(workDateBetween(from, to), activeWorkRecord())
+				.fetchOne();
 	}
 
 	public List<Object[]> workTypeCounts(LocalDate from, LocalDate to) {
-		return entityManager.createQuery("""
-				select w.workType, count(w.id)
-				from WorkRecord w
-				where w.workDate between :from and :to
-					and w.status = :activeStatus
-				group by w.workType
-				order by count(w.id) desc
-				""", Object[].class)
-				.setParameter("from", from)
-				.setParameter("to", to)
-				.setParameter("activeStatus", WorkRecordStatus.ACTIVE)
-				.getResultList();
+		var count = workRecord.id.count();
+		return queryFactory
+				.select(workRecord.workType, count)
+				.from(workRecord)
+				.where(workDateBetween(from, to), activeWorkRecord())
+				.groupBy(workRecord.workType)
+				.orderBy(count.desc())
+				.fetch()
+				.stream()
+				.map(tuple -> new Object[] { tuple.get(workRecord.workType), nullToZero(tuple.get(count)) })
+				.toList();
 	}
 
 	public List<WorkRecord> recentWorkRecords(LocalDate from, LocalDate to, int limit) {
-		return entityManager.createQuery("""
-				select w
-				from WorkRecord w
-				left join fetch w.workTypeRef wt
-				where w.workDate between :from and :to
-					and w.status = :activeStatus
-				order by w.workDate desc, w.id desc
-				""", WorkRecord.class)
-				.setParameter("from", from)
-				.setParameter("to", to)
-				.setParameter("activeStatus", WorkRecordStatus.ACTIVE)
-				.setMaxResults(limit)
-				.getResultList();
+		return queryFactory
+				.selectFrom(workRecord)
+				.leftJoin(workRecord.workTypeRef, workType).fetchJoin()
+				.where(workDateBetween(from, to), activeWorkRecord())
+				.orderBy(workRecord.workDate.desc(), workRecord.id.desc())
+				.limit(limit)
+				.fetch();
+	}
+
+	private com.querydsl.jpa.impl.JPAQuery<AnalyticsSlipSummaryResponse> slipSummaryQuery(LocalDate from, LocalDate to) {
+		return queryFactory
+				.select(Projections.constructor(
+						AnalyticsSlipSummaryResponse.class,
+						salesSlip.id,
+						salesSlip.slipNumber,
+						salesSlip.saleDate,
+						businessPartner.name,
+						salesSlip.totalAmount,
+						salesSlip.paidAmount,
+						salesSlip.remainingAmount,
+						salesSlip.paymentStatus,
+						salesSlip.salesStatus))
+				.from(salesSlip)
+				.join(salesSlip.partner, businessPartner)
+				.where(saleDateBetween(from, to), activeSalesSlip());
+	}
+
+	private PartnerAnalyticsStatResponse partnerStat(
+			Tuple tuple,
+			NumberExpression<Long> totalSales,
+			NumberExpression<Long> transactionCount,
+			NumberExpression<Long> unpaidAmount,
+			NumberExpression<Long> paidAmount,
+			com.querydsl.core.types.dsl.DateExpression<LocalDate> latestSaleDate) {
+		return new PartnerAnalyticsStatResponse(
+				tuple.get(businessPartner.id),
+				tuple.get(businessPartner.name),
+				tuple.get(businessPartner.partnerType),
+				nullToZero(tuple.get(totalSales)),
+				nullToZero(tuple.get(transactionCount)),
+				nullToZero(tuple.get(unpaidAmount)),
+				nullToZero(tuple.get(paidAmount)),
+				nullToZero(tuple.get(partnerBalanceSummary.receivableBalance)),
+				nullToZero(tuple.get(partnerBalanceSummary.creditBalance)),
+				nullToZero(tuple.get(partnerBalanceSummary.unappliedPaymentAmount)),
+				tuple.get(latestSaleDate));
+	}
+
+	private BooleanExpression saleDateBetween(LocalDate from, LocalDate to) {
+		return salesSlip.saleDate.between(from, to);
+	}
+
+	private BooleanExpression activeSalesSlip() {
+		return salesSlip.salesStatus.ne("취소");
+	}
+
+	private BooleanExpression workDateBetween(LocalDate from, LocalDate to) {
+		return workRecord.workDate.between(from, to);
+	}
+
+	private BooleanExpression activeWorkRecord() {
+		return workRecord.status.eq(WorkRecordStatus.ACTIVE);
+	}
+
+	private Long nullToZero(Long value) {
+		return value == null ? 0L : value;
 	}
 }
