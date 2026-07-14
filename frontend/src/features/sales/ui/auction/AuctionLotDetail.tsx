@@ -7,9 +7,15 @@ import type {
 } from "@/entities/farm/types";
 import { formatShortDate } from "@/shared/lib/dateFormat";
 import { auctionAttemptStatusLabel } from "../../lib/auctionDisplay";
+import {
+  SalesDetailCard,
+  SalesDetailActionButton,
+  SalesDetailEmpty,
+  SalesDetailHeader,
+} from "../common/SalesDetailCard";
+import { AuctionLotStatusBadge } from "../common/SalesStatusBadge";
 import { AuctionQuantityAdjustDialog } from "./AuctionQuantityAdjustDialog";
 import { AuctionResultDialog } from "./AuctionResultDialog";
-import { StatusBadge } from "./AuctionLotList";
 
 export function AuctionLotDetail({
   lot,
@@ -46,11 +52,7 @@ export function AuctionLotDetail({
   const [returnDate, setReturnDate] = useState("");
 
   if (!lot) {
-    return (
-      <section className="flex h-full min-h-0 items-center justify-center rounded-md border border-[#dfe5dc] bg-white p-8 text-center text-sm text-[#6c786f]">
-        조회할 lot를 선택하세요.
-      </section>
-    );
+    return <SalesDetailEmpty>조회할 lot를 선택하세요.</SalesDetailEmpty>;
   }
 
   const currentLot = lot;
@@ -70,64 +72,61 @@ export function AuctionLotDetail({
 
   return (
     <>
-      <section className="h-full min-h-0 min-w-0 overflow-y-auto rounded-md border border-[#dfe5dc] bg-white shadow-sm">
-        <header className="flex flex-wrap items-center justify-between gap-2 border-b border-[#e7ebe5] px-4 py-3">
-          <div>
-            <p className="text-xs font-semibold text-[#6b786f]">
-              LOT #{currentLot.id}
-            </p>
-            <h2 className="text-base font-bold">
-              {currentLot.varietyName} · {currentLot.auctionMarket}
-            </h2>
-          </div>
-          <div className="flex flex-wrap items-center gap-2">
-            <StatusBadge status={currentLot.currentStatus} />
-            <button
-              className="inline-flex h-8 items-center gap-1.5 rounded-md border border-[#d7ded5] px-3 text-xs font-semibold"
-              type="button"
-              onClick={() => setShowResultForm(true)}
-            >
-              <Plus className="h-3.5 w-3.5" />
-              경매 결과 입력
-            </button>
-            <button
-              className="inline-flex h-8 items-center gap-1.5 rounded-md border border-[#d7ded5] px-3 text-xs font-semibold"
-              type="button"
-              onClick={() => setShowQuantityAdjustment(true)}
-            >
-              <SlidersHorizontal className="h-3.5 w-3.5" />
-              수량 보정
-            </button>
-            {currentLot.currentStatus === "REAUCTION_WAITING" ||
-            currentLot.currentStatus === "RETURN_INFERRED" ||
-            currentLot.currentStatus === "PARTIALLY_RETURNED" ? (
-              <button
-                className="inline-flex h-8 items-center gap-1.5 rounded-md border border-[#d7ded5] px-3 text-xs font-semibold disabled:opacity-50"
-                type="button"
-                disabled={loading || currentLot.returnConfirmableQuantity === 0}
-                onClick={() => {
-                  setReturnQuantity(currentLot.returnConfirmableQuantity);
-                  setReturnDate(
-                    [...currentLot.attempts]
-                      .reverse()
-                      .find(
-                        (attempt) =>
-                          attempt.attemptStatus === "RETURN_INFERRED",
-                      )?.auctionDate ??
-                      currentLot.latestAuctionDate ??
-                      currentLot.shipmentDate,
-                  );
-                  setShowReturnConfirmation((current) => !current);
-                }}
+      <SalesDetailCard>
+        <SalesDetailHeader
+          eyebrow={`LOT #${currentLot.id}`}
+          eyebrowAside={
+            <AuctionLotStatusBadge
+              size="compact"
+              status={currentLot.currentStatus}
+            />
+          }
+          title={`${currentLot.varietyName} · ${currentLot.auctionMarket}`}
+          actions={
+            <>
+              <SalesDetailActionButton
+                icon={Plus}
+                onClick={() => setShowResultForm(true)}
               >
-                <RotateCcw className="h-3.5 w-3.5" />
-                {currentLot.currentStatus === "REAUCTION_WAITING"
-                  ? "반환 처리"
-                  : "반환 확인"}
-              </button>
-            ) : null}
-          </div>
-        </header>
+                경매 결과 입력
+              </SalesDetailActionButton>
+              <SalesDetailActionButton
+                icon={SlidersHorizontal}
+                onClick={() => setShowQuantityAdjustment(true)}
+              >
+                수량 보정
+              </SalesDetailActionButton>
+              {currentLot.currentStatus === "REAUCTION_WAITING" ||
+              currentLot.currentStatus === "RETURN_INFERRED" ||
+              currentLot.currentStatus === "PARTIALLY_RETURNED" ? (
+                <SalesDetailActionButton
+                  disabled={
+                    loading || currentLot.returnConfirmableQuantity === 0
+                  }
+                  icon={RotateCcw}
+                  onClick={() => {
+                    setReturnQuantity(currentLot.returnConfirmableQuantity);
+                    setReturnDate(
+                      [...currentLot.attempts]
+                        .reverse()
+                        .find(
+                          (attempt) =>
+                            attempt.attemptStatus === "RETURN_INFERRED",
+                        )?.auctionDate ??
+                        currentLot.latestAuctionDate ??
+                        currentLot.shipmentDate,
+                    );
+                    setShowReturnConfirmation((current) => !current);
+                  }}
+                >
+                  {currentLot.currentStatus === "REAUCTION_WAITING"
+                    ? "반환 처리"
+                    : "반환 확인"}
+                </SalesDetailActionButton>
+              ) : null}
+            </>
+          }
+        />
 
         {showReturnConfirmation ? (
           <form
@@ -273,7 +272,7 @@ export function AuctionLotDetail({
             </div>
           </div>
         </div>
-      </section>
+      </SalesDetailCard>
 
       {showResultForm ? (
         <AuctionResultDialog

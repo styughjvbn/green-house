@@ -3,11 +3,8 @@ import type { ColumnDef } from "@tanstack/react-table";
 import type { AuctionLot } from "@/entities/farm/types";
 import { formatShortDate } from "@/shared/lib/dateFormat";
 import { DataTable } from "@/shared/ui/DataTable";
-import {
-  auctionInspectionLabel,
-  auctionStatusLabel,
-  auctionStatusTone,
-} from "../../lib/auctionDisplay";
+import { auctionInspectionLabel } from "../../lib/auctionDisplay";
+import { AuctionLotStatusBadge } from "../common/SalesStatusBadge";
 
 export function AuctionLotList({
   lots,
@@ -80,7 +77,9 @@ export function AuctionLotList({
       {
         accessorKey: "currentStatus",
         header: "상태",
-        cell: ({ row }) => <StatusBadge status={row.original.currentStatus} />,
+        cell: ({ row }) => (
+          <AuctionLotStatusBadge status={row.original.currentStatus} />
+        ),
         size: 105,
       },
       {
@@ -147,25 +146,4 @@ function quantityColumn(
     },
     meta: { align: "right" },
   };
-}
-
-export function StatusBadge({
-  status,
-}: {
-  status: AuctionLot["currentStatus"];
-}) {
-  const tone = auctionStatusTone(status);
-  const classes = {
-    green: "bg-[#e5f5e8] text-[#16853b]",
-    orange: "bg-[#fff1d8] text-[#c66f00]",
-    red: "bg-[#fee9e7] text-[#c43d35]",
-    blue: "bg-[#e9f1fb] text-[#286aa6]",
-  }[tone];
-  return (
-    <span
-      className={`inline-flex rounded px-2 py-1 text-[11px] font-bold whitespace-nowrap ${classes}`}
-    >
-      {auctionStatusLabel(status)}
-    </span>
-  );
 }

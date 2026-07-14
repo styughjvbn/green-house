@@ -6,6 +6,7 @@ import { Plus } from "lucide-react";
 import { formatShortDate } from "@/shared/lib/dateFormat";
 import { DataTable } from "@/shared/ui/DataTable";
 import type { SalesSlipListItem } from "../../model/types";
+import { SalesSlipStatusBadge } from "../common/SalesStatusBadge";
 
 export function SalesSlipList({
   currentPage,
@@ -67,13 +68,17 @@ export function SalesSlipList({
       {
         accessorKey: "paymentStatus",
         header: "입금 상태",
-        cell: ({ row }) => <StatusBadge value={row.original.paymentStatus} />,
+        cell: ({ row }) => (
+          <SalesSlipStatusBadge value={row.original.paymentStatus} />
+        ),
         size: 10,
       },
       {
         accessorKey: "salesStatus",
         header: "판매 상태",
-        cell: ({ row }) => <StatusBadge value={row.original.salesStatus} />,
+        cell: ({ row }) => (
+          <SalesSlipStatusBadge value={row.original.salesStatus} />
+        ),
         size: 110,
       },
     ],
@@ -110,30 +115,5 @@ export function SalesSlipList({
       onPageSizeChange={onPageSizeChange}
       onRowClick={(row) => onSelect(row.id)}
     />
-  );
-}
-
-function StatusBadge({ value }: { value: string }) {
-  const tone =
-    value === "미입금"
-      ? "orange"
-      : value === "작성중"
-        ? "blue"
-        : value === "취소"
-          ? "gray"
-          : "green";
-  const classes = {
-    blue: "bg-[#e6f0ff] text-[#246df2]",
-    green: "bg-[#e7f7e8] text-[#16853b]",
-    orange: "bg-[#fff1d6] text-[#d88400]",
-    gray: "bg-[#eef1ee] text-[#657169]",
-  }[tone];
-
-  return (
-    <span
-      className={`inline-flex rounded-md px-2.5 py-1 text-xs font-bold whitespace-nowrap ${classes}`}
-    >
-      {value}
-    </span>
   );
 }

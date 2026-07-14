@@ -3,10 +3,7 @@
 import { useMemo, useState } from "react";
 import type { ColumnDef } from "@tanstack/react-table";
 import { RefreshCw } from "lucide-react";
-import type {
-  AuctionSettlement,
-  AuctionSettlementStatus,
-} from "@/entities/farm/types";
+import type { AuctionSettlement } from "@/entities/farm/types";
 import { formatShortDate } from "@/shared/lib/dateFormat";
 import { DataTable } from "@/shared/ui/DataTable";
 import {
@@ -19,6 +16,12 @@ import {
   SalesTabSplit,
   SalesTabStack,
 } from "../common/SalesTabLayout";
+import {
+  SalesDetailCard,
+  SalesDetailEmpty,
+  SalesDetailHeader,
+} from "../common/SalesDetailCard";
+import { AuctionSettlementStatusBadge } from "../common/SalesStatusBadge";
 
 export function AuctionSettlementView({
   initialSettlements,
@@ -95,7 +98,9 @@ export function AuctionSettlementView({
       {
         accessorKey: "status",
         header: "상태",
-        cell: ({ row }) => <SettlementStatus status={row.original.status} />,
+        cell: ({ row }) => (
+          <AuctionSettlementStatusBadge status={row.original.status} />
+        ),
         size: 110,
         meta: { align: "center" },
       },
@@ -200,27 +205,21 @@ function SettlementDetail({
   onUpdate: (settlement: AuctionSettlement) => void;
 }) {
   if (!settlement) {
-    return (
-      <section className="rounded-md border border-[#dfe5dc] bg-white p-10 text-center text-sm text-[#68756c]">
-        확인할 정산을 선택하세요.
-      </section>
-    );
+    return <SalesDetailEmpty>확인할 정산을 선택하세요.</SalesDetailEmpty>;
   }
 
   return (
-    <section className="min-w-0 rounded-md border border-[#dfe5dc] bg-white shadow-sm">
-      <header className="flex flex-wrap items-center justify-between gap-2 border-b border-[#e5e9e3] px-4 py-3">
-        <div>
-          <p className="text-xs font-semibold text-[#68756c]">
-            정산 #{settlement.id}
-          </p>
-          <h3 className="mt-0.5 text-base font-bold">
-            {settlement.auctionHouseName} ·{" "}
-            {formatShortDate(settlement.auctionDate)}
-          </h3>
-        </div>
-        <SettlementStatus status={settlement.status} />
-      </header>
+    <SalesDetailCard>
+      <SalesDetailHeader
+        eyebrow={`정산 #${settlement.id}`}
+        eyebrowAside={
+          <AuctionSettlementStatusBadge
+            size="compact"
+            status={settlement.status}
+          />
+        }
+        title={`${settlement.auctionHouseName} · ${formatShortDate(settlement.auctionDate)}`}
+      />
 
       <div className="grid grid-cols-2 gap-px border-b border-[#e5e9e3] bg-[#e5e9e3] sm:grid-cols-4">
         <Metric label="총 낙찰액" value={settlement.grossAmount} />
@@ -284,7 +283,7 @@ function SettlementDetail({
           );
         }}
       />
-    </section>
+    </SalesDetailCard>
   );
 }
 
@@ -303,27 +302,5 @@ function Metric({ label, value }: { label: string; value: number }) {
       <p className="text-[11px] text-[#68756c]">{label}</p>
       <p className="mt-1 text-sm font-bold">{value.toLocaleString()}원</p>
     </div>
-  );
-}
-
-const statusLabels: Record<AuctionSettlementStatus, string> = {
-  CREATED: "생성",
-  PAYMENT_WAITING: "입금 대기",
-  PARTIALLY_PAID: "부분 입금",
-  PAID: "정산 완료",
-  AMOUNT_MISMATCH: "금액 불일치",
-  REVIEW_REQUIRED: "확인 필요",
-  CANCELLED: "취소",
-};
-
-function SettlementStatus({ status }: { status: AuctionSettlementStatus }) {
-  const warning = ["AMOUNT_MISMATCH", "REVIEW_REQUIRED"].includes(status);
-  const done = status === "PAID";
-  return (
-    <span
-      className={`inline-flex rounded px-2 py-1 text-[11px] font-semibold ${warning ? "bg-[#fff0ed] text-[#c4473c]" : done ? "bg-[#e8f6ec] text-[#158442]" : "bg-[#fff5df] text-[#a96a00]"}`}
-    >
-      {statusLabels[status]}
-    </span>
   );
 }
