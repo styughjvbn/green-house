@@ -121,4 +121,14 @@ public interface OrchidGroupRepository extends JpaRepository<OrchidGroup, Long> 
 			order by b.displayOrder asc, z.sortOrder asc, g.sortOrder asc
 			""")
 	List<OrchidGroup> findActiveWorkTargetsByHouseId(@Param("houseId") Long houseId);
+
+	@Query("""
+			select g from OrchidGroup g
+			join fetch g.bedZone z
+			join fetch z.physicalBed b
+			join fetch b.house
+			left join fetch g.variety
+			where g.id in :orchidGroupIds
+			""")
+	List<OrchidGroup> findDetailsByIds(@Param("orchidGroupIds") java.util.Collection<Long> orchidGroupIds);
 }
