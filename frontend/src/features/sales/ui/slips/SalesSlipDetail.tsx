@@ -9,6 +9,7 @@ import {
   SalesDetailActionButton,
   SalesDetailEmpty,
   SalesDetailHeader,
+  SalesDetailSummary,
 } from "../common/SalesDetailCard";
 
 export function SalesSlipDetail({
@@ -53,6 +54,25 @@ export function SalesSlipDetail({
       <SalesDetailHeader
         eyebrow={`LOT #${salesSlip.slipNumber}`}
         title="전표 상세"
+        summary={
+          <SalesDetailSummary
+            align="left"
+            columns="lg:grid-cols-4"
+            items={[
+              {
+                label: "판매 유형",
+                value:
+                  salesSlip.salesType === "AUCTION" ? "경매 판매" : "일반 판매",
+              },
+              {
+                label: "판매일자",
+                value: formatShortDate(salesSlip.saleDate),
+              },
+              { label: "입금 상태", value: salesSlip.paymentStatus },
+              { label: "판매 상태", value: salesSlip.salesStatus },
+            ]}
+          />
+        }
         actions={
           <>
             {canEdit ? (
@@ -105,24 +125,7 @@ export function SalesSlipDetail({
       />
 
       <div className="p-4">
-        <div className="rounded-md border border-[#dfe5dc] bg-[#fbfcfa] p-4">
-          <div className="grid gap-4 lg:grid-cols-4">
-            <InfoLabel
-              label="판매 유형"
-              value={
-                salesSlip.salesType === "AUCTION" ? "경매 판매" : "일반 판매"
-              }
-            />
-            <InfoLabel
-              label="판매일자"
-              value={formatShortDate(salesSlip.saleDate)}
-            />
-            <InfoLabel label="입금 상태" value={salesSlip.paymentStatus} />
-            <InfoLabel label="판매 상태" value={salesSlip.salesStatus} />
-          </div>
-        </div>
-
-        <div className="mt-3 grid gap-3 lg:grid-cols-2">
+        <div className="grid gap-3 lg:grid-cols-2">
           <InfoBox title="거래처 정보">
             <Description label="거래처명" value={salesSlip.partner.name} />
             <Description label="대표자명" value={salesSlip.partner.ownerName} />
@@ -239,25 +242,6 @@ export function SalesSlipDetail({
         ) : null}
       </div>
     </SalesDetailCard>
-  );
-}
-
-function InfoLabel({
-  label,
-  strong = false,
-  value,
-}: {
-  label: string;
-  strong?: boolean;
-  value: string;
-}) {
-  return (
-    <div>
-      <p className="text-xs font-semibold text-[#6a766e]">{label}</p>
-      <p className={`mt-1 ${strong ? "text-2xl font-bold" : "font-semibold"}`}>
-        {value}
-      </p>
-    </div>
   );
 }
 

@@ -31,28 +31,39 @@ export function SalesDetailHeader({
   actions,
   eyebrow,
   eyebrowAside,
+  summary,
   title,
 }: {
   actions?: ReactNode;
   eyebrow?: ReactNode;
   eyebrowAside?: ReactNode;
+  summary?: ReactNode;
   title: ReactNode;
 }) {
   return (
-    <header className="flex flex-wrap items-center justify-between gap-2 border-b border-[#e7ebe5] px-4 py-3">
-      <div className="min-w-0">
-        {eyebrow || eyebrowAside ? (
-          <div className="flex flex-wrap items-center gap-2">
-            {eyebrow ? (
-              <p className="text-xs font-semibold text-[#6b786f]">{eyebrow}</p>
-            ) : null}
-            {eyebrowAside}
-          </div>
+    <header className="border-b border-[#e7ebe5]">
+      <div className="flex flex-wrap items-center justify-between gap-2 px-4 py-3">
+        <div className="min-w-0">
+          {eyebrow || eyebrowAside ? (
+            <div className="flex flex-wrap items-center gap-2">
+              {eyebrow ? (
+                <p className="text-xs font-semibold text-[#6b786f]">
+                  {eyebrow}
+                </p>
+              ) : null}
+              {eyebrowAside}
+            </div>
+          ) : null}
+          <h2 className="truncate text-base font-bold text-[#17251b]">
+            {title}
+          </h2>
+        </div>
+        {actions ? (
+          <SalesDetailHeaderActions>{actions}</SalesDetailHeaderActions>
         ) : null}
-        <h2 className="truncate text-base font-bold text-[#17251b]">{title}</h2>
       </div>
-      {actions ? (
-        <SalesDetailHeaderActions>{actions}</SalesDetailHeaderActions>
+      {summary ? (
+        <div className="border-t border-[#edf0ec]">{summary}</div>
       ) : null}
     </header>
   );
@@ -63,6 +74,37 @@ export function SalesDetailEmpty({ children }: { children: ReactNode }) {
     <section className="flex h-full min-h-0 items-center justify-center rounded-md border border-[#dfe5dc] bg-white p-8 text-center text-sm text-[#6c786f]">
       {children}
     </section>
+  );
+}
+
+type SalesDetailSummaryItem = {
+  label: string;
+  value: ReactNode;
+};
+
+export function SalesDetailSummary({
+  align = "right",
+  columns = "sm:grid-cols-4",
+  items,
+}: {
+  align?: "left" | "center" | "right";
+  columns?: string;
+  items: SalesDetailSummaryItem[];
+}) {
+  return (
+    <div className={`grid grid-cols-2 gap-px bg-[#e5e9e3] ${columns}`}>
+      {items.map((item) => (
+        <div
+          key={item.label}
+          className={`bg-[#fbfcfa] px-3 py-3 ${summaryAlignClass(align)}`}
+        >
+          <p className="text-[11px] font-semibold text-[#68756c]">
+            {item.label}
+          </p>
+          <p className="mt-1 text-sm font-bold text-[#17251b]">{item.value}</p>
+        </div>
+      ))}
+    </div>
   );
 }
 
@@ -128,11 +170,17 @@ function actionToneClass(tone: DetailActionTone) {
   return "border border-[#d7ded5] bg-white text-[#344138]";
 }
 
-function SalesDetailHeaderActions({
-  children,
-}: {
-  children: ReactNode;
-}) {
+function summaryAlignClass(align: "left" | "center" | "right") {
+  if (align === "center") {
+    return "text-center";
+  }
+  if (align === "right") {
+    return "text-right";
+  }
+  return "text-left";
+}
+
+function SalesDetailHeaderActions({ children }: { children: ReactNode }) {
   const rootRef = useRef<HTMLDivElement | null>(null);
   const measureRef = useRef<HTMLDivElement | null>(null);
 
@@ -149,6 +197,9 @@ function SalesDetailHeaderActions({
       setCollapsed((current) =>
         current === nextCollapsed ? current : nextCollapsed,
       );
+      if (!nextCollapsed) {
+        setOpen(false);
+      }
     }
 
     syncCollapsed();
@@ -165,12 +216,6 @@ function SalesDetailHeaderActions({
 
     return () => observer.disconnect();
   }, []);
-
-  useEffect(() => {
-    if (!collapsed) {
-      setOpen(false);
-    }
-  }, [collapsed]);
 
   useEffect(() => {
     if (!open) return;
@@ -195,10 +240,7 @@ function SalesDetailHeaderActions({
   }, [open]);
 
   return (
-    <div
-      ref={rootRef}
-      className="relative flex min-w-0 flex-1 justify-end"
-    >
+    <div ref={rootRef} className="relative flex min-w-0 flex-1 justify-end">
       <div
         ref={measureRef}
         className="pointer-events-none invisible absolute top-0 right-0 flex w-full flex-wrap items-center justify-end gap-2"
@@ -238,9 +280,7 @@ function SalesDetailHeaderActions({
           ) : null}
         </div>
       ) : (
-        <div className="flex items-center justify-end gap-2">
-          {children}
-        </div>
+        <div className="flex items-center justify-end gap-2">{children}</div>
       )}
     </div>
   );

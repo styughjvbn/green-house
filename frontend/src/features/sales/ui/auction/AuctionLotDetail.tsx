@@ -12,6 +12,7 @@ import {
   SalesDetailActionButton,
   SalesDetailEmpty,
   SalesDetailHeader,
+  SalesDetailSummary,
 } from "../common/SalesDetailCard";
 import { AuctionLotStatusBadge } from "../common/SalesStatusBadge";
 import { AuctionQuantityAdjustDialog } from "./AuctionQuantityAdjustDialog";
@@ -82,6 +83,29 @@ export function AuctionLotDetail({
             />
           }
           title={`${currentLot.varietyName} · ${currentLot.auctionMarket}`}
+          summary={
+            <SalesDetailSummary
+              align="left"
+              items={[
+                {
+                  label: "출하",
+                  value: `${currentLot.shippedQuantity.toLocaleString()}분`,
+                },
+                {
+                  label: "낙찰",
+                  value: `${currentLot.soldQuantity.toLocaleString()}분`,
+                },
+                {
+                  label: "대기",
+                  value: `${currentLot.waitingQuantity.toLocaleString()}분`,
+                },
+                {
+                  label: "반환",
+                  value: `${currentLot.returnedQuantity.toLocaleString()}분`,
+                },
+              ]}
+            />
+          }
           actions={
             <>
               <SalesDetailActionButton
@@ -190,13 +214,7 @@ export function AuctionLotDetail({
 
         <div className="grid gap-3 p-4">
           <div>
-            <div className="grid grid-cols-2 gap-2 rounded-md bg-[#f7f9f6] p-3 text-center sm:grid-cols-4">
-              <Quantity label="출하" value={currentLot.shippedQuantity} />
-              <Quantity label="낙찰" value={currentLot.soldQuantity} />
-              <Quantity label="대기" value={currentLot.waitingQuantity} />
-              <Quantity label="반환" value={currentLot.returnedQuantity} />
-            </div>
-            <h3 className="mt-4 mb-2 text-sm font-bold">경매 진행 타임라인</h3>
+            <h3 className="mb-2 text-sm font-bold">경매 진행 타임라인</h3>
             <ol className="space-y-2 border-l-2 border-[#dce9da] pl-4">
               <TimelineItem
                 date={currentLot.shipmentDate}
@@ -294,15 +312,6 @@ export function AuctionLotDetail({
         />
       ) : null}
     </>
-  );
-}
-
-function Quantity({ label, value }: { label: string; value: number }) {
-  return (
-    <div>
-      <p className="text-xs text-[#68756c]">{label}</p>
-      <p className="mt-1 text-base font-bold">{value.toLocaleString()}분</p>
-    </div>
   );
 }
 

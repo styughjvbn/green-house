@@ -20,6 +20,7 @@ import {
   SalesDetailCard,
   SalesDetailEmpty,
   SalesDetailHeader,
+  SalesDetailSummary,
 } from "../common/SalesDetailCard";
 import { AuctionSettlementStatusBadge } from "../common/SalesStatusBadge";
 
@@ -219,14 +220,29 @@ function SettlementDetail({
           />
         }
         title={`${settlement.auctionHouseName} · ${formatShortDate(settlement.auctionDate)}`}
+        summary={
+          <SalesDetailSummary
+            items={[
+              {
+                label: "총 낙찰액",
+                value: `${settlement.grossAmount.toLocaleString()}원`,
+              },
+              {
+                label: "예상 입금액",
+                value: `${settlement.expectedDepositAmount.toLocaleString()}원`,
+              },
+              {
+                label: "입금액",
+                value: `${settlement.paidAmount.toLocaleString()}원`,
+              },
+              {
+                label: "잔액",
+                value: `${settlement.remainingAmount.toLocaleString()}원`,
+              },
+            ]}
+          />
+        }
       />
-
-      <div className="grid grid-cols-2 gap-px border-b border-[#e5e9e3] bg-[#e5e9e3] sm:grid-cols-4">
-        <Metric label="총 낙찰액" value={settlement.grossAmount} />
-        <Metric label="예상 입금액" value={settlement.expectedDepositAmount} />
-        <Metric label="입금액" value={settlement.paidAmount} />
-        <Metric label="잔액" value={settlement.remainingAmount} />
-      </div>
 
       <div className="px-4 py-3">
         <div className="mb-2 flex items-center justify-between">
@@ -292,15 +308,6 @@ function Summary({ label, value }: { label: string; value: number }) {
     <div>
       <p className="text-[11px] text-[#68756c]">{label}</p>
       <p className="text-sm font-bold">{value.toLocaleString()}원</p>
-    </div>
-  );
-}
-
-function Metric({ label, value }: { label: string; value: number }) {
-  return (
-    <div className="bg-white px-3 py-3 text-right">
-      <p className="text-[11px] text-[#68756c]">{label}</p>
-      <p className="mt-1 text-sm font-bold">{value.toLocaleString()}원</p>
     </div>
   );
 }
