@@ -1,6 +1,6 @@
 "use client";
 
-import { Plus } from "lucide-react";
+import { Layers3, Plus } from "lucide-react";
 import type { WorkRecord, WorkType } from "@/entities/farm/types";
 import { formatWorkRecordContent } from "@/entities/farm/workTypes";
 import { PaginationControls } from "@/shared/ui/PaginationControls";
@@ -15,6 +15,7 @@ type WorkRecordListProps = {
   totalRecords: number;
   workTypes: WorkType[];
   onCreate: () => void;
+  onCreateOperation: () => void;
   onPageChange: (page: number) => void;
   onPageSizeChange: (pageSize: number) => void;
   onSelect: (recordId: number) => void;
@@ -29,6 +30,7 @@ export function WorkRecordList({
   totalRecords,
   workTypes,
   onCreate,
+  onCreateOperation,
   onPageChange,
   onPageSizeChange,
   onSelect,
@@ -40,14 +42,24 @@ export function WorkRecordList({
           <h2 className="text-lg font-bold text-[#17251b]">작업 이력 목록</h2>
           <p className="mt-1 text-sm text-[#6a766e]">전체 {totalRecords}건</p>
         </div>
-        <button
-          className="inline-flex h-10 items-center gap-2 rounded-md bg-[#159447] px-4 text-sm font-semibold text-white shadow-sm"
-          type="button"
-          onClick={onCreate}
-        >
-          <Plus className="h-4 w-4" strokeWidth={1.8} aria-hidden="true" />
-          작업 이력 등록
-        </button>
+        <div className="flex flex-wrap gap-2">
+          <button
+            className="inline-flex h-10 items-center gap-2 rounded-md border border-[#159447] bg-white px-4 text-sm font-semibold text-[#10783a]"
+            type="button"
+            onClick={onCreateOperation}
+          >
+            <Layers3 className="h-4 w-4" strokeWidth={1.8} aria-hidden="true" />
+            동 전체 농약 작업
+          </button>
+          <button
+            className="inline-flex h-10 items-center gap-2 rounded-md bg-[#159447] px-4 text-sm font-semibold text-white shadow-sm"
+            type="button"
+            onClick={onCreate}
+          >
+            <Plus className="h-4 w-4" strokeWidth={1.8} aria-hidden="true" />
+            작업 이력 등록
+          </button>
+        </div>
       </div>
       <div className="min-h-0 flex-1 overflow-auto">
         <table className="w-full min-w-[730px] border-collapse text-left text-sm">

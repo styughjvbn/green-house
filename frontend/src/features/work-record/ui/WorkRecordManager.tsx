@@ -1,14 +1,17 @@
 "use client";
 
+import { useState } from "react";
 import type { WorkRecordManagerProps } from "../model/types";
 import { useWorkRecordManager } from "../model/useWorkRecordManager";
 import { WorkRecordCreateForm } from "./components/WorkRecordCreateForm";
 import { WorkRecordDetail } from "./components/WorkRecordDetail";
 import { WorkRecordFilters } from "./components/WorkRecordFilters";
 import { WorkRecordList } from "./components/WorkRecordList";
+import { HouseWorkOperationPanel } from "./components/HouseWorkOperationPanel";
 
 export function WorkRecordManager(props: WorkRecordManagerProps) {
   const manager = useWorkRecordManager(props);
+  const [showOperationForm, setShowOperationForm] = useState(false);
 
   return (
     <div className="flex h-full min-h-0 flex-col gap-4">
@@ -42,6 +45,13 @@ export function WorkRecordManager(props: WorkRecordManagerProps) {
           onSubmit={manager.submitWorkRecord}
         />
       ) : null}
+      {showOperationForm ? (
+        <HouseWorkOperationPanel
+          houses={props.houses}
+          workTypes={props.workTypes}
+          onClose={() => setShowOperationForm(false)}
+        />
+      ) : null}
 
       <div
         className={`grid min-h-0 flex-1 gap-4 ${
@@ -61,6 +71,7 @@ export function WorkRecordManager(props: WorkRecordManagerProps) {
           totalRecords={manager.filteredRecords.length}
           workTypes={props.workTypes}
           onCreate={() => manager.setShowCreateForm(true)}
+          onCreateOperation={() => setShowOperationForm(true)}
           onPageChange={manager.changePage}
           onPageSizeChange={manager.changePageSize}
           onSelect={manager.selectRecord}
