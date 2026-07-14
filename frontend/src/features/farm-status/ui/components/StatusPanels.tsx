@@ -122,11 +122,11 @@ function SelectedOrchidDetail({
           value={selectedOrchidGroup.placementType ?? "-"}
         />
         <DetailMetric
-          label="시작 위치"
+          label="시작 칸"
           value={formatOptionalNumber(selectedOrchidGroup.startPosition, "")}
         />
         <DetailMetric
-          label="종료 위치"
+          label="종료 칸"
           value={formatOptionalNumber(selectedOrchidGroup.endPosition, "")}
         />
       </div>

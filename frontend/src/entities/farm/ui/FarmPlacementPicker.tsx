@@ -25,11 +25,11 @@ export type FarmPlacementSelection = {
 };
 
 export function FarmPlacementField({
-  buttonPlaceholder = "위치 선택",
+  buttonPlaceholder = "칸 선택",
   dialogDescription = "구역을 고른 뒤 차지할 시작 칸과 끝 칸을 지정하세요.",
-  dialogTitle = "배치 위치 선택",
+  dialogTitle = "배치 칸 선택",
   excludeOrchidGroupId = null,
-  fieldLabel = "배치 위치",
+  fieldLabel = "배치 칸",
   houses,
   submitLabel = "선택 완료",
   value,
@@ -84,7 +84,7 @@ export function FarmPlacementField({
 
 export function FarmPlacementPickerDialog({
   dialogDescription = "구역을 고른 뒤 차지할 시작 칸과 끝 칸을 지정하세요.",
-  dialogTitle = "배치 위치 선택",
+  dialogTitle = "배치 칸 선택",
   excludeOrchidGroupId = null,
   houses,
   initialValue,

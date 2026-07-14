@@ -56,7 +56,7 @@ const TEMPLATE_CONFIG: Record<WorkTypeTemplate, WorkTypeTemplateConfig> = {
     labels: {},
   },
   MOVEMENT: {
-    label: "위치 이동형",
+    label: "자리 이동형",
     fields: ["worker", "memo"],
     labels: {},
   },
@@ -148,7 +148,7 @@ export function formatWorkRecordContent(
       ? `이전 구역 #${record.fromBedZoneId}`
       : null;
     const to = record.toBedZoneId ? `이동 구역 #${record.toBedZoneId}` : null;
-    return [from, to].filter(Boolean).join(" -> ") || "위치 이동";
+    return [from, to].filter(Boolean).join(" -> ") || "자리 이동";
   }
 
   return details.join(" / ") || record.memo || "-";
