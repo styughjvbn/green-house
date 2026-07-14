@@ -84,6 +84,7 @@ House
 
 ```text
 WorkType 1 ─ N WorkRecord
+WorkType 1 ─ N WorkOperation 1 ─ N WorkOperationTarget 1 ─ 1 WorkTargetExecution
 ```
 
 ### WorkType
@@ -121,6 +122,18 @@ WorkType 1 ─ N WorkRecord
 - 실수 입력은 삭제하지 않고 취소 상태와 취소 사유로 남긴다.
 
 위치 이동은 삭제보다 이력 보존을 우선한다.
+
+### WorkOperation
+
+상위 범위와 그룹을 포함하는 신규 작업 전체 단위다.
+
+- 원본 선택 범위와 실제 난 묶음 대상을 분리한다.
+- 저장 시 실제 대상과 당시 위치·속성·수량 스냅샷을 확정한다.
+- 상위 범위 작업은 난 묶음별로 복제하지 않는다.
+- 대상별 실행 상태를 별도로 가진다.
+- 첫 구현은 동 전체 농약 작업의 계획·완료를 지원한다.
+
+기존 `WorkRecord`는 과거 기록과 위치 이동 같은 기존 시스템 기록을 위해 유지한다. 난 묶음 이력 조회에서는 두 모델을 합쳐 표시한다.
 
 ## 3. 거래처·판매 도메인
 
