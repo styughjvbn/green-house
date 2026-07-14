@@ -158,16 +158,18 @@ export function FilterSearchButton({
   disabled = false,
   label = "검색",
   onClick,
+  type = "submit",
 }: {
   className?: string;
   disabled?: boolean;
   label?: string;
   onClick?: () => void;
+  type?: "button" | "submit";
 }) {
   return (
     <button
       className={`inline-flex h-10 items-center justify-center gap-2 rounded-md bg-[#159447] px-5 text-sm font-semibold text-white disabled:opacity-60 lg:mt-6 ${className}`}
-      type="button"
+      type={type}
       disabled={disabled}
       onClick={onClick}
     >
