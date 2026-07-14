@@ -1678,8 +1678,16 @@ paths:
     $ref: "./slices/orchid-collection.openapi.yaml#/paths/~1api~1orchid-group-collections~1{collectionId}~1members~1{orchidGroupId}"
   /api/orchid-groups/{orchidGroupId}/collections:
     $ref: "./slices/orchid-collection.openapi.yaml#/paths/~1api~1orchid-groups~1{orchidGroupId}~1collections"
+  /api/orchid-groups/derived-groups:
+    $ref: "./slices/derived-orchid-group.openapi.yaml#/paths/~1api~1orchid-groups~1derived-groups"
+  /api/orchid-groups/derived-groups/{groupKey}/members:
+    $ref: "./slices/derived-orchid-group.openapi.yaml#/paths/~1api~1orchid-groups~1derived-groups~1{groupKey}~1members"
 components:
   schemas:
+    DerivedOrchidGroupResponse:
+      $ref: "./slices/derived-orchid-group.openapi.yaml#/components/schemas/DerivedOrchidGroupResponse"
+    ApiResponseListDerivedOrchidGroupResponse:
+      $ref: "./slices/derived-orchid-group.openapi.yaml#/components/schemas/ApiResponseListDerivedOrchidGroupResponse"
     OrchidGroupCollectionCreateRequest:
       $ref: "./slices/orchid-collection.openapi.yaml#/components/schemas/OrchidGroupCollectionCreateRequest"
     OrchidGroupCollectionUpdateRequest:

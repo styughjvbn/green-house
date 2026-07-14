@@ -7,8 +7,8 @@
 
 - 기준 명세: `docs/api/openapi.yaml`
 - OpenAPI 버전: `3.1.0`
-- 현재 구현 API: `81` operations / `62` path entries
-- schema 수: `124`
+- 현재 구현 API: `83` operations / `64` path entries
+- schema 수: `126`
 - Base URL: `/api`
 - 공통 응답: `ApiResponse*` 래퍼 사용
 
@@ -158,6 +158,19 @@
 | `POST` | `/api/orchid-group-collections/{collectionId}/members` | 난 묶음 소속 일괄 추가 |
 | `DELETE` | `/api/orchid-group-collections/{collectionId}/members/{orchidGroupId}` | 난 묶음 소속 해제 |
 | `GET` | `/api/orchid-groups/{orchidGroupId}/collections` | 난 묶음의 사용자 그룹 역조회 |
+
+### 난 묶음 자동 그룹
+
+- slice: `docs/api/slices/derived-orchid-group.openapi.yaml`
+- package: `com.greenhouse.backend.farm`
+- controller tag: `derived-orchid-group-controller`
+- 역할: 품종·현재 년생·화분 크기 기준 실시간 그룹 집계와 구성원 조회
+- operations: 2
+
+| Method | Path | Operation |
+|---|---|---|
+| `GET` | `/api/orchid-groups/derived-groups` | 자동 그룹 목록과 묶음 수·총수량·위치 수 집계 |
+| `GET` | `/api/orchid-groups/derived-groups/{groupKey}/members` | 현재 조건에 해당하는 구성원 조회 |
 
 ### 거래처
 

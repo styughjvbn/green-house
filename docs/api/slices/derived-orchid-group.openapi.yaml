@@ -1,0 +1,102 @@
+openapi: 3.1.0
+info:
+  title: Greenhouse API Slice - 난 묶음 자동 그룹
+  version: v0
+  description: 품종·현재 년생·표준 화분 크기로 실시간 계산하는 자동 그룹 API
+servers:
+  - url: http://localhost:8080
+paths:
+  /api/orchid-groups/derived-groups:
+    get:
+      tags: [derived-orchid-group-controller]
+      operationId: getDerivedOrchidGroups
+      parameters:
+        - {name: varietyId, in: query, required: false, schema: {type: integer, format: int64}}
+        - {name: ageYear, in: query, required: false, schema: {type: integer, format: int32}}
+        - {name: potSizeCode, in: query, required: false, schema: {$ref: '#/components/schemas/PotSizeCode'}}
+        - {name: houseId, in: query, required: false, schema: {type: integer, format: int64}}
+        - {name: status, in: query, required: false, schema: {type: string}}
+        - {name: keyword, in: query, required: false, schema: {type: string}}
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponseListDerivedOrchidGroupResponse'
+  /api/orchid-groups/derived-groups/{groupKey}/members:
+    get:
+      tags: [derived-orchid-group-controller]
+      operationId: getDerivedOrchidGroupMembers
+      parameters:
+        - name: groupKey
+          in: path
+          required: true
+          description: varietyId:ageYear:potSizeCode. 년생 미지정은 UNSPECIFIED.
+          schema: {type: string}
+        - {name: houseId, in: query, required: false, schema: {type: integer, format: int64}}
+        - {name: status, in: query, required: false, schema: {type: string}}
+        - {name: keyword, in: query, required: false, schema: {type: string}}
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponseListDerivedOrchidGroupMemberResponse'
+components:
+  schemas:
+    PotSizeCode:
+      type: string
+      enum: [UNSPECIFIED, POT_2, POT_2_5, POT_3, POT_3_5, POT_4, POT_4_5, POT_5, POT_6, HANGING, ETC]
+    DerivedOrchidGroupResponse:
+      type: object
+      properties:
+        groupKey: {type: string}
+        varietyId: {type: integer, format: int64}
+        varietyName: {type: string}
+        genus: {type: string}
+        ageYear: {type: integer, format: int32}
+        potSizeCode: {$ref: '#/components/schemas/PotSizeCode'}
+        potSize: {type: string}
+        orchidGroupCount: {type: integer, format: int32}
+        totalQuantity: {type: integer, format: int32}
+        locationCount: {type: integer, format: int32}
+    DerivedOrchidGroupMemberResponse:
+      type: object
+      properties:
+        id: {type: integer, format: int64}
+        bedZoneId: {type: integer, format: int64}
+        varietyId: {type: integer, format: int64}
+        genus: {type: string}
+        varietyName: {type: string}
+        quantity: {type: integer, format: int32}
+        potSize: {type: string}
+        potSizeCode: {$ref: '#/components/schemas/PotSizeCode'}
+        ageYear: {type: integer, format: int32}
+        status: {type: string}
+        placementType: {type: string}
+        trayCount: {type: integer, format: int32}
+        splitPlacementAllowed: {type: boolean}
+        startPosition: {type: number}
+        endPosition: {type: number}
+        sortOrder: {type: integer, format: int32}
+        memo: {type: string}
+        houseId: {type: integer, format: int64}
+        houseNumber: {type: integer, format: int32}
+        physicalBedNumber: {type: integer, format: int32}
+        bedZoneName: {type: string}
+    ApiResponseListDerivedOrchidGroupResponse:
+      type: object
+      properties:
+        data:
+          type: array
+          items: {$ref: '#/components/schemas/DerivedOrchidGroupResponse'}
+        message: {type: string}
+    ApiResponseListDerivedOrchidGroupMemberResponse:
+      type: object
+      properties:
+        data:
+          type: array
+          items: {$ref: '#/components/schemas/DerivedOrchidGroupMemberResponse'}
+        message: {type: string}
