@@ -107,4 +107,18 @@ public interface OrchidGroupRepository extends JpaRepository<OrchidGroup, Long> 
 			where g.id = :orchidGroupId
 			""")
 	Optional<OrchidGroup> findDetailById(@Param("orchidGroupId") Long orchidGroupId);
+
+	@Query("""
+			select g from OrchidGroup g
+			join fetch g.bedZone z
+			join fetch z.physicalBed b
+			join fetch b.house h
+			left join fetch g.variety
+			left join fetch g.inboundRecord
+			where h.id = :houseId
+			  and g.quantity > 0
+			  and g.status not in ('종료', '폐기', '판매 완료')
+			order by b.displayOrder asc, z.sortOrder asc, g.sortOrder asc
+			""")
+	List<OrchidGroup> findActiveWorkTargetsByHouseId(@Param("houseId") Long houseId);
 }

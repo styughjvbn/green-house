@@ -11,6 +11,7 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
 public interface WorkRecordRepository extends JpaRepository<WorkRecord, Long>, WorkRecordRepositoryCustom {
+	List<WorkRecord> findByTargetTypeAndTargetIdOrderByWorkDateDescIdDesc(String targetType, Long targetId);
 
 	Optional<WorkRecord> findTopByTargetTypeAndTargetIdAndWorkTypeOrderByWorkDateDescIdDesc(
 			String targetType,

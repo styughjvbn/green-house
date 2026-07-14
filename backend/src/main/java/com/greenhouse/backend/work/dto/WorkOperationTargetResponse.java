@@ -1,0 +1,44 @@
+package com.greenhouse.backend.work.dto;
+
+import com.greenhouse.backend.work.application.ResolvedWorkTarget;
+import com.greenhouse.backend.work.domain.WorkOperationTarget;
+import com.greenhouse.backend.work.domain.WorkTargetExecutionStatus;
+import java.util.Map;
+
+public record WorkOperationTargetResponse(
+		Long id,
+		Long orchidGroupId,
+		String varietyName,
+		Integer quantitySnapshot,
+		Integer ageYearSnapshot,
+		String potSizeSnapshot,
+		Map<String, Object> locationSnapshot,
+		WorkTargetExecutionStatus executionStatus) {
+
+	public static WorkOperationTargetResponse preview(
+			ResolvedWorkTarget target) {
+		return new WorkOperationTargetResponse(
+				null,
+				target.orchidGroupId(),
+				target.varietyName(),
+				target.quantity(),
+				target.ageYear(),
+				target.potSize(),
+				target.location(),
+				WorkTargetExecutionStatus.PENDING);
+	}
+
+	public static WorkOperationTargetResponse from(
+			WorkOperationTarget target,
+			WorkTargetExecutionStatus executionStatus) {
+		return new WorkOperationTargetResponse(
+				target.getId(),
+				target.getOrchidGroupId(),
+				target.getVarietyNameSnapshot(),
+				target.getQuantitySnapshot(),
+				target.getAgeYearSnapshot(),
+				target.getPotSizeSnapshot(),
+				target.getLocationSnapshot(),
+				executionStatus);
+	}
+}
