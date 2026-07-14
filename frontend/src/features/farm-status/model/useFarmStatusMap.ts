@@ -266,17 +266,29 @@ export function useFarmStatusMap({
 
   async function handleSelectOrchidGroup(group: SelectedFarmStatusOrchidGroup) {
     await runRequest(async () => {
-      const selectionData = await fetchFarmStatusOrchidGroups(
-        "BED_ZONE",
-        group.bedZoneId,
+      const shouldLoadHouseZoom =
+        selectedHouseId !== group.houseId ||
+        zoomData?.houseId !== group.houseId;
+      const [selectionData, houseZoomData] = await Promise.all([
+        fetchFarmStatusOrchidGroups("BED_ZONE", group.bedZoneId),
+        shouldLoadHouseZoom
+          ? fetchFarmStatusHouseZoom(group.houseId)
+          : Promise.resolve(zoomData),
+      ]);
+      const detailedGroup = findOrchidGroupInZoomData(
+        houseZoomData,
+        group.orchidGroupId,
       );
 
-      setSelectedOrchidGroup(group);
+      setSelectedOrchidGroup(
+        toSelectedFarmStatusOrchidGroup(group, detailedGroup),
+      );
       setSelectedTarget({ type: "BED_ZONE", id: group.bedZoneId });
       setSelection(selectionData);
       if (selectedHouseId !== group.houseId) {
         setSelectedHouseId(group.houseId);
       }
+      setZoomData(houseZoomData);
     });
   }
 
@@ -291,35 +303,30 @@ export function useFarmStatusMap({
       setSelectedTarget({ type: "BED_ZONE", id: group.bedZoneId });
       setSelection(selectionData);
       setZoomData(houseZoomData);
-      setSelectedOrchidGroup({
-        ageYear: group.ageYear,
-        endPosition: group.endPosition,
-        orchidGroupId: group.id,
-        varietyName: group.varietyName,
-        genus: group.genus,
-        memo: group.memo,
-        placementType: group.placementType,
-        potSize: group.potSize,
-        quantity: group.quantity,
-        sortOrder: group.sortOrder,
-        splitPlacementAllowed: group.splitPlacementAllowed,
-        startPosition: group.startPosition,
-        status: group.status,
-        trayCount: group.trayCount,
-        varietyId: group.varietyId,
-        houseId: group.houseId,
-        houseNumber: group.houseNumber,
-        physicalBedId:
-          findPhysicalBedId(
-            mapData.houses,
-            group.houseId,
-            group.physicalBedNumber,
-          ) ?? 0,
-        physicalBedNumber: group.physicalBedNumber,
-        physicalBedName: `${group.physicalBedNumber}배드`,
-        bedZoneId: group.bedZoneId,
-        bedZoneName: group.bedZoneName,
-      });
+      setSelectedOrchidGroup(
+        toSelectedFarmStatusOrchidGroup(
+          {
+            orchidGroupId: group.id,
+            varietyName: group.varietyName,
+            genus: group.genus,
+            quantity: group.quantity,
+            status: group.status,
+            houseId: group.houseId,
+            houseNumber: group.houseNumber,
+            physicalBedId:
+              findPhysicalBedId(
+                mapData.houses,
+                group.houseId,
+                group.physicalBedNumber,
+              ) ?? 0,
+            physicalBedNumber: group.physicalBedNumber,
+            physicalBedName: `${group.physicalBedNumber}배드`,
+            bedZoneId: group.bedZoneId,
+            bedZoneName: group.bedZoneName,
+          },
+          group,
+        ),
+      );
     });
   }
 
@@ -373,4 +380,39 @@ function findPhysicalBedId(
   return houses
     .find((house) => house.houseId === houseId)
     ?.physicalBeds.find((bed) => bed.number === physicalBedNumber)?.id;
+}
+
+function findOrchidGroupInZoomData(
+  zoomData: FarmStatusZoomData | null,
+  orchidGroupId: number,
+) {
+  return (
+    zoomData?.physicalBeds
+      .flatMap((bed) => bed.bedZones)
+      .flatMap((zone) => zone.orchidGroups)
+      .find((group) => group.id === orchidGroupId) ?? null
+  );
+}
+
+function toSelectedFarmStatusOrchidGroup(
+  summary: SelectedFarmStatusOrchidGroup,
+  detail: OrchidGroup | null,
+): SelectedFarmStatusOrchidGroup {
+  if (!detail) {
+    return summary;
+  }
+
+  return {
+    ...summary,
+    ageYear: detail.ageYear,
+    endPosition: detail.endPosition,
+    memo: detail.memo,
+    placementType: detail.placementType,
+    potSize: detail.potSize,
+    sortOrder: detail.sortOrder,
+    splitPlacementAllowed: detail.splitPlacementAllowed,
+    startPosition: detail.startPosition,
+    trayCount: detail.trayCount,
+    varietyId: detail.varietyId,
+  };
 }

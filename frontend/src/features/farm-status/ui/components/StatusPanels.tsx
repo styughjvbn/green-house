@@ -123,7 +123,7 @@ function SelectedOrchidDetail({
         />
         <DetailMetric
           label="시작 칸"
-          value={formatOptionalNumber(selectedOrchidGroup.startPosition, "")}
+          value={formatStartCell(selectedOrchidGroup.startPosition)}
         />
         <DetailMetric
           label="종료 칸"
@@ -217,6 +217,14 @@ function formatOptionalNumber(
   }
 
   return suffix ? `${value}${suffix}` : String(value);
+}
+
+function formatStartCell(value: number | null | undefined) {
+  if (value == null) {
+    return "-";
+  }
+
+  return String(value + 1);
 }
 
 function createManagementHref(
