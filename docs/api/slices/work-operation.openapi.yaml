@@ -124,6 +124,7 @@ components:
         varietyName: {type: string}
         quantitySnapshot: {type: integer, format: int32}
         ageYearSnapshot: {type: integer, format: int32}
+        potSizeCodeSnapshot: {type: string}
         potSizeSnapshot: {type: string}
         locationSnapshot: {type: object, additionalProperties: true}
         executionStatus:

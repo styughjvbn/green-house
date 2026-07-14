@@ -20,7 +20,9 @@ API는 `WORK_OPERATION_V2_ENABLED=true`일 때만 노출한다. 기본값은 비
 
 - 자동 그룹 기준은 `variety_id + 현재 년생 + pot_size_code`다.
 - 자동 그룹은 영속 엔티티를 만들지 않고 조회 시 계산한다.
-- `pot_size_code` 도입 전에는 자동 그룹 API를 열지 않는다.
+- 화분 크기 코드는 `POT_2`, `POT_2_5`, `POT_3`, `POT_3_5`, `POT_4`, `POT_4_5`, `POT_5`, `POT_6`, `HANGING`, `ETC`를 사용한다.
+- 미지정은 `UNSPECIFIED`, 기존 값 중 안전하게 매핑할 수 없는 값은 `UNMAPPED`로 보존하고 자동 그룹에서 제외한다.
+- `UNMAPPED` 검수 목록은 `scripts/data-audit/unmapped-pot-sizes.sql`로 조회한다.
 - 사용자 그룹 소속은 위치와 속성이 바뀌어도 유지한다.
 - 구조 변경 결과 난 묶음은 사용자 그룹을 기본 상속하지 않는다. 완료 시 사용자가 선택한다.
 
