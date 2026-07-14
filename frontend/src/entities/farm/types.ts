@@ -17,6 +17,19 @@ export type OrchidGroup = {
   varietyName: string;
   quantity: number;
   potSize: string | null;
+  potSizeCode:
+    | "UNSPECIFIED"
+    | "UNMAPPED"
+    | "POT_2"
+    | "POT_2_5"
+    | "POT_3"
+    | "POT_3_5"
+    | "POT_4"
+    | "POT_4_5"
+    | "POT_5"
+    | "POT_6"
+    | "HANGING"
+    | "ETC";
   ageYear: number | null;
   status: string;
   placementType: string | null;
@@ -251,6 +264,7 @@ export type WorkOperationTarget = {
   varietyName: string;
   quantitySnapshot: number;
   ageYearSnapshot: number | null;
+  potSizeCodeSnapshot: string | null;
   potSizeSnapshot: string | null;
   locationSnapshot: WorkLocationSnapshot;
   executionStatus: WorkTargetExecutionStatus;
