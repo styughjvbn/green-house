@@ -6,7 +6,6 @@ import { useAuctionTracking } from "../../model/useAuctionTracking";
 import { AuctionFilters } from "./AuctionFilters";
 import { AuctionLotDetail } from "./AuctionLotDetail";
 import { AuctionLotList } from "./AuctionLotList";
-import { AuctionSummaryCards } from "./AuctionSummaryCards";
 import {
   SalesTabError,
   SalesTabSplit,
@@ -24,10 +23,10 @@ export function AuctionTrackingView({
 
   return (
     <SalesTabStack>
-      <AuctionSummaryCards summary={tracking.summary} />
       <AuctionFilters
         filters={tracking.filters}
         loading={tracking.loading}
+        summary={tracking.summary}
         onChange={tracking.updateFilter}
         onSearch={() => tracking.refresh()}
         onReset={tracking.resetFilters}

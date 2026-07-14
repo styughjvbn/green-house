@@ -143,7 +143,7 @@ export function SalesFilterResetButton({
 }) {
   return (
     <button
-      className={`inline-flex h-10 items-center justify-center gap-2 rounded-md border border-[#dfe5dc] bg-white px-4 text-sm font-semibold text-[#344138] ${className}`}
+      className={`inline-flex h-10 items-center justify-center gap-2 rounded-md border border-[#dfe5dc] bg-white px-4 text-sm font-semibold text-[#344138] lg:mt-6 ${className}`}
       type="button"
       onClick={onClick}
     >
@@ -166,7 +166,7 @@ export function SalesFilterSearchButton({
 }) {
   return (
     <button
-      className={`inline-flex h-10 items-center justify-center gap-2 rounded-md bg-[#159447] px-5 text-sm font-semibold text-white disabled:opacity-60 ${className}`}
+      className={`inline-flex h-10 items-center justify-center gap-2 rounded-md bg-[#159447] px-5 text-sm font-semibold text-white disabled:opacity-60 lg:mt-6 ${className}`}
       type="button"
       disabled={disabled}
       onClick={onClick}

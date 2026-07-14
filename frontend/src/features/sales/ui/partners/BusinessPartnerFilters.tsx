@@ -53,8 +53,8 @@ export function BusinessPartnerFilters({
           onChange={(value) => onChange("keyword", value)}
         />
 
-        <SalesFilterResetButton className="2xl:mt-7" onClick={onReset} />
-        <SalesFilterSearchButton className="2xl:mt-7" />
+        <SalesFilterResetButton onClick={onReset} />
+        <SalesFilterSearchButton />
       </SalesFilterGrid>
     </SalesFilterPanel>
   );

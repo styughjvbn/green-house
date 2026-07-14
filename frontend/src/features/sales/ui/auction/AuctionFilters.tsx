@@ -1,7 +1,9 @@
+import type { AuctionTrackingSummary } from "@/entities/farm/types";
 import { auctionStatusOptions } from "../../lib/auctionDisplay";
 import type { AuctionFilterState } from "../../model/types";
 import {
   SalesFilterCheck,
+  SalesFilterDateRange,
   SalesFilterGrid,
   SalesFilterInput,
   SalesFilterPanel,
@@ -13,12 +15,14 @@ import {
 export function AuctionFilters({
   filters,
   loading,
+  summary,
   onChange,
   onSearch,
   onReset,
 }: {
   filters: AuctionFilterState;
   loading: boolean;
+  summary: AuctionTrackingSummary;
   onChange: <K extends keyof AuctionFilterState>(
     field: K,
     value: AuctionFilterState[K],
@@ -31,35 +35,24 @@ export function AuctionFilters({
       footer={
         <>
           <SalesFilterCheck
-            label="확인 필요만"
+            label={`확인 필요만 ${summary.reviewRequiredCount.toLocaleString()}건`}
             checked={filters.reviewOnly}
             onChange={(checked) => onChange("reviewOnly", checked)}
           />
           <SalesFilterCheck
-            label="반환 추정만"
-            checked={filters.returnOnly}
-            onChange={(checked) => onChange("returnOnly", checked)}
-          />
-          <SalesFilterCheck
-            label="재경매 대기만"
+            label={`재경매 대기만 ${summary.waitingQuantity.toLocaleString()}분`}
             checked={filters.waitingOnly}
             onChange={(checked) => onChange("waitingOnly", checked)}
           />
         </>
       }
     >
-      <SalesFilterGrid className="sm:grid-cols-2 lg:grid-cols-4 2xl:grid-cols-[1fr_1fr_1fr_1fr_1fr_1fr_1.4fr_auto_auto]">
-        <SalesFilterInput
-          label="출하 시작일"
-          type="date"
-          value={filters.from}
-          onChange={(value) => onChange("from", value)}
-        />
-        <SalesFilterInput
-          label="출하 종료일"
-          type="date"
-          value={filters.to}
-          onChange={(value) => onChange("to", value)}
+      <SalesFilterGrid className="sm:grid-cols-2 lg:grid-cols-[2fr_0.5fr_0.5fr_0.5fr_1fr_1.4fr_auto_auto]">
+        <SalesFilterDateRange
+          from={filters.from}
+          to={filters.to}
+          onFromChange={(value) => onChange("from", value)}
+          onToChange={(value) => onChange("to", value)}
         />
         <SalesFilterInput
           label="경매장"
@@ -93,9 +86,8 @@ export function AuctionFilters({
           value={filters.keyword}
           onChange={(value) => onChange("keyword", value)}
         />
-        <SalesFilterResetButton className="2xl:mt-7" onClick={onReset} />
+        <SalesFilterResetButton onClick={onReset} />
         <SalesFilterSearchButton
-          className="2xl:mt-7"
           disabled={loading}
           label="조회"
           onClick={onSearch}
