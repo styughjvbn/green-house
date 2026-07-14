@@ -219,6 +219,86 @@ export type WorkRecord = {
   cancelReason: string | null;
 };
 
+export type WorkOperationStatus =
+  | "DRAFT"
+  | "PLANNED"
+  | "IN_PROGRESS"
+  | "PAUSED"
+  | "COMPLETED"
+  | "CANCELED"
+  | "CORRECTED";
+
+export type WorkTargetExecutionStatus =
+  | "PENDING"
+  | "IN_PROGRESS"
+  | "COMPLETED"
+  | "SKIPPED"
+  | "CANCELED"
+  | "FAILED";
+
+export type WorkLocationSnapshot = {
+  houseId: number;
+  houseNumber: number;
+  physicalBedId: number;
+  physicalBedNumber: number;
+  bedZoneId: number;
+  bedZoneName: string;
+};
+
+export type WorkOperationTarget = {
+  id: number | null;
+  orchidGroupId: number;
+  varietyName: string;
+  quantitySnapshot: number;
+  ageYearSnapshot: number | null;
+  potSizeSnapshot: string | null;
+  locationSnapshot: WorkLocationSnapshot;
+  executionStatus: WorkTargetExecutionStatus;
+};
+
+export type WorkTargetPreview = {
+  orchidGroupCount: number;
+  totalQuantity: number;
+  targets: WorkOperationTarget[];
+};
+
+export type WorkOperation = {
+  id: number;
+  workTypeId: number;
+  workType: string;
+  title: string;
+  status: WorkOperationStatus;
+  plannedStartDate: string;
+  plannedEndDate: string | null;
+  actualStartAt: string | null;
+  actualEndAt: string | null;
+  sourceScopeType: "HOUSE";
+  sourceScopeId: number;
+  targetSnapshotAt: string;
+  details: Record<string, unknown> | null;
+  worker: string | null;
+  memo: string | null;
+  targets: WorkOperationTarget[];
+};
+
+export type OrchidGroupWorkHistory = {
+  sourceKind: "WORK_OPERATION" | "LEGACY_WORK_RECORD";
+  workOperationId: number | null;
+  legacyWorkRecordId: number | null;
+  workTypeId: number | null;
+  workType: string;
+  title: string;
+  workDate: string;
+  status: string;
+  propagated: boolean;
+  sourceScopeType: WorkRecordTargetType;
+  sourceScopeId: number | null;
+  locationSnapshot: WorkLocationSnapshot | null;
+  currentLocation: WorkLocationSnapshot;
+  worker: string | null;
+  memo: string | null;
+};
+
 export type PartnerType = "WHOLESALE" | "RETAIL" | "AUCTION_HOUSE";
 
 export type BusinessPartner = {

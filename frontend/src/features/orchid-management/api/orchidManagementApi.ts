@@ -4,6 +4,7 @@ import type {
   FarmStatusMapData,
   House,
   OrchidGroup,
+  OrchidGroupWorkHistory,
   VarietyOption,
   WorkRecord,
   WorkRecordTargetType,
@@ -181,6 +182,12 @@ export function getOrchidWorkRecords(
     params.set("targetId", String(targetId));
   }
   return fetchApi<WorkRecord[]>(`/work-records?${params.toString()}`);
+}
+
+export function getOrchidGroupWorkHistory(orchidGroupId: number) {
+  return fetchApi<OrchidGroupWorkHistory[]>(
+    `/orchid-groups/${orchidGroupId}/work-history`,
+  );
 }
 
 export async function createOrchidWorkRecord(

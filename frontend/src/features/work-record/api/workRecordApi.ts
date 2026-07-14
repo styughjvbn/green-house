@@ -4,9 +4,13 @@ import type {
   OrchidGroup,
   PhysicalBed,
   WorkRecord,
+  WorkOperation,
+  WorkTargetPreview,
 } from "@/entities/farm/types";
 import type {
   CreateWorkRecordPayload,
+  CreateWorkOperationPayload,
+  WorkTargetPreviewPayload,
   WorkRecordTargetOptions,
 } from "../model/types";
 
@@ -88,4 +92,56 @@ export async function cancelWorkRecord({
   }
 
   return body.data as WorkRecord;
+}
+
+export async function previewWorkOperationTargets(
+  payload: WorkTargetPreviewPayload,
+): Promise<WorkTargetPreview> {
+  return requestWorkOperation<WorkTargetPreview>(
+    "/work-operations/target-preview",
+    "POST",
+    payload,
+  );
+}
+
+export async function createWorkOperation(
+  payload: CreateWorkOperationPayload,
+): Promise<WorkOperation> {
+  return requestWorkOperation<WorkOperation>(
+    "/work-operations",
+    "POST",
+    payload,
+  );
+}
+
+export async function completeWorkOperation(
+  workOperationId: number,
+): Promise<WorkOperation> {
+  return requestWorkOperation<WorkOperation>(
+    `/work-operations/${workOperationId}/complete`,
+    "POST",
+  );
+}
+
+async function requestWorkOperation<T>(
+  path: string,
+  method: "POST",
+  payload?: unknown,
+): Promise<T> {
+  const response = await fetch(`${API_BASE_URL}${path}`, {
+    method,
+    credentials: "include",
+    headers: payload ? { "Content-Type": "application/json" } : undefined,
+    body: payload ? JSON.stringify(payload) : undefined,
+  });
+  const body = await response.json().catch(() => null);
+
+  if (!response.ok) {
+    if (response.status === 404) {
+      throw new Error("신규 작업 실행 기능이 비활성화되어 있습니다.");
+    }
+    throw new Error(body?.error?.message ?? "신규 작업을 처리하지 못했습니다.");
+  }
+
+  return body.data as T;
 }

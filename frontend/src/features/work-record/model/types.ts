@@ -4,6 +4,8 @@
   OrchidGroup,
   PhysicalBed,
   WorkRecord,
+  WorkOperation,
+  WorkTargetPreview,
   WorkRecordTargetType,
   WorkType,
 } from "@/entities/farm/types";
@@ -54,4 +56,39 @@ export type WorkRecordFilterState = {
   to: string;
   worker: string;
   keyword: string;
+};
+
+export type WorkOperationFormState = {
+  houseId: string;
+  title: string;
+  plannedStartDate: string;
+  plannedEndDate: string;
+  materialName: string;
+  dilutionRatio: string;
+  quantity: string;
+  worker: string;
+  memo: string;
+};
+
+export type WorkTargetPreviewPayload = {
+  scopeType: "HOUSE";
+  scopeId: number;
+};
+
+export type CreateWorkOperationPayload = {
+  workTypeId: number;
+  title: string;
+  plannedStartDate: string;
+  plannedEndDate: string | null;
+  sourceScopeType: "HOUSE";
+  sourceScopeId: number;
+  details: Record<string, unknown>;
+  worker: string | null;
+  memo: string | null;
+  excludedOrchidGroupIds: number[];
+};
+
+export type WorkOperationUiState = {
+  operation: WorkOperation | null;
+  preview: WorkTargetPreview | null;
 };
