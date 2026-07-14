@@ -95,6 +95,7 @@ public class WorkOperationService {
 						group.varietyId(),
 						group.varietyName(),
 						group.ageYear(),
+						group.potSizeCode(),
 						group.potSize(),
 						group.quantity(),
 						group.location()))

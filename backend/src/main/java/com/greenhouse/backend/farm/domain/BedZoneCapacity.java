@@ -62,7 +62,7 @@ public class BedZoneCapacity extends BaseEntity {
 			Boolean allowed,
 			String memo) {
 		this.placementType = placementType;
-		this.potSize = potSize;
+		this.potSize = PotSizeCode.fromInput(potSize).getDisplayValue();
 		this.capacityMode = capacityMode;
 		this.unitSpan = unitSpan;
 		this.capacityValue = capacityValue;

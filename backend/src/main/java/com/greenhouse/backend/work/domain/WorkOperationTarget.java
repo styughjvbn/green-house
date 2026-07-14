@@ -87,6 +87,7 @@ public class WorkOperationTarget {
 			Long varietyIdSnapshot,
 			String varietyNameSnapshot,
 			Integer ageYearSnapshot,
+			String potSizeCodeSnapshot,
 			String potSizeSnapshot,
 			Integer quantitySnapshot,
 			Map<String, Object> locationSnapshot) {
@@ -98,6 +99,7 @@ public class WorkOperationTarget {
 		this.varietyIdSnapshot = varietyIdSnapshot;
 		this.varietyNameSnapshot = varietyNameSnapshot;
 		this.ageYearSnapshot = ageYearSnapshot;
+		this.potSizeCodeSnapshot = potSizeCodeSnapshot;
 		this.potSizeSnapshot = potSizeSnapshot;
 		this.quantitySnapshot = quantitySnapshot;
 		this.locationSnapshot = locationSnapshot;

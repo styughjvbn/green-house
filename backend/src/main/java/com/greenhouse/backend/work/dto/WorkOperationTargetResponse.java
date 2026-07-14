@@ -11,6 +11,7 @@ public record WorkOperationTargetResponse(
 		String varietyName,
 		Integer quantitySnapshot,
 		Integer ageYearSnapshot,
+		String potSizeCodeSnapshot,
 		String potSizeSnapshot,
 		Map<String, Object> locationSnapshot,
 		WorkTargetExecutionStatus executionStatus) {
@@ -23,6 +24,7 @@ public record WorkOperationTargetResponse(
 				target.varietyName(),
 				target.quantity(),
 				target.ageYear(),
+				target.potSizeCode(),
 				target.potSize(),
 				target.location(),
 				WorkTargetExecutionStatus.PENDING);
@@ -37,6 +39,7 @@ public record WorkOperationTargetResponse(
 				target.getVarietyNameSnapshot(),
 				target.getQuantitySnapshot(),
 				target.getAgeYearSnapshot(),
+				target.getPotSizeCodeSnapshot(),
 				target.getPotSizeSnapshot(),
 				target.getLocationSnapshot(),
 				executionStatus);

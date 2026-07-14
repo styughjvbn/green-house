@@ -117,7 +117,7 @@ public class InboundRecord extends BaseEntity {
 		this.actualQuantity = actualQuantity;
 		this.tempLocation = tempLocation;
 		this.pottingDueDate = pottingDueDate;
-		this.potSize = potSize;
+		this.potSize = PotSizeCode.fromInput(potSize).getDisplayValue();
 		this.ageYear = ageYear;
 		this.growthStage = growthStage;
 		this.placementType = placementType;
@@ -147,7 +147,7 @@ public class InboundRecord extends BaseEntity {
 		this.actualQuantity = actualQuantity;
 		this.tempLocation = tempLocation;
 		this.pottingDueDate = pottingDueDate;
-		this.potSize = potSize;
+		this.potSize = PotSizeCode.fromInput(potSize).getDisplayValue();
 		this.ageYear = ageYear;
 		this.growthStage = growthStage;
 		this.placementType = placementType;

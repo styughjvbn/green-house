@@ -9,5 +9,6 @@ public record ResolvedWorkTarget(
 		Integer quantity,
 		Integer ageYear,
 		String potSize,
+		String potSizeCode,
 		Map<String, Object> location) {
 }

@@ -50,6 +50,7 @@ public class FarmWorkTargetResolver implements WorkTargetResolver {
 				group.getQuantity(),
 				currentAgeYear(group),
 				group.getPotSize(),
+				group.getPotSizeCode().name(),
 				location(group));
 	}
 

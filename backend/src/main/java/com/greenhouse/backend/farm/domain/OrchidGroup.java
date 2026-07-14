@@ -3,6 +3,8 @@ package com.greenhouse.backend.farm.domain;
 import com.greenhouse.backend.common.domain.BaseEntity;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
 import jakarta.persistence.FetchType;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
@@ -51,6 +53,10 @@ public class OrchidGroup extends BaseEntity {
 	@Column(name = "pot_size")
 	private String potSize;
 
+	@Enumerated(EnumType.STRING)
+	@Column(name = "pot_size_code", nullable = false, length = 30)
+	private PotSizeCode potSizeCode;
+
 	@Column(name = "age_year")
 	private Integer ageYear;
 
@@ -94,7 +100,7 @@ public class OrchidGroup extends BaseEntity {
 		this.varietyName = varietyName;
 		this.quantity = quantity;
 		this.reservedQuantity = 0;
-		this.potSize = potSize;
+		applyPotSize(potSize);
 		this.ageYear = ageYear;
 		this.status = status;
 		this.sortOrder = sortOrder;
@@ -119,7 +125,7 @@ public class OrchidGroup extends BaseEntity {
 		this.genus = genus;
 		this.varietyName = varietyName;
 		this.quantity = quantity;
-		this.potSize = potSize;
+		applyPotSize(potSize);
 		this.ageYear = ageYear;
 		this.status = status;
 		this.placementType = placementType;
@@ -128,6 +134,11 @@ public class OrchidGroup extends BaseEntity {
 		this.startPosition = startPosition;
 		this.endPosition = endPosition;
 		this.memo = memo;
+	}
+
+	private void applyPotSize(String potSize) {
+		this.potSizeCode = PotSizeCode.fromInput(potSize);
+		this.potSize = this.potSizeCode.getDisplayValue();
 	}
 
 	public void moveTo(BedZone bedZone, Integer sortOrder, BigDecimal startPosition, BigDecimal endPosition) {
