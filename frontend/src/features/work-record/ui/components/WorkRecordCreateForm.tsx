@@ -1,5 +1,6 @@
 ﻿"use client";
 
+import { X } from "lucide-react";
 import type { FormEvent } from "react";
 import type {
   BedZone,
@@ -30,6 +31,7 @@ type WorkRecordCreateFormProps = {
   safePhysicalBedId: string;
   saving: boolean;
   workTypes: WorkType[];
+  onClose: () => void;
   onChange: <K extends keyof WorkRecordFormState>(
     field: K,
     value: WorkRecordFormState[K],
@@ -49,6 +51,7 @@ export function WorkRecordCreateForm({
   safePhysicalBedId,
   saving,
   workTypes,
+  onClose,
   onChange,
   onSubmit,
 }: WorkRecordCreateFormProps) {
@@ -57,110 +60,144 @@ export function WorkRecordCreateForm({
   const template = selectedWorkType?.template ?? null;
 
   return (
-    <section className="rounded-md border border-[#d7ddd4] bg-white p-4 shadow-sm">
-      <div>
-        <p className="text-sm font-semibold text-[#3d6f91]">작업 등록</p>
-        <h2 className="mt-1 text-2xl font-semibold">새 작업 이력</h2>
-      </div>
-
-      <form className="mt-4 space-y-3" onSubmit={onSubmit}>
-        <div className="grid grid-cols-2 gap-3">
-          <SelectField
-            label="작업 유형"
-            value={form.workTypeId}
-            onChange={(value) => onChange("workTypeId", value)}
+    <div
+      className="fixed inset-0 z-[1000] flex items-center justify-center bg-black/35 p-4"
+      role="presentation"
+      onMouseDown={onClose}
+    >
+      <section
+        className="flex max-h-[calc(100dvh-2rem)] w-full max-w-2xl flex-col rounded-md bg-white shadow-xl"
+        role="dialog"
+        aria-modal="true"
+        aria-label="새 작업 이력"
+        onMouseDown={(event) => event.stopPropagation()}
+      >
+        <div className="flex shrink-0 items-start justify-between gap-3 border-b border-[#edf0ec] p-5">
+          <div>
+            <p className="text-sm font-semibold text-[#3d6f91]">작업 등록</p>
+            <h2 className="mt-1 text-xl font-semibold">새 작업 이력</h2>
+          </div>
+          <button
+            className="flex h-8 w-8 shrink-0 items-center justify-center rounded border border-[#d9dfda] text-[#435047] hover:bg-[#f4f7f3]"
+            type="button"
+            onClick={onClose}
+            aria-label="닫기"
           >
-            {manualWorkTypes.map((workType) => (
-              <option key={workType.id} value={workType.id}>
-                {workType.name}
-              </option>
-            ))}
-          </SelectField>
-          <TextField
-            label="작업일"
-            required
-            type="date"
-            value={form.workDate}
-            onChange={(value) => onChange("workDate", value)}
-          />
+            <X className="h-4 w-4" strokeWidth={1.8} aria-hidden="true" />
+          </button>
         </div>
 
-        <TargetSelectorFields
-          bedZones={bedZones}
-          form={form}
-          houses={houses}
-          orchidGroups={orchidGroups}
-          physicalBeds={physicalBeds}
-          safeBedZoneId={safeBedZoneId}
-          safeOrchidGroupId={safeOrchidGroupId}
-          safePhysicalBedId={safePhysicalBedId}
-          onChange={onChange}
-        />
-
-        {isVisibleWorkRecordField(template, "materialName") ||
-        isVisibleWorkRecordField(template, "dilutionRatio") ? (
+        <form
+          className="min-h-0 space-y-3 overflow-y-auto p-5"
+          onSubmit={onSubmit}
+        >
           <div className="grid grid-cols-2 gap-3">
-            {isVisibleWorkRecordField(template, "materialName") ? (
+            <SelectField
+              label="작업 유형"
+              value={form.workTypeId}
+              onChange={(value) => onChange("workTypeId", value)}
+            >
+              {manualWorkTypes.map((workType) => (
+                <option key={workType.id} value={workType.id}>
+                  {workType.name}
+                </option>
+              ))}
+            </SelectField>
+            <TextField
+              label="작업일"
+              required
+              type="date"
+              value={form.workDate}
+              onChange={(value) => onChange("workDate", value)}
+            />
+          </div>
+
+          <TargetSelectorFields
+            bedZones={bedZones}
+            form={form}
+            houses={houses}
+            orchidGroups={orchidGroups}
+            physicalBeds={physicalBeds}
+            safeBedZoneId={safeBedZoneId}
+            safeOrchidGroupId={safeOrchidGroupId}
+            safePhysicalBedId={safePhysicalBedId}
+            onChange={onChange}
+          />
+
+          {isVisibleWorkRecordField(template, "materialName") ||
+          isVisibleWorkRecordField(template, "dilutionRatio") ? (
+            <div className="grid grid-cols-2 gap-3">
+              {isVisibleWorkRecordField(template, "materialName") ? (
+                <TextField
+                  label={getWorkRecordFieldLabel(template, "materialName")}
+                  value={form.materialName}
+                  onChange={(value) => onChange("materialName", value)}
+                />
+              ) : null}
+              {isVisibleWorkRecordField(template, "dilutionRatio") ? (
+                <TextField
+                  label={getWorkRecordFieldLabel(template, "dilutionRatio")}
+                  value={form.dilutionRatio}
+                  onChange={(value) => onChange("dilutionRatio", value)}
+                />
+              ) : null}
+            </div>
+          ) : null}
+
+          <div className="grid grid-cols-2 gap-3">
+            {isVisibleWorkRecordField(template, "quantity") ? (
               <TextField
-                label={getWorkRecordFieldLabel(template, "materialName")}
-                value={form.materialName}
-                onChange={(value) => onChange("materialName", value)}
+                label={getWorkRecordFieldLabel(template, "quantity")}
+                value={form.quantity}
+                onChange={(value) => onChange("quantity", value)}
               />
             ) : null}
-            {isVisibleWorkRecordField(template, "dilutionRatio") ? (
+            {isVisibleWorkRecordField(template, "worker") ? (
               <TextField
-                label={getWorkRecordFieldLabel(template, "dilutionRatio")}
-                value={form.dilutionRatio}
-                onChange={(value) => onChange("dilutionRatio", value)}
+                label={getWorkRecordFieldLabel(template, "worker")}
+                value={form.worker}
+                onChange={(value) => onChange("worker", value)}
               />
             ) : null}
           </div>
-        ) : null}
 
-        <div className="grid grid-cols-2 gap-3">
-          {isVisibleWorkRecordField(template, "quantity") ? (
-            <TextField
-              label={getWorkRecordFieldLabel(template, "quantity")}
-              value={form.quantity}
-              onChange={(value) => onChange("quantity", value)}
-            />
+          {isVisibleWorkRecordField(template, "memo") ? (
+            <label className="block">
+              <span className="text-sm font-semibold text-[#435047]">
+                {getWorkRecordFieldLabel(template, "memo")}
+              </span>
+              <textarea
+                className="mt-1 min-h-20 w-full rounded-md border border-[#cfd8cc] px-3 py-2 text-sm"
+                value={form.memo}
+                onChange={(event) => onChange("memo", event.target.value)}
+              />
+            </label>
           ) : null}
-          {isVisibleWorkRecordField(template, "worker") ? (
-            <TextField
-              label={getWorkRecordFieldLabel(template, "worker")}
-              value={form.worker}
-              onChange={(value) => onChange("worker", value)}
-            />
+
+          {errorMessage ? (
+            <p className="rounded-md bg-[#fff1ec] p-3 text-sm text-[#9b341e]">
+              {errorMessage}
+            </p>
           ) : null}
-        </div>
 
-        {isVisibleWorkRecordField(template, "memo") ? (
-          <label className="block">
-            <span className="text-sm font-semibold text-[#435047]">
-              {getWorkRecordFieldLabel(template, "memo")}
-            </span>
-            <textarea
-              className="mt-1 min-h-20 w-full rounded-md border border-[#cfd8cc] px-3 py-2 text-sm"
-              value={form.memo}
-              onChange={(event) => onChange("memo", event.target.value)}
-            />
-          </label>
-        ) : null}
-
-        {errorMessage ? (
-          <p className="rounded-md bg-[#fff1ec] p-3 text-sm text-[#9b341e]">
-            {errorMessage}
-          </p>
-        ) : null}
-
-        <button
-          className="w-full rounded-md bg-[#159447] px-4 py-3 text-sm font-semibold text-white disabled:opacity-60"
-          disabled={saving || !form.workTypeId}
-          type="submit"
-        >
-          {saving ? "저장 중" : "작업 이력 저장"}
-        </button>
-      </form>
-    </section>
+          <div className="flex justify-end gap-2 border-t border-[#edf0ec] pt-4">
+            <button
+              className="rounded-md border border-[#d4dbd5] px-4 py-2 text-sm font-semibold"
+              type="button"
+              onClick={onClose}
+            >
+              취소
+            </button>
+            <button
+              className="rounded-md bg-[#159447] px-4 py-2 text-sm font-semibold text-white disabled:opacity-60"
+              disabled={saving || !form.workTypeId}
+              type="submit"
+            >
+              {saving ? "저장 중" : "작업 이력 저장"}
+            </button>
+          </div>
+        </form>
+      </section>
+    </div>
   );
 }

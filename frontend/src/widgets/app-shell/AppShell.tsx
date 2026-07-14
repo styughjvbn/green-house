@@ -242,7 +242,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           )}
         </div>
 
-        <nav className="mt-5 min-h-0 flex-1 space-y-3 overflow-y-auto pr-1">
+        <nav className="scrollbar-hidden mt-5 min-h-0 flex-1 space-y-3 overflow-y-auto">
           {navigation.map((item) => (
             <div key={item.href}>
               <NavItem
