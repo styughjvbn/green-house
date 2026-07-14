@@ -7,8 +7,8 @@
 
 - 기준 명세: `docs/api/openapi.yaml`
 - OpenAPI 버전: `3.1.0`
-- 현재 구현 API: `68` operations / `56` path entries
-- schema 수: `117`
+- 현재 구현 API: `81` operations / `62` path entries
+- schema 수: `124`
 - Base URL: `/api`
 - 공통 응답: `ApiResponse*` 래퍼 사용
 
@@ -139,6 +139,25 @@
 | `GET` | `/api/orchid-groups/{orchidGroupId}/work-history` | 기존·신규 통합 이력 |
 
 초기 구현 제한: `sourceScopeType=HOUSE`, 작업 유형 코드 `PESTICIDE`만 지원한다.
+
+### 난 묶음 사용자 그룹
+
+- slice: `docs/api/slices/orchid-collection.openapi.yaml`
+- package: `com.greenhouse.backend.farm`
+- controller tag: `orchid-group-collection-controller`
+- 역할: 사용자 그룹 생성·수정·보관, 난 묶음 소속 추가·해제·역조회
+- operations: 8
+
+| Method | Path | Operation |
+|---|---|---|
+| `GET` | `/api/orchid-group-collections` | 활성/보관 사용자 그룹 목록 |
+| `POST` | `/api/orchid-group-collections` | 사용자 그룹 생성 |
+| `GET` | `/api/orchid-group-collections/{collectionId}` | 사용자 그룹 상세 |
+| `PATCH` | `/api/orchid-group-collections/{collectionId}` | 이름·설명·목적 수정 |
+| `POST` | `/api/orchid-group-collections/{collectionId}/archive` | 사용자 그룹 보관 |
+| `POST` | `/api/orchid-group-collections/{collectionId}/members` | 난 묶음 소속 일괄 추가 |
+| `DELETE` | `/api/orchid-group-collections/{collectionId}/members/{orchidGroupId}` | 난 묶음 소속 해제 |
+| `GET` | `/api/orchid-groups/{orchidGroupId}/collections` | 난 묶음의 사용자 그룹 역조회 |
 
 ### 거래처
 
