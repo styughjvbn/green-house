@@ -164,8 +164,8 @@ export function DataTable<TData>({
     onPageSizeChange;
 
   return (
-    <section className="min-w-0 rounded-md border border-[#dfe5dc] bg-white shadow-sm">
-      <div className="flex items-center justify-between gap-3 border-b border-[#e7ebe5] px-4 py-3">
+    <section className="flex h-full min-h-0 min-w-0 flex-col rounded-md border border-[#dfe5dc] bg-white shadow-sm">
+      <div className="flex shrink-0 items-center justify-between gap-3 border-b border-[#e7ebe5] px-4 py-3">
         <h2 className="text-base font-bold text-[#17251b]">{title}</h2>
         <div className="flex shrink-0 items-center gap-3">
           {totalLabel ? (
@@ -178,7 +178,7 @@ export function DataTable<TData>({
         </div>
       </div>
 
-      <div ref={tableBodyRef} className="max-h-[590px] overflow-auto bg-white">
+      <div ref={tableBodyRef} className="min-h-0 flex-1 overflow-auto bg-white">
         <table
           className="w-full table-fixed border-collapse text-left text-xs"
           style={{
@@ -306,7 +306,7 @@ export function DataTable<TData>({
       </div>
 
       {hasPagination ? (
-        <div className="flex flex-wrap items-center justify-between gap-2 border-t border-[#e7ebe5] px-3 py-2.5">
+        <div className="flex shrink-0 flex-wrap items-center justify-between gap-2 border-t border-[#e7ebe5] px-3 py-2.5">
           <PaginationControls
             nextLabel="다음"
             pageCount={totalPages}

@@ -23,7 +23,11 @@ export function SalesTabStack({
   children: ReactNode;
   className?: string;
 }) {
-  return <div className={`space-y-3 ${className}`}>{children}</div>;
+  return (
+    <div className={`flex h-full min-h-0 flex-col gap-3 ${className}`}>
+      {children}
+    </div>
+  );
 }
 
 export function SalesTabSplit({
