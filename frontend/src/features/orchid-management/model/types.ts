@@ -119,6 +119,34 @@ export type OrchidManagementSearchState = {
   status: string;
 };
 
+export type OrchidGroupCollectionMember = {
+  membershipId: number;
+  orchidGroupId: number;
+  varietyName: string;
+  quantity: number;
+  status: string;
+  potSize: string | null;
+  ageYear: number | null;
+  houseNumber: number;
+  physicalBedNumber: number;
+  bedZoneName: string;
+  joinedAt: string;
+};
+
+export type OrchidGroupCollection = {
+  id: number;
+  name: string;
+  description: string | null;
+  purpose: string | null;
+  status: "ACTIVE" | "ARCHIVED";
+  orchidGroupCount: number;
+  totalQuantity: number;
+  createdBy: string | null;
+  createdAt: string;
+  updatedAt: string;
+  members: OrchidGroupCollectionMember[];
+};
+
 export type OrchidManagementMapProps = {
   mapData: FarmStatusMapData;
   house: House;

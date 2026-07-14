@@ -26,6 +26,7 @@ import type {
 import ActionButton from "./ActionButton";
 import OrchidGroupForm from "./OrchidGroupForm";
 import OrchidWorkRecordForm from "./OrchidWorkRecordForm";
+import UserCollectionPanel from "./UserCollectionPanel";
 
 export default function OrchidSelectionPanel({
   copiedOrchidGroup,
@@ -322,6 +323,13 @@ export default function OrchidSelectionPanel({
             </p>
           ) : null}
         </section>
+      ) : null}
+
+      {!hideList && selectedOrchidGroup ? (
+        <UserCollectionPanel
+          key={selectedOrchidGroup.id}
+          orchidGroup={selectedOrchidGroup}
+        />
       ) : null}
 
       {mutationMode === "CREATE" || mutationMode === "EDIT" ? (

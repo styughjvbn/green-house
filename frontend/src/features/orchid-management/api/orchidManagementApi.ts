@@ -1,4 +1,4 @@
-import { API_BASE_URL, fetchApi } from "@/shared/api/client";
+import { API_BASE_URL, fetchApi, handleAuthExpired } from "@/shared/api/client";
 import type {
   BedZonePlacementProfile,
   FarmStatusMapData,
@@ -12,6 +12,7 @@ import type {
 } from "@/entities/farm/types";
 import type {
   MutationPayload,
+  OrchidGroupCollection,
   PreciseMovePayload,
   WorkRecordQuickPayload,
 } from "../model/types";
@@ -190,6 +191,44 @@ export function getOrchidGroupWorkHistory(orchidGroupId: number) {
   );
 }
 
+export function getOrchidGroupCollections() {
+  return fetchApi<OrchidGroupCollection[]>("/orchid-group-collections");
+}
+
+export function createOrchidGroupCollection(name: string) {
+  return submitCollectionMutation("/orchid-group-collections", "POST", {
+    name,
+  });
+}
+
+export function addOrchidGroupCollectionMember(
+  collectionId: number,
+  orchidGroupId: number,
+) {
+  return submitCollectionMutation(
+    `/orchid-group-collections/${collectionId}/members`,
+    "POST",
+    { orchidGroupIds: [orchidGroupId] },
+  );
+}
+
+export function removeOrchidGroupCollectionMember(
+  collectionId: number,
+  orchidGroupId: number,
+) {
+  return submitCollectionMutation(
+    `/orchid-group-collections/${collectionId}/members/${orchidGroupId}`,
+    "DELETE",
+  );
+}
+
+export function archiveOrchidGroupCollection(collectionId: number) {
+  return submitCollectionMutation(
+    `/orchid-group-collections/${collectionId}/archive`,
+    "POST",
+  );
+}
+
 export async function createOrchidWorkRecord(
   payload: WorkRecordQuickPayload,
 ): Promise<WorkRecord> {
@@ -237,4 +276,25 @@ async function submitOrchidMutation(
   if (!response.ok) {
     throw new Error(resolveErrorMessage(body, "저장하지 못했습니다."));
   }
+}
+
+async function submitCollectionMutation(
+  path: string,
+  method: "POST" | "DELETE",
+  payload?: object,
+): Promise<OrchidGroupCollection> {
+  const response = await fetch(`${API_BASE_URL}${path}`, {
+    method,
+    credentials: "include",
+    headers: payload ? { "Content-Type": "application/json" } : undefined,
+    body: payload ? JSON.stringify(payload) : undefined,
+  });
+  await handleAuthExpired(response);
+  const body = await readJson(response);
+  if (!response.ok) {
+    throw new Error(
+      resolveErrorMessage(body, "사용자 그룹을 변경하지 못했습니다."),
+    );
+  }
+  return (body as { data: OrchidGroupCollection }).data;
 }
