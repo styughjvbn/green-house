@@ -6,11 +6,7 @@ import { useAuctionTracking } from "../../model/useAuctionTracking";
 import { AuctionFilters } from "./AuctionFilters";
 import { AuctionLotDetail } from "./AuctionLotDetail";
 import { AuctionLotList } from "./AuctionLotList";
-import {
-  SalesTabError,
-  SalesTabSplit,
-  SalesTabStack,
-} from "../common/SalesTabLayout";
+import { TabError, TabSplit, TabStack } from "@/shared/ui/TabLayout";
 
 export function AuctionTrackingView({
   initialPage,
@@ -22,7 +18,7 @@ export function AuctionTrackingView({
   const tracking = useAuctionTracking(initialPage, initialSummary);
 
   return (
-    <SalesTabStack>
+    <TabStack>
       <AuctionFilters
         filters={tracking.filters}
         loading={tracking.loading}
@@ -31,8 +27,8 @@ export function AuctionTrackingView({
         onSearch={() => tracking.refresh()}
         onReset={tracking.resetFilters}
       />
-      <SalesTabError message={tracking.error} />
-      <SalesTabSplit
+      <TabError message={tracking.error} />
+      <TabSplit
         columns="lg:grid-cols-[minmax(0,1.15fr)_minmax(420px,0.85fr)]"
         gap="gap-3"
       >
@@ -55,7 +51,7 @@ export function AuctionTrackingView({
           onConfirmReturn={tracking.confirmReturn}
           onAdjust={tracking.adjustQuantity}
         />
-      </SalesTabSplit>
-    </SalesTabStack>
+      </TabSplit>
+    </TabStack>
   );
 }

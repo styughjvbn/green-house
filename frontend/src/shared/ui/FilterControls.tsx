@@ -1,7 +1,7 @@
 import type { ReactNode } from "react";
 import { RefreshCw, Search } from "lucide-react";
 
-export function SalesFilterPanel({
+export function FilterPanel({
   children,
   footer,
 }: {
@@ -20,7 +20,7 @@ export function SalesFilterPanel({
   );
 }
 
-export function SalesFilterGrid({
+export function FilterGrid({
   children,
   className,
 }: {
@@ -30,7 +30,7 @@ export function SalesFilterGrid({
   return <div className={`grid gap-2 ${className}`}>{children}</div>;
 }
 
-export function SalesFilterField({
+export function FilterField({
   children,
   label,
 }: {
@@ -47,7 +47,7 @@ export function SalesFilterField({
   );
 }
 
-export function SalesFilterInput({
+export function FilterInput({
   label,
   onChange,
   placeholder,
@@ -61,7 +61,7 @@ export function SalesFilterInput({
   value: string;
 }) {
   return (
-    <SalesFilterField label={label}>
+    <FilterField label={label}>
       <input
         className="h-10 w-full rounded-md border border-[#cfd8cc] px-2 text-sm"
         placeholder={placeholder}
@@ -69,11 +69,11 @@ export function SalesFilterInput({
         value={value}
         onChange={(event) => onChange(event.target.value)}
       />
-    </SalesFilterField>
+    </FilterField>
   );
 }
 
-export function SalesFilterSelect({
+export function FilterSelect({
   children,
   label,
   onChange,
@@ -85,7 +85,7 @@ export function SalesFilterSelect({
   value: string;
 }) {
   return (
-    <SalesFilterField label={label}>
+    <FilterField label={label}>
       <select
         className="h-10 w-full rounded-md border border-[#cfd8cc] bg-white px-2 text-sm"
         value={value}
@@ -93,11 +93,11 @@ export function SalesFilterSelect({
       >
         {children}
       </select>
-    </SalesFilterField>
+    </FilterField>
   );
 }
 
-export function SalesFilterDateRange({
+export function FilterDateRange({
   from,
   onFromChange,
   onToChange,
@@ -134,7 +134,7 @@ export function SalesFilterDateRange({
   );
 }
 
-export function SalesFilterResetButton({
+export function FilterResetButton({
   className = "",
   onClick,
 }: {
@@ -153,7 +153,7 @@ export function SalesFilterResetButton({
   );
 }
 
-export function SalesFilterSearchButton({
+export function FilterSearchButton({
   className = "",
   disabled = false,
   label = "검색",
@@ -177,7 +177,7 @@ export function SalesFilterSearchButton({
   );
 }
 
-export function SalesFilterCheck({
+export function FilterCheck({
   checked,
   label,
   onChange,

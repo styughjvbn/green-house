@@ -4,7 +4,7 @@ import type { AuctionLot } from "@/entities/farm/types";
 import { formatShortDate } from "@/shared/lib/dateFormat";
 import { DataTable } from "@/shared/ui/DataTable";
 import { auctionInspectionLabel } from "../../lib/auctionDisplay";
-import { AuctionLotStatusBadge } from "../common/SalesStatusBadge";
+import { AuctionLotStatusBadge } from "@/features/sales/ui/common/SalesStatusBadge";
 
 export function AuctionLotList({
   lots,

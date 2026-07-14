@@ -3,18 +3,30 @@
 import { Pencil, Plus, Trash2 } from "lucide-react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useMemo, useState } from "react";
-import { PaginationControls } from "@/shared/ui/PaginationControls";
+import type { ColumnDef } from "@tanstack/react-table";
+import { formatShortDate } from "@/shared/lib/dateFormat";
+import { DataTable } from "@/shared/ui/DataTable";
+import {
+  DetailActionButton,
+  DetailCard,
+  DetailHeader,
+  DetailSummary,
+} from "@/shared/ui/DetailCard";
+import {
+  FilterField,
+  FilterGrid,
+  FilterPanel,
+  FilterResetButton,
+  FilterSearchButton,
+} from "@/shared/ui/FilterControls";
+import { TabSplit, TabStack } from "@/shared/ui/TabLayout";
+import { StatusBadge } from "@/shared/ui/StatusBadge";
 import type {
   InventoryPageResult,
   Variety,
   VarietyPayload,
 } from "../../model/types";
-import {
-  DetailRow,
-  Field,
-  inputClass,
-  StatusBadge,
-} from "./InventoryPrimitives";
+import { DetailRow, Field, inputClass } from "./InventoryPrimitives";
 import { PotSizeInput } from "./PotSizeInput";
 
 export function VarietySection({
@@ -61,6 +73,53 @@ export function VarietySection({
     description: selected?.description ?? "",
     memo: selected?.memo ?? "",
   });
+  const columns = useMemo<ColumnDef<Variety, unknown>[]>(
+    () => [
+      {
+        accessorKey: "code",
+        header: "품종코드",
+        size: 110,
+        meta: { cellClassName: "font-semibold text-[#16793a]" },
+      },
+      { accessorKey: "genus", header: "속", size: 120 },
+      {
+        accessorKey: "name",
+        header: "품종명",
+        size: 180,
+        meta: { cellClassName: "font-semibold" },
+      },
+      { accessorKey: "potSize", header: "기본 화분", size: 100 },
+      {
+        accessorKey: "saleEnabled",
+        header: "판매 사용",
+        cell: ({ row }) => (
+          <StatusBadge tone={row.original.saleEnabled ? "green" : "gray"}>
+            {row.original.saleEnabled ? "사용" : "미사용"}
+          </StatusBadge>
+        ),
+        size: 100,
+      },
+      {
+        accessorKey: "status",
+        header: "상태",
+        cell: ({ row }) => (
+          <StatusBadge
+            tone={row.original.status === "ACTIVE" ? "green" : "gray"}
+          >
+            {row.original.status === "ACTIVE" ? "활성" : "비활성"}
+          </StatusBadge>
+        ),
+        size: 90,
+      },
+      {
+        accessorKey: "registeredAt",
+        header: "등록일",
+        cell: ({ row }) => formatShortDate(row.original.registeredAt),
+        size: 100,
+      },
+    ],
+    [],
+  );
 
   const updateParams = (updater: (params: URLSearchParams) => void) => {
     const params = new URLSearchParams(searchParams.toString());
@@ -69,9 +128,9 @@ export function VarietySection({
   };
 
   return (
-    <>
+    <TabStack>
       <form
-        className="grid gap-3 rounded-md border border-[#dce2dc] bg-white p-3 shadow-sm md:grid-cols-2 xl:grid-cols-[1fr_1.1fr_1fr_1fr_auto_auto] xl:items-end"
+        className="shrink-0"
         onSubmit={(event) => {
           event.preventDefault();
           const formData = new FormData(event.currentTarget);
@@ -99,219 +158,191 @@ export function VarietySection({
           });
         }}
       >
-        <Field label="속">
-          <select
-            className={inputClass}
-            defaultValue={genus}
-            name="varietyGenus"
-          >
-            {genusOptions.map((value) => (
-              <option key={value}>{value}</option>
-            ))}
-          </select>
-        </Field>
-        <Field label="품종명">
-          <input
-            className={inputClass}
-            defaultValue={keyword}
-            name="varietyKeyword"
-            placeholder="품종명을 입력하세요"
-          />
-        </Field>
-        <Field label="상태">
-          <select
-            className={inputClass}
-            defaultValue={status}
-            name="varietyStatus"
-          >
-            <option>전체</option>
-            <option value="ACTIVE">활성</option>
-            <option value="INACTIVE">비활성</option>
-          </select>
-        </Field>
-        <Field label="판매 사용">
-          <select className={inputClass} defaultValue={sale} name="varietySale">
-            <option>전체</option>
-            <option>사용</option>
-            <option>미사용</option>
-          </select>
-        </Field>
-        <button
-          className="h-9 rounded-md border border-[#d7ddd8] px-4 text-sm font-semibold"
-          type="button"
-          onClick={() => {
-            updateParams((params) => {
-              [
-                "varietyGenus",
-                "varietyKeyword",
-                "varietyStatus",
-                "varietySale",
-              ].forEach((key) => params.delete(key));
-              params.set("varietyPage", "0");
-            });
-          }}
-        >
-          초기화
-        </button>
-        <button
-          className="h-9 rounded-md bg-[#159447] px-6 text-sm font-semibold text-white"
-          type="submit"
-        >
-          검색
-        </button>
+        <FilterPanel>
+          <FilterGrid className="lg:grid-cols-[1fr_1.1fr_1fr_1fr_auto_auto] lg:items-end">
+            <FilterField label="속">
+              <select
+                className={inputClass}
+                defaultValue={genus}
+                name="varietyGenus"
+              >
+                {genusOptions.map((value) => (
+                  <option key={value}>{value}</option>
+                ))}
+              </select>
+            </FilterField>
+            <FilterField label="품종명">
+              <input
+                className={inputClass}
+                defaultValue={keyword}
+                name="varietyKeyword"
+                placeholder="품종명을 입력하세요"
+              />
+            </FilterField>
+            <FilterField label="상태">
+              <select
+                className={inputClass}
+                defaultValue={status}
+                name="varietyStatus"
+              >
+                <option>전체</option>
+                <option value="ACTIVE">활성</option>
+                <option value="INACTIVE">비활성</option>
+              </select>
+            </FilterField>
+            <FilterField label="판매 사용">
+              <select
+                className={inputClass}
+                defaultValue={sale}
+                name="varietySale"
+              >
+                <option>전체</option>
+                <option>사용</option>
+                <option>미사용</option>
+              </select>
+            </FilterField>
+            <FilterResetButton
+              className="h-9 lg:mt-5"
+              onClick={() => {
+                updateParams((params) => {
+                  [
+                    "varietyGenus",
+                    "varietyKeyword",
+                    "varietyStatus",
+                    "varietySale",
+                  ].forEach((key) => params.delete(key));
+                  params.set("varietyPage", "0");
+                });
+              }}
+            />
+            <FilterSearchButton className="h-9 lg:mt-5" />
+          </FilterGrid>
+        </FilterPanel>
       </form>
 
-      <div className="mt-3 grid min-w-0 gap-3 2xl:grid-cols-[minmax(0,1.15fr)_minmax(25rem,1fr)]">
-        <section className="min-w-0 rounded-md border border-[#dce2dc] bg-white p-3 shadow-sm">
-          <div className="flex items-center justify-between gap-3">
-            <h2 className="text-sm font-bold">
-              품종 목록{" "}
-              <span className="ml-2 text-xs font-semibold text-[#159447]">
-                (총 {pageData.totalElements}개)
-              </span>
-            </h2>
+      <TabSplit
+        columns="lg:grid-cols-[minmax(0,1.15fr)_minmax(25rem,1fr)]"
+        gap="gap-3"
+      >
+        <DataTable
+          actions={
             <button
-              className="flex items-center gap-2 rounded-md bg-[#159447] px-3 py-2 text-xs font-semibold text-white shadow-sm"
+              className="inline-flex h-9 items-center gap-2 rounded-md bg-[#159447] px-3 text-xs font-semibold whitespace-nowrap text-white shadow-sm"
               type="button"
               onClick={onCreate}
             >
-              <Plus className="h-3.5 w-3.5" />새 품종 등록
+              <Plus className="h-4 w-4" strokeWidth={1.8} aria-hidden="true" />
+              새 품종 등록
             </button>
-          </div>
-          <div className="mt-3 overflow-x-auto">
-            <table className="w-full min-w-[680px] border-collapse text-xs">
-              <thead className="border-y border-[#dce2dc] bg-[#f7f9f6] text-[#536057]">
-                <tr>
-                  {[
-                    "품종코드",
-                    "속",
-                    "품종명",
-                    "기본 화분",
-                    "판매 사용",
-                    "상태",
-                    "등록일",
-                  ].map((label) => (
-                    <th
-                      className="px-3 py-2 text-left font-semibold"
-                      key={label}
-                    >
-                      {label}
-                    </th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody>
-                {pageData.content.map((item) => (
-                  <tr
-                    className={`cursor-pointer border-b border-[#e5e9e5] hover:bg-[#f3f9f3] ${item.id === selected?.id ? "bg-[#eaf7eb]" : ""}`}
-                    key={item.id}
-                    onClick={() => {
-                      setEditing(false);
-                      onSelect(item.id);
-                    }}
-                  >
-                    <td className="px-3 py-2 font-semibold text-[#16793a]">
-                      {item.code}
-                    </td>
-                    <td className="px-3 py-2">{item.genus}</td>
-                    <td className="px-3 py-2 font-semibold">{item.name}</td>
-                    <td className="px-3 py-2">{item.potSize}</td>
-                    <td className="px-3 py-2">
-                      <StatusBadge
-                        active={item.saleEnabled}
-                        labels={["사용", "미사용"]}
-                      />
-                    </td>
-                    <td className="px-3 py-2">
-                      <StatusBadge active={item.status === "ACTIVE"} />
-                    </td>
-                    <td className="px-3 py-2">{item.registeredAt}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-          <div className="mt-3 flex items-center justify-between gap-3">
-            <PaginationControls
-              nextLabel="다음"
-              pageCount={pageData.totalPages}
-              pageIndex={pageData.page}
-              pageSize={pageData.size}
-              pageSizeOptions={[10, 20, 50]}
-              previousLabel="이전"
-              onPageChange={(pageIndex) =>
-                updateParams((params) => {
-                  params.set("varietyPage", String(pageIndex));
-                })
-              }
-              onPageSizeChange={(pageSize) =>
-                updateParams((params) => {
-                  params.set("varietySize", String(pageSize));
-                  params.set("varietyPage", "0");
-                })
-              }
-            />
-          </div>
-        </section>
+          }
+          columns={columns}
+          data={pageData.content}
+          emptyMessage="조건에 맞는 품종이 없습니다."
+          getRowId={(row) => String(row.id)}
+          pageIndex={pageData.page}
+          pageSize={pageData.size}
+          pageSizeOptions={[10, 20, 50]}
+          selectedRowId={selected == null ? null : String(selected.id)}
+          settingsKey="inventory.varieties"
+          title="품종 목록"
+          totalLabel={`총 ${pageData.totalElements.toLocaleString()}개`}
+          totalPages={pageData.totalPages}
+          onPageChange={(pageIndex) =>
+            updateParams((params) => {
+              params.set("varietyPage", String(pageIndex));
+            })
+          }
+          onPageSizeChange={(pageSize) =>
+            updateParams((params) => {
+              params.set("varietySize", String(pageSize));
+              params.set("varietyPage", "0");
+            })
+          }
+          onRowClick={(row) => {
+            setEditing(false);
+            onSelect(row.id);
+          }}
+        />
 
         {selected ? (
-          <section className="min-w-0 rounded-md border border-[#dce2dc] bg-white p-4 shadow-sm">
-            <div className="flex items-center justify-between">
-              <h2 className="text-sm font-bold">품종 상세 정보</h2>
-              <div className="flex items-center gap-2">
-                <button
-                  className="rounded border border-[#e2c8c8] px-3 py-1.5 text-xs font-semibold text-[#a14545]"
-                  type="button"
-                  onClick={() => {
-                    if (!window.confirm("이 품종을 삭제할까요?")) return;
-                    void onDelete(selected.id).catch((error: Error) => {
-                      window.alert(error.message);
-                    });
-                  }}
-                >
-                  <Trash2 className="mr-1 inline h-3.5 w-3.5" />
-                  삭제
-                </button>
-                {selected.status === "ACTIVE" ? (
-                  <button
-                    className="rounded border border-[#e2c8c8] px-3 py-1.5 text-xs font-semibold text-[#a14545]"
-                    type="button"
-                    onClick={() =>
-                      void onDeactivate(selected.id).catch((error: Error) => {
+          <DetailCard>
+            <DetailHeader
+              eyebrow="품종 상세"
+              title={selected.name}
+              actions={
+                <>
+                  <DetailActionButton
+                    icon={Trash2}
+                    tone="danger"
+                    onClick={() => {
+                      if (!window.confirm("이 품종을 삭제할까요?")) return;
+                      void onDelete(selected.id).catch((error: Error) => {
                         window.alert(error.message);
-                      })
-                    }
+                      });
+                    }}
                   >
-                    비활성화
-                  </button>
-                ) : null}
-                <button
-                  className="flex items-center gap-1 rounded border border-[#d7ddd8] px-3 py-1.5 text-xs font-semibold"
-                  type="button"
-                  onClick={() => {
-                    if (editing) {
-                      setEditing(false);
-                      return;
-                    }
+                    삭제
+                  </DetailActionButton>
+                  {selected.status === "ACTIVE" ? (
+                    <DetailActionButton
+                      tone="danger"
+                      onClick={() =>
+                        void onDeactivate(selected.id).catch((error: Error) => {
+                          window.alert(error.message);
+                        })
+                      }
+                    >
+                      비활성화
+                    </DetailActionButton>
+                  ) : null}
+                  <DetailActionButton
+                    icon={Pencil}
+                    onClick={() => {
+                      if (editing) {
+                        setEditing(false);
+                        return;
+                      }
 
-                    setForm({
-                      genus: selected.genus,
-                      name: selected.name,
-                      alias: selected.alias,
-                      defaultPotSize: selected.potSize,
-                      saleEnabled: selected.saleEnabled,
-                      description: selected.description,
-                      memo: selected.memo,
-                    });
-                    setEditing(true);
-                  }}
-                >
-                  <Pencil className="h-3.5 w-3.5" />
-                  {editing ? "취소" : "수정"}
-                </button>
-              </div>
-            </div>
-            <div className="mt-3 grid gap-4 sm:grid-cols-[9rem_minmax(0,1fr)]">
+                      setForm({
+                        genus: selected.genus,
+                        name: selected.name,
+                        alias: selected.alias,
+                        defaultPotSize: selected.potSize,
+                        saleEnabled: selected.saleEnabled,
+                        description: selected.description,
+                        memo: selected.memo,
+                      });
+                      setEditing(true);
+                    }}
+                  >
+                    {editing ? "취소" : "수정"}
+                  </DetailActionButton>
+                </>
+              }
+              summary={
+                <DetailSummary
+                  items={[
+                    {
+                      label: "보유 묶음 수",
+                      value: `${selected.connectedGroupCount}개`,
+                    },
+                    {
+                      label: "총 보유 수량",
+                      value: `${selected.totalQuantity}분`,
+                    },
+                    {
+                      label: "판매 가능 수량",
+                      value: `${selected.saleableQuantity}분`,
+                    },
+                    {
+                      label: "최근 작업일",
+                      value: selected.recentWorkDate ?? "-",
+                    },
+                  ]}
+                />
+              }
+            />
+            <div className="grid gap-4 p-4 sm:grid-cols-[9rem_minmax(0,1fr)]">
               <div className="flex aspect-square items-center justify-center rounded-md border border-[#d9e0d9] bg-[#eff7ed] text-[#159447]">
                 <span className="text-5xl">✿</span>
               </div>
@@ -436,15 +467,20 @@ export function VarietySection({
                     label="판매 사용"
                     value={
                       <StatusBadge
-                        active={selected.saleEnabled}
-                        labels={["사용", "미사용"]}
-                      />
+                        tone={selected.saleEnabled ? "green" : "gray"}
+                      >
+                        {selected.saleEnabled ? "사용" : "미사용"}
+                      </StatusBadge>
                     }
                   />
                   <DetailRow
                     label="상태"
                     value={
-                      <StatusBadge active={selected.status === "ACTIVE"} />
+                      <StatusBadge
+                        tone={selected.status === "ACTIVE" ? "green" : "gray"}
+                      >
+                        {selected.status === "ACTIVE" ? "활성" : "비활성"}
+                      </StatusBadge>
                     }
                   />
                   <DetailRow label="메모" value={selected.memo} />
@@ -453,25 +489,7 @@ export function VarietySection({
                 </dl>
               )}
             </div>
-            <div className="mt-4 grid gap-2 sm:grid-cols-2 xl:grid-cols-4">
-              <SummaryCard
-                label="보유 묶음 수"
-                value={`${selected.connectedGroupCount}개`}
-              />
-              <SummaryCard
-                label="총 보유 수량"
-                value={`${selected.totalQuantity}분`}
-              />
-              <SummaryCard
-                label="판매 가능 수량"
-                value={`${selected.saleableQuantity}분`}
-              />
-              <SummaryCard
-                label="최근 작업일"
-                value={selected.recentWorkDate ?? "-"}
-              />
-            </div>
-            <div className="mt-4 border-t border-[#dce2dc] pt-3">
+            <div className="border-t border-[#dce2dc] px-4 py-3">
               <h3 className="text-xs font-bold">
                 연결된 난 묶음{" "}
                 <span className="text-[#159447]">
@@ -532,19 +550,10 @@ export function VarietySection({
                 </table>
               </div>
             </div>
-          </section>
+          </DetailCard>
         ) : null}
-      </div>
-    </>
-  );
-}
-
-function SummaryCard({ label, value }: { label: string; value: string }) {
-  return (
-    <div className="rounded-md border border-[#e1e6e1] bg-[#fbfcfa] px-3 py-2">
-      <p className="text-[11px] text-[#68756d]">{label}</p>
-      <strong className="mt-1 block text-sm">{value}</strong>
-    </div>
+      </TabSplit>
+    </TabStack>
   );
 }
 

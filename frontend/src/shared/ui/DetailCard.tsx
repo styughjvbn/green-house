@@ -11,7 +11,7 @@ import {
 } from "react";
 import type { LucideProps } from "lucide-react";
 
-export function SalesDetailCard({
+export function DetailCard({
   children,
   className = "",
 }: {
@@ -27,7 +27,7 @@ export function SalesDetailCard({
   );
 }
 
-export function SalesDetailHeader({
+export function DetailHeader({
   actions,
   eyebrow,
   eyebrowAside,
@@ -58,9 +58,7 @@ export function SalesDetailHeader({
             {title}
           </h2>
         </div>
-        {actions ? (
-          <SalesDetailHeaderActions>{actions}</SalesDetailHeaderActions>
-        ) : null}
+        {actions ? <DetailHeaderActions>{actions}</DetailHeaderActions> : null}
       </div>
       {summary ? (
         <div className="border-t border-[#edf0ec]">{summary}</div>
@@ -69,7 +67,7 @@ export function SalesDetailHeader({
   );
 }
 
-export function SalesDetailEmpty({ children }: { children: ReactNode }) {
+export function DetailEmpty({ children }: { children: ReactNode }) {
   return (
     <section className="flex h-full min-h-0 items-center justify-center rounded-md border border-[#dfe5dc] bg-white p-8 text-center text-sm text-[#6c786f]">
       {children}
@@ -77,19 +75,19 @@ export function SalesDetailEmpty({ children }: { children: ReactNode }) {
   );
 }
 
-type SalesDetailSummaryItem = {
+type DetailSummaryItem = {
   label: string;
   value: ReactNode;
 };
 
-export function SalesDetailSummary({
+export function DetailSummary({
   align = "right",
   columns = "sm:grid-cols-4",
   items,
 }: {
   align?: "left" | "center" | "right";
   columns?: string;
-  items: SalesDetailSummaryItem[];
+  items: DetailSummaryItem[];
 }) {
   return (
     <div className={`grid grid-cols-2 gap-px bg-[#e5e9e3] ${columns}`}>
@@ -110,7 +108,7 @@ export function SalesDetailSummary({
 
 type DetailActionTone = "default" | "primary" | "danger";
 
-type SalesDetailActionButtonProps = {
+type DetailActionButtonProps = {
   children: ReactNode;
   disabled?: boolean;
   href?: string;
@@ -119,14 +117,14 @@ type SalesDetailActionButtonProps = {
   onClick?: () => void;
 };
 
-export function SalesDetailActionButton({
+export function DetailActionButton({
   children,
   disabled = false,
   href,
   icon: Icon,
   tone = "default",
   onClick,
-}: SalesDetailActionButtonProps) {
+}: DetailActionButtonProps) {
   const className = [
     "inline-flex h-8 items-center gap-1.5 rounded-md px-3 text-xs font-semibold disabled:opacity-60",
     actionToneClass(tone),
@@ -180,7 +178,7 @@ function summaryAlignClass(align: "left" | "center" | "right") {
   return "text-left";
 }
 
-function SalesDetailHeaderActions({ children }: { children: ReactNode }) {
+function DetailHeaderActions({ children }: { children: ReactNode }) {
   const rootRef = useRef<HTMLDivElement | null>(null);
   const measureRef = useRef<HTMLDivElement | null>(null);
 

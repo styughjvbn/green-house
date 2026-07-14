@@ -7,12 +7,12 @@ import { DataTable } from "@/shared/ui/DataTable";
 import { confirmSalesSlipPayment } from "../../api/salesApi";
 import { ManualPaymentPanel } from "../auction/ManualPaymentPanel";
 import {
-  SalesDetailCard,
-  SalesDetailActionButton,
-  SalesDetailEmpty,
-  SalesDetailHeader,
-  SalesDetailSummary,
-} from "../common/SalesDetailCard";
+  DetailCard,
+  DetailActionButton,
+  DetailEmpty,
+  DetailHeader,
+  DetailSummary,
+} from "@/shared/ui/DetailCard";
 
 const salesSlipItemColumns: ColumnDef<SalesSlipItem, unknown>[] = [
   {
@@ -112,11 +112,11 @@ export function SalesSlipDetail({
   const [slipInfoOpen, setSlipInfoOpen] = useState(false);
 
   if (loading) {
-    return <SalesDetailEmpty>전표 상세를 불러오는 중입니다.</SalesDetailEmpty>;
+    return <DetailEmpty>전표 상세를 불러오는 중입니다.</DetailEmpty>;
   }
 
   if (!salesSlip) {
-    return <SalesDetailEmpty>선택한 전표가 없습니다.</SalesDetailEmpty>;
+    return <DetailEmpty>선택한 전표가 없습니다.</DetailEmpty>;
   }
 
   const supplyAmount = Math.round(salesSlip.totalAmount / 1.1);
@@ -132,12 +132,12 @@ export function SalesSlipDetail({
   const canCancel = salesSlip.salesStatus !== "취소";
 
   return (
-    <SalesDetailCard>
-      <SalesDetailHeader
+    <DetailCard>
+      <DetailHeader
         eyebrow={`LOT #${salesSlip.slipNumber}`}
         title="전표 상세"
         summary={
-          <SalesDetailSummary
+          <DetailSummary
             align="left"
             columns="lg:grid-cols-4"
             items={[
@@ -158,25 +158,25 @@ export function SalesSlipDetail({
         actions={
           <>
             {canEdit ? (
-              <SalesDetailActionButton
+              <DetailActionButton
                 icon={Pencil}
                 onClick={() => onEditSalesSlip(salesSlip.id)}
               >
                 전표 수정
-              </SalesDetailActionButton>
+              </DetailActionButton>
             ) : null}
             {canComplete ? (
-              <SalesDetailActionButton
+              <DetailActionButton
                 disabled={updatingSalesStatus}
                 icon={Truck}
                 tone="primary"
                 onClick={() => void onCompleteSalesSlip(salesSlip.id)}
               >
                 {salesSlip.salesType === "AUCTION" ? "출하 완료" : "출고 완료"}
-              </SalesDetailActionButton>
+              </DetailActionButton>
             ) : null}
             {canCancel ? (
-              <SalesDetailActionButton
+              <DetailActionButton
                 disabled={updatingSalesStatus}
                 icon={Ban}
                 tone="danger"
@@ -191,17 +191,15 @@ export function SalesSlipDetail({
                 }}
               >
                 전표 취소
-              </SalesDetailActionButton>
+              </DetailActionButton>
             ) : null}
-            <SalesDetailActionButton
+            <DetailActionButton
               href={`/print/sales-slips/${salesSlip.id}`}
               icon={Printer}
             >
               인쇄(미리보기)
-            </SalesDetailActionButton>
-            <SalesDetailActionButton icon={Copy}>
-              전표 복사
-            </SalesDetailActionButton>
+            </DetailActionButton>
+            <DetailActionButton icon={Copy}>전표 복사</DetailActionButton>
           </>
         }
       />
@@ -274,7 +272,7 @@ export function SalesSlipDetail({
           </div>
         ) : null}
       </div>
-    </SalesDetailCard>
+    </DetailCard>
   );
 }
 

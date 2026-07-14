@@ -8,13 +8,13 @@ import type {
 import { formatShortDate } from "@/shared/lib/dateFormat";
 import { auctionAttemptStatusLabel } from "../../lib/auctionDisplay";
 import {
-  SalesDetailCard,
-  SalesDetailActionButton,
-  SalesDetailEmpty,
-  SalesDetailHeader,
-  SalesDetailSummary,
-} from "../common/SalesDetailCard";
-import { AuctionLotStatusBadge } from "../common/SalesStatusBadge";
+  DetailCard,
+  DetailActionButton,
+  DetailEmpty,
+  DetailHeader,
+  DetailSummary,
+} from "@/shared/ui/DetailCard";
+import { AuctionLotStatusBadge } from "@/features/sales/ui/common/SalesStatusBadge";
 import { AuctionQuantityAdjustDialog } from "./AuctionQuantityAdjustDialog";
 import { AuctionResultDialog } from "./AuctionResultDialog";
 
@@ -53,7 +53,7 @@ export function AuctionLotDetail({
   const [returnDate, setReturnDate] = useState("");
 
   if (!lot) {
-    return <SalesDetailEmpty>조회할 lot를 선택하세요.</SalesDetailEmpty>;
+    return <DetailEmpty>조회할 lot를 선택하세요.</DetailEmpty>;
   }
 
   const currentLot = lot;
@@ -73,8 +73,8 @@ export function AuctionLotDetail({
 
   return (
     <>
-      <SalesDetailCard>
-        <SalesDetailHeader
+      <DetailCard>
+        <DetailHeader
           eyebrow={`LOT #${currentLot.id}`}
           eyebrowAside={
             <AuctionLotStatusBadge
@@ -84,7 +84,7 @@ export function AuctionLotDetail({
           }
           title={`${currentLot.varietyName} · ${currentLot.auctionMarket}`}
           summary={
-            <SalesDetailSummary
+            <DetailSummary
               align="left"
               items={[
                 {
@@ -108,22 +108,22 @@ export function AuctionLotDetail({
           }
           actions={
             <>
-              <SalesDetailActionButton
+              <DetailActionButton
                 icon={Plus}
                 onClick={() => setShowResultForm(true)}
               >
                 경매 결과 입력
-              </SalesDetailActionButton>
-              <SalesDetailActionButton
+              </DetailActionButton>
+              <DetailActionButton
                 icon={SlidersHorizontal}
                 onClick={() => setShowQuantityAdjustment(true)}
               >
                 수량 보정
-              </SalesDetailActionButton>
+              </DetailActionButton>
               {currentLot.currentStatus === "REAUCTION_WAITING" ||
               currentLot.currentStatus === "RETURN_INFERRED" ||
               currentLot.currentStatus === "PARTIALLY_RETURNED" ? (
-                <SalesDetailActionButton
+                <DetailActionButton
                   disabled={
                     loading || currentLot.returnConfirmableQuantity === 0
                   }
@@ -146,7 +146,7 @@ export function AuctionLotDetail({
                   {currentLot.currentStatus === "REAUCTION_WAITING"
                     ? "반환 처리"
                     : "반환 확인"}
-                </SalesDetailActionButton>
+                </DetailActionButton>
               ) : null}
             </>
           }
@@ -290,7 +290,7 @@ export function AuctionLotDetail({
             </div>
           </div>
         </div>
-      </SalesDetailCard>
+      </DetailCard>
 
       {showResultForm ? (
         <AuctionResultDialog

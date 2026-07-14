@@ -2,13 +2,13 @@
 
 import type { BusinessPartnerFilterState } from "../../model/types";
 import {
-  SalesFilterGrid,
-  SalesFilterInput,
-  SalesFilterPanel,
-  SalesFilterResetButton,
-  SalesFilterSearchButton,
-  SalesFilterSelect,
-} from "../common/SalesFilterControls";
+  FilterGrid,
+  FilterInput,
+  FilterPanel,
+  FilterResetButton,
+  FilterSearchButton,
+  FilterSelect,
+} from "@/shared/ui/FilterControls";
 
 export function BusinessPartnerFilters({
   filters,
@@ -23,9 +23,9 @@ export function BusinessPartnerFilters({
   onReset: () => void;
 }) {
   return (
-    <SalesFilterPanel>
-      <SalesFilterGrid className="md:grid-cols-2 2xl:grid-cols-[1fr_1fr_2.2fr_auto_auto]">
-        <SalesFilterSelect
+    <FilterPanel>
+      <FilterGrid className="md:grid-cols-2 2xl:grid-cols-[1fr_1fr_2.2fr_auto_auto]">
+        <FilterSelect
           label="거래처 유형"
           value={filters.partnerType}
           onChange={(value) => onChange("partnerType", value)}
@@ -34,9 +34,9 @@ export function BusinessPartnerFilters({
           <option value="WHOLESALE">도매</option>
           <option value="RETAIL">소매</option>
           <option value="AUCTION_HOUSE">경매장</option>
-        </SalesFilterSelect>
+        </FilterSelect>
 
-        <SalesFilterSelect
+        <FilterSelect
           label="상태"
           value={filters.active}
           onChange={(value) => onChange("active", value)}
@@ -44,18 +44,18 @@ export function BusinessPartnerFilters({
           <option value="">전체</option>
           <option value="ACTIVE">사용중</option>
           <option value="INACTIVE">사용중지</option>
-        </SalesFilterSelect>
+        </FilterSelect>
 
-        <SalesFilterInput
+        <FilterInput
           label="키워드"
           placeholder="거래처명, 대표자명, 연락처, 메모"
           value={filters.keyword}
           onChange={(value) => onChange("keyword", value)}
         />
 
-        <SalesFilterResetButton onClick={onReset} />
-        <SalesFilterSearchButton />
-      </SalesFilterGrid>
-    </SalesFilterPanel>
+        <FilterResetButton onClick={onReset} />
+        <FilterSearchButton />
+      </FilterGrid>
+    </FilterPanel>
   );
 }

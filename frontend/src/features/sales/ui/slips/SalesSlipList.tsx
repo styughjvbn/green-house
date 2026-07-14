@@ -6,7 +6,7 @@ import { Plus } from "lucide-react";
 import { formatShortDate } from "@/shared/lib/dateFormat";
 import { DataTable } from "@/shared/ui/DataTable";
 import type { SalesSlipListItem } from "../../model/types";
-import { SalesSlipStatusBadge } from "../common/SalesStatusBadge";
+import { SalesSlipStatusBadge } from "@/features/sales/ui/common/SalesStatusBadge";
 
 export function SalesSlipList({
   currentPage,

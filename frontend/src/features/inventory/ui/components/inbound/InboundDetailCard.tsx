@@ -1,6 +1,12 @@
 "use client";
 
 import { Scissors } from "lucide-react";
+import {
+  DetailActionButton,
+  DetailCard,
+  DetailHeader,
+} from "@/shared/ui/DetailCard";
+import { StatusBadge } from "@/shared/ui/StatusBadge";
 import type {
   InboundRecord,
   InboundRecordUpdatePayload,
@@ -44,53 +50,46 @@ export function InboundDetailCard({
   onDelete: () => void;
 }) {
   return (
-    <section className="min-w-0 rounded-md border border-[#dce2dc] bg-white p-4 shadow-sm">
-      <div className="flex flex-wrap items-center justify-between gap-2">
-        <h2 className="text-sm font-bold">입고 상세</h2>
-        <div className="flex flex-wrap gap-2">
-          {record.status !== "CANCELED" ? (
-            <button
-              className="flex items-center gap-1 rounded-md border border-[#d7ddd8] px-3 py-1.5 text-xs font-semibold"
-              type="button"
-              onClick={() =>
-                onToggleEditing(!editing, createInboundEditForm(record))
-              }
-            >
-              수정
-            </button>
-          ) : null}
-          {record.inboundType === "FLASK_SEEDLING" &&
-          !record.createdOrchidGroupId &&
-          record.status !== "CANCELED" ? (
-            <button
-              className="flex items-center gap-1 rounded-md border border-[#d7ddd8] px-3 py-1.5 text-xs font-semibold"
-              type="button"
-              onClick={onOpenPotting}
-            >
-              <Scissors className="h-3.5 w-3.5" />
-              포트 작업 등록
-            </button>
-          ) : null}
-          {!record.createdOrchidGroupId && record.status !== "CANCELED" ? (
-            <button
-              className="rounded-md border border-[#e2c8c8] px-3 py-1.5 text-xs font-semibold text-[#a14545]"
-              type="button"
-              onClick={onOpenCancel}
-            >
-              입고 취소
-            </button>
-          ) : null}
-          {record.status === "CANCELED" ? (
-            <button
-              className="rounded-md border border-[#e2c8c8] px-3 py-1.5 text-xs font-semibold text-[#a14545]"
-              type="button"
-              onClick={onDelete}
-            >
-              삭제
-            </button>
-          ) : null}
-        </div>
-      </div>
+    <DetailCard>
+      <DetailHeader
+        eyebrow="입고 상세"
+        eyebrowAside={
+          <StatusBadge tone={inboundStatusTone(record.status)} size="compact">
+            {INBOUND_STATUS_LABELS[record.status]}
+          </StatusBadge>
+        }
+        title={record.varietyName}
+        actions={
+          <>
+            {record.status !== "CANCELED" ? (
+              <DetailActionButton
+                onClick={() =>
+                  onToggleEditing(!editing, createInboundEditForm(record))
+                }
+              >
+                수정
+              </DetailActionButton>
+            ) : null}
+            {record.inboundType === "FLASK_SEEDLING" &&
+            !record.createdOrchidGroupId &&
+            record.status !== "CANCELED" ? (
+              <DetailActionButton icon={Scissors} onClick={onOpenPotting}>
+                포트 작업 등록
+              </DetailActionButton>
+            ) : null}
+            {!record.createdOrchidGroupId && record.status !== "CANCELED" ? (
+              <DetailActionButton tone="danger" onClick={onOpenCancel}>
+                입고 취소
+              </DetailActionButton>
+            ) : null}
+            {record.status === "CANCELED" ? (
+              <DetailActionButton tone="danger" onClick={onDelete}>
+                삭제
+              </DetailActionButton>
+            ) : null}
+          </>
+        }
+      />
       {editing ? (
         <InboundEditForm
           editForm={editForm}
@@ -101,7 +100,7 @@ export function InboundDetailCard({
       ) : (
         <InboundDetailView record={record} />
       )}
-    </section>
+    </DetailCard>
   );
 }
 
@@ -122,7 +121,7 @@ function InboundEditForm({
 }) {
   return (
     <form
-      className="mt-3 grid gap-3 md:grid-cols-2"
+      className="grid gap-3 p-4 md:grid-cols-2"
       onSubmit={(event) => {
         event.preventDefault();
         void onSubmit();
@@ -272,7 +271,7 @@ function InboundEditForm({
 
 function InboundDetailView({ record }: { record: InboundRecord }) {
   return (
-    <dl className="mt-3 space-y-1">
+    <dl className="space-y-1 p-4">
       <DetailRow label="입고일" value={record.inboundDate} />
       <DetailRow
         label="입고 유형"
@@ -280,7 +279,14 @@ function InboundDetailView({ record }: { record: InboundRecord }) {
       />
       <DetailRow label="속" value={record.genus} />
       <DetailRow label="품종명" value={record.varietyName} />
-      <DetailRow label="상태" value={INBOUND_STATUS_LABELS[record.status]} />
+      <DetailRow
+        label="상태"
+        value={
+          <StatusBadge tone={inboundStatusTone(record.status)}>
+            {INBOUND_STATUS_LABELS[record.status]}
+          </StatusBadge>
+        }
+      />
       <DetailRow label="예상 수량" value={record.estimatedQuantity} />
       <DetailRow label="실제 수량" value={record.actualQuantity} />
       <DetailRow label="임시 위치" value={record.tempLocation} />
@@ -298,4 +304,10 @@ function InboundDetailView({ record }: { record: InboundRecord }) {
       <DetailRow label="메모" value={record.memo} />
     </dl>
   );
+}
+
+function inboundStatusTone(status: InboundRecord["status"]) {
+  if (status === "POTTED") return "green";
+  if (status === "CANCELED") return "gray";
+  return "blue";
 }

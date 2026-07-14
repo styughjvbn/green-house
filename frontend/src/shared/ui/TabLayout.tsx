@@ -2,7 +2,7 @@ import type { ReactNode } from "react";
 
 const defaultColumns = "lg:grid-cols-[minmax(0,0.88fr)_minmax(0,1.12fr)]";
 
-export function SalesTabLayout({
+export function TabLayout({
   children,
   className = "",
 }: {
@@ -16,7 +16,7 @@ export function SalesTabLayout({
   );
 }
 
-export function SalesTabStack({
+export function TabStack({
   children,
   className = "",
 }: {
@@ -30,7 +30,7 @@ export function SalesTabStack({
   );
 }
 
-export function SalesTabSplit({
+export function TabSplit({
   children,
   columns = defaultColumns,
   gap = "gap-4",
@@ -46,7 +46,7 @@ export function SalesTabSplit({
   );
 }
 
-export function SalesTabError({ message }: { message: string | null }) {
+export function TabError({ message }: { message: string | null }) {
   if (!message) {
     return null;
   }

@@ -14,18 +14,14 @@ import {
   rebuildAuctionSettlement,
 } from "../../api/salesApi";
 import { ManualPaymentPanel } from "./ManualPaymentPanel";
+import { TabError, TabSplit, TabStack } from "@/shared/ui/TabLayout";
 import {
-  SalesTabError,
-  SalesTabSplit,
-  SalesTabStack,
-} from "../common/SalesTabLayout";
-import {
-  SalesDetailCard,
-  SalesDetailEmpty,
-  SalesDetailHeader,
-  SalesDetailSummary,
-} from "../common/SalesDetailCard";
-import { AuctionSettlementStatusBadge } from "../common/SalesStatusBadge";
+  DetailCard,
+  DetailEmpty,
+  DetailHeader,
+  DetailSummary,
+} from "@/shared/ui/DetailCard";
+import { AuctionSettlementStatusBadge } from "@/features/sales/ui/common/SalesStatusBadge";
 
 const settlementLineColumns: ColumnDef<AuctionSettlementLine, unknown>[] = [
   {
@@ -175,7 +171,7 @@ export function AuctionSettlementView({
   }
 
   return (
-    <SalesTabStack>
+    <TabStack>
       <section className="flex flex-wrap items-center justify-between gap-3 rounded-md border border-[#dfe5dc] bg-white px-4 py-3 shadow-sm">
         <div>
           <h2 className="text-base font-bold">경매장 정산</h2>
@@ -200,9 +196,9 @@ export function AuctionSettlementView({
         </div>
       </section>
 
-      <SalesTabError message={error} />
+      <TabError message={error} />
 
-      <SalesTabSplit
+      <TabSplit
         columns="lg:grid-cols-[minmax(0,0.9fr)_minmax(480px,1.1fr)]"
         gap="gap-3"
       >
@@ -235,8 +231,8 @@ export function AuctionSettlementView({
             )
           }
         />
-      </SalesTabSplit>
-    </SalesTabStack>
+      </TabSplit>
+    </TabStack>
   );
 }
 
@@ -248,12 +244,12 @@ function SettlementDetail({
   onUpdate: (settlement: AuctionSettlement) => void;
 }) {
   if (!settlement) {
-    return <SalesDetailEmpty>확인할 정산을 선택하세요.</SalesDetailEmpty>;
+    return <DetailEmpty>확인할 정산을 선택하세요.</DetailEmpty>;
   }
 
   return (
-    <SalesDetailCard>
-      <SalesDetailHeader
+    <DetailCard>
+      <DetailHeader
         eyebrow={`정산 #${settlement.id}`}
         eyebrowAside={
           <AuctionSettlementStatusBadge
@@ -263,7 +259,7 @@ function SettlementDetail({
         }
         title={`${settlement.auctionHouseName} · ${formatShortDate(settlement.auctionDate)}`}
         summary={
-          <SalesDetailSummary
+          <DetailSummary
             items={[
               {
                 label: "총 낙찰액",
@@ -310,7 +306,7 @@ function SettlementDetail({
           );
         }}
       />
-    </SalesDetailCard>
+    </DetailCard>
   );
 }
 

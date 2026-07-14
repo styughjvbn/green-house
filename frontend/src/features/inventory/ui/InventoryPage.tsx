@@ -166,9 +166,9 @@ export function InventoryPage({
   };
 
   return (
-    <main className="min-w-0 space-y-3">
+    <main className="flex h-full min-h-0 min-w-0 flex-col">
       {activeTab === "VARIETY" ? (
-        <div id="variety-management">
+        <div id="variety-management" className="h-full min-h-0">
           <VarietySection
             connectedGroups={selectedConnectedGroups}
             loadingGroups={loadingGroups}
@@ -214,7 +214,7 @@ export function InventoryPage({
       ) : null}
 
       {activeTab === "MATERIAL" ? (
-        <div id="material-management">
+        <div id="material-management" className="h-full min-h-0">
           <MaterialSection
             pageData={initialMaterialPage}
             selectedId={selectedMaterialId}

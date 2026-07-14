@@ -3,6 +3,7 @@
 import type { House } from "@/entities/farm/types";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useState } from "react";
+import { TabSplit, TabStack } from "@/shared/ui/TabLayout";
 import type {
   InboundPottingPayload,
   InboundRecord,
@@ -83,7 +84,7 @@ export function InboundSection({
   };
 
   return (
-    <>
+    <TabStack>
       <InboundFilterCard
         inboundType={inboundType}
         keyword={keyword}
@@ -121,7 +122,10 @@ export function InboundSection({
         }}
       />
 
-      <div className="mt-3 grid min-w-0 gap-3 2xl:grid-cols-[minmax(0,1.15fr)_minmax(24rem,0.95fr)]">
+      <TabSplit
+        columns="lg:grid-cols-[minmax(0,1.15fr)_minmax(24rem,0.95fr)]"
+        gap="gap-3"
+      >
         <InboundListCard
           pageData={pageData}
           selectedId={selected?.id}
@@ -176,7 +180,7 @@ export function InboundSection({
             }}
           />
         ) : null}
-      </div>
+      </TabSplit>
 
       <InboundCreateDialog
         houses={houses}
@@ -211,6 +215,6 @@ export function InboundSection({
           setDialog(null);
         }}
       />
-    </>
+    </TabStack>
   );
 }

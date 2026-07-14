@@ -10,7 +10,7 @@ import { useSalesManager } from "../model/useSalesManager";
 import type { SalesManagerProps } from "../model/types";
 import { AuctionSettlementView } from "./auction/AuctionSettlementView";
 import { AuctionTrackingView } from "./auction/AuctionTrackingView";
-import { SalesTabLayout, SalesTabSplit } from "./common/SalesTabLayout";
+import { TabLayout, TabSplit } from "@/shared/ui/TabLayout";
 import { BusinessPartnerCreateForm } from "./partners/BusinessPartnerCreateForm";
 import { BusinessPartnerFilters } from "./partners/BusinessPartnerFilters";
 import { BusinessPartnerList } from "./partners/BusinessPartnerList";
@@ -67,7 +67,7 @@ export function SalesManager({
   const auctionSettlements = initialAuctionSettlements ?? [];
 
   return (
-    <SalesTabLayout>
+    <TabLayout>
       {activeTab === "SLIPS" ? (
         <>
           <SalesFilters
@@ -100,7 +100,7 @@ export function SalesManager({
             />
           ) : null}
 
-          <SalesTabSplit>
+          <TabSplit>
             <SalesSlipList
               currentPage={sales.salesSlipCurrentPage}
               pageSize={sales.salesSlipPageSize}
@@ -125,7 +125,7 @@ export function SalesManager({
               onCompleteSalesSlip={sales.handleCompleteSalesSlip}
               onPaymentConfirmed={sales.updateSalesSlip}
             />
-          </SalesTabSplit>
+          </TabSplit>
         </>
       ) : activeTab === "AUCTION" ? (
         <AuctionTrackingView
@@ -141,7 +141,7 @@ export function SalesManager({
             onChange={sales.updatePartnerFilters}
             onReset={sales.resetPartnerFilters}
           />
-          <SalesTabSplit columns="lg:grid-cols-[420px_minmax(0,1fr)]">
+          <TabSplit columns="lg:grid-cols-[420px_minmax(0,1fr)]">
             <BusinessPartnerList
               currentPage={sales.partnerCurrentPage}
               pageSize={sales.partnerPageSize}
@@ -178,10 +178,10 @@ export function SalesManager({
                 }
               />
             </div>
-          </SalesTabSplit>
+          </TabSplit>
         </>
       )}
-    </SalesTabLayout>
+    </TabLayout>
   );
 }
 
