@@ -1656,8 +1656,36 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ApiResponseAuctionLotResponse"
+  /api/work-operations/target-preview:
+    $ref: "./slices/work-operation.openapi.yaml#/paths/~1api~1work-operations~1target-preview"
+  /api/work-operations:
+    $ref: "./slices/work-operation.openapi.yaml#/paths/~1api~1work-operations"
+  /api/work-operations/{workOperationId}:
+    $ref: "./slices/work-operation.openapi.yaml#/paths/~1api~1work-operations~1{workOperationId}"
+  /api/work-operations/{workOperationId}/complete:
+    $ref: "./slices/work-operation.openapi.yaml#/paths/~1api~1work-operations~1{workOperationId}~1complete"
+  /api/orchid-groups/{orchidGroupId}/work-history:
+    $ref: "./slices/work-operation.openapi.yaml#/paths/~1api~1orchid-groups~1{orchidGroupId}~1work-history"
 components:
   schemas:
+    WorkTargetPreviewRequest:
+      $ref: "./slices/work-operation.openapi.yaml#/components/schemas/WorkTargetPreviewRequest"
+    WorkOperationCreateRequest:
+      $ref: "./slices/work-operation.openapi.yaml#/components/schemas/WorkOperationCreateRequest"
+    WorkOperationTargetResponse:
+      $ref: "./slices/work-operation.openapi.yaml#/components/schemas/WorkOperationTargetResponse"
+    WorkTargetPreviewResponse:
+      $ref: "./slices/work-operation.openapi.yaml#/components/schemas/WorkTargetPreviewResponse"
+    WorkOperationResponse:
+      $ref: "./slices/work-operation.openapi.yaml#/components/schemas/WorkOperationResponse"
+    OrchidGroupWorkHistoryResponse:
+      $ref: "./slices/work-operation.openapi.yaml#/components/schemas/OrchidGroupWorkHistoryResponse"
+    ApiResponseWorkTargetPreviewResponse:
+      $ref: "./slices/work-operation.openapi.yaml#/components/schemas/ApiResponseWorkTargetPreviewResponse"
+    ApiResponseWorkOperationResponse:
+      $ref: "./slices/work-operation.openapi.yaml#/components/schemas/ApiResponseWorkOperationResponse"
+    ApiResponseListOrchidGroupWorkHistoryResponse:
+      $ref: "./slices/work-operation.openapi.yaml#/components/schemas/ApiResponseListOrchidGroupWorkHistoryResponse"
     PartnerSettlementSettingsRequest:
       type: object
       properties:

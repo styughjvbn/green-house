@@ -66,7 +66,7 @@ def main():
         for path, operations in openapi.get("paths", {}).items():
             selected_operations = OrderedDict()
             for method, operation in operations.items():
-                if method.startswith("x-"):
+                if method == "$ref" or method.startswith("x-"):
                     continue
                 if any(tag in operation.get("tags", []) for tag in tags):
                     selected_operations[method] = operation

@@ -7,8 +7,8 @@
 
 - 기준 명세: `docs/api/openapi.yaml`
 - OpenAPI 버전: `3.1.0`
-- 현재 구현 API: `68` operations / `51` path entries
-- schema 수: `110`
+- 현재 구현 API: `68` operations / `56` path entries
+- schema 수: `117`
 - Base URL: `/api`
 - 공통 응답: `ApiResponse*` 래퍼 사용
 
@@ -121,6 +121,24 @@
 | `DELETE` | `/api/varieties/{varietyId}` | `delete_1` | `-` | `200:ApiResponseVoid` |
 | `PATCH` | `/api/varieties/{varietyId}/deactivate` | `deactivate` | `-` | `200:ApiResponseVarietyResponse` |
 | `GET` | `/api/varieties/{varietyId}/orchid-groups` | `getOrchidGroups_1` | `-` | `200:ApiResponseListVarietyConnectedOrchidGroupResponse` |
+
+### 신규 작업 실행
+
+- slice: `docs/api/slices/work-operation.openapi.yaml`
+- package: `com.greenhouse.backend.work`
+- controller tag: `work-operation-controller`
+- 역할: 동 전체 농약 작업 대상 미리보기·스냅샷·완료와 난 묶음 통합 이력
+- operations: 5
+
+| Method | Path | Operation |
+|---|---|---|
+| `POST` | `/api/work-operations/target-preview` | 대상 미리보기 |
+| `POST` | `/api/work-operations` | 작업 생성과 대상 스냅샷 확정 |
+| `GET` | `/api/work-operations/{workOperationId}` | 작업 상세 |
+| `POST` | `/api/work-operations/{workOperationId}/complete` | 작업과 대상 일괄 완료 |
+| `GET` | `/api/orchid-groups/{orchidGroupId}/work-history` | 기존·신규 통합 이력 |
+
+초기 구현 제한: `sourceScopeType=HOUSE`, 작업 유형 코드 `PESTICIDE`만 지원한다.
 
 ### 거래처
 

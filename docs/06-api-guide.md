@@ -17,7 +17,8 @@ docs/api/slices/*.openapi.yaml
 | `farm-status.openapi.yaml` | 농장 현황 맵, 선택 범위 조회, 대시보드 요약 |
 | `orchid-command.openapi.yaml` | 난 묶음 생성, 수정, 이동, 배치 |
 | `inventory.openapi.yaml` | 품종 CRUD/삭제, 자재 CRUD/삭제, 입고 기록 생성/수정/포트작업/취소/삭제, 목록 페이지네이션 |
-| `work.openapi.yaml` | 작업 유형, 작업 이력 |
+| `work.openapi.yaml` | 작업 유형과 기존 작업 이력 |
+| `work-operation.openapi.yaml` | 신규 동 전체 농약 작업과 난 묶음 통합 이력 |
 | `partner.openapi.yaml` | 거래처, 정산 설정 |
 | `sales.openapi.yaml` | 판매 전표, 경매 판매 전표 |
 | `auction.openapi.yaml` | 경매 lot, 결과 입력, 상태 변경, 반환 확인, 수량 보정, 정산 |
@@ -82,3 +83,7 @@ docs/api/slices/*.openapi.yaml
 - 프론트 요청 payload
 - OpenAPI 갱신
 - seed 데이터 영향
+
+## 6. 신규 작업 실행 API 범위
+
+현재 신규 작업 실행 API는 `HOUSE` 범위의 `PESTICIDE` 작업만 지원한다. 대상 미리보기, 생성, 상세, 완료, 난 묶음 통합 이력을 제공한다. 다른 범위·작업 유형을 구현된 것으로 가정하지 않는다.
