@@ -1,12 +1,14 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import type { ColumnDef } from "@tanstack/react-table";
 import { RefreshCw } from "lucide-react";
 import type {
   AuctionSettlement,
   AuctionSettlementStatus,
 } from "@/entities/farm/types";
-import { PaginationControls } from "@/shared/ui/PaginationControls";
+import { formatShortDate } from "@/shared/lib/dateFormat";
+import { DataTable } from "@/shared/ui/DataTable";
 import {
   confirmAuctionSettlementPayment,
   rebuildAuctionSettlement,
@@ -54,6 +56,52 @@ export function AuctionSettlementView({
     const start = visiblePage * pageSize;
     return settlements.slice(start, start + pageSize);
   }, [pageSize, settlements, visiblePage]);
+  const columns = useMemo<ColumnDef<AuctionSettlement, unknown>[]>(
+    () => [
+      {
+        accessorKey: "auctionHouseName",
+        header: "경매장",
+        size: 180,
+        meta: { hideable: false, cellClassName: "font-semibold" },
+      },
+      {
+        accessorKey: "auctionDate",
+        header: "경매일",
+        cell: ({ row }) => formatShortDate(row.original.auctionDate),
+        size: 110,
+      },
+      {
+        accessorKey: "grossAmount",
+        header: "총 낙찰액",
+        cell: ({ row }) => `${row.original.grossAmount.toLocaleString()}원`,
+        size: 130,
+        meta: { align: "right" },
+      },
+      {
+        accessorKey: "expectedDepositAmount",
+        header: "예상 입금액",
+        cell: ({ row }) =>
+          `${row.original.expectedDepositAmount.toLocaleString()}원`,
+        size: 140,
+        meta: { align: "right" },
+      },
+      {
+        accessorKey: "remainingAmount",
+        header: "잔액",
+        cell: ({ row }) => row.original.remainingAmount.toLocaleString() + "원",
+        size: 120,
+        meta: { align: "right", cellClassName: "font-semibold" },
+      },
+      {
+        accessorKey: "status",
+        header: "상태",
+        cell: ({ row }) => <SettlementStatus status={row.original.status} />,
+        size: 110,
+        meta: { align: "center" },
+      },
+    ],
+    [],
+  );
 
   async function rebuildSelected() {
     if (!selected) return;
@@ -110,79 +158,26 @@ export function AuctionSettlementView({
         columns="lg:grid-cols-[minmax(0,0.9fr)_minmax(480px,1.1fr)]"
         gap="gap-3"
       >
-        <section className="min-w-0 rounded-md border border-[#dfe5dc] bg-white shadow-sm">
-          <header className="border-b border-[#e5e9e3] px-4 py-3">
-            <h3 className="text-sm font-bold">정산 목록</h3>
-            <p className="mt-0.5 text-xs text-[#68756c]">
-              총 {settlements.length.toLocaleString()}건
-            </p>
-          </header>
-          <div className="overflow-x-auto">
-            <table className="w-full min-w-[700px] text-sm">
-              <thead className="bg-[#f7f9f6] text-xs text-[#66736a]">
-                <tr>
-                  <th className="px-3 py-2 text-left">경매장</th>
-                  <th className="px-3 py-2 text-left">경매일</th>
-                  <th className="px-3 py-2 text-right">총 낙찰액</th>
-                  <th className="px-3 py-2 text-right">예상 입금액</th>
-                  <th className="px-3 py-2 text-right">잔액</th>
-                  <th className="px-3 py-2 text-center">상태</th>
-                </tr>
-              </thead>
-              <tbody>
-                {paginatedSettlements.map((settlement) => (
-                  <tr
-                    key={settlement.id}
-                    className={`cursor-pointer border-t border-[#edf0ec] ${selected?.id === settlement.id ? "bg-[#eef7ec]" : "hover:bg-[#fafbf9]"}`}
-                    onClick={() => setSelectedId(settlement.id)}
-                  >
-                    <td className="px-3 py-2.5 font-semibold">
-                      {settlement.auctionHouseName}
-                    </td>
-                    <td className="px-3 py-2.5">{settlement.auctionDate}</td>
-                    <td className="px-3 py-2.5 text-right">
-                      {settlement.grossAmount.toLocaleString()}원
-                    </td>
-                    <td className="px-3 py-2.5 text-right">
-                      {settlement.expectedDepositAmount.toLocaleString()}원
-                    </td>
-                    <td className="px-3 py-2.5 text-right font-semibold">
-                      {settlement.remainingAmount.toLocaleString()}원
-                    </td>
-                    <td className="px-3 py-2.5 text-center">
-                      <SettlementStatus status={settlement.status} />
-                    </td>
-                  </tr>
-                ))}
-                {paginatedSettlements.length === 0 ? (
-                  <tr>
-                    <td
-                      colSpan={6}
-                      className="py-14 text-center text-[#68756c]"
-                    >
-                      생성된 경매 정산이 없습니다.
-                    </td>
-                  </tr>
-                ) : null}
-              </tbody>
-            </table>
-          </div>
-          <div className="border-t border-[#e5e9e3] px-4 py-3">
-            <PaginationControls
-              nextLabel="다음"
-              pageCount={totalPages}
-              pageIndex={visiblePage}
-              pageSize={pageSize}
-              pageSizeOptions={[10, 20, 50]}
-              previousLabel="이전"
-              onPageChange={setPage}
-              onPageSizeChange={(nextPageSize) => {
-                setPageSize(nextPageSize);
-                setPage(0);
-              }}
-            />
-          </div>
-        </section>
+        <DataTable
+          columns={columns}
+          data={paginatedSettlements}
+          emptyMessage="생성된 경매 정산이 없습니다."
+          getRowId={(row) => String(row.id)}
+          pageIndex={visiblePage}
+          pageSize={pageSize}
+          pageSizeOptions={[10, 20, 50]}
+          selectedRowId={selected?.id == null ? null : String(selected.id)}
+          settingsKey="sales.settlements"
+          title="정산 목록"
+          totalLabel={`총 ${settlements.length.toLocaleString()}건`}
+          totalPages={totalPages}
+          onPageChange={setPage}
+          onPageSizeChange={(nextPageSize) => {
+            setPageSize(nextPageSize);
+            setPage(0);
+          }}
+          onRowClick={(row) => setSelectedId(row.id)}
+        />
 
         <SettlementDetail
           settlement={selected}
@@ -220,7 +215,8 @@ function SettlementDetail({
             정산 #{settlement.id}
           </p>
           <h3 className="mt-0.5 text-base font-bold">
-            {settlement.auctionHouseName} · {settlement.auctionDate}
+            {settlement.auctionHouseName} ·{" "}
+            {formatShortDate(settlement.auctionDate)}
           </h3>
         </div>
         <SettlementStatus status={settlement.status} />
@@ -254,7 +250,9 @@ function SettlementDetail({
             <tbody>
               {settlement.lines.map((line) => (
                 <tr key={line.id} className="border-t border-[#edf0ec]">
-                  <td className="px-2 py-2">{line.shipmentDate}</td>
+                  <td className="px-2 py-2">
+                    {formatShortDate(line.shipmentDate)}
+                  </td>
                   <td className="px-2 py-2 font-semibold">
                     {line.varietyName} · {line.shipmentGrade || "-"}
                   </td>

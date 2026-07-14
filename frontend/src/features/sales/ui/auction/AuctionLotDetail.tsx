@@ -5,6 +5,7 @@ import type {
   AuctionInspectionStatus,
   AuctionLot,
 } from "@/entities/farm/types";
+import { formatShortDate } from "@/shared/lib/dateFormat";
 import {
   auctionAttemptStatusLabel,
   auctionInspectionLabel,
@@ -675,7 +676,7 @@ function TimelineItem({
     >
       <div className="flex flex-wrap justify-between gap-2">
         <strong className="text-sm">{title}</strong>
-        <time className="text-xs text-[#68756c]">{date}</time>
+        <time className="text-xs text-[#68756c]">{formatShortDate(date)}</time>
       </div>
       <div className="mt-1 text-xs text-[#5c6960]">{description}</div>
     </li>

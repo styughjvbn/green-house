@@ -12,6 +12,7 @@
     "check": "node ../scripts/check-frontend.js"
   },
   "dependencies": {
+    "@tanstack/react-table": "^8.21.3",
     "@types/leaflet": "^1.9.21",
     "leaflet": "^1.9.4",
     "lucide": "^1.21.0",

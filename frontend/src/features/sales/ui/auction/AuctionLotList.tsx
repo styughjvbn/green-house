@@ -1,5 +1,8 @@
+import { useMemo } from "react";
+import type { ColumnDef } from "@tanstack/react-table";
 import type { AuctionLot } from "@/entities/farm/types";
-import { PaginationControls } from "@/shared/ui/PaginationControls";
+import { formatShortDate } from "@/shared/lib/dateFormat";
+import { DataTable } from "@/shared/ui/DataTable";
 import {
   auctionInspectionLabel,
   auctionStatusLabel,
@@ -27,149 +30,123 @@ export function AuctionLotList({
   onPageChange: (page: number) => void;
   onPageSizeChange: (size: number) => void;
 }) {
+  const columns = useMemo<ColumnDef<AuctionLot, unknown>[]>(
+    () => [
+      {
+        accessorKey: "shipmentDate",
+        header: "출하일",
+        cell: ({ row }) => formatShortDate(row.original.shipmentDate),
+        size: 110,
+      },
+      {
+        accessorKey: "auctionMarket",
+        header: "경매장",
+        size: 140,
+        meta: { cellClassName: "font-semibold whitespace-nowrap" },
+      },
+      {
+        id: "item",
+        header: "품목 / 품종",
+        cell: ({ row }) => (
+          <>
+            <strong className="block">{row.original.varietyName}</strong>
+            <span className="text-[#738077]">{row.original.itemName}</span>
+          </>
+        ),
+        size: 220,
+      },
+      {
+        accessorKey: "shipmentGrade",
+        header: "등급",
+        cell: ({ row }) => row.original.shipmentGrade || "-",
+        size: 80,
+      },
+      quantityColumn("shippedQuantity", "출하"),
+      quantityColumn("soldQuantity", "판매"),
+      quantityColumn("waitingQuantity", "대기", (value) => value > 0),
+      quantityColumn("returnedQuantity", "반환"),
+      {
+        accessorKey: "latestAuctionDate",
+        header: "최근 경매",
+        cell: ({ row }) => formatShortDate(row.original.latestAuctionDate),
+        size: 110,
+      },
+      {
+        accessorKey: "failedCount",
+        header: "유찰",
+        size: 70,
+        meta: { align: "center" },
+      },
+      {
+        accessorKey: "currentStatus",
+        header: "상태",
+        cell: ({ row }) => <StatusBadge status={row.original.currentStatus} />,
+        size: 105,
+      },
+      {
+        accessorKey: "totalAmount",
+        header: "금액",
+        cell: ({ row }) => row.original.totalAmount.toLocaleString(),
+        size: 110,
+        meta: { align: "right", cellClassName: "whitespace-nowrap" },
+      },
+      {
+        accessorKey: "inspectionStatus",
+        header: "검수",
+        cell: ({ row }) =>
+          auctionInspectionLabel(row.original.inspectionStatus),
+        size: 100,
+      },
+    ],
+    [],
+  );
+
   return (
-    <section className="min-w-0 rounded-md border border-[#dfe5dc] bg-white shadow-sm">
-      <div className="flex items-center justify-between border-b border-[#e7ebe5] px-4 py-3">
-        <h2 className="text-base font-bold text-[#17251b]">출하 lot 목록</h2>
-        <span className="text-xs font-semibold text-[#159447]">
-          총 {totalElements.toLocaleString()}건
+    <DataTable
+      columns={columns}
+      data={lots}
+      emptyMessage="조건에 맞는 출하 lot이 없습니다."
+      getRowId={(row) => String(row.id)}
+      pageIndex={page - 1}
+      pageSize={pageSize}
+      pageSizeOptions={[20, 50, 100]}
+      selectedRowId={selectedId == null ? null : String(selectedId)}
+      settingsKey="sales.auctionLots"
+      title="출하 lot 목록"
+      totalLabel={`총 ${totalElements.toLocaleString()}건`}
+      totalPages={totalPages}
+      onPageChange={(pageIndex) => onPageChange(pageIndex + 1)}
+      onPageSizeChange={onPageSizeChange}
+      onRowClick={(row) => onSelect(row.id)}
+    />
+  );
+}
+
+function quantityColumn(
+  key:
+    | "shippedQuantity"
+    | "soldQuantity"
+    | "waitingQuantity"
+    | "returnedQuantity",
+  header: string,
+  emphasize?: (value: number) => boolean,
+): ColumnDef<AuctionLot, unknown> {
+  return {
+    accessorKey: key,
+    header,
+    size: 70,
+    cell: ({ row }) => {
+      const value = row.original[key];
+      return (
+        <span
+          className={`font-semibold ${emphasize?.(value) ? "text-[#d67a00]" : ""}`}
+        >
+          {value.toLocaleString()}
         </span>
-      </div>
-      <div className="max-h-[590px] overflow-auto">
-        <table className="w-full min-w-[1160px] border-collapse text-left text-xs">
-          <thead className="sticky top-0 z-10 bg-[#f7f9f6] text-[#4b584f]">
-            <tr>
-              {[
-                "출하일",
-                "경매장",
-                "품목 / 품종",
-                "등급",
-                "출하",
-                "판매",
-                "대기",
-                "반환",
-                "최근 경매",
-                "유찰",
-                "상태",
-                "금액",
-                "검수",
-              ].map((label) => (
-                <th
-                  key={label}
-                  className="border-b border-[#dfe5dc] px-2.5 py-2.5 font-semibold whitespace-nowrap"
-                >
-                  {label}
-                </th>
-              ))}
-            </tr>
-          </thead>
-          <tbody>
-            {lots.map((lot) => (
-              <tr
-                key={lot.id}
-                className={`cursor-pointer border-b border-[#edf0ec] hover:bg-[#f0f8ef] ${selectedId === lot.id ? "bg-[#eaf7eb]" : ""}`}
-                onClick={() => onSelect(lot.id)}
-              >
-                <td className="px-2.5 py-2.5 whitespace-nowrap">
-                  {lot.shipmentDate}
-                </td>
-                <td className="px-2.5 py-2.5 font-semibold whitespace-nowrap">
-                  {lot.auctionMarket}
-                </td>
-                <td className="px-2.5 py-2.5">
-                  <strong className="block">{lot.varietyName}</strong>
-                  <span className="text-[#738077]">{lot.itemName}</span>
-                </td>
-                <td className="px-2.5 py-2.5">{lot.shipmentGrade || "-"}</td>
-                <NumberCell value={lot.shippedQuantity} />
-                <NumberCell value={lot.soldQuantity} />
-                <NumberCell
-                  value={lot.waitingQuantity}
-                  emphasize={lot.waitingQuantity > 0}
-                />
-                <NumberCell value={lot.returnedQuantity} />
-                <td className="px-2.5 py-2.5 whitespace-nowrap">
-                  {lot.latestAuctionDate || "-"}
-                </td>
-                <td className="px-2.5 py-2.5 text-center">{lot.failedCount}</td>
-                <td className="px-2.5 py-2.5">
-                  <StatusBadge status={lot.currentStatus} />
-                </td>
-                <td className="px-2.5 py-2.5 text-right whitespace-nowrap">
-                  {lot.totalAmount.toLocaleString()}
-                </td>
-                <td className="px-2.5 py-2.5 whitespace-nowrap">
-                  {auctionInspectionLabel(lot.inspectionStatus)}
-                </td>
-              </tr>
-            ))}
-            {lots.length === 0 ? (
-              <tr>
-                <td
-                  className="py-14 text-center text-sm text-[#6c786f]"
-                  colSpan={13}
-                >
-                  조건에 맞는 출하 lot이 없습니다.
-                </td>
-              </tr>
-            ) : null}
-          </tbody>
-        </table>
-      </div>
-      <Pagination
-        page={page}
-        pageSize={pageSize}
-        totalPages={totalPages}
-        onPageChange={onPageChange}
-        onPageSizeChange={onPageSizeChange}
-      />
-    </section>
-  );
-}
-
-function Pagination({
-  page,
-  pageSize,
-  totalPages,
-  onPageChange,
-  onPageSizeChange,
-}: {
-  page: number;
-  pageSize: number;
-  totalPages: number;
-  onPageChange: (page: number) => void;
-  onPageSizeChange: (size: number) => void;
-}) {
-  return (
-    <div className="flex flex-wrap items-center justify-between gap-2 border-t border-[#e7ebe5] px-3 py-2.5">
-      <PaginationControls
-        nextLabel="다음"
-        pageCount={totalPages}
-        pageIndex={page - 1}
-        pageSize={pageSize}
-        pageSizeOptions={[20, 50, 100]}
-        previousLabel="이전"
-        onPageChange={(pageIndex) => onPageChange(pageIndex + 1)}
-        onPageSizeChange={onPageSizeChange}
-      />
-    </div>
-  );
-}
-
-function NumberCell({
-  value,
-  emphasize = false,
-}: {
-  value: number;
-  emphasize?: boolean;
-}) {
-  return (
-    <td
-      className={`px-2.5 py-2.5 text-right font-semibold ${emphasize ? "text-[#d67a00]" : ""}`}
-    >
-      {value.toLocaleString()}
-    </td>
-  );
+      );
+    },
+    meta: { align: "right" },
+  };
 }
 
 export function StatusBadge({

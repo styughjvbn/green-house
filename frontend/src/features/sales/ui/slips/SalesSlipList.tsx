@@ -1,7 +1,10 @@
 "use client";
 
+import { useMemo } from "react";
+import type { ColumnDef } from "@tanstack/react-table";
 import { Plus } from "lucide-react";
-import { PaginationControls } from "@/shared/ui/PaginationControls";
+import { formatShortDate } from "@/shared/lib/dateFormat";
+import { DataTable } from "@/shared/ui/DataTable";
 import type { SalesSlipListItem } from "../../model/types";
 
 export function SalesSlipList({
@@ -27,110 +30,86 @@ export function SalesSlipList({
   onPageChange: (pageIndex: number) => void;
   onPageSizeChange: (pageSize: number) => void;
 }) {
-  return (
-    <section className="flex min-h-0 min-w-0 flex-col rounded-md border border-[#dfe5dc] bg-white p-4 shadow-sm">
-      <div className="flex items-start justify-between gap-3">
-        <div className="flex items-center gap-2">
-          <h2 className="text-xl font-bold text-[#17251b]">판매 전표 목록</h2>
-          <span className="text-sm font-semibold text-[#159447]">
-            총 {totalSalesSlips}건
+  const columns = useMemo<ColumnDef<SalesSlipListItem, unknown>[]>(
+    () => [
+      {
+        accessorKey: "saleDate",
+        header: "판매일자",
+        cell: ({ row }) => formatShortDate(row.original.saleDate),
+        size: 80,
+        meta: { hideable: false },
+      },
+      {
+        id: "salesType",
+        header: "판매 유형",
+        size: 70,
+        cell: ({ row }) =>
+          row.original.salesType === "AUCTION" ? "경매" : "일반",
+      },
+      {
+        id: "partnerName",
+        header: "거래처",
+        cell: ({ row }) => (
+          <span className="block truncate" title={row.original.partner.name}>
+            {row.original.partner.name}
           </span>
-        </div>
+        ),
+        size: 190,
+        meta: { cellClassName: "max-w-[180px] font-semibold" },
+      },
+      {
+        accessorKey: "totalAmount",
+        header: "총 금액",
+        cell: ({ row }) => row.original.totalAmount.toLocaleString(),
+        size: 120,
+        meta: { align: "right", cellClassName: "whitespace-nowrap" },
+      },
+      {
+        accessorKey: "paymentStatus",
+        header: "입금 상태",
+        cell: ({ row }) => <StatusBadge value={row.original.paymentStatus} />,
+        size: 10,
+      },
+      {
+        accessorKey: "salesStatus",
+        header: "판매 상태",
+        cell: ({ row }) => <StatusBadge value={row.original.salesStatus} />,
+        size: 110,
+      },
+    ],
+    [],
+  );
+
+  return (
+    <DataTable
+      actions={
         <button
-          className="inline-flex h-10 items-center gap-2 rounded-md bg-[#159447] px-4 text-sm font-semibold text-white shadow-sm"
+          className="inline-flex h-9 items-center gap-2 rounded-md bg-[#159447] px-3 text-xs font-semibold whitespace-nowrap text-white shadow-sm"
           type="button"
           onClick={onCreateSalesSlip}
         >
           <Plus className="h-4 w-4" strokeWidth={1.8} aria-hidden="true" />
           판매 전표 등록
         </button>
-      </div>
-
-      <div className="mt-4 min-h-0 flex-1 overflow-auto">
-        <table className="w-full min-w-[720px] border-collapse text-left text-sm">
-          <thead className="border-y border-[#dfe5dc] text-[#435047]">
-            <tr>
-              <th className="px-3 py-3 font-semibold whitespace-nowrap">
-                판매일자
-              </th>
-              <th className="px-3 py-3 font-semibold whitespace-nowrap">
-                판매 유형
-              </th>
-              <th className="px-3 py-3 font-semibold whitespace-nowrap">
-                거래처
-              </th>
-              <th className="px-3 py-3 text-right font-semibold whitespace-nowrap">
-                총 금액
-              </th>
-              <th className="px-3 py-3 font-semibold whitespace-nowrap">
-                입금 상태
-              </th>
-              <th className="px-3 py-3 font-semibold whitespace-nowrap">
-                판매 상태
-              </th>
-            </tr>
-          </thead>
-          <tbody>
-            {salesSlips.map((slip) => {
-              const selected = selectedSalesSlipId === slip.id;
-
-              return (
-                <tr
-                  key={slip.id}
-                  className={`cursor-pointer border-b border-[#edf0ec] transition hover:bg-[#eef7ec] ${
-                    selected ? "bg-[#eaf7eb]" : "bg-white"
-                  }`}
-                  onClick={() => onSelect(slip.id)}
-                >
-                  <td className="px-3 py-3 whitespace-nowrap">
-                    {slip.saleDate}
-                  </td>
-                  <td className="px-3 py-3 whitespace-nowrap">
-                    {slip.salesType === "AUCTION" ? "경매" : "일반"}
-                  </td>
-                  <td className="max-w-[180px] px-3 py-3 font-semibold">
-                    <span className="block truncate" title={slip.partner.name}>
-                      {slip.partner.name}
-                    </span>
-                  </td>
-                  <td className="px-3 py-3 text-right whitespace-nowrap">
-                    {slip.totalAmount.toLocaleString()}
-                  </td>
-                  <td className="px-3 py-3">
-                    <StatusBadge value={slip.paymentStatus} />
-                  </td>
-                  <td className="px-3 py-3">
-                    <StatusBadge value={slip.salesStatus} />
-                  </td>
-                </tr>
-              );
-            })}
-            {salesSlips.length === 0 ? (
-              <tr>
-                <td
-                  className="px-3 py-12 text-center text-[#5c6a60]"
-                  colSpan={7}
-                >
-                  조건에 맞는 판매 전표가 없습니다.
-                </td>
-              </tr>
-            ) : null}
-          </tbody>
-        </table>
-      </div>
-      <div className="mt-4">
-        <PaginationControls
-          nextLabel="다음"
-          pageCount={totalPages}
-          pageIndex={currentPage}
-          pageSize={pageSize}
-          pageSizeOptions={[10, 20, 50]}
-          previousLabel="이전"
-          onPageChange={onPageChange}
-          onPageSizeChange={onPageSizeChange}
-        />
-      </div>
-    </section>
+      }
+      columns={columns}
+      data={salesSlips}
+      emptyMessage="조건에 맞는 판매 전표가 없습니다."
+      getRowId={(row) => String(row.id)}
+      pageIndex={currentPage}
+      pageSize={pageSize}
+      pageSizeOptions={[10, 20, 50]}
+      selectedRowId={
+        selectedSalesSlipId == null ? null : String(selectedSalesSlipId)
+      }
+      settingsKey="sales.slips"
+      title="판매 전표 목록"
+      totalLabel={`총 ${totalSalesSlips.toLocaleString()}건`}
+      totalPages={totalPages}
+      onPageChange={onPageChange}
+      onPageSizeChange={onPageSizeChange}
+      onRowClick={(row) => onSelect(row.id)}
+    />
   );
 }
 

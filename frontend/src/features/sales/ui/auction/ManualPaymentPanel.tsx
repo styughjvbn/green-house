@@ -3,6 +3,7 @@
 import { useState, type FormEvent, type ReactNode } from "react";
 import { Banknote, ChevronDown, ChevronUp } from "lucide-react";
 import type { PartnerPaymentEvent } from "@/entities/farm/types";
+import { formatShortDate } from "@/shared/lib/dateFormat";
 import {
   getPaymentEvents,
   type ManualPaymentPayload,
@@ -98,7 +99,7 @@ export function ManualPaymentPanel({
         <div className="space-y-3 border-t border-[#edf0ec] px-4 py-3">
           <div className="flex flex-wrap gap-x-5 gap-y-1 text-xs text-[#68756c]">
             <span>현재 잔액 {remainingAmount.toLocaleString()}원</span>
-            <span>입금 예정일 {expectedPaymentDate ?? "-"}</span>
+            <span>입금 예정일 {formatShortDate(expectedPaymentDate)}</span>
           </div>
 
           {remainingAmount > 0 ? (
@@ -180,7 +181,7 @@ export function ManualPaymentPanel({
                     className="flex flex-wrap justify-between gap-2 px-3 py-2"
                   >
                     <span>
-                      {event.eventDate} ·{" "}
+                      {formatShortDate(event.eventDate)} ·{" "}
                       {event.depositorName || "입금자 미기재"}
                     </span>
                     <strong>{event.amount.toLocaleString()}원</strong>

@@ -4,6 +4,7 @@ import type { ReactNode } from "react";
 import Link from "next/link";
 import { Ban, Copy, Pencil, Printer, Truck } from "lucide-react";
 import type { SalesSlip } from "@/entities/farm/types";
+import { formatShortDate } from "@/shared/lib/dateFormat";
 import { confirmSalesSlipPayment } from "../../api/salesApi";
 import { ManualPaymentPanel } from "../auction/ManualPaymentPanel";
 
@@ -126,7 +127,10 @@ export function SalesSlipDetail({
               salesSlip.salesType === "AUCTION" ? "경매 판매" : "일반 판매"
             }
           />
-          <InfoLabel label="판매일자" value={salesSlip.saleDate} />
+          <InfoLabel
+            label="판매일자"
+            value={formatShortDate(salesSlip.saleDate)}
+          />
           <InfoLabel label="입금 상태" value={salesSlip.paymentStatus} />
           <InfoLabel label="판매 상태" value={salesSlip.salesStatus} />
         </div>
