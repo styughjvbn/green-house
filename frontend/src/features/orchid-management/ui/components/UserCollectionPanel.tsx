@@ -13,9 +13,9 @@ import {
 import type { OrchidGroupCollection } from "../../model/types";
 
 export default function UserCollectionPanel({
-  orchidGroup,
+  orchidGroups,
 }: {
-  orchidGroup: OrchidGroup;
+  orchidGroups: OrchidGroup[];
 }) {
   const [collections, setCollections] = useState<OrchidGroupCollection[]>([]);
   const [name, setName] = useState("");
@@ -38,7 +38,7 @@ export default function UserCollectionPanel({
     return () => {
       cancelled = true;
     };
-  }, [orchidGroup.id]);
+  }, []);
 
   async function createCollection() {
     const normalizedName = name.trim();
@@ -49,7 +49,7 @@ export default function UserCollectionPanel({
       const created = await createOrchidGroupCollection(normalizedName);
       const withMember = await addOrchidGroupCollectionMember(
         created.id,
-        orchidGroup.id,
+        orchidGroups.map((group) => group.id),
       );
       setCollections((current) => [withMember, ...current]);
       setName("");
@@ -62,13 +62,26 @@ export default function UserCollectionPanel({
 
   async function toggleMembership(collection: OrchidGroupCollection) {
     if (savingId !== null) return;
-    const joined = hasMember(collection, orchidGroup.id);
+    const joinedCount = countMembers(collection, orchidGroups);
+    const allJoined = joinedCount === orchidGroups.length;
     setSavingId(collection.id);
     setErrorMessage(null);
     try {
-      const updated = joined
-        ? await removeOrchidGroupCollectionMember(collection.id, orchidGroup.id)
-        : await addOrchidGroupCollectionMember(collection.id, orchidGroup.id);
+      let updated: OrchidGroupCollection;
+      if (allJoined) {
+        updated = collection;
+        for (const orchidGroup of orchidGroups) {
+          updated = await removeOrchidGroupCollectionMember(
+            collection.id,
+            orchidGroup.id,
+          );
+        }
+      } else {
+        updated = await addOrchidGroupCollectionMember(
+          collection.id,
+          orchidGroups.map((group) => group.id),
+        );
+      }
       replaceCollection(updated);
     } catch (error) {
       setErrorMessage(toMessage(error));
@@ -110,7 +123,7 @@ export default function UserCollectionPanel({
         <div>
           <p className="text-sm font-semibold text-[#17251b]">사용자 그룹</p>
           <p className="mt-0.5 text-[11px] text-[#6a766e]">
-            {orchidGroup.varietyName} 묶음의 별도 관리 그룹
+            선택한 {orchidGroups.length}묶음의 별도 관리 그룹
           </p>
         </div>
         {loading ? (
@@ -145,12 +158,13 @@ export default function UserCollectionPanel({
 
       <div className="mt-3 max-h-48 space-y-2 overflow-y-auto pr-1">
         {collections.map((collection) => {
-          const joined = hasMember(collection, orchidGroup.id);
+          const joinedCount = countMembers(collection, orchidGroups);
+          const allJoined = joinedCount === orchidGroups.length;
           const saving = savingId === collection.id;
           return (
             <div
               className={`flex items-center justify-between gap-2 rounded-md border px-3 py-2 ${
-                joined
+                joinedCount > 0
                   ? "border-[#b9dfc2] bg-[#f2faf4]"
                   : "border-[#e1e6df] bg-white"
               }`}
@@ -167,7 +181,7 @@ export default function UserCollectionPanel({
               </div>
               <div className="flex shrink-0 gap-1">
                 <button
-                  aria-label={joined ? "그룹에서 해제" : "그룹에 추가"}
+                  aria-label={allJoined ? "그룹에서 전체 해제" : "그룹에 추가"}
                   className="flex h-8 items-center gap-1 rounded-md border border-[#cfd8cc] px-2 text-[11px] font-semibold text-[#34503b] disabled:opacity-50"
                   disabled={savingId !== null}
                   onClick={() => void toggleMembership(collection)}
@@ -175,12 +189,16 @@ export default function UserCollectionPanel({
                 >
                   {saving ? (
                     <LoaderCircle className="h-3.5 w-3.5 animate-spin" />
-                  ) : joined ? (
+                  ) : allJoined ? (
                     <Minus className="h-3.5 w-3.5" />
                   ) : (
                     <Plus className="h-3.5 w-3.5" />
                   )}
-                  {joined ? "해제" : "추가"}
+                  {allJoined
+                    ? `해제 ${joinedCount}`
+                    : joinedCount > 0
+                      ? `추가 ${orchidGroups.length - joinedCount}`
+                      : `추가 ${orchidGroups.length}`}
                 </button>
                 <button
                   aria-label="사용자 그룹 보관"
@@ -211,10 +229,14 @@ export default function UserCollectionPanel({
   );
 }
 
-function hasMember(collection: OrchidGroupCollection, orchidGroupId: number) {
-  return collection.members.some(
-    (member) => member.orchidGroupId === orchidGroupId,
-  );
+function countMembers(
+  collection: OrchidGroupCollection,
+  orchidGroups: OrchidGroup[],
+) {
+  const selectedIds = new Set(orchidGroups.map((group) => group.id));
+  return collection.members.filter((member) =>
+    selectedIds.has(member.orchidGroupId),
+  ).length;
 }
 
 function toMessage(error: unknown) {

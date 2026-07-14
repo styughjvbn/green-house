@@ -15,3 +15,10 @@ export const POT_SIZE_OPTIONS = [
 export function isStandardPotSize(value: string) {
   return POT_SIZE_OPTIONS.some((option) => option.value === value);
 }
+
+export function formatPotSize(code: string, value: string | null) {
+  if (code === "UNSPECIFIED") return "화분 미지정";
+  if (code === "UNMAPPED") return value ? `${value} (검수 필요)` : "검수 필요";
+  const option = POT_SIZE_OPTIONS.find((item) => item.value === value);
+  return option?.label ?? value ?? code;
+}

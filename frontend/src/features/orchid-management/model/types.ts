@@ -147,6 +147,19 @@ export type OrchidGroupCollection = {
   members: OrchidGroupCollectionMember[];
 };
 
+export type DerivedOrchidGroup = {
+  groupKey: string;
+  varietyId: number;
+  varietyName: string;
+  genus: string | null;
+  ageYear: number | null;
+  potSizeCode: OrchidGroup["potSizeCode"];
+  potSize: string | null;
+  orchidGroupCount: number;
+  totalQuantity: number;
+  locationCount: number;
+};
+
 export type OrchidManagementMapProps = {
   mapData: FarmStatusMapData;
   house: House;

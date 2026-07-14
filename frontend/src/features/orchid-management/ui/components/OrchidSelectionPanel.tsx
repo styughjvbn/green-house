@@ -1,6 +1,6 @@
 "use client";
 
-import type { ReactNode } from "react";
+import { useState, type ReactNode } from "react";
 import type {
   BedZone,
   House,
@@ -24,6 +24,7 @@ import type {
   WorkRecordQuickFormState,
 } from "../../model/types";
 import ActionButton from "./ActionButton";
+import DerivedGroupPanel from "./DerivedGroupPanel";
 import OrchidGroupForm from "./OrchidGroupForm";
 import OrchidWorkRecordForm from "./OrchidWorkRecordForm";
 import UserCollectionPanel from "./UserCollectionPanel";
@@ -114,6 +115,9 @@ export default function OrchidSelectionPanel({
   ) => void;
   onWorkRecordCreate: () => Promise<void>;
 }) {
+  const [selectedOrchidGroupIds, setSelectedOrchidGroupIds] = useState<
+    Set<number>
+  >(new Set());
   const listZone =
     listSelection.type === "BED_ZONE"
       ? (findBedZone(house, listSelection.bedZoneId)?.zone ?? null)
@@ -134,6 +138,22 @@ export default function OrchidSelectionPanel({
             bed.bedZones.flatMap((bedZone) => bedZone.orchidGroups),
           )
         : [];
+  const allHouseOrchidGroups = house.physicalBeds.flatMap((bed) =>
+    bed.bedZones.flatMap((bedZone) => bedZone.orchidGroups),
+  );
+  const batchSelectedGroups = allHouseOrchidGroups.filter((orchidGroup) =>
+    selectedOrchidGroupIds.has(orchidGroup.id),
+  );
+  const collectionTargets =
+    batchSelectedGroups.length > 0
+      ? batchSelectedGroups
+      : selectedOrchidGroup
+        ? [selectedOrchidGroup]
+        : [];
+  const collectionTargetKey = collectionTargets
+    .map((orchidGroup) => orchidGroup.id)
+    .sort((a, b) => a - b)
+    .join("-");
   const matchedCount = orchidGroups.filter((orchidGroup) =>
     filteredOrchidGroupIds.has(orchidGroup.id),
   ).length;
@@ -160,6 +180,15 @@ export default function OrchidSelectionPanel({
                 : orchidGroups.length}
               개)
             </p>
+            {selectedOrchidGroupIds.size > 0 ? (
+              <button
+                className="text-xs font-semibold text-[#159447]"
+                onClick={() => setSelectedOrchidGroupIds(new Set())}
+                type="button"
+              >
+                {selectedOrchidGroupIds.size}개 선택 해제
+              </button>
+            ) : null}
           </div>
           {copiedOrchidGroup ? (
             <div className="mt-3 flex items-center justify-between gap-2 rounded-md border border-[#dbe8d8] bg-[#f5faf3] px-3 py-2 text-xs">
@@ -217,26 +246,49 @@ export default function OrchidSelectionPanel({
                       }
                     >
                       <div className="flex items-start justify-between gap-3">
-                        <div className="min-w-0">
-                          <div className="flex items-center gap-2">
-                            <span
-                              className={`h-2.5 w-2.5 shrink-0 rounded-full ${
-                                matched
-                                  ? getStatusDotClass(orchidGroup.status)
-                                  : "bg-[#a6ada6]"
-                              }`}
-                            />
-                            <p className="truncate text-sm font-bold text-[#17251b]">
-                              {orchidGroup.varietyName}
+                        <label
+                          className="flex min-w-0 flex-1 cursor-pointer items-start gap-2"
+                          onClick={(event) => event.stopPropagation()}
+                        >
+                          <input
+                            aria-label={`${orchidGroup.varietyName} 다중 선택`}
+                            checked={selectedOrchidGroupIds.has(orchidGroup.id)}
+                            className="mt-0.5 h-4 w-4 accent-[#159447]"
+                            disabled={!matched}
+                            onChange={() =>
+                              setSelectedOrchidGroupIds((current) => {
+                                const next = new Set(current);
+                                if (next.has(orchidGroup.id)) {
+                                  next.delete(orchidGroup.id);
+                                } else {
+                                  next.add(orchidGroup.id);
+                                }
+                                return next;
+                              })
+                            }
+                            type="checkbox"
+                          />
+                          <div className="min-w-0">
+                            <div className="flex items-center gap-2">
+                              <span
+                                className={`h-2.5 w-2.5 shrink-0 rounded-full ${
+                                  matched
+                                    ? getStatusDotClass(orchidGroup.status)
+                                    : "bg-[#a6ada6]"
+                                }`}
+                              />
+                              <p className="truncate text-sm font-bold text-[#17251b]">
+                                {orchidGroup.varietyName}
+                              </p>
+                            </div>
+                            <p className="mt-1 text-xs font-semibold text-[#344138]">
+                              {orchidGroup.quantity}분
+                            </p>
+                            <p className="mt-0.5 text-[11px] text-[#6a766e]">
+                              {formatOrchidMeta(orchidGroup)}
                             </p>
                           </div>
-                          <p className="mt-1 text-xs font-semibold text-[#344138]">
-                            {orchidGroup.quantity}분
-                          </p>
-                          <p className="mt-0.5 text-[11px] text-[#6a766e]">
-                            {formatOrchidMeta(orchidGroup)}
-                          </p>
-                        </div>
+                        </label>
 
                         <div className="flex shrink-0 items-center gap-1.5">
                           <StatusBadge
@@ -325,10 +377,23 @@ export default function OrchidSelectionPanel({
         </section>
       ) : null}
 
-      {!hideList && selectedOrchidGroup ? (
+      {!hideList ? (
+        <DerivedGroupPanel
+          key={house.id}
+          houseId={house.id}
+          onSelectMembers={(members) => {
+            setSelectedOrchidGroupIds(
+              new Set(members.map((member) => member.id)),
+            );
+            if (members[0]) onSelectOrchidGroup(members[0].id);
+          }}
+        />
+      ) : null}
+
+      {!hideList && collectionTargets.length > 0 ? (
         <UserCollectionPanel
-          key={selectedOrchidGroup.id}
-          orchidGroup={selectedOrchidGroup}
+          key={collectionTargetKey}
+          orchidGroups={collectionTargets}
         />
       ) : null}
 

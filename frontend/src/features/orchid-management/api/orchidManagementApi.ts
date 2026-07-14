@@ -11,6 +11,7 @@ import type {
   WorkType,
 } from "@/entities/farm/types";
 import type {
+  DerivedOrchidGroup,
   MutationPayload,
   OrchidGroupCollection,
   PreciseMovePayload,
@@ -195,6 +196,23 @@ export function getOrchidGroupCollections() {
   return fetchApi<OrchidGroupCollection[]>("/orchid-group-collections");
 }
 
+export function getDerivedOrchidGroups(houseId: number) {
+  const params = new URLSearchParams({ houseId: String(houseId) });
+  return fetchApi<DerivedOrchidGroup[]>(
+    `/orchid-groups/derived-groups?${params.toString()}`,
+  );
+}
+
+export function getDerivedOrchidGroupMembers(
+  groupKey: string,
+  houseId: number,
+) {
+  const params = new URLSearchParams({ houseId: String(houseId) });
+  return fetchApi<OrchidGroup[]>(
+    `/orchid-groups/derived-groups/${encodeURIComponent(groupKey)}/members?${params.toString()}`,
+  );
+}
+
 export function createOrchidGroupCollection(name: string) {
   return submitCollectionMutation("/orchid-group-collections", "POST", {
     name,
@@ -203,12 +221,16 @@ export function createOrchidGroupCollection(name: string) {
 
 export function addOrchidGroupCollectionMember(
   collectionId: number,
-  orchidGroupId: number,
+  orchidGroupIds: number | number[],
 ) {
   return submitCollectionMutation(
     `/orchid-group-collections/${collectionId}/members`,
     "POST",
-    { orchidGroupIds: [orchidGroupId] },
+    {
+      orchidGroupIds: Array.isArray(orchidGroupIds)
+        ? orchidGroupIds
+        : [orchidGroupIds],
+    },
   );
 }
 
