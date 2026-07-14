@@ -8,15 +8,24 @@ import type {
   VarietyOption,
 } from "@/entities/farm/types";
 import {
+  buildOccupiedCells,
   findFirstAvailableSingleSlot,
+  findBedZone,
   endCellToPosition,
+  normalizeCellRange,
   nullableNumber,
   nullableText,
   positionToEndCell,
+  rangeHasOccupiedCell,
   positionToStartCell,
+  resolveMaxCell,
   startCellToPosition,
 } from "../../lib/orchidManagementUtils";
-import type { MutationPayload, OrchidFormState } from "../../model/types";
+import type {
+  MapCellRangePick,
+  MutationPayload,
+  OrchidFormState,
+} from "../../model/types";
 import TextField from "./TextField";
 import VarietySearchSelect from "./VarietySearchSelect";
 
@@ -26,7 +35,10 @@ export default function OrchidGroupForm({
   mode,
   saving,
   targetZone,
+  mapCellRangePick,
   onCancel,
+  onStartMapCellRangePick,
+  onSyncMapCellRangePick,
   onSubmit,
 }: {
   initialValue: OrchidGroup | null;
@@ -34,7 +46,22 @@ export default function OrchidGroupForm({
   mode: "CREATE" | "EDIT";
   saving: boolean;
   targetZone: BedZone | null;
+  mapCellRangePick: MapCellRangePick;
   onCancel: () => void;
+  onStartMapCellRangePick: (options: {
+    endCell: string;
+    excludeOrchidGroupId?: number | null;
+    maxCell: number;
+    startCell: string;
+    targetBedZoneId: number | null;
+  }) => void;
+  onSyncMapCellRangePick: (options: {
+    endCell: string;
+    excludeOrchidGroupId?: number | null;
+    maxCell: number;
+    startCell: string;
+    targetBedZoneId: number;
+  }) => void;
   onSubmit: (payload: MutationPayload) => Promise<void>;
 }) {
   const initialVariety = useMemo<VarietyOption | null>(
@@ -44,19 +71,25 @@ export default function OrchidGroupForm({
             id: initialValue.varietyId,
             genus: initialValue.genus ?? "",
             name: initialValue.varietyName,
-            defaultPotSize: initialValue.potSize,
+            defaultPotSize: null,
             active: true,
           }
         : null,
     [initialValue],
   );
 
+  const mapTargetZone =
+    mode === "CREATE" && mapCellRangePick.targetBedZoneId != null
+      ? (findBedZone(house, mapCellRangePick.targetBedZoneId)?.zone ?? null)
+      : null;
+  const activeZone = mapTargetZone ?? targetZone;
+
   const defaultPlacement = useMemo(
     () =>
-      mode === "CREATE" && targetZone
-        ? findFirstAvailableSingleSlot(house, targetZone.id)
+      mode === "CREATE" && activeZone
+        ? findFirstAvailableSingleSlot(house, activeZone.id)
         : null,
-    [house, mode, targetZone],
+    [activeZone, house, mode],
   );
 
   const [form, setForm] = useState<OrchidFormState>(() => ({
@@ -85,6 +118,56 @@ export default function OrchidGroupForm({
           : "",
     memo: initialValue?.memo ?? "",
   }));
+  const [selectedVariety, setSelectedVariety] = useState<VarietyOption | null>(
+    initialVariety,
+  );
+  const maxCell = useMemo(
+    () => resolveMaxCell(house, activeZone?.id ?? null),
+    [activeZone, house],
+  );
+  const excludedOrchidGroupId =
+    mode === "EDIT" ? (initialValue?.id ?? null) : null;
+  const occupiedCells = useMemo(
+    () =>
+      buildOccupiedCells(
+        activeZone?.orchidGroups ?? [],
+        excludedOrchidGroupId,
+        maxCell,
+      ),
+    [activeZone, excludedOrchidGroupId, maxCell],
+  );
+  const [ignoredMapPickVersion, setIgnoredMapPickVersion] = useState(0);
+  const rangePickActive =
+    mapCellRangePick.active &&
+    (mode === "CREATE"
+      ? mapCellRangePick.targetBedZoneId == null ||
+        mapCellRangePick.targetBedZoneId === activeZone?.id
+      : mapCellRangePick.targetBedZoneId === activeZone?.id);
+  const mapPickedRange =
+    activeZone != null &&
+    mapCellRangePick.targetBedZoneId === activeZone.id &&
+    mapCellRangePick.startCell != null &&
+    mapCellRangePick.endCell != null &&
+    mapCellRangePick.version > ignoredMapPickVersion
+      ? {
+          startPosition: String(mapCellRangePick.startCell),
+          endPosition: String(mapCellRangePick.endCell),
+        }
+      : null;
+  const startPositionValue =
+    mapPickedRange?.startPosition ?? form.startPosition;
+  const endPositionValue = mapPickedRange?.endPosition ?? form.endPosition;
+  const normalizedRange = normalizeCellRange(
+    startPositionValue,
+    endPositionValue,
+    maxCell,
+  );
+  const rangeBlocked = rangeHasOccupiedCell({
+    startCell: normalizedRange.startCell,
+    endCell: normalizedRange.endCell,
+    occupiedCells,
+  });
+  const submitBlocked = mode === "EDIT" && rangeBlocked;
 
   function updateField<K extends keyof OrchidFormState>(
     field: K,
@@ -93,7 +176,42 @@ export default function OrchidGroupForm({
     setForm((current) => ({ ...current, [field]: value }));
   }
 
+  function updateStartCell(value: string) {
+    setIgnoredMapPickVersion(mapCellRangePick.version);
+    updateField("startPosition", value);
+  }
+
+  function updateEndCell(value: string) {
+    setIgnoredMapPickVersion(mapCellRangePick.version);
+    updateField("endPosition", value);
+  }
+
+  function commitCellRange() {
+    if (!activeZone) {
+      return;
+    }
+    const range = normalizeCellRange(
+      startPositionValue,
+      endPositionValue,
+      maxCell,
+    );
+    setIgnoredMapPickVersion(mapCellRangePick.version);
+    setForm((current) => ({
+      ...current,
+      startPosition: String(range.startCell),
+      endPosition: String(range.endCell),
+    }));
+    onSyncMapCellRangePick({
+      targetBedZoneId: activeZone.id,
+      excludeOrchidGroupId: excludedOrchidGroupId,
+      maxCell,
+      startCell: String(range.startCell),
+      endCell: String(range.endCell),
+    });
+  }
+
   function handleSelectVariety(option: VarietyOption) {
+    setSelectedVariety(option);
     setForm((current) => ({
       ...current,
       varietyId: String(option.id),
@@ -106,11 +224,17 @@ export default function OrchidGroupForm({
 
   function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    if (!form.varietyId) {
+    if (!form.varietyId || !activeZone || submitBlocked) {
       return;
     }
+    const range = normalizeCellRange(
+      startPositionValue,
+      endPositionValue,
+      maxCell,
+    );
 
     void onSubmit({
+      bedZoneId: activeZone.id,
       varietyId: Number(form.varietyId),
       quantity: Number(form.quantity),
       potSize: nullableText(form.potSize),
@@ -119,8 +243,8 @@ export default function OrchidGroupForm({
       placementType: nullableText(form.placementType),
       trayCount: null,
       splitPlacementAllowed: form.splitPlacementAllowed,
-      startPosition: startCellToPosition(form.startPosition),
-      endPosition: endCellToPosition(form.endPosition),
+      startPosition: startCellToPosition(String(range.startCell)),
+      endPosition: endCellToPosition(String(range.endCell)),
       memo: nullableText(form.memo),
     });
   }
@@ -137,11 +261,15 @@ export default function OrchidGroupForm({
               : "난 묶음 수정"}
           </p>
           <h3 className="mt-1 text-base font-semibold">
-            {targetZone?.name ?? "구역 선택 필요"}
+            {activeZone?.name ?? "맵에서 위치 지정"}
           </h3>
-          {targetZone ? (
+          {activeZone ? (
             <p className="mt-1 text-xs font-semibold text-[#5c6a60]">
-              {targetZone.houseNumber}동 {targetZone.physicalBedNumber}배드
+              {activeZone.houseNumber}동 {activeZone.physicalBedNumber}배드
+            </p>
+          ) : mode === "CREATE" ? (
+            <p className="mt-1 text-xs font-semibold text-[#5c6a60]">
+              맵에서 지정 버튼을 누른 뒤 빈 칸을 선택하세요.
             </p>
           ) : null}
         </div>
@@ -156,26 +284,9 @@ export default function OrchidGroupForm({
       <form className="mt-3 space-y-2" onSubmit={handleSubmit}>
         <VarietySearchSelect
           disabled={saving}
-          selectedVariety={
-            form.varietyId
-              ? {
-                  id: Number(form.varietyId),
-                  genus: form.genus,
-                  name: form.varietyName,
-                  defaultPotSize: form.potSize || null,
-                  active: true,
-                }
-              : initialVariety
-          }
+          selectedVariety={selectedVariety}
           onSelect={handleSelectVariety}
         />
-        <div className="rounded-md border border-[#dbe1da] bg-[#f8faf7] px-3 py-2 text-xs text-[#435047]">
-          <p className="font-semibold">선택 품종</p>
-          <p className="mt-1">
-            {form.varietyName || "선택 안 됨"}
-            {form.genus ? ` / ${form.genus}` : ""}
-          </p>
-        </div>
         <div className="grid grid-cols-2 gap-2">
           <TextField
             label="수량"
@@ -210,24 +321,56 @@ export default function OrchidGroupForm({
             </select>
           </label>
         </div>
-        <div className="grid grid-cols-2 gap-2">
+        <div className="grid grid-cols-[auto_minmax(0,1fr)_minmax(0,1fr)] items-end gap-2">
+          <button
+            className={`mb-px h-[34px] rounded-md border px-3 text-xs font-semibold transition ${
+              rangePickActive
+                ? "border-[#159447] bg-[#159447] text-white"
+                : "border-[#cfd8cc] bg-white text-[#36513d] hover:bg-[#f3f8f2]"
+            }`}
+            disabled={saving || (mode === "EDIT" && !activeZone)}
+            type="button"
+            onClick={() => {
+              if (mode === "EDIT" && !activeZone) return;
+              onStartMapCellRangePick({
+                targetBedZoneId:
+                  mode === "CREATE" ? null : (activeZone?.id ?? null),
+                excludeOrchidGroupId:
+                  mode === "EDIT" ? (initialValue?.id ?? null) : null,
+                maxCell,
+                startCell: startPositionValue,
+                endCell: endPositionValue,
+              });
+            }}
+          >
+            맵에서 지정
+          </button>
           <TextField
             label="시작 칸"
+            max={maxCell}
             min={1}
             step={1}
             type="number"
-            value={form.startPosition}
-            onChange={(value) => updateField("startPosition", value)}
+            value={startPositionValue}
+            onBlur={commitCellRange}
+            onChange={updateStartCell}
           />
           <TextField
             label="끝 칸"
+            max={maxCell}
             min={1}
             step={1}
             type="number"
-            value={form.endPosition}
-            onChange={(value) => updateField("endPosition", value)}
+            value={endPositionValue}
+            onBlur={commitCellRange}
+            onChange={updateEndCell}
           />
         </div>
+        {rangeBlocked ? (
+          <p className="rounded-md border border-[#f0d299] bg-[#fff8e8] px-3 py-2 text-xs font-semibold text-[#96650f]">
+            선택 범위 중간에 이미 배치된 난 묶음이 있습니다.
+          </p>
+        ) : null}
         <div>
           <label className="block">
             <span className="text-sm font-semibold text-[#435047]">
@@ -276,7 +419,7 @@ export default function OrchidGroupForm({
         </label>
         <button
           className="w-full rounded-md bg-[#159447] px-3 py-2 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-60"
-          disabled={saving || !targetZone || !form.varietyId}
+          disabled={saving || !activeZone || !form.varietyId || submitBlocked}
           type="submit"
         >
           {saving ? "저장 중..." : "저장"}
@@ -304,7 +447,7 @@ function PotSizeField({
       <span className="text-sm font-semibold text-[#435047]">화분 크기</span>
       <div className="mt-1 flex overflow-hidden rounded-md border border-[#cfd8cc] bg-white">
         <input
-          className="min-w-0 flex-1 px-2 py-1.5 text-sm outline-none"
+          className="min-w-0 flex-1 px-2 py-1 text-sm outline-none"
           inputMode="decimal"
           value={amount}
           onChange={(event) =>
@@ -313,7 +456,7 @@ function PotSizeField({
         />
         <select
           aria-label="화분 크기 단위"
-          className="border-l border-[#cfd8cc] bg-[#f8faf7] px-2 py-1.5 text-sm font-semibold text-[#26352c] outline-none"
+          className="border-l border-[#cfd8cc] bg-[#f8faf7] px-2 py-1 text-sm font-semibold text-[#26352c] outline-none"
           value={unit}
           onChange={(event) =>
             onChange(formatPotSize(amount, event.target.value))

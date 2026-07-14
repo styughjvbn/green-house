@@ -3,6 +3,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { usePathname, useSearchParams } from "next/navigation";
+import { useEffect, useState } from "react";
 import { SessionUserPanel } from "@/features/auth/ui/SessionUserPanel";
 import { PageHeader } from "@/widgets/page-header";
 import {
@@ -11,6 +12,8 @@ import {
   Flower2,
   Home,
   PackageCheck,
+  PanelLeftClose,
+  PanelLeftOpen,
   Printer,
   Settings,
   ShoppingBag,
@@ -102,23 +105,27 @@ function NavItem({
   label,
   icon: Icon,
   active,
+  collapsed,
 }: {
   href: string;
   label: string;
   icon: LucideIcon;
   active: boolean;
+  collapsed: boolean;
 }) {
   return (
     <Link
       href={href}
-      className={`flex items-center gap-3 rounded-md px-3 py-3 text-sm font-medium transition ${
+      title={collapsed ? label : undefined}
+      onClick={(event) => event.stopPropagation()}
+      className={`flex items-center overflow-hidden rounded-md px-3 py-3 text-sm font-medium transition ${
         active
           ? "bg-[#2f8f4e] text-white"
           : "text-[#dcebe0] hover:bg-white/10 hover:text-white"
-      }`}
+      } ${collapsed ? "justify-center" : "gap-3"}`}
     >
       <Icon className="h-4 w-4 shrink-0" strokeWidth={1.8} aria-hidden="true" />
-      <span>{label}</span>
+      {collapsed ? null : <span className="whitespace-nowrap">{label}</span>}
     </Link>
   );
 }
@@ -135,7 +142,8 @@ function SalesSubNavItem({
   return (
     <Link
       href={href}
-      className={`block rounded-md px-3 py-2 text-sm font-medium transition ${
+      onClick={(event) => event.stopPropagation()}
+      className={`block overflow-hidden rounded-md px-3 py-2 text-sm font-medium whitespace-nowrap transition ${
         active
           ? "bg-white/12 text-white"
           : "text-[#c8d8cd] hover:bg-white/10 hover:text-white"
@@ -149,6 +157,18 @@ function SalesSubNavItem({
 export function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const searchParams = useSearchParams();
+  const [sidebarExpanded, setSidebarExpanded] = useState(true);
+
+  useEffect(() => {
+    const query = window.matchMedia("(min-width: 1536px)");
+    const syncSidebar = () => setSidebarExpanded(query.matches);
+
+    syncSidebar();
+    query.addEventListener("change", syncSidebar);
+
+    return () => query.removeEventListener("change", syncSidebar);
+  }, []);
+
   if (pathname === "/login") {
     return <>{children}</>;
   }
@@ -156,24 +176,73 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const currentPage = getCurrentPageMeta(pathname);
   const salesTab = searchParams.get("tab") ?? "SLIPS";
   const isSalesPage = pathname.startsWith("/sales");
+  const sidebarCollapsed = !sidebarExpanded;
 
   return (
-    <div className="flex min-h-screen bg-[#f7f8f5]">
-      <aside className="sticky top-0 hidden h-screen w-44 shrink-0 flex-col bg-[#003b1f] px-2 py-4 lg:flex">
-        <div className="flex items-center gap-3 px-2 py-2">
-          <div className="flex h-10 w-10 shrink-0 items-center justify-center">
+    <div className="app-shell-root flex bg-[#f7f8f5]">
+      <aside
+        className={`app-shell-sidebar sticky top-0 hidden shrink-0 flex-col bg-[#003b1f] px-2 py-4 transition-[width] duration-200 lg:flex ${
+          sidebarCollapsed ? "w-12 cursor-pointer" : "w-44"
+        }`}
+        onClick={() => {
+          if (sidebarCollapsed) {
+            setSidebarExpanded(true);
+          }
+        }}
+      >
+        <div
+          className={`group flex items-center gap-3 px-1 py-1 ${
+            sidebarCollapsed ? "justify-center" : ""
+          }`}
+          onClick={(event) => event.stopPropagation()}
+        >
+          <div className="relative flex h-10 w-10 shrink-0 items-center justify-center">
             <Image src="/flower.png" alt="Logo" width={40} height={40} />
+            {sidebarCollapsed ? (
+              <button
+                className="absolute inset-0 flex h-10 w-10 items-center justify-center rounded-md bg-[#003b1f]/85 text-white opacity-0 transition group-hover:opacity-100"
+                type="button"
+                aria-label="사이드바 펼치기"
+                title="펼치기"
+                onClick={() => setSidebarExpanded(true)}
+              >
+                <PanelLeftOpen
+                  className="h-4 w-4"
+                  strokeWidth={1.8}
+                  aria-hidden="true"
+                />
+              </button>
+            ) : null}
           </div>
 
-          <div>
-            <p className="text-base leading-none font-semibold text-white">
-              난 농장
-            </p>
-            <p className="mt-2 text-xs text-[#c8d8cd]">관리 시스템</p>
-          </div>
+          {sidebarCollapsed ? null : (
+            <div className="flex min-w-0 flex-1 items-start justify-between gap-2 overflow-hidden">
+              <div className="min-w-0">
+                <p className="text-base leading-none font-semibold whitespace-nowrap text-white">
+                  난 농장
+                </p>
+                <p className="mt-2 text-xs whitespace-nowrap text-[#c8d8cd]">
+                  관리 시스템
+                </p>
+              </div>
+              <button
+                className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md text-[#dcebe0] hover:bg-white/10 hover:text-white"
+                type="button"
+                aria-label="사이드바 접기"
+                title="접기"
+                onClick={() => setSidebarExpanded(false)}
+              >
+                <PanelLeftClose
+                  className="h-4 w-4"
+                  strokeWidth={1.8}
+                  aria-hidden="true"
+                />
+              </button>
+            </div>
+          )}
         </div>
 
-        <nav className="mt-8 min-h-0 flex-1 space-y-3 overflow-y-auto pr-1">
+        <nav className="scrollbar-hidden mt-5 min-h-0 flex-1 space-y-3 overflow-y-auto">
           {navigation.map((item) => (
             <div key={item.href}>
               <NavItem
@@ -185,9 +254,12 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                     ? pathname.startsWith("/sales")
                     : pathname === item.href
                 }
+                collapsed={sidebarCollapsed}
               />
 
-              {item.href === "/sales" && pathname.startsWith("/sales") ? (
+              {!sidebarCollapsed &&
+              item.href === "/sales" &&
+              pathname.startsWith("/sales") ? (
                 <div className="mt-2 space-y-1 pl-3">
                   <SalesSubNavItem
                     href="/sales?tab=SLIPS"
@@ -212,7 +284,8 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                 </div>
               ) : null}
 
-              {item.href === "/analytics" &&
+              {!sidebarCollapsed &&
+              item.href === "/analytics" &&
               pathname.startsWith("/analytics") ? (
                 <div className="mt-2 space-y-1 pl-3">
                   <SalesSubNavItem
@@ -243,7 +316,8 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                 </div>
               ) : null}
 
-              {item.href === "/inventory" &&
+              {!sidebarCollapsed &&
+              item.href === "/inventory" &&
               pathname.startsWith("/inventory") ? (
                 <div className="mt-2 space-y-1 pl-3">
                   <SalesSubNavItem
@@ -267,10 +341,10 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           ))}
         </nav>
 
-        <SessionUserPanel />
+        {sidebarCollapsed ? null : <SessionUserPanel />}
       </aside>
 
-      <div className="min-w-0 flex-1">
+      <div className="app-shell-main min-w-0 flex-1">
         <header className="border-b border-[#d7ddd4] bg-white px-4 py-4 lg:hidden">
           <p className="text-xl font-semibold">난 농장 관리</p>
 
@@ -369,12 +443,13 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           ) : null}
         </header>
 
-        <PageHeader
-          title={currentPage.title}
-          description={currentPage.description}
-        />
-
         <main className="app-content px-4 py-4 md:px-8 lg:px-6">
+          <PageHeader
+            title={currentPage.title}
+            description={currentPage.description}
+            collapsed={sidebarCollapsed}
+          />
+
           {children}
         </main>
       </div>

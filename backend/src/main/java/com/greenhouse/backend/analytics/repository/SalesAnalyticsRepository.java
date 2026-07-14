@@ -3,6 +3,7 @@ package com.greenhouse.backend.analytics.repository;
 import com.greenhouse.backend.analytics.dto.AnalyticsSlipSummaryResponse;
 import com.greenhouse.backend.analytics.dto.PartnerAnalyticsStatResponse;
 import com.greenhouse.backend.work.domain.WorkRecord;
+import com.greenhouse.backend.work.domain.WorkRecordStatus;
 import java.time.LocalDate;
 import java.util.List;
 import jakarta.persistence.EntityManager;
@@ -181,9 +182,11 @@ public class SalesAnalyticsRepository {
 				select count(w.id)
 				from WorkRecord w
 				where w.workDate between :from and :to
+					and w.status = :activeStatus
 				""", Long.class)
 				.setParameter("from", from)
 				.setParameter("to", to)
+				.setParameter("activeStatus", WorkRecordStatus.ACTIVE)
 				.getSingleResult();
 	}
 
@@ -193,10 +196,12 @@ public class SalesAnalyticsRepository {
 				from WorkRecord w
 				left join w.workTypeRef wt
 				where w.workDate between :from and :to
+					and w.status = :activeStatus
 					and wt.template = :template
 				""", Long.class)
 				.setParameter("from", from)
 				.setParameter("to", to)
+				.setParameter("activeStatus", WorkRecordStatus.ACTIVE)
 				.setParameter("template", com.greenhouse.backend.work.domain.WorkTypeTemplate.valueOf(template))
 				.getSingleResult();
 	}
@@ -206,9 +211,11 @@ public class SalesAnalyticsRepository {
 				select max(w.workDate)
 				from WorkRecord w
 				where w.workDate between :from and :to
+					and w.status = :activeStatus
 				""", LocalDate.class)
 				.setParameter("from", from)
 				.setParameter("to", to)
+				.setParameter("activeStatus", WorkRecordStatus.ACTIVE)
 				.getSingleResult();
 	}
 
@@ -217,11 +224,13 @@ public class SalesAnalyticsRepository {
 				select w.workType, count(w.id)
 				from WorkRecord w
 				where w.workDate between :from and :to
+					and w.status = :activeStatus
 				group by w.workType
 				order by count(w.id) desc
 				""", Object[].class)
 				.setParameter("from", from)
 				.setParameter("to", to)
+				.setParameter("activeStatus", WorkRecordStatus.ACTIVE)
 				.getResultList();
 	}
 
@@ -231,10 +240,12 @@ public class SalesAnalyticsRepository {
 				from WorkRecord w
 				left join fetch w.workTypeRef wt
 				where w.workDate between :from and :to
+					and w.status = :activeStatus
 				order by w.workDate desc, w.id desc
 				""", WorkRecord.class)
 				.setParameter("from", from)
 				.setParameter("to", to)
+				.setParameter("activeStatus", WorkRecordStatus.ACTIVE)
 				.setMaxResults(limit)
 				.getResultList();
 	}

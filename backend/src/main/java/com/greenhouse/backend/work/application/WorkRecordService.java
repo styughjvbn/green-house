@@ -1,6 +1,9 @@
 package com.greenhouse.backend.work.application;
 
+import com.greenhouse.backend.common.exception.NotFoundException;
 import com.greenhouse.backend.work.domain.WorkRecord;
+import com.greenhouse.backend.work.domain.WorkRecordStatus;
+import com.greenhouse.backend.work.dto.WorkRecordCancelRequest;
 import com.greenhouse.backend.work.dto.WorkRecordCreateRequest;
 import com.greenhouse.backend.work.dto.WorkRecordResponse;
 import com.greenhouse.backend.work.repository.WorkRecordRepository;
@@ -27,11 +30,20 @@ public class WorkRecordService {
 			Long targetId,
 			String workType,
 			LocalDate from,
-			LocalDate to) {
+			LocalDate to,
+			boolean includeCanceled) {
 		if (targetType != null) {
 			validateTarget(targetType, targetId);
 		}
-		return workRecordRepository.search(normalize(targetType), targetId, normalize(workType), from, to).stream()
+		return workRecordRepository.search(
+						normalize(targetType),
+						targetId,
+						normalize(workType),
+						from,
+						to,
+						includeCanceled,
+						WorkRecordStatus.CANCELED)
+				.stream()
 				.map(this::toResponse)
 				.toList();
 	}
@@ -51,6 +63,13 @@ public class WorkRecordService {
 				normalize(request.memo()),
 				request.details());
 		return toResponse(workRecordRepository.save(workRecord));
+	}
+
+	public WorkRecordResponse cancel(Long workRecordId, WorkRecordCancelRequest request) {
+		var workRecord = workRecordRepository.findById(workRecordId)
+				.orElseThrow(() -> new NotFoundException("작업 이력을 찾을 수 없습니다."));
+		workRecord.cancel(normalize(request.cancelReason()));
+		return toResponse(workRecord);
 	}
 
 	private WorkRecordResponse toResponse(WorkRecord workRecord) {

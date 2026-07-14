@@ -1,6 +1,7 @@
 "use client";
 
-import { X } from "lucide-react";
+import { Ban, ChevronDown, ChevronUp, X } from "lucide-react";
+import { useState } from "react";
 import type { WorkRecord, WorkType } from "@/entities/farm/types";
 import {
   getRecordTemplate,
@@ -11,19 +12,25 @@ import {
 import { formatTarget, formatTargetType } from "../../lib/workRecordForm";
 
 type WorkRecordDetailProps = {
+  canceling: boolean;
   record: WorkRecord | null;
   workTypes: WorkType[];
+  onCancel: (cancelReason: string | null) => void;
   onClose: () => void;
 };
 
 export function WorkRecordDetail({
+  canceling,
+  onCancel,
   onClose,
   record,
   workTypes,
 }: WorkRecordDetailProps) {
+  const [additionalInfoOpen, setAdditionalInfoOpen] = useState(false);
+
   if (!record) {
     return (
-      <aside className="rounded-md border border-[#dfe5dc] bg-white p-5 text-sm text-[#5c6a60] shadow-sm">
+      <aside className="min-h-0 overflow-y-auto rounded-md border border-[#dfe5dc] bg-white p-5 text-sm text-[#5c6a60] shadow-sm">
         <div className="flex items-center justify-between gap-3">
           <span>선택한 작업 이력이 없습니다.</span>
           <CloseButton onClose={onClose} />
@@ -37,10 +44,36 @@ export function WorkRecordDetail({
   const detailEntries = formatDetailEntries(record.details);
 
   return (
-    <aside className="rounded-md border border-[#dfe5dc] bg-white p-5 shadow-sm">
+    <aside className="min-h-0 overflow-y-auto rounded-md border border-[#dfe5dc] bg-white p-5 shadow-sm">
       <div className="flex items-center justify-between gap-3">
         <h2 className="text-lg font-bold text-[#17251b]">작업 이력 상세</h2>
-        <CloseButton onClose={onClose} />
+        <div className="flex items-center gap-2">
+          {record.status !== "CANCELED" ? (
+            <button
+              className="inline-flex h-8 items-center gap-1.5 rounded-md border border-[#e8b6aa] bg-[#fff4f1] px-2.5 text-xs font-bold text-[#9b341f] disabled:opacity-60"
+              disabled={canceling}
+              type="button"
+              onClick={() => {
+                const reason = window.prompt(
+                  "작업 이력 취소 사유를 입력하세요. 비워두면 사유 없이 취소됩니다.",
+                  "",
+                );
+                if (reason == null) {
+                  return;
+                }
+                onCancel(reason.trim() || null);
+              }}
+            >
+              <Ban
+                className="h-3.5 w-3.5"
+                strokeWidth={1.8}
+                aria-hidden="true"
+              />
+              {canceling ? "취소 중" : "취소 처리"}
+            </button>
+          ) : null}
+          <CloseButton onClose={onClose} />
+        </div>
       </div>
 
       <div className="mt-5">
@@ -109,14 +142,37 @@ export function WorkRecordDetail({
         ) : null}
         {detailEntries.length ? (
           <>
-            <dt className="pt-2 text-sm font-bold text-[#17251b]">추가 정보</dt>
-            {detailEntries.map((entry) => (
-              <DetailRow
-                key={entry.key}
-                label={entry.label}
-                value={entry.value}
-              />
-            ))}
+            <dt className="pt-2">
+              <button
+                className="flex w-full items-center justify-between rounded-md bg-[#f6f8f5] px-3 py-2 text-left text-sm font-bold text-[#17251b]"
+                type="button"
+                onClick={() => setAdditionalInfoOpen((open) => !open)}
+              >
+                <span>추가 정보</span>
+                {additionalInfoOpen ? (
+                  <ChevronUp
+                    className="h-4 w-4 text-[#6a766e]"
+                    strokeWidth={1.8}
+                    aria-hidden="true"
+                  />
+                ) : (
+                  <ChevronDown
+                    className="h-4 w-4 text-[#6a766e]"
+                    strokeWidth={1.8}
+                    aria-hidden="true"
+                  />
+                )}
+              </button>
+            </dt>
+            {additionalInfoOpen
+              ? detailEntries.map((entry) => (
+                  <DetailRow
+                    key={entry.key}
+                    label={entry.label}
+                    value={entry.value}
+                  />
+                ))
+              : null}
           </>
         ) : null}
       </dl>
@@ -127,12 +183,12 @@ export function WorkRecordDetail({
 function CloseButton({ onClose }: { onClose: () => void }) {
   return (
     <button
-      className="h-8 w-8 rounded-md text-[#6a766e]"
+      className="h-5 w-5 rounded-md text-[#6a766e]"
       type="button"
       aria-label="닫기"
       onClick={onClose}
     >
-      <X className="h-4 w-4" strokeWidth={1.8} aria-hidden="true" />
+      <X className="h-5 w-5" strokeWidth={1.8} aria-hidden="true" />
     </button>
   );
 }

@@ -1,6 +1,7 @@
 package com.greenhouse.backend.work.repository;
 
 import com.greenhouse.backend.work.domain.WorkRecord;
+import com.greenhouse.backend.work.domain.WorkRecordStatus;
 import java.time.LocalDate;
 import java.util.Collection;
 import java.util.List;
@@ -17,6 +18,15 @@ public interface WorkRecordRepository extends JpaRepository<WorkRecord, Long> {
 			Long targetId,
 			String workType);
 
+	default List<WorkRecord> search(
+			String targetType,
+			Long targetId,
+			String workType,
+			LocalDate from,
+			LocalDate to) {
+		return search(targetType, targetId, workType, from, to, false, WorkRecordStatus.CANCELED);
+	}
+
 	@Query("""
 			select w from WorkRecord w
 			where (:targetType is null or w.targetType = :targetType)
@@ -24,6 +34,7 @@ public interface WorkRecordRepository extends JpaRepository<WorkRecord, Long> {
 				and (:workType is null or w.workType = :workType)
 				and (:from is null or w.workDate >= :from)
 				and (:to is null or w.workDate <= :to)
+				and (:includeCanceled = true or w.status <> :canceledStatus)
 			order by w.workDate desc, w.id desc
 			""")
 	List<WorkRecord> search(
@@ -31,18 +42,22 @@ public interface WorkRecordRepository extends JpaRepository<WorkRecord, Long> {
 			@Param("targetId") Long targetId,
 			@Param("workType") String workType,
 			@Param("from") LocalDate from,
-			@Param("to") LocalDate to);
+			@Param("to") LocalDate to,
+			@Param("includeCanceled") boolean includeCanceled,
+			@Param("canceledStatus") WorkRecordStatus canceledStatus);
 
 	@Query("""
 			select w.targetId as targetId, max(w.workDate) as latestWorkDate
 			from WorkRecord w
 			where w.targetType = :targetType
 				and w.targetId in :targetIds
+				and w.status = :status
 			group by w.targetId
 			""")
 	List<WorkDateRow> findLatestWorkDates(
 			@Param("targetType") String targetType,
-			@Param("targetIds") Collection<Long> targetIds);
+			@Param("targetIds") Collection<Long> targetIds,
+			@Param("status") WorkRecordStatus status);
 
 	@Modifying(clearAutomatically = true, flushAutomatically = true)
 	@Query(value = """

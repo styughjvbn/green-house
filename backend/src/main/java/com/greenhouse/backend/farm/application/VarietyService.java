@@ -65,10 +65,13 @@ public class VarietyService {
 	}
 
 	public VarietyResponse create(VarietyCreateRequest request) {
+		String genus = normalizeRequired(request.genus());
+		String name = normalizeRequired(request.name());
+		validateUniqueVariety(genus, name, null);
 		var variety = new Variety(
 				nextCode(),
-				normalizeRequired(request.genus()),
-				normalizeRequired(request.name()),
+				genus,
+				name,
 				normalize(request.alias()),
 				normalize(request.defaultPotSize()),
 				request.saleEnabled() == null || request.saleEnabled(),
@@ -80,9 +83,12 @@ public class VarietyService {
 
 	public VarietyResponse update(Long varietyId, VarietyUpdateRequest request) {
 		var variety = findVariety(varietyId);
+		String genus = normalizeRequired(request.genus());
+		String name = normalizeRequired(request.name());
+		validateUniqueVariety(genus, name, varietyId);
 		variety.update(
-				normalizeRequired(request.genus()),
-				normalizeRequired(request.name()),
+				genus,
+				name,
 				normalize(request.alias()),
 				normalize(request.defaultPotSize()),
 				request.saleEnabled() == null || request.saleEnabled(),
@@ -183,6 +189,15 @@ public class VarietyService {
 			throw new IllegalArgumentException("필수 문자열 값은 비워둘 수 없습니다.");
 		}
 		return normalized;
+	}
+
+	private void validateUniqueVariety(String genus, String name, Long currentId) {
+		boolean duplicated = currentId == null
+				? varietyRepository.existsByGenusAndName(genus, name)
+				: varietyRepository.existsByGenusAndNameAndIdNot(genus, name, currentId);
+		if (duplicated) {
+			throw new IllegalArgumentException("같은 속과 품종명을 가진 품종이 이미 있습니다.");
+		}
 	}
 
 	private void validatePageRequest(int page, int size) {

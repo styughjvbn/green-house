@@ -25,11 +25,15 @@ dependencies {
 	implementation("org.springframework.boot:spring-boot-starter-flyway")
 	implementation("org.springframework.boot:spring-boot-starter-security")
 	implementation("org.flywaydb:flyway-database-postgresql")
+	implementation("com.querydsl:querydsl-jpa:5.1.0:jakarta")
 	// OpenAPI + Swagger UI
 	implementation("org.springdoc:springdoc-openapi-starter-webmvc-ui:3.0.3")
     // Lombok
     compileOnly("org.projectlombok:lombok")
     annotationProcessor("org.projectlombok:lombok")
+	annotationProcessor("com.querydsl:querydsl-apt:5.1.0:jakarta")
+	annotationProcessor("jakarta.annotation:jakarta.annotation-api")
+	annotationProcessor("jakarta.persistence:jakarta.persistence-api")
 
 	runtimeOnly("org.postgresql:postgresql")
 	

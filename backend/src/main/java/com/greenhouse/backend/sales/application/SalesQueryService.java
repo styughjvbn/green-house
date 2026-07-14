@@ -47,20 +47,9 @@ public class SalesQueryService {
 		String normalizedPaymentStatus = blankToNull(paymentStatus);
 		String normalizedSalesStatus = blankToNull(salesStatus);
 		String normalizedKeyword = blankToNull(keyword);
-		Page<SalesSlipListItemResponse> result = normalizedKeyword == null
-				? salesSlipRepository
-						.searchPage(partnerId, from, to, normalizedPaymentStatus, normalizedSalesStatus, pageable)
-						.map(SalesSlipListItemResponse::from)
-				: salesSlipRepository
-						.searchPageWithKeyword(
-								partnerId,
-								from,
-								to,
-								normalizedPaymentStatus,
-								normalizedSalesStatus,
-								"%" + normalizedKeyword.toLowerCase() + "%",
-								pageable)
-						.map(SalesSlipListItemResponse::from);
+		Page<SalesSlipListItemResponse> result = salesSlipRepository
+				.searchPage(partnerId, from, to, normalizedPaymentStatus, normalizedSalesStatus, normalizedKeyword, pageable)
+				.map(SalesSlipListItemResponse::from);
 		return SalesSlipPageResponse.from(result);
 	}
 

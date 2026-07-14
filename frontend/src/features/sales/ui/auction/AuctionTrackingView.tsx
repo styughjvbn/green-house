@@ -2,11 +2,11 @@ import type {
   AuctionLotPage,
   AuctionTrackingSummary,
 } from "@/entities/farm/types";
-import { useAuctionTracking } from "../model/useAuctionTracking";
-import { AuctionFilters } from "./components/AuctionFilters";
-import { AuctionLotDetail } from "./components/AuctionLotDetail";
-import { AuctionLotList } from "./components/AuctionLotList";
-import { AuctionSummaryCards } from "./components/AuctionSummaryCards";
+import { useAuctionTracking } from "../../model/useAuctionTracking";
+import { AuctionFilters } from "./AuctionFilters";
+import { AuctionLotDetail } from "./AuctionLotDetail";
+import { AuctionLotList } from "./AuctionLotList";
+import { TabError, TabSplit, TabStack } from "@/shared/ui/TabLayout";
 
 export function AuctionTrackingView({
   initialPage,
@@ -18,21 +18,20 @@ export function AuctionTrackingView({
   const tracking = useAuctionTracking(initialPage, initialSummary);
 
   return (
-    <div className="space-y-3">
-      <AuctionSummaryCards summary={tracking.summary} />
+    <TabStack>
       <AuctionFilters
         filters={tracking.filters}
         loading={tracking.loading}
+        summary={tracking.summary}
         onChange={tracking.updateFilter}
         onSearch={() => tracking.refresh()}
         onReset={tracking.resetFilters}
       />
-      {tracking.error ? (
-        <p className="rounded-md border border-[#f0c7c3] bg-[#fff1ef] px-3 py-2 text-sm font-semibold text-[#b83e35]">
-          {tracking.error}
-        </p>
-      ) : null}
-      <div className="grid min-w-0 gap-3 2xl:grid-cols-[minmax(0,1.15fr)_minmax(420px,0.85fr)]">
+      <TabError message={tracking.error} />
+      <TabSplit
+        columns="lg:grid-cols-[minmax(0,1.15fr)_minmax(420px,0.85fr)]"
+        gap="gap-3"
+      >
         <AuctionLotList
           lots={tracking.lots}
           page={tracking.page}
@@ -52,7 +51,7 @@ export function AuctionTrackingView({
           onConfirmReturn={tracking.confirmReturn}
           onAdjust={tracking.adjustQuantity}
         />
-      </div>
-    </div>
+      </TabSplit>
+    </TabStack>
   );
 }

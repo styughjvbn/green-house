@@ -323,7 +323,7 @@ function WorkTab({ props }: { props: AnalyticsPageProps }) {
               value={`${workAnalytics?.totalCount ?? 0}건`}
             />
             <Metric label="최근 작업일" value={latestWorkDate ?? "-"} />
-            <Metric label="위치 이동 기록" value={`${movementCount}건`} />
+            <Metric label="자리 이동 기록" value={`${movementCount}건`} />
             <Metric label="상태 기록" value={`${statusCount}건`} />
           </div>
           <div className="mt-3 grid gap-3 xl:grid-cols-[1fr_1fr]">

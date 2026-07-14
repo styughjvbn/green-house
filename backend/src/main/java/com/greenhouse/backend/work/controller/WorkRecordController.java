@@ -3,6 +3,7 @@ package com.greenhouse.backend.work.controller;
 import com.greenhouse.backend.common.api.ApiResponse;
 import com.greenhouse.backend.work.application.WorkRecordService;
 import com.greenhouse.backend.work.application.WorkTypeService;
+import com.greenhouse.backend.work.dto.WorkRecordCancelRequest;
 import com.greenhouse.backend.work.dto.WorkRecordCreateRequest;
 import com.greenhouse.backend.work.dto.WorkRecordResponse;
 import com.greenhouse.backend.work.dto.WorkTypeCreateRequest;
@@ -39,14 +40,28 @@ public class WorkRecordController {
 			@RequestParam(required = false) Long targetId,
 			@RequestParam(required = false) String workType,
 			@RequestParam(required = false) LocalDate from,
-			@RequestParam(required = false) LocalDate to) {
-		return ApiResponse.ok(workRecordService.getWorkRecords(targetType, targetId, workType, from, to));
+			@RequestParam(required = false) LocalDate to,
+			@RequestParam(defaultValue = "false") boolean includeCanceled) {
+		return ApiResponse.ok(workRecordService.getWorkRecords(
+				targetType,
+				targetId,
+				workType,
+				from,
+				to,
+				includeCanceled));
 	}
 
 	@PostMapping("/work-records")
 	@ResponseStatus(HttpStatus.CREATED)
 	public ApiResponse<WorkRecordResponse> create(@Valid @RequestBody WorkRecordCreateRequest request) {
 		return ApiResponse.ok(workRecordService.create(request));
+	}
+
+	@PatchMapping("/work-records/{workRecordId}/cancel")
+	public ApiResponse<WorkRecordResponse> cancel(
+			@PathVariable Long workRecordId,
+			@Valid @RequestBody WorkRecordCancelRequest request) {
+		return ApiResponse.ok(workRecordService.cancel(workRecordId, request));
 	}
 
 	@GetMapping("/work-types")

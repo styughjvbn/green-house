@@ -1,30 +1,24 @@
 "use client";
 
-import type { DragEvent, MouseEvent, PointerEvent } from "react";
+import type { MouseEvent, PointerEvent } from "react";
 import { getOrchidVarietyColor } from "@/entities/farm/orchidColors";
 import type { OrchidGroup } from "@/entities/farm/types";
 
 export default function OrchidGroupBlock({
   distinguishVarietyColors,
-  draggable,
   heightPx,
   muted,
   orchidGroup,
   positionLabel,
   selected,
-  onDragEnd,
-  onDragStart,
   onSelect,
 }: {
   distinguishVarietyColors: boolean;
-  draggable: boolean;
   heightPx: number;
   muted: boolean;
   orchidGroup: OrchidGroup;
   positionLabel: string | null;
   selected: boolean;
-  onDragEnd: () => void;
-  onDragStart: () => void;
   onSelect: () => void;
 }) {
   const warning =
@@ -52,17 +46,6 @@ export default function OrchidGroupBlock({
     onSelect();
   }
 
-  function handleDragStart(event: DragEvent<HTMLDivElement>) {
-    if (muted) {
-      event.preventDefault();
-      return;
-    }
-    event.stopPropagation();
-    event.dataTransfer.effectAllowed = "move";
-    event.dataTransfer.setData("text/plain", String(orchidGroup.id));
-    onDragStart();
-  }
-
   function handlePointerUp(event: PointerEvent<HTMLDivElement>) {
     if (event.pointerType === "mouse") {
       return;
@@ -76,7 +59,7 @@ export default function OrchidGroupBlock({
 
   return (
     <div
-      className={`h-full touch-manipulation border transition ${
+      className={`h-full w-full min-w-0 touch-manipulation overflow-hidden border transition ${
         varietyColor
           ? "text-white hover:brightness-95"
           : muted
@@ -85,16 +68,9 @@ export default function OrchidGroupBlock({
               ? "border-[#246df2] bg-[#dcecff]"
               : "border-[#c8ddc2] bg-[#e4f2d8] hover:border-[#159447]"
       } ${selected ? "ring-1 ring-[#246df2]/20" : ""} ${
-        muted
-          ? "cursor-default"
-          : draggable
-            ? "cursor-grab active:cursor-grabbing"
-            : "cursor-pointer"
+        muted ? "cursor-default" : "cursor-pointer"
       }`}
-      draggable={draggable}
       onClick={handleClick}
-      onDragEnd={onDragEnd}
-      onDragStart={handleDragStart}
       onPointerUp={handlePointerUp}
       role="button"
       style={
@@ -106,23 +82,20 @@ export default function OrchidGroupBlock({
           : undefined
       }
       tabIndex={0}
-      title={draggable ? "드래그해 다른 구역으로 이동" : undefined}
     >
-      <div className={`flex h-full flex-col ${paddingClass(density)}`}>
+      <div className={`flex h-full min-w-0 flex-col ${paddingClass(density)}`}>
         {density === "dot" ? (
           <div className="flex h-full items-center justify-end px-1">
-            <span
-              className={`inline-block h-2 w-2 rounded-full ${
-                muted
-                  ? "bg-[#9aa39a]"
-                  : warning
-                    ? "bg-[#f59e0b]"
-                    : "bg-[#16a34a]"
-              }`}
-            />
+            {warning || muted ? (
+              <span
+                className={`inline-block h-2 w-2 rounded-full ${
+                  muted ? "bg-[#9aa39a]" : "bg-[#f59e0b]"
+                }`}
+              />
+            ) : null}
           </div>
         ) : density === "tiny" ? (
-          <div className="flex h-full items-center gap-2">
+          <div className="flex h-full min-w-0 items-center gap-2">
             <p
               className={`min-w-0 flex-1 truncate text-sm font-bold ${titleTextClass}`}
             >
@@ -131,31 +104,29 @@ export default function OrchidGroupBlock({
             <p className={`shrink-0 text-xs font-bold ${titleTextClass}`}>
               {orchidGroup.quantity}분
             </p>
-            <span
-              className={`inline-block h-2 w-2 rounded-full ${
-                muted
-                  ? "bg-[#9aa39a]"
-                  : warning
-                    ? "bg-[#f59e0b]"
-                    : "bg-[#16a34a]"
-              }`}
-            />
+            {warning || muted ? (
+              <span
+                className={`inline-block h-2 w-2 rounded-full ${
+                  muted ? "bg-[#9aa39a]" : "bg-[#f59e0b]"
+                }`}
+              />
+            ) : null}
           </div>
         ) : (
           <>
-            <div className="flex items-start justify-between gap-2">
-              <p className={`truncate text-sm font-bold ${titleTextClass}`}>
+            <div className="flex min-w-0 items-start justify-between gap-2">
+              <p
+                className={`min-w-0 truncate text-sm font-bold ${titleTextClass}`}
+              >
                 {orchidGroup.varietyName}
               </p>
-              <span
-                className={`mt-0.5 inline-block h-2 w-2 rounded-full ${
-                  muted
-                    ? "bg-[#9aa39a]"
-                    : warning
-                      ? "bg-[#f59e0b]"
-                      : "bg-[#16a34a]"
-                }`}
-              />
+              {warning || muted ? (
+                <span
+                  className={`mt-0.5 inline-block h-2 w-2 rounded-full ${
+                    muted ? "bg-[#9aa39a]" : "bg-[#f59e0b]"
+                  }`}
+                />
+              ) : null}
             </div>
             <div className="mt-auto">
               <p className={`text-xs font-bold ${titleTextClass}`}>

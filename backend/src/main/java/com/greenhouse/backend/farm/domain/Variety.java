@@ -7,6 +7,7 @@ import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
+import jakarta.persistence.UniqueConstraint;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.AccessLevel;
@@ -14,7 +15,8 @@ import lombok.AccessLevel;
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 @Entity
-@Table(name = "varieties")
+@Table(name = "varieties", uniqueConstraints = @UniqueConstraint(name = "uk_varieties_genus_name", columnNames = {
+		"genus", "name" }))
 public class Variety extends BaseEntity {
 
 	@Id

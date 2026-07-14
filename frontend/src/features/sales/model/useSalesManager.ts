@@ -245,9 +245,21 @@ export function useSalesManager(
   ) {
     setSalesForm((current) => ({
       ...current,
-      items: current.items.map((item, itemIndex) =>
-        itemIndex === index ? { ...item, [field]: value } : item,
-      ),
+      items: current.items.map((item, itemIndex) => {
+        if (itemIndex !== index) return item;
+
+        const nextItem = { ...item, [field]: value };
+
+        return {
+          ...nextItem,
+          allocations:
+            field === "itemName" || field === "genus"
+              ? nextItem.allocations.filter((allocation) =>
+                  isSameSalesItemVariety(nextItem, allocation),
+                )
+              : nextItem.allocations,
+        };
+      }),
     }));
   }
 
@@ -270,6 +282,14 @@ export function useSalesManager(
       ...current,
       items: current.items.map((item, itemIndex) => {
         if (itemIndex !== index) return item;
+        if (
+          !isSameSalesItemVariety(item, {
+            genus: orchidGroup.genus,
+            varietyName: orchidGroup.varietyName,
+          })
+        ) {
+          return item;
+        }
 
         const existingIndex = item.allocations.findIndex(
           (allocation) => Number(allocation.orchidGroupId) === orchidGroup.id,
@@ -329,16 +349,20 @@ export function useSalesManager(
   function removeAllocation(index: number, allocationIndex: number) {
     setSalesForm((current) => ({
       ...current,
-      items: current.items.map((item, itemIndex) =>
-        itemIndex === index
-          ? {
-              ...item,
-              allocations: item.allocations.filter(
-                (_, currentIndex) => currentIndex !== allocationIndex,
-              ),
-            }
-          : item,
-      ),
+      items: current.items.map((item, itemIndex) => {
+        if (itemIndex !== index) return item;
+
+        const allocations = item.allocations.filter(
+          (_, currentIndex) => currentIndex !== allocationIndex,
+        );
+
+        return {
+          ...item,
+          itemName: allocations.length === 0 ? "" : item.itemName,
+          genus: allocations.length === 0 ? "" : item.genus,
+          allocations,
+        };
+      }),
     }));
   }
 
@@ -552,6 +576,18 @@ export function useSalesManager(
     handleCreateBusinessPartner,
     handleCreateSalesSlip,
   };
+}
+
+function isSameSalesItemVariety(
+  item: Pick<SalesItemForm, "genus" | "itemName">,
+  target: Pick<SalesAllocationForm, "genus" | "varietyName">,
+) {
+  const itemName = item.itemName.trim();
+  const genus = item.genus.trim();
+  return (
+    (!itemName || itemName === target.varietyName) &&
+    (!genus || genus === target.genus)
+  );
 }
 
 function createEmptySalesSlipPage(): SalesSlipPage {

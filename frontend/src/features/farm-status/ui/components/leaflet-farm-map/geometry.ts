@@ -78,9 +78,11 @@ export function findOrchidGroupCenter(
       const zoneGeometries = getZoneGeometries(rect, bed.bedZones);
 
       for (const { zone, zoneRect } of zoneGeometries) {
-        const orchidGeometry = getOrchidBlockGeometries(zoneRect, zone).find(
-          ({ group }) => group.id === orchidGroupId,
-        );
+        const orchidGeometry = getOrchidBlockGeometries(
+          zoneRect,
+          zone,
+          bed,
+        ).find(({ group }) => group.id === orchidGroupId);
 
         if (orchidGeometry) {
           return {
@@ -213,19 +215,50 @@ export function getBedGeometries(
   const topPadding = 34;
   const bottomPadding = 24;
   const gap = 3;
-  const bedWidth = (houseRect.width - paddingX * 2 - gap * 2) / 3;
-  const bedHeight = houseRect.height - topPadding - bottomPadding;
+  const visibleBeds = beds.slice(0, 3);
+  const availableWidth =
+    houseRect.width - paddingX * 2 - gap * Math.max(0, visibleBeds.length - 1);
+  const availableHeight = houseRect.height - topPadding - bottomPadding;
+  const widthValues = getRelativeValues(visibleBeds, (bed) => bed.widthCm);
+  const lengthValues = getRelativeValues(
+    visibleBeds,
+    (bed) => bed.lengthCm ?? bed.positionUnitCount,
+  );
+  const totalWidthValue = widthValues.reduce((sum, value) => sum + value, 0);
+  const maxLengthValue = Math.max(...lengthValues, 1);
+  let cursorRight = houseRect.x + houseRect.width - paddingX;
 
-  return beds.slice(0, 3).map((bed, index) => ({
-    bed,
-    rect: {
-      number: bed.number,
-      x: houseRect.x + paddingX + (2 - index) * (bedWidth + gap),
-      y: houseRect.y + topPadding,
-      width: bedWidth,
-      height: bedHeight,
-    },
-  }));
+  return visibleBeds.map((bed, index) => {
+    const width = (availableWidth * widthValues[index]) / totalWidthValue;
+    const height = (availableHeight * lengthValues[index]) / maxLengthValue;
+    const x = cursorRight - width;
+    cursorRight = x - gap;
+
+    return {
+      bed,
+      rect: {
+        number: bed.number,
+        x,
+        y: houseRect.y + topPadding + (availableHeight - height),
+        width,
+        height,
+      },
+    };
+  });
+}
+
+function getRelativeValues(
+  beds: PhysicalBed[],
+  readValue: (bed: PhysicalBed) => number | null,
+) {
+  const rawValues = beds.map((bed) => {
+    const value = Number(readValue(bed) ?? 0);
+    return Number.isFinite(value) && value > 0 ? value : null;
+  });
+  const fallback =
+    rawValues.find((value): value is number => value !== null) ?? 1;
+
+  return rawValues.map((value) => value ?? fallback);
 }
 
 export function getZoneGeometries(
@@ -255,30 +288,87 @@ export function getZoneGeometries(
 export function getOrchidBlockGeometries(
   zoneRect: VisualZoneGeometry,
   zone: BedZone,
+  bed: PhysicalBed,
 ) {
   const groups = [...zone.orchidGroups].sort((a, b) => {
     const aStart = a.startPosition ?? a.sortOrder;
     const bStart = b.startPosition ?? b.sortOrder;
     return aStart - bStart;
   });
+  const positionedGroups = groups.filter(
+    (group) => group.startPosition != null && group.endPosition != null,
+  );
+  const unpositionedGroups = groups.filter(
+    (group) => group.startPosition == null || group.endPosition == null,
+  );
   const gap = 3;
   const top = zoneRect.y + 34;
   const availableHeight = zoneRect.height - 44;
-  const blockHeight = Math.max(
-    18,
-    (availableHeight - gap * Math.max(0, groups.length - 1)) /
-      Math.max(1, groups.length),
-  );
+  const maxCell = Math.max(1, Math.floor(bed.positionUnitCount ?? 28));
+  const cellHeight = availableHeight / maxCell;
+  const positionedBlocks = positionedGroups.map((group) => {
+    const range = resolveGroupCellRange({
+      startPosition: group.startPosition,
+      endPosition: group.endPosition,
+      maxCell,
+    });
+    const height = Math.max(
+      6,
+      (range.endCell - range.startCell + 1) * cellHeight - gap,
+    );
 
-  return groups.map((group, index) => ({
+    return {
+      group,
+      rect: {
+        x: zoneRect.x + 2,
+        y: top + (range.startCell - 1) * cellHeight,
+        width: zoneRect.width - 4,
+        height,
+      },
+    };
+  });
+  const fallbackHeight = Math.max(
+    18,
+    (availableHeight - gap * Math.max(0, unpositionedGroups.length - 1)) /
+      Math.max(1, unpositionedGroups.length),
+  );
+  const fallbackBlocks = unpositionedGroups.map((group, index) => ({
     group,
     rect: {
       x: zoneRect.x + 2,
-      y: top + index * (blockHeight + gap),
+      y: top + index * (fallbackHeight + gap),
       width: zoneRect.width - 4,
-      height: Math.min(blockHeight, availableHeight),
+      height: Math.min(fallbackHeight, availableHeight),
     },
   }));
+
+  return [...positionedBlocks, ...fallbackBlocks];
+}
+
+function resolveGroupCellRange({
+  endPosition,
+  maxCell,
+  startPosition,
+}: {
+  endPosition: number | null | undefined;
+  maxCell: number;
+  startPosition: number | null | undefined;
+}) {
+  const startCell = clampCell(Math.floor(startPosition ?? 0) + 1, 1, maxCell);
+  const endCell = clampCell(
+    Math.ceil(endPosition ?? startPosition ?? startCell),
+    1,
+    maxCell,
+  );
+
+  return {
+    startCell: Math.min(startCell, endCell),
+    endCell: Math.max(startCell, endCell),
+  };
+}
+
+function clampCell(value: number, min: number, max: number) {
+  return Math.min(Math.max(value, min), max);
 }
 
 export function toFarmStatusItem(

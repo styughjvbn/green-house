@@ -1,21 +1,33 @@
 "use client";
 
 import type { FormEvent } from "react";
-import type { BedZone, OrchidGroup, WorkType } from "@/entities/farm/types";
+import type {
+  BedZone,
+  House,
+  OrchidGroup,
+  PhysicalBed,
+  WorkType,
+} from "@/entities/farm/types";
 import {
   findWorkType,
   getManualWorkTypes,
   getWorkRecordFieldLabel,
   isVisibleWorkRecordField,
 } from "@/entities/farm/workTypes";
-import type { WorkRecordQuickFormState } from "../../model/types";
+import type {
+  OrchidSelection,
+  WorkRecordQuickFormState,
+} from "../../model/types";
 import TextField, { SelectField } from "./TextField";
 
 type OrchidWorkRecordFormProps = {
   form: WorkRecordQuickFormState;
+  house: House;
   resolvedZone: BedZone | null;
   saving: boolean;
   selectedOrchidGroup: OrchidGroup | null;
+  selectedPhysicalBed: PhysicalBed | null;
+  selection: OrchidSelection | null;
   workTypes: WorkType[];
   onCancel: () => void;
   onChange: <K extends keyof WorkRecordQuickFormState>(
@@ -27,9 +39,12 @@ type OrchidWorkRecordFormProps = {
 
 export default function OrchidWorkRecordForm({
   form,
+  house,
   resolvedZone,
   saving,
   selectedOrchidGroup,
+  selectedPhysicalBed,
+  selection,
   workTypes,
   onCancel,
   onChange,
@@ -40,7 +55,13 @@ export default function OrchidWorkRecordForm({
   const template = selectedWorkType?.template ?? null;
   const targetLabel = selectedOrchidGroup
     ? `${selectedOrchidGroup.varietyName} / ${selectedOrchidGroup.quantity}분`
-    : (resolvedZone?.name ?? "선택 대상");
+    : resolvedZone
+      ? `${resolvedZone.physicalBedNumber}다이 ${resolvedZone.name}`
+      : selectedPhysicalBed
+        ? `${house.number}동 ${selectedPhysicalBed.number}다이`
+        : selection?.type === "HOUSE"
+          ? `${house.number}동`
+          : "선택 대상";
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -52,7 +73,7 @@ export default function OrchidWorkRecordForm({
       <div className="flex items-start justify-between gap-3">
         <div>
           <p className="text-sm font-semibold text-[#246df2]">작업 기록 추가</p>
-          <h3 className="mt-1 text-lg font-semibold">{targetLabel}</h3>
+          <h3 className="text-lg font-semibold">{targetLabel}</h3>
         </div>
         <button
           className="rounded-md border border-[#d7ddd4] px-2 py-1 text-xs font-semibold"
@@ -63,7 +84,7 @@ export default function OrchidWorkRecordForm({
         </button>
       </div>
 
-      <form className="mt-3 space-y-3" onSubmit={handleSubmit}>
+      <form className="mt-1 space-y-1" onSubmit={handleSubmit}>
         <div className="grid grid-cols-2 gap-2">
           <SelectField
             label="작업 유형"

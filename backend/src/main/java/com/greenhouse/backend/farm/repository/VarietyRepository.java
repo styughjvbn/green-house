@@ -32,6 +32,10 @@ public interface VarietyRepository extends JpaRepository<Variety, Long> {
 
 	Optional<Variety> findByGenusAndName(String genus, String name);
 
+	boolean existsByGenusAndName(String genus, String name);
+
+	boolean existsByGenusAndNameAndIdNot(String genus, String name, Long id);
+
 	@Query("select distinct v.genus from Variety v order by v.genus asc")
 	List<String> findDistinctGenera();
 }

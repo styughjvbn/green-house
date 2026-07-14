@@ -1,53 +1,67 @@
 "use client";
 
 import type { PhysicalBed } from "@/entities/farm/types";
-import type { DragState, OrchidSelection } from "../../model/types";
+import type { MapCellRangePick, OrchidSelection } from "../../model/types";
 import BedZoneBlock from "./BedZoneBlock";
 
 export default function PhysicalBedBlock({
   bed,
   distinguishVarietyColors,
-  dragState,
   filteredOrchidGroupIds,
-  placementEditMode,
-  saving,
   selection,
   showScale,
-  onDragEnd,
-  onDragStart,
-  onDropOnBedZone,
-  onEnterDropZone,
+  cellRangePick,
+  onPickCellRange,
   onSelectBedZone,
+  onSelectPhysicalBed,
   onSelectOrchidGroup,
 }: {
   bed: PhysicalBed;
   distinguishVarietyColors: boolean;
-  dragState: DragState;
   filteredOrchidGroupIds: Set<number>;
-  placementEditMode: boolean;
-  saving: boolean;
   selection: OrchidSelection | null;
   showScale: boolean;
-  onDragEnd: () => void;
-  onDragStart: (orchidGroupId: number) => void;
-  onDropOnBedZone: (bedZoneId: number) => Promise<void>;
-  onEnterDropZone: (bedZoneId: number) => void;
+  cellRangePick: MapCellRangePick;
+  onPickCellRange: (bedZoneId: number, cell: number) => void;
   onSelectBedZone: (bedZoneId: number) => void;
+  onSelectPhysicalBed: (physicalBedId: number) => void;
   onSelectOrchidGroup: (orchidGroupId: number) => void;
 }) {
+  const selected =
+    selection?.type === "PHYSICAL_BED" && selection.physicalBedId === bed.id;
+
   return (
-    <div className="rounded-md border border-[#cfe0cc] bg-[#f7faf6] p-2">
-      <div className="mt-2 grid grid-cols-2 gap-2">
+    <div
+      className={`flex h-full min-h-0 cursor-pointer flex-col rounded-md border p-2 transition ${
+        selected
+          ? "border-[#246df2] bg-[#f4f8ff] ring-2 ring-[#246df2]/20"
+          : "border-[#cfe0cc] bg-[#f7faf6] hover:border-[#159447]"
+      }`}
+      role="button"
+      tabIndex={0}
+      onClick={(event) => {
+        event.stopPropagation();
+        onSelectPhysicalBed(bed.id);
+      }}
+      onKeyDown={(event) => {
+        if (event.key === "Enter" || event.key === " ") {
+          event.preventDefault();
+          onSelectPhysicalBed(bed.id);
+        }
+      }}
+    >
+      <p className="shrink-0 px-2 text-center text-sm font-semibold">
+        {bed.number}다이
+      </p>
+      <div className="mt-1 grid min-h-0 flex-1 grid-cols-2 gap-2">
         {bed.bedZones.map((zone) => (
           <BedZoneBlock
             key={zone.id}
             distinguishVarietyColors={distinguishVarietyColors}
-            dragState={dragState}
             filteredOrchidGroupIds={filteredOrchidGroupIds}
             maxPosition={bed.positionUnitCount}
-            placementEditMode={placementEditMode}
-            saving={saving}
             showScale={showScale}
+            cellRangePick={cellRangePick}
             zone={zone}
             selected={
               selection?.type === "BED_ZONE" && selection.bedZoneId === zone.id
@@ -57,10 +71,7 @@ export default function PhysicalBedBlock({
                 ? selection.orchidGroupId
                 : null
             }
-            onDragEnd={onDragEnd}
-            onDragStart={onDragStart}
-            onDropOnBedZone={onDropOnBedZone}
-            onEnterDropZone={onEnterDropZone}
+            onPickCellRange={onPickCellRange}
             onSelectBedZone={onSelectBedZone}
             onSelectOrchidGroup={onSelectOrchidGroup}
           />

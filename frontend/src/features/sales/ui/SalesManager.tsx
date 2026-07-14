@@ -8,16 +8,17 @@ import type {
 } from "@/entities/farm/types";
 import { useSalesManager } from "../model/useSalesManager";
 import type { SalesManagerProps } from "../model/types";
-import { AuctionSettlementView } from "./AuctionSettlementView";
-import { AuctionTrackingView } from "./AuctionTrackingView";
-import { BusinessPartnerCreateForm } from "./components/BusinessPartnerCreateForm";
-import { BusinessPartnerFilters } from "./components/BusinessPartnerFilters";
-import { BusinessPartnerList } from "./components/BusinessPartnerList";
-import { PartnerSettlementSettingsSection } from "./components/PartnerSettlementSettingsSection";
-import { SalesFilters } from "./components/SalesFilters";
-import { SalesSlipCreateForm } from "./components/SalesSlipCreateForm";
-import { SalesSlipDetail } from "./components/SalesSlipDetail";
-import { SalesSlipList } from "./components/SalesSlipList";
+import { AuctionSettlementView } from "./auction/AuctionSettlementView";
+import { AuctionTrackingView } from "./auction/AuctionTrackingView";
+import { TabLayout, TabSplit } from "@/shared/ui/TabLayout";
+import { BusinessPartnerCreateForm } from "./partners/BusinessPartnerCreateForm";
+import { BusinessPartnerFilters } from "./partners/BusinessPartnerFilters";
+import { BusinessPartnerList } from "./partners/BusinessPartnerList";
+import { PartnerSettlementSettingsSection } from "./partners/PartnerSettlementSettingsSection";
+import { SalesFilters } from "./slips/SalesFilters";
+import { SalesSlipCreateForm } from "./slips/SalesSlipCreateForm";
+import { SalesSlipDetail } from "./slips/SalesSlipDetail";
+import { SalesSlipList } from "./slips/SalesSlipList";
 
 export function SalesManager({
   activeTab,
@@ -66,7 +67,7 @@ export function SalesManager({
   const auctionSettlements = initialAuctionSettlements ?? [];
 
   return (
-    <div className="space-y-4">
+    <TabLayout>
       {activeTab === "SLIPS" ? (
         <>
           <SalesFilters
@@ -99,7 +100,7 @@ export function SalesManager({
             />
           ) : null}
 
-          <div className="grid gap-4 2xl:grid-cols-[minmax(0,0.88fr)_minmax(0,1.12fr)]">
+          <TabSplit>
             <SalesSlipList
               currentPage={sales.salesSlipCurrentPage}
               pageSize={sales.salesSlipPageSize}
@@ -124,7 +125,7 @@ export function SalesManager({
               onCompleteSalesSlip={sales.handleCompleteSalesSlip}
               onPaymentConfirmed={sales.updateSalesSlip}
             />
-          </div>
+          </TabSplit>
         </>
       ) : activeTab === "AUCTION" ? (
         <AuctionTrackingView
@@ -140,7 +141,7 @@ export function SalesManager({
             onChange={sales.updatePartnerFilters}
             onReset={sales.resetPartnerFilters}
           />
-          <div className="grid gap-4 xl:grid-cols-[420px_minmax(0,1fr)]">
+          <TabSplit columns="lg:grid-cols-[420px_minmax(0,1fr)]">
             <BusinessPartnerList
               currentPage={sales.partnerCurrentPage}
               pageSize={sales.partnerPageSize}
@@ -177,10 +178,10 @@ export function SalesManager({
                 }
               />
             </div>
-          </div>
+          </TabSplit>
         </>
       )}
-    </div>
+    </TabLayout>
   );
 }
 

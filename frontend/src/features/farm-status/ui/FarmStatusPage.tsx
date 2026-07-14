@@ -17,7 +17,7 @@ export function FarmStatusPage({
   initialZoom,
 }: FarmStatusPageProps) {
   return (
-    <main className="space-y-5">
+    <main className="h-full min-h-0">
       <FarmStatusMap
         mapData={mapData}
         initialSelection={initialSelection}

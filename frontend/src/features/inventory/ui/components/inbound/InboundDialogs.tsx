@@ -16,6 +16,7 @@ import type {
 import { INBOUND_TYPE_LABELS, toNumber } from "../../../lib/inboundUi";
 import { Field, inputClass } from "../InventoryPrimitives";
 import { PotSizeInput } from "../PotSizeInput";
+import { VarietyCreatableFields } from "../VarietyCreatableFields";
 import {
   InboundPlacementField,
   type InboundPlacementSelection,
@@ -77,6 +78,17 @@ export function InboundCreateDialog({
             window.alert("배치 위치를 선택해주세요.");
             return;
           }
+          const normalizedNewGenus = newGenus.trim();
+          const normalizedNewName = newName.trim();
+
+          if (
+            varietyMode === "new" &&
+            (!normalizedNewGenus || !normalizedNewName)
+          ) {
+            window.alert("새 품종의 속과 품종명을 입력해주세요.");
+            return;
+          }
+
           void onSubmit({
             inboundDate,
             inboundType,
@@ -85,8 +97,8 @@ export function InboundCreateDialog({
             newVariety:
               varietyMode === "new"
                 ? {
-                    genus: newGenus,
-                    name: newName,
+                    genus: normalizedNewGenus,
+                    name: normalizedNewName,
                     defaultPotSize: newPotSize,
                     memo,
                   }
@@ -150,22 +162,15 @@ export function InboundCreateDialog({
           />
         ) : (
           <div className="grid gap-3 md:col-span-2 md:grid-cols-3">
-            <Field label="새 속">
-              <input
-                className={inputClass}
-                required
-                value={newGenus}
-                onChange={(event) => setNewGenus(event.target.value)}
-              />
-            </Field>
-            <Field label="새 품종명">
-              <input
-                className={inputClass}
-                required
-                value={newName}
-                onChange={(event) => setNewName(event.target.value)}
-              />
-            </Field>
+            <VarietyCreatableFields
+              genus={newGenus}
+              genusLabel="새 속"
+              name={newName}
+              nameLabel="새 품종명"
+              varieties={varieties}
+              onGenusChange={setNewGenus}
+              onNameChange={setNewName}
+            />
             <PotSizeInput
               label="기본 화분"
               value={newPotSize}

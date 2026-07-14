@@ -10,11 +10,15 @@ type StatusFilter = "ALL" | "정상" | "주의" | "이상";
 export function SalesOrchidGroupSearchSelect({
   disabled = false,
   initialKeyword = "",
+  requiredGenus = "",
+  requiredVarietyName = "",
   selectedIds = [],
   onSelect,
 }: {
   disabled?: boolean;
   initialKeyword?: string;
+  requiredGenus?: string;
+  requiredVarietyName?: string;
   selectedIds?: string[];
   onSelect: (value: SalesOrchidGroupOption) => void;
 }) {
@@ -26,12 +30,21 @@ export function SalesOrchidGroupSearchSelect({
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const selectedIdSet = useMemo(() => new Set(selectedIds), [selectedIds]);
+  const normalizedRequiredGenus = requiredGenus.trim();
+  const normalizedRequiredVarietyName = requiredVarietyName.trim();
+  const fixedVarietyLabel = [
+    normalizedRequiredGenus,
+    normalizedRequiredVarietyName,
+  ]
+    .filter(Boolean)
+    .join(" / ");
 
   async function load(nextKeyword = keyword) {
     setLoading(true);
     setError(null);
     try {
-      const result = await searchSalesOrchidGroups(nextKeyword);
+      const searchKeyword = normalizedRequiredVarietyName || nextKeyword;
+      const result = await searchSalesOrchidGroups(searchKeyword);
       setItems(result);
       setSelectedHouse((current) => {
         if (
@@ -54,7 +67,9 @@ export function SalesOrchidGroupSearchSelect({
   }
 
   function openPicker() {
-    const nextKeyword = initialKeyword.trim();
+    const nextKeyword = (
+      normalizedRequiredVarietyName || initialKeyword
+    ).trim();
     setKeyword(nextKeyword);
     void load(nextKeyword);
     setOpen(true);
@@ -62,10 +77,19 @@ export function SalesOrchidGroupSearchSelect({
 
   const filteredItems = useMemo(() => {
     return items.filter((item) => {
+      if (
+        normalizedRequiredVarietyName &&
+        item.varietyName !== normalizedRequiredVarietyName
+      ) {
+        return false;
+      }
+      if (normalizedRequiredGenus && item.genus !== normalizedRequiredGenus) {
+        return false;
+      }
       if (status !== "ALL" && item.status !== status) return false;
       return true;
     });
-  }, [items, status]);
+  }, [items, normalizedRequiredGenus, normalizedRequiredVarietyName, status]);
 
   const houseCounts = useMemo(() => {
     const counts = new Map<number, number>();
@@ -122,7 +146,9 @@ export function SalesOrchidGroupSearchSelect({
                   난 묶음 선택
                 </h2>
                 <p className="mt-0.5 text-xs text-[#66736a]">
-                  위치를 확인한 뒤 판매 품목에 배분할 묶음을 선택하세요.
+                  {fixedVarietyLabel
+                    ? `${fixedVarietyLabel} 묶음만 선택할 수 있습니다.`
+                    : "위치를 확인한 뒤 판매 품목에 배분할 묶음을 선택하세요."}
                 </p>
               </div>
               <button
@@ -140,12 +166,13 @@ export function SalesOrchidGroupSearchSelect({
                 <div className="space-y-3">
                   <label className="block space-y-1">
                     <span className="text-xs font-semibold text-[#425047]">
-                      검색어
+                      {fixedVarietyLabel ? "선택 품종" : "검색어"}
                     </span>
                     <div className="flex gap-2">
                       <input
-                        className="h-9 min-w-0 flex-1 rounded-md border border-[#cfd8cc] px-3 text-sm outline-none focus:border-[#159447] focus:ring-1 focus:ring-[#159447]"
-                        value={keyword}
+                        className="h-9 min-w-0 flex-1 rounded-md border border-[#cfd8cc] px-3 text-sm outline-none focus:border-[#159447] focus:ring-1 focus:ring-[#159447] disabled:bg-[#f0f3ef]"
+                        disabled={Boolean(fixedVarietyLabel)}
+                        value={fixedVarietyLabel || keyword}
                         placeholder="품종명, 속, 위치"
                         onChange={(event) => setKeyword(event.target.value)}
                         onKeyDown={(event) => {
@@ -157,6 +184,7 @@ export function SalesOrchidGroupSearchSelect({
                       />
                       <button
                         className="flex h-9 w-9 items-center justify-center rounded-md bg-[#159447] text-white"
+                        disabled={Boolean(fixedVarietyLabel)}
                         type="button"
                         aria-label="검색"
                         onClick={() => void load()}

@@ -273,6 +273,7 @@ function FarmBedFeature({
               selectedOrchidGroupId={selectedOrchidGroup?.orchidGroupId ?? null}
               selected={selectedBedZoneId === zone.id}
               showOrchids={showOrchids}
+              bed={bed}
               zone={zone}
               zoneRect={zoneRect}
               onSelectBedZone={onSelectBedZone}
@@ -285,6 +286,7 @@ function FarmBedFeature({
 }
 
 function FarmZoneFeature({
+  bed,
   detailSource,
   filterMatches,
   hasActiveSearch,
@@ -298,6 +300,7 @@ function FarmZoneFeature({
   onSelectBedZone,
   onSelectOrchidGroup,
 }: {
+  bed: PhysicalBed;
   detailSource: DetailSource;
   filterMatches: FarmStatusFilterMatches;
   hasActiveSearch: boolean;
@@ -316,6 +319,7 @@ function FarmZoneFeature({
   const mutedOpacity = matched ? 1 : 0.34;
   const sideLabel =
     zone.side === "LEFT" ? "좌" : zone.side === "RIGHT" ? "우" : zone.side;
+  const orchidBlockGeometries = getOrchidBlockGeometries(zoneRect, zone, bed);
 
   return (
     <>
@@ -362,7 +366,7 @@ function FarmZoneFeature({
         })}
       />
       {showOrchids && hasGroups
-        ? getOrchidBlockGeometries(zoneRect, zone).map(({ group, rect }) => {
+        ? orchidBlockGeometries.map(({ group, rect }) => {
             const selectedGroup = selectedOrchidGroupId === group.id;
             const matchedGroup =
               !hasActiveSearch || filterMatches.orchidGroupIds.has(group.id);
@@ -404,7 +408,7 @@ function FarmZoneFeature({
           })
         : null}
       {showOrchids && hasGroups
-        ? getOrchidBlockGeometries(zoneRect, zone).map(({ group, rect }) => (
+        ? orchidBlockGeometries.map(({ group, rect }) => (
             <Marker
               key={`${group.id}-label`}
               icon={createOrchidBlockIcon(

@@ -1,18 +1,23 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState, useSyncExternalStore } from "react";
+import { normalizeCellRange } from "../lib/orchidManagementUtils";
 import { useOrchidManagementMap } from "../model/useOrchidManagementMap";
-import type { OrchidManagementMapProps } from "../model/types";
+import type {
+  MapCellRangePick,
+  OrchidManagementMapProps,
+} from "../model/types";
 import BedPrecisionSettings from "./components/BedPrecisionSettings";
 import HouseDetailMap from "./components/HouseDetailMap";
 import HouseSelectorPanel from "./components/HouseSelectorPanel";
 import OrchidSearchPanel from "./components/OrchidSearchPanel";
-import OrchidSelectionPanel, {
-  SelectedZoneInfo,
-} from "./components/OrchidSelectionPanel";
+import OrchidSelectionPanel from "./components/OrchidSelectionPanel";
+import SelectedZoneInfo from "./components/SelectedZoneInfo";
 
 const VARIETY_COLOR_STORAGE_KEY =
   "orchid-management:distinguish-variety-colors";
+const VARIETY_COLOR_CHANGE_EVENT =
+  "orchid-management:distinguish-variety-colors-change";
 
 export function OrchidManagementMap({
   initialSelectedOrchidGroupId,
@@ -32,64 +37,190 @@ export function OrchidManagementMap({
     initialSearchFilters,
   );
   const [showScale, setShowScale] = useState(true);
-  const [distinguishVarietyColors, setDistinguishVarietyColors] = useState(
+  const placementHouses = useMemo(
     () =>
-      typeof window !== "undefined" &&
-      window.localStorage.getItem(VARIETY_COLOR_STORAGE_KEY) === "true",
+      mapData.houses.map((item) => ({
+        id: item.houseId,
+        number: item.houseNumber,
+        name: item.houseName,
+        memo: null,
+        physicalBeds: item.physicalBeds,
+      })),
+    [mapData.houses],
   );
+  const distinguishVarietyColors = useSyncExternalStore(
+    subscribeVarietyColorPreference,
+    getVarietyColorPreference,
+    getServerVarietyColorPreference,
+  );
+  const [mapCellRangePick, setMapCellRangePick] = useState<MapCellRangePick>({
+    active: false,
+    excludeOrchidGroupId: null,
+    targetBedZoneId: null,
+    startCell: null,
+    endCell: null,
+    version: 0,
+  });
 
   function toggleVarietyColors() {
-    setDistinguishVarietyColors((current) => {
-      const next = !current;
-      window.localStorage.setItem(VARIETY_COLOR_STORAGE_KEY, String(next));
-      return next;
+    const next = !distinguishVarietyColors;
+    window.localStorage.setItem(VARIETY_COLOR_STORAGE_KEY, String(next));
+    window.dispatchEvent(new Event(VARIETY_COLOR_CHANGE_EVENT));
+  }
+
+  function startMapCellRangePick({
+    targetBedZoneId,
+    excludeOrchidGroupId,
+  }: {
+    endCell: string;
+    excludeOrchidGroupId?: number | null;
+    maxCell: number;
+    startCell: string;
+    targetBedZoneId: number | null;
+  }) {
+    setMapCellRangePick((current) => ({
+      active: true,
+      excludeOrchidGroupId: excludeOrchidGroupId ?? null,
+      targetBedZoneId,
+      startCell: null,
+      endCell: null,
+      version: current.version + 1,
+    }));
+  }
+
+  function syncMapCellRangePick({
+    endCell,
+    excludeOrchidGroupId,
+    maxCell,
+    startCell,
+    targetBedZoneId,
+  }: {
+    endCell: string;
+    excludeOrchidGroupId?: number | null;
+    maxCell: number;
+    startCell: string;
+    targetBedZoneId: number;
+  }) {
+    const range = normalizeCellRange(startCell, endCell, maxCell);
+    setMapCellRangePick((current) => ({
+      active: false,
+      excludeOrchidGroupId: excludeOrchidGroupId ?? null,
+      targetBedZoneId,
+      startCell: range.startCell,
+      endCell: range.endCell,
+      version: current.version + 1,
+    }));
+  }
+
+  function clearMapCellRangePick() {
+    setMapCellRangePick((current) => ({
+      active: false,
+      excludeOrchidGroupId: null,
+      targetBedZoneId: null,
+      startCell: null,
+      endCell: null,
+      version: current.version + 1,
+    }));
+  }
+
+  function pickMapCellRange(bedZoneId: number, cell: number) {
+    setMapCellRangePick((current) => {
+      if (!current.active) {
+        return current;
+      }
+      const targetBedZoneId = current.targetBedZoneId ?? bedZoneId;
+      if (targetBedZoneId !== bedZoneId) {
+        return current;
+      }
+
+      if (
+        current.startCell == null ||
+        (current.endCell != null && current.startCell !== current.endCell)
+      ) {
+        return {
+          ...current,
+          targetBedZoneId,
+          startCell: cell,
+          endCell: cell,
+          version: current.version + 1,
+        };
+      }
+
+      return {
+        active: false,
+        excludeOrchidGroupId: current.excludeOrchidGroupId,
+        targetBedZoneId,
+        startCell: Math.min(current.startCell, cell),
+        endCell: Math.max(current.startCell, cell),
+        version: current.version + 1,
+      };
     });
   }
 
   return (
-    <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_440px]">
-      <section className="space-y-3">
+    <div className="grid h-full min-h-0 gap-4 lg:grid-cols-[minmax(0,1fr)_clamp(280px,28%,440px)]">
+      <section className="flex h-full min-h-0 flex-col gap-3">
         <HouseSelectorPanel
+          createActive={
+            orchidManagement.mutationMode === "CREATE" &&
+            !orchidManagement.pasteSourceOrchidGroup
+          }
           distinguishVarietyColors={distinguishVarietyColors}
           house={house}
           houses={mapData.houses}
-          placementEditMode={orchidManagement.placementEditMode}
+          selected={orchidManagement.selection?.type === "HOUSE"}
           selectedHouseId={house.id}
           showScale={showScale}
-          onTogglePlacementEditMode={
-            orchidManagement.actions.togglePlacementEditMode
-          }
           onToggleVarietyColors={toggleVarietyColors}
           onToggleScale={() => setShowScale((current) => !current)}
+          onOpenCreate={() => {
+            clearMapCellRangePick();
+            orchidManagement.actions.openCreate();
+          }}
+          onSelectHouse={() => {
+            clearMapCellRangePick();
+            orchidManagement.actions.selectHouse();
+          }}
         />
-        <HouseDetailMap
-          distinguishVarietyColors={distinguishVarietyColors}
-          dragState={orchidManagement.dragState}
-          filteredOrchidGroupIds={orchidManagement.filteredOrchidGroupIds}
-          house={house}
-          placementEditMode={orchidManagement.placementEditMode}
-          saving={orchidManagement.saving}
-          selection={orchidManagement.selection}
-          showScale={showScale}
-          onDragEnd={orchidManagement.actions.endDrag}
-          onDragStart={orchidManagement.actions.startDrag}
-          onDropOnBedZone={orchidManagement.actions.dropOnBedZone}
-          onEnterDropZone={orchidManagement.actions.enterDropZone}
-          onSelectBedZone={orchidManagement.actions.selectBedZone}
-          onSelectOrchidGroup={
-            orchidManagement.actions.selectOrchidGroupForEdit
-          }
-        />
+        <div className="min-h-0 flex-1">
+          <HouseDetailMap
+            distinguishVarietyColors={distinguishVarietyColors}
+            filteredOrchidGroupIds={orchidManagement.filteredOrchidGroupIds}
+            house={house}
+            selection={orchidManagement.selection}
+            showScale={showScale}
+            cellRangePick={mapCellRangePick}
+            onPickCellRange={pickMapCellRange}
+            onSelectBedZone={(bedZoneId) => {
+              clearMapCellRangePick();
+              orchidManagement.actions.selectBedZone(bedZoneId);
+            }}
+            onSelectHouse={() => {
+              clearMapCellRangePick();
+              orchidManagement.actions.selectHouse();
+            }}
+            onSelectPhysicalBed={(physicalBedId) => {
+              clearMapCellRangePick();
+              orchidManagement.actions.selectPhysicalBed(physicalBedId);
+            }}
+            onSelectOrchidGroup={(orchidGroupId) => {
+              clearMapCellRangePick();
+              orchidManagement.actions.selectOrchidGroupForEdit(orchidGroupId);
+            }}
+          />
+        </div>
         <SelectedZoneInfo
           house={house}
           selectedBedZone={orchidManagement.selectedBedZone}
           selectedOrchidGroup={orchidManagement.selectedOrchidGroup}
+          selectedPhysicalBed={orchidManagement.selectedPhysicalBed}
+          selection={orchidManagement.selection}
           workRecordSummary={orchidManagement.workRecordSummary}
           workRecordSummaryLoading={orchidManagement.workRecordSummaryLoading}
         />
         {/* <BedPrecisionSettings zone={orchidManagement.resolvedZone} /> 26.07.11 비활성화*/}
       </section>
-      <div className="space-y-3">
+      <div className="flex h-full min-h-0 flex-col gap-3">
         <OrchidSearchPanel
           currentHouseId={house.id}
           currentSelectedOrchidGroupId={
@@ -100,8 +231,14 @@ export function OrchidManagementMap({
           hasActiveSearch={orchidManagement.hasActiveSearch}
           loading={orchidManagement.searchLoading}
           results={orchidManagement.searchResults}
-          onClear={orchidManagement.actions.resetSearch}
-          onSelectResult={orchidManagement.actions.moveToOrchidGroup}
+          onClear={() => {
+            clearMapCellRangePick();
+            orchidManagement.actions.resetSearch();
+          }}
+          onSelectResult={(orchidGroup) => {
+            clearMapCellRangePick();
+            orchidManagement.actions.moveToOrchidGroup(orchidGroup);
+          }}
           onUpdateFilter={orchidManagement.actions.updateSearchFilter}
         />
         <OrchidSelectionPanel
@@ -110,38 +247,91 @@ export function OrchidManagementMap({
           filteredOrchidGroupIds={orchidManagement.filteredOrchidGroupIds}
           hasActiveSearch={orchidManagement.hasActiveSearch}
           house={house}
+          placementHouses={placementHouses}
+          listSelection={orchidManagement.listSelection}
           mutationMode={orchidManagement.mutationMode}
           pasteSourceOrchidGroup={orchidManagement.pasteSourceOrchidGroup}
-          preferredMoveZoneId={orchidManagement.preferredMoveZoneId}
           resolvedZone={orchidManagement.resolvedZone}
           saving={orchidManagement.saving}
           selectedBedZone={orchidManagement.selectedBedZone}
           selectedOrchidGroup={orchidManagement.selectedOrchidGroup}
+          selectedPhysicalBed={orchidManagement.selectedPhysicalBed}
+          selection={orchidManagement.selection}
           workRecordForm={orchidManagement.workRecordForm}
           workTypes={workTypes}
-          onCancelMutation={orchidManagement.actions.cancelMutation}
-          onClearCopiedOrchidGroup={
-            orchidManagement.actions.clearCopiedOrchidGroup
-          }
+          mapCellRangePick={mapCellRangePick}
+          onCancelMutation={() => {
+            clearMapCellRangePick();
+            orchidManagement.actions.cancelMutation();
+          }}
+          onClearCopiedOrchidGroup={() => {
+            clearMapCellRangePick();
+            orchidManagement.actions.clearCopiedOrchidGroup();
+          }}
           onCopyOrchidGroup={orchidManagement.actions.copyOrchidGroup}
-          onCreate={orchidManagement.actions.create}
-          onDelete={orchidManagement.actions.delete}
-          onEdit={orchidManagement.actions.edit}
-          onMove={orchidManagement.actions.move}
-          onOpenCreate={orchidManagement.actions.openCreate}
-          onOpenEdit={orchidManagement.actions.openEdit}
-          onOpenMove={orchidManagement.actions.openMove}
-          onOpenPaste={orchidManagement.actions.openPaste}
-          onOpenWorkRecord={orchidManagement.actions.openWorkRecord}
-          onSelectOrchidGroup={orchidManagement.actions.selectOrchidGroup}
-          onTogglePlacementEditMode={
-            orchidManagement.actions.togglePlacementEditMode
-          }
+          onCreate={async (payload) => {
+            await orchidManagement.actions.create(payload);
+            clearMapCellRangePick();
+          }}
+          onDelete={async () => {
+            await orchidManagement.actions.delete();
+            clearMapCellRangePick();
+          }}
+          onEdit={async (payload) => {
+            await orchidManagement.actions.edit(payload);
+            clearMapCellRangePick();
+          }}
+          onMove={async (payload) => {
+            await orchidManagement.actions.move(payload);
+            clearMapCellRangePick();
+          }}
+          onOpenEdit={() => {
+            clearMapCellRangePick();
+            orchidManagement.actions.openEdit();
+          }}
+          onOpenMove={() => {
+            clearMapCellRangePick();
+            orchidManagement.actions.openMove();
+          }}
+          onOpenPaste={() => {
+            clearMapCellRangePick();
+            orchidManagement.actions.openPaste();
+          }}
+          onOpenWorkRecord={() => {
+            clearMapCellRangePick();
+            orchidManagement.actions.openWorkRecord();
+          }}
+          onSelectOrchidGroup={(orchidGroupId) => {
+            clearMapCellRangePick();
+            orchidManagement.actions.selectOrchidGroup(orchidGroupId);
+          }}
+          onStartMapCellRangePick={startMapCellRangePick}
+          onSyncMapCellRangePick={syncMapCellRangePick}
           onUpdateWorkRecordForm={orchidManagement.actions.updateWorkRecordForm}
-          onWorkRecordCreate={orchidManagement.actions.workRecordCreate}
-          placementEditMode={orchidManagement.placementEditMode}
+          onWorkRecordCreate={async () => {
+            await orchidManagement.actions.workRecordCreate();
+            clearMapCellRangePick();
+          }}
         />
       </div>
     </div>
   );
+}
+
+function subscribeVarietyColorPreference(onStoreChange: () => void) {
+  window.addEventListener("storage", onStoreChange);
+  window.addEventListener(VARIETY_COLOR_CHANGE_EVENT, onStoreChange);
+
+  return () => {
+    window.removeEventListener("storage", onStoreChange);
+    window.removeEventListener(VARIETY_COLOR_CHANGE_EVENT, onStoreChange);
+  };
+}
+
+function getServerVarietyColorPreference() {
+  return false;
+}
+
+function getVarietyColorPreference() {
+  return window.localStorage.getItem(VARIETY_COLOR_STORAGE_KEY) === "true";
 }
