@@ -232,6 +232,7 @@ export function InventoryPage({
           key="variety"
           kind="variety"
           open
+          varieties={varietyOptions}
           onClose={() => setDialog(null)}
           onSubmit={(values) => {
             void handleCreateVariety(values);

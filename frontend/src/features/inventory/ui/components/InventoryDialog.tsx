@@ -3,13 +3,19 @@
 import { X } from "lucide-react";
 import type { ReactNode } from "react";
 import { useState } from "react";
-import type { MaterialPayload, VarietyPayload } from "../../model/types";
+import type {
+  MaterialPayload,
+  Variety,
+  VarietyPayload,
+} from "../../model/types";
 import { Field, inputClass } from "./InventoryPrimitives";
+import { VarietyCreatableFields } from "./VarietyCreatableFields";
 
 type InventoryDialogProps =
   | {
       kind: "variety";
       open: boolean;
+      varieties: Variety[];
       onClose: () => void;
       onSubmit: (values: VarietyPayload) => void;
     }
@@ -26,7 +32,11 @@ export function InventoryDialog(props: InventoryDialogProps) {
   if (props.kind === "variety") {
     return (
       <DialogShell title="새 품종 등록" onClose={props.onClose}>
-        <VarietyDialogForm onClose={props.onClose} onSubmit={props.onSubmit} />
+        <VarietyDialogForm
+          varieties={props.varieties}
+          onClose={props.onClose}
+          onSubmit={props.onSubmit}
+        />
       </DialogShell>
     );
   }
@@ -41,9 +51,11 @@ export function InventoryDialog(props: InventoryDialogProps) {
 function VarietyDialogForm({
   onClose,
   onSubmit,
+  varieties,
 }: {
   onClose: () => void;
   onSubmit: (values: VarietyPayload) => void;
+  varieties: Variety[];
 }) {
   const [form, setForm] = useState<VarietyPayload>({
     genus: "",
@@ -60,36 +72,29 @@ function VarietyDialogForm({
       className="mt-5 grid gap-3 md:grid-cols-2"
       onSubmit={(event) => {
         event.preventDefault();
-        onSubmit(form);
+        const genus = form.genus.trim();
+        const name = form.name.trim();
+
+        if (!genus || !name) {
+          window.alert("속과 품종명을 입력해주세요.");
+          return;
+        }
+
+        onSubmit({ ...form, genus, name });
         onClose();
       }}
     >
-      <Field label="속">
-        <input
-          className={inputClass}
-          required
-          value={form.genus}
-          onChange={(event) =>
-            setForm((current) => ({
-              ...current,
-              genus: event.target.value,
-            }))
-          }
-        />
-      </Field>
-      <Field label="품종명">
-        <input
-          className={inputClass}
-          required
-          value={form.name}
-          onChange={(event) =>
-            setForm((current) => ({
-              ...current,
-              name: event.target.value,
-            }))
-          }
-        />
-      </Field>
+      <VarietyCreatableFields
+        genus={form.genus}
+        name={form.name}
+        varieties={varieties}
+        onGenusChange={(value) =>
+          setForm((current) => ({ ...current, genus: value }))
+        }
+        onNameChange={(value) =>
+          setForm((current) => ({ ...current, name: value }))
+        }
+      />
       <Field label="별칭">
         <input
           className={inputClass}
