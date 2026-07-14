@@ -1,6 +1,7 @@
 package com.greenhouse.backend.farm.repository;
 
 import com.greenhouse.backend.farm.domain.OrchidGroup;
+import com.greenhouse.backend.farm.domain.PotSizeCode;
 import java.util.List;
 import java.util.Optional;
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -131,4 +132,31 @@ public interface OrchidGroupRepository extends JpaRepository<OrchidGroup, Long> 
 			where g.id in :orchidGroupIds
 			""")
 	List<OrchidGroup> findDetailsByIds(@Param("orchidGroupIds") java.util.Collection<Long> orchidGroupIds);
+
+	@Query("""
+			select g from OrchidGroup g
+			join fetch g.bedZone z
+			join fetch z.physicalBed b
+			join fetch b.house h
+			join fetch g.variety v
+			left join fetch g.inboundRecord
+			where g.quantity > 0
+			  and g.status not in ('종료', '폐기', '판매 완료')
+			  and g.potSizeCode <> com.greenhouse.backend.farm.domain.PotSizeCode.UNMAPPED
+			  and (:varietyId is null or v.id = :varietyId)
+			  and (:potSizeCode is null or g.potSizeCode = :potSizeCode)
+			  and (:houseId is null or h.id = :houseId)
+			  and (:status = '' or g.status = :status)
+			  and (:keyword = ''
+			      or lower(v.name) like lower(concat('%', :keyword, '%'))
+			      or lower(v.genus) like lower(concat('%', :keyword, '%')))
+			order by v.name asc, g.ageYear asc, g.potSizeCode asc,
+			         h.number asc, b.displayOrder asc, z.sortOrder asc, g.sortOrder asc
+			""")
+	List<OrchidGroup> findDerivedGroupCandidates(
+			@Param("varietyId") Long varietyId,
+			@Param("potSizeCode") PotSizeCode potSizeCode,
+			@Param("houseId") Long houseId,
+			@Param("status") String status,
+			@Param("keyword") String keyword);
 }
