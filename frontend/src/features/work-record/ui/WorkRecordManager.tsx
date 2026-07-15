@@ -31,6 +31,7 @@ export function WorkRecordManager(
       ) : null}
       {activeTab === "LIST" && manager.showCreateForm ? (
         <WorkRecordCreateForm
+          bedZones={manager.bedZones}
           errorMessage={manager.errorMessage}
           form={manager.form}
           orchidGroups={manager.orchidGroups}

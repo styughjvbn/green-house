@@ -37,6 +37,11 @@ export type WorkRecordTargetOptions = {
   orchidGroups: OrchidGroup[];
 };
 
+export type WorkTargetSelectionOptions = {
+  orchidGroups: OrchidGroup[];
+  bedZones: BedZone[];
+};
+
 export type CreateWorkRecordPayload = {
   workTypeId: number;
   workDate: string;

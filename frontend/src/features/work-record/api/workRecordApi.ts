@@ -11,6 +11,7 @@ import type {
   CreateWorkRecordPayload,
   CreateWorkOperationPayload,
   WorkOperationScopeOptions,
+  WorkTargetSelectionOptions,
   WorkTargetPreviewPayload,
   WorkRecordTargetOptions,
 } from "../model/types";
@@ -38,6 +39,17 @@ export async function getSelectableWorkTargetGroups(): Promise<OrchidGroup[]> {
   return groups.filter(
     (group) => group.quantity > 0 && !excludedStatuses.has(group.status),
   );
+}
+
+export async function getWorkTargetSelectionOptions(): Promise<WorkTargetSelectionOptions> {
+  const [orchidGroups, bedZones] = await Promise.all([
+    getSelectableWorkTargetGroups(),
+    fetchApi<BedZone[]>("/bed-zones"),
+  ]);
+  return {
+    orchidGroups,
+    bedZones: bedZones.filter((zone) => zone.active),
+  };
 }
 
 export async function getWorkRecordTargetOptions(

@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { X } from "lucide-react";
 import type {
+  BedZone,
   OrchidGroup,
   WorkOperation,
   WorkTargetPreview,
@@ -11,7 +12,7 @@ import type {
 import {
   completeWorkOperation,
   createWorkOperation,
-  getSelectableWorkTargetGroups,
+  getWorkTargetSelectionOptions,
   previewWorkOperationTargets,
   transitionWorkOperation,
   transitionWorkOperationTarget,
@@ -55,6 +56,7 @@ export function WorkOperationPanel({
   const [manualIds, setManualIds] = useState<Set<number>>(new Set());
   const [targetSelectorOpen, setTargetSelectorOpen] = useState(false);
   const [orchidGroups, setOrchidGroups] = useState<OrchidGroup[]>([]);
+  const [bedZones, setBedZones] = useState<BedZone[]>([]);
   const [loading, setLoading] = useState(false);
   const [optionsLoading, setOptionsLoading] = useState(true);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
@@ -84,9 +86,12 @@ export function WorkOperationPanel({
 
   useEffect(() => {
     let cancelled = false;
-    void getSelectableWorkTargetGroups()
+    void getWorkTargetSelectionOptions()
       .then((result) => {
-        if (!cancelled) setOrchidGroups(result);
+        if (!cancelled) {
+          setOrchidGroups(result.orchidGroups);
+          setBedZones(result.bedZones);
+        }
       })
       .catch((error: unknown) => {
         if (!cancelled) {
@@ -424,6 +429,7 @@ export function WorkOperationPanel({
       </section>
       {targetSelectorOpen ? (
         <WorkTargetSelectionDialog
+          bedZones={bedZones}
           groups={orchidGroups}
           initialSelectedIds={manualIds}
           onClose={() => setTargetSelectorOpen(false)}

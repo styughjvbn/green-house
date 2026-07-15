@@ -1,11 +1,11 @@
 ﻿"use client";
 
 import { FormEvent, useEffect, useMemo, useState } from "react";
-import type { OrchidGroup, WorkRecord } from "@/entities/farm/types";
+import type { BedZone, OrchidGroup, WorkRecord } from "@/entities/farm/types";
 import {
   cancelWorkRecord,
   createCompletedWorkOperationFromRecord,
-  getSelectableWorkTargetGroups,
+  getWorkTargetSelectionOptions,
 } from "../api/workRecordApi";
 import {
   createInitialWorkRecordFilters,
@@ -27,6 +27,7 @@ export function useWorkRecordManager({
 }: WorkRecordManagerProps) {
   const [records, setRecords] = useState<WorkRecord[]>(initialRecords);
   const [orchidGroups, setOrchidGroups] = useState<OrchidGroup[]>([]);
+  const [bedZones, setBedZones] = useState<BedZone[]>([]);
   const [selectedOrchidGroupIds, setSelectedOrchidGroupIds] = useState<
     Set<number>
   >(new Set());
@@ -66,9 +67,12 @@ export function useWorkRecordManager({
 
   useEffect(() => {
     let cancelled = false;
-    void getSelectableWorkTargetGroups()
-      .then((groups) => {
-        if (!cancelled) setOrchidGroups(groups);
+    void getWorkTargetSelectionOptions()
+      .then((options) => {
+        if (!cancelled) {
+          setOrchidGroups(options.orchidGroups);
+          setBedZones(options.bedZones);
+        }
       })
       .catch((error: unknown) => {
         if (!cancelled) {
@@ -197,6 +201,7 @@ export function useWorkRecordManager({
     canceling,
     errorMessage,
     orchidGroups,
+    bedZones,
     selectedOrchidGroupIds,
     setSelectedOrchidGroupIds,
     selectRecord,

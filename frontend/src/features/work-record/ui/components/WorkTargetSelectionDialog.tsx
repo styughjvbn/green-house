@@ -2,11 +2,12 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Search, X } from "lucide-react";
-import type { OrchidGroup } from "@/entities/farm/types";
+import type { BedZone, BedZoneSide, OrchidGroup } from "@/entities/farm/types";
 
 type ZoneNode = {
   id: number;
   name: string;
+  side: BedZoneSide;
   groups: OrchidGroup[];
 };
 
@@ -24,11 +25,13 @@ type HouseNode = {
 };
 
 export function WorkTargetSelectionDialog({
+  bedZones,
   groups,
   initialSelectedIds,
   onClose,
   onConfirm,
 }: {
+  bedZones: BedZone[];
   groups: OrchidGroup[];
   initialSelectedIds: Set<number>;
   onClose: () => void;
@@ -38,7 +41,10 @@ export function WorkTargetSelectionDialog({
     () => new Set(initialSelectedIds),
   );
   const [keyword, setKeyword] = useState("");
-  const tree = useMemo(() => buildTargetTree(groups), [groups]);
+  const tree = useMemo(
+    () => buildTargetTree(groups, bedZones),
+    [bedZones, groups],
+  );
   const visibleTree = useMemo(
     () => filterTargetTree(tree, keyword),
     [keyword, tree],
@@ -46,16 +52,9 @@ export function WorkTargetSelectionDialog({
   const [focusedHouseId, setFocusedHouseId] = useState<number | null>(
     () => tree[0]?.id ?? null,
   );
-  const [focusedBedNumber, setFocusedBedNumber] = useState<number | null>(
-    () => tree[0]?.beds[0]?.number ?? null,
-  );
   const focusedHouse =
     visibleTree.find((house) => house.id === focusedHouseId) ??
     visibleTree[0] ??
-    null;
-  const focusedBed =
-    focusedHouse?.beds.find((bed) => bed.number === focusedBedNumber) ??
-    focusedHouse?.beds[0] ??
     null;
   const selectedGroups = useMemo(
     () => groups.filter((group) => selectedIds.has(group.id)),
@@ -141,7 +140,7 @@ export function WorkTargetSelectionDialog({
         </div>
 
         <div className="min-h-0 flex-1 overflow-y-auto p-4 sm:p-5">
-          {focusedHouse && focusedBed ? (
+          {focusedHouse ? (
             <div className="space-y-4">
               <section>
                 <div className="mb-2 flex items-center justify-between gap-2">
@@ -167,17 +166,13 @@ export function WorkTargetSelectionDialog({
                           <SelectionCheckbox
                             label={`${house.number}동 전체`}
                             {...selectionState(house.groups, selectedIds)}
+                            disabled={house.groups.length === 0}
                             onChange={() => toggleGroups(house.groups)}
                           />
                           <button
                             className="flex flex-1 flex-col items-start"
                             type="button"
-                            onClick={() => {
-                              setFocusedHouseId(house.id);
-                              setFocusedBedNumber(
-                                house.beds[0]?.number ?? null,
-                              );
-                            }}
+                            onClick={() => setFocusedHouseId(house.id)}
                           >
                             <span className="text-sm font-bold text-[#26352b]">
                               {house.number}동
@@ -196,98 +191,62 @@ export function WorkTargetSelectionDialog({
               <section>
                 <div className="mb-2 flex items-center justify-between gap-2">
                   <p className="text-sm font-bold text-[#344138]">
-                    {focusedHouse.number}동 다이 선택
+                    {focusedHouse.number}동 배치
                   </p>
                   <p className="text-xs text-[#718077]">
-                    {focusedHouse.beds[0].number}다이 →{" "}
-                    {focusedHouse.beds[focusedHouse.beds.length - 1].number}다이
+                    다이 전체 또는 좌·우 구역을 선택하세요.
                   </p>
                 </div>
-                <div className="overflow-x-auto pb-1">
-                  <div className="flex min-w-max gap-2">
-                    {focusedHouse.beds.map((bed) => {
-                      const active = bed.number === focusedBed.number;
-                      return (
-                        <div
-                          className={`flex min-w-28 items-center gap-2 rounded-md border p-2 ${
-                            active
-                              ? "border-[#3d6f91] bg-[#edf5fa]"
-                              : "border-[#d7dfd5] bg-white"
-                          }`}
-                          key={`${focusedHouse.id}-${bed.number}`}
-                        >
-                          <SelectionCheckbox
-                            label={`${focusedHouse.number}동 ${bed.number}다이 전체`}
-                            {...selectionState(bed.groups, selectedIds)}
-                            onChange={() => toggleGroups(bed.groups)}
-                          />
-                          <button
-                            className="flex flex-1 flex-col items-start"
-                            type="button"
-                            onClick={() => setFocusedBedNumber(bed.number)}
-                          >
-                            <span className="text-sm font-bold text-[#344138]">
-                              {bed.number}다이
-                            </span>
-                            <span className="text-[11px] text-[#718077]">
-                              {bed.groups.length}묶음
-                            </span>
-                          </button>
-                        </div>
-                      );
-                    })}
-                  </div>
-                </div>
-              </section>
-
-              <section className="overflow-hidden rounded-md border border-[#d7dfd5] bg-white">
-                <div className="border-b border-[#dfe6dd] bg-[#f1f6f0] px-4 py-3">
-                  <p className="text-sm font-bold text-[#26352b]">
-                    {focusedHouse.number}동 · {focusedBed.number}다이
-                  </p>
-                  <p className="mt-0.5 text-xs text-[#6a766e]">
-                    구역 전체 또는 개별 난 묶음을 선택하세요.
-                  </p>
-                </div>
-                <div className="grid gap-3 p-3 md:grid-cols-2">
-                  {focusedBed.zones.map((zone) => (
+                <div className="grid gap-3 lg:grid-cols-3">
+                  {focusedHouse.beds.map((bed) => (
                     <div
-                      className="rounded-md border border-[#e1e7df] p-2"
-                      key={zone.id}
+                      className="overflow-hidden rounded-md border border-[#cfd9cd] bg-white"
+                      key={`${focusedHouse.id}-${bed.number}`}
                     >
-                      <div className="flex items-center gap-3 px-2 py-1.5">
+                      <div className="flex items-center gap-2 border-b border-[#dfe6dd] bg-[#f1f6f0] px-3 py-2.5">
                         <SelectionCheckbox
-                          label={`${focusedHouse.number}동 ${focusedBed.number}다이 ${zone.name} 전체`}
-                          {...selectionState(zone.groups, selectedIds)}
-                          onChange={() => toggleGroups(zone.groups)}
+                          label={`${focusedHouse.number}동 ${bed.number}다이 전체`}
+                          {...selectionState(bed.groups, selectedIds)}
+                          disabled={bed.groups.length === 0}
+                          onChange={() => toggleGroups(bed.groups)}
                         />
-                        <span className="text-sm font-semibold text-[#435047]">
-                          {zone.name}
+                        <span className="text-sm font-bold text-[#26352b]">
+                          {bed.number}다이
                         </span>
                         <span className="ml-auto text-xs text-[#718077]">
-                          {zone.groups.length}묶음
+                          {bed.groups.length}묶음
                         </span>
                       </div>
-                      <div className="mt-1 space-y-1">
-                        {zone.groups.map((group) => (
-                          <label
-                            className="flex cursor-pointer items-center gap-2 rounded px-2 py-2 text-sm hover:bg-[#f4f8f3]"
-                            key={group.id}
-                          >
-                            <SelectionCheckbox
-                              label={`${group.varietyName} ${group.quantity}분`}
-                              checked={selectedIds.has(group.id)}
-                              indeterminate={false}
-                              onChange={() => toggleGroups([group])}
+                      <div className="grid min-h-44 grid-cols-2 gap-px bg-[#dce4da]">
+                        {(["RIGHT", "LEFT"] as const).map((side) => {
+                          const zone = bed.zones.find(
+                            (candidate) => candidate.side === side,
+                          );
+                          return zone ? (
+                            <BedSideZone
+                              key={side}
+                              bedNumber={bed.number}
+                              houseNumber={focusedHouse.number}
+                              selectedIds={selectedIds}
+                              side={side}
+                              zone={zone}
+                              onToggle={toggleGroups}
                             />
-                            <span className="min-w-0 flex-1 truncate text-[#344138]">
-                              {group.varietyName}
-                            </span>
-                            <span className="shrink-0 text-xs text-[#6a766e]">
-                              {group.quantity}분
-                            </span>
-                          </label>
-                        ))}
+                          ) : (
+                            <div
+                              className="flex min-h-44 flex-col items-center justify-center bg-[#edf0ed] px-2 text-center text-[#9aa39c]"
+                              key={side}
+                              aria-disabled="true"
+                            >
+                              <span className="text-xs font-bold">
+                                {sideLabel(side)}
+                              </span>
+                              <span className="mt-1 text-[11px]">
+                                비어 있음
+                              </span>
+                            </div>
+                          );
+                        })}
                       </div>
                     </div>
                   ))}
@@ -334,13 +293,80 @@ export function WorkTargetSelectionDialog({
   );
 }
 
+function BedSideZone({
+  bedNumber,
+  houseNumber,
+  selectedIds,
+  side,
+  zone,
+  onToggle,
+}: {
+  bedNumber: number;
+  houseNumber: number;
+  selectedIds: Set<number>;
+  side: "LEFT" | "RIGHT";
+  zone: ZoneNode;
+  onToggle: (groups: OrchidGroup[]) => void;
+}) {
+  if (zone.groups.length === 0) {
+    return (
+      <div
+        className="flex min-h-44 flex-col items-center justify-center bg-[#edf0ed] px-2 text-center text-[#9aa39c]"
+        aria-disabled="true"
+      >
+        <span className="text-xs font-bold">{sideLabel(side)}</span>
+        <span className="mt-1 text-[11px]">난 묶음 없음</span>
+      </div>
+    );
+  }
+
+  return (
+    <div className="min-h-44 bg-white p-2">
+      <div className="flex items-center gap-2 border-b border-[#edf0ec] px-1 pb-2">
+        <SelectionCheckbox
+          label={`${houseNumber}동 ${bedNumber}다이 ${sideLabel(side)} 전체`}
+          {...selectionState(zone.groups, selectedIds)}
+          onChange={() => onToggle(zone.groups)}
+        />
+        <div className="min-w-0">
+          <p className="text-xs font-bold text-[#435047]">{sideLabel(side)}</p>
+          <p className="truncate text-[10px] text-[#7a867e]">{zone.name}</p>
+        </div>
+      </div>
+      <div className="mt-1 space-y-0.5">
+        {zone.groups.map((group) => (
+          <label
+            className="flex cursor-pointer items-center gap-1.5 rounded px-1 py-1.5 text-xs hover:bg-[#f4f8f3]"
+            key={group.id}
+          >
+            <SelectionCheckbox
+              label={`${group.varietyName} ${group.quantity}분`}
+              checked={selectedIds.has(group.id)}
+              indeterminate={false}
+              onChange={() => onToggle([group])}
+            />
+            <span className="min-w-0 flex-1 truncate text-[#344138]">
+              {group.varietyName}
+            </span>
+            <span className="shrink-0 text-[10px] text-[#6a766e]">
+              {group.quantity}분
+            </span>
+          </label>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 function SelectionCheckbox({
   checked,
+  disabled = false,
   indeterminate,
   label,
   onChange,
 }: {
   checked: boolean;
+  disabled?: boolean;
   indeterminate: boolean;
   label: string;
   onChange: () => void;
@@ -356,12 +382,17 @@ function SelectionCheckbox({
       ref={ref}
       aria-label={label}
       checked={checked}
-      className="h-4 w-4 shrink-0 accent-[#159447]"
+      className="h-4 w-4 shrink-0 accent-[#159447] disabled:cursor-not-allowed disabled:opacity-35"
+      disabled={disabled}
       type="checkbox"
       onClick={(event) => event.stopPropagation()}
       onChange={onChange}
     />
   );
+}
+
+function sideLabel(side: "LEFT" | "RIGHT") {
+  return side === "RIGHT" ? "우측" : "좌측";
 }
 
 function selectionState(groups: OrchidGroup[], selectedIds: Set<number>) {
@@ -375,48 +406,47 @@ function selectionState(groups: OrchidGroup[], selectedIds: Set<number>) {
   };
 }
 
-function buildTargetTree(groups: OrchidGroup[]): HouseNode[] {
-  const houses = new Map<number, OrchidGroup[]>();
+function buildTargetTree(
+  groups: OrchidGroup[],
+  bedZones: BedZone[],
+): HouseNode[] {
+  const groupsByZone = new Map<number, OrchidGroup[]>();
   groups.forEach((group) => {
-    const houseGroups = houses.get(group.houseId) ?? [];
-    houseGroups.push(group);
-    houses.set(group.houseId, houseGroups);
+    const zoneGroups = groupsByZone.get(group.bedZoneId) ?? [];
+    zoneGroups.push(group);
+    groupsByZone.set(group.bedZoneId, zoneGroups);
   });
 
-  return [...houses.entries()]
-    .map(([houseId, houseGroups]) => {
-      const beds = new Map<number, OrchidGroup[]>();
-      houseGroups.forEach((group) => {
-        const bedGroups = beds.get(group.physicalBedNumber) ?? [];
-        bedGroups.push(group);
-        beds.set(group.physicalBedNumber, bedGroups);
-      });
+  const zonesByHouse = new Map<number, BedZone[]>();
+  bedZones.forEach((zone) => {
+    const houseZones = zonesByHouse.get(zone.houseId) ?? [];
+    houseZones.push(zone);
+    zonesByHouse.set(zone.houseId, houseZones);
+  });
 
+  return [...zonesByHouse.entries()]
+    .map(([houseId, houseZones]) => {
+      const beds = [1, 2, 3].map((bedNumber) => {
+        const zones = houseZones
+          .filter((zone) => zone.physicalBedNumber === bedNumber)
+          .map((zone) => ({
+            id: zone.id,
+            name: zone.name,
+            side: zone.side,
+            groups: [...(groupsByZone.get(zone.id) ?? [])].sort(compareGroups),
+          }))
+          .sort(compareZones);
+        return {
+          number: bedNumber,
+          groups: zones.flatMap((zone) => zone.groups),
+          zones,
+        };
+      });
       return {
         id: houseId,
-        number: houseGroups[0].houseNumber,
-        groups: houseGroups,
-        beds: [...beds.entries()]
-          .map(([bedNumber, bedGroups]) => {
-            const zones = new Map<number, OrchidGroup[]>();
-            bedGroups.forEach((group) => {
-              const zoneGroups = zones.get(group.bedZoneId) ?? [];
-              zoneGroups.push(group);
-              zones.set(group.bedZoneId, zoneGroups);
-            });
-            return {
-              number: bedNumber,
-              groups: bedGroups,
-              zones: [...zones.entries()]
-                .map(([zoneId, zoneGroups]) => ({
-                  id: zoneId,
-                  name: zoneGroups[0].bedZoneName,
-                  groups: zoneGroups.sort(compareGroups),
-                }))
-                .sort((a, b) => a.name.localeCompare(b.name, "ko")),
-            };
-          })
-          .sort((a, b) => a.number - b.number),
+        number: houseZones[0].houseNumber,
+        groups: beds.flatMap((bed) => bed.groups),
+        beds,
       };
     })
     .sort((a, b) => a.number - b.number);
@@ -427,7 +457,7 @@ function filterTargetTree(tree: HouseNode[], keyword: string): HouseNode[] {
   if (!normalizedKeyword) return tree;
 
   return tree.flatMap((house) => {
-    const beds = house.beds.flatMap((bed) => {
+    const beds = house.beds.map((bed) => {
       const zones = bed.zones.flatMap((zone) => {
         const matchingGroups = zone.groups.filter((group) =>
           `${group.varietyName} ${group.houseNumber}동 ${group.physicalBedNumber}다이 ${group.bedZoneName}`
@@ -438,17 +468,13 @@ function filterTargetTree(tree: HouseNode[], keyword: string): HouseNode[] {
           ? [{ ...zone, groups: matchingGroups }]
           : [];
       });
-      return zones.length > 0
-        ? [
-            {
-              ...bed,
-              groups: zones.flatMap((zone) => zone.groups),
-              zones,
-            },
-          ]
-        : [];
+      return {
+        ...bed,
+        groups: zones.flatMap((zone) => zone.groups),
+        zones,
+      };
     });
-    return beds.length > 0
+    return beds.some((bed) => bed.groups.length > 0)
       ? [
           {
             ...house,
@@ -462,4 +488,14 @@ function filterTargetTree(tree: HouseNode[], keyword: string): HouseNode[] {
 
 function compareGroups(a: OrchidGroup, b: OrchidGroup) {
   return a.sortOrder - b.sortOrder || a.id - b.id;
+}
+
+function compareZones(a: ZoneNode, b: ZoneNode) {
+  const order: Record<BedZoneSide, number> = {
+    RIGHT: 0,
+    LEFT: 1,
+    CUSTOM: 2,
+    HANGING: 3,
+  };
+  return order[a.side] - order[b.side] || a.name.localeCompare(b.name, "ko");
 }

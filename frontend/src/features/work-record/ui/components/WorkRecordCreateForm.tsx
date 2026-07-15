@@ -3,7 +3,7 @@
 import { X } from "lucide-react";
 import { useMemo, useState } from "react";
 import type { FormEvent } from "react";
-import type { OrchidGroup, WorkType } from "@/entities/farm/types";
+import type { BedZone, OrchidGroup, WorkType } from "@/entities/farm/types";
 import {
   findWorkType,
   getManualWorkTypes,
@@ -15,6 +15,7 @@ import { SelectField, TextField } from "./FormFields";
 import { WorkTargetSelectionDialog } from "./WorkTargetSelectionDialog";
 
 type WorkRecordCreateFormProps = {
+  bedZones: BedZone[];
   errorMessage: string | null;
   form: WorkRecordFormState;
   orchidGroups: OrchidGroup[];
@@ -31,6 +32,7 @@ type WorkRecordCreateFormProps = {
 };
 
 export function WorkRecordCreateForm({
+  bedZones,
   errorMessage,
   form,
   orchidGroups,
@@ -207,6 +209,7 @@ export function WorkRecordCreateForm({
       </section>
       {targetSelectorOpen ? (
         <WorkTargetSelectionDialog
+          bedZones={bedZones}
           groups={orchidGroups}
           initialSelectedIds={selectedOrchidGroupIds}
           onClose={() => setTargetSelectorOpen(false)}
