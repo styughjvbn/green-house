@@ -20,7 +20,11 @@ DOMAIN_MAP = dict(
         ("auth", ["auth-controller"]),
         ("farm-structure", ["farm-structure-controller", "orchid-group-query-controller"]),
         ("farm-status", ["farm-status-controller", "dashboard-controller"]),
-        ("orchid-command", ["orchid-group-command-controller", "bed-placement-controller"]),
+        ("orchid-command", [
+            "orchid-group-command-controller",
+            "bed-placement-controller",
+            "multi-create-work-operation-controller",
+        ]),
         ("inventory", ["variety-controller", "material-controller", "inbound-record-controller"]),
         ("orchid-collection", ["orchid-group-collection-controller"]),
         ("derived-orchid-group", ["derived-orchid-group-controller"]),
