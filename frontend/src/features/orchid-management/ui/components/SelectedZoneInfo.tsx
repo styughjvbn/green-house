@@ -386,10 +386,10 @@ function OrchidGroupActivityView({
                       등록된 작업 없음
                     </p>
                   )}
-                  <OrchidGroupLineageDetail
+                  {/* <OrchidGroupLineageDetail
                     lineage={lineage}
                     loading={lineageLoading}
-                  />
+                  />  TODO: 난 묶음 관리 페이지 맵 정리 후 활성화 */}
                 </div>
               </section>
             </div>,

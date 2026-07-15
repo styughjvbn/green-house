@@ -108,14 +108,14 @@ export default function HouseSelectorPanel({
         추가
       </button>
 
-      <button
+      {/* <button
         className="inline-flex h-8 shrink-0 items-center gap-2 rounded-md border border-[#dfe5dc] bg-white px-3 text-sm font-semibold text-[#344138] shadow-sm"
         onClick={onOpenMultiCreate}
         type="button"
       >
         <ListPlus className="h-4 w-4" strokeWidth={1.8} aria-hidden="true" />
         일괄 추가
-      </button>
+      </button> TODO: 난 묶음 관리 페이지 맵 정리 후 활성화*/}
 
       <div className="min-w-3 flex-1" />
       <button

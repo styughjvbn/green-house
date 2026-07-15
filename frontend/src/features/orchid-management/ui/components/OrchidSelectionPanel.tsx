@@ -176,7 +176,7 @@ export default function OrchidSelectionPanel({
 
   return (
     <aside className="flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto">
-      {!hideList ? (
+      {/* {!hideList ? (
         <div className="grid shrink-0 grid-cols-3 gap-1 rounded-md border border-[#d7ddd4] bg-white p-1 shadow-sm">
           {(
             [
@@ -199,7 +199,7 @@ export default function OrchidSelectionPanel({
             </button>
           ))}
         </div>
-      ) : null}
+      ) : null}  TODO: 난 묶음 관리 페이지 맵 정리 후 활성화 */}
 
       {!hideList && viewMode === "LOCATION" ? (
         <section className="flex min-h-0 flex-1 flex-col rounded-md border border-[#d7ddd4] bg-white p-3 shadow-sm">
@@ -211,7 +211,7 @@ export default function OrchidSelectionPanel({
                 : orchidGroups.length}
               개)
             </p>
-            {selectedOrchidGroupIds.size > 0 ? (
+            {/* {selectedOrchidGroupIds.size > 0 ? (
               <button
                 className="text-xs font-semibold text-[#159447]"
                 onClick={onClearSelectedOrchidGroups}
@@ -219,7 +219,7 @@ export default function OrchidSelectionPanel({
               >
                 {selectedOrchidGroupIds.size}개 선택 해제
               </button>
-            ) : null}
+            ) : null}  TODO: 난 묶음 관리 페이지 맵 정리 후 활성화 */}
           </div>
           {copiedOrchidGroup ? (
             <div className="mt-3 flex items-center justify-between gap-2 rounded-md border border-[#dbe8d8] bg-[#f5faf3] px-3 py-2 text-xs">
@@ -277,20 +277,19 @@ export default function OrchidSelectionPanel({
                       }
                     >
                       <div className="flex items-start justify-between gap-3">
-                        <label
-                          className="flex min-w-0 flex-1 cursor-pointer items-start gap-2"
-                          onClick={(event) => event.stopPropagation()}
-                        >
-                          <input
+                        {/* TODO: 난 묶음 관리 페이지 맵 정리 후 체크박스 활성화 시 label과 클릭 전파 차단 복원 */}
+                        <div className="flex min-w-0 flex-1 cursor-pointer items-start gap-2">
+                          {/* TODO: 난 묶음 관리 페이지 맵 정리 후 활성화 */}
+                          {/* <input
                             aria-label={`${orchidGroup.varietyName} 다중 선택`}
                             checked={selectedOrchidGroupIds.has(orchidGroup.id)}
                             className="mt-0.5 h-4 w-4 accent-[#159447]"
-                            disabled={!matched}
+                            disabled
                             onChange={() =>
                               onToggleSelectedOrchidGroup(orchidGroup.id)
                             }
                             type="checkbox"
-                          />
+                          /> */}
                           <div className="min-w-0">
                             <div className="flex items-center gap-2">
                               <span
@@ -311,7 +310,7 @@ export default function OrchidSelectionPanel({
                               {formatOrchidMeta(orchidGroup)}
                             </p>
                           </div>
-                        </label>
+                        </div>
 
                         <div className="flex shrink-0 items-center gap-1.5">
                           <StatusBadge
@@ -368,7 +367,7 @@ export default function OrchidSelectionPanel({
                 ) : null}
               </div>
 
-              <div className="mt-3 grid shrink-0 grid-cols-3 gap-2">
+              <div className="mt-3 grid shrink-0 grid-cols-2 gap-2">
                 <ActionButton
                   icon={<Clipboard className="h-4 w-4" />}
                   label="작업 기록 추가"
@@ -382,12 +381,12 @@ export default function OrchidSelectionPanel({
                   active={mutationMode === "MOVE"}
                   disabled={!selectedOrchidGroup}
                 />
-                <ActionButton
+                {/* <ActionButton
                   icon={<Sprout className="h-4 w-4" />}
                   label="분갈이"
                   onClick={onOpenRepot}
                   disabled={!selectedOrchidGroup}
-                />
+                />  TODO: 난 묶음 관리 페이지 맵 정리 후 활성화 */}
               </div>
             </div>
           ) : (
