@@ -13,10 +13,35 @@ import type {
 import type {
   DerivedOrchidGroup,
   MutationPayload,
+  MultiCreateOrchidGroupRow,
+  MultiCreateWorkResult,
   OrchidGroupCollection,
   PreciseMovePayload,
   WorkRecordQuickPayload,
 } from "../model/types";
+
+export async function createMultipleOrchidGroups(payload: {
+  idempotencyKey: string;
+  title: string;
+  workDate: string;
+  worker: string | null;
+  memo: string | null;
+  rows: MultiCreateOrchidGroupRow[];
+}): Promise<MultiCreateWorkResult> {
+  const response = await fetch(`${API_BASE_URL}/work-operations/multi-create`, {
+    method: "POST",
+    credentials: "include",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload),
+  });
+  const body = await readJson(response);
+  if (!response.ok) {
+    throw new Error(
+      resolveErrorMessage(body, "난 묶음을 일괄 생성하지 못했습니다."),
+    );
+  }
+  return (body as { data: MultiCreateWorkResult }).data;
+}
 
 type ApiErrorPayload = {
   error?: {

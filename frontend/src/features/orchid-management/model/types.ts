@@ -74,6 +74,16 @@ export type MutationPayload = {
   memo: string | null;
 };
 
+export type MultiCreateOrchidGroupRow = {
+  orchidGroup: MutationPayload & { bedZoneId: number };
+  collectionIds: number[];
+};
+
+export type MultiCreateWorkResult = {
+  operation: { id: number; status: string; title: string };
+  createdOrchidGroups: OrchidGroup[];
+};
+
 export type PreciseMovePayload = {
   toBedZoneId: number;
   startPosition?: number | null;
