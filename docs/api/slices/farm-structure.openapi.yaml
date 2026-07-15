@@ -85,6 +85,25 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ApiResponsePhysicalBedResponse'
+  /api/orchid-groups/{orchidGroupId}/lineage:
+    get:
+      tags:
+      - orchid-group-query-controller
+      operationId: getLineage
+      parameters:
+      - name: orchidGroupId
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: int64
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponseOrchidGroupLineageResponse'
   /api/houses:
     get:
       tags:
@@ -212,6 +231,13 @@ components:
             $ref: '#/components/schemas/PhysicalBedResponse'
         message:
           type: string
+    ApiResponseOrchidGroupLineageResponse:
+      type: object
+      properties:
+        data:
+          $ref: '#/components/schemas/OrchidGroupLineageResponse'
+        message:
+          type: string
     ApiResponsePhysicalBedResponse:
       type: object
       properties:
@@ -282,6 +308,51 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/PhysicalBedResponse'
+    OrchidGroupLineageItemResponse:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: int64
+        relationType:
+          type: string
+          enum:
+          - CREATED_FROM_INBOUND
+          - REPOTTED_TO
+          - SPLIT_TO
+          - MERGED_TO
+          - POTTED_TO
+          - CORRECTED_TO
+        workOperationId:
+          type: integer
+          format: int64
+        sourceQuantity:
+          type: integer
+          format: int32
+        resultQuantity:
+          type: integer
+          format: int32
+        createdAt:
+          type: string
+          format: date-time
+        sourceOrchidGroup:
+          $ref: '#/components/schemas/OrchidGroupResponse'
+        resultOrchidGroup:
+          $ref: '#/components/schemas/OrchidGroupResponse'
+    OrchidGroupLineageResponse:
+      type: object
+      properties:
+        orchidGroupId:
+          type: integer
+          format: int64
+        sources:
+          type: array
+          items:
+            $ref: '#/components/schemas/OrchidGroupLineageItemResponse'
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/OrchidGroupLineageItemResponse'
     OrchidGroupResponse:
       type: object
       properties:
