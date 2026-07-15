@@ -12,7 +12,7 @@ import {
   FarmPlacementPickerDialog,
   type FarmPlacementSelection,
 } from "@/entities/farm/ui/FarmPlacementPicker";
-import { Copy, Edit2, Trash2, Clipboard, Move } from "lucide-react";
+import { Copy, Edit2, Trash2, Clipboard, Move, Sprout } from "lucide-react";
 import { findBedZone } from "../../lib/orchidManagementUtils";
 import type {
   MutationMode,
@@ -58,6 +58,7 @@ export default function OrchidSelectionPanel({
   onOpenEdit,
   onOpenMove,
   onOpenPaste,
+  onOpenRepot,
   onOpenWorkRecord,
   onSelectOrchidGroup,
   onStartMapCellRangePick,
@@ -93,6 +94,7 @@ export default function OrchidSelectionPanel({
   onOpenEdit: () => void;
   onOpenMove: () => void;
   onOpenPaste: () => void;
+  onOpenRepot: () => void;
   onOpenWorkRecord: () => void;
   onSelectOrchidGroup: (orchidGroupId: number) => void;
   onStartMapCellRangePick: (options: {
@@ -345,7 +347,7 @@ export default function OrchidSelectionPanel({
                 ) : null}
               </div>
 
-              <div className="mt-3 grid shrink-0 grid-cols-2 gap-2">
+              <div className="mt-3 grid shrink-0 grid-cols-3 gap-2">
                 <ActionButton
                   icon={<Clipboard className="h-4 w-4" />}
                   label="작업 기록 추가"
@@ -357,6 +359,12 @@ export default function OrchidSelectionPanel({
                   label="자리 이동"
                   onClick={onOpenMove}
                   active={mutationMode === "MOVE"}
+                  disabled={!selectedOrchidGroup}
+                />
+                <ActionButton
+                  icon={<Sprout className="h-4 w-4" />}
+                  label="분갈이"
+                  onClick={onOpenRepot}
                   disabled={!selectedOrchidGroup}
                 />
               </div>

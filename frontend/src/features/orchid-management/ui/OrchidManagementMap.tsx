@@ -11,6 +11,7 @@ import BedPrecisionSettings from "./components/BedPrecisionSettings";
 import HouseDetailMap from "./components/HouseDetailMap";
 import HouseSelectorPanel from "./components/HouseSelectorPanel";
 import MultiCreateOrchidGroupForm from "./components/MultiCreateOrchidGroupForm";
+import RepotWorkOperationForm from "./components/RepotWorkOperationForm";
 import OrchidSearchPanel from "./components/OrchidSearchPanel";
 import OrchidSelectionPanel from "./components/OrchidSelectionPanel";
 import SelectedZoneInfo from "./components/SelectedZoneInfo";
@@ -39,6 +40,10 @@ export function OrchidManagementMap({
   );
   const [showScale, setShowScale] = useState(true);
   const [showMultiCreate, setShowMultiCreate] = useState(false);
+  const [repotSource, setRepotSource] = useState(
+    orchidManagement.selectedOrchidGroup,
+  );
+  const [showRepot, setShowRepot] = useState(false);
   const placementHouses = useMemo(
     () =>
       mapData.houses.map((item) => ({
@@ -177,12 +182,14 @@ export function OrchidManagementMap({
           onToggleScale={() => setShowScale((current) => !current)}
           onOpenCreate={() => {
             setShowMultiCreate(false);
+            setShowRepot(false);
             clearMapCellRangePick();
             orchidManagement.actions.openCreate();
           }}
           onOpenMultiCreate={() => {
             clearMapCellRangePick();
             orchidManagement.actions.cancelMutation();
+            setShowRepot(false);
             setShowMultiCreate(true);
           }}
           onSelectHouse={() => {
@@ -251,7 +258,13 @@ export function OrchidManagementMap({
           }}
           onUpdateFilter={orchidManagement.actions.updateSearchFilter}
         />
-        {showMultiCreate ? (
+        {showRepot && repotSource ? (
+          <RepotWorkOperationForm
+            houses={placementHouses}
+            source={repotSource}
+            onClose={() => setShowRepot(false)}
+          />
+        ) : showMultiCreate ? (
           <MultiCreateOrchidGroupForm
             house={house}
             onClose={() => setShowMultiCreate(false)}
@@ -312,6 +325,14 @@ export function OrchidManagementMap({
             onOpenPaste={() => {
               clearMapCellRangePick();
               orchidManagement.actions.openPaste();
+            }}
+            onOpenRepot={() => {
+              if (!orchidManagement.selectedOrchidGroup) return;
+              clearMapCellRangePick();
+              orchidManagement.actions.cancelMutation();
+              setShowMultiCreate(false);
+              setRepotSource(orchidManagement.selectedOrchidGroup);
+              setShowRepot(true);
             }}
             onOpenWorkRecord={() => {
               clearMapCellRangePick();
