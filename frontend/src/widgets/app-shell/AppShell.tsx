@@ -251,7 +251,8 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
   const currentPage = getCurrentPageMeta(pathname);
   const breadcrumbs = getBreadcrumbs(pathname, currentPage.title);
-  const salesTab = pathname.split("/")[2] ?? "slips";
+  const activeTabPath = pathname.split("/")[2] ?? "";
+  const isWorkPage = pathname.startsWith("/work-records");
   const isSalesPage = pathname.startsWith("/sales");
   const sidebarCollapsed = !sidebarExpanded;
 
@@ -347,28 +348,50 @@ export function AppShell({ children }: { children: React.ReactNode }) {
               />
 
               {!sidebarCollapsed &&
+              item.activeHref === "/work-records" &&
+              isWorkPage ? (
+                <div className="mt-2 space-y-1 pl-3">
+                  <SalesSubNavItem
+                    href="/work-records/list"
+                    label="작업 목록"
+                    active={activeTabPath === "list"}
+                  />
+                  <SalesSubNavItem
+                    href="/work-records/calendar"
+                    label="캘린더"
+                    active={activeTabPath === "calendar"}
+                  />
+                  <SalesSubNavItem
+                    href="/work-records/history"
+                    label="작업 이력"
+                    active={activeTabPath === "history"}
+                  />
+                </div>
+              ) : null}
+
+              {!sidebarCollapsed &&
               item.activeHref === "/sales" &&
               pathname.startsWith("/sales") ? (
                 <div className="mt-2 space-y-1 pl-3">
                   <SalesSubNavItem
                     href="/sales/slips"
                     label="판매 전표"
-                    active={salesTab === "slips"}
+                    active={activeTabPath === "slips"}
                   />
                   <SalesSubNavItem
                     href="/sales/auction"
                     label="출하·경매 추적"
-                    active={salesTab === "auction"}
+                    active={activeTabPath === "auction"}
                   />
                   <SalesSubNavItem
                     href="/sales/settlement"
                     label="경매 정산"
-                    active={salesTab === "settlement"}
+                    active={activeTabPath === "settlement"}
                   />
                   <SalesSubNavItem
                     href="/sales/partners"
                     label="거래처 관리"
-                    active={salesTab === "partners"}
+                    active={activeTabPath === "partners"}
                   />
                 </div>
               ) : null}
@@ -380,27 +403,27 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                   <SalesSubNavItem
                     href="/analytics/sales"
                     label="매출/출하"
-                    active={salesTab === "sales"}
+                    active={activeTabPath === "sales"}
                   />
                   <SalesSubNavItem
                     href="/analytics/variety"
                     label="품종 분석"
-                    active={salesTab === "variety"}
+                    active={activeTabPath === "variety"}
                   />
                   <SalesSubNavItem
                     href="/analytics/customer"
                     label="거래처 분석"
-                    active={salesTab === "customer"}
+                    active={activeTabPath === "customer"}
                   />
                   <SalesSubNavItem
                     href="/analytics/space"
                     label="농장 공간"
-                    active={salesTab === "space"}
+                    active={activeTabPath === "space"}
                   />
                   <SalesSubNavItem
                     href="/analytics/work"
                     label="작업/상태"
-                    active={salesTab === "work"}
+                    active={activeTabPath === "work"}
                   />
                 </div>
               ) : null}
@@ -412,17 +435,17 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                   <SalesSubNavItem
                     href="/inventory/variety"
                     label="품종 관리"
-                    active={salesTab === "variety"}
+                    active={activeTabPath === "variety"}
                   />
                   <SalesSubNavItem
                     href="/inventory/inbound"
                     label="입고 관리"
-                    active={salesTab === "inbound"}
+                    active={activeTabPath === "inbound"}
                   />
                   <SalesSubNavItem
                     href="/inventory/material"
                     label="자재 관리"
-                    active={salesTab === "material"}
+                    active={activeTabPath === "material"}
                   />
                 </div>
               ) : null}
@@ -459,6 +482,28 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             })}
           </nav>
 
+          {isWorkPage ? (
+            <div className="mt-3 flex gap-2 overflow-x-auto">
+              {[
+                ["list", "작업 목록"],
+                ["calendar", "캘린더"],
+                ["history", "작업 이력"],
+              ].map(([tab, label]) => (
+                <Link
+                  key={tab}
+                  href={`/work-records/${tab}`}
+                  className={`shrink-0 rounded-md px-3 py-2 text-sm font-medium ${
+                    activeTabPath === tab
+                      ? "bg-[#dcefe1] text-[#1c5f33]"
+                      : "bg-[#f0f3ef] text-[#435047]"
+                  }`}
+                >
+                  {label}
+                </Link>
+              ))}
+            </div>
+          ) : null}
+
           {isSalesPage ? (
             <div className="mt-3 flex gap-2 overflow-x-auto">
               {[
@@ -471,7 +516,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                   key={tab}
                   href={`/sales/${tab}`}
                   className={`shrink-0 rounded-md px-3 py-2 text-sm font-medium ${
-                    salesTab === tab
+                    activeTabPath === tab
                       ? "bg-[#dcefe1] text-[#1c5f33]"
                       : "bg-[#f0f3ef] text-[#435047]"
                   }`}
@@ -495,7 +540,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                   key={tab}
                   href={`/analytics/${tab}`}
                   className={`shrink-0 rounded-md px-3 py-2 text-sm font-medium ${
-                    salesTab === tab
+                    activeTabPath === tab
                       ? "bg-[#dcefe1] text-[#1c5f33]"
                       : "bg-[#f0f3ef] text-[#435047]"
                   }`}
@@ -517,7 +562,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                   key={tab}
                   href={`/inventory/${tab}`}
                   className={`shrink-0 rounded-md px-3 py-2 text-sm font-medium ${
-                    salesTab === tab
+                    activeTabPath === tab
                       ? "bg-[#dcefe1] text-[#1c5f33]"
                       : "bg-[#f0f3ef] text-[#435047]"
                   }`}

@@ -36,6 +36,7 @@ export default async function Page({
         activeTab={activeTab}
         houses={mapData.houses}
         initialRecords={records}
+        key={activeTab}
         workTypes={workTypes}
       />
     </main>
