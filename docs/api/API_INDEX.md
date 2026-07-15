@@ -60,9 +60,9 @@
 
 - slice: `docs/api/slices/orchid-command.openapi.yaml`
 - package 후보: `com.greenhouse.backend.farm`
-- controller tags: `orchid-group-command-controller`, `bed-placement-controller`
-- 역할: 난 묶음 생성·수정·삭제·이동, 정밀 배치 프로필 API
-- operations: 10
+- controller tags: `orchid-group-command-controller`, `bed-placement-controller`, `multi-create-work-operation-controller`, `repot-work-operation-controller`
+- 역할: 난 묶음 생성·수정·삭제·이동, 정밀 배치, 다중 생성·분갈이 구조 변경 API
+- operations: 12
 
 | Method | Path | Operation | Request | Response |
 |---|---|---|---|---|
@@ -72,6 +72,12 @@
 | `DELETE` | `/api/orchid-groups/{orchidGroupId}` | `delete` | `-` | `200:ApiResponseVoid` |
 | `PATCH` | `/api/orchid-groups/{orchidGroupId}` | `update_2` | `OrchidGroupUpdateRequest` | `200:ApiResponseOrchidGroupResponse` |
 | `PATCH` | `/api/orchid-groups/{orchidGroupId}/move` | `move` | `OrchidGroupMoveRequest` | `200:ApiResponseOrchidGroupResponse` |
+| `POST` | `/api/work-operations/multi-create` | `create_2` | `MultiCreateWorkOperationRequest` | `201:ApiResponseMultiCreateWorkOperationResponse` |
+| `GET` | `/api/work-operations/{workOperationId}/created-orchid-groups` | `get_5` | `-` | `200:ApiResponseMultiCreateWorkOperationResponse` |
+| `GET` | `/api/work-operations/{workOperationId}/cancel-eligibility` | `getCancellationEligibility` | `-` | `200:ApiResponseMultiCreateCancellationEligibilityResponse` |
+| `POST` | `/api/work-operations/{workOperationId}/cancel-created-orchid-groups` | `cancel_1` | `-` | `200:ApiResponseMultiCreateWorkOperationResponse` |
+| `POST` | `/api/work-operations/repot` | `execute` | `RepotWorkOperationRequest` | `201:ApiResponseRepotWorkOperationResponse` |
+| `GET` | `/api/work-operations/{workOperationId}/repot-results` | `get_4` | `-` | `200:ApiResponseRepotWorkOperationResponse` |
 
 ### 작업 이력
 

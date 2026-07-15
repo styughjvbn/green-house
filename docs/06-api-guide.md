@@ -28,7 +28,7 @@ python3 scripts/generate_openapi.py --url http://localhost:8080/api-docs
 | `auth.openapi.yaml` | 로그인, 로그아웃, 현재 사용자 조회 |
 | `farm-structure.openapi.yaml` | 하우스, 물리 배드, 논리 구역, 난 묶음 조회 |
 | `farm-status.openapi.yaml` | 농장 현황 맵, 선택 범위 조회, 대시보드 요약 |
-| `orchid-command.openapi.yaml` | 난 묶음 생성, 다중 생성 작업, 수정, 이동, 배치 |
+| `orchid-command.openapi.yaml` | 난 묶음 생성, 다중 생성·분갈이 작업, 수정, 이동, 배치 |
 | `inventory.openapi.yaml` | 품종 CRUD/삭제, 자재 CRUD/삭제, 입고 기록 생성/수정/포트작업/취소/삭제, 목록 페이지네이션 |
 | `orchid-collection.openapi.yaml` | 난 묶음 사용자 그룹과 소속 관리 |
 | `derived-orchid-group.openapi.yaml` | 품종·년생·화분 크기 기준 자동 그룹 조회 |
@@ -102,4 +102,6 @@ python3 scripts/generate_openapi.py --url http://localhost:8080/api-docs
 
 ## 6. 신규 작업 실행 API 범위
 
-현재 신규 작업 실행 API는 `HOUSE`, `DERIVED_GROUP`, `USER_COLLECTION`, `MANUAL_SELECTION` 범위의 `PESTICIDE` 작업을 지원한다. 대상 미리보기, 생성, 상세, 대상별 진행·건너뛰기, 작업 시작·일시중지·재개·취소·완료, 난 묶음 통합 이력을 제공한다. 다른 작업 유형을 구현된 것으로 가정하지 않는다.
+범위 기반 신규 작업 실행 API는 `HOUSE`, `DERIVED_GROUP`, `USER_COLLECTION`, `MANUAL_SELECTION` 범위의 `PESTICIDE` 작업을 지원한다. 대상 미리보기, 생성, 상세, 대상별 진행·건너뛰기, 작업 시작·일시중지·재개·취소·완료, 난 묶음 통합 이력을 제공한다.
+
+구조 변경 작업은 별도 API로 제공한다. 다중 생성은 원본 대상 없이 여러 난 묶음을 만들고, 분갈이는 단일 원본을 대상으로 부분·전체 수량을 처리해 결과 난 묶음과 계보를 만든다. 구현되지 않은 다른 작업 유형을 일반 작업 API에서 사용할 수 있다고 가정하지 않는다.

@@ -46,6 +46,8 @@
 - `DELETE /api/orchid-groups/{orchidGroupId}`
 - `PATCH /api/orchid-groups/{orchidGroupId}`
 - `PATCH /api/orchid-groups/{orchidGroupId}/move`
+- `POST /api/work-operations/repot`
+- `GET /api/work-operations/{workOperationId}/repot-results`
 
 ### 작업 이력
 
