@@ -259,7 +259,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   return (
     <div className="app-shell-root relative flex bg-[#f7f8f5]">
       <aside
-        className={`app-shell-sidebar sticky top-0 z-40 hidden shrink-0 flex-col bg-[#003b1f] px-2 py-4 transition-[width,box-shadow] duration-200 lg:flex lg:max-2xl:absolute lg:max-2xl:left-0 ${
+        className={`app-shell-sidebar sticky top-0 z-1500 hidden shrink-0 flex-col bg-[#003b1f] px-2 py-4 transition-[width,box-shadow] duration-200 lg:flex lg:max-2xl:absolute lg:max-2xl:left-0 ${
           sidebarCollapsed ? "w-12 cursor-pointer" : "w-44"
         } ${sidebarCollapsed ? "" : "lg:max-2xl:shadow-xl"}`}
         tabIndex={-1}

@@ -40,6 +40,10 @@ export function OrchidManagementMap({
     initialSearchFilters,
   );
   const [showScale, setShowScale] = useState(true);
+  const [orchidGroupSelection, setOrchidGroupSelection] = useState<{
+    houseId: number;
+    ids: Set<number>;
+  }>(() => ({ houseId: house.id, ids: new Set() }));
   const [showMultiCreate, setShowMultiCreate] = useState(false);
   const [repotSource, setRepotSource] = useState(
     orchidManagement.selectedOrchidGroup,
@@ -72,6 +76,19 @@ export function OrchidManagementMap({
     endCell: null,
     version: 0,
   });
+  const selectedOrchidGroupIds =
+    orchidGroupSelection.houseId === house.id
+      ? orchidGroupSelection.ids
+      : new Set<number>();
+
+  function toggleSelectedOrchidGroup(orchidGroupId: number) {
+    setOrchidGroupSelection((current) => {
+      const next = new Set(current.houseId === house.id ? current.ids : []);
+      if (next.has(orchidGroupId)) next.delete(orchidGroupId);
+      else next.add(orchidGroupId);
+      return { houseId: house.id, ids: next };
+    });
+  }
 
   function toggleVarietyColors() {
     const next = !distinguishVarietyColors;
@@ -206,6 +223,7 @@ export function OrchidManagementMap({
             distinguishVarietyColors={distinguishVarietyColors}
             filteredOrchidGroupIds={orchidManagement.filteredOrchidGroupIds}
             house={house}
+            selectedOrchidGroupIds={selectedOrchidGroupIds}
             selection={orchidManagement.selection}
             showScale={showScale}
             cellRangePick={mapCellRangePick}
@@ -303,6 +321,7 @@ export function OrchidManagementMap({
             resolvedZone={orchidManagement.resolvedZone}
             saving={orchidManagement.saving}
             selectedBedZone={orchidManagement.selectedBedZone}
+            selectedOrchidGroupIds={selectedOrchidGroupIds}
             selectedOrchidGroup={orchidManagement.selectedOrchidGroup}
             selectedPhysicalBed={orchidManagement.selectedPhysicalBed}
             selection={orchidManagement.selection}
@@ -317,6 +336,9 @@ export function OrchidManagementMap({
               clearMapCellRangePick();
               orchidManagement.actions.clearCopiedOrchidGroup();
             }}
+            onClearSelectedOrchidGroups={() =>
+              setOrchidGroupSelection({ houseId: house.id, ids: new Set() })
+            }
             onCopyOrchidGroup={orchidManagement.actions.copyOrchidGroup}
             onCreate={async (payload) => {
               await orchidManagement.actions.create(payload);
@@ -362,8 +384,15 @@ export function OrchidManagementMap({
               clearMapCellRangePick();
               orchidManagement.actions.selectOrchidGroup(orchidGroupId);
             }}
+            onSelectOrchidGroups={(orchidGroupIds) =>
+              setOrchidGroupSelection({
+                houseId: house.id,
+                ids: new Set(orchidGroupIds),
+              })
+            }
             onStartMapCellRangePick={startMapCellRangePick}
             onSyncMapCellRangePick={syncMapCellRangePick}
+            onToggleSelectedOrchidGroup={toggleSelectedOrchidGroup}
             onUpdateWorkRecordForm={
               orchidManagement.actions.updateWorkRecordForm
             }

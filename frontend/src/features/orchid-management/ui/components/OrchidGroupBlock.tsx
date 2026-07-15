@@ -62,10 +62,10 @@ export default function OrchidGroupBlock({
       className={`h-full w-full min-w-0 touch-manipulation overflow-hidden border transition ${
         varietyColor
           ? "text-white hover:brightness-95"
-          : muted
-            ? "border-[#d6d8d4] bg-[#ebeeea] text-[#8a928a] opacity-80"
-            : selected
-              ? "border-[#246df2] bg-[#dcecff]"
+          : selected
+            ? "border-[#246df2] bg-[#dcecff]"
+            : muted
+              ? "border-[#d6d8d4] bg-[#ebeeea] text-[#8a928a] opacity-80"
               : "border-[#c8ddc2] bg-[#e4f2d8] hover:border-[#159447]"
       } ${selected ? "ring-1 ring-[#246df2]/20" : ""} ${
         muted ? "cursor-default" : "cursor-pointer"

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, type ReactNode } from "react";
+import type { ReactNode } from "react";
 import type {
   BedZone,
   House,
@@ -42,6 +42,7 @@ export default function OrchidSelectionPanel({
   resolvedZone,
   saving,
   selectedBedZone,
+  selectedOrchidGroupIds,
   selectedOrchidGroup,
   selectedPhysicalBed,
   selection,
@@ -50,6 +51,7 @@ export default function OrchidSelectionPanel({
   mapCellRangePick,
   onCancelMutation,
   onClearCopiedOrchidGroup,
+  onClearSelectedOrchidGroups,
   onCopyOrchidGroup,
   onCreate,
   onDelete,
@@ -61,8 +63,10 @@ export default function OrchidSelectionPanel({
   onOpenRepot,
   onOpenWorkRecord,
   onSelectOrchidGroup,
+  onSelectOrchidGroups,
   onStartMapCellRangePick,
   onSyncMapCellRangePick,
+  onToggleSelectedOrchidGroup,
   onUpdateWorkRecordForm,
   onWorkRecordCreate,
 }: {
@@ -78,6 +82,7 @@ export default function OrchidSelectionPanel({
   resolvedZone: BedZone | null;
   saving: boolean;
   selectedBedZone: BedZone | null;
+  selectedOrchidGroupIds: Set<number>;
   selectedOrchidGroup: OrchidGroup | null;
   selectedPhysicalBed: PhysicalBed | null;
   selection: OrchidSelection | null;
@@ -86,6 +91,7 @@ export default function OrchidSelectionPanel({
   mapCellRangePick: MapCellRangePick;
   onCancelMutation: () => void;
   onClearCopiedOrchidGroup: () => void;
+  onClearSelectedOrchidGroups: () => void;
   onCopyOrchidGroup: (orchidGroupId: number) => void;
   onCreate: (payload: MutationPayload) => Promise<void>;
   onDelete: () => Promise<void>;
@@ -97,6 +103,7 @@ export default function OrchidSelectionPanel({
   onOpenRepot: () => void;
   onOpenWorkRecord: () => void;
   onSelectOrchidGroup: (orchidGroupId: number) => void;
+  onSelectOrchidGroups: (orchidGroupIds: number[]) => void;
   onStartMapCellRangePick: (options: {
     endCell: string;
     excludeOrchidGroupId?: number | null;
@@ -111,15 +118,13 @@ export default function OrchidSelectionPanel({
     startCell: string;
     targetBedZoneId: number;
   }) => void;
+  onToggleSelectedOrchidGroup: (orchidGroupId: number) => void;
   onUpdateWorkRecordForm: <K extends keyof WorkRecordQuickFormState>(
     field: K,
     value: WorkRecordQuickFormState[K],
   ) => void;
   onWorkRecordCreate: () => Promise<void>;
 }) {
-  const [selectedOrchidGroupIds, setSelectedOrchidGroupIds] = useState<
-    Set<number>
-  >(new Set());
   const listZone =
     listSelection.type === "BED_ZONE"
       ? (findBedZone(house, listSelection.bedZoneId)?.zone ?? null)
@@ -185,7 +190,7 @@ export default function OrchidSelectionPanel({
             {selectedOrchidGroupIds.size > 0 ? (
               <button
                 className="text-xs font-semibold text-[#159447]"
-                onClick={() => setSelectedOrchidGroupIds(new Set())}
+                onClick={onClearSelectedOrchidGroups}
                 type="button"
               >
                 {selectedOrchidGroupIds.size}개 선택 해제
@@ -258,15 +263,7 @@ export default function OrchidSelectionPanel({
                             className="mt-0.5 h-4 w-4 accent-[#159447]"
                             disabled={!matched}
                             onChange={() =>
-                              setSelectedOrchidGroupIds((current) => {
-                                const next = new Set(current);
-                                if (next.has(orchidGroup.id)) {
-                                  next.delete(orchidGroup.id);
-                                } else {
-                                  next.add(orchidGroup.id);
-                                }
-                                return next;
-                              })
+                              onToggleSelectedOrchidGroup(orchidGroup.id)
                             }
                             type="checkbox"
                           />
@@ -390,9 +387,7 @@ export default function OrchidSelectionPanel({
           key={house.id}
           houseId={house.id}
           onSelectMembers={(members) => {
-            setSelectedOrchidGroupIds(
-              new Set(members.map((member) => member.id)),
-            );
+            onSelectOrchidGroups(members.map((member) => member.id));
             if (members[0]) onSelectOrchidGroup(members[0].id);
           }}
         />
