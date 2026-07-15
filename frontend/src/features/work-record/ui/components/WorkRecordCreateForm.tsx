@@ -1,14 +1,9 @@
 ﻿"use client";
 
 import { X } from "lucide-react";
+import { useMemo, useState } from "react";
 import type { FormEvent } from "react";
-import type {
-  BedZone,
-  HouseStatusSummary,
-  OrchidGroup,
-  PhysicalBed,
-  WorkType,
-} from "@/entities/farm/types";
+import type { OrchidGroup, WorkType } from "@/entities/farm/types";
 import {
   findWorkType,
   getManualWorkTypes,
@@ -17,18 +12,13 @@ import {
 } from "@/entities/farm/workTypes";
 import type { WorkRecordFormState } from "../../model/types";
 import { SelectField, TextField } from "./FormFields";
-import { TargetSelectorFields } from "./TargetSelectorFields";
+import { WorkTargetSelectionDialog } from "./WorkTargetSelectionDialog";
 
 type WorkRecordCreateFormProps = {
-  bedZones: BedZone[];
   errorMessage: string | null;
   form: WorkRecordFormState;
-  houses: HouseStatusSummary[];
   orchidGroups: OrchidGroup[];
-  physicalBeds: PhysicalBed[];
-  safeBedZoneId: string;
-  safeOrchidGroupId: string;
-  safePhysicalBedId: string;
+  selectedOrchidGroupIds: Set<number>;
   saving: boolean;
   workTypes: WorkType[];
   onClose: () => void;
@@ -36,28 +26,37 @@ type WorkRecordCreateFormProps = {
     field: K,
     value: WorkRecordFormState[K],
   ) => void;
+  onTargetChange: (selectedIds: Set<number>) => void;
   onSubmit: (event: FormEvent<HTMLFormElement>) => void;
 };
 
 export function WorkRecordCreateForm({
-  bedZones,
   errorMessage,
   form,
-  houses,
   orchidGroups,
-  physicalBeds,
-  safeBedZoneId,
-  safeOrchidGroupId,
-  safePhysicalBedId,
+  selectedOrchidGroupIds,
   saving,
   workTypes,
   onClose,
   onChange,
+  onTargetChange,
   onSubmit,
 }: WorkRecordCreateFormProps) {
+  const [targetSelectorOpen, setTargetSelectorOpen] = useState(false);
   const manualWorkTypes = getManualWorkTypes(workTypes);
   const selectedWorkType = findWorkType(workTypes, Number(form.workTypeId));
   const template = selectedWorkType?.template ?? null;
+  const selectedGroups = useMemo(
+    () => orchidGroups.filter((group) => selectedOrchidGroupIds.has(group.id)),
+    [orchidGroups, selectedOrchidGroupIds],
+  );
+  const selectedQuantity = selectedGroups.reduce(
+    (sum, group) => sum + group.quantity,
+    0,
+  );
+  const selectedZoneCount = new Set(
+    selectedGroups.map((group) => group.bedZoneId),
+  ).size;
 
   return (
     <div
@@ -69,13 +68,13 @@ export function WorkRecordCreateForm({
         className="flex max-h-[calc(100dvh-2rem)] w-full max-w-2xl flex-col rounded-md bg-white shadow-xl"
         role="dialog"
         aria-modal="true"
-        aria-label="새 작업 이력"
+        aria-label="작업 기록 추가"
         onMouseDown={(event) => event.stopPropagation()}
       >
         <div className="flex shrink-0 items-start justify-between gap-3 border-b border-[#edf0ec] p-5">
           <div>
             <p className="text-sm font-semibold text-[#3d6f91]">작업 등록</p>
-            <h2 className="mt-1 text-xl font-semibold">새 작업 이력</h2>
+            <h2 className="mt-1 text-xl font-semibold">작업 기록 추가</h2>
           </div>
           <button
             className="flex h-8 w-8 shrink-0 items-center justify-center rounded border border-[#d9dfda] text-[#435047] hover:bg-[#f4f7f3]"
@@ -112,17 +111,23 @@ export function WorkRecordCreateForm({
             />
           </div>
 
-          <TargetSelectorFields
-            bedZones={bedZones}
-            form={form}
-            houses={houses}
-            orchidGroups={orchidGroups}
-            physicalBeds={physicalBeds}
-            safeBedZoneId={safeBedZoneId}
-            safeOrchidGroupId={safeOrchidGroupId}
-            safePhysicalBedId={safePhysicalBedId}
-            onChange={onChange}
-          />
+          <section className="flex flex-wrap items-center justify-between gap-3 rounded-md border border-[#cfe0d2] bg-[#f7faf6] p-4">
+            <div>
+              <p className="text-sm font-semibold text-[#26352b]">작업 대상</p>
+              <p className="mt-1 text-sm text-[#5c6a60]">
+                {selectedGroups.length > 0
+                  ? `${selectedGroups.length}묶음 · ${selectedQuantity}분 · ${selectedZoneCount}개 구역`
+                  : "동, 다이, 구역 또는 개별 난 묶음을 선택하세요."}
+              </p>
+            </div>
+            <button
+              className="rounded-md border border-[#159447] bg-white px-4 py-2 text-sm font-semibold text-[#10783a] hover:bg-[#f1faf3]"
+              type="button"
+              onClick={() => setTargetSelectorOpen(true)}
+            >
+              {selectedGroups.length > 0 ? "대상 변경" : "작업 대상 선택"}
+            </button>
+          </section>
 
           {isVisibleWorkRecordField(template, "materialName") ||
           isVisibleWorkRecordField(template, "dilutionRatio") ? (
@@ -190,7 +195,9 @@ export function WorkRecordCreateForm({
             </button>
             <button
               className="rounded-md bg-[#159447] px-4 py-2 text-sm font-semibold text-white disabled:opacity-60"
-              disabled={saving || !form.workTypeId}
+              disabled={
+                saving || !form.workTypeId || selectedOrchidGroupIds.size === 0
+              }
               type="submit"
             >
               {saving ? "저장 중" : "작업 이력 저장"}
@@ -198,6 +205,17 @@ export function WorkRecordCreateForm({
           </div>
         </form>
       </section>
+      {targetSelectorOpen ? (
+        <WorkTargetSelectionDialog
+          groups={orchidGroups}
+          initialSelectedIds={selectedOrchidGroupIds}
+          onClose={() => setTargetSelectorOpen(false)}
+          onConfirm={(selectedIds) => {
+            onTargetChange(selectedIds);
+            setTargetSelectorOpen(false);
+          }}
+        />
+      ) : null}
     </div>
   );
 }

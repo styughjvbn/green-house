@@ -23,16 +23,21 @@ export async function getWorkOperationScopeOptions(): Promise<WorkOperationScope
     fetchApi<WorkOperationScopeOptions["collections"]>(
       "/orchid-group-collections",
     ),
-    fetchApi<OrchidGroup[]>("/orchid-groups"),
+    getSelectableWorkTargetGroups(),
   ]);
-  const excludedStatuses = new Set(["종료", "폐기", "판매 완료"]);
   return {
     derivedGroups,
     collections,
-    orchidGroups: orchidGroups.filter(
-      (group) => group.quantity > 0 && !excludedStatuses.has(group.status),
-    ),
+    orchidGroups,
   };
+}
+
+export async function getSelectableWorkTargetGroups(): Promise<OrchidGroup[]> {
+  const groups = await fetchApi<OrchidGroup[]>("/orchid-groups");
+  const excludedStatuses = new Set(["종료", "폐기", "판매 완료"]);
+  return groups.filter(
+    (group) => group.quantity > 0 && !excludedStatuses.has(group.status),
+  );
 }
 
 export async function getWorkRecordTargetOptions(
@@ -73,7 +78,7 @@ export async function getWorkRecordTargetOptions(
 export async function createCompletedWorkOperationFromRecord(
   payload: CreateWorkRecordPayload,
   workTypeName: string,
-): Promise<WorkOperation | WorkRecord> {
+): Promise<WorkOperation> {
   const response = await fetch(`${API_BASE_URL}/work-operations/record`, {
     method: "POST",
     credentials: "include",
@@ -82,8 +87,8 @@ export async function createCompletedWorkOperationFromRecord(
       workTypeId: payload.workTypeId,
       title: `${workTypeName} 작업`,
       plannedStartDate: payload.workDate,
-      sourceScopeType: payload.targetType,
-      sourceScopeId: payload.targetId,
+      sourceScopeType: "MANUAL_SELECTION",
+      sourceOrchidGroupIds: payload.orchidGroupIds,
       details: {
         materialName: payload.materialName,
         dilutionRatio: payload.dilutionRatio,
@@ -94,29 +99,15 @@ export async function createCompletedWorkOperationFromRecord(
     }),
   });
   if (response.status === 404) {
-    return createLegacyWorkRecord(payload);
+    throw new Error(
+      "난 묶음 다중 선택은 신규 작업 실행 기능이 활성화되어야 사용할 수 있습니다.",
+    );
   }
   const body = await response.json().catch(() => null);
   if (!response.ok) {
     throw new Error(body?.error?.message ?? "신규 작업을 처리하지 못했습니다.");
   }
   return body.data as WorkOperation;
-}
-
-async function createLegacyWorkRecord(
-  payload: CreateWorkRecordPayload,
-): Promise<WorkRecord> {
-  const response = await fetch(`${API_BASE_URL}/work-records`, {
-    method: "POST",
-    credentials: "include",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(payload),
-  });
-  const body = await response.json().catch(() => null);
-  if (!response.ok) {
-    throw new Error(body?.error?.message ?? "작업 이력을 저장하지 못했습니다.");
-  }
-  return body.data as WorkRecord;
 }
 
 export async function cancelWorkRecord({

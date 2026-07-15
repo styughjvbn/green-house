@@ -91,7 +91,7 @@ export function getSelectedTargetId(
 
 export function toCreateWorkRecordPayload(
   form: WorkRecordFormState,
-  targetId: number | null,
+  orchidGroupIds: Set<number>,
   workTypes: WorkType[],
 ): CreateWorkRecordPayload {
   const workType = workTypes.find(
@@ -102,8 +102,9 @@ export function toCreateWorkRecordPayload(
   return {
     workTypeId: Number(form.workTypeId),
     workDate: form.workDate,
-    targetType: form.targetType,
-    targetId,
+    targetType: "ORCHID_GROUP",
+    targetId: null,
+    orchidGroupIds: [...orchidGroupIds],
     materialName: isVisibleWorkRecordField(template, "materialName")
       ? nullableText(form.materialName)
       : null,

@@ -1,26 +1,17 @@
 ﻿"use client";
 
 import { FormEvent, useEffect, useMemo, useState } from "react";
-import type {
-  BedZone,
-  OrchidGroup,
-  PhysicalBed,
-  WorkRecord,
-} from "@/entities/farm/types";
+import type { OrchidGroup, WorkRecord } from "@/entities/farm/types";
 import {
   cancelWorkRecord,
   createCompletedWorkOperationFromRecord,
-  getWorkRecordTargetOptions,
+  getSelectableWorkTargetGroups,
 } from "../api/workRecordApi";
 import {
   createInitialWorkRecordFilters,
   createInitialWorkRecordForm,
   filterWorkRecords,
-  getSelectedTargetId,
   resetWorkRecordFormAfterSubmit,
-  resolveSafeBedZoneId,
-  resolveSafeOrchidGroupId,
-  resolveSafePhysicalBedId,
   toCreateWorkRecordPayload,
 } from "../lib/workRecordForm";
 import type {
@@ -35,9 +26,10 @@ export function useWorkRecordManager({
   workTypes,
 }: WorkRecordManagerProps) {
   const [records, setRecords] = useState<WorkRecord[]>(initialRecords);
-  const [physicalBeds, setPhysicalBeds] = useState<PhysicalBed[]>([]);
-  const [bedZones, setBedZones] = useState<BedZone[]>([]);
   const [orchidGroups, setOrchidGroups] = useState<OrchidGroup[]>([]);
+  const [selectedOrchidGroupIds, setSelectedOrchidGroupIds] = useState<
+    Set<number>
+  >(new Set());
   const [form, setForm] = useState<WorkRecordFormState>(() =>
     createInitialWorkRecordForm(workTypes, houses),
   );
@@ -56,27 +48,6 @@ export function useWorkRecordManager({
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [operationCreatedVersion, setOperationCreatedVersion] = useState(0);
 
-  const safePhysicalBedId = resolveSafePhysicalBedId(
-    form.physicalBedId,
-    physicalBeds,
-  );
-  const safeBedZoneId = resolveSafeBedZoneId(form.bedZoneId, bedZones);
-  const safeOrchidGroupId = resolveSafeOrchidGroupId(
-    form.orchidGroupId,
-    orchidGroups,
-  );
-
-  const selectedTargetId = useMemo(
-    () =>
-      getSelectedTargetId(
-        form.targetType,
-        form,
-        safePhysicalBedId,
-        safeBedZoneId,
-        safeOrchidGroupId,
-      ),
-    [form, safePhysicalBedId, safeBedZoneId, safeOrchidGroupId],
-  );
   const filteredRecords = useMemo(
     () => filterWorkRecords(records, filters),
     [records, filters],
@@ -94,36 +65,25 @@ export function useWorkRecordManager({
     null;
 
   useEffect(() => {
-    if (!form.houseId) {
-      return;
-    }
-
     let cancelled = false;
-
-    async function loadHouseScopedOptions() {
-      const options = await getWorkRecordTargetOptions(form.houseId);
-      if (cancelled) {
-        return;
-      }
-      setPhysicalBeds(options.physicalBeds);
-      setBedZones(options.bedZones);
-      setOrchidGroups(options.orchidGroups);
-    }
-
-    void loadHouseScopedOptions().catch((error) => {
-      if (!cancelled) {
-        setErrorMessage(
-          error instanceof Error
-            ? error.message
-            : "대상 목록을 불러오지 못했습니다.",
-        );
-      }
-    });
+    void getSelectableWorkTargetGroups()
+      .then((groups) => {
+        if (!cancelled) setOrchidGroups(groups);
+      })
+      .catch((error: unknown) => {
+        if (!cancelled) {
+          setErrorMessage(
+            error instanceof Error
+              ? error.message
+              : "대상 목록을 불러오지 못했습니다.",
+          );
+        }
+      });
 
     return () => {
       cancelled = true;
     };
-  }, [form.houseId]);
+  }, []);
 
   function updateForm<K extends keyof WorkRecordFormState>(
     field: K,
@@ -171,7 +131,7 @@ export function useWorkRecordManager({
     try {
       const payload = toCreateWorkRecordPayload(
         form,
-        selectedTargetId,
+        selectedOrchidGroupIds,
         workTypes,
       );
       const workType = workTypes.find((item) => item.id === payload.workTypeId);
@@ -181,6 +141,7 @@ export function useWorkRecordManager({
       );
       setOperationCreatedVersion((current) => current + 1);
       setShowCreateForm(false);
+      setSelectedOrchidGroupIds(new Set());
       setForm((current) => resetWorkRecordFormAfterSubmit(current));
     } catch (error) {
       setErrorMessage(
@@ -235,12 +196,9 @@ export function useWorkRecordManager({
     saving,
     canceling,
     errorMessage,
-    physicalBeds,
-    bedZones,
     orchidGroups,
-    safePhysicalBedId,
-    safeBedZoneId,
-    safeOrchidGroupId,
+    selectedOrchidGroupIds,
+    setSelectedOrchidGroupIds,
     selectRecord,
     closeDetail,
     changePage,

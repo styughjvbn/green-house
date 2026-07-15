@@ -31,25 +31,20 @@ export function WorkRecordManager(
       ) : null}
       {activeTab === "LIST" && manager.showCreateForm ? (
         <WorkRecordCreateForm
-          bedZones={manager.bedZones}
           errorMessage={manager.errorMessage}
           form={manager.form}
-          houses={props.houses}
           orchidGroups={manager.orchidGroups}
-          physicalBeds={manager.physicalBeds}
-          safeBedZoneId={manager.safeBedZoneId}
-          safeOrchidGroupId={manager.safeOrchidGroupId}
-          safePhysicalBedId={manager.safePhysicalBedId}
+          selectedOrchidGroupIds={manager.selectedOrchidGroupIds}
           saving={manager.saving}
           workTypes={props.workTypes}
           onClose={() => manager.setShowCreateForm(false)}
           onChange={manager.updateForm}
+          onTargetChange={manager.setSelectedOrchidGroupIds}
           onSubmit={manager.submitWorkRecord}
         />
       ) : null}
       {activeTab === "LIST" && showOperationForm ? (
         <WorkOperationPanel
-          houses={props.houses}
           workTypes={props.workTypes}
           onClose={() => setShowOperationForm(false)}
           onSaved={() => setOperationSavedVersion((current) => current + 1)}

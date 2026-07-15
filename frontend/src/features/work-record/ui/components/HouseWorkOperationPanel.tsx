@@ -3,7 +3,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { X } from "lucide-react";
 import type {
-  HouseStatusSummary,
   OrchidGroup,
   WorkOperation,
   WorkTargetPreview,
@@ -12,25 +11,23 @@ import type {
 import {
   completeWorkOperation,
   createWorkOperation,
-  getWorkOperationScopeOptions,
+  getSelectableWorkTargetGroups,
   previewWorkOperationTargets,
   transitionWorkOperation,
   transitionWorkOperationTarget,
 } from "../../api/workRecordApi";
 import type {
   WorkOperationFormState,
-  WorkOperationScopeOptions,
   WorkTargetPreviewPayload,
 } from "../../model/types";
-import { SelectField, TextField } from "./FormFields";
+import { TextField } from "./FormFields";
+import { WorkTargetSelectionDialog } from "./WorkTargetSelectionDialog";
 
 export function WorkOperationPanel({
-  houses,
   workTypes,
   onClose,
   onSaved,
 }: {
-  houses: HouseStatusSummary[];
   workTypes: WorkType[];
   onClose: () => void;
   onSaved?: () => void;
@@ -39,11 +36,11 @@ export function WorkOperationPanel({
     (workType) => workType.code === "PESTICIDE",
   );
   const [form, setForm] = useState<WorkOperationFormState>(() => ({
-    sourceScopeType: "HOUSE",
-    houseId: String(houses[0]?.houseId ?? ""),
+    sourceScopeType: "MANUAL_SELECTION",
+    houseId: "",
     scopeKey: "",
     collectionId: "",
-    title: houses[0] ? `${houses[0].houseNumber}동 농약 작업` : "농약 작업",
+    title: "농약 작업",
     plannedStartDate: new Date().toISOString().slice(0, 10),
     plannedEndDate: "",
     materialName: "",
@@ -56,9 +53,8 @@ export function WorkOperationPanel({
   const [operation, setOperation] = useState<WorkOperation | null>(null);
   const [excludedIds, setExcludedIds] = useState<Set<number>>(new Set());
   const [manualIds, setManualIds] = useState<Set<number>>(new Set());
-  const [manualKeyword, setManualKeyword] = useState("");
-  const [scopeOptions, setScopeOptions] =
-    useState<WorkOperationScopeOptions | null>(null);
+  const [targetSelectorOpen, setTargetSelectorOpen] = useState(false);
+  const [orchidGroups, setOrchidGroups] = useState<OrchidGroup[]>([]);
   const [loading, setLoading] = useState(false);
   const [optionsLoading, setOptionsLoading] = useState(true);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
@@ -74,23 +70,23 @@ export function WorkOperationPanel({
     (sum, target) => sum + target.quantitySnapshot,
     0,
   );
-  const manualGroups = useMemo(() => {
-    const keyword = manualKeyword.trim().toLowerCase();
-    return (scopeOptions?.orchidGroups ?? []).filter(
-      (group) =>
-        !keyword ||
-        group.varietyName.toLowerCase().includes(keyword) ||
-        `${group.houseNumber}동 ${group.physicalBedNumber}다이 ${group.bedZoneName}`.includes(
-          keyword,
-        ),
-    );
-  }, [manualKeyword, scopeOptions]);
+  const selectedManualGroups = useMemo(
+    () => orchidGroups.filter((group) => manualIds.has(group.id)),
+    [manualIds, orchidGroups],
+  );
+  const selectedManualQuantity = selectedManualGroups.reduce(
+    (sum, group) => sum + group.quantity,
+    0,
+  );
+  const selectedManualZoneCount = new Set(
+    selectedManualGroups.map((group) => group.bedZoneId),
+  ).size;
 
   useEffect(() => {
     let cancelled = false;
-    void getWorkOperationScopeOptions()
+    void getSelectableWorkTargetGroups()
       .then((result) => {
-        if (!cancelled) setScopeOptions(result);
+        if (!cancelled) setOrchidGroups(result);
       })
       .catch((error: unknown) => {
         if (!cancelled) {
@@ -111,12 +107,12 @@ export function WorkOperationPanel({
 
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
-      if (event.key === "Escape") onClose();
+      if (event.key === "Escape" && !targetSelectorOpen) onClose();
     };
 
     document.addEventListener("keydown", handleKeyDown);
     return () => document.removeEventListener("keydown", handleKeyDown);
-  }, [onClose]);
+  }, [onClose, targetSelectorOpen]);
 
   function updateForm<K extends keyof WorkOperationFormState>(
     field: K,
@@ -131,12 +127,6 @@ export function WorkOperationPanel({
       setPreview(null);
       setExcludedIds(new Set());
     } else if (field === "houseId") {
-      const house = houses.find((item) => String(item.houseId) === value);
-      setForm((current) => ({
-        ...current,
-        houseId: value,
-        title: house ? `${house.houseNumber}동 농약 작업` : current.title,
-      }));
       setPreview(null);
       setExcludedIds(new Set());
     }
@@ -307,67 +297,27 @@ export function WorkOperationPanel({
             />
           ) : (
             <>
-              <div className="mt-4 grid gap-3 md:grid-cols-2 lg:grid-cols-4">
-                <SelectField
-                  label="대상 방식"
-                  value={form.sourceScopeType}
-                  onChange={(value) =>
-                    updateForm(
-                      "sourceScopeType",
-                      value as WorkOperationFormState["sourceScopeType"],
-                    )
-                  }
+              <section className="mt-4 flex flex-wrap items-center justify-between gap-3 rounded-md border border-[#cfe0d2] bg-white p-4">
+                <div>
+                  <p className="text-sm font-semibold text-[#26352b]">
+                    작업 대상
+                  </p>
+                  <p className="mt-1 text-sm text-[#5c6a60]">
+                    {manualIds.size > 0
+                      ? `${manualIds.size}묶음 · ${selectedManualQuantity}분 · ${selectedManualZoneCount}개 구역`
+                      : "동, 다이, 구역 또는 개별 난 묶음을 선택하세요."}
+                  </p>
+                </div>
+                <button
+                  className="rounded-md border border-[#159447] bg-white px-4 py-2 text-sm font-semibold text-[#10783a] hover:bg-[#f1faf3]"
+                  disabled={optionsLoading}
+                  type="button"
+                  onClick={() => setTargetSelectorOpen(true)}
                 >
-                  <option value="HOUSE">동 전체</option>
-                  <option value="DERIVED_GROUP">자동 그룹</option>
-                  <option value="USER_COLLECTION">사용자 그룹</option>
-                  <option value="MANUAL_SELECTION">직접 다중 선택</option>
-                </SelectField>
-                {form.sourceScopeType === "HOUSE" ? (
-                  <SelectField
-                    label="대상 동"
-                    value={form.houseId}
-                    onChange={(value) => updateForm("houseId", value)}
-                  >
-                    {houses.map((house) => (
-                      <option key={house.houseId} value={house.houseId}>
-                        {house.houseNumber}동
-                      </option>
-                    ))}
-                  </SelectField>
-                ) : null}
-                {form.sourceScopeType === "DERIVED_GROUP" ? (
-                  <SelectField
-                    label="자동 그룹"
-                    value={form.scopeKey}
-                    onChange={(value) => updateForm("scopeKey", value)}
-                  >
-                    <option value="">선택</option>
-                    {(scopeOptions?.derivedGroups ?? []).map((group) => (
-                      <option key={group.groupKey} value={group.groupKey}>
-                        {group.varietyName} · {group.ageYear ?? "년생 미지정"} ·{" "}
-                        {group.potSize ?? "화분 미지정"} ·{" "}
-                        {group.orchidGroupCount}
-                        묶음
-                      </option>
-                    ))}
-                  </SelectField>
-                ) : null}
-                {form.sourceScopeType === "USER_COLLECTION" ? (
-                  <SelectField
-                    label="사용자 그룹"
-                    value={form.collectionId}
-                    onChange={(value) => updateForm("collectionId", value)}
-                  >
-                    <option value="">선택</option>
-                    {(scopeOptions?.collections ?? []).map((collection) => (
-                      <option key={collection.id} value={collection.id}>
-                        {collection.name} · {collection.orchidGroupCount}묶음 ·{" "}
-                        {collection.totalQuantity}분
-                      </option>
-                    ))}
-                  </SelectField>
-                ) : null}
+                  {manualIds.size > 0 ? "대상 변경" : "작업 대상 선택"}
+                </button>
+              </section>
+              <div className="mt-4 grid gap-3 md:grid-cols-2 lg:grid-cols-4">
                 <TextField
                   label="작업명"
                   required
@@ -408,24 +358,6 @@ export function WorkOperationPanel({
                   onChange={(value) => updateForm("worker", value)}
                 />
               </div>
-              {form.sourceScopeType === "MANUAL_SELECTION" ? (
-                <ManualTargetSelector
-                  groups={manualGroups}
-                  keyword={manualKeyword}
-                  selectedIds={manualIds}
-                  onKeywordChange={setManualKeyword}
-                  onToggle={(orchidGroupId) => {
-                    setManualIds((current) => {
-                      const next = new Set(current);
-                      if (next.has(orchidGroupId)) next.delete(orchidGroupId);
-                      else next.add(orchidGroupId);
-                      return next;
-                    });
-                    setPreview(null);
-                    setExcludedIds(new Set());
-                  }}
-                />
-              ) : null}
               <label className="mt-3 block text-sm font-semibold text-[#435047]">
                 메모
                 <textarea
@@ -490,6 +422,23 @@ export function WorkOperationPanel({
           )}
         </div>
       </section>
+      {targetSelectorOpen ? (
+        <WorkTargetSelectionDialog
+          groups={orchidGroups}
+          initialSelectedIds={manualIds}
+          onClose={() => setTargetSelectorOpen(false)}
+          onConfirm={(selectedIds) => {
+            setManualIds(selectedIds);
+            setForm((current) => ({
+              ...current,
+              sourceScopeType: "MANUAL_SELECTION",
+            }));
+            setPreview(null);
+            setExcludedIds(new Set());
+            setTargetSelectorOpen(false);
+          }}
+        />
+      ) : null}
     </div>
   );
 }
@@ -741,62 +690,6 @@ function targetStatusLabel(
     CANCELED: "취소",
     FAILED: "실패",
   }[status];
-}
-
-function ManualTargetSelector({
-  groups,
-  keyword,
-  selectedIds,
-  onKeywordChange,
-  onToggle,
-}: {
-  groups: OrchidGroup[];
-  keyword: string;
-  selectedIds: Set<number>;
-  onKeywordChange: (value: string) => void;
-  onToggle: (orchidGroupId: number) => void;
-}) {
-  return (
-    <section className="mt-3 rounded-md border border-[#d7ddd4] bg-white p-3">
-      <div className="flex flex-wrap items-center justify-between gap-2">
-        <p className="text-sm font-semibold text-[#344138]">
-          직접 선택 {selectedIds.size}묶음
-        </p>
-        <input
-          className="w-64 rounded-md border border-[#cfd8cc] px-3 py-2 text-sm"
-          placeholder="품종 또는 위치 검색"
-          value={keyword}
-          onChange={(event) => onKeywordChange(event.target.value)}
-        />
-      </div>
-      <div className="mt-2 max-h-48 overflow-y-auto border-t border-[#edf0ec]">
-        {groups.map((group) => (
-          <label
-            className="flex cursor-pointer items-center gap-3 border-b border-[#edf0ec] px-2 py-2 text-sm last:border-b-0"
-            key={group.id}
-          >
-            <input
-              checked={selectedIds.has(group.id)}
-              className="h-4 w-4 accent-[#159447]"
-              type="checkbox"
-              onChange={() => onToggle(group.id)}
-            />
-            <span className="min-w-0 flex-1 truncate font-semibold">
-              {group.varietyName}
-            </span>
-            <span className="text-xs text-[#5c6a60]">
-              {group.houseNumber}동 {group.physicalBedNumber}다이{" "}
-              {group.bedZoneName}
-            </span>
-            <span className="w-14 text-right text-xs">{group.quantity}분</span>
-          </label>
-        ))}
-        {groups.length === 0 ? (
-          <p className="p-3 text-sm text-[#5c6a60]">검색 결과가 없습니다.</p>
-        ) : null}
-      </div>
-    </section>
-  );
 }
 
 function buildScopePayload(

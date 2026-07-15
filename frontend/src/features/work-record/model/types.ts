@@ -42,6 +42,7 @@ export type CreateWorkRecordPayload = {
   workDate: string;
   targetType: WorkRecordTargetType;
   targetId: number | null;
+  orchidGroupIds: number[];
   materialName: string | null;
   dilutionRatio: string | null;
   quantity: string | null;
