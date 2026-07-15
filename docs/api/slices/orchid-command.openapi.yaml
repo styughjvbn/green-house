@@ -49,11 +49,29 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ApiResponseBedZonePlacementProfileResponse'
+  /api/work-operations/multi-create:
+    post:
+      tags:
+      - multi-create-work-operation-controller
+      operationId: create_2
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/MultiCreateWorkOperationRequest'
+        required: true
+      responses:
+        '201':
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponseMultiCreateWorkOperationResponse'
   /api/orchid-groups:
     post:
       tags:
       - orchid-group-command-controller
-      operationId: create_3
+      operationId: create_4
       requestBody:
         content:
           application/json:
@@ -135,6 +153,25 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ApiResponseOrchidGroupResponse'
+  /api/work-operations/{workOperationId}/created-orchid-groups:
+    get:
+      tags:
+      - multi-create-work-operation-controller
+      operationId: get_4
+      parameters:
+      - name: workOperationId
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: int64
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponseMultiCreateWorkOperationResponse'
 components:
   schemas:
     ApiResponseBedZonePlacementProfileResponse:
@@ -142,6 +179,13 @@ components:
       properties:
         data:
           $ref: '#/components/schemas/BedZonePlacementProfileResponse'
+        message:
+          type: string
+    ApiResponseMultiCreateWorkOperationResponse:
+      type: object
+      properties:
+        data:
+          $ref: '#/components/schemas/MultiCreateWorkOperationResponse'
         message:
           type: string
     ApiResponseOrchidGroupResponse:
@@ -254,6 +298,63 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/BedZoneCapacityResponse'
+    MultiCreateOrchidGroupRowRequest:
+      type: object
+      properties:
+        orchidGroup:
+          $ref: '#/components/schemas/OrchidGroupCreateRequest'
+        collectionIds:
+          type: array
+          items:
+            type: integer
+            format: int64
+          maxItems: 20
+          minItems: 0
+          uniqueItems: true
+      required:
+      - orchidGroup
+    MultiCreateWorkOperationRequest:
+      type: object
+      properties:
+        idempotencyKey:
+          type: string
+          maxLength: 100
+          minLength: 0
+        title:
+          type: string
+          maxLength: 150
+          minLength: 0
+        workDate:
+          type: string
+          format: date
+        worker:
+          type: string
+          maxLength: 100
+          minLength: 0
+        memo:
+          type: string
+          maxLength: 1000
+          minLength: 0
+        rows:
+          type: array
+          items:
+            $ref: '#/components/schemas/MultiCreateOrchidGroupRowRequest'
+          maxItems: 100
+          minItems: 0
+      required:
+      - idempotencyKey
+      - rows
+      - title
+      - workDate
+    MultiCreateWorkOperationResponse:
+      type: object
+      properties:
+        operation:
+          $ref: '#/components/schemas/WorkOperationResponse'
+        createdOrchidGroups:
+          type: array
+          items:
+            $ref: '#/components/schemas/OrchidGroupResponse'
     OrchidGroupCreateRequest:
       type: object
       properties:
@@ -440,3 +541,158 @@ components:
       - quantity
       - status
       - varietyId
+    WorkOperationProgressResponse:
+      type: object
+      properties:
+        total:
+          type: integer
+          format: int32
+        pending:
+          type: integer
+          format: int32
+        inProgress:
+          type: integer
+          format: int32
+        completed:
+          type: integer
+          format: int32
+        skipped:
+          type: integer
+          format: int32
+        canceled:
+          type: integer
+          format: int32
+        failed:
+          type: integer
+          format: int32
+        progressPercent:
+          type: integer
+          format: int32
+    WorkOperationResponse:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: int64
+        workTypeId:
+          type: integer
+          format: int64
+        workType:
+          type: string
+        title:
+          type: string
+        status:
+          type: string
+          enum:
+          - DRAFT
+          - PLANNED
+          - IN_PROGRESS
+          - PAUSED
+          - COMPLETED
+          - CANCELED
+          - CORRECTED
+        plannedStartDate:
+          type: string
+          format: date
+        plannedEndDate:
+          type: string
+          format: date
+        actualStartAt:
+          type: string
+          format: date-time
+        actualEndAt:
+          type: string
+          format: date-time
+        sourceScopeType:
+          type: string
+          enum:
+          - NONE
+          - FARM
+          - HOUSE
+          - PHYSICAL_BED
+          - BED_ZONE
+          - ORCHID_GROUP
+          - DERIVED_GROUP
+          - USER_COLLECTION
+          - MANUAL_SELECTION
+        sourceScopeId:
+          type: integer
+          format: int64
+        sourceConditionSnapshot:
+          type: object
+          additionalProperties: {}
+        targetSnapshotAt:
+          type: string
+          format: date-time
+        details:
+          type: object
+          additionalProperties: {}
+        worker:
+          type: string
+        memo:
+          type: string
+        progress:
+          $ref: '#/components/schemas/WorkOperationProgressResponse'
+        targets:
+          type: array
+          items:
+            $ref: '#/components/schemas/WorkOperationTargetResponse'
+    WorkOperationTargetResponse:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: int64
+        orchidGroupId:
+          type: integer
+          format: int64
+        inclusionSource:
+          type: string
+          enum:
+          - DIRECT
+          - FARM
+          - HOUSE
+          - PHYSICAL_BED
+          - BED_ZONE
+          - DERIVED_GROUP
+          - USER_COLLECTION
+          - MANUAL_ADDITION
+          - LINEAGE
+        varietyName:
+          type: string
+        quantitySnapshot:
+          type: integer
+          format: int32
+        ageYearSnapshot:
+          type: integer
+          format: int32
+        potSizeCodeSnapshot:
+          type: string
+        potSizeSnapshot:
+          type: string
+        locationSnapshot:
+          type: object
+          additionalProperties: {}
+        executionStatus:
+          type: string
+          enum:
+          - PENDING
+          - IN_PROGRESS
+          - COMPLETED
+          - SKIPPED
+          - CANCELED
+          - FAILED
+        startedAt:
+          type: string
+          format: date-time
+        completedAt:
+          type: string
+          format: date-time
+        effectAppliedAt:
+          type: string
+          format: date-time
+        worker:
+          type: string
+        resultDetails:
+          type: object
+          additionalProperties: {}

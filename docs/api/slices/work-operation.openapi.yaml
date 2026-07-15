@@ -318,6 +318,7 @@ components:
         sourceScopeType:
           type: string
           enum:
+          - NONE
           - FARM
           - HOUSE
           - PHYSICAL_BED
@@ -358,6 +359,7 @@ components:
         sourceScopeType:
           type: string
           enum:
+          - NONE
           - FARM
           - HOUSE
           - PHYSICAL_BED
@@ -462,6 +464,7 @@ components:
         sourceScopeType:
           type: string
           enum:
+          - NONE
           - FARM
           - HOUSE
           - PHYSICAL_BED
@@ -567,6 +570,7 @@ components:
         scopeType:
           type: string
           enum:
+          - NONE
           - FARM
           - HOUSE
           - PHYSICAL_BED

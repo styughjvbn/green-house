@@ -279,6 +279,7 @@ components:
           - STATUS
           - MEMO
           - MOVEMENT
+          - MULTI_CREATE
         workDate:
           type: string
           format: date
@@ -333,6 +334,7 @@ components:
           - STATUS
           - MEMO
           - MOVEMENT
+          - MULTI_CREATE
       required:
       - name
       - template
@@ -367,6 +369,7 @@ components:
           - STATUS
           - MEMO
           - MOVEMENT
+          - MULTI_CREATE
         defaultType:
           type: boolean
         systemType:
@@ -393,6 +396,7 @@ components:
           - STATUS
           - MEMO
           - MOVEMENT
+          - MULTI_CREATE
         active:
           type: boolean
       required:

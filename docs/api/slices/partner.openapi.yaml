@@ -79,7 +79,7 @@ paths:
     post:
       tags:
       - business-partner-controller
-      operationId: create_7
+      operationId: create_8
       requestBody:
         content:
           application/json:
