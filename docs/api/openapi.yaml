@@ -401,6 +401,49 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ApiResponseWorkOperationResponse'
+  /api/work-operations/{workOperationId}/corrections:
+    get:
+      tags:
+      - work-operation-controller
+      operationId: getCorrections
+      parameters:
+      - name: workOperationId
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: int64
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponseWorkOperationCorrectionsResponse'
+    post:
+      tags:
+      - work-operation-controller
+      operationId: createCorrection
+      parameters:
+      - name: workOperationId
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: int64
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/WorkOperationCorrectionCreateRequest'
+        required: true
+      responses:
+        '201':
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponseWorkOperationCorrectionsResponse'
   /api/work-operations/{workOperationId}/complete:
     post:
       tags:
@@ -3051,6 +3094,7 @@ components:
           - MEMO
           - MOVEMENT
           - MULTI_CREATE
+          - CORRECTION
       required:
       - name
       - template
@@ -3082,6 +3126,7 @@ components:
           - MEMO
           - MOVEMENT
           - MULTI_CREATE
+          - CORRECTION
         defaultType:
           type: boolean
         systemType:
@@ -3163,6 +3208,7 @@ components:
           - MEMO
           - MOVEMENT
           - MULTI_CREATE
+          - CORRECTION
         workDate:
           type: string
           format: date
@@ -3431,6 +3477,66 @@ components:
         resultDetails:
           type: object
           additionalProperties: {}
+    WorkOperationCorrectionCreateRequest:
+      type: object
+      properties:
+        idempotencyKey:
+          type: string
+          maxLength: 100
+          minLength: 0
+        title:
+          type: string
+          maxLength: 150
+          minLength: 0
+        workDate:
+          type: string
+          format: date
+        worker:
+          type: string
+          maxLength: 100
+          minLength: 0
+        memo:
+          type: string
+          maxLength: 1000
+          minLength: 0
+        reason:
+          type: string
+          maxLength: 1000
+          minLength: 0
+      required:
+      - idempotencyKey
+      - reason
+      - title
+      - workDate
+    ApiResponseWorkOperationCorrectionsResponse:
+      type: object
+      properties:
+        data:
+          $ref: '#/components/schemas/WorkOperationCorrectionsResponse'
+        message:
+          type: string
+    WorkOperationCorrectionItemResponse:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: int64
+        reason:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+        correctionOperation:
+          $ref: '#/components/schemas/WorkOperationResponse'
+    WorkOperationCorrectionsResponse:
+      type: object
+      properties:
+        originalOperation:
+          $ref: '#/components/schemas/WorkOperationResponse'
+        corrections:
+          type: array
+          items:
+            $ref: '#/components/schemas/WorkOperationCorrectionItemResponse'
     ApiResponseMultiCreateWorkOperationResponse:
       type: object
       properties:
@@ -4829,6 +4935,7 @@ components:
           - MEMO
           - MOVEMENT
           - MULTI_CREATE
+          - CORRECTION
         active:
           type: boolean
       required:
