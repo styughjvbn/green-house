@@ -179,6 +179,17 @@ public class OrchidGroup extends BaseEntity {
 		this.status = "생성 취소";
 	}
 
+	public void applyRepot(Integer inputQuantity) {
+		validatePositiveQuantity(inputQuantity, "분갈이 투입 수량");
+		if (getAvailableQuantity() < inputQuantity) {
+			throw new IllegalArgumentException("난 묶음 가용 수량보다 많이 분갈이할 수 없습니다.");
+		}
+		this.quantity -= inputQuantity;
+		if (this.quantity == 0) {
+			this.status = "종료";
+		}
+	}
+
 	public void reserve(Integer reserveQuantity) {
 		validatePositiveQuantity(reserveQuantity, "예약 수량");
 		if (getAvailableQuantity() < reserveQuantity) {

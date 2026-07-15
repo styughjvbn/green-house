@@ -23,6 +23,7 @@ public class WorkType extends BaseEntity {
 	public static final String INBOUND_CODE = "INBOUND";
 	public static final String POTTING_CODE = "POTTING";
 	public static final String MULTI_CREATE_CODE = "MULTI_CREATE";
+	public static final String REPOT_CODE = "REPOT";
 
 	@Id
 	@GeneratedValue(strategy = GenerationType.IDENTITY)
