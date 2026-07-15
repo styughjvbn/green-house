@@ -39,8 +39,8 @@ const pageMeta = [
   },
   {
     href: "/work-records",
-    title: "작업 이력",
-    description: "농장 작업 기록을 확인하고 관리하세요.",
+    title: "작업 관리",
+    description: "농장 작업을 등록하고 일정과 이력을 관리하세요.",
   },
   {
     href: "/sales",
@@ -92,7 +92,7 @@ const navigation: {
   { href: "/", label: "대시보드", icon: Home },
   { href: "/farm-status", label: "농장 현황", icon: Sprout },
   { href: "/orchid-groups", label: "난 묶음 관리", icon: Flower2 },
-  { href: "/work-records", label: "작업 이력", icon: ClipboardList },
+  { href: "/work-records", label: "작업 관리", icon: ClipboardList },
   { href: "/sales", label: "판매 관리", icon: ShoppingBag },
   { href: "/analytics", label: "분석", icon: BarChart3 },
   { href: "/print", label: "출력", icon: Printer },

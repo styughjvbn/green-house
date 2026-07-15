@@ -425,7 +425,7 @@ function WorkTab({ props }: { props: AnalyticsPageProps }) {
         </div>
         <Link
           className="mt-3 flex h-9 items-center justify-center rounded-md border border-[#d7ded8] text-xs font-semibold"
-          href="/work-records"
+          href="/work-records?tab=HISTORY"
         >
           작업 이력 보기
         </Link>

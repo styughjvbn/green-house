@@ -14,7 +14,7 @@ export function QuickActions() {
   const actions: Array<[string, string, LucideIcon, string]> = [
     ["농장 현황 보기", "/farm-status", Map, "green"],
     ["난 묶음 추가", "/orchid-groups", PlusCircle, "green"],
-    ["작업 기록 추가", "/work-records", ClipboardEdit, "green"],
+    ["작업 관리", "/work-records", ClipboardEdit, "green"],
     ["판매 전표 등록", "/sales", FileText, "green"],
     ["출력하기", "/print", Printer, "blue"],
     ["검색하기", "/farm-status", Search, "blue"],
