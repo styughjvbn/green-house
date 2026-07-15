@@ -4,6 +4,7 @@ import com.greenhouse.backend.common.api.ApiResponse;
 import com.greenhouse.backend.farm.application.MultiCreateWorkOperationService;
 import com.greenhouse.backend.farm.dto.MultiCreateWorkOperationRequest;
 import com.greenhouse.backend.farm.dto.MultiCreateWorkOperationResponse;
+import com.greenhouse.backend.farm.dto.MultiCreateCancellationEligibilityResponse;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
@@ -34,5 +35,11 @@ public class MultiCreateWorkOperationController {
 	@GetMapping("/{workOperationId}/created-orchid-groups")
 	public ApiResponse<MultiCreateWorkOperationResponse> get(@PathVariable Long workOperationId) {
 		return ApiResponse.ok(service.get(workOperationId));
+	}
+
+	@GetMapping("/{workOperationId}/cancel-eligibility")
+	public ApiResponse<MultiCreateCancellationEligibilityResponse> getCancellationEligibility(
+			@PathVariable Long workOperationId) {
+		return ApiResponse.ok(service.getCancellationEligibility(workOperationId));
 	}
 }

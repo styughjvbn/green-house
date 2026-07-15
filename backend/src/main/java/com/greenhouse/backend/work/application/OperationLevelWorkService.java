@@ -69,6 +69,11 @@ public class OperationLevelWorkService {
 
 	@Transactional(readOnly = true)
 	public List<Long> getResultOrchidGroupIds(Long operationId) {
+		var operation = workOperationRepository.findWithWorkTypeById(operationId)
+				.orElseThrow(() -> new com.greenhouse.backend.common.exception.NotFoundException("작업을 찾을 수 없습니다."));
+		if (!com.greenhouse.backend.work.domain.WorkType.MULTI_CREATE_CODE.equals(operation.getWorkType().getCode())) {
+			throw new IllegalArgumentException("다중 생성 작업만 생성 결과를 조회할 수 있습니다.");
+		}
 		return workEffectOrchidGroupRepository
 				.findByWorkAppliedEffectWorkOperationIdOrderByIdAsc(operationId)
 				.stream().map(link -> link.getOrchidGroupId()).toList();

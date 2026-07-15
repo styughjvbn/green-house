@@ -2,11 +2,15 @@ package com.greenhouse.backend.farm.application;
 
 import com.greenhouse.backend.farm.dto.MultiCreateWorkOperationRequest;
 import com.greenhouse.backend.farm.dto.MultiCreateWorkOperationResponse;
+import com.greenhouse.backend.farm.dto.MultiCreateCancellationEligibilityResponse;
+import com.greenhouse.backend.common.application.OrchidGroupUsageInspector;
 import com.greenhouse.backend.farm.dto.OrchidGroupResponse;
 import com.greenhouse.backend.farm.repository.OrchidGroupRepository;
 import com.greenhouse.backend.work.application.OperationLevelWorkService;
 import com.greenhouse.backend.work.domain.WorkType;
 import java.util.Map;
+import java.util.List;
+import java.util.LinkedHashSet;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -16,12 +20,15 @@ public class MultiCreateWorkOperationService {
 
 	private final OperationLevelWorkService operationLevelWorkService;
 	private final OrchidGroupRepository orchidGroupRepository;
+	private final List<OrchidGroupUsageInspector> usageInspectors;
 
 	public MultiCreateWorkOperationService(
 			OperationLevelWorkService operationLevelWorkService,
-			OrchidGroupRepository orchidGroupRepository) {
+			OrchidGroupRepository orchidGroupRepository,
+			List<OrchidGroupUsageInspector> usageInspectors) {
 		this.operationLevelWorkService = operationLevelWorkService;
 		this.orchidGroupRepository = orchidGroupRepository;
+		this.usageInspectors = usageInspectors;
 	}
 
 	public MultiCreateWorkOperationResponse create(MultiCreateWorkOperationRequest request) {
@@ -35,6 +42,18 @@ public class MultiCreateWorkOperationService {
 	@Transactional(readOnly = true)
 	public MultiCreateWorkOperationResponse get(Long operationId) {
 		return response(operationId);
+	}
+
+	@Transactional(readOnly = true)
+	public MultiCreateCancellationEligibilityResponse getCancellationEligibility(Long operationId) {
+		List<Long> groupIds = operationLevelWorkService.getResultOrchidGroupIds(operationId);
+		var idSet = new LinkedHashSet<>(groupIds);
+		var blockers = usageInspectors.stream()
+				.flatMap(inspector -> inspector.inspect(idSet, operationId).stream())
+				.map(MultiCreateCancellationEligibilityResponse.Blocker::from)
+				.toList();
+		return new MultiCreateCancellationEligibilityResponse(
+				operationId, blockers.isEmpty(), groupIds, blockers);
 	}
 
 	private MultiCreateWorkOperationResponse response(Long operationId) {

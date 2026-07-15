@@ -2,6 +2,7 @@ package com.greenhouse.backend;
 
 import static org.hamcrest.Matchers.hasSize;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -41,6 +42,7 @@ class MultiCreateWorkOperationIntegrationTests extends AbstractBackendIntegratio
 	private BedZone bedZone;
 	private Variety variety;
 	private OrchidGroupCollection collection;
+	private WorkType pesticideType;
 
 	@BeforeEach
 	void setUp() {
@@ -61,6 +63,8 @@ class MultiCreateWorkOperationIntegrationTests extends AbstractBackendIntegratio
 		workTypeRepository.save(new WorkType(
 				WorkType.MULTI_CREATE_CODE, "난 묶음 다중 생성", WorkTypeTemplate.MULTI_CREATE,
 				true, true, true, 1));
+		pesticideType = workTypeRepository.save(new WorkType(
+				"PESTICIDE", "농약", WorkTypeTemplate.PESTICIDE, true, false, true, 2));
 		House house = new House(3, "3동");
 		PhysicalBed bed = new PhysicalBed(1, 1);
 		bed.updatePositionUnits(new BigDecimal("24"), "칸");
@@ -125,5 +129,29 @@ class MultiCreateWorkOperationIntegrationTests extends AbstractBackendIntegratio
 		org.assertj.core.api.Assertions.assertThat(workAppliedEffectRepository.count()).isEqualTo(1);
 		org.assertj.core.api.Assertions.assertThat(workEffectOrchidGroupRepository.count()).isEqualTo(2);
 		org.assertj.core.api.Assertions.assertThat(memberRepository.count()).isEqualTo(1);
+
+		mockMvc.perform(get("/api/work-operations/{id}/cancel-eligibility", operationId))
+				.andExpect(status().isOk())
+				.andExpect(jsonPath("$.data.cancelable").value(true))
+				.andExpect(jsonPath("$.data.blockers", hasSize(0)));
+
+		Long createdGroupId = orchidGroupRepository.findAll().getFirst().getId();
+		mockMvc.perform(post("/api/work-operations")
+				.contentType(MediaType.APPLICATION_JSON)
+				.content("""
+						{
+						  "workTypeId": %d,
+						  "title": "생성 후 농약 작업",
+						  "plannedStartDate": "2026-07-16",
+						  "sourceScopeType": "MANUAL_SELECTION",
+						  "sourceOrchidGroupIds": [%d]
+						}
+						""".formatted(pesticideType.getId(), createdGroupId)))
+				.andExpect(status().isCreated());
+
+		mockMvc.perform(get("/api/work-operations/{id}/cancel-eligibility", operationId))
+				.andExpect(status().isOk())
+				.andExpect(jsonPath("$.data.cancelable").value(false))
+				.andExpect(jsonPath("$.data.blockers[0].code").value("WORK_OPERATION"));
 	}
 }
