@@ -113,6 +113,31 @@ export type RepotWorkResult = {
   lossReason: string | null;
 };
 
+export type OrchidGroupLineageRelationType =
+  | "CREATED_FROM_INBOUND"
+  | "REPOTTED_TO"
+  | "SPLIT_TO"
+  | "MERGED_TO"
+  | "POTTED_TO"
+  | "CORRECTED_TO";
+
+export type OrchidGroupLineageItem = {
+  id: number;
+  relationType: OrchidGroupLineageRelationType;
+  workOperationId: number;
+  sourceQuantity: number;
+  resultQuantity: number;
+  createdAt: string;
+  sourceOrchidGroup: OrchidGroup;
+  resultOrchidGroup: OrchidGroup;
+};
+
+export type OrchidGroupLineage = {
+  orchidGroupId: number;
+  sources: OrchidGroupLineageItem[];
+  results: OrchidGroupLineageItem[];
+};
+
 export type PreciseMovePayload = {
   toBedZoneId: number;
   startPosition?: number | null;

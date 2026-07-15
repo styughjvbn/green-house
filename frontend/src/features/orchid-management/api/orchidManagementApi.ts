@@ -17,11 +17,18 @@ import type {
   MultiCreateCancellationEligibility,
   MultiCreateWorkResult,
   OrchidGroupCollection,
+  OrchidGroupLineage,
   PreciseMovePayload,
   RepotResultOrchidGroupRow,
   RepotWorkResult,
   WorkRecordQuickPayload,
 } from "../model/types";
+
+export function getOrchidGroupLineage(orchidGroupId: number) {
+  return fetchApi<OrchidGroupLineage>(
+    `/orchid-groups/${orchidGroupId}/lineage`,
+  );
+}
 
 export async function executeRepotWork(payload: {
   idempotencyKey: string;
