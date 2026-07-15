@@ -135,6 +135,16 @@ export async function createWorkOperation(
   );
 }
 
+export function getWorkOperations(filters: {
+  from: string;
+  to: string;
+  status?: WorkOperation["status"] | "";
+}): Promise<WorkOperation[]> {
+  const params = new URLSearchParams({ from: filters.from, to: filters.to });
+  if (filters.status) params.set("status", filters.status);
+  return fetchApi<WorkOperation[]>(`/work-operations?${params.toString()}`);
+}
+
 export async function completeWorkOperation(
   workOperationId: number,
 ): Promise<WorkOperation> {
