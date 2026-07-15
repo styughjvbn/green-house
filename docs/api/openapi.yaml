@@ -4,9 +4,52 @@ info:
   description: 난 농장 관리 시스템 Backend API
   version: 0.0.1
 servers:
-- url: http://localhost:8091
+- url: http://localhost:8080
   description: Generated server url
 paths:
+  /api/sales-slips/{salesSlipId}:
+    get:
+      tags:
+      - sales-controller
+      operationId: getSalesSlip
+      parameters:
+      - name: salesSlipId
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: int64
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponseSalesSlipResponse'
+    put:
+      tags:
+      - sales-controller
+      operationId: updateSalesSlip
+      parameters:
+      - name: salesSlipId
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: int64
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SalesSlipCreateRequest'
+        required: true
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponseSalesSlipResponse'
   /api/business-partners/{partnerId}/settlement-settings:
     get:
       tags:
@@ -20,12 +63,12 @@ paths:
           type: integer
           format: int64
       responses:
-        "200":
+        '200':
           description: OK
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/ApiResponsePartnerSettlementSettingsResponse"
+                $ref: '#/components/schemas/ApiResponsePartnerSettlementSettingsResponse'
     put:
       tags:
       - partner-settlement-settings-controller
@@ -41,15 +84,15 @@ paths:
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/PartnerSettlementSettingsRequest"
+              $ref: '#/components/schemas/PartnerSettlementSettingsRequest'
         required: true
       responses:
-        "200":
+        '200':
           description: OK
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/ApiResponsePartnerSettlementSettingsResponse"
+                $ref: '#/components/schemas/ApiResponsePartnerSettlementSettingsResponse'
   /api/bed-zones/{bedZoneId}/placement-profile:
     get:
       tags:
@@ -63,12 +106,12 @@ paths:
           type: integer
           format: int64
       responses:
-        "200":
+        '200':
           description: OK
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/ApiResponseBedZonePlacementProfileResponse"
+                $ref: '#/components/schemas/ApiResponseBedZonePlacementProfileResponse'
     put:
       tags:
       - bed-placement-controller
@@ -84,15 +127,15 @@ paths:
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/BedZonePlacementProfileRequest"
+              $ref: '#/components/schemas/BedZonePlacementProfileRequest'
         required: true
       responses:
-        "200":
+        '200':
           description: OK
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/ApiResponseBedZonePlacementProfileResponse"
+                $ref: '#/components/schemas/ApiResponseBedZonePlacementProfileResponse'
   /api/work-types:
     get:
       tags:
@@ -106,12 +149,12 @@ paths:
           type: boolean
           default: false
       responses:
-        "200":
+        '200':
           description: OK
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/ApiResponseListWorkTypeResponse"
+                $ref: '#/components/schemas/ApiResponseListWorkTypeResponse'
     post:
       tags:
       - work-record-controller
@@ -120,15 +163,15 @@ paths:
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/WorkTypeCreateRequest"
+              $ref: '#/components/schemas/WorkTypeCreateRequest'
         required: true
       responses:
-        "201":
+        '201':
           description: Created
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/ApiResponseWorkTypeResponse"
+                $ref: '#/components/schemas/ApiResponseWorkTypeResponse'
   /api/work-records:
     get:
       tags:
@@ -168,13 +211,14 @@ paths:
         required: false
         schema:
           type: boolean
+          default: false
       responses:
-        "200":
+        '200':
           description: OK
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/ApiResponseListWorkRecordResponse"
+                $ref: '#/components/schemas/ApiResponseListWorkRecordResponse'
     post:
       tags:
       - work-record-controller
@@ -183,22 +227,46 @@ paths:
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/WorkRecordCreateRequest"
+              $ref: '#/components/schemas/WorkRecordCreateRequest'
         required: true
       responses:
-        "201":
+        '201':
           description: Created
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/ApiResponseWorkRecordResponse"
-  /api/work-records/{workRecordId}/cancel:
-    patch:
+                $ref: '#/components/schemas/ApiResponseWorkRecordResponse'
+  /api/work-operations:
+    post:
       tags:
-      - work-record-controller
-      operationId: cancel_1
+      - work-operation-controller
+      operationId: create_1
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/WorkOperationCreateRequest'
+        required: true
+      responses:
+        '201':
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponseWorkOperationResponse'
+  /api/work-operations/{workOperationId}/targets/{targetId}/start:
+    post:
+      tags:
+      - work-operation-controller
+      operationId: startTarget
       parameters:
-      - name: workRecordId
+      - name: workOperationId
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: int64
+      - name: targetId
         in: path
         required: true
         schema:
@@ -208,15 +276,187 @@ paths:
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/WorkRecordCancelRequest"
-        required: true
+              $ref: '#/components/schemas/WorkTargetExecutionRequest'
       responses:
-        "200":
+        '200':
           description: OK
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/ApiResponseWorkRecordResponse"
+                $ref: '#/components/schemas/ApiResponseWorkOperationResponse'
+  /api/work-operations/{workOperationId}/targets/{targetId}/skip:
+    post:
+      tags:
+      - work-operation-controller
+      operationId: skipTarget
+      parameters:
+      - name: workOperationId
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: int64
+      - name: targetId
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: int64
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/WorkTargetExecutionRequest'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponseWorkOperationResponse'
+  /api/work-operations/{workOperationId}/targets/{targetId}/complete:
+    post:
+      tags:
+      - work-operation-controller
+      operationId: completeTarget
+      parameters:
+      - name: workOperationId
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: int64
+      - name: targetId
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: int64
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/WorkTargetExecutionRequest'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponseWorkOperationResponse'
+  /api/work-operations/{workOperationId}/start:
+    post:
+      tags:
+      - work-operation-controller
+      operationId: start
+      parameters:
+      - name: workOperationId
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: int64
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponseWorkOperationResponse'
+  /api/work-operations/{workOperationId}/resume:
+    post:
+      tags:
+      - work-operation-controller
+      operationId: resume
+      parameters:
+      - name: workOperationId
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: int64
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponseWorkOperationResponse'
+  /api/work-operations/{workOperationId}/pause:
+    post:
+      tags:
+      - work-operation-controller
+      operationId: pause
+      parameters:
+      - name: workOperationId
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: int64
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponseWorkOperationResponse'
+  /api/work-operations/{workOperationId}/complete:
+    post:
+      tags:
+      - work-operation-controller
+      operationId: complete
+      parameters:
+      - name: workOperationId
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: int64
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponseWorkOperationResponse'
+  /api/work-operations/{workOperationId}/cancel:
+    post:
+      tags:
+      - work-operation-controller
+      operationId: cancel
+      parameters:
+      - name: workOperationId
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: int64
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponseWorkOperationResponse'
+  /api/work-operations/target-preview:
+    post:
+      tags:
+      - work-operation-controller
+      operationId: preview
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/WorkTargetPreviewRequest'
+        required: true
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponseWorkTargetPreviewResponse'
   /api/varieties:
     get:
       tags:
@@ -257,44 +497,30 @@ paths:
           type: integer
           format: int32
           default: 10
-      - name: page
-        in: query
-        required: false
-        schema:
-          type: integer
-          format: int32
-          default: 0
-      - name: size
-        in: query
-        required: false
-        schema:
-          type: integer
-          format: int32
-          default: 10
       responses:
-        "200":
+        '200':
           description: OK
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/ApiResponseVarietyPageResponse"
+                $ref: '#/components/schemas/ApiResponseVarietyPageResponse'
     post:
       tags:
       - variety-controller
-      operationId: create_1
+      operationId: create_2
       requestBody:
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/VarietyCreateRequest"
+              $ref: '#/components/schemas/VarietyCreateRequest'
         required: true
       responses:
-        "201":
+        '201':
           description: Created
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/ApiResponseVarietyResponse"
+                $ref: '#/components/schemas/ApiResponseVarietyResponse'
   /api/sales-slips:
     get:
       tags:
@@ -320,12 +546,12 @@ paths:
           type: string
           format: date
       responses:
-        "200":
+        '200':
           description: OK
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/ApiResponseListSalesSlipResponse"
+                $ref: '#/components/schemas/ApiResponseListSalesSlipResponse'
     post:
       tags:
       - sales-controller
@@ -334,15 +560,15 @@ paths:
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/SalesSlipCreateRequest"
+              $ref: '#/components/schemas/SalesSlipCreateRequest'
         required: true
       responses:
-        "201":
+        '201':
           description: Created
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/ApiResponseSalesSlipResponse"
+                $ref: '#/components/schemas/ApiResponseSalesSlipResponse'
   /api/sales-slips/{salesSlipId}/confirm-payment:
     post:
       tags:
@@ -359,15 +585,15 @@ paths:
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/ManualPaymentRequest"
+              $ref: '#/components/schemas/ManualPaymentRequest'
         required: true
       responses:
-        "200":
+        '200':
           description: OK
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/ApiResponseSalesSlipResponse"
+                $ref: '#/components/schemas/ApiResponseSalesSlipResponse'
   /api/orchid-groups:
     get:
       tags:
@@ -380,6 +606,11 @@ paths:
         schema:
           type: integer
           format: int64
+      - name: keyword
+        in: query
+        required: false
+        schema:
+          type: string
       - name: physicalBedId
         in: query
         required: false
@@ -398,29 +629,109 @@ paths:
         schema:
           type: string
       responses:
-        "200":
+        '200':
           description: OK
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/ApiResponseListOrchidGroupResponse"
+                $ref: '#/components/schemas/ApiResponseListOrchidGroupResponse'
     post:
       tags:
       - orchid-group-command-controller
-      operationId: create_2
+      operationId: create_3
       requestBody:
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/OrchidGroupCreateRequest"
+              $ref: '#/components/schemas/OrchidGroupCreateRequest'
         required: true
       responses:
-        "201":
+        '201':
           description: Created
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/ApiResponseOrchidGroupResponse"
+                $ref: '#/components/schemas/ApiResponseOrchidGroupResponse'
+  /api/orchid-group-collections:
+    get:
+      tags:
+      - orchid-group-collection-controller
+      operationId: getCollections
+      parameters:
+      - name: includeArchived
+        in: query
+        required: false
+        schema:
+          type: boolean
+          default: false
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponseListOrchidGroupCollectionResponse'
+    post:
+      tags:
+      - orchid-group-collection-controller
+      operationId: create_4
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/OrchidGroupCollectionCreateRequest'
+        required: true
+      responses:
+        '201':
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponseOrchidGroupCollectionResponse'
+  /api/orchid-group-collections/{collectionId}/members:
+    post:
+      tags:
+      - orchid-group-collection-controller
+      operationId: addMembers
+      parameters:
+      - name: collectionId
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: int64
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/OrchidGroupCollectionMemberAddRequest'
+        required: true
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponseOrchidGroupCollectionResponse'
+  /api/orchid-group-collections/{collectionId}/archive:
+    post:
+      tags:
+      - orchid-group-collection-controller
+      operationId: archive
+      parameters:
+      - name: collectionId
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: int64
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponseOrchidGroupCollectionResponse'
   /api/materials:
     get:
       tags:
@@ -447,30 +758,44 @@ paths:
         required: false
         schema:
           type: boolean
+      - name: page
+        in: query
+        required: false
+        schema:
+          type: integer
+          format: int32
+          default: 0
+      - name: size
+        in: query
+        required: false
+        schema:
+          type: integer
+          format: int32
+          default: 10
       responses:
-        "200":
+        '200':
           description: OK
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/ApiResponseMaterialPageResponse"
+                $ref: '#/components/schemas/ApiResponseMaterialPageResponse'
     post:
       tags:
       - material-controller
-      operationId: create_3
+      operationId: create_5
       requestBody:
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/MaterialCreateRequest"
+              $ref: '#/components/schemas/MaterialCreateRequest'
         required: true
       responses:
-        "201":
+        '201':
           description: Created
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/ApiResponseMaterialResponse"
+                $ref: '#/components/schemas/ApiResponseMaterialResponse'
   /api/inbound-records:
     get:
       tags:
@@ -531,29 +856,29 @@ paths:
           format: int32
           default: 10
       responses:
-        "200":
+        '200':
           description: OK
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/ApiResponseInboundRecordPageResponse"
+                $ref: '#/components/schemas/ApiResponseInboundRecordPageResponse'
     post:
       tags:
       - inbound-record-controller
-      operationId: create_4
+      operationId: create_6
       requestBody:
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/InboundRecordCreateRequest"
+              $ref: '#/components/schemas/InboundRecordCreateRequest'
         required: true
       responses:
-        "201":
+        '201':
           description: Created
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/ApiResponseInboundRecordResponse"
+                $ref: '#/components/schemas/ApiResponseInboundRecordResponse'
   /api/inbound-records/{inboundRecordId}/potting:
     post:
       tags:
@@ -570,20 +895,20 @@ paths:
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/InboundRecordPottingRequest"
+              $ref: '#/components/schemas/InboundRecordPottingRequest'
         required: true
       responses:
-        "200":
+        '200':
           description: OK
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/ApiResponseInboundRecordResponse"
+                $ref: '#/components/schemas/ApiResponseInboundRecordResponse'
   /api/inbound-records/{inboundRecordId}/cancel:
     post:
       tags:
       - inbound-record-controller
-      operationId: cancel
+      operationId: cancel_1
       parameters:
       - name: inboundRecordId
         in: path
@@ -595,14 +920,14 @@ paths:
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/InboundRecordCancelRequest"
+              $ref: '#/components/schemas/InboundRecordCancelRequest'
       responses:
-        "200":
+        '200':
           description: OK
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/ApiResponseInboundRecordResponse"
+                $ref: '#/components/schemas/ApiResponseInboundRecordResponse'
   /api/business-partners:
     get:
       tags:
@@ -624,29 +949,59 @@ paths:
           - RETAIL
           - AUCTION_HOUSE
       responses:
-        "200":
+        '200':
           description: OK
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/ApiResponseListBusinessPartnerResponse"
+                $ref: '#/components/schemas/ApiResponseListBusinessPartnerResponse'
     post:
       tags:
       - business-partner-controller
-      operationId: create_5
+      operationId: create_7
       requestBody:
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/BusinessPartnerCreateRequest"
+              $ref: '#/components/schemas/BusinessPartnerCreateRequest'
         required: true
       responses:
-        "201":
+        '201':
           description: Created
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/ApiResponseBusinessPartnerResponse"
+                $ref: '#/components/schemas/ApiResponseBusinessPartnerResponse'
+  /api/auth/logout:
+    post:
+      tags:
+      - auth-controller
+      operationId: logout
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponseVoid'
+  /api/auth/login:
+    post:
+      tags:
+      - auth-controller
+      operationId: login
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LoginRequest'
+        required: true
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponseAuthenticatedUserResponse'
   /api/auction-settlements/{settlementId}/confirm-payment:
     post:
       tags:
@@ -663,15 +1018,15 @@ paths:
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/ManualPaymentRequest"
+              $ref: '#/components/schemas/ManualPaymentRequest'
         required: true
       responses:
-        "200":
+        '200':
           description: OK
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/ApiResponseAuctionSettlementResponse"
+                $ref: '#/components/schemas/ApiResponseAuctionSettlementResponse'
   /api/auction-settlements/rebuild:
     post:
       tags:
@@ -691,12 +1046,12 @@ paths:
           type: string
           format: date
       responses:
-        "200":
+        '200':
           description: OK
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/ApiResponseAuctionSettlementResponse"
+                $ref: '#/components/schemas/ApiResponseAuctionSettlementResponse'
   /api/auction-lots/{id}/results:
     post:
       tags:
@@ -713,15 +1068,15 @@ paths:
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/AuctionLotResultRequest"
+              $ref: '#/components/schemas/AuctionLotResultRequest'
         required: true
       responses:
-        "200":
+        '200':
           description: OK
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/ApiResponseAuctionLotResponse"
+                $ref: '#/components/schemas/ApiResponseAuctionLotResponse'
   /api/auction-lots/{id}/confirm-return:
     post:
       tags:
@@ -738,15 +1093,15 @@ paths:
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/AuctionLotReturnRequest"
+              $ref: '#/components/schemas/AuctionLotReturnRequest'
         required: true
       responses:
-        "200":
+        '200':
           description: OK
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/ApiResponseAuctionLotResponse"
+                $ref: '#/components/schemas/ApiResponseAuctionLotResponse'
   /api/auction-lots/{id}/adjust-quantity:
     post:
       tags:
@@ -763,15 +1118,15 @@ paths:
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/AuctionLotAdjustmentRequest"
+              $ref: '#/components/schemas/AuctionLotAdjustmentRequest'
         required: true
       responses:
-        "200":
+        '200':
           description: OK
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/ApiResponseAuctionLotResponse"
+                $ref: '#/components/schemas/ApiResponseAuctionLotResponse'
   /api/work-types/{workTypeId}:
     patch:
       tags:
@@ -788,15 +1143,15 @@ paths:
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/WorkTypeUpdateRequest"
+              $ref: '#/components/schemas/WorkTypeUpdateRequest'
         required: true
       responses:
-        "200":
+        '200':
           description: OK
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/ApiResponseWorkTypeResponse"
+                $ref: '#/components/schemas/ApiResponseWorkTypeResponse'
   /api/work-types/reorder:
     patch:
       tags:
@@ -806,15 +1161,40 @@ paths:
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/WorkTypeReorderRequest"
+              $ref: '#/components/schemas/WorkTypeReorderRequest'
         required: true
       responses:
-        "200":
+        '200':
           description: OK
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/ApiResponseListWorkTypeResponse"
+                $ref: '#/components/schemas/ApiResponseListWorkTypeResponse'
+  /api/work-records/{workRecordId}/cancel:
+    patch:
+      tags:
+      - work-record-controller
+      operationId: cancel_2
+      parameters:
+      - name: workRecordId
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: int64
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/WorkRecordCancelRequest'
+        required: true
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponseWorkRecordResponse'
   /api/varieties/{varietyId}:
     get:
       tags:
@@ -828,12 +1208,30 @@ paths:
           type: integer
           format: int64
       responses:
-        "200":
+        '200':
           description: OK
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/ApiResponseVarietyResponse"
+                $ref: '#/components/schemas/ApiResponseVarietyResponse'
+    delete:
+      tags:
+      - variety-controller
+      operationId: delete
+      parameters:
+      - name: varietyId
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: int64
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponseVoid'
     patch:
       tags:
       - variety-controller
@@ -849,33 +1247,15 @@ paths:
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/VarietyUpdateRequest"
+              $ref: '#/components/schemas/VarietyUpdateRequest'
         required: true
       responses:
-        "200":
+        '200':
           description: OK
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/ApiResponseVarietyResponse"
-    delete:
-      tags:
-      - variety-controller
-      operationId: delete_1
-      parameters:
-      - name: varietyId
-        in: path
-        required: true
-        schema:
-          type: integer
-          format: int64
-      responses:
-        "200":
-          description: OK
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ApiResponseVoid"
+                $ref: '#/components/schemas/ApiResponseVarietyResponse'
   /api/varieties/{varietyId}/deactivate:
     patch:
       tags:
@@ -889,17 +1269,42 @@ paths:
           type: integer
           format: int64
       responses:
-        "200":
+        '200':
           description: OK
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/ApiResponseVarietyResponse"
+                $ref: '#/components/schemas/ApiResponseVarietyResponse'
+  /api/sales-slips/{salesSlipId}/sales-status:
+    patch:
+      tags:
+      - sales-controller
+      operationId: updateSalesStatus
+      parameters:
+      - name: salesSlipId
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: int64
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SalesSlipStatusUpdateRequest'
+        required: true
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponseSalesSlipResponse'
   /api/orchid-groups/{orchidGroupId}:
     delete:
       tags:
       - orchid-group-command-controller
-      operationId: delete
+      operationId: delete_1
       parameters:
       - name: orchidGroupId
         in: path
@@ -908,12 +1313,12 @@ paths:
           type: integer
           format: int64
       responses:
-        "200":
+        '200':
           description: OK
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/ApiResponseVoid"
+                $ref: '#/components/schemas/ApiResponseVoid'
     patch:
       tags:
       - orchid-group-command-controller
@@ -929,15 +1334,15 @@ paths:
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/OrchidGroupUpdateRequest"
+              $ref: '#/components/schemas/OrchidGroupUpdateRequest'
         required: true
       responses:
-        "200":
+        '200':
           description: OK
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/ApiResponseOrchidGroupResponse"
+                $ref: '#/components/schemas/ApiResponseOrchidGroupResponse'
   /api/orchid-groups/{orchidGroupId}/move:
     patch:
       tags:
@@ -954,15 +1359,58 @@ paths:
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/OrchidGroupMoveRequest"
+              $ref: '#/components/schemas/OrchidGroupMoveRequest'
         required: true
       responses:
-        "200":
+        '200':
           description: OK
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/ApiResponseOrchidGroupResponse"
+                $ref: '#/components/schemas/ApiResponseOrchidGroupResponse'
+  /api/orchid-group-collections/{collectionId}:
+    get:
+      tags:
+      - orchid-group-collection-controller
+      operationId: get_2
+      parameters:
+      - name: collectionId
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: int64
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponseOrchidGroupCollectionResponse'
+    patch:
+      tags:
+      - orchid-group-collection-controller
+      operationId: update_4
+      parameters:
+      - name: collectionId
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: int64
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/OrchidGroupCollectionUpdateRequest'
+        required: true
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponseOrchidGroupCollectionResponse'
   /api/materials/{materialId}:
     get:
       tags:
@@ -976,36 +1424,12 @@ paths:
           type: integer
           format: int64
       responses:
-        "200":
+        '200':
           description: OK
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/ApiResponseMaterialResponse"
-    patch:
-      tags:
-      - material-controller
-      operationId: update_4
-      parameters:
-      - name: materialId
-        in: path
-        required: true
-        schema:
-          type: integer
-          format: int64
-      requestBody:
-        content:
-          application/json:
-            schema:
-              $ref: "#/components/schemas/MaterialUpdateRequest"
-        required: true
-      responses:
-        "200":
-          description: OK
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ApiResponseMaterialResponse"
+                $ref: '#/components/schemas/ApiResponseMaterialResponse'
     delete:
       tags:
       - material-controller
@@ -1018,12 +1442,36 @@ paths:
           type: integer
           format: int64
       responses:
-        "200":
+        '200':
           description: OK
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/ApiResponseVoid"
+                $ref: '#/components/schemas/ApiResponseVoid'
+    patch:
+      tags:
+      - material-controller
+      operationId: update_5
+      parameters:
+      - name: materialId
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: int64
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/MaterialUpdateRequest'
+        required: true
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponseMaterialResponse'
   /api/materials/{materialId}/deactivate:
     patch:
       tags:
@@ -1037,12 +1485,12 @@ paths:
           type: integer
           format: int64
       responses:
-        "200":
+        '200':
           description: OK
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/ApiResponseMaterialResponse"
+                $ref: '#/components/schemas/ApiResponseMaterialResponse'
   /api/inbound-records/{inboundRecordId}:
     get:
       tags:
@@ -1056,16 +1504,34 @@ paths:
           type: integer
           format: int64
       responses:
-        "200":
+        '200':
           description: OK
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/ApiResponseInboundRecordResponse"
+                $ref: '#/components/schemas/ApiResponseInboundRecordResponse'
+    delete:
+      tags:
+      - inbound-record-controller
+      operationId: delete_3
+      parameters:
+      - name: inboundRecordId
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: int64
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponseVoid'
     patch:
       tags:
       - inbound-record-controller
-      operationId: update_5
+      operationId: update_6
       parameters:
       - name: inboundRecordId
         in: path
@@ -1077,33 +1543,15 @@ paths:
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/InboundRecordUpdateRequest"
+              $ref: '#/components/schemas/InboundRecordUpdateRequest'
         required: true
       responses:
-        "200":
+        '200':
           description: OK
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/ApiResponseInboundRecordResponse"
-    delete:
-      tags:
-      - inbound-record-controller
-      operationId: delete
-      parameters:
-      - name: inboundRecordId
-        in: path
-        required: true
-        schema:
-          type: integer
-          format: int64
-      responses:
-        "200":
-          description: OK
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ApiResponseVoid"
+                $ref: '#/components/schemas/ApiResponseInboundRecordResponse'
   /api/auction-lots/{id}/status:
     patch:
       tags:
@@ -1120,15 +1568,34 @@ paths:
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/AuctionLotStatusRequest"
+              $ref: '#/components/schemas/AuctionLotStatusRequest'
         required: true
       responses:
-        "200":
+        '200':
           description: OK
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/ApiResponseAuctionLotResponse"
+                $ref: '#/components/schemas/ApiResponseAuctionLotResponse'
+  /api/work-operations/{workOperationId}:
+    get:
+      tags:
+      - work-operation-controller
+      operationId: get_3
+      parameters:
+      - name: workOperationId
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: int64
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponseWorkOperationResponse'
   /api/varieties/{varietyId}/orchid-groups:
     get:
       tags:
@@ -1142,31 +1609,53 @@ paths:
           type: integer
           format: int64
       responses:
-        "200":
+        '200':
           description: OK
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/ApiResponseListVarietyConnectedOrchidGroupResponse"
-  /api/sales-slips/{salesSlipId}:
+                $ref: '#/components/schemas/ApiResponseListVarietyConnectedOrchidGroupResponse'
+  /api/varieties/genera:
+    get:
+      tags:
+      - variety-controller
+      operationId: getGenera
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponseListString'
+  /api/sales/orchid-groups/search:
     get:
       tags:
       - sales-controller
-      operationId: getSalesSlip
+      operationId: searchSalesOrchidGroups
       parameters:
-      - name: salesSlipId
-        in: path
-        required: true
+      - name: keyword
+        in: query
+        required: false
+        schema:
+          type: string
+      - name: varietyId
+        in: query
+        required: false
         schema:
           type: integer
           format: int64
+      - name: status
+        in: query
+        required: false
+        schema:
+          type: string
       responses:
-        "200":
+        '200':
           description: OK
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/ApiResponseSalesSlipResponse"
+                $ref: '#/components/schemas/ApiResponseListSalesOrchidGroupSearchResponse'
   /api/sales-slips/{salesSlipId}/print:
     get:
       tags:
@@ -1180,24 +1669,111 @@ paths:
           type: integer
           format: int64
       responses:
-        "200":
+        '200':
           description: OK
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/ApiResponseSalesSlipResponse"
+                $ref: '#/components/schemas/ApiResponseSalesSlipResponse'
+  /api/sales-slips/print:
+    get:
+      tags:
+      - print-controller
+      operationId: getPrintableSalesSlips
+      parameters:
+      - name: page
+        in: query
+        required: false
+        schema:
+          type: integer
+          format: int32
+          default: 0
+      - name: size
+        in: query
+        required: false
+        schema:
+          type: integer
+          format: int32
+          default: 10
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponseSalesSlipPageResponse'
+  /api/sales-slips/page:
+    get:
+      tags:
+      - sales-controller
+      operationId: getSalesSlipPage
+      parameters:
+      - name: partnerId
+        in: query
+        required: false
+        schema:
+          type: integer
+          format: int64
+      - name: from
+        in: query
+        required: false
+        schema:
+          type: string
+          format: date
+      - name: to
+        in: query
+        required: false
+        schema:
+          type: string
+          format: date
+      - name: paymentStatus
+        in: query
+        required: false
+        schema:
+          type: string
+      - name: salesStatus
+        in: query
+        required: false
+        schema:
+          type: string
+      - name: keyword
+        in: query
+        required: false
+        schema:
+          type: string
+      - name: page
+        in: query
+        required: false
+        schema:
+          type: integer
+          format: int32
+          default: 0
+      - name: size
+        in: query
+        required: false
+        schema:
+          type: integer
+          format: int32
+          default: 10
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponseSalesSlipPageResponse'
   /api/sales-slips/auction-shipments:
     get:
       tags:
       - sales-controller
       operationId: getAuctionShipmentOptions
       responses:
-        "200":
+        '200':
           description: OK
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/ApiResponseListAuctionShipmentOptionResponse"
+                $ref: '#/components/schemas/ApiResponseListAuctionShipmentOptionResponse'
   /api/physical-beds:
     get:
       tags:
@@ -1211,12 +1787,12 @@ paths:
           type: integer
           format: int64
       responses:
-        "200":
+        '200':
           description: OK
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/ApiResponseListPhysicalBedResponse"
+                $ref: '#/components/schemas/ApiResponseListPhysicalBedResponse'
   /api/physical-beds/{physicalBedId}:
     get:
       tags:
@@ -1230,12 +1806,12 @@ paths:
           type: integer
           format: int64
       responses:
-        "200":
+        '200':
           description: OK
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/ApiResponsePhysicalBedResponse"
+                $ref: '#/components/schemas/ApiResponsePhysicalBedResponse'
   /api/partner-payment-events:
     get:
       tags:
@@ -1264,24 +1840,155 @@ paths:
           type: integer
           format: int64
       responses:
-        "200":
+        '200':
           description: OK
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/ApiResponseListPartnerPaymentEventResponse"
+                $ref: '#/components/schemas/ApiResponseListPartnerPaymentEventResponse'
+  /api/orchid-groups/{orchidGroupId}/work-history:
+    get:
+      tags:
+      - work-operation-controller
+      operationId: getOrchidGroupHistory
+      parameters:
+      - name: orchidGroupId
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: int64
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponseListOrchidGroupWorkHistoryResponse'
+  /api/orchid-groups/{orchidGroupId}/collections:
+    get:
+      tags:
+      - orchid-group-collection-controller
+      operationId: getForOrchidGroup
+      parameters:
+      - name: orchidGroupId
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: int64
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponseListOrchidGroupCollectionResponse'
+  /api/orchid-groups/derived-groups:
+    get:
+      tags:
+      - derived-orchid-group-controller
+      operationId: getGroups
+      parameters:
+      - name: varietyId
+        in: query
+        required: false
+        schema:
+          type: integer
+          format: int64
+      - name: ageYear
+        in: query
+        required: false
+        schema:
+          type: integer
+          format: int32
+      - name: potSizeCode
+        in: query
+        required: false
+        schema:
+          type: string
+          enum:
+          - UNSPECIFIED
+          - UNMAPPED
+          - POT_2
+          - POT_2_5
+          - POT_3
+          - POT_3_5
+          - POT_4
+          - POT_4_5
+          - POT_5
+          - POT_6
+          - HANGING
+          - ETC
+      - name: houseId
+        in: query
+        required: false
+        schema:
+          type: integer
+          format: int64
+      - name: status
+        in: query
+        required: false
+        schema:
+          type: string
+      - name: keyword
+        in: query
+        required: false
+        schema:
+          type: string
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponseListDerivedOrchidGroupResponse'
+  /api/orchid-groups/derived-groups/{groupKey}/members:
+    get:
+      tags:
+      - derived-orchid-group-controller
+      operationId: getMembers
+      parameters:
+      - name: groupKey
+        in: path
+        required: true
+        schema:
+          type: string
+      - name: houseId
+        in: query
+        required: false
+        schema:
+          type: integer
+          format: int64
+      - name: status
+        in: query
+        required: false
+        schema:
+          type: string
+      - name: keyword
+        in: query
+        required: false
+        schema:
+          type: string
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponseListOrchidGroupResponse'
   /api/houses:
     get:
       tags:
       - farm-structure-controller
       operationId: getHouses
       responses:
-        "200":
+        '200':
           description: OK
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/ApiResponseListHouseResponse"
+                $ref: '#/components/schemas/ApiResponseListHouseResponse'
   /api/houses/{houseId}:
     get:
       tags:
@@ -1295,12 +2002,12 @@ paths:
           type: integer
           format: int64
       responses:
-        "200":
+        '200':
           description: OK
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/ApiResponseHouseResponse"
+                $ref: '#/components/schemas/ApiResponseHouseResponse'
   /api/farm-status/zoom:
     get:
       tags:
@@ -1329,12 +2036,12 @@ paths:
           type: integer
           format: int64
       responses:
-        "200":
+        '200':
           description: OK
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/ApiResponseFarmStatusZoomResponse"
+                $ref: '#/components/schemas/ApiResponseFarmStatusZoomResponse'
   /api/farm-status/orchid-groups:
     get:
       tags:
@@ -1357,36 +2064,36 @@ paths:
           type: integer
           format: int64
       responses:
-        "200":
+        '200':
           description: OK
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/ApiResponseFarmStatusOrchidGroupListResponse"
+                $ref: '#/components/schemas/ApiResponseFarmStatusOrchidGroupListResponse'
   /api/farm-status/map:
     get:
       tags:
       - farm-status-controller
       operationId: getMap
       responses:
-        "200":
+        '200':
           description: OK
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/ApiResponseFarmStatusMapResponse"
+                $ref: '#/components/schemas/ApiResponseFarmStatusMapResponse'
   /api/dashboard/summary:
     get:
       tags:
       - dashboard-controller
       operationId: getSummary
       responses:
-        "200":
+        '200':
           description: OK
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/ApiResponseDashboardSummaryResponse"
+                $ref: '#/components/schemas/ApiResponseDashboardSummaryResponse'
   /api/business-partners/{partnerId}/balance-summary:
     get:
       tags:
@@ -1400,12 +2107,12 @@ paths:
           type: integer
           format: int64
       responses:
-        "200":
+        '200':
           description: OK
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/ApiResponsePartnerBalanceSummaryResponse"
+                $ref: '#/components/schemas/ApiResponsePartnerBalanceSummaryResponse'
   /api/bed-zones:
     get:
       tags:
@@ -1425,12 +2132,12 @@ paths:
           type: integer
           format: int64
       responses:
-        "200":
+        '200':
           description: OK
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/ApiResponseListBedZoneResponse"
+                $ref: '#/components/schemas/ApiResponseListBedZoneResponse'
   /api/bed-zones/{bedZoneId}:
     get:
       tags:
@@ -1444,24 +2151,36 @@ paths:
           type: integer
           format: int64
       responses:
-        "200":
+        '200':
           description: OK
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/ApiResponseBedZoneResponse"
+                $ref: '#/components/schemas/ApiResponseBedZoneResponse'
+  /api/auth/me:
+    get:
+      tags:
+      - auth-controller
+      operationId: me
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponseAuthenticatedUserResponse'
   /api/auction-tracking/summary:
     get:
       tags:
       - auction-tracking-controller
       operationId: getSummary_1
       responses:
-        "200":
+        '200':
           description: OK
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/ApiResponseAuctionTrackingSummaryResponse"
+                $ref: '#/components/schemas/ApiResponseAuctionTrackingSummaryResponse'
   /api/auction-settlements:
     get:
       tags:
@@ -1500,12 +2219,12 @@ paths:
           - REVIEW_REQUIRED
           - CANCELLED
       responses:
-        "200":
+        '200':
           description: OK
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/ApiResponseListAuctionSettlementResponse"
+                $ref: '#/components/schemas/ApiResponseListAuctionSettlementResponse'
   /api/auction-settlements/{settlementId}:
     get:
       tags:
@@ -1519,12 +2238,12 @@ paths:
           type: integer
           format: int64
       responses:
-        "200":
+        '200':
           description: OK
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/ApiResponseAuctionSettlementResponse"
+                $ref: '#/components/schemas/ApiResponseAuctionSettlementResponse'
   /api/auction-lots:
     get:
       tags:
@@ -1612,12 +2331,12 @@ paths:
           format: int32
           default: 20
       responses:
-        "200":
+        '200':
           description: OK
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/ApiResponseAuctionLotPageResponse"
+                $ref: '#/components/schemas/ApiResponseAuctionLotPageResponse'
   /api/auction-lots/{id}:
     get:
       tags:
@@ -1631,12 +2350,12 @@ paths:
           type: integer
           format: int64
       responses:
-        "200":
+        '200':
           description: OK
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/ApiResponseAuctionLotResponse"
+                $ref: '#/components/schemas/ApiResponseAuctionLotResponse'
   /api/auction-lots/{id}/timeline:
     get:
       tags:
@@ -1650,94 +2369,336 @@ paths:
           type: integer
           format: int64
       responses:
-        "200":
+        '200':
           description: OK
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/ApiResponseAuctionLotResponse"
-  /api/work-operations/target-preview:
-    $ref: "./slices/work-operation.openapi.yaml#/paths/~1api~1work-operations~1target-preview"
-  /api/work-operations:
-    $ref: "./slices/work-operation.openapi.yaml#/paths/~1api~1work-operations"
-  /api/work-operations/{workOperationId}:
-    $ref: "./slices/work-operation.openapi.yaml#/paths/~1api~1work-operations~1{workOperationId}"
-  /api/work-operations/{workOperationId}/complete:
-    $ref: "./slices/work-operation.openapi.yaml#/paths/~1api~1work-operations~1{workOperationId}~1complete"
-  /api/work-operations/{workOperationId}/start:
-    $ref: "./slices/work-operation.openapi.yaml#/paths/~1api~1work-operations~1{workOperationId}~1start"
-  /api/work-operations/{workOperationId}/pause:
-    $ref: "./slices/work-operation.openapi.yaml#/paths/~1api~1work-operations~1{workOperationId}~1pause"
-  /api/work-operations/{workOperationId}/resume:
-    $ref: "./slices/work-operation.openapi.yaml#/paths/~1api~1work-operations~1{workOperationId}~1resume"
-  /api/work-operations/{workOperationId}/cancel:
-    $ref: "./slices/work-operation.openapi.yaml#/paths/~1api~1work-operations~1{workOperationId}~1cancel"
-  /api/work-operations/{workOperationId}/targets/{targetId}/start:
-    $ref: "./slices/work-operation.openapi.yaml#/paths/~1api~1work-operations~1{workOperationId}~1targets~1{targetId}~1start"
-  /api/work-operations/{workOperationId}/targets/{targetId}/complete:
-    $ref: "./slices/work-operation.openapi.yaml#/paths/~1api~1work-operations~1{workOperationId}~1targets~1{targetId}~1complete"
-  /api/work-operations/{workOperationId}/targets/{targetId}/skip:
-    $ref: "./slices/work-operation.openapi.yaml#/paths/~1api~1work-operations~1{workOperationId}~1targets~1{targetId}~1skip"
-  /api/orchid-groups/{orchidGroupId}/work-history:
-    $ref: "./slices/work-operation.openapi.yaml#/paths/~1api~1orchid-groups~1{orchidGroupId}~1work-history"
-  /api/orchid-group-collections:
-    $ref: "./slices/orchid-collection.openapi.yaml#/paths/~1api~1orchid-group-collections"
-  /api/orchid-group-collections/{collectionId}:
-    $ref: "./slices/orchid-collection.openapi.yaml#/paths/~1api~1orchid-group-collections~1{collectionId}"
-  /api/orchid-group-collections/{collectionId}/archive:
-    $ref: "./slices/orchid-collection.openapi.yaml#/paths/~1api~1orchid-group-collections~1{collectionId}~1archive"
-  /api/orchid-group-collections/{collectionId}/members:
-    $ref: "./slices/orchid-collection.openapi.yaml#/paths/~1api~1orchid-group-collections~1{collectionId}~1members"
+                $ref: '#/components/schemas/ApiResponseAuctionLotResponse'
+  /api/analytics/work:
+    get:
+      tags:
+      - analytics-controller
+      operationId: getWorkAnalytics
+      parameters:
+      - name: from
+        in: query
+        required: false
+        schema:
+          type: string
+          format: date
+      - name: to
+        in: query
+        required: false
+        schema:
+          type: string
+          format: date
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponseWorkAnalyticsResponse'
+  /api/analytics/sales:
+    get:
+      tags:
+      - analytics-controller
+      operationId: getSalesAnalytics
+      parameters:
+      - name: from
+        in: query
+        required: false
+        schema:
+          type: string
+          format: date
+      - name: to
+        in: query
+        required: false
+        schema:
+          type: string
+          format: date
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponseSalesAnalyticsResponse'
+  /api/analytics/partners:
+    get:
+      tags:
+      - analytics-controller
+      operationId: getPartnerAnalytics
+      parameters:
+      - name: from
+        in: query
+        required: false
+        schema:
+          type: string
+          format: date
+      - name: to
+        in: query
+        required: false
+        schema:
+          type: string
+          format: date
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponsePartnerAnalyticsResponse'
   /api/orchid-group-collections/{collectionId}/members/{orchidGroupId}:
-    $ref: "./slices/orchid-collection.openapi.yaml#/paths/~1api~1orchid-group-collections~1{collectionId}~1members~1{orchidGroupId}"
-  /api/orchid-groups/{orchidGroupId}/collections:
-    $ref: "./slices/orchid-collection.openapi.yaml#/paths/~1api~1orchid-groups~1{orchidGroupId}~1collections"
-  /api/orchid-groups/derived-groups:
-    $ref: "./slices/derived-orchid-group.openapi.yaml#/paths/~1api~1orchid-groups~1derived-groups"
-  /api/orchid-groups/derived-groups/{groupKey}/members:
-    $ref: "./slices/derived-orchid-group.openapi.yaml#/paths/~1api~1orchid-groups~1derived-groups~1{groupKey}~1members"
+    delete:
+      tags:
+      - orchid-group-collection-controller
+      operationId: removeMember
+      parameters:
+      - name: collectionId
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: int64
+      - name: orchidGroupId
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: int64
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponseOrchidGroupCollectionResponse'
 components:
   schemas:
-    DerivedOrchidGroupResponse:
-      $ref: "./slices/derived-orchid-group.openapi.yaml#/components/schemas/DerivedOrchidGroupResponse"
-    ApiResponseListDerivedOrchidGroupResponse:
-      $ref: "./slices/derived-orchid-group.openapi.yaml#/components/schemas/ApiResponseListDerivedOrchidGroupResponse"
-    OrchidGroupCollectionCreateRequest:
-      $ref: "./slices/orchid-collection.openapi.yaml#/components/schemas/OrchidGroupCollectionCreateRequest"
-    OrchidGroupCollectionUpdateRequest:
-      $ref: "./slices/orchid-collection.openapi.yaml#/components/schemas/OrchidGroupCollectionUpdateRequest"
-    OrchidGroupCollectionMemberAddRequest:
-      $ref: "./slices/orchid-collection.openapi.yaml#/components/schemas/OrchidGroupCollectionMemberAddRequest"
-    OrchidGroupCollectionMemberResponse:
-      $ref: "./slices/orchid-collection.openapi.yaml#/components/schemas/OrchidGroupCollectionMemberResponse"
-    OrchidGroupCollectionResponse:
-      $ref: "./slices/orchid-collection.openapi.yaml#/components/schemas/OrchidGroupCollectionResponse"
-    ApiResponseOrchidGroupCollectionResponse:
-      $ref: "./slices/orchid-collection.openapi.yaml#/components/schemas/ApiResponseOrchidGroupCollectionResponse"
-    ApiResponseListOrchidGroupCollectionResponse:
-      $ref: "./slices/orchid-collection.openapi.yaml#/components/schemas/ApiResponseListOrchidGroupCollectionResponse"
-    WorkTargetPreviewRequest:
-      $ref: "./slices/work-operation.openapi.yaml#/components/schemas/WorkTargetPreviewRequest"
-    WorkOperationCreateRequest:
-      $ref: "./slices/work-operation.openapi.yaml#/components/schemas/WorkOperationCreateRequest"
-    WorkOperationTargetResponse:
-      $ref: "./slices/work-operation.openapi.yaml#/components/schemas/WorkOperationTargetResponse"
-    WorkTargetPreviewResponse:
-      $ref: "./slices/work-operation.openapi.yaml#/components/schemas/WorkTargetPreviewResponse"
-    WorkOperationResponse:
-      $ref: "./slices/work-operation.openapi.yaml#/components/schemas/WorkOperationResponse"
-    WorkOperationProgressResponse:
-      $ref: "./slices/work-operation.openapi.yaml#/components/schemas/WorkOperationProgressResponse"
-    WorkTargetExecutionRequest:
-      $ref: "./slices/work-operation.openapi.yaml#/components/schemas/WorkTargetExecutionRequest"
-    OrchidGroupWorkHistoryResponse:
-      $ref: "./slices/work-operation.openapi.yaml#/components/schemas/OrchidGroupWorkHistoryResponse"
-    ApiResponseWorkTargetPreviewResponse:
-      $ref: "./slices/work-operation.openapi.yaml#/components/schemas/ApiResponseWorkTargetPreviewResponse"
-    ApiResponseWorkOperationResponse:
-      $ref: "./slices/work-operation.openapi.yaml#/components/schemas/ApiResponseWorkOperationResponse"
-    ApiResponseListOrchidGroupWorkHistoryResponse:
-      $ref: "./slices/work-operation.openapi.yaml#/components/schemas/ApiResponseListOrchidGroupWorkHistoryResponse"
+    SalesSlipCreateRequest:
+      type: object
+      properties:
+        saleDate:
+          type: string
+          format: date
+        salesType:
+          type: string
+          enum:
+          - DIRECT
+          - AUCTION
+        partnerId:
+          type: integer
+          format: int64
+        auctionShipmentId:
+          type: integer
+          format: int64
+        paymentStatus:
+          type: string
+          maxLength: 50
+          minLength: 0
+        salesStatus:
+          type: string
+          maxLength: 50
+          minLength: 0
+        paymentMethod:
+          type: string
+          maxLength: 50
+          minLength: 0
+        memo:
+          type: string
+          maxLength: 1000
+          minLength: 0
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/SalesSlipItemRequest'
+      required:
+      - items
+      - saleDate
+    SalesSlipItemAllocationRequest:
+      type: object
+      properties:
+        orchidGroupId:
+          type: integer
+          format: int64
+        quantity:
+          type: integer
+          format: int32
+          minimum: 1
+      required:
+      - orchidGroupId
+      - quantity
+    SalesSlipItemRequest:
+      type: object
+      properties:
+        itemName:
+          type: string
+          maxLength: 150
+          minLength: 0
+        genus:
+          type: string
+          maxLength: 100
+          minLength: 0
+        spec:
+          type: string
+          maxLength: 100
+          minLength: 0
+        quantity:
+          type: integer
+          format: int32
+          minimum: 1
+        unitPrice:
+          type: integer
+          format: int32
+          minimum: 0
+        memo:
+          type: string
+          maxLength: 1000
+          minLength: 0
+        allocations:
+          type: array
+          items:
+            $ref: '#/components/schemas/SalesSlipItemAllocationRequest'
+      required:
+      - allocations
+      - itemName
+      - quantity
+      - unitPrice
+    ApiResponseSalesSlipResponse:
+      type: object
+      properties:
+        data:
+          $ref: '#/components/schemas/SalesSlipResponse'
+        message:
+          type: string
+    BusinessPartnerResponse:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: int64
+        name:
+          type: string
+        partnerType:
+          type: string
+          enum:
+          - WHOLESALE
+          - RETAIL
+          - AUCTION_HOUSE
+        ownerName:
+          type: string
+        phone:
+          type: string
+        address:
+          type: string
+        memo:
+          type: string
+        active:
+          type: boolean
+    SalesSlipItemAllocationResponse:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: int64
+        orchidGroupId:
+          type: integer
+          format: int64
+        varietyName:
+          type: string
+        allocatedQuantity:
+          type: integer
+          format: int32
+        availableQuantity:
+          type: integer
+          format: int32
+        houseNumber:
+          type: integer
+          format: int32
+        physicalBedNumber:
+          type: integer
+          format: int32
+        bedZoneName:
+          type: string
+    SalesSlipItemResponse:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: int64
+        auctionShipmentLotId:
+          type: integer
+          format: int64
+        itemName:
+          type: string
+        genus:
+          type: string
+        spec:
+          type: string
+        quantity:
+          type: integer
+          format: int32
+        unitPrice:
+          type: integer
+          format: int32
+        amount:
+          type: integer
+          format: int32
+        memo:
+          type: string
+        allocations:
+          type: array
+          items:
+            $ref: '#/components/schemas/SalesSlipItemAllocationResponse'
+    SalesSlipResponse:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: int64
+        slipNumber:
+          type: string
+        saleDate:
+          type: string
+          format: date
+        salesType:
+          type: string
+          enum:
+          - DIRECT
+          - AUCTION
+        auctionShipmentId:
+          type: integer
+          format: int64
+        auctionMarket:
+          type: string
+        partner:
+          $ref: '#/components/schemas/BusinessPartnerResponse'
+        totalAmount:
+          type: integer
+          format: int32
+        expectedPaymentDate:
+          type: string
+          format: date
+        paidAmount:
+          type: integer
+          format: int64
+        remainingAmount:
+          type: integer
+          format: int64
+        paymentStatus:
+          type: string
+        salesStatus:
+          type: string
+        paymentMethod:
+          type: string
+        memo:
+          type: string
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/SalesSlipItemResponse'
     PartnerSettlementSettingsRequest:
       type: object
       properties:
@@ -1791,7 +2752,7 @@ components:
       type: object
       properties:
         data:
-          $ref: "#/components/schemas/PartnerSettlementSettingsResponse"
+          $ref: '#/components/schemas/PartnerSettlementSettingsResponse'
         message:
           type: string
     PartnerSettlementSettingsResponse:
@@ -1860,6 +2821,9 @@ components:
           type: integer
           format: int32
           minimum: 0
+        unitSpan:
+          type: number
+          minimum: 0.0
         allowed:
           type: boolean
         memo:
@@ -1871,55 +2835,22 @@ components:
       - capacityMode
       - capacityValue
       - placementType
+      - unitSpan
     BedZonePlacementProfileRequest:
       type: object
       properties:
-        segments:
-          type: array
-          items:
-            $ref: "#/components/schemas/BedZoneSegmentRequest"
-          minItems: 1
-      required:
-      - segments
-    BedZoneSegmentRequest:
-      type: object
-      properties:
-        id:
-          type: integer
-          format: int64
-        name:
-          type: string
-          maxLength: 100
-          minLength: 0
-        segmentType:
-          type: string
-          enum:
-          - START
-          - MIDDLE
-          - END
-          - CUSTOM
-        sortOrder:
-          type: integer
-          format: int32
-          minimum: 1
-        memo:
-          type: string
-          maxLength: 1000
-          minLength: 0
         capacities:
           type: array
           items:
-            $ref: "#/components/schemas/BedZoneCapacityRequest"
+            $ref: '#/components/schemas/BedZoneCapacityRequest'
+          minItems: 1
       required:
       - capacities
-      - name
-      - segmentType
-      - sortOrder
     ApiResponseBedZonePlacementProfileResponse:
       type: object
       properties:
         data:
-          $ref: "#/components/schemas/BedZonePlacementProfileResponse"
+          $ref: '#/components/schemas/BedZonePlacementProfileResponse'
         message:
           type: string
     BedZoneCapacityResponse:
@@ -1940,6 +2871,8 @@ components:
           - EXPANDED
           - COMPRESSED
           - TEMPORARY
+        unitSpan:
+          type: number
         capacityValue:
           type: integer
           format: int32
@@ -1961,36 +2894,14 @@ components:
         physicalBedNumber:
           type: integer
           format: int32
-        hasUnassignedGroups:
-          type: boolean
-        segments:
-          type: array
-          items:
-            $ref: "#/components/schemas/BedZoneSegmentResponse"
-    BedZoneSegmentResponse:
-      type: object
-      properties:
-        id:
-          type: integer
-          format: int64
-        name:
-          type: string
-        segmentType:
-          type: string
-          enum:
-          - START
-          - MIDDLE
-          - END
-          - CUSTOM
-        sortOrder:
-          type: integer
-          format: int32
-        memo:
+        positionUnitCount:
+          type: number
+        positionUnitLabel:
           type: string
         capacities:
           type: array
           items:
-            $ref: "#/components/schemas/BedZoneCapacityResponse"
+            $ref: '#/components/schemas/BedZoneCapacityResponse'
     WorkTypeCreateRequest:
       type: object
       properties:
@@ -2015,7 +2926,7 @@ components:
       type: object
       properties:
         data:
-          $ref: "#/components/schemas/WorkTypeResponse"
+          $ref: '#/components/schemas/WorkTypeResponse'
         message:
           type: string
     WorkTypeResponse:
@@ -2047,13 +2958,6 @@ components:
         sortOrder:
           type: integer
           format: int32
-    WorkRecordCancelRequest:
-      type: object
-      properties:
-        cancelReason:
-          type: string
-          maxLength: 1000
-          minLength: 0
     WorkRecordCreateRequest:
       type: object
       properties:
@@ -2090,6 +2994,9 @@ components:
           type: string
           maxLength: 1000
           minLength: 0
+        details:
+          type: object
+          additionalProperties: {}
       required:
       - targetType
       - workDate
@@ -2098,7 +3005,7 @@ components:
       type: object
       properties:
         data:
-          $ref: "#/components/schemas/WorkRecordResponse"
+          $ref: '#/components/schemas/WorkRecordResponse'
         message:
           type: string
     WorkRecordResponse:
@@ -2146,7 +3053,7 @@ components:
           format: int64
         details:
           type: object
-          additionalProperties: true
+          additionalProperties: {}
         memo:
           type: string
         status:
@@ -2159,6 +3066,278 @@ components:
           format: date-time
         cancelReason:
           type: string
+    WorkOperationCreateRequest:
+      type: object
+      properties:
+        workTypeId:
+          type: integer
+          format: int64
+        title:
+          type: string
+          maxLength: 150
+          minLength: 0
+        plannedStartDate:
+          type: string
+          format: date
+        plannedEndDate:
+          type: string
+          format: date
+        sourceScopeType:
+          type: string
+          enum:
+          - FARM
+          - HOUSE
+          - PHYSICAL_BED
+          - BED_ZONE
+          - ORCHID_GROUP
+          - DERIVED_GROUP
+          - USER_COLLECTION
+          - MANUAL_SELECTION
+        sourceScopeId:
+          type: integer
+          format: int64
+        sourceScopeKey:
+          type: string
+        sourceOrchidGroupIds:
+          type: array
+          items:
+            type: integer
+            format: int64
+        details:
+          type: object
+          additionalProperties: {}
+        worker:
+          type: string
+          maxLength: 100
+          minLength: 0
+        memo:
+          type: string
+          maxLength: 1000
+          minLength: 0
+        excludedOrchidGroupIds:
+          type: array
+          items:
+            type: integer
+            format: int64
+      required:
+      - plannedStartDate
+      - sourceScopeType
+      - title
+      - workTypeId
+    ApiResponseWorkOperationResponse:
+      type: object
+      properties:
+        data:
+          $ref: '#/components/schemas/WorkOperationResponse'
+        message:
+          type: string
+    WorkOperationProgressResponse:
+      type: object
+      properties:
+        total:
+          type: integer
+          format: int32
+        pending:
+          type: integer
+          format: int32
+        inProgress:
+          type: integer
+          format: int32
+        completed:
+          type: integer
+          format: int32
+        skipped:
+          type: integer
+          format: int32
+        canceled:
+          type: integer
+          format: int32
+        failed:
+          type: integer
+          format: int32
+        progressPercent:
+          type: integer
+          format: int32
+    WorkOperationResponse:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: int64
+        workTypeId:
+          type: integer
+          format: int64
+        workType:
+          type: string
+        title:
+          type: string
+        status:
+          type: string
+          enum:
+          - DRAFT
+          - PLANNED
+          - IN_PROGRESS
+          - PAUSED
+          - COMPLETED
+          - CANCELED
+          - CORRECTED
+        plannedStartDate:
+          type: string
+          format: date
+        plannedEndDate:
+          type: string
+          format: date
+        actualStartAt:
+          type: string
+          format: date-time
+        actualEndAt:
+          type: string
+          format: date-time
+        sourceScopeType:
+          type: string
+          enum:
+          - FARM
+          - HOUSE
+          - PHYSICAL_BED
+          - BED_ZONE
+          - ORCHID_GROUP
+          - DERIVED_GROUP
+          - USER_COLLECTION
+          - MANUAL_SELECTION
+        sourceScopeId:
+          type: integer
+          format: int64
+        sourceConditionSnapshot:
+          type: object
+          additionalProperties: {}
+        targetSnapshotAt:
+          type: string
+          format: date-time
+        details:
+          type: object
+          additionalProperties: {}
+        worker:
+          type: string
+        memo:
+          type: string
+        progress:
+          $ref: '#/components/schemas/WorkOperationProgressResponse'
+        targets:
+          type: array
+          items:
+            $ref: '#/components/schemas/WorkOperationTargetResponse'
+    WorkOperationTargetResponse:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: int64
+        orchidGroupId:
+          type: integer
+          format: int64
+        inclusionSource:
+          type: string
+          enum:
+          - DIRECT
+          - FARM
+          - HOUSE
+          - PHYSICAL_BED
+          - BED_ZONE
+          - DERIVED_GROUP
+          - USER_COLLECTION
+          - MANUAL_ADDITION
+          - LINEAGE
+        varietyName:
+          type: string
+        quantitySnapshot:
+          type: integer
+          format: int32
+        ageYearSnapshot:
+          type: integer
+          format: int32
+        potSizeCodeSnapshot:
+          type: string
+        potSizeSnapshot:
+          type: string
+        locationSnapshot:
+          type: object
+          additionalProperties: {}
+        executionStatus:
+          type: string
+          enum:
+          - PENDING
+          - IN_PROGRESS
+          - COMPLETED
+          - SKIPPED
+          - CANCELED
+          - FAILED
+        startedAt:
+          type: string
+          format: date-time
+        completedAt:
+          type: string
+          format: date-time
+        worker:
+          type: string
+        resultDetails:
+          type: object
+          additionalProperties: {}
+    WorkTargetExecutionRequest:
+      type: object
+      properties:
+        worker:
+          type: string
+          maxLength: 100
+          minLength: 0
+        resultDetails:
+          type: object
+          additionalProperties: {}
+    WorkTargetPreviewRequest:
+      type: object
+      properties:
+        scopeType:
+          type: string
+          enum:
+          - FARM
+          - HOUSE
+          - PHYSICAL_BED
+          - BED_ZONE
+          - ORCHID_GROUP
+          - DERIVED_GROUP
+          - USER_COLLECTION
+          - MANUAL_SELECTION
+        scopeId:
+          type: integer
+          format: int64
+        scopeKey:
+          type: string
+        orchidGroupIds:
+          type: array
+          items:
+            type: integer
+            format: int64
+      required:
+      - scopeType
+    ApiResponseWorkTargetPreviewResponse:
+      type: object
+      properties:
+        data:
+          $ref: '#/components/schemas/WorkTargetPreviewResponse'
+        message:
+          type: string
+    WorkTargetPreviewResponse:
+      type: object
+      properties:
+        orchidGroupCount:
+          type: integer
+          format: int32
+        totalQuantity:
+          type: integer
+          format: int32
+        targets:
+          type: array
+          items:
+            $ref: '#/components/schemas/WorkOperationTargetResponse'
     VarietyCreateRequest:
       type: object
       properties:
@@ -2195,28 +3374,9 @@ components:
       type: object
       properties:
         data:
-          $ref: "#/components/schemas/VarietyResponse"
+          $ref: '#/components/schemas/VarietyResponse'
         message:
           type: string
-    VarietyPageResponse:
-      type: object
-      properties:
-        content:
-          type: array
-          items:
-            $ref: "#/components/schemas/VarietyResponse"
-        page:
-          type: integer
-          format: int32
-        size:
-          type: integer
-          format: int32
-        totalElements:
-          type: integer
-          format: int64
-        totalPages:
-          type: integer
-          format: int32
     VarietyResponse:
       type: object
       properties:
@@ -2262,187 +3422,6 @@ components:
         updatedAt:
           type: string
           format: date-time
-    SalesSlipCreateRequest:
-      type: object
-      properties:
-        saleDate:
-          type: string
-          format: date
-        salesType:
-          type: string
-          enum:
-          - DIRECT
-          - AUCTION
-        partnerId:
-          type: integer
-          format: int64
-        auctionShipmentId:
-          type: integer
-          format: int64
-        paymentStatus:
-          type: string
-          maxLength: 50
-          minLength: 0
-        salesStatus:
-          type: string
-          maxLength: 50
-          minLength: 0
-        paymentMethod:
-          type: string
-          maxLength: 50
-          minLength: 0
-        memo:
-          type: string
-          maxLength: 1000
-          minLength: 0
-        items:
-          type: array
-          items:
-            $ref: "#/components/schemas/SalesSlipItemRequest"
-      required:
-      - items
-      - saleDate
-    SalesSlipItemRequest:
-      type: object
-      properties:
-        orchidGroupId:
-          type: integer
-          format: int64
-        itemName:
-          type: string
-          maxLength: 150
-          minLength: 0
-        genus:
-          type: string
-          maxLength: 100
-          minLength: 0
-        spec:
-          type: string
-          maxLength: 100
-          minLength: 0
-        quantity:
-          type: integer
-          format: int32
-          minimum: 1
-        unitPrice:
-          type: integer
-          format: int32
-          minimum: 0
-        memo:
-          type: string
-          maxLength: 1000
-          minLength: 0
-      required:
-      - itemName
-      - quantity
-      - unitPrice
-    ApiResponseSalesSlipResponse:
-      type: object
-      properties:
-        data:
-          $ref: "#/components/schemas/SalesSlipResponse"
-        message:
-          type: string
-    BusinessPartnerResponse:
-      type: object
-      properties:
-        id:
-          type: integer
-          format: int64
-        name:
-          type: string
-        partnerType:
-          type: string
-          enum:
-          - WHOLESALE
-          - RETAIL
-          - AUCTION_HOUSE
-        ownerName:
-          type: string
-        phone:
-          type: string
-        address:
-          type: string
-        memo:
-          type: string
-        active:
-          type: boolean
-    SalesSlipItemResponse:
-      type: object
-      properties:
-        id:
-          type: integer
-          format: int64
-        orchidGroupId:
-          type: integer
-          format: int64
-        auctionShipmentLotId:
-          type: integer
-          format: int64
-        itemName:
-          type: string
-        genus:
-          type: string
-        spec:
-          type: string
-        quantity:
-          type: integer
-          format: int32
-        unitPrice:
-          type: integer
-          format: int32
-        amount:
-          type: integer
-          format: int32
-        memo:
-          type: string
-    SalesSlipResponse:
-      type: object
-      properties:
-        id:
-          type: integer
-          format: int64
-        slipNumber:
-          type: string
-        saleDate:
-          type: string
-          format: date
-        salesType:
-          type: string
-          enum:
-          - DIRECT
-          - AUCTION
-        auctionShipmentId:
-          type: integer
-          format: int64
-        auctionMarket:
-          type: string
-        partner:
-          $ref: "#/components/schemas/BusinessPartnerResponse"
-        totalAmount:
-          type: integer
-          format: int32
-        expectedPaymentDate:
-          type: string
-          format: date
-        paidAmount:
-          type: integer
-          format: int64
-        remainingAmount:
-          type: integer
-          format: int64
-        paymentStatus:
-          type: string
-        salesStatus:
-          type: string
-        paymentMethod:
-          type: string
-        memo:
-          type: string
-        items:
-          type: array
-          items:
-            $ref: "#/components/schemas/SalesSlipItemResponse"
     ManualPaymentRequest:
       type: object
       properties:
@@ -2506,6 +3485,12 @@ components:
           minimum: 0
         splitPlacementAllowed:
           type: boolean
+        startPosition:
+          type: number
+          minimum: 0.0
+        endPosition:
+          type: number
+          minimum: 0.0
         memo:
           type: string
           maxLength: 1000
@@ -2519,7 +3504,7 @@ components:
       type: object
       properties:
         data:
-          $ref: "#/components/schemas/OrchidGroupResponse"
+          $ref: '#/components/schemas/OrchidGroupResponse'
         message:
           type: string
     OrchidGroupResponse:
@@ -2570,15 +3555,18 @@ components:
           format: int32
         splitPlacementAllowed:
           type: boolean
-        segmentPlacements:
-          type: array
-          items:
-            $ref: "#/components/schemas/OrchidGroupSegmentPlacementResponse"
+        startPosition:
+          type: number
+        endPosition:
+          type: number
         sortOrder:
           type: integer
           format: int32
         memo:
           type: string
+        houseId:
+          type: integer
+          format: int64
         houseNumber:
           type: integer
           format: int32
@@ -2587,36 +3575,117 @@ components:
           format: int32
         bedZoneName:
           type: string
-    OrchidGroupSegmentPlacementResponse:
+    OrchidGroupCollectionCreateRequest:
+      type: object
+      properties:
+        name:
+          type: string
+          maxLength: 100
+          minLength: 0
+        description:
+          type: string
+          maxLength: 1000
+          minLength: 0
+        purpose:
+          type: string
+          maxLength: 200
+          minLength: 0
+        createdBy:
+          type: string
+          maxLength: 100
+          minLength: 0
+      required:
+      - name
+    ApiResponseOrchidGroupCollectionResponse:
+      type: object
+      properties:
+        data:
+          $ref: '#/components/schemas/OrchidGroupCollectionResponse'
+        message:
+          type: string
+    OrchidGroupCollectionMemberResponse:
+      type: object
+      properties:
+        membershipId:
+          type: integer
+          format: int64
+        orchidGroupId:
+          type: integer
+          format: int64
+        varietyName:
+          type: string
+        quantity:
+          type: integer
+          format: int32
+        status:
+          type: string
+        potSize:
+          type: string
+        ageYear:
+          type: integer
+          format: int32
+        houseNumber:
+          type: integer
+          format: int32
+        physicalBedNumber:
+          type: integer
+          format: int32
+        bedZoneName:
+          type: string
+        joinedAt:
+          type: string
+          format: date-time
+    OrchidGroupCollectionResponse:
       type: object
       properties:
         id:
           type: integer
           format: int64
-        segmentId:
-          type: integer
-          format: int64
-        segmentName:
+        name:
           type: string
-        quantity:
-          type: integer
-          format: int32
-        trayCount:
-          type: integer
-          format: int32
-        placementMode:
+        description:
+          type: string
+        purpose:
+          type: string
+        status:
           type: string
           enum:
-          - SPACIOUS
-          - STANDARD
-          - EXPANDED
-          - COMPRESSED
-          - TEMPORARY
-        reorganizeDueDate:
+          - ACTIVE
+          - ARCHIVED
+        orchidGroupCount:
+          type: integer
+          format: int32
+        totalQuantity:
+          type: integer
+          format: int32
+        createdBy:
           type: string
-          format: date
-        memo:
+        createdAt:
           type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+        members:
+          type: array
+          items:
+            $ref: '#/components/schemas/OrchidGroupCollectionMemberResponse'
+    OrchidGroupCollectionMemberAddRequest:
+      type: object
+      properties:
+        orchidGroupIds:
+          type: array
+          items:
+            type: integer
+            format: int64
+          minItems: 1
+          uniqueItems: true
+        createdBy:
+          type: string
+          maxLength: 100
+          minLength: 0
+      required:
+      - orchidGroupIds
     MaterialCreateRequest:
       type: object
       properties:
@@ -2655,28 +3724,9 @@ components:
       type: object
       properties:
         data:
-          $ref: "#/components/schemas/MaterialResponse"
+          $ref: '#/components/schemas/MaterialResponse'
         message:
           type: string
-    MaterialPageResponse:
-      type: object
-      properties:
-        content:
-          type: array
-          items:
-            $ref: "#/components/schemas/MaterialResponse"
-        page:
-          type: integer
-          format: int32
-        size:
-          type: integer
-          format: int32
-        totalElements:
-          type: integer
-          format: int64
-        totalPages:
-          type: integer
-          format: int32
     MaterialResponse:
       type: object
       properties:
@@ -2747,11 +3797,11 @@ components:
           type: integer
           format: int64
         newVariety:
-          $ref: "#/components/schemas/InboundNewVarietyRequest"
+          $ref: '#/components/schemas/InboundNewVarietyRequest'
         bottleCount:
           type: integer
           format: int32
-          minimum: 1
+          minimum: 0
         estimatedQuantity:
           type: integer
           format: int32
@@ -2790,6 +3840,10 @@ components:
         bedZoneId:
           type: integer
           format: int64
+        startPosition:
+          type: number
+        endPosition:
+          type: number
         status:
           type: string
           enum:
@@ -2813,28 +3867,9 @@ components:
       type: object
       properties:
         data:
-          $ref: "#/components/schemas/InboundRecordResponse"
+          $ref: '#/components/schemas/InboundRecordResponse'
         message:
           type: string
-    InboundRecordPageResponse:
-      type: object
-      properties:
-        content:
-          type: array
-          items:
-            $ref: "#/components/schemas/InboundRecordResponse"
-        page:
-          type: integer
-          format: int32
-        size:
-          type: integer
-          format: int32
-        totalElements:
-          type: integer
-          format: int64
-        totalPages:
-          type: integer
-          format: int32
     InboundRecordResponse:
       type: object
       properties:
@@ -2935,6 +3970,10 @@ components:
         bedZoneId:
           type: integer
           format: int64
+        startPosition:
+          type: number
+        endPosition:
+          type: number
         worker:
           type: string
           maxLength: 50
@@ -2990,14 +4029,49 @@ components:
       type: object
       properties:
         data:
-          $ref: "#/components/schemas/BusinessPartnerResponse"
+          $ref: '#/components/schemas/BusinessPartnerResponse'
         message:
           type: string
+    ApiResponseVoid:
+      type: object
+      properties:
+        data: {}
+        message:
+          type: string
+    LoginRequest:
+      type: object
+      properties:
+        username:
+          type: string
+          minLength: 1
+        password:
+          type: string
+          minLength: 1
+      required:
+      - password
+      - username
+    ApiResponseAuthenticatedUserResponse:
+      type: object
+      properties:
+        data:
+          $ref: '#/components/schemas/AuthenticatedUserResponse'
+        message:
+          type: string
+    AuthenticatedUserResponse:
+      type: object
+      properties:
+        username:
+          type: string
+        role:
+          type: string
+          enum:
+          - ADMIN
+          - WORKER
     ApiResponseAuctionSettlementResponse:
       type: object
       properties:
         data:
-          $ref: "#/components/schemas/AuctionSettlementResponse"
+          $ref: '#/components/schemas/AuctionSettlementResponse'
         message:
           type: string
     AuctionSettlementLineResponse:
@@ -3094,7 +4168,7 @@ components:
         lines:
           type: array
           items:
-            $ref: "#/components/schemas/AuctionSettlementLineResponse"
+            $ref: '#/components/schemas/AuctionSettlementLineResponse'
     AuctionLotResultLineRequest:
       type: object
       properties:
@@ -3156,7 +4230,7 @@ components:
         resultLines:
           type: array
           items:
-            $ref: "#/components/schemas/AuctionLotResultLineRequest"
+            $ref: '#/components/schemas/AuctionLotResultLineRequest'
       required:
       - attemptStatus
       - auctionDate
@@ -3164,7 +4238,7 @@ components:
       type: object
       properties:
         data:
-          $ref: "#/components/schemas/AuctionLotResponse"
+          $ref: '#/components/schemas/AuctionLotResponse'
         message:
           type: string
     AuctionAttemptResponse:
@@ -3193,7 +4267,7 @@ components:
         resultLines:
           type: array
           items:
-            $ref: "#/components/schemas/AuctionResultLineResponse"
+            $ref: '#/components/schemas/AuctionResultLineResponse'
     AuctionLotResponse:
       type: object
       properties:
@@ -3273,11 +4347,11 @@ components:
         attempts:
           type: array
           items:
-            $ref: "#/components/schemas/AuctionAttemptResponse"
+            $ref: '#/components/schemas/AuctionAttemptResponse'
         statusHistory:
           type: array
           items:
-            $ref: "#/components/schemas/AuctionStatusHistoryResponse"
+            $ref: '#/components/schemas/AuctionStatusHistoryResponse'
     AuctionResultLineResponse:
       type: object
       properties:
@@ -3444,9 +4518,16 @@ components:
         data:
           type: array
           items:
-            $ref: "#/components/schemas/WorkTypeResponse"
+            $ref: '#/components/schemas/WorkTypeResponse'
         message:
           type: string
+    WorkRecordCancelRequest:
+      type: object
+      properties:
+        cancelReason:
+          type: string
+          maxLength: 1000
+          minLength: 0
     VarietyUpdateRequest:
       type: object
       properties:
@@ -3479,6 +4560,19 @@ components:
       required:
       - genus
       - name
+    SalesSlipStatusUpdateRequest:
+      type: object
+      properties:
+        salesStatus:
+          type: string
+          maxLength: 50
+          minLength: 0
+        memo:
+          type: string
+          maxLength: 1000
+          minLength: 0
+      required:
+      - salesStatus
     OrchidGroupUpdateRequest:
       type: object
       properties:
@@ -3511,6 +4605,12 @@ components:
           minimum: 0
         splitPlacementAllowed:
           type: boolean
+        startPosition:
+          type: number
+          minimum: 0.0
+        endPosition:
+          type: number
+          minimum: 0.0
         memo:
           type: string
           maxLength: 1000
@@ -3519,44 +4619,18 @@ components:
       - quantity
       - status
       - varietyId
-    OrchidGroupMovePlacementRequest:
-      type: object
-      properties:
-        segmentId:
-          type: integer
-          format: int64
-        quantity:
-          type: integer
-          format: int32
-          minimum: 1
-        trayCount:
-          type: integer
-          format: int32
-          minimum: 1
-      required:
-      - quantity
-      - segmentId
     OrchidGroupMoveRequest:
       type: object
       properties:
         toBedZoneId:
           type: integer
           format: int64
-        placementMode:
-          type: string
-          enum:
-          - SPACIOUS
-          - STANDARD
-          - EXPANDED
-          - COMPRESSED
-          - TEMPORARY
-        placements:
-          type: array
-          items:
-            $ref: "#/components/schemas/OrchidGroupMovePlacementRequest"
-        reorganizeDueDate:
-          type: string
-          format: date
+        startPosition:
+          type: number
+          minimum: 0.0
+        endPosition:
+          type: number
+          minimum: 0.0
         worker:
           type: string
           maxLength: 100
@@ -3567,6 +4641,23 @@ components:
           minLength: 0
       required:
       - toBedZoneId
+    OrchidGroupCollectionUpdateRequest:
+      type: object
+      properties:
+        name:
+          type: string
+          maxLength: 100
+          minLength: 0
+        description:
+          type: string
+          maxLength: 1000
+          minLength: 0
+        purpose:
+          type: string
+          maxLength: 200
+          minLength: 0
+      required:
+      - name
     MaterialUpdateRequest:
       type: object
       properties:
@@ -3610,7 +4701,7 @@ components:
         bottleCount:
           type: integer
           format: int32
-          minimum: 1
+          minimum: 0
         estimatedQuantity:
           type: integer
           format: int32
@@ -3696,23 +4787,42 @@ components:
         data:
           type: array
           items:
-            $ref: "#/components/schemas/WorkRecordResponse"
+            $ref: '#/components/schemas/WorkRecordResponse'
         message:
           type: string
     ApiResponseVarietyPageResponse:
       type: object
       properties:
         data:
-          $ref: "#/components/schemas/VarietyPageResponse"
+          $ref: '#/components/schemas/VarietyPageResponse'
         message:
           type: string
+    VarietyPageResponse:
+      type: object
+      properties:
+        content:
+          type: array
+          items:
+            $ref: '#/components/schemas/VarietyResponse'
+        page:
+          type: integer
+          format: int32
+        size:
+          type: integer
+          format: int32
+        totalElements:
+          type: integer
+          format: int64
+        totalPages:
+          type: integer
+          format: int32
     ApiResponseListVarietyConnectedOrchidGroupResponse:
       type: object
       properties:
         data:
           type: array
           items:
-            $ref: "#/components/schemas/VarietyConnectedOrchidGroupResponse"
+            $ref: '#/components/schemas/VarietyConnectedOrchidGroupResponse'
         message:
           type: string
     VarietyConnectedOrchidGroupResponse:
@@ -3731,22 +4841,146 @@ components:
         latestWorkDate:
           type: string
           format: date
+    ApiResponseListString:
+      type: object
+      properties:
+        data:
+          type: array
+          items:
+            type: string
+        message:
+          type: string
+    ApiResponseListSalesOrchidGroupSearchResponse:
+      type: object
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/SalesOrchidGroupSearchResponse'
+        message:
+          type: string
+    SalesOrchidGroupSearchResponse:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: int64
+        varietyId:
+          type: integer
+          format: int64
+        varietyName:
+          type: string
+        genus:
+          type: string
+        status:
+          type: string
+        quantity:
+          type: integer
+          format: int32
+        reservedQuantity:
+          type: integer
+          format: int32
+        availableQuantity:
+          type: integer
+          format: int32
+        potSize:
+          type: string
+        ageYear:
+          type: integer
+          format: int32
+        houseNumber:
+          type: integer
+          format: int32
+        physicalBedNumber:
+          type: integer
+          format: int32
+        bedZoneName:
+          type: string
     ApiResponseListSalesSlipResponse:
       type: object
       properties:
         data:
           type: array
           items:
-            $ref: "#/components/schemas/SalesSlipResponse"
+            $ref: '#/components/schemas/SalesSlipResponse'
         message:
           type: string
+    ApiResponseSalesSlipPageResponse:
+      type: object
+      properties:
+        data:
+          $ref: '#/components/schemas/SalesSlipPageResponse'
+        message:
+          type: string
+    SalesSlipListItemResponse:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: int64
+        slipNumber:
+          type: string
+        saleDate:
+          type: string
+          format: date
+        salesType:
+          type: string
+          enum:
+          - DIRECT
+          - AUCTION
+        auctionShipmentId:
+          type: integer
+          format: int64
+        auctionMarket:
+          type: string
+        partner:
+          $ref: '#/components/schemas/BusinessPartnerResponse'
+        totalAmount:
+          type: integer
+          format: int32
+        expectedPaymentDate:
+          type: string
+          format: date
+        paidAmount:
+          type: integer
+          format: int64
+        remainingAmount:
+          type: integer
+          format: int64
+        paymentStatus:
+          type: string
+        salesStatus:
+          type: string
+        paymentMethod:
+          type: string
+        memo:
+          type: string
+    SalesSlipPageResponse:
+      type: object
+      properties:
+        content:
+          type: array
+          items:
+            $ref: '#/components/schemas/SalesSlipListItemResponse'
+        page:
+          type: integer
+          format: int32
+        size:
+          type: integer
+          format: int32
+        totalElements:
+          type: integer
+          format: int64
+        totalPages:
+          type: integer
+          format: int32
     ApiResponseListAuctionShipmentOptionResponse:
       type: object
       properties:
         data:
           type: array
           items:
-            $ref: "#/components/schemas/AuctionShipmentOptionResponse"
+            $ref: '#/components/schemas/AuctionShipmentOptionResponse'
         message:
           type: string
     AuctionShipmentOptionResponse:
@@ -3766,7 +5000,7 @@ components:
         lots:
           type: array
           items:
-            $ref: "#/components/schemas/Lot"
+            $ref: '#/components/schemas/Lot'
     Lot:
       type: object
       properties:
@@ -3788,7 +5022,7 @@ components:
         data:
           type: array
           items:
-            $ref: "#/components/schemas/PhysicalBedResponse"
+            $ref: '#/components/schemas/PhysicalBedResponse'
         message:
           type: string
     BedZoneResponse:
@@ -3836,7 +5070,7 @@ components:
         orchidGroups:
           type: array
           items:
-            $ref: "#/components/schemas/OrchidGroupResponse"
+            $ref: '#/components/schemas/OrchidGroupResponse'
     PhysicalBedResponse:
       type: object
       properties:
@@ -3867,17 +5101,21 @@ components:
         supportIntervalCm:
           type: integer
           format: int32
+        positionUnitCount:
+          type: number
+        positionUnitLabel:
+          type: string
         memo:
           type: string
         bedZones:
           type: array
           items:
-            $ref: "#/components/schemas/BedZoneResponse"
+            $ref: '#/components/schemas/BedZoneResponse'
     ApiResponsePhysicalBedResponse:
       type: object
       properties:
         data:
-          $ref: "#/components/schemas/PhysicalBedResponse"
+          $ref: '#/components/schemas/PhysicalBedResponse'
         message:
           type: string
     ApiResponseListPartnerPaymentEventResponse:
@@ -3886,7 +5124,7 @@ components:
         data:
           type: array
           items:
-            $ref: "#/components/schemas/PartnerPaymentEventResponse"
+            $ref: '#/components/schemas/PartnerPaymentEventResponse'
         message:
           type: string
     PartnerPaymentEventResponse:
@@ -3961,30 +5199,185 @@ components:
         data:
           type: array
           items:
-            $ref: "#/components/schemas/OrchidGroupResponse"
+            $ref: '#/components/schemas/OrchidGroupResponse'
         message:
           type: string
+    ApiResponseListOrchidGroupWorkHistoryResponse:
+      type: object
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/OrchidGroupWorkHistoryResponse'
+        message:
+          type: string
+    OrchidGroupWorkHistoryResponse:
+      type: object
+      properties:
+        sourceKind:
+          type: string
+        workOperationId:
+          type: integer
+          format: int64
+        legacyWorkRecordId:
+          type: integer
+          format: int64
+        workTypeId:
+          type: integer
+          format: int64
+        workType:
+          type: string
+        title:
+          type: string
+        workDate:
+          type: string
+          format: date
+        status:
+          type: string
+        propagated:
+          type: boolean
+        sourceScopeType:
+          type: string
+          enum:
+          - FARM
+          - HOUSE
+          - PHYSICAL_BED
+          - BED_ZONE
+          - ORCHID_GROUP
+          - DERIVED_GROUP
+          - USER_COLLECTION
+          - MANUAL_SELECTION
+        sourceScopeId:
+          type: integer
+          format: int64
+        locationSnapshot:
+          type: object
+          additionalProperties: {}
+        currentLocation:
+          type: object
+          additionalProperties: {}
+        worker:
+          type: string
+        memo:
+          type: string
+    ApiResponseListOrchidGroupCollectionResponse:
+      type: object
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/OrchidGroupCollectionResponse'
+        message:
+          type: string
+    ApiResponseListDerivedOrchidGroupResponse:
+      type: object
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/DerivedOrchidGroupResponse'
+        message:
+          type: string
+    DerivedOrchidGroupResponse:
+      type: object
+      properties:
+        groupKey:
+          type: string
+        varietyId:
+          type: integer
+          format: int64
+        varietyName:
+          type: string
+        genus:
+          type: string
+        ageYear:
+          type: integer
+          format: int32
+        potSizeCode:
+          type: string
+          enum:
+          - UNSPECIFIED
+          - UNMAPPED
+          - POT_2
+          - POT_2_5
+          - POT_3
+          - POT_3_5
+          - POT_4
+          - POT_4_5
+          - POT_5
+          - POT_6
+          - HANGING
+          - ETC
+        potSize:
+          type: string
+        orchidGroupCount:
+          type: integer
+          format: int32
+        totalQuantity:
+          type: integer
+          format: int32
+        locationCount:
+          type: integer
+          format: int32
     ApiResponseMaterialPageResponse:
       type: object
       properties:
         data:
-          $ref: "#/components/schemas/MaterialPageResponse"
+          $ref: '#/components/schemas/MaterialPageResponse'
         message:
           type: string
+    MaterialPageResponse:
+      type: object
+      properties:
+        content:
+          type: array
+          items:
+            $ref: '#/components/schemas/MaterialResponse'
+        page:
+          type: integer
+          format: int32
+        size:
+          type: integer
+          format: int32
+        totalElements:
+          type: integer
+          format: int64
+        totalPages:
+          type: integer
+          format: int32
     ApiResponseInboundRecordPageResponse:
       type: object
       properties:
         data:
-          $ref: "#/components/schemas/InboundRecordPageResponse"
+          $ref: '#/components/schemas/InboundRecordPageResponse'
         message:
           type: string
+    InboundRecordPageResponse:
+      type: object
+      properties:
+        content:
+          type: array
+          items:
+            $ref: '#/components/schemas/InboundRecordResponse'
+        page:
+          type: integer
+          format: int32
+        size:
+          type: integer
+          format: int32
+        totalElements:
+          type: integer
+          format: int64
+        totalPages:
+          type: integer
+          format: int32
     ApiResponseListHouseResponse:
       type: object
       properties:
         data:
           type: array
           items:
-            $ref: "#/components/schemas/HouseResponse"
+            $ref: '#/components/schemas/HouseResponse'
         message:
           type: string
     HouseResponse:
@@ -4003,19 +5396,19 @@ components:
         physicalBeds:
           type: array
           items:
-            $ref: "#/components/schemas/PhysicalBedResponse"
+            $ref: '#/components/schemas/PhysicalBedResponse'
     ApiResponseHouseResponse:
       type: object
       properties:
         data:
-          $ref: "#/components/schemas/HouseResponse"
+          $ref: '#/components/schemas/HouseResponse'
         message:
           type: string
     ApiResponseFarmStatusZoomResponse:
       type: object
       properties:
         data:
-          $ref: "#/components/schemas/FarmStatusZoomResponse"
+          $ref: '#/components/schemas/FarmStatusZoomResponse'
         message:
           type: string
     FarmStatusZoomResponse:
@@ -4036,16 +5429,16 @@ components:
         physicalBeds:
           type: array
           items:
-            $ref: "#/components/schemas/PhysicalBedResponse"
+            $ref: '#/components/schemas/PhysicalBedResponse'
         bedZones:
           type: array
           items:
-            $ref: "#/components/schemas/BedZoneResponse"
+            $ref: '#/components/schemas/BedZoneResponse'
     ApiResponseFarmStatusOrchidGroupListResponse:
       type: object
       properties:
         data:
-          $ref: "#/components/schemas/FarmStatusOrchidGroupListResponse"
+          $ref: '#/components/schemas/FarmStatusOrchidGroupListResponse'
         message:
           type: string
     FarmStatusOrchidGroupItemResponse:
@@ -4099,12 +5492,12 @@ components:
         items:
           type: array
           items:
-            $ref: "#/components/schemas/FarmStatusOrchidGroupItemResponse"
+            $ref: '#/components/schemas/FarmStatusOrchidGroupItemResponse'
     ApiResponseFarmStatusMapResponse:
       type: object
       properties:
         data:
-          $ref: "#/components/schemas/FarmStatusMapResponse"
+          $ref: '#/components/schemas/FarmStatusMapResponse'
         message:
           type: string
     FarmStatusMapResponse:
@@ -4113,7 +5506,7 @@ components:
         houses:
           type: array
           items:
-            $ref: "#/components/schemas/HouseStatusSummaryResponse"
+            $ref: '#/components/schemas/HouseStatusSummaryResponse'
     HouseStatusSummaryResponse:
       type: object
       properties:
@@ -4136,11 +5529,15 @@ components:
           format: int64
         latestWorkDate:
           type: string
+        physicalBeds:
+          type: array
+          items:
+            $ref: '#/components/schemas/PhysicalBedResponse'
     ApiResponseDashboardSummaryResponse:
       type: object
       properties:
         data:
-          $ref: "#/components/schemas/DashboardSummaryResponse"
+          $ref: '#/components/schemas/DashboardSummaryResponse'
         message:
           type: string
     DashboardSummaryResponse:
@@ -4172,14 +5569,14 @@ components:
         data:
           type: array
           items:
-            $ref: "#/components/schemas/BusinessPartnerResponse"
+            $ref: '#/components/schemas/BusinessPartnerResponse'
         message:
           type: string
     ApiResponsePartnerBalanceSummaryResponse:
       type: object
       properties:
         data:
-          $ref: "#/components/schemas/PartnerBalanceSummaryResponse"
+          $ref: '#/components/schemas/PartnerBalanceSummaryResponse'
         message:
           type: string
     PartnerBalanceSummaryResponse:
@@ -4205,21 +5602,21 @@ components:
         data:
           type: array
           items:
-            $ref: "#/components/schemas/BedZoneResponse"
+            $ref: '#/components/schemas/BedZoneResponse'
         message:
           type: string
     ApiResponseBedZoneResponse:
       type: object
       properties:
         data:
-          $ref: "#/components/schemas/BedZoneResponse"
+          $ref: '#/components/schemas/BedZoneResponse'
         message:
           type: string
     ApiResponseAuctionTrackingSummaryResponse:
       type: object
       properties:
         data:
-          $ref: "#/components/schemas/AuctionTrackingSummaryResponse"
+          $ref: '#/components/schemas/AuctionTrackingSummaryResponse'
         message:
           type: string
     AuctionTrackingSummaryResponse:
@@ -4252,14 +5649,14 @@ components:
         data:
           type: array
           items:
-            $ref: "#/components/schemas/AuctionSettlementResponse"
+            $ref: '#/components/schemas/AuctionSettlementResponse'
         message:
           type: string
     ApiResponseAuctionLotPageResponse:
       type: object
       properties:
         data:
-          $ref: "#/components/schemas/AuctionLotPageResponse"
+          $ref: '#/components/schemas/AuctionLotPageResponse'
         message:
           type: string
     AuctionLotPageResponse:
@@ -4268,7 +5665,7 @@ components:
         content:
           type: array
           items:
-            $ref: "#/components/schemas/AuctionLotResponse"
+            $ref: '#/components/schemas/AuctionLotResponse'
         page:
           type: integer
           format: int32
@@ -4281,9 +5678,183 @@ components:
         totalPages:
           type: integer
           format: int32
-    ApiResponseVoid:
+    AnalyticsRankedValueResponse:
       type: object
       properties:
-        data: {}
+        label:
+          type: string
+        value:
+          type: integer
+          format: int64
+        secondary:
+          type: string
+    ApiResponseWorkAnalyticsResponse:
+      type: object
+      properties:
+        data:
+          $ref: '#/components/schemas/WorkAnalyticsResponse'
         message:
           type: string
+    WorkAnalyticsResponse:
+      type: object
+      properties:
+        totalCount:
+          type: integer
+          format: int64
+        movementCount:
+          type: integer
+          format: int64
+        statusCount:
+          type: integer
+          format: int64
+        latestWorkDate:
+          type: string
+          format: date
+        workTypeCounts:
+          type: array
+          items:
+            $ref: '#/components/schemas/AnalyticsRankedValueResponse'
+        recentRecords:
+          type: array
+          items:
+            $ref: '#/components/schemas/WorkRecordResponse'
+    AnalyticsInsightResponse:
+      type: object
+      properties:
+        tone:
+          type: string
+        text:
+          type: string
+        actionLabel:
+          type: string
+        actionHref:
+          type: string
+    AnalyticsSlipSummaryResponse:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: int64
+        slipNumber:
+          type: string
+        saleDate:
+          type: string
+          format: date
+        partnerName:
+          type: string
+        totalAmount:
+          type: integer
+          format: int32
+        paidAmount:
+          type: integer
+          format: int64
+        remainingAmount:
+          type: integer
+          format: int64
+        paymentStatus:
+          type: string
+        salesStatus:
+          type: string
+    ApiResponseSalesAnalyticsResponse:
+      type: object
+      properties:
+        data:
+          $ref: '#/components/schemas/SalesAnalyticsResponse'
+        message:
+          type: string
+    SalesAnalyticsResponse:
+      type: object
+      properties:
+        currentMonthSales:
+          type: integer
+          format: int64
+        shippedQuantity:
+          type: integer
+          format: int64
+        unpaidAmount:
+          type: integer
+          format: int64
+        monthlySales:
+          type: array
+          items:
+            $ref: '#/components/schemas/AnalyticsRankedValueResponse'
+        varietySales:
+          type: array
+          items:
+            $ref: '#/components/schemas/AnalyticsRankedValueResponse'
+        partnerSales:
+          type: array
+          items:
+            $ref: '#/components/schemas/AnalyticsRankedValueResponse'
+        paymentBreakdown:
+          type: array
+          items:
+            $ref: '#/components/schemas/AnalyticsRankedValueResponse'
+        recentSlips:
+          type: array
+          items:
+            $ref: '#/components/schemas/AnalyticsSlipSummaryResponse'
+        unpaidSlips:
+          type: array
+          items:
+            $ref: '#/components/schemas/AnalyticsSlipSummaryResponse'
+        salesInsights:
+          type: array
+          items:
+            $ref: '#/components/schemas/AnalyticsInsightResponse'
+    ApiResponsePartnerAnalyticsResponse:
+      type: object
+      properties:
+        data:
+          $ref: '#/components/schemas/PartnerAnalyticsResponse'
+        message:
+          type: string
+    PartnerAnalyticsResponse:
+      type: object
+      properties:
+        partnerStats:
+          type: array
+          items:
+            $ref: '#/components/schemas/PartnerAnalyticsStatResponse'
+        partnerSales:
+          type: array
+          items:
+            $ref: '#/components/schemas/AnalyticsRankedValueResponse'
+    PartnerAnalyticsStatResponse:
+      type: object
+      properties:
+        partnerId:
+          type: integer
+          format: int64
+        partnerName:
+          type: string
+        partnerType:
+          type: string
+          enum:
+          - WHOLESALE
+          - RETAIL
+          - AUCTION_HOUSE
+        totalSales:
+          type: integer
+          format: int64
+        transactionCount:
+          type: integer
+          format: int64
+        unpaidAmount:
+          type: integer
+          format: int64
+        paidAmount:
+          type: integer
+          format: int64
+        receivableBalance:
+          type: integer
+          format: int64
+        creditBalance:
+          type: integer
+          format: int64
+        unappliedPaymentAmount:
+          type: integer
+          format: int64
+        latestSaleDate:
+          type: string
+          format: date

@@ -7,8 +7,8 @@
 
 - 기준 명세: `docs/api/openapi.yaml`
 - OpenAPI 버전: `3.1.0`
-- 현재 구현 API: `90` operations / `71` path entries
-- schema 수: `128`
+- 현재 구현 API: `102` operations / `82` path entries
+- schema 수: `146`
 - Base URL: `/api`
 - 공통 응답: `ApiResponse*` 래퍼 사용
 
@@ -61,7 +61,7 @@
 - package 후보: `com.greenhouse.backend.farm`
 - controller tags: `orchid-group-command-controller`, `bed-placement-controller`
 - 역할: 난 묶음 생성·수정·삭제·이동, 정밀 배치 프로필 API
-- operations: 7
+- operations: 6
 
 | Method | Path | Operation | Request | Response |
 |---|---|---|---|---|
@@ -78,7 +78,7 @@
 - package 후보: `com.greenhouse.backend.work`
 - controller tags: `work-record-controller`
 - 역할: 작업 이력과 작업 유형 관리 API
-- operations: 6
+- operations: 7
 
 | Method | Path | Operation | Request | Response |
 |---|---|---|---|---|
@@ -96,7 +96,7 @@
 - package 후보: `com.greenhouse.backend.farm`
 - controller tags: `variety-controller`, `material-controller`, `inbound-record-controller`
 - 역할: 품종 CRUD/삭제, 자재 CRUD/삭제, 입고 기록 생성·수정·포트 작업·취소·삭제 API
-- operations: 20
+- operations: 21
 
 | Method | Path | Operation | Request | Response |
 |---|---|---|---|---|
@@ -200,7 +200,7 @@
 - package 후보: `com.greenhouse.backend.sales`
 - controller tags: `sales-controller`
 - 역할: 판매 전표 조회·생성·출력, 경매 출하 전표 후보 API
-- operations: 5
+- operations: 11
 
 | Method | Path | Operation | Request | Response |
 |---|---|---|---|---|
@@ -221,7 +221,7 @@
 - package 후보: `com.greenhouse.backend.auction`
 - controller tags: `auction-tracking-controller`, `auction-settlement-controller`
 - 역할: 경매 lot 조회·상태 변경·반환 확인·수량 보정·경매 정산 API
-- operations: 10
+- operations: 11
 
 | Method | Path | Operation | Request | Response |
 |---|---|---|---|---|
@@ -242,7 +242,7 @@
 - package 후보: `com.greenhouse.backend.settlement`
 - controller tags: `payment-controller`
 - 역할: 수동 입금 확인, 입금 이벤트 조회, 거래처 잔액 요약 API
-- operations: 4
+- operations: 3
 
 | Method | Path | Operation | Request | Response |
 |---|---|---|---|---|

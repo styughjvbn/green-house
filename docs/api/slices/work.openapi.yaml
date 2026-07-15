@@ -1,8 +1,7 @@
 openapi: 3.1.0
 info:
-  title: Greenhouse API Slice - 작업 이력
-  version: v0
-  description: 작업 이력과 작업 유형 관리 API
+  title: Greenhouse API Slice - work
+  version: 0.0.1
 servers:
 - url: http://localhost:8080
   description: Generated server url
@@ -23,7 +22,7 @@ paths:
         '200':
           description: OK
           content:
-            '*/*':
+            application/json:
               schema:
                 $ref: '#/components/schemas/ApiResponseListWorkTypeResponse'
     post:
@@ -40,7 +39,7 @@ paths:
         '201':
           description: Created
           content:
-            '*/*':
+            application/json:
               schema:
                 $ref: '#/components/schemas/ApiResponseWorkTypeResponse'
   /api/work-records:
@@ -82,11 +81,12 @@ paths:
         required: false
         schema:
           type: boolean
+          default: false
       responses:
         '200':
           description: OK
           content:
-            '*/*':
+            application/json:
               schema:
                 $ref: '#/components/schemas/ApiResponseListWorkRecordResponse'
     post:
@@ -103,32 +103,7 @@ paths:
         '201':
           description: Created
           content:
-            '*/*':
-              schema:
-                $ref: '#/components/schemas/ApiResponseWorkRecordResponse'
-  /api/work-records/{workRecordId}/cancel:
-    patch:
-      tags:
-      - work-record-controller
-      operationId: cancel_1
-      parameters:
-      - name: workRecordId
-        in: path
-        required: true
-        schema:
-          type: integer
-          format: int64
-      requestBody:
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/WorkRecordCancelRequest'
-        required: true
-      responses:
-        '200':
-          description: OK
-          content:
-            '*/*':
+            application/json:
               schema:
                 $ref: '#/components/schemas/ApiResponseWorkRecordResponse'
   /api/work-types/{workTypeId}:
@@ -153,7 +128,7 @@ paths:
         '200':
           description: OK
           content:
-            '*/*':
+            application/json:
               schema:
                 $ref: '#/components/schemas/ApiResponseWorkTypeResponse'
   /api/work-types/reorder:
@@ -171,9 +146,34 @@ paths:
         '200':
           description: OK
           content:
-            '*/*':
+            application/json:
               schema:
                 $ref: '#/components/schemas/ApiResponseListWorkTypeResponse'
+  /api/work-records/{workRecordId}/cancel:
+    patch:
+      tags:
+      - work-record-controller
+      operationId: cancel_2
+      parameters:
+      - name: workRecordId
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: int64
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/WorkRecordCancelRequest'
+        required: true
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponseWorkRecordResponse'
 components:
   schemas:
     ApiResponseListWorkRecordResponse:
@@ -253,7 +253,7 @@ components:
           minLength: 0
         details:
           type: object
-          additionalProperties: true
+          additionalProperties: {}
       required:
       - targetType
       - workDate
@@ -303,7 +303,7 @@ components:
           format: int64
         details:
           type: object
-          additionalProperties: true
+          additionalProperties: {}
         memo:
           type: string
         status:

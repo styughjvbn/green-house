@@ -1,8 +1,7 @@
 openapi: 3.1.0
 info:
-  title: Greenhouse API Slice - 난 묶음 명령/정밀 배치
-  version: v0
-  description: 난 묶음 생성·수정·삭제·이동, 정밀 배치 프로필 API
+  title: Greenhouse API Slice - orchid-command
+  version: 0.0.1
 servers:
 - url: http://localhost:8080
   description: Generated server url
@@ -23,7 +22,7 @@ paths:
         '200':
           description: OK
           content:
-            '*/*':
+            application/json:
               schema:
                 $ref: '#/components/schemas/ApiResponseBedZonePlacementProfileResponse'
     put:
@@ -47,14 +46,14 @@ paths:
         '200':
           description: OK
           content:
-            '*/*':
+            application/json:
               schema:
                 $ref: '#/components/schemas/ApiResponseBedZonePlacementProfileResponse'
   /api/orchid-groups:
     post:
       tags:
       - orchid-group-command-controller
-      operationId: create_1
+      operationId: create_3
       requestBody:
         content:
           application/json:
@@ -65,14 +64,14 @@ paths:
         '201':
           description: Created
           content:
-            '*/*':
+            application/json:
               schema:
                 $ref: '#/components/schemas/ApiResponseOrchidGroupResponse'
   /api/orchid-groups/{orchidGroupId}:
     delete:
       tags:
       - orchid-group-command-controller
-      operationId: delete
+      operationId: delete_1
       parameters:
       - name: orchidGroupId
         in: path
@@ -84,13 +83,13 @@ paths:
         '200':
           description: OK
           content:
-            '*/*':
+            application/json:
               schema:
                 $ref: '#/components/schemas/ApiResponseVoid'
     patch:
       tags:
       - orchid-group-command-controller
-      operationId: update_2
+      operationId: update_3
       parameters:
       - name: orchidGroupId
         in: path
@@ -108,7 +107,7 @@ paths:
         '200':
           description: OK
           content:
-            '*/*':
+            application/json:
               schema:
                 $ref: '#/components/schemas/ApiResponseOrchidGroupResponse'
   /api/orchid-groups/{orchidGroupId}/move:
@@ -133,7 +132,7 @@ paths:
         '200':
           description: OK
           content:
-            '*/*':
+            application/json:
               schema:
                 $ref: '#/components/schemas/ApiResponseOrchidGroupResponse'
 components:
@@ -181,6 +180,9 @@ components:
           type: integer
           format: int32
           minimum: 0
+        unitSpan:
+          type: number
+          minimum: 0.0
         allowed:
           type: boolean
         memo:
@@ -192,6 +194,7 @@ components:
       - capacityMode
       - capacityValue
       - placementType
+      - unitSpan
     BedZoneCapacityResponse:
       type: object
       properties:
@@ -210,6 +213,8 @@ components:
           - EXPANDED
           - COMPRESSED
           - TEMPORARY
+        unitSpan:
+          type: number
         capacityValue:
           type: integer
           format: int32
@@ -220,13 +225,13 @@ components:
     BedZonePlacementProfileRequest:
       type: object
       properties:
-        segments:
+        capacities:
           type: array
           items:
-            $ref: '#/components/schemas/BedZoneSegmentRequest'
+            $ref: '#/components/schemas/BedZoneCapacityRequest'
           minItems: 1
       required:
-      - segments
+      - capacities
     BedZonePlacementProfileResponse:
       type: object
       properties:
@@ -241,65 +246,9 @@ components:
         physicalBedNumber:
           type: integer
           format: int32
-        hasUnassignedGroups:
-          type: boolean
-        segments:
-          type: array
-          items:
-            $ref: '#/components/schemas/BedZoneSegmentResponse'
-    BedZoneSegmentRequest:
-      type: object
-      properties:
-        id:
-          type: integer
-          format: int64
-        name:
-          type: string
-          maxLength: 100
-          minLength: 0
-        segmentType:
-          type: string
-          enum:
-          - START
-          - MIDDLE
-          - END
-          - CUSTOM
-        sortOrder:
-          type: integer
-          format: int32
-          minimum: 1
-        memo:
-          type: string
-          maxLength: 1000
-          minLength: 0
-        capacities:
-          type: array
-          items:
-            $ref: '#/components/schemas/BedZoneCapacityRequest'
-      required:
-      - capacities
-      - name
-      - segmentType
-      - sortOrder
-    BedZoneSegmentResponse:
-      type: object
-      properties:
-        id:
-          type: integer
-          format: int64
-        name:
-          type: string
-        segmentType:
-          type: string
-          enum:
-          - START
-          - MIDDLE
-          - END
-          - CUSTOM
-        sortOrder:
-          type: integer
-          format: int32
-        memo:
+        positionUnitCount:
+          type: number
+        positionUnitLabel:
           type: string
         capacities:
           type: array
@@ -340,6 +289,12 @@ components:
           minimum: 0
         splitPlacementAllowed:
           type: boolean
+        startPosition:
+          type: number
+          minimum: 0.0
+        endPosition:
+          type: number
+          minimum: 0.0
         memo:
           type: string
           maxLength: 1000
@@ -349,44 +304,18 @@ components:
       - quantity
       - status
       - varietyId
-    OrchidGroupMovePlacementRequest:
-      type: object
-      properties:
-        segmentId:
-          type: integer
-          format: int64
-        quantity:
-          type: integer
-          format: int32
-          minimum: 1
-        trayCount:
-          type: integer
-          format: int32
-          minimum: 1
-      required:
-      - quantity
-      - segmentId
     OrchidGroupMoveRequest:
       type: object
       properties:
         toBedZoneId:
           type: integer
           format: int64
-        placementMode:
-          type: string
-          enum:
-          - SPACIOUS
-          - STANDARD
-          - EXPANDED
-          - COMPRESSED
-          - TEMPORARY
-        placements:
-          type: array
-          items:
-            $ref: '#/components/schemas/OrchidGroupMovePlacementRequest'
-        reorganizeDueDate:
-          type: string
-          format: date
+        startPosition:
+          type: number
+          minimum: 0.0
+        endPosition:
+          type: number
+          minimum: 0.0
         worker:
           type: string
           maxLength: 100
@@ -445,15 +374,18 @@ components:
           format: int32
         splitPlacementAllowed:
           type: boolean
-        segmentPlacements:
-          type: array
-          items:
-            $ref: '#/components/schemas/OrchidGroupSegmentPlacementResponse'
+        startPosition:
+          type: number
+        endPosition:
+          type: number
         sortOrder:
           type: integer
           format: int32
         memo:
           type: string
+        houseId:
+          type: integer
+          format: int64
         houseNumber:
           type: integer
           format: int32
@@ -461,36 +393,6 @@ components:
           type: integer
           format: int32
         bedZoneName:
-          type: string
-    OrchidGroupSegmentPlacementResponse:
-      type: object
-      properties:
-        id:
-          type: integer
-          format: int64
-        segmentId:
-          type: integer
-          format: int64
-        segmentName:
-          type: string
-        quantity:
-          type: integer
-          format: int32
-        trayCount:
-          type: integer
-          format: int32
-        placementMode:
-          type: string
-          enum:
-          - SPACIOUS
-          - STANDARD
-          - EXPANDED
-          - COMPRESSED
-          - TEMPORARY
-        reorganizeDueDate:
-          type: string
-          format: date
-        memo:
           type: string
     OrchidGroupUpdateRequest:
       type: object
@@ -524,6 +426,12 @@ components:
           minimum: 0
         splitPlacementAllowed:
           type: boolean
+        startPosition:
+          type: number
+          minimum: 0.0
+        endPosition:
+          type: number
+          minimum: 0.0
         memo:
           type: string
           maxLength: 1000

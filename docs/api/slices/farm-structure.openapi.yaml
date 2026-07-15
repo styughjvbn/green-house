@@ -1,8 +1,7 @@
 openapi: 3.1.0
 info:
-  title: Greenhouse API Slice - 농장 구조
-  version: v0
-  description: 동, 물리 배드, 논리 구역, 난 묶음 조회 API
+  title: Greenhouse API Slice - farm-structure
+  version: 0.0.1
 servers:
 - url: http://localhost:8080
   description: Generated server url
@@ -10,7 +9,7 @@ paths:
   /api/orchid-groups:
     get:
       tags:
-      - farm-structure-controller
+      - orchid-group-query-controller
       operationId: getOrchidGroups
       parameters:
       - name: houseId
@@ -45,7 +44,7 @@ paths:
         '200':
           description: OK
           content:
-            '*/*':
+            application/json:
               schema:
                 $ref: '#/components/schemas/ApiResponseListOrchidGroupResponse'
   /api/physical-beds:
@@ -64,7 +63,7 @@ paths:
         '200':
           description: OK
           content:
-            '*/*':
+            application/json:
               schema:
                 $ref: '#/components/schemas/ApiResponseListPhysicalBedResponse'
   /api/physical-beds/{physicalBedId}:
@@ -83,7 +82,7 @@ paths:
         '200':
           description: OK
           content:
-            '*/*':
+            application/json:
               schema:
                 $ref: '#/components/schemas/ApiResponsePhysicalBedResponse'
   /api/houses:
@@ -95,7 +94,7 @@ paths:
         '200':
           description: OK
           content:
-            '*/*':
+            application/json:
               schema:
                 $ref: '#/components/schemas/ApiResponseListHouseResponse'
   /api/houses/{houseId}:
@@ -114,7 +113,7 @@ paths:
         '200':
           description: OK
           content:
-            '*/*':
+            application/json:
               schema:
                 $ref: '#/components/schemas/ApiResponseHouseResponse'
   /api/bed-zones:
@@ -139,7 +138,7 @@ paths:
         '200':
           description: OK
           content:
-            '*/*':
+            application/json:
               schema:
                 $ref: '#/components/schemas/ApiResponseListBedZoneResponse'
   /api/bed-zones/{bedZoneId}:
@@ -158,7 +157,7 @@ paths:
         '200':
           description: OK
           content:
-            '*/*':
+            application/json:
               schema:
                 $ref: '#/components/schemas/ApiResponseBedZoneResponse'
 components:
@@ -292,6 +291,9 @@ components:
         bedZoneId:
           type: integer
           format: int64
+        varietyId:
+          type: integer
+          format: int64
         genus:
           type: string
         varietyName:
@@ -328,10 +330,10 @@ components:
           format: int32
         splitPlacementAllowed:
           type: boolean
-        segmentPlacements:
-          type: array
-          items:
-            $ref: '#/components/schemas/OrchidGroupSegmentPlacementResponse'
+        startPosition:
+          type: number
+        endPosition:
+          type: number
         sortOrder:
           type: integer
           format: int32
@@ -347,36 +349,6 @@ components:
           type: integer
           format: int32
         bedZoneName:
-          type: string
-    OrchidGroupSegmentPlacementResponse:
-      type: object
-      properties:
-        id:
-          type: integer
-          format: int64
-        segmentId:
-          type: integer
-          format: int64
-        segmentName:
-          type: string
-        quantity:
-          type: integer
-          format: int32
-        trayCount:
-          type: integer
-          format: int32
-        placementMode:
-          type: string
-          enum:
-          - SPACIOUS
-          - STANDARD
-          - EXPANDED
-          - COMPRESSED
-          - TEMPORARY
-        reorganizeDueDate:
-          type: string
-          format: date
-        memo:
           type: string
     PhysicalBedResponse:
       type: object
@@ -408,6 +380,10 @@ components:
         supportIntervalCm:
           type: integer
           format: int32
+        positionUnitCount:
+          type: number
+        positionUnitLabel:
+          type: string
         memo:
           type: string
         bedZones:

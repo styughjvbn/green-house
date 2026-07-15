@@ -1,8 +1,7 @@
 openapi: 3.1.0
 info:
-  title: Greenhouse API Slice - 거래처
-  version: v0
-  description: 거래처 조회·등록과 거래처 정산 설정 API
+  title: Greenhouse API Slice - partner
+  version: 0.0.1
 servers:
 - url: http://localhost:8080
   description: Generated server url
@@ -23,7 +22,7 @@ paths:
         '200':
           description: OK
           content:
-            '*/*':
+            application/json:
               schema:
                 $ref: '#/components/schemas/ApiResponsePartnerSettlementSettingsResponse'
     put:
@@ -47,7 +46,7 @@ paths:
         '200':
           description: OK
           content:
-            '*/*':
+            application/json:
               schema:
                 $ref: '#/components/schemas/ApiResponsePartnerSettlementSettingsResponse'
   /api/business-partners:
@@ -74,13 +73,13 @@ paths:
         '200':
           description: OK
           content:
-            '*/*':
+            application/json:
               schema:
                 $ref: '#/components/schemas/ApiResponseListBusinessPartnerResponse'
     post:
       tags:
       - business-partner-controller
-      operationId: create_2
+      operationId: create_7
       requestBody:
         content:
           application/json:
@@ -91,7 +90,7 @@ paths:
         '201':
           description: Created
           content:
-            '*/*':
+            application/json:
               schema:
                 $ref: '#/components/schemas/ApiResponseBusinessPartnerResponse'
 components:

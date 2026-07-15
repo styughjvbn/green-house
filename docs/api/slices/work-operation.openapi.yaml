@@ -1,38 +1,22 @@
 openapi: 3.1.0
 info:
-  title: Greenhouse API Slice - 신규 작업 실행
-  version: v0
-  description: 동 전체 농약 작업의 대상 확정, 완료, 난 묶음 통합 이력 API
+  title: Greenhouse API Slice - work-operation
+  version: 0.0.1
 servers:
-  - url: http://localhost:8080
+- url: http://localhost:8080
+  description: Generated server url
 paths:
-  /api/work-operations/target-preview:
-    post:
-      tags: [work-operation-controller]
-      operationId: previewWorkOperationTargets
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/WorkTargetPreviewRequest'
-      responses:
-        '200':
-          description: OK
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ApiResponseWorkTargetPreviewResponse'
   /api/work-operations:
     post:
-      tags: [work-operation-controller]
-      operationId: createWorkOperation
+      tags:
+      - work-operation-controller
+      operationId: create_1
       requestBody:
-        required: true
         content:
           application/json:
             schema:
               $ref: '#/components/schemas/WorkOperationCreateRequest'
+        required: true
       responses:
         '201':
           description: Created
@@ -40,15 +24,29 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ApiResponseWorkOperationResponse'
-  /api/work-operations/{workOperationId}:
-    get:
-      tags: [work-operation-controller]
-      operationId: getWorkOperation
+  /api/work-operations/{workOperationId}/targets/{targetId}/start:
+    post:
+      tags:
+      - work-operation-controller
+      operationId: startTarget
       parameters:
-        - name: workOperationId
-          in: path
-          required: true
-          schema: {type: integer, format: int64}
+      - name: workOperationId
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: int64
+      - name: targetId
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: int64
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/WorkTargetExecutionRequest'
       responses:
         '200':
           description: OK
@@ -56,15 +54,59 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ApiResponseWorkOperationResponse'
-  /api/work-operations/{workOperationId}/complete:
+  /api/work-operations/{workOperationId}/targets/{targetId}/skip:
     post:
-      tags: [work-operation-controller]
-      operationId: completeWorkOperation
+      tags:
+      - work-operation-controller
+      operationId: skipTarget
       parameters:
-        - name: workOperationId
-          in: path
-          required: true
-          schema: {type: integer, format: int64}
+      - name: workOperationId
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: int64
+      - name: targetId
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: int64
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/WorkTargetExecutionRequest'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponseWorkOperationResponse'
+  /api/work-operations/{workOperationId}/targets/{targetId}/complete:
+    post:
+      tags:
+      - work-operation-controller
+      operationId: completeTarget
+      parameters:
+      - name: workOperationId
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: int64
+      - name: targetId
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: int64
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/WorkTargetExecutionRequest'
       responses:
         '200':
           description: OK
@@ -74,112 +116,148 @@ paths:
                 $ref: '#/components/schemas/ApiResponseWorkOperationResponse'
   /api/work-operations/{workOperationId}/start:
     post:
-      tags: [work-operation-controller]
-      operationId: startWorkOperation
+      tags:
+      - work-operation-controller
+      operationId: start
       parameters:
-        - $ref: '#/components/parameters/WorkOperationId'
+      - name: workOperationId
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: int64
       responses:
         '200':
           description: OK
           content:
             application/json:
-              schema: {$ref: '#/components/schemas/ApiResponseWorkOperationResponse'}
-  /api/work-operations/{workOperationId}/pause:
-    post:
-      tags: [work-operation-controller]
-      operationId: pauseWorkOperation
-      parameters:
-        - $ref: '#/components/parameters/WorkOperationId'
-      responses:
-        '200':
-          description: OK
-          content:
-            application/json:
-              schema: {$ref: '#/components/schemas/ApiResponseWorkOperationResponse'}
+              schema:
+                $ref: '#/components/schemas/ApiResponseWorkOperationResponse'
   /api/work-operations/{workOperationId}/resume:
     post:
-      tags: [work-operation-controller]
-      operationId: resumeWorkOperation
+      tags:
+      - work-operation-controller
+      operationId: resume
       parameters:
-        - $ref: '#/components/parameters/WorkOperationId'
+      - name: workOperationId
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: int64
       responses:
         '200':
           description: OK
           content:
             application/json:
-              schema: {$ref: '#/components/schemas/ApiResponseWorkOperationResponse'}
+              schema:
+                $ref: '#/components/schemas/ApiResponseWorkOperationResponse'
+  /api/work-operations/{workOperationId}/pause:
+    post:
+      tags:
+      - work-operation-controller
+      operationId: pause
+      parameters:
+      - name: workOperationId
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: int64
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponseWorkOperationResponse'
+  /api/work-operations/{workOperationId}/complete:
+    post:
+      tags:
+      - work-operation-controller
+      operationId: complete
+      parameters:
+      - name: workOperationId
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: int64
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponseWorkOperationResponse'
   /api/work-operations/{workOperationId}/cancel:
     post:
-      tags: [work-operation-controller]
-      operationId: cancelWorkOperation
+      tags:
+      - work-operation-controller
+      operationId: cancel
       parameters:
-        - $ref: '#/components/parameters/WorkOperationId'
+      - name: workOperationId
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: int64
       responses:
         '200':
           description: OK
           content:
             application/json:
-              schema: {$ref: '#/components/schemas/ApiResponseWorkOperationResponse'}
-  /api/work-operations/{workOperationId}/targets/{targetId}/start:
+              schema:
+                $ref: '#/components/schemas/ApiResponseWorkOperationResponse'
+  /api/work-operations/target-preview:
     post:
-      tags: [work-operation-controller]
-      operationId: startWorkOperationTarget
-      parameters:
-        - $ref: '#/components/parameters/WorkOperationId'
-        - $ref: '#/components/parameters/WorkOperationTargetId'
+      tags:
+      - work-operation-controller
+      operationId: preview
       requestBody:
         content:
           application/json:
-            schema: {$ref: '#/components/schemas/WorkTargetExecutionRequest'}
+            schema:
+              $ref: '#/components/schemas/WorkTargetPreviewRequest'
+        required: true
       responses:
         '200':
           description: OK
           content:
             application/json:
-              schema: {$ref: '#/components/schemas/ApiResponseWorkOperationResponse'}
-  /api/work-operations/{workOperationId}/targets/{targetId}/complete:
-    post:
-      tags: [work-operation-controller]
-      operationId: completeWorkOperationTarget
+              schema:
+                $ref: '#/components/schemas/ApiResponseWorkTargetPreviewResponse'
+  /api/work-operations/{workOperationId}:
+    get:
+      tags:
+      - work-operation-controller
+      operationId: get_3
       parameters:
-        - $ref: '#/components/parameters/WorkOperationId'
-        - $ref: '#/components/parameters/WorkOperationTargetId'
-      requestBody:
-        content:
-          application/json:
-            schema: {$ref: '#/components/schemas/WorkTargetExecutionRequest'}
+      - name: workOperationId
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: int64
       responses:
         '200':
           description: OK
           content:
             application/json:
-              schema: {$ref: '#/components/schemas/ApiResponseWorkOperationResponse'}
-  /api/work-operations/{workOperationId}/targets/{targetId}/skip:
-    post:
-      tags: [work-operation-controller]
-      operationId: skipWorkOperationTarget
-      parameters:
-        - $ref: '#/components/parameters/WorkOperationId'
-        - $ref: '#/components/parameters/WorkOperationTargetId'
-      requestBody:
-        content:
-          application/json:
-            schema: {$ref: '#/components/schemas/WorkTargetExecutionRequest'}
-      responses:
-        '200':
-          description: OK
-          content:
-            application/json:
-              schema: {$ref: '#/components/schemas/ApiResponseWorkOperationResponse'}
+              schema:
+                $ref: '#/components/schemas/ApiResponseWorkOperationResponse'
   /api/orchid-groups/{orchidGroupId}/work-history:
     get:
-      tags: [work-operation-controller]
-      operationId: getOrchidGroupWorkHistory
+      tags:
+      - work-operation-controller
+      operationId: getOrchidGroupHistory
       parameters:
-        - name: orchidGroupId
-          in: path
-          required: true
-          schema: {type: integer, format: int64}
+      - name: orchidGroupId
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: int64
       responses:
         '200':
           description: OK
@@ -188,156 +266,334 @@ paths:
               schema:
                 $ref: '#/components/schemas/ApiResponseListOrchidGroupWorkHistoryResponse'
 components:
-  parameters:
-    WorkOperationId:
-      name: workOperationId
-      in: path
-      required: true
-      schema: {type: integer, format: int64}
-    WorkOperationTargetId:
-      name: targetId
-      in: path
-      required: true
-      schema: {type: integer, format: int64}
   schemas:
-    WorkTargetPreviewRequest:
-      type: object
-      required: [scopeType]
-      properties:
-        scopeType:
-          type: string
-          enum: [HOUSE, DERIVED_GROUP, USER_COLLECTION, MANUAL_SELECTION]
-        scopeId: {type: integer, format: int64}
-        scopeKey: {type: string}
-        orchidGroupIds:
-          type: array
-          uniqueItems: true
-          items: {type: integer, format: int64}
-    WorkOperationCreateRequest:
-      type: object
-      required: [workTypeId, title, plannedStartDate, sourceScopeType]
-      properties:
-        workTypeId: {type: integer, format: int64}
-        title: {type: string, maxLength: 150}
-        plannedStartDate: {type: string, format: date}
-        plannedEndDate: {type: string, format: date}
-        sourceScopeType:
-          type: string
-          enum: [HOUSE, DERIVED_GROUP, USER_COLLECTION, MANUAL_SELECTION]
-        sourceScopeId: {type: integer, format: int64}
-        sourceScopeKey: {type: string}
-        sourceOrchidGroupIds:
-          type: array
-          uniqueItems: true
-          items: {type: integer, format: int64}
-        details: {type: object, additionalProperties: true}
-        worker: {type: string, maxLength: 100}
-        memo: {type: string, maxLength: 1000}
-        excludedOrchidGroupIds:
-          type: array
-          items: {type: integer, format: int64}
-    WorkOperationTargetResponse:
-      type: object
-      properties:
-        id: {type: integer, format: int64}
-        orchidGroupId: {type: integer, format: int64}
-        inclusionSource:
-          type: [string, 'null']
-          enum: [DIRECT, FARM, HOUSE, PHYSICAL_BED, BED_ZONE, DERIVED_GROUP, USER_COLLECTION, MANUAL_ADDITION, LINEAGE, null]
-        varietyName: {type: string}
-        quantitySnapshot: {type: integer, format: int32}
-        ageYearSnapshot: {type: integer, format: int32}
-        potSizeCodeSnapshot: {type: string}
-        potSizeSnapshot: {type: string}
-        locationSnapshot: {type: object, additionalProperties: true}
-        executionStatus:
-          type: string
-          enum: [PENDING, IN_PROGRESS, COMPLETED, SKIPPED, CANCELED, FAILED]
-        startedAt: {type: string, format: date-time}
-        completedAt: {type: string, format: date-time}
-        worker: {type: string}
-        resultDetails: {type: object, additionalProperties: true}
-    WorkTargetPreviewResponse:
-      type: object
-      properties:
-        orchidGroupCount: {type: integer, format: int32}
-        totalQuantity: {type: integer, format: int32}
-        targets:
-          type: array
-          items: {$ref: '#/components/schemas/WorkOperationTargetResponse'}
-    WorkOperationResponse:
-      type: object
-      properties:
-        id: {type: integer, format: int64}
-        workTypeId: {type: integer, format: int64}
-        workType: {type: string}
-        title: {type: string}
-        status:
-          type: string
-          enum: [DRAFT, PLANNED, IN_PROGRESS, PAUSED, COMPLETED, CANCELED, CORRECTED]
-        plannedStartDate: {type: string, format: date}
-        plannedEndDate: {type: string, format: date}
-        actualStartAt: {type: string, format: date-time}
-        actualEndAt: {type: string, format: date-time}
-        sourceScopeType: {type: string}
-        sourceScopeId: {type: integer, format: int64}
-        sourceConditionSnapshot: {type: object, additionalProperties: true}
-        targetSnapshotAt: {type: string, format: date-time}
-        details: {type: object, additionalProperties: true}
-        worker: {type: string}
-        memo: {type: string}
-        progress: {$ref: '#/components/schemas/WorkOperationProgressResponse'}
-        targets:
-          type: array
-          items: {$ref: '#/components/schemas/WorkOperationTargetResponse'}
-    WorkOperationProgressResponse:
-      type: object
-      properties:
-        total: {type: integer, format: int32}
-        pending: {type: integer, format: int32}
-        inProgress: {type: integer, format: int32}
-        completed: {type: integer, format: int32}
-        skipped: {type: integer, format: int32}
-        canceled: {type: integer, format: int32}
-        failed: {type: integer, format: int32}
-        progressPercent: {type: integer, format: int32, minimum: 0, maximum: 100}
-    WorkTargetExecutionRequest:
-      type: object
-      properties:
-        worker: {type: string, maxLength: 100}
-        resultDetails: {type: object, additionalProperties: true}
-    OrchidGroupWorkHistoryResponse:
-      type: object
-      properties:
-        sourceKind: {type: string, enum: [WORK_OPERATION, LEGACY_WORK_RECORD]}
-        workOperationId: {type: integer, format: int64}
-        legacyWorkRecordId: {type: integer, format: int64}
-        workTypeId: {type: integer, format: int64}
-        workType: {type: string}
-        title: {type: string}
-        workDate: {type: string, format: date}
-        status: {type: string}
-        propagated: {type: boolean}
-        sourceScopeType: {type: string}
-        sourceScopeId: {type: integer, format: int64}
-        locationSnapshot: {type: object, additionalProperties: true}
-        currentLocation: {type: object, additionalProperties: true}
-        worker: {type: string}
-        memo: {type: string}
-    ApiResponseWorkTargetPreviewResponse:
-      type: object
-      properties:
-        data: {$ref: '#/components/schemas/WorkTargetPreviewResponse'}
-        message: {type: string}
-    ApiResponseWorkOperationResponse:
-      type: object
-      properties:
-        data: {$ref: '#/components/schemas/WorkOperationResponse'}
-        message: {type: string}
     ApiResponseListOrchidGroupWorkHistoryResponse:
       type: object
       properties:
         data:
           type: array
-          items: {$ref: '#/components/schemas/OrchidGroupWorkHistoryResponse'}
-        message: {type: string}
+          items:
+            $ref: '#/components/schemas/OrchidGroupWorkHistoryResponse'
+        message:
+          type: string
+    ApiResponseWorkOperationResponse:
+      type: object
+      properties:
+        data:
+          $ref: '#/components/schemas/WorkOperationResponse'
+        message:
+          type: string
+    ApiResponseWorkTargetPreviewResponse:
+      type: object
+      properties:
+        data:
+          $ref: '#/components/schemas/WorkTargetPreviewResponse'
+        message:
+          type: string
+    OrchidGroupWorkHistoryResponse:
+      type: object
+      properties:
+        sourceKind:
+          type: string
+        workOperationId:
+          type: integer
+          format: int64
+        legacyWorkRecordId:
+          type: integer
+          format: int64
+        workTypeId:
+          type: integer
+          format: int64
+        workType:
+          type: string
+        title:
+          type: string
+        workDate:
+          type: string
+          format: date
+        status:
+          type: string
+        propagated:
+          type: boolean
+        sourceScopeType:
+          type: string
+          enum:
+          - FARM
+          - HOUSE
+          - PHYSICAL_BED
+          - BED_ZONE
+          - ORCHID_GROUP
+          - DERIVED_GROUP
+          - USER_COLLECTION
+          - MANUAL_SELECTION
+        sourceScopeId:
+          type: integer
+          format: int64
+        locationSnapshot:
+          type: object
+          additionalProperties: {}
+        currentLocation:
+          type: object
+          additionalProperties: {}
+        worker:
+          type: string
+        memo:
+          type: string
+    WorkOperationCreateRequest:
+      type: object
+      properties:
+        workTypeId:
+          type: integer
+          format: int64
+        title:
+          type: string
+          maxLength: 150
+          minLength: 0
+        plannedStartDate:
+          type: string
+          format: date
+        plannedEndDate:
+          type: string
+          format: date
+        sourceScopeType:
+          type: string
+          enum:
+          - FARM
+          - HOUSE
+          - PHYSICAL_BED
+          - BED_ZONE
+          - ORCHID_GROUP
+          - DERIVED_GROUP
+          - USER_COLLECTION
+          - MANUAL_SELECTION
+        sourceScopeId:
+          type: integer
+          format: int64
+        sourceScopeKey:
+          type: string
+        sourceOrchidGroupIds:
+          type: array
+          items:
+            type: integer
+            format: int64
+        details:
+          type: object
+          additionalProperties: {}
+        worker:
+          type: string
+          maxLength: 100
+          minLength: 0
+        memo:
+          type: string
+          maxLength: 1000
+          minLength: 0
+        excludedOrchidGroupIds:
+          type: array
+          items:
+            type: integer
+            format: int64
+      required:
+      - plannedStartDate
+      - sourceScopeType
+      - title
+      - workTypeId
+    WorkOperationProgressResponse:
+      type: object
+      properties:
+        total:
+          type: integer
+          format: int32
+        pending:
+          type: integer
+          format: int32
+        inProgress:
+          type: integer
+          format: int32
+        completed:
+          type: integer
+          format: int32
+        skipped:
+          type: integer
+          format: int32
+        canceled:
+          type: integer
+          format: int32
+        failed:
+          type: integer
+          format: int32
+        progressPercent:
+          type: integer
+          format: int32
+    WorkOperationResponse:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: int64
+        workTypeId:
+          type: integer
+          format: int64
+        workType:
+          type: string
+        title:
+          type: string
+        status:
+          type: string
+          enum:
+          - DRAFT
+          - PLANNED
+          - IN_PROGRESS
+          - PAUSED
+          - COMPLETED
+          - CANCELED
+          - CORRECTED
+        plannedStartDate:
+          type: string
+          format: date
+        plannedEndDate:
+          type: string
+          format: date
+        actualStartAt:
+          type: string
+          format: date-time
+        actualEndAt:
+          type: string
+          format: date-time
+        sourceScopeType:
+          type: string
+          enum:
+          - FARM
+          - HOUSE
+          - PHYSICAL_BED
+          - BED_ZONE
+          - ORCHID_GROUP
+          - DERIVED_GROUP
+          - USER_COLLECTION
+          - MANUAL_SELECTION
+        sourceScopeId:
+          type: integer
+          format: int64
+        sourceConditionSnapshot:
+          type: object
+          additionalProperties: {}
+        targetSnapshotAt:
+          type: string
+          format: date-time
+        details:
+          type: object
+          additionalProperties: {}
+        worker:
+          type: string
+        memo:
+          type: string
+        progress:
+          $ref: '#/components/schemas/WorkOperationProgressResponse'
+        targets:
+          type: array
+          items:
+            $ref: '#/components/schemas/WorkOperationTargetResponse'
+    WorkOperationTargetResponse:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: int64
+        orchidGroupId:
+          type: integer
+          format: int64
+        inclusionSource:
+          type: string
+          enum:
+          - DIRECT
+          - FARM
+          - HOUSE
+          - PHYSICAL_BED
+          - BED_ZONE
+          - DERIVED_GROUP
+          - USER_COLLECTION
+          - MANUAL_ADDITION
+          - LINEAGE
+        varietyName:
+          type: string
+        quantitySnapshot:
+          type: integer
+          format: int32
+        ageYearSnapshot:
+          type: integer
+          format: int32
+        potSizeCodeSnapshot:
+          type: string
+        potSizeSnapshot:
+          type: string
+        locationSnapshot:
+          type: object
+          additionalProperties: {}
+        executionStatus:
+          type: string
+          enum:
+          - PENDING
+          - IN_PROGRESS
+          - COMPLETED
+          - SKIPPED
+          - CANCELED
+          - FAILED
+        startedAt:
+          type: string
+          format: date-time
+        completedAt:
+          type: string
+          format: date-time
+        worker:
+          type: string
+        resultDetails:
+          type: object
+          additionalProperties: {}
+    WorkTargetExecutionRequest:
+      type: object
+      properties:
+        worker:
+          type: string
+          maxLength: 100
+          minLength: 0
+        resultDetails:
+          type: object
+          additionalProperties: {}
+    WorkTargetPreviewRequest:
+      type: object
+      properties:
+        scopeType:
+          type: string
+          enum:
+          - FARM
+          - HOUSE
+          - PHYSICAL_BED
+          - BED_ZONE
+          - ORCHID_GROUP
+          - DERIVED_GROUP
+          - USER_COLLECTION
+          - MANUAL_SELECTION
+        scopeId:
+          type: integer
+          format: int64
+        scopeKey:
+          type: string
+        orchidGroupIds:
+          type: array
+          items:
+            type: integer
+            format: int64
+      required:
+      - scopeType
+    WorkTargetPreviewResponse:
+      type: object
+      properties:
+        orchidGroupCount:
+          type: integer
+          format: int32
+        totalQuantity:
+          type: integer
+          format: int32
+        targets:
+          type: array
+          items:
+            $ref: '#/components/schemas/WorkOperationTargetResponse'

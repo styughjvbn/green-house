@@ -1,37 +1,11 @@
 openapi: 3.1.0
 info:
-  title: Greenhouse API Slice - 입금/정산 이벤트
-  version: v0
-  description: 수동 입금 확인, 입금 이벤트 조회, 거래처 잔액 요약 API
+  title: Greenhouse API Slice - payment
+  version: 0.0.1
 servers:
 - url: http://localhost:8080
   description: Generated server url
 paths:
-  /api/sales-slips/{salesSlipId}/confirm-payment:
-    post:
-      tags:
-      - payment-controller
-      operationId: confirmSalesSlipPayment
-      parameters:
-      - name: salesSlipId
-        in: path
-        required: true
-        schema:
-          type: integer
-          format: int64
-      requestBody:
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/ManualPaymentRequest'
-        required: true
-      responses:
-        '200':
-          description: OK
-          content:
-            '*/*':
-              schema:
-                $ref: '#/components/schemas/ApiResponseSalesSlipResponse'
   /api/auction-settlements/{settlementId}/confirm-payment:
     post:
       tags:
@@ -54,7 +28,7 @@ paths:
         '200':
           description: OK
           content:
-            '*/*':
+            application/json:
               schema:
                 $ref: '#/components/schemas/ApiResponseAuctionSettlementResponse'
   /api/partner-payment-events:
@@ -88,7 +62,7 @@ paths:
         '200':
           description: OK
           content:
-            '*/*':
+            application/json:
               schema:
                 $ref: '#/components/schemas/ApiResponseListPartnerPaymentEventResponse'
   /api/business-partners/{partnerId}/balance-summary:
@@ -107,7 +81,7 @@ paths:
         '200':
           description: OK
           content:
-            '*/*':
+            application/json:
               schema:
                 $ref: '#/components/schemas/ApiResponsePartnerBalanceSummaryResponse'
 components:
@@ -133,13 +107,6 @@ components:
       properties:
         data:
           $ref: '#/components/schemas/PartnerBalanceSummaryResponse'
-        message:
-          type: string
-    ApiResponseSalesSlipResponse:
-      type: object
-      properties:
-        data:
-          $ref: '#/components/schemas/SalesSlipResponse'
         message:
           type: string
     AuctionSettlementLineResponse:
@@ -237,30 +204,6 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/AuctionSettlementLineResponse'
-    BusinessPartnerResponse:
-      type: object
-      properties:
-        id:
-          type: integer
-          format: int64
-        name:
-          type: string
-        partnerType:
-          type: string
-          enum:
-          - WHOLESALE
-          - RETAIL
-          - AUCTION_HOUSE
-        ownerName:
-          type: string
-        phone:
-          type: string
-        address:
-          type: string
-        memo:
-          type: string
-        active:
-          type: boolean
     ManualPaymentRequest:
       type: object
       properties:
@@ -372,79 +315,3 @@ components:
           type: string
         createdBy:
           type: string
-    SalesSlipItemResponse:
-      type: object
-      properties:
-        id:
-          type: integer
-          format: int64
-        orchidGroupId:
-          type: integer
-          format: int64
-        auctionShipmentLotId:
-          type: integer
-          format: int64
-        itemName:
-          type: string
-        genus:
-          type: string
-        spec:
-          type: string
-        quantity:
-          type: integer
-          format: int32
-        unitPrice:
-          type: integer
-          format: int32
-        amount:
-          type: integer
-          format: int32
-        memo:
-          type: string
-    SalesSlipResponse:
-      type: object
-      properties:
-        id:
-          type: integer
-          format: int64
-        slipNumber:
-          type: string
-        saleDate:
-          type: string
-          format: date
-        salesType:
-          type: string
-          enum:
-          - DIRECT
-          - AUCTION
-        auctionShipmentId:
-          type: integer
-          format: int64
-        auctionMarket:
-          type: string
-        partner:
-          $ref: '#/components/schemas/BusinessPartnerResponse'
-        totalAmount:
-          type: integer
-          format: int32
-        expectedPaymentDate:
-          type: string
-          format: date
-        paidAmount:
-          type: integer
-          format: int64
-        remainingAmount:
-          type: integer
-          format: int64
-        paymentStatus:
-          type: string
-        salesStatus:
-          type: string
-        paymentMethod:
-          type: string
-        memo:
-          type: string
-        items:
-          type: array
-          items:
-            $ref: '#/components/schemas/SalesSlipItemResponse'

@@ -1,8 +1,7 @@
 openapi: 3.1.0
 info:
-  title: Greenhouse API Slice - 농장 현황
-  version: v0
-  description: 농장 현황 지도, 줌 단계, 선택 대상 난 묶음, 대시보드 요약 API
+  title: Greenhouse API Slice - farm-status
+  version: 0.0.1
 servers:
 - url: http://localhost:8080
   description: Generated server url
@@ -38,14 +37,14 @@ paths:
         '200':
           description: OK
           content:
-            '*/*':
+            application/json:
               schema:
                 $ref: '#/components/schemas/ApiResponseFarmStatusZoomResponse'
   /api/farm-status/orchid-groups:
     get:
       tags:
       - farm-status-controller
-      operationId: getOrchidGroups_1
+      operationId: getOrchidGroups_2
       parameters:
       - name: targetType
         in: query
@@ -66,7 +65,7 @@ paths:
         '200':
           description: OK
           content:
-            '*/*':
+            application/json:
               schema:
                 $ref: '#/components/schemas/ApiResponseFarmStatusOrchidGroupListResponse'
   /api/farm-status/map:
@@ -78,7 +77,7 @@ paths:
         '200':
           description: OK
           content:
-            '*/*':
+            application/json:
               schema:
                 $ref: '#/components/schemas/ApiResponseFarmStatusMapResponse'
   /api/dashboard/summary:
@@ -90,7 +89,7 @@ paths:
         '200':
           description: OK
           content:
-            '*/*':
+            application/json:
               schema:
                 $ref: '#/components/schemas/ApiResponseDashboardSummaryResponse'
 components:
@@ -192,10 +191,6 @@ components:
           format: int64
         latestWorkDate:
           type: string
-        physicalBeds:
-          type: array
-          items:
-            $ref: '#/components/schemas/PhysicalBedResponse'
     FarmStatusMapResponse:
       type: object
       properties:
@@ -300,6 +295,10 @@ components:
           format: int64
         latestWorkDate:
           type: string
+        physicalBeds:
+          type: array
+          items:
+            $ref: '#/components/schemas/PhysicalBedResponse'
     OrchidGroupResponse:
       type: object
       properties:
@@ -307,6 +306,9 @@ components:
           type: integer
           format: int64
         bedZoneId:
+          type: integer
+          format: int64
+        varietyId:
           type: integer
           format: int64
         genus:
@@ -345,15 +347,18 @@ components:
           format: int32
         splitPlacementAllowed:
           type: boolean
-        segmentPlacements:
-          type: array
-          items:
-            $ref: '#/components/schemas/OrchidGroupSegmentPlacementResponse'
+        startPosition:
+          type: number
+        endPosition:
+          type: number
         sortOrder:
           type: integer
           format: int32
         memo:
           type: string
+        houseId:
+          type: integer
+          format: int64
         houseNumber:
           type: integer
           format: int32
@@ -361,36 +366,6 @@ components:
           type: integer
           format: int32
         bedZoneName:
-          type: string
-    OrchidGroupSegmentPlacementResponse:
-      type: object
-      properties:
-        id:
-          type: integer
-          format: int64
-        segmentId:
-          type: integer
-          format: int64
-        segmentName:
-          type: string
-        quantity:
-          type: integer
-          format: int32
-        trayCount:
-          type: integer
-          format: int32
-        placementMode:
-          type: string
-          enum:
-          - SPACIOUS
-          - STANDARD
-          - EXPANDED
-          - COMPRESSED
-          - TEMPORARY
-        reorganizeDueDate:
-          type: string
-          format: date
-        memo:
           type: string
     PhysicalBedResponse:
       type: object
