@@ -6,6 +6,8 @@ import com.greenhouse.backend.farm.dto.MultiCreateCancellationEligibilityRespons
 import com.greenhouse.backend.common.application.OrchidGroupUsageInspector;
 import com.greenhouse.backend.farm.dto.OrchidGroupResponse;
 import com.greenhouse.backend.farm.repository.OrchidGroupRepository;
+import com.greenhouse.backend.farm.repository.OrchidGroupCollectionMemberRepository;
+import com.greenhouse.backend.work.domain.WorkOperationStatus;
 import com.greenhouse.backend.work.application.OperationLevelWorkService;
 import com.greenhouse.backend.work.domain.WorkType;
 import java.util.Map;
@@ -21,14 +23,17 @@ public class MultiCreateWorkOperationService {
 	private final OperationLevelWorkService operationLevelWorkService;
 	private final OrchidGroupRepository orchidGroupRepository;
 	private final List<OrchidGroupUsageInspector> usageInspectors;
+	private final OrchidGroupCollectionMemberRepository memberRepository;
 
 	public MultiCreateWorkOperationService(
 			OperationLevelWorkService operationLevelWorkService,
 			OrchidGroupRepository orchidGroupRepository,
-			List<OrchidGroupUsageInspector> usageInspectors) {
+			List<OrchidGroupUsageInspector> usageInspectors,
+			OrchidGroupCollectionMemberRepository memberRepository) {
 		this.operationLevelWorkService = operationLevelWorkService;
 		this.orchidGroupRepository = orchidGroupRepository;
 		this.usageInspectors = usageInspectors;
+		this.memberRepository = memberRepository;
 	}
 
 	public MultiCreateWorkOperationResponse create(MultiCreateWorkOperationRequest request) {
@@ -46,6 +51,12 @@ public class MultiCreateWorkOperationService {
 
 	@Transactional(readOnly = true)
 	public MultiCreateCancellationEligibilityResponse getCancellationEligibility(Long operationId) {
+		if (operationLevelWorkService.get(operationId).status() == WorkOperationStatus.CANCELED) {
+			return new MultiCreateCancellationEligibilityResponse(
+					operationId, false, operationLevelWorkService.getResultOrchidGroupIds(operationId),
+					List.of(new MultiCreateCancellationEligibilityResponse.Blocker(
+							"ALREADY_CANCELED", "이미 취소된 다중 생성 작업입니다.", 1)));
+		}
 		List<Long> groupIds = operationLevelWorkService.getResultOrchidGroupIds(operationId);
 		var idSet = new LinkedHashSet<>(groupIds);
 		var blockers = usageInspectors.stream()
@@ -54,6 +65,29 @@ public class MultiCreateWorkOperationService {
 				.toList();
 		return new MultiCreateCancellationEligibilityResponse(
 				operationId, blockers.isEmpty(), groupIds, blockers);
+	}
+
+	public MultiCreateWorkOperationResponse cancel(Long operationId) {
+		if (operationLevelWorkService.get(operationId).status() == WorkOperationStatus.CANCELED) {
+			return response(operationId);
+		}
+		List<Long> groupIds = operationLevelWorkService.getResultOrchidGroupIds(operationId);
+		var groups = orchidGroupRepository.findAllForUpdateByIdIn(groupIds);
+		if (groups.size() != groupIds.size()) {
+			throw new IllegalArgumentException("생성 결과 난 묶음 일부를 찾을 수 없어 취소할 수 없습니다.");
+		}
+		var idSet = new LinkedHashSet<>(groupIds);
+		var blockers = usageInspectors.stream()
+				.flatMap(inspector -> inspector.inspect(idSet, operationId).stream())
+				.toList();
+		if (!blockers.isEmpty()) {
+			throw new IllegalArgumentException(blockers.getFirst().message());
+		}
+		memberRepository.findByOrchidGroupIdInAndRemovedAtIsNull(groupIds)
+				.forEach(member -> member.remove());
+		groups.forEach(group -> group.cancelCreation());
+		operationLevelWorkService.cancelMultiCreate(operationId);
+		return response(operationId);
 	}
 
 	private MultiCreateWorkOperationResponse response(Long operationId) {

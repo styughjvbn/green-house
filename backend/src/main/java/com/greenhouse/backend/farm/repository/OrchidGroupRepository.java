@@ -7,8 +7,14 @@ import java.util.Optional;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
+import org.springframework.data.jpa.repository.Lock;
+import jakarta.persistence.LockModeType;
 
 public interface OrchidGroupRepository extends JpaRepository<OrchidGroup, Long> {
+
+	@Lock(LockModeType.PESSIMISTIC_WRITE)
+	@Query("select g from OrchidGroup g where g.id in :orchidGroupIds")
+	List<OrchidGroup> findAllForUpdateByIdIn(@Param("orchidGroupIds") java.util.Collection<Long> orchidGroupIds);
 
 	boolean existsByVarietyName(String varietyName);
 

@@ -6,11 +6,13 @@ import com.greenhouse.backend.work.domain.WorkOperation;
 import com.greenhouse.backend.work.domain.WorkSourceScopeType;
 import com.greenhouse.backend.work.dto.WorkOperationResponse;
 import com.greenhouse.backend.work.repository.WorkEffectOrchidGroupRepository;
+import com.greenhouse.backend.work.repository.WorkAppliedEffectRepository;
 import com.greenhouse.backend.work.repository.WorkOperationRepository;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
+import com.greenhouse.backend.work.domain.WorkOperationStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -23,18 +25,21 @@ public class OperationLevelWorkService {
 	private final WorkEffectProcessor workEffectProcessor;
 	private final WorkOperationRepository workOperationRepository;
 	private final WorkEffectOrchidGroupRepository workEffectOrchidGroupRepository;
+	private final WorkAppliedEffectRepository workAppliedEffectRepository;
 
 	public OperationLevelWorkService(
 			WorkTypeService workTypeService,
 			WorkOperationService workOperationService,
 			WorkEffectProcessor workEffectProcessor,
 			WorkOperationRepository workOperationRepository,
-			WorkEffectOrchidGroupRepository workEffectOrchidGroupRepository) {
+			WorkEffectOrchidGroupRepository workEffectOrchidGroupRepository,
+			WorkAppliedEffectRepository workAppliedEffectRepository) {
 		this.workTypeService = workTypeService;
 		this.workOperationService = workOperationService;
 		this.workEffectProcessor = workEffectProcessor;
 		this.workOperationRepository = workOperationRepository;
 		this.workEffectOrchidGroupRepository = workEffectOrchidGroupRepository;
+		this.workAppliedEffectRepository = workAppliedEffectRepository;
 	}
 
 	public WorkOperationResponse execute(
@@ -77,5 +82,21 @@ public class OperationLevelWorkService {
 		return workEffectOrchidGroupRepository
 				.findByWorkAppliedEffectWorkOperationIdOrderByIdAsc(operationId)
 				.stream().map(link -> link.getOrchidGroupId()).toList();
+	}
+
+	public WorkOperationResponse cancelMultiCreate(Long operationId) {
+		WorkOperation operation = workOperationRepository.findWithWorkTypeById(operationId)
+				.orElseThrow(() -> new com.greenhouse.backend.common.exception.NotFoundException("작업을 찾을 수 없습니다."));
+		if (!com.greenhouse.backend.work.domain.WorkType.MULTI_CREATE_CODE.equals(operation.getWorkType().getCode())) {
+			throw new IllegalArgumentException("다중 생성 작업만 결과 취소할 수 있습니다.");
+		}
+		if (operation.getStatus() == WorkOperationStatus.CANCELED) {
+			return workOperationService.get(operationId);
+		}
+		operation.cancelCompletedStructureChange();
+		workAppliedEffectRepository.findByWorkOperationIdAndEffectKey(operationId, "OPERATION")
+				.orElseThrow(() -> new com.greenhouse.backend.common.exception.NotFoundException("작업 효과를 찾을 수 없습니다."))
+				.cancel(LocalDateTime.now());
+		return workOperationService.get(operationId);
 	}
 }

@@ -80,42 +80,16 @@ class MultiCreateWorkOperationIntegrationTests extends AbstractBackendIntegratio
 
 	@Test
 	void createsMultipleGroupsOnceAndLinksTheCauseOperation() throws Exception {
-		String request = """
-				{
-				  "idempotencyKey": "multi-create-test-1",
-				  "title": "초기 난 묶음 등록",
-				  "workDate": "2026-07-15",
-				  "worker": "테스터",
-				  "rows": [
-				    {
-				      "orchidGroup": {
-				        "bedZoneId": %d, "varietyId": %d, "quantity": 30,
-				        "potSize": "3.5치", "ageYear": 2, "status": "정상",
-				        "placementType": "단일", "startPosition": 0, "endPosition": 2
-				      },
-				      "collectionIds": [%d]
-				    },
-				    {
-				      "orchidGroup": {
-				        "bedZoneId": %d, "varietyId": %d, "quantity": 40,
-				        "potSize": "4치", "ageYear": 3, "status": "정상",
-				        "placementType": "단일", "startPosition": 2, "endPosition": 4
-				      }
-				    }
-				  ]
-				}
-				""".formatted(
-				bedZone.getId(), variety.getId(), collection.getId(), bedZone.getId(), variety.getId());
+		String request = multiCreateRequest("multi-create-test-1");
 
-		var first = mockMvc.perform(post("/api/work-operations/multi-create")
+		mockMvc.perform(post("/api/work-operations/multi-create")
 				.contentType(MediaType.APPLICATION_JSON)
 				.content(request))
 				.andExpect(status().isCreated())
 				.andExpect(jsonPath("$.data.operation.status").value("COMPLETED"))
 				.andExpect(jsonPath("$.data.operation.sourceScopeType").value("NONE"))
 				.andExpect(jsonPath("$.data.createdOrchidGroups", hasSize(2)))
-				.andExpect(jsonPath("$.data.createdOrchidGroups[0].potSizeCode").value("POT_3_5"))
-				.andReturn();
+				.andExpect(jsonPath("$.data.createdOrchidGroups[0].potSizeCode").value("POT_3_5"));
 
 		Long operationId = workOperationRepository.findByRequestKey("multi-create-test-1").orElseThrow().getId();
 		mockMvc.perform(post("/api/work-operations/multi-create")
@@ -153,5 +127,61 @@ class MultiCreateWorkOperationIntegrationTests extends AbstractBackendIntegratio
 				.andExpect(status().isOk())
 				.andExpect(jsonPath("$.data.cancelable").value(false))
 				.andExpect(jsonPath("$.data.blockers[0].code").value("WORK_OPERATION"));
+	}
+
+	@Test
+	void cancelsUnconnectedCreatedGroupsWithoutDeletingAuditHistory() throws Exception {
+		mockMvc.perform(post("/api/work-operations/multi-create")
+				.contentType(MediaType.APPLICATION_JSON)
+				.content(multiCreateRequest("multi-create-cancel-1")))
+				.andExpect(status().isCreated());
+		Long operationId = workOperationRepository.findByRequestKey("multi-create-cancel-1").orElseThrow().getId();
+
+		mockMvc.perform(post("/api/work-operations/{id}/cancel-created-orchid-groups", operationId))
+				.andExpect(status().isOk())
+				.andExpect(jsonPath("$.data.operation.status").value("CANCELED"))
+				.andExpect(jsonPath("$.data.createdOrchidGroups", hasSize(2)))
+				.andExpect(jsonPath("$.data.createdOrchidGroups[0].quantity").value(0))
+				.andExpect(jsonPath("$.data.createdOrchidGroups[0].status").value("생성 취소"));
+		mockMvc.perform(post("/api/work-operations/{id}/cancel-created-orchid-groups", operationId))
+				.andExpect(status().isOk())
+				.andExpect(jsonPath("$.data.operation.status").value("CANCELED"));
+
+		org.assertj.core.api.Assertions.assertThat(orchidGroupRepository.count()).isEqualTo(2);
+		org.assertj.core.api.Assertions.assertThat(
+				memberRepository.findByOrchidGroupIdInAndRemovedAtIsNull(
+						orchidGroupRepository.findAll().stream().map(group -> group.getId()).toList()))
+				.isEmpty();
+		org.assertj.core.api.Assertions.assertThat(workAppliedEffectRepository.findAll().getFirst().getCanceledAt())
+				.isNotNull();
+	}
+
+	private String multiCreateRequest(String idempotencyKey) {
+		return """
+				{
+				  "idempotencyKey": "%s",
+				  "title": "초기 난 묶음 등록",
+				  "workDate": "2026-07-15",
+				  "worker": "테스터",
+				  "rows": [
+				    {
+				      "orchidGroup": {
+				        "bedZoneId": %d, "varietyId": %d, "quantity": 30,
+				        "potSize": "3.5치", "ageYear": 2, "status": "정상",
+				        "placementType": "단일", "startPosition": 0, "endPosition": 2
+				      },
+				      "collectionIds": [%d]
+				    },
+				    {
+				      "orchidGroup": {
+				        "bedZoneId": %d, "varietyId": %d, "quantity": 40,
+				        "potSize": "4치", "ageYear": 3, "status": "정상",
+				        "placementType": "단일", "startPosition": 2, "endPosition": 4
+				      }
+				    }
+				  ]
+				}
+				""".formatted(
+				idempotencyKey, bedZone.getId(), variety.getId(), collection.getId(), bedZone.getId(), variety.getId());
 	}
 }

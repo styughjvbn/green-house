@@ -42,4 +42,9 @@ public class MultiCreateWorkOperationController {
 			@PathVariable Long workOperationId) {
 		return ApiResponse.ok(service.getCancellationEligibility(workOperationId));
 	}
+
+	@PostMapping("/{workOperationId}/cancel-created-orchid-groups")
+	public ApiResponse<MultiCreateWorkOperationResponse> cancel(@PathVariable Long workOperationId) {
+		return ApiResponse.ok(service.cancel(workOperationId));
+	}
 }
