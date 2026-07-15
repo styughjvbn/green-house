@@ -1,6 +1,6 @@
-package com.greenhouse.backend.work.dto;
+package com.greenhouse.backend.farm.dto;
 
-import com.greenhouse.backend.farm.dto.OrchidGroupResponse;
+import com.greenhouse.backend.work.dto.WorkOperationResponse;
 import java.util.List;
 
 public record MultiCreateWorkOperationResponse(

@@ -57,9 +57,9 @@ public class WorkEffectProcessor {
 				command.worker(),
 				command.resultDetails(),
 				result.resultDetails()));
-		workEffectOrchidGroupRepository.saveAll(result.resultOrchidGroups().stream()
-				.map(group -> new WorkEffectOrchidGroup(
-						appliedEffect, group, WorkEffectOrchidGroupRelationType.CREATED))
+		workEffectOrchidGroupRepository.saveAll(result.resultOrchidGroupIds().stream()
+				.map(groupId -> new WorkEffectOrchidGroup(
+						appliedEffect, groupId, WorkEffectOrchidGroupRelationType.CREATED))
 				.toList());
 		return result;
 	}

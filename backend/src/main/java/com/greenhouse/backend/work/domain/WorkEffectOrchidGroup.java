@@ -1,6 +1,5 @@
 package com.greenhouse.backend.work.domain;
 
-import com.greenhouse.backend.farm.domain.OrchidGroup;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
@@ -32,9 +31,8 @@ public class WorkEffectOrchidGroup {
 	@JoinColumn(name = "work_applied_effect_id", nullable = false)
 	private WorkAppliedEffect workAppliedEffect;
 
-	@ManyToOne(fetch = FetchType.LAZY, optional = false)
-	@JoinColumn(name = "orchid_group_id", nullable = false)
-	private OrchidGroup orchidGroup;
+	@Column(name = "orchid_group_id", nullable = false)
+	private Long orchidGroupId;
 
 	@Enumerated(EnumType.STRING)
 	@Column(name = "relation_type", nullable = false, length = 30)
@@ -46,10 +44,10 @@ public class WorkEffectOrchidGroup {
 
 	public WorkEffectOrchidGroup(
 			WorkAppliedEffect workAppliedEffect,
-			OrchidGroup orchidGroup,
+			Long orchidGroupId,
 			WorkEffectOrchidGroupRelationType relationType) {
 		this.workAppliedEffect = workAppliedEffect;
-		this.orchidGroup = orchidGroup;
+		this.orchidGroupId = orchidGroupId;
 		this.relationType = relationType;
 	}
 }

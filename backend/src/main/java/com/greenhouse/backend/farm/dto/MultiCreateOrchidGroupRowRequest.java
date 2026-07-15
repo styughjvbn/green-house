@@ -1,6 +1,5 @@
-package com.greenhouse.backend.work.dto;
+package com.greenhouse.backend.farm.dto;
 
-import com.greenhouse.backend.farm.dto.OrchidGroupCreateRequest;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;

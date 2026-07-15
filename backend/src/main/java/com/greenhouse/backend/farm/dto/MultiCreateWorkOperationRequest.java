@@ -1,4 +1,4 @@
-package com.greenhouse.backend.work.dto;
+package com.greenhouse.backend.farm.dto;
 
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
