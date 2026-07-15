@@ -1,6 +1,7 @@
 package com.greenhouse.backend.work.domain;
 
 public enum WorkSourceScopeType {
+	NONE,
 	FARM,
 	HOUSE,
 	PHYSICAL_BED,

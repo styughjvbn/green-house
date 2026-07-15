@@ -22,6 +22,7 @@ public class WorkType extends BaseEntity {
 	public static final String MOVEMENT_CODE = "MOVEMENT";
 	public static final String INBOUND_CODE = "INBOUND";
 	public static final String POTTING_CODE = "POTTING";
+	public static final String MULTI_CREATE_CODE = "MULTI_CREATE";
 
 	@Id
 	@GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -95,7 +96,16 @@ public class WorkType extends BaseEntity {
 		return switch (template) {
 			case PESTICIDE, FERTILIZER, CLEANUP, STATUS, MEMO -> WorkEffectKind.RECORD_ONLY;
 			case MOVEMENT -> WorkEffectKind.ATTRIBUTE_CHANGE;
-			case REPOT -> WorkEffectKind.STRUCTURE_CHANGE;
+			case REPOT, MULTI_CREATE -> WorkEffectKind.STRUCTURE_CHANGE;
+		};
+	}
+
+	public String handlerCode() {
+		return switch (template) {
+			case PESTICIDE, FERTILIZER, CLEANUP, STATUS, MEMO -> "RECORD_ONLY";
+			case MOVEMENT -> "MOVE";
+			case REPOT -> "REPOT";
+			case MULTI_CREATE -> "MULTI_CREATE";
 		};
 	}
 }

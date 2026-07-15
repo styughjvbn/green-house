@@ -79,6 +79,9 @@ public class WorkOperation extends BaseEntity {
 	@Column(columnDefinition = "text")
 	private String memo;
 
+	@Column(name = "request_key", unique = true, length = 100)
+	private String requestKey;
+
 	@Version
 	@Column(nullable = false)
 	private long version;
@@ -106,6 +109,13 @@ public class WorkOperation extends BaseEntity {
 		this.details = details;
 		this.worker = worker;
 		this.memo = memo;
+	}
+
+	public void assignRequestKey(String requestKey) {
+		if (this.requestKey != null) {
+			throw new IllegalStateException("요청 식별자는 변경할 수 없습니다.");
+		}
+		this.requestKey = requestKey;
 	}
 
 	public void complete(LocalDateTime completedAt) {

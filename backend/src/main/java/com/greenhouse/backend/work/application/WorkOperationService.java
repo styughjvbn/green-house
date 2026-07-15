@@ -200,7 +200,7 @@ public class WorkOperationService {
 		var result = workEffectProcessor.apply(
 				operation,
 				execution.getTarget(),
-				new WorkEffectCommand(completedAt, worker, request.resultDetails()));
+				new WorkEffectCommand(completedAt, worker, request.resultDetails(), null));
 		execution.completeWithEffect(completedAt, worker, result.resultDetails());
 		return get(operationId);
 	}

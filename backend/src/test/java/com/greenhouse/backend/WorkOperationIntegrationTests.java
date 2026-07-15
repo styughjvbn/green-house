@@ -19,6 +19,7 @@ import com.greenhouse.backend.work.domain.WorkTypeTemplate;
 import com.greenhouse.backend.work.repository.WorkOperationRepository;
 import com.greenhouse.backend.work.repository.WorkOperationTargetRepository;
 import com.greenhouse.backend.work.repository.WorkAppliedEffectRepository;
+import com.greenhouse.backend.work.repository.WorkEffectOrchidGroupRepository;
 import com.greenhouse.backend.work.repository.WorkTargetExecutionRepository;
 import java.math.BigDecimal;
 import org.junit.jupiter.api.BeforeEach;
@@ -36,6 +37,8 @@ class WorkOperationIntegrationTests extends AbstractBackendIntegrationTest {
 	private WorkTargetExecutionRepository workTargetExecutionRepository;
 	@Autowired
 	private WorkAppliedEffectRepository workAppliedEffectRepository;
+	@Autowired
+	private WorkEffectOrchidGroupRepository workEffectOrchidGroupRepository;
 
 	private WorkType pesticideType;
 	private OrchidGroup targetGroup;
@@ -44,6 +47,7 @@ class WorkOperationIntegrationTests extends AbstractBackendIntegrationTest {
 
 	@BeforeEach
 	void setUp() {
+		workEffectOrchidGroupRepository.deleteAll();
 		workAppliedEffectRepository.deleteAll();
 		workTargetExecutionRepository.deleteAll();
 		workOperationTargetRepository.deleteAll();

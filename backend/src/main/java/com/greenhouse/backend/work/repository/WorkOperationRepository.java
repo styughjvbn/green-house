@@ -9,4 +9,7 @@ public interface WorkOperationRepository extends JpaRepository<WorkOperation, Lo
 
 	@EntityGraph(attributePaths = "workType")
 	Optional<WorkOperation> findWithWorkTypeById(Long id);
+
+	@EntityGraph(attributePaths = "workType")
+	Optional<WorkOperation> findByRequestKey(String requestKey);
 }

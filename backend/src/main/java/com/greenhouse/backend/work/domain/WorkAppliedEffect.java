@@ -27,8 +27,8 @@ import org.hibernate.type.SqlTypes;
 @Table(
 		name = "work_applied_effects",
 		uniqueConstraints = @UniqueConstraint(
-				name = "uk_work_applied_effect_operation_target_kind",
-				columnNames = {"work_operation_id", "work_operation_target_id", "effect_kind"}))
+				name = "uk_work_applied_effect_operation_key_kind",
+				columnNames = {"work_operation_id", "effect_key", "effect_kind"}))
 public class WorkAppliedEffect extends BaseEntity {
 
 	@Id
@@ -39,9 +39,12 @@ public class WorkAppliedEffect extends BaseEntity {
 	@JoinColumn(name = "work_operation_id", nullable = false)
 	private WorkOperation workOperation;
 
-	@ManyToOne(fetch = FetchType.LAZY, optional = false)
-	@JoinColumn(name = "work_operation_target_id", nullable = false)
+	@ManyToOne(fetch = FetchType.LAZY)
+	@JoinColumn(name = "work_operation_target_id")
 	private WorkOperationTarget target;
+
+	@Column(name = "effect_key", nullable = false, length = 100)
+	private String effectKey;
 
 	@Enumerated(EnumType.STRING)
 	@Column(name = "effect_kind", nullable = false, length = 30)
@@ -67,6 +70,7 @@ public class WorkAppliedEffect extends BaseEntity {
 	public WorkAppliedEffect(
 			WorkOperation workOperation,
 			WorkOperationTarget target,
+			String effectKey,
 			WorkEffectKind effectKind,
 			String handlerCode,
 			LocalDateTime appliedAt,
@@ -75,6 +79,7 @@ public class WorkAppliedEffect extends BaseEntity {
 			Map<String, Object> resultDetails) {
 		this.workOperation = workOperation;
 		this.target = target;
+		this.effectKey = effectKey;
 		this.effectKind = effectKind;
 		this.handlerCode = handlerCode;
 		this.appliedAt = appliedAt;

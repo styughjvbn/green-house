@@ -6,9 +6,9 @@ import com.greenhouse.backend.work.domain.WorkOperationTarget;
 
 public interface WorkEffectHandler {
 
-	WorkEffectKind supports();
+	String supports();
 
-	String handlerCode();
+	WorkEffectKind effectKind();
 
 	WorkExecutionResult execute(
 			WorkOperation operation,

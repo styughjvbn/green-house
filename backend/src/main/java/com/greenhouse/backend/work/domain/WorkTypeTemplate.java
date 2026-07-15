@@ -7,5 +7,6 @@ public enum WorkTypeTemplate {
 	CLEANUP,
 	STATUS,
 	MEMO,
-	MOVEMENT
+	MOVEMENT,
+	MULTI_CREATE
 }
