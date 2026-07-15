@@ -3277,6 +3277,9 @@ components:
         completedAt:
           type: string
           format: date-time
+        effectAppliedAt:
+          type: string
+          format: date-time
         worker:
           type: string
         resultDetails:

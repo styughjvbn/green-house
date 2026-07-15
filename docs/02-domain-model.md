@@ -106,6 +106,7 @@ House
 ```text
 WorkType 1 ─ N WorkRecord
 WorkType 1 ─ N WorkOperation 1 ─ N WorkOperationTarget 1 ─ 1 WorkTargetExecution
+                                      └─ N WorkAppliedEffect
 ```
 
 ### WorkType
@@ -155,6 +156,8 @@ WorkType 1 ─ N WorkOperation 1 ─ N WorkOperationTarget 1 ─ 1 WorkTargetExe
 - 대상별 실행 상태를 별도로 가진다.
 - 전체 작업은 계획·진행·일시중지·완료·취소 상태를 가진다.
 - 각 대상은 대기·진행·완료·건너뜀·취소·실패 상태와 처리 시각·작업자·결과 상세를 가진다.
+- 대상 완료는 작업 효과 handler를 거치며 효과 적용과 완료 상태 변경을 하나의 트랜잭션으로 처리한다.
+- 같은 대상의 같은 효과는 한 번만 적용하고 `WorkAppliedEffect`에 handler, 입력·결과, 적용 시각을 보존한다.
 
 기존 `WorkRecord`는 과거 기록과 위치 이동 같은 기존 시스템 기록을 위해 유지한다. 난 묶음 이력 조회에서는 두 모델을 합쳐 표시한다.
 
