@@ -11,6 +11,7 @@ import com.greenhouse.backend.work.dto.WorkOperationCorrectionItemResponse;
 import com.greenhouse.backend.work.dto.WorkOperationCorrectionsResponse;
 import com.greenhouse.backend.work.repository.WorkOperationCorrectionRepository;
 import com.greenhouse.backend.work.repository.WorkOperationRepository;
+import com.greenhouse.backend.work.repository.WorkAppliedEffectRepository;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import lombok.RequiredArgsConstructor;
@@ -26,6 +27,7 @@ public class WorkOperationCorrectionService {
 	private final WorkOperationCorrectionRepository correctionRepository;
 	private final OperationLevelWorkService operationLevelWorkService;
 	private final WorkOperationService workOperationService;
+	private final WorkAppliedEffectRepository workAppliedEffectRepository;
 
 	public WorkOperationCorrectionsResponse create(
 			Long originalWorkOperationId,
@@ -62,9 +64,17 @@ public class WorkOperationCorrectionService {
 		var original = workOperationService.get(originalWorkOperationId);
 		var corrections = correctionRepository
 				.findByOriginalWorkOperationIdOrderByCreatedAtAscIdAsc(originalWorkOperationId).stream()
-				.map(correction -> WorkOperationCorrectionItemResponse.from(
-						correction,
-						workOperationService.get(correction.getCorrectionWorkOperation().getId())))
+				.map(correction -> {
+					Long correctionOperationId = correction.getCorrectionWorkOperation().getId();
+					Map<String, Object> effectDetails = workAppliedEffectRepository
+							.findByWorkOperationIdAndEffectKey(correctionOperationId, "OPERATION")
+							.map(effect -> effect.getResultDetails())
+							.orElse(Map.of());
+					return WorkOperationCorrectionItemResponse.from(
+							correction,
+							workOperationService.get(correctionOperationId),
+							effectDetails);
+				})
 				.toList();
 		return new WorkOperationCorrectionsResponse(original, corrections);
 	}
