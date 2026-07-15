@@ -2,12 +2,15 @@ package com.greenhouse.backend.work.controller;
 
 import com.greenhouse.backend.common.api.ApiResponse;
 import com.greenhouse.backend.work.application.WorkOperationService;
+import com.greenhouse.backend.work.application.MultiCreateWorkOperationService;
 import com.greenhouse.backend.work.dto.OrchidGroupWorkHistoryResponse;
 import com.greenhouse.backend.work.dto.WorkOperationCreateRequest;
 import com.greenhouse.backend.work.dto.WorkOperationResponse;
 import com.greenhouse.backend.work.dto.WorkTargetPreviewRequest;
 import com.greenhouse.backend.work.dto.WorkTargetPreviewResponse;
 import com.greenhouse.backend.work.dto.WorkTargetExecutionRequest;
+import com.greenhouse.backend.work.dto.MultiCreateWorkOperationRequest;
+import com.greenhouse.backend.work.dto.MultiCreateWorkOperationResponse;
 import jakarta.validation.Valid;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
@@ -28,6 +31,20 @@ import org.springframework.web.bind.annotation.RestController;
 public class WorkOperationController {
 
 	private final WorkOperationService workOperationService;
+	private final MultiCreateWorkOperationService multiCreateWorkOperationService;
+
+	@PostMapping("/work-operations/multi-create")
+	@ResponseStatus(HttpStatus.CREATED)
+	public ApiResponse<MultiCreateWorkOperationResponse> multiCreate(
+			@Valid @RequestBody MultiCreateWorkOperationRequest request) {
+		return ApiResponse.ok(multiCreateWorkOperationService.create(request));
+	}
+
+	@GetMapping("/work-operations/{workOperationId}/created-orchid-groups")
+	public ApiResponse<MultiCreateWorkOperationResponse> getCreatedOrchidGroups(
+			@PathVariable Long workOperationId) {
+		return ApiResponse.ok(multiCreateWorkOperationService.get(workOperationId));
+	}
 
 	@PostMapping("/work-operations/target-preview")
 	public ApiResponse<WorkTargetPreviewResponse> preview(@Valid @RequestBody WorkTargetPreviewRequest request) {

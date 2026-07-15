@@ -60,6 +60,11 @@ const TEMPLATE_CONFIG: Record<WorkTypeTemplate, WorkTypeTemplateConfig> = {
     fields: ["worker", "memo"],
     labels: {},
   },
+  MULTI_CREATE: {
+    label: "난 묶음 다중 생성형",
+    fields: ["worker", "memo"],
+    labels: {},
+  },
 };
 
 export const WORK_TYPE_TEMPLATES = Object.keys(

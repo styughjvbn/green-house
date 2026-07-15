@@ -198,7 +198,8 @@ export type WorkTypeTemplate =
   | "CLEANUP"
   | "STATUS"
   | "MEMO"
-  | "MOVEMENT";
+  | "MOVEMENT"
+  | "MULTI_CREATE";
 
 export type WorkType = {
   id: number;

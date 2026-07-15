@@ -31,8 +31,15 @@ public class OrchidGroupCommandService {
 	private final OrchidPlacementPolicy orchidPlacementPolicy;
 
 	public OrchidGroupResponse create(OrchidGroupCreateRequest request) {
+		return OrchidGroupResponse.from(createEntity(request));
+	}
+
+	public OrchidGroup createEntity(OrchidGroupCreateRequest request) {
 		BedZone bedZone = findZone(request.bedZoneId());
 		Variety variety = findVariety(request.varietyId());
+		if (!variety.isActive()) {
+			throw new IllegalArgumentException("비활성 품종으로 난 묶음을 생성할 수 없습니다.");
+		}
 		BigDecimal startPosition = orchidPlacementPolicy.normalizeNumber(request.startPosition());
 		BigDecimal endPosition = orchidPlacementPolicy.normalizeNumber(request.endPosition());
 		orchidPlacementPolicy.validatePlacement(bedZone, startPosition, endPosition, null);
@@ -63,7 +70,7 @@ public class OrchidGroupCommandService {
 				endPosition,
 				normalize(request.memo()));
 		orchidGroup.assignVariety(variety);
-		return OrchidGroupResponse.from(orchidGroupRepository.save(orchidGroup));
+		return orchidGroupRepository.save(orchidGroup);
 	}
 
 	public OrchidGroupResponse update(Long orchidGroupId, OrchidGroupUpdateRequest request) {
