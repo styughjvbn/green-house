@@ -233,4 +233,39 @@ class WorkOperationIntegrationTests extends AbstractBackendIntegrationTest {
 				.andExpect(status().isOk())
 				.andExpect(jsonPath("$.data", hasSize(0)));
 	}
+
+	@Test
+	void createsAnImmediatelyCompletedRecordOperationAndRejectsLegacyManualWrites() throws Exception {
+		mockMvc.perform(post("/api/work-operations/record")
+				.contentType(MediaType.APPLICATION_JSON)
+				.content("""
+						{
+						  "workTypeId": %d,
+						  "title": "구역 농약 기록",
+						  "plannedStartDate": "2026-07-15",
+						  "sourceScopeType": "BED_ZONE",
+						  "sourceScopeId": %d,
+						  "details": {"materialName": "살균제"},
+						  "worker": "테스터"
+						}
+						""".formatted(pesticideType.getId(), targetGroup.getBedZone().getId())))
+				.andExpect(status().isCreated())
+				.andExpect(jsonPath("$.data.status").value("COMPLETED"))
+				.andExpect(jsonPath("$.data.targets", hasSize(1)))
+				.andExpect(jsonPath("$.data.targets[0].executionStatus").value("COMPLETED"))
+				.andExpect(jsonPath("$.data.targets[0].resultDetails.materialName").value("살균제"));
+
+		mockMvc.perform(post("/api/work-records")
+				.contentType(MediaType.APPLICATION_JSON)
+				.content("""
+						{
+						  "workTypeId": %d,
+						  "workDate": "2026-07-15",
+						  "targetType": "ORCHID_GROUP",
+						  "targetId": %d
+						}
+						""".formatted(pesticideType.getId(), targetGroup.getId())))
+				.andExpect(status().isBadRequest())
+				.andExpect(jsonPath("$.error.details[0]").value("신규 작업 기록은 작업 실행 API를 사용해주세요."));
+	}
 }
