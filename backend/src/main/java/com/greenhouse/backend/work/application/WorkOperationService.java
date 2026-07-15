@@ -135,6 +135,22 @@ public class WorkOperationService {
 		return WorkOperationResponse.from(operation, responses);
 	}
 
+	@Transactional(readOnly = true)
+	public List<WorkOperationResponse> search(
+			LocalDate fromDate,
+			LocalDate toDate,
+			WorkOperationStatus status,
+			WorkSourceScopeType scopeType,
+			Long scopeId) {
+		validateDates(fromDate, toDate);
+		if (scopeId != null && scopeType == null) {
+			throw new IllegalArgumentException("대상 범위 ID를 조회하려면 대상 범위 유형이 필요합니다.");
+		}
+		return workOperationRepository.search(fromDate, toDate, status, scopeType, scopeId).stream()
+				.map(operation -> get(operation.getId()))
+				.toList();
+	}
+
 	public WorkOperationResponse complete(Long operationId) {
 		WorkOperation operation = workOperationRepository.findWithWorkTypeById(operationId)
 				.orElseThrow(() -> new NotFoundException("작업을 찾을 수 없습니다."));

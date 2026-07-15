@@ -13,6 +13,7 @@ import com.greenhouse.backend.work.dto.WorkTargetPreviewResponse;
 import com.greenhouse.backend.work.dto.WorkTargetExecutionRequest;
 import jakarta.validation.Valid;
 import java.util.List;
+import java.time.LocalDate;
 import lombok.RequiredArgsConstructor;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.http.HttpStatus;
@@ -21,6 +22,7 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 
@@ -42,6 +44,16 @@ public class WorkOperationController {
 	@ResponseStatus(HttpStatus.CREATED)
 	public ApiResponse<WorkOperationResponse> create(@Valid @RequestBody WorkOperationCreateRequest request) {
 		return ApiResponse.ok(workOperationService.create(request));
+	}
+
+	@GetMapping("/work-operations")
+	public ApiResponse<List<WorkOperationResponse>> search(
+			@RequestParam(required = false) LocalDate from,
+			@RequestParam(required = false) LocalDate to,
+			@RequestParam(required = false) com.greenhouse.backend.work.domain.WorkOperationStatus status,
+			@RequestParam(required = false) com.greenhouse.backend.work.domain.WorkSourceScopeType scopeType,
+			@RequestParam(required = false) Long scopeId) {
+		return ApiResponse.ok(workOperationService.search(from, to, status, scopeType, scopeId));
 	}
 
 	@GetMapping("/work-operations/{workOperationId}")
