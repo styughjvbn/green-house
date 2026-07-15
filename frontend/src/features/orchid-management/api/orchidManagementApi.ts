@@ -380,7 +380,7 @@ export function archiveOrchidGroupCollection(collectionId: number) {
 export async function createOrchidWorkOperation(
   payload: WorkRecordQuickPayload,
   workTypeName: string,
-): Promise<WorkOperation> {
+): Promise<WorkOperation | WorkRecord> {
   const response = await fetch(`${API_BASE_URL}/work-operations/record`, {
     method: "POST",
     credentials: "include",
@@ -400,6 +400,9 @@ export async function createOrchidWorkOperation(
       memo: payload.memo,
     }),
   });
+  if (response.status === 404) {
+    return createLegacyOrchidWorkRecord(payload);
+  }
   const body = await readJson(response);
   if (!response.ok) {
     throw new Error(
@@ -407,6 +410,25 @@ export async function createOrchidWorkOperation(
     );
   }
   return (body as { data: WorkOperation }).data;
+}
+
+async function createLegacyOrchidWorkRecord(
+  payload: WorkRecordQuickPayload,
+): Promise<WorkRecord> {
+  const response = await fetch(`${API_BASE_URL}/work-records`, {
+    method: "POST",
+    credentials: "include",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload),
+  });
+  await handleAuthExpired(response);
+  const body = await readJson(response);
+  if (!response.ok) {
+    throw new Error(
+      resolveErrorMessage(body, "작업 이력을 저장하지 못했습니다."),
+    );
+  }
+  return (body as { data: WorkRecord }).data;
 }
 
 export async function fetchHouse(houseId: number): Promise<House> {

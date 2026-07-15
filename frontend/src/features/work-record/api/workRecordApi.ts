@@ -73,11 +73,12 @@ export async function getWorkRecordTargetOptions(
 export async function createCompletedWorkOperationFromRecord(
   payload: CreateWorkRecordPayload,
   workTypeName: string,
-): Promise<WorkOperation> {
-  return requestWorkOperation<WorkOperation>(
-    "/work-operations/record",
-    "POST",
-    {
+): Promise<WorkOperation | WorkRecord> {
+  const response = await fetch(`${API_BASE_URL}/work-operations/record`, {
+    method: "POST",
+    credentials: "include",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
       workTypeId: payload.workTypeId,
       title: `${workTypeName} 작업`,
       plannedStartDate: payload.workDate,
@@ -90,8 +91,32 @@ export async function createCompletedWorkOperationFromRecord(
       },
       worker: payload.worker,
       memo: payload.memo,
-    },
-  );
+    }),
+  });
+  if (response.status === 404) {
+    return createLegacyWorkRecord(payload);
+  }
+  const body = await response.json().catch(() => null);
+  if (!response.ok) {
+    throw new Error(body?.error?.message ?? "신규 작업을 처리하지 못했습니다.");
+  }
+  return body.data as WorkOperation;
+}
+
+async function createLegacyWorkRecord(
+  payload: CreateWorkRecordPayload,
+): Promise<WorkRecord> {
+  const response = await fetch(`${API_BASE_URL}/work-records`, {
+    method: "POST",
+    credentials: "include",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload),
+  });
+  const body = await response.json().catch(() => null);
+  if (!response.ok) {
+    throw new Error(body?.error?.message ?? "작업 이력을 저장하지 못했습니다.");
+  }
+  return body.data as WorkRecord;
 }
 
 export async function cancelWorkRecord({
