@@ -57,10 +57,17 @@ public class WorkEffectProcessor {
 				command.worker(),
 				command.resultDetails(),
 				result.resultDetails()));
-		workEffectOrchidGroupRepository.saveAll(result.resultOrchidGroupIds().stream()
-				.map(groupId -> new WorkEffectOrchidGroup(
-						appliedEffect, groupId, WorkEffectOrchidGroupRelationType.CREATED))
-				.toList());
+		var groupLinks = new java.util.ArrayList<WorkEffectOrchidGroup>();
+		if (target != null && effectKind == WorkEffectKind.STRUCTURE_CHANGE) {
+			groupLinks.add(new WorkEffectOrchidGroup(
+					appliedEffect, target.getOrchidGroupId(), WorkEffectOrchidGroupRelationType.SOURCE));
+		}
+		WorkEffectOrchidGroupRelationType resultRelation = target == null
+				? WorkEffectOrchidGroupRelationType.CREATED
+				: WorkEffectOrchidGroupRelationType.RESULT;
+		result.resultOrchidGroupIds().forEach(groupId -> groupLinks.add(
+				new WorkEffectOrchidGroup(appliedEffect, groupId, resultRelation)));
+		workEffectOrchidGroupRepository.saveAll(groupLinks);
 		return result;
 	}
 }
