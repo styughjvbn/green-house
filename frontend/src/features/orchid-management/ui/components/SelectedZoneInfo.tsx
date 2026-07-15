@@ -1,6 +1,7 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { createPortal } from "react-dom";
 import type {
   BedZone,
   House,
@@ -120,21 +121,47 @@ export default function SelectedZoneInfo({
             </div>
           </div>
 
-          <div className="grid shrink-0 grid-cols-4 gap-1 text-center lg:w-60">
-            <InfoMetric label="난 묶음 수" value={`${targetGroups.length}개`} />
+          <div
+            className={`grid shrink-0 gap-1 text-center ${
+              selectedOrchidGroup
+                ? "grid-cols-2 lg:w-32"
+                : "grid-cols-4 lg:w-60"
+            }`}
+          >
+            {!selectedOrchidGroup ? (
+              <InfoMetric
+                label="난 묶음 수"
+                value={`${targetGroups.length}개`}
+              />
+            ) : null}
             <InfoMetric label="총 수량" value={`${totalQuantity}분`} />
+            {!selectedOrchidGroup ? (
+              <InfoMetric
+                label={zone ? "구역 수" : "하위 구역"}
+                value={`${zoneCount}개`}
+              />
+            ) : null}
             <InfoMetric
-              label={zone || selectedOrchidGroup ? "구역 수" : "하위 구역"}
-              value={`${zoneCount}개`}
+              label="상태"
+              value={selectedOrchidGroup?.status ?? "정상"}
             />
-            <InfoMetric label="상태" value="정상" />
           </div>
 
           <div className="min-w-0 flex-1 border-t border-[#e1e6df] pt-2 lg:border-t-0 lg:border-l lg:pt-0 lg:pl-3">
-            <WorkRecordSummaryView
-              loading={workRecordSummaryLoading}
-              summary={workRecordSummary}
-            />
+            {selectedOrchidGroup ? (
+              <OrchidGroupActivityView
+                history={orchidGroupHistory}
+                loading={orchidGroupHistoryLoading}
+                lineage={orchidGroupLineage}
+                lineageLoading={orchidGroupLineageLoading}
+                onOpenCorrection={onOpenCorrection}
+              />
+            ) : (
+              <WorkRecordSummaryView
+                loading={workRecordSummaryLoading}
+                summary={workRecordSummary}
+              />
+            )}
           </div>
         </div>
       ) : (
@@ -142,24 +169,11 @@ export default function SelectedZoneInfo({
           구역 또는 난 묶음을 선택하세요.
         </p>
       )}
-      {selectedOrchidGroup ? (
-        <>
-          <OrchidGroupLineageView
-            lineage={orchidGroupLineage}
-            loading={orchidGroupLineageLoading}
-          />
-          <OrchidGroupHistoryView
-            history={orchidGroupHistory}
-            loading={orchidGroupHistoryLoading}
-            onOpenCorrection={onOpenCorrection}
-          />
-        </>
-      ) : null}
     </section>
   );
 }
 
-function OrchidGroupLineageView({
+function OrchidGroupLineageDetail({
   lineage,
   loading,
 }: {
@@ -168,7 +182,6 @@ function OrchidGroupLineageView({
 }) {
   const sources = lineage?.sources ?? [];
   const results = lineage?.results ?? [];
-  if (!loading && sources.length === 0 && results.length === 0) return null;
 
   return (
     <div className="mt-3 border-t border-[#e1e6df] pt-3">
@@ -182,6 +195,8 @@ function OrchidGroupLineageView({
       </div>
       {loading ? (
         <p className="mt-2 text-xs text-[#5c6a60]">계보 확인 중</p>
+      ) : sources.length === 0 && results.length === 0 ? (
+        <p className="mt-2 text-xs text-[#5c6a60]">연결된 계보가 없습니다.</p>
       ) : (
         <div className="mt-2 grid gap-2 lg:grid-cols-2">
           {sources.length > 0 ? (
@@ -260,68 +275,176 @@ function lineageLabel(relationType: OrchidGroupLineageRelationType) {
   )[relationType];
 }
 
-function OrchidGroupHistoryView({
+function OrchidGroupActivityView({
   history,
+  lineage,
+  lineageLoading,
   loading,
   onOpenCorrection,
 }: {
   history: OrchidGroupWorkHistory[];
+  lineage: OrchidGroupLineage | null;
+  lineageLoading: boolean;
   loading: boolean;
   onOpenCorrection: (workOperationId: number) => void;
 }) {
+  const [detailOpen, setDetailOpen] = useState(false);
+  const lineageCount =
+    (lineage?.sources.length ?? 0) + (lineage?.results.length ?? 0);
+  const hasDetails = history.length > 0 || lineageLoading || lineageCount > 0;
+
+  useEffect(() => {
+    if (!detailOpen) return;
+
+    const closeOnEscape = (event: KeyboardEvent) => {
+      if (event.key === "Escape") setDetailOpen(false);
+    };
+
+    document.addEventListener("keydown", closeOnEscape);
+    return () => {
+      document.removeEventListener("keydown", closeOnEscape);
+    };
+  }, [detailOpen]);
+
   return (
-    <div className="mt-3 border-t border-[#e1e6df] pt-3">
+    <div>
       <div className="flex items-center justify-between gap-3">
-        <h3 className="text-sm font-bold text-[#344138]">난 묶음 작업 이력</h3>
-        <span className="text-xs text-[#6f7b72]">
-          최근 {Math.min(history.length, 5)}건
-        </span>
+        <h3 className="text-xs font-bold text-[#344138]">최근 작업</h3>
+        {hasDetails ? (
+          <button
+            className="text-[11px] font-semibold text-[#16713a]"
+            type="button"
+            aria-expanded={detailOpen}
+            onClick={() => setDetailOpen((current) => !current)}
+          >
+            상세 보기
+          </button>
+        ) : (
+          <span className="text-[11px] text-[#6f7b72]">{history.length}건</span>
+        )}
       </div>
       {loading ? (
-        <p className="mt-2 text-xs text-[#5c6a60]">통합 이력 확인 중</p>
+        <p className="mt-1 rounded-md bg-[#f5f7f3] p-2 text-xs text-[#5c6a60]">
+          최근 작업 확인 중
+        </p>
       ) : history.length === 0 ? (
-        <p className="mt-2 text-xs text-[#5c6a60]">
-          표시할 통합 이력이 없습니다.
+        <p className="mt-1 rounded-md bg-[#f5f7f3] p-2 text-xs text-[#5c6a60]">
+          등록된 작업 없음
         </p>
       ) : (
-        <ul className="mt-2 grid gap-2 lg:grid-cols-2 xl:grid-cols-3">
-          {history.slice(0, 5).map((item) => (
-            <li
-              key={`${item.sourceKind}-${item.workOperationId ?? item.legacyWorkRecordId}`}
-              className="rounded-md border border-[#dfe5dc] bg-[#fbfcfa] p-2.5 text-xs"
-            >
-              <div className="flex items-center justify-between gap-2">
-                <span className="font-bold text-[#17251b]">{item.title}</span>
-                <span className="shrink-0 text-[#5c6a60]">{item.workDate}</span>
-              </div>
-              <p className="mt-1 text-[#435047]">{historySourceLabel(item)}</p>
-              {item.locationSnapshot ? (
-                <p className="mt-1 text-[#6a766e]">
-                  당시 {formatLocation(item.locationSnapshot)}
-                  {item.locationSnapshot.houseId !==
-                    item.currentLocation.houseId ||
-                  item.locationSnapshot.bedZoneId !==
-                    item.currentLocation.bedZoneId
-                    ? ` · 현재 ${formatLocation(item.currentLocation)}`
-                    : ""}
-                </p>
-              ) : null}
-              {item.sourceKind === "WORK_OPERATION_EFFECT" &&
-              item.workOperationId != null ? (
-                <button
-                  className="mt-2 rounded-md border border-[#9dcaaa] bg-white px-2 py-1 font-semibold text-[#16713a]"
-                  type="button"
-                  onClick={() => onOpenCorrection(item.workOperationId!)}
-                >
-                  결과 보정
-                </button>
-              ) : null}
-            </li>
+        <ul className="mt-1 grid gap-1 sm:grid-cols-2">
+          {history.slice(0, 2).map((item) => (
+            <ActivityItem item={item} key={historyItemKey(item)} />
           ))}
         </ul>
       )}
+
+      {detailOpen
+        ? createPortal(
+            <div
+              className="fixed inset-0 z-[1000] flex items-center justify-center bg-black/20 p-4"
+              role="presentation"
+              onMouseDown={() => setDetailOpen(false)}
+            >
+              <section
+                className="flex max-h-[min(32rem,calc(100dvh-2rem))] w-full max-w-md flex-col rounded-md border border-[#cfd8cc] bg-white p-3 shadow-xl"
+                role="dialog"
+                aria-modal="true"
+                aria-label="난 묶음 상세"
+                onMouseDown={(event) => event.stopPropagation()}
+              >
+                <div className="flex shrink-0 items-center justify-between gap-3">
+                  <p className="text-sm font-bold text-[#17251b]">
+                    난 묶음 상세
+                  </p>
+                  <button
+                    className="text-xs font-semibold text-[#5c6a60]"
+                    type="button"
+                    onClick={() => setDetailOpen(false)}
+                  >
+                    닫기
+                  </button>
+                </div>
+                <div className="mt-2 min-h-0 overflow-y-auto">
+                  <p className="text-xs font-bold text-[#344138]">최근 작업</p>
+                  {history.length > 0 ? (
+                    <ul className="mt-2 space-y-2">
+                      {history.slice(0, 5).map((item) => (
+                        <ActivityItem
+                          detailed
+                          item={item}
+                          key={historyItemKey(item)}
+                          onOpenCorrection={(workOperationId) => {
+                            setDetailOpen(false);
+                            onOpenCorrection(workOperationId);
+                          }}
+                        />
+                      ))}
+                    </ul>
+                  ) : (
+                    <p className="mt-2 text-xs text-[#5c6a60]">
+                      등록된 작업 없음
+                    </p>
+                  )}
+                  <OrchidGroupLineageDetail
+                    lineage={lineage}
+                    loading={lineageLoading}
+                  />
+                </div>
+              </section>
+            </div>,
+            document.body,
+          )
+        : null}
     </div>
   );
+}
+
+function ActivityItem({
+  detailed = false,
+  item,
+  onOpenCorrection,
+}: {
+  detailed?: boolean;
+  item: OrchidGroupWorkHistory;
+  onOpenCorrection?: (workOperationId: number) => void;
+}) {
+  return (
+    <li className="rounded-md border border-[#dfe5dc] bg-[#fbfcfa] px-2 py-1.5 text-[11px]">
+      <div className="flex items-center justify-between gap-2">
+        <span className="truncate font-bold text-[#17251b]">{item.title}</span>
+        <span className="shrink-0 text-[#5c6a60]">{item.workDate}</span>
+      </div>
+      {detailed ? (
+        <p className="mt-1 text-[#435047]">{historySourceLabel(item)}</p>
+      ) : null}
+      {detailed && item.locationSnapshot ? (
+        <p className="mt-1 text-[#6a766e]">
+          당시 {formatLocation(item.locationSnapshot)}
+          {item.locationSnapshot.houseId !== item.currentLocation.houseId ||
+          item.locationSnapshot.bedZoneId !== item.currentLocation.bedZoneId
+            ? ` · 현재 ${formatLocation(item.currentLocation)}`
+            : ""}
+        </p>
+      ) : null}
+      {detailed &&
+      item.sourceKind === "WORK_OPERATION_EFFECT" &&
+      item.workOperationId != null &&
+      onOpenCorrection ? (
+        <button
+          className="mt-1 rounded-md border border-[#9dcaaa] bg-white px-2 py-0.5 font-semibold text-[#16713a]"
+          type="button"
+          onClick={() => onOpenCorrection(item.workOperationId!)}
+        >
+          결과 보정
+        </button>
+      ) : null}
+    </li>
+  );
+}
+
+function historyItemKey(item: OrchidGroupWorkHistory) {
+  return `${item.sourceKind}-${item.workOperationId ?? item.legacyWorkRecordId}`;
 }
 
 function historySourceLabel(item: OrchidGroupWorkHistory) {
@@ -349,8 +472,6 @@ function WorkRecordSummaryView({
   loading: boolean;
   summary: WorkRecordSummary;
 }) {
-  const [showTypeSummary, setShowTypeSummary] = useState(false);
-
   if (loading) {
     return (
       <p className="mt-1 rounded-md bg-[#f5f7f3] p-2 text-xs text-[#5c6a60]">
@@ -368,29 +489,11 @@ function WorkRecordSummaryView({
   );
 
   return (
-    <div className="relative mt-1 grid gap-2 xl:grid-cols-[210px_minmax(0,1fr)]">
+    <div className="mt-1 grid gap-2 xl:grid-cols-[210px_minmax(0,1fr)]">
       <dl className="hidden grid-cols-3 gap-1 text-[11px] text-[#5c6a60] xl:grid">
         {summaryRows}
       </dl>
-
-      {showTypeSummary ? (
-        <dl className="absolute right-0 bottom-full z-20 mb-2 grid w-56 grid-cols-3 gap-1 rounded-md border border-[#d7ddd4] bg-white p-2 text-[11px] text-[#5c6a60] shadow-lg xl:hidden">
-          {summaryRows}
-        </dl>
-      ) : null}
-
-      <button
-        className="min-w-0 text-left xl:contents"
-        type="button"
-        onClick={() => setShowTypeSummary((current) => !current)}
-        onBlur={(event) => {
-          if (!event.currentTarget.contains(event.relatedTarget)) {
-            setShowTypeSummary(false);
-          }
-        }}
-      >
-        <RecentWorkList records={summary.latestRecords.slice(0, 2)} />
-      </button>
+      <RecentWorkList records={summary.latestRecords.slice(0, 2)} />
     </div>
   );
 }
@@ -409,7 +512,7 @@ function RecentWorkList({ records }: { records: WorkRecord[] }) {
       {records.map((record) => (
         <li
           key={record.id}
-          className={`"px-2 py-1.5" rounded-md border border-[#e1e6df] bg-[#fbfcfa] text-xs`}
+          className="rounded-md border border-[#e1e6df] bg-[#fbfcfa] px-2 py-1.5 text-xs"
         >
           <div className="flex items-center justify-between gap-2">
             <span className="truncate font-semibold text-[#17251b]">
