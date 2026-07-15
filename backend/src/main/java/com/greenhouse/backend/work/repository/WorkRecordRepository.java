@@ -4,6 +4,7 @@ import com.greenhouse.backend.work.domain.WorkRecord;
 import com.greenhouse.backend.work.domain.WorkRecordStatus;
 import java.time.LocalDate;
 import java.util.List;
+import java.util.Collection;
 import java.util.Optional;
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -11,6 +12,7 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
 public interface WorkRecordRepository extends JpaRepository<WorkRecord, Long>, WorkRecordRepositoryCustom {
+	long countByTargetTypeAndTargetIdIn(String targetType, Collection<Long> targetIds);
 	List<WorkRecord> findByTargetTypeAndTargetIdOrderByWorkDateDescIdDesc(String targetType, Long targetId);
 
 	Optional<WorkRecord> findTopByTargetTypeAndTargetIdAndWorkTypeOrderByWorkDateDescIdDesc(

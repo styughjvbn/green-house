@@ -5,6 +5,7 @@ import com.greenhouse.backend.farm.domain.InboundStatus;
 import com.greenhouse.backend.farm.domain.InboundType;
 import java.time.LocalDate;
 import java.util.Optional;
+import java.util.Collection;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.EntityGraph;
@@ -46,6 +47,8 @@ public interface InboundRecordRepository extends JpaRepository<InboundRecord, Lo
 			Pageable pageable);
 
 	boolean existsByVarietyId(Long varietyId);
+
+	long countByCreatedOrchidGroupIdIn(Collection<Long> orchidGroupIds);
 
 	@Modifying(clearAutomatically = true, flushAutomatically = true)
 	@Query("""
