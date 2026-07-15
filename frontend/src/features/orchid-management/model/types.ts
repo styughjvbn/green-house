@@ -7,6 +7,7 @@ import type {
   SelectedOrchidGroup,
   WorkRecord,
   WorkRecordTargetType,
+  WorkOperation,
   WorkType,
 } from "@/entities/farm/types";
 
@@ -111,6 +112,29 @@ export type RepotWorkResult = {
   inputQuantity: number;
   lossQuantity: number;
   lossReason: string | null;
+};
+
+export type WorkOperationCorrectionAdjustment = {
+  orchidGroupId: number;
+  beforeQuantity: number;
+  afterQuantity: number;
+  beforeStatus: string;
+  afterStatus: string;
+};
+
+export type WorkOperationCorrectionItem = {
+  id: number;
+  reason: string;
+  createdAt: string;
+  correctionOperation: WorkOperation;
+  effectDetails: {
+    adjustments?: WorkOperationCorrectionAdjustment[];
+  };
+};
+
+export type WorkOperationCorrections = {
+  originalOperation: WorkOperation;
+  corrections: WorkOperationCorrectionItem[];
 };
 
 export type OrchidGroupLineageRelationType =

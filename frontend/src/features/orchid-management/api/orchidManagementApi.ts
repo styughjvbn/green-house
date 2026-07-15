@@ -21,6 +21,7 @@ import type {
   PreciseMovePayload,
   RepotResultOrchidGroupRow,
   RepotWorkResult,
+  WorkOperationCorrections,
   WorkRecordQuickPayload,
 } from "../model/types";
 
@@ -28,6 +29,47 @@ export function getOrchidGroupLineage(orchidGroupId: number) {
   return fetchApi<OrchidGroupLineage>(
     `/orchid-groups/${orchidGroupId}/lineage`,
   );
+}
+
+export function getWorkOperationCorrections(workOperationId: number) {
+  return fetchApi<WorkOperationCorrections>(
+    `/work-operations/${workOperationId}/corrections`,
+  );
+}
+
+export async function createWorkOperationCorrection(
+  workOperationId: number,
+  payload: {
+    idempotencyKey: string;
+    title: string;
+    workDate: string;
+    worker: string | null;
+    memo: string | null;
+    reason: string;
+    orchidGroupAdjustments: Array<{
+      orchidGroupId: number;
+      quantity: number;
+      status: string;
+    }>;
+  },
+): Promise<WorkOperationCorrections> {
+  const response = await fetch(
+    `${API_BASE_URL}/work-operations/${workOperationId}/corrections`,
+    {
+      method: "POST",
+      credentials: "include",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    },
+  );
+  await handleAuthExpired(response);
+  const body = await readJson(response);
+  if (!response.ok) {
+    throw new Error(
+      resolveErrorMessage(body, "보정 작업을 완료하지 못했습니다."),
+    );
+  }
+  return (body as { data: WorkOperationCorrections }).data;
 }
 
 export async function executeRepotWork(payload: {
