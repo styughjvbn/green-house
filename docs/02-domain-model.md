@@ -174,7 +174,9 @@ WorkType 1 ─ N WorkOperation 1 ─ N WorkOperationTarget 1 ─ 1 WorkTargetExe
 - 보정 작업은 `CORRECTION` 시스템 작업 유형으로 완료 상태와 효과 감사 기록을 가진다.
 - 보정 사유와 생성 시각을 보존하며 같은 보정 작업은 하나의 원본에만 연결한다.
 - 관계 생성 후 원본 작업은 `CORRECTED` 상태가 되지만 기존 결과 데이터는 변경하거나 삭제하지 않는다.
-- 수량·상태·계보를 실제로 변경하는 보정 효과는 후속 범위다.
+- 보정 효과는 원본 작업의 생성 결과만 잠근 뒤 수량·상태를 변경하고 전후 값을 `WorkAppliedEffect.resultDetails`에 보존한다.
+- 후속 작업·이동·판매·입고 연결이 있거나 예약 수량보다 작게 줄이려는 보정은 거부한다.
+- 새 결과 생성과 계보 교체 보정은 후속 범위다.
 
 ### OrchidGroupLineage
 

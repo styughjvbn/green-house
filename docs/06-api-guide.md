@@ -106,4 +106,4 @@ python3 scripts/generate_openapi.py --url http://localhost:8080/api-docs
 
 구조 변경 작업은 별도 API로 제공한다. 다중 생성은 원본 대상 없이 여러 난 묶음을 만들고, 분갈이는 단일 원본을 대상으로 부분·전체 수량을 처리해 결과 난 묶음과 계보를 만든다. 구현되지 않은 다른 작업 유형을 일반 작업 API에서 사용할 수 있다고 가정하지 않는다.
 
-완료된 구조 변경 작업의 보정 관계는 `POST/GET /api/work-operations/{workOperationId}/corrections`로 기록·조회한다. 현재 API는 보정 작업과 사유를 연결하고 원본 상태를 `CORRECTED`로 표시하지만 난 묶음 수량·상태·계보 자체를 변경하지 않는다.
+완료된 구조 변경 작업의 보정은 `POST/GET /api/work-operations/{workOperationId}/corrections`로 실행·조회한다. 생성 요청의 `orchidGroupAdjustments`에는 원본 작업이 만든 결과 난 묶음만 지정할 수 있으며 수량·상태 전후 값은 응답의 `effectDetails.adjustments`에서 확인한다. 후속 운영 데이터가 연결된 결과와 예약 수량을 침해하는 변경은 거부한다.
