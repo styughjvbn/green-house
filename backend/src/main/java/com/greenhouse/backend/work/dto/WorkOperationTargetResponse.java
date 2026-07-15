@@ -21,6 +21,7 @@ public record WorkOperationTargetResponse(
 		WorkTargetExecutionStatus executionStatus,
 		LocalDateTime startedAt,
 		LocalDateTime completedAt,
+		LocalDateTime effectAppliedAt,
 		String worker,
 		Map<String, Object> resultDetails) {
 
@@ -37,6 +38,7 @@ public record WorkOperationTargetResponse(
 				target.potSize(),
 				target.location(),
 				WorkTargetExecutionStatus.PENDING,
+				null,
 				null,
 				null,
 				null,
@@ -59,6 +61,7 @@ public record WorkOperationTargetResponse(
 				execution.getStatus(),
 				execution.getStartedAt(),
 				execution.getCompletedAt(),
+				execution.getEffectAppliedAt(),
 				execution.getWorker(),
 				execution.getResultDetails());
 	}

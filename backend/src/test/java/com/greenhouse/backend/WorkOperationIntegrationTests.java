@@ -18,6 +18,7 @@ import com.greenhouse.backend.work.domain.WorkType;
 import com.greenhouse.backend.work.domain.WorkTypeTemplate;
 import com.greenhouse.backend.work.repository.WorkOperationRepository;
 import com.greenhouse.backend.work.repository.WorkOperationTargetRepository;
+import com.greenhouse.backend.work.repository.WorkAppliedEffectRepository;
 import com.greenhouse.backend.work.repository.WorkTargetExecutionRepository;
 import java.math.BigDecimal;
 import org.junit.jupiter.api.BeforeEach;
@@ -33,6 +34,8 @@ class WorkOperationIntegrationTests extends AbstractBackendIntegrationTest {
 	private WorkOperationTargetRepository workOperationTargetRepository;
 	@Autowired
 	private WorkTargetExecutionRepository workTargetExecutionRepository;
+	@Autowired
+	private WorkAppliedEffectRepository workAppliedEffectRepository;
 
 	private WorkType pesticideType;
 	private OrchidGroup targetGroup;
@@ -41,6 +44,7 @@ class WorkOperationIntegrationTests extends AbstractBackendIntegrationTest {
 
 	@BeforeEach
 	void setUp() {
+		workAppliedEffectRepository.deleteAll();
 		workTargetExecutionRepository.deleteAll();
 		workOperationTargetRepository.deleteAll();
 		workOperationRepository.deleteAll();
@@ -134,14 +138,40 @@ class WorkOperationIntegrationTests extends AbstractBackendIntegrationTest {
 		mockMvc.perform(post("/api/work-operations/{id}/start", operationId))
 				.andExpect(status().isOk())
 				.andExpect(jsonPath("$.data.status").value("IN_PROGRESS"));
-		mockMvc.perform(post("/api/work-operations/{id}/targets/{targetId}/complete", operationId, targetId))
+		mockMvc.perform(post("/api/work-operations/{id}/targets/{targetId}/complete", operationId, targetId)
+				.contentType(MediaType.APPLICATION_JSON)
+				.content("""
+						{
+						  "worker": "첫 작업자",
+						  "resultDetails": {"weather": "맑음"}
+						}
+						"""))
 				.andExpect(status().isOk())
-				.andExpect(jsonPath("$.data.targets[0].executionStatus").value("COMPLETED"));
+				.andExpect(jsonPath("$.data.targets[0].executionStatus").value("COMPLETED"))
+				.andExpect(jsonPath("$.data.targets[0].effectAppliedAt").exists())
+				.andExpect(jsonPath("$.data.targets[0].worker").value("첫 작업자"))
+				.andExpect(jsonPath("$.data.targets[0].resultDetails.weather").value("맑음"));
 
 		mockMvc.perform(post("/api/work-operations/{id}/complete", operationId))
 				.andExpect(status().isOk())
 				.andExpect(jsonPath("$.data.status").value("COMPLETED"))
 				.andExpect(jsonPath("$.data.targets[0].executionStatus").value("COMPLETED"));
+
+		mockMvc.perform(post("/api/work-operations/{id}/targets/{targetId}/complete", operationId, targetId)
+				.contentType(MediaType.APPLICATION_JSON)
+				.content("""
+						{
+						  "worker": "중복 작업자",
+						  "resultDetails": {"weather": "변경 시도"}
+						}
+						"""))
+				.andExpect(status().isOk())
+				.andExpect(jsonPath("$.data.status").value("COMPLETED"))
+				.andExpect(jsonPath("$.data.targets[0].worker").value("첫 작업자"))
+				.andExpect(jsonPath("$.data.targets[0].resultDetails.weather").value("맑음"));
+		org.assertj.core.api.Assertions.assertThat(
+				workAppliedEffectRepository.countByWorkOperationIdAndTargetId(operationId, targetId))
+				.isEqualTo(1);
 
 		mockMvc.perform(patch("/api/orchid-groups/{id}/move", targetGroup.getId())
 				.contentType(MediaType.APPLICATION_JSON)

@@ -7,6 +7,8 @@ import com.greenhouse.backend.work.domain.WorkOperationStatus;
 import com.greenhouse.backend.work.domain.WorkSourceScopeType;
 import com.greenhouse.backend.work.domain.WorkTargetExecution;
 import com.greenhouse.backend.work.domain.WorkTargetInclusionSource;
+import com.greenhouse.backend.work.application.effect.WorkEffectCommand;
+import com.greenhouse.backend.work.application.effect.WorkEffectProcessor;
 import com.greenhouse.backend.work.dto.OrchidGroupWorkHistoryResponse;
 import com.greenhouse.backend.work.dto.WorkOperationCreateRequest;
 import com.greenhouse.backend.work.dto.WorkOperationResponse;
@@ -42,6 +44,7 @@ public class WorkOperationService {
 	private final WorkOperationTargetRepository workOperationTargetRepository;
 	private final WorkTargetExecutionRepository workTargetExecutionRepository;
 	private final WorkRecordRepository workRecordRepository;
+	private final WorkEffectProcessor workEffectProcessor;
 
 	@Transactional(readOnly = true)
 	public WorkTargetPreviewResponse preview(WorkTargetPreviewRequest request) {
@@ -184,9 +187,21 @@ public class WorkOperationService {
 
 	public WorkOperationResponse completeTarget(
 			Long operationId, Long targetId, WorkTargetExecutionRequest request) {
-		validateOperationInProgress(operationId);
-		findExecution(operationId, targetId).complete(
-				LocalDateTime.now(), normalize(request.worker()), request.resultDetails());
+		WorkTargetExecution execution = findExecutionForUpdate(operationId, targetId);
+		if (execution.isEffectApplied()) {
+			return get(operationId);
+		}
+		WorkOperation operation = execution.getTarget().getWorkOperation();
+		if (operation.getStatus() != WorkOperationStatus.IN_PROGRESS) {
+			throw new IllegalArgumentException("진행 중인 작업에서만 대상을 처리할 수 있습니다.");
+		}
+		LocalDateTime completedAt = LocalDateTime.now();
+		String worker = normalize(request.worker());
+		var result = workEffectProcessor.apply(
+				operation,
+				execution.getTarget(),
+				new WorkEffectCommand(completedAt, worker, request.resultDetails()));
+		execution.completeWithEffect(completedAt, worker, result.resultDetails());
 		return get(operationId);
 	}
 
@@ -232,6 +247,12 @@ public class WorkOperationService {
 
 	private WorkTargetExecution findExecution(Long operationId, Long targetId) {
 		return workTargetExecutionRepository.findByTargetIdAndTargetWorkOperationId(targetId, operationId)
+				.orElseThrow(() -> new NotFoundException("작업 대상을 찾을 수 없습니다."));
+	}
+
+	private WorkTargetExecution findExecutionForUpdate(Long operationId, Long targetId) {
+		return workTargetExecutionRepository
+				.findForUpdateByTargetIdAndTargetWorkOperationId(targetId, operationId)
 				.orElseThrow(() -> new NotFoundException("작업 대상을 찾을 수 없습니다."));
 	}
 

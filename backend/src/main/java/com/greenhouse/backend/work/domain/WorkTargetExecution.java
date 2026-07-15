@@ -64,10 +64,6 @@ public class WorkTargetExecution extends BaseEntity {
 		this.status = WorkTargetExecutionStatus.PENDING;
 	}
 
-	public void complete(LocalDateTime completedAt, String worker) {
-		complete(completedAt, worker, null);
-	}
-
 	public void start(LocalDateTime startedAt, String worker) {
 		if (status == WorkTargetExecutionStatus.IN_PROGRESS) {
 			return;
@@ -80,8 +76,11 @@ public class WorkTargetExecution extends BaseEntity {
 		this.status = WorkTargetExecutionStatus.IN_PROGRESS;
 	}
 
-	public void complete(LocalDateTime completedAt, String worker, Map<String, Object> resultDetails) {
-		if (status == WorkTargetExecutionStatus.COMPLETED) {
+	public void completeWithEffect(
+			LocalDateTime completedAt,
+			String worker,
+			Map<String, Object> resultDetails) {
+		if (isEffectApplied()) {
 			return;
 		}
 		if (status != WorkTargetExecutionStatus.PENDING && status != WorkTargetExecutionStatus.IN_PROGRESS) {
@@ -93,7 +92,12 @@ public class WorkTargetExecution extends BaseEntity {
 		this.completedAt = completedAt;
 		this.worker = worker;
 		this.resultDetails = resultDetails;
+		this.effectAppliedAt = completedAt;
 		this.status = WorkTargetExecutionStatus.COMPLETED;
+	}
+
+	public boolean isEffectApplied() {
+		return effectAppliedAt != null;
 	}
 
 	public void skip(LocalDateTime skippedAt, String worker, Map<String, Object> resultDetails) {
