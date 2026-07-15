@@ -7,7 +7,7 @@ import { WorkRecordCreateForm } from "./components/WorkRecordCreateForm";
 import { WorkRecordDetail } from "./components/WorkRecordDetail";
 import { WorkRecordFilters } from "./components/WorkRecordFilters";
 import { WorkRecordList } from "./components/WorkRecordList";
-import { HouseWorkOperationPanel } from "./components/HouseWorkOperationPanel";
+import { WorkOperationPanel } from "./components/HouseWorkOperationPanel";
 
 export function WorkRecordManager(props: WorkRecordManagerProps) {
   const manager = useWorkRecordManager(props);
@@ -46,7 +46,7 @@ export function WorkRecordManager(props: WorkRecordManagerProps) {
         />
       ) : null}
       {showOperationForm ? (
-        <HouseWorkOperationPanel
+        <WorkOperationPanel
           houses={props.houses}
           workTypes={props.workTypes}
           onClose={() => setShowOperationForm(false)}

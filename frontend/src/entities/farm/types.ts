@@ -261,6 +261,17 @@ export type WorkLocationSnapshot = {
 export type WorkOperationTarget = {
   id: number | null;
   orchidGroupId: number;
+  inclusionSource:
+    | "DIRECT"
+    | "FARM"
+    | "HOUSE"
+    | "PHYSICAL_BED"
+    | "BED_ZONE"
+    | "DERIVED_GROUP"
+    | "USER_COLLECTION"
+    | "MANUAL_ADDITION"
+    | "LINEAGE"
+    | null;
   varietyName: string;
   quantitySnapshot: number;
   ageYearSnapshot: number | null;
@@ -286,8 +297,13 @@ export type WorkOperation = {
   plannedEndDate: string | null;
   actualStartAt: string | null;
   actualEndAt: string | null;
-  sourceScopeType: "HOUSE";
-  sourceScopeId: number;
+  sourceScopeType:
+    | "HOUSE"
+    | "DERIVED_GROUP"
+    | "USER_COLLECTION"
+    | "MANUAL_SELECTION";
+  sourceScopeId: number | null;
+  sourceConditionSnapshot: Record<string, unknown>;
   targetSnapshotAt: string;
   details: Record<string, unknown> | null;
   worker: string | null;

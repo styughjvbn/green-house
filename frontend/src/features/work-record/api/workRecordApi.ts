@@ -1,4 +1,4 @@
-﻿import { API_BASE_URL } from "@/shared/api/client";
+﻿import { API_BASE_URL, fetchApi } from "@/shared/api/client";
 import type {
   BedZone,
   OrchidGroup,
@@ -10,9 +10,30 @@ import type {
 import type {
   CreateWorkRecordPayload,
   CreateWorkOperationPayload,
+  WorkOperationScopeOptions,
   WorkTargetPreviewPayload,
   WorkRecordTargetOptions,
 } from "../model/types";
+
+export async function getWorkOperationScopeOptions(): Promise<WorkOperationScopeOptions> {
+  const [derivedGroups, collections, orchidGroups] = await Promise.all([
+    fetchApi<WorkOperationScopeOptions["derivedGroups"]>(
+      "/orchid-groups/derived-groups",
+    ),
+    fetchApi<WorkOperationScopeOptions["collections"]>(
+      "/orchid-group-collections",
+    ),
+    fetchApi<OrchidGroup[]>("/orchid-groups"),
+  ]);
+  const excludedStatuses = new Set(["종료", "폐기", "판매 완료"]);
+  return {
+    derivedGroups,
+    collections,
+    orchidGroups: orchidGroups.filter(
+      (group) => group.quantity > 0 && !excludedStatuses.has(group.status),
+    ),
+  };
+}
 
 export async function getWorkRecordTargetOptions(
   houseId: string,

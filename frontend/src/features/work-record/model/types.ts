@@ -59,7 +59,10 @@ export type WorkRecordFilterState = {
 };
 
 export type WorkOperationFormState = {
+  sourceScopeType: WorkOperationScopeType;
   houseId: string;
+  scopeKey: string;
+  collectionId: string;
   title: string;
   plannedStartDate: string;
   plannedEndDate: string;
@@ -70,9 +73,39 @@ export type WorkOperationFormState = {
   memo: string;
 };
 
+export type WorkOperationScopeType =
+  | "HOUSE"
+  | "DERIVED_GROUP"
+  | "USER_COLLECTION"
+  | "MANUAL_SELECTION";
+
+export type WorkDerivedGroupOption = {
+  groupKey: string;
+  varietyName: string;
+  ageYear: number | null;
+  potSize: string | null;
+  orchidGroupCount: number;
+  totalQuantity: number;
+};
+
+export type WorkCollectionOption = {
+  id: number;
+  name: string;
+  orchidGroupCount: number;
+  totalQuantity: number;
+};
+
+export type WorkOperationScopeOptions = {
+  derivedGroups: WorkDerivedGroupOption[];
+  collections: WorkCollectionOption[];
+  orchidGroups: OrchidGroup[];
+};
+
 export type WorkTargetPreviewPayload = {
-  scopeType: "HOUSE";
-  scopeId: number;
+  scopeType: WorkOperationScopeType;
+  scopeId?: number;
+  scopeKey?: string;
+  orchidGroupIds?: number[];
 };
 
 export type CreateWorkOperationPayload = {
@@ -80,8 +113,10 @@ export type CreateWorkOperationPayload = {
   title: string;
   plannedStartDate: string;
   plannedEndDate: string | null;
-  sourceScopeType: "HOUSE";
-  sourceScopeId: number;
+  sourceScopeType: WorkOperationScopeType;
+  sourceScopeId?: number;
+  sourceScopeKey?: string;
+  sourceOrchidGroupIds?: number[];
   details: Record<string, unknown>;
   worker: string | null;
   memo: string | null;
