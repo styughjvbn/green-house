@@ -93,6 +93,12 @@ body {
   flex: 0 0 auto;
 }
 
+@media (min-width: 64rem) and (max-width: 95.999rem) {
+  .app-content > header.app-header-sidebar-overlay-expanded {
+    margin-left: 7rem;
+  }
+}
+
 .app-content > main {
   min-width: 0;
   flex: 1 1 auto;

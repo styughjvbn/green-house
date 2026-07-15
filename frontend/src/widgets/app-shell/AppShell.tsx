@@ -84,6 +84,38 @@ function getCurrentPageMeta(pathname: string) {
   );
 }
 
+const tabLabels: Record<string, Record<string, string>> = {
+  "work-records": {
+    list: "작업 목록",
+    calendar: "캘린더",
+    history: "작업 이력",
+  },
+  sales: {
+    slips: "판매 전표",
+    auction: "출하·경매 추적",
+    settlement: "경매 정산",
+    partners: "거래처 관리",
+  },
+  analytics: {
+    sales: "매출/출하",
+    variety: "품종 분석",
+    customer: "거래처 분석",
+    space: "농장 공간",
+    work: "작업/상태",
+  },
+  inventory: {
+    variety: "품종 관리",
+    inbound: "입고 관리",
+    material: "자재 관리",
+  },
+};
+
+function getBreadcrumbs(pathname: string, pageTitle: string) {
+  const [section, tab] = pathname.split("/").filter(Boolean);
+  const tabLabel = section && tab ? tabLabels[section]?.[tab] : undefined;
+  return tabLabel ? [pageTitle, tabLabel] : [pageTitle];
+}
+
 const navigation: {
   href: string;
   activeHref?: string;
@@ -218,6 +250,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   }
 
   const currentPage = getCurrentPageMeta(pathname);
+  const breadcrumbs = getBreadcrumbs(pathname, currentPage.title);
   const salesTab = pathname.split("/")[2] ?? "slips";
   const isSalesPage = pathname.startsWith("/sales");
   const sidebarCollapsed = !sidebarExpanded;
@@ -228,9 +261,25 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         className={`app-shell-sidebar sticky top-0 z-40 hidden shrink-0 flex-col bg-[#003b1f] px-2 py-4 transition-[width,box-shadow] duration-200 lg:flex lg:max-2xl:absolute lg:max-2xl:left-0 ${
           sidebarCollapsed ? "w-12 cursor-pointer" : "w-44"
         } ${sidebarCollapsed ? "" : "lg:max-2xl:shadow-xl"}`}
-        onClick={() => {
+        tabIndex={-1}
+        onClick={(event) => {
           if (sidebarCollapsed) {
             setSidebarExpanded(true);
+            event.currentTarget.focus();
+          }
+        }}
+        onFocus={() => {
+          if (compactDesktopHeader && sidebarCollapsed) {
+            setSidebarExpanded(true);
+          }
+        }}
+        onBlur={(event) => {
+          const nextTarget = event.relatedTarget;
+          if (
+            compactDesktopHeader &&
+            (!nextTarget || !event.currentTarget.contains(nextTarget))
+          ) {
+            setSidebarExpanded(false);
           }
         }}
       >
@@ -484,6 +533,10 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           <PageHeader
             title={currentPage.title}
             description={currentPage.description}
+            breadcrumbs={breadcrumbs}
+            className={
+              sidebarExpanded ? "app-header-sidebar-overlay-expanded" : ""
+            }
             collapsed={compactDesktopHeader || sidebarCollapsed}
           />
 
