@@ -2,9 +2,9 @@
 
 ## 1. 결정 상태
 
-`2026-07-14` 기준 결정이다. 기존 `WorkRecord`는 읽기와 시스템 이동 기록을 유지하고, 신규 상위 범위 작업은 `WorkOperation`에 저장한다.
+`2026-07-15` 기준 결정이다. 기존 `WorkRecord`는 읽기와 시스템 이동 기록을 유지하고, 신규 상위 범위 작업은 `WorkOperation`에 저장한다.
 
-동 전체 농약 작업, 사용자 그룹 관리, 자동 그룹 조회를 구현했다. 기간 작업의 개별 명령과 구조 변경 작업은 후속 단계다.
+동 전체·자동 그룹·사용자 그룹·직접 다중 선택 농약 작업과 그룹 관리를 구현했다. 기간 작업의 개별 명령과 구조 변경 작업은 후속 단계다.
 API는 `WORK_OPERATION_V2_ENABLED=true`일 때만 노출한다. 기본값은 비활성화다.
 
 ## 2. 대상 확정
@@ -15,6 +15,7 @@ API는 `WORK_OPERATION_V2_ENABLED=true`일 때만 노출한다. 기본값은 비
 - 작업 시작 전 새로고침은 후속 단계에서 제공한다.
 - 작업 시작 후 대상은 자동 변경하지 않는다.
 - 작업 당시 품종, 년생, 화분 표시값, 수량, 위치를 스냅샷으로 보존한다.
+- 자동 그룹은 그룹 키, 사용자 그룹은 그룹 ID, 직접 선택은 난 묶음 ID 목록을 조건 스냅샷으로 함께 보존한다.
 
 ## 3. 자동·사용자 그룹
 
@@ -34,7 +35,7 @@ API는 `WORK_OPERATION_V2_ENABLED=true`일 때만 노출한다. 기본값은 비
 
 - 전체 상태: `DRAFT`, `PLANNED`, `IN_PROGRESS`, `PAUSED`, `COMPLETED`, `CANCELED`, `CORRECTED`.
 - 대상 상태: `PENDING`, `IN_PROGRESS`, `COMPLETED`, `SKIPPED`, `CANCELED`, `FAILED`.
-- 첫 구현에서는 `PLANNED → COMPLETED`만 제공한다.
+- 현재 구현에서는 `PLANNED → COMPLETED`만 제공한다.
 - 상위 작업을 난 묶음별 작업 행으로 복제하지 않는다. `WorkOperationTarget` 연결로 조회한다.
 - 조회 중복 기준은 `workOperationId + orchidGroupId`다.
 

@@ -92,15 +92,20 @@ components:
   schemas:
     WorkTargetPreviewRequest:
       type: object
-      required: [scopeType, scopeId]
+      required: [scopeType]
       properties:
         scopeType:
           type: string
-          enum: [HOUSE]
+          enum: [HOUSE, DERIVED_GROUP, USER_COLLECTION, MANUAL_SELECTION]
         scopeId: {type: integer, format: int64}
+        scopeKey: {type: string}
+        orchidGroupIds:
+          type: array
+          uniqueItems: true
+          items: {type: integer, format: int64}
     WorkOperationCreateRequest:
       type: object
-      required: [workTypeId, title, plannedStartDate, sourceScopeType, sourceScopeId]
+      required: [workTypeId, title, plannedStartDate, sourceScopeType]
       properties:
         workTypeId: {type: integer, format: int64}
         title: {type: string, maxLength: 150}
@@ -108,8 +113,13 @@ components:
         plannedEndDate: {type: string, format: date}
         sourceScopeType:
           type: string
-          enum: [HOUSE]
+          enum: [HOUSE, DERIVED_GROUP, USER_COLLECTION, MANUAL_SELECTION]
         sourceScopeId: {type: integer, format: int64}
+        sourceScopeKey: {type: string}
+        sourceOrchidGroupIds:
+          type: array
+          uniqueItems: true
+          items: {type: integer, format: int64}
         details: {type: object, additionalProperties: true}
         worker: {type: string, maxLength: 100}
         memo: {type: string, maxLength: 1000}
@@ -121,6 +131,9 @@ components:
       properties:
         id: {type: integer, format: int64}
         orchidGroupId: {type: integer, format: int64}
+        inclusionSource:
+          type: [string, 'null']
+          enum: [DIRECT, FARM, HOUSE, PHYSICAL_BED, BED_ZONE, DERIVED_GROUP, USER_COLLECTION, MANUAL_ADDITION, LINEAGE, null]
         varietyName: {type: string}
         quantitySnapshot: {type: integer, format: int32}
         ageYearSnapshot: {type: integer, format: int32}
@@ -154,6 +167,7 @@ components:
         actualEndAt: {type: string, format: date-time}
         sourceScopeType: {type: string}
         sourceScopeId: {type: integer, format: int64}
+        sourceConditionSnapshot: {type: object, additionalProperties: true}
         targetSnapshotAt: {type: string, format: date-time}
         details: {type: object, additionalProperties: true}
         worker: {type: string}
