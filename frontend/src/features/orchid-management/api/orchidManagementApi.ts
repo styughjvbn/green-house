@@ -18,8 +18,38 @@ import type {
   MultiCreateWorkResult,
   OrchidGroupCollection,
   PreciseMovePayload,
+  RepotResultOrchidGroupRow,
+  RepotWorkResult,
   WorkRecordQuickPayload,
 } from "../model/types";
+
+export async function executeRepotWork(payload: {
+  idempotencyKey: string;
+  title: string;
+  workDate: string;
+  worker: string | null;
+  memo: string | null;
+  sourceOrchidGroupId: number;
+  inputQuantity: number;
+  lossQuantity: number;
+  lossReason: string | null;
+  results: RepotResultOrchidGroupRow[];
+  inheritCollectionIds: number[];
+}): Promise<RepotWorkResult> {
+  const response = await fetch(`${API_BASE_URL}/work-operations/repot`, {
+    method: "POST",
+    credentials: "include",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload),
+  });
+  const body = await readJson(response);
+  if (!response.ok) {
+    throw new Error(
+      resolveErrorMessage(body, "분갈이 작업을 완료하지 못했습니다."),
+    );
+  }
+  return (body as { data: RepotWorkResult }).data;
+}
 
 export function getMultiCreateCancellationEligibility(workOperationId: number) {
   return fetchApi<MultiCreateCancellationEligibility>(
