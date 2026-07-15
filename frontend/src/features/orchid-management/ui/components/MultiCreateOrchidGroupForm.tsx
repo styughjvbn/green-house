@@ -1,10 +1,14 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { FormEvent, useMemo, useState } from "react";
+import { FormEvent, useEffect, useMemo, useState } from "react";
 import type { House, VarietyOption } from "@/entities/farm/types";
 import { POT_SIZE_OPTIONS } from "@/entities/farm/potSizes";
-import { createMultipleOrchidGroups } from "../../api/orchidManagementApi";
+import {
+  createMultipleOrchidGroups,
+  getOrchidGroupCollections,
+} from "../../api/orchidManagementApi";
+import type { OrchidGroupCollection } from "../../model/types";
 import VarietySearchSelect from "./VarietySearchSelect";
 
 type Row = {
@@ -17,6 +21,7 @@ type Row = {
   startCell: string;
   endCell: string;
   memo: string;
+  collectionIds: number[];
 };
 
 export default function MultiCreateOrchidGroupForm({
@@ -47,6 +52,19 @@ export default function MultiCreateOrchidGroupForm({
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [createdCount, setCreatedCount] = useState<number | null>(null);
+  const [collections, setCollections] = useState<OrchidGroupCollection[]>([]);
+
+  useEffect(() => {
+    let active = true;
+    void getOrchidGroupCollections().then((items) => {
+      if (active) {
+        setCollections(items.filter((item) => item.status === "ACTIVE"));
+      }
+    });
+    return () => {
+      active = false;
+    };
+  }, []);
 
   function updateRow(key: string, patch: Partial<Row>) {
     setRows((current) =>
@@ -84,7 +102,7 @@ export default function MultiCreateOrchidGroupForm({
             endPosition: Number(row.endCell),
             memo: row.memo.trim() || null,
           },
-          collectionIds: [],
+          collectionIds: row.collectionIds,
         })),
       });
       setCreatedCount(result.createdOrchidGroups.length);
@@ -231,6 +249,36 @@ export default function MultiCreateOrchidGroupForm({
                 value={row.memo}
                 onChange={(value) => updateRow(row.key, { memo: value })}
               />
+              {collections.length > 0 ? (
+                <fieldset>
+                  <legend className="text-sm font-semibold text-[#435047]">
+                    사용자 그룹 소속
+                  </legend>
+                  <div className="mt-1 flex flex-wrap gap-2">
+                    {collections.map((collection) => (
+                      <label
+                        key={collection.id}
+                        className="flex items-center gap-1 rounded-md border bg-white px-2 py-1 text-xs"
+                      >
+                        <input
+                          checked={row.collectionIds.includes(collection.id)}
+                          type="checkbox"
+                          onChange={(event) =>
+                            updateRow(row.key, {
+                              collectionIds: event.target.checked
+                                ? [...row.collectionIds, collection.id]
+                                : row.collectionIds.filter(
+                                    (id) => id !== collection.id,
+                                  ),
+                            })
+                          }
+                        />
+                        {collection.name}
+                      </label>
+                    ))}
+                  </div>
+                </fieldset>
+              ) : null}
             </div>
           ))}
           {error ? (
@@ -276,6 +324,7 @@ function newRow(bedZoneId: number | undefined, cell: number): Row {
     startCell: String(cell),
     endCell: String(cell),
     memo: "",
+    collectionIds: [],
   };
 }
 
