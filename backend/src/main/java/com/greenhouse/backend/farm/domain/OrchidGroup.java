@@ -190,6 +190,20 @@ public class OrchidGroup extends BaseEntity {
 		}
 	}
 
+	public void correctQuantityAndStatus(Integer correctedQuantity, String correctedStatus) {
+		if (correctedQuantity == null || correctedQuantity < 0) {
+			throw new IllegalArgumentException("보정 수량은 0 이상이어야 합니다.");
+		}
+		if (correctedQuantity < reservedQuantity) {
+			throw new IllegalArgumentException("보정 수량은 현재 예약 수량보다 작을 수 없습니다.");
+		}
+		if (correctedStatus == null || correctedStatus.isBlank()) {
+			throw new IllegalArgumentException("보정 상태가 필요합니다.");
+		}
+		this.quantity = correctedQuantity;
+		this.status = correctedStatus.trim();
+	}
+
 	public void reserve(Integer reserveQuantity) {
 		validatePositiveQuantity(reserveQuantity, "예약 수량");
 		if (getAvailableQuantity() < reserveQuantity) {
