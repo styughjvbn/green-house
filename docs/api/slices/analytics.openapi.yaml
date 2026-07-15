@@ -285,6 +285,7 @@ components:
           - MEMO
           - MOVEMENT
           - MULTI_CREATE
+          - CORRECTION
         workDate:
           type: string
           format: date

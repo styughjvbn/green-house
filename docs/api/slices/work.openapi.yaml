@@ -280,6 +280,7 @@ components:
           - MEMO
           - MOVEMENT
           - MULTI_CREATE
+          - CORRECTION
         workDate:
           type: string
           format: date
@@ -335,6 +336,7 @@ components:
           - MEMO
           - MOVEMENT
           - MULTI_CREATE
+          - CORRECTION
       required:
       - name
       - template
@@ -370,6 +372,7 @@ components:
           - MEMO
           - MOVEMENT
           - MULTI_CREATE
+          - CORRECTION
         defaultType:
           type: boolean
         systemType:
@@ -397,6 +400,7 @@ components:
           - MEMO
           - MOVEMENT
           - MULTI_CREATE
+          - CORRECTION
         active:
           type: boolean
       required:
