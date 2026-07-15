@@ -43,6 +43,20 @@ export function WorkTargetSelectionDialog({
     () => filterTargetTree(tree, keyword),
     [keyword, tree],
   );
+  const [focusedHouseId, setFocusedHouseId] = useState<number | null>(
+    () => tree[0]?.id ?? null,
+  );
+  const [focusedBedNumber, setFocusedBedNumber] = useState<number | null>(
+    () => tree[0]?.beds[0]?.number ?? null,
+  );
+  const focusedHouse =
+    visibleTree.find((house) => house.id === focusedHouseId) ??
+    visibleTree[0] ??
+    null;
+  const focusedBed =
+    focusedHouse?.beds.find((bed) => bed.number === focusedBedNumber) ??
+    focusedHouse?.beds[0] ??
+    null;
   const selectedGroups = useMemo(
     () => groups.filter((group) => selectedIds.has(group.id)),
     [groups, selectedIds],
@@ -96,8 +110,8 @@ export function WorkTargetSelectionDialog({
           <div>
             <h3 className="text-lg font-bold text-[#17251b]">작업 대상 선택</h3>
             <p className="mt-1 text-sm text-[#617067]">
-              동, 다이, 구역을 함께 선택해도 실제 저장 대상은 난 묶음으로
-              합쳐집니다.
+              동과 다이를 왼쪽에서 오른쪽으로 확인하며 복수 범위를 선택할 수
+              있습니다.
             </p>
           </div>
           <button
@@ -127,103 +141,164 @@ export function WorkTargetSelectionDialog({
         </div>
 
         <div className="min-h-0 flex-1 overflow-y-auto p-4 sm:p-5">
-          <div className="overflow-hidden rounded-md border border-[#d7dfd5] bg-white">
-            {visibleTree.map((house) => (
-              <details
-                className="border-b border-[#dfe6dd] last:border-b-0"
-                open
-                key={house.id}
-              >
-                <summary className="flex cursor-pointer list-none items-center gap-3 bg-[#edf5ed] px-3 py-3 marker:content-none">
-                  <SelectionCheckbox
-                    label={`${house.number}동 전체`}
-                    {...selectionState(house.groups, selectedIds)}
-                    onChange={() => toggleGroups(house.groups)}
-                  />
-                  <span className="font-bold text-[#26352b]">
-                    {house.number}동
-                  </span>
-                  <span className="ml-auto text-xs font-semibold text-[#617067]">
-                    {house.groups.length}묶음
-                  </span>
-                </summary>
-
-                <div className="px-2 py-2 sm:px-3">
-                  {house.beds.map((bed) => (
-                    <details
-                      className="border-b border-[#e7ece5] last:border-b-0"
-                      open
-                      key={`${house.id}-${bed.number}`}
-                    >
-                      <summary className="flex cursor-pointer list-none items-center gap-3 px-2 py-2.5 marker:content-none">
-                        <SelectionCheckbox
-                          label={`${house.number}동 ${bed.number}다이 전체`}
-                          {...selectionState(bed.groups, selectedIds)}
-                          onChange={() => toggleGroups(bed.groups)}
-                        />
-                        <span className="font-semibold text-[#344138]">
-                          {bed.number}다이
-                        </span>
-                        <span className="ml-auto text-xs text-[#6a766e]">
-                          {bed.groups.length}묶음
-                        </span>
-                      </summary>
-
-                      <div className="mb-2 ml-3 border-l border-[#d9e2d7] pl-3 sm:ml-5 sm:pl-4">
-                        {bed.zones.map((zone) => (
-                          <div
-                            className="border-b border-[#edf0ec] py-2 last:border-b-0"
-                            key={zone.id}
+          {focusedHouse && focusedBed ? (
+            <div className="space-y-4">
+              <section>
+                <div className="mb-2 flex items-center justify-between gap-2">
+                  <p className="text-sm font-bold text-[#344138]">동 선택</p>
+                  <p className="text-xs text-[#718077]">
+                    {visibleTree[0].number}동 →{" "}
+                    {visibleTree[visibleTree.length - 1].number}동
+                  </p>
+                </div>
+                <div className="overflow-x-auto pb-1">
+                  <div className="flex min-w-max gap-2">
+                    {visibleTree.map((house) => {
+                      const active = house.id === focusedHouse.id;
+                      return (
+                        <div
+                          className={`flex min-w-24 items-center gap-2 rounded-md border p-2 ${
+                            active
+                              ? "border-[#159447] bg-[#edf8ef]"
+                              : "border-[#d7dfd5] bg-white"
+                          }`}
+                          key={house.id}
+                        >
+                          <SelectionCheckbox
+                            label={`${house.number}동 전체`}
+                            {...selectionState(house.groups, selectedIds)}
+                            onChange={() => toggleGroups(house.groups)}
+                          />
+                          <button
+                            className="flex flex-1 flex-col items-start"
+                            type="button"
+                            onClick={() => {
+                              setFocusedHouseId(house.id);
+                              setFocusedBedNumber(
+                                house.beds[0]?.number ?? null,
+                              );
+                            }}
                           >
-                            <div className="flex items-center gap-3 px-2 py-1.5">
-                              <SelectionCheckbox
-                                label={`${house.number}동 ${bed.number}다이 ${zone.name} 전체`}
-                                {...selectionState(zone.groups, selectedIds)}
-                                onChange={() => toggleGroups(zone.groups)}
-                              />
-                              <span className="text-sm font-semibold text-[#435047]">
-                                {zone.name}
-                              </span>
-                              <span className="ml-auto text-xs text-[#718077]">
-                                {zone.groups.length}묶음
-                              </span>
-                            </div>
+                            <span className="text-sm font-bold text-[#26352b]">
+                              {house.number}동
+                            </span>
+                            <span className="text-[11px] text-[#718077]">
+                              {house.groups.length}묶음
+                            </span>
+                          </button>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              </section>
 
-                            <div className="mt-1 ml-7 grid gap-1 md:grid-cols-2">
-                              {zone.groups.map((group) => (
-                                <label
-                                  className="flex cursor-pointer items-center gap-2 rounded px-2 py-2 text-sm hover:bg-[#f4f8f3]"
-                                  key={group.id}
-                                >
-                                  <SelectionCheckbox
-                                    label={`${group.varietyName} ${group.quantity}분`}
-                                    checked={selectedIds.has(group.id)}
-                                    indeterminate={false}
-                                    onChange={() => toggleGroups([group])}
-                                  />
-                                  <span className="min-w-0 flex-1 truncate text-[#344138]">
-                                    {group.varietyName}
-                                  </span>
-                                  <span className="shrink-0 text-xs text-[#6a766e]">
-                                    {group.quantity}분
-                                  </span>
-                                </label>
-                              ))}
-                            </div>
-                          </div>
+              <section>
+                <div className="mb-2 flex items-center justify-between gap-2">
+                  <p className="text-sm font-bold text-[#344138]">
+                    {focusedHouse.number}동 다이 선택
+                  </p>
+                  <p className="text-xs text-[#718077]">
+                    {focusedHouse.beds[0].number}다이 →{" "}
+                    {focusedHouse.beds[focusedHouse.beds.length - 1].number}다이
+                  </p>
+                </div>
+                <div className="overflow-x-auto pb-1">
+                  <div className="flex min-w-max gap-2">
+                    {focusedHouse.beds.map((bed) => {
+                      const active = bed.number === focusedBed.number;
+                      return (
+                        <div
+                          className={`flex min-w-28 items-center gap-2 rounded-md border p-2 ${
+                            active
+                              ? "border-[#3d6f91] bg-[#edf5fa]"
+                              : "border-[#d7dfd5] bg-white"
+                          }`}
+                          key={`${focusedHouse.id}-${bed.number}`}
+                        >
+                          <SelectionCheckbox
+                            label={`${focusedHouse.number}동 ${bed.number}다이 전체`}
+                            {...selectionState(bed.groups, selectedIds)}
+                            onChange={() => toggleGroups(bed.groups)}
+                          />
+                          <button
+                            className="flex flex-1 flex-col items-start"
+                            type="button"
+                            onClick={() => setFocusedBedNumber(bed.number)}
+                          >
+                            <span className="text-sm font-bold text-[#344138]">
+                              {bed.number}다이
+                            </span>
+                            <span className="text-[11px] text-[#718077]">
+                              {bed.groups.length}묶음
+                            </span>
+                          </button>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              </section>
+
+              <section className="overflow-hidden rounded-md border border-[#d7dfd5] bg-white">
+                <div className="border-b border-[#dfe6dd] bg-[#f1f6f0] px-4 py-3">
+                  <p className="text-sm font-bold text-[#26352b]">
+                    {focusedHouse.number}동 · {focusedBed.number}다이
+                  </p>
+                  <p className="mt-0.5 text-xs text-[#6a766e]">
+                    구역 전체 또는 개별 난 묶음을 선택하세요.
+                  </p>
+                </div>
+                <div className="grid gap-3 p-3 md:grid-cols-2">
+                  {focusedBed.zones.map((zone) => (
+                    <div
+                      className="rounded-md border border-[#e1e7df] p-2"
+                      key={zone.id}
+                    >
+                      <div className="flex items-center gap-3 px-2 py-1.5">
+                        <SelectionCheckbox
+                          label={`${focusedHouse.number}동 ${focusedBed.number}다이 ${zone.name} 전체`}
+                          {...selectionState(zone.groups, selectedIds)}
+                          onChange={() => toggleGroups(zone.groups)}
+                        />
+                        <span className="text-sm font-semibold text-[#435047]">
+                          {zone.name}
+                        </span>
+                        <span className="ml-auto text-xs text-[#718077]">
+                          {zone.groups.length}묶음
+                        </span>
+                      </div>
+                      <div className="mt-1 space-y-1">
+                        {zone.groups.map((group) => (
+                          <label
+                            className="flex cursor-pointer items-center gap-2 rounded px-2 py-2 text-sm hover:bg-[#f4f8f3]"
+                            key={group.id}
+                          >
+                            <SelectionCheckbox
+                              label={`${group.varietyName} ${group.quantity}분`}
+                              checked={selectedIds.has(group.id)}
+                              indeterminate={false}
+                              onChange={() => toggleGroups([group])}
+                            />
+                            <span className="min-w-0 flex-1 truncate text-[#344138]">
+                              {group.varietyName}
+                            </span>
+                            <span className="shrink-0 text-xs text-[#6a766e]">
+                              {group.quantity}분
+                            </span>
+                          </label>
                         ))}
                       </div>
-                    </details>
+                    </div>
                   ))}
                 </div>
-              </details>
-            ))}
-            {visibleTree.length === 0 ? (
-              <p className="px-4 py-12 text-center text-sm text-[#6a766e]">
-                검색 결과가 없습니다.
-              </p>
-            ) : null}
-          </div>
+              </section>
+            </div>
+          ) : (
+            <div className="rounded-md border border-[#d7dfd5] bg-white px-4 py-12 text-center text-sm text-[#6a766e]">
+              검색 결과가 없습니다.
+            </div>
+          )}
         </div>
 
         <footer className="flex shrink-0 flex-wrap items-center justify-between gap-3 border-t border-[#dbe5da] bg-white px-5 py-4">
