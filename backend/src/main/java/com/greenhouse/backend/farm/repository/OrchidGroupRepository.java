@@ -129,6 +129,19 @@ public interface OrchidGroupRepository extends JpaRepository<OrchidGroup, Long> 
 			join fetch z.physicalBed b
 			join fetch b.house
 			left join fetch g.variety
+			left join fetch g.inboundRecord
+			where g.id in :orchidGroupIds
+			  and g.quantity > 0
+			  and g.status not in ('종료', '폐기', '판매 완료')
+			""")
+	List<OrchidGroup> findActiveWorkTargetsByIds(@Param("orchidGroupIds") java.util.Collection<Long> orchidGroupIds);
+
+	@Query("""
+			select g from OrchidGroup g
+			join fetch g.bedZone z
+			join fetch z.physicalBed b
+			join fetch b.house
+			left join fetch g.variety
 			where g.id in :orchidGroupIds
 			""")
 	List<OrchidGroup> findDetailsByIds(@Param("orchidGroupIds") java.util.Collection<Long> orchidGroupIds);

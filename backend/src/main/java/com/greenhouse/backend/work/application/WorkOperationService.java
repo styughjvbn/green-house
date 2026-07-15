@@ -3,6 +3,7 @@ package com.greenhouse.backend.work.application;
 import com.greenhouse.backend.common.exception.NotFoundException;
 import com.greenhouse.backend.work.domain.WorkOperation;
 import com.greenhouse.backend.work.domain.WorkOperationTarget;
+import com.greenhouse.backend.work.domain.WorkSourceScopeType;
 import com.greenhouse.backend.work.domain.WorkTargetExecution;
 import com.greenhouse.backend.work.domain.WorkTargetInclusionSource;
 import com.greenhouse.backend.work.dto.OrchidGroupWorkHistoryResponse;
@@ -18,6 +19,7 @@ import com.greenhouse.backend.work.repository.WorkTargetExecutionRepository;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.HashSet;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -41,7 +43,9 @@ public class WorkOperationService {
 
 	@Transactional(readOnly = true)
 	public WorkTargetPreviewResponse preview(WorkTargetPreviewRequest request) {
-		List<ResolvedWorkTarget> groups = workTargetResolver.resolve(request.scopeType(), request.scopeId());
+		WorkTargetSelection selection = selection(
+				request.scopeType(), request.scopeId(), request.scopeKey(), request.orchidGroupIds());
+		List<ResolvedWorkTarget> groups = workTargetResolver.resolve(selection);
 		var targets = groups.stream()
 				.map(WorkOperationTargetResponse::preview)
 				.toList();
@@ -58,7 +62,10 @@ public class WorkOperationService {
 			throw new IllegalArgumentException("초기 작업 실행 모델은 농약 작업만 지원합니다.");
 		}
 
-		List<ResolvedWorkTarget> resolved = workTargetResolver.resolve(request.sourceScopeType(), request.sourceScopeId());
+		WorkTargetSelection selection = selection(
+				request.sourceScopeType(), request.sourceScopeId(), request.sourceScopeKey(),
+				request.sourceOrchidGroupIds());
+		List<ResolvedWorkTarget> resolved = workTargetResolver.resolve(selection);
 		Set<Long> excludedIds = request.excludedOrchidGroupIds() == null
 				? Set.of()
 				: new HashSet<>(request.excludedOrchidGroupIds());
@@ -73,7 +80,7 @@ public class WorkOperationService {
 			throw new IllegalArgumentException("작업 대상 난 묶음이 한 개 이상 필요합니다.");
 		}
 
-		Map<String, Object> conditionSnapshot = Map.of("houseId", request.sourceScopeId());
+		Map<String, Object> conditionSnapshot = conditionSnapshot(selection);
 		WorkOperation operation = workOperationRepository.save(new WorkOperation(
 				workType,
 				normalizeRequired(request.title()),
@@ -90,7 +97,7 @@ public class WorkOperationService {
 				.map(group -> new WorkOperationTarget(
 						operation,
 						group.orchidGroupId(),
-						WorkTargetInclusionSource.HOUSE,
+						inclusionSource(request.sourceScopeType()),
 						request.sourceScopeId(),
 						group.varietyId(),
 						group.varietyName(),
@@ -156,6 +163,58 @@ public class WorkOperationService {
 		if (endDate != null && endDate.isBefore(startDate)) {
 			throw new IllegalArgumentException("예정 종료일은 예정 시작일보다 빠를 수 없습니다.");
 		}
+	}
+
+	private WorkTargetSelection selection(
+			WorkSourceScopeType scopeType,
+			Long scopeId,
+			String scopeKey,
+			List<Long> orchidGroupIds) {
+		String normalizedKey = normalize(scopeKey);
+		List<Long> normalizedIds = orchidGroupIds == null
+				? List.of()
+				: orchidGroupIds.stream().filter(java.util.Objects::nonNull).distinct().toList();
+		switch (scopeType) {
+			case HOUSE, USER_COLLECTION -> {
+				if (scopeId == null) {
+					throw new IllegalArgumentException("선택한 작업 대상의 ID가 필요합니다.");
+				}
+			}
+			case DERIVED_GROUP -> {
+				if (normalizedKey == null) {
+					throw new IllegalArgumentException("자동 그룹 키가 필요합니다.");
+				}
+			}
+			case MANUAL_SELECTION -> {
+				if (normalizedIds.isEmpty()) {
+					throw new IllegalArgumentException("직접 선택한 난 묶음이 한 개 이상 필요합니다.");
+				}
+			}
+			default -> throw new IllegalArgumentException("아직 지원하지 않는 작업 대상 유형입니다.");
+		}
+		return new WorkTargetSelection(scopeType, scopeId, normalizedKey, normalizedIds);
+	}
+
+	private Map<String, Object> conditionSnapshot(WorkTargetSelection selection) {
+		Map<String, Object> snapshot = new LinkedHashMap<>();
+		switch (selection.scopeType()) {
+			case HOUSE -> snapshot.put("houseId", selection.scopeId());
+			case USER_COLLECTION -> snapshot.put("collectionId", selection.scopeId());
+			case DERIVED_GROUP -> snapshot.put("groupKey", selection.scopeKey());
+			case MANUAL_SELECTION -> snapshot.put("orchidGroupIds", selection.orchidGroupIds());
+			default -> throw new IllegalArgumentException("아직 지원하지 않는 작업 대상 유형입니다.");
+		}
+		return snapshot;
+	}
+
+	private WorkTargetInclusionSource inclusionSource(WorkSourceScopeType scopeType) {
+		return switch (scopeType) {
+			case HOUSE -> WorkTargetInclusionSource.HOUSE;
+			case DERIVED_GROUP -> WorkTargetInclusionSource.DERIVED_GROUP;
+			case USER_COLLECTION -> WorkTargetInclusionSource.USER_COLLECTION;
+			case MANUAL_SELECTION -> WorkTargetInclusionSource.MANUAL_ADDITION;
+			default -> throw new IllegalArgumentException("아직 지원하지 않는 작업 대상 유형입니다.");
+		};
 	}
 
 	private String normalize(String value) {
