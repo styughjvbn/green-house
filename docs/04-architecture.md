@@ -17,6 +17,7 @@ green-house/
 - Next.js
 - TypeScript
 - Tailwind CSS
+- shadcn/ui와 Radix UI primitives
 - React 기반 상태 관리
 - 지도/드래그 UI는 기능 단위 컴포넌트로 분리
 
@@ -136,8 +137,10 @@ dto
 ```text
 src/
  ├─ app/        라우트 진입점
+ ├─ components/ shadcn/ui 공통 primitives
  ├─ features/   기능 단위 화면/상태/API
  ├─ entities/   도메인 타입
+ ├─ lib/        shadcn/ui 공통 유틸
  ├─ shared/     공통 UI/API 유틸
  └─ widgets/    큰 공통 레이아웃
 ```
@@ -148,6 +151,7 @@ src/
 - 실제 UI와 상태 로직은 `features/*`에 둔다.
 - API 타입은 OpenAPI 또는 `entities` 타입과 맞춘다.
 - 화면별 복잡한 상태는 페이지 내부에 몰아넣지 않는다.
+- AppShell의 버튼, 툴팁, 접이식 메뉴, 모바일 시트는 `components/ui`의 shadcn primitives를 사용한다.
 
 ## 6. 데이터 보존 원칙
 
