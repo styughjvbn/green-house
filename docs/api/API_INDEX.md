@@ -7,7 +7,7 @@
 
 - 기준 명세: `docs/api/openapi.yaml`
 - OpenAPI 버전: `3.1.0`
-- 현재 구현 API: `105` operations / `85` path entries
+- 현재 구현 API: `106` operations / `86` path entries
 - schema 수: `153`
 - Base URL: `/api`
 - 공통 응답: `ApiResponse*` 래퍼 사용
@@ -61,7 +61,7 @@
 - package 후보: `com.greenhouse.backend.farm`
 - controller tags: `orchid-group-command-controller`, `bed-placement-controller`
 - 역할: 난 묶음 생성·수정·삭제·이동, 정밀 배치 프로필 API
-- operations: 9
+- operations: 10
 
 | Method | Path | Operation | Request | Response |
 |---|---|---|---|---|

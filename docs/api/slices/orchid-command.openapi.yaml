@@ -49,6 +49,25 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ApiResponseBedZonePlacementProfileResponse'
+  /api/work-operations/{workOperationId}/cancel-created-orchid-groups:
+    post:
+      tags:
+      - multi-create-work-operation-controller
+      operationId: cancel_1
+      parameters:
+      - name: workOperationId
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: int64
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponseMultiCreateWorkOperationResponse'
   /api/work-operations/multi-create:
     post:
       tags:

@@ -153,7 +153,7 @@ paths:
     patch:
       tags:
       - work-record-controller
-      operationId: cancel_2
+      operationId: cancel_3
       parameters:
       - name: workRecordId
         in: path
