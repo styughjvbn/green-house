@@ -7,8 +7,8 @@
 
 - 기준 명세: `docs/api/openapi.yaml`
 - OpenAPI 버전: `3.1.0`
-- 현재 구현 API: `83` operations / `64` path entries
-- schema 수: `126`
+- 현재 구현 API: `90` operations / `71` path entries
+- schema 수: `128`
 - Base URL: `/api`
 - 공통 응답: `ApiResponse*` 래퍼 사용
 
@@ -128,14 +128,21 @@
 - package: `com.greenhouse.backend.work`
 - controller tag: `work-operation-controller`
 - 역할: 동·자동 그룹·사용자 그룹·직접 선택 농약 작업의 대상 미리보기·스냅샷·완료와 난 묶음 통합 이력
-- operations: 5
+- operations: 12
 
 | Method | Path | Operation |
 |---|---|---|
 | `POST` | `/api/work-operations/target-preview` | 대상 미리보기 |
 | `POST` | `/api/work-operations` | 작업 생성과 대상 스냅샷 확정 |
 | `GET` | `/api/work-operations/{workOperationId}` | 작업 상세 |
-| `POST` | `/api/work-operations/{workOperationId}/complete` | 작업과 대상 일괄 완료 |
+| `POST` | `/api/work-operations/{workOperationId}/complete` | 모든 대상 처리 후 전체 작업 완료 |
+| `POST` | `/api/work-operations/{workOperationId}/start` | 기간 작업 시작 |
+| `POST` | `/api/work-operations/{workOperationId}/pause` | 기간 작업 일시중지 |
+| `POST` | `/api/work-operations/{workOperationId}/resume` | 기간 작업 재개 |
+| `POST` | `/api/work-operations/{workOperationId}/cancel` | 미완료 작업 취소 |
+| `POST` | `/api/work-operations/{workOperationId}/targets/{targetId}/start` | 대상 작업 시작 |
+| `POST` | `/api/work-operations/{workOperationId}/targets/{targetId}/complete` | 대상 작업 완료 |
+| `POST` | `/api/work-operations/{workOperationId}/targets/{targetId}/skip` | 대상 건너뛰기 |
 | `GET` | `/api/orchid-groups/{orchidGroupId}/work-history` | 기존·신규 통합 이력 |
 
 대상 범위는 `HOUSE`, `DERIVED_GROUP`, `USER_COLLECTION`, `MANUAL_SELECTION`을 지원한다. 작업 유형 코드는 `PESTICIDE`로 제한한다.

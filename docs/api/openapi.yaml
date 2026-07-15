@@ -1664,6 +1664,20 @@ paths:
     $ref: "./slices/work-operation.openapi.yaml#/paths/~1api~1work-operations~1{workOperationId}"
   /api/work-operations/{workOperationId}/complete:
     $ref: "./slices/work-operation.openapi.yaml#/paths/~1api~1work-operations~1{workOperationId}~1complete"
+  /api/work-operations/{workOperationId}/start:
+    $ref: "./slices/work-operation.openapi.yaml#/paths/~1api~1work-operations~1{workOperationId}~1start"
+  /api/work-operations/{workOperationId}/pause:
+    $ref: "./slices/work-operation.openapi.yaml#/paths/~1api~1work-operations~1{workOperationId}~1pause"
+  /api/work-operations/{workOperationId}/resume:
+    $ref: "./slices/work-operation.openapi.yaml#/paths/~1api~1work-operations~1{workOperationId}~1resume"
+  /api/work-operations/{workOperationId}/cancel:
+    $ref: "./slices/work-operation.openapi.yaml#/paths/~1api~1work-operations~1{workOperationId}~1cancel"
+  /api/work-operations/{workOperationId}/targets/{targetId}/start:
+    $ref: "./slices/work-operation.openapi.yaml#/paths/~1api~1work-operations~1{workOperationId}~1targets~1{targetId}~1start"
+  /api/work-operations/{workOperationId}/targets/{targetId}/complete:
+    $ref: "./slices/work-operation.openapi.yaml#/paths/~1api~1work-operations~1{workOperationId}~1targets~1{targetId}~1complete"
+  /api/work-operations/{workOperationId}/targets/{targetId}/skip:
+    $ref: "./slices/work-operation.openapi.yaml#/paths/~1api~1work-operations~1{workOperationId}~1targets~1{targetId}~1skip"
   /api/orchid-groups/{orchidGroupId}/work-history:
     $ref: "./slices/work-operation.openapi.yaml#/paths/~1api~1orchid-groups~1{orchidGroupId}~1work-history"
   /api/orchid-group-collections:
@@ -1712,6 +1726,10 @@ components:
       $ref: "./slices/work-operation.openapi.yaml#/components/schemas/WorkTargetPreviewResponse"
     WorkOperationResponse:
       $ref: "./slices/work-operation.openapi.yaml#/components/schemas/WorkOperationResponse"
+    WorkOperationProgressResponse:
+      $ref: "./slices/work-operation.openapi.yaml#/components/schemas/WorkOperationProgressResponse"
+    WorkTargetExecutionRequest:
+      $ref: "./slices/work-operation.openapi.yaml#/components/schemas/WorkTargetExecutionRequest"
     OrchidGroupWorkHistoryResponse:
       $ref: "./slices/work-operation.openapi.yaml#/components/schemas/OrchidGroupWorkHistoryResponse"
     ApiResponseWorkTargetPreviewResponse:

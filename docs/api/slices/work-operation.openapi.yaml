@@ -72,6 +72,105 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ApiResponseWorkOperationResponse'
+  /api/work-operations/{workOperationId}/start:
+    post:
+      tags: [work-operation-controller]
+      operationId: startWorkOperation
+      parameters:
+        - $ref: '#/components/parameters/WorkOperationId'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/ApiResponseWorkOperationResponse'}
+  /api/work-operations/{workOperationId}/pause:
+    post:
+      tags: [work-operation-controller]
+      operationId: pauseWorkOperation
+      parameters:
+        - $ref: '#/components/parameters/WorkOperationId'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/ApiResponseWorkOperationResponse'}
+  /api/work-operations/{workOperationId}/resume:
+    post:
+      tags: [work-operation-controller]
+      operationId: resumeWorkOperation
+      parameters:
+        - $ref: '#/components/parameters/WorkOperationId'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/ApiResponseWorkOperationResponse'}
+  /api/work-operations/{workOperationId}/cancel:
+    post:
+      tags: [work-operation-controller]
+      operationId: cancelWorkOperation
+      parameters:
+        - $ref: '#/components/parameters/WorkOperationId'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/ApiResponseWorkOperationResponse'}
+  /api/work-operations/{workOperationId}/targets/{targetId}/start:
+    post:
+      tags: [work-operation-controller]
+      operationId: startWorkOperationTarget
+      parameters:
+        - $ref: '#/components/parameters/WorkOperationId'
+        - $ref: '#/components/parameters/WorkOperationTargetId'
+      requestBody:
+        content:
+          application/json:
+            schema: {$ref: '#/components/schemas/WorkTargetExecutionRequest'}
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/ApiResponseWorkOperationResponse'}
+  /api/work-operations/{workOperationId}/targets/{targetId}/complete:
+    post:
+      tags: [work-operation-controller]
+      operationId: completeWorkOperationTarget
+      parameters:
+        - $ref: '#/components/parameters/WorkOperationId'
+        - $ref: '#/components/parameters/WorkOperationTargetId'
+      requestBody:
+        content:
+          application/json:
+            schema: {$ref: '#/components/schemas/WorkTargetExecutionRequest'}
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/ApiResponseWorkOperationResponse'}
+  /api/work-operations/{workOperationId}/targets/{targetId}/skip:
+    post:
+      tags: [work-operation-controller]
+      operationId: skipWorkOperationTarget
+      parameters:
+        - $ref: '#/components/parameters/WorkOperationId'
+        - $ref: '#/components/parameters/WorkOperationTargetId'
+      requestBody:
+        content:
+          application/json:
+            schema: {$ref: '#/components/schemas/WorkTargetExecutionRequest'}
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/ApiResponseWorkOperationResponse'}
   /api/orchid-groups/{orchidGroupId}/work-history:
     get:
       tags: [work-operation-controller]
@@ -89,6 +188,17 @@ paths:
               schema:
                 $ref: '#/components/schemas/ApiResponseListOrchidGroupWorkHistoryResponse'
 components:
+  parameters:
+    WorkOperationId:
+      name: workOperationId
+      in: path
+      required: true
+      schema: {type: integer, format: int64}
+    WorkOperationTargetId:
+      name: targetId
+      in: path
+      required: true
+      schema: {type: integer, format: int64}
   schemas:
     WorkTargetPreviewRequest:
       type: object
@@ -143,6 +253,10 @@ components:
         executionStatus:
           type: string
           enum: [PENDING, IN_PROGRESS, COMPLETED, SKIPPED, CANCELED, FAILED]
+        startedAt: {type: string, format: date-time}
+        completedAt: {type: string, format: date-time}
+        worker: {type: string}
+        resultDetails: {type: object, additionalProperties: true}
     WorkTargetPreviewResponse:
       type: object
       properties:
@@ -172,9 +286,26 @@ components:
         details: {type: object, additionalProperties: true}
         worker: {type: string}
         memo: {type: string}
+        progress: {$ref: '#/components/schemas/WorkOperationProgressResponse'}
         targets:
           type: array
           items: {$ref: '#/components/schemas/WorkOperationTargetResponse'}
+    WorkOperationProgressResponse:
+      type: object
+      properties:
+        total: {type: integer, format: int32}
+        pending: {type: integer, format: int32}
+        inProgress: {type: integer, format: int32}
+        completed: {type: integer, format: int32}
+        skipped: {type: integer, format: int32}
+        canceled: {type: integer, format: int32}
+        failed: {type: integer, format: int32}
+        progressPercent: {type: integer, format: int32, minimum: 0, maximum: 100}
+    WorkTargetExecutionRequest:
+      type: object
+      properties:
+        worker: {type: string, maxLength: 100}
+        resultDetails: {type: object, additionalProperties: true}
     OrchidGroupWorkHistoryResponse:
       type: object
       properties:
