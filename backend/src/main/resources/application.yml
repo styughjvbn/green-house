@@ -33,7 +33,7 @@ server:
 
 app:
   features:
-    work-operation-v2-enabled: ${WORK_OPERATION_V2_ENABLED:false}
+    work-operation-v2-enabled: ${WORK_OPERATION_V2_ENABLED:true}
   auth:
     enabled: ${AUTH_ENABLED:true}
     session-timeout: ${SESSION_TIMEOUT:7d}
