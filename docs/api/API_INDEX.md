@@ -26,9 +26,9 @@
 
 - slice: `docs/api/slices/farm-structure.openapi.yaml`
 - package 후보: `com.greenhouse.backend.farm`
-- controller tags: `farm-structure-controller`
+- controller tags: `farm-structure-controller`, `orchid-group-query-controller`
 - 역할: 동, 물리 배드, 논리 구역, 난 묶음 조회 API
-- operations: 7
+- operations: 8
 
 | Method | Path | Operation | Request | Response |
 |---|---|---|---|---|
@@ -37,6 +37,7 @@
 | `GET` | `/api/houses` | `getHouses` | `-` | `200:ApiResponseListHouseResponse` |
 | `GET` | `/api/houses/{houseId}` | `getHouse` | `-` | `200:ApiResponseHouseResponse` |
 | `GET` | `/api/orchid-groups` | `getOrchidGroups` | `-` | `200:ApiResponseListOrchidGroupResponse` |
+| `GET` | `/api/orchid-groups/{orchidGroupId}/lineage` | `getLineage` | `-` | `200:ApiResponseOrchidGroupLineageResponse` |
 | `GET` | `/api/physical-beds` | `getPhysicalBeds` | `-` | `200:ApiResponseListPhysicalBedResponse` |
 | `GET` | `/api/physical-beds/{physicalBedId}` | `getPhysicalBed` | `-` | `200:ApiResponsePhysicalBedResponse` |
 

@@ -27,6 +27,7 @@
 - `GET /api/houses`
 - `GET /api/houses/{houseId}`
 - `GET /api/orchid-groups`
+- `GET /api/orchid-groups/{orchidGroupId}/lineage`
 - `GET /api/physical-beds`
 - `GET /api/physical-beds/{physicalBedId}`
 
