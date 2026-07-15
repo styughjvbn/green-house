@@ -3477,6 +3477,24 @@ components:
         resultDetails:
           type: object
           additionalProperties: {}
+    OrchidGroupCorrectionRequest:
+      type: object
+      properties:
+        orchidGroupId:
+          type: integer
+          format: int64
+        quantity:
+          type: integer
+          format: int32
+          minimum: 0
+        status:
+          type: string
+          maxLength: 50
+          minLength: 0
+      required:
+      - orchidGroupId
+      - quantity
+      - status
     WorkOperationCorrectionCreateRequest:
       type: object
       properties:
@@ -3503,8 +3521,15 @@ components:
           type: string
           maxLength: 1000
           minLength: 0
+        orchidGroupAdjustments:
+          type: array
+          items:
+            $ref: '#/components/schemas/OrchidGroupCorrectionRequest'
+          maxItems: 100
+          minItems: 0
       required:
       - idempotencyKey
+      - orchidGroupAdjustments
       - reason
       - title
       - workDate
@@ -3528,6 +3553,9 @@ components:
           format: date-time
         correctionOperation:
           $ref: '#/components/schemas/WorkOperationResponse'
+        effectDetails:
+          type: object
+          additionalProperties: {}
     WorkOperationCorrectionsResponse:
       type: object
       properties:
