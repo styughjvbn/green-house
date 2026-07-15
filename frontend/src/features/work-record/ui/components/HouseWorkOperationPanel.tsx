@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import { X } from "lucide-react";
 import type {
   HouseStatusSummary,
   OrchidGroup,
@@ -107,6 +108,15 @@ export function WorkOperationPanel({
       cancelled = true;
     };
   }, []);
+
+  useEffect(() => {
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") onClose();
+    };
+
+    document.addEventListener("keydown", handleKeyDown);
+    return () => document.removeEventListener("keydown", handleKeyDown);
+  }, [onClose]);
 
   function updateForm<K extends keyof WorkOperationFormState>(
     field: K,
@@ -248,220 +258,239 @@ export function WorkOperationPanel({
   }
 
   return (
-    <section className="rounded-md border border-[#b9d7bf] bg-[#f5fbf5] p-4 shadow-sm">
-      <div className="flex flex-wrap items-start justify-between gap-3">
-        <div>
-          <h2 className="text-lg font-bold text-[#17251b]">
-            그룹·범위 농약 작업
-          </h2>
-          <p className="mt-1 text-sm text-[#5c6a60]">
-            저장 시 현재 포함된 난 묶음과 위치가 확정됩니다.
-          </p>
+    <div
+      className="fixed inset-0 z-[1000] flex items-center justify-center bg-black/35 p-4"
+      role="presentation"
+      onMouseDown={onClose}
+    >
+      <section
+        className="flex max-h-[calc(100dvh-2rem)] w-full max-w-6xl flex-col overflow-hidden rounded-md bg-[#f5fbf5] shadow-xl"
+        role="dialog"
+        aria-modal="true"
+        aria-label="기간 작업 등록"
+        onMouseDown={(event) => event.stopPropagation()}
+      >
+        <div className="flex shrink-0 items-start justify-between gap-3 border-b border-[#dbe8dc] bg-white p-5">
+          <div>
+            <p className="text-sm font-semibold text-[#3d6f91]">작업 관리</p>
+            <h2 className="mt-1 text-xl font-semibold text-[#17251b]">
+              기간 작업 등록
+            </h2>
+            <p className="mt-1 text-sm text-[#5c6a60]">
+              저장 시 현재 포함된 난 묶음과 위치가 확정됩니다.
+            </p>
+          </div>
+          <button
+            className="flex h-8 w-8 shrink-0 items-center justify-center rounded border border-[#d9dfda] text-[#435047] hover:bg-[#f4f7f3]"
+            type="button"
+            onClick={onClose}
+            aria-label="닫기"
+          >
+            <X className="h-4 w-4" strokeWidth={1.8} aria-hidden="true" />
+          </button>
         </div>
-        <button
-          className="rounded-md border border-[#b9c7bc] bg-white px-3 py-2 text-sm"
-          type="button"
-          onClick={onClose}
-        >
-          닫기
-        </button>
-      </div>
 
-      {errorMessage ? (
-        <p className="mt-3 rounded-md border border-[#c25a3c] bg-[#fff1ec] p-3 text-sm text-[#8f2f19]">
-          {errorMessage}
-        </p>
-      ) : null}
-
-      {operation ? (
-        <OperationResult
-          operation={operation}
-          loading={loading}
-          onComplete={completeOperation}
-          onOperationAction={changeOperationStatus}
-          onTargetAction={changeTargetStatus}
-        />
-      ) : (
-        <>
-          <div className="mt-4 grid gap-3 md:grid-cols-2 lg:grid-cols-4">
-            <SelectField
-              label="대상 방식"
-              value={form.sourceScopeType}
-              onChange={(value) =>
-                updateForm(
-                  "sourceScopeType",
-                  value as WorkOperationFormState["sourceScopeType"],
-                )
-              }
-            >
-              <option value="HOUSE">동 전체</option>
-              <option value="DERIVED_GROUP">자동 그룹</option>
-              <option value="USER_COLLECTION">사용자 그룹</option>
-              <option value="MANUAL_SELECTION">직접 다중 선택</option>
-            </SelectField>
-            {form.sourceScopeType === "HOUSE" ? (
-              <SelectField
-                label="대상 동"
-                value={form.houseId}
-                onChange={(value) => updateForm("houseId", value)}
-              >
-                {houses.map((house) => (
-                  <option key={house.houseId} value={house.houseId}>
-                    {house.houseNumber}동
-                  </option>
-                ))}
-              </SelectField>
-            ) : null}
-            {form.sourceScopeType === "DERIVED_GROUP" ? (
-              <SelectField
-                label="자동 그룹"
-                value={form.scopeKey}
-                onChange={(value) => updateForm("scopeKey", value)}
-              >
-                <option value="">선택</option>
-                {(scopeOptions?.derivedGroups ?? []).map((group) => (
-                  <option key={group.groupKey} value={group.groupKey}>
-                    {group.varietyName} · {group.ageYear ?? "년생 미지정"} ·{" "}
-                    {group.potSize ?? "화분 미지정"} · {group.orchidGroupCount}
-                    묶음
-                  </option>
-                ))}
-              </SelectField>
-            ) : null}
-            {form.sourceScopeType === "USER_COLLECTION" ? (
-              <SelectField
-                label="사용자 그룹"
-                value={form.collectionId}
-                onChange={(value) => updateForm("collectionId", value)}
-              >
-                <option value="">선택</option>
-                {(scopeOptions?.collections ?? []).map((collection) => (
-                  <option key={collection.id} value={collection.id}>
-                    {collection.name} · {collection.orchidGroupCount}묶음 ·{" "}
-                    {collection.totalQuantity}분
-                  </option>
-                ))}
-              </SelectField>
-            ) : null}
-            <TextField
-              label="작업명"
-              required
-              value={form.title}
-              onChange={(value) => updateForm("title", value)}
-            />
-            <TextField
-              label="시작일"
-              required
-              type="date"
-              value={form.plannedStartDate}
-              onChange={(value) => updateForm("plannedStartDate", value)}
-            />
-            <TextField
-              label="종료 예정일"
-              type="date"
-              value={form.plannedEndDate}
-              onChange={(value) => updateForm("plannedEndDate", value)}
-            />
-            <TextField
-              label="약제명"
-              value={form.materialName}
-              onChange={(value) => updateForm("materialName", value)}
-            />
-            <TextField
-              label="희석 배수"
-              value={form.dilutionRatio}
-              onChange={(value) => updateForm("dilutionRatio", value)}
-            />
-            <TextField
-              label="사용량"
-              value={form.quantity}
-              onChange={(value) => updateForm("quantity", value)}
-            />
-            <TextField
-              label="작업자"
-              value={form.worker}
-              onChange={(value) => updateForm("worker", value)}
-            />
-          </div>
-          {form.sourceScopeType === "MANUAL_SELECTION" ? (
-            <ManualTargetSelector
-              groups={manualGroups}
-              keyword={manualKeyword}
-              selectedIds={manualIds}
-              onKeywordChange={setManualKeyword}
-              onToggle={(orchidGroupId) => {
-                setManualIds((current) => {
-                  const next = new Set(current);
-                  if (next.has(orchidGroupId)) next.delete(orchidGroupId);
-                  else next.add(orchidGroupId);
-                  return next;
-                });
-                setPreview(null);
-                setExcludedIds(new Set());
-              }}
-            />
-          ) : null}
-          <label className="mt-3 block text-sm font-semibold text-[#435047]">
-            메모
-            <textarea
-              className="mt-1 min-h-20 w-full rounded-md border border-[#cfd8cc] bg-white px-3 py-2 font-normal"
-              value={form.memo}
-              onChange={(event) => updateForm("memo", event.target.value)}
-            />
-          </label>
-
-          <div className="mt-4 flex flex-wrap items-center gap-3">
-            <button
-              className="rounded-md border border-[#159447] bg-white px-4 py-2 text-sm font-semibold text-[#10783a]"
-              disabled={
-                loading || optionsLoading || !buildScopePayload(form, manualIds)
-              }
-              type="button"
-              onClick={loadPreview}
-            >
-              {loading ? "확인 중" : "실제 대상 미리보기"}
-            </button>
-            {preview ? (
-              <span className="text-sm font-semibold text-[#344138]">
-                포함 {includedTargets.length}묶음 · {includedQuantity}분
-              </span>
-            ) : null}
-          </div>
-
-          {preview ? (
-            <TargetPreview
-              preview={preview}
-              excludedIds={excludedIds}
-              onToggle={(id) =>
-                setExcludedIds((current) => {
-                  const next = new Set(current);
-                  if (next.has(id)) next.delete(id);
-                  else next.add(id);
-                  return next;
-                })
-              }
-            />
+        <div className="min-h-0 overflow-y-auto p-5">
+          {errorMessage ? (
+            <p className="rounded-md border border-[#c25a3c] bg-[#fff1ec] p-3 text-sm text-[#8f2f19]">
+              {errorMessage}
+            </p>
           ) : null}
 
-          <div className="mt-4 flex justify-end">
-            <button
-              className="rounded-md bg-[#159447] px-5 py-2.5 text-sm font-semibold text-white disabled:bg-[#9bb7a2]"
-              disabled={
-                loading ||
-                !preview ||
-                includedTargets.length === 0 ||
-                !form.title.trim() ||
-                !pesticideType
-              }
-              type="button"
-              onClick={saveOperation}
-            >
-              작업 저장
-            </button>
-          </div>
-        </>
-      )}
-    </section>
+          {operation ? (
+            <OperationResult
+              operation={operation}
+              loading={loading}
+              onComplete={completeOperation}
+              onOperationAction={changeOperationStatus}
+              onTargetAction={changeTargetStatus}
+            />
+          ) : (
+            <>
+              <div className="mt-4 grid gap-3 md:grid-cols-2 lg:grid-cols-4">
+                <SelectField
+                  label="대상 방식"
+                  value={form.sourceScopeType}
+                  onChange={(value) =>
+                    updateForm(
+                      "sourceScopeType",
+                      value as WorkOperationFormState["sourceScopeType"],
+                    )
+                  }
+                >
+                  <option value="HOUSE">동 전체</option>
+                  <option value="DERIVED_GROUP">자동 그룹</option>
+                  <option value="USER_COLLECTION">사용자 그룹</option>
+                  <option value="MANUAL_SELECTION">직접 다중 선택</option>
+                </SelectField>
+                {form.sourceScopeType === "HOUSE" ? (
+                  <SelectField
+                    label="대상 동"
+                    value={form.houseId}
+                    onChange={(value) => updateForm("houseId", value)}
+                  >
+                    {houses.map((house) => (
+                      <option key={house.houseId} value={house.houseId}>
+                        {house.houseNumber}동
+                      </option>
+                    ))}
+                  </SelectField>
+                ) : null}
+                {form.sourceScopeType === "DERIVED_GROUP" ? (
+                  <SelectField
+                    label="자동 그룹"
+                    value={form.scopeKey}
+                    onChange={(value) => updateForm("scopeKey", value)}
+                  >
+                    <option value="">선택</option>
+                    {(scopeOptions?.derivedGroups ?? []).map((group) => (
+                      <option key={group.groupKey} value={group.groupKey}>
+                        {group.varietyName} · {group.ageYear ?? "년생 미지정"} ·{" "}
+                        {group.potSize ?? "화분 미지정"} ·{" "}
+                        {group.orchidGroupCount}
+                        묶음
+                      </option>
+                    ))}
+                  </SelectField>
+                ) : null}
+                {form.sourceScopeType === "USER_COLLECTION" ? (
+                  <SelectField
+                    label="사용자 그룹"
+                    value={form.collectionId}
+                    onChange={(value) => updateForm("collectionId", value)}
+                  >
+                    <option value="">선택</option>
+                    {(scopeOptions?.collections ?? []).map((collection) => (
+                      <option key={collection.id} value={collection.id}>
+                        {collection.name} · {collection.orchidGroupCount}묶음 ·{" "}
+                        {collection.totalQuantity}분
+                      </option>
+                    ))}
+                  </SelectField>
+                ) : null}
+                <TextField
+                  label="작업명"
+                  required
+                  value={form.title}
+                  onChange={(value) => updateForm("title", value)}
+                />
+                <TextField
+                  label="시작일"
+                  required
+                  type="date"
+                  value={form.plannedStartDate}
+                  onChange={(value) => updateForm("plannedStartDate", value)}
+                />
+                <TextField
+                  label="종료 예정일"
+                  type="date"
+                  value={form.plannedEndDate}
+                  onChange={(value) => updateForm("plannedEndDate", value)}
+                />
+                <TextField
+                  label="약제명"
+                  value={form.materialName}
+                  onChange={(value) => updateForm("materialName", value)}
+                />
+                <TextField
+                  label="희석 배수"
+                  value={form.dilutionRatio}
+                  onChange={(value) => updateForm("dilutionRatio", value)}
+                />
+                <TextField
+                  label="사용량"
+                  value={form.quantity}
+                  onChange={(value) => updateForm("quantity", value)}
+                />
+                <TextField
+                  label="작업자"
+                  value={form.worker}
+                  onChange={(value) => updateForm("worker", value)}
+                />
+              </div>
+              {form.sourceScopeType === "MANUAL_SELECTION" ? (
+                <ManualTargetSelector
+                  groups={manualGroups}
+                  keyword={manualKeyword}
+                  selectedIds={manualIds}
+                  onKeywordChange={setManualKeyword}
+                  onToggle={(orchidGroupId) => {
+                    setManualIds((current) => {
+                      const next = new Set(current);
+                      if (next.has(orchidGroupId)) next.delete(orchidGroupId);
+                      else next.add(orchidGroupId);
+                      return next;
+                    });
+                    setPreview(null);
+                    setExcludedIds(new Set());
+                  }}
+                />
+              ) : null}
+              <label className="mt-3 block text-sm font-semibold text-[#435047]">
+                메모
+                <textarea
+                  className="mt-1 min-h-20 w-full rounded-md border border-[#cfd8cc] bg-white px-3 py-2 font-normal"
+                  value={form.memo}
+                  onChange={(event) => updateForm("memo", event.target.value)}
+                />
+              </label>
+
+              <div className="mt-4 flex flex-wrap items-center gap-3">
+                <button
+                  className="rounded-md border border-[#159447] bg-white px-4 py-2 text-sm font-semibold text-[#10783a]"
+                  disabled={
+                    loading ||
+                    optionsLoading ||
+                    !buildScopePayload(form, manualIds)
+                  }
+                  type="button"
+                  onClick={loadPreview}
+                >
+                  {loading ? "확인 중" : "실제 대상 미리보기"}
+                </button>
+                {preview ? (
+                  <span className="text-sm font-semibold text-[#344138]">
+                    포함 {includedTargets.length}묶음 · {includedQuantity}분
+                  </span>
+                ) : null}
+              </div>
+
+              {preview ? (
+                <TargetPreview
+                  preview={preview}
+                  excludedIds={excludedIds}
+                  onToggle={(id) =>
+                    setExcludedIds((current) => {
+                      const next = new Set(current);
+                      if (next.has(id)) next.delete(id);
+                      else next.add(id);
+                      return next;
+                    })
+                  }
+                />
+              ) : null}
+
+              <div className="mt-4 flex justify-end">
+                <button
+                  className="rounded-md bg-[#159447] px-5 py-2.5 text-sm font-semibold text-white disabled:bg-[#9bb7a2]"
+                  disabled={
+                    loading ||
+                    !preview ||
+                    includedTargets.length === 0 ||
+                    !form.title.trim() ||
+                    !pesticideType
+                  }
+                  type="button"
+                  onClick={saveOperation}
+                >
+                  작업 저장
+                </button>
+              </div>
+            </>
+          )}
+        </div>
+      </section>
+    </div>
   );
 }
 
