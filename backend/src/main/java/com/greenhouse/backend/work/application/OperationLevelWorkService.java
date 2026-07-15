@@ -68,7 +68,10 @@ public class OperationLevelWorkService {
 			Map<String, Object> details,
 			Object payload) {
 		var existing = workOperationRepository.findByRequestKey(requestKey);
-		if (existing.isPresent()) return workOperationService.get(existing.get().getId());
+		if (existing.isPresent()) {
+			validateRequestKeyWorkType(existing.get(), workTypeCode);
+			return workOperationService.get(existing.get().getId());
+		}
 
 		ResolvedWorkTarget resolved = workTargetResolver.getCurrent(orchidGroupId);
 		WorkOperation operation = new WorkOperation(
@@ -108,7 +111,10 @@ public class OperationLevelWorkService {
 			Map<String, Object> details,
 			Object payload) {
 		var existing = workOperationRepository.findByRequestKey(requestKey);
-		if (existing.isPresent()) return workOperationService.get(existing.get().getId());
+		if (existing.isPresent()) {
+			validateRequestKeyWorkType(existing.get(), workTypeCode);
+			return workOperationService.get(existing.get().getId());
+		}
 
 		WorkOperation operation = new WorkOperation(
 				workTypeService.getByCode(workTypeCode), title, workDate, workDate,
@@ -167,5 +173,11 @@ public class OperationLevelWorkService {
 				.orElseThrow(() -> new com.greenhouse.backend.common.exception.NotFoundException("작업 효과를 찾을 수 없습니다."))
 				.cancel(LocalDateTime.now());
 		return workOperationService.get(operationId);
+	}
+
+	private void validateRequestKeyWorkType(WorkOperation operation, String workTypeCode) {
+		if (!operation.getWorkType().getCode().equals(workTypeCode)) {
+			throw new IllegalArgumentException("요청 식별자가 다른 작업 유형에서 이미 사용되었습니다.");
+		}
 	}
 }
