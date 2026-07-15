@@ -19,6 +19,7 @@ import com.greenhouse.backend.work.dto.WorkTargetExecutionRequest;
 import com.greenhouse.backend.work.repository.WorkOperationRepository;
 import com.greenhouse.backend.work.repository.WorkOperationTargetRepository;
 import com.greenhouse.backend.work.repository.WorkRecordRepository;
+import com.greenhouse.backend.work.repository.WorkEffectOrchidGroupRepository;
 import com.greenhouse.backend.work.repository.WorkTargetExecutionRepository;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -44,6 +45,7 @@ public class WorkOperationService {
 	private final WorkOperationTargetRepository workOperationTargetRepository;
 	private final WorkTargetExecutionRepository workTargetExecutionRepository;
 	private final WorkRecordRepository workRecordRepository;
+	private final WorkEffectOrchidGroupRepository workEffectOrchidGroupRepository;
 	private final WorkEffectProcessor workEffectProcessor;
 
 	@Transactional(readOnly = true)
@@ -219,15 +221,20 @@ public class WorkOperationService {
 		List<WorkOperationTarget> targets = workOperationTargetRepository
 				.findByOrchidGroupIdAndExcludedAtIsNullOrderByWorkOperationPlannedStartDateDescWorkOperationIdDesc(
 						orchidGroupId);
-		var operationHistory = targets.stream()
-				.map(target -> OrchidGroupWorkHistoryResponse.from(target, currentLocation))
-				.toList();
+		var operationHistoryById = new java.util.LinkedHashMap<Long, OrchidGroupWorkHistoryResponse>();
+		targets.forEach(target -> operationHistoryById.put(
+				target.getWorkOperation().getId(), OrchidGroupWorkHistoryResponse.from(target, currentLocation)));
+		workEffectOrchidGroupRepository
+				.findByOrchidGroupIdOrderByWorkAppliedEffectAppliedAtDescWorkAppliedEffectIdDesc(orchidGroupId)
+				.forEach(effectGroup -> operationHistoryById.putIfAbsent(
+						effectGroup.getWorkAppliedEffect().getWorkOperation().getId(),
+						OrchidGroupWorkHistoryResponse.fromEffect(effectGroup, currentLocation)));
 		var legacyHistory = workRecordRepository
 				.findByTargetTypeAndTargetIdOrderByWorkDateDescIdDesc("ORCHID_GROUP", orchidGroupId)
 				.stream()
 				.map(record -> OrchidGroupWorkHistoryResponse.fromLegacy(record, currentLocation))
 				.toList();
-		return java.util.stream.Stream.concat(operationHistory.stream(), legacyHistory.stream())
+		return java.util.stream.Stream.concat(operationHistoryById.values().stream(), legacyHistory.stream())
 				.sorted(java.util.Comparator.comparing(OrchidGroupWorkHistoryResponse::workDate).reversed()
 						.thenComparing(history -> history.workOperationId() == null ? Long.MIN_VALUE : history.workOperationId(),
 								java.util.Comparator.reverseOrder()))

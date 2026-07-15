@@ -110,6 +110,12 @@ class MultiCreateWorkOperationIntegrationTests extends AbstractBackendIntegratio
 				.andExpect(jsonPath("$.data.blockers", hasSize(0)));
 
 		Long createdGroupId = orchidGroupRepository.findAll().getFirst().getId();
+		mockMvc.perform(get("/api/orchid-groups/{id}/work-history", createdGroupId))
+				.andExpect(status().isOk())
+				.andExpect(jsonPath("$.data", hasSize(1)))
+				.andExpect(jsonPath("$.data[0].sourceKind").value("WORK_OPERATION_EFFECT"))
+				.andExpect(jsonPath("$.data[0].workOperationId").value(operationId));
+
 		mockMvc.perform(post("/api/work-operations")
 				.contentType(MediaType.APPLICATION_JSON)
 				.content("""

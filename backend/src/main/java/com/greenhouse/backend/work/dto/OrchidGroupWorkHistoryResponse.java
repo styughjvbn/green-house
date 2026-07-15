@@ -1,6 +1,7 @@
 package com.greenhouse.backend.work.dto;
 
 import com.greenhouse.backend.work.domain.WorkOperationTarget;
+import com.greenhouse.backend.work.domain.WorkEffectOrchidGroup;
 import com.greenhouse.backend.work.domain.WorkRecord;
 import com.greenhouse.backend.work.domain.WorkSourceScopeType;
 import java.time.LocalDate;
@@ -64,5 +65,27 @@ public record OrchidGroupWorkHistoryResponse(
 				currentLocation,
 				record.getWorker(),
 				record.getMemo());
+	}
+
+	public static OrchidGroupWorkHistoryResponse fromEffect(
+			WorkEffectOrchidGroup effectOrchidGroup,
+			Map<String, Object> currentLocation) {
+		var operation = effectOrchidGroup.getWorkAppliedEffect().getWorkOperation();
+		return new OrchidGroupWorkHistoryResponse(
+				"WORK_OPERATION_EFFECT",
+				operation.getId(),
+				null,
+				operation.getWorkType().getId(),
+				operation.getWorkType().getName(),
+				operation.getTitle(),
+				operation.getPlannedStartDate(),
+				operation.getStatus().name(),
+				true,
+				operation.getSourceScopeType(),
+				operation.getSourceScopeId(),
+				null,
+				currentLocation,
+				operation.getWorker(),
+				operation.getMemo());
 	}
 }
