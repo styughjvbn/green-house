@@ -9,7 +9,7 @@ import type {
 } from "@/entities/farm/types";
 import {
   cancelWorkRecord,
-  createWorkRecord,
+  createCompletedWorkOperationFromRecord,
   getWorkRecordTargetOptions,
 } from "../api/workRecordApi";
 import {
@@ -168,13 +168,16 @@ export function useWorkRecordManager({
     setErrorMessage(null);
 
     try {
-      const createdRecord = await createWorkRecord(
-        toCreateWorkRecordPayload(form, selectedTargetId, workTypes),
+      const payload = toCreateWorkRecordPayload(
+        form,
+        selectedTargetId,
+        workTypes,
       );
-      setRecords((current) => [createdRecord, ...current]);
-      setSelectedRecordId(createdRecord.id);
-      setDetailOpen(true);
-      setCurrentPage(1);
+      const workType = workTypes.find((item) => item.id === payload.workTypeId);
+      await createCompletedWorkOperationFromRecord(
+        payload,
+        workType?.name ?? "작업",
+      );
       setShowCreateForm(false);
       setForm((current) => resetWorkRecordFormAfterSubmit(current));
     } catch (error) {

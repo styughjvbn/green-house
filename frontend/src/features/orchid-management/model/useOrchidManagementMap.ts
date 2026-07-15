@@ -17,7 +17,7 @@ import {
 } from "@/entities/farm/workTypes";
 import {
   createOrchidGroup,
-  createOrchidWorkRecord,
+  createOrchidWorkOperation,
   deleteOrchidGroup,
   getOrchidWorkRecords,
   getOrchidGroupLineage,
@@ -529,13 +529,18 @@ export function useOrchidManagementMap(
 
   async function handleWorkRecordCreate() {
     await runMutation(async () => {
-      await createOrchidWorkRecord({
-        workTypeId: Number(workRecordForm.workTypeId),
-        workDate: workRecordForm.workDate,
-        targetType: workRecordForm.targetType,
-        targetId: workRecordForm.targetId,
-        ...toVisibleWorkRecordFields(workRecordForm, workTypes),
-      });
+      const workTypeId = Number(workRecordForm.workTypeId);
+      const workType = workTypes.find((item) => item.id === workTypeId);
+      await createOrchidWorkOperation(
+        {
+          workTypeId,
+          workDate: workRecordForm.workDate,
+          targetType: workRecordForm.targetType,
+          targetId: workRecordForm.targetId,
+          ...toVisibleWorkRecordFields(workRecordForm, workTypes),
+        },
+        workType?.name ?? "작업",
+      );
       setWorkRecordForm((current) => ({
         ...current,
         materialName: "",

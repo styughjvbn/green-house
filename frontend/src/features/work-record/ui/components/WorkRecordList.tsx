@@ -71,7 +71,7 @@ export function WorkRecordList({
             onClick={onCreate}
           >
             <Plus className="h-4 w-4" strokeWidth={1.8} aria-hidden="true" />
-            작업 이력 등록
+            작업 기록
           </button>
         </div>
       </div>
