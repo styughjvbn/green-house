@@ -199,4 +199,38 @@ class WorkOperationIntegrationTests extends AbstractBackendIntegrationTest {
 				.andExpect(jsonPath("$.data[?(@.sourceKind == 'WORK_OPERATION')].currentLocation.houseNumber").value(hasItem(5)))
 				.andExpect(jsonPath("$.data[?(@.sourceKind == 'LEGACY_WORK_RECORD')].workType").value(hasItem("위치 이동")));
 	}
+
+	@Test
+	void searchesOperationsByOverlappingPeriodStatusAndScope() throws Exception {
+		mockMvc.perform(post("/api/work-operations")
+				.contentType(MediaType.APPLICATION_JSON)
+				.content("""
+						{
+						  "workTypeId": %d,
+						  "title": "7월 기간 농약 작업",
+						  "plannedStartDate": "2026-07-10",
+						  "plannedEndDate": "2026-07-20",
+						  "sourceScopeType": "HOUSE",
+						  "sourceScopeId": %d
+						}
+						""".formatted(pesticideType.getId(), sourceHouse.getId())))
+				.andExpect(status().isCreated());
+
+		mockMvc.perform(get("/api/work-operations")
+				.param("from", "2026-07-15")
+				.param("to", "2026-07-31")
+				.param("status", "PLANNED")
+				.param("scopeType", "HOUSE")
+				.param("scopeId", sourceHouse.getId().toString()))
+				.andExpect(status().isOk())
+				.andExpect(jsonPath("$.data", hasSize(1)))
+				.andExpect(jsonPath("$.data[0].title").value("7월 기간 농약 작업"))
+				.andExpect(jsonPath("$.data[0].targets", hasSize(1)));
+
+		mockMvc.perform(get("/api/work-operations")
+				.param("from", "2026-08-01")
+				.param("to", "2026-08-31"))
+				.andExpect(status().isOk())
+				.andExpect(jsonPath("$.data", hasSize(0)));
+	}
 }
