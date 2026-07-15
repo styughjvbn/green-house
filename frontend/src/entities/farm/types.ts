@@ -328,7 +328,7 @@ export type WorkOperation = {
 };
 
 export type OrchidGroupWorkHistory = {
-  sourceKind: "WORK_OPERATION" | "LEGACY_WORK_RECORD";
+  sourceKind: "WORK_OPERATION" | "WORK_OPERATION_EFFECT" | "LEGACY_WORK_RECORD";
   workOperationId: number | null;
   legacyWorkRecordId: number | null;
   workTypeId: number | null;
@@ -337,7 +337,12 @@ export type OrchidGroupWorkHistory = {
   workDate: string;
   status: string;
   propagated: boolean;
-  sourceScopeType: WorkRecordTargetType;
+  sourceScopeType:
+    | WorkRecordTargetType
+    | "NONE"
+    | "DERIVED_GROUP"
+    | "USER_COLLECTION"
+    | "MANUAL_SELECTION";
   sourceScopeId: number | null;
   locationSnapshot: WorkLocationSnapshot | null;
   currentLocation: WorkLocationSnapshot;

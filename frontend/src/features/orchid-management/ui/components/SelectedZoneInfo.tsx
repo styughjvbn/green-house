@@ -10,7 +10,13 @@ import type {
   WorkRecord,
 } from "@/entities/farm/types";
 import { findBedZone } from "../../lib/orchidManagementUtils";
-import type { OrchidSelection, WorkRecordSummary } from "../../model/types";
+import type {
+  OrchidGroupLineage,
+  OrchidGroupLineageItem,
+  OrchidGroupLineageRelationType,
+  OrchidSelection,
+  WorkRecordSummary,
+} from "../../model/types";
 import InfoMetric from "./InfoMetric";
 
 export default function SelectedZoneInfo({
@@ -23,6 +29,8 @@ export default function SelectedZoneInfo({
   workRecordSummaryLoading,
   orchidGroupHistory,
   orchidGroupHistoryLoading,
+  orchidGroupLineage,
+  orchidGroupLineageLoading,
 }: {
   house: House;
   selectedBedZone: BedZone | null;
@@ -33,6 +41,8 @@ export default function SelectedZoneInfo({
   workRecordSummaryLoading: boolean;
   orchidGroupHistory: OrchidGroupWorkHistory[];
   orchidGroupHistoryLoading: boolean;
+  orchidGroupLineage: OrchidGroupLineage | null;
+  orchidGroupLineageLoading: boolean;
 }) {
   const zone = selectedOrchidGroup
     ? (findBedZone(house, selectedOrchidGroup.bedZoneId)?.zone ?? null)
@@ -131,13 +141,120 @@ export default function SelectedZoneInfo({
         </p>
       )}
       {selectedOrchidGroup ? (
-        <OrchidGroupHistoryView
-          history={orchidGroupHistory}
-          loading={orchidGroupHistoryLoading}
-        />
+        <>
+          <OrchidGroupLineageView
+            lineage={orchidGroupLineage}
+            loading={orchidGroupLineageLoading}
+          />
+          <OrchidGroupHistoryView
+            history={orchidGroupHistory}
+            loading={orchidGroupHistoryLoading}
+          />
+        </>
       ) : null}
     </section>
   );
+}
+
+function OrchidGroupLineageView({
+  lineage,
+  loading,
+}: {
+  lineage: OrchidGroupLineage | null;
+  loading: boolean;
+}) {
+  const sources = lineage?.sources ?? [];
+  const results = lineage?.results ?? [];
+  if (!loading && sources.length === 0 && results.length === 0) return null;
+
+  return (
+    <div className="mt-3 border-t border-[#e1e6df] pt-3">
+      <div className="flex items-center justify-between gap-3">
+        <h3 className="text-sm font-bold text-[#344138]">난 묶음 계보</h3>
+        {!loading ? (
+          <span className="text-xs text-[#6f7b72]">
+            원본 {sources.length} · 결과 {results.length}
+          </span>
+        ) : null}
+      </div>
+      {loading ? (
+        <p className="mt-2 text-xs text-[#5c6a60]">계보 확인 중</p>
+      ) : (
+        <div className="mt-2 grid gap-2 lg:grid-cols-2">
+          {sources.length > 0 ? (
+            <LineageGroup direction="SOURCE" items={sources} />
+          ) : null}
+          {results.length > 0 ? (
+            <LineageGroup direction="RESULT" items={results} />
+          ) : null}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function LineageGroup({
+  direction,
+  items,
+}: {
+  direction: "SOURCE" | "RESULT";
+  items: OrchidGroupLineageItem[];
+}) {
+  return (
+    <div className="rounded-md border border-[#dce7dc] bg-[#f9fcf8] p-2.5">
+      <p className="text-xs font-bold text-[#16713a]">
+        {direction === "SOURCE"
+          ? "이 난 묶음의 원본"
+          : "이 난 묶음에서 나온 결과"}
+      </p>
+      <ul className="mt-2 max-h-40 space-y-2 overflow-y-auto pr-1">
+        {items.map((item) => {
+          const connected =
+            direction === "SOURCE"
+              ? item.sourceOrchidGroup
+              : item.resultOrchidGroup;
+          return (
+            <li
+              key={item.id}
+              className="rounded-md border bg-white p-2 text-xs"
+            >
+              <div className="flex items-start justify-between gap-2">
+                <div className="min-w-0">
+                  <p className="truncate font-bold text-[#17251b]">
+                    {connected.varietyName}
+                  </p>
+                  <p className="mt-0.5 text-[#6a766e]">
+                    {connected.houseNumber}동 {connected.physicalBedNumber}다이{" "}
+                    {connected.bedZoneName} · 현재 {connected.quantity}분
+                  </p>
+                </div>
+                <span className="shrink-0 rounded bg-[#edf8ef] px-1.5 py-0.5 font-semibold text-[#16713a]">
+                  {lineageLabel(item.relationType)}
+                </span>
+              </div>
+              <p className="mt-1 text-[#435047]">
+                투입 {item.sourceQuantity}분 → 결과 {item.resultQuantity}분 ·
+                작업 #{item.workOperationId}
+              </p>
+            </li>
+          );
+        })}
+      </ul>
+    </div>
+  );
+}
+
+function lineageLabel(relationType: OrchidGroupLineageRelationType) {
+  return (
+    {
+      CREATED_FROM_INBOUND: "입고 생성",
+      REPOTTED_TO: "분갈이",
+      SPLIT_TO: "분주",
+      MERGED_TO: "병합",
+      POTTED_TO: "포트 작업",
+      CORRECTED_TO: "보정",
+    } satisfies Record<OrchidGroupLineageRelationType, string>
+  )[relationType];
 }
 
 function OrchidGroupHistoryView({
@@ -172,9 +289,7 @@ function OrchidGroupHistoryView({
                 <span className="font-bold text-[#17251b]">{item.title}</span>
                 <span className="shrink-0 text-[#5c6a60]">{item.workDate}</span>
               </div>
-              <p className="mt-1 text-[#435047]">
-                {item.propagated ? "동 전체 작업에서 적용" : "직접 등록"}
-              </p>
+              <p className="mt-1 text-[#435047]">{historySourceLabel(item)}</p>
               {item.locationSnapshot ? (
                 <p className="mt-1 text-[#6a766e]">
                   당시 {formatLocation(item.locationSnapshot)}
@@ -192,6 +307,20 @@ function OrchidGroupHistoryView({
       )}
     </div>
   );
+}
+
+function historySourceLabel(item: OrchidGroupWorkHistory) {
+  if (item.sourceKind === "WORK_OPERATION_EFFECT") {
+    return "구조 변경 작업으로 연결";
+  }
+  if (!item.propagated) return "직접 등록";
+  return item.sourceScopeType === "HOUSE"
+    ? "동 전체 작업에서 적용"
+    : item.sourceScopeType === "DERIVED_GROUP"
+      ? "자동 그룹 작업에서 적용"
+      : item.sourceScopeType === "USER_COLLECTION"
+        ? "사용자 그룹 작업에서 적용"
+        : "범위 작업에서 적용";
 }
 
 function formatLocation(location: OrchidGroupWorkHistory["currentLocation"]) {
