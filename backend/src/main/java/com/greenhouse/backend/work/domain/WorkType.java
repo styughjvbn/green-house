@@ -90,4 +90,12 @@ public class WorkType extends BaseEntity {
 				&& !INBOUND_CODE.equals(code)
 				&& !POTTING_CODE.equals(code);
 	}
+
+	public WorkEffectKind effectKind() {
+		return switch (template) {
+			case PESTICIDE, FERTILIZER, CLEANUP, STATUS, MEMO -> WorkEffectKind.RECORD_ONLY;
+			case MOVEMENT -> WorkEffectKind.ATTRIBUTE_CHANGE;
+			case REPOT -> WorkEffectKind.STRUCTURE_CHANGE;
+		};
+	}
 }
