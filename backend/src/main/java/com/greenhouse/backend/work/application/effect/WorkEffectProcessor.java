@@ -63,6 +63,7 @@ public class WorkEffectProcessor {
 					appliedEffect, target.getOrchidGroupId(), WorkEffectOrchidGroupRelationType.SOURCE));
 		}
 		WorkEffectOrchidGroupRelationType resultRelation = target == null
+				&& "MULTI_CREATE".equals(handlerCode)
 				? WorkEffectOrchidGroupRelationType.CREATED
 				: WorkEffectOrchidGroupRelationType.RESULT;
 		result.resultOrchidGroupIds().forEach(groupId -> groupLinks.add(

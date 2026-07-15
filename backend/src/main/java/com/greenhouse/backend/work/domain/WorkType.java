@@ -104,7 +104,8 @@ public class WorkType extends BaseEntity {
 
 	public String handlerCode() {
 		return switch (template) {
-			case PESTICIDE, FERTILIZER, CLEANUP, STATUS, MEMO, CORRECTION -> "RECORD_ONLY";
+			case PESTICIDE, FERTILIZER, CLEANUP, STATUS, MEMO -> "RECORD_ONLY";
+			case CORRECTION -> "CORRECTION";
 			case MOVEMENT -> "MOVE";
 			case REPOT -> "REPOT";
 			case MULTI_CREATE -> "MULTI_CREATE";
