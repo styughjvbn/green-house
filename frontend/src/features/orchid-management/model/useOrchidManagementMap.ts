@@ -20,6 +20,7 @@ import {
   createOrchidWorkRecord,
   deleteOrchidGroup,
   getOrchidWorkRecords,
+  getOrchidGroupLineage,
   getOrchidGroupWorkHistory,
   moveOrchidGroup,
   searchOrchidGroups,
@@ -37,6 +38,7 @@ import type {
   MutationMode,
   MutationPayload,
   OrchidListSelection,
+  OrchidGroupLineage,
   OrchidSelection,
   PreciseMovePayload,
   WorkRecordQuickFormState,
@@ -122,6 +124,10 @@ export function useOrchidManagementMap(
   const [orchidGroupHistoryState, setOrchidGroupHistoryState] = useState<{
     orchidGroupId: number;
     items: OrchidGroupWorkHistory[];
+  } | null>(null);
+  const [orchidGroupLineageState, setOrchidGroupLineageState] = useState<{
+    orchidGroupId: number;
+    item: OrchidGroupLineage;
   } | null>(null);
   const [saving, setSaving] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
@@ -285,6 +291,37 @@ export function useOrchidManagementMap(
           setOrchidGroupHistoryState({
             orchidGroupId: selectedOrchidGroup.id,
             items: [],
+          });
+        }
+      });
+
+    return () => {
+      ignore = true;
+    };
+  }, [selectedOrchidGroup, workRecordSummaryVersion]);
+
+  useEffect(() => {
+    let ignore = false;
+    if (!selectedOrchidGroup) return;
+
+    void getOrchidGroupLineage(selectedOrchidGroup.id)
+      .then((lineage) => {
+        if (!ignore) {
+          setOrchidGroupLineageState({
+            orchidGroupId: selectedOrchidGroup.id,
+            item: lineage,
+          });
+        }
+      })
+      .catch(() => {
+        if (!ignore) {
+          setOrchidGroupLineageState({
+            orchidGroupId: selectedOrchidGroup.id,
+            item: {
+              orchidGroupId: selectedOrchidGroup.id,
+              sources: [],
+              results: [],
+            },
           });
         }
       });
@@ -584,6 +621,14 @@ export function useOrchidManagementMap(
     orchidGroupHistoryLoading:
       Boolean(selectedOrchidGroup) &&
       orchidGroupHistoryState?.orchidGroupId !== selectedOrchidGroup?.id,
+    orchidGroupLineage:
+      selectedOrchidGroup &&
+      orchidGroupLineageState?.orchidGroupId === selectedOrchidGroup.id
+        ? orchidGroupLineageState.item
+        : null,
+    orchidGroupLineageLoading:
+      Boolean(selectedOrchidGroup) &&
+      orchidGroupLineageState?.orchidGroupId !== selectedOrchidGroup?.id,
     actions: {
       cancelMutation: () => {
         setMutationMode(null);
