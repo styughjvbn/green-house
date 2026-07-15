@@ -102,7 +102,9 @@ python3 scripts/generate_openapi.py --url http://localhost:8080/api-docs
 
 ## 6. 신규 작업 실행 API 범위
 
-범위 기반 신규 작업 실행 API는 `HOUSE`, `DERIVED_GROUP`, `USER_COLLECTION`, `MANUAL_SELECTION` 범위의 `PESTICIDE` 작업을 지원한다. 대상 미리보기, 생성, 상세, 대상별 진행·건너뛰기, 작업 시작·일시중지·재개·취소·완료, 난 묶음 통합 이력을 제공한다.
+기간 작업 실행 API는 `HOUSE`, `DERIVED_GROUP`, `USER_COLLECTION`, `MANUAL_SELECTION` 범위의 기록형 작업을 지원한다. 대상 미리보기, 생성, 기간·상태·범위별 목록, 상세, 대상별 진행·건너뛰기, 작업 시작·일시중지·재개·취소·완료, 난 묶음 통합 이력을 제공한다.
+
+`POST /api/work-operations/record`는 농장 전체, 동, 물리 배드, 논리 구역, 난 묶음 범위의 기록형 작업을 대상 스냅샷과 함께 즉시 완료한다. `WORK_OPERATION_V2_ENABLED=true`에서는 사용자 수동 `POST /api/work-records`를 거부하고, 비활성화하면 기존 작성 흐름으로 복귀한다. 기존 `WorkRecord` 조회·취소와 이동·입고 시스템 기록은 유지한다.
 
 구조 변경 작업은 별도 API로 제공한다. 다중 생성은 원본 대상 없이 여러 난 묶음을 만들고, 분갈이는 단일 원본을 대상으로 부분·전체 수량을 처리해 결과 난 묶음과 계보를 만든다. 구현되지 않은 다른 작업 유형을 일반 작업 API에서 사용할 수 있다고 가정하지 않는다.
 

@@ -39,7 +39,7 @@ AUTH_ENABLED
 WORK_OPERATION_V2_ENABLED
 ```
 
-신규 작업 실행 API는 검증 전까지 `WORK_OPERATION_V2_ENABLED=false`를 유지한다.
+신규 작업 실행 API는 기본 활성화된다. 운영 중 복귀가 필요하면 `WORK_OPERATION_V2_ENABLED=false`로 설정해 신규 작업 API를 숨기고 기존 수동 작업 기록 작성을 다시 활성화한다.
 
 인증을 적용하는 경우 다음 값을 별도로 관리한다.
 

@@ -134,13 +134,15 @@
 - slice: `docs/api/slices/work-operation.openapi.yaml`
 - package: `com.greenhouse.backend.work`
 - controller tag: `work-operation-controller`
-- 역할: 동·자동 그룹·사용자 그룹·직접 선택 농약 작업의 대상 미리보기·스냅샷·완료, 난 묶음 통합 이력, 구조 변경 보정 관계
-- operations: 14
+- 역할: 범위별 기록형 작업의 미리보기·스냅샷·즉시 완료·기간 조회, 난 묶음 통합 이력, 구조 변경 보정 관계
+- operations: 16
 
 | Method | Path | Operation |
 |---|---|---|
 | `POST` | `/api/work-operations/target-preview` | 대상 미리보기 |
 | `POST` | `/api/work-operations` | 작업 생성과 대상 스냅샷 확정 |
+| `POST` | `/api/work-operations/record` | 기록형 작업을 생성하고 즉시 완료 |
+| `GET` | `/api/work-operations` | 기간·상태·범위별 작업 목록 |
 | `GET` | `/api/work-operations/{workOperationId}` | 작업 상세 |
 | `POST` | `/api/work-operations/{workOperationId}/complete` | 모든 대상 처리 후 전체 작업 완료 |
 | `POST` | `/api/work-operations/{workOperationId}/start` | 기간 작업 시작 |
@@ -154,7 +156,7 @@
 | `POST` | `/api/work-operations/{workOperationId}/corrections` | 완료된 구조 변경 작업에 보정 작업 연결 |
 | `GET` | `/api/work-operations/{workOperationId}/corrections` | 원본 작업과 연결된 보정 작업 조회 |
 
-대상 범위는 `HOUSE`, `DERIVED_GROUP`, `USER_COLLECTION`, `MANUAL_SELECTION`을 지원한다. 작업 유형 코드는 `PESTICIDE`로 제한한다.
+기간 작업 범위는 `HOUSE`, `DERIVED_GROUP`, `USER_COLLECTION`, `MANUAL_SELECTION`을 지원한다. 즉시 완료 기록은 `FARM`, `HOUSE`, `PHYSICAL_BED`, `BED_ZONE`, `ORCHID_GROUP` 범위를 지원하며 일반 생성은 기록형 작업 유형으로 제한한다.
 
 ### 난 묶음 사용자 그룹
 

@@ -5,11 +5,8 @@
 ## 기준
 
 - 실제 구현 기준: `docs/api/openapi.yaml`
-- 실제 구현 operations: `67`
-- 실제 구현 path entries: `50`
-- 과거 md/추가안에서 수집한 endpoint 후보: `69`
-- 후보 중 OpenAPI와 매칭되는 endpoint: `43`
-- 후보 중 OpenAPI에 없는 endpoint: `26`
+- 실제 구현 operations: `113`
+- 실제 구현 path entries: `91`
 
 ## 판단 규칙
 
@@ -51,6 +48,9 @@
 
 ### 작업 이력
 
+- `GET /api/work-operations`
+- `POST /api/work-operations`
+- `POST /api/work-operations/record`
 - `POST /api/work-operations/{workOperationId}/corrections`
 - `GET /api/work-operations/{workOperationId}/corrections`
 - `GET /api/work-records`
@@ -59,6 +59,8 @@
 - `POST /api/work-types`
 - `PATCH /api/work-types/reorder`
 - `PATCH /api/work-types/{workTypeId}`
+
+`WORK_OPERATION_V2_ENABLED=true`에서는 사용자 수동 `POST /api/work-records`가 거부된다. endpoint는 기능 비활성화 시 기존 작성 흐름으로 복귀하기 위해 OpenAPI에 유지한다.
 
 ### 품종/입고/자재
 
