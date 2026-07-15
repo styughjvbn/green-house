@@ -31,6 +31,7 @@ export default function SelectedZoneInfo({
   orchidGroupHistoryLoading,
   orchidGroupLineage,
   orchidGroupLineageLoading,
+  onOpenCorrection,
 }: {
   house: House;
   selectedBedZone: BedZone | null;
@@ -43,6 +44,7 @@ export default function SelectedZoneInfo({
   orchidGroupHistoryLoading: boolean;
   orchidGroupLineage: OrchidGroupLineage | null;
   orchidGroupLineageLoading: boolean;
+  onOpenCorrection: (workOperationId: number) => void;
 }) {
   const zone = selectedOrchidGroup
     ? (findBedZone(house, selectedOrchidGroup.bedZoneId)?.zone ?? null)
@@ -149,6 +151,7 @@ export default function SelectedZoneInfo({
           <OrchidGroupHistoryView
             history={orchidGroupHistory}
             loading={orchidGroupHistoryLoading}
+            onOpenCorrection={onOpenCorrection}
           />
         </>
       ) : null}
@@ -260,9 +263,11 @@ function lineageLabel(relationType: OrchidGroupLineageRelationType) {
 function OrchidGroupHistoryView({
   history,
   loading,
+  onOpenCorrection,
 }: {
   history: OrchidGroupWorkHistory[];
   loading: boolean;
+  onOpenCorrection: (workOperationId: number) => void;
 }) {
   return (
     <div className="mt-3 border-t border-[#e1e6df] pt-3">
@@ -300,6 +305,16 @@ function OrchidGroupHistoryView({
                     ? ` · 현재 ${formatLocation(item.currentLocation)}`
                     : ""}
                 </p>
+              ) : null}
+              {item.sourceKind === "WORK_OPERATION_EFFECT" &&
+              item.workOperationId != null ? (
+                <button
+                  className="mt-2 rounded-md border border-[#9dcaaa] bg-white px-2 py-1 font-semibold text-[#16713a]"
+                  type="button"
+                  onClick={() => onOpenCorrection(item.workOperationId!)}
+                >
+                  결과 보정
+                </button>
               ) : null}
             </li>
           ))}

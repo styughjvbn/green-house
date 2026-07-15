@@ -12,6 +12,7 @@ import HouseDetailMap from "./components/HouseDetailMap";
 import HouseSelectorPanel from "./components/HouseSelectorPanel";
 import MultiCreateOrchidGroupForm from "./components/MultiCreateOrchidGroupForm";
 import RepotWorkOperationForm from "./components/RepotWorkOperationForm";
+import WorkOperationCorrectionForm from "./components/WorkOperationCorrectionForm";
 import OrchidSearchPanel from "./components/OrchidSearchPanel";
 import OrchidSelectionPanel from "./components/OrchidSelectionPanel";
 import SelectedZoneInfo from "./components/SelectedZoneInfo";
@@ -44,6 +45,9 @@ export function OrchidManagementMap({
     orchidManagement.selectedOrchidGroup,
   );
   const [showRepot, setShowRepot] = useState(false);
+  const [correctionOperationId, setCorrectionOperationId] = useState<
+    number | null
+  >(null);
   const placementHouses = useMemo(
     () =>
       mapData.houses.map((item) => ({
@@ -236,6 +240,13 @@ export function OrchidManagementMap({
           orchidGroupHistoryLoading={orchidManagement.orchidGroupHistoryLoading}
           orchidGroupLineage={orchidManagement.orchidGroupLineage}
           orchidGroupLineageLoading={orchidManagement.orchidGroupLineageLoading}
+          onOpenCorrection={(workOperationId) => {
+            if (!orchidManagement.selectedOrchidGroup) return;
+            clearMapCellRangePick();
+            setShowMultiCreate(false);
+            setShowRepot(false);
+            setCorrectionOperationId(workOperationId);
+          }}
         />
         {/* <BedPrecisionSettings zone={orchidManagement.resolvedZone} /> 26.07.11 비활성화*/}
       </section>
@@ -260,7 +271,14 @@ export function OrchidManagementMap({
           }}
           onUpdateFilter={orchidManagement.actions.updateSearchFilter}
         />
-        {showRepot && repotSource ? (
+        {correctionOperationId && orchidManagement.selectedOrchidGroup ? (
+          <WorkOperationCorrectionForm
+            key={`${correctionOperationId}-${orchidManagement.selectedOrchidGroup.id}`}
+            originalWorkOperationId={correctionOperationId}
+            orchidGroup={orchidManagement.selectedOrchidGroup}
+            onClose={() => setCorrectionOperationId(null)}
+          />
+        ) : showRepot && repotSource ? (
           <RepotWorkOperationForm
             houses={placementHouses}
             source={repotSource}
