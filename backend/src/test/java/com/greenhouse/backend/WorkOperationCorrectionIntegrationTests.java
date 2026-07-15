@@ -36,6 +36,8 @@ class WorkOperationCorrectionIntegrationTests extends AbstractBackendIntegration
 
 	private BedZone bedZone;
 	private Variety variety;
+	private Long createdGroupId;
+	private WorkType pesticideType;
 
 	@BeforeEach
 	void setUp() {
@@ -56,6 +58,8 @@ class WorkOperationCorrectionIntegrationTests extends AbstractBackendIntegration
 		workTypeRepository.save(new WorkType(
 				WorkType.CORRECTION_CODE, "구조 변경 보정", WorkTypeTemplate.CORRECTION,
 				true, true, true, 2));
+		pesticideType = workTypeRepository.save(new WorkType(
+				"PESTICIDE", "농약", WorkTypeTemplate.PESTICIDE, true, false, true, 3));
 		House house = new House(1, "1동");
 		PhysicalBed bed = new PhysicalBed(1, 1);
 		bed.updatePositionUnits(new BigDecimal("24"), "칸");
@@ -68,10 +72,8 @@ class WorkOperationCorrectionIntegrationTests extends AbstractBackendIntegration
 	}
 
 	@Test
-	void linksAnIdempotentCorrectionWithoutDeletingOriginalResults() throws Exception {
+	void adjustsAnOriginalResultOnceAndPreservesItsAuditHistory() throws Exception {
 		Long originalId = createMultiCreateOperation();
-		var quantitiesBefore = orchidGroupRepository.findAll().stream()
-				.map(group -> group.getQuantity()).toList();
 
 		mockMvc.perform(post("/api/work-operations/{id}/corrections", originalId)
 				.contentType(MediaType.APPLICATION_JSON)
@@ -80,7 +82,9 @@ class WorkOperationCorrectionIntegrationTests extends AbstractBackendIntegration
 				.andExpect(jsonPath("$.data.originalOperation.status").value("CORRECTED"))
 				.andExpect(jsonPath("$.data.corrections", hasSize(1)))
 				.andExpect(jsonPath("$.data.corrections[0].reason").value("결과 수량 확인 필요"))
-				.andExpect(jsonPath("$.data.corrections[0].correctionOperation.status").value("COMPLETED"));
+				.andExpect(jsonPath("$.data.corrections[0].correctionOperation.status").value("COMPLETED"))
+				.andExpect(jsonPath("$.data.corrections[0].effectDetails.adjustments[0].beforeQuantity").value(30))
+				.andExpect(jsonPath("$.data.corrections[0].effectDetails.adjustments[0].afterQuantity").value(25));
 		mockMvc.perform(post("/api/work-operations/{id}/corrections", originalId)
 				.contentType(MediaType.APPLICATION_JSON)
 				.content(correctionRequest("correction-1")))
@@ -96,8 +100,13 @@ class WorkOperationCorrectionIntegrationTests extends AbstractBackendIntegration
 		assertThat(appliedEffectRepository.count()).isEqualTo(2);
 		assertThat(operationRepository.findWithWorkTypeById(originalId).orElseThrow().getStatus())
 				.isEqualTo(WorkOperationStatus.CORRECTED);
-		assertThat(orchidGroupRepository.findAll().stream().map(group -> group.getQuantity()).toList())
-				.containsExactlyElementsOf(quantitiesBefore);
+		var correctedGroup = orchidGroupRepository.findById(createdGroupId).orElseThrow();
+		assertThat(correctedGroup.getQuantity()).isEqualTo(25);
+		assertThat(correctedGroup.getStatus()).isEqualTo("수량 보정");
+		var correctionEffect = appliedEffectRepository.findAll().stream()
+				.filter(effect -> WorkType.CORRECTION_CODE.equals(effect.getHandlerCode()))
+				.findFirst().orElseThrow();
+		assertThat(correctionEffect.getResultDetails()).containsKey("adjustments");
 	}
 
 	@Test
@@ -116,6 +125,31 @@ class WorkOperationCorrectionIntegrationTests extends AbstractBackendIntegration
 				.andExpect(status().isBadRequest());
 	}
 
+	@Test
+	void rejectsAdjustmentWhenAResultHasDownstreamWork() throws Exception {
+		Long originalId = createMultiCreateOperation();
+		mockMvc.perform(post("/api/work-operations")
+				.contentType(MediaType.APPLICATION_JSON)
+				.content("""
+						{
+						  "workTypeId": %d,
+						  "title": "후속 농약 작업",
+						  "plannedStartDate": "2026-07-16",
+						  "sourceScopeType": "MANUAL_SELECTION",
+						  "sourceOrchidGroupIds": [%d]
+						}
+						""".formatted(pesticideType.getId(), createdGroupId)))
+				.andExpect(status().isCreated());
+
+		mockMvc.perform(post("/api/work-operations/{id}/corrections", originalId)
+				.contentType(MediaType.APPLICATION_JSON)
+				.content(correctionRequest("correction-blocked")))
+				.andExpect(status().isBadRequest());
+
+		assertThat(orchidGroupRepository.findById(createdGroupId).orElseThrow().getQuantity()).isEqualTo(30);
+		assertThat(correctionRepository.count()).isZero();
+	}
+
 	private Long createMultiCreateOperation() throws Exception {
 		mockMvc.perform(post("/api/work-operations/multi-create")
 				.contentType(MediaType.APPLICATION_JSON)
@@ -132,6 +166,7 @@ class WorkOperationCorrectionIntegrationTests extends AbstractBackendIntegration
 						}
 						""".formatted(bedZone.getId(), variety.getId())))
 				.andExpect(status().isCreated());
+		createdGroupId = orchidGroupRepository.findAll().getFirst().getId();
 		return operationRepository.findByRequestKey("correction-source").orElseThrow().getId();
 	}
 
@@ -142,8 +177,13 @@ class WorkOperationCorrectionIntegrationTests extends AbstractBackendIntegration
 				  "title": "다중 생성 결과 보정 확인",
 				  "workDate": "2026-07-15",
 				  "worker": "관리자",
-				  "reason": "결과 수량 확인 필요"
+				  "reason": "결과 수량 확인 필요",
+				  "orchidGroupAdjustments": [{
+				    "orchidGroupId": %d,
+				    "quantity": 25,
+				    "status": "수량 보정"
+				  }]
 				}
-				""".formatted(idempotencyKey);
+				""".formatted(idempotencyKey, createdGroupId);
 	}
 }
