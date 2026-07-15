@@ -128,6 +128,15 @@ class WorkOperationIntegrationTests extends AbstractBackendIntegrationTest {
 		String response = createResult.getResponse().getContentAsString();
 		Long operationId = Long.valueOf(response.replaceAll(
 				".*?\\\"data\\\":\\{\\\"id\\\":(\\d+).*", "$1"));
+		Long targetId = workOperationTargetRepository
+				.findByWorkOperationIdAndExcludedAtIsNullOrderByIdAsc(operationId).getFirst().getId();
+
+		mockMvc.perform(post("/api/work-operations/{id}/start", operationId))
+				.andExpect(status().isOk())
+				.andExpect(jsonPath("$.data.status").value("IN_PROGRESS"));
+		mockMvc.perform(post("/api/work-operations/{id}/targets/{targetId}/complete", operationId, targetId))
+				.andExpect(status().isOk())
+				.andExpect(jsonPath("$.data.targets[0].executionStatus").value("COMPLETED"));
 
 		mockMvc.perform(post("/api/work-operations/{id}/complete", operationId))
 				.andExpect(status().isOk())

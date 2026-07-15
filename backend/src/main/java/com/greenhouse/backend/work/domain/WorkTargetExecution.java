@@ -65,6 +65,22 @@ public class WorkTargetExecution extends BaseEntity {
 	}
 
 	public void complete(LocalDateTime completedAt, String worker) {
+		complete(completedAt, worker, null);
+	}
+
+	public void start(LocalDateTime startedAt, String worker) {
+		if (status == WorkTargetExecutionStatus.IN_PROGRESS) {
+			return;
+		}
+		if (status != WorkTargetExecutionStatus.PENDING) {
+			throw new IllegalArgumentException("시작할 수 없는 작업 대상 상태입니다.");
+		}
+		this.startedAt = startedAt;
+		this.worker = worker;
+		this.status = WorkTargetExecutionStatus.IN_PROGRESS;
+	}
+
+	public void complete(LocalDateTime completedAt, String worker, Map<String, Object> resultDetails) {
 		if (status == WorkTargetExecutionStatus.COMPLETED) {
 			return;
 		}
@@ -76,6 +92,41 @@ public class WorkTargetExecution extends BaseEntity {
 		}
 		this.completedAt = completedAt;
 		this.worker = worker;
+		this.resultDetails = resultDetails;
 		this.status = WorkTargetExecutionStatus.COMPLETED;
+	}
+
+	public void skip(LocalDateTime skippedAt, String worker, Map<String, Object> resultDetails) {
+		if (status == WorkTargetExecutionStatus.SKIPPED) {
+			return;
+		}
+		if (status != WorkTargetExecutionStatus.PENDING && status != WorkTargetExecutionStatus.IN_PROGRESS) {
+			throw new IllegalArgumentException("건너뛸 수 없는 작업 대상 상태입니다.");
+		}
+		if (startedAt == null) {
+			startedAt = skippedAt;
+		}
+		this.completedAt = skippedAt;
+		this.worker = worker;
+		this.resultDetails = resultDetails;
+		this.status = WorkTargetExecutionStatus.SKIPPED;
+	}
+
+	public void cancel(LocalDateTime canceledAt) {
+		if (status == WorkTargetExecutionStatus.CANCELED) {
+			return;
+		}
+		if (status == WorkTargetExecutionStatus.COMPLETED) {
+			throw new IllegalArgumentException("완료된 작업 대상은 취소할 수 없습니다.");
+		}
+		if (startedAt == null) {
+			startedAt = canceledAt;
+		}
+		this.completedAt = canceledAt;
+		this.status = WorkTargetExecutionStatus.CANCELED;
+	}
+
+	public boolean isTerminalForCompletion() {
+		return status == WorkTargetExecutionStatus.COMPLETED || status == WorkTargetExecutionStatus.SKIPPED;
 	}
 }

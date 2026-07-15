@@ -3,6 +3,7 @@ package com.greenhouse.backend.work.application;
 import com.greenhouse.backend.common.exception.NotFoundException;
 import com.greenhouse.backend.work.domain.WorkOperation;
 import com.greenhouse.backend.work.domain.WorkOperationTarget;
+import com.greenhouse.backend.work.domain.WorkOperationStatus;
 import com.greenhouse.backend.work.domain.WorkSourceScopeType;
 import com.greenhouse.backend.work.domain.WorkTargetExecution;
 import com.greenhouse.backend.work.domain.WorkTargetInclusionSource;
@@ -12,6 +13,7 @@ import com.greenhouse.backend.work.dto.WorkOperationResponse;
 import com.greenhouse.backend.work.dto.WorkOperationTargetResponse;
 import com.greenhouse.backend.work.dto.WorkTargetPreviewRequest;
 import com.greenhouse.backend.work.dto.WorkTargetPreviewResponse;
+import com.greenhouse.backend.work.dto.WorkTargetExecutionRequest;
 import com.greenhouse.backend.work.repository.WorkOperationRepository;
 import com.greenhouse.backend.work.repository.WorkOperationTargetRepository;
 import com.greenhouse.backend.work.repository.WorkRecordRepository;
@@ -123,7 +125,7 @@ public class WorkOperationService {
 				.stream()
 				.collect(Collectors.toMap(execution -> execution.getTarget().getId(), Function.identity()));
 		var responses = targets.stream()
-				.map(target -> WorkOperationTargetResponse.from(target, executions.get(target.getId()).getStatus()))
+				.map(target -> WorkOperationTargetResponse.from(target, executions.get(target.getId())))
 				.toList();
 		return WorkOperationResponse.from(operation, responses);
 	}
@@ -131,10 +133,68 @@ public class WorkOperationService {
 	public WorkOperationResponse complete(Long operationId) {
 		WorkOperation operation = workOperationRepository.findWithWorkTypeById(operationId)
 				.orElseThrow(() -> new NotFoundException("작업을 찾을 수 없습니다."));
+		List<WorkTargetExecution> executions = workTargetExecutionRepository
+				.findByTargetWorkOperationIdOrderByIdAsc(operationId);
+		if (executions.isEmpty() || executions.stream().anyMatch(execution -> !execution.isTerminalForCompletion())) {
+			throw new IllegalArgumentException("모든 작업 대상을 완료하거나 건너뛴 뒤 전체 작업을 완료할 수 있습니다.");
+		}
 		LocalDateTime completedAt = LocalDateTime.now();
 		operation.complete(completedAt);
-		workTargetExecutionRepository.findByTargetWorkOperationIdOrderByIdAsc(operationId)
-				.forEach(execution -> execution.complete(completedAt, operation.getWorker()));
+		return get(operationId);
+	}
+
+	public WorkOperationResponse start(Long operationId) {
+		WorkOperation operation = findOperation(operationId);
+		operation.start(LocalDateTime.now());
+		return get(operationId);
+	}
+
+	public WorkOperationResponse pause(Long operationId) {
+		WorkOperation operation = findOperation(operationId);
+		operation.pause();
+		return get(operationId);
+	}
+
+	public WorkOperationResponse resume(Long operationId) {
+		WorkOperation operation = findOperation(operationId);
+		operation.resume();
+		return get(operationId);
+	}
+
+	public WorkOperationResponse cancel(Long operationId) {
+		WorkOperation operation = findOperation(operationId);
+		List<WorkTargetExecution> executions = workTargetExecutionRepository
+				.findByTargetWorkOperationIdOrderByIdAsc(operationId);
+		if (executions.stream().anyMatch(execution -> execution.getStatus()
+				== com.greenhouse.backend.work.domain.WorkTargetExecutionStatus.COMPLETED)) {
+			throw new IllegalArgumentException("완료된 대상이 있는 작업은 취소할 수 없습니다.");
+		}
+		LocalDateTime canceledAt = LocalDateTime.now();
+		operation.cancel();
+		executions.forEach(execution -> execution.cancel(canceledAt));
+		return get(operationId);
+	}
+
+	public WorkOperationResponse startTarget(
+			Long operationId, Long targetId, WorkTargetExecutionRequest request) {
+		validateOperationInProgress(operationId);
+		findExecution(operationId, targetId).start(LocalDateTime.now(), normalize(request.worker()));
+		return get(operationId);
+	}
+
+	public WorkOperationResponse completeTarget(
+			Long operationId, Long targetId, WorkTargetExecutionRequest request) {
+		validateOperationInProgress(operationId);
+		findExecution(operationId, targetId).complete(
+				LocalDateTime.now(), normalize(request.worker()), request.resultDetails());
+		return get(operationId);
+	}
+
+	public WorkOperationResponse skipTarget(
+			Long operationId, Long targetId, WorkTargetExecutionRequest request) {
+		validateOperationInProgress(operationId);
+		findExecution(operationId, targetId).skip(
+				LocalDateTime.now(), normalize(request.worker()), request.resultDetails());
 		return get(operationId);
 	}
 
@@ -162,6 +222,22 @@ public class WorkOperationService {
 	private void validateDates(LocalDate startDate, LocalDate endDate) {
 		if (endDate != null && endDate.isBefore(startDate)) {
 			throw new IllegalArgumentException("예정 종료일은 예정 시작일보다 빠를 수 없습니다.");
+		}
+	}
+
+	private WorkOperation findOperation(Long operationId) {
+		return workOperationRepository.findWithWorkTypeById(operationId)
+				.orElseThrow(() -> new NotFoundException("작업을 찾을 수 없습니다."));
+	}
+
+	private WorkTargetExecution findExecution(Long operationId, Long targetId) {
+		return workTargetExecutionRepository.findByTargetIdAndTargetWorkOperationId(targetId, operationId)
+				.orElseThrow(() -> new NotFoundException("작업 대상을 찾을 수 없습니다."));
+	}
+
+	private void validateOperationInProgress(Long operationId) {
+		if (findOperation(operationId).getStatus() != WorkOperationStatus.IN_PROGRESS) {
+			throw new IllegalArgumentException("진행 중인 작업에서만 대상을 처리할 수 있습니다.");
 		}
 	}
 

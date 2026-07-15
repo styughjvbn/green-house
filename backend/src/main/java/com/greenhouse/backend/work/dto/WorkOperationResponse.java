@@ -25,6 +25,7 @@ public record WorkOperationResponse(
 		Map<String, Object> details,
 		String worker,
 		String memo,
+		WorkOperationProgressResponse progress,
 		List<WorkOperationTargetResponse> targets) {
 
 	public static WorkOperationResponse from(WorkOperation operation, List<WorkOperationTargetResponse> targets) {
@@ -45,6 +46,7 @@ public record WorkOperationResponse(
 				operation.getDetails(),
 				operation.getWorker(),
 				operation.getMemo(),
+				WorkOperationProgressResponse.from(targets),
 				targets);
 	}
 }

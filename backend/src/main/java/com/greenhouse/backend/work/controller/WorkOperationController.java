@@ -7,6 +7,7 @@ import com.greenhouse.backend.work.dto.WorkOperationCreateRequest;
 import com.greenhouse.backend.work.dto.WorkOperationResponse;
 import com.greenhouse.backend.work.dto.WorkTargetPreviewRequest;
 import com.greenhouse.backend.work.dto.WorkTargetPreviewResponse;
+import com.greenhouse.backend.work.dto.WorkTargetExecutionRequest;
 import jakarta.validation.Valid;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
@@ -47,6 +48,53 @@ public class WorkOperationController {
 	@PostMapping("/work-operations/{workOperationId}/complete")
 	public ApiResponse<WorkOperationResponse> complete(@PathVariable Long workOperationId) {
 		return ApiResponse.ok(workOperationService.complete(workOperationId));
+	}
+
+	@PostMapping("/work-operations/{workOperationId}/start")
+	public ApiResponse<WorkOperationResponse> start(@PathVariable Long workOperationId) {
+		return ApiResponse.ok(workOperationService.start(workOperationId));
+	}
+
+	@PostMapping("/work-operations/{workOperationId}/pause")
+	public ApiResponse<WorkOperationResponse> pause(@PathVariable Long workOperationId) {
+		return ApiResponse.ok(workOperationService.pause(workOperationId));
+	}
+
+	@PostMapping("/work-operations/{workOperationId}/resume")
+	public ApiResponse<WorkOperationResponse> resume(@PathVariable Long workOperationId) {
+		return ApiResponse.ok(workOperationService.resume(workOperationId));
+	}
+
+	@PostMapping("/work-operations/{workOperationId}/cancel")
+	public ApiResponse<WorkOperationResponse> cancel(@PathVariable Long workOperationId) {
+		return ApiResponse.ok(workOperationService.cancel(workOperationId));
+	}
+
+	@PostMapping("/work-operations/{workOperationId}/targets/{targetId}/start")
+	public ApiResponse<WorkOperationResponse> startTarget(
+			@PathVariable Long workOperationId,
+			@PathVariable Long targetId,
+			@Valid @RequestBody(required = false) WorkTargetExecutionRequest request) {
+		return ApiResponse.ok(workOperationService.startTarget(
+				workOperationId, targetId, request == null ? new WorkTargetExecutionRequest(null, null) : request));
+	}
+
+	@PostMapping("/work-operations/{workOperationId}/targets/{targetId}/complete")
+	public ApiResponse<WorkOperationResponse> completeTarget(
+			@PathVariable Long workOperationId,
+			@PathVariable Long targetId,
+			@Valid @RequestBody(required = false) WorkTargetExecutionRequest request) {
+		return ApiResponse.ok(workOperationService.completeTarget(
+				workOperationId, targetId, request == null ? new WorkTargetExecutionRequest(null, null) : request));
+	}
+
+	@PostMapping("/work-operations/{workOperationId}/targets/{targetId}/skip")
+	public ApiResponse<WorkOperationResponse> skipTarget(
+			@PathVariable Long workOperationId,
+			@PathVariable Long targetId,
+			@Valid @RequestBody(required = false) WorkTargetExecutionRequest request) {
+		return ApiResponse.ok(workOperationService.skipTarget(
+				workOperationId, targetId, request == null ? new WorkTargetExecutionRequest(null, null) : request));
 	}
 
 	@GetMapping("/orchid-groups/{orchidGroupId}/work-history")

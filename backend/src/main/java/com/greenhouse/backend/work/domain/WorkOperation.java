@@ -121,4 +121,47 @@ public class WorkOperation extends BaseEntity {
 		actualEndAt = completedAt;
 		status = WorkOperationStatus.COMPLETED;
 	}
+
+	public void start(LocalDateTime startedAt) {
+		if (status == WorkOperationStatus.IN_PROGRESS) {
+			return;
+		}
+		if (status != WorkOperationStatus.PLANNED) {
+			throw new IllegalArgumentException("시작할 수 없는 작업 상태입니다.");
+		}
+		if (actualStartAt == null) {
+			actualStartAt = startedAt;
+		}
+		status = WorkOperationStatus.IN_PROGRESS;
+	}
+
+	public void pause() {
+		if (status == WorkOperationStatus.PAUSED) {
+			return;
+		}
+		if (status != WorkOperationStatus.IN_PROGRESS) {
+			throw new IllegalArgumentException("일시중지할 수 없는 작업 상태입니다.");
+		}
+		status = WorkOperationStatus.PAUSED;
+	}
+
+	public void resume() {
+		if (status == WorkOperationStatus.IN_PROGRESS) {
+			return;
+		}
+		if (status != WorkOperationStatus.PAUSED) {
+			throw new IllegalArgumentException("재개할 수 없는 작업 상태입니다.");
+		}
+		status = WorkOperationStatus.IN_PROGRESS;
+	}
+
+	public void cancel() {
+		if (status == WorkOperationStatus.CANCELED) {
+			return;
+		}
+		if (status == WorkOperationStatus.COMPLETED || status == WorkOperationStatus.CORRECTED) {
+			throw new IllegalArgumentException("완료되거나 보정된 작업은 취소할 수 없습니다.");
+		}
+		status = WorkOperationStatus.CANCELED;
+	}
 }

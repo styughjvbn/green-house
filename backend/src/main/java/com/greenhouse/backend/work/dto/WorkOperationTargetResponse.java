@@ -2,8 +2,10 @@ package com.greenhouse.backend.work.dto;
 
 import com.greenhouse.backend.work.application.ResolvedWorkTarget;
 import com.greenhouse.backend.work.domain.WorkOperationTarget;
+import com.greenhouse.backend.work.domain.WorkTargetExecution;
 import com.greenhouse.backend.work.domain.WorkTargetInclusionSource;
 import com.greenhouse.backend.work.domain.WorkTargetExecutionStatus;
+import java.time.LocalDateTime;
 import java.util.Map;
 
 public record WorkOperationTargetResponse(
@@ -16,7 +18,11 @@ public record WorkOperationTargetResponse(
 		String potSizeCodeSnapshot,
 		String potSizeSnapshot,
 		Map<String, Object> locationSnapshot,
-		WorkTargetExecutionStatus executionStatus) {
+		WorkTargetExecutionStatus executionStatus,
+		LocalDateTime startedAt,
+		LocalDateTime completedAt,
+		String worker,
+		Map<String, Object> resultDetails) {
 
 	public static WorkOperationTargetResponse preview(
 			ResolvedWorkTarget target) {
@@ -30,12 +36,16 @@ public record WorkOperationTargetResponse(
 				target.potSizeCode(),
 				target.potSize(),
 				target.location(),
-				WorkTargetExecutionStatus.PENDING);
+				WorkTargetExecutionStatus.PENDING,
+				null,
+				null,
+				null,
+				null);
 	}
 
 	public static WorkOperationTargetResponse from(
 			WorkOperationTarget target,
-			WorkTargetExecutionStatus executionStatus) {
+			WorkTargetExecution execution) {
 		return new WorkOperationTargetResponse(
 				target.getId(),
 				target.getOrchidGroupId(),
@@ -46,6 +56,10 @@ public record WorkOperationTargetResponse(
 				target.getPotSizeCodeSnapshot(),
 				target.getPotSizeSnapshot(),
 				target.getLocationSnapshot(),
-				executionStatus);
+				execution.getStatus(),
+				execution.getStartedAt(),
+				execution.getCompletedAt(),
+				execution.getWorker(),
+				execution.getResultDetails());
 	}
 }

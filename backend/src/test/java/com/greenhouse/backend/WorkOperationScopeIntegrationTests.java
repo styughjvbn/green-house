@@ -20,6 +20,7 @@ import com.greenhouse.backend.farm.repository.OrchidGroupCollectionMemberReposit
 import com.greenhouse.backend.farm.repository.OrchidGroupCollectionRepository;
 import com.greenhouse.backend.work.domain.WorkType;
 import com.greenhouse.backend.work.domain.WorkTypeTemplate;
+import com.greenhouse.backend.work.repository.WorkOperationTargetRepository;
 import java.math.BigDecimal;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -33,6 +34,8 @@ class WorkOperationScopeIntegrationTests extends AbstractBackendIntegrationTest 
 	private OrchidGroupCollectionRepository collectionRepository;
 	@Autowired
 	private OrchidGroupCollectionMemberRepository collectionMemberRepository;
+	@Autowired
+	private WorkOperationTargetRepository workOperationTargetRepository;
 
 	@Test
 	void resolvesDerivedCollectionAndManualScopesThenPreservesSnapshot() throws Exception {
@@ -110,6 +113,44 @@ class WorkOperationScopeIntegrationTests extends AbstractBackendIntegrationTest 
 		mockMvc.perform(get("/api/work-operations/{id}", operationId))
 				.andExpect(status().isOk())
 				.andExpect(jsonPath("$.data.targets", hasSize(2)));
+
+		mockMvc.perform(post("/api/work-operations/{id}/complete", operationId))
+				.andExpect(status().isBadRequest());
+		mockMvc.perform(post("/api/work-operations/{id}/start", operationId))
+				.andExpect(status().isOk())
+				.andExpect(jsonPath("$.data.status").value("IN_PROGRESS"));
+		mockMvc.perform(post("/api/work-operations/{id}/pause", operationId))
+				.andExpect(status().isOk())
+				.andExpect(jsonPath("$.data.status").value("PAUSED"));
+
+		var targets = workOperationTargetRepository
+				.findByWorkOperationIdAndExcludedAtIsNullOrderByIdAsc(operationId);
+		mockMvc.perform(post("/api/work-operations/{id}/targets/{targetId}/start", operationId, targets.get(0).getId()))
+				.andExpect(status().isBadRequest());
+		mockMvc.perform(post("/api/work-operations/{id}/resume", operationId))
+				.andExpect(status().isOk())
+				.andExpect(jsonPath("$.data.status").value("IN_PROGRESS"));
+		mockMvc.perform(post("/api/work-operations/{id}/targets/{targetId}/start", operationId, targets.get(0).getId())
+				.contentType(MediaType.APPLICATION_JSON)
+				.content("{\"worker\":\"첫 작업자\"}"))
+				.andExpect(status().isOk())
+				.andExpect(jsonPath("$.data.progress.inProgress").value(1));
+		mockMvc.perform(post("/api/work-operations/{id}/targets/{targetId}/complete", operationId, targets.get(0).getId())
+				.contentType(MediaType.APPLICATION_JSON)
+				.content("{\"worker\":\"첫 작업자\",\"resultDetails\":{\"memo\":\"완료\"}}"))
+				.andExpect(status().isOk())
+				.andExpect(jsonPath("$.data.targets[0].worker").value("첫 작업자"))
+				.andExpect(jsonPath("$.data.targets[0].resultDetails.memo").value("완료"));
+		mockMvc.perform(post("/api/work-operations/{id}/targets/{targetId}/skip", operationId, targets.get(1).getId())
+				.contentType(MediaType.APPLICATION_JSON)
+				.content("{\"worker\":\"둘째 작업자\",\"resultDetails\":{\"reason\":\"대상 제외\"}}"))
+				.andExpect(status().isOk())
+				.andExpect(jsonPath("$.data.progress.completed").value(1))
+				.andExpect(jsonPath("$.data.progress.skipped").value(1))
+				.andExpect(jsonPath("$.data.progress.progressPercent").value(100));
+		mockMvc.perform(post("/api/work-operations/{id}/complete", operationId))
+				.andExpect(status().isOk())
+				.andExpect(jsonPath("$.data.status").value("COMPLETED"));
 	}
 
 	private org.springframework.test.web.servlet.ResultActions preview(String content) throws Exception {
