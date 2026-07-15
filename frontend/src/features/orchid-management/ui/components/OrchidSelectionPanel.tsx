@@ -1,6 +1,6 @@
 "use client";
 
-import type { ReactNode } from "react";
+import { useState, type ReactNode } from "react";
 import type {
   BedZone,
   House,
@@ -125,6 +125,9 @@ export default function OrchidSelectionPanel({
   ) => void;
   onWorkRecordCreate: () => Promise<void>;
 }) {
+  const [viewMode, setViewMode] = useState<
+    "LOCATION" | "DERIVED" | "COLLECTION"
+  >("LOCATION");
   const listZone =
     listSelection.type === "BED_ZONE"
       ? (findBedZone(house, listSelection.bedZoneId)?.zone ?? null)
@@ -157,10 +160,6 @@ export default function OrchidSelectionPanel({
       : selectedOrchidGroup
         ? [selectedOrchidGroup]
         : [];
-  const collectionTargetKey = collectionTargets
-    .map((orchidGroup) => orchidGroup.id)
-    .sort((a, b) => a - b)
-    .join("-");
   const matchedCount = orchidGroups.filter((orchidGroup) =>
     filteredOrchidGroupIds.has(orchidGroup.id),
   ).length;
@@ -178,6 +177,31 @@ export default function OrchidSelectionPanel({
   return (
     <aside className="flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto">
       {!hideList ? (
+        <div className="grid shrink-0 grid-cols-3 gap-1 rounded-md border border-[#d7ddd4] bg-white p-1 shadow-sm">
+          {(
+            [
+              ["LOCATION", "위치별"],
+              ["DERIVED", "자동 그룹"],
+              ["COLLECTION", "사용자 그룹"],
+            ] as const
+          ).map(([mode, label]) => (
+            <button
+              className={`rounded-md px-2 py-2 text-xs font-bold transition ${
+                viewMode === mode
+                  ? "bg-[#2f8f4e] text-white"
+                  : "text-[#526057] hover:bg-[#eef5ed]"
+              }`}
+              key={mode}
+              type="button"
+              onClick={() => setViewMode(mode)}
+            >
+              {label}
+            </button>
+          ))}
+        </div>
+      ) : null}
+
+      {!hideList && viewMode === "LOCATION" ? (
         <section className="flex min-h-0 flex-1 flex-col rounded-md border border-[#d7ddd4] bg-white p-3 shadow-sm">
           <div className="flex shrink-0 items-center justify-between gap-3">
             <p className="text-sm font-semibold text-[#17251b]">
@@ -382,7 +406,7 @@ export default function OrchidSelectionPanel({
         </section>
       ) : null}
 
-      {!hideList ? (
+      {!hideList && viewMode === "DERIVED" ? (
         <DerivedGroupPanel
           key={house.id}
           houseId={house.id}
@@ -393,10 +417,15 @@ export default function OrchidSelectionPanel({
         />
       ) : null}
 
-      {!hideList && collectionTargets.length > 0 ? (
+      {!hideList && viewMode === "COLLECTION" ? (
         <UserCollectionPanel
-          key={collectionTargetKey}
+          key={`user-groups-${house.id}`}
+          houseNumber={house.number}
           orchidGroups={collectionTargets}
+          onSelectMembers={(orchidGroupIds) => {
+            onSelectOrchidGroups(orchidGroupIds);
+            if (orchidGroupIds[0]) onSelectOrchidGroup(orchidGroupIds[0]);
+          }}
         />
       ) : null}
 

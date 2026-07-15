@@ -20,6 +20,8 @@ export default function DerivedGroupPanel({
   const [groups, setGroups] = useState<DerivedOrchidGroup[]>([]);
   const [loading, setLoading] = useState(true);
   const [loadingKey, setLoadingKey] = useState<string | null>(null);
+  const [selectedGroupKey, setSelectedGroupKey] = useState<string | null>(null);
+  const [selectedMembers, setSelectedMembers] = useState<OrchidGroup[]>([]);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   useEffect(() => {
@@ -44,9 +46,13 @@ export default function DerivedGroupPanel({
     setLoadingKey(group.groupKey);
     setErrorMessage(null);
     try {
-      onSelectMembers(
-        await getDerivedOrchidGroupMembers(group.groupKey, houseId),
+      const members = await getDerivedOrchidGroupMembers(
+        group.groupKey,
+        houseId,
       );
+      setSelectedGroupKey(group.groupKey);
+      setSelectedMembers(members);
+      onSelectMembers(members);
     } catch (error) {
       setErrorMessage(toMessage(error));
     } finally {
@@ -55,7 +61,7 @@ export default function DerivedGroupPanel({
   }
 
   return (
-    <section className="shrink-0 rounded-md border border-[#d7ddd4] bg-white p-3 shadow-sm">
+    <section className="flex min-h-0 flex-1 flex-col rounded-md border border-[#d7ddd4] bg-white p-3 shadow-sm">
       <div className="flex items-center justify-between gap-2">
         <div>
           <p className="flex items-center gap-1.5 text-sm font-semibold text-[#17251b]">
@@ -75,10 +81,14 @@ export default function DerivedGroupPanel({
         )}
       </div>
 
-      <div className="mt-3 max-h-52 space-y-2 overflow-y-auto pr-1">
+      <div className="mt-3 min-h-0 flex-1 space-y-2 overflow-y-auto pr-1">
         {groups.map((group) => (
           <button
-            className="flex w-full items-center justify-between gap-3 rounded-md border border-[#e1e6df] bg-white px-3 py-2 text-left hover:border-[#159447] disabled:opacity-60"
+            className={`flex w-full items-center justify-between gap-3 rounded-md border px-3 py-2 text-left disabled:opacity-60 ${
+              selectedGroupKey === group.groupKey
+                ? "border-[#246df2] bg-[#f4f8ff] ring-1 ring-[#246df2]/20"
+                : "border-[#e1e6df] bg-white hover:border-[#159447]"
+            }`}
             disabled={loadingKey !== null}
             key={group.groupKey}
             onClick={() => void selectGroup(group)}
@@ -114,6 +124,32 @@ export default function DerivedGroupPanel({
           </p>
         ) : null}
       </div>
+      {selectedGroupKey ? (
+        <div className="mt-3 shrink-0 rounded-md border border-[#dce4da] bg-[#f7faf6] p-3">
+          <div className="flex items-center justify-between gap-2">
+            <p className="text-xs font-bold text-[#26352b]">그룹 구성</p>
+            <span className="text-[11px] font-semibold text-[#58705e]">
+              {selectedMembers.length}묶음
+            </span>
+          </div>
+          <div className="mt-2 max-h-32 space-y-1 overflow-y-auto">
+            {selectedMembers.map((member) => (
+              <div
+                className="flex items-center justify-between gap-2 rounded bg-white px-2 py-1.5 text-[11px]"
+                key={member.id}
+              >
+                <span className="min-w-0 truncate font-semibold text-[#344138]">
+                  {member.varietyName} · {member.physicalBedNumber}다이 ·{" "}
+                  {member.bedZoneName}
+                </span>
+                <span className="shrink-0 text-[#6a766e]">
+                  {member.quantity}분
+                </span>
+              </div>
+            ))}
+          </div>
+        </div>
+      ) : null}
       {errorMessage ? (
         <p className="mt-2 rounded-md border border-[#f1b0a0] bg-[#fff1ec] p-2 text-xs text-[#9b341e]">
           {errorMessage}
