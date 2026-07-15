@@ -2,8 +2,11 @@ package com.greenhouse.backend.work.controller;
 
 import com.greenhouse.backend.common.api.ApiResponse;
 import com.greenhouse.backend.work.application.WorkOperationService;
+import com.greenhouse.backend.work.application.WorkOperationCorrectionService;
 import com.greenhouse.backend.work.dto.OrchidGroupWorkHistoryResponse;
 import com.greenhouse.backend.work.dto.WorkOperationCreateRequest;
+import com.greenhouse.backend.work.dto.WorkOperationCorrectionCreateRequest;
+import com.greenhouse.backend.work.dto.WorkOperationCorrectionsResponse;
 import com.greenhouse.backend.work.dto.WorkOperationResponse;
 import com.greenhouse.backend.work.dto.WorkTargetPreviewRequest;
 import com.greenhouse.backend.work.dto.WorkTargetPreviewResponse;
@@ -28,6 +31,7 @@ import org.springframework.web.bind.annotation.RestController;
 public class WorkOperationController {
 
 	private final WorkOperationService workOperationService;
+	private final WorkOperationCorrectionService workOperationCorrectionService;
 
 	@PostMapping("/work-operations/target-preview")
 	public ApiResponse<WorkTargetPreviewResponse> preview(@Valid @RequestBody WorkTargetPreviewRequest request) {
@@ -101,5 +105,19 @@ public class WorkOperationController {
 	public ApiResponse<List<OrchidGroupWorkHistoryResponse>> getOrchidGroupHistory(
 			@PathVariable Long orchidGroupId) {
 		return ApiResponse.ok(workOperationService.getOrchidGroupHistory(orchidGroupId));
+	}
+
+	@PostMapping("/work-operations/{workOperationId}/corrections")
+	@ResponseStatus(HttpStatus.CREATED)
+	public ApiResponse<WorkOperationCorrectionsResponse> createCorrection(
+			@PathVariable Long workOperationId,
+			@Valid @RequestBody WorkOperationCorrectionCreateRequest request) {
+		return ApiResponse.ok(workOperationCorrectionService.create(workOperationId, request));
+	}
+
+	@GetMapping("/work-operations/{workOperationId}/corrections")
+	public ApiResponse<WorkOperationCorrectionsResponse> getCorrections(
+			@PathVariable Long workOperationId) {
+		return ApiResponse.ok(workOperationCorrectionService.get(workOperationId));
 	}
 }
