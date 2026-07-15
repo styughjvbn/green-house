@@ -237,6 +237,64 @@ paths:
               schema:
                 $ref: '#/components/schemas/ApiResponseWorkRecordResponse'
   /api/work-operations:
+    get:
+      tags:
+      - work-operation-controller
+      operationId: search
+      parameters:
+      - name: from
+        in: query
+        required: false
+        schema:
+          type: string
+          format: date
+      - name: to
+        in: query
+        required: false
+        schema:
+          type: string
+          format: date
+      - name: status
+        in: query
+        required: false
+        schema:
+          type: string
+          enum:
+          - DRAFT
+          - PLANNED
+          - IN_PROGRESS
+          - PAUSED
+          - COMPLETED
+          - CANCELED
+          - CORRECTED
+      - name: scopeType
+        in: query
+        required: false
+        schema:
+          type: string
+          enum:
+          - NONE
+          - FARM
+          - HOUSE
+          - PHYSICAL_BED
+          - BED_ZONE
+          - ORCHID_GROUP
+          - DERIVED_GROUP
+          - USER_COLLECTION
+          - MANUAL_SELECTION
+      - name: scopeId
+        in: query
+        required: false
+        schema:
+          type: integer
+          format: int64
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponseListWorkOperationResponse'
     post:
       tags:
       - work-operation-controller
@@ -537,6 +595,24 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ApiResponseRepotWorkOperationResponse'
+  /api/work-operations/record:
+    post:
+      tags:
+      - work-operation-controller
+      operationId: createCompletedRecord
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/WorkOperationCreateRequest'
+        required: true
+      responses:
+        '201':
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponseWorkOperationResponse'
   /api/work-operations/multi-create:
     post:
       tags:
@@ -5256,6 +5332,15 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/WorkRecordResponse'
+        message:
+          type: string
+    ApiResponseListWorkOperationResponse:
+      type: object
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/WorkOperationResponse'
         message:
           type: string
     ApiResponseMultiCreateCancellationEligibilityResponse:
