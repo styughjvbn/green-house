@@ -8,10 +8,12 @@ import { WorkRecordDetail } from "./components/WorkRecordDetail";
 import { WorkRecordFilters } from "./components/WorkRecordFilters";
 import { WorkRecordList } from "./components/WorkRecordList";
 import { WorkOperationPanel } from "./components/HouseWorkOperationPanel";
+import { WorkOperationSchedule } from "./components/WorkOperationSchedule";
 
 export function WorkRecordManager(props: WorkRecordManagerProps) {
   const manager = useWorkRecordManager(props);
   const [showOperationForm, setShowOperationForm] = useState(false);
+  const [showOperationSchedule, setShowOperationSchedule] = useState(false);
 
   return (
     <div className="flex h-full min-h-0 flex-col gap-4">
@@ -52,6 +54,11 @@ export function WorkRecordManager(props: WorkRecordManagerProps) {
           onClose={() => setShowOperationForm(false)}
         />
       ) : null}
+      {showOperationSchedule ? (
+        <WorkOperationSchedule
+          onClose={() => setShowOperationSchedule(false)}
+        />
+      ) : null}
 
       <div
         className={`grid min-h-0 flex-1 gap-4 ${
@@ -72,6 +79,7 @@ export function WorkRecordManager(props: WorkRecordManagerProps) {
           workTypes={props.workTypes}
           onCreate={() => manager.setShowCreateForm(true)}
           onCreateOperation={() => setShowOperationForm(true)}
+          onViewOperations={() => setShowOperationSchedule(true)}
           onPageChange={manager.changePage}
           onPageSizeChange={manager.changePageSize}
           onSelect={manager.selectRecord}

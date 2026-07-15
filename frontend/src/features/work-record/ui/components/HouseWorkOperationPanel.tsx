@@ -497,7 +497,7 @@ function TargetPreview({
   );
 }
 
-function OperationResult({
+export function OperationResult({
   operation,
   loading,
   onComplete,
