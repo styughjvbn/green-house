@@ -65,8 +65,8 @@ public class WorkOperationService {
 	public WorkOperationResponse create(WorkOperationCreateRequest request) {
 		validateDates(request.plannedStartDate(), request.plannedEndDate());
 		var workType = workTypeService.getActiveForCreate(request.workTypeId());
-		if (!"PESTICIDE".equals(workType.getCode())) {
-			throw new IllegalArgumentException("초기 작업 실행 모델은 농약 작업만 지원합니다.");
+		if (workType.effectKind() != com.greenhouse.backend.work.domain.WorkEffectKind.RECORD_ONLY) {
+			throw new IllegalArgumentException("일반 작업 생성은 기록형 작업 유형만 지원합니다.");
 		}
 
 		WorkTargetSelection selection = selection(
@@ -116,6 +116,24 @@ public class WorkOperationService {
 				.toList();
 		workOperationTargetRepository.saveAll(targets);
 		workTargetExecutionRepository.saveAll(targets.stream().map(WorkTargetExecution::new).toList());
+		return get(operation.getId());
+	}
+
+	public WorkOperationResponse createCompletedRecord(WorkOperationCreateRequest request) {
+		WorkOperationResponse created = create(request);
+		WorkOperation operation = findOperation(created.id());
+		LocalDateTime executedAt = LocalDateTime.now();
+		operation.start(executedAt);
+		List<WorkTargetExecution> executions = workTargetExecutionRepository
+				.findByTargetWorkOperationIdOrderByIdAsc(operation.getId());
+		for (WorkTargetExecution execution : executions) {
+			var result = workEffectProcessor.apply(
+					operation,
+					execution.getTarget(),
+					new WorkEffectCommand(executedAt, normalize(request.worker()), request.details(), null));
+			execution.completeWithEffect(executedAt, normalize(request.worker()), result.resultDetails());
+		}
+		operation.complete(executedAt);
 		return get(operation.getId());
 	}
 
@@ -295,7 +313,12 @@ public class WorkOperationService {
 				? List.of()
 				: orchidGroupIds.stream().filter(java.util.Objects::nonNull).distinct().toList();
 		switch (scopeType) {
-			case HOUSE, USER_COLLECTION -> {
+			case FARM -> {
+				if (scopeId != null) {
+					throw new IllegalArgumentException("전체 농장 작업에는 대상 범위 ID를 지정할 수 없습니다.");
+				}
+			}
+			case HOUSE, PHYSICAL_BED, BED_ZONE, ORCHID_GROUP, USER_COLLECTION -> {
 				if (scopeId == null) {
 					throw new IllegalArgumentException("선택한 작업 대상의 ID가 필요합니다.");
 				}
@@ -312,13 +335,20 @@ public class WorkOperationService {
 			}
 			default -> throw new IllegalArgumentException("아직 지원하지 않는 작업 대상 유형입니다.");
 		}
+		if (scopeType == WorkSourceScopeType.ORCHID_GROUP) {
+			normalizedIds = List.of(scopeId);
+		}
 		return new WorkTargetSelection(scopeType, scopeId, normalizedKey, normalizedIds);
 	}
 
 	private Map<String, Object> conditionSnapshot(WorkTargetSelection selection) {
 		Map<String, Object> snapshot = new LinkedHashMap<>();
 		switch (selection.scopeType()) {
+			case FARM -> snapshot.put("farm", true);
 			case HOUSE -> snapshot.put("houseId", selection.scopeId());
+			case PHYSICAL_BED -> snapshot.put("physicalBedId", selection.scopeId());
+			case BED_ZONE -> snapshot.put("bedZoneId", selection.scopeId());
+			case ORCHID_GROUP -> snapshot.put("orchidGroupId", selection.scopeId());
 			case USER_COLLECTION -> snapshot.put("collectionId", selection.scopeId());
 			case DERIVED_GROUP -> snapshot.put("groupKey", selection.scopeKey());
 			case MANUAL_SELECTION -> snapshot.put("orchidGroupIds", selection.orchidGroupIds());
@@ -329,7 +359,11 @@ public class WorkOperationService {
 
 	private WorkTargetInclusionSource inclusionSource(WorkSourceScopeType scopeType) {
 		return switch (scopeType) {
+			case FARM -> WorkTargetInclusionSource.FARM;
 			case HOUSE -> WorkTargetInclusionSource.HOUSE;
+			case PHYSICAL_BED -> WorkTargetInclusionSource.PHYSICAL_BED;
+			case BED_ZONE -> WorkTargetInclusionSource.BED_ZONE;
+			case ORCHID_GROUP -> WorkTargetInclusionSource.DIRECT;
 			case DERIVED_GROUP -> WorkTargetInclusionSource.DERIVED_GROUP;
 			case USER_COLLECTION -> WorkTargetInclusionSource.USER_COLLECTION;
 			case MANUAL_SELECTION -> WorkTargetInclusionSource.MANUAL_ADDITION;

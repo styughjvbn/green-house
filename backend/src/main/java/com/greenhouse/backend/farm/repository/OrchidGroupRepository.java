@@ -136,6 +136,23 @@ public interface OrchidGroupRepository extends JpaRepository<OrchidGroup, Long> 
 			join fetch b.house
 			left join fetch g.variety
 			left join fetch g.inboundRecord
+			where (:physicalBedId is null or b.id = :physicalBedId)
+			  and (:bedZoneId is null or z.id = :bedZoneId)
+			  and g.quantity > 0
+			  and g.status not in ('종료', '폐기', '판매 완료')
+			order by b.house.number asc, b.displayOrder asc, z.sortOrder asc, g.sortOrder asc
+			""")
+	List<OrchidGroup> findActiveWorkTargets(
+			@Param("physicalBedId") Long physicalBedId,
+			@Param("bedZoneId") Long bedZoneId);
+
+	@Query("""
+			select g from OrchidGroup g
+			join fetch g.bedZone z
+			join fetch z.physicalBed b
+			join fetch b.house
+			left join fetch g.variety
+			left join fetch g.inboundRecord
 			where g.id in :orchidGroupIds
 			  and g.quantity > 0
 			  and g.status not in ('종료', '폐기', '판매 완료')

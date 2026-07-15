@@ -4,9 +4,11 @@ import com.greenhouse.backend.common.exception.NotFoundException;
 import com.greenhouse.backend.farm.domain.OrchidGroup;
 import com.greenhouse.backend.farm.domain.OrchidGroupCollectionStatus;
 import com.greenhouse.backend.farm.repository.HouseRepository;
+import com.greenhouse.backend.farm.repository.BedZoneRepository;
 import com.greenhouse.backend.farm.repository.OrchidGroupCollectionMemberRepository;
 import com.greenhouse.backend.farm.repository.OrchidGroupCollectionRepository;
 import com.greenhouse.backend.farm.repository.OrchidGroupRepository;
+import com.greenhouse.backend.farm.repository.PhysicalBedRepository;
 import com.greenhouse.backend.work.application.ResolvedWorkTarget;
 import com.greenhouse.backend.work.application.WorkTargetSelection;
 import com.greenhouse.backend.work.application.WorkTargetResolver;
@@ -26,6 +28,8 @@ import org.springframework.stereotype.Component;
 public class FarmWorkTargetResolver implements WorkTargetResolver {
 
 	private final HouseRepository houseRepository;
+	private final PhysicalBedRepository physicalBedRepository;
+	private final BedZoneRepository bedZoneRepository;
 	private final OrchidGroupRepository orchidGroupRepository;
 	private final OrchidGroupCollectionRepository collectionRepository;
 	private final OrchidGroupCollectionMemberRepository collectionMemberRepository;
@@ -34,7 +38,11 @@ public class FarmWorkTargetResolver implements WorkTargetResolver {
 	@Override
 	public List<ResolvedWorkTarget> resolve(WorkTargetSelection selection) {
 		return switch (selection.scopeType()) {
+			case FARM -> resolveLocation(null, null);
 			case HOUSE -> resolveHouse(selection.scopeId());
+			case PHYSICAL_BED -> resolvePhysicalBed(selection.scopeId());
+			case BED_ZONE -> resolveBedZone(selection.scopeId());
+			case ORCHID_GROUP -> resolveManual(selection.orchidGroupIds());
 			case DERIVED_GROUP -> resolveActiveIds(derivedOrchidGroupService
 					.getMembers(selection.scopeKey(), null, null, null).stream()
 					.map(member -> member.id())
@@ -69,6 +77,26 @@ public class FarmWorkTargetResolver implements WorkTargetResolver {
 			throw new NotFoundException("동을 찾을 수 없습니다.");
 		}
 		return orchidGroupRepository.findActiveWorkTargetsByHouseId(houseId).stream()
+				.map(this::toResolvedTarget)
+				.toList();
+	}
+
+	private List<ResolvedWorkTarget> resolvePhysicalBed(Long physicalBedId) {
+		if (physicalBedId == null || !physicalBedRepository.existsById(physicalBedId)) {
+			throw new NotFoundException("다이를 찾을 수 없습니다.");
+		}
+		return resolveLocation(physicalBedId, null);
+	}
+
+	private List<ResolvedWorkTarget> resolveBedZone(Long bedZoneId) {
+		if (bedZoneId == null || !bedZoneRepository.existsById(bedZoneId)) {
+			throw new NotFoundException("논리 구역을 찾을 수 없습니다.");
+		}
+		return resolveLocation(null, bedZoneId);
+	}
+
+	private List<ResolvedWorkTarget> resolveLocation(Long physicalBedId, Long bedZoneId) {
+		return orchidGroupRepository.findActiveWorkTargets(physicalBedId, bedZoneId).stream()
 				.map(this::toResolvedTarget)
 				.toList();
 	}

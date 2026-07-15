@@ -46,6 +46,13 @@ public class WorkOperationController {
 		return ApiResponse.ok(workOperationService.create(request));
 	}
 
+	@PostMapping("/work-operations/record")
+	@ResponseStatus(HttpStatus.CREATED)
+	public ApiResponse<WorkOperationResponse> createCompletedRecord(
+			@Valid @RequestBody WorkOperationCreateRequest request) {
+		return ApiResponse.ok(workOperationService.createCompletedRecord(request));
+	}
+
 	@GetMapping("/work-operations")
 	public ApiResponse<List<WorkOperationResponse>> search(
 			@RequestParam(required = false) LocalDate from,
