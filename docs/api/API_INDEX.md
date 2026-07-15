@@ -134,8 +134,8 @@
 - slice: `docs/api/slices/work-operation.openapi.yaml`
 - package: `com.greenhouse.backend.work`
 - controller tag: `work-operation-controller`
-- 역할: 동·자동 그룹·사용자 그룹·직접 선택 농약 작업의 대상 미리보기·스냅샷·완료와 난 묶음 통합 이력
-- operations: 12
+- 역할: 동·자동 그룹·사용자 그룹·직접 선택 농약 작업의 대상 미리보기·스냅샷·완료, 난 묶음 통합 이력, 구조 변경 보정 관계
+- operations: 14
 
 | Method | Path | Operation |
 |---|---|---|
@@ -151,6 +151,8 @@
 | `POST` | `/api/work-operations/{workOperationId}/targets/{targetId}/complete` | 대상 작업 완료 |
 | `POST` | `/api/work-operations/{workOperationId}/targets/{targetId}/skip` | 대상 건너뛰기 |
 | `GET` | `/api/orchid-groups/{orchidGroupId}/work-history` | 기존·신규 통합 이력 |
+| `POST` | `/api/work-operations/{workOperationId}/corrections` | 완료된 구조 변경 작업에 보정 작업 연결 |
+| `GET` | `/api/work-operations/{workOperationId}/corrections` | 원본 작업과 연결된 보정 작업 조회 |
 
 대상 범위는 `HOUSE`, `DERIVED_GROUP`, `USER_COLLECTION`, `MANUAL_SELECTION`을 지원한다. 작업 유형 코드는 `PESTICIDE`로 제한한다.
 

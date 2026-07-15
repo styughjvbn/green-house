@@ -105,3 +105,5 @@ python3 scripts/generate_openapi.py --url http://localhost:8080/api-docs
 범위 기반 신규 작업 실행 API는 `HOUSE`, `DERIVED_GROUP`, `USER_COLLECTION`, `MANUAL_SELECTION` 범위의 `PESTICIDE` 작업을 지원한다. 대상 미리보기, 생성, 상세, 대상별 진행·건너뛰기, 작업 시작·일시중지·재개·취소·완료, 난 묶음 통합 이력을 제공한다.
 
 구조 변경 작업은 별도 API로 제공한다. 다중 생성은 원본 대상 없이 여러 난 묶음을 만들고, 분갈이는 단일 원본을 대상으로 부분·전체 수량을 처리해 결과 난 묶음과 계보를 만든다. 구현되지 않은 다른 작업 유형을 일반 작업 API에서 사용할 수 있다고 가정하지 않는다.
+
+완료된 구조 변경 작업의 보정 관계는 `POST/GET /api/work-operations/{workOperationId}/corrections`로 기록·조회한다. 현재 API는 보정 작업과 사유를 연결하고 원본 상태를 `CORRECTED`로 표시하지만 난 묶음 수량·상태·계보 자체를 변경하지 않는다.

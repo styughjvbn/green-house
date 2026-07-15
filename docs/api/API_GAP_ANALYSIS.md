@@ -51,6 +51,8 @@
 
 ### 작업 이력
 
+- `POST /api/work-operations/{workOperationId}/corrections`
+- `GET /api/work-operations/{workOperationId}/corrections`
 - `GET /api/work-records`
 - `POST /api/work-records`
 - `GET /api/work-types`
