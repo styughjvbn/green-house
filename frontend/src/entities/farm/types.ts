@@ -199,7 +199,8 @@ export type WorkTypeTemplate =
   | "STATUS"
   | "MEMO"
   | "MOVEMENT"
-  | "MULTI_CREATE";
+  | "MULTI_CREATE"
+  | "CORRECTION";
 
 export type WorkType = {
   id: number;

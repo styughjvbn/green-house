@@ -65,6 +65,11 @@ const TEMPLATE_CONFIG: Record<WorkTypeTemplate, WorkTypeTemplateConfig> = {
     fields: ["worker", "memo"],
     labels: {},
   },
+  CORRECTION: {
+    label: "구조 변경 보정형",
+    fields: ["worker", "memo"],
+    labels: {},
+  },
 };
 
 export const WORK_TYPE_TEMPLATES = Object.keys(
