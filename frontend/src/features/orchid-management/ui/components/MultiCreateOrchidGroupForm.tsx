@@ -6,9 +6,12 @@ import type { House, VarietyOption } from "@/entities/farm/types";
 import { POT_SIZE_OPTIONS } from "@/entities/farm/potSizes";
 import {
   createMultipleOrchidGroups,
+  cancelMultiCreateWork,
+  getMultiCreateCancellationEligibility,
   getOrchidGroupCollections,
 } from "../../api/orchidManagementApi";
 import type { OrchidGroupCollection } from "../../model/types";
+import type { MultiCreateWorkResult } from "../../model/types";
 import VarietySearchSelect from "./VarietySearchSelect";
 
 type Row = {
@@ -51,7 +54,8 @@ export default function MultiCreateOrchidGroupForm({
   const [rows, setRows] = useState<Row[]>(() => [newRow(zones[0]?.id, 1)]);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [createdCount, setCreatedCount] = useState<number | null>(null);
+  const [result, setResult] = useState<MultiCreateWorkResult | null>(null);
+  const [canceling, setCanceling] = useState(false);
   const [collections, setCollections] = useState<OrchidGroupCollection[]>([]);
 
   useEffect(() => {
@@ -105,7 +109,7 @@ export default function MultiCreateOrchidGroupForm({
           collectionIds: row.collectionIds,
         })),
       });
-      setCreatedCount(result.createdOrchidGroups.length);
+      setResult(result);
       router.refresh();
     } catch (cause) {
       setError(
@@ -113,6 +117,34 @@ export default function MultiCreateOrchidGroupForm({
       );
     } finally {
       setSaving(false);
+    }
+  }
+
+  async function cancelCreation() {
+    if (!result) return;
+    setCanceling(true);
+    setError(null);
+    try {
+      const eligibility = await getMultiCreateCancellationEligibility(
+        result.operation.id,
+      );
+      if (!eligibility.cancelable) {
+        setError(
+          eligibility.blockers.map((blocker) => blocker.message).join(" ") ||
+            "현재 생성 작업을 취소할 수 없습니다.",
+        );
+        return;
+      }
+      setResult(await cancelMultiCreateWork(result.operation.id));
+      router.refresh();
+    } catch (cause) {
+      setError(
+        cause instanceof Error
+          ? cause.message
+          : "생성 작업을 취소하지 못했습니다.",
+      );
+    } finally {
+      setCanceling(false);
     }
   }
 
@@ -133,9 +165,24 @@ export default function MultiCreateOrchidGroupForm({
           닫기
         </button>
       </div>
-      {createdCount != null ? (
-        <div className="mt-3 rounded-md bg-[#edf8ef] p-3 text-sm font-semibold text-[#16713a]">
-          난 묶음 {createdCount}개를 생성했습니다.
+      {result != null ? (
+        <div className="mt-3 space-y-2 rounded-md bg-[#edf8ef] p-3 text-sm font-semibold text-[#16713a]">
+          <p>
+            {result.operation.status === "CANCELED"
+              ? "다중 생성 작업을 취소했습니다."
+              : `난 묶음 ${result.createdOrchidGroups.length}개를 생성했습니다.`}
+          </p>
+          {error ? <p className="text-[#9c321d]">{error}</p> : null}
+          {result.operation.status !== "CANCELED" ? (
+            <button
+              className="rounded-md border border-[#b75b49] bg-white px-3 py-2 text-xs text-[#9c321d] disabled:opacity-50"
+              disabled={canceling}
+              type="button"
+              onClick={() => void cancelCreation()}
+            >
+              {canceling ? "취소 가능 여부 확인 중" : "방금 생성한 작업 취소"}
+            </button>
+          ) : null}
         </div>
       ) : (
         <form className="mt-3 space-y-3" onSubmit={submit}>

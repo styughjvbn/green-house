@@ -84,6 +84,13 @@ export type MultiCreateWorkResult = {
   createdOrchidGroups: OrchidGroup[];
 };
 
+export type MultiCreateCancellationEligibility = {
+  workOperationId: number;
+  cancelable: boolean;
+  createdOrchidGroupIds: number[];
+  blockers: Array<{ code: string; message: string; count: number }>;
+};
+
 export type PreciseMovePayload = {
   toBedZoneId: number;
   startPosition?: number | null;

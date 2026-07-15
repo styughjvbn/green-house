@@ -14,11 +14,32 @@ import type {
   DerivedOrchidGroup,
   MutationPayload,
   MultiCreateOrchidGroupRow,
+  MultiCreateCancellationEligibility,
   MultiCreateWorkResult,
   OrchidGroupCollection,
   PreciseMovePayload,
   WorkRecordQuickPayload,
 } from "../model/types";
+
+export function getMultiCreateCancellationEligibility(workOperationId: number) {
+  return fetchApi<MultiCreateCancellationEligibility>(
+    `/work-operations/${workOperationId}/cancel-eligibility`,
+  );
+}
+
+export async function cancelMultiCreateWork(workOperationId: number) {
+  const response = await fetch(
+    `${API_BASE_URL}/work-operations/${workOperationId}/cancel-created-orchid-groups`,
+    { method: "POST", credentials: "include" },
+  );
+  const body = await readJson(response);
+  if (!response.ok) {
+    throw new Error(
+      resolveErrorMessage(body, "다중 생성 작업을 취소하지 못했습니다."),
+    );
+  }
+  return (body as { data: MultiCreateWorkResult }).data;
+}
 
 export async function createMultipleOrchidGroups(payload: {
   idempotencyKey: string;
