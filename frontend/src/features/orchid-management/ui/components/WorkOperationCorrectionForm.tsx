@@ -3,6 +3,7 @@
 import { useRouter } from "next/navigation";
 import { type FormEvent, useEffect, useState } from "react";
 import type { OrchidGroup } from "@/entities/farm/types";
+import { createUuid } from "@/shared/lib/id";
 import {
   createWorkOperationCorrection,
   getWorkOperationCorrections,
@@ -19,9 +20,7 @@ export default function WorkOperationCorrectionForm({
   onClose: () => void;
 }) {
   const router = useRouter();
-  const [idempotencyKey, setIdempotencyKey] = useState(() =>
-    crypto.randomUUID(),
-  );
+  const [idempotencyKey, setIdempotencyKey] = useState(createUuid);
   const [title, setTitle] = useState(`${orchidGroup.varietyName} 결과 보정`);
   const [workDate, setWorkDate] = useState(() =>
     new Date().toISOString().slice(0, 10),
@@ -101,7 +100,7 @@ export default function WorkOperationCorrectionForm({
         },
       );
       setCorrections(result);
-      setIdempotencyKey(crypto.randomUUID());
+      setIdempotencyKey(createUuid());
       router.refresh();
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : "보정하지 못했습니다.");

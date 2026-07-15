@@ -4,6 +4,7 @@ import { useRouter } from "next/navigation";
 import { FormEvent, useEffect, useMemo, useState } from "react";
 import type { House, VarietyOption } from "@/entities/farm/types";
 import { POT_SIZE_OPTIONS } from "@/entities/farm/potSizes";
+import { createUuid } from "@/shared/lib/id";
 import {
   createMultipleOrchidGroups,
   cancelMultiCreateWork,
@@ -50,7 +51,7 @@ export default function MultiCreateOrchidGroupForm({
     new Date().toISOString().slice(0, 10),
   );
   const [worker, setWorker] = useState("");
-  const [idempotencyKey] = useState(() => crypto.randomUUID());
+  const [idempotencyKey] = useState(createUuid);
   const [rows, setRows] = useState<Row[]>(() => [newRow(zones[0]?.id, 1)]);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -362,7 +363,7 @@ export default function MultiCreateOrchidGroupForm({
 
 function newRow(bedZoneId: number | undefined, cell: number): Row {
   return {
-    key: crypto.randomUUID(),
+    key: createUuid(),
     bedZoneId: bedZoneId ? String(bedZoneId) : "",
     variety: null,
     quantity: "1",

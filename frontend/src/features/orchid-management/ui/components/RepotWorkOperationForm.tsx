@@ -4,6 +4,7 @@ import { useRouter } from "next/navigation";
 import { type FormEvent, useEffect, useMemo, useState } from "react";
 import type { House, OrchidGroup } from "@/entities/farm/types";
 import { POT_SIZE_OPTIONS } from "@/entities/farm/potSizes";
+import { createUuid } from "@/shared/lib/id";
 import {
   executeRepotWork,
   getOrchidGroupCollections,
@@ -43,7 +44,7 @@ export default function RepotWorkOperationForm({
       ),
     [houses],
   );
-  const [idempotencyKey] = useState(() => crypto.randomUUID());
+  const [idempotencyKey] = useState(createUuid);
   const [title, setTitle] = useState(`${source.varietyName} 분갈이`);
   const [workDate, setWorkDate] = useState(() =>
     new Date().toISOString().slice(0, 10),
@@ -447,7 +448,7 @@ function newRow(source: OrchidGroup, offset = 0): ResultRow {
   const sourceEnd =
     source.endPosition == null ? sourceStart : Math.ceil(source.endPosition);
   return {
-    key: crypto.randomUUID(),
+    key: createUuid(),
     bedZoneId: String(source.bedZoneId),
     quantity: offset === 0 ? String(source.quantity) : "1",
     potSize: source.potSize ?? "",
