@@ -13,6 +13,8 @@ import {
   createWorkOperation,
   getWorkOperationScopeOptions,
   previewWorkOperationTargets,
+  transitionWorkOperation,
+  transitionWorkOperationTarget,
 } from "../../api/workRecordApi";
 import type {
   WorkOperationFormState,
@@ -196,6 +198,52 @@ export function WorkOperationPanel({
     }
   }
 
+  async function changeOperationStatus(
+    action: "start" | "pause" | "resume" | "cancel",
+  ) {
+    if (!operation) return;
+    setLoading(true);
+    setErrorMessage(null);
+    try {
+      setOperation(await transitionWorkOperation(operation.id, action));
+    } catch (error) {
+      setErrorMessage(
+        error instanceof Error
+          ? error.message
+          : "작업 상태를 변경하지 못했습니다.",
+      );
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  async function changeTargetStatus(
+    targetId: number,
+    action: "start" | "complete" | "skip",
+  ) {
+    if (!operation) return;
+    setLoading(true);
+    setErrorMessage(null);
+    try {
+      setOperation(
+        await transitionWorkOperationTarget(
+          operation.id,
+          targetId,
+          action,
+          operation.worker,
+        ),
+      );
+    } catch (error) {
+      setErrorMessage(
+        error instanceof Error
+          ? error.message
+          : "대상 상태를 변경하지 못했습니다.",
+      );
+    } finally {
+      setLoading(false);
+    }
+  }
+
   return (
     <section className="rounded-md border border-[#b9d7bf] bg-[#f5fbf5] p-4 shadow-sm">
       <div className="flex flex-wrap items-start justify-between gap-3">
@@ -227,6 +275,8 @@ export function WorkOperationPanel({
           operation={operation}
           loading={loading}
           onComplete={completeOperation}
+          onOperationAction={changeOperationStatus}
+          onTargetAction={changeTargetStatus}
         />
       ) : (
         <>
@@ -451,39 +501,212 @@ function OperationResult({
   operation,
   loading,
   onComplete,
+  onOperationAction,
+  onTargetAction,
 }: {
   operation: WorkOperation;
   loading: boolean;
   onComplete: () => void;
+  onOperationAction: (action: "start" | "pause" | "resume" | "cancel") => void;
+  onTargetAction: (
+    targetId: number,
+    action: "start" | "complete" | "skip",
+  ) => void;
 }) {
   const completed = operation.status === "COMPLETED";
+  const canceled = operation.status === "CANCELED";
+  const active = operation.status === "IN_PROGRESS";
+  const canComplete =
+    active &&
+    operation.progress.pending === 0 &&
+    operation.progress.inProgress === 0 &&
+    operation.progress.failed === 0;
   return (
     <div className="mt-4 rounded-md border border-[#cfe0d2] bg-white p-4">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <p className="font-bold text-[#17251b]">{operation.title}</p>
           <p className="mt-1 text-sm text-[#5c6a60]">
-            대상 {operation.targets.length}묶음 · 상태{" "}
-            {completed ? "완료" : "계획"}
+            {operation.plannedStartDate}
+            {operation.plannedEndDate
+              ? ` ~ ${operation.plannedEndDate}`
+              : ""} · {operationStatusLabel(operation.status)}
           </p>
         </div>
-        {!completed ? (
-          <button
-            className="rounded-md bg-[#246df2] px-5 py-2.5 text-sm font-semibold text-white"
-            disabled={loading}
-            type="button"
-            onClick={onComplete}
+        {completed || canceled ? (
+          <span
+            className={`rounded-full px-3 py-1.5 text-sm font-semibold ${completed ? "bg-[#e7f6eb] text-[#10783a]" : "bg-[#f2eeee] text-[#765f5a]"}`}
           >
-            {loading ? "처리 중" : "전체 작업 완료"}
-          </button>
-        ) : (
-          <span className="rounded-full bg-[#e7f6eb] px-3 py-1.5 text-sm font-semibold text-[#10783a]">
-            완료됨
+            {completed ? "완료됨" : "취소됨"}
           </span>
+        ) : (
+          <div className="flex flex-wrap gap-2">
+            {operation.status === "PLANNED" ? (
+              <StatusAction
+                label="작업 시작"
+                disabled={loading}
+                onClick={() => onOperationAction("start")}
+              />
+            ) : null}
+            {active ? (
+              <StatusAction
+                label="일시중지"
+                disabled={loading}
+                onClick={() => onOperationAction("pause")}
+              />
+            ) : null}
+            {operation.status === "PAUSED" ? (
+              <StatusAction
+                label="작업 재개"
+                disabled={loading}
+                onClick={() => onOperationAction("resume")}
+              />
+            ) : null}
+            <StatusAction
+              label="전체 완료"
+              primary
+              disabled={loading || !canComplete}
+              onClick={onComplete}
+            />
+            <StatusAction
+              label="취소"
+              danger
+              disabled={loading}
+              onClick={() => onOperationAction("cancel")}
+            />
+          </div>
         )}
+      </div>
+
+      <div className="mt-4 rounded-md bg-[#f4f7f3] p-3">
+        <div className="flex items-center justify-between text-sm font-semibold text-[#344138]">
+          <span>
+            완료 {operation.progress.completed} · 진행{" "}
+            {operation.progress.inProgress} · 대기 {operation.progress.pending}{" "}
+            · 건너뜀 {operation.progress.skipped}
+          </span>
+          <span>{operation.progress.progressPercent}%</span>
+        </div>
+        <div className="mt-2 h-2 overflow-hidden rounded-full bg-[#dce5dc]">
+          <div
+            className="h-full rounded-full bg-[#159447] transition-all"
+            style={{ width: `${operation.progress.progressPercent}%` }}
+          />
+        </div>
+      </div>
+
+      <div className="mt-4 max-h-72 overflow-y-auto rounded-md border border-[#e1e6df]">
+        {operation.targets.map((target) => (
+          <div
+            className="flex flex-wrap items-center gap-2 border-b border-[#edf0ec] px-3 py-2 last:border-b-0"
+            key={target.orchidGroupId}
+          >
+            <div className="min-w-0 flex-1">
+              <p className="truncate text-sm font-semibold text-[#26352b]">
+                {target.varietyName}
+              </p>
+              <p className="mt-0.5 text-xs text-[#6a766e]">
+                {target.locationSnapshot.houseNumber}동{" "}
+                {target.locationSnapshot.physicalBedNumber}다이{" "}
+                {target.locationSnapshot.bedZoneName} ·{" "}
+                {target.quantitySnapshot}분
+              </p>
+            </div>
+            <span className="rounded-full bg-[#eef2ed] px-2 py-1 text-xs font-semibold text-[#526057]">
+              {targetStatusLabel(target.executionStatus)}
+            </span>
+            {active &&
+            target.id != null &&
+            target.executionStatus === "PENDING" ? (
+              <StatusAction
+                small
+                label="시작"
+                disabled={loading}
+                onClick={() => onTargetAction(target.id!, "start")}
+              />
+            ) : null}
+            {active &&
+            target.id != null &&
+            (target.executionStatus === "PENDING" ||
+              target.executionStatus === "IN_PROGRESS") ? (
+              <>
+                <StatusAction
+                  small
+                  primary
+                  label="완료"
+                  disabled={loading}
+                  onClick={() => onTargetAction(target.id!, "complete")}
+                />
+                <StatusAction
+                  small
+                  label="건너뛰기"
+                  disabled={loading}
+                  onClick={() => onTargetAction(target.id!, "skip")}
+                />
+              </>
+            ) : null}
+          </div>
+        ))}
       </div>
     </div>
   );
+}
+
+function StatusAction({
+  label,
+  disabled,
+  primary = false,
+  danger = false,
+  small = false,
+  onClick,
+}: {
+  label: string;
+  disabled: boolean;
+  primary?: boolean;
+  danger?: boolean;
+  small?: boolean;
+  onClick: () => void;
+}) {
+  const color = primary
+    ? "border-[#159447] bg-[#159447] text-white"
+    : danger
+      ? "border-[#e2b5aa] bg-white text-[#a33a24]"
+      : "border-[#cfd8cc] bg-white text-[#34503b]";
+  return (
+    <button
+      className={`rounded-md border font-semibold disabled:opacity-45 ${color} ${small ? "px-2 py-1 text-xs" : "px-3 py-2 text-sm"}`}
+      disabled={disabled}
+      onClick={onClick}
+      type="button"
+    >
+      {label}
+    </button>
+  );
+}
+
+function operationStatusLabel(status: WorkOperation["status"]) {
+  return {
+    DRAFT: "초안",
+    PLANNED: "계획",
+    IN_PROGRESS: "진행 중",
+    PAUSED: "일시중지",
+    COMPLETED: "완료",
+    CANCELED: "취소",
+    CORRECTED: "보정",
+  }[status];
+}
+
+function targetStatusLabel(
+  status: WorkOperation["targets"][number]["executionStatus"],
+) {
+  return {
+    PENDING: "대기",
+    IN_PROGRESS: "진행 중",
+    COMPLETED: "완료",
+    SKIPPED: "건너뜀",
+    CANCELED: "취소",
+    FAILED: "실패",
+  }[status];
 }
 
 function ManualTargetSelector({

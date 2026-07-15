@@ -144,6 +144,29 @@ export async function completeWorkOperation(
   );
 }
 
+export async function transitionWorkOperation(
+  workOperationId: number,
+  action: "start" | "pause" | "resume" | "cancel",
+): Promise<WorkOperation> {
+  return requestWorkOperation<WorkOperation>(
+    `/work-operations/${workOperationId}/${action}`,
+    "POST",
+  );
+}
+
+export async function transitionWorkOperationTarget(
+  workOperationId: number,
+  targetId: number,
+  action: "start" | "complete" | "skip",
+  worker: string | null,
+): Promise<WorkOperation> {
+  return requestWorkOperation<WorkOperation>(
+    `/work-operations/${workOperationId}/targets/${targetId}/${action}`,
+    "POST",
+    { worker },
+  );
+}
+
 async function requestWorkOperation<T>(
   path: string,
   method: "POST",

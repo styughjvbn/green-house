@@ -279,6 +279,10 @@ export type WorkOperationTarget = {
   potSizeSnapshot: string | null;
   locationSnapshot: WorkLocationSnapshot;
   executionStatus: WorkTargetExecutionStatus;
+  startedAt: string | null;
+  completedAt: string | null;
+  worker: string | null;
+  resultDetails: Record<string, unknown> | null;
 };
 
 export type WorkTargetPreview = {
@@ -308,6 +312,16 @@ export type WorkOperation = {
   details: Record<string, unknown> | null;
   worker: string | null;
   memo: string | null;
+  progress: {
+    total: number;
+    pending: number;
+    inProgress: number;
+    completed: number;
+    skipped: number;
+    canceled: number;
+    failed: number;
+    progressPercent: number;
+  };
   targets: WorkOperationTarget[];
 };
 
