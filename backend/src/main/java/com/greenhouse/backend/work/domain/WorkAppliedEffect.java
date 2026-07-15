@@ -56,6 +56,9 @@ public class WorkAppliedEffect extends BaseEntity {
 	@Column(name = "applied_at", nullable = false)
 	private LocalDateTime appliedAt;
 
+	@Column(name = "canceled_at")
+	private LocalDateTime canceledAt;
+
 	@Column(length = 100)
 	private String worker;
 
@@ -86,5 +89,11 @@ public class WorkAppliedEffect extends BaseEntity {
 		this.worker = worker;
 		this.commandDetails = commandDetails;
 		this.resultDetails = resultDetails;
+	}
+
+	public void cancel(LocalDateTime canceledAt) {
+		if (this.canceledAt == null) {
+			this.canceledAt = canceledAt;
+		}
 	}
 }

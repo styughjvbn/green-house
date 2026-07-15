@@ -174,4 +174,15 @@ public class WorkOperation extends BaseEntity {
 		}
 		status = WorkOperationStatus.CANCELED;
 	}
+
+	public void cancelCompletedStructureChange() {
+		if (status == WorkOperationStatus.CANCELED) {
+			return;
+		}
+		if (status != WorkOperationStatus.COMPLETED
+				|| workType.effectKind() != WorkEffectKind.STRUCTURE_CHANGE) {
+			throw new IllegalArgumentException("완료된 구조 변경 작업만 결과 취소할 수 있습니다.");
+		}
+		status = WorkOperationStatus.CANCELED;
+	}
 }
