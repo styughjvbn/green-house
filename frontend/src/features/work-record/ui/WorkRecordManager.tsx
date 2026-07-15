@@ -1,6 +1,6 @@
 "use client";
 
-import { useRouter, useSearchParams } from "next/navigation";
+import Link from "next/link";
 import { useState } from "react";
 import type { WorkRecordManagerProps } from "../model/types";
 import { useWorkRecordManager } from "../model/useWorkRecordManager";
@@ -12,25 +12,18 @@ import { WorkOperationPanel } from "./components/HouseWorkOperationPanel";
 import { WorkOperationSchedule } from "./components/WorkOperationSchedule";
 import { WorkOperationList } from "./components/WorkOperationList";
 
-type WorkManagementTab = "LIST" | "CALENDAR" | "HISTORY";
+export type WorkManagementTab = "LIST" | "CALENDAR" | "HISTORY";
 
-export function WorkRecordManager(props: WorkRecordManagerProps) {
+export function WorkRecordManager(
+  props: WorkRecordManagerProps & { activeTab: WorkManagementTab },
+) {
   const manager = useWorkRecordManager(props);
-  const router = useRouter();
-  const searchParams = useSearchParams();
   const [showOperationForm, setShowOperationForm] = useState(false);
   const [operationSavedVersion, setOperationSavedVersion] = useState(0);
-  const requestedTab = searchParams.get("tab");
-  const activeTab: WorkManagementTab =
-    requestedTab === "CALENDAR" || requestedTab === "HISTORY"
-      ? requestedTab
-      : "LIST";
+  const { activeTab } = props;
   const refreshKey = manager.operationCreatedVersion + operationSavedVersion;
 
-  function changeTab(tab: WorkManagementTab) {
-    const params = new URLSearchParams(searchParams.toString());
-    params.set("tab", tab);
-    router.replace(`/work-records?${params.toString()}`);
+  function prepareTabChange() {
     setShowOperationForm(false);
     manager.setShowCreateForm(false);
   }
@@ -45,14 +38,20 @@ export function WorkRecordManager(props: WorkRecordManagerProps) {
             ["HISTORY", "작업 이력"],
           ] as const
         ).map(([tab, label]) => (
-          <button
-            className={`min-w-28 rounded-md px-4 py-2.5 text-sm font-bold transition ${activeTab === tab ? "bg-[#2f8f4e] text-white" : "text-[#435047] hover:bg-[#eef5ed]"}`}
+          <Link
+            className={`min-w-28 rounded-md px-4 py-2.5 text-center text-sm font-bold transition ${activeTab === tab ? "bg-[#2f8f4e] text-white" : "text-[#435047] hover:bg-[#eef5ed]"}`}
+            href={
+              {
+                LIST: "/work-records/list",
+                CALENDAR: "/work-records/calendar",
+                HISTORY: "/work-records/history",
+              }[tab]
+            }
             key={tab}
-            type="button"
-            onClick={() => changeTab(tab)}
+            onClick={prepareTabChange}
           >
             {label}
-          </button>
+          </Link>
         ))}
       </div>
       {manager.errorMessage && !manager.showCreateForm ? (

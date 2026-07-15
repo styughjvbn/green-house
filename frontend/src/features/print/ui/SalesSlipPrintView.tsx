@@ -21,7 +21,7 @@ export function SalesSlipPrintView({ slip }: SalesSlipPrintViewProps) {
         <div className="flex gap-2">
           <Link
             className="inline-flex items-center rounded-md border border-[#cfd8cc] px-4 py-2 text-sm font-semibold text-[#435047]"
-            href="/sales"
+            href="/sales/slips"
           >
             판매 관리
           </Link>

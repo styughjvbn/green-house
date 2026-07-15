@@ -11,7 +11,7 @@ export function RecentWorkSummary({ records }: { records: WorkRecord[] }) {
           <Link
             key={record.id}
             className="grid grid-cols-[1fr_110px_1fr_16px] items-center gap-3 py-3 text-sm"
-            href="/work-records?tab=HISTORY"
+            href="/work-records/history"
           >
             <span className="font-semibold text-[#344138]">
               {record.workType}
@@ -29,7 +29,7 @@ export function RecentWorkSummary({ records }: { records: WorkRecord[] }) {
       </div>
       <Link
         className="mt-3 flex h-10 items-center justify-center rounded-md border border-[#dfe5dc] text-sm font-semibold text-[#344138]"
-        href="/work-records?tab=HISTORY"
+        href="/work-records/history"
       >
         작업 이력 전체 보기
       </Link>
