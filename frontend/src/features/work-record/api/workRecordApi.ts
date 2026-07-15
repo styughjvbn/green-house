@@ -70,23 +70,28 @@ export async function getWorkRecordTargetOptions(
   };
 }
 
-export async function createWorkRecord(
+export async function createCompletedWorkOperationFromRecord(
   payload: CreateWorkRecordPayload,
-): Promise<WorkRecord> {
-  const response = await fetch(`${API_BASE_URL}/work-records`, {
-    method: "POST",
-    credentials: "include",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(payload),
-  });
-
-  const body = await response.json();
-
-  if (!response.ok) {
-    throw new Error(body?.error?.message ?? "작업 이력을 저장하지 못했습니다.");
-  }
-
-  return body.data as WorkRecord;
+  workTypeName: string,
+): Promise<WorkOperation> {
+  return requestWorkOperation<WorkOperation>(
+    "/work-operations/record",
+    "POST",
+    {
+      workTypeId: payload.workTypeId,
+      title: `${workTypeName} 작업`,
+      plannedStartDate: payload.workDate,
+      sourceScopeType: payload.targetType,
+      sourceScopeId: payload.targetId,
+      details: {
+        materialName: payload.materialName,
+        dilutionRatio: payload.dilutionRatio,
+        quantity: payload.quantity,
+      },
+      worker: payload.worker,
+      memo: payload.memo,
+    },
+  );
 }
 
 export async function cancelWorkRecord({

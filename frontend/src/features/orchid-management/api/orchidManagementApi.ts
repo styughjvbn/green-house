@@ -7,6 +7,7 @@ import type {
   OrchidGroupWorkHistory,
   VarietyOption,
   WorkRecord,
+  WorkOperation,
   WorkRecordTargetType,
   WorkType,
 } from "@/entities/farm/types";
@@ -376,14 +377,28 @@ export function archiveOrchidGroupCollection(collectionId: number) {
   );
 }
 
-export async function createOrchidWorkRecord(
+export async function createOrchidWorkOperation(
   payload: WorkRecordQuickPayload,
-): Promise<WorkRecord> {
-  const response = await fetch(`${API_BASE_URL}/work-records`, {
+  workTypeName: string,
+): Promise<WorkOperation> {
+  const response = await fetch(`${API_BASE_URL}/work-operations/record`, {
     method: "POST",
     credentials: "include",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(payload),
+    body: JSON.stringify({
+      workTypeId: payload.workTypeId,
+      title: `${workTypeName} 작업`,
+      plannedStartDate: payload.workDate,
+      sourceScopeType: payload.targetType,
+      sourceScopeId: payload.targetId,
+      details: {
+        materialName: payload.materialName,
+        dilutionRatio: payload.dilutionRatio,
+        quantity: payload.quantity,
+      },
+      worker: payload.worker,
+      memo: payload.memo,
+    }),
   });
   const body = await readJson(response);
   if (!response.ok) {
@@ -391,7 +406,7 @@ export async function createOrchidWorkRecord(
       resolveErrorMessage(body, "작업 이력을 저장하지 못했습니다."),
     );
   }
-  return (body as { data: WorkRecord }).data;
+  return (body as { data: WorkOperation }).data;
 }
 
 export async function fetchHouse(houseId: number): Promise<House> {

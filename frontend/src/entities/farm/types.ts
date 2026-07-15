@@ -305,7 +305,7 @@ export type WorkOperation = {
   actualStartAt: string | null;
   actualEndAt: string | null;
   sourceScopeType:
-    | "HOUSE"
+    | WorkRecordTargetType
     | "DERIVED_GROUP"
     | "USER_COLLECTION"
     | "MANUAL_SELECTION";
