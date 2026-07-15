@@ -172,6 +172,25 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ApiResponseMultiCreateWorkOperationResponse'
+  /api/work-operations/{workOperationId}/cancel-eligibility:
+    get:
+      tags:
+      - multi-create-work-operation-controller
+      operationId: getCancellationEligibility
+      parameters:
+      - name: workOperationId
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: int64
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponseMultiCreateCancellationEligibilityResponse'
 components:
   schemas:
     ApiResponseBedZonePlacementProfileResponse:
@@ -179,6 +198,13 @@ components:
       properties:
         data:
           $ref: '#/components/schemas/BedZonePlacementProfileResponse'
+        message:
+          type: string
+    ApiResponseMultiCreateCancellationEligibilityResponse:
+      type: object
+      properties:
+        data:
+          $ref: '#/components/schemas/MultiCreateCancellationEligibilityResponse'
         message:
           type: string
     ApiResponseMultiCreateWorkOperationResponse:
@@ -298,6 +324,33 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/BedZoneCapacityResponse'
+    Blocker:
+      type: object
+      properties:
+        code:
+          type: string
+        message:
+          type: string
+        count:
+          type: integer
+          format: int64
+    MultiCreateCancellationEligibilityResponse:
+      type: object
+      properties:
+        workOperationId:
+          type: integer
+          format: int64
+        cancelable:
+          type: boolean
+        createdOrchidGroupIds:
+          type: array
+          items:
+            type: integer
+            format: int64
+        blockers:
+          type: array
+          items:
+            $ref: '#/components/schemas/Blocker'
     MultiCreateOrchidGroupRowRequest:
       type: object
       properties:

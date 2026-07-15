@@ -1633,6 +1633,25 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ApiResponseMultiCreateWorkOperationResponse'
+  /api/work-operations/{workOperationId}/cancel-eligibility:
+    get:
+      tags:
+      - multi-create-work-operation-controller
+      operationId: getCancellationEligibility
+      parameters:
+      - name: workOperationId
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: int64
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponseMultiCreateCancellationEligibilityResponse'
   /api/varieties/{varietyId}/orchid-groups:
     get:
       tags:
@@ -4901,6 +4920,40 @@ components:
             $ref: '#/components/schemas/WorkRecordResponse'
         message:
           type: string
+    ApiResponseMultiCreateCancellationEligibilityResponse:
+      type: object
+      properties:
+        data:
+          $ref: '#/components/schemas/MultiCreateCancellationEligibilityResponse'
+        message:
+          type: string
+    Blocker:
+      type: object
+      properties:
+        code:
+          type: string
+        message:
+          type: string
+        count:
+          type: integer
+          format: int64
+    MultiCreateCancellationEligibilityResponse:
+      type: object
+      properties:
+        workOperationId:
+          type: integer
+          format: int64
+        cancelable:
+          type: boolean
+        createdOrchidGroupIds:
+          type: array
+          items:
+            type: integer
+            format: int64
+        blockers:
+          type: array
+          items:
+            $ref: '#/components/schemas/Blocker'
     ApiResponseVarietyPageResponse:
       type: object
       properties:
