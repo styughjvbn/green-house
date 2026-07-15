@@ -8,5 +8,6 @@ public enum WorkTypeTemplate {
 	STATUS,
 	MEMO,
 	MOVEMENT,
-	MULTI_CREATE
+	MULTI_CREATE,
+	CORRECTION
 }

@@ -185,4 +185,15 @@ public class WorkOperation extends BaseEntity {
 		}
 		status = WorkOperationStatus.CANCELED;
 	}
+
+	public void markCorrected() {
+		if (status == WorkOperationStatus.CORRECTED) {
+			return;
+		}
+		if (status != WorkOperationStatus.COMPLETED
+				|| workType.effectKind() != WorkEffectKind.STRUCTURE_CHANGE) {
+			throw new IllegalArgumentException("완료된 구조 변경 작업만 보정할 수 있습니다.");
+		}
+		status = WorkOperationStatus.CORRECTED;
+	}
 }
