@@ -54,6 +54,7 @@ export function useWorkRecordManager({
   const [saving, setSaving] = useState(false);
   const [canceling, setCanceling] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [operationCreatedVersion, setOperationCreatedVersion] = useState(0);
 
   const safePhysicalBedId = resolveSafePhysicalBedId(
     form.physicalBedId,
@@ -178,6 +179,7 @@ export function useWorkRecordManager({
         payload,
         workType?.name ?? "작업",
       );
+      setOperationCreatedVersion((current) => current + 1);
       setShowCreateForm(false);
       setForm((current) => resetWorkRecordFormAfterSubmit(current));
     } catch (error) {
@@ -249,5 +251,6 @@ export function useWorkRecordManager({
     updateForm,
     submitWorkRecord,
     cancelSelectedRecord,
+    operationCreatedVersion,
   };
 }

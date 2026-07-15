@@ -27,10 +27,12 @@ export function WorkOperationPanel({
   houses,
   workTypes,
   onClose,
+  onSaved,
 }: {
   houses: HouseStatusSummary[];
   workTypes: WorkType[];
   onClose: () => void;
+  onSaved?: () => void;
 }) {
   const pesticideType = workTypes.find(
     (workType) => workType.code === "PESTICIDE",
@@ -174,6 +176,7 @@ export function WorkOperationPanel({
         excludedOrchidGroupIds: [...excludedIds],
       });
       setOperation(result);
+      onSaved?.();
     } catch (error) {
       setErrorMessage(
         error instanceof Error ? error.message : "작업을 저장하지 못했습니다.",
@@ -515,6 +518,8 @@ export function OperationResult({
 }) {
   const completed = operation.status === "COMPLETED";
   const canceled = operation.status === "CANCELED";
+  const corrected = operation.status === "CORRECTED";
+  const terminal = completed || canceled || corrected;
   const active = operation.status === "IN_PROGRESS";
   const canComplete =
     active &&
@@ -533,11 +538,11 @@ export function OperationResult({
               : ""} · {operationStatusLabel(operation.status)}
           </p>
         </div>
-        {completed || canceled ? (
+        {terminal ? (
           <span
-            className={`rounded-full px-3 py-1.5 text-sm font-semibold ${completed ? "bg-[#e7f6eb] text-[#10783a]" : "bg-[#f2eeee] text-[#765f5a]"}`}
+            className={`rounded-full px-3 py-1.5 text-sm font-semibold ${completed || corrected ? "bg-[#e7f6eb] text-[#10783a]" : "bg-[#f2eeee] text-[#765f5a]"}`}
           >
-            {completed ? "완료됨" : "취소됨"}
+            {corrected ? "보정됨" : completed ? "완료됨" : "취소됨"}
           </span>
         ) : (
           <div className="flex flex-wrap gap-2">

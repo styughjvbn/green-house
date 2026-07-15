@@ -12,7 +12,13 @@ import { OperationResult } from "./HouseWorkOperationPanel";
 
 const WEEKDAYS = ["월", "화", "수", "목", "금", "토", "일"];
 
-export function WorkOperationSchedule({ onClose }: { onClose: () => void }) {
+export function WorkOperationSchedule({
+  onClose,
+  refreshKey = 0,
+}: {
+  onClose?: () => void;
+  refreshKey?: number;
+}) {
   const [month, setMonth] = useState(() =>
     new Date().toISOString().slice(0, 7),
   );
@@ -50,7 +56,7 @@ export function WorkOperationSchedule({ onClose }: { onClose: () => void }) {
     return () => {
       active = false;
     };
-  }, [range.from, range.to, status]);
+  }, [range.from, range.to, status, refreshKey]);
 
   function changeMonth(offset: number) {
     const [year, monthNumber] = month.split("-").map(Number);
@@ -92,13 +98,15 @@ export function WorkOperationSchedule({ onClose }: { onClose: () => void }) {
             저장된 작업을 다시 열어 전체·대상별 진행 상태를 관리합니다.
           </p>
         </div>
-        <button
-          className="rounded-md border bg-white px-3 py-2 text-sm"
-          type="button"
-          onClick={onClose}
-        >
-          닫기
-        </button>
+        {onClose ? (
+          <button
+            className="rounded-md border bg-white px-3 py-2 text-sm"
+            type="button"
+            onClick={onClose}
+          >
+            닫기
+          </button>
+        ) : null}
       </div>
 
       <div className="mt-4 flex flex-wrap items-center justify-between gap-3">

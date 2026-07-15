@@ -165,14 +165,21 @@ export async function createWorkOperation(
   );
 }
 
-export function getWorkOperations(filters: {
-  from: string;
-  to: string;
-  status?: WorkOperation["status"] | "";
-}): Promise<WorkOperation[]> {
-  const params = new URLSearchParams({ from: filters.from, to: filters.to });
+export function getWorkOperations(
+  filters: {
+    from?: string;
+    to?: string;
+    status?: WorkOperation["status"] | "";
+  } = {},
+): Promise<WorkOperation[]> {
+  const params = new URLSearchParams();
+  if (filters.from) params.set("from", filters.from);
+  if (filters.to) params.set("to", filters.to);
   if (filters.status) params.set("status", filters.status);
-  return fetchApi<WorkOperation[]>(`/work-operations?${params.toString()}`);
+  const query = params.toString();
+  return fetchApi<WorkOperation[]>(
+    `/work-operations${query ? `?${query}` : ""}`,
+  );
 }
 
 export async function completeWorkOperation(
