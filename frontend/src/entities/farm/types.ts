@@ -281,6 +281,7 @@ export type WorkOperationTarget = {
   executionStatus: WorkTargetExecutionStatus;
   startedAt: string | null;
   completedAt: string | null;
+  effectAppliedAt: string | null;
   worker: string | null;
   resultDetails: Record<string, unknown> | null;
 };
