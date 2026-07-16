@@ -923,6 +923,7 @@ components:
           - FERTILIZER
           - REPOT
           - CLEANUP
+          - DISCARD
           - STATUS
           - MEMO
           - MOVEMENT

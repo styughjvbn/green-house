@@ -276,6 +276,7 @@ components:
           - FERTILIZER
           - REPOT
           - CLEANUP
+          - DISCARD
           - STATUS
           - MEMO
           - MOVEMENT
@@ -332,6 +333,7 @@ components:
           - FERTILIZER
           - REPOT
           - CLEANUP
+          - DISCARD
           - STATUS
           - MEMO
           - MOVEMENT
@@ -368,6 +370,7 @@ components:
           - FERTILIZER
           - REPOT
           - CLEANUP
+          - DISCARD
           - STATUS
           - MEMO
           - MOVEMENT
@@ -396,6 +399,7 @@ components:
           - FERTILIZER
           - REPOT
           - CLEANUP
+          - DISCARD
           - STATUS
           - MEMO
           - MOVEMENT
