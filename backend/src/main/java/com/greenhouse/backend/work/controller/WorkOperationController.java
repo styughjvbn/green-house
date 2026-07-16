@@ -4,6 +4,8 @@ import com.greenhouse.backend.common.api.ApiResponse;
 import com.greenhouse.backend.work.application.WorkOperationService;
 import com.greenhouse.backend.work.application.WorkOperationCorrectionService;
 import com.greenhouse.backend.work.dto.OrchidGroupWorkHistoryResponse;
+import com.greenhouse.backend.work.dto.InboundPottingCandidateResponse;
+import com.greenhouse.backend.work.dto.InboundPottingPlanCreateRequest;
 import com.greenhouse.backend.work.dto.WorkOperationCreateRequest;
 import com.greenhouse.backend.work.dto.WorkOperationCorrectionCreateRequest;
 import com.greenhouse.backend.work.dto.WorkOperationCorrectionsResponse;
@@ -51,6 +53,18 @@ public class WorkOperationController {
 	public ApiResponse<WorkOperationResponse> createCompletedRecord(
 			@Valid @RequestBody WorkOperationCreateRequest request) {
 		return ApiResponse.ok(workOperationService.createCompletedRecord(request));
+	}
+
+	@GetMapping("/work-operations/inbound-potting-candidates")
+	public ApiResponse<List<InboundPottingCandidateResponse>> getInboundPottingCandidates() {
+		return ApiResponse.ok(workOperationService.getInboundPottingCandidates());
+	}
+
+	@PostMapping("/work-operations/inbound-potting-plans")
+	@ResponseStatus(HttpStatus.CREATED)
+	public ApiResponse<WorkOperationResponse> createInboundPottingPlan(
+			@Valid @RequestBody InboundPottingPlanCreateRequest request) {
+		return ApiResponse.ok(workOperationService.createInboundPottingPlan(request));
 	}
 
 	@GetMapping("/work-operations")

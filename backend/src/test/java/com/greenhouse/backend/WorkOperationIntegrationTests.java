@@ -41,6 +41,7 @@ class WorkOperationIntegrationTests extends AbstractBackendIntegrationTest {
 	private WorkEffectOrchidGroupRepository workEffectOrchidGroupRepository;
 
 	private WorkType pesticideType;
+	private WorkType movementType;
 	private OrchidGroup targetGroup;
 	private House sourceHouse;
 	private BedZone destinationZone;
@@ -62,7 +63,7 @@ class WorkOperationIntegrationTests extends AbstractBackendIntegrationTest {
 
 		pesticideType = workTypeRepository.save(new WorkType(
 				"PESTICIDE", "농약", WorkTypeTemplate.PESTICIDE, true, false, true, 1));
-		workTypeRepository.save(new WorkType(
+		movementType = workTypeRepository.save(new WorkType(
 				"MOVEMENT", "위치 이동", WorkTypeTemplate.MOVEMENT, true, true, true, 2));
 
 		House house = new House(3, "3동");
@@ -94,6 +95,55 @@ class WorkOperationIntegrationTests extends AbstractBackendIntegrationTest {
 				BigDecimal.TEN);
 		targetGroup.assignVariety(variety);
 		targetGroup = orchidGroupRepository.save(targetGroup);
+	}
+
+	@Test
+	void plansAndExecutesMovementPerTargetWithoutLegacyRecord() throws Exception {
+		var createResult = mockMvc.perform(post("/api/work-operations")
+				.contentType(MediaType.APPLICATION_JSON)
+				.content("""
+						{
+						  "workTypeId": %d,
+						  "title": "5동 자리 이동",
+						  "plannedStartDate": "2026-07-16",
+						  "sourceScopeType": "MANUAL_SELECTION",
+						  "sourceOrchidGroupIds": [%d]
+						}
+						""".formatted(movementType.getId(), targetGroup.getId())))
+				.andExpect(status().isCreated())
+				.andExpect(jsonPath("$.data.workTypeCode").value("MOVEMENT"))
+				.andExpect(jsonPath("$.data.targets", hasSize(1)))
+				.andReturn();
+
+		Long operationId = Long.valueOf(createResult.getResponse().getContentAsString().replaceAll(
+				".*?\\\"data\\\":\\{\\\"id\\\":(\\d+).*", "$1"));
+		Long targetId = workOperationTargetRepository
+				.findByWorkOperationIdAndExcludedAtIsNullOrderByIdAsc(operationId).getFirst().getId();
+
+		mockMvc.perform(post("/api/work-operations/{id}/start", operationId))
+				.andExpect(status().isOk());
+		mockMvc.perform(post("/api/work-operations/{id}/targets/{targetId}/complete", operationId, targetId)
+				.contentType(MediaType.APPLICATION_JSON)
+				.content("""
+						{
+						  "worker": "이동 담당자",
+						  "resultDetails": {
+						    "toBedZoneId": %d,
+						    "startPosition": 0,
+						    "endPosition": 10,
+						    "worker": "이동 담당자",
+						    "memo": "계획 이동 완료"
+						  }
+						}
+						""".formatted(destinationZone.getId())))
+				.andExpect(status().isOk())
+				.andExpect(jsonPath("$.data.targets[0].executionStatus").value("COMPLETED"))
+				.andExpect(jsonPath("$.data.targets[0].resultDetails.toBedZoneId").value(destinationZone.getId()));
+
+		org.assertj.core.api.Assertions.assertThat(
+				orchidGroupRepository.findById(targetGroup.getId()).orElseThrow().getBedZone().getId())
+				.isEqualTo(destinationZone.getId());
+		org.assertj.core.api.Assertions.assertThat(workRecordRepository.count()).isZero();
 	}
 
 	@Test

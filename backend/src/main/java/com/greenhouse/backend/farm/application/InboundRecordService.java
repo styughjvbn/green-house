@@ -152,6 +152,19 @@ public class InboundRecordService {
 	}
 
 	public InboundRecordResponse potting(Long inboundRecordId, InboundRecordPottingRequest request) {
+		return potting(inboundRecordId, request, true);
+	}
+
+	public InboundRecordResponse pottingForOperation(
+			Long inboundRecordId,
+			InboundRecordPottingRequest request) {
+		return potting(inboundRecordId, request, false);
+	}
+
+	private InboundRecordResponse potting(
+			Long inboundRecordId,
+			InboundRecordPottingRequest request,
+			boolean recordLegacyWork) {
 		InboundRecord inboundRecord = findInboundRecord(inboundRecordId);
 		if (inboundRecord.getInboundType() != InboundType.FLASK_SEEDLING) {
 			throw new IllegalArgumentException("유리병 모종 입고만 포트 작업을 등록할 수 있습니다.");
@@ -209,16 +222,18 @@ public class InboundRecordService {
 				normalize(request.worker()),
 				appendMemo(inboundRecord.getMemo(), request.memo()));
 		inboundRecord.place(bedZone, orchidGroup, request.pottingDate(), request.actualQuantity());
-		recordWork(
-				POTTING_WORK_TYPE_CODE,
-				request.pottingDate(),
-				"ORCHID_GROUP",
-				orchidGroup.getId(),
-				inboundRecord.getVariety().getName(),
-				String.valueOf(request.actualQuantity()),
-				normalize(request.worker()),
-				normalize(request.memo()),
-				pottingWorkDetails(inboundRecord, orchidGroup, request));
+		if (recordLegacyWork) {
+			recordWork(
+					POTTING_WORK_TYPE_CODE,
+					request.pottingDate(),
+					"ORCHID_GROUP",
+					orchidGroup.getId(),
+					inboundRecord.getVariety().getName(),
+					String.valueOf(request.actualQuantity()),
+					normalize(request.worker()),
+					normalize(request.memo()),
+					pottingWorkDetails(inboundRecord, orchidGroup, request));
+		}
 		return InboundRecordResponse.from(findInboundRecord(inboundRecord.getId()));
 	}
 

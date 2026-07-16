@@ -10,6 +10,8 @@ import com.greenhouse.backend.work.domain.WorkTargetInclusionSource;
 import com.greenhouse.backend.work.application.effect.WorkEffectCommand;
 import com.greenhouse.backend.work.application.effect.WorkEffectProcessor;
 import com.greenhouse.backend.work.dto.OrchidGroupWorkHistoryResponse;
+import com.greenhouse.backend.work.dto.InboundPottingPlanCreateRequest;
+import com.greenhouse.backend.work.dto.InboundPottingCandidateResponse;
 import com.greenhouse.backend.work.dto.WorkOperationCreateRequest;
 import com.greenhouse.backend.work.dto.WorkOperationResponse;
 import com.greenhouse.backend.work.dto.WorkOperationTargetResponse;
@@ -47,6 +49,7 @@ public class WorkOperationService {
 	private final WorkRecordRepository workRecordRepository;
 	private final WorkEffectOrchidGroupRepository workEffectOrchidGroupRepository;
 	private final WorkEffectProcessor workEffectProcessor;
+	private final InboundPottingPlanGateway inboundPottingPlanGateway;
 
 	@Transactional(readOnly = true)
 	public WorkTargetPreviewResponse preview(WorkTargetPreviewRequest request) {
@@ -64,9 +67,11 @@ public class WorkOperationService {
 
 	public WorkOperationResponse create(WorkOperationCreateRequest request) {
 		validateDates(request.plannedStartDate(), request.plannedEndDate());
-		var workType = workTypeService.getActiveForCreate(request.workTypeId());
-		if (workType.effectKind() != com.greenhouse.backend.work.domain.WorkEffectKind.RECORD_ONLY) {
-			throw new IllegalArgumentException("일반 작업 생성은 기록형 작업 유형만 지원합니다.");
+		var workType = workTypeService.getActiveForPlan(request.workTypeId());
+		if (workType.effectKind() != com.greenhouse.backend.work.domain.WorkEffectKind.RECORD_ONLY
+				&& !com.greenhouse.backend.work.domain.WorkType.REPOT_CODE.equals(workType.getCode())
+				&& !com.greenhouse.backend.work.domain.WorkType.MOVEMENT_CODE.equals(workType.getCode())) {
+			throw new IllegalArgumentException("이 작업 유형은 난 묶음 대상 기간 작업으로 만들 수 없습니다.");
 		}
 
 		WorkTargetSelection selection = selection(
@@ -120,6 +125,7 @@ public class WorkOperationService {
 	}
 
 	public WorkOperationResponse createCompletedRecord(WorkOperationCreateRequest request) {
+		workTypeService.getActiveForCreate(request.workTypeId());
 		WorkOperationResponse created = create(request);
 		WorkOperation operation = findOperation(created.id());
 		LocalDateTime executedAt = LocalDateTime.now();
@@ -134,6 +140,55 @@ public class WorkOperationService {
 			execution.completeWithEffect(executedAt, normalize(request.worker()), result.resultDetails());
 		}
 		operation.complete(executedAt);
+		return get(operation.getId());
+	}
+
+	@Transactional(readOnly = true)
+	public List<InboundPottingCandidateResponse> getInboundPottingCandidates() {
+		return inboundPottingPlanGateway.findCandidates()
+				.stream()
+				.map(InboundPottingCandidateResponse::from)
+				.toList();
+	}
+
+	public WorkOperationResponse createInboundPottingPlan(InboundPottingPlanCreateRequest request) {
+		validateDates(request.plannedStartDate(), request.plannedEndDate());
+		var workType = workTypeService.getByCode(com.greenhouse.backend.work.domain.WorkType.POTTING_CODE);
+		if (!workType.isActive()) {
+			throw new IllegalArgumentException("포트 작업 유형이 비활성화되어 있습니다.");
+		}
+		List<Long> requestedIds = request.inboundRecordIds().stream().distinct().toList();
+		var records = inboundPottingPlanGateway.resolve(requestedIds);
+
+		WorkOperation operation = workOperationRepository.save(new WorkOperation(
+				workType,
+				normalizeRequired(request.title()),
+				request.plannedStartDate(),
+				request.plannedEndDate(),
+				WorkSourceScopeType.INBOUND_RECORD_SELECTION,
+				null,
+				Map.of("inboundRecordIds", requestedIds),
+				Map.of(),
+				normalize(request.worker()),
+				normalize(request.memo())));
+		List<WorkOperationTarget> targets = records.stream()
+				.sorted(java.util.Comparator.comparing(record -> requestedIds.indexOf(record.id())))
+				.map(record -> {
+					Map<String, Object> location = new LinkedHashMap<>();
+					location.put("tempLocation", record.tempLocation());
+					location.put("pottingDueDate", record.pottingDueDate());
+					return WorkOperationTarget.inboundRecord(
+							operation,
+							record.id(),
+							record.varietyId(),
+							record.varietyName(),
+							record.estimatedQuantity() == null ? 0 : record.estimatedQuantity(),
+							record.potSize(),
+							location);
+				})
+				.toList();
+		workOperationTargetRepository.saveAll(targets);
+		workTargetExecutionRepository.saveAll(targets.stream().map(WorkTargetExecution::new).toList());
 		return get(operation.getId());
 	}
 

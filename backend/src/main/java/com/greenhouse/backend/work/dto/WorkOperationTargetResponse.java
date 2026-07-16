@@ -5,12 +5,15 @@ import com.greenhouse.backend.work.domain.WorkOperationTarget;
 import com.greenhouse.backend.work.domain.WorkTargetExecution;
 import com.greenhouse.backend.work.domain.WorkTargetInclusionSource;
 import com.greenhouse.backend.work.domain.WorkTargetExecutionStatus;
+import com.greenhouse.backend.work.domain.WorkTargetReferenceType;
 import java.time.LocalDateTime;
 import java.util.Map;
 
 public record WorkOperationTargetResponse(
 		Long id,
+		WorkTargetReferenceType targetReferenceType,
 		Long orchidGroupId,
+		Long inboundRecordId,
 		WorkTargetInclusionSource inclusionSource,
 		String varietyName,
 		Integer quantitySnapshot,
@@ -29,7 +32,9 @@ public record WorkOperationTargetResponse(
 			ResolvedWorkTarget target) {
 		return new WorkOperationTargetResponse(
 				null,
+				WorkTargetReferenceType.ORCHID_GROUP,
 				target.orchidGroupId(),
+				null,
 				null,
 				target.varietyName(),
 				target.quantity(),
@@ -50,7 +55,9 @@ public record WorkOperationTargetResponse(
 			WorkTargetExecution execution) {
 		return new WorkOperationTargetResponse(
 				target.getId(),
+				target.getTargetReferenceType(),
 				target.getOrchidGroupId(),
+				target.getInboundRecordId(),
 				target.getInclusionSource(),
 				target.getVarietyNameSnapshot(),
 				target.getQuantitySnapshot(),

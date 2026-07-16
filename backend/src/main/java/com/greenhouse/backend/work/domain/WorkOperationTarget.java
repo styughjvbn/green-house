@@ -34,8 +34,15 @@ public class WorkOperationTarget {
 	@JoinColumn(name = "work_operation_id", nullable = false)
 	private WorkOperation workOperation;
 
-	@Column(name = "orchid_group_id", nullable = false)
+	@Column(name = "orchid_group_id")
 	private Long orchidGroupId;
+
+	@Enumerated(EnumType.STRING)
+	@Column(name = "target_reference_type", nullable = false, length = 30)
+	private WorkTargetReferenceType targetReferenceType;
+
+	@Column(name = "inbound_record_id")
+	private Long inboundRecordId;
 
 	@Enumerated(EnumType.STRING)
 	@Column(name = "inclusion_source", nullable = false, length = 30)
@@ -93,6 +100,7 @@ public class WorkOperationTarget {
 			Map<String, Object> locationSnapshot) {
 		this.workOperation = workOperation;
 		this.orchidGroupId = orchidGroupId;
+		this.targetReferenceType = WorkTargetReferenceType.ORCHID_GROUP;
 		this.inclusionSource = inclusionSource;
 		this.sourceReferenceId = sourceReferenceId;
 		this.includedAt = LocalDateTime.now();
@@ -103,5 +111,28 @@ public class WorkOperationTarget {
 		this.potSizeSnapshot = potSizeSnapshot;
 		this.quantitySnapshot = quantitySnapshot;
 		this.locationSnapshot = locationSnapshot;
+	}
+
+	public static WorkOperationTarget inboundRecord(
+			WorkOperation workOperation,
+			Long inboundRecordId,
+			Long varietyIdSnapshot,
+			String varietyNameSnapshot,
+			Integer quantitySnapshot,
+			String potSizeSnapshot,
+			Map<String, Object> locationSnapshot) {
+		WorkOperationTarget target = new WorkOperationTarget();
+		target.workOperation = workOperation;
+		target.targetReferenceType = WorkTargetReferenceType.INBOUND_RECORD;
+		target.inboundRecordId = inboundRecordId;
+		target.inclusionSource = WorkTargetInclusionSource.INBOUND_RECORD;
+		target.sourceReferenceId = inboundRecordId;
+		target.includedAt = LocalDateTime.now();
+		target.varietyIdSnapshot = varietyIdSnapshot;
+		target.varietyNameSnapshot = varietyNameSnapshot;
+		target.quantitySnapshot = quantitySnapshot;
+		target.potSizeSnapshot = potSizeSnapshot;
+		target.locationSnapshot = locationSnapshot;
+		return target;
 	}
 }

@@ -9,5 +9,6 @@ public enum WorkTargetInclusionSource {
 	DERIVED_GROUP,
 	USER_COLLECTION,
 	MANUAL_ADDITION,
+	INBOUND_RECORD,
 	LINEAGE
 }

@@ -3,6 +3,7 @@ package com.greenhouse.backend.work.dto;
 import com.greenhouse.backend.work.domain.WorkOperation;
 import com.greenhouse.backend.work.domain.WorkOperationStatus;
 import com.greenhouse.backend.work.domain.WorkSourceScopeType;
+import com.greenhouse.backend.work.domain.WorkTypeTemplate;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
@@ -11,7 +12,9 @@ import java.util.Map;
 public record WorkOperationResponse(
 		Long id,
 		Long workTypeId,
+		String workTypeCode,
 		String workType,
+		WorkTypeTemplate workTypeTemplate,
 		String title,
 		WorkOperationStatus status,
 		LocalDate plannedStartDate,
@@ -32,7 +35,9 @@ public record WorkOperationResponse(
 		return new WorkOperationResponse(
 				operation.getId(),
 				operation.getWorkType().getId(),
+				operation.getWorkType().getCode(),
 				operation.getWorkType().getName(),
+				operation.getWorkType().getTemplate(),
 				operation.getTitle(),
 				operation.getStatus(),
 				operation.getPlannedStartDate(),

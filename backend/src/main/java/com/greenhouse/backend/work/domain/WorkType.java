@@ -103,6 +103,9 @@ public class WorkType extends BaseEntity {
 	}
 
 	public String handlerCode() {
+		if (POTTING_CODE.equals(code)) {
+			return "POTTING";
+		}
 		return switch (template) {
 			case PESTICIDE, FERTILIZER, CLEANUP, STATUS, MEMO -> "RECORD_ONLY";
 			case CORRECTION -> "CORRECTION";

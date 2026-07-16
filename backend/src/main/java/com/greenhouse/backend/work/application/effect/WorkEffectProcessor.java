@@ -58,7 +58,8 @@ public class WorkEffectProcessor {
 				command.resultDetails(),
 				result.resultDetails()));
 		var groupLinks = new java.util.ArrayList<WorkEffectOrchidGroup>();
-		if (target != null && effectKind == WorkEffectKind.STRUCTURE_CHANGE) {
+		if (target != null && target.getOrchidGroupId() != null
+				&& effectKind == WorkEffectKind.STRUCTURE_CHANGE) {
 			groupLinks.add(new WorkEffectOrchidGroup(
 					appliedEffect, target.getOrchidGroupId(), WorkEffectOrchidGroupRelationType.SOURCE));
 		}

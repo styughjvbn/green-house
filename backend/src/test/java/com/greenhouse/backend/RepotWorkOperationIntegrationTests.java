@@ -48,6 +48,7 @@ class RepotWorkOperationIntegrationTests extends AbstractBackendIntegrationTest 
 
 	private BedZone bedZone;
 	private Variety variety;
+	private WorkType repotType;
 
 	@BeforeEach
 	void setUp() {
@@ -66,7 +67,7 @@ class RepotWorkOperationIntegrationTests extends AbstractBackendIntegrationTest 
 		houseRepository.deleteAll();
 		workTypeRepository.deleteAll();
 
-		workTypeRepository.save(new WorkType(
+		repotType = workTypeRepository.save(new WorkType(
 				WorkType.REPOT_CODE, "분갈이", WorkTypeTemplate.REPOT, true, true, true, 1));
 		House house = new House(1, "1동");
 		PhysicalBed bed = new PhysicalBed(1, 1);
@@ -77,6 +78,66 @@ class RepotWorkOperationIntegrationTests extends AbstractBackendIntegrationTest 
 		houseRepository.save(house);
 		variety = varietyRepository.save(new Variety(
 				"REPOT-001", "팔레놉시스", "분갈이 테스트", null, "3.5치", true, true, null, null));
+	}
+
+	@Test
+	void plansRepotAndAppliesStructureChangeWhenTargetIsCompleted() throws Exception {
+		OrchidGroup source = createSource(40, "0", "2");
+		var created = mockMvc.perform(post("/api/work-operations")
+				.contentType(MediaType.APPLICATION_JSON)
+				.content("""
+						{
+						  "workTypeId": %d,
+						  "title": "계획 분갈이",
+						  "plannedStartDate": "2026-07-16",
+						  "plannedEndDate": "2026-07-18",
+						  "sourceScopeType": "MANUAL_SELECTION",
+						  "sourceOrchidGroupIds": [%d]
+						}
+						""".formatted(repotType.getId(), source.getId())))
+				.andExpect(status().isCreated())
+				.andExpect(jsonPath("$.data.workTypeCode").value("REPOT"))
+				.andExpect(jsonPath("$.data.status").value("PLANNED"))
+				.andReturn();
+		Long operationId = Long.valueOf(created.getResponse().getContentAsString().replaceAll(
+				".*?\\\"data\\\":\\{\\\"id\\\":(\\d+).*", "$1"));
+		Long targetId = operationTargetRepository
+				.findByWorkOperationIdAndExcludedAtIsNullOrderByIdAsc(operationId)
+				.getFirst().getId();
+
+		mockMvc.perform(post("/api/work-operations/{id}/start", operationId))
+				.andExpect(status().isOk());
+		mockMvc.perform(post("/api/work-operations/{id}/targets/{targetId}/complete", operationId, targetId)
+				.contentType(MediaType.APPLICATION_JSON)
+				.content("""
+						{
+						  "worker": "계획 작업자",
+						  "resultDetails": {
+						    "idempotencyKey": "planned-repot",
+						    "title": "계획 분갈이",
+						    "workDate": "2026-07-16",
+						    "sourceOrchidGroupId": %d,
+						    "inputQuantity": 40,
+						    "lossQuantity": 0,
+						    "results": [{
+						      "bedZoneId": %d,
+						      "quantity": 40,
+						      "potSize": "4치",
+						      "ageYear": 3,
+						      "splitPlacementAllowed": false,
+						      "startPosition": 0,
+						      "endPosition": 2
+						    }],
+						    "inheritCollectionIds": []
+						  }
+						}
+						""".formatted(source.getId(), bedZone.getId())))
+				.andExpect(status().isOk())
+				.andExpect(jsonPath("$.data.targets[0].executionStatus").value("COMPLETED"));
+
+		assertThat(orchidGroupRepository.findById(source.getId()).orElseThrow().getQuantity()).isZero();
+		assertThat(lineageRepository.findBySourceOrchidGroupIdOrderByCreatedAtAscIdAsc(source.getId()))
+				.hasSize(1);
 	}
 
 	@Test

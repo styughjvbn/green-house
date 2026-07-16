@@ -107,6 +107,17 @@ public class OrchidGroupCommandService {
 	}
 
 	public OrchidGroupResponse move(Long orchidGroupId, OrchidGroupMoveRequest request) {
+		return move(orchidGroupId, request, true);
+	}
+
+	public OrchidGroupResponse moveForOperation(Long orchidGroupId, OrchidGroupMoveRequest request) {
+		return move(orchidGroupId, request, false);
+	}
+
+	private OrchidGroupResponse move(
+			Long orchidGroupId,
+			OrchidGroupMoveRequest request,
+			boolean recordLegacyWork) {
 		OrchidGroup orchidGroup = orchidGroupRepository.findById(orchidGroupId)
 				.orElseThrow(() -> new NotFoundException("난 묶음을 찾을 수 없습니다."));
 		BedZone toBedZone = findZone(request.toBedZoneId());
@@ -128,12 +139,14 @@ public class OrchidGroupCommandService {
 			orchidGroup.moveTo(toBedZone, orchidGroup.getSortOrder(), startPosition, endPosition);
 		}
 
-		movementWorkRecorder.record(
-				orchidGroup.getId(),
-				fromBedZoneId,
-				toBedZone.getId(),
-				normalize(request.worker()),
-				normalize(request.memo()));
+		if (recordLegacyWork) {
+			movementWorkRecorder.record(
+					orchidGroup.getId(),
+					fromBedZoneId,
+					toBedZone.getId(),
+					normalize(request.worker()),
+					normalize(request.memo()));
+		}
 		return OrchidGroupResponse.from(orchidGroup);
 	}
 

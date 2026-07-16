@@ -1,5 +1,6 @@
 package com.greenhouse.backend.farm.application;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.greenhouse.backend.common.exception.NotFoundException;
 import com.greenhouse.backend.farm.domain.OrchidGroup;
 import com.greenhouse.backend.farm.domain.OrchidGroupCollection;
@@ -30,6 +31,7 @@ public class RepotWorkHandler implements WorkEffectHandler {
 	private final OrchidGroupLineageService lineageService;
 	private final OrchidGroupCollectionRepository collectionRepository;
 	private final OrchidGroupCollectionMemberRepository memberRepository;
+	private final ObjectMapper objectMapper = new ObjectMapper().findAndRegisterModules();
 
 	public RepotWorkHandler(
 			OrchidGroupRepository orchidGroupRepository,
@@ -51,7 +53,9 @@ public class RepotWorkHandler implements WorkEffectHandler {
 	public WorkExecutionResult execute(
 			WorkOperation operation, WorkOperationTarget target, WorkEffectCommand command) {
 		if (target == null) throw new IllegalArgumentException("분갈이 작업에는 원본 난 묶음이 필요합니다.");
-		RepotWorkOperationRequest request = command.payloadAs(RepotWorkOperationRequest.class);
+		RepotWorkOperationRequest request = command.payload() == null
+				? objectMapper.convertValue(command.resultDetails(), RepotWorkOperationRequest.class)
+				: command.payloadAs(RepotWorkOperationRequest.class);
 		if (!target.getOrchidGroupId().equals(request.sourceOrchidGroupId())) {
 			throw new IllegalArgumentException("분갈이 작업 대상과 원본 난 묶음이 일치하지 않습니다.");
 		}
