@@ -70,7 +70,9 @@ public class WorkOperationService {
 		var workType = workTypeService.getActiveForPlan(request.workTypeId());
 		if (workType.effectKind() != com.greenhouse.backend.work.domain.WorkEffectKind.RECORD_ONLY
 				&& !com.greenhouse.backend.work.domain.WorkType.REPOT_CODE.equals(workType.getCode())
-				&& !com.greenhouse.backend.work.domain.WorkType.MOVEMENT_CODE.equals(workType.getCode())) {
+				&& !com.greenhouse.backend.work.domain.WorkType.MOVEMENT_CODE.equals(workType.getCode())
+				&& !com.greenhouse.backend.work.domain.WorkType.DIVIDE_CODE.equals(workType.getCode())
+				&& !com.greenhouse.backend.work.domain.WorkType.MERGE_CODE.equals(workType.getCode())) {
 			throw new IllegalArgumentException("이 작업 유형은 난 묶음 대상 기간 작업으로 만들 수 없습니다.");
 		}
 
@@ -90,6 +92,15 @@ public class WorkOperationService {
 				.toList();
 		if (included.isEmpty()) {
 			throw new IllegalArgumentException("작업 대상 난 묶음이 한 개 이상 필요합니다.");
+		}
+		if (com.greenhouse.backend.work.domain.WorkType.MERGE_CODE.equals(workType.getCode())) {
+			if (included.size() < 2) {
+				throw new IllegalArgumentException("합식은 원본 난 묶음이 두 개 이상 필요합니다.");
+			}
+			Long varietyId = included.getFirst().varietyId();
+			if (varietyId == null || included.stream().anyMatch(group -> !varietyId.equals(group.varietyId()))) {
+				throw new IllegalArgumentException("합식은 같은 품종의 난 묶음끼리만 계획할 수 있습니다.");
+			}
 		}
 
 		Map<String, Object> conditionSnapshot = conditionSnapshot(selection);
@@ -293,6 +304,37 @@ public class WorkOperationService {
 				execution.getTarget(),
 				new WorkEffectCommand(completedAt, worker, request.resultDetails(), null));
 		execution.completeWithEffect(completedAt, worker, result.resultDetails());
+		return get(operationId);
+	}
+
+	public WorkOperationResponse completeMerge(
+			Long operationId, WorkTargetExecutionRequest request) {
+		List<WorkTargetExecution> executions = workTargetExecutionRepository
+				.findForUpdateByTargetWorkOperationIdOrderByIdAsc(operationId);
+		if (executions.size() < 2) {
+			throw new IllegalArgumentException("합식은 작업 대상이 두 개 이상 필요합니다.");
+		}
+		WorkOperation operation = executions.getFirst().getTarget().getWorkOperation();
+		if (!com.greenhouse.backend.work.domain.WorkType.MERGE_CODE.equals(operation.getWorkType().getCode())) {
+			throw new IllegalArgumentException("합식 작업만 일괄 실행할 수 있습니다.");
+		}
+		if (executions.stream().allMatch(WorkTargetExecution::isEffectApplied)) {
+			return get(operationId);
+		}
+		if (executions.stream().anyMatch(WorkTargetExecution::isEffectApplied)) {
+			throw new IllegalStateException("합식 작업 대상의 효과 적용 상태가 일치하지 않습니다.");
+		}
+		if (operation.getStatus() != WorkOperationStatus.IN_PROGRESS) {
+			throw new IllegalArgumentException("진행 중인 합식 작업만 실행할 수 있습니다.");
+		}
+		LocalDateTime completedAt = LocalDateTime.now();
+		String worker = normalize(request.worker());
+		var result = workEffectProcessor.apply(
+				operation,
+				null,
+				new WorkEffectCommand(completedAt, worker, request.resultDetails(), null));
+		executions.forEach(execution ->
+				execution.completeWithEffect(completedAt, worker, result.resultDetails()));
 		return get(operationId);
 	}
 

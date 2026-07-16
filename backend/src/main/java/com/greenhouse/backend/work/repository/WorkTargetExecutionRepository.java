@@ -13,6 +13,10 @@ public interface WorkTargetExecutionRepository extends JpaRepository<WorkTargetE
 	@EntityGraph(attributePaths = "target")
 	List<WorkTargetExecution> findByTargetWorkOperationIdOrderByIdAsc(Long workOperationId);
 
+	@Lock(LockModeType.PESSIMISTIC_WRITE)
+	@EntityGraph(attributePaths = {"target", "target.workOperation", "target.workOperation.workType"})
+	List<WorkTargetExecution> findForUpdateByTargetWorkOperationIdOrderByIdAsc(Long workOperationId);
+
 	@EntityGraph(attributePaths = {"target", "target.workOperation"})
 	Optional<WorkTargetExecution> findByTargetIdAndTargetWorkOperationId(Long targetId, Long workOperationId);
 

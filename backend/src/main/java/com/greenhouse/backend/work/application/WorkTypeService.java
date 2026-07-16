@@ -90,7 +90,9 @@ public class WorkTypeService {
 		}
 		if (workType.isManualCreateAllowed()
 				|| WorkType.REPOT_CODE.equals(workType.getCode())
-				|| WorkType.MOVEMENT_CODE.equals(workType.getCode())) {
+				|| WorkType.MOVEMENT_CODE.equals(workType.getCode())
+				|| WorkType.DIVIDE_CODE.equals(workType.getCode())
+				|| WorkType.MERGE_CODE.equals(workType.getCode())) {
 			return workType;
 		}
 		throw new IllegalArgumentException("기간 작업으로 계획할 수 없는 작업 유형입니다.");

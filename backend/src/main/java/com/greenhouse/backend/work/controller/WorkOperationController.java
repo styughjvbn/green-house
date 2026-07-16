@@ -134,6 +134,13 @@ public class WorkOperationController {
 				workOperationId, targetId, request == null ? new WorkTargetExecutionRequest(null, null) : request));
 	}
 
+	@PostMapping("/work-operations/{workOperationId}/merge/complete")
+	public ApiResponse<WorkOperationResponse> completeMerge(
+			@PathVariable Long workOperationId,
+			@Valid @RequestBody WorkTargetExecutionRequest request) {
+		return ApiResponse.ok(workOperationService.completeMerge(workOperationId, request));
+	}
+
 	@GetMapping("/orchid-groups/{orchidGroupId}/work-history")
 	public ApiResponse<List<OrchidGroupWorkHistoryResponse>> getOrchidGroupHistory(
 			@PathVariable Long orchidGroupId) {

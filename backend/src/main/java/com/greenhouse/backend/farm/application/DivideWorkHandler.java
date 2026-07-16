@@ -10,22 +10,22 @@ import com.greenhouse.backend.work.domain.WorkOperationTarget;
 import org.springframework.stereotype.Component;
 
 @Component
-public class RepotWorkHandler implements WorkEffectHandler {
+public class DivideWorkHandler implements WorkEffectHandler {
 
 	private final SingleSourceTransformationExecutor executor;
 
-	public RepotWorkHandler(SingleSourceTransformationExecutor executor) {
+	public DivideWorkHandler(SingleSourceTransformationExecutor executor) {
 		this.executor = executor;
 	}
 
-	@Override public String supports() { return "REPOT"; }
+	@Override public String supports() { return "DIVIDE"; }
 	@Override public WorkEffectKind effectKind() { return WorkEffectKind.STRUCTURE_CHANGE; }
 
 	@Override
 	public WorkExecutionResult execute(
 			WorkOperation operation, WorkOperationTarget target, WorkEffectCommand command) {
 		return executor.execute(
-				operation, target, command, "분갈이", "REPOT",
-				OrchidGroupLineageRelationType.REPOTTED_TO);
+				operation, target, command, "분주", "DIVIDE",
+				OrchidGroupLineageRelationType.SPLIT_TO);
 	}
 }

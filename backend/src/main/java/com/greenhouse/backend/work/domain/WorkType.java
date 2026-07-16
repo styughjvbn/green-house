@@ -24,6 +24,8 @@ public class WorkType extends BaseEntity {
 	public static final String POTTING_CODE = "POTTING";
 	public static final String MULTI_CREATE_CODE = "MULTI_CREATE";
 	public static final String REPOT_CODE = "REPOT";
+	public static final String DIVIDE_CODE = "DIVIDE";
+	public static final String MERGE_CODE = "MERGE";
 	public static final String CORRECTION_CODE = "CORRECTION";
 
 	@Id
@@ -105,6 +107,12 @@ public class WorkType extends BaseEntity {
 	public String handlerCode() {
 		if (POTTING_CODE.equals(code)) {
 			return "POTTING";
+		}
+		if (DIVIDE_CODE.equals(code)) {
+			return "DIVIDE";
+		}
+		if (MERGE_CODE.equals(code)) {
+			return "MERGE";
 		}
 		return switch (template) {
 			case PESTICIDE, FERTILIZER, CLEANUP, STATUS, MEMO -> "RECORD_ONLY";
