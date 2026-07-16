@@ -282,6 +282,7 @@ paths:
           - DERIVED_GROUP
           - USER_COLLECTION
           - MANUAL_SELECTION
+          - INBOUND_RECORD_SELECTION
       - name: scopeId
         in: query
         required: false
@@ -631,6 +632,24 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ApiResponseMultiCreateWorkOperationResponse'
+  /api/work-operations/inbound-potting-plans:
+    post:
+      tags:
+      - work-operation-controller
+      operationId: createInboundPottingPlan
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/InboundPottingPlanCreateRequest'
+        required: true
+      responses:
+        '201':
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponseWorkOperationResponse'
   /api/varieties:
     get:
       tags:
@@ -1827,6 +1846,18 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ApiResponseMultiCreateCancellationEligibilityResponse'
+  /api/work-operations/inbound-potting-candidates:
+    get:
+      tags:
+      - work-operation-controller
+      operationId: getInboundPottingCandidates
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponseListInboundPottingCandidateResponse'
   /api/varieties/{varietyId}/orchid-groups:
     get:
       tags:
@@ -3350,6 +3381,7 @@ components:
           - DERIVED_GROUP
           - USER_COLLECTION
           - MANUAL_SELECTION
+          - INBOUND_RECORD_SELECTION
         sourceScopeId:
           type: integer
           format: int64
@@ -3424,8 +3456,22 @@ components:
         workTypeId:
           type: integer
           format: int64
+        workTypeCode:
+          type: string
         workType:
           type: string
+        workTypeTemplate:
+          type: string
+          enum:
+          - PESTICIDE
+          - FERTILIZER
+          - REPOT
+          - CLEANUP
+          - STATUS
+          - MEMO
+          - MOVEMENT
+          - MULTI_CREATE
+          - CORRECTION
         title:
           type: string
         status:
@@ -3462,6 +3508,7 @@ components:
           - DERIVED_GROUP
           - USER_COLLECTION
           - MANUAL_SELECTION
+          - INBOUND_RECORD_SELECTION
         sourceScopeId:
           type: integer
           format: int64
@@ -3490,7 +3537,15 @@ components:
         id:
           type: integer
           format: int64
+        targetReferenceType:
+          type: string
+          enum:
+          - ORCHID_GROUP
+          - INBOUND_RECORD
         orchidGroupId:
+          type: integer
+          format: int64
+        inboundRecordId:
           type: integer
           format: int64
         inclusionSource:
@@ -3504,6 +3559,7 @@ components:
           - DERIVED_GROUP
           - USER_COLLECTION
           - MANUAL_ADDITION
+          - INBOUND_RECORD
           - LINEAGE
         varietyName:
           type: string
@@ -3740,6 +3796,7 @@ components:
           - DERIVED_GROUP
           - USER_COLLECTION
           - MANUAL_SELECTION
+          - INBOUND_RECORD_SELECTION
         scopeId:
           type: integer
           format: int64
@@ -3998,6 +4055,38 @@ components:
       - quantity
       - status
       - varietyId
+    InboundPottingPlanCreateRequest:
+      type: object
+      properties:
+        title:
+          type: string
+          maxLength: 150
+          minLength: 0
+        plannedStartDate:
+          type: string
+          format: date
+        plannedEndDate:
+          type: string
+          format: date
+        inboundRecordIds:
+          type: array
+          items:
+            type: integer
+            format: int64
+          maxItems: 100
+          minItems: 0
+        worker:
+          type: string
+          maxLength: 100
+          minLength: 0
+        memo:
+          type: string
+          maxLength: 1000
+          minLength: 0
+      required:
+      - inboundRecordIds
+      - plannedStartDate
+      - title
     VarietyCreateRequest:
       type: object
       properties:
@@ -5377,6 +5466,38 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/Blocker'
+    ApiResponseListInboundPottingCandidateResponse:
+      type: object
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/InboundPottingCandidateResponse'
+        message:
+          type: string
+    InboundPottingCandidateResponse:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: int64
+        varietyName:
+          type: string
+        status:
+          type: string
+        estimatedQuantity:
+          type: integer
+          format: int32
+        actualQuantity:
+          type: integer
+          format: int32
+        tempLocation:
+          type: string
+        pottingDueDate:
+          type: string
+          format: date
+        potSize:
+          type: string
     ApiResponseVarietyPageResponse:
       type: object
       properties:
@@ -5835,6 +5956,7 @@ components:
           - DERIVED_GROUP
           - USER_COLLECTION
           - MANUAL_SELECTION
+          - INBOUND_RECORD_SELECTION
         sourceScopeId:
           type: integer
           format: int64
