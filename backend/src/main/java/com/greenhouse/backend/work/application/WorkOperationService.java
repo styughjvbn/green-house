@@ -78,7 +78,8 @@ public class WorkOperationService {
 				&& !com.greenhouse.backend.work.domain.WorkType.REPOT_CODE.equals(workType.getCode())
 				&& !com.greenhouse.backend.work.domain.WorkType.MOVEMENT_CODE.equals(workType.getCode())
 				&& !com.greenhouse.backend.work.domain.WorkType.DIVIDE_CODE.equals(workType.getCode())
-				&& !com.greenhouse.backend.work.domain.WorkType.MERGE_CODE.equals(workType.getCode())) {
+				&& !com.greenhouse.backend.work.domain.WorkType.MERGE_CODE.equals(workType.getCode())
+				&& !com.greenhouse.backend.work.domain.WorkType.DISCARD_CODE.equals(workType.getCode())) {
 			throw new IllegalArgumentException("이 작업 유형은 난 묶음 대상 기간 작업으로 만들 수 없습니다.");
 		}
 

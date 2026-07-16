@@ -42,6 +42,7 @@ class WorkOperationIntegrationTests extends AbstractBackendIntegrationTest {
 
 	private WorkType pesticideType;
 	private WorkType movementType;
+	private WorkType discardType;
 	private OrchidGroup targetGroup;
 	private House sourceHouse;
 	private BedZone destinationZone;
@@ -65,6 +66,8 @@ class WorkOperationIntegrationTests extends AbstractBackendIntegrationTest {
 				"PESTICIDE", "농약", WorkTypeTemplate.PESTICIDE, true, false, true, 1));
 		movementType = workTypeRepository.save(new WorkType(
 				"MOVEMENT", "위치 이동", WorkTypeTemplate.MOVEMENT, true, true, true, 2));
+		discardType = workTypeRepository.save(new WorkType(
+				"DISCARD", "폐기", WorkTypeTemplate.DISCARD, true, true, true, 3));
 
 		House house = new House(3, "3동");
 		PhysicalBed bed = new PhysicalBed(1, 1);
@@ -95,6 +98,80 @@ class WorkOperationIntegrationTests extends AbstractBackendIntegrationTest {
 				BigDecimal.TEN);
 		targetGroup.assignVariety(variety);
 		targetGroup = orchidGroupRepository.save(targetGroup);
+	}
+
+	@Test
+	void discardsPartialOrFullQuantityAndClosesFullyDiscardedGroup() throws Exception {
+		Long partialOperationId = createDiscardOperation("일부 폐기");
+		Long partialTargetId = workOperationTargetRepository
+				.findByWorkOperationIdAndExcludedAtIsNullOrderByIdAsc(partialOperationId).getFirst().getId();
+
+		mockMvc.perform(post("/api/work-operations/{id}/start", partialOperationId))
+				.andExpect(status().isOk());
+		mockMvc.perform(post(
+				"/api/work-operations/{id}/targets/{targetId}/complete", partialOperationId, partialTargetId)
+				.contentType(MediaType.APPLICATION_JSON)
+				.content("""
+						{
+						  "worker": "폐기 담당자",
+						  "resultDetails": {
+						    "discardQuantity": 30,
+						    "reason": "상태 불량"
+						  }
+						}
+						"""))
+				.andExpect(status().isOk())
+				.andExpect(jsonPath("$.data.targets[0].executionStatus").value("COMPLETED"))
+				.andExpect(jsonPath("$.data.targets[0].resultDetails.discardedQuantity").value(30))
+				.andExpect(jsonPath("$.data.targets[0].resultDetails.remainingQuantity").value(70));
+
+		OrchidGroup partiallyDiscarded = orchidGroupRepository.findById(targetGroup.getId()).orElseThrow();
+		org.assertj.core.api.Assertions.assertThat(partiallyDiscarded.getQuantity()).isEqualTo(70);
+		org.assertj.core.api.Assertions.assertThat(partiallyDiscarded.getStatus()).isEqualTo("정상");
+
+		mockMvc.perform(post("/api/work-operations/{id}/complete", partialOperationId))
+				.andExpect(status().isOk());
+
+		Long fullOperationId = createDiscardOperation("전량 폐기");
+		Long fullTargetId = workOperationTargetRepository
+				.findByWorkOperationIdAndExcludedAtIsNullOrderByIdAsc(fullOperationId).getFirst().getId();
+		mockMvc.perform(post("/api/work-operations/{id}/start", fullOperationId))
+				.andExpect(status().isOk());
+		mockMvc.perform(post(
+				"/api/work-operations/{id}/targets/{targetId}/complete", fullOperationId, fullTargetId)
+				.contentType(MediaType.APPLICATION_JSON)
+				.content("""
+						{
+						  "resultDetails": {"discardQuantity": 70}
+						}
+						"""))
+				.andExpect(status().isOk())
+				.andExpect(jsonPath("$.data.targets[0].executionStatus").value("COMPLETED"))
+				.andExpect(jsonPath("$.data.targets[0].resultDetails.remainingQuantity").value(0))
+				.andExpect(jsonPath("$.data.targets[0].resultDetails.status").value("폐기"));
+
+		OrchidGroup fullyDiscarded = orchidGroupRepository.findById(targetGroup.getId()).orElseThrow();
+		org.assertj.core.api.Assertions.assertThat(fullyDiscarded.getQuantity()).isZero();
+		org.assertj.core.api.Assertions.assertThat(fullyDiscarded.getStatus()).isEqualTo("폐기");
+	}
+
+	private Long createDiscardOperation(String title) throws Exception {
+		var result = mockMvc.perform(post("/api/work-operations")
+				.contentType(MediaType.APPLICATION_JSON)
+				.content("""
+						{
+						  "workTypeId": %d,
+						  "title": "%s",
+						  "plannedStartDate": "2026-07-16",
+						  "sourceScopeType": "MANUAL_SELECTION",
+						  "sourceOrchidGroupIds": [%d]
+						}
+						""".formatted(discardType.getId(), title, targetGroup.getId())))
+				.andExpect(status().isCreated())
+				.andExpect(jsonPath("$.data.workTypeCode").value("DISCARD"))
+				.andReturn();
+		return Long.valueOf(result.getResponse().getContentAsString().replaceAll(
+				".*?\\\"data\\\":\\{\\\"id\\\":(\\d+).*", "$1"));
 	}
 
 	@Test

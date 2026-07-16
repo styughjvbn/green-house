@@ -5,6 +5,7 @@ public enum WorkTypeTemplate {
 	FERTILIZER,
 	REPOT,
 	CLEANUP,
+	DISCARD,
 	STATUS,
 	MEMO,
 	MOVEMENT,

@@ -190,6 +190,17 @@ public class OrchidGroup extends BaseEntity {
 		}
 	}
 
+	public void discard(Integer discardQuantity) {
+		validatePositiveQuantity(discardQuantity, "폐기 수량");
+		if (getAvailableQuantity() < discardQuantity) {
+			throw new IllegalArgumentException("난 묶음 가용 수량보다 많이 폐기할 수 없습니다.");
+		}
+		this.quantity -= discardQuantity;
+		if (this.quantity == 0) {
+			this.status = "폐기";
+		}
+	}
+
 	public void correctQuantityAndStatus(Integer correctedQuantity, String correctedStatus) {
 		if (correctedQuantity == null || correctedQuantity < 0) {
 			throw new IllegalArgumentException("보정 수량은 0 이상이어야 합니다.");

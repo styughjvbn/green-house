@@ -26,6 +26,7 @@ public class WorkType extends BaseEntity {
 	public static final String REPOT_CODE = "REPOT";
 	public static final String DIVIDE_CODE = "DIVIDE";
 	public static final String MERGE_CODE = "MERGE";
+	public static final String DISCARD_CODE = "DISCARD";
 	public static final String CORRECTION_CODE = "CORRECTION";
 
 	@Id
@@ -99,7 +100,7 @@ public class WorkType extends BaseEntity {
 	public WorkEffectKind effectKind() {
 		return switch (template) {
 			case PESTICIDE, FERTILIZER, CLEANUP, STATUS, MEMO, CORRECTION -> WorkEffectKind.RECORD_ONLY;
-			case MOVEMENT -> WorkEffectKind.ATTRIBUTE_CHANGE;
+			case DISCARD, MOVEMENT -> WorkEffectKind.ATTRIBUTE_CHANGE;
 			case REPOT, MULTI_CREATE -> WorkEffectKind.STRUCTURE_CHANGE;
 		};
 	}
@@ -114,9 +115,13 @@ public class WorkType extends BaseEntity {
 		if (MERGE_CODE.equals(code)) {
 			return "MERGE";
 		}
+		if (DISCARD_CODE.equals(code)) {
+			return "DISCARD";
+		}
 		return switch (template) {
 			case PESTICIDE, FERTILIZER, CLEANUP, STATUS, MEMO -> "RECORD_ONLY";
 			case CORRECTION -> "CORRECTION";
+			case DISCARD -> "DISCARD";
 			case MOVEMENT -> "MOVE";
 			case REPOT -> "REPOT";
 			case MULTI_CREATE -> "MULTI_CREATE";
