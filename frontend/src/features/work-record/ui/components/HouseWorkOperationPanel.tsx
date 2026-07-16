@@ -93,6 +93,8 @@ export function WorkOperationPanel({
   const isDedicatedWorkflow =
     selectedWorkType?.code === "POTTING" ||
     selectedWorkType?.code === "REPOT" ||
+    selectedWorkType?.code === "DIVIDE" ||
+    selectedWorkType?.code === "MERGE" ||
     selectedWorkType?.code === "MOVEMENT";
 
   const includedTargets = useMemo(
@@ -133,7 +135,9 @@ export function WorkOperationPanel({
             ? "대상 선택 후 실제 대상을 미리보기해주세요."
             : includedTargets.length === 0
               ? "포함할 난 묶음을 하나 이상 선택해주세요."
-              : null;
+              : selectedWorkType.code === "MERGE" && includedTargets.length < 2
+                ? "합식할 원본 난 묶음을 두 개 이상 선택해주세요."
+                : null;
 
   useEffect(() => {
     let cancelled = false;
@@ -615,6 +619,7 @@ export function WorkOperationPanel({
           bedZones={bedZones}
           houses={houses}
           operation={operation}
+          orchidGroups={orchidGroups}
           source={
             executionTarget.orchidGroupId == null
               ? null
@@ -859,6 +864,17 @@ export function OperationResult({
                 onClick={() => onOperationAction("resume")}
               />
             ) : null}
+            {active && operation.workTypeCode === "MERGE" ? (
+              <StatusAction
+                label="합식 실행 입력"
+                primary
+                disabled={loading || !onExecuteTarget}
+                onClick={() => {
+                  const firstTarget = operation.targets[0];
+                  if (firstTarget) onExecuteTarget?.(firstTarget);
+                }}
+              />
+            ) : null}
             <StatusAction
               label="전체 완료"
               primary
@@ -915,7 +931,8 @@ export function OperationResult({
             <span className="rounded-full bg-[#eef2ed] px-2 py-1 text-xs font-semibold text-[#526057]">
               {targetStatusLabel(target.executionStatus)}
             </span>
-            {active &&
+            {operation.workTypeCode !== "MERGE" &&
+            active &&
             target.id != null &&
             target.executionStatus === "PENDING" ? (
               <StatusAction
@@ -925,7 +942,8 @@ export function OperationResult({
                 onClick={() => onTargetAction(target.id!, "start")}
               />
             ) : null}
-            {active &&
+            {operation.workTypeCode !== "MERGE" &&
+            active &&
             target.id != null &&
             (target.executionStatus === "PENDING" ||
               target.executionStatus === "IN_PROGRESS") ? (
@@ -935,6 +953,7 @@ export function OperationResult({
                   primary
                   label={
                     operation.workTypeCode === "REPOT" ||
+                    operation.workTypeCode === "DIVIDE" ||
                     operation.workTypeCode === "POTTING" ||
                     operation.workTypeCode === "MOVEMENT"
                       ? "실행 입력"
@@ -943,6 +962,7 @@ export function OperationResult({
                   disabled={
                     loading ||
                     ((operation.workTypeCode === "REPOT" ||
+                      operation.workTypeCode === "DIVIDE" ||
                       operation.workTypeCode === "POTTING" ||
                       operation.workTypeCode === "MOVEMENT") &&
                       !onExecuteTarget)
@@ -950,6 +970,7 @@ export function OperationResult({
                   onClick={() => {
                     if (
                       operation.workTypeCode === "REPOT" ||
+                      operation.workTypeCode === "DIVIDE" ||
                       operation.workTypeCode === "POTTING" ||
                       operation.workTypeCode === "MOVEMENT"
                     ) {
@@ -1012,6 +1033,10 @@ function workPlanGuidance(code?: string) {
       return "원본 난 묶음을 계획 대상으로 확정하고, 실행할 때 각 묶음의 목적 구역과 위치를 입력합니다.";
     case "REPOT":
       return "원본 난 묶음을 선택하고, 실행할 때 투입·손실 수량과 결과 난 묶음의 배치를 입력합니다.";
+    case "DIVIDE":
+      return "분주할 원본 난 묶음을 선택하고, 실행할 때 각 결과 묶음의 수량과 배치를 입력합니다.";
+    case "MERGE":
+      return "같은 품종의 원본 난 묶음을 두 개 이상 선택하고, 실행할 때 원본별 투입 수량과 하나의 결과 배치를 입력합니다.";
     case "POTTING":
       return "포트 작업 대기 입고 기록을 선택하고, 실행할 때 실제 수량과 배치 위치를 입력합니다.";
     default:

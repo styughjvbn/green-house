@@ -122,6 +122,8 @@ export function getSchedulableWorkTypes(workTypes: WorkType[]) {
     (workType) =>
       workType.active &&
       (workType.code === "REPOT" ||
+        workType.code === "DIVIDE" ||
+        workType.code === "MERGE" ||
         workType.code === "POTTING" ||
         workType.code === "MOVEMENT" ||
         (!workType.systemType &&

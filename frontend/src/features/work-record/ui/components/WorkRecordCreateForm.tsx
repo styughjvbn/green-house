@@ -23,7 +23,9 @@ type WorkRecordCreateFormProps = {
   saving: boolean;
   workTypes: WorkType[];
   onClose: () => void;
-  onOpenDedicatedWork: (workTypeCode: "MOVEMENT" | "REPOT" | "POTTING") => void;
+  onOpenDedicatedWork: (
+    workTypeCode: "MOVEMENT" | "REPOT" | "DIVIDE" | "MERGE" | "POTTING",
+  ) => void;
   onChange: <K extends keyof WorkRecordFormState>(
     field: K,
     value: WorkRecordFormState[K],
@@ -108,6 +110,8 @@ export function WorkRecordCreateForm({
                 [
                   ["MOVEMENT", "자리 이동", "목적 구역·칸 입력"],
                   ["REPOT", "분갈이", "투입·손실·결과 입력"],
+                  ["DIVIDE", "분주", "하나의 원본을 여러 묶음으로 분리"],
+                  ["MERGE", "합식", "여러 원본을 하나의 묶음으로 결합"],
                   ["POTTING", "포트 작업", "입고 기록·배치 입력"],
                 ] as const
               ).map(([code, label, description]) => {

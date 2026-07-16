@@ -273,6 +273,7 @@ export function WorkOperationList({
           bedZones={bedZones}
           houses={houses}
           operation={selected}
+          orchidGroups={orchidGroups}
           source={
             executionTarget.orchidGroupId == null
               ? null
