@@ -246,6 +246,7 @@ export type WorkOperationStatus =
 export type WorkTargetExecutionStatus =
   | "PENDING"
   | "IN_PROGRESS"
+  | "PARTIALLY_COMPLETED"
   | "COMPLETED"
   | "SKIPPED"
   | "CANCELED"
@@ -285,6 +286,8 @@ export type WorkOperationTarget = {
   potSizeCodeSnapshot: string | null;
   potSizeSnapshot: string | null;
   locationSnapshot: WorkLocationSnapshot;
+  processedQuantity: number;
+  remainingQuantity: number;
   executionStatus: WorkTargetExecutionStatus;
   startedAt: string | null;
   completedAt: string | null;
@@ -328,6 +331,7 @@ export type WorkOperation = {
     total: number;
     pending: number;
     inProgress: number;
+    partial: number;
     completed: number;
     skipped: number;
     canceled: number;

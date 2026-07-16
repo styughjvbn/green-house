@@ -280,6 +280,38 @@ export async function completeMergeWorkOperation(
   );
 }
 
+export async function executeStructureChangeWorkOperation(
+  workOperationId: number,
+  payload: {
+    idempotencyKey: string;
+    worker: string | null;
+    memo: string | null;
+    sources: { sourceOrchidGroupId: number; inputQuantity: number }[];
+    lossQuantity: number;
+    lossReason: string | null;
+    results: {
+      bedZoneId: number;
+      quantity: number;
+      sourceOrchidGroupIds: number[];
+      potSize: string | null;
+      ageYear: number | null;
+      purpose: "NORMAL" | "DIVIDE_CANDIDATE" | "HELD";
+      placementType: null;
+      trayCount: null;
+      splitPlacementAllowed: false;
+      startPosition: number;
+      endPosition: number;
+      memo: string | null;
+    }[];
+  },
+): Promise<WorkOperation> {
+  return requestWorkOperation<WorkOperation>(
+    `/work-operations/${workOperationId}/structure-change-executions`,
+    "POST",
+    payload,
+  );
+}
+
 async function requestWorkOperation<T>(
   path: string,
   method: "POST",

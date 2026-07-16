@@ -32,6 +32,20 @@ type HouseNode = {
   beds: BedNode[];
 };
 
+export type WorkTargetSelectionScope =
+  | {
+      type: "DERIVED_GROUP";
+      scopeKey: string;
+      label: string;
+      memberIds: number[];
+    }
+  | {
+      type: "USER_COLLECTION";
+      collectionId: number;
+      label: string;
+      memberIds: number[];
+    };
+
 export function WorkTargetSelectionDialog({
   bedZones,
   groups,
@@ -43,7 +57,10 @@ export function WorkTargetSelectionDialog({
   groups: OrchidGroup[];
   initialSelectedIds: Set<number>;
   onClose: () => void;
-  onConfirm: (selectedIds: Set<number>) => void;
+  onConfirm: (
+    selectedIds: Set<number>,
+    scope: WorkTargetSelectionScope | null,
+  ) => void;
 }) {
   const [selectedIds, setSelectedIds] = useState(
     () => new Set(initialSelectedIds),
@@ -59,6 +76,8 @@ export function WorkTargetSelectionDialog({
   const [loadingGroups, setLoadingGroups] = useState(true);
   const [loadingGroupKey, setLoadingGroupKey] = useState<string | null>(null);
   const [groupError, setGroupError] = useState<string | null>(null);
+  const [selectedScope, setSelectedScope] =
+    useState<WorkTargetSelectionScope | null>(null);
   const tree = useMemo(
     () => buildTargetTree(groups, bedZones),
     [bedZones, groups],
@@ -156,6 +175,7 @@ export function WorkTargetSelectionDialog({
   }
 
   function toggleGroups(targetGroups: OrchidGroup[]) {
+    setSelectedScope(null);
     toggleIds(targetGroups.map((group) => group.id));
   }
 
@@ -163,7 +183,19 @@ export function WorkTargetSelectionDialog({
     if (loadingGroupKey) return;
     const cachedIds = derivedMemberIds.get(group.groupKey);
     if (cachedIds) {
+      const availableIds = cachedIds.filter((id) => selectableIds.has(id));
+      const selecting = availableIds.some((id) => !selectedIds.has(id));
       toggleIds(cachedIds);
+      setSelectedScope(
+        selecting
+          ? {
+              type: "DERIVED_GROUP",
+              scopeKey: group.groupKey,
+              label: group.varietyName,
+              memberIds: availableIds,
+            }
+          : null,
+      );
       setKeyword("");
       return;
     }
@@ -176,6 +208,12 @@ export function WorkTargetSelectionDialog({
         new Map(current).set(group.groupKey, memberIds),
       );
       toggleIds(memberIds);
+      setSelectedScope({
+        type: "DERIVED_GROUP",
+        scopeKey: group.groupKey,
+        label: group.varietyName,
+        memberIds: memberIds.filter((id) => selectableIds.has(id)),
+      });
       setKeyword("");
     } catch (error) {
       setGroupError(
@@ -262,7 +300,20 @@ export function WorkTargetSelectionDialog({
                         {...selectionStateByIds(memberIds, selectedIds)}
                         disabled={memberIds.length === 0}
                         onChange={() => {
+                          const selecting = memberIds.some(
+                            (id) => !selectedIds.has(id),
+                          );
                           toggleIds(memberIds);
+                          setSelectedScope(
+                            selecting
+                              ? {
+                                  type: "USER_COLLECTION",
+                                  collectionId: collection.id,
+                                  label: collection.name,
+                                  memberIds,
+                                }
+                              : null,
+                          );
                           setKeyword("");
                         }}
                       />
@@ -475,7 +526,15 @@ export function WorkTargetSelectionDialog({
               className="rounded-md bg-[#159447] px-4 py-2 text-sm font-semibold text-white disabled:bg-[#9bb7a2]"
               disabled={selectedGroups.length === 0}
               type="button"
-              onClick={() => onConfirm(new Set(selectedIds))}
+              onClick={() =>
+                onConfirm(
+                  new Set(selectedIds),
+                  selectedScope &&
+                    sameIds(selectedIds, new Set(selectedScope.memberIds))
+                    ? selectedScope
+                    : null,
+                )
+              }
             >
               대상 확정
             </button>
@@ -604,6 +663,10 @@ function selectionStateByIds(targetIds: number[], selectedIds: Set<number>) {
     checked: targetIds.length > 0 && selectedCount === targetIds.length,
     indeterminate: selectedCount > 0 && selectedCount < targetIds.length,
   };
+}
+
+function sameIds(left: Set<number>, right: Set<number>) {
+  return left.size === right.size && [...left].every((id) => right.has(id));
 }
 
 function buildTargetTree(

@@ -23,6 +23,7 @@ import {
   completeMergeWorkOperation,
   transitionWorkOperationTarget,
 } from "../../api/workRecordApi";
+import { BatchStructureWorkExecutionDialog } from "./BatchStructureWorkExecutionDialog";
 import { TextField } from "./FormFields";
 
 type ResultRow = {
@@ -50,8 +51,12 @@ export function StructureWorkExecutionDialog(
   if (props.operation.workTypeCode === "POTTING") {
     return <PottingWorkExecutionDialog {...props} />;
   }
-  if (props.operation.workTypeCode === "MERGE") {
-    return <MergeWorkExecutionDialog {...props} />;
+  if (
+    props.operation.workTypeCode === "REPOT" ||
+    props.operation.workTypeCode === "DIVIDE" ||
+    props.operation.workTypeCode === "MERGE"
+  ) {
+    return <BatchStructureWorkExecutionDialog {...props} />;
   }
   return <OrchidStructureWorkExecutionDialog {...props} />;
 }

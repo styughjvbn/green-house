@@ -80,6 +80,7 @@ export function WorkOperationPanel({
     new Set(),
   );
   const [targetSelectorOpen, setTargetSelectorOpen] = useState(false);
+  const [targetScopeLabel, setTargetScopeLabel] = useState<string | null>(null);
   const [orchidGroups, setOrchidGroups] = useState<OrchidGroup[]>([]);
   const [bedZones, setBedZones] = useState<BedZone[]>([]);
   const [inboundCandidates, setInboundCandidates] = useState<
@@ -137,9 +138,7 @@ export function WorkOperationPanel({
             ? "대상 선택 후 실제 대상을 미리보기해주세요."
             : includedTargets.length === 0
               ? "포함할 난 묶음을 하나 이상 선택해주세요."
-              : selectedWorkType.code === "MERGE" && includedTargets.length < 2
-                ? "합식할 원본 난 묶음을 두 개 이상 선택해주세요."
-                : null;
+              : null;
 
   useEffect(() => {
     let cancelled = false;
@@ -457,7 +456,7 @@ export function WorkOperationPanel({
                         ? `입고 기록 ${inboundRecordIds.size}건`
                         : "포트 작업할 유리병 모종 입고 기록을 선택하세요."
                       : manualIds.size > 0
-                        ? `${manualIds.size}묶음 · ${selectedManualQuantity}분 · ${selectedManualZoneCount}개 구역`
+                        ? `${targetScopeLabel ? `${targetScopeLabel} · ` : ""}${manualIds.size}묶음 · ${selectedManualQuantity}분 · ${selectedManualZoneCount}개 구역`
                         : "동, 다이, 구역 또는 개별 난 묶음을 선택하세요."}
                   </p>
                 </div>
@@ -621,15 +620,48 @@ export function WorkOperationPanel({
             groups={orchidGroups}
             initialSelectedIds={manualIds}
             onClose={() => setTargetSelectorOpen(false)}
-            onConfirm={(selectedIds) => {
+            onConfirm={(selectedIds, scope) => {
               setManualIds(selectedIds);
+              setTargetScopeLabel(scope?.label ?? null);
+              const scopePayload: WorkTargetPreviewPayload = scope
+                ? scope.type === "DERIVED_GROUP"
+                  ? { scopeType: "DERIVED_GROUP", scopeKey: scope.scopeKey }
+                  : {
+                      scopeType: "USER_COLLECTION",
+                      scopeId: scope.collectionId,
+                    }
+                : {
+                    scopeType: "MANUAL_SELECTION",
+                    orchidGroupIds: [...selectedIds],
+                  };
               setForm((current) => ({
                 ...current,
-                sourceScopeType: "MANUAL_SELECTION",
+                sourceScopeType: scope?.type ?? "MANUAL_SELECTION",
+                scopeKey: scope?.type === "DERIVED_GROUP" ? scope.scopeKey : "",
+                collectionId:
+                  scope?.type === "USER_COLLECTION"
+                    ? String(scope.collectionId)
+                    : "",
+                title:
+                  scope && selectedWorkType
+                    ? `${scope.label} ${selectedWorkType.name}`
+                    : current.title,
               }));
               setPreview(null);
               setExcludedIds(new Set());
               setTargetSelectorOpen(false);
+              setLoading(true);
+              setErrorMessage(null);
+              void previewWorkOperationTargets(scopePayload)
+                .then((result) => setPreview(result))
+                .catch((cause: unknown) =>
+                  setErrorMessage(
+                    cause instanceof Error
+                      ? cause.message
+                      : "작업 대상을 확인하지 못했습니다.",
+                  ),
+                )
+                .finally(() => setLoading(false));
             }}
           />
         )
@@ -842,7 +874,11 @@ export function OperationResult({
     active &&
     operation.progress.pending === 0 &&
     operation.progress.inProgress === 0 &&
+    operation.progress.partial === 0 &&
     operation.progress.failed === 0;
+  const structureChange = ["REPOT", "DIVIDE", "MERGE"].includes(
+    operation.workTypeCode,
+  );
   return (
     <div className="mt-4 rounded-md border border-[#cfe0d2] bg-white p-4">
       <div className="flex flex-wrap items-center justify-between gap-3">
@@ -884,13 +920,15 @@ export function OperationResult({
                 onClick={() => onOperationAction("resume")}
               />
             ) : null}
-            {active && operation.workTypeCode === "MERGE" ? (
+            {active && structureChange ? (
               <StatusAction
-                label="합식 실행 입력"
+                label={`${operation.workType} 실행 등록`}
                 primary
                 disabled={loading || !onExecuteTarget}
                 onClick={() => {
-                  const firstTarget = operation.targets[0];
+                  const firstTarget = operation.targets.find(
+                    (target) => target.remainingQuantity > 0,
+                  );
                   if (firstTarget) onExecuteTarget?.(firstTarget);
                 }}
               />
@@ -915,8 +953,9 @@ export function OperationResult({
         <div className="flex items-center justify-between text-sm font-semibold text-[#344138]">
           <span>
             완료 {operation.progress.completed} · 진행{" "}
-            {operation.progress.inProgress} · 대기 {operation.progress.pending}{" "}
-            · 건너뜀 {operation.progress.skipped}
+            {operation.progress.inProgress} · 부분 {operation.progress.partial}{" "}
+            · 대기 {operation.progress.pending} · 건너뜀{" "}
+            {operation.progress.skipped}
           </span>
           <span>{operation.progress.progressPercent}%</span>
         </div>
@@ -945,13 +984,32 @@ export function OperationResult({
                 {target.targetReferenceType === "INBOUND_RECORD"
                   ? `${target.locationSnapshot.tempLocation ?? "임시 위치 미지정"} · 입고 #${target.inboundRecordId}`
                   : `${target.locationSnapshot.houseNumber}동 ${target.locationSnapshot.physicalBedNumber}다이 ${target.locationSnapshot.bedZoneName}`}{" "}
-                · {target.quantitySnapshot}분
+                · 계획 {target.quantitySnapshot}분
+                {target.processedQuantity > 0
+                  ? ` · 작업 ${target.processedQuantity}분 · 잔여 ${target.remainingQuantity}분`
+                  : ""}
               </p>
             </div>
             <span className="rounded-full bg-[#eef2ed] px-2 py-1 text-xs font-semibold text-[#526057]">
               {targetStatusLabel(target.executionStatus)}
             </span>
-            {operation.workTypeCode !== "MERGE" &&
+            {structureChange &&
+            active &&
+            target.id != null &&
+            (target.executionStatus === "PENDING" ||
+              target.executionStatus === "PARTIALLY_COMPLETED") ? (
+              <StatusAction
+                small
+                label={
+                  target.executionStatus === "PARTIALLY_COMPLETED"
+                    ? "잔여 제외"
+                    : "건너뛰기"
+                }
+                disabled={loading}
+                onClick={() => onTargetAction(target.id!, "skip")}
+              />
+            ) : null}
+            {!structureChange &&
             active &&
             target.id != null &&
             target.executionStatus === "PENDING" ? (
@@ -962,7 +1020,7 @@ export function OperationResult({
                 onClick={() => onTargetAction(target.id!, "start")}
               />
             ) : null}
-            {operation.workTypeCode !== "MERGE" &&
+            {!structureChange &&
             active &&
             target.id != null &&
             (target.executionStatus === "PENDING" ||
@@ -1052,11 +1110,11 @@ function workPlanGuidance(code?: string) {
     case "MOVEMENT":
       return "원본 난 묶음을 계획 대상으로 확정하고, 실행할 때 각 묶음의 목적 구역과 위치를 입력합니다.";
     case "REPOT":
-      return "원본 난 묶음을 선택하고, 실행할 때 투입·손실 수량과 결과 난 묶음의 배치를 입력합니다.";
+      return "보통 자동·사용자 그룹 하나를 대상으로 정하고, 실행 회차마다 작업한 일부 수량과 여러 결과 묶음을 기록합니다.";
     case "DIVIDE":
-      return "분주할 원본 난 묶음을 선택하고, 실행할 때 각 결과 묶음의 수량과 배치를 입력합니다.";
+      return "대상 그룹을 정한 뒤 실행 회차마다 원본별 수량과 여러 결과 묶음을 기록합니다.";
     case "MERGE":
-      return "같은 품종의 원본 난 묶음을 두 개 이상 선택하고, 실행할 때 원본별 투입 수량과 하나의 결과 배치를 입력합니다.";
+      return "같은 품종의 대상 그룹을 정하고, 실행 회차마다 원본과 여러 결과 묶음을 기록합니다.";
     case "POTTING":
       return "포트 작업 대기 입고 기록을 선택하고, 실행할 때 실제 수량과 배치 위치를 입력합니다.";
     default:
@@ -1082,6 +1140,7 @@ function targetStatusLabel(
   return {
     PENDING: "대기",
     IN_PROGRESS: "진행 중",
+    PARTIALLY_COMPLETED: "부분 완료",
     COMPLETED: "완료",
     SKIPPED: "건너뜀",
     CANCELED: "취소",
