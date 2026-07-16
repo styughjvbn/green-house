@@ -36,15 +36,20 @@ import { StructureWorkExecutionDialog } from "./StructureWorkExecutionDialog";
 
 export function WorkOperationPanel({
   workTypes,
+  initialWorkTypeCode,
   onClose,
   onSaved,
 }: {
   workTypes: WorkType[];
+  initialWorkTypeCode?: string | null;
   onClose: () => void;
   onSaved?: () => void;
 }) {
   const schedulableWorkTypes = getSchedulableWorkTypes(workTypes);
-  const initialWorkType = schedulableWorkTypes[0];
+  const initialWorkType =
+    schedulableWorkTypes.find(
+      (workType) => workType.code === initialWorkTypeCode,
+    ) ?? schedulableWorkTypes[0];
   const [form, setForm] = useState<WorkOperationFormState>(() => ({
     workTypeId: initialWorkType ? String(initialWorkType.id) : "",
     sourceScopeType: "MANUAL_SELECTION",

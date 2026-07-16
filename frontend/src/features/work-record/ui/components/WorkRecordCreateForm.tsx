@@ -23,6 +23,7 @@ type WorkRecordCreateFormProps = {
   saving: boolean;
   workTypes: WorkType[];
   onClose: () => void;
+  onOpenDedicatedWork: (workTypeCode: "MOVEMENT" | "REPOT" | "POTTING") => void;
   onChange: <K extends keyof WorkRecordFormState>(
     field: K,
     value: WorkRecordFormState[K],
@@ -41,6 +42,7 @@ export function WorkRecordCreateForm({
   workTypes,
   onClose,
   onChange,
+  onOpenDedicatedWork,
   onTargetChange,
   onSubmit,
 }: WorkRecordCreateFormProps) {
@@ -76,7 +78,11 @@ export function WorkRecordCreateForm({
         <div className="flex shrink-0 items-start justify-between gap-3 border-b border-[#edf0ec] p-5">
           <div>
             <p className="text-sm font-semibold text-[#3d6f91]">작업 등록</p>
-            <h2 className="mt-1 text-xl font-semibold">작업 기록 추가</h2>
+            <h2 className="mt-1 text-xl font-semibold">작업 등록</h2>
+            <p className="mt-1 text-sm text-[#5c6a60]">
+              일반 작업은 바로 기록하고, 이동·분갈이·포트 작업은 전용 입력으로
+              진행합니다.
+            </p>
           </div>
           <button
             className="flex h-8 w-8 shrink-0 items-center justify-center rounded border border-[#d9dfda] text-[#435047] hover:bg-[#f4f7f3]"
@@ -92,6 +98,50 @@ export function WorkRecordCreateForm({
           className="min-h-0 space-y-3 overflow-y-auto p-5"
           onSubmit={onSubmit}
         >
+          <section className="rounded-md border border-[#cfe0d2] bg-[#f7faf6] p-4">
+            <p className="text-sm font-semibold text-[#26352b]">전용 작업</p>
+            <p className="mt-1 text-xs text-[#6a766e]">
+              대상별 목적지나 결과 난 묶음을 입력해야 하는 작업입니다.
+            </p>
+            <div className="mt-3 grid gap-2 sm:grid-cols-3">
+              {(
+                [
+                  ["MOVEMENT", "자리 이동", "목적 구역·칸 입력"],
+                  ["REPOT", "분갈이", "투입·손실·결과 입력"],
+                  ["POTTING", "포트 작업", "입고 기록·배치 입력"],
+                ] as const
+              ).map(([code, label, description]) => {
+                const available = workTypes.some(
+                  (workType) => workType.active && workType.code === code,
+                );
+                return (
+                  <button
+                    key={code}
+                    className="rounded-md border border-[#cfd8cc] bg-white px-3 py-3 text-left hover:border-[#159447] hover:bg-[#f1faf3] disabled:cursor-not-allowed disabled:opacity-40"
+                    disabled={!available}
+                    type="button"
+                    onClick={() => onOpenDedicatedWork(code)}
+                  >
+                    <span className="block text-sm font-semibold text-[#26352b]">
+                      {label}
+                    </span>
+                    <span className="mt-1 block text-xs text-[#6a766e]">
+                      {description}
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
+          </section>
+
+          <div className="flex items-center gap-3 py-1">
+            <span className="h-px flex-1 bg-[#e2e7e1]" />
+            <span className="text-xs font-semibold text-[#6a766e]">
+              일반 작업 바로 기록
+            </span>
+            <span className="h-px flex-1 bg-[#e2e7e1]" />
+          </div>
+
           <div className="grid grid-cols-2 gap-3">
             <SelectField
               label="작업 유형"

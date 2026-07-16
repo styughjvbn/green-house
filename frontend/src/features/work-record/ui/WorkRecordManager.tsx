@@ -18,6 +18,9 @@ export function WorkRecordManager(
 ) {
   const manager = useWorkRecordManager(props);
   const [showOperationForm, setShowOperationForm] = useState(false);
+  const [operationInitialTypeCode, setOperationInitialTypeCode] = useState<
+    string | null
+  >(null);
   const [operationSavedVersion, setOperationSavedVersion] = useState(0);
   const { activeTab } = props;
   const refreshKey = manager.operationCreatedVersion + operationSavedVersion;
@@ -40,12 +43,18 @@ export function WorkRecordManager(
           workTypes={props.workTypes}
           onClose={() => manager.setShowCreateForm(false)}
           onChange={manager.updateForm}
+          onOpenDedicatedWork={(workTypeCode) => {
+            manager.setShowCreateForm(false);
+            setOperationInitialTypeCode(workTypeCode);
+            setShowOperationForm(true);
+          }}
           onTargetChange={manager.setSelectedOrchidGroupIds}
           onSubmit={manager.submitWorkRecord}
         />
       ) : null}
       {activeTab === "LIST" && showOperationForm ? (
         <WorkOperationPanel
+          initialWorkTypeCode={operationInitialTypeCode}
           workTypes={props.workTypes}
           onClose={() => setShowOperationForm(false)}
           onSaved={() => setOperationSavedVersion((current) => current + 1)}
@@ -59,6 +68,7 @@ export function WorkRecordManager(
           refreshKey={refreshKey}
           onCreateOperation={() => {
             manager.setShowCreateForm(false);
+            setOperationInitialTypeCode(null);
             setShowOperationForm(true);
           }}
           onCreateRecord={() => {
