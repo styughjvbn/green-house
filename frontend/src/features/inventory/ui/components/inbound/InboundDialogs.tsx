@@ -397,7 +397,11 @@ export function InboundPottingDialog({
   if (!open || !record) return null;
 
   return (
-    <DialogShell title="포트 작업 등록" onClose={onClose}>
+    <DialogShell title="포트 작업 즉시 실행" onClose={onClose}>
+      <p className="rounded-md border border-[#cfe0d2] bg-[#f4f8f3] px-3 py-2 text-sm text-[#526057]">
+        완료하면 작업 관리에 포트 작업이 자동으로 기록되고 결과 난 묶음이
+        생성됩니다.
+      </p>
       <PottingExecutionForm
         houses={houses}
         initialActualQuantity={record.actualQuantity}
@@ -405,7 +409,7 @@ export function InboundPottingDialog({
         initialPotSize={record.potSize}
         initialWorker={record.worker}
         subject={record.varietyName}
-        submitLabel="저장"
+        submitLabel="작업 실행 및 완료"
         onCancel={onClose}
         onSubmit={onSubmit}
       />

@@ -74,7 +74,7 @@ export function InboundDetailCard({
             !record.createdOrchidGroupId &&
             record.status !== "CANCELED" ? (
               <DetailActionButton icon={Scissors} onClick={onOpenPotting}>
-                포트 작업 등록
+                포트 작업 실행
               </DetailActionButton>
             ) : null}
             {!record.createdOrchidGroupId && record.status !== "CANCELED" ? (

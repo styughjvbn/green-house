@@ -1,4 +1,5 @@
 import { API_BASE_URL, fetchApi } from "@/shared/api/client";
+import type { WorkOperation } from "@/entities/farm/types";
 import type {
   ConnectedOrchidGroup,
   InboundPottingPayload,
@@ -309,15 +310,15 @@ export function potInboundRecord(
   inboundRecordId: number,
   payload: InboundPottingPayload,
 ) {
-  return requestJson<InboundRecordResponse>(
-    `/inbound-records/${inboundRecordId}/potting`,
+  return requestJson<WorkOperation>(
+    "/work-operations/inbound-potting-executions",
     {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(payload),
+      body: JSON.stringify({ inboundRecordId, ...payload }),
     },
     "포트 작업을 저장하지 못했습니다.",
-  ).then(toInboundRecord);
+  );
 }
 
 export function cancelInboundRecord(inboundRecordId: number, memo?: string) {

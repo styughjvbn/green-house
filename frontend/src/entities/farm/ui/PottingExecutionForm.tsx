@@ -154,7 +154,7 @@ export function PottingExecutionForm({
       </Field>
       <FarmPlacementField
         dialogDescription="구역을 고른 뒤 포트 작업 결과가 차지할 시작 칸과 끝 칸을 지정하세요."
-        dialogTitle="포트 작업 배치 위치 선탉"
+        dialogTitle="포트 작업 배치 위치 선택"
         houses={houses}
         value={placement}
         onChange={(nextPlacement) => {
