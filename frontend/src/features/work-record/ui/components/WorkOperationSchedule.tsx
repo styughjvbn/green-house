@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import type {
   BedZone,
+  House,
   OrchidGroup,
   WorkOperation,
   WorkOperationStatus,
@@ -21,11 +22,13 @@ const WEEKDAYS = ["월", "화", "수", "목", "금", "토", "일"];
 
 export function WorkOperationSchedule({
   bedZones = [],
+  houses = [],
   orchidGroups = [],
   onClose,
   refreshKey = 0,
 }: {
   bedZones?: BedZone[];
+  houses?: House[];
   orchidGroups?: OrchidGroup[];
   onClose?: () => void;
   refreshKey?: number;
@@ -243,6 +246,7 @@ export function WorkOperationSchedule({
       {selected && executionTarget ? (
         <StructureWorkExecutionDialog
           bedZones={bedZones}
+          houses={houses}
           operation={selected}
           source={
             executionTarget.orchidGroupId == null

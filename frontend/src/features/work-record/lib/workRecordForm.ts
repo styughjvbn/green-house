@@ -1,6 +1,6 @@
 ﻿import type {
   BedZone,
-  HouseStatusSummary,
+  House,
   OrchidGroup,
   PhysicalBed,
   WorkRecord,
@@ -19,7 +19,7 @@ import type {
 
 export function createInitialWorkRecordForm(
   workTypes: WorkType[],
-  houses: HouseStatusSummary[],
+  houses: House[],
 ): WorkRecordFormState {
   const today = new Date().toISOString().slice(0, 10);
   const firstWorkType = getManualWorkTypes(workTypes)[0] ?? workTypes[0];
@@ -28,7 +28,7 @@ export function createInitialWorkRecordForm(
     workTypeId: firstWorkType ? String(firstWorkType.id) : "",
     workDate: today,
     targetType: "FARM",
-    houseId: houses[0] ? String(houses[0].houseId) : "",
+    houseId: houses[0] ? String(houses[0].id) : "",
     physicalBedId: "",
     bedZoneId: "",
     orchidGroupId: "",

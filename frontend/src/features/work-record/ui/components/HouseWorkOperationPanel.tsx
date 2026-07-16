@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import { X } from "lucide-react";
 import type {
   BedZone,
+  House,
   OrchidGroup,
   WorkOperation,
   WorkOperationTarget,
@@ -35,11 +36,13 @@ import { WorkTargetSelectionDialog } from "./WorkTargetSelectionDialog";
 import { StructureWorkExecutionDialog } from "./StructureWorkExecutionDialog";
 
 export function WorkOperationPanel({
+  houses,
   workTypes,
   initialWorkTypeCode,
   onClose,
   onSaved,
 }: {
+  houses: House[];
   workTypes: WorkType[];
   initialWorkTypeCode?: string | null;
   onClose: () => void;
@@ -610,6 +613,7 @@ export function WorkOperationPanel({
       {operation && executionTarget ? (
         <StructureWorkExecutionDialog
           bedZones={bedZones}
+          houses={houses}
           operation={operation}
           source={
             executionTarget.orchidGroupId == null

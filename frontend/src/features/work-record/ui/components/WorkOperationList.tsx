@@ -4,6 +4,7 @@ import { Layers3, Plus, RefreshCw } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import type {
   BedZone,
+  House,
   OrchidGroup,
   WorkOperation,
   WorkOperationStatus,
@@ -20,12 +21,14 @@ import { StructureWorkExecutionDialog } from "./StructureWorkExecutionDialog";
 
 export function WorkOperationList({
   bedZones,
+  houses,
   orchidGroups,
   refreshKey,
   onCreateOperation,
   onCreateRecord,
 }: {
   bedZones: BedZone[];
+  houses: House[];
   orchidGroups: OrchidGroup[];
   refreshKey: number;
   onCreateOperation: () => void;
@@ -268,6 +271,7 @@ export function WorkOperationList({
       {selected && executionTarget ? (
         <StructureWorkExecutionDialog
           bedZones={bedZones}
+          houses={houses}
           operation={selected}
           source={
             executionTarget.orchidGroupId == null

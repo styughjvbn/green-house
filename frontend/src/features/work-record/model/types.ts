@@ -1,6 +1,6 @@
 ﻿import type {
   BedZone,
-  HouseStatusSummary,
+  House,
   OrchidGroup,
   PhysicalBed,
   WorkRecord,
@@ -12,7 +12,7 @@
 
 export type WorkRecordManagerProps = {
   initialRecords: WorkRecord[];
-  houses: HouseStatusSummary[];
+  houses: House[];
   workTypes: WorkType[];
 };
 

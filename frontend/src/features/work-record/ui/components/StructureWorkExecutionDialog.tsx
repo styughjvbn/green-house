@@ -4,10 +4,15 @@ import { useState } from "react";
 import { Plus, Trash2, X } from "lucide-react";
 import type {
   BedZone,
+  House,
   OrchidGroup,
   WorkOperation,
   WorkOperationTarget,
 } from "@/entities/farm/types";
+import {
+  PottingExecutionForm,
+  type PottingExecutionValues,
+} from "@/entities/farm/ui/PottingExecutionForm";
 import { POT_SIZE_OPTIONS } from "@/entities/farm/potSizes";
 import { createUuid } from "@/shared/lib/id";
 import { transitionWorkOperationTarget } from "../../api/workRecordApi";
@@ -23,21 +28,33 @@ type ResultRow = {
   endCell: string;
 };
 
-export function StructureWorkExecutionDialog({
+type StructureWorkExecutionDialogProps = {
+  bedZones: BedZone[];
+  houses: House[];
+  operation: WorkOperation;
+  source: OrchidGroup | null;
+  target: WorkOperationTarget;
+  onClose: () => void;
+  onSaved: (operation: WorkOperation) => void;
+};
+
+export function StructureWorkExecutionDialog(
+  props: StructureWorkExecutionDialogProps,
+) {
+  if (props.operation.workTypeCode === "POTTING") {
+    return <PottingWorkExecutionDialog {...props} />;
+  }
+  return <OrchidStructureWorkExecutionDialog {...props} />;
+}
+
+function OrchidStructureWorkExecutionDialog({
   bedZones,
   operation,
   source,
   target,
   onClose,
   onSaved,
-}: {
-  bedZones: BedZone[];
-  operation: WorkOperation;
-  source: OrchidGroup | null;
-  target: WorkOperationTarget;
-  onClose: () => void;
-  onSaved: (operation: WorkOperation) => void;
-}) {
+}: StructureWorkExecutionDialogProps) {
   const isRepot = operation.workTypeCode === "REPOT";
   const isMovement = operation.workTypeCode === "MOVEMENT";
   const initialBedZoneId =
@@ -52,15 +69,6 @@ export function StructureWorkExecutionDialog({
   );
   const [lossQuantity, setLossQuantity] = useState("0");
   const [lossReason, setLossReason] = useState("");
-  const [actualQuantity, setActualQuantity] = useState(
-    String(Math.max(1, target.quantitySnapshot)),
-  );
-  const [potSize, setPotSize] = useState(
-    source?.potSize ?? target.potSizeSnapshot ?? "",
-  );
-  const [ageYear, setAgeYear] = useState(
-    source?.ageYear == null ? "" : String(source.ageYear),
-  );
   const [bedZoneId, setBedZoneId] = useState(String(initialBedZoneId ?? ""));
   const [startCell, setStartCell] = useState("1");
   const [endCell, setEndCell] = useState("1");
@@ -88,45 +96,30 @@ export function StructureWorkExecutionDialog({
             worker: worker.trim() || null,
             memo: memo.trim() || null,
           }
-        : isRepot
-          ? {
-              idempotencyKey: createUuid(),
-              title: operation.title,
-              workDate: new Date().toISOString().slice(0, 10),
-              worker: worker.trim() || null,
-              memo: memo.trim() || null,
-              sourceOrchidGroupId: target.orchidGroupId,
-              inputQuantity: Number(inputQuantity),
-              lossQuantity: Number(lossQuantity),
-              lossReason: Number(lossQuantity) > 0 ? lossReason.trim() : null,
-              inheritCollectionIds: [],
-              results: rows.map((row) => ({
-                bedZoneId: Number(row.bedZoneId),
-                quantity: Number(row.quantity),
-                potSize: row.potSize || null,
-                ageYear: row.ageYear ? Number(row.ageYear) : null,
-                placementType: null,
-                trayCount: null,
-                splitPlacementAllowed: false,
-                startPosition: Number(row.startCell) - 1,
-                endPosition: Number(row.endCell),
-                memo: null,
-              })),
-            }
-          : {
-              pottingDate: new Date().toISOString().slice(0, 10),
-              actualQuantity: Number(actualQuantity),
-              potSize: potSize || null,
-              ageYear: ageYear ? Number(ageYear) : null,
-              growthStage: null,
+        : {
+            idempotencyKey: createUuid(),
+            title: operation.title,
+            workDate: new Date().toISOString().slice(0, 10),
+            worker: worker.trim() || null,
+            memo: memo.trim() || null,
+            sourceOrchidGroupId: target.orchidGroupId,
+            inputQuantity: Number(inputQuantity),
+            lossQuantity: Number(lossQuantity),
+            lossReason: Number(lossQuantity) > 0 ? lossReason.trim() : null,
+            inheritCollectionIds: [],
+            results: rows.map((row) => ({
+              bedZoneId: Number(row.bedZoneId),
+              quantity: Number(row.quantity),
+              potSize: row.potSize || null,
+              ageYear: row.ageYear ? Number(row.ageYear) : null,
               placementType: null,
               trayCount: null,
-              bedZoneId: Number(bedZoneId),
-              startPosition: Number(startCell) - 1,
-              endPosition: Number(endCell),
-              worker: worker.trim() || null,
-              memo: memo.trim() || null,
-            };
+              splitPlacementAllowed: false,
+              startPosition: Number(row.startCell) - 1,
+              endPosition: Number(row.endCell),
+              memo: null,
+            })),
+          };
       onSaved(
         await transitionWorkOperationTarget(
           operation.id,
@@ -190,11 +183,7 @@ export function StructureWorkExecutionDialog({
         return "결과 난 묶음의 위치와 수량을 확인해주세요.";
       return null;
     }
-    if (!bedZoneId || Number(actualQuantity) < 1)
-      return "배치 위치와 실제 수량을 확인해주세요.";
-    if (Number(startCell) < 1 || Number(endCell) < Number(startCell))
-      return "배치 시작·끝 칸을 확인해주세요.";
-    return null;
+    return "지원하지 않는 작업 유형입니다.";
   }
 
   return (
@@ -290,7 +279,7 @@ export function StructureWorkExecutionDialog({
                 ))}
               </div>
             </>
-          ) : isMovement ? (
+          ) : (
             <div className="grid gap-3 sm:grid-cols-2">
               <SelectInput
                 label="이동할 구역"
@@ -309,43 +298,6 @@ export function StructureWorkExecutionDialog({
                   {target.locationSnapshot.bedZoneName}
                 </span>
               </div>
-              <TextField
-                label="시작 칸"
-                type="number"
-                value={startCell}
-                onChange={setStartCell}
-              />
-              <TextField
-                label="끝 칸"
-                type="number"
-                value={endCell}
-                onChange={setEndCell}
-              />
-            </div>
-          ) : (
-            <div className="grid gap-3 sm:grid-cols-2">
-              <TextField
-                label="실제 수량"
-                type="number"
-                value={actualQuantity}
-                onChange={setActualQuantity}
-              />
-              <SelectInput
-                label="배치 구역"
-                value={bedZoneId}
-                onChange={setBedZoneId}
-                options={bedZones.map((zone) => ({
-                  value: String(zone.id),
-                  label: `${zone.houseNumber}동 ${zone.physicalBedNumber}다이 ${zone.name}`,
-                }))}
-              />
-              <PotSizeInput value={potSize} onChange={setPotSize} />
-              <TextField
-                label="년생"
-                type="number"
-                value={ageYear}
-                onChange={setAgeYear}
-              />
               <TextField
                 label="시작 칸"
                 type="number"
@@ -387,6 +339,71 @@ export function StructureWorkExecutionDialog({
             {saving ? "처리 중" : "작업 완료"}
           </button>
         </footer>
+      </section>
+    </div>
+  );
+}
+
+function PottingWorkExecutionDialog({
+  houses,
+  operation,
+  target,
+  onClose,
+  onSaved,
+}: StructureWorkExecutionDialogProps) {
+  async function complete(values: PottingExecutionValues) {
+    if (target.id == null) {
+      throw new Error("포트 작업 대상을 찾을 수 없습니다.");
+    }
+    const updated = await transitionWorkOperationTarget(
+      operation.id,
+      target.id,
+      "complete",
+      values.worker ?? null,
+      {
+        ...values,
+        growthStage: null,
+        trayCount: null,
+      },
+    );
+    onSaved(updated);
+    onClose();
+  }
+
+  return (
+    <div
+      className="fixed inset-0 z-[1300] flex items-center justify-center bg-black/45 p-4"
+      role="presentation"
+      onMouseDown={onClose}
+    >
+      <section
+        className="max-h-[calc(100dvh-2rem)] w-full max-w-3xl overflow-y-auto rounded-lg bg-white p-5 shadow-2xl"
+        role="dialog"
+        aria-modal="true"
+        aria-label="포트 작업 실행 입력"
+        onMouseDown={(event) => event.stopPropagation()}
+      >
+        <header className="flex items-start justify-between gap-3 border-b pb-4">
+          <div>
+            <h3 className="font-bold text-[#17251b]">포트 작업 실행 입력</h3>
+            <p className="mt-1 text-xs text-[#6a766e]">
+              {target.varietyName} · 계획 #{operation.id}
+            </p>
+          </div>
+          <button type="button" aria-label="닫기" onClick={onClose}>
+            <X className="h-4 w-4" aria-hidden="true" />
+          </button>
+        </header>
+        <PottingExecutionForm
+          houses={houses}
+          initialActualQuantity={Math.max(1, target.quantitySnapshot)}
+          initialAgeYear={target.ageYearSnapshot}
+          initialPotSize={target.potSizeSnapshot}
+          initialWorker={operation.worker}
+          subject={target.varietyName}
+          onCancel={onClose}
+          onSubmit={complete}
+        />
       </section>
     </div>
   );

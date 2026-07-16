@@ -54,6 +54,7 @@ export function WorkRecordManager(
       ) : null}
       {activeTab === "LIST" && showOperationForm ? (
         <WorkOperationPanel
+          houses={props.houses}
           initialWorkTypeCode={operationInitialTypeCode}
           workTypes={props.workTypes}
           onClose={() => setShowOperationForm(false)}
@@ -64,6 +65,7 @@ export function WorkRecordManager(
       {activeTab === "LIST" ? (
         <WorkOperationList
           bedZones={manager.bedZones}
+          houses={props.houses}
           orchidGroups={manager.orchidGroups}
           refreshKey={refreshKey}
           onCreateOperation={() => {
@@ -82,6 +84,7 @@ export function WorkRecordManager(
         <div className="min-h-0 flex-1 overflow-auto">
           <WorkOperationSchedule
             bedZones={manager.bedZones}
+            houses={props.houses}
             orchidGroups={manager.orchidGroups}
             refreshKey={refreshKey}
           />
