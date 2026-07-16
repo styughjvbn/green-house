@@ -2,10 +2,12 @@ package com.greenhouse.backend.work.controller;
 
 import com.greenhouse.backend.common.api.ApiResponse;
 import com.greenhouse.backend.work.application.WorkOperationService;
+import com.greenhouse.backend.work.application.InboundPottingOperationService;
 import com.greenhouse.backend.work.application.WorkOperationCorrectionService;
 import com.greenhouse.backend.work.dto.OrchidGroupWorkHistoryResponse;
 import com.greenhouse.backend.work.dto.InboundPottingCandidateResponse;
 import com.greenhouse.backend.work.dto.InboundPottingPlanCreateRequest;
+import com.greenhouse.backend.work.dto.InboundPottingExecutionRequest;
 import com.greenhouse.backend.work.dto.WorkOperationCreateRequest;
 import com.greenhouse.backend.work.dto.WorkOperationCorrectionCreateRequest;
 import com.greenhouse.backend.work.dto.WorkOperationCorrectionsResponse;
@@ -36,6 +38,7 @@ import org.springframework.web.bind.annotation.RestController;
 public class WorkOperationController {
 
 	private final WorkOperationService workOperationService;
+	private final InboundPottingOperationService inboundPottingOperationService;
 	private final WorkOperationCorrectionService workOperationCorrectionService;
 
 	@PostMapping("/work-operations/target-preview")
@@ -66,6 +69,13 @@ public class WorkOperationController {
 	public ApiResponse<WorkOperationResponse> createInboundPottingPlan(
 			@Valid @RequestBody InboundPottingPlanCreateRequest request) {
 		return ApiResponse.ok(workOperationService.createInboundPottingPlan(request));
+	}
+
+	@PostMapping("/work-operations/inbound-potting-executions")
+	@ResponseStatus(HttpStatus.CREATED)
+	public ApiResponse<WorkOperationResponse> executeInboundPotting(
+			@Valid @RequestBody InboundPottingExecutionRequest request) {
+		return ApiResponse.ok(inboundPottingOperationService.executeNow(request));
 	}
 
 	@GetMapping("/work-operations")

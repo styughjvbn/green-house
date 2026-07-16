@@ -148,4 +148,48 @@ class InboundPottingPlanIntegrationTests extends AbstractBackendIntegrationTest 
 		assertThat(updated.getStatus()).isEqualTo(InboundStatus.PLACED);
 		assertThat(workRecordRepository.count()).isZero();
 	}
+
+	@Test
+	void executesImmediateInboundPottingAsACompletedWorkOperation() throws Exception {
+		mockMvc.perform(post("/api/work-operations/inbound-potting-executions")
+				.contentType(MediaType.APPLICATION_JSON)
+				.content("""
+						{
+						  "inboundRecordId": %d,
+						  "pottingDate": "2026-07-16",
+						  "actualQuantity": 100,
+						  "potSize": "2치",
+						  "ageYear": 1,
+						  "bedZoneId": %d,
+						  "startPosition": 0,
+						  "endPosition": 4,
+						  "worker": "입고 담당",
+						  "memo": "입고 화면 즉시 실행"
+						}
+						""".formatted(inboundRecord.getId(), bedZone.getId())))
+				.andExpect(status().isCreated())
+				.andExpect(jsonPath("$.data.status").value("COMPLETED"))
+				.andExpect(jsonPath("$.data.workTypeCode").value("POTTING"))
+				.andExpect(jsonPath("$.data.targets[0].inboundRecordId").value(inboundRecord.getId()))
+				.andExpect(jsonPath("$.data.targets[0].resultDetails.actualQuantity").value(100));
+
+		InboundRecord updated = inboundRecordRepository.findWithDetailsById(inboundRecord.getId()).orElseThrow();
+		assertThat(updated.getStatus()).isEqualTo(InboundStatus.PLACED);
+		assertThat(updated.getActualQuantity()).isEqualTo(100);
+		assertThat(updated.getCreatedOrchidGroup()).isNotNull();
+
+		var operations = operationRepository.findAll();
+		assertThat(operations).hasSize(1);
+		assertThat(operations.getFirst().getWorkType().getCode()).isEqualTo(WorkType.POTTING_CODE);
+		assertThat(operations.getFirst().getStatus().name()).isEqualTo("COMPLETED");
+		var targets = operationTargetRepository
+				.findByWorkOperationIdAndExcludedAtIsNullOrderByIdAsc(operations.getFirst().getId());
+		assertThat(targets).hasSize(1);
+		assertThat(targets.getFirst().getInboundRecordId()).isEqualTo(inboundRecord.getId());
+		assertThat(targetExecutionRepository
+				.findByTargetWorkOperationIdOrderByIdAsc(operations.getFirst().getId()).getFirst().getStatus().name())
+				.isEqualTo("COMPLETED");
+		assertThat(appliedEffectRepository.count()).isEqualTo(1);
+		assertThat(workRecordRepository.count()).isZero();
+	}
 }

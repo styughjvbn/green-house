@@ -10,6 +10,8 @@ import com.greenhouse.backend.farm.dto.InboundRecordPageResponse;
 import com.greenhouse.backend.farm.dto.InboundRecordPottingRequest;
 import com.greenhouse.backend.farm.dto.InboundRecordResponse;
 import com.greenhouse.backend.farm.dto.InboundRecordUpdateRequest;
+import com.greenhouse.backend.work.application.InboundPottingOperationService;
+import com.greenhouse.backend.work.dto.InboundPottingExecutionRequest;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 
@@ -32,6 +34,7 @@ import org.springframework.web.bind.annotation.RestController;
 public class InboundRecordController {
 
 	private final InboundRecordService inboundRecordService;
+	private final InboundPottingOperationService inboundPottingOperationService;
 
 	@GetMapping
 	public ApiResponse<InboundRecordPageResponse> getInboundRecords(
@@ -68,7 +71,22 @@ public class InboundRecordController {
 	public ApiResponse<InboundRecordResponse> potting(
 			@PathVariable Long inboundRecordId,
 			@Valid @RequestBody InboundRecordPottingRequest request) {
-		return ApiResponse.ok(inboundRecordService.potting(inboundRecordId, request));
+		inboundPottingOperationService.executeNow(
+				new InboundPottingExecutionRequest(
+						inboundRecordId,
+						request.pottingDate(),
+						request.actualQuantity(),
+						request.potSize(),
+						request.ageYear(),
+						request.growthStage(),
+						request.placementType(),
+						request.trayCount(),
+						request.bedZoneId(),
+						request.startPosition(),
+						request.endPosition(),
+						request.worker(),
+						request.memo()));
+		return ApiResponse.ok(inboundRecordService.getInboundRecord(inboundRecordId));
 	}
 
 	@PostMapping("/{inboundRecordId}/cancel")

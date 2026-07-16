@@ -39,7 +39,6 @@ public class InboundRecordService {
 
 	private static final String DEFAULT_ORCHID_STATUS = "정상";
 	private static final String INBOUND_WORK_TYPE_CODE = "INBOUND";
-	private static final String POTTING_WORK_TYPE_CODE = "POTTING";
 	private static final String FARM_TARGET_TYPE = "FARM";
 
 	private final InboundRecordRepository inboundRecordRepository;
@@ -151,20 +150,15 @@ public class InboundRecordService {
 		return InboundRecordResponse.from(inboundRecord);
 	}
 
-	public InboundRecordResponse potting(Long inboundRecordId, InboundRecordPottingRequest request) {
-		return potting(inboundRecordId, request, true);
-	}
-
 	public InboundRecordResponse pottingForOperation(
 			Long inboundRecordId,
 			InboundRecordPottingRequest request) {
-		return potting(inboundRecordId, request, false);
+		return potting(inboundRecordId, request);
 	}
 
 	private InboundRecordResponse potting(
 			Long inboundRecordId,
-			InboundRecordPottingRequest request,
-			boolean recordLegacyWork) {
+			InboundRecordPottingRequest request) {
 		InboundRecord inboundRecord = findInboundRecord(inboundRecordId);
 		if (inboundRecord.getInboundType() != InboundType.FLASK_SEEDLING) {
 			throw new IllegalArgumentException("유리병 모종 입고만 포트 작업을 등록할 수 있습니다.");
@@ -222,18 +216,6 @@ public class InboundRecordService {
 				normalize(request.worker()),
 				appendMemo(inboundRecord.getMemo(), request.memo()));
 		inboundRecord.place(bedZone, orchidGroup, request.pottingDate(), request.actualQuantity());
-		if (recordLegacyWork) {
-			recordWork(
-					POTTING_WORK_TYPE_CODE,
-					request.pottingDate(),
-					"ORCHID_GROUP",
-					orchidGroup.getId(),
-					inboundRecord.getVariety().getName(),
-					String.valueOf(request.actualQuantity()),
-					normalize(request.worker()),
-					normalize(request.memo()),
-					pottingWorkDetails(inboundRecord, orchidGroup, request));
-		}
 		return InboundRecordResponse.from(findInboundRecord(inboundRecord.getId()));
 	}
 
@@ -464,26 +446,6 @@ public class InboundRecordService {
 
 	private String formatBottleCount(Integer bottleCount) {
 		return bottleCount == null ? "-" : bottleCount + "병";
-	}
-
-	private Map<String, Object> pottingWorkDetails(
-			InboundRecord inboundRecord,
-			OrchidGroup orchidGroup,
-			InboundRecordPottingRequest request) {
-		Map<String, Object> details = new LinkedHashMap<>();
-		putDetail(details, "inboundRecordId", inboundRecord.getId());
-		putDetail(details, "orchidGroupId", orchidGroup.getId());
-		putDetail(details, "varietyId", inboundRecord.getVariety().getId());
-		putDetail(details, "genus", inboundRecord.getVariety().getGenus());
-		putDetail(details, "varietyName", inboundRecord.getVariety().getName());
-		putDetail(details, "actualQuantity", request.actualQuantity());
-		putDetail(details, "potSize", firstNonBlank(request.potSize(), inboundRecord.getPotSize()));
-		putDetail(details, "ageYear", request.ageYear());
-		putDetail(details, "growthStage", normalize(request.growthStage()));
-		putDetail(details, "placementType", normalize(request.placementType()));
-		putDetail(details, "trayCount", request.trayCount());
-		putDetail(details, "bedZoneId", request.bedZoneId());
-		return details;
 	}
 
 	private void putDetail(Map<String, Object> details, String key, Object value) {
