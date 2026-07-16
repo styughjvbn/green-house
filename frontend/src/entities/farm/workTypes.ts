@@ -45,6 +45,13 @@ const TEMPLATE_CONFIG: Record<WorkTypeTemplate, WorkTypeTemplateConfig> = {
       quantity: "작업 수량/범위",
     },
   },
+  DISCARD: {
+    label: "폐기형",
+    fields: ["quantity", "worker", "memo"],
+    labels: {
+      quantity: "폐기 수량",
+    },
+  },
   STATUS: {
     label: "상태 기록형",
     fields: ["worker", "memo"],
@@ -124,15 +131,21 @@ export function getSchedulableWorkTypes(workTypes: WorkType[]) {
       (workType.code === "REPOT" ||
         workType.code === "DIVIDE" ||
         workType.code === "MERGE" ||
+        workType.code === "DISCARD" ||
         workType.code === "POTTING" ||
         workType.code === "MOVEMENT" ||
         (!workType.systemType &&
           workType.code !== "INBOUND" &&
           workType.code !== "MULTI_CREATE" &&
           workType.code !== "CORRECTION" &&
-          ["PESTICIDE", "FERTILIZER", "CLEANUP", "STATUS", "MEMO"].includes(
-            workType.template,
-          ))),
+          [
+            "PESTICIDE",
+            "FERTILIZER",
+            "CLEANUP",
+            "DISCARD",
+            "STATUS",
+            "MEMO",
+          ].includes(workType.template))),
   );
 }
 

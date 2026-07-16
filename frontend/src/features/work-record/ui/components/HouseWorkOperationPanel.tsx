@@ -98,6 +98,7 @@ export function WorkOperationPanel({
     selectedWorkType?.code === "REPOT" ||
     selectedWorkType?.code === "DIVIDE" ||
     selectedWorkType?.code === "MERGE" ||
+    selectedWorkType?.code === "DISCARD" ||
     selectedWorkType?.code === "MOVEMENT";
 
   const includedTargets = useMemo(
@@ -985,9 +986,12 @@ export function OperationResult({
                   ? `${target.locationSnapshot.tempLocation ?? "임시 위치 미지정"} · 입고 #${target.inboundRecordId}`
                   : `${target.locationSnapshot.houseNumber}동 ${target.locationSnapshot.physicalBedNumber}다이 ${target.locationSnapshot.bedZoneName}`}{" "}
                 · 계획 {target.quantitySnapshot}분
-                {target.processedQuantity > 0
-                  ? ` · 작업 ${target.processedQuantity}분 · 잔여 ${target.remainingQuantity}분`
-                  : ""}
+                {operation.workTypeCode === "DISCARD" &&
+                typeof target.resultDetails?.discardedQuantity === "number"
+                  ? ` · 폐기 ${target.resultDetails.discardedQuantity}분 · 현재 ${target.resultDetails.remainingQuantity}분`
+                  : target.processedQuantity > 0
+                    ? ` · 작업 ${target.processedQuantity}분 · 잔여 ${target.remainingQuantity}분`
+                    : ""}
               </p>
             </div>
             <span className="rounded-full bg-[#eef2ed] px-2 py-1 text-xs font-semibold text-[#526057]">
@@ -1033,6 +1037,7 @@ export function OperationResult({
                     operation.workTypeCode === "REPOT" ||
                     operation.workTypeCode === "DIVIDE" ||
                     operation.workTypeCode === "POTTING" ||
+                    operation.workTypeCode === "DISCARD" ||
                     operation.workTypeCode === "MOVEMENT"
                       ? "실행 입력"
                       : "완료"
@@ -1042,6 +1047,7 @@ export function OperationResult({
                     ((operation.workTypeCode === "REPOT" ||
                       operation.workTypeCode === "DIVIDE" ||
                       operation.workTypeCode === "POTTING" ||
+                      operation.workTypeCode === "DISCARD" ||
                       operation.workTypeCode === "MOVEMENT") &&
                       !onExecuteTarget)
                   }
@@ -1050,6 +1056,7 @@ export function OperationResult({
                       operation.workTypeCode === "REPOT" ||
                       operation.workTypeCode === "DIVIDE" ||
                       operation.workTypeCode === "POTTING" ||
+                      operation.workTypeCode === "DISCARD" ||
                       operation.workTypeCode === "MOVEMENT"
                     ) {
                       onExecuteTarget?.(target);
@@ -1117,6 +1124,8 @@ function workPlanGuidance(code?: string) {
       return "같은 품종의 대상 그룹을 정하고, 실행 회차마다 원본과 여러 결과 묶음을 기록합니다.";
     case "POTTING":
       return "포트 작업 대기 입고 기록을 선택하고, 실행할 때 실제 수량과 배치 위치를 입력합니다.";
+    case "DISCARD":
+      return "폐기할 난 묶음을 대상으로 정하고, 실행할 때 대상별 일부 또는 전량 폐기 수량과 사유를 입력합니다.";
     default:
       return "난 묶음을 계획 대상으로 확정하고, 작업 유형에 맞는 기록 내용을 저장합니다.";
   }

@@ -196,6 +196,7 @@ export type WorkTypeTemplate =
   | "FERTILIZER"
   | "REPOT"
   | "CLEANUP"
+  | "DISCARD"
   | "STATUS"
   | "MEMO"
   | "MOVEMENT"
