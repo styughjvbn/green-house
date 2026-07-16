@@ -23,6 +23,7 @@ type WorkRecordCreateFormProps = {
   saving: boolean;
   workTypes: WorkType[];
   onClose: () => void;
+  onOpenPlannedWork: () => void;
   onOpenDedicatedWork: (
     workTypeCode: "MOVEMENT" | "REPOT" | "DIVIDE" | "MERGE" | "POTTING",
   ) => void;
@@ -44,6 +45,7 @@ export function WorkRecordCreateForm({
   workTypes,
   onClose,
   onChange,
+  onOpenPlannedWork,
   onOpenDedicatedWork,
   onTargetChange,
   onSubmit,
@@ -74,7 +76,7 @@ export function WorkRecordCreateForm({
         className="flex max-h-[calc(100dvh-2rem)] w-full max-w-2xl flex-col rounded-md bg-white shadow-xl"
         role="dialog"
         aria-modal="true"
-        aria-label="작업 기록 추가"
+        aria-label="작업 등록"
         onMouseDown={(event) => event.stopPropagation()}
       >
         <div className="flex shrink-0 items-start justify-between gap-3 border-b border-[#edf0ec] p-5">
@@ -82,8 +84,7 @@ export function WorkRecordCreateForm({
             <p className="text-sm font-semibold text-[#3d6f91]">작업 등록</p>
             <h2 className="mt-1 text-xl font-semibold">작업 등록</h2>
             <p className="mt-1 text-sm text-[#5c6a60]">
-              일반 작업은 바로 기록하고, 이동·분갈이·포트 작업은 전용 입력으로
-              진행합니다.
+              완료된 작업을 기록하거나 기간을 정해 작업을 계획합니다.
             </p>
           </div>
           <button
@@ -100,6 +101,23 @@ export function WorkRecordCreateForm({
           className="min-h-0 space-y-3 overflow-y-auto p-5"
           onSubmit={onSubmit}
         >
+          <div className="grid grid-cols-2 gap-2 rounded-md bg-[#edf3ed] p-1">
+            <button
+              className="rounded bg-white px-3 py-2 text-sm font-semibold text-[#10783a] shadow-sm"
+              type="button"
+              aria-current="page"
+            >
+              완료 작업 기록
+            </button>
+            <button
+              className="rounded px-3 py-2 text-sm font-semibold text-[#526057] hover:bg-white/70"
+              type="button"
+              onClick={onOpenPlannedWork}
+            >
+              기간 작업 계획
+            </button>
+          </div>
+
           <section className="rounded-md border border-[#cfe0d2] bg-[#f7faf6] p-4">
             <p className="text-sm font-semibold text-[#26352b]">전용 작업</p>
             <p className="mt-1 text-xs text-[#6a766e]">

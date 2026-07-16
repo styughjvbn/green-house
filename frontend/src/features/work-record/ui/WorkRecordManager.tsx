@@ -43,6 +43,11 @@ export function WorkRecordManager(
           workTypes={props.workTypes}
           onClose={() => manager.setShowCreateForm(false)}
           onChange={manager.updateForm}
+          onOpenPlannedWork={() => {
+            manager.setShowCreateForm(false);
+            setOperationInitialTypeCode(null);
+            setShowOperationForm(true);
+          }}
           onOpenDedicatedWork={(workTypeCode) => {
             manager.setShowCreateForm(false);
             setOperationInitialTypeCode(workTypeCode);
@@ -58,6 +63,10 @@ export function WorkRecordManager(
           initialWorkTypeCode={operationInitialTypeCode}
           workTypes={props.workTypes}
           onClose={() => setShowOperationForm(false)}
+          onOpenCompletedWork={() => {
+            setShowOperationForm(false);
+            manager.setShowCreateForm(true);
+          }}
           onSaved={() => setOperationSavedVersion((current) => current + 1)}
         />
       ) : null}
@@ -68,12 +77,7 @@ export function WorkRecordManager(
           houses={props.houses}
           orchidGroups={manager.orchidGroups}
           refreshKey={refreshKey}
-          onCreateOperation={() => {
-            manager.setShowCreateForm(false);
-            setOperationInitialTypeCode(null);
-            setShowOperationForm(true);
-          }}
-          onCreateRecord={() => {
+          onCreateWork={() => {
             setShowOperationForm(false);
             manager.setShowCreateForm(true);
           }}

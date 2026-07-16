@@ -1,6 +1,6 @@
 "use client";
 
-import { Layers3, Plus, RefreshCw } from "lucide-react";
+import { Plus, RefreshCw } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import type {
   BedZone,
@@ -24,15 +24,13 @@ export function WorkOperationList({
   houses,
   orchidGroups,
   refreshKey,
-  onCreateOperation,
-  onCreateRecord,
+  onCreateWork,
 }: {
   bedZones: BedZone[];
   houses: House[];
   orchidGroups: OrchidGroup[];
   refreshKey: number;
-  onCreateOperation: () => void;
-  onCreateRecord: () => void;
+  onCreateWork: () => void;
 }) {
   const [operations, setOperations] = useState<WorkOperation[]>([]);
   const [selectedId, setSelectedId] = useState<number | null>(null);
@@ -117,20 +115,12 @@ export function WorkOperationList({
           </div>
           <div className="flex flex-wrap gap-2">
             <button
-              className="inline-flex h-10 items-center gap-2 rounded-md bg-[#159447] px-4 text-sm font-semibold text-white shadow-sm hover:bg-[#10783a]"
-              type="button"
-              onClick={onCreateOperation}
-            >
-              <Layers3 className="h-4 w-4" aria-hidden="true" />
-              기간 작업 등록
-            </button>
-            <button
               className="inline-flex h-10 items-center gap-2 rounded-md bg-[#159447] px-4 text-sm font-semibold text-white"
               type="button"
-              onClick={onCreateRecord}
+              onClick={onCreateWork}
             >
               <Plus className="h-4 w-4" aria-hidden="true" />
-              작업 기록
+              작업 등록
             </button>
           </div>
         </div>

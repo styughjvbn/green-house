@@ -40,12 +40,14 @@ export function WorkOperationPanel({
   workTypes,
   initialWorkTypeCode,
   onClose,
+  onOpenCompletedWork,
   onSaved,
 }: {
   houses: House[];
   workTypes: WorkType[];
   initialWorkTypeCode?: string | null;
   onClose: () => void;
+  onOpenCompletedWork: () => void;
   onSaved?: () => void;
 }) {
   const schedulableWorkTypes = getSchedulableWorkTypes(workTypes);
@@ -364,17 +366,17 @@ export function WorkOperationPanel({
         className="flex max-h-[calc(100dvh-2rem)] w-full max-w-6xl flex-col overflow-hidden rounded-md bg-[#f5fbf5] shadow-xl"
         role="dialog"
         aria-modal="true"
-        aria-label="기간 작업 등록"
+        aria-label="작업 등록"
         onMouseDown={(event) => event.stopPropagation()}
       >
         <div className="flex shrink-0 items-start justify-between gap-3 border-b border-[#dbe8dc] bg-white p-5">
           <div>
             <p className="text-sm font-semibold text-[#3d6f91]">작업 관리</p>
             <h2 className="mt-1 text-xl font-semibold text-[#17251b]">
-              기간 작업 등록
+              작업 등록
             </h2>
             <p className="mt-1 text-sm text-[#5c6a60]">
-              작업 유형을 먼저 선택하고 계획 대상을 확정합니다.
+              완료된 작업을 기록하거나 기간을 정해 작업을 계획합니다.
             </p>
           </div>
           <button
@@ -388,6 +390,24 @@ export function WorkOperationPanel({
         </div>
 
         <div className="min-h-0 overflow-y-auto p-5">
+          {!operation ? (
+            <div className="grid grid-cols-2 gap-2 rounded-md bg-[#e5eee5] p-1">
+              <button
+                className="rounded px-3 py-2 text-sm font-semibold text-[#526057] hover:bg-white/70"
+                type="button"
+                onClick={onOpenCompletedWork}
+              >
+                완료 작업 기록
+              </button>
+              <button
+                className="rounded bg-white px-3 py-2 text-sm font-semibold text-[#10783a] shadow-sm"
+                type="button"
+                aria-current="page"
+              >
+                기간 작업 계획
+              </button>
+            </div>
+          ) : null}
           {errorMessage ? (
             <p className="rounded-md border border-[#c25a3c] bg-[#fff1ec] p-3 text-sm text-[#8f2f19]">
               {errorMessage}
