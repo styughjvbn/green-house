@@ -163,6 +163,89 @@ class DivideMergeWorkOperationIntegrationTests extends AbstractBackendIntegratio
 		});
 	}
 
+	@Test
+	void recordsPartialBatchAndCreatesMultiplePurposeResults() throws Exception {
+		OrchidGroup source = createSource(30, "0", "3");
+		Long operationId = createPlan(divideType, source.getId());
+
+		mockMvc.perform(post("/api/work-operations/{id}/start", operationId))
+				.andExpect(status().isOk());
+		mockMvc.perform(post("/api/work-operations/{id}/structure-change-executions", operationId)
+				.contentType(MediaType.APPLICATION_JSON)
+				.content("""
+						{
+						  "idempotencyKey": "divide-batch-1",
+						  "worker": "분주 담당자",
+						  "sources": [
+						    {"sourceOrchidGroupId": %d, "inputQuantity": 10}
+						  ],
+						  "lossQuantity": 0,
+						  "results": [
+						    {"bedZoneId": %d, "quantity": 6, "sourceOrchidGroupIds": [%d], "potSize": "3.5치", "ageYear": 2, "purpose": "NORMAL", "startPosition": 0, "endPosition": 1},
+						    {"bedZoneId": %d, "quantity": 4, "sourceOrchidGroupIds": [%d], "potSize": "3.5치", "ageYear": 2, "purpose": "DIVIDE_CANDIDATE", "startPosition": 1, "endPosition": 2}
+						  ]
+						}
+						""".formatted(
+								source.getId(), resultZone.getId(), source.getId(), resultZone.getId(), source.getId())))
+				.andExpect(status().isCreated())
+				.andExpect(jsonPath("$.data.targets[0].executionStatus").value("PARTIALLY_COMPLETED"))
+				.andExpect(jsonPath("$.data.targets[0].processedQuantity").value(10))
+				.andExpect(jsonPath("$.data.targets[0].remainingQuantity").value(20))
+				.andExpect(jsonPath("$.data.progress.progressPercent").value(33));
+
+		assertThat(orchidGroupRepository.findById(source.getId()).orElseThrow().getQuantity()).isEqualTo(20);
+		assertThat(orchidGroupRepository.findByBedZoneIdAndQuantityGreaterThanOrderBySortOrderAsc(
+				resultZone.getId(), 0))
+				.hasSize(2)
+				.extracting(OrchidGroup::getStatus)
+				.containsExactly("정상", "분주 예정");
+		assertThat(appliedEffectRepository.findByWorkOperationIdOrderByIdAsc(operationId)).hasSize(1);
+
+		Long targetId = operationTargetRepository
+				.findByWorkOperationIdAndExcludedAtIsNullOrderByIdAsc(operationId).getFirst().getId();
+		mockMvc.perform(post("/api/work-operations/{id}/targets/{targetId}/skip", operationId, targetId)
+				.contentType(MediaType.APPLICATION_JSON)
+				.content("{\"worker\":\"분주 담당자\"}"))
+				.andExpect(status().isOk())
+				.andExpect(jsonPath("$.data.targets[0].executionStatus").value("SKIPPED"))
+				.andExpect(jsonPath("$.data.progress.progressPercent").value(100));
+	}
+
+	@Test
+	void mergesMultiplePlannedSourcesIntoOneBatchResult() throws Exception {
+		OrchidGroup first = createSource(8, "0", "1");
+		OrchidGroup second = createSource(12, "1", "2");
+		Long operationId = createPlan(mergeType, first.getId(), second.getId());
+
+		mockMvc.perform(post("/api/work-operations/{id}/start", operationId))
+				.andExpect(status().isOk());
+		mockMvc.perform(post("/api/work-operations/{id}/structure-change-executions", operationId)
+				.contentType(MediaType.APPLICATION_JSON)
+				.content("""
+						{
+						  "idempotencyKey": "merge-batch-1",
+						  "sources": [
+						    {"sourceOrchidGroupId": %d, "inputQuantity": 8},
+						    {"sourceOrchidGroupId": %d, "inputQuantity": 12}
+						  ],
+						  "lossQuantity": 0,
+						  "results": [
+						    {"bedZoneId": %d, "quantity": 20, "sourceOrchidGroupIds": [%d, %d], "potSize": "4치", "ageYear": 2, "purpose": "NORMAL", "startPosition": 0, "endPosition": 2}
+						  ]
+						}
+						""".formatted(
+								first.getId(), second.getId(), resultZone.getId(), first.getId(), second.getId())))
+				.andExpect(status().isCreated())
+				.andExpect(jsonPath("$.data.targets[0].executionStatus").value("COMPLETED"))
+				.andExpect(jsonPath("$.data.targets[1].executionStatus").value("COMPLETED"));
+
+		var result = orchidGroupRepository
+				.findByBedZoneIdAndQuantityGreaterThanOrderBySortOrderAsc(resultZone.getId(), 0).getFirst();
+		assertThat(lineageRepository.findByResultOrchidGroupIdOrderByCreatedAtAscIdAsc(result.getId()))
+				.hasSize(2)
+				.allMatch(lineage -> lineage.getRelationType() == OrchidGroupLineageRelationType.MERGED_TO);
+	}
+
 	private Long createPlan(WorkType workType, Long... sourceIds) throws Exception {
 		String ids = java.util.Arrays.stream(sourceIds).map(String::valueOf)
 				.collect(java.util.stream.Collectors.joining(","));

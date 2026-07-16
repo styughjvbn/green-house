@@ -55,6 +55,9 @@ public class WorkTargetExecution extends BaseEntity {
 	@Column(name = "effect_applied_at")
 	private LocalDateTime effectAppliedAt;
 
+	@Column(name = "processed_quantity", nullable = false)
+	private Integer processedQuantity;
+
 	@Version
 	@Column(nullable = false)
 	private long version;
@@ -62,6 +65,7 @@ public class WorkTargetExecution extends BaseEntity {
 	public WorkTargetExecution(WorkOperationTarget target) {
 		this.target = target;
 		this.status = WorkTargetExecutionStatus.PENDING;
+		this.processedQuantity = 0;
 	}
 
 	public void start(LocalDateTime startedAt, String worker) {
@@ -83,7 +87,9 @@ public class WorkTargetExecution extends BaseEntity {
 		if (isEffectApplied()) {
 			return;
 		}
-		if (status != WorkTargetExecutionStatus.PENDING && status != WorkTargetExecutionStatus.IN_PROGRESS) {
+		if (status != WorkTargetExecutionStatus.PENDING
+				&& status != WorkTargetExecutionStatus.IN_PROGRESS
+				&& status != WorkTargetExecutionStatus.PARTIALLY_COMPLETED) {
 			throw new IllegalArgumentException("완료할 수 없는 작업 대상 상태입니다.");
 		}
 		if (startedAt == null) {
@@ -93,6 +99,7 @@ public class WorkTargetExecution extends BaseEntity {
 		this.worker = worker;
 		this.resultDetails = resultDetails;
 		this.effectAppliedAt = completedAt;
+		this.processedQuantity = target.getQuantitySnapshot();
 		this.status = WorkTargetExecutionStatus.COMPLETED;
 	}
 
@@ -100,11 +107,44 @@ public class WorkTargetExecution extends BaseEntity {
 		return effectAppliedAt != null;
 	}
 
+	public void recordPartialEffect(
+			Integer inputQuantity,
+			Integer plannedQuantity,
+			LocalDateTime executedAt,
+			String worker,
+			Map<String, Object> resultDetails) {
+		if (inputQuantity == null || inputQuantity < 1) {
+			throw new IllegalArgumentException("작업 수량은 1 이상이어야 합니다.");
+		}
+		int nextQuantity = processedQuantity + inputQuantity;
+		if (nextQuantity > plannedQuantity) {
+			throw new IllegalArgumentException("누적 작업 수량은 계획 수량보다 클 수 없습니다.");
+		}
+		if (status != WorkTargetExecutionStatus.PENDING
+				&& status != WorkTargetExecutionStatus.IN_PROGRESS
+				&& status != WorkTargetExecutionStatus.PARTIALLY_COMPLETED) {
+			throw new IllegalArgumentException("추가 실행할 수 없는 작업 대상 상태입니다.");
+		}
+		if (startedAt == null) startedAt = executedAt;
+		this.processedQuantity = nextQuantity;
+		this.worker = worker;
+		this.resultDetails = resultDetails;
+		this.effectAppliedAt = executedAt;
+		if (nextQuantity == plannedQuantity) {
+			this.completedAt = executedAt;
+			this.status = WorkTargetExecutionStatus.COMPLETED;
+		} else {
+			this.status = WorkTargetExecutionStatus.PARTIALLY_COMPLETED;
+		}
+	}
+
 	public void skip(LocalDateTime skippedAt, String worker, Map<String, Object> resultDetails) {
 		if (status == WorkTargetExecutionStatus.SKIPPED) {
 			return;
 		}
-		if (status != WorkTargetExecutionStatus.PENDING && status != WorkTargetExecutionStatus.IN_PROGRESS) {
+		if (status != WorkTargetExecutionStatus.PENDING
+				&& status != WorkTargetExecutionStatus.IN_PROGRESS
+				&& status != WorkTargetExecutionStatus.PARTIALLY_COMPLETED) {
 			throw new IllegalArgumentException("건너뛸 수 없는 작업 대상 상태입니다.");
 		}
 		if (startedAt == null) {

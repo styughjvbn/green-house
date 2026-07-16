@@ -39,6 +39,27 @@ public class WorkEffectProcessor {
 			WorkOperation operation,
 			WorkOperationTarget target,
 			WorkEffectCommand command) {
+		return apply(operation, target, command,
+				target == null ? "OPERATION" : "TARGET:" + target.getId(),
+				target != null && target.getOrchidGroupId() != null
+						? List.of(target.getOrchidGroupId())
+						: List.of());
+	}
+
+	public WorkExecutionResult applyBatch(
+			WorkOperation operation,
+			String executionKey,
+			List<Long> sourceOrchidGroupIds,
+			WorkEffectCommand command) {
+		return apply(operation, null, command, "EXECUTION:" + executionKey, sourceOrchidGroupIds);
+	}
+
+	private WorkExecutionResult apply(
+			WorkOperation operation,
+			WorkOperationTarget target,
+			WorkEffectCommand command,
+			String effectKey,
+			List<Long> sourceOrchidGroupIds) {
 		String handlerCode = operation.getWorkType().handlerCode();
 		WorkEffectHandler handler = handlers.get(handlerCode);
 		if (handler == null) {
@@ -50,7 +71,7 @@ public class WorkEffectProcessor {
 		WorkAppliedEffect appliedEffect = workAppliedEffectRepository.save(new WorkAppliedEffect(
 				operation,
 				target,
-				target == null ? "OPERATION" : "TARGET:" + target.getId(),
+				effectKey,
 				effectKind,
 				handlerCode,
 				command.executedAt(),
@@ -58,10 +79,10 @@ public class WorkEffectProcessor {
 				command.resultDetails(),
 				result.resultDetails()));
 		var groupLinks = new java.util.ArrayList<WorkEffectOrchidGroup>();
-		if (target != null && target.getOrchidGroupId() != null
-				&& effectKind == WorkEffectKind.STRUCTURE_CHANGE) {
-			groupLinks.add(new WorkEffectOrchidGroup(
-					appliedEffect, target.getOrchidGroupId(), WorkEffectOrchidGroupRelationType.SOURCE));
+		if (effectKind == WorkEffectKind.STRUCTURE_CHANGE) {
+			sourceOrchidGroupIds.stream().distinct().forEach(groupId -> groupLinks.add(
+					new WorkEffectOrchidGroup(
+							appliedEffect, groupId, WorkEffectOrchidGroupRelationType.SOURCE)));
 		}
 		WorkEffectOrchidGroupRelationType resultRelation = target == null
 				&& "MULTI_CREATE".equals(handlerCode)

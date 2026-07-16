@@ -18,11 +18,15 @@ import com.greenhouse.backend.work.dto.WorkOperationTargetResponse;
 import com.greenhouse.backend.work.dto.WorkTargetPreviewRequest;
 import com.greenhouse.backend.work.dto.WorkTargetPreviewResponse;
 import com.greenhouse.backend.work.dto.WorkTargetExecutionRequest;
+import com.greenhouse.backend.work.dto.StructureChangeExecutionRequest;
 import com.greenhouse.backend.work.repository.WorkOperationRepository;
 import com.greenhouse.backend.work.repository.WorkOperationTargetRepository;
 import com.greenhouse.backend.work.repository.WorkRecordRepository;
 import com.greenhouse.backend.work.repository.WorkEffectOrchidGroupRepository;
 import com.greenhouse.backend.work.repository.WorkTargetExecutionRepository;
+import com.greenhouse.backend.work.repository.WorkAppliedEffectRepository;
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.HashSet;
@@ -49,7 +53,9 @@ public class WorkOperationService {
 	private final WorkRecordRepository workRecordRepository;
 	private final WorkEffectOrchidGroupRepository workEffectOrchidGroupRepository;
 	private final WorkEffectProcessor workEffectProcessor;
+	private final WorkAppliedEffectRepository workAppliedEffectRepository;
 	private final InboundPottingPlanGateway inboundPottingPlanGateway;
+	private final ObjectMapper objectMapper = new ObjectMapper().findAndRegisterModules();
 
 	@Transactional(readOnly = true)
 	public WorkTargetPreviewResponse preview(WorkTargetPreviewRequest request) {
@@ -94,9 +100,6 @@ public class WorkOperationService {
 			throw new IllegalArgumentException("작업 대상 난 묶음이 한 개 이상 필요합니다.");
 		}
 		if (com.greenhouse.backend.work.domain.WorkType.MERGE_CODE.equals(workType.getCode())) {
-			if (included.size() < 2) {
-				throw new IllegalArgumentException("합식은 원본 난 묶음이 두 개 이상 필요합니다.");
-			}
 			Long varietyId = included.getFirst().varietyId();
 			if (varietyId == null || included.stream().anyMatch(group -> !varietyId.equals(group.varietyId()))) {
 				throw new IllegalArgumentException("합식은 같은 품종의 난 묶음끼리만 계획할 수 있습니다.");
@@ -271,8 +274,9 @@ public class WorkOperationService {
 		List<WorkTargetExecution> executions = workTargetExecutionRepository
 				.findByTargetWorkOperationIdOrderByIdAsc(operationId);
 		if (executions.stream().anyMatch(execution -> execution.getStatus()
-				== com.greenhouse.backend.work.domain.WorkTargetExecutionStatus.COMPLETED)) {
-			throw new IllegalArgumentException("완료된 대상이 있는 작업은 취소할 수 없습니다.");
+				== com.greenhouse.backend.work.domain.WorkTargetExecutionStatus.COMPLETED
+				|| execution.getProcessedQuantity() > 0)) {
+			throw new IllegalArgumentException("이미 실행된 수량이 있는 작업은 취소할 수 없습니다.");
 		}
 		LocalDateTime canceledAt = LocalDateTime.now();
 		operation.cancel();
@@ -335,6 +339,65 @@ public class WorkOperationService {
 				new WorkEffectCommand(completedAt, worker, request.resultDetails(), null));
 		executions.forEach(execution ->
 				execution.completeWithEffect(completedAt, worker, result.resultDetails()));
+		return get(operationId);
+	}
+
+	public WorkOperationResponse executeStructureChange(
+			Long operationId, StructureChangeExecutionRequest request) {
+		List<WorkTargetExecution> executions = workTargetExecutionRepository
+				.findForUpdateByTargetWorkOperationIdOrderByIdAsc(operationId);
+		if (executions.isEmpty()) {
+			throw new IllegalArgumentException("구조 변경 작업 대상이 없습니다.");
+		}
+		WorkOperation operation = executions.getFirst().getTarget().getWorkOperation();
+		if (!Set.of(
+				com.greenhouse.backend.work.domain.WorkType.REPOT_CODE,
+				com.greenhouse.backend.work.domain.WorkType.DIVIDE_CODE,
+				com.greenhouse.backend.work.domain.WorkType.MERGE_CODE)
+				.contains(operation.getWorkType().getCode())) {
+			throw new IllegalArgumentException("분갈이·분주·합식 작업만 회차 실행할 수 있습니다.");
+		}
+		if (operation.getStatus() != WorkOperationStatus.IN_PROGRESS) {
+			throw new IllegalArgumentException("진행 중인 구조 변경 작업만 실행할 수 있습니다.");
+		}
+		String effectKey = "EXECUTION:" + request.idempotencyKey();
+		if (workAppliedEffectRepository.findByWorkOperationIdAndEffectKey(operationId, effectKey).isPresent()) {
+			return get(operationId);
+		}
+
+		Map<Long, WorkTargetExecution> executionByGroupId = executions.stream()
+				.filter(execution -> execution.getTarget().getOrchidGroupId() != null)
+				.collect(Collectors.toMap(
+						execution -> execution.getTarget().getOrchidGroupId(), Function.identity()));
+		Set<Long> requestedIds = request.sources().stream()
+				.map(source -> source.sourceOrchidGroupId()).collect(Collectors.toSet());
+		if (requestedIds.size() != request.sources().size()
+				|| !executionByGroupId.keySet().containsAll(requestedIds)) {
+			throw new IllegalArgumentException("실행 원본은 계획에 확정된 난 묶음이어야 하며 중복될 수 없습니다.");
+		}
+		request.sources().forEach(source -> {
+			WorkTargetExecution execution = executionByGroupId.get(source.sourceOrchidGroupId());
+			int remaining = execution.getTarget().getQuantitySnapshot() - execution.getProcessedQuantity();
+			if (source.inputQuantity() > remaining) {
+				throw new IllegalArgumentException("작업 수량은 대상의 계획 잔여 수량보다 클 수 없습니다.");
+			}
+		});
+
+		LocalDateTime executedAt = LocalDateTime.now();
+		String worker = normalize(request.worker());
+		Map<String, Object> commandDetails = objectMapper.convertValue(
+				request, new TypeReference<Map<String, Object>>() {});
+		var result = workEffectProcessor.applyBatch(
+				operation,
+				request.idempotencyKey(),
+				requestedIds.stream().sorted().toList(),
+				new WorkEffectCommand(executedAt, worker, commandDetails, request));
+		request.sources().forEach(source -> {
+			WorkTargetExecution execution = executionByGroupId.get(source.sourceOrchidGroupId());
+			execution.recordPartialEffect(
+					source.inputQuantity(), execution.getTarget().getQuantitySnapshot(),
+					executedAt, worker, result.resultDetails());
+		});
 		return get(operationId);
 	}
 

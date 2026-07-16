@@ -13,6 +13,7 @@ import com.greenhouse.backend.work.dto.WorkOperationResponse;
 import com.greenhouse.backend.work.dto.WorkTargetPreviewRequest;
 import com.greenhouse.backend.work.dto.WorkTargetPreviewResponse;
 import com.greenhouse.backend.work.dto.WorkTargetExecutionRequest;
+import com.greenhouse.backend.work.dto.StructureChangeExecutionRequest;
 import jakarta.validation.Valid;
 import java.util.List;
 import java.time.LocalDate;
@@ -139,6 +140,14 @@ public class WorkOperationController {
 			@PathVariable Long workOperationId,
 			@Valid @RequestBody WorkTargetExecutionRequest request) {
 		return ApiResponse.ok(workOperationService.completeMerge(workOperationId, request));
+	}
+
+	@PostMapping("/work-operations/{workOperationId}/structure-change-executions")
+	@ResponseStatus(HttpStatus.CREATED)
+	public ApiResponse<WorkOperationResponse> executeStructureChange(
+			@PathVariable Long workOperationId,
+			@Valid @RequestBody StructureChangeExecutionRequest request) {
+		return ApiResponse.ok(workOperationService.executeStructureChange(workOperationId, request));
 	}
 
 	@GetMapping("/orchid-groups/{orchidGroupId}/work-history")
