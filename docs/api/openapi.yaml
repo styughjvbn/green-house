@@ -403,6 +403,31 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ApiResponseWorkOperationResponse'
+  /api/work-operations/{workOperationId}/structure-change-executions:
+    post:
+      tags:
+      - work-operation-controller
+      operationId: executeStructureChange
+      parameters:
+      - name: workOperationId
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: int64
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/StructureChangeExecutionRequest'
+        required: true
+      responses:
+        '201':
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponseWorkOperationResponse'
   /api/work-operations/{workOperationId}/start:
     post:
       tags:
@@ -3457,6 +3482,9 @@ components:
         inProgress:
           type: integer
           format: int32
+        partial:
+          type: integer
+          format: int32
         completed:
           type: integer
           format: int32
@@ -3601,11 +3629,18 @@ components:
         locationSnapshot:
           type: object
           additionalProperties: {}
+        processedQuantity:
+          type: integer
+          format: int32
+        remainingQuantity:
+          type: integer
+          format: int32
         executionStatus:
           type: string
           enum:
           - PENDING
           - IN_PROGRESS
+          - PARTIALLY_COMPLETED
           - COMPLETED
           - SKIPPED
           - CANCELED
@@ -3634,6 +3669,117 @@ components:
         resultDetails:
           type: object
           additionalProperties: {}
+    StructureChangeExecutionRequest:
+      type: object
+      properties:
+        idempotencyKey:
+          type: string
+          maxLength: 100
+          minLength: 0
+        worker:
+          type: string
+          maxLength: 100
+          minLength: 0
+        memo:
+          type: string
+          maxLength: 1000
+          minLength: 0
+        sources:
+          type: array
+          items:
+            $ref: '#/components/schemas/StructureChangeSourceRequest'
+          maxItems: 100
+          minItems: 0
+        lossQuantity:
+          type: integer
+          format: int32
+          minimum: 0
+        lossReason:
+          type: string
+          maxLength: 1000
+          minLength: 0
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/StructureChangeResultRequest'
+          maxItems: 100
+          minItems: 0
+      required:
+      - idempotencyKey
+      - lossQuantity
+      - results
+      - sources
+    StructureChangeResultRequest:
+      type: object
+      properties:
+        bedZoneId:
+          type: integer
+          format: int64
+        quantity:
+          type: integer
+          format: int32
+          minimum: 1
+        sourceOrchidGroupIds:
+          type: array
+          items:
+            type: integer
+            format: int64
+          maxItems: 100
+          minItems: 0
+          uniqueItems: true
+        potSize:
+          type: string
+          maxLength: 50
+          minLength: 0
+        ageYear:
+          type: integer
+          format: int32
+          minimum: 0
+        purpose:
+          type: string
+          enum:
+          - NORMAL
+          - DIVIDE_CANDIDATE
+          - HELD
+        placementType:
+          type: string
+          maxLength: 50
+          minLength: 0
+        trayCount:
+          type: integer
+          format: int32
+          minimum: 0
+        splitPlacementAllowed:
+          type: boolean
+        startPosition:
+          type: number
+          minimum: 0.0
+        endPosition:
+          type: number
+          minimum: 0.0
+        memo:
+          type: string
+          maxLength: 1000
+          minLength: 0
+      required:
+      - bedZoneId
+      - endPosition
+      - purpose
+      - quantity
+      - startPosition
+    StructureChangeSourceRequest:
+      type: object
+      properties:
+        sourceOrchidGroupId:
+          type: integer
+          format: int64
+        inputQuantity:
+          type: integer
+          format: int32
+          minimum: 1
+      required:
+      - inputQuantity
+      - sourceOrchidGroupId
     OrchidGroupCorrectionRequest:
       type: object
       properties:

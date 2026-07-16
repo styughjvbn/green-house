@@ -106,6 +106,6 @@ python3 scripts/generate_openapi.py --url http://localhost:8080/api-docs
 
 `POST /api/work-operations/record`는 농장 전체, 동, 물리 배드, 논리 구역, 난 묶음 범위의 기록형 작업을 대상 스냅샷과 함께 즉시 완료한다. `WORK_OPERATION_V2_ENABLED=true`에서는 사용자 수동 `POST /api/work-records`를 거부하고, 비활성화하면 기존 작성 흐름으로 복귀한다. 기존 `WorkRecord` 조회·취소와 이동·입고 시스템 기록은 유지한다.
 
-자리 이동·분갈이·분주·합식·입고 포트 작업은 계획 생성 시 대상을 스냅샷으로 확정하되 위치나 구조를 변경하지 않는다. 분주는 대상별로 복수 결과를 생성하고, 합식은 `POST /api/work-operations/{workOperationId}/merge/complete`에서 같은 품종의 복수 원본과 하나의 결과를 한 트랜잭션으로 처리한다. 다중 생성은 대상 없는 즉시 구조 변경 API로 유지한다.
+자리 이동·분갈이·분주·합식·입고 포트 작업은 계획 생성 시 대상을 스냅샷으로 확정하되 위치나 구조를 변경하지 않는다. 분갈이·분주·합식 실행 회차는 `POST /api/work-operations/{workOperationId}/structure-change-executions`에서 계획 대상 일부와 원본별 수량, 복수 결과를 처리하고 누적 작업 수량을 갱신한다. 기존 합식 완료 API는 이전 클라이언트 호환용이다. 다중 생성은 대상 없는 즉시 구조 변경 API로 유지한다.
 
 완료된 구조 변경 작업의 보정은 `POST/GET /api/work-operations/{workOperationId}/corrections`로 실행·조회한다. 생성 요청의 `orchidGroupAdjustments`에는 원본 작업이 만든 결과 난 묶음만 지정할 수 있으며 수량·상태 전후 값은 응답의 `effectDetails.adjustments`에서 확인한다. 후속 운영 데이터가 연결된 결과와 예약 수량을 침해하는 변경은 거부한다.

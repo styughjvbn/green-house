@@ -790,6 +790,9 @@ components:
         inProgress:
           type: integer
           format: int32
+        partial:
+          type: integer
+          format: int32
         completed:
           type: integer
           format: int32
@@ -934,11 +937,18 @@ components:
         locationSnapshot:
           type: object
           additionalProperties: {}
+        processedQuantity:
+          type: integer
+          format: int32
+        remainingQuantity:
+          type: integer
+          format: int32
         executionStatus:
           type: string
           enum:
           - PENDING
           - IN_PROGRESS
+          - PARTIALLY_COMPLETED
           - COMPLETED
           - SKIPPED
           - CANCELED
