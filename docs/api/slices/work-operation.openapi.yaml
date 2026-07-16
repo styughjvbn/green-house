@@ -415,6 +415,24 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ApiResponseWorkOperationResponse'
+  /api/work-operations/inbound-potting-executions:
+    post:
+      tags:
+      - work-operation-controller
+      operationId: executeInboundPotting
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/InboundPottingExecutionRequest'
+        required: true
+      responses:
+        '201':
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponseWorkOperationResponse'
   /api/work-operations/{workOperationId}:
     get:
       tags:
@@ -538,6 +556,59 @@ components:
           format: date
         potSize:
           type: string
+    InboundPottingExecutionRequest:
+      type: object
+      properties:
+        inboundRecordId:
+          type: integer
+          format: int64
+        pottingDate:
+          type: string
+          format: date
+        actualQuantity:
+          type: integer
+          format: int32
+          minimum: 1
+        potSize:
+          type: string
+          maxLength: 50
+          minLength: 0
+        ageYear:
+          type: integer
+          format: int32
+          minimum: 0
+        growthStage:
+          type: string
+          maxLength: 100
+          minLength: 0
+        placementType:
+          type: string
+          maxLength: 100
+          minLength: 0
+        trayCount:
+          type: integer
+          format: int32
+          minimum: 0
+        bedZoneId:
+          type: integer
+          format: int64
+        startPosition:
+          type: number
+        endPosition:
+          type: number
+        worker:
+          type: string
+          maxLength: 50
+          minLength: 0
+        memo:
+          type: string
+          maxLength: 1000
+          minLength: 0
+      required:
+      - actualQuantity
+      - bedZoneId
+      - inboundRecordId
+      - pottingDate
     InboundPottingPlanCreateRequest:
       type: object
       properties:

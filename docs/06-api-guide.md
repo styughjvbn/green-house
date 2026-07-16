@@ -108,6 +108,8 @@ python3 scripts/generate_openapi.py --url http://localhost:8080/api-docs
 
 자리 이동·분갈이·분주·합식·입고 포트 작업은 계획 생성 시 대상을 스냅샷으로 확정하되 위치나 구조를 변경하지 않는다. 분갈이·분주·합식 실행 회차는 `POST /api/work-operations/{workOperationId}/structure-change-executions`에서 계획 대상 일부와 원본별 수량, 복수 결과를 처리하고 누적 작업 수량을 갱신한다. 기존 합식 완료 API는 이전 클라이언트 호환용이다. 다중 생성은 대상 없는 즉시 구조 변경 API로 유지한다.
 
+입고 관리 화면의 즉시 실행은 `POST /api/work-operations/inbound-potting-executions`를 사용한다. 서버는 단일 대상 `WorkOperation`을 생성·시작·실행·완료하고 결과 작업을 반환하며, 별도의 포트 작업 `WorkRecord`는 만들지 않는다. 기존 `POST /api/inbound-records/{inboundRecordId}/potting`은 호환 응답인 `InboundRecordResponse`를 유지하면서 내부적으로 같은 실행기를 사용한다.
+
 폐기는 대상별 완료 요청의 `resultDetails.discardQuantity`만큼 현재 가용 수량에서 차감한다. 일부 폐기는 기존 상태와 잔여 수량을 유지하고, 전량 폐기는 수량 0과 `폐기` 상태로 전환한다. 입력한 폐기 수량과 관계없이 해당 난 묶음의 폐기 처리는 한 번의 대상 실행으로 완료된다.
 
 완료된 구조 변경 작업의 보정은 `POST/GET /api/work-operations/{workOperationId}/corrections`로 실행·조회한다. 생성 요청의 `orchidGroupAdjustments`에는 원본 작업이 만든 결과 난 묶음만 지정할 수 있으며 수량·상태 전후 값은 응답의 `effectDetails.adjustments`에서 확인한다. 후속 운영 데이터가 연결된 결과와 예약 수량을 침해하는 변경은 거부한다.
