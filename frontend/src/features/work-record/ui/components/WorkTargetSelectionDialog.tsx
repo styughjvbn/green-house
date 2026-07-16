@@ -1,8 +1,16 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Search, X } from "lucide-react";
+import { Layers3, LoaderCircle, Search, Users, X } from "lucide-react";
 import type { BedZone, BedZoneSide, OrchidGroup } from "@/entities/farm/types";
+import {
+  getDerivedWorkTargetMembers,
+  getWorkTargetGroupOptions,
+} from "../../api/workRecordApi";
+import type {
+  WorkCollectionOption,
+  WorkDerivedGroupOption,
+} from "../../model/types";
 
 type ZoneNode = {
   id: number;
@@ -41,6 +49,16 @@ export function WorkTargetSelectionDialog({
     () => new Set(initialSelectedIds),
   );
   const [keyword, setKeyword] = useState("");
+  const [derivedGroups, setDerivedGroups] = useState<WorkDerivedGroupOption[]>(
+    [],
+  );
+  const [collections, setCollections] = useState<WorkCollectionOption[]>([]);
+  const [derivedMemberIds, setDerivedMemberIds] = useState<
+    Map<string, number[]>
+  >(() => new Map());
+  const [loadingGroups, setLoadingGroups] = useState(true);
+  const [loadingGroupKey, setLoadingGroupKey] = useState<string | null>(null);
+  const [groupError, setGroupError] = useState<string | null>(null);
   const tree = useMemo(
     () => buildTargetTree(groups, bedZones),
     [bedZones, groups],
@@ -67,6 +85,29 @@ export function WorkTargetSelectionDialog({
   const selectedZoneCount = new Set(
     selectedGroups.map((group) => group.bedZoneId),
   ).size;
+  const selectableIds = useMemo(
+    () => new Set(groups.map((group) => group.id)),
+    [groups],
+  );
+  const normalizedKeyword = keyword.trim().toLocaleLowerCase("ko");
+  const visibleDerivedGroups = normalizedKeyword
+    ? derivedGroups
+        .filter((group) =>
+          `${group.varietyName} ${group.ageYear ?? ""} ${group.potSize ?? ""}`
+            .toLocaleLowerCase("ko")
+            .includes(normalizedKeyword),
+        )
+        .slice(0, 8)
+    : derivedGroups
+        .filter((group) => derivedMemberIds.has(group.groupKey))
+        .slice(0, 8);
+  const visibleCollections = normalizedKeyword
+    ? collections
+        .filter((collection) =>
+          collection.name.toLocaleLowerCase("ko").includes(normalizedKeyword),
+        )
+        .slice(0, 8)
+    : [];
 
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
@@ -76,17 +117,75 @@ export function WorkTargetSelectionDialog({
     return () => document.removeEventListener("keydown", handleKeyDown);
   }, [onClose]);
 
-  function toggleGroups(targetGroups: OrchidGroup[]) {
-    const targetIds = targetGroups.map((group) => group.id);
-    const shouldSelect = targetIds.some((id) => !selectedIds.has(id));
+  useEffect(() => {
+    let cancelled = false;
+    void getWorkTargetGroupOptions()
+      .then((options) => {
+        if (cancelled) return;
+        setDerivedGroups(options.derivedGroups);
+        setCollections(options.collections);
+      })
+      .catch((error: unknown) => {
+        if (!cancelled) {
+          setGroupError(
+            error instanceof Error
+              ? error.message
+              : "그룹 목록을 불러오지 못했습니다.",
+          );
+        }
+      })
+      .finally(() => {
+        if (!cancelled) setLoadingGroups(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  function toggleIds(targetIds: number[]) {
+    const availableIds = targetIds.filter((id) => selectableIds.has(id));
+    const shouldSelect = availableIds.some((id) => !selectedIds.has(id));
     setSelectedIds((current) => {
       const next = new Set(current);
-      targetIds.forEach((id) => {
+      availableIds.forEach((id) => {
         if (shouldSelect) next.add(id);
         else next.delete(id);
       });
       return next;
     });
+  }
+
+  function toggleGroups(targetGroups: OrchidGroup[]) {
+    toggleIds(targetGroups.map((group) => group.id));
+  }
+
+  async function toggleDerivedGroup(group: WorkDerivedGroupOption) {
+    if (loadingGroupKey) return;
+    const cachedIds = derivedMemberIds.get(group.groupKey);
+    if (cachedIds) {
+      toggleIds(cachedIds);
+      setKeyword("");
+      return;
+    }
+    setLoadingGroupKey(group.groupKey);
+    setGroupError(null);
+    try {
+      const members = await getDerivedWorkTargetMembers(group.groupKey);
+      const memberIds = members.map((member) => member.id);
+      setDerivedMemberIds((current) =>
+        new Map(current).set(group.groupKey, memberIds),
+      );
+      toggleIds(memberIds);
+      setKeyword("");
+    } catch (error) {
+      setGroupError(
+        error instanceof Error
+          ? error.message
+          : "자동 그룹 대상을 불러오지 못했습니다.",
+      );
+    } finally {
+      setLoadingGroupKey(null);
+    }
   }
 
   return (
@@ -109,7 +208,7 @@ export function WorkTargetSelectionDialog({
           <div>
             <h3 className="text-lg font-bold text-[#17251b]">작업 대상 선택</h3>
             <p className="mt-1 text-sm text-[#617067]">
-              동과 다이를 왼쪽에서 오른쪽으로 확인하며 복수 범위를 선택할 수
+              위치, 자동 그룹, 사용자 그룹을 함께 사용해 대상을 선택할 수
               있습니다.
             </p>
           </div>
@@ -123,7 +222,7 @@ export function WorkTargetSelectionDialog({
           </button>
         </header>
 
-        <div className="shrink-0 border-b border-[#dbe5da] bg-white px-5 py-3">
+        <div className="shrink-0 space-y-3 border-b border-[#dbe5da] bg-white px-5 py-3">
           <label className="relative block">
             <Search
               className="pointer-events-none absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 text-[#718077]"
@@ -132,11 +231,105 @@ export function WorkTargetSelectionDialog({
             <input
               autoFocus
               className="w-full rounded-md border border-[#cfd8cc] bg-white py-2 pr-3 pl-9 text-sm outline-none focus:border-[#159447] focus:ring-2 focus:ring-[#159447]/15"
-              placeholder="품종 또는 위치 검색"
+              placeholder="위치, 품종 또는 그룹 이름 검색"
               value={keyword}
               onChange={(event) => setKeyword(event.target.value)}
             />
           </label>
+
+          {loadingGroups ||
+          visibleCollections.length > 0 ||
+          visibleDerivedGroups.length > 0 ? (
+            <div>
+              <div className="mb-2 flex items-center gap-2 text-xs font-semibold text-[#58705e]">
+                <span>{normalizedKeyword ? "검색된 그룹" : "빠른 선택"}</span>
+                {loadingGroups ? (
+                  <LoaderCircle className="h-3.5 w-3.5 animate-spin text-[#159447]" />
+                ) : null}
+              </div>
+              <div className="flex gap-2 overflow-x-auto pb-1">
+                {visibleCollections.map((collection) => {
+                  const memberIds = collection.members
+                    .map((member) => member.orchidGroupId)
+                    .filter((id) => selectableIds.has(id));
+                  return (
+                    <label
+                      className="flex min-w-52 cursor-pointer items-center gap-2 rounded-md border border-[#d7dfd5] bg-[#f8faf7] px-3 py-2 hover:border-[#159447]"
+                      key={`collection-${collection.id}`}
+                    >
+                      <SelectionCheckbox
+                        label={`${collection.name} 사용자 그룹`}
+                        {...selectionStateByIds(memberIds, selectedIds)}
+                        disabled={memberIds.length === 0}
+                        onChange={() => {
+                          toggleIds(memberIds);
+                          setKeyword("");
+                        }}
+                      />
+                      <Users
+                        className="h-4 w-4 shrink-0 text-[#3d6f91]"
+                        aria-hidden="true"
+                      />
+                      <span className="min-w-0 flex-1">
+                        <span className="block truncate text-xs font-semibold text-[#26352b]">
+                          {collection.name}
+                        </span>
+                        <span className="block text-[11px] text-[#718077]">
+                          사용자 그룹 · {memberIds.length}묶음
+                        </span>
+                      </span>
+                    </label>
+                  );
+                })}
+                {visibleDerivedGroups.map((group) => {
+                  const memberIds = derivedMemberIds.get(group.groupKey);
+                  const state = memberIds
+                    ? selectionStateByIds(
+                        memberIds.filter((id) => selectableIds.has(id)),
+                        selectedIds,
+                      )
+                    : { checked: false, indeterminate: false };
+                  return (
+                    <label
+                      className="flex min-w-56 cursor-pointer items-center gap-2 rounded-md border border-[#d7dfd5] bg-[#f8faf7] px-3 py-2 hover:border-[#159447]"
+                      key={`derived-${group.groupKey}`}
+                    >
+                      {loadingGroupKey === group.groupKey ? (
+                        <LoaderCircle className="h-4 w-4 shrink-0 animate-spin text-[#159447]" />
+                      ) : (
+                        <SelectionCheckbox
+                          label={`${group.varietyName} 자동 그룹`}
+                          {...state}
+                          disabled={loadingGroupKey !== null}
+                          onChange={() => void toggleDerivedGroup(group)}
+                        />
+                      )}
+                      <Layers3
+                        className="h-4 w-4 shrink-0 text-[#159447]"
+                        aria-hidden="true"
+                      />
+                      <span className="min-w-0 flex-1">
+                        <span className="block truncate text-xs font-semibold text-[#26352b]">
+                          {group.varietyName}
+                        </span>
+                        <span className="block truncate text-[11px] text-[#718077]">
+                          자동 그룹 · {group.ageYear ?? "년생 미지정"}
+                          {group.ageYear == null ? "" : "년생"} ·{" "}
+                          {group.potSize ?? "화분 미지정"}
+                        </span>
+                      </span>
+                    </label>
+                  );
+                })}
+              </div>
+            </div>
+          ) : null}
+
+          {groupError ? (
+            <p className="rounded-md bg-[#fff1ec] px-3 py-2 text-xs text-[#8f2f19]">
+              {groupError}
+            </p>
+          ) : null}
         </div>
 
         <div className="min-h-0 flex-1 overflow-y-auto p-4 sm:p-5">
@@ -396,13 +589,20 @@ function sideLabel(side: "LEFT" | "RIGHT") {
 }
 
 function selectionState(groups: OrchidGroup[], selectedIds: Set<number>) {
-  const selectedCount = groups.reduce(
-    (count, group) => count + Number(selectedIds.has(group.id)),
+  return selectionStateByIds(
+    groups.map((group) => group.id),
+    selectedIds,
+  );
+}
+
+function selectionStateByIds(targetIds: number[], selectedIds: Set<number>) {
+  const selectedCount = targetIds.reduce(
+    (count, id) => count + Number(selectedIds.has(id)),
     0,
   );
   return {
-    checked: groups.length > 0 && selectedCount === groups.length,
-    indeterminate: selectedCount > 0 && selectedCount < groups.length,
+    checked: targetIds.length > 0 && selectedCount === targetIds.length,
+    indeterminate: selectedCount > 0 && selectedCount < targetIds.length,
   };
 }
 

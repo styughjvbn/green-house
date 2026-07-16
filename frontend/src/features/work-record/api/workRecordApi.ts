@@ -13,9 +13,35 @@ import type {
   InboundPottingCandidate,
   WorkOperationScopeOptions,
   WorkTargetSelectionOptions,
+  WorkDerivedGroupOption,
+  WorkCollectionOption,
   WorkTargetPreviewPayload,
   WorkRecordTargetOptions,
 } from "../model/types";
+
+export async function getWorkTargetGroupOptions(): Promise<{
+  derivedGroups: WorkDerivedGroupOption[];
+  collections: WorkCollectionOption[];
+}> {
+  const [derivedGroups, collections] = await Promise.all([
+    fetchApi<WorkDerivedGroupOption[]>("/orchid-groups/derived-groups"),
+    fetchApi<WorkCollectionOption[]>("/orchid-group-collections"),
+  ]);
+  return {
+    derivedGroups,
+    collections: collections.filter(
+      (collection) => collection.status === "ACTIVE",
+    ),
+  };
+}
+
+export function getDerivedWorkTargetMembers(
+  groupKey: string,
+): Promise<OrchidGroup[]> {
+  return fetchApi<OrchidGroup[]>(
+    `/orchid-groups/derived-groups/${encodeURIComponent(groupKey)}/members`,
+  );
+}
 
 export async function getWorkOperationScopeOptions(): Promise<WorkOperationScopeOptions> {
   const [derivedGroups, collections, orchidGroups] = await Promise.all([

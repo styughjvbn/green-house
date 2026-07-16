@@ -107,11 +107,17 @@ export type WorkDerivedGroupOption = {
   totalQuantity: number;
 };
 
+export type WorkCollectionMemberOption = {
+  orchidGroupId: number;
+};
+
 export type WorkCollectionOption = {
   id: number;
   name: string;
+  status: "ACTIVE" | "ARCHIVED";
   orchidGroupCount: number;
   totalQuantity: number;
+  members: WorkCollectionMemberOption[];
 };
 
 export type WorkOperationScopeOptions = {
