@@ -10,6 +10,7 @@ import type {
 import type {
   CreateWorkRecordPayload,
   CreateWorkOperationPayload,
+  InboundPottingCandidate,
   WorkOperationScopeOptions,
   WorkTargetSelectionOptions,
   WorkTargetPreviewPayload,
@@ -168,6 +169,29 @@ export async function createWorkOperation(
   );
 }
 
+export function getInboundPottingCandidates(): Promise<
+  InboundPottingCandidate[]
+> {
+  return fetchApi<InboundPottingCandidate[]>(
+    "/work-operations/inbound-potting-candidates",
+  );
+}
+
+export async function createInboundPottingPlan(payload: {
+  title: string;
+  plannedStartDate: string;
+  plannedEndDate: string | null;
+  inboundRecordIds: number[];
+  worker: string | null;
+  memo: string | null;
+}): Promise<WorkOperation> {
+  return requestWorkOperation<WorkOperation>(
+    "/work-operations/inbound-potting-plans",
+    "POST",
+    payload,
+  );
+}
+
 export function getWorkOperations(
   filters: {
     from?: string;
@@ -209,11 +233,12 @@ export async function transitionWorkOperationTarget(
   targetId: number,
   action: "start" | "complete" | "skip",
   worker: string | null,
+  resultDetails?: Record<string, unknown>,
 ): Promise<WorkOperation> {
   return requestWorkOperation<WorkOperation>(
     `/work-operations/${workOperationId}/targets/${targetId}/${action}`,
     "POST",
-    { worker },
+    { worker, resultDetails },
   );
 }
 

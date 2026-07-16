@@ -117,6 +117,23 @@ export function getManualWorkTypes(workTypes: WorkType[]) {
   );
 }
 
+export function getSchedulableWorkTypes(workTypes: WorkType[]) {
+  return workTypes.filter(
+    (workType) =>
+      workType.active &&
+      (workType.code === "REPOT" ||
+        workType.code === "POTTING" ||
+        workType.code === "MOVEMENT" ||
+        (!workType.systemType &&
+          workType.code !== "INBOUND" &&
+          workType.code !== "MULTI_CREATE" &&
+          workType.code !== "CORRECTION" &&
+          ["PESTICIDE", "FERTILIZER", "CLEANUP", "STATUS", "MEMO"].includes(
+            workType.template,
+          ))),
+  );
+}
+
 export function findWorkType(workTypes: WorkType[], workTypeId: number | null) {
   return workTypes.find((workType) => workType.id === workTypeId) ?? null;
 }

@@ -6,23 +6,33 @@ import type {
   BedZone,
   OrchidGroup,
   WorkOperation,
+  WorkOperationTarget,
   WorkTargetPreview,
   WorkType,
 } from "@/entities/farm/types";
 import {
+  getSchedulableWorkTypes,
+  getWorkRecordFieldLabel,
+  isVisibleWorkRecordField,
+} from "@/entities/farm/workTypes";
+import {
   completeWorkOperation,
+  createInboundPottingPlan,
   createWorkOperation,
+  getInboundPottingCandidates,
   getWorkTargetSelectionOptions,
   previewWorkOperationTargets,
   transitionWorkOperation,
   transitionWorkOperationTarget,
 } from "../../api/workRecordApi";
 import type {
+  InboundPottingCandidate,
   WorkOperationFormState,
   WorkTargetPreviewPayload,
 } from "../../model/types";
-import { TextField } from "./FormFields";
+import { SelectField, TextField } from "./FormFields";
 import { WorkTargetSelectionDialog } from "./WorkTargetSelectionDialog";
+import { StructureWorkExecutionDialog } from "./StructureWorkExecutionDialog";
 
 export function WorkOperationPanel({
   workTypes,
@@ -33,15 +43,15 @@ export function WorkOperationPanel({
   onClose: () => void;
   onSaved?: () => void;
 }) {
-  const pesticideType = workTypes.find(
-    (workType) => workType.code === "PESTICIDE",
-  );
+  const schedulableWorkTypes = getSchedulableWorkTypes(workTypes);
+  const initialWorkType = schedulableWorkTypes[0];
   const [form, setForm] = useState<WorkOperationFormState>(() => ({
+    workTypeId: initialWorkType ? String(initialWorkType.id) : "",
     sourceScopeType: "MANUAL_SELECTION",
     houseId: "",
     scopeKey: "",
     collectionId: "",
-    title: "농약 작업",
+    title: initialWorkType ? `${initialWorkType.name} 작업` : "기간 작업",
     plannedStartDate: new Date().toISOString().slice(0, 10),
     plannedEndDate: "",
     materialName: "",
@@ -52,19 +62,37 @@ export function WorkOperationPanel({
   }));
   const [preview, setPreview] = useState<WorkTargetPreview | null>(null);
   const [operation, setOperation] = useState<WorkOperation | null>(null);
+  const [executionTarget, setExecutionTarget] =
+    useState<WorkOperationTarget | null>(null);
   const [excludedIds, setExcludedIds] = useState<Set<number>>(new Set());
   const [manualIds, setManualIds] = useState<Set<number>>(new Set());
+  const [inboundRecordIds, setInboundRecordIds] = useState<Set<number>>(
+    new Set(),
+  );
   const [targetSelectorOpen, setTargetSelectorOpen] = useState(false);
   const [orchidGroups, setOrchidGroups] = useState<OrchidGroup[]>([]);
   const [bedZones, setBedZones] = useState<BedZone[]>([]);
+  const [inboundCandidates, setInboundCandidates] = useState<
+    InboundPottingCandidate[]
+  >([]);
   const [loading, setLoading] = useState(false);
   const [optionsLoading, setOptionsLoading] = useState(true);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const selectedWorkType = schedulableWorkTypes.find(
+    (workType) => String(workType.id) === form.workTypeId,
+  );
+  const isInboundPotting = selectedWorkType?.code === "POTTING";
+  const isDedicatedWorkflow =
+    selectedWorkType?.code === "POTTING" ||
+    selectedWorkType?.code === "REPOT" ||
+    selectedWorkType?.code === "MOVEMENT";
 
   const includedTargets = useMemo(
     () =>
       preview?.targets.filter(
-        (target) => !excludedIds.has(target.orchidGroupId),
+        (target) =>
+          target.orchidGroupId != null &&
+          !excludedIds.has(target.orchidGroupId),
       ) ?? [],
     [excludedIds, preview],
   );
@@ -83,14 +111,33 @@ export function WorkOperationPanel({
   const selectedManualZoneCount = new Set(
     selectedManualGroups.map((group) => group.bedZoneId),
   ).size;
+  const saveUnavailableReason = loading
+    ? "처리 중입니다."
+    : !selectedWorkType
+      ? "작업 유형을 선택해주세요."
+      : !form.title.trim()
+        ? "작업명을 입력해주세요."
+        : isInboundPotting
+          ? inboundRecordIds.size === 0
+            ? "포트 작업할 입고 기록을 선택해주세요."
+            : null
+          : !preview
+            ? "대상 선택 후 실제 대상을 미리보기해주세요."
+            : includedTargets.length === 0
+              ? "포함할 난 묶음을 하나 이상 선택해주세요."
+              : null;
 
   useEffect(() => {
     let cancelled = false;
-    void getWorkTargetSelectionOptions()
-      .then((result) => {
+    void Promise.all([
+      getWorkTargetSelectionOptions(),
+      getInboundPottingCandidates(),
+    ])
+      .then(([result, candidates]) => {
         if (!cancelled) {
           setOrchidGroups(result.orchidGroups);
           setBedZones(result.bedZones);
+          setInboundCandidates(candidates);
         }
       })
       .catch((error: unknown) => {
@@ -112,19 +159,35 @@ export function WorkOperationPanel({
 
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
-      if (event.key === "Escape" && !targetSelectorOpen) onClose();
+      if (event.key === "Escape" && !targetSelectorOpen && !executionTarget)
+        onClose();
     };
 
     document.addEventListener("keydown", handleKeyDown);
     return () => document.removeEventListener("keydown", handleKeyDown);
-  }, [onClose, targetSelectorOpen]);
+  }, [executionTarget, onClose, targetSelectorOpen]);
 
   function updateForm<K extends keyof WorkOperationFormState>(
     field: K,
     value: WorkOperationFormState[K],
   ) {
     setForm((current) => ({ ...current, [field]: value }));
-    if (
+    if (field === "workTypeId") {
+      const workType = schedulableWorkTypes.find(
+        (candidate) => String(candidate.id) === value,
+      );
+      setForm((current) => ({
+        ...current,
+        workTypeId: String(value),
+        title: workType ? `${workType.name} 작업` : current.title,
+        sourceScopeType:
+          workType?.code === "POTTING"
+            ? "INBOUND_RECORD_SELECTION"
+            : "MANUAL_SELECTION",
+      }));
+      setPreview(null);
+      setExcludedIds(new Set());
+    } else if (
       field === "sourceScopeType" ||
       field === "scopeKey" ||
       field === "collectionId"
@@ -156,14 +219,41 @@ export function WorkOperationPanel({
   }
 
   async function saveOperation() {
-    if (!preview || !pesticideType || includedTargets.length === 0) return;
+    if (!selectedWorkType) return;
+    if (isInboundPotting) {
+      if (inboundRecordIds.size === 0) return;
+      setLoading(true);
+      setErrorMessage(null);
+      try {
+        const result = await createInboundPottingPlan({
+          title: form.title.trim(),
+          plannedStartDate: form.plannedStartDate,
+          plannedEndDate: form.plannedEndDate || null,
+          inboundRecordIds: [...inboundRecordIds],
+          worker: form.worker.trim() || null,
+          memo: form.memo.trim() || null,
+        });
+        setOperation(result);
+        onSaved?.();
+      } catch (error) {
+        setErrorMessage(
+          error instanceof Error
+            ? error.message
+            : "작업을 저장하지 못했습니다.",
+        );
+      } finally {
+        setLoading(false);
+      }
+      return;
+    }
+    if (!preview || includedTargets.length === 0) return;
     const scopePayload = buildScopePayload(form, manualIds);
     if (!scopePayload) return;
     setLoading(true);
     setErrorMessage(null);
     try {
       const result = await createWorkOperation({
-        workTypeId: pesticideType.id,
+        workTypeId: selectedWorkType.id,
         title: form.title.trim(),
         plannedStartDate: form.plannedStartDate,
         plannedEndDate: form.plannedEndDate || null,
@@ -272,7 +362,7 @@ export function WorkOperationPanel({
               기간 작업 등록
             </h2>
             <p className="mt-1 text-sm text-[#5c6a60]">
-              저장 시 현재 포함된 난 묶음과 위치가 확정됩니다.
+              작업 유형을 먼저 선택하고 계획 대상을 확정합니다.
             </p>
           </div>
           <button
@@ -299,18 +389,44 @@ export function WorkOperationPanel({
               onComplete={completeOperation}
               onOperationAction={changeOperationStatus}
               onTargetAction={changeTargetStatus}
+              onExecuteTarget={setExecutionTarget}
             />
           ) : (
             <>
+              <section className="mt-4 grid gap-3 rounded-md border border-[#cfe0d2] bg-white p-4 md:grid-cols-[minmax(220px,0.45fr)_minmax(0,1fr)]">
+                <SelectField
+                  label="작업 유형"
+                  value={form.workTypeId}
+                  onChange={(value) => updateForm("workTypeId", value)}
+                >
+                  {schedulableWorkTypes.map((workType) => (
+                    <option key={workType.id} value={workType.id}>
+                      {workType.name}
+                    </option>
+                  ))}
+                </SelectField>
+                <div className="rounded-md bg-[#f4f8f3] px-4 py-3 text-sm text-[#526057]">
+                  <p className="font-semibold text-[#26352b]">
+                    {selectedWorkType?.name ?? "작업 유형을 선택하세요"}
+                  </p>
+                  <p className="mt-1">
+                    {workPlanGuidance(selectedWorkType?.code)}
+                  </p>
+                </div>
+              </section>
               <section className="mt-4 flex flex-wrap items-center justify-between gap-3 rounded-md border border-[#cfe0d2] bg-white p-4">
                 <div>
                   <p className="text-sm font-semibold text-[#26352b]">
                     작업 대상
                   </p>
                   <p className="mt-1 text-sm text-[#5c6a60]">
-                    {manualIds.size > 0
-                      ? `${manualIds.size}묶음 · ${selectedManualQuantity}분 · ${selectedManualZoneCount}개 구역`
-                      : "동, 다이, 구역 또는 개별 난 묶음을 선택하세요."}
+                    {isInboundPotting
+                      ? inboundRecordIds.size > 0
+                        ? `입고 기록 ${inboundRecordIds.size}건`
+                        : "포트 작업할 유리병 모종 입고 기록을 선택하세요."
+                      : manualIds.size > 0
+                        ? `${manualIds.size}묶음 · ${selectedManualQuantity}분 · ${selectedManualZoneCount}개 구역`
+                        : "동, 다이, 구역 또는 개별 난 묶음을 선택하세요."}
                   </p>
                 </div>
                 <button
@@ -319,10 +435,13 @@ export function WorkOperationPanel({
                   type="button"
                   onClick={() => setTargetSelectorOpen(true)}
                 >
-                  {manualIds.size > 0 ? "대상 변경" : "작업 대상 선택"}
+                  {(isInboundPotting ? inboundRecordIds.size : manualIds.size) >
+                  0
+                    ? "대상 변경"
+                    : "작업 대상 선택"}
                 </button>
               </section>
-              <div className="mt-4 grid gap-3 md:grid-cols-2 lg:grid-cols-4">
+              <div className="mt-4 grid gap-3 md:grid-cols-3">
                 <TextField
                   label="작업명"
                   required
@@ -342,21 +461,48 @@ export function WorkOperationPanel({
                   value={form.plannedEndDate}
                   onChange={(value) => updateForm("plannedEndDate", value)}
                 />
-                <TextField
-                  label="약제명"
-                  value={form.materialName}
-                  onChange={(value) => updateForm("materialName", value)}
-                />
-                <TextField
-                  label="희석 배수"
-                  value={form.dilutionRatio}
-                  onChange={(value) => updateForm("dilutionRatio", value)}
-                />
-                <TextField
-                  label="사용량"
-                  value={form.quantity}
-                  onChange={(value) => updateForm("quantity", value)}
-                />
+                {!isDedicatedWorkflow &&
+                isVisibleWorkRecordField(
+                  selectedWorkType?.template ?? null,
+                  "materialName",
+                ) ? (
+                  <TextField
+                    label={getWorkRecordFieldLabel(
+                      selectedWorkType?.template ?? null,
+                      "materialName",
+                    )}
+                    value={form.materialName}
+                    onChange={(value) => updateForm("materialName", value)}
+                  />
+                ) : null}
+                {!isDedicatedWorkflow &&
+                isVisibleWorkRecordField(
+                  selectedWorkType?.template ?? null,
+                  "dilutionRatio",
+                ) ? (
+                  <TextField
+                    label={getWorkRecordFieldLabel(
+                      selectedWorkType?.template ?? null,
+                      "dilutionRatio",
+                    )}
+                    value={form.dilutionRatio}
+                    onChange={(value) => updateForm("dilutionRatio", value)}
+                  />
+                ) : null}
+                {!isDedicatedWorkflow &&
+                isVisibleWorkRecordField(
+                  selectedWorkType?.template ?? null,
+                  "quantity",
+                ) ? (
+                  <TextField
+                    label={getWorkRecordFieldLabel(
+                      selectedWorkType?.template ?? null,
+                      "quantity",
+                    )}
+                    value={form.quantity}
+                    onChange={(value) => updateForm("quantity", value)}
+                  />
+                ) : null}
                 <TextField
                   label="작업자"
                   value={form.worker}
@@ -372,27 +518,29 @@ export function WorkOperationPanel({
                 />
               </label>
 
-              <div className="mt-4 flex flex-wrap items-center gap-3">
-                <button
-                  className="rounded-md border border-[#159447] bg-white px-4 py-2 text-sm font-semibold text-[#10783a]"
-                  disabled={
-                    loading ||
-                    optionsLoading ||
-                    !buildScopePayload(form, manualIds)
-                  }
-                  type="button"
-                  onClick={loadPreview}
-                >
-                  {loading ? "확인 중" : "실제 대상 미리보기"}
-                </button>
-                {preview ? (
-                  <span className="text-sm font-semibold text-[#344138]">
-                    포함 {includedTargets.length}묶음 · {includedQuantity}분
-                  </span>
-                ) : null}
-              </div>
+              {!isInboundPotting ? (
+                <div className="mt-4 flex flex-wrap items-center gap-3">
+                  <button
+                    className="rounded-md border border-[#159447] bg-white px-4 py-2 text-sm font-semibold text-[#10783a]"
+                    disabled={
+                      loading ||
+                      optionsLoading ||
+                      !buildScopePayload(form, manualIds)
+                    }
+                    type="button"
+                    onClick={loadPreview}
+                  >
+                    {loading ? "확인 중" : "실제 대상 미리보기"}
+                  </button>
+                  {preview ? (
+                    <span className="text-sm font-semibold text-[#344138]">
+                      포함 {includedTargets.length}묶음 · {includedQuantity}분
+                    </span>
+                  ) : null}
+                </div>
+              ) : null}
 
-              {preview ? (
+              {!isInboundPotting && preview ? (
                 <TargetPreview
                   preview={preview}
                   excludedIds={excludedIds}
@@ -407,16 +555,13 @@ export function WorkOperationPanel({
                 />
               ) : null}
 
-              <div className="mt-4 flex justify-end">
+              <div className="mt-4 flex flex-wrap items-center justify-between gap-3">
+                <p className="text-sm text-[#6a766e]">
+                  {saveUnavailableReason ?? "등록할 준비가 되었습니다."}
+                </p>
                 <button
                   className="rounded-md bg-[#159447] px-5 py-2.5 text-sm font-semibold text-white disabled:bg-[#9bb7a2]"
-                  disabled={
-                    loading ||
-                    !preview ||
-                    includedTargets.length === 0 ||
-                    !form.title.trim() ||
-                    !pesticideType
-                  }
+                  disabled={saveUnavailableReason != null}
                   type="button"
                   onClick={saveOperation}
                 >
@@ -428,23 +573,170 @@ export function WorkOperationPanel({
         </div>
       </section>
       {targetSelectorOpen ? (
-        <WorkTargetSelectionDialog
+        isInboundPotting ? (
+          <InboundPottingTargetDialog
+            candidates={inboundCandidates}
+            initialSelectedIds={inboundRecordIds}
+            onClose={() => setTargetSelectorOpen(false)}
+            onConfirm={(selectedIds) => {
+              setInboundRecordIds(selectedIds);
+              setTargetSelectorOpen(false);
+            }}
+          />
+        ) : (
+          <WorkTargetSelectionDialog
+            bedZones={bedZones}
+            groups={orchidGroups}
+            initialSelectedIds={manualIds}
+            onClose={() => setTargetSelectorOpen(false)}
+            onConfirm={(selectedIds) => {
+              setManualIds(selectedIds);
+              setForm((current) => ({
+                ...current,
+                sourceScopeType: "MANUAL_SELECTION",
+              }));
+              setPreview(null);
+              setExcludedIds(new Set());
+              setTargetSelectorOpen(false);
+            }}
+          />
+        )
+      ) : null}
+      {operation && executionTarget ? (
+        <StructureWorkExecutionDialog
           bedZones={bedZones}
-          groups={orchidGroups}
-          initialSelectedIds={manualIds}
-          onClose={() => setTargetSelectorOpen(false)}
-          onConfirm={(selectedIds) => {
-            setManualIds(selectedIds);
-            setForm((current) => ({
-              ...current,
-              sourceScopeType: "MANUAL_SELECTION",
-            }));
-            setPreview(null);
-            setExcludedIds(new Set());
-            setTargetSelectorOpen(false);
+          operation={operation}
+          source={
+            executionTarget.orchidGroupId == null
+              ? null
+              : (orchidGroups.find(
+                  (group) => group.id === executionTarget.orchidGroupId,
+                ) ?? null)
+          }
+          target={executionTarget}
+          onClose={() => setExecutionTarget(null)}
+          onSaved={(updated) => {
+            setOperation(updated);
+            setExecutionTarget(null);
+            onSaved?.();
           }}
         />
       ) : null}
+    </div>
+  );
+}
+
+function InboundPottingTargetDialog({
+  candidates,
+  initialSelectedIds,
+  onClose,
+  onConfirm,
+}: {
+  candidates: InboundPottingCandidate[];
+  initialSelectedIds: Set<number>;
+  onClose: () => void;
+  onConfirm: (selectedIds: Set<number>) => void;
+}) {
+  const [selectedIds, setSelectedIds] = useState(
+    () => new Set(initialSelectedIds),
+  );
+  const [keyword, setKeyword] = useState("");
+  const visible = candidates.filter((candidate) =>
+    `${candidate.varietyName} ${candidate.tempLocation ?? ""}`
+      .toLowerCase()
+      .includes(keyword.trim().toLowerCase()),
+  );
+  return (
+    <div
+      className="fixed inset-0 z-[1200] flex items-center justify-center bg-black/45 p-4"
+      role="presentation"
+      onMouseDown={(event) => {
+        event.stopPropagation();
+        onClose();
+      }}
+    >
+      <section
+        className="flex max-h-[calc(100dvh-2rem)] w-full max-w-2xl flex-col overflow-hidden rounded-lg bg-white shadow-2xl"
+        role="dialog"
+        aria-modal="true"
+        aria-label="포트 작업 대상 선택"
+        onMouseDown={(event) => event.stopPropagation()}
+      >
+        <header className="flex items-center justify-between border-b p-4">
+          <div>
+            <h3 className="font-bold text-[#17251b]">포트 작업 대상 선택</h3>
+            <p className="mt-1 text-xs text-[#6a766e]">
+              임시 보관 또는 포트 작업 대기 중인 유리병 모종입니다.
+            </p>
+          </div>
+          <button type="button" aria-label="닫기" onClick={onClose}>
+            <X className="h-4 w-4" aria-hidden="true" />
+          </button>
+        </header>
+        <div className="border-b p-4">
+          <input
+            autoFocus
+            className="w-full rounded-md border border-[#cfd8cc] px-3 py-2 text-sm"
+            placeholder="품종 또는 임시 위치 검색"
+            value={keyword}
+            onChange={(event) => setKeyword(event.target.value)}
+          />
+        </div>
+        <div className="min-h-0 flex-1 overflow-y-auto p-4">
+          <div className="overflow-hidden rounded-md border">
+            {visible.map((candidate) => (
+              <label
+                className="flex cursor-pointer items-center gap-3 border-b px-3 py-3 text-sm last:border-b-0 hover:bg-[#f4f8f3]"
+                key={candidate.id}
+              >
+                <input
+                  checked={selectedIds.has(candidate.id)}
+                  className="h-4 w-4 accent-[#159447]"
+                  type="checkbox"
+                  onChange={() =>
+                    setSelectedIds((current) => {
+                      const next = new Set(current);
+                      if (next.has(candidate.id)) next.delete(candidate.id);
+                      else next.add(candidate.id);
+                      return next;
+                    })
+                  }
+                />
+                <span className="min-w-0 flex-1">
+                  <span className="block font-semibold">
+                    {candidate.varietyName}
+                  </span>
+                  <span className="block text-xs text-[#6a766e]">
+                    {candidate.tempLocation ?? "임시 위치 미지정"} · 예상{" "}
+                    {candidate.estimatedQuantity ?? "-"}분
+                  </span>
+                </span>
+                <span className="text-xs text-[#5c6a60]">
+                  예정 {candidate.pottingDueDate ?? "미지정"}
+                </span>
+              </label>
+            ))}
+            {visible.length === 0 ? (
+              <p className="p-8 text-center text-sm text-[#6a766e]">
+                선택할 수 있는 입고 기록이 없습니다.
+              </p>
+            ) : null}
+          </div>
+        </div>
+        <footer className="flex items-center justify-between border-t p-4">
+          <span className="text-sm font-semibold">
+            {selectedIds.size}건 선택
+          </span>
+          <button
+            className="rounded-md bg-[#159447] px-4 py-2 text-sm font-semibold text-white disabled:opacity-40"
+            disabled={selectedIds.size === 0}
+            type="button"
+            onClick={() => onConfirm(new Set(selectedIds))}
+          >
+            대상 확정
+          </button>
+        </footer>
+      </section>
     </div>
   );
 }
@@ -462,13 +754,18 @@ function TargetPreview({
     <div className="mt-4 max-h-52 overflow-auto rounded-md border border-[#d7ddd4] bg-white">
       {preview.targets.map((target) => (
         <label
-          key={target.orchidGroupId}
+          key={target.orchidGroupId ?? target.id}
           className="flex cursor-pointer items-center gap-3 border-b border-[#edf0ec] px-3 py-2 text-sm last:border-b-0"
         >
           <input
-            checked={!excludedIds.has(target.orchidGroupId)}
+            checked={
+              target.orchidGroupId != null &&
+              !excludedIds.has(target.orchidGroupId)
+            }
             type="checkbox"
-            onChange={() => onToggle(target.orchidGroupId)}
+            onChange={() => {
+              if (target.orchidGroupId != null) onToggle(target.orchidGroupId);
+            }}
           />
           <span className="min-w-0 flex-1 truncate font-semibold">
             {target.varietyName}
@@ -490,6 +787,7 @@ export function OperationResult({
   onComplete,
   onOperationAction,
   onTargetAction,
+  onExecuteTarget,
 }: {
   operation: WorkOperation;
   loading: boolean;
@@ -499,6 +797,7 @@ export function OperationResult({
     targetId: number,
     action: "start" | "complete" | "skip",
   ) => void;
+  onExecuteTarget?: (target: WorkOperation["targets"][number]) => void;
 }) {
   const completed = operation.status === "COMPLETED";
   const canceled = operation.status === "CANCELED";
@@ -588,17 +887,20 @@ export function OperationResult({
         {operation.targets.map((target) => (
           <div
             className="flex flex-wrap items-center gap-2 border-b border-[#edf0ec] px-3 py-2 last:border-b-0"
-            key={target.orchidGroupId}
+            key={
+              target.id ??
+              `${target.targetReferenceType}-${target.orchidGroupId ?? target.inboundRecordId}`
+            }
           >
             <div className="min-w-0 flex-1">
               <p className="truncate text-sm font-semibold text-[#26352b]">
                 {target.varietyName}
               </p>
               <p className="mt-0.5 text-xs text-[#6a766e]">
-                {target.locationSnapshot.houseNumber}동{" "}
-                {target.locationSnapshot.physicalBedNumber}다이{" "}
-                {target.locationSnapshot.bedZoneName} ·{" "}
-                {target.quantitySnapshot}분
+                {target.targetReferenceType === "INBOUND_RECORD"
+                  ? `${target.locationSnapshot.tempLocation ?? "임시 위치 미지정"} · 입고 #${target.inboundRecordId}`
+                  : `${target.locationSnapshot.houseNumber}동 ${target.locationSnapshot.physicalBedNumber}다이 ${target.locationSnapshot.bedZoneName}`}{" "}
+                · {target.quantitySnapshot}분
               </p>
             </div>
             <span className="rounded-full bg-[#eef2ed] px-2 py-1 text-xs font-semibold text-[#526057]">
@@ -622,9 +924,31 @@ export function OperationResult({
                 <StatusAction
                   small
                   primary
-                  label="완료"
-                  disabled={loading}
-                  onClick={() => onTargetAction(target.id!, "complete")}
+                  label={
+                    operation.workTypeCode === "REPOT" ||
+                    operation.workTypeCode === "POTTING" ||
+                    operation.workTypeCode === "MOVEMENT"
+                      ? "실행 입력"
+                      : "완료"
+                  }
+                  disabled={
+                    loading ||
+                    ((operation.workTypeCode === "REPOT" ||
+                      operation.workTypeCode === "POTTING" ||
+                      operation.workTypeCode === "MOVEMENT") &&
+                      !onExecuteTarget)
+                  }
+                  onClick={() => {
+                    if (
+                      operation.workTypeCode === "REPOT" ||
+                      operation.workTypeCode === "POTTING" ||
+                      operation.workTypeCode === "MOVEMENT"
+                    ) {
+                      onExecuteTarget?.(target);
+                    } else {
+                      onTargetAction(target.id!, "complete");
+                    }
+                  }}
                 />
                 <StatusAction
                   small
@@ -671,6 +995,19 @@ function StatusAction({
       {label}
     </button>
   );
+}
+
+function workPlanGuidance(code?: string) {
+  switch (code) {
+    case "MOVEMENT":
+      return "원본 난 묶음을 계획 대상으로 확정하고, 실행할 때 각 묶음의 목적 구역과 위치를 입력합니다.";
+    case "REPOT":
+      return "원본 난 묶음을 선택하고, 실행할 때 투입·손실 수량과 결과 난 묶음의 배치를 입력합니다.";
+    case "POTTING":
+      return "포트 작업 대기 입고 기록을 선택하고, 실행할 때 실제 수량과 배치 위치를 입력합니다.";
+    default:
+      return "난 묶음을 계획 대상으로 확정하고, 작업 유형에 맞는 기록 내용을 저장합니다.";
+  }
 }
 
 function operationStatusLabel(status: WorkOperation["status"]) {
@@ -725,5 +1062,7 @@ function buildScopePayload(
             orchidGroupIds: [...manualIds],
           }
         : null;
+    case "INBOUND_RECORD_SELECTION":
+      return null;
   }
 }

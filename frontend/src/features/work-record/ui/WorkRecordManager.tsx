@@ -54,6 +54,8 @@ export function WorkRecordManager(
 
       {activeTab === "LIST" ? (
         <WorkOperationList
+          bedZones={manager.bedZones}
+          orchidGroups={manager.orchidGroups}
           refreshKey={refreshKey}
           onCreateOperation={() => {
             manager.setShowCreateForm(false);
@@ -68,7 +70,11 @@ export function WorkRecordManager(
 
       {activeTab === "CALENDAR" ? (
         <div className="min-h-0 flex-1 overflow-auto">
-          <WorkOperationSchedule refreshKey={refreshKey} />
+          <WorkOperationSchedule
+            bedZones={manager.bedZones}
+            orchidGroups={manager.orchidGroups}
+            refreshKey={refreshKey}
+          />
         </div>
       ) : null}
 

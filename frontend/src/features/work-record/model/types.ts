@@ -65,6 +65,7 @@ export type WorkRecordFilterState = {
 };
 
 export type WorkOperationFormState = {
+  workTypeId: string;
   sourceScopeType: WorkOperationScopeType;
   houseId: string;
   scopeKey: string;
@@ -83,7 +84,19 @@ export type WorkOperationScopeType =
   | "HOUSE"
   | "DERIVED_GROUP"
   | "USER_COLLECTION"
-  | "MANUAL_SELECTION";
+  | "MANUAL_SELECTION"
+  | "INBOUND_RECORD_SELECTION";
+
+export type InboundPottingCandidate = {
+  id: number;
+  varietyName: string;
+  status: string;
+  estimatedQuantity: number | null;
+  actualQuantity: number | null;
+  tempLocation: string | null;
+  pottingDueDate: string | null;
+  potSize: string | null;
+};
 
 export type WorkDerivedGroupOption = {
   groupKey: string;

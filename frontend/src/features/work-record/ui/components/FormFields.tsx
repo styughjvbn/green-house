@@ -6,7 +6,7 @@ type TextFieldProps = {
   label: string;
   onChange: (value: string) => void;
   required?: boolean;
-  type?: "date" | "text";
+  type?: "date" | "number" | "text";
   value: string;
 };
 

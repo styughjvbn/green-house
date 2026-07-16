@@ -258,11 +258,15 @@ export type WorkLocationSnapshot = {
   physicalBedNumber: number;
   bedZoneId: number;
   bedZoneName: string;
+  tempLocation?: string | null;
+  pottingDueDate?: string | null;
 };
 
 export type WorkOperationTarget = {
   id: number | null;
-  orchidGroupId: number;
+  targetReferenceType: "ORCHID_GROUP" | "INBOUND_RECORD";
+  orchidGroupId: number | null;
+  inboundRecordId: number | null;
   inclusionSource:
     | "DIRECT"
     | "FARM"
@@ -272,6 +276,7 @@ export type WorkOperationTarget = {
     | "DERIVED_GROUP"
     | "USER_COLLECTION"
     | "MANUAL_ADDITION"
+    | "INBOUND_RECORD"
     | "LINEAGE"
     | null;
   varietyName: string;
@@ -297,7 +302,9 @@ export type WorkTargetPreview = {
 export type WorkOperation = {
   id: number;
   workTypeId: number;
+  workTypeCode: string;
   workType: string;
+  workTypeTemplate: WorkTypeTemplate;
   title: string;
   status: WorkOperationStatus;
   plannedStartDate: string;
@@ -309,7 +316,8 @@ export type WorkOperation = {
     | "NONE"
     | "DERIVED_GROUP"
     | "USER_COLLECTION"
-    | "MANUAL_SELECTION";
+    | "MANUAL_SELECTION"
+    | "INBOUND_RECORD_SELECTION";
   sourceScopeId: number | null;
   sourceConditionSnapshot: Record<string, unknown>;
   targetSnapshotAt: string;

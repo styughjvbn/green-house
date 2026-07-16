@@ -2,7 +2,13 @@
 
 import { Layers3, Plus, RefreshCw } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
-import type { WorkOperation, WorkOperationStatus } from "@/entities/farm/types";
+import type {
+  BedZone,
+  OrchidGroup,
+  WorkOperation,
+  WorkOperationStatus,
+  WorkOperationTarget,
+} from "@/entities/farm/types";
 import {
   completeWorkOperation,
   getWorkOperations,
@@ -10,12 +16,17 @@ import {
   transitionWorkOperationTarget,
 } from "../../api/workRecordApi";
 import { OperationResult } from "./HouseWorkOperationPanel";
+import { StructureWorkExecutionDialog } from "./StructureWorkExecutionDialog";
 
 export function WorkOperationList({
+  bedZones,
+  orchidGroups,
   refreshKey,
   onCreateOperation,
   onCreateRecord,
 }: {
+  bedZones: BedZone[];
+  orchidGroups: OrchidGroup[];
   refreshKey: number;
   onCreateOperation: () => void;
   onCreateRecord: () => void;
@@ -27,6 +38,8 @@ export function WorkOperationList({
   const [reloadVersion, setReloadVersion] = useState(0);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [executionTarget, setExecutionTarget] =
+    useState<WorkOperationTarget | null>(null);
 
   useEffect(() => {
     let active = true;
@@ -101,7 +114,7 @@ export function WorkOperationList({
           </div>
           <div className="flex flex-wrap gap-2">
             <button
-              className="inline-flex h-10 items-center gap-2 rounded-md border border-[#159447] bg-white px-4 text-sm font-semibold text-[#10783a]"
+              className="inline-flex h-10 items-center gap-2 rounded-md bg-[#159447] px-4 text-sm font-semibold text-white shadow-sm hover:bg-[#10783a]"
               type="button"
               onClick={onCreateOperation}
             >
@@ -244,6 +257,7 @@ export function WorkOperationList({
                 ),
               )
             }
+            onExecuteTarget={setExecutionTarget}
           />
         ) : (
           <div className="rounded-md border border-[#dfe5dc] bg-white p-8 text-center text-sm text-[#5c6a60] shadow-sm">
@@ -251,6 +265,25 @@ export function WorkOperationList({
           </div>
         )}
       </div>
+      {selected && executionTarget ? (
+        <StructureWorkExecutionDialog
+          bedZones={bedZones}
+          operation={selected}
+          source={
+            executionTarget.orchidGroupId == null
+              ? null
+              : (orchidGroups.find(
+                  (group) => group.id === executionTarget.orchidGroupId,
+                ) ?? null)
+          }
+          target={executionTarget}
+          onClose={() => setExecutionTarget(null)}
+          onSaved={(updated) => {
+            updateOperation(updated);
+            setExecutionTarget(null);
+          }}
+        />
+      ) : null}
     </div>
   );
 }
@@ -266,6 +299,7 @@ function scopeLabel(operation: WorkOperation) {
     DERIVED_GROUP: "자동 그룹",
     USER_COLLECTION: "사용자 그룹",
     MANUAL_SELECTION: "직접 선택",
+    INBOUND_RECORD_SELECTION: "입고 포트 대상",
   }[operation.sourceScopeType];
   return operation.sourceScopeId == null
     ? label

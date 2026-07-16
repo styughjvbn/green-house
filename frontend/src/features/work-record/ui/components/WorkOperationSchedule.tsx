@@ -1,7 +1,13 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import type { WorkOperation, WorkOperationStatus } from "@/entities/farm/types";
+import type {
+  BedZone,
+  OrchidGroup,
+  WorkOperation,
+  WorkOperationStatus,
+  WorkOperationTarget,
+} from "@/entities/farm/types";
 import {
   completeWorkOperation,
   getWorkOperations,
@@ -9,13 +15,18 @@ import {
   transitionWorkOperationTarget,
 } from "../../api/workRecordApi";
 import { OperationResult } from "./HouseWorkOperationPanel";
+import { StructureWorkExecutionDialog } from "./StructureWorkExecutionDialog";
 
 const WEEKDAYS = ["월", "화", "수", "목", "금", "토", "일"];
 
 export function WorkOperationSchedule({
+  bedZones = [],
+  orchidGroups = [],
   onClose,
   refreshKey = 0,
 }: {
+  bedZones?: BedZone[];
+  orchidGroups?: OrchidGroup[];
   onClose?: () => void;
   refreshKey?: number;
 }) {
@@ -27,6 +38,8 @@ export function WorkOperationSchedule({
   const [selectedId, setSelectedId] = useState<number | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [executionTarget, setExecutionTarget] =
+    useState<WorkOperationTarget | null>(null);
   const range = useMemo(() => monthRange(month), [month]);
   const selected = operations.find((item) => item.id === selectedId) ?? null;
 
@@ -224,6 +237,26 @@ export function WorkOperationSchedule({
               ),
             )
           }
+          onExecuteTarget={setExecutionTarget}
+        />
+      ) : null}
+      {selected && executionTarget ? (
+        <StructureWorkExecutionDialog
+          bedZones={bedZones}
+          operation={selected}
+          source={
+            executionTarget.orchidGroupId == null
+              ? null
+              : (orchidGroups.find(
+                  (group) => group.id === executionTarget.orchidGroupId,
+                ) ?? null)
+          }
+          target={executionTarget}
+          onClose={() => setExecutionTarget(null)}
+          onSaved={(updated) => {
+            updateOperation(updated);
+            setExecutionTarget(null);
+          }}
         />
       ) : null}
     </section>
