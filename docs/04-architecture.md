@@ -20,6 +20,7 @@ green-house/
 - shadcn/ui와 Radix UI primitives
 - React 기반 상태 관리
 - 지도/드래그 UI는 기능 단위 컴포넌트로 분리
+- 입고 관리와 작업 관리가 공통으로 사용하는 포트 실행·농장 배치 UI는 `entities/farm/ui`에 두고 저장 API는 각 `features/*`에서 연결한다.
 
 ### Backend
 
