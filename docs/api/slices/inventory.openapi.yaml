@@ -171,6 +171,7 @@ paths:
           enum:
           - TEMP_STORED
           - POTTING_PENDING
+          - POTTING_IN_PROGRESS
           - POTTED
           - PLACED
           - CANCELED
@@ -685,6 +686,7 @@ components:
           enum:
           - TEMP_STORED
           - POTTING_PENDING
+          - POTTING_IN_PROGRESS
           - POTTED
           - PLACED
           - CANCELED

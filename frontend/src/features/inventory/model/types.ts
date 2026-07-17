@@ -67,6 +67,7 @@ export type InboundType =
 export type InboundStatus =
   | "TEMP_STORED"
   | "POTTING_PENDING"
+  | "POTTING_IN_PROGRESS"
   | "POTTED"
   | "PLACED"
   | "CANCELED";

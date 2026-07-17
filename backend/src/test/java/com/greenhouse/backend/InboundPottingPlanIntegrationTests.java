@@ -298,6 +298,159 @@ class InboundPottingPlanIntegrationTests extends AbstractBackendIntegrationTest 
 	}
 
 	@Test
+	void pottingPlanUpdatesInboundStatusAndInboundCancellationCancelsLinkedWork() throws Exception {
+		var createdInbound = mockMvc.perform(post("/api/inbound-records")
+				.contentType(MediaType.APPLICATION_JSON)
+				.content("""
+						{
+						  "inboundDate": "2026-07-17",
+						  "inboundType": "FLASK_SEEDLING",
+						  "varietyId": %d,
+						  "bottleCount": 5,
+						  "estimatedQuantity": 80,
+						  "tempLocation": "배양실 C",
+						  "potSize": "2치",
+						  "worker": "입고 담당"
+						}
+						""".formatted(inboundRecord.getVariety().getId())))
+				.andExpect(status().isCreated())
+				.andExpect(jsonPath("$.data.status").value("TEMP_STORED"))
+				.andReturn();
+		Long inboundRecordId = Long.valueOf(createdInbound.getResponse().getContentAsString().replaceAll(
+				".*?\\\"data\\\":\\{\\\"id\\\":(\\d+).*", "$1"));
+
+		mockMvc.perform(post("/api/work-operations/inbound-potting-plans")
+				.contentType(MediaType.APPLICATION_JSON)
+				.content("""
+						{
+						  "title": "상태 연동 포트 작업",
+						  "plannedStartDate": "2026-07-18",
+						  "inboundRecordIds": [%d]
+						}
+						""".formatted(inboundRecordId)))
+				.andExpect(status().isCreated());
+		mockMvc.perform(get("/api/inbound-records/{id}", inboundRecordId))
+				.andExpect(status().isOk())
+				.andExpect(jsonPath("$.data.status").value("POTTING_IN_PROGRESS"));
+
+		mockMvc.perform(post("/api/inbound-records/{id}/cancel", inboundRecordId)
+				.contentType(MediaType.APPLICATION_JSON)
+				.content("""
+						{"memo": "입고 취소"}
+						"""))
+				.andExpect(status().isOk())
+				.andExpect(jsonPath("$.data.status").value("CANCELED"));
+
+		var linkedOperations = operationRepository.findAll().stream()
+				.filter(operation -> operationTargetRepository
+						.findByWorkOperationIdAndExcludedAtIsNullOrderByIdAsc(operation.getId())
+						.stream()
+						.anyMatch(target -> inboundRecordId.equals(target.getInboundRecordId())))
+				.toList();
+		assertThat(linkedOperations).hasSize(2);
+		assertThat(linkedOperations).allSatisfy(operation ->
+				assertThat(operation.getStatus().name()).isEqualTo("CANCELED"));
+		assertThat(targetExecutionRepository.findAll())
+				.anySatisfy(execution -> {
+					assertThat(execution.getTarget().getInboundRecordId()).isEqualTo(inboundRecordId);
+					assertThat(execution.getTarget().getWorkOperation().getWorkType().getCode())
+							.isEqualTo(WorkType.POTTING_CODE);
+					assertThat(execution.getStatus().name()).isEqualTo("CANCELED");
+				});
+		assertThat(appliedEffectRepository.findAll())
+				.singleElement()
+				.satisfies(effect -> assertThat(effect.getCanceledAt()).isNotNull());
+	}
+
+	@Test
+	void cancelingOneInboundOnlyCancelsItsTargetInAMultiInboundPlan() throws Exception {
+		InboundRecord secondInbound = inboundRecordRepository.save(new InboundRecord(
+				LocalDate.of(2026, 7, 2),
+				InboundType.FLASK_SEEDLING,
+				inboundRecord.getVariety(),
+				InboundStatus.TEMP_STORED,
+				4,
+				60,
+				null,
+				"배양실 B",
+				null,
+				"2치",
+				1,
+				null,
+				null,
+				null,
+				null,
+				"입고 담당",
+				null));
+		var planned = mockMvc.perform(post("/api/work-operations/inbound-potting-plans")
+				.contentType(MediaType.APPLICATION_JSON)
+				.content("""
+						{
+						  "title": "복수 입고 포트 작업",
+						  "plannedStartDate": "2026-07-18",
+						  "inboundRecordIds": [%d, %d]
+						}
+						""".formatted(inboundRecord.getId(), secondInbound.getId())))
+				.andExpect(status().isCreated())
+				.andReturn();
+		Long operationId = Long.valueOf(planned.getResponse().getContentAsString().replaceAll(
+				".*?\\\"data\\\":\\{\\\"id\\\":(\\d+).*", "$1"));
+		mockMvc.perform(get("/api/inbound-records/{id}", inboundRecord.getId()))
+				.andExpect(status().isOk())
+				.andExpect(jsonPath("$.data.status").value("POTTING_IN_PROGRESS"));
+		mockMvc.perform(get("/api/inbound-records/{id}", secondInbound.getId()))
+				.andExpect(status().isOk())
+				.andExpect(jsonPath("$.data.status").value("POTTING_IN_PROGRESS"));
+
+		mockMvc.perform(post("/api/inbound-records/{id}/cancel", secondInbound.getId())
+				.contentType(MediaType.APPLICATION_JSON)
+				.content("{}"))
+				.andExpect(status().isOk())
+				.andExpect(jsonPath("$.data.status").value("CANCELED"));
+
+		assertThat(operationRepository.findById(operationId).orElseThrow().getStatus().name())
+				.isEqualTo("PLANNED");
+		mockMvc.perform(get("/api/inbound-records/{id}", inboundRecord.getId()))
+				.andExpect(status().isOk())
+				.andExpect(jsonPath("$.data.status").value("POTTING_IN_PROGRESS"));
+		assertThat(targetExecutionRepository
+				.findByTargetWorkOperationIdOrderByIdAsc(operationId))
+				.satisfiesExactlyInAnyOrder(
+						execution -> {
+							assertThat(execution.getTarget().getInboundRecordId()).isEqualTo(inboundRecord.getId());
+							assertThat(execution.getStatus().name()).isEqualTo("PENDING");
+						},
+						execution -> {
+							assertThat(execution.getTarget().getInboundRecordId()).isEqualTo(secondInbound.getId());
+							assertThat(execution.getStatus().name()).isEqualTo("CANCELED");
+						});
+	}
+
+	@Test
+	void cancelingPottingWorkRestoresTheInboundWaitingStatus() throws Exception {
+		var planned = mockMvc.perform(post("/api/work-operations/inbound-potting-plans")
+				.contentType(MediaType.APPLICATION_JSON)
+				.content("""
+						{
+						  "title": "취소할 포트 작업",
+						  "plannedStartDate": "2026-07-18",
+						  "inboundRecordIds": [%d]
+						}
+						""".formatted(inboundRecord.getId())))
+				.andExpect(status().isCreated())
+				.andReturn();
+		Long operationId = Long.valueOf(planned.getResponse().getContentAsString().replaceAll(
+				".*?\\\"data\\\":\\{\\\"id\\\":(\\d+).*", "$1"));
+
+		mockMvc.perform(post("/api/work-operations/{id}/cancel", operationId))
+				.andExpect(status().isOk())
+				.andExpect(jsonPath("$.data.status").value("CANCELED"));
+		mockMvc.perform(get("/api/inbound-records/{id}", inboundRecord.getId()))
+				.andExpect(status().isOk())
+				.andExpect(jsonPath("$.data.status").value("POTTING_PENDING"));
+	}
+
+	@Test
 	void executesImmediateInboundPottingWithMultipleResultGroups() throws Exception {
 		mockMvc.perform(post("/api/work-operations/inbound-potting-executions")
 				.contentType(MediaType.APPLICATION_JSON)

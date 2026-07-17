@@ -43,6 +43,15 @@ public class WorkTargetExecutionRepositoryImpl implements WorkTargetExecutionRep
 	}
 
 	@Override
+	public List<WorkTargetExecution> findForUpdateByTargetInboundRecordIdOrderByIdAsc(Long inboundRecordId) {
+		return executionWithOperationAndWorkType()
+				.where(workOperationTarget.inboundRecordId.eq(inboundRecordId))
+				.orderBy(workTargetExecution.id.asc())
+				.setLockMode(LockModeType.PESSIMISTIC_WRITE)
+				.fetch();
+	}
+
+	@Override
 	public List<WorkTargetExecution> findByTargetWorkOperationIdOrderByIdAsc(Long workOperationId) {
 		return queryFactory
 				.selectFrom(workTargetExecution)

@@ -20,6 +20,7 @@ import com.greenhouse.backend.farm.repository.OrchidGroupRepository;
 import com.greenhouse.backend.farm.repository.VarietyRepository;
 import com.greenhouse.backend.work.application.SystemWorkCleanupService;
 import com.greenhouse.backend.work.application.InboundWorkOperationRecorder;
+import com.greenhouse.backend.work.application.InboundWorkOperationLifecycleService;
 import com.greenhouse.backend.work.dto.InboundWorkOperationCreateRequest;
 
 import java.math.BigDecimal;
@@ -45,6 +46,7 @@ public class InboundRecordService {
 	private final BedZoneRepository bedZoneRepository;
 	private final OrchidGroupRepository orchidGroupRepository;
 	private final InboundWorkOperationRecorder inboundWorkOperationRecorder;
+	private final InboundWorkOperationLifecycleService inboundWorkOperationLifecycleService;
 	private final SystemWorkCleanupService systemWorkCleanupService;
 	private final OrchidPlacementPolicy orchidPlacementPolicy;
 
@@ -231,6 +233,7 @@ public class InboundRecordService {
 		if (inboundRecord.getCreatedOrchidGroup() != null) {
 			throw new IllegalArgumentException("난 묶음이 생성된 입고 기록은 취소할 수 없습니다.");
 		}
+		inboundWorkOperationLifecycleService.cancelForInboundRecord(inboundRecordId);
 		inboundRecord.cancel(normalize(request.memo()));
 		return InboundRecordResponse.from(inboundRecord);
 	}
@@ -259,6 +262,9 @@ public class InboundRecordService {
 	private void validateCreate(InboundRecordCreateRequest request, InboundStatus status) {
 		if (request.varietyId() == null && request.newVariety() == null) {
 			throw new IllegalArgumentException("품종을 선택하거나 새 품종을 입력해야 합니다.");
+		}
+		if (status == InboundStatus.POTTING_IN_PROGRESS) {
+			throw new IllegalArgumentException("작업중 상태는 포트 작업 계획 생성 시 자동으로 설정됩니다.");
 		}
 		if (request.inboundType() == InboundType.FLASK_SEEDLING) {
 			if (request.estimatedQuantity() == null) {
@@ -428,6 +434,7 @@ public class InboundRecordService {
 		return switch (status) {
 			case TEMP_STORED -> "임시보관";
 			case POTTING_PENDING -> "포트작업대기";
+			case POTTING_IN_PROGRESS -> "작업중";
 			case POTTED -> "포트작업완료";
 			case PLACED -> "배치완료";
 			case CANCELED -> "취소";

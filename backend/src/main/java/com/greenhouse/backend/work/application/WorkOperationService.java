@@ -207,6 +207,7 @@ public class WorkOperationService {
 				.toList();
 		workOperationTargetRepository.saveAll(targets);
 		workTargetExecutionRepository.saveAll(targets.stream().map(WorkTargetExecution::new).toList());
+		inboundPottingPlanGateway.markPottingPlanned(requestedIds);
 		return get(operation.getId());
 	}
 
@@ -291,6 +292,7 @@ public class WorkOperationService {
 				.filter(execution -> execution.getStatus()
 						!= com.greenhouse.backend.work.domain.WorkTargetExecutionStatus.SKIPPED)
 				.forEach(execution -> execution.cancel(canceledAt));
+		closeInboundPottingPlans(operation, executions);
 		return get(operationId);
 	}
 
@@ -474,9 +476,31 @@ public class WorkOperationService {
 	public WorkOperationResponse skipTarget(
 			Long operationId, Long targetId, WorkTargetExecutionRequest request) {
 		validateOperationInProgress(operationId);
-		findExecution(operationId, targetId).skip(
-				LocalDateTime.now(), normalize(request.worker()), request.resultDetails());
+		WorkTargetExecution execution = findExecution(operationId, targetId);
+		execution.skip(LocalDateTime.now(), normalize(request.worker()), request.resultDetails());
+		closeInboundPottingPlans(
+				execution.getTarget().getWorkOperation(),
+				List.of(execution));
 		return get(operationId);
+	}
+
+	private void closeInboundPottingPlans(
+			WorkOperation operation,
+			List<WorkTargetExecution> executions) {
+		if (!com.greenhouse.backend.work.domain.WorkType.POTTING_CODE.equals(operation.getWorkType().getCode())) {
+			return;
+		}
+		List<Long> inboundRecordIds = executions.stream()
+				.filter(execution -> execution.getStatus()
+						!= WorkTargetExecutionStatus.COMPLETED)
+				.map(WorkTargetExecution::getTarget)
+				.filter(target -> target.getTargetReferenceType() == WorkTargetReferenceType.INBOUND_RECORD)
+				.map(WorkOperationTarget::getInboundRecordId)
+				.distinct()
+				.toList();
+		if (!inboundRecordIds.isEmpty()) {
+			inboundPottingPlanGateway.closePottingPlan(inboundRecordIds);
+		}
 	}
 
 	@Transactional(readOnly = true)

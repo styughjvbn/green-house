@@ -46,6 +46,20 @@ public class FarmInboundPottingPlanGateway implements InboundPottingPlanGateway 
 		return findRecords(inboundRecordIds).stream().map(this::toTarget).toList();
 	}
 
+	@Override
+	public void markPottingPlanned(List<Long> inboundRecordIds) {
+		List<InboundRecord> records = findRecords(inboundRecordIds);
+		if (records.size() != inboundRecordIds.size()) {
+			throw new IllegalArgumentException("포트 작업 대상 입고 기록을 찾을 수 없습니다.");
+		}
+		records.forEach(InboundRecord::markPottingPlanned);
+	}
+
+	@Override
+	public void closePottingPlan(List<Long> inboundRecordIds) {
+		findRecords(inboundRecordIds).forEach(InboundRecord::closePottingPlan);
+	}
+
 	private List<InboundRecord> findRecords(List<Long> inboundRecordIds) {
 		return inboundRecordRepository.findByIdIn(inboundRecordIds);
 	}

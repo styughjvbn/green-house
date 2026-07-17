@@ -180,6 +180,24 @@ public class InboundRecord extends BaseEntity {
 		this.status = status;
 	}
 
+	public void markPottingPlanned() {
+		if (inboundType != InboundType.FLASK_SEEDLING
+				|| status == InboundStatus.CANCELED
+				|| createdOrchidGroup != null) {
+			throw new IllegalStateException("포트 작업을 계획할 수 없는 입고 기록입니다.");
+		}
+		this.status = InboundStatus.POTTING_IN_PROGRESS;
+	}
+
+	public void closePottingPlan() {
+		if (status != InboundStatus.POTTING_IN_PROGRESS) {
+			return;
+		}
+		this.status = pottingDueDate == null
+				? InboundStatus.TEMP_STORED
+				: InboundStatus.POTTING_PENDING;
+	}
+
 	public void cancel(String memo) {
 		this.status = InboundStatus.CANCELED;
 		if (memo != null && !memo.isBlank()) {

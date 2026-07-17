@@ -171,6 +171,8 @@ public class WorkTargetExecution extends BaseEntity {
 	}
 
 	public boolean isTerminalForCompletion() {
-		return status == WorkTargetExecutionStatus.COMPLETED || status == WorkTargetExecutionStatus.SKIPPED;
+		return status == WorkTargetExecutionStatus.COMPLETED
+				|| status == WorkTargetExecutionStatus.SKIPPED
+				|| status == WorkTargetExecutionStatus.CANCELED;
 	}
 }

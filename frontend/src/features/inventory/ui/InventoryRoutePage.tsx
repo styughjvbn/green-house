@@ -103,6 +103,7 @@ export async function InventoryRoutePage({
           ? (inboundStatus as
               | "TEMP_STORED"
               | "POTTING_PENDING"
+              | "POTTING_IN_PROGRESS"
               | "POTTED"
               | "PLACED"
               | "CANCELED")

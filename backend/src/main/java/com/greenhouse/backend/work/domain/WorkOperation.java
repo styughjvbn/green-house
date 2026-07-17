@@ -187,6 +187,18 @@ public class WorkOperation extends BaseEntity {
 		status = WorkOperationStatus.CANCELED;
 	}
 
+	public void cancelCompletedInbound(LocalDateTime canceledAt) {
+		if (status == WorkOperationStatus.CANCELED) {
+			return;
+		}
+		if (status != WorkOperationStatus.COMPLETED
+				|| !WorkType.INBOUND_CODE.equals(workType.getCode())) {
+			throw new IllegalArgumentException("완료된 입고 작업만 입고 취소와 함께 취소할 수 있습니다.");
+		}
+		actualEndAt = canceledAt;
+		status = WorkOperationStatus.CANCELED;
+	}
+
 	public void markCorrected() {
 		if (status == WorkOperationStatus.CORRECTED) {
 			return;
