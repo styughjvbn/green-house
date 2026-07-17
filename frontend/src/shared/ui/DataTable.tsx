@@ -1,7 +1,7 @@
 "use client";
 
 import type { ReactNode, TouchEvent } from "react";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   flexRender,
   getCoreRowModel,
@@ -83,18 +83,11 @@ export function DataTable<TData>({
   const resizeTouchRef = useRef<{ columnId: string; time: number } | null>(
     null,
   );
-  const initialSettings = useMemo(
-    () => readColumnSettings(settingsKey),
-    [settingsKey],
-  );
-  const [columnVisibility, setColumnVisibility] = useState<VisibilityState>(
-    initialSettings.columnVisibility ?? {},
-  );
-  const [columnOrder, setColumnOrder] = useState<ColumnOrderState>(
-    initialSettings.columnOrder ?? [],
-  );
-  const [columnSizing, setColumnSizing] = useState<ColumnSizingState>(
-    initialSettings.columnSizing ?? {},
+  const [columnVisibility, setColumnVisibility] = useState<VisibilityState>({});
+  const [columnOrder, setColumnOrder] = useState<ColumnOrderState>([]);
+  const [columnSizing, setColumnSizing] = useState<ColumnSizingState>({});
+  const [restoredSettingsKey, setRestoredSettingsKey] = useState<string | null>(
+    null,
   );
 
   const table = useReactTable({
@@ -125,12 +118,29 @@ export function DataTable<TData>({
   });
 
   useEffect(() => {
+    const settings = readColumnSettings(settingsKey);
+    setColumnVisibility(settings.columnVisibility ?? {});
+    setColumnOrder(settings.columnOrder ?? []);
+    setColumnSizing(settings.columnSizing ?? {});
+    setRestoredSettingsKey(settingsKey);
+  }, [settingsKey]);
+
+  useEffect(() => {
+    if (restoredSettingsKey !== settingsKey) {
+      return;
+    }
     writeColumnSettings(settingsKey, {
       columnOrder,
       columnSizing,
       columnVisibility,
     });
-  }, [columnOrder, columnSizing, columnVisibility, settingsKey]);
+  }, [
+    columnOrder,
+    columnSizing,
+    columnVisibility,
+    restoredSettingsKey,
+    settingsKey,
+  ]);
 
   function handleResizeTouchStart(
     event: TouchEvent<HTMLButtonElement>,
@@ -652,10 +662,14 @@ function writeColumnSettings(
   if (typeof window === "undefined") {
     return;
   }
-  window.localStorage.setItem(
-    storageKey(settingsKey),
-    JSON.stringify(settings),
-  );
+  try {
+    window.localStorage.setItem(
+      storageKey(settingsKey),
+      JSON.stringify(settings),
+    );
+  } catch {
+    // 저장소를 사용할 수 없는 환경에서도 테이블 설정은 현재 세션에서 유지한다.
+  }
 }
 
 function storageKey(settingsKey: string) {
