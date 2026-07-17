@@ -342,6 +342,7 @@ public class WorkOperationService {
 				execution.getTarget(),
 				new WorkEffectCommand(completedAt, worker, request.resultDetails(), null));
 		execution.completeWithEffect(completedAt, worker, result.resultDetails());
+		completeIfAllTargetsClosed(operation, completedAt);
 		return get(operationId);
 	}
 
@@ -441,6 +442,7 @@ public class WorkOperationService {
 				new WorkEffectCommand(completedAt, worker, request.resultDetails(), null));
 		executions.forEach(execution ->
 				execution.completeWithEffect(completedAt, worker, result.resultDetails()));
+		completeIfAllTargetsClosed(operation, completedAt);
 		return get(operationId);
 	}
 
@@ -500,6 +502,7 @@ public class WorkOperationService {
 					source.inputQuantity(), execution.getTarget().getQuantitySnapshot(),
 					executedAt, worker, result.resultDetails());
 		});
+		completeIfAllTargetsClosed(operation, executedAt);
 		return get(operationId);
 	}
 
@@ -508,10 +511,23 @@ public class WorkOperationService {
 		validateOperationInProgress(operationId);
 		WorkTargetExecution execution = findExecution(operationId, targetId);
 		execution.skip(LocalDateTime.now(), normalize(request.worker()), request.resultDetails());
+		completeIfAllTargetsClosed(execution.getTarget().getWorkOperation(), execution.getCompletedAt());
 		closeInboundPottingPlans(
 				execution.getTarget().getWorkOperation(),
 				List.of(execution));
 		return get(operationId);
+	}
+
+	private void completeIfAllTargetsClosed(WorkOperation operation, LocalDateTime completedAt) {
+		if (operation.getStatus() != WorkOperationStatus.IN_PROGRESS) {
+			return;
+		}
+		List<WorkTargetExecution> executions = workTargetExecutionRepository
+				.findByTargetWorkOperationIdOrderByIdAsc(operation.getId());
+		if (!executions.isEmpty()
+				&& executions.stream().allMatch(WorkTargetExecution::isTerminalForCompletion)) {
+			operation.complete(completedAt);
+		}
 	}
 
 	private void closeInboundPottingPlans(

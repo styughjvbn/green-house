@@ -279,6 +279,7 @@ class WorkOperationIntegrationTests extends AbstractBackendIntegrationTest {
 						}
 						"""))
 				.andExpect(status().isOk())
+				.andExpect(jsonPath("$.data.status").value("COMPLETED"))
 				.andExpect(jsonPath("$.data.targets[0].executionStatus").value("COMPLETED"))
 				.andExpect(jsonPath("$.data.targets[0].effectAppliedAt").exists())
 				.andExpect(jsonPath("$.data.targets[0].worker").value("첫 작업자"))
@@ -296,7 +297,7 @@ class WorkOperationIntegrationTests extends AbstractBackendIntegrationTest {
 				.isEqualTo(java.time.LocalDate.of(2026, 7, 15));
 		org.assertj.core.api.Assertions.assertThat(
 				workOperationRepository.findById(operationId).orElseThrow().getActualEndAt().toLocalDate())
-				.isEqualTo(java.time.LocalDate.of(2026, 7, 16));
+				.isEqualTo(java.time.LocalDate.of(2026, 7, 15));
 
 		mockMvc.perform(post("/api/work-operations/{id}/targets/{targetId}/complete", operationId, targetId)
 				.contentType(MediaType.APPLICATION_JSON)

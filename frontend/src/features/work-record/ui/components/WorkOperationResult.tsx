@@ -40,6 +40,7 @@ export function OperationResult({
     operation.progress.inProgress === 0 &&
     operation.progress.partial === 0 &&
     operation.progress.failed === 0;
+  const hasRemainingWork = !canComplete;
   const structureChange = ["REPOT", "DIVIDE", "MERGE"].includes(
     operation.workTypeCode,
   );
@@ -78,7 +79,7 @@ export function OperationResult({
                 onClick={() => onOperationAction("start")}
               />
             ) : null}
-            {active ? (
+            {active && hasRemainingWork ? (
               <StatusAction
                 label="일시중지"
                 disabled={loading}
@@ -92,7 +93,7 @@ export function OperationResult({
                 onClick={() => onOperationAction("resume")}
               />
             ) : null}
-            {active && structureChange ? (
+            {active && hasRemainingWork && structureChange ? (
               <StatusAction
                 label={`${operation.workType} 실행 등록`}
                 primary
@@ -111,12 +112,14 @@ export function OperationResult({
               disabled={loading || !canComplete}
               onClick={() => setCompletionTargetId("operation")}
             />
-            <StatusAction
-              label="취소"
-              danger
-              disabled={loading}
-              onClick={() => onOperationAction("cancel")}
-            />
+            {hasRemainingWork ? (
+              <StatusAction
+                label="취소"
+                danger
+                disabled={loading}
+                onClick={() => onOperationAction("cancel")}
+              />
+            ) : null}
           </div>
         )}
       </div>
