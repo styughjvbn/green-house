@@ -138,6 +138,8 @@ pg_dump -U greenhouse greenhouse > backup_$(date +%Y%m%d).sql
 - 다른 PC 또는 외장 디스크에 복사
 - 복구 테스트 주기적으로 수행
 
+운영 백업을 V6 이하 스키마로 복원한 뒤 현재 백엔드를 시작하면 Flyway가 최신 스키마까지 순서대로 갱신한다. V22는 기존 `work_records`를 `work_operations`·대상·실행 데이터로 변환하며, 원본 행은 감사용으로 보존한다. 변환 작업의 `request_key`는 `LEGACY_WORK_RECORD:{id}` 형식이므로 같은 이력이 중복 생성되지 않는다.
+
 ## 6. 운영 전 체크리스트
 
 - [ ] DB 마이그레이션 정상 실행
