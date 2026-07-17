@@ -7,8 +7,33 @@ import java.util.Optional;
 import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Lock;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 
 public interface WorkTargetExecutionRepository extends JpaRepository<WorkTargetExecution, Long> {
+
+	@Lock(LockModeType.PESSIMISTIC_WRITE)
+	@Query("""
+			select execution
+			from WorkTargetExecution execution
+			join fetch execution.target target
+			join fetch target.workOperation operation
+			join fetch operation.workType workType
+			where target.inboundRecordId = :inboundRecordId
+			  and workType.code = 'POTTING'
+			  and operation.status in (
+			    com.greenhouse.backend.work.domain.WorkOperationStatus.PLANNED,
+			    com.greenhouse.backend.work.domain.WorkOperationStatus.IN_PROGRESS,
+			    com.greenhouse.backend.work.domain.WorkOperationStatus.PAUSED
+			  )
+			  and execution.status in (
+			    com.greenhouse.backend.work.domain.WorkTargetExecutionStatus.PENDING,
+			    com.greenhouse.backend.work.domain.WorkTargetExecutionStatus.IN_PROGRESS
+			  )
+			order by operation.plannedStartDate asc, operation.id asc
+			""")
+	List<WorkTargetExecution> findActiveInboundPottingForUpdate(
+			@Param("inboundRecordId") Long inboundRecordId);
 
 	@EntityGraph(attributePaths = "target")
 	List<WorkTargetExecution> findByTargetWorkOperationIdOrderByIdAsc(Long workOperationId);

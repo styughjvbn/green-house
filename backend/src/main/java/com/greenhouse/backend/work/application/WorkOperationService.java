@@ -173,6 +173,12 @@ public class WorkOperationService {
 			throw new IllegalArgumentException("포트 작업 유형이 비활성화되어 있습니다.");
 		}
 		List<Long> requestedIds = request.inboundRecordIds().stream().distinct().toList();
+		for (Long inboundRecordId : requestedIds) {
+			if (!workTargetExecutionRepository
+					.findActiveInboundPottingForUpdate(inboundRecordId).isEmpty()) {
+				throw new IllegalArgumentException("이미 활성 포트 작업 계획에 포함된 입고 기록입니다.");
+			}
+		}
 		var records = inboundPottingPlanGateway.resolve(requestedIds);
 
 		WorkOperation operation = workOperationRepository.save(new WorkOperation(
