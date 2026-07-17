@@ -72,7 +72,7 @@ export function PottingExecutionForm({
 
   async function submit() {
     if (!pottingDate) {
-      setError("포트 작업일을 입력해주세요.");
+      setError("포트 작업 완료일을 입력해주세요.");
       return;
     }
     if (rows.some((row) => !isValidResultRow(row))) {
@@ -128,7 +128,7 @@ export function PottingExecutionForm({
       <Field label="입고 품종">
         <input className={inputClass} disabled value={subject} />
       </Field>
-      <Field label="포트 작업일">
+      <Field label="포트 작업 완료일">
         <input
           className={inputClass}
           required

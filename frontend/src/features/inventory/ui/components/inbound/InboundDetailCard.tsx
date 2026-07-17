@@ -292,7 +292,7 @@ function InboundDetailView({ record }: { record: InboundRecord }) {
       <DetailRow label="임시 위치" value={record.tempLocation} />
       <DetailRow label="현재 위치" value={record.currentLocation} />
       <DetailRow label="포트 예정일" value={record.pottingDueDate} />
-      <DetailRow label="포트 작업일" value={record.pottingDate} />
+      <DetailRow label="포트 작업 완료일" value={record.pottingDate} />
       <DetailRow label="화분 크기" value={record.potSize} />
       <DetailRow label="초기 년생" value={record.ageYear} />
       <DetailRow label="배치 규격" value={record.placementType} />

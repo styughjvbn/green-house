@@ -248,7 +248,7 @@ export function WorkOperationPanel({
           inboundRecordIds,
           inboundCandidates,
         );
-        const results = await Promise.all(
+        await Promise.all(
           varietyGroups.map((group) =>
             createInboundPottingPlan({
               title: varietyWorkTitle(
@@ -264,8 +264,8 @@ export function WorkOperationPanel({
             }),
           ),
         );
-        setOperation(results[0] ?? null);
         onSaved?.();
+        onClose();
       } catch (error) {
         setErrorMessage(
           error instanceof Error
@@ -298,7 +298,7 @@ export function WorkOperationPanel({
                 ),
               },
             ];
-      const results = await Promise.all(
+      await Promise.all(
         groupsToCreate.map((group) => {
           const groupTargetIds = new Set(group.targetIds);
           const excludedForGroup = preview.targets.flatMap((target) =>
@@ -331,8 +331,8 @@ export function WorkOperationPanel({
           });
         }),
       );
-      setOperation(results[0] ?? null);
       onSaved?.();
+      onClose();
     } catch (error) {
       setErrorMessage(
         error instanceof Error ? error.message : "작업을 저장하지 못했습니다.",
