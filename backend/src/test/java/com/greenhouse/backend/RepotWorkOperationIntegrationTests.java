@@ -2,6 +2,7 @@ package com.greenhouse.backend;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.hamcrest.Matchers.hasSize;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -180,6 +181,26 @@ class RepotWorkOperationIntegrationTests extends AbstractBackendIntegrationTest 
 				.andExpect(status().isOk())
 				.andExpect(jsonPath("$.data", hasSize(1)))
 				.andExpect(jsonPath("$.data[0].workOperationId").value(operationId));
+	}
+
+	@Test
+	void rejectsDeletingOrchidGroupReferencedByWorkEffect() throws Exception {
+		OrchidGroup source = createSource(40, "0", "2");
+		mockMvc.perform(post("/api/work-operations/repot")
+				.contentType(MediaType.APPLICATION_JSON)
+				.content(repotRequest("repot-delete-conflict", source.getId(), 40, 0, null, 40, "2", "4", "")))
+				.andExpect(status().isCreated());
+
+		Long resultId = orchidGroupRepository.findAll().stream()
+				.map(OrchidGroup::getId)
+				.filter(id -> !id.equals(source.getId()))
+				.findFirst()
+				.orElseThrow();
+
+		mockMvc.perform(delete("/api/orchid-groups/{orchidGroupId}", resultId))
+				.andExpect(status().isConflict())
+				.andExpect(jsonPath("$.error.code").value("CONFLICT"))
+				.andExpect(jsonPath("$.error.message").value("작업 이력과 연결된 난 묶음은 삭제할 수 없습니다. 작업 취소, 보정 또는 폐기 작업으로 처리해주세요."));
 	}
 
 	@Test
