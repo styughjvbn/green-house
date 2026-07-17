@@ -24,6 +24,10 @@ export type FarmPlacementSelection = {
   label: string;
 };
 
+export type FarmPlacementReference = FarmPlacementSelection & {
+  kind: "SOURCE" | "RESULT";
+};
+
 export function FarmPlacementField({
   buttonPlaceholder = "칸 선택",
   dialogDescription = "구역을 고른 뒤 차지할 시작 칸과 끝 칸을 지정하세요.",
@@ -32,6 +36,7 @@ export function FarmPlacementField({
   excludeOrchidGroupIds = [],
   fieldLabel = "배치 칸",
   houses,
+  referencePlacements = [],
   submitLabel = "선택 완료",
   value,
   onChange,
@@ -43,6 +48,7 @@ export function FarmPlacementField({
   excludeOrchidGroupIds?: number[];
   fieldLabel?: string;
   houses: House[];
+  referencePlacements?: FarmPlacementReference[];
   submitLabel?: string;
   value: FarmPlacementSelection | null;
   onChange: (value: FarmPlacementSelection) => void;
@@ -73,6 +79,7 @@ export function FarmPlacementField({
           excludeOrchidGroupIds={excludeOrchidGroupIds}
           houses={houses}
           initialValue={value}
+          referencePlacements={referencePlacements}
           submitLabel={submitLabel}
           onClose={() => setOpen(false)}
           onSelect={(nextValue) => {
@@ -92,6 +99,7 @@ export function FarmPlacementPickerDialog({
   excludeOrchidGroupIds = [],
   houses,
   initialValue,
+  referencePlacements = [],
   submitDisabled = false,
   submitLabel = "선택 완료",
   onClose,
@@ -103,6 +111,7 @@ export function FarmPlacementPickerDialog({
   excludeOrchidGroupIds?: number[];
   houses: House[];
   initialValue: FarmPlacementSelection | null;
+  referencePlacements?: FarmPlacementReference[];
   submitDisabled?: boolean;
   submitLabel?: string;
   onClose: () => void;
@@ -142,8 +151,10 @@ export function FarmPlacementPickerDialog({
       buildOccupiedCells(
         selected?.zone.orchidGroups ?? [],
         referenceOrchidGroupIds,
+        referencePlacements,
+        selected?.zone.id ?? null,
       ),
-    [referenceOrchidGroupIds, selected],
+    [referenceOrchidGroupIds, referencePlacements, selected],
   );
   const hasOverlap = [...selectedCells].some((cell) => occupiedCells.has(cell));
   const selectedLabel = selected
@@ -289,6 +300,7 @@ export function FarmPlacementPickerDialog({
               <HousePreview
                 excludeOrchidGroupId={excludeOrchidGroupId}
                 excludeOrchidGroupIds={excludeOrchidGroupIds}
+                referencePlacements={referencePlacements}
                 selectedBedZoneId={selected?.zone.id ?? null}
                 selectedCells={selectedCells}
                 house={selectedHouse}
@@ -338,6 +350,7 @@ function HousePreview({
   excludeOrchidGroupId,
   excludeOrchidGroupIds,
   house,
+  referencePlacements,
   selectedBedZoneId,
   selectedCells,
   onSelectCell,
@@ -345,6 +358,7 @@ function HousePreview({
   excludeOrchidGroupId: number | null;
   excludeOrchidGroupIds: number[];
   house: House;
+  referencePlacements: FarmPlacementReference[];
   selectedBedZoneId: number | null;
   selectedCells: Set<number>;
   onSelectCell: (bedZoneId: number, cell: number) => void;
@@ -355,8 +369,13 @@ function HousePreview({
         <h3 className="text-sm font-bold text-[#17251b]">{house.number}동</h3>
         <div className="flex items-center gap-3 text-xs font-semibold text-[#66736a]">
           <Legend color="bg-[#159447]" label="선택" />
-          {excludeOrchidGroupId != null || excludeOrchidGroupIds.length > 0 ? (
+          {excludeOrchidGroupId != null ||
+          excludeOrchidGroupIds.length > 0 ||
+          referencePlacements.some((item) => item.kind === "SOURCE") ? (
             <Legend color="bg-[#fff1b8]" label="원본 위치" />
+          ) : null}
+          {referencePlacements.some((item) => item.kind === "RESULT") ? (
+            <Legend color="bg-[#dcecff]" label="다른 결과" />
           ) : null}
           <Legend color="bg-[#eef1ed]" label="사용 중" />
           <Legend color="bg-white" label="빈 칸" />
@@ -389,6 +408,7 @@ function HousePreview({
                   excludeOrchidGroupId={excludeOrchidGroupId}
                   excludeOrchidGroupIds={excludeOrchidGroupIds}
                   maxCell={Math.max(1, Math.floor(bed.positionUnitCount ?? 28))}
+                  referencePlacements={referencePlacements}
                   selected={selectedBedZoneId === zone.id}
                   selectedCells={selectedCells}
                   zone={zone}
@@ -407,6 +427,7 @@ function ZonePreview({
   excludeOrchidGroupId,
   excludeOrchidGroupIds,
   maxCell,
+  referencePlacements,
   selected,
   selectedCells,
   zone,
@@ -415,6 +436,7 @@ function ZonePreview({
   excludeOrchidGroupId: number | null;
   excludeOrchidGroupIds: number[];
   maxCell: number;
+  referencePlacements: FarmPlacementReference[];
   selected: boolean;
   selectedCells: Set<number>;
   zone: BedZone;
@@ -427,6 +449,8 @@ function ZonePreview({
       ...excludeOrchidGroupIds,
       ...(excludeOrchidGroupId == null ? [] : [excludeOrchidGroupId]),
     ]),
+    referencePlacements,
+    zone.id,
   );
   const referenceOrchidGroupIds = new Set([
     ...excludeOrchidGroupIds,
@@ -435,6 +459,8 @@ function ZonePreview({
   const referenceCells = buildReferenceCells(
     zone.orchidGroups,
     referenceOrchidGroupIds,
+    referencePlacements,
+    zone.id,
   );
 
   return (
@@ -465,19 +491,21 @@ function ZonePreview({
         <div className="min-w-0">
           {cells.map((cell) => {
             const occupied = occupiedCells.has(cell);
-            const reference = referenceCells.has(cell);
+            const reference = referenceCells.get(cell);
             const cellSelected = selected && selectedCells.has(cell);
 
             return (
               <button
                 key={cell}
                 className={`flex h-5 w-full items-center justify-between border-b border-[#edf1ec] px-2 text-left text-[10px] transition last:border-b-0 ${
-                  occupied
-                    ? "bg-[#eef1ed] text-[#77817a]"
-                    : cellSelected
-                      ? "bg-[#159447] text-white"
-                      : reference
-                        ? "bg-[#fff1b8] text-[#6f5700] hover:bg-[#ffe99a]"
+                  cellSelected
+                    ? "bg-[#159447] text-white"
+                    : reference
+                      ? reference.kind === "RESULT"
+                        ? "bg-[#dcecff] text-[#20518f] hover:bg-[#c7e0ff]"
+                        : "bg-[#fff1b8] text-[#6f5700] hover:bg-[#ffe99a]"
+                      : occupied
+                        ? "bg-[#eef1ed] text-[#77817a]"
                         : "bg-white text-[#425047] hover:bg-[#eef8ef]"
                 }`}
                 type="button"
@@ -485,7 +513,7 @@ function ZonePreview({
               >
                 <span className="truncate pl-2 font-semibold">
                   {reference
-                    ? `원본 · ${findGroupLabel(zone.orchidGroups, cell, referenceOrchidGroupIds)}`
+                    ? `${reference.kind === "RESULT" ? "결과" : "원본"} · ${reference.label}`
                     : occupied
                       ? findGroupLabel(zone.orchidGroups, cell)
                       : "빈 칸"}
@@ -561,6 +589,8 @@ function buildCellSet(startCell: number, endCell: number) {
 function buildOccupiedCells(
   orchidGroups: OrchidGroup[],
   excludeOrchidGroupIds: Set<number>,
+  referencePlacements: FarmPlacementReference[] = [],
+  bedZoneId: number | null = null,
 ) {
   const cells = new Set<number>();
   orchidGroups.forEach((group) => {
@@ -576,14 +606,31 @@ function buildOccupiedCells(
       cells.add(cell);
     }
   });
+  referencePlacements
+    .filter(
+      (reference) =>
+        reference.kind === "RESULT" &&
+        (bedZoneId == null || reference.bedZoneId === bedZoneId),
+    )
+    .forEach((reference) => {
+      for (
+        let cell = reference.startCell;
+        cell <= reference.endCell;
+        cell += 1
+      ) {
+        cells.add(cell);
+      }
+    });
   return cells;
 }
 
 function buildReferenceCells(
   orchidGroups: OrchidGroup[],
   referenceOrchidGroupIds: Set<number>,
+  referencePlacements: FarmPlacementReference[] = [],
+  bedZoneId: number | null = null,
 ) {
-  const cells = new Set<number>();
+  const cells = new Map<number, FarmPlacementReference>();
   orchidGroups.forEach((group) => {
     if (
       !referenceOrchidGroupIds.has(group.id) ||
@@ -594,8 +641,23 @@ function buildReferenceCells(
     }
     const startCell = Math.floor(group.startPosition) + 1;
     const endCell = Math.ceil(group.endPosition);
+    const label = `${group.varietyName} ${group.quantity.toLocaleString()}분`;
     for (let cell = startCell; cell <= endCell; cell += 1) {
-      cells.add(cell);
+      cells.set(cell, {
+        bedZoneId: group.bedZoneId,
+        startCell,
+        endCell,
+        startPosition: group.startPosition,
+        endPosition: group.endPosition,
+        kind: "SOURCE",
+        label,
+      });
+    }
+  });
+  referencePlacements.forEach((reference) => {
+    if (bedZoneId != null && reference.bedZoneId !== bedZoneId) return;
+    for (let cell = reference.startCell; cell <= reference.endCell; cell += 1) {
+      cells.set(cell, reference);
     }
   });
   return cells;

@@ -7,6 +7,7 @@ import type { House } from "@/entities/farm/types";
 import { isStandardPotSize, POT_SIZE_OPTIONS } from "@/entities/farm/potSizes";
 import {
   FarmPlacementField,
+  type FarmPlacementReference,
   type FarmPlacementSelection,
 } from "@/entities/farm/ui/FarmPlacementPicker";
 import { createUuid } from "@/shared/lib/id";
@@ -184,6 +185,7 @@ export function PottingExecutionForm({
                 dialogDescription="구역을 고른 뒤 포트 작업 결과가 차지할 시작 칸과 끝 칸을 지정하세요."
                 dialogTitle={`포트 작업 결과 ${index + 1} 배치 위치`}
                 houses={houses}
+                referencePlacements={resultReferencePlacements(rows, row.key)}
                 value={row.placement}
                 onChange={(placement) =>
                   updateRow(setRows, row.key, { placement })
@@ -363,6 +365,22 @@ function newResultRow(
     placementType: "",
     placement: null,
   };
+}
+
+function resultReferencePlacements(
+  rows: PottingResultRow[],
+  currentRowKey: string,
+): FarmPlacementReference[] {
+  return rows.flatMap((row, index) => {
+    if (row.key === currentRowKey || row.placement == null) return [];
+    return [
+      {
+        ...row.placement,
+        kind: "RESULT" as const,
+        label: `결과 ${index + 1} · ${row.actualQuantity || 0}분`,
+      },
+    ];
+  });
 }
 
 function updateRow(

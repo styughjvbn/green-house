@@ -5,6 +5,7 @@ import { useMemo, useState } from "react";
 import type { House, OrchidGroup, WorkOperation } from "@/entities/farm/types";
 import {
   FarmPlacementField,
+  type FarmPlacementReference,
   type FarmPlacementSelection,
 } from "@/entities/farm/ui/FarmPlacementPicker";
 import { POT_SIZE_OPTIONS } from "@/entities/farm/potSizes";
@@ -535,8 +536,9 @@ export function BatchStructureWorkExecutionDialog({
             </div>
             {rows.map((row, index) => (
               <ResultFields
-                excludeOrchidGroupIds={row.sourceOrchidGroupIds.filter(
-                  (sourceId) => {
+                excludeOrchidGroupIds={selectedSources
+                  .map(({ group }) => group.id)
+                  .filter((sourceId) => {
                     const source = orchidGroups.find(
                       (group) => group.id === sourceId,
                     );
@@ -545,12 +547,15 @@ export function BatchStructureWorkExecutionDialog({
                       (Number(inputQuantities[sourceId]) === source.quantity ||
                         releasedPlacements[sourceId] != null)
                     );
-                  },
-                )}
+                  })}
                 houses={houses}
                 index={index}
                 key={row.key}
                 operation={operation}
+                referencePlacements={[
+                  ...sourceReferencePlacements(selectedSources),
+                  ...resultReferencePlacements(rows, row.key),
+                ]}
                 removable={rows.length > 1}
                 row={row}
                 onChange={(patch) => patchRow(row.key, patch)}
@@ -622,6 +627,7 @@ function ResultFields({
   houses,
   index,
   operation,
+  referencePlacements,
   removable,
   row,
   onChange,
@@ -631,6 +637,7 @@ function ResultFields({
   houses: House[];
   index: number;
   operation: WorkOperation;
+  referencePlacements: FarmPlacementReference[];
   removable: boolean;
   row: ResultRow;
   onChange: (patch: Partial<ResultRow>) => void;
@@ -663,6 +670,7 @@ function ResultFields({
             fieldLabel="결과 배치"
             excludeOrchidGroupIds={excludeOrchidGroupIds}
             houses={houses}
+            referencePlacements={referencePlacements}
             value={row.placement}
             onChange={(placement) => onChange({ placement })}
           />
@@ -732,6 +740,38 @@ function sourceLocationLabel(group: OrchidGroup) {
 function sourcePositionLabel(group: OrchidGroup) {
   if (group.startPosition == null || group.endPosition == null) return "";
   return ` · ${Math.floor(group.startPosition) + 1}~${Math.ceil(group.endPosition)}칸`;
+}
+
+function resultReferencePlacements(
+  rows: ResultRow[],
+  currentRowKey: string,
+): FarmPlacementReference[] {
+  return rows.flatMap((row, index) => {
+    if (row.key === currentRowKey || row.placement == null) return [];
+    return [
+      {
+        ...row.placement,
+        kind: "RESULT" as const,
+        label: `결과 ${index + 1} · ${row.quantity || 0}분`,
+      },
+    ];
+  });
+}
+
+function sourceReferencePlacements(
+  sources: Array<{ group: OrchidGroup }>,
+): FarmPlacementReference[] {
+  return sources.flatMap(({ group }) => {
+    const placement = inferPlacement(group);
+    if (!placement) return [];
+    return [
+      {
+        ...placement,
+        kind: "SOURCE" as const,
+        label: `${group.varietyName} ${group.quantity.toLocaleString()}분`,
+      },
+    ];
+  });
 }
 
 function inferPlacement(group: OrchidGroup): FarmPlacementSelection | null {
