@@ -19,7 +19,8 @@ import com.greenhouse.backend.farm.repository.InboundRecordRepository;
 import com.greenhouse.backend.farm.repository.OrchidGroupRepository;
 import com.greenhouse.backend.farm.repository.VarietyRepository;
 import com.greenhouse.backend.work.application.SystemWorkCleanupService;
-import com.greenhouse.backend.work.application.SystemWorkRecorder;
+import com.greenhouse.backend.work.application.InboundWorkOperationRecorder;
+import com.greenhouse.backend.work.dto.InboundWorkOperationCreateRequest;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
@@ -38,14 +39,12 @@ import org.springframework.transaction.annotation.Transactional;
 public class InboundRecordService {
 
 	private static final String DEFAULT_ORCHID_STATUS = "정상";
-	private static final String INBOUND_WORK_TYPE_CODE = "INBOUND";
-	private static final String FARM_TARGET_TYPE = "FARM";
 
 	private final InboundRecordRepository inboundRecordRepository;
 	private final VarietyRepository varietyRepository;
 	private final BedZoneRepository bedZoneRepository;
 	private final OrchidGroupRepository orchidGroupRepository;
-	private final SystemWorkRecorder systemWorkRecorder;
+	private final InboundWorkOperationRecorder inboundWorkOperationRecorder;
 	private final SystemWorkCleanupService systemWorkCleanupService;
 	private final OrchidPlacementPolicy orchidPlacementPolicy;
 
@@ -114,17 +113,19 @@ public class InboundRecordService {
 		} else {
 			saved.markPottingPending(status);
 		}
-		recordWork(
-					INBOUND_WORK_TYPE_CODE,
-					saved.getInboundDate(),
-					FARM_TARGET_TYPE,
-					null,
-					saved.getVariety().getName(),
-					resolveWorkQuantity(saved.getInboundType(), saved.getBottleCount(), saved.getActualQuantity(),
-							saved.getEstimatedQuantity()),
-					saved.getWorker(),
-					inboundWorkMemo(saved),
-					inboundWorkDetails(saved));
+		Map<String, Object> workDetails = inboundWorkDetails(saved);
+		inboundWorkOperationRecorder.record(new InboundWorkOperationCreateRequest(
+				saved.getId(),
+				saved.getInboundDate(),
+				saved.getVariety().getId(),
+				saved.getVariety().getName(),
+				resolveQuantity(saved.getActualQuantity(), saved.getEstimatedQuantity()),
+				saved.getPotSize(),
+				inboundLocationSnapshot(saved),
+				saved.getCreatedOrchidGroup() == null ? null : saved.getCreatedOrchidGroup().getId(),
+				saved.getWorker(),
+				inboundWorkMemo(saved),
+				workDetails));
 		return InboundRecordResponse.from(findInboundRecord(saved.getId()));
 	}
 
@@ -363,40 +364,6 @@ public class InboundRecordService {
 		return new OrchidPlacementPolicy.PlacementRange(startPosition, endPosition);
 	}
 
-	private void recordWork(
-			String workTypeCode,
-			LocalDate workDate,
-			String targetType,
-			Long targetId,
-			String materialName,
-			String quantity,
-			String worker,
-			String memo) {
-		recordWork(workTypeCode, workDate, targetType, targetId, materialName, quantity, worker, memo, null);
-	}
-
-	private void recordWork(
-			String workTypeCode,
-			LocalDate workDate,
-			String targetType,
-			Long targetId,
-			String materialName,
-			String quantity,
-			String worker,
-			String memo,
-			Map<String, Object> details) {
-		systemWorkRecorder.record(
-				workTypeCode,
-				workDate,
-				targetType,
-				targetId,
-				normalize(materialName),
-				normalize(quantity),
-				normalize(worker),
-				normalize(memo),
-				details);
-	}
-
 	private Map<String, Object> inboundWorkDetails(InboundRecord record) {
 		Map<String, Object> details = new LinkedHashMap<>();
 		putDetail(details, "inboundRecordId", record.getId());
@@ -419,6 +386,23 @@ public class InboundRecordService {
 		putDetail(details, "orchidGroupId",
 				record.getCreatedOrchidGroup() == null ? null : record.getCreatedOrchidGroup().getId());
 		return details;
+	}
+
+	private Map<String, Object> inboundLocationSnapshot(InboundRecord record) {
+		Map<String, Object> location = new LinkedHashMap<>();
+		if (record.getBedZone() != null) {
+			BedZone zone = record.getBedZone();
+			putDetail(location, "houseId", zone.getPhysicalBed().getHouse().getId());
+			putDetail(location, "houseNumber", zone.getPhysicalBed().getHouse().getNumber());
+			putDetail(location, "physicalBedId", zone.getPhysicalBed().getId());
+			putDetail(location, "physicalBedNumber", zone.getPhysicalBed().getNumber());
+			putDetail(location, "bedZoneId", zone.getId());
+			putDetail(location, "bedZoneName", zone.getName());
+		} else {
+			putDetail(location, "tempLocation", record.getTempLocation());
+			putDetail(location, "pottingDueDate", record.getPottingDueDate());
+		}
+		return location;
 	}
 
 	private String inboundWorkMemo(InboundRecord record) {
@@ -466,15 +450,6 @@ public class InboundRecordService {
 			throw new IllegalArgumentException("수량은 1 이상이어야 합니다.");
 		}
 		return resolved;
-	}
-
-	private String resolveWorkQuantity(InboundType inboundType, Integer bottleCount, Integer actualQuantity,
-			Integer estimatedQuantity) {
-		if (inboundType == InboundType.FLASK_SEEDLING && bottleCount != null) {
-			return bottleCount + "병";
-		}
-		Integer resolved = actualQuantity != null ? actualQuantity : estimatedQuantity;
-		return resolved == null ? null : String.valueOf(resolved);
 	}
 
 	private String appendMemo(String base, String extra) {

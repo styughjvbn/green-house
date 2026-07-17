@@ -61,6 +61,8 @@ class InboundPottingPlanIntegrationTests extends AbstractBackendIntegrationTest 
 
 		pottingType = workTypeRepository.save(new WorkType(
 				WorkType.POTTING_CODE, "포트 작업", WorkTypeTemplate.REPOT, true, false, true, 1));
+		workTypeRepository.save(new WorkType(
+				WorkType.INBOUND_CODE, "입고", WorkTypeTemplate.MEMO, true, false, true, 0));
 		House house = new House(1, "1동");
 		PhysicalBed bed = new PhysicalBed(1, 1);
 		bed.updatePositionUnits(new BigDecimal("24"), "칸");
@@ -89,6 +91,53 @@ class InboundPottingPlanIntegrationTests extends AbstractBackendIntegrationTest 
 				null,
 				"입고 담당",
 				null));
+	}
+
+	@Test
+	void createsInboundAsACompletedWorkOperationWithoutLegacyWorkRecord() throws Exception {
+		var created = mockMvc.perform(post("/api/inbound-records")
+				.contentType(MediaType.APPLICATION_JSON)
+				.content("""
+						{
+						  "inboundDate": "2026-07-17",
+						  "inboundType": "PRODUCT_POT",
+						  "varietyId": %d,
+						  "actualQuantity": 20,
+						  "potSize": "2치",
+						  "ageYear": 1,
+						  "bedZoneId": %d,
+						  "startPosition": 8,
+						  "endPosition": 10,
+						  "worker": "입고 담당",
+						  "memo": "신규 입고"
+						}
+						""".formatted(inboundRecord.getVariety().getId(), bedZone.getId())))
+				.andExpect(status().isCreated())
+				.andExpect(jsonPath("$.data.status").value("PLACED"))
+				.andReturn();
+		Long inboundRecordId = Long.valueOf(created.getResponse().getContentAsString().replaceAll(
+				".*?\\\"data\\\":\\{\\\"id\\\":(\\d+).*", "$1"));
+
+		assertThat(workRecordRepository.count()).isZero();
+		assertThat(operationRepository.findAll()).singleElement().satisfies(operation -> {
+			assertThat(operation.getWorkType().getCode()).isEqualTo(WorkType.INBOUND_CODE);
+			assertThat(operation.getStatus().name()).isEqualTo("COMPLETED");
+			assertThat(operation.getPlannedStartDate()).isEqualTo(LocalDate.of(2026, 7, 17));
+		});
+		Long operationId = operationRepository.findAll().getFirst().getId();
+		assertThat(operationTargetRepository
+				.findByWorkOperationIdAndExcludedAtIsNullOrderByIdAsc(operationId))
+				.singleElement()
+				.satisfies(target -> assertThat(target.getInboundRecordId()).isEqualTo(inboundRecordId));
+		assertThat(targetExecutionRepository
+				.findByTargetWorkOperationIdOrderByIdAsc(operationId))
+				.singleElement()
+				.satisfies(execution -> assertThat(execution.getStatus().name()).isEqualTo("COMPLETED"));
+		assertThat(effectOrchidGroupRepository
+				.findByWorkAppliedEffectWorkOperationIdAndRelationTypeOrderByIdAsc(
+						operationId,
+						com.greenhouse.backend.work.domain.WorkEffectOrchidGroupRelationType.RESULT))
+				.hasSize(1);
 	}
 
 	@Test
