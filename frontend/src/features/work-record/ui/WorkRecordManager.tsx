@@ -3,7 +3,6 @@
 import { useState } from "react";
 import type { WorkRecordManagerProps } from "../model/types";
 import { useWorkRecordManager } from "../model/useWorkRecordManager";
-import { WorkRecordCreateForm } from "./components/WorkRecordCreateForm";
 import { WorkRecordDetail } from "./components/WorkRecordDetail";
 import { WorkRecordFilters } from "./components/WorkRecordFilters";
 import { WorkRecordList } from "./components/WorkRecordList";
@@ -30,35 +29,10 @@ export function WorkRecordManager(
 
   return (
     <div className="flex h-full min-h-0 flex-col gap-4">
-      {manager.errorMessage && !manager.showCreateForm ? (
+      {manager.errorMessage ? (
         <div className="rounded-md border border-[#c25a3c] bg-[#fff1ec] p-3 text-sm text-[#8f2f19]">
           {manager.errorMessage}
         </div>
-      ) : null}
-      {activeTab === "LIST" && manager.showCreateForm ? (
-        <WorkRecordCreateForm
-          bedZones={manager.bedZones}
-          errorMessage={manager.errorMessage}
-          form={manager.form}
-          orchidGroups={manager.orchidGroups}
-          selectedOrchidGroupIds={manager.selectedOrchidGroupIds}
-          saving={manager.saving}
-          workTypes={props.workTypes}
-          onClose={() => manager.setShowCreateForm(false)}
-          onChange={manager.updateForm}
-          onOpenPlannedWork={() => {
-            manager.setShowCreateForm(false);
-            setOperationInitialTypeCode(null);
-            setShowOperationForm(true);
-          }}
-          onOpenDedicatedWork={(workTypeCode) => {
-            manager.setShowCreateForm(false);
-            setOperationInitialTypeCode(workTypeCode);
-            setShowOperationForm(true);
-          }}
-          onTargetChange={manager.setSelectedOrchidGroupIds}
-          onSubmit={manager.submitWorkRecord}
-        />
       ) : null}
       {activeTab === "LIST" && showOperationForm ? (
         <WorkOperationPanel
@@ -66,11 +40,10 @@ export function WorkRecordManager(
           initialWorkTypeCode={operationInitialTypeCode}
           workTypes={props.workTypes}
           onClose={() => setShowOperationForm(false)}
-          onOpenCompletedWork={() => {
-            setShowOperationForm(false);
-            manager.setShowCreateForm(true);
+          onSaved={() => {
+            setOperationSavedVersion((current) => current + 1);
+            manager.setOperationCreatedVersion((current) => current + 1);
           }}
-          onSaved={() => setOperationSavedVersion((current) => current + 1)}
         />
       ) : null}
 
@@ -81,8 +54,8 @@ export function WorkRecordManager(
           orchidGroups={manager.orchidGroups}
           refreshKey={refreshKey}
           onCreateWork={() => {
-            setShowOperationForm(false);
-            manager.setShowCreateForm(true);
+            setOperationInitialTypeCode(null);
+            setShowOperationForm(true);
           }}
         />
       ) : null}

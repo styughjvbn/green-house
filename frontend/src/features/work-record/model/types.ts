@@ -16,21 +16,6 @@ export type WorkRecordManagerProps = {
   workTypes: WorkType[];
 };
 
-export type WorkRecordFormState = {
-  workTypeId: string;
-  workDate: string;
-  targetType: WorkRecordTargetType;
-  houseId: string;
-  physicalBedId: string;
-  bedZoneId: string;
-  orchidGroupId: string;
-  materialName: string;
-  dilutionRatio: string;
-  quantity: string;
-  worker: string;
-  memo: string;
-};
-
 export type WorkRecordTargetOptions = {
   physicalBeds: PhysicalBed[];
   bedZones: BedZone[];

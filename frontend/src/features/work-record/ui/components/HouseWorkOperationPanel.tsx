@@ -11,9 +11,13 @@ import type {
   WorkTargetPreview,
   WorkType,
 } from "@/entities/farm/types";
-import { getSchedulableWorkTypes } from "@/entities/farm/workTypes";
+import {
+  getSchedulableWorkTypes,
+  isVisibleWorkRecordField,
+} from "@/entities/farm/workTypes";
 import {
   completeWorkOperation,
+  createCompletedWorkOperationFromRecord,
   createInboundPottingPlan,
   createWorkOperation,
   getInboundPottingCandidates,
@@ -23,6 +27,7 @@ import {
   transitionWorkOperationTarget,
 } from "../../api/workRecordApi";
 import type {
+  CreateWorkRecordPayload,
   InboundPottingCandidate,
   WorkOperationFormState,
   WorkTargetPreviewPayload,
@@ -45,14 +50,12 @@ export function WorkOperationPanel({
   workTypes,
   initialWorkTypeCode,
   onClose,
-  onOpenCompletedWork,
   onSaved,
 }: {
   houses: House[];
   workTypes: WorkType[];
   initialWorkTypeCode?: string | null;
   onClose: () => void;
-  onOpenCompletedWork: () => void;
   onSaved?: () => void;
 }) {
   const schedulableWorkTypes = getSchedulableWorkTypes(workTypes);
@@ -81,6 +84,9 @@ export function WorkOperationPanel({
     useState<WorkOperationTarget | null>(null);
   const [excludedIds, setExcludedIds] = useState<Set<number>>(new Set());
   const [manualIds, setManualIds] = useState<Set<number>>(new Set());
+  const [registrationMode, setRegistrationMode] = useState<"RECORD" | "PLAN">(
+    "PLAN",
+  );
   const [inboundRecordIds, setInboundRecordIds] = useState<Set<number>>(
     new Set(),
   );
@@ -105,6 +111,12 @@ export function WorkOperationPanel({
     selectedWorkType?.code === "MERGE" ||
     selectedWorkType?.code === "DISCARD" ||
     selectedWorkType?.code === "MOVEMENT";
+  const recordDisabled =
+    selectedWorkType?.code === "POTTING" ||
+    selectedWorkType?.code === "REPOT" ||
+    selectedWorkType?.code === "DIVIDE" ||
+    selectedWorkType?.code === "MERGE" ||
+    selectedWorkType?.code === "DISCARD";
 
   const includedTargets = useMemo(
     () =>
@@ -123,13 +135,6 @@ export function WorkOperationPanel({
     () => orchidGroups.filter((group) => manualIds.has(group.id)),
     [manualIds, orchidGroups],
   );
-  const selectedManualQuantity = selectedManualGroups.reduce(
-    (sum, group) => sum + group.quantity,
-    0,
-  );
-  const selectedManualZoneCount = new Set(
-    selectedManualGroups.map((group) => group.bedZoneId),
-  ).size;
   const saveUnavailableReason = loading
     ? "처리 중입니다."
     : !selectedWorkType
@@ -140,11 +145,13 @@ export function WorkOperationPanel({
           ? inboundRecordIds.size === 0
             ? "포트 작업할 입고 기록을 선택해주세요."
             : null
-          : !preview
+          : registrationMode === "PLAN" && !preview
             ? "대상 선택 후 실제 대상을 미리보기해주세요."
-            : includedTargets.length === 0
+            : registrationMode === "PLAN" && includedTargets.length === 0
               ? "포함할 난 묶음을 하나 이상 선택해주세요."
-              : null;
+              : registrationMode === "RECORD" && manualIds.size === 0
+                ? "기록할 난 묶음을 하나 이상 선택해주세요."
+                : null;
 
   useEffect(() => {
     let cancelled = false;
@@ -195,6 +202,15 @@ export function WorkOperationPanel({
       const workType = schedulableWorkTypes.find(
         (candidate) => String(candidate.id) === value,
       );
+      const nextRecordDisabled =
+        workType?.code === "POTTING" ||
+        workType?.code === "REPOT" ||
+        workType?.code === "DIVIDE" ||
+        workType?.code === "MERGE" ||
+        workType?.code === "DISCARD";
+      if (nextRecordDisabled) {
+        setRegistrationMode("PLAN");
+      }
       setForm((current) => ({
         ...current,
         workTypeId: String(value),
@@ -239,6 +255,29 @@ export function WorkOperationPanel({
 
   async function saveOperation() {
     if (!selectedWorkType) return;
+    if (registrationMode === "RECORD") {
+      if (manualIds.size === 0 || recordDisabled) return;
+      setLoading(true);
+      setErrorMessage(null);
+      try {
+        await createCompletedWorkOperationFromRecord(
+          recordPayload(form, manualIds, selectedWorkType),
+          selectedWorkType.name,
+          form.title,
+        );
+        onSaved?.();
+        onClose();
+      } catch (error) {
+        setErrorMessage(
+          error instanceof Error
+            ? error.message
+            : "작업 기록을 저장하지 못했습니다.",
+        );
+      } finally {
+        setLoading(false);
+      }
+      return;
+    }
     if (isInboundPotting) {
       if (inboundRecordIds.size === 0) return;
       setLoading(true);
@@ -462,15 +501,16 @@ export function WorkOperationPanel({
               selectedWorkType={selectedWorkType}
               isInboundPotting={isInboundPotting}
               isDedicatedWorkflow={isDedicatedWorkflow}
-              targetSummary={
-                isInboundPotting
-                  ? inboundRecordIds.size > 0
-                    ? `입고 기록 ${inboundRecordIds.size}건`
-                    : "포트 작업할 유리병 모종 입고 기록을 선택하세요."
-                  : manualIds.size > 0
-                    ? `${targetScopeLabel ? `${targetScopeLabel} · ` : ""}${manualIds.size}묶음 · ${selectedManualQuantity}분 · ${selectedManualZoneCount}개 구역`
-                    : "동, 다이, 구역 또는 개별 난 묶음을 선택하세요."
-              }
+              targetSummary={targetSummary({
+                isInboundPotting,
+                inboundRecordIds,
+                inboundCandidates,
+                manualIds,
+                targetScopeLabel,
+                selectedManualGroups,
+                preview,
+                excludedIds,
+              })}
               targetCount={
                 isInboundPotting ? inboundRecordIds.size : manualIds.size
               }
@@ -482,7 +522,10 @@ export function WorkOperationPanel({
               includedTargetCount={includedTargets.length}
               includedQuantity={includedQuantity}
               saveUnavailableReason={saveUnavailableReason}
-              onOpenCompletedWork={onOpenCompletedWork}
+              registrationMode={registrationMode}
+              recordDisabled={recordDisabled}
+              onChangeRegistrationMode={setRegistrationMode}
+              onCancel={onClose}
               onUpdateForm={updateForm}
               onOpenTargetSelector={() => setTargetSelectorOpen(true)}
               onLoadPreview={loadPreview}
@@ -586,4 +629,123 @@ export function WorkOperationPanel({
       ) : null}
     </div>
   );
+}
+
+function targetSummary({
+  isInboundPotting,
+  inboundRecordIds,
+  inboundCandidates,
+  manualIds,
+  targetScopeLabel,
+  selectedManualGroups,
+  preview,
+  excludedIds,
+}: {
+  isInboundPotting: boolean;
+  inboundRecordIds: Set<number>;
+  inboundCandidates: InboundPottingCandidate[];
+  manualIds: Set<number>;
+  targetScopeLabel: string | null;
+  selectedManualGroups: OrchidGroup[];
+  preview: WorkTargetPreview | null;
+  excludedIds: Set<number>;
+}) {
+  if (isInboundPotting) {
+    const selected = inboundCandidates.filter((candidate) =>
+      inboundRecordIds.has(candidate.id),
+    );
+    const quantity = selected.reduce(
+      (sum, item) => sum + (item.actualQuantity ?? item.estimatedQuantity ?? 0),
+      0,
+    );
+    return {
+      title:
+        selected.length > 0
+          ? `입고 포트 대상 · ${selected[0]?.varietyName ?? "품종 미지정"}`
+          : "포트 작업할 유리병 모종 입고 기록을 선택하세요.",
+      metrics:
+        selected.length > 0
+          ? `입고 기록 ${selected.length}건 · 총 ${quantity.toLocaleString()}개`
+          : "대상 선택이 필요합니다.",
+      location: selected
+        .map((item) => item.tempLocation)
+        .filter(Boolean)
+        .slice(0, 3)
+        .join(" / "),
+    };
+  }
+
+  if (manualIds.size === 0) {
+    return {
+      title: "동, 다이, 구역 또는 개별 난 묶음을 선택하세요.",
+      metrics: "대상 선택이 필요합니다.",
+      location: "",
+    };
+  }
+
+  const includedTargets =
+    preview?.targets.filter(
+      (target) =>
+        target.orchidGroupId != null && !excludedIds.has(target.orchidGroupId),
+    ) ?? [];
+  const groups =
+    includedTargets.length > 0
+      ? selectedManualGroups.filter((group) =>
+          includedTargets.some((target) => target.orchidGroupId === group.id),
+        )
+      : selectedManualGroups;
+  const houseCounts = [...groupByHouse(groups).entries()]
+    .sort(([left], [right]) => left - right)
+    .map(([houseNumber, count]) => `${houseNumber}동 ${count}개`)
+    .join(" / ");
+  const totalQuantity = groups.reduce((sum, group) => sum + group.quantity, 0);
+  const zoneCount = new Set(groups.map((group) => group.bedZoneId)).size;
+  const first = groups[0] ?? selectedManualGroups[0];
+  return {
+    title: targetScopeLabel
+      ? `${targetScopeLabel}`
+      : first
+        ? `${first.varietyName} · ${first.ageYear ?? "-"}년생 · ${first.potSize ?? "-"}`
+        : "직접 선택",
+    metrics: `난 묶음 ${groups.length}개 · 총 ${totalQuantity.toLocaleString()}분 · ${zoneCount}개 구역`,
+    location: houseCounts,
+  };
+}
+
+function groupByHouse(groups: OrchidGroup[]) {
+  const counts = new Map<number, number>();
+  groups.forEach((group) => {
+    counts.set(group.houseNumber, (counts.get(group.houseNumber) ?? 0) + 1);
+  });
+  return counts;
+}
+
+function recordPayload(
+  form: WorkOperationFormState,
+  manualIds: Set<number>,
+  selectedWorkType: WorkType,
+): CreateWorkRecordPayload {
+  const template = selectedWorkType.template;
+  return {
+    workTypeId: selectedWorkType.id,
+    workDate: form.plannedStartDate,
+    targetType: "ORCHID_GROUP",
+    targetId: null,
+    orchidGroupIds: [...manualIds],
+    materialName: isVisibleWorkRecordField(template, "materialName")
+      ? form.materialName.trim() || null
+      : null,
+    dilutionRatio: isVisibleWorkRecordField(template, "dilutionRatio")
+      ? form.dilutionRatio.trim() || null
+      : null,
+    quantity: isVisibleWorkRecordField(template, "quantity")
+      ? form.quantity.trim() || null
+      : null,
+    worker: isVisibleWorkRecordField(template, "worker")
+      ? form.worker.trim() || null
+      : null,
+    memo: isVisibleWorkRecordField(template, "memo")
+      ? form.memo.trim() || null
+      : null,
+  };
 }

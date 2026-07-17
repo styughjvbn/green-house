@@ -1,39 +1,23 @@
 ﻿"use client";
 
-import { FormEvent, useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import type { BedZone, OrchidGroup, WorkRecord } from "@/entities/farm/types";
 import {
   cancelWorkRecord,
-  createCompletedWorkOperationFromRecord,
   getWorkTargetSelectionOptions,
 } from "../api/workRecordApi";
 import {
   createInitialWorkRecordFilters,
-  createInitialWorkRecordForm,
   filterWorkRecords,
-  resetWorkRecordFormAfterSubmit,
-  toCreateWorkRecordPayload,
 } from "../lib/workRecordForm";
-import type {
-  WorkRecordFilterState,
-  WorkRecordFormState,
-  WorkRecordManagerProps,
-} from "./types";
+import type { WorkRecordFilterState, WorkRecordManagerProps } from "./types";
 
 export function useWorkRecordManager({
   initialRecords,
-  houses,
-  workTypes,
 }: WorkRecordManagerProps) {
   const [records, setRecords] = useState<WorkRecord[]>(initialRecords);
   const [orchidGroups, setOrchidGroups] = useState<OrchidGroup[]>([]);
   const [bedZones, setBedZones] = useState<BedZone[]>([]);
-  const [selectedOrchidGroupIds, setSelectedOrchidGroupIds] = useState<
-    Set<number>
-  >(new Set());
-  const [form, setForm] = useState<WorkRecordFormState>(() =>
-    createInitialWorkRecordForm(workTypes, houses),
-  );
   const [filters, setFilters] = useState<WorkRecordFilterState>(() =>
     createInitialWorkRecordFilters(),
   );
@@ -43,8 +27,6 @@ export function useWorkRecordManager({
   const [detailOpen, setDetailOpen] = useState(Boolean(initialRecords[0]));
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
-  const [showCreateForm, setShowCreateForm] = useState(false);
-  const [saving, setSaving] = useState(false);
   const [canceling, setCanceling] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [operationCreatedVersion, setOperationCreatedVersion] = useState(0);
@@ -89,13 +71,6 @@ export function useWorkRecordManager({
     };
   }, []);
 
-  function updateForm<K extends keyof WorkRecordFormState>(
-    field: K,
-    value: WorkRecordFormState[K],
-  ) {
-    setForm((current) => ({ ...current, [field]: value }));
-  }
-
   function updateFilters<K extends keyof WorkRecordFilterState>(
     field: K,
     value: WorkRecordFilterState[K],
@@ -125,35 +100,6 @@ export function useWorkRecordManager({
 
   function closeDetail() {
     setDetailOpen(false);
-  }
-
-  async function submitWorkRecord(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    setSaving(true);
-    setErrorMessage(null);
-
-    try {
-      const payload = toCreateWorkRecordPayload(
-        form,
-        selectedOrchidGroupIds,
-        workTypes,
-      );
-      const workType = workTypes.find((item) => item.id === payload.workTypeId);
-      await createCompletedWorkOperationFromRecord(
-        payload,
-        workType?.name ?? "작업",
-      );
-      setOperationCreatedVersion((current) => current + 1);
-      setShowCreateForm(false);
-      setSelectedOrchidGroupIds(new Set());
-      setForm((current) => resetWorkRecordFormAfterSubmit(current));
-    } catch (error) {
-      setErrorMessage(
-        error instanceof Error ? error.message : "요청 중 문제가 발생했습니다.",
-      );
-    } finally {
-      setSaving(false);
-    }
   }
 
   async function cancelSelectedRecord(cancelReason: string | null) {
@@ -190,30 +136,23 @@ export function useWorkRecordManager({
     filteredRecords,
     paginatedRecords,
     selectedRecord,
-    form,
     filters,
     detailOpen,
     currentPage: visibleCurrentPage,
     pageSize,
     totalPages,
-    showCreateForm,
-    saving,
     canceling,
     errorMessage,
     orchidGroups,
     bedZones,
-    selectedOrchidGroupIds,
-    setSelectedOrchidGroupIds,
     selectRecord,
     closeDetail,
     changePage,
     changePageSize,
-    setShowCreateForm,
     updateFilters,
     resetFilters,
-    updateForm,
-    submitWorkRecord,
     cancelSelectedRecord,
     operationCreatedVersion,
+    setOperationCreatedVersion,
   };
 }

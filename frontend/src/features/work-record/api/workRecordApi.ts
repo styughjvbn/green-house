@@ -121,6 +121,7 @@ export async function getWorkRecordTargetOptions(
 export async function createCompletedWorkOperationFromRecord(
   payload: CreateWorkRecordPayload,
   workTypeName: string,
+  title?: string | null,
 ): Promise<WorkOperation> {
   const response = await fetch(`${API_BASE_URL}/work-operations/record`, {
     method: "POST",
@@ -128,7 +129,7 @@ export async function createCompletedWorkOperationFromRecord(
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
       workTypeId: payload.workTypeId,
-      title: `${workTypeName} 작업`,
+      title: title?.trim() || `${workTypeName} 작업`,
       plannedStartDate: payload.workDate,
       sourceScopeType: "MANUAL_SELECTION",
       sourceOrchidGroupIds: payload.orchidGroupIds,
