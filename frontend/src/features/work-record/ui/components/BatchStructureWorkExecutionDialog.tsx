@@ -442,12 +442,11 @@ export function BatchStructureWorkExecutionDialog({
                   />
                   <span className="min-w-0 text-xs">
                     <span className="block truncate font-semibold text-[#26352b]">
-                      {group.varietyName} · {group.houseNumber}동{" "}
-                      {group.physicalBedNumber}다이
+                      {group.varietyName} · {sourceLocationLabel(group)}
                     </span>
                     <span className="text-[#6a766e]">
                       현재 {group.quantity}분 · 계획 잔여{" "}
-                      {target.remainingQuantity}분
+                      {target.remainingQuantity}분{sourcePositionLabel(group)}
                     </span>
                   </span>
                   <TextField
@@ -524,7 +523,7 @@ export function BatchStructureWorkExecutionDialog({
                 </select>
               </label>
               <TextField
-                label="전체 결과 년생"
+                label="전체 결과 시작 년생"
                 type="number"
                 value={commonAgeYear}
                 onChange={(ageYear) =>
@@ -689,7 +688,7 @@ function ResultFields({
           </select>
         </label>
         <TextField
-          label="년생"
+          label="시작 년생"
           type="number"
           value={row.ageYear}
           onChange={(ageYear) => onChange({ ageYear })}
@@ -726,6 +725,15 @@ function newResultRow(group: OrchidGroup, quantity: number): ResultRow {
   };
 }
 
+function sourceLocationLabel(group: OrchidGroup) {
+  return `${group.houseNumber}동 ${group.physicalBedNumber}다이 ${group.bedZoneName}`;
+}
+
+function sourcePositionLabel(group: OrchidGroup) {
+  if (group.startPosition == null || group.endPosition == null) return "";
+  return ` · ${Math.floor(group.startPosition) + 1}~${Math.ceil(group.endPosition)}칸`;
+}
+
 function inferPlacement(group: OrchidGroup): FarmPlacementSelection | null {
   if (group.startPosition == null || group.endPosition == null) return null;
   return {
@@ -734,7 +742,7 @@ function inferPlacement(group: OrchidGroup): FarmPlacementSelection | null {
     endCell: Math.ceil(group.endPosition),
     startPosition: group.startPosition,
     endPosition: group.endPosition,
-    label: `${group.houseNumber}동 ${group.physicalBedNumber}다이 ${group.bedZoneName} · ${Math.floor(group.startPosition) + 1}~${Math.ceil(group.endPosition)}칸`,
+    label: `${sourceLocationLabel(group)}${sourcePositionLabel(group)}`,
   };
 }
 
@@ -766,7 +774,7 @@ function inferReleasedPlacement(
     endCell,
     startPosition: startCell - 1,
     endPosition: endCell,
-    label: `${group.houseNumber}동 ${group.physicalBedNumber}다이 ${group.bedZoneName} · ${startCell}~${endCell}칸`,
+    label: `${sourceLocationLabel(group)} · ${startCell}~${endCell}칸`,
   };
 }
 

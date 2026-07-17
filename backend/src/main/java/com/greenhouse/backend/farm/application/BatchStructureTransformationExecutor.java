@@ -66,6 +66,9 @@ public class BatchStructureTransformationExecutor {
 		Map<Long, Integer> inputBySourceId = sourceRequests.values().stream().collect(Collectors.toMap(
 				StructureChangeSourceRequest::sourceOrchidGroupId,
 				StructureChangeSourceRequest::inputQuantity));
+		Map<Long, String> sourceStatusById = sources.values().stream().collect(Collectors.toMap(
+				OrchidGroup::getId,
+				OrchidGroup::getStatus));
 		var referencedSourceIds = request.results().stream()
 				.flatMap(row -> row.sourceOrchidGroupIds() == null || row.sourceOrchidGroupIds().isEmpty()
 						? inputBySourceId.keySet().stream()
@@ -96,7 +99,8 @@ public class BatchStructureTransformationExecutor {
 			OrchidGroup resultSource = sources.get(lineageSourceIds.iterator().next());
 			OrchidGroup result = orchidGroupCommandService.createEntity(new OrchidGroupCreateRequest(
 					row.bedZoneId(), varietyId, row.quantity(), row.potSize(), row.ageYear(),
-					resultStatus(resultSource.getStatus(), row.purpose()), row.placementType(), row.trayCount(),
+					resultStatus(sourceStatusById.get(resultSource.getId()), row.purpose()),
+					row.placementType(), row.trayCount(),
 					row.splitPlacementAllowed(), row.startPosition(), row.endPosition(), row.memo()));
 			lineageSourceIds.forEach(sourceId -> lineageService.record(
 					sources.get(sourceId), result, relationType, operation,

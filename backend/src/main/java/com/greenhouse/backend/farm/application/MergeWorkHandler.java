@@ -98,11 +98,12 @@ public class MergeWorkHandler implements WorkEffectHandler {
 			throw new IllegalArgumentException("손실 수량이 있으면 손실 사유를 입력해야 합니다.");
 		}
 
+		String resultStatus = first.getStatus();
 		inputBySourceId.forEach((sourceId, inputQuantity) ->
 				sourcesById.get(sourceId).applyRepot(inputQuantity));
 		var row = request.result();
 		OrchidGroup result = orchidGroupCommandService.createEntity(new OrchidGroupCreateRequest(
-				row.bedZoneId(), varietyId, row.quantity(), row.potSize(), row.ageYear(), first.getStatus(),
+				row.bedZoneId(), varietyId, row.quantity(), row.potSize(), row.ageYear(), resultStatus,
 				row.placementType(), row.trayCount(), row.splitPlacementAllowed(),
 				row.startPosition(), row.endPosition(), row.memo()));
 		request.sources().forEach(sourceInput -> lineageService.record(

@@ -114,6 +114,10 @@ class DivideMergeWorkOperationIntegrationTests extends AbstractBackendIntegratio
 				.andExpect(jsonPath("$.data.targets[0].executionStatus").value("COMPLETED"));
 
 		assertThat(orchidGroupRepository.findById(source.getId()).orElseThrow().getQuantity()).isZero();
+		assertThat(orchidGroupRepository.findByBedZoneIdAndQuantityGreaterThanOrderBySortOrderAsc(
+				resultZone.getId(), 0))
+				.extracting(OrchidGroup::getStatus)
+				.containsExactly("정상", "정상");
 		assertThat(lineageRepository.findBySourceOrchidGroupIdOrderByCreatedAtAscIdAsc(source.getId()))
 				.hasSize(2)
 				.allMatch(lineage -> lineage.getRelationType() == OrchidGroupLineageRelationType.SPLIT_TO);
@@ -186,6 +190,7 @@ class DivideMergeWorkOperationIntegrationTests extends AbstractBackendIntegratio
 				resultZone.getId(), 0);
 		assertThat(resultGroups).singleElement().satisfies(result -> {
 			assertThat(result.getQuantity()).isEqualTo(30);
+			assertThat(result.getStatus()).isEqualTo("정상");
 			assertThat(lineageRepository.findByResultOrchidGroupIdOrderByCreatedAtAscIdAsc(result.getId()))
 					.hasSize(2)
 					.allMatch(lineage -> lineage.getRelationType() == OrchidGroupLineageRelationType.MERGED_TO);
@@ -327,6 +332,7 @@ class DivideMergeWorkOperationIntegrationTests extends AbstractBackendIntegratio
 
 		var result = orchidGroupRepository
 				.findByBedZoneIdAndQuantityGreaterThanOrderBySortOrderAsc(resultZone.getId(), 0).getFirst();
+		assertThat(result.getStatus()).isEqualTo("정상");
 		assertThat(lineageRepository.findByResultOrchidGroupIdOrderByCreatedAtAscIdAsc(result.getId()))
 				.hasSize(2)
 				.allMatch(lineage -> lineage.getRelationType() == OrchidGroupLineageRelationType.MERGED_TO);
