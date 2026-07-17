@@ -30,7 +30,6 @@ paths:
         schema:
           type: string
           enum:
-          - DRAFT
           - PLANNED
           - IN_PROGRESS
           - PAUSED
@@ -1044,7 +1043,6 @@ components:
         status:
           type: string
           enum:
-          - DRAFT
           - PLANNED
           - IN_PROGRESS
           - PAUSED

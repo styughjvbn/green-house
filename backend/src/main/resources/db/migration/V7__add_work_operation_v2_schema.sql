@@ -59,7 +59,10 @@ CREATE TABLE work_operations (
     version BIGINT NOT NULL DEFAULT 0,
     created_at TIMESTAMP NOT NULL,
     updated_at TIMESTAMP NOT NULL,
-    CONSTRAINT uk_work_operations_request_key UNIQUE (request_key)
+    CONSTRAINT uk_work_operations_request_key UNIQUE (request_key),
+    CONSTRAINT ck_work_operations_status CHECK (
+        status IN ('PLANNED', 'IN_PROGRESS', 'PAUSED', 'COMPLETED', 'CANCELED', 'CORRECTED')
+    )
 );
 
 CREATE INDEX idx_work_operations_status_start

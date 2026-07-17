@@ -141,7 +141,6 @@ export function WorkOperationList({
             }}
           >
             <option value="">전체 상태</option>
-            <option value="DRAFT">초안</option>
             <option value="PLANNED">계획</option>
             <option value="IN_PROGRESS">진행 중</option>
             <option value="PAUSED">일시중지</option>
@@ -305,7 +304,6 @@ function scopeLabel(operation: WorkOperation) {
 
 function statusLabel(status: WorkOperationStatus) {
   return {
-    DRAFT: "초안",
     PLANNED: "계획",
     IN_PROGRESS: "진행 중",
     PAUSED: "일시중지",

@@ -156,7 +156,6 @@ export function WorkOperationSchedule({
             }}
           >
             <option value="">전체</option>
-            <option value="DRAFT">초안</option>
             <option value="PLANNED">계획</option>
             <option value="IN_PROGRESS">진행 중</option>
             <option value="PAUSED">일시중지</option>

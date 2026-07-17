@@ -236,7 +236,6 @@ export type WorkRecord = {
 };
 
 export type WorkOperationStatus =
-  | "DRAFT"
   | "PLANNED"
   | "IN_PROGRESS"
   | "PAUSED"

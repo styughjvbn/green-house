@@ -118,7 +118,6 @@ export function workPlanGuidance(code?: string) {
 
 export function operationStatusLabel(status: WorkOperation["status"]) {
   return {
-    DRAFT: "초안",
     PLANNED: "계획",
     IN_PROGRESS: "진행 중",
     PAUSED: "일시중지",
