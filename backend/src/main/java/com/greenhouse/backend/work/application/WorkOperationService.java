@@ -102,10 +102,14 @@ public class WorkOperationService {
 		if (included.isEmpty()) {
 			throw new IllegalArgumentException("작업 대상 난 묶음이 한 개 이상 필요합니다.");
 		}
-		if (com.greenhouse.backend.work.domain.WorkType.MERGE_CODE.equals(workType.getCode())) {
+		if (Set.of(
+				com.greenhouse.backend.work.domain.WorkType.REPOT_CODE,
+				com.greenhouse.backend.work.domain.WorkType.DIVIDE_CODE,
+				com.greenhouse.backend.work.domain.WorkType.MERGE_CODE)
+				.contains(workType.getCode())) {
 			Long varietyId = included.getFirst().varietyId();
 			if (varietyId == null || included.stream().anyMatch(group -> !varietyId.equals(group.varietyId()))) {
-				throw new IllegalArgumentException("합식은 같은 품종의 난 묶음끼리만 계획할 수 있습니다.");
+				throw new IllegalArgumentException("분갈이·분주·합식 작업은 하나의 품종만 대상으로 계획할 수 있습니다.");
 			}
 		}
 
@@ -182,6 +186,10 @@ public class WorkOperationService {
 			}
 		}
 		var records = inboundPottingPlanGateway.resolve(requestedIds);
+		Long varietyId = records.getFirst().varietyId();
+		if (varietyId == null || records.stream().anyMatch(record -> !varietyId.equals(record.varietyId()))) {
+			throw new IllegalArgumentException("포트 작업은 하나의 품종만 대상으로 계획할 수 있습니다.");
+		}
 
 		WorkOperation operation = workOperationRepository.save(new WorkOperation(
 				workType,

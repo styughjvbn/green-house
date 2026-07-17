@@ -5,6 +5,7 @@ import java.time.LocalDate;
 
 public record InboundPottingCandidateResponse(
 		Long id,
+		Long varietyId,
 		String varietyName,
 		String status,
 		Integer estimatedQuantity,
@@ -14,7 +15,7 @@ public record InboundPottingCandidateResponse(
 		String potSize) {
 	public static InboundPottingCandidateResponse from(InboundPottingPlanTarget target) {
 		return new InboundPottingCandidateResponse(
-				target.id(), target.varietyName(), target.status(), target.estimatedQuantity(),
+				target.id(), target.varietyId(), target.varietyName(), target.status(), target.estimatedQuantity(),
 				target.actualQuantity(), target.tempLocation(), target.pottingDueDate(), target.potSize());
 	}
 }

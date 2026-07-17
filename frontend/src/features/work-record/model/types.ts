@@ -89,6 +89,7 @@ export type WorkOperationScopeType =
 
 export type InboundPottingCandidate = {
   id: number;
+  varietyId: number;
   varietyName: string;
   status: string;
   estimatedQuantity: number | null;

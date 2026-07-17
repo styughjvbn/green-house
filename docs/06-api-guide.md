@@ -116,6 +116,8 @@ python3 scripts/generate_openapi.py --url http://localhost:8080/api-docs
 
 입고 관리 화면의 즉시 실행은 `POST /api/work-operations/inbound-potting-executions`를 사용한다. 같은 입고 기록이 활성 포트 작업 계획에 포함되어 있으면 해당 계획의 대상을 실행하고, 계획이 없을 때만 단일 대상 `WorkOperation`을 새로 생성한다. 다중 대상 계획은 실행한 대상만 완료하고 나머지 대상을 유지한다. 요청의 `results`에 결과별 수량·화분·년생·배치 위치를 전달하며 한 번의 포트 작업으로 여러 난 묶음을 생성할 수 있다. 별도의 포트 작업 `WorkRecord`는 만들지 않는다. 기존 `POST /api/inbound-records/{inboundRecordId}/potting`은 호환 응답인 `InboundRecordResponse`를 유지하면서 내부적으로 같은 실행기를 사용한다.
 
+분갈이·분주·합식·포트 작업 하나에는 한 품종의 대상만 포함할 수 있다. 작업 등록 화면에서 여러 품종을 함께 선택하면 품종별 작업으로 자동 분리하고, 여러 작업이 생성될 때는 작업명에 품종명을 덧붙인다. API에 혼합 품종 대상을 직접 전달하면 요청을 거부한다.
+
 폐기는 대상별 완료 요청의 `resultDetails.discardQuantity`만큼 현재 가용 수량에서 차감한다. 일부 폐기는 기존 상태와 잔여 수량을 유지하고, 전량 폐기는 수량 0과 `폐기` 상태로 전환한다. 입력한 폐기 수량과 관계없이 해당 난 묶음의 폐기 처리는 한 번의 대상 실행으로 완료된다.
 
 완료된 구조 변경 작업의 보정은 `POST/GET /api/work-operations/{workOperationId}/corrections`로 실행·조회한다. 생성 요청의 `orchidGroupAdjustments`에는 원본 작업이 만든 결과 난 묶음만 지정할 수 있으며 수량·상태 전후 값은 응답의 `effectDetails.adjustments`에서 확인한다. 후속 운영 데이터가 연결된 결과와 예약 수량을 침해하는 변경은 거부한다.

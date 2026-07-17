@@ -41,6 +41,7 @@ class DivideMergeWorkOperationIntegrationTests extends AbstractBackendIntegratio
 	private BedZone sourceZone;
 	private BedZone resultZone;
 	private Variety variety;
+	private WorkType repotType;
 	private WorkType divideType;
 	private WorkType mergeType;
 
@@ -60,10 +61,12 @@ class DivideMergeWorkOperationIntegrationTests extends AbstractBackendIntegratio
 		houseRepository.deleteAll();
 		workTypeRepository.deleteAll();
 
+		repotType = workTypeRepository.save(new WorkType(
+				WorkType.REPOT_CODE, "분갈이", WorkTypeTemplate.REPOT, true, true, true, 1));
 		divideType = workTypeRepository.save(new WorkType(
-				WorkType.DIVIDE_CODE, "분주", WorkTypeTemplate.REPOT, true, true, true, 1));
+				WorkType.DIVIDE_CODE, "분주", WorkTypeTemplate.REPOT, true, true, true, 2));
 		mergeType = workTypeRepository.save(new WorkType(
-				WorkType.MERGE_CODE, "합식", WorkTypeTemplate.REPOT, true, true, true, 2));
+				WorkType.MERGE_CODE, "합식", WorkTypeTemplate.REPOT, true, true, true, 3));
 		House house = new House(1, "1동");
 		PhysicalBed bed = new PhysicalBed(1, 1);
 		bed.updatePositionUnits(new BigDecimal("24"), "칸");
@@ -114,6 +117,32 @@ class DivideMergeWorkOperationIntegrationTests extends AbstractBackendIntegratio
 		assertThat(lineageRepository.findBySourceOrchidGroupIdOrderByCreatedAtAscIdAsc(source.getId()))
 				.hasSize(2)
 				.allMatch(lineage -> lineage.getRelationType() == OrchidGroupLineageRelationType.SPLIT_TO);
+	}
+
+	@Test
+	void rejectsMixedVarietiesForEachStructureChangePlan() throws Exception {
+		OrchidGroup first = createSource(20, "0", "1");
+		Variety anotherVariety = varietyRepository.save(new Variety(
+				"STRUCTURE-002", "팔레놉시스", "다른 구조 변경 품종", null,
+				"3.5치", true, true, null, null));
+		OrchidGroup second = createSource(anotherVariety, 20, "1", "2");
+		String sourceIds = first.getId() + "," + second.getId();
+
+		for (WorkType workType : java.util.List.of(repotType, divideType, mergeType)) {
+			mockMvc.perform(post("/api/work-operations")
+					.contentType(MediaType.APPLICATION_JSON)
+					.content("""
+							{
+							  "workTypeId": %d,
+							  "title": "혼합 품종 작업",
+							  "plannedStartDate": "2026-07-16",
+							  "sourceScopeType": "MANUAL_SELECTION",
+							  "sourceOrchidGroupIds": [%s]
+							}
+							""".formatted(workType.getId(), sourceIds)))
+					.andExpect(status().isBadRequest());
+		}
+		assertThat(operationRepository.count()).isZero();
 	}
 
 	@Test
@@ -268,10 +297,14 @@ class DivideMergeWorkOperationIntegrationTests extends AbstractBackendIntegratio
 	}
 
 	private OrchidGroup createSource(int quantity, String start, String end) {
+		return createSource(variety, quantity, start, end);
+	}
+
+	private OrchidGroup createSource(Variety sourceVariety, int quantity, String start, String end) {
 		OrchidGroup group = new OrchidGroup(
-				sourceZone, variety.getGenus(), variety.getName(), quantity, "3.5치", 2, "정상", 1,
+				sourceZone, sourceVariety.getGenus(), sourceVariety.getName(), quantity, "3.5치", 2, "정상", 1,
 				new BigDecimal(start), new BigDecimal(end));
-		group.assignVariety(variety);
+		group.assignVariety(sourceVariety);
 		return orchidGroupRepository.save(group);
 	}
 }

@@ -202,6 +202,42 @@ class InboundPottingPlanIntegrationTests extends AbstractBackendIntegrationTest 
 	}
 
 	@Test
+	void rejectsMixedVarietiesInOneInboundPottingPlan() throws Exception {
+		Variety anotherVariety = varietyRepository.save(new Variety(
+				"POT-002", "팔레놉시스", "다른 포트 계획 난", null, "2치", true, true, null, null));
+		InboundRecord anotherInbound = inboundRecordRepository.save(new InboundRecord(
+				LocalDate.of(2026, 7, 2),
+				InboundType.FLASK_SEEDLING,
+				anotherVariety,
+				InboundStatus.POTTING_PENDING,
+				5,
+				80,
+				null,
+				"배양실 B",
+				LocalDate.of(2026, 7, 18),
+				"2치",
+				1,
+				null,
+				null,
+				null,
+				null,
+				"입고 담당",
+				null));
+
+		mockMvc.perform(post("/api/work-operations/inbound-potting-plans")
+				.contentType(MediaType.APPLICATION_JSON)
+				.content("""
+						{
+						  "title": "혼합 품종 포트 작업",
+						  "plannedStartDate": "2026-07-16",
+						  "inboundRecordIds": [%d, %d]
+						}
+						""".formatted(inboundRecord.getId(), anotherInbound.getId())))
+				.andExpect(status().isBadRequest());
+		assertThat(operationRepository.count()).isZero();
+	}
+
+	@Test
 	void activePottingUsesCurrentInboundAndCompletedPottingKeepsExecutionSnapshot() throws Exception {
 		var planned = mockMvc.perform(post("/api/work-operations/inbound-potting-plans")
 				.contentType(MediaType.APPLICATION_JSON)

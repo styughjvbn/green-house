@@ -1,8 +1,101 @@
-import type { WorkOperation } from "@/entities/farm/types";
 import type {
+  OrchidGroup,
+  WorkOperation,
+  WorkOperationTarget,
+} from "@/entities/farm/types";
+import type {
+  InboundPottingCandidate,
   WorkOperationFormState,
   WorkTargetPreviewPayload,
 } from "../../model/types";
+
+export type VarietyTargetGroup = {
+  varietyKey: string;
+  varietyName: string;
+  targetIds: number[];
+};
+
+const SINGLE_VARIETY_WORK_CODES = new Set([
+  "REPOT",
+  "DIVIDE",
+  "MERGE",
+  "POTTING",
+]);
+
+export function requiresSingleVarietyWork(code?: string) {
+  return code != null && SINGLE_VARIETY_WORK_CODES.has(code);
+}
+
+export function groupOrchidTargetsByVariety(
+  targets: WorkOperationTarget[],
+  orchidGroups: OrchidGroup[],
+): VarietyTargetGroup[] {
+  const orchidGroupById = new Map(
+    orchidGroups.map((group) => [group.id, group]),
+  );
+  return groupTargets(
+    targets.flatMap((target) => {
+      if (target.orchidGroupId == null) return [];
+      const orchidGroup = orchidGroupById.get(target.orchidGroupId);
+      return [
+        {
+          id: target.orchidGroupId,
+          varietyKey:
+            orchidGroup?.varietyId == null
+              ? `name:${target.varietyName}`
+              : `id:${orchidGroup.varietyId}`,
+          varietyName: target.varietyName,
+        },
+      ];
+    }),
+  );
+}
+
+export function groupInboundTargetsByVariety(
+  selectedIds: Set<number>,
+  candidates: InboundPottingCandidate[],
+): VarietyTargetGroup[] {
+  return groupTargets(
+    candidates
+      .filter((candidate) => selectedIds.has(candidate.id))
+      .map((candidate) => ({
+        id: candidate.id,
+        varietyKey: `id:${candidate.varietyId}`,
+        varietyName: candidate.varietyName,
+      })),
+  );
+}
+
+export function varietyWorkTitle(
+  baseTitle: string,
+  varietyName: string,
+  varietyCount: number,
+) {
+  return varietyCount > 1 ? `${baseTitle} - ${varietyName}` : baseTitle;
+}
+
+function groupTargets(
+  targets: {
+    id: number;
+    varietyKey: string;
+    varietyName: string;
+  }[],
+): VarietyTargetGroup[] {
+  const grouped = new Map<string, VarietyTargetGroup>();
+  targets.forEach((target) => {
+    const current = grouped.get(target.varietyKey);
+    if (current) {
+      current.targetIds.push(target.id);
+      return;
+    }
+    grouped.set(target.varietyKey, {
+      varietyKey: target.varietyKey,
+      varietyName: target.varietyName,
+      targetIds: [target.id],
+    });
+  });
+  return [...grouped.values()];
+}
 
 export function workPlanGuidance(code?: string) {
   switch (code) {

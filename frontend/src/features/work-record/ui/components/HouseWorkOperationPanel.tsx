@@ -32,7 +32,13 @@ import { WorkOperationPlanForm } from "./WorkOperationPlanForm";
 import { OperationResult } from "./WorkOperationResult";
 import { WorkTargetSelectionDialog } from "./WorkTargetSelectionDialog";
 import { StructureWorkExecutionDialog } from "./StructureWorkExecutionDialog";
-import { buildScopePayload } from "./workOperationPanelUtils";
+import {
+  buildScopePayload,
+  groupInboundTargetsByVariety,
+  groupOrchidTargetsByVariety,
+  requiresSingleVarietyWork,
+  varietyWorkTitle,
+} from "./workOperationPanelUtils";
 
 export function WorkOperationPanel({
   houses,
@@ -238,15 +244,27 @@ export function WorkOperationPanel({
       setLoading(true);
       setErrorMessage(null);
       try {
-        const result = await createInboundPottingPlan({
-          title: form.title.trim(),
-          plannedStartDate: form.plannedStartDate,
-          plannedEndDate: form.plannedEndDate || null,
-          inboundRecordIds: [...inboundRecordIds],
-          worker: form.worker.trim() || null,
-          memo: form.memo.trim() || null,
-        });
-        setOperation(result);
+        const varietyGroups = groupInboundTargetsByVariety(
+          inboundRecordIds,
+          inboundCandidates,
+        );
+        const results = await Promise.all(
+          varietyGroups.map((group) =>
+            createInboundPottingPlan({
+              title: varietyWorkTitle(
+                form.title.trim(),
+                group.varietyName,
+                varietyGroups.length,
+              ),
+              plannedStartDate: form.plannedStartDate,
+              plannedEndDate: form.plannedEndDate || null,
+              inboundRecordIds: group.targetIds,
+              worker: form.worker.trim() || null,
+              memo: form.memo.trim() || null,
+            }),
+          ),
+        );
+        setOperation(results[0] ?? null);
         onSaved?.();
       } catch (error) {
         setErrorMessage(
@@ -265,25 +283,55 @@ export function WorkOperationPanel({
     setLoading(true);
     setErrorMessage(null);
     try {
-      const result = await createWorkOperation({
-        workTypeId: selectedWorkType.id,
-        title: form.title.trim(),
-        plannedStartDate: form.plannedStartDate,
-        plannedEndDate: form.plannedEndDate || null,
-        sourceScopeType: scopePayload.scopeType,
-        sourceScopeId: scopePayload.scopeId,
-        sourceScopeKey: scopePayload.scopeKey,
-        sourceOrchidGroupIds: scopePayload.orchidGroupIds,
-        details: {
-          materialName: form.materialName.trim() || null,
-          dilutionRatio: form.dilutionRatio.trim() || null,
-          quantity: form.quantity.trim() || null,
-        },
-        worker: form.worker.trim() || null,
-        memo: form.memo.trim() || null,
-        excludedOrchidGroupIds: [...excludedIds],
-      });
-      setOperation(result);
+      const varietyGroups = requiresSingleVarietyWork(selectedWorkType.code)
+        ? groupOrchidTargetsByVariety(includedTargets, orchidGroups)
+        : [];
+      const groupsToCreate =
+        varietyGroups.length > 0
+          ? varietyGroups
+          : [
+              {
+                varietyKey: "all",
+                varietyName: "",
+                targetIds: includedTargets.flatMap((target) =>
+                  target.orchidGroupId == null ? [] : [target.orchidGroupId],
+                ),
+              },
+            ];
+      const results = await Promise.all(
+        groupsToCreate.map((group) => {
+          const groupTargetIds = new Set(group.targetIds);
+          const excludedForGroup = preview.targets.flatMap((target) =>
+            target.orchidGroupId != null &&
+            !groupTargetIds.has(target.orchidGroupId)
+              ? [target.orchidGroupId]
+              : [],
+          );
+          return createWorkOperation({
+            workTypeId: selectedWorkType.id,
+            title: varietyWorkTitle(
+              form.title.trim(),
+              group.varietyName,
+              groupsToCreate.length,
+            ),
+            plannedStartDate: form.plannedStartDate,
+            plannedEndDate: form.plannedEndDate || null,
+            sourceScopeType: scopePayload.scopeType,
+            sourceScopeId: scopePayload.scopeId,
+            sourceScopeKey: scopePayload.scopeKey,
+            sourceOrchidGroupIds: scopePayload.orchidGroupIds,
+            details: {
+              materialName: form.materialName.trim() || null,
+              dilutionRatio: form.dilutionRatio.trim() || null,
+              quantity: form.quantity.trim() || null,
+            },
+            worker: form.worker.trim() || null,
+            memo: form.memo.trim() || null,
+            excludedOrchidGroupIds: excludedForGroup,
+          });
+        }),
+      );
+      setOperation(results[0] ?? null);
       onSaved?.();
     } catch (error) {
       setErrorMessage(
