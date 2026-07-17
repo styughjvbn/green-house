@@ -6,7 +6,6 @@ import type {
   House,
   OrchidGroup,
   OrchidGroupWorkHistory,
-  WorkRecord,
   WorkRecordTargetType,
   WorkType,
 } from "@/entities/farm/types";
@@ -19,7 +18,6 @@ import {
   createOrchidGroup,
   createOrchidWorkOperation,
   deleteOrchidGroup,
-  getOrchidWorkRecords,
   getOrchidGroupLineage,
   getOrchidGroupWorkHistory,
   moveOrchidGroup,
@@ -214,42 +212,33 @@ export function useOrchidManagementMap(
     () => currentHouseOrchidGroupIds.size,
     [currentHouseOrchidGroupIds],
   );
-  const workRecordSummaryTarget = useMemo(
+  const workRecordSummaryOrchidGroupIds = useMemo(
     () =>
-      resolveWorkRecordTarget({
-        houseId: house.id,
-        resolvedZoneId: resolvedZone?.id ?? null,
-        selectedOrchidGroupId: selectedOrchidGroup?.id ?? null,
+      resolveSummaryOrchidGroupIds({
+        house,
+        resolvedZone,
+        selectedOrchidGroup,
+        selectedPhysicalBed,
         selection,
       }),
-    [house.id, resolvedZone?.id, selectedOrchidGroup?.id, selection],
+    [house, resolvedZone, selectedOrchidGroup, selectedPhysicalBed, selection],
   );
 
   useEffect(() => {
     let ignore = false;
 
     async function loadWorkRecordSummary() {
-      if (!workRecordSummaryTarget.id) {
+      if (workRecordSummaryOrchidGroupIds.length === 0) {
         setWorkRecordSummary(createEmptyWorkRecordSummary());
+        setWorkRecordSummaryLoading(false);
         return;
       }
 
       setWorkRecordSummaryLoading(true);
       try {
-        const recordGroups =
-          workRecordSummaryTarget.type === "BED_ZONE" && resolvedZone
-            ? await Promise.all([
-                getOrchidWorkRecords("BED_ZONE", resolvedZone.id),
-                ...resolvedZone.orchidGroups.map((orchidGroup) =>
-                  getOrchidWorkRecords("ORCHID_GROUP", orchidGroup.id),
-                ),
-              ])
-            : [
-                await getOrchidWorkRecords(
-                  workRecordSummaryTarget.type,
-                  workRecordSummaryTarget.id,
-                ),
-              ];
+        const recordGroups = await Promise.all(
+          workRecordSummaryOrchidGroupIds.map(getOrchidGroupWorkHistory),
+        );
         if (!ignore) {
           setWorkRecordSummary(createWorkRecordSummary(recordGroups.flat()));
         }
@@ -269,7 +258,7 @@ export function useOrchidManagementMap(
     return () => {
       ignore = true;
     };
-  }, [resolvedZone, workRecordSummaryTarget, workRecordSummaryVersion]);
+  }, [workRecordSummaryOrchidGroupIds, workRecordSummaryVersion]);
 
   useEffect(() => {
     let ignore = false;
@@ -435,7 +424,7 @@ export function useOrchidManagementMap(
       setMutationMode(null);
       return;
     }
-    const target = resolveWorkRecordTarget({
+    const target = resolveWorkOperationTarget({
       houseId: house.id,
       resolvedZoneId: resolvedZone?.id ?? null,
       selectedOrchidGroupId: selectedOrchidGroup?.id ?? null,
@@ -674,7 +663,7 @@ function collectCurrentHouseOrchidGroupIds(house: House) {
   );
 }
 
-function resolveWorkRecordTarget({
+function resolveWorkOperationTarget({
   houseId,
   resolvedZoneId,
   selectedOrchidGroupId,
@@ -695,6 +684,35 @@ function resolveWorkRecordTarget({
     return { type: "PHYSICAL_BED", id: selection.physicalBedId };
   }
   return { type: "HOUSE", id: houseId };
+}
+
+function resolveSummaryOrchidGroupIds({
+  house,
+  resolvedZone,
+  selectedOrchidGroup,
+  selectedPhysicalBed,
+  selection,
+}: {
+  house: House;
+  resolvedZone: House["physicalBeds"][number]["bedZones"][number] | null;
+  selectedOrchidGroup: OrchidGroup | null;
+  selectedPhysicalBed: House["physicalBeds"][number] | null;
+  selection: OrchidSelection | null;
+}): number[] {
+  if (selectedOrchidGroup) {
+    return [selectedOrchidGroup.id];
+  }
+  if (selection?.type === "BED_ZONE" && resolvedZone) {
+    return resolvedZone.orchidGroups.map((group) => group.id);
+  }
+  if (selection?.type === "PHYSICAL_BED" && selectedPhysicalBed) {
+    return selectedPhysicalBed.bedZones.flatMap((zone) =>
+      zone.orchidGroups.map((group) => group.id),
+    );
+  }
+  return house.physicalBeds.flatMap((bed) =>
+    bed.bedZones.flatMap((zone) => zone.orchidGroups.map((group) => group.id)),
+  );
 }
 
 function createInitialWorkRecordForm(
@@ -758,8 +776,19 @@ function createEmptyWorkRecordSummary(): WorkRecordSummary {
   };
 }
 
-function createWorkRecordSummary(records: WorkRecord[]): WorkRecordSummary {
-  const sortedRecords = [...records].sort(compareWorkRecordsDesc);
+function createWorkRecordSummary(
+  records: OrchidGroupWorkHistory[],
+): WorkRecordSummary {
+  const uniqueRecords = new Map<string, OrchidGroupWorkHistory>();
+  records.forEach((record) => {
+    const key = `${record.sourceKind}-${record.workOperationId ?? record.legacyWorkRecordId}`;
+    if (!uniqueRecords.has(key)) {
+      uniqueRecords.set(key, record);
+    }
+  });
+  const sortedRecords = [...uniqueRecords.values()].sort(
+    compareWorkRecordsDesc,
+  );
 
   return {
     latestRecords: sortedRecords.slice(0, 5),
@@ -774,9 +803,15 @@ function createWorkRecordSummary(records: WorkRecord[]): WorkRecordSummary {
   };
 }
 
-function compareWorkRecordsDesc(a: WorkRecord, b: WorkRecord) {
+function compareWorkRecordsDesc(
+  a: OrchidGroupWorkHistory,
+  b: OrchidGroupWorkHistory,
+) {
   if (a.workDate !== b.workDate) {
     return b.workDate.localeCompare(a.workDate);
   }
-  return b.id - a.id;
+  return (
+    (b.workOperationId ?? b.legacyWorkRecordId ?? 0) -
+    (a.workOperationId ?? a.legacyWorkRecordId ?? 0)
+  );
 }

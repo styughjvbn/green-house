@@ -6,9 +6,7 @@ import type {
   OrchidGroup,
   OrchidGroupWorkHistory,
   VarietyOption,
-  WorkRecord,
   WorkOperation,
-  WorkRecordTargetType,
   WorkType,
 } from "@/entities/farm/types";
 import type {
@@ -301,17 +299,6 @@ export function getOrchidWorkTypes() {
   return fetchApi<WorkType[]>("/work-types");
 }
 
-export function getOrchidWorkRecords(
-  targetType: WorkRecordTargetType,
-  targetId: number | null,
-) {
-  const params = new URLSearchParams({ targetType });
-  if (targetId !== null) {
-    params.set("targetId", String(targetId));
-  }
-  return fetchApi<WorkRecord[]>(`/work-records?${params.toString()}`);
-}
-
 export function getOrchidGroupWorkHistory(orchidGroupId: number) {
   return fetchApi<OrchidGroupWorkHistory[]>(
     `/orchid-groups/${orchidGroupId}/work-history`,
@@ -380,7 +367,7 @@ export function archiveOrchidGroupCollection(collectionId: number) {
 export async function createOrchidWorkOperation(
   payload: WorkRecordQuickPayload,
   workTypeName: string,
-): Promise<WorkOperation | WorkRecord> {
+): Promise<WorkOperation> {
   const response = await fetch(`${API_BASE_URL}/work-operations/record`, {
     method: "POST",
     credentials: "include",
@@ -400,9 +387,6 @@ export async function createOrchidWorkOperation(
       memo: payload.memo,
     }),
   });
-  if (response.status === 404) {
-    return createLegacyOrchidWorkRecord(payload);
-  }
   const body = await readJson(response);
   if (!response.ok) {
     throw new Error(
@@ -410,25 +394,6 @@ export async function createOrchidWorkOperation(
     );
   }
   return (body as { data: WorkOperation }).data;
-}
-
-async function createLegacyOrchidWorkRecord(
-  payload: WorkRecordQuickPayload,
-): Promise<WorkRecord> {
-  const response = await fetch(`${API_BASE_URL}/work-records`, {
-    method: "POST",
-    credentials: "include",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(payload),
-  });
-  await handleAuthExpired(response);
-  const body = await readJson(response);
-  if (!response.ok) {
-    throw new Error(
-      resolveErrorMessage(body, "작업 이력을 저장하지 못했습니다."),
-    );
-  }
-  return (body as { data: WorkRecord }).data;
 }
 
 export async function fetchHouse(houseId: number): Promise<House> {

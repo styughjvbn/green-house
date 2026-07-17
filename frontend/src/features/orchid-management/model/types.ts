@@ -3,9 +3,9 @@ import type {
   FarmStatusMapData,
   House,
   OrchidGroup,
+  OrchidGroupWorkHistory,
   SelectedBedZone,
   SelectedOrchidGroup,
-  WorkRecord,
   WorkRecordTargetType,
   WorkOperation,
   WorkType,
@@ -194,11 +194,11 @@ export type WorkRecordQuickPayload = {
 };
 
 export type WorkRecordSummary = {
-  latestRecords: WorkRecord[];
+  latestRecords: OrchidGroupWorkHistory[];
   latestByType: {
-    pesticide: WorkRecord | null;
-    fertilizer: WorkRecord | null;
-    repot: WorkRecord | null;
+    pesticide: OrchidGroupWorkHistory | null;
+    fertilizer: OrchidGroupWorkHistory | null;
+    repot: OrchidGroupWorkHistory | null;
   };
 };
 

@@ -8,7 +8,6 @@ import type {
   OrchidGroup,
   OrchidGroupWorkHistory,
   PhysicalBed,
-  WorkRecord,
 } from "@/entities/farm/types";
 import { findBedZone } from "../../lib/orchidManagementUtils";
 import type {
@@ -498,7 +497,7 @@ function WorkRecordSummaryView({
   );
 }
 
-function RecentWorkList({ records }: { records: WorkRecord[] }) {
+function RecentWorkList({ records }: { records: OrchidGroupWorkHistory[] }) {
   if (records.length === 0) {
     return (
       <p className="rounded-md bg-[#f5f7f3] p-2 text-xs text-[#5c6a60]">
@@ -511,7 +510,7 @@ function RecentWorkList({ records }: { records: WorkRecord[] }) {
     <ul className={"space-y-1"}>
       {records.map((record) => (
         <li
-          key={record.id}
+          key={historyItemKey(record)}
           className="rounded-md border border-[#e1e6df] bg-[#fbfcfa] px-2 py-1.5 text-xs"
         >
           <div className="flex items-center justify-between gap-2">
@@ -533,7 +532,7 @@ function SummaryRow({
   record,
 }: {
   label: string;
-  record: WorkRecord | null;
+  record: OrchidGroupWorkHistory | null;
 }) {
   return (
     <div className="rounded-md bg-[#f5f7f3] px-2 py-1">
