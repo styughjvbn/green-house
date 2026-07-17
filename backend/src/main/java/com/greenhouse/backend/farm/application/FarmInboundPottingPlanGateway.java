@@ -29,7 +29,7 @@ public class FarmInboundPottingPlanGateway implements InboundPottingPlanGateway 
 
 	@Override
 	public List<InboundPottingPlanTarget> resolve(List<Long> inboundRecordIds) {
-		List<InboundRecord> records = inboundRecordRepository.findByIdIn(inboundRecordIds);
+		List<InboundRecord> records = findRecords(inboundRecordIds);
 		if (records.size() != inboundRecordIds.size()) {
 			throw new IllegalArgumentException("선택한 입고 기록 중 찾을 수 없는 항목이 있습니다.");
 		}
@@ -39,6 +39,15 @@ public class FarmInboundPottingPlanGateway implements InboundPottingPlanGateway 
 			throw new IllegalArgumentException("포트 작업 대기 중인 유리병 모종만 계획할 수 있습니다.");
 		}
 		return records.stream().map(this::toTarget).toList();
+	}
+
+	@Override
+	public List<InboundPottingPlanTarget> findCurrent(List<Long> inboundRecordIds) {
+		return findRecords(inboundRecordIds).stream().map(this::toTarget).toList();
+	}
+
+	private List<InboundRecord> findRecords(List<Long> inboundRecordIds) {
+		return inboundRecordRepository.findByIdIn(inboundRecordIds);
 	}
 
 	private InboundPottingPlanTarget toTarget(InboundRecord record) {

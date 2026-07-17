@@ -135,4 +135,20 @@ public class WorkOperationTarget {
 		target.locationSnapshot = locationSnapshot;
 		return target;
 	}
+
+	public void refreshInboundSnapshot(
+			Long varietyIdSnapshot,
+			String varietyNameSnapshot,
+			Integer quantitySnapshot,
+			String potSizeSnapshot,
+			Map<String, Object> locationSnapshot) {
+		if (targetReferenceType != WorkTargetReferenceType.INBOUND_RECORD) {
+			throw new IllegalStateException("입고 기록 대상만 최신 입고 정보로 갱신할 수 있습니다.");
+		}
+		this.varietyIdSnapshot = varietyIdSnapshot;
+		this.varietyNameSnapshot = varietyNameSnapshot;
+		this.quantitySnapshot = quantitySnapshot;
+		this.potSizeSnapshot = potSizeSnapshot;
+		this.locationSnapshot = locationSnapshot;
+	}
 }

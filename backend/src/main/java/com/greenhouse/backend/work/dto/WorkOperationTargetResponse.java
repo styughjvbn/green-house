@@ -1,6 +1,7 @@
 package com.greenhouse.backend.work.dto;
 
 import com.greenhouse.backend.work.application.ResolvedWorkTarget;
+import com.greenhouse.backend.work.application.InboundPottingPlanTarget;
 import com.greenhouse.backend.work.domain.WorkOperationTarget;
 import com.greenhouse.backend.work.domain.WorkTargetExecution;
 import com.greenhouse.backend.work.domain.WorkTargetInclusionSource;
@@ -57,25 +58,51 @@ public record WorkOperationTargetResponse(
 	public static WorkOperationTargetResponse from(
 			WorkOperationTarget target,
 			WorkTargetExecution execution) {
+		return from(target, execution, null);
+	}
+
+	public static WorkOperationTargetResponse from(
+			WorkOperationTarget target,
+			WorkTargetExecution execution,
+			InboundPottingPlanTarget currentInbound) {
+		String varietyName = currentInbound == null
+				? target.getVarietyNameSnapshot()
+				: currentInbound.varietyName();
+		int quantity = currentInbound == null
+				? target.getQuantitySnapshot()
+				: currentInbound.currentQuantity(target.getQuantitySnapshot());
+		String potSize = currentInbound == null
+				? target.getPotSizeSnapshot()
+				: currentInbound.potSize();
+		Map<String, Object> location = currentInbound == null
+				? target.getLocationSnapshot()
+				: inboundLocation(currentInbound);
 		return new WorkOperationTargetResponse(
 				target.getId(),
 				target.getTargetReferenceType(),
 				target.getOrchidGroupId(),
 				target.getInboundRecordId(),
 				target.getInclusionSource(),
-				target.getVarietyNameSnapshot(),
-				target.getQuantitySnapshot(),
+				varietyName,
+				quantity,
 				target.getAgeYearSnapshot(),
 				target.getPotSizeCodeSnapshot(),
-				target.getPotSizeSnapshot(),
-				target.getLocationSnapshot(),
+				potSize,
+				location,
 				execution.getProcessedQuantity(),
-				Math.max(0, target.getQuantitySnapshot() - execution.getProcessedQuantity()),
+				Math.max(0, quantity - execution.getProcessedQuantity()),
 				execution.getStatus(),
 				execution.getStartedAt(),
 				execution.getCompletedAt(),
 				execution.getEffectAppliedAt(),
 				execution.getWorker(),
 				execution.getResultDetails());
+	}
+
+	private static Map<String, Object> inboundLocation(InboundPottingPlanTarget inbound) {
+		Map<String, Object> location = new java.util.LinkedHashMap<>();
+		location.put("tempLocation", inbound.tempLocation());
+		location.put("pottingDueDate", inbound.pottingDueDate());
+		return location;
 	}
 }

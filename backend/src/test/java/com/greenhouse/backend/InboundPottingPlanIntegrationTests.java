@@ -3,6 +3,7 @@ package com.greenhouse.backend;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.hamcrest.Matchers.hasSize;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -198,6 +199,102 @@ class InboundPottingPlanIntegrationTests extends AbstractBackendIntegrationTest 
 		assertThat(updated.getCreatedOrchidGroup()).isNotNull();
 		assertThat(updated.getStatus()).isEqualTo(InboundStatus.PLACED);
 		assertThat(workRecordRepository.count()).isZero();
+	}
+
+	@Test
+	void activePottingUsesCurrentInboundAndCompletedPottingKeepsExecutionSnapshot() throws Exception {
+		var planned = mockMvc.perform(post("/api/work-operations/inbound-potting-plans")
+				.contentType(MediaType.APPLICATION_JSON)
+				.content("""
+						{
+						  "title": "입고 연동 포트 작업",
+						  "plannedStartDate": "2026-07-16",
+						  "inboundRecordIds": [%d]
+						}
+						""".formatted(inboundRecord.getId())))
+				.andExpect(status().isCreated())
+				.andExpect(jsonPath("$.data.targets[0].quantitySnapshot").value(120))
+				.andReturn();
+		Long operationId = Long.valueOf(planned.getResponse().getContentAsString().replaceAll(
+				".*?\\\"data\\\":\\{\\\"id\\\":(\\d+).*", "$1"));
+		var storedTarget = operationTargetRepository
+				.findByWorkOperationIdAndExcludedAtIsNullOrderByIdAsc(operationId)
+				.getFirst();
+
+		mockMvc.perform(patch("/api/inbound-records/{id}", inboundRecord.getId())
+				.contentType(MediaType.APPLICATION_JSON)
+				.content("""
+						{
+						  "inboundDate": "2026-07-01",
+						  "bottleCount": 10,
+						  "estimatedQuantity": 150,
+						  "tempLocation": "배양실 B",
+						  "pottingDueDate": "2026-07-20",
+						  "potSize": "2.5치",
+						  "ageYear": 1,
+						  "worker": "수정 담당"
+						}
+						"""))
+				.andExpect(status().isOk());
+
+		mockMvc.perform(get("/api/work-operations/{id}", operationId))
+				.andExpect(status().isOk())
+				.andExpect(jsonPath("$.data.targets[0].quantitySnapshot").value(150))
+				.andExpect(jsonPath("$.data.targets[0].potSizeSnapshot").value("2.5\""))
+				.andExpect(jsonPath("$.data.targets[0].locationSnapshot.tempLocation").value("배양실 B"))
+				.andExpect(jsonPath("$.data.targets[0].locationSnapshot.pottingDueDate").value("2026-07-20"));
+		assertThat(storedTarget.getQuantitySnapshot()).isEqualTo(120);
+
+		mockMvc.perform(post("/api/work-operations/{id}/start", operationId))
+				.andExpect(status().isOk());
+		mockMvc.perform(post("/api/work-operations/{id}/targets/{targetId}/complete", operationId, storedTarget.getId())
+				.contentType(MediaType.APPLICATION_JSON)
+				.content("""
+						{
+						  "worker": "포트 담당",
+						  "resultDetails": {
+						    "pottingDate": "2026-07-20",
+						    "results": [{
+						      "quantity": 150,
+						      "potSize": "2.5치",
+						      "ageYear": 1,
+						      "bedZoneId": %d,
+						      "startPosition": 0,
+						      "endPosition": 4
+						    }],
+						    "worker": "포트 담당"
+						  }
+						}
+						""".formatted(bedZone.getId())))
+				.andExpect(status().isOk())
+				.andExpect(jsonPath("$.data.targets[0].quantitySnapshot").value(150));
+		mockMvc.perform(post("/api/work-operations/{id}/complete", operationId))
+				.andExpect(status().isOk())
+				.andExpect(jsonPath("$.data.status").value("COMPLETED"));
+
+		mockMvc.perform(patch("/api/inbound-records/{id}", inboundRecord.getId())
+				.contentType(MediaType.APPLICATION_JSON)
+				.content("""
+						{
+						  "inboundDate": "2026-07-01",
+						  "bottleCount": 10,
+						  "estimatedQuantity": 180,
+						  "actualQuantity": 180,
+						  "tempLocation": "배양실 C",
+						  "pottingDueDate": "2026-07-25",
+						  "potSize": "3치",
+						  "ageYear": 1
+						}
+						"""))
+				.andExpect(status().isOk());
+
+		mockMvc.perform(get("/api/work-operations/{id}", operationId))
+				.andExpect(status().isOk())
+				.andExpect(jsonPath("$.data.targets[0].quantitySnapshot").value(150))
+				.andExpect(jsonPath("$.data.targets[0].potSizeSnapshot").value("2.5\""))
+				.andExpect(jsonPath("$.data.targets[0].locationSnapshot.tempLocation").value("배양실 B"))
+				.andExpect(jsonPath("$.data.targets[0].locationSnapshot.pottingDueDate").value("2026-07-20"));
+		assertThat(storedTarget.getQuantitySnapshot()).isEqualTo(150);
 	}
 
 	@Test

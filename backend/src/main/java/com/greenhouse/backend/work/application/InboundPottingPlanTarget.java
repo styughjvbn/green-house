@@ -12,4 +12,9 @@ public record InboundPottingPlanTarget(
 		String tempLocation,
 		LocalDate pottingDueDate,
 		String potSize) {
+
+	public int currentQuantity(int fallback) {
+		Integer current = actualQuantity != null ? actualQuantity : estimatedQuantity;
+		return current == null ? fallback : current;
+	}
 }

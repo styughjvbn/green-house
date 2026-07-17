@@ -6,7 +6,9 @@ import com.greenhouse.backend.work.domain.WorkOperationTarget;
 import com.greenhouse.backend.work.domain.WorkOperationStatus;
 import com.greenhouse.backend.work.domain.WorkSourceScopeType;
 import com.greenhouse.backend.work.domain.WorkTargetExecution;
+import com.greenhouse.backend.work.domain.WorkTargetExecutionStatus;
 import com.greenhouse.backend.work.domain.WorkTargetInclusionSource;
+import com.greenhouse.backend.work.domain.WorkTargetReferenceType;
 import com.greenhouse.backend.work.application.effect.WorkEffectCommand;
 import com.greenhouse.backend.work.application.effect.WorkEffectProcessor;
 import com.greenhouse.backend.work.dto.OrchidGroupWorkHistoryResponse;
@@ -194,19 +196,14 @@ public class WorkOperationService {
 				normalize(request.memo())));
 		List<WorkOperationTarget> targets = records.stream()
 				.sorted(java.util.Comparator.comparing(record -> requestedIds.indexOf(record.id())))
-				.map(record -> {
-					Map<String, Object> location = new LinkedHashMap<>();
-					location.put("tempLocation", record.tempLocation());
-					location.put("pottingDueDate", record.pottingDueDate());
-					return WorkOperationTarget.inboundRecord(
+				.map(record -> WorkOperationTarget.inboundRecord(
 							operation,
 							record.id(),
 							record.varietyId(),
 							record.varietyName(),
-							record.estimatedQuantity() == null ? 0 : record.estimatedQuantity(),
+							record.currentQuantity(0),
 							record.potSize(),
-							location);
-				})
+							inboundLocation(record)))
 				.toList();
 		workOperationTargetRepository.saveAll(targets);
 		workTargetExecutionRepository.saveAll(targets.stream().map(WorkTargetExecution::new).toList());
@@ -223,8 +220,14 @@ public class WorkOperationService {
 				.findByTargetWorkOperationIdOrderByIdAsc(operationId)
 				.stream()
 				.collect(Collectors.toMap(execution -> execution.getTarget().getId(), Function.identity()));
+		Map<Long, InboundPottingPlanTarget> currentInboundById = currentInboundTargets(operation, targets, executions);
 		var responses = targets.stream()
-				.map(target -> WorkOperationTargetResponse.from(target, executions.get(target.getId())))
+				.map(target -> WorkOperationTargetResponse.from(
+						target,
+						executions.get(target.getId()),
+						target.getInboundRecordId() == null
+								? null
+								: currentInboundById.get(target.getInboundRecordId())))
 				.toList();
 		return WorkOperationResponse.from(operation, responses);
 	}
@@ -308,6 +311,7 @@ public class WorkOperationService {
 		if (operation.getStatus() != WorkOperationStatus.IN_PROGRESS) {
 			throw new IllegalArgumentException("진행 중인 작업에서만 대상을 처리할 수 있습니다.");
 		}
+		refreshInboundSnapshotForExecution(operation, execution.getTarget());
 		LocalDateTime completedAt = LocalDateTime.now();
 		String worker = normalize(request.worker());
 		var result = workEffectProcessor.apply(
@@ -316,6 +320,65 @@ public class WorkOperationService {
 				new WorkEffectCommand(completedAt, worker, request.resultDetails(), null));
 		execution.completeWithEffect(completedAt, worker, result.resultDetails());
 		return get(operationId);
+	}
+
+	private Map<Long, InboundPottingPlanTarget> currentInboundTargets(
+			WorkOperation operation,
+			List<WorkOperationTarget> targets,
+			Map<Long, WorkTargetExecution> executions) {
+		if (!com.greenhouse.backend.work.domain.WorkType.POTTING_CODE.equals(operation.getWorkType().getCode())
+				|| !Set.of(
+						WorkOperationStatus.PLANNED,
+						WorkOperationStatus.IN_PROGRESS,
+						WorkOperationStatus.PAUSED)
+						.contains(operation.getStatus())) {
+			return Map.of();
+		}
+		List<Long> inboundRecordIds = targets.stream()
+				.filter(target -> target.getTargetReferenceType() == WorkTargetReferenceType.INBOUND_RECORD)
+				.filter(target -> {
+					WorkTargetExecution execution = executions.get(target.getId());
+					return execution != null && Set.of(
+							WorkTargetExecutionStatus.PENDING,
+							WorkTargetExecutionStatus.IN_PROGRESS,
+							WorkTargetExecutionStatus.PARTIALLY_COMPLETED)
+							.contains(execution.getStatus());
+				})
+				.map(WorkOperationTarget::getInboundRecordId)
+				.distinct()
+				.toList();
+		if (inboundRecordIds.isEmpty()) {
+			return Map.of();
+		}
+		return inboundPottingPlanGateway.findCurrent(inboundRecordIds).stream()
+				.collect(Collectors.toMap(InboundPottingPlanTarget::id, Function.identity()));
+	}
+
+	private void refreshInboundSnapshotForExecution(
+			WorkOperation operation,
+			WorkOperationTarget target) {
+		if (!com.greenhouse.backend.work.domain.WorkType.POTTING_CODE.equals(operation.getWorkType().getCode())
+				|| target.getTargetReferenceType() != WorkTargetReferenceType.INBOUND_RECORD) {
+			return;
+		}
+		InboundPottingPlanTarget current = inboundPottingPlanGateway
+				.findCurrent(List.of(target.getInboundRecordId()))
+				.stream()
+				.findFirst()
+				.orElseThrow(() -> new NotFoundException("포트 작업 대상 입고 기록을 찾을 수 없습니다."));
+		target.refreshInboundSnapshot(
+				current.varietyId(),
+				current.varietyName(),
+				current.currentQuantity(target.getQuantitySnapshot()),
+				current.potSize(),
+				inboundLocation(current));
+	}
+
+	private Map<String, Object> inboundLocation(InboundPottingPlanTarget inbound) {
+		Map<String, Object> location = new LinkedHashMap<>();
+		location.put("tempLocation", inbound.tempLocation());
+		location.put("pottingDueDate", inbound.pottingDueDate());
+		return location;
 	}
 
 	public WorkOperationResponse completeMerge(
