@@ -16,7 +16,7 @@ import {
   transitionWorkOperation,
   transitionWorkOperationTarget,
 } from "../../api/workRecordApi";
-import { OperationResult } from "./HouseWorkOperationPanel";
+import { OperationResult } from "./WorkOperationResult";
 import { StructureWorkExecutionDialog } from "./StructureWorkExecutionDialog";
 
 export function WorkOperationList({

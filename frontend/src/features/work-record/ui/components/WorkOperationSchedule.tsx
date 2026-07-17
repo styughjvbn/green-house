@@ -15,7 +15,7 @@ import {
   transitionWorkOperation,
   transitionWorkOperationTarget,
 } from "../../api/workRecordApi";
-import { OperationResult } from "./HouseWorkOperationPanel";
+import { OperationResult } from "./WorkOperationResult";
 import { StructureWorkExecutionDialog } from "./StructureWorkExecutionDialog";
 
 const WEEKDAYS = ["월", "화", "수", "목", "금", "토", "일"];
