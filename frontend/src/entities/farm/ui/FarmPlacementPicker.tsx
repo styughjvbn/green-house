@@ -29,6 +29,7 @@ export function FarmPlacementField({
   dialogDescription = "구역을 고른 뒤 차지할 시작 칸과 끝 칸을 지정하세요.",
   dialogTitle = "배치 칸 선택",
   excludeOrchidGroupId = null,
+  excludeOrchidGroupIds = [],
   fieldLabel = "배치 칸",
   houses,
   submitLabel = "선택 완료",
@@ -39,6 +40,7 @@ export function FarmPlacementField({
   dialogDescription?: string;
   dialogTitle?: string;
   excludeOrchidGroupId?: number | null;
+  excludeOrchidGroupIds?: number[];
   fieldLabel?: string;
   houses: House[];
   submitLabel?: string;
@@ -68,6 +70,7 @@ export function FarmPlacementField({
           dialogDescription={dialogDescription}
           dialogTitle={dialogTitle}
           excludeOrchidGroupId={excludeOrchidGroupId}
+          excludeOrchidGroupIds={excludeOrchidGroupIds}
           houses={houses}
           initialValue={value}
           submitLabel={submitLabel}
@@ -86,6 +89,7 @@ export function FarmPlacementPickerDialog({
   dialogDescription = "구역을 고른 뒤 차지할 시작 칸과 끝 칸을 지정하세요.",
   dialogTitle = "배치 칸 선택",
   excludeOrchidGroupId = null,
+  excludeOrchidGroupIds = [],
   houses,
   initialValue,
   submitDisabled = false,
@@ -96,6 +100,7 @@ export function FarmPlacementPickerDialog({
   dialogDescription?: string;
   dialogTitle?: string;
   excludeOrchidGroupId?: number | null;
+  excludeOrchidGroupIds?: number[];
   houses: House[];
   initialValue: FarmPlacementSelection | null;
   submitDisabled?: boolean;
@@ -124,13 +129,21 @@ export function FarmPlacementPickerDialog({
   const normalizedStart = clamp(Math.min(startCell, endCell), 1, maxCell);
   const normalizedEnd = clamp(Math.max(startCell, endCell), 1, maxCell);
   const selectedCells = buildCellSet(normalizedStart, normalizedEnd);
+  const referenceOrchidGroupIds = useMemo(
+    () =>
+      new Set([
+        ...excludeOrchidGroupIds,
+        ...(excludeOrchidGroupId == null ? [] : [excludeOrchidGroupId]),
+      ]),
+    [excludeOrchidGroupId, excludeOrchidGroupIds],
+  );
   const occupiedCells = useMemo(
     () =>
       buildOccupiedCells(
         selected?.zone.orchidGroups ?? [],
-        excludeOrchidGroupId,
+        referenceOrchidGroupIds,
       ),
-    [excludeOrchidGroupId, selected],
+    [referenceOrchidGroupIds, selected],
   );
   const hasOverlap = [...selectedCells].some((cell) => occupiedCells.has(cell));
   const selectedLabel = selected
@@ -260,8 +273,8 @@ export function FarmPlacementPickerDialog({
                 {selectedLabel || "선택 가능한 구역 없음"}
               </p>
               <p className="mt-1 text-[#66736a]">
-                초록색은 선택 범위, 흰색은 빈 칸, 회색은 이미 사용 중인
-                칸입니다.
+                초록색은 선택 범위, 노란색은 원본 난 묶음 위치, 흰색은 빈 칸,
+                회색은 이미 사용 중인 칸입니다.
               </p>
               {hasOverlap ? (
                 <p className="mt-2 font-bold text-[#b42318]">
@@ -275,6 +288,7 @@ export function FarmPlacementPickerDialog({
             {selectedHouse ? (
               <HousePreview
                 excludeOrchidGroupId={excludeOrchidGroupId}
+                excludeOrchidGroupIds={excludeOrchidGroupIds}
                 selectedBedZoneId={selected?.zone.id ?? null}
                 selectedCells={selectedCells}
                 house={selectedHouse}
@@ -322,12 +336,14 @@ export function FarmPlacementPickerDialog({
 
 function HousePreview({
   excludeOrchidGroupId,
+  excludeOrchidGroupIds,
   house,
   selectedBedZoneId,
   selectedCells,
   onSelectCell,
 }: {
   excludeOrchidGroupId: number | null;
+  excludeOrchidGroupIds: number[];
   house: House;
   selectedBedZoneId: number | null;
   selectedCells: Set<number>;
@@ -339,6 +355,9 @@ function HousePreview({
         <h3 className="text-sm font-bold text-[#17251b]">{house.number}동</h3>
         <div className="flex items-center gap-3 text-xs font-semibold text-[#66736a]">
           <Legend color="bg-[#159447]" label="선택" />
+          {excludeOrchidGroupId != null || excludeOrchidGroupIds.length > 0 ? (
+            <Legend color="bg-[#fff1b8]" label="원본 위치" />
+          ) : null}
           <Legend color="bg-[#eef1ed]" label="사용 중" />
           <Legend color="bg-white" label="빈 칸" />
         </div>
@@ -368,6 +387,7 @@ function HousePreview({
                 <ZonePreview
                   key={zone.id}
                   excludeOrchidGroupId={excludeOrchidGroupId}
+                  excludeOrchidGroupIds={excludeOrchidGroupIds}
                   maxCell={Math.max(1, Math.floor(bed.positionUnitCount ?? 28))}
                   selected={selectedBedZoneId === zone.id}
                   selectedCells={selectedCells}
@@ -385,6 +405,7 @@ function HousePreview({
 
 function ZonePreview({
   excludeOrchidGroupId,
+  excludeOrchidGroupIds,
   maxCell,
   selected,
   selectedCells,
@@ -392,6 +413,7 @@ function ZonePreview({
   onSelectCell,
 }: {
   excludeOrchidGroupId: number | null;
+  excludeOrchidGroupIds: number[];
   maxCell: number;
   selected: boolean;
   selectedCells: Set<number>;
@@ -401,7 +423,18 @@ function ZonePreview({
   const cells = Array.from({ length: maxCell }, (_, index) => maxCell - index);
   const occupiedCells = buildOccupiedCells(
     zone.orchidGroups,
-    excludeOrchidGroupId,
+    new Set([
+      ...excludeOrchidGroupIds,
+      ...(excludeOrchidGroupId == null ? [] : [excludeOrchidGroupId]),
+    ]),
+  );
+  const referenceOrchidGroupIds = new Set([
+    ...excludeOrchidGroupIds,
+    ...(excludeOrchidGroupId == null ? [] : [excludeOrchidGroupId]),
+  ]);
+  const referenceCells = buildReferenceCells(
+    zone.orchidGroups,
+    referenceOrchidGroupIds,
   );
 
   return (
@@ -432,6 +465,7 @@ function ZonePreview({
         <div className="min-w-0">
           {cells.map((cell) => {
             const occupied = occupiedCells.has(cell);
+            const reference = referenceCells.has(cell);
             const cellSelected = selected && selectedCells.has(cell);
 
             return (
@@ -442,13 +476,19 @@ function ZonePreview({
                     ? "bg-[#eef1ed] text-[#77817a]"
                     : cellSelected
                       ? "bg-[#159447] text-white"
-                      : "bg-white text-[#425047] hover:bg-[#eef8ef]"
+                      : reference
+                        ? "bg-[#fff1b8] text-[#6f5700] hover:bg-[#ffe99a]"
+                        : "bg-white text-[#425047] hover:bg-[#eef8ef]"
                 }`}
                 type="button"
                 onClick={() => onSelectCell(cell)}
               >
                 <span className="truncate pl-2 font-semibold">
-                  {occupied ? findGroupLabel(zone.orchidGroups, cell) : "빈 칸"}
+                  {reference
+                    ? `원본 · ${findGroupLabel(zone.orchidGroups, cell, referenceOrchidGroupIds)}`
+                    : occupied
+                      ? findGroupLabel(zone.orchidGroups, cell)
+                      : "빈 칸"}
                 </span>
               </button>
             );
@@ -520,11 +560,11 @@ function buildCellSet(startCell: number, endCell: number) {
 
 function buildOccupiedCells(
   orchidGroups: OrchidGroup[],
-  excludeOrchidGroupId: number | null,
+  excludeOrchidGroupIds: Set<number>,
 ) {
   const cells = new Set<number>();
   orchidGroups.forEach((group) => {
-    if (group.id === excludeOrchidGroupId) {
+    if (excludeOrchidGroupIds.has(group.id)) {
       return;
     }
     if (group.startPosition == null || group.endPosition == null) {
@@ -539,8 +579,37 @@ function buildOccupiedCells(
   return cells;
 }
 
-function findGroupLabel(orchidGroups: OrchidGroup[], cell: number) {
+function buildReferenceCells(
+  orchidGroups: OrchidGroup[],
+  referenceOrchidGroupIds: Set<number>,
+) {
+  const cells = new Set<number>();
+  orchidGroups.forEach((group) => {
+    if (
+      !referenceOrchidGroupIds.has(group.id) ||
+      group.startPosition == null ||
+      group.endPosition == null
+    ) {
+      return;
+    }
+    const startCell = Math.floor(group.startPosition) + 1;
+    const endCell = Math.ceil(group.endPosition);
+    for (let cell = startCell; cell <= endCell; cell += 1) {
+      cells.add(cell);
+    }
+  });
+  return cells;
+}
+
+function findGroupLabel(
+  orchidGroups: OrchidGroup[],
+  cell: number,
+  groupIds?: Set<number>,
+) {
   const group = orchidGroups.find((item) => {
+    if (groupIds && !groupIds.has(item.id)) {
+      return false;
+    }
     if (item.startPosition == null || item.endPosition == null) {
       return false;
     }

@@ -293,7 +293,12 @@ export async function executeStructureChangeWorkOperation(
     completedDate: string;
     worker: string | null;
     memo: string | null;
-    sources: { sourceOrchidGroupId: number; inputQuantity: number }[];
+    sources: {
+      sourceOrchidGroupId: number;
+      inputQuantity: number;
+      releasedStartPosition: number | null;
+      releasedEndPosition: number | null;
+    }[];
     lossQuantity: number;
     lossReason: string | null;
     results: {

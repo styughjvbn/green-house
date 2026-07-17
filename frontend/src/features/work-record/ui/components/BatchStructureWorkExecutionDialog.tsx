@@ -80,6 +80,11 @@ export function BatchStructureWorkExecutionDialog({
       ]),
     ),
   );
+  const [releasedPlacements, setReleasedPlacements] = useState<
+    Record<number, FarmPlacementSelection | null>
+  >(() =>
+    Object.fromEntries(availableSources.map(({ group }) => [group.id, null])),
+  );
   const [rows, setRows] = useState<ResultRow[]>(() =>
     availableSources.map(({ group, inferredQuantity }) =>
       newResultRow(group, inferredQuantity),
@@ -136,13 +141,51 @@ export function BatchStructureWorkExecutionDialog({
   }
 
   function changeInputQuantity(groupId: number, value: string) {
+    const source = availableSources.find(
+      ({ group }) => group.id === groupId,
+    )?.group;
+    const released = source
+      ? inferReleasedPlacement(source, Number(value))
+      : null;
     setInputQuantities((current) => ({ ...current, [groupId]: value }));
+    setReleasedPlacements((current) => ({
+      ...current,
+      [groupId]: released,
+    }));
     setRows((current) =>
       current.map((row) =>
         row.autoQuantity &&
         row.sourceOrchidGroupIds.length === 1 &&
         row.sourceOrchidGroupIds[0] === groupId
-          ? { ...row, quantity: value }
+          ? {
+              ...row,
+              quantity: value,
+              placement:
+                Number(value) < (source?.quantity ?? 0)
+                  ? released
+                  : source
+                    ? inferPlacement(source)
+                    : row.placement,
+            }
+          : row,
+      ),
+    );
+  }
+
+  function changeReleasedPlacement(
+    groupId: number,
+    placement: FarmPlacementSelection,
+  ) {
+    setReleasedPlacements((current) => ({
+      ...current,
+      [groupId]: placement,
+    }));
+    setRows((current) =>
+      current.map((row) =>
+        row.autoQuantity &&
+        row.sourceOrchidGroupIds.length === 1 &&
+        row.sourceOrchidGroupIds[0] === groupId
+          ? { ...row, placement }
           : row,
       ),
     );
@@ -241,6 +284,10 @@ export function BatchStructureWorkExecutionDialog({
         sources: selectedSources.map(({ group }) => ({
           sourceOrchidGroupId: group.id,
           inputQuantity: Number(inputQuantities[group.id]),
+          releasedStartPosition:
+            releasedPlacements[group.id]?.startPosition ?? null,
+          releasedEndPosition:
+            releasedPlacements[group.id]?.endPosition ?? null,
         })),
         lossQuantity: Number(lossQuantity),
         lossReason: Number(lossQuantity) > 0 ? lossReason.trim() : null,
@@ -310,11 +357,26 @@ export function BatchStructureWorkExecutionDialog({
     if (hasOverlappingPlacements(rows))
       return "결과 난 묶음끼리 배치 칸이 겹칩니다.";
     for (const { group } of selectedSources) {
+      const inputQuantity = Number(inputQuantities[group.id]);
+      const released = releasedPlacements[group.id];
       if (
-        Number(inputQuantities[group.id]) < group.quantity &&
-        overlapsSource(
+        released &&
+        (inputQuantity >= group.quantity ||
+          released.bedZoneId !== group.bedZoneId ||
+          group.startPosition == null ||
+          group.endPosition == null ||
+          released.startPosition <= group.startPosition ||
+          released.startPosition >= group.endPosition ||
+          released.endPosition !== group.endPosition)
+      ) {
+        return "원본에서 비울 자리는 원본 배치의 맨 뒤쪽 연속 구간으로 선택해주세요.";
+      }
+      if (
+        inputQuantity < group.quantity &&
+        overlapsRemainingSource(
           rows.filter((row) => row.sourceOrchidGroupIds.includes(group.id)),
           group,
+          released,
         )
       ) {
         return "일부만 작업하는 원본의 잔여 배치와 결과 배치가 겹칠 수 없습니다.";
@@ -368,8 +430,8 @@ export function BatchStructureWorkExecutionDialog({
             </div>
             <div className="mt-3 grid gap-2 md:grid-cols-2">
               {availableSources.map(({ group, target }) => (
-                <label
-                  className="grid cursor-pointer items-center gap-2 rounded-md bg-white p-2 sm:grid-cols-[auto_minmax(0,1fr)_120px]"
+                <div
+                  className="grid items-center gap-2 rounded-md bg-white p-2 sm:grid-cols-[auto_minmax(0,1fr)_120px]"
                   key={group.id}
                 >
                   <input
@@ -394,7 +456,30 @@ export function BatchStructureWorkExecutionDialog({
                     value={inputQuantities[group.id] ?? ""}
                     onChange={(value) => changeInputQuantity(group.id, value)}
                   />
-                </label>
+                  {selectedSourceIds.has(group.id) &&
+                  Number(inputQuantities[group.id]) < group.quantity &&
+                  group.startPosition != null &&
+                  group.endPosition != null ? (
+                    <div className="sm:col-span-2 sm:col-start-2">
+                      <FarmPlacementField
+                        buttonPlaceholder="원본 뒤쪽에서 비울 칸 선택"
+                        dialogDescription="이번에 꺼내 작업할 수량만큼 원본 배치의 맨 뒤쪽 연속 구간을 선택하세요."
+                        dialogTitle="원본에서 비울 자리"
+                        excludeOrchidGroupIds={[group.id]}
+                        fieldLabel="원본에서 비울 자리"
+                        houses={houses}
+                        value={releasedPlacements[group.id] ?? null}
+                        onChange={(placement) =>
+                          changeReleasedPlacement(group.id, placement)
+                        }
+                      />
+                      <p className="mt-1 text-[11px] text-[#6a766e]">
+                        작업 수량 비율에 맞춰 뒤쪽 칸을 자동 선택했습니다.
+                        실제로 비운 범위가 다르면 수정하세요.
+                      </p>
+                    </div>
+                  ) : null}
+                </div>
               ))}
             </div>
           </section>
@@ -451,15 +536,18 @@ export function BatchStructureWorkExecutionDialog({
             </div>
             {rows.map((row, index) => (
               <ResultFields
-                excludeOrchidGroupId={
-                  row.sourceOrchidGroupIds.length === 1 &&
-                  Number(inputQuantities[row.sourceOrchidGroupIds[0]]) ===
-                    orchidGroups.find(
-                      (group) => group.id === row.sourceOrchidGroupIds[0],
-                    )?.quantity
-                    ? row.sourceOrchidGroupIds[0]
-                    : null
-                }
+                excludeOrchidGroupIds={row.sourceOrchidGroupIds.filter(
+                  (sourceId) => {
+                    const source = orchidGroups.find(
+                      (group) => group.id === sourceId,
+                    );
+                    return (
+                      source != null &&
+                      (Number(inputQuantities[sourceId]) === source.quantity ||
+                        releasedPlacements[sourceId] != null)
+                    );
+                  },
+                )}
                 houses={houses}
                 index={index}
                 key={row.key}
@@ -531,7 +619,7 @@ export function BatchStructureWorkExecutionDialog({
 }
 
 function ResultFields({
-  excludeOrchidGroupId,
+  excludeOrchidGroupIds,
   houses,
   index,
   operation,
@@ -540,7 +628,7 @@ function ResultFields({
   onChange,
   onRemove,
 }: {
-  excludeOrchidGroupId: number | null;
+  excludeOrchidGroupIds: number[];
   houses: House[];
   index: number;
   operation: WorkOperation;
@@ -574,7 +662,7 @@ function ResultFields({
             dialogDescription="자동 선택된 위치를 확인하거나 결과 난 묶음의 새 위치를 지정하세요."
             dialogTitle={`${operation.workType} 결과 ${index + 1} 배치 위치`}
             fieldLabel="결과 배치"
-            excludeOrchidGroupId={excludeOrchidGroupId}
+            excludeOrchidGroupIds={excludeOrchidGroupIds}
             houses={houses}
             value={row.placement}
             onChange={(placement) => onChange({ placement })}
@@ -650,6 +738,38 @@ function inferPlacement(group: OrchidGroup): FarmPlacementSelection | null {
   };
 }
 
+function inferReleasedPlacement(
+  group: OrchidGroup,
+  inputQuantity: number,
+): FarmPlacementSelection | null {
+  if (
+    !Number.isInteger(inputQuantity) ||
+    inputQuantity < 1 ||
+    inputQuantity >= group.quantity ||
+    group.startPosition == null ||
+    group.endPosition == null
+  ) {
+    return null;
+  }
+  const totalCells =
+    Math.ceil(group.endPosition) - Math.floor(group.startPosition);
+  if (totalCells < 2) return null;
+  const releasedCells = Math.min(
+    totalCells - 1,
+    Math.max(1, Math.ceil((totalCells * inputQuantity) / group.quantity)),
+  );
+  const endCell = Math.ceil(group.endPosition);
+  const startCell = endCell - releasedCells + 1;
+  return {
+    bedZoneId: group.bedZoneId,
+    startCell,
+    endCell,
+    startPosition: startCell - 1,
+    endPosition: endCell,
+    label: `${group.houseNumber}동 ${group.physicalBedNumber}다이 ${group.bedZoneName} · ${startCell}~${endCell}칸`,
+  };
+}
+
 function hasOverlappingPlacements(rows: ResultRow[]) {
   return rows.some((left, index) =>
     rows
@@ -666,13 +786,18 @@ function hasOverlappingPlacements(rows: ResultRow[]) {
   );
 }
 
-function overlapsSource(rows: ResultRow[], source: OrchidGroup) {
+function overlapsRemainingSource(
+  rows: ResultRow[],
+  source: OrchidGroup,
+  released: FarmPlacementSelection | null | undefined,
+) {
   if (source.startPosition == null || source.endPosition == null) return false;
+  const remainingEnd = released?.startPosition ?? source.endPosition;
   return rows.some(
     (row) =>
       row.placement &&
       row.placement.bedZoneId === source.bedZoneId &&
-      row.placement.startPosition < source.endPosition! &&
+      row.placement.startPosition < remainingEnd &&
       source.startPosition! < row.placement.endPosition,
   );
 }
