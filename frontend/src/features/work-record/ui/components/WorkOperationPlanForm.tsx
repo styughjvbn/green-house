@@ -98,7 +98,15 @@ export function WorkOperationPlanForm({
         <SectionTitle title="작업 유형 선택" />
         <WorkTypeGroup
           title="일반 작업"
-          codes={["PESTICIDE", "FERTILIZER", "STATUS", "MEMO", "CLEANUP"]}
+          codes={[
+            "PESTICIDE",
+            "FERTILIZER",
+            "STATUS",
+            "MEMO",
+            "LEAF_CLEANUP",
+            "FLOWER_CLEANUP",
+            "WEED_CLEANUP",
+          ]}
           workTypes={workTypes}
           selectedWorkType={selectedWorkType}
           onSelect={(workType) =>
@@ -107,7 +115,7 @@ export function WorkOperationPlanForm({
         />
         <WorkTypeGroup
           title="구조 변경 작업"
-          codes={["MOVEMENT", "REPOT", "DIVIDE", "MERGE", "DISCARD", "POTTING"]}
+          codes={["REPOT", "DIVIDE", "MERGE", "DISCARD", "POTTING"]} //TODO "MOVEMENT" 는 비활성화
           workTypes={workTypes}
           selectedWorkType={selectedWorkType}
           onSelect={(workType) =>

@@ -398,9 +398,16 @@ export function WorkTargetSelectionDialog({
                   <div className="flex min-w-max gap-2">
                     {visibleTree.map((house) => {
                       const active = house.id === focusedHouse.id;
+                      const originalHouse =
+                        tree.find((item) => item.id === house.id) ?? house;
+                      const selectedCount = countSelectedGroups(
+                        originalHouse.groups,
+                        selectedIds,
+                      );
+                      const searching = normalizedKeyword.length > 0;
                       return (
                         <div
-                          className={`flex min-w-24 items-center gap-2 rounded-md border p-2 ${
+                          className={`flex min-w-32 items-center gap-2 rounded-md border p-2 ${
                             active
                               ? "border-[#159447] bg-[#edf8ef]"
                               : "border-[#d7dfd5] bg-white"
@@ -421,8 +428,16 @@ export function WorkTargetSelectionDialog({
                             <span className="text-sm font-bold text-[#26352b]">
                               {house.number}동
                             </span>
+                            {selectedCount > 0 ? (
+                              <span className="text-[11px] font-semibold text-[#3d6f91]">
+                                선택 {selectedCount}개
+                              </span>
+                            ) : null}
                             <span className="text-[11px] text-[#718077]">
-                              {house.groups.length}묶음
+                              {searching
+                                ? `검색 ${house.groups.length}개 · `
+                                : ""}
+                              전체 {originalHouse.groups.length}개
                             </span>
                           </button>
                         </div>
@@ -586,7 +601,7 @@ function BedSideZone({
         </div>
       </div>
       <div className="mt-1 space-y-0.5">
-        {zone.groups.map((group) => (
+        {[...zone.groups].reverse().map((group) => (
           <label
             className="flex cursor-pointer items-center gap-1.5 rounded px-1 py-1.5 text-xs hover:bg-[#f4f8f3]"
             key={group.id}
@@ -651,6 +666,13 @@ function selectionState(groups: OrchidGroup[], selectedIds: Set<number>) {
   return selectionStateByIds(
     groups.map((group) => group.id),
     selectedIds,
+  );
+}
+
+function countSelectedGroups(groups: OrchidGroup[], selectedIds: Set<number>) {
+  return groups.reduce(
+    (count, group) => count + Number(selectedIds.has(group.id)),
+    0,
   );
 }
 
