@@ -4,6 +4,7 @@ import com.greenhouse.backend.common.exception.NotFoundException;
 import com.greenhouse.backend.work.domain.WorkOperation;
 import com.greenhouse.backend.work.domain.WorkOperationTarget;
 import com.greenhouse.backend.work.domain.WorkOperationStatus;
+import com.greenhouse.backend.work.domain.WorkOperationSearchView;
 import com.greenhouse.backend.work.domain.WorkSourceScopeType;
 import com.greenhouse.backend.work.domain.WorkTargetExecution;
 import com.greenhouse.backend.work.domain.WorkTargetExecutionStatus;
@@ -250,13 +251,17 @@ public class WorkOperationService {
 			LocalDate fromDate,
 			LocalDate toDate,
 			WorkOperationStatus status,
+			WorkOperationSearchView view,
 			WorkSourceScopeType scopeType,
 			Long scopeId) {
 		validateDates(fromDate, toDate);
 		if (scopeId != null && scopeType == null) {
 			throw new IllegalArgumentException("대상 범위 ID를 조회하려면 대상 범위 유형이 필요합니다.");
 		}
-		return workOperationRepository.search(fromDate, toDate, status, scopeType, scopeId).stream()
+		LocalDateTime todayStartedAt = LocalDate.now(FARM_TIME_ZONE).atStartOfDay();
+		return workOperationRepository.search(
+						fromDate, toDate, status, view, todayStartedAt, scopeType, scopeId)
+				.stream()
 				.map(operation -> get(operation.getId()))
 				.toList();
 	}

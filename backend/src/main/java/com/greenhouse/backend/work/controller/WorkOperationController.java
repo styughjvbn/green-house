@@ -84,9 +84,10 @@ public class WorkOperationController {
 			@RequestParam(required = false) LocalDate from,
 			@RequestParam(required = false) LocalDate to,
 			@RequestParam(required = false) com.greenhouse.backend.work.domain.WorkOperationStatus status,
+			@RequestParam(defaultValue = "ALL") com.greenhouse.backend.work.domain.WorkOperationSearchView view,
 			@RequestParam(required = false) com.greenhouse.backend.work.domain.WorkSourceScopeType scopeType,
 			@RequestParam(required = false) Long scopeId) {
-		return ApiResponse.ok(workOperationService.search(from, to, status, scopeType, scopeId));
+		return ApiResponse.ok(workOperationService.search(from, to, status, view, scopeType, scopeId));
 	}
 
 	@GetMapping("/work-operations/{workOperationId}")

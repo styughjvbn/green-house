@@ -5,12 +5,14 @@ import static com.greenhouse.backend.work.domain.QWorkType.workType;
 
 import com.greenhouse.backend.work.domain.WorkOperation;
 import com.greenhouse.backend.work.domain.WorkOperationStatus;
+import com.greenhouse.backend.work.domain.WorkOperationSearchView;
 import com.greenhouse.backend.work.domain.WorkSourceScopeType;
 import com.querydsl.core.BooleanBuilder;
 import com.querydsl.core.types.dsl.BooleanExpression;
 import com.querydsl.jpa.impl.JPAQueryFactory;
 import jakarta.persistence.EntityManager;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 
@@ -45,12 +47,15 @@ public class WorkOperationRepositoryImpl implements WorkOperationRepositoryCusto
 			LocalDate fromDate,
 			LocalDate toDate,
 			WorkOperationStatus status,
+			WorkOperationSearchView view,
+			LocalDateTime todayStartedAt,
 			WorkSourceScopeType scopeType,
 			Long scopeId) {
 		return queryFactory
 				.selectFrom(workOperation)
 				.join(workOperation.workType, workType).fetchJoin()
-				.where(searchConditions(fromDate, toDate, status, scopeType, scopeId))
+				.where(searchConditions(
+						fromDate, toDate, status, view, todayStartedAt, scopeType, scopeId))
 				.orderBy(workOperation.plannedStartDate.desc(), workOperation.id.desc())
 				.fetch();
 	}
@@ -59,14 +64,31 @@ public class WorkOperationRepositoryImpl implements WorkOperationRepositoryCusto
 			LocalDate fromDate,
 			LocalDate toDate,
 			WorkOperationStatus status,
+			WorkOperationSearchView view,
+			LocalDateTime todayStartedAt,
 			WorkSourceScopeType scopeType,
 			Long scopeId) {
 		return new BooleanBuilder()
 				.and(statusEq(status))
+				.and(viewCondition(view, todayStartedAt))
 				.and(scopeTypeEq(scopeType))
 				.and(scopeIdEq(scopeId))
 				.and(periodEndsOnOrAfter(fromDate))
 				.and(periodStartsOnOrBefore(toDate));
+	}
+
+	private BooleanExpression viewCondition(WorkOperationSearchView view, LocalDateTime todayStartedAt) {
+		if (view == null || view == WorkOperationSearchView.ALL) {
+			return null;
+		}
+		BooleanExpression active = workOperation.status.in(
+				WorkOperationStatus.PLANNED,
+				WorkOperationStatus.IN_PROGRESS,
+				WorkOperationStatus.PAUSED);
+		if (view == WorkOperationSearchView.MANAGEMENT) {
+			return active.or(workOperation.updatedAt.goe(todayStartedAt));
+		}
+		return active.not();
 	}
 
 	private BooleanExpression statusEq(WorkOperationStatus status) {

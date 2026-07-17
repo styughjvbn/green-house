@@ -223,12 +223,14 @@ export function getWorkOperations(
     from?: string;
     to?: string;
     status?: WorkOperation["status"] | "";
+    view?: "ALL" | "MANAGEMENT" | "HISTORY";
   } = {},
 ): Promise<WorkOperation[]> {
   const params = new URLSearchParams();
   if (filters.from) params.set("from", filters.from);
   if (filters.to) params.set("to", filters.to);
   if (filters.status) params.set("status", filters.status);
+  if (filters.view) params.set("view", filters.view);
   const query = params.toString();
   return fetchApi<WorkOperation[]>(
     `/work-operations${query ? `?${query}` : ""}`,

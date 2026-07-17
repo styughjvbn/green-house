@@ -24,13 +24,15 @@ export function WorkOperationList({
   houses,
   orchidGroups,
   refreshKey,
+  view = "MANAGEMENT",
   onCreateWork,
 }: {
   bedZones: BedZone[];
   houses: House[];
   orchidGroups: OrchidGroup[];
   refreshKey: number;
-  onCreateWork: () => void;
+  view?: "MANAGEMENT" | "HISTORY";
+  onCreateWork?: () => void;
 }) {
   const [operations, setOperations] = useState<WorkOperation[]>([]);
   const [selectedId, setSelectedId] = useState<number | null>(null);
@@ -44,7 +46,7 @@ export function WorkOperationList({
 
   useEffect(() => {
     let active = true;
-    void getWorkOperations({ status })
+    void getWorkOperations({ status, view })
       .then((result) => {
         if (!active) return;
         setOperations(result);
@@ -68,7 +70,7 @@ export function WorkOperationList({
     return () => {
       active = false;
     };
-  }, [refreshKey, reloadVersion, status]);
+  }, [refreshKey, reloadVersion, status, view]);
 
   const filtered = useMemo(() => {
     const normalized = keyword.trim().toLowerCase();
@@ -108,21 +110,27 @@ export function WorkOperationList({
       <section className="flex min-h-0 flex-col rounded-md border border-[#dfe5dc] bg-white p-4 shadow-sm">
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div>
-            <h2 className="text-lg font-bold text-[#17251b]">작업 목록</h2>
+            <h2 className="text-lg font-bold text-[#17251b]">
+              {view === "MANAGEMENT" ? "작업 목록" : "작업 이력"}
+            </h2>
             <p className="mt-1 text-sm text-[#6a766e]">
-              전체 {filtered.length}건
+              {view === "MANAGEMENT"
+                ? `진행할 작업과 오늘 변경된 작업 ${filtered.length}건`
+                : `완료·취소·보정된 작업 ${filtered.length}건`}
             </p>
           </div>
-          <div className="flex flex-wrap gap-2">
-            <button
-              className="inline-flex h-10 items-center gap-2 rounded-md bg-[#159447] px-4 text-sm font-semibold text-white"
-              type="button"
-              onClick={onCreateWork}
-            >
-              <Plus className="h-4 w-4" aria-hidden="true" />
-              작업 등록
-            </button>
-          </div>
+          {onCreateWork ? (
+            <div className="flex flex-wrap gap-2">
+              <button
+                className="inline-flex h-10 items-center gap-2 rounded-md bg-[#159447] px-4 text-sm font-semibold text-white"
+                type="button"
+                onClick={onCreateWork}
+              >
+                <Plus className="h-4 w-4" aria-hidden="true" />
+                작업 등록
+              </button>
+            </div>
+          ) : null}
         </div>
 
         <div className="mt-4 flex flex-wrap gap-2">
@@ -140,10 +148,16 @@ export function WorkOperationList({
               setStatus(event.target.value as WorkOperationStatus | "");
             }}
           >
-            <option value="">전체 상태</option>
-            <option value="PLANNED">계획</option>
-            <option value="IN_PROGRESS">진행 중</option>
-            <option value="PAUSED">일시중지</option>
+            <option value="">
+              {view === "MANAGEMENT" ? "관리 대상 전체" : "종료 상태 전체"}
+            </option>
+            {view === "MANAGEMENT" ? (
+              <>
+                <option value="PLANNED">계획</option>
+                <option value="IN_PROGRESS">진행 중</option>
+                <option value="PAUSED">일시중지</option>
+              </>
+            ) : null}
             <option value="COMPLETED">완료</option>
             <option value="CORRECTED">보정됨</option>
             <option value="CANCELED">취소</option>

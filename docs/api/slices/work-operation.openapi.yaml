@@ -36,6 +36,16 @@ paths:
           - COMPLETED
           - CANCELED
           - CORRECTED
+      - name: view
+        in: query
+        required: false
+        schema:
+          type: string
+          default: ALL
+          enum:
+          - ALL
+          - MANAGEMENT
+          - HISTORY
       - name: scopeType
         in: query
         required: false
