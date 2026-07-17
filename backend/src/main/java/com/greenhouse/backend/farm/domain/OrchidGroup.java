@@ -158,6 +158,9 @@ public class OrchidGroup extends BaseEntity {
 
 	public void assignInboundRecord(InboundRecord inboundRecord) {
 		this.inboundRecord = inboundRecord;
+		if (inboundRecord != null) {
+			inboundRecord.addCreatedOrchidGroup(this);
+		}
 	}
 
 	public int getAvailableQuantity() {

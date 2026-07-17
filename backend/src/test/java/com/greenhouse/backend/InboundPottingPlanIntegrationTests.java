@@ -129,19 +129,21 @@ class InboundPottingPlanIntegrationTests extends AbstractBackendIntegrationTest 
 						  "worker": "포트 담당",
 						  "resultDetails": {
 						    "pottingDate": "2026-07-16",
-						    "actualQuantity": 100,
-						    "potSize": "2치",
-						    "ageYear": 1,
-						    "bedZoneId": %d,
-						    "startPosition": 0,
-						    "endPosition": 4,
+						    "results": [{
+						      "quantity": 100,
+						      "potSize": "2치",
+						      "ageYear": 1,
+						      "bedZoneId": %d,
+						      "startPosition": 0,
+						      "endPosition": 4
+						    }],
 						    "worker": "포트 담당"
 						  }
 						}
 						""".formatted(bedZone.getId())))
 				.andExpect(status().isOk())
 				.andExpect(jsonPath("$.data.targets[0].executionStatus").value("COMPLETED"))
-				.andExpect(jsonPath("$.data.targets[0].resultDetails.createdOrchidGroupId").isNumber());
+				.andExpect(jsonPath("$.data.targets[0].resultDetails.createdOrchidGroupIds", hasSize(1)));
 
 		InboundRecord updated = inboundRecordRepository.findWithDetailsById(inboundRecord.getId()).orElseThrow();
 		assertThat(updated.getCreatedOrchidGroup()).isNotNull();
@@ -150,33 +152,50 @@ class InboundPottingPlanIntegrationTests extends AbstractBackendIntegrationTest 
 	}
 
 	@Test
-	void executesImmediateInboundPottingAsACompletedWorkOperation() throws Exception {
+	void executesImmediateInboundPottingWithMultipleResultGroups() throws Exception {
 		mockMvc.perform(post("/api/work-operations/inbound-potting-executions")
 				.contentType(MediaType.APPLICATION_JSON)
 				.content("""
 						{
 						  "inboundRecordId": %d,
 						  "pottingDate": "2026-07-16",
-						  "actualQuantity": 100,
-						  "potSize": "2치",
-						  "ageYear": 1,
-						  "bedZoneId": %d,
-						  "startPosition": 0,
-						  "endPosition": 4,
+						  "results": [
+						    {
+						      "quantity": 60,
+						      "potSize": "2치",
+						      "ageYear": 1,
+						      "bedZoneId": %d,
+						      "startPosition": 0,
+						      "endPosition": 4
+						    },
+						    {
+						      "quantity": 40,
+						      "potSize": "2치",
+						      "ageYear": 1,
+						      "bedZoneId": %d,
+						      "startPosition": 4,
+						      "endPosition": 8
+						    }
+						  ],
 						  "worker": "입고 담당",
 						  "memo": "입고 화면 즉시 실행"
 						}
-						""".formatted(inboundRecord.getId(), bedZone.getId())))
+						""".formatted(inboundRecord.getId(), bedZone.getId(), bedZone.getId())))
 				.andExpect(status().isCreated())
 				.andExpect(jsonPath("$.data.status").value("COMPLETED"))
 				.andExpect(jsonPath("$.data.workTypeCode").value("POTTING"))
 				.andExpect(jsonPath("$.data.targets[0].inboundRecordId").value(inboundRecord.getId()))
-				.andExpect(jsonPath("$.data.targets[0].resultDetails.actualQuantity").value(100));
+				.andExpect(jsonPath("$.data.targets[0].resultDetails.actualQuantity").value(100))
+				.andExpect(jsonPath("$.data.targets[0].resultDetails.createdOrchidGroupIds", hasSize(2)));
 
 		InboundRecord updated = inboundRecordRepository.findWithDetailsById(inboundRecord.getId()).orElseThrow();
 		assertThat(updated.getStatus()).isEqualTo(InboundStatus.PLACED);
 		assertThat(updated.getActualQuantity()).isEqualTo(100);
 		assertThat(updated.getCreatedOrchidGroup()).isNotNull();
+		assertThat(orchidGroupRepository.findAll()).hasSize(2);
+		mockMvc.perform(get("/api/inbound-records/{id}", inboundRecord.getId()))
+				.andExpect(status().isOk())
+				.andExpect(jsonPath("$.data.createdOrchidGroupIds", hasSize(2)));
 
 		var operations = operationRepository.findAll();
 		assertThat(operations).hasSize(1);
@@ -190,6 +209,60 @@ class InboundPottingPlanIntegrationTests extends AbstractBackendIntegrationTest 
 				.findByTargetWorkOperationIdOrderByIdAsc(operations.getFirst().getId()).getFirst().getStatus().name())
 				.isEqualTo("COMPLETED");
 		assertThat(appliedEffectRepository.count()).isEqualTo(1);
+		assertThat(effectOrchidGroupRepository.count()).isEqualTo(2);
+		assertThat(workRecordRepository.count()).isZero();
+	}
+
+	@Test
+	void immediateExecutionReusesTheExistingPottingPlan() throws Exception {
+		var planned = mockMvc.perform(post("/api/work-operations/inbound-potting-plans")
+				.contentType(MediaType.APPLICATION_JSON)
+				.content("""
+						{
+						  "title": "기존 포트 작업 계획",
+						  "plannedStartDate": "2026-07-16",
+						  "inboundRecordIds": [%d]
+						}
+						""".formatted(inboundRecord.getId())))
+				.andExpect(status().isCreated())
+				.andReturn();
+		Long operationId = Long.valueOf(planned.getResponse().getContentAsString().replaceAll(
+				".*?\\\"data\\\":\\{\\\"id\\\":(\\d+).*", "$1"));
+
+		mockMvc.perform(post("/api/work-operations/inbound-potting-plans")
+				.contentType(MediaType.APPLICATION_JSON)
+				.content("""
+						{
+						  "title": "중복 포트 작업 계획",
+						  "plannedStartDate": "2026-07-16",
+						  "inboundRecordIds": [%d]
+						}
+						""".formatted(inboundRecord.getId())))
+				.andExpect(status().isBadRequest());
+
+		mockMvc.perform(post("/api/work-operations/inbound-potting-executions")
+				.contentType(MediaType.APPLICATION_JSON)
+				.content("""
+						{
+						  "inboundRecordId": %d,
+						  "pottingDate": "2026-07-16",
+						  "results": [{
+						    "quantity": 100,
+						    "potSize": "2치",
+						    "ageYear": 1,
+						    "bedZoneId": %d,
+						    "startPosition": 0,
+						    "endPosition": 4
+						  }],
+						  "worker": "입고 담당"
+						}
+						""".formatted(inboundRecord.getId(), bedZone.getId())))
+				.andExpect(status().isCreated())
+				.andExpect(jsonPath("$.data.id").value(operationId))
+				.andExpect(jsonPath("$.data.status").value("COMPLETED"))
+				.andExpect(jsonPath("$.data.targets[0].executionStatus").value("COMPLETED"));
+
+		assertThat(operationRepository.count()).isEqualTo(1);
 		assertThat(workRecordRepository.count()).isZero();
 	}
 }

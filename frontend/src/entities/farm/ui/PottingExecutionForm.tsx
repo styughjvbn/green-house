@@ -1,23 +1,39 @@
 "use client";
 
 import { useState } from "react";
-import type { ReactNode } from "react";
+import type { Dispatch, ReactNode, SetStateAction } from "react";
+import { Plus, Trash2 } from "lucide-react";
 import type { House } from "@/entities/farm/types";
 import { isStandardPotSize, POT_SIZE_OPTIONS } from "@/entities/farm/potSizes";
 import {
   FarmPlacementField,
   type FarmPlacementSelection,
 } from "@/entities/farm/ui/FarmPlacementPicker";
+import { createUuid } from "@/shared/lib/id";
+
+type PottingResultRow = {
+  key: string;
+  actualQuantity: string;
+  potSize: string;
+  ageYear: string;
+  placementType: string;
+  placement: FarmPlacementSelection | null;
+};
 
 export type PottingExecutionValues = {
   pottingDate: string;
-  actualQuantity: number;
-  potSize?: string;
-  ageYear?: number;
-  placementType?: string;
-  bedZoneId: number;
-  startPosition: number;
-  endPosition: number;
+  results: Array<{
+    bedZoneId: number;
+    quantity: number;
+    potSize?: string;
+    ageYear?: number;
+    placementType?: string;
+    trayCount?: number;
+    splitPlacementAllowed: boolean;
+    startPosition: number;
+    endPosition: number;
+    memo?: string;
+  }>;
   worker?: string;
   memo?: string;
 };
@@ -46,43 +62,29 @@ export function PottingExecutionForm({
   const [pottingDate, setPottingDate] = useState(
     new Date().toISOString().slice(0, 10),
   );
-  const [actualQuantity, setActualQuantity] = useState(
-    initialActualQuantity == null ? "" : String(initialActualQuantity),
-  );
-  const [potSize, setPotSize] = useState(initialPotSize ?? "");
-  const [ageYear, setAgeYear] = useState(
-    initialAgeYear == null ? "" : String(initialAgeYear),
-  );
-  const [placementType, setPlacementType] = useState("");
-  const [placement, setPlacement] = useState<FarmPlacementSelection | null>(
-    null,
-  );
+  const [rows, setRows] = useState<PottingResultRow[]>(() => [
+    newResultRow(initialActualQuantity, initialPotSize, initialAgeYear),
+  ]);
   const [worker, setWorker] = useState(initialWorker ?? "");
   const [memo, setMemo] = useState("");
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   async function submit() {
-    const quantity = Number(actualQuantity);
-    const age = ageYear ? Number(ageYear) : undefined;
     if (!pottingDate) {
       setError("포트 작업일을 입력해주세요.");
       return;
     }
-    if (!Number.isInteger(quantity) || quantity < 1) {
-      setError("실제 생성 수량을 1 이상의 정수로 입력해주세요.");
+    if (rows.some((row) => !isValidResultRow(row))) {
+      setError("각 결과 난 묶음의 수량, 년생, 배치 위치를 확인해주세요.");
       return;
     }
-    if (age != null && (!Number.isInteger(age) || age < 0)) {
-      setError("초기 년생을 0 이상의 정수로 입력해주세요.");
-      return;
-    }
-    if (!placement) {
-      setError("배치 위치를 선택해주세요.");
-      return;
-    }
-    if (placementType === "CUSTOM:") {
+    if (rows.some((row) => row.placementType === "CUSTOM:")) {
       setError("기타 배치 규격명을 입력해주세요.");
+      return;
+    }
+    if (hasOverlappingPlacements(rows)) {
+      setError("결과 난 묶음끼리 배치 칸이 겹칩니다.");
       return;
     }
 
@@ -91,13 +93,16 @@ export function PottingExecutionForm({
     try {
       await onSubmit({
         pottingDate,
-        actualQuantity: quantity,
-        potSize: potSize.trim() || undefined,
-        ageYear: age,
-        placementType: placementType.trim() || undefined,
-        bedZoneId: placement.bedZoneId,
-        startPosition: placement.startPosition,
-        endPosition: placement.endPosition,
+        results: rows.map((row) => ({
+          bedZoneId: row.placement!.bedZoneId,
+          quantity: Number(row.actualQuantity),
+          potSize: row.potSize.trim() || undefined,
+          ageYear: row.ageYear ? Number(row.ageYear) : undefined,
+          placementType: row.placementType.trim() || undefined,
+          splitPlacementAllowed: false,
+          startPosition: row.placement!.startPosition,
+          endPosition: row.placement!.endPosition,
+        })),
         worker: worker.trim() || undefined,
         memo: memo.trim() || undefined,
       });
@@ -132,37 +137,97 @@ export function PottingExecutionForm({
           onChange={(event) => setPottingDate(event.target.value)}
         />
       </Field>
-      <Field label="실제 생성 수량">
-        <input
-          className={inputClass}
-          min={1}
-          required
-          type="number"
-          value={actualQuantity}
-          onChange={(event) => setActualQuantity(event.target.value)}
-        />
-      </Field>
-      <PotSizeField value={potSize} onChange={setPotSize} />
-      <Field label="초기 년생">
-        <input
-          className={inputClass}
-          min={0}
-          type="number"
-          value={ageYear}
-          onChange={(event) => setAgeYear(event.target.value)}
-        />
-      </Field>
-      <FarmPlacementField
-        dialogDescription="구역을 고른 뒤 포트 작업 결과가 차지할 시작 칸과 끝 칸을 지정하세요."
-        dialogTitle="포트 작업 배치 위치 선택"
-        houses={houses}
-        value={placement}
-        onChange={(nextPlacement) => {
-          setPlacement(nextPlacement);
-          setPlacementType("");
-        }}
-      />
-      <PlacementTypeField value={placementType} onChange={setPlacementType} />
+      <div className="space-y-3 md:col-span-2">
+        <div className="flex items-center justify-between">
+          <div>
+            <p className="text-sm font-bold text-[#27332b]">결과 난 묶음</p>
+            <p className="text-xs font-normal text-[#6a766e]">
+              생성 수량 합계 {resultQuantityTotal(rows).toLocaleString()}개
+            </p>
+          </div>
+          <button
+            className="inline-flex items-center gap-1 rounded-md border border-[#d4dbd5] px-3 py-1.5 text-xs font-semibold"
+            type="button"
+            onClick={() =>
+              setRows((current) => [
+                ...current,
+                newResultRow(null, initialPotSize, initialAgeYear),
+              ])
+            }
+          >
+            <Plus className="h-3.5 w-3.5" aria-hidden="true" /> 난 묶음 추가
+          </button>
+        </div>
+        {rows.map((row, index) => (
+          <section key={row.key} className="rounded-md border bg-[#f8faf7] p-3">
+            <div className="mb-3 flex items-center justify-between">
+              <p className="text-xs font-bold">결과 {index + 1}</p>
+              {rows.length > 1 ? (
+                <button
+                  type="button"
+                  aria-label={`결과 ${index + 1} 삭제`}
+                  onClick={() =>
+                    setRows((current) =>
+                      current.filter((candidate) => candidate.key !== row.key),
+                    )
+                  }
+                >
+                  <Trash2
+                    className="h-4 w-4 text-[#a33a24]"
+                    aria-hidden="true"
+                  />
+                </button>
+              ) : null}
+            </div>
+            <div className="grid gap-3 md:grid-cols-2">
+              <FarmPlacementField
+                dialogDescription="구역을 고른 뒤 포트 작업 결과가 차지할 시작 칸과 끝 칸을 지정하세요."
+                dialogTitle={`포트 작업 결과 ${index + 1} 배치 위치`}
+                houses={houses}
+                value={row.placement}
+                onChange={(placement) =>
+                  updateRow(setRows, row.key, { placement })
+                }
+              />
+              <Field label="실제 생성 수량">
+                <input
+                  className={inputClass}
+                  min={1}
+                  required
+                  type="number"
+                  value={row.actualQuantity}
+                  onChange={(event) =>
+                    updateRow(setRows, row.key, {
+                      actualQuantity: event.target.value,
+                    })
+                  }
+                />
+              </Field>
+              <PotSizeField
+                value={row.potSize}
+                onChange={(potSize) => updateRow(setRows, row.key, { potSize })}
+              />
+              <Field label="초기 년생">
+                <input
+                  className={inputClass}
+                  min={0}
+                  type="number"
+                  value={row.ageYear}
+                  onChange={(event) =>
+                    updateRow(setRows, row.key, { ageYear: event.target.value })
+                  }
+                />
+              </Field>
+              <PlacementTypeField
+                value={row.placementType}
+                onChange={(placementType) =>
+                  updateRow(setRows, row.key, { placementType })
+                }
+              />
+            </div>
+          </section>
+        ))}
+      </div>
       <Field label="작업자">
         <input
           className={inputClass}
@@ -283,6 +348,72 @@ function PlacementTypeField({
       ) : null}
     </div>
   );
+}
+
+function newResultRow(
+  quantity: number | null | undefined,
+  potSize: string | null | undefined,
+  ageYear: number | null | undefined,
+): PottingResultRow {
+  return {
+    key: createUuid(),
+    actualQuantity: quantity == null ? "" : String(quantity),
+    potSize: potSize ?? "",
+    ageYear: ageYear == null ? "" : String(ageYear),
+    placementType: "",
+    placement: null,
+  };
+}
+
+function updateRow(
+  setRows: Dispatch<SetStateAction<PottingResultRow[]>>,
+  key: string,
+  patch: Partial<PottingResultRow>,
+) {
+  setRows((current) =>
+    current.map((row) => (row.key === key ? { ...row, ...patch } : row)),
+  );
+}
+
+function isValidResultRow(row: PottingResultRow) {
+  const quantity = Number(row.actualQuantity);
+  const ageYear = row.ageYear ? Number(row.ageYear) : undefined;
+  return (
+    row.placement != null &&
+    Number.isInteger(quantity) &&
+    quantity >= 1 &&
+    (ageYear == null || (Number.isInteger(ageYear) && ageYear >= 0))
+  );
+}
+
+function resultQuantityTotal(rows: PottingResultRow[]) {
+  return rows.reduce((total, row) => {
+    const quantity = Number(row.actualQuantity);
+    return total + (Number.isFinite(quantity) ? quantity : 0);
+  }, 0);
+}
+
+function hasOverlappingPlacements(rows: PottingResultRow[]) {
+  for (let leftIndex = 0; leftIndex < rows.length; leftIndex += 1) {
+    const left = rows[leftIndex].placement;
+    if (!left) continue;
+    for (
+      let rightIndex = leftIndex + 1;
+      rightIndex < rows.length;
+      rightIndex += 1
+    ) {
+      const right = rows[rightIndex].placement;
+      if (
+        right &&
+        left.bedZoneId === right.bedZoneId &&
+        left.startPosition < right.endPosition &&
+        right.startPosition < left.endPosition
+      ) {
+        return true;
+      }
+    }
+  }
+  return false;
 }
 
 function Field({ label, children }: { label: string; children: ReactNode }) {

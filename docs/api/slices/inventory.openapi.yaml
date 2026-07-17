@@ -724,37 +724,16 @@ components:
         pottingDate:
           type: string
           format: date
-        actualQuantity:
-          type: integer
-          format: int32
-          minimum: 1
-        potSize:
-          type: string
-          maxLength: 50
-          minLength: 0
-        ageYear:
-          type: integer
-          format: int32
-          minimum: 0
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/RepotResultOrchidGroupRequest'
+          maxItems: 100
+          minItems: 0
         growthStage:
           type: string
           maxLength: 100
           minLength: 0
-        placementType:
-          type: string
-          maxLength: 100
-          minLength: 0
-        trayCount:
-          type: integer
-          format: int32
-          minimum: 0
-        bedZoneId:
-          type: integer
-          format: int64
-        startPosition:
-          type: number
-        endPosition:
-          type: number
         worker:
           type: string
           maxLength: 50
@@ -764,9 +743,8 @@ components:
           maxLength: 1000
           minLength: 0
       required:
-      - actualQuantity
-      - bedZoneId
       - pottingDate
+      - results
     InboundRecordResponse:
       type: object
       properties:
@@ -824,6 +802,11 @@ components:
         createdOrchidGroupId:
           type: integer
           format: int64
+        createdOrchidGroupIds:
+          type: array
+          items:
+            type: integer
+            format: int64
         worker:
           type: string
         memo:
@@ -1006,6 +989,49 @@ components:
       required:
       - category
       - name
+    RepotResultOrchidGroupRequest:
+      type: object
+      properties:
+        bedZoneId:
+          type: integer
+          format: int64
+        quantity:
+          type: integer
+          format: int32
+          minimum: 1
+        potSize:
+          type: string
+          maxLength: 50
+          minLength: 0
+        ageYear:
+          type: integer
+          format: int32
+          minimum: 0
+        placementType:
+          type: string
+          maxLength: 50
+          minLength: 0
+        trayCount:
+          type: integer
+          format: int32
+          minimum: 0
+        splitPlacementAllowed:
+          type: boolean
+        startPosition:
+          type: number
+          minimum: 0.0
+        endPosition:
+          type: number
+          minimum: 0.0
+        memo:
+          type: string
+          maxLength: 1000
+          minLength: 0
+      required:
+      - bedZoneId
+      - endPosition
+      - quantity
+      - startPosition
     VarietyConnectedOrchidGroupResponse:
       type: object
       properties:

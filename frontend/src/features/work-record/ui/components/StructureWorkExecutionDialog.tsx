@@ -776,7 +776,6 @@ function PottingWorkExecutionDialog({
       {
         ...values,
         growthStage: null,
-        trayCount: null,
       },
     );
     onSaved(updated);

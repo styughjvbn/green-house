@@ -93,6 +93,7 @@ export interface InboundRecord {
   bedZoneId: number | null;
   currentLocation: string | null;
   createdOrchidGroupId: number | null;
+  createdOrchidGroupIds: number[];
   worker: string | null;
   memo: string | null;
   createdAt: string;
@@ -145,15 +146,19 @@ export interface InboundRecordUpdatePayload {
 
 export interface InboundPottingPayload {
   pottingDate: string;
-  actualQuantity: number;
-  potSize?: string;
-  ageYear?: number;
+  results: Array<{
+    bedZoneId: number;
+    quantity: number;
+    potSize?: string;
+    ageYear?: number;
+    placementType?: string;
+    trayCount?: number;
+    splitPlacementAllowed: boolean;
+    startPosition: number;
+    endPosition: number;
+    memo?: string;
+  }>;
   growthStage?: string;
-  placementType?: string;
-  trayCount?: number;
-  bedZoneId: number;
-  startPosition?: number;
-  endPosition?: number;
   worker?: string;
   memo?: string;
 }

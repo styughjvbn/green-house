@@ -83,6 +83,7 @@ type InboundRecordResponse = {
   bedZoneId: number | null;
   currentLocation: string | null;
   createdOrchidGroupId: number | null;
+  createdOrchidGroupIds: number[];
   worker: string | null;
   memo: string | null;
   createdAt: string;
@@ -389,6 +390,7 @@ function toInboundRecord(item: InboundRecordResponse): InboundRecord {
     bedZoneId: item.bedZoneId,
     currentLocation: item.currentLocation,
     createdOrchidGroupId: item.createdOrchidGroupId,
+    createdOrchidGroupIds: item.createdOrchidGroupIds,
     worker: item.worker,
     memo: item.memo,
     createdAt: item.createdAt,

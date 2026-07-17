@@ -39,12 +39,12 @@ public class InboundPottingWorkHandler implements WorkEffectHandler {
 		var result = inboundRecordService.pottingForOperation(target.getInboundRecordId(), request);
 		var details = new LinkedHashMap<String, Object>();
 		details.put("inboundRecordId", target.getInboundRecordId());
-		details.put("createdOrchidGroupId", result.createdOrchidGroupId());
+		details.put("createdOrchidGroupIds", result.createdOrchidGroupIds());
 		details.put("actualQuantity", result.actualQuantity());
-		details.put("bedZoneId", result.bedZoneId());
+		details.put("resultCount", result.createdOrchidGroupIds().size());
 		return new WorkExecutionResult(
 				"POTTING",
 				details,
-				List.of(result.createdOrchidGroupId()));
+				result.createdOrchidGroupIds());
 	}
 }

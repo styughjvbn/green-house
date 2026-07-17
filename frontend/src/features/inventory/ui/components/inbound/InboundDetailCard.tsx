@@ -299,7 +299,11 @@ function InboundDetailView({ record }: { record: InboundRecord }) {
       <DetailRow label="작업자" value={record.worker} />
       <DetailRow
         label="생성 난 묶음"
-        value={record.createdOrchidGroupId ?? "-"}
+        value={
+          record.createdOrchidGroupIds.length
+            ? record.createdOrchidGroupIds.join(", ")
+            : "-"
+        }
       />
       <DetailRow label="메모" value={record.memo} />
     </dl>

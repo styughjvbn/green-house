@@ -150,13 +150,13 @@ public class InboundRecordService {
 		return InboundRecordResponse.from(inboundRecord);
 	}
 
-	public InboundRecordResponse pottingForOperation(
+	public InboundPottingResult pottingForOperation(
 			Long inboundRecordId,
 			InboundRecordPottingRequest request) {
 		return potting(inboundRecordId, request);
 	}
 
-	private InboundRecordResponse potting(
+	private InboundPottingResult potting(
 			Long inboundRecordId,
 			InboundRecordPottingRequest request) {
 		InboundRecord inboundRecord = findInboundRecord(inboundRecordId);
@@ -169,54 +169,60 @@ public class InboundRecordService {
 		if (inboundRecord.getCreatedOrchidGroup() != null) {
 			throw new IllegalArgumentException("이미 난 묶음이 생성된 입고 기록입니다.");
 		}
-		BedZone bedZone = findBedZone(request.bedZoneId());
-		OrchidPlacementPolicy.PlacementRange placementRange = resolvePlacementRange(
-				bedZone,
-				request.startPosition(),
-				request.endPosition());
-		OrchidGroup orchidGroup = new OrchidGroup(
-				bedZone,
-				inboundRecord.getVariety().getGenus(),
-				inboundRecord.getVariety().getName(),
-				request.actualQuantity(),
-				firstNonBlank(request.potSize(), inboundRecord.getPotSize()),
-				request.ageYear(),
-				DEFAULT_ORCHID_STATUS,
-				orchidGroupRepository.findMaxSortOrderByBedZoneId(bedZone.getId()) + 1,
-				placementRange.startPosition(),
-				placementRange.endPosition());
-		orchidGroup.updateDetails(
-				inboundRecord.getVariety().getGenus(),
-				inboundRecord.getVariety().getName(),
-				request.actualQuantity(),
-				firstNonBlank(request.potSize(), inboundRecord.getPotSize()),
-				request.ageYear(),
-				DEFAULT_ORCHID_STATUS,
-				normalize(request.placementType()),
-				request.trayCount(),
-				false,
-				placementRange.startPosition(),
-				placementRange.endPosition(),
-				normalize(request.memo()));
-		orchidGroup.assignVariety(inboundRecord.getVariety());
-		orchidGroup.assignInboundRecord(inboundRecord);
-		orchidGroupRepository.save(orchidGroup);
+		var createdGroups = request.results().stream().map(row -> {
+			BedZone bedZone = findBedZone(row.bedZoneId());
+			OrchidPlacementPolicy.PlacementRange placementRange = resolvePlacementRange(
+					bedZone, row.startPosition(), row.endPosition());
+			OrchidGroup orchidGroup = new OrchidGroup(
+					bedZone,
+					inboundRecord.getVariety().getGenus(),
+					inboundRecord.getVariety().getName(),
+					row.quantity(),
+					firstNonBlank(row.potSize(), inboundRecord.getPotSize()),
+					row.ageYear(),
+					DEFAULT_ORCHID_STATUS,
+					orchidGroupRepository.findMaxSortOrderByBedZoneId(bedZone.getId()) + 1,
+					placementRange.startPosition(),
+					placementRange.endPosition());
+			orchidGroup.updateDetails(
+					inboundRecord.getVariety().getGenus(),
+					inboundRecord.getVariety().getName(),
+					row.quantity(),
+					firstNonBlank(row.potSize(), inboundRecord.getPotSize()),
+					row.ageYear(),
+					DEFAULT_ORCHID_STATUS,
+					normalize(row.placementType()),
+					row.trayCount(),
+					Boolean.TRUE.equals(row.splitPlacementAllowed()),
+					placementRange.startPosition(),
+					placementRange.endPosition(),
+					normalize(row.memo()));
+			orchidGroup.assignVariety(inboundRecord.getVariety());
+			orchidGroup.assignInboundRecord(inboundRecord);
+			return orchidGroupRepository.saveAndFlush(orchidGroup);
+		}).toList();
+		OrchidGroup representative = createdGroups.getFirst();
+		int actualQuantity = createdGroups.stream().mapToInt(OrchidGroup::getQuantity).sum();
 		inboundRecord.updateMetadata(
 				inboundRecord.getInboundDate(),
 				inboundRecord.getBottleCount(),
 				inboundRecord.getEstimatedQuantity(),
-				request.actualQuantity(),
+				actualQuantity,
 				inboundRecord.getTempLocation(),
 				inboundRecord.getPottingDueDate(),
-				firstNonBlank(request.potSize(), inboundRecord.getPotSize()),
-				request.ageYear(),
+				representative.getPotSize(),
+				representative.getAgeYear(),
 				normalize(request.growthStage()),
-				normalize(request.placementType()),
-				request.trayCount(),
+				representative.getPlacementType(),
+				representative.getTrayCount(),
 				normalize(request.worker()),
 				appendMemo(inboundRecord.getMemo(), request.memo()));
-		inboundRecord.place(bedZone, orchidGroup, request.pottingDate(), request.actualQuantity());
-		return InboundRecordResponse.from(findInboundRecord(inboundRecord.getId()));
+		inboundRecord.place(
+				representative.getBedZone(), representative, request.pottingDate(), actualQuantity);
+		return new InboundPottingResult(
+				InboundRecordResponse.from(findInboundRecord(inboundRecord.getId())),
+				createdGroups.stream().map(OrchidGroup::getId).toList(),
+				actualQuantity);
 	}
 
 	public InboundRecordResponse cancel(Long inboundRecordId, InboundRecordCancelRequest request) {

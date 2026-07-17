@@ -4,6 +4,7 @@ import com.greenhouse.backend.farm.domain.BedZone;
 import com.greenhouse.backend.farm.domain.InboundRecord;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.util.List;
 
 public record InboundRecordResponse(
 		Long id,
@@ -27,6 +28,7 @@ public record InboundRecordResponse(
 		Long bedZoneId,
 		String currentLocation,
 		Long createdOrchidGroupId,
+		List<Long> createdOrchidGroupIds,
 		String worker,
 		String memo,
 		LocalDateTime createdAt,
@@ -55,6 +57,7 @@ public record InboundRecordResponse(
 				record.getBedZone() == null ? null : record.getBedZone().getId(),
 				formatLocation(record.getBedZone(), record.getTempLocation()),
 				record.getCreatedOrchidGroup() == null ? null : record.getCreatedOrchidGroup().getId(),
+				record.getCreatedOrchidGroups().stream().map(group -> group.getId()).sorted().toList(),
 				record.getWorker(),
 				record.getMemo(),
 				record.getCreatedAt(),

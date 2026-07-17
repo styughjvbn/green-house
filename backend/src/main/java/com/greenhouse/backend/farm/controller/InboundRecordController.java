@@ -12,6 +12,7 @@ import com.greenhouse.backend.farm.dto.InboundRecordResponse;
 import com.greenhouse.backend.farm.dto.InboundRecordUpdateRequest;
 import com.greenhouse.backend.work.application.InboundPottingOperationService;
 import com.greenhouse.backend.work.dto.InboundPottingExecutionRequest;
+import com.greenhouse.backend.work.dto.InboundPottingResultRequest;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 
@@ -75,15 +76,11 @@ public class InboundRecordController {
 				new InboundPottingExecutionRequest(
 						inboundRecordId,
 						request.pottingDate(),
-						request.actualQuantity(),
-						request.potSize(),
-						request.ageYear(),
+						request.results().stream().map(row -> new InboundPottingResultRequest(
+								row.bedZoneId(), row.quantity(), row.potSize(), row.ageYear(),
+								row.placementType(), row.trayCount(), row.splitPlacementAllowed(),
+								row.startPosition(), row.endPosition(), row.memo())).toList(),
 						request.growthStage(),
-						request.placementType(),
-						request.trayCount(),
-						request.bedZoneId(),
-						request.startPosition(),
-						request.endPosition(),
 						request.worker(),
 						request.memo()));
 		return ApiResponse.ok(inboundRecordService.getInboundRecord(inboundRecordId));
