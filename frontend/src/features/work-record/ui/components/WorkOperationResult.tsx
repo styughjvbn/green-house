@@ -1,6 +1,7 @@
 import { useState } from "react";
 import type { WorkOperation } from "@/entities/farm/types";
 import { WorkCompletionDateDialog } from "./WorkCompletionDateDialog";
+import { WorkOperationDetails } from "./WorkOperationDetails";
 import {
   operationStatusLabel,
   targetStatusLabel,
@@ -119,6 +120,8 @@ export function OperationResult({
           </div>
         )}
       </div>
+
+      <WorkOperationDetails operation={operation} />
 
       <div className="mt-4 rounded-md bg-[#f4f7f3] p-3">
         <div className="flex items-center justify-between text-sm font-semibold text-[#344138]">
