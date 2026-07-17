@@ -462,7 +462,7 @@ export function WorkTargetSelectionDialog({
                         </span>
                       </div>
                       <div className="grid min-h-44 grid-cols-2 gap-px bg-[#dce4da]">
-                        {(["RIGHT", "LEFT"] as const).map((side) => {
+                        {(["LEFT", "RIGHT"] as const).map((side) => {
                           const zone = bed.zones.find(
                             (candidate) => candidate.side === side,
                           );
@@ -755,8 +755,8 @@ function compareGroups(a: OrchidGroup, b: OrchidGroup) {
 
 function compareZones(a: ZoneNode, b: ZoneNode) {
   const order: Record<BedZoneSide, number> = {
-    RIGHT: 0,
-    LEFT: 1,
+    LEFT: 0,
+    RIGHT: 1,
     CUSTOM: 2,
     HANGING: 3,
   };
