@@ -165,13 +165,14 @@ public class WorkOperation extends BaseEntity {
 		status = WorkOperationStatus.IN_PROGRESS;
 	}
 
-	public void cancel() {
+	public void cancel(LocalDateTime canceledAt) {
 		if (status == WorkOperationStatus.CANCELED) {
 			return;
 		}
 		if (status == WorkOperationStatus.COMPLETED || status == WorkOperationStatus.CORRECTED) {
 			throw new IllegalArgumentException("완료되거나 보정된 작업은 취소할 수 없습니다.");
 		}
+		actualEndAt = canceledAt;
 		status = WorkOperationStatus.CANCELED;
 	}
 

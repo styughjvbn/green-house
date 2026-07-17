@@ -280,14 +280,14 @@ public class WorkOperationService {
 		WorkOperation operation = findOperation(operationId);
 		List<WorkTargetExecution> executions = workTargetExecutionRepository
 				.findByTargetWorkOperationIdOrderByIdAsc(operationId);
-		if (executions.stream().anyMatch(execution -> execution.getStatus()
-				== com.greenhouse.backend.work.domain.WorkTargetExecutionStatus.COMPLETED
-				|| execution.getProcessedQuantity() > 0)) {
-			throw new IllegalArgumentException("이미 실행된 수량이 있는 작업은 취소할 수 없습니다.");
-		}
 		LocalDateTime canceledAt = LocalDateTime.now();
-		operation.cancel();
-		executions.forEach(execution -> execution.cancel(canceledAt));
+		operation.cancel(canceledAt);
+		executions.stream()
+				.filter(execution -> execution.getStatus()
+						!= com.greenhouse.backend.work.domain.WorkTargetExecutionStatus.COMPLETED)
+				.filter(execution -> execution.getStatus()
+						!= com.greenhouse.backend.work.domain.WorkTargetExecutionStatus.SKIPPED)
+				.forEach(execution -> execution.cancel(canceledAt));
 		return get(operationId);
 	}
 

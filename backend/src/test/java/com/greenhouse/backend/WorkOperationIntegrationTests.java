@@ -362,6 +362,67 @@ class WorkOperationIntegrationTests extends AbstractBackendIntegrationTest {
 	}
 
 	@Test
+	void cancelsRemainingTargetsAfterSomeTargetsAreCompleted() throws Exception {
+		OrchidGroup secondGroup = new OrchidGroup(
+				targetGroup.getBedZone(),
+				targetGroup.getGenus(),
+				targetGroup.getVarietyName(),
+				80,
+				"3.5치",
+				2,
+				"정상",
+				2,
+				BigDecimal.TEN,
+				new BigDecimal("20"));
+		secondGroup.assignVariety(targetGroup.getVariety());
+		secondGroup = orchidGroupRepository.save(secondGroup);
+
+		var created = mockMvc.perform(post("/api/work-operations")
+				.contentType(MediaType.APPLICATION_JSON)
+				.content("""
+						{
+						  "workTypeId": %d,
+						  "title": "일부 완료 후 취소",
+						  "plannedStartDate": "2026-07-17",
+						  "sourceScopeType": "MANUAL_SELECTION",
+						  "sourceOrchidGroupIds": [%d, %d]
+						}
+						""".formatted(pesticideType.getId(), targetGroup.getId(), secondGroup.getId())))
+				.andExpect(status().isCreated())
+				.andExpect(jsonPath("$.data.targets", hasSize(2)))
+				.andReturn();
+		Long operationId = Long.valueOf(created.getResponse().getContentAsString().replaceAll(
+				".*?\\\"data\\\":\\{\\\"id\\\":(\\d+).*", "$1"));
+		Long completedTargetId = workOperationTargetRepository
+				.findByWorkOperationIdAndExcludedAtIsNullOrderByIdAsc(operationId).getFirst().getId();
+
+		mockMvc.perform(post("/api/work-operations/{id}/start", operationId))
+				.andExpect(status().isOk());
+		mockMvc.perform(post(
+				"/api/work-operations/{id}/targets/{targetId}/complete", operationId, completedTargetId)
+				.contentType(MediaType.APPLICATION_JSON)
+				.content("""
+						{"worker": "작업자", "resultDetails": {"weather": "맑음"}}
+						"""))
+				.andExpect(status().isOk())
+				.andExpect(jsonPath("$.data.progress.completed").value(1))
+				.andExpect(jsonPath("$.data.progress.pending").value(1));
+
+		mockMvc.perform(post("/api/work-operations/{id}/cancel", operationId))
+				.andExpect(status().isOk())
+				.andExpect(jsonPath("$.data.status").value("CANCELED"))
+				.andExpect(jsonPath("$.data.actualEndAt").exists())
+				.andExpect(jsonPath("$.data.progress.completed").value(1))
+				.andExpect(jsonPath("$.data.progress.canceled").value(1))
+				.andExpect(jsonPath("$.data.targets[?(@.executionStatus == 'COMPLETED')]", hasSize(1)))
+				.andExpect(jsonPath("$.data.targets[?(@.executionStatus == 'CANCELED')]", hasSize(1)));
+
+		org.assertj.core.api.Assertions.assertThat(
+				workAppliedEffectRepository.countByWorkOperationIdAndTargetId(operationId, completedTargetId))
+				.isEqualTo(1);
+	}
+
+	@Test
 	void createsAnImmediatelyCompletedRecordOperationAndRejectsLegacyManualWrites() throws Exception {
 		mockMvc.perform(post("/api/work-operations/record")
 				.contentType(MediaType.APPLICATION_JSON)
