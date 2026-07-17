@@ -25,7 +25,7 @@ export type FarmPlacementSelection = {
 };
 
 export type FarmPlacementReference = FarmPlacementSelection & {
-  kind: "SOURCE" | "RESULT";
+  kind: "SOURCE" | "RESULT" | "SAVED_RESULT";
 };
 
 export function FarmPlacementField({
@@ -377,6 +377,9 @@ function HousePreview({
           {referencePlacements.some((item) => item.kind === "RESULT") ? (
             <Legend color="bg-[#dcecff]" label="다른 결과" />
           ) : null}
+          {referencePlacements.some((item) => item.kind === "SAVED_RESULT") ? (
+            <Legend color="bg-[#e8f3df]" label="다른 회차 결과" />
+          ) : null}
           <Legend color="bg-[#eef1ed]" label="사용 중" />
           <Legend color="bg-white" label="빈 칸" />
         </div>
@@ -503,7 +506,9 @@ function ZonePreview({
                     : reference
                       ? reference.kind === "RESULT"
                         ? "bg-[#dcecff] text-[#20518f] hover:bg-[#c7e0ff]"
-                        : "bg-[#fff1b8] text-[#6f5700] hover:bg-[#ffe99a]"
+                        : reference.kind === "SAVED_RESULT"
+                          ? "bg-[#e8f3df] text-[#2f6334] hover:bg-[#d9ebca]"
+                          : "bg-[#fff1b8] text-[#6f5700] hover:bg-[#ffe99a]"
                       : occupied
                         ? "bg-[#eef1ed] text-[#77817a]"
                         : "bg-white text-[#425047] hover:bg-[#eef8ef]"
@@ -513,7 +518,7 @@ function ZonePreview({
               >
                 <span className="truncate pl-2 font-semibold">
                   {reference
-                    ? `${reference.kind === "RESULT" ? "결과" : "원본"} · ${reference.label}`
+                    ? `${referencePrefix(reference.kind)} · ${reference.label}`
                     : occupied
                       ? findGroupLabel(zone.orchidGroups, cell)
                       : "빈 칸"}
@@ -536,6 +541,12 @@ function Legend({ color, label }: { color: string; label: string }) {
       {label}
     </span>
   );
+}
+
+function referencePrefix(kind: FarmPlacementReference["kind"]) {
+  if (kind === "SOURCE") return "원본";
+  if (kind === "SAVED_RESULT") return "다른 회차";
+  return "결과";
 }
 
 function NumberField({
@@ -609,7 +620,7 @@ function buildOccupiedCells(
   referencePlacements
     .filter(
       (reference) =>
-        reference.kind === "RESULT" &&
+        (reference.kind === "RESULT" || reference.kind === "SAVED_RESULT") &&
         (bedZoneId == null || reference.bedZoneId === bedZoneId),
     )
     .forEach((reference) => {

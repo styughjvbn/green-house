@@ -1,7 +1,7 @@
 "use client";
 
 import { Plus, Trash2, X } from "lucide-react";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import type { House, OrchidGroup, WorkOperation } from "@/entities/farm/types";
 import {
   FarmPlacementField,
@@ -10,7 +10,10 @@ import {
 } from "@/entities/farm/ui/FarmPlacementPicker";
 import { POT_SIZE_OPTIONS } from "@/entities/farm/potSizes";
 import { createUuid } from "@/shared/lib/id";
-import { executeStructureChangeWorkOperation } from "../../api/workRecordApi";
+import {
+  executeStructureChangeWorkOperation,
+  getOrchidGroups,
+} from "../../api/workRecordApi";
 import { TextField } from "./FormFields";
 import { localDateValue } from "./WorkCompletionDateDialog";
 
@@ -40,6 +43,23 @@ export function BatchStructureWorkExecutionDialog({
   onClose: () => void;
   onSaved: (operation: WorkOperation) => void;
 }) {
+  const priorResultOrchidGroupIds = useMemo(
+    () => collectPriorResultOrchidGroupIds(operation),
+    [operation],
+  );
+  const [fetchedOrchidGroups, setFetchedOrchidGroups] = useState<OrchidGroup[]>(
+    [],
+  );
+  const orchidGroupsById = useMemo(
+    () =>
+      new Map(
+        [...orchidGroups, ...fetchedOrchidGroups].map((group) => [
+          group.id,
+          group,
+        ]),
+      ),
+    [fetchedOrchidGroups, orchidGroups],
+  );
   const availableSources = useMemo(
     () =>
       operation.targets.flatMap((target) => {
@@ -51,9 +71,7 @@ export function BatchStructureWorkExecutionDialog({
         ) {
           return [];
         }
-        const group = orchidGroups.find(
-          (candidate) => candidate.id === target.orchidGroupId,
-        );
+        const group = orchidGroupsById.get(target.orchidGroupId);
         if (!group) return [];
         return [
           {
@@ -66,7 +84,25 @@ export function BatchStructureWorkExecutionDialog({
           },
         ];
       }),
-    [operation.targets, orchidGroups],
+    [operation.targets, orchidGroupsById],
+  );
+  const missingPriorResultIdKey = useMemo(
+    () =>
+      priorResultOrchidGroupIds
+        .filter((id) => !orchidGroupsById.has(id))
+        .sort((left, right) => left - right)
+        .join(","),
+    [orchidGroupsById, priorResultOrchidGroupIds],
+  );
+  const savedResultReferences = useMemo(
+    () =>
+      savedResultReferencePlacements(
+        priorResultOrchidGroupIds.flatMap((id) => {
+          const group = orchidGroupsById.get(id);
+          return group ? [group] : [];
+        }),
+      ),
+    [orchidGroupsById, priorResultOrchidGroupIds],
   );
   const [selectedSourceIds, setSelectedSourceIds] = useState<Set<number>>(
     () => new Set(availableSources.map(({ group }) => group.id)),
@@ -118,6 +154,34 @@ export function BatchStructureWorkExecutionDialog({
     new Set(rows.map((row) => row.ageYear)).size === 1
       ? (rows[0]?.ageYear ?? "")
       : "";
+
+  useEffect(() => {
+    const missingIds = missingPriorResultIdKey
+      ? missingPriorResultIdKey.split(",").map(Number)
+      : [];
+    if (missingIds.length === 0) return;
+    let cancelled = false;
+    void getOrchidGroups()
+      .then((groups) => {
+        if (cancelled) return;
+        const missingIdSet = new Set(missingIds);
+        setFetchedOrchidGroups((current) => {
+          const currentIds = new Set(current.map((group) => group.id));
+          const additions = groups.filter(
+            (group) => missingIdSet.has(group.id) && !currentIds.has(group.id),
+          );
+          return additions.length === 0 ? current : [...current, ...additions];
+        });
+      })
+      .catch(() => {
+        if (!cancelled) {
+          setFetchedOrchidGroups((current) => current);
+        }
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [missingPriorResultIdKey]);
 
   function toggleSource(group: OrchidGroup) {
     const selected = selectedSourceIds.has(group.id);
@@ -244,26 +308,33 @@ export function BatchStructureWorkExecutionDialog({
 
   function removeResult(removed: ResultRow) {
     setRows((current) => {
+      const removedIndex = current.findIndex((row) => row.key === removed.key);
       const next = current.filter((row) => row.key !== removed.key);
+      if (next.length === 0) return current;
       const receiverIndex = next.findIndex((row) =>
         row.sourceOrchidGroupIds.some((id) =>
           removed.sourceOrchidGroupIds.includes(id),
         ),
       );
-      if (receiverIndex >= 0) {
-        next[receiverIndex] = {
-          ...next[receiverIndex],
-          sourceOrchidGroupIds: [
-            ...new Set([
-              ...next[receiverIndex].sourceOrchidGroupIds,
-              ...removed.sourceOrchidGroupIds,
-            ]),
-          ],
-          quantity: String(
-            Number(next[receiverIndex].quantity) + Number(removed.quantity),
-          ),
-        };
-      }
+      const fallbackReceiverIndex = Math.max(
+        0,
+        Math.min(removedIndex - 1, next.length - 1),
+      );
+      const targetIndex =
+        receiverIndex >= 0 ? receiverIndex : fallbackReceiverIndex;
+      next[targetIndex] = {
+        ...next[targetIndex],
+        sourceOrchidGroupIds: [
+          ...new Set([
+            ...next[targetIndex].sourceOrchidGroupIds,
+            ...removed.sourceOrchidGroupIds,
+          ]),
+        ],
+        quantity: String(
+          Number(next[targetIndex].quantity) + Number(removed.quantity),
+        ),
+        autoQuantity: false,
+      };
       return next;
     });
   }
@@ -554,6 +625,7 @@ export function BatchStructureWorkExecutionDialog({
                 operation={operation}
                 referencePlacements={[
                   ...sourceReferencePlacements(selectedSources),
+                  ...savedResultReferences,
                   ...resultReferencePlacements(rows, row.key),
                 ]}
                 removable={rows.length > 1}
@@ -772,6 +844,59 @@ function sourceReferencePlacements(
       },
     ];
   });
+}
+
+function savedResultReferencePlacements(
+  groups: OrchidGroup[],
+): FarmPlacementReference[] {
+  return groups.flatMap((group) => {
+    if (group.quantity < 1) return [];
+    const placement = inferPlacement(group);
+    if (!placement) return [];
+    return [
+      {
+        ...placement,
+        kind: "SAVED_RESULT" as const,
+        label: `${group.varietyName} ${group.quantity.toLocaleString()}분`,
+      },
+    ];
+  });
+}
+
+function collectPriorResultOrchidGroupIds(operation: WorkOperation) {
+  const ids = new Set<number>();
+  operation.targets.forEach((target) => {
+    collectResultIds(target.resultDetails).forEach((id) => ids.add(id));
+  });
+  return [...ids];
+}
+
+function collectResultIds(details: Record<string, unknown> | null) {
+  if (!details) return [];
+  const ids: number[] = [];
+  collectNumber(details.resultOrchidGroupId, ids);
+  collectNumbers(details.resultOrchidGroupIds, ids);
+  if (Array.isArray(details.results)) {
+    details.results.forEach((item) => {
+      if (isRecord(item)) collectNumber(item.orchidGroupId, ids);
+    });
+  }
+  return ids;
+}
+
+function collectNumbers(value: unknown, ids: number[]) {
+  if (!Array.isArray(value)) return;
+  value.forEach((item) => collectNumber(item, ids));
+}
+
+function collectNumber(value: unknown, ids: number[]) {
+  if (typeof value === "number" && Number.isInteger(value)) {
+    ids.push(value);
+  }
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value != null;
 }
 
 function inferPlacement(group: OrchidGroup): FarmPlacementSelection | null {

@@ -68,6 +68,10 @@ export async function getSelectableWorkTargetGroups(): Promise<OrchidGroup[]> {
   );
 }
 
+export function getOrchidGroups(): Promise<OrchidGroup[]> {
+  return fetchApi<OrchidGroup[]>("/orchid-groups");
+}
+
 export async function getWorkTargetSelectionOptions(): Promise<WorkTargetSelectionOptions> {
   const [orchidGroups, bedZones] = await Promise.all([
     getSelectableWorkTargetGroups(),
