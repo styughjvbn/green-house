@@ -242,6 +242,61 @@ class DivideMergeWorkOperationIntegrationTests extends AbstractBackendIntegratio
 	}
 
 	@Test
+	void reusesReleasedTailOfSourcePlacementForPartialExecution() throws Exception {
+		OrchidGroup source = createSource(100, "0", "10");
+		Long operationId = createPlan(repotType, source.getId());
+
+		mockMvc.perform(post("/api/work-operations/{id}/start", operationId))
+				.andExpect(status().isOk());
+		mockMvc.perform(post("/api/work-operations/{id}/structure-change-executions", operationId)
+						.contentType(MediaType.APPLICATION_JSON)
+						.content("""
+								{
+								  "idempotencyKey": "repot-reuse-source-tail",
+								  "completedDate": "2026-07-16",
+								  "sources": [
+								    {
+								      "sourceOrchidGroupId": %d,
+								      "inputQuantity": 50,
+								      "releasedStartPosition": 5,
+								      "releasedEndPosition": 10
+								    }
+								  ],
+								  "lossQuantity": 0,
+								  "results": [
+								    {
+								      "bedZoneId": %d,
+								      "quantity": 50,
+								      "sourceOrchidGroupIds": [%d],
+								      "potSize": "4치",
+								      "ageYear": 2,
+								      "purpose": "NORMAL",
+								      "startPosition": 5,
+								      "endPosition": 10
+								    }
+								  ]
+								}
+								""".formatted(source.getId(), sourceZone.getId(), source.getId())))
+				.andExpect(status().isCreated())
+				.andExpect(jsonPath("$.data.targets[0].executionStatus").value("PARTIALLY_COMPLETED"));
+
+		OrchidGroup remainingSource = orchidGroupRepository.findById(source.getId()).orElseThrow();
+		assertThat(remainingSource.getQuantity()).isEqualTo(50);
+		assertThat(remainingSource.getStartPosition()).isEqualByComparingTo("0");
+		assertThat(remainingSource.getEndPosition()).isEqualByComparingTo("5");
+
+		assertThat(orchidGroupRepository.findByBedZoneIdAndQuantityGreaterThanOrderBySortOrderAsc(
+				sourceZone.getId(), 0))
+				.filteredOn(group -> !group.getId().equals(source.getId()))
+				.singleElement()
+				.satisfies(result -> {
+					assertThat(result.getQuantity()).isEqualTo(50);
+					assertThat(result.getStartPosition()).isEqualByComparingTo("5");
+					assertThat(result.getEndPosition()).isEqualByComparingTo("10");
+				});
+	}
+
+	@Test
 	void mergesMultiplePlannedSourcesIntoOneBatchResult() throws Exception {
 		OrchidGroup first = createSource(8, "0", "1");
 		OrchidGroup second = createSource(12, "1", "2");

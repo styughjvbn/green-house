@@ -60,7 +60,10 @@ public class BatchStructureTransformationExecutor {
 			throw new IllegalArgumentException("한 실행 회차에서는 같은 품종의 난 묶음만 함께 처리할 수 있습니다.");
 		}
 
-		Map<Long, Integer> inputBySourceId = request.sources().stream().collect(Collectors.toMap(
+		Map<Long, StructureChangeSourceRequest> sourceRequests = request.sources().stream().collect(Collectors.toMap(
+				StructureChangeSourceRequest::sourceOrchidGroupId,
+				Function.identity()));
+		Map<Long, Integer> inputBySourceId = sourceRequests.values().stream().collect(Collectors.toMap(
 				StructureChangeSourceRequest::sourceOrchidGroupId,
 				StructureChangeSourceRequest::inputQuantity));
 		var referencedSourceIds = request.results().stream()
@@ -77,8 +80,11 @@ public class BatchStructureTransformationExecutor {
 				throw new IllegalArgumentException("작업 수량은 원본 난 묶음의 현재 수량보다 클 수 없습니다.");
 			}
 		});
-		inputBySourceId.forEach((sourceId, inputQuantity) ->
-				sources.get(sourceId).applyRepot(inputQuantity));
+		sourceRequests.forEach((sourceId, sourceRequest) ->
+				sources.get(sourceId).applyRepot(
+						sourceRequest.inputQuantity(),
+						sourceRequest.releasedStartPosition(),
+						sourceRequest.releasedEndPosition()));
 
 		List<OrchidGroup> results = request.results().stream().map(row -> {
 			var lineageSourceIds = row.sourceOrchidGroupIds() == null || row.sourceOrchidGroupIds().isEmpty()

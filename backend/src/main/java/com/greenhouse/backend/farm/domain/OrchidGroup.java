@@ -183,9 +183,32 @@ public class OrchidGroup extends BaseEntity {
 	}
 
 	public void applyRepot(Integer inputQuantity) {
+		applyRepot(inputQuantity, null, null);
+	}
+
+	public void applyRepot(
+			Integer inputQuantity,
+			BigDecimal releasedStartPosition,
+			BigDecimal releasedEndPosition) {
 		validatePositiveQuantity(inputQuantity, "분갈이 투입 수량");
 		if (getAvailableQuantity() < inputQuantity) {
 			throw new IllegalArgumentException("난 묶음 가용 수량보다 많이 분갈이할 수 없습니다.");
+		}
+		boolean partial = inputQuantity < this.quantity;
+		if ((releasedStartPosition == null) != (releasedEndPosition == null)) {
+			throw new IllegalArgumentException("원본에서 비울 시작·끝 위치를 모두 입력해야 합니다.");
+		}
+		if (releasedStartPosition != null) {
+			if (!partial) {
+				throw new IllegalArgumentException("일부 작업할 때만 원본에서 비울 위치를 지정할 수 있습니다.");
+			}
+			if (startPosition == null || endPosition == null
+					|| releasedStartPosition.compareTo(startPosition) <= 0
+					|| releasedStartPosition.compareTo(endPosition) >= 0
+					|| releasedEndPosition.compareTo(endPosition) != 0) {
+				throw new IllegalArgumentException("원본 배치의 뒤쪽 연속 구간만 비울 수 있습니다.");
+			}
+			this.endPosition = releasedStartPosition;
 		}
 		this.quantity -= inputQuantity;
 		if (this.quantity == 0) {

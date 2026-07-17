@@ -3820,6 +3820,12 @@ components:
           type: integer
           format: int32
           minimum: 1
+        releasedStartPosition:
+          type: number
+          minimum: 0.0
+        releasedEndPosition:
+          type: number
+          minimum: 0.0
       required:
       - inputQuantity
       - sourceOrchidGroupId
