@@ -177,6 +177,7 @@ class InboundPottingPlanIntegrationTests extends AbstractBackendIntegrationTest 
 				.content("""
 						{
 						  "worker": "포트 담당",
+						  "completedDate": "2026-07-16",
 						  "resultDetails": {
 						    "pottingDate": "2026-07-16",
 						    "results": [{
@@ -198,6 +199,10 @@ class InboundPottingPlanIntegrationTests extends AbstractBackendIntegrationTest 
 		InboundRecord updated = inboundRecordRepository.findWithDetailsById(inboundRecord.getId()).orElseThrow();
 		assertThat(updated.getCreatedOrchidGroup()).isNotNull();
 		assertThat(updated.getStatus()).isEqualTo(InboundStatus.PLACED);
+		assertThat(targetExecutionRepository
+				.findByTargetWorkOperationIdOrderByIdAsc(operationId)
+				.getFirst().getCompletedAt().toLocalDate())
+				.isEqualTo(LocalDate.of(2026, 7, 16));
 		assertThat(workRecordRepository.count()).isZero();
 	}
 

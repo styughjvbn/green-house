@@ -1,4 +1,6 @@
+import { useState } from "react";
 import type { WorkOperation } from "@/entities/farm/types";
+import { WorkCompletionDateDialog } from "./WorkCompletionDateDialog";
 import {
   operationStatusLabel,
   targetStatusLabel,
@@ -14,14 +16,18 @@ export function OperationResult({
 }: {
   operation: WorkOperation;
   loading: boolean;
-  onComplete: () => void;
+  onComplete: (completedDate: string) => void;
   onOperationAction: (action: "start" | "pause" | "resume" | "cancel") => void;
   onTargetAction: (
     targetId: number,
     action: "start" | "complete" | "skip",
+    completedDate?: string,
   ) => void;
   onExecuteTarget?: (target: WorkOperation["targets"][number]) => void;
 }) {
+  const [completionTargetId, setCompletionTargetId] = useState<
+    number | "operation" | null
+  >(null);
   const completed = operation.status === "COMPLETED";
   const canceled = operation.status === "CANCELED";
   const corrected = operation.status === "CORRECTED";
@@ -47,6 +53,9 @@ export function OperationResult({
             {operation.plannedEndDate
               ? ` ~ ${operation.plannedEndDate}`
               : ""} · {operationStatusLabel(operation.status)}
+            {operation.actualEndAt
+              ? ` · 완료 ${operation.actualEndAt.slice(0, 10)}`
+              : ""}
           </p>
         </div>
         {terminal ? (
@@ -99,7 +108,7 @@ export function OperationResult({
               label="전체 완료"
               primary
               disabled={loading || !canComplete}
-              onClick={onComplete}
+              onClick={() => setCompletionTargetId("operation")}
             />
             <StatusAction
               label="취소"
@@ -153,6 +162,9 @@ export function OperationResult({
                   : target.processedQuantity > 0
                     ? ` · 작업 ${target.processedQuantity}분 · 잔여 ${target.remainingQuantity}분`
                     : ""}
+                {target.completedAt
+                  ? ` · 완료 ${target.completedAt.slice(0, 10)}`
+                  : ""}
               </p>
             </div>
             <span className="rounded-full bg-[#eef2ed] px-2 py-1 text-xs font-semibold text-[#526057]">
@@ -222,7 +234,7 @@ export function OperationResult({
                     ) {
                       onExecuteTarget?.(target);
                     } else {
-                      onTargetAction(target.id!, "complete");
+                      setCompletionTargetId(target.id!);
                     }
                   }}
                 />
@@ -237,6 +249,22 @@ export function OperationResult({
           </div>
         ))}
       </div>
+      {completionTargetId != null ? (
+        <WorkCompletionDateDialog
+          title={
+            completionTargetId === "operation" ? "작업 완료" : "작업 실행 완료"
+          }
+          description="실제로 작업을 완료한 날짜를 확인해주세요."
+          onClose={() => setCompletionTargetId(null)}
+          onConfirm={(completedDate) => {
+            if (completionTargetId === "operation") {
+              onComplete(completedDate);
+            } else {
+              onTargetAction(completionTargetId, "complete", completedDate);
+            }
+          }}
+        />
+      ) : null}
     </div>
   );
 }

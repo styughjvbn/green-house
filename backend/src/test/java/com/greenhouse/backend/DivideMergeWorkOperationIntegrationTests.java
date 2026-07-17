@@ -204,6 +204,7 @@ class DivideMergeWorkOperationIntegrationTests extends AbstractBackendIntegratio
 				.content("""
 						{
 						  "idempotencyKey": "divide-batch-1",
+						  "completedDate": "2026-07-16",
 						  "worker": "분주 담당자",
 						  "sources": [
 						    {"sourceOrchidGroupId": %d, "inputQuantity": 10}
@@ -253,6 +254,7 @@ class DivideMergeWorkOperationIntegrationTests extends AbstractBackendIntegratio
 				.content("""
 						{
 						  "idempotencyKey": "merge-batch-1",
+						  "completedDate": "2026-07-16",
 						  "sources": [
 						    {"sourceOrchidGroupId": %d, "inputQuantity": 8},
 						    {"sourceOrchidGroupId": %d, "inputQuantity": 12}

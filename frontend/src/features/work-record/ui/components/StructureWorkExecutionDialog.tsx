@@ -25,6 +25,7 @@ import {
 } from "../../api/workRecordApi";
 import { BatchStructureWorkExecutionDialog } from "./BatchStructureWorkExecutionDialog";
 import { TextField } from "./FormFields";
+import { localDateValue } from "./WorkCompletionDateDialog";
 
 type ResultRow = {
   key: string;
@@ -80,11 +81,17 @@ function DiscardWorkExecutionDialog({
   );
   const [worker, setWorker] = useState(operation.worker ?? "");
   const [reason, setReason] = useState("");
+  const today = localDateValue(new Date());
+  const [completedDate, setCompletedDate] = useState(today);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   async function submit() {
     if (target.id == null) return;
+    if (!completedDate) {
+      setError("완료일을 입력해주세요.");
+      return;
+    }
     const quantity = Number(discardQuantity);
     if (
       !Number.isInteger(quantity) ||
@@ -107,6 +114,7 @@ function DiscardWorkExecutionDialog({
             discardQuantity: quantity,
             reason: reason.trim() || null,
           },
+          completedDate,
         ),
       );
       onClose();
@@ -173,6 +181,14 @@ function DiscardWorkExecutionDialog({
             </button>
           </div>
           <TextField label="작업자" value={worker} onChange={setWorker} />
+          <TextField
+            label="완료일"
+            max={today}
+            required
+            type="date"
+            value={completedDate}
+            onChange={setCompletedDate}
+          />
           <label className="block">
             <span className="text-sm font-semibold text-[#435047]">
               폐기 사유
@@ -235,6 +251,8 @@ function OrchidStructureWorkExecutionDialog({
       : bedZones[0]?.id) ?? bedZones[0]?.id;
   const [worker, setWorker] = useState(operation.worker ?? "");
   const [memo, setMemo] = useState("");
+  const today = localDateValue(new Date());
+  const [completedDate, setCompletedDate] = useState(today);
   const [inputQuantity, setInputQuantity] = useState(
     String(source?.quantity ?? target.quantitySnapshot),
   );
@@ -268,7 +286,7 @@ function OrchidStructureWorkExecutionDialog({
         : {
             idempotencyKey: createUuid(),
             title: operation.title,
-            workDate: new Date().toISOString().slice(0, 10),
+            workDate: completedDate,
             worker: worker.trim() || null,
             memo: memo.trim() || null,
             sourceOrchidGroupId: target.orchidGroupId,
@@ -296,6 +314,7 @@ function OrchidStructureWorkExecutionDialog({
           "complete",
           worker.trim() || null,
           resultDetails,
+          completedDate,
         ),
       );
       onClose();
@@ -309,6 +328,7 @@ function OrchidStructureWorkExecutionDialog({
   }
 
   function validate() {
+    if (!completedDate) return "완료일을 입력해주세요.";
     if (!bedZones.length) return "결과를 배치할 논리 구역이 없습니다.";
     if (isMovement) {
       if (!source) return "현재 원본 난 묶음을 찾을 수 없습니다.";
@@ -487,6 +507,14 @@ function OrchidStructureWorkExecutionDialog({
             </div>
           )}
           <div className="grid gap-3 sm:grid-cols-2">
+            <TextField
+              label="완료일"
+              max={today}
+              required
+              type="date"
+              value={completedDate}
+              onChange={setCompletedDate}
+            />
             <TextField label="작업자" value={worker} onChange={setWorker} />
             <TextField label="메모" value={memo} onChange={setMemo} />
           </div>
@@ -556,6 +584,8 @@ function MergeWorkExecutionDialog({
   );
   const [worker, setWorker] = useState(operation.worker ?? "");
   const [memo, setMemo] = useState("");
+  const today = localDateValue(new Date());
+  const [completedDate, setCompletedDate] = useState(today);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -591,6 +621,7 @@ function MergeWorkExecutionDialog({
             memo: memo.trim() || null,
           },
         },
+        completedDate,
       );
       onSaved(updated);
       onClose();
@@ -606,6 +637,7 @@ function MergeWorkExecutionDialog({
   }
 
   function validate() {
+    if (!completedDate) return "완료일을 입력해주세요.";
     if (sources.length !== operation.targets.length || sources.length < 2)
       return "합식할 현재 원본 난 묶음을 모두 찾을 수 없습니다.";
     if (
@@ -725,6 +757,14 @@ function MergeWorkExecutionDialog({
             onChange={setPlacement}
           />
           <div className="grid gap-3 sm:grid-cols-2">
+            <TextField
+              label="완료일"
+              max={today}
+              required
+              type="date"
+              value={completedDate}
+              onChange={setCompletedDate}
+            />
             <TextField label="작업자" value={worker} onChange={setWorker} />
             <TextField label="메모" value={memo} onChange={setMemo} />
           </div>
@@ -777,6 +817,7 @@ function PottingWorkExecutionDialog({
         ...values,
         growthStage: null,
       },
+      values.pottingDate,
     );
     onSaved(updated);
     onClose();

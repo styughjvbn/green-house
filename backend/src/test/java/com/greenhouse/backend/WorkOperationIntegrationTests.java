@@ -274,6 +274,7 @@ class WorkOperationIntegrationTests extends AbstractBackendIntegrationTest {
 				.content("""
 						{
 						  "worker": "첫 작업자",
+						  "completedDate": "2026-07-15",
 						  "resultDetails": {"weather": "맑음"}
 						}
 						"""))
@@ -283,10 +284,19 @@ class WorkOperationIntegrationTests extends AbstractBackendIntegrationTest {
 				.andExpect(jsonPath("$.data.targets[0].worker").value("첫 작업자"))
 				.andExpect(jsonPath("$.data.targets[0].resultDetails.weather").value("맑음"));
 
-		mockMvc.perform(post("/api/work-operations/{id}/complete", operationId))
+		mockMvc.perform(post("/api/work-operations/{id}/complete", operationId)
+				.contentType(MediaType.APPLICATION_JSON)
+				.content("{\"completedDate\":\"2026-07-16\"}"))
 				.andExpect(status().isOk())
 				.andExpect(jsonPath("$.data.status").value("COMPLETED"))
 				.andExpect(jsonPath("$.data.targets[0].executionStatus").value("COMPLETED"));
+		org.assertj.core.api.Assertions.assertThat(
+				workTargetExecutionRepository.findByTargetWorkOperationIdOrderByIdAsc(operationId)
+						.getFirst().getCompletedAt().toLocalDate())
+				.isEqualTo(java.time.LocalDate.of(2026, 7, 15));
+		org.assertj.core.api.Assertions.assertThat(
+				workOperationRepository.findById(operationId).orElseThrow().getActualEndAt().toLocalDate())
+				.isEqualTo(java.time.LocalDate.of(2026, 7, 16));
 
 		mockMvc.perform(post("/api/work-operations/{id}/targets/{targetId}/complete", operationId, targetId)
 				.contentType(MediaType.APPLICATION_JSON)

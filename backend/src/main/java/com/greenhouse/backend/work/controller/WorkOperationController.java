@@ -9,6 +9,7 @@ import com.greenhouse.backend.work.dto.InboundPottingCandidateResponse;
 import com.greenhouse.backend.work.dto.InboundPottingPlanCreateRequest;
 import com.greenhouse.backend.work.dto.InboundPottingExecutionRequest;
 import com.greenhouse.backend.work.dto.WorkOperationCreateRequest;
+import com.greenhouse.backend.work.dto.WorkOperationCompleteRequest;
 import com.greenhouse.backend.work.dto.WorkOperationCorrectionCreateRequest;
 import com.greenhouse.backend.work.dto.WorkOperationCorrectionsResponse;
 import com.greenhouse.backend.work.dto.WorkOperationResponse;
@@ -94,8 +95,11 @@ public class WorkOperationController {
 	}
 
 	@PostMapping("/work-operations/{workOperationId}/complete")
-	public ApiResponse<WorkOperationResponse> complete(@PathVariable Long workOperationId) {
-		return ApiResponse.ok(workOperationService.complete(workOperationId));
+	public ApiResponse<WorkOperationResponse> complete(
+			@PathVariable Long workOperationId,
+			@Valid @RequestBody(required = false) WorkOperationCompleteRequest request) {
+		return ApiResponse.ok(workOperationService.complete(
+				workOperationId, request == null ? null : request.completedDate()));
 	}
 
 	@PostMapping("/work-operations/{workOperationId}/start")
@@ -124,7 +128,7 @@ public class WorkOperationController {
 			@PathVariable Long targetId,
 			@Valid @RequestBody(required = false) WorkTargetExecutionRequest request) {
 		return ApiResponse.ok(workOperationService.startTarget(
-				workOperationId, targetId, request == null ? new WorkTargetExecutionRequest(null, null) : request));
+				workOperationId, targetId, request == null ? new WorkTargetExecutionRequest(null, null, null) : request));
 	}
 
 	@PostMapping("/work-operations/{workOperationId}/targets/{targetId}/complete")
@@ -133,7 +137,7 @@ public class WorkOperationController {
 			@PathVariable Long targetId,
 			@Valid @RequestBody(required = false) WorkTargetExecutionRequest request) {
 		return ApiResponse.ok(workOperationService.completeTarget(
-				workOperationId, targetId, request == null ? new WorkTargetExecutionRequest(null, null) : request));
+				workOperationId, targetId, request == null ? new WorkTargetExecutionRequest(null, null, null) : request));
 	}
 
 	@PostMapping("/work-operations/{workOperationId}/targets/{targetId}/skip")
@@ -142,7 +146,7 @@ public class WorkOperationController {
 			@PathVariable Long targetId,
 			@Valid @RequestBody(required = false) WorkTargetExecutionRequest request) {
 		return ApiResponse.ok(workOperationService.skipTarget(
-				workOperationId, targetId, request == null ? new WorkTargetExecutionRequest(null, null) : request));
+				workOperationId, targetId, request == null ? new WorkTargetExecutionRequest(null, null, null) : request));
 	}
 
 	@PostMapping("/work-operations/{workOperationId}/merge/complete")

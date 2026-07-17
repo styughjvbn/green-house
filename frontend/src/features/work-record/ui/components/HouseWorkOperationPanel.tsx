@@ -342,12 +342,12 @@ export function WorkOperationPanel({
     }
   }
 
-  async function completeOperation() {
+  async function completeOperation(completedDate: string) {
     if (!operation) return;
     setLoading(true);
     setErrorMessage(null);
     try {
-      setOperation(await completeWorkOperation(operation.id));
+      setOperation(await completeWorkOperation(operation.id, completedDate));
     } catch (error) {
       setErrorMessage(
         error instanceof Error ? error.message : "작업을 완료하지 못했습니다.",
@@ -379,6 +379,7 @@ export function WorkOperationPanel({
   async function changeTargetStatus(
     targetId: number,
     action: "start" | "complete" | "skip",
+    completedDate?: string,
   ) {
     if (!operation) return;
     setLoading(true);
@@ -390,6 +391,8 @@ export function WorkOperationPanel({
           targetId,
           action,
           operation.worker,
+          undefined,
+          completedDate,
         ),
       );
     } catch (error) {

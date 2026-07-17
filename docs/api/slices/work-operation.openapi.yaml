@@ -335,6 +335,11 @@ paths:
         schema:
           type: integer
           format: int64
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/WorkOperationCompleteRequest'
       responses:
         '200':
           description: OK
@@ -741,6 +746,9 @@ components:
           type: string
           maxLength: 100
           minLength: 0
+        completedDate:
+          type: string
+          format: date
         worker:
           type: string
           maxLength: 100
@@ -770,6 +778,7 @@ components:
           maxItems: 100
           minItems: 0
       required:
+      - completedDate
       - idempotencyKey
       - lossQuantity
       - results
@@ -845,6 +854,12 @@ components:
       required:
       - inputQuantity
       - sourceOrchidGroupId
+    WorkOperationCompleteRequest:
+      type: object
+      properties:
+        completedDate:
+          type: string
+          format: date
     WorkOperationCorrectionCreateRequest:
       type: object
       properties:
@@ -1168,6 +1183,9 @@ components:
         resultDetails:
           type: object
           additionalProperties: {}
+        completedDate:
+          type: string
+          format: date
     WorkTargetPreviewRequest:
       type: object
       properties:

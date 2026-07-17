@@ -31,6 +31,8 @@ import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.LocalTime;
+import java.time.ZoneId;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -46,6 +48,8 @@ import org.springframework.transaction.annotation.Transactional;
 @Transactional
 @RequiredArgsConstructor
 public class WorkOperationService {
+
+	private static final ZoneId FARM_TIME_ZONE = ZoneId.of("Asia/Seoul");
 
 	private final WorkTargetResolver workTargetResolver;
 	private final WorkTypeService workTypeService;
@@ -149,7 +153,7 @@ public class WorkOperationService {
 		workTypeService.getActiveForCreate(request.workTypeId());
 		WorkOperationResponse created = create(request);
 		WorkOperation operation = findOperation(created.id());
-		LocalDateTime executedAt = LocalDateTime.now();
+		LocalDateTime executedAt = completionTime(request.plannedStartDate());
 		operation.start(executedAt);
 		List<WorkTargetExecution> executions = workTargetExecutionRepository
 				.findByTargetWorkOperationIdOrderByIdAsc(operation.getId());
@@ -258,6 +262,10 @@ public class WorkOperationService {
 	}
 
 	public WorkOperationResponse complete(Long operationId) {
+		return complete(operationId, null);
+	}
+
+	public WorkOperationResponse complete(Long operationId, LocalDate completedDate) {
 		WorkOperation operation = workOperationRepository.findWithWorkTypeById(operationId)
 				.orElseThrow(() -> new NotFoundException("작업을 찾을 수 없습니다."));
 		List<WorkTargetExecution> executions = workTargetExecutionRepository
@@ -265,7 +273,7 @@ public class WorkOperationService {
 		if (executions.isEmpty() || executions.stream().anyMatch(execution -> !execution.isTerminalForCompletion())) {
 			throw new IllegalArgumentException("모든 작업 대상을 완료하거나 건너뛴 뒤 전체 작업을 완료할 수 있습니다.");
 		}
-		LocalDateTime completedAt = LocalDateTime.now();
+		LocalDateTime completedAt = completionTime(completedDate);
 		operation.complete(completedAt);
 		return get(operationId);
 	}
@@ -322,7 +330,7 @@ public class WorkOperationService {
 			throw new IllegalArgumentException("진행 중인 작업에서만 대상을 처리할 수 있습니다.");
 		}
 		refreshInboundSnapshotForExecution(operation, execution.getTarget());
-		LocalDateTime completedAt = LocalDateTime.now();
+		LocalDateTime completedAt = completionTime(request.completedDate());
 		String worker = normalize(request.worker());
 		var result = workEffectProcessor.apply(
 				operation,
@@ -391,6 +399,15 @@ public class WorkOperationService {
 		return location;
 	}
 
+	private LocalDateTime completionTime(LocalDate completedDate) {
+		LocalDate today = LocalDate.now(FARM_TIME_ZONE);
+		LocalDate date = completedDate == null ? today : completedDate;
+		if (date.isAfter(today)) {
+			throw new IllegalArgumentException("완료일은 오늘 이후로 입력할 수 없습니다.");
+		}
+		return LocalDateTime.of(date, LocalTime.now(FARM_TIME_ZONE));
+	}
+
 	public WorkOperationResponse completeMerge(
 			Long operationId, WorkTargetExecutionRequest request) {
 		List<WorkTargetExecution> executions = workTargetExecutionRepository
@@ -411,7 +428,7 @@ public class WorkOperationService {
 		if (operation.getStatus() != WorkOperationStatus.IN_PROGRESS) {
 			throw new IllegalArgumentException("진행 중인 합식 작업만 실행할 수 있습니다.");
 		}
-		LocalDateTime completedAt = LocalDateTime.now();
+		LocalDateTime completedAt = completionTime(request.completedDate());
 		String worker = normalize(request.worker());
 		var result = workEffectProcessor.apply(
 				operation,
@@ -463,7 +480,7 @@ public class WorkOperationService {
 			}
 		});
 
-		LocalDateTime executedAt = LocalDateTime.now();
+		LocalDateTime executedAt = completionTime(request.completedDate());
 		String worker = normalize(request.worker());
 		Map<String, Object> commandDetails = objectMapper.convertValue(
 				request, new TypeReference<Map<String, Object>>() {});

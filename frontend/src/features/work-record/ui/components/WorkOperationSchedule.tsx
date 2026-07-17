@@ -226,17 +226,21 @@ export function WorkOperationSchedule({
         <OperationResult
           operation={selected}
           loading={loading}
-          onComplete={() => void run(() => completeWorkOperation(selected.id))}
+          onComplete={(completedDate) =>
+            void run(() => completeWorkOperation(selected.id, completedDate))
+          }
           onOperationAction={(action) =>
             void run(() => transitionWorkOperation(selected.id, action))
           }
-          onTargetAction={(targetId, action) =>
+          onTargetAction={(targetId, action, completedDate) =>
             void run(() =>
               transitionWorkOperationTarget(
                 selected.id,
                 targetId,
                 action,
                 selected.worker,
+                undefined,
+                completedDate,
               ),
             )
           }

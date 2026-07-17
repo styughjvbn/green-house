@@ -11,6 +11,7 @@ import { POT_SIZE_OPTIONS } from "@/entities/farm/potSizes";
 import { createUuid } from "@/shared/lib/id";
 import { executeStructureChangeWorkOperation } from "../../api/workRecordApi";
 import { TextField } from "./FormFields";
+import { localDateValue } from "./WorkCompletionDateDialog";
 
 type ResultPurpose = "NORMAL" | "DIVIDE_CANDIDATE" | "HELD";
 
@@ -86,6 +87,8 @@ export function BatchStructureWorkExecutionDialog({
   );
   const [lossQuantity, setLossQuantity] = useState("0");
   const [lossReason, setLossReason] = useState("");
+  const today = localDateValue(new Date());
+  const [completedDate, setCompletedDate] = useState(today);
   const [worker, setWorker] = useState(operation.worker ?? "");
   const [memo, setMemo] = useState("");
   const [saving, setSaving] = useState(false);
@@ -232,6 +235,7 @@ export function BatchStructureWorkExecutionDialog({
     try {
       const updated = await executeStructureChangeWorkOperation(operation.id, {
         idempotencyKey: createUuid(),
+        completedDate,
         worker: worker.trim() || null,
         memo: memo.trim() || null,
         sources: selectedSources.map(({ group }) => ({
@@ -269,6 +273,7 @@ export function BatchStructureWorkExecutionDialog({
   }
 
   function validate() {
+    if (!completedDate) return "완료일을 입력해주세요.";
     if (selectedSources.length === 0)
       return "이번에 작업할 원본을 선택해주세요.";
     if (
@@ -468,6 +473,14 @@ export function BatchStructureWorkExecutionDialog({
           </section>
 
           <div className="grid gap-3 sm:grid-cols-2">
+            <TextField
+              label="이번 실행 완료일"
+              max={today}
+              required
+              type="date"
+              value={completedDate}
+              onChange={setCompletedDate}
+            />
             <TextField
               label="손실 수량"
               type="number"

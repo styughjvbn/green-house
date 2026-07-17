@@ -237,10 +237,12 @@ export function getWorkOperations(
 
 export async function completeWorkOperation(
   workOperationId: number,
+  completedDate: string,
 ): Promise<WorkOperation> {
   return requestWorkOperation<WorkOperation>(
     `/work-operations/${workOperationId}/complete`,
     "POST",
+    { completedDate },
   );
 }
 
@@ -260,11 +262,12 @@ export async function transitionWorkOperationTarget(
   action: "start" | "complete" | "skip",
   worker: string | null,
   resultDetails?: Record<string, unknown>,
+  completedDate?: string,
 ): Promise<WorkOperation> {
   return requestWorkOperation<WorkOperation>(
     `/work-operations/${workOperationId}/targets/${targetId}/${action}`,
     "POST",
-    { worker, resultDetails },
+    { worker, resultDetails, completedDate },
   );
 }
 
@@ -272,11 +275,12 @@ export async function completeMergeWorkOperation(
   workOperationId: number,
   worker: string | null,
   resultDetails: Record<string, unknown>,
+  completedDate: string,
 ): Promise<WorkOperation> {
   return requestWorkOperation<WorkOperation>(
     `/work-operations/${workOperationId}/merge/complete`,
     "POST",
-    { worker, resultDetails },
+    { worker, resultDetails, completedDate },
   );
 }
 
@@ -284,6 +288,7 @@ export async function executeStructureChangeWorkOperation(
   workOperationId: number,
   payload: {
     idempotencyKey: string;
+    completedDate: string;
     worker: string | null;
     memo: string | null;
     sources: { sourceOrchidGroupId: number; inputQuantity: number }[];

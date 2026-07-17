@@ -78,12 +78,12 @@ public class InboundPottingOperationService {
 		WorkOperationResponse updated = workOperationService.completeTarget(
 				operation.id(),
 				targetId,
-				new WorkTargetExecutionRequest(request.worker(), resultDetails));
+				new WorkTargetExecutionRequest(request.worker(), resultDetails, request.pottingDate()));
 		if (updated.progress().pending() == 0
 				&& updated.progress().inProgress() == 0
 				&& updated.progress().partial() == 0
 				&& updated.progress().failed() == 0) {
-			return workOperationService.complete(updated.id());
+			return workOperationService.complete(updated.id(), request.pottingDate());
 		}
 		return updated;
 	}
