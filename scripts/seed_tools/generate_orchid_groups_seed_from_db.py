@@ -46,6 +46,7 @@ FROM (
         og.quantity,
         COALESCE(og.reserved_quantity, 0) AS reserved_quantity,
         og.pot_size,
+        og.pot_size_code,
         og.placement_type,
         og.tray_count,
         og.status,
@@ -187,6 +188,7 @@ def build_insert_row(group: dict[str, Any]) -> str:
         sql_literal(variety_name),
         maybe_number_literal(group.get("age_year")),
         sql_literal(group.get("pot_size")),
+        sql_literal(group.get("pot_size_code") or "UNSPECIFIED"),
         sql_literal(group.get("placement_type")),
         maybe_number_literal(group.get("quantity")),
         maybe_number_literal(group.get("reserved_quantity") or 0),
@@ -238,6 +240,7 @@ def build_sql(groups: list[dict[str, Any]], delete_existing: bool) -> str:
         lines.append("    variety_name,")
         lines.append("    age_year,")
         lines.append("    pot_size,")
+        lines.append("    pot_size_code,")
         lines.append("    placement_type,")
         lines.append("    quantity,")
         lines.append("    reserved_quantity,")

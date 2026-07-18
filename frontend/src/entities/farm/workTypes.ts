@@ -45,6 +45,13 @@ const TEMPLATE_CONFIG: Record<WorkTypeTemplate, WorkTypeTemplateConfig> = {
       quantity: "작업 수량/범위",
     },
   },
+  DISCARD: {
+    label: "폐기형",
+    fields: ["quantity", "worker", "memo"],
+    labels: {
+      quantity: "폐기 수량",
+    },
+  },
   STATUS: {
     label: "상태 기록형",
     fields: ["worker", "memo"],
@@ -57,6 +64,16 @@ const TEMPLATE_CONFIG: Record<WorkTypeTemplate, WorkTypeTemplateConfig> = {
   },
   MOVEMENT: {
     label: "자리 이동형",
+    fields: ["worker", "memo"],
+    labels: {},
+  },
+  MULTI_CREATE: {
+    label: "난 묶음 다중 생성형",
+    fields: ["worker", "memo"],
+    labels: {},
+  },
+  CORRECTION: {
+    label: "구조 변경 보정형",
     fields: ["worker", "memo"],
     labels: {},
   },
@@ -104,6 +121,31 @@ export function getManualWorkTypes(workTypes: WorkType[]) {
       !workType.systemType &&
       workType.code !== "INBOUND" &&
       workType.code !== "POTTING",
+  );
+}
+
+export function getSchedulableWorkTypes(workTypes: WorkType[]) {
+  return workTypes.filter(
+    (workType) =>
+      workType.active &&
+      (workType.code === "REPOT" ||
+        workType.code === "DIVIDE" ||
+        workType.code === "MERGE" ||
+        workType.code === "DISCARD" ||
+        workType.code === "POTTING" ||
+        workType.code === "MOVEMENT" ||
+        (!workType.systemType &&
+          workType.code !== "INBOUND" &&
+          workType.code !== "MULTI_CREATE" &&
+          workType.code !== "CORRECTION" &&
+          [
+            "PESTICIDE",
+            "FERTILIZER",
+            "CLEANUP",
+            "DISCARD",
+            "STATUS",
+            "MEMO",
+          ].includes(workType.template))),
   );
 }
 

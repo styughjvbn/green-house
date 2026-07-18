@@ -3,10 +3,11 @@ import type {
   FarmStatusMapData,
   House,
   OrchidGroup,
+  OrchidGroupWorkHistory,
   SelectedBedZone,
   SelectedOrchidGroup,
-  WorkRecord,
   WorkRecordTargetType,
+  WorkOperation,
   WorkType,
 } from "@/entities/farm/types";
 
@@ -74,6 +75,93 @@ export type MutationPayload = {
   memo: string | null;
 };
 
+export type MultiCreateOrchidGroupRow = {
+  orchidGroup: MutationPayload & { bedZoneId: number };
+  collectionIds: number[];
+};
+
+export type MultiCreateWorkResult = {
+  operation: { id: number; status: string; title: string };
+  createdOrchidGroups: OrchidGroup[];
+};
+
+export type MultiCreateCancellationEligibility = {
+  workOperationId: number;
+  cancelable: boolean;
+  createdOrchidGroupIds: number[];
+  blockers: Array<{ code: string; message: string; count: number }>;
+};
+
+export type RepotResultOrchidGroupRow = {
+  bedZoneId: number;
+  quantity: number;
+  potSize: string | null;
+  ageYear: number | null;
+  placementType: string | null;
+  trayCount: number | null;
+  splitPlacementAllowed: boolean;
+  startPosition: number;
+  endPosition: number;
+  memo: string | null;
+};
+
+export type RepotWorkResult = {
+  operation: { id: number; status: string; title: string };
+  sourceOrchidGroup: OrchidGroup;
+  resultOrchidGroups: OrchidGroup[];
+  inputQuantity: number;
+  lossQuantity: number;
+  lossReason: string | null;
+};
+
+export type WorkOperationCorrectionAdjustment = {
+  orchidGroupId: number;
+  beforeQuantity: number;
+  afterQuantity: number;
+  beforeStatus: string;
+  afterStatus: string;
+};
+
+export type WorkOperationCorrectionItem = {
+  id: number;
+  reason: string;
+  createdAt: string;
+  correctionOperation: WorkOperation;
+  effectDetails: {
+    adjustments?: WorkOperationCorrectionAdjustment[];
+  };
+};
+
+export type WorkOperationCorrections = {
+  originalOperation: WorkOperation;
+  corrections: WorkOperationCorrectionItem[];
+};
+
+export type OrchidGroupLineageRelationType =
+  | "CREATED_FROM_INBOUND"
+  | "REPOTTED_TO"
+  | "SPLIT_TO"
+  | "MERGED_TO"
+  | "POTTED_TO"
+  | "CORRECTED_TO";
+
+export type OrchidGroupLineageItem = {
+  id: number;
+  relationType: OrchidGroupLineageRelationType;
+  workOperationId: number;
+  sourceQuantity: number;
+  resultQuantity: number;
+  createdAt: string;
+  sourceOrchidGroup: OrchidGroup;
+  resultOrchidGroup: OrchidGroup;
+};
+
+export type OrchidGroupLineage = {
+  orchidGroupId: number;
+  sources: OrchidGroupLineageItem[];
+  results: OrchidGroupLineageItem[];
+};
+
 export type PreciseMovePayload = {
   toBedZoneId: number;
   startPosition?: number | null;
@@ -106,17 +194,58 @@ export type WorkRecordQuickPayload = {
 };
 
 export type WorkRecordSummary = {
-  latestRecords: WorkRecord[];
+  latestRecords: OrchidGroupWorkHistory[];
   latestByType: {
-    pesticide: WorkRecord | null;
-    fertilizer: WorkRecord | null;
-    repot: WorkRecord | null;
+    pesticide: OrchidGroupWorkHistory | null;
+    fertilizer: OrchidGroupWorkHistory | null;
+    repot: OrchidGroupWorkHistory | null;
   };
 };
 
 export type OrchidManagementSearchState = {
   keyword: string;
   status: string;
+};
+
+export type OrchidGroupCollectionMember = {
+  membershipId: number;
+  orchidGroupId: number;
+  varietyName: string;
+  quantity: number;
+  status: string;
+  potSize: string | null;
+  ageYear: number | null;
+  houseNumber: number;
+  physicalBedNumber: number;
+  bedZoneName: string;
+  joinedAt: string;
+};
+
+export type OrchidGroupCollection = {
+  id: number;
+  name: string;
+  description: string | null;
+  purpose: string | null;
+  status: "ACTIVE" | "ARCHIVED";
+  orchidGroupCount: number;
+  totalQuantity: number;
+  createdBy: string | null;
+  createdAt: string;
+  updatedAt: string;
+  members: OrchidGroupCollectionMember[];
+};
+
+export type DerivedOrchidGroup = {
+  groupKey: string;
+  varietyId: number;
+  varietyName: string;
+  genus: string | null;
+  ageYear: number | null;
+  potSizeCode: OrchidGroup["potSizeCode"];
+  potSize: string | null;
+  orchidGroupCount: number;
+  totalQuantity: number;
+  locationCount: number;
 };
 
 export type OrchidManagementMapProps = {

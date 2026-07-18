@@ -3,6 +3,23 @@
 :root {
   --background: #f7f8f6;
   --foreground: #1f2a24;
+  --card: #ffffff;
+  --card-foreground: #1f2a24;
+  --popover: #ffffff;
+  --popover-foreground: #1f2a24;
+  --primary: #2f8f4e;
+  --primary-foreground: #ffffff;
+  --secondary: #eef5ed;
+  --secondary-foreground: #214f31;
+  --muted: #f0f3ef;
+  --muted-foreground: #66736b;
+  --accent: #e7f0e6;
+  --accent-foreground: #214f31;
+  --destructive: #c5442d;
+  --border: #d7ddd4;
+  --input: #cfd8cc;
+  --ring: #2f8f4e;
+  --radius: 0.5rem;
   --app-viewport-height: 100dvh;
   --font-scale: 1;
   font-size: calc(16px * var(--font-scale));
@@ -11,6 +28,25 @@
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
   --font-sans: var(--font-geist-sans);
 }
 
@@ -55,6 +91,12 @@ body {
 .app-content > header {
   margin: -1rem -1rem 1rem;
   flex: 0 0 auto;
+}
+
+@media (min-width: 64rem) and (max-width: 95.999rem) {
+  .app-content > header.app-header-sidebar-overlay-expanded {
+    margin-left: 7rem;
+  }
 }
 
 .app-content > main {

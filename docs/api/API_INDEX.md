@@ -7,8 +7,8 @@
 
 - 기준 명세: `docs/api/openapi.yaml`
 - OpenAPI 버전: `3.1.0`
-- 현재 구현 API: `68` operations / `51` path entries
-- schema 수: `110`
+- 현재 구현 API: `106` operations / `86` path entries
+- schema 수: `153`
 - Base URL: `/api`
 - 공통 응답: `ApiResponse*` 래퍼 사용
 
@@ -26,9 +26,9 @@
 
 - slice: `docs/api/slices/farm-structure.openapi.yaml`
 - package 후보: `com.greenhouse.backend.farm`
-- controller tags: `farm-structure-controller`
+- controller tags: `farm-structure-controller`, `orchid-group-query-controller`
 - 역할: 동, 물리 배드, 논리 구역, 난 묶음 조회 API
-- operations: 7
+- operations: 8
 
 | Method | Path | Operation | Request | Response |
 |---|---|---|---|---|
@@ -37,6 +37,7 @@
 | `GET` | `/api/houses` | `getHouses` | `-` | `200:ApiResponseListHouseResponse` |
 | `GET` | `/api/houses/{houseId}` | `getHouse` | `-` | `200:ApiResponseHouseResponse` |
 | `GET` | `/api/orchid-groups` | `getOrchidGroups` | `-` | `200:ApiResponseListOrchidGroupResponse` |
+| `GET` | `/api/orchid-groups/{orchidGroupId}/lineage` | `getLineage` | `-` | `200:ApiResponseOrchidGroupLineageResponse` |
 | `GET` | `/api/physical-beds` | `getPhysicalBeds` | `-` | `200:ApiResponseListPhysicalBedResponse` |
 | `GET` | `/api/physical-beds/{physicalBedId}` | `getPhysicalBed` | `-` | `200:ApiResponsePhysicalBedResponse` |
 
@@ -59,9 +60,9 @@
 
 - slice: `docs/api/slices/orchid-command.openapi.yaml`
 - package 후보: `com.greenhouse.backend.farm`
-- controller tags: `orchid-group-command-controller`, `bed-placement-controller`
-- 역할: 난 묶음 생성·수정·삭제·이동, 정밀 배치 프로필 API
-- operations: 7
+- controller tags: `orchid-group-command-controller`, `bed-placement-controller`, `multi-create-work-operation-controller`, `repot-work-operation-controller`
+- 역할: 난 묶음 생성·수정·삭제·이동, 정밀 배치, 다중 생성·분갈이 구조 변경 API
+- operations: 12
 
 | Method | Path | Operation | Request | Response |
 |---|---|---|---|---|
@@ -71,6 +72,12 @@
 | `DELETE` | `/api/orchid-groups/{orchidGroupId}` | `delete` | `-` | `200:ApiResponseVoid` |
 | `PATCH` | `/api/orchid-groups/{orchidGroupId}` | `update_2` | `OrchidGroupUpdateRequest` | `200:ApiResponseOrchidGroupResponse` |
 | `PATCH` | `/api/orchid-groups/{orchidGroupId}/move` | `move` | `OrchidGroupMoveRequest` | `200:ApiResponseOrchidGroupResponse` |
+| `POST` | `/api/work-operations/multi-create` | `create_2` | `MultiCreateWorkOperationRequest` | `201:ApiResponseMultiCreateWorkOperationResponse` |
+| `GET` | `/api/work-operations/{workOperationId}/created-orchid-groups` | `get_5` | `-` | `200:ApiResponseMultiCreateWorkOperationResponse` |
+| `GET` | `/api/work-operations/{workOperationId}/cancel-eligibility` | `getCancellationEligibility` | `-` | `200:ApiResponseMultiCreateCancellationEligibilityResponse` |
+| `POST` | `/api/work-operations/{workOperationId}/cancel-created-orchid-groups` | `cancel_1` | `-` | `200:ApiResponseMultiCreateWorkOperationResponse` |
+| `POST` | `/api/work-operations/repot` | `execute` | `RepotWorkOperationRequest` | `201:ApiResponseRepotWorkOperationResponse` |
+| `GET` | `/api/work-operations/{workOperationId}/repot-results` | `get_4` | `-` | `200:ApiResponseRepotWorkOperationResponse` |
 
 ### 작업 이력
 
@@ -78,7 +85,7 @@
 - package 후보: `com.greenhouse.backend.work`
 - controller tags: `work-record-controller`
 - 역할: 작업 이력과 작업 유형 관리 API
-- operations: 6
+- operations: 7
 
 | Method | Path | Operation | Request | Response |
 |---|---|---|---|---|
@@ -96,7 +103,7 @@
 - package 후보: `com.greenhouse.backend.farm`
 - controller tags: `variety-controller`, `material-controller`, `inbound-record-controller`
 - 역할: 품종 CRUD/삭제, 자재 CRUD/삭제, 입고 기록 생성·수정·포트 작업·취소·삭제 API
-- operations: 20
+- operations: 21
 
 | Method | Path | Operation | Request | Response |
 |---|---|---|---|---|
@@ -122,6 +129,67 @@
 | `PATCH` | `/api/varieties/{varietyId}/deactivate` | `deactivate` | `-` | `200:ApiResponseVarietyResponse` |
 | `GET` | `/api/varieties/{varietyId}/orchid-groups` | `getOrchidGroups_1` | `-` | `200:ApiResponseListVarietyConnectedOrchidGroupResponse` |
 
+### 신규 작업 실행
+
+- slice: `docs/api/slices/work-operation.openapi.yaml`
+- package: `com.greenhouse.backend.work`
+- controller tag: `work-operation-controller`
+- 역할: 범위별 기록형 작업의 미리보기·스냅샷·즉시 완료·기간 조회, 난 묶음 통합 이력, 구조 변경 보정 관계
+- operations: 16
+
+| Method | Path | Operation |
+|---|---|---|
+| `POST` | `/api/work-operations/target-preview` | 대상 미리보기 |
+| `POST` | `/api/work-operations` | 작업 생성과 대상 스냅샷 확정 |
+| `POST` | `/api/work-operations/record` | 기록형 작업을 생성하고 즉시 완료 |
+| `GET` | `/api/work-operations` | 기간·상태·범위별 작업 목록 |
+| `GET` | `/api/work-operations/{workOperationId}` | 작업 상세 |
+| `POST` | `/api/work-operations/{workOperationId}/complete` | 모든 대상 처리 후 전체 작업 완료 |
+| `POST` | `/api/work-operations/{workOperationId}/start` | 기간 작업 시작 |
+| `POST` | `/api/work-operations/{workOperationId}/pause` | 기간 작업 일시중지 |
+| `POST` | `/api/work-operations/{workOperationId}/resume` | 기간 작업 재개 |
+| `POST` | `/api/work-operations/{workOperationId}/cancel` | 미완료 작업 취소 |
+| `POST` | `/api/work-operations/{workOperationId}/targets/{targetId}/start` | 대상 작업 시작 |
+| `POST` | `/api/work-operations/{workOperationId}/targets/{targetId}/complete` | 대상 작업 완료 |
+| `POST` | `/api/work-operations/{workOperationId}/targets/{targetId}/skip` | 대상 건너뛰기 |
+| `GET` | `/api/orchid-groups/{orchidGroupId}/work-history` | 기존·신규 통합 이력 |
+| `POST` | `/api/work-operations/{workOperationId}/corrections` | 완료된 구조 변경 작업에 보정 작업 연결 |
+| `GET` | `/api/work-operations/{workOperationId}/corrections` | 원본 작업과 연결된 보정 작업 조회 |
+
+기간 작업 범위는 `HOUSE`, `DERIVED_GROUP`, `USER_COLLECTION`, `MANUAL_SELECTION`을 지원한다. 즉시 완료 기록은 `FARM`, `HOUSE`, `PHYSICAL_BED`, `BED_ZONE`, `ORCHID_GROUP` 범위를 지원하며 일반 생성은 기록형 작업 유형으로 제한한다.
+
+### 난 묶음 사용자 그룹
+
+- slice: `docs/api/slices/orchid-collection.openapi.yaml`
+- package: `com.greenhouse.backend.farm`
+- controller tag: `orchid-group-collection-controller`
+- 역할: 사용자 그룹 생성·수정·보관, 난 묶음 소속 추가·해제·역조회
+- operations: 8
+
+| Method | Path | Operation |
+|---|---|---|
+| `GET` | `/api/orchid-group-collections` | 활성/보관 사용자 그룹 목록 |
+| `POST` | `/api/orchid-group-collections` | 사용자 그룹 생성 |
+| `GET` | `/api/orchid-group-collections/{collectionId}` | 사용자 그룹 상세 |
+| `PATCH` | `/api/orchid-group-collections/{collectionId}` | 이름·설명·목적 수정 |
+| `POST` | `/api/orchid-group-collections/{collectionId}/archive` | 사용자 그룹 보관 |
+| `POST` | `/api/orchid-group-collections/{collectionId}/members` | 난 묶음 소속 일괄 추가 |
+| `DELETE` | `/api/orchid-group-collections/{collectionId}/members/{orchidGroupId}` | 난 묶음 소속 해제 |
+| `GET` | `/api/orchid-groups/{orchidGroupId}/collections` | 난 묶음의 사용자 그룹 역조회 |
+
+### 난 묶음 자동 그룹
+
+- slice: `docs/api/slices/derived-orchid-group.openapi.yaml`
+- package: `com.greenhouse.backend.farm`
+- controller tag: `derived-orchid-group-controller`
+- 역할: 품종·현재 년생·화분 크기 기준 실시간 그룹 집계와 구성원 조회
+- operations: 2
+
+| Method | Path | Operation |
+|---|---|---|
+| `GET` | `/api/orchid-groups/derived-groups` | 자동 그룹 목록과 묶음 수·총수량·위치 수 집계 |
+| `GET` | `/api/orchid-groups/derived-groups/{groupKey}/members` | 현재 조건에 해당하는 구성원 조회 |
+
 ### 거래처
 
 - slice: `docs/api/slices/partner.openapi.yaml`
@@ -143,7 +211,7 @@
 - package 후보: `com.greenhouse.backend.sales`
 - controller tags: `sales-controller`
 - 역할: 판매 전표 조회·생성·출력, 경매 출하 전표 후보 API
-- operations: 5
+- operations: 11
 
 | Method | Path | Operation | Request | Response |
 |---|---|---|---|---|
@@ -164,7 +232,7 @@
 - package 후보: `com.greenhouse.backend.auction`
 - controller tags: `auction-tracking-controller`, `auction-settlement-controller`
 - 역할: 경매 lot 조회·상태 변경·반환 확인·수량 보정·경매 정산 API
-- operations: 10
+- operations: 11
 
 | Method | Path | Operation | Request | Response |
 |---|---|---|---|---|
@@ -185,7 +253,7 @@
 - package 후보: `com.greenhouse.backend.settlement`
 - controller tags: `payment-controller`
 - 역할: 수동 입금 확인, 입금 이벤트 조회, 거래처 잔액 요약 API
-- operations: 4
+- operations: 3
 
 | Method | Path | Operation | Request | Response |
 |---|---|---|---|---|

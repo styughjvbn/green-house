@@ -1,12 +1,14 @@
 "use client";
 
-import { Bell, CalendarDays, CloudSun } from "lucide-react";
+import { Bell, CalendarDays, ChevronRight, CloudSun } from "lucide-react";
 import type { ReactNode } from "react";
 import { useSyncExternalStore } from "react";
 
 type PageHeaderProps = {
   title: string;
   description: string;
+  breadcrumbs?: string[];
+  className?: string;
   collapsed?: boolean;
   notificationCount?: number;
   temperatureLabel?: string;
@@ -16,6 +18,8 @@ type PageHeaderProps = {
 export function PageHeader({
   title,
   description,
+  breadcrumbs = [title],
+  className = "",
   collapsed = false,
   notificationCount = 0,
   temperatureLabel = "24째C",
@@ -28,29 +32,51 @@ export function PageHeader({
   );
 
   return (
-    <header className="border-b border-[#edf0ec] bg-white shadow-[0_1px_8px_rgba(31,42,36,0.04)] transition-[border-color,box-shadow] duration-200 ease-out">
+    <header
+      className={`border-b border-[#edf0ec] bg-white shadow-[0_1px_8px_rgba(31,42,36,0.04)] transition-[margin-left,border-color,box-shadow] duration-200 ease-out ${className}`}
+    >
       <div
         className={`flex items-center justify-between gap-4 px-4 transition-[min-height,padding] duration-200 ease-out md:px-5 ${
           collapsed ? "min-h-6" : "min-h-10 py-3"
         }`}
       >
         <div className="flex min-w-0 items-end gap-2">
-          <h1
-            className={`truncate font-bold text-[#17251b] transition-[font-size,line-height] duration-200 ease-out ${
-              collapsed ? "text-xs" : "text-xl"
-            }`}
-          >
-            {title}
-          </h1>
-          <p
-            className={`truncate text-sm text-[#7a8680] transition-[max-width,max-height,opacity,transform] duration-200 ease-out ${
-              collapsed
-                ? "max-h-0 max-w-0 translate-y-0.5 opacity-0"
-                : "max-h-5 max-w-[40rem] translate-y-0 opacity-100"
-            }`}
-          >
-            {description}
-          </p>
+          {collapsed ? (
+            <h1
+              aria-label={breadcrumbs.join(" > ")}
+              className="flex min-w-0 items-center gap-1 text-xs font-bold text-[#17251b]"
+            >
+              {breadcrumbs.map((item, index) => (
+                <span className="flex min-w-0 items-center gap-1" key={item}>
+                  {index > 0 ? (
+                    <ChevronRight
+                      className="h-3 w-3 shrink-0 text-[#9aa49e]"
+                      strokeWidth={1.8}
+                      aria-hidden="true"
+                    />
+                  ) : null}
+                  <span
+                    className={`truncate ${
+                      index === breadcrumbs.length - 1
+                        ? "text-[#17251b]"
+                        : "text-[#68756d]"
+                    }`}
+                  >
+                    {item}
+                  </span>
+                </span>
+              ))}
+            </h1>
+          ) : (
+            <>
+              <h1 className="truncate text-xl font-bold text-[#17251b] transition-[font-size,line-height] duration-200 ease-out">
+                {title}
+              </h1>
+              <p className="max-h-5 max-w-[40rem] translate-y-0 truncate text-sm text-[#7a8680] opacity-100 transition-[max-width,max-height,opacity,transform] duration-200 ease-out">
+                {description}
+              </p>
+            </>
+          )}
         </div>
 
         <div

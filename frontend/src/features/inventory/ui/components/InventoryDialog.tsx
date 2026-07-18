@@ -9,6 +9,7 @@ import type {
   VarietyPayload,
 } from "../../model/types";
 import { Field, inputClass } from "./InventoryPrimitives";
+import { PotSizeInput } from "./PotSizeInput";
 import { VarietyCreatableFields } from "./VarietyCreatableFields";
 
 type InventoryDialogProps =
@@ -107,18 +108,13 @@ function VarietyDialogForm({
           }
         />
       </Field>
-      <Field label="기본 화분">
-        <input
-          className={inputClass}
-          value={form.defaultPotSize}
-          onChange={(event) =>
-            setForm((current) => ({
-              ...current,
-              defaultPotSize: event.target.value,
-            }))
-          }
-        />
-      </Field>
+      <PotSizeInput
+        label="기본 화분"
+        value={form.defaultPotSize}
+        onChange={(value) =>
+          setForm((current) => ({ ...current, defaultPotSize: value }))
+        }
+      />
       <label className="flex items-center gap-2 text-sm font-semibold text-[#425047] md:col-span-2">
         <input
           checked={form.saleEnabled}

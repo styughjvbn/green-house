@@ -4,6 +4,7 @@ import com.greenhouse.backend.common.api.ErrorResponse;
 import java.util.List;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.MissingServletRequestParameterException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
@@ -18,10 +19,25 @@ public class GlobalExceptionHandler {
 				.body(ErrorResponse.of("CAPACITY_CONFLICT", exception.getMessage(), List.of()));
 	}
 
+	@ExceptionHandler(ConflictException.class)
+	ResponseEntity<ErrorResponse> handleConflict(ConflictException exception) {
+		return ResponseEntity.status(HttpStatus.CONFLICT)
+				.body(ErrorResponse.of("CONFLICT", exception.getMessage(), List.of()));
+	}
+
 	@ExceptionHandler(NotFoundException.class)
 	ResponseEntity<ErrorResponse> handleNotFound(NotFoundException exception) {
 		return ResponseEntity.status(HttpStatus.NOT_FOUND)
 				.body(ErrorResponse.of("NOT_FOUND", exception.getMessage(), List.of()));
+	}
+
+	@ExceptionHandler(DataIntegrityViolationException.class)
+	ResponseEntity<ErrorResponse> handleDataIntegrityViolation(DataIntegrityViolationException exception) {
+		return ResponseEntity.status(HttpStatus.CONFLICT)
+				.body(ErrorResponse.of(
+						"DATA_INTEGRITY_CONFLICT",
+						"연결된 이력이 있어 삭제할 수 없습니다.",
+						List.of()));
 	}
 
 	@ExceptionHandler({

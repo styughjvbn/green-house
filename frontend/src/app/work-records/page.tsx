@@ -1,27 +1,20 @@
-import { WorkRecordManager } from "@/features/work-record/ui/WorkRecordManager";
-import { fetchApi } from "@/shared/api/client";
-import type {
-  FarmStatusMapData,
-  WorkRecord,
-  WorkType,
-} from "@/entities/farm/types";
+import { redirect } from "next/navigation";
+import { appendSearchParams } from "@/shared/lib/route";
 
-export const dynamic = "force-dynamic";
+export default async function Page({
+  searchParams,
+}: {
+  searchParams?: Promise<Record<string, string | string[] | undefined>>;
+}) {
+  const resolvedSearchParams = searchParams ? await searchParams : undefined;
+  const requestedTab = resolvedSearchParams?.tab;
+  const tab = Array.isArray(requestedTab) ? requestedTab[0] : requestedTab;
+  const path =
+    {
+      LIST: "/work-records/list",
+      CALENDAR: "/work-records/calendar",
+      HISTORY: "/work-records/history",
+    }[tab ?? "LIST"] ?? "/work-records/list";
 
-export default async function WorkRecordsPage() {
-  const [records, workTypes, mapData] = await Promise.all([
-    fetchApi<WorkRecord[]>("/work-records"),
-    fetchApi<WorkType[]>("/work-types"),
-    fetchApi<FarmStatusMapData>("/farm-status/map"),
-  ]);
-
-  return (
-    <main className="h-full min-h-0">
-      <WorkRecordManager
-        houses={mapData.houses}
-        initialRecords={records}
-        workTypes={workTypes}
-      />
-    </main>
-  );
+  redirect(appendSearchParams(path, resolvedSearchParams, ["tab"]));
 }

@@ -1,5 +1,6 @@
 package com.greenhouse.backend.farm.application;
 
+import com.greenhouse.backend.common.exception.ConflictException;
 import com.greenhouse.backend.common.exception.NotFoundException;
 import com.greenhouse.backend.farm.domain.BedZone;
 import com.greenhouse.backend.farm.domain.OrchidGroup;
@@ -13,6 +14,7 @@ import com.greenhouse.backend.farm.repository.InboundRecordRepository;
 import com.greenhouse.backend.farm.repository.OrchidGroupRepository;
 import com.greenhouse.backend.farm.repository.VarietyRepository;
 import com.greenhouse.backend.work.application.MovementWorkRecorder;
+import com.greenhouse.backend.work.repository.WorkEffectOrchidGroupRepository;
 import java.math.BigDecimal;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -28,11 +30,19 @@ public class OrchidGroupCommandService {
 	private final InboundRecordRepository inboundRecordRepository;
 	private final VarietyRepository varietyRepository;
 	private final MovementWorkRecorder movementWorkRecorder;
+	private final WorkEffectOrchidGroupRepository workEffectOrchidGroupRepository;
 	private final OrchidPlacementPolicy orchidPlacementPolicy;
 
 	public OrchidGroupResponse create(OrchidGroupCreateRequest request) {
+		return OrchidGroupResponse.from(createEntity(request));
+	}
+
+	public OrchidGroup createEntity(OrchidGroupCreateRequest request) {
 		BedZone bedZone = findZone(request.bedZoneId());
 		Variety variety = findVariety(request.varietyId());
+		if (!variety.isActive()) {
+			throw new IllegalArgumentException("비활성 품종으로 난 묶음을 생성할 수 없습니다.");
+		}
 		BigDecimal startPosition = orchidPlacementPolicy.normalizeNumber(request.startPosition());
 		BigDecimal endPosition = orchidPlacementPolicy.normalizeNumber(request.endPosition());
 		orchidPlacementPolicy.validatePlacement(bedZone, startPosition, endPosition, null);
@@ -63,7 +73,7 @@ public class OrchidGroupCommandService {
 				endPosition,
 				normalize(request.memo()));
 		orchidGroup.assignVariety(variety);
-		return OrchidGroupResponse.from(orchidGroupRepository.save(orchidGroup));
+		return orchidGroupRepository.save(orchidGroup);
 	}
 
 	public OrchidGroupResponse update(Long orchidGroupId, OrchidGroupUpdateRequest request) {
@@ -95,11 +105,25 @@ public class OrchidGroupCommandService {
 		if (!orchidGroupRepository.existsById(orchidGroupId)) {
 			throw new NotFoundException("난 묶음을 찾을 수 없습니다.");
 		}
+		if (workEffectOrchidGroupRepository.existsByOrchidGroupId(orchidGroupId)) {
+			throw new ConflictException("작업 이력과 연결된 난 묶음은 삭제할 수 없습니다. 작업 취소, 보정 또는 폐기 작업으로 처리해주세요.");
+		}
 		inboundRecordRepository.clearCreatedOrchidGroup(orchidGroupId);
 		orchidGroupRepository.deleteById(orchidGroupId);
 	}
 
 	public OrchidGroupResponse move(Long orchidGroupId, OrchidGroupMoveRequest request) {
+		return move(orchidGroupId, request, true);
+	}
+
+	public OrchidGroupResponse moveForOperation(Long orchidGroupId, OrchidGroupMoveRequest request) {
+		return move(orchidGroupId, request, false);
+	}
+
+	private OrchidGroupResponse move(
+			Long orchidGroupId,
+			OrchidGroupMoveRequest request,
+			boolean recordLegacyWork) {
 		OrchidGroup orchidGroup = orchidGroupRepository.findById(orchidGroupId)
 				.orElseThrow(() -> new NotFoundException("난 묶음을 찾을 수 없습니다."));
 		BedZone toBedZone = findZone(request.toBedZoneId());
@@ -121,12 +145,14 @@ public class OrchidGroupCommandService {
 			orchidGroup.moveTo(toBedZone, orchidGroup.getSortOrder(), startPosition, endPosition);
 		}
 
-		movementWorkRecorder.record(
-				orchidGroup.getId(),
-				fromBedZoneId,
-				toBedZone.getId(),
-				normalize(request.worker()),
-				normalize(request.memo()));
+		if (recordLegacyWork) {
+			movementWorkRecorder.record(
+					orchidGroup.getId(),
+					fromBedZoneId,
+					toBedZone.getId(),
+					normalize(request.worker()),
+					normalize(request.memo()));
+		}
 		return OrchidGroupResponse.from(orchidGroup);
 	}
 

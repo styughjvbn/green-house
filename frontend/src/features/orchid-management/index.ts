@@ -5,7 +5,7 @@ export {
   getHouse,
   getOrchidWorkTypes,
   getOrchidManagementMap,
-  createOrchidWorkRecord,
+  createOrchidWorkOperation,
   fetchHouse,
   createOrchidGroup,
   updateOrchidGroup,

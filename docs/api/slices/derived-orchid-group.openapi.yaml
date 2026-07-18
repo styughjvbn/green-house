@@ -1,0 +1,230 @@
+openapi: 3.1.0
+info:
+  title: Greenhouse API Slice - derived-orchid-group
+  version: 0.0.1
+servers:
+- url: http://localhost:8080
+  description: Generated server url
+paths:
+  /api/orchid-groups/derived-groups:
+    get:
+      tags:
+      - derived-orchid-group-controller
+      operationId: getGroups
+      parameters:
+      - name: varietyId
+        in: query
+        required: false
+        schema:
+          type: integer
+          format: int64
+      - name: ageYear
+        in: query
+        required: false
+        schema:
+          type: integer
+          format: int32
+      - name: potSizeCode
+        in: query
+        required: false
+        schema:
+          type: string
+          enum:
+          - UNSPECIFIED
+          - UNMAPPED
+          - POT_2
+          - POT_2_5
+          - POT_3
+          - POT_3_5
+          - POT_4
+          - POT_4_5
+          - POT_5
+          - POT_6
+          - HANGING
+          - ETC
+      - name: houseId
+        in: query
+        required: false
+        schema:
+          type: integer
+          format: int64
+      - name: status
+        in: query
+        required: false
+        schema:
+          type: string
+      - name: keyword
+        in: query
+        required: false
+        schema:
+          type: string
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponseListDerivedOrchidGroupResponse'
+  /api/orchid-groups/derived-groups/{groupKey}/members:
+    get:
+      tags:
+      - derived-orchid-group-controller
+      operationId: getMembers
+      parameters:
+      - name: groupKey
+        in: path
+        required: true
+        schema:
+          type: string
+      - name: houseId
+        in: query
+        required: false
+        schema:
+          type: integer
+          format: int64
+      - name: status
+        in: query
+        required: false
+        schema:
+          type: string
+      - name: keyword
+        in: query
+        required: false
+        schema:
+          type: string
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponseListOrchidGroupResponse'
+components:
+  schemas:
+    ApiResponseListDerivedOrchidGroupResponse:
+      type: object
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/DerivedOrchidGroupResponse'
+        message:
+          type: string
+    ApiResponseListOrchidGroupResponse:
+      type: object
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/OrchidGroupResponse'
+        message:
+          type: string
+    DerivedOrchidGroupResponse:
+      type: object
+      properties:
+        groupKey:
+          type: string
+        varietyId:
+          type: integer
+          format: int64
+        varietyName:
+          type: string
+        genus:
+          type: string
+        ageYear:
+          type: integer
+          format: int32
+        potSizeCode:
+          type: string
+          enum:
+          - UNSPECIFIED
+          - UNMAPPED
+          - POT_2
+          - POT_2_5
+          - POT_3
+          - POT_3_5
+          - POT_4
+          - POT_4_5
+          - POT_5
+          - POT_6
+          - HANGING
+          - ETC
+        potSize:
+          type: string
+        orchidGroupCount:
+          type: integer
+          format: int32
+        totalQuantity:
+          type: integer
+          format: int32
+        locationCount:
+          type: integer
+          format: int32
+    OrchidGroupResponse:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: int64
+        bedZoneId:
+          type: integer
+          format: int64
+        varietyId:
+          type: integer
+          format: int64
+        genus:
+          type: string
+        varietyName:
+          type: string
+        quantity:
+          type: integer
+          format: int32
+        potSize:
+          type: string
+        potSizeCode:
+          type: string
+          enum:
+          - UNSPECIFIED
+          - UNMAPPED
+          - POT_2
+          - POT_2_5
+          - POT_3
+          - POT_3_5
+          - POT_4
+          - POT_4_5
+          - POT_5
+          - POT_6
+          - HANGING
+          - ETC
+        ageYear:
+          type: integer
+          format: int32
+        status:
+          type: string
+        placementType:
+          type: string
+        trayCount:
+          type: integer
+          format: int32
+        splitPlacementAllowed:
+          type: boolean
+        startPosition:
+          type: number
+        endPosition:
+          type: number
+        sortOrder:
+          type: integer
+          format: int32
+        memo:
+          type: string
+        houseId:
+          type: integer
+          format: int64
+        houseNumber:
+          type: integer
+          format: int32
+        physicalBedNumber:
+          type: integer
+          format: int32
+        bedZoneName:
+          type: string

@@ -14,6 +14,7 @@ import type {
   BedZoneCapacity,
   BedZonePlacementProfile,
 } from "@/entities/farm/types";
+import { POT_SIZE_OPTIONS } from "@/entities/farm/potSizes";
 import {
   getBedZonePlacementProfile,
   saveBedZonePlacementProfile,
@@ -255,14 +256,19 @@ function CapacityEditor({
         <option value="HANGING">행잉</option>
         <option value="CUSTOM:기타">기타</option>
       </select>
-      <input
+      <select
         className={inputClass}
-        placeholder="화분 크기"
         value={capacity.potSize ?? ""}
         onChange={(event) =>
           onChange({ ...capacity, potSize: event.target.value || null })
         }
-      />
+      >
+        {POT_SIZE_OPTIONS.map((option) => (
+          <option key={option.value || "unspecified"} value={option.value}>
+            {option.label}
+          </option>
+        ))}
+      </select>
       <select
         className={inputClass}
         value={capacity.capacityMode}

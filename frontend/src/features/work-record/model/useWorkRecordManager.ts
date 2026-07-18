@@ -1,46 +1,23 @@
 ﻿"use client";
 
-import { FormEvent, useEffect, useMemo, useState } from "react";
-import type {
-  BedZone,
-  OrchidGroup,
-  PhysicalBed,
-  WorkRecord,
-} from "@/entities/farm/types";
+import { useEffect, useMemo, useState } from "react";
+import type { BedZone, OrchidGroup, WorkRecord } from "@/entities/farm/types";
 import {
   cancelWorkRecord,
-  createWorkRecord,
-  getWorkRecordTargetOptions,
+  getWorkTargetSelectionOptions,
 } from "../api/workRecordApi";
 import {
   createInitialWorkRecordFilters,
-  createInitialWorkRecordForm,
   filterWorkRecords,
-  getSelectedTargetId,
-  resetWorkRecordFormAfterSubmit,
-  resolveSafeBedZoneId,
-  resolveSafeOrchidGroupId,
-  resolveSafePhysicalBedId,
-  toCreateWorkRecordPayload,
 } from "../lib/workRecordForm";
-import type {
-  WorkRecordFilterState,
-  WorkRecordFormState,
-  WorkRecordManagerProps,
-} from "./types";
+import type { WorkRecordFilterState, WorkRecordManagerProps } from "./types";
 
 export function useWorkRecordManager({
   initialRecords,
-  houses,
-  workTypes,
 }: WorkRecordManagerProps) {
   const [records, setRecords] = useState<WorkRecord[]>(initialRecords);
-  const [physicalBeds, setPhysicalBeds] = useState<PhysicalBed[]>([]);
-  const [bedZones, setBedZones] = useState<BedZone[]>([]);
   const [orchidGroups, setOrchidGroups] = useState<OrchidGroup[]>([]);
-  const [form, setForm] = useState<WorkRecordFormState>(() =>
-    createInitialWorkRecordForm(workTypes, houses),
-  );
+  const [bedZones, setBedZones] = useState<BedZone[]>([]);
   const [filters, setFilters] = useState<WorkRecordFilterState>(() =>
     createInitialWorkRecordFilters(),
   );
@@ -50,32 +27,10 @@ export function useWorkRecordManager({
   const [detailOpen, setDetailOpen] = useState(Boolean(initialRecords[0]));
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
-  const [showCreateForm, setShowCreateForm] = useState(false);
-  const [saving, setSaving] = useState(false);
   const [canceling, setCanceling] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [operationCreatedVersion, setOperationCreatedVersion] = useState(0);
 
-  const safePhysicalBedId = resolveSafePhysicalBedId(
-    form.physicalBedId,
-    physicalBeds,
-  );
-  const safeBedZoneId = resolveSafeBedZoneId(form.bedZoneId, bedZones);
-  const safeOrchidGroupId = resolveSafeOrchidGroupId(
-    form.orchidGroupId,
-    orchidGroups,
-  );
-
-  const selectedTargetId = useMemo(
-    () =>
-      getSelectedTargetId(
-        form.targetType,
-        form,
-        safePhysicalBedId,
-        safeBedZoneId,
-        safeOrchidGroupId,
-      ),
-    [form, safePhysicalBedId, safeBedZoneId, safeOrchidGroupId],
-  );
   const filteredRecords = useMemo(
     () => filterWorkRecords(records, filters),
     [records, filters],
@@ -93,43 +48,28 @@ export function useWorkRecordManager({
     null;
 
   useEffect(() => {
-    if (!form.houseId) {
-      return;
-    }
-
     let cancelled = false;
-
-    async function loadHouseScopedOptions() {
-      const options = await getWorkRecordTargetOptions(form.houseId);
-      if (cancelled) {
-        return;
-      }
-      setPhysicalBeds(options.physicalBeds);
-      setBedZones(options.bedZones);
-      setOrchidGroups(options.orchidGroups);
-    }
-
-    void loadHouseScopedOptions().catch((error) => {
-      if (!cancelled) {
-        setErrorMessage(
-          error instanceof Error
-            ? error.message
-            : "대상 목록을 불러오지 못했습니다.",
-        );
-      }
-    });
+    void getWorkTargetSelectionOptions()
+      .then((options) => {
+        if (!cancelled) {
+          setOrchidGroups(options.orchidGroups);
+          setBedZones(options.bedZones);
+        }
+      })
+      .catch((error: unknown) => {
+        if (!cancelled) {
+          setErrorMessage(
+            error instanceof Error
+              ? error.message
+              : "대상 목록을 불러오지 못했습니다.",
+          );
+        }
+      });
 
     return () => {
       cancelled = true;
     };
-  }, [form.houseId]);
-
-  function updateForm<K extends keyof WorkRecordFormState>(
-    field: K,
-    value: WorkRecordFormState[K],
-  ) {
-    setForm((current) => ({ ...current, [field]: value }));
-  }
+  }, []);
 
   function updateFilters<K extends keyof WorkRecordFilterState>(
     field: K,
@@ -160,30 +100,6 @@ export function useWorkRecordManager({
 
   function closeDetail() {
     setDetailOpen(false);
-  }
-
-  async function submitWorkRecord(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    setSaving(true);
-    setErrorMessage(null);
-
-    try {
-      const createdRecord = await createWorkRecord(
-        toCreateWorkRecordPayload(form, selectedTargetId, workTypes),
-      );
-      setRecords((current) => [createdRecord, ...current]);
-      setSelectedRecordId(createdRecord.id);
-      setDetailOpen(true);
-      setCurrentPage(1);
-      setShowCreateForm(false);
-      setForm((current) => resetWorkRecordFormAfterSubmit(current));
-    } catch (error) {
-      setErrorMessage(
-        error instanceof Error ? error.message : "요청 중 문제가 발생했습니다.",
-      );
-    } finally {
-      setSaving(false);
-    }
   }
 
   async function cancelSelectedRecord(cancelReason: string | null) {
@@ -220,31 +136,23 @@ export function useWorkRecordManager({
     filteredRecords,
     paginatedRecords,
     selectedRecord,
-    form,
     filters,
     detailOpen,
     currentPage: visibleCurrentPage,
     pageSize,
     totalPages,
-    showCreateForm,
-    saving,
     canceling,
     errorMessage,
-    physicalBeds,
-    bedZones,
     orchidGroups,
-    safePhysicalBedId,
-    safeBedZoneId,
-    safeOrchidGroupId,
+    bedZones,
     selectRecord,
     closeDetail,
     changePage,
     changePageSize,
-    setShowCreateForm,
     updateFilters,
     resetFilters,
-    updateForm,
-    submitWorkRecord,
     cancelSelectedRecord,
+    operationCreatedVersion,
+    setOperationCreatedVersion,
   };
 }

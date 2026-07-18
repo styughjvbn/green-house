@@ -1,0 +1,314 @@
+openapi: 3.1.0
+info:
+  title: Greenhouse API Slice - orchid-collection
+  version: 0.0.1
+servers:
+- url: http://localhost:8080
+  description: Generated server url
+paths:
+  /api/orchid-group-collections:
+    get:
+      tags:
+      - orchid-group-collection-controller
+      operationId: getCollections
+      parameters:
+      - name: includeArchived
+        in: query
+        required: false
+        schema:
+          type: boolean
+          default: false
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponseListOrchidGroupCollectionResponse'
+    post:
+      tags:
+      - orchid-group-collection-controller
+      operationId: create_5
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/OrchidGroupCollectionCreateRequest'
+        required: true
+      responses:
+        '201':
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponseOrchidGroupCollectionResponse'
+  /api/orchid-group-collections/{collectionId}/members:
+    post:
+      tags:
+      - orchid-group-collection-controller
+      operationId: addMembers
+      parameters:
+      - name: collectionId
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: int64
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/OrchidGroupCollectionMemberAddRequest'
+        required: true
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponseOrchidGroupCollectionResponse'
+  /api/orchid-group-collections/{collectionId}/archive:
+    post:
+      tags:
+      - orchid-group-collection-controller
+      operationId: archive
+      parameters:
+      - name: collectionId
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: int64
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponseOrchidGroupCollectionResponse'
+  /api/orchid-group-collections/{collectionId}:
+    get:
+      tags:
+      - orchid-group-collection-controller
+      operationId: get_2
+      parameters:
+      - name: collectionId
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: int64
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponseOrchidGroupCollectionResponse'
+    patch:
+      tags:
+      - orchid-group-collection-controller
+      operationId: update_4
+      parameters:
+      - name: collectionId
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: int64
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/OrchidGroupCollectionUpdateRequest'
+        required: true
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponseOrchidGroupCollectionResponse'
+  /api/orchid-groups/{orchidGroupId}/collections:
+    get:
+      tags:
+      - orchid-group-collection-controller
+      operationId: getForOrchidGroup
+      parameters:
+      - name: orchidGroupId
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: int64
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponseListOrchidGroupCollectionResponse'
+  /api/orchid-group-collections/{collectionId}/members/{orchidGroupId}:
+    delete:
+      tags:
+      - orchid-group-collection-controller
+      operationId: removeMember
+      parameters:
+      - name: collectionId
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: int64
+      - name: orchidGroupId
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: int64
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponseOrchidGroupCollectionResponse'
+components:
+  schemas:
+    ApiResponseListOrchidGroupCollectionResponse:
+      type: object
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/OrchidGroupCollectionResponse'
+        message:
+          type: string
+    ApiResponseOrchidGroupCollectionResponse:
+      type: object
+      properties:
+        data:
+          $ref: '#/components/schemas/OrchidGroupCollectionResponse'
+        message:
+          type: string
+    OrchidGroupCollectionCreateRequest:
+      type: object
+      properties:
+        name:
+          type: string
+          maxLength: 100
+          minLength: 0
+        description:
+          type: string
+          maxLength: 1000
+          minLength: 0
+        purpose:
+          type: string
+          maxLength: 200
+          minLength: 0
+        createdBy:
+          type: string
+          maxLength: 100
+          minLength: 0
+      required:
+      - name
+    OrchidGroupCollectionMemberAddRequest:
+      type: object
+      properties:
+        orchidGroupIds:
+          type: array
+          items:
+            type: integer
+            format: int64
+          minItems: 1
+          uniqueItems: true
+        createdBy:
+          type: string
+          maxLength: 100
+          minLength: 0
+      required:
+      - orchidGroupIds
+    OrchidGroupCollectionMemberResponse:
+      type: object
+      properties:
+        membershipId:
+          type: integer
+          format: int64
+        orchidGroupId:
+          type: integer
+          format: int64
+        varietyName:
+          type: string
+        quantity:
+          type: integer
+          format: int32
+        status:
+          type: string
+        potSize:
+          type: string
+        ageYear:
+          type: integer
+          format: int32
+        houseNumber:
+          type: integer
+          format: int32
+        physicalBedNumber:
+          type: integer
+          format: int32
+        bedZoneName:
+          type: string
+        joinedAt:
+          type: string
+          format: date-time
+    OrchidGroupCollectionResponse:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: int64
+        name:
+          type: string
+        description:
+          type: string
+        purpose:
+          type: string
+        status:
+          type: string
+          enum:
+          - ACTIVE
+          - ARCHIVED
+        orchidGroupCount:
+          type: integer
+          format: int32
+        totalQuantity:
+          type: integer
+          format: int32
+        createdBy:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+        members:
+          type: array
+          items:
+            $ref: '#/components/schemas/OrchidGroupCollectionMemberResponse'
+    OrchidGroupCollectionUpdateRequest:
+      type: object
+      properties:
+        name:
+          type: string
+          maxLength: 100
+          minLength: 0
+        description:
+          type: string
+          maxLength: 1000
+          minLength: 0
+        purpose:
+          type: string
+          maxLength: 200
+          minLength: 0
+      required:
+      - name

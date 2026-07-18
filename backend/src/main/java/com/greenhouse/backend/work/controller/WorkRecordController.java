@@ -25,6 +25,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.beans.factory.annotation.Value;
 
 @RestController
 @RequestMapping("/api")
@@ -33,6 +34,8 @@ public class WorkRecordController {
 
 	private final WorkRecordService workRecordService;
 	private final WorkTypeService workTypeService;
+	@Value("${app.features.work-operation-v2-enabled:false}")
+	private boolean workOperationV2Enabled;
 
 	@GetMapping("/work-records")
 	public ApiResponse<List<WorkRecordResponse>> getWorkRecords(
@@ -54,6 +57,9 @@ public class WorkRecordController {
 	@PostMapping("/work-records")
 	@ResponseStatus(HttpStatus.CREATED)
 	public ApiResponse<WorkRecordResponse> create(@Valid @RequestBody WorkRecordCreateRequest request) {
+		if (workOperationV2Enabled) {
+			throw new IllegalArgumentException("신규 작업 기록은 작업 실행 API를 사용해주세요.");
+		}
 		return ApiResponse.ok(workRecordService.create(request));
 	}
 

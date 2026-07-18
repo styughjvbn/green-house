@@ -280,6 +280,7 @@ const INBOUND_TYPE_LABELS: Record<string, string> = {
 const INBOUND_STATUS_LABELS: Record<string, string> = {
   TEMP_STORED: "임시보관",
   POTTING_PENDING: "포트작업대기",
+  POTTING_IN_PROGRESS: "작업중",
   POTTED: "포트작업완료",
   PLACED: "배치완료",
   CANCELED: "취소",

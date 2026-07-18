@@ -10,6 +10,9 @@ import type {
 import BedPrecisionSettings from "./components/BedPrecisionSettings";
 import HouseDetailMap from "./components/HouseDetailMap";
 import HouseSelectorPanel from "./components/HouseSelectorPanel";
+import MultiCreateOrchidGroupForm from "./components/MultiCreateOrchidGroupForm";
+import RepotWorkOperationForm from "./components/RepotWorkOperationForm";
+import WorkOperationCorrectionForm from "./components/WorkOperationCorrectionForm";
 import OrchidSearchPanel from "./components/OrchidSearchPanel";
 import OrchidSelectionPanel from "./components/OrchidSelectionPanel";
 import SelectedZoneInfo from "./components/SelectedZoneInfo";
@@ -37,6 +40,18 @@ export function OrchidManagementMap({
     initialSearchFilters,
   );
   const [showScale, setShowScale] = useState(true);
+  const [orchidGroupSelection, setOrchidGroupSelection] = useState<{
+    houseId: number;
+    ids: Set<number>;
+  }>(() => ({ houseId: house.id, ids: new Set() }));
+  const [showMultiCreate, setShowMultiCreate] = useState(false);
+  const [repotSource, setRepotSource] = useState(
+    orchidManagement.selectedOrchidGroup,
+  );
+  const [showRepot, setShowRepot] = useState(false);
+  const [correctionOperationId, setCorrectionOperationId] = useState<
+    number | null
+  >(null);
   const placementHouses = useMemo(
     () =>
       mapData.houses.map((item) => ({
@@ -61,6 +76,19 @@ export function OrchidManagementMap({
     endCell: null,
     version: 0,
   });
+  const selectedOrchidGroupIds =
+    orchidGroupSelection.houseId === house.id
+      ? orchidGroupSelection.ids
+      : new Set<number>();
+
+  function toggleSelectedOrchidGroup(orchidGroupId: number) {
+    setOrchidGroupSelection((current) => {
+      const next = new Set(current.houseId === house.id ? current.ids : []);
+      if (next.has(orchidGroupId)) next.delete(orchidGroupId);
+      else next.add(orchidGroupId);
+      return { houseId: house.id, ids: next };
+    });
+  }
 
   function toggleVarietyColors() {
     const next = !distinguishVarietyColors;
@@ -174,8 +202,16 @@ export function OrchidManagementMap({
           onToggleVarietyColors={toggleVarietyColors}
           onToggleScale={() => setShowScale((current) => !current)}
           onOpenCreate={() => {
+            setShowMultiCreate(false);
+            setShowRepot(false);
             clearMapCellRangePick();
             orchidManagement.actions.openCreate();
+          }}
+          onOpenMultiCreate={() => {
+            clearMapCellRangePick();
+            orchidManagement.actions.cancelMutation();
+            setShowRepot(false);
+            setShowMultiCreate(true);
           }}
           onSelectHouse={() => {
             clearMapCellRangePick();
@@ -187,6 +223,7 @@ export function OrchidManagementMap({
             distinguishVarietyColors={distinguishVarietyColors}
             filteredOrchidGroupIds={orchidManagement.filteredOrchidGroupIds}
             house={house}
+            selectedOrchidGroupIds={selectedOrchidGroupIds}
             selection={orchidManagement.selection}
             showScale={showScale}
             cellRangePick={mapCellRangePick}
@@ -217,6 +254,17 @@ export function OrchidManagementMap({
           selection={orchidManagement.selection}
           workRecordSummary={orchidManagement.workRecordSummary}
           workRecordSummaryLoading={orchidManagement.workRecordSummaryLoading}
+          orchidGroupHistory={orchidManagement.orchidGroupHistory}
+          orchidGroupHistoryLoading={orchidManagement.orchidGroupHistoryLoading}
+          orchidGroupLineage={orchidManagement.orchidGroupLineage}
+          orchidGroupLineageLoading={orchidManagement.orchidGroupLineageLoading}
+          onOpenCorrection={(workOperationId) => {
+            if (!orchidManagement.selectedOrchidGroup) return;
+            clearMapCellRangePick();
+            setShowMultiCreate(false);
+            setShowRepot(false);
+            setCorrectionOperationId(workOperationId);
+          }}
         />
         {/* <BedPrecisionSettings zone={orchidManagement.resolvedZone} /> 26.07.11 비활성화*/}
       </section>
@@ -241,78 +289,119 @@ export function OrchidManagementMap({
           }}
           onUpdateFilter={orchidManagement.actions.updateSearchFilter}
         />
-        <OrchidSelectionPanel
-          copiedOrchidGroup={orchidManagement.copiedOrchidGroup}
-          errorMessage={orchidManagement.errorMessage}
-          filteredOrchidGroupIds={orchidManagement.filteredOrchidGroupIds}
-          hasActiveSearch={orchidManagement.hasActiveSearch}
-          house={house}
-          placementHouses={placementHouses}
-          listSelection={orchidManagement.listSelection}
-          mutationMode={orchidManagement.mutationMode}
-          pasteSourceOrchidGroup={orchidManagement.pasteSourceOrchidGroup}
-          resolvedZone={orchidManagement.resolvedZone}
-          saving={orchidManagement.saving}
-          selectedBedZone={orchidManagement.selectedBedZone}
-          selectedOrchidGroup={orchidManagement.selectedOrchidGroup}
-          selectedPhysicalBed={orchidManagement.selectedPhysicalBed}
-          selection={orchidManagement.selection}
-          workRecordForm={orchidManagement.workRecordForm}
-          workTypes={workTypes}
-          mapCellRangePick={mapCellRangePick}
-          onCancelMutation={() => {
-            clearMapCellRangePick();
-            orchidManagement.actions.cancelMutation();
-          }}
-          onClearCopiedOrchidGroup={() => {
-            clearMapCellRangePick();
-            orchidManagement.actions.clearCopiedOrchidGroup();
-          }}
-          onCopyOrchidGroup={orchidManagement.actions.copyOrchidGroup}
-          onCreate={async (payload) => {
-            await orchidManagement.actions.create(payload);
-            clearMapCellRangePick();
-          }}
-          onDelete={async () => {
-            await orchidManagement.actions.delete();
-            clearMapCellRangePick();
-          }}
-          onEdit={async (payload) => {
-            await orchidManagement.actions.edit(payload);
-            clearMapCellRangePick();
-          }}
-          onMove={async (payload) => {
-            await orchidManagement.actions.move(payload);
-            clearMapCellRangePick();
-          }}
-          onOpenEdit={() => {
-            clearMapCellRangePick();
-            orchidManagement.actions.openEdit();
-          }}
-          onOpenMove={() => {
-            clearMapCellRangePick();
-            orchidManagement.actions.openMove();
-          }}
-          onOpenPaste={() => {
-            clearMapCellRangePick();
-            orchidManagement.actions.openPaste();
-          }}
-          onOpenWorkRecord={() => {
-            clearMapCellRangePick();
-            orchidManagement.actions.openWorkRecord();
-          }}
-          onSelectOrchidGroup={(orchidGroupId) => {
-            clearMapCellRangePick();
-            orchidManagement.actions.selectOrchidGroup(orchidGroupId);
-          }}
-          onStartMapCellRangePick={startMapCellRangePick}
-          onSyncMapCellRangePick={syncMapCellRangePick}
-          onUpdateWorkRecordForm={orchidManagement.actions.updateWorkRecordForm}
-          onWorkRecordCreate={async () => {
-            await orchidManagement.actions.workRecordCreate();
-            clearMapCellRangePick();
-          }}
-        />
+        {correctionOperationId && orchidManagement.selectedOrchidGroup ? (
+          <WorkOperationCorrectionForm
+            key={`${correctionOperationId}-${orchidManagement.selectedOrchidGroup.id}`}
+            originalWorkOperationId={correctionOperationId}
+            orchidGroup={orchidManagement.selectedOrchidGroup}
+            onClose={() => setCorrectionOperationId(null)}
+          />
+        ) : showRepot && repotSource ? (
+          <RepotWorkOperationForm
+            houses={placementHouses}
+            source={repotSource}
+            onClose={() => setShowRepot(false)}
+          />
+        ) : showMultiCreate ? (
+          <MultiCreateOrchidGroupForm
+            house={house}
+            onClose={() => setShowMultiCreate(false)}
+          />
+        ) : (
+          <OrchidSelectionPanel
+            copiedOrchidGroup={orchidManagement.copiedOrchidGroup}
+            errorMessage={orchidManagement.errorMessage}
+            filteredOrchidGroupIds={orchidManagement.filteredOrchidGroupIds}
+            hasActiveSearch={orchidManagement.hasActiveSearch}
+            house={house}
+            placementHouses={placementHouses}
+            listSelection={orchidManagement.listSelection}
+            mutationMode={orchidManagement.mutationMode}
+            pasteSourceOrchidGroup={orchidManagement.pasteSourceOrchidGroup}
+            resolvedZone={orchidManagement.resolvedZone}
+            saving={orchidManagement.saving}
+            selectedBedZone={orchidManagement.selectedBedZone}
+            selectedOrchidGroupIds={selectedOrchidGroupIds}
+            selectedOrchidGroup={orchidManagement.selectedOrchidGroup}
+            selectedPhysicalBed={orchidManagement.selectedPhysicalBed}
+            selection={orchidManagement.selection}
+            workRecordForm={orchidManagement.workRecordForm}
+            workTypes={workTypes}
+            mapCellRangePick={mapCellRangePick}
+            onCancelMutation={() => {
+              clearMapCellRangePick();
+              orchidManagement.actions.cancelMutation();
+            }}
+            onClearCopiedOrchidGroup={() => {
+              clearMapCellRangePick();
+              orchidManagement.actions.clearCopiedOrchidGroup();
+            }}
+            onClearSelectedOrchidGroups={() =>
+              setOrchidGroupSelection({ houseId: house.id, ids: new Set() })
+            }
+            onCopyOrchidGroup={orchidManagement.actions.copyOrchidGroup}
+            onCreate={async (payload) => {
+              await orchidManagement.actions.create(payload);
+              clearMapCellRangePick();
+            }}
+            onDelete={async () => {
+              await orchidManagement.actions.delete();
+              clearMapCellRangePick();
+            }}
+            onEdit={async (payload) => {
+              await orchidManagement.actions.edit(payload);
+              clearMapCellRangePick();
+            }}
+            onMove={async (payload) => {
+              await orchidManagement.actions.move(payload);
+              clearMapCellRangePick();
+            }}
+            onOpenEdit={() => {
+              clearMapCellRangePick();
+              orchidManagement.actions.openEdit();
+            }}
+            onOpenMove={() => {
+              clearMapCellRangePick();
+              orchidManagement.actions.openMove();
+            }}
+            onOpenPaste={() => {
+              clearMapCellRangePick();
+              orchidManagement.actions.openPaste();
+            }}
+            onOpenRepot={() => {
+              if (!orchidManagement.selectedOrchidGroup) return;
+              clearMapCellRangePick();
+              orchidManagement.actions.cancelMutation();
+              setShowMultiCreate(false);
+              setRepotSource(orchidManagement.selectedOrchidGroup);
+              setShowRepot(true);
+            }}
+            onOpenWorkRecord={() => {
+              clearMapCellRangePick();
+              orchidManagement.actions.openWorkRecord();
+            }}
+            onSelectOrchidGroup={(orchidGroupId) => {
+              clearMapCellRangePick();
+              orchidManagement.actions.selectOrchidGroup(orchidGroupId);
+            }}
+            onSelectOrchidGroups={(orchidGroupIds) =>
+              setOrchidGroupSelection({
+                houseId: house.id,
+                ids: new Set(orchidGroupIds),
+              })
+            }
+            onStartMapCellRangePick={startMapCellRangePick}
+            onSyncMapCellRangePick={syncMapCellRangePick}
+            onToggleSelectedOrchidGroup={toggleSelectedOrchidGroup}
+            onUpdateWorkRecordForm={
+              orchidManagement.actions.updateWorkRecordForm
+            }
+            onWorkRecordCreate={async () => {
+              await orchidManagement.actions.workRecordCreate();
+              clearMapCellRangePick();
+            }}
+          />
+        )}
       </div>
     </div>
   );

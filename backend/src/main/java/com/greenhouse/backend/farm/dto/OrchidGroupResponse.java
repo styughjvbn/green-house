@@ -1,6 +1,7 @@
 package com.greenhouse.backend.farm.dto;
 
 import com.greenhouse.backend.farm.domain.OrchidGroup;
+import com.greenhouse.backend.farm.domain.PotSizeCode;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.temporal.ChronoUnit;
@@ -13,6 +14,7 @@ public record OrchidGroupResponse(
 		String varietyName,
 		Integer quantity,
 		String potSize,
+		PotSizeCode potSizeCode,
 		Integer ageYear,
 		String status,
 		String placementType,
@@ -40,6 +42,7 @@ public record OrchidGroupResponse(
 				variety != null ? variety.getName() : orchidGroup.getVarietyName(),
 				orchidGroup.getQuantity(),
 				orchidGroup.getPotSize(),
+				orchidGroup.getPotSizeCode(),
 				calculateAgeYear(orchidGroup),
 				orchidGroup.getStatus(),
 				orchidGroup.getPlacementType(),

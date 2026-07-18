@@ -21,6 +21,7 @@ export default function BedZoneBlock({
   zone,
   selected,
   selectedOrchidGroupId,
+  selectedOrchidGroupIds,
   onPickCellRange,
   onSelectBedZone,
   onSelectOrchidGroup,
@@ -33,6 +34,7 @@ export default function BedZoneBlock({
   zone: BedZone;
   selected: boolean;
   selectedOrchidGroupId: number | null;
+  selectedOrchidGroupIds: Set<number>;
   onPickCellRange: (bedZoneId: number, cell: number) => void;
   onSelectBedZone: (bedZoneId: number) => void;
   onSelectOrchidGroup: (orchidGroupId: number) => void;
@@ -241,7 +243,10 @@ export default function BedZoneBlock({
                       ? `${displayRange.startCell}-${displayRange.endCell}칸`
                       : formatCellRange(orchidGroup)
                   }
-                  selected={selectedOrchidGroupId === orchidGroup.id}
+                  selected={
+                    selectedOrchidGroupId === orchidGroup.id ||
+                    selectedOrchidGroupIds.has(orchidGroup.id)
+                  }
                   onSelect={() => onSelectOrchidGroup(orchidGroup.id)}
                 />
               </div>

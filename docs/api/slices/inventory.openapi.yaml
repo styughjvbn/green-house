@@ -1,8 +1,7 @@
 openapi: 3.1.0
 info:
-  title: Greenhouse API Slice - 품종/입고 관리
+  title: Greenhouse API Slice - inventory
   version: 0.0.1
-  description: 품종 CRUD, 자재 CRUD, 입고 기록 관리 API
 servers:
 - url: http://localhost:8080
   description: Generated server url
@@ -57,7 +56,7 @@ paths:
     post:
       tags:
       - variety-controller
-      operationId: create_1
+      operationId: create_3
       requestBody:
         content:
           application/json:
@@ -71,117 +70,6 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ApiResponseVarietyResponse'
-  /api/varieties/genera:
-    get:
-      tags:
-      - variety-controller
-      operationId: getGenera
-      responses:
-        '200':
-          description: OK
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ApiResponseListString'
-  /api/varieties/{varietyId}:
-    get:
-      tags:
-      - variety-controller
-      operationId: getVariety
-      parameters:
-      - name: varietyId
-        in: path
-        required: true
-        schema:
-          type: integer
-          format: int64
-      responses:
-        '200':
-          description: OK
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ApiResponseVarietyResponse'
-    patch:
-      tags:
-      - variety-controller
-      operationId: update_2
-      parameters:
-      - name: varietyId
-        in: path
-        required: true
-        schema:
-          type: integer
-          format: int64
-      requestBody:
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/VarietyUpdateRequest'
-        required: true
-      responses:
-        '200':
-          description: OK
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ApiResponseVarietyResponse'
-    delete:
-      tags:
-      - variety-controller
-      operationId: delete_1
-      parameters:
-      - name: varietyId
-        in: path
-        required: true
-        schema:
-          type: integer
-          format: int64
-      responses:
-        '200':
-          description: OK
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ApiResponseVoid'
-  /api/varieties/{varietyId}/deactivate:
-    patch:
-      tags:
-      - variety-controller
-      operationId: deactivate
-      parameters:
-      - name: varietyId
-        in: path
-        required: true
-        schema:
-          type: integer
-          format: int64
-      responses:
-        '200':
-          description: OK
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ApiResponseVarietyResponse'
-  /api/varieties/{varietyId}/orchid-groups:
-    get:
-      tags:
-      - variety-controller
-      operationId: getOrchidGroups_1
-      parameters:
-      - name: varietyId
-        in: path
-        required: true
-        schema:
-          type: integer
-          format: int64
-      responses:
-        '200':
-          description: OK
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ApiResponseListVarietyConnectedOrchidGroupResponse'
   /api/materials:
     get:
       tags:
@@ -232,7 +120,7 @@ paths:
     post:
       tags:
       - material-controller
-      operationId: create_3
+      operationId: create_6
       requestBody:
         content:
           application/json:
@@ -242,86 +130,6 @@ paths:
       responses:
         '201':
           description: Created
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ApiResponseMaterialResponse'
-  /api/materials/{materialId}:
-    get:
-      tags:
-      - material-controller
-      operationId: getMaterial
-      parameters:
-      - name: materialId
-        in: path
-        required: true
-        schema:
-          type: integer
-          format: int64
-      responses:
-        '200':
-          description: OK
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ApiResponseMaterialResponse'
-    patch:
-      tags:
-      - material-controller
-      operationId: update_4
-      parameters:
-      - name: materialId
-        in: path
-        required: true
-        schema:
-          type: integer
-          format: int64
-      requestBody:
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/MaterialUpdateRequest'
-        required: true
-      responses:
-        '200':
-          description: OK
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ApiResponseMaterialResponse'
-    delete:
-      tags:
-      - material-controller
-      operationId: delete_2
-      parameters:
-      - name: materialId
-        in: path
-        required: true
-        schema:
-          type: integer
-          format: int64
-      responses:
-        '200':
-          description: OK
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ApiResponseVoid'
-  /api/materials/{materialId}/deactivate:
-    patch:
-      tags:
-      - material-controller
-      operationId: deactivate_1
-      parameters:
-      - name: materialId
-        in: path
-        required: true
-        schema:
-          type: integer
-          format: int64
-      responses:
-        '200':
-          description: OK
           content:
             application/json:
               schema:
@@ -363,6 +171,7 @@ paths:
           enum:
           - TEMP_STORED
           - POTTING_PENDING
+          - POTTING_IN_PROGRESS
           - POTTED
           - PLACED
           - CANCELED
@@ -395,7 +204,7 @@ paths:
     post:
       tags:
       - inbound-record-controller
-      operationId: create_4
+      operationId: create_7
       requestBody:
         content:
           application/json:
@@ -409,67 +218,6 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ApiResponseInboundRecordResponse'
-  /api/inbound-records/{inboundRecordId}:
-    get:
-      tags:
-      - inbound-record-controller
-      operationId: getInboundRecord
-      parameters:
-      - name: inboundRecordId
-        in: path
-        required: true
-        schema:
-          type: integer
-          format: int64
-      responses:
-        '200':
-          description: OK
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ApiResponseInboundRecordResponse'
-    patch:
-      tags:
-      - inbound-record-controller
-      operationId: update_5
-      parameters:
-      - name: inboundRecordId
-        in: path
-        required: true
-        schema:
-          type: integer
-          format: int64
-      requestBody:
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/InboundRecordUpdateRequest'
-        required: true
-      responses:
-        '200':
-          description: OK
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ApiResponseInboundRecordResponse'
-    delete:
-      tags:
-      - inbound-record-controller
-      operationId: delete
-      parameters:
-      - name: inboundRecordId
-        in: path
-        required: true
-        schema:
-          type: integer
-          format: int64
-      responses:
-        '200':
-          description: OK
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ApiResponseVoid'
   /api/inbound-records/{inboundRecordId}/potting:
     post:
       tags:
@@ -499,7 +247,7 @@ paths:
     post:
       tags:
       - inbound-record-controller
-      operationId: cancel
+      operationId: cancel_2
       parameters:
       - name: inboundRecordId
         in: path
@@ -519,15 +267,260 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ApiResponseInboundRecordResponse'
+  /api/varieties/{varietyId}:
+    get:
+      tags:
+      - variety-controller
+      operationId: getVariety
+      parameters:
+      - name: varietyId
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: int64
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponseVarietyResponse'
+    delete:
+      tags:
+      - variety-controller
+      operationId: delete
+      parameters:
+      - name: varietyId
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: int64
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponseVoid'
+    patch:
+      tags:
+      - variety-controller
+      operationId: update_2
+      parameters:
+      - name: varietyId
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: int64
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/VarietyUpdateRequest'
+        required: true
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponseVarietyResponse'
+  /api/varieties/{varietyId}/deactivate:
+    patch:
+      tags:
+      - variety-controller
+      operationId: deactivate
+      parameters:
+      - name: varietyId
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: int64
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponseVarietyResponse'
+  /api/materials/{materialId}:
+    get:
+      tags:
+      - material-controller
+      operationId: getMaterial
+      parameters:
+      - name: materialId
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: int64
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponseMaterialResponse'
+    delete:
+      tags:
+      - material-controller
+      operationId: delete_2
+      parameters:
+      - name: materialId
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: int64
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponseVoid'
+    patch:
+      tags:
+      - material-controller
+      operationId: update_5
+      parameters:
+      - name: materialId
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: int64
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/MaterialUpdateRequest'
+        required: true
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponseMaterialResponse'
+  /api/materials/{materialId}/deactivate:
+    patch:
+      tags:
+      - material-controller
+      operationId: deactivate_1
+      parameters:
+      - name: materialId
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: int64
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponseMaterialResponse'
+  /api/inbound-records/{inboundRecordId}:
+    get:
+      tags:
+      - inbound-record-controller
+      operationId: getInboundRecord
+      parameters:
+      - name: inboundRecordId
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: int64
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponseInboundRecordResponse'
+    delete:
+      tags:
+      - inbound-record-controller
+      operationId: delete_3
+      parameters:
+      - name: inboundRecordId
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: int64
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponseVoid'
+    patch:
+      tags:
+      - inbound-record-controller
+      operationId: update_6
+      parameters:
+      - name: inboundRecordId
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: int64
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/InboundRecordUpdateRequest'
+        required: true
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponseInboundRecordResponse'
+  /api/varieties/{varietyId}/orchid-groups:
+    get:
+      tags:
+      - variety-controller
+      operationId: getOrchidGroups_1
+      parameters:
+      - name: varietyId
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: int64
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponseListVarietyConnectedOrchidGroupResponse'
+  /api/varieties/genera:
+    get:
+      tags:
+      - variety-controller
+      operationId: getGenera
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponseListString'
 components:
   schemas:
-    ApiResponseInboundRecordResponse:
-      type: object
-      properties:
-        data:
-          $ref: '#/components/schemas/InboundRecordResponse'
-        message:
-          type: string
     ApiResponseInboundRecordPageResponse:
       type: object
       properties:
@@ -535,13 +528,11 @@ components:
           $ref: '#/components/schemas/InboundRecordPageResponse'
         message:
           type: string
-    ApiResponseListVarietyConnectedOrchidGroupResponse:
+    ApiResponseInboundRecordResponse:
       type: object
       properties:
         data:
-          type: array
-          items:
-            $ref: '#/components/schemas/VarietyConnectedOrchidGroupResponse'
+          $ref: '#/components/schemas/InboundRecordResponse'
         message:
           type: string
     ApiResponseListString:
@@ -553,11 +544,13 @@ components:
             type: string
         message:
           type: string
-    ApiResponseVarietyPageResponse:
+    ApiResponseListVarietyConnectedOrchidGroupResponse:
       type: object
       properties:
         data:
-          $ref: '#/components/schemas/VarietyPageResponse'
+          type: array
+          items:
+            $ref: '#/components/schemas/VarietyConnectedOrchidGroupResponse'
         message:
           type: string
     ApiResponseMaterialPageResponse:
@@ -567,18 +560,25 @@ components:
           $ref: '#/components/schemas/MaterialPageResponse'
         message:
           type: string
-    ApiResponseVarietyResponse:
-      type: object
-      properties:
-        data:
-          $ref: '#/components/schemas/VarietyResponse'
-        message:
-          type: string
     ApiResponseMaterialResponse:
       type: object
       properties:
         data:
           $ref: '#/components/schemas/MaterialResponse'
+        message:
+          type: string
+    ApiResponseVarietyPageResponse:
+      type: object
+      properties:
+        data:
+          $ref: '#/components/schemas/VarietyPageResponse'
+        message:
+          type: string
+    ApiResponseVarietyResponse:
+      type: object
+      properties:
+        data:
+          $ref: '#/components/schemas/VarietyResponse'
         message:
           type: string
     ApiResponseVoid:
@@ -587,25 +587,6 @@ components:
         data: {}
         message:
           type: string
-    InboundRecordPageResponse:
-      type: object
-      properties:
-        content:
-          type: array
-          items:
-            $ref: '#/components/schemas/InboundRecordResponse'
-        page:
-          type: integer
-          format: int32
-        size:
-          type: integer
-          format: int32
-        totalElements:
-          type: integer
-          format: int64
-        totalPages:
-          type: integer
-          format: int32
     InboundNewVarietyRequest:
       type: object
       properties:
@@ -687,7 +668,6 @@ components:
           minLength: 0
         placementType:
           type: string
-          description: 난 묶음 배치 규격과 같은 placementType 문자열을 입고 시점 기준으로 보존하는 스냅샷 값
           maxLength: 100
           minLength: 0
         trayCount:
@@ -706,6 +686,7 @@ components:
           enum:
           - TEMP_STORED
           - POTTING_PENDING
+          - POTTING_IN_PROGRESS
           - POTTED
           - PLACED
           - CANCELED
@@ -720,44 +701,41 @@ components:
       required:
       - inboundDate
       - inboundType
+    InboundRecordPageResponse:
+      type: object
+      properties:
+        content:
+          type: array
+          items:
+            $ref: '#/components/schemas/InboundRecordResponse'
+        page:
+          type: integer
+          format: int32
+        size:
+          type: integer
+          format: int32
+        totalElements:
+          type: integer
+          format: int64
+        totalPages:
+          type: integer
+          format: int32
     InboundRecordPottingRequest:
       type: object
       properties:
         pottingDate:
           type: string
           format: date
-        actualQuantity:
-          type: integer
-          format: int32
-          minimum: 1
-        potSize:
-          type: string
-          maxLength: 50
-          minLength: 0
-        ageYear:
-          type: integer
-          format: int32
-          minimum: 0
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/RepotResultOrchidGroupRequest'
+          maxItems: 100
+          minItems: 0
         growthStage:
           type: string
           maxLength: 100
           minLength: 0
-        placementType:
-          type: string
-          description: 난 묶음 배치 규격과 같은 placementType 문자열을 포트 작업 시점 기준으로 보존하는 스냅샷 값
-          maxLength: 100
-          minLength: 0
-        trayCount:
-          type: integer
-          format: int32
-          minimum: 0
-        bedZoneId:
-          type: integer
-          format: int64
-        startPosition:
-          type: number
-        endPosition:
-          type: number
         worker:
           type: string
           maxLength: 50
@@ -767,9 +745,8 @@ components:
           maxLength: 1000
           minLength: 0
       required:
-      - actualQuantity
-      - bedZoneId
       - pottingDate
+      - results
     InboundRecordResponse:
       type: object
       properties:
@@ -816,7 +793,6 @@ components:
           type: string
         placementType:
           type: string
-          description: 입고 또는 포트 작업 시점에 선택된 배치 규격 스냅샷 값
         trayCount:
           type: integer
           format: int32
@@ -828,6 +804,11 @@ components:
         createdOrchidGroupId:
           type: integer
           format: int64
+        createdOrchidGroupIds:
+          type: array
+          items:
+            type: integer
+            format: int64
         worker:
           type: string
         memo:
@@ -877,7 +858,6 @@ components:
           minLength: 0
         placementType:
           type: string
-          description: 기존 입고 기록에 보존된 배치 규격 스냅샷 값
           maxLength: 100
           minLength: 0
         trayCount:
@@ -928,6 +908,55 @@ components:
       required:
       - category
       - name
+    MaterialPageResponse:
+      type: object
+      properties:
+        content:
+          type: array
+          items:
+            $ref: '#/components/schemas/MaterialResponse'
+        page:
+          type: integer
+          format: int32
+        size:
+          type: integer
+          format: int32
+        totalElements:
+          type: integer
+          format: int64
+        totalPages:
+          type: integer
+          format: int32
+    MaterialResponse:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: int64
+        code:
+          type: string
+        category:
+          type: string
+        name:
+          type: string
+        manufacturer:
+          type: string
+        specification:
+          type: string
+        stockQuantity:
+          type: string
+        storageLocation:
+          type: string
+        usage:
+          type: string
+        active:
+          type: boolean
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
     MaterialUpdateRequest:
       type: object
       properties:
@@ -962,55 +991,49 @@ components:
       required:
       - category
       - name
-    MaterialResponse:
+    RepotResultOrchidGroupRequest:
       type: object
       properties:
-        id:
+        bedZoneId:
           type: integer
           format: int64
-        code:
+        quantity:
+          type: integer
+          format: int32
+          minimum: 1
+        potSize:
           type: string
-        category:
+          maxLength: 50
+          minLength: 0
+        ageYear:
+          type: integer
+          format: int32
+          minimum: 0
+        placementType:
           type: string
-        name:
-          type: string
-        manufacturer:
-          type: string
-        specification:
-          type: string
-        stockQuantity:
-          type: string
-        storageLocation:
-          type: string
-        usage:
-          type: string
-        active:
+          maxLength: 50
+          minLength: 0
+        trayCount:
+          type: integer
+          format: int32
+          minimum: 0
+        splitPlacementAllowed:
           type: boolean
-        createdAt:
+        startPosition:
+          type: number
+          minimum: 0.0
+        endPosition:
+          type: number
+          minimum: 0.0
+        memo:
           type: string
-          format: date-time
-        updatedAt:
-          type: string
-          format: date-time
-    MaterialPageResponse:
-      type: object
-      properties:
-        content:
-          type: array
-          items:
-            $ref: '#/components/schemas/MaterialResponse'
-        page:
-          type: integer
-          format: int32
-        size:
-          type: integer
-          format: int32
-        totalElements:
-          type: integer
-          format: int64
-        totalPages:
-          type: integer
-          format: int32
+          maxLength: 1000
+          minLength: 0
+      required:
+      - bedZoneId
+      - endPosition
+      - quantity
+      - startPosition
     VarietyConnectedOrchidGroupResponse:
       type: object
       properties:
@@ -1059,6 +1082,25 @@ components:
       required:
       - genus
       - name
+    VarietyPageResponse:
+      type: object
+      properties:
+        content:
+          type: array
+          items:
+            $ref: '#/components/schemas/VarietyResponse'
+        page:
+          type: integer
+          format: int32
+        size:
+          type: integer
+          format: int32
+        totalElements:
+          type: integer
+          format: int64
+        totalPages:
+          type: integer
+          format: int32
     VarietyResponse:
       type: object
       properties:
@@ -1104,25 +1146,6 @@ components:
         updatedAt:
           type: string
           format: date-time
-    VarietyPageResponse:
-      type: object
-      properties:
-        content:
-          type: array
-          items:
-            $ref: '#/components/schemas/VarietyResponse'
-        page:
-          type: integer
-          format: int32
-        size:
-          type: integer
-          format: int32
-        totalElements:
-          type: integer
-          format: int64
-        totalPages:
-          type: integer
-          format: int32
     VarietyUpdateRequest:
       type: object
       properties:

@@ -8,6 +8,7 @@ export default function HouseDetailMap({
   distinguishVarietyColors,
   filteredOrchidGroupIds,
   house,
+  selectedOrchidGroupIds,
   selection,
   showScale,
   cellRangePick,
@@ -20,6 +21,7 @@ export default function HouseDetailMap({
   distinguishVarietyColors: boolean;
   filteredOrchidGroupIds: Set<number>;
   house: House;
+  selectedOrchidGroupIds: Set<number>;
   selection: OrchidSelection | null;
   showScale: boolean;
   cellRangePick: MapCellRangePick;
@@ -41,6 +43,7 @@ export default function HouseDetailMap({
             bed={bed}
             distinguishVarietyColors={distinguishVarietyColors}
             filteredOrchidGroupIds={filteredOrchidGroupIds}
+            selectedOrchidGroupIds={selectedOrchidGroupIds}
             selection={selection}
             showScale={showScale}
             cellRangePick={cellRangePick}

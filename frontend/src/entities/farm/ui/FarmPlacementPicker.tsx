@@ -24,13 +24,19 @@ export type FarmPlacementSelection = {
   label: string;
 };
 
+export type FarmPlacementReference = FarmPlacementSelection & {
+  kind: "SOURCE" | "RESULT" | "SAVED_RESULT";
+};
+
 export function FarmPlacementField({
   buttonPlaceholder = "칸 선택",
   dialogDescription = "구역을 고른 뒤 차지할 시작 칸과 끝 칸을 지정하세요.",
   dialogTitle = "배치 칸 선택",
   excludeOrchidGroupId = null,
+  excludeOrchidGroupIds = [],
   fieldLabel = "배치 칸",
   houses,
+  referencePlacements = [],
   submitLabel = "선택 완료",
   value,
   onChange,
@@ -39,8 +45,10 @@ export function FarmPlacementField({
   dialogDescription?: string;
   dialogTitle?: string;
   excludeOrchidGroupId?: number | null;
+  excludeOrchidGroupIds?: number[];
   fieldLabel?: string;
   houses: House[];
+  referencePlacements?: FarmPlacementReference[];
   submitLabel?: string;
   value: FarmPlacementSelection | null;
   onChange: (value: FarmPlacementSelection) => void;
@@ -68,8 +76,10 @@ export function FarmPlacementField({
           dialogDescription={dialogDescription}
           dialogTitle={dialogTitle}
           excludeOrchidGroupId={excludeOrchidGroupId}
+          excludeOrchidGroupIds={excludeOrchidGroupIds}
           houses={houses}
           initialValue={value}
+          referencePlacements={referencePlacements}
           submitLabel={submitLabel}
           onClose={() => setOpen(false)}
           onSelect={(nextValue) => {
@@ -86,8 +96,10 @@ export function FarmPlacementPickerDialog({
   dialogDescription = "구역을 고른 뒤 차지할 시작 칸과 끝 칸을 지정하세요.",
   dialogTitle = "배치 칸 선택",
   excludeOrchidGroupId = null,
+  excludeOrchidGroupIds = [],
   houses,
   initialValue,
+  referencePlacements = [],
   submitDisabled = false,
   submitLabel = "선택 완료",
   onClose,
@@ -96,8 +108,10 @@ export function FarmPlacementPickerDialog({
   dialogDescription?: string;
   dialogTitle?: string;
   excludeOrchidGroupId?: number | null;
+  excludeOrchidGroupIds?: number[];
   houses: House[];
   initialValue: FarmPlacementSelection | null;
+  referencePlacements?: FarmPlacementReference[];
   submitDisabled?: boolean;
   submitLabel?: string;
   onClose: () => void;
@@ -124,13 +138,23 @@ export function FarmPlacementPickerDialog({
   const normalizedStart = clamp(Math.min(startCell, endCell), 1, maxCell);
   const normalizedEnd = clamp(Math.max(startCell, endCell), 1, maxCell);
   const selectedCells = buildCellSet(normalizedStart, normalizedEnd);
+  const referenceOrchidGroupIds = useMemo(
+    () =>
+      new Set([
+        ...excludeOrchidGroupIds,
+        ...(excludeOrchidGroupId == null ? [] : [excludeOrchidGroupId]),
+      ]),
+    [excludeOrchidGroupId, excludeOrchidGroupIds],
+  );
   const occupiedCells = useMemo(
     () =>
       buildOccupiedCells(
         selected?.zone.orchidGroups ?? [],
-        excludeOrchidGroupId,
+        referenceOrchidGroupIds,
+        referencePlacements,
+        selected?.zone.id ?? null,
       ),
-    [excludeOrchidGroupId, selected],
+    [referenceOrchidGroupIds, referencePlacements, selected],
   );
   const hasOverlap = [...selectedCells].some((cell) => occupiedCells.has(cell));
   const selectedLabel = selected
@@ -260,8 +284,8 @@ export function FarmPlacementPickerDialog({
                 {selectedLabel || "선택 가능한 구역 없음"}
               </p>
               <p className="mt-1 text-[#66736a]">
-                초록색은 선택 범위, 흰색은 빈 칸, 회색은 이미 사용 중인
-                칸입니다.
+                초록색은 선택 범위, 노란색은 원본 난 묶음 위치, 흰색은 빈 칸,
+                회색은 이미 사용 중인 칸입니다.
               </p>
               {hasOverlap ? (
                 <p className="mt-2 font-bold text-[#b42318]">
@@ -275,6 +299,8 @@ export function FarmPlacementPickerDialog({
             {selectedHouse ? (
               <HousePreview
                 excludeOrchidGroupId={excludeOrchidGroupId}
+                excludeOrchidGroupIds={excludeOrchidGroupIds}
+                referencePlacements={referencePlacements}
                 selectedBedZoneId={selected?.zone.id ?? null}
                 selectedCells={selectedCells}
                 house={selectedHouse}
@@ -322,13 +348,17 @@ export function FarmPlacementPickerDialog({
 
 function HousePreview({
   excludeOrchidGroupId,
+  excludeOrchidGroupIds,
   house,
+  referencePlacements,
   selectedBedZoneId,
   selectedCells,
   onSelectCell,
 }: {
   excludeOrchidGroupId: number | null;
+  excludeOrchidGroupIds: number[];
   house: House;
+  referencePlacements: FarmPlacementReference[];
   selectedBedZoneId: number | null;
   selectedCells: Set<number>;
   onSelectCell: (bedZoneId: number, cell: number) => void;
@@ -339,6 +369,17 @@ function HousePreview({
         <h3 className="text-sm font-bold text-[#17251b]">{house.number}동</h3>
         <div className="flex items-center gap-3 text-xs font-semibold text-[#66736a]">
           <Legend color="bg-[#159447]" label="선택" />
+          {excludeOrchidGroupId != null ||
+          excludeOrchidGroupIds.length > 0 ||
+          referencePlacements.some((item) => item.kind === "SOURCE") ? (
+            <Legend color="bg-[#fff1b8]" label="원본 위치" />
+          ) : null}
+          {referencePlacements.some((item) => item.kind === "RESULT") ? (
+            <Legend color="bg-[#dcecff]" label="다른 결과" />
+          ) : null}
+          {referencePlacements.some((item) => item.kind === "SAVED_RESULT") ? (
+            <Legend color="bg-[#e8f3df]" label="다른 회차 결과" />
+          ) : null}
           <Legend color="bg-[#eef1ed]" label="사용 중" />
           <Legend color="bg-white" label="빈 칸" />
         </div>
@@ -368,7 +409,9 @@ function HousePreview({
                 <ZonePreview
                   key={zone.id}
                   excludeOrchidGroupId={excludeOrchidGroupId}
+                  excludeOrchidGroupIds={excludeOrchidGroupIds}
                   maxCell={Math.max(1, Math.floor(bed.positionUnitCount ?? 28))}
+                  referencePlacements={referencePlacements}
                   selected={selectedBedZoneId === zone.id}
                   selectedCells={selectedCells}
                   zone={zone}
@@ -385,14 +428,18 @@ function HousePreview({
 
 function ZonePreview({
   excludeOrchidGroupId,
+  excludeOrchidGroupIds,
   maxCell,
+  referencePlacements,
   selected,
   selectedCells,
   zone,
   onSelectCell,
 }: {
   excludeOrchidGroupId: number | null;
+  excludeOrchidGroupIds: number[];
   maxCell: number;
+  referencePlacements: FarmPlacementReference[];
   selected: boolean;
   selectedCells: Set<number>;
   zone: BedZone;
@@ -401,7 +448,22 @@ function ZonePreview({
   const cells = Array.from({ length: maxCell }, (_, index) => maxCell - index);
   const occupiedCells = buildOccupiedCells(
     zone.orchidGroups,
-    excludeOrchidGroupId,
+    new Set([
+      ...excludeOrchidGroupIds,
+      ...(excludeOrchidGroupId == null ? [] : [excludeOrchidGroupId]),
+    ]),
+    referencePlacements,
+    zone.id,
+  );
+  const referenceOrchidGroupIds = new Set([
+    ...excludeOrchidGroupIds,
+    ...(excludeOrchidGroupId == null ? [] : [excludeOrchidGroupId]),
+  ]);
+  const referenceCells = buildReferenceCells(
+    zone.orchidGroups,
+    referenceOrchidGroupIds,
+    referencePlacements,
+    zone.id,
   );
 
   return (
@@ -432,23 +494,34 @@ function ZonePreview({
         <div className="min-w-0">
           {cells.map((cell) => {
             const occupied = occupiedCells.has(cell);
+            const reference = referenceCells.get(cell);
             const cellSelected = selected && selectedCells.has(cell);
 
             return (
               <button
                 key={cell}
                 className={`flex h-5 w-full items-center justify-between border-b border-[#edf1ec] px-2 text-left text-[10px] transition last:border-b-0 ${
-                  occupied
-                    ? "bg-[#eef1ed] text-[#77817a]"
-                    : cellSelected
-                      ? "bg-[#159447] text-white"
-                      : "bg-white text-[#425047] hover:bg-[#eef8ef]"
+                  cellSelected
+                    ? "bg-[#159447] text-white"
+                    : reference
+                      ? reference.kind === "RESULT"
+                        ? "bg-[#dcecff] text-[#20518f] hover:bg-[#c7e0ff]"
+                        : reference.kind === "SAVED_RESULT"
+                          ? "bg-[#e8f3df] text-[#2f6334] hover:bg-[#d9ebca]"
+                          : "bg-[#fff1b8] text-[#6f5700] hover:bg-[#ffe99a]"
+                      : occupied
+                        ? "bg-[#eef1ed] text-[#77817a]"
+                        : "bg-white text-[#425047] hover:bg-[#eef8ef]"
                 }`}
                 type="button"
                 onClick={() => onSelectCell(cell)}
               >
                 <span className="truncate pl-2 font-semibold">
-                  {occupied ? findGroupLabel(zone.orchidGroups, cell) : "빈 칸"}
+                  {reference
+                    ? `${referencePrefix(reference.kind)} · ${reference.label}`
+                    : occupied
+                      ? findGroupLabel(zone.orchidGroups, cell)
+                      : "빈 칸"}
                 </span>
               </button>
             );
@@ -468,6 +541,12 @@ function Legend({ color, label }: { color: string; label: string }) {
       {label}
     </span>
   );
+}
+
+function referencePrefix(kind: FarmPlacementReference["kind"]) {
+  if (kind === "SOURCE") return "원본";
+  if (kind === "SAVED_RESULT") return "다른 회차";
+  return "결과";
 }
 
 function NumberField({
@@ -520,11 +599,13 @@ function buildCellSet(startCell: number, endCell: number) {
 
 function buildOccupiedCells(
   orchidGroups: OrchidGroup[],
-  excludeOrchidGroupId: number | null,
+  excludeOrchidGroupIds: Set<number>,
+  referencePlacements: FarmPlacementReference[] = [],
+  bedZoneId: number | null = null,
 ) {
   const cells = new Set<number>();
   orchidGroups.forEach((group) => {
-    if (group.id === excludeOrchidGroupId) {
+    if (excludeOrchidGroupIds.has(group.id)) {
       return;
     }
     if (group.startPosition == null || group.endPosition == null) {
@@ -536,11 +617,72 @@ function buildOccupiedCells(
       cells.add(cell);
     }
   });
+  referencePlacements
+    .filter(
+      (reference) =>
+        (reference.kind === "RESULT" || reference.kind === "SAVED_RESULT") &&
+        (bedZoneId == null || reference.bedZoneId === bedZoneId),
+    )
+    .forEach((reference) => {
+      for (
+        let cell = reference.startCell;
+        cell <= reference.endCell;
+        cell += 1
+      ) {
+        cells.add(cell);
+      }
+    });
   return cells;
 }
 
-function findGroupLabel(orchidGroups: OrchidGroup[], cell: number) {
+function buildReferenceCells(
+  orchidGroups: OrchidGroup[],
+  referenceOrchidGroupIds: Set<number>,
+  referencePlacements: FarmPlacementReference[] = [],
+  bedZoneId: number | null = null,
+) {
+  const cells = new Map<number, FarmPlacementReference>();
+  orchidGroups.forEach((group) => {
+    if (
+      !referenceOrchidGroupIds.has(group.id) ||
+      group.startPosition == null ||
+      group.endPosition == null
+    ) {
+      return;
+    }
+    const startCell = Math.floor(group.startPosition) + 1;
+    const endCell = Math.ceil(group.endPosition);
+    const label = `${group.varietyName} ${group.quantity.toLocaleString()}분`;
+    for (let cell = startCell; cell <= endCell; cell += 1) {
+      cells.set(cell, {
+        bedZoneId: group.bedZoneId,
+        startCell,
+        endCell,
+        startPosition: group.startPosition,
+        endPosition: group.endPosition,
+        kind: "SOURCE",
+        label,
+      });
+    }
+  });
+  referencePlacements.forEach((reference) => {
+    if (bedZoneId != null && reference.bedZoneId !== bedZoneId) return;
+    for (let cell = reference.startCell; cell <= reference.endCell; cell += 1) {
+      cells.set(cell, reference);
+    }
+  });
+  return cells;
+}
+
+function findGroupLabel(
+  orchidGroups: OrchidGroup[],
+  cell: number,
+  groupIds?: Set<number>,
+) {
   const group = orchidGroups.find((item) => {
+    if (groupIds && !groupIds.has(item.id)) {
+      return false;
+    }
     if (item.startPosition == null || item.endPosition == null) {
       return false;
     }

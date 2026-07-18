@@ -1,6 +1,6 @@
 "use client";
 
-import { Info, Palette, Plus, Ruler } from "lucide-react";
+import { Info, ListPlus, Palette, Plus, Ruler } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { type FocusEvent, useEffect, useRef, useState } from "react";
 import type { House, HouseStatusSummary } from "@/entities/farm/types";
@@ -15,6 +15,7 @@ export default function HouseSelectorPanel({
   showScale,
   onToggleVarietyColors,
   onOpenCreate,
+  onOpenMultiCreate,
   onToggleScale,
   onSelectHouse,
 }: {
@@ -27,6 +28,7 @@ export default function HouseSelectorPanel({
   showScale: boolean;
   onToggleVarietyColors: () => void;
   onOpenCreate: () => void;
+  onOpenMultiCreate: () => void;
   onToggleScale: () => void;
   onSelectHouse: () => void;
 }) {
@@ -105,6 +107,15 @@ export default function HouseSelectorPanel({
         <Plus className="h-4 w-4" strokeWidth={1.8} aria-hidden="true" />난 묶음
         추가
       </button>
+
+      {/* <button
+        className="inline-flex h-8 shrink-0 items-center gap-2 rounded-md border border-[#dfe5dc] bg-white px-3 text-sm font-semibold text-[#344138] shadow-sm"
+        onClick={onOpenMultiCreate}
+        type="button"
+      >
+        <ListPlus className="h-4 w-4" strokeWidth={1.8} aria-hidden="true" />
+        일괄 추가
+      </button> TODO: 난 묶음 관리 페이지 맵 정리 후 활성화*/}
 
       <div className="min-w-3 flex-1" />
       <button

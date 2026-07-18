@@ -1,6 +1,7 @@
 "use client";
 
 import type { House } from "@/entities/farm/types";
+import { PottingExecutionForm } from "@/entities/farm/ui/PottingExecutionForm";
 import { X } from "lucide-react";
 import type { ReactNode } from "react";
 import type { CSSObjectWithLabel, SingleValue } from "react-select";
@@ -393,118 +394,25 @@ export function InboundPottingDialog({
   onClose: () => void;
   onSubmit: (payload: InboundPottingPayload) => Promise<void>;
 }) {
-  const [pottingDate, setPottingDate] = useState(
-    new Date().toISOString().slice(0, 10),
-  );
-  const [actualQuantity, setActualQuantity] = useState("");
-  const [potSize, setPotSize] = useState("");
-  const [ageYear, setAgeYear] = useState("");
-  const [placementType, setPlacementType] = useState("");
-  const [placement, setPlacement] = useState<InboundPlacementSelection | null>(
-    null,
-  );
-  const [worker, setWorker] = useState("");
-  const [memo, setMemo] = useState("");
-
   if (!open || !record) return null;
 
   return (
-    <DialogShell title="포트 작업 등록" onClose={onClose}>
-      <form
-        className="mt-4 grid gap-3 md:grid-cols-2"
-        onSubmit={(event) => {
-          event.preventDefault();
-          if (!placement) {
-            window.alert("배치 위치를 선택해주세요.");
-            return;
-          }
-          void onSubmit({
-            pottingDate,
-            actualQuantity: Number(actualQuantity),
-            potSize: potSize.trim() || undefined,
-            ageYear: toNumber(ageYear),
-            placementType: placementType.trim() || undefined,
-            bedZoneId: placement?.bedZoneId ?? 0,
-            startPosition: placement?.startPosition,
-            endPosition: placement?.endPosition,
-            worker: worker.trim() || undefined,
-            memo: memo.trim() || undefined,
-          });
-        }}
-      >
-        <Field label="입고 품종">
-          <input className={inputClass} disabled value={record.varietyName} />
-        </Field>
-        <Field label="포트 작업일">
-          <input
-            className={inputClass}
-            required
-            type="date"
-            value={pottingDate}
-            onChange={(event) => setPottingDate(event.target.value)}
-          />
-        </Field>
-        <Field label="실제 생성 수량">
-          <input
-            className={inputClass}
-            required
-            type="number"
-            value={actualQuantity}
-            onChange={(event) => setActualQuantity(event.target.value)}
-          />
-        </Field>
-        <PotSizeInput label="화분 크기" value={potSize} onChange={setPotSize} />
-        <Field label="초기 년생">
-          <input
-            className={inputClass}
-            type="number"
-            value={ageYear}
-            onChange={(event) => setAgeYear(event.target.value)}
-          />
-        </Field>
-        <InboundPlacementField
-          houses={houses}
-          value={placement}
-          onChange={(nextPlacement) => {
-            setPlacement(nextPlacement);
-            setPlacementType("");
-          }}
-        />
-        <InboundPlacementTypeField
-          value={placementType}
-          onChange={setPlacementType}
-        />
-        <Field label="작업자">
-          <input
-            className={inputClass}
-            value={worker}
-            onChange={(event) => setWorker(event.target.value)}
-          />
-        </Field>
-        <label className="space-y-1 text-xs font-semibold text-[#425047] md:col-span-2">
-          <span>메모</span>
-          <textarea
-            className="min-h-24 w-full rounded-md border border-[#d7ddd8] bg-white px-3 py-2 text-sm outline-none focus:border-[#159447] focus:ring-1 focus:ring-[#159447]"
-            value={memo}
-            onChange={(event) => setMemo(event.target.value)}
-          />
-        </label>
-        <div className="flex justify-end gap-2 md:col-span-2">
-          <button
-            className="rounded-md border border-[#d4dbd5] px-4 py-2 text-sm font-semibold"
-            type="button"
-            onClick={onClose}
-          >
-            취소
-          </button>
-          <button
-            className="rounded-md bg-[#159447] px-4 py-2 text-sm font-semibold text-white"
-            type="submit"
-          >
-            저장
-          </button>
-        </div>
-      </form>
+    <DialogShell title="포트 작업 즉시 실행" onClose={onClose}>
+      <p className="rounded-md border border-[#cfe0d2] bg-[#f4f8f3] px-3 py-2 text-sm text-[#526057]">
+        완료하면 작업 관리에 포트 작업이 자동으로 기록되고 결과 난 묶음이
+        생성됩니다.
+      </p>
+      <PottingExecutionForm
+        houses={houses}
+        initialActualQuantity={record.actualQuantity}
+        initialAgeYear={record.ageYear}
+        initialPotSize={record.potSize}
+        initialWorker={record.worker}
+        subject={record.varietyName}
+        submitLabel="작업 실행 및 완료"
+        onCancel={onClose}
+        onSubmit={onSubmit}
+      />
     </DialogShell>
   );
 }

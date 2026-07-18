@@ -1,0 +1,24 @@
+package com.greenhouse.backend.work.repository;
+
+import com.greenhouse.backend.work.domain.WorkEffectOrchidGroup;
+import com.greenhouse.backend.work.domain.WorkEffectOrchidGroupRelationType;
+import java.util.List;
+import org.springframework.data.jpa.repository.EntityGraph;
+import org.springframework.data.jpa.repository.JpaRepository;
+
+public interface WorkEffectOrchidGroupRepository extends JpaRepository<WorkEffectOrchidGroup, Long> {
+
+	@EntityGraph(attributePaths = "workAppliedEffect")
+	List<WorkEffectOrchidGroup> findByWorkAppliedEffectWorkOperationIdOrderByIdAsc(Long workOperationId);
+
+	@EntityGraph(attributePaths = "workAppliedEffect")
+	List<WorkEffectOrchidGroup> findByWorkAppliedEffectWorkOperationIdAndRelationTypeOrderByIdAsc(
+			Long workOperationId,
+			WorkEffectOrchidGroupRelationType relationType);
+
+	@EntityGraph(attributePaths = {"workAppliedEffect", "workAppliedEffect.workOperation", "workAppliedEffect.workOperation.workType"})
+	List<WorkEffectOrchidGroup> findByOrchidGroupIdOrderByWorkAppliedEffectAppliedAtDescWorkAppliedEffectIdDesc(
+			Long orchidGroupId);
+
+	boolean existsByOrchidGroupId(Long orchidGroupId);
+}

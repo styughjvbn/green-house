@@ -1,7 +1,7 @@
 "use client";
 
-import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import { useEffect, useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
+import { useEffect, useState } from "react";
 import type { House } from "@/entities/farm/types";
 import {
   cancelInboundRecord,
@@ -34,7 +34,7 @@ import { MaterialSection } from "./components/MaterialSection";
 import { VarietySection } from "./components/VarietySection";
 
 export function InventoryPage({
-  initialActiveTab,
+  activeTab,
   houses,
   initialInboundPage,
   initialMaterialPage,
@@ -42,7 +42,7 @@ export function InventoryPage({
   varietyGenera,
   varietyOptions,
 }: {
-  initialActiveTab?: string;
+  activeTab: "VARIETY" | "INBOUND" | "MATERIAL";
   houses: House[];
   initialInboundPage: InventoryPageResult<InboundRecord>;
   initialMaterialPage: InventoryPageResult<Material>;
@@ -51,8 +51,6 @@ export function InventoryPage({
   varietyOptions: Variety[];
 }) {
   const router = useRouter();
-  const pathname = usePathname();
-  const searchParams = useSearchParams();
   const [selectedInboundId, setSelectedInboundId] = useState(
     initialInboundPage.content[0]?.id ?? 0,
   );
@@ -67,20 +65,6 @@ export function InventoryPage({
   const [selectedConnectedGroups, setSelectedConnectedGroups] = useState<
     Variety["connectedGroups"]
   >([]);
-
-  const activeTab = useMemo<"VARIETY" | "INBOUND" | "MATERIAL">(() => {
-    const tab = searchParams.get("tab");
-
-    if (tab === "INBOUND" || tab === "MATERIAL" || tab === "VARIETY") {
-      return tab;
-    }
-
-    if (initialActiveTab === "INBOUND" || initialActiveTab === "MATERIAL") {
-      return initialActiveTab;
-    }
-
-    return "VARIETY";
-  }, [initialActiveTab, searchParams]);
 
   useEffect(() => {
     if (!selectedVarietyId) return;
@@ -102,12 +86,6 @@ export function InventoryPage({
       active = false;
     };
   }, [selectedVarietyId]);
-
-  const updateTab = (nextTab: "VARIETY" | "INBOUND" | "MATERIAL") => {
-    const params = new URLSearchParams(searchParams.toString());
-    params.set("tab", nextTab);
-    router.replace(`${pathname}?${params.toString()}`);
-  };
 
   const handleCreateVariety = async (payload: VarietyPayload) => {
     const created = await createVariety(payload);
@@ -199,7 +177,6 @@ export function InventoryPage({
             setSelectedInboundId(created.id);
             router.refresh();
           }}
-          onOpenCreate={() => updateTab("INBOUND")}
           onPotting={async (inboundRecordId, payload) => {
             await potInboundRecord(inboundRecordId, payload);
             router.refresh();
