@@ -95,7 +95,7 @@ export function OperationResult({
             ) : null}
             {active && hasRemainingWork && structureChange ? (
               <StatusAction
-                label={`${operation.workType} 실행 등록`}
+                label={`${operation.workType} 회차 등록`}
                 primary
                 disabled={loading || !onExecuteTarget}
                 onClick={() => {

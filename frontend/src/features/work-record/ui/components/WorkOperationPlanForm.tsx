@@ -46,6 +46,7 @@ export function WorkOperationPlanForm({
   excludedIds,
   includedTargetCount,
   includedQuantity,
+  autoSplitWorkCount,
   saveUnavailableReason,
   registrationMode,
   recordDisabled,
@@ -72,6 +73,7 @@ export function WorkOperationPlanForm({
   excludedIds: Set<number>;
   includedTargetCount: number;
   includedQuantity: number;
+  autoSplitWorkCount: number;
   saveUnavailableReason: string | null;
   registrationMode: "RECORD" | "PLAN";
   recordDisabled: boolean;
@@ -208,6 +210,11 @@ export function WorkOperationPlanForm({
               onToggle={onToggleExcluded}
             />
           </>
+        ) : null}
+        {autoSplitWorkCount > 1 ? (
+          <p className="mt-3 rounded-md border border-[#d8e7d7] bg-[#f4faf3] px-3 py-2 text-sm font-semibold text-[#2f6f3d]">
+            품종별로 분리되어 {autoSplitWorkCount}개의 작업이 개별 생성됩니다.
+          </p>
         ) : null}
       </section>
 

@@ -135,6 +135,13 @@ export function WorkOperationPanel({
       : includedTargets.flatMap((target) =>
           target.orchidGroupId == null ? [] : [target.orchidGroupId],
         );
+  const autoSplitWorkCount = countAutoSplitWorks({
+    selectedWorkType,
+    isInboundPotting,
+    inboundRecordIds,
+    inboundCandidates,
+    includedTargets,
+  });
   const saveUnavailableReason = loading
     ? "처리 중입니다."
     : !selectedWorkType
@@ -510,6 +517,7 @@ export function WorkOperationPanel({
               excludedIds={excludedIds}
               includedTargetCount={includedTargets.length}
               includedQuantity={includedQuantity}
+              autoSplitWorkCount={autoSplitWorkCount}
               saveUnavailableReason={saveUnavailableReason}
               registrationMode={registrationMode}
               recordDisabled={recordDisabled}
@@ -732,6 +740,41 @@ function formatLocalDate(date: Date) {
   const month = String(date.getMonth() + 1).padStart(2, "0");
   const day = String(date.getDate()).padStart(2, "0");
   return `${year}-${month}-${day}`;
+}
+
+function countAutoSplitWorks({
+  selectedWorkType,
+  isInboundPotting,
+  inboundRecordIds,
+  inboundCandidates,
+  includedTargets,
+}: {
+  selectedWorkType?: WorkType;
+  isInboundPotting: boolean;
+  inboundRecordIds: Set<number>;
+  inboundCandidates: InboundPottingCandidate[];
+  includedTargets: WorkOperationTarget[];
+}) {
+  if (isInboundPotting) {
+    return new Set(
+      inboundCandidates
+        .filter((candidate) => inboundRecordIds.has(candidate.id))
+        .map((candidate) =>
+          candidate.varietyId == null
+            ? `name:${candidate.varietyName}`
+            : `id:${candidate.varietyId}`,
+        ),
+    ).size;
+  }
+  if (
+    selectedWorkType?.code !== "REPOT" &&
+    selectedWorkType?.code !== "DIVIDE" &&
+    selectedWorkType?.code !== "MERGE"
+  ) {
+    return 0;
+  }
+  return new Set(includedTargets.map((target) => `name:${target.varietyName}`))
+    .size;
 }
 
 function recordPayload(
