@@ -74,7 +74,7 @@ export function InboundDetailCard({
             !record.createdOrchidGroupId &&
             record.status !== "CANCELED" ? (
               <DetailActionButton icon={Scissors} onClick={onOpenPotting}>
-                포트 작업 등록
+                포트 작업 실행
               </DetailActionButton>
             ) : null}
             {!record.createdOrchidGroupId && record.status !== "CANCELED" ? (
@@ -292,14 +292,18 @@ function InboundDetailView({ record }: { record: InboundRecord }) {
       <DetailRow label="임시 위치" value={record.tempLocation} />
       <DetailRow label="현재 위치" value={record.currentLocation} />
       <DetailRow label="포트 예정일" value={record.pottingDueDate} />
-      <DetailRow label="포트 작업일" value={record.pottingDate} />
+      <DetailRow label="포트 작업 완료일" value={record.pottingDate} />
       <DetailRow label="화분 크기" value={record.potSize} />
       <DetailRow label="초기 년생" value={record.ageYear} />
       <DetailRow label="배치 규격" value={record.placementType} />
       <DetailRow label="작업자" value={record.worker} />
       <DetailRow
         label="생성 난 묶음"
-        value={record.createdOrchidGroupId ?? "-"}
+        value={
+          record.createdOrchidGroupIds.length
+            ? record.createdOrchidGroupIds.join(", ")
+            : "-"
+        }
       />
       <DetailRow label="메모" value={record.memo} />
     </dl>

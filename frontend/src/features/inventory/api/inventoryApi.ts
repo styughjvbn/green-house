@@ -1,4 +1,5 @@
 import { API_BASE_URL, fetchApi } from "@/shared/api/client";
+import type { WorkOperation } from "@/entities/farm/types";
 import type {
   ConnectedOrchidGroup,
   InboundPottingPayload,
@@ -82,6 +83,7 @@ type InboundRecordResponse = {
   bedZoneId: number | null;
   currentLocation: string | null;
   createdOrchidGroupId: number | null;
+  createdOrchidGroupIds: number[];
   worker: string | null;
   memo: string | null;
   createdAt: string;
@@ -309,15 +311,15 @@ export function potInboundRecord(
   inboundRecordId: number,
   payload: InboundPottingPayload,
 ) {
-  return requestJson<InboundRecordResponse>(
-    `/inbound-records/${inboundRecordId}/potting`,
+  return requestJson<WorkOperation>(
+    "/work-operations/inbound-potting-executions",
     {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(payload),
+      body: JSON.stringify({ inboundRecordId, ...payload }),
     },
     "포트 작업을 저장하지 못했습니다.",
-  ).then(toInboundRecord);
+  );
 }
 
 export function cancelInboundRecord(inboundRecordId: number, memo?: string) {
@@ -388,6 +390,7 @@ function toInboundRecord(item: InboundRecordResponse): InboundRecord {
     bedZoneId: item.bedZoneId,
     currentLocation: item.currentLocation,
     createdOrchidGroupId: item.createdOrchidGroupId,
+    createdOrchidGroupIds: item.createdOrchidGroupIds,
     worker: item.worker,
     memo: item.memo,
     createdAt: item.createdAt,

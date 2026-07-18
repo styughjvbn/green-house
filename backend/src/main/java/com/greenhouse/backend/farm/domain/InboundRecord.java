@@ -11,12 +11,15 @@ import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
+import jakarta.persistence.OneToMany;
 import jakarta.persistence.Table;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.AccessLevel;
 
 import java.time.LocalDate;
+import java.util.ArrayList;
+import java.util.List;
 
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
@@ -84,6 +87,9 @@ public class InboundRecord extends BaseEntity {
 	@JoinColumn(name = "created_orchid_group_id")
 	private OrchidGroup createdOrchidGroup;
 
+	@OneToMany(mappedBy = "inboundRecord")
+	private List<OrchidGroup> createdOrchidGroups = new ArrayList<>();
+
 	@Column(length = 50)
 	private String worker;
 
@@ -117,7 +123,7 @@ public class InboundRecord extends BaseEntity {
 		this.actualQuantity = actualQuantity;
 		this.tempLocation = tempLocation;
 		this.pottingDueDate = pottingDueDate;
-		this.potSize = potSize;
+		this.potSize = PotSizeCode.fromInput(potSize).getDisplayValue();
 		this.ageYear = ageYear;
 		this.growthStage = growthStage;
 		this.placementType = placementType;
@@ -147,7 +153,7 @@ public class InboundRecord extends BaseEntity {
 		this.actualQuantity = actualQuantity;
 		this.tempLocation = tempLocation;
 		this.pottingDueDate = pottingDueDate;
-		this.potSize = potSize;
+		this.potSize = PotSizeCode.fromInput(potSize).getDisplayValue();
 		this.ageYear = ageYear;
 		this.growthStage = growthStage;
 		this.placementType = placementType;
@@ -164,8 +170,32 @@ public class InboundRecord extends BaseEntity {
 		this.status = InboundStatus.PLACED;
 	}
 
+	public void addCreatedOrchidGroup(OrchidGroup orchidGroup) {
+		if (!createdOrchidGroups.contains(orchidGroup)) {
+			createdOrchidGroups.add(orchidGroup);
+		}
+	}
+
 	public void markPottingPending(InboundStatus status) {
 		this.status = status;
+	}
+
+	public void markPottingPlanned() {
+		if (inboundType != InboundType.FLASK_SEEDLING
+				|| status == InboundStatus.CANCELED
+				|| createdOrchidGroup != null) {
+			throw new IllegalStateException("포트 작업을 계획할 수 없는 입고 기록입니다.");
+		}
+		this.status = InboundStatus.POTTING_IN_PROGRESS;
+	}
+
+	public void closePottingPlan() {
+		if (status != InboundStatus.POTTING_IN_PROGRESS) {
+			return;
+		}
+		this.status = pottingDueDate == null
+				? InboundStatus.TEMP_STORED
+				: InboundStatus.POTTING_PENDING;
 	}
 
 	public void cancel(String memo) {

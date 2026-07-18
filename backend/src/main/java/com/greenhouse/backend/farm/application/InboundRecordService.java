@@ -19,7 +19,9 @@ import com.greenhouse.backend.farm.repository.InboundRecordRepository;
 import com.greenhouse.backend.farm.repository.OrchidGroupRepository;
 import com.greenhouse.backend.farm.repository.VarietyRepository;
 import com.greenhouse.backend.work.application.SystemWorkCleanupService;
-import com.greenhouse.backend.work.application.SystemWorkRecorder;
+import com.greenhouse.backend.work.application.InboundWorkOperationRecorder;
+import com.greenhouse.backend.work.application.InboundWorkOperationLifecycleService;
+import com.greenhouse.backend.work.dto.InboundWorkOperationCreateRequest;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
@@ -38,15 +40,13 @@ import org.springframework.transaction.annotation.Transactional;
 public class InboundRecordService {
 
 	private static final String DEFAULT_ORCHID_STATUS = "정상";
-	private static final String INBOUND_WORK_TYPE_CODE = "INBOUND";
-	private static final String POTTING_WORK_TYPE_CODE = "POTTING";
-	private static final String FARM_TARGET_TYPE = "FARM";
 
 	private final InboundRecordRepository inboundRecordRepository;
 	private final VarietyRepository varietyRepository;
 	private final BedZoneRepository bedZoneRepository;
 	private final OrchidGroupRepository orchidGroupRepository;
-	private final SystemWorkRecorder systemWorkRecorder;
+	private final InboundWorkOperationRecorder inboundWorkOperationRecorder;
+	private final InboundWorkOperationLifecycleService inboundWorkOperationLifecycleService;
 	private final SystemWorkCleanupService systemWorkCleanupService;
 	private final OrchidPlacementPolicy orchidPlacementPolicy;
 
@@ -115,17 +115,19 @@ public class InboundRecordService {
 		} else {
 			saved.markPottingPending(status);
 		}
-		recordWork(
-					INBOUND_WORK_TYPE_CODE,
-					saved.getInboundDate(),
-					FARM_TARGET_TYPE,
-					null,
-					saved.getVariety().getName(),
-					resolveWorkQuantity(saved.getInboundType(), saved.getBottleCount(), saved.getActualQuantity(),
-							saved.getEstimatedQuantity()),
-					saved.getWorker(),
-					inboundWorkMemo(saved),
-					inboundWorkDetails(saved));
+		Map<String, Object> workDetails = inboundWorkDetails(saved);
+		inboundWorkOperationRecorder.record(new InboundWorkOperationCreateRequest(
+				saved.getId(),
+				saved.getInboundDate(),
+				saved.getVariety().getId(),
+				saved.getVariety().getName(),
+				resolveQuantity(saved.getActualQuantity(), saved.getEstimatedQuantity()),
+				saved.getPotSize(),
+				inboundLocationSnapshot(saved),
+				saved.getCreatedOrchidGroup() == null ? null : saved.getCreatedOrchidGroup().getId(),
+				saved.getWorker(),
+				inboundWorkMemo(saved),
+				workDetails));
 		return InboundRecordResponse.from(findInboundRecord(saved.getId()));
 	}
 
@@ -151,7 +153,15 @@ public class InboundRecordService {
 		return InboundRecordResponse.from(inboundRecord);
 	}
 
-	public InboundRecordResponse potting(Long inboundRecordId, InboundRecordPottingRequest request) {
+	public InboundPottingResult pottingForOperation(
+			Long inboundRecordId,
+			InboundRecordPottingRequest request) {
+		return potting(inboundRecordId, request);
+	}
+
+	private InboundPottingResult potting(
+			Long inboundRecordId,
+			InboundRecordPottingRequest request) {
 		InboundRecord inboundRecord = findInboundRecord(inboundRecordId);
 		if (inboundRecord.getInboundType() != InboundType.FLASK_SEEDLING) {
 			throw new IllegalArgumentException("유리병 모종 입고만 포트 작업을 등록할 수 있습니다.");
@@ -162,64 +172,60 @@ public class InboundRecordService {
 		if (inboundRecord.getCreatedOrchidGroup() != null) {
 			throw new IllegalArgumentException("이미 난 묶음이 생성된 입고 기록입니다.");
 		}
-		BedZone bedZone = findBedZone(request.bedZoneId());
-		OrchidPlacementPolicy.PlacementRange placementRange = resolvePlacementRange(
-				bedZone,
-				request.startPosition(),
-				request.endPosition());
-		OrchidGroup orchidGroup = new OrchidGroup(
-				bedZone,
-				inboundRecord.getVariety().getGenus(),
-				inboundRecord.getVariety().getName(),
-				request.actualQuantity(),
-				firstNonBlank(request.potSize(), inboundRecord.getPotSize()),
-				request.ageYear(),
-				DEFAULT_ORCHID_STATUS,
-				orchidGroupRepository.findMaxSortOrderByBedZoneId(bedZone.getId()) + 1,
-				placementRange.startPosition(),
-				placementRange.endPosition());
-		orchidGroup.updateDetails(
-				inboundRecord.getVariety().getGenus(),
-				inboundRecord.getVariety().getName(),
-				request.actualQuantity(),
-				firstNonBlank(request.potSize(), inboundRecord.getPotSize()),
-				request.ageYear(),
-				DEFAULT_ORCHID_STATUS,
-				normalize(request.placementType()),
-				request.trayCount(),
-				false,
-				placementRange.startPosition(),
-				placementRange.endPosition(),
-				normalize(request.memo()));
-		orchidGroup.assignVariety(inboundRecord.getVariety());
-		orchidGroup.assignInboundRecord(inboundRecord);
-		orchidGroupRepository.save(orchidGroup);
+		var createdGroups = request.results().stream().map(row -> {
+			BedZone bedZone = findBedZone(row.bedZoneId());
+			OrchidPlacementPolicy.PlacementRange placementRange = resolvePlacementRange(
+					bedZone, row.startPosition(), row.endPosition());
+			OrchidGroup orchidGroup = new OrchidGroup(
+					bedZone,
+					inboundRecord.getVariety().getGenus(),
+					inboundRecord.getVariety().getName(),
+					row.quantity(),
+					firstNonBlank(row.potSize(), inboundRecord.getPotSize()),
+					row.ageYear(),
+					DEFAULT_ORCHID_STATUS,
+					orchidGroupRepository.findMaxSortOrderByBedZoneId(bedZone.getId()) + 1,
+					placementRange.startPosition(),
+					placementRange.endPosition());
+			orchidGroup.updateDetails(
+					inboundRecord.getVariety().getGenus(),
+					inboundRecord.getVariety().getName(),
+					row.quantity(),
+					firstNonBlank(row.potSize(), inboundRecord.getPotSize()),
+					row.ageYear(),
+					DEFAULT_ORCHID_STATUS,
+					normalize(row.placementType()),
+					row.trayCount(),
+					Boolean.TRUE.equals(row.splitPlacementAllowed()),
+					placementRange.startPosition(),
+					placementRange.endPosition(),
+					normalize(row.memo()));
+			orchidGroup.assignVariety(inboundRecord.getVariety());
+			orchidGroup.assignInboundRecord(inboundRecord);
+			return orchidGroupRepository.saveAndFlush(orchidGroup);
+		}).toList();
+		OrchidGroup representative = createdGroups.getFirst();
+		int actualQuantity = createdGroups.stream().mapToInt(OrchidGroup::getQuantity).sum();
 		inboundRecord.updateMetadata(
 				inboundRecord.getInboundDate(),
 				inboundRecord.getBottleCount(),
 				inboundRecord.getEstimatedQuantity(),
-				request.actualQuantity(),
+				actualQuantity,
 				inboundRecord.getTempLocation(),
 				inboundRecord.getPottingDueDate(),
-				firstNonBlank(request.potSize(), inboundRecord.getPotSize()),
-				request.ageYear(),
+				representative.getPotSize(),
+				representative.getAgeYear(),
 				normalize(request.growthStage()),
-				normalize(request.placementType()),
-				request.trayCount(),
+				representative.getPlacementType(),
+				representative.getTrayCount(),
 				normalize(request.worker()),
 				appendMemo(inboundRecord.getMemo(), request.memo()));
-		inboundRecord.place(bedZone, orchidGroup, request.pottingDate(), request.actualQuantity());
-		recordWork(
-				POTTING_WORK_TYPE_CODE,
-				request.pottingDate(),
-				"ORCHID_GROUP",
-				orchidGroup.getId(),
-				inboundRecord.getVariety().getName(),
-				String.valueOf(request.actualQuantity()),
-				normalize(request.worker()),
-				normalize(request.memo()),
-				pottingWorkDetails(inboundRecord, orchidGroup, request));
-		return InboundRecordResponse.from(findInboundRecord(inboundRecord.getId()));
+		inboundRecord.place(
+				representative.getBedZone(), representative, request.pottingDate(), actualQuantity);
+		return new InboundPottingResult(
+				InboundRecordResponse.from(findInboundRecord(inboundRecord.getId())),
+				createdGroups.stream().map(OrchidGroup::getId).toList(),
+				actualQuantity);
 	}
 
 	public InboundRecordResponse cancel(Long inboundRecordId, InboundRecordCancelRequest request) {
@@ -227,6 +233,7 @@ public class InboundRecordService {
 		if (inboundRecord.getCreatedOrchidGroup() != null) {
 			throw new IllegalArgumentException("난 묶음이 생성된 입고 기록은 취소할 수 없습니다.");
 		}
+		inboundWorkOperationLifecycleService.cancelForInboundRecord(inboundRecordId);
 		inboundRecord.cancel(normalize(request.memo()));
 		return InboundRecordResponse.from(inboundRecord);
 	}
@@ -255,6 +262,9 @@ public class InboundRecordService {
 	private void validateCreate(InboundRecordCreateRequest request, InboundStatus status) {
 		if (request.varietyId() == null && request.newVariety() == null) {
 			throw new IllegalArgumentException("품종을 선택하거나 새 품종을 입력해야 합니다.");
+		}
+		if (status == InboundStatus.POTTING_IN_PROGRESS) {
+			throw new IllegalArgumentException("작업중 상태는 포트 작업 계획 생성 시 자동으로 설정됩니다.");
 		}
 		if (request.inboundType() == InboundType.FLASK_SEEDLING) {
 			if (request.estimatedQuantity() == null) {
@@ -360,40 +370,6 @@ public class InboundRecordService {
 		return new OrchidPlacementPolicy.PlacementRange(startPosition, endPosition);
 	}
 
-	private void recordWork(
-			String workTypeCode,
-			LocalDate workDate,
-			String targetType,
-			Long targetId,
-			String materialName,
-			String quantity,
-			String worker,
-			String memo) {
-		recordWork(workTypeCode, workDate, targetType, targetId, materialName, quantity, worker, memo, null);
-	}
-
-	private void recordWork(
-			String workTypeCode,
-			LocalDate workDate,
-			String targetType,
-			Long targetId,
-			String materialName,
-			String quantity,
-			String worker,
-			String memo,
-			Map<String, Object> details) {
-		systemWorkRecorder.record(
-				workTypeCode,
-				workDate,
-				targetType,
-				targetId,
-				normalize(materialName),
-				normalize(quantity),
-				normalize(worker),
-				normalize(memo),
-				details);
-	}
-
 	private Map<String, Object> inboundWorkDetails(InboundRecord record) {
 		Map<String, Object> details = new LinkedHashMap<>();
 		putDetail(details, "inboundRecordId", record.getId());
@@ -416,6 +392,23 @@ public class InboundRecordService {
 		putDetail(details, "orchidGroupId",
 				record.getCreatedOrchidGroup() == null ? null : record.getCreatedOrchidGroup().getId());
 		return details;
+	}
+
+	private Map<String, Object> inboundLocationSnapshot(InboundRecord record) {
+		Map<String, Object> location = new LinkedHashMap<>();
+		if (record.getBedZone() != null) {
+			BedZone zone = record.getBedZone();
+			putDetail(location, "houseId", zone.getPhysicalBed().getHouse().getId());
+			putDetail(location, "houseNumber", zone.getPhysicalBed().getHouse().getNumber());
+			putDetail(location, "physicalBedId", zone.getPhysicalBed().getId());
+			putDetail(location, "physicalBedNumber", zone.getPhysicalBed().getNumber());
+			putDetail(location, "bedZoneId", zone.getId());
+			putDetail(location, "bedZoneName", zone.getName());
+		} else {
+			putDetail(location, "tempLocation", record.getTempLocation());
+			putDetail(location, "pottingDueDate", record.getPottingDueDate());
+		}
+		return location;
 	}
 
 	private String inboundWorkMemo(InboundRecord record) {
@@ -441,6 +434,7 @@ public class InboundRecordService {
 		return switch (status) {
 			case TEMP_STORED -> "임시보관";
 			case POTTING_PENDING -> "포트작업대기";
+			case POTTING_IN_PROGRESS -> "작업중";
 			case POTTED -> "포트작업완료";
 			case PLACED -> "배치완료";
 			case CANCELED -> "취소";
@@ -449,26 +443,6 @@ public class InboundRecordService {
 
 	private String formatBottleCount(Integer bottleCount) {
 		return bottleCount == null ? "-" : bottleCount + "병";
-	}
-
-	private Map<String, Object> pottingWorkDetails(
-			InboundRecord inboundRecord,
-			OrchidGroup orchidGroup,
-			InboundRecordPottingRequest request) {
-		Map<String, Object> details = new LinkedHashMap<>();
-		putDetail(details, "inboundRecordId", inboundRecord.getId());
-		putDetail(details, "orchidGroupId", orchidGroup.getId());
-		putDetail(details, "varietyId", inboundRecord.getVariety().getId());
-		putDetail(details, "genus", inboundRecord.getVariety().getGenus());
-		putDetail(details, "varietyName", inboundRecord.getVariety().getName());
-		putDetail(details, "actualQuantity", request.actualQuantity());
-		putDetail(details, "potSize", firstNonBlank(request.potSize(), inboundRecord.getPotSize()));
-		putDetail(details, "ageYear", request.ageYear());
-		putDetail(details, "growthStage", normalize(request.growthStage()));
-		putDetail(details, "placementType", normalize(request.placementType()));
-		putDetail(details, "trayCount", request.trayCount());
-		putDetail(details, "bedZoneId", request.bedZoneId());
-		return details;
 	}
 
 	private void putDetail(Map<String, Object> details, String key, Object value) {
@@ -483,15 +457,6 @@ public class InboundRecordService {
 			throw new IllegalArgumentException("수량은 1 이상이어야 합니다.");
 		}
 		return resolved;
-	}
-
-	private String resolveWorkQuantity(InboundType inboundType, Integer bottleCount, Integer actualQuantity,
-			Integer estimatedQuantity) {
-		if (inboundType == InboundType.FLASK_SEEDLING && bottleCount != null) {
-			return bottleCount + "병";
-		}
-		Integer resolved = actualQuantity != null ? actualQuantity : estimatedQuantity;
-		return resolved == null ? null : String.valueOf(resolved);
 	}
 
 	private String appendMemo(String base, String extra) {

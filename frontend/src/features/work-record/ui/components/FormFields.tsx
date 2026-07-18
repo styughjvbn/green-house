@@ -4,14 +4,16 @@ import type { ReactNode } from "react";
 
 type TextFieldProps = {
   label: string;
+  max?: string;
   onChange: (value: string) => void;
   required?: boolean;
-  type?: "date" | "text";
+  type?: "date" | "number" | "text";
   value: string;
 };
 
 export function TextField({
   label,
+  max,
   onChange,
   required = false,
   type = "text",
@@ -22,6 +24,7 @@ export function TextField({
       <span className="text-sm font-semibold text-[#435047]">{label}</span>
       <input
         className="mt-1 w-full rounded-md border border-[#cfd8cc] px-3 py-2 text-sm"
+        max={max}
         required={required}
         type={type}
         value={value}

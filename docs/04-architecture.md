@@ -17,8 +17,10 @@ green-house/
 - Next.js
 - TypeScript
 - Tailwind CSS
+- shadcn/ui와 Radix UI primitives
 - React 기반 상태 관리
 - 지도/드래그 UI는 기능 단위 컴포넌트로 분리
+- 입고 관리와 작업 관리가 공통으로 사용하는 포트 실행·농장 배치 UI는 `entities/farm/ui`에 두고 저장 API는 각 `features/*`에서 연결한다.
 
 ### Backend
 
@@ -78,6 +80,13 @@ print
 - 작업 유형
 - 작업 이력
 - 이동 작업 이력
+- 신규 작업 전체 단위와 상태 전이
+- 실제 난 묶음 대상 해석과 스냅샷
+- 작업 유형별 효과 handler와 효과 적용 감사 기록
+- 자리 이동·입고 포트 계획의 전용 실행 handler와 분갈이·분주·합식 공통 N:M 실행기
+- 원본 대상 없는 작업 효과 실행 facade와 생성 결과 ID 연결
+- 기존·신규 난 묶음 이력 통합 조회
+- 입고 포트 계획은 `work`의 대상 조회 인터페이스를 `farm`이 구현해 입고 저장소를 작업 모듈에서 직접 참조하지 않는다.
 
 ### partner
 
@@ -131,8 +140,10 @@ dto
 ```text
 src/
  ├─ app/        라우트 진입점
+ ├─ components/ shadcn/ui 공통 primitives
  ├─ features/   기능 단위 화면/상태/API
  ├─ entities/   도메인 타입
+ ├─ lib/        shadcn/ui 공통 유틸
  ├─ shared/     공통 UI/API 유틸
  └─ widgets/    큰 공통 레이아웃
 ```
@@ -143,6 +154,7 @@ src/
 - 실제 UI와 상태 로직은 `features/*`에 둔다.
 - API 타입은 OpenAPI 또는 `entities` 타입과 맞춘다.
 - 화면별 복잡한 상태는 페이지 내부에 몰아넣지 않는다.
+- AppShell의 버튼, 툴팁, 접이식 메뉴, 모바일 시트는 `components/ui`의 shadcn primitives를 사용한다.
 
 ## 6. 데이터 보존 원칙
 

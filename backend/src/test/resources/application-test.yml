@@ -1,3 +1,5 @@
 app:
+  features:
+    work-operation-v2-enabled: true
   auth:
     enabled: false

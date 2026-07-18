@@ -22,6 +22,12 @@ public class WorkType extends BaseEntity {
 	public static final String MOVEMENT_CODE = "MOVEMENT";
 	public static final String INBOUND_CODE = "INBOUND";
 	public static final String POTTING_CODE = "POTTING";
+	public static final String MULTI_CREATE_CODE = "MULTI_CREATE";
+	public static final String REPOT_CODE = "REPOT";
+	public static final String DIVIDE_CODE = "DIVIDE";
+	public static final String MERGE_CODE = "MERGE";
+	public static final String DISCARD_CODE = "DISCARD";
+	public static final String CORRECTION_CODE = "CORRECTION";
 
 	@Id
 	@GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -89,5 +95,36 @@ public class WorkType extends BaseEntity {
 		return !systemType
 				&& !INBOUND_CODE.equals(code)
 				&& !POTTING_CODE.equals(code);
+	}
+
+	public WorkEffectKind effectKind() {
+		return switch (template) {
+			case PESTICIDE, FERTILIZER, CLEANUP, STATUS, MEMO, CORRECTION -> WorkEffectKind.RECORD_ONLY;
+			case DISCARD, MOVEMENT -> WorkEffectKind.ATTRIBUTE_CHANGE;
+			case REPOT, MULTI_CREATE -> WorkEffectKind.STRUCTURE_CHANGE;
+		};
+	}
+
+	public String handlerCode() {
+		if (POTTING_CODE.equals(code)) {
+			return "POTTING";
+		}
+		if (DIVIDE_CODE.equals(code)) {
+			return "DIVIDE";
+		}
+		if (MERGE_CODE.equals(code)) {
+			return "MERGE";
+		}
+		if (DISCARD_CODE.equals(code)) {
+			return "DISCARD";
+		}
+		return switch (template) {
+			case PESTICIDE, FERTILIZER, CLEANUP, STATUS, MEMO -> "RECORD_ONLY";
+			case CORRECTION -> "CORRECTION";
+			case DISCARD -> "DISCARD";
+			case MOVEMENT -> "MOVE";
+			case REPOT -> "REPOT";
+			case MULTI_CREATE -> "MULTI_CREATE";
+		};
 	}
 }

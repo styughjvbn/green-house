@@ -1,8 +1,7 @@
 openapi: 3.1.0
 info:
-  title: Greenhouse API Slice - 출하·경매 추적/정산
-  version: v0
-  description: 경매 lot 조회·상태 변경·반환 확인·수량 보정·경매 정산 API
+  title: Greenhouse API Slice - auction
+  version: 0.0.1
 servers:
 - url: http://localhost:8080
   description: Generated server url
@@ -29,9 +28,34 @@ paths:
         '200':
           description: OK
           content:
-            '*/*':
+            application/json:
               schema:
                 $ref: '#/components/schemas/ApiResponseAuctionSettlementResponse'
+  /api/auction-lots/{id}/results:
+    post:
+      tags:
+      - auction-tracking-controller
+      operationId: addResult
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: int64
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AuctionLotResultRequest'
+        required: true
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponseAuctionLotResponse'
   /api/auction-lots/{id}/confirm-return:
     post:
       tags:
@@ -54,7 +78,7 @@ paths:
         '200':
           description: OK
           content:
-            '*/*':
+            application/json:
               schema:
                 $ref: '#/components/schemas/ApiResponseAuctionLotResponse'
   /api/auction-lots/{id}/adjust-quantity:
@@ -79,32 +103,7 @@ paths:
         '200':
           description: OK
           content:
-            '*/*':
-              schema:
-                $ref: '#/components/schemas/ApiResponseAuctionLotResponse'
-  /api/auction-lots/{id}/results:
-    post:
-      tags:
-      - auction-tracking-controller
-      operationId: addResult
-      parameters:
-      - name: id
-        in: path
-        required: true
-        schema:
-          type: integer
-          format: int64
-      requestBody:
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/AuctionLotResultRequest'
-        required: true
-      responses:
-        '200':
-          description: OK
-          content:
-            '*/*':
+            application/json:
               schema:
                 $ref: '#/components/schemas/ApiResponseAuctionLotResponse'
   /api/auction-lots/{id}/status:
@@ -129,7 +128,7 @@ paths:
         '200':
           description: OK
           content:
-            '*/*':
+            application/json:
               schema:
                 $ref: '#/components/schemas/ApiResponseAuctionLotResponse'
   /api/auction-tracking/summary:
@@ -141,7 +140,7 @@ paths:
         '200':
           description: OK
           content:
-            '*/*':
+            application/json:
               schema:
                 $ref: '#/components/schemas/ApiResponseAuctionTrackingSummaryResponse'
   /api/auction-settlements:
@@ -185,7 +184,7 @@ paths:
         '200':
           description: OK
           content:
-            '*/*':
+            application/json:
               schema:
                 $ref: '#/components/schemas/ApiResponseListAuctionSettlementResponse'
   /api/auction-settlements/{settlementId}:
@@ -204,7 +203,7 @@ paths:
         '200':
           description: OK
           content:
-            '*/*':
+            application/json:
               schema:
                 $ref: '#/components/schemas/ApiResponseAuctionSettlementResponse'
   /api/auction-lots:
@@ -297,7 +296,7 @@ paths:
         '200':
           description: OK
           content:
-            '*/*':
+            application/json:
               schema:
                 $ref: '#/components/schemas/ApiResponseAuctionLotPageResponse'
   /api/auction-lots/{id}:
@@ -316,7 +315,7 @@ paths:
         '200':
           description: OK
           content:
-            '*/*':
+            application/json:
               schema:
                 $ref: '#/components/schemas/ApiResponseAuctionLotResponse'
   /api/auction-lots/{id}/timeline:
@@ -335,7 +334,7 @@ paths:
         '200':
           description: OK
           content:
-            '*/*':
+            application/json:
               schema:
                 $ref: '#/components/schemas/ApiResponseAuctionLotResponse'
 components:

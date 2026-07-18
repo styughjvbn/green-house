@@ -1,110 +1,99 @@
 openapi: 3.1.0
 info:
-  title: Greenhouse API Slice - Analytics
-  version: v0
-  description: 분석 화면 전용 집계 API
+  title: Greenhouse API Slice - analytics
+  version: 0.0.1
 servers:
-  - url: http://localhost:8080
-    description: Local server
+- url: http://localhost:8080
+  description: Generated server url
 paths:
-  /api/analytics/sales:
-    get:
-      tags: [analytics-controller]
-      operationId: getSalesAnalytics
-      parameters:
-        - name: from
-          in: query
-          required: false
-          schema:
-            type: string
-            format: date
-        - name: to
-          in: query
-          required: false
-          schema:
-            type: string
-            format: date
-      responses:
-        "200":
-          description: OK
-          content:
-            "*/*":
-              schema:
-                $ref: "#/components/schemas/ApiResponseSalesAnalyticsResponse"
-  /api/analytics/partners:
-    get:
-      tags: [analytics-controller]
-      operationId: getPartnerAnalytics
-      parameters:
-        - name: from
-          in: query
-          required: false
-          schema:
-            type: string
-            format: date
-        - name: to
-          in: query
-          required: false
-          schema:
-            type: string
-            format: date
-      responses:
-        "200":
-          description: OK
-          content:
-            "*/*":
-              schema:
-                $ref: "#/components/schemas/ApiResponsePartnerAnalyticsResponse"
   /api/analytics/work:
     get:
-      tags: [analytics-controller]
+      tags:
+      - analytics-controller
       operationId: getWorkAnalytics
       parameters:
-        - name: from
-          in: query
-          required: false
-          schema:
-            type: string
-            format: date
-        - name: to
-          in: query
-          required: false
-          schema:
-            type: string
-            format: date
+      - name: from
+        in: query
+        required: false
+        schema:
+          type: string
+          format: date
+      - name: to
+        in: query
+        required: false
+        schema:
+          type: string
+          format: date
       responses:
-        "200":
+        '200':
           description: OK
           content:
-            "*/*":
+            application/json:
               schema:
-                $ref: "#/components/schemas/ApiResponseWorkAnalyticsResponse"
+                $ref: '#/components/schemas/ApiResponseWorkAnalyticsResponse'
+  /api/analytics/sales:
+    get:
+      tags:
+      - analytics-controller
+      operationId: getSalesAnalytics
+      parameters:
+      - name: from
+        in: query
+        required: false
+        schema:
+          type: string
+          format: date
+      - name: to
+        in: query
+        required: false
+        schema:
+          type: string
+          format: date
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponseSalesAnalyticsResponse'
+  /api/analytics/partners:
+    get:
+      tags:
+      - analytics-controller
+      operationId: getPartnerAnalytics
+      parameters:
+      - name: from
+        in: query
+        required: false
+        schema:
+          type: string
+          format: date
+      - name: to
+        in: query
+        required: false
+        schema:
+          type: string
+          format: date
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponsePartnerAnalyticsResponse'
 components:
   schemas:
-    ApiResponseSalesAnalyticsResponse:
+    AnalyticsInsightResponse:
       type: object
       properties:
-        data:
-          $ref: "#/components/schemas/SalesAnalyticsResponse"
-        message:
+        tone:
           type: string
-          nullable: true
-    ApiResponsePartnerAnalyticsResponse:
-      type: object
-      properties:
-        data:
-          $ref: "#/components/schemas/PartnerAnalyticsResponse"
-        message:
+        text:
           type: string
-          nullable: true
-    ApiResponseWorkAnalyticsResponse:
-      type: object
-      properties:
-        data:
-          $ref: "#/components/schemas/WorkAnalyticsResponse"
-        message:
+        actionLabel:
           type: string
-          nullable: true
+        actionHref:
+          type: string
     AnalyticsRankedValueResponse:
       type: object
       properties:
@@ -115,7 +104,6 @@ components:
           format: int64
         secondary:
           type: string
-          nullable: true
     AnalyticsSlipSummaryResponse:
       type: object
       properties:
@@ -142,59 +130,38 @@ components:
           type: string
         salesStatus:
           type: string
-    AnalyticsInsightResponse:
+    ApiResponsePartnerAnalyticsResponse:
       type: object
       properties:
-        tone:
+        data:
+          $ref: '#/components/schemas/PartnerAnalyticsResponse'
+        message:
           type: string
-        text:
-          type: string
-        actionLabel:
-          type: string
-          nullable: true
-        actionHref:
-          type: string
-          nullable: true
-    SalesAnalyticsResponse:
+    ApiResponseSalesAnalyticsResponse:
       type: object
       properties:
-        currentMonthSales:
-          type: integer
-          format: int64
-        shippedQuantity:
-          type: integer
-          format: int64
-        unpaidAmount:
-          type: integer
-          format: int64
-        monthlySales:
+        data:
+          $ref: '#/components/schemas/SalesAnalyticsResponse'
+        message:
+          type: string
+    ApiResponseWorkAnalyticsResponse:
+      type: object
+      properties:
+        data:
+          $ref: '#/components/schemas/WorkAnalyticsResponse'
+        message:
+          type: string
+    PartnerAnalyticsResponse:
+      type: object
+      properties:
+        partnerStats:
           type: array
           items:
-            $ref: "#/components/schemas/AnalyticsRankedValueResponse"
-        varietySales:
-          type: array
-          items:
-            $ref: "#/components/schemas/AnalyticsRankedValueResponse"
+            $ref: '#/components/schemas/PartnerAnalyticsStatResponse'
         partnerSales:
           type: array
           items:
-            $ref: "#/components/schemas/AnalyticsRankedValueResponse"
-        paymentBreakdown:
-          type: array
-          items:
-            $ref: "#/components/schemas/AnalyticsRankedValueResponse"
-        recentSlips:
-          type: array
-          items:
-            $ref: "#/components/schemas/AnalyticsSlipSummaryResponse"
-        unpaidSlips:
-          type: array
-          items:
-            $ref: "#/components/schemas/AnalyticsSlipSummaryResponse"
-        salesInsights:
-          type: array
-          items:
-            $ref: "#/components/schemas/AnalyticsInsightResponse"
+            $ref: '#/components/schemas/AnalyticsRankedValueResponse'
     PartnerAnalyticsStatResponse:
       type: object
       properties:
@@ -205,7 +172,10 @@ components:
           type: string
         partnerType:
           type: string
-          enum: [WHOLESALE, RETAIL, AUCTION_HOUSE]
+          enum:
+          - WHOLESALE
+          - RETAIL
+          - AUCTION_HOUSE
         totalSales:
           type: integer
           format: int64
@@ -230,65 +200,46 @@ components:
         latestSaleDate:
           type: string
           format: date
-          nullable: true
-    PartnerAnalyticsResponse:
+    SalesAnalyticsResponse:
       type: object
       properties:
-        partnerStats:
+        currentMonthSales:
+          type: integer
+          format: int64
+        shippedQuantity:
+          type: integer
+          format: int64
+        unpaidAmount:
+          type: integer
+          format: int64
+        monthlySales:
           type: array
           items:
-            $ref: "#/components/schemas/PartnerAnalyticsStatResponse"
+            $ref: '#/components/schemas/AnalyticsRankedValueResponse'
+        varietySales:
+          type: array
+          items:
+            $ref: '#/components/schemas/AnalyticsRankedValueResponse'
         partnerSales:
           type: array
           items:
-            $ref: "#/components/schemas/AnalyticsRankedValueResponse"
-    WorkRecordResponse:
-      type: object
-      properties:
-        id:
-          type: integer
-          format: int64
-        workTypeId:
-          type: integer
-          format: int64
-          nullable: true
-        workType:
-          type: string
-        workTypeTemplate:
-          type: string
-          nullable: true
-        workDate:
-          type: string
-          format: date
-        targetType:
-          type: string
-        targetId:
-          type: integer
-          format: int64
-          nullable: true
-        materialName:
-          type: string
-          nullable: true
-        dilutionRatio:
-          type: string
-          nullable: true
-        quantity:
-          type: string
-          nullable: true
-        worker:
-          type: string
-          nullable: true
-        fromBedZoneId:
-          type: integer
-          format: int64
-          nullable: true
-        toBedZoneId:
-          type: integer
-          format: int64
-          nullable: true
-        memo:
-          type: string
-          nullable: true
+            $ref: '#/components/schemas/AnalyticsRankedValueResponse'
+        paymentBreakdown:
+          type: array
+          items:
+            $ref: '#/components/schemas/AnalyticsRankedValueResponse'
+        recentSlips:
+          type: array
+          items:
+            $ref: '#/components/schemas/AnalyticsSlipSummaryResponse'
+        unpaidSlips:
+          type: array
+          items:
+            $ref: '#/components/schemas/AnalyticsSlipSummaryResponse'
+        salesInsights:
+          type: array
+          items:
+            $ref: '#/components/schemas/AnalyticsInsightResponse'
     WorkAnalyticsResponse:
       type: object
       properties:
@@ -304,12 +255,72 @@ components:
         latestWorkDate:
           type: string
           format: date
-          nullable: true
         workTypeCounts:
           type: array
           items:
-            $ref: "#/components/schemas/AnalyticsRankedValueResponse"
+            $ref: '#/components/schemas/AnalyticsRankedValueResponse'
         recentRecords:
           type: array
           items:
-            $ref: "#/components/schemas/WorkRecordResponse"
+            $ref: '#/components/schemas/WorkRecordResponse'
+    WorkRecordResponse:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: int64
+        workTypeId:
+          type: integer
+          format: int64
+        workType:
+          type: string
+        workTypeTemplate:
+          type: string
+          enum:
+          - PESTICIDE
+          - FERTILIZER
+          - REPOT
+          - CLEANUP
+          - DISCARD
+          - STATUS
+          - MEMO
+          - MOVEMENT
+          - MULTI_CREATE
+          - CORRECTION
+        workDate:
+          type: string
+          format: date
+        targetType:
+          type: string
+        targetId:
+          type: integer
+          format: int64
+        materialName:
+          type: string
+        dilutionRatio:
+          type: string
+        quantity:
+          type: string
+        worker:
+          type: string
+        fromBedZoneId:
+          type: integer
+          format: int64
+        toBedZoneId:
+          type: integer
+          format: int64
+        details:
+          type: object
+          additionalProperties: {}
+        memo:
+          type: string
+        status:
+          type: string
+          enum:
+          - ACTIVE
+          - CANCELED
+        canceledAt:
+          type: string
+          format: date-time
+        cancelReason:
+          type: string

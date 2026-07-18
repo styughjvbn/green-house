@@ -30,7 +30,6 @@ export function InboundSection({
   varieties,
   selectedId,
   onSelect,
-  onOpenCreate,
   onUpdate,
   onCreate,
   onPotting,
@@ -42,7 +41,6 @@ export function InboundSection({
   varieties: Variety[];
   selectedId: number;
   onSelect: (id: number) => void;
-  onOpenCreate: () => void;
   onUpdate: (
     inboundRecordId: number,
     payload: InboundRecordUpdatePayload,
@@ -129,10 +127,7 @@ export function InboundSection({
         <InboundListCard
           pageData={pageData}
           selectedId={selected?.id}
-          onOpenCreate={() => {
-            onOpenCreate();
-            setDialog("create");
-          }}
+          onOpenCreate={() => setDialog("create")}
           onPageChange={(pageIndex) =>
             updateParams((params) => {
               params.set("inboundPage", String(pageIndex));

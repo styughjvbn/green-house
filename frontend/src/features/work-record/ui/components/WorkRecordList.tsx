@@ -1,6 +1,5 @@
 "use client";
 
-import { Plus } from "lucide-react";
 import type { WorkRecord, WorkType } from "@/entities/farm/types";
 import { formatWorkRecordContent } from "@/entities/farm/workTypes";
 import { PaginationControls } from "@/shared/ui/PaginationControls";
@@ -14,7 +13,6 @@ type WorkRecordListProps = {
   totalPages: number;
   totalRecords: number;
   workTypes: WorkType[];
-  onCreate: () => void;
   onPageChange: (page: number) => void;
   onPageSizeChange: (pageSize: number) => void;
   onSelect: (recordId: number) => void;
@@ -28,7 +26,6 @@ export function WorkRecordList({
   totalPages,
   totalRecords,
   workTypes,
-  onCreate,
   onPageChange,
   onPageSizeChange,
   onSelect,
@@ -37,17 +34,9 @@ export function WorkRecordList({
     <section className="flex min-h-0 flex-col rounded-md border border-[#dfe5dc] bg-white p-4 shadow-sm">
       <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
         <div>
-          <h2 className="text-lg font-bold text-[#17251b]">작업 이력 목록</h2>
+          <h2 className="text-lg font-bold text-[#17251b]">기존 작업 이력</h2>
           <p className="mt-1 text-sm text-[#6a766e]">전체 {totalRecords}건</p>
         </div>
-        <button
-          className="inline-flex h-10 items-center gap-2 rounded-md bg-[#159447] px-4 text-sm font-semibold text-white shadow-sm"
-          type="button"
-          onClick={onCreate}
-        >
-          <Plus className="h-4 w-4" strokeWidth={1.8} aria-hidden="true" />
-          작업 이력 등록
-        </button>
       </div>
       <div className="min-h-0 flex-1 overflow-auto">
         <table className="w-full min-w-[730px] border-collapse text-left text-sm">

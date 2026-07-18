@@ -24,6 +24,8 @@ docs/
   06-api-guide.md
   07-deployment.md
   08-roadmap.md
+  10-work-operation-and-orchid-collection.md
+  11-난 그룹·작업 실행·이력 전파 기능 구현 계획.md
 
   api/
     openapi.yaml
@@ -45,6 +47,8 @@ docs/
 | `06-api-guide.md` | OpenAPI 사용 방법과 API 그룹 |
 | `07-deployment.md` | 로컬 실행, 운영 배포, 백업 체크리스트 |
 | `08-roadmap.md` | 이후 확장 후보와 우선순위 |
+| `10-work-operation-and-orchid-collection.md` | 작업 실행, 대상 스냅샷, 그룹·전파 정책 |
+| `11-난 그룹·작업 실행·이력 전파 기능 구현 계획.md` | 작업 실행·그룹 기능의 단계별 구현 계획 |
 
 ## 관리 규칙
 

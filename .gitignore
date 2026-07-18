@@ -23,6 +23,8 @@ pnpm-debug.log*
 hs_err_pid*
 replay_pid*
 temp/
+__pycache__/
+*.py[cod]
 
 scripts/seed_tools/__pycache__/
 # private seed input data

@@ -38,7 +38,7 @@ export function SalesSummary({
           <Link
             key={slip.id}
             className="grid grid-cols-[1fr_1fr_90px_56px] items-center gap-2 py-2 text-sm"
-            href="/sales"
+            href="/sales/slips"
           >
             <span className="font-semibold text-[#344138]">
               {slip.slipNumber}

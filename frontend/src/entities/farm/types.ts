@@ -17,6 +17,19 @@ export type OrchidGroup = {
   varietyName: string;
   quantity: number;
   potSize: string | null;
+  potSizeCode:
+    | "UNSPECIFIED"
+    | "UNMAPPED"
+    | "POT_2"
+    | "POT_2_5"
+    | "POT_3"
+    | "POT_3_5"
+    | "POT_4"
+    | "POT_4_5"
+    | "POT_5"
+    | "POT_6"
+    | "HANGING"
+    | "ETC";
   ageYear: number | null;
   status: string;
   placementType: string | null;
@@ -183,9 +196,12 @@ export type WorkTypeTemplate =
   | "FERTILIZER"
   | "REPOT"
   | "CLEANUP"
+  | "DISCARD"
   | "STATUS"
   | "MEMO"
-  | "MOVEMENT";
+  | "MOVEMENT"
+  | "MULTI_CREATE"
+  | "CORRECTION";
 
 export type WorkType = {
   id: number;
@@ -217,6 +233,135 @@ export type WorkRecord = {
   status: "ACTIVE" | "CANCELED";
   canceledAt: string | null;
   cancelReason: string | null;
+};
+
+export type WorkOperationStatus =
+  | "PLANNED"
+  | "IN_PROGRESS"
+  | "PAUSED"
+  | "COMPLETED"
+  | "CANCELED"
+  | "CORRECTED";
+
+export type WorkTargetExecutionStatus =
+  | "PENDING"
+  | "IN_PROGRESS"
+  | "PARTIALLY_COMPLETED"
+  | "COMPLETED"
+  | "SKIPPED"
+  | "CANCELED"
+  | "FAILED";
+
+export type WorkLocationSnapshot = {
+  houseId: number;
+  houseNumber: number;
+  physicalBedId: number;
+  physicalBedNumber: number;
+  bedZoneId: number;
+  bedZoneName: string;
+  tempLocation?: string | null;
+  pottingDueDate?: string | null;
+};
+
+export type WorkOperationTarget = {
+  id: number | null;
+  targetReferenceType: "ORCHID_GROUP" | "INBOUND_RECORD";
+  orchidGroupId: number | null;
+  inboundRecordId: number | null;
+  inclusionSource:
+    | "DIRECT"
+    | "FARM"
+    | "HOUSE"
+    | "PHYSICAL_BED"
+    | "BED_ZONE"
+    | "DERIVED_GROUP"
+    | "USER_COLLECTION"
+    | "MANUAL_ADDITION"
+    | "INBOUND_RECORD"
+    | "LINEAGE"
+    | null;
+  varietyName: string;
+  quantitySnapshot: number;
+  ageYearSnapshot: number | null;
+  potSizeCodeSnapshot: string | null;
+  potSizeSnapshot: string | null;
+  locationSnapshot: WorkLocationSnapshot;
+  processedQuantity: number;
+  remainingQuantity: number;
+  executionStatus: WorkTargetExecutionStatus;
+  startedAt: string | null;
+  completedAt: string | null;
+  effectAppliedAt: string | null;
+  worker: string | null;
+  resultDetails: Record<string, unknown> | null;
+};
+
+export type WorkTargetPreview = {
+  orchidGroupCount: number;
+  totalQuantity: number;
+  targets: WorkOperationTarget[];
+};
+
+export type WorkOperation = {
+  id: number;
+  workTypeId: number;
+  workTypeCode: string;
+  workType: string;
+  workTypeTemplate: WorkTypeTemplate;
+  title: string;
+  status: WorkOperationStatus;
+  plannedStartDate: string;
+  plannedEndDate: string | null;
+  actualStartAt: string | null;
+  actualEndAt: string | null;
+  sourceScopeType:
+    | WorkRecordTargetType
+    | "NONE"
+    | "DERIVED_GROUP"
+    | "USER_COLLECTION"
+    | "MANUAL_SELECTION"
+    | "INBOUND_RECORD_SELECTION";
+  sourceScopeId: number | null;
+  sourceConditionSnapshot: Record<string, unknown>;
+  targetSnapshotAt: string;
+  details: Record<string, unknown> | null;
+  worker: string | null;
+  memo: string | null;
+  progress: {
+    total: number;
+    pending: number;
+    inProgress: number;
+    partial: number;
+    completed: number;
+    skipped: number;
+    canceled: number;
+    failed: number;
+    progressPercent: number;
+  };
+  targets: WorkOperationTarget[];
+};
+
+export type OrchidGroupWorkHistory = {
+  sourceKind: "WORK_OPERATION" | "WORK_OPERATION_EFFECT" | "LEGACY_WORK_RECORD";
+  workOperationId: number | null;
+  legacyWorkRecordId: number | null;
+  workTypeId: number | null;
+  workType: string;
+  title: string;
+  workDate: string;
+  status: string;
+  propagated: boolean;
+  sourceScopeType:
+    | WorkRecordTargetType
+    | "NONE"
+    | "DERIVED_GROUP"
+    | "USER_COLLECTION"
+    | "MANUAL_SELECTION";
+  sourceScopeId: number | null;
+  locationSnapshot: WorkLocationSnapshot | null;
+  currentLocation: WorkLocationSnapshot;
+  worker: string | null;
+  memo: string | null;
 };
 
 export type PartnerType = "WHOLESALE" | "RETAIL" | "AUCTION_HOUSE";

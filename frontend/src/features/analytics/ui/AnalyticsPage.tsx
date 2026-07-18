@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { usePathname, useRouter, useSearchParams } from "next/navigation";
+import { useRouter } from "next/navigation";
 import { createAnalyticsViewModel } from "../lib/analyticsView";
 import type {
   AnalyticsFilters,
@@ -26,12 +26,7 @@ const DEFAULT_FILTERS: AnalyticsFilters = {
 
 export function AnalyticsPage(props: AnalyticsPageProps) {
   const router = useRouter();
-  const pathname = usePathname();
-  const searchParams = useSearchParams();
-  const tab =
-    props.activeTab ??
-    (searchParams.get("tab") as AnalyticsTab | null) ??
-    "SALES";
+  const tab = props.activeTab ?? "SALES";
   const [draftFilters, setDraftFilters] = useState(DEFAULT_FILTERS);
   const [filters, setFilters] = useState(DEFAULT_FILTERS);
   const view = useMemo(() => createAnalyticsViewModel(props), [props]);
@@ -61,9 +56,14 @@ export function AnalyticsPage(props: AnalyticsPageProps) {
   };
 
   function updateTab(nextTab: AnalyticsTab) {
-    const params = new URLSearchParams(searchParams.toString());
-    params.set("tab", nextTab);
-    router.push(`${pathname}?${params.toString()}`);
+    const path = {
+      SALES: "/analytics/sales",
+      VARIETY: "/analytics/variety",
+      CUSTOMER: "/analytics/customer",
+      SPACE: "/analytics/space",
+      WORK: "/analytics/work",
+    }[nextTab];
+    router.push(path);
   }
 
   return (

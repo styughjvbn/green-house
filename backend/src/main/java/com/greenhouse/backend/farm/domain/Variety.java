@@ -64,7 +64,7 @@ public class Variety extends BaseEntity {
 		this.genus = genus;
 		this.name = name;
 		this.alias = alias;
-		this.defaultPotSize = defaultPotSize;
+		this.defaultPotSize = PotSizeCode.fromInput(defaultPotSize).getDisplayValue();
 		this.saleEnabled = saleEnabled;
 		this.active = active;
 		this.description = description;
@@ -82,7 +82,7 @@ public class Variety extends BaseEntity {
 		this.genus = genus;
 		this.name = name;
 		this.alias = alias;
-		this.defaultPotSize = defaultPotSize;
+		this.defaultPotSize = PotSizeCode.fromInput(defaultPotSize).getDisplayValue();
 		this.saleEnabled = saleEnabled;
 		this.description = description;
 		this.memo = memo;

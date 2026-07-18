@@ -36,7 +36,10 @@ SPRING_PROFILES_ACTIVE
 JPA_DDL_AUTO
 FRONTEND_ORIGIN_PATTERNS
 AUTH_ENABLED
+WORK_OPERATION_V2_ENABLED
 ```
+
+신규 작업 실행 API는 기본 활성화된다. 운영 중 복귀가 필요하면 `WORK_OPERATION_V2_ENABLED=false`로 설정해 신규 작업 API를 숨기고 기존 수동 작업 기록 작성을 다시 활성화한다.
 
 인증을 적용하는 경우 다음 값을 별도로 관리한다.
 
@@ -134,6 +137,21 @@ pg_dump -U greenhouse greenhouse > backup_$(date +%Y%m%d).sql
 - 월 1회 장기 보관
 - 다른 PC 또는 외장 디스크에 복사
 - 복구 테스트 주기적으로 수행
+
+운영 백업을 V6 이하 스키마로 복원한 뒤 현재 백엔드를 시작하면 Flyway가 최신 스키마까지 순서대로 갱신한다. V7은 작업 V2 구조를 생성하고, V8은 기존 `work_records`를 `work_operations`·대상·실행 데이터로 변환하며 원본 행은 감사용으로 보존한다. 변환 작업의 `request_key`는 `LEGACY_WORK_RECORD:{id}` 형식이므로 같은 이력이 중복 생성되지 않는다.
+
+운영 custom dump로 로컬 개발 DB를 초기화할 때는 다음 스크립트를 사용한다. 백업을 생략하면 `temp/`의 최신 `*.dump.gz` 또는 `*.dump`를 선택한다. 스크립트는 로컬 DB만 허용하며 기존 백엔드를 종료하고, 복원 후 Flyway 적용·Hibernate 스키마 검증·작업 V2 무결성 검사를 수행한다.
+
+```bash
+# 확인 문구 입력 후 실행
+./scripts/reset-dev-db.sh
+
+# 백업 지정
+./scripts/reset-dev-db.sh temp/green-house_20260717_120001.dump.gz
+
+# CI 또는 반복 개발 작업
+./scripts/reset-dev-db.sh --yes
+```
 
 ## 6. 운영 전 체크리스트
 

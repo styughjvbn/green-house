@@ -1,8 +1,7 @@
 openapi: 3.1.0
 info:
-  title: Greenhouse API Slice - 난 묶음 명령/정밀 배치
-  version: v0
-  description: 난 묶음 생성·수정·삭제·이동, 정밀 배치 프로필 API
+  title: Greenhouse API Slice - orchid-command
+  version: 0.0.1
 servers:
 - url: http://localhost:8080
   description: Generated server url
@@ -23,7 +22,7 @@ paths:
         '200':
           description: OK
           content:
-            '*/*':
+            application/json:
               schema:
                 $ref: '#/components/schemas/ApiResponseBedZonePlacementProfileResponse'
     put:
@@ -47,14 +46,69 @@ paths:
         '200':
           description: OK
           content:
-            '*/*':
+            application/json:
               schema:
                 $ref: '#/components/schemas/ApiResponseBedZonePlacementProfileResponse'
+  /api/work-operations/{workOperationId}/cancel-created-orchid-groups:
+    post:
+      tags:
+      - multi-create-work-operation-controller
+      operationId: cancel_1
+      parameters:
+      - name: workOperationId
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: int64
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponseMultiCreateWorkOperationResponse'
+  /api/work-operations/repot:
+    post:
+      tags:
+      - repot-work-operation-controller
+      operationId: execute
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RepotWorkOperationRequest'
+        required: true
+      responses:
+        '201':
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponseRepotWorkOperationResponse'
+  /api/work-operations/multi-create:
+    post:
+      tags:
+      - multi-create-work-operation-controller
+      operationId: create_2
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/MultiCreateWorkOperationRequest'
+        required: true
+      responses:
+        '201':
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponseMultiCreateWorkOperationResponse'
   /api/orchid-groups:
     post:
       tags:
       - orchid-group-command-controller
-      operationId: create_1
+      operationId: create_4
       requestBody:
         content:
           application/json:
@@ -65,14 +119,14 @@ paths:
         '201':
           description: Created
           content:
-            '*/*':
+            application/json:
               schema:
                 $ref: '#/components/schemas/ApiResponseOrchidGroupResponse'
   /api/orchid-groups/{orchidGroupId}:
     delete:
       tags:
       - orchid-group-command-controller
-      operationId: delete
+      operationId: delete_1
       parameters:
       - name: orchidGroupId
         in: path
@@ -84,13 +138,13 @@ paths:
         '200':
           description: OK
           content:
-            '*/*':
+            application/json:
               schema:
                 $ref: '#/components/schemas/ApiResponseVoid'
     patch:
       tags:
       - orchid-group-command-controller
-      operationId: update_2
+      operationId: update_3
       parameters:
       - name: orchidGroupId
         in: path
@@ -108,7 +162,7 @@ paths:
         '200':
           description: OK
           content:
-            '*/*':
+            application/json:
               schema:
                 $ref: '#/components/schemas/ApiResponseOrchidGroupResponse'
   /api/orchid-groups/{orchidGroupId}/move:
@@ -133,9 +187,66 @@ paths:
         '200':
           description: OK
           content:
-            '*/*':
+            application/json:
               schema:
                 $ref: '#/components/schemas/ApiResponseOrchidGroupResponse'
+  /api/work-operations/{workOperationId}/repot-results:
+    get:
+      tags:
+      - repot-work-operation-controller
+      operationId: get_4
+      parameters:
+      - name: workOperationId
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: int64
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponseRepotWorkOperationResponse'
+  /api/work-operations/{workOperationId}/created-orchid-groups:
+    get:
+      tags:
+      - multi-create-work-operation-controller
+      operationId: get_5
+      parameters:
+      - name: workOperationId
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: int64
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponseMultiCreateWorkOperationResponse'
+  /api/work-operations/{workOperationId}/cancel-eligibility:
+    get:
+      tags:
+      - multi-create-work-operation-controller
+      operationId: getCancellationEligibility
+      parameters:
+      - name: workOperationId
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: int64
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponseMultiCreateCancellationEligibilityResponse'
 components:
   schemas:
     ApiResponseBedZonePlacementProfileResponse:
@@ -145,11 +256,32 @@ components:
           $ref: '#/components/schemas/BedZonePlacementProfileResponse'
         message:
           type: string
+    ApiResponseMultiCreateCancellationEligibilityResponse:
+      type: object
+      properties:
+        data:
+          $ref: '#/components/schemas/MultiCreateCancellationEligibilityResponse'
+        message:
+          type: string
+    ApiResponseMultiCreateWorkOperationResponse:
+      type: object
+      properties:
+        data:
+          $ref: '#/components/schemas/MultiCreateWorkOperationResponse'
+        message:
+          type: string
     ApiResponseOrchidGroupResponse:
       type: object
       properties:
         data:
           $ref: '#/components/schemas/OrchidGroupResponse'
+        message:
+          type: string
+    ApiResponseRepotWorkOperationResponse:
+      type: object
+      properties:
+        data:
+          $ref: '#/components/schemas/RepotWorkOperationResponse'
         message:
           type: string
     ApiResponseVoid:
@@ -181,6 +313,9 @@ components:
           type: integer
           format: int32
           minimum: 0
+        unitSpan:
+          type: number
+          minimum: 0.0
         allowed:
           type: boolean
         memo:
@@ -192,6 +327,7 @@ components:
       - capacityMode
       - capacityValue
       - placementType
+      - unitSpan
     BedZoneCapacityResponse:
       type: object
       properties:
@@ -210,6 +346,8 @@ components:
           - EXPANDED
           - COMPRESSED
           - TEMPORARY
+        unitSpan:
+          type: number
         capacityValue:
           type: integer
           format: int32
@@ -220,13 +358,13 @@ components:
     BedZonePlacementProfileRequest:
       type: object
       properties:
-        segments:
+        capacities:
           type: array
           items:
-            $ref: '#/components/schemas/BedZoneSegmentRequest'
+            $ref: '#/components/schemas/BedZoneCapacityRequest'
           minItems: 1
       required:
-      - segments
+      - capacities
     BedZonePlacementProfileResponse:
       type: object
       properties:
@@ -241,70 +379,98 @@ components:
         physicalBedNumber:
           type: integer
           format: int32
-        hasUnassignedGroups:
-          type: boolean
-        segments:
-          type: array
-          items:
-            $ref: '#/components/schemas/BedZoneSegmentResponse'
-    BedZoneSegmentRequest:
-      type: object
-      properties:
-        id:
-          type: integer
-          format: int64
-        name:
-          type: string
-          maxLength: 100
-          minLength: 0
-        segmentType:
-          type: string
-          enum:
-          - START
-          - MIDDLE
-          - END
-          - CUSTOM
-        sortOrder:
-          type: integer
-          format: int32
-          minimum: 1
-        memo:
-          type: string
-          maxLength: 1000
-          minLength: 0
-        capacities:
-          type: array
-          items:
-            $ref: '#/components/schemas/BedZoneCapacityRequest'
-      required:
-      - capacities
-      - name
-      - segmentType
-      - sortOrder
-    BedZoneSegmentResponse:
-      type: object
-      properties:
-        id:
-          type: integer
-          format: int64
-        name:
-          type: string
-        segmentType:
-          type: string
-          enum:
-          - START
-          - MIDDLE
-          - END
-          - CUSTOM
-        sortOrder:
-          type: integer
-          format: int32
-        memo:
+        positionUnitCount:
+          type: number
+        positionUnitLabel:
           type: string
         capacities:
           type: array
           items:
             $ref: '#/components/schemas/BedZoneCapacityResponse'
+    Blocker:
+      type: object
+      properties:
+        code:
+          type: string
+        message:
+          type: string
+        count:
+          type: integer
+          format: int64
+    MultiCreateCancellationEligibilityResponse:
+      type: object
+      properties:
+        workOperationId:
+          type: integer
+          format: int64
+        cancelable:
+          type: boolean
+        createdOrchidGroupIds:
+          type: array
+          items:
+            type: integer
+            format: int64
+        blockers:
+          type: array
+          items:
+            $ref: '#/components/schemas/Blocker'
+    MultiCreateOrchidGroupRowRequest:
+      type: object
+      properties:
+        orchidGroup:
+          $ref: '#/components/schemas/OrchidGroupCreateRequest'
+        collectionIds:
+          type: array
+          items:
+            type: integer
+            format: int64
+          maxItems: 20
+          minItems: 0
+          uniqueItems: true
+      required:
+      - orchidGroup
+    MultiCreateWorkOperationRequest:
+      type: object
+      properties:
+        idempotencyKey:
+          type: string
+          maxLength: 100
+          minLength: 0
+        title:
+          type: string
+          maxLength: 150
+          minLength: 0
+        workDate:
+          type: string
+          format: date
+        worker:
+          type: string
+          maxLength: 100
+          minLength: 0
+        memo:
+          type: string
+          maxLength: 1000
+          minLength: 0
+        rows:
+          type: array
+          items:
+            $ref: '#/components/schemas/MultiCreateOrchidGroupRowRequest'
+          maxItems: 100
+          minItems: 0
+      required:
+      - idempotencyKey
+      - rows
+      - title
+      - workDate
+    MultiCreateWorkOperationResponse:
+      type: object
+      properties:
+        operation:
+          $ref: '#/components/schemas/WorkOperationResponse'
+        createdOrchidGroups:
+          type: array
+          items:
+            $ref: '#/components/schemas/OrchidGroupResponse'
     OrchidGroupCreateRequest:
       type: object
       properties:
@@ -340,6 +506,12 @@ components:
           minimum: 0
         splitPlacementAllowed:
           type: boolean
+        startPosition:
+          type: number
+          minimum: 0.0
+        endPosition:
+          type: number
+          minimum: 0.0
         memo:
           type: string
           maxLength: 1000
@@ -349,44 +521,18 @@ components:
       - quantity
       - status
       - varietyId
-    OrchidGroupMovePlacementRequest:
-      type: object
-      properties:
-        segmentId:
-          type: integer
-          format: int64
-        quantity:
-          type: integer
-          format: int32
-          minimum: 1
-        trayCount:
-          type: integer
-          format: int32
-          minimum: 1
-      required:
-      - quantity
-      - segmentId
     OrchidGroupMoveRequest:
       type: object
       properties:
         toBedZoneId:
           type: integer
           format: int64
-        placementMode:
-          type: string
-          enum:
-          - SPACIOUS
-          - STANDARD
-          - EXPANDED
-          - COMPRESSED
-          - TEMPORARY
-        placements:
-          type: array
-          items:
-            $ref: '#/components/schemas/OrchidGroupMovePlacementRequest'
-        reorganizeDueDate:
-          type: string
-          format: date
+        startPosition:
+          type: number
+          minimum: 0.0
+        endPosition:
+          type: number
+          minimum: 0.0
         worker:
           type: string
           maxLength: 100
@@ -418,6 +564,21 @@ components:
           format: int32
         potSize:
           type: string
+        potSizeCode:
+          type: string
+          enum:
+          - UNSPECIFIED
+          - UNMAPPED
+          - POT_2
+          - POT_2_5
+          - POT_3
+          - POT_3_5
+          - POT_4
+          - POT_4_5
+          - POT_5
+          - POT_6
+          - HANGING
+          - ETC
         ageYear:
           type: integer
           format: int32
@@ -430,15 +591,18 @@ components:
           format: int32
         splitPlacementAllowed:
           type: boolean
-        segmentPlacements:
-          type: array
-          items:
-            $ref: '#/components/schemas/OrchidGroupSegmentPlacementResponse'
+        startPosition:
+          type: number
+        endPosition:
+          type: number
         sortOrder:
           type: integer
           format: int32
         memo:
           type: string
+        houseId:
+          type: integer
+          format: int64
         houseNumber:
           type: integer
           format: int32
@@ -446,36 +610,6 @@ components:
           type: integer
           format: int32
         bedZoneName:
-          type: string
-    OrchidGroupSegmentPlacementResponse:
-      type: object
-      properties:
-        id:
-          type: integer
-          format: int64
-        segmentId:
-          type: integer
-          format: int64
-        segmentName:
-          type: string
-        quantity:
-          type: integer
-          format: int32
-        trayCount:
-          type: integer
-          format: int32
-        placementMode:
-          type: string
-          enum:
-          - SPACIOUS
-          - STANDARD
-          - EXPANDED
-          - COMPRESSED
-          - TEMPORARY
-        reorganizeDueDate:
-          type: string
-          format: date
-        memo:
           type: string
     OrchidGroupUpdateRequest:
       type: object
@@ -509,6 +643,12 @@ components:
           minimum: 0
         splitPlacementAllowed:
           type: boolean
+        startPosition:
+          type: number
+          minimum: 0.0
+        endPosition:
+          type: number
+          minimum: 0.0
         memo:
           type: string
           maxLength: 1000
@@ -517,3 +657,313 @@ components:
       - quantity
       - status
       - varietyId
+    RepotResultOrchidGroupRequest:
+      type: object
+      properties:
+        bedZoneId:
+          type: integer
+          format: int64
+        quantity:
+          type: integer
+          format: int32
+          minimum: 1
+        potSize:
+          type: string
+          maxLength: 50
+          minLength: 0
+        ageYear:
+          type: integer
+          format: int32
+          minimum: 0
+        placementType:
+          type: string
+          maxLength: 50
+          minLength: 0
+        trayCount:
+          type: integer
+          format: int32
+          minimum: 0
+        splitPlacementAllowed:
+          type: boolean
+        startPosition:
+          type: number
+          minimum: 0.0
+        endPosition:
+          type: number
+          minimum: 0.0
+        memo:
+          type: string
+          maxLength: 1000
+          minLength: 0
+      required:
+      - bedZoneId
+      - endPosition
+      - quantity
+      - startPosition
+    RepotWorkOperationRequest:
+      type: object
+      properties:
+        idempotencyKey:
+          type: string
+          maxLength: 100
+          minLength: 0
+        title:
+          type: string
+          maxLength: 150
+          minLength: 0
+        workDate:
+          type: string
+          format: date
+        worker:
+          type: string
+          maxLength: 100
+          minLength: 0
+        memo:
+          type: string
+          maxLength: 1000
+          minLength: 0
+        sourceOrchidGroupId:
+          type: integer
+          format: int64
+        inputQuantity:
+          type: integer
+          format: int32
+          minimum: 1
+        lossQuantity:
+          type: integer
+          format: int32
+          minimum: 0
+        lossReason:
+          type: string
+          maxLength: 1000
+          minLength: 0
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/RepotResultOrchidGroupRequest'
+          maxItems: 100
+          minItems: 0
+        inheritCollectionIds:
+          type: array
+          items:
+            type: integer
+            format: int64
+          maxItems: 20
+          minItems: 0
+          uniqueItems: true
+      required:
+      - idempotencyKey
+      - inputQuantity
+      - lossQuantity
+      - results
+      - sourceOrchidGroupId
+      - title
+      - workDate
+    RepotWorkOperationResponse:
+      type: object
+      properties:
+        operation:
+          $ref: '#/components/schemas/WorkOperationResponse'
+        sourceOrchidGroup:
+          $ref: '#/components/schemas/OrchidGroupResponse'
+        resultOrchidGroups:
+          type: array
+          items:
+            $ref: '#/components/schemas/OrchidGroupResponse'
+        inputQuantity:
+          type: integer
+          format: int32
+        lossQuantity:
+          type: integer
+          format: int32
+        lossReason:
+          type: string
+    WorkOperationProgressResponse:
+      type: object
+      properties:
+        total:
+          type: integer
+          format: int32
+        pending:
+          type: integer
+          format: int32
+        inProgress:
+          type: integer
+          format: int32
+        partial:
+          type: integer
+          format: int32
+        completed:
+          type: integer
+          format: int32
+        skipped:
+          type: integer
+          format: int32
+        canceled:
+          type: integer
+          format: int32
+        failed:
+          type: integer
+          format: int32
+        progressPercent:
+          type: integer
+          format: int32
+    WorkOperationResponse:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: int64
+        workTypeId:
+          type: integer
+          format: int64
+        workTypeCode:
+          type: string
+        workType:
+          type: string
+        workTypeTemplate:
+          type: string
+          enum:
+          - PESTICIDE
+          - FERTILIZER
+          - REPOT
+          - CLEANUP
+          - DISCARD
+          - STATUS
+          - MEMO
+          - MOVEMENT
+          - MULTI_CREATE
+          - CORRECTION
+        title:
+          type: string
+        status:
+          type: string
+          enum:
+          - PLANNED
+          - IN_PROGRESS
+          - PAUSED
+          - COMPLETED
+          - CANCELED
+          - CORRECTED
+        plannedStartDate:
+          type: string
+          format: date
+        plannedEndDate:
+          type: string
+          format: date
+        actualStartAt:
+          type: string
+          format: date-time
+        actualEndAt:
+          type: string
+          format: date-time
+        sourceScopeType:
+          type: string
+          enum:
+          - NONE
+          - FARM
+          - HOUSE
+          - PHYSICAL_BED
+          - BED_ZONE
+          - ORCHID_GROUP
+          - DERIVED_GROUP
+          - USER_COLLECTION
+          - MANUAL_SELECTION
+          - INBOUND_RECORD_SELECTION
+        sourceScopeId:
+          type: integer
+          format: int64
+        sourceConditionSnapshot:
+          type: object
+          additionalProperties: {}
+        targetSnapshotAt:
+          type: string
+          format: date-time
+        details:
+          type: object
+          additionalProperties: {}
+        worker:
+          type: string
+        memo:
+          type: string
+        progress:
+          $ref: '#/components/schemas/WorkOperationProgressResponse'
+        targets:
+          type: array
+          items:
+            $ref: '#/components/schemas/WorkOperationTargetResponse'
+    WorkOperationTargetResponse:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: int64
+        targetReferenceType:
+          type: string
+          enum:
+          - ORCHID_GROUP
+          - INBOUND_RECORD
+        orchidGroupId:
+          type: integer
+          format: int64
+        inboundRecordId:
+          type: integer
+          format: int64
+        inclusionSource:
+          type: string
+          enum:
+          - DIRECT
+          - FARM
+          - HOUSE
+          - PHYSICAL_BED
+          - BED_ZONE
+          - DERIVED_GROUP
+          - USER_COLLECTION
+          - MANUAL_ADDITION
+          - INBOUND_RECORD
+          - LINEAGE
+        varietyName:
+          type: string
+        quantitySnapshot:
+          type: integer
+          format: int32
+        ageYearSnapshot:
+          type: integer
+          format: int32
+        potSizeCodeSnapshot:
+          type: string
+        potSizeSnapshot:
+          type: string
+        locationSnapshot:
+          type: object
+          additionalProperties: {}
+        processedQuantity:
+          type: integer
+          format: int32
+        remainingQuantity:
+          type: integer
+          format: int32
+        executionStatus:
+          type: string
+          enum:
+          - PENDING
+          - IN_PROGRESS
+          - PARTIALLY_COMPLETED
+          - COMPLETED
+          - SKIPPED
+          - CANCELED
+          - FAILED
+        startedAt:
+          type: string
+          format: date-time
+        completedAt:
+          type: string
+          format: date-time
+        effectAppliedAt:
+          type: string
+          format: date-time
+        worker:
+          type: string
+        resultDetails:
+          type: object
+          additionalProperties: {}

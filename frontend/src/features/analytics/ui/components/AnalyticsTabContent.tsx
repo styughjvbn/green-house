@@ -134,7 +134,7 @@ function BusinessPartnerTab({
             partnerStats.slice(0, 10).map((item) => (
               <Link
                 className="grid grid-cols-[minmax(0,1.1fr)_7rem_6rem_5rem_6rem] items-center rounded-md border border-[#e1e6e1] px-4 py-3 text-xs hover:bg-[#f3f9f3]"
-                href={`/sales?tab=PARTNERS`}
+                href="/sales/partners"
                 key={item.partnerId}
               >
                 <div className="min-w-0">
@@ -159,7 +159,7 @@ function BusinessPartnerTab({
           ) : (
             <Link
               className="flex h-24 items-center justify-center rounded-md border border-dashed border-[#d7ded8] text-xs text-[#6b776f]"
-              href="/sales?tab=PARTNERS"
+              href="/sales/partners"
             >
               거래 데이터 없음
             </Link>
@@ -425,7 +425,7 @@ function WorkTab({ props }: { props: AnalyticsPageProps }) {
         </div>
         <Link
           className="mt-3 flex h-9 items-center justify-center rounded-md border border-[#d7ded8] text-xs font-semibold"
-          href="/work-records"
+          href="/work-records/history"
         >
           작업 이력 보기
         </Link>

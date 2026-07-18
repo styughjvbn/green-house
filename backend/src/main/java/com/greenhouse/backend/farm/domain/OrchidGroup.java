@@ -3,6 +3,8 @@ package com.greenhouse.backend.farm.domain;
 import com.greenhouse.backend.common.domain.BaseEntity;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
 import jakarta.persistence.FetchType;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
@@ -51,6 +53,10 @@ public class OrchidGroup extends BaseEntity {
 	@Column(name = "pot_size")
 	private String potSize;
 
+	@Enumerated(EnumType.STRING)
+	@Column(name = "pot_size_code", nullable = false, length = 30)
+	private PotSizeCode potSizeCode;
+
 	@Column(name = "age_year")
 	private Integer ageYear;
 
@@ -94,7 +100,7 @@ public class OrchidGroup extends BaseEntity {
 		this.varietyName = varietyName;
 		this.quantity = quantity;
 		this.reservedQuantity = 0;
-		this.potSize = potSize;
+		applyPotSize(potSize);
 		this.ageYear = ageYear;
 		this.status = status;
 		this.sortOrder = sortOrder;
@@ -119,7 +125,7 @@ public class OrchidGroup extends BaseEntity {
 		this.genus = genus;
 		this.varietyName = varietyName;
 		this.quantity = quantity;
-		this.potSize = potSize;
+		applyPotSize(potSize);
 		this.ageYear = ageYear;
 		this.status = status;
 		this.placementType = placementType;
@@ -128,6 +134,11 @@ public class OrchidGroup extends BaseEntity {
 		this.startPosition = startPosition;
 		this.endPosition = endPosition;
 		this.memo = memo;
+	}
+
+	private void applyPotSize(String potSize) {
+		this.potSizeCode = PotSizeCode.fromInput(potSize);
+		this.potSize = this.potSizeCode.getDisplayValue();
 	}
 
 	public void moveTo(BedZone bedZone, Integer sortOrder, BigDecimal startPosition, BigDecimal endPosition) {
@@ -147,6 +158,9 @@ public class OrchidGroup extends BaseEntity {
 
 	public void assignInboundRecord(InboundRecord inboundRecord) {
 		this.inboundRecord = inboundRecord;
+		if (inboundRecord != null) {
+			inboundRecord.addCreatedOrchidGroup(this);
+		}
 	}
 
 	public int getAvailableQuantity() {
@@ -155,6 +169,76 @@ public class OrchidGroup extends BaseEntity {
 
 	public boolean isVisibleInActiveViews() {
 		return quantity != null && quantity > 0;
+	}
+
+	public void cancelCreation() {
+		if ("생성 취소".equals(status)) {
+			return;
+		}
+		if (reservedQuantity != 0) {
+			throw new IllegalArgumentException("예약 수량이 있는 난 묶음은 생성을 취소할 수 없습니다.");
+		}
+		this.quantity = 0;
+		this.status = "생성 취소";
+	}
+
+	public void applyRepot(Integer inputQuantity) {
+		applyRepot(inputQuantity, null, null);
+	}
+
+	public void applyRepot(
+			Integer inputQuantity,
+			BigDecimal releasedStartPosition,
+			BigDecimal releasedEndPosition) {
+		validatePositiveQuantity(inputQuantity, "분갈이 투입 수량");
+		if (getAvailableQuantity() < inputQuantity) {
+			throw new IllegalArgumentException("난 묶음 가용 수량보다 많이 분갈이할 수 없습니다.");
+		}
+		boolean partial = inputQuantity < this.quantity;
+		if ((releasedStartPosition == null) != (releasedEndPosition == null)) {
+			throw new IllegalArgumentException("원본에서 비울 시작·끝 위치를 모두 입력해야 합니다.");
+		}
+		if (releasedStartPosition != null) {
+			if (!partial) {
+				throw new IllegalArgumentException("일부 작업할 때만 원본에서 비울 위치를 지정할 수 있습니다.");
+			}
+			if (startPosition == null || endPosition == null
+					|| releasedStartPosition.compareTo(startPosition) <= 0
+					|| releasedStartPosition.compareTo(endPosition) >= 0
+					|| releasedEndPosition.compareTo(endPosition) != 0) {
+				throw new IllegalArgumentException("원본 배치의 뒤쪽 연속 구간만 비울 수 있습니다.");
+			}
+			this.endPosition = releasedStartPosition;
+		}
+		this.quantity -= inputQuantity;
+		if (this.quantity == 0) {
+			this.status = "종료";
+		}
+	}
+
+	public void discard(Integer discardQuantity) {
+		validatePositiveQuantity(discardQuantity, "폐기 수량");
+		if (getAvailableQuantity() < discardQuantity) {
+			throw new IllegalArgumentException("난 묶음 가용 수량보다 많이 폐기할 수 없습니다.");
+		}
+		this.quantity -= discardQuantity;
+		if (this.quantity == 0) {
+			this.status = "폐기";
+		}
+	}
+
+	public void correctQuantityAndStatus(Integer correctedQuantity, String correctedStatus) {
+		if (correctedQuantity == null || correctedQuantity < 0) {
+			throw new IllegalArgumentException("보정 수량은 0 이상이어야 합니다.");
+		}
+		if (correctedQuantity < reservedQuantity) {
+			throw new IllegalArgumentException("보정 수량은 현재 예약 수량보다 작을 수 없습니다.");
+		}
+		if (correctedStatus == null || correctedStatus.isBlank()) {
+			throw new IllegalArgumentException("보정 상태가 필요합니다.");
+		}
+		this.quantity = correctedQuantity;
+		this.status = correctedStatus.trim();
 	}
 
 	public void reserve(Integer reserveQuantity) {

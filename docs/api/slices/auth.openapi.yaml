@@ -1,58 +1,68 @@
 openapi: 3.1.0
 info:
-  title: Green House Auth API
-  version: 1.0.0
+  title: Greenhouse API Slice - auth
+  version: 0.0.1
+servers:
+- url: http://localhost:8080
+  description: Generated server url
 paths:
+  /api/auth/logout:
+    post:
+      tags:
+      - auth-controller
+      operationId: logout
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponseVoid'
   /api/auth/login:
     post:
-      tags: [auth-controller]
-      summary: 세션 로그인
+      tags:
+      - auth-controller
+      operationId: login
       requestBody:
-        required: true
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/LoginRequest"
+              $ref: '#/components/schemas/LoginRequest'
+        required: true
       responses:
-        "200":
-          description: 로그인 성공
+        '200':
+          description: OK
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/ApiResponseAuthenticatedUserResponse"
+                $ref: '#/components/schemas/ApiResponseAuthenticatedUserResponse'
   /api/auth/me:
     get:
-      tags: [auth-controller]
-      summary: 현재 로그인 사용자 조회
+      tags:
+      - auth-controller
+      operationId: me
       responses:
-        "200":
-          description: 현재 사용자
+        '200':
+          description: OK
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/ApiResponseAuthenticatedUserResponse"
-  /api/auth/logout:
-    post:
-      tags: [auth-controller]
-      summary: 세션 로그아웃
-      responses:
-        "200":
-          description: 로그아웃 성공
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ApiResponseVoid"
+                $ref: '#/components/schemas/ApiResponseAuthenticatedUserResponse'
 components:
   schemas:
-    LoginRequest:
+    ApiResponseAuthenticatedUserResponse:
       type: object
-      required: [username, password]
       properties:
-        username:
+        data:
+          $ref: '#/components/schemas/AuthenticatedUserResponse'
+        message:
           type: string
-        password:
+    ApiResponseVoid:
+      type: object
+      properties:
+        data: {}
+        message:
           type: string
-          format: password
     AuthenticatedUserResponse:
       type: object
       properties:
@@ -60,20 +70,18 @@ components:
           type: string
         role:
           type: string
-          enum: [ADMIN, WORKER]
-    ApiResponseAuthenticatedUserResponse:
+          enum:
+          - ADMIN
+          - WORKER
+    LoginRequest:
       type: object
       properties:
-        data:
-          $ref: "#/components/schemas/AuthenticatedUserResponse"
-        message:
+        username:
           type: string
-          nullable: true
-    ApiResponseVoid:
-      type: object
-      properties:
-        data:
-          nullable: true
-        message:
+          minLength: 1
+        password:
           type: string
-          nullable: true
+          minLength: 1
+      required:
+      - password
+      - username
