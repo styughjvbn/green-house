@@ -139,12 +139,12 @@ function DiscardWorkExecutionDialog({
         className="w-full max-w-lg rounded-lg bg-white shadow-2xl"
         role="dialog"
         aria-modal="true"
-        aria-label="폐기 실행 입력"
+        aria-label="폐기 결과 입력"
         onMouseDown={(event) => event.stopPropagation()}
       >
         <header className="flex items-start justify-between border-b p-4">
           <div>
-            <p className="text-sm font-semibold text-[#9b341e]">폐기 실행</p>
+            <p className="text-sm font-semibold text-[#9b341e]">폐기 결과</p>
             <h2 className="mt-1 text-xl font-semibold text-[#17251b]">
               {source?.varietyName ?? target.varietyName}
             </h2>
@@ -224,7 +224,7 @@ function DiscardWorkExecutionDialog({
             type="button"
             onClick={() => void submit()}
           >
-            {saving ? "처리 중" : "폐기 실행"}
+            {saving ? "처리 중" : "폐기 결과 저장"}
           </button>
         </footer>
       </section>

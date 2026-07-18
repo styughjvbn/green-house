@@ -44,6 +44,13 @@ export function OperationResult({
   const structureChange = ["REPOT", "DIVIDE", "MERGE"].includes(
     operation.workTypeCode,
   );
+  const potting = operation.workTypeCode === "POTTING";
+  const firstExecutablePottingTarget = operation.targets.find(
+    (target) =>
+      target.remainingQuantity > 0 &&
+      (target.executionStatus === "PENDING" ||
+        target.executionStatus === "IN_PROGRESS"),
+  );
 
   return (
     <div className="mt-4 rounded-md border border-[#cfe0d2] bg-white p-4">
@@ -103,6 +110,20 @@ export function OperationResult({
                     (target) => target.remainingQuantity > 0,
                   );
                   if (firstTarget) onExecuteTarget?.(firstTarget);
+                }}
+              />
+            ) : null}
+            {active && hasRemainingWork && potting ? (
+              <StatusAction
+                label="포트 작업 결과 입력"
+                primary
+                disabled={
+                  loading || !onExecuteTarget || !firstExecutablePottingTarget
+                }
+                onClick={() => {
+                  if (firstExecutablePottingTarget) {
+                    onExecuteTarget?.(firstExecutablePottingTarget);
+                  }
                 }}
               />
             ) : null}
@@ -193,6 +214,7 @@ export function OperationResult({
               />
             ) : null}
             {!structureChange &&
+            !potting &&
             active &&
             target.id != null &&
             target.executionStatus === "PENDING" ? (
@@ -204,6 +226,7 @@ export function OperationResult({
               />
             ) : null}
             {!structureChange &&
+            !potting &&
             active &&
             target.id != null &&
             (target.executionStatus === "PENDING" ||
@@ -218,7 +241,7 @@ export function OperationResult({
                     operation.workTypeCode === "POTTING" ||
                     operation.workTypeCode === "DISCARD" ||
                     operation.workTypeCode === "MOVEMENT"
-                      ? "실행 입력"
+                      ? "결과 입력"
                       : "완료"
                   }
                   disabled={
@@ -251,6 +274,17 @@ export function OperationResult({
                   onClick={() => onTargetAction(target.id!, "skip")}
                 />
               </>
+            ) : null}
+            {potting &&
+            active &&
+            target.id != null &&
+            target.executionStatus === "PENDING" ? (
+              <StatusAction
+                small
+                label="건너뛰기"
+                disabled={loading}
+                onClick={() => onTargetAction(target.id!, "skip")}
+              />
             ) : null}
           </div>
         ))}

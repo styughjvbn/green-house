@@ -36,6 +36,7 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.time.ZoneId;
+import java.util.Comparator;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -180,7 +181,8 @@ public class WorkOperationService {
 
 		List<VarietyTargetGroup> varietyGroups = groupTargetsByVariety(included);
 		return varietyGroups.stream()
-				.map(group -> create(batchOperationRequest(operationRequest, group, resolved, excludedIds, varietyGroups.size())))
+				.map(group -> create(
+						batchOperationRequest(operationRequest, group, resolved, excludedIds, varietyGroups.size())))
 				.toList();
 	}
 
@@ -244,13 +246,13 @@ public class WorkOperationService {
 		List<WorkOperationTarget> targets = records.stream()
 				.sorted(java.util.Comparator.comparing(record -> requestedIds.indexOf(record.id())))
 				.map(record -> WorkOperationTarget.inboundRecord(
-							operation,
-							record.id(),
-							record.varietyId(),
-							record.varietyName(),
-							record.currentQuantity(0),
-							record.potSize(),
-							inboundLocation(record)))
+						operation,
+						record.id(),
+						record.varietyId(),
+						record.varietyName(),
+						record.currentQuantity(0),
+						record.potSize(),
+						inboundLocation(record)))
 				.toList();
 		workOperationTargetRepository.saveAll(targets);
 		workTargetExecutionRepository.saveAll(targets.stream().map(WorkTargetExecution::new).toList());
@@ -322,7 +324,7 @@ public class WorkOperationService {
 		}
 		LocalDateTime todayStartedAt = LocalDate.now(FARM_TIME_ZONE).atStartOfDay();
 		return workOperationRepository.search(
-						fromDate, toDate, status, view, todayStartedAt, scopeType, scopeId)
+				fromDate, toDate, status, view, todayStartedAt, scopeType, scopeId)
 				.stream()
 				.map(operation -> get(operation.getId()))
 				.toList();
@@ -370,10 +372,10 @@ public class WorkOperationService {
 		LocalDateTime canceledAt = LocalDateTime.now();
 		operation.cancel(canceledAt);
 		executions.stream()
-				.filter(execution -> execution.getStatus()
-						!= com.greenhouse.backend.work.domain.WorkTargetExecutionStatus.COMPLETED)
-				.filter(execution -> execution.getStatus()
-						!= com.greenhouse.backend.work.domain.WorkTargetExecutionStatus.SKIPPED)
+				.filter(execution -> execution
+						.getStatus() != com.greenhouse.backend.work.domain.WorkTargetExecutionStatus.COMPLETED)
+				.filter(execution -> execution
+						.getStatus() != com.greenhouse.backend.work.domain.WorkTargetExecutionStatus.SKIPPED)
 				.forEach(execution -> execution.cancel(canceledAt));
 		closeInboundPottingPlans(operation, executions);
 		return get(operationId);
@@ -502,8 +504,7 @@ public class WorkOperationService {
 				operation,
 				null,
 				new WorkEffectCommand(completedAt, worker, request.resultDetails(), null));
-		executions.forEach(execution ->
-				execution.completeWithEffect(completedAt, worker, result.resultDetails()));
+		executions.forEach(execution -> execution.completeWithEffect(completedAt, worker, result.resultDetails()));
 		completeIfAllTargetsClosed(operation, completedAt);
 		return get(operationId);
 	}
@@ -552,7 +553,8 @@ public class WorkOperationService {
 		LocalDateTime executedAt = completionTime(request.completedDate());
 		String worker = normalize(request.worker());
 		Map<String, Object> commandDetails = objectMapper.convertValue(
-				request, new TypeReference<Map<String, Object>>() {});
+				request, new TypeReference<Map<String, Object>>() {
+				});
 		var result = workEffectProcessor.applyBatch(
 				operation,
 				request.idempotencyKey(),
@@ -599,8 +601,7 @@ public class WorkOperationService {
 			return;
 		}
 		List<Long> inboundRecordIds = executions.stream()
-				.filter(execution -> execution.getStatus()
-						!= WorkTargetExecutionStatus.COMPLETED)
+				.filter(execution -> execution.getStatus() != WorkTargetExecutionStatus.COMPLETED)
 				.map(WorkTargetExecution::getTarget)
 				.filter(target -> target.getTargetReferenceType() == WorkTargetReferenceType.INBOUND_RECORD)
 				.map(WorkOperationTarget::getInboundRecordId)
