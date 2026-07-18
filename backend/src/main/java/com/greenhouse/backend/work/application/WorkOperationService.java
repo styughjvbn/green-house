@@ -625,15 +625,15 @@ public class WorkOperationService {
 				.forEach(effectGroup -> operationHistoryById.putIfAbsent(
 						effectGroup.getWorkAppliedEffect().getWorkOperation().getId(),
 						OrchidGroupWorkHistoryResponse.fromEffect(effectGroup, currentLocation)));
-		var legacyHistory = workRecordRepository
-				.findByTargetTypeAndTargetIdOrderByWorkDateDescIdDesc("ORCHID_GROUP", orchidGroupId)
-				.stream()
-				.map(record -> OrchidGroupWorkHistoryResponse.fromLegacy(record, currentLocation))
-				.toList();
-		return java.util.stream.Stream.concat(operationHistoryById.values().stream(), legacyHistory.stream())
-				.sorted(java.util.Comparator.comparing(OrchidGroupWorkHistoryResponse::workDate).reversed()
-						.thenComparing(history -> history.workOperationId() == null ? Long.MIN_VALUE : history.workOperationId(),
-								java.util.Comparator.reverseOrder()))
+		return operationHistoryById.values().stream()
+				.sorted(
+						Comparator.comparing(OrchidGroupWorkHistoryResponse::workDate)
+								.reversed()
+								.thenComparing(
+										history -> history.workOperationId() == null
+												? Long.MIN_VALUE
+												: history.workOperationId(),
+										Comparator.reverseOrder()))
 				.toList();
 	}
 
