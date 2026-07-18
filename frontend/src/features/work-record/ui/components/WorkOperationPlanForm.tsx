@@ -52,6 +52,7 @@ export function WorkOperationPlanForm({
   onChangeRegistrationMode,
   onCancel,
   onUpdateForm,
+  onSelectFarmTarget,
   onOpenTargetSelector,
   onLoadPreview,
   onToggleExcluded,
@@ -80,6 +81,7 @@ export function WorkOperationPlanForm({
     field: K,
     value: WorkOperationFormState[K],
   ) => void;
+  onSelectFarmTarget: () => void;
   onOpenTargetSelector: () => void;
   onLoadPreview: () => void;
   onToggleExcluded: (id: number) => void;
@@ -164,6 +166,16 @@ export function WorkOperationPlanForm({
             ) : null}
           </div>
           <div className="flex flex-wrap gap-2">
+            {!isDedicatedWorkflow ? (
+              <button
+                className="rounded-md border border-[#159447] bg-white px-4 py-2 text-sm font-semibold text-[#10783a] hover:bg-[#f1faf3] disabled:opacity-50"
+                disabled={optionsLoading}
+                type="button"
+                onClick={onSelectFarmTarget}
+              >
+                농장 전체
+              </button>
+            ) : null}
             <button
               className="rounded-md border border-[#159447] bg-white px-4 py-2 text-sm font-semibold text-[#10783a] hover:bg-[#f1faf3] disabled:opacity-50"
               disabled={optionsLoading}

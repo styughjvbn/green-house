@@ -135,6 +135,12 @@ export function WorkOperationPanel({
     () => orchidGroups.filter((group) => manualIds.has(group.id)),
     [manualIds, orchidGroups],
   );
+  const recordTargetIds =
+    manualIds.size > 0
+      ? [...manualIds]
+      : includedTargets.flatMap((target) =>
+          target.orchidGroupId == null ? [] : [target.orchidGroupId],
+        );
   const saveUnavailableReason = loading
     ? "처리 중입니다."
     : !selectedWorkType
@@ -149,7 +155,7 @@ export function WorkOperationPanel({
             ? "대상 선택 후 실제 대상을 미리보기해주세요."
             : registrationMode === "PLAN" && includedTargets.length === 0
               ? "포함할 난 묶음을 하나 이상 선택해주세요."
-              : registrationMode === "RECORD" && manualIds.size === 0
+              : registrationMode === "RECORD" && recordTargetIds.length === 0
                 ? "기록할 난 묶음을 하나 이상 선택해주세요."
                 : null;
 
@@ -253,15 +259,42 @@ export function WorkOperationPanel({
     }
   }
 
+  async function selectFarmTarget() {
+    setForm((current) => ({
+      ...current,
+      sourceScopeType: "FARM",
+      houseId: "",
+      scopeKey: "",
+      collectionId: "",
+    }));
+    setManualIds(new Set());
+    setTargetScopeLabel("농장 전체");
+    setExcludedIds(new Set());
+    setLoading(true);
+    setErrorMessage(null);
+    try {
+      const result = await previewWorkOperationTargets({ scopeType: "FARM" });
+      setPreview(result);
+    } catch (error) {
+      setErrorMessage(
+        error instanceof Error
+          ? error.message
+          : "농장 전체 대상을 확인하지 못했습니다.",
+      );
+    } finally {
+      setLoading(false);
+    }
+  }
+
   async function saveOperation() {
     if (!selectedWorkType) return;
     if (registrationMode === "RECORD") {
-      if (manualIds.size === 0 || recordDisabled) return;
+      if (recordTargetIds.length === 0 || recordDisabled) return;
       setLoading(true);
       setErrorMessage(null);
       try {
         await createCompletedWorkOperationFromRecord(
-          recordPayload(form, manualIds, selectedWorkType),
+          recordPayload(form, recordTargetIds, selectedWorkType),
           selectedWorkType.name,
           form.title,
         );
@@ -527,6 +560,7 @@ export function WorkOperationPanel({
               onChangeRegistrationMode={setRegistrationMode}
               onCancel={onClose}
               onUpdateForm={updateForm}
+              onSelectFarmTarget={selectFarmTarget}
               onOpenTargetSelector={() => setTargetSelectorOpen(true)}
               onLoadPreview={loadPreview}
               onToggleExcluded={(id) =>
@@ -676,6 +710,23 @@ function targetSummary({
   }
 
   if (manualIds.size === 0) {
+    const includedTargets =
+      preview?.targets.filter(
+        (target) =>
+          target.orchidGroupId != null &&
+          !excludedIds.has(target.orchidGroupId),
+      ) ?? [];
+    if (targetScopeLabel && includedTargets.length > 0) {
+      const quantity = includedTargets.reduce(
+        (sum, target) => sum + target.quantitySnapshot,
+        0,
+      );
+      return {
+        title: targetScopeLabel,
+        metrics: `난 묶음 ${includedTargets.length}개 · 총 ${quantity.toLocaleString()}분`,
+        location: "",
+      };
+    }
     return {
       title: "동, 다이, 구역 또는 개별 난 묶음을 선택하세요.",
       metrics: "대상 선택이 필요합니다.",
@@ -729,7 +780,7 @@ function formatLocalDate(date: Date) {
 
 function recordPayload(
   form: WorkOperationFormState,
-  manualIds: Set<number>,
+  orchidGroupIds: number[],
   selectedWorkType: WorkType,
 ): CreateWorkRecordPayload {
   const template = selectedWorkType.template;
@@ -738,7 +789,7 @@ function recordPayload(
     workDate: form.plannedStartDate,
     targetType: "ORCHID_GROUP",
     targetId: null,
-    orchidGroupIds: [...manualIds],
+    orchidGroupIds,
     materialName: isVisibleWorkRecordField(template, "materialName")
       ? form.materialName.trim() || null
       : null,

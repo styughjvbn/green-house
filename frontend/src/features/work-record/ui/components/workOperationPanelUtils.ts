@@ -146,6 +146,8 @@ export function buildScopePayload(
   manualIds: Set<number>,
 ): WorkTargetPreviewPayload | null {
   switch (form.sourceScopeType) {
+    case "FARM":
+      return { scopeType: "FARM" };
     case "HOUSE":
       return form.houseId
         ? { scopeType: "HOUSE", scopeId: Number(form.houseId) }

@@ -66,6 +66,7 @@ export type WorkOperationFormState = {
 };
 
 export type WorkOperationScopeType =
+  | "FARM"
   | "HOUSE"
   | "DERIVED_GROUP"
   | "USER_COLLECTION"
