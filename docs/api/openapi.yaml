@@ -714,6 +714,24 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ApiResponseWorkOperationResponse'
+  /api/work-operations/inbound-potting-plans/batch:
+    post:
+      tags:
+      - work-operation-controller
+      operationId: createInboundPottingPlans
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/InboundPottingPlanBatchCreateRequest'
+        required: true
+      responses:
+        '201':
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponseListWorkOperationResponse'
   /api/work-operations/inbound-potting-executions:
     post:
       tags:
@@ -732,6 +750,24 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ApiResponseWorkOperationResponse'
+  /api/work-operations/batch:
+    post:
+      tags:
+      - work-operation-controller
+      operationId: createBatch
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/WorkOperationBatchCreateRequest'
+        required: true
+      responses:
+        '201':
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponseListWorkOperationResponse'
   /api/varieties:
     get:
       tags:
@@ -4313,6 +4349,22 @@ components:
       - inboundRecordIds
       - plannedStartDate
       - title
+    InboundPottingPlanBatchCreateRequest:
+      type: object
+      properties:
+        plan:
+          $ref: '#/components/schemas/InboundPottingPlanCreateRequest'
+      required:
+      - plan
+    ApiResponseListWorkOperationResponse:
+      type: object
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/WorkOperationResponse'
+        message:
+          type: string
     InboundPottingExecutionRequest:
       type: object
       properties:
@@ -4387,6 +4439,13 @@ components:
       - endPosition
       - quantity
       - startPosition
+    WorkOperationBatchCreateRequest:
+      type: object
+      properties:
+        operation:
+          $ref: '#/components/schemas/WorkOperationCreateRequest'
+      required:
+      - operation
     VarietyCreateRequest:
       type: object
       properties:
@@ -5706,15 +5765,6 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/WorkRecordResponse'
-        message:
-          type: string
-    ApiResponseListWorkOperationResponse:
-      type: object
-      properties:
-        data:
-          type: array
-          items:
-            $ref: '#/components/schemas/WorkOperationResponse'
         message:
           type: string
     ApiResponseMultiCreateCancellationEligibilityResponse:

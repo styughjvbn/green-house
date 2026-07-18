@@ -5,10 +5,12 @@ import com.greenhouse.backend.work.application.WorkOperationService;
 import com.greenhouse.backend.work.application.InboundPottingOperationService;
 import com.greenhouse.backend.work.application.WorkOperationCorrectionService;
 import com.greenhouse.backend.work.dto.OrchidGroupWorkHistoryResponse;
+import com.greenhouse.backend.work.dto.InboundPottingPlanBatchCreateRequest;
 import com.greenhouse.backend.work.dto.InboundPottingCandidateResponse;
 import com.greenhouse.backend.work.dto.InboundPottingPlanCreateRequest;
 import com.greenhouse.backend.work.dto.InboundPottingExecutionRequest;
 import com.greenhouse.backend.work.dto.WorkOperationCreateRequest;
+import com.greenhouse.backend.work.dto.WorkOperationBatchCreateRequest;
 import com.greenhouse.backend.work.dto.WorkOperationCompleteRequest;
 import com.greenhouse.backend.work.dto.WorkOperationCorrectionCreateRequest;
 import com.greenhouse.backend.work.dto.WorkOperationCorrectionsResponse;
@@ -53,6 +55,13 @@ public class WorkOperationController {
 		return ApiResponse.ok(workOperationService.create(request));
 	}
 
+	@PostMapping("/work-operations/batch")
+	@ResponseStatus(HttpStatus.CREATED)
+	public ApiResponse<List<WorkOperationResponse>> createBatch(
+			@Valid @RequestBody WorkOperationBatchCreateRequest request) {
+		return ApiResponse.ok(workOperationService.createBatch(request));
+	}
+
 	@PostMapping("/work-operations/record")
 	@ResponseStatus(HttpStatus.CREATED)
 	public ApiResponse<WorkOperationResponse> createCompletedRecord(
@@ -70,6 +79,13 @@ public class WorkOperationController {
 	public ApiResponse<WorkOperationResponse> createInboundPottingPlan(
 			@Valid @RequestBody InboundPottingPlanCreateRequest request) {
 		return ApiResponse.ok(workOperationService.createInboundPottingPlan(request));
+	}
+
+	@PostMapping("/work-operations/inbound-potting-plans/batch")
+	@ResponseStatus(HttpStatus.CREATED)
+	public ApiResponse<List<WorkOperationResponse>> createInboundPottingPlans(
+			@Valid @RequestBody InboundPottingPlanBatchCreateRequest request) {
+		return ApiResponse.ok(workOperationService.createInboundPottingPlans(request));
 	}
 
 	@PostMapping("/work-operations/inbound-potting-executions")

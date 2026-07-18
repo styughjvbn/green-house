@@ -429,6 +429,24 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ApiResponseWorkOperationResponse'
+  /api/work-operations/inbound-potting-plans/batch:
+    post:
+      tags:
+      - work-operation-controller
+      operationId: createInboundPottingPlans
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/InboundPottingPlanBatchCreateRequest'
+        required: true
+      responses:
+        '201':
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponseListWorkOperationResponse'
   /api/work-operations/inbound-potting-executions:
     post:
       tags:
@@ -447,6 +465,24 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ApiResponseWorkOperationResponse'
+  /api/work-operations/batch:
+    post:
+      tags:
+      - work-operation-controller
+      operationId: createBatch
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/WorkOperationBatchCreateRequest'
+        required: true
+      responses:
+        '201':
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponseListWorkOperationResponse'
   /api/work-operations/{workOperationId}:
     get:
       tags:
@@ -604,6 +640,13 @@ components:
       - inboundRecordId
       - pottingDate
       - results
+    InboundPottingPlanBatchCreateRequest:
+      type: object
+      properties:
+        plan:
+          $ref: '#/components/schemas/InboundPottingPlanCreateRequest'
+      required:
+      - plan
     InboundPottingPlanCreateRequest:
       type: object
       properties:
@@ -869,6 +912,13 @@ components:
       required:
       - inputQuantity
       - sourceOrchidGroupId
+    WorkOperationBatchCreateRequest:
+      type: object
+      properties:
+        operation:
+          $ref: '#/components/schemas/WorkOperationCreateRequest'
+      required:
+      - operation
     WorkOperationCompleteRequest:
       type: object
       properties:

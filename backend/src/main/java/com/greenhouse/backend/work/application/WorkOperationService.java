@@ -13,8 +13,10 @@ import com.greenhouse.backend.work.domain.WorkTargetReferenceType;
 import com.greenhouse.backend.work.application.effect.WorkEffectCommand;
 import com.greenhouse.backend.work.application.effect.WorkEffectProcessor;
 import com.greenhouse.backend.work.dto.OrchidGroupWorkHistoryResponse;
+import com.greenhouse.backend.work.dto.InboundPottingPlanBatchCreateRequest;
 import com.greenhouse.backend.work.dto.InboundPottingPlanCreateRequest;
 import com.greenhouse.backend.work.dto.InboundPottingCandidateResponse;
+import com.greenhouse.backend.work.dto.WorkOperationBatchCreateRequest;
 import com.greenhouse.backend.work.dto.WorkOperationCreateRequest;
 import com.greenhouse.backend.work.dto.WorkOperationResponse;
 import com.greenhouse.backend.work.dto.WorkOperationTargetResponse;
@@ -150,6 +152,38 @@ public class WorkOperationService {
 		return get(operation.getId());
 	}
 
+	public List<WorkOperationResponse> createBatch(WorkOperationBatchCreateRequest request) {
+		WorkOperationCreateRequest operationRequest = request.operation();
+		var workType = workTypeService.getActiveForPlan(operationRequest.workTypeId());
+		WorkTargetSelection selection = selection(
+				operationRequest.sourceScopeType(),
+				operationRequest.sourceScopeId(),
+				operationRequest.sourceScopeKey(),
+				operationRequest.sourceOrchidGroupIds());
+		List<ResolvedWorkTarget> resolved = workTargetResolver.resolve(selection);
+		Set<Long> excludedIds = operationRequest.excludedOrchidGroupIds() == null
+				? Set.of()
+				: new HashSet<>(operationRequest.excludedOrchidGroupIds());
+		Set<Long> resolvedIds = resolved.stream().map(ResolvedWorkTarget::orchidGroupId).collect(Collectors.toSet());
+		if (!resolvedIds.containsAll(excludedIds)) {
+			throw new IllegalArgumentException("제외 대상은 현재 해석된 난 묶음에 포함되어야 합니다.");
+		}
+		List<ResolvedWorkTarget> included = resolved.stream()
+				.filter(group -> !excludedIds.contains(group.orchidGroupId()))
+				.toList();
+		if (included.isEmpty()) {
+			throw new IllegalArgumentException("작업 대상 난 묶음이 한 개 이상 필요합니다.");
+		}
+		if (!requiresSingleVariety(workType.getCode())) {
+			return List.of(create(operationRequest));
+		}
+
+		List<VarietyTargetGroup> varietyGroups = groupTargetsByVariety(included);
+		return varietyGroups.stream()
+				.map(group -> create(batchOperationRequest(operationRequest, group, resolved, excludedIds, varietyGroups.size())))
+				.toList();
+	}
+
 	public WorkOperationResponse createCompletedRecord(WorkOperationCreateRequest request) {
 		workTypeService.getActiveForCreate(request.workTypeId());
 		WorkOperationResponse created = create(request);
@@ -222,6 +256,34 @@ public class WorkOperationService {
 		workTargetExecutionRepository.saveAll(targets.stream().map(WorkTargetExecution::new).toList());
 		inboundPottingPlanGateway.markPottingPlanned(requestedIds);
 		return get(operation.getId());
+	}
+
+	public List<WorkOperationResponse> createInboundPottingPlans(InboundPottingPlanBatchCreateRequest request) {
+		InboundPottingPlanCreateRequest planRequest = request.plan();
+		List<Long> requestedIds = planRequest.inboundRecordIds().stream().distinct().toList();
+		if (requestedIds.isEmpty()) {
+			throw new IllegalArgumentException("포트 작업할 입고 기록이 한 개 이상 필요합니다.");
+		}
+		List<InboundPottingPlanTarget> records = inboundPottingPlanGateway.resolve(requestedIds);
+		Map<String, List<Long>> idsByVariety = new LinkedHashMap<>();
+		Map<String, String> namesByVariety = new LinkedHashMap<>();
+		for (InboundPottingPlanTarget record : records) {
+			String key = record.varietyId() == null
+					? "name:" + record.varietyName()
+					: "id:" + record.varietyId();
+			idsByVariety.computeIfAbsent(key, ignored -> new java.util.ArrayList<>()).add(record.id());
+			namesByVariety.putIfAbsent(key, record.varietyName());
+		}
+		int varietyCount = idsByVariety.size();
+		return idsByVariety.entrySet().stream()
+				.map(entry -> createInboundPottingPlan(new InboundPottingPlanCreateRequest(
+						varietyTitle(planRequest.title(), namesByVariety.get(entry.getKey()), varietyCount),
+						planRequest.plannedStartDate(),
+						planRequest.plannedEndDate(),
+						entry.getValue(),
+						planRequest.worker(),
+						planRequest.memo())))
+				.toList();
 	}
 
 	@Transactional(readOnly = true)
@@ -578,6 +640,67 @@ public class WorkOperationService {
 	private void validateDates(LocalDate startDate, LocalDate endDate) {
 		if (endDate != null && endDate.isBefore(startDate)) {
 			throw new IllegalArgumentException("예정 종료일은 예정 시작일보다 빠를 수 없습니다.");
+		}
+	}
+
+	private boolean requiresSingleVariety(String workTypeCode) {
+		return Set.of(
+				com.greenhouse.backend.work.domain.WorkType.REPOT_CODE,
+				com.greenhouse.backend.work.domain.WorkType.DIVIDE_CODE,
+				com.greenhouse.backend.work.domain.WorkType.MERGE_CODE)
+				.contains(workTypeCode);
+	}
+
+	private List<VarietyTargetGroup> groupTargetsByVariety(List<ResolvedWorkTarget> targets) {
+		Map<String, VarietyTargetGroup> grouped = new LinkedHashMap<>();
+		for (ResolvedWorkTarget target : targets) {
+			String key = target.varietyId() == null
+					? "name:" + target.varietyName()
+					: "id:" + target.varietyId();
+			grouped.computeIfAbsent(key, ignored -> new VarietyTargetGroup(target.varietyName()))
+					.targetIds()
+					.add(target.orchidGroupId());
+		}
+		return List.copyOf(grouped.values());
+	}
+
+	private WorkOperationCreateRequest batchOperationRequest(
+			WorkOperationCreateRequest request,
+			VarietyTargetGroup group,
+			List<ResolvedWorkTarget> resolved,
+			Set<Long> originalExcludedIds,
+			int varietyCount) {
+		Set<Long> groupTargetIds = Set.copyOf(group.targetIds());
+		List<Long> excludedIds = resolved.stream()
+				.map(ResolvedWorkTarget::orchidGroupId)
+				.filter(id -> originalExcludedIds.contains(id) || !groupTargetIds.contains(id))
+				.distinct()
+				.toList();
+		return new WorkOperationCreateRequest(
+				request.workTypeId(),
+				varietyTitle(request.title(), group.varietyName(), varietyCount),
+				request.plannedStartDate(),
+				request.plannedEndDate(),
+				request.sourceScopeType(),
+				request.sourceScopeId(),
+				request.sourceScopeKey(),
+				request.sourceOrchidGroupIds(),
+				request.details(),
+				request.worker(),
+				request.memo(),
+				excludedIds);
+	}
+
+	private String varietyTitle(String baseTitle, String varietyName, int varietyCount) {
+		if (varietyCount <= 1 || varietyName == null || varietyName.isBlank()) {
+			return normalizeRequired(baseTitle);
+		}
+		return normalizeRequired(baseTitle) + " - " + varietyName;
+	}
+
+	private record VarietyTargetGroup(String varietyName, List<Long> targetIds) {
+		private VarietyTargetGroup(String varietyName) {
+			this(varietyName, new java.util.ArrayList<>());
 		}
 	}
 

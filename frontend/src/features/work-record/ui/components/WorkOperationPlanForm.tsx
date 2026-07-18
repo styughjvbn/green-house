@@ -320,7 +320,7 @@ export function WorkOperationPlanForm({
       <div className="rounded-md border border-[#cfe0d2] bg-white p-4">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <p className="text-sm font-semibold text-[#344138]">
-            대상 {targetCount}개 ·{" "}
+            대상 난 묶음 {targetCount}개 ·{" "}
             {structureWork ? "구조 변경 작업" : "일반 작업"} ·{" "}
             {recordMode ? "작업 기록으로 저장" : "작업 계획으로 저장"}
           </p>

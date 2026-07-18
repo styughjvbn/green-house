@@ -200,6 +200,16 @@ export async function createWorkOperation(
   );
 }
 
+export async function createWorkOperationsBatch(
+  payload: CreateWorkOperationPayload,
+): Promise<WorkOperation[]> {
+  return requestWorkOperation<WorkOperation[]>(
+    "/work-operations/batch",
+    "POST",
+    { operation: payload },
+  );
+}
+
 export function getInboundPottingCandidates(): Promise<
   InboundPottingCandidate[]
 > {
@@ -220,6 +230,21 @@ export async function createInboundPottingPlan(payload: {
     "/work-operations/inbound-potting-plans",
     "POST",
     payload,
+  );
+}
+
+export async function createInboundPottingPlansBatch(payload: {
+  title: string;
+  plannedStartDate: string;
+  plannedEndDate: string | null;
+  inboundRecordIds: number[];
+  worker: string | null;
+  memo: string | null;
+}): Promise<WorkOperation[]> {
+  return requestWorkOperation<WorkOperation[]>(
+    "/work-operations/inbound-potting-plans/batch",
+    "POST",
+    { plan: payload },
   );
 }
 

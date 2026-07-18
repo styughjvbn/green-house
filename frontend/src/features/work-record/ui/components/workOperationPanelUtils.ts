@@ -1,101 +1,8 @@
+import type { WorkOperation } from "@/entities/farm/types";
 import type {
-  OrchidGroup,
-  WorkOperation,
-  WorkOperationTarget,
-} from "@/entities/farm/types";
-import type {
-  InboundPottingCandidate,
   WorkOperationFormState,
   WorkTargetPreviewPayload,
 } from "../../model/types";
-
-export type VarietyTargetGroup = {
-  varietyKey: string;
-  varietyName: string;
-  targetIds: number[];
-};
-
-const SINGLE_VARIETY_WORK_CODES = new Set([
-  "REPOT",
-  "DIVIDE",
-  "MERGE",
-  "POTTING",
-]);
-
-export function requiresSingleVarietyWork(code?: string) {
-  return code != null && SINGLE_VARIETY_WORK_CODES.has(code);
-}
-
-export function groupOrchidTargetsByVariety(
-  targets: WorkOperationTarget[],
-  orchidGroups: OrchidGroup[],
-): VarietyTargetGroup[] {
-  const orchidGroupById = new Map(
-    orchidGroups.map((group) => [group.id, group]),
-  );
-  return groupTargets(
-    targets.flatMap((target) => {
-      if (target.orchidGroupId == null) return [];
-      const orchidGroup = orchidGroupById.get(target.orchidGroupId);
-      return [
-        {
-          id: target.orchidGroupId,
-          varietyKey:
-            orchidGroup?.varietyId == null
-              ? `name:${target.varietyName}`
-              : `id:${orchidGroup.varietyId}`,
-          varietyName: target.varietyName,
-        },
-      ];
-    }),
-  );
-}
-
-export function groupInboundTargetsByVariety(
-  selectedIds: Set<number>,
-  candidates: InboundPottingCandidate[],
-): VarietyTargetGroup[] {
-  return groupTargets(
-    candidates
-      .filter((candidate) => selectedIds.has(candidate.id))
-      .map((candidate) => ({
-        id: candidate.id,
-        varietyKey: `id:${candidate.varietyId}`,
-        varietyName: candidate.varietyName,
-      })),
-  );
-}
-
-export function varietyWorkTitle(
-  baseTitle: string,
-  varietyName: string,
-  varietyCount: number,
-) {
-  return varietyCount > 1 ? `${baseTitle} - ${varietyName}` : baseTitle;
-}
-
-function groupTargets(
-  targets: {
-    id: number;
-    varietyKey: string;
-    varietyName: string;
-  }[],
-): VarietyTargetGroup[] {
-  const grouped = new Map<string, VarietyTargetGroup>();
-  targets.forEach((target) => {
-    const current = grouped.get(target.varietyKey);
-    if (current) {
-      current.targetIds.push(target.id);
-      return;
-    }
-    grouped.set(target.varietyKey, {
-      varietyKey: target.varietyKey,
-      varietyName: target.varietyName,
-      targetIds: [target.id],
-    });
-  });
-  return [...grouped.values()];
-}
 
 export function workPlanGuidance(code?: string) {
   switch (code) {
@@ -104,9 +11,9 @@ export function workPlanGuidance(code?: string) {
     case "REPOT":
       return "보통 자동·사용자 그룹 하나를 대상으로 정하고, 실행 회차마다 작업한 일부 수량과 여러 결과 묶음을 기록합니다.";
     case "DIVIDE":
-      return "대상 그룹을 정한 뒤 실행 회차마다 원본별 수량과 여러 결과 묶음을 기록합니다.";
+      return "대상 그룹을 정한 뒤 실행 회차마다 작업한 일부 수량과 여러 결과 묶음을 기록합니다.";
     case "MERGE":
-      return "같은 품종의 대상 그룹을 정하고, 실행 회차마다 원본과 여러 결과 묶음을 기록합니다.";
+      return "같은 품종의 대상 그룹을 정하고, 실행 회차마다 작업한 일부 수량과 여러 결과 묶음을 기록합니다.";
     case "POTTING":
       return "포트 작업 대기 입고 기록을 선택하고, 실행할 때 실제 수량과 배치 위치를 입력합니다.";
     case "DISCARD":

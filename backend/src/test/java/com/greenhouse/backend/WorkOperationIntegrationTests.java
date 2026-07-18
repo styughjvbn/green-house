@@ -43,6 +43,7 @@ class WorkOperationIntegrationTests extends AbstractBackendIntegrationTest {
 	private WorkType pesticideType;
 	private WorkType movementType;
 	private WorkType discardType;
+	private WorkType repotType;
 	private OrchidGroup targetGroup;
 	private House sourceHouse;
 	private BedZone destinationZone;
@@ -68,6 +69,8 @@ class WorkOperationIntegrationTests extends AbstractBackendIntegrationTest {
 				"MOVEMENT", "위치 이동", WorkTypeTemplate.MOVEMENT, true, true, true, 2));
 		discardType = workTypeRepository.save(new WorkType(
 				"DISCARD", "폐기", WorkTypeTemplate.DISCARD, true, true, true, 3));
+		repotType = workTypeRepository.save(new WorkType(
+				WorkType.REPOT_CODE, "분갈이", WorkTypeTemplate.REPOT, true, true, true, 4));
 
 		House house = new House(3, "3동");
 		PhysicalBed bed = new PhysicalBed(1, 1);
@@ -98,6 +101,46 @@ class WorkOperationIntegrationTests extends AbstractBackendIntegrationTest {
 				BigDecimal.TEN);
 		targetGroup.assignVariety(variety);
 		targetGroup = orchidGroupRepository.save(targetGroup);
+	}
+
+	@Test
+	void batchCreateSplitsSingleVarietyStructureWorkInOneRequest() throws Exception {
+		Variety anotherVariety = varietyRepository.save(new Variety(
+				"TEST-002", "카틀레야", "다른 품종", null, "3.5치", true, true, null, null));
+		OrchidGroup anotherGroup = new OrchidGroup(
+				targetGroup.getBedZone(),
+				anotherVariety.getGenus(),
+				anotherVariety.getName(),
+				80,
+				"3.5치",
+				2,
+				"정상",
+				2,
+				new BigDecimal("11"),
+				new BigDecimal("12"));
+		anotherGroup.assignVariety(anotherVariety);
+		anotherGroup = orchidGroupRepository.save(anotherGroup);
+
+		mockMvc.perform(post("/api/work-operations/batch")
+				.contentType(MediaType.APPLICATION_JSON)
+				.content("""
+						{
+						  "operation": {
+						    "workTypeId": %d,
+						    "title": "품종별 분갈이",
+						    "plannedStartDate": "2026-07-16",
+						    "sourceScopeType": "MANUAL_SELECTION",
+						    "sourceOrchidGroupIds": [%d, %d]
+						  }
+						}
+						""".formatted(repotType.getId(), targetGroup.getId(), anotherGroup.getId())))
+				.andExpect(status().isCreated())
+				.andExpect(jsonPath("$.data", hasSize(2)))
+				.andExpect(jsonPath("$.data[*].title", hasItem("품종별 분갈이 - 테스트 난")))
+				.andExpect(jsonPath("$.data[*].title", hasItem("품종별 분갈이 - 다른 품종")));
+
+		org.assertj.core.api.Assertions.assertThat(workOperationRepository.count()).isEqualTo(2);
+		org.assertj.core.api.Assertions.assertThat(workOperationTargetRepository.count()).isEqualTo(2);
 	}
 
 	@Test
