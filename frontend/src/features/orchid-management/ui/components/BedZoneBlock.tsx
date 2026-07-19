@@ -42,9 +42,14 @@ export default function BedZoneBlock({
   const resolvedMaxPosition = maxPosition && maxPosition > 0 ? maxPosition : 28;
   const densityCellHeight = DENSITY_REFERENCE_HEIGHT / resolvedMaxPosition;
   const cells = buildCells(resolvedMaxPosition);
+  const canRestartCreatePickInAnyZone =
+    cellRangePick.active &&
+    cellRangePick.completed &&
+    cellRangePick.excludeOrchidGroupId == null;
   const rangePickActive =
     cellRangePick.active &&
     (cellRangePick.targetBedZoneId == null ||
+      canRestartCreatePickInAnyZone ||
       cellRangePick.targetBedZoneId === zone.id);
   const pickedStartCell =
     cellRangePick.targetBedZoneId === zone.id ? cellRangePick.startCell : null;
@@ -163,6 +168,7 @@ export default function BedZoneBlock({
                   event.preventDefault();
                   event.stopPropagation();
                   const selectingStart =
+                    cellRangePick.completed ||
                     pickedStartCell == null ||
                     (pickedEndCell != null &&
                       pickedStartCell !== pickedEndCell);

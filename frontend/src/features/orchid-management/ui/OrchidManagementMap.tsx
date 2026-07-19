@@ -82,6 +82,7 @@ export function OrchidManagementMap({
   );
   const [mapCellRangePick, setMapCellRangePick] = useState<MapCellRangePick>({
     active: false,
+    completed: false,
     excludeOrchidGroupId: null,
     targetBedZoneId: null,
     startCell: null,
@@ -118,14 +119,35 @@ export function OrchidManagementMap({
     startCell: string;
     targetBedZoneId: number | null;
   }) {
-    setMapCellRangePick((current) => ({
-      active: true,
-      excludeOrchidGroupId: excludeOrchidGroupId ?? null,
-      targetBedZoneId,
-      startCell: null,
-      endCell: null,
-      version: current.version + 1,
-    }));
+    const nextExcludeOrchidGroupId = excludeOrchidGroupId ?? null;
+    setMapCellRangePick((current) => {
+      const sameTarget =
+        (targetBedZoneId == null ||
+          current.targetBedZoneId === targetBedZoneId) &&
+        current.excludeOrchidGroupId === nextExcludeOrchidGroupId;
+
+      if (current.active && sameTarget) {
+        return {
+          active: false,
+          completed: false,
+          excludeOrchidGroupId: null,
+          targetBedZoneId: null,
+          startCell: null,
+          endCell: null,
+          version: current.version + 1,
+        };
+      }
+
+      return {
+        active: true,
+        completed: false,
+        excludeOrchidGroupId: nextExcludeOrchidGroupId,
+        targetBedZoneId,
+        startCell: null,
+        endCell: null,
+        version: current.version + 1,
+      };
+    });
   }
 
   function syncMapCellRangePick({
@@ -143,7 +165,8 @@ export function OrchidManagementMap({
   }) {
     const range = normalizeCellRange(startCell, endCell, maxCell);
     setMapCellRangePick((current) => ({
-      active: false,
+      active: true,
+      completed: true,
       excludeOrchidGroupId: excludeOrchidGroupId ?? null,
       targetBedZoneId,
       startCell: range.startCell,
@@ -155,6 +178,7 @@ export function OrchidManagementMap({
   function clearMapCellRangePick() {
     setMapCellRangePick((current) => ({
       active: false,
+      completed: false,
       excludeOrchidGroupId: null,
       targetBedZoneId: null,
       startCell: null,
@@ -169,17 +193,19 @@ export function OrchidManagementMap({
         return current;
       }
       const targetBedZoneId = current.targetBedZoneId ?? bedZoneId;
-      if (targetBedZoneId !== bedZoneId) {
+      if (targetBedZoneId !== bedZoneId && !current.completed) {
         return current;
       }
 
       if (
         current.startCell == null ||
+        current.completed ||
         (current.endCell != null && current.startCell !== current.endCell)
       ) {
         return {
           ...current,
-          targetBedZoneId,
+          completed: false,
+          targetBedZoneId: bedZoneId,
           startCell: cell,
           endCell: cell,
           version: current.version + 1,
@@ -187,7 +213,8 @@ export function OrchidManagementMap({
       }
 
       return {
-        active: false,
+        active: true,
+        completed: true,
         excludeOrchidGroupId: current.excludeOrchidGroupId,
         targetBedZoneId,
         startCell: Math.min(current.startCell, cell),

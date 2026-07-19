@@ -24,6 +24,7 @@ import {
 } from "../../lib/orchidManagementUtils";
 import type {
   MapCellRangePick,
+  OrchidFormDraft,
   MutationPayload,
   OrchidFormState,
 } from "../../model/types";
@@ -37,7 +38,9 @@ export default function OrchidGroupForm({
   saving,
   targetZone,
   mapCellRangePick,
+  draft,
   onCancel,
+  onDraftChange,
   onStartMapCellRangePick,
   onSyncMapCellRangePick,
   onSubmit,
@@ -48,7 +51,9 @@ export default function OrchidGroupForm({
   saving: boolean;
   targetZone: BedZone | null;
   mapCellRangePick: MapCellRangePick;
+  draft?: OrchidFormDraft | null;
   onCancel: () => void;
+  onDraftChange?: (draft: OrchidFormDraft) => void;
   onStartMapCellRangePick: (options: {
     endCell: string;
     excludeOrchidGroupId?: number | null;
@@ -93,34 +98,13 @@ export default function OrchidGroupForm({
     [activeZone, house, mode],
   );
 
-  const [form, setForm] = useState<OrchidFormState>(() => ({
-    varietyId: initialValue?.varietyId ? String(initialValue.varietyId) : "",
-    varietyQuery: "",
-    genus: initialValue?.genus ?? "",
-    varietyName: initialValue?.varietyName ?? "",
-    quantity: initialValue ? String(initialValue.quantity) : "1",
-    potSize: initialValue?.potSize ?? "",
-    ageYear: initialValue?.ageYear ? String(initialValue.ageYear) : "",
-    status: initialValue?.status ?? "정상",
-    placementType: initialValue?.placementType ?? "",
-    trayCount: initialValue?.trayCount ? String(initialValue.trayCount) : "",
-    splitPlacementAllowed: initialValue?.splitPlacementAllowed ?? false,
-    startPosition:
-      mode === "EDIT" && initialValue?.startPosition != null
-        ? positionToStartCell(initialValue.startPosition)
-        : defaultPlacement != null
-          ? String(defaultPlacement.startPosition)
-          : "",
-    endPosition:
-      mode === "EDIT" && initialValue?.endPosition != null
-        ? positionToEndCell(initialValue.endPosition)
-        : defaultPlacement != null
-          ? String(defaultPlacement.endPosition)
-          : "",
-    memo: initialValue?.memo ?? "",
-  }));
+  const [form, setForm] = useState<OrchidFormState>(
+    () =>
+      draft?.form ??
+      createInitialFormState(mode, initialValue, defaultPlacement),
+  );
   const [selectedVariety, setSelectedVariety] = useState<VarietyOption | null>(
-    initialVariety,
+    draft?.selectedVariety ?? initialVariety,
   );
   const maxCell = useMemo(
     () => resolveMaxCell(house, activeZone?.id ?? null),
@@ -144,6 +128,9 @@ export default function OrchidGroupForm({
       ? mapCellRangePick.targetBedZoneId == null ||
         mapCellRangePick.targetBedZoneId === activeZone?.id
       : mapCellRangePick.targetBedZoneId === activeZone?.id);
+  const rangePickButtonLabel = rangePickActive
+    ? "맵에서 지정 끄기"
+    : "맵에서 지정 켜기";
   const mapPickedRange =
     activeZone != null &&
     mapCellRangePick.targetBedZoneId === activeZone.id &&
@@ -170,11 +157,17 @@ export default function OrchidGroupForm({
   });
   const submitBlocked = mode === "EDIT" && rangeBlocked;
 
+  function saveFormDraft(next: OrchidFormState, nextVariety = selectedVariety) {
+    setForm(next);
+    onDraftChange?.({ form: next, selectedVariety: nextVariety });
+  }
+
   function updateField<K extends keyof OrchidFormState>(
     field: K,
     value: OrchidFormState[K],
   ) {
-    setForm((current) => ({ ...current, [field]: value }));
+    const next = { ...form, [field]: value };
+    saveFormDraft(next);
   }
 
   function updateStartCell(value: string) {
@@ -197,11 +190,12 @@ export default function OrchidGroupForm({
       maxCell,
     );
     setIgnoredMapPickVersion(mapCellRangePick.version);
-    setForm((current) => ({
-      ...current,
+    const next = {
+      ...form,
       startPosition: String(range.startCell),
       endPosition: String(range.endCell),
-    }));
+    };
+    saveFormDraft(next);
     onSyncMapCellRangePick({
       targetBedZoneId: activeZone.id,
       excludeOrchidGroupId: excludedOrchidGroupId,
@@ -213,14 +207,33 @@ export default function OrchidGroupForm({
 
   function handleSelectVariety(option: VarietyOption) {
     setSelectedVariety(option);
-    setForm((current) => ({
-      ...current,
+    const next = {
+      ...form,
       varietyId: String(option.id),
       varietyQuery: option.name,
       genus: option.genus,
       varietyName: option.name,
-      potSize: current.potSize || option.defaultPotSize || "",
-    }));
+      potSize: form.potSize || option.defaultPotSize || "",
+    };
+    saveFormDraft(next, option);
+  }
+
+  function handleToggleMapCellRangePick() {
+    if (mode === "EDIT" && !activeZone) return;
+    if (rangePickActive && mapPickedRange) {
+      saveFormDraft({
+        ...form,
+        startPosition: mapPickedRange.startPosition,
+        endPosition: mapPickedRange.endPosition,
+      });
+    }
+    onStartMapCellRangePick({
+      targetBedZoneId: mode === "CREATE" ? null : (activeZone?.id ?? null),
+      excludeOrchidGroupId: mode === "EDIT" ? (initialValue?.id ?? null) : null,
+      maxCell,
+      startCell: startPositionValue,
+      endCell: endPositionValue,
+    });
   }
 
   function handleSubmit(event: FormEvent<HTMLFormElement>) {
@@ -331,20 +344,9 @@ export default function OrchidGroupForm({
             }`}
             disabled={saving || (mode === "EDIT" && !activeZone)}
             type="button"
-            onClick={() => {
-              if (mode === "EDIT" && !activeZone) return;
-              onStartMapCellRangePick({
-                targetBedZoneId:
-                  mode === "CREATE" ? null : (activeZone?.id ?? null),
-                excludeOrchidGroupId:
-                  mode === "EDIT" ? (initialValue?.id ?? null) : null,
-                maxCell,
-                startCell: startPositionValue,
-                endCell: endPositionValue,
-              });
-            }}
+            onClick={handleToggleMapCellRangePick}
           >
-            맵에서 지정
+            {rangePickButtonLabel}
           </button>
           <TextField
             label="시작 칸"
@@ -432,6 +434,39 @@ export default function OrchidGroupForm({
 
 function resolvePlacementSelectValue(value: string) {
   return value.startsWith("CUSTOM:") ? "CUSTOM" : value;
+}
+
+function createInitialFormState(
+  mode: "CREATE" | "EDIT",
+  initialValue: OrchidGroup | null,
+  defaultPlacement: { startPosition: number; endPosition: number } | null,
+): OrchidFormState {
+  return {
+    varietyId: initialValue?.varietyId ? String(initialValue.varietyId) : "",
+    varietyQuery: "",
+    genus: initialValue?.genus ?? "",
+    varietyName: initialValue?.varietyName ?? "",
+    quantity: initialValue ? String(initialValue.quantity) : "1",
+    potSize: initialValue?.potSize ?? "",
+    ageYear: initialValue?.ageYear ? String(initialValue.ageYear) : "",
+    status: initialValue?.status ?? "정상",
+    placementType: initialValue?.placementType ?? "",
+    trayCount: initialValue?.trayCount ? String(initialValue.trayCount) : "",
+    splitPlacementAllowed: initialValue?.splitPlacementAllowed ?? false,
+    startPosition:
+      mode === "EDIT" && initialValue?.startPosition != null
+        ? positionToStartCell(initialValue.startPosition)
+        : defaultPlacement != null
+          ? String(defaultPlacement.startPosition)
+          : "",
+    endPosition:
+      mode === "EDIT" && initialValue?.endPosition != null
+        ? positionToEndCell(initialValue.endPosition)
+        : defaultPlacement != null
+          ? String(defaultPlacement.endPosition)
+          : "",
+    memo: initialValue?.memo ?? "",
+  };
 }
 
 function PotSizeField({

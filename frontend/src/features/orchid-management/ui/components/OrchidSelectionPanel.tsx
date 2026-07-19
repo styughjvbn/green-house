@@ -18,6 +18,7 @@ import type {
   MutationMode,
   MapCellRangePick,
   MutationPayload,
+  OrchidFormDraft,
   OrchidListSelection,
   OrchidSelection,
   PreciseMovePayload,
@@ -128,6 +129,7 @@ export default function OrchidSelectionPanel({
   const [viewMode, setViewMode] = useState<
     "LOCATION" | "DERIVED" | "COLLECTION"
   >("LOCATION");
+  const [createDraft, setCreateDraft] = useState<OrchidFormDraft | null>(null);
   const listZone =
     listSelection.type === "BED_ZONE"
       ? (findBedZone(house, listSelection.bedZoneId)?.zone ?? null)
@@ -457,6 +459,7 @@ export default function OrchidSelectionPanel({
               ? `edit-${selectedOrchidGroup?.id ?? "none"}`
               : `create-${resolvedZone?.id ?? "none"}-${pasteSourceOrchidGroup?.id ?? "empty"}`
           }
+          draft={mutationMode === "CREATE" ? createDraft : null}
           house={house}
           initialValue={
             mutationMode === "EDIT"
@@ -468,9 +471,17 @@ export default function OrchidSelectionPanel({
           mapCellRangePick={mapCellRangePick}
           targetZone={resolvedZone}
           onCancel={onCancelMutation}
+          onDraftChange={mutationMode === "CREATE" ? setCreateDraft : undefined}
           onStartMapCellRangePick={onStartMapCellRangePick}
           onSyncMapCellRangePick={onSyncMapCellRangePick}
-          onSubmit={mutationMode === "EDIT" ? onEdit : onCreate}
+          onSubmit={
+            mutationMode === "EDIT"
+              ? onEdit
+              : async (payload) => {
+                  await onCreate(payload);
+                  setCreateDraft(null);
+                }
+          }
         />
       ) : null}
 

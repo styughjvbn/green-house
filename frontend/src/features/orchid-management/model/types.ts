@@ -37,6 +37,7 @@ export type MutationMode = "CREATE" | "EDIT" | "MOVE" | "WORK_RECORD" | null;
 
 export type MapCellRangePick = {
   active: boolean;
+  completed: boolean;
   excludeOrchidGroupId: number | null;
   targetBedZoneId: number | null;
   startCell: number | null;
@@ -59,6 +60,17 @@ export type OrchidFormState = {
   startPosition: string;
   endPosition: string;
   memo: string;
+};
+
+export type OrchidFormDraft = {
+  form: OrchidFormState;
+  selectedVariety: {
+    id: number;
+    genus: string;
+    name: string;
+    defaultPotSize: string | null;
+    active: boolean;
+  } | null;
 };
 
 export type MutationPayload = {
