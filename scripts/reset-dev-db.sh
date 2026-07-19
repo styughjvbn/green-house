@@ -117,15 +117,52 @@ latest_backup() {
 
 validate_backup() {
     local backup="$1"
+    local gzip_status
+    local restore_status
 
     case "$backup" in
         *.dump.gz)
-            gzip -t "$backup"
+            echo "Validating compressed backup: $backup"
+
+            if ! gzip -t "$backup"; then
+                echo "Invalid or corrupted gzip backup: $backup" >&2
+                exit 1
+            fi
+
+            echo "Checking PostgreSQL dump format..."
+
+            set +o pipefail
             gzip -cd "$backup" | pg_restore --list >/dev/null
+            pipeline_status=("${PIPESTATUS[@]}")
+            set -o pipefail
+
+            gzip_status="${pipeline_status[0]}"
+            restore_status="${pipeline_status[1]}"
+
+            if (( restore_status != 0 )); then
+                echo "pg_restore cannot read backup: $backup" >&2
+                exit 1
+            fi
+
+            if (( gzip_status != 0 && gzip_status != 141 )); then
+                echo "Failed to decompress backup: $backup" >&2
+                exit 1
+            fi
+
+            echo "Backup validation passed."
             ;;
+
         *.dump)
-            pg_restore --list "$backup" >/dev/null
+            echo "Validating backup: $backup"
+
+            if ! pg_restore --list "$backup" >/dev/null; then
+                echo "pg_restore cannot read backup: $backup" >&2
+                exit 1
+            fi
+
+            echo "Backup validation passed."
             ;;
+
         *)
             echo "Backup must be a PostgreSQL custom dump (*.dump or *.dump.gz)." >&2
             exit 1
