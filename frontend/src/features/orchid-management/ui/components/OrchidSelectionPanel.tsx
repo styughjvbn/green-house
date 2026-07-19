@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, type ReactNode } from "react";
+import { useMemo, useState, type ReactNode } from "react";
 import type {
   BedZone,
   House,
@@ -150,6 +150,10 @@ export default function OrchidSelectionPanel({
             bed.bedZones.flatMap((bedZone) => bedZone.orchidGroups),
           )
         : [];
+  const sortedOrchidGroups = useMemo(
+    () => sortOrchidGroupsByMapOrder(orchidGroups, house),
+    [house, orchidGroups],
+  );
   const allHouseOrchidGroups = house.physicalBeds.flatMap((bed) =>
     bed.bedZones.flatMap((bedZone) => bedZone.orchidGroups),
   );
@@ -167,7 +171,7 @@ export default function OrchidSelectionPanel({
       : selectedOrchidGroup
         ? [selectedOrchidGroup]
         : [];
-  const matchedCount = orchidGroups.filter((orchidGroup) =>
+  const matchedCount = sortedOrchidGroups.filter((orchidGroup) =>
     filteredOrchidGroupIds.has(orchidGroup.id),
   ).length;
   const firstVisibleBed = house.physicalBeds[0];
@@ -231,8 +235,8 @@ export default function OrchidSelectionPanel({
                 : "난 묶음 목록"}{" "}
               (
               {hasActiveSearch
-                ? `${matchedCount}/${orchidGroups.length}`
-                : orchidGroups.length}
+                ? `${matchedCount}/${sortedOrchidGroups.length}`
+                : sortedOrchidGroups.length}
               개)
             </p>
             {/* {selectedOrchidGroupIds.size > 0 ? (
@@ -278,7 +282,7 @@ export default function OrchidSelectionPanel({
                   compactList ? "max-h-28 shrink-0" : "min-h-0 flex-1"
                 }`}
               >
-                {orchidGroups.map((orchidGroup) => {
+                {sortedOrchidGroups.map((orchidGroup) => {
                   const selected = orchidGroup.id === selectedOrchidGroup?.id;
                   const matched = filteredOrchidGroupIds.has(orchidGroup.id);
 
@@ -581,6 +585,70 @@ function formatOrchidMeta(orchidGroup: OrchidGroup) {
   ]
     .filter(Boolean)
     .join(" · ");
+}
+
+function sortOrchidGroupsByMapOrder(orchidGroups: OrchidGroup[], house: House) {
+  const zoneOrder = new Map<
+    number,
+    {
+      bedDisplayOrder: number;
+      bedNumber: number;
+      zoneSideOrder: number;
+      zoneSortOrder: number;
+    }
+  >();
+
+  house.physicalBeds.forEach((bed) => {
+    bed.bedZones.forEach((zone) => {
+      zoneOrder.set(zone.id, {
+        bedDisplayOrder: bed.displayOrder,
+        bedNumber: bed.number,
+        zoneSideOrder: sideOrder(zone.side),
+        zoneSortOrder: zone.sortOrder,
+      });
+    });
+  });
+
+  return [...orchidGroups].sort((a, b) => {
+    const aOrder = zoneOrder.get(a.bedZoneId);
+    const bOrder = zoneOrder.get(b.bedZoneId);
+    const bedCompare =
+      compareNumber(aOrder?.bedDisplayOrder, bOrder?.bedDisplayOrder) ||
+      compareNumber(aOrder?.bedNumber, bOrder?.bedNumber) ||
+      a.physicalBedNumber - b.physicalBedNumber;
+    if (bedCompare !== 0) return bedCompare;
+
+    const zoneCompare =
+      compareNumber(aOrder?.zoneSideOrder, bOrder?.zoneSideOrder) ||
+      compareNumber(aOrder?.zoneSortOrder, bOrder?.zoneSortOrder) ||
+      a.bedZoneName.localeCompare(b.bedZoneName, "ko");
+    if (zoneCompare !== 0) return zoneCompare;
+
+    const positionCompare =
+      topCell(b) - topCell(a) || bottomCell(b) - bottomCell(a);
+    if (positionCompare !== 0) return positionCompare;
+
+    return a.sortOrder - b.sortOrder || a.id - b.id;
+  });
+}
+
+function sideOrder(side: BedZone["side"]) {
+  if (side === "LEFT") return 0;
+  if (side === "RIGHT") return 1;
+  if (side === "CUSTOM") return 2;
+  return 3;
+}
+
+function topCell(orchidGroup: OrchidGroup) {
+  return Math.ceil(orchidGroup.endPosition ?? orchidGroup.startPosition ?? 0);
+}
+
+function bottomCell(orchidGroup: OrchidGroup) {
+  return Math.floor(orchidGroup.startPosition ?? orchidGroup.endPosition ?? 0);
+}
+
+function compareNumber(a: number | undefined, b: number | undefined) {
+  return (a ?? Number.MAX_SAFE_INTEGER) - (b ?? Number.MAX_SAFE_INTEGER);
 }
 
 function getStatusDotClass(status: string) {
