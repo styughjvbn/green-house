@@ -3,7 +3,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { SessionUserPanel } from "@/features/auth/ui/SessionUserPanel";
 import { PageHeader } from "@/widgets/page-header";
 import {
@@ -184,14 +184,26 @@ function NavItem({
       href={href}
       title={collapsed ? label : undefined}
       onClick={(event) => event.stopPropagation()}
-      className={`flex items-center overflow-hidden rounded-md px-3 py-3 text-sm font-medium transition ${
+      className={`grid grid-cols-[1.5rem_minmax(0,1fr)] items-center overflow-hidden rounded-md px-1 py-3 text-sm font-medium transition-colors ${
         active
           ? "bg-[#2f8f4e] text-white"
           : "text-[#dcebe0] hover:bg-white/10 hover:text-white"
-      } ${collapsed ? "justify-center" : "gap-3"}`}
+      } gap-3`}
     >
-      <Icon className="h-4 w-4 shrink-0" strokeWidth={1.8} aria-hidden="true" />
-      {collapsed ? null : <span className="whitespace-nowrap">{label}</span>}
+      <span className="flex h-6 w-6 items-center justify-center">
+        <Icon
+          className="h-4 w-4 shrink-0"
+          strokeWidth={1.8}
+          aria-hidden="true"
+        />
+      </span>
+      <span
+        className={`overflow-hidden whitespace-nowrap transition-[max-width,opacity] duration-200 ease-out ${
+          collapsed ? "max-w-0 opacity-0" : "max-w-32 opacity-100"
+        }`}
+      >
+        {label}
+      </span>
     </Link>
   );
 }
@@ -224,6 +236,28 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const [sidebarExpanded, setSidebarExpanded] = useState(true);
   const [compactDesktopHeader, setCompactDesktopHeader] = useState(false);
+  const sidebarIdleTimerRef = useRef<ReturnType<typeof setTimeout> | null>(
+    null,
+  );
+
+  const clearSidebarIdleTimer = () => {
+    if (sidebarIdleTimerRef.current) {
+      clearTimeout(sidebarIdleTimerRef.current);
+      sidebarIdleTimerRef.current = null;
+    }
+  };
+
+  const scheduleSidebarIdleCollapse = () => {
+    clearSidebarIdleTimer();
+
+    if (!compactDesktopHeader || !sidebarExpanded) {
+      return;
+    }
+
+    sidebarIdleTimerRef.current = setTimeout(() => {
+      setSidebarExpanded(false);
+    }, 2000);
+  };
 
   useEffect(() => {
     const sidebarQuery = window.matchMedia("(min-width: 1536px)");
@@ -244,6 +278,12 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       compactHeaderQuery.removeEventListener("change", syncLayout);
     };
   }, []);
+
+  useEffect(() => {
+    scheduleSidebarIdleCollapse();
+
+    return clearSidebarIdleTimer;
+  }, [compactDesktopHeader, sidebarExpanded]);
 
   if (pathname === "/login") {
     return <>{children}</>;
@@ -269,6 +309,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             event.currentTarget.focus();
           }
         }}
+        onMouseMove={scheduleSidebarIdleCollapse}
         onFocus={() => {
           if (compactDesktopHeader && sidebarCollapsed) {
             setSidebarExpanded(true);
@@ -285,16 +326,14 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         }}
       >
         <div
-          className={`group flex items-center gap-3 px-1 py-1 ${
-            sidebarCollapsed ? "justify-center" : ""
-          }`}
+          className="group grid grid-cols-[2rem_minmax(0,1fr)] items-center gap-3"
           onClick={(event) => event.stopPropagation()}
         >
-          <div className="relative flex h-10 w-10 shrink-0 items-center justify-center">
+          <div className="relative flex h-8 w-8 shrink-0 items-center justify-center">
             <Image src="/flower.png" alt="Logo" width={40} height={40} />
             {sidebarCollapsed ? (
               <button
-                className="absolute inset-0 flex h-10 w-10 items-center justify-center rounded-md bg-[#003b1f]/85 text-white opacity-0 transition group-hover:opacity-100"
+                className="absolute flex h-10 w-10 items-center justify-center rounded-md bg-[#003b1f]/85 text-white opacity-0 transition-opacity group-hover:opacity-100"
                 type="button"
                 aria-label="사이드바 펼치기"
                 title="펼치기"
@@ -309,31 +348,34 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             ) : null}
           </div>
 
-          {sidebarCollapsed ? null : (
-            <div className="flex min-w-0 flex-1 items-start justify-between gap-2 overflow-hidden">
-              <div className="min-w-0">
-                <p className="text-base leading-none font-semibold whitespace-nowrap text-white">
-                  난 농장
-                </p>
-                <p className="mt-2 text-xs whitespace-nowrap text-[#c8d8cd]">
-                  관리 시스템
-                </p>
-              </div>
-              <button
-                className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md text-[#dcebe0] hover:bg-white/10 hover:text-white"
-                type="button"
-                aria-label="사이드바 접기"
-                title="접기"
-                onClick={() => setSidebarExpanded(false)}
-              >
-                <PanelLeftClose
-                  className="h-4 w-4"
-                  strokeWidth={1.8}
-                  aria-hidden="true"
-                />
-              </button>
+          <div
+            className={`flex min-w-0 items-start justify-between gap-2 overflow-hidden transition-[max-width,opacity] duration-200 ease-out ${
+              sidebarCollapsed ? "max-w-0 opacity-0" : "max-w-32 opacity-100"
+            }`}
+          >
+            <div className="min-w-0">
+              <p className="text-base leading-none font-semibold whitespace-nowrap text-white">
+                난 농장
+              </p>
+              <p className="mt-2 text-xs whitespace-nowrap text-[#c8d8cd]">
+                관리 시스템
+              </p>
             </div>
-          )}
+            <button
+              className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md text-[#dcebe0] hover:bg-white/10 hover:text-white"
+              type="button"
+              aria-label="사이드바 접기"
+              title="접기"
+              tabIndex={sidebarCollapsed ? -1 : 0}
+              onClick={() => setSidebarExpanded(false)}
+            >
+              <PanelLeftClose
+                className="h-4 w-4"
+                strokeWidth={1.8}
+                aria-hidden="true"
+              />
+            </button>
+          </div>
         </div>
 
         <nav className="scrollbar-hidden mt-5 min-h-0 flex-1 space-y-3 overflow-y-auto">
