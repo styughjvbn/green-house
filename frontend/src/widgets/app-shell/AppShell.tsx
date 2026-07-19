@@ -372,6 +372,17 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const isWorkPage = pathname.startsWith("/work-records");
   const isSalesPage = pathname.startsWith("/sales");
   const sidebarCollapsed = !sidebarExpanded;
+  const activeNavigationItem = navigation.find((item) =>
+    isNavigationActive(pathname, item),
+  );
+  const compactHeaderSubNavigation =
+    compactDesktopHeader && activeNavigationItem?.activeHref
+      ? subNavigation[activeNavigationItem.activeHref]?.map((item) => ({
+          href: item.href,
+          label: item.label,
+          active: activeTabPath === item.tab,
+        }))
+      : undefined;
 
   return (
     <div className="app-shell-root relative flex bg-[#f7f8f5]">
@@ -662,6 +673,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             title={currentPage.title}
             description={currentPage.description}
             breadcrumbs={breadcrumbs}
+            compactSubNavigation={compactHeaderSubNavigation}
             className={
               sidebarExpanded ? "app-header-sidebar-overlay-expanded" : ""
             }

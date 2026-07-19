@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { Bell, CalendarDays, ChevronRight, CloudSun } from "lucide-react";
 import type { ReactNode } from "react";
 import { useSyncExternalStore } from "react";
@@ -10,6 +11,11 @@ type PageHeaderProps = {
   breadcrumbs?: string[];
   className?: string;
   collapsed?: boolean;
+  compactSubNavigation?: {
+    href: string;
+    label: string;
+    active: boolean;
+  }[];
   notificationCount?: number;
   temperatureLabel?: string;
   children?: ReactNode;
@@ -21,6 +27,7 @@ export function PageHeader({
   breadcrumbs = [title],
   className = "",
   collapsed = false,
+  compactSubNavigation,
   notificationCount = 0,
   temperatureLabel = "24째C",
   children,
@@ -43,29 +50,70 @@ export function PageHeader({
         <div className="flex min-w-0 items-end gap-2">
           {collapsed ? (
             <h1
-              aria-label={breadcrumbs.join(" > ")}
-              className="flex min-w-0 items-center gap-1 text-xs font-bold text-[#17251b]"
+              aria-label={
+                compactSubNavigation
+                  ? `${title} > ${compactSubNavigation
+                      .map((item) => item.label)
+                      .join(" · ")}`
+                  : breadcrumbs.join(" > ")
+              }
+              className="flex min-w-0 items-center gap-1 text-xs text-[#17251b]"
             >
-              {breadcrumbs.map((item, index) => (
-                <span className="flex min-w-0 items-center gap-1" key={item}>
-                  {index > 0 ? (
-                    <ChevronRight
-                      className="h-3 w-3 shrink-0 text-[#9aa49e]"
-                      strokeWidth={1.8}
-                      aria-hidden="true"
-                    />
-                  ) : null}
-                  <span
-                    className={`truncate ${
-                      index === breadcrumbs.length - 1
-                        ? "text-[#17251b]"
-                        : "text-[#68756d]"
-                    }`}
-                  >
-                    {item}
+              {compactSubNavigation ? (
+                <>
+                  <span className="shrink-0 font-bold text-[#68756d]">
+                    {title}
                   </span>
-                </span>
-              ))}
+                  <ChevronRight
+                    className="h-3 w-3 shrink-0 text-[#9aa49e]"
+                    strokeWidth={1.8}
+                    aria-hidden="true"
+                  />
+                  <span className="flex min-w-0 items-center gap-1 overflow-hidden">
+                    {compactSubNavigation.map((item, index) => (
+                      <span
+                        className="flex min-w-0 items-center gap-1"
+                        key={item.href}
+                      >
+                        {index > 0 ? (
+                          <span className="shrink-0 text-[#9aa49e]">·</span>
+                        ) : null}
+                        <Link
+                          href={item.href}
+                          className={`inline-flex !h-[15px] !min-h-0 items-center truncate leading-[15px] hover:text-[#214f31] ${
+                            item.active
+                              ? "font-bold text-[#17251b]"
+                              : "font-medium text-[#68756d]"
+                          }`}
+                        >
+                          {item.label}
+                        </Link>
+                      </span>
+                    ))}
+                  </span>
+                </>
+              ) : (
+                breadcrumbs.map((item, index) => (
+                  <span className="flex min-w-0 items-center gap-1" key={item}>
+                    {index > 0 ? (
+                      <ChevronRight
+                        className="h-3 w-3 shrink-0 text-[#9aa49e]"
+                        strokeWidth={1.8}
+                        aria-hidden="true"
+                      />
+                    ) : null}
+                    <span
+                      className={`truncate ${
+                        index === breadcrumbs.length - 1
+                          ? "font-bold text-[#17251b]"
+                          : "font-medium text-[#68756d]"
+                      }`}
+                    >
+                      {item}
+                    </span>
+                  </span>
+                ))
+              )}
             </h1>
           ) : (
             <>
