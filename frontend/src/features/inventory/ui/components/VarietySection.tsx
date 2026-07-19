@@ -62,6 +62,9 @@ export function VarietySection({
   const selected =
     pageData.content.find((item) => item.id === selectedId) ??
     pageData.content[0];
+  const connectedGroupCountLabel = loadingGroups
+    ? selected?.connectedGroupCount
+    : connectedGroups.length;
   const genusOptions = useMemo(() => ["전체", ...new Set(genera)], [genera]);
   const [editing, setEditing] = useState(false);
   const [form, setForm] = useState<VarietyPayload>({
@@ -130,6 +133,7 @@ export function VarietySection({
   return (
     <TabStack>
       <form
+        key={`${genus}:${keyword}:${status}:${sale}`}
         className="shrink-0"
         onSubmit={(event) => {
           event.preventDefault();
@@ -331,7 +335,7 @@ export function VarietySection({
                   items={[
                     {
                       label: "보유 묶음 수",
-                      value: `${selected.connectedGroupCount}개`,
+                      value: `${connectedGroupCountLabel ?? 0}개`,
                     },
                     {
                       label: "총 보유 수량",
@@ -500,7 +504,7 @@ export function VarietySection({
               <h3 className="text-xs font-bold">
                 연결된 난 묶음{" "}
                 <span className="text-[#159447]">
-                  ({selected.connectedGroupCount}개)
+                  ({connectedGroupCountLabel ?? 0}개)
                 </span>
               </h3>
               <div className="mt-2 overflow-x-auto">
@@ -520,7 +524,16 @@ export function VarietySection({
                     </tr>
                   </thead>
                   <tbody>
-                    {connectedGroups.length ? (
+                    {loadingGroups ? (
+                      <tr>
+                        <td
+                          className="px-2 py-6 text-center text-[#758078]"
+                          colSpan={4}
+                        >
+                          불러오는 중
+                        </td>
+                      </tr>
+                    ) : connectedGroups.length ? (
                       connectedGroups.map((group) => (
                         <tr
                           className="border-b border-[#e4e8e4]"
@@ -534,15 +547,6 @@ export function VarietySection({
                           </td>
                         </tr>
                       ))
-                    ) : loadingGroups ? (
-                      <tr>
-                        <td
-                          className="px-2 py-6 text-center text-[#758078]"
-                          colSpan={4}
-                        >
-                          불러오는 중
-                        </td>
-                      </tr>
                     ) : (
                       <tr>
                         <td
