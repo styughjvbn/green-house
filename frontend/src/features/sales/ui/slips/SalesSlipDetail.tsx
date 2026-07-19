@@ -16,13 +16,6 @@ import {
 
 const salesSlipItemColumns: ColumnDef<SalesSlipItem, unknown>[] = [
   {
-    id: "rowNumber",
-    header: "No.",
-    cell: ({ row }) => row.index + 1,
-    size: 60,
-    meta: { align: "center", hideable: false },
-  },
-  {
     id: "itemName",
     header: "품종명 / 속",
     cell: ({ row }) => (

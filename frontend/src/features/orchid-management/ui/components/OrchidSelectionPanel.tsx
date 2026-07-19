@@ -282,7 +282,7 @@ export default function OrchidSelectionPanel({
                   compactList ? "max-h-28 shrink-0" : "min-h-0 flex-1"
                 }`}
               >
-                {sortedOrchidGroups.map((orchidGroup) => {
+                {sortedOrchidGroups.map((orchidGroup, index) => {
                   const selected = orchidGroup.id === selectedOrchidGroup?.id;
                   const matched = filteredOrchidGroupIds.has(orchidGroup.id);
 
@@ -334,50 +334,59 @@ export default function OrchidSelectionPanel({
                             <p className="mt-1 text-xs font-semibold text-[#344138]">
                               {orchidGroup.quantity}분
                             </p>
-                            <p className="mt-0.5 text-[11px] text-[#6a766e]">
-                              {formatOrchidMeta(orchidGroup)}
+                            <p className="mt-0.5 truncate text-[11px] text-[#6a766e]">
+                              {formatOrchidMeta(orchidGroup) || "-"}
                             </p>
                           </div>
                         </div>
 
-                        <div className="flex shrink-0 items-center gap-1.5">
-                          <StatusBadge
-                            muted={!matched}
-                            value={orchidGroup.status}
-                          />
-                          <IconAction
-                            label="복사"
-                            onClick={() => onCopyOrchidGroup(orchidGroup.id)}
-                            disabled={!matched}
-                          >
-                            <Copy
-                              className="h-4 w-4"
-                              strokeWidth={1.8}
-                              aria-hidden="true"
+                        <div className="flex shrink-0 flex-col items-end gap-2.5">
+                          <div className="flex items-center gap-1.5">
+                            <StatusBadge
+                              muted={!matched}
+                              value={orchidGroup.status}
                             />
-                          </IconAction>
-                          <IconAction
-                            label="수정"
-                            onClick={onOpenEdit}
-                            disabled={!matched || !selected}
+                            <IconAction
+                              label="복사"
+                              onClick={() => onCopyOrchidGroup(orchidGroup.id)}
+                              disabled={!matched}
+                            >
+                              <Copy
+                                className="h-4 w-4"
+                                strokeWidth={1.8}
+                                aria-hidden="true"
+                              />
+                            </IconAction>
+                            <IconAction
+                              label="수정"
+                              onClick={onOpenEdit}
+                              disabled={!matched || !selected}
+                            >
+                              <Edit2
+                                className="h-4 w-4"
+                                strokeWidth={1.8}
+                                aria-hidden="true"
+                              />
+                            </IconAction>
+                            <IconAction
+                              label="삭제"
+                              onClick={onDelete}
+                              disabled={!matched || !selected || saving}
+                            >
+                              <Trash2
+                                className="h-4 w-4"
+                                strokeWidth={1.8}
+                                aria-hidden="true"
+                              />
+                            </IconAction>
+                          </div>
+                          <span
+                            className={`text-[10px] font-semibold ${
+                              matched ? "text-[#9aa49e]" : "text-[#b2b8b2]"
+                            }`}
                           >
-                            <Edit2
-                              className="h-4 w-4"
-                              strokeWidth={1.8}
-                              aria-hidden="true"
-                            />
-                          </IconAction>
-                          <IconAction
-                            label="삭제"
-                            onClick={onDelete}
-                            disabled={!matched || !selected || saving}
-                          >
-                            <Trash2
-                              className="h-4 w-4"
-                              strokeWidth={1.8}
-                              aria-hidden="true"
-                            />
-                          </IconAction>
+                            #{index + 1}
+                          </span>
                         </div>
                       </div>
                     </div>

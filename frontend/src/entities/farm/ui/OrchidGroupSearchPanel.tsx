@@ -21,6 +21,7 @@ export function OrchidGroupSearchPanel<
   placeholder,
   results,
   resultDescription,
+  showResultIndex = false,
   statuses: initialStatuses = [],
   variant = "default",
   onClear,
@@ -36,6 +37,7 @@ export function OrchidGroupSearchPanel<
   placeholder: string;
   results: OrchidGroup[];
   resultDescription: string;
+  showResultIndex?: boolean;
   statuses?: string[];
   variant?: "default" | "soft";
   onClear: () => void;
@@ -154,13 +156,14 @@ export function OrchidGroupSearchPanel<
                 <p className="px-3 py-3 text-sm text-[#5d6860]">검색 중</p>
               ) : (
                 <div className="max-h-[150px] overflow-y-auto">
-                  {results.map((orchidGroup) => (
+                  {results.map((orchidGroup, index) => (
                     <SearchResultButton
                       key={orchidGroup.id}
                       currentHouseId={currentHouseId}
                       currentSelectedOrchidGroupId={
                         currentSelectedOrchidGroupId
                       }
+                      indexLabel={showResultIndex ? `#${index + 1}` : null}
                       orchidGroup={orchidGroup}
                       onSelectResult={onSelectResult}
                     />
@@ -178,11 +181,13 @@ export function OrchidGroupSearchPanel<
 function SearchResultButton({
   currentHouseId,
   currentSelectedOrchidGroupId,
+  indexLabel,
   orchidGroup,
   onSelectResult,
 }: {
   currentHouseId?: number;
   currentSelectedOrchidGroupId: number | null;
+  indexLabel: string | null;
   orchidGroup: OrchidGroup;
   onSelectResult: (orchidGroup: OrchidGroup) => void;
 }) {
@@ -205,14 +210,21 @@ function SearchResultButton({
       type="button"
     >
       <div className="flex items-start justify-between gap-3">
-        <div className="min-w-0">
-          <p className="truncate text-sm font-semibold text-[#17251b]">
-            {orchidGroup.varietyName}
-          </p>
-          <p className="mt-1 text-xs text-[#5e6a61]">
-            {orchidGroup.houseNumber}동 {orchidGroup.physicalBedNumber}배드{" "}
-            {orchidGroup.bedZoneName}
-          </p>
+        <div className="flex min-w-0 items-start gap-2">
+          {indexLabel ? (
+            <span className="mt-0.5 w-6 shrink-0 text-right text-[11px] font-semibold text-[#9aa49e]">
+              {indexLabel}
+            </span>
+          ) : null}
+          <div className="min-w-0">
+            <p className="truncate text-sm font-semibold text-[#17251b]">
+              {orchidGroup.varietyName}
+            </p>
+            <p className="mt-1 text-xs text-[#5e6a61]">
+              {orchidGroup.houseNumber}동 {orchidGroup.physicalBedNumber}배드{" "}
+              {orchidGroup.bedZoneName}
+            </p>
+          </div>
         </div>
         <div className="shrink-0 text-right">
           <p className="text-xs font-semibold text-[#2d3a31]">
