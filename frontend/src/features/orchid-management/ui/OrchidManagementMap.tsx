@@ -92,17 +92,6 @@ export function OrchidManagementMap({
     orchidGroupSelection.houseId === house.id
       ? orchidGroupSelection.ids
       : new Set<number>();
-  const visibleOrchidGroupIds = useMemo(
-    () =>
-      new Set(
-        scopedHouse.physicalBeds.flatMap((bed) =>
-          bed.bedZones.flatMap((zone) =>
-            zone.orchidGroups.map((group) => group.id),
-          ),
-        ),
-      ),
-    [scopedHouse.physicalBeds],
-  );
 
   function toggleSelectedOrchidGroup(orchidGroupId: number) {
     setOrchidGroupSelection((current) => {
@@ -263,12 +252,6 @@ export function OrchidManagementMap({
             }}
           />
         </div>
-        {orchidManagement.selectedOrchidGroup &&
-        !visibleOrchidGroupIds.has(orchidManagement.selectedOrchidGroup.id) ? (
-          <p className="rounded-md border border-[#f0d58a] bg-[#fff9e8] px-3 py-2 text-xs font-semibold text-[#7a5b08]">
-            선택한 난 묶음은 현재 화면 밖에 있습니다.
-          </p>
-        ) : null}
         <SelectedZoneInfo
           house={scopedHouse}
           selectedBedZone={orchidManagement.selectedBedZone}
