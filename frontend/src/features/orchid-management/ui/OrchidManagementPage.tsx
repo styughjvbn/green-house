@@ -1,10 +1,17 @@
-import type { FarmStatusMapData, House, WorkType } from "@/entities/farm/types";
+import type {
+  FarmStatusMapData,
+  House,
+  VisibleBedCount,
+  WorkType,
+} from "@/entities/farm/types";
 import type { OrchidManagementSearchState } from "../model/types";
 import { OrchidManagementMap } from "./OrchidManagementMap";
 
 type OrchidManagementPageProps = {
   mapData: FarmStatusMapData;
   house: House | null;
+  initialStartBedId: number | null;
+  initialVisibleBedCount: VisibleBedCount;
   initialSelectedOrchidGroupId: number | null;
   initialSelectedPhysicalBedId?: number | null;
   initialSelectedBedZoneId?: number | null;
@@ -15,6 +22,8 @@ type OrchidManagementPageProps = {
 export function OrchidManagementPage({
   mapData,
   house,
+  initialStartBedId,
+  initialVisibleBedCount,
   initialSelectedOrchidGroupId,
   initialSelectedPhysicalBedId,
   initialSelectedBedZoneId,
@@ -45,6 +54,8 @@ export function OrchidManagementPage({
         initialSearchFilters={initialSearchFilters}
         mapData={mapData}
         house={house}
+        initialStartBedId={initialStartBedId}
+        initialVisibleBedCount={initialVisibleBedCount}
         initialSelectedOrchidGroupId={initialSelectedOrchidGroupId}
         workTypes={workTypes}
       />
