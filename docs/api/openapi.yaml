@@ -50,6 +50,31 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ApiResponseSalesSlipResponse'
+  /api/business-partners/{partnerId}:
+    put:
+      tags:
+      - business-partner-controller
+      operationId: update
+      parameters:
+      - name: partnerId
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: int64
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/BusinessPartnerUpdateRequest'
+        required: true
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponseBusinessPartnerResponse'
   /api/business-partners/{partnerId}/settlement-settings:
     get:
       tags:
@@ -72,7 +97,7 @@ paths:
     put:
       tags:
       - partner-settlement-settings-controller
-      operationId: update
+      operationId: update_1
       parameters:
       - name: partnerId
         in: path
@@ -115,7 +140,7 @@ paths:
     put:
       tags:
       - bed-placement-controller
-      operationId: update_1
+      operationId: update_2
       parameters:
       - name: bedZoneId
         in: path
@@ -1547,7 +1572,7 @@ paths:
     patch:
       tags:
       - variety-controller
-      operationId: update_2
+      operationId: update_3
       parameters:
       - name: varietyId
         in: path
@@ -1634,7 +1659,7 @@ paths:
     patch:
       tags:
       - orchid-group-command-controller
-      operationId: update_3
+      operationId: update_4
       parameters:
       - name: orchidGroupId
         in: path
@@ -1702,7 +1727,7 @@ paths:
     patch:
       tags:
       - orchid-group-collection-controller
-      operationId: update_4
+      operationId: update_5
       parameters:
       - name: collectionId
         in: path
@@ -1763,7 +1788,7 @@ paths:
     patch:
       tags:
       - material-controller
-      operationId: update_5
+      operationId: update_6
       parameters:
       - name: materialId
         in: path
@@ -1843,7 +1868,7 @@ paths:
     patch:
       tags:
       - inbound-record-controller
-      operationId: update_6
+      operationId: update_7
       parameters:
       - name: inboundRecordId
         in: path
@@ -2442,6 +2467,32 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ApiResponseFarmStatusZoomResponse'
+  /api/farm-status/orchid-management:
+    get:
+      tags:
+      - farm-status-controller
+      operationId: getOrchidManagementViewport
+      parameters:
+      - name: startBedId
+        in: query
+        required: false
+        schema:
+          type: integer
+          format: int64
+      - name: bedCount
+        in: query
+        required: false
+        schema:
+          type: integer
+          format: int32
+          default: 3
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponseOrchidManagementViewportResponse'
   /api/farm-status/orchid-groups:
     get:
       tags:
@@ -3099,6 +3150,45 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/SalesSlipItemResponse'
+    BusinessPartnerUpdateRequest:
+      type: object
+      properties:
+        name:
+          type: string
+          maxLength: 150
+          minLength: 0
+        partnerType:
+          type: string
+          enum:
+          - WHOLESALE
+          - RETAIL
+          - AUCTION_HOUSE
+        ownerName:
+          type: string
+          maxLength: 100
+          minLength: 0
+        phone:
+          type: string
+          maxLength: 50
+          minLength: 0
+        address:
+          type: string
+          maxLength: 1000
+          minLength: 0
+        memo:
+          type: string
+          maxLength: 1000
+          minLength: 0
+      required:
+      - name
+      - partnerType
+    ApiResponseBusinessPartnerResponse:
+      type: object
+      properties:
+        data:
+          $ref: '#/components/schemas/BusinessPartnerResponse'
+        message:
+          type: string
     PartnerSettlementSettingsRequest:
       type: object
       properties:
@@ -4999,13 +5089,6 @@ components:
       required:
       - name
       - partnerType
-    ApiResponseBusinessPartnerResponse:
-      type: object
-      properties:
-        data:
-          $ref: '#/components/schemas/BusinessPartnerResponse'
-        message:
-          type: string
     ApiResponseVoid:
       type: object
       properties:
@@ -6534,6 +6617,66 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/BedZoneResponse'
+    ApiResponseOrchidManagementViewportResponse:
+      type: object
+      properties:
+        data:
+          $ref: '#/components/schemas/OrchidManagementViewportResponse'
+        message:
+          type: string
+    OrchidManagementBedOrderResponse:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: int64
+        houseId:
+          type: integer
+          format: int64
+        houseNumber:
+          type: integer
+          format: int32
+        number:
+          type: integer
+          format: int32
+    OrchidManagementSummaryResponse:
+      type: object
+      properties:
+        orchidGroupCount:
+          type: integer
+          format: int64
+        totalQuantity:
+          type: integer
+          format: int64
+        abnormalCount:
+          type: integer
+          format: int64
+        bedZoneCount:
+          type: integer
+          format: int64
+    OrchidManagementViewportResponse:
+      type: object
+      properties:
+        startBedId:
+          type: integer
+          format: int64
+        bedCount:
+          type: integer
+          format: int32
+        beds:
+          type: array
+          items:
+            $ref: '#/components/schemas/PhysicalBedResponse'
+        hasPrevious:
+          type: boolean
+        hasNext:
+          type: boolean
+        summary:
+          $ref: '#/components/schemas/OrchidManagementSummaryResponse'
+        bedOrder:
+          type: array
+          items:
+            $ref: '#/components/schemas/OrchidManagementBedOrderResponse'
     ApiResponseFarmStatusOrchidGroupListResponse:
       type: object
       properties:

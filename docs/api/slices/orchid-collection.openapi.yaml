@@ -108,7 +108,7 @@ paths:
     patch:
       tags:
       - orchid-group-collection-controller
-      operationId: update_4
+      operationId: update_5
       parameters:
       - name: collectionId
         in: path

@@ -9,6 +9,9 @@ import com.greenhouse.backend.farm.dto.FarmStatusOrchidGroupItemResponse;
 import com.greenhouse.backend.farm.dto.FarmStatusOrchidGroupListResponse;
 import com.greenhouse.backend.farm.dto.FarmStatusZoomResponse;
 import com.greenhouse.backend.farm.dto.HouseStatusSummaryResponse;
+import com.greenhouse.backend.farm.dto.OrchidManagementBedOrderResponse;
+import com.greenhouse.backend.farm.dto.OrchidManagementSummaryResponse;
+import com.greenhouse.backend.farm.dto.OrchidManagementViewportResponse;
 import com.greenhouse.backend.farm.dto.PhysicalBedResponse;
 import com.greenhouse.backend.farm.repository.BedZoneRepository;
 import com.greenhouse.backend.farm.repository.HouseRepository;
@@ -47,6 +50,69 @@ public class FarmStatusService {
 								.toList()))
 				.toList();
 		return new FarmStatusMapResponse(houses);
+	}
+
+	public OrchidManagementViewportResponse getOrchidManagementViewport(Long startBedId, int bedCount) {
+		if (bedCount < 2 || bedCount > 4) {
+			throw new IllegalArgumentException("bedCount must be between 2 and 4.");
+		}
+
+		var allBeds = physicalBedRepository.findAllInFarmOrder();
+		if (allBeds.isEmpty()) {
+			return new OrchidManagementViewportResponse(
+					null,
+					bedCount,
+					List.of(),
+					false,
+					false,
+					new OrchidManagementSummaryResponse(0, 0, 0, 0),
+					List.of());
+		}
+
+		int requestedIndex = 0;
+		if (startBedId != null) {
+			for (int index = 0; index < allBeds.size(); index++) {
+				if (allBeds.get(index).getId().equals(startBedId)) {
+					requestedIndex = index;
+					break;
+				}
+			}
+		}
+		int startIndex = Math.min(requestedIndex, Math.max(0, allBeds.size() - bedCount));
+		var visibleBeds = allBeds.subList(startIndex, Math.min(startIndex + bedCount, allBeds.size()));
+
+		long orchidGroupCount = 0;
+		long totalQuantity = 0;
+		long abnormalCount = 0;
+		long bedZoneCount = 0;
+		for (var bed : visibleBeds) {
+			bedZoneCount += bed.getBedZones().size();
+			for (var zone : bed.getBedZones()) {
+				for (var orchidGroup : zone.getOrchidGroups()) {
+					if (orchidGroup.getQuantity() == null || orchidGroup.getQuantity() <= 0) {
+						continue;
+					}
+					orchidGroupCount++;
+					totalQuantity += orchidGroup.getQuantity();
+					if (List.of("주의", "이상", "병해충").contains(orchidGroup.getStatus())) {
+						abnormalCount++;
+					}
+				}
+			}
+		}
+
+		return new OrchidManagementViewportResponse(
+				visibleBeds.getFirst().getId(),
+				bedCount,
+				visibleBeds.stream().map(PhysicalBedResponse::from).toList(),
+				startIndex > 0,
+				startIndex + bedCount < allBeds.size(),
+				new OrchidManagementSummaryResponse(
+						orchidGroupCount,
+						totalQuantity,
+						abnormalCount,
+						bedZoneCount),
+				allBeds.stream().map(OrchidManagementBedOrderResponse::from).toList());
 	}
 
 	public FarmStatusOrchidGroupListResponse getOrchidGroups(FarmStatusTargetType targetType, Long targetId) {

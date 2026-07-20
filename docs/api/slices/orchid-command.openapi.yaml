@@ -28,7 +28,7 @@ paths:
     put:
       tags:
       - bed-placement-controller
-      operationId: update_1
+      operationId: update_2
       parameters:
       - name: bedZoneId
         in: path
@@ -144,7 +144,7 @@ paths:
     patch:
       tags:
       - orchid-group-command-controller
-      operationId: update_3
+      operationId: update_4
       parameters:
       - name: orchidGroupId
         in: path

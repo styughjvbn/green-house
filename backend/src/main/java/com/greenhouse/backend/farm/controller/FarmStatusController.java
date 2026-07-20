@@ -7,6 +7,7 @@ import com.greenhouse.backend.farm.domain.FarmZoomLevel;
 import com.greenhouse.backend.farm.dto.FarmStatusMapResponse;
 import com.greenhouse.backend.farm.dto.FarmStatusOrchidGroupListResponse;
 import com.greenhouse.backend.farm.dto.FarmStatusZoomResponse;
+import com.greenhouse.backend.farm.dto.OrchidManagementViewportResponse;
 
 import lombok.RequiredArgsConstructor;
 
@@ -32,6 +33,13 @@ public class FarmStatusController {
 			@RequestParam FarmStatusTargetType targetType,
 			@RequestParam Long targetId) {
 		return ApiResponse.ok(farmStatusService.getOrchidGroups(targetType, targetId));
+	}
+
+	@GetMapping("/orchid-management")
+	public ApiResponse<OrchidManagementViewportResponse> getOrchidManagementViewport(
+			@RequestParam(required = false) Long startBedId,
+			@RequestParam(defaultValue = "3") int bedCount) {
+		return ApiResponse.ok(farmStatusService.getOrchidManagementViewport(startBedId, bedCount));
 	}
 
 	@GetMapping("/zoom")
