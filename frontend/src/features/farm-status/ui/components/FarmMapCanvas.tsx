@@ -17,13 +17,14 @@ import type {
 const LeafletFarmMap = dynamic(() => import("./LeafletFarmMap"), {
   ssr: false,
   loading: () => (
-    <div className="flex min-h-0 flex-1 items-center justify-center rounded-xl border border-[#cdd9c8] bg-[#95b969] text-sm font-semibold text-white shadow-sm">
+    <div className="flex min-h-0 flex-1 items-center justify-center border border-[#cdd9c8] bg-[#95b969] text-sm font-semibold text-white shadow-sm">
       농장 지도를 불러오는 중입니다.
     </div>
   ),
 });
 
 type FarmMapCanvasProps = {
+  detailPanelOpen: boolean;
   filterMatches: FarmStatusFilterMatches;
   hasActiveSearch: boolean;
   houses: HouseStatusSummary[];

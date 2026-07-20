@@ -236,8 +236,29 @@ export async function saveBedZonePlacementProfile(
   return (body as { data: BedZonePlacementProfile }).data;
 }
 
-export function getOrchidManagementMap() {
-  return fetchApi<FarmStatusMapData>("/farm-status/map");
+export async function getOrchidManagementMap(): Promise<FarmStatusMapData> {
+  const houses = await fetchApi<House[]>("/houses");
+
+  return {
+    houses: houses.map((house) => {
+      const orchidGroups = house.physicalBeds.flatMap((bed) =>
+        bed.bedZones.flatMap((zone) => zone.orchidGroups),
+      );
+      return {
+        houseId: house.id,
+        houseNumber: house.number,
+        houseName: house.name,
+        orchidGroupCount: orchidGroups.length,
+        warningCount: orchidGroups.filter((group) =>
+          ["주의", "이상", "병해충"].includes(group.status),
+        ).length,
+        repotDueCount: 0,
+        latestWorkDate: null,
+        physicalBeds: house.physicalBeds,
+      };
+    }),
+    orchidGroups: [],
+  };
 }
 
 export function getOrchidManagementViewport(

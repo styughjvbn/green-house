@@ -26,6 +26,8 @@ public interface OrchidGroupRepository extends JpaRepository<OrchidGroup, Long> 
 			join fetch g.bedZone z
 			join fetch z.physicalBed b
 			join fetch b.house h
+			left join fetch g.variety
+			left join fetch g.inboundRecord
 			where (:houseId is null or h.id = :houseId)
 			    and (:keyword = ''
 			        or lower(g.varietyName) like concat('%', lower(:keyword), '%')

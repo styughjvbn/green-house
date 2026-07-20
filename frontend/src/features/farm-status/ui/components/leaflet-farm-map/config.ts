@@ -19,6 +19,16 @@ export const FARM_BOUNDS: LatLngBoundsExpression = [
   [WORLD_HEIGHT, WORLD_WIDTH],
 ];
 
+export const FARM_PAN_BOUNDS: LatLngBoundsExpression = [
+  [-WORLD_HEIGHT * 0.5, -WORLD_WIDTH * 0.5],
+  [WORLD_HEIGHT * 1.5, WORLD_WIDTH * 1.5],
+];
+
+export const FARM_ACTUAL_PAN_BOUNDS: LatLngBoundsExpression = [
+  [-WORLD_HEIGHT * 0.8, -WORLD_WIDTH * 0.8],
+  [WORLD_HEIGHT * 1.8, WORLD_WIDTH * 1.8],
+];
+
 export const LEVEL_RANK: Record<FarmZoomLevel, number> = {
   FARM: 0,
   HOUSE: 1,

@@ -376,6 +376,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const activeTabPath = pathname.split("/")[2] ?? "";
   const isWorkPage = pathname.startsWith("/work-records");
   const isSalesPage = pathname.startsWith("/sales");
+  const isFarmStatusPage = pathname.startsWith("/farm-status");
   const sidebarCollapsed = !sidebarExpanded;
   const activeNavigationItem = navigation.find((item) =>
     isNavigationActive(pathname, item),
@@ -673,7 +674,13 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           ) : null}
         </header>
 
-        <main className="app-content px-4 py-4 md:px-8 lg:px-6">
+        <main
+          className={
+            isFarmStatusPage
+              ? "app-content farm-status-content p-0"
+              : "app-content px-4 py-4 md:px-8 lg:px-6"
+          }
+        >
           <PageHeader
             title={currentPage.title}
             description={currentPage.description}

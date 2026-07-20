@@ -140,8 +140,25 @@ export type HouseStatusSummary = {
   physicalBeds: PhysicalBed[];
 };
 
+export type FarmStatusMapOrchidGroup = {
+  orchidGroupId: number;
+  houseId: number;
+  physicalBedId: number;
+  bedZoneId: number;
+  startPosition: number | null;
+  endPosition: number | null;
+  varietyId: number | null;
+  varietyName: string;
+  quantity: number;
+  status: string;
+  ageYear: number | null;
+  potSize: string | null;
+  sortOrder: number;
+};
+
 export type FarmStatusMapData = {
   houses: HouseStatusSummary[];
+  orchidGroups: FarmStatusMapOrchidGroup[];
 };
 
 export type VisibleBedCount = 2 | 3 | 4;

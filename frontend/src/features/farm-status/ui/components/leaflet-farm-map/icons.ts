@@ -1,5 +1,4 @@
 import { divIcon, type LeafletMouseEvent } from "leaflet";
-import { getOrchidVarietyColor } from "@/entities/farm/orchidColors";
 import type { OrchidGroup } from "@/entities/farm/types";
 
 export function stopLeafletClick(event: LeafletMouseEvent) {
@@ -88,14 +87,10 @@ export function createBottomMetricIcon({
 export function createOrchidBlockIcon(
   group: OrchidGroup,
   matched: boolean,
-  distinguishVarietyColors: boolean,
+  fillColor: string,
   mapZoom: number,
 ) {
-  const bg = matched
-    ? distinguishVarietyColors
-      ? getOrchidVarietyColor(group).fill
-      : "#1f8f48"
-    : "#9aa19a";
+  const bg = matched ? fillColor : "#9aa19a";
   const compact = mapZoom <= 2;
   const width = compact ? 46 : 96;
   const height = compact ? 32 : 46;

@@ -5,6 +5,8 @@ import com.greenhouse.backend.farm.domain.FarmStatusTargetType;
 import com.greenhouse.backend.farm.domain.FarmZoomLevel;
 import com.greenhouse.backend.farm.dto.BedZoneResponse;
 import com.greenhouse.backend.farm.dto.FarmStatusMapResponse;
+import com.greenhouse.backend.farm.dto.FarmStatusMapOrchidGroupResponse;
+import com.greenhouse.backend.farm.dto.FarmStatusMapPhysicalBedResponse;
 import com.greenhouse.backend.farm.dto.FarmStatusOrchidGroupItemResponse;
 import com.greenhouse.backend.farm.dto.FarmStatusOrchidGroupListResponse;
 import com.greenhouse.backend.farm.dto.FarmStatusZoomResponse;
@@ -35,21 +37,29 @@ public class FarmStatusService {
 	private final OrchidGroupRepository orchidGroupRepository;
 
 	public FarmStatusMapResponse getMap() {
+		var mapOrchidGroups = orchidGroupRepository.search(null, "", null, null, null);
 		var houses = houseRepository.findAll().stream()
 				.sorted((a, b) -> a.getNumber().compareTo(b.getNumber()))
 				.map(house -> new HouseStatusSummaryResponse(
 						house.getId(),
 						house.getNumber(),
 						house.getName(),
-						orchidGroupRepository.countByHouseId(house.getId()),
-						orchidGroupRepository.countWarningStatusByHouseId(house.getId()),
+						mapOrchidGroups.stream()
+								.filter(group -> group.getBedZone().getPhysicalBed().getHouse().getId().equals(house.getId()))
+								.count(),
+						mapOrchidGroups.stream()
+								.filter(group -> group.getBedZone().getPhysicalBed().getHouse().getId().equals(house.getId()))
+								.filter(group -> List.of("주의", "이상", "병해충").contains(group.getStatus()))
+								.count(),
 						0,
 						null,
 						physicalBedRepository.findByHouseIdOrderByDisplayOrderAsc(house.getId()).stream()
-								.map(PhysicalBedResponse::from)
+								.map(FarmStatusMapPhysicalBedResponse::from)
 								.toList()))
 				.toList();
-		return new FarmStatusMapResponse(houses);
+		return new FarmStatusMapResponse(
+				houses,
+				mapOrchidGroups.stream().map(FarmStatusMapOrchidGroupResponse::from).toList());
 	}
 
 	public OrchidManagementViewportResponse getOrchidManagementViewport(Long startBedId, int bedCount) {

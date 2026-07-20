@@ -6743,6 +6743,125 @@ components:
           $ref: '#/components/schemas/FarmStatusMapResponse'
         message:
           type: string
+    FarmStatusMapBedZoneResponse:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: int64
+        physicalBedId:
+          type: integer
+          format: int64
+        physicalBedNumber:
+          type: integer
+          format: int32
+        houseId:
+          type: integer
+          format: int64
+        houseNumber:
+          type: integer
+          format: int32
+        name:
+          type: string
+        side:
+          type: string
+          enum:
+          - LEFT
+          - RIGHT
+          - CUSTOM
+          - HANGING
+        zoneType:
+          type: string
+          enum:
+          - DEFAULT
+          - CUSTOM
+          - HANGING
+          - TRAY
+          - GRID
+        sortOrder:
+          type: integer
+          format: int32
+        active:
+          type: boolean
+        memo:
+          type: string
+    FarmStatusMapOrchidGroupResponse:
+      type: object
+      properties:
+        orchidGroupId:
+          type: integer
+          format: int64
+        houseId:
+          type: integer
+          format: int64
+        physicalBedId:
+          type: integer
+          format: int64
+        bedZoneId:
+          type: integer
+          format: int64
+        startPosition:
+          type: number
+        endPosition:
+          type: number
+        varietyId:
+          type: integer
+          format: int64
+        varietyName:
+          type: string
+        quantity:
+          type: integer
+          format: int32
+        status:
+          type: string
+        ageYear:
+          type: integer
+          format: int32
+        potSize:
+          type: string
+        sortOrder:
+          type: integer
+          format: int32
+    FarmStatusMapPhysicalBedResponse:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: int64
+        houseId:
+          type: integer
+          format: int64
+        houseNumber:
+          type: integer
+          format: int32
+        number:
+          type: integer
+          format: int32
+        displayOrder:
+          type: integer
+          format: int32
+        lengthCm:
+          type: integer
+          format: int32
+        widthCm:
+          type: integer
+          format: int32
+        wireCount:
+          type: integer
+          format: int32
+        supportIntervalCm:
+          type: integer
+          format: int32
+        positionUnitCount:
+          type: number
+        positionUnitLabel:
+          type: string
+        memo:
+          type: string
+        bedZones:
+          type: array
+          items:
+            $ref: '#/components/schemas/FarmStatusMapBedZoneResponse'
     FarmStatusMapResponse:
       type: object
       properties:
@@ -6750,6 +6869,10 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/HouseStatusSummaryResponse'
+        orchidGroups:
+          type: array
+          items:
+            $ref: '#/components/schemas/FarmStatusMapOrchidGroupResponse'
     HouseStatusSummaryResponse:
       type: object
       properties:
@@ -6775,7 +6898,7 @@ components:
         physicalBeds:
           type: array
           items:
-            $ref: '#/components/schemas/PhysicalBedResponse'
+            $ref: '#/components/schemas/FarmStatusMapPhysicalBedResponse'
     ApiResponseDashboardSummaryResponse:
       type: object
       properties:
