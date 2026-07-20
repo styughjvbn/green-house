@@ -796,7 +796,7 @@ function createWorkRecordSummary(
 ): WorkRecordSummary {
   const uniqueRecords = new Map<string, OrchidGroupWorkHistory>();
   records.forEach((record) => {
-    const key = `${record.sourceKind}-${record.workOperationId ?? record.legacyWorkRecordId}`;
+    const key = `${record.sourceKind}-${record.workOperationId}`;
     if (!uniqueRecords.has(key)) {
       uniqueRecords.set(key, record);
     }
@@ -825,8 +825,5 @@ function compareWorkRecordsDesc(
   if (a.workDate !== b.workDate) {
     return b.workDate.localeCompare(a.workDate);
   }
-  return (
-    (b.workOperationId ?? b.legacyWorkRecordId ?? 0) -
-    (a.workOperationId ?? a.legacyWorkRecordId ?? 0)
-  );
+  return b.workOperationId - a.workOperationId;
 }

@@ -153,7 +153,7 @@
 | `POST` | `/api/work-operations/{workOperationId}/targets/{targetId}/start` | 대상 작업 시작 |
 | `POST` | `/api/work-operations/{workOperationId}/targets/{targetId}/complete` | 대상 작업 완료 |
 | `POST` | `/api/work-operations/{workOperationId}/targets/{targetId}/skip` | 대상 건너뛰기 |
-| `GET` | `/api/orchid-groups/{orchidGroupId}/work-history` | 기존·신규 통합 이력 |
+| `GET` | `/api/orchid-groups/{orchidGroupId}/work-history` | `WorkOperation` 기반 난 묶음 이력 |
 | `POST` | `/api/work-operations/{workOperationId}/corrections` | 완료된 구조 변경 작업에 보정 작업 연결 |
 | `GET` | `/api/work-operations/{workOperationId}/corrections` | 원본 작업과 연결된 보정 작업 조회 |
 

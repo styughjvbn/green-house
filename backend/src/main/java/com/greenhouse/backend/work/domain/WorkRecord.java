@@ -128,25 +128,4 @@ public class WorkRecord extends BaseEntity {
 		this.cancelReason = cancelReason;
 	}
 
-	public static WorkRecord movement(
-			WorkType movementType,
-			Long orchidGroupId,
-			Long fromBedZoneId,
-			Long toBedZoneId,
-			String worker,
-			String memo) {
-		WorkRecord workRecord = new WorkRecord(
-				movementType,
-				LocalDate.now(),
-				"ORCHID_GROUP",
-				orchidGroupId,
-				null,
-				null,
-				null,
-				worker,
-				memo);
-		workRecord.fromBedZoneId = fromBedZoneId;
-		workRecord.toBedZoneId = toBedZoneId;
-		return workRecord;
-	}
 }

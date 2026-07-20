@@ -14,6 +14,7 @@ import com.greenhouse.backend.farm.domain.House;
 import com.greenhouse.backend.farm.domain.OrchidGroup;
 import com.greenhouse.backend.farm.domain.PhysicalBed;
 import com.greenhouse.backend.farm.domain.Variety;
+import com.greenhouse.backend.work.domain.WorkRecord;
 import com.greenhouse.backend.work.domain.WorkType;
 import com.greenhouse.backend.work.domain.WorkTypeTemplate;
 import com.greenhouse.backend.work.repository.WorkOperationRepository;
@@ -22,6 +23,7 @@ import com.greenhouse.backend.work.repository.WorkAppliedEffectRepository;
 import com.greenhouse.backend.work.repository.WorkEffectOrchidGroupRepository;
 import com.greenhouse.backend.work.repository.WorkTargetExecutionRepository;
 import java.math.BigDecimal;
+import java.time.LocalDate;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -371,14 +373,52 @@ class WorkOperationIntegrationTests extends AbstractBackendIntegrationTest {
 				.andExpect(status().isOk())
 				.andExpect(jsonPath("$.data.houseNumber").value(5));
 
+			mockMvc.perform(get("/api/orchid-groups/{id}/work-history", targetGroup.getId()))
+					.andExpect(status().isOk())
+					.andExpect(jsonPath("$.data", hasSize(2)))
+					.andExpect(jsonPath("$.data[?(@.sourceKind == 'WORK_OPERATION')].workOperationId").value(hasItem(operationId.intValue())))
+					.andExpect(jsonPath("$.data[?(@.sourceKind == 'WORK_OPERATION')].propagated").value(hasItem(true)))
+					.andExpect(jsonPath("$.data[?(@.sourceKind == 'WORK_OPERATION')].locationSnapshot.houseNumber").value(hasItem(3)))
+					.andExpect(jsonPath("$.data[?(@.sourceKind == 'WORK_OPERATION')].currentLocation.houseNumber").value(hasItem(5)))
+					.andExpect(jsonPath("$.data[?(@.sourceKind == 'WORK_OPERATION')].workType").value(hasItem("위치 이동")));
+			org.assertj.core.api.Assertions.assertThat(workRecordRepository.count()).isZero();
+	}
+
+	@Test
+	void doesNotCreateMovementOperationWhenPlacementIsUnchanged() throws Exception {
+		mockMvc.perform(patch("/api/orchid-groups/{id}/move", targetGroup.getId())
+				.contentType(MediaType.APPLICATION_JSON)
+				.content("""
+						{
+						  "toBedZoneId": %d,
+						  "startPosition": 1.00,
+						  "endPosition": 10.00,
+						  "worker": "테스터"
+						}
+						""".formatted(targetGroup.getBedZone().getId())))
+				.andExpect(status().isOk())
+				.andExpect(jsonPath("$.data.houseNumber").value(3));
+
+		org.assertj.core.api.Assertions.assertThat(workOperationRepository.count()).isZero();
+		org.assertj.core.api.Assertions.assertThat(workRecordRepository.count()).isZero();
+	}
+
+	@Test
+	void excludesLegacyWorkRecordFromOrchidGroupHistory() throws Exception {
+		workRecordRepository.save(new WorkRecord(
+				pesticideType,
+				LocalDate.of(2026, 7, 14),
+				"ORCHID_GROUP",
+				targetGroup.getId(),
+				null,
+				null,
+				null,
+				"테스터",
+				null));
+
 		mockMvc.perform(get("/api/orchid-groups/{id}/work-history", targetGroup.getId()))
 				.andExpect(status().isOk())
-				.andExpect(jsonPath("$.data", hasSize(2)))
-				.andExpect(jsonPath("$.data[?(@.sourceKind == 'WORK_OPERATION')].workOperationId").value(hasItem(operationId.intValue())))
-				.andExpect(jsonPath("$.data[?(@.sourceKind == 'WORK_OPERATION')].propagated").value(hasItem(true)))
-				.andExpect(jsonPath("$.data[?(@.sourceKind == 'WORK_OPERATION')].locationSnapshot.houseNumber").value(hasItem(3)))
-				.andExpect(jsonPath("$.data[?(@.sourceKind == 'WORK_OPERATION')].currentLocation.houseNumber").value(hasItem(5)))
-				.andExpect(jsonPath("$.data[?(@.sourceKind == 'LEGACY_WORK_RECORD')].workType").value(hasItem("위치 이동")));
+				.andExpect(jsonPath("$.data", hasSize(0)));
 	}
 
 	@Test

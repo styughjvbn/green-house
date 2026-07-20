@@ -381,9 +381,8 @@ export type WorkOperation = {
 };
 
 export type OrchidGroupWorkHistory = {
-  sourceKind: "WORK_OPERATION" | "WORK_OPERATION_EFFECT" | "LEGACY_WORK_RECORD";
-  workOperationId: number | null;
-  legacyWorkRecordId: number | null;
+  sourceKind: "WORK_OPERATION" | "WORK_OPERATION_EFFECT";
+  workOperationId: number;
   workTypeId: number | null;
   workType: string;
   title: string;

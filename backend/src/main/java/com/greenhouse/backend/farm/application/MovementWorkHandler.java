@@ -34,8 +34,9 @@ public class MovementWorkHandler implements WorkEffectHandler {
 		if (target == null || target.getTargetReferenceType() != WorkTargetReferenceType.ORCHID_GROUP) {
 			throw new IllegalArgumentException("자리 이동 작업에는 난 묶음 대상이 필요합니다.");
 		}
-		OrchidGroupMoveRequest request = objectMapper.convertValue(
-				command.resultDetails(), OrchidGroupMoveRequest.class);
+		OrchidGroupMoveRequest request = command.payload() == null
+				? objectMapper.convertValue(command.resultDetails(), OrchidGroupMoveRequest.class)
+				: command.payloadAs(OrchidGroupMoveRequest.class);
 		var moved = orchidGroupCommandService.moveForOperation(target.getOrchidGroupId(), request);
 		var details = new LinkedHashMap<String, Object>();
 		details.put("orchidGroupId", target.getOrchidGroupId());

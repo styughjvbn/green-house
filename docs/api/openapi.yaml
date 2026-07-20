@@ -6348,9 +6348,6 @@ components:
         workOperationId:
           type: integer
           format: int64
-        legacyWorkRecordId:
-          type: integer
-          format: int64
         workTypeId:
           type: integer
           format: int64

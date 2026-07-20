@@ -2,6 +2,7 @@ package com.greenhouse.backend.farm.controller;
 
 import com.greenhouse.backend.common.api.ApiResponse;
 import com.greenhouse.backend.farm.application.OrchidGroupCommandService;
+import com.greenhouse.backend.farm.application.OrchidGroupMovementService;
 import com.greenhouse.backend.farm.dto.OrchidGroupCreateRequest;
 import com.greenhouse.backend.farm.dto.OrchidGroupMoveRequest;
 import com.greenhouse.backend.farm.dto.OrchidGroupResponse;
@@ -25,6 +26,7 @@ import org.springframework.web.bind.annotation.RestController;
 public class OrchidGroupCommandController {
 
 	private final OrchidGroupCommandService orchidGroupCommandService;
+	private final OrchidGroupMovementService orchidGroupMovementService;
 
 	@PostMapping
 	@ResponseStatus(HttpStatus.CREATED)
@@ -49,6 +51,6 @@ public class OrchidGroupCommandController {
 	public ApiResponse<OrchidGroupResponse> move(
 			@PathVariable Long orchidGroupId,
 			@Valid @RequestBody OrchidGroupMoveRequest request) {
-		return ApiResponse.ok(orchidGroupCommandService.move(orchidGroupId, request));
+		return ApiResponse.ok(orchidGroupMovementService.move(orchidGroupId, request));
 	}
 }

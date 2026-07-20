@@ -26,7 +26,6 @@ import com.greenhouse.backend.work.dto.WorkTargetExecutionRequest;
 import com.greenhouse.backend.work.dto.StructureChangeExecutionRequest;
 import com.greenhouse.backend.work.repository.WorkOperationRepository;
 import com.greenhouse.backend.work.repository.WorkOperationTargetRepository;
-import com.greenhouse.backend.work.repository.WorkRecordRepository;
 import com.greenhouse.backend.work.repository.WorkEffectOrchidGroupRepository;
 import com.greenhouse.backend.work.repository.WorkTargetExecutionRepository;
 import com.greenhouse.backend.work.repository.WorkAppliedEffectRepository;
@@ -60,7 +59,6 @@ public class WorkOperationService {
 	private final WorkOperationRepository workOperationRepository;
 	private final WorkOperationTargetRepository workOperationTargetRepository;
 	private final WorkTargetExecutionRepository workTargetExecutionRepository;
-	private final WorkRecordRepository workRecordRepository;
 	private final WorkEffectOrchidGroupRepository workEffectOrchidGroupRepository;
 	private final WorkEffectProcessor workEffectProcessor;
 	private final WorkAppliedEffectRepository workAppliedEffectRepository;
@@ -631,9 +629,9 @@ public class WorkOperationService {
 						Comparator.comparing(OrchidGroupWorkHistoryResponse::workDate)
 								.reversed()
 								.thenComparing(
-										history -> history.workOperationId() == null
+										item -> item.workOperationId() == null
 												? Long.MIN_VALUE
-												: history.workOperationId(),
+												: item.workOperationId(),
 										Comparator.reverseOrder()))
 				.toList();
 	}
