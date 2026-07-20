@@ -9,6 +9,7 @@ import type {
   WorkRecordTargetType,
   WorkOperation,
   WorkType,
+  VisibleBedCount,
 } from "@/entities/farm/types";
 
 export type SelectedHouse = {
@@ -36,6 +37,7 @@ export type MutationMode = "CREATE" | "EDIT" | "MOVE" | "WORK_RECORD" | null;
 
 export type MapCellRangePick = {
   active: boolean;
+  completed: boolean;
   excludeOrchidGroupId: number | null;
   targetBedZoneId: number | null;
   startCell: number | null;
@@ -58,6 +60,17 @@ export type OrchidFormState = {
   startPosition: string;
   endPosition: string;
   memo: string;
+};
+
+export type OrchidFormDraft = {
+  form: OrchidFormState;
+  selectedVariety: {
+    id: number;
+    genus: string;
+    name: string;
+    defaultPotSize: string | null;
+    active: boolean;
+  } | null;
 };
 
 export type MutationPayload = {
@@ -172,8 +185,9 @@ export type PreciseMovePayload = {
 export type WorkRecordQuickFormState = {
   workTypeId: string;
   workDate: string;
-  targetType: WorkRecordTargetType;
+  targetType: WorkRecordTargetType | "MANUAL_SELECTION";
   targetId: number | null;
+  targetIds: number[];
   materialName: string;
   dilutionRatio: string;
   quantity: string;
@@ -184,8 +198,9 @@ export type WorkRecordQuickFormState = {
 export type WorkRecordQuickPayload = {
   workTypeId: number;
   workDate: string;
-  targetType: WorkRecordTargetType;
+  targetType: WorkRecordTargetType | "MANUAL_SELECTION";
   targetId: number | null;
+  targetIds: number[];
   materialName: string | null;
   dilutionRatio: string | null;
   quantity: string | null;
@@ -251,6 +266,8 @@ export type DerivedOrchidGroup = {
 export type OrchidManagementMapProps = {
   mapData: FarmStatusMapData;
   house: House;
+  initialStartBedId: number | null;
+  initialVisibleBedCount: VisibleBedCount;
   initialSelectedOrchidGroupId: number | null;
   initialSelectedPhysicalBedId?: number | null;
   initialSelectedBedZoneId?: number | null;

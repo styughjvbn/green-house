@@ -59,4 +59,19 @@ public class BusinessPartner extends BaseEntity {
 		this.memo = memo;
 		this.active = true;
 	}
+
+	public void update(
+			String name,
+			PartnerType partnerType,
+			String ownerName,
+			String phone,
+			String address,
+			String memo) {
+		this.name = name;
+		this.partnerType = partnerType;
+		this.ownerName = ownerName;
+		this.phone = phone;
+		this.address = address;
+		this.memo = memo;
+	}
 }

@@ -74,7 +74,7 @@ export default function SelectedZoneInfo({
   const targetContext = zone
     ? `${zone.houseNumber}동 ${zone.physicalBedNumber}다이`
     : physicalBed
-      ? `${house.number}동`
+      ? `${physicalBed.houseNumber}동`
       : selectedHouse
         ? house.name
         : null;
@@ -104,17 +104,20 @@ export default function SelectedZoneInfo({
     <section className="rounded-md border border-[#d7ddd4] bg-white p-2.5 shadow-sm">
       {targetLabel && targetName ? (
         <div className="flex flex-col gap-1 lg:flex-row lg:items-center">
-          <div className="shrink-0 lg:w-44">
+          <div className="min-w-0 shrink-0 lg:w-44">
             <p className="text-xs font-semibold text-[#6f7b72]">
               {targetLabel}
             </p>
-            <div className="mt-1 flex flex-wrap items-center gap-1.5">
+            <div className="mt-1 flex min-w-0 items-center gap-1.5">
               {targetContext ? (
-                <span className="text-sm font-semibold text-[#5c6a60]">
+                <span className="shrink-0 text-sm font-semibold text-[#5c6a60]">
                   {targetContext}
                 </span>
               ) : null}
-              <span className="rounded-md bg-[#e6f0ff] px-2 py-1 text-sm font-semibold text-[#246df2]">
+              <span
+                className="min-w-0 truncate rounded-md bg-[#e6f0ff] px-2 py-1 text-sm font-semibold text-[#246df2]"
+                title={selectedOrchidGroup ? targetName : undefined}
+              >
                 {targetName}
               </span>
             </div>
@@ -123,7 +126,7 @@ export default function SelectedZoneInfo({
           <div
             className={`grid shrink-0 gap-1 text-center ${
               selectedOrchidGroup
-                ? "grid-cols-2 lg:w-32"
+                ? "grid-cols-2 lg:min-w-32"
                 : "grid-cols-4 lg:w-60"
             }`}
           >
@@ -133,7 +136,7 @@ export default function SelectedZoneInfo({
                 value={`${targetGroups.length}개`}
               />
             ) : null}
-            <InfoMetric label="총 수량" value={`${totalQuantity}분`} />
+            <InfoMetric label="총 수량" value={`${totalQuantity}분`} nowrap />
             {!selectedOrchidGroup ? (
               <InfoMetric
                 label={zone ? "구역 수" : "하위 구역"}
@@ -311,7 +314,7 @@ function OrchidGroupActivityView({
         <h3 className="text-xs font-bold text-[#344138]">최근 작업</h3>
         {hasDetails ? (
           <button
-            className="text-[11px] font-semibold text-[#16713a]"
+            className="!min-h-0 text-[11px] font-semibold text-[#16713a]"
             type="button"
             aria-expanded={detailOpen}
             onClick={() => setDetailOpen((current) => !current)}
@@ -323,11 +326,11 @@ function OrchidGroupActivityView({
         )}
       </div>
       {loading ? (
-        <p className="mt-1 rounded-md bg-[#f5f7f3] p-2 text-xs text-[#5c6a60]">
+        <p className="mt-1 rounded-md bg-[#f5f7f3] px-2 py-0.5 text-xs text-[#5c6a60]">
           최근 작업 확인 중
         </p>
       ) : history.length === 0 ? (
-        <p className="mt-1 rounded-md bg-[#f5f7f3] p-2 text-xs text-[#5c6a60]">
+        <p className="mt-1 rounded-md bg-[#f5f7f3] px-2 py-0.5 text-xs text-[#5c6a60]">
           등록된 작업 없음
         </p>
       ) : (
@@ -409,7 +412,7 @@ function ActivityItem({
   onOpenCorrection?: (workOperationId: number) => void;
 }) {
   return (
-    <li className="rounded-md border border-[#dfe5dc] bg-[#fbfcfa] px-2 py-1.5 text-[11px]">
+    <li className="rounded-md border border-[#dfe5dc] bg-[#fbfcfa] px-2 py-0.5 text-[11px]">
       <div className="flex items-center justify-between gap-2">
         <span className="truncate font-bold text-[#17251b]">{item.title}</span>
         <span className="shrink-0 text-[#5c6a60]">{item.workDate}</span>
@@ -511,7 +514,7 @@ function RecentWorkList({ records }: { records: OrchidGroupWorkHistory[] }) {
       {records.map((record) => (
         <li
           key={historyItemKey(record)}
-          className="rounded-md border border-[#e1e6df] bg-[#fbfcfa] px-2 py-1.5 text-xs"
+          className="rounded-md border border-[#e1e6df] bg-[#fbfcfa] px-2 text-xs"
         >
           <div className="flex items-center justify-between gap-2">
             <span className="truncate font-semibold text-[#17251b]">

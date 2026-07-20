@@ -195,8 +195,6 @@ WorkType 1 ─ N WorkOperation 1 ─ N WorkOperationTarget 1 ─ 1 WorkTargetExe
 - 작업 당시 원본 수량과 결과 수량을 함께 보존한다.
 - 난 묶음 기준으로 직접 원본과 직접 결과를 양방향 조회한다.
 
-기존 `WorkRecord`는 과거 기록과 위치 이동·입고 같은 기존 시스템 기록을 위해 유지한다. 기능 플래그 활성화 시 사용자 수동 입력은 `WorkOperation`으로 전환하며 난 묶음 이력 조회에서는 두 모델을 합쳐 표시한다.
-
 ## 3. 거래처·판매 도메인
 
 ```text

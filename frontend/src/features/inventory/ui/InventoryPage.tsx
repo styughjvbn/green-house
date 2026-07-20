@@ -65,16 +65,24 @@ export function InventoryPage({
   const [selectedConnectedGroups, setSelectedConnectedGroups] = useState<
     Variety["connectedGroups"]
   >([]);
+  const visibleSelectedVarietyId = initialVarietyPage.content.some(
+    (variety) => variety.id === selectedVarietyId,
+  )
+    ? selectedVarietyId
+    : (initialVarietyPage.content[0]?.id ?? 0);
 
   useEffect(() => {
-    if (!selectedVarietyId) return;
+    if (!visibleSelectedVarietyId || activeTab !== "VARIETY") {
+      return;
+    }
 
     let active = true;
 
     void (async () => {
+      setSelectedConnectedGroups([]);
       setLoadingGroups(true);
       try {
-        const groups = await getVarietyOrchidGroups(selectedVarietyId);
+        const groups = await getVarietyOrchidGroups(visibleSelectedVarietyId);
         if (!active) return;
         setSelectedConnectedGroups(groups);
       } finally {
@@ -85,7 +93,7 @@ export function InventoryPage({
     return () => {
       active = false;
     };
-  }, [selectedVarietyId]);
+  }, [activeTab, visibleSelectedVarietyId]);
 
   const handleCreateVariety = async (payload: VarietyPayload) => {
     const created = await createVariety(payload);
@@ -151,7 +159,7 @@ export function InventoryPage({
             connectedGroups={selectedConnectedGroups}
             loadingGroups={loadingGroups}
             pageData={initialVarietyPage}
-            selectedId={selectedVarietyId}
+            selectedId={visibleSelectedVarietyId}
             genera={varietyGenera}
             onCreate={() => setDialog("variety")}
             onDeactivate={handleDeactivateVariety}

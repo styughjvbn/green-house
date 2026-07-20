@@ -1,9 +1,11 @@
 package com.greenhouse.backend.partner.application;
 
+import com.greenhouse.backend.common.exception.NotFoundException;
 import com.greenhouse.backend.partner.domain.BusinessPartner;
 import com.greenhouse.backend.partner.domain.PartnerType;
 import com.greenhouse.backend.partner.dto.BusinessPartnerCreateRequest;
 import com.greenhouse.backend.partner.dto.BusinessPartnerResponse;
+import com.greenhouse.backend.partner.dto.BusinessPartnerUpdateRequest;
 import com.greenhouse.backend.partner.repository.BusinessPartnerRepository;
 
 import lombok.RequiredArgsConstructor;
@@ -40,6 +42,19 @@ public class BusinessPartnerService {
 				request.name().trim(), request.partnerType(), normalize(request.ownerName()),
 				normalize(request.phone()), normalize(request.address()), normalize(request.memo()));
 		return BusinessPartnerResponse.from(repository.save(partner));
+	}
+
+	public BusinessPartnerResponse update(Long partnerId, BusinessPartnerUpdateRequest request) {
+		var partner = repository.findById(partnerId)
+				.orElseThrow(() -> new NotFoundException("거래처를 찾을 수 없습니다."));
+		partner.update(
+				request.name().trim(),
+				request.partnerType(),
+				normalize(request.ownerName()),
+				normalize(request.phone()),
+				normalize(request.address()),
+				normalize(request.memo()));
+		return BusinessPartnerResponse.from(partner);
 	}
 
 	private String normalize(String value) {

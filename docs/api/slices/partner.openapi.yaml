@@ -6,6 +6,31 @@ servers:
 - url: http://localhost:8080
   description: Generated server url
 paths:
+  /api/business-partners/{partnerId}:
+    put:
+      tags:
+      - business-partner-controller
+      operationId: updateBusinessPartner
+      parameters:
+      - name: partnerId
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: int64
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/BusinessPartnerUpdateRequest'
+        required: true
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponseBusinessPartnerResponse'
   /api/business-partners/{partnerId}/settlement-settings:
     get:
       tags:
@@ -119,6 +144,38 @@ components:
         message:
           type: string
     BusinessPartnerCreateRequest:
+      type: object
+      properties:
+        name:
+          type: string
+          maxLength: 150
+          minLength: 0
+        partnerType:
+          type: string
+          enum:
+          - WHOLESALE
+          - RETAIL
+          - AUCTION_HOUSE
+        ownerName:
+          type: string
+          maxLength: 100
+          minLength: 0
+        phone:
+          type: string
+          maxLength: 50
+          minLength: 0
+        address:
+          type: string
+          maxLength: 1000
+          minLength: 0
+        memo:
+          type: string
+          maxLength: 1000
+          minLength: 0
+      required:
+      - name
+      - partnerType
+    BusinessPartnerUpdateRequest:
       type: object
       properties:
         name:

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, type ReactNode } from "react";
+import { useMemo, useState, type ReactNode } from "react";
 import type {
   BedZone,
   House,
@@ -18,6 +18,7 @@ import type {
   MutationMode,
   MapCellRangePick,
   MutationPayload,
+  OrchidFormDraft,
   OrchidListSelection,
   OrchidSelection,
   PreciseMovePayload,
@@ -128,6 +129,7 @@ export default function OrchidSelectionPanel({
   const [viewMode, setViewMode] = useState<
     "LOCATION" | "DERIVED" | "COLLECTION"
   >("LOCATION");
+  const [createDraft, setCreateDraft] = useState<OrchidFormDraft | null>(null);
   const listZone =
     listSelection.type === "BED_ZONE"
       ? (findBedZone(house, listSelection.bedZoneId)?.zone ?? null)
@@ -148,9 +150,18 @@ export default function OrchidSelectionPanel({
             bed.bedZones.flatMap((bedZone) => bedZone.orchidGroups),
           )
         : [];
+  const sortedOrchidGroups = useMemo(
+    () => sortOrchidGroupsByMapOrder(orchidGroups, house),
+    [house, orchidGroups],
+  );
   const allHouseOrchidGroups = house.physicalBeds.flatMap((bed) =>
     bed.bedZones.flatMap((bedZone) => bedZone.orchidGroups),
   );
+  const selectedOrchidGroupOutsideViewport =
+    selectedOrchidGroup != null &&
+    !allHouseOrchidGroups.some(
+      (orchidGroup) => orchidGroup.id === selectedOrchidGroup.id,
+    );
   const batchSelectedGroups = allHouseOrchidGroups.filter((orchidGroup) =>
     selectedOrchidGroupIds.has(orchidGroup.id),
   );
@@ -160,15 +171,23 @@ export default function OrchidSelectionPanel({
       : selectedOrchidGroup
         ? [selectedOrchidGroup]
         : [];
-  const matchedCount = orchidGroups.filter((orchidGroup) =>
+  const matchedCount = sortedOrchidGroups.filter((orchidGroup) =>
     filteredOrchidGroupIds.has(orchidGroup.id),
   ).length;
+  const firstVisibleBed = house.physicalBeds[0];
+  const lastVisibleBed = house.physicalBeds.at(-1);
+  const visibleRangeLabel =
+    firstVisibleBed && lastVisibleBed
+      ? firstVisibleBed.houseId === lastVisibleBed.houseId
+        ? `${firstVisibleBed.houseNumber}동`
+        : `${firstVisibleBed.houseNumber}동 ${firstVisibleBed.number}다이 ~ ${lastVisibleBed.houseNumber}동 ${lastVisibleBed.number}다이`
+      : "현재 화면";
   const listTargetLabel = listZone
     ? "이 구역"
     : listPhysicalBed
       ? "이 다이"
       : selectedHouse
-        ? "이 동"
+        ? visibleRangeLabel
         : "선택 대상";
   const hasListTarget = Boolean(listZone || listPhysicalBed || selectedHouse);
   const compactList = mutationMode === "MOVE" && selectedOrchidGroup != null;
@@ -201,14 +220,23 @@ export default function OrchidSelectionPanel({
         </div>
       ) : null}  TODO: 난 묶음 관리 페이지 맵 정리 후 활성화 */}
 
+      {selectedOrchidGroupOutsideViewport ? (
+        <p className="rounded-md border border-[#f0d58a] bg-[#fff9e8] px-3 py-2 text-xs font-semibold text-[#7a5b08]">
+          선택한 난 묶음은 현재 화면 밖에 있습니다.
+        </p>
+      ) : null}
+
       {!hideList && viewMode === "LOCATION" ? (
         <section className="flex min-h-0 flex-1 flex-col rounded-md border border-[#d7ddd4] bg-white p-3 shadow-sm">
           <div className="flex shrink-0 items-center justify-between gap-3">
             <p className="text-sm font-semibold text-[#17251b]">
-              난 묶음 목록 (
+              {selectedHouse
+                ? `${visibleRangeLabel} 난 묶음 목록`
+                : "난 묶음 목록"}{" "}
+              (
               {hasActiveSearch
-                ? `${matchedCount}/${orchidGroups.length}`
-                : orchidGroups.length}
+                ? `${matchedCount}/${sortedOrchidGroups.length}`
+                : sortedOrchidGroups.length}
               개)
             </p>
             {/* {selectedOrchidGroupIds.size > 0 ? (
@@ -254,7 +282,7 @@ export default function OrchidSelectionPanel({
                   compactList ? "max-h-28 shrink-0" : "min-h-0 flex-1"
                 }`}
               >
-                {orchidGroups.map((orchidGroup) => {
+                {sortedOrchidGroups.map((orchidGroup, index) => {
                   const selected = orchidGroup.id === selectedOrchidGroup?.id;
                   const matched = filteredOrchidGroupIds.has(orchidGroup.id);
 
@@ -306,50 +334,59 @@ export default function OrchidSelectionPanel({
                             <p className="mt-1 text-xs font-semibold text-[#344138]">
                               {orchidGroup.quantity}분
                             </p>
-                            <p className="mt-0.5 text-[11px] text-[#6a766e]">
-                              {formatOrchidMeta(orchidGroup)}
+                            <p className="mt-0.5 truncate text-[11px] text-[#6a766e]">
+                              {formatOrchidMeta(orchidGroup) || "-"}
                             </p>
                           </div>
                         </div>
 
-                        <div className="flex shrink-0 items-center gap-1.5">
-                          <StatusBadge
-                            muted={!matched}
-                            value={orchidGroup.status}
-                          />
-                          <IconAction
-                            label="복사"
-                            onClick={() => onCopyOrchidGroup(orchidGroup.id)}
-                            disabled={!matched}
-                          >
-                            <Copy
-                              className="h-4 w-4"
-                              strokeWidth={1.8}
-                              aria-hidden="true"
+                        <div className="flex shrink-0 flex-col items-end gap-2.5">
+                          <div className="flex items-center gap-1.5">
+                            <StatusBadge
+                              muted={!matched}
+                              value={orchidGroup.status}
                             />
-                          </IconAction>
-                          <IconAction
-                            label="수정"
-                            onClick={onOpenEdit}
-                            disabled={!matched || !selected}
+                            <IconAction
+                              label="복사"
+                              onClick={() => onCopyOrchidGroup(orchidGroup.id)}
+                              disabled={!matched}
+                            >
+                              <Copy
+                                className="h-4 w-4"
+                                strokeWidth={1.8}
+                                aria-hidden="true"
+                              />
+                            </IconAction>
+                            <IconAction
+                              label="수정"
+                              onClick={onOpenEdit}
+                              disabled={!matched || !selected}
+                            >
+                              <Edit2
+                                className="h-4 w-4"
+                                strokeWidth={1.8}
+                                aria-hidden="true"
+                              />
+                            </IconAction>
+                            <IconAction
+                              label="삭제"
+                              onClick={onDelete}
+                              disabled={!matched || !selected || saving}
+                            >
+                              <Trash2
+                                className="h-4 w-4"
+                                strokeWidth={1.8}
+                                aria-hidden="true"
+                              />
+                            </IconAction>
+                          </div>
+                          <span
+                            className={`text-[10px] font-semibold ${
+                              matched ? "text-[#9aa49e]" : "text-[#b2b8b2]"
+                            }`}
                           >
-                            <Edit2
-                              className="h-4 w-4"
-                              strokeWidth={1.8}
-                              aria-hidden="true"
-                            />
-                          </IconAction>
-                          <IconAction
-                            label="삭제"
-                            onClick={onDelete}
-                            disabled={!matched || !selected || saving}
-                          >
-                            <Trash2
-                              className="h-4 w-4"
-                              strokeWidth={1.8}
-                              aria-hidden="true"
-                            />
-                          </IconAction>
+                            #{index + 1}
+                          </span>
                         </div>
                       </div>
                     </div>
@@ -435,6 +472,7 @@ export default function OrchidSelectionPanel({
               ? `edit-${selectedOrchidGroup?.id ?? "none"}`
               : `create-${resolvedZone?.id ?? "none"}-${pasteSourceOrchidGroup?.id ?? "empty"}`
           }
+          draft={mutationMode === "CREATE" ? createDraft : null}
           house={house}
           initialValue={
             mutationMode === "EDIT"
@@ -446,9 +484,17 @@ export default function OrchidSelectionPanel({
           mapCellRangePick={mapCellRangePick}
           targetZone={resolvedZone}
           onCancel={onCancelMutation}
+          onDraftChange={mutationMode === "CREATE" ? setCreateDraft : undefined}
           onStartMapCellRangePick={onStartMapCellRangePick}
           onSyncMapCellRangePick={onSyncMapCellRangePick}
-          onSubmit={mutationMode === "EDIT" ? onEdit : onCreate}
+          onSubmit={
+            mutationMode === "EDIT"
+              ? onEdit
+              : async (payload) => {
+                  await onCreate(payload);
+                  setCreateDraft(null);
+                }
+          }
         />
       ) : null}
 
@@ -548,6 +594,70 @@ function formatOrchidMeta(orchidGroup: OrchidGroup) {
   ]
     .filter(Boolean)
     .join(" · ");
+}
+
+function sortOrchidGroupsByMapOrder(orchidGroups: OrchidGroup[], house: House) {
+  const zoneOrder = new Map<
+    number,
+    {
+      bedDisplayOrder: number;
+      bedNumber: number;
+      zoneSideOrder: number;
+      zoneSortOrder: number;
+    }
+  >();
+
+  house.physicalBeds.forEach((bed) => {
+    bed.bedZones.forEach((zone) => {
+      zoneOrder.set(zone.id, {
+        bedDisplayOrder: bed.displayOrder,
+        bedNumber: bed.number,
+        zoneSideOrder: sideOrder(zone.side),
+        zoneSortOrder: zone.sortOrder,
+      });
+    });
+  });
+
+  return [...orchidGroups].sort((a, b) => {
+    const aOrder = zoneOrder.get(a.bedZoneId);
+    const bOrder = zoneOrder.get(b.bedZoneId);
+    const bedCompare =
+      compareNumber(aOrder?.bedDisplayOrder, bOrder?.bedDisplayOrder) ||
+      compareNumber(aOrder?.bedNumber, bOrder?.bedNumber) ||
+      a.physicalBedNumber - b.physicalBedNumber;
+    if (bedCompare !== 0) return bedCompare;
+
+    const zoneCompare =
+      compareNumber(aOrder?.zoneSideOrder, bOrder?.zoneSideOrder) ||
+      compareNumber(aOrder?.zoneSortOrder, bOrder?.zoneSortOrder) ||
+      a.bedZoneName.localeCompare(b.bedZoneName, "ko");
+    if (zoneCompare !== 0) return zoneCompare;
+
+    const positionCompare =
+      topCell(b) - topCell(a) || bottomCell(b) - bottomCell(a);
+    if (positionCompare !== 0) return positionCompare;
+
+    return a.sortOrder - b.sortOrder || a.id - b.id;
+  });
+}
+
+function sideOrder(side: BedZone["side"]) {
+  if (side === "LEFT") return 0;
+  if (side === "RIGHT") return 1;
+  if (side === "CUSTOM") return 2;
+  return 3;
+}
+
+function topCell(orchidGroup: OrchidGroup) {
+  return Math.ceil(orchidGroup.endPosition ?? orchidGroup.startPosition ?? 0);
+}
+
+function bottomCell(orchidGroup: OrchidGroup) {
+  return Math.floor(orchidGroup.startPosition ?? orchidGroup.endPosition ?? 0);
+}
+
+function compareNumber(a: number | undefined, b: number | undefined) {
+  return (a ?? Number.MAX_SAFE_INTEGER) - (b ?? Number.MAX_SAFE_INTEGER);
 }
 
 function getStatusDotClass(status: string) {

@@ -53,14 +53,22 @@ export default function OrchidWorkRecordForm({
   const manualWorkTypes = getManualWorkTypes(workTypes);
   const selectedWorkType = findWorkType(workTypes, Number(form.workTypeId));
   const template = selectedWorkType?.template ?? null;
+  const firstVisibleBed = house.physicalBeds[0];
+  const lastVisibleBed = house.physicalBeds.at(-1);
+  const visibleRangeLabel =
+    firstVisibleBed && lastVisibleBed
+      ? firstVisibleBed.houseId === lastVisibleBed.houseId
+        ? `${firstVisibleBed.houseNumber}동`
+        : `${firstVisibleBed.houseNumber}동 ${firstVisibleBed.number}다이 ~ ${lastVisibleBed.houseNumber}동 ${lastVisibleBed.number}다이`
+      : "현재 화면";
   const targetLabel = selectedOrchidGroup
     ? `${selectedOrchidGroup.varietyName} / ${selectedOrchidGroup.quantity}분`
     : resolvedZone
       ? `${resolvedZone.physicalBedNumber}다이 ${resolvedZone.name}`
       : selectedPhysicalBed
         ? `${house.number}동 ${selectedPhysicalBed.number}다이`
-        : selection?.type === "HOUSE"
-          ? `${house.number}동`
+        : selection?.type === "HOUSE" || form.targetType === "MANUAL_SELECTION"
+          ? visibleRangeLabel
           : "선택 대상";
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {

@@ -40,6 +40,32 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ApiResponseFarmStatusZoomResponse'
+  /api/farm-status/orchid-management:
+    get:
+      tags:
+      - farm-status-controller
+      operationId: getOrchidManagementViewport
+      parameters:
+      - name: startBedId
+        in: query
+        required: false
+        schema:
+          type: integer
+          format: int64
+      - name: bedCount
+        in: query
+        required: false
+        schema:
+          type: integer
+          format: int32
+          default: 3
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponseOrchidManagementViewportResponse'
   /api/farm-status/orchid-groups:
     get:
       tags:
@@ -120,6 +146,13 @@ components:
       properties:
         data:
           $ref: '#/components/schemas/FarmStatusZoomResponse'
+        message:
+          type: string
+    ApiResponseOrchidManagementViewportResponse:
+      type: object
+      properties:
+        data:
+          $ref: '#/components/schemas/OrchidManagementViewportResponse'
         message:
           type: string
     BedZoneResponse:
@@ -367,6 +400,59 @@ components:
           format: int32
         bedZoneName:
           type: string
+    OrchidManagementBedOrderResponse:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: int64
+        houseId:
+          type: integer
+          format: int64
+        houseNumber:
+          type: integer
+          format: int32
+        number:
+          type: integer
+          format: int32
+    OrchidManagementSummaryResponse:
+      type: object
+      properties:
+        orchidGroupCount:
+          type: integer
+          format: int64
+        totalQuantity:
+          type: integer
+          format: int64
+        abnormalCount:
+          type: integer
+          format: int64
+        bedZoneCount:
+          type: integer
+          format: int64
+    OrchidManagementViewportResponse:
+      type: object
+      properties:
+        startBedId:
+          type: integer
+          format: int64
+        bedCount:
+          type: integer
+          format: int32
+        beds:
+          type: array
+          items:
+            $ref: '#/components/schemas/PhysicalBedResponse'
+        hasPrevious:
+          type: boolean
+        hasNext:
+          type: boolean
+        summary:
+          $ref: '#/components/schemas/OrchidManagementSummaryResponse'
+        bedOrder:
+          type: array
+          items:
+            $ref: '#/components/schemas/OrchidManagementBedOrderResponse'
     PhysicalBedResponse:
       type: object
       properties:

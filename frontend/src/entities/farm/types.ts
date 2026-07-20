@@ -144,6 +144,28 @@ export type FarmStatusMapData = {
   houses: HouseStatusSummary[];
 };
 
+export type VisibleBedCount = 2 | 3 | 4;
+
+export type OrchidManagementViewport = {
+  startBedId: number | null;
+  bedCount: VisibleBedCount;
+  beds: PhysicalBed[];
+  hasPrevious: boolean;
+  hasNext: boolean;
+  summary: {
+    orchidGroupCount: number;
+    totalQuantity: number;
+    abnormalCount: number;
+    bedZoneCount: number;
+  };
+  bedOrder: Array<{
+    id: number;
+    houseId: number;
+    houseNumber: number;
+    number: number;
+  }>;
+};
+
 export type FarmStatusOrchidGroupItem = {
   orchidGroupId: number;
   varietyName: string;

@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { Bell, CalendarDays, ChevronRight, CloudSun } from "lucide-react";
 import type { ReactNode } from "react";
 import { useSyncExternalStore } from "react";
@@ -10,6 +11,11 @@ type PageHeaderProps = {
   breadcrumbs?: string[];
   className?: string;
   collapsed?: boolean;
+  compactSubNavigation?: {
+    href: string;
+    label: string;
+    active: boolean;
+  }[];
   notificationCount?: number;
   temperatureLabel?: string;
   children?: ReactNode;
@@ -17,10 +23,11 @@ type PageHeaderProps = {
 
 export function PageHeader({
   title,
-  description,
+  description: _description,
   breadcrumbs = [title],
   className = "",
-  collapsed = false,
+  collapsed: _collapsed = false,
+  compactSubNavigation,
   notificationCount = 0,
   temperatureLabel = "24째C",
   children,
@@ -35,18 +42,53 @@ export function PageHeader({
     <header
       className={`border-b border-[#edf0ec] bg-white shadow-[0_1px_8px_rgba(31,42,36,0.04)] transition-[margin-left,border-color,box-shadow] duration-200 ease-out ${className}`}
     >
-      <div
-        className={`flex items-center justify-between gap-4 px-4 transition-[min-height,padding] duration-200 ease-out md:px-5 ${
-          collapsed ? "min-h-6" : "min-h-10 py-3"
-        }`}
-      >
+      <div className="flex min-h-6 items-center justify-between gap-4 px-4 transition-[min-height,padding] duration-200 ease-out md:px-5">
         <div className="flex min-w-0 items-end gap-2">
-          {collapsed ? (
-            <h1
-              aria-label={breadcrumbs.join(" > ")}
-              className="flex min-w-0 items-center gap-1 text-xs font-bold text-[#17251b]"
-            >
-              {breadcrumbs.map((item, index) => (
+          <h1
+            aria-label={
+              compactSubNavigation
+                ? `${title} > ${compactSubNavigation
+                    .map((item) => item.label)
+                    .join(" · ")}`
+                : breadcrumbs.join(" > ")
+            }
+            className="flex min-w-0 items-center gap-1 text-xs text-[#17251b]"
+          >
+            {compactSubNavigation ? (
+              <>
+                <span className="shrink-0 font-bold text-[#68756d]">
+                  {title}
+                </span>
+                <ChevronRight
+                  className="h-3 w-3 shrink-0 text-[#9aa49e]"
+                  strokeWidth={1.8}
+                  aria-hidden="true"
+                />
+                <span className="flex min-w-0 items-center gap-1 overflow-hidden">
+                  {compactSubNavigation.map((item, index) => (
+                    <span
+                      className="flex min-w-0 items-center gap-1"
+                      key={item.href}
+                    >
+                      {index > 0 ? (
+                        <span className="shrink-0 text-[#9aa49e]">·</span>
+                      ) : null}
+                      <Link
+                        href={item.href}
+                        className={`inline-flex !h-[15px] !min-h-0 items-center truncate leading-[15px] hover:text-[#214f31] ${
+                          item.active
+                            ? "font-bold text-[#17251b]"
+                            : "font-medium text-[#68756d]"
+                        }`}
+                      >
+                        {item.label}
+                      </Link>
+                    </span>
+                  ))}
+                </span>
+              </>
+            ) : (
+              breadcrumbs.map((item, index) => (
                 <span className="flex min-w-0 items-center gap-1" key={item}>
                   {index > 0 ? (
                     <ChevronRight
@@ -58,30 +100,29 @@ export function PageHeader({
                   <span
                     className={`truncate ${
                       index === breadcrumbs.length - 1
-                        ? "text-[#17251b]"
-                        : "text-[#68756d]"
+                        ? "font-bold text-[#17251b]"
+                        : "font-medium text-[#68756d]"
                     }`}
                   >
                     {item}
                   </span>
                 </span>
-              ))}
+              ))
+            )}
+          </h1>
+
+          {/*
+            Deprecated: 넓은 페이지 헤더는 더 이상 사용하지 않는다.
+            <h1 className="truncate text-xl font-bold text-[#17251b] transition-[font-size,line-height] duration-200 ease-out">
+              {title}
             </h1>
-          ) : (
-            <>
-              <h1 className="truncate text-xl font-bold text-[#17251b] transition-[font-size,line-height] duration-200 ease-out">
-                {title}
-              </h1>
-              <p className="max-h-5 max-w-[40rem] translate-y-0 truncate text-sm text-[#7a8680] opacity-100 transition-[max-width,max-height,opacity,transform] duration-200 ease-out">
-                {description}
-              </p>
-            </>
-          )}
+            <p className="max-h-5 max-w-[40rem] translate-y-0 truncate text-sm text-[#7a8680] opacity-100 transition-[max-width,max-height,opacity,transform] duration-200 ease-out">
+              {_description}
+            </p>
+          */}
         </div>
 
-        <div
-          className={`flex shrink-0 items-center gap-3 text-[#4f5d55] transition-[font-size] duration-200 ease-out ${collapsed ? "text-xs" : "text-sm"} `}
-        >
+        <div className="flex shrink-0 items-center gap-3 text-xs text-[#4f5d55] transition-[font-size] duration-200 ease-out">
           {/* <div className="relative flex h-8 w-8 items-center justify-center text-[#718078]">
             <Bell className="h-5 w-5" strokeWidth={1.8} aria-hidden="true" />
             {notificationCount > 0 ? (
@@ -117,9 +158,14 @@ export function PageHeader({
         </div>
       </div>
 
-      {children && !collapsed ? (
-        <div className="border-t border-[#edf0ec] px-4 md:px-5">{children}</div>
-      ) : null}
+      {/*
+        Deprecated: 넓은 헤더 하단 영역은 더 이상 사용하지 않는다.
+        {children ? (
+          <div className="border-t border-[#edf0ec] px-4 md:px-5">
+            {children}
+          </div>
+        ) : null}
+      */}
     </header>
   );
 }

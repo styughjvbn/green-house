@@ -3,7 +3,8 @@
 import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
+import type { MouseEventHandler } from "react";
 import { SessionUserPanel } from "@/features/auth/ui/SessionUserPanel";
 import { PageHeader } from "@/widgets/page-header";
 import {
@@ -153,6 +154,39 @@ const navigation: {
   { href: "/settings", label: "설정", icon: Settings },
 ];
 
+const subNavigation: Record<
+  string,
+  {
+    href: string;
+    label: string;
+    tab: string;
+  }[]
+> = {
+  "/work-records": [
+    { href: "/work-records/list", label: "작업 목록", tab: "list" },
+    { href: "/work-records/calendar", label: "캘린더", tab: "calendar" },
+    { href: "/work-records/history", label: "작업 이력", tab: "history" },
+  ],
+  "/sales": [
+    { href: "/sales/slips", label: "판매 전표", tab: "slips" },
+    { href: "/sales/auction", label: "출하·경매 추적", tab: "auction" },
+    { href: "/sales/settlement", label: "경매 정산", tab: "settlement" },
+    { href: "/sales/partners", label: "거래처 관리", tab: "partners" },
+  ],
+  "/analytics": [
+    { href: "/analytics/sales", label: "매출/출하", tab: "sales" },
+    { href: "/analytics/variety", label: "품종 분석", tab: "variety" },
+    { href: "/analytics/customer", label: "거래처 분석", tab: "customer" },
+    { href: "/analytics/space", label: "농장 공간", tab: "space" },
+    { href: "/analytics/work", label: "작업/상태", tab: "work" },
+  ],
+  "/inventory": [
+    { href: "/inventory/variety", label: "품종 관리", tab: "variety" },
+    { href: "/inventory/inbound", label: "입고 관리", tab: "inbound" },
+    { href: "/inventory/material", label: "자재 관리", tab: "material" },
+  ],
+};
+
 function isNavigationActive(
   pathname: string,
   item: (typeof navigation)[number],
@@ -172,26 +206,43 @@ function NavItem({
   icon: Icon,
   active,
   collapsed,
+  onClick,
 }: {
   href: string;
   label: string;
   icon: LucideIcon;
   active: boolean;
   collapsed: boolean;
+  onClick?: MouseEventHandler<HTMLAnchorElement>;
 }) {
   return (
     <Link
       href={href}
       title={collapsed ? label : undefined}
-      onClick={(event) => event.stopPropagation()}
-      className={`flex items-center overflow-hidden rounded-md px-3 py-3 text-sm font-medium transition ${
+      onClick={(event) => {
+        event.stopPropagation();
+        onClick?.(event);
+      }}
+      className={`grid grid-cols-[1.5rem_minmax(0,1fr)] items-center overflow-hidden rounded-md px-1 py-3 text-sm font-medium transition-colors ${
         active
           ? "bg-[#2f8f4e] text-white"
           : "text-[#dcebe0] hover:bg-white/10 hover:text-white"
-      } ${collapsed ? "justify-center" : "gap-3"}`}
+      } gap-3`}
     >
-      <Icon className="h-4 w-4 shrink-0" strokeWidth={1.8} aria-hidden="true" />
-      {collapsed ? null : <span className="whitespace-nowrap">{label}</span>}
+      <span className="flex h-6 w-6 items-center justify-center">
+        <Icon
+          className="h-4 w-4 shrink-0"
+          strokeWidth={1.8}
+          aria-hidden="true"
+        />
+      </span>
+      <span
+        className={`overflow-hidden whitespace-nowrap transition-[max-width,opacity] duration-200 ease-out ${
+          collapsed ? "max-w-0 opacity-0" : "max-w-32 opacity-100"
+        }`}
+      >
+        {label}
+      </span>
     </Link>
   );
 }
@@ -220,30 +271,101 @@ function SalesSubNavItem({
   );
 }
 
+function SubNavFlyout({
+  items,
+  activeTabPath,
+  open,
+}: {
+  items: (typeof subNavigation)[string];
+  activeTabPath: string;
+  open?: boolean;
+}) {
+  return (
+    <div
+      className={`absolute top-0 left-full z-10 ml-2 min-w-30 rounded-md border border-white/10 bg-[#003b1f] p-2 shadow-xl transition-[opacity,transform] duration-150 ease-out ${
+        open
+          ? "pointer-events-auto translate-x-0 opacity-100"
+          : "pointer-events-none translate-x-1 opacity-0 group-focus-within/nav-item:pointer-events-auto group-focus-within/nav-item:translate-x-0 group-focus-within/nav-item:opacity-100 group-hover/nav-item:pointer-events-auto group-hover/nav-item:translate-x-0 group-hover/nav-item:opacity-100"
+      }`}
+    >
+      <div className="space-y-1">
+        {items.map((item) => (
+          <SalesSubNavItem
+            key={item.href}
+            href={item.href}
+            label={item.label}
+            active={activeTabPath === item.tab}
+          />
+        ))}
+      </div>
+    </div>
+  );
+}
+
 export function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const [sidebarExpanded, setSidebarExpanded] = useState(true);
   const [compactDesktopHeader, setCompactDesktopHeader] = useState(false);
+  const [thinDesktopHeader, setThinDesktopHeader] = useState(false);
+  const [openSubNavFlyoutHref, setOpenSubNavFlyoutHref] = useState<
+    string | null
+  >(null);
+  const sidebarIdleTimerRef = useRef<ReturnType<typeof setTimeout> | null>(
+    null,
+  );
+
+  const clearSidebarIdleTimer = () => {
+    if (sidebarIdleTimerRef.current) {
+      clearTimeout(sidebarIdleTimerRef.current);
+      sidebarIdleTimerRef.current = null;
+    }
+  };
+
+  const scheduleSidebarIdleCollapse = () => {
+    clearSidebarIdleTimer();
+
+    if (!compactDesktopHeader || (!sidebarExpanded && !openSubNavFlyoutHref)) {
+      return;
+    }
+
+    sidebarIdleTimerRef.current = setTimeout(() => {
+      setOpenSubNavFlyoutHref(null);
+      if (sidebarExpanded) {
+        setSidebarExpanded(false);
+      }
+    }, 2500);
+  };
 
   useEffect(() => {
     const sidebarQuery = window.matchMedia("(min-width: 1536px)");
     const compactHeaderQuery = window.matchMedia(
       "(min-width: 1024px) and (max-width: 1535px)",
     );
+    const thinHeaderQuery = window.matchMedia("(min-width: 1024px)");
     const syncLayout = () => {
+      setOpenSubNavFlyoutHref(null);
       setSidebarExpanded(sidebarQuery.matches);
       setCompactDesktopHeader(compactHeaderQuery.matches);
+      setThinDesktopHeader(thinHeaderQuery.matches);
     };
 
     syncLayout();
     sidebarQuery.addEventListener("change", syncLayout);
     compactHeaderQuery.addEventListener("change", syncLayout);
+    thinHeaderQuery.addEventListener("change", syncLayout);
 
     return () => {
       sidebarQuery.removeEventListener("change", syncLayout);
       compactHeaderQuery.removeEventListener("change", syncLayout);
+      thinHeaderQuery.removeEventListener("change", syncLayout);
     };
   }, []);
+
+  useEffect(() => {
+    scheduleSidebarIdleCollapse();
+
+    return clearSidebarIdleTimer;
+  }, [compactDesktopHeader, openSubNavFlyoutHref, sidebarExpanded]);
 
   if (pathname === "/login") {
     return <>{children}</>;
@@ -255,6 +377,17 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const isWorkPage = pathname.startsWith("/work-records");
   const isSalesPage = pathname.startsWith("/sales");
   const sidebarCollapsed = !sidebarExpanded;
+  const activeNavigationItem = navigation.find((item) =>
+    isNavigationActive(pathname, item),
+  );
+  const compactHeaderSubNavigation =
+    compactDesktopHeader && activeNavigationItem?.activeHref
+      ? subNavigation[activeNavigationItem.activeHref]?.map((item) => ({
+          href: item.href,
+          label: item.label,
+          active: activeTabPath === item.tab,
+        }))
+      : undefined;
 
   return (
     <div className="app-shell-root relative flex bg-[#f7f8f5]">
@@ -265,12 +398,19 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         tabIndex={-1}
         onClick={(event) => {
           if (sidebarCollapsed) {
+            setOpenSubNavFlyoutHref(null);
             setSidebarExpanded(true);
             event.currentTarget.focus();
           }
         }}
-        onFocus={() => {
-          if (compactDesktopHeader && sidebarCollapsed) {
+        onMouseMove={scheduleSidebarIdleCollapse}
+        onFocus={(event) => {
+          if (
+            event.target === event.currentTarget &&
+            compactDesktopHeader &&
+            sidebarCollapsed
+          ) {
+            setOpenSubNavFlyoutHref(null);
             setSidebarExpanded(true);
           }
         }}
@@ -280,25 +420,27 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             compactDesktopHeader &&
             (!nextTarget || !event.currentTarget.contains(nextTarget))
           ) {
+            setOpenSubNavFlyoutHref(null);
             setSidebarExpanded(false);
           }
         }}
       >
         <div
-          className={`group flex items-center gap-3 px-1 py-1 ${
-            sidebarCollapsed ? "justify-center" : ""
-          }`}
+          className="group grid grid-cols-[2rem_minmax(0,1fr)] items-center gap-3"
           onClick={(event) => event.stopPropagation()}
         >
-          <div className="relative flex h-10 w-10 shrink-0 items-center justify-center">
+          <div className="relative flex h-8 w-8 shrink-0 items-center justify-center">
             <Image src="/flower.png" alt="Logo" width={40} height={40} />
             {sidebarCollapsed ? (
               <button
-                className="absolute inset-0 flex h-10 w-10 items-center justify-center rounded-md bg-[#003b1f]/85 text-white opacity-0 transition group-hover:opacity-100"
+                className="absolute flex h-10 w-10 items-center justify-center rounded-md bg-[#003b1f]/85 text-white opacity-0 transition-opacity group-hover:opacity-100"
                 type="button"
                 aria-label="사이드바 펼치기"
                 title="펼치기"
-                onClick={() => setSidebarExpanded(true)}
+                onClick={() => {
+                  setOpenSubNavFlyoutHref(null);
+                  setSidebarExpanded(true);
+                }}
               >
                 <PanelLeftOpen
                   className="h-4 w-4"
@@ -309,148 +451,105 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             ) : null}
           </div>
 
-          {sidebarCollapsed ? null : (
-            <div className="flex min-w-0 flex-1 items-start justify-between gap-2 overflow-hidden">
-              <div className="min-w-0">
-                <p className="text-base leading-none font-semibold whitespace-nowrap text-white">
-                  난 농장
-                </p>
-                <p className="mt-2 text-xs whitespace-nowrap text-[#c8d8cd]">
-                  관리 시스템
-                </p>
-              </div>
-              <button
-                className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md text-[#dcebe0] hover:bg-white/10 hover:text-white"
-                type="button"
-                aria-label="사이드바 접기"
-                title="접기"
-                onClick={() => setSidebarExpanded(false)}
-              >
-                <PanelLeftClose
-                  className="h-4 w-4"
-                  strokeWidth={1.8}
-                  aria-hidden="true"
-                />
-              </button>
+          <div
+            className={`flex min-w-0 items-start justify-between gap-2 overflow-hidden transition-[max-width,opacity] duration-200 ease-out ${
+              sidebarCollapsed ? "max-w-0 opacity-0" : "max-w-32 opacity-100"
+            }`}
+          >
+            <div className="min-w-0">
+              <p className="text-base leading-none font-semibold whitespace-nowrap text-white">
+                난 농장
+              </p>
+              <p className="mt-2 text-xs whitespace-nowrap text-[#c8d8cd]">
+                관리 시스템
+              </p>
             </div>
-          )}
+            <button
+              className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md text-[#dcebe0] hover:bg-white/10 hover:text-white"
+              type="button"
+              aria-label="사이드바 접기"
+              title="접기"
+              tabIndex={sidebarCollapsed ? -1 : 0}
+              onClick={() => {
+                setOpenSubNavFlyoutHref(null);
+                setSidebarExpanded(false);
+              }}
+            >
+              <PanelLeftClose
+                className="h-4 w-4"
+                strokeWidth={1.8}
+                aria-hidden="true"
+              />
+            </button>
+          </div>
         </div>
 
-        <nav className="scrollbar-hidden mt-5 min-h-0 flex-1 space-y-3 overflow-y-auto">
-          {navigation.map((item) => (
-            <div key={item.href}>
-              <NavItem
-                href={item.href}
-                label={item.label}
-                icon={item.icon}
-                active={isNavigationActive(pathname, item)}
-                collapsed={sidebarCollapsed}
-              />
+        <nav
+          className={`scrollbar-hidden mt-5 min-h-0 flex-1 space-y-3 ${
+            compactDesktopHeader ? "overflow-visible" : "overflow-y-auto"
+          }`}
+        >
+          {navigation.map((item) => {
+            const active = isNavigationActive(pathname, item);
+            const subNavItems = item.activeHref
+              ? subNavigation[item.activeHref]
+              : undefined;
+            const flyoutOpen =
+              sidebarCollapsed &&
+              active &&
+              item.activeHref !== undefined &&
+              openSubNavFlyoutHref === item.activeHref;
+            const activeFlyoutOpen = !sidebarCollapsed && active;
+            const shouldShowInlineSubNav =
+              !compactDesktopHeader && !sidebarCollapsed && active;
 
-              {!sidebarCollapsed &&
-              item.activeHref === "/work-records" &&
-              isWorkPage ? (
-                <div className="mt-2 space-y-1 pl-3">
-                  <SalesSubNavItem
-                    href="/work-records/list"
-                    label="작업 목록"
-                    active={activeTabPath === "list"}
-                  />
-                  <SalesSubNavItem
-                    href="/work-records/calendar"
-                    label="캘린더"
-                    active={activeTabPath === "calendar"}
-                  />
-                  <SalesSubNavItem
-                    href="/work-records/history"
-                    label="작업 이력"
-                    active={activeTabPath === "history"}
-                  />
-                </div>
-              ) : null}
+            return (
+              <div className="group/nav-item relative" key={item.href}>
+                <NavItem
+                  href={item.href}
+                  label={item.label}
+                  icon={item.icon}
+                  active={active}
+                  collapsed={sidebarCollapsed}
+                  onClick={(event) => {
+                    if (
+                      compactDesktopHeader &&
+                      sidebarCollapsed &&
+                      active &&
+                      item.activeHref &&
+                      subNavItems
+                    ) {
+                      event.preventDefault();
+                      setOpenSubNavFlyoutHref(item.activeHref);
+                    }
+                  }}
+                />
 
-              {!sidebarCollapsed &&
-              item.activeHref === "/sales" &&
-              pathname.startsWith("/sales") ? (
-                <div className="mt-2 space-y-1 pl-3">
-                  <SalesSubNavItem
-                    href="/sales/slips"
-                    label="판매 전표"
-                    active={activeTabPath === "slips"}
+                {compactDesktopHeader &&
+                subNavItems &&
+                (!sidebarCollapsed || flyoutOpen) ? (
+                  <SubNavFlyout
+                    items={subNavItems}
+                    activeTabPath={activeTabPath}
+                    open={flyoutOpen || activeFlyoutOpen}
                   />
-                  <SalesSubNavItem
-                    href="/sales/auction"
-                    label="출하·경매 추적"
-                    active={activeTabPath === "auction"}
-                  />
-                  <SalesSubNavItem
-                    href="/sales/settlement"
-                    label="경매 정산"
-                    active={activeTabPath === "settlement"}
-                  />
-                  <SalesSubNavItem
-                    href="/sales/partners"
-                    label="거래처 관리"
-                    active={activeTabPath === "partners"}
-                  />
-                </div>
-              ) : null}
+                ) : null}
 
-              {!sidebarCollapsed &&
-              item.activeHref === "/analytics" &&
-              pathname.startsWith("/analytics") ? (
-                <div className="mt-2 space-y-1 pl-3">
-                  <SalesSubNavItem
-                    href="/analytics/sales"
-                    label="매출/출하"
-                    active={activeTabPath === "sales"}
-                  />
-                  <SalesSubNavItem
-                    href="/analytics/variety"
-                    label="품종 분석"
-                    active={activeTabPath === "variety"}
-                  />
-                  <SalesSubNavItem
-                    href="/analytics/customer"
-                    label="거래처 분석"
-                    active={activeTabPath === "customer"}
-                  />
-                  <SalesSubNavItem
-                    href="/analytics/space"
-                    label="농장 공간"
-                    active={activeTabPath === "space"}
-                  />
-                  <SalesSubNavItem
-                    href="/analytics/work"
-                    label="작업/상태"
-                    active={activeTabPath === "work"}
-                  />
-                </div>
-              ) : null}
-
-              {!sidebarCollapsed &&
-              item.activeHref === "/inventory" &&
-              pathname.startsWith("/inventory") ? (
-                <div className="mt-2 space-y-1 pl-3">
-                  <SalesSubNavItem
-                    href="/inventory/variety"
-                    label="품종 관리"
-                    active={activeTabPath === "variety"}
-                  />
-                  <SalesSubNavItem
-                    href="/inventory/inbound"
-                    label="입고 관리"
-                    active={activeTabPath === "inbound"}
-                  />
-                  <SalesSubNavItem
-                    href="/inventory/material"
-                    label="자재 관리"
-                    active={activeTabPath === "material"}
-                  />
-                </div>
-              ) : null}
-            </div>
-          ))}
+                {shouldShowInlineSubNav && subNavItems ? (
+                  <div className="mt-2 space-y-1 pl-3">
+                    {subNavItems.map((subItem) => (
+                      <SalesSubNavItem
+                        key={subItem.href}
+                        href={subItem.href}
+                        label={subItem.label}
+                        active={activeTabPath === subItem.tab}
+                      />
+                    ))}
+                  </div>
+                ) : null}
+              </div>
+            );
+          })}
         </nav>
 
         {sidebarCollapsed ? null : <SessionUserPanel />}
@@ -579,10 +678,11 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             title={currentPage.title}
             description={currentPage.description}
             breadcrumbs={breadcrumbs}
+            compactSubNavigation={compactHeaderSubNavigation}
             className={
               sidebarExpanded ? "app-header-sidebar-overlay-expanded" : ""
             }
-            collapsed={compactDesktopHeader || sidebarCollapsed}
+            collapsed={thinDesktopHeader || sidebarCollapsed}
           />
 
           {children}

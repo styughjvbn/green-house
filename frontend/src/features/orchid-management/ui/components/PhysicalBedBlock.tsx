@@ -53,7 +53,7 @@ export default function PhysicalBedBlock({
       }}
     >
       <p className="shrink-0 px-2 text-center text-sm font-semibold">
-        {bed.number}다이
+        {bed.houseNumber}동 {bed.number}다이
       </p>
       <div className="mt-1 grid min-h-0 flex-1 grid-cols-2 gap-2">
         {bed.bedZones.map((zone) => (

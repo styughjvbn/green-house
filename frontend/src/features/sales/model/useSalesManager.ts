@@ -10,6 +10,7 @@ import {
   createSalesSlip,
   getSalesSlip,
   getSalesSlipPage,
+  updateBusinessPartner,
   updateSalesSlip as requestUpdateSalesSlip,
 } from "../api/salesApi";
 import {
@@ -21,6 +22,7 @@ import {
   createInitialSalesForm,
   filterBusinessPartners,
   resetSalesSlipFormAfterSave,
+  toBusinessPartnerForm,
   toCreateBusinessPartnerPayload,
   toCreateSalesSlipPayload,
   toSalesSlipForm,
@@ -52,6 +54,15 @@ export function useSalesManager(
   const [partnerForm, setBusinessPartnerForm] = useState<BusinessPartnerForm>(
     createEmptyBusinessPartnerForm(),
   );
+  const [partnerEditDraft, setPartnerEditDraft] = useState<{
+    partnerId: number | null;
+    form: BusinessPartnerForm;
+  }>(() => ({
+    partnerId: initialBusinessPartners[0]?.id ?? null,
+    form: initialBusinessPartners[0]
+      ? toBusinessPartnerForm(initialBusinessPartners[0])
+      : createEmptyBusinessPartnerForm(),
+  }));
   const [salesForm, setSalesForm] = useState<SalesSlipForm>(() =>
     createInitialSalesForm(initialBusinessPartners),
   );
@@ -79,6 +90,8 @@ export function useSalesManager(
   const [partnerPage, setPartnerPage] = useState(0);
   const [partnerPageSize, setPartnerPageSize] = useState(10);
   const [savingBusinessPartner, setSavingBusinessPartner] = useState(false);
+  const [savingBusinessPartnerEdit, setSavingBusinessPartnerEdit] =
+    useState(false);
   const [savingSlip, setSavingSlip] = useState(false);
   const [updatingSlipStatus, setUpdatingSlipStatus] = useState(false);
   const [loadingSalesSlipPage, setLoadingSalesSlipPage] = useState(false);
@@ -105,6 +118,12 @@ export function useSalesManager(
   }, [filteredBusinessPartners, partnerPageSize, visiblePartnerPage]);
   const selectedBusinessPartner =
     partners.find((partner) => partner.id === selectedPartnerId) ?? null;
+  const partnerEditForm =
+    selectedBusinessPartner == null
+      ? createEmptyBusinessPartnerForm()
+      : partnerEditDraft.partnerId === selectedBusinessPartner.id
+        ? partnerEditDraft.form
+        : toBusinessPartnerForm(selectedBusinessPartner);
 
   const loadSalesSlipPage = useCallback(
     async (pageOverride = salesSlipPage) => {
@@ -177,6 +196,22 @@ export function useSalesManager(
     value: BusinessPartnerForm[K],
   ) {
     setBusinessPartnerForm((current) => ({ ...current, [field]: value }));
+  }
+
+  function updateBusinessPartnerEditForm<K extends keyof BusinessPartnerForm>(
+    field: K,
+    value: BusinessPartnerForm[K],
+  ) {
+    if (!selectedBusinessPartner) return;
+    setPartnerEditDraft((current) => ({
+      partnerId: selectedBusinessPartner.id,
+      form: {
+        ...(current.partnerId === selectedBusinessPartner.id
+          ? current.form
+          : toBusinessPartnerForm(selectedBusinessPartner)),
+        [field]: value,
+      },
+    }));
   }
 
   function updateSalesForm<K extends keyof SalesSlipForm>(
@@ -403,6 +438,41 @@ export function useSalesManager(
     }
   }
 
+  async function handleUpdateBusinessPartner(
+    event: FormEvent<HTMLFormElement>,
+  ) {
+    event.preventDefault();
+    if (!selectedBusinessPartner) return false;
+
+    setSavingBusinessPartnerEdit(true);
+    setErrorMessage(null);
+    try {
+      const updated = await updateBusinessPartner(
+        selectedBusinessPartner.id,
+        toCreateBusinessPartnerPayload(partnerEditForm),
+      );
+      setBusinessPartners((current) =>
+        current.map((partner) =>
+          partner.id === updated.id ? updated : partner,
+        ),
+      );
+      setPartnerEditDraft({
+        partnerId: updated.id,
+        form: toBusinessPartnerForm(updated),
+      });
+      return true;
+    } catch (error) {
+      setErrorMessage(
+        error instanceof Error
+          ? error.message
+          : "거래처를 수정하지 못했습니다.",
+      );
+      return false;
+    } finally {
+      setSavingBusinessPartnerEdit(false);
+    }
+  }
+
   async function handleCreateSalesSlip(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setSavingSlip(true);
@@ -537,12 +607,14 @@ export function useSalesManager(
     selectedPartnerId,
     selectedBusinessPartner,
     partnerForm,
+    partnerEditForm,
     filters,
     partnerFilters,
     salesForm,
     showCreateSlip,
     editingSlipId,
     savingBusinessPartner,
+    savingBusinessPartnerEdit,
     savingSlip,
     updatingSlipStatus,
     errorMessage,
@@ -566,6 +638,7 @@ export function useSalesManager(
     setPartnerPageSize,
     updateAllocation,
     updateBusinessPartnerForm,
+    updateBusinessPartnerEditForm,
     updateFilters,
     updatePartnerFilters,
     updateSalesForm,
@@ -574,6 +647,7 @@ export function useSalesManager(
     handleCompleteSalesSlip,
     handleCancelSalesSlip,
     handleCreateBusinessPartner,
+    handleUpdateBusinessPartner,
     handleCreateSalesSlip,
   };
 }

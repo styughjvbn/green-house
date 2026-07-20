@@ -1,7 +1,7 @@
 "use client";
 
 import type { ReactNode, TouchEvent } from "react";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
   flexRender,
   getCoreRowModel,
@@ -56,6 +56,9 @@ type PersistedColumnSettings = {
   columnVisibility?: VisibilityState;
 };
 
+const ROW_NUMBER_COLUMN_ID = "__rowNumber";
+const ROW_NUMBER_COLUMN_SIZE = 40;
+
 export function DataTable<TData>({
   actions,
   columns,
@@ -89,11 +92,36 @@ export function DataTable<TData>({
   const [restoredSettingsKey, setRestoredSettingsKey] = useState<string | null>(
     null,
   );
+  const rowNumberOffset =
+    pageIndex != null && pageSize != null ? pageIndex * pageSize : 0;
+  const tableColumns = useMemo<ColumnDef<TData, unknown>[]>(
+    () => [
+      {
+        id: ROW_NUMBER_COLUMN_ID,
+        header: "No.",
+        size: ROW_NUMBER_COLUMN_SIZE,
+        minSize: 10,
+        maxSize: 96,
+        enableSorting: false,
+        enableResizing: true,
+        cell: ({ row }) => rowNumberOffset + row.index + 1,
+        meta: {
+          align: "right",
+          cellClassName: "font-semibold text-[#8a968d]",
+          headerClassName: "text-[#7b877f]",
+          hideable: true,
+          reorderable: false,
+        },
+      },
+      ...columns,
+    ],
+    [columns, rowNumberOffset],
+  );
 
   const table = useReactTable({
     data,
     enableSorting: Boolean(onSortingChange),
-    columns,
+    columns: tableColumns,
     getCoreRowModel: getCoreRowModel(),
     getRowId,
     manualSorting,
@@ -120,7 +148,7 @@ export function DataTable<TData>({
   useEffect(() => {
     const settings = readColumnSettings(settingsKey);
     setColumnVisibility(settings.columnVisibility ?? {});
-    setColumnOrder(settings.columnOrder ?? []);
+    setColumnOrder(ensureRowNumberColumnOrder(settings.columnOrder ?? []));
     setColumnSizing(settings.columnSizing ?? {});
     setRestoredSettingsKey(settingsKey);
   }, [settingsKey]);
@@ -130,7 +158,7 @@ export function DataTable<TData>({
       return;
     }
     writeColumnSettings(settingsKey, {
-      columnOrder,
+      columnOrder: ensureRowNumberColumnOrder(columnOrder),
       columnSizing,
       columnVisibility,
     });
@@ -433,31 +461,26 @@ function DataTableColumnMenu<TData>({ table }: { table: Table<TData> }) {
   }, [open]);
 
   function moveColumn(columnId: string, direction: -1 | 1) {
-    const order = table.getState().columnOrder;
-    const visibleOrder =
-      order.length > 0
-        ? order
-        : table.getAllLeafColumns().map((column) => column.id);
+    if (columnId === ROW_NUMBER_COLUMN_ID) {
+      return;
+    }
+    const visibleOrder = completeColumnOrder(table);
     const index = visibleOrder.indexOf(columnId);
     const nextIndex = index + direction;
-    if (index < 0 || nextIndex < 0 || nextIndex >= visibleOrder.length) {
+    if (index < 0 || nextIndex <= 0 || nextIndex >= visibleOrder.length) {
       return;
     }
     const nextOrder = [...visibleOrder];
     nextOrder.splice(index, 1);
     nextOrder.splice(nextIndex, 0, columnId);
-    table.setColumnOrder(nextOrder);
+    table.setColumnOrder(ensureRowNumberColumnOrder(nextOrder));
   }
 
   function reorderColumn(sourceId: string, targetId: string) {
-    if (sourceId === targetId) {
+    if (sourceId === targetId || sourceId === ROW_NUMBER_COLUMN_ID) {
       return;
     }
-    const order = table.getState().columnOrder;
-    const visibleOrder =
-      order.length > 0
-        ? order
-        : table.getAllLeafColumns().map((column) => column.id);
+    const visibleOrder = completeColumnOrder(table);
     const sourceIndex = visibleOrder.indexOf(sourceId);
     const targetIndex = visibleOrder.indexOf(targetId);
     if (sourceIndex < 0 || targetIndex < 0) {
@@ -465,8 +488,8 @@ function DataTableColumnMenu<TData>({ table }: { table: Table<TData> }) {
     }
     const nextOrder = [...visibleOrder];
     nextOrder.splice(sourceIndex, 1);
-    nextOrder.splice(targetIndex, 0, sourceId);
-    table.setColumnOrder(nextOrder);
+    nextOrder.splice(Math.max(targetIndex, 1), 0, sourceId);
+    table.setColumnOrder(ensureRowNumberColumnOrder(nextOrder));
   }
 
   return (
@@ -520,6 +543,7 @@ function DataTableColumnMenu<TData>({ table }: { table: Table<TData> }) {
           <div className="max-h-80 space-y-1 overflow-y-auto">
             {configurableColumns.map((column) => {
               const isDragging = draggingColumnId === column.id;
+              const reorderable = column.columnDef.meta?.reorderable !== false;
               const showDropPreview =
                 draggingColumnId != null &&
                 dragOverColumnId === column.id &&
@@ -531,7 +555,7 @@ function DataTableColumnMenu<TData>({ table }: { table: Table<TData> }) {
                   className={`relative grid grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-2 rounded border border-[#edf0ec] px-2 py-1.5 transition ${
                     isDragging ? "bg-[#eef7ec] opacity-70" : ""
                   } ${showDropPreview ? "border-[#159447] bg-[#f4fbf3]" : ""}`}
-                  draggable={column.columnDef.meta?.reorderable !== false}
+                  draggable={reorderable}
                   onDragStart={() => setDraggingColumnId(column.id)}
                   onDragEnd={() => {
                     setDraggingColumnId(null);
@@ -553,7 +577,11 @@ function DataTableColumnMenu<TData>({ table }: { table: Table<TData> }) {
                   {showDropPreview ? (
                     <span className="absolute -top-1.5 right-2 left-2 h-1 rounded-full bg-[#159447]" />
                   ) : null}
-                  <GripVertical className="h-4 w-4 text-[#8a968d]" />
+                  {reorderable ? (
+                    <GripVertical className="h-4 w-4 text-[#8a968d]" />
+                  ) : (
+                    <span className="h-4 w-4" />
+                  )}
                   <label className="flex min-w-0 items-center gap-2 text-sm">
                     <input
                       className="h-4 w-4 accent-[#159447]"
@@ -564,24 +592,28 @@ function DataTableColumnMenu<TData>({ table }: { table: Table<TData> }) {
                     />
                     <span className="truncate">{columnLabel(column)}</span>
                   </label>
-                  <div className="flex gap-1">
-                    <button
-                      className="h-6 w-6 rounded border border-[#dfe5dc] text-xs"
-                      type="button"
-                      aria-label="위로 이동"
-                      onClick={() => moveColumn(column.id, -1)}
-                    >
-                      ↑
-                    </button>
-                    <button
-                      className="h-6 w-6 rounded border border-[#dfe5dc] text-xs"
-                      type="button"
-                      aria-label="아래로 이동"
-                      onClick={() => moveColumn(column.id, 1)}
-                    >
-                      ↓
-                    </button>
-                  </div>
+                  {reorderable ? (
+                    <div className="flex gap-1">
+                      <button
+                        className="h-6 w-6 rounded border border-[#dfe5dc] text-xs"
+                        type="button"
+                        aria-label="위로 이동"
+                        onClick={() => moveColumn(column.id, -1)}
+                      >
+                        ↑
+                      </button>
+                      <button
+                        className="h-6 w-6 rounded border border-[#dfe5dc] text-xs"
+                        type="button"
+                        aria-label="아래로 이동"
+                        onClick={() => moveColumn(column.id, 1)}
+                      >
+                        ↓
+                      </button>
+                    </div>
+                  ) : (
+                    <span className="h-6 w-14" />
+                  )}
                 </div>
               );
             })}
@@ -595,6 +627,26 @@ function DataTableColumnMenu<TData>({ table }: { table: Table<TData> }) {
 function columnLabel<TData>(column: Column<TData, unknown>) {
   const header = column.columnDef.header;
   return typeof header === "string" ? header : column.id;
+}
+
+function completeColumnOrder<TData>(table: Table<TData>) {
+  const currentOrder = table.getState().columnOrder;
+  const allColumnIds = table.getAllLeafColumns().map((column) => column.id);
+  const orderedIds = currentOrder.filter((columnId) =>
+    allColumnIds.includes(columnId),
+  );
+  const missingIds = allColumnIds.filter(
+    (columnId) => !orderedIds.includes(columnId),
+  );
+
+  return ensureRowNumberColumnOrder([...orderedIds, ...missingIds]);
+}
+
+function ensureRowNumberColumnOrder(order: ColumnOrderState) {
+  return [
+    ROW_NUMBER_COLUMN_ID,
+    ...order.filter((columnId) => columnId !== ROW_NUMBER_COLUMN_ID),
+  ];
 }
 
 function fitColumnToContent<TData>(
