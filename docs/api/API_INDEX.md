@@ -47,13 +47,14 @@
 - package 후보: `com.greenhouse.backend.farm`
 - controller tags: `farm-status-controller`, `dashboard-controller`
 - 역할: 농장 현황 지도, 줌 단계, 선택 대상 난 묶음, 대시보드 요약 API
-- operations: 4
+- operations: 5
 
 | Method | Path | Operation | Request | Response |
 |---|---|---|---|---|
 | `GET` | `/api/dashboard/summary` | `getSummary` | `-` | `200:ApiResponseDashboardSummaryResponse` |
 | `GET` | `/api/farm-status/map` | `getMap` | `-` | `200:ApiResponseFarmStatusMapResponse` |
-| `GET` | `/api/farm-status/orchid-groups` | `getOrchidGroups_1` | `-` | `200:ApiResponseFarmStatusOrchidGroupListResponse` |
+| `GET` | `/api/farm-status/orchid-management` | `getOrchidManagementViewport` | `-` | `200:ApiResponseOrchidManagementViewportResponse` |
+| `GET` | `/api/farm-status/orchid-groups` | `getOrchidGroups_2` | `-` | `200:ApiResponseFarmStatusOrchidGroupListResponse` |
 | `GET` | `/api/farm-status/zoom` | `getZoom` | `-` | `200:ApiResponseFarmStatusZoomResponse` |
 
 ### 난 묶음 명령/정밀 배치

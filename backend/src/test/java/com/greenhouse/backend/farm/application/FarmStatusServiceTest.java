@@ -67,6 +67,28 @@ class FarmStatusServiceTest {
 				.hasMessageContaining("bedCount");
 	}
 
+	@Test
+	void returnsLightweightFarmMapStructureWithoutLoadingDetailedGroupLists() {
+		var house = mock(House.class);
+		when(house.getId()).thenReturn(1L);
+		when(house.getNumber()).thenReturn(1);
+		when(house.getName()).thenReturn("1동");
+		var physicalBed = bed(11L, 1L, 1, 1);
+		when(houseRepository.findAll()).thenReturn(List.of(house));
+		when(physicalBedRepository.findByHouseIdOrderByDisplayOrderAsc(1L))
+				.thenReturn(List.of(physicalBed));
+		when(orchidGroupRepository.search(null, "", null, null, null))
+				.thenReturn(List.of());
+
+		var result = service.getMap();
+
+		assertThat(result.houses()).hasSize(1);
+		assertThat(result.houses().getFirst().physicalBeds())
+				.extracting("id")
+				.containsExactly(11L);
+		assertThat(result.orchidGroups()).isEmpty();
+	}
+
 	private PhysicalBed bed(long id, long houseId, int houseNumber, int number) {
 		var house = mock(House.class);
 		when(house.getId()).thenReturn(houseId);

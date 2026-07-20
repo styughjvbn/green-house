@@ -9,6 +9,7 @@ import org.springframework.data.jpa.repository.Query;
 
 public interface PhysicalBedRepository extends JpaRepository<PhysicalBed, Long> {
 
+	@EntityGraph(attributePaths = { "house", "bedZones" })
 	List<PhysicalBed> findByHouseIdOrderByDisplayOrderAsc(Long houseId);
 
 	@Query("""

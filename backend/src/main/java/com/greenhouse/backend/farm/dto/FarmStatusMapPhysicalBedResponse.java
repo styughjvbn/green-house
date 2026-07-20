@@ -1,0 +1,41 @@
+package com.greenhouse.backend.farm.dto;
+
+import com.greenhouse.backend.farm.domain.PhysicalBed;
+import java.math.BigDecimal;
+import java.util.List;
+
+public record FarmStatusMapPhysicalBedResponse(
+		Long id,
+		Long houseId,
+		Integer houseNumber,
+		Integer number,
+		Integer displayOrder,
+		Integer lengthCm,
+		Integer widthCm,
+		Integer wireCount,
+		Integer supportIntervalCm,
+		BigDecimal positionUnitCount,
+		String positionUnitLabel,
+		String memo,
+		List<FarmStatusMapBedZoneResponse> bedZones) {
+
+	public static FarmStatusMapPhysicalBedResponse from(PhysicalBed physicalBed) {
+		var house = physicalBed.getHouse();
+		return new FarmStatusMapPhysicalBedResponse(
+				physicalBed.getId(),
+				house.getId(),
+				house.getNumber(),
+				physicalBed.getNumber(),
+				physicalBed.getDisplayOrder(),
+				physicalBed.getLengthCm(),
+				physicalBed.getWidthCm(),
+				physicalBed.getWireCount(),
+				physicalBed.getSupportIntervalCm(),
+				physicalBed.getPositionUnitCount(),
+				physicalBed.getPositionUnitLabel(),
+				physicalBed.getMemo(),
+				physicalBed.getBedZones().stream()
+						.map(FarmStatusMapBedZoneResponse::from)
+						.toList());
+	}
+}

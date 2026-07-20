@@ -10,5 +10,5 @@ public record HouseStatusSummaryResponse(
 		long warningCount,
 		long repotDueCount,
 		String latestWorkDate,
-		List<PhysicalBedResponse> physicalBeds) {
+		List<FarmStatusMapPhysicalBedResponse> physicalBeds) {
 }
