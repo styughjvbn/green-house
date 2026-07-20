@@ -20,6 +20,11 @@ green-house/
 - shadcn/ui와 Radix UI primitives
 - React 기반 상태 관리
 - 지도/드래그 UI는 기능 단위 컴포넌트로 분리
+- 농장 현황 맵은 구조와 경량 난 묶음 배치를 한 번에 조회하고, 정규화·실제
+  좌표 계산을 분리한다. 동·다이·구역·난 묶음 사각형은 Leaflet Canvas
+  renderer를 사용하며 확대 단계에 필요한 HTML 라벨만 생성한다.
+- 농장 현황의 검색·선택 레이어는 기본 구조 레이어와 분리하고 좌표 계산
+  결과를 메모이제이션한다.
 - 난 묶음 관리 맵은 `PhysicalBed`를 농장 전체 순서로 펼치고 Embla Carousel로 2~4개 다이 viewport를 관리한다. URL 동기화와 현재 표시 범위 계산은 `useBedViewport`에 둔다.
 - 입고 관리와 작업 관리가 공통으로 사용하는 포트 실행·농장 배치 UI는 `entities/farm/ui`에 두고 저장 API는 각 `features/*`에서 연결한다.
 

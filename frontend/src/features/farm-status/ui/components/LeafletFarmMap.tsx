@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { MapContainer } from "react-leaflet";
-import { CRS, type Map as LeafletMap } from "leaflet";
+import { canvas, CRS, type Map as LeafletMap } from "leaflet";
 import type {
   BedZone,
   FarmStatusZoomData,
@@ -11,7 +11,9 @@ import type {
   PhysicalBed,
 } from "@/entities/farm/types";
 import type {
+  FarmStatusColorMode,
   FarmStatusFilterMatches,
+  FarmStatusLayoutMode,
   SelectedFarmStatusOrchidGroup,
   SelectedTarget,
 } from "../../model/types";
@@ -23,7 +25,8 @@ import {
   MapZoomBridge,
 } from "./leaflet-farm-map/MapBridges";
 import {
-  FARM_BOUNDS,
+  FARM_ACTUAL_PAN_BOUNDS,
+  FARM_PAN_BOUNDS,
   getLevelByMapZoom,
   INITIAL_ZOOM,
   MAX_ZOOM,
@@ -39,6 +42,7 @@ import {
 } from "./leaflet-farm-map/geometry";
 
 type LeafletFarmMapProps = {
+  detailPanelOpen: boolean;
   filterMatches: FarmStatusFilterMatches;
   hasActiveSearch: boolean;
   houses: HouseStatusSummary[];
@@ -59,6 +63,7 @@ type LeafletFarmMapProps = {
 };
 
 export default function LeafletFarmMap({
+  detailPanelOpen,
   filterMatches,
   hasActiveSearch,
   houses,
@@ -79,8 +84,10 @@ export default function LeafletFarmMap({
 }: LeafletFarmMapProps) {
   const [map, setMap] = useState<LeafletMap | null>(null);
   const [mapZoom, setMapZoom] = useState(INITIAL_ZOOM);
-  const [distinguishVarietyColors, setDistinguishVarietyColors] =
-    useState(false);
+  const [layoutMode, setLayoutMode] =
+    useState<FarmStatusLayoutMode>("NORMALIZED");
+  const [colorMode, setColorMode] = useState<FarmStatusColorMode>("STATUS");
+  const mapRenderer = useMemo(() => canvas({ padding: 0.5 }), []);
   const currentLevel = getLevelByMapZoom(mapZoom);
 
   const houseByNumber = useMemo(() => {
@@ -89,8 +96,8 @@ export default function LeafletFarmMap({
     return items;
   }, [houses]);
   const scaledHouseLayout = useMemo(
-    () => getScaledHouseLayout(houses),
-    [houses],
+    () => getScaledHouseLayout(houses, layoutMode),
+    [houses, layoutMode],
   );
 
   const resetMap = useCallback(() => {
@@ -105,35 +112,72 @@ export default function LeafletFarmMap({
   }, [map, onReset]);
 
   useEffect(() => {
-    if (!map || !selectedOrchidGroup) {
+    if (
+      !map ||
+      (!selectedOrchidGroup && (!selectedHouseId || !detailPanelOpen))
+    ) {
       return;
     }
 
-    const center = findOrchidGroupCenter(
-      selectedOrchidGroup.orchidGroupId,
-      scaledHouseLayout,
-      houseByNumber,
-      zoomData,
-    );
+    const center = selectedOrchidGroup
+      ? findOrchidGroupCenter(
+          selectedOrchidGroup.orchidGroupId,
+          scaledHouseLayout,
+          houseByNumber,
+          zoomData,
+        )
+      : (() => {
+          const selectedHouse = houses.find(
+            (house) => house.houseId === selectedHouseId,
+          );
+          const geometry = scaledHouseLayout.find(
+            (item) => item.houseNumber === selectedHouse?.houseNumber,
+          );
+          return geometry
+            ? {
+                x: geometry.x + geometry.width / 2,
+                y: geometry.y + geometry.height / 2,
+              }
+            : null;
+        })();
     if (!center) {
       return;
     }
 
-    map.panTo(toLatLng(center), { animate: true, duration: 0.35 });
-  }, [houseByNumber, map, scaledHouseLayout, selectedOrchidGroup, zoomData]);
+    const selectedCenter = toLatLng(center);
+    const targetCenter = detailPanelOpen
+      ? map.unproject(
+          map.project(selectedCenter, map.getZoom()).add([180, 0]),
+          map.getZoom(),
+        )
+      : selectedCenter;
+    map.panTo(targetCenter, { animate: true, duration: 0.35 });
+  }, [
+    detailPanelOpen,
+    houseByNumber,
+    houses,
+    map,
+    scaledHouseLayout,
+    selectedHouseId,
+    selectedOrchidGroup,
+    zoomData,
+  ]);
 
   return (
-    <div className="relative min-h-0 flex-1 overflow-hidden rounded-xl border border-[#cdd9c8] bg-[#95b969] shadow-sm">
+    <div className="relative h-full min-h-0 overflow-hidden border border-[#cdd9c8] bg-[#95b969] shadow-sm">
       <MapContainer
         attributionControl={false}
         center={toLatLng({ x: WORLD_WIDTH / 2, y: WORLD_HEIGHT / 2 })}
         className="farm-leaflet-map h-full w-full bg-[#a6c77a]"
         crs={CRS.Simple}
         doubleClickZoom={false}
-        maxBounds={FARM_BOUNDS}
-        maxBoundsViscosity={0.85}
+        maxBounds={
+          layoutMode === "ACTUAL" ? FARM_ACTUAL_PAN_BOUNDS : FARM_PAN_BOUNDS
+        }
+        maxBoundsViscosity={0.65}
         maxZoom={MAX_ZOOM}
         minZoom={MIN_ZOOM}
+        renderer={mapRenderer}
         scrollWheelZoom
         wheelPxPerZoomLevel={WHEEL_PX_PER_ZOOM_LEVEL}
         zoom={INITIAL_ZOOM}
@@ -160,8 +204,9 @@ export default function LeafletFarmMap({
               filterMatches={filterMatches}
               hasActiveSearch={hasActiveSearch}
               house={house}
+              layoutMode={layoutMode}
               mapZoom={mapZoom}
-              distinguishVarietyColors={distinguishVarietyColors}
+              colorMode={colorMode}
               selectedBedZoneId={selectedBedZoneId}
               selectedHouseId={selectedHouseId}
               selectedOrchidGroup={selectedOrchidGroup}
@@ -179,13 +224,17 @@ export default function LeafletFarmMap({
 
       <FarmMapOverlay
         currentLevel={currentLevel}
+        colorMode={colorMode}
+        houses={houses}
+        layoutMode={layoutMode}
         map={map}
         mapZoom={mapZoom}
         resetMap={resetMap}
-        distinguishVarietyColors={distinguishVarietyColors}
-        onToggleVarietyColors={() =>
-          setDistinguishVarietyColors((current) => !current)
-        }
+        onColorModeChange={setColorMode}
+        onLayoutModeChange={(mode) => {
+          setLayoutMode(mode);
+          resetMap();
+        }}
       />
     </div>
   );

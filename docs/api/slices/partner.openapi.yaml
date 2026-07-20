@@ -10,7 +10,7 @@ paths:
     put:
       tags:
       - business-partner-controller
-      operationId: updateBusinessPartner
+      operationId: update
       parameters:
       - name: partnerId
         in: path
@@ -53,7 +53,7 @@ paths:
     put:
       tags:
       - partner-settlement-settings-controller
-      operationId: update
+      operationId: update_1
       parameters:
       - name: partnerId
         in: path
@@ -175,6 +175,30 @@ components:
       required:
       - name
       - partnerType
+    BusinessPartnerResponse:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: int64
+        name:
+          type: string
+        partnerType:
+          type: string
+          enum:
+          - WHOLESALE
+          - RETAIL
+          - AUCTION_HOUSE
+        ownerName:
+          type: string
+        phone:
+          type: string
+        address:
+          type: string
+        memo:
+          type: string
+        active:
+          type: boolean
     BusinessPartnerUpdateRequest:
       type: object
       properties:
@@ -207,30 +231,6 @@ components:
       required:
       - name
       - partnerType
-    BusinessPartnerResponse:
-      type: object
-      properties:
-        id:
-          type: integer
-          format: int64
-        name:
-          type: string
-        partnerType:
-          type: string
-          enum:
-          - WHOLESALE
-          - RETAIL
-          - AUCTION_HOUSE
-        ownerName:
-          type: string
-        phone:
-          type: string
-        address:
-          type: string
-        memo:
-          type: string
-        active:
-          type: boolean
     PartnerSettlementSettingsRequest:
       type: object
       properties:

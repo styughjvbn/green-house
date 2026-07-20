@@ -93,6 +93,10 @@ body {
   flex: 0 0 auto;
 }
 
+.app-content.farm-status-content > header {
+  margin: 0;
+}
+
 @media (min-width: 64rem) and (max-width: 95.999rem) {
   .app-content > header.app-header-sidebar-overlay-expanded {
     margin-left: 6rem;
