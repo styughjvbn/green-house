@@ -306,6 +306,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const [sidebarExpanded, setSidebarExpanded] = useState(true);
   const [compactDesktopHeader, setCompactDesktopHeader] = useState(false);
+  const [thinDesktopHeader, setThinDesktopHeader] = useState(false);
   const [openSubNavFlyoutHref, setOpenSubNavFlyoutHref] = useState<
     string | null
   >(null);
@@ -340,19 +341,23 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     const compactHeaderQuery = window.matchMedia(
       "(min-width: 1024px) and (max-width: 1535px)",
     );
+    const thinHeaderQuery = window.matchMedia("(min-width: 1024px)");
     const syncLayout = () => {
       setOpenSubNavFlyoutHref(null);
       setSidebarExpanded(sidebarQuery.matches);
       setCompactDesktopHeader(compactHeaderQuery.matches);
+      setThinDesktopHeader(thinHeaderQuery.matches);
     };
 
     syncLayout();
     sidebarQuery.addEventListener("change", syncLayout);
     compactHeaderQuery.addEventListener("change", syncLayout);
+    thinHeaderQuery.addEventListener("change", syncLayout);
 
     return () => {
       sidebarQuery.removeEventListener("change", syncLayout);
       compactHeaderQuery.removeEventListener("change", syncLayout);
+      thinHeaderQuery.removeEventListener("change", syncLayout);
     };
   }, []);
 
@@ -677,7 +682,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             className={
               sidebarExpanded ? "app-header-sidebar-overlay-expanded" : ""
             }
-            collapsed={compactDesktopHeader || sidebarCollapsed}
+            collapsed={thinDesktopHeader || sidebarCollapsed}
           />
 
           {children}
