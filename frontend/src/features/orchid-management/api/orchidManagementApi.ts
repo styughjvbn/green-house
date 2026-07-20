@@ -3,6 +3,7 @@ import type {
   BedZonePlacementProfile,
   FarmStatusMapData,
   House,
+  OrchidManagementViewport,
   OrchidGroup,
   OrchidGroupWorkHistory,
   VarietyOption,
@@ -239,6 +240,19 @@ export function getOrchidManagementMap() {
   return fetchApi<FarmStatusMapData>("/farm-status/map");
 }
 
+export function getOrchidManagementViewport(
+  startBedId: number | null,
+  bedCount: 2 | 3 | 4,
+) {
+  const params = new URLSearchParams({ bedCount: String(bedCount) });
+  if (startBedId) {
+    params.set("startBedId", String(startBedId));
+  }
+  return fetchApi<OrchidManagementViewport>(
+    `/farm-status/orchid-management?${params.toString()}`,
+  );
+}
+
 export function searchOrchidGroups({
   keyword,
   status,
@@ -378,6 +392,7 @@ export async function createOrchidWorkOperation(
       plannedStartDate: payload.workDate,
       sourceScopeType: payload.targetType,
       sourceScopeId: payload.targetId,
+      sourceOrchidGroupIds: payload.targetIds,
       details: {
         materialName: payload.materialName,
         dilutionRatio: payload.dilutionRatio,

@@ -5,8 +5,8 @@
 ## 기준
 
 - 실제 구현 기준: `docs/api/openapi.yaml`
-- 실제 구현 operations: `113`
-- 실제 구현 path entries: `91`
+- 실제 구현 operations: `122`
+- 실제 구현 path entries: `100`
 
 ## 판단 규칙
 
@@ -32,6 +32,7 @@
 
 - `GET /api/dashboard/summary`
 - `GET /api/farm-status/map`
+- `GET /api/farm-status/orchid-management`
 - `GET /api/farm-status/orchid-groups`
 - `GET /api/farm-status/zoom`
 

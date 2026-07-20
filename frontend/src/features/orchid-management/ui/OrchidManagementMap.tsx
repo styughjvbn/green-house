@@ -2,14 +2,14 @@
 
 import { useMemo, useState, useSyncExternalStore } from "react";
 import { normalizeCellRange } from "../lib/orchidManagementUtils";
+import { useBedViewport } from "../model/useBedViewport";
 import { useOrchidManagementMap } from "../model/useOrchidManagementMap";
 import type {
   MapCellRangePick,
   OrchidManagementMapProps,
 } from "../model/types";
-import BedPrecisionSettings from "./components/BedPrecisionSettings";
-import HouseDetailMap from "./components/HouseDetailMap";
-import HouseSelectorPanel from "./components/HouseSelectorPanel";
+import BedNavigationToolbar from "./components/BedNavigationToolbar";
+import ContinuousBedMap from "./components/ContinuousBedMap";
 import MultiCreateOrchidGroupForm from "./components/MultiCreateOrchidGroupForm";
 import RepotWorkOperationForm from "./components/RepotWorkOperationForm";
 import WorkOperationCorrectionForm from "./components/WorkOperationCorrectionForm";
@@ -27,11 +27,23 @@ export function OrchidManagementMap({
   initialSelectedPhysicalBedId,
   initialSelectedBedZoneId,
   initialSearchFilters,
+  initialStartBedId,
+  initialVisibleBedCount,
   mapData,
   house,
   workTypes,
 }: OrchidManagementMapProps) {
+  const bedViewport = useBedViewport(
+    house.physicalBeds,
+    initialStartBedId,
+    initialVisibleBedCount,
+  );
+  const scopedHouse = useMemo(
+    () => ({ ...house, physicalBeds: bedViewport.visibleBeds }),
+    [bedViewport.visibleBeds, house],
+  );
   const orchidManagement = useOrchidManagementMap(
+    scopedHouse,
     house,
     workTypes,
     initialSelectedOrchidGroupId,
@@ -188,16 +200,17 @@ export function OrchidManagementMap({
   return (
     <div className="grid h-full min-h-0 gap-4 lg:grid-cols-[minmax(0,1fr)_clamp(280px,28%,440px)]">
       <section className="flex h-full min-h-0 flex-col gap-3">
-        <HouseSelectorPanel
+        <BedNavigationToolbar
           createActive={
             orchidManagement.mutationMode === "CREATE" &&
             !orchidManagement.pasteSourceOrchidGroup
           }
           distinguishVarietyColors={distinguishVarietyColors}
-          house={house}
           houses={mapData.houses}
-          selected={orchidManagement.selection?.type === "HOUSE"}
-          selectedHouseId={house.id}
+          startHouseId={bedViewport.visibleBeds[0]?.houseId ?? null}
+          visibleBedCount={bedViewport.visibleBedCount}
+          hasPrevious={bedViewport.hasPrevious}
+          hasNext={bedViewport.hasNext}
           showScale={showScale}
           onToggleVarietyColors={toggleVarietyColors}
           onToggleScale={() => setShowScale((current) => !current)}
@@ -207,34 +220,27 @@ export function OrchidManagementMap({
             clearMapCellRangePick();
             orchidManagement.actions.openCreate();
           }}
-          onOpenMultiCreate={() => {
-            clearMapCellRangePick();
-            orchidManagement.actions.cancelMutation();
-            setShowRepot(false);
-            setShowMultiCreate(true);
-          }}
-          onSelectHouse={() => {
-            clearMapCellRangePick();
-            orchidManagement.actions.selectHouse();
-          }}
+          onPrevious={bedViewport.actions.previous}
+          onNext={bedViewport.actions.next}
+          onGoToHouse={bedViewport.actions.goToHouse}
+          onVisibleBedCountChange={bedViewport.actions.setVisibleBedCount}
         />
         <div className="min-h-0 flex-1">
-          <HouseDetailMap
+          <ContinuousBedMap
+            beds={house.physicalBeds}
+            startBedIndex={bedViewport.startBedIndex}
+            visibleBedCount={bedViewport.visibleBedCount}
             distinguishVarietyColors={distinguishVarietyColors}
             filteredOrchidGroupIds={orchidManagement.filteredOrchidGroupIds}
-            house={house}
             selectedOrchidGroupIds={selectedOrchidGroupIds}
             selection={orchidManagement.selection}
             showScale={showScale}
             cellRangePick={mapCellRangePick}
+            onStartBedIndexChange={bedViewport.actions.setStartIndex}
             onPickCellRange={pickMapCellRange}
             onSelectBedZone={(bedZoneId) => {
               clearMapCellRangePick();
               orchidManagement.actions.selectBedZone(bedZoneId);
-            }}
-            onSelectHouse={() => {
-              clearMapCellRangePick();
-              orchidManagement.actions.selectHouse();
             }}
             onSelectPhysicalBed={(physicalBedId) => {
               clearMapCellRangePick();
@@ -247,7 +253,7 @@ export function OrchidManagementMap({
           />
         </div>
         <SelectedZoneInfo
-          house={house}
+          house={scopedHouse}
           selectedBedZone={orchidManagement.selectedBedZone}
           selectedOrchidGroup={orchidManagement.selectedOrchidGroup}
           selectedPhysicalBed={orchidManagement.selectedPhysicalBed}
@@ -270,7 +276,6 @@ export function OrchidManagementMap({
       </section>
       <div className="flex h-full min-h-0 flex-col gap-3">
         <OrchidSearchPanel
-          currentHouseId={house.id}
           currentSelectedOrchidGroupId={
             orchidManagement.selectedOrchidGroup?.id ?? null
           }
@@ -285,6 +290,14 @@ export function OrchidManagementMap({
           }}
           onSelectResult={(orchidGroup) => {
             clearMapCellRangePick();
+            const targetBed = house.physicalBeds.find(
+              (bed) =>
+                bed.houseId === orchidGroup.houseId &&
+                bed.number === orchidGroup.physicalBedNumber,
+            );
+            if (targetBed) {
+              bedViewport.actions.goToBed(targetBed.id);
+            }
             orchidManagement.actions.moveToOrchidGroup(orchidGroup);
           }}
           onUpdateFilter={orchidManagement.actions.updateSearchFilter}
@@ -304,7 +317,7 @@ export function OrchidManagementMap({
           />
         ) : showMultiCreate ? (
           <MultiCreateOrchidGroupForm
-            house={house}
+            house={scopedHouse}
             onClose={() => setShowMultiCreate(false)}
           />
         ) : (
@@ -313,7 +326,7 @@ export function OrchidManagementMap({
             errorMessage={orchidManagement.errorMessage}
             filteredOrchidGroupIds={orchidManagement.filteredOrchidGroupIds}
             hasActiveSearch={orchidManagement.hasActiveSearch}
-            house={house}
+            house={scopedHouse}
             placementHouses={placementHouses}
             listSelection={orchidManagement.listSelection}
             mutationMode={orchidManagement.mutationMode}

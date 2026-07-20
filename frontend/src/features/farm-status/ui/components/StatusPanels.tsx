@@ -232,11 +232,12 @@ function createManagementHref(
   selectedHouse: HouseStatusSummary | null,
 ) {
   const params = new URLSearchParams();
-  const houseId = resolveHouseId(selection, selectedHouse);
+  const startBedId = resolveStartBedId(selection, selectedHouse);
 
-  if (houseId != null) {
-    params.set("houseId", String(houseId));
+  if (startBedId != null) {
+    params.set("startBedId", String(startBedId));
   }
+  params.set("bedCount", "3");
 
   if (selection?.targetType === "PHYSICAL_BED") {
     params.set("physicalBedId", String(selection.targetId));
@@ -250,15 +251,19 @@ function createManagementHref(
   return query ? `/orchid-groups?${query}` : "/orchid-groups";
 }
 
-function resolveHouseId(
+function resolveStartBedId(
   selection: FarmStatusOrchidGroupList | null,
   selectedHouse: HouseStatusSummary | null,
 ) {
-  if (selection?.targetType === "HOUSE") {
+  if (selection?.targetType === "PHYSICAL_BED") {
     return selection.targetId;
   }
 
-  return selection?.items[0]?.houseId ?? selectedHouse?.houseId ?? null;
+  return (
+    selection?.items[0]?.physicalBedId ??
+    selectedHouse?.physicalBeds[0]?.id ??
+    null
+  );
 }
 
 export function RecentWorkSummary({ compact = false }: { compact?: boolean }) {

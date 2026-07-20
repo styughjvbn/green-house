@@ -307,7 +307,7 @@ paths:
     patch:
       tags:
       - variety-controller
-      operationId: update_2
+      operationId: update_3
       parameters:
       - name: varietyId
         in: path
@@ -387,7 +387,7 @@ paths:
     patch:
       tags:
       - material-controller
-      operationId: update_5
+      operationId: update_6
       parameters:
       - name: materialId
         in: path
@@ -467,7 +467,7 @@ paths:
     patch:
       tags:
       - inbound-record-controller
-      operationId: update_6
+      operationId: update_7
       parameters:
       - name: inboundRecordId
         in: path

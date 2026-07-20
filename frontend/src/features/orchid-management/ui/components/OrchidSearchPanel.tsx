@@ -16,7 +16,7 @@ export default function OrchidSearchPanel({
   onSelectResult,
   onUpdateFilter,
 }: {
-  currentHouseId: number;
+  currentHouseId?: number;
   currentSelectedOrchidGroupId: number | null;
   filteredCount: number;
   filters: OrchidManagementSearchState;

@@ -45,6 +45,7 @@ import type {
 
 export function useOrchidManagementMap(
   house: House,
+  navigationHouse: House,
   workTypes: WorkType[],
   initialSelectedOrchidGroupId: number | null,
   initialSelectedPhysicalBedId: number | null,
@@ -56,23 +57,23 @@ export function useOrchidManagementMap(
   const initialOrchidGroup = useMemo(
     () =>
       initialSelectedOrchidGroupId
-        ? findOrchidGroup(house, initialSelectedOrchidGroupId)
+        ? findOrchidGroup(navigationHouse, initialSelectedOrchidGroupId)
         : null,
-    [house, initialSelectedOrchidGroupId],
+    [initialSelectedOrchidGroupId, navigationHouse],
   );
   const initialPhysicalBed = useMemo(
     () =>
       initialSelectedPhysicalBedId
-        ? findPhysicalBed(house, initialSelectedPhysicalBedId)
+        ? findPhysicalBed(navigationHouse, initialSelectedPhysicalBedId)
         : null,
-    [house, initialSelectedPhysicalBedId],
+    [initialSelectedPhysicalBedId, navigationHouse],
   );
   const initialBedZone = useMemo(
     () =>
       initialSelectedBedZoneId
-        ? (findBedZone(house, initialSelectedBedZoneId)?.zone ?? null)
+        ? (findBedZone(navigationHouse, initialSelectedBedZoneId)?.zone ?? null)
         : null,
-    [house, initialSelectedBedZoneId],
+    [initialSelectedBedZoneId, navigationHouse],
   );
 
   const [selection, setSelection] = useState<OrchidSelection | null>(
@@ -129,21 +130,30 @@ export function useOrchidManagementMap(
   } | null>(null);
   const [saving, setSaving] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const resolvedListSelection: OrchidListSelection =
+    listSelection.type === "HOUSE" ||
+    (listSelection.type === "PHYSICAL_BED" &&
+      Boolean(findPhysicalBed(house, listSelection.physicalBedId))) ||
+    (listSelection.type === "BED_ZONE" &&
+      Boolean(findBedZone(house, listSelection.bedZoneId)))
+      ? listSelection
+      : { type: "HOUSE", houseId: house.id };
 
   const selectedOrchidGroup =
     selection?.type === "ORCHID_GROUP"
-      ? findOrchidGroup(house, selection.orchidGroupId)
+      ? findOrchidGroup(navigationHouse, selection.orchidGroupId)
       : null;
   const selectedBedZone =
     selection?.type === "BED_ZONE"
-      ? (findBedZone(house, selection.bedZoneId)?.zone ?? null)
+      ? (findBedZone(navigationHouse, selection.bedZoneId)?.zone ?? null)
       : null;
   const selectedPhysicalBed =
     selection?.type === "PHYSICAL_BED"
-      ? findPhysicalBed(house, selection.physicalBedId)
+      ? findPhysicalBed(navigationHouse, selection.physicalBedId)
       : null;
   const resolvedZone = selectedOrchidGroup
-    ? (findBedZone(house, selectedOrchidGroup.bedZoneId)?.zone ?? null)
+    ? (findBedZone(navigationHouse, selectedOrchidGroup.bedZoneId)?.zone ??
+      null)
     : selectedBedZone;
   const currentHouseOrchidGroupIds = useMemo(
     () => collectCurrentHouseOrchidGroupIds(house),
@@ -161,15 +171,10 @@ export function useOrchidManagementMap(
     }
     return new Set(
       searchResults
-        .filter((orchidGroup) => orchidGroup.houseNumber === house.number)
+        .filter((orchidGroup) => currentHouseOrchidGroupIds.has(orchidGroup.id))
         .map((orchidGroup) => orchidGroup.id),
     );
-  }, [
-    currentHouseOrchidGroupIds,
-    hasActiveSearch,
-    house.number,
-    searchResults,
-  ]);
+  }, [currentHouseOrchidGroupIds, hasActiveSearch, searchResults]);
 
   useEffect(() => {
     let ignore = false;
@@ -360,7 +365,7 @@ export function useOrchidManagementMap(
       return;
     }
     clearPasteSource();
-    setSelection(listSelection);
+    setSelection(resolvedListSelection);
     setMutationMode("CREATE");
     setErrorMessage(null);
   }
@@ -378,7 +383,7 @@ export function useOrchidManagementMap(
   }
 
   function copyOrchidGroup(orchidGroupId: number) {
-    const orchidGroup = findOrchidGroup(house, orchidGroupId);
+    const orchidGroup = findOrchidGroup(navigationHouse, orchidGroupId);
     if (orchidGroup) {
       copyToClipboard(orchidGroup);
       setErrorMessage(null);
@@ -399,7 +404,7 @@ export function useOrchidManagementMap(
       return;
     }
     if (openClipboardPaste()) {
-      setSelection(listSelection);
+      setSelection(resolvedListSelection);
       setMutationMode("CREATE");
       setErrorMessage(null);
       return;
@@ -425,11 +430,15 @@ export function useOrchidManagementMap(
       return;
     }
     const target = resolveWorkOperationTarget({
-      houseId: house.id,
+      house,
       resolvedZoneId: resolvedZone?.id ?? null,
       selectedOrchidGroupId: selectedOrchidGroup?.id ?? null,
       selection,
     });
+    if (target.type === "MANUAL_SELECTION" && target.ids.length === 0) {
+      setErrorMessage("현재 화면에 작업 대상으로 등록할 난 묶음이 없습니다.");
+      return;
+    }
     setWorkRecordForm((current) => ({
       ...current,
       workTypeId:
@@ -437,6 +446,7 @@ export function useOrchidManagementMap(
         String(getManualWorkTypes(workTypes)[0]?.id ?? workTypes[0]?.id ?? ""),
       targetType: target.type,
       targetId: target.id,
+      targetIds: target.ids,
     }));
     setMutationMode("WORK_RECORD");
     clearPasteSource();
@@ -465,24 +475,12 @@ export function useOrchidManagementMap(
   }
 
   function moveToOrchidGroup(orchidGroup: OrchidGroup) {
-    if (orchidGroup.houseId === house.id) {
+    if (findOrchidGroup(navigationHouse, orchidGroup.id)) {
       setSelection({ type: "ORCHID_GROUP", orchidGroupId: orchidGroup.id });
       setMutationMode(null);
       clearPasteSource();
       return;
     }
-
-    const params = new URLSearchParams({
-      houseId: String(orchidGroup.houseId),
-      orchidGroupId: String(orchidGroup.id),
-    });
-    if (searchFilters.keyword.trim()) {
-      params.set("searchKeyword", searchFilters.keyword.trim());
-    }
-    if (searchFilters.status) {
-      params.set("searchStatus", searchFilters.status);
-    }
-    router.push(`/orchid-groups?${params}`);
   }
 
   async function handleCreate(payload: MutationPayload) {
@@ -526,6 +524,7 @@ export function useOrchidManagementMap(
           workDate: workRecordForm.workDate,
           targetType: workRecordForm.targetType,
           targetId: workRecordForm.targetId,
+          targetIds: workRecordForm.targetIds,
           ...toVisibleWorkRecordFields(workRecordForm, workTypes),
         },
         workType?.name ?? "작업",
@@ -592,7 +591,7 @@ export function useOrchidManagementMap(
     pasteSourceOrchidGroup,
     filteredOrchidGroupIds,
     hasActiveSearch,
-    listSelection,
+    listSelection: resolvedListSelection,
     mutationMode,
     resolvedZone,
     saving,
@@ -664,26 +663,41 @@ function collectCurrentHouseOrchidGroupIds(house: House) {
 }
 
 function resolveWorkOperationTarget({
-  houseId,
+  house,
   resolvedZoneId,
   selectedOrchidGroupId,
   selection,
 }: {
-  houseId: number;
+  house: House;
   resolvedZoneId: number | null;
   selectedOrchidGroupId: number | null;
   selection: OrchidSelection | null;
-}): { type: WorkRecordTargetType; id: number | null } {
+}): {
+  type: WorkRecordTargetType | "MANUAL_SELECTION";
+  id: number | null;
+  ids: number[];
+} {
   if (selectedOrchidGroupId) {
-    return { type: "ORCHID_GROUP", id: selectedOrchidGroupId };
+    return { type: "ORCHID_GROUP", id: selectedOrchidGroupId, ids: [] };
   }
-  if (selection?.type === "BED_ZONE" && resolvedZoneId) {
-    return { type: "BED_ZONE", id: resolvedZoneId };
+  if (
+    selection?.type === "BED_ZONE" &&
+    resolvedZoneId &&
+    findBedZone(house, resolvedZoneId)
+  ) {
+    return { type: "BED_ZONE", id: resolvedZoneId, ids: [] };
   }
-  if (selection?.type === "PHYSICAL_BED") {
-    return { type: "PHYSICAL_BED", id: selection.physicalBedId };
+  if (
+    selection?.type === "PHYSICAL_BED" &&
+    findPhysicalBed(house, selection.physicalBedId)
+  ) {
+    return { type: "PHYSICAL_BED", id: selection.physicalBedId, ids: [] };
   }
-  return { type: "HOUSE", id: houseId };
+  return {
+    type: "MANUAL_SELECTION",
+    id: null,
+    ids: Array.from(collectCurrentHouseOrchidGroupIds(house)),
+  };
 }
 
 function resolveSummaryOrchidGroupIds({
@@ -726,6 +740,7 @@ function createInitialWorkRecordForm(
     workDate: new Date().toISOString().slice(0, 10),
     targetType: orchidGroupId ? "ORCHID_GROUP" : "HOUSE",
     targetId: orchidGroupId,
+    targetIds: [],
     materialName: "",
     dilutionRatio: "",
     quantity: "",

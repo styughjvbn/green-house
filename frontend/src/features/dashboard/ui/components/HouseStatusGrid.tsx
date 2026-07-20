@@ -27,7 +27,7 @@ export function HouseStatusGrid({ houses }: { houses: HouseStatusSummary[] }) {
             <Link
               key={house.houseId}
               className={`relative flex h-16 items-center justify-center rounded-t-2xl border text-lg font-bold ${houseToneClass(tone)}`}
-              href={`/orchid-groups?houseId=${house.houseId}`}
+              href={`/orchid-groups?startBedId=${house.physicalBeds[0]?.id ?? ""}&bedCount=3`}
             >
               <span
                 className={`absolute top-2 h-2 w-2 rounded-full ${dotClass(tone)}`}
