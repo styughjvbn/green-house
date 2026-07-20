@@ -5,13 +5,16 @@ import com.greenhouse.backend.partner.application.BusinessPartnerService;
 import com.greenhouse.backend.partner.domain.PartnerType;
 import com.greenhouse.backend.partner.dto.BusinessPartnerCreateRequest;
 import com.greenhouse.backend.partner.dto.BusinessPartnerResponse;
+import com.greenhouse.backend.partner.dto.BusinessPartnerUpdateRequest;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 
 import java.util.List;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
@@ -35,5 +38,12 @@ public class BusinessPartnerController {
 	@ResponseStatus(HttpStatus.CREATED)
 	public ApiResponse<BusinessPartnerResponse> create(@Valid @RequestBody BusinessPartnerCreateRequest request) {
 		return ApiResponse.ok(service.create(request));
+	}
+
+	@PutMapping("/{partnerId}")
+	public ApiResponse<BusinessPartnerResponse> update(
+			@PathVariable Long partnerId,
+			@Valid @RequestBody BusinessPartnerUpdateRequest request) {
+		return ApiResponse.ok(service.update(partnerId, request));
 	}
 }

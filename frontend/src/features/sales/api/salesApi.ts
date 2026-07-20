@@ -23,6 +23,7 @@ import type {
   CreateSalesSlipPayload,
   SalesFilterState,
   SalesSlipPage,
+  UpdateBusinessPartnerPayload,
 } from "../model/types";
 
 type ApiSuccess<T> = {
@@ -312,6 +313,21 @@ export function createBusinessPartner(
       body: JSON.stringify(payload),
     },
     "거래처를 저장하지 못했습니다.",
+  );
+}
+
+export function updateBusinessPartner(
+  partnerId: number,
+  payload: UpdateBusinessPartnerPayload,
+): Promise<BusinessPartner> {
+  return requestJson<BusinessPartner>(
+    `/business-partners/${partnerId}`,
+    {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    },
+    "거래처를 수정하지 못했습니다.",
   );
 }
 

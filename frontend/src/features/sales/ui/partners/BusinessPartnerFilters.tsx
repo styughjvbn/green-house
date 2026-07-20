@@ -24,7 +24,7 @@ export function BusinessPartnerFilters({
 }) {
   return (
     <FilterPanel>
-      <FilterGrid className="md:grid-cols-2 2xl:grid-cols-[1fr_1fr_2.2fr_auto_auto]">
+      <FilterGrid className="md:grid-cols-2 lg:grid-cols-[1fr_1fr_2.2fr_auto_auto]">
         <FilterSelect
           label="거래처 유형"
           value={filters.partnerType}

@@ -70,7 +70,7 @@ export type SalesSlipForm = {
 
 export type SalesSlipFormMode = "create" | "edit";
 
-export type CreateBusinessPartnerPayload = {
+export type BusinessPartnerPayload = {
   name: string;
   partnerType: PartnerType;
   ownerName: string | null;
@@ -78,6 +78,10 @@ export type CreateBusinessPartnerPayload = {
   address: string | null;
   memo: string | null;
 };
+
+export type CreateBusinessPartnerPayload = BusinessPartnerPayload;
+
+export type UpdateBusinessPartnerPayload = BusinessPartnerPayload;
 
 export type CreateSalesSlipPayload = {
   salesType: "DIRECT" | "AUCTION";

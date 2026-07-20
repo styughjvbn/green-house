@@ -21,6 +21,19 @@ export function createEmptyBusinessPartnerForm(): BusinessPartnerForm {
   };
 }
 
+export function toBusinessPartnerForm(
+  partner: BusinessPartner,
+): BusinessPartnerForm {
+  return {
+    name: partner.name,
+    partnerType: partner.partnerType,
+    ownerName: partner.ownerName ?? "",
+    phone: partner.phone ?? "",
+    address: partner.address ?? "",
+    memo: partner.memo ?? "",
+  };
+}
+
 export function createEmptySalesAllocation(): SalesAllocationForm {
   return {
     orchidGroupId: "",

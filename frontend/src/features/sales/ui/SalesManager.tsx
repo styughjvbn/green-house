@@ -12,6 +12,10 @@ import { AuctionSettlementView } from "./auction/AuctionSettlementView";
 import { AuctionTrackingView } from "./auction/AuctionTrackingView";
 import { TabLayout, TabSplit } from "@/shared/ui/TabLayout";
 import { BusinessPartnerCreateForm } from "./partners/BusinessPartnerCreateForm";
+import {
+  BusinessPartnerEditSection,
+  type BusinessPartnerDetailMode,
+} from "./partners/BusinessPartnerEditSection";
 import { BusinessPartnerFilters } from "./partners/BusinessPartnerFilters";
 import { BusinessPartnerList } from "./partners/BusinessPartnerList";
 import { PartnerSettlementSettingsSection } from "./partners/PartnerSettlementSettingsSection";
@@ -35,6 +39,8 @@ export function SalesManager({
     initialShowCreateSlip,
   );
   const [showCreatePartner, setShowCreatePartner] = useState(false);
+  const [partnerDetailMode, setPartnerDetailMode] =
+    useState<BusinessPartnerDetailMode>("read");
 
   async function handleCreateSalesSlip(event: FormEvent<HTMLFormElement>) {
     await sales.handleCreateSalesSlip(event);
@@ -47,6 +53,12 @@ export function SalesManager({
     if (created) {
       setShowCreatePartner(false);
     }
+  }
+
+  async function handleUpdateBusinessPartner(
+    event: FormEvent<HTMLFormElement>,
+  ) {
+    return await sales.handleUpdateBusinessPartner(event);
   }
 
   function handleToggleCreateSalesSlip() {
@@ -141,18 +153,17 @@ export function SalesManager({
             onChange={sales.updatePartnerFilters}
             onReset={sales.resetPartnerFilters}
           />
-          <TabSplit columns="lg:grid-cols-[420px_minmax(0,1fr)]">
+          <TabSplit columns="lg:grid-cols-[520px_minmax(0,1fr)]">
             <BusinessPartnerList
               currentPage={sales.partnerCurrentPage}
               pageSize={sales.partnerPageSize}
               partners={sales.paginatedBusinessPartners}
-              selectedBusinessPartnerId={
-                showCreatePartner ? null : sales.selectedPartnerId
-              }
+              selectedBusinessPartnerId={sales.selectedPartnerId}
               totalPages={sales.partnerTotalPages}
               totalPartners={sales.filteredBusinessPartners.length}
               onSelectBusinessPartner={(partnerId) => {
                 setShowCreatePartner(false);
+                setPartnerDetailMode("read");
                 sales.selectBusinessPartner(partnerId);
               }}
               onCreateBusinessPartner={() => setShowCreatePartner(true)}
@@ -162,23 +173,37 @@ export function SalesManager({
                 sales.setPartnerPage(0);
               }}
             />
-            <div className="space-y-4">
-              {showCreatePartner ? (
-                <BusinessPartnerCreateForm
-                  form={sales.partnerForm}
-                  saving={sales.savingBusinessPartner}
-                  onChange={sales.updateBusinessPartnerForm}
-                  onSubmit={handleCreateBusinessPartner}
-                />
-              ) : null}
-              <PartnerSettlementSettingsSection
+            <div>
+              <BusinessPartnerEditSection
                 key={sales.selectedBusinessPartner?.id ?? "empty"}
-                partner={
-                  showCreatePartner ? null : sales.selectedBusinessPartner
-                }
-              />
+                partner={sales.selectedBusinessPartner}
+                form={sales.partnerEditForm}
+                saving={sales.savingBusinessPartnerEdit}
+                mode={partnerDetailMode}
+                errorMessage={sales.errorMessage}
+                onChange={sales.updateBusinessPartnerEditForm}
+                onModeChange={setPartnerDetailMode}
+                onSubmit={handleUpdateBusinessPartner}
+              >
+                <PartnerSettlementSettingsSection
+                  key={sales.selectedBusinessPartner?.id ?? "empty"}
+                  partner={sales.selectedBusinessPartner}
+                  embedded
+                  mode={partnerDetailMode === "settlement" ? "edit" : "read"}
+                  onSaved={() => setPartnerDetailMode("read")}
+                />
+              </BusinessPartnerEditSection>
             </div>
           </TabSplit>
+          {showCreatePartner ? (
+            <BusinessPartnerCreateForm
+              form={sales.partnerForm}
+              saving={sales.savingBusinessPartner}
+              onChange={sales.updateBusinessPartnerForm}
+              onClose={() => setShowCreatePartner(false)}
+              onSubmit={handleCreateBusinessPartner}
+            />
+          ) : null}
         </>
       )}
     </TabLayout>

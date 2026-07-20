@@ -49,6 +49,24 @@ class SalesIntegrationTests extends AbstractBackendIntegrationTest {
 				.andExpect(jsonPath("$.data[0].partnerType").value("WHOLESALE"))
 				.andExpect(jsonPath("$.data[0].active").value(true));
 
+		mockMvc.perform(put("/api/business-partners/{partnerId}", partnerId)
+				.contentType(MediaType.APPLICATION_JSON)
+				.content("""
+						{
+						  "name": "??? ??",
+						  "partnerType": "RETAIL",
+						  "ownerName": "???",
+						  "phone": "010-1111-2222",
+						  "address": "?? ??",
+						  "memo": "?? ??"
+						}
+						"""))
+				.andExpect(status().isOk())
+				.andExpect(jsonPath("$.data.id").value(partnerId))
+				.andExpect(jsonPath("$.data.name").value("??? ??"))
+				.andExpect(jsonPath("$.data.partnerType").value("RETAIL"))
+				.andExpect(jsonPath("$.data.phone").value("010-1111-2222"));
+
 		var slipResult = mockMvc.perform(post("/api/sales-slips")
 				.contentType(MediaType.APPLICATION_JSON)
 				.content("""
