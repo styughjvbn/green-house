@@ -73,14 +73,14 @@ export function OrchidGroupSearchPanel<
 
   return (
     <section
-      className={`border bg-white p-3 shadow-sm ${
+      className={`border bg-white p-1.5 shadow-sm ${
         variant === "soft"
           ? "rounded-xl border-[#d9e2d5]"
           : "rounded-md border-[#d7ddd4]"
       }`}
       onBlur={handleBlur}
     >
-      <div className="grid gap-2 lg:grid-cols-[minmax(0,1fr)_95px_auto]">
+      <div className="grid gap-2 lg:grid-cols-[minmax(0,1fr)_70px]">
         <label className="relative block">
           <Search
             aria-hidden="true"

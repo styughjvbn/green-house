@@ -7,6 +7,7 @@ import type {
 } from "@/entities/farm/types";
 import type { LatLngBoundsExpression, LatLngExpression } from "leaflet";
 import type { SelectedFarmStatusOrchidGroup } from "../../../model/types";
+import type { FarmStatusLayoutMode } from "../../../model/types";
 import { HOUSE_WIDTH, WORLD_HEIGHT, WORLD_WIDTH } from "./config";
 
 export type Rect = {
@@ -99,7 +100,12 @@ export function findOrchidGroupCenter(
 
 export function getScaledHouseLayout(
   houses: HouseStatusSummary[],
+  layoutMode: FarmStatusLayoutMode = "ACTUAL",
 ): FarmHouseGeometry[] {
+  if (layoutMode === "NORMALIZED") {
+    return getNormalizedHouseLayout(houses);
+  }
+
   const orderedHouses = [...houses].sort(
     (a, b) => b.houseNumber - a.houseNumber,
   );
@@ -133,6 +139,38 @@ export function getScaledHouseLayout(
       x: startX + index * (HOUSE_WIDTH + horizontalGap),
       width: HOUSE_WIDTH,
       y: houseBottom - height,
+      height,
+    };
+  });
+}
+
+function getNormalizedHouseLayout(
+  houses: HouseStatusSummary[],
+): FarmHouseGeometry[] {
+  const orderedHouses = [...houses].sort(
+    (a, b) => a.houseNumber - b.houseNumber,
+  );
+  const columns = Math.min(5, Math.max(1, orderedHouses.length));
+  const rows = Math.ceil(orderedHouses.length / columns);
+  const gapX = 28;
+  const gapY = 34;
+  const marginY = 58;
+  const previousWidth = (WORLD_WIDTH - 70 * 2 - gapX * (columns - 1)) / columns;
+  const width = previousWidth / 2;
+  const height = (WORLD_HEIGHT - marginY * 2 - gapY * (rows - 1)) / rows;
+  const layoutWidth = columns * width + gapX * (columns - 1);
+  const startX = (WORLD_WIDTH - layoutWidth) / 2;
+
+  return orderedHouses.map((house, index) => {
+    const column = index % columns;
+    const row = Math.floor(index / columns);
+    return {
+      houseNumber: house.houseNumber,
+      // 공통 실제 배치 좌표 변환이 X/Y를 뒤집으므로 정규화 그리드는
+      // 역방향 좌표를 사용해 화면에서 왼쪽→오른쪽, 위→아래로 보이게 한다.
+      x: startX + (columns - 1 - column) * (width + gapX),
+      y: marginY + (rows - 1 - row) * (height + gapY),
+      width,
       height,
     };
   });

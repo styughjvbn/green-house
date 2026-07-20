@@ -30,6 +30,9 @@ export type FarmStatusSearchState = {
   status: string;
 };
 
+export type FarmStatusLayoutMode = "NORMALIZED" | "ACTUAL";
+export type FarmStatusColorMode = "STATUS" | "VARIETY" | "AGE";
+
 export type FarmStatusFilterMatches = {
   bedZoneIds: Set<number>;
   houseIds: Set<number>;
