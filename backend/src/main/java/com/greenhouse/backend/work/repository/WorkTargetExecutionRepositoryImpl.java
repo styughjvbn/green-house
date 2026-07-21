@@ -14,6 +14,7 @@ import com.querydsl.jpa.impl.JPAQueryFactory;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.LockModeType;
 import java.util.List;
+import java.util.Collection;
 import java.util.Optional;
 
 public class WorkTargetExecutionRepositoryImpl implements WorkTargetExecutionRepositoryCustom {
@@ -58,6 +59,17 @@ public class WorkTargetExecutionRepositoryImpl implements WorkTargetExecutionRep
 				.join(workTargetExecution.target, workOperationTarget).fetchJoin()
 				.where(workOperationTarget.workOperation.id.eq(workOperationId))
 				.orderBy(workTargetExecution.id.asc())
+				.fetch();
+	}
+
+	@Override
+	public List<WorkTargetExecution> findByTargetWorkOperationIdInOrderByIdAsc(
+			Collection<Long> workOperationIds) {
+		return queryFactory
+				.selectFrom(workTargetExecution)
+				.join(workTargetExecution.target, workOperationTarget).fetchJoin()
+				.where(workOperationTarget.workOperation.id.in(workOperationIds))
+				.orderBy(workOperationTarget.workOperation.id.asc(), workTargetExecution.id.asc())
 				.fetch();
 	}
 

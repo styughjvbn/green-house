@@ -96,7 +96,8 @@ public class WorkOperation extends BaseEntity {
 			Map<String, Object> sourceConditionSnapshot,
 			Map<String, Object> details,
 			String worker,
-			String memo) {
+			String memo,
+			LocalDateTime targetSnapshotAt) {
 		this.workType = workType;
 		this.title = title;
 		this.status = WorkOperationStatus.PLANNED;
@@ -105,7 +106,7 @@ public class WorkOperation extends BaseEntity {
 		this.sourceScopeType = sourceScopeType;
 		this.sourceScopeId = sourceScopeId;
 		this.sourceConditionSnapshot = sourceConditionSnapshot;
-		this.targetSnapshotAt = LocalDateTime.now();
+		this.targetSnapshotAt = targetSnapshotAt;
 		this.details = details;
 		this.worker = worker;
 		this.memo = memo;

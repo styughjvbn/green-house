@@ -4,10 +4,11 @@ import com.greenhouse.backend.common.exception.NotFoundException;
 import com.greenhouse.backend.farm.domain.OrchidGroup;
 import com.greenhouse.backend.farm.dto.OrchidGroupMoveRequest;
 import com.greenhouse.backend.farm.dto.OrchidGroupResponse;
-import com.greenhouse.backend.work.application.OperationLevelWorkService;
+import com.greenhouse.backend.work.application.ImmediateWorkExecutionService;
 import com.greenhouse.backend.work.domain.WorkType;
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.time.Clock;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.UUID;
@@ -20,8 +21,9 @@ import org.springframework.transaction.annotation.Transactional;
 @RequiredArgsConstructor
 public class OrchidGroupMovementService {
 
-	private final OperationLevelWorkService operationLevelWorkService;
+	private final ImmediateWorkExecutionService immediateWorkExecutionService;
 	private final OrchidGroupReader orchidGroupReader;
+	private final Clock clock;
 
 	public OrchidGroupResponse move(Long orchidGroupId, OrchidGroupMoveRequest request) {
 		var orchidGroup = orchidGroupReader.findDetailById(orchidGroupId)
@@ -37,11 +39,11 @@ public class OrchidGroupMovementService {
 		putIfNotNull(details, "worker", request.worker());
 		putIfNotNull(details, "memo", request.memo());
 
-		operationLevelWorkService.executeForTarget(
+		immediateWorkExecutionService.executeForTarget(
 				"DIRECT_MOVE:" + UUID.randomUUID(),
 				WorkType.MOVEMENT_CODE,
 				"위치 이동",
-				LocalDate.now(),
+				LocalDate.now(clock),
 				request.worker(),
 				request.memo(),
 				orchidGroupId,

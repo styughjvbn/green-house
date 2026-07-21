@@ -19,14 +19,20 @@ import org.springframework.transaction.annotation.Transactional;
 @Transactional
 public class InboundPottingOperationService {
 
-	private final WorkOperationService workOperationService;
+	private final InboundPottingPlanService planService;
+	private final WorkOperationProgressService progressService;
+	private final WorkOperationQueryService queryService;
 	private final WorkTargetExecutionRepository workTargetExecutionRepository;
 	private final ObjectMapper objectMapper = new ObjectMapper().findAndRegisterModules();
 
 	public InboundPottingOperationService(
-			WorkOperationService workOperationService,
+			InboundPottingPlanService planService,
+			WorkOperationProgressService progressService,
+			WorkOperationQueryService queryService,
 			WorkTargetExecutionRepository workTargetExecutionRepository) {
-		this.workOperationService = workOperationService;
+		this.planService = planService;
+		this.progressService = progressService;
+		this.queryService = queryService;
 		this.workTargetExecutionRepository = workTargetExecutionRepository;
 	}
 
@@ -37,7 +43,7 @@ public class InboundPottingOperationService {
 		if (!activeExecutions.isEmpty()) {
 			return executeExisting(activeExecutions.getFirst(), request);
 		}
-		WorkOperationResponse planned = workOperationService.createInboundPottingPlan(
+		WorkOperationResponse planned = planService.create(
 				new InboundPottingPlanCreateRequest(
 						"입고 #" + inboundRecordId + " 포트 작업",
 						request.pottingDate(),
@@ -45,7 +51,7 @@ public class InboundPottingOperationService {
 						List.of(inboundRecordId),
 						request.worker(),
 						request.memo()));
-		WorkOperationResponse started = workOperationService.start(planned.id());
+		WorkOperationResponse started = progressService.start(planned.id());
 		Long targetId = started.targets().stream()
 				.filter(target -> inboundRecordId.equals(target.inboundRecordId()))
 				.findFirst()
@@ -60,9 +66,9 @@ public class InboundPottingOperationService {
 		Long operationId = execution.getTarget().getWorkOperation().getId();
 		WorkOperationStatus status = execution.getTarget().getWorkOperation().getStatus();
 		WorkOperationResponse active = switch (status) {
-			case PLANNED -> workOperationService.start(operationId);
-			case PAUSED -> workOperationService.resume(operationId);
-			case IN_PROGRESS -> workOperationService.get(operationId);
+			case PLANNED -> progressService.start(operationId);
+			case PAUSED -> progressService.resume(operationId);
+			case IN_PROGRESS -> queryService.get(operationId);
 			default -> throw new IllegalStateException("실행할 수 없는 포트 작업 계획입니다.");
 		};
 		return executeTarget(active, execution.getTarget().getId(), request);
@@ -75,7 +81,7 @@ public class InboundPottingOperationService {
 		Map<String, Object> resultDetails = new LinkedHashMap<>(objectMapper.convertValue(
 				request, new TypeReference<Map<String, Object>>() {}));
 		resultDetails.remove("inboundRecordId");
-		WorkOperationResponse updated = workOperationService.completeTarget(
+		WorkOperationResponse updated = progressService.completeTarget(
 				operation.id(),
 				targetId,
 				new WorkTargetExecutionRequest(request.worker(), resultDetails, request.pottingDate()));
@@ -83,7 +89,7 @@ public class InboundPottingOperationService {
 				&& updated.progress().inProgress() == 0
 				&& updated.progress().partial() == 0
 				&& updated.progress().failed() == 0) {
-			return workOperationService.complete(updated.id(), request.pottingDate());
+			return progressService.complete(updated.id(), request.pottingDate());
 		}
 		return updated;
 	}

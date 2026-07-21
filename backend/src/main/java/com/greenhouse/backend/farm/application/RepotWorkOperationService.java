@@ -5,7 +5,8 @@ import com.greenhouse.backend.farm.dto.OrchidGroupResponse;
 import com.greenhouse.backend.farm.dto.RepotWorkOperationRequest;
 import com.greenhouse.backend.farm.dto.RepotWorkOperationResponse;
 import com.greenhouse.backend.farm.repository.OrchidGroupRepository;
-import com.greenhouse.backend.work.application.OperationLevelWorkService;
+import com.greenhouse.backend.work.application.ImmediateWorkExecutionService;
+import com.greenhouse.backend.work.application.WorkOperationQueryService;
 import com.greenhouse.backend.work.domain.WorkType;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -17,13 +18,16 @@ import org.springframework.transaction.annotation.Transactional;
 @Transactional
 public class RepotWorkOperationService {
 
-	private final OperationLevelWorkService operationLevelWorkService;
+	private final ImmediateWorkExecutionService immediateWorkExecutionService;
+	private final WorkOperationQueryService queryService;
 	private final OrchidGroupRepository orchidGroupRepository;
 
 	public RepotWorkOperationService(
-			OperationLevelWorkService operationLevelWorkService,
+			ImmediateWorkExecutionService immediateWorkExecutionService,
+			WorkOperationQueryService queryService,
 			OrchidGroupRepository orchidGroupRepository) {
-		this.operationLevelWorkService = operationLevelWorkService;
+		this.immediateWorkExecutionService = immediateWorkExecutionService;
+		this.queryService = queryService;
 		this.orchidGroupRepository = orchidGroupRepository;
 	}
 
@@ -40,7 +44,7 @@ public class RepotWorkOperationService {
 			details.put("lossReason", request.lossReason().trim());
 		}
 		details.put("resultCount", request.results().size());
-		var operation = operationLevelWorkService.executeForTarget(
+		var operation = immediateWorkExecutionService.executeForTarget(
 				normalizeRequired(request.idempotencyKey()),
 				WorkType.REPOT_CODE,
 				normalizeRequired(request.title()),
@@ -70,8 +74,8 @@ public class RepotWorkOperationService {
 	}
 
 	private RepotWorkOperationResponse response(Long operationId) {
-		var operation = operationLevelWorkService.get(operationId);
-		var resultIds = operationLevelWorkService.getStructureChangeResultOrchidGroupIds(
+		var operation = queryService.get(operationId);
+		var resultIds = immediateWorkExecutionService.getStructureChangeResultOrchidGroupIds(
 				operationId, WorkType.REPOT_CODE);
 		var source = orchidGroupRepository.findDetailById(operation.sourceScopeId())
 				.orElseThrow(() -> new NotFoundException(

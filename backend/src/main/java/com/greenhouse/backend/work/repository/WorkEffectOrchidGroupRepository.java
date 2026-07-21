@@ -8,6 +8,8 @@ import org.springframework.data.jpa.repository.JpaRepository;
 
 public interface WorkEffectOrchidGroupRepository extends JpaRepository<WorkEffectOrchidGroup, Long> {
 
+	List<WorkEffectOrchidGroup> findByWorkAppliedEffectIdOrderByIdAsc(Long workAppliedEffectId);
+
 	@EntityGraph(attributePaths = "workAppliedEffect")
 	List<WorkEffectOrchidGroup> findByWorkAppliedEffectWorkOperationIdOrderByIdAsc(Long workOperationId);
 

@@ -97,13 +97,14 @@ public class WorkOperationTarget {
 			String potSizeCodeSnapshot,
 			String potSizeSnapshot,
 			Integer quantitySnapshot,
-			Map<String, Object> locationSnapshot) {
+			Map<String, Object> locationSnapshot,
+			LocalDateTime includedAt) {
 		this.workOperation = workOperation;
 		this.orchidGroupId = orchidGroupId;
 		this.targetReferenceType = WorkTargetReferenceType.ORCHID_GROUP;
 		this.inclusionSource = inclusionSource;
 		this.sourceReferenceId = sourceReferenceId;
-		this.includedAt = LocalDateTime.now();
+		this.includedAt = includedAt;
 		this.varietyIdSnapshot = varietyIdSnapshot;
 		this.varietyNameSnapshot = varietyNameSnapshot;
 		this.ageYearSnapshot = ageYearSnapshot;
@@ -120,14 +121,15 @@ public class WorkOperationTarget {
 			String varietyNameSnapshot,
 			Integer quantitySnapshot,
 			String potSizeSnapshot,
-			Map<String, Object> locationSnapshot) {
+			Map<String, Object> locationSnapshot,
+			LocalDateTime includedAt) {
 		WorkOperationTarget target = new WorkOperationTarget();
 		target.workOperation = workOperation;
 		target.targetReferenceType = WorkTargetReferenceType.INBOUND_RECORD;
 		target.inboundRecordId = inboundRecordId;
 		target.inclusionSource = WorkTargetInclusionSource.INBOUND_RECORD;
 		target.sourceReferenceId = inboundRecordId;
-		target.includedAt = LocalDateTime.now();
+		target.includedAt = includedAt;
 		target.varietyIdSnapshot = varietyIdSnapshot;
 		target.varietyNameSnapshot = varietyNameSnapshot;
 		target.quantitySnapshot = quantitySnapshot;

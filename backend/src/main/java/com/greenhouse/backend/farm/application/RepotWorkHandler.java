@@ -13,13 +13,13 @@ import org.springframework.stereotype.Component;
 public class RepotWorkHandler implements WorkEffectHandler {
 
 	private final SingleSourceTransformationExecutor executor;
-	private final BatchStructureTransformationExecutor batchExecutor;
+	private final StructureChangeExecutor structureChangeExecutor;
 
 	public RepotWorkHandler(
 			SingleSourceTransformationExecutor executor,
-			BatchStructureTransformationExecutor batchExecutor) {
+			StructureChangeExecutor structureChangeExecutor) {
 		this.executor = executor;
-		this.batchExecutor = batchExecutor;
+		this.structureChangeExecutor = structureChangeExecutor;
 	}
 
 	@Override public String supports() { return "REPOT"; }
@@ -29,8 +29,7 @@ public class RepotWorkHandler implements WorkEffectHandler {
 	public WorkExecutionResult execute(
 			WorkOperation operation, WorkOperationTarget target, WorkEffectCommand command) {
 		if (command.payload() instanceof com.greenhouse.backend.work.dto.StructureChangeExecutionRequest request) {
-			return batchExecutor.execute(
-					operation, request, "REPOT", "분갈이", OrchidGroupLineageRelationType.REPOTTED_TO);
+			return structureChangeExecutor.execute(operation, request);
 		}
 		return executor.execute(
 				operation, target, command, "분갈이", "REPOT",

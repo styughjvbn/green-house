@@ -1,17 +1,15 @@
 package com.greenhouse.backend.work.application;
 
-import com.greenhouse.backend.work.domain.WorkAppliedEffect;
+import com.greenhouse.backend.work.application.effect.WorkEffectCommand;
+import com.greenhouse.backend.work.application.effect.WorkEffectStore;
+import com.greenhouse.backend.work.application.effect.WorkExecutionResult;
 import com.greenhouse.backend.work.domain.WorkEffectKind;
-import com.greenhouse.backend.work.domain.WorkEffectOrchidGroup;
-import com.greenhouse.backend.work.domain.WorkEffectOrchidGroupRelationType;
 import com.greenhouse.backend.work.domain.WorkOperation;
 import com.greenhouse.backend.work.domain.WorkOperationTarget;
 import com.greenhouse.backend.work.domain.WorkSourceScopeType;
 import com.greenhouse.backend.work.domain.WorkTargetExecution;
 import com.greenhouse.backend.work.domain.WorkType;
 import com.greenhouse.backend.work.dto.InboundWorkOperationCreateRequest;
-import com.greenhouse.backend.work.repository.WorkAppliedEffectRepository;
-import com.greenhouse.backend.work.repository.WorkEffectOrchidGroupRepository;
 import com.greenhouse.backend.work.repository.WorkOperationRepository;
 import com.greenhouse.backend.work.repository.WorkOperationTargetRepository;
 import com.greenhouse.backend.work.repository.WorkTargetExecutionRepository;
@@ -32,8 +30,8 @@ public class InboundWorkOperationRecorder {
 	private final WorkOperationRepository workOperationRepository;
 	private final WorkOperationTargetRepository workOperationTargetRepository;
 	private final WorkTargetExecutionRepository workTargetExecutionRepository;
-	private final WorkAppliedEffectRepository workAppliedEffectRepository;
-	private final WorkEffectOrchidGroupRepository workEffectOrchidGroupRepository;
+	private final WorkEffectStore workEffectStore;
+	private final WorkOperationSupport support;
 
 	public void record(InboundWorkOperationCreateRequest request) {
 		WorkType workType = workTypeService.getByCode(WorkType.INBOUND_CODE);
@@ -54,7 +52,8 @@ public class InboundWorkOperationRecorder {
 				Map.of("inboundRecordIds", List.of(request.inboundRecordId())),
 				details,
 				normalize(request.worker()),
-				normalize(request.memo())));
+				normalize(request.memo()),
+				support.now()));
 		WorkOperationTarget target = workOperationTargetRepository.save(
 				WorkOperationTarget.inboundRecord(
 						operation,
@@ -63,27 +62,25 @@ public class InboundWorkOperationRecorder {
 						request.varietyName(),
 						request.quantity(),
 						request.potSize(),
-						request.locationSnapshot()));
+						request.locationSnapshot(),
+						support.now()));
 		WorkTargetExecution execution = workTargetExecutionRepository.save(new WorkTargetExecution(target));
-		LocalDateTime executedAt = LocalDateTime.now();
+		LocalDateTime executedAt = support.now();
 		String worker = normalize(request.worker());
 		operation.start(executedAt);
-		WorkAppliedEffect effect = workAppliedEffectRepository.save(new WorkAppliedEffect(
+		workEffectStore.save(
 				operation,
 				target,
+				new WorkEffectCommand(executedAt, worker, details, request),
 				"TARGET:" + target.getId(),
+				List.of(),
 				WorkEffectKind.RECORD_ONLY,
-				workType.handlerCode(),
-				executedAt,
-				worker,
-				details,
-				details));
-		if (request.createdOrchidGroupId() != null) {
-			workEffectOrchidGroupRepository.save(new WorkEffectOrchidGroup(
-					effect,
-					request.createdOrchidGroupId(),
-					WorkEffectOrchidGroupRelationType.RESULT));
-		}
+				new WorkExecutionResult(
+						workType.handlerCode(),
+						details,
+						request.createdOrchidGroupId() == null
+								? List.of()
+								: List.of(request.createdOrchidGroupId())));
 		execution.completeWithEffect(executedAt, worker, details);
 		operation.complete(executedAt);
 	}

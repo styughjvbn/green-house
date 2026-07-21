@@ -22,11 +22,12 @@ public class InboundWorkOperationLifecycleService {
 
 	private final WorkTargetExecutionRepository workTargetExecutionRepository;
 	private final WorkAppliedEffectRepository workAppliedEffectRepository;
+	private final WorkOperationSupport support;
 
 	public void cancelForInboundRecord(Long inboundRecordId) {
 		List<WorkTargetExecution> linkedExecutions = workTargetExecutionRepository
 				.findForUpdateByTargetInboundRecordIdOrderByIdAsc(inboundRecordId);
-		LocalDateTime canceledAt = LocalDateTime.now();
+		LocalDateTime canceledAt = support.now();
 		Map<Long, List<WorkTargetExecution>> byOperationId = linkedExecutions.stream()
 				.filter(execution -> isInboundLifecycleWork(execution.getTarget().getWorkOperation()))
 				.collect(Collectors.groupingBy(

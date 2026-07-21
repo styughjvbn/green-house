@@ -12,8 +12,8 @@ import com.greenhouse.backend.farm.repository.PhysicalBedRepository;
 import com.greenhouse.backend.work.application.ResolvedWorkTarget;
 import com.greenhouse.backend.work.application.WorkTargetSelection;
 import com.greenhouse.backend.work.application.WorkTargetResolver;
-import com.greenhouse.backend.work.domain.WorkSourceScopeType;
 import java.time.LocalDate;
+import java.time.Clock;
 import java.time.temporal.ChronoUnit;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -34,6 +34,7 @@ public class FarmWorkTargetResolver implements WorkTargetResolver {
 	private final OrchidGroupCollectionRepository collectionRepository;
 	private final OrchidGroupCollectionMemberRepository collectionMemberRepository;
 	private final DerivedOrchidGroupService derivedOrchidGroupService;
+	private final Clock clock;
 
 	@Override
 	public List<ResolvedWorkTarget> resolve(WorkTargetSelection selection) {
@@ -145,7 +146,7 @@ public class FarmWorkTargetResolver implements WorkTargetResolver {
 		if (referenceDate == null) {
 			return group.getAgeYear();
 		}
-		long elapsedYears = ChronoUnit.YEARS.between(referenceDate, LocalDate.now());
+		long elapsedYears = ChronoUnit.YEARS.between(referenceDate, LocalDate.now(clock));
 		return group.getAgeYear() + Math.max(0, Math.toIntExact(elapsedYears));
 	}
 

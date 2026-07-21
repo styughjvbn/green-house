@@ -25,8 +25,8 @@ public class WorkOperationCorrectionService {
 
 	private final WorkOperationRepository workOperationRepository;
 	private final WorkOperationCorrectionRepository correctionRepository;
-	private final OperationLevelWorkService operationLevelWorkService;
-	private final WorkOperationService workOperationService;
+	private final ImmediateWorkExecutionService immediateWorkExecutionService;
+	private final WorkOperationQueryService queryService;
 	private final WorkAppliedEffectRepository workAppliedEffectRepository;
 
 	public WorkOperationCorrectionsResponse create(
@@ -37,7 +37,7 @@ public class WorkOperationCorrectionService {
 		Map<String, Object> details = new LinkedHashMap<>();
 		details.put("originalWorkOperationId", originalWorkOperationId);
 		details.put("reason", reason);
-		var correctionOperation = operationLevelWorkService.execute(
+		var correctionOperation = immediateWorkExecutionService.execute(
 				normalizeRequired(request.idempotencyKey()),
 				WorkType.CORRECTION_CODE,
 				normalizeRequired(request.title()),
@@ -61,7 +61,7 @@ public class WorkOperationCorrectionService {
 	}
 
 	private WorkOperationCorrectionsResponse response(Long originalWorkOperationId) {
-		var original = workOperationService.get(originalWorkOperationId);
+		var original = queryService.get(originalWorkOperationId);
 		var corrections = correctionRepository
 				.findByOriginalWorkOperationIdOrderByCreatedAtAscIdAsc(originalWorkOperationId).stream()
 				.map(correction -> {
@@ -72,7 +72,7 @@ public class WorkOperationCorrectionService {
 							.orElse(Map.of());
 					return WorkOperationCorrectionItemResponse.from(
 							correction,
-							workOperationService.get(correctionOperationId),
+							queryService.get(correctionOperationId),
 							effectDetails);
 				})
 				.toList();

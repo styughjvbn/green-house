@@ -30,7 +30,7 @@ public class MergeWorkHandler implements WorkEffectHandler {
 	private final OrchidGroupCommandService orchidGroupCommandService;
 	private final OrchidGroupLineageService lineageService;
 	private final WorkOperationTargetReader workOperationTargetReader;
-	private final BatchStructureTransformationExecutor batchExecutor;
+	private final StructureChangeExecutor structureChangeExecutor;
 	private final ObjectMapper objectMapper = new ObjectMapper().findAndRegisterModules();
 
 	public MergeWorkHandler(
@@ -38,12 +38,12 @@ public class MergeWorkHandler implements WorkEffectHandler {
 			OrchidGroupCommandService orchidGroupCommandService,
 			OrchidGroupLineageService lineageService,
 			WorkOperationTargetReader workOperationTargetReader,
-			BatchStructureTransformationExecutor batchExecutor) {
+			StructureChangeExecutor structureChangeExecutor) {
 		this.orchidGroupRepository = orchidGroupRepository;
 		this.orchidGroupCommandService = orchidGroupCommandService;
 		this.lineageService = lineageService;
 		this.workOperationTargetReader = workOperationTargetReader;
-		this.batchExecutor = batchExecutor;
+		this.structureChangeExecutor = structureChangeExecutor;
 	}
 
 	@Override public String supports() { return "MERGE"; }
@@ -53,8 +53,7 @@ public class MergeWorkHandler implements WorkEffectHandler {
 	public WorkExecutionResult execute(
 			WorkOperation operation, WorkOperationTarget target, WorkEffectCommand command) {
 		if (command.payload() instanceof com.greenhouse.backend.work.dto.StructureChangeExecutionRequest request) {
-			return batchExecutor.execute(
-					operation, request, "MERGE", "합식", OrchidGroupLineageRelationType.MERGED_TO);
+			return structureChangeExecutor.execute(operation, request);
 		}
 		if (target != null) {
 			throw new IllegalArgumentException("합식은 작업 전체 대상을 한 번에 실행해야 합니다.");

@@ -13,13 +13,13 @@ import org.springframework.stereotype.Component;
 public class DivideWorkHandler implements WorkEffectHandler {
 
 	private final SingleSourceTransformationExecutor executor;
-	private final BatchStructureTransformationExecutor batchExecutor;
+	private final StructureChangeExecutor structureChangeExecutor;
 
 	public DivideWorkHandler(
 			SingleSourceTransformationExecutor executor,
-			BatchStructureTransformationExecutor batchExecutor) {
+			StructureChangeExecutor structureChangeExecutor) {
 		this.executor = executor;
-		this.batchExecutor = batchExecutor;
+		this.structureChangeExecutor = structureChangeExecutor;
 	}
 
 	@Override public String supports() { return "DIVIDE"; }
@@ -29,8 +29,7 @@ public class DivideWorkHandler implements WorkEffectHandler {
 	public WorkExecutionResult execute(
 			WorkOperation operation, WorkOperationTarget target, WorkEffectCommand command) {
 		if (command.payload() instanceof com.greenhouse.backend.work.dto.StructureChangeExecutionRequest request) {
-			return batchExecutor.execute(
-					operation, request, "DIVIDE", "분주", OrchidGroupLineageRelationType.SPLIT_TO);
+			return structureChangeExecutor.execute(operation, request);
 		}
 		return executor.execute(
 				operation, target, command, "분주", "DIVIDE",
