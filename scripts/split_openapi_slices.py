@@ -29,7 +29,7 @@ DOMAIN_MAP = dict(
         ("inventory", ["variety-controller", "material-controller", "inbound-record-controller"]),
         ("orchid-collection", ["orchid-group-collection-controller"]),
         ("derived-orchid-group", ["derived-orchid-group-controller"]),
-        ("work", ["work-record-controller"]),
+        ("work", ["work-type-controller"]),
         ("work-operation", ["work-operation-controller"]),
         ("partner", ["business-partner-controller", "partner-settlement-settings-controller"]),
         ("sales", ["sales-controller", "print-controller"]),

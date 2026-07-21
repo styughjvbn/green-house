@@ -11,7 +11,7 @@ import com.greenhouse.backend.farm.dto.VarietyUpdateRequest;
 import com.greenhouse.backend.farm.repository.InboundRecordRepository;
 import com.greenhouse.backend.farm.repository.OrchidGroupRepository;
 import com.greenhouse.backend.farm.repository.VarietyRepository;
-import com.greenhouse.backend.work.application.WorkRecordMetricsReader;
+import com.greenhouse.backend.work.application.WorkOperationMetricsReader;
 
 import lombok.RequiredArgsConstructor;
 
@@ -31,7 +31,7 @@ public class VarietyService {
 	private final VarietyRepository varietyRepository;
 	private final OrchidGroupRepository orchidGroupRepository;
 	private final InboundRecordRepository inboundRecordRepository;
-	private final WorkRecordMetricsReader workRecordMetricsReader;
+	private final WorkOperationMetricsReader workOperationMetricsReader;
 
 	@Transactional(readOnly = true)
 	public VarietyPageResponse getVarieties(
@@ -156,8 +156,7 @@ public class VarietyService {
 	}
 
 	private Map<Long, LocalDate> latestWorkDates(List<OrchidGroup> orchidGroups) {
-		return workRecordMetricsReader.getLatestWorkDates(
-				"ORCHID_GROUP",
+		return workOperationMetricsReader.getLatestWorkDates(
 				orchidGroups.stream().map(OrchidGroup::getId).toList());
 	}
 

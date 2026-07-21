@@ -51,7 +51,6 @@ class InboundPottingPlanIntegrationTests extends AbstractBackendIntegrationTest 
 		targetExecutionRepository.deleteAll();
 		operationTargetRepository.deleteAll();
 		operationRepository.deleteAll();
-		workRecordRepository.deleteAll();
 		inboundRecordRepository.deleteAll();
 		orchidGroupRepository.deleteAll();
 		varietyRepository.deleteAll();
@@ -95,7 +94,7 @@ class InboundPottingPlanIntegrationTests extends AbstractBackendIntegrationTest 
 	}
 
 	@Test
-	void createsInboundAsACompletedWorkOperationWithoutLegacyWorkRecord() throws Exception {
+	void createsInboundAsACompletedWorkOperation() throws Exception {
 		var created = mockMvc.perform(post("/api/inbound-records")
 				.contentType(MediaType.APPLICATION_JSON)
 				.content("""
@@ -119,7 +118,6 @@ class InboundPottingPlanIntegrationTests extends AbstractBackendIntegrationTest 
 		Long inboundRecordId = Long.valueOf(created.getResponse().getContentAsString().replaceAll(
 				".*?\\\"data\\\":\\{\\\"id\\\":(\\d+).*", "$1"));
 
-		assertThat(workRecordRepository.count()).isZero();
 		assertThat(operationRepository.findAll()).singleElement().satisfies(operation -> {
 			assertThat(operation.getWorkType().getCode()).isEqualTo(WorkType.INBOUND_CODE);
 			assertThat(operation.getStatus().name()).isEqualTo("COMPLETED");
@@ -203,7 +201,6 @@ class InboundPottingPlanIntegrationTests extends AbstractBackendIntegrationTest 
 				.findByTargetWorkOperationIdOrderByIdAsc(operationId)
 				.getFirst().getCompletedAt().toLocalDate())
 				.isEqualTo(LocalDate.of(2026, 7, 16));
-		assertThat(workRecordRepository.count()).isZero();
 	}
 
 	@Test
@@ -550,7 +547,6 @@ class InboundPottingPlanIntegrationTests extends AbstractBackendIntegrationTest 
 				.isEqualTo("COMPLETED");
 		assertThat(appliedEffectRepository.count()).isEqualTo(1);
 		assertThat(effectOrchidGroupRepository.count()).isEqualTo(2);
-		assertThat(workRecordRepository.count()).isZero();
 	}
 
 	@Test
@@ -603,6 +599,5 @@ class InboundPottingPlanIntegrationTests extends AbstractBackendIntegrationTest 
 				.andExpect(jsonPath("$.data.targets[0].executionStatus").value("COMPLETED"));
 
 		assertThat(operationRepository.count()).isEqualTo(1);
-		assertThat(workRecordRepository.count()).isZero();
 	}
 }

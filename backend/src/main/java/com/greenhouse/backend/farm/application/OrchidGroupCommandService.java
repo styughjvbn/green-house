@@ -13,7 +13,7 @@ import com.greenhouse.backend.farm.repository.BedZoneRepository;
 import com.greenhouse.backend.farm.repository.InboundRecordRepository;
 import com.greenhouse.backend.farm.repository.OrchidGroupRepository;
 import com.greenhouse.backend.farm.repository.VarietyRepository;
-import com.greenhouse.backend.work.application.WorkEffectReferenceReader;
+import com.greenhouse.backend.work.application.WorkOrchidGroupUsageInspector;
 import java.math.BigDecimal;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -28,7 +28,7 @@ public class OrchidGroupCommandService {
 	private final OrchidGroupRepository orchidGroupRepository;
 	private final InboundRecordRepository inboundRecordRepository;
 	private final VarietyRepository varietyRepository;
-	private final WorkEffectReferenceReader workEffectReferenceReader;
+	private final WorkOrchidGroupUsageInspector workUsageInspector;
 	private final OrchidPlacementPolicy orchidPlacementPolicy;
 
 	public OrchidGroupResponse create(OrchidGroupCreateRequest request) {
@@ -103,7 +103,7 @@ public class OrchidGroupCommandService {
 		if (!orchidGroupRepository.existsById(orchidGroupId)) {
 			throw new NotFoundException("난 묶음을 찾을 수 없습니다.");
 		}
-		if (workEffectReferenceReader.existsByOrchidGroupId(orchidGroupId)) {
+		if (workUsageInspector.hasEffectReference(orchidGroupId)) {
 			throw new ConflictException("작업 이력과 연결된 난 묶음은 삭제할 수 없습니다. 작업 취소, 보정 또는 폐기 작업으로 처리해주세요.");
 		}
 		inboundRecordRepository.clearCreatedOrchidGroup(orchidGroupId);

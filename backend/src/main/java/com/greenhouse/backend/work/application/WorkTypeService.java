@@ -111,16 +111,6 @@ public class WorkTypeService {
 				.orElseThrow(() -> new NotFoundException("Work type not found."));
 	}
 
-	@Transactional(readOnly = true)
-	public WorkTypeTemplate resolveTemplate(WorkType workType, String snapshotName) {
-		if (workType != null) {
-			return workType.getTemplate();
-		}
-		return workTypeRepository.findByName(snapshotName)
-				.map(WorkType::getTemplate)
-				.orElse(null);
-	}
-
 	private WorkType getById(Long id) {
 		if (id == null) {
 			throw new IllegalArgumentException("Work type id is required.");

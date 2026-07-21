@@ -4,9 +4,20 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import com.greenhouse.backend.work.domain.WorkOperation;
+import com.greenhouse.backend.work.domain.WorkSourceScopeType;
+import com.greenhouse.backend.work.domain.WorkType;
+import com.greenhouse.backend.work.domain.WorkTypeTemplate;
+import com.greenhouse.backend.work.repository.WorkOperationRepository;
+import java.time.LocalDate;
+import java.time.LocalDateTime;
 import org.junit.jupiter.api.Test;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.transaction.annotation.Transactional;
 
 class AnalyticsIntegrationTests extends AbstractBackendIntegrationTest {
+	@Autowired
+	private WorkOperationRepository workOperationRepository;
 
 	@Test
 	void returnsSalesAnalyticsWithoutSeedData() throws Exception {
@@ -32,5 +43,35 @@ class AnalyticsIntegrationTests extends AbstractBackendIntegrationTest {
 				.andExpect(jsonPath("$.data.totalCount").value(0))
 				.andExpect(jsonPath("$.data.workTypeCounts").isArray())
 				.andExpect(jsonPath("$.data.recentRecords").isArray());
+	}
+
+	@Test
+	@Transactional
+	void returnsCompletedWorkOperationsInWorkAnalytics() throws Exception {
+		var workType = workTypeRepository.save(new WorkType(
+				"ANALYTICS_MEMO", "분석 메모", WorkTypeTemplate.MEMO, false, false, true, 100));
+		var operation = new WorkOperation(
+				workType,
+				"분석 대상 작업",
+				LocalDate.of(2026, 7, 15),
+				null,
+				WorkSourceScopeType.FARM,
+				null,
+				null,
+				null,
+				"테스터",
+				"분석 메모",
+				LocalDateTime.of(2026, 7, 15, 1, 0));
+		operation.complete(LocalDateTime.of(2026, 7, 15, 2, 0));
+		workOperationRepository.save(operation);
+
+		mockMvc.perform(get("/api/analytics/work")
+				.param("from", "2026-07-01")
+				.param("to", "2026-07-31"))
+				.andExpect(status().isOk())
+				.andExpect(jsonPath("$.data.totalCount").value(1))
+				.andExpect(jsonPath("$.data.recentRecords[0].id").value(operation.getId()))
+				.andExpect(jsonPath("$.data.recentRecords[0].title").value("분석 대상 작업"))
+				.andExpect(jsonPath("$.data.recentRecords[0].status").value("COMPLETED"));
 	}
 }

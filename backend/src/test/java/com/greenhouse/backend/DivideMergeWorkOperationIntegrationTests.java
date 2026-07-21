@@ -53,7 +53,6 @@ class DivideMergeWorkOperationIntegrationTests extends AbstractBackendIntegratio
 		targetExecutionRepository.deleteAll();
 		operationTargetRepository.deleteAll();
 		operationRepository.deleteAll();
-		workRecordRepository.deleteAll();
 		orchidGroupRepository.deleteAll();
 		varietyRepository.deleteAll();
 		bedZoneRepository.deleteAll();

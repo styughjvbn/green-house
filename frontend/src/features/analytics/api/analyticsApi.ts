@@ -3,7 +3,6 @@ import type {
   FarmStatusMapData,
   House,
   PartnerBalanceSummary,
-  WorkRecord,
 } from "@/entities/farm/types";
 import { fetchApi } from "@/shared/api/client";
 import type {
@@ -66,7 +65,6 @@ function createAnalyticsData({
   salesAnalytics = null,
   summary,
   workAnalytics = null,
-  workRecords = [],
 }: {
   houses?: House[];
   mapData: FarmStatusMapData;
@@ -75,7 +73,6 @@ function createAnalyticsData({
   salesAnalytics?: SalesAnalyticsData | null;
   summary: DashboardSummary;
   workAnalytics?: WorkAnalyticsData | null;
-  workRecords?: WorkRecord[];
 }) {
   return {
     businessPartners: [],
@@ -87,6 +84,5 @@ function createAnalyticsData({
     salesSlips: salesAnalytics?.recentSlips ?? [],
     summary,
     workAnalytics,
-    workRecords,
   };
 }

@@ -18,7 +18,6 @@ import com.greenhouse.backend.farm.repository.BedZoneRepository;
 import com.greenhouse.backend.farm.repository.InboundRecordRepository;
 import com.greenhouse.backend.farm.repository.OrchidGroupRepository;
 import com.greenhouse.backend.farm.repository.VarietyRepository;
-import com.greenhouse.backend.work.application.SystemWorkCleanupService;
 import com.greenhouse.backend.work.application.InboundWorkOperationRecorder;
 import com.greenhouse.backend.work.application.InboundWorkOperationLifecycleService;
 import com.greenhouse.backend.work.dto.InboundWorkOperationCreateRequest;
@@ -47,7 +46,6 @@ public class InboundRecordService {
 	private final OrchidGroupRepository orchidGroupRepository;
 	private final InboundWorkOperationRecorder inboundWorkOperationRecorder;
 	private final InboundWorkOperationLifecycleService inboundWorkOperationLifecycleService;
-	private final SystemWorkCleanupService systemWorkCleanupService;
 	private final OrchidPlacementPolicy orchidPlacementPolicy;
 
 	@Transactional(readOnly = true)
@@ -246,7 +244,6 @@ public class InboundRecordService {
 		if (inboundRecord.getCreatedOrchidGroup() != null) {
 			throw new IllegalArgumentException("난 묶음이 생성된 입고 기록은 삭제할 수 없습니다.");
 		}
-		systemWorkCleanupService.deleteAutoInboundCreateRecords(inboundRecordId);
 		inboundRecordRepository.delete(inboundRecord);
 	}
 

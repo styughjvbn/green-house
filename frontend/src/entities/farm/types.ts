@@ -253,27 +253,6 @@ export type WorkType = {
   sortOrder: number;
 };
 
-export type WorkRecord = {
-  id: number;
-  workTypeId: number | null;
-  workType: string;
-  workTypeTemplate: WorkTypeTemplate | null;
-  workDate: string;
-  targetType: WorkRecordTargetType;
-  targetId: number | null;
-  materialName: string | null;
-  dilutionRatio: string | null;
-  quantity: string | null;
-  worker: string | null;
-  fromBedZoneId: number | null;
-  toBedZoneId: number | null;
-  details: Record<string, unknown> | null;
-  memo: string | null;
-  status: "ACTIVE" | "CANCELED";
-  canceledAt: string | null;
-  cancelReason: string | null;
-};
-
 export type WorkOperationStatus =
   | "PLANNED"
   | "IN_PROGRESS"

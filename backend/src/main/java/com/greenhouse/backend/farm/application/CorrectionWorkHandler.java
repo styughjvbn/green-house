@@ -4,7 +4,7 @@ import com.greenhouse.backend.common.application.OrchidGroupUsageInspector;
 import com.greenhouse.backend.common.exception.NotFoundException;
 import com.greenhouse.backend.farm.domain.OrchidGroup;
 import com.greenhouse.backend.farm.repository.OrchidGroupRepository;
-import com.greenhouse.backend.work.application.StructureChangeResultReader;
+import com.greenhouse.backend.work.application.StructureChangeReferenceReader;
 import com.greenhouse.backend.work.application.effect.WorkEffectCommand;
 import com.greenhouse.backend.work.application.effect.WorkEffectHandler;
 import com.greenhouse.backend.work.application.effect.WorkExecutionResult;
@@ -25,15 +25,15 @@ import org.springframework.stereotype.Component;
 @Component
 public class CorrectionWorkHandler implements WorkEffectHandler {
 
-	private final StructureChangeResultReader structureChangeResultReader;
+	private final StructureChangeReferenceReader structureChangeReferenceReader;
 	private final OrchidGroupRepository orchidGroupRepository;
 	private final List<OrchidGroupUsageInspector> usageInspectors;
 
 	public CorrectionWorkHandler(
-			StructureChangeResultReader structureChangeResultReader,
+			StructureChangeReferenceReader structureChangeReferenceReader,
 			OrchidGroupRepository orchidGroupRepository,
 			List<OrchidGroupUsageInspector> usageInspectors) {
-		this.structureChangeResultReader = structureChangeResultReader;
+		this.structureChangeReferenceReader = structureChangeReferenceReader;
 		this.orchidGroupRepository = orchidGroupRepository;
 		this.usageInspectors = usageInspectors;
 	}
@@ -47,7 +47,8 @@ public class CorrectionWorkHandler implements WorkEffectHandler {
 		if (target != null) throw new IllegalArgumentException("보정 작업은 작업 단위로 실행해야 합니다.");
 		WorkOperationCorrectionCreateRequest request = command.payloadAs(WorkOperationCorrectionCreateRequest.class);
 		Long originalOperationId = originalOperationId(command.resultDetails());
-		List<Long> correctableIds = structureChangeResultReader.getCorrectableResultOrchidGroupIds(originalOperationId);
+		List<Long> correctableIds = structureChangeReferenceReader
+				.getCorrectableResultOrchidGroupIds(originalOperationId);
 		Set<Long> adjustmentIds = request.orchidGroupAdjustments().stream()
 				.map(OrchidGroupCorrectionRequest::orchidGroupId)
 				.collect(Collectors.toCollection(LinkedHashSet::new));

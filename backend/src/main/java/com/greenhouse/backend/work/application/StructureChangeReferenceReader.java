@@ -4,9 +4,13 @@ import com.greenhouse.backend.common.exception.NotFoundException;
 import com.greenhouse.backend.work.domain.WorkEffectKind;
 import com.greenhouse.backend.work.domain.WorkEffectOrchidGroupRelationType;
 import com.greenhouse.backend.work.domain.WorkOperationStatus;
+import com.greenhouse.backend.work.domain.WorkOperationTarget;
 import com.greenhouse.backend.work.repository.WorkEffectOrchidGroupRepository;
 import com.greenhouse.backend.work.repository.WorkOperationRepository;
+import com.greenhouse.backend.work.repository.WorkOperationTargetRepository;
 import java.util.List;
+import java.util.Set;
+import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -14,10 +18,18 @@ import org.springframework.transaction.annotation.Transactional;
 @Service
 @Transactional(readOnly = true)
 @RequiredArgsConstructor
-public class StructureChangeResultReader {
+public class StructureChangeReferenceReader {
 
 	private final WorkOperationRepository workOperationRepository;
+	private final WorkOperationTargetRepository workOperationTargetRepository;
 	private final WorkEffectOrchidGroupRepository workEffectOrchidGroupRepository;
+
+	public Set<Long> getActiveOrchidGroupIds(Long workOperationId) {
+		return workOperationTargetRepository
+				.findByWorkOperationIdAndExcludedAtIsNullOrderByIdAsc(workOperationId).stream()
+				.map(WorkOperationTarget::getOrchidGroupId)
+				.collect(Collectors.toSet());
+	}
 
 	public List<Long> getCorrectableResultOrchidGroupIds(Long operationId) {
 		var operation = workOperationRepository.findWithWorkTypeById(operationId)

@@ -19,7 +19,7 @@ python3 scripts/generate_openapi.py
 python3 scripts/generate_openapi.py --url http://localhost:8080/api-docs
 ```
 
-생성 과정은 `WORK_OPERATION_V2_ENABLED=true`, `AUTH_ENABLED=false`로 임시 백엔드를 실행한다. 분할 스크립트는 모든 operation이 controller tag 기준으로 정확히 하나의 slice에 포함되는지 검사하며, 새 controller tag의 매핑이 없으면 실패한다.
+생성 과정은 `AUTH_ENABLED=false`로 임시 백엔드를 실행한다. 분할 스크립트는 모든 operation이 controller tag 기준으로 정확히 하나의 slice에 포함되는지 검사하며, 새 controller tag의 매핑이 없으면 실패한다.
 
 ## 2. 주요 그룹
 
@@ -108,9 +108,9 @@ python3 scripts/generate_openapi.py --url http://localhost:8080/api-docs
 
 대상 완료와 구조 변경 실행에는 `completedDate`를 전달하고, 전체 작업 완료에도 완료 요청 본문의 `completedDate`를 전달한다. 화면 기본값은 농장 기준 오늘이며 오늘 이전 날짜로 수정할 수 있다. 포트 작업은 `pottingDate`를 대상과 전체 작업의 완료일로 함께 사용한다. 기존 호출 호환을 위해 일반 대상·전체 완료에서 날짜를 생략하면 농장 기준 오늘로 처리한다.
 
-`POST /api/work-operations/record`는 농장 전체, 동, 물리 배드, 논리 구역, 난 묶음 범위의 기록형 작업을 대상 스냅샷과 함께 즉시 완료한다. `WORK_OPERATION_V2_ENABLED=true`에서는 사용자 수동 `POST /api/work-records`를 거부하고, 비활성화하면 기존 작성 흐름으로 복귀한다. 직접 위치 이동도 완료된 `WorkOperation`과 작업 효과로 기록하며 난 묶음 이력 API는 `WorkRecord`를 반환하지 않는다.
+`POST /api/work-operations/record`는 농장 전체, 동, 물리 배드, 논리 구역, 난 묶음 범위의 기록형 작업을 대상 스냅샷과 함께 즉시 완료한다. 직접 위치 이동도 완료된 `WorkOperation`과 작업 효과로 기록하며 모든 작업 이력 API는 `WorkOperation` 계약을 사용한다.
 
-신규 입고 등록은 입고 기록 대상을 가진 완료 상태의 `WorkOperation`을 생성한다. 기존 `WorkRecord`에는 입고 이력을 중복 생성하지 않는다.
+신규 입고 등록은 입고 기록 대상을 가진 완료 상태의 `WorkOperation`을 생성한다.
 
 자리 이동·분갈이·분주·합식·입고 포트 작업은 계획 생성 시 대상을 스냅샷으로 확정하되 위치나 구조를 변경하지 않는다. 분갈이·분주·합식 실행 회차는 `POST /api/work-operations/{workOperationId}/structure-change-executions`에서 계획 대상 일부와 원본별 수량, 복수 결과를 처리하고 누적 작업 수량을 갱신한다. 기존 합식 완료 API는 이전 클라이언트 호환용이다. 다중 생성은 대상 없는 즉시 구조 변경 API로 유지한다.
 
@@ -120,7 +120,7 @@ python3 scripts/generate_openapi.py --url http://localhost:8080/api-docs
 
 포트 작업 계획에 포함된 입고 기록은 `POTTING_IN_PROGRESS` 상태로 전환해 입고 관리에서 `작업중`으로 표시한다. 포트 작업을 취소하거나 대상을 건너뛰면 예정일 유무에 따라 포트 작업 대기 또는 임시보관 상태로 복귀한다. 결과 난 묶음이 없는 입고 기록을 취소하면 연결된 입고 작업과 아직 실행되지 않은 포트 작업 대상도 같은 트랜잭션에서 취소한다.
 
-입고 관리 화면의 즉시 실행은 `POST /api/work-operations/inbound-potting-executions`를 사용한다. 같은 입고 기록이 활성 포트 작업 계획에 포함되어 있으면 해당 계획의 대상을 실행하고, 계획이 없을 때만 단일 대상 `WorkOperation`을 새로 생성한다. 다중 대상 계획은 실행한 대상만 완료하고 나머지 대상을 유지한다. 요청의 `results`에 결과별 수량·화분·년생·배치 위치를 전달하며 한 번의 포트 작업으로 여러 난 묶음을 생성할 수 있다. 별도의 포트 작업 `WorkRecord`는 만들지 않는다. 기존 `POST /api/inbound-records/{inboundRecordId}/potting`은 호환 응답인 `InboundRecordResponse`를 유지하면서 내부적으로 같은 실행기를 사용한다.
+입고 관리 화면의 즉시 실행은 `POST /api/work-operations/inbound-potting-executions`를 사용한다. 같은 입고 기록이 활성 포트 작업 계획에 포함되어 있으면 해당 계획의 대상을 실행하고, 계획이 없을 때만 단일 대상 `WorkOperation`을 새로 생성한다. 다중 대상 계획은 실행한 대상만 완료하고 나머지 대상을 유지한다. 요청의 `results`에 결과별 수량·화분·년생·배치 위치를 전달하며 한 번의 포트 작업으로 여러 난 묶음을 생성할 수 있다. 기존 `POST /api/inbound-records/{inboundRecordId}/potting`은 호환 응답인 `InboundRecordResponse`를 유지하면서 내부적으로 같은 실행기를 사용한다.
 
 분갈이·분주·합식·포트 작업 하나에는 한 품종의 대상만 포함할 수 있다. 작업 등록 화면에서 여러 품종을 함께 선택하면 품종별 작업으로 자동 분리하고, 여러 작업이 생성될 때는 작업명에 품종명을 덧붙인다. API에 혼합 품종 대상을 직접 전달하면 요청을 거부한다.
 

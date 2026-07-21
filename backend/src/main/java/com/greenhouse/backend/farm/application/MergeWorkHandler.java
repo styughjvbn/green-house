@@ -11,7 +11,7 @@ import com.greenhouse.backend.farm.repository.OrchidGroupRepository;
 import com.greenhouse.backend.work.application.effect.WorkEffectCommand;
 import com.greenhouse.backend.work.application.effect.WorkEffectHandler;
 import com.greenhouse.backend.work.application.effect.WorkExecutionResult;
-import com.greenhouse.backend.work.application.WorkOperationTargetReader;
+import com.greenhouse.backend.work.application.StructureChangeReferenceReader;
 import com.greenhouse.backend.work.domain.WorkEffectKind;
 import com.greenhouse.backend.work.domain.WorkOperation;
 import com.greenhouse.backend.work.domain.WorkOperationTarget;
@@ -29,7 +29,7 @@ public class MergeWorkHandler implements WorkEffectHandler {
 	private final OrchidGroupRepository orchidGroupRepository;
 	private final OrchidGroupCommandService orchidGroupCommandService;
 	private final OrchidGroupLineageService lineageService;
-	private final WorkOperationTargetReader workOperationTargetReader;
+	private final StructureChangeReferenceReader structureChangeReferenceReader;
 	private final StructureChangeExecutor structureChangeExecutor;
 	private final ObjectMapper objectMapper = new ObjectMapper().findAndRegisterModules();
 
@@ -37,12 +37,12 @@ public class MergeWorkHandler implements WorkEffectHandler {
 			OrchidGroupRepository orchidGroupRepository,
 			OrchidGroupCommandService orchidGroupCommandService,
 			OrchidGroupLineageService lineageService,
-			WorkOperationTargetReader workOperationTargetReader,
+			StructureChangeReferenceReader structureChangeReferenceReader,
 			StructureChangeExecutor structureChangeExecutor) {
 		this.orchidGroupRepository = orchidGroupRepository;
 		this.orchidGroupCommandService = orchidGroupCommandService;
 		this.lineageService = lineageService;
-		this.workOperationTargetReader = workOperationTargetReader;
+		this.structureChangeReferenceReader = structureChangeReferenceReader;
 		this.structureChangeExecutor = structureChangeExecutor;
 	}
 
@@ -147,7 +147,7 @@ public class MergeWorkHandler implements WorkEffectHandler {
 		if (requestedIds.size() != request.sources().size()) {
 			throw new IllegalArgumentException("합식 원본 난 묶음은 중복될 수 없습니다.");
 		}
-		Set<Long> targetIds = workOperationTargetReader.getActiveOrchidGroupIds(operation.getId());
+		Set<Long> targetIds = structureChangeReferenceReader.getActiveOrchidGroupIds(operation.getId());
 		if (!targetIds.equals(requestedIds)) {
 			throw new IllegalArgumentException("합식 원본은 계획에 확정된 작업 대상과 일치해야 합니다.");
 		}

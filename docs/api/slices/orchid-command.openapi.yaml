@@ -90,7 +90,7 @@ paths:
     post:
       tags:
       - multi-create-work-operation-controller
-      operationId: create_2
+      operationId: create_1
       requestBody:
         content:
           application/json:
@@ -108,7 +108,7 @@ paths:
     post:
       tags:
       - orchid-group-command-controller
-      operationId: create_4
+      operationId: create_3
       requestBody:
         content:
           application/json:

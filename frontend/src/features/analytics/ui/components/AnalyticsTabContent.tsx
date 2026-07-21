@@ -1,6 +1,7 @@
 ﻿import Link from "next/link";
 import type {
   AnalyticsPageProps,
+  WorkAnalyticsData,
   PartnerAnalyticsStat,
   AnalyticsTab,
   AnalyticsViewModel,
@@ -411,7 +412,7 @@ function WorkTab({ props }: { props: AnalyticsPageProps }) {
                   <td className="px-3 py-2">{record.workDate}</td>
                   <td className="px-3 py-2 font-semibold">{record.workType}</td>
                   <td className="px-3 py-2">
-                    {formatTargetType(record.targetType)}
+                    {formatTargetType(record.sourceScopeType)}
                   </td>
                   <td className="px-3 py-2">{formatWorkContent(record)}</td>
                   <td className="px-3 py-2">{record.worker ?? "-"}</td>
@@ -462,7 +463,7 @@ function requiresReview(latestWorkDate: string | null) {
 }
 
 function formatTargetType(
-  targetType: AnalyticsPageProps["workRecords"][number]["targetType"],
+  targetType: WorkAnalyticsData["recentRecords"][number]["sourceScopeType"],
 ) {
   return (
     {
@@ -471,18 +472,15 @@ function formatTargetType(
       BED_ZONE: "구역",
       ORCHID_GROUP: "난 묶음",
       FARM: "농장",
+      NONE: "대상 없음",
+      DERIVED_GROUP: "자동 그룹",
+      USER_COLLECTION: "사용자 그룹",
+      MANUAL_SELECTION: "직접 선택",
+      INBOUND_RECORD_SELECTION: "입고 기록",
     }[targetType] ?? targetType
   );
 }
 
-function formatWorkContent(record: AnalyticsPageProps["workRecords"][number]) {
-  const parts = [
-    record.materialName,
-    record.dilutionRatio ? `희석 ${record.dilutionRatio}` : null,
-    record.quantity ? `수량 ${record.quantity}` : null,
-    record.fromBedZoneId && record.toBedZoneId
-      ? `${record.fromBedZoneId}→${record.toBedZoneId}`
-      : null,
-  ].filter(Boolean);
-  return parts.length ? parts.join(" · ") : "-";
+function formatWorkContent(record: WorkAnalyticsData["recentRecords"][number]) {
+  return record.title || "-";
 }

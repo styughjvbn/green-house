@@ -7,7 +7,6 @@ import com.greenhouse.backend.farm.repository.MaterialRepository;
 import com.greenhouse.backend.farm.repository.OrchidGroupRepository;
 import com.greenhouse.backend.farm.repository.PhysicalBedRepository;
 import com.greenhouse.backend.farm.repository.VarietyRepository;
-import com.greenhouse.backend.work.repository.WorkRecordRepository;
 import com.greenhouse.backend.work.repository.WorkTypeRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -29,8 +28,6 @@ abstract class AbstractBackendIntegrationTest {
     @Autowired
     protected OrchidGroupRepository orchidGroupRepository;
     @Autowired
-    protected WorkRecordRepository workRecordRepository;
-    @Autowired
     protected WorkTypeRepository workTypeRepository;
     @Autowired
     protected VarietyRepository varietyRepository;
@@ -39,4 +36,3 @@ abstract class AbstractBackendIntegrationTest {
     @Autowired
     protected MaterialRepository materialRepository;
 }
-

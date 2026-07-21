@@ -7,7 +7,6 @@ import com.greenhouse.backend.farm.dto.MultiCreateWorkOperationResponse;
 import com.greenhouse.backend.farm.dto.MultiCreateCancellationEligibilityResponse;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
-import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -20,7 +19,6 @@ import org.springframework.web.bind.annotation.RestController;
 @RestController
 @RequestMapping("/api/work-operations")
 @RequiredArgsConstructor
-@ConditionalOnProperty(prefix = "app.features", name = "work-operation-v2-enabled", havingValue = "true")
 public class MultiCreateWorkOperationController {
 
 	private final MultiCreateWorkOperationService service;

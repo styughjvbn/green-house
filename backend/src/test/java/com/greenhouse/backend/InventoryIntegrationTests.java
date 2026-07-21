@@ -284,7 +284,7 @@ class InventoryIntegrationTests extends AbstractBackendIntegrationTest {
 	}
 
 	@Test
-	void deletesCanceledInboundRecordAndRemovesAutoWorkRecord() throws Exception {
+	void deletesCanceledInboundRecord() throws Exception {
 		var sampleVariety = varietyRepository.findAll().stream()
 				.filter(variety -> variety.getName().equals("카틀레야 A"))
 				.findFirst()
@@ -308,8 +308,6 @@ class InventoryIntegrationTests extends AbstractBackendIntegrationTest {
 		var inboundRecordId = Long
 				.valueOf(createResult.getResponse().getContentAsString().replaceAll(".*\\\"id\\\":(\\d+).*", "$1"));
 
-		assertThat(workRecordRepository.search("INBOUND_RECORD", inboundRecordId, "입고", null, null)).hasSize(1);
-
 		mockMvc.perform(post("/api/inbound-records/{inboundRecordId}/cancel", inboundRecordId)
 				.contentType(MediaType.APPLICATION_JSON)
 				.content("""
@@ -325,7 +323,6 @@ class InventoryIntegrationTests extends AbstractBackendIntegrationTest {
 				.andExpect(jsonPath("$.data").doesNotExist());
 
 		assertThat(inboundRecordRepository.existsById(inboundRecordId)).isFalse();
-		assertThat(workRecordRepository.search("INBOUND_RECORD", inboundRecordId, "입고", null, null)).isEmpty();
 	}
 
 	@Test

@@ -70,7 +70,6 @@ def generate_from_temporary_backend(port: int, timeout_seconds: int) -> dict[str
     environment.update(
         {
             "SERVER_PORT": str(port),
-            "WORK_OPERATION_V2_ENABLED": "true",
             "AUTH_ENABLED": "false",
         }
     )
