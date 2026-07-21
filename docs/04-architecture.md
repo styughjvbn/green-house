@@ -97,7 +97,8 @@ print
 - 목록 조회는 작업별 상세 재조회를 하지 않고 대상과 실행 상태를 일괄 조회해 응답을 조립한다.
 - 분갈이·분주·합식은 공통 구조 변경 실행기와 작업별 Strategy를 사용한다. 난 묶음 저장소가 필요한 Strategy 구현은 `farm` 모듈에 둔다.
 - 효과 실행과 효과 감사 저장을 분리하고 모든 신규 효과는 공통 저장 컴포넌트를 사용한다.
-- 작업 시각은 `Asia/Seoul` 기준 `Clock` Bean을 주입받아 계산한다.
+- DB의 `timestamp without time zone` 시점 값은 UTC로 저장한다. 업무일자는 `Asia/Seoul` 기준으로
+  계산하고 API 응답의 시점 값은 UTC에서 `Asia/Seoul`로 변환한다.
 
 ### partner
 

@@ -1,5 +1,6 @@
 package com.greenhouse.backend.farm.dto;
 
+import com.greenhouse.backend.common.config.TimeConfig;
 import com.greenhouse.backend.farm.domain.BedZone;
 import com.greenhouse.backend.farm.domain.InboundRecord;
 import java.time.LocalDate;
@@ -60,8 +61,8 @@ public record InboundRecordResponse(
 				record.getCreatedOrchidGroups().stream().map(group -> group.getId()).sorted().toList(),
 				record.getWorker(),
 				record.getMemo(),
-				record.getCreatedAt(),
-				record.getUpdatedAt());
+				TimeConfig.toFarmTime(record.getCreatedAt()),
+				TimeConfig.toFarmTime(record.getUpdatedAt()));
 	}
 
 	private static String formatLocation(BedZone bedZone, String tempLocation) {

@@ -1,5 +1,6 @@
 package com.greenhouse.backend.work.dto;
 
+import com.greenhouse.backend.common.config.TimeConfig;
 import com.greenhouse.backend.work.domain.WorkRecord;
 import com.greenhouse.backend.work.domain.WorkRecordStatus;
 import com.greenhouse.backend.work.domain.WorkTypeTemplate;
@@ -45,7 +46,7 @@ public record WorkRecordResponse(
 				workRecord.getDetails(),
 				workRecord.getMemo(),
 				workRecord.getStatus(),
-				workRecord.getCanceledAt(),
+				TimeConfig.toFarmTime(workRecord.getCanceledAt()),
 				workRecord.getCancelReason());
 	}
 }

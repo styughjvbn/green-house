@@ -1,5 +1,6 @@
 package com.greenhouse.backend.farm.dto;
 
+import com.greenhouse.backend.common.config.TimeConfig;
 import com.greenhouse.backend.farm.domain.OrchidGroupCollection;
 import com.greenhouse.backend.farm.domain.OrchidGroupCollectionStatus;
 import java.time.LocalDateTime;
@@ -24,6 +25,7 @@ public record OrchidGroupCollectionResponse(
 		return new OrchidGroupCollectionResponse(
 				collection.getId(), collection.getName(), collection.getDescription(), collection.getPurpose(),
 				collection.getStatus(), members.size(), members.stream().mapToInt(member -> Math.max(0, member.quantity())).sum(),
-				collection.getCreatedBy(), collection.getCreatedAt(), collection.getUpdatedAt(), members);
+				collection.getCreatedBy(), TimeConfig.toFarmTime(collection.getCreatedAt()),
+				TimeConfig.toFarmTime(collection.getUpdatedAt()), members);
 	}
 }

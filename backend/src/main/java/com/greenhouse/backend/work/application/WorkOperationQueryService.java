@@ -1,5 +1,6 @@
 package com.greenhouse.backend.work.application;
 
+import com.greenhouse.backend.common.config.TimeConfig;
 import com.greenhouse.backend.common.exception.NotFoundException;
 import com.greenhouse.backend.work.domain.WorkOperationSearchView;
 import com.greenhouse.backend.work.domain.WorkOperationStatus;
@@ -47,8 +48,9 @@ public class WorkOperationQueryService {
 		if (scopeId != null && scopeType == null) {
 			throw new IllegalArgumentException("대상 범위 ID를 조회하려면 대상 범위 유형이 필요합니다.");
 		}
+		LocalDate farmToday = TimeConfig.farmToday(clock);
 		return responseAssembler.assembleAll(operationRepository.search(
-				fromDate, toDate, status, view, LocalDate.now(clock).atStartOfDay(), scopeType, scopeId));
+				fromDate, toDate, status, view, TimeConfig.farmDayStartUtc(farmToday), scopeType, scopeId));
 	}
 
 	public List<OrchidGroupWorkHistoryResponse> getOrchidGroupHistory(Long orchidGroupId) {

@@ -1,5 +1,6 @@
 package com.greenhouse.backend.work.dto;
 
+import com.greenhouse.backend.common.config.TimeConfig;
 import com.greenhouse.backend.work.domain.WorkOperation;
 import com.greenhouse.backend.work.domain.WorkOperationStatus;
 import com.greenhouse.backend.work.domain.WorkSourceScopeType;
@@ -42,12 +43,12 @@ public record WorkOperationResponse(
 				operation.getStatus(),
 				operation.getPlannedStartDate(),
 				operation.getPlannedEndDate(),
-				operation.getActualStartAt(),
-				operation.getActualEndAt(),
+				TimeConfig.toFarmTime(operation.getActualStartAt()),
+				TimeConfig.toFarmTime(operation.getActualEndAt()),
 				operation.getSourceScopeType(),
 				operation.getSourceScopeId(),
 				operation.getSourceConditionSnapshot(),
-				operation.getTargetSnapshotAt(),
+				TimeConfig.toFarmTime(operation.getTargetSnapshotAt()),
 				operation.getDetails(),
 				operation.getWorker(),
 				operation.getMemo(),

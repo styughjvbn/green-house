@@ -1,5 +1,6 @@
 package com.greenhouse.backend.farm.application;
 
+import com.greenhouse.backend.common.config.TimeConfig;
 import com.greenhouse.backend.common.exception.NotFoundException;
 import com.greenhouse.backend.farm.domain.OrchidGroup;
 import com.greenhouse.backend.farm.dto.OrchidGroupMoveRequest;
@@ -43,7 +44,7 @@ public class OrchidGroupMovementService {
 				"DIRECT_MOVE:" + UUID.randomUUID(),
 				WorkType.MOVEMENT_CODE,
 				"위치 이동",
-				LocalDate.now(clock),
+				TimeConfig.farmToday(clock),
 				request.worker(),
 				request.memo(),
 				orchidGroupId,

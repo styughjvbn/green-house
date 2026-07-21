@@ -1,5 +1,6 @@
 package com.greenhouse.backend.farm.dto;
 
+import com.greenhouse.backend.common.config.TimeConfig;
 import com.greenhouse.backend.farm.domain.Material;
 import java.time.LocalDateTime;
 
@@ -28,7 +29,7 @@ public record MaterialResponse(
 				material.getStorageLocation(),
 				material.getUsage(),
 				material.isActive(),
-				material.getCreatedAt(),
-				material.getUpdatedAt());
+				TimeConfig.toFarmTime(material.getCreatedAt()),
+				TimeConfig.toFarmTime(material.getUpdatedAt()));
 	}
 }

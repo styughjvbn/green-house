@@ -1,5 +1,6 @@
 package com.greenhouse.backend.farm.application;
 
+import com.greenhouse.backend.common.config.TimeConfig;
 import com.greenhouse.backend.common.exception.NotFoundException;
 import com.greenhouse.backend.farm.domain.OrchidGroup;
 import com.greenhouse.backend.farm.domain.OrchidGroupCollectionStatus;
@@ -142,11 +143,11 @@ public class FarmWorkTargetResolver implements WorkTargetResolver {
 		}
 		LocalDate referenceDate = group.getInboundRecord() != null
 				? group.getInboundRecord().getInboundDate()
-				: group.getCreatedAt() == null ? null : group.getCreatedAt().toLocalDate();
+				: group.getCreatedAt() == null ? null : TimeConfig.toFarmTime(group.getCreatedAt()).toLocalDate();
 		if (referenceDate == null) {
 			return group.getAgeYear();
 		}
-		long elapsedYears = ChronoUnit.YEARS.between(referenceDate, LocalDate.now(clock));
+		long elapsedYears = ChronoUnit.YEARS.between(referenceDate, TimeConfig.farmToday(clock));
 		return group.getAgeYear() + Math.max(0, Math.toIntExact(elapsedYears));
 	}
 

@@ -7,6 +7,7 @@ import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
 import java.time.LocalDateTime;
+import java.time.ZoneOffset;
 import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -40,12 +41,12 @@ public class OrchidGroupCollectionMember {
 		this.collectionId = collectionId;
 		this.orchidGroupId = orchidGroupId;
 		this.createdBy = createdBy;
-		this.joinedAt = LocalDateTime.now();
+		this.joinedAt = LocalDateTime.now(ZoneOffset.UTC);
 	}
 
 	public void remove() {
 		if (removedAt == null) {
-			removedAt = LocalDateTime.now();
+			removedAt = LocalDateTime.now(ZoneOffset.UTC);
 		}
 	}
 }

@@ -18,6 +18,7 @@ import lombok.AccessLevel;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.ZoneOffset;
 import java.util.Map;
 import org.hibernate.annotations.JdbcTypeCode;
 import org.hibernate.type.SqlTypes;
@@ -124,7 +125,7 @@ public class WorkRecord extends BaseEntity {
 			return;
 		}
 		this.status = WorkRecordStatus.CANCELED;
-		this.canceledAt = LocalDateTime.now();
+		this.canceledAt = LocalDateTime.now(ZoneOffset.UTC);
 		this.cancelReason = cancelReason;
 	}
 

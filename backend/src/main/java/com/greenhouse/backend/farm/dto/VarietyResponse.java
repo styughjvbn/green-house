@@ -1,5 +1,6 @@
 package com.greenhouse.backend.farm.dto;
 
+import com.greenhouse.backend.common.config.TimeConfig;
 import com.greenhouse.backend.farm.domain.Variety;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -45,7 +46,7 @@ public record VarietyResponse(
 				saleableQuantity,
 				recentInboundDate,
 				recentWorkDate,
-				variety.getCreatedAt(),
-				variety.getUpdatedAt());
+				TimeConfig.toFarmTime(variety.getCreatedAt()),
+				TimeConfig.toFarmTime(variety.getUpdatedAt()));
 	}
 }

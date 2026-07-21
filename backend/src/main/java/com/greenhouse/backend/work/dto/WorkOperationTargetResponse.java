@@ -1,5 +1,6 @@
 package com.greenhouse.backend.work.dto;
 
+import com.greenhouse.backend.common.config.TimeConfig;
 import com.greenhouse.backend.work.application.ResolvedWorkTarget;
 import com.greenhouse.backend.work.application.InboundPottingPlanTarget;
 import com.greenhouse.backend.work.domain.WorkOperationTarget;
@@ -92,9 +93,9 @@ public record WorkOperationTargetResponse(
 				execution.getProcessedQuantity(),
 				Math.max(0, quantity - execution.getProcessedQuantity()),
 				execution.getStatus(),
-				execution.getStartedAt(),
-				execution.getCompletedAt(),
-				execution.getEffectAppliedAt(),
+				TimeConfig.toFarmTime(execution.getStartedAt()),
+				TimeConfig.toFarmTime(execution.getCompletedAt()),
+				TimeConfig.toFarmTime(execution.getEffectAppliedAt()),
 				execution.getWorker(),
 				execution.getResultDetails());
 	}

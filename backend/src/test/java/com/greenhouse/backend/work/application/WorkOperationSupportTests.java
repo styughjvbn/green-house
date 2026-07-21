@@ -14,14 +14,14 @@ class WorkOperationSupportTests {
 
 	private final WorkOperationSupport support = new WorkOperationSupport(Clock.fixed(
 			Instant.parse("2026-07-21T01:02:03Z"),
-			ZoneId.of("Asia/Seoul")));
+			ZoneId.of("UTC")));
 
 	@Test
-	void usesTheFarmClockForTodayAndCompletionTime() {
+	void keepsFarmDatesInKoreaAndStoresTimestampsInUtc() {
 		assertThat(support.today()).isEqualTo(LocalDate.of(2026, 7, 21));
-		assertThat(support.now()).isEqualTo(LocalDateTime.of(2026, 7, 21, 10, 2, 3));
+		assertThat(support.now()).isEqualTo(LocalDateTime.of(2026, 7, 21, 1, 2, 3));
 		assertThat(support.completionTime(LocalDate.of(2026, 7, 20)))
-				.isEqualTo(LocalDateTime.of(2026, 7, 20, 10, 2, 3));
+				.isEqualTo(LocalDateTime.of(2026, 7, 20, 1, 2, 3));
 	}
 
 	@Test

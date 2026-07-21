@@ -1,5 +1,6 @@
 package com.greenhouse.backend.farm.dto;
 
+import com.greenhouse.backend.common.config.TimeConfig;
 import com.greenhouse.backend.farm.domain.OrchidGroup;
 import com.greenhouse.backend.farm.domain.PotSizeCode;
 import java.math.BigDecimal;
@@ -66,12 +67,14 @@ public record OrchidGroupResponse(
 
 		LocalDate referenceDate = orchidGroup.getInboundRecord() != null
 				? orchidGroup.getInboundRecord().getInboundDate()
-				: orchidGroup.getCreatedAt() != null ? orchidGroup.getCreatedAt().toLocalDate() : null;
+				: orchidGroup.getCreatedAt() != null
+						? TimeConfig.toFarmTime(orchidGroup.getCreatedAt()).toLocalDate()
+						: null;
 		if (referenceDate == null) {
 			return baseAgeYear;
 		}
 
-		long elapsedYears = ChronoUnit.YEARS.between(referenceDate, LocalDate.now());
+		long elapsedYears = ChronoUnit.YEARS.between(referenceDate, LocalDate.now(TimeConfig.FARM_TIME_ZONE));
 		return baseAgeYear + Math.max(0, Math.toIntExact(elapsedYears));
 	}
 }

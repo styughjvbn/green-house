@@ -1,9 +1,9 @@
 package com.greenhouse.backend.work.application;
 
+import com.greenhouse.backend.common.config.TimeConfig;
 import java.time.Clock;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
-import java.time.LocalTime;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 
@@ -14,11 +14,11 @@ public class WorkOperationSupport {
 	private final Clock clock;
 
 	public LocalDate today() {
-		return LocalDate.now(clock);
+		return TimeConfig.farmToday(clock);
 	}
 
 	public LocalDateTime now() {
-		return LocalDateTime.now(clock);
+		return TimeConfig.utcNow(clock);
 	}
 
 	public LocalDateTime completionTime(LocalDate completedDate) {
@@ -27,7 +27,7 @@ public class WorkOperationSupport {
 		if (date.isAfter(today)) {
 			throw new IllegalArgumentException("완료일은 오늘 이후로 입력할 수 없습니다.");
 		}
-		return LocalDateTime.of(date, LocalTime.now(clock));
+		return TimeConfig.farmDateTimeToUtc(date, clock);
 	}
 
 	public void validateDates(LocalDate startDate, LocalDate endDate) {
