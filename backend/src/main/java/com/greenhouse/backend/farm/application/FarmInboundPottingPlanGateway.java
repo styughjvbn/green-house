@@ -4,8 +4,8 @@ import com.greenhouse.backend.farm.domain.InboundRecord;
 import com.greenhouse.backend.farm.domain.InboundStatus;
 import com.greenhouse.backend.farm.domain.InboundType;
 import com.greenhouse.backend.farm.repository.InboundRecordRepository;
-import com.greenhouse.backend.work.application.InboundPottingPlanGateway;
-import com.greenhouse.backend.work.application.InboundPottingPlanTarget;
+import com.greenhouse.backend.work.application.target.InboundPottingPlanGateway;
+import com.greenhouse.backend.work.application.target.InboundPottingPlanTarget;
 import java.util.List;
 import org.springframework.stereotype.Component;
 

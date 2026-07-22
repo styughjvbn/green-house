@@ -4,8 +4,8 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.greenhouse.backend.farm.dto.InboundRecordPottingRequest;
 import com.greenhouse.backend.work.application.effect.WorkEffectCommand;
 import com.greenhouse.backend.work.application.effect.WorkExecutionResult;
-import com.greenhouse.backend.work.domain.WorkOperationTarget;
-import com.greenhouse.backend.work.domain.WorkTargetReferenceType;
+import com.greenhouse.backend.work.domain.target.WorkOperationTarget;
+import com.greenhouse.backend.work.domain.target.WorkTargetReferenceType;
 import java.util.LinkedHashMap;
 import org.springframework.stereotype.Component;
 

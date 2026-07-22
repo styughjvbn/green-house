@@ -1,28 +1,28 @@
 package com.greenhouse.backend.work.controller;
 
 import com.greenhouse.backend.common.api.ApiResponse;
-import com.greenhouse.backend.work.application.InboundPottingOperationService;
-import com.greenhouse.backend.work.application.InboundPottingPlanService;
-import com.greenhouse.backend.work.application.StructureChangeExecutionService;
-import com.greenhouse.backend.work.application.WorkOperationCorrectionService;
-import com.greenhouse.backend.work.application.WorkOperationPlanService;
-import com.greenhouse.backend.work.application.WorkOperationProgressService;
-import com.greenhouse.backend.work.application.WorkOperationQueryService;
-import com.greenhouse.backend.work.dto.OrchidGroupWorkHistoryResponse;
-import com.greenhouse.backend.work.dto.InboundPottingPlanBatchCreateRequest;
-import com.greenhouse.backend.work.dto.InboundPottingCandidateResponse;
-import com.greenhouse.backend.work.dto.InboundPottingPlanCreateRequest;
-import com.greenhouse.backend.work.dto.InboundPottingExecutionRequest;
-import com.greenhouse.backend.work.dto.WorkOperationCreateRequest;
-import com.greenhouse.backend.work.dto.WorkOperationBatchCreateRequest;
-import com.greenhouse.backend.work.dto.WorkOperationCompleteRequest;
-import com.greenhouse.backend.work.dto.WorkOperationCorrectionCreateRequest;
-import com.greenhouse.backend.work.dto.WorkOperationCorrectionsResponse;
-import com.greenhouse.backend.work.dto.WorkOperationResponse;
-import com.greenhouse.backend.work.dto.WorkTargetPreviewRequest;
-import com.greenhouse.backend.work.dto.WorkTargetPreviewResponse;
-import com.greenhouse.backend.work.dto.WorkTargetExecutionRequest;
-import com.greenhouse.backend.work.dto.StructureChangeExecutionRequest;
+import com.greenhouse.backend.work.application.correction.WorkOperationCorrectionService;
+import com.greenhouse.backend.work.application.operation.InboundPottingOperationService;
+import com.greenhouse.backend.work.application.operation.InboundPottingPlanService;
+import com.greenhouse.backend.work.application.operation.StructureChangeExecutionService;
+import com.greenhouse.backend.work.application.operation.WorkOperationPlanService;
+import com.greenhouse.backend.work.application.operation.WorkOperationProgressService;
+import com.greenhouse.backend.work.application.operation.WorkOperationQueryService;
+import com.greenhouse.backend.work.dto.operation.OrchidGroupWorkHistoryResponse;
+import com.greenhouse.backend.work.dto.effect.InboundPottingPlanBatchCreateRequest;
+import com.greenhouse.backend.work.dto.effect.InboundPottingCandidateResponse;
+import com.greenhouse.backend.work.dto.effect.InboundPottingPlanCreateRequest;
+import com.greenhouse.backend.work.dto.effect.InboundPottingExecutionRequest;
+import com.greenhouse.backend.work.dto.operation.WorkOperationCreateRequest;
+import com.greenhouse.backend.work.dto.operation.WorkOperationBatchCreateRequest;
+import com.greenhouse.backend.work.dto.operation.WorkOperationCompleteRequest;
+import com.greenhouse.backend.work.dto.correction.WorkOperationCorrectionCreateRequest;
+import com.greenhouse.backend.work.dto.correction.WorkOperationCorrectionsResponse;
+import com.greenhouse.backend.work.dto.operation.WorkOperationResponse;
+import com.greenhouse.backend.work.dto.target.WorkTargetPreviewRequest;
+import com.greenhouse.backend.work.dto.target.WorkTargetPreviewResponse;
+import com.greenhouse.backend.work.dto.target.WorkTargetExecutionRequest;
+import com.greenhouse.backend.work.dto.effect.StructureChangeExecutionRequest;
 import jakarta.validation.Valid;
 import java.util.List;
 import java.time.LocalDate;
@@ -105,9 +105,9 @@ public class WorkOperationController {
 	public ApiResponse<List<WorkOperationResponse>> search(
 			@RequestParam(required = false) LocalDate from,
 			@RequestParam(required = false) LocalDate to,
-			@RequestParam(required = false) com.greenhouse.backend.work.domain.WorkOperationStatus status,
-			@RequestParam(defaultValue = "ALL") com.greenhouse.backend.work.domain.WorkOperationSearchView view,
-			@RequestParam(required = false) com.greenhouse.backend.work.domain.WorkSourceScopeType scopeType,
+			@RequestParam(required = false) com.greenhouse.backend.work.domain.operation.WorkOperationStatus status,
+			@RequestParam(defaultValue = "ALL") com.greenhouse.backend.work.domain.operation.WorkOperationSearchView view,
+			@RequestParam(required = false) com.greenhouse.backend.work.domain.operation.WorkSourceScopeType scopeType,
 			@RequestParam(required = false) Long scopeId) {
 		return ApiResponse.ok(queryService.search(from, to, status, view, scopeType, scopeId));
 	}

@@ -11,7 +11,7 @@ import com.greenhouse.backend.farm.dto.VarietyUpdateRequest;
 import com.greenhouse.backend.farm.repository.InboundRecordRepository;
 import com.greenhouse.backend.farm.repository.OrchidGroupRepository;
 import com.greenhouse.backend.farm.repository.VarietyRepository;
-import com.greenhouse.backend.work.application.WorkOperationMetricsReader;
+import com.greenhouse.backend.work.application.operation.WorkOperationMetricsReader;
 
 import lombok.RequiredArgsConstructor;
 

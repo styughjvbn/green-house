@@ -73,6 +73,8 @@
 
 ## 7. 작업 모듈 내부 구조
 
+`application`, `domain`, `dto` 코드는 `operation`, `target`, `effect`, `correction` 기능 패키지로 구분한다. 계층마다 같은 기능 경계를 사용해 작업 본체, 대상, 적용 효과, 보정 계약의 위치를 일관되게 유지한다.
+
 - `WorkOperationPlanService`: 대상 미리보기, 계획·일괄 계획·즉시 완료 기록 생성
 - `WorkOperationProgressService`: 전체·대상 상태 전이와 자동 완료
 - `WorkOperationQueryService`: 상세·목록·난 묶음 이력 조회와 응답 조립

@@ -1,8 +1,8 @@
 package com.greenhouse.backend.farm.application;
 
 import com.greenhouse.backend.farm.domain.OrchidGroupLineageRelationType;
-import com.greenhouse.backend.work.domain.WorkType;
-import com.greenhouse.backend.work.dto.StructureChangeExecutionRequest;
+import com.greenhouse.backend.work.domain.operation.WorkType;
+import com.greenhouse.backend.work.dto.effect.StructureChangeExecutionRequest;
 import org.springframework.stereotype.Component;
 
 @Component

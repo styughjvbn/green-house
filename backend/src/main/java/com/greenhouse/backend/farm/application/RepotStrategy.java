@@ -1,7 +1,7 @@
 package com.greenhouse.backend.farm.application;
 
 import com.greenhouse.backend.farm.domain.OrchidGroupLineageRelationType;
-import com.greenhouse.backend.work.domain.WorkType;
+import com.greenhouse.backend.work.domain.operation.WorkType;
 import org.springframework.stereotype.Component;
 
 @Component

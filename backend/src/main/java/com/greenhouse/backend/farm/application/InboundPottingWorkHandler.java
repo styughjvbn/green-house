@@ -3,9 +3,9 @@ package com.greenhouse.backend.farm.application;
 import com.greenhouse.backend.work.application.effect.WorkEffectCommand;
 import com.greenhouse.backend.work.application.effect.WorkEffectHandler;
 import com.greenhouse.backend.work.application.effect.WorkExecutionResult;
-import com.greenhouse.backend.work.domain.WorkEffectKind;
-import com.greenhouse.backend.work.domain.WorkOperation;
-import com.greenhouse.backend.work.domain.WorkOperationTarget;
+import com.greenhouse.backend.work.domain.effect.WorkEffectKind;
+import com.greenhouse.backend.work.domain.operation.WorkOperation;
+import com.greenhouse.backend.work.domain.target.WorkOperationTarget;
 import org.springframework.stereotype.Component;
 
 @Component

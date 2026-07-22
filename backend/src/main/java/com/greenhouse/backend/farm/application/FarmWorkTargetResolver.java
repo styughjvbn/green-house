@@ -10,9 +10,9 @@ import com.greenhouse.backend.farm.repository.OrchidGroupCollectionMemberReposit
 import com.greenhouse.backend.farm.repository.OrchidGroupCollectionRepository;
 import com.greenhouse.backend.farm.repository.OrchidGroupRepository;
 import com.greenhouse.backend.farm.repository.PhysicalBedRepository;
-import com.greenhouse.backend.work.application.ResolvedWorkTarget;
-import com.greenhouse.backend.work.application.WorkTargetSelection;
-import com.greenhouse.backend.work.application.WorkTargetResolver;
+import com.greenhouse.backend.work.application.target.ResolvedWorkTarget;
+import com.greenhouse.backend.work.application.target.WorkTargetSelection;
+import com.greenhouse.backend.work.application.target.WorkTargetResolver;
 import java.time.LocalDate;
 import java.time.Clock;
 import java.time.temporal.ChronoUnit;

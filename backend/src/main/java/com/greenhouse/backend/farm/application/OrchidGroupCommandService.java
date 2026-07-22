@@ -13,7 +13,7 @@ import com.greenhouse.backend.farm.repository.BedZoneRepository;
 import com.greenhouse.backend.farm.repository.InboundRecordRepository;
 import com.greenhouse.backend.farm.repository.OrchidGroupRepository;
 import com.greenhouse.backend.farm.repository.VarietyRepository;
-import com.greenhouse.backend.work.application.WorkOrchidGroupUsageInspector;
+import com.greenhouse.backend.work.application.target.WorkOrchidGroupUsageInspector;
 import java.math.BigDecimal;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;

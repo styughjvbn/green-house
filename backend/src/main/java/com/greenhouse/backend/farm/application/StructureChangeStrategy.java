@@ -1,7 +1,7 @@
 package com.greenhouse.backend.farm.application;
 
 import com.greenhouse.backend.farm.domain.OrchidGroupLineageRelationType;
-import com.greenhouse.backend.work.dto.StructureChangeExecutionRequest;
+import com.greenhouse.backend.work.dto.effect.StructureChangeExecutionRequest;
 
 public interface StructureChangeStrategy {
 

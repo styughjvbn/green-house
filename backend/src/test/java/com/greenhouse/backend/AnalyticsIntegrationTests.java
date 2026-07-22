@@ -4,10 +4,10 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
-import com.greenhouse.backend.work.domain.WorkOperation;
-import com.greenhouse.backend.work.domain.WorkSourceScopeType;
-import com.greenhouse.backend.work.domain.WorkType;
-import com.greenhouse.backend.work.domain.WorkTypeTemplate;
+import com.greenhouse.backend.work.domain.operation.WorkOperation;
+import com.greenhouse.backend.work.domain.operation.WorkSourceScopeType;
+import com.greenhouse.backend.work.domain.operation.WorkType;
+import com.greenhouse.backend.work.domain.operation.WorkTypeTemplate;
 import com.greenhouse.backend.work.repository.WorkOperationRepository;
 import java.time.LocalDate;
 import java.time.LocalDateTime;

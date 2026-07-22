@@ -10,9 +10,9 @@ import com.greenhouse.backend.farm.dto.InboundRecordPageResponse;
 import com.greenhouse.backend.farm.dto.InboundRecordPottingRequest;
 import com.greenhouse.backend.farm.dto.InboundRecordResponse;
 import com.greenhouse.backend.farm.dto.InboundRecordUpdateRequest;
-import com.greenhouse.backend.work.application.InboundPottingOperationService;
-import com.greenhouse.backend.work.dto.InboundPottingExecutionRequest;
-import com.greenhouse.backend.work.dto.InboundPottingResultRequest;
+import com.greenhouse.backend.work.application.operation.InboundPottingOperationService;
+import com.greenhouse.backend.work.dto.effect.InboundPottingExecutionRequest;
+import com.greenhouse.backend.work.dto.effect.InboundPottingResultRequest;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 

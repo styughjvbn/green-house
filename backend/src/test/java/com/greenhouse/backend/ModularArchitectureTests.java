@@ -72,6 +72,13 @@ class ModularArchitectureTests {
 	}
 
 	@Test
+	void workLayersAreGroupedByFeature() throws IOException {
+		assertWorkFeaturePackages("application");
+		assertWorkFeaturePackages("domain");
+		assertWorkFeaturePackages("dto");
+	}
+
+	@Test
 	void declaredModuleDependenciesAreAcyclic() {
 		for (String module : MODULES) {
 			assertThat(reaches(module, module, new java.util.HashSet<>()))
@@ -113,6 +120,15 @@ class ModularArchitectureTests {
 						.doesNotContain(fragment);
 				}
 			}
+		}
+	}
+
+	private void assertWorkFeaturePackages(String layer) throws IOException {
+		Path layerRoot = SOURCE_ROOT.resolve("work").resolve(layer);
+		try (Stream<Path> entries = Files.list(layerRoot)) {
+			assertThat(entries.map(path -> path.getFileName().toString()).toList())
+					.as("Unexpected package in work/%s", layer)
+					.containsExactlyInAnyOrder("operation", "target", "effect", "correction");
 		}
 	}
 

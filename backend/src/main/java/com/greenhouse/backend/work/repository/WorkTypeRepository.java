@@ -1,6 +1,6 @@
 package com.greenhouse.backend.work.repository;
 
-import com.greenhouse.backend.work.domain.WorkType;
+import com.greenhouse.backend.work.domain.operation.WorkType;
 import java.util.List;
 import java.util.Optional;
 import org.springframework.data.jpa.repository.JpaRepository;

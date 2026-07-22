@@ -1,11 +1,11 @@
 package com.greenhouse.backend.work.controller;
 
 import com.greenhouse.backend.common.api.ApiResponse;
-import com.greenhouse.backend.work.application.WorkTypeService;
-import com.greenhouse.backend.work.dto.WorkTypeCreateRequest;
-import com.greenhouse.backend.work.dto.WorkTypeReorderRequest;
-import com.greenhouse.backend.work.dto.WorkTypeResponse;
-import com.greenhouse.backend.work.dto.WorkTypeUpdateRequest;
+import com.greenhouse.backend.work.application.operation.WorkTypeService;
+import com.greenhouse.backend.work.dto.operation.WorkTypeCreateRequest;
+import com.greenhouse.backend.work.dto.operation.WorkTypeReorderRequest;
+import com.greenhouse.backend.work.dto.operation.WorkTypeResponse;
+import com.greenhouse.backend.work.dto.operation.WorkTypeUpdateRequest;
 import jakarta.validation.Valid;
 import java.util.List;
 import lombok.RequiredArgsConstructor;

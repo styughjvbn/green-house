@@ -1,6 +1,6 @@
 package com.greenhouse.backend.farm.domain;
 
-import com.greenhouse.backend.work.domain.WorkOperation;
+import com.greenhouse.backend.work.domain.operation.WorkOperation;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;

@@ -1,6 +1,6 @@
 package com.greenhouse.backend.work.repository;
 
-import com.greenhouse.backend.work.domain.WorkOperationTarget;
+import com.greenhouse.backend.work.domain.target.WorkOperationTarget;
 import java.util.List;
 import java.util.Collection;
 import org.springframework.data.jpa.repository.EntityGraph;

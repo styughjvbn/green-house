@@ -16,8 +16,8 @@ import com.greenhouse.backend.farm.domain.InboundStatus;
 import com.greenhouse.backend.farm.domain.InboundType;
 import com.greenhouse.backend.farm.domain.PhysicalBed;
 import com.greenhouse.backend.farm.domain.Variety;
-import com.greenhouse.backend.work.domain.WorkType;
-import com.greenhouse.backend.work.domain.WorkTypeTemplate;
+import com.greenhouse.backend.work.domain.operation.WorkType;
+import com.greenhouse.backend.work.domain.operation.WorkTypeTemplate;
 import com.greenhouse.backend.work.repository.WorkAppliedEffectRepository;
 import com.greenhouse.backend.work.repository.WorkEffectOrchidGroupRepository;
 import com.greenhouse.backend.work.repository.WorkOperationRepository;
@@ -135,7 +135,7 @@ class InboundPottingPlanIntegrationTests extends AbstractBackendIntegrationTest 
 		assertThat(effectOrchidGroupRepository
 				.findByWorkAppliedEffectWorkOperationIdAndRelationTypeOrderByIdAsc(
 						operationId,
-						com.greenhouse.backend.work.domain.WorkEffectOrchidGroupRelationType.RESULT))
+						com.greenhouse.backend.work.domain.effect.WorkEffectOrchidGroupRelationType.RESULT))
 				.hasSize(1);
 	}
 

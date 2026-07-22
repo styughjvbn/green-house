@@ -100,6 +100,16 @@ print
 - DB의 `timestamp without time zone` 시점 값은 UTC로 저장한다. 업무일자는 `Asia/Seoul` 기준으로
   계산하고 API 응답의 시점 값은 UTC에서 `Asia/Seoul`로 변환한다.
 
+`work`의 `application`, `domain`, `dto` 계층은 동일한 기능별 하위 패키지로 구성한다.
+
+```text
+application|domain|dto/
+ ├─ operation/   작업 계획·실행·조회·상태 전이·작업 유형
+ ├─ target/      대상 선택·스냅샷·실행 상태·외부 대상 gateway
+ ├─ effect/      효과 실행·감사·구조 변경과 입고 포트 계약
+ └─ correction/  완료 작업 보정과 보정 대상 조회
+```
+
 ### partner
 
 - 거래처

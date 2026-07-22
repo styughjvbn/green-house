@@ -1,6 +1,6 @@
 package com.greenhouse.backend.work.repository;
 
-import com.greenhouse.backend.work.domain.WorkTargetExecution;
+import com.greenhouse.backend.work.domain.target.WorkTargetExecution;
 import java.util.List;
 import java.util.Collection;
 import java.util.Optional;

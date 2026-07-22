@@ -1,8 +1,8 @@
 package com.greenhouse.backend.farm.application;
 
 import com.greenhouse.backend.work.application.effect.WorkExecutionResult;
-import com.greenhouse.backend.work.domain.WorkOperation;
-import com.greenhouse.backend.work.dto.StructureChangeExecutionRequest;
+import com.greenhouse.backend.work.domain.operation.WorkOperation;
+import com.greenhouse.backend.work.dto.effect.StructureChangeExecutionRequest;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 

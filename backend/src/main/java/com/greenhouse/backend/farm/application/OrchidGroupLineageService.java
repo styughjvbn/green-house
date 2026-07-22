@@ -8,7 +8,7 @@ import com.greenhouse.backend.farm.dto.OrchidGroupLineageItemResponse;
 import com.greenhouse.backend.farm.dto.OrchidGroupLineageResponse;
 import com.greenhouse.backend.farm.repository.OrchidGroupLineageRepository;
 import com.greenhouse.backend.farm.repository.OrchidGroupRepository;
-import com.greenhouse.backend.work.domain.WorkOperation;
+import com.greenhouse.backend.work.domain.operation.WorkOperation;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;

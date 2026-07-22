@@ -4,14 +4,14 @@ import static com.greenhouse.backend.partner.domain.QBusinessPartner.businessPar
 import static com.greenhouse.backend.sales.domain.QSalesSlip.salesSlip;
 import static com.greenhouse.backend.sales.domain.QSalesSlipItem.salesSlipItem;
 import static com.greenhouse.backend.settlement.domain.QPartnerBalanceSummary.partnerBalanceSummary;
-import static com.greenhouse.backend.work.domain.QWorkOperation.workOperation;
-import static com.greenhouse.backend.work.domain.QWorkType.workType;
+import static com.greenhouse.backend.work.domain.operation.QWorkOperation.workOperation;
+import static com.greenhouse.backend.work.domain.operation.QWorkType.workType;
 
 import com.greenhouse.backend.analytics.dto.AnalyticsSlipSummaryResponse;
 import com.greenhouse.backend.analytics.dto.PartnerAnalyticsStatResponse;
 import com.greenhouse.backend.analytics.dto.WorkAnalyticsItemResponse;
-import com.greenhouse.backend.work.domain.WorkOperationStatus;
-import com.greenhouse.backend.work.domain.WorkTypeTemplate;
+import com.greenhouse.backend.work.domain.operation.WorkOperationStatus;
+import com.greenhouse.backend.work.domain.operation.WorkTypeTemplate;
 import com.querydsl.core.Tuple;
 import com.querydsl.core.types.Projections;
 import com.querydsl.core.types.dsl.BooleanExpression;

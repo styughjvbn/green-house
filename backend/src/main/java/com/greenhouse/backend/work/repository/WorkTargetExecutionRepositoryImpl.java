@@ -1,14 +1,14 @@
 package com.greenhouse.backend.work.repository;
 
-import static com.greenhouse.backend.work.domain.QWorkOperation.workOperation;
-import static com.greenhouse.backend.work.domain.QWorkOperationTarget.workOperationTarget;
-import static com.greenhouse.backend.work.domain.QWorkTargetExecution.workTargetExecution;
-import static com.greenhouse.backend.work.domain.QWorkType.workType;
+import static com.greenhouse.backend.work.domain.operation.QWorkOperation.workOperation;
+import static com.greenhouse.backend.work.domain.target.QWorkOperationTarget.workOperationTarget;
+import static com.greenhouse.backend.work.domain.target.QWorkTargetExecution.workTargetExecution;
+import static com.greenhouse.backend.work.domain.operation.QWorkType.workType;
 
-import com.greenhouse.backend.work.domain.WorkOperationStatus;
-import com.greenhouse.backend.work.domain.WorkTargetExecution;
-import com.greenhouse.backend.work.domain.WorkTargetExecutionStatus;
-import com.greenhouse.backend.work.domain.WorkType;
+import com.greenhouse.backend.work.domain.operation.WorkOperationStatus;
+import com.greenhouse.backend.work.domain.target.WorkTargetExecution;
+import com.greenhouse.backend.work.domain.target.WorkTargetExecutionStatus;
+import com.greenhouse.backend.work.domain.operation.WorkType;
 import com.querydsl.jpa.impl.JPAQuery;
 import com.querydsl.jpa.impl.JPAQueryFactory;
 import jakarta.persistence.EntityManager;

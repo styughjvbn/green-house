@@ -18,9 +18,9 @@ import com.greenhouse.backend.farm.repository.BedZoneRepository;
 import com.greenhouse.backend.farm.repository.InboundRecordRepository;
 import com.greenhouse.backend.farm.repository.OrchidGroupRepository;
 import com.greenhouse.backend.farm.repository.VarietyRepository;
-import com.greenhouse.backend.work.application.InboundWorkOperationRecorder;
-import com.greenhouse.backend.work.application.InboundWorkOperationLifecycleService;
-import com.greenhouse.backend.work.dto.InboundWorkOperationCreateRequest;
+import com.greenhouse.backend.work.application.operation.InboundWorkOperationRecorder;
+import com.greenhouse.backend.work.application.operation.InboundWorkOperationLifecycleService;
+import com.greenhouse.backend.work.dto.operation.InboundWorkOperationCreateRequest;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;

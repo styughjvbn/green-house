@@ -1,11 +1,11 @@
 package com.greenhouse.backend.work.application.effect;
 
-import com.greenhouse.backend.work.domain.WorkAppliedEffect;
-import com.greenhouse.backend.work.domain.WorkEffectKind;
-import com.greenhouse.backend.work.domain.WorkEffectOrchidGroup;
-import com.greenhouse.backend.work.domain.WorkEffectOrchidGroupRelationType;
-import com.greenhouse.backend.work.domain.WorkOperation;
-import com.greenhouse.backend.work.domain.WorkOperationTarget;
+import com.greenhouse.backend.work.domain.effect.WorkAppliedEffect;
+import com.greenhouse.backend.work.domain.effect.WorkEffectKind;
+import com.greenhouse.backend.work.domain.effect.WorkEffectOrchidGroup;
+import com.greenhouse.backend.work.domain.effect.WorkEffectOrchidGroupRelationType;
+import com.greenhouse.backend.work.domain.operation.WorkOperation;
+import com.greenhouse.backend.work.domain.target.WorkOperationTarget;
 import com.greenhouse.backend.work.repository.WorkAppliedEffectRepository;
 import com.greenhouse.backend.work.repository.WorkEffectOrchidGroupRepository;
 import java.util.ArrayList;
