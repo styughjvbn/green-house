@@ -318,9 +318,9 @@ test("난 묶음 관리 맵 리팩터링 전 정확성·성능 기준값", async
       })),
       selectionType: "HOUSE",
       action: async (target) => {
-        await page
-          .getByLabel("동으로 빠른 이동")
-          .selectOption(String(target.id));
+        await visibleByLabel(page, "동으로 빠른 이동").selectOption(
+          String(target.id),
+        );
       },
     });
 
@@ -549,11 +549,11 @@ async function runSwipeScenarios(
     collector.begin();
     const startedAt = await browserNow(page);
     for (let step = 0; step < CONTINUOUS_SWIPE_STEPS; step += 1) {
-      await page.getByLabel("다음 다이").click();
+      await visibleByLabel(page, "다음 다이").click();
       await page.waitForTimeout(25);
     }
     for (let step = 0; step < CONTINUOUS_SWIPE_STEPS; step += 1) {
-      await page.getByLabel("이전 다이").click();
+      await visibleByLabel(page, "이전 다이").click();
       await page.waitForTimeout(25);
     }
     await waitForHistoryDom(page, "HOUSE", middleHouse.id);
@@ -562,7 +562,7 @@ async function runSwipeScenarios(
     metric.clickToRenderMs = round(ready.startTime - startedAt.startTime);
     const mountedAfter = await mountedBedCount(page);
     const visibleAfter = await visibleBedIds(page);
-    const historySection = page.getByTestId("selected-history");
+    const historySection = selectedHistorySection(page);
     const finalSelectionType = await historySection.getAttribute(
       "data-selection-type",
     );
@@ -572,7 +572,7 @@ async function runSwipeScenarios(
     const finalScopeMatches =
       finalSelectionType === "HOUSE" && finalSelectionId === middleHouse.id;
     const finalHistoryReady =
-      (await page.getByTestId("selected-history").getAttribute("aria-busy")) ===
+      (await selectedHistorySection(page).getAttribute("aria-busy")) ===
       "false";
     stability = {
       ...dragStability,
@@ -659,14 +659,15 @@ async function measureSwipe(
   const beforeId = await visibleStartBedId(page);
   collector.begin();
   const start = await browserNow(page);
-  await page
-    .getByLabel(direction === "next" ? "다음 다이" : "이전 다이")
-    .click();
+  await visibleByLabel(
+    page,
+    direction === "next" ? "다음 다이" : "이전 다이",
+  ).click();
   await expect
     .poll(() => visibleStartBedId(page), { timeout: 120_000 })
     .not.toBe(beforeId);
   const metric = await collector.finish(start.epoch, false);
-  await expect(page.getByTestId("selected-history")).toHaveAttribute(
+  await expect(selectedHistorySection(page)).toHaveAttribute(
     "aria-busy",
     "false",
     { timeout: 180_000 },
@@ -685,7 +686,7 @@ async function measureSwipe(
 }
 
 async function navigateToHouseAndWait(page: Page, house: House) {
-  const houseSelect = page.getByLabel("동으로 빠른 이동");
+  const houseSelect = visibleByLabel(page, "동으로 빠른 이동");
 
   await houseSelect.selectOption(String(house.id));
   await expect(houseSelect).toHaveValue(String(house.id));
@@ -702,7 +703,7 @@ async function navigateToHouseAndWait(page: Page, house: House) {
     )
     .toBe(true);
 
-  await expect(page.getByTestId("selected-history")).toHaveAttribute(
+  await expect(selectedHistorySection(page)).toHaveAttribute(
     "aria-busy",
     "false",
     { timeout: 180_000 },
@@ -710,15 +711,27 @@ async function navigateToHouseAndWait(page: Page, house: House) {
 }
 
 async function clickPhysicalBed(page: Page, bedId: number) {
-  await page.getByTestId(`physical-bed-${bedId}`).click();
+  await physicalBedMapSection(page)
+    .getByTestId(`physical-bed-${bedId}`)
+    .filter({ visible: true })
+    .first()
+    .click();
 }
 
 async function clickBedZone(page: Page, zoneId: number) {
-  await page.getByTestId(`bed-zone-${zoneId}`).click();
+  await physicalBedMapSection(page)
+    .getByTestId(`bed-zone-${zoneId}`)
+    .filter({ visible: true })
+    .first()
+    .click();
 }
 
 async function clickOrchidGroup(page: Page, groupId: number) {
-  await page.getByTestId(`orchid-group-${groupId}`).click();
+  await physicalBedMapSection(page)
+    .getByTestId(`orchid-group-${groupId}`)
+    .filter({ visible: true })
+    .first()
+    .click();
 }
 
 async function waitForHistoryDom(
@@ -726,7 +739,7 @@ async function waitForHistoryDom(
   type: "HOUSE" | "PHYSICAL_BED" | "BED_ZONE" | "ORCHID_GROUP",
   targetId: number,
 ) {
-  const section = page.getByTestId("selected-history");
+  const section = selectedHistorySection(page);
   await expect(section).toBeVisible({ timeout: 120_000 });
   await expect(section).toHaveAttribute("data-selection-type", type, {
     timeout: 120_000,
@@ -762,12 +775,22 @@ async function renderSettledAt(page: Page) {
   );
 }
 
-async function physicalBedMapSection(page: Page) {
-  return page.getByTestId("map-root");
+function physicalBedMapSection(page: Page) {
+  return page.getByTestId("map-root").filter({ visible: true }).first();
+}
+
+function selectedHistorySection(page: Page) {
+  return page.getByTestId("selected-history").filter({ visible: true }).first();
+}
+
+function visibleByLabel(page: Page, label: string) {
+  return page.getByLabel(label).filter({ visible: true }).first();
 }
 
 async function mountedBedCount(page: Page) {
-  return page.locator('[data-testid^="physical-bed-"]').count();
+  return physicalBedMapSection(page)
+    .locator('[data-testid^="physical-bed-"]')
+    .count();
 }
 
 async function visibleBedIds(page: Page) {
@@ -778,7 +801,7 @@ async function visibleBedIds(page: Page) {
     return [];
   }
 
-  return page
+  return mapSection
     .locator('[data-testid^="physical-bed-"]')
     .evaluateAll((beds, bounds) => {
       return beds
@@ -809,7 +832,7 @@ async function visibleStartBedId(page: Page) {
     return "";
   }
 
-  const visible = await page
+  const visible = await mapSection
     .locator('[data-testid^="physical-bed-"]')
     .evaluateAll((beds, bounds) => {
       return beds
@@ -834,9 +857,8 @@ async function visibleStartBedId(page: Page) {
 
 async function currentSelectionLabel(page: Page) {
   return (
-    (await page
-      .getByTestId("selected-history")
-      .getAttribute("data-selection-type")) ?? "NONE"
+    (await selectedHistorySection(page).getAttribute("data-selection-type")) ??
+    "NONE"
   );
 }
 

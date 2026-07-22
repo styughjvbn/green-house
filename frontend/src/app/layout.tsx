@@ -37,7 +37,7 @@ export default function RootLayout({
       <body className="min-h-full bg-[#f7f8f6] text-[#1f2a24]">
         <FontScaleInitializer />
         <PwaRuntime />
-        <Suspense fallback={children}>
+        <Suspense fallback={null}>
           <AppShell>{children}</AppShell>
         </Suspense>
       </body>
