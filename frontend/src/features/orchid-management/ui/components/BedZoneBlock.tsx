@@ -77,6 +77,7 @@ export default function BedZoneBlock({
 
   return (
     <div
+      data-testid={`bed-zone-${zone.id}`}
       className={`flex h-full min-h-0 touch-manipulation flex-col rounded-l border p-2 text-left transition ${
         selected
           ? "border-[#246df2] bg-[#f4f8ff] ring-2 ring-[#246df2]/20"

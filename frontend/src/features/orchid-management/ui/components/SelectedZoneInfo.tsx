@@ -99,9 +99,28 @@ export default function SelectedZoneInfo({
       : zone
         ? 1
         : 0;
+  const selectionType = selection?.type ?? "NONE";
+  const selectionId = selectedOrchidGroup
+    ? selectedOrchidGroup.id
+    : zone
+      ? zone.id
+      : physicalBed
+        ? physicalBed.id
+        : selection?.type === "HOUSE"
+          ? selection.houseId
+          : null;
+  const historyLoading = selectedOrchidGroup
+    ? orchidGroupHistoryLoading
+    : workRecordSummaryLoading;
 
   return (
-    <section className="rounded-md border border-[#d7ddd4] bg-white p-2.5 shadow-sm">
+    <section
+      aria-busy={historyLoading}
+      className="rounded-md border border-[#d7ddd4] bg-white p-2.5 shadow-sm"
+      data-testid="selected-history"
+      data-selection-id={selectionId ?? ""}
+      data-selection-type={selectionType}
+    >
       {targetLabel && targetName ? (
         <div className="flex flex-col gap-1 lg:flex-row lg:items-center">
           <div className="min-w-0 shrink-0 lg:w-44">
@@ -412,7 +431,10 @@ function ActivityItem({
   onOpenCorrection?: (workOperationId: number) => void;
 }) {
   return (
-    <li className="rounded-md border border-[#dfe5dc] bg-[#fbfcfa] px-2 py-0.5 text-[11px]">
+    <li
+      className="rounded-md border border-[#dfe5dc] bg-[#fbfcfa] px-2 py-0.5 text-[11px]"
+      data-testid="history-item"
+    >
       <div className="flex items-center justify-between gap-2">
         <span className="truncate font-bold text-[#17251b]">{item.title}</span>
         <span className="shrink-0 text-[#5c6a60]">{item.workDate}</span>
@@ -515,6 +537,7 @@ function RecentWorkList({ records }: { records: OrchidGroupWorkHistory[] }) {
         <li
           key={historyItemKey(record)}
           className="rounded-md border border-[#e1e6df] bg-[#fbfcfa] px-2 text-xs"
+          data-testid="history-item"
         >
           <div className="flex items-center justify-between gap-2">
             <span className="truncate font-semibold text-[#17251b]">

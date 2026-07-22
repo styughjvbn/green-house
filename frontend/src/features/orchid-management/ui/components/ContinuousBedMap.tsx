@@ -66,7 +66,10 @@ export default function ContinuousBedMap({
   }, [emblaApi, startBedIndex, visibleBedCount]);
 
   return (
-    <section className="h-full min-h-0 overflow-hidden rounded-md border border-[#d7ddd4] bg-white p-3 shadow-sm">
+    <section
+      className="h-full min-h-0 overflow-hidden rounded-md border border-[#d7ddd4] bg-white p-3 shadow-sm"
+      data-testid="map-root"
+    >
       <div
         ref={emblaRef}
         className="h-full overflow-hidden"

@@ -59,6 +59,7 @@ export default function OrchidGroupBlock({
 
   return (
     <div
+      data-testid={`orchid-group-${orchidGroup.id}`}
       className={`h-full w-full min-w-0 touch-manipulation overflow-hidden border transition ${
         varietyColor
           ? "text-white hover:brightness-95"

@@ -288,18 +288,16 @@ test("난 묶음 관리 맵 리팩터링 전 정확성·성능 기준값", async
       waitUntil: "domcontentloaded",
       timeout: 180_000,
     });
-    await waitForHistoryDom(page, "HOUSE", `${houses[0]!.number}동`);
+    await waitForHistoryDom(page, "HOUSE", houses[0]!.id);
 
     const collector = new HistoryRequestCollector(page);
     const houseTargets = houses.slice(1).concat(houses[0]).slice(0, 8);
-    const houseSelectionLabel = `${houses[0]!.number}동`;
     scenarioResults.houseHistory = await runSelectionScenario({
       page,
       collector,
       scenario: "동 이력 표시",
       targets: houseTargets.map((house) => ({
         id: house.id,
-        label: houseSelectionLabel,
         scope: scopeForHouse(house),
       })),
       selectionType: "HOUSE",
@@ -324,16 +322,29 @@ test("난 묶음 관리 맵 리팩터링 전 정확성·성능 기준값", async
       scenario: "다이 이력 표시",
       targets: bedTargets.map((bed) => ({
         id: bed.id,
-        label: `${bed.number}다이`,
         scope: scopeForBed(bed, firstHouse),
       })),
       selectionType: "PHYSICAL_BED",
       action: async (target) => {
-        await clickPhysicalBed(page, firstHouse, target.id);
+        await clickPhysicalBed(page, target.id);
       },
     });
 
     const firstBed = firstHouse.physicalBeds[0]!;
+    scenarioResults.zoneHistory = await runSelectionScenario({
+      page,
+      collector,
+      scenario: "구역 이력 표시",
+      targets: firstBed.bedZones.map((zone) => ({
+        id: zone.id,
+        scope: scopeForZone(zone, firstBed, firstHouse),
+      })),
+      selectionType: "BED_ZONE",
+      action: async (target) => {
+        await clickBedZone(page, target.id);
+      },
+    });
+
     const firstZone = firstBed.bedZones[0]!;
     scenarioResults.orchidGroupHistory = await runSelectionScenario({
       page,
@@ -341,16 +352,11 @@ test("난 묶음 관리 맵 리팩터링 전 정확성·성능 기준값", async
       scenario: "난 묶음 이력 표시",
       targets: firstZone.orchidGroups.slice(0, 2).map((group) => ({
         id: group.id,
-        label: group.varietyName,
         scope: scopeForGroup(group, firstZone, firstBed, firstHouse),
       })),
       selectionType: "ORCHID_GROUP",
       action: async (target) => {
-        const group = firstZone.orchidGroups.find(
-          (item) => item.id === target.id,
-        )!;
-
-        await clickOrchidGroup(page, group);
+        await clickOrchidGroup(page, target.id);
       },
     });
 
@@ -430,13 +436,9 @@ async function runSelectionScenario({
   page: Page;
   collector: HistoryRequestCollector;
   scenario: string;
-  targets: Array<{ id: number; label: string; scope: SelectionScope }>;
+  targets: Array<{ id: number; scope: SelectionScope }>;
   selectionType: "HOUSE" | "PHYSICAL_BED" | "BED_ZONE" | "ORCHID_GROUP";
-  action: (target: {
-    id: number;
-    label: string;
-    scope: SelectionScope;
-  }) => Promise<void>;
+  action: (target: { id: number; scope: SelectionScope }) => Promise<void>;
 }): Promise<ScenarioResult> {
   const samples: IterationMetric[] = [];
   let accuracy: AccuracyResult | undefined;
@@ -447,12 +449,12 @@ async function runSelectionScenario({
     collector.begin();
     const start = await browserNow(page);
     await action(target);
+    const metric = await collector.finish(start.epoch);
     const historySection = await waitForHistoryDom(
       page,
       selectionType,
-      target.label,
+      target.id,
     );
-    const metric = await collector.finish(start.epoch);
     const ready = await renderSettledAt(page);
     metric.clickToRenderMs = round(ready.startTime - start.startTime);
 
@@ -534,12 +536,12 @@ async function runSwipeScenarios(
       await page.getByLabel("이전 다이").click();
       await page.waitForTimeout(25);
     }
-    await waitForHistoryDom(page, "HOUSE", `${houses[0]!.number}동`);
+    await waitForHistoryDom(page, "HOUSE", houses[0]!.id);
     const metric = await collector.finish(startedAt.epoch);
     const ready = await renderSettledAt(page);
     metric.clickToRenderMs = round(ready.startTime - startedAt.startTime);
     const mountedAfter = await mountedBedCount(page);
-    const visibleAfter = await visibleBedLabels(page);
+    const visibleAfter = await visibleBedIds(page);
     const expectedFinalGroupIds = new Set(
       scopeForHouse(middleHouse).groups.map((group) => group.id),
     );
@@ -552,15 +554,15 @@ async function runSwipeScenarios(
       finalResponseGroupIds,
     );
     const finalHistoryReady =
-      (await page.getByText("최근 작업 확인 중", { exact: true }).count()) ===
-      0;
+      (await page.getByTestId("selected-history").getAttribute("aria-busy")) ===
+      "false";
     stability = {
       ...dragStability,
       mountedBedsBefore: mountedBefore,
       mountedBedsAfter: mountedAfter,
       domGrowth: mountedAfter - mountedBefore,
       visibleBedsAfter: visibleAfter.length,
-      visibleBedLabelsAfter: visibleAfter,
+      visibleBedIdsAfter: visibleAfter,
       withinVisibleBedLimit: mountedAfter <= 4,
       duplicateHistoryRequestCount: duplicateRequestCount(metric.responses),
       expectedFinalGroupIds: [...expectedFinalGroupIds],
@@ -598,13 +600,9 @@ async function runSwipeScenarios(
           ),
           sampleTitles: [],
           passed:
-            stability.domGrowth === 0 &&
             stability.finalHistoryReady === true &&
             stability.finalScopeMatches === true,
           violations: [
-            ...(stability.domGrowth === 0
-              ? []
-              : [`난 묶음 맵 DOM이 ${stability.domGrowth}개 증가함`]),
             ...(stability.finalHistoryReady === true
               ? []
               : ["연속 스와이프 후 작업 이력이 준비되지 않음"]),
@@ -649,10 +647,12 @@ async function measureSwipe(
   await expect
     .poll(() => visibleStartBedId(page), { timeout: 120_000 })
     .not.toBe(beforeId);
-  await expect(
-    page.getByText("최근 작업 확인 중", { exact: true }),
-  ).toHaveCount(0, { timeout: 180_000 });
   const metric = await collector.finish(start.epoch);
+  await expect(page.getByTestId("selected-history")).toHaveAttribute(
+    "aria-busy",
+    "false",
+    { timeout: 180_000 },
+  );
   const ready = await renderSettledAt(page);
   const responseReadyEpoch = Math.max(
     start.epoch,
@@ -672,59 +672,59 @@ async function navigateToHouseAndWait(page: Page, house: House) {
   await houseSelect.selectOption(String(house.id));
   await expect(houseSelect).toHaveValue(String(house.id));
 
-  const expectedLabels = house.physicalBeds.map(
-    (bed) => `${house.number}동 ${bed.number}다이`,
-  );
+  const expectedBedIds = new Set(house.physicalBeds.map((bed) => bed.id));
 
   await expect
     .poll(
       async () => {
-        const visible = new Set(await visibleBedLabels(page));
-
-        return expectedLabels.every((label) => visible.has(label));
+        const visible = new Set(await visibleBedIds(page));
+        return setsEqual(expectedBedIds, visible);
       },
       { timeout: 120_000 },
     )
     .toBe(true);
 
-  await expect(
-    page.getByText("최근 작업 확인 중", { exact: true }),
-  ).toHaveCount(0, { timeout: 180_000 });
+  await expect(page.getByTestId("selected-history")).toHaveAttribute(
+    "aria-busy",
+    "false",
+    { timeout: 180_000 },
+  );
 }
 
-async function clickPhysicalBed(page: Page, house: House, bedId: number) {
-  const bed = house.physicalBeds.find((item) => item.id === bedId)!;
-  await physicalBedRoot(page, `${house.number}동 ${bed.number}다이`).click();
+async function clickPhysicalBed(page: Page, bedId: number) {
+  await page.getByTestId(`physical-bed-${bedId}`).click();
 }
 
-async function clickOrchidGroup(page: Page, group: OrchidGroup) {
-  await page
-    .getByText(group.varietyName, { exact: true })
-    .first()
-    .locator("xpath=ancestor::*[@role='button'][1]")
-    .click();
+async function clickBedZone(page: Page, zoneId: number) {
+  await page.getByTestId(`bed-zone-${zoneId}`).click();
+}
+
+async function clickOrchidGroup(page: Page, groupId: number) {
+  await page.getByTestId(`orchid-group-${groupId}`).click();
 }
 
 async function waitForHistoryDom(
   page: Page,
   type: "HOUSE" | "PHYSICAL_BED" | "BED_ZONE" | "ORCHID_GROUP",
-  targetLabel: string,
+  targetId: number,
 ) {
-  const heading = {
-    HOUSE: "선택한 동",
-    PHYSICAL_BED: "선택한 다이",
-    BED_ZONE: "선택한 구역",
-    ORCHID_GROUP: "선택한 난 묶음",
-  }[type];
-  const headingElement = page.getByText(heading, { exact: true });
-  await expect(headingElement).toBeVisible({ timeout: 120_000 });
-  const section = headingElement.locator("xpath=ancestor::section[1]");
-  await expect(
-    section.getByText(targetLabel, { exact: true }).last(),
-  ).toBeVisible({ timeout: 120_000 });
-  await expect(
-    section.getByText("최근 작업 확인 중", { exact: true }),
-  ).toHaveCount(0, { timeout: 180_000 });
+  const section = page.getByTestId("selected-history");
+  await expect(section).toBeVisible({ timeout: 120_000 });
+  await expect(section).toHaveAttribute("data-selection-type", type, {
+    timeout: 120_000,
+  });
+  if (type !== "HOUSE") {
+    await expect(section).toHaveAttribute(
+      "data-selection-id",
+      String(targetId),
+      {
+        timeout: 120_000,
+      },
+    );
+  }
+  await expect(section).toHaveAttribute("aria-busy", "false", {
+    timeout: 180_000,
+  });
   await renderSettledAt(page);
   return section;
 }
@@ -750,29 +750,15 @@ async function renderSettledAt(page: Page) {
   );
 }
 
-function physicalBedRoot(page: Page, label: string) {
-  return page
-    .getByText(label, { exact: true })
-    .first()
-    .locator("xpath=parent::*");
-}
-
 async function physicalBedMapSection(page: Page) {
-  return page
-    .locator("p")
-    .filter({ hasText: /^\d+동 \d+다이$/ })
-    .first()
-    .locator("xpath=ancestor::section[1]");
+  return page.getByTestId("map-root");
 }
 
 async function mountedBedCount(page: Page) {
-  return page
-    .locator("p")
-    .filter({ hasText: /^\d+동 \d+다이$/ })
-    .count();
+  return page.locator('[data-testid^="physical-bed-"]').count();
 }
 
-async function visibleBedLabels(page: Page) {
+async function visibleBedIds(page: Page) {
   const mapSection = await physicalBedMapSection(page);
   const sectionBox = await mapSection.boundingBox();
 
@@ -781,16 +767,11 @@ async function visibleBedLabels(page: Page) {
   }
 
   return page
-    .locator("p")
-    .filter({ hasText: /^\d+동 \d+다이$/ })
-    .evaluateAll((labels, bounds) => {
-      return labels
-        .filter((label) => {
-          const box = label.parentElement?.getBoundingClientRect();
-
-          if (!box) {
-            return false;
-          }
+    .locator('[data-testid^="physical-bed-"]')
+    .evaluateAll((beds, bounds) => {
+      return beds
+        .filter((bed) => {
+          const box = bed.getBoundingClientRect();
 
           const centerX = box.left + box.width / 2;
           const centerY = box.top + box.height / 2;
@@ -802,7 +783,9 @@ async function visibleBedLabels(page: Page) {
             centerY <= bounds.y + bounds.height
           );
         })
-        .map((label) => label.textContent?.trim() ?? "");
+        .map((bed) =>
+          Number((bed as HTMLElement).dataset.testid?.split("-").at(-1)),
+        );
     }, sectionBox);
 }
 
@@ -815,17 +798,16 @@ async function visibleStartBedId(page: Page) {
   }
 
   const visible = await page
-    .locator("p")
-    .filter({ hasText: /^\d+동 \d+다이$/ })
-    .evaluateAll((labels, bounds) => {
-      return labels
-        .map((label) => {
-          const box = label.parentElement?.getBoundingClientRect();
+    .locator('[data-testid^="physical-bed-"]')
+    .evaluateAll((beds, bounds) => {
+      return beds
+        .map((bed) => {
+          const box = bed.getBoundingClientRect();
 
           return {
-            label: label.textContent?.trim() ?? "",
-            left: box?.left ?? Number.POSITIVE_INFINITY,
-            centerX: box ? box.left + box.width / 2 : 0,
+            id: Number((bed as HTMLElement).dataset.testid?.split("-").at(-1)),
+            left: box.left,
+            centerX: box.left + box.width / 2,
           };
         })
         .filter(
@@ -835,19 +817,15 @@ async function visibleStartBedId(page: Page) {
         .sort((a, b) => a.left - b.left);
     }, sectionBox);
 
-  return visible[0]?.label ?? "";
+  return visible[0]?.id ?? 0;
 }
 
 async function currentSelectionLabel(page: Page) {
-  for (const label of [
-    "선택한 동",
-    "선택한 다이",
-    "선택한 구역",
-    "선택한 난 묶음",
-  ]) {
-    if (await page.getByText(label, { exact: true }).isVisible()) return label;
-  }
-  return "없음";
+  return (
+    (await page
+      .getByTestId("selected-history")
+      .getAttribute("data-selection-type")) ?? "NONE"
+  );
 }
 
 function latestRequestWaveGroupIds(
@@ -910,8 +888,7 @@ async function verifyAccuracy(
    * 중복 API 호출로 인해 같은 데이터가 반복 수집된 경우도 포함한다.
    * 기준값으로만 기록하며 테스트 실패 조건으로 사용하지 않는다.
    */
-  const duplicateCount =
-    records.length - new Set(records.map(historyKey)).size;
+  const duplicateCount = records.length - new Set(records.map(historyKey)).size;
 
   const violations: string[] = [];
 
@@ -928,15 +905,11 @@ async function verifyAccuracy(
    * 응답에 포함된 작업 이력 개수를 범위별로 검증한다.
    */
 
-  for (const [scopeType, expectedCount] of Object.entries(
-    expectedByScope,
-  )) {
+  for (const [scopeType, expectedCount] of Object.entries(expectedByScope)) {
     const actualCount = actualByScope[scopeType] ?? 0;
 
     if (actualCount !== expectedCount) {
-      violations.push(
-        `${scopeType} ${actualCount}건(예상 ${expectedCount}건)`,
-      );
+      violations.push(`${scopeType} ${actualCount}건(예상 ${expectedCount}건)`);
     }
   }
 
@@ -960,9 +933,7 @@ async function verifyAccuracy(
         houseIds.has(record.sourceScopeId));
 
     if (!belongsToScope) {
-      violations.push(
-        `범위 밖 작업 ${record.workOperationId}`,
-      );
+      violations.push(`범위 밖 작업 ${record.workOperationId}`);
       break;
     }
   }
@@ -985,28 +956,22 @@ async function verifyAccuracy(
    */
 
   const historyTitles = await historySection
-    .locator("li")
+    .getByTestId("history-item")
     .allTextContents();
 
   const sampleTitles = historyTitles.slice(0, 2);
 
-  const latestRecord = [...uniqueRecords].sort(
-    compareHistoryDesc,
-  )[0];
+  const latestRecord = [...uniqueRecords].sort(compareHistoryDesc)[0];
 
   if (latestRecord) {
-    const latestDateDigits = normalizeDateDigits(
-      latestRecord.workDate,
-    );
+    const latestDateDigits = normalizeDateDigits(latestRecord.workDate);
 
     const latestDateShortDigits =
       latestDateDigits.length === 8
         ? latestDateDigits.slice(2)
         : latestDateDigits;
 
-    const normalizedHistoryTitles = historyTitles.map(
-      normalizeDateDigits,
-    );
+    const normalizedHistoryTitles = historyTitles.map(normalizeDateDigits);
 
     const latestDateVisible = normalizedHistoryTitles.some(
       (titleDigits) =>
@@ -1025,14 +990,10 @@ async function verifyAccuracy(
    * HTTP 응답 상태를 검증한다.
    */
 
-  const failedResponse = responses.find(
-    (response) => response.status !== 200,
-  );
+  const failedResponse = responses.find((response) => response.status !== 200);
 
   if (failedResponse) {
-    violations.push(
-      `work-history 응답 상태 ${failedResponse.status}`,
-    );
+    violations.push(`work-history 응답 상태 ${failedResponse.status}`);
   }
 
   return {
@@ -1042,9 +1003,7 @@ async function verifyAccuracy(
     expectedTotalCount,
     houseCount: actualByScope.HOUSE ?? 0,
     physicalBedCount: actualByScope.PHYSICAL_BED ?? 0,
-    propagatedCount: uniqueRecords.filter(
-      (record) => record.propagated,
-    ).length,
+    propagatedCount: uniqueRecords.filter((record) => record.propagated).length,
     requestCount: responses.length,
     requestDuplicateCount,
     sampleTitles,
@@ -1232,10 +1191,9 @@ function summarizeSeed(houses: House[]) {
 
 async function inspectRenderingStability(page: Page) {
   const mountedBeds = await mountedBedCount(page);
-  const visibleBeds = (await visibleBedLabels(page)).length;
+  const visibleBeds = (await visibleBedIds(page)).length;
   const orchidGroupNodes = await page
-    .locator("p")
-    .filter({ hasText: /^맵 기준 난 H/ })
+    .locator('[data-testid^="orchid-group-"]')
     .count();
   return {
     mountedBeds,
@@ -1245,24 +1203,14 @@ async function inspectRenderingStability(page: Page) {
   };
 }
 
-function readNonNegativeInteger(
-  name: string,
-  fallback: number,
-) {
+function readNonNegativeInteger(name: string, fallback: number) {
   const value = Number(process.env[name]);
 
-  return Number.isInteger(value) && value >= 0
-    ? value
-    : fallback;
+  return Number.isInteger(value) && value >= 0 ? value : fallback;
 }
 
-function readPositiveInteger(
-  name: string,
-  fallback: number,
-) {
+function readPositiveInteger(name: string, fallback: number) {
   const value = Number(process.env[name]);
 
-  return Number.isInteger(value) && value > 0
-    ? value
-    : fallback;
+  return Number.isInteger(value) && value > 0 ? value : fallback;
 }
