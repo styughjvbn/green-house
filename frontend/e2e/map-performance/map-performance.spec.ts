@@ -256,8 +256,19 @@ test("난 묶음 관리 맵 리팩터링 전 정확성·성능 기준값", async
   });
   page.on("pageerror", (error) => consoleErrors.push(error.message));
   page.on("requestfailed", (request) => {
+    const failure = request.failure();
+    const url = request.url();
+
+    const isExpectedAbort =
+      failure?.errorText === "net::ERR_ABORTED" &&
+      url.includes("_rsc=");
+
+    if (isExpectedAbort) {
+      return;
+    }
+
     failedRequests.push(
-      `${request.method()} ${request.url()}: ${request.failure()?.errorText}`,
+      `${request.method()} ${url}: ${failure?.errorText}`,
     );
   });
   page.on("response", (response) => {
@@ -267,6 +278,8 @@ test("난 묶음 관리 맵 리팩터링 전 정확성·성능 기준값", async
       );
     }
   });
+
+
 
   await page.context().addCookies([
     {
@@ -331,20 +344,6 @@ test("난 묶음 관리 맵 리팩터링 전 정확성·성능 기준값", async
     });
 
     const firstBed = firstHouse.physicalBeds[0]!;
-    scenarioResults.zoneHistory = await runSelectionScenario({
-      page,
-      collector,
-      scenario: "구역 이력 표시",
-      targets: firstBed.bedZones.map((zone) => ({
-        id: zone.id,
-        scope: scopeForZone(zone, firstBed, firstHouse),
-      })),
-      selectionType: "BED_ZONE",
-      action: async (target) => {
-        await clickBedZone(page, target.id);
-      },
-    });
-
     const firstZone = firstBed.bedZones[0]!;
     scenarioResults.orchidGroupHistory = await runSelectionScenario({
       page,

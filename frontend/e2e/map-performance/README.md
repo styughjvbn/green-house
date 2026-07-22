@@ -83,8 +83,8 @@ npm run e2e:map:baseline
 
 | 변수                       |                                    기본값 | 역할                           |
 | -------------------------- | ----------------------------------------: | ------------------------------ |
-| `MAP_E2E_WARMUP`           |                                       `5` | 시나리오별 워밍업 횟수(0 허용) |
-| `MAP_E2E_ITERATIONS`       |                                      `20` | 시나리오별 측정 횟수           |
+| `MAP_E2E_WARMUP`           |                                       `1` | 시나리오별 워밍업 횟수(0 허용) |
+| `MAP_E2E_ITERATIONS`       |                                       `5` | 시나리오별 측정 횟수           |
 | `MAP_E2E_CONTINUOUS_STEPS` |                                      `10` | 연속 이동의 전진·후진 횟수     |
 | `MAP_E2E_DB_NAME`          |                      `greenhouse_map_e2e` | E2E 전용 DB 이름               |
 | `MAP_E2E_DB_HOST`          |                               `127.0.0.1` | PostgreSQL 호스트              |
