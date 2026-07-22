@@ -183,12 +183,10 @@ dto
 
 ```text
 src/
- ├─ app/        라우트 진입점
- ├─ components/ shadcn/ui 공통 primitives
+ ├─ app/        Next.js 라우트·메타데이터 진입점
  ├─ features/   기능 단위 화면/상태/API
- ├─ entities/   도메인 타입
- ├─ lib/        shadcn/ui 공통 유틸
- ├─ shared/     공통 UI/API 유틸
+ ├─ entities/   도메인 타입과 도메인 공통 UI
+ ├─ shared/     전역 공통 API·유틸·UI·PWA 런타임
  └─ widgets/    큰 공통 레이아웃
 ```
 
@@ -198,7 +196,11 @@ src/
 - 실제 UI와 상태 로직은 `features/*`에 둔다.
 - API 타입은 OpenAPI 또는 `entities` 타입과 맞춘다.
 - 화면별 복잡한 상태는 페이지 내부에 몰아넣지 않는다.
-- AppShell의 버튼, 툴팁, 접이식 메뉴, 모바일 시트는 `components/ui`의 shadcn primitives를 사용한다.
+- 범용 UI는 `shared/ui`에 두고 shadcn/Radix primitive는
+  `shared/ui/primitives`에 둔다. 특정 도메인이나 기능에 종속된 UI는
+  `entities/*/ui` 또는 `features/*/ui`에 유지한다.
+- PWA 브라우저 런타임과 전용 스타일은 `shared/pwa`에 둔다. Next.js가 위치를
+  규정하는 manifest는 `app/manifest.ts`, 서비스 워커와 아이콘은 `public/`에 둔다.
 
 ## 6. 데이터 보존 원칙
 

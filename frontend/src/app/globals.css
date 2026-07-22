@@ -20,7 +20,6 @@
   --input: #cfd8cc;
   --ring: #2f8f4e;
   --radius: 0.5rem;
-  --app-viewport-height: 100dvh;
   --font-scale: 1;
   font-size: calc(16px * var(--font-scale));
 }
@@ -129,12 +128,6 @@ body {
     margin-right: -1.5rem;
     margin-left: -1.5rem;
   }
-}
-
-.pwa-fixed-viewport,
-.pwa-fixed-viewport body {
-  height: var(--app-viewport-height);
-  overflow: hidden;
 }
 
 a,
