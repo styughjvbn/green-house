@@ -44,6 +44,10 @@ dependencies {
 	testImplementation("org.springframework.boot:spring-boot-starter-validation-test")
 	testImplementation("org.springframework.security:spring-security-test")
 	testImplementation("org.springframework.boot:spring-boot-starter-webmvc-test")
+	testImplementation("org.springframework.boot:spring-boot-testcontainers")
+	testImplementation(platform("org.testcontainers:testcontainers-bom:2.0.5"))
+	testImplementation("org.testcontainers:testcontainers-junit-jupiter")
+	testImplementation("org.testcontainers:testcontainers-postgresql")
 	testRuntimeOnly("org.junit.platform:junit-platform-launcher")
 	// Lombok
 	testCompileOnly("org.projectlombok:lombok")
@@ -52,4 +56,37 @@ dependencies {
 
 tasks.withType<Test> {
 	useJUnitPlatform()
+}
+
+tasks.named<Test>("test") {
+	useJUnitPlatform {
+		excludeTags("work-e2e", "work-benchmark")
+	}
+}
+
+tasks.register<Test>("workE2eTest") {
+	group = "verification"
+	description = "Runs the Work API contract E2E tests against PostgreSQL."
+	testClassesDirs = sourceSets["test"].output.classesDirs
+	classpath = sourceSets["test"].runtimeClasspath
+	useJUnitPlatform {
+		includeTags("work-e2e")
+	}
+	shouldRunAfter(tasks.named("test"))
+}
+
+tasks.register<Test>("workBenchmark") {
+	group = "verification"
+	description = "Measures Work API query count and response-time distribution."
+	testClassesDirs = sourceSets["test"].output.classesDirs
+	classpath = sourceSets["test"].runtimeClasspath
+	useJUnitPlatform {
+		includeTags("work-benchmark")
+	}
+	maxParallelForks = 1
+	systemProperty(
+		"workBenchmark.enforceQueryLimits",
+		providers.gradleProperty("workBenchmarkEnforce").orElse("false").get()
+	)
+	shouldRunAfter(tasks.named("workE2eTest"))
 }

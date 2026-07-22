@@ -214,3 +214,27 @@ src/
 - 원본 가져오기 데이터
 
 삭제가 필요한 경우에도 물리 삭제보다 상태 변경 또는 비활성화를 우선 검토한다.
+
+## 7. 백엔드 리팩터링 검증
+
+`work` 리팩터링 검증은 브라우저 E2E와 분리하고 실제 PostgreSQL을 사용하는 두 Gradle 작업으로 실행한다.
+
+```bash
+cd backend
+./gradlew workE2eTest
+./gradlew workBenchmark
+./gradlew workBenchmark -PworkBenchmarkEnforce=true
+```
+
+- `workE2eTest`: RANDOM_PORT의 실제 HTTP 요청으로 대상 미리보기, 일반·즉시 완료 작업,
+  작업과 대상 상태 전이, 분갈이 수량·계보, 계획형 구조 변경, 요청 키 멱등성,
+  작업 상세·분갈이 결과·난 묶음 통합 이력을 검증한다.
+- `workBenchmark`: 작업 100건과 대상 2,000건을 고정 생성하고 작업 목록·상세·난 묶음 통합 이력
+  조회의 쿼리 수를 검증한다. API별 3회 워밍업 후 20회 측정한 median/p95는
+  `backend/build/work-benchmark/results.json`에 기록한다.
+- 기능 결과와 DB 불변식은 자동 실패 조건으로 사용한다. 응답 시간은 실행 환경 영향을 받으므로
+  전후 결과를 수동 비교하고 CI의 강한 실패 조건으로 사용하지 않는다. 기본 벤치마크는
+  리팩터링 전 기준값도 남길 수 있도록 쿼리 상한을 기록만 하며, `-PworkBenchmarkEnforce=true`를
+  지정한 경우에만 상한 초과로 실패한다.
+- 전후 비교가 필요하면 각 대상 커밋에서 `clean workE2eTest workBenchmark`를 실행하고 생성된
+  `results.json`을 각각 `before.json`, `after.json`으로 별도 보관한다.
