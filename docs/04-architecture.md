@@ -81,6 +81,22 @@ print
 - 배드 정밀 설정
 - 위치 이동
 
+`farm`의 각 계층은 동일한 기능 경계를 사용한다.
+
+```text
+application|domain|repository|controller|dto/
+ ├─ structure/       동·물리 배드·논리 구역·배치 용량
+ ├─ status/          농장 현황·확대 단계 조회
+ ├─ orchid/          난 묶음 조회·명령·이동
+ ├─ collection/      사용자 난 묶음 그룹
+ ├─ inbound/         입고·포트 실행
+ ├─ variety/         품종 기준 정보
+ ├─ material/        자재 기준 정보
+ └─ transformation/  분갈이·분주·합식·다중 생성·계보
+```
+
+저장소가 없는 현황 기능처럼 계층에 구현이 필요하지 않은 경우 해당 하위 패키지는 생략한다.
+
 ### work
 
 - 작업 유형

@@ -1,12 +1,12 @@
 package com.greenhouse.backend;
 
-import com.greenhouse.backend.farm.repository.BedZoneRepository;
-import com.greenhouse.backend.farm.repository.HouseRepository;
-import com.greenhouse.backend.farm.repository.InboundRecordRepository;
-import com.greenhouse.backend.farm.repository.MaterialRepository;
-import com.greenhouse.backend.farm.repository.OrchidGroupRepository;
-import com.greenhouse.backend.farm.repository.PhysicalBedRepository;
-import com.greenhouse.backend.farm.repository.VarietyRepository;
+import com.greenhouse.backend.farm.repository.structure.BedZoneRepository;
+import com.greenhouse.backend.farm.repository.structure.HouseRepository;
+import com.greenhouse.backend.farm.repository.inbound.InboundRecordRepository;
+import com.greenhouse.backend.farm.repository.material.MaterialRepository;
+import com.greenhouse.backend.farm.repository.orchid.OrchidGroupRepository;
+import com.greenhouse.backend.farm.repository.structure.PhysicalBedRepository;
+import com.greenhouse.backend.farm.repository.variety.VarietyRepository;
 import com.greenhouse.backend.work.repository.WorkTypeRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;

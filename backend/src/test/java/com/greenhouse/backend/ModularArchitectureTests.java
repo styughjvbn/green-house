@@ -73,9 +73,22 @@ class ModularArchitectureTests {
 
 	@Test
 	void workLayersAreGroupedByFeature() throws IOException {
-		assertWorkFeaturePackages("application");
-		assertWorkFeaturePackages("domain");
-		assertWorkFeaturePackages("dto");
+		assertFeaturePackages("work", "application", "operation", "target", "effect", "correction");
+		assertFeaturePackages("work", "domain", "operation", "target", "effect", "correction");
+		assertFeaturePackages("work", "dto", "operation", "target", "effect", "correction");
+	}
+
+	@Test
+	void farmLayersAreGroupedByFeature() throws IOException {
+		String[] allFeatures = {
+				"structure", "status", "orchid", "collection", "inbound", "variety", "material", "transformation"
+		};
+		assertFeaturePackages("farm", "application", allFeatures);
+		assertFeaturePackages("farm", "domain", allFeatures);
+		assertFeaturePackages("farm", "controller", allFeatures);
+		assertFeaturePackages("farm", "dto", allFeatures);
+		assertFeaturePackages("farm", "repository",
+				"structure", "orchid", "collection", "inbound", "variety", "material", "transformation");
 	}
 
 	@Test
@@ -123,12 +136,12 @@ class ModularArchitectureTests {
 		}
 	}
 
-	private void assertWorkFeaturePackages(String layer) throws IOException {
-		Path layerRoot = SOURCE_ROOT.resolve("work").resolve(layer);
+	private void assertFeaturePackages(String module, String layer, String... expectedPackages) throws IOException {
+		Path layerRoot = SOURCE_ROOT.resolve(module).resolve(layer);
 		try (Stream<Path> entries = Files.list(layerRoot)) {
 			assertThat(entries.map(path -> path.getFileName().toString()).toList())
-					.as("Unexpected package in work/%s", layer)
-					.containsExactlyInAnyOrder("operation", "target", "effect", "correction");
+					.as("Unexpected package in %s/%s", module, layer)
+					.containsExactlyInAnyOrder(expectedPackages);
 		}
 	}
 

@@ -3,9 +3,9 @@ package com.greenhouse.backend;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
-import com.greenhouse.backend.farm.application.VarietyService;
-import com.greenhouse.backend.farm.dto.VarietyCreateRequest;
-import com.greenhouse.backend.farm.dto.VarietyUpdateRequest;
+import com.greenhouse.backend.farm.application.variety.VarietyService;
+import com.greenhouse.backend.farm.dto.variety.VarietyCreateRequest;
+import com.greenhouse.backend.farm.dto.variety.VarietyUpdateRequest;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;

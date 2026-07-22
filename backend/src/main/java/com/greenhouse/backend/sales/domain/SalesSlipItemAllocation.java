@@ -1,7 +1,7 @@
 package com.greenhouse.backend.sales.domain;
 
 import com.greenhouse.backend.common.domain.BaseEntity;
-import com.greenhouse.backend.farm.domain.OrchidGroup;
+import com.greenhouse.backend.farm.domain.orchid.OrchidGroup;
 import jakarta.persistence.Entity;
 import jakarta.persistence.FetchType;
 import jakarta.persistence.GeneratedValue;

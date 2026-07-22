@@ -1,6 +1,6 @@
 package com.greenhouse.backend;
 
-import com.greenhouse.backend.farm.dto.OrchidGroupResponse;
+import com.greenhouse.backend.farm.dto.orchid.OrchidGroupResponse;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;

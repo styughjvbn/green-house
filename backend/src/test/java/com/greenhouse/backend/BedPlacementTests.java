@@ -3,12 +3,12 @@ package com.greenhouse.backend;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
-import com.greenhouse.backend.farm.application.OrchidGroupCommandService;
-import com.greenhouse.backend.farm.application.OrchidGroupMovementService;
-import com.greenhouse.backend.farm.dto.OrchidGroupMoveRequest;
-import com.greenhouse.backend.farm.dto.OrchidGroupUpdateRequest;
-import com.greenhouse.backend.farm.repository.BedZoneRepository;
-import com.greenhouse.backend.farm.repository.OrchidGroupRepository;
+import com.greenhouse.backend.farm.application.orchid.OrchidGroupCommandService;
+import com.greenhouse.backend.farm.application.orchid.OrchidGroupMovementService;
+import com.greenhouse.backend.farm.dto.orchid.OrchidGroupMoveRequest;
+import com.greenhouse.backend.farm.dto.orchid.OrchidGroupUpdateRequest;
+import com.greenhouse.backend.farm.repository.structure.BedZoneRepository;
+import com.greenhouse.backend.farm.repository.orchid.OrchidGroupRepository;
 import com.greenhouse.backend.work.repository.WorkOperationRepository;
 import java.math.BigDecimal;
 import org.junit.jupiter.api.BeforeEach;
