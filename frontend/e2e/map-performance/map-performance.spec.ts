@@ -70,14 +70,25 @@ type House = {
 
 type ApiEnvelope<T> = { data: T };
 
+type WorkHistoryPage = {
+  content: WorkHistory[];
+  page: number;
+  size: number;
+  totalElements: number;
+  totalPages: number;
+};
+
 type HistoryResponseMetric = {
   apiResponseTimeMs: number;
+  page: number;
   payloadBytes: number;
   records: WorkHistory[];
   requestStartedAtEpoch: number;
   scopeId: number | null;
   scopeType: string | null;
   status: number;
+  totalElements: number;
+  totalPages: number;
 };
 
 type IterationMetric = {
@@ -226,18 +237,27 @@ class HistoryRequestCollector {
       await response.finished();
       const body = await response.body();
       const payload = JSON.parse(body.toString("utf8")) as ApiEnvelope<
-        WorkHistory[]
+        WorkHistoryPage | WorkHistory[]
       >;
+      const result = Array.isArray(payload.data)
+        ? {
+            content: payload.data,
+            totalElements: payload.data.length,
+            totalPages: payload.data.length > 0 ? 1 : 0,
+          }
+        : payload.data;
       const timing = request.timing();
       const responseEnd = timing.responseEnd;
       this.responses.push({
         apiResponseTimeMs:
           responseEnd >= 0 ? round(responseEnd) : round(Date.now() - startedAt),
         payloadBytes: body.byteLength,
-        records: payload.data,
+        records: result.content,
         requestStartedAtEpoch: startedAt,
         ...parseHistoryScope(request.url()),
         status: response.status(),
+        totalElements: result.totalElements,
+        totalPages: result.totalPages,
       });
       this.requestStarts.push(startedAt);
     } finally {
@@ -362,19 +382,32 @@ test("난 묶음 관리 맵 리팩터링 전 정확성·성능 기준값", async
       },
     });
 
+    const orchidGroupTargets = firstZone.orchidGroups
+      .slice(0, 2)
+      .map((group) => ({
+        id: group.id,
+        scope: scopeForGroup(group, firstZone, firstBed, firstHouse),
+      }));
     scenarioResults.orchidGroupHistory = await runSelectionScenario({
       page,
       collector,
       scenario: "난 묶음 이력 표시",
-      targets: firstZone.orchidGroups.slice(0, 2).map((group) => ({
-        id: group.id,
-        scope: scopeForGroup(group, firstZone, firstBed, firstHouse),
-      })),
+      targets: orchidGroupTargets,
       selectionType: "ORCHID_GROUP",
       action: async (target) => {
         await clickOrchidGroup(page, target.id);
       },
     });
+    const selectedOrchidGroupTarget =
+      orchidGroupTargets[
+        (WARMUP_COUNT + ITERATION_COUNT - 1) % orchidGroupTargets.length
+      ]!;
+    scenarioResults.orchidGroupHistory.accuracy =
+      await verifyOrchidGroupDetailedHistory(
+        page,
+        collector,
+        selectedOrchidGroupTarget,
+      );
 
     Object.assign(renderingStability, await inspectRenderingStability(page));
 
@@ -492,6 +525,51 @@ async function runSelectionScenario({
   return buildScenarioResult(scenario, samples, accuracy);
 }
 
+async function verifyOrchidGroupDetailedHistory(
+  page: Page,
+  collector: HistoryRequestCollector,
+  target: { id: number; scope: SelectionScope },
+) {
+  collector.begin();
+  const start = await browserNow(page);
+  await visibleByLabel(page, "상세 보기").click();
+  const detail = page
+    .getByTestId("history-detail")
+    .filter({ visible: true })
+    .first();
+  await expect(detail).toBeVisible({ timeout: 120_000 });
+  await expect(detail).toHaveAttribute("aria-busy", "false", {
+    timeout: 120_000,
+  });
+  const totalPages = Number(
+    await detail.getAttribute("data-history-total-pages"),
+  );
+
+  for (let pageIndex = 1; pageIndex < totalPages; pageIndex += 1) {
+    await detail.getByTestId("history-page-next").click();
+    await expect(detail).toHaveAttribute(
+      "data-history-page",
+      String(pageIndex),
+      { timeout: 120_000 },
+    );
+    await expect(detail).toHaveAttribute("aria-busy", "false", {
+      timeout: 120_000,
+    });
+  }
+
+  const metric = await collector.finish(start.epoch, false);
+  const accuracy = await verifyAccuracy(
+    selectedHistorySection(page),
+    target.scope,
+    metric.responses,
+    "ORCHID_GROUP",
+    target.id,
+    true,
+  );
+  await detail.getByRole("button", { name: "닫기" }).click();
+  return accuracy;
+}
+
 async function runSwipeScenarios(
   page: Page,
   collector: HistoryRequestCollector,
@@ -581,7 +659,8 @@ async function runSwipeScenarios(
       domGrowth: mountedAfter - mountedBefore,
       visibleBedsAfter: visibleAfter.length,
       visibleBedIdsAfter: visibleAfter,
-      withinVisibleBedLimit: mountedAfter <= 5,
+      withinVisibleBedLimit:
+        mountedAfter <= Math.max(visibleAfter.length * 3, 1),
       duplicateHistoryRequestCount: duplicateRequestCount(metric.responses),
       finalSelectionType,
       finalSelectionId,
@@ -872,6 +951,7 @@ async function verifyAccuracy(
   responses: HistoryResponseMetric[],
   selectionType: "HOUSE" | "PHYSICAL_BED" | "BED_ZONE" | "ORCHID_GROUP",
   selectionId: number,
+  completeHistory = false,
 ): Promise<AccuracyResult> {
   const records = responses.flatMap((response) => response.records);
   const uniqueRecords = deduplicateHistory(records);
@@ -906,6 +986,10 @@ async function verifyAccuracy(
    * 기준값으로만 기록하며 테스트 실패 조건으로 사용하지 않는다.
    */
   const duplicateCount = records.length - new Set(records.map(historyKey)).size;
+  const actualTotalCount = Math.max(
+    uniqueRecords.length,
+    ...responses.map((response) => response.totalElements),
+  );
 
   const violations: string[] = [];
 
@@ -928,11 +1012,15 @@ async function verifyAccuracy(
    * 응답에 포함된 작업 이력 개수를 범위별로 검증한다.
    */
 
-  for (const [scopeType, expectedCount] of Object.entries(expectedByScope)) {
-    const actualCount = actualByScope[scopeType] ?? 0;
+  if (completeHistory) {
+    for (const [scopeType, expectedCount] of Object.entries(expectedByScope)) {
+      const actualCount = actualByScope[scopeType] ?? 0;
 
-    if (actualCount !== expectedCount) {
-      violations.push(`${scopeType} ${actualCount}건(예상 ${expectedCount}건)`);
+      if (actualCount !== expectedCount) {
+        violations.push(
+          `${scopeType} ${actualCount}건(예상 ${expectedCount}건)`,
+        );
+      }
     }
   }
 
@@ -965,9 +1053,15 @@ async function verifyAccuracy(
    * 중복 제거 후 전체 작업 이력 개수를 검증한다.
    */
 
-  if (uniqueRecords.length !== expectedTotalCount) {
+  if (actualTotalCount !== expectedTotalCount) {
     violations.push(
-      `통합 이력 ${uniqueRecords.length}건(예상 ${expectedTotalCount}건)`,
+      `통합 이력 ${actualTotalCount}건(예상 ${expectedTotalCount}건)`,
+    );
+  }
+
+  if (completeHistory && uniqueRecords.length !== expectedTotalCount) {
+    violations.push(
+      `상세 페이지 누적 ${uniqueRecords.length}건(예상 ${expectedTotalCount}건)`,
     );
   }
 
@@ -1020,7 +1114,7 @@ async function verifyAccuracy(
   }
 
   return {
-    actualTotalCount: uniqueRecords.length,
+    actualTotalCount,
     directCount: actualByScope.ORCHID_GROUP ?? 0,
     duplicateCount,
     expectedTotalCount,
@@ -1136,7 +1230,7 @@ function compareHistoryDesc(a: WorkHistory, b: WorkHistory) {
 function duplicateRequestCount(responses: HistoryResponseMetric[]) {
   const counts = countBy(
     responses,
-    (response) => `${response.scopeType}:${response.scopeId}`,
+    (response) => `${response.scopeType}:${response.scopeId}:${response.page}`,
   );
   return Object.values(counts).reduce(
     (sum, count) => sum + Math.max(0, count - 1),
@@ -1182,10 +1276,11 @@ function isWorkHistoryUrl(url: string) {
 function parseHistoryScope(url: string) {
   const match = url.match(/\/orchid-groups\/(\d+)\/work-history/);
   if (match?.[1]) {
-    return { scopeType: "ORCHID_GROUP", scopeId: Number(match[1]) };
+    return { page: 0, scopeType: "ORCHID_GROUP", scopeId: Number(match[1]) };
   }
   const parsed = new URL(url);
   return {
+    page: Number(parsed.searchParams.get("page")) || 0,
     scopeType: parsed.searchParams.get("scopeType"),
     scopeId: Number(parsed.searchParams.get("scopeId")) || null,
   };
@@ -1235,7 +1330,7 @@ async function inspectRenderingStability(page: Page) {
     mountedBeds,
     visibleBeds,
     orchidGroupNodes,
-    withinVisibleBedLimit: mountedBeds <= 5,
+    withinVisibleBedLimit: mountedBeds <= Math.max(visibleBeds * 3, 1),
   };
 }
 

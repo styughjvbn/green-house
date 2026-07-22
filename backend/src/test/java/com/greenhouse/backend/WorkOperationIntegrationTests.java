@@ -359,10 +359,13 @@ class WorkOperationIntegrationTests extends AbstractBackendIntegrationTest {
 
 		mockMvc.perform(get("/api/work-history")
 				.param("scopeType", "HOUSE")
-				.param("scopeId", sourceHouse.getId().toString()))
+				.param("scopeId", sourceHouse.getId().toString())
+				.param("page", "0")
+				.param("size", "20"))
 				.andExpect(status().isOk())
-				.andExpect(jsonPath("$.data", hasSize(1)))
-				.andExpect(jsonPath("$.data[0].workOperationId").value(operationId));
+				.andExpect(jsonPath("$.data.content", hasSize(1)))
+				.andExpect(jsonPath("$.data.totalElements").value(1))
+				.andExpect(jsonPath("$.data.content[0].workOperationId").value(operationId));
 
 		mockMvc.perform(patch("/api/orchid-groups/{id}/move", targetGroup.getId())
 				.contentType(MediaType.APPLICATION_JSON)
@@ -388,10 +391,28 @@ class WorkOperationIntegrationTests extends AbstractBackendIntegrationTest {
 
 		mockMvc.perform(get("/api/work-history")
 				.param("scopeType", "ORCHID_GROUP")
-				.param("scopeId", targetGroup.getId().toString()))
+				.param("scopeId", targetGroup.getId().toString())
+				.param("page", "0")
+				.param("size", "1"))
 				.andExpect(status().isOk())
-				.andExpect(jsonPath("$.data", hasSize(2)))
-				.andExpect(jsonPath("$.data[0].currentLocation.houseNumber").value(5));
+				.andExpect(jsonPath("$.data.content", hasSize(1)))
+				.andExpect(jsonPath("$.data.page").value(0))
+				.andExpect(jsonPath("$.data.size").value(1))
+				.andExpect(jsonPath("$.data.totalElements").value(2))
+				.andExpect(jsonPath("$.data.totalPages").value(2))
+				.andExpect(jsonPath("$.data.content[0].workType").value("위치 이동"))
+				.andExpect(jsonPath("$.data.content[0].currentLocation.houseNumber").value(5));
+
+		mockMvc.perform(get("/api/work-history")
+				.param("scopeType", "ORCHID_GROUP")
+				.param("scopeId", targetGroup.getId().toString())
+				.param("page", "1")
+				.param("size", "1"))
+				.andExpect(status().isOk())
+				.andExpect(jsonPath("$.data.content", hasSize(1)))
+				.andExpect(jsonPath("$.data.page").value(1))
+				.andExpect(jsonPath("$.data.totalElements").value(2))
+				.andExpect(jsonPath("$.data.content[0].workOperationId").value(operationId));
 	}
 
 	@Test

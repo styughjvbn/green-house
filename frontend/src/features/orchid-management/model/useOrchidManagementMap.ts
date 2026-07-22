@@ -41,7 +41,11 @@ import type {
   PreciseMovePayload,
   WorkRecordQuickFormState,
   WorkRecordSummary,
+  WorkHistoryPage,
 } from "./types";
+
+const SUMMARY_HISTORY_SIZE = 20;
+const DETAIL_HISTORY_SIZE = 10;
 
 export function useOrchidManagementMap(
   house: House,
@@ -117,20 +121,31 @@ export function useOrchidManagementMap(
   const [workRecordSummaryVersion, setWorkRecordSummaryVersion] = useState(0);
   const [workHistoryState, setWorkHistoryState] = useState<{
     key: string;
-    items: OrchidGroupWorkHistory[];
+    result: WorkHistoryPage;
   } | null>(null);
-  const workHistoryCacheRef = useRef(
-    new Map<string, OrchidGroupWorkHistory[]>(),
-  );
+  const workHistoryCacheRef = useRef(new Map<string, WorkHistoryPage>());
   const workHistoryRequestsRef = useRef(
     new Map<
       string,
       {
         controller: AbortController;
-        promise: Promise<OrchidGroupWorkHistory[]>;
+        promise: Promise<WorkHistoryPage>;
       }
     >(),
   );
+  const [detailHistoryState, setDetailHistoryState] = useState<{
+    key: string;
+    orchidGroupId: number;
+    result: WorkHistoryPage;
+  } | null>(null);
+  const [detailHistoryLoadingKey, setDetailHistoryLoadingKey] = useState<
+    string | null
+  >(null);
+  const detailHistoryCacheRef = useRef(new Map<string, WorkHistoryPage>());
+  const detailHistoryRequestRef = useRef<{
+    key: string;
+    controller: AbortController;
+  } | null>(null);
   const [orchidGroupLineageState, setOrchidGroupLineageState] = useState<{
     orchidGroupId: number;
     item: OrchidGroupLineage;
@@ -234,7 +249,7 @@ export function useOrchidManagementMap(
   const currentWorkHistory = useMemo(
     () =>
       workHistoryKey && workHistoryState?.key === workHistoryKey
-        ? workHistoryState.items
+        ? workHistoryState.result.content
         : [],
     [workHistoryKey, workHistoryState],
   );
@@ -267,7 +282,7 @@ export function useOrchidManagementMap(
       let active = true;
       queueMicrotask(() => {
         if (active) {
-          setWorkHistoryState({ key: workHistoryKey, items: cached });
+          setWorkHistoryState({ key: workHistoryKey, result: cached });
         }
       });
       return () => {
@@ -283,6 +298,8 @@ export function useOrchidManagementMap(
         promise: getWorkHistory(
           workHistoryScope.scopeType,
           workHistoryScope.scopeId,
+          0,
+          SUMMARY_HISTORY_SIZE,
           controller.signal,
         ),
       };
@@ -291,10 +308,10 @@ export function useOrchidManagementMap(
     let active = true;
 
     void request.promise
-      .then((history) => {
-        workHistoryCacheRef.current.set(workHistoryKey, history);
+      .then((result) => {
+        workHistoryCacheRef.current.set(workHistoryKey, result);
         if (active) {
-          setWorkHistoryState({ key: workHistoryKey, items: history });
+          setWorkHistoryState({ key: workHistoryKey, result });
         }
       })
       .catch((error: unknown) => {
@@ -302,7 +319,10 @@ export function useOrchidManagementMap(
           active &&
           !(error instanceof DOMException && error.name === "AbortError")
         ) {
-          setWorkHistoryState({ key: workHistoryKey, items: [] });
+          setWorkHistoryState({
+            key: workHistoryKey,
+            result: emptyWorkHistoryPage(0, SUMMARY_HISTORY_SIZE),
+          });
         }
       })
       .finally(() => {
@@ -322,6 +342,7 @@ export function useOrchidManagementMap(
         request.controller.abort(),
       );
       workHistoryRequestsRef.current.clear();
+      detailHistoryRequestRef.current?.controller.abort();
     },
     [],
   );
@@ -356,6 +377,63 @@ export function useOrchidManagementMap(
       ignore = true;
     };
   }, [selectedOrchidGroup, workRecordSummaryVersion]);
+
+  useEffect(() => {
+    const selectedPrefix = selectedOrchidGroup
+      ? `${selectedOrchidGroup.id}:`
+      : null;
+    const pending = detailHistoryRequestRef.current;
+    if (
+      pending &&
+      (!selectedPrefix || !pending.key.startsWith(selectedPrefix))
+    ) {
+      pending.controller.abort();
+      detailHistoryRequestRef.current = null;
+    }
+  }, [selectedOrchidGroup]);
+
+  async function loadOrchidGroupHistoryPage(page: number) {
+    if (!selectedOrchidGroup || page < 0) return;
+    const orchidGroupId = selectedOrchidGroup.id;
+    const key = `${orchidGroupId}:${page}:${DETAIL_HISTORY_SIZE}`;
+    const cached = detailHistoryCacheRef.current.get(key);
+    if (cached) {
+      setDetailHistoryState({ key, orchidGroupId, result: cached });
+      setDetailHistoryLoadingKey(null);
+      return;
+    }
+
+    detailHistoryRequestRef.current?.controller.abort();
+    const controller = new AbortController();
+    detailHistoryRequestRef.current = { key, controller };
+    setDetailHistoryLoadingKey(key);
+    try {
+      const result = await getWorkHistory(
+        "ORCHID_GROUP",
+        orchidGroupId,
+        page,
+        DETAIL_HISTORY_SIZE,
+        controller.signal,
+      );
+      detailHistoryCacheRef.current.set(key, result);
+      if (detailHistoryRequestRef.current?.key === key) {
+        setDetailHistoryState({ key, orchidGroupId, result });
+      }
+    } catch (error) {
+      if (!(error instanceof DOMException && error.name === "AbortError")) {
+        setDetailHistoryState({
+          key,
+          orchidGroupId,
+          result: emptyWorkHistoryPage(page, DETAIL_HISTORY_SIZE),
+        });
+      }
+    } finally {
+      if (detailHistoryRequestRef.current?.key === key) {
+        detailHistoryRequestRef.current = null;
+        setDetailHistoryLoadingKey(null);
+      }
+    }
+  }
 
   function selectBedZone(bedZoneId: number) {
     setSelection({ type: "BED_ZONE", bedZoneId });
@@ -609,6 +687,11 @@ export function useOrchidManagementMap(
         request.controller.abort(),
       );
       workHistoryRequestsRef.current.clear();
+      detailHistoryCacheRef.current.clear();
+      detailHistoryRequestRef.current?.controller.abort();
+      detailHistoryRequestRef.current = null;
+      setDetailHistoryState(null);
+      setDetailHistoryLoadingKey(null);
       setWorkHistoryState(null);
       setWorkRecordSummaryVersion((current) => current + 1);
       setMutationMode(null);
@@ -650,6 +733,15 @@ export function useOrchidManagementMap(
         : [],
     orchidGroupHistoryLoading:
       Boolean(selectedOrchidGroup) && workRecordSummaryLoading,
+    orchidGroupHistoryPage:
+      selectedOrchidGroup &&
+      detailHistoryState?.orchidGroupId === selectedOrchidGroup.id
+        ? detailHistoryState.result
+        : null,
+    orchidGroupHistoryPageLoading: Boolean(
+      selectedOrchidGroup &&
+      detailHistoryLoadingKey?.startsWith(`${selectedOrchidGroup.id}:`),
+    ),
     orchidGroupLineage:
       selectedOrchidGroup &&
       orchidGroupLineageState?.orchidGroupId === selectedOrchidGroup.id
@@ -681,6 +773,7 @@ export function useOrchidManagementMap(
       selectPhysicalBed,
       selectOrchidGroup,
       selectOrchidGroupForEdit,
+      loadOrchidGroupHistoryPage,
       updateSearchFilter,
       updateWorkRecordForm,
       workRecordCreate: handleWorkRecordCreate,
@@ -837,6 +930,16 @@ function createWorkRecordSummary(
       repot:
         sortedRecords.find((record) => record.workType === "분갈이") ?? null,
     },
+  };
+}
+
+function emptyWorkHistoryPage(page: number, size: number): WorkHistoryPage {
+  return {
+    content: [],
+    page,
+    size,
+    totalElements: 0,
+    totalPages: 0,
   };
 }
 

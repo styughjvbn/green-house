@@ -310,8 +310,15 @@ export function OrchidManagementMap({
           workRecordSummaryLoading={orchidManagement.workRecordSummaryLoading}
           orchidGroupHistory={orchidManagement.orchidGroupHistory}
           orchidGroupHistoryLoading={orchidManagement.orchidGroupHistoryLoading}
+          orchidGroupHistoryPage={orchidManagement.orchidGroupHistoryPage}
+          orchidGroupHistoryPageLoading={
+            orchidManagement.orchidGroupHistoryPageLoading
+          }
           orchidGroupLineage={orchidManagement.orchidGroupLineage}
           orchidGroupLineageLoading={orchidManagement.orchidGroupLineageLoading}
+          onOrchidGroupHistoryPageChange={
+            orchidManagement.actions.loadOrchidGroupHistoryPage
+          }
           onOpenCorrection={(workOperationId) => {
             if (!orchidManagement.selectedOrchidGroup) return;
             clearMapCellRangePick();

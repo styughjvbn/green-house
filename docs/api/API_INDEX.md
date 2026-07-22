@@ -8,7 +8,7 @@
 - 기준 명세: `docs/api/openapi.yaml`
 - OpenAPI 버전: `3.1.0`
 - 현재 구현 API: `120` operations / `99` path entries
-- schema 수: `181`
+- schema 수: `183`
 - Base URL: `/api`
 - 공통 응답: `ApiResponse*` 래퍼 사용
 
@@ -150,7 +150,7 @@
 | `POST` | `/api/work-operations/{workOperationId}/targets/{targetId}/start` | 대상 작업 시작 |
 | `POST` | `/api/work-operations/{workOperationId}/targets/{targetId}/complete` | 대상 작업 완료 |
 | `POST` | `/api/work-operations/{workOperationId}/targets/{targetId}/skip` | 대상 건너뛰기 |
-| `GET` | `/api/work-history` | 동·다이·구역·난 묶음 범위의 통합 작업 이력 |
+| `GET` | `/api/work-history` | 동·다이·구역·난 묶음 범위의 페이지형 통합 작업 이력 |
 | `GET` | `/api/orchid-groups/{orchidGroupId}/work-history` | `WorkOperation` 기반 난 묶음 이력 |
 | `POST` | `/api/work-operations/{workOperationId}/corrections` | 완료된 구조 변경 작업에 보정 작업 연결 |
 | `GET` | `/api/work-operations/{workOperationId}/corrections` | 원본 작업과 연결된 보정 작업 조회 |

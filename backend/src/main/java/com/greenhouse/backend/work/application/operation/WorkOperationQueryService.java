@@ -2,6 +2,7 @@ package com.greenhouse.backend.work.application.operation;
 
 import com.greenhouse.backend.work.application.target.WorkTargetResolver;
 import com.greenhouse.backend.work.application.target.WorkTargetSelection;
+import com.greenhouse.backend.common.api.PageResponse;
 import com.greenhouse.backend.common.config.TimeConfig;
 import com.greenhouse.backend.common.exception.NotFoundException;
 import com.greenhouse.backend.work.domain.operation.WorkOperationSearchView;
@@ -24,6 +25,8 @@ import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Sort;
 
 @Service
 @Transactional(readOnly = true)
@@ -59,10 +62,74 @@ public class WorkOperationQueryService {
 	}
 
 	public List<OrchidGroupWorkHistoryResponse> getOrchidGroupHistory(Long orchidGroupId) {
-		return getWorkHistory(WorkHistoryScopeType.ORCHID_GROUP, orchidGroupId);
+		return getAllWorkHistory(WorkHistoryScopeType.ORCHID_GROUP, orchidGroupId);
 	}
 
-	public List<OrchidGroupWorkHistoryResponse> getWorkHistory(
+	public PageResponse<OrchidGroupWorkHistoryResponse> getWorkHistory(
+			WorkHistoryScopeType scopeType,
+			Long scopeId,
+			int page,
+			int size) {
+		validatePage(page, size);
+		ResolvedHistoryScope scope = resolveHistoryScope(scopeType, scopeId);
+		if (scope.orchidGroupIds().isEmpty()) {
+			return new PageResponse<>(List.of(), page, size, 0, 0);
+		}
+		var pageable = PageRequest.of(
+				page,
+				size,
+				Sort.by(Sort.Direction.DESC, "plannedStartDate")
+						.and(Sort.by(Sort.Direction.DESC, "id")));
+		var operationPage = operationRepository.findHistoryPage(scope.orchidGroupIds(), pageable);
+		if (operationPage.isEmpty()) {
+			return new PageResponse<>(
+					List.of(),
+					operationPage.getNumber(),
+					operationPage.getSize(),
+					operationPage.getTotalElements(),
+					operationPage.getTotalPages());
+		}
+		List<Long> operationIds = operationPage.getContent().stream().map(operation -> operation.getId()).toList();
+		Map<Long, OrchidGroupWorkHistoryResponse> historyByOperationId = assembleHistoryPage(
+				operationIds,
+				scope.orchidGroupIds(),
+				scope.currentLocations());
+		return PageResponse.from(operationPage.map(operation -> historyByOperationId.get(operation.getId())));
+	}
+
+	private List<OrchidGroupWorkHistoryResponse> getAllWorkHistory(
+			WorkHistoryScopeType scopeType,
+			Long scopeId) {
+		ResolvedHistoryScope scope = resolveHistoryScope(scopeType, scopeId);
+		if (scope.orchidGroupIds().isEmpty()) {
+			return List.of();
+		}
+		var historyByOperationId = new LinkedHashMap<Long, OrchidGroupWorkHistoryResponse>();
+		targetRepository
+				.findByOrchidGroupIdInAndExcludedAtIsNullOrderByWorkOperationPlannedStartDateDescWorkOperationIdDesc(
+						scope.orchidGroupIds())
+				.forEach(target -> historyByOperationId.put(
+						target.getWorkOperation().getId(),
+						OrchidGroupWorkHistoryResponse.from(
+								target,
+								scope.currentLocations().getOrDefault(
+										target.getOrchidGroupId(), target.getLocationSnapshot()))));
+		effectOrchidGroupRepository
+				.findByOrchidGroupIdInOrderByWorkAppliedEffectAppliedAtDescWorkAppliedEffectIdDesc(
+						scope.orchidGroupIds())
+				.forEach(effectGroup -> historyByOperationId.putIfAbsent(
+						effectGroup.getWorkAppliedEffect().getWorkOperation().getId(),
+						OrchidGroupWorkHistoryResponse.fromEffect(
+								effectGroup,
+								scope.currentLocations().get(effectGroup.getOrchidGroupId()))));
+		return historyByOperationId.values().stream()
+				.sorted(Comparator.comparing(OrchidGroupWorkHistoryResponse::workDate)
+						.reversed()
+						.thenComparing(OrchidGroupWorkHistoryResponse::workOperationId, Comparator.reverseOrder()))
+				.toList();
+	}
+
+	private ResolvedHistoryScope resolveHistoryScope(
 			WorkHistoryScopeType scopeType,
 			Long scopeId) {
 		validateHistoryScope(scopeType, scopeId);
@@ -70,9 +137,6 @@ public class WorkOperationQueryService {
 		List<Long> directIds = scopeType == WorkHistoryScopeType.ORCHID_GROUP ? List.of(scopeId) : List.of();
 		var resolvedTargets = workTargetResolver.resolve(new WorkTargetSelection(
 				sourceScopeType, scopeId, null, directIds));
-		if (resolvedTargets.isEmpty()) {
-			return List.of();
-		}
 		Set<Long> orchidGroupIds = resolvedTargets.stream()
 				.map(target -> target.orchidGroupId())
 				.collect(Collectors.toSet());
@@ -81,33 +145,51 @@ public class WorkOperationQueryService {
 						target -> target.orchidGroupId(),
 						target -> target.location(),
 						(left, right) -> left));
+		return new ResolvedHistoryScope(orchidGroupIds, currentLocations);
+	}
+
+	private Map<Long, OrchidGroupWorkHistoryResponse> assembleHistoryPage(
+			List<Long> operationIds,
+			Set<Long> orchidGroupIds,
+			Map<Long, Map<String, Object>> currentLocations) {
 		var historyByOperationId = new LinkedHashMap<Long, OrchidGroupWorkHistoryResponse>();
 		targetRepository
-				.findByOrchidGroupIdInAndExcludedAtIsNullOrderByWorkOperationPlannedStartDateDescWorkOperationIdDesc(
-						orchidGroupIds)
-				.forEach(target -> historyByOperationId.put(
+				.findByWorkOperationIdInAndOrchidGroupIdInAndExcludedAtIsNullOrderByWorkOperationIdAscIdAsc(
+						operationIds, orchidGroupIds)
+				.forEach(target -> historyByOperationId.putIfAbsent(
 						target.getWorkOperation().getId(),
 						OrchidGroupWorkHistoryResponse.from(
 								target,
 								currentLocations.getOrDefault(target.getOrchidGroupId(), target.getLocationSnapshot()))));
 		effectOrchidGroupRepository
-				.findByOrchidGroupIdInOrderByWorkAppliedEffectAppliedAtDescWorkAppliedEffectIdDesc(orchidGroupIds)
+				.findByWorkAppliedEffectWorkOperationIdInAndOrchidGroupIdInOrderByWorkAppliedEffectWorkOperationIdAscIdAsc(
+						operationIds, orchidGroupIds)
 				.forEach(effectGroup -> historyByOperationId.putIfAbsent(
 						effectGroup.getWorkAppliedEffect().getWorkOperation().getId(),
 						OrchidGroupWorkHistoryResponse.fromEffect(
 								effectGroup,
 								currentLocations.get(effectGroup.getOrchidGroupId()))));
-		return historyByOperationId.values().stream()
-				.sorted(Comparator.comparing(OrchidGroupWorkHistoryResponse::workDate)
-						.reversed()
-						.thenComparing(OrchidGroupWorkHistoryResponse::workOperationId, Comparator.reverseOrder()))
-				.toList();
+		return historyByOperationId;
 	}
 
 	private void validateHistoryScope(WorkHistoryScopeType scopeType, Long scopeId) {
 		if (scopeType == null || scopeId == null) {
 			throw new IllegalArgumentException("작업 이력 조회 범위 유형과 ID가 필요합니다.");
 		}
+	}
+
+	private void validatePage(int page, int size) {
+		if (page < 0) {
+			throw new IllegalArgumentException("페이지 번호는 0 이상이어야 합니다.");
+		}
+		if (size < 1 || size > 100) {
+			throw new IllegalArgumentException("페이지 크기는 1~100이어야 합니다.");
+		}
+	}
+
+	private record ResolvedHistoryScope(
+			Set<Long> orchidGroupIds,
+			Map<Long, Map<String, Object>> currentLocations) {
 	}
 
 	private void validateDates(LocalDate startDate, LocalDate endDate) {

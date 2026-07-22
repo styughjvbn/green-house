@@ -27,5 +27,10 @@ public interface WorkEffectOrchidGroupRepository extends JpaRepository<WorkEffec
 	List<WorkEffectOrchidGroup> findByOrchidGroupIdInOrderByWorkAppliedEffectAppliedAtDescWorkAppliedEffectIdDesc(
 			Collection<Long> orchidGroupIds);
 
+	@EntityGraph(attributePaths = {"workAppliedEffect", "workAppliedEffect.workOperation", "workAppliedEffect.workOperation.workType"})
+	List<WorkEffectOrchidGroup> findByWorkAppliedEffectWorkOperationIdInAndOrchidGroupIdInOrderByWorkAppliedEffectWorkOperationIdAscIdAsc(
+			Collection<Long> workOperationIds,
+			Collection<Long> orchidGroupIds);
+
 	boolean existsByOrchidGroupId(Long orchidGroupId);
 }

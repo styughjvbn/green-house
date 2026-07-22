@@ -65,14 +65,11 @@ export default function ContinuousBedMap({
     emblaApi.scrollTo(startBedIndex, true);
   }, [emblaApi, startBedIndex, visibleBedCount]);
 
-  const maxRenderedBedCount = 5;
-  const leadingBuffer = visibleBedCount < 4 ? 1 : 0;
-  let renderStartIndex = Math.max(0, startBedIndex - leadingBuffer);
+  const renderStartIndex = Math.max(0, startBedIndex - visibleBedCount);
   const renderEndIndex = Math.min(
     beds.length,
-    renderStartIndex + maxRenderedBedCount,
+    startBedIndex + visibleBedCount * 2,
   );
-  renderStartIndex = Math.max(0, renderEndIndex - maxRenderedBedCount);
 
   return (
     <section

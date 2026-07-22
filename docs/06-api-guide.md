@@ -110,7 +110,7 @@ python3 scripts/generate_openapi.py --url http://localhost:8080/api-docs
 
 `POST /api/work-operations/record`는 농장 전체, 동, 물리 배드, 논리 구역, 난 묶음 범위의 기록형 작업을 대상 스냅샷과 함께 즉시 완료한다. 직접 위치 이동도 완료된 `WorkOperation`과 작업 효과로 기록하며 모든 작업 이력 API는 `WorkOperation` 계약을 사용한다.
 
-`GET /api/work-history?scopeType={scopeType}&scopeId={scopeId}`는 `HOUSE`, `PHYSICAL_BED`, `BED_ZONE`, `ORCHID_GROUP` 범위의 직접·전파 이력을 서버에서 통합한다. 동일 작업은 한 번만 반환하며 최신 작업일과 작업 ID 역순으로 정렬한다. 기존 난 묶음별 이력 경로는 호환용으로 유지한다.
+`GET /api/work-history?scopeType={scopeType}&scopeId={scopeId}&page={page}&size={size}`는 `HOUSE`, `PHYSICAL_BED`, `BED_ZONE`, `ORCHID_GROUP` 범위의 직접·전파 이력을 서버에서 통합해 페이지로 반환한다. `page`는 0부터 시작하고 `size`는 기본 20, 최대 100이다. 동일 작업은 한 번만 반환하며 최신 작업일과 작업 ID 역순으로 정렬한다. 요약 화면은 첫 페이지 일부만 사용하고 난 묶음 상세는 10건 단위로 페이지를 전환한다. 기존 난 묶음별 전체 이력 경로는 호환용으로 유지한다.
 
 신규 입고 등록은 입고 기록 대상을 가진 완료 상태의 `WorkOperation`을 생성한다.
 

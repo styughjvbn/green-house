@@ -1,6 +1,7 @@
 package com.greenhouse.backend.work.controller;
 
 import com.greenhouse.backend.common.api.ApiResponse;
+import com.greenhouse.backend.common.api.PageResponse;
 import com.greenhouse.backend.work.application.correction.WorkOperationCorrectionService;
 import com.greenhouse.backend.work.application.operation.InboundPottingOperationService;
 import com.greenhouse.backend.work.application.operation.InboundPottingPlanService;
@@ -196,10 +197,12 @@ public class WorkOperationController {
 	}
 
 	@GetMapping("/work-history")
-	public ApiResponse<List<OrchidGroupWorkHistoryResponse>> getWorkHistory(
+	public ApiResponse<PageResponse<OrchidGroupWorkHistoryResponse>> getWorkHistory(
 			@RequestParam WorkHistoryScopeType scopeType,
-			@RequestParam Long scopeId) {
-		return ApiResponse.ok(queryService.getWorkHistory(scopeType, scopeId));
+			@RequestParam Long scopeId,
+			@RequestParam(defaultValue = "0") int page,
+			@RequestParam(defaultValue = "20") int size) {
+		return ApiResponse.ok(queryService.getWorkHistory(scopeType, scopeId, page, size));
 	}
 
 	@PostMapping("/work-operations/{workOperationId}/corrections")

@@ -15,6 +15,7 @@ import type {
   OrchidGroupLineageItem,
   OrchidGroupLineageRelationType,
   OrchidSelection,
+  WorkHistoryPage,
   WorkRecordSummary,
 } from "../../model/types";
 import InfoMetric from "./InfoMetric";
@@ -29,9 +30,12 @@ export default function SelectedZoneInfo({
   workRecordSummaryLoading,
   orchidGroupHistory,
   orchidGroupHistoryLoading,
+  orchidGroupHistoryPage,
+  orchidGroupHistoryPageLoading,
   orchidGroupLineage,
   orchidGroupLineageLoading,
   onOpenCorrection,
+  onOrchidGroupHistoryPageChange,
 }: {
   house: House;
   selectedBedZone: BedZone | null;
@@ -42,9 +46,12 @@ export default function SelectedZoneInfo({
   workRecordSummaryLoading: boolean;
   orchidGroupHistory: OrchidGroupWorkHistory[];
   orchidGroupHistoryLoading: boolean;
+  orchidGroupHistoryPage: WorkHistoryPage | null;
+  orchidGroupHistoryPageLoading: boolean;
   orchidGroupLineage: OrchidGroupLineage | null;
   orchidGroupLineageLoading: boolean;
   onOpenCorrection: (workOperationId: number) => void;
+  onOrchidGroupHistoryPageChange: (page: number) => void;
 }) {
   const zone = selectedOrchidGroup
     ? (findBedZone(house, selectedOrchidGroup.bedZoneId)?.zone ?? null)
@@ -171,11 +178,15 @@ export default function SelectedZoneInfo({
           <div className="min-w-0 flex-1 border-t border-[#e1e6df] pt-2 lg:border-t-0 lg:border-l lg:pt-0 lg:pl-3">
             {selectedOrchidGroup ? (
               <OrchidGroupActivityView
+                key={selectedOrchidGroup.id}
                 history={orchidGroupHistory}
+                historyPage={orchidGroupHistoryPage}
+                historyPageLoading={orchidGroupHistoryPageLoading}
                 loading={orchidGroupHistoryLoading}
                 lineage={orchidGroupLineage}
                 lineageLoading={orchidGroupLineageLoading}
                 onOpenCorrection={onOpenCorrection}
+                onHistoryPageChange={onOrchidGroupHistoryPageChange}
               />
             ) : (
               <WorkRecordSummaryView
@@ -298,16 +309,22 @@ function lineageLabel(relationType: OrchidGroupLineageRelationType) {
 
 function OrchidGroupActivityView({
   history,
+  historyPage,
+  historyPageLoading,
   lineage,
   lineageLoading,
   loading,
   onOpenCorrection,
+  onHistoryPageChange,
 }: {
   history: OrchidGroupWorkHistory[];
+  historyPage: WorkHistoryPage | null;
+  historyPageLoading: boolean;
   lineage: OrchidGroupLineage | null;
   lineageLoading: boolean;
   loading: boolean;
   onOpenCorrection: (workOperationId: number) => void;
+  onHistoryPageChange: (page: number) => void;
 }) {
   const [detailOpen, setDetailOpen] = useState(false);
   const lineageCount =
@@ -336,7 +353,10 @@ function OrchidGroupActivityView({
             className="!min-h-0 text-[11px] font-semibold text-[#16713a]"
             type="button"
             aria-expanded={detailOpen}
-            onClick={() => setDetailOpen((current) => !current)}
+            onClick={() => {
+              if (!detailOpen) onHistoryPageChange(0);
+              setDetailOpen((current) => !current);
+            }}
           >
             상세 보기
           </button>
@@ -368,7 +388,11 @@ function OrchidGroupActivityView({
               onMouseDown={() => setDetailOpen(false)}
             >
               <section
+                aria-busy={historyPageLoading}
                 className="flex max-h-[min(32rem,calc(100dvh-2rem))] w-full max-w-md flex-col rounded-md border border-[#cfd8cc] bg-white p-3 shadow-xl"
+                data-history-page={historyPage?.page ?? ""}
+                data-history-total-pages={historyPage?.totalPages ?? ""}
+                data-testid="history-detail"
                 role="dialog"
                 aria-modal="true"
                 aria-label="난 묶음 상세"
@@ -388,9 +412,13 @@ function OrchidGroupActivityView({
                 </div>
                 <div className="mt-2 min-h-0 overflow-y-auto">
                   <p className="text-xs font-bold text-[#344138]">최근 작업</p>
-                  {history.length > 0 ? (
+                  {historyPageLoading ? (
+                    <p className="mt-2 text-xs text-[#5c6a60]">
+                      작업 이력 확인 중
+                    </p>
+                  ) : historyPage && historyPage.content.length > 0 ? (
                     <ul className="mt-2 space-y-2">
-                      {history.slice(0, 5).map((item) => (
+                      {historyPage.content.map((item) => (
                         <ActivityItem
                           detailed
                           item={item}
@@ -407,6 +435,37 @@ function OrchidGroupActivityView({
                       등록된 작업 없음
                     </p>
                   )}
+                  {historyPage && historyPage.totalPages > 1 ? (
+                    <div className="mt-3 flex items-center justify-between gap-2 text-xs">
+                      <button
+                        type="button"
+                        data-testid="history-page-previous"
+                        disabled={historyPage.page === 0 || historyPageLoading}
+                        onClick={() =>
+                          onHistoryPageChange(historyPage.page - 1)
+                        }
+                      >
+                        이전
+                      </button>
+                      <span>
+                        {historyPage.page + 1}/{historyPage.totalPages} · 총{" "}
+                        {historyPage.totalElements}건
+                      </span>
+                      <button
+                        type="button"
+                        data-testid="history-page-next"
+                        disabled={
+                          historyPage.page + 1 >= historyPage.totalPages ||
+                          historyPageLoading
+                        }
+                        onClick={() =>
+                          onHistoryPageChange(historyPage.page + 1)
+                        }
+                      >
+                        다음
+                      </button>
+                    </div>
+                  ) : null}
                   {/* <OrchidGroupLineageDetail
                     lineage={lineage}
                     loading={lineageLoading}
