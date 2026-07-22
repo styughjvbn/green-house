@@ -7,11 +7,11 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
-import com.greenhouse.backend.farm.application.BedPlacementProfileService;
-import com.greenhouse.backend.farm.domain.PlacementCapacityMode;
-import com.greenhouse.backend.farm.dto.BedZoneCapacityRequest;
-import com.greenhouse.backend.farm.dto.BedZonePlacementProfileRequest;
-import com.greenhouse.backend.farm.repository.BedZoneRepository;
+import com.greenhouse.backend.farm.application.structure.BedPlacementProfileService;
+import com.greenhouse.backend.farm.domain.structure.PlacementCapacityMode;
+import com.greenhouse.backend.farm.dto.structure.BedZoneCapacityRequest;
+import com.greenhouse.backend.farm.dto.structure.BedZonePlacementProfileRequest;
+import com.greenhouse.backend.farm.repository.structure.BedZoneRepository;
 import java.math.BigDecimal;
 import java.util.List;
 import org.junit.jupiter.api.Disabled;

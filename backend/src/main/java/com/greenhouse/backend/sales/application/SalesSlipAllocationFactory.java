@@ -1,8 +1,8 @@
 package com.greenhouse.backend.sales.application;
 
 import com.greenhouse.backend.common.exception.NotFoundException;
-import com.greenhouse.backend.farm.application.OrchidGroupReader;
-import com.greenhouse.backend.farm.domain.OrchidGroup;
+import com.greenhouse.backend.farm.application.orchid.OrchidGroupReader;
+import com.greenhouse.backend.farm.domain.orchid.OrchidGroup;
 import com.greenhouse.backend.sales.domain.SalesSlipItem;
 import com.greenhouse.backend.sales.domain.SalesSlipItemAllocation;
 import com.greenhouse.backend.sales.dto.SalesSlipItemAllocationRequest;

@@ -3,7 +3,7 @@ package com.greenhouse.backend;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
-import com.greenhouse.backend.farm.domain.PotSizeCode;
+import com.greenhouse.backend.farm.domain.orchid.PotSizeCode;
 import org.junit.jupiter.api.Test;
 
 class PotSizeCodeTests {

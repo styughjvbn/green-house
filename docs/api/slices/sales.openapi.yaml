@@ -221,7 +221,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ApiResponseSalesSlipPageResponse'
+                $ref: '#/components/schemas/ApiResponsePageResponseSalesSlipListItemResponse'
   /api/sales-slips/page:
     get:
       tags:
@@ -281,7 +281,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ApiResponseSalesSlipPageResponse'
+                $ref: '#/components/schemas/ApiResponsePageResponseSalesSlipListItemResponse'
   /api/sales-slips/auction-shipments:
     get:
       tags:
@@ -323,11 +323,11 @@ components:
             $ref: '#/components/schemas/SalesSlipResponse'
         message:
           type: string
-    ApiResponseSalesSlipPageResponse:
+    ApiResponsePageResponseSalesSlipListItemResponse:
       type: object
       properties:
         data:
-          $ref: '#/components/schemas/SalesSlipPageResponse'
+          $ref: '#/components/schemas/PageResponseSalesSlipListItemResponse'
         message:
           type: string
     ApiResponseSalesSlipResponse:
@@ -422,6 +422,25 @@ components:
       required:
       - amount
       - paymentDate
+    PageResponseSalesSlipListItemResponse:
+      type: object
+      properties:
+        content:
+          type: array
+          items:
+            $ref: '#/components/schemas/SalesSlipListItemResponse'
+        page:
+          type: integer
+          format: int32
+        size:
+          type: integer
+          format: int32
+        totalElements:
+          type: integer
+          format: int64
+        totalPages:
+          type: integer
+          format: int32
     SalesOrchidGroupSearchResponse:
       type: object
       properties:
@@ -646,25 +665,6 @@ components:
           type: string
         memo:
           type: string
-    SalesSlipPageResponse:
-      type: object
-      properties:
-        content:
-          type: array
-          items:
-            $ref: '#/components/schemas/SalesSlipListItemResponse'
-        page:
-          type: integer
-          format: int32
-        size:
-          type: integer
-          format: int32
-        totalElements:
-          type: integer
-          format: int64
-        totalPages:
-          type: integer
-          format: int32
     SalesSlipResponse:
       type: object
       properties:

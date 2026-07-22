@@ -213,7 +213,6 @@ apply_flyway_and_validate_schema() {
         cd "$BACKEND_DIR"
         SERVER_PORT="$port" \
             AUTH_ENABLED=false \
-            WORK_OPERATION_V2_ENABLED=true \
             DATABASE_URL="jdbc:postgresql://${DB_HOST}:${DB_PORT}/${DB_NAME}" \
             DATABASE_USERNAME="$DB_USER" \
             DATABASE_PASSWORD="$DB_PASSWORD" \

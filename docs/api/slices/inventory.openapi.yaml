@@ -52,11 +52,11 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ApiResponseVarietyPageResponse'
+                $ref: '#/components/schemas/ApiResponsePageResponseVarietyResponse'
     post:
       tags:
       - variety-controller
-      operationId: create_3
+      operationId: create_2
       requestBody:
         content:
           application/json:
@@ -116,11 +116,11 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ApiResponseMaterialPageResponse'
+                $ref: '#/components/schemas/ApiResponsePageResponseMaterialResponse'
     post:
       tags:
       - material-controller
-      operationId: create_6
+      operationId: create_5
       requestBody:
         content:
           application/json:
@@ -200,11 +200,11 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ApiResponseInboundRecordPageResponse'
+                $ref: '#/components/schemas/ApiResponsePageResponseInboundRecordResponse'
     post:
       tags:
       - inbound-record-controller
-      operationId: create_7
+      operationId: create_6
       requestBody:
         content:
           application/json:
@@ -521,13 +521,6 @@ paths:
                 $ref: '#/components/schemas/ApiResponseListString'
 components:
   schemas:
-    ApiResponseInboundRecordPageResponse:
-      type: object
-      properties:
-        data:
-          $ref: '#/components/schemas/InboundRecordPageResponse'
-        message:
-          type: string
     ApiResponseInboundRecordResponse:
       type: object
       properties:
@@ -553,13 +546,6 @@ components:
             $ref: '#/components/schemas/VarietyConnectedOrchidGroupResponse'
         message:
           type: string
-    ApiResponseMaterialPageResponse:
-      type: object
-      properties:
-        data:
-          $ref: '#/components/schemas/MaterialPageResponse'
-        message:
-          type: string
     ApiResponseMaterialResponse:
       type: object
       properties:
@@ -567,11 +553,25 @@ components:
           $ref: '#/components/schemas/MaterialResponse'
         message:
           type: string
-    ApiResponseVarietyPageResponse:
+    ApiResponsePageResponseInboundRecordResponse:
       type: object
       properties:
         data:
-          $ref: '#/components/schemas/VarietyPageResponse'
+          $ref: '#/components/schemas/PageResponseInboundRecordResponse'
+        message:
+          type: string
+    ApiResponsePageResponseMaterialResponse:
+      type: object
+      properties:
+        data:
+          $ref: '#/components/schemas/PageResponseMaterialResponse'
+        message:
+          type: string
+    ApiResponsePageResponseVarietyResponse:
+      type: object
+      properties:
+        data:
+          $ref: '#/components/schemas/PageResponseVarietyResponse'
         message:
           type: string
     ApiResponseVarietyResponse:
@@ -701,25 +701,6 @@ components:
       required:
       - inboundDate
       - inboundType
-    InboundRecordPageResponse:
-      type: object
-      properties:
-        content:
-          type: array
-          items:
-            $ref: '#/components/schemas/InboundRecordResponse'
-        page:
-          type: integer
-          format: int32
-        size:
-          type: integer
-          format: int32
-        totalElements:
-          type: integer
-          format: int64
-        totalPages:
-          type: integer
-          format: int32
     InboundRecordPottingRequest:
       type: object
       properties:
@@ -908,25 +889,6 @@ components:
       required:
       - category
       - name
-    MaterialPageResponse:
-      type: object
-      properties:
-        content:
-          type: array
-          items:
-            $ref: '#/components/schemas/MaterialResponse'
-        page:
-          type: integer
-          format: int32
-        size:
-          type: integer
-          format: int32
-        totalElements:
-          type: integer
-          format: int64
-        totalPages:
-          type: integer
-          format: int32
     MaterialResponse:
       type: object
       properties:
@@ -991,6 +953,63 @@ components:
       required:
       - category
       - name
+    PageResponseInboundRecordResponse:
+      type: object
+      properties:
+        content:
+          type: array
+          items:
+            $ref: '#/components/schemas/InboundRecordResponse'
+        page:
+          type: integer
+          format: int32
+        size:
+          type: integer
+          format: int32
+        totalElements:
+          type: integer
+          format: int64
+        totalPages:
+          type: integer
+          format: int32
+    PageResponseMaterialResponse:
+      type: object
+      properties:
+        content:
+          type: array
+          items:
+            $ref: '#/components/schemas/MaterialResponse'
+        page:
+          type: integer
+          format: int32
+        size:
+          type: integer
+          format: int32
+        totalElements:
+          type: integer
+          format: int64
+        totalPages:
+          type: integer
+          format: int32
+    PageResponseVarietyResponse:
+      type: object
+      properties:
+        content:
+          type: array
+          items:
+            $ref: '#/components/schemas/VarietyResponse'
+        page:
+          type: integer
+          format: int32
+        size:
+          type: integer
+          format: int32
+        totalElements:
+          type: integer
+          format: int64
+        totalPages:
+          type: integer
+          format: int32
     RepotResultOrchidGroupRequest:
       type: object
       properties:
@@ -1082,25 +1101,6 @@ components:
       required:
       - genus
       - name
-    VarietyPageResponse:
-      type: object
-      properties:
-        content:
-          type: array
-          items:
-            $ref: '#/components/schemas/VarietyResponse'
-        page:
-          type: integer
-          format: int32
-        size:
-          type: integer
-          format: int32
-        totalElements:
-          type: integer
-          format: int64
-        totalPages:
-          type: integer
-          format: int32
     VarietyResponse:
       type: object
       properties:

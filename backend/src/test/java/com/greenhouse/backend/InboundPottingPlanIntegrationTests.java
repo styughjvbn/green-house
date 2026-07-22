@@ -8,16 +8,16 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
-import com.greenhouse.backend.farm.domain.BedZone;
-import com.greenhouse.backend.farm.domain.BedZoneSide;
-import com.greenhouse.backend.farm.domain.House;
-import com.greenhouse.backend.farm.domain.InboundRecord;
-import com.greenhouse.backend.farm.domain.InboundStatus;
-import com.greenhouse.backend.farm.domain.InboundType;
-import com.greenhouse.backend.farm.domain.PhysicalBed;
-import com.greenhouse.backend.farm.domain.Variety;
-import com.greenhouse.backend.work.domain.WorkType;
-import com.greenhouse.backend.work.domain.WorkTypeTemplate;
+import com.greenhouse.backend.farm.domain.structure.BedZone;
+import com.greenhouse.backend.farm.domain.structure.BedZoneSide;
+import com.greenhouse.backend.farm.domain.structure.House;
+import com.greenhouse.backend.farm.domain.inbound.InboundRecord;
+import com.greenhouse.backend.farm.domain.inbound.InboundStatus;
+import com.greenhouse.backend.farm.domain.inbound.InboundType;
+import com.greenhouse.backend.farm.domain.structure.PhysicalBed;
+import com.greenhouse.backend.farm.domain.variety.Variety;
+import com.greenhouse.backend.work.domain.operation.WorkType;
+import com.greenhouse.backend.work.domain.operation.WorkTypeTemplate;
 import com.greenhouse.backend.work.repository.WorkAppliedEffectRepository;
 import com.greenhouse.backend.work.repository.WorkEffectOrchidGroupRepository;
 import com.greenhouse.backend.work.repository.WorkOperationRepository;
@@ -51,7 +51,6 @@ class InboundPottingPlanIntegrationTests extends AbstractBackendIntegrationTest 
 		targetExecutionRepository.deleteAll();
 		operationTargetRepository.deleteAll();
 		operationRepository.deleteAll();
-		workRecordRepository.deleteAll();
 		inboundRecordRepository.deleteAll();
 		orchidGroupRepository.deleteAll();
 		varietyRepository.deleteAll();
@@ -95,7 +94,7 @@ class InboundPottingPlanIntegrationTests extends AbstractBackendIntegrationTest 
 	}
 
 	@Test
-	void createsInboundAsACompletedWorkOperationWithoutLegacyWorkRecord() throws Exception {
+	void createsInboundAsACompletedWorkOperation() throws Exception {
 		var created = mockMvc.perform(post("/api/inbound-records")
 				.contentType(MediaType.APPLICATION_JSON)
 				.content("""
@@ -119,7 +118,6 @@ class InboundPottingPlanIntegrationTests extends AbstractBackendIntegrationTest 
 		Long inboundRecordId = Long.valueOf(created.getResponse().getContentAsString().replaceAll(
 				".*?\\\"data\\\":\\{\\\"id\\\":(\\d+).*", "$1"));
 
-		assertThat(workRecordRepository.count()).isZero();
 		assertThat(operationRepository.findAll()).singleElement().satisfies(operation -> {
 			assertThat(operation.getWorkType().getCode()).isEqualTo(WorkType.INBOUND_CODE);
 			assertThat(operation.getStatus().name()).isEqualTo("COMPLETED");
@@ -137,7 +135,7 @@ class InboundPottingPlanIntegrationTests extends AbstractBackendIntegrationTest 
 		assertThat(effectOrchidGroupRepository
 				.findByWorkAppliedEffectWorkOperationIdAndRelationTypeOrderByIdAsc(
 						operationId,
-						com.greenhouse.backend.work.domain.WorkEffectOrchidGroupRelationType.RESULT))
+						com.greenhouse.backend.work.domain.effect.WorkEffectOrchidGroupRelationType.RESULT))
 				.hasSize(1);
 	}
 
@@ -203,7 +201,6 @@ class InboundPottingPlanIntegrationTests extends AbstractBackendIntegrationTest 
 				.findByTargetWorkOperationIdOrderByIdAsc(operationId)
 				.getFirst().getCompletedAt().toLocalDate())
 				.isEqualTo(LocalDate.of(2026, 7, 16));
-		assertThat(workRecordRepository.count()).isZero();
 	}
 
 	@Test
@@ -550,7 +547,6 @@ class InboundPottingPlanIntegrationTests extends AbstractBackendIntegrationTest 
 				.isEqualTo("COMPLETED");
 		assertThat(appliedEffectRepository.count()).isEqualTo(1);
 		assertThat(effectOrchidGroupRepository.count()).isEqualTo(2);
-		assertThat(workRecordRepository.count()).isZero();
 	}
 
 	@Test
@@ -603,6 +599,5 @@ class InboundPottingPlanIntegrationTests extends AbstractBackendIntegrationTest 
 				.andExpect(jsonPath("$.data.targets[0].executionStatus").value("COMPLETED"));
 
 		assertThat(operationRepository.count()).isEqualTo(1);
-		assertThat(workRecordRepository.count()).isZero();
 	}
 }

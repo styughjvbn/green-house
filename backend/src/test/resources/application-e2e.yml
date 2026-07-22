@@ -1,0 +1,17 @@
+spring:
+  flyway:
+    enabled: true
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    open-in-view: false
+    properties:
+      hibernate:
+        generate_statistics: true
+  task:
+    scheduling:
+      enabled: false
+
+app:
+  auth:
+    enabled: false

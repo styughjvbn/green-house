@@ -3,12 +3,13 @@ package com.greenhouse.backend;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
-import com.greenhouse.backend.farm.application.OrchidGroupCommandService;
-import com.greenhouse.backend.farm.dto.OrchidGroupMoveRequest;
-import com.greenhouse.backend.farm.dto.OrchidGroupUpdateRequest;
-import com.greenhouse.backend.farm.repository.BedZoneRepository;
-import com.greenhouse.backend.farm.repository.OrchidGroupRepository;
-import com.greenhouse.backend.work.repository.WorkRecordRepository;
+import com.greenhouse.backend.farm.application.orchid.OrchidGroupCommandService;
+import com.greenhouse.backend.farm.application.orchid.OrchidGroupMovementService;
+import com.greenhouse.backend.farm.dto.orchid.OrchidGroupMoveRequest;
+import com.greenhouse.backend.farm.dto.orchid.OrchidGroupUpdateRequest;
+import com.greenhouse.backend.farm.repository.structure.BedZoneRepository;
+import com.greenhouse.backend.farm.repository.orchid.OrchidGroupRepository;
+import com.greenhouse.backend.work.repository.WorkOperationRepository;
 import java.math.BigDecimal;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Disabled;
@@ -26,8 +27,9 @@ class BedPlacementTests {
 
 	@Autowired BedZoneRepository bedZoneRepository;
 	@Autowired OrchidGroupRepository orchidGroupRepository;
-	@Autowired WorkRecordRepository workRecordRepository;
+	@Autowired WorkOperationRepository workOperationRepository;
 	@Autowired OrchidGroupCommandService commandService;
+	@Autowired OrchidGroupMovementService movementService;
 
 	private Long groupId;
 	private Long targetZoneId;
@@ -57,7 +59,7 @@ class BedPlacementTests {
 
 	@Test
 	void movesWithDirectPositionRange() {
-		var moved = commandService.move(groupId, new OrchidGroupMoveRequest(
+		var moved = movementService.move(groupId, new OrchidGroupMoveRequest(
 				targetZoneId,
 				BigDecimal.ZERO,
 				BigDecimal.valueOf(8),
@@ -71,7 +73,7 @@ class BedPlacementTests {
 
 	@Test
 	void rejectsInvalidPositionRange() {
-		assertThatThrownBy(() -> commandService.move(groupId, new OrchidGroupMoveRequest(
+		assertThatThrownBy(() -> movementService.move(groupId, new OrchidGroupMoveRequest(
 				targetZoneId,
 				BigDecimal.valueOf(10),
 				BigDecimal.valueOf(8),
@@ -81,16 +83,16 @@ class BedPlacementTests {
 	}
 
 	@Test
-	void createsMovementRecordWhenZoneChanges() {
-		long before = workRecordRepository.count();
+	void createsMovementOperationWhenZoneChanges() {
+		long before = workOperationRepository.count();
 
-		commandService.move(groupId, new OrchidGroupMoveRequest(
+		movementService.move(groupId, new OrchidGroupMoveRequest(
 				targetZoneId,
 				BigDecimal.ZERO,
 				BigDecimal.valueOf(8),
 				"관리자",
 				"이동"));
 
-		assertThat(workRecordRepository.count()).isEqualTo(before + 1);
+		assertThat(workOperationRepository.count()).isEqualTo(before + 1);
 	}
 }

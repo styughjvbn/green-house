@@ -4,7 +4,8 @@ import type {
   FarmStatusMapData,
   House,
   PartnerBalanceSummary,
-  WorkRecord,
+  WorkOperationStatus,
+  WorkTypeTemplate,
 } from "@/entities/farm/types";
 
 export type AnalyticsTab = "SALES" | "VARIETY" | "CUSTOMER" | "SPACE" | "WORK";
@@ -20,7 +21,6 @@ export type AnalyticsPageProps = {
   salesSlips: AnalyticsSlipSummary[];
   summary: DashboardSummary;
   workAnalytics: WorkAnalyticsData | null;
-  workRecords: WorkRecord[];
 };
 
 export type RankedValue = {
@@ -86,7 +86,29 @@ export type WorkAnalyticsData = {
   statusCount: number;
   latestWorkDate: string | null;
   workTypeCounts: RankedValue[];
-  recentRecords: WorkRecord[];
+  recentRecords: WorkAnalyticsItem[];
+};
+
+export type WorkAnalyticsItem = {
+  id: number;
+  workDate: string;
+  workType: string;
+  workTypeTemplate: WorkTypeTemplate;
+  title: string;
+  sourceScopeType:
+    | "FARM"
+    | "HOUSE"
+    | "PHYSICAL_BED"
+    | "BED_ZONE"
+    | "ORCHID_GROUP"
+    | "NONE"
+    | "DERIVED_GROUP"
+    | "USER_COLLECTION"
+    | "MANUAL_SELECTION"
+    | "INBOUND_RECORD_SELECTION";
+  worker: string | null;
+  memo: string | null;
+  status: WorkOperationStatus;
 };
 
 export type AnalyticsViewModel = {

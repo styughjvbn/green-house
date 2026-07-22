@@ -1,0 +1,174 @@
+package com.greenhouse.backend.farm.application.orchid;
+
+import com.greenhouse.backend.farm.application.structure.OrchidPlacementPolicy;
+import com.greenhouse.backend.common.exception.ConflictException;
+import com.greenhouse.backend.common.exception.NotFoundException;
+import com.greenhouse.backend.farm.domain.structure.BedZone;
+import com.greenhouse.backend.farm.domain.orchid.OrchidGroup;
+import com.greenhouse.backend.farm.domain.variety.Variety;
+import com.greenhouse.backend.farm.dto.orchid.OrchidGroupCreateRequest;
+import com.greenhouse.backend.farm.dto.orchid.OrchidGroupMoveRequest;
+import com.greenhouse.backend.farm.dto.orchid.OrchidGroupResponse;
+import com.greenhouse.backend.farm.dto.orchid.OrchidGroupUpdateRequest;
+import com.greenhouse.backend.farm.repository.structure.BedZoneRepository;
+import com.greenhouse.backend.farm.repository.inbound.InboundRecordRepository;
+import com.greenhouse.backend.farm.repository.orchid.OrchidGroupRepository;
+import com.greenhouse.backend.farm.repository.variety.VarietyRepository;
+import com.greenhouse.backend.work.application.target.WorkOrchidGroupUsageInspector;
+import java.math.BigDecimal;
+import lombok.RequiredArgsConstructor;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+@Service
+@Transactional
+@RequiredArgsConstructor
+public class OrchidGroupCommandService {
+
+	private final BedZoneRepository bedZoneRepository;
+	private final OrchidGroupRepository orchidGroupRepository;
+	private final InboundRecordRepository inboundRecordRepository;
+	private final VarietyRepository varietyRepository;
+	private final WorkOrchidGroupUsageInspector workUsageInspector;
+	private final OrchidPlacementPolicy orchidPlacementPolicy;
+
+	public OrchidGroupResponse create(OrchidGroupCreateRequest request) {
+		return OrchidGroupResponse.from(createEntity(request));
+	}
+
+	public OrchidGroup createEntity(OrchidGroupCreateRequest request) {
+		BedZone bedZone = findZone(request.bedZoneId());
+		Variety variety = findVariety(request.varietyId());
+		if (!variety.isActive()) {
+			throw new IllegalArgumentException("비활성 품종으로 난 묶음을 생성할 수 없습니다.");
+		}
+		BigDecimal startPosition = orchidPlacementPolicy.normalizeNumber(request.startPosition());
+		BigDecimal endPosition = orchidPlacementPolicy.normalizeNumber(request.endPosition());
+		orchidPlacementPolicy.validatePlacement(bedZone, startPosition, endPosition, null);
+
+		int nextSortOrder = orchidGroupRepository.findMaxSortOrderByBedZoneId(bedZone.getId()) + 1;
+		OrchidGroup orchidGroup = new OrchidGroup(
+				bedZone,
+				variety.getGenus(),
+				variety.getName(),
+				request.quantity(),
+				normalize(request.potSize()),
+				request.ageYear(),
+				normalizeRequired(request.status()),
+				nextSortOrder,
+				startPosition,
+				endPosition);
+		orchidGroup.updateDetails(
+				variety.getGenus(),
+				variety.getName(),
+				request.quantity(),
+				normalize(request.potSize()),
+				request.ageYear(),
+				normalizeRequired(request.status()),
+				normalize(request.placementType()),
+				request.trayCount(),
+				request.splitPlacementAllowed(),
+				startPosition,
+				endPosition,
+				normalize(request.memo()));
+		orchidGroup.assignVariety(variety);
+		return orchidGroupRepository.save(orchidGroup);
+	}
+
+	public OrchidGroupResponse update(Long orchidGroupId, OrchidGroupUpdateRequest request) {
+		OrchidGroup orchidGroup = orchidGroupRepository.findById(orchidGroupId)
+				.orElseThrow(() -> new NotFoundException("난 묶음을 찾을 수 없습니다."));
+		Variety variety = findVariety(request.varietyId());
+		BigDecimal startPosition = orchidPlacementPolicy.normalizeNumber(request.startPosition());
+		BigDecimal endPosition = orchidPlacementPolicy.normalizeNumber(request.endPosition());
+		orchidPlacementPolicy.validatePlacement(orchidGroup.getBedZone(), startPosition, endPosition, orchidGroupId);
+
+		orchidGroup.updateDetails(
+				variety.getGenus(),
+				variety.getName(),
+				request.quantity(),
+				normalize(request.potSize()),
+				request.ageYear(),
+				normalizeRequired(request.status()),
+				normalize(request.placementType()),
+				request.trayCount(),
+				request.splitPlacementAllowed(),
+				startPosition,
+				endPosition,
+				normalize(request.memo()));
+		orchidGroup.assignVariety(variety);
+		return OrchidGroupResponse.from(orchidGroup);
+	}
+
+	public void delete(Long orchidGroupId) {
+		if (!orchidGroupRepository.existsById(orchidGroupId)) {
+			throw new NotFoundException("난 묶음을 찾을 수 없습니다.");
+		}
+		if (workUsageInspector.hasEffectReference(orchidGroupId)) {
+			throw new ConflictException("작업 이력과 연결된 난 묶음은 삭제할 수 없습니다. 작업 취소, 보정 또는 폐기 작업으로 처리해주세요.");
+		}
+		inboundRecordRepository.clearCreatedOrchidGroup(orchidGroupId);
+		orchidGroupRepository.deleteById(orchidGroupId);
+	}
+
+	public OrchidGroupResponse moveForOperation(Long orchidGroupId, OrchidGroupMoveRequest request) {
+		OrchidGroup orchidGroup = orchidGroupRepository.findById(orchidGroupId)
+				.orElseThrow(() -> new NotFoundException("난 묶음을 찾을 수 없습니다."));
+		BedZone toBedZone = findZone(request.toBedZoneId());
+		BigDecimal startPosition = orchidPlacementPolicy.normalizeNumber(request.startPosition());
+		BigDecimal endPosition = orchidPlacementPolicy.normalizeNumber(request.endPosition());
+		orchidPlacementPolicy.validatePlacement(toBedZone, startPosition, endPosition, orchidGroupId);
+
+		Long fromBedZoneId = orchidGroup.getBedZone().getId();
+		if (fromBedZoneId.equals(toBedZone.getId())
+				&& equalPosition(orchidGroup.getStartPosition(), startPosition)
+				&& equalPosition(orchidGroup.getEndPosition(), endPosition)) {
+			return OrchidGroupResponse.from(orchidGroup);
+		}
+
+		if (!fromBedZoneId.equals(toBedZone.getId())) {
+			int nextSortOrder = orchidGroupRepository.findMaxSortOrderByBedZoneId(toBedZone.getId()) + 1;
+			orchidGroup.moveTo(toBedZone, nextSortOrder, startPosition, endPosition);
+		} else {
+			orchidGroup.moveTo(toBedZone, orchidGroup.getSortOrder(), startPosition, endPosition);
+		}
+
+		return OrchidGroupResponse.from(orchidGroup);
+	}
+
+	private boolean equalPosition(BigDecimal currentValue, BigDecimal requestValue) {
+		if (currentValue == null && requestValue == null) {
+			return true;
+		}
+		if (currentValue == null || requestValue == null) {
+			return false;
+		}
+		return currentValue.compareTo(requestValue) == 0;
+	}
+
+	private BedZone findZone(Long bedZoneId) {
+		return bedZoneRepository.findWithDetailsById(bedZoneId)
+				.orElseThrow(() -> new NotFoundException("논리 구역을 찾을 수 없습니다."));
+	}
+
+	private Variety findVariety(Long varietyId) {
+		return varietyRepository.findById(varietyId)
+				.orElseThrow(() -> new NotFoundException("품종을 찾을 수 없습니다."));
+	}
+
+	private String normalize(String value) {
+		if (value == null) {
+			return null;
+		}
+		String trimmed = value.trim();
+		return trimmed.isEmpty() ? null : trimmed;
+	}
+
+	private String normalizeRequired(String value) {
+		String normalized = normalize(value);
+		if (normalized == null) {
+			throw new IllegalArgumentException("필수 문자열 값은 비워둘 수 없습니다.");
+		}
+		return normalized;
+	}
+}

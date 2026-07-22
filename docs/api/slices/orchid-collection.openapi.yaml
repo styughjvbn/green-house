@@ -28,7 +28,7 @@ paths:
     post:
       tags:
       - orchid-group-collection-controller
-      operationId: create_5
+      operationId: create_4
       requestBody:
         content:
           application/json:

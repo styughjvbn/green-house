@@ -78,7 +78,7 @@ paths:
     post:
       tags:
       - work-operation-controller
-      operationId: create_1
+      operationId: create
       requestBody:
         content:
           application/json:
@@ -746,9 +746,6 @@ components:
         sourceKind:
           type: string
         workOperationId:
-          type: integer
-          format: int64
-        legacyWorkRecordId:
           type: integer
           format: int64
         workTypeId:

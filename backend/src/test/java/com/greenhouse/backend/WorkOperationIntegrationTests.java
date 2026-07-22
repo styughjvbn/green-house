@@ -8,20 +8,21 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
-import com.greenhouse.backend.farm.domain.BedZone;
-import com.greenhouse.backend.farm.domain.BedZoneSide;
-import com.greenhouse.backend.farm.domain.House;
-import com.greenhouse.backend.farm.domain.OrchidGroup;
-import com.greenhouse.backend.farm.domain.PhysicalBed;
-import com.greenhouse.backend.farm.domain.Variety;
-import com.greenhouse.backend.work.domain.WorkType;
-import com.greenhouse.backend.work.domain.WorkTypeTemplate;
+import com.greenhouse.backend.farm.domain.structure.BedZone;
+import com.greenhouse.backend.farm.domain.structure.BedZoneSide;
+import com.greenhouse.backend.farm.domain.structure.House;
+import com.greenhouse.backend.farm.domain.orchid.OrchidGroup;
+import com.greenhouse.backend.farm.domain.structure.PhysicalBed;
+import com.greenhouse.backend.farm.domain.variety.Variety;
+import com.greenhouse.backend.work.domain.operation.WorkType;
+import com.greenhouse.backend.work.domain.operation.WorkTypeTemplate;
 import com.greenhouse.backend.work.repository.WorkOperationRepository;
 import com.greenhouse.backend.work.repository.WorkOperationTargetRepository;
 import com.greenhouse.backend.work.repository.WorkAppliedEffectRepository;
 import com.greenhouse.backend.work.repository.WorkEffectOrchidGroupRepository;
 import com.greenhouse.backend.work.repository.WorkTargetExecutionRepository;
 import java.math.BigDecimal;
+import java.time.LocalDate;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -55,7 +56,6 @@ class WorkOperationIntegrationTests extends AbstractBackendIntegrationTest {
 		workTargetExecutionRepository.deleteAll();
 		workOperationTargetRepository.deleteAll();
 		workOperationRepository.deleteAll();
-		workRecordRepository.deleteAll();
 		orchidGroupRepository.deleteAll();
 		varietyRepository.deleteAll();
 		bedZoneRepository.deleteAll();
@@ -263,7 +263,6 @@ class WorkOperationIntegrationTests extends AbstractBackendIntegrationTest {
 		org.assertj.core.api.Assertions.assertThat(
 				orchidGroupRepository.findById(targetGroup.getId()).orElseThrow().getBedZone().getId())
 				.isEqualTo(destinationZone.getId());
-		org.assertj.core.api.Assertions.assertThat(workRecordRepository.count()).isZero();
 	}
 
 	@Test
@@ -371,14 +370,32 @@ class WorkOperationIntegrationTests extends AbstractBackendIntegrationTest {
 				.andExpect(status().isOk())
 				.andExpect(jsonPath("$.data.houseNumber").value(5));
 
-		mockMvc.perform(get("/api/orchid-groups/{id}/work-history", targetGroup.getId()))
+			mockMvc.perform(get("/api/orchid-groups/{id}/work-history", targetGroup.getId()))
+					.andExpect(status().isOk())
+					.andExpect(jsonPath("$.data", hasSize(2)))
+					.andExpect(jsonPath("$.data[?(@.sourceKind == 'WORK_OPERATION')].workOperationId").value(hasItem(operationId.intValue())))
+					.andExpect(jsonPath("$.data[?(@.sourceKind == 'WORK_OPERATION')].propagated").value(hasItem(true)))
+					.andExpect(jsonPath("$.data[?(@.sourceKind == 'WORK_OPERATION')].locationSnapshot.houseNumber").value(hasItem(3)))
+					.andExpect(jsonPath("$.data[?(@.sourceKind == 'WORK_OPERATION')].currentLocation.houseNumber").value(hasItem(5)))
+					.andExpect(jsonPath("$.data[?(@.sourceKind == 'WORK_OPERATION')].workType").value(hasItem("위치 이동")));
+	}
+
+	@Test
+	void doesNotCreateMovementOperationWhenPlacementIsUnchanged() throws Exception {
+		mockMvc.perform(patch("/api/orchid-groups/{id}/move", targetGroup.getId())
+				.contentType(MediaType.APPLICATION_JSON)
+				.content("""
+						{
+						  "toBedZoneId": %d,
+						  "startPosition": 1.00,
+						  "endPosition": 10.00,
+						  "worker": "테스터"
+						}
+						""".formatted(targetGroup.getBedZone().getId())))
 				.andExpect(status().isOk())
-				.andExpect(jsonPath("$.data", hasSize(2)))
-				.andExpect(jsonPath("$.data[?(@.sourceKind == 'WORK_OPERATION')].workOperationId").value(hasItem(operationId.intValue())))
-				.andExpect(jsonPath("$.data[?(@.sourceKind == 'WORK_OPERATION')].propagated").value(hasItem(true)))
-				.andExpect(jsonPath("$.data[?(@.sourceKind == 'WORK_OPERATION')].locationSnapshot.houseNumber").value(hasItem(3)))
-				.andExpect(jsonPath("$.data[?(@.sourceKind == 'WORK_OPERATION')].currentLocation.houseNumber").value(hasItem(5)))
-				.andExpect(jsonPath("$.data[?(@.sourceKind == 'LEGACY_WORK_RECORD')].workType").value(hasItem("위치 이동")));
+				.andExpect(jsonPath("$.data.houseNumber").value(3));
+
+		org.assertj.core.api.Assertions.assertThat(workOperationRepository.count()).isZero();
 	}
 
 	@Test
@@ -516,7 +533,7 @@ class WorkOperationIntegrationTests extends AbstractBackendIntegrationTest {
 	}
 
 	@Test
-	void createsAnImmediatelyCompletedRecordOperationAndRejectsLegacyManualWrites() throws Exception {
+	void createsAnImmediatelyCompletedRecordOperation() throws Exception {
 		mockMvc.perform(post("/api/work-operations/record")
 				.contentType(MediaType.APPLICATION_JSON)
 				.content("""
@@ -535,18 +552,5 @@ class WorkOperationIntegrationTests extends AbstractBackendIntegrationTest {
 				.andExpect(jsonPath("$.data.targets", hasSize(1)))
 				.andExpect(jsonPath("$.data.targets[0].executionStatus").value("COMPLETED"))
 				.andExpect(jsonPath("$.data.targets[0].resultDetails.materialName").value("살균제"));
-
-		mockMvc.perform(post("/api/work-records")
-				.contentType(MediaType.APPLICATION_JSON)
-				.content("""
-						{
-						  "workTypeId": %d,
-						  "workDate": "2026-07-15",
-						  "targetType": "ORCHID_GROUP",
-						  "targetId": %d
-						}
-						""".formatted(pesticideType.getId(), targetGroup.getId())))
-				.andExpect(status().isBadRequest())
-				.andExpect(jsonPath("$.error.details[0]").value("신규 작업 기록은 작업 실행 API를 사용해주세요."));
 	}
 }

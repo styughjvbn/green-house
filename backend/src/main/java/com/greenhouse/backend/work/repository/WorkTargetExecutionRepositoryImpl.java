@@ -1,19 +1,20 @@
 package com.greenhouse.backend.work.repository;
 
-import static com.greenhouse.backend.work.domain.QWorkOperation.workOperation;
-import static com.greenhouse.backend.work.domain.QWorkOperationTarget.workOperationTarget;
-import static com.greenhouse.backend.work.domain.QWorkTargetExecution.workTargetExecution;
-import static com.greenhouse.backend.work.domain.QWorkType.workType;
+import static com.greenhouse.backend.work.domain.operation.QWorkOperation.workOperation;
+import static com.greenhouse.backend.work.domain.target.QWorkOperationTarget.workOperationTarget;
+import static com.greenhouse.backend.work.domain.target.QWorkTargetExecution.workTargetExecution;
+import static com.greenhouse.backend.work.domain.operation.QWorkType.workType;
 
-import com.greenhouse.backend.work.domain.WorkOperationStatus;
-import com.greenhouse.backend.work.domain.WorkTargetExecution;
-import com.greenhouse.backend.work.domain.WorkTargetExecutionStatus;
-import com.greenhouse.backend.work.domain.WorkType;
+import com.greenhouse.backend.work.domain.operation.WorkOperationStatus;
+import com.greenhouse.backend.work.domain.target.WorkTargetExecution;
+import com.greenhouse.backend.work.domain.target.WorkTargetExecutionStatus;
+import com.greenhouse.backend.work.domain.operation.WorkType;
 import com.querydsl.jpa.impl.JPAQuery;
 import com.querydsl.jpa.impl.JPAQueryFactory;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.LockModeType;
 import java.util.List;
+import java.util.Collection;
 import java.util.Optional;
 
 public class WorkTargetExecutionRepositoryImpl implements WorkTargetExecutionRepositoryCustom {
@@ -58,6 +59,17 @@ public class WorkTargetExecutionRepositoryImpl implements WorkTargetExecutionRep
 				.join(workTargetExecution.target, workOperationTarget).fetchJoin()
 				.where(workOperationTarget.workOperation.id.eq(workOperationId))
 				.orderBy(workTargetExecution.id.asc())
+				.fetch();
+	}
+
+	@Override
+	public List<WorkTargetExecution> findByTargetWorkOperationIdInOrderByIdAsc(
+			Collection<Long> workOperationIds) {
+		return queryFactory
+				.selectFrom(workTargetExecution)
+				.join(workTargetExecution.target, workOperationTarget).fetchJoin()
+				.where(workOperationTarget.workOperation.id.in(workOperationIds))
+				.orderBy(workOperationTarget.workOperation.id.asc(), workTargetExecution.id.asc())
 				.fetch();
 	}
 

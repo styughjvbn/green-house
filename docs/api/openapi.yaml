@@ -164,7 +164,7 @@ paths:
   /api/work-types:
     get:
       tags:
-      - work-record-controller
+      - work-type-controller
       operationId: getWorkTypes
       parameters:
       - name: includeInactive
@@ -182,7 +182,7 @@ paths:
                 $ref: '#/components/schemas/ApiResponseListWorkTypeResponse'
     post:
       tags:
-      - work-record-controller
+      - work-type-controller
       operationId: createWorkType
       requestBody:
         content:
@@ -197,70 +197,6 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ApiResponseWorkTypeResponse'
-  /api/work-records:
-    get:
-      tags:
-      - work-record-controller
-      operationId: getWorkRecords
-      parameters:
-      - name: targetType
-        in: query
-        required: false
-        schema:
-          type: string
-      - name: targetId
-        in: query
-        required: false
-        schema:
-          type: integer
-          format: int64
-      - name: workType
-        in: query
-        required: false
-        schema:
-          type: string
-      - name: from
-        in: query
-        required: false
-        schema:
-          type: string
-          format: date
-      - name: to
-        in: query
-        required: false
-        schema:
-          type: string
-          format: date
-      - name: includeCanceled
-        in: query
-        required: false
-        schema:
-          type: boolean
-          default: false
-      responses:
-        '200':
-          description: OK
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ApiResponseListWorkRecordResponse'
-    post:
-      tags:
-      - work-record-controller
-      operationId: create
-      requestBody:
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/WorkRecordCreateRequest'
-        required: true
-      responses:
-        '201':
-          description: Created
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ApiResponseWorkRecordResponse'
   /api/work-operations:
     get:
       tags:
@@ -333,7 +269,7 @@ paths:
     post:
       tags:
       - work-operation-controller
-      operationId: create_1
+      operationId: create
       requestBody:
         content:
           application/json:
@@ -707,7 +643,7 @@ paths:
     post:
       tags:
       - multi-create-work-operation-controller
-      operationId: create_2
+      operationId: create_1
       requestBody:
         content:
           application/json:
@@ -839,11 +775,11 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ApiResponseVarietyPageResponse'
+                $ref: '#/components/schemas/ApiResponsePageResponseVarietyResponse'
     post:
       tags:
       - variety-controller
-      operationId: create_3
+      operationId: create_2
       requestBody:
         content:
           application/json:
@@ -974,7 +910,7 @@ paths:
     post:
       tags:
       - orchid-group-command-controller
-      operationId: create_4
+      operationId: create_3
       requestBody:
         content:
           application/json:
@@ -1010,7 +946,7 @@ paths:
     post:
       tags:
       - orchid-group-collection-controller
-      operationId: create_5
+      operationId: create_4
       requestBody:
         content:
           application/json:
@@ -1114,11 +1050,11 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ApiResponseMaterialPageResponse'
+                $ref: '#/components/schemas/ApiResponsePageResponseMaterialResponse'
     post:
       tags:
       - material-controller
-      operationId: create_6
+      operationId: create_5
       requestBody:
         content:
           application/json:
@@ -1198,11 +1134,11 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ApiResponseInboundRecordPageResponse'
+                $ref: '#/components/schemas/ApiResponsePageResponseInboundRecordResponse'
     post:
       tags:
       - inbound-record-controller
-      operationId: create_7
+      operationId: create_6
       requestBody:
         content:
           application/json:
@@ -1295,7 +1231,7 @@ paths:
     post:
       tags:
       - business-partner-controller
-      operationId: create_8
+      operationId: create_7
       requestBody:
         content:
           application/json:
@@ -1467,7 +1403,7 @@ paths:
   /api/work-types/{workTypeId}:
     patch:
       tags:
-      - work-record-controller
+      - work-type-controller
       operationId: updateWorkType
       parameters:
       - name: workTypeId
@@ -1492,7 +1428,7 @@ paths:
   /api/work-types/reorder:
     patch:
       tags:
-      - work-record-controller
+      - work-type-controller
       operationId: reorderWorkTypes
       requestBody:
         content:
@@ -1507,31 +1443,6 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ApiResponseListWorkTypeResponse'
-  /api/work-records/{workRecordId}/cancel:
-    patch:
-      tags:
-      - work-record-controller
-      operationId: cancel_3
-      parameters:
-      - name: workRecordId
-        in: path
-        required: true
-        schema:
-          type: integer
-          format: int64
-      requestBody:
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/WorkRecordCancelRequest'
-        required: true
-      responses:
-        '200':
-          description: OK
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ApiResponseWorkRecordResponse'
   /api/varieties/{varietyId}:
     get:
       tags:
@@ -2107,7 +2018,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ApiResponseSalesSlipPageResponse'
+                $ref: '#/components/schemas/ApiResponsePageResponseSalesSlipListItemResponse'
   /api/sales-slips/page:
     get:
       tags:
@@ -2167,7 +2078,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ApiResponseSalesSlipPageResponse'
+                $ref: '#/components/schemas/ApiResponsePageResponseSalesSlipListItemResponse'
   /api/sales-slips/auction-shipments:
     get:
       tags:
@@ -2787,7 +2698,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ApiResponseAuctionLotPageResponse'
+                $ref: '#/components/schemas/ApiResponsePageResponseAuctionLotResponse'
   /api/auction-lots/{id}:
     get:
       tags:
@@ -3454,117 +3365,6 @@ components:
         sortOrder:
           type: integer
           format: int32
-    WorkRecordCreateRequest:
-      type: object
-      properties:
-        workTypeId:
-          type: integer
-          format: int64
-        workDate:
-          type: string
-          format: date
-        targetType:
-          type: string
-          maxLength: 50
-          minLength: 0
-        targetId:
-          type: integer
-          format: int64
-        materialName:
-          type: string
-          maxLength: 100
-          minLength: 0
-        dilutionRatio:
-          type: string
-          maxLength: 50
-          minLength: 0
-        quantity:
-          type: string
-          maxLength: 50
-          minLength: 0
-        worker:
-          type: string
-          maxLength: 50
-          minLength: 0
-        memo:
-          type: string
-          maxLength: 1000
-          minLength: 0
-        details:
-          type: object
-          additionalProperties: {}
-      required:
-      - targetType
-      - workDate
-      - workTypeId
-    ApiResponseWorkRecordResponse:
-      type: object
-      properties:
-        data:
-          $ref: '#/components/schemas/WorkRecordResponse'
-        message:
-          type: string
-    WorkRecordResponse:
-      type: object
-      properties:
-        id:
-          type: integer
-          format: int64
-        workTypeId:
-          type: integer
-          format: int64
-        workType:
-          type: string
-        workTypeTemplate:
-          type: string
-          enum:
-          - PESTICIDE
-          - FERTILIZER
-          - REPOT
-          - CLEANUP
-          - DISCARD
-          - STATUS
-          - MEMO
-          - MOVEMENT
-          - MULTI_CREATE
-          - CORRECTION
-        workDate:
-          type: string
-          format: date
-        targetType:
-          type: string
-        targetId:
-          type: integer
-          format: int64
-        materialName:
-          type: string
-        dilutionRatio:
-          type: string
-        quantity:
-          type: string
-        worker:
-          type: string
-        fromBedZoneId:
-          type: integer
-          format: int64
-        toBedZoneId:
-          type: integer
-          format: int64
-        details:
-          type: object
-          additionalProperties: {}
-        memo:
-          type: string
-        status:
-          type: string
-          enum:
-          - ACTIVE
-          - CANCELED
-        canceledAt:
-          type: string
-          format: date-time
-        cancelReason:
-          type: string
     WorkOperationCreateRequest:
       type: object
       properties:
@@ -5581,13 +5381,6 @@ components:
             $ref: '#/components/schemas/WorkTypeResponse'
         message:
           type: string
-    WorkRecordCancelRequest:
-      type: object
-      properties:
-        cancelReason:
-          type: string
-          maxLength: 1000
-          minLength: 0
     VarietyUpdateRequest:
       type: object
       properties:
@@ -5841,15 +5634,6 @@ components:
       required:
       - reason
       - status
-    ApiResponseListWorkRecordResponse:
-      type: object
-      properties:
-        data:
-          type: array
-          items:
-            $ref: '#/components/schemas/WorkRecordResponse'
-        message:
-          type: string
     ApiResponseMultiCreateCancellationEligibilityResponse:
       type: object
       properties:
@@ -5919,14 +5703,14 @@ components:
           format: date
         potSize:
           type: string
-    ApiResponseVarietyPageResponse:
+    ApiResponsePageResponseVarietyResponse:
       type: object
       properties:
         data:
-          $ref: '#/components/schemas/VarietyPageResponse'
+          $ref: '#/components/schemas/PageResponseVarietyResponse'
         message:
           type: string
-    VarietyPageResponse:
+    PageResponseVarietyResponse:
       type: object
       properties:
         content:
@@ -6034,13 +5818,32 @@ components:
             $ref: '#/components/schemas/SalesSlipResponse'
         message:
           type: string
-    ApiResponseSalesSlipPageResponse:
+    ApiResponsePageResponseSalesSlipListItemResponse:
       type: object
       properties:
         data:
-          $ref: '#/components/schemas/SalesSlipPageResponse'
+          $ref: '#/components/schemas/PageResponseSalesSlipListItemResponse'
         message:
           type: string
+    PageResponseSalesSlipListItemResponse:
+      type: object
+      properties:
+        content:
+          type: array
+          items:
+            $ref: '#/components/schemas/SalesSlipListItemResponse'
+        page:
+          type: integer
+          format: int32
+        size:
+          type: integer
+          format: int32
+        totalElements:
+          type: integer
+          format: int64
+        totalPages:
+          type: integer
+          format: int32
     SalesSlipListItemResponse:
       type: object
       properties:
@@ -6084,25 +5887,6 @@ components:
           type: string
         memo:
           type: string
-    SalesSlipPageResponse:
-      type: object
-      properties:
-        content:
-          type: array
-          items:
-            $ref: '#/components/schemas/SalesSlipListItemResponse'
-        page:
-          type: integer
-          format: int32
-        size:
-          type: integer
-          format: int32
-        totalElements:
-          type: integer
-          format: int64
-        totalPages:
-          type: integer
-          format: int32
     ApiResponseListAuctionShipmentOptionResponse:
       type: object
       properties:
@@ -6348,9 +6132,6 @@ components:
         workOperationId:
           type: integer
           format: int64
-        legacyWorkRecordId:
-          type: integer
-          format: int64
         workTypeId:
           type: integer
           format: int64
@@ -6502,14 +6283,14 @@ components:
         locationCount:
           type: integer
           format: int32
-    ApiResponseMaterialPageResponse:
+    ApiResponsePageResponseMaterialResponse:
       type: object
       properties:
         data:
-          $ref: '#/components/schemas/MaterialPageResponse'
+          $ref: '#/components/schemas/PageResponseMaterialResponse'
         message:
           type: string
-    MaterialPageResponse:
+    PageResponseMaterialResponse:
       type: object
       properties:
         content:
@@ -6528,14 +6309,14 @@ components:
         totalPages:
           type: integer
           format: int32
-    ApiResponseInboundRecordPageResponse:
+    ApiResponsePageResponseInboundRecordResponse:
       type: object
       properties:
         data:
-          $ref: '#/components/schemas/InboundRecordPageResponse'
+          $ref: '#/components/schemas/PageResponseInboundRecordResponse'
         message:
           type: string
-    InboundRecordPageResponse:
+    PageResponseInboundRecordResponse:
       type: object
       properties:
         content:
@@ -7018,14 +6799,14 @@ components:
             $ref: '#/components/schemas/AuctionSettlementResponse'
         message:
           type: string
-    ApiResponseAuctionLotPageResponse:
+    ApiResponsePageResponseAuctionLotResponse:
       type: object
       properties:
         data:
-          $ref: '#/components/schemas/AuctionLotPageResponse'
+          $ref: '#/components/schemas/PageResponseAuctionLotResponse'
         message:
           type: string
-    AuctionLotPageResponse:
+    PageResponseAuctionLotResponse:
       type: object
       properties:
         content:
@@ -7061,6 +6842,58 @@ components:
           $ref: '#/components/schemas/WorkAnalyticsResponse'
         message:
           type: string
+    WorkAnalyticsItemResponse:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: int64
+        workDate:
+          type: string
+          format: date
+        workType:
+          type: string
+        workTypeTemplate:
+          type: string
+          enum:
+          - PESTICIDE
+          - FERTILIZER
+          - REPOT
+          - CLEANUP
+          - DISCARD
+          - STATUS
+          - MEMO
+          - MOVEMENT
+          - MULTI_CREATE
+          - CORRECTION
+        title:
+          type: string
+        sourceScopeType:
+          type: string
+          enum:
+          - NONE
+          - FARM
+          - HOUSE
+          - PHYSICAL_BED
+          - BED_ZONE
+          - ORCHID_GROUP
+          - DERIVED_GROUP
+          - USER_COLLECTION
+          - MANUAL_SELECTION
+          - INBOUND_RECORD_SELECTION
+        worker:
+          type: string
+        memo:
+          type: string
+        status:
+          type: string
+          enum:
+          - PLANNED
+          - IN_PROGRESS
+          - PAUSED
+          - COMPLETED
+          - CANCELED
+          - CORRECTED
     WorkAnalyticsResponse:
       type: object
       properties:
@@ -7083,7 +6916,7 @@ components:
         recentRecords:
           type: array
           items:
-            $ref: '#/components/schemas/WorkRecordResponse'
+            $ref: '#/components/schemas/WorkAnalyticsItemResponse'
     AnalyticsInsightResponse:
       type: object
       properties:

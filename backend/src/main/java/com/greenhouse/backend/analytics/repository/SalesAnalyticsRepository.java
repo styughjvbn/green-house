@@ -4,14 +4,14 @@ import static com.greenhouse.backend.partner.domain.QBusinessPartner.businessPar
 import static com.greenhouse.backend.sales.domain.QSalesSlip.salesSlip;
 import static com.greenhouse.backend.sales.domain.QSalesSlipItem.salesSlipItem;
 import static com.greenhouse.backend.settlement.domain.QPartnerBalanceSummary.partnerBalanceSummary;
-import static com.greenhouse.backend.work.domain.QWorkRecord.workRecord;
-import static com.greenhouse.backend.work.domain.QWorkType.workType;
+import static com.greenhouse.backend.work.domain.operation.QWorkOperation.workOperation;
+import static com.greenhouse.backend.work.domain.operation.QWorkType.workType;
 
 import com.greenhouse.backend.analytics.dto.AnalyticsSlipSummaryResponse;
 import com.greenhouse.backend.analytics.dto.PartnerAnalyticsStatResponse;
-import com.greenhouse.backend.work.domain.WorkRecord;
-import com.greenhouse.backend.work.domain.WorkRecordStatus;
-import com.greenhouse.backend.work.domain.WorkTypeTemplate;
+import com.greenhouse.backend.analytics.dto.WorkAnalyticsItemResponse;
+import com.greenhouse.backend.work.domain.operation.WorkOperationStatus;
+import com.greenhouse.backend.work.domain.operation.WorkTypeTemplate;
 import com.querydsl.core.Tuple;
 import com.querydsl.core.types.Projections;
 import com.querydsl.core.types.dsl.BooleanExpression;
@@ -176,54 +176,66 @@ public class SalesAnalyticsRepository {
 				.toList();
 	}
 
-	public Long countWorkRecords(LocalDate from, LocalDate to) {
+	public Long countWorkOperations(LocalDate from, LocalDate to) {
 		return nullToZero(queryFactory
-				.select(workRecord.id.count())
-				.from(workRecord)
-				.where(workDateBetween(from, to), activeWorkRecord())
+				.select(workOperation.id.count())
+				.from(workOperation)
+				.where(workDateBetween(from, to), completedWorkOperation())
 				.fetchOne());
 	}
 
-	public Long countWorkRecordsByTemplate(LocalDate from, LocalDate to, String template) {
+	public Long countWorkOperationsByTemplate(LocalDate from, LocalDate to, String template) {
 		return nullToZero(queryFactory
-				.select(workRecord.id.count())
-				.from(workRecord)
-				.leftJoin(workRecord.workTypeRef, workType)
+				.select(workOperation.id.count())
+				.from(workOperation)
+				.join(workOperation.workType, workType)
 				.where(
 						workDateBetween(from, to),
-						activeWorkRecord(),
+						completedWorkOperation(),
 						workType.template.eq(WorkTypeTemplate.valueOf(template)))
 				.fetchOne());
 	}
 
 	public LocalDate latestWorkDate(LocalDate from, LocalDate to) {
 		return queryFactory
-				.select(workRecord.workDate.max())
-				.from(workRecord)
-				.where(workDateBetween(from, to), activeWorkRecord())
+				.select(workOperation.plannedStartDate.max())
+				.from(workOperation)
+				.where(workDateBetween(from, to), completedWorkOperation())
 				.fetchOne();
 	}
 
 	public List<Object[]> workTypeCounts(LocalDate from, LocalDate to) {
-		var count = workRecord.id.count();
+		var count = workOperation.id.count();
 		return queryFactory
-				.select(workRecord.workType, count)
-				.from(workRecord)
-				.where(workDateBetween(from, to), activeWorkRecord())
-				.groupBy(workRecord.workType)
+				.select(workType.name, count)
+				.from(workOperation)
+				.join(workOperation.workType, workType)
+				.where(workDateBetween(from, to), completedWorkOperation())
+				.groupBy(workType.name)
 				.orderBy(count.desc())
 				.fetch()
 				.stream()
-				.map(tuple -> new Object[] { tuple.get(workRecord.workType), nullToZero(tuple.get(count)) })
+				.map(tuple -> new Object[] { tuple.get(workType.name), nullToZero(tuple.get(count)) })
 				.toList();
 	}
 
-	public List<WorkRecord> recentWorkRecords(LocalDate from, LocalDate to, int limit) {
+	public List<WorkAnalyticsItemResponse> recentWorkOperations(LocalDate from, LocalDate to, int limit) {
 		return queryFactory
-				.selectFrom(workRecord)
-				.leftJoin(workRecord.workTypeRef, workType).fetchJoin()
-				.where(workDateBetween(from, to), activeWorkRecord())
-				.orderBy(workRecord.workDate.desc(), workRecord.id.desc())
+				.select(Projections.constructor(
+						WorkAnalyticsItemResponse.class,
+						workOperation.id,
+						workOperation.plannedStartDate,
+						workType.name,
+						workType.template,
+						workOperation.title,
+						workOperation.sourceScopeType,
+						workOperation.worker,
+						workOperation.memo,
+						workOperation.status))
+				.from(workOperation)
+				.join(workOperation.workType, workType)
+				.where(workDateBetween(from, to), completedWorkOperation())
+				.orderBy(workOperation.plannedStartDate.desc(), workOperation.id.desc())
 				.limit(limit)
 				.fetch();
 	}
@@ -276,11 +288,11 @@ public class SalesAnalyticsRepository {
 	}
 
 	private BooleanExpression workDateBetween(LocalDate from, LocalDate to) {
-		return workRecord.workDate.between(from, to);
+		return workOperation.plannedStartDate.between(from, to);
 	}
 
-	private BooleanExpression activeWorkRecord() {
-		return workRecord.status.eq(WorkRecordStatus.ACTIVE);
+	private BooleanExpression completedWorkOperation() {
+		return workOperation.status.in(WorkOperationStatus.COMPLETED, WorkOperationStatus.CORRECTED);
 	}
 
 	private Long nullToZero(Long value) {

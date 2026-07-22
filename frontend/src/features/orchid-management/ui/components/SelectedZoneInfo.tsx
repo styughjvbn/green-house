@@ -446,7 +446,7 @@ function ActivityItem({
 }
 
 function historyItemKey(item: OrchidGroupWorkHistory) {
-  return `${item.sourceKind}-${item.workOperationId ?? item.legacyWorkRecordId}`;
+  return `${item.sourceKind}-${item.workOperationId}`;
 }
 
 function historySourceLabel(item: OrchidGroupWorkHistory) {

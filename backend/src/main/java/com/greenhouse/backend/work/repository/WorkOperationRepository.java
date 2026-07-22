@@ -1,6 +1,6 @@
 package com.greenhouse.backend.work.repository;
 
-import com.greenhouse.backend.work.domain.WorkOperation;
+import com.greenhouse.backend.work.domain.operation.WorkOperation;
 import org.springframework.data.jpa.repository.JpaRepository;
 
 public interface WorkOperationRepository

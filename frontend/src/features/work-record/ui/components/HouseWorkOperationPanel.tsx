@@ -17,7 +17,7 @@ import {
 } from "@/entities/farm/workTypes";
 import {
   completeWorkOperation,
-  createCompletedWorkOperationFromRecord,
+  createCompletedWorkOperation,
   createInboundPottingPlansBatch,
   createWorkOperationsBatch,
   getInboundPottingCandidates,
@@ -27,7 +27,7 @@ import {
   transitionWorkOperationTarget,
 } from "../../api/workRecordApi";
 import type {
-  CreateWorkRecordPayload,
+  CompletedWorkOperationPayload,
   InboundPottingCandidate,
   WorkOperationFormState,
   WorkTargetPreviewPayload,
@@ -294,7 +294,7 @@ export function WorkOperationPanel({
       setLoading(true);
       setErrorMessage(null);
       try {
-        await createCompletedWorkOperationFromRecord(
+        await createCompletedWorkOperation(
           recordPayload(form, recordTargetIds, selectedWorkType),
           selectedWorkType.name,
           form.title,
@@ -781,7 +781,7 @@ function recordPayload(
   form: WorkOperationFormState,
   orchidGroupIds: number[],
   selectedWorkType: WorkType,
-): CreateWorkRecordPayload {
+): CompletedWorkOperationPayload {
   const template = selectedWorkType.template;
   return {
     workTypeId: selectedWorkType.id,

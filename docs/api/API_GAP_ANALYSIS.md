@@ -54,14 +54,10 @@
 - `POST /api/work-operations/record`
 - `POST /api/work-operations/{workOperationId}/corrections`
 - `GET /api/work-operations/{workOperationId}/corrections`
-- `GET /api/work-records`
-- `POST /api/work-records`
 - `GET /api/work-types`
 - `POST /api/work-types`
 - `PATCH /api/work-types/reorder`
 - `PATCH /api/work-types/{workTypeId}`
-
-`WORK_OPERATION_V2_ENABLED=true`에서는 사용자 수동 `POST /api/work-records`가 거부된다. endpoint는 기능 비활성화 시 기존 작성 흐름으로 복귀하기 위해 OpenAPI에 유지한다.
 
 ### 품종/입고/자재
 
@@ -180,6 +176,8 @@
 
 ### 작업 이력 수정/삭제
 
+- `GET /api/work-records`
+- `POST /api/work-records`
 - `DELETE /api/work-records/{workRecordId}`
 - `PATCH /api/work-records/{workRecordId}`
 

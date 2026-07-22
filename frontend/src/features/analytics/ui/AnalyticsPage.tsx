@@ -29,7 +29,24 @@ export function AnalyticsPage(props: AnalyticsPageProps) {
   const tab = props.activeTab ?? "SALES";
   const [draftFilters, setDraftFilters] = useState(DEFAULT_FILTERS);
   const [filters, setFilters] = useState(DEFAULT_FILTERS);
-  const view = useMemo(() => createAnalyticsViewModel(props), [props]);
+  const filteredProps = useMemo<AnalyticsPageProps>(() => {
+    if (!props.workAnalytics) return props;
+    return {
+      ...props,
+      workAnalytics: {
+        ...props.workAnalytics,
+        recentRecords: props.workAnalytics.recentRecords.filter(
+          (item) =>
+            item.workDate >= filters.dateFrom &&
+            item.workDate <= filters.dateTo,
+        ),
+      },
+    };
+  }, [filters.dateFrom, filters.dateTo, props]);
+  const view = useMemo(
+    () => createAnalyticsViewModel(filteredProps),
+    [filteredProps],
+  );
   const varieties = useMemo(
     () => view.varietySales.map((item) => item.label),
     [view.varietySales],
@@ -38,18 +55,6 @@ export function AnalyticsPage(props: AnalyticsPageProps) {
     () => view.partnerSales.map((item) => item.label),
     [view.partnerSales],
   );
-  const filteredProps = useMemo(
-    () => ({
-      ...props,
-      workRecords: props.workRecords.filter(
-        (record) =>
-          record.workDate >= filters.dateFrom &&
-          record.workDate <= filters.dateTo,
-      ),
-    }),
-    [filters, props],
-  );
-
   const reset = () => {
     setDraftFilters(DEFAULT_FILTERS);
     setFilters(DEFAULT_FILTERS);

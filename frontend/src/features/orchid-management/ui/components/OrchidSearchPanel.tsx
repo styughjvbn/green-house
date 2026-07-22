@@ -39,7 +39,7 @@ export default function OrchidSearchPanel({
       hasActiveSearch={hasActiveSearch}
       loading={loading}
       placeholder="전체 농장 난 묶음 검색"
-      resultDescription="결과가 있는 동, 배드, 구역, 난 묶음만 강조"
+      resultDescription="결과가 있는 곳만 강조"
       results={results}
       showResultIndex
       onClear={onClear}
