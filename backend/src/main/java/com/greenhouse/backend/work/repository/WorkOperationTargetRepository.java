@@ -20,4 +20,8 @@ public interface WorkOperationTargetRepository extends JpaRepository<WorkOperati
 	@EntityGraph(attributePaths = { "workOperation", "workOperation.workType" })
 	List<WorkOperationTarget> findByOrchidGroupIdAndExcludedAtIsNullOrderByWorkOperationPlannedStartDateDescWorkOperationIdDesc(
 			Long orchidGroupId);
+
+	@EntityGraph(attributePaths = { "workOperation", "workOperation.workType" })
+	List<WorkOperationTarget> findByOrchidGroupIdInAndExcludedAtIsNullOrderByWorkOperationPlannedStartDateDescWorkOperationIdDesc(
+			Collection<Long> orchidGroupIds);
 }

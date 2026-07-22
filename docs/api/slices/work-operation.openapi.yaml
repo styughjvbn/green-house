@@ -514,6 +514,35 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ApiResponseListInboundPottingCandidateResponse'
+  /api/work-history:
+    get:
+      tags:
+      - work-operation-controller
+      operationId: getWorkHistory
+      parameters:
+      - name: scopeType
+        in: query
+        required: true
+        schema:
+          type: string
+          enum:
+          - HOUSE
+          - PHYSICAL_BED
+          - BED_ZONE
+          - ORCHID_GROUP
+      - name: scopeId
+        in: query
+        required: true
+        schema:
+          type: integer
+          format: int64
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponseListOrchidGroupWorkHistoryResponse'
   /api/orchid-groups/{orchidGroupId}/work-history:
     get:
       tags:

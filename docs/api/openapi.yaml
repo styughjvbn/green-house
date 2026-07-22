@@ -1913,6 +1913,35 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ApiResponseListInboundPottingCandidateResponse'
+  /api/work-history:
+    get:
+      tags:
+      - work-operation-controller
+      operationId: getWorkHistory
+      parameters:
+      - name: scopeType
+        in: query
+        required: true
+        schema:
+          type: string
+          enum:
+          - HOUSE
+          - PHYSICAL_BED
+          - BED_ZONE
+          - ORCHID_GROUP
+      - name: scopeId
+        in: query
+        required: true
+        schema:
+          type: integer
+          format: int64
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponseListOrchidGroupWorkHistoryResponse'
   /api/varieties/{varietyId}/orchid-groups:
     get:
       tags:
@@ -5703,6 +5732,63 @@ components:
           format: date
         potSize:
           type: string
+    ApiResponseListOrchidGroupWorkHistoryResponse:
+      type: object
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/OrchidGroupWorkHistoryResponse'
+        message:
+          type: string
+    OrchidGroupWorkHistoryResponse:
+      type: object
+      properties:
+        sourceKind:
+          type: string
+        workOperationId:
+          type: integer
+          format: int64
+        workTypeId:
+          type: integer
+          format: int64
+        workType:
+          type: string
+        title:
+          type: string
+        workDate:
+          type: string
+          format: date
+        status:
+          type: string
+        propagated:
+          type: boolean
+        sourceScopeType:
+          type: string
+          enum:
+          - NONE
+          - FARM
+          - HOUSE
+          - PHYSICAL_BED
+          - BED_ZONE
+          - ORCHID_GROUP
+          - DERIVED_GROUP
+          - USER_COLLECTION
+          - MANUAL_SELECTION
+          - INBOUND_RECORD_SELECTION
+        sourceScopeId:
+          type: integer
+          format: int64
+        locationSnapshot:
+          type: object
+          additionalProperties: {}
+        currentLocation:
+          type: object
+          additionalProperties: {}
+        worker:
+          type: string
+        memo:
+          type: string
     ApiResponsePageResponseVarietyResponse:
       type: object
       properties:
@@ -6114,63 +6200,6 @@ components:
           items:
             $ref: '#/components/schemas/OrchidGroupResponse'
         message:
-          type: string
-    ApiResponseListOrchidGroupWorkHistoryResponse:
-      type: object
-      properties:
-        data:
-          type: array
-          items:
-            $ref: '#/components/schemas/OrchidGroupWorkHistoryResponse'
-        message:
-          type: string
-    OrchidGroupWorkHistoryResponse:
-      type: object
-      properties:
-        sourceKind:
-          type: string
-        workOperationId:
-          type: integer
-          format: int64
-        workTypeId:
-          type: integer
-          format: int64
-        workType:
-          type: string
-        title:
-          type: string
-        workDate:
-          type: string
-          format: date
-        status:
-          type: string
-        propagated:
-          type: boolean
-        sourceScopeType:
-          type: string
-          enum:
-          - NONE
-          - FARM
-          - HOUSE
-          - PHYSICAL_BED
-          - BED_ZONE
-          - ORCHID_GROUP
-          - DERIVED_GROUP
-          - USER_COLLECTION
-          - MANUAL_SELECTION
-          - INBOUND_RECORD_SELECTION
-        sourceScopeId:
-          type: integer
-          format: int64
-        locationSnapshot:
-          type: object
-          additionalProperties: {}
-        currentLocation:
-          type: object
-          additionalProperties: {}
-        worker:
-          type: string
-        memo:
           type: string
     ApiResponseOrchidGroupLineageResponse:
       type: object

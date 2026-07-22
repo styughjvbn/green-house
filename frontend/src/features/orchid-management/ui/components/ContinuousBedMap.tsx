@@ -65,6 +65,15 @@ export default function ContinuousBedMap({
     emblaApi.scrollTo(startBedIndex, true);
   }, [emblaApi, startBedIndex, visibleBedCount]);
 
+  const maxRenderedBedCount = 5;
+  const leadingBuffer = visibleBedCount < 4 ? 1 : 0;
+  let renderStartIndex = Math.max(0, startBedIndex - leadingBuffer);
+  const renderEndIndex = Math.min(
+    beds.length,
+    renderStartIndex + maxRenderedBedCount,
+  );
+  renderStartIndex = Math.max(0, renderEndIndex - maxRenderedBedCount);
+
   return (
     <section
       className="h-full min-h-0 overflow-hidden rounded-md border border-[#d7ddd4] bg-white p-3 shadow-sm"
@@ -105,25 +114,29 @@ export default function ContinuousBedMap({
         }}
       >
         <div className="-ml-3 flex h-full touch-pan-y">
-          {beds.map((bed) => (
+          {beds.map((bed, index) => (
             <div
               key={bed.id}
               className="min-w-0 shrink-0 pl-3"
               style={{ flexBasis: `${100 / visibleBedCount}%` }}
             >
-              <PhysicalBedBlock
-                bed={bed}
-                distinguishVarietyColors={distinguishVarietyColors}
-                filteredOrchidGroupIds={filteredOrchidGroupIds}
-                selectedOrchidGroupIds={selectedOrchidGroupIds}
-                selection={selection}
-                showScale={showScale}
-                cellRangePick={cellRangePick}
-                onPickCellRange={onPickCellRange}
-                onSelectBedZone={onSelectBedZone}
-                onSelectPhysicalBed={onSelectPhysicalBed}
-                onSelectOrchidGroup={onSelectOrchidGroup}
-              />
+              {index >= renderStartIndex && index < renderEndIndex ? (
+                <PhysicalBedBlock
+                  bed={bed}
+                  distinguishVarietyColors={distinguishVarietyColors}
+                  filteredOrchidGroupIds={filteredOrchidGroupIds}
+                  selectedOrchidGroupIds={selectedOrchidGroupIds}
+                  selection={selection}
+                  showScale={showScale}
+                  cellRangePick={cellRangePick}
+                  onPickCellRange={onPickCellRange}
+                  onSelectBedZone={onSelectBedZone}
+                  onSelectPhysicalBed={onSelectPhysicalBed}
+                  onSelectOrchidGroup={onSelectOrchidGroup}
+                />
+              ) : (
+                <div aria-hidden="true" className="h-full" />
+              )}
             </div>
           ))}
         </div>

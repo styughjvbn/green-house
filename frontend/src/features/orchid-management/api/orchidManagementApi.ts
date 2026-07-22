@@ -334,9 +334,18 @@ export function getOrchidWorkTypes() {
   return fetchApi<WorkType[]>("/work-types");
 }
 
-export function getOrchidGroupWorkHistory(orchidGroupId: number) {
+export function getWorkHistory(
+  scopeType: "HOUSE" | "PHYSICAL_BED" | "BED_ZONE" | "ORCHID_GROUP",
+  scopeId: number,
+  signal?: AbortSignal,
+) {
+  const params = new URLSearchParams({
+    scopeType,
+    scopeId: String(scopeId),
+  });
   return fetchApi<OrchidGroupWorkHistory[]>(
-    `/orchid-groups/${orchidGroupId}/work-history`,
+    `/work-history?${params.toString()}`,
+    { signal },
   );
 }
 

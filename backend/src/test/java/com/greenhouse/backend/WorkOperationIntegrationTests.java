@@ -355,7 +355,14 @@ class WorkOperationIntegrationTests extends AbstractBackendIntegrationTest {
 				.andExpect(jsonPath("$.data.targets[0].resultDetails.weather").value("맑음"));
 		org.assertj.core.api.Assertions.assertThat(
 				workAppliedEffectRepository.countByWorkOperationIdAndTargetId(operationId, targetId))
-				.isEqualTo(1);
+			.isEqualTo(1);
+
+		mockMvc.perform(get("/api/work-history")
+				.param("scopeType", "HOUSE")
+				.param("scopeId", sourceHouse.getId().toString()))
+				.andExpect(status().isOk())
+				.andExpect(jsonPath("$.data", hasSize(1)))
+				.andExpect(jsonPath("$.data[0].workOperationId").value(operationId));
 
 		mockMvc.perform(patch("/api/orchid-groups/{id}/move", targetGroup.getId())
 				.contentType(MediaType.APPLICATION_JSON)
@@ -370,14 +377,21 @@ class WorkOperationIntegrationTests extends AbstractBackendIntegrationTest {
 				.andExpect(status().isOk())
 				.andExpect(jsonPath("$.data.houseNumber").value(5));
 
-			mockMvc.perform(get("/api/orchid-groups/{id}/work-history", targetGroup.getId()))
-					.andExpect(status().isOk())
-					.andExpect(jsonPath("$.data", hasSize(2)))
-					.andExpect(jsonPath("$.data[?(@.sourceKind == 'WORK_OPERATION')].workOperationId").value(hasItem(operationId.intValue())))
-					.andExpect(jsonPath("$.data[?(@.sourceKind == 'WORK_OPERATION')].propagated").value(hasItem(true)))
-					.andExpect(jsonPath("$.data[?(@.sourceKind == 'WORK_OPERATION')].locationSnapshot.houseNumber").value(hasItem(3)))
-					.andExpect(jsonPath("$.data[?(@.sourceKind == 'WORK_OPERATION')].currentLocation.houseNumber").value(hasItem(5)))
-					.andExpect(jsonPath("$.data[?(@.sourceKind == 'WORK_OPERATION')].workType").value(hasItem("위치 이동")));
+		mockMvc.perform(get("/api/orchid-groups/{id}/work-history", targetGroup.getId()))
+				.andExpect(status().isOk())
+				.andExpect(jsonPath("$.data", hasSize(2)))
+				.andExpect(jsonPath("$.data[?(@.sourceKind == 'WORK_OPERATION')].workOperationId").value(hasItem(operationId.intValue())))
+				.andExpect(jsonPath("$.data[?(@.sourceKind == 'WORK_OPERATION')].propagated").value(hasItem(true)))
+				.andExpect(jsonPath("$.data[?(@.sourceKind == 'WORK_OPERATION')].locationSnapshot.houseNumber").value(hasItem(3)))
+				.andExpect(jsonPath("$.data[?(@.sourceKind == 'WORK_OPERATION')].currentLocation.houseNumber").value(hasItem(5)))
+				.andExpect(jsonPath("$.data[?(@.sourceKind == 'WORK_OPERATION')].workType").value(hasItem("위치 이동")));
+
+		mockMvc.perform(get("/api/work-history")
+				.param("scopeType", "ORCHID_GROUP")
+				.param("scopeId", targetGroup.getId().toString()))
+				.andExpect(status().isOk())
+				.andExpect(jsonPath("$.data", hasSize(2)))
+				.andExpect(jsonPath("$.data[0].currentLocation.houseNumber").value(5));
 	}
 
 	@Test

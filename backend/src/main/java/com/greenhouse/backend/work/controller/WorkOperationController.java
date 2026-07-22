@@ -8,7 +8,9 @@ import com.greenhouse.backend.work.application.operation.StructureChangeExecutio
 import com.greenhouse.backend.work.application.operation.WorkOperationPlanService;
 import com.greenhouse.backend.work.application.operation.WorkOperationProgressService;
 import com.greenhouse.backend.work.application.operation.WorkOperationQueryService;
+import com.greenhouse.backend.work.domain.operation.WorkSourceScopeType;
 import com.greenhouse.backend.work.dto.operation.OrchidGroupWorkHistoryResponse;
+import com.greenhouse.backend.work.dto.operation.WorkHistoryScopeType;
 import com.greenhouse.backend.work.dto.effect.InboundPottingPlanBatchCreateRequest;
 import com.greenhouse.backend.work.dto.effect.InboundPottingCandidateResponse;
 import com.greenhouse.backend.work.dto.effect.InboundPottingPlanCreateRequest;
@@ -191,6 +193,13 @@ public class WorkOperationController {
 	public ApiResponse<List<OrchidGroupWorkHistoryResponse>> getOrchidGroupHistory(
 			@PathVariable Long orchidGroupId) {
 		return ApiResponse.ok(queryService.getOrchidGroupHistory(orchidGroupId));
+	}
+
+	@GetMapping("/work-history")
+	public ApiResponse<List<OrchidGroupWorkHistoryResponse>> getWorkHistory(
+			@RequestParam WorkHistoryScopeType scopeType,
+			@RequestParam Long scopeId) {
+		return ApiResponse.ok(queryService.getWorkHistory(scopeType, scopeId));
 	}
 
 	@PostMapping("/work-operations/{workOperationId}/corrections")

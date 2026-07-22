@@ -51,6 +51,24 @@ export function OrchidManagementMap({
     initialSelectedBedZoneId ?? null,
     initialSearchFilters,
   );
+  const selectedHistoryHouse = useMemo(() => {
+    if (orchidManagement.selection?.type !== "HOUSE") return null;
+    const selectedHouseId = orchidManagement.selection.houseId;
+    const physicalBeds = house.physicalBeds.filter(
+      (bed) => bed.houseId === selectedHouseId,
+    );
+    const selectedSummary = mapData.houses.find(
+      (item) => item.houseId === selectedHouseId,
+    );
+    return {
+      ...house,
+      id: selectedHouseId,
+      number: selectedSummary?.houseNumber ?? physicalBeds[0]?.houseNumber ?? 0,
+      name: selectedSummary?.houseName ?? house.name,
+      physicalBeds,
+    };
+  }, [house, mapData.houses, orchidManagement.selection]);
+  const historyHouse = selectedHistoryHouse ?? scopedHouse;
   const [showScale, setShowScale] = useState(true);
   const [orchidGroupSelection, setOrchidGroupSelection] = useState<{
     houseId: number;
@@ -249,7 +267,10 @@ export function OrchidManagementMap({
           }}
           onPrevious={bedViewport.actions.previous}
           onNext={bedViewport.actions.next}
-          onGoToHouse={bedViewport.actions.goToHouse}
+          onGoToHouse={(houseId) => {
+            bedViewport.actions.goToHouse(houseId);
+            orchidManagement.actions.selectHouse(houseId);
+          }}
           onVisibleBedCountChange={bedViewport.actions.setVisibleBedCount}
         />
         <div className="min-h-0 flex-1">
@@ -280,7 +301,7 @@ export function OrchidManagementMap({
           />
         </div>
         <SelectedZoneInfo
-          house={scopedHouse}
+          house={historyHouse}
           selectedBedZone={orchidManagement.selectedBedZone}
           selectedOrchidGroup={orchidManagement.selectedOrchidGroup}
           selectedPhysicalBed={orchidManagement.selectedPhysicalBed}

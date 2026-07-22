@@ -72,10 +72,11 @@ type ApiEnvelope<T> = { data: T };
 
 type HistoryResponseMetric = {
   apiResponseTimeMs: number;
-  groupId: number;
   payloadBytes: number;
   records: WorkHistory[];
   requestStartedAtEpoch: number;
+  scopeId: number | null;
+  scopeType: string | null;
   status: number;
 };
 
@@ -183,12 +184,19 @@ class HistoryRequestCollector {
     this.requestStartedAt = new WeakMap<Request, number>();
   }
 
-  async finish(metricStartEpoch: number): Promise<IterationMetric> {
-    await expect
-      .poll(() => this.responses.length > 0 && this.pending === 0, {
-        timeout: 120_000,
-      })
-      .toBeTruthy();
+  async finish(
+    metricStartEpoch: number,
+    expectRequest = true,
+  ): Promise<IterationMetric> {
+    if (expectRequest) {
+      await expect
+        .poll(() => this.responses.length > 0 && this.pending === 0, {
+          timeout: 120_000,
+        })
+        .toBeTruthy();
+    } else {
+      await expect.poll(() => this.pending, { timeout: 120_000 }).toBe(0);
+    }
     this.active = false;
 
     const responseTimes = this.responses
@@ -225,10 +233,10 @@ class HistoryRequestCollector {
       this.responses.push({
         apiResponseTimeMs:
           responseEnd >= 0 ? round(responseEnd) : round(Date.now() - startedAt),
-        groupId: parseGroupId(request.url()),
         payloadBytes: body.byteLength,
         records: payload.data,
         requestStartedAtEpoch: startedAt,
+        ...parseHistoryScope(request.url()),
         status: response.status(),
       });
       this.requestStarts.push(startedAt);
@@ -260,16 +268,13 @@ test("난 묶음 관리 맵 리팩터링 전 정확성·성능 기준값", async
     const url = request.url();
 
     const isExpectedAbort =
-      failure?.errorText === "net::ERR_ABORTED" &&
-      url.includes("_rsc=");
+      failure?.errorText === "net::ERR_ABORTED" && url.includes("_rsc=");
 
     if (isExpectedAbort) {
       return;
     }
 
-    failedRequests.push(
-      `${request.method()} ${url}: ${failure?.errorText}`,
-    );
+    failedRequests.push(`${request.method()} ${url}: ${failure?.errorText}`);
   });
   page.on("response", (response) => {
     if (isWorkHistoryUrl(response.url()) && response.status() >= 400) {
@@ -278,8 +283,6 @@ test("난 묶음 관리 맵 리팩터링 전 정확성·성능 기준값", async
       );
     }
   });
-
-
 
   await page.context().addCookies([
     {
@@ -345,6 +348,20 @@ test("난 묶음 관리 맵 리팩터링 전 정확성·성능 기준값", async
 
     const firstBed = firstHouse.physicalBeds[0]!;
     const firstZone = firstBed.bedZones[0]!;
+    scenarioResults.bedZoneHistory = await runSelectionScenario({
+      page,
+      collector,
+      scenario: "구역 이력 표시",
+      targets: firstBed.bedZones.slice(0, 2).map((zone) => ({
+        id: zone.id,
+        scope: scopeForZone(zone, firstBed, firstHouse),
+      })),
+      selectionType: "BED_ZONE",
+      action: async (target) => {
+        await clickBedZone(page, target.id);
+      },
+    });
+
     scenarioResults.orchidGroupHistory = await runSelectionScenario({
       page,
       collector,
@@ -448,21 +465,25 @@ async function runSelectionScenario({
     collector.begin();
     const start = await browserNow(page);
     await action(target);
-    const metric = await collector.finish(start.epoch);
     const historySection = await waitForHistoryDom(
       page,
       selectionType,
       target.id,
     );
+    const metric = await collector.finish(start.epoch, false);
     const ready = await renderSettledAt(page);
     metric.clickToRenderMs = round(ready.startTime - start.startTime);
 
-    if (index >= WARMUP_COUNT) {
-      accuracy ??= await verifyAccuracy(
+    if (!accuracy && metric.responses.length > 0) {
+      accuracy = await verifyAccuracy(
         historySection,
         target.scope,
         metric.responses,
+        selectionType,
+        target.id,
       );
+    }
+    if (index >= WARMUP_COUNT) {
       metric.responses = [];
       samples.push(metric);
     }
@@ -535,23 +556,21 @@ async function runSwipeScenarios(
       await page.getByLabel("이전 다이").click();
       await page.waitForTimeout(25);
     }
-    await waitForHistoryDom(page, "HOUSE", houses[0]!.id);
-    const metric = await collector.finish(startedAt.epoch);
+    await waitForHistoryDom(page, "HOUSE", middleHouse.id);
+    const metric = await collector.finish(startedAt.epoch, false);
     const ready = await renderSettledAt(page);
     metric.clickToRenderMs = round(ready.startTime - startedAt.startTime);
     const mountedAfter = await mountedBedCount(page);
     const visibleAfter = await visibleBedIds(page);
-    const expectedFinalGroupIds = new Set(
-      scopeForHouse(middleHouse).groups.map((group) => group.id),
+    const historySection = page.getByTestId("selected-history");
+    const finalSelectionType = await historySection.getAttribute(
+      "data-selection-type",
     );
-    const finalResponseGroupIds = latestRequestWaveGroupIds(
-      metric.responses,
-      expectedFinalGroupIds.size,
+    const finalSelectionId = Number(
+      await historySection.getAttribute("data-selection-id"),
     );
-    const finalScopeMatches = setsEqual(
-      expectedFinalGroupIds,
-      finalResponseGroupIds,
-    );
+    const finalScopeMatches =
+      finalSelectionType === "HOUSE" && finalSelectionId === middleHouse.id;
     const finalHistoryReady =
       (await page.getByTestId("selected-history").getAttribute("aria-busy")) ===
       "false";
@@ -562,10 +581,10 @@ async function runSwipeScenarios(
       domGrowth: mountedAfter - mountedBefore,
       visibleBedsAfter: visibleAfter.length,
       visibleBedIdsAfter: visibleAfter,
-      withinVisibleBedLimit: mountedAfter <= 4,
+      withinVisibleBedLimit: mountedAfter <= 5,
       duplicateHistoryRequestCount: duplicateRequestCount(metric.responses),
-      expectedFinalGroupIds: [...expectedFinalGroupIds],
-      finalResponseGroupIds: [...finalResponseGroupIds],
+      finalSelectionType,
+      finalSelectionId,
       finalScopeMatches,
       finalHistoryReady,
     };
@@ -646,7 +665,7 @@ async function measureSwipe(
   await expect
     .poll(() => visibleStartBedId(page), { timeout: 120_000 })
     .not.toBe(beforeId);
-  const metric = await collector.finish(start.epoch);
+  const metric = await collector.finish(start.epoch, false);
   await expect(page.getByTestId("selected-history")).toHaveAttribute(
     "aria-busy",
     "false",
@@ -712,15 +731,9 @@ async function waitForHistoryDom(
   await expect(section).toHaveAttribute("data-selection-type", type, {
     timeout: 120_000,
   });
-  if (type !== "HOUSE") {
-    await expect(section).toHaveAttribute(
-      "data-selection-id",
-      String(targetId),
-      {
-        timeout: 120_000,
-      },
-    );
-  }
+  await expect(section).toHaveAttribute("data-selection-id", String(targetId), {
+    timeout: 120_000,
+  });
   await expect(section).toHaveAttribute("aria-busy", "false", {
     timeout: 180_000,
   });
@@ -827,21 +840,6 @@ async function currentSelectionLabel(page: Page) {
   );
 }
 
-function latestRequestWaveGroupIds(
-  responses: HistoryResponseMetric[],
-  expectedCount: number,
-) {
-  return new Set(
-    [...responses]
-      .sort(
-        (left, right) =>
-          right.requestStartedAtEpoch - left.requestStartedAtEpoch,
-      )
-      .slice(0, expectedCount)
-      .map((response) => response.groupId),
-  );
-}
-
 function setsEqual(left: Set<number>, right: Set<number>) {
   return left.size === right.size && [...left].every((item) => right.has(item));
 }
@@ -850,6 +848,8 @@ async function verifyAccuracy(
   historySection: Locator,
   scope: SelectionScope,
   responses: HistoryResponseMetric[],
+  selectionType: "HOUSE" | "PHYSICAL_BED" | "BED_ZONE" | "ORCHID_GROUP",
+  selectionId: number,
 ): Promise<AccuracyResult> {
   const records = responses.flatMap((response) => response.records);
   const uniqueRecords = deduplicateHistory(records);
@@ -876,10 +876,6 @@ async function verifyAccuracy(
     (record) => record.sourceScopeType,
   );
 
-  const requestedGroupIds = new Set(
-    responses.map((response) => response.groupId),
-  );
-
   const requestDuplicateCount = duplicateRequestCount(responses);
 
   /*
@@ -896,7 +892,13 @@ async function verifyAccuracy(
    * 요청 대상이 현재 선택 범위와 다른 경우만 정확성 실패로 처리한다.
    */
 
-  if (!setsEqual(groupIds, requestedGroupIds)) {
+  if (
+    !responses.some(
+      (response) =>
+        response.scopeType === selectionType &&
+        response.scopeId === selectionId,
+    )
+  ) {
     violations.push("선택 범위와 work-history 요청 대상이 다름");
   }
 
@@ -1110,7 +1112,10 @@ function compareHistoryDesc(a: WorkHistory, b: WorkHistory) {
 }
 
 function duplicateRequestCount(responses: HistoryResponseMetric[]) {
-  const counts = countBy(responses, (response) => String(response.groupId));
+  const counts = countBy(
+    responses,
+    (response) => `${response.scopeType}:${response.scopeId}`,
+  );
   return Object.values(counts).reduce(
     (sum, count) => sum + Math.max(0, count - 1),
     0,
@@ -1146,12 +1151,22 @@ function round(value: number) {
 }
 
 function isWorkHistoryUrl(url: string) {
-  return /\/api\/orchid-groups\/\d+\/work-history(?:\?|$)/.test(url);
+  return (
+    /\/api\/work-history(?:\?|$)/.test(url) ||
+    /\/api\/orchid-groups\/\d+\/work-history(?:\?|$)/.test(url)
+  );
 }
 
-function parseGroupId(url: string) {
+function parseHistoryScope(url: string) {
   const match = url.match(/\/orchid-groups\/(\d+)\/work-history/);
-  return Number(match?.[1]);
+  if (match?.[1]) {
+    return { scopeType: "ORCHID_GROUP", scopeId: Number(match[1]) };
+  }
+  const parsed = new URL(url);
+  return {
+    scopeType: parsed.searchParams.get("scopeType"),
+    scopeId: Number(parsed.searchParams.get("scopeId")) || null,
+  };
 }
 
 function validateSeedStructure(houses: House[]) {
@@ -1198,7 +1213,7 @@ async function inspectRenderingStability(page: Page) {
     mountedBeds,
     visibleBeds,
     orchidGroupNodes,
-    withinVisibleBedLimit: mountedBeds <= 4,
+    withinVisibleBedLimit: mountedBeds <= 5,
   };
 }
 
