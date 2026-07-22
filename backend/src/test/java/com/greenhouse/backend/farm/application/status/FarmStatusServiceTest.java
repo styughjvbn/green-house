@@ -75,8 +75,7 @@ class FarmStatusServiceTest {
 		when(house.getName()).thenReturn("1동");
 		var physicalBed = bed(11L, 1L, 1, 1);
 		when(houseRepository.findAll()).thenReturn(List.of(house));
-		when(physicalBedRepository.findByHouseIdOrderByDisplayOrderAsc(1L))
-				.thenReturn(List.of(physicalBed));
+		when(physicalBedRepository.findAllInFarmOrder()).thenReturn(List.of(physicalBed));
 		when(orchidGroupRepository.search(null, "", null, null, null))
 				.thenReturn(List.of());
 

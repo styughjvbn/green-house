@@ -20,7 +20,7 @@ public record OrchidGroupLineageItemResponse(
 		return new OrchidGroupLineageItemResponse(
 				lineage.getId(),
 				lineage.getRelationType(),
-				lineage.getWorkOperation().getId(),
+				lineage.getWorkOperationId(),
 				lineage.getSourceQuantity(),
 				lineage.getResultQuantity(),
 				TimeConfig.toFarmTime(lineage.getCreatedAt()),

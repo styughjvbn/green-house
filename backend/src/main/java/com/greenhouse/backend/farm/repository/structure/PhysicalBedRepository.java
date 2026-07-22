@@ -13,10 +13,11 @@ public interface PhysicalBedRepository extends JpaRepository<PhysicalBed, Long> 
 	List<PhysicalBed> findByHouseIdOrderByDisplayOrderAsc(Long houseId);
 
 	@Query("""
-			select b from PhysicalBed b
+			select distinct b from PhysicalBed b
 			join fetch b.house h
 			order by h.number asc, b.displayOrder asc
 			""")
+	@EntityGraph(attributePaths = { "house", "bedZones" })
 	List<PhysicalBed> findAllInFarmOrder();
 
 	@EntityGraph(attributePaths = { "house", "bedZones" })

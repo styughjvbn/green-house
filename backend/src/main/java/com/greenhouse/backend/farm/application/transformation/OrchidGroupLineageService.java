@@ -8,7 +8,6 @@ import com.greenhouse.backend.farm.dto.transformation.OrchidGroupLineageItemResp
 import com.greenhouse.backend.farm.dto.transformation.OrchidGroupLineageResponse;
 import com.greenhouse.backend.farm.repository.transformation.OrchidGroupLineageRepository;
 import com.greenhouse.backend.farm.repository.orchid.OrchidGroupRepository;
-import com.greenhouse.backend.work.domain.operation.WorkOperation;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -25,11 +24,11 @@ public class OrchidGroupLineageService {
 			OrchidGroup source,
 			OrchidGroup result,
 			OrchidGroupLineageRelationType relationType,
-			WorkOperation workOperation,
+			Long workOperationId,
 			Integer sourceQuantity,
 			Integer resultQuantity) {
 		return lineageRepository.save(new OrchidGroupLineage(
-				source, result, relationType, workOperation, sourceQuantity, resultQuantity));
+				source, result, relationType, workOperationId, sourceQuantity, resultQuantity));
 	}
 
 	@Transactional(readOnly = true)

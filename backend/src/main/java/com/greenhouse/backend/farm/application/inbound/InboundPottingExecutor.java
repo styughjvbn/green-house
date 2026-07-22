@@ -12,11 +12,11 @@ import org.springframework.stereotype.Component;
 @Component
 public class InboundPottingExecutor {
 
-	private final InboundRecordService inboundRecordService;
+	private final InboundPottingService inboundPottingService;
 	private final ObjectMapper objectMapper = new ObjectMapper().findAndRegisterModules();
 
-	public InboundPottingExecutor(InboundRecordService inboundRecordService) {
-		this.inboundRecordService = inboundRecordService;
+	public InboundPottingExecutor(InboundPottingService inboundPottingService) {
+		this.inboundPottingService = inboundPottingService;
 	}
 
 	public WorkExecutionResult execute(WorkOperationTarget target, WorkEffectCommand command) {
@@ -25,7 +25,7 @@ public class InboundPottingExecutor {
 		}
 		InboundRecordPottingRequest request = objectMapper.convertValue(
 				command.resultDetails(), InboundRecordPottingRequest.class);
-		var result = inboundRecordService.pottingForOperation(target.getInboundRecordId(), request);
+		var result = inboundPottingService.potting(target.getInboundRecordId(), request);
 		var details = new LinkedHashMap<String, Object>();
 		details.put("inboundRecordId", target.getInboundRecordId());
 		details.put("createdOrchidGroupIds", result.createdOrchidGroupIds());

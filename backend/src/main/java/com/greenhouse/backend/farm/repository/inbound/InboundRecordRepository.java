@@ -47,6 +47,13 @@ public interface InboundRecordRepository extends JpaRepository<InboundRecord, Lo
 			  and (:varietyKeyword = '' or lower(variety.name) like lower(concat('%', :varietyKeyword, '%')))
 			order by record.inboundDate desc, record.id desc
 			""")
+	@EntityGraph(attributePaths = {
+			"variety",
+			"bedZone",
+			"bedZone.physicalBed",
+			"bedZone.physicalBed.house",
+			"createdOrchidGroup"
+	})
 	Page<InboundRecord> search(
 			@Param("from") LocalDate from,
 			@Param("to") LocalDate to,
@@ -73,4 +80,12 @@ public interface InboundRecordRepository extends JpaRepository<InboundRecord, Lo
 			where record.variety.id = :varietyId
 			""")
 	LocalDate findLatestInboundDateByVarietyId(@Param("varietyId") Long varietyId);
+
+	@Query("""
+			select record.variety.id, max(record.inboundDate)
+			from InboundRecord record
+			where record.variety.id in :varietyIds
+			group by record.variety.id
+			""")
+	List<Object[]> findLatestInboundDatesByVarietyIds(@Param("varietyIds") Collection<Long> varietyIds);
 }

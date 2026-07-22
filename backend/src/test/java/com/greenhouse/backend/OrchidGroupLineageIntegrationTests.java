@@ -77,7 +77,7 @@ class OrchidGroupLineageIntegrationTests extends AbstractBackendIntegrationTest 
 		var source = groups.get(0);
 		var result = groups.get(1);
 		lineageService.record(
-				source, result, OrchidGroupLineageRelationType.REPOTTED_TO, operation, 30, 28);
+				source, result, OrchidGroupLineageRelationType.REPOTTED_TO, operation.getId(), 30, 28);
 
 		mockMvc.perform(get("/api/orchid-groups/{id}/lineage", source.getId()))
 				.andExpect(status().isOk())

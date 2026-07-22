@@ -80,7 +80,7 @@ public class SingleSourceTransformationExecutor {
 					row.placementType(), row.trayCount(), row.splitPlacementAllowed(),
 					row.startPosition(), row.endPosition(), row.memo()));
 			lineageService.record(
-					source, result, relationType, operation, request.inputQuantity(), row.quantity());
+					source, result, relationType, operation.getId(), request.inputQuantity(), row.quantity());
 			memberRepository.saveAll(collectionIds.stream()
 					.map(id -> new OrchidGroupCollectionMember(id, result.getId(), command.worker()))
 					.toList());

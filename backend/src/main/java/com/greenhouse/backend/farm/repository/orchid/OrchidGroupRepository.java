@@ -81,6 +81,17 @@ public interface OrchidGroupRepository extends JpaRepository<OrchidGroup, Long> 
 			""")
 	List<OrchidGroup> findByVarietyIdOrderByLocation(@Param("varietyId") Long varietyId);
 
+	@Query("""
+			select g from OrchidGroup g
+			join fetch g.bedZone z
+			join fetch z.physicalBed b
+			join fetch b.house h
+			where g.variety.id in :varietyIds
+			  and g.quantity > 0
+			order by h.number asc, b.displayOrder asc, z.sortOrder asc, g.sortOrder asc
+			""")
+	List<OrchidGroup> findByVarietyIdInOrderByLocation(@Param("varietyIds") java.util.Collection<Long> varietyIds);
+
 	boolean existsByVarietyId(Long varietyId);
 
 	List<OrchidGroup> findByVarietyIsNull();

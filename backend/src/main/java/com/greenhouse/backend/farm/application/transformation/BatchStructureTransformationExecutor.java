@@ -104,7 +104,7 @@ public class BatchStructureTransformationExecutor {
 					row.placementType(), row.trayCount(),
 					row.splitPlacementAllowed(), row.startPosition(), row.endPosition(), row.memo()));
 			lineageSourceIds.forEach(sourceId -> lineageService.record(
-					sources.get(sourceId), result, relationType, operation,
+					sources.get(sourceId), result, relationType, operation.getId(),
 					inputBySourceId.get(sourceId), result.getQuantity()));
 			return result;
 		}).toList();

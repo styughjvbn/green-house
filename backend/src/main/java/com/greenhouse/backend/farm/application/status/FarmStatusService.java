@@ -23,6 +23,8 @@ import com.greenhouse.backend.farm.repository.structure.PhysicalBedRepository;
 import lombok.RequiredArgsConstructor;
 
 import java.util.List;
+import java.util.Set;
+import java.util.stream.Collectors;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -30,6 +32,7 @@ import org.springframework.transaction.annotation.Transactional;
 @Transactional(readOnly = true)
 @RequiredArgsConstructor
 public class FarmStatusService {
+	private static final Set<String> WARNING_STATUSES = Set.of("주의", "이상", "병해충");
 
 	private final HouseRepository houseRepository;
 	private final PhysicalBedRepository physicalBedRepository;
@@ -38,24 +41,28 @@ public class FarmStatusService {
 
 	public FarmStatusMapResponse getMap() {
 		var mapOrchidGroups = orchidGroupRepository.search(null, "", null, null, null);
+		var groupsByHouseId = mapOrchidGroups.stream().collect(Collectors.groupingBy(
+				group -> group.getBedZone().getPhysicalBed().getHouse().getId()));
+		var bedsByHouseId = physicalBedRepository.findAllInFarmOrder().stream()
+				.collect(Collectors.groupingBy(bed -> bed.getHouse().getId()));
 		var houses = houseRepository.findAll().stream()
 				.sorted((a, b) -> a.getNumber().compareTo(b.getNumber()))
-				.map(house -> new HouseStatusSummaryResponse(
-						house.getId(),
-						house.getNumber(),
-						house.getName(),
-						mapOrchidGroups.stream()
-								.filter(group -> group.getBedZone().getPhysicalBed().getHouse().getId().equals(house.getId()))
-								.count(),
-						mapOrchidGroups.stream()
-								.filter(group -> group.getBedZone().getPhysicalBed().getHouse().getId().equals(house.getId()))
-								.filter(group -> List.of("주의", "이상", "병해충").contains(group.getStatus()))
-								.count(),
-						0,
-						null,
-						physicalBedRepository.findByHouseIdOrderByDisplayOrderAsc(house.getId()).stream()
-								.map(FarmStatusMapPhysicalBedResponse::from)
-								.toList()))
+				.map(house -> {
+					var houseGroups = groupsByHouseId.getOrDefault(house.getId(), List.of());
+					return new HouseStatusSummaryResponse(
+							house.getId(),
+							house.getNumber(),
+							house.getName(),
+							houseGroups.size(),
+							houseGroups.stream()
+									.filter(group -> WARNING_STATUSES.contains(group.getStatus()))
+									.count(),
+							0,
+							null,
+							bedsByHouseId.getOrDefault(house.getId(), List.of()).stream()
+									.map(FarmStatusMapPhysicalBedResponse::from)
+									.toList());
+				})
 				.toList();
 		return new FarmStatusMapResponse(
 				houses,
@@ -104,7 +111,7 @@ public class FarmStatusService {
 					}
 					orchidGroupCount++;
 					totalQuantity += orchidGroup.getQuantity();
-					if (List.of("주의", "이상", "병해충").contains(orchidGroup.getStatus())) {
+					if (WARNING_STATUSES.contains(orchidGroup.getStatus())) {
 						abnormalCount++;
 					}
 				}

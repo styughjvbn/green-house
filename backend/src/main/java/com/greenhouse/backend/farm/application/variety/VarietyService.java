@@ -1,24 +1,18 @@
 package com.greenhouse.backend.farm.application.variety;
 
+import com.greenhouse.backend.farm.dto.variety.VarietyPageResponse;
 import com.greenhouse.backend.common.exception.NotFoundException;
-import com.greenhouse.backend.farm.domain.orchid.OrchidGroup;
 import com.greenhouse.backend.farm.domain.variety.Variety;
 import com.greenhouse.backend.farm.dto.variety.VarietyConnectedOrchidGroupResponse;
 import com.greenhouse.backend.farm.dto.variety.VarietyCreateRequest;
-import com.greenhouse.backend.farm.dto.variety.VarietyPageResponse;
 import com.greenhouse.backend.farm.dto.variety.VarietyResponse;
 import com.greenhouse.backend.farm.dto.variety.VarietyUpdateRequest;
 import com.greenhouse.backend.farm.repository.inbound.InboundRecordRepository;
 import com.greenhouse.backend.farm.repository.orchid.OrchidGroupRepository;
 import com.greenhouse.backend.farm.repository.variety.VarietyRepository;
-import com.greenhouse.backend.work.application.operation.WorkOperationMetricsReader;
-
 import lombok.RequiredArgsConstructor;
 
-import java.time.LocalDate;
-import java.util.Comparator;
 import java.util.List;
-import java.util.Map;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
@@ -31,7 +25,7 @@ public class VarietyService {
 	private final VarietyRepository varietyRepository;
 	private final OrchidGroupRepository orchidGroupRepository;
 	private final InboundRecordRepository inboundRecordRepository;
-	private final WorkOperationMetricsReader workOperationMetricsReader;
+	private final VarietyResponseAssembler responseAssembler;
 
 	@Transactional(readOnly = true)
 	public VarietyPageResponse getVarieties(
@@ -42,7 +36,7 @@ public class VarietyService {
 			int page,
 			int size) {
 		validatePageRequest(page, size);
-		return VarietyPageResponse.from(varietyRepository.search(
+		var result = varietyRepository.search(
 				normalize(keyword) == null ? "" : normalize(keyword),
 				normalize(genus) == null ? "" : normalize(genus),
 				saleEnabled,
@@ -50,13 +44,13 @@ public class VarietyService {
 				PageRequest.of(page, size, Sort.by(
 						Sort.Order.desc("active"),
 						Sort.Order.asc("genus"),
-						Sort.Order.asc("name"))))
-				.map(this::toResponse));
+						Sort.Order.asc("name"))));
+		return VarietyPageResponse.from(responseAssembler.assemble(result));
 	}
 
 	@Transactional(readOnly = true)
 	public VarietyResponse getVariety(Long varietyId) {
-		return toResponse(findVariety(varietyId));
+		return responseAssembler.assemble(findVariety(varietyId));
 	}
 
 	@Transactional(readOnly = true)
@@ -78,7 +72,7 @@ public class VarietyService {
 				true,
 				normalize(request.description()),
 				normalize(request.memo()));
-		return toResponse(varietyRepository.save(variety));
+		return responseAssembler.assemble(varietyRepository.save(variety));
 	}
 
 	public VarietyResponse update(Long varietyId, VarietyUpdateRequest request) {
@@ -96,13 +90,13 @@ public class VarietyService {
 				normalize(request.memo()));
 		orchidGroupRepository.findByVarietyIdOrderByLocation(varietyId)
 				.forEach(group -> group.assignVariety(variety));
-		return toResponse(variety);
+		return responseAssembler.assemble(variety);
 	}
 
 	public VarietyResponse deactivate(Long varietyId) {
 		var variety = findVariety(varietyId);
 		variety.deactivate();
-		return toResponse(variety);
+		return responseAssembler.assemble(variety);
 	}
 
 	public void delete(Long varietyId) {
@@ -116,55 +110,12 @@ public class VarietyService {
 
 	@Transactional(readOnly = true)
 	public List<VarietyConnectedOrchidGroupResponse> getOrchidGroups(Long varietyId) {
-		var variety = findVariety(varietyId);
-		var orchidGroups = orchidGroupRepository.findByVarietyIdOrderByLocation(variety.getId());
-		var latestWorkDates = latestWorkDates(orchidGroups);
-		return orchidGroups.stream()
-				.map(group -> new VarietyConnectedOrchidGroupResponse(
-						group.getId(),
-						formatLocation(group),
-						group.getQuantity(),
-						group.getStatus(),
-						latestWorkDates.get(group.getId())))
-				.toList();
+		return responseAssembler.connectedOrchidGroups(findVariety(varietyId));
 	}
 
 	public Variety findVariety(Long varietyId) {
 		return varietyRepository.findById(varietyId)
 				.orElseThrow(() -> new NotFoundException("품종을 찾을 수 없습니다."));
-	}
-
-	private VarietyResponse toResponse(Variety variety) {
-		var orchidGroups = orchidGroupRepository.findByVarietyIdOrderByLocation(variety.getId());
-		var latestWorkDates = latestWorkDates(orchidGroups);
-		long totalQuantity = orchidGroups.stream().mapToLong(OrchidGroup::getQuantity).sum();
-		long saleableQuantity = orchidGroups.stream()
-				.filter(group -> !List.of("주의", "이상", "병해충").contains(group.getStatus()))
-				.mapToLong(OrchidGroup::getQuantity)
-				.sum();
-		LocalDate recentWorkDate = latestWorkDates.values().stream()
-				.filter(java.util.Objects::nonNull)
-				.max(Comparator.naturalOrder())
-				.orElse(null);
-		return VarietyResponse.from(
-				variety,
-				orchidGroups.size(),
-				totalQuantity,
-				saleableQuantity,
-				inboundRecordRepository.findLatestInboundDateByVarietyId(variety.getId()),
-				recentWorkDate);
-	}
-
-	private Map<Long, LocalDate> latestWorkDates(List<OrchidGroup> orchidGroups) {
-		return workOperationMetricsReader.getLatestWorkDates(
-				orchidGroups.stream().map(OrchidGroup::getId).toList());
-	}
-
-	private String formatLocation(OrchidGroup orchidGroup) {
-		var bedZone = orchidGroup.getBedZone();
-		var physicalBed = bedZone.getPhysicalBed();
-		var house = physicalBed.getHouse();
-		return "%d동-%d다이 %s".formatted(house.getNumber(), physicalBed.getNumber(), bedZone.getName());
 	}
 
 	private String nextCode() {

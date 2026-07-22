@@ -108,7 +108,7 @@ public class MergeWorkHandler implements WorkEffectHandler {
 				row.startPosition(), row.endPosition(), row.memo()));
 		request.sources().forEach(sourceInput -> lineageService.record(
 				sourcesById.get(sourceInput.sourceOrchidGroupId()), result,
-				OrchidGroupLineageRelationType.MERGED_TO, operation,
+				OrchidGroupLineageRelationType.MERGED_TO, operation.getId(),
 				sourceInput.inputQuantity(), result.getQuantity()));
 
 		var details = new LinkedHashMap<String, Object>();

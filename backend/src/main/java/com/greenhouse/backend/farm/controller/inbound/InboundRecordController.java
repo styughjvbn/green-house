@@ -1,12 +1,13 @@
 package com.greenhouse.backend.farm.controller.inbound;
 
 import com.greenhouse.backend.common.api.ApiResponse;
+import com.greenhouse.backend.farm.dto.inbound.InboundRecordPageResponse;
 import com.greenhouse.backend.farm.application.inbound.InboundRecordService;
+import com.greenhouse.backend.farm.application.inbound.InboundRecordQueryService;
 import com.greenhouse.backend.farm.domain.inbound.InboundStatus;
 import com.greenhouse.backend.farm.domain.inbound.InboundType;
 import com.greenhouse.backend.farm.dto.inbound.InboundRecordCancelRequest;
 import com.greenhouse.backend.farm.dto.inbound.InboundRecordCreateRequest;
-import com.greenhouse.backend.farm.dto.inbound.InboundRecordPageResponse;
 import com.greenhouse.backend.farm.dto.inbound.InboundRecordPottingRequest;
 import com.greenhouse.backend.farm.dto.inbound.InboundRecordResponse;
 import com.greenhouse.backend.farm.dto.inbound.InboundRecordUpdateRequest;
@@ -35,6 +36,7 @@ import org.springframework.web.bind.annotation.RestController;
 public class InboundRecordController {
 
 	private final InboundRecordService inboundRecordService;
+	private final InboundRecordQueryService inboundRecordQueryService;
 	private final InboundPottingOperationService inboundPottingOperationService;
 
 	@GetMapping
@@ -47,12 +49,12 @@ public class InboundRecordController {
 			@RequestParam(defaultValue = "0") int page,
 			@RequestParam(defaultValue = "10") int size) {
 		return ApiResponse
-				.ok(inboundRecordService.getInboundRecords(from, to, inboundType, status, variety, page, size));
+				.ok(inboundRecordQueryService.getInboundRecords(from, to, inboundType, status, variety, page, size));
 	}
 
 	@GetMapping("/{inboundRecordId}")
 	public ApiResponse<InboundRecordResponse> getInboundRecord(@PathVariable Long inboundRecordId) {
-		return ApiResponse.ok(inboundRecordService.getInboundRecord(inboundRecordId));
+		return ApiResponse.ok(inboundRecordQueryService.getInboundRecord(inboundRecordId));
 	}
 
 	@PostMapping
@@ -83,7 +85,7 @@ public class InboundRecordController {
 						request.growthStage(),
 						request.worker(),
 						request.memo()));
-		return ApiResponse.ok(inboundRecordService.getInboundRecord(inboundRecordId));
+		return ApiResponse.ok(inboundRecordQueryService.getInboundRecord(inboundRecordId));
 	}
 
 	@PostMapping("/{inboundRecordId}/cancel")
