@@ -1,0 +1,151 @@
+#!/usr/bin/env bash
+
+set -Eeuo pipefail
+
+SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
+PROJECT_ROOT="$(cd -- "${SCRIPT_DIR}/../.." && pwd)"
+BACKEND_PORT="${MAP_E2E_BACKEND_PORT:-18080}"
+FRONTEND_PORT="${MAP_E2E_FRONTEND_PORT:-13000}"
+MAP_DB_HOST="${MAP_E2E_DB_HOST:-127.0.0.1}"
+MAP_DB_PORT="${MAP_E2E_DB_PORT:-5432}"
+MAP_DB_USER="${MAP_E2E_DB_USER:-greenhouse}"
+MAP_DB_PASSWORD="${MAP_E2E_DB_PASSWORD:-greenhouse}"
+MAP_DB_NAME="${MAP_E2E_DB_NAME:-greenhouse_map_e2e}"
+E2E_LOG_DIR="${PROJECT_ROOT}/logs/map-performance-e2e"
+BACKEND_PID=""
+FRONTEND_PID=""
+REUSE_DB=false
+DEBUG_MODE=false
+PLAYWRIGHT_ARGS=()
+
+usage() {
+    cat <<'EOF'
+Usage: run-map-performance-baseline [options]
+
+  --reuse-db  Keep the existing E2E DB; skip reset, migration, and seed
+  --headed    Run Playwright with a visible browser
+  --debug     Run Playwright Inspector debug mode
+  --help      Show this help
+EOF
+}
+
+while [[ $# -gt 0 ]]; do
+    case "$1" in
+        --reuse-db)
+            REUSE_DB=true
+            ;;
+        --headed)
+            PLAYWRIGHT_ARGS+=(--headed)
+            ;;
+        --debug)
+            DEBUG_MODE=true
+            PLAYWRIGHT_ARGS+=(--debug)
+            ;;
+        --help)
+            usage
+            exit 0
+            ;;
+        *)
+            echo "Unknown option: $1" >&2
+            usage >&2
+            exit 2
+            ;;
+    esac
+    shift
+done
+
+stop_process_group() {
+    local process_id="$1"
+    if [[ -n "$process_id" ]] && kill -0 "$process_id" 2>/dev/null; then
+        kill -- "-$process_id" 2>/dev/null || true
+        wait "$process_id" 2>/dev/null || true
+    fi
+}
+
+cleanup() {
+    stop_process_group "$FRONTEND_PID"
+    stop_process_group "$BACKEND_PID"
+}
+
+trap cleanup EXIT
+
+wait_for_url() {
+    local url="$1"
+    local process_id="$2"
+    local log_file="$3"
+    local label="$4"
+
+    for _ in {1..180}; do
+        if curl --silent --fail "$url" >/dev/null 2>&1; then
+            return 0
+        fi
+        if ! kill -0 "$process_id" 2>/dev/null; then
+            echo "${label} exited before becoming ready." >&2
+            tail -n 100 "$log_file" >&2 || true
+            return 1
+        fi
+        sleep 1
+    done
+
+    echo "${label} did not become ready: ${url}" >&2
+    tail -n 100 "$log_file" >&2 || true
+    return 1
+}
+
+mkdir -p "$E2E_LOG_DIR"
+if [[ "$REUSE_DB" == true ]]; then
+    if [[ ! "$MAP_DB_NAME" =~ _map_e2e$ ]]; then
+        echo "Refusing to use a database without the _map_e2e suffix: ${MAP_DB_NAME}" >&2
+        exit 1
+    fi
+    echo "Reusing E2E database without reset, migration, or seed: ${MAP_DB_NAME}"
+    cd "${PROJECT_ROOT}/backend"
+    ./gradlew bootJar
+    FLYWAY_ENABLED=false
+else
+    "${SCRIPT_DIR}/prepare-map-performance-data"
+    FLYWAY_ENABLED=true
+fi
+
+if [[ "$DEBUG_MODE" == true ]] && [[ -z "${MAP_E2E_RESULT_FILE:-}" ]]; then
+    export MAP_E2E_RESULT_FILE="e2e-results/map-performance-debug.json"
+fi
+
+cd "${PROJECT_ROOT}/backend"
+setsid env -u DEBUG \
+    DATABASE_URL="jdbc:postgresql://${MAP_DB_HOST}:${MAP_DB_PORT}/${MAP_DB_NAME}" \
+    DATABASE_USERNAME="$MAP_DB_USER" \
+    DATABASE_PASSWORD="$MAP_DB_PASSWORD" \
+    SERVER_PORT="$BACKEND_PORT" \
+    AUTH_ENABLED=false \
+    JPA_DDL_AUTO=validate \
+    SPRING_FLYWAY_ENABLED="$FLYWAY_ENABLED" \
+    LOGGING_LEVEL_ROOT=INFO \
+    java -jar build/libs/backend-0.0.1-SNAPSHOT.jar \
+    >"${E2E_LOG_DIR}/backend.log" 2>&1 &
+BACKEND_PID=$!
+wait_for_url \
+    "http://127.0.0.1:${BACKEND_PORT}/actuator/health" \
+    "$BACKEND_PID" \
+    "${E2E_LOG_DIR}/backend.log" \
+    "Map E2E backend"
+
+cd "${PROJECT_ROOT}/frontend"
+BACKEND_API_URL="http://127.0.0.1:${BACKEND_PORT}/api" \
+npm run build
+
+setsid env \
+    BACKEND_API_URL="http://127.0.0.1:${BACKEND_PORT}/api" \
+    npm run start -- --hostname 127.0.0.1 --port "$FRONTEND_PORT" \
+    >"${E2E_LOG_DIR}/frontend.log" 2>&1 &
+FRONTEND_PID=$!
+wait_for_url \
+    "http://127.0.0.1:${FRONTEND_PORT}/login" \
+    "$FRONTEND_PID" \
+    "${E2E_LOG_DIR}/frontend.log" \
+    "Map E2E frontend"
+
+PLAYWRIGHT_BASE_URL="http://127.0.0.1:${FRONTEND_PORT}" \
+npx playwright test \
+    --config=e2e/map-performance/playwright.config.ts \
+    "${PLAYWRIGHT_ARGS[@]}"

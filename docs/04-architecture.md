@@ -240,3 +240,18 @@ cd backend
   지정한 경우에만 상한 초과로 실패한다.
 - 전후 비교가 필요하면 각 대상 커밋에서 `clean workE2eTest workBenchmark`를 실행하고 생성된
   `results.json`을 각각 `before.json`, `after.json`으로 별도 보관한다.
+
+## 8. 프론트엔드 맵 성능 E2E
+
+난 묶음 관리 맵의 리팩터링 전후 비교는 `frontend/e2e/map-performance`의
+Playwright 시나리오를 사용한다. production build, 실제 Spring Boot 백엔드,
+PostgreSQL 전용 DB에서 workers 1과 고정 viewport로 실행한다.
+
+측정 코드는 제품 소스에 계측 분기나 전용 DOM 속성을 추가하지 않는다. Playwright가
+기존 접근성 이름과 화면의 로딩 상태를 관찰하고, 네트워크 응답 완료 후 두 프레임이
+지난 시점을 렌더 완료로 기록한다.
+
+일반 기준 측정은 전용 DB를 매번 재생성한다. 디버그 실행은 `--reuse-db`로 DB 준비
+단계를 생략하고 Flyway를 비활성화해 기존 E2E DB 상태를 보존한다.
+
+측정 데이터와 실행 방법은 `frontend/e2e/map-performance/README.md`를 기준으로 한다.

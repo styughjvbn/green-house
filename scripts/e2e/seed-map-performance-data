@@ -1,0 +1,30 @@
+#!/usr/bin/env bash
+
+set -Eeuo pipefail
+
+SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
+
+MAP_DB_HOST="${MAP_E2E_DB_HOST:-127.0.0.1}"
+MAP_DB_PORT="${MAP_E2E_DB_PORT:-5432}"
+MAP_DB_USER="${MAP_E2E_DB_USER:-greenhouse}"
+MAP_DB_PASSWORD="${MAP_E2E_DB_PASSWORD:-greenhouse}"
+MAP_DB_NAME="${MAP_E2E_DB_NAME:-greenhouse_map_e2e}"
+
+if [[ ! "$MAP_DB_NAME" =~ _map_e2e$ ]]; then
+    echo "Refusing to seed a database without the _map_e2e suffix: ${MAP_DB_NAME}" >&2
+    exit 1
+fi
+
+PGPASSWORD="$MAP_DB_PASSWORD" psql \
+    --host "$MAP_DB_HOST" \
+    --port "$MAP_DB_PORT" \
+    --username "$MAP_DB_USER" \
+    --dbname "$MAP_DB_NAME" \
+    --file "${SCRIPT_DIR}/map-performance-seed.sql"
+
+PGPASSWORD="$MAP_DB_PASSWORD" psql \
+    --host "$MAP_DB_HOST" \
+    --port "$MAP_DB_PORT" \
+    --username "$MAP_DB_USER" \
+    --dbname "$MAP_DB_NAME" \
+    --command "TABLE map_performance_seed_manifest ORDER BY metric_key;"

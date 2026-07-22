@@ -1,0 +1,68 @@
+#!/usr/bin/env bash
+
+set -Eeuo pipefail
+
+SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
+PROJECT_ROOT="$(cd -- "${SCRIPT_DIR}/../.." && pwd)"
+BACKEND_PORT="${MAP_E2E_BACKEND_PORT:-18080}"
+MAP_DB_HOST="${MAP_E2E_DB_HOST:-127.0.0.1}"
+MAP_DB_PORT="${MAP_E2E_DB_PORT:-5432}"
+MAP_DB_USER="${MAP_E2E_DB_USER:-greenhouse}"
+MAP_DB_PASSWORD="${MAP_E2E_DB_PASSWORD:-greenhouse}"
+MAP_DB_NAME="${MAP_E2E_DB_NAME:-greenhouse_map_e2e}"
+E2E_LOG_DIR="${PROJECT_ROOT}/logs/map-performance-e2e"
+BACKEND_PID=""
+
+stop_backend() {
+    if [[ -n "$BACKEND_PID" ]] && kill -0 "$BACKEND_PID" 2>/dev/null; then
+        kill -- "-$BACKEND_PID" 2>/dev/null || true
+        wait "$BACKEND_PID" 2>/dev/null || true
+    fi
+}
+
+trap stop_backend EXIT
+
+wait_for_backend() {
+    for _ in {1..120}; do
+        if curl --silent --fail \
+            "http://127.0.0.1:${BACKEND_PORT}/actuator/health" >/dev/null 2>&1; then
+            return 0
+        fi
+        if ! kill -0 "$BACKEND_PID" 2>/dev/null; then
+            echo "Map E2E migration backend exited before becoming ready." >&2
+            tail -n 80 "${E2E_LOG_DIR}/prepare-backend.log" >&2 || true
+            return 1
+        fi
+        sleep 1
+    done
+
+    echo "Map E2E migration backend did not become ready." >&2
+    tail -n 80 "${E2E_LOG_DIR}/prepare-backend.log" >&2 || true
+    return 1
+}
+
+mkdir -p "$E2E_LOG_DIR"
+"${SCRIPT_DIR}/reset-map-performance-db"
+
+cd "${PROJECT_ROOT}/backend"
+./gradlew bootJar
+
+setsid env -u DEBUG \
+    DATABASE_URL="jdbc:postgresql://${MAP_DB_HOST}:${MAP_DB_PORT}/${MAP_DB_NAME}" \
+    DATABASE_USERNAME="$MAP_DB_USER" \
+    DATABASE_PASSWORD="$MAP_DB_PASSWORD" \
+    SERVER_PORT="$BACKEND_PORT" \
+    AUTH_ENABLED=false \
+    JPA_DDL_AUTO=validate \
+    LOGGING_LEVEL_ROOT=INFO \
+    java -jar build/libs/backend-0.0.1-SNAPSHOT.jar \
+    >"${E2E_LOG_DIR}/prepare-backend.log" 2>&1 &
+BACKEND_PID=$!
+
+wait_for_backend
+stop_backend
+BACKEND_PID=""
+
+"${SCRIPT_DIR}/seed-map-performance-data"
+
+echo "Map performance E2E data prepared."
