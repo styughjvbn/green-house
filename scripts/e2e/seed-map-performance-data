@@ -14,15 +14,18 @@ if [[ ! "$MAP_DB_NAME" =~ _map_e2e$ ]]; then
     echo "Refusing to seed a database without the _map_e2e suffix: ${MAP_DB_NAME}" >&2
     exit 1
 fi
-
-PGPASSWORD="$MAP_DB_PASSWORD" psql \
+PGCLIENTENCODING=UTF8 \
+PGPASSWORD="$MAP_DB_PASSWORD" \
+psql \
     --host "$MAP_DB_HOST" \
     --port "$MAP_DB_PORT" \
     --username "$MAP_DB_USER" \
     --dbname "$MAP_DB_NAME" \
     --file "${SCRIPT_DIR}/map-performance-seed.sql"
 
-PGPASSWORD="$MAP_DB_PASSWORD" psql \
+PGCLIENTENCODING=UTF8 \
+PGPASSWORD="$MAP_DB_PASSWORD" \
+psql \
     --host "$MAP_DB_HOST" \
     --port "$MAP_DB_PORT" \
     --username "$MAP_DB_USER" \

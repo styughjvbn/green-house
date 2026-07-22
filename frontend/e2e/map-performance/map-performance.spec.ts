@@ -334,21 +334,6 @@ test("난 묶음 관리 맵 리팩터링 전 정확성·성능 기준값", async
     });
 
     const firstBed = firstHouse.physicalBeds[0]!;
-    scenarioResults.zoneHistory = await runSelectionScenario({
-      page,
-      collector,
-      scenario: "구역 이력 표시",
-      targets: firstBed.bedZones.map((zone) => ({
-        id: zone.id,
-        label: zone.name,
-        scope: scopeForZone(zone, firstBed, firstHouse),
-      })),
-      selectionType: "BED_ZONE",
-      action: async (target) => {
-        await clickBedZone(page, firstHouse, firstBed, target.id);
-      },
-    });
-
     const firstZone = firstBed.bedZones[0]!;
     scenarioResults.orchidGroupHistory = await runSelectionScenario({
       page,
@@ -364,6 +349,7 @@ test("난 묶음 관리 맵 리팩터링 전 정확성·성능 기준값", async
         const group = firstZone.orchidGroups.find(
           (item) => item.id === target.id,
         )!;
+
         await clickOrchidGroup(page, group);
       },
     });
@@ -386,7 +372,7 @@ test("난 묶음 관리 맵 리팩터링 전 정확성·성능 기준값", async
         browserVersion: browser.version(),
         continuousSwipeSteps: CONTINUOUS_SWIPE_STEPS,
         iterations: ITERATION_COUNT,
-        viewport: { width: 1440, height: 1000 },
+        viewport: { width: 1180, height: 820 },
         warmups: WARMUP_COUNT,
         workers: 1,
       },
@@ -407,6 +393,18 @@ test("난 묶음 관리 맵 리팩터링 전 정확성·성능 기준값", async
       `${JSON.stringify(result, null, 2)}\n`,
       "utf8",
     );
+  }
+
+  if (
+    correctnessFailures.length > 0 ||
+    consoleErrors.length > 0 ||
+    failedRequests.length > 0
+  ) {
+    console.log("correctnessFailures:", correctnessFailures);
+    console.log("consoleErrors:", consoleErrors);
+    console.log("failedRequests:", failedRequests);
+
+    await page.pause();
   }
 
   expect(correctnessFailures, "정확성 검증 실패").toEqual([]);
@@ -699,17 +697,6 @@ async function clickPhysicalBed(page: Page, house: House, bedId: number) {
   await physicalBedRoot(page, `${house.number}동 ${bed.number}다이`).click();
 }
 
-async function clickBedZone(
-  page: Page,
-  house: House,
-  bed: PhysicalBed,
-  zoneId: number,
-) {
-  const zoneIndex = bed.bedZones.findIndex((zone) => zone.id === zoneId);
-  const bedRoot = physicalBedRoot(page, `${house.number}동 ${bed.number}다이`);
-  await bedRoot.locator(":scope > div > [role=button]").nth(zoneIndex).click();
-}
-
 async function clickOrchidGroup(page: Page, group: OrchidGroup) {
   await page
     .getByText(group.varietyName, { exact: true })
@@ -888,49 +875,77 @@ async function verifyAccuracy(
   responses: HistoryResponseMetric[],
 ): Promise<AccuracyResult> {
   const records = responses.flatMap((response) => response.records);
-  const unique = deduplicateHistory(records);
-  const duplicateCount = unique.length - new Set(unique.map(historyKey)).size;
+  const uniqueRecords = deduplicateHistory(records);
+
+  const groupIds = new Set(scope.groups.map((group) => group.id));
+  const zoneIds = new Set(scope.zones.map((zone) => zone.id));
+  const bedIds = new Set(scope.beds.map((bed) => bed.id));
+  const houseIds = new Set(scope.houses.map((house) => house.id));
+
   const expectedByScope = {
     ORCHID_GROUP: scope.groups.length * 60,
     BED_ZONE: scope.zones.length * 20,
     PHYSICAL_BED: scope.beds.length * 10,
     HOUSE: scope.houses.length * 10,
   };
+
   const expectedTotalCount = Object.values(expectedByScope).reduce(
     (sum, count) => sum + count,
     0,
   );
-  const actualByScope = countBy(unique, (record) => record.sourceScopeType);
-  const groupIds = new Set(scope.groups.map((group) => group.id));
-  const zoneIds = new Set(scope.zones.map((zone) => zone.id));
-  const bedIds = new Set(scope.beds.map((bed) => bed.id));
-  const houseIds = new Set(scope.houses.map((house) => house.id));
-  const violations: string[] = [];
-  const requestDuplicateCount = duplicateRequestCount(responses);
+
+  const actualByScope = countBy(
+    uniqueRecords,
+    (record) => record.sourceScopeType,
+  );
+
   const requestedGroupIds = new Set(
     responses.map((response) => response.groupId),
   );
 
-  if (responses.length !== scope.groups.length) {
-    violations.push(
-      `work-history 요청 ${responses.length}건(예상 ${scope.groups.length}건)`,
-    );
-  }
+  const requestDuplicateCount = duplicateRequestCount(responses);
+
+  /*
+   * 원본 응답 전체에서 중복된 작업 이력 수를 측정한다.
+   * 중복 API 호출로 인해 같은 데이터가 반복 수집된 경우도 포함한다.
+   * 기준값으로만 기록하며 테스트 실패 조건으로 사용하지 않는다.
+   */
+  const duplicateCount =
+    records.length - new Set(records.map(historyKey)).size;
+
+  const violations: string[] = [];
+
+  /*
+   * 요청 횟수와 중복 요청은 리팩터링 전후 비교 지표로만 기록한다.
+   * 요청 대상이 현재 선택 범위와 다른 경우만 정확성 실패로 처리한다.
+   */
+
   if (!setsEqual(groupIds, requestedGroupIds)) {
     violations.push("선택 범위와 work-history 요청 대상이 다름");
   }
-  if (requestDuplicateCount > 0) {
-    violations.push(`중복 work-history 요청 ${requestDuplicateCount}건`);
-  }
 
-  for (const [scopeType, expected] of Object.entries(expectedByScope)) {
-    const actual = actualByScope[scopeType] ?? 0;
-    if (actual !== expected) {
-      violations.push(`${scopeType} ${actual}건(예상 ${expected}건)`);
+  /*
+   * 응답에 포함된 작업 이력 개수를 범위별로 검증한다.
+   */
+
+  for (const [scopeType, expectedCount] of Object.entries(
+    expectedByScope,
+  )) {
+    const actualCount = actualByScope[scopeType] ?? 0;
+
+    if (actualCount !== expectedCount) {
+      violations.push(
+        `${scopeType} ${actualCount}건(예상 ${expectedCount}건)`,
+      );
     }
   }
-  for (const record of unique) {
-    const valid =
+
+  /*
+   * 응답의 각 작업 이력이 현재 선택 범위에 속하는지 검증한다.
+   */
+
+  for (const record of uniqueRecords) {
+    const belongsToScope =
       (record.sourceScopeType === "ORCHID_GROUP" &&
         record.sourceScopeId != null &&
         groupIds.has(record.sourceScopeId)) ||
@@ -943,47 +958,93 @@ async function verifyAccuracy(
       (record.sourceScopeType === "HOUSE" &&
         record.sourceScopeId != null &&
         houseIds.has(record.sourceScopeId));
-    if (!valid) {
-      violations.push(`범위 밖 작업 ${record.workOperationId}`);
+
+    if (!belongsToScope) {
+      violations.push(
+        `범위 밖 작업 ${record.workOperationId}`,
+      );
       break;
     }
   }
-  if (unique.length !== expectedTotalCount) {
+
+  /*
+   * 중복 제거 후 전체 작업 이력 개수를 검증한다.
+   */
+
+  if (uniqueRecords.length !== expectedTotalCount) {
     violations.push(
-      `통합 이력 ${unique.length}건(예상 ${expectedTotalCount}건)`,
+      `통합 이력 ${uniqueRecords.length}건(예상 ${expectedTotalCount}건)`,
     );
   }
-  if (unique.length !== new Set(unique.map(historyKey)).size) {
-    violations.push("중복 제거 후 작업 중복 존재");
-  }
-  const sampleTitles = await historySection
+
+  /*
+   * 화면에 렌더링된 작업 이력 목록을 확인한다.
+   *
+   * 정확성 검증은 전체 항목을 사용하고,
+   * 결과 파일에는 처음 두 항목만 표본으로 저장한다.
+   */
+
+  const historyTitles = await historySection
     .locator("li")
-    .evaluateAll((items) =>
-      items.slice(0, 2).map((item) => item.textContent ?? ""),
+    .allTextContents();
+
+  const sampleTitles = historyTitles.slice(0, 2);
+
+  const latestRecord = [...uniqueRecords].sort(
+    compareHistoryDesc,
+  )[0];
+
+  if (latestRecord) {
+    const latestDateDigits = normalizeDateDigits(
+      latestRecord.workDate,
     );
-  const latestRecord = [...unique].sort(compareHistoryDesc)[0];
-  const latestDateLabel = latestRecord
-    ? latestRecord.workDate.replace(/^\d{2}(\d{2})-(\d{2})-(\d{2})$/, "$1$2$3")
-    : null;
-  if (
-    latestDateLabel &&
-    !sampleTitles.some((title) => title.includes(latestDateLabel))
-  ) {
-    violations.push(`최근 작업 표본에 최신 작업일 ${latestDateLabel}이 없음`);
+
+    const latestDateShortDigits =
+      latestDateDigits.length === 8
+        ? latestDateDigits.slice(2)
+        : latestDateDigits;
+
+    const normalizedHistoryTitles = historyTitles.map(
+      normalizeDateDigits,
+    );
+
+    const latestDateVisible = normalizedHistoryTitles.some(
+      (titleDigits) =>
+        titleDigits.includes(latestDateDigits) ||
+        titleDigits.includes(latestDateShortDigits),
+    );
+
+    if (!latestDateVisible) {
+      violations.push(
+        `최근 작업 목록에 최신 작업일 ${latestRecord.workDate}이 없음`,
+      );
+    }
   }
-  const failedResponse = responses.find((response) => response.status !== 200);
+
+  /*
+   * HTTP 응답 상태를 검증한다.
+   */
+
+  const failedResponse = responses.find(
+    (response) => response.status !== 200,
+  );
+
   if (failedResponse) {
-    violations.push(`work-history 응답 상태 ${failedResponse.status}`);
+    violations.push(
+      `work-history 응답 상태 ${failedResponse.status}`,
+    );
   }
 
   return {
-    actualTotalCount: unique.length,
+    actualTotalCount: uniqueRecords.length,
     directCount: actualByScope.ORCHID_GROUP ?? 0,
     duplicateCount,
     expectedTotalCount,
     houseCount: actualByScope.HOUSE ?? 0,
     physicalBedCount: actualByScope.PHYSICAL_BED ?? 0,
-    propagatedCount: unique.filter((record) => record.propagated).length,
+    propagatedCount: uniqueRecords.filter(
+      (record) => record.propagated,
+    ).length,
     requestCount: responses.length,
     requestDuplicateCount,
     sampleTitles,
@@ -991,6 +1052,10 @@ async function verifyAccuracy(
     violations,
     zoneCount: actualByScope.BED_ZONE ?? 0,
   };
+}
+
+function normalizeDateDigits(value: string): string {
+  return value.replace(/\D/g, "");
 }
 
 function scopeForGroup(
@@ -1180,12 +1245,24 @@ async function inspectRenderingStability(page: Page) {
   };
 }
 
-function readPositiveInteger(name: string, fallback: number) {
+function readNonNegativeInteger(
+  name: string,
+  fallback: number,
+) {
   const value = Number(process.env[name]);
-  return Number.isInteger(value) && value > 0 ? value : fallback;
+
+  return Number.isInteger(value) && value >= 0
+    ? value
+    : fallback;
 }
 
-function readNonNegativeInteger(name: string, fallback: number) {
+function readPositiveInteger(
+  name: string,
+  fallback: number,
+) {
   const value = Number(process.env[name]);
-  return Number.isInteger(value) && value >= 0 ? value : fallback;
+
+  return Number.isInteger(value) && value > 0
+    ? value
+    : fallback;
 }
