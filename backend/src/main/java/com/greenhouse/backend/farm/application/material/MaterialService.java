@@ -1,9 +1,9 @@
 package com.greenhouse.backend.farm.application.material;
 
+import com.greenhouse.backend.common.api.PageResponse;
 import com.greenhouse.backend.common.exception.NotFoundException;
 import com.greenhouse.backend.farm.domain.material.Material;
 import com.greenhouse.backend.farm.dto.material.MaterialCreateRequest;
-import com.greenhouse.backend.farm.dto.material.MaterialPageResponse;
 import com.greenhouse.backend.farm.dto.material.MaterialResponse;
 import com.greenhouse.backend.farm.dto.material.MaterialUpdateRequest;
 import com.greenhouse.backend.farm.repository.material.MaterialRepository;
@@ -23,7 +23,7 @@ public class MaterialService {
 	private final MaterialRepository materialRepository;
 
 	@Transactional(readOnly = true)
-	public MaterialPageResponse getMaterials(
+	public PageResponse<MaterialResponse> getMaterials(
 			String keyword,
 			String category,
 			String manufacturer,
@@ -31,7 +31,7 @@ public class MaterialService {
 			int page,
 			int size) {
 		validatePageRequest(page, size);
-		return MaterialPageResponse.from(materialRepository.search(
+		return PageResponse.from(materialRepository.search(
 				normalize(keyword) == null ? "" : normalize(keyword),
 				normalize(category) == null ? "" : normalize(category),
 				normalize(manufacturer) == null ? "" : normalize(manufacturer),

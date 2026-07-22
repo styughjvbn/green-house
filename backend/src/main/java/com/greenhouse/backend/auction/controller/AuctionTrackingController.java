@@ -3,13 +3,13 @@ package com.greenhouse.backend.auction.controller;
 import com.greenhouse.backend.auction.application.AuctionTrackingService;
 import com.greenhouse.backend.auction.domain.AuctionLotStatus;
 import com.greenhouse.backend.auction.dto.AuctionLotAdjustmentRequest;
-import com.greenhouse.backend.auction.dto.AuctionLotPageResponse;
 import com.greenhouse.backend.auction.dto.AuctionLotResultRequest;
 import com.greenhouse.backend.auction.dto.AuctionLotResponse;
 import com.greenhouse.backend.auction.dto.AuctionLotReturnRequest;
 import com.greenhouse.backend.auction.dto.AuctionLotStatusRequest;
 import com.greenhouse.backend.auction.dto.AuctionTrackingSummaryResponse;
 import com.greenhouse.backend.common.api.ApiResponse;
+import com.greenhouse.backend.common.api.PageResponse;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 
@@ -30,7 +30,7 @@ public class AuctionTrackingController {
 	private final AuctionTrackingService trackingService;
 
 	@GetMapping("/auction-lots")
-	public ApiResponse<AuctionLotPageResponse> getLots(@RequestParam(required = false) LocalDate from,
+	public ApiResponse<PageResponse<AuctionLotResponse>> getLots(@RequestParam(required = false) LocalDate from,
 			@RequestParam(required = false) LocalDate to, @RequestParam(required = false) String market,
 			@RequestParam(required = false) String variety, @RequestParam(required = false) String grade,
 			@RequestParam(required = false) AuctionLotStatus status, @RequestParam(required = false) Boolean reviewOnly,

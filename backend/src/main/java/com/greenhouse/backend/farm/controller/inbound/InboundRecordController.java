@@ -1,7 +1,7 @@
 package com.greenhouse.backend.farm.controller.inbound;
 
 import com.greenhouse.backend.common.api.ApiResponse;
-import com.greenhouse.backend.farm.dto.inbound.InboundRecordPageResponse;
+import com.greenhouse.backend.common.api.PageResponse;
 import com.greenhouse.backend.farm.application.inbound.InboundRecordService;
 import com.greenhouse.backend.farm.application.inbound.InboundRecordQueryService;
 import com.greenhouse.backend.farm.domain.inbound.InboundStatus;
@@ -40,7 +40,7 @@ public class InboundRecordController {
 	private final InboundPottingOperationService inboundPottingOperationService;
 
 	@GetMapping
-	public ApiResponse<InboundRecordPageResponse> getInboundRecords(
+	public ApiResponse<PageResponse<InboundRecordResponse>> getInboundRecords(
 			@RequestParam(required = false) LocalDate from,
 			@RequestParam(required = false) LocalDate to,
 			@RequestParam(required = false) InboundType inboundType,

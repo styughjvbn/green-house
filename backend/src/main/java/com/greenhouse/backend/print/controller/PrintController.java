@@ -1,8 +1,9 @@
 package com.greenhouse.backend.print.controller;
 
 import com.greenhouse.backend.common.api.ApiResponse;
+import com.greenhouse.backend.common.api.PageResponse;
 import com.greenhouse.backend.print.application.PrintQueryService;
-import com.greenhouse.backend.sales.dto.SalesSlipPageResponse;
+import com.greenhouse.backend.sales.dto.SalesSlipListItemResponse;
 import com.greenhouse.backend.sales.dto.SalesSlipResponse;
 
 import lombok.RequiredArgsConstructor;
@@ -20,7 +21,7 @@ public class PrintController {
 	private final PrintQueryService printQueryService;
 
 	@GetMapping("/print")
-	public ApiResponse<SalesSlipPageResponse> getPrintableSalesSlips(
+	public ApiResponse<PageResponse<SalesSlipListItemResponse>> getPrintableSalesSlips(
 			@RequestParam(defaultValue = "0") int page,
 			@RequestParam(defaultValue = "10") int size) {
 		return ApiResponse.ok(printQueryService.getPrintableSalesSlips(page, size));

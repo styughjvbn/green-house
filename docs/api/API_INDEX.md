@@ -105,20 +105,20 @@
 
 | Method | Path | Operation | Request | Response |
 |---|---|---|---|---|
-| `GET` | `/api/inbound-records` | `getInboundRecords` | `-` | `200:ApiResponseInboundRecordPageResponse` |
+| `GET` | `/api/inbound-records` | `getInboundRecords` | `-` | `200:ApiResponsePageResponseInboundRecordResponse` |
 | `POST` | `/api/inbound-records` | `create_4` | `InboundRecordCreateRequest` | `201:ApiResponseInboundRecordResponse` |
 | `GET` | `/api/inbound-records/{inboundRecordId}` | `getInboundRecord` | `-` | `200:ApiResponseInboundRecordResponse` |
 | `PATCH` | `/api/inbound-records/{inboundRecordId}` | `update_5` | `InboundRecordUpdateRequest` | `200:ApiResponseInboundRecordResponse` |
 | `DELETE` | `/api/inbound-records/{inboundRecordId}` | `delete` | `-` | `200:ApiResponseVoid` |
 | `POST` | `/api/inbound-records/{inboundRecordId}/cancel` | `cancel` | `InboundRecordCancelRequest` | `200:ApiResponseInboundRecordResponse` |
 | `POST` | `/api/inbound-records/{inboundRecordId}/potting` | `potting` | `InboundRecordPottingRequest` | `200:ApiResponseInboundRecordResponse` |
-| `GET` | `/api/materials` | `getMaterials` | `-` | `200:ApiResponseMaterialPageResponse` |
+| `GET` | `/api/materials` | `getMaterials` | `-` | `200:ApiResponsePageResponseMaterialResponse` |
 | `POST` | `/api/materials` | `create_3` | `MaterialCreateRequest` | `201:ApiResponseMaterialResponse` |
 | `GET` | `/api/materials/{materialId}` | `getMaterial` | `-` | `200:ApiResponseMaterialResponse` |
 | `PATCH` | `/api/materials/{materialId}` | `update_4` | `MaterialUpdateRequest` | `200:ApiResponseMaterialResponse` |
 | `DELETE` | `/api/materials/{materialId}` | `delete_2` | `-` | `200:ApiResponseVoid` |
 | `PATCH` | `/api/materials/{materialId}/deactivate` | `deactivate_1` | `-` | `200:ApiResponseMaterialResponse` |
-| `GET` | `/api/varieties` | `getVarieties` | `-` | `200:ApiResponseVarietyPageResponse` |
+| `GET` | `/api/varieties` | `getVarieties` | `-` | `200:ApiResponsePageResponseVarietyResponse` |
 | `POST` | `/api/varieties` | `create_1` | `VarietyCreateRequest` | `201:ApiResponseVarietyResponse` |
 | `GET` | `/api/varieties/genera` | `getGenera` | `-` | `200:ApiResponseListString` |
 | `GET` | `/api/varieties/{varietyId}` | `getVariety` | `-` | `200:ApiResponseVarietyResponse` |
@@ -214,7 +214,7 @@
 | Method | Path | Operation | Request | Response |
 |---|---|---|---|---|
 | `GET` | `/api/sales-slips` | `getSalesSlips` | `-` | `200:ApiResponseListSalesSlipResponse` |
-| `GET` | `/api/sales-slips/page` | `getSalesSlipPage` | `-` | `200:ApiResponseSalesSlipPageResponse` |
+| `GET` | `/api/sales-slips/page` | `getSalesSlipPage` | `-` | `200:ApiResponsePageResponseSalesSlipListItemResponse` |
 | `GET` | `/api/analytics/sales` | `getSalesAnalytics` | `-` | `200:ApiResponseSalesAnalyticsResponse` |
 | `GET` | `/api/analytics/partners` | `getPartnerAnalytics` | `-` | `200:ApiResponsePartnerAnalyticsResponse` |
 | `GET` | `/api/analytics/work` | `getWorkAnalytics` | `-` | `200:ApiResponseWorkAnalyticsResponse` |
@@ -222,7 +222,7 @@
 | `GET` | `/api/sales-slips/auction-shipments` | `getAuctionShipmentOptions` | `-` | `200:ApiResponseListAuctionShipmentOptionResponse` |
 | `GET` | `/api/sales-slips/{salesSlipId}` | `getSalesSlip` | `-` | `200:ApiResponseSalesSlipResponse` |
 | `GET` | `/api/sales-slips/{salesSlipId}/print` | `getSalesSlipPrintData` | `-` | `200:ApiResponseSalesSlipResponse` |
-| `GET` | `/api/sales-slips/print` | `getPrintableSalesSlips` | `-` | `200:ApiResponseSalesSlipPageResponse` |
+| `GET` | `/api/sales-slips/print` | `getPrintableSalesSlips` | `-` | `200:ApiResponsePageResponseSalesSlipListItemResponse` |
 
 ### 출하·경매 추적/정산
 
@@ -234,7 +234,7 @@
 
 | Method | Path | Operation | Request | Response |
 |---|---|---|---|---|
-| `GET` | `/api/auction-lots` | `getLots` | `-` | `200:ApiResponseAuctionLotPageResponse` |
+| `GET` | `/api/auction-lots` | `getLots` | `-` | `200:ApiResponsePageResponseAuctionLotResponse` |
 | `GET` | `/api/auction-lots/{id}` | `getLot` | `-` | `200:ApiResponseAuctionLotResponse` |
 | `POST` | `/api/auction-lots/{id}/adjust-quantity` | `adjust` | `AuctionLotAdjustmentRequest` | `200:ApiResponseAuctionLotResponse` |
 | `POST` | `/api/auction-lots/{id}/confirm-return` | `confirmReturn` | `AuctionLotReturnRequest` | `200:ApiResponseAuctionLotResponse` |

@@ -1,9 +1,9 @@
 package com.greenhouse.backend.farm.controller.material;
 
 import com.greenhouse.backend.common.api.ApiResponse;
+import com.greenhouse.backend.common.api.PageResponse;
 import com.greenhouse.backend.farm.application.material.MaterialService;
 import com.greenhouse.backend.farm.dto.material.MaterialCreateRequest;
-import com.greenhouse.backend.farm.dto.material.MaterialPageResponse;
 import com.greenhouse.backend.farm.dto.material.MaterialResponse;
 import com.greenhouse.backend.farm.dto.material.MaterialUpdateRequest;
 import jakarta.validation.Valid;
@@ -29,7 +29,7 @@ public class MaterialController {
 	private final MaterialService materialService;
 
 	@GetMapping
-	public ApiResponse<MaterialPageResponse> getMaterials(
+	public ApiResponse<PageResponse<MaterialResponse>> getMaterials(
 			@RequestParam(required = false) String keyword,
 			@RequestParam(required = false) String category,
 			@RequestParam(required = false) String manufacturer,

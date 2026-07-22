@@ -1,6 +1,6 @@
 package com.greenhouse.backend.farm.application.inbound;
 
-import com.greenhouse.backend.farm.dto.inbound.InboundRecordPageResponse;
+import com.greenhouse.backend.common.api.PageResponse;
 import com.greenhouse.backend.farm.domain.inbound.InboundStatus;
 import com.greenhouse.backend.farm.domain.inbound.InboundType;
 import com.greenhouse.backend.farm.dto.inbound.InboundRecordResponse;
@@ -20,7 +20,7 @@ public class InboundRecordQueryService {
 	private final InboundRecordRepository inboundRecordRepository;
 	private final InboundRecordFinder inboundRecordFinder;
 
-	public InboundRecordPageResponse getInboundRecords(
+	public PageResponse<InboundRecordResponse> getInboundRecords(
 			LocalDate from,
 			LocalDate to,
 			InboundType inboundType,
@@ -30,7 +30,7 @@ public class InboundRecordQueryService {
 			int size) {
 		validatePageRequest(page, size);
 		String keyword = normalize(varietyKeyword);
-		return InboundRecordPageResponse.from(inboundRecordRepository.search(
+		return PageResponse.from(inboundRecordRepository.search(
 				from,
 				to,
 				inboundType,

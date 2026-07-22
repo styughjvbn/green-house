@@ -1,6 +1,6 @@
 package com.greenhouse.backend.farm.application.variety;
 
-import com.greenhouse.backend.farm.dto.variety.VarietyPageResponse;
+import com.greenhouse.backend.common.api.PageResponse;
 import com.greenhouse.backend.common.exception.NotFoundException;
 import com.greenhouse.backend.farm.domain.variety.Variety;
 import com.greenhouse.backend.farm.dto.variety.VarietyConnectedOrchidGroupResponse;
@@ -28,7 +28,7 @@ public class VarietyService {
 	private final VarietyResponseAssembler responseAssembler;
 
 	@Transactional(readOnly = true)
-	public VarietyPageResponse getVarieties(
+	public PageResponse<VarietyResponse> getVarieties(
 			String keyword,
 			String genus,
 			Boolean saleEnabled,
@@ -45,7 +45,7 @@ public class VarietyService {
 						Sort.Order.desc("active"),
 						Sort.Order.asc("genus"),
 						Sort.Order.asc("name"))));
-		return VarietyPageResponse.from(responseAssembler.assemble(result));
+		return PageResponse.from(responseAssembler.assemble(result));
 	}
 
 	@Transactional(readOnly = true)

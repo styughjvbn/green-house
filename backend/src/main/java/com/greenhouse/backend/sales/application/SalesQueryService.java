@@ -1,10 +1,10 @@
 package com.greenhouse.backend.sales.application;
 
 import com.greenhouse.backend.auction.application.AuctionDataReader;
+import com.greenhouse.backend.common.api.PageResponse;
 import com.greenhouse.backend.common.exception.NotFoundException;
 import com.greenhouse.backend.sales.dto.AuctionShipmentOptionResponse;
 import com.greenhouse.backend.sales.dto.SalesSlipListItemResponse;
-import com.greenhouse.backend.sales.dto.SalesSlipPageResponse;
 import com.greenhouse.backend.sales.dto.SalesSlipResponse;
 import com.greenhouse.backend.sales.repository.SalesSlipRepository;
 
@@ -31,7 +31,7 @@ public class SalesQueryService {
 				.toList();
 	}
 
-	public SalesSlipPageResponse getSalesSlipPage(
+	public PageResponse<SalesSlipListItemResponse> getSalesSlipPage(
 			Long partnerId,
 			LocalDate from,
 			LocalDate to,
@@ -50,7 +50,7 @@ public class SalesQueryService {
 		Page<SalesSlipListItemResponse> result = salesSlipRepository
 				.searchPage(partnerId, from, to, normalizedPaymentStatus, normalizedSalesStatus, normalizedKeyword, pageable)
 				.map(SalesSlipListItemResponse::from);
-		return SalesSlipPageResponse.from(result);
+		return PageResponse.from(result);
 	}
 
 	public SalesSlipResponse getSalesSlip(Long salesSlipId) {

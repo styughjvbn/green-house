@@ -1,10 +1,10 @@
 package com.greenhouse.backend.farm.controller.variety;
 
 import com.greenhouse.backend.common.api.ApiResponse;
+import com.greenhouse.backend.common.api.PageResponse;
 import com.greenhouse.backend.farm.application.variety.VarietyService;
 import com.greenhouse.backend.farm.dto.variety.VarietyConnectedOrchidGroupResponse;
 import com.greenhouse.backend.farm.dto.variety.VarietyCreateRequest;
-import com.greenhouse.backend.farm.dto.variety.VarietyPageResponse;
 import com.greenhouse.backend.farm.dto.variety.VarietyResponse;
 import com.greenhouse.backend.farm.dto.variety.VarietyUpdateRequest;
 import jakarta.validation.Valid;
@@ -30,7 +30,7 @@ public class VarietyController {
 	private final VarietyService varietyService;
 
 	@GetMapping
-	public ApiResponse<VarietyPageResponse> getVarieties(
+	public ApiResponse<PageResponse<VarietyResponse>> getVarieties(
 			@RequestParam(required = false) String keyword,
 			@RequestParam(required = false) String genus,
 			@RequestParam(required = false) Boolean saleEnabled,

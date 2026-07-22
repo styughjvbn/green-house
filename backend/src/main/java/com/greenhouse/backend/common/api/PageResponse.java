@@ -1,16 +1,17 @@
-package com.greenhouse.backend.farm.dto.variety;
+package com.greenhouse.backend.common.api;
 
 import java.util.List;
 import org.springframework.data.domain.Page;
 
-public record VarietyPageResponse(
-		List<VarietyResponse> content,
+public record PageResponse<T>(
+		List<T> content,
 		int page,
 		int size,
 		long totalElements,
 		int totalPages) {
-	public static VarietyPageResponse from(Page<VarietyResponse> result) {
-		return new VarietyPageResponse(
+
+	public static <T> PageResponse<T> from(Page<T> result) {
+		return new PageResponse<>(
 				result.getContent(),
 				result.getNumber(),
 				result.getSize(),

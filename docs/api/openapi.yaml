@@ -775,7 +775,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ApiResponseVarietyPageResponse'
+                $ref: '#/components/schemas/ApiResponsePageResponseVarietyResponse'
     post:
       tags:
       - variety-controller
@@ -1050,7 +1050,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ApiResponseMaterialPageResponse'
+                $ref: '#/components/schemas/ApiResponsePageResponseMaterialResponse'
     post:
       tags:
       - material-controller
@@ -1134,7 +1134,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ApiResponseInboundRecordPageResponse'
+                $ref: '#/components/schemas/ApiResponsePageResponseInboundRecordResponse'
     post:
       tags:
       - inbound-record-controller
@@ -2018,7 +2018,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ApiResponseSalesSlipPageResponse'
+                $ref: '#/components/schemas/ApiResponsePageResponseSalesSlipListItemResponse'
   /api/sales-slips/page:
     get:
       tags:
@@ -2078,7 +2078,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ApiResponseSalesSlipPageResponse'
+                $ref: '#/components/schemas/ApiResponsePageResponseSalesSlipListItemResponse'
   /api/sales-slips/auction-shipments:
     get:
       tags:
@@ -2698,7 +2698,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ApiResponseAuctionLotPageResponse'
+                $ref: '#/components/schemas/ApiResponsePageResponseAuctionLotResponse'
   /api/auction-lots/{id}:
     get:
       tags:
@@ -5703,14 +5703,14 @@ components:
           format: date
         potSize:
           type: string
-    ApiResponseVarietyPageResponse:
+    ApiResponsePageResponseVarietyResponse:
       type: object
       properties:
         data:
-          $ref: '#/components/schemas/VarietyPageResponse'
+          $ref: '#/components/schemas/PageResponseVarietyResponse'
         message:
           type: string
-    VarietyPageResponse:
+    PageResponseVarietyResponse:
       type: object
       properties:
         content:
@@ -5818,13 +5818,32 @@ components:
             $ref: '#/components/schemas/SalesSlipResponse'
         message:
           type: string
-    ApiResponseSalesSlipPageResponse:
+    ApiResponsePageResponseSalesSlipListItemResponse:
       type: object
       properties:
         data:
-          $ref: '#/components/schemas/SalesSlipPageResponse'
+          $ref: '#/components/schemas/PageResponseSalesSlipListItemResponse'
         message:
           type: string
+    PageResponseSalesSlipListItemResponse:
+      type: object
+      properties:
+        content:
+          type: array
+          items:
+            $ref: '#/components/schemas/SalesSlipListItemResponse'
+        page:
+          type: integer
+          format: int32
+        size:
+          type: integer
+          format: int32
+        totalElements:
+          type: integer
+          format: int64
+        totalPages:
+          type: integer
+          format: int32
     SalesSlipListItemResponse:
       type: object
       properties:
@@ -5868,25 +5887,6 @@ components:
           type: string
         memo:
           type: string
-    SalesSlipPageResponse:
-      type: object
-      properties:
-        content:
-          type: array
-          items:
-            $ref: '#/components/schemas/SalesSlipListItemResponse'
-        page:
-          type: integer
-          format: int32
-        size:
-          type: integer
-          format: int32
-        totalElements:
-          type: integer
-          format: int64
-        totalPages:
-          type: integer
-          format: int32
     ApiResponseListAuctionShipmentOptionResponse:
       type: object
       properties:
@@ -6283,14 +6283,14 @@ components:
         locationCount:
           type: integer
           format: int32
-    ApiResponseMaterialPageResponse:
+    ApiResponsePageResponseMaterialResponse:
       type: object
       properties:
         data:
-          $ref: '#/components/schemas/MaterialPageResponse'
+          $ref: '#/components/schemas/PageResponseMaterialResponse'
         message:
           type: string
-    MaterialPageResponse:
+    PageResponseMaterialResponse:
       type: object
       properties:
         content:
@@ -6309,14 +6309,14 @@ components:
         totalPages:
           type: integer
           format: int32
-    ApiResponseInboundRecordPageResponse:
+    ApiResponsePageResponseInboundRecordResponse:
       type: object
       properties:
         data:
-          $ref: '#/components/schemas/InboundRecordPageResponse'
+          $ref: '#/components/schemas/PageResponseInboundRecordResponse'
         message:
           type: string
-    InboundRecordPageResponse:
+    PageResponseInboundRecordResponse:
       type: object
       properties:
         content:
@@ -6799,14 +6799,14 @@ components:
             $ref: '#/components/schemas/AuctionSettlementResponse'
         message:
           type: string
-    ApiResponseAuctionLotPageResponse:
+    ApiResponsePageResponseAuctionLotResponse:
       type: object
       properties:
         data:
-          $ref: '#/components/schemas/AuctionLotPageResponse'
+          $ref: '#/components/schemas/PageResponseAuctionLotResponse'
         message:
           type: string
-    AuctionLotPageResponse:
+    PageResponseAuctionLotResponse:
       type: object
       properties:
         content:
