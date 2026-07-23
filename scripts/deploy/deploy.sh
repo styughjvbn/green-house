@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# Green House production deploy script
+# Green House deployment script
 #
 # Usage:
 #   ./scripts/deploy/deploy.sh <tag>
@@ -32,6 +32,7 @@ APP_URL="${APP_URL:-https://green-house.sjw-project.site}"
 BACKEND_HEALTH_PATH="${BACKEND_HEALTH_PATH:-/api/dashboard/summary}"
 
 ROLLOUT_TIMEOUT="${ROLLOUT_TIMEOUT:-180s}"
+OPERATION_LOCK_FILE="${GREENHOUSE_OPERATION_LOCK_FILE:-/tmp/green-house-operation.lock}"
 
 if [[ $# -eq 1 ]]; then
   BACKEND_TAG="$1"
@@ -192,6 +193,10 @@ print_summary() {
 main() {
   require_command kubectl
   require_command curl
+  require_command flock
+
+  exec 9>"${OPERATION_LOCK_FILE}"
+  flock -n 9 || fail "Another deployment or demo reset is running: ${OPERATION_LOCK_FILE}"
 
   check_context
   check_image_pull_secret
@@ -204,7 +209,7 @@ main() {
   echo
 
   if [[ "${SKIP_CONFIRM:-false}" != "true" ]]; then
-    read -r -p "Deploy to production? [y/N] " answer
+    read -r -p "Deploy to namespace '${NAMESPACE}'? [y/N] " answer
     case "${answer}" in
       y|Y|yes|YES) ;;
       *) echo "Cancelled."; exit 0 ;;

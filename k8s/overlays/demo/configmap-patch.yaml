@@ -1,0 +1,21 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: green-house-config
+  namespace: green-house
+data:
+  DATABASE_URL: jdbc:postgresql://green-house-postgres-host:5432/greenhouse_demo
+  DATABASE_USERNAME: greenhouse_demo_app
+  FLYWAY_URL: jdbc:postgresql://green-house-postgres-host:5432/greenhouse_demo
+  FLYWAY_USERNAME: greenhouse_demo_migrator
+  FRONTEND_ORIGIN_PATTERNS: https://green-house-demo.sjw-project.site
+  DEMO_MODE: "true"
+  DEMO_USERNAME: demo
+  DEMO_REQUEST_LIMIT_PER_MINUTE: "120"
+  DEMO_MUTATION_LIMIT_PER_MINUTE: "30"
+  DEMO_MUTATION_LIMIT_PER_DAY: "300"
+  DEMO_MAX_REQUEST_BYTES: "262144"
+  DB_POOL_MAX_SIZE: "5"
+  DB_POOL_MIN_IDLE: "1"
+  DB_POOL_CONNECTION_TIMEOUT: "10000"
+  SERVER_FORWARD_HEADERS_STRATEGY: framework
