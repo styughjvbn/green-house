@@ -1,7 +1,7 @@
 ﻿"use client";
 
 import { useRouter } from "next/navigation";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type {
   House,
   OrchidGroup,
@@ -462,12 +462,15 @@ export function useOrchidManagementMap(
     clearPasteSource();
   }
 
-  function selectOrchidGroupForEdit(orchidGroupId: number) {
-    setSelection({ type: "ORCHID_GROUP", orchidGroupId });
-    setMutationMode("EDIT");
-    clearPasteSource();
-    setErrorMessage(null);
-  }
+  const selectOrchidGroupForEdit = useCallback(
+    (orchidGroupId: number) => {
+      setSelection({ type: "ORCHID_GROUP", orchidGroupId });
+      setMutationMode("EDIT");
+      clearPasteSource();
+      setErrorMessage(null);
+    },
+    [clearPasteSource],
+  );
 
   function openCreate() {
     if (mutationMode === "CREATE" && !pasteSourceOrchidGroup) {

@@ -245,6 +245,7 @@ export default function BedZoneBlock({
                   heightPx={heightPx}
                   muted={!matched}
                   orchidGroup={orchidGroup}
+                  orchidGroupId={orchidGroup.id}
                   positionLabel={
                     previewMoved
                       ? `${displayRange.startCell}-${displayRange.endCell}칸`
@@ -254,7 +255,7 @@ export default function BedZoneBlock({
                     selectedOrchidGroupId === orchidGroup.id ||
                     selectedOrchidGroupIds.has(orchidGroup.id)
                   }
-                  onSelect={() => onSelectOrchidGroup(orchidGroup.id)}
+                  onSelect={onSelectOrchidGroup}
                 />
               </div>
             );

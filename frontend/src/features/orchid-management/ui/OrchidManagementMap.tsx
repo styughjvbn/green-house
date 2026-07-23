@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState, useSyncExternalStore } from "react";
+import { useCallback, useMemo, useState, useSyncExternalStore } from "react";
 import { normalizeCellRange } from "../lib/orchidManagementUtils";
 import { useBedViewport } from "../model/useBedViewport";
 import { useOrchidManagementMap } from "../model/useOrchidManagementMap";
@@ -193,7 +193,7 @@ export function OrchidManagementMap({
     }));
   }
 
-  function clearMapCellRangePick() {
+  const clearMapCellRangePick = useCallback(() => {
     setMapCellRangePick((current) => ({
       active: false,
       completed: false,
@@ -203,7 +203,17 @@ export function OrchidManagementMap({
       endCell: null,
       version: current.version + 1,
     }));
-  }
+  }, []);
+
+  const selectOrchidGroupForEdit =
+    orchidManagement.actions.selectOrchidGroupForEdit;
+  const handleSelectOrchidGroup = useCallback(
+    (orchidGroupId: number) => {
+      clearMapCellRangePick();
+      selectOrchidGroupForEdit(orchidGroupId);
+    },
+    [clearMapCellRangePick, selectOrchidGroupForEdit],
+  );
 
   function pickMapCellRange(bedZoneId: number, cell: number) {
     setMapCellRangePick((current) => {
@@ -294,10 +304,7 @@ export function OrchidManagementMap({
               clearMapCellRangePick();
               orchidManagement.actions.selectPhysicalBed(physicalBedId);
             }}
-            onSelectOrchidGroup={(orchidGroupId) => {
-              clearMapCellRangePick();
-              orchidManagement.actions.selectOrchidGroupForEdit(orchidGroupId);
-            }}
+            onSelectOrchidGroup={handleSelectOrchidGroup}
           />
         </div>
         <SelectedZoneInfo
