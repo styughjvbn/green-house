@@ -24,6 +24,20 @@ npm install
 npm run dev
 ```
 
+Linux/macOS에서는 개발 서버를 한 번에 실행할 수 있다.
+
+```bash
+./scripts/dev-start.sh
+```
+
+프론트엔드 렌더링 성능처럼 production build 기준으로 확인해야 할 때는 다음 옵션을
+사용한다. 이 모드는 `npm run build`가 성공한 후 `npm run start`로 프론트엔드를
+실행하며, 기존 3000 포트를 재사용하지 않는다.
+
+```bash
+./scripts/dev-start.sh --frontend-production
+```
+
 ## 2. 환경 변수
 
 ### Backend

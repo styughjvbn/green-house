@@ -4,9 +4,14 @@ set -Eeuo pipefail
 
 NO_DB=false
 LAN=false
+FRONTEND_PRODUCTION=false
 
 while [[ $# -gt 0 ]]; do
     case "$1" in
+        --frontend-production)
+            FRONTEND_PRODUCTION=true
+            shift
+            ;;
         --lan)
             LAN=true
             shift
@@ -17,7 +22,7 @@ while [[ $# -gt 0 ]]; do
             ;;
         *)
             echo "Unknown option: $1" >&2
-            echo "Usage: $0 [--no-db] [--lan]" >&2
+            echo "Usage: $0 [--no-db] [--lan] [--frontend-production]" >&2
             exit 1
             ;;
     esac
@@ -135,11 +140,13 @@ if ! wait_http_ready \
     exit 1
 fi
 
-if test_port_listening 3000; then
+if test_port_listening 3000 && [[ "$FRONTEND_PRODUCTION" == true ]]; then
+    echo "Frontend production mode requires port 3000 to be free." >&2
+    echo "Stop the existing frontend before running this command." >&2
+    exit 1
+elif test_port_listening 3000; then
     echo "Frontend already listening on http://localhost:3000"
 else
-    echo "Starting frontend..."
-
     FRONTEND_OUT="${LOGS}/frontend.out.log"
     FRONTEND_ERR="${LOGS}/frontend.err.log"
     FRONTEND_PID_FILE="${PIDS}/frontend.pid"
@@ -147,11 +154,27 @@ else
     (
         cd "${ROOT}/frontend"
 
-        if [[ "$LAN" == true ]]; then
+        if [[ "$FRONTEND_PRODUCTION" == true ]]; then
+            echo "Building frontend for production..."
+            npm run build
+            echo "Starting frontend from production build..."
+
+            if [[ "$LAN" == true ]]; then
+                nohup npm run start -- --hostname 0.0.0.0 \
+                    >"$FRONTEND_OUT" \
+                    2>"$FRONTEND_ERR" &
+            else
+                nohup npm run start \
+                    >"$FRONTEND_OUT" \
+                    2>"$FRONTEND_ERR" &
+            fi
+        elif [[ "$LAN" == true ]]; then
+            echo "Starting frontend development server..."
             nohup npm run dev -- --hostname 0.0.0.0 \
                 >"$FRONTEND_OUT" \
                 2>"$FRONTEND_ERR" &
         else
+            echo "Starting frontend development server..."
             nohup npm run dev \
                 >"$FRONTEND_OUT" \
                 2>"$FRONTEND_ERR" &
@@ -174,7 +197,11 @@ if ! wait_http_ready \
 fi
 
 echo
-echo "Development servers are running."
+if [[ "$FRONTEND_PRODUCTION" == true ]]; then
+    echo "Backend and production frontend are running."
+else
+    echo "Development servers are running."
+fi
 echo "Frontend: http://localhost:3000"
 if [[ "$LAN" == true ]]; then
     LAN_IP="$(
