@@ -854,10 +854,7 @@ function visibleByLabel(page: Page, label: string) {
 }
 
 function visibleButtonByName(page: Page, name: string) {
-  return page
-    .getByRole("button", { name })
-    .filter({ visible: true })
-    .first();
+  return page.getByRole("button", { name }).filter({ visible: true }).first();
 }
 
 async function mountedBedCount(page: Page) {

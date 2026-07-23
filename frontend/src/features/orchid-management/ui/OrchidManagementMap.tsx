@@ -13,7 +13,6 @@ import ContinuousBedMap from "./components/ContinuousBedMap";
 import MultiCreateOrchidGroupForm from "./components/MultiCreateOrchidGroupForm";
 import RepotWorkOperationForm from "./components/RepotWorkOperationForm";
 import WorkOperationCorrectionForm from "./components/WorkOperationCorrectionForm";
-import OrchidSearchPanel from "./components/OrchidSearchPanel";
 import OrchidSelectionPanel from "./components/OrchidSelectionPanel";
 import SelectedZoneInfo from "./components/SelectedZoneInfo";
 
@@ -337,33 +336,6 @@ export function OrchidManagementMap({
         {/* <BedPrecisionSettings zone={orchidManagement.resolvedZone} /> 26.07.11 비활성화*/}
       </section>
       <div className="flex h-full min-h-0 flex-col gap-3">
-        <OrchidSearchPanel
-          currentSelectedOrchidGroupId={
-            orchidManagement.selectedOrchidGroup?.id ?? null
-          }
-          filteredCount={orchidManagement.searchResults.length}
-          filters={orchidManagement.searchFilters}
-          hasActiveSearch={orchidManagement.hasActiveSearch}
-          loading={orchidManagement.searchLoading}
-          results={orchidManagement.searchResults}
-          onClear={() => {
-            clearMapCellRangePick();
-            orchidManagement.actions.resetSearch();
-          }}
-          onSelectResult={(orchidGroup) => {
-            clearMapCellRangePick();
-            const targetBed = house.physicalBeds.find(
-              (bed) =>
-                bed.houseId === orchidGroup.houseId &&
-                bed.number === orchidGroup.physicalBedNumber,
-            );
-            if (targetBed) {
-              bedViewport.actions.goToBed(targetBed.id);
-            }
-            orchidManagement.actions.moveToOrchidGroup(orchidGroup);
-          }}
-          onUpdateFilter={orchidManagement.actions.updateSearchFilter}
-        />
         {correctionOperationId && orchidManagement.selectedOrchidGroup ? (
           <WorkOperationCorrectionForm
             key={`${correctionOperationId}-${orchidManagement.selectedOrchidGroup.id}`}
@@ -386,7 +358,6 @@ export function OrchidManagementMap({
           <OrchidSelectionPanel
             copiedOrchidGroup={orchidManagement.copiedOrchidGroup}
             errorMessage={orchidManagement.errorMessage}
-            filteredOrchidGroupIds={orchidManagement.filteredOrchidGroupIds}
             hasActiveSearch={orchidManagement.hasActiveSearch}
             house={scopedHouse}
             placementHouses={placementHouses}
@@ -400,6 +371,9 @@ export function OrchidManagementMap({
             selectedOrchidGroup={orchidManagement.selectedOrchidGroup}
             selectedPhysicalBed={orchidManagement.selectedPhysicalBed}
             selection={orchidManagement.selection}
+            searchFilters={orchidManagement.searchFilters}
+            searchLoading={orchidManagement.searchLoading}
+            searchResults={orchidManagement.searchResults}
             workRecordForm={orchidManagement.workRecordForm}
             workTypes={workTypes}
             mapCellRangePick={mapCellRangePick}
@@ -465,9 +439,25 @@ export function OrchidManagementMap({
                 ids: new Set(orchidGroupIds),
               })
             }
+            onSelectSearchResult={(orchidGroup) => {
+              clearMapCellRangePick();
+              const targetBed = house.physicalBeds.find(
+                (bed) =>
+                  bed.houseId === orchidGroup.houseId &&
+                  bed.number === orchidGroup.physicalBedNumber,
+              );
+              const targetBedIsVisible = bedViewport.visibleBeds.some(
+                (bed) => bed.id === targetBed?.id,
+              );
+              if (targetBed && !targetBedIsVisible) {
+                bedViewport.actions.goToBed(targetBed.id);
+              }
+              orchidManagement.actions.moveToOrchidGroup(orchidGroup);
+            }}
             onStartMapCellRangePick={startMapCellRangePick}
             onSyncMapCellRangePick={syncMapCellRangePick}
             onToggleSelectedOrchidGroup={toggleSelectedOrchidGroup}
+            onUpdateSearchFilter={orchidManagement.actions.updateSearchFilter}
             onUpdateWorkRecordForm={
               orchidManagement.actions.updateWorkRecordForm
             }

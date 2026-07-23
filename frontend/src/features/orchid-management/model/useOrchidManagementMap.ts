@@ -182,10 +182,8 @@ export function useOrchidManagementMap(
     [house],
   );
   const hasActiveSearch = useMemo(
-    () =>
-      searchFilters.keyword.trim().length > 0 ||
-      searchFilters.status.length > 0,
-    [searchFilters],
+    () => searchFilters.keyword.trim().length > 0,
+    [searchFilters.keyword],
   );
   const filteredOrchidGroupIds = useMemo(() => {
     if (!hasActiveSearch) {
