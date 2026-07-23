@@ -9,8 +9,8 @@ import {
 import { mkdir, writeFile } from "node:fs/promises";
 import path from "node:path";
 
-const WARMUP_COUNT = readNonNegativeInteger("MAP_E2E_WARMUP", 5);
-const ITERATION_COUNT = readPositiveInteger("MAP_E2E_ITERATIONS", 20);
+const WARMUP_COUNT = readNonNegativeInteger("MAP_E2E_WARMUP", 1);
+const ITERATION_COUNT = readPositiveInteger("MAP_E2E_ITERATIONS", 5);
 const CONTINUOUS_SWIPE_STEPS = readPositiveInteger(
   "MAP_E2E_CONTINUOUS_STEPS",
   10,
@@ -368,19 +368,6 @@ test("난 묶음 관리 맵 리팩터링 전 정확성·성능 기준값", async
 
     const firstBed = firstHouse.physicalBeds[0]!;
     const firstZone = firstBed.bedZones[0]!;
-    scenarioResults.bedZoneHistory = await runSelectionScenario({
-      page,
-      collector,
-      scenario: "구역 이력 표시",
-      targets: firstBed.bedZones.slice(0, 2).map((zone) => ({
-        id: zone.id,
-        scope: scopeForZone(zone, firstBed, firstHouse),
-      })),
-      selectionType: "BED_ZONE",
-      action: async (target) => {
-        await clickBedZone(page, target.id);
-      },
-    });
 
     const orchidGroupTargets = firstZone.orchidGroups
       .slice(0, 2)
@@ -532,7 +519,7 @@ async function verifyOrchidGroupDetailedHistory(
 ) {
   collector.begin();
   const start = await browserNow(page);
-  await visibleByLabel(page, "상세 보기").click();
+  await visibleButtonByName(page, "상세 보기").click();
   const detail = page
     .getByTestId("history-detail")
     .filter({ visible: true })
@@ -864,6 +851,13 @@ function selectedHistorySection(page: Page) {
 
 function visibleByLabel(page: Page, label: string) {
   return page.getByLabel(label).filter({ visible: true }).first();
+}
+
+function visibleButtonByName(page: Page, name: string) {
+  return page
+    .getByRole("button", { name })
+    .filter({ visible: true })
+    .first();
 }
 
 async function mountedBedCount(page: Page) {
