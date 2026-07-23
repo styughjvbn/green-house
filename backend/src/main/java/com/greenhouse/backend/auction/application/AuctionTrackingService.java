@@ -5,7 +5,6 @@ import com.greenhouse.backend.auction.domain.AuctionInspectionStatus;
 import com.greenhouse.backend.auction.domain.AuctionLotStatus;
 import com.greenhouse.backend.auction.domain.AuctionResultLine;
 import com.greenhouse.backend.auction.dto.AuctionLotAdjustmentRequest;
-import com.greenhouse.backend.auction.dto.AuctionLotPageResponse;
 import com.greenhouse.backend.auction.dto.AuctionLotResultLineRequest;
 import com.greenhouse.backend.auction.dto.AuctionLotResultRequest;
 import com.greenhouse.backend.auction.dto.AuctionLotResponse;
@@ -13,6 +12,7 @@ import com.greenhouse.backend.auction.dto.AuctionLotReturnRequest;
 import com.greenhouse.backend.auction.dto.AuctionLotStatusRequest;
 import com.greenhouse.backend.auction.dto.AuctionTrackingSummaryResponse;
 import com.greenhouse.backend.auction.repository.AuctionShipmentLotRepository;
+import com.greenhouse.backend.common.api.PageResponse;
 import com.greenhouse.backend.common.exception.NotFoundException;
 
 import lombok.RequiredArgsConstructor;
@@ -31,7 +31,7 @@ import org.springframework.transaction.annotation.Transactional;
 public class AuctionTrackingService {
 	private final AuctionShipmentLotRepository lotRepository;
 
-	public AuctionLotPageResponse getLots(LocalDate from, LocalDate to, String market, String variety, String grade,
+	public PageResponse<AuctionLotResponse> getLots(LocalDate from, LocalDate to, String market, String variety, String grade,
 			AuctionLotStatus status, Boolean reviewOnly, Boolean returnOnly, Boolean waitingOnly, String keyword,
 			int page, int size) {
 		if (page < 0)
@@ -59,7 +59,7 @@ public class AuctionTrackingService {
 						AuctionInspectionStatus.SOURCE_ERROR),
 				pageable)
 				.map(AuctionLotResponse::from);
-		return AuctionLotPageResponse.from(result);
+		return PageResponse.from(result);
 	}
 
 	public AuctionLotResponse getLot(Long id) {

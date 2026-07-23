@@ -16,6 +16,7 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 
 import java.time.LocalDateTime;
+import java.time.ZoneOffset;
 
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
@@ -48,7 +49,7 @@ public class AuctionLotStatusHistory {
 		shipmentLot = lot;
 		previousStatus = previous;
 		newStatus = next;
-		changedAt = LocalDateTime.now();
+		changedAt = LocalDateTime.now(ZoneOffset.UTC);
 		this.reason = reason;
 		this.worker = worker;
 		this.memo = memo;

@@ -1,6 +1,6 @@
 package com.greenhouse.backend.work.repository;
 
-import com.greenhouse.backend.work.domain.WorkOperationTarget;
+import com.greenhouse.backend.work.domain.target.WorkOperationTarget;
 import java.util.List;
 import java.util.Collection;
 import org.springframework.data.jpa.repository.EntityGraph;
@@ -14,6 +14,19 @@ public interface WorkOperationTargetRepository extends JpaRepository<WorkOperati
 	List<WorkOperationTarget> findByWorkOperationIdAndExcludedAtIsNullOrderByIdAsc(Long workOperationId);
 
 	@EntityGraph(attributePaths = { "workOperation", "workOperation.workType" })
+	List<WorkOperationTarget> findByWorkOperationIdInAndExcludedAtIsNullOrderByWorkOperationIdAscIdAsc(
+			Collection<Long> workOperationIds);
+
+	@EntityGraph(attributePaths = { "workOperation", "workOperation.workType" })
 	List<WorkOperationTarget> findByOrchidGroupIdAndExcludedAtIsNullOrderByWorkOperationPlannedStartDateDescWorkOperationIdDesc(
 			Long orchidGroupId);
+
+	@EntityGraph(attributePaths = { "workOperation", "workOperation.workType" })
+	List<WorkOperationTarget> findByOrchidGroupIdInAndExcludedAtIsNullOrderByWorkOperationPlannedStartDateDescWorkOperationIdDesc(
+			Collection<Long> orchidGroupIds);
+
+	@EntityGraph(attributePaths = { "workOperation", "workOperation.workType" })
+	List<WorkOperationTarget> findByWorkOperationIdInAndOrchidGroupIdInAndExcludedAtIsNullOrderByWorkOperationIdAscIdAsc(
+			Collection<Long> workOperationIds,
+			Collection<Long> orchidGroupIds);
 }

@@ -79,7 +79,7 @@ stop_process_by_port() {
 
 stop_matching_processes() {
     local patterns=(
-        "${ROOT}/frontend.*next dev"
+        "${ROOT}/frontend.*next (dev|start)"
         "${ROOT}/backend.*bootRun"
         "com\.greenhouse\.backend\.BackendApplication"
     )

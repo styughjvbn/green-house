@@ -1,6 +1,7 @@
 package com.greenhouse.backend.sales.controller;
 
 import com.greenhouse.backend.common.api.ApiResponse;
+import com.greenhouse.backend.common.api.PageResponse;
 import com.greenhouse.backend.sales.application.SalesOrchidGroupQueryService;
 import com.greenhouse.backend.sales.application.SalesPaymentService;
 import com.greenhouse.backend.sales.application.SalesQueryService;
@@ -10,7 +11,7 @@ import com.greenhouse.backend.sales.application.SalesSlipUpdateService;
 import com.greenhouse.backend.sales.dto.AuctionShipmentOptionResponse;
 import com.greenhouse.backend.sales.dto.SalesOrchidGroupSearchResponse;
 import com.greenhouse.backend.sales.dto.SalesSlipCreateRequest;
-import com.greenhouse.backend.sales.dto.SalesSlipPageResponse;
+import com.greenhouse.backend.sales.dto.SalesSlipListItemResponse;
 import com.greenhouse.backend.sales.dto.SalesSlipResponse;
 import com.greenhouse.backend.sales.dto.SalesSlipStatusUpdateRequest;
 import com.greenhouse.backend.settlement.dto.ManualPaymentRequest;
@@ -51,7 +52,7 @@ public class SalesController {
 	}
 
 	@GetMapping("/sales-slips/page")
-	public ApiResponse<SalesSlipPageResponse> getSalesSlipPage(
+	public ApiResponse<PageResponse<SalesSlipListItemResponse>> getSalesSlipPage(
 			@RequestParam(required = false) Long partnerId,
 			@RequestParam(required = false) LocalDate from,
 			@RequestParam(required = false) LocalDate to,

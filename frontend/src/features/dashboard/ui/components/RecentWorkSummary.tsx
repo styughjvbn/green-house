@@ -1,9 +1,13 @@
 import Link from "next/link";
-import type { WorkRecord } from "@/entities/farm/types";
+import type { WorkAnalyticsItem } from "@/features/analytics/model/types";
 import { getRecentWorkLabel } from "../../lib/dashboardView";
 import { DashboardEmptyText, DashboardPanel } from "./DashboardPanel";
 
-export function RecentWorkSummary({ records }: { records: WorkRecord[] }) {
+export function RecentWorkSummary({
+  records,
+}: {
+  records: WorkAnalyticsItem[];
+}) {
   return (
     <DashboardPanel title="최근 작업 요약">
       <div className="divide-y divide-[#edf0ec]">

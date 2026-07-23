@@ -1,5 +1,5 @@
 import { notFound } from "next/navigation";
-import type { House, WorkRecord, WorkType } from "@/entities/farm/types";
+import type { House, WorkType } from "@/entities/farm/types";
 import { WorkRecordManager } from "@/features/work-record/ui/WorkRecordManager";
 import { fetchApi } from "@/shared/api/client";
 
@@ -20,8 +20,7 @@ export default async function Page({
   const activeTab = WORK_TABS[tab as keyof typeof WORK_TABS];
   if (!activeTab) notFound();
 
-  const [records, workTypes, houses] = await Promise.all([
-    fetchApi<WorkRecord[]>("/work-records"),
+  const [workTypes, houses] = await Promise.all([
     fetchApi<WorkType[]>("/work-types"),
     fetchApi<House[]>("/houses"),
   ]);
@@ -31,7 +30,6 @@ export default async function Page({
       <WorkRecordManager
         activeTab={activeTab}
         houses={houses}
-        initialRecords={records}
         key={activeTab}
         workTypes={workTypes}
       />

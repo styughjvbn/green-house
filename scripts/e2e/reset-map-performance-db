@@ -1,0 +1,46 @@
+#!/usr/bin/env bash
+
+set -Eeuo pipefail
+
+SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
+PROJECT_ROOT="$(cd -- "${SCRIPT_DIR}/../.." && pwd)"
+
+MAP_DB_HOST="${MAP_E2E_DB_HOST:-127.0.0.1}"
+MAP_DB_PORT="${MAP_E2E_DB_PORT:-5432}"
+MAP_DB_USER="${MAP_E2E_DB_USER:-greenhouse}"
+MAP_DB_PASSWORD="${MAP_E2E_DB_PASSWORD:-greenhouse}"
+MAP_DB_NAME="${MAP_E2E_DB_NAME:-greenhouse_map_e2e}"
+
+if [[ ! "$MAP_DB_NAME" =~ _map_e2e$ ]]; then
+    echo "Refusing to reset a database without the _map_e2e suffix: ${MAP_DB_NAME}" >&2
+    exit 1
+fi
+
+cd "$PROJECT_ROOT"
+docker compose up -d db
+
+for _ in {1..30}; do
+    if PGPASSWORD="$MAP_DB_PASSWORD" pg_isready \
+        --host "$MAP_DB_HOST" \
+        --port "$MAP_DB_PORT" \
+        --username "$MAP_DB_USER" >/dev/null 2>&1; then
+        break
+    fi
+    sleep 1
+done
+
+PGPASSWORD="$MAP_DB_PASSWORD" dropdb \
+    --host "$MAP_DB_HOST" \
+    --port "$MAP_DB_PORT" \
+    --username "$MAP_DB_USER" \
+    --if-exists \
+    --force \
+    "$MAP_DB_NAME"
+
+PGPASSWORD="$MAP_DB_PASSWORD" createdb \
+    --host "$MAP_DB_HOST" \
+    --port "$MAP_DB_PORT" \
+    --username "$MAP_DB_USER" \
+    "$MAP_DB_NAME"
+
+echo "Reset E2E database: ${MAP_DB_NAME}"

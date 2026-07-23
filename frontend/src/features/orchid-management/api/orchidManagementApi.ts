@@ -5,7 +5,6 @@ import type {
   House,
   OrchidManagementViewport,
   OrchidGroup,
-  OrchidGroupWorkHistory,
   VarietyOption,
   WorkOperation,
   WorkType,
@@ -23,6 +22,7 @@ import type {
   RepotWorkResult,
   WorkOperationCorrections,
   WorkRecordQuickPayload,
+  WorkHistoryPage,
 } from "../model/types";
 
 export function getOrchidGroupLineage(orchidGroupId: number) {
@@ -334,30 +334,50 @@ export function getOrchidWorkTypes() {
   return fetchApi<WorkType[]>("/work-types");
 }
 
-export function getOrchidGroupWorkHistory(orchidGroupId: number) {
-  return fetchApi<OrchidGroupWorkHistory[]>(
-    `/orchid-groups/${orchidGroupId}/work-history`,
-  );
+export function getWorkHistory(
+  scopeType: "HOUSE" | "PHYSICAL_BED" | "BED_ZONE" | "ORCHID_GROUP",
+  scopeId: number,
+  page: number,
+  size: number,
+  signal?: AbortSignal,
+) {
+  const params = new URLSearchParams({
+    scopeType,
+    scopeId: String(scopeId),
+    page: String(page),
+    size: String(size),
+  });
+  return fetchApi<WorkHistoryPage>(`/work-history?${params.toString()}`, {
+    signal,
+  });
 }
 
 export function getOrchidGroupCollections() {
   return fetchApi<OrchidGroupCollection[]>("/orchid-group-collections");
 }
 
-export function getDerivedOrchidGroups(houseId: number) {
-  const params = new URLSearchParams({ houseId: String(houseId) });
+export function getDerivedOrchidGroups(houseId?: number | null) {
+  const params = new URLSearchParams();
+  if (houseId != null) {
+    params.set("houseId", String(houseId));
+  }
+  const query = params.toString();
   return fetchApi<DerivedOrchidGroup[]>(
-    `/orchid-groups/derived-groups?${params.toString()}`,
+    `/orchid-groups/derived-groups${query ? `?${query}` : ""}`,
   );
 }
 
 export function getDerivedOrchidGroupMembers(
   groupKey: string,
-  houseId: number,
+  houseId?: number | null,
 ) {
-  const params = new URLSearchParams({ houseId: String(houseId) });
+  const params = new URLSearchParams();
+  if (houseId != null) {
+    params.set("houseId", String(houseId));
+  }
+  const query = params.toString();
   return fetchApi<OrchidGroup[]>(
-    `/orchid-groups/derived-groups/${encodeURIComponent(groupKey)}/members?${params.toString()}`,
+    `/orchid-groups/derived-groups/${encodeURIComponent(groupKey)}/members${query ? `?${query}` : ""}`,
   );
 }
 

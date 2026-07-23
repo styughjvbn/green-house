@@ -3,9 +3,6 @@
 import { useState } from "react";
 import type { WorkRecordManagerProps } from "../model/types";
 import { useWorkRecordManager } from "../model/useWorkRecordManager";
-import { WorkRecordDetail } from "./components/WorkRecordDetail";
-import { WorkRecordFilters } from "./components/WorkRecordFilters";
-import { WorkRecordList } from "./components/WorkRecordList";
 import { WorkOperationPanel } from "./components/HouseWorkOperationPanel";
 import { WorkOperationSchedule } from "./components/WorkOperationSchedule";
 import { WorkOperationList } from "./components/WorkOperationList";
@@ -15,15 +12,12 @@ export type WorkManagementTab = "LIST" | "CALENDAR" | "HISTORY";
 export function WorkRecordManager(
   props: WorkRecordManagerProps & { activeTab: WorkManagementTab },
 ) {
-  const manager = useWorkRecordManager(props);
+  const manager = useWorkRecordManager();
   const [showOperationForm, setShowOperationForm] = useState(false);
   const [operationInitialTypeCode, setOperationInitialTypeCode] = useState<
     string | null
   >(null);
   const [operationSavedVersion, setOperationSavedVersion] = useState(0);
-  const [historyKind, setHistoryKind] = useState<"CURRENT" | "LEGACY">(
-    "CURRENT",
-  );
   const { activeTab } = props;
   const refreshKey = manager.operationCreatedVersion + operationSavedVersion;
 
@@ -72,84 +66,13 @@ export function WorkRecordManager(
       ) : null}
 
       {activeTab === "HISTORY" ? (
-        <>
-          <div className="flex gap-2 rounded-md border border-[#dfe5dc] bg-white p-2">
-            <button
-              className={`rounded-md px-4 py-2 text-sm font-semibold ${
-                historyKind === "CURRENT"
-                  ? "bg-[#159447] text-white"
-                  : "text-[#435047]"
-              }`}
-              type="button"
-              onClick={() => setHistoryKind("CURRENT")}
-            >
-              작업 이력
-            </button>
-            <button
-              className={`rounded-md px-4 py-2 text-sm font-semibold ${
-                historyKind === "LEGACY"
-                  ? "bg-[#159447] text-white"
-                  : "text-[#435047]"
-              }`}
-              type="button"
-              onClick={() => setHistoryKind("LEGACY")}
-            >
-              이전 작업 이력
-            </button>
-          </div>
-          {historyKind === "CURRENT" ? (
-            <WorkOperationList
-              bedZones={manager.bedZones}
-              houses={props.houses}
-              orchidGroups={manager.orchidGroups}
-              refreshKey={refreshKey}
-              view="HISTORY"
-            />
-          ) : (
-            <>
-              <WorkRecordFilters
-                filters={manager.filters}
-                records={manager.records}
-                workTypes={props.workTypes}
-                onChange={manager.updateFilters}
-                onReset={manager.resetFilters}
-              />
-              <div
-                className={`grid min-h-0 flex-1 gap-4 ${
-                  manager.detailOpen
-                    ? "lg:grid-cols-[minmax(0,1fr)_400px]"
-                    : "lg:grid-cols-1"
-                }`}
-              >
-                <WorkRecordList
-                  currentPage={manager.currentPage}
-                  pageSize={manager.pageSize}
-                  records={manager.paginatedRecords}
-                  selectedRecordId={
-                    manager.detailOpen
-                      ? (manager.selectedRecord?.id ?? null)
-                      : null
-                  }
-                  totalPages={manager.totalPages}
-                  totalRecords={manager.filteredRecords.length}
-                  workTypes={props.workTypes}
-                  onPageChange={manager.changePage}
-                  onPageSizeChange={manager.changePageSize}
-                  onSelect={manager.selectRecord}
-                />
-                {manager.detailOpen ? (
-                  <WorkRecordDetail
-                    canceling={manager.canceling}
-                    record={manager.selectedRecord}
-                    workTypes={props.workTypes}
-                    onCancel={manager.cancelSelectedRecord}
-                    onClose={manager.closeDetail}
-                  />
-                ) : null}
-              </div>
-            </>
-          )}
-        </>
+        <WorkOperationList
+          bedZones={manager.bedZones}
+          houses={props.houses}
+          orchidGroups={manager.orchidGroups}
+          refreshKey={refreshKey}
+          view="HISTORY"
+        />
       ) : null}
     </div>
   );

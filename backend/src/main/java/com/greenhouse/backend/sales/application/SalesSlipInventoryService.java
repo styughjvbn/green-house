@@ -1,6 +1,6 @@
 package com.greenhouse.backend.sales.application;
 
-import com.greenhouse.backend.farm.domain.OrchidGroup;
+import com.greenhouse.backend.farm.domain.orchid.OrchidGroup;
 import com.greenhouse.backend.sales.domain.SalesInventoryMovement;
 import com.greenhouse.backend.sales.domain.SalesInventoryMovementType;
 import com.greenhouse.backend.sales.domain.SalesSlip;

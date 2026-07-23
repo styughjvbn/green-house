@@ -25,7 +25,8 @@ green-house/
   renderer를 사용하며 확대 단계에 필요한 HTML 라벨만 생성한다.
 - 농장 현황의 검색·선택 레이어는 기본 구조 레이어와 분리하고 좌표 계산
   결과를 메모이제이션한다.
-- 난 묶음 관리 맵은 `PhysicalBed`를 농장 전체 순서로 펼치고 Embla Carousel로 2~4개 다이 viewport를 관리한다. URL 동기화와 현재 표시 범위 계산은 `useBedViewport`에 둔다.
+- 난 묶음 관리 맵은 `PhysicalBed`를 농장 전체 순서로 펼치고 Embla Carousel로 2~4개 다이 viewport를 관리한다. URL 동기화와 현재 표시 범위 계산은 `useBedViewport`에 두며 현재 viewport와 앞뒤 각각 표시 개수만큼의 이동 버퍼만 무거운 내부 콘텐츠를 마운트한다.
+- 선택 이력은 동·다이·구역·난 묶음 범위별 페이지 API로 조회한다. 요약은 첫 20건만 사용하고 난 묶음 상세는 10건 단위로 조회한다. 선택 키·상세 페이지별 메모리 캐시와 진행 요청 공유·취소를 적용하고, 캐러셀 이동 상태는 선택 상태와 분리해 단순 스와이프가 이력 조회를 유발하지 않게 한다.
 - 입고 관리와 작업 관리가 공통으로 사용하는 포트 실행·농장 배치 UI는 `entities/farm/ui`에 두고 저장 API는 각 `features/*`에서 연결한다.
 
 ### Backend
@@ -64,6 +65,7 @@ print
 ### common
 
 - 공통 응답
+- 페이지 목록 응답은 `PageResponse<T>`로 통일한다.
 - 예외 처리
 - 공통 유틸
 - 공통 검증
@@ -80,19 +82,55 @@ print
 - 자재
 - 배드 정밀 설정
 - 위치 이동
+- 입고 조회, 입고 명령, 포트 실행을 별도 application service로 분리한다.
+- 입고 작업 스냅샷과 메모 조립은 전용 factory가 담당한다.
+- 품종 목록의 난 묶음·최근 입고일·최근 작업일은 페이지 단위로 일괄 조회한다.
+- 난 묶음 계보는 `work` 엔티티를 직접 참조하지 않고 `workOperationId` 값으로 연결한다.
+
+`farm`의 각 계층은 동일한 기능 경계를 사용한다.
+
+```text
+application|domain|repository|controller|dto/
+ ├─ structure/       동·물리 배드·논리 구역·배치 용량
+ ├─ status/          농장 현황·확대 단계 조회
+ ├─ orchid/          난 묶음 조회·명령·이동
+ ├─ collection/      사용자 난 묶음 그룹
+ ├─ inbound/         입고·포트 실행
+ ├─ variety/         품종 기준 정보
+ ├─ material/        자재 기준 정보
+ └─ transformation/  분갈이·분주·합식·다중 생성·계보
+```
+
+저장소가 없는 현황 기능처럼 계층에 구현이 필요하지 않은 경우 해당 하위 패키지는 생략한다.
 
 ### work
 
 - 작업 유형
 - 작업 이력
-- 이동 작업 이력
+- `WorkOperation` 기반 이동 작업 이력
 - 신규 작업 전체 단위와 상태 전이
 - 실제 난 묶음 대상 해석과 스냅샷
 - 작업 유형별 효과 handler와 효과 적용 감사 기록
 - 자리 이동·입고 포트 계획의 전용 실행 handler와 분갈이·분주·합식 공통 N:M 실행기
 - 원본 대상 없는 작업 효과 실행 facade와 생성 결과 ID 연결
-- 기존·신규 난 묶음 이력 통합 조회
+- `WorkOperation`과 작업 효과 연결 기반 난 묶음 이력 조회
 - 입고 포트 계획은 `work`의 대상 조회 인터페이스를 `farm`이 구현해 입고 저장소를 작업 모듈에서 직접 참조하지 않는다.
+- 작업 계획·진행·조회·구조 변경·입고 포트 계획·즉시 실행은 각각 application service로 분리한다.
+- 목록 조회는 작업별 상세 재조회를 하지 않고 대상과 실행 상태를 일괄 조회해 응답을 조립한다.
+- 분갈이·분주·합식은 공통 구조 변경 실행기와 작업별 Strategy를 사용한다. 난 묶음 저장소가 필요한 Strategy 구현은 `farm` 모듈에 둔다.
+- 효과 실행과 효과 감사 저장을 분리하고 모든 신규 효과는 공통 저장 컴포넌트를 사용한다.
+- DB의 `timestamp without time zone` 시점 값은 UTC로 저장한다. 업무일자는 `Asia/Seoul` 기준으로
+  계산하고 API 응답의 시점 값은 UTC에서 `Asia/Seoul`로 변환한다.
+
+`work`의 `application`, `domain`, `dto` 계층은 동일한 기능별 하위 패키지로 구성한다.
+
+```text
+application|domain|dto/
+ ├─ operation/   작업 계획·실행·조회·상태 전이·작업 유형
+ ├─ target/      대상 선택·스냅샷·실행 상태·외부 대상 gateway
+ ├─ effect/      효과 실행·감사·구조 변경과 입고 포트 계약
+ └─ correction/  완료 작업 보정과 보정 대상 조회
+```
 
 ### partner
 
@@ -137,6 +175,7 @@ dto
 - Service는 유스케이스와 트랜잭션을 담당한다.
 - Entity는 DB 매핑과 최소 도메인 규칙을 가진다.
 - Repository는 데이터 접근만 담당한다.
+- 다른 모듈의 Repository를 직접 참조하지 않고 해당 모듈의 application API 또는 port를 사용한다.
 - 외부로 노출되는 구조는 DTO로 제한한다.
 
 ## 5. 프론트엔드 구조
@@ -145,12 +184,10 @@ dto
 
 ```text
 src/
- ├─ app/        라우트 진입점
- ├─ components/ shadcn/ui 공통 primitives
+ ├─ app/        Next.js 라우트·메타데이터 진입점
  ├─ features/   기능 단위 화면/상태/API
- ├─ entities/   도메인 타입
- ├─ lib/        shadcn/ui 공통 유틸
- ├─ shared/     공통 UI/API 유틸
+ ├─ entities/   도메인 타입과 도메인 공통 UI
+ ├─ shared/     전역 공통 API·유틸·UI·PWA 런타임
  └─ widgets/    큰 공통 레이아웃
 ```
 
@@ -160,7 +197,11 @@ src/
 - 실제 UI와 상태 로직은 `features/*`에 둔다.
 - API 타입은 OpenAPI 또는 `entities` 타입과 맞춘다.
 - 화면별 복잡한 상태는 페이지 내부에 몰아넣지 않는다.
-- AppShell의 버튼, 툴팁, 접이식 메뉴, 모바일 시트는 `components/ui`의 shadcn primitives를 사용한다.
+- 범용 UI는 `shared/ui`에 두고 shadcn/Radix primitive는
+  `shared/ui/primitives`에 둔다. 특정 도메인이나 기능에 종속된 UI는
+  `entities/*/ui` 또는 `features/*/ui`에 유지한다.
+- PWA 브라우저 런타임과 전용 스타일은 `shared/pwa`에 둔다. Next.js가 위치를
+  규정하는 manifest는 `app/manifest.ts`, 서비스 워커와 아이콘은 `public/`에 둔다.
 
 ## 6. 데이터 보존 원칙
 
@@ -176,3 +217,43 @@ src/
 - 원본 가져오기 데이터
 
 삭제가 필요한 경우에도 물리 삭제보다 상태 변경 또는 비활성화를 우선 검토한다.
+
+## 7. 백엔드 리팩터링 검증
+
+`work` 리팩터링 검증은 브라우저 E2E와 분리하고 실제 PostgreSQL을 사용하는 두 Gradle 작업으로 실행한다.
+
+```bash
+cd backend
+./gradlew workE2eTest
+./gradlew workBenchmark
+./gradlew workBenchmark -PworkBenchmarkEnforce=true
+```
+
+- `workE2eTest`: RANDOM_PORT의 실제 HTTP 요청으로 대상 미리보기, 일반·즉시 완료 작업,
+  작업과 대상 상태 전이, 분갈이 수량·계보, 계획형 구조 변경, 요청 키 멱등성,
+  작업 상세·분갈이 결과·난 묶음 통합 이력을 검증한다.
+- `workBenchmark`: 작업 100건과 대상 2,000건을 고정 생성하고 작업 목록·상세·난 묶음 통합 이력
+  조회의 쿼리 수를 검증한다. API별 3회 워밍업 후 20회 측정한 median/p95는
+  `backend/build/work-benchmark/results.json`에 기록한다.
+- 기능 결과와 DB 불변식은 자동 실패 조건으로 사용한다. 응답 시간은 실행 환경 영향을 받으므로
+  전후 결과를 수동 비교하고 CI의 강한 실패 조건으로 사용하지 않는다. 기본 벤치마크는
+  리팩터링 전 기준값도 남길 수 있도록 쿼리 상한을 기록만 하며, `-PworkBenchmarkEnforce=true`를
+  지정한 경우에만 상한 초과로 실패한다.
+- 전후 비교가 필요하면 각 대상 커밋에서 `clean workE2eTest workBenchmark`를 실행하고 생성된
+  `results.json`을 각각 `before.json`, `after.json`으로 별도 보관한다.
+
+## 8. 프론트엔드 맵 성능 E2E
+
+난 묶음 관리 맵의 리팩터링 전후 비교는 `frontend/e2e/map-performance`의
+Playwright 시나리오를 사용한다. production build, 실제 Spring Boot 백엔드,
+PostgreSQL 전용 DB에서 workers 1과 고정 viewport로 실행한다.
+
+제품 동작에는 측정 분기를 추가하지 않는다. Playwright 선택자는 맵·다이·구역·난 묶음·
+선택 이력·이력 항목에 부여한 안정적인 `data-testid` 계약을 사용한다. 네트워크 응답
+완료 후 두 프레임이 지난 시점을 렌더 완료로 기록한다. 요청 수, 응답 크기, 렌더 시간,
+마운트 수와 DOM 증감은 실패 조건이 아니라 전후 비교 지표로만 저장한다.
+
+일반 기준 측정은 전용 DB를 매번 재생성한다. 디버그 실행은 `--reuse-db`로 DB 준비
+단계를 생략하고 Flyway를 비활성화해 기존 E2E DB 상태를 보존한다.
+
+측정 데이터와 실행 방법은 `frontend/e2e/map-performance/README.md`를 기준으로 한다.

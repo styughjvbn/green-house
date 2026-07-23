@@ -78,7 +78,7 @@ paths:
     post:
       tags:
       - work-operation-controller
-      operationId: create_1
+      operationId: create
       requestBody:
         content:
           application/json:
@@ -514,6 +514,49 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ApiResponseListInboundPottingCandidateResponse'
+  /api/work-history:
+    get:
+      tags:
+      - work-operation-controller
+      operationId: getWorkHistory
+      parameters:
+      - name: scopeType
+        in: query
+        required: true
+        schema:
+          type: string
+          enum:
+          - HOUSE
+          - PHYSICAL_BED
+          - BED_ZONE
+          - ORCHID_GROUP
+      - name: scopeId
+        in: query
+        required: true
+        schema:
+          type: integer
+          format: int64
+      - name: page
+        in: query
+        required: false
+        schema:
+          type: integer
+          format: int32
+          default: 0
+      - name: size
+        in: query
+        required: false
+        schema:
+          type: integer
+          format: int32
+          default: 20
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponsePageResponseOrchidGroupWorkHistoryResponse'
   /api/orchid-groups/{orchidGroupId}/work-history:
     get:
       tags:
@@ -560,6 +603,13 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/WorkOperationResponse'
+        message:
+          type: string
+    ApiResponsePageResponseOrchidGroupWorkHistoryResponse:
+      type: object
+      properties:
+        data:
+          $ref: '#/components/schemas/PageResponseOrchidGroupWorkHistoryResponse'
         message:
           type: string
     ApiResponseWorkOperationCorrectionsResponse:
@@ -748,9 +798,6 @@ components:
         workOperationId:
           type: integer
           format: int64
-        legacyWorkRecordId:
-          type: integer
-          format: int64
         workTypeId:
           type: integer
           format: int64
@@ -791,6 +838,25 @@ components:
           type: string
         memo:
           type: string
+    PageResponseOrchidGroupWorkHistoryResponse:
+      type: object
+      properties:
+        content:
+          type: array
+          items:
+            $ref: '#/components/schemas/OrchidGroupWorkHistoryResponse'
+        page:
+          type: integer
+          format: int32
+        size:
+          type: integer
+          format: int32
+        totalElements:
+          type: integer
+          format: int64
+        totalPages:
+          type: integer
+          format: int32
     StructureChangeExecutionRequest:
       type: object
       properties:

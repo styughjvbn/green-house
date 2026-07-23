@@ -23,6 +23,7 @@ import lombok.AccessLevel;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.ZoneOffset;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
@@ -118,7 +119,7 @@ public class AuctionSettlement extends BaseEntity {
 		grossAmount = lines.stream().mapToLong(AuctionSettlementLine::getAmount).sum();
 		expectedDepositAmount = Math.max(0L, grossAmount - feeAmount - deductionAmount);
 		remainingAmount = Math.max(0L, expectedDepositAmount - paidAmount);
-		resultReceivedAt = LocalDateTime.now();
+		resultReceivedAt = LocalDateTime.now(ZoneOffset.UTC);
 		if (paidAmount > 0 && remainingAmount > 0)
 			status = AuctionSettlementStatus.PARTIALLY_PAID;
 		else if (paidAmount > 0 && remainingAmount == 0)
@@ -139,7 +140,7 @@ public class AuctionSettlement extends BaseEntity {
 		this.paidAmount += amount;
 		this.remainingAmount = Math.max(0L, expectedDepositAmount - paidAmount);
 		this.status = remainingAmount == 0 ? AuctionSettlementStatus.PAID : AuctionSettlementStatus.PARTIALLY_PAID;
-		this.confirmedAt = LocalDateTime.now();
+		this.confirmedAt = LocalDateTime.now(ZoneOffset.UTC);
 		this.confirmedBy = worker;
 	}
 

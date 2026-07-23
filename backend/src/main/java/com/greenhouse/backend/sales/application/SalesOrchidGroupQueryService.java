@@ -1,6 +1,6 @@
 package com.greenhouse.backend.sales.application;
 
-import com.greenhouse.backend.farm.application.OrchidGroupReader;
+import com.greenhouse.backend.farm.application.orchid.OrchidGroupReader;
 import com.greenhouse.backend.sales.dto.SalesOrchidGroupSearchResponse;
 import java.util.List;
 import lombok.RequiredArgsConstructor;

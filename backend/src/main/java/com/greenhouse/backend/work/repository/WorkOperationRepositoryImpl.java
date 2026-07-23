@@ -1,12 +1,12 @@
 package com.greenhouse.backend.work.repository;
 
-import static com.greenhouse.backend.work.domain.QWorkOperation.workOperation;
-import static com.greenhouse.backend.work.domain.QWorkType.workType;
+import static com.greenhouse.backend.work.domain.operation.QWorkOperation.workOperation;
+import static com.greenhouse.backend.work.domain.operation.QWorkType.workType;
 
-import com.greenhouse.backend.work.domain.WorkOperation;
-import com.greenhouse.backend.work.domain.WorkOperationStatus;
-import com.greenhouse.backend.work.domain.WorkOperationSearchView;
-import com.greenhouse.backend.work.domain.WorkSourceScopeType;
+import com.greenhouse.backend.work.domain.operation.WorkOperation;
+import com.greenhouse.backend.work.domain.operation.WorkOperationStatus;
+import com.greenhouse.backend.work.domain.operation.WorkOperationSearchView;
+import com.greenhouse.backend.work.domain.operation.WorkSourceScopeType;
 import com.querydsl.core.BooleanBuilder;
 import com.querydsl.core.types.dsl.BooleanExpression;
 import com.querydsl.jpa.impl.JPAQueryFactory;

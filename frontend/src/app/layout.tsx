@@ -3,10 +3,10 @@ import { Suspense } from "react";
 import { Geist } from "next/font/google";
 import { FontScaleInitializer } from "@/features/settings";
 import { DEFAULT_FONT_SCALE } from "@/features/settings/lib/fontScale";
+import { PwaRuntime } from "@/shared/pwa";
 import { AppShell } from "@/widgets/app-shell/AppShell";
-import PwaViewportHeightFix from "./PwaViewportHeightFix";
-import ServiceWorkerRegister from "./ServiceWorkerRegister";
 import "./globals.css";
+import "@/shared/pwa/pwa.css";
 import "leaflet/dist/leaflet.css";
 
 const geistSans = Geist({
@@ -36,11 +36,10 @@ export default function RootLayout({
     >
       <body className="min-h-full bg-[#f7f8f6] text-[#1f2a24]">
         <FontScaleInitializer />
-        <PwaViewportHeightFix />
-        <Suspense fallback={children}>
+        <PwaRuntime />
+        <Suspense fallback={null}>
           <AppShell>{children}</AppShell>
         </Suspense>
-        <ServiceWorkerRegister />
       </body>
     </html>
   );

@@ -9,7 +9,11 @@
     "lint": "eslint",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
-    "check": "node ../scripts/check-frontend.js"
+    "check": "node ../scripts/check-frontend.js",
+    "e2e:map:install": "playwright install chromium",
+    "e2e:map:prepare": "bash ../scripts/e2e/prepare-map-performance-data",
+    "e2e:map:baseline": "bash ../scripts/e2e/run-map-performance-baseline",
+    "e2e:map:debug": "MAP_E2E_WARMUP=0 MAP_E2E_ITERATIONS=1 MAP_E2E_CONTINUOUS_STEPS=1 bash ../scripts/e2e/run-map-performance-baseline --reuse-db --headed --debug"
   },
   "dependencies": {
     "@radix-ui/react-dialog": "^1.1.19",
@@ -32,6 +36,7 @@
     "tailwind-merge": "^3.6.0"
   },
   "devDependencies": {
+    "@playwright/test": "1.61.1",
     "@tailwindcss/postcss": "^4",
     "@types/node": "^20",
     "@types/react": "^19",

@@ -2,8 +2,6 @@
   BedZone,
   House,
   OrchidGroup,
-  PhysicalBed,
-  WorkRecord,
   WorkOperation,
   WorkTargetPreview,
   WorkRecordTargetType,
@@ -11,15 +9,8 @@
 } from "@/entities/farm/types";
 
 export type WorkRecordManagerProps = {
-  initialRecords: WorkRecord[];
   houses: House[];
   workTypes: WorkType[];
-};
-
-export type WorkRecordTargetOptions = {
-  physicalBeds: PhysicalBed[];
-  bedZones: BedZone[];
-  orchidGroups: OrchidGroup[];
 };
 
 export type WorkTargetSelectionOptions = {
@@ -27,7 +18,7 @@ export type WorkTargetSelectionOptions = {
   bedZones: BedZone[];
 };
 
-export type CreateWorkRecordPayload = {
+export type CompletedWorkOperationPayload = {
   workTypeId: number;
   workDate: string;
   targetType: WorkRecordTargetType;
@@ -38,15 +29,6 @@ export type CreateWorkRecordPayload = {
   quantity: string | null;
   worker: string | null;
   memo: string | null;
-};
-
-export type WorkRecordFilterState = {
-  targetType: "" | WorkRecordTargetType;
-  workType: string;
-  from: string;
-  to: string;
-  worker: string;
-  keyword: string;
 };
 
 export type WorkOperationFormState = {

@@ -25,7 +25,7 @@ import com.greenhouse.backend.auction.repository.AuctionShipmentRepository;
 import com.greenhouse.backend.partner.domain.BusinessPartner;
 import com.greenhouse.backend.partner.domain.PartnerType;
 import com.greenhouse.backend.partner.repository.BusinessPartnerRepository;
-import com.greenhouse.backend.farm.repository.OrchidGroupRepository;
+import com.greenhouse.backend.farm.repository.orchid.OrchidGroupRepository;
 import java.time.LocalDate;
 import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;

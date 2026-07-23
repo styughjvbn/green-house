@@ -240,6 +240,58 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/AnalyticsInsightResponse'
+    WorkAnalyticsItemResponse:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: int64
+        workDate:
+          type: string
+          format: date
+        workType:
+          type: string
+        workTypeTemplate:
+          type: string
+          enum:
+          - PESTICIDE
+          - FERTILIZER
+          - REPOT
+          - CLEANUP
+          - DISCARD
+          - STATUS
+          - MEMO
+          - MOVEMENT
+          - MULTI_CREATE
+          - CORRECTION
+        title:
+          type: string
+        sourceScopeType:
+          type: string
+          enum:
+          - NONE
+          - FARM
+          - HOUSE
+          - PHYSICAL_BED
+          - BED_ZONE
+          - ORCHID_GROUP
+          - DERIVED_GROUP
+          - USER_COLLECTION
+          - MANUAL_SELECTION
+          - INBOUND_RECORD_SELECTION
+        worker:
+          type: string
+        memo:
+          type: string
+        status:
+          type: string
+          enum:
+          - PLANNED
+          - IN_PROGRESS
+          - PAUSED
+          - COMPLETED
+          - CANCELED
+          - CORRECTED
     WorkAnalyticsResponse:
       type: object
       properties:
@@ -262,65 +314,4 @@ components:
         recentRecords:
           type: array
           items:
-            $ref: '#/components/schemas/WorkRecordResponse'
-    WorkRecordResponse:
-      type: object
-      properties:
-        id:
-          type: integer
-          format: int64
-        workTypeId:
-          type: integer
-          format: int64
-        workType:
-          type: string
-        workTypeTemplate:
-          type: string
-          enum:
-          - PESTICIDE
-          - FERTILIZER
-          - REPOT
-          - CLEANUP
-          - DISCARD
-          - STATUS
-          - MEMO
-          - MOVEMENT
-          - MULTI_CREATE
-          - CORRECTION
-        workDate:
-          type: string
-          format: date
-        targetType:
-          type: string
-        targetId:
-          type: integer
-          format: int64
-        materialName:
-          type: string
-        dilutionRatio:
-          type: string
-        quantity:
-          type: string
-        worker:
-          type: string
-        fromBedZoneId:
-          type: integer
-          format: int64
-        toBedZoneId:
-          type: integer
-          format: int64
-        details:
-          type: object
-          additionalProperties: {}
-        memo:
-          type: string
-        status:
-          type: string
-          enum:
-          - ACTIVE
-          - CANCELED
-        canceledAt:
-          type: string
-          format: date-time
-        cancelReason:
-          type: string
+            $ref: '#/components/schemas/WorkAnalyticsItemResponse'

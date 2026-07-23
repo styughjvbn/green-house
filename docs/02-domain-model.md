@@ -104,7 +104,6 @@ House
 ## 2. 작업 도메인
 
 ```text
-WorkType 1 ─ N WorkRecord
 WorkType 1 ─ N WorkOperation 1 ─ N WorkOperationTarget 1 ─ 1 WorkTargetExecution
                                       └─ N WorkAppliedEffect
 ```
@@ -126,24 +125,6 @@ WorkType 1 ─ N WorkOperation 1 ─ N WorkOperationTarget 1 ─ 1 WorkTargetExe
 - 위치 이동
 
 사용자 정의 작업 유형을 추가, 수정, 비활성화, 정렬할 수 있다.
-
-### WorkRecord
-
-실제 작업 이력이다.
-
-- 작업일
-- 작업 유형
-- 대상 유형: 농장, 동, 물리 배드, 논리 구역, 난 묶음
-- 작업자
-- 약제명/비료명
-- 희석 배수/농도
-- 수량
-- 작업별 가변 상세 정보는 `details`에 보관한다.
-- 메모
-- 이동 전/후 위치
-- 실수 입력은 삭제하지 않고 취소 상태와 취소 사유로 남긴다.
-
-위치 이동은 삭제보다 이력 보존을 우선한다.
 
 ### WorkOperation
 
@@ -173,6 +154,7 @@ WorkType 1 ─ N WorkOperation 1 ─ N WorkOperationTarget 1 ─ 1 WorkTargetExe
 - 결과 난 묶음들이 같은 품종·년생·표준 화분 크기를 가지면 다음 조회부터 하나의 자동 그룹 구성으로 자연스럽게 묶인다.
 - 자리 이동 계획은 원본 대상을 확정하되, 목적 논리 구역과 구간은 대상별 실행 시 입력하고 이동 효과 이력을 한 번만 남긴다.
 - 전체 분갈이는 원본을 수량 0·`종료` 상태로 보존하고, 부분 분갈이는 차감 후 잔여 수량으로 계속 운영한다.
+- 이전 `work_records` 테이블은 마이그레이션 원본과 감사 데이터로만 보존하며 애플리케이션 도메인과 API에서는 사용하지 않는다.
 
 ### WorkOperationCorrection
 

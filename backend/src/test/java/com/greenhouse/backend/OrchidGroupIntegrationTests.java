@@ -1,6 +1,6 @@
 package com.greenhouse.backend;
 
-import com.greenhouse.backend.farm.dto.OrchidGroupResponse;
+import com.greenhouse.backend.farm.dto.orchid.OrchidGroupResponse;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
@@ -397,7 +397,7 @@ class OrchidGroupIntegrationTests extends AbstractBackendIntegrationTest {
 	}
 
 	@Test
-	void movesOrchidGroupAndCreatesMovementWorkRecord() throws Exception {
+	void movesOrchidGroupAndCreatesMovementWorkOperation() throws Exception {
 		var sampleHouse = houseRepository.findAll().stream()
 				.filter(house -> house.getNumber() == 3)
 				.findFirst()
@@ -444,14 +444,10 @@ class OrchidGroupIntegrationTests extends AbstractBackendIntegrationTest {
 				.andExpect(jsonPath("$.data.bedZoneId").value(targetZone.getId()))
 				.andExpect(jsonPath("$.data.sortOrder").value(targetBeforeCount + 1));
 
-		var movement = workRecordRepository
-				.findTopByTargetTypeAndTargetIdAndWorkTypeOrderByWorkDateDescIdDesc(
-						"ORCHID_GROUP",
-						createdId,
-						workTypeRepository.findByCode("MOVEMENT").orElseThrow().getName())
-				.orElseThrow();
-		assertThat(movement.getFromBedZoneId()).isEqualTo(sourceZone.getId());
-		assertThat(movement.getToBedZoneId()).isEqualTo(targetZone.getId());
+		mockMvc.perform(get("/api/orchid-groups/{id}/work-history", createdId))
+				.andExpect(status().isOk())
+				.andExpect(jsonPath("$.data[0].workType").value("위치 이동"))
+				.andExpect(jsonPath("$.data[0].sourceKind").value("WORK_OPERATION"));
 
 		mockMvc.perform(delete("/api/orchid-groups/{orchidGroupId}", createdId))
 				.andExpect(status().isOk());

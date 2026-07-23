@@ -9,7 +9,7 @@ paths:
   /api/work-types:
     get:
       tags:
-      - work-record-controller
+      - work-type-controller
       operationId: getWorkTypes
       parameters:
       - name: includeInactive
@@ -27,7 +27,7 @@ paths:
                 $ref: '#/components/schemas/ApiResponseListWorkTypeResponse'
     post:
       tags:
-      - work-record-controller
+      - work-type-controller
       operationId: createWorkType
       requestBody:
         content:
@@ -42,74 +42,10 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ApiResponseWorkTypeResponse'
-  /api/work-records:
-    get:
-      tags:
-      - work-record-controller
-      operationId: getWorkRecords
-      parameters:
-      - name: targetType
-        in: query
-        required: false
-        schema:
-          type: string
-      - name: targetId
-        in: query
-        required: false
-        schema:
-          type: integer
-          format: int64
-      - name: workType
-        in: query
-        required: false
-        schema:
-          type: string
-      - name: from
-        in: query
-        required: false
-        schema:
-          type: string
-          format: date
-      - name: to
-        in: query
-        required: false
-        schema:
-          type: string
-          format: date
-      - name: includeCanceled
-        in: query
-        required: false
-        schema:
-          type: boolean
-          default: false
-      responses:
-        '200':
-          description: OK
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ApiResponseListWorkRecordResponse'
-    post:
-      tags:
-      - work-record-controller
-      operationId: create
-      requestBody:
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/WorkRecordCreateRequest'
-        required: true
-      responses:
-        '201':
-          description: Created
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ApiResponseWorkRecordResponse'
   /api/work-types/{workTypeId}:
     patch:
       tags:
-      - work-record-controller
+      - work-type-controller
       operationId: updateWorkType
       parameters:
       - name: workTypeId
@@ -134,7 +70,7 @@ paths:
   /api/work-types/reorder:
     patch:
       tags:
-      - work-record-controller
+      - work-type-controller
       operationId: reorderWorkTypes
       requestBody:
         content:
@@ -149,42 +85,8 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ApiResponseListWorkTypeResponse'
-  /api/work-records/{workRecordId}/cancel:
-    patch:
-      tags:
-      - work-record-controller
-      operationId: cancel_3
-      parameters:
-      - name: workRecordId
-        in: path
-        required: true
-        schema:
-          type: integer
-          format: int64
-      requestBody:
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/WorkRecordCancelRequest'
-        required: true
-      responses:
-        '200':
-          description: OK
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ApiResponseWorkRecordResponse'
 components:
   schemas:
-    ApiResponseListWorkRecordResponse:
-      type: object
-      properties:
-        data:
-          type: array
-          items:
-            $ref: '#/components/schemas/WorkRecordResponse'
-        message:
-          type: string
     ApiResponseListWorkTypeResponse:
       type: object
       properties:
@@ -194,130 +96,12 @@ components:
             $ref: '#/components/schemas/WorkTypeResponse'
         message:
           type: string
-    ApiResponseWorkRecordResponse:
-      type: object
-      properties:
-        data:
-          $ref: '#/components/schemas/WorkRecordResponse'
-        message:
-          type: string
     ApiResponseWorkTypeResponse:
       type: object
       properties:
         data:
           $ref: '#/components/schemas/WorkTypeResponse'
         message:
-          type: string
-    WorkRecordCancelRequest:
-      type: object
-      properties:
-        cancelReason:
-          type: string
-          maxLength: 1000
-          minLength: 0
-    WorkRecordCreateRequest:
-      type: object
-      properties:
-        workTypeId:
-          type: integer
-          format: int64
-        workDate:
-          type: string
-          format: date
-        targetType:
-          type: string
-          maxLength: 50
-          minLength: 0
-        targetId:
-          type: integer
-          format: int64
-        materialName:
-          type: string
-          maxLength: 100
-          minLength: 0
-        dilutionRatio:
-          type: string
-          maxLength: 50
-          minLength: 0
-        quantity:
-          type: string
-          maxLength: 50
-          minLength: 0
-        worker:
-          type: string
-          maxLength: 50
-          minLength: 0
-        memo:
-          type: string
-          maxLength: 1000
-          minLength: 0
-        details:
-          type: object
-          additionalProperties: {}
-      required:
-      - targetType
-      - workDate
-      - workTypeId
-    WorkRecordResponse:
-      type: object
-      properties:
-        id:
-          type: integer
-          format: int64
-        workTypeId:
-          type: integer
-          format: int64
-        workType:
-          type: string
-        workTypeTemplate:
-          type: string
-          enum:
-          - PESTICIDE
-          - FERTILIZER
-          - REPOT
-          - CLEANUP
-          - DISCARD
-          - STATUS
-          - MEMO
-          - MOVEMENT
-          - MULTI_CREATE
-          - CORRECTION
-        workDate:
-          type: string
-          format: date
-        targetType:
-          type: string
-        targetId:
-          type: integer
-          format: int64
-        materialName:
-          type: string
-        dilutionRatio:
-          type: string
-        quantity:
-          type: string
-        worker:
-          type: string
-        fromBedZoneId:
-          type: integer
-          format: int64
-        toBedZoneId:
-          type: integer
-          format: int64
-        details:
-          type: object
-          additionalProperties: {}
-        memo:
-          type: string
-        status:
-          type: string
-          enum:
-          - ACTIVE
-          - CANCELED
-        canceledAt:
-          type: string
-          format: date-time
-        cancelReason:
           type: string
     WorkTypeCreateRequest:
       type: object

@@ -6,8 +6,6 @@ import com.greenhouse.backend.analytics.dto.PartnerAnalyticsResponse;
 import com.greenhouse.backend.analytics.dto.SalesAnalyticsResponse;
 import com.greenhouse.backend.analytics.dto.WorkAnalyticsResponse;
 import com.greenhouse.backend.analytics.repository.SalesAnalyticsRepository;
-import com.greenhouse.backend.work.domain.WorkTypeTemplate;
-import com.greenhouse.backend.work.dto.WorkRecordResponse;
 import java.time.LocalDate;
 import java.time.YearMonth;
 import java.text.NumberFormat;
@@ -70,15 +68,11 @@ public class AnalyticsQueryService {
 
 	public WorkAnalyticsResponse getWorkAnalytics(LocalDate from, LocalDate to) {
 		DateRange range = normalizeRange(from, to);
-		var recentRecords = salesAnalyticsRepository.recentWorkRecords(range.from(), range.to(), 10).stream()
-				.map(record -> WorkRecordResponse.from(
-						record,
-						record.getWorkTypeRef() == null ? WorkTypeTemplate.MEMO : record.getWorkTypeRef().getTemplate()))
-				.toList();
+		var recentRecords = salesAnalyticsRepository.recentWorkOperations(range.from(), range.to(), 10);
 		return new WorkAnalyticsResponse(
-				salesAnalyticsRepository.countWorkRecords(range.from(), range.to()),
-				salesAnalyticsRepository.countWorkRecordsByTemplate(range.from(), range.to(), "MOVEMENT"),
-				salesAnalyticsRepository.countWorkRecordsByTemplate(range.from(), range.to(), "STATUS"),
+				salesAnalyticsRepository.countWorkOperations(range.from(), range.to()),
+				salesAnalyticsRepository.countWorkOperationsByTemplate(range.from(), range.to(), "MOVEMENT"),
+				salesAnalyticsRepository.countWorkOperationsByTemplate(range.from(), range.to(), "STATUS"),
 				salesAnalyticsRepository.latestWorkDate(range.from(), range.to()),
 				ranked(salesAnalyticsRepository.workTypeCounts(range.from(), range.to())),
 				recentRecords);

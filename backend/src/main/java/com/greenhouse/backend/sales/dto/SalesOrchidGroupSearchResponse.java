@@ -1,6 +1,6 @@
 package com.greenhouse.backend.sales.dto;
 
-import com.greenhouse.backend.farm.domain.OrchidGroup;
+import com.greenhouse.backend.farm.domain.orchid.OrchidGroup;
 
 public record SalesOrchidGroupSearchResponse(
 		Long id,

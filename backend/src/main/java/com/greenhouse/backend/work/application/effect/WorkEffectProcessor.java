@@ -1,13 +1,8 @@
 package com.greenhouse.backend.work.application.effect;
 
-import com.greenhouse.backend.work.domain.WorkAppliedEffect;
-import com.greenhouse.backend.work.domain.WorkEffectKind;
-import com.greenhouse.backend.work.domain.WorkOperation;
-import com.greenhouse.backend.work.domain.WorkOperationTarget;
-import com.greenhouse.backend.work.domain.WorkEffectOrchidGroup;
-import com.greenhouse.backend.work.domain.WorkEffectOrchidGroupRelationType;
-import com.greenhouse.backend.work.repository.WorkAppliedEffectRepository;
-import com.greenhouse.backend.work.repository.WorkEffectOrchidGroupRepository;
+import com.greenhouse.backend.work.domain.effect.WorkEffectKind;
+import com.greenhouse.backend.work.domain.operation.WorkOperation;
+import com.greenhouse.backend.work.domain.target.WorkOperationTarget;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -17,13 +12,11 @@ import org.springframework.stereotype.Component;
 public class WorkEffectProcessor {
 
 	private final Map<String, WorkEffectHandler> handlers;
-	private final WorkAppliedEffectRepository workAppliedEffectRepository;
-	private final WorkEffectOrchidGroupRepository workEffectOrchidGroupRepository;
+	private final WorkEffectStore effectStore;
 
 	public WorkEffectProcessor(
 			List<WorkEffectHandler> handlers,
-			WorkAppliedEffectRepository workAppliedEffectRepository,
-			WorkEffectOrchidGroupRepository workEffectOrchidGroupRepository) {
+			WorkEffectStore effectStore) {
 		this.handlers = new HashMap<>();
 		for (WorkEffectHandler handler : handlers) {
 			WorkEffectHandler duplicate = this.handlers.put(handler.supports(), handler);
@@ -31,8 +24,7 @@ public class WorkEffectProcessor {
 				throw new IllegalStateException("작업 효과 handler code는 중복될 수 없습니다.");
 			}
 		}
-		this.workAppliedEffectRepository = workAppliedEffectRepository;
-		this.workEffectOrchidGroupRepository = workEffectOrchidGroupRepository;
+		this.effectStore = effectStore;
 	}
 
 	public WorkExecutionResult apply(
@@ -60,6 +52,10 @@ public class WorkEffectProcessor {
 			WorkEffectCommand command,
 			String effectKey,
 			List<Long> sourceOrchidGroupIds) {
+		var existing = effectStore.find(operation.getId(), effectKey);
+		if (existing.isPresent()) {
+			return existing.get();
+		}
 		String handlerCode = operation.getWorkType().handlerCode();
 		WorkEffectHandler handler = handlers.get(handlerCode);
 		if (handler == null) {
@@ -68,29 +64,18 @@ public class WorkEffectProcessor {
 		WorkEffectKind effectKind = handler.effectKind();
 
 		WorkExecutionResult result = handler.execute(operation, target, command);
-		WorkAppliedEffect appliedEffect = workAppliedEffectRepository.save(new WorkAppliedEffect(
-				operation,
-				target,
-				effectKey,
-				effectKind,
-				handlerCode,
-				command.executedAt(),
-				command.worker(),
-				command.resultDetails(),
-				result.resultDetails()));
-		var groupLinks = new java.util.ArrayList<WorkEffectOrchidGroup>();
-		if (effectKind == WorkEffectKind.STRUCTURE_CHANGE) {
-			sourceOrchidGroupIds.stream().distinct().forEach(groupId -> groupLinks.add(
-					new WorkEffectOrchidGroup(
-							appliedEffect, groupId, WorkEffectOrchidGroupRelationType.SOURCE)));
-		}
-		WorkEffectOrchidGroupRelationType resultRelation = target == null
-				&& "MULTI_CREATE".equals(handlerCode)
-				? WorkEffectOrchidGroupRelationType.CREATED
-				: WorkEffectOrchidGroupRelationType.RESULT;
-		result.resultOrchidGroupIds().forEach(groupId -> groupLinks.add(
-				new WorkEffectOrchidGroup(appliedEffect, groupId, resultRelation)));
-		workEffectOrchidGroupRepository.saveAll(groupLinks);
-		return result;
+		return persist(operation, target, command, effectKey, sourceOrchidGroupIds, effectKind, result);
+	}
+
+	private WorkExecutionResult persist(
+			WorkOperation operation,
+			WorkOperationTarget target,
+			WorkEffectCommand command,
+			String effectKey,
+			List<Long> sourceOrchidGroupIds,
+			WorkEffectKind effectKind,
+			WorkExecutionResult result) {
+		return effectStore.save(
+				operation, target, command, effectKey, sourceOrchidGroupIds, effectKind, result);
 	}
 }

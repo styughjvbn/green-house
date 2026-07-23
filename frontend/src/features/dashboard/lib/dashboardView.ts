@@ -1,5 +1,7 @@
-import type { WorkRecord } from "@/entities/farm/types";
-import type { AnalyticsSlipSummary } from "@/features/analytics/model/types";
+import type {
+  AnalyticsSlipSummary,
+  WorkAnalyticsItem,
+} from "@/features/analytics/model/types";
 import type { DashboardPageProps, DashboardTone } from "../model/types";
 
 export function createDashboardViewModel({
@@ -62,8 +64,8 @@ export function getPaymentStatusLabel(slip: AnalyticsSlipSummary) {
   return slip.paymentStatus === "미입금" ? "미입금" : "입금";
 }
 
-export function getRecentWorkLabel(record: WorkRecord) {
-  return record.memo ?? record.materialName ?? "농장 전체";
+export function getRecentWorkLabel(record: WorkAnalyticsItem) {
+  return record.title || record.memo || "작업";
 }
 
 export function toneText(tone: DashboardTone) {

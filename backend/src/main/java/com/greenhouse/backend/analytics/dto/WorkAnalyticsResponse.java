@@ -1,6 +1,5 @@
 package com.greenhouse.backend.analytics.dto;
 
-import com.greenhouse.backend.work.dto.WorkRecordResponse;
 import java.time.LocalDate;
 import java.util.List;
 
@@ -10,5 +9,5 @@ public record WorkAnalyticsResponse(
 		Long statusCount,
 		LocalDate latestWorkDate,
 		List<AnalyticsRankedValueResponse> workTypeCounts,
-		List<WorkRecordResponse> recentRecords) {
+		List<WorkAnalyticsItemResponse> recentRecords) {
 }

@@ -1,7 +1,7 @@
 package com.greenhouse.backend.dashboard.application;
 
 import com.greenhouse.backend.dashboard.dto.DashboardSummaryResponse;
-import com.greenhouse.backend.farm.application.FarmMetricsReader;
+import com.greenhouse.backend.farm.application.status.FarmMetricsReader;
 
 import lombok.RequiredArgsConstructor;
 

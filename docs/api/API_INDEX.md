@@ -7,8 +7,8 @@
 
 - 기준 명세: `docs/api/openapi.yaml`
 - OpenAPI 버전: `3.1.0`
-- 현재 구현 API: `106` operations / `86` path entries
-- schema 수: `153`
+- 현재 구현 API: `120` operations / `99` path entries
+- schema 수: `183`
 - Base URL: `/api`
 - 공통 응답: `ApiResponse*` 래퍼 사용
 
@@ -80,19 +80,16 @@
 | `POST` | `/api/work-operations/repot` | `execute` | `RepotWorkOperationRequest` | `201:ApiResponseRepotWorkOperationResponse` |
 | `GET` | `/api/work-operations/{workOperationId}/repot-results` | `get_4` | `-` | `200:ApiResponseRepotWorkOperationResponse` |
 
-### 작업 이력
+### 작업 유형
 
 - slice: `docs/api/slices/work.openapi.yaml`
 - package 후보: `com.greenhouse.backend.work`
-- controller tags: `work-record-controller`
-- 역할: 작업 이력과 작업 유형 관리 API
-- operations: 7
+- controller tags: `work-type-controller`
+- 역할: 작업 유형 관리 API
+- operations: 4
 
 | Method | Path | Operation | Request | Response |
 |---|---|---|---|---|
-| `GET` | `/api/work-records` | `getWorkRecords` | `-` | `200:ApiResponseListWorkRecordResponse` |
-| `POST` | `/api/work-records` | `create` | `WorkRecordCreateRequest` | `201:ApiResponseWorkRecordResponse` |
-| `PATCH` | `/api/work-records/{workRecordId}/cancel` | `cancel_1` | `WorkRecordCancelRequest` | `200:ApiResponseWorkRecordResponse` |
 | `GET` | `/api/work-types` | `getWorkTypes` | `-` | `200:ApiResponseListWorkTypeResponse` |
 | `POST` | `/api/work-types` | `createWorkType` | `WorkTypeCreateRequest` | `201:ApiResponseWorkTypeResponse` |
 | `PATCH` | `/api/work-types/reorder` | `reorderWorkTypes` | `WorkTypeReorderRequest` | `200:ApiResponseListWorkTypeResponse` |
@@ -108,20 +105,20 @@
 
 | Method | Path | Operation | Request | Response |
 |---|---|---|---|---|
-| `GET` | `/api/inbound-records` | `getInboundRecords` | `-` | `200:ApiResponseInboundRecordPageResponse` |
+| `GET` | `/api/inbound-records` | `getInboundRecords` | `-` | `200:ApiResponsePageResponseInboundRecordResponse` |
 | `POST` | `/api/inbound-records` | `create_4` | `InboundRecordCreateRequest` | `201:ApiResponseInboundRecordResponse` |
 | `GET` | `/api/inbound-records/{inboundRecordId}` | `getInboundRecord` | `-` | `200:ApiResponseInboundRecordResponse` |
 | `PATCH` | `/api/inbound-records/{inboundRecordId}` | `update_5` | `InboundRecordUpdateRequest` | `200:ApiResponseInboundRecordResponse` |
 | `DELETE` | `/api/inbound-records/{inboundRecordId}` | `delete` | `-` | `200:ApiResponseVoid` |
 | `POST` | `/api/inbound-records/{inboundRecordId}/cancel` | `cancel` | `InboundRecordCancelRequest` | `200:ApiResponseInboundRecordResponse` |
 | `POST` | `/api/inbound-records/{inboundRecordId}/potting` | `potting` | `InboundRecordPottingRequest` | `200:ApiResponseInboundRecordResponse` |
-| `GET` | `/api/materials` | `getMaterials` | `-` | `200:ApiResponseMaterialPageResponse` |
+| `GET` | `/api/materials` | `getMaterials` | `-` | `200:ApiResponsePageResponseMaterialResponse` |
 | `POST` | `/api/materials` | `create_3` | `MaterialCreateRequest` | `201:ApiResponseMaterialResponse` |
 | `GET` | `/api/materials/{materialId}` | `getMaterial` | `-` | `200:ApiResponseMaterialResponse` |
 | `PATCH` | `/api/materials/{materialId}` | `update_4` | `MaterialUpdateRequest` | `200:ApiResponseMaterialResponse` |
 | `DELETE` | `/api/materials/{materialId}` | `delete_2` | `-` | `200:ApiResponseVoid` |
 | `PATCH` | `/api/materials/{materialId}/deactivate` | `deactivate_1` | `-` | `200:ApiResponseMaterialResponse` |
-| `GET` | `/api/varieties` | `getVarieties` | `-` | `200:ApiResponseVarietyPageResponse` |
+| `GET` | `/api/varieties` | `getVarieties` | `-` | `200:ApiResponsePageResponseVarietyResponse` |
 | `POST` | `/api/varieties` | `create_1` | `VarietyCreateRequest` | `201:ApiResponseVarietyResponse` |
 | `GET` | `/api/varieties/genera` | `getGenera` | `-` | `200:ApiResponseListString` |
 | `GET` | `/api/varieties/{varietyId}` | `getVariety` | `-` | `200:ApiResponseVarietyResponse` |
@@ -136,7 +133,7 @@
 - package: `com.greenhouse.backend.work`
 - controller tag: `work-operation-controller`
 - 역할: 범위별 기록형 작업의 미리보기·스냅샷·즉시 완료·기간 조회, 난 묶음 통합 이력, 구조 변경 보정 관계
-- operations: 16
+- operations: 17
 
 | Method | Path | Operation |
 |---|---|---|
@@ -153,7 +150,8 @@
 | `POST` | `/api/work-operations/{workOperationId}/targets/{targetId}/start` | 대상 작업 시작 |
 | `POST` | `/api/work-operations/{workOperationId}/targets/{targetId}/complete` | 대상 작업 완료 |
 | `POST` | `/api/work-operations/{workOperationId}/targets/{targetId}/skip` | 대상 건너뛰기 |
-| `GET` | `/api/orchid-groups/{orchidGroupId}/work-history` | 기존·신규 통합 이력 |
+| `GET` | `/api/work-history` | 동·다이·구역·난 묶음 범위의 페이지형 통합 작업 이력 |
+| `GET` | `/api/orchid-groups/{orchidGroupId}/work-history` | `WorkOperation` 기반 난 묶음 이력 |
 | `POST` | `/api/work-operations/{workOperationId}/corrections` | 완료된 구조 변경 작업에 보정 작업 연결 |
 | `GET` | `/api/work-operations/{workOperationId}/corrections` | 원본 작업과 연결된 보정 작업 조회 |
 
@@ -217,7 +215,7 @@
 | Method | Path | Operation | Request | Response |
 |---|---|---|---|---|
 | `GET` | `/api/sales-slips` | `getSalesSlips` | `-` | `200:ApiResponseListSalesSlipResponse` |
-| `GET` | `/api/sales-slips/page` | `getSalesSlipPage` | `-` | `200:ApiResponseSalesSlipPageResponse` |
+| `GET` | `/api/sales-slips/page` | `getSalesSlipPage` | `-` | `200:ApiResponsePageResponseSalesSlipListItemResponse` |
 | `GET` | `/api/analytics/sales` | `getSalesAnalytics` | `-` | `200:ApiResponseSalesAnalyticsResponse` |
 | `GET` | `/api/analytics/partners` | `getPartnerAnalytics` | `-` | `200:ApiResponsePartnerAnalyticsResponse` |
 | `GET` | `/api/analytics/work` | `getWorkAnalytics` | `-` | `200:ApiResponseWorkAnalyticsResponse` |
@@ -225,7 +223,7 @@
 | `GET` | `/api/sales-slips/auction-shipments` | `getAuctionShipmentOptions` | `-` | `200:ApiResponseListAuctionShipmentOptionResponse` |
 | `GET` | `/api/sales-slips/{salesSlipId}` | `getSalesSlip` | `-` | `200:ApiResponseSalesSlipResponse` |
 | `GET` | `/api/sales-slips/{salesSlipId}/print` | `getSalesSlipPrintData` | `-` | `200:ApiResponseSalesSlipResponse` |
-| `GET` | `/api/sales-slips/print` | `getPrintableSalesSlips` | `-` | `200:ApiResponseSalesSlipPageResponse` |
+| `GET` | `/api/sales-slips/print` | `getPrintableSalesSlips` | `-` | `200:ApiResponsePageResponseSalesSlipListItemResponse` |
 
 ### 출하·경매 추적/정산
 
@@ -237,7 +235,7 @@
 
 | Method | Path | Operation | Request | Response |
 |---|---|---|---|---|
-| `GET` | `/api/auction-lots` | `getLots` | `-` | `200:ApiResponseAuctionLotPageResponse` |
+| `GET` | `/api/auction-lots` | `getLots` | `-` | `200:ApiResponsePageResponseAuctionLotResponse` |
 | `GET` | `/api/auction-lots/{id}` | `getLot` | `-` | `200:ApiResponseAuctionLotResponse` |
 | `POST` | `/api/auction-lots/{id}/adjust-quantity` | `adjust` | `AuctionLotAdjustmentRequest` | `200:ApiResponseAuctionLotResponse` |
 | `POST` | `/api/auction-lots/{id}/confirm-return` | `confirmReturn` | `AuctionLotReturnRequest` | `200:ApiResponseAuctionLotResponse` |

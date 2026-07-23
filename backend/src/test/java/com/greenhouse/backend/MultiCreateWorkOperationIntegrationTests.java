@@ -6,16 +6,16 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
-import com.greenhouse.backend.farm.domain.BedZone;
-import com.greenhouse.backend.farm.domain.BedZoneSide;
-import com.greenhouse.backend.farm.domain.House;
-import com.greenhouse.backend.farm.domain.OrchidGroupCollection;
-import com.greenhouse.backend.farm.domain.PhysicalBed;
-import com.greenhouse.backend.farm.domain.Variety;
-import com.greenhouse.backend.farm.repository.OrchidGroupCollectionMemberRepository;
-import com.greenhouse.backend.farm.repository.OrchidGroupCollectionRepository;
-import com.greenhouse.backend.work.domain.WorkType;
-import com.greenhouse.backend.work.domain.WorkTypeTemplate;
+import com.greenhouse.backend.farm.domain.structure.BedZone;
+import com.greenhouse.backend.farm.domain.structure.BedZoneSide;
+import com.greenhouse.backend.farm.domain.structure.House;
+import com.greenhouse.backend.farm.domain.collection.OrchidGroupCollection;
+import com.greenhouse.backend.farm.domain.structure.PhysicalBed;
+import com.greenhouse.backend.farm.domain.variety.Variety;
+import com.greenhouse.backend.farm.repository.collection.OrchidGroupCollectionMemberRepository;
+import com.greenhouse.backend.farm.repository.collection.OrchidGroupCollectionRepository;
+import com.greenhouse.backend.work.domain.operation.WorkType;
+import com.greenhouse.backend.work.domain.operation.WorkTypeTemplate;
 import com.greenhouse.backend.work.repository.WorkAppliedEffectRepository;
 import com.greenhouse.backend.work.repository.WorkEffectOrchidGroupRepository;
 import com.greenhouse.backend.work.repository.WorkOperationRepository;
