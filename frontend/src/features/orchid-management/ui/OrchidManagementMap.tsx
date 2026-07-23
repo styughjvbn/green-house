@@ -81,6 +81,8 @@ export function OrchidManagementMap({
   const [correctionOperationId, setCorrectionOperationId] = useState<
     number | null
   >(null);
+  const [searchGroupOrchidGroupIds, setSearchGroupOrchidGroupIds] =
+    useState<Set<number> | null>(null);
   const placementHouses = useMemo(
     () =>
       mapData.houses.map((item) => ({
@@ -288,7 +290,10 @@ export function OrchidManagementMap({
             startBedIndex={bedViewport.startBedIndex}
             visibleBedCount={bedViewport.visibleBedCount}
             distinguishVarietyColors={distinguishVarietyColors}
-            filteredOrchidGroupIds={orchidManagement.filteredOrchidGroupIds}
+            filteredOrchidGroupIds={
+              searchGroupOrchidGroupIds ??
+              orchidManagement.filteredOrchidGroupIds
+            }
             selectedOrchidGroupIds={selectedOrchidGroupIds}
             selection={orchidManagement.selection}
             showScale={showScale}
@@ -454,6 +459,11 @@ export function OrchidManagementMap({
               }
               orchidManagement.actions.moveToOrchidGroup(orchidGroup);
             }}
+            onSearchGroupSelectionChange={(orchidGroupIds) =>
+              setSearchGroupOrchidGroupIds(
+                orchidGroupIds ? new Set(orchidGroupIds) : null,
+              )
+            }
             onStartMapCellRangePick={startMapCellRangePick}
             onSyncMapCellRangePick={syncMapCellRangePick}
             onToggleSelectedOrchidGroup={toggleSelectedOrchidGroup}
