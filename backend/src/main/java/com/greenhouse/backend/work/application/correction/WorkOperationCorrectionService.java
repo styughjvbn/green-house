@@ -2,6 +2,7 @@ package com.greenhouse.backend.work.application.correction;
 
 import com.greenhouse.backend.work.application.operation.ImmediateWorkExecutionService;
 import com.greenhouse.backend.work.application.operation.WorkOperationQueryService;
+import com.greenhouse.backend.common.application.RequestActorProvider;
 import com.greenhouse.backend.common.exception.NotFoundException;
 import com.greenhouse.backend.work.domain.effect.WorkEffectKind;
 import com.greenhouse.backend.work.domain.operation.WorkOperation;
@@ -30,6 +31,7 @@ public class WorkOperationCorrectionService {
 	private final ImmediateWorkExecutionService immediateWorkExecutionService;
 	private final WorkOperationQueryService queryService;
 	private final WorkAppliedEffectRepository workAppliedEffectRepository;
+	private final RequestActorProvider requestActorProvider;
 
 	public WorkOperationCorrectionsResponse create(
 			Long originalWorkOperationId,
@@ -44,7 +46,7 @@ public class WorkOperationCorrectionService {
 				WorkType.CORRECTION_CODE,
 				normalizeRequired(request.title()),
 				request.workDate(),
-				normalize(request.worker()),
+				requestActorProvider.resolve(request.worker()),
 				normalize(request.memo()),
 				details,
 				request);

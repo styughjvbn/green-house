@@ -4,7 +4,7 @@ import {
   type ApiResponse,
 } from "@/shared/api/client";
 
-export type AuthRole = "ADMIN" | "WORKER";
+export type AuthRole = "ADMIN" | "WORKER" | "DEMO";
 
 export type AuthenticatedUser = {
   username: string;

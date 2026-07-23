@@ -156,7 +156,13 @@ function SubNavFlyout({
   );
 }
 
-export function AppShell({ children }: { children: React.ReactNode }) {
+export function AppShell({
+  children,
+  demoMode,
+}: {
+  children: React.ReactNode;
+  demoMode: boolean;
+}) {
   const pathname = usePathname();
   const [sidebarExpanded, setSidebarExpanded] = useState(true);
   const [compactDesktopHeader, setCompactDesktopHeader] = useState(false);
@@ -244,11 +250,15 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       : undefined;
 
   return (
-    <div className="app-shell-root relative flex bg-[#f7f8f5]">
+    <div
+      className="app-shell-root relative flex bg-[#f7f8f5]"
+      style={demoMode ? { height: "100%" } : undefined}
+    >
       <aside
         className={`app-shell-sidebar sticky top-0 z-750 hidden shrink-0 flex-col bg-[#003b1f] px-2 py-4 transition-[width,box-shadow] duration-200 lg:flex lg:max-2xl:absolute lg:max-2xl:left-0 ${
           sidebarCollapsed ? "w-12 cursor-pointer" : "w-44"
         } ${sidebarCollapsed ? "" : "lg:max-2xl:shadow-xl"}`}
+        style={demoMode ? { height: "100%" } : undefined}
         tabIndex={-1}
         onClick={(event) => {
           if (sidebarCollapsed) {
@@ -404,7 +414,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           })}
         </nav>
 
-        {sidebarCollapsed ? null : <SessionUserPanel />}
+        {sidebarCollapsed ? null : <SessionUserPanel demoMode={demoMode} />}
       </aside>
 
       <div className="app-shell-main min-w-0 flex-1 lg:max-2xl:ml-12">

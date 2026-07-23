@@ -1,6 +1,7 @@
 package com.greenhouse.backend.settlement.application;
 
 import com.greenhouse.backend.common.exception.NotFoundException;
+import com.greenhouse.backend.common.application.RequestActorProvider;
 import com.greenhouse.backend.settlement.domain.PaymentTargetType;
 import com.greenhouse.backend.settlement.dto.AuctionSettlementResponse;
 import com.greenhouse.backend.settlement.dto.ManualPaymentRequest;
@@ -22,11 +23,12 @@ public class PaymentService {
 	private final AuctionSettlementRepository auctionSettlementRepository;
 	private final PaymentLedgerService paymentLedgerService;
 	private final PartnerBalanceService partnerBalanceService;
+	private final RequestActorProvider requestActorProvider;
 
 	public AuctionSettlementResponse confirmAuctionPayment(Long settlementId, ManualPaymentRequest request) {
 		var settlement = auctionSettlementRepository.findWithDetailsById(settlementId)
 				.orElseThrow(() -> new NotFoundException("경매 정산을 찾을 수 없습니다."));
-		settlement.recordPayment(request.amount(), worker(request.worker()));
+		settlement.recordPayment(request.amount(), defaultWorker(requestActorProvider.resolve(request.worker())));
 		var received = paymentLedgerService.recordManualPayment(
 				settlement.getAuctionHouse(), PaymentTargetType.AUCTION_SETTLEMENT, settlementId, request);
 		partnerBalanceService.recordActivity(settlement.getAuctionHouse().getId(), received);
@@ -43,7 +45,7 @@ public class PaymentService {
 				.toList();
 	}
 
-	private String worker(String value) {
-		return value == null || value.isBlank() ? "관리자" : value.trim();
+	private String defaultWorker(String value) {
+		return value == null ? "관리자" : value;
 	}
 }

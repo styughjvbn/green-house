@@ -81,7 +81,7 @@ public class WorkOperationProgressService {
 			Long operationId, Long targetId, WorkTargetExecutionRequest request) {
 		validateOperationInProgress(operationId);
 		findExecution(operationId, targetId)
-				.start(support.now(), support.normalize(request.worker()));
+				.start(support.now(), support.actor(request.worker()));
 		return queryService.get(operationId);
 	}
 
@@ -97,7 +97,7 @@ public class WorkOperationProgressService {
 		}
 		refreshInboundSnapshot(operation, execution.getTarget());
 		LocalDateTime completedAt = support.completionTime(request.completedDate());
-		String worker = support.normalize(request.worker());
+		String worker = support.actor(request.worker());
 		var result = workEffectProcessor.apply(
 				operation,
 				execution.getTarget(),
@@ -111,7 +111,7 @@ public class WorkOperationProgressService {
 			Long operationId, Long targetId, WorkTargetExecutionRequest request) {
 		validateOperationInProgress(operationId);
 		WorkTargetExecution execution = findExecution(operationId, targetId);
-		execution.skip(support.now(), support.normalize(request.worker()), request.resultDetails());
+		execution.skip(support.now(), support.actor(request.worker()), request.resultDetails());
 		completeIfAllTargetsClosed(execution.getTarget().getWorkOperation(), execution.getCompletedAt());
 		closeInboundPottingPlans(execution.getTarget().getWorkOperation(), List.of(execution));
 		return queryService.get(operationId);

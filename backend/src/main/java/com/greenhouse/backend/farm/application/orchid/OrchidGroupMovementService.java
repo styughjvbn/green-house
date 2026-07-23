@@ -2,6 +2,7 @@ package com.greenhouse.backend.farm.application.orchid;
 
 import com.greenhouse.backend.common.config.TimeConfig;
 import com.greenhouse.backend.common.exception.NotFoundException;
+import com.greenhouse.backend.common.application.RequestActorProvider;
 import com.greenhouse.backend.farm.domain.orchid.OrchidGroup;
 import com.greenhouse.backend.farm.dto.orchid.OrchidGroupMoveRequest;
 import com.greenhouse.backend.farm.dto.orchid.OrchidGroupResponse;
@@ -25,6 +26,7 @@ public class OrchidGroupMovementService {
 	private final ImmediateWorkExecutionService immediateWorkExecutionService;
 	private final OrchidGroupReader orchidGroupReader;
 	private final Clock clock;
+	private final RequestActorProvider requestActorProvider;
 
 	public OrchidGroupResponse move(Long orchidGroupId, OrchidGroupMoveRequest request) {
 		var orchidGroup = orchidGroupReader.findDetailById(orchidGroupId)
@@ -37,7 +39,8 @@ public class OrchidGroupMovementService {
 		details.put("toBedZoneId", request.toBedZoneId());
 		putIfNotNull(details, "startPosition", request.startPosition());
 		putIfNotNull(details, "endPosition", request.endPosition());
-		putIfNotNull(details, "worker", request.worker());
+		String worker = requestActorProvider.resolve(request.worker());
+		putIfNotNull(details, "worker", worker);
 		putIfNotNull(details, "memo", request.memo());
 
 		immediateWorkExecutionService.executeForTarget(
@@ -45,7 +48,7 @@ public class OrchidGroupMovementService {
 				WorkType.MOVEMENT_CODE,
 				"위치 이동",
 				TimeConfig.farmToday(clock),
-				request.worker(),
+				worker,
 				request.memo(),
 				orchidGroupId,
 				details,

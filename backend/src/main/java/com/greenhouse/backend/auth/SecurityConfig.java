@@ -21,18 +21,24 @@ import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.provisioning.InMemoryUserDetailsManager;
+import org.springframework.security.web.authentication.AnonymousAuthenticationFilter;
 import org.springframework.security.web.SecurityFilterChain;
+
+import com.greenhouse.backend.demo.DemoAuthenticationFilter;
+import com.greenhouse.backend.demo.DemoProperties;
+import com.greenhouse.backend.demo.DemoProtectionFilter;
 
 @Configuration
 @EnableWebSecurity
 @EnableMethodSecurity
-@EnableConfigurationProperties(AuthProperties.class)
+@EnableConfigurationProperties({AuthProperties.class, DemoProperties.class})
 public class SecurityConfig {
 
 	@Bean
 	SecurityFilterChain securityFilterChain(
 			HttpSecurity http,
-			AuthProperties authProperties
+			AuthProperties authProperties,
+			DemoProperties demoProperties
 	) throws Exception {
 		http
 				.csrf(AbstractHttpConfigurer::disable)
@@ -41,6 +47,21 @@ public class SecurityConfig {
 				.httpBasic(AbstractHttpConfigurer::disable)
 				.logout(AbstractHttpConfigurer::disable)
 				.sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.IF_REQUIRED));
+
+		if (demoProperties.enabled()) {
+			var authenticationFilter = new DemoAuthenticationFilter(demoProperties);
+			var protectionFilter = new DemoProtectionFilter(demoProperties);
+			http
+					.sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+					.addFilterBefore(authenticationFilter, AnonymousAuthenticationFilter.class)
+					.addFilterAfter(protectionFilter, DemoAuthenticationFilter.class)
+					.authorizeHttpRequests(authorize -> authorize
+							.requestMatchers("/actuator/health", "/api-docs/**", "/swagger-ui/**", "/swagger-ui.html").permitAll()
+							.requestMatchers("/api/**").authenticated()
+							.anyRequest().permitAll()
+					);
+			return http.build();
+		}
 
 		if (!authProperties.enabled()) {
 			http.authorizeHttpRequests(authorize -> authorize.anyRequest().permitAll());

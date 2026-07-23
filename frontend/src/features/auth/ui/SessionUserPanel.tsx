@@ -6,10 +6,13 @@ import { getCurrentUser, type AuthenticatedUser } from "../api/authApi";
 import { LogoutButton } from "./LogoutButton";
 
 function getRoleLabel(role: AuthenticatedUser["role"]) {
-  return role === "ADMIN" ? "관리자" : "작업자";
+  if (role === "ADMIN") {
+    return "관리자";
+  }
+  return role === "DEMO" ? "데모 사용자" : "작업자";
 }
 
-export function SessionUserPanel() {
+export function SessionUserPanel({ demoMode }: { demoMode: boolean }) {
   const [user, setUser] = useState<AuthenticatedUser | null>(null);
 
   useEffect(() => {
@@ -43,7 +46,7 @@ export function SessionUserPanel() {
           </div>
         </div>
 
-        <LogoutButton variant="sidebar" />
+        {demoMode ? null : <LogoutButton variant="sidebar" />}
       </div>
     </div>
   );

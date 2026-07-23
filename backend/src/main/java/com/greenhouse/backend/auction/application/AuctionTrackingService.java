@@ -14,6 +14,7 @@ import com.greenhouse.backend.auction.dto.AuctionTrackingSummaryResponse;
 import com.greenhouse.backend.auction.repository.AuctionShipmentLotRepository;
 import com.greenhouse.backend.common.api.PageResponse;
 import com.greenhouse.backend.common.exception.NotFoundException;
+import com.greenhouse.backend.common.application.RequestActorProvider;
 
 import lombok.RequiredArgsConstructor;
 
@@ -30,6 +31,7 @@ import org.springframework.transaction.annotation.Transactional;
 @RequiredArgsConstructor
 public class AuctionTrackingService {
 	private final AuctionShipmentLotRepository lotRepository;
+	private final RequestActorProvider requestActorProvider;
 
 	public PageResponse<AuctionLotResponse> getLots(LocalDate from, LocalDate to, String market, String variety, String grade,
 			AuctionLotStatus status, Boolean reviewOnly, Boolean returnOnly, Boolean waitingOnly, String keyword,
@@ -88,7 +90,7 @@ public class AuctionTrackingService {
 			throw new IllegalArgumentException("확인할 반환 수량이 없습니다.");
 		int quantity = request.returnedQuantity() == null ? lot.getReturnConfirmableQuantity()
 				: request.returnedQuantity();
-		lot.confirmReturn(quantity, request.returnDate(), normalize(request.worker()), normalize(request.memo()));
+		lot.confirmReturn(quantity, request.returnDate(), requestActorProvider.resolve(request.worker()), normalize(request.memo()));
 		return AuctionLotResponse.from(lot);
 	}
 
@@ -96,7 +98,7 @@ public class AuctionTrackingService {
 	public AuctionLotResponse adjust(Long id, AuctionLotAdjustmentRequest request) {
 		var lot = findLot(id);
 		lot.adjustQuantities(request.soldQuantity(), request.waitingQuantity(), request.returnedQuantity(),
-				normalize(request.worker()), normalize(request.memo()));
+				requestActorProvider.resolve(request.worker()), normalize(request.memo()));
 		return AuctionLotResponse.from(lot);
 	}
 
@@ -178,7 +180,7 @@ public class AuctionTrackingService {
 	@Transactional
 	public AuctionLotResponse changeStatus(Long id, AuctionLotStatusRequest request) {
 		var lot = findLot(id);
-		lot.changeStatus(request.status(), request.reason().trim(), normalize(request.worker()),
+		lot.changeStatus(request.status(), request.reason().trim(), requestActorProvider.resolve(request.worker()),
 				normalize(request.memo()));
 		return AuctionLotResponse.from(lot);
 	}

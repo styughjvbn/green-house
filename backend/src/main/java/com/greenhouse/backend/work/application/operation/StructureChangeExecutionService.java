@@ -60,7 +60,7 @@ public class StructureChangeExecutionService {
 		}
 		validateInProgress(operation);
 		LocalDateTime completedAt = support.completionTime(request.completedDate());
-		String worker = support.normalize(request.worker());
+		String worker = support.actor(request.worker());
 		var result = workEffectProcessor.apply(
 				operation,
 				null,
@@ -109,7 +109,7 @@ public class StructureChangeExecutionService {
 		});
 
 		LocalDateTime executedAt = support.completionTime(request.completedDate());
-		String worker = support.normalize(request.worker());
+		String worker = support.actor(request.worker());
 		Map<String, Object> commandDetails = objectMapper.convertValue(
 				request, new TypeReference<Map<String, Object>>() {});
 		var result = workEffectProcessor.applyBatch(
