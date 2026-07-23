@@ -222,6 +222,14 @@ export type OrchidManagementSearchState = {
   status: string;
 };
 
+export type WorkHistoryPage = {
+  content: OrchidGroupWorkHistory[];
+  page: number;
+  size: number;
+  totalElements: number;
+  totalPages: number;
+};
+
 export type OrchidGroupCollectionMember = {
   membershipId: number;
   orchidGroupId: number;

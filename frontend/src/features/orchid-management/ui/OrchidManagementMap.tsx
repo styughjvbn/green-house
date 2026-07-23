@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState, useSyncExternalStore } from "react";
+import { useCallback, useMemo, useState, useSyncExternalStore } from "react";
 import { normalizeCellRange } from "../lib/orchidManagementUtils";
 import { useBedViewport } from "../model/useBedViewport";
 import { useOrchidManagementMap } from "../model/useOrchidManagementMap";
@@ -51,6 +51,24 @@ export function OrchidManagementMap({
     initialSelectedBedZoneId ?? null,
     initialSearchFilters,
   );
+  const selectedHistoryHouse = useMemo(() => {
+    if (orchidManagement.selection?.type !== "HOUSE") return null;
+    const selectedHouseId = orchidManagement.selection.houseId;
+    const physicalBeds = house.physicalBeds.filter(
+      (bed) => bed.houseId === selectedHouseId,
+    );
+    const selectedSummary = mapData.houses.find(
+      (item) => item.houseId === selectedHouseId,
+    );
+    return {
+      ...house,
+      id: selectedHouseId,
+      number: selectedSummary?.houseNumber ?? physicalBeds[0]?.houseNumber ?? 0,
+      name: selectedSummary?.houseName ?? house.name,
+      physicalBeds,
+    };
+  }, [house, mapData.houses, orchidManagement.selection]);
+  const historyHouse = selectedHistoryHouse ?? scopedHouse;
   const [showScale, setShowScale] = useState(true);
   const [orchidGroupSelection, setOrchidGroupSelection] = useState<{
     houseId: number;
@@ -175,7 +193,7 @@ export function OrchidManagementMap({
     }));
   }
 
-  function clearMapCellRangePick() {
+  const clearMapCellRangePick = useCallback(() => {
     setMapCellRangePick((current) => ({
       active: false,
       completed: false,
@@ -185,7 +203,17 @@ export function OrchidManagementMap({
       endCell: null,
       version: current.version + 1,
     }));
-  }
+  }, []);
+
+  const selectOrchidGroupForEdit =
+    orchidManagement.actions.selectOrchidGroupForEdit;
+  const handleSelectOrchidGroup = useCallback(
+    (orchidGroupId: number) => {
+      clearMapCellRangePick();
+      selectOrchidGroupForEdit(orchidGroupId);
+    },
+    [clearMapCellRangePick, selectOrchidGroupForEdit],
+  );
 
   function pickMapCellRange(bedZoneId: number, cell: number) {
     setMapCellRangePick((current) => {
@@ -249,7 +277,10 @@ export function OrchidManagementMap({
           }}
           onPrevious={bedViewport.actions.previous}
           onNext={bedViewport.actions.next}
-          onGoToHouse={bedViewport.actions.goToHouse}
+          onGoToHouse={(houseId) => {
+            bedViewport.actions.goToHouse(houseId);
+            orchidManagement.actions.selectHouse(houseId);
+          }}
           onVisibleBedCountChange={bedViewport.actions.setVisibleBedCount}
         />
         <div className="min-h-0 flex-1">
@@ -273,14 +304,11 @@ export function OrchidManagementMap({
               clearMapCellRangePick();
               orchidManagement.actions.selectPhysicalBed(physicalBedId);
             }}
-            onSelectOrchidGroup={(orchidGroupId) => {
-              clearMapCellRangePick();
-              orchidManagement.actions.selectOrchidGroupForEdit(orchidGroupId);
-            }}
+            onSelectOrchidGroup={handleSelectOrchidGroup}
           />
         </div>
         <SelectedZoneInfo
-          house={scopedHouse}
+          house={historyHouse}
           selectedBedZone={orchidManagement.selectedBedZone}
           selectedOrchidGroup={orchidManagement.selectedOrchidGroup}
           selectedPhysicalBed={orchidManagement.selectedPhysicalBed}
@@ -289,8 +317,15 @@ export function OrchidManagementMap({
           workRecordSummaryLoading={orchidManagement.workRecordSummaryLoading}
           orchidGroupHistory={orchidManagement.orchidGroupHistory}
           orchidGroupHistoryLoading={orchidManagement.orchidGroupHistoryLoading}
+          orchidGroupHistoryPage={orchidManagement.orchidGroupHistoryPage}
+          orchidGroupHistoryPageLoading={
+            orchidManagement.orchidGroupHistoryPageLoading
+          }
           orchidGroupLineage={orchidManagement.orchidGroupLineage}
           orchidGroupLineageLoading={orchidManagement.orchidGroupLineageLoading}
+          onOrchidGroupHistoryPageChange={
+            orchidManagement.actions.loadOrchidGroupHistoryPage
+          }
           onOpenCorrection={(workOperationId) => {
             if (!orchidManagement.selectedOrchidGroup) return;
             clearMapCellRangePick();

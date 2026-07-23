@@ -25,7 +25,8 @@ green-house/
   renderer를 사용하며 확대 단계에 필요한 HTML 라벨만 생성한다.
 - 농장 현황의 검색·선택 레이어는 기본 구조 레이어와 분리하고 좌표 계산
   결과를 메모이제이션한다.
-- 난 묶음 관리 맵은 `PhysicalBed`를 농장 전체 순서로 펼치고 Embla Carousel로 2~4개 다이 viewport를 관리한다. URL 동기화와 현재 표시 범위 계산은 `useBedViewport`에 둔다.
+- 난 묶음 관리 맵은 `PhysicalBed`를 농장 전체 순서로 펼치고 Embla Carousel로 2~4개 다이 viewport를 관리한다. URL 동기화와 현재 표시 범위 계산은 `useBedViewport`에 두며 현재 viewport와 앞뒤 각각 표시 개수만큼의 이동 버퍼만 무거운 내부 콘텐츠를 마운트한다.
+- 선택 이력은 동·다이·구역·난 묶음 범위별 페이지 API로 조회한다. 요약은 첫 20건만 사용하고 난 묶음 상세는 10건 단위로 조회한다. 선택 키·상세 페이지별 메모리 캐시와 진행 요청 공유·취소를 적용하고, 캐러셀 이동 상태는 선택 상태와 분리해 단순 스와이프가 이력 조회를 유발하지 않게 한다.
 - 입고 관리와 작업 관리가 공통으로 사용하는 포트 실행·농장 배치 UI는 `entities/farm/ui`에 두고 저장 API는 각 `features/*`에서 연결한다.
 
 ### Backend
@@ -183,12 +184,10 @@ dto
 
 ```text
 src/
- ├─ app/        라우트 진입점
- ├─ components/ shadcn/ui 공통 primitives
+ ├─ app/        Next.js 라우트·메타데이터 진입점
  ├─ features/   기능 단위 화면/상태/API
- ├─ entities/   도메인 타입
- ├─ lib/        shadcn/ui 공통 유틸
- ├─ shared/     공통 UI/API 유틸
+ ├─ entities/   도메인 타입과 도메인 공통 UI
+ ├─ shared/     전역 공통 API·유틸·UI·PWA 런타임
  └─ widgets/    큰 공통 레이아웃
 ```
 
@@ -198,7 +197,11 @@ src/
 - 실제 UI와 상태 로직은 `features/*`에 둔다.
 - API 타입은 OpenAPI 또는 `entities` 타입과 맞춘다.
 - 화면별 복잡한 상태는 페이지 내부에 몰아넣지 않는다.
-- AppShell의 버튼, 툴팁, 접이식 메뉴, 모바일 시트는 `components/ui`의 shadcn primitives를 사용한다.
+- 범용 UI는 `shared/ui`에 두고 shadcn/Radix primitive는
+  `shared/ui/primitives`에 둔다. 특정 도메인이나 기능에 종속된 UI는
+  `entities/*/ui` 또는 `features/*/ui`에 유지한다.
+- PWA 브라우저 런타임과 전용 스타일은 `shared/pwa`에 둔다. Next.js가 위치를
+  규정하는 manifest는 `app/manifest.ts`, 서비스 워커와 아이콘은 `public/`에 둔다.
 
 ## 6. 데이터 보존 원칙
 
@@ -238,3 +241,19 @@ cd backend
   지정한 경우에만 상한 초과로 실패한다.
 - 전후 비교가 필요하면 각 대상 커밋에서 `clean workE2eTest workBenchmark`를 실행하고 생성된
   `results.json`을 각각 `before.json`, `after.json`으로 별도 보관한다.
+
+## 8. 프론트엔드 맵 성능 E2E
+
+난 묶음 관리 맵의 리팩터링 전후 비교는 `frontend/e2e/map-performance`의
+Playwright 시나리오를 사용한다. production build, 실제 Spring Boot 백엔드,
+PostgreSQL 전용 DB에서 workers 1과 고정 viewport로 실행한다.
+
+제품 동작에는 측정 분기를 추가하지 않는다. Playwright 선택자는 맵·다이·구역·난 묶음·
+선택 이력·이력 항목에 부여한 안정적인 `data-testid` 계약을 사용한다. 네트워크 응답
+완료 후 두 프레임이 지난 시점을 렌더 완료로 기록한다. 요청 수, 응답 크기, 렌더 시간,
+마운트 수와 DOM 증감은 실패 조건이 아니라 전후 비교 지표로만 저장한다.
+
+일반 기준 측정은 전용 DB를 매번 재생성한다. 디버그 실행은 `--reuse-db`로 DB 준비
+단계를 생략하고 Flyway를 비활성화해 기존 E2E DB 상태를 보존한다.
+
+측정 데이터와 실행 방법은 `frontend/e2e/map-performance/README.md`를 기준으로 한다.

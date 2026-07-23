@@ -1,7 +1,7 @@
 ﻿"use client";
 
 import { useRouter } from "next/navigation";
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type {
   House,
   OrchidGroup,
@@ -19,7 +19,7 @@ import {
   createOrchidWorkOperation,
   deleteOrchidGroup,
   getOrchidGroupLineage,
-  getOrchidGroupWorkHistory,
+  getWorkHistory,
   moveOrchidGroup,
   searchOrchidGroups,
   updateOrchidGroup,
@@ -41,7 +41,11 @@ import type {
   PreciseMovePayload,
   WorkRecordQuickFormState,
   WorkRecordSummary,
+  WorkHistoryPage,
 } from "./types";
+
+const SUMMARY_HISTORY_SIZE = 20;
+const DETAIL_HISTORY_SIZE = 10;
 
 export function useOrchidManagementMap(
   house: House,
@@ -114,15 +118,33 @@ export function useOrchidManagementMap(
     useState<WorkRecordQuickFormState>(() =>
       createInitialWorkRecordForm(workTypes, firstOrchidGroup?.id ?? null),
     );
-  const [workRecordSummary, setWorkRecordSummary] = useState<WorkRecordSummary>(
-    () => createEmptyWorkRecordSummary(),
-  );
-  const [workRecordSummaryLoading, setWorkRecordSummaryLoading] =
-    useState(false);
   const [workRecordSummaryVersion, setWorkRecordSummaryVersion] = useState(0);
-  const [orchidGroupHistoryState, setOrchidGroupHistoryState] = useState<{
+  const [workHistoryState, setWorkHistoryState] = useState<{
+    key: string;
+    result: WorkHistoryPage;
+  } | null>(null);
+  const workHistoryCacheRef = useRef(new Map<string, WorkHistoryPage>());
+  const workHistoryRequestsRef = useRef(
+    new Map<
+      string,
+      {
+        controller: AbortController;
+        promise: Promise<WorkHistoryPage>;
+      }
+    >(),
+  );
+  const [detailHistoryState, setDetailHistoryState] = useState<{
+    key: string;
     orchidGroupId: number;
-    items: OrchidGroupWorkHistory[];
+    result: WorkHistoryPage;
+  } | null>(null);
+  const [detailHistoryLoadingKey, setDetailHistoryLoadingKey] = useState<
+    string | null
+  >(null);
+  const detailHistoryCacheRef = useRef(new Map<string, WorkHistoryPage>());
+  const detailHistoryRequestRef = useRef<{
+    key: string;
+    controller: AbortController;
   } | null>(null);
   const [orchidGroupLineageState, setOrchidGroupLineageState] = useState<{
     orchidGroupId: number;
@@ -217,82 +239,113 @@ export function useOrchidManagementMap(
     () => currentHouseOrchidGroupIds.size,
     [currentHouseOrchidGroupIds],
   );
-  const workRecordSummaryOrchidGroupIds = useMemo(
+  const workHistoryScope = useMemo(
+    () => resolveWorkHistoryScope(selection),
+    [selection],
+  );
+  const workHistoryKey = workHistoryScope
+    ? `${workHistoryScope.scopeType}:${workHistoryScope.scopeId}`
+    : null;
+  const currentWorkHistory = useMemo(
     () =>
-      resolveSummaryOrchidGroupIds({
-        house,
-        resolvedZone,
-        selectedOrchidGroup,
-        selectedPhysicalBed,
-        selection,
-      }),
-    [house, resolvedZone, selectedOrchidGroup, selectedPhysicalBed, selection],
+      workHistoryKey && workHistoryState?.key === workHistoryKey
+        ? workHistoryState.result.content
+        : [],
+    [workHistoryKey, workHistoryState],
+  );
+  const workRecordSummary = useMemo(
+    () => createWorkRecordSummary(currentWorkHistory),
+    [currentWorkHistory],
+  );
+  const workRecordSummaryLoading = Boolean(
+    workHistoryKey && workHistoryState?.key !== workHistoryKey,
   );
 
   useEffect(() => {
-    let ignore = false;
-
-    async function loadWorkRecordSummary() {
-      if (workRecordSummaryOrchidGroupIds.length === 0) {
-        setWorkRecordSummary(createEmptyWorkRecordSummary());
-        setWorkRecordSummaryLoading(false);
-        return;
-      }
-
-      setWorkRecordSummaryLoading(true);
-      try {
-        const recordGroups = await Promise.all(
-          workRecordSummaryOrchidGroupIds.map(getOrchidGroupWorkHistory),
-        );
-        if (!ignore) {
-          setWorkRecordSummary(createWorkRecordSummary(recordGroups.flat()));
-        }
-      } catch {
-        if (!ignore) {
-          setWorkRecordSummary(createEmptyWorkRecordSummary());
-        }
-      } finally {
-        if (!ignore) {
-          setWorkRecordSummaryLoading(false);
-        }
-      }
-    }
-
-    void loadWorkRecordSummary();
-
-    return () => {
-      ignore = true;
-    };
-  }, [workRecordSummaryOrchidGroupIds, workRecordSummaryVersion]);
-
-  useEffect(() => {
-    let ignore = false;
-    if (!selectedOrchidGroup) {
+    if (!workHistoryScope || !workHistoryKey) {
+      workHistoryRequestsRef.current.forEach((request) =>
+        request.controller.abort(),
+      );
+      workHistoryRequestsRef.current.clear();
       return;
     }
 
-    void getOrchidGroupWorkHistory(selectedOrchidGroup.id)
-      .then((history) => {
-        if (!ignore) {
-          setOrchidGroupHistoryState({
-            orchidGroupId: selectedOrchidGroup.id,
-            items: history,
+    for (const [pendingKey, pendingRequest] of workHistoryRequestsRef.current) {
+      if (pendingKey !== workHistoryKey) {
+        pendingRequest.controller.abort();
+        workHistoryRequestsRef.current.delete(pendingKey);
+      }
+    }
+
+    const cached = workHistoryCacheRef.current.get(workHistoryKey);
+    if (cached) {
+      let active = true;
+      queueMicrotask(() => {
+        if (active) {
+          setWorkHistoryState({ key: workHistoryKey, result: cached });
+        }
+      });
+      return () => {
+        active = false;
+      };
+    }
+
+    let request = workHistoryRequestsRef.current.get(workHistoryKey);
+    if (!request) {
+      const controller = new AbortController();
+      request = {
+        controller,
+        promise: getWorkHistory(
+          workHistoryScope.scopeType,
+          workHistoryScope.scopeId,
+          0,
+          SUMMARY_HISTORY_SIZE,
+          controller.signal,
+        ),
+      };
+      workHistoryRequestsRef.current.set(workHistoryKey, request);
+    }
+    let active = true;
+
+    void request.promise
+      .then((result) => {
+        workHistoryCacheRef.current.set(workHistoryKey, result);
+        if (active) {
+          setWorkHistoryState({ key: workHistoryKey, result });
+        }
+      })
+      .catch((error: unknown) => {
+        if (
+          active &&
+          !(error instanceof DOMException && error.name === "AbortError")
+        ) {
+          setWorkHistoryState({
+            key: workHistoryKey,
+            result: emptyWorkHistoryPage(0, SUMMARY_HISTORY_SIZE),
           });
         }
       })
-      .catch(() => {
-        if (!ignore) {
-          setOrchidGroupHistoryState({
-            orchidGroupId: selectedOrchidGroup.id,
-            items: [],
-          });
+      .finally(() => {
+        if (workHistoryRequestsRef.current.get(workHistoryKey) === request) {
+          workHistoryRequestsRef.current.delete(workHistoryKey);
         }
       });
 
     return () => {
-      ignore = true;
+      active = false;
     };
-  }, [selectedOrchidGroup, workRecordSummaryVersion]);
+  }, [workHistoryKey, workHistoryScope, workRecordSummaryVersion]);
+
+  useEffect(
+    () => () => {
+      workHistoryRequestsRef.current.forEach((request) =>
+        request.controller.abort(),
+      );
+      workHistoryRequestsRef.current.clear();
+      detailHistoryRequestRef.current?.controller.abort();
+    },
+    [],
+  );
 
   useEffect(() => {
     let ignore = false;
@@ -325,6 +378,63 @@ export function useOrchidManagementMap(
     };
   }, [selectedOrchidGroup, workRecordSummaryVersion]);
 
+  useEffect(() => {
+    const selectedPrefix = selectedOrchidGroup
+      ? `${selectedOrchidGroup.id}:`
+      : null;
+    const pending = detailHistoryRequestRef.current;
+    if (
+      pending &&
+      (!selectedPrefix || !pending.key.startsWith(selectedPrefix))
+    ) {
+      pending.controller.abort();
+      detailHistoryRequestRef.current = null;
+    }
+  }, [selectedOrchidGroup]);
+
+  async function loadOrchidGroupHistoryPage(page: number) {
+    if (!selectedOrchidGroup || page < 0) return;
+    const orchidGroupId = selectedOrchidGroup.id;
+    const key = `${orchidGroupId}:${page}:${DETAIL_HISTORY_SIZE}`;
+    const cached = detailHistoryCacheRef.current.get(key);
+    if (cached) {
+      setDetailHistoryState({ key, orchidGroupId, result: cached });
+      setDetailHistoryLoadingKey(null);
+      return;
+    }
+
+    detailHistoryRequestRef.current?.controller.abort();
+    const controller = new AbortController();
+    detailHistoryRequestRef.current = { key, controller };
+    setDetailHistoryLoadingKey(key);
+    try {
+      const result = await getWorkHistory(
+        "ORCHID_GROUP",
+        orchidGroupId,
+        page,
+        DETAIL_HISTORY_SIZE,
+        controller.signal,
+      );
+      detailHistoryCacheRef.current.set(key, result);
+      if (detailHistoryRequestRef.current?.key === key) {
+        setDetailHistoryState({ key, orchidGroupId, result });
+      }
+    } catch (error) {
+      if (!(error instanceof DOMException && error.name === "AbortError")) {
+        setDetailHistoryState({
+          key,
+          orchidGroupId,
+          result: emptyWorkHistoryPage(page, DETAIL_HISTORY_SIZE),
+        });
+      }
+    } finally {
+      if (detailHistoryRequestRef.current?.key === key) {
+        detailHistoryRequestRef.current = null;
+        setDetailHistoryLoadingKey(null);
+      }
+    }
+  }
+
   function selectBedZone(bedZoneId: number) {
     setSelection({ type: "BED_ZONE", bedZoneId });
     setListSelection({ type: "BED_ZONE", bedZoneId });
@@ -339,9 +449,9 @@ export function useOrchidManagementMap(
     clearPasteSource();
   }
 
-  function selectHouse() {
-    setSelection({ type: "HOUSE", houseId: house.id });
-    setListSelection({ type: "HOUSE", houseId: house.id });
+  function selectHouse(houseId: number) {
+    setSelection({ type: "HOUSE", houseId });
+    setListSelection({ type: "HOUSE", houseId });
     setMutationMode(null);
     clearPasteSource();
   }
@@ -352,12 +462,15 @@ export function useOrchidManagementMap(
     clearPasteSource();
   }
 
-  function selectOrchidGroupForEdit(orchidGroupId: number) {
-    setSelection({ type: "ORCHID_GROUP", orchidGroupId });
-    setMutationMode("EDIT");
-    clearPasteSource();
-    setErrorMessage(null);
-  }
+  const selectOrchidGroupForEdit = useCallback(
+    (orchidGroupId: number) => {
+      setSelection({ type: "ORCHID_GROUP", orchidGroupId });
+      setMutationMode("EDIT");
+      clearPasteSource();
+      setErrorMessage(null);
+    },
+    [clearPasteSource],
+  );
 
   function openCreate() {
     if (mutationMode === "CREATE" && !pasteSourceOrchidGroup) {
@@ -536,7 +649,6 @@ export function useOrchidManagementMap(
         quantity: "",
         memo: "",
       }));
-      setWorkRecordSummaryVersion((current) => current + 1);
     });
   }
 
@@ -573,6 +685,18 @@ export function useOrchidManagementMap(
     setErrorMessage(null);
     try {
       await action();
+      workHistoryCacheRef.current.clear();
+      workHistoryRequestsRef.current.forEach((request) =>
+        request.controller.abort(),
+      );
+      workHistoryRequestsRef.current.clear();
+      detailHistoryCacheRef.current.clear();
+      detailHistoryRequestRef.current?.controller.abort();
+      detailHistoryRequestRef.current = null;
+      setDetailHistoryState(null);
+      setDetailHistoryLoadingKey(null);
+      setWorkHistoryState(null);
+      setWorkRecordSummaryVersion((current) => current + 1);
       setMutationMode(null);
       clearPasteSource();
       router.refresh();
@@ -607,13 +731,20 @@ export function useOrchidManagementMap(
     workRecordSummary,
     workRecordSummaryLoading,
     orchidGroupHistory:
-      selectedOrchidGroup &&
-      orchidGroupHistoryState?.orchidGroupId === selectedOrchidGroup.id
-        ? orchidGroupHistoryState.items
+      selectedOrchidGroup && workHistoryScope?.scopeType === "ORCHID_GROUP"
+        ? currentWorkHistory
         : [],
     orchidGroupHistoryLoading:
-      Boolean(selectedOrchidGroup) &&
-      orchidGroupHistoryState?.orchidGroupId !== selectedOrchidGroup?.id,
+      Boolean(selectedOrchidGroup) && workRecordSummaryLoading,
+    orchidGroupHistoryPage:
+      selectedOrchidGroup &&
+      detailHistoryState?.orchidGroupId === selectedOrchidGroup.id
+        ? detailHistoryState.result
+        : null,
+    orchidGroupHistoryPageLoading: Boolean(
+      selectedOrchidGroup &&
+      detailHistoryLoadingKey?.startsWith(`${selectedOrchidGroup.id}:`),
+    ),
     orchidGroupLineage:
       selectedOrchidGroup &&
       orchidGroupLineageState?.orchidGroupId === selectedOrchidGroup.id
@@ -645,6 +776,7 @@ export function useOrchidManagementMap(
       selectPhysicalBed,
       selectOrchidGroup,
       selectOrchidGroupForEdit,
+      loadOrchidGroupHistoryPage,
       updateSearchFilter,
       updateWorkRecordForm,
       workRecordCreate: handleWorkRecordCreate,
@@ -693,6 +825,9 @@ function resolveWorkOperationTarget({
   ) {
     return { type: "PHYSICAL_BED", id: selection.physicalBedId, ids: [] };
   }
+  if (selection?.type === "HOUSE") {
+    return { type: "HOUSE", id: selection.houseId, ids: [] };
+  }
   return {
     type: "MANUAL_SELECTION",
     id: null,
@@ -700,33 +835,27 @@ function resolveWorkOperationTarget({
   };
 }
 
-function resolveSummaryOrchidGroupIds({
-  house,
-  resolvedZone,
-  selectedOrchidGroup,
-  selectedPhysicalBed,
-  selection,
-}: {
-  house: House;
-  resolvedZone: House["physicalBeds"][number]["bedZones"][number] | null;
-  selectedOrchidGroup: OrchidGroup | null;
-  selectedPhysicalBed: House["physicalBeds"][number] | null;
-  selection: OrchidSelection | null;
-}): number[] {
-  if (selectedOrchidGroup) {
-    return [selectedOrchidGroup.id];
+function resolveWorkHistoryScope(selection: OrchidSelection | null): {
+  scopeType: "HOUSE" | "PHYSICAL_BED" | "BED_ZONE" | "ORCHID_GROUP";
+  scopeId: number;
+} | null {
+  if (!selection) return null;
+  switch (selection.type) {
+    case "HOUSE":
+      return { scopeType: "HOUSE", scopeId: selection.houseId };
+    case "PHYSICAL_BED":
+      return {
+        scopeType: "PHYSICAL_BED",
+        scopeId: selection.physicalBedId,
+      };
+    case "BED_ZONE":
+      return { scopeType: "BED_ZONE", scopeId: selection.bedZoneId };
+    case "ORCHID_GROUP":
+      return {
+        scopeType: "ORCHID_GROUP",
+        scopeId: selection.orchidGroupId,
+      };
   }
-  if (selection?.type === "BED_ZONE" && resolvedZone) {
-    return resolvedZone.orchidGroups.map((group) => group.id);
-  }
-  if (selection?.type === "PHYSICAL_BED" && selectedPhysicalBed) {
-    return selectedPhysicalBed.bedZones.flatMap((zone) =>
-      zone.orchidGroups.map((group) => group.id),
-    );
-  }
-  return house.physicalBeds.flatMap((bed) =>
-    bed.bedZones.flatMap((zone) => zone.orchidGroups.map((group) => group.id)),
-  );
 }
 
 function createInitialWorkRecordForm(
@@ -780,17 +909,6 @@ function nullableText(value: string) {
   return trimmed.length > 0 ? trimmed : null;
 }
 
-function createEmptyWorkRecordSummary(): WorkRecordSummary {
-  return {
-    latestRecords: [],
-    latestByType: {
-      pesticide: null,
-      fertilizer: null,
-      repot: null,
-    },
-  };
-}
-
 function createWorkRecordSummary(
   records: OrchidGroupWorkHistory[],
 ): WorkRecordSummary {
@@ -815,6 +933,16 @@ function createWorkRecordSummary(
       repot:
         sortedRecords.find((record) => record.workType === "분갈이") ?? null,
     },
+  };
+}
+
+function emptyWorkHistoryPage(page: number, size: number): WorkHistoryPage {
+  return {
+    content: [],
+    page,
+    size,
+    totalElements: 0,
+    totalPages: 0,
   };
 }
 

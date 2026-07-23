@@ -24,6 +24,20 @@ npm install
 npm run dev
 ```
 
+Linux/macOS에서는 개발 서버를 한 번에 실행할 수 있다.
+
+```bash
+./scripts/dev-start.sh
+```
+
+프론트엔드 렌더링 성능처럼 production build 기준으로 확인해야 할 때는 다음 옵션을
+사용한다. 이 모드는 `npm run build`가 성공한 후 `npm run start`로 프론트엔드를
+실행하며, 기존 3000 포트를 재사용하지 않는다.
+
+```bash
+./scripts/dev-start.sh --frontend-production
+```
+
 ## 2. 환경 변수
 
 ### Backend
@@ -170,3 +184,24 @@ pg_dump -U greenhouse greenhouse > backup_$(date +%Y%m%d).sql
 - 수정 전 백업을 만든다.
 - 전표, 작업 이력, 입금 이벤트, 경매 상태 이력은 삭제하지 않는다.
 - 잘못된 데이터는 취소/보정 이력으로 처리한다.
+
+## 8. 난 묶음 관리 맵 성능 기준 측정
+
+맵 리팩터링 전후 기준값은 운영·개발 DB가 아닌 `_map_e2e` 접미사의 전용 DB에서
+측정한다.
+
+```bash
+cd frontend
+npm run e2e:map:install
+npm run e2e:map:prepare
+npm run e2e:map:baseline
+npm run e2e:map:debug
+```
+
+`e2e:map:baseline`은 DB 초기화와 seed, 백엔드 jar 실행, Next.js production build,
+Playwright 실행을 순서대로 수행한다. 결과는
+`frontend/e2e-results/map-performance-before.json`에 저장한다.
+
+`e2e:map:debug`는 기존 `_map_e2e` DB를 재사용하고 migration과 seed를 실행하지
+않는다. Chromium headed 모드와 Playwright Inspector를 사용하며, 축소된 반복 횟수로
+디버깅한다.

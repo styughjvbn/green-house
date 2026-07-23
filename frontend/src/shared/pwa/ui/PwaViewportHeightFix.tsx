@@ -25,7 +25,7 @@ function readViewportHeight() {
   return Math.floor(window.visualViewport?.height ?? window.innerHeight);
 }
 
-export default function PwaViewportHeightFix() {
+export function PwaViewportHeightFix() {
   useEffect(() => {
     if (!isInstalledApp() || !isMobileChrome()) {
       return;

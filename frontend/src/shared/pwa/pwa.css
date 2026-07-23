@@ -1,0 +1,9 @@
+:root {
+  --app-viewport-height: 100dvh;
+}
+
+.pwa-fixed-viewport,
+.pwa-fixed-viewport body {
+  height: var(--app-viewport-height);
+  overflow: hidden;
+}

@@ -45,12 +45,16 @@ export async function handleAuthExpired(response: Response) {
   }
 }
 
-export async function fetchApi<T>(path: string): Promise<T> {
+export async function fetchApi<T>(
+  path: string,
+  options?: { signal?: AbortSignal },
+): Promise<T> {
   const headers = await buildRequestHeaders();
   const response = await fetch(`${API_BASE_URL}${path}`, {
     cache: "no-store",
     credentials: "include",
     headers,
+    signal: options?.signal,
   });
   await handleAuthExpired(response);
   const payload = (await response.json()) as ApiResponse<T> | ApiErrorResponse;

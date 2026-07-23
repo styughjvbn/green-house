@@ -34,6 +34,7 @@ export default function PhysicalBedBlock({
 
   return (
     <div
+      data-testid={`physical-bed-${bed.id}`}
       className={`flex h-full min-h-0 cursor-pointer flex-col rounded-md border p-2 transition ${
         selected
           ? "border-[#246df2] bg-[#f4f8ff] ring-2 ring-[#246df2]/20"

@@ -1,0 +1,218 @@
+#!/usr/bin/env bash
+
+set -Eeuo pipefail
+
+SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
+PROJECT_ROOT="$(cd -- "${SCRIPT_DIR}/../.." && pwd)"
+
+BACKEND_PORT="${MAP_E2E_BACKEND_PORT:-18080}"
+
+MAP_DB_HOST="${MAP_E2E_DB_HOST:-127.0.0.1}"
+MAP_DB_PORT="${MAP_E2E_DB_PORT:-5432}"
+MAP_DB_USER="${MAP_E2E_DB_USER:-greenhouse}"
+MAP_DB_PASSWORD="${MAP_E2E_DB_PASSWORD:-greenhouse}"
+MAP_DB_NAME="${MAP_E2E_DB_NAME:-greenhouse_map_e2e}"
+
+E2E_LOG_DIR="${PROJECT_ROOT}/logs/map-performance-e2e"
+BACKEND_LOG_FILE="${E2E_LOG_DIR}/prepare-backend.log"
+
+BACKEND_PID=""
+
+log() {
+    printf '[map-e2e] %s\n' "$*"
+}
+
+is_windows_git_bash() {
+    [[ "${OSTYPE:-}" == msys* || "${OSTYPE:-}" == cygwin* ]]
+}
+
+stop_backend() {
+    if [[ -z "${BACKEND_PID:-}" ]]; then
+        return
+    fi
+
+    log "Stopping migration backend. PID=${BACKEND_PID}"
+
+    if is_windows_git_bash; then
+        powershell.exe -NoProfile -NonInteractive -Command \
+            "\$processId = (
+                Get-NetTCPConnection \
+                    -LocalPort ${BACKEND_PORT} \
+                    -State Listen \
+                    -ErrorAction SilentlyContinue |
+                Select-Object -First 1 -ExpandProperty OwningProcess
+            );
+            if (\$processId) {
+                Stop-Process -Id \$processId -Force -ErrorAction SilentlyContinue
+            }" \
+            >/dev/null 2>&1 || true
+
+        # Git Bash가 추적하는 중간 프로세스도 정리
+        kill "$BACKEND_PID" >/dev/null 2>&1 || true
+
+        BACKEND_PID=""
+        return
+    fi
+
+    if kill -0 "$BACKEND_PID" 2>/dev/null; then
+        kill -- "-$BACKEND_PID" 2>/dev/null \
+            || kill "$BACKEND_PID" 2>/dev/null \
+            || true
+
+        wait "$BACKEND_PID" 2>/dev/null || true
+    fi
+
+    BACKEND_PID=""
+}
+
+on_exit() {
+    local exit_code=$?
+
+    stop_backend
+
+    if (( exit_code != 0 )); then
+        echo
+        log "Preparation failed with exit code ${exit_code}."
+
+        if [[ -f "$BACKEND_LOG_FILE" ]]; then
+            log "Last backend log lines:"
+            tail -n 80 "$BACKEND_LOG_FILE" >&2 || true
+        fi
+    fi
+
+    exit "$exit_code"
+}
+
+trap on_exit EXIT
+trap 'exit 130' INT
+trap 'exit 143' TERM
+
+wait_for_backend() {
+    local health_url="http://127.0.0.1:${BACKEND_PORT}/actuator/health"
+    local attempt
+
+    log "Waiting for backend health check: ${health_url}"
+
+    for attempt in {1..120}; do
+        if curl \
+            --silent \
+            --fail \
+            "$health_url" \
+            >/dev/null 2>&1; then
+
+            log "Backend became ready after ${attempt} second(s)."
+            return 0
+        fi
+
+        if ! kill -0 "$BACKEND_PID" 2>/dev/null; then
+            echo "Map E2E migration backend exited before becoming ready." >&2
+
+            if [[ -f "$BACKEND_LOG_FILE" ]]; then
+                tail -n 80 "$BACKEND_LOG_FILE" >&2 || true
+            fi
+
+            return 1
+        fi
+
+        if (( attempt % 10 == 0 )); then
+            log "Still waiting for backend: ${attempt}/120 seconds"
+
+            if [[ -f "$BACKEND_LOG_FILE" ]]; then
+                tail -n 5 "$BACKEND_LOG_FILE" || true
+            fi
+        fi
+
+        sleep 1
+    done
+
+    echo "Map E2E migration backend did not become ready." >&2
+
+    if [[ -f "$BACKEND_LOG_FILE" ]]; then
+        tail -n 80 "$BACKEND_LOG_FILE" >&2 || true
+    fi
+
+    return 1
+}
+
+start_backend() {
+    log "Starting migration backend on port ${BACKEND_PORT}"
+    log "Backend log: ${BACKEND_LOG_FILE}"
+
+    local -a backend_command=(
+        env
+        -u DEBUG
+        "DATABASE_URL=jdbc:postgresql://${MAP_DB_HOST}:${MAP_DB_PORT}/${MAP_DB_NAME}"
+        "DATABASE_USERNAME=${MAP_DB_USER}"
+        "DATABASE_PASSWORD=${MAP_DB_PASSWORD}"
+        "SERVER_PORT=${BACKEND_PORT}"
+        "AUTH_ENABLED=false"
+        "JPA_DDL_AUTO=validate"
+        "LOGGING_LEVEL_ROOT=INFO"
+        java
+        -jar
+        build/libs/backend-0.0.1-SNAPSHOT.jar
+    )
+
+    if command -v setsid >/dev/null 2>&1; then
+        setsid "${backend_command[@]}" \
+            >"$BACKEND_LOG_FILE" 2>&1 &
+    else
+        "${backend_command[@]}" \
+            >"$BACKEND_LOG_FILE" 2>&1 &
+    fi
+
+    BACKEND_PID=$!
+
+    log "Migration backend started. PID=${BACKEND_PID}"
+}
+
+verify_seed() {
+    log "Verifying generated E2E data..."
+
+    PGPASSWORD="$MAP_DB_PASSWORD" \
+    psql \
+        -X \
+        -v ON_ERROR_STOP=1 \
+        -h "$MAP_DB_HOST" \
+        -p "$MAP_DB_PORT" \
+        -U "$MAP_DB_USER" \
+        -d "$MAP_DB_NAME" \
+        -c "
+            SELECT
+                metric_key,
+                metric_value
+            FROM map_performance_seed_manifest
+            ORDER BY metric_key;
+        "
+}
+
+mkdir -p "$E2E_LOG_DIR"
+
+log "[1/7] Resetting map performance database..."
+"${SCRIPT_DIR}/reset-map-performance-db"
+
+log "[2/7] Building backend..."
+cd "${PROJECT_ROOT}/backend"
+./gradlew bootJar
+
+if [[ ! -f "build/libs/backend-0.0.1-SNAPSHOT.jar" ]]; then
+    echo "Backend JAR was not created." >&2
+    exit 1
+fi
+
+log "[3/7] Starting migration backend..."
+start_backend
+
+log "[4/7] Waiting for Flyway migration and backend startup..."
+wait_for_backend
+
+log "[5/7] Stopping migration backend..."
+stop_backend
+
+log "[6/7] Seeding map performance data..."
+"${SCRIPT_DIR}/seed-map-performance-data"
+
+log "[7/7] Verifying seed manifest..."
+verify_seed
+
+log "Map performance E2E data prepared successfully."

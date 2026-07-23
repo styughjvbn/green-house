@@ -8,8 +8,8 @@
 src/
   app/        라우트 진입점
   features/   기능 단위 구현
-  entities/   여러 기능이 공유하는 도메인 타입
-  shared/     전역 공통 기반 코드
+  entities/   여러 기능이 공유하는 도메인 타입과 도메인 UI
+  shared/     전역 공통 API, 유틸, UI, PWA 런타임
   widgets/    앱 쉘처럼 큰 공통 UI
 ```
 
@@ -85,6 +85,22 @@ import { API_BASE_URL, fetchApi } from "@/shared/api/client";
 ```
 
 조회 API는 가능하면 `fetchApi<T>()`를 사용한다. 생성/수정/삭제처럼 세밀한 에러 처리가 필요한 경우 feature의 `api` 파일에 별도 request helper를 둔다.
+
+범용 UI는 모두 `shared/ui`에 둔다. shadcn/Radix 기반의 저수준 컴포넌트는
+`shared/ui/primitives`, 테이블·필터·상세 카드처럼 앱 공통 조합 컴포넌트는
+`shared/ui`에 둔다. 특정 도메인 타입에 의존하면 `entities/{domain}/ui`, 한 기능에서만
+사용하면 `features/{feature}/ui`에 둔다.
+
+PWA 코드는 다음 경계를 사용한다.
+
+```text
+shared/pwa/          서비스 워커 등록, 설치 앱 viewport 보정, 전용 스타일
+app/manifest.ts      Next.js manifest 라우트 진입점
+public/sw.js         브라우저가 직접 요청하는 서비스 워커
+public/icon-*.png    manifest 정적 아이콘
+```
+
+`app/layout.tsx`는 `PwaRuntime`만 마운트한다.
 
 ## widgets
 

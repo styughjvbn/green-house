@@ -1,0 +1,474 @@
+#!/usr/bin/env bash
+
+set -Eeuo pipefail
+
+SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
+PROJECT_ROOT="$(cd -- "${SCRIPT_DIR}/../.." && pwd)"
+
+BACKEND_PORT="${MAP_E2E_BACKEND_PORT:-18080}"
+FRONTEND_PORT="${MAP_E2E_FRONTEND_PORT:-13000}"
+
+MAP_DB_HOST="${MAP_E2E_DB_HOST:-127.0.0.1}"
+MAP_DB_PORT="${MAP_E2E_DB_PORT:-5432}"
+MAP_DB_USER="${MAP_E2E_DB_USER:-greenhouse}"
+MAP_DB_PASSWORD="${MAP_E2E_DB_PASSWORD:-greenhouse}"
+MAP_DB_NAME="${MAP_E2E_DB_NAME:-greenhouse_map_e2e}"
+
+E2E_LOG_DIR="${PROJECT_ROOT}/logs/map-performance-e2e"
+BACKEND_LOG_FILE="${E2E_LOG_DIR}/backend.log"
+FRONTEND_LOG_FILE="${E2E_LOG_DIR}/frontend.log"
+
+BACKEND_PID=""
+FRONTEND_PID=""
+
+REUSE_DB=false
+DEBUG_MODE=false
+
+WARMUP=""
+ITERATIONS=""
+CONTINUOUS_STEPS=""
+
+PLAYWRIGHT_ARGS=()
+
+# Windows psql의 기본 UHC 인코딩 문제 방지
+export PGCLIENTENCODING="${PGCLIENTENCODING:-UTF8}"
+
+log() {
+    printf '[map-e2e] %s\n' "$*"
+}
+
+is_windows_git_bash() {
+    [[ "${OSTYPE:-}" == msys* || "${OSTYPE:-}" == cygwin* ]]
+}
+
+usage() {
+    cat <<'EOF'
+Usage: run-map-performance-baseline [options]
+
+  --reuse-db          Keep the existing E2E DB; skip reset, migration, and seed
+  --headed            Run Playwright with a visible browser
+  --debug             Run Playwright Inspector debug mode
+  --warmup NUMBER     Number of warmup repetitions, including 0
+  --iterations NUMBER Number of measured repetitions
+  --steps NUMBER      Number of continuous swipe steps
+  --help              Show this help
+EOF
+}
+
+require_non_negative_integer() {
+    local option_name="$1"
+    local value="$2"
+
+    if [[ ! "$value" =~ ^[0-9]+$ ]]; then
+        echo "${option_name} must be a non-negative integer: ${value}" >&2
+        exit 2
+    fi
+}
+
+require_positive_integer() {
+    local option_name="$1"
+    local value="$2"
+
+    if [[ ! "$value" =~ ^[1-9][0-9]*$ ]]; then
+        echo "${option_name} must be a positive integer: ${value}" >&2
+        exit 2
+    fi
+}
+
+while [[ $# -gt 0 ]]; do
+    case "$1" in
+        --reuse-db)
+            REUSE_DB=true
+            ;;
+
+        --headed)
+            PLAYWRIGHT_ARGS+=(--headed)
+            ;;
+
+        --debug)
+            DEBUG_MODE=true
+            PLAYWRIGHT_ARGS+=(--debug)
+            ;;
+
+        --warmup)
+            if [[ $# -lt 2 ]]; then
+                echo "--warmup requires a value." >&2
+                exit 2
+            fi
+
+            WARMUP="$2"
+            require_non_negative_integer "--warmup" "$WARMUP"
+            shift
+            ;;
+
+        --iterations)
+            if [[ $# -lt 2 ]]; then
+                echo "--iterations requires a value." >&2
+                exit 2
+            fi
+
+            ITERATIONS="$2"
+            require_positive_integer "--iterations" "$ITERATIONS"
+            shift
+            ;;
+
+        --steps)
+            if [[ $# -lt 2 ]]; then
+                echo "--steps requires a value." >&2
+                exit 2
+            fi
+
+            CONTINUOUS_STEPS="$2"
+            require_positive_integer "--steps" "$CONTINUOUS_STEPS"
+            shift
+            ;;
+
+        --help)
+            usage
+            exit 0
+            ;;
+
+        *)
+            echo "Unknown option: $1" >&2
+            usage >&2
+            exit 2
+            ;;
+    esac
+
+    shift
+done
+
+if [[ -n "$WARMUP" ]]; then
+    export MAP_E2E_WARMUP="$WARMUP"
+fi
+
+if [[ -n "$ITERATIONS" ]]; then
+    export MAP_E2E_ITERATIONS="$ITERATIONS"
+fi
+
+if [[ -n "$CONTINUOUS_STEPS" ]]; then
+    export MAP_E2E_CONTINUOUS_STEPS="$CONTINUOUS_STEPS"
+fi
+
+stop_windows_process_by_port() {
+    local port="$1"
+    local label="$2"
+
+    log "Stopping ${label} listening on port ${port}..."
+
+    powershell.exe \
+        -NoProfile \
+        -NonInteractive \
+        -Command \
+        "\$connections = Get-NetTCPConnection \
+            -LocalPort ${port} \
+            -State Listen \
+            -ErrorAction SilentlyContinue;
+
+        \$processIds = \$connections |
+            Select-Object -ExpandProperty OwningProcess -Unique;
+
+        foreach (\$targetProcessId in \$processIds) {
+            if (\$targetProcessId -and \$targetProcessId -ne 0) {
+                Stop-Process \
+                    -Id \$targetProcessId \
+                    -Force \
+                    -ErrorAction SilentlyContinue;
+            }
+        }" \
+        >/dev/null 2>&1 || true
+}
+
+stop_process() {
+    local process_id="${1:-}"
+    local port="$2"
+    local label="$3"
+
+    if is_windows_git_bash; then
+        # Git Bash의 $!와 Windows 프로세스 ID가 다를 수 있으므로
+        # 실제 포트 점유 프로세스를 우선 종료한다.
+        stop_windows_process_by_port "$port" "$label"
+
+        if [[ -n "$process_id" ]]; then
+            taskkill.exe \
+                /PID "$process_id" \
+                /T \
+                /F \
+                >/dev/null 2>&1 || true
+
+            kill "$process_id" >/dev/null 2>&1 || true
+        fi
+
+        # Git Bash에서는 wait가 종료되지 않는 경우가 있어 실행하지 않는다.
+        return
+    fi
+
+    if [[ -z "$process_id" ]]; then
+        return
+    fi
+
+    if kill -0 "$process_id" 2>/dev/null; then
+        kill -- "-$process_id" 2>/dev/null \
+            || kill "$process_id" 2>/dev/null \
+            || true
+
+        wait "$process_id" 2>/dev/null || true
+    fi
+}
+
+stop_frontend() {
+    if [[ -z "${FRONTEND_PID:-}" ]]; then
+        return
+    fi
+
+    log "Stopping frontend. PID=${FRONTEND_PID}"
+    stop_process "$FRONTEND_PID" "$FRONTEND_PORT" "frontend"
+    FRONTEND_PID=""
+}
+
+stop_backend() {
+    if [[ -z "${BACKEND_PID:-}" ]]; then
+        return
+    fi
+
+    log "Stopping backend. PID=${BACKEND_PID}"
+    stop_process "$BACKEND_PID" "$BACKEND_PORT" "backend"
+    BACKEND_PID=""
+}
+
+cleanup() {
+    local exit_code=$?
+
+    # EXIT trap 재실행 방지
+    trap - EXIT
+
+    stop_frontend
+    stop_backend
+
+    if (( exit_code != 0 )); then
+        echo
+        log "Map performance E2E failed with exit code ${exit_code}."
+
+        if [[ -f "$BACKEND_LOG_FILE" ]]; then
+            log "Last backend log lines:"
+            tail -n 80 "$BACKEND_LOG_FILE" >&2 || true
+        fi
+
+        if [[ -f "$FRONTEND_LOG_FILE" ]]; then
+            log "Last frontend log lines:"
+            tail -n 80 "$FRONTEND_LOG_FILE" >&2 || true
+        fi
+    fi
+
+    exit "$exit_code"
+}
+
+trap cleanup EXIT
+trap 'exit 130' INT
+trap 'exit 143' TERM
+
+wait_for_url() {
+    local url="$1"
+    local process_id="$2"
+    local log_file="$3"
+    local label="$4"
+    local attempt
+
+    log "Waiting for ${label}: ${url}"
+
+    for attempt in {1..180}; do
+        if curl \
+            --silent \
+            --fail \
+            "$url" \
+            >/dev/null 2>&1; then
+
+            log "${label} became ready after ${attempt} second(s)."
+            return 0
+        fi
+
+        if [[ -n "$process_id" ]] &&
+            ! kill -0 "$process_id" 2>/dev/null; then
+
+            echo "${label} exited before becoming ready." >&2
+
+            if [[ -f "$log_file" ]]; then
+                tail -n 100 "$log_file" >&2 || true
+            fi
+
+            return 1
+        fi
+
+        if (( attempt % 10 == 0 )); then
+            log "Still waiting for ${label}: ${attempt}/180 seconds"
+
+            if [[ -f "$log_file" ]]; then
+                tail -n 5 "$log_file" || true
+            fi
+        fi
+
+        sleep 1
+    done
+
+    echo "${label} did not become ready: ${url}" >&2
+
+    if [[ -f "$log_file" ]]; then
+        tail -n 100 "$log_file" >&2 || true
+    fi
+
+    return 1
+}
+
+start_backend() {
+    log "Starting backend on port ${BACKEND_PORT}..."
+    log "Backend log: ${BACKEND_LOG_FILE}"
+
+    local -a backend_command=(
+        env
+        -u DEBUG
+        "DATABASE_URL=jdbc:postgresql://${MAP_DB_HOST}:${MAP_DB_PORT}/${MAP_DB_NAME}"
+        "DATABASE_USERNAME=${MAP_DB_USER}"
+        "DATABASE_PASSWORD=${MAP_DB_PASSWORD}"
+        "SERVER_PORT=${BACKEND_PORT}"
+        "AUTH_ENABLED=false"
+        "JPA_DDL_AUTO=validate"
+        "SPRING_FLYWAY_ENABLED=${FLYWAY_ENABLED}"
+        "LOGGING_LEVEL_ROOT=INFO"
+        java
+        -jar
+        build/libs/backend-0.0.1-SNAPSHOT.jar
+    )
+
+    if command -v setsid >/dev/null 2>&1; then
+        setsid "${backend_command[@]}" \
+            >"$BACKEND_LOG_FILE" 2>&1 &
+    else
+        "${backend_command[@]}" \
+            >"$BACKEND_LOG_FILE" 2>&1 &
+    fi
+
+    BACKEND_PID=$!
+
+    log "Backend process started. PID=${BACKEND_PID}"
+}
+
+start_frontend() {
+    log "Starting frontend on port ${FRONTEND_PORT}..."
+    log "Frontend log: ${FRONTEND_LOG_FILE}"
+
+    local -a frontend_command=(
+        env
+        "BACKEND_API_URL=http://127.0.0.1:${BACKEND_PORT}/api"
+        npm
+        run
+        start
+        --
+        --hostname
+        127.0.0.1
+        --port
+        "$FRONTEND_PORT"
+    )
+
+    if command -v setsid >/dev/null 2>&1; then
+        setsid "${frontend_command[@]}" \
+            >"$FRONTEND_LOG_FILE" 2>&1 &
+    else
+        "${frontend_command[@]}" \
+            >"$FRONTEND_LOG_FILE" 2>&1 &
+    fi
+
+    FRONTEND_PID=$!
+
+    log "Frontend process started. PID=${FRONTEND_PID}"
+}
+
+mkdir -p "$E2E_LOG_DIR"
+
+log "Configuration:"
+log "  Database: ${MAP_DB_NAME}"
+log "  Backend port: ${BACKEND_PORT}"
+log "  Frontend port: ${FRONTEND_PORT}"
+log "  Reuse DB: ${REUSE_DB}"
+log "  Debug mode: ${DEBUG_MODE}"
+log "  Warmup: ${MAP_E2E_WARMUP:-default}"
+log "  Iterations: ${MAP_E2E_ITERATIONS:-default}"
+log "  Continuous steps: ${MAP_E2E_CONTINUOUS_STEPS:-default}"
+
+if [[ "$REUSE_DB" == true ]]; then
+    if [[ ! "$MAP_DB_NAME" =~ _map_e2e$ ]]; then
+        echo \
+            "Refusing to use a database without the _map_e2e suffix: ${MAP_DB_NAME}" \
+            >&2
+        exit 1
+    fi
+
+    log "[1/7] Reusing E2E database: ${MAP_DB_NAME}"
+    log "Skipping reset, migration, and seed."
+
+    cd "${PROJECT_ROOT}/backend"
+
+    log "[2/7] Building backend JAR..."
+    ./gradlew bootJar
+
+    FLYWAY_ENABLED=false
+else
+    log "[1/7] Preparing map performance E2E database..."
+    "${SCRIPT_DIR}/prepare-map-performance-data"
+
+    # prepare-map-performance-data에서 bootJar까지 수행함
+    log "[2/7] Backend JAR and database prepared."
+
+    FLYWAY_ENABLED=true
+fi
+
+BACKEND_JAR="${PROJECT_ROOT}/backend/build/libs/backend-0.0.1-SNAPSHOT.jar"
+
+if [[ ! -f "$BACKEND_JAR" ]]; then
+    echo "Backend JAR was not created: ${BACKEND_JAR}" >&2
+    exit 1
+fi
+
+if [[ "$DEBUG_MODE" == true ]] &&
+    [[ -z "${MAP_E2E_RESULT_FILE:-}" ]]; then
+
+    export MAP_E2E_RESULT_FILE="e2e-results/map-performance-debug.json"
+fi
+
+log "[3/7] Starting E2E backend..."
+
+cd "${PROJECT_ROOT}/backend"
+start_backend
+
+wait_for_url \
+    "http://127.0.0.1:${BACKEND_PORT}/actuator/health" \
+    "$BACKEND_PID" \
+    "$BACKEND_LOG_FILE" \
+    "Map E2E backend"
+
+log "[4/7] Building frontend..."
+
+cd "${PROJECT_ROOT}/frontend"
+
+env \
+    "BACKEND_API_URL=http://127.0.0.1:${BACKEND_PORT}/api" \
+    npm run build
+
+log "[5/7] Starting E2E frontend..."
+
+start_frontend
+
+wait_for_url \
+    "http://127.0.0.1:${FRONTEND_PORT}/login" \
+    "$FRONTEND_PID" \
+    "$FRONTEND_LOG_FILE" \
+    "Map E2E frontend"
+
+log "[6/7] Running Playwright map performance tests..."
+
+env \
+    "PLAYWRIGHT_BASE_URL=http://127.0.0.1:${FRONTEND_PORT}" \
+    npx playwright test \
+        --config=e2e/map-performance/playwright.config.ts \
+        "${PLAYWRIGHT_ARGS[@]}"
+
+log "[7/7] Playwright test completed successfully."

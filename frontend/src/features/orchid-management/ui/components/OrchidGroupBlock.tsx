@@ -1,14 +1,15 @@
 "use client";
 
-import type { MouseEvent, PointerEvent } from "react";
+import { memo, type MouseEvent, type PointerEvent } from "react";
 import { getOrchidVarietyColor } from "@/entities/farm/orchidColors";
 import type { OrchidGroup } from "@/entities/farm/types";
 
-export default function OrchidGroupBlock({
+function OrchidGroupBlock({
   distinguishVarietyColors,
   heightPx,
   muted,
   orchidGroup,
+  orchidGroupId,
   positionLabel,
   selected,
   onSelect,
@@ -17,9 +18,10 @@ export default function OrchidGroupBlock({
   heightPx: number;
   muted: boolean;
   orchidGroup: OrchidGroup;
+  orchidGroupId: number;
   positionLabel: string | null;
   selected: boolean;
-  onSelect: () => void;
+  onSelect: (orchidGroupId: number) => void;
 }) {
   const warning =
     orchidGroup.status !== "정상" && orchidGroup.status !== "판매 가능";
@@ -43,7 +45,7 @@ export default function OrchidGroupBlock({
     if (muted) {
       return;
     }
-    onSelect();
+    onSelect(orchidGroupId);
   }
 
   function handlePointerUp(event: PointerEvent<HTMLDivElement>) {
@@ -54,11 +56,12 @@ export default function OrchidGroupBlock({
     if (muted) {
       return;
     }
-    onSelect();
+    onSelect(orchidGroupId);
   }
 
   return (
     <div
+      data-testid={`orchid-group-${orchidGroup.id}`}
       className={`h-full w-full min-w-0 touch-manipulation overflow-hidden border transition ${
         varietyColor
           ? "text-white hover:brightness-95"
@@ -144,6 +147,8 @@ export default function OrchidGroupBlock({
     </div>
   );
 }
+
+export default memo(OrchidGroupBlock);
 
 function resolveDensity(heightPx: number) {
   if (heightPx < 16) {

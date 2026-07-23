@@ -2,7 +2,7 @@
 
 import { useEffect } from "react";
 
-export default function ServiceWorkerRegister() {
+export function ServiceWorkerRegister() {
   useEffect(() => {
     if (!("serviceWorker" in navigator)) {
       return;
