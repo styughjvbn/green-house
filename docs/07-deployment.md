@@ -50,6 +50,13 @@ SPRING_PROFILES_ACTIVE
 JPA_DDL_AUTO
 FRONTEND_ORIGIN_PATTERNS
 AUTH_ENABLED
+DEMO_MODE
+DB_POOL_MAX_SIZE
+DB_POOL_MIN_IDLE
+DB_POOL_CONNECTION_TIMEOUT
+FLYWAY_URL
+FLYWAY_USERNAME
+FLYWAY_PASSWORD
 ```
 
 인증을 적용하는 경우 다음 값을 별도로 관리한다.
@@ -118,7 +125,7 @@ PostgreSQL
 
 적용 전 확인:
 
-- `k8s/base/secret.yaml`의 운영 비밀번호 변경
+- `k8s/base/secret.yaml`의 운영 DB·로그인 비밀번호 변경
 - `k8s/base/postgres-host-service.yaml`의 host PostgreSQL IP 확인
 - backend/frontend 이미지 태그 변경
 - Traefik TLS secret 이름 확인
@@ -163,6 +170,15 @@ pg_dump -U greenhouse greenhouse > backup_$(date +%Y%m%d).sql
 # CI 또는 반복 개발 작업
 ./scripts/reset-dev-db.sh --yes
 ```
+
+### 데모 환경
+
+데모 환경은 `k8s/overlays/demo`를 사용하며 운영과 동일한 이미지 SHA를 배포한다.
+로그인 우회, 데모 인증 주체, 요청 제한은 `DEMO_MODE=true`에서만 활성화된다.
+
+운영 PC의 DB role 생성, Secret 적용, 초기화와 모니터링 절차는
+`docs/12-demo-operations.md`를 따른다. 비식별화가 끝나지 않은 운영 백업을 데모
+DB에 직접 복구하지 않는다.
 
 ## 6. 운영 전 체크리스트
 
