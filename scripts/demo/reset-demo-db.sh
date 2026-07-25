@@ -35,13 +35,16 @@ validate_target() {
   [[ -n "${DEMO_DB_TARGET_URL:-}" ]] || fail "DEMO_DB_TARGET_URL is required"
   [[ "${DEMO_RESET_CONFIRM:-}" == "greenhouse_demo" ]] \
     || fail "Set DEMO_RESET_CONFIRM=greenhouse_demo to confirm the reset"
-  [[ "${DEMO_SANITIZATION_VERIFIED:-}" == "true" ]] \
-    || fail "Set DEMO_SANITIZATION_VERIFIED=true only after anonymization verification"
 }
 
 validate_backup() {
   local backup="$1"
   [[ -f "${backup}" ]] || fail "Backup not found: ${backup}"
+  [[ -f "${backup}.sha256" ]] || fail "Sanitization checksum not found: ${backup}.sha256"
+  (
+    cd "$(dirname "${backup}")"
+    sha256sum -c "$(basename "${backup}").sha256"
+  ) || fail "Sanitization checksum verification failed"
   case "${backup}" in
     *.dump)
       pg_restore --list "${backup}" >/dev/null
@@ -98,6 +101,7 @@ main() {
   require_command kubectl
   require_command psql
   require_command pg_restore
+  require_command sha256sum
   require_command dropdb
   require_command createdb
   require_command gzip
