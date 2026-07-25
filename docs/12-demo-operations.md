@@ -175,7 +175,85 @@ APP_URL=https://green-house-demo.sjw-project.site \
 ./scripts/deploy/deploy.sh sha-<commit>
 ```
 
-## 7. 초기 데이터 복구
+## 7. 운영 데이터 비식별화
+
+운영 DB에는 비식별화 SQL을 직접 실행하지 않는다. PostgreSQL 외부 접속이 차단된
+격리 작업 PC 또는 격리 컨테이너에서 다음 순서로 처리한다. `psql`, `pg_dump`,
+`pg_restore`, Flyway CLI는 운영 PostgreSQL과 같은 major 버전을 사용한다.
+
+```text
+운영 custom-format dump
+→ greenhouse_demo_sanitize_tmp 복구
+→ 최신 Flyway 적용
+→ 스키마 허용 목록 확인
+→ 비식별화
+→ 민감정보·외래키·업무 불변식 검사
+→ 허용된 테이블만 custom-format dump
+→ SHA-256 생성
+```
+
+현재 허용 목록과 스키마 지문은 `scripts/demo/schema-allowlist.tsv`에 있다. 신규
+테이블, 신규 컬럼, nullable/type 변경이 있으면 dump 생성이 실패한다. 검토 후
+비식별화 SQL과 허용 목록을 함께 갱신한다.
+
+격리 임시 DB 복구:
+
+```bash
+export SANITIZE_DB_ADMIN_URL='postgresql://<local-admin>@127.0.0.1:5432/postgres'
+export SANITIZE_DB_URL='postgresql://<local-admin>@127.0.0.1:5432/greenhouse_demo_sanitize_tmp'
+export SANITIZE_DB_NAME='greenhouse_demo_sanitize_tmp'
+export SANITIZE_RESTORE_CONFIRM='greenhouse_demo_sanitize_tmp'
+
+export SANITIZE_FLYWAY_URL='jdbc:postgresql://127.0.0.1:5432/greenhouse_demo_sanitize_tmp'
+export SANITIZE_FLYWAY_USER='<local-admin>'
+read -rs SANITIZE_FLYWAY_PASSWORD
+export SANITIZE_FLYWAY_PASSWORD
+
+./scripts/demo/restore-temp-db.sh /secure/source/greenhouse-production.dump
+```
+
+비식별화와 검증 후 dump 생성:
+
+```bash
+export SANITIZE_DUMP_CONFIRM='greenhouse_demo_sanitize_tmp'
+
+read -rs DEMO_ANONYMIZATION_KEY
+export DEMO_ANONYMIZATION_KEY
+read -r DEMO_DATE_SHIFT_DAYS
+export DEMO_DATE_SHIFT_DAYS
+read -r DEMO_QUANTITY_FACTOR
+export DEMO_QUANTITY_FACTOR
+read -r DEMO_PRICE_FACTOR
+export DEMO_PRICE_FACTOR
+
+./scripts/demo/create-demo-dump.sh \
+  /secure/demo/greenhouse_demo_sanitized.dump
+```
+
+생성 결과는 dump와 같은 디렉터리의 `.sha256` 파일이다. SQL 중 하나라도 실패하거나
+스키마·민감정보·외래키·수량·판매·정산 검증이 실패하면 dump가 생성되지 않는다.
+비식별화 키는 32자 이상이어야 하며 수량·단가 배율은 각각 2~9 범위에서 선택한다.
+날짜 이동값은 0이 아닌 정수다. 값은 저장소나 shell history에 남기지 않고 운영
+비밀 저장소에서 공급한다. 같은 키를 사용하면 같은 원본 문자열이 같은 데모 값으로
+변환된다. SQL은 격리 임시 DB에 `pgcrypto` extension을 설치하므로 작업 계정에 해당
+권한이 필요하다.
+
+변환 규칙:
+
+- ID, 외래키, 구역 배치와 상태 이력은 유지
+- 날짜와 audit timestamp는 모두 동일 일수만큼 이동
+- 작업자와 입금자는 keyed HMAC 순서에 따른 결정적 데모명으로 치환
+- 거래처는 ID 기반 데모명, 품종·품목·자재명은 keyed HMAC 기반 데모명으로 치환
+- 수량과 단가는 외부 주입 배율로 변환하고 연관 금액은 두 배율의 곱으로 변환
+- 전화번호는 고정값, 주소는 데모 주소, 자유 메모와 외부 UID는 제거
+- JSON 구조와 숫자·불리언·허용 코드값은 유지하고 나머지 문자열은 `데모`로 치환
+
+작업 성공 후 `greenhouse_demo_sanitize_tmp`를 삭제하고 운영 원본 dump를 보안 삭제한다.
+삭제 전 데모 dump와 SHA-256을 별도 보관 위치에 복사하고 `pg_restore --list`로 다시
+확인한다. 원본 dump 경로는 자동 삭제 대상이 아니므로 운영자가 정확한 파일을 확인한
+뒤 삭제한다.
+
+## 8. 초기 데이터 복구
 
 초기화 스크립트는 DB 이름이 정확히 `greenhouse_demo`일 때만 실행된다. 백엔드를
 중지하고 DB를 다시 만든 뒤 dump 복구, 권한 적용, Flyway 시작, health check를
@@ -185,20 +263,19 @@ APP_URL=https://green-house-demo.sjw-project.site \
 export DEMO_DB_ADMIN_URL='postgresql://<admin>@127.0.0.1:5432/postgres'
 export DEMO_DB_TARGET_URL='postgresql://greenhouse_demo_migrator@127.0.0.1:5432/greenhouse_demo'
 export DEMO_RESET_CONFIRM='greenhouse_demo'
-export DEMO_SANITIZATION_VERIFIED='true'
 
 ./scripts/demo/reset-demo-db.sh /secure/demo/greenhouse_demo_sanitized.dump
 ```
 
-비밀번호는 `.pgpass` 또는 운영 PC의 안전한 비밀 저장소로 공급한다. 스크립트와 운영
-배포는 기본적으로 `/tmp/green-house-operation.lock`을 공유해 동시에 실행되지 않는다.
-운영 PC가 여러 대라면 로컬 파일 잠금만으로 부족하므로 Kubernetes Lease 잠금을
-추가해야 한다.
+초기화 스크립트는 dump 옆의 `.sha256` 파일을 반드시 검증한다. 비밀번호는 `.pgpass`
+또는 운영 PC의 안전한 비밀 저장소로 공급한다. 스크립트와 운영 배포는 기본적으로
+`/tmp/green-house-operation.lock`을 공유해 동시에 실행되지 않는다. 운영 PC가 여러
+대라면 로컬 파일 잠금만으로 부족하므로 Kubernetes Lease 잠금을 추가해야 한다.
 
 Cron 등록 전 동일 명령을 수동 실행하고 복구·health check를 확인한다. 기본 주기는
 하루 1회이며 저사용 시간에 실행한다.
 
-## 8. 모니터링
+## 9. 모니터링
 
 필수 경고 항목:
 
@@ -214,7 +291,7 @@ Cron 등록 전 동일 명령을 수동 실행하고 복구·health check를 확
 데모 DB 복구 중 운영 API 지연이 커지면 복구를 중단하고 `pg_restore --jobs=1` 유지,
 실행 시간 조정 또는 별도 PostgreSQL 인스턴스 전환을 검토한다.
 
-## 9. 배포 후 검증
+## 10. 배포 후 검증
 
 - 데모 URL이 로그인 없이 열림
 - `/api/auth/me`가 `demo`, `DEMO`를 반환
