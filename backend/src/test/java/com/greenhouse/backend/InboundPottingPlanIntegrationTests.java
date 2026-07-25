@@ -550,6 +550,50 @@ class InboundPottingPlanIntegrationTests extends AbstractBackendIntegrationTest 
 	}
 
 	@Test
+	void createsCompletedInboundPottingRecordAfterAllResultsAreProvided() throws Exception {
+		mockMvc.perform(post("/api/work-operations/inbound-potting-records")
+				.contentType(MediaType.APPLICATION_JSON)
+				.content("""
+						{
+						  "plan": {
+						    "title": "포트 작업 기록",
+						    "plannedStartDate": "2026-07-16",
+						    "plannedEndDate": "2026-07-16",
+						    "inboundRecordIds": [%d],
+						    "worker": "포트 담당"
+						  },
+						  "executions": [
+						    {
+						      "inboundRecordId": %d,
+						      "pottingDate": "2026-07-16",
+						      "results": [
+						        {
+						          "quantity": 100,
+						          "potSize": "2치",
+						          "ageYear": 1,
+						          "bedZoneId": %d,
+						          "startPosition": 0,
+						          "endPosition": 6
+						        }
+						      ],
+						      "worker": "포트 담당"
+						    }
+						  ]
+						}
+						""".formatted(inboundRecord.getId(), inboundRecord.getId(), bedZone.getId())))
+				.andExpect(status().isCreated())
+				.andExpect(jsonPath("$.data", hasSize(1)))
+				.andExpect(jsonPath("$.data[0].status").value("COMPLETED"))
+				.andExpect(jsonPath("$.data[0].targets[0].resultDetails.createdOrchidGroupIds", hasSize(1)));
+
+		assertThat(operationRepository.findAll()).singleElement()
+				.satisfies(operation -> assertThat(operation.getStatus().name()).isEqualTo("COMPLETED"));
+		assertThat(inboundRecordRepository.findWithDetailsById(inboundRecord.getId()).orElseThrow().getStatus())
+				.isEqualTo(InboundStatus.PLACED);
+		assertThat(orchidGroupRepository.findAll()).hasSize(1);
+	}
+
+	@Test
 	void immediateExecutionReusesTheExistingPottingPlan() throws Exception {
 		var planned = mockMvc.perform(post("/api/work-operations/inbound-potting-plans")
 				.contentType(MediaType.APPLICATION_JSON)

@@ -6,6 +6,7 @@ import com.greenhouse.backend.work.application.correction.WorkOperationCorrectio
 import com.greenhouse.backend.work.application.operation.InboundPottingOperationService;
 import com.greenhouse.backend.work.application.operation.InboundPottingPlanService;
 import com.greenhouse.backend.work.application.operation.StructureChangeExecutionService;
+import com.greenhouse.backend.work.application.operation.StructureChangeRecordService;
 import com.greenhouse.backend.work.application.operation.WorkOperationPlanService;
 import com.greenhouse.backend.work.application.operation.WorkOperationProgressService;
 import com.greenhouse.backend.work.application.operation.WorkOperationQueryService;
@@ -26,6 +27,10 @@ import com.greenhouse.backend.work.dto.target.WorkTargetPreviewRequest;
 import com.greenhouse.backend.work.dto.target.WorkTargetPreviewResponse;
 import com.greenhouse.backend.work.dto.target.WorkTargetExecutionRequest;
 import com.greenhouse.backend.work.dto.effect.StructureChangeExecutionRequest;
+import com.greenhouse.backend.work.dto.effect.StructureChangeRecordCreateRequest;
+import com.greenhouse.backend.work.dto.effect.StructureChangeRecordBatchCreateRequest;
+import com.greenhouse.backend.work.dto.effect.DiscardRecordCreateRequest;
+import com.greenhouse.backend.work.dto.effect.InboundPottingRecordCreateRequest;
 import jakarta.validation.Valid;
 import java.util.List;
 import java.time.LocalDate;
@@ -49,6 +54,7 @@ public class WorkOperationController {
 	private final WorkOperationProgressService progressService;
 	private final WorkOperationQueryService queryService;
 	private final StructureChangeExecutionService structureChangeExecutionService;
+	private final StructureChangeRecordService structureChangeRecordService;
 	private final InboundPottingPlanService inboundPottingPlanService;
 	private final InboundPottingOperationService inboundPottingOperationService;
 	private final WorkOperationCorrectionService workOperationCorrectionService;
@@ -76,6 +82,34 @@ public class WorkOperationController {
 	public ApiResponse<WorkOperationResponse> createCompletedRecord(
 			@Valid @RequestBody WorkOperationCreateRequest request) {
 		return ApiResponse.ok(planService.createCompletedRecord(request));
+	}
+
+	@PostMapping("/work-operations/structure-change-records")
+	@ResponseStatus(HttpStatus.CREATED)
+	public ApiResponse<WorkOperationResponse> createStructureChangeRecord(
+			@Valid @RequestBody StructureChangeRecordCreateRequest request) {
+		return ApiResponse.ok(structureChangeRecordService.createStructureChangeRecord(request));
+	}
+
+	@PostMapping("/work-operations/structure-change-records/batch")
+	@ResponseStatus(HttpStatus.CREATED)
+	public ApiResponse<List<WorkOperationResponse>> createStructureChangeRecords(
+			@Valid @RequestBody StructureChangeRecordBatchCreateRequest request) {
+		return ApiResponse.ok(structureChangeRecordService.createStructureChangeRecords(request));
+	}
+
+	@PostMapping("/work-operations/discard-records")
+	@ResponseStatus(HttpStatus.CREATED)
+	public ApiResponse<WorkOperationResponse> createDiscardRecord(
+			@Valid @RequestBody DiscardRecordCreateRequest request) {
+		return ApiResponse.ok(structureChangeRecordService.createDiscardRecord(request));
+	}
+
+	@PostMapping("/work-operations/inbound-potting-records")
+	@ResponseStatus(HttpStatus.CREATED)
+	public ApiResponse<List<WorkOperationResponse>> createInboundPottingRecord(
+			@Valid @RequestBody InboundPottingRecordCreateRequest request) {
+		return ApiResponse.ok(structureChangeRecordService.createInboundPottingRecord(request));
 	}
 
 	@GetMapping("/work-operations/inbound-potting-candidates")

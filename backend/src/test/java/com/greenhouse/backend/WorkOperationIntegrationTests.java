@@ -198,6 +198,41 @@ class WorkOperationIntegrationTests extends AbstractBackendIntegrationTest {
 		org.assertj.core.api.Assertions.assertThat(fullyDiscarded.getStatus()).isEqualTo("폐기");
 	}
 
+	@Test
+	void createsCompletedDiscardRecordWithAllTargetResults() throws Exception {
+		mockMvc.perform(post("/api/work-operations/discard-records")
+				.contentType(MediaType.APPLICATION_JSON)
+				.content("""
+						{
+						  "operation": {
+						    "workTypeId": %d,
+						    "title": "폐기 작업 기록",
+						    "plannedStartDate": "2026-07-16",
+						    "plannedEndDate": "2026-07-16",
+						    "sourceScopeType": "MANUAL_SELECTION",
+						    "sourceOrchidGroupIds": [%d]
+						  },
+						  "completedDate": "2026-07-16",
+						  "worker": "폐기 담당자",
+						  "results": [
+						    {
+						      "orchidGroupId": %d,
+						      "discardQuantity": 25,
+						      "reason": "상태 불량"
+						    }
+						  ]
+						}
+						""".formatted(discardType.getId(), targetGroup.getId(), targetGroup.getId())))
+				.andExpect(status().isCreated())
+				.andExpect(jsonPath("$.data.status").value("COMPLETED"))
+				.andExpect(jsonPath("$.data.targets[0].resultDetails.discardedQuantity").value(25))
+				.andExpect(jsonPath("$.data.targets[0].resultDetails.remainingQuantity").value(75));
+
+		OrchidGroup updated = orchidGroupRepository.findById(targetGroup.getId()).orElseThrow();
+		org.assertj.core.api.Assertions.assertThat(updated.getQuantity()).isEqualTo(75);
+		org.assertj.core.api.Assertions.assertThat(workOperationRepository.count()).isEqualTo(1);
+	}
+
 	private Long createDiscardOperation(String title) throws Exception {
 		var result = mockMvc.perform(post("/api/work-operations")
 				.contentType(MediaType.APPLICATION_JSON)
