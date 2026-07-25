@@ -603,6 +603,42 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ApiResponseWorkTargetPreviewResponse'
+  /api/work-operations/structure-change-records:
+    post:
+      tags:
+      - work-operation-controller
+      operationId: createStructureChangeRecord
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/StructureChangeRecordCreateRequest'
+        required: true
+      responses:
+        '201':
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponseWorkOperationResponse'
+  /api/work-operations/structure-change-records/batch:
+    post:
+      tags:
+      - work-operation-controller
+      operationId: createStructureChangeRecords
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/StructureChangeRecordBatchCreateRequest'
+        required: true
+      responses:
+        '201':
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponseListWorkOperationResponse'
   /api/work-operations/repot:
     post:
       tags:
@@ -657,6 +693,24 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ApiResponseMultiCreateWorkOperationResponse'
+  /api/work-operations/inbound-potting-records:
+    post:
+      tags:
+      - work-operation-controller
+      operationId: createInboundPottingRecord
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/InboundPottingRecordCreateRequest'
+        required: true
+      responses:
+        '201':
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponseListWorkOperationResponse'
   /api/work-operations/inbound-potting-plans:
     post:
       tags:
@@ -703,6 +757,24 @@ paths:
           application/json:
             schema:
               $ref: '#/components/schemas/InboundPottingExecutionRequest'
+        required: true
+      responses:
+        '201':
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponseWorkOperationResponse'
+  /api/work-operations/discard-records:
+    post:
+      tags:
+      - work-operation-controller
+      operationId: createDiscardRecord
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DiscardRecordCreateRequest'
         required: true
       responses:
         '201':
@@ -4024,6 +4096,36 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/WorkOperationTargetResponse'
+    StructureChangeRecordCreateRequest:
+      type: object
+      properties:
+        operation:
+          $ref: '#/components/schemas/WorkOperationCreateRequest'
+        execution:
+          $ref: '#/components/schemas/StructureChangeExecutionRequest'
+      required:
+      - execution
+      - operation
+    StructureChangeRecordBatchCreateRequest:
+      type: object
+      properties:
+        records:
+          type: array
+          items:
+            $ref: '#/components/schemas/StructureChangeRecordCreateRequest'
+          maxItems: 100
+          minItems: 0
+      required:
+      - records
+    ApiResponseListWorkOperationResponse:
+      type: object
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/WorkOperationResponse'
+        message:
+          type: string
     RepotResultOrchidGroupRequest:
       type: object
       properties:
@@ -4250,6 +4352,37 @@ components:
       - quantity
       - status
       - varietyId
+    InboundPottingExecutionRequest:
+      type: object
+      properties:
+        inboundRecordId:
+          type: integer
+          format: int64
+        pottingDate:
+          type: string
+          format: date
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/InboundPottingResultRequest'
+          maxItems: 100
+          minItems: 0
+        growthStage:
+          type: string
+          maxLength: 100
+          minLength: 0
+        worker:
+          type: string
+          maxLength: 50
+          minLength: 0
+        memo:
+          type: string
+          maxLength: 1000
+          minLength: 0
+      required:
+      - inboundRecordId
+      - pottingDate
+      - results
     InboundPottingPlanCreateRequest:
       type: object
       properties:
@@ -4282,53 +4415,20 @@ components:
       - inboundRecordIds
       - plannedStartDate
       - title
-    InboundPottingPlanBatchCreateRequest:
+    InboundPottingRecordCreateRequest:
       type: object
       properties:
         plan:
           $ref: '#/components/schemas/InboundPottingPlanCreateRequest'
-      required:
-      - plan
-    ApiResponseListWorkOperationResponse:
-      type: object
-      properties:
-        data:
+        executions:
           type: array
           items:
-            $ref: '#/components/schemas/WorkOperationResponse'
-        message:
-          type: string
-    InboundPottingExecutionRequest:
-      type: object
-      properties:
-        inboundRecordId:
-          type: integer
-          format: int64
-        pottingDate:
-          type: string
-          format: date
-        results:
-          type: array
-          items:
-            $ref: '#/components/schemas/InboundPottingResultRequest'
+            $ref: '#/components/schemas/InboundPottingExecutionRequest'
           maxItems: 100
           minItems: 0
-        growthStage:
-          type: string
-          maxLength: 100
-          minLength: 0
-        worker:
-          type: string
-          maxLength: 50
-          minLength: 0
-        memo:
-          type: string
-          maxLength: 1000
-          minLength: 0
       required:
-      - inboundRecordId
-      - pottingDate
-      - results
+      - executions
+      - plan
     InboundPottingResultRequest:
       type: object
       properties:
@@ -4372,6 +4472,52 @@ components:
       - endPosition
       - quantity
       - startPosition
+    InboundPottingPlanBatchCreateRequest:
+      type: object
+      properties:
+        plan:
+          $ref: '#/components/schemas/InboundPottingPlanCreateRequest'
+      required:
+      - plan
+    DiscardRecordCreateRequest:
+      type: object
+      properties:
+        operation:
+          $ref: '#/components/schemas/WorkOperationCreateRequest'
+        completedDate:
+          type: string
+          format: date
+        worker:
+          type: string
+          maxLength: 100
+          minLength: 0
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/DiscardRecordResultRequest'
+          maxItems: 100
+          minItems: 0
+      required:
+      - completedDate
+      - operation
+      - results
+    DiscardRecordResultRequest:
+      type: object
+      properties:
+        orchidGroupId:
+          type: integer
+          format: int64
+        discardQuantity:
+          type: integer
+          format: int32
+          minimum: 1
+        reason:
+          type: string
+          maxLength: 1000
+          minLength: 0
+      required:
+      - discardQuantity
+      - orchidGroupId
     WorkOperationBatchCreateRequest:
       type: object
       properties:

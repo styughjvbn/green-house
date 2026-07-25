@@ -7,8 +7,8 @@
 
 - 기준 명세: `docs/api/openapi.yaml`
 - OpenAPI 버전: `3.1.0`
-- 현재 구현 API: `120` operations / `99` path entries
-- schema 수: `183`
+- 현재 구현 API: `124` operations / `103` path entries
+- schema 수: `188`
 - Base URL: `/api`
 - 공통 응답: `ApiResponse*` 래퍼 사용
 
@@ -133,13 +133,17 @@
 - package: `com.greenhouse.backend.work`
 - controller tag: `work-operation-controller`
 - 역할: 범위별 기록형 작업의 미리보기·스냅샷·즉시 완료·기간 조회, 난 묶음 통합 이력, 구조 변경 보정 관계
-- operations: 17
+- operations: 21
 
 | Method | Path | Operation |
 |---|---|---|
 | `POST` | `/api/work-operations/target-preview` | 대상 미리보기 |
 | `POST` | `/api/work-operations` | 작업 생성과 대상 스냅샷 확정 |
 | `POST` | `/api/work-operations/record` | 기록형 작업을 생성하고 즉시 완료 |
+| `POST` | `/api/work-operations/structure-change-records` | 분갈이·분주·합식 전체 결과 작업 기록 |
+| `POST` | `/api/work-operations/structure-change-records/batch` | 혼합 품종의 품종별 구조 변경 기록 일괄 저장 |
+| `POST` | `/api/work-operations/discard-records` | 전체 대상 폐기 결과 작업 기록 |
+| `POST` | `/api/work-operations/inbound-potting-records` | 전체 입고 대상 포트 결과 작업 기록 |
 | `GET` | `/api/work-operations` | 기간·상태·범위별 작업 목록 |
 | `GET` | `/api/work-operations/{workOperationId}` | 작업 상세 |
 | `POST` | `/api/work-operations/{workOperationId}/complete` | 모든 대상 처리 후 전체 작업 완료 |
