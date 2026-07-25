@@ -374,7 +374,7 @@ function FarmZoneFeature({
           keyboard={false}
           position={toLatLng({
             x: zoneRect.x + zoneRect.width / 2,
-            y: zoneRect.y + 16,
+            y: zoneRect.y + 2,
           })}
         />
       ) : null}
