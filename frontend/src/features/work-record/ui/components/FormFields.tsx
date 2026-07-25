@@ -3,6 +3,7 @@
 import type { ReactNode } from "react";
 
 type TextFieldProps = {
+  disabled?: boolean;
   label: string;
   max?: string;
   onChange: (value: string) => void;
@@ -12,6 +13,7 @@ type TextFieldProps = {
 };
 
 export function TextField({
+  disabled = false,
   label,
   max,
   onChange,
@@ -23,7 +25,8 @@ export function TextField({
     <label className="block">
       <span className="text-sm font-semibold text-[#435047]">{label}</span>
       <input
-        className="mt-1 w-full rounded-md border border-[#cfd8cc] px-3 py-2 text-sm"
+        className="mt-1 w-full rounded-md border border-[#cfd8cc] px-3 py-2 text-sm disabled:cursor-not-allowed disabled:bg-[#f1f4f0] disabled:text-[#6a766e]"
+        disabled={disabled}
         max={max}
         required={required}
         type={type}

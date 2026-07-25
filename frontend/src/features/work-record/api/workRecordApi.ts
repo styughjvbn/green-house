@@ -254,37 +254,119 @@ export async function completeMergeWorkOperation(
 
 export async function executeStructureChangeWorkOperation(
   workOperationId: number,
-  payload: {
-    idempotencyKey: string;
-    completedDate: string;
-    worker: string | null;
-    memo: string | null;
-    sources: {
-      sourceOrchidGroupId: number;
-      inputQuantity: number;
-      releasedStartPosition: number | null;
-      releasedEndPosition: number | null;
-    }[];
-    lossQuantity: number;
-    lossReason: string | null;
-    results: {
-      bedZoneId: number;
-      quantity: number;
-      sourceOrchidGroupIds: number[];
-      potSize: string | null;
-      ageYear: number | null;
-      purpose: "NORMAL" | "DIVIDE_CANDIDATE" | "HELD";
-      placementType: null;
-      trayCount: null;
-      splitPlacementAllowed: false;
-      startPosition: number;
-      endPosition: number;
-      memo: string | null;
-    }[];
-  },
+  payload: StructureChangeExecutionPayload,
 ): Promise<WorkOperation> {
   return requestWorkOperation<WorkOperation>(
     `/work-operations/${workOperationId}/structure-change-executions`,
+    "POST",
+    payload,
+  );
+}
+
+export type StructureChangeExecutionPayload = {
+  idempotencyKey: string;
+  completedDate: string;
+  worker: string | null;
+  memo: string | null;
+  sources: {
+    sourceOrchidGroupId: number;
+    inputQuantity: number;
+    releasedStartPosition: number | null;
+    releasedEndPosition: number | null;
+  }[];
+  lossQuantity: number;
+  lossReason: string | null;
+  results: {
+    bedZoneId: number;
+    quantity: number;
+    sourceOrchidGroupIds: number[];
+    potSize: string | null;
+    ageYear: number | null;
+    purpose: "NORMAL" | "DIVIDE_CANDIDATE" | "HELD";
+    placementType: null;
+    trayCount: null;
+    splitPlacementAllowed: false;
+    startPosition: number;
+    endPosition: number;
+    memo: string | null;
+  }[];
+};
+
+export type StructureChangeRecordPayload = {
+  operation: CreateWorkOperationPayload;
+  execution: StructureChangeExecutionPayload;
+};
+
+export function createStructureChangeRecord(
+  payload: StructureChangeRecordPayload,
+): Promise<WorkOperation> {
+  return requestWorkOperation<WorkOperation>(
+    "/work-operations/structure-change-records",
+    "POST",
+    payload,
+  );
+}
+
+export function createStructureChangeRecords(
+  records: StructureChangeRecordPayload[],
+): Promise<WorkOperation[]> {
+  return requestWorkOperation<WorkOperation[]>(
+    "/work-operations/structure-change-records/batch",
+    "POST",
+    { records },
+  );
+}
+
+export function createDiscardRecord(payload: {
+  operation: CreateWorkOperationPayload;
+  completedDate: string;
+  worker: string | null;
+  results: Array<{
+    orchidGroupId: number;
+    discardQuantity: number;
+    reason: string | null;
+  }>;
+}): Promise<WorkOperation> {
+  return requestWorkOperation<WorkOperation>(
+    "/work-operations/discard-records",
+    "POST",
+    payload,
+  );
+}
+
+export type InboundPottingExecutionPayload = {
+  inboundRecordId: number;
+  pottingDate: string;
+  results: Array<{
+    bedZoneId: number;
+    quantity: number;
+    potSize?: string;
+    ageYear?: number;
+    placementType?: string;
+    trayCount?: number;
+    splitPlacementAllowed: boolean;
+    startPosition: number;
+    endPosition: number;
+    memo?: string;
+  }>;
+  growthStage?: string;
+  worker?: string;
+  memo?: string;
+};
+
+export function createInboundPottingRecord(payload: {
+  plan: {
+    title: string;
+    plannedStartDate: string;
+    plannedEndDate: string | null;
+    inboundRecordIds: number[];
+    worker: string | null;
+    memo: string | null;
+  };
+  executions: InboundPottingExecutionPayload[];
+}): Promise<WorkOperation[]> {
+  return requestWorkOperation<WorkOperation[]>(
+    "/work-operations/inbound-potting-records",
     "POST",
     payload,
   );

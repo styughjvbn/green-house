@@ -1,7 +1,11 @@
 "use client";
 
 import { Plus, Trash2, X } from "lucide-react";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import {
+  WorkRecordVarietyNavigation,
+  type WorkRecordNavigationItem,
+} from "@/shared/ui/WorkRecordVarietyNavigation";
 import type { House, OrchidGroup, WorkOperation } from "@/entities/farm/types";
 import {
   FarmPlacementField,
@@ -13,6 +17,7 @@ import { createUuid } from "@/shared/lib/id";
 import {
   executeStructureChangeWorkOperation,
   getOrchidGroups,
+  type StructureChangeExecutionPayload,
 } from "../../api/workRecordApi";
 import { TextField } from "./FormFields";
 import { localDateValue } from "./WorkCompletionDateDialog";
@@ -34,14 +39,44 @@ export function BatchStructureWorkExecutionDialog({
   houses,
   orchidGroups,
   operation,
+  recordMode = false,
+  closeAfterSubmit = true,
+  active = true,
+  embedded = false,
+  recordNavigation,
+  onRecordDirty,
   onClose,
   onSaved,
+  onSubmitRecord,
 }: {
   houses: House[];
   orchidGroups: OrchidGroup[];
-  operation: WorkOperation;
+  operation: Pick<
+    WorkOperation,
+    | "id"
+    | "plannedStartDate"
+    | "targets"
+    | "title"
+    | "worker"
+    | "workType"
+    | "workTypeCode"
+  >;
+  recordMode?: boolean;
+  closeAfterSubmit?: boolean;
+  active?: boolean;
+  embedded?: boolean;
+  recordNavigation?: {
+    activeKey: string;
+    allCompleted: boolean;
+    items: WorkRecordNavigationItem[];
+    saving: boolean;
+    onSave: () => Promise<void>;
+    onSelect: (key: string) => void;
+  };
+  onRecordDirty?: () => void;
   onClose: () => void;
-  onSaved: (operation: WorkOperation) => void;
+  onSaved?: (operation: WorkOperation) => void;
+  onSubmitRecord?: (payload: StructureChangeExecutionPayload) => Promise<void>;
 }) {
   const priorResultOrchidGroupIds = useMemo(
     () => collectPriorResultOrchidGroupIds(operation),
@@ -130,7 +165,9 @@ export function BatchStructureWorkExecutionDialog({
   const [lossQuantity, setLossQuantity] = useState("0");
   const [lossReason, setLossReason] = useState("");
   const today = localDateValue(new Date());
-  const [completedDate, setCompletedDate] = useState(today);
+  const [completedDate, setCompletedDate] = useState(
+    recordMode ? operation.plannedStartDate : today,
+  );
   const [worker, setWorker] = useState(operation.worker ?? "");
   const [memo, setMemo] = useState("");
   const [saving, setSaving] = useState(false);
@@ -154,6 +191,27 @@ export function BatchStructureWorkExecutionDialog({
     new Set(rows.map((row) => row.ageYear)).size === 1
       ? (rows[0]?.ageYear ?? "")
       : "";
+  const onRecordDirtyRef = useRef(onRecordDirty);
+
+  useEffect(() => {
+    onRecordDirtyRef.current = onRecordDirty;
+  }, [onRecordDirty]);
+
+  useEffect(() => {
+    if (recordMode) {
+      onRecordDirtyRef.current?.();
+    }
+  }, [
+    completedDate,
+    inputQuantities,
+    lossQuantity,
+    lossReason,
+    memo,
+    recordMode,
+    releasedPlacements,
+    rows,
+    worker,
+  ]);
 
   useEffect(() => {
     const missingIds = missingPriorResultIdKey
@@ -348,7 +406,7 @@ export function BatchStructureWorkExecutionDialog({
     setSaving(true);
     setError(null);
     try {
-      const updated = await executeStructureChangeWorkOperation(operation.id, {
+      const payload: StructureChangeExecutionPayload = {
         idempotencyKey: createUuid(),
         completedDate,
         worker: worker.trim() || null,
@@ -377,9 +435,19 @@ export function BatchStructureWorkExecutionDialog({
           endPosition: row.placement!.endPosition,
           memo: null,
         })),
-      });
-      onSaved(updated);
-      onClose();
+      };
+      if (onSubmitRecord) {
+        await onSubmitRecord(payload);
+      } else {
+        const updated = await executeStructureChangeWorkOperation(
+          operation.id,
+          payload,
+        );
+        onSaved?.(updated);
+      }
+      if (closeAfterSubmit) {
+        onClose();
+      }
     } catch (cause) {
       setError(
         cause instanceof Error
@@ -395,6 +463,16 @@ export function BatchStructureWorkExecutionDialog({
     if (!completedDate) return "완료일을 입력해주세요.";
     if (selectedSources.length === 0)
       return "이번에 작업할 원본을 선택해주세요.";
+    if (
+      recordMode &&
+      (selectedSources.length !== availableSources.length ||
+        selectedSources.some(
+          ({ group, target }) =>
+            Number(inputQuantities[group.id]) !== target.quantitySnapshot,
+        ))
+    ) {
+      return "작업 기록은 선택한 모든 원본의 전체 수량을 입력해주세요.";
+    }
     if (
       selectedSources.some(({ group, target }) => {
         const quantity = Number(inputQuantities[group.id]);
@@ -459,7 +537,12 @@ export function BatchStructureWorkExecutionDialog({
 
   return (
     <div
-      className="fixed inset-0 z-[1300] flex items-center justify-center bg-black/45 p-4"
+      className={`${embedded ? "absolute" : "fixed z-[1300] bg-black/45"} inset-0 items-center justify-center p-4 ${
+        active
+          ? "pointer-events-auto visible flex"
+          : "pointer-events-none invisible flex"
+      }`}
+      aria-hidden={!active}
       role="presentation"
       onMouseDown={onClose}
     >
@@ -473,11 +556,14 @@ export function BatchStructureWorkExecutionDialog({
         <header className="flex items-start justify-between border-b p-4">
           <div>
             <h3 className="font-bold text-[#17251b]">
-              {operation.workType} 실행 회차 등록
+              {recordMode
+                ? `${operation.workType} 작업 결과 입력`
+                : `${operation.workType} 실행 회차 등록`}
             </h3>
             <p className="mt-1 text-xs text-[#6a766e]">
-              원본과 결과는 계획 대상에서 자동으로 채웠습니다. 이번 작업의
-              예외만 수정하세요.
+              {recordMode
+                ? "선택한 모든 원본과 생성할 결과를 한 번에 입력하세요."
+                : "원본과 결과는 계획 대상에서 자동으로 채웠습니다. 이번 작업의 예외만 수정하세요."}
             </p>
           </div>
           <button type="button" aria-label="닫기" onClick={onClose}>
@@ -509,6 +595,7 @@ export function BatchStructureWorkExecutionDialog({
                   <input
                     className="h-4 w-4 accent-[#159447]"
                     checked={selectedSourceIds.has(group.id)}
+                    disabled={recordMode}
                     type="checkbox"
                     onChange={() => toggleSource(group)}
                   />
@@ -517,11 +604,13 @@ export function BatchStructureWorkExecutionDialog({
                       {group.varietyName} · {sourceLocationLabel(group)}
                     </span>
                     <span className="text-[#6a766e]">
-                      현재 {group.quantity}분 · 계획 잔여{" "}
+                      현재 {group.quantity}분 ·{" "}
+                      {recordMode ? "기록 수량" : "계획 잔여"}{" "}
                       {target.remainingQuantity}분{sourcePositionLabel(group)}
                     </span>
                   </span>
                   <TextField
+                    disabled
                     label="작업 수량"
                     type="number"
                     value={inputQuantities[group.id] ?? ""}
@@ -638,7 +727,7 @@ export function BatchStructureWorkExecutionDialog({
 
           <div className="grid gap-3 sm:grid-cols-2">
             <TextField
-              label="이번 실행 완료일"
+              label={recordMode ? "작업일" : "이번 실행 완료일"}
               max={today}
               required
               type="date"
@@ -672,9 +761,16 @@ export function BatchStructureWorkExecutionDialog({
           ) : null}
         </div>
 
-        <footer className="flex justify-end gap-2 border-t p-4">
+        <footer className="flex flex-wrap items-center justify-end gap-2 border-t p-4">
+          {recordMode && recordNavigation ? (
+            <WorkRecordVarietyNavigation
+              activeKey={recordNavigation.activeKey}
+              items={recordNavigation.items}
+              onSelect={recordNavigation.onSelect}
+            />
+          ) : null}
           <button
-            className="rounded-md border px-4 py-2 text-sm"
+            className={`${recordMode && recordNavigation ? "ml-2" : ""} rounded-md border px-4 py-2 text-sm`}
             type="button"
             onClick={onClose}
           >
@@ -686,8 +782,34 @@ export function BatchStructureWorkExecutionDialog({
             type="button"
             onClick={() => void submit()}
           >
-            {saving ? "처리 중" : "이번 실행 저장"}
+            {saving
+              ? "처리 중"
+              : recordMode && recordNavigation
+                ? "현재 품종 입력 완료"
+                : recordMode
+                  ? "작업 기록 저장"
+                  : "이번 실행 저장"}
           </button>
+          {recordMode && recordNavigation ? (
+            <button
+              className="rounded-md bg-[#0f6f35] px-4 py-2 text-sm font-semibold text-white disabled:opacity-40"
+              disabled={
+                recordNavigation.saving || !recordNavigation.allCompleted
+              }
+              type="button"
+              onClick={() => {
+                void recordNavigation.onSave().catch((cause: unknown) => {
+                  setError(
+                    cause instanceof Error
+                      ? cause.message
+                      : "작업 기록을 저장하지 못했습니다.",
+                  );
+                });
+              }}
+            >
+              {recordNavigation.saving ? "저장 중" : "전체 작업 기록 저장"}
+            </button>
+          ) : null}
         </footer>
       </section>
     </div>
@@ -708,7 +830,7 @@ function ResultFields({
   excludeOrchidGroupIds: number[];
   houses: House[];
   index: number;
-  operation: WorkOperation;
+  operation: Pick<WorkOperation, "workTypeCode" | "workType">;
   referencePlacements: FarmPlacementReference[];
   removable: boolean;
   row: ResultRow;
@@ -863,7 +985,9 @@ function savedResultReferencePlacements(
   });
 }
 
-function collectPriorResultOrchidGroupIds(operation: WorkOperation) {
+function collectPriorResultOrchidGroupIds(
+  operation: Pick<WorkOperation, "targets">,
+) {
   const ids = new Set<number>();
   operation.targets.forEach((target) => {
     collectResultIds(target.resultDetails).forEach((id) => ids.add(id));

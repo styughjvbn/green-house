@@ -18,7 +18,10 @@ import {
 import {
   completeWorkOperation,
   createCompletedWorkOperation,
+  createDiscardRecord,
   createInboundPottingPlansBatch,
+  createInboundPottingRecord,
+  createStructureChangeRecords,
   createWorkOperationsBatch,
   getInboundPottingCandidates,
   getWorkTargetSelectionOptions,
@@ -31,12 +34,16 @@ import type {
   InboundPottingCandidate,
   WorkOperationFormState,
   WorkTargetPreviewPayload,
+  CreateWorkOperationPayload,
 } from "../../model/types";
+import { DiscardWorkRecordDialog } from "./DiscardWorkRecordDialog";
+import { InboundPottingWorkRecordDialog } from "./InboundPottingWorkRecordDialog";
 import { InboundPottingTargetDialog } from "./InboundPottingTargetDialog";
 import { WorkOperationPlanForm } from "./WorkOperationPlanForm";
 import { OperationResult } from "./WorkOperationResult";
 import { WorkTargetSelectionDialog } from "./WorkTargetSelectionDialog";
 import { StructureWorkExecutionDialog } from "./StructureWorkExecutionDialog";
+import { StructureChangeWorkRecordDialog } from "./StructureChangeWorkRecordDialog";
 import { buildScopePayload } from "./workOperationPanelUtils";
 
 export function WorkOperationPanel({
@@ -79,12 +86,13 @@ export function WorkOperationPanel({
   const [excludedIds, setExcludedIds] = useState<Set<number>>(new Set());
   const [manualIds, setManualIds] = useState<Set<number>>(new Set());
   const [registrationMode, setRegistrationMode] = useState<"RECORD" | "PLAN">(
-    "PLAN",
+    "RECORD",
   );
   const [inboundRecordIds, setInboundRecordIds] = useState<Set<number>>(
     new Set(),
   );
   const [targetSelectorOpen, setTargetSelectorOpen] = useState(false);
+  const [recordResultOpen, setRecordResultOpen] = useState(false);
   const [targetScopeLabel, setTargetScopeLabel] = useState<string | null>(null);
   const [orchidGroups, setOrchidGroups] = useState<OrchidGroup[]>([]);
   const [bedZones, setBedZones] = useState<BedZone[]>([]);
@@ -105,12 +113,15 @@ export function WorkOperationPanel({
     selectedWorkType?.code === "MERGE" ||
     selectedWorkType?.code === "DISCARD" ||
     selectedWorkType?.code === "MOVEMENT";
-  const recordDisabled =
-    selectedWorkType?.code === "POTTING" ||
+  const recordDisabled = false;
+  const isBatchStructureWork =
     selectedWorkType?.code === "REPOT" ||
     selectedWorkType?.code === "DIVIDE" ||
-    selectedWorkType?.code === "MERGE" ||
-    selectedWorkType?.code === "DISCARD";
+    selectedWorkType?.code === "MERGE";
+  const isStructureRecord =
+    isBatchStructureWork ||
+    selectedWorkType?.code === "DISCARD" ||
+    selectedWorkType?.code === "POTTING";
 
   const includedTargets = useMemo(
     () =>
@@ -130,11 +141,11 @@ export function WorkOperationPanel({
     [manualIds, orchidGroups],
   );
   const recordTargetIds =
-    manualIds.size > 0
-      ? [...manualIds]
-      : includedTargets.flatMap((target) =>
+    includedTargets.length > 0
+      ? includedTargets.flatMap((target) =>
           target.orchidGroupId == null ? [] : [target.orchidGroupId],
-        );
+        )
+      : [...manualIds];
   const autoSplitWorkCount = countAutoSplitWorks({
     selectedWorkType,
     isInboundPotting,
@@ -148,17 +159,19 @@ export function WorkOperationPanel({
       ? "작업 유형을 선택해주세요."
       : !form.title.trim()
         ? "작업명을 입력해주세요."
-        : isInboundPotting
-          ? inboundRecordIds.size === 0
-            ? "포트 작업할 입고 기록을 선택해주세요."
-            : null
-          : registrationMode === "PLAN" && !preview
-            ? "대상 선택 후 실제 대상을 미리보기해주세요."
-            : registrationMode === "PLAN" && includedTargets.length === 0
-              ? "포함할 난 묶음을 하나 이상 선택해주세요."
-              : registrationMode === "RECORD" && recordTargetIds.length === 0
-                ? "기록할 난 묶음을 하나 이상 선택해주세요."
-                : null;
+        : !form.plannedStartDate
+          ? "작업일 또는 시작일을 입력해주세요."
+          : isInboundPotting
+            ? inboundRecordIds.size === 0
+              ? "포트 작업할 입고 기록을 선택해주세요."
+              : null
+            : registrationMode === "PLAN" && !preview
+              ? "대상 선택 후 실제 대상을 미리보기해주세요."
+              : registrationMode === "PLAN" && includedTargets.length === 0
+                ? "포함할 난 묶음을 하나 이상 선택해주세요."
+                : registrationMode === "RECORD" && recordTargetIds.length === 0
+                  ? "기록할 난 묶음을 하나 이상 선택해주세요."
+                  : null;
 
   useEffect(() => {
     let cancelled = false;
@@ -209,15 +222,6 @@ export function WorkOperationPanel({
       const workType = schedulableWorkTypes.find(
         (candidate) => String(candidate.id) === value,
       );
-      const nextRecordDisabled =
-        workType?.code === "POTTING" ||
-        workType?.code === "REPOT" ||
-        workType?.code === "DIVIDE" ||
-        workType?.code === "MERGE" ||
-        workType?.code === "DISCARD";
-      if (nextRecordDisabled) {
-        setRegistrationMode("PLAN");
-      }
       setForm((current) => ({
         ...current,
         workTypeId: String(value),
@@ -229,6 +233,7 @@ export function WorkOperationPanel({
       }));
       setPreview(null);
       setExcludedIds(new Set());
+      setRegistrationMode("RECORD");
     } else if (
       field === "sourceScopeType" ||
       field === "scopeKey" ||
@@ -290,7 +295,12 @@ export function WorkOperationPanel({
   async function saveOperation() {
     if (!selectedWorkType) return;
     if (registrationMode === "RECORD") {
-      if (recordTargetIds.length === 0 || recordDisabled) return;
+      if ((!isInboundPotting && recordTargetIds.length === 0) || recordDisabled)
+        return;
+      if (isStructureRecord) {
+        setRecordResultOpen(true);
+        return;
+      }
       setLoading(true);
       setErrorMessage(null);
       try {
@@ -625,6 +635,75 @@ export function WorkOperationPanel({
           }}
         />
       ) : null}
+      {recordResultOpen && selectedWorkType && isBatchStructureWork ? (
+        <StructureChangeWorkRecordDialog
+          baseOperation={structureRecordOperationPayload(
+            form,
+            selectedWorkType,
+            recordTargetIds,
+          )}
+          houses={houses}
+          orchidGroups={orchidGroups}
+          targets={includedTargets}
+          workType={selectedWorkType}
+          onClose={() => setRecordResultOpen(false)}
+          onSubmit={async (records) => {
+            await createStructureChangeRecords(records);
+            onSaved?.();
+            onClose();
+          }}
+        />
+      ) : null}
+      {recordResultOpen && selectedWorkType?.code === "DISCARD" ? (
+        <DiscardWorkRecordDialog
+          groups={orchidGroups.filter((group) =>
+            recordTargetIds.includes(group.id),
+          )}
+          initialCompletedDate={form.plannedStartDate}
+          initialWorker={form.worker}
+          onClose={() => setRecordResultOpen(false)}
+          onSubmit={async ({ completedDate, worker, results }) => {
+            await createDiscardRecord({
+              operation: structureRecordOperationPayload(
+                form,
+                selectedWorkType,
+                recordTargetIds,
+              ),
+              completedDate,
+              worker,
+              results,
+            });
+            onSaved?.();
+            onClose();
+          }}
+        />
+      ) : null}
+      {recordResultOpen && selectedWorkType?.code === "POTTING" ? (
+        <InboundPottingWorkRecordDialog
+          candidates={inboundCandidates.filter((candidate) =>
+            inboundRecordIds.has(candidate.id),
+          )}
+          houses={houses}
+          workDate={form.plannedStartDate}
+          worker={form.worker}
+          onClose={() => setRecordResultOpen(false)}
+          onSubmit={async (executions) => {
+            await createInboundPottingRecord({
+              plan: {
+                title: form.title.trim(),
+                plannedStartDate: form.plannedStartDate,
+                plannedEndDate: form.plannedStartDate,
+                inboundRecordIds: [...inboundRecordIds],
+                worker: form.worker.trim() || null,
+                memo: form.memo.trim() || null,
+              },
+              executions,
+            });
+            onSaved?.();
+            onClose();
+          }}
+        />
+      ) : null}
     </div>
   );
 }
@@ -804,5 +883,24 @@ function recordPayload(
     memo: isVisibleWorkRecordField(template, "memo")
       ? form.memo.trim() || null
       : null,
+  };
+}
+
+function structureRecordOperationPayload(
+  form: WorkOperationFormState,
+  selectedWorkType: WorkType,
+  orchidGroupIds: number[],
+): CreateWorkOperationPayload {
+  return {
+    workTypeId: selectedWorkType.id,
+    title: form.title.trim(),
+    plannedStartDate: form.plannedStartDate,
+    plannedEndDate: form.plannedStartDate,
+    sourceScopeType: "MANUAL_SELECTION",
+    sourceOrchidGroupIds: orchidGroupIds,
+    details: {},
+    worker: form.worker.trim() || null,
+    memo: form.memo.trim() || null,
+    excludedOrchidGroupIds: [],
   };
 }

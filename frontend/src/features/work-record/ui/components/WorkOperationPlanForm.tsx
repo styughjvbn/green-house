@@ -23,14 +23,6 @@ const STRUCTURE_WORK_CODES = new Set([
   "POTTING",
 ]);
 
-const PLAN_ONLY_CODES = new Set([
-  "REPOT",
-  "DIVIDE",
-  "MERGE",
-  "DISCARD",
-  "POTTING",
-]);
-
 export function WorkOperationPlanForm({
   form,
   workTypes,
@@ -89,7 +81,6 @@ export function WorkOperationPlanForm({
   onToggleExcluded: (id: number) => void;
   onSave: () => void;
 }) {
-  const planOnly = PLAN_ONLY_CODES.has(selectedWorkType?.code ?? "");
   const structureWork = STRUCTURE_WORK_CODES.has(selectedWorkType?.code ?? "");
   const recordMode = registrationMode === "RECORD";
   const saveLabel = recordMode
@@ -134,11 +125,13 @@ export function WorkOperationPlanForm({
           <MethodButton
             title="작업 기록"
             description={
-              planOnly || recordDisabled
-                ? "결과 입력이 필요한 작업은 계획으로 등록합니다."
-                : "이미 끝난 작업을 기록"
+              recordDisabled
+                ? "이 작업은 전용 화면에서 기록합니다."
+                : structureWork
+                  ? "모든 작업 결과를 입력해 완료 기록"
+                  : "이미 끝난 작업을 기록"
             }
-            disabled={planOnly || recordDisabled}
+            disabled={recordDisabled}
             selected={recordMode}
             onClick={() => onChangeRegistrationMode("RECORD")}
           />
@@ -270,7 +263,8 @@ export function WorkOperationPlanForm({
               onChange={(value) => onUpdateForm("dilutionRatio", value)}
             />
           ) : null}
-          {(!isDedicatedWorkflow || recordMode) &&
+          {!(structureWork && recordMode) &&
+          (!isDedicatedWorkflow || recordMode) &&
           isVisibleWorkRecordField(
             selectedWorkType?.template ?? null,
             "quantity",
