@@ -8,7 +8,7 @@
 - 기준 명세: `docs/api/openapi.yaml`
 - OpenAPI 버전: `3.1.0`
 - 현재 구현 API: `124` operations / `103` path entries
-- schema 수: `188`
+- schema 수: `190`
 - Base URL: `/api`
 - 공통 응답: `ApiResponse*` 래퍼 사용
 
@@ -120,7 +120,7 @@
 | `PATCH` | `/api/materials/{materialId}/deactivate` | `deactivate_1` | `-` | `200:ApiResponseMaterialResponse` |
 | `GET` | `/api/varieties` | `getVarieties` | `-` | `200:ApiResponsePageResponseVarietyResponse` |
 | `POST` | `/api/varieties` | `create_1` | `VarietyCreateRequest` | `201:ApiResponseVarietyResponse` |
-| `GET` | `/api/varieties/genera` | `getGenera` | `-` | `200:ApiResponseListString` |
+| `GET` | `/api/varieties/genera` | `getGenera` | `-` | `200:ApiResponseVarietyGeneraResponse` |
 | `GET` | `/api/varieties/{varietyId}` | `getVariety` | `-` | `200:ApiResponseVarietyResponse` |
 | `PATCH` | `/api/varieties/{varietyId}` | `update_2` | `VarietyUpdateRequest` | `200:ApiResponseVarietyResponse` |
 | `DELETE` | `/api/varieties/{varietyId}` | `delete_1` | `-` | `200:ApiResponseVoid` |

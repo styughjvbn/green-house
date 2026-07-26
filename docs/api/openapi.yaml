@@ -2058,7 +2058,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ApiResponseListString'
+                $ref: '#/components/schemas/ApiResponseVarietyGeneraResponse'
   /api/sales/orchid-groups/search:
     get:
       tags:
@@ -6017,14 +6017,33 @@ components:
         latestWorkDate:
           type: string
           format: date
-    ApiResponseListString:
+    ApiResponseVarietyGeneraResponse:
       type: object
       properties:
         data:
+          $ref: '#/components/schemas/VarietyGeneraResponse'
+        message:
+          type: string
+    VarietyGeneraResponse:
+      type: object
+      properties:
+        genera:
           type: array
           items:
             type: string
-        message:
+        varieties:
+          type: array
+          items:
+            $ref: '#/components/schemas/VarietyNameResponse'
+    VarietyNameResponse:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: int64
+        genus:
+          type: string
+        name:
           type: string
     ApiResponseListSalesOrchidGroupSearchResponse:
       type: object

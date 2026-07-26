@@ -45,6 +45,17 @@ type VarietyResponse = {
   updatedAt: string;
 };
 
+type VarietyNameResponse = {
+  id: number;
+  genus: string;
+  name: string;
+};
+
+type VarietyGeneraResponse = {
+  genera: string[];
+  varieties: VarietyNameResponse[];
+};
+
 type PageResponse<T> = {
   content: T[];
   page: number;
@@ -161,7 +172,12 @@ export function getVarieties(query: VarietyQuery = {}) {
 }
 
 export function getVarietyGenera() {
-  return fetchApi<string[]>("/varieties/genera");
+  return fetchApi<VarietyGeneraResponse>("/varieties/genera").then(
+    (result) => ({
+      genera: result.genera,
+      varieties: result.varieties.map(toVarietyName),
+    }),
+  );
 }
 
 export function getVarietyOrchidGroups(varietyId: number) {
@@ -363,6 +379,29 @@ function toVariety(item: VarietyResponse): Variety {
     saleableQuantity: item.saleableQuantity,
     recentInboundDate: item.recentInboundDate,
     recentWorkDate: item.recentWorkDate,
+    connectedGroups: [],
+  };
+}
+
+function toVarietyName(item: VarietyNameResponse): Variety {
+  return {
+    id: item.id,
+    code: "",
+    genus: item.genus,
+    name: item.name,
+    alias: "",
+    potSize: "",
+    saleEnabled: true,
+    status: "ACTIVE",
+    description: "",
+    memo: "",
+    registeredAt: "",
+    updatedAt: "",
+    connectedGroupCount: 0,
+    totalQuantity: 0,
+    saleableQuantity: 0,
+    recentInboundDate: null,
+    recentWorkDate: null,
     connectedGroups: [],
   };
 }

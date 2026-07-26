@@ -34,7 +34,7 @@ export async function InventoryRoutePage({
     const page = readNumberParam(resolvedSearchParams, "page", 0);
     const size = readNumberParam(resolvedSearchParams, "size", 10);
 
-    const [varieties, varietyGenera, varietyOptions] = await Promise.all([
+    const [varieties, varietyLookup] = await Promise.all([
       getVarieties({
         keyword: varietyKeyword,
         genus: varietyGenus,
@@ -54,18 +54,13 @@ export async function InventoryRoutePage({
         size,
       }),
       getVarietyGenera(),
-      getVarieties({
-        active: true,
-        page: 0,
-        size: 100,
-      }),
     ]);
 
     return (
       <InventoryVarietyPage
         initialVarietyPage={varieties}
-        varietyGenera={varietyGenera}
-        varietyOptions={varietyOptions.content}
+        varietyGenera={varietyLookup.genera}
+        varietyOptions={varietyLookup.varieties}
       />
     );
   }
@@ -83,7 +78,7 @@ export async function InventoryRoutePage({
     const page = readNumberParam(resolvedSearchParams, "page", 0);
     const size = readNumberParam(resolvedSearchParams, "size", 10);
 
-    const [inboundRecords, varietyOptions, houses] = await Promise.all([
+    const [inboundRecords, varietyLookup, houses] = await Promise.all([
       getInboundRecords({
         inboundType:
           inboundType && inboundType !== "ALL"
@@ -108,11 +103,7 @@ export async function InventoryRoutePage({
         page,
         size,
       }),
-      getVarieties({
-        active: true,
-        page: 0,
-        size: 100,
-      }),
+      getVarietyGenera(),
       fetchApi<House[]>("/houses"),
     ]);
 
@@ -120,7 +111,7 @@ export async function InventoryRoutePage({
       <InventoryInboundPage
         houses={houses}
         initialInboundPage={inboundRecords}
-        varietyOptions={varietyOptions.content}
+        varietyOptions={varietyLookup.varieties}
       />
     );
   }

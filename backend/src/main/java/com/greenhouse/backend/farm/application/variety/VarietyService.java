@@ -5,6 +5,7 @@ import com.greenhouse.backend.common.exception.NotFoundException;
 import com.greenhouse.backend.farm.domain.variety.Variety;
 import com.greenhouse.backend.farm.dto.variety.VarietyConnectedOrchidGroupResponse;
 import com.greenhouse.backend.farm.dto.variety.VarietyCreateRequest;
+import com.greenhouse.backend.farm.dto.variety.VarietyGeneraResponse;
 import com.greenhouse.backend.farm.dto.variety.VarietyResponse;
 import com.greenhouse.backend.farm.dto.variety.VarietyUpdateRequest;
 import com.greenhouse.backend.farm.repository.inbound.InboundRecordRepository;
@@ -54,8 +55,8 @@ public class VarietyService {
 	}
 
 	@Transactional(readOnly = true)
-	public List<String> getGenera() {
-		return varietyRepository.findDistinctGenera();
+	public VarietyGeneraResponse getGenera() {
+		return new VarietyGeneraResponse(varietyRepository.findDistinctGenera(), varietyRepository.findActiveNames());
 	}
 
 	public VarietyResponse create(VarietyCreateRequest request) {
