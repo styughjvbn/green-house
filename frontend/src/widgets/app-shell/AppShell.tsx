@@ -2,6 +2,7 @@
 
 import Image from "next/image";
 import Link from "next/link";
+import type { Route } from "next";
 import { usePathname } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import type { MouseEventHandler } from "react";
@@ -70,7 +71,7 @@ function NavItem({
 }) {
   return (
     <Link
-      href={href}
+      href={href as Route}
       title={collapsed ? label : undefined}
       onClick={(event) => {
         event.stopPropagation();
@@ -111,7 +112,7 @@ function SalesSubNavItem({
 }) {
   return (
     <Link
-      href={href}
+      href={href as Route}
       onClick={(event) => event.stopPropagation()}
       className={`block overflow-hidden rounded-md px-3 py-2 text-sm font-medium whitespace-nowrap transition ${
         active
@@ -145,7 +146,7 @@ function SubNavFlyout({
         {items.map((item) => (
           <SalesSubNavItem
             key={item.href}
-            href={item.href}
+            href={item.href as Route}
             label={item.label}
             active={activeTabPath === item.tab}
           />
@@ -357,7 +358,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             return (
               <div className="group/nav-item relative" key={item.href}>
                 <NavItem
-                  href={item.href}
+                  href={item.href as Route}
                   label={item.label}
                   icon={item.icon}
                   active={active}
@@ -391,7 +392,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                     {subNavItems.map((subItem) => (
                       <SalesSubNavItem
                         key={subItem.href}
-                        href={subItem.href}
+                        href={subItem.href as Route}
                         label={subItem.label}
                         active={activeTabPath === subItem.tab}
                       />
@@ -418,7 +419,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
               return (
                 <Link
                   key={item.href}
-                  href={item.href}
+                  href={item.href as Route}
                   className={`flex shrink-0 items-center gap-2 rounded-md px-4 py-2 text-base font-medium ${
                     active
                       ? "bg-[#e7f0e6] text-[#214f31]"
@@ -437,7 +438,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
               {activeSubNavigation.map((item) => (
                 <Link
                   key={item.href}
-                  href={item.href}
+                  href={item.href as Route}
                   className={`shrink-0 rounded-md px-3 py-2 text-sm font-medium ${
                     activeTabPath === item.tab
                       ? "bg-[#dcefe1] text-[#1c5f33]"

@@ -7,7 +7,9 @@ import {
   getVarietyGenera,
 } from "../api/inventoryApi";
 import { fetchApi } from "@/shared/api/client";
-import { InventoryPage } from "./InventoryPage";
+import { InventoryInboundPage } from "./InventoryInboundPage";
+import { InventoryMaterialPage } from "./InventoryMaterialPage";
+import { InventoryVarietyPage } from "./InventoryVarietyPage";
 
 export async function InventoryRoutePage({
   activeTab,
@@ -17,15 +19,112 @@ export async function InventoryRoutePage({
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
   const resolvedSearchParams = await searchParams;
-  const varietyKeyword = readSearchParam(
-    resolvedSearchParams,
-    "varietyKeyword",
-  );
-  const varietyGenus = readSearchParam(resolvedSearchParams, "varietyGenus");
-  const varietySale = readSearchParam(resolvedSearchParams, "varietySale");
-  const varietyStatus = readSearchParam(resolvedSearchParams, "varietyStatus");
-  const varietyPage = readNumberParam(resolvedSearchParams, "varietyPage", 0);
-  const varietySize = readNumberParam(resolvedSearchParams, "varietySize", 10);
+
+  if (activeTab === "variety") {
+    const varietyKeyword = readSearchParam(
+      resolvedSearchParams,
+      "varietyKeyword",
+    );
+    const varietyGenus = readSearchParam(resolvedSearchParams, "varietyGenus");
+    const varietySale = readSearchParam(resolvedSearchParams, "varietySale");
+    const varietyStatus = readSearchParam(
+      resolvedSearchParams,
+      "varietyStatus",
+    );
+    const page = readNumberParam(resolvedSearchParams, "page", 0);
+    const size = readNumberParam(resolvedSearchParams, "size", 10);
+
+    const [varieties, varietyGenera, varietyOptions] = await Promise.all([
+      getVarieties({
+        keyword: varietyKeyword,
+        genus: varietyGenus,
+        saleEnabled:
+          varietySale === "사용"
+            ? true
+            : varietySale === "미사용"
+              ? false
+              : undefined,
+        active:
+          varietyStatus === "ACTIVE"
+            ? true
+            : varietyStatus === "INACTIVE"
+              ? false
+              : undefined,
+        page,
+        size,
+      }),
+      getVarietyGenera(),
+      getVarieties({
+        active: true,
+        page: 0,
+        size: 100,
+      }),
+    ]);
+
+    return (
+      <InventoryVarietyPage
+        initialVarietyPage={varieties}
+        varietyGenera={varietyGenera}
+        varietyOptions={varietyOptions.content}
+      />
+    );
+  }
+
+  if (activeTab === "inbound") {
+    const inboundKeyword = readSearchParam(
+      resolvedSearchParams,
+      "inboundKeyword",
+    );
+    const inboundType = readSearchParam(resolvedSearchParams, "inboundType");
+    const inboundStatus = readSearchParam(
+      resolvedSearchParams,
+      "inboundStatus",
+    );
+    const page = readNumberParam(resolvedSearchParams, "page", 0);
+    const size = readNumberParam(resolvedSearchParams, "size", 10);
+
+    const [inboundRecords, varietyOptions, houses] = await Promise.all([
+      getInboundRecords({
+        inboundType:
+          inboundType && inboundType !== "ALL"
+            ? (inboundType as
+                | "FLASK_SEEDLING"
+                | "POTTED_SEEDLING"
+                | "PRODUCT_POT"
+                | "SAMPLE"
+                | "ETC")
+            : undefined,
+        status:
+          inboundStatus && inboundStatus !== "ALL"
+            ? (inboundStatus as
+                | "TEMP_STORED"
+                | "POTTING_PENDING"
+                | "POTTING_IN_PROGRESS"
+                | "POTTED"
+                | "PLACED"
+                | "CANCELED")
+            : undefined,
+        variety: inboundKeyword,
+        page,
+        size,
+      }),
+      getVarieties({
+        active: true,
+        page: 0,
+        size: 100,
+      }),
+      fetchApi<House[]>("/houses"),
+    ]);
+
+    return (
+      <InventoryInboundPage
+        houses={houses}
+        initialInboundPage={inboundRecords}
+        varietyOptions={varietyOptions.content}
+      />
+    );
+  }
+
   const materialKeyword = readSearchParam(
     resolvedSearchParams,
     "materialKeyword",
@@ -42,107 +141,27 @@ export async function InventoryRoutePage({
     resolvedSearchParams,
     "materialStatus",
   );
-  const materialPage = readNumberParam(resolvedSearchParams, "materialPage", 0);
-  const materialSize = readNumberParam(
-    resolvedSearchParams,
-    "materialSize",
-    10,
-  );
-  const inboundKeyword = readSearchParam(
-    resolvedSearchParams,
-    "inboundKeyword",
-  );
-  const inboundType = readSearchParam(resolvedSearchParams, "inboundType");
-  const inboundStatus = readSearchParam(resolvedSearchParams, "inboundStatus");
-  const inboundPage = readNumberParam(resolvedSearchParams, "inboundPage", 0);
-  const inboundSize = readNumberParam(resolvedSearchParams, "inboundSize", 10);
+  const page = readNumberParam(resolvedSearchParams, "page", 0);
+  const size = readNumberParam(resolvedSearchParams, "size", 10);
 
-  const [
-    varieties,
-    varietyGenera,
-    varietyOptions,
-    inboundRecords,
-    materials,
-    houses,
-  ] = await Promise.all([
-    getVarieties({
-      keyword: varietyKeyword,
-      genus: varietyGenus,
-      saleEnabled:
-        varietySale === "사용"
-          ? true
-          : varietySale === "미사용"
-            ? false
-            : undefined,
-      active:
-        varietyStatus === "ACTIVE"
-          ? true
-          : varietyStatus === "INACTIVE"
-            ? false
-            : undefined,
-      page: varietyPage,
-      size: varietySize,
-    }),
-    getVarietyGenera(),
-    getVarieties({
-      active: true,
-      page: 0,
-      size: 100,
-    }),
-    getInboundRecords({
-      inboundType:
-        inboundType && inboundType !== "ALL"
-          ? (inboundType as
-              | "FLASK_SEEDLING"
-              | "POTTED_SEEDLING"
-              | "PRODUCT_POT"
-              | "SAMPLE"
-              | "ETC")
+  const materials = await getMaterials({
+    keyword: materialKeyword,
+    category:
+      materialCategory && materialCategory !== "전체"
+        ? materialCategory
+        : undefined,
+    manufacturer: materialManufacturer,
+    active:
+      materialStatus === "ACTIVE"
+        ? true
+        : materialStatus === "INACTIVE"
+          ? false
           : undefined,
-      status:
-        inboundStatus && inboundStatus !== "ALL"
-          ? (inboundStatus as
-              | "TEMP_STORED"
-              | "POTTING_PENDING"
-              | "POTTING_IN_PROGRESS"
-              | "POTTED"
-              | "PLACED"
-              | "CANCELED")
-          : undefined,
-      variety: inboundKeyword,
-      page: inboundPage,
-      size: inboundSize,
-    }),
-    getMaterials({
-      keyword: materialKeyword,
-      category:
-        materialCategory && materialCategory !== "전체"
-          ? materialCategory
-          : undefined,
-      manufacturer: materialManufacturer,
-      active:
-        materialStatus === "ACTIVE"
-          ? true
-          : materialStatus === "INACTIVE"
-            ? false
-            : undefined,
-      page: materialPage,
-      size: materialSize,
-    }),
-    fetchApi<House[]>("/houses"),
-  ]);
+    page,
+    size,
+  });
 
-  return (
-    <InventoryPage
-      activeTab={activeTab}
-      houses={houses}
-      initialInboundPage={inboundRecords}
-      initialMaterialPage={materials}
-      initialVarietyPage={varieties}
-      varietyGenera={varietyGenera}
-      varietyOptions={varietyOptions.content}
-    />
-  );
+  return <InventoryMaterialPage initialMaterialPage={materials} />;
 }
 
 function readSearchParam(

@@ -1,6 +1,7 @@
 "use client";
 
 import type { House } from "@/entities/farm/types";
+import type { Route } from "next";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useState } from "react";
 import { TabSplit, TabStack } from "@/shared/ui/TabLayout";
@@ -78,7 +79,7 @@ export function InboundSection({
   const updateParams = (updater: (params: URLSearchParams) => void) => {
     const params = new URLSearchParams(searchParams.toString());
     updater(params);
-    router.replace(`${pathname}?${params.toString()}`);
+    router.replace(`${pathname}?${params.toString()}` as Route);
   };
 
   return (
@@ -92,7 +93,7 @@ export function InboundSection({
             ["inboundKeyword", "inboundStatus", "inboundType"].forEach((key) =>
               params.delete(key),
             );
-            params.set("inboundPage", "0");
+            params.set("page", "0");
           });
         }}
         onSubmit={(formData) => {
@@ -115,7 +116,7 @@ export function InboundSection({
               formData.get("inboundKeyword"),
               "",
             );
-            params.set("inboundPage", "0");
+            params.set("page", "0");
           });
         }}
       />
@@ -130,13 +131,13 @@ export function InboundSection({
           onOpenCreate={() => setDialog("create")}
           onPageChange={(pageIndex) =>
             updateParams((params) => {
-              params.set("inboundPage", String(pageIndex));
+              params.set("page", String(pageIndex));
             })
           }
           onPageSizeChange={(pageSize) =>
             updateParams((params) => {
-              params.set("inboundSize", String(pageSize));
-              params.set("inboundPage", "0");
+              params.set("size", String(pageSize));
+              params.set("page", "0");
             })
           }
           onSelect={(id) => {

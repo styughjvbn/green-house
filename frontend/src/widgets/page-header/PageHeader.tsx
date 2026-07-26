@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import type { Route } from "next";
 import { Bell, CalendarDays, ChevronRight, CloudSun } from "lucide-react";
 import type { ReactNode } from "react";
 import { useSyncExternalStore } from "react";
@@ -74,7 +75,7 @@ export function PageHeader({
                         <span className="shrink-0 text-[#9aa49e]">·</span>
                       ) : null}
                       <Link
-                        href={item.href}
+                        href={item.href as Route}
                         className={`inline-flex !h-[15px] !min-h-0 items-center truncate leading-[15px] hover:text-[#214f31] ${
                           item.active
                             ? "font-bold text-[#17251b]"

@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import type { Route } from "next";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import type { SalesSlipPage } from "@/features/sales/model/types";
 import { PaginationControls } from "@/shared/ui/PaginationControls";
@@ -20,7 +21,7 @@ export function PrintPage({ salesSlipPage }: PrintPageProps) {
     const params = new URLSearchParams(searchParams.toString());
     params.set("page", String(nextPage));
     params.set("size", String(nextSize));
-    router.push(`${pathname}?${params.toString()}`);
+    router.push(`${pathname}?${params.toString()}` as Route);
   }
 
   return (

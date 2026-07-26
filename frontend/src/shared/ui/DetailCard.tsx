@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import type { Route } from "next";
 import { MoreHorizontal } from "lucide-react";
 import {
   useEffect,
@@ -140,7 +141,7 @@ export function DetailActionButton({
 
   if (href) {
     return (
-      <Link className={className} href={href}>
+      <Link className={className} href={href as Route}>
         {content}
       </Link>
     );

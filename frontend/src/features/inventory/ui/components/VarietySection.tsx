@@ -1,6 +1,7 @@
 "use client";
 
 import { Pencil, Plus, Trash2 } from "lucide-react";
+import type { Route } from "next";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useMemo, useState } from "react";
 import type { ColumnDef } from "@tanstack/react-table";
@@ -127,7 +128,7 @@ export function VarietySection({
   const updateParams = (updater: (params: URLSearchParams) => void) => {
     const params = new URLSearchParams(searchParams.toString());
     updater(params);
-    router.replace(`${pathname}?${params.toString()}`);
+    router.replace(`${pathname}?${params.toString()}` as Route);
   };
 
   return (
@@ -158,7 +159,7 @@ export function VarietySection({
               formData.get("varietySale"),
               "전체",
             );
-            params.set("varietyPage", "0");
+            params.set("page", "0");
           });
         }}
       >
@@ -215,7 +216,7 @@ export function VarietySection({
                     "varietyStatus",
                     "varietySale",
                   ].forEach((key) => params.delete(key));
-                  params.set("varietyPage", "0");
+                  params.set("page", "0");
                 });
               }}
             />
@@ -253,13 +254,13 @@ export function VarietySection({
           totalPages={pageData.totalPages}
           onPageChange={(pageIndex) =>
             updateParams((params) => {
-              params.set("varietyPage", String(pageIndex));
+              params.set("page", String(pageIndex));
             })
           }
           onPageSizeChange={(pageSize) =>
             updateParams((params) => {
-              params.set("varietySize", String(pageSize));
-              params.set("varietyPage", "0");
+              params.set("size", String(pageSize));
+              params.set("page", "0");
             })
           }
           onRowClick={(row) => {

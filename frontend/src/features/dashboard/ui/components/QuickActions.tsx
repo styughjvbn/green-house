@@ -1,4 +1,5 @@
 import Link from "next/link";
+import type { Route } from "next";
 import {
   ClipboardEdit,
   FileText,
@@ -27,7 +28,7 @@ export function QuickActions() {
           <Link
             key={label}
             className="flex min-h-24 flex-col items-center justify-center gap-2 rounded-md border border-[#dfe5dc] bg-white text-sm font-semibold text-[#344138] hover:bg-[#eef7ec]"
-            href={href}
+            href={href as Route}
           >
             <Icon
               className={`h-8 w-8 ${tone === "blue" ? "text-[#246df2]" : "text-[#159447]"}`}
