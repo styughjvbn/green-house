@@ -2,7 +2,6 @@
 
 import { useRouter } from "next/navigation";
 import { useState } from "react";
-import type { House } from "@/entities/farm/types";
 import {
   cancelInboundRecord,
   createInboundRecord,
@@ -19,11 +18,9 @@ import type {
 import { InboundSection } from "./components/InboundSection";
 
 export function InventoryInboundPage({
-  houses,
   initialInboundPage,
   varietyOptions,
 }: {
-  houses: House[];
   initialInboundPage: InventoryPageResult<InboundRecord>;
   varietyOptions: Variety[];
 }) {
@@ -43,7 +40,6 @@ export function InventoryInboundPage({
   return (
     <main className="flex h-full min-h-0 min-w-0 flex-col">
       <InboundSection
-        houses={houses}
         pageData={initialInboundPage}
         selectedId={selectedInboundId}
         varieties={varietyOptions}

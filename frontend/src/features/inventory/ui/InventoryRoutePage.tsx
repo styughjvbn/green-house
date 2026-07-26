@@ -1,4 +1,3 @@
-import type { House } from "@/entities/farm/types";
 import type { InventoryTab } from "@/shared/config/routes";
 import {
   getInboundRecords,
@@ -6,7 +5,6 @@ import {
   getVarieties,
   getVarietyGenera,
 } from "../api/inventoryApi";
-import { fetchApi } from "@/shared/api/client";
 import { InventoryInboundPage } from "./InventoryInboundPage";
 import { InventoryMaterialPage } from "./InventoryMaterialPage";
 import { InventoryVarietyPage } from "./InventoryVarietyPage";
@@ -78,7 +76,7 @@ export async function InventoryRoutePage({
     const page = readNumberParam(resolvedSearchParams, "page", 0);
     const size = readNumberParam(resolvedSearchParams, "size", 10);
 
-    const [inboundRecords, varietyLookup, houses] = await Promise.all([
+    const [inboundRecords, varietyLookup] = await Promise.all([
       getInboundRecords({
         inboundType:
           inboundType && inboundType !== "ALL"
@@ -104,12 +102,10 @@ export async function InventoryRoutePage({
         size,
       }),
       getVarietyGenera(),
-      fetchApi<House[]>("/houses"),
     ]);
 
     return (
       <InventoryInboundPage
-        houses={houses}
         initialInboundPage={inboundRecords}
         varietyOptions={varietyLookup.varieties}
       />
