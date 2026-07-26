@@ -1,13 +1,14 @@
 "use client";
 
 import { useState } from "react";
+import type { WorkRecordTab } from "@/shared/config/routes";
 import type { WorkRecordManagerProps } from "../model/types";
 import { useWorkRecordManager } from "../model/useWorkRecordManager";
 import { WorkOperationPanel } from "./components/HouseWorkOperationPanel";
 import { WorkOperationSchedule } from "./components/WorkOperationSchedule";
 import { WorkOperationList } from "./components/WorkOperationList";
 
-export type WorkManagementTab = "LIST" | "CALENDAR" | "HISTORY";
+export type WorkManagementTab = WorkRecordTab;
 
 export function WorkRecordManager(
   props: WorkRecordManagerProps & { activeTab: WorkManagementTab },
@@ -28,7 +29,7 @@ export function WorkRecordManager(
           {manager.errorMessage}
         </div>
       ) : null}
-      {activeTab === "LIST" && showOperationForm ? (
+      {activeTab === "list" && showOperationForm ? (
         <WorkOperationPanel
           houses={props.houses}
           initialWorkTypeCode={operationInitialTypeCode}
@@ -41,7 +42,7 @@ export function WorkRecordManager(
         />
       ) : null}
 
-      {activeTab === "LIST" ? (
+      {activeTab === "list" ? (
         <WorkOperationList
           bedZones={manager.bedZones}
           houses={props.houses}
@@ -54,7 +55,7 @@ export function WorkRecordManager(
         />
       ) : null}
 
-      {activeTab === "CALENDAR" ? (
+      {activeTab === "calendar" ? (
         <div className="min-h-0 flex-1 overflow-auto">
           <WorkOperationSchedule
             bedZones={manager.bedZones}
@@ -65,7 +66,7 @@ export function WorkRecordManager(
         </div>
       ) : null}
 
-      {activeTab === "HISTORY" ? (
+      {activeTab === "history" ? (
         <WorkOperationList
           bedZones={manager.bedZones}
           houses={props.houses}

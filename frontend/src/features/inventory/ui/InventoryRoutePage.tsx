@@ -1,4 +1,5 @@
 import type { House } from "@/entities/farm/types";
+import type { InventoryTab } from "@/shared/config/routes";
 import {
   getInboundRecords,
   getMaterials,
@@ -12,10 +13,10 @@ export async function InventoryRoutePage({
   activeTab,
   searchParams,
 }: {
-  activeTab: "VARIETY" | "INBOUND" | "MATERIAL";
-  searchParams?: Promise<Record<string, string | string[] | undefined>>;
+  activeTab: InventoryTab;
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
-  const resolvedSearchParams = searchParams ? await searchParams : undefined;
+  const resolvedSearchParams = await searchParams;
   const varietyKeyword = readSearchParam(
     resolvedSearchParams,
     "varietyKeyword",

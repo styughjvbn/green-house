@@ -80,7 +80,7 @@ export function SalesManager({
 
   return (
     <TabLayout>
-      {activeTab === "SLIPS" ? (
+      {activeTab === "slips" ? (
         <>
           <SalesFilters
             partners={sales.partners}
@@ -139,12 +139,12 @@ export function SalesManager({
             />
           </TabSplit>
         </>
-      ) : activeTab === "AUCTION" ? (
+      ) : activeTab === "auction" ? (
         <AuctionTrackingView
           initialPage={auctionPage}
           initialSummary={auctionSummary}
         />
-      ) : activeTab === "SETTLEMENT" ? (
+      ) : activeTab === "settlement" ? (
         <AuctionSettlementView initialSettlements={auctionSettlements} />
       ) : (
         <>

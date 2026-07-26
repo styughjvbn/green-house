@@ -3,6 +3,7 @@
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import type { House } from "@/entities/farm/types";
+import type { InventoryTab } from "@/shared/config/routes";
 import {
   cancelInboundRecord,
   createMaterial,
@@ -42,7 +43,7 @@ export function InventoryPage({
   varietyGenera,
   varietyOptions,
 }: {
-  activeTab: "VARIETY" | "INBOUND" | "MATERIAL";
+  activeTab: InventoryTab;
   houses: House[];
   initialInboundPage: InventoryPageResult<InboundRecord>;
   initialMaterialPage: InventoryPageResult<Material>;
@@ -72,7 +73,7 @@ export function InventoryPage({
     : (initialVarietyPage.content[0]?.id ?? 0);
 
   useEffect(() => {
-    if (!visibleSelectedVarietyId || activeTab !== "VARIETY") {
+    if (!visibleSelectedVarietyId || activeTab !== "variety") {
       return;
     }
 
@@ -153,7 +154,7 @@ export function InventoryPage({
 
   return (
     <main className="flex h-full min-h-0 min-w-0 flex-col">
-      {activeTab === "VARIETY" ? (
+      {activeTab === "variety" ? (
         <div id="variety-management" className="h-full min-h-0">
           <VarietySection
             connectedGroups={selectedConnectedGroups}
@@ -170,7 +171,7 @@ export function InventoryPage({
         </div>
       ) : null}
 
-      {activeTab === "INBOUND" ? (
+      {activeTab === "inbound" ? (
         <InboundSection
           houses={houses}
           pageData={initialInboundPage}
@@ -198,7 +199,7 @@ export function InventoryPage({
         />
       ) : null}
 
-      {activeTab === "MATERIAL" ? (
+      {activeTab === "material" ? (
         <div id="material-management" className="h-full min-h-0">
           <MaterialSection
             pageData={initialMaterialPage}

@@ -6,8 +6,9 @@ import type {
   PartnerType,
   SalesSlip,
 } from "@/entities/farm/types";
+import type { SalesTab } from "@/shared/config/routes";
 
-export type SalesTab = "SLIPS" | "AUCTION" | "SETTLEMENT" | "PARTNERS";
+export type { SalesTab };
 
 export type SalesManagerProps = {
   activeTab: SalesTab;

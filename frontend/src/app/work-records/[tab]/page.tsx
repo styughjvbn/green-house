@@ -2,14 +2,9 @@ import { notFound } from "next/navigation";
 import type { House, WorkType } from "@/entities/farm/types";
 import { WorkRecordManager } from "@/features/work-record/ui/WorkRecordManager";
 import { fetchApi } from "@/shared/api/client";
+import { isWorkRecordTab } from "@/shared/config/routes";
 
 export const dynamic = "force-dynamic";
-
-const WORK_TABS = {
-  list: "LIST",
-  calendar: "CALENDAR",
-  history: "HISTORY",
-} as const;
 
 export default async function Page({
   params,
@@ -17,8 +12,7 @@ export default async function Page({
   params: Promise<{ tab: string }>;
 }) {
   const { tab } = await params;
-  const activeTab = WORK_TABS[tab as keyof typeof WORK_TABS];
-  if (!activeTab) notFound();
+  if (!isWorkRecordTab(tab)) notFound();
 
   const [workTypes, houses] = await Promise.all([
     fetchApi<WorkType[]>("/work-types"),
@@ -28,9 +22,9 @@ export default async function Page({
   return (
     <main className="h-full min-h-0">
       <WorkRecordManager
-        activeTab={activeTab}
+        activeTab={tab}
         houses={houses}
-        key={activeTab}
+        key={tab}
         workTypes={workTypes}
       />
     </main>

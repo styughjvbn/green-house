@@ -1,22 +1,6 @@
 import { redirect } from "next/navigation";
-import { appendSearchParams } from "@/shared/lib/route";
+import { ANALYTICS_ROUTE, DEFAULT_ANALYTICS_TAB } from "@/shared/config/routes";
 
-export default async function Page({
-  searchParams,
-}: {
-  searchParams?: Promise<Record<string, string | string[] | undefined>>;
-}) {
-  const resolvedSearchParams = searchParams ? await searchParams : undefined;
-  const requestedTab = resolvedSearchParams?.tab;
-  const tab = Array.isArray(requestedTab) ? requestedTab[0] : requestedTab;
-  const path =
-    {
-      SALES: "/analytics/sales",
-      VARIETY: "/analytics/variety",
-      CUSTOMER: "/analytics/customer",
-      SPACE: "/analytics/space",
-      WORK: "/analytics/work",
-    }[tab ?? "SALES"] ?? "/analytics/sales";
-
-  redirect(appendSearchParams(path, resolvedSearchParams, ["tab"]));
+export default function Page() {
+  redirect(ANALYTICS_ROUTE.tab(DEFAULT_ANALYTICS_TAB));
 }

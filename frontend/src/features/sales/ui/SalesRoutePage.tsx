@@ -15,7 +15,7 @@ export async function SalesRoutePage({
   activeTab: SalesTab;
   createSlip?: boolean;
 }) {
-  if (activeTab === "AUCTION") {
+  if (activeTab === "auction") {
     const [auctionPage, auctionSummary] = await Promise.all([
       getAuctionLots(),
       getAuctionTrackingSummary(),
@@ -31,7 +31,7 @@ export async function SalesRoutePage({
     );
   }
 
-  if (activeTab === "SETTLEMENT") {
+  if (activeTab === "settlement") {
     const auctionSettlements = await getAuctionSettlements();
     return (
       <SalesPage
@@ -42,7 +42,7 @@ export async function SalesRoutePage({
     );
   }
 
-  if (activeTab === "PARTNERS") {
+  if (activeTab === "partners") {
     const partners = await getBusinessPartners();
     return (
       <SalesPage

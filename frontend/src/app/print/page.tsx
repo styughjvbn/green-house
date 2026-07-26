@@ -5,9 +5,9 @@ export const dynamic = "force-dynamic";
 export default async function Page({
   searchParams,
 }: {
-  searchParams?: Promise<Record<string, string | string[] | undefined>>;
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
-  const resolvedSearchParams = searchParams ? await searchParams : undefined;
+  const resolvedSearchParams = await searchParams;
   const page = parsePositiveInt(resolvedSearchParams?.page, 0);
   const size = parsePositiveInt(resolvedSearchParams?.size, 10);
   const salesSlipPage = await getPrintableSalesSlips(page, size);

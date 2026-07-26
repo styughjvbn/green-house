@@ -1,20 +1,9 @@
 import { redirect } from "next/navigation";
-import { appendSearchParams } from "@/shared/lib/route";
+import {
+  DEFAULT_WORK_RECORD_TAB,
+  WORK_RECORD_ROUTE,
+} from "@/shared/config/routes";
 
-export default async function Page({
-  searchParams,
-}: {
-  searchParams?: Promise<Record<string, string | string[] | undefined>>;
-}) {
-  const resolvedSearchParams = searchParams ? await searchParams : undefined;
-  const requestedTab = resolvedSearchParams?.tab;
-  const tab = Array.isArray(requestedTab) ? requestedTab[0] : requestedTab;
-  const path =
-    {
-      LIST: "/work-records/list",
-      CALENDAR: "/work-records/calendar",
-      HISTORY: "/work-records/history",
-    }[tab ?? "LIST"] ?? "/work-records/list";
-
-  redirect(appendSearchParams(path, resolvedSearchParams, ["tab"]));
+export default function Page() {
+  redirect(WORK_RECORD_ROUTE.tab(DEFAULT_WORK_RECORD_TAB));
 }

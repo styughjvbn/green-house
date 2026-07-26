@@ -1,20 +1,6 @@
 import { redirect } from "next/navigation";
-import { appendSearchParams } from "@/shared/lib/route";
+import { DEFAULT_INVENTORY_TAB, INVENTORY_ROUTE } from "@/shared/config/routes";
 
-export default async function Page({
-  searchParams,
-}: {
-  searchParams?: Promise<Record<string, string | string[] | undefined>>;
-}) {
-  const resolvedSearchParams = searchParams ? await searchParams : undefined;
-  const requestedTab = resolvedSearchParams?.tab;
-  const tab = Array.isArray(requestedTab) ? requestedTab[0] : requestedTab;
-  const path =
-    {
-      VARIETY: "/inventory/variety",
-      INBOUND: "/inventory/inbound",
-      MATERIAL: "/inventory/material",
-    }[tab ?? "VARIETY"] ?? "/inventory/variety";
-
-  redirect(appendSearchParams(path, resolvedSearchParams, ["tab"]));
+export default function Page() {
+  redirect(INVENTORY_ROUTE.tab(DEFAULT_INVENTORY_TAB));
 }

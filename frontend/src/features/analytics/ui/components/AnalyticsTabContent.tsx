@@ -25,19 +25,19 @@ export function AnalyticsTabContent({
   props: AnalyticsPageProps;
   view: AnalyticsViewModel;
 }) {
-  if (tab === "SALES") return <SalesTab view={view} />;
-  if (tab === "VARIETY")
+  if (tab === "sales") return <SalesTab view={view} />;
+  if (tab === "variety")
     return (
       <VarietyTab values={view.varietySales} saleable={view.saleableQuantity} />
     );
-  if (tab === "CUSTOMER")
+  if (tab === "customer")
     return (
       <BusinessPartnerTab
         partnerStats={view.partnerStats}
         values={view.partnerSales}
       />
     );
-  if (tab === "SPACE") return <SpaceTab props={props} />;
+  if (tab === "space") return <SpaceTab props={props} />;
   return <WorkTab props={props} />;
 }
 
