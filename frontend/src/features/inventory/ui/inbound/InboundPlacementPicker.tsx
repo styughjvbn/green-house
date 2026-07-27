@@ -8,15 +8,17 @@ import {
 
 export type InboundPlacementSelection = FarmPlacementSelection;
 
+type InboundPlacementFieldProps = {
+  houses: House[];
+  value: InboundPlacementSelection | null;
+  onChange: (value: InboundPlacementSelection) => void;
+};
+
 export function InboundPlacementField({
   houses,
   value,
   onChange,
-}: {
-  houses: House[];
-  value: InboundPlacementSelection | null;
-  onChange: (value: InboundPlacementSelection) => void;
-}) {
+}: InboundPlacementFieldProps) {
   return (
     <FarmPlacementField
       dialogDescription="구역을 고른 뒤 입고 난 묶음이 차지할 시작 칸과 끝 칸을 지정하세요."

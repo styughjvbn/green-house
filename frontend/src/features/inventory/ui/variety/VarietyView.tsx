@@ -1,8 +1,6 @@
 "use client";
 
 import { Pencil, Plus, Trash2 } from "lucide-react";
-import type { Route } from "next";
-import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useMemo, useState } from "react";
 import type { ColumnDef } from "@tanstack/react-table";
 import type { Page } from "@/shared/api/page";
@@ -23,11 +21,21 @@ import {
 } from "@/shared/ui/FilterControls";
 import { TabSplit, TabStack } from "@/shared/ui/TabLayout";
 import { StatusBadge } from "@/shared/ui/StatusBadge";
-import type { Variety, VarietyPayload } from "../../model/types";
-import { DetailRow, Field, inputClass } from "./InventoryPrimitives";
-import { PotSizeInput } from "./PotSizeInput";
+import type {
+  Variety,
+  VarietyFilterState,
+  VarietyPayload,
+} from "../../model/types";
+import {
+  DetailRow,
+  Field,
+  inputClass,
+} from "../components/InventoryPrimitives";
+import { PotSizeInput } from "../components/PotSizeInput";
 
-export function VarietySection({
+export function VarietyView({
+  filters,
+  loading,
   pageData,
   connectedGroups,
   genera,
@@ -38,7 +46,14 @@ export function VarietySection({
   onUpdate,
   onDeactivate,
   onDelete,
+  onFilterChange,
+  onPageChange,
+  onPageSizeChange,
+  onReset,
+  onSearch,
 }: {
+  filters: VarietyFilterState;
+  loading: boolean;
   pageData: Page<Variety>;
   connectedGroups: Variety["connectedGroups"];
   genera: string[];
@@ -49,21 +64,22 @@ export function VarietySection({
   onUpdate: (varietyId: number, payload: VarietyPayload) => Promise<void>;
   onDeactivate: (varietyId: number) => Promise<void>;
   onDelete: (varietyId: number) => Promise<void>;
+  onFilterChange: <K extends keyof VarietyFilterState>(
+    field: K,
+    value: VarietyFilterState[K],
+  ) => void;
+  onPageChange: (page: number) => void;
+  onPageSizeChange: (size: number) => void;
+  onReset: () => void;
+  onSearch: () => void;
 }) {
-  const router = useRouter();
-  const pathname = usePathname();
-  const searchParams = useSearchParams();
-  const keyword = searchParams.get("varietyKeyword") ?? "";
-  const genus = searchParams.get("varietyGenus") ?? "전체";
-  const status = searchParams.get("varietyStatus") ?? "전체";
-  const sale = searchParams.get("varietySale") ?? "전체";
   const selected =
     pageData.content.find((item) => item.id === selectedId) ??
     pageData.content[0];
   const connectedGroupCountLabel = loadingGroups
     ? selected?.connectedGroupCount
     : connectedGroups.length;
-  const genusOptions = useMemo(() => ["전체", ...new Set(genera)], [genera]);
+  const genusOptions = useMemo(() => [...new Set(genera)], [genera]);
   const [editing, setEditing] = useState(false);
   const [form, setForm] = useState<VarietyPayload>({
     genus: selected?.genus ?? "",
@@ -122,42 +138,13 @@ export function VarietySection({
     [],
   );
 
-  const updateParams = (updater: (params: URLSearchParams) => void) => {
-    const params = new URLSearchParams(searchParams.toString());
-    updater(params);
-    router.replace(`${pathname}?${params.toString()}` as Route);
-  };
-
   return (
     <TabStack>
       <form
-        key={`${genus}:${keyword}:${status}:${sale}`}
         className="shrink-0"
         onSubmit={(event) => {
           event.preventDefault();
-          const formData = new FormData(event.currentTarget);
-
-          updateParams((params) => {
-            setQueryParam(params, "varietyGenus", formData.get("varietyGenus"));
-            setQueryParam(
-              params,
-              "varietyKeyword",
-              formData.get("varietyKeyword"),
-            );
-            setQueryParam(
-              params,
-              "varietyStatus",
-              formData.get("varietyStatus"),
-              "전체",
-            );
-            setQueryParam(
-              params,
-              "varietySale",
-              formData.get("varietySale"),
-              "전체",
-            );
-            params.set("page", "0");
-          });
+          onSearch();
         }}
       >
         <FilterPanel>
@@ -165,9 +152,13 @@ export function VarietySection({
             <FilterField label="속">
               <select
                 className={inputClass}
-                defaultValue={genus}
+                value={filters.genus}
                 name="varietyGenus"
+                onChange={(event) =>
+                  onFilterChange("genus", event.target.value)
+                }
               >
+                <option value="">전체</option>
                 {genusOptions.map((value) => (
                   <option key={value}>{value}</option>
                 ))}
@@ -176,18 +167,27 @@ export function VarietySection({
             <FilterField label="품종명">
               <input
                 className={inputClass}
-                defaultValue={keyword}
+                value={filters.keyword}
                 name="varietyKeyword"
                 placeholder="품종명을 입력하세요"
+                onChange={(event) =>
+                  onFilterChange("keyword", event.target.value)
+                }
               />
             </FilterField>
             <FilterField label="상태">
               <select
                 className={inputClass}
-                defaultValue={status}
+                value={filters.status}
                 name="varietyStatus"
+                onChange={(event) =>
+                  onFilterChange(
+                    "status",
+                    event.target.value as VarietyFilterState["status"],
+                  )
+                }
               >
-                <option>전체</option>
+                <option value="">전체</option>
                 <option value="ACTIVE">활성</option>
                 <option value="INACTIVE">비활성</option>
               </select>
@@ -195,28 +195,21 @@ export function VarietySection({
             <FilterField label="판매 사용">
               <select
                 className={inputClass}
-                defaultValue={sale}
+                value={filters.saleEnabled}
                 name="varietySale"
+                onChange={(event) =>
+                  onFilterChange(
+                    "saleEnabled",
+                    event.target.value as VarietyFilterState["saleEnabled"],
+                  )
+                }
               >
-                <option>전체</option>
-                <option>사용</option>
-                <option>미사용</option>
+                <option value="">전체</option>
+                <option value="true">사용</option>
+                <option value="false">미사용</option>
               </select>
             </FilterField>
-            <FilterResetButton
-              className="h-9 lg:mt-5"
-              onClick={() => {
-                updateParams((params) => {
-                  [
-                    "varietyGenus",
-                    "varietyKeyword",
-                    "varietyStatus",
-                    "varietySale",
-                  ].forEach((key) => params.delete(key));
-                  params.set("page", "0");
-                });
-              }}
-            />
+            <FilterResetButton className="h-9 lg:mt-5" onClick={onReset} />
             <FilterSearchButton className="h-9 lg:mt-5" />
           </FilterGrid>
         </FilterPanel>
@@ -241,6 +234,7 @@ export function VarietySection({
           data={pageData.content}
           emptyMessage="조건에 맞는 품종이 없습니다."
           getRowId={(row) => String(row.id)}
+          isLoading={loading}
           pageIndex={pageData.page}
           pageSize={pageData.size}
           pageSizeOptions={[10, 20, 50]}
@@ -249,17 +243,8 @@ export function VarietySection({
           title="품종 목록"
           totalLabel={`총 ${pageData.totalElements.toLocaleString()}개`}
           totalPages={pageData.totalPages}
-          onPageChange={(pageIndex) =>
-            updateParams((params) => {
-              params.set("page", String(pageIndex));
-            })
-          }
-          onPageSizeChange={(pageSize) =>
-            updateParams((params) => {
-              params.set("size", String(pageSize));
-              params.set("page", "0");
-            })
-          }
+          onPageChange={onPageChange}
+          onPageSizeChange={onPageSizeChange}
           onRowClick={(row) => {
             setEditing(false);
             onSelect(row.id);
@@ -564,20 +549,4 @@ export function VarietySection({
       </TabSplit>
     </TabStack>
   );
-}
-
-function setQueryParam(
-  params: URLSearchParams,
-  key: string,
-  value: FormDataEntryValue | null,
-  emptyValue = "전체",
-) {
-  const normalized = typeof value === "string" ? value.trim() : "";
-
-  if (!normalized || normalized === emptyValue) {
-    params.delete(key);
-    return;
-  }
-
-  params.set(key, normalized);
 }

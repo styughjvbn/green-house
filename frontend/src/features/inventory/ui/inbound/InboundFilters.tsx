@@ -1,6 +1,6 @@
 "use client";
 
-import type { InboundStatus, InboundType } from "../../../model/types";
+import type { InboundFilterState } from "../../model/types";
 import {
   FilterField,
   FilterGrid,
@@ -11,20 +11,21 @@ import {
 import {
   INBOUND_STATUS_LABELS,
   INBOUND_TYPE_LABELS,
-} from "../../../lib/inboundUi";
-import { inputClass } from "../InventoryPrimitives";
+} from "../../lib/inboundUi";
+import { inputClass } from "../components/InventoryPrimitives";
 
-export function InboundFilterCard({
-  inboundType,
-  status,
-  keyword,
-  onSubmit,
+export function InboundFilters({
+  filters,
+  onChange,
+  onSearch,
   onReset,
 }: {
-  inboundType: InboundType | "ALL";
-  status: InboundStatus | "ALL";
-  keyword: string;
-  onSubmit: (formData: FormData) => void;
+  filters: InboundFilterState;
+  onChange: <K extends keyof InboundFilterState>(
+    field: K,
+    value: InboundFilterState[K],
+  ) => void;
+  onSearch: () => void;
   onReset: () => void;
 }) {
   return (
@@ -32,7 +33,7 @@ export function InboundFilterCard({
       className="shrink-0"
       onSubmit={(event) => {
         event.preventDefault();
-        onSubmit(new FormData(event.currentTarget));
+        onSearch();
       }}
     >
       <FilterPanel>
@@ -40,10 +41,16 @@ export function InboundFilterCard({
           <FilterField label="입고 유형">
             <select
               className={inputClass}
-              defaultValue={inboundType}
+              value={filters.inboundType}
               name="inboundType"
+              onChange={(event) =>
+                onChange(
+                  "inboundType",
+                  event.target.value as InboundFilterState["inboundType"],
+                )
+              }
             >
-              <option value="ALL">전체</option>
+              <option value="">전체</option>
               {Object.entries(INBOUND_TYPE_LABELS).map(([value, label]) => (
                 <option key={value} value={value}>
                   {label}
@@ -54,10 +61,16 @@ export function InboundFilterCard({
           <FilterField label="상태">
             <select
               className={inputClass}
-              defaultValue={status}
+              value={filters.status}
               name="inboundStatus"
+              onChange={(event) =>
+                onChange(
+                  "status",
+                  event.target.value as InboundFilterState["status"],
+                )
+              }
             >
-              <option value="ALL">전체</option>
+              <option value="">전체</option>
               {Object.entries(INBOUND_STATUS_LABELS).map(([value, label]) => (
                 <option key={value} value={value}>
                   {label}
@@ -68,9 +81,10 @@ export function InboundFilterCard({
           <FilterField label="품종명">
             <input
               className={inputClass}
-              defaultValue={keyword}
+              value={filters.keyword}
               name="inboundKeyword"
               placeholder="품종명, 위치"
+              onChange={(event) => onChange("keyword", event.target.value)}
             />
           </FilterField>
           <FilterResetButton className="h-9 lg:mt-5" onClick={onReset} />

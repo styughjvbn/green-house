@@ -1,8 +1,6 @@
 "use client";
 
 import { Pencil, Plus, Trash2 } from "lucide-react";
-import type { Route } from "next";
-import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useMemo, useState } from "react";
 import type { ColumnDef } from "@tanstack/react-table";
 import type { Page } from "@/shared/api/page";
@@ -22,10 +20,20 @@ import {
 } from "@/shared/ui/FilterControls";
 import { TabSplit, TabStack } from "@/shared/ui/TabLayout";
 import { StatusBadge } from "@/shared/ui/StatusBadge";
-import type { Material, MaterialPayload } from "../../model/types";
-import { DetailRow, Field, inputClass } from "./InventoryPrimitives";
+import type {
+  Material,
+  MaterialFilterState,
+  MaterialPayload,
+} from "../../model/types";
+import {
+  DetailRow,
+  Field,
+  inputClass,
+} from "../components/InventoryPrimitives";
 
-export function MaterialSection({
+export function MaterialView({
+  filters,
+  loading,
   pageData,
   selectedId,
   onSelect,
@@ -33,7 +41,14 @@ export function MaterialSection({
   onUpdate,
   onDeactivate,
   onDelete,
+  onFilterChange,
+  onPageChange,
+  onPageSizeChange,
+  onReset,
+  onSearch,
 }: {
+  filters: MaterialFilterState;
+  loading: boolean;
   pageData: Page<Material>;
   selectedId: number;
   onSelect: (id: number) => void;
@@ -41,21 +56,19 @@ export function MaterialSection({
   onUpdate: (materialId: number, payload: MaterialPayload) => Promise<void>;
   onDeactivate: (materialId: number) => Promise<void>;
   onDelete: (materialId: number) => Promise<void>;
+  onFilterChange: <K extends keyof MaterialFilterState>(
+    field: K,
+    value: MaterialFilterState[K],
+  ) => void;
+  onPageChange: (page: number) => void;
+  onPageSizeChange: (size: number) => void;
+  onReset: () => void;
+  onSearch: () => void;
 }) {
-  const router = useRouter();
-  const pathname = usePathname();
-  const searchParams = useSearchParams();
-  const category = searchParams.get("materialCategory") ?? "전체";
-  const keyword = searchParams.get("materialKeyword") ?? "";
-  const manufacturer = searchParams.get("materialManufacturer") ?? "";
-  const status = searchParams.get("materialStatus") ?? "전체";
   const selected =
     pageData.content.find((item) => item.id === selectedId) ??
     pageData.content[0];
-  const categories = useMemo(
-    () => ["전체", ...new Set(pageData.content.map((item) => item.category))],
-    [pageData.content],
-  );
+  const categories = ["자재", "농약", "비료"];
   const [editing, setEditing] = useState(false);
   const [form, setForm] = useState<MaterialPayload>({
     category: selected?.category ?? "자재",
@@ -105,47 +118,13 @@ export function MaterialSection({
     ],
     [],
   );
-  const updateParams = (updater: (params: URLSearchParams) => void) => {
-    const params = new URLSearchParams(searchParams.toString());
-    updater(params);
-    router.replace(`${pathname}?${params.toString()}` as Route);
-  };
-
   return (
     <TabStack>
       <form
         className="shrink-0"
         onSubmit={(event) => {
           event.preventDefault();
-          const formData = new FormData(event.currentTarget);
-
-          updateParams((params) => {
-            setQueryParam(
-              params,
-              "materialCategory",
-              formData.get("materialCategory"),
-              "전체",
-            );
-            setQueryParam(
-              params,
-              "materialKeyword",
-              formData.get("materialKeyword"),
-              "",
-            );
-            setQueryParam(
-              params,
-              "materialManufacturer",
-              formData.get("materialManufacturer"),
-              "",
-            );
-            setQueryParam(
-              params,
-              "materialStatus",
-              formData.get("materialStatus"),
-              "전체",
-            );
-            params.set("page", "0");
-          });
+          onSearch();
         }}
       >
         <FilterPanel>
@@ -153,9 +132,13 @@ export function MaterialSection({
             <FilterField label="자재 종류">
               <select
                 className={inputClass}
-                defaultValue={category}
+                value={filters.category}
                 name="materialCategory"
+                onChange={(event) =>
+                  onFilterChange("category", event.target.value)
+                }
               >
+                <option value="">전체</option>
                 {categories.map((value) => (
                   <option key={value}>{value}</option>
                 ))}
@@ -164,44 +147,43 @@ export function MaterialSection({
             <FilterField label="자재명">
               <input
                 className={inputClass}
-                defaultValue={keyword}
+                value={filters.keyword}
                 name="materialKeyword"
                 placeholder="자재명을 입력하세요"
+                onChange={(event) =>
+                  onFilterChange("keyword", event.target.value)
+                }
               />
             </FilterField>
             <FilterField label="제조사">
               <input
                 className={inputClass}
-                defaultValue={manufacturer}
+                value={filters.manufacturer}
                 name="materialManufacturer"
                 placeholder="제조사를 입력하세요"
+                onChange={(event) =>
+                  onFilterChange("manufacturer", event.target.value)
+                }
               />
             </FilterField>
             <FilterField label="상태">
               <select
                 className={inputClass}
-                defaultValue={status}
+                value={filters.status}
                 name="materialStatus"
+                onChange={(event) =>
+                  onFilterChange(
+                    "status",
+                    event.target.value as MaterialFilterState["status"],
+                  )
+                }
               >
-                <option>전체</option>
+                <option value="">전체</option>
                 <option value="ACTIVE">활성</option>
                 <option value="INACTIVE">비활성</option>
               </select>
             </FilterField>
-            <FilterResetButton
-              className="h-9 lg:mt-5"
-              onClick={() => {
-                updateParams((params) => {
-                  [
-                    "materialCategory",
-                    "materialKeyword",
-                    "materialManufacturer",
-                    "materialStatus",
-                  ].forEach((key) => params.delete(key));
-                  params.set("page", "0");
-                });
-              }}
-            />
+            <FilterResetButton className="h-9 lg:mt-5" onClick={onReset} />
             <FilterSearchButton className="h-9 lg:mt-5" />
           </FilterGrid>
         </FilterPanel>
@@ -223,6 +205,7 @@ export function MaterialSection({
           data={pageData.content}
           emptyMessage="조건에 맞는 자재가 없습니다."
           getRowId={(row) => String(row.id)}
+          isLoading={loading}
           pageIndex={pageData.page}
           pageSize={pageData.size}
           pageSizeOptions={[10, 20, 50]}
@@ -231,17 +214,8 @@ export function MaterialSection({
           title="자재 목록"
           totalLabel={`총 ${pageData.totalElements.toLocaleString()}개`}
           totalPages={pageData.totalPages}
-          onPageChange={(pageIndex) =>
-            updateParams((params) => {
-              params.set("page", String(pageIndex));
-            })
-          }
-          onPageSizeChange={(pageSize) =>
-            updateParams((params) => {
-              params.set("size", String(pageSize));
-              params.set("page", "0");
-            })
-          }
+          onPageChange={onPageChange}
+          onPageSizeChange={onPageSizeChange}
           onRowClick={(row) => {
             setEditing(false);
             onSelect(row.id);
@@ -446,20 +420,4 @@ export function MaterialSection({
       </TabSplit>
     </TabStack>
   );
-}
-
-function setQueryParam(
-  params: URLSearchParams,
-  key: string,
-  value: FormDataEntryValue | null,
-  emptyValue = "",
-) {
-  const normalized = typeof value === "string" ? value.trim() : "";
-
-  if (!normalized || normalized === emptyValue) {
-    params.delete(key);
-    return;
-  }
-
-  params.set(key, normalized);
 }

@@ -10,15 +10,19 @@ import { StatusBadge } from "@/shared/ui/StatusBadge";
 import type {
   InboundRecord,
   InboundRecordUpdatePayload,
-} from "../../../model/types";
+} from "../../model/types";
 import {
   createInboundEditForm,
   INBOUND_STATUS_LABELS,
   INBOUND_TYPE_LABELS,
   toOptionalNumber,
-} from "../../../lib/inboundUi";
-import { DetailRow, Field, inputClass } from "../InventoryPrimitives";
-import { PotSizeInput } from "../PotSizeInput";
+} from "../../lib/inboundUi";
+import {
+  DetailRow,
+  Field,
+  inputClass,
+} from "../components/InventoryPrimitives";
+import { PotSizeInput } from "../components/PotSizeInput";
 import { InboundPlacementTypeField } from "./InboundPlacementTypeField";
 
 export function InboundDetailCard({

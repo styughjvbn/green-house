@@ -7,14 +7,15 @@ import type { Page } from "@/shared/api/page";
 import { formatShortDate } from "@/shared/lib/dateFormat";
 import { DataTable } from "@/shared/ui/DataTable";
 import { StatusBadge } from "@/shared/ui/StatusBadge";
-import type { InboundRecord } from "../../../model/types";
+import type { InboundRecord } from "../../model/types";
 import {
   INBOUND_STATUS_LABELS,
   INBOUND_TYPE_LABELS,
-} from "../../../lib/inboundUi";
+} from "../../lib/inboundUi";
 
-export function InboundListCard({
+export function InboundList({
   pageData,
+  loading,
   selectedId,
   onSelect,
   onOpenCreate,
@@ -22,6 +23,7 @@ export function InboundListCard({
   onPageSizeChange,
 }: {
   pageData: Page<InboundRecord>;
+  loading: boolean;
   selectedId?: number;
   onSelect: (id: number) => void;
   onOpenCreate: () => void;
@@ -104,6 +106,7 @@ export function InboundListCard({
       data={pageData.content}
       emptyMessage="조건에 맞는 입고 기록이 없습니다."
       getRowId={(row) => String(row.id)}
+      isLoading={loading}
       pageIndex={pageData.page}
       pageSize={pageData.size}
       pageSizeOptions={[10, 20, 50]}

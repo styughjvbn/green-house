@@ -1,78 +1,77 @@
 "use client";
 
-import { useRouter } from "next/navigation";
 import { useState } from "react";
 import type { Page } from "@/shared/api/page";
+import { usePagedListUrlActions } from "@/shared/api/usePagedListUrlActions";
+import { TabError } from "@/shared/ui/TabLayout";
 import {
-  createMaterial,
-  deactivateMaterial,
-  deleteMaterial,
-  updateMaterial,
-} from "../api/inventoryApi";
-import type { Material, MaterialPayload } from "../model/types";
+  MATERIAL_FILTER_KEYS,
+  writeMaterialFilterParams,
+} from "../lib/inventoryUrlFilters";
+import { useMaterials } from "../model/useMaterials";
+import type {
+  Material,
+  MaterialFilterState,
+  MaterialPayload,
+} from "../model/types";
 import { InventoryDialog } from "./components/InventoryDialog";
-import { MaterialSection } from "./components/MaterialSection";
+import { MaterialView } from "./material/MaterialView";
 
 export function InventoryMaterialPage({
+  initialFilters,
   initialMaterialPage,
 }: {
+  initialFilters: MaterialFilterState;
   initialMaterialPage: Page<Material>;
 }) {
-  const router = useRouter();
-  const [selectedMaterialId, setSelectedMaterialId] = useState(
-    initialMaterialPage.content[0]?.id ?? 0,
-  );
+  const materials = useMaterials({
+    initialFilters,
+    initialPage: initialMaterialPage,
+  });
+  const listActions = usePagedListUrlActions({
+    filters: materials.filters,
+    filterKeys: MATERIAL_FILTER_KEYS,
+    writeFilterParams: writeMaterialFilterParams,
+    onSearch: materials.search,
+    onReset: materials.reset,
+    onPageChange: materials.changePage,
+    onPageSizeChange: materials.changePageSize,
+  });
   const [dialogOpen, setDialogOpen] = useState(false);
 
-  const handleCreateMaterial = async (payload: MaterialPayload) => {
-    const created = await createMaterial(payload);
-    setSelectedMaterialId(created.id);
-    router.refresh();
-  };
-
-  const handleUpdateMaterial = async (
-    materialId: number,
-    payload: MaterialPayload,
-  ) => {
-    await updateMaterial(materialId, payload);
-    router.refresh();
-  };
-
-  const handleDeactivateMaterial = async (materialId: number) => {
-    await deactivateMaterial(materialId);
-    router.refresh();
-  };
-
-  const handleDeleteMaterial = async (materialId: number) => {
-    await deleteMaterial(materialId);
-    router.refresh();
-  };
+  async function createMaterial(payload: MaterialPayload) {
+    await materials.create(payload);
+    listActions.changePage(0);
+    setDialogOpen(false);
+  }
 
   return (
     <main className="flex h-full min-h-0 min-w-0 flex-col">
-      <div id="material-management" className="h-full min-h-0">
-        <MaterialSection
-          pageData={initialMaterialPage}
-          selectedId={selectedMaterialId}
-          onCreate={() => setDialogOpen(true)}
-          onDeactivate={handleDeactivateMaterial}
-          onDelete={handleDeleteMaterial}
-          onSelect={setSelectedMaterialId}
-          onUpdate={handleUpdateMaterial}
-        />
-      </div>
+      <TabError message={materials.error} />
+      <MaterialView
+        filters={materials.filters}
+        loading={materials.loading}
+        pageData={materials.pageData}
+        selectedId={materials.selectedId ?? 0}
+        onCreate={() => setDialogOpen(true)}
+        onDeactivate={materials.deactivate}
+        onDelete={materials.remove}
+        onFilterChange={materials.updateFilter}
+        onPageChange={listActions.changePage}
+        onPageSizeChange={listActions.changePageSize}
+        onReset={listActions.reset}
+        onSearch={listActions.search}
+        onSelect={materials.select}
+        onUpdate={materials.update}
+      />
 
-      {dialogOpen ? (
-        <InventoryDialog
-          key="material"
-          kind="material"
-          open
-          onClose={() => setDialogOpen(false)}
-          onSubmit={(values) => {
-            void handleCreateMaterial(values);
-          }}
-        />
-      ) : null}
+      <InventoryDialog
+        key={dialogOpen ? "material-open" : "material-closed"}
+        kind="material"
+        open={dialogOpen}
+        onClose={() => setDialogOpen(false)}
+        onSubmit={(values) => void createMaterial(values)}
+      />
     </main>
   );
 }

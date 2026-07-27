@@ -1,4 +1,9 @@
 import type { InventoryTab } from "@/shared/config/routes";
+import type {
+  InboundFilterState,
+  MaterialFilterState,
+  VarietyFilterState,
+} from "../model/types";
 import {
   getInboundRecords,
   getMaterials,
@@ -31,23 +36,27 @@ export async function InventoryRoutePage({
     );
     const page = readNumberParam(resolvedSearchParams, "page", 0);
     const size = readNumberParam(resolvedSearchParams, "size", 10);
+    const initialFilters: VarietyFilterState = {
+      keyword: varietyKeyword ?? "",
+      genus: varietyGenus && varietyGenus !== "전체" ? varietyGenus : "",
+      status:
+        varietyStatus === "ACTIVE" || varietyStatus === "INACTIVE"
+          ? varietyStatus
+          : "",
+      saleEnabled:
+        varietySale === "사용" || varietySale === "true"
+          ? "true"
+          : varietySale === "미사용" || varietySale === "false"
+            ? "false"
+            : "",
+    };
 
     const [varieties, varietyLookup] = await Promise.all([
       getVarieties({
-        keyword: varietyKeyword,
-        genus: varietyGenus,
-        saleEnabled:
-          varietySale === "사용"
-            ? true
-            : varietySale === "미사용"
-              ? false
-              : undefined,
-        active:
-          varietyStatus === "ACTIVE"
-            ? true
-            : varietyStatus === "INACTIVE"
-              ? false
-              : undefined,
+        keyword: initialFilters.keyword || undefined,
+        genus: initialFilters.genus || undefined,
+        saleEnabled: toBoolean(initialFilters.saleEnabled),
+        active: toActive(initialFilters.status),
         page,
         size,
       }),
@@ -56,9 +65,9 @@ export async function InventoryRoutePage({
 
     return (
       <InventoryVarietyPage
+        initialFilters={initialFilters}
         initialVarietyPage={varieties}
-        varietyGenera={varietyLookup.genera}
-        varietyOptions={varietyLookup.varieties}
+        initialVarietyLookup={varietyLookup}
       />
     );
   }
@@ -75,29 +84,23 @@ export async function InventoryRoutePage({
     );
     const page = readNumberParam(resolvedSearchParams, "page", 0);
     const size = readNumberParam(resolvedSearchParams, "size", 10);
+    const initialFilters: InboundFilterState = {
+      keyword: inboundKeyword ?? "",
+      inboundType:
+        inboundType && inboundType !== "ALL"
+          ? (inboundType as InboundFilterState["inboundType"])
+          : "",
+      status:
+        inboundStatus && inboundStatus !== "ALL"
+          ? (inboundStatus as InboundFilterState["status"])
+          : "",
+    };
 
     const [inboundRecords, varietyLookup] = await Promise.all([
       getInboundRecords({
-        inboundType:
-          inboundType && inboundType !== "ALL"
-            ? (inboundType as
-                | "FLASK_SEEDLING"
-                | "POTTED_SEEDLING"
-                | "PRODUCT_POT"
-                | "SAMPLE"
-                | "ETC")
-            : undefined,
-        status:
-          inboundStatus && inboundStatus !== "ALL"
-            ? (inboundStatus as
-                | "TEMP_STORED"
-                | "POTTING_PENDING"
-                | "POTTING_IN_PROGRESS"
-                | "POTTED"
-                | "PLACED"
-                | "CANCELED")
-            : undefined,
-        variety: inboundKeyword,
+        inboundType: initialFilters.inboundType || undefined,
+        status: initialFilters.status || undefined,
+        variety: initialFilters.keyword || undefined,
         page,
         size,
       }),
@@ -106,8 +109,9 @@ export async function InventoryRoutePage({
 
     return (
       <InventoryInboundPage
+        initialFilters={initialFilters}
         initialInboundPage={inboundRecords}
-        varietyOptions={varietyLookup.varieties}
+        initialVarietyLookup={varietyLookup}
       />
     );
   }
@@ -130,25 +134,40 @@ export async function InventoryRoutePage({
   );
   const page = readNumberParam(resolvedSearchParams, "page", 0);
   const size = readNumberParam(resolvedSearchParams, "size", 10);
+  const initialFilters: MaterialFilterState = {
+    keyword: materialKeyword ?? "",
+    category:
+      materialCategory && materialCategory !== "전체" ? materialCategory : "",
+    manufacturer: materialManufacturer ?? "",
+    status:
+      materialStatus === "ACTIVE" || materialStatus === "INACTIVE"
+        ? materialStatus
+        : "",
+  };
 
   const materials = await getMaterials({
-    keyword: materialKeyword,
-    category:
-      materialCategory && materialCategory !== "전체"
-        ? materialCategory
-        : undefined,
-    manufacturer: materialManufacturer,
-    active:
-      materialStatus === "ACTIVE"
-        ? true
-        : materialStatus === "INACTIVE"
-          ? false
-          : undefined,
+    keyword: initialFilters.keyword || undefined,
+    category: initialFilters.category || undefined,
+    manufacturer: initialFilters.manufacturer || undefined,
+    active: toActive(initialFilters.status),
     page,
     size,
   });
 
-  return <InventoryMaterialPage initialMaterialPage={materials} />;
+  return (
+    <InventoryMaterialPage
+      initialFilters={initialFilters}
+      initialMaterialPage={materials}
+    />
+  );
+}
+
+function toActive(status: "ACTIVE" | "INACTIVE" | "") {
+  return status ? status === "ACTIVE" : undefined;
+}
+
+function toBoolean(value: "true" | "false" | "") {
+  return value ? value === "true" : undefined;
 }
 
 function readSearchParam(

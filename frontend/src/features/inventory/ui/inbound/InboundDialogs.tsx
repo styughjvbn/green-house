@@ -13,11 +13,11 @@ import type {
   InboundRecordPayload,
   InboundType,
   Variety,
-} from "../../../model/types";
-import { INBOUND_TYPE_LABELS, toNumber } from "../../../lib/inboundUi";
-import { Field, inputClass } from "../InventoryPrimitives";
-import { PotSizeInput } from "../PotSizeInput";
-import { VarietyCreatableFields } from "../VarietyCreatableFields";
+} from "../../model/types";
+import { INBOUND_TYPE_LABELS, toNumber } from "../../lib/inboundUi";
+import { Field, inputClass } from "../components/InventoryPrimitives";
+import { PotSizeInput } from "../components/PotSizeInput";
+import { VarietyCreatableFields } from "../components/VarietyCreatableFields";
 import {
   InboundPlacementField,
   type InboundPlacementSelection,

@@ -12,7 +12,7 @@ export function usePagedListUrlActions<Filters>({
   onPageSizeChange,
 }: {
   filters: Filters;
-  filterKeys: ReadonlyArray<keyof Filters & string>;
+  filterKeys: ReadonlyArray<string>;
   writeFilterParams: (params: URLSearchParams, filters: Filters) => void;
   onSearch: (filters: Filters) => void;
   onReset: () => void;

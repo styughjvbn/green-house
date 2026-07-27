@@ -1,5 +1,5 @@
 import { API_BASE_URL, fetchApi } from "@/shared/api/client";
-import type { WorkOperation } from "@/entities/farm/types";
+import type { House, WorkOperation } from "@/entities/farm/types";
 import type { Page } from "@/shared/api/page";
 import type {
   ConnectedOrchidGroup,
@@ -170,6 +170,10 @@ export function getVarietyGenera() {
       varieties: result.varieties.map(toVarietyName),
     }),
   );
+}
+
+export function getInventoryHouses() {
+  return fetchApi<House[]>("/houses");
 }
 
 export function getVarietyOrchidGroups(varietyId: number) {
