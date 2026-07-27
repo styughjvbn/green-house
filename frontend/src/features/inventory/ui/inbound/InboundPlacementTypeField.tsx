@@ -1,6 +1,6 @@
 "use client";
 
-import { Field, inputClass } from "../components/InventoryPrimitives";
+import { Field, inputClass } from "../common/InventoryPrimitives";
 
 const PLACEMENT_TYPE_OPTIONS = [
   { value: "TRAY_12", label: "12구 트레이" },

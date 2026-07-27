@@ -15,9 +15,9 @@ import type {
   Variety,
 } from "../../model/types";
 import { INBOUND_TYPE_LABELS, toNumber } from "../../lib/inboundUi";
-import { Field, inputClass } from "../components/InventoryPrimitives";
-import { PotSizeInput } from "../components/PotSizeInput";
-import { VarietyCreatableFields } from "../components/VarietyCreatableFields";
+import { Field, inputClass } from "../common/InventoryPrimitives";
+import { PotSizeInput } from "../common/PotSizeInput";
+import { VarietyCreatableFields } from "../common/VarietyCreatableFields";
 import {
   InboundPlacementField,
   type InboundPlacementSelection,

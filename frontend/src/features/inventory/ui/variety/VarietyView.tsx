@@ -26,12 +26,8 @@ import type {
   VarietyFilterState,
   VarietyPayload,
 } from "../../model/types";
-import {
-  DetailRow,
-  Field,
-  inputClass,
-} from "../components/InventoryPrimitives";
-import { PotSizeInput } from "../components/PotSizeInput";
+import { DetailRow, Field, inputClass } from "../common/InventoryPrimitives";
+import { PotSizeInput } from "../common/PotSizeInput";
 
 export function VarietyView({
   filters,

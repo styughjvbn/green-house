@@ -12,7 +12,7 @@ import {
   INBOUND_STATUS_LABELS,
   INBOUND_TYPE_LABELS,
 } from "../../lib/inboundUi";
-import { inputClass } from "../components/InventoryPrimitives";
+import { inputClass } from "../common/InventoryPrimitives";
 
 export function InboundFilters({
   filters,

@@ -25,11 +25,7 @@ import type {
   MaterialFilterState,
   MaterialPayload,
 } from "../../model/types";
-import {
-  DetailRow,
-  Field,
-  inputClass,
-} from "../components/InventoryPrimitives";
+import { DetailRow, Field, inputClass } from "../common/InventoryPrimitives";
 
 export function MaterialView({
   filters,

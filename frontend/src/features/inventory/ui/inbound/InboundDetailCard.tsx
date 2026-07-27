@@ -17,12 +17,8 @@ import {
   INBOUND_TYPE_LABELS,
   toOptionalNumber,
 } from "../../lib/inboundUi";
-import {
-  DetailRow,
-  Field,
-  inputClass,
-} from "../components/InventoryPrimitives";
-import { PotSizeInput } from "../components/PotSizeInput";
+import { DetailRow, Field, inputClass } from "../common/InventoryPrimitives";
+import { PotSizeInput } from "../common/PotSizeInput";
 import { InboundPlacementTypeField } from "./InboundPlacementTypeField";
 
 export function InboundDetailCard({
