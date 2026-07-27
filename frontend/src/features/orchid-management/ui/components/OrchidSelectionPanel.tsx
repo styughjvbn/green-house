@@ -15,10 +15,8 @@ import type {
   WorkType,
 } from "@/entities/farm/types";
 import { formatPotSize } from "@/entities/farm/potSizes";
-import {
-  FarmPlacementPickerDialog,
-  type FarmPlacementSelection,
-} from "@/entities/farm/ui/FarmPlacementPicker";
+import type { FarmPlacementSelection } from "@/entities/farm/model/placement";
+import { FarmPlacementPickerDialog } from "@/entities/farm/ui/FarmPlacementPicker";
 import {
   Clipboard,
   Copy,

@@ -1,5 +1,5 @@
 import type { WorkOperationStatus } from "@/entities/farm/types";
-import type { WorkOperationFilterState } from "../model/useWorkOperations";
+import type { WorkOperationFilterState } from "../model/types";
 
 export type WorkWorkspaceScope = "MANAGEMENT" | "ALL";
 export type WorkWorkspaceView = "LIST" | "CALENDAR";
@@ -30,6 +30,61 @@ const WORK_STATUSES: WorkOperationStatus[] = [
 ];
 
 type SearchParamsReader = Pick<URLSearchParams, "get">;
+
+export type ServerSearchParams = Record<string, string | string[] | undefined>;
+
+export function createServerSearchParamReader(
+  searchParams: ServerSearchParams,
+): SearchParamsReader {
+  return {
+    get(name) {
+      const value = searchParams[name];
+      return Array.isArray(value) ? (value[0] ?? null) : (value ?? null);
+    },
+  };
+}
+
+export function needsWorkRecordUrlNormalization(
+  searchParams: ServerSearchParams,
+  state: WorkRecordUrlState,
+) {
+  const reader = createServerSearchParamReader(searchParams);
+  const scope = reader.get("scope");
+  const view = reader.get("view");
+  const month = reader.get("month");
+  const page = reader.get("page");
+  const size = reader.get("size");
+  const status = reader.get("status");
+  return !(
+    (scope === "MANAGEMENT" || scope === "ALL") &&
+    (view === "LIST" || view === "CALENDAR") &&
+    (state.view !== "CALENDAR" || month === state.month) &&
+    (page == null || page === String(state.page)) &&
+    (size == null || size === String(state.size)) &&
+    (status == null || status === state.filters.status)
+  );
+}
+
+export function createNormalizedWorkRecordSearchParams(
+  searchParams: ServerSearchParams,
+  state: WorkRecordUrlState,
+) {
+  const params = new URLSearchParams();
+  Object.entries(searchParams).forEach(([key, value]) => {
+    const values = Array.isArray(value) ? value : [value];
+    values.forEach((item) => {
+      if (item != null) params.append(key, item);
+    });
+  });
+  params.set("scope", state.scope);
+  params.set("view", state.view);
+  if (state.view === "CALENDAR") params.set("month", state.month);
+  else params.delete("month");
+  if (params.has("page")) params.set("page", String(state.page));
+  if (params.has("size")) params.set("size", String(state.size));
+  if (params.has("status") && !state.filters.status) params.delete("status");
+  return params;
+}
 
 export function readWorkRecordUrlState(
   params: SearchParamsReader,
@@ -75,7 +130,7 @@ export function setWorkWorkspaceView(
   params.set("view", view);
 }
 
-export function currentMonth() {
+function currentMonth() {
   const date = new Date();
   const year = date.getFullYear();
   const month = String(date.getMonth() + 1).padStart(2, "0");

@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { OrchidGroup, WorkOperation } from "@/entities/farm/types";
-import type { FarmPlacementSelection } from "@/entities/farm/ui/FarmPlacementPicker";
+import type { FarmPlacementSelection } from "@/entities/farm/model/placement";
 import {
   executeStructureChangeWorkOperation,
   getOrchidGroups,

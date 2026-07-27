@@ -1,127 +1,50 @@
 "use client";
 
 import type { ReactNode } from "react";
-import { useState } from "react";
-import type {
-  BedZone,
-  House,
-  OrchidGroup,
-  WorkOperation,
-  WorkOperationTarget,
-} from "@/entities/farm/types";
-import { usePagedListUrlActions } from "@/shared/api/usePagedListUrlActions";
 import { TabError, TabLayout, TabSplit } from "@/shared/ui/TabLayout";
-import {
-  completeWorkOperation,
-  transitionWorkOperation,
-  transitionWorkOperationTarget,
-} from "../api/workRecordApi";
-import {
-  useWorkOperations,
-  type WorkOperationFilterState,
-} from "../model/useWorkOperations";
-import {
-  WORK_LIST_FILTER_KEYS,
-  writeWorkListFilterParams,
-} from "../lib/workRecordUrlState";
-import { OperationResult } from "./components/WorkOperationResult";
-import { WorkExecutionDialog } from "./WorkExecutionDialog";
+import type { WorkRecordUrlState } from "../lib/workRecordUrlState";
+import { useWorkOperationActions } from "../model/useWorkOperationActions";
+import { useWorkOperations } from "../model/useWorkOperations";
+import { WorkOperationDetailPanel } from "./WorkOperationDetailPanel";
 import { WorkListFilters } from "./list/WorkListFilters";
 import { WorkListTable } from "./list/WorkListTable";
 
 export function WorkOperationListView({
-  bedZones,
-  houses,
   headerActions,
-  initialFilters,
-  initialPage,
-  initialSize,
-  orchidGroups,
-  queryView = "MANAGEMENT",
-  refreshKey,
+  routeState,
   showCreateAction = true,
   onCreateWork,
 }: {
-  bedZones: BedZone[];
-  houses: House[];
   headerActions?: ReactNode;
-  initialFilters: WorkOperationFilterState;
-  initialPage: number;
-  initialSize: number;
-  orchidGroups: OrchidGroup[];
-  queryView?: "ALL" | "MANAGEMENT";
-  refreshKey: number;
+  routeState: WorkRecordUrlState;
   showCreateAction?: boolean;
   onCreateWork: () => void;
 }) {
-  const list = useWorkOperations({
-    initialFilters,
-    initialPage,
-    initialSize,
-    refreshKey,
-    view: queryView,
-  });
-  const listActions = usePagedListUrlActions({
-    filters: list.filters,
-    filterKeys: WORK_LIST_FILTER_KEYS,
-    writeFilterParams: writeWorkListFilterParams,
-    onSearch: list.search,
-    onReset: list.reset,
-    onPageChange: list.changePage,
-    onPageSizeChange: list.changePageSize,
-  });
-  const [selectedId, setSelectedId] = useState<number | null>(null);
-  const [actionLoading, setActionLoading] = useState(false);
-  const [actionError, setActionError] = useState<string | null>(null);
-  const [executionTarget, setExecutionTarget] =
-    useState<WorkOperationTarget | null>(null);
+  const list = useWorkOperations(routeState);
   const operations = list.pageData.content;
-  const selected =
-    operations.find((operation) => operation.id === selectedId) ?? null;
-  const loading = list.query.isFetching || actionLoading;
+  const actions = useWorkOperationActions(operations);
+  const loading = list.query.isFetching || actions.loading;
   const error =
-    actionError ??
+    actions.error ??
     (list.query.error instanceof Error ? list.query.error.message : null);
-
-  async function run(action: () => Promise<WorkOperation>) {
-    setActionLoading(true);
-    setActionError(null);
-    try {
-      const updated = await action();
-      setSelectedId(updated.id);
-      await list.query.refetch();
-    } catch (cause) {
-      setActionError(
-        cause instanceof Error
-          ? cause.message
-          : "작업 상태를 변경하지 못했습니다.",
-      );
-    } finally {
-      setActionLoading(false);
-    }
-  }
-
-  function clearSelection() {
-    setSelectedId(null);
-    setExecutionTarget(null);
-    setActionError(null);
-  }
 
   return (
     <>
       <TabLayout>
         <WorkListFilters
-          allStatusLabel={queryView === "ALL" ? "모든 상태" : "관리 대상 전체"}
+          allStatusLabel={
+            routeState.scope === "ALL" ? "모든 상태" : "관리 대상 전체"
+          }
           filters={list.filters}
           loading={loading}
           onChange={list.updateFilter}
           onReset={() => {
-            clearSelection();
-            listActions.reset();
+            actions.clearSelection();
+            list.reset();
           }}
           onSearch={() => {
-            clearSelection();
-            listActions.search();
+            actions.clearSelection();
+            list.search();
           }}
         />
 
@@ -132,82 +55,29 @@ export function WorkOperationListView({
             headerActions={headerActions}
             loading={loading}
             operations={operations}
-            page={list.queryState.page}
-            pageSize={list.queryState.size}
-            selectedId={selectedId}
+            page={routeState.page}
+            pageSize={routeState.size}
+            selectedId={actions.selectedId}
             totalElements={list.pageData.totalElements}
             totalPages={list.pageData.totalPages}
             onCreate={showCreateAction ? onCreateWork : undefined}
             onPageChange={(page) => {
-              clearSelection();
-              listActions.changePage(page);
+              actions.clearSelection();
+              list.changePage(page);
             }}
             onPageSizeChange={(size) => {
-              clearSelection();
-              listActions.changePageSize(size);
+              actions.clearSelection();
+              list.changePageSize(size);
             }}
-            onSelect={setSelectedId}
+            onSelect={actions.select}
           />
 
-          <div className="min-h-0 overflow-auto">
-            {selected ? (
-              <OperationResult
-                className="h-full"
-                operation={selected}
-                loading={loading}
-                onComplete={(completedDate) =>
-                  void run(() =>
-                    completeWorkOperation(selected.id, completedDate),
-                  )
-                }
-                onOperationAction={(action) =>
-                  void run(() => transitionWorkOperation(selected.id, action))
-                }
-                onTargetAction={(targetId, action, completedDate) =>
-                  void run(() =>
-                    transitionWorkOperationTarget(
-                      selected.id,
-                      targetId,
-                      action,
-                      selected.worker,
-                      undefined,
-                      completedDate,
-                    ),
-                  )
-                }
-                onExecuteTarget={setExecutionTarget}
-              />
-            ) : (
-              <div className="flex h-full min-h-40 items-center justify-center rounded-md border border-[#dfe5dc] bg-white p-8 text-center text-sm text-[#5c6a60] shadow-sm">
-                상세를 확인할 작업을 선택하세요.
-              </div>
-            )}
-          </div>
+          <WorkOperationDetailPanel
+            actions={actions}
+            emptyMessage="상세를 확인할 작업을 선택하세요."
+          />
         </TabSplit>
       </TabLayout>
-
-      {selected && executionTarget ? (
-        <WorkExecutionDialog
-          bedZones={bedZones}
-          houses={houses}
-          operation={selected}
-          orchidGroups={orchidGroups}
-          source={
-            executionTarget.orchidGroupId == null
-              ? null
-              : (orchidGroups.find(
-                  (group) => group.id === executionTarget.orchidGroupId,
-                ) ?? null)
-          }
-          target={executionTarget}
-          onClose={() => setExecutionTarget(null)}
-          onSaved={(updated) => {
-            setSelectedId(updated.id);
-            void list.query.refetch();
-            setExecutionTarget(null);
-          }}
-        />
-      ) : null}
     </>
   );
 }

@@ -2,7 +2,7 @@ import type { OrchidGroup, WorkOperation } from "@/entities/farm/types";
 import type {
   FarmPlacementReference,
   FarmPlacementSelection,
-} from "@/entities/farm/ui/FarmPlacementPicker";
+} from "@/entities/farm/model/placement";
 import { createUuid } from "@/shared/lib/id";
 import type { StructureChangeExecutionPayload } from "../../../api/workRecordApi";
 

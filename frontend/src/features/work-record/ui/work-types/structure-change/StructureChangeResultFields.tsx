@@ -1,10 +1,10 @@
 import { Plus, Trash2 } from "lucide-react";
 import type { House, OrchidGroup } from "@/entities/farm/types";
-import {
-  FarmPlacementField,
-  type FarmPlacementReference,
-  type FarmPlacementSelection,
-} from "@/entities/farm/ui/FarmPlacementPicker";
+import type {
+  FarmPlacementReference,
+  FarmPlacementSelection,
+} from "@/entities/farm/model/placement";
+import { FarmPlacementField } from "@/entities/farm/ui/FarmPlacementPicker";
 import { POT_SIZE_OPTIONS } from "@/entities/farm/potSizes";
 import { TextField } from "../../components/FormFields";
 import {

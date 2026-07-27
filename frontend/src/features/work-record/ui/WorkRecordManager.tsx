@@ -1,49 +1,54 @@
-"use client";
+import {
+  dehydrate,
+  HydrationBoundary,
+  QueryClient,
+} from "@tanstack/react-query";
+import { redirect } from "next/navigation";
+import {
+  createNormalizedWorkRecordSearchParams,
+  createServerSearchParamReader,
+  needsWorkRecordUrlNormalization,
+  readWorkRecordUrlState,
+  type ServerSearchParams,
+} from "../lib/workRecordUrlState";
+import {
+  workOperationCalendarQueryOptions,
+  workOperationPageQueryOptions,
+  workTypesQueryOptions,
+} from "../model/workRecordQueryOptions";
+import { WorkRecordWorkspace } from "./WorkRecordWorkspace";
 
-import { useMemo, useState } from "react";
-import { useRouter } from "next/navigation";
-import type { WorkRecordManagerProps } from "../model/types";
-import { deriveWorkTargetSelectionOptions } from "../model/workTargetSelectionOptions";
-import { WorkOperationRegistrationDialog } from "./components/WorkOperationRegistrationDialog";
-import { WorkWorkspacePage } from "./WorkWorkspacePage";
-
-export function WorkRecordManager(props: WorkRecordManagerProps) {
-  const router = useRouter();
-  const targetOptions = useMemo(
-    () => deriveWorkTargetSelectionOptions(props.houses),
-    [props.houses],
+export async function WorkRecordManager({
+  searchParams,
+}: {
+  searchParams: Promise<ServerSearchParams>;
+}) {
+  const resolvedSearchParams = await searchParams;
+  const routeState = readWorkRecordUrlState(
+    createServerSearchParamReader(resolvedSearchParams),
   );
-  const [showOperationForm, setShowOperationForm] = useState(false);
-  const [operationInitialTypeCode, setOperationInitialTypeCode] = useState<
-    string | null
-  >(null);
-  const [operationSavedVersion, setOperationSavedVersion] = useState(0);
+  if (needsWorkRecordUrlNormalization(resolvedSearchParams, routeState)) {
+    redirect(
+      `/work-records?${createNormalizedWorkRecordSearchParams(
+        resolvedSearchParams,
+        routeState,
+      )}`,
+    );
+  }
+  const queryClient = new QueryClient();
+  const operationPrefetch =
+    routeState.view === "CALENDAR"
+      ? queryClient.prefetchQuery(workOperationCalendarQueryOptions(routeState))
+      : queryClient.prefetchQuery(workOperationPageQueryOptions(routeState));
+
+  await Promise.all([
+    queryClient.prefetchQuery(workTypesQueryOptions()),
+    operationPrefetch,
+  ]);
 
   return (
-    <div className="flex h-full min-h-0 flex-col gap-4">
-      {showOperationForm ? (
-        <WorkOperationRegistrationDialog
-          houses={props.houses}
-          initialWorkTypeCode={operationInitialTypeCode}
-          workTypes={props.workTypes}
-          onClose={() => setShowOperationForm(false)}
-          onSaved={() => {
-            setOperationSavedVersion((current) => current + 1);
-            router.refresh();
-          }}
-        />
-      ) : null}
-
-      <WorkWorkspacePage
-        bedZones={targetOptions.bedZones}
-        houses={props.houses}
-        orchidGroups={targetOptions.orchidGroups}
-        refreshKey={operationSavedVersion}
-        onCreateWork={() => {
-          setOperationInitialTypeCode(null);
-          setShowOperationForm(true);
-        }}
-      />
-    </div>
+    <HydrationBoundary state={dehydrate(queryClient)}>
+      <WorkRecordWorkspace />
+    </HydrationBoundary>
   );
 }

@@ -153,6 +153,15 @@ public class WorkOperationController {
 				from, to, status, view, scopeType, scopeId, keyword, page, size));
 	}
 
+	@GetMapping("/work-operations/calendar")
+	public ApiResponse<List<WorkOperationResponse>> getCalendar(
+			@RequestParam LocalDate from,
+			@RequestParam LocalDate to,
+			@RequestParam(required = false) com.greenhouse.backend.work.domain.operation.WorkOperationStatus status,
+			@RequestParam(defaultValue = "ALL") com.greenhouse.backend.work.domain.operation.WorkOperationSearchView view) {
+		return ApiResponse.ok(queryService.getCalendar(from, to, status, view));
+	}
+
 	@GetMapping("/work-operations/{workOperationId}")
 	public ApiResponse<WorkOperationResponse> get(@PathVariable Long workOperationId) {
 		return ApiResponse.ok(queryService.get(workOperationId));

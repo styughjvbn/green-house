@@ -1,78 +1,34 @@
-import type { WorkOperation, WorkOperationStatus } from "@/entities/farm/types";
+import { useQuery } from "@tanstack/react-query";
+import type { WorkOperation } from "@/entities/farm/types";
 import { createEmptyPage } from "@/shared/api/page";
-import { usePagedListQuery } from "@/shared/api/usePagedListQuery";
-import { getWorkOperations } from "../api/workRecordApi";
+import { useUrlPagedListState } from "@/shared/api/useUrlPagedListState";
+import {
+  WORK_LIST_FILTER_KEYS,
+  writeWorkListFilterParams,
+  type WorkRecordUrlState,
+} from "../lib/workRecordUrlState";
+import type { WorkOperationFilterState } from "./types";
+import { workOperationPageQueryOptions } from "./workRecordQueryOptions";
 
-export type WorkOperationFilterState = {
-  from: string;
-  keyword: string;
-  status: WorkOperationStatus | "";
-  to: string;
-};
-
-const workOperationQueryKeys = {
-  all: ["workOperations"] as const,
-  page: (
-    view: "ALL" | "MANAGEMENT" | "HISTORY",
-    filters: WorkOperationFilterState,
-    page: number,
-    size: number,
-    refreshKey: number,
-  ) =>
-    [
-      ...workOperationQueryKeys.all,
-      view,
-      filters,
-      page,
-      size,
-      refreshKey,
-    ] as const,
-};
-
-export function useWorkOperations({
-  initialFilters,
-  initialPage,
-  initialSize,
-  refreshKey,
-  view,
-}: {
-  initialFilters: WorkOperationFilterState;
-  initialPage: number;
-  initialSize: number;
-  refreshKey: number;
-  view: "ALL" | "MANAGEMENT" | "HISTORY";
-}) {
-  const listState = usePagedListQuery({
-    createEmptyFilters: createEmptyWorkOperationFilters,
-    hasInitialData: false,
-    initialFilters,
-    initialPage: createEmptyPage<WorkOperation>(initialSize, initialPage),
-    queryKey: ({ filters, page, size }) =>
-      workOperationQueryKeys.page(view, filters, page, size, refreshKey),
-    queryFn: ({ filters, page, size }) =>
-      getWorkOperations({
-        from: filters.from,
-        keyword: filters.keyword,
-        status: filters.status,
-        to: filters.to,
-        view,
-        page,
-        size,
-      }),
+export function useWorkOperations(routeState: WorkRecordUrlState) {
+  const query = useQuery(workOperationPageQueryOptions(routeState));
+  const listState = useUrlPagedListState({
+    emptyFilters: createEmptyWorkOperationFilters,
+    filterKeys: WORK_LIST_FILTER_KEYS,
+    routeFilters: routeState.filters,
+    writeFilterParams: writeWorkListFilterParams,
   });
 
   return {
     ...listState,
+    query,
     pageData:
-      listState.pageData ??
-      createEmptyPage<WorkOperation>(
-        listState.queryState.size,
-        listState.queryState.page,
-      ),
+      query.data ??
+      createEmptyPage<WorkOperation>(routeState.size, routeState.page),
   };
 }
 
-export function createEmptyWorkOperationFilters(): WorkOperationFilterState {
+function createEmptyWorkOperationFilters(): WorkOperationFilterState {
   return {
     from: "",
     keyword: "",

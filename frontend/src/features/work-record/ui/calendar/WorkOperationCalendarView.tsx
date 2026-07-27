@@ -1,132 +1,53 @@
 "use client";
 
 import type { ReactNode } from "react";
-import { useEffect, useMemo, useState } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { ChevronLeft, ChevronRight } from "lucide-react";
-import type {
-  BedZone,
-  House,
-  OrchidGroup,
-  WorkOperation,
-  WorkOperationStatus,
-  WorkOperationTarget,
-} from "@/entities/farm/types";
+import type { WorkOperation, WorkOperationStatus } from "@/entities/farm/types";
 import { useUrlSearchParamsWriter } from "@/shared/lib/useUrlSearchParamsWriter";
-import {
-  completeWorkOperation,
-  getAllWorkOperations,
-  transitionWorkOperation,
-  transitionWorkOperationTarget,
-} from "../../api/workRecordApi";
+import type { WorkRecordUrlState } from "../../lib/workRecordUrlState";
+import { useWorkOperationActions } from "../../model/useWorkOperationActions";
+import { workOperationCalendarQueryOptions } from "../../model/workRecordQueryOptions";
 import { TabError, TabLayout, TabSplit } from "@/shared/ui/TabLayout";
 import { WorkCalendarFilters } from "./WorkCalendarFilters";
-import { OperationResult } from "../components/WorkOperationResult";
-import { WorkExecutionDialog } from "../WorkExecutionDialog";
+import { WorkOperationDetailPanel } from "../WorkOperationDetailPanel";
 
 const WEEKDAYS = ["월", "화", "수", "목", "금", "토", "일"];
 
 export function WorkOperationCalendarView({
-  bedZones = [],
   headerActions,
-  houses = [],
-  initialMonth,
-  initialStatus,
-  orchidGroups = [],
-  refreshKey = 0,
-  view = "ALL",
+  routeState,
 }: {
-  bedZones?: BedZone[];
   headerActions?: ReactNode;
-  houses?: House[];
-  initialMonth: string;
-  initialStatus: WorkOperationStatus | "";
-  orchidGroups?: OrchidGroup[];
-  refreshKey?: number;
-  view?: "ALL" | "MANAGEMENT";
+  routeState: WorkRecordUrlState;
 }) {
   const writeUrlParams = useUrlSearchParamsWriter();
-  const [month, setMonth] = useState(initialMonth);
-  const [status, setStatus] = useState<WorkOperationStatus | "">(initialStatus);
-  const [operations, setOperations] = useState<WorkOperation[]>([]);
-  const [selectedId, setSelectedId] = useState<number | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [executionTarget, setExecutionTarget] =
-    useState<WorkOperationTarget | null>(null);
-  const range = useMemo(() => monthRange(month), [month]);
-  const selected = operations.find((item) => item.id === selectedId) ?? null;
-
-  useEffect(() => {
-    let active = true;
-    void getAllWorkOperations({
-      from: range.from,
-      to: range.to,
-      status,
-      view,
-    })
-      .then((result) => {
-        if (!active) return;
-        setOperations(result);
-        setSelectedId((current) =>
-          result.some((item) => item.id === current) ? current : null,
-        );
-        setError(null);
-      })
-      .catch((cause: unknown) => {
-        if (active) {
-          setError(
-            cause instanceof Error
-              ? cause.message
-              : "기간 작업을 불러오지 못했습니다.",
-          );
-        }
-      })
-      .finally(() => {
-        if (active) setLoading(false);
-      });
-    return () => {
-      active = false;
-    };
-  }, [range.from, range.to, status, refreshKey, view]);
+  const operationsQuery = useQuery(
+    workOperationCalendarQueryOptions(routeState),
+  );
+  const operations = operationsQuery.data ?? [];
+  const actions = useWorkOperationActions(operations);
+  const month = routeState.month;
+  const status = routeState.filters.status;
+  const loading = operationsQuery.isFetching || actions.loading;
+  const error =
+    actions.error ??
+    (operationsQuery.error instanceof Error
+      ? operationsQuery.error.message
+      : null);
 
   function changeMonth(offset: number) {
     const [year, monthNumber] = month.split("-").map(Number);
     const next = new Date(Date.UTC(year, monthNumber - 1 + offset, 1));
     const nextMonth = next.toISOString().slice(0, 7);
-    setLoading(true);
-    setMonth(nextMonth);
     writeUrlParams((params) => params.set("month", nextMonth));
   }
 
   function changeStatus(nextStatus: WorkOperationStatus | "") {
-    setLoading(true);
-    setStatus(nextStatus);
     writeUrlParams((params) => {
       if (nextStatus) params.set("status", nextStatus);
       else params.delete("status");
     });
-  }
-
-  function updateOperation(updated: WorkOperation) {
-    setOperations((current) =>
-      current.map((item) => (item.id === updated.id ? updated : item)),
-    );
-  }
-
-  async function run(action: () => Promise<WorkOperation>) {
-    setLoading(true);
-    setError(null);
-    try {
-      updateOperation(await action());
-    } catch (cause) {
-      setError(
-        cause instanceof Error
-          ? cause.message
-          : "작업 상태를 변경하지 못했습니다.",
-      );
-    } finally {
-      setLoading(false);
-    }
   }
 
   const cells = calendarCells(month);
@@ -211,11 +132,11 @@ export function WorkOperationCalendarView({
                     <div className="mt-1 space-y-1">
                       {dayOperations.slice(0, 3).map((operation) => (
                         <button
-                          className={`block w-full truncate rounded px-1.5 py-1 text-left text-[11px] font-semibold ${selectedId === operation.id ? "bg-[#16713a] text-white" : statusClass(operation.status)}`}
+                          className={`block w-full truncate rounded px-1.5 py-1 text-left text-[11px] font-semibold ${actions.selectedId === operation.id ? "bg-[#16713a] text-white" : statusClass(operation.status)}`}
                           key={operation.id}
                           title={operation.title}
                           type="button"
-                          onClick={() => setSelectedId(operation.id)}
+                          onClick={() => actions.select(operation.id)}
                         >
                           {operation.title}
                         </button>
@@ -233,74 +154,13 @@ export function WorkOperationCalendarView({
           </div>
         </section>
 
-        <div className="min-h-0 overflow-auto">
-          {selected ? (
-            <OperationResult
-              className="h-full"
-              operation={selected}
-              loading={loading}
-              onComplete={(completedDate) =>
-                void run(() =>
-                  completeWorkOperation(selected.id, completedDate),
-                )
-              }
-              onOperationAction={(action) =>
-                void run(() => transitionWorkOperation(selected.id, action))
-              }
-              onTargetAction={(targetId, action, completedDate) =>
-                void run(() =>
-                  transitionWorkOperationTarget(
-                    selected.id,
-                    targetId,
-                    action,
-                    selected.worker,
-                    undefined,
-                    completedDate,
-                  ),
-                )
-              }
-              onExecuteTarget={setExecutionTarget}
-            />
-          ) : (
-            <div className="flex h-full min-h-40 items-center justify-center rounded-md border border-[#dfe5dc] bg-white p-8 text-center text-sm text-[#5c6a60] shadow-sm">
-              상세를 확인할 캘린더 작업을 선택하세요.
-            </div>
-          )}
-        </div>
-      </TabSplit>
-
-      {selected && executionTarget ? (
-        <WorkExecutionDialog
-          bedZones={bedZones}
-          houses={houses}
-          operation={selected}
-          orchidGroups={orchidGroups}
-          source={
-            executionTarget.orchidGroupId == null
-              ? null
-              : (orchidGroups.find(
-                  (group) => group.id === executionTarget.orchidGroupId,
-                ) ?? null)
-          }
-          target={executionTarget}
-          onClose={() => setExecutionTarget(null)}
-          onSaved={(updated) => {
-            updateOperation(updated);
-            setExecutionTarget(null);
-          }}
+        <WorkOperationDetailPanel
+          actions={actions}
+          emptyMessage="상세를 확인할 캘린더 작업을 선택하세요."
         />
-      ) : null}
+      </TabSplit>
     </TabLayout>
   );
-}
-
-function monthRange(month: string) {
-  const [year, monthNumber] = month.split("-").map(Number);
-  const lastDay = new Date(Date.UTC(year, monthNumber, 0)).getUTCDate();
-  return {
-    from: `${month}-01`,
-    to: `${month}-${String(lastDay).padStart(2, "0")}`,
-  };
 }
 
 function calendarCells(month: string): Array<string | null> {

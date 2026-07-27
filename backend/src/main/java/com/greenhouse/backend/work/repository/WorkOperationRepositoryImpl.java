@@ -13,6 +13,7 @@ import com.querydsl.jpa.impl.JPAQueryFactory;
 import jakarta.persistence.EntityManager;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.util.List;
 import java.util.Optional;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
@@ -24,6 +25,22 @@ public class WorkOperationRepositoryImpl implements WorkOperationRepositoryCusto
 
 	public WorkOperationRepositoryImpl(EntityManager entityManager) {
 		this.queryFactory = new JPAQueryFactory(entityManager);
+	}
+
+	@Override
+	public List<WorkOperation> searchAll(
+			LocalDate fromDate,
+			LocalDate toDate,
+			WorkOperationStatus status,
+			WorkOperationSearchView view,
+			LocalDateTime todayStartedAt) {
+		return queryFactory
+				.selectFrom(workOperation)
+				.join(workOperation.workType, workType).fetchJoin()
+				.where(searchConditions(
+						fromDate, toDate, status, view, todayStartedAt, null, null, null))
+				.orderBy(workOperation.plannedStartDate.asc(), workOperation.id.asc())
+				.fetch();
 	}
 
 	@Override

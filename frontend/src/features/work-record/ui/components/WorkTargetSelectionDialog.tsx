@@ -440,7 +440,7 @@ export function WorkTargetSelectionDialog({
                     {focusedHouse.number}동 배치
                   </p>
                   <p className="text-xs text-[#718077]">
-                    다이 전체 또는 좌·우 구역을 선택하세요.
+                    다이 전체 또는 구역별로 선택하세요.
                   </p>
                 </div>
                 <div className="grid gap-3 lg:grid-cols-3">
@@ -464,13 +464,10 @@ export function WorkTargetSelectionDialog({
                         </span>
                       </div>
                       <div className="grid min-h-44 grid-cols-2 gap-px bg-[#dce4da]">
-                        {(["LEFT", "RIGHT"] as const).map((side) => {
-                          const zone = bed.zones.find(
-                            (candidate) => candidate.side === side,
-                          );
+                        {bedDisplayZones(bed).map(({ side, zone }, index) => {
                           return zone ? (
                             <BedSideZone
-                              key={side}
+                              key={zone.id}
                               bedNumber={bed.number}
                               houseNumber={focusedHouse.number}
                               selectedIds={selectedIds}
@@ -481,7 +478,7 @@ export function WorkTargetSelectionDialog({
                           ) : (
                             <div
                               className="flex min-h-44 flex-col items-center justify-center bg-[#edf0ed] px-2 text-center text-[#9aa39c]"
-                              key={side}
+                              key={`${side}-${index}`}
                               aria-disabled="true"
                             >
                               <span className="text-xs font-bold">
@@ -558,7 +555,7 @@ function BedSideZone({
   bedNumber: number;
   houseNumber: number;
   selectedIds: Set<number>;
-  side: "LEFT" | "RIGHT";
+  side: BedZoneSide;
   zone: ZoneNode;
   onToggle: (groups: OrchidGroup[]) => void;
 }) {
@@ -645,8 +642,30 @@ function SelectionCheckbox({
   );
 }
 
-function sideLabel(side: "LEFT" | "RIGHT") {
-  return side === "RIGHT" ? "우측" : "좌측";
+function sideLabel(side: BedZoneSide) {
+  switch (side) {
+    case "LEFT":
+      return "좌측";
+    case "RIGHT":
+      return "우측";
+    case "CUSTOM":
+      return "사용자 구역";
+    case "HANGING":
+      return "행잉";
+  }
+}
+
+function bedDisplayZones(bed: BedNode) {
+  const standardSides: BedZoneSide[] = ["LEFT", "RIGHT"];
+  return [
+    ...standardSides.map((side) => ({
+      side,
+      zone: bed.zones.find((zone) => zone.side === side) ?? null,
+    })),
+    ...bed.zones
+      .filter((zone) => zone.side === "CUSTOM" || zone.side === "HANGING")
+      .map((zone) => ({ side: zone.side, zone })),
+  ];
 }
 
 function selectionState(groups: OrchidGroup[], selectedIds: Set<number>) {
@@ -698,7 +717,10 @@ function buildTargetTree(
 
   return [...zonesByHouse.entries()]
     .map(([houseId, houseZones]) => {
-      const beds = [1, 2, 3].map((bedNumber) => {
+      const bedNumbers = [
+        ...new Set(houseZones.map((zone) => zone.physicalBedNumber)),
+      ].sort((left, right) => left - right);
+      const beds = bedNumbers.map((bedNumber) => {
         const zones = houseZones
           .filter((zone) => zone.physicalBedNumber === bedNumber)
           .map((zone) => ({

@@ -4,6 +4,7 @@ import {
   isVisibleWorkRecordField,
 } from "@/entities/farm/workTypes";
 import type { WorkOperationFormState } from "../../model/types";
+import { getWorkTypeDefinition } from "../../model/workTypeDefinition";
 import { TextField } from "./FormFields";
 import { WorkOperationTargetPreview } from "./WorkOperationTargetPreview";
 import { workPlanGuidance } from "../common/workOperationLabels";
@@ -32,7 +33,6 @@ export function WorkOperationPlanForm({
   autoSplitWorkCount,
   saveUnavailableReason,
   registrationMode,
-  recordDisabled,
   onChangeRegistrationMode,
   onCancel,
   onUpdateForm,
@@ -59,7 +59,6 @@ export function WorkOperationPlanForm({
   autoSplitWorkCount: number;
   saveUnavailableReason: string | null;
   registrationMode: "RECORD" | "PLAN";
-  recordDisabled: boolean;
   onChangeRegistrationMode: (mode: "RECORD" | "PLAN") => void;
   onCancel: () => void;
   onUpdateForm: <K extends keyof WorkOperationFormState>(
@@ -73,6 +72,9 @@ export function WorkOperationPlanForm({
   onSave: () => void;
 }) {
   const recordMode = registrationMode === "RECORD";
+  const selectedDefinition = getWorkTypeDefinition(selectedWorkType);
+  const recordDisabled = !selectedDefinition.recordSupported;
+  const planDisabled = !selectedDefinition.planSupported;
   const saveLabel = recordMode
     ? `${selectedWorkType?.name ?? "작업"} 기록 저장`
     : `${selectedWorkType?.name ?? "작업"} 계획 저장`;
@@ -82,16 +84,8 @@ export function WorkOperationPlanForm({
       <section className="rounded-md border border-[#cfe0d2] bg-white p-4">
         <SectionTitle title="작업 유형 선택" />
         <WorkTypeGroup
+          category="GENERAL"
           title="일반 작업"
-          codes={[
-            "PESTICIDE",
-            "FERTILIZER",
-            "STATUS",
-            "MEMO",
-            "LEAF_CLEANUP",
-            "FLOWER_CLEANUP",
-            "WEED_CLEANUP",
-          ]}
           workTypes={workTypes}
           selectedWorkType={selectedWorkType}
           onSelect={(workType) =>
@@ -99,8 +93,8 @@ export function WorkOperationPlanForm({
           }
         />
         <WorkTypeGroup
+          category="STRUCTURE_CHANGE"
           title="구조 변경 작업"
-          codes={["REPOT", "DIVIDE", "MERGE", "DISCARD", "POTTING"]} //TODO "MOVEMENT" 는 비활성화
           workTypes={workTypes}
           selectedWorkType={selectedWorkType}
           onSelect={(workType) =>
@@ -128,6 +122,7 @@ export function WorkOperationPlanForm({
           <MethodButton
             title="작업 계획"
             description="앞으로 수행할 작업을 등록하고 진행 상태를 관리"
+            disabled={planDisabled}
             selected={!recordMode}
             onClick={() => onChangeRegistrationMode("PLAN")}
           />
@@ -253,8 +248,7 @@ export function WorkOperationPlanForm({
               onChange={(value) => onUpdateForm("dilutionRatio", value)}
             />
           ) : null}
-          {!(isDedicatedWorkflow && recordMode) &&
-          (!isDedicatedWorkflow || recordMode) &&
+          {!isDedicatedWorkflow &&
           isVisibleWorkRecordField(
             selectedWorkType?.template ?? null,
             "quantity",
@@ -348,22 +342,21 @@ function SectionTitle({ title }: { title: string }) {
 }
 
 function WorkTypeGroup({
+  category,
   title,
-  codes,
   workTypes,
   selectedWorkType,
   onSelect,
 }: {
+  category: "GENERAL" | "STRUCTURE_CHANGE";
   title: string;
-  codes: string[];
   workTypes: WorkType[];
   selectedWorkType?: WorkType;
   onSelect: (workType: WorkType) => void;
 }) {
-  const items = codes.flatMap((code) => {
-    const workType = workTypes.find((item) => item.code === code);
-    return workType ? [workType] : [];
-  });
+  const items = workTypes.filter(
+    (workType) => getWorkTypeDefinition(workType).category === category,
+  );
   if (items.length === 0) return null;
   return (
     <div className="mt-3">

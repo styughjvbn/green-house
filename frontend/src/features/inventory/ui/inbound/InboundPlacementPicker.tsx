@@ -1,10 +1,8 @@
 "use client";
 
 import type { House } from "@/entities/farm/types";
-import {
-  FarmPlacementField,
-  type FarmPlacementSelection,
-} from "@/entities/farm/ui/FarmPlacementPicker";
+import type { FarmPlacementSelection } from "@/entities/farm/model/placement";
+import { FarmPlacementField } from "@/entities/farm/ui/FarmPlacementPicker";
 
 export type InboundPlacementSelection = FarmPlacementSelection;
 

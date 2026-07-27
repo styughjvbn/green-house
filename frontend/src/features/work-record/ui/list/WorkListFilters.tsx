@@ -8,7 +8,7 @@ import {
   FilterSearchButton,
   FilterSelect,
 } from "@/shared/ui/FilterControls";
-import type { WorkOperationFilterState } from "../../model/useWorkOperations";
+import type { WorkOperationFilterState } from "../../model/types";
 
 export function WorkListFilters({
   allStatusLabel = "관리 대상 전체",

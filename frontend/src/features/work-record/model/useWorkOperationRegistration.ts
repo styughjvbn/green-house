@@ -22,32 +22,31 @@ import {
   buildWorkTargetScopePayload,
   countAutoSplitWorks,
   createInitialWorkOperationForm,
-  getIncludedTargets,
-  getRecordTargetIds,
   getSaveUnavailableReason,
   type WorkRegistrationMode,
 } from "./workOperationRegistration";
+import {
+  getIncludedTargets,
+  getRecordTargetIds,
+} from "./registrationTargetSelection";
 import { getWorkTypeDefinition } from "./workTypeDefinition";
 import { deriveWorkTargetSelectionOptions } from "./workTargetSelectionOptions";
 
 export function useWorkOperationRegistration({
-  initialWorkTypeCode,
   houses,
   onClose,
   onSaved,
   workTypes,
 }: {
-  initialWorkTypeCode?: string | null;
   houses: House[];
   onClose: () => void;
   onSaved?: () => void;
   workTypes: WorkType[];
 }) {
-  const schedulableWorkTypes = getSchedulableWorkTypes(workTypes);
-  const initialWorkType =
-    schedulableWorkTypes.find(
-      (workType) => workType.code === initialWorkTypeCode,
-    ) ?? schedulableWorkTypes[0];
+  const schedulableWorkTypes = getSchedulableWorkTypes(workTypes).filter(
+    (workType) => getWorkTypeDefinition(workType).category != null,
+  );
+  const initialWorkType = schedulableWorkTypes[0];
   const [form, setForm] = useState<WorkOperationFormState>(() =>
     createInitialWorkOperationForm(initialWorkType),
   );
@@ -87,7 +86,7 @@ export function useWorkOperationRegistration({
     (sum, target) => sum + target.quantitySnapshot,
     0,
   );
-  const recordTargetIds = getRecordTargetIds(includedTargets, manualIds);
+  const recordTargetIds = getRecordTargetIds(preview, excludedIds, manualIds);
   const autoSplitWorkCount = countAutoSplitWorks({
     inboundCandidates,
     inboundRecordIds,
@@ -152,23 +151,30 @@ export function useWorkOperationRegistration({
       const workType = schedulableWorkTypes.find(
         (candidate) => String(candidate.id) === value,
       );
+      const definition = getWorkTypeDefinition(workType);
       setForm((current) => ({
         ...current,
         workTypeId: String(value),
         title: workType ? `${workType.name} 작업` : current.title,
         sourceScopeType:
-          getWorkTypeDefinition(workType).targetSource === "INBOUND_RECORD"
+          definition.targetSource === "INBOUND_RECORD"
             ? "INBOUND_RECORD_SELECTION"
             : "MANUAL_SELECTION",
       }));
       setPreview(null);
       setExcludedIds(new Set());
-      setRegistrationMode("RECORD");
+      setManualIds(new Set());
+      setInboundRecordIds(new Set());
+      setTargetScopeLabel(null);
+      setRegistrationMode(
+        definition.recordSupported && definition.category != null
+          ? "RECORD"
+          : "PLAN",
+      );
     } else if (
       field === "sourceScopeType" ||
       field === "scopeKey" ||
-      field === "collectionId" ||
-      field === "houseId"
+      field === "collectionId"
     ) {
       setPreview(null);
       setExcludedIds(new Set());
@@ -185,7 +191,6 @@ export function useWorkOperationRegistration({
     setForm((current) => ({
       ...current,
       sourceScopeType: "FARM",
-      houseId: "",
       scopeKey: "",
       collectionId: "",
     }));

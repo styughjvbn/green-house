@@ -5,11 +5,11 @@ import type { Dispatch, ReactNode, SetStateAction } from "react";
 import { Plus, Trash2 } from "lucide-react";
 import type { House } from "@/entities/farm/types";
 import { isStandardPotSize, POT_SIZE_OPTIONS } from "@/entities/farm/potSizes";
-import {
-  FarmPlacementField,
-  type FarmPlacementReference,
-  type FarmPlacementSelection,
-} from "@/entities/farm/ui/FarmPlacementPicker";
+import type {
+  FarmPlacementReference,
+  FarmPlacementSelection,
+} from "@/entities/farm/model/placement";
+import { FarmPlacementField } from "@/entities/farm/ui/FarmPlacementPicker";
 import { createUuid } from "@/shared/lib/id";
 
 type PottingResultRow = {

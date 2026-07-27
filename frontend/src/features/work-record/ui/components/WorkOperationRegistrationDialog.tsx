@@ -12,19 +12,16 @@ import { WorkTargetSelectionDialog } from "./WorkTargetSelectionDialog";
 export function WorkOperationRegistrationDialog({
   houses,
   workTypes,
-  initialWorkTypeCode,
   onClose,
   onSaved,
 }: {
   houses: House[];
   workTypes: WorkType[];
-  initialWorkTypeCode?: string | null;
   onClose: () => void;
   onSaved?: () => void;
 }) {
   const registration = useWorkOperationRegistration({
     houses,
-    initialWorkTypeCode,
     onClose,
     onSaved,
     workTypes,
@@ -88,7 +85,6 @@ export function WorkOperationRegistrationDialog({
             loading={registration.loading}
             optionsLoading={registration.optionsLoading}
             preview={registration.preview}
-            recordDisabled={false}
             registrationMode={registration.registrationMode}
             saveUnavailableReason={registration.saveUnavailableReason}
             selectedWorkType={registration.selectedWorkType}

@@ -79,6 +79,21 @@ public class WorkOperationQueryService {
 				operationPage.getTotalPages());
 	}
 
+	public List<WorkOperationResponse> getCalendar(
+			LocalDate fromDate,
+			LocalDate toDate,
+			WorkOperationStatus status,
+			WorkOperationSearchView view) {
+		validateDates(fromDate, toDate);
+		LocalDate farmToday = TimeConfig.farmToday(clock);
+		return responseAssembler.assembleAll(operationRepository.searchAll(
+				fromDate,
+				toDate,
+				status,
+				view,
+				TimeConfig.farmDayStartUtc(farmToday)));
+	}
+
 	public List<OrchidGroupWorkHistoryResponse> getOrchidGroupHistory(Long orchidGroupId) {
 		return getAllWorkHistory(WorkHistoryScopeType.ORCHID_GROUP, orchidGroupId);
 	}

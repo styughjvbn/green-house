@@ -535,6 +535,15 @@ class WorkOperationIntegrationTests extends AbstractBackendIntegrationTest {
 				.andExpect(jsonPath("$.data.page").value(1))
 				.andExpect(jsonPath("$.data.content[0].title").value("7월 기간 농약 작업"));
 
+		mockMvc.perform(get("/api/work-operations/calendar")
+				.param("from", "2026-07-01")
+				.param("to", "2026-07-31")
+				.param("status", "PLANNED"))
+				.andExpect(status().isOk())
+				.andExpect(jsonPath("$.data", hasSize(2)))
+				.andExpect(jsonPath("$.data[0].title").value("7월 기간 농약 작업"))
+				.andExpect(jsonPath("$.data[1].title").value("7월 기간 농약 작업 2"));
+
 		mockMvc.perform(get("/api/work-operations").param("size", "101"))
 				.andExpect(status().isBadRequest());
 	}

@@ -6,6 +6,7 @@ import com.greenhouse.backend.work.domain.operation.WorkOperationSearchView;
 import com.greenhouse.backend.work.domain.operation.WorkSourceScopeType;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.util.List;
 import java.util.Optional;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -26,4 +27,11 @@ public interface WorkOperationRepositoryCustom {
 			Long scopeId,
 			String keyword,
 			Pageable pageable);
+
+	List<WorkOperation> searchAll(
+			LocalDate fromDate,
+			LocalDate toDate,
+			WorkOperationStatus status,
+			WorkOperationSearchView view,
+			LocalDateTime todayStartedAt);
 }

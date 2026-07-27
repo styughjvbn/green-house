@@ -1,9 +1,7 @@
 "use client";
 
-import { useEffect } from "react";
 import { useSearchParams } from "next/navigation";
 import { CalendarDays, List, Plus } from "lucide-react";
-import type { BedZone, House, OrchidGroup } from "@/entities/farm/types";
 import { useUrlSearchParamsWriter } from "@/shared/lib/useUrlSearchParamsWriter";
 import {
   readWorkRecordUrlState,
@@ -16,58 +14,13 @@ import { WorkOperationCalendarView } from "./calendar/WorkOperationCalendarView"
 import { WorkOperationListView } from "./WorkOperationListView";
 
 export function WorkWorkspacePage({
-  bedZones,
-  houses,
-  orchidGroups,
-  refreshKey,
   onCreateWork,
 }: {
-  bedZones: BedZone[];
-  houses: House[];
-  orchidGroups: OrchidGroup[];
-  refreshKey: number;
   onCreateWork: () => void;
 }) {
   const searchParams = useSearchParams();
   const writeUrlParams = useUrlSearchParamsWriter();
   const urlState = readWorkRecordUrlState(searchParams);
-  const routeStateKey = JSON.stringify(urlState);
-
-  useEffect(() => {
-    const scope = searchParams.get("scope");
-    const view = searchParams.get("view");
-    const month = searchParams.get("month");
-    const page = searchParams.get("page");
-    const size = searchParams.get("size");
-    const status = searchParams.get("status");
-    if (
-      (scope === "MANAGEMENT" || scope === "ALL") &&
-      (view === "LIST" || view === "CALENDAR") &&
-      (urlState.view !== "CALENDAR" || month === urlState.month) &&
-      (page == null || page === String(urlState.page)) &&
-      (size == null || size === String(urlState.size)) &&
-      (status == null || status === urlState.filters.status)
-    ) {
-      return;
-    }
-    writeUrlParams((params) => {
-      params.set("scope", urlState.scope);
-      params.set("view", urlState.view);
-      if (urlState.view === "CALENDAR") {
-        params.set("month", urlState.month);
-      }
-      if (page != null) params.set("page", String(urlState.page));
-      if (size != null) params.set("size", String(urlState.size));
-      if (status && !urlState.filters.status) params.delete("status");
-    });
-  }, [
-    searchParams,
-    urlState.filters.status,
-    urlState.month,
-    urlState.scope,
-    urlState.view,
-    writeUrlParams,
-  ]);
 
   function changeScope(scope: WorkWorkspaceScope) {
     writeUrlParams((params) => setWorkWorkspaceScope(params, scope));
@@ -96,30 +49,15 @@ export function WorkWorkspacePage({
     <main className="h-full min-h-0">
       {urlState.view === "LIST" ? (
         <WorkOperationListView
-          key={`list:${urlState.scope}:${routeStateKey}`}
-          bedZones={bedZones}
           headerActions={headerActions}
-          houses={houses}
-          initialFilters={urlState.filters}
-          initialPage={urlState.page}
-          initialSize={urlState.size}
-          orchidGroups={orchidGroups}
-          queryView={urlState.scope}
-          refreshKey={refreshKey}
+          routeState={urlState}
           showCreateAction={false}
           onCreateWork={onCreateWork}
         />
       ) : (
         <WorkOperationCalendarView
-          key={`calendar:${urlState.scope}:${routeStateKey}`}
-          bedZones={bedZones}
           headerActions={headerActions}
-          houses={houses}
-          initialMonth={urlState.month}
-          initialStatus={urlState.filters.status}
-          orchidGroups={orchidGroups}
-          refreshKey={refreshKey}
-          view={urlState.scope}
+          routeState={urlState}
         />
       )}
     </main>

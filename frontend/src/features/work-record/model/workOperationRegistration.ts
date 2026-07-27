@@ -12,10 +12,11 @@ import type {
   WorkTargetPreviewPayload,
 } from "./types";
 import { getWorkTypeDefinition } from "./workTypeDefinition";
+import { getIncludedTargets } from "./registrationTargetSelection";
 
 export type WorkRegistrationMode = "RECORD" | "PLAN";
 
-export type WorkTargetSummary = {
+type WorkTargetSummary = {
   title: string;
   metrics: string;
   location: string;
@@ -27,7 +28,6 @@ export function createInitialWorkOperationForm(
   return {
     workTypeId: workType ? String(workType.id) : "",
     sourceScopeType: "MANUAL_SELECTION",
-    houseId: "",
     scopeKey: "",
     collectionId: "",
     title: workType ? `${workType.name} 작업` : "기간 작업",
@@ -39,29 +39,6 @@ export function createInitialWorkOperationForm(
     worker: "",
     memo: "",
   };
-}
-
-export function getIncludedTargets(
-  preview: WorkTargetPreview | null,
-  excludedIds: Set<number>,
-) {
-  return (
-    preview?.targets.filter(
-      (target) =>
-        target.orchidGroupId != null && !excludedIds.has(target.orchidGroupId),
-    ) ?? []
-  );
-}
-
-export function getRecordTargetIds(
-  includedTargets: WorkOperationTarget[],
-  manualIds: Set<number>,
-) {
-  return includedTargets.length > 0
-    ? includedTargets.flatMap((target) =>
-        target.orchidGroupId == null ? [] : [target.orchidGroupId],
-      )
-    : [...manualIds];
 }
 
 export function getSaveUnavailableReason({
@@ -87,6 +64,11 @@ export function getSaveUnavailableReason({
 }) {
   if (loading) return "처리 중입니다.";
   if (!selectedWorkType) return "작업 유형을 선택해주세요.";
+  const definition = getWorkTypeDefinition(selectedWorkType);
+  if (registrationMode === "RECORD" && !definition.recordSupported)
+    return "이 작업 유형은 작업 기록을 지원하지 않습니다.";
+  if (registrationMode === "PLAN" && !definition.planSupported)
+    return "이 작업 유형은 작업 계획을 지원하지 않습니다.";
   if (!form.title.trim()) return "작업명을 입력해주세요.";
   if (!form.plannedStartDate) return "작업일 또는 시작일을 입력해주세요.";
   if (isInboundPotting) {
@@ -149,7 +131,7 @@ export function buildTargetSummary({
 
   const includedTargets = getIncludedTargets(preview, excludedIds);
   if (manualIds.size === 0) {
-    if (targetScopeLabel && includedTargets.length > 0) {
+    if (targetScopeLabel && preview) {
       const quantity = includedTargets.reduce(
         (sum, target) => sum + target.quantitySnapshot,
         0,
@@ -170,19 +152,18 @@ export function buildTargetSummary({
   const selectedGroups = orchidGroups.filter((group) =>
     manualIds.has(group.id),
   );
-  const groups =
-    includedTargets.length > 0
-      ? selectedGroups.filter((group) =>
-          includedTargets.some((target) => target.orchidGroupId === group.id),
-        )
-      : selectedGroups;
+  const groups = preview
+    ? selectedGroups.filter((group) =>
+        includedTargets.some((target) => target.orchidGroupId === group.id),
+      )
+    : selectedGroups;
   const houseCounts = [...groupByHouse(groups).entries()]
     .sort(([left], [right]) => left - right)
     .map(([houseNumber, count]) => `${houseNumber}동 ${count}개`)
     .join(" / ");
   const totalQuantity = groups.reduce((sum, group) => sum + group.quantity, 0);
   const zoneCount = new Set(groups.map((group) => group.bedZoneId)).size;
-  const first = groups[0] ?? selectedGroups[0];
+  const first = groups[0];
   return {
     title: targetScopeLabel
       ? targetScopeLabel
@@ -264,10 +245,6 @@ export function buildWorkTargetScopePayload(
   switch (form.sourceScopeType) {
     case "FARM":
       return { scopeType: "FARM" };
-    case "HOUSE":
-      return form.houseId
-        ? { scopeType: "HOUSE", scopeId: Number(form.houseId) }
-        : null;
     case "DERIVED_GROUP":
       return form.scopeKey
         ? { scopeType: "DERIVED_GROUP", scopeKey: form.scopeKey }
