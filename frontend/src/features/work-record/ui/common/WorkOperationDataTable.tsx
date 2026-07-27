@@ -18,7 +18,6 @@ export function WorkOperationDataTable({
   pageSize,
   selectedId,
   settingsKey,
-  showActualEndDate = false,
   title,
   totalElements,
   totalPages,
@@ -34,7 +33,6 @@ export function WorkOperationDataTable({
   pageSize: number;
   selectedId: number | null;
   settingsKey: string;
-  showActualEndDate?: boolean;
   title: string;
   totalElements: number;
   totalPages: number;
@@ -42,8 +40,8 @@ export function WorkOperationDataTable({
   onPageSizeChange: (size: number) => void;
   onSelect: (id: number) => void;
 }) {
-  const columns = useMemo<ColumnDef<WorkOperation, unknown>[]>(() => {
-    const dateColumns: ColumnDef<WorkOperation, unknown>[] = [
+  const columns = useMemo<ColumnDef<WorkOperation, unknown>[]>(
+    () => [
       {
         accessorKey: "plannedStartDate",
         header: "계획일",
@@ -51,19 +49,6 @@ export function WorkOperationDataTable({
         size: 150,
         meta: { cellClassName: "whitespace-nowrap" },
       },
-    ];
-
-    if (showActualEndDate) {
-      dateColumns.push({
-        accessorKey: "actualEndAt",
-        header: "종료일",
-        cell: ({ row }) => formatShortDate(row.original.actualEndAt),
-        size: 90,
-      });
-    }
-
-    return [
-      ...dateColumns,
       {
         id: "work",
         header: "작업",
@@ -106,8 +91,9 @@ export function WorkOperationDataTable({
         ),
         size: 85,
       },
-    ];
-  }, [showActualEndDate]);
+    ],
+    [],
+  );
 
   return (
     <DataTable

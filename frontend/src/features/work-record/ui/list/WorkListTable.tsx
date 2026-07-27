@@ -1,8 +1,10 @@
+import type { ReactNode } from "react";
 import { Plus } from "lucide-react";
 import type { WorkOperation } from "@/entities/farm/types";
 import { WorkOperationDataTable } from "../common/WorkOperationDataTable";
 
 export function WorkListTable({
+  headerActions,
   loading,
   operations,
   page,
@@ -15,6 +17,7 @@ export function WorkListTable({
   onPageSizeChange,
   onSelect,
 }: {
+  headerActions?: ReactNode;
   loading: boolean;
   operations: WorkOperation[];
   page: number;
@@ -22,7 +25,7 @@ export function WorkListTable({
   selectedId: number | null;
   totalElements: number;
   totalPages: number;
-  onCreate: () => void;
+  onCreate?: () => void;
   onPageChange: (page: number) => void;
   onPageSizeChange: (size: number) => void;
   onSelect: (id: number) => void;
@@ -30,14 +33,25 @@ export function WorkListTable({
   return (
     <WorkOperationDataTable
       actions={
-        <button
-          className="inline-flex h-9 items-center gap-2 rounded-md bg-[#159447] px-3 text-xs font-semibold whitespace-nowrap text-white shadow-sm"
-          type="button"
-          onClick={onCreate}
-        >
-          <Plus className="h-4 w-4" strokeWidth={1.8} aria-hidden="true" />
-          작업 등록
-        </button>
+        headerActions || onCreate ? (
+          <div className="flex max-w-full flex-wrap items-center justify-end gap-2">
+            {headerActions}
+            {onCreate ? (
+              <button
+                className="inline-flex h-9 items-center gap-2 rounded-md bg-[#159447] px-3 text-xs font-semibold whitespace-nowrap text-white shadow-sm"
+                type="button"
+                onClick={onCreate}
+              >
+                <Plus
+                  className="h-4 w-4"
+                  strokeWidth={1.8}
+                  aria-hidden="true"
+                />
+                작업 등록
+              </button>
+            ) : null}
+          </div>
+        ) : null
       }
       emptyMessage="조건에 맞는 작업이 없습니다."
       loading={loading}

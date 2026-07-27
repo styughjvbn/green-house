@@ -13,7 +13,7 @@ export type WorkOperationFilterState = {
 const workOperationQueryKeys = {
   all: ["workOperations"] as const,
   page: (
-    view: "MANAGEMENT" | "HISTORY",
+    view: "ALL" | "MANAGEMENT" | "HISTORY",
     filters: WorkOperationFilterState,
     page: number,
     size: number,
@@ -37,7 +37,7 @@ export function useWorkOperations({
   view,
 }: {
   refreshKey: number;
-  view: "MANAGEMENT" | "HISTORY";
+  view: "ALL" | "MANAGEMENT" | "HISTORY";
 }) {
   const listState = usePagedListQuery({
     createEmptyFilters: createEmptyWorkOperationFilters,

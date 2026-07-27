@@ -1,5 +1,6 @@
 "use client";
 
+import type { ReactNode } from "react";
 import { useState } from "react";
 import type {
   BedZone,
@@ -20,20 +21,26 @@ import { StructureWorkExecutionDialog } from "./components/StructureWorkExecutio
 import { WorkListFilters } from "./list/WorkListFilters";
 import { WorkListTable } from "./list/WorkListTable";
 
-export function WorkListPage({
+export function WorkOperationListView({
   bedZones,
   houses,
+  headerActions,
   orchidGroups,
+  queryView = "MANAGEMENT",
   refreshKey,
+  showCreateAction = true,
   onCreateWork,
 }: {
   bedZones: BedZone[];
   houses: House[];
+  headerActions?: ReactNode;
   orchidGroups: OrchidGroup[];
+  queryView?: "ALL" | "MANAGEMENT";
   refreshKey: number;
+  showCreateAction?: boolean;
   onCreateWork: () => void;
 }) {
-  const list = useWorkOperations({ refreshKey, view: "MANAGEMENT" });
+  const list = useWorkOperations({ refreshKey, view: queryView });
   const [selectedId, setSelectedId] = useState<number | null>(null);
   const [actionLoading, setActionLoading] = useState(false);
   const [actionError, setActionError] = useState<string | null>(null);
@@ -72,9 +79,10 @@ export function WorkListPage({
   }
 
   return (
-    <main className="h-full min-h-0">
+    <>
       <TabLayout>
         <WorkListFilters
+          allStatusLabel={queryView === "ALL" ? "모든 상태" : "관리 대상 전체"}
           filters={list.filters}
           loading={loading}
           onChange={list.updateFilter}
@@ -90,8 +98,9 @@ export function WorkListPage({
 
         <TabError message={error} />
 
-        <TabSplit columns="grid-rows-[minmax(24rem,1fr)_minmax(20rem,auto)] lg:grid-rows-1 lg:grid-cols-[minmax(0,0.88fr)_minmax(0,1.12fr)]">
+        <TabSplit columns="grid-rows-[minmax(24rem,1fr)_minmax(20rem,auto)] lg:grid-rows-1 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
           <WorkListTable
+            headerActions={headerActions}
             loading={loading}
             operations={operations}
             page={list.queryState.page}
@@ -99,7 +108,7 @@ export function WorkListPage({
             selectedId={selectedId}
             totalElements={list.pageData.totalElements}
             totalPages={list.pageData.totalPages}
-            onCreate={onCreateWork}
+            onCreate={showCreateAction ? onCreateWork : undefined}
             onPageChange={(page) => {
               clearSelection();
               list.changePage(page);
@@ -170,6 +179,6 @@ export function WorkListPage({
           }}
         />
       ) : null}
-    </main>
+    </>
   );
 }

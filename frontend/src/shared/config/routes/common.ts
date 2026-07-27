@@ -3,6 +3,7 @@ export const COMMON_ROUTES = {
   login: "/login",
   farmStatus: "/farm-status",
   orchidGroups: "/orchid-groups",
+  workRecords: "/work-records",
   print: "/print",
   settings: "/settings",
 } as const;

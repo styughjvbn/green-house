@@ -6,8 +6,6 @@ import {
   INVENTORY_ROUTE,
   SALES_NAV_ITEMS,
   SALES_ROUTE,
-  WORK_RECORD_NAV_ITEMS,
-  WORK_RECORD_ROUTE,
 } from "@/shared/config/routes";
 import {
   BarChart3,
@@ -59,7 +57,7 @@ export const PAGE_META = [
     description: "난 묶음의 위치와 상태를 등록하고 관리하세요.",
   },
   {
-    href: WORK_RECORD_ROUTE.root,
+    href: COMMON_ROUTES.workRecords,
     title: "작업 관리",
     description: "농장 작업을 등록하고 일정과 이력을 관리하세요.",
   },
@@ -95,11 +93,9 @@ export const NAVIGATION = [
   { href: COMMON_ROUTES.farmStatus, label: "농장 현황", icon: Sprout },
   { href: COMMON_ROUTES.orchidGroups, label: "난 묶음 관리", icon: Flower2 },
   {
-    href: WORK_RECORD_ROUTE.tab("list"),
-    sectionHref: WORK_RECORD_ROUTE.root,
+    href: COMMON_ROUTES.workRecords,
     label: "작업 관리",
     icon: ClipboardList,
-    children: WORK_RECORD_NAV_ITEMS,
   },
   {
     href: SALES_ROUTE.tab("slips"),

@@ -1,26 +1,18 @@
 "use client";
 
 import { useState } from "react";
-import type { WorkRecordTab } from "@/shared/config/routes";
 import type { WorkRecordManagerProps } from "../model/types";
 import { useWorkRecordManager } from "../model/useWorkRecordManager";
 import { WorkOperationPanel } from "./components/HouseWorkOperationPanel";
-import { WorkOperationSchedule } from "./components/WorkOperationSchedule";
-import { WorkHistoryPage } from "./WorkHistoryPage";
-import { WorkListPage } from "./WorkListPage";
+import { WorkWorkspacePage } from "./WorkWorkspacePage";
 
-export type WorkManagementTab = WorkRecordTab;
-
-export function WorkRecordManager(
-  props: WorkRecordManagerProps & { activeTab: WorkManagementTab },
-) {
+export function WorkRecordManager(props: WorkRecordManagerProps) {
   const manager = useWorkRecordManager();
   const [showOperationForm, setShowOperationForm] = useState(false);
   const [operationInitialTypeCode, setOperationInitialTypeCode] = useState<
     string | null
   >(null);
   const [operationSavedVersion, setOperationSavedVersion] = useState(0);
-  const { activeTab } = props;
   const refreshKey = manager.operationCreatedVersion + operationSavedVersion;
 
   return (
@@ -30,7 +22,7 @@ export function WorkRecordManager(
           {manager.errorMessage}
         </div>
       ) : null}
-      {activeTab === "list" && showOperationForm ? (
+      {showOperationForm ? (
         <WorkOperationPanel
           houses={props.houses}
           initialWorkTypeCode={operationInitialTypeCode}
@@ -43,33 +35,16 @@ export function WorkRecordManager(
         />
       ) : null}
 
-      {activeTab === "list" ? (
-        <WorkListPage
-          bedZones={manager.bedZones}
-          houses={props.houses}
-          orchidGroups={manager.orchidGroups}
-          refreshKey={refreshKey}
-          onCreateWork={() => {
-            setOperationInitialTypeCode(null);
-            setShowOperationForm(true);
-          }}
-        />
-      ) : null}
-
-      {activeTab === "calendar" ? (
-        <div className="min-h-0 flex-1 overflow-auto">
-          <WorkOperationSchedule
-            bedZones={manager.bedZones}
-            houses={props.houses}
-            orchidGroups={manager.orchidGroups}
-            refreshKey={refreshKey}
-          />
-        </div>
-      ) : null}
-
-      {activeTab === "history" ? (
-        <WorkHistoryPage refreshKey={refreshKey} />
-      ) : null}
+      <WorkWorkspacePage
+        bedZones={manager.bedZones}
+        houses={props.houses}
+        orchidGroups={manager.orchidGroups}
+        refreshKey={refreshKey}
+        onCreateWork={() => {
+          setOperationInitialTypeCode(null);
+          setShowOperationForm(true);
+        }}
+      />
     </div>
   );
 }

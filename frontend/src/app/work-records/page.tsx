@@ -1,9 +1,18 @@
-import { redirect } from "next/navigation";
-import {
-  DEFAULT_WORK_RECORD_TAB,
-  WORK_RECORD_ROUTE,
-} from "@/shared/config/routes";
+import type { House, WorkType } from "@/entities/farm/types";
+import { WorkRecordManager } from "@/features/work-record/ui/WorkRecordManager";
+import { fetchApi } from "@/shared/api/client";
 
-export default function Page() {
-  redirect(WORK_RECORD_ROUTE.tab(DEFAULT_WORK_RECORD_TAB));
+export const dynamic = "force-dynamic";
+
+export default async function Page() {
+  const [workTypes, houses] = await Promise.all([
+    fetchApi<WorkType[]>("/work-types"),
+    fetchApi<House[]>("/houses"),
+  ]);
+
+  return (
+    <main className="h-full min-h-0">
+      <WorkRecordManager houses={houses} workTypes={workTypes} />
+    </main>
+  );
 }

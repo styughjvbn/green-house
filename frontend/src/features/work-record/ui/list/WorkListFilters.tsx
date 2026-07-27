@@ -11,12 +11,14 @@ import {
 import type { WorkOperationFilterState } from "../../model/useWorkOperations";
 
 export function WorkListFilters({
+  allStatusLabel = "관리 대상 전체",
   filters,
   loading,
   onChange,
   onReset,
   onSearch,
 }: {
+  allStatusLabel?: string;
   filters: WorkOperationFilterState;
   loading: boolean;
   onChange: <K extends keyof WorkOperationFilterState>(
@@ -48,7 +50,7 @@ export function WorkListFilters({
               onChange("status", value as WorkOperationStatus | "")
             }
           >
-            <option value="">관리 대상 전체</option>
+            <option value="">{allStatusLabel}</option>
             <option value="PLANNED">계획</option>
             <option value="IN_PROGRESS">진행 중</option>
             <option value="PAUSED">일시중지</option>

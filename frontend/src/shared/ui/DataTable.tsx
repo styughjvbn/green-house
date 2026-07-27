@@ -203,9 +203,9 @@ export function DataTable<TData>({
 
   return (
     <section className="flex h-full min-h-0 min-w-0 flex-col rounded-md border border-[#dfe5dc] bg-white shadow-sm">
-      <div className="flex shrink-0 items-center justify-between gap-3 border-b border-[#e7ebe5] px-4 py-3">
+      <div className="flex shrink-0 flex-wrap items-center justify-between gap-3 border-b border-[#e7ebe5] px-4 py-3">
         <h2 className="text-base font-bold text-[#17251b]">{title}</h2>
-        <div className="flex shrink-0 items-center gap-3">
+        <div className="ml-auto flex max-w-full shrink-0 flex-wrap items-center justify-end gap-3">
           {totalLabel ? (
             <span className="text-xs font-semibold whitespace-nowrap text-[#159447]">
               {totalLabel}
