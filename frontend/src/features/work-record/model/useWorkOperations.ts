@@ -29,20 +29,23 @@ const workOperationQueryKeys = {
     ] as const,
 };
 
-const INITIAL_PAGE = createEmptyPage<WorkOperation>(20);
-const INITIAL_FILTERS = createEmptyWorkOperationFilters();
-
 export function useWorkOperations({
+  initialFilters,
+  initialPage,
+  initialSize,
   refreshKey,
   view,
 }: {
+  initialFilters: WorkOperationFilterState;
+  initialPage: number;
+  initialSize: number;
   refreshKey: number;
   view: "ALL" | "MANAGEMENT" | "HISTORY";
 }) {
   const listState = usePagedListQuery({
     createEmptyFilters: createEmptyWorkOperationFilters,
-    initialFilters: INITIAL_FILTERS,
-    initialPage: INITIAL_PAGE,
+    initialFilters,
+    initialPage: createEmptyPage<WorkOperation>(initialSize, initialPage),
     queryKey: ({ filters, page, size }) =>
       workOperationQueryKeys.page(view, filters, page, size, refreshKey),
     queryFn: ({ filters, page, size }) =>
@@ -59,11 +62,16 @@ export function useWorkOperations({
 
   return {
     ...listState,
-    pageData: listState.pageData ?? createEmptyPage<WorkOperation>(20),
+    pageData:
+      listState.pageData ??
+      createEmptyPage<WorkOperation>(
+        listState.queryState.size,
+        listState.queryState.page,
+      ),
   };
 }
 
-function createEmptyWorkOperationFilters(): WorkOperationFilterState {
+export function createEmptyWorkOperationFilters(): WorkOperationFilterState {
   return {
     from: "",
     keyword: "",

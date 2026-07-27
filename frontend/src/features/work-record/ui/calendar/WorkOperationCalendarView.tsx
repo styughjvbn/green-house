@@ -11,6 +11,7 @@ import type {
   WorkOperationStatus,
   WorkOperationTarget,
 } from "@/entities/farm/types";
+import { useUrlSearchParamsWriter } from "@/shared/lib/useUrlSearchParamsWriter";
 import {
   completeWorkOperation,
   getAllWorkOperations,
@@ -28,6 +29,8 @@ export function WorkOperationCalendarView({
   bedZones = [],
   headerActions,
   houses = [],
+  initialMonth,
+  initialStatus,
   orchidGroups = [],
   refreshKey = 0,
   view = "ALL",
@@ -35,14 +38,15 @@ export function WorkOperationCalendarView({
   bedZones?: BedZone[];
   headerActions?: ReactNode;
   houses?: House[];
+  initialMonth: string;
+  initialStatus: WorkOperationStatus | "";
   orchidGroups?: OrchidGroup[];
   refreshKey?: number;
   view?: "ALL" | "MANAGEMENT";
 }) {
-  const [month, setMonth] = useState(() =>
-    new Date().toISOString().slice(0, 7),
-  );
-  const [status, setStatus] = useState<WorkOperationStatus | "">("");
+  const writeUrlParams = useUrlSearchParamsWriter();
+  const [month, setMonth] = useState(initialMonth);
+  const [status, setStatus] = useState<WorkOperationStatus | "">(initialStatus);
   const [operations, setOperations] = useState<WorkOperation[]>([]);
   const [selectedId, setSelectedId] = useState<number | null>(null);
   const [loading, setLoading] = useState(true);
@@ -88,8 +92,19 @@ export function WorkOperationCalendarView({
   function changeMonth(offset: number) {
     const [year, monthNumber] = month.split("-").map(Number);
     const next = new Date(Date.UTC(year, monthNumber - 1 + offset, 1));
+    const nextMonth = next.toISOString().slice(0, 7);
     setLoading(true);
-    setMonth(next.toISOString().slice(0, 7));
+    setMonth(nextMonth);
+    writeUrlParams((params) => params.set("month", nextMonth));
+  }
+
+  function changeStatus(nextStatus: WorkOperationStatus | "") {
+    setLoading(true);
+    setStatus(nextStatus);
+    writeUrlParams((params) => {
+      if (nextStatus) params.set("status", nextStatus);
+      else params.delete("status");
+    });
   }
 
   function updateOperation(updated: WorkOperation) {
@@ -118,13 +133,7 @@ export function WorkOperationCalendarView({
 
   return (
     <TabLayout>
-      <WorkCalendarFilters
-        status={status}
-        onStatusChange={(nextStatus) => {
-          setLoading(true);
-          setStatus(nextStatus);
-        }}
-      />
+      <WorkCalendarFilters status={status} onStatusChange={changeStatus} />
 
       <TabError message={error} />
 

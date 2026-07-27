@@ -9,13 +9,21 @@ import type {
   WorkOperation,
   WorkOperationTarget,
 } from "@/entities/farm/types";
+import { usePagedListUrlActions } from "@/shared/api/usePagedListUrlActions";
 import { TabError, TabLayout, TabSplit } from "@/shared/ui/TabLayout";
 import {
   completeWorkOperation,
   transitionWorkOperation,
   transitionWorkOperationTarget,
 } from "../api/workRecordApi";
-import { useWorkOperations } from "../model/useWorkOperations";
+import {
+  useWorkOperations,
+  type WorkOperationFilterState,
+} from "../model/useWorkOperations";
+import {
+  WORK_LIST_FILTER_KEYS,
+  writeWorkListFilterParams,
+} from "../lib/workRecordUrlState";
 import { OperationResult } from "./components/WorkOperationResult";
 import { WorkExecutionDialog } from "./WorkExecutionDialog";
 import { WorkListFilters } from "./list/WorkListFilters";
@@ -25,6 +33,9 @@ export function WorkOperationListView({
   bedZones,
   houses,
   headerActions,
+  initialFilters,
+  initialPage,
+  initialSize,
   orchidGroups,
   queryView = "MANAGEMENT",
   refreshKey,
@@ -34,13 +45,31 @@ export function WorkOperationListView({
   bedZones: BedZone[];
   houses: House[];
   headerActions?: ReactNode;
+  initialFilters: WorkOperationFilterState;
+  initialPage: number;
+  initialSize: number;
   orchidGroups: OrchidGroup[];
   queryView?: "ALL" | "MANAGEMENT";
   refreshKey: number;
   showCreateAction?: boolean;
   onCreateWork: () => void;
 }) {
-  const list = useWorkOperations({ refreshKey, view: queryView });
+  const list = useWorkOperations({
+    initialFilters,
+    initialPage,
+    initialSize,
+    refreshKey,
+    view: queryView,
+  });
+  const listActions = usePagedListUrlActions({
+    filters: list.filters,
+    filterKeys: WORK_LIST_FILTER_KEYS,
+    writeFilterParams: writeWorkListFilterParams,
+    onSearch: list.search,
+    onReset: list.reset,
+    onPageChange: list.changePage,
+    onPageSizeChange: list.changePageSize,
+  });
   const [selectedId, setSelectedId] = useState<number | null>(null);
   const [actionLoading, setActionLoading] = useState(false);
   const [actionError, setActionError] = useState<string | null>(null);
@@ -88,11 +117,11 @@ export function WorkOperationListView({
           onChange={list.updateFilter}
           onReset={() => {
             clearSelection();
-            list.reset();
+            listActions.reset();
           }}
           onSearch={() => {
             clearSelection();
-            list.search();
+            listActions.search();
           }}
         />
 
@@ -111,11 +140,11 @@ export function WorkOperationListView({
             onCreate={showCreateAction ? onCreateWork : undefined}
             onPageChange={(page) => {
               clearSelection();
-              list.changePage(page);
+              listActions.changePage(page);
             }}
             onPageSizeChange={(size) => {
               clearSelection();
-              list.changePageSize(size);
+              listActions.changePageSize(size);
             }}
             onSelect={setSelectedId}
           />

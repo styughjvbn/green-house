@@ -1,13 +1,19 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect } from "react";
+import { useSearchParams } from "next/navigation";
 import { CalendarDays, List, Plus } from "lucide-react";
 import type { BedZone, House, OrchidGroup } from "@/entities/farm/types";
+import { useUrlSearchParamsWriter } from "@/shared/lib/useUrlSearchParamsWriter";
+import {
+  readWorkRecordUrlState,
+  setWorkWorkspaceScope,
+  setWorkWorkspaceView,
+  type WorkWorkspaceScope,
+  type WorkWorkspaceView,
+} from "../lib/workRecordUrlState";
 import { WorkOperationCalendarView } from "./calendar/WorkOperationCalendarView";
 import { WorkOperationListView } from "./WorkOperationListView";
-
-type WorkScope = "MANAGEMENT" | "ALL";
-type WorkView = "LIST" | "CALENDAR";
 
 export function WorkWorkspacePage({
   bedZones,
@@ -22,40 +28,98 @@ export function WorkWorkspacePage({
   refreshKey: number;
   onCreateWork: () => void;
 }) {
-  const [scope, setScope] = useState<WorkScope>("MANAGEMENT");
-  const [view, setView] = useState<WorkView>("LIST");
+  const searchParams = useSearchParams();
+  const writeUrlParams = useUrlSearchParamsWriter();
+  const urlState = readWorkRecordUrlState(searchParams);
+  const routeStateKey = JSON.stringify(urlState);
+
+  useEffect(() => {
+    const scope = searchParams.get("scope");
+    const view = searchParams.get("view");
+    const month = searchParams.get("month");
+    const page = searchParams.get("page");
+    const size = searchParams.get("size");
+    const status = searchParams.get("status");
+    if (
+      (scope === "MANAGEMENT" || scope === "ALL") &&
+      (view === "LIST" || view === "CALENDAR") &&
+      (urlState.view !== "CALENDAR" || month === urlState.month) &&
+      (page == null || page === String(urlState.page)) &&
+      (size == null || size === String(urlState.size)) &&
+      (status == null || status === urlState.filters.status)
+    ) {
+      return;
+    }
+    writeUrlParams((params) => {
+      params.set("scope", urlState.scope);
+      params.set("view", urlState.view);
+      if (urlState.view === "CALENDAR") {
+        params.set("month", urlState.month);
+      }
+      if (page != null) params.set("page", String(urlState.page));
+      if (size != null) params.set("size", String(urlState.size));
+      if (status && !urlState.filters.status) params.delete("status");
+    });
+  }, [
+    searchParams,
+    urlState.filters.status,
+    urlState.month,
+    urlState.scope,
+    urlState.view,
+    writeUrlParams,
+  ]);
+
+  function changeScope(scope: WorkWorkspaceScope) {
+    writeUrlParams((params) => setWorkWorkspaceScope(params, scope));
+  }
+
+  function changeView(view: WorkWorkspaceView) {
+    writeUrlParams((params) => {
+      setWorkWorkspaceView(params, view);
+      if (view === "CALENDAR" && !params.get("month")) {
+        params.set("month", urlState.month);
+      }
+    });
+  }
+
   const headerActions = (
     <WorkspaceHeaderActions
-      scope={scope}
-      view={view}
+      scope={urlState.scope}
+      view={urlState.view}
       onCreateWork={onCreateWork}
-      onScopeChange={setScope}
-      onViewChange={setView}
+      onScopeChange={changeScope}
+      onViewChange={changeView}
     />
   );
 
   return (
     <main className="h-full min-h-0">
-      {view === "LIST" ? (
+      {urlState.view === "LIST" ? (
         <WorkOperationListView
-          key={scope}
+          key={`list:${urlState.scope}:${routeStateKey}`}
           bedZones={bedZones}
           headerActions={headerActions}
           houses={houses}
+          initialFilters={urlState.filters}
+          initialPage={urlState.page}
+          initialSize={urlState.size}
           orchidGroups={orchidGroups}
-          queryView={scope}
+          queryView={urlState.scope}
           refreshKey={refreshKey}
           showCreateAction={false}
           onCreateWork={onCreateWork}
         />
       ) : (
         <WorkOperationCalendarView
+          key={`calendar:${urlState.scope}:${routeStateKey}`}
           bedZones={bedZones}
           headerActions={headerActions}
           houses={houses}
+          initialMonth={urlState.month}
+          initialStatus={urlState.filters.status}
           orchidGroups={orchidGroups}
           refreshKey={refreshKey}
-          view={scope}
+          view={urlState.scope}
         />
       )}
     </main>
@@ -69,11 +133,11 @@ function WorkspaceHeaderActions({
   onScopeChange,
   onViewChange,
 }: {
-  scope: WorkScope;
-  view: WorkView;
+  scope: WorkWorkspaceScope;
+  view: WorkWorkspaceView;
   onCreateWork: () => void;
-  onScopeChange: (scope: WorkScope) => void;
-  onViewChange: (view: WorkView) => void;
+  onScopeChange: (scope: WorkWorkspaceScope) => void;
+  onViewChange: (view: WorkWorkspaceView) => void;
 }) {
   return (
     <>

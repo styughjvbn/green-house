@@ -53,11 +53,9 @@ export function WorkOperationRegistrationDialog({
         aria-label="작업 등록"
         onMouseDown={(event) => event.stopPropagation()}
       >
-        <header className="flex shrink-0 items-start justify-between border-b border-[#dbe8dc] bg-white py-3 px-5">
+        <header className="flex shrink-0 items-start justify-between border-b border-[#dbe8dc] bg-white px-5 py-3">
           <div className="flex items-end gap-3">
-            <h2 className="text-xl font-semibold text-[#17251b]">
-              작업 등록
-            </h2>
+            <h2 className="text-xl font-semibold text-[#17251b]">작업 등록</h2>
             <p className="text-sm text-[#5c6a60]">
               완료된 작업을 기록하거나 기간을 정해 작업을 계획합니다.
             </p>
