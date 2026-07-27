@@ -5,6 +5,7 @@ import type {
   PartnerSettlementSettings,
   SalesOrchidGroupOption,
   SalesSlip,
+  SalesSlipPage,
 } from "@/entities/farm/types";
 import type {
   AuctionLot,
@@ -22,7 +23,6 @@ import type {
   CreateBusinessPartnerPayload,
   CreateSalesSlipPayload,
   SalesFilterState,
-  SalesSlipPage,
   UpdateBusinessPartnerPayload,
 } from "../model/types";
 

@@ -3,9 +3,9 @@
 import { useMemo } from "react";
 import type { ColumnDef } from "@tanstack/react-table";
 import { Plus } from "lucide-react";
+import type { SalesSlipListItem } from "@/entities/farm/types";
 import { formatShortDate } from "@/shared/lib/dateFormat";
 import { DataTable } from "@/shared/ui/DataTable";
-import type { SalesSlipListItem } from "../../model/types";
 import { SalesSlipStatusBadge } from "@/features/sales/ui/common/SalesStatusBadge";
 
 export function SalesSlipList({

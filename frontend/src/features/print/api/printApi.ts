@@ -1,6 +1,5 @@
 import { fetchApi } from "@/shared/api/client";
-import type { SalesSlip } from "@/entities/farm/types";
-import type { SalesSlipPage } from "@/features/sales/model/types";
+import type { SalesSlip, SalesSlipPage } from "@/entities/farm/types";
 
 export function getPrintableSalesSlips(page = 0, size = 10) {
   const params = new URLSearchParams({

@@ -2,6 +2,7 @@ import type {
   AuctionLotPage,
   AuctionTrackingSummary,
 } from "@/entities/farm/types";
+import type { AuctionFilterState } from "../../model/types";
 import { useAuctionTracking } from "../../model/useAuctionTracking";
 import { AuctionFilters } from "./AuctionFilters";
 import { AuctionLotDetail } from "./AuctionLotDetail";
@@ -11,11 +12,34 @@ import { TabError, TabSplit, TabStack } from "@/shared/ui/TabLayout";
 export function AuctionTrackingView({
   initialPage,
   initialSummary,
+  initialFilters,
+  queryFilters,
+  queryPage,
+  querySize,
+  onSearch,
+  onResetFilters,
+  onPageChange,
+  onPageSizeChange,
 }: {
   initialPage: AuctionLotPage;
   initialSummary: AuctionTrackingSummary;
+  initialFilters: AuctionFilterState;
+  queryFilters: AuctionFilterState;
+  queryPage: number;
+  querySize: number;
+  onSearch: (filters: AuctionFilterState) => void;
+  onResetFilters: () => void;
+  onPageChange: (page: number) => void;
+  onPageSizeChange: (size: number) => void;
 }) {
-  const tracking = useAuctionTracking(initialPage, initialSummary);
+  const tracking = useAuctionTracking({
+    initialPage,
+    initialSummary,
+    initialFilters,
+    queryFilters,
+    queryPage,
+    querySize,
+  });
 
   return (
     <TabStack>
@@ -24,8 +48,11 @@ export function AuctionTrackingView({
         loading={tracking.loading}
         summary={tracking.summary}
         onChange={tracking.updateFilter}
-        onSearch={() => tracking.refresh()}
-        onReset={tracking.resetFilters}
+        onSearch={() => onSearch(tracking.filters)}
+        onReset={() => {
+          tracking.resetFilters();
+          onResetFilters();
+        }}
       />
       <TabError message={tracking.error} />
       <TabSplit
@@ -40,8 +67,8 @@ export function AuctionTrackingView({
           totalPages={tracking.totalPages}
           selectedId={tracking.selectedLot?.id ?? null}
           onSelect={tracking.setSelectedId}
-          onPageChange={tracking.changePage}
-          onPageSizeChange={tracking.changePageSize}
+          onPageChange={onPageChange}
+          onPageSizeChange={onPageSizeChange}
         />
         <AuctionLotDetail
           key={tracking.selectedLot?.id ?? "empty"}

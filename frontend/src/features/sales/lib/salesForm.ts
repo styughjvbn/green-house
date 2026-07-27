@@ -76,25 +76,6 @@ export function createInitialSalesForm(
   };
 }
 
-export function createInitialSalesFilters(): SalesFilterState {
-  return {
-    from: "",
-    to: "",
-    partnerId: "",
-    paymentStatus: "",
-    salesStatus: "",
-    keyword: "",
-  };
-}
-
-export function createInitialBusinessPartnerFilters(): BusinessPartnerFilterState {
-  return {
-    partnerType: "",
-    active: "",
-    keyword: "",
-  };
-}
-
 export function todayIsoDate(): string {
   return new Date().toISOString().slice(0, 10);
 }

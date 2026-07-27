@@ -8,6 +8,7 @@ import {
   FilterInput,
   FilterPanel,
   FilterResetButton,
+  FilterSearchButton,
   FilterSelect,
 } from "@/shared/ui/FilterControls";
 
@@ -16,6 +17,7 @@ export function SalesFilters({
   filters,
   onChange,
   onReset,
+  onSearch,
 }: {
   partners: BusinessPartner[];
   filters: SalesFilterState;
@@ -24,10 +26,11 @@ export function SalesFilters({
     value: SalesFilterState[K],
   ) => void;
   onReset: () => void;
+  onSearch: () => void;
 }) {
   return (
     <FilterPanel>
-      <FilterGrid className="lg:grid-cols-[2fr_1.3fr_1.1fr_1.1fr_1.7fr_auto]">
+      <FilterGrid className="lg:grid-cols-[2fr_1.3fr_1.1fr_1.1fr_1.7fr_auto_auto]">
         <FilterDateRange
           from={filters.from}
           to={filters.to}
@@ -78,6 +81,7 @@ export function SalesFilters({
         />
 
         <FilterResetButton onClick={onReset} />
+        <FilterSearchButton type="button" onClick={onSearch} />
       </FilterGrid>
     </FilterPanel>
   );

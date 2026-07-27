@@ -3,7 +3,7 @@
 import Link from "next/link";
 import type { Route } from "next";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import type { SalesSlipPage } from "@/features/sales/model/types";
+import type { SalesSlipPage } from "@/entities/farm/types";
 import { PaginationControls } from "@/shared/ui/PaginationControls";
 
 type PrintPageProps = {

@@ -1,34 +1,7 @@
-import type {
-  AuctionLotPage,
-  AuctionTrackingSummary,
-  AuctionSettlement,
-  BusinessPartner,
-  PartnerType,
-  SalesSlip,
-} from "@/entities/farm/types";
+import type { PartnerType } from "@/entities/farm/types";
 import type { SalesTab } from "@/shared/config/routes";
 
 export type { SalesTab };
-
-export type SalesManagerProps = {
-  activeTab: SalesTab;
-  initialShowCreateSlip?: boolean;
-  initialBusinessPartners?: BusinessPartner[];
-  initialSalesSlipPage?: SalesSlipPage;
-  initialAuctionPage?: AuctionLotPage;
-  initialAuctionSummary?: AuctionTrackingSummary;
-  initialAuctionSettlements?: AuctionSettlement[];
-};
-
-export type SalesSlipListItem = Omit<SalesSlip, "items">;
-
-export type SalesSlipPage = {
-  content: SalesSlipListItem[];
-  page: number;
-  size: number;
-  totalElements: number;
-  totalPages: number;
-};
 
 export type BusinessPartnerForm = {
   name: string;

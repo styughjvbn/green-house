@@ -21,5 +21,11 @@ export default async function Page({
       ? requestedCreateSlip[0]
       : requestedCreateSlip) === "1";
 
-  return <SalesRoutePage activeTab={tab} createSlip={createSlip} />;
+  return (
+    <SalesRoutePage
+      activeTab={tab}
+      createSlip={createSlip}
+      searchParams={resolvedSearchParams}
+    />
+  );
 }

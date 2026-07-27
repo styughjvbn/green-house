@@ -1,5 +1,7 @@
-﻿export { SalesPage } from "./ui/SalesPage";
-export { SalesManager } from "./ui/SalesManager";
+﻿export { SalesAuctionPage } from "./ui/SalesAuctionPage";
+export { SalesPartnersPage } from "./ui/SalesPartnersPage";
+export { SalesSettlementPage } from "./ui/SalesSettlementPage";
+export { SalesSlipsPage } from "./ui/SalesSlipsPage";
 
 export {
   confirmAuctionSettlementPayment,
