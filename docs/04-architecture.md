@@ -30,6 +30,7 @@ green-house/
 - 입고 관리와 작업 관리가 공통으로 사용하는 포트 실행·농장 배치 UI는 `entities/farm/ui`에 두고 저장 API는 각 `features/*`에서 연결한다.
 - 판매와 inventory의 서버 페이지 목록은 TanStack Query와 `shared/api`의 공통 페이지 훅으로 관리한다. 서버 컴포넌트가 첫 페이지 데이터를 제공하고 기능별 model 훅이 필터·페이지 상태, 캐시 무효화, mutation을 담당한다.
 - 작업 관리의 통합·목록·이력 화면은 TanStack Query 공통 페이지 훅과 공용 `DataTable`을 사용한다. 통합 화면은 `MANAGEMENT`와 `ALL` 조회 범위, 목록과 캘린더 보기 방식을 조합하며 월간 캘린더는 같은 페이지 API를 끝까지 조회해 기간 전체 작업을 구성한다.
+- 작업 관리의 특수 실행 흐름은 `features/work-record/ui/work-types` 아래에서 이동·폐기·포트·구조 변경 단위로 분리한다. 작업 코드별 대상 출처, 실행 UI, 완료 기록 UI는 `model/workTypeDefinition.ts`의 정의를 통해 선택하며 일반 작업은 공통 기록 흐름을 사용한다.
 
 ### Backend
 

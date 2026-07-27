@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { X } from "lucide-react";
 import type { OrchidGroup } from "@/entities/farm/types";
-import { TextField } from "./FormFields";
+import { TextField } from "../../components/FormFields";
 
 type DiscardResult = {
   orchidGroupId: number;

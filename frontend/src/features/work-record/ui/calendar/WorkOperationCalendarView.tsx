@@ -20,7 +20,7 @@ import {
 import { TabError, TabLayout, TabSplit } from "@/shared/ui/TabLayout";
 import { WorkCalendarFilters } from "./WorkCalendarFilters";
 import { OperationResult } from "../components/WorkOperationResult";
-import { StructureWorkExecutionDialog } from "../components/StructureWorkExecutionDialog";
+import { WorkExecutionDialog } from "../WorkExecutionDialog";
 
 const WEEKDAYS = ["월", "화", "수", "목", "금", "토", "일"];
 
@@ -261,7 +261,7 @@ export function WorkOperationCalendarView({
       </TabSplit>
 
       {selected && executionTarget ? (
-        <StructureWorkExecutionDialog
+        <WorkExecutionDialog
           bedZones={bedZones}
           houses={houses}
           operation={selected}

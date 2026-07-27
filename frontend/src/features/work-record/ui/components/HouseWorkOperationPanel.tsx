@@ -18,10 +18,7 @@ import {
 import {
   completeWorkOperation,
   createCompletedWorkOperation,
-  createDiscardRecord,
   createInboundPottingPlansBatch,
-  createInboundPottingRecord,
-  createStructureChangeRecords,
   createWorkOperationsBatch,
   getInboundPottingCandidates,
   getWorkTargetSelectionOptions,
@@ -34,16 +31,14 @@ import type {
   InboundPottingCandidate,
   WorkOperationFormState,
   WorkTargetPreviewPayload,
-  CreateWorkOperationPayload,
 } from "../../model/types";
-import { DiscardWorkRecordDialog } from "./DiscardWorkRecordDialog";
-import { InboundPottingWorkRecordDialog } from "./InboundPottingWorkRecordDialog";
+import { getWorkTypeDefinition } from "../../model/workTypeDefinition";
+import { WorkExecutionDialog } from "../WorkExecutionDialog";
+import { WorkRecordResultDialog } from "../WorkRecordResultDialog";
 import { InboundPottingTargetDialog } from "./InboundPottingTargetDialog";
 import { WorkOperationPlanForm } from "./WorkOperationPlanForm";
 import { OperationResult } from "./WorkOperationResult";
 import { WorkTargetSelectionDialog } from "./WorkTargetSelectionDialog";
-import { StructureWorkExecutionDialog } from "./StructureWorkExecutionDialog";
-import { StructureChangeWorkRecordDialog } from "./StructureChangeWorkRecordDialog";
 import { buildScopePayload } from "./workOperationPanelUtils";
 
 export function WorkOperationPanel({
@@ -105,23 +100,11 @@ export function WorkOperationPanel({
   const selectedWorkType = schedulableWorkTypes.find(
     (workType) => String(workType.id) === form.workTypeId,
   );
-  const isInboundPotting = selectedWorkType?.code === "POTTING";
-  const isDedicatedWorkflow =
-    selectedWorkType?.code === "POTTING" ||
-    selectedWorkType?.code === "REPOT" ||
-    selectedWorkType?.code === "DIVIDE" ||
-    selectedWorkType?.code === "MERGE" ||
-    selectedWorkType?.code === "DISCARD" ||
-    selectedWorkType?.code === "MOVEMENT";
+  const workTypeDefinition = getWorkTypeDefinition(selectedWorkType);
+  const isInboundPotting = workTypeDefinition.targetSource === "INBOUND_RECORD";
+  const isDedicatedWorkflow = workTypeDefinition.workflow !== "GENERIC";
   const recordDisabled = false;
-  const isBatchStructureWork =
-    selectedWorkType?.code === "REPOT" ||
-    selectedWorkType?.code === "DIVIDE" ||
-    selectedWorkType?.code === "MERGE";
-  const isStructureRecord =
-    isBatchStructureWork ||
-    selectedWorkType?.code === "DISCARD" ||
-    selectedWorkType?.code === "POTTING";
+  const hasDedicatedRecordResult = workTypeDefinition.recordResult != null;
 
   const includedTargets = useMemo(
     () =>
@@ -227,7 +210,7 @@ export function WorkOperationPanel({
         workTypeId: String(value),
         title: workType ? `${workType.name} 작업` : current.title,
         sourceScopeType:
-          workType?.code === "POTTING"
+          getWorkTypeDefinition(workType).targetSource === "INBOUND_RECORD"
             ? "INBOUND_RECORD_SELECTION"
             : "MANUAL_SELECTION",
       }));
@@ -297,7 +280,7 @@ export function WorkOperationPanel({
     if (registrationMode === "RECORD") {
       if ((!isInboundPotting && recordTargetIds.length === 0) || recordDisabled)
         return;
-      if (isStructureRecord) {
+      if (hasDedicatedRecordResult) {
         setRecordResultOpen(true);
         return;
       }
@@ -614,7 +597,7 @@ export function WorkOperationPanel({
         )
       ) : null}
       {operation && executionTarget ? (
-        <StructureWorkExecutionDialog
+        <WorkExecutionDialog
           bedZones={bedZones}
           houses={houses}
           operation={operation}
@@ -635,70 +618,21 @@ export function WorkOperationPanel({
           }}
         />
       ) : null}
-      {recordResultOpen && selectedWorkType && isBatchStructureWork ? (
-        <StructureChangeWorkRecordDialog
-          baseOperation={structureRecordOperationPayload(
-            form,
-            selectedWorkType,
-            recordTargetIds,
-          )}
+      {recordResultOpen &&
+      selectedWorkType &&
+      workTypeDefinition.recordResult ? (
+        <WorkRecordResultDialog
+          candidates={inboundCandidates}
+          form={form}
           houses={houses}
+          inboundRecordIds={inboundRecordIds}
+          kind={workTypeDefinition.recordResult}
+          orchidGroupIds={recordTargetIds}
           orchidGroups={orchidGroups}
           targets={includedTargets}
           workType={selectedWorkType}
           onClose={() => setRecordResultOpen(false)}
-          onSubmit={async (records) => {
-            await createStructureChangeRecords(records);
-            onSaved?.();
-            onClose();
-          }}
-        />
-      ) : null}
-      {recordResultOpen && selectedWorkType?.code === "DISCARD" ? (
-        <DiscardWorkRecordDialog
-          groups={orchidGroups.filter((group) =>
-            recordTargetIds.includes(group.id),
-          )}
-          initialCompletedDate={form.plannedStartDate}
-          initialWorker={form.worker}
-          onClose={() => setRecordResultOpen(false)}
-          onSubmit={async ({ completedDate, worker, results }) => {
-            await createDiscardRecord({
-              operation: structureRecordOperationPayload(
-                form,
-                selectedWorkType,
-                recordTargetIds,
-              ),
-              completedDate,
-              worker,
-              results,
-            });
-            onSaved?.();
-            onClose();
-          }}
-        />
-      ) : null}
-      {recordResultOpen && selectedWorkType?.code === "POTTING" ? (
-        <InboundPottingWorkRecordDialog
-          candidates={inboundCandidates.filter((candidate) =>
-            inboundRecordIds.has(candidate.id),
-          )}
-          houses={houses}
-          workDate={form.plannedStartDate}
-          worker={form.worker}
-          onClose={() => setRecordResultOpen(false)}
-          onSubmit={async (executions) => {
-            await createInboundPottingRecord({
-              plan: {
-                title: form.title.trim(),
-                plannedStartDate: form.plannedStartDate,
-                plannedEndDate: form.plannedStartDate,
-                inboundRecordIds: [...inboundRecordIds],
-                worker: form.worker.trim() || null,
-                memo: form.memo.trim() || null,
-              },
-              executions,
-            });
+          onSaved={() => {
             onSaved?.();
             onClose();
           }}
@@ -846,9 +780,7 @@ function countAutoSplitWorks({
     ).size;
   }
   if (
-    selectedWorkType?.code !== "REPOT" &&
-    selectedWorkType?.code !== "DIVIDE" &&
-    selectedWorkType?.code !== "MERGE"
+    getWorkTypeDefinition(selectedWorkType).recordResult !== "STRUCTURE_CHANGE"
   ) {
     return 0;
   }
@@ -883,24 +815,5 @@ function recordPayload(
     memo: isVisibleWorkRecordField(template, "memo")
       ? form.memo.trim() || null
       : null,
-  };
-}
-
-function structureRecordOperationPayload(
-  form: WorkOperationFormState,
-  selectedWorkType: WorkType,
-  orchidGroupIds: number[],
-): CreateWorkOperationPayload {
-  return {
-    workTypeId: selectedWorkType.id,
-    title: form.title.trim(),
-    plannedStartDate: form.plannedStartDate,
-    plannedEndDate: form.plannedStartDate,
-    sourceScopeType: "MANUAL_SELECTION",
-    sourceOrchidGroupIds: orchidGroupIds,
-    details: {},
-    worker: form.worker.trim() || null,
-    memo: form.memo.trim() || null,
-    excludedOrchidGroupIds: [],
   };
 }

@@ -8,10 +8,10 @@ import {
   type PottingExecutionValues,
 } from "@/entities/farm/ui/PottingExecutionForm";
 import { WorkRecordVarietyNavigation } from "@/shared/ui/WorkRecordVarietyNavigation";
-import type { InboundPottingExecutionPayload } from "../../api/workRecordApi";
-import type { InboundPottingCandidate } from "../../model/types";
+import type { InboundPottingExecutionPayload } from "../../../api/workRecordApi";
+import type { InboundPottingCandidate } from "../../../model/types";
 
-export function InboundPottingWorkRecordDialog({
+export function PottingWorkRecordDialog({
   candidates,
   houses,
   workDate,

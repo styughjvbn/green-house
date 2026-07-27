@@ -17,7 +17,7 @@ import {
 } from "../api/workRecordApi";
 import { useWorkOperations } from "../model/useWorkOperations";
 import { OperationResult } from "./components/WorkOperationResult";
-import { StructureWorkExecutionDialog } from "./components/StructureWorkExecutionDialog";
+import { WorkExecutionDialog } from "./WorkExecutionDialog";
 import { WorkListFilters } from "./list/WorkListFilters";
 import { WorkListTable } from "./list/WorkListTable";
 
@@ -158,7 +158,7 @@ export function WorkOperationListView({
       </TabLayout>
 
       {selected && executionTarget ? (
-        <StructureWorkExecutionDialog
+        <WorkExecutionDialog
           bedZones={bedZones}
           houses={houses}
           operation={selected}

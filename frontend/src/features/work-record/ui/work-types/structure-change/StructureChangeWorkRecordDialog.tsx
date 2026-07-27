@@ -7,12 +7,12 @@ import type {
   WorkOperationTarget,
   WorkType,
 } from "@/entities/farm/types";
-import type { CreateWorkOperationPayload } from "../../model/types";
+import type { CreateWorkOperationPayload } from "../../../model/types";
 import type {
   StructureChangeExecutionPayload,
   StructureChangeRecordPayload,
-} from "../../api/workRecordApi";
-import { BatchStructureWorkExecutionDialog } from "./BatchStructureWorkExecutionDialog";
+} from "../../../api/workRecordApi";
+import { StructureChangeExecutionDialog } from "./StructureChangeExecutionDialog";
 
 type VarietyTargetGroup = {
   key: string;
@@ -98,7 +98,7 @@ export function StructureChangeWorkRecordDialog({
       onMouseDown={onClose}
     >
       {groups.map((group) => (
-        <BatchStructureWorkExecutionDialog
+        <StructureChangeExecutionDialog
           active={group.key === activeKey}
           closeAfterSubmit={false}
           embedded

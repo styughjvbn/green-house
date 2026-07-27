@@ -1,5 +1,6 @@
 import { useState } from "react";
 import type { WorkOperation } from "@/entities/farm/types";
+import { getWorkExecutionKind } from "../../model/workTypeDefinition";
 import { WorkCompletionDateDialog } from "./WorkCompletionDateDialog";
 import { WorkOperationDetails } from "./WorkOperationDetails";
 import {
@@ -43,10 +44,10 @@ export function OperationResult({
     operation.progress.partial === 0 &&
     operation.progress.failed === 0;
   const hasRemainingWork = !canComplete;
-  const structureChange = ["REPOT", "DIVIDE", "MERGE"].includes(
-    operation.workTypeCode,
-  );
-  const potting = operation.workTypeCode === "POTTING";
+  const executionKind = getWorkExecutionKind(operation.workTypeCode);
+  const structureChange = executionKind === "STRUCTURE_CHANGE";
+  const potting = executionKind === "POTTING";
+  const requiresResultEntry = executionKind != null;
   const firstExecutablePottingTarget = operation.targets.find(
     (target) =>
       target.remainingQuantity > 0 &&
@@ -239,32 +240,12 @@ export function OperationResult({
                 <StatusAction
                   small
                   primary
-                  label={
-                    operation.workTypeCode === "REPOT" ||
-                    operation.workTypeCode === "DIVIDE" ||
-                    operation.workTypeCode === "POTTING" ||
-                    operation.workTypeCode === "DISCARD" ||
-                    operation.workTypeCode === "MOVEMENT"
-                      ? "결과 입력"
-                      : "완료"
-                  }
+                  label={requiresResultEntry ? "결과 입력" : "완료"}
                   disabled={
-                    loading ||
-                    ((operation.workTypeCode === "REPOT" ||
-                      operation.workTypeCode === "DIVIDE" ||
-                      operation.workTypeCode === "POTTING" ||
-                      operation.workTypeCode === "DISCARD" ||
-                      operation.workTypeCode === "MOVEMENT") &&
-                      !onExecuteTarget)
+                    loading || (requiresResultEntry && !onExecuteTarget)
                   }
                   onClick={() => {
-                    if (
-                      operation.workTypeCode === "REPOT" ||
-                      operation.workTypeCode === "DIVIDE" ||
-                      operation.workTypeCode === "POTTING" ||
-                      operation.workTypeCode === "DISCARD" ||
-                      operation.workTypeCode === "MOVEMENT"
-                    ) {
+                    if (requiresResultEntry) {
                       onExecuteTarget?.(target);
                     } else {
                       setCompletionTargetId(target.id!);

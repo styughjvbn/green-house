@@ -14,15 +14,6 @@ type TargetSummary = {
   location: string;
 };
 
-const STRUCTURE_WORK_CODES = new Set([
-  "MOVEMENT",
-  "REPOT",
-  "DIVIDE",
-  "MERGE",
-  "DISCARD",
-  "POTTING",
-]);
-
 export function WorkOperationPlanForm({
   form,
   workTypes,
@@ -81,7 +72,6 @@ export function WorkOperationPlanForm({
   onToggleExcluded: (id: number) => void;
   onSave: () => void;
 }) {
-  const structureWork = STRUCTURE_WORK_CODES.has(selectedWorkType?.code ?? "");
   const recordMode = registrationMode === "RECORD";
   const saveLabel = recordMode
     ? `${selectedWorkType?.name ?? "작업"} 기록 저장`
@@ -127,7 +117,7 @@ export function WorkOperationPlanForm({
             description={
               recordDisabled
                 ? "이 작업은 전용 화면에서 기록합니다."
-                : structureWork
+                : isDedicatedWorkflow
                   ? "모든 작업 결과를 입력해 완료 기록"
                   : "이미 끝난 작업을 기록"
             }
@@ -263,7 +253,7 @@ export function WorkOperationPlanForm({
               onChange={(value) => onUpdateForm("dilutionRatio", value)}
             />
           ) : null}
-          {!(structureWork && recordMode) &&
+          {!(isDedicatedWorkflow && recordMode) &&
           (!isDedicatedWorkflow || recordMode) &&
           isVisibleWorkRecordField(
             selectedWorkType?.template ?? null,
@@ -294,7 +284,7 @@ export function WorkOperationPlanForm({
         </label>
       </section>
 
-      {structureWork && !recordMode ? (
+      {isDedicatedWorkflow && !recordMode ? (
         <section className="rounded-md border border-[#cfe0d2] bg-[#f7faf6] p-4">
           <SectionTitle title="구조 변경 작업 안내" />
           <p className="text-sm text-[#526057]">
@@ -322,7 +312,7 @@ export function WorkOperationPlanForm({
         <div className="flex flex-wrap items-center justify-between gap-3">
           <p className="text-sm font-semibold text-[#344138]">
             대상 난 묶음 {targetCount}개 ·{" "}
-            {structureWork ? "구조 변경 작업" : "일반 작업"} ·{" "}
+            {isDedicatedWorkflow ? "구조 변경 작업" : "일반 작업"} ·{" "}
             {recordMode ? "작업 기록으로 저장" : "작업 계획으로 저장"}
           </p>
           <div className="flex gap-2">

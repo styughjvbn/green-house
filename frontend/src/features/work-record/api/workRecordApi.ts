@@ -268,19 +268,6 @@ export async function transitionWorkOperationTarget(
   );
 }
 
-export async function completeMergeWorkOperation(
-  workOperationId: number,
-  worker: string | null,
-  resultDetails: Record<string, unknown>,
-  completedDate: string,
-): Promise<WorkOperation> {
-  return requestWorkOperation<WorkOperation>(
-    `/work-operations/${workOperationId}/merge/complete`,
-    "POST",
-    { worker, resultDetails, completedDate },
-  );
-}
-
 export async function executeStructureChangeWorkOperation(
   workOperationId: number,
   payload: StructureChangeExecutionPayload,
