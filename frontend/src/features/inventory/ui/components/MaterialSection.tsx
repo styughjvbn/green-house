@@ -5,6 +5,7 @@ import type { Route } from "next";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useMemo, useState } from "react";
 import type { ColumnDef } from "@tanstack/react-table";
+import type { Page } from "@/shared/api/page";
 import { formatShortDate } from "@/shared/lib/dateFormat";
 import { DataTable } from "@/shared/ui/DataTable";
 import {
@@ -21,11 +22,7 @@ import {
 } from "@/shared/ui/FilterControls";
 import { TabSplit, TabStack } from "@/shared/ui/TabLayout";
 import { StatusBadge } from "@/shared/ui/StatusBadge";
-import type {
-  InventoryPageResult,
-  Material,
-  MaterialPayload,
-} from "../../model/types";
+import type { Material, MaterialPayload } from "../../model/types";
 import { DetailRow, Field, inputClass } from "./InventoryPrimitives";
 
 export function MaterialSection({
@@ -37,7 +34,7 @@ export function MaterialSection({
   onDeactivate,
   onDelete,
 }: {
-  pageData: InventoryPageResult<Material>;
+  pageData: Page<Material>;
   selectedId: number;
   onSelect: (id: number) => void;
   onCreate: () => void;

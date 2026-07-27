@@ -1,10 +1,9 @@
 "use client";
 
 import type { BusinessPartner, SalesSlipPage } from "@/entities/farm/types";
-import { useUrlSearchParamsWriter } from "@/shared/lib/useUrlSearchParamsWriter";
+import { usePagedListUrlActions } from "@/shared/api/usePagedListUrlActions";
 import { TabError, TabLayout, TabSplit } from "@/shared/ui/TabLayout";
 import {
-  deleteParams,
   SALES_FILTER_KEYS,
   writeSalesFilterParams,
 } from "../lib/salesUrlFilters";
@@ -26,28 +25,22 @@ export function SalesSlipsPage({
   initialPage: SalesSlipPage;
   initialShowCreateSlip?: boolean;
 }) {
-  const writeUrlParams = useUrlSearchParamsWriter();
   const sales = useSalesSlips({
     initialBusinessPartners,
-    initialSalesPage: initialPage,
+    initialPage,
     initialShowCreateSlip,
-    initialSalesFilters: initialFilters,
+    initialFilters,
   });
 
-  const updateFilter = <K extends keyof SalesFilterState>(
-    field: K,
-    value: SalesFilterState[K],
-  ) => {
-    sales.updateFilters(field, value);
-  };
-
-  const searchSalesSlips = () => {
-    sales.searchSalesSlips(sales.filters);
-    writeUrlParams((params) => {
-      writeSalesFilterParams(params, sales.filters);
-      params.set("page", "0");
-    });
-  };
+  const listActions = usePagedListUrlActions({
+    filters: sales.filters,
+    filterKeys: SALES_FILTER_KEYS,
+    writeFilterParams: writeSalesFilterParams,
+    onSearch: sales.searchSalesSlips,
+    onReset: sales.resetFilters,
+    onPageChange: sales.setSalesSlipPage,
+    onPageSizeChange: sales.setSalesSlipPageSize,
+  });
 
   function handleToggleCreateSalesSlip() {
     const nextOpen = !sales.showCreateSlip;
@@ -64,15 +57,9 @@ export function SalesSlipsPage({
         <SalesFilters
           partners={sales.partners}
           filters={sales.filters}
-          onChange={updateFilter}
-          onReset={() => {
-            sales.resetFilters();
-            writeUrlParams((params) => {
-              deleteParams(params, SALES_FILTER_KEYS);
-              params.set("page", "0");
-            });
-          }}
-          onSearch={searchSalesSlips}
+          onChange={sales.updateFilters}
+          onReset={listActions.reset}
+          onSearch={listActions.search}
         />
 
         {sales.showCreateSlip ? (
@@ -111,19 +98,8 @@ export function SalesSlipsPage({
             totalSalesSlips={sales.salesSlipTotalElements}
             onSelect={sales.selectSalesSlip}
             onCreateSalesSlip={handleToggleCreateSalesSlip}
-            onPageChange={(pageIndex) => {
-              sales.setSalesSlipPage(pageIndex);
-              writeUrlParams((params) => {
-                params.set("page", String(pageIndex));
-              });
-            }}
-            onPageSizeChange={(pageSize) => {
-              sales.setSalesSlipPageSize(pageSize);
-              writeUrlParams((params) => {
-                params.set("size", String(pageSize));
-                params.set("page", "0");
-              });
-            }}
+            onPageChange={listActions.changePage}
+            onPageSizeChange={listActions.changePageSize}
           />
           <SalesSlipDetail
             loading={sales.loadingSalesSlipDetail}

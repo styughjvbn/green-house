@@ -1,10 +1,6 @@
-﻿export type Page<T> = {
-  content: T[];
-  page: number;
-  size: number;
-  totalElements: number;
-  totalPages: number;
-};
+﻿import type { Page } from "@/shared/api/page";
+
+export type { Page } from "@/shared/api/page";
 
 export type BedZoneSide = "LEFT" | "RIGHT" | "CUSTOM" | "HANGING";
 

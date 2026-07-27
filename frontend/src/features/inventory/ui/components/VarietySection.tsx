@@ -5,6 +5,7 @@ import type { Route } from "next";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useMemo, useState } from "react";
 import type { ColumnDef } from "@tanstack/react-table";
+import type { Page } from "@/shared/api/page";
 import { formatShortDate } from "@/shared/lib/dateFormat";
 import { DataTable } from "@/shared/ui/DataTable";
 import {
@@ -22,11 +23,7 @@ import {
 } from "@/shared/ui/FilterControls";
 import { TabSplit, TabStack } from "@/shared/ui/TabLayout";
 import { StatusBadge } from "@/shared/ui/StatusBadge";
-import type {
-  InventoryPageResult,
-  Variety,
-  VarietyPayload,
-} from "../../model/types";
+import type { Variety, VarietyPayload } from "../../model/types";
 import { DetailRow, Field, inputClass } from "./InventoryPrimitives";
 import { PotSizeInput } from "./PotSizeInput";
 
@@ -42,7 +39,7 @@ export function VarietySection({
   onDeactivate,
   onDelete,
 }: {
-  pageData: InventoryPageResult<Variety>;
+  pageData: Page<Variety>;
   connectedGroups: Variety["connectedGroups"];
   genera: string[];
   selectedId: number;

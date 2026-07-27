@@ -3,11 +3,10 @@
 import type { SubmitEvent } from "react";
 import { useState } from "react";
 import type { BusinessPartnerPage } from "@/entities/farm/types";
-import { useUrlSearchParamsWriter } from "@/shared/lib/useUrlSearchParamsWriter";
+import { usePagedListUrlActions } from "@/shared/api/usePagedListUrlActions";
 import { TabError, TabLayout, TabSplit } from "@/shared/ui/TabLayout";
 import {
   BUSINESS_PARTNER_FILTER_KEYS,
-  deleteParams,
   writeBusinessPartnerFilterParams,
 } from "../lib/salesUrlFilters";
 import { useBusinessPartners } from "../model/useBusinessPartners";
@@ -28,7 +27,6 @@ export function SalesPartnersPage({
   initialPage: BusinessPartnerPage;
   initialFilters: BusinessPartnerFilterState;
 }) {
-  const writeUrlParams = useUrlSearchParamsWriter();
   const partners = useBusinessPartners({
     initialPage,
     initialFilters,
@@ -37,20 +35,15 @@ export function SalesPartnersPage({
   const [partnerDetailMode, setPartnerDetailMode] =
     useState<BusinessPartnerDetailMode>("read");
 
-  const updateFilter = <K extends keyof BusinessPartnerFilterState>(
-    field: K,
-    value: BusinessPartnerFilterState[K],
-  ) => {
-    partners.updateFilter(field, value);
-  };
-
-  const searchBusinessPartners = () => {
-    partners.search(partners.filters);
-    writeUrlParams((params) => {
-      writeBusinessPartnerFilterParams(params, partners.filters);
-      params.set("page", "0");
-    });
-  };
+  const listActions = usePagedListUrlActions({
+    filters: partners.filters,
+    filterKeys: BUSINESS_PARTNER_FILTER_KEYS,
+    writeFilterParams: writeBusinessPartnerFilterParams,
+    onSearch: partners.search,
+    onReset: partners.resetFilters,
+    onPageChange: partners.setPage,
+    onPageSizeChange: partners.setPageSize,
+  });
 
   async function handleCreateBusinessPartner(
     event: SubmitEvent<HTMLFormElement>,
@@ -66,15 +59,9 @@ export function SalesPartnersPage({
       <TabLayout>
         <BusinessPartnerFilters
           filters={partners.filters}
-          onChange={updateFilter}
-          onReset={() => {
-            partners.resetFilters();
-            writeUrlParams((params) => {
-              deleteParams(params, BUSINESS_PARTNER_FILTER_KEYS);
-              params.set("page", "0");
-            });
-          }}
-          onSearch={searchBusinessPartners}
+          onChange={partners.updateFilter}
+          onReset={listActions.reset}
+          onSearch={listActions.search}
         />
         <TabError message={partners.errorMessage} />
         <TabSplit columns="lg:grid-cols-[520px_minmax(0,1fr)]">
@@ -92,19 +79,8 @@ export function SalesPartnersPage({
               partners.selectPartner(partnerId);
             }}
             onCreateBusinessPartner={() => setShowCreatePartner(true)}
-            onPageChange={(pageIndex) => {
-              partners.setPage(pageIndex);
-              writeUrlParams((params) => {
-                params.set("page", String(pageIndex));
-              });
-            }}
-            onPageSizeChange={(pageSize) => {
-              partners.setPageSize(pageSize);
-              writeUrlParams((params) => {
-                params.set("size", String(pageSize));
-                params.set("page", "0");
-              });
-            }}
+            onPageChange={listActions.changePage}
+            onPageSizeChange={listActions.changePageSize}
           />
           <div>
             <BusinessPartnerEditSection

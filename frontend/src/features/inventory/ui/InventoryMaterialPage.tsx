@@ -2,24 +2,21 @@
 
 import { useRouter } from "next/navigation";
 import { useState } from "react";
+import type { Page } from "@/shared/api/page";
 import {
   createMaterial,
   deactivateMaterial,
   deleteMaterial,
   updateMaterial,
 } from "../api/inventoryApi";
-import type {
-  InventoryPageResult,
-  Material,
-  MaterialPayload,
-} from "../model/types";
+import type { Material, MaterialPayload } from "../model/types";
 import { InventoryDialog } from "./components/InventoryDialog";
 import { MaterialSection } from "./components/MaterialSection";
 
 export function InventoryMaterialPage({
   initialMaterialPage,
 }: {
-  initialMaterialPage: InventoryPageResult<Material>;
+  initialMaterialPage: Page<Material>;
 }) {
   const router = useRouter();
   const [selectedMaterialId, setSelectedMaterialId] = useState(

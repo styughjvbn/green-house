@@ -1,9 +1,9 @@
 import { API_BASE_URL, fetchApi } from "@/shared/api/client";
 import type { WorkOperation } from "@/entities/farm/types";
+import type { Page } from "@/shared/api/page";
 import type {
   ConnectedOrchidGroup,
   InboundPottingPayload,
-  InventoryPageResult,
   InboundRecord,
   InboundRecordPayload,
   InboundRecordUpdatePayload,
@@ -54,14 +54,6 @@ type VarietyNameResponse = {
 type VarietyGeneraResponse = {
   genera: string[];
   varieties: VarietyNameResponse[];
-};
-
-type PageResponse<T> = {
-  content: T[];
-  page: number;
-  size: number;
-  totalElements: number;
-  totalPages: number;
 };
 
 type VarietyConnectedGroupResponse = {
@@ -166,7 +158,7 @@ type InboundQuery = {
 };
 
 export function getVarieties(query: VarietyQuery = {}) {
-  return fetchApi<PageResponse<VarietyResponse>>(
+  return fetchApi<Page<VarietyResponse>>(
     `/varieties${toQueryString(query)}`,
   ).then((result) => mapPage(result, toVariety));
 }
@@ -241,7 +233,7 @@ export function deleteVariety(varietyId: number) {
 }
 
 export function getMaterials(query: MaterialQuery = {}) {
-  return fetchApi<PageResponse<MaterialResponse>>(
+  return fetchApi<Page<MaterialResponse>>(
     `/materials${toQueryString(query)}`,
   ).then((result) => mapPage(result, toMaterial));
 }
@@ -291,7 +283,7 @@ export function deleteMaterial(materialId: number) {
 }
 
 export function getInboundRecords(query: InboundQuery = {}) {
-  return fetchApi<PageResponse<InboundRecordResponse>>(
+  return fetchApi<Page<InboundRecordResponse>>(
     `/inbound-records${toQueryString(query)}`,
   ).then((result) => mapPage(result, toInboundRecord));
 }
@@ -455,9 +447,9 @@ function toMaterial(item: MaterialResponse): Material {
 }
 
 function mapPage<TSource, TTarget>(
-  result: PageResponse<TSource> | TSource[],
+  result: Page<TSource> | TSource[],
   mapper: (item: TSource) => TTarget,
-): InventoryPageResult<TTarget> {
+): Page<TTarget> {
   if (Array.isArray(result)) {
     return {
       content: result.map(mapper),

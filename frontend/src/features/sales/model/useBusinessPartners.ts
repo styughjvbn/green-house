@@ -1,13 +1,11 @@
 import { useState, type FormEvent } from "react";
-import {
-  keepPreviousData,
-  useQuery,
-  useQueryClient,
-} from "@tanstack/react-query";
+import { useQueryClient } from "@tanstack/react-query";
 import type {
   BusinessPartner,
   BusinessPartnerPage,
 } from "@/entities/farm/types";
+import { createEmptyPage } from "@/shared/api/page";
+import { usePagedListQuery } from "@/shared/api/usePagedListQuery";
 import {
   createBusinessPartner,
   getBusinessPartnerPage,
@@ -20,7 +18,6 @@ import {
 } from "../lib/salesForm";
 import { createInitialBusinessPartnerFilters } from "../lib/salesUrlFilters";
 import type { BusinessPartnerFilterState, BusinessPartnerForm } from "./types";
-import { usePagedListQueryState } from "./usePagedListQueryState";
 
 const businessPartnerKeys = {
   all: ["sales", "businessPartners"] as const,
@@ -36,24 +33,18 @@ export function useBusinessPartners({
   initialPage: BusinessPartnerPage;
 }) {
   const queryClient = useQueryClient();
-  const listState = usePagedListQueryState({
+  const listState = usePagedListQuery({
     createEmptyFilters: createInitialBusinessPartnerFilters,
     initialFilters,
-    initialPage: initialPage.page,
-    initialSize: initialPage.size,
+    initialPage,
+    queryKey: ({ filters, page, size }) =>
+      businessPartnerKeys.page(filters, page, size),
+    queryFn: ({ filters, page, size }) =>
+      getBusinessPartnerPage(filters, page, size),
   });
   const { filters, page, size } = listState.queryState;
-  const isInitialQuery =
-    filters === initialFilters &&
-    page === initialPage.page &&
-    size === initialPage.size;
-  const pageQuery = useQuery({
-    queryKey: businessPartnerKeys.page(filters, page, size),
-    queryFn: () => getBusinessPartnerPage(filters, page, size),
-    initialData: isInitialQuery ? initialPage : undefined,
-    placeholderData: keepPreviousData,
-  });
-  const pageData = pageQuery.data ?? emptyBusinessPartnerPage(size);
+  const pageQuery = listState.query;
+  const pageData = listState.pageData ?? createEmptyPage<BusinessPartner>(size);
   const [selectedPartnerId, setSelectedPartnerId] = useState<number | null>(
     initialPage.content[0]?.id ?? null,
   );
@@ -201,16 +192,6 @@ export function useBusinessPartners({
     updateEditForm,
     handleCreate,
     handleUpdate,
-  };
-}
-
-function emptyBusinessPartnerPage(size: number): BusinessPartnerPage {
-  return {
-    content: [],
-    page: 0,
-    size,
-    totalElements: 0,
-    totalPages: 0,
   };
 }
 

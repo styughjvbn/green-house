@@ -5,11 +5,11 @@ import type { Route } from "next";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useState } from "react";
 import { fetchApi } from "@/shared/api/client";
+import type { Page } from "@/shared/api/page";
 import { TabSplit, TabStack } from "@/shared/ui/TabLayout";
 import type {
   InboundPottingPayload,
   InboundRecord,
-  InventoryPageResult,
   InboundRecordPayload,
   InboundStatus,
   InboundType,
@@ -37,7 +37,7 @@ export function InboundSection({
   onCancel,
   onDelete,
 }: {
-  pageData: InventoryPageResult<InboundRecord>;
+  pageData: Page<InboundRecord>;
   varieties: Variety[];
   selectedId: number;
   onSelect: (id: number) => void;

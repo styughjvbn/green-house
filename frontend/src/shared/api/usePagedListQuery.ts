@@ -1,3 +1,8 @@
+import {
+  keepPreviousData,
+  useQuery,
+  type QueryKey,
+} from "@tanstack/react-query";
 import { useState } from "react";
 
 export type PagedListQueryState<Filters> = {
@@ -6,22 +11,39 @@ export type PagedListQueryState<Filters> = {
   size: number;
 };
 
-export function usePagedListQueryState<Filters>({
+type PageMetadata = {
+  page: number;
+  size: number;
+};
+
+export function usePagedListQuery<Filters, PageData extends PageMetadata>({
   createEmptyFilters,
   initialFilters,
   initialPage,
-  initialSize,
+  queryKey,
+  queryFn,
 }: {
   createEmptyFilters: () => Filters;
   initialFilters: Filters;
-  initialPage: number;
-  initialSize: number;
+  initialPage: PageData;
+  queryKey: (state: PagedListQueryState<Filters>) => QueryKey;
+  queryFn: (state: PagedListQueryState<Filters>) => Promise<PageData>;
 }) {
   const [filters, setFilters] = useState(initialFilters);
   const [queryState, setQueryState] = useState<PagedListQueryState<Filters>>({
     filters: initialFilters,
-    page: initialPage,
-    size: initialSize,
+    page: initialPage.page,
+    size: initialPage.size,
+  });
+  const isInitialQuery =
+    queryState.filters === initialFilters &&
+    queryState.page === initialPage.page &&
+    queryState.size === initialPage.size;
+  const query = useQuery({
+    queryKey: queryKey(queryState),
+    queryFn: () => queryFn(queryState),
+    initialData: isInitialQuery ? initialPage : undefined,
+    placeholderData: keepPreviousData,
   });
 
   function updateFilter<K extends keyof Filters>(field: K, value: Filters[K]) {
@@ -57,6 +79,8 @@ export function usePagedListQueryState<Filters>({
   return {
     filters,
     queryState,
+    query,
+    pageData: query.data,
     updateFilter,
     search,
     reset,

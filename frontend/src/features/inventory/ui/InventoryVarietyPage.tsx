@@ -2,6 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
+import type { Page } from "@/shared/api/page";
 import {
   createVariety,
   deactivateVariety,
@@ -9,11 +10,7 @@ import {
   getVarietyOrchidGroups,
   updateVariety,
 } from "../api/inventoryApi";
-import type {
-  InventoryPageResult,
-  Variety,
-  VarietyPayload,
-} from "../model/types";
+import type { Variety, VarietyPayload } from "../model/types";
 import { InventoryDialog } from "./components/InventoryDialog";
 import { VarietySection } from "./components/VarietySection";
 
@@ -22,7 +19,7 @@ export function InventoryVarietyPage({
   varietyGenera,
   varietyOptions,
 }: {
-  initialVarietyPage: InventoryPageResult<Variety>;
+  initialVarietyPage: Page<Variety>;
   varietyGenera: string[];
   varietyOptions: Variety[];
 }) {

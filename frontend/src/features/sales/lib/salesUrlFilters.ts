@@ -98,13 +98,6 @@ export function writeAuctionFilterParams(
   });
 }
 
-export function deleteParams(
-  params: URLSearchParams,
-  keys: ReadonlyArray<string>,
-) {
-  keys.forEach((key) => params.delete(key));
-}
-
 function setStringParam(params: URLSearchParams, key: string, value: string) {
   const normalized = value.trim();
   if (!normalized) {

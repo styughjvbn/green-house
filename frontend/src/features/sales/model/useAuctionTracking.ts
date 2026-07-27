@@ -1,15 +1,11 @@
 import { useMemo, useState, type FormEvent } from "react";
-import {
-  keepPreviousData,
-  useMutation,
-  useQuery,
-  useQueryClient,
-} from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import type {
   AuctionLot,
   AuctionLotPage,
   AuctionTrackingSummary,
 } from "@/entities/farm/types";
+import { usePagedListQuery } from "@/shared/api/usePagedListQuery";
 import {
   adjustAuctionQuantity,
   confirmAuctionReturn,
@@ -17,6 +13,7 @@ import {
   getAuctionLots,
   getAuctionTrackingSummary,
 } from "../api/salesApi";
+import { createInitialAuctionFilters } from "../lib/salesUrlFilters";
 import type { AuctionFilterState } from "./types";
 import type {
   AuctionQuantityAdjustmentPayload,
@@ -35,39 +32,36 @@ export function useAuctionTracking({
   initialPage,
   initialSummary,
   initialFilters,
-  queryFilters,
-  queryPage,
-  querySize,
 }: {
   initialPage: AuctionLotPage;
   initialSummary: AuctionTrackingSummary;
   initialFilters: AuctionFilterState;
-  queryFilters: AuctionFilterState;
-  queryPage: number;
-  querySize: number;
 }) {
   const queryClient = useQueryClient();
+  const listState = usePagedListQuery({
+    createEmptyFilters: createInitialAuctionFilters,
+    initialFilters,
+    initialPage,
+    queryKey: ({ filters, page, size }) =>
+      auctionTrackingKeys.lots(filters, page, size),
+    queryFn: ({ filters, page, size }) => getAuctionLots(filters, page, size),
+  });
+  const {
+    filters: queryFilters,
+    page: queryPage,
+    size: querySize,
+  } = listState.queryState;
   const [selectedId, setSelectedId] = useState<number | null>(
     initialPage.content[0]?.id ?? null,
   );
-  const isInitialLotsQuery =
-    queryFilters === initialFilters &&
-    queryPage === initialPage.page &&
-    querySize === initialPage.size;
-
-  const lotsQuery = useQuery({
-    queryKey: auctionTrackingKeys.lots(queryFilters, queryPage, querySize),
-    queryFn: () => getAuctionLots(queryFilters, queryPage, querySize),
-    initialData: isInitialLotsQuery ? initialPage : undefined,
-    placeholderData: keepPreviousData,
-  });
+  const lotsQuery = listState.query;
   const summaryQuery = useQuery({
     queryKey: auctionTrackingKeys.summary(),
     queryFn: getAuctionTrackingSummary,
     initialData: initialSummary,
   });
 
-  const pageResult = lotsQuery.data ?? initialPage;
+  const pageResult = listState.pageData ?? initialPage;
   const summary = summaryQuery.data;
   const selectedLot = useMemo(
     () =>
@@ -187,10 +181,16 @@ export function useAuctionTracking({
     totalElements: pageResult.totalElements,
     totalPages: Math.max(1, pageResult.totalPages),
     summary,
+    filters: listState.filters,
     selectedLot,
     loading: lotsQuery.isFetching || summaryQuery.isFetching || mutationPending,
     listLoading: lotsQuery.isFetching,
     error: error == null ? null : toMessage(error),
+    updateFilter: listState.updateFilter,
+    search: listState.search,
+    resetFilters: listState.reset,
+    setPage: listState.changePage,
+    setPageSize: listState.changePageSize,
     setSelectedId,
     confirmReturn,
     adjustQuantity,

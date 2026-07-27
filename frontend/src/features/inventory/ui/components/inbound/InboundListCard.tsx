@@ -3,10 +3,11 @@
 import { useMemo } from "react";
 import type { ColumnDef } from "@tanstack/react-table";
 import { Plus } from "lucide-react";
+import type { Page } from "@/shared/api/page";
 import { formatShortDate } from "@/shared/lib/dateFormat";
 import { DataTable } from "@/shared/ui/DataTable";
 import { StatusBadge } from "@/shared/ui/StatusBadge";
-import type { InboundRecord, InventoryPageResult } from "../../../model/types";
+import type { InboundRecord } from "../../../model/types";
 import {
   INBOUND_STATUS_LABELS,
   INBOUND_TYPE_LABELS,
@@ -20,7 +21,7 @@ export function InboundListCard({
   onPageChange,
   onPageSizeChange,
 }: {
-  pageData: InventoryPageResult<InboundRecord>;
+  pageData: Page<InboundRecord>;
   selectedId?: number;
   onSelect: (id: number) => void;
   onOpenCreate: () => void;

@@ -2,6 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { useState } from "react";
+import type { Page } from "@/shared/api/page";
 import {
   cancelInboundRecord,
   createInboundRecord,
@@ -12,7 +13,6 @@ import {
 import type {
   InboundRecord,
   InboundRecordUpdatePayload,
-  InventoryPageResult,
   Variety,
 } from "../model/types";
 import { InboundSection } from "./components/InboundSection";
@@ -21,7 +21,7 @@ export function InventoryInboundPage({
   initialInboundPage,
   varietyOptions,
 }: {
-  initialInboundPage: InventoryPageResult<InboundRecord>;
+  initialInboundPage: Page<InboundRecord>;
   varietyOptions: Variety[];
 }) {
   const router = useRouter();

@@ -1,15 +1,14 @@
 import { useMemo, useState, type FormEvent } from "react";
-import {
-  keepPreviousData,
-  useQuery,
-  useQueryClient,
-} from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import type {
   BusinessPartner,
   SalesOrchidGroupOption,
   SalesSlip,
+  SalesSlipListItem,
   SalesSlipPage,
 } from "@/entities/farm/types";
+import { createEmptyPage } from "@/shared/api/page";
+import { usePagedListQuery } from "@/shared/api/usePagedListQuery";
 import {
   changeSalesSlipStatus,
   createSalesSlip,
@@ -32,7 +31,6 @@ import type {
   SalesItemForm,
   SalesSlipForm,
 } from "./types";
-import { usePagedListQueryState } from "./usePagedListQueryState";
 
 const salesSlipKeys = {
   all: ["sales", "slips"] as const,
@@ -42,48 +40,32 @@ const salesSlipKeys = {
     [...salesSlipKeys.all, "detail", salesSlipId] as const,
 };
 
-type UseSalesSlipsOptions = {
-  initialBusinessPartners: BusinessPartner[];
-  initialSalesPage: SalesSlipPage;
-  initialShowCreateSlip?: boolean;
-  initialSalesFilters?: SalesFilterState;
-};
-
 export function useSalesSlips({
   initialBusinessPartners,
-  initialSalesPage,
+  initialPage,
   initialShowCreateSlip = false,
-  initialSalesFilters = createInitialSalesFilters(),
-}: UseSalesSlipsOptions) {
+  initialFilters = createInitialSalesFilters(),
+}: {
+  initialBusinessPartners: BusinessPartner[];
+  initialPage: SalesSlipPage;
+  initialShowCreateSlip?: boolean;
+  initialFilters?: SalesFilterState;
+}) {
   const queryClient = useQueryClient();
   const partners = initialBusinessPartners;
-  const listState = usePagedListQueryState({
+  const listState = usePagedListQuery({
     createEmptyFilters: createInitialSalesFilters,
-    initialFilters: initialSalesFilters,
-    initialPage: initialSalesPage.page,
-    initialSize: initialSalesPage.size,
+    initialFilters: initialFilters,
+    initialPage,
+    queryKey: ({ filters, page, size }) =>
+      salesSlipKeys.page(filters, page, size),
+    queryFn: ({ filters, page, size }) => getSalesSlipPage(filters, page, size),
   });
   const salesSlipQueryState = listState.queryState;
-  const isInitialSalesSlipQuery =
-    salesSlipQueryState.filters === initialSalesFilters &&
-    salesSlipQueryState.page === initialSalesPage.page &&
-    salesSlipQueryState.size === initialSalesPage.size;
-  const salesSlipQuery = useQuery({
-    queryKey: salesSlipKeys.page(
-      salesSlipQueryState.filters,
-      salesSlipQueryState.page,
-      salesSlipQueryState.size,
-    ),
-    queryFn: () =>
-      getSalesSlipPage(
-        salesSlipQueryState.filters,
-        salesSlipQueryState.page,
-        salesSlipQueryState.size,
-      ),
-    initialData: isInitialSalesSlipQuery ? initialSalesPage : undefined,
-    placeholderData: keepPreviousData,
-  });
-  const salesSlipPageData = salesSlipQuery.data ?? createEmptySalesSlipPage();
+  const salesSlipQuery = listState.query;
+  const salesSlipPageData =
+    listState.pageData ??
+    createEmptyPage<SalesSlipListItem>(salesSlipQueryState.size);
   const [selectedSalesSlip, setSelectedSalesSlip] = useState<SalesSlip | null>(
     null,
   );
@@ -93,7 +75,7 @@ export function useSalesSlips({
   const [showCreateSlip, setShowCreateSlip] = useState(initialShowCreateSlip);
   const [editingSlipId, setEditingSlipId] = useState<number | null>(null);
   const [selectedSlipId, setSelectedSlipId] = useState<number | null>(
-    initialSalesPage.content[0]?.id ?? null,
+    initialPage.content[0]?.id ?? null,
   );
   const [savingSlip, setSavingSlip] = useState(false);
   const [updatingSlipStatus, setUpdatingSlipStatus] = useState(false);
@@ -480,14 +462,4 @@ function isSameSalesItemVariety(
     (!itemName || itemName === target.varietyName) &&
     (!genus || genus === target.genus)
   );
-}
-
-function createEmptySalesSlipPage(): SalesSlipPage {
-  return {
-    content: [],
-    page: 0,
-    size: 10,
-    totalElements: 0,
-    totalPages: 1,
-  };
 }
