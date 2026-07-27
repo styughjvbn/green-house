@@ -1,19 +1,26 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import type { House } from "@/entities/farm/types";
-import { createEmptyPage, type Page } from "@/shared/api/page";
-import { usePagedListQuery } from "@/shared/api/usePagedListQuery";
+import { createEmptyPage } from "@/shared/api/page";
+import { useUrlPagedListState } from "@/shared/api/useUrlPagedListState";
 import {
   cancelInboundRecord,
   createInboundRecord,
   deleteInboundRecord,
-  getInboundRecords,
   getInventoryHouses,
-  getVarietyGenera,
   potInboundRecord,
   updateInboundRecord,
 } from "../api/inventoryApi";
-import { createEmptyInboundFilters } from "../lib/inventoryUrlFilters";
+import type { InventoryRouteState } from "../lib/inventoryRouteState";
+import {
+  createEmptyInboundFilters,
+  INBOUND_FILTER_KEYS,
+  writeInboundFilterParams,
+} from "../lib/inventoryUrlFilters";
+import {
+  inboundPageQueryOptions,
+  varietyLookupQueryOptions,
+} from "./inventoryQueryOptions";
 import { inventoryQueryKeys } from "./inventoryQueryKeys";
 import type {
   InboundFilterState,
@@ -21,49 +28,30 @@ import type {
   InboundRecord,
   InboundRecordPayload,
   InboundRecordUpdatePayload,
-  VarietyLookup,
 } from "./types";
 
 export function useInboundRecords({
-  initialFilters,
-  initialLookup,
-  initialPage,
+  routeState,
 }: {
-  initialFilters: InboundFilterState;
-  initialLookup: VarietyLookup;
-  initialPage: Page<InboundRecord>;
+  routeState: InventoryRouteState<InboundFilterState>;
 }) {
   const queryClient = useQueryClient();
-  const listState = usePagedListQuery({
-    createEmptyFilters: createEmptyInboundFilters,
-    initialFilters,
-    initialPage,
-    queryKey: ({ filters, page, size }) =>
-      inventoryQueryKeys.inbound.page(filters, page, size),
-    queryFn: ({ filters, page, size }) =>
-      getInboundRecords({
-        inboundType: filters.inboundType || undefined,
-        status: filters.status || undefined,
-        variety: filters.keyword || undefined,
-        page,
-        size,
-      }),
+  const query = useQuery(inboundPageQueryOptions(routeState));
+  const listState = useUrlPagedListState({
+    emptyFilters: createEmptyInboundFilters,
+    filterKeys: INBOUND_FILTER_KEYS,
+    routeFilters: routeState.filters,
+    writeFilterParams: writeInboundFilterParams,
   });
   const pageData =
-    listState.pageData ??
-    createEmptyPage<InboundRecord>(listState.queryState.size);
-  const [selectedId, setSelectedId] = useState<number | null>(
-    initialPage.content[0]?.id ?? null,
-  );
+    query.data ??
+    createEmptyPage<InboundRecord>(routeState.size, routeState.page);
+  const [selectedId, setSelectedId] = useState<number | null>(null);
   const selected =
     pageData.content.find((item) => item.id === selectedId) ??
     pageData.content[0] ??
     null;
-  const lookupQuery = useQuery({
-    queryKey: inventoryQueryKeys.varieties.lookup,
-    queryFn: getVarietyGenera,
-    initialData: initialLookup,
-  });
+  const lookupQuery = useQuery(varietyLookupQueryOptions());
   const [housesEnabled, setHousesEnabled] = useState(false);
   const housesQuery = useQuery<House[]>({
     queryKey: inventoryQueryKeys.houses,
@@ -139,10 +127,11 @@ export function useInboundRecords({
 
   return {
     ...listState,
+    query,
     pageData,
     selected,
     selectedId: selected?.id ?? null,
-    varietyOptions: lookupQuery.data.varieties,
+    varietyOptions: lookupQuery.data?.varieties ?? [],
     houses: housesQuery.data ?? [],
     enableHouses: () => setHousesEnabled(true),
     retryHouses: housesQuery.refetch,
@@ -166,7 +155,7 @@ export function useInboundRecords({
       await deleteMutation.mutateAsync(inboundRecordId);
     },
     loading:
-      listState.query.isFetching ||
+      query.isFetching ||
       createMutation.isPending ||
       updateMutation.isPending ||
       pottingMutation.isPending ||
@@ -175,7 +164,7 @@ export function useInboundRecords({
     housesLoading: housesQuery.isFetching,
     housesError: toMessage(housesQuery.error),
     error: toMessage(
-      listState.query.error ??
+      query.error ??
         lookupQuery.error ??
         createMutation.error ??
         updateMutation.error ??

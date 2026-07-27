@@ -1,51 +1,22 @@
 "use client";
 
 import { useState } from "react";
-import type { Page } from "@/shared/api/page";
-import { usePagedListUrlActions } from "@/shared/api/usePagedListUrlActions";
+import { useSearchParams } from "next/navigation";
 import { TabError } from "@/shared/ui/TabLayout";
-import {
-  VARIETY_FILTER_KEYS,
-  writeVarietyFilterParams,
-} from "../lib/inventoryUrlFilters";
+import { readVarietyRouteState } from "../lib/inventoryRouteState";
 import { useVarieties } from "../model/useVarieties";
-import type {
-  Variety,
-  VarietyFilterState,
-  VarietyLookup,
-  VarietyPayload,
-} from "../model/types";
+import type { VarietyPayload } from "../model/types";
 import { InventoryDialog } from "./components/InventoryDialog";
 import { VarietyView } from "./variety/VarietyView";
 
-export function InventoryVarietyPage({
-  initialFilters,
-  initialVarietyPage,
-  initialVarietyLookup,
-}: {
-  initialFilters: VarietyFilterState;
-  initialVarietyPage: Page<Variety>;
-  initialVarietyLookup: VarietyLookup;
-}) {
-  const varieties = useVarieties({
-    initialFilters,
-    initialLookup: initialVarietyLookup,
-    initialPage: initialVarietyPage,
-  });
-  const listActions = usePagedListUrlActions({
-    filters: varieties.filters,
-    filterKeys: VARIETY_FILTER_KEYS,
-    writeFilterParams: writeVarietyFilterParams,
-    onSearch: varieties.search,
-    onReset: varieties.reset,
-    onPageChange: varieties.changePage,
-    onPageSizeChange: varieties.changePageSize,
-  });
+export function InventoryVarietyPage() {
+  const routeState = readVarietyRouteState(useSearchParams());
+  const varieties = useVarieties({ routeState });
   const [dialogOpen, setDialogOpen] = useState(false);
 
   async function createVariety(payload: VarietyPayload) {
     await varieties.create(payload);
-    listActions.changePage(0);
+    varieties.changePage(0);
     setDialogOpen(false);
   }
 
@@ -64,10 +35,10 @@ export function InventoryVarietyPage({
         onDeactivate={varieties.deactivate}
         onDelete={varieties.remove}
         onFilterChange={varieties.updateFilter}
-        onPageChange={listActions.changePage}
-        onPageSizeChange={listActions.changePageSize}
-        onReset={listActions.reset}
-        onSearch={listActions.search}
+        onPageChange={varieties.changePage}
+        onPageSizeChange={varieties.changePageSize}
+        onReset={varieties.reset}
+        onSearch={varieties.search}
         onSelect={varieties.select}
         onUpdate={varieties.update}
       />

@@ -1,47 +1,39 @@
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
-import { createEmptyPage, type Page } from "@/shared/api/page";
-import { usePagedListQuery } from "@/shared/api/usePagedListQuery";
+import { createEmptyPage } from "@/shared/api/page";
+import { useUrlPagedListState } from "@/shared/api/useUrlPagedListState";
 import {
   createMaterial,
   deactivateMaterial,
   deleteMaterial,
-  getMaterials,
   updateMaterial,
 } from "../api/inventoryApi";
-import { createEmptyMaterialFilters } from "../lib/inventoryUrlFilters";
+import type { InventoryRouteState } from "../lib/inventoryRouteState";
+import {
+  createEmptyMaterialFilters,
+  MATERIAL_FILTER_KEYS,
+  writeMaterialFilterParams,
+} from "../lib/inventoryUrlFilters";
+import { materialPageQueryOptions } from "./inventoryQueryOptions";
 import { inventoryQueryKeys } from "./inventoryQueryKeys";
 import type { Material, MaterialFilterState, MaterialPayload } from "./types";
 
 export function useMaterials({
-  initialFilters,
-  initialPage,
+  routeState,
 }: {
-  initialFilters: MaterialFilterState;
-  initialPage: Page<Material>;
+  routeState: InventoryRouteState<MaterialFilterState>;
 }) {
   const queryClient = useQueryClient();
-  const listState = usePagedListQuery({
-    createEmptyFilters: createEmptyMaterialFilters,
-    initialFilters,
-    initialPage,
-    queryKey: ({ filters, page, size }) =>
-      inventoryQueryKeys.materials.page(filters, page, size),
-    queryFn: ({ filters, page, size }) =>
-      getMaterials({
-        category: filters.category || undefined,
-        keyword: filters.keyword || undefined,
-        manufacturer: filters.manufacturer || undefined,
-        active: toActive(filters.status),
-        page,
-        size,
-      }),
+  const query = useQuery(materialPageQueryOptions(routeState));
+  const listState = useUrlPagedListState({
+    emptyFilters: createEmptyMaterialFilters,
+    filterKeys: MATERIAL_FILTER_KEYS,
+    routeFilters: routeState.filters,
+    writeFilterParams: writeMaterialFilterParams,
   });
   const pageData =
-    listState.pageData ?? createEmptyPage<Material>(listState.queryState.size);
-  const [selectedId, setSelectedId] = useState<number | null>(
-    initialPage.content[0]?.id ?? null,
-  );
+    query.data ?? createEmptyPage<Material>(routeState.size, routeState.page);
+  const [selectedId, setSelectedId] = useState<number | null>(null);
   const selected =
     pageData.content.find((item) => item.id === selectedId) ??
     pageData.content[0] ??
@@ -90,6 +82,7 @@ export function useMaterials({
 
   return {
     ...listState,
+    query,
     pageData,
     selected,
     selectedId: selected?.id ?? null,
@@ -107,23 +100,19 @@ export function useMaterials({
       await deleteMutation.mutateAsync(materialId);
     },
     loading:
-      listState.query.isFetching ||
+      query.isFetching ||
       createMutation.isPending ||
       updateMutation.isPending ||
       deactivateMutation.isPending ||
       deleteMutation.isPending,
     error: toMessage(
-      listState.query.error ??
+      query.error ??
         createMutation.error ??
         updateMutation.error ??
         deactivateMutation.error ??
         deleteMutation.error,
     ),
   };
-}
-
-function toActive(status: MaterialFilterState["status"]) {
-  return status ? status === "ACTIVE" : undefined;
 }
 
 function toMessage(error: unknown) {

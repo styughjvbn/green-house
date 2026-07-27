@@ -1,65 +1,48 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
-import { createEmptyPage, type Page } from "@/shared/api/page";
-import { usePagedListQuery } from "@/shared/api/usePagedListQuery";
+import { createEmptyPage } from "@/shared/api/page";
+import { useUrlPagedListState } from "@/shared/api/useUrlPagedListState";
 import {
   createVariety,
   deactivateVariety,
   deleteVariety,
-  getVarieties,
-  getVarietyGenera,
   getVarietyOrchidGroups,
   updateVariety,
 } from "../api/inventoryApi";
-import { createEmptyVarietyFilters } from "../lib/inventoryUrlFilters";
+import type { InventoryRouteState } from "../lib/inventoryRouteState";
+import {
+  createEmptyVarietyFilters,
+  VARIETY_FILTER_KEYS,
+  writeVarietyFilterParams,
+} from "../lib/inventoryUrlFilters";
+import {
+  varietyLookupQueryOptions,
+  varietyPageQueryOptions,
+} from "./inventoryQueryOptions";
 import { inventoryQueryKeys } from "./inventoryQueryKeys";
-import type {
-  Variety,
-  VarietyFilterState,
-  VarietyLookup,
-  VarietyPayload,
-} from "./types";
+import type { Variety, VarietyFilterState, VarietyPayload } from "./types";
 
 export function useVarieties({
-  initialFilters,
-  initialLookup,
-  initialPage,
+  routeState,
 }: {
-  initialFilters: VarietyFilterState;
-  initialLookup: VarietyLookup;
-  initialPage: Page<Variety>;
+  routeState: InventoryRouteState<VarietyFilterState>;
 }) {
   const queryClient = useQueryClient();
-  const listState = usePagedListQuery({
-    createEmptyFilters: createEmptyVarietyFilters,
-    initialFilters,
-    initialPage,
-    queryKey: ({ filters, page, size }) =>
-      inventoryQueryKeys.varieties.page(filters, page, size),
-    queryFn: ({ filters, page, size }) =>
-      getVarieties({
-        genus: filters.genus || undefined,
-        keyword: filters.keyword || undefined,
-        active: toActive(filters.status),
-        saleEnabled: toBoolean(filters.saleEnabled),
-        page,
-        size,
-      }),
+  const query = useQuery(varietyPageQueryOptions(routeState));
+  const listState = useUrlPagedListState({
+    emptyFilters: createEmptyVarietyFilters,
+    filterKeys: VARIETY_FILTER_KEYS,
+    routeFilters: routeState.filters,
+    writeFilterParams: writeVarietyFilterParams,
   });
   const pageData =
-    listState.pageData ?? createEmptyPage<Variety>(listState.queryState.size);
-  const [selectedId, setSelectedId] = useState<number | null>(
-    initialPage.content[0]?.id ?? null,
-  );
+    query.data ?? createEmptyPage<Variety>(routeState.size, routeState.page);
+  const [selectedId, setSelectedId] = useState<number | null>(null);
   const selected =
     pageData.content.find((item) => item.id === selectedId) ??
     pageData.content[0] ??
     null;
-  const lookupQuery = useQuery({
-    queryKey: inventoryQueryKeys.varieties.lookup,
-    queryFn: getVarietyGenera,
-    initialData: initialLookup,
-  });
+  const lookupQuery = useQuery(varietyLookupQueryOptions());
   const groupsQuery = useQuery({
     queryKey: inventoryQueryKeys.varieties.groups(selected?.id ?? 0),
     queryFn: () => getVarietyOrchidGroups(selected?.id as number),
@@ -109,10 +92,11 @@ export function useVarieties({
 
   return {
     ...listState,
+    query,
     pageData,
     selected,
     selectedId: selected?.id ?? null,
-    lookup: lookupQuery.data,
+    lookup: lookupQuery.data ?? { genera: [], varieties: [] },
     connectedGroups: groupsQuery.data ?? [],
     select: setSelectedId,
     create: async (payload: VarietyPayload) => {
@@ -128,14 +112,14 @@ export function useVarieties({
       await deleteMutation.mutateAsync(varietyId);
     },
     loading:
-      listState.query.isFetching ||
+      query.isFetching ||
       createMutation.isPending ||
       updateMutation.isPending ||
       deactivateMutation.isPending ||
       deleteMutation.isPending,
     groupsLoading: groupsQuery.isFetching,
     error: toMessage(
-      listState.query.error ??
+      query.error ??
         lookupQuery.error ??
         groupsQuery.error ??
         createMutation.error ??
@@ -144,14 +128,6 @@ export function useVarieties({
         deleteMutation.error,
     ),
   };
-}
-
-function toActive(status: VarietyFilterState["status"]) {
-  return status ? status === "ACTIVE" : undefined;
-}
-
-function toBoolean(value: VarietyFilterState["saleEnabled"]) {
-  return value ? value === "true" : undefined;
 }
 
 function toMessage(error: unknown) {

@@ -1,20 +1,11 @@
 "use client";
 
 import { useState } from "react";
-import type { Page } from "@/shared/api/page";
-import { usePagedListUrlActions } from "@/shared/api/usePagedListUrlActions";
+import { useSearchParams } from "next/navigation";
 import { TabError, TabSplit, TabStack } from "@/shared/ui/TabLayout";
-import {
-  INBOUND_FILTER_KEYS,
-  writeInboundFilterParams,
-} from "../lib/inventoryUrlFilters";
+import { readInboundRouteState } from "../lib/inventoryRouteState";
 import { useInboundRecords } from "../model/useInboundRecords";
-import type {
-  InboundFilterState,
-  InboundRecord,
-  InboundRecordUpdatePayload,
-  VarietyLookup,
-} from "../model/types";
+import type { InboundRecordUpdatePayload } from "../model/types";
 import { InboundDetailCard } from "./inbound/InboundDetailCard";
 import {
   CancelDialog,
@@ -24,29 +15,9 @@ import {
 import { InboundFilters } from "./inbound/InboundFilters";
 import { InboundList } from "./inbound/InboundList";
 
-export function InventoryInboundPage({
-  initialFilters,
-  initialInboundPage,
-  initialVarietyLookup,
-}: {
-  initialFilters: InboundFilterState;
-  initialInboundPage: Page<InboundRecord>;
-  initialVarietyLookup: VarietyLookup;
-}) {
-  const inbound = useInboundRecords({
-    initialFilters,
-    initialLookup: initialVarietyLookup,
-    initialPage: initialInboundPage,
-  });
-  const listActions = usePagedListUrlActions({
-    filters: inbound.filters,
-    filterKeys: INBOUND_FILTER_KEYS,
-    writeFilterParams: writeInboundFilterParams,
-    onSearch: inbound.search,
-    onReset: inbound.reset,
-    onPageChange: inbound.changePage,
-    onPageSizeChange: inbound.changePageSize,
-  });
+export function InventoryInboundPage() {
+  const routeState = readInboundRouteState(useSearchParams());
+  const inbound = useInboundRecords({ routeState });
   const [dialog, setDialog] = useState<"create" | "potting" | "cancel" | null>(
     null,
   );
@@ -72,8 +43,8 @@ export function InventoryInboundPage({
         <InboundFilters
           filters={inbound.filters}
           onChange={inbound.updateFilter}
-          onReset={listActions.reset}
-          onSearch={listActions.search}
+          onReset={inbound.reset}
+          onSearch={inbound.search}
         />
         <TabError message={inbound.error} />
 
@@ -86,8 +57,8 @@ export function InventoryInboundPage({
             pageData={inbound.pageData}
             selectedId={selected?.id}
             onOpenCreate={() => openPlacementDialog("create")}
-            onPageChange={listActions.changePage}
-            onPageSizeChange={listActions.changePageSize}
+            onPageChange={inbound.changePage}
+            onPageSizeChange={inbound.changePageSize}
             onSelect={(id) => {
               setEditing(false);
               inbound.select(id);
@@ -131,7 +102,7 @@ export function InventoryInboundPage({
           onClose={() => setDialog(null)}
           onSubmit={async (payload) => {
             await inbound.create(payload);
-            listActions.changePage(0);
+            inbound.changePage(0);
             setDialog(null);
           }}
         />

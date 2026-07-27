@@ -28,7 +28,7 @@ green-house/
 - 난 묶음 관리 맵은 `PhysicalBed`를 농장 전체 순서로 펼치고 Embla Carousel로 2~4개 다이 viewport를 관리한다. URL 동기화와 현재 표시 범위 계산은 `useBedViewport`에 두며 현재 viewport와 앞뒤 각각 표시 개수만큼의 이동 버퍼만 무거운 내부 콘텐츠를 마운트한다.
 - 선택 이력은 동·다이·구역·난 묶음 범위별 페이지 API로 조회한다. 요약은 첫 20건만 사용하고 난 묶음 상세는 10건 단위로 조회한다. 선택 키·상세 페이지별 메모리 캐시와 진행 요청 공유·취소를 적용하고, 캐러셀 이동 상태는 선택 상태와 분리해 단순 스와이프가 이력 조회를 유발하지 않게 한다.
 - 입고 관리와 작업 관리가 공통으로 사용하는 포트 실행·농장 배치 UI는 `entities/farm/ui`에 두고 저장 API는 각 `features/*`에서 연결한다.
-- 판매와 inventory의 서버 페이지 목록은 TanStack Query와 `shared/api`의 공통 페이지 훅으로 관리한다. 서버 컴포넌트가 첫 페이지 데이터를 제공하고 기능별 model 훅이 필터·페이지 상태, 캐시 무효화, mutation을 담당한다.
+- 판매와 inventory의 서버 페이지 목록은 TanStack Query로 관리한다. inventory는 URL을 조회 조건의 단일 기준으로 사용하고 서버와 클라이언트가 같은 파서와 query option을 공유한다. 서버 컴포넌트는 현재 URL 조건을 prefetch해 hydration하며, 공통 URL 페이지 훅은 검색 초안과 URL 변경만 담당한다.
 - 작업 관리의 통합·목록·이력 화면은 TanStack Query 공통 페이지 훅과 공용 `DataTable`을 사용한다. 통합 화면은 `MANAGEMENT`와 `ALL` 조회 범위, 목록과 캘린더 보기 방식을 조합하며 월간 캘린더는 같은 페이지 API를 끝까지 조회해 기간 전체 작업을 구성한다.
 - 작업 관리의 특수 실행 흐름은 `features/work-record/ui/work-types` 아래에서 이동·폐기·포트·구조 변경 단위로 분리한다. 작업 코드별 대상 출처, 실행 UI, 완료 기록 UI는 `model/workTypeDefinition.ts`의 정의를 통해 선택하며 일반 작업은 공통 기록 흐름을 사용한다.
 

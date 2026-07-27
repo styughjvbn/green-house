@@ -1,47 +1,22 @@
 "use client";
 
 import { useState } from "react";
-import type { Page } from "@/shared/api/page";
-import { usePagedListUrlActions } from "@/shared/api/usePagedListUrlActions";
+import { useSearchParams } from "next/navigation";
 import { TabError } from "@/shared/ui/TabLayout";
-import {
-  MATERIAL_FILTER_KEYS,
-  writeMaterialFilterParams,
-} from "../lib/inventoryUrlFilters";
+import { readMaterialRouteState } from "../lib/inventoryRouteState";
 import { useMaterials } from "../model/useMaterials";
-import type {
-  Material,
-  MaterialFilterState,
-  MaterialPayload,
-} from "../model/types";
+import type { MaterialPayload } from "../model/types";
 import { InventoryDialog } from "./components/InventoryDialog";
 import { MaterialView } from "./material/MaterialView";
 
-export function InventoryMaterialPage({
-  initialFilters,
-  initialMaterialPage,
-}: {
-  initialFilters: MaterialFilterState;
-  initialMaterialPage: Page<Material>;
-}) {
-  const materials = useMaterials({
-    initialFilters,
-    initialPage: initialMaterialPage,
-  });
-  const listActions = usePagedListUrlActions({
-    filters: materials.filters,
-    filterKeys: MATERIAL_FILTER_KEYS,
-    writeFilterParams: writeMaterialFilterParams,
-    onSearch: materials.search,
-    onReset: materials.reset,
-    onPageChange: materials.changePage,
-    onPageSizeChange: materials.changePageSize,
-  });
+export function InventoryMaterialPage() {
+  const routeState = readMaterialRouteState(useSearchParams());
+  const materials = useMaterials({ routeState });
   const [dialogOpen, setDialogOpen] = useState(false);
 
   async function createMaterial(payload: MaterialPayload) {
     await materials.create(payload);
-    listActions.changePage(0);
+    materials.changePage(0);
     setDialogOpen(false);
   }
 
@@ -57,10 +32,10 @@ export function InventoryMaterialPage({
         onDeactivate={materials.deactivate}
         onDelete={materials.remove}
         onFilterChange={materials.updateFilter}
-        onPageChange={listActions.changePage}
-        onPageSizeChange={listActions.changePageSize}
-        onReset={listActions.reset}
-        onSearch={listActions.search}
+        onPageChange={materials.changePage}
+        onPageSizeChange={materials.changePageSize}
+        onReset={materials.reset}
+        onSearch={materials.search}
         onSelect={materials.select}
         onUpdate={materials.update}
       />
