@@ -7,6 +7,7 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
+    "test": "node --experimental-strip-types --test test/**/*.test.mjs",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "check": "node ../scripts/check-frontend.js",

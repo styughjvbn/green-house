@@ -7,8 +7,8 @@
 
 - 기준 명세: `docs/api/openapi.yaml`
 - OpenAPI 버전: `3.1.0`
-- 현재 구현 API: `124` operations / `103` path entries
-- schema 수: `190`
+- 현재 구현 API: `125` operations / `104` path entries
+- schema 수: `192`
 - Base URL: `/api`
 - 공통 응답: `ApiResponse*` 래퍼 사용
 
@@ -199,14 +199,16 @@
 - package 후보: `com.greenhouse.backend.partner`
 - controller tags: `business-partner-controller`, `partner-settlement-settings-controller`
 - 역할: 거래처 조회·등록과 거래처 정산 설정 API
-- operations: 4
+- operations: 6
 
 | Method | Path | Operation | Request | Response |
 |---|---|---|---|---|
 | `GET` | `/api/business-partners` | `getPartners` | `-` | `200:ApiResponseListBusinessPartnerResponse` |
-| `POST` | `/api/business-partners` | `create_2` | `BusinessPartnerCreateRequest` | `201:ApiResponseBusinessPartnerResponse` |
+| `POST` | `/api/business-partners` | `create_7` | `BusinessPartnerCreateRequest` | `201:ApiResponseBusinessPartnerResponse` |
+| `GET` | `/api/business-partners/page` | `getPartnerPage` | `-` | `200:ApiResponsePageResponseBusinessPartnerResponse` |
+| `PUT` | `/api/business-partners/{partnerId}` | `update` | `BusinessPartnerUpdateRequest` | `200:ApiResponseBusinessPartnerResponse` |
 | `GET` | `/api/business-partners/{partnerId}/settlement-settings` | `get` | `-` | `200:ApiResponsePartnerSettlementSettingsResponse` |
-| `PUT` | `/api/business-partners/{partnerId}/settlement-settings` | `update` | `PartnerSettlementSettingsRequest` | `200:ApiResponsePartnerSettlementSettingsResponse` |
+| `PUT` | `/api/business-partners/{partnerId}/settlement-settings` | `update_1` | `PartnerSettlementSettingsRequest` | `200:ApiResponsePartnerSettlementSettingsResponse` |
 
 ### 판매 전표
 

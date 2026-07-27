@@ -29,17 +29,12 @@ src/
 예시:
 
 ```ts
-import { getBusinessPartners, getSalesSlips, SalesPage } from "@/features/sales";
+import { SalesRoutePage } from "@/features/sales";
 
 export const dynamic = "force-dynamic";
 
 export default async function Page() {
-  const [partners, salesSlips] = await Promise.all([
-    getBusinessPartners(),
-    getSalesSlips(),
-  ]);
-
-  return <SalesPage partners={partners} salesSlips={salesSlips} />;
+  return <SalesRoutePage activeTab="slips" />;
 }
 ```
 

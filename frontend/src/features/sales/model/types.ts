@@ -1,4 +1,4 @@
-import type { PartnerType } from "@/entities/farm/types";
+import type { AuctionLotStatus, PartnerType } from "@/entities/farm/types";
 import type { SalesTab } from "@/shared/config/routes";
 
 export type { SalesTab };
@@ -44,49 +44,13 @@ export type SalesSlipForm = {
 
 export type SalesSlipFormMode = "create" | "edit";
 
-export type BusinessPartnerPayload = {
-  name: string;
-  partnerType: PartnerType;
-  ownerName: string | null;
-  phone: string | null;
-  address: string | null;
-  memo: string | null;
-};
-
-export type CreateBusinessPartnerPayload = BusinessPartnerPayload;
-
-export type UpdateBusinessPartnerPayload = BusinessPartnerPayload;
-
-export type CreateSalesSlipPayload = {
-  salesType: "DIRECT" | "AUCTION";
-  saleDate: string;
-  partnerId: number | null;
-  auctionShipmentId: number | null;
-  paymentStatus: string;
-  salesStatus: string;
-  paymentMethod: string | null;
-  memo: string | null;
-  items: Array<{
-    itemName: string;
-    genus: string | null;
-    spec: string | null;
-    quantity: number;
-    unitPrice: number;
-    memo: string | null;
-    allocations: Array<{
-      orchidGroupId: number;
-      quantity: number;
-    }>;
-  }>;
-};
-
 export type AuctionFilterState = {
   from: string;
   to: string;
   market: string;
   variety: string;
   grade: string;
-  status: string;
+  status: AuctionLotStatus | "";
   keyword: string;
   reviewOnly: boolean;
   returnOnly: boolean;
@@ -103,7 +67,7 @@ export type SalesFilterState = {
 };
 
 export type BusinessPartnerFilterState = {
-  partnerType: string;
-  active: string;
+  partnerType: PartnerType | "";
+  active: "ACTIVE" | "INACTIVE" | "";
   keyword: string;
 };

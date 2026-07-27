@@ -1,15 +1,14 @@
 "use client";
 
-import type { FormEvent } from "react";
-import type { BusinessPartnerPage, SalesSlipPage } from "@/entities/farm/types";
+import type { BusinessPartner, SalesSlipPage } from "@/entities/farm/types";
 import { useUrlSearchParamsWriter } from "@/shared/lib/useUrlSearchParamsWriter";
-import { TabLayout, TabSplit } from "@/shared/ui/TabLayout";
+import { TabError, TabLayout, TabSplit } from "@/shared/ui/TabLayout";
 import {
   deleteParams,
   SALES_FILTER_KEYS,
   writeSalesFilterParams,
 } from "../lib/salesUrlFilters";
-import { useSalesManager } from "../model/useSalesManager";
+import { useSalesSlips } from "../model/useSalesSlips";
 import type { SalesFilterState } from "../model/types";
 import { SalesFilters } from "./slips/SalesFilters";
 import { SalesSlipCreateForm } from "./slips/SalesSlipCreateForm";
@@ -17,19 +16,19 @@ import { SalesSlipDetail } from "./slips/SalesSlipDetail";
 import { SalesSlipList } from "./slips/SalesSlipList";
 
 export function SalesSlipsPage({
-  initialBusinessPartnerPage,
+  initialBusinessPartners,
   initialFilters,
   initialPage,
   initialShowCreateSlip = false,
 }: {
-  initialBusinessPartnerPage: BusinessPartnerPage;
+  initialBusinessPartners: BusinessPartner[];
   initialFilters: SalesFilterState;
   initialPage: SalesSlipPage;
   initialShowCreateSlip?: boolean;
 }) {
   const writeUrlParams = useUrlSearchParamsWriter();
-  const sales = useSalesManager({
-    initialBusinessPartnerPage,
+  const sales = useSalesSlips({
+    initialBusinessPartners,
     initialSalesPage: initialPage,
     initialShowCreateSlip,
     initialSalesFilters: initialFilters,
@@ -50,10 +49,6 @@ export function SalesSlipsPage({
     });
   };
 
-  async function handleCreateSalesSlip(event: FormEvent<HTMLFormElement>) {
-    await sales.handleCreateSalesSlip(event);
-  }
-
   function handleToggleCreateSalesSlip() {
     const nextOpen = !sales.showCreateSlip;
     if (nextOpen) {
@@ -61,10 +56,6 @@ export function SalesSlipsPage({
     } else {
       sales.cancelSalesSlipEditing();
     }
-  }
-
-  function handleEditSalesSlip(salesSlipId: number) {
-    void sales.startEditSalesSlip(salesSlipId);
   }
 
   return (
@@ -101,17 +92,20 @@ export function SalesSlipsPage({
             }}
             onChange={sales.updateSalesForm}
             onRemoveItem={sales.removeSalesItem}
-            onSubmit={handleCreateSalesSlip}
+            onSubmit={sales.handleCreateSalesSlip}
             onSalesTypeChange={sales.selectSalesType}
             onUpdateItem={sales.updateItem}
           />
         ) : null}
 
+        <TabError message={sales.errorMessage} />
+
         <TabSplit>
           <SalesSlipList
             currentPage={sales.salesSlipCurrentPage}
             pageSize={sales.salesSlipPageSize}
-            salesSlips={sales.paginatedSalesSlips}
+            salesSlips={sales.salesSlips}
+            loading={sales.loadingSalesSlipPage}
             selectedSalesSlipId={sales.selectedSalesSlipId}
             totalPages={sales.salesSlipTotalPages}
             totalSalesSlips={sales.salesSlipTotalElements}
@@ -136,7 +130,7 @@ export function SalesSlipsPage({
             salesSlip={sales.selectedSalesSlip}
             updatingSalesStatus={sales.updatingSlipStatus}
             onCancelSalesSlip={sales.handleCancelSalesSlip}
-            onEditSalesSlip={handleEditSalesSlip}
+            onEditSalesSlip={sales.startEditSalesSlip}
             onCompleteSalesSlip={sales.handleCompleteSalesSlip}
             onPaymentConfirmed={sales.updateSalesSlip}
           />

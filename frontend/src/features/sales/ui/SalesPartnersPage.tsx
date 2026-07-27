@@ -1,16 +1,16 @@
 "use client";
 
-import type { FormEvent } from "react";
+import type { SubmitEvent } from "react";
 import { useState } from "react";
 import type { BusinessPartnerPage } from "@/entities/farm/types";
 import { useUrlSearchParamsWriter } from "@/shared/lib/useUrlSearchParamsWriter";
-import { TabLayout, TabSplit } from "@/shared/ui/TabLayout";
+import { TabError, TabLayout, TabSplit } from "@/shared/ui/TabLayout";
 import {
   BUSINESS_PARTNER_FILTER_KEYS,
   deleteParams,
   writeBusinessPartnerFilterParams,
 } from "../lib/salesUrlFilters";
-import { useSalesManager } from "../model/useSalesManager";
+import { useBusinessPartners } from "../model/useBusinessPartners";
 import type { BusinessPartnerFilterState } from "../model/types";
 import { BusinessPartnerCreateForm } from "./partners/BusinessPartnerCreateForm";
 import {
@@ -29,9 +29,9 @@ export function SalesPartnersPage({
   initialFilters: BusinessPartnerFilterState;
 }) {
   const writeUrlParams = useUrlSearchParamsWriter();
-  const sales = useSalesManager({
-    initialBusinessPartnerPage: initialPage,
-    initialPartnerFilters: initialFilters,
+  const partners = useBusinessPartners({
+    initialPage,
+    initialFilters,
   });
   const [showCreatePartner, setShowCreatePartner] = useState(false);
   const [partnerDetailMode, setPartnerDetailMode] =
@@ -41,65 +41,65 @@ export function SalesPartnersPage({
     field: K,
     value: BusinessPartnerFilterState[K],
   ) => {
-    const nextFilters = { ...sales.partnerFilters, [field]: value };
-    sales.updatePartnerFilters(field, value);
+    partners.updateFilter(field, value);
+  };
+
+  const searchBusinessPartners = () => {
+    partners.search(partners.filters);
     writeUrlParams((params) => {
-      writeBusinessPartnerFilterParams(params, nextFilters);
+      writeBusinessPartnerFilterParams(params, partners.filters);
       params.set("page", "0");
     });
   };
 
   async function handleCreateBusinessPartner(
-    event: FormEvent<HTMLFormElement>,
+    event: SubmitEvent<HTMLFormElement>,
   ) {
-    const created = await sales.handleCreateBusinessPartner(event);
+    const created = await partners.handleCreate(event);
     if (created) {
       setShowCreatePartner(false);
     }
-  }
-
-  async function handleUpdateBusinessPartner(
-    event: FormEvent<HTMLFormElement>,
-  ) {
-    return await sales.handleUpdateBusinessPartner(event);
   }
 
   return (
     <main className="h-full min-h-0">
       <TabLayout>
         <BusinessPartnerFilters
-          filters={sales.partnerFilters}
+          filters={partners.filters}
           onChange={updateFilter}
           onReset={() => {
-            sales.resetPartnerFilters();
+            partners.resetFilters();
             writeUrlParams((params) => {
               deleteParams(params, BUSINESS_PARTNER_FILTER_KEYS);
               params.set("page", "0");
             });
           }}
+          onSearch={searchBusinessPartners}
         />
+        <TabError message={partners.errorMessage} />
         <TabSplit columns="lg:grid-cols-[520px_minmax(0,1fr)]">
           <BusinessPartnerList
-            currentPage={sales.partnerCurrentPage}
-            pageSize={sales.partnerPageSize}
-            partners={sales.paginatedBusinessPartners}
-            selectedBusinessPartnerId={sales.selectedPartnerId}
-            totalPages={sales.partnerTotalPages}
-            totalPartners={sales.filteredBusinessPartners.length}
+            currentPage={partners.currentPage}
+            loading={partners.loading}
+            pageSize={partners.pageSize}
+            partners={partners.partners}
+            selectedBusinessPartnerId={partners.selectedPartnerId}
+            totalPages={partners.totalPages}
+            totalPartners={partners.totalElements}
             onSelectBusinessPartner={(partnerId) => {
               setShowCreatePartner(false);
               setPartnerDetailMode("read");
-              sales.selectBusinessPartner(partnerId);
+              partners.selectPartner(partnerId);
             }}
             onCreateBusinessPartner={() => setShowCreatePartner(true)}
             onPageChange={(pageIndex) => {
-              sales.setPartnerPage(pageIndex);
+              partners.setPage(pageIndex);
               writeUrlParams((params) => {
                 params.set("page", String(pageIndex));
               });
             }}
             onPageSizeChange={(pageSize) => {
-              sales.setPartnerPageSize(pageSize);
+              partners.setPageSize(pageSize);
               writeUrlParams((params) => {
                 params.set("size", String(pageSize));
                 params.set("page", "0");
@@ -108,19 +108,19 @@ export function SalesPartnersPage({
           />
           <div>
             <BusinessPartnerEditSection
-              key={sales.selectedBusinessPartner?.id ?? "empty"}
-              partner={sales.selectedBusinessPartner}
-              form={sales.partnerEditForm}
-              saving={sales.savingBusinessPartnerEdit}
+              key={partners.selectedPartner?.id ?? "empty"}
+              partner={partners.selectedPartner}
+              form={partners.editForm}
+              saving={partners.savingEdit}
               mode={partnerDetailMode}
-              errorMessage={sales.errorMessage}
-              onChange={sales.updateBusinessPartnerEditForm}
+              errorMessage={partners.errorMessage}
+              onChange={partners.updateEditForm}
               onModeChange={setPartnerDetailMode}
-              onSubmit={handleUpdateBusinessPartner}
+              onSubmit={partners.handleUpdate}
             >
               <PartnerSettlementSettingsSection
-                key={sales.selectedBusinessPartner?.id ?? "empty"}
-                partner={sales.selectedBusinessPartner}
+                key={partners.selectedPartner?.id ?? "empty"}
+                partner={partners.selectedPartner}
                 embedded
                 mode={partnerDetailMode === "settlement" ? "edit" : "read"}
                 onSaved={() => setPartnerDetailMode("read")}
@@ -130,9 +130,9 @@ export function SalesPartnersPage({
         </TabSplit>
         {showCreatePartner ? (
           <BusinessPartnerCreateForm
-            form={sales.partnerForm}
-            saving={sales.savingBusinessPartner}
-            onChange={sales.updateBusinessPartnerForm}
+            form={partners.createForm}
+            saving={partners.savingCreate}
+            onChange={partners.updateCreateForm}
             onClose={() => setShowCreatePartner(false)}
             onSubmit={handleCreateBusinessPartner}
           />

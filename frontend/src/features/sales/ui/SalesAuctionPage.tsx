@@ -8,10 +8,11 @@ import { useUrlSearchParamsWriter } from "@/shared/lib/useUrlSearchParamsWriter"
 import { TabLayout } from "@/shared/ui/TabLayout";
 import {
   AUCTION_FILTER_KEYS,
+  createInitialAuctionFilters,
   deleteParams,
   writeAuctionFilterParams,
 } from "../lib/salesUrlFilters";
-import { useAuctionTrackingQueryState } from "../model/useAuctionTrackingQueryState";
+import { usePagedListQueryState } from "../model/usePagedListQueryState";
 import type { AuctionFilterState } from "../model/types";
 import { AuctionTrackingView } from "./auction/AuctionTrackingView";
 
@@ -25,9 +26,11 @@ export function SalesAuctionPage({
   initialFilters: AuctionFilterState;
 }) {
   const writeUrlParams = useUrlSearchParamsWriter();
-  const auctionQuery = useAuctionTrackingQueryState({
+  const auctionQuery = usePagedListQueryState({
+    createEmptyFilters: createInitialAuctionFilters,
     initialFilters,
-    initialPage,
+    initialPage: initialPage.page,
+    initialSize: initialPage.size,
   });
 
   const applyFilters = (filters: AuctionFilterState) => {
@@ -45,13 +48,15 @@ export function SalesAuctionPage({
           initialPage={initialPage}
           initialSummary={initialSummary}
           initialFilters={initialFilters}
+          filters={auctionQuery.filters}
           queryFilters={auctionQuery.queryState.filters}
           queryPage={auctionQuery.queryState.page}
           querySize={auctionQuery.queryState.size}
+          onFilterChange={auctionQuery.updateFilter}
           onPageChange={(page) => {
-            auctionQuery.changePage(page - 1);
+            auctionQuery.changePage(page);
             writeUrlParams((params) => {
-              params.set("page", String(page - 1));
+              params.set("page", String(page));
             });
           }}
           onPageSizeChange={(size) => {

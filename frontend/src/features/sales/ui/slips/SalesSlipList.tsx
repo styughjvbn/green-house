@@ -12,6 +12,7 @@ export function SalesSlipList({
   currentPage,
   pageSize,
   salesSlips,
+  loading,
   selectedSalesSlipId,
   totalPages,
   totalSalesSlips,
@@ -23,6 +24,7 @@ export function SalesSlipList({
   currentPage: number;
   pageSize: number;
   salesSlips: SalesSlipListItem[];
+  loading: boolean;
   selectedSalesSlipId: number | null;
   totalPages: number;
   totalSalesSlips: number;
@@ -102,6 +104,7 @@ export function SalesSlipList({
       emptyMessage="조건에 맞는 판매 전표가 없습니다."
       getRowId={(row) => String(row.id)}
       pageIndex={currentPage}
+      isLoading={loading}
       pageSize={pageSize}
       pageSizeOptions={[10, 20, 50]}
       selectedRowId={

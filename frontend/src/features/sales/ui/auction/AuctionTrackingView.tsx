@@ -13,10 +13,12 @@ export function AuctionTrackingView({
   initialPage,
   initialSummary,
   initialFilters,
+  filters,
   queryFilters,
   queryPage,
   querySize,
   onSearch,
+  onFilterChange,
   onResetFilters,
   onPageChange,
   onPageSizeChange,
@@ -24,10 +26,15 @@ export function AuctionTrackingView({
   initialPage: AuctionLotPage;
   initialSummary: AuctionTrackingSummary;
   initialFilters: AuctionFilterState;
+  filters: AuctionFilterState;
   queryFilters: AuctionFilterState;
   queryPage: number;
   querySize: number;
   onSearch: (filters: AuctionFilterState) => void;
+  onFilterChange: <K extends keyof AuctionFilterState>(
+    field: K,
+    value: AuctionFilterState[K],
+  ) => void;
   onResetFilters: () => void;
   onPageChange: (page: number) => void;
   onPageSizeChange: (size: number) => void;
@@ -44,15 +51,12 @@ export function AuctionTrackingView({
   return (
     <TabStack>
       <AuctionFilters
-        filters={tracking.filters}
+        filters={filters}
         loading={tracking.loading}
         summary={tracking.summary}
-        onChange={tracking.updateFilter}
-        onSearch={() => onSearch(tracking.filters)}
-        onReset={() => {
-          tracking.resetFilters();
-          onResetFilters();
-        }}
+        onChange={onFilterChange}
+        onSearch={() => onSearch(filters)}
+        onReset={onResetFilters}
       />
       <TabError message={tracking.error} />
       <TabSplit
@@ -61,6 +65,7 @@ export function AuctionTrackingView({
       >
         <AuctionLotList
           lots={tracking.lots}
+          loading={tracking.listLoading}
           page={tracking.page}
           pageSize={tracking.pageSize}
           totalElements={tracking.totalElements}

@@ -1,4 +1,4 @@
-import { FormEvent, useMemo, useState } from "react";
+import { useMemo, useState, type FormEvent } from "react";
 import {
   keepPreviousData,
   useMutation,
@@ -17,12 +17,12 @@ import {
   getAuctionLots,
   getAuctionTrackingSummary,
 } from "../api/salesApi";
-import { createInitialAuctionFilters } from "../lib/salesUrlFilters";
 import type { AuctionFilterState } from "./types";
 import type {
-  AuctionAttemptStatus,
-  AuctionInspectionStatus,
-} from "@/entities/farm/types";
+  AuctionQuantityAdjustmentPayload,
+  AuctionResultFormPayload,
+  AuctionReturnPayload,
+} from "../api/types";
 
 const auctionTrackingKeys = {
   all: ["sales", "auctionTracking"] as const,
@@ -47,7 +47,6 @@ export function useAuctionTracking({
   querySize: number;
 }) {
   const queryClient = useQueryClient();
-  const [filters, setFilters] = useState(initialFilters);
   const [selectedId, setSelectedId] = useState<number | null>(
     initialPage.content[0]?.id ?? null,
   );
@@ -91,20 +90,7 @@ export function useAuctionTracking({
       payload,
     }: {
       lotId: number;
-      payload: {
-        auctionDate: string;
-        attemptNo: null;
-        attemptStatus: AuctionAttemptStatus;
-        failedReason: string | null;
-        memo: string | null;
-        resultLines?: Array<{
-          auctionGrade: string | null;
-          quantity: number;
-          unitPrice: number;
-          note: string | null;
-          inspectionStatus: AuctionInspectionStatus | null;
-        }>;
-      };
+      payload: AuctionResultFormPayload & { attemptNo: null };
     }) => createAuctionResult(lotId, payload),
     onSuccess: invalidateAuctionTracking,
   });
@@ -114,12 +100,7 @@ export function useAuctionTracking({
       payload,
     }: {
       lotId: number;
-      payload: {
-        returnedQuantity: number;
-        returnDate: string;
-        worker: string | null;
-        memo: string | null;
-      };
+      payload: AuctionReturnPayload;
     }) => confirmAuctionReturn(lotId, payload),
     onSuccess: invalidateAuctionTracking,
   });
@@ -129,27 +110,10 @@ export function useAuctionTracking({
       payload,
     }: {
       lotId: number;
-      payload: {
-        soldQuantity: number;
-        waitingQuantity: number;
-        returnedQuantity: number;
-        worker: string | null;
-        memo: string | null;
-      };
+      payload: AuctionQuantityAdjustmentPayload;
     }) => adjustAuctionQuantity(lotId, payload),
     onSuccess: invalidateAuctionTracking,
   });
-
-  function updateFilter<K extends keyof AuctionFilterState>(
-    field: K,
-    value: AuctionFilterState[K],
-  ) {
-    setFilters((current) => ({ ...current, [field]: value }));
-  }
-
-  function resetFilters() {
-    setFilters(createInitialAuctionFilters());
-  }
 
   async function confirmReturn(returnedQuantity: number, returnDate: string) {
     if (!selectedLot) return;
@@ -190,19 +154,7 @@ export function useAuctionTracking({
     });
   }
 
-  async function addResult(payload: {
-    auctionDate: string;
-    attemptStatus: AuctionAttemptStatus;
-    failedReason: string | null;
-    memo: string | null;
-    resultLines?: Array<{
-      auctionGrade: string | null;
-      quantity: number;
-      unitPrice: number;
-      note: string | null;
-      inspectionStatus: AuctionInspectionStatus | null;
-    }>;
-  }) {
+  async function addResult(payload: AuctionResultFormPayload) {
     if (!selectedLot) return;
     await createResultMutation.mutateAsync({
       lotId: selectedLot.id,
@@ -230,17 +182,15 @@ export function useAuctionTracking({
 
   return {
     lots: pageResult.content,
-    page: pageResult.page + 1,
-    pageSize: pageResult.size,
+    page: queryPage,
+    pageSize: querySize,
     totalElements: pageResult.totalElements,
     totalPages: Math.max(1, pageResult.totalPages),
     summary,
-    filters,
     selectedLot,
     loading: lotsQuery.isFetching || summaryQuery.isFetching || mutationPending,
+    listLoading: lotsQuery.isFetching,
     error: error == null ? null : toMessage(error),
-    updateFilter,
-    resetFilters,
     setSelectedId,
     confirmReturn,
     adjustQuantity,

@@ -1,4 +1,4 @@
-import { FormEvent, useEffect, useMemo, useState } from "react";
+import { useMemo, useState, type FormEvent } from "react";
 import {
   keepPreviousData,
   useQuery,
@@ -6,78 +6,65 @@ import {
 } from "@tanstack/react-query";
 import type {
   BusinessPartner,
-  BusinessPartnerPage,
   SalesOrchidGroupOption,
   SalesSlip,
   SalesSlipPage,
 } from "@/entities/farm/types";
 import {
   changeSalesSlipStatus,
-  createBusinessPartner,
   createSalesSlip,
   getSalesSlip,
   getSalesSlipPage,
-  updateBusinessPartner,
   updateSalesSlip as requestUpdateSalesSlip,
 } from "../api/salesApi";
 import {
   calculateSalesTotal,
-  createEmptyBusinessPartnerForm,
   createEmptySalesItem,
   createInitialSalesForm,
-  filterBusinessPartners,
   resetSalesSlipFormAfterSave,
-  toBusinessPartnerForm,
-  toCreateBusinessPartnerPayload,
   toCreateSalesSlipPayload,
   toSalesSlipForm,
 } from "../lib/salesForm";
-import {
-  createInitialBusinessPartnerFilters,
-  createInitialSalesFilters,
-} from "../lib/salesUrlFilters";
+import { createInitialSalesFilters } from "../lib/salesUrlFilters";
 import type {
-  BusinessPartnerFilterState,
-  BusinessPartnerForm,
   SalesAllocationForm,
   SalesFilterState,
   SalesItemForm,
   SalesSlipForm,
 } from "./types";
+import { usePagedListQueryState } from "./usePagedListQueryState";
 
 const salesSlipKeys = {
   all: ["sales", "slips"] as const,
   page: (filters: SalesFilterState, page: number, size: number) =>
     [...salesSlipKeys.all, filters, page, size] as const,
+  detail: (salesSlipId: number) =>
+    [...salesSlipKeys.all, "detail", salesSlipId] as const,
 };
 
-type UseSalesManagerOptions = {
-  initialBusinessPartnerPage: BusinessPartnerPage;
-  initialSalesPage?: SalesSlipPage;
+type UseSalesSlipsOptions = {
+  initialBusinessPartners: BusinessPartner[];
+  initialSalesPage: SalesSlipPage;
   initialShowCreateSlip?: boolean;
   initialSalesFilters?: SalesFilterState;
-  initialPartnerFilters?: BusinessPartnerFilterState;
 };
 
-export function useSalesManager({
-  initialBusinessPartnerPage,
+export function useSalesSlips({
+  initialBusinessPartners,
   initialSalesPage,
   initialShowCreateSlip = false,
   initialSalesFilters = createInitialSalesFilters(),
-  initialPartnerFilters = createInitialBusinessPartnerFilters(),
-}: UseSalesManagerOptions) {
+}: UseSalesSlipsOptions) {
   const queryClient = useQueryClient();
-  const initialBusinessPartners = initialBusinessPartnerPage.content;
-  const [partners, setBusinessPartners] = useState<BusinessPartner[]>(
-    initialBusinessPartners,
-  );
-  const [salesSlipQueryState, setSalesSlipQueryState] = useState(() => ({
-    filters: initialSalesFilters,
-    page: initialSalesPage?.page ?? 0,
-    size: initialSalesPage?.size ?? 10,
-  }));
+  const partners = initialBusinessPartners;
+  const listState = usePagedListQueryState({
+    createEmptyFilters: createInitialSalesFilters,
+    initialFilters: initialSalesFilters,
+    initialPage: initialSalesPage.page,
+    initialSize: initialSalesPage.size,
+  });
+  const salesSlipQueryState = listState.queryState;
   const isInitialSalesSlipQuery =
-    initialSalesPage != null &&
     salesSlipQueryState.filters === initialSalesFilters &&
     salesSlipQueryState.page === initialSalesPage.page &&
     salesSlipQueryState.size === initialSalesPage.size;
@@ -93,7 +80,6 @@ export function useSalesManager({
         salesSlipQueryState.page,
         salesSlipQueryState.size,
       ),
-    enabled: initialSalesPage != null,
     initialData: isInitialSalesSlipQuery ? initialSalesPage : undefined,
     placeholderData: keepPreviousData,
   });
@@ -101,43 +87,14 @@ export function useSalesManager({
   const [selectedSalesSlip, setSelectedSalesSlip] = useState<SalesSlip | null>(
     null,
   );
-  const [partnerForm, setBusinessPartnerForm] = useState<BusinessPartnerForm>(
-    createEmptyBusinessPartnerForm(),
-  );
-  const [partnerEditDraft, setPartnerEditDraft] = useState<{
-    partnerId: number | null;
-    form: BusinessPartnerForm;
-  }>(() => ({
-    partnerId: initialBusinessPartners[0]?.id ?? null,
-    form: initialBusinessPartners[0]
-      ? toBusinessPartnerForm(initialBusinessPartners[0])
-      : createEmptyBusinessPartnerForm(),
-  }));
   const [salesForm, setSalesForm] = useState<SalesSlipForm>(() =>
     createInitialSalesForm(initialBusinessPartners),
   );
-  const [filters, setFilters] = useState<SalesFilterState>(
-    () => initialSalesFilters,
-  );
-  const [partnerFilters, setPartnerFilters] =
-    useState<BusinessPartnerFilterState>(() => initialPartnerFilters);
   const [showCreateSlip, setShowCreateSlip] = useState(initialShowCreateSlip);
   const [editingSlipId, setEditingSlipId] = useState<number | null>(null);
   const [selectedSlipId, setSelectedSlipId] = useState<number | null>(
-    initialSalesPage?.content[0]?.id ?? null,
+    initialSalesPage.content[0]?.id ?? null,
   );
-  const [selectedPartnerId, setSelectedPartnerId] = useState<number | null>(
-    initialBusinessPartners[0]?.id ?? null,
-  );
-  const [partnerPage, setPartnerPage] = useState(
-    initialBusinessPartnerPage.page,
-  );
-  const [partnerPageSize, setPartnerPageSize] = useState(
-    initialBusinessPartnerPage.size,
-  );
-  const [savingBusinessPartner, setSavingBusinessPartner] = useState(false);
-  const [savingBusinessPartnerEdit, setSavingBusinessPartnerEdit] =
-    useState(false);
   const [savingSlip, setSavingSlip] = useState(false);
   const [updatingSlipStatus, setUpdatingSlipStatus] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
@@ -146,119 +103,31 @@ export function useSalesManager({
     () => calculateSalesTotal(salesForm.items),
     [salesForm.items],
   );
-  const filteredBusinessPartners = useMemo(
-    () => filterBusinessPartners(partners, partnerFilters),
-    [partners, partnerFilters],
-  );
   const salesSlipTotalPages = Math.max(1, salesSlipPageData.totalPages);
   const visibleSalesSlipPage = Math.min(
     salesSlipQueryState.page,
     salesSlipTotalPages - 1,
   );
-  const partnerTotalPages = Math.max(
-    1,
-    Math.ceil(filteredBusinessPartners.length / partnerPageSize),
-  );
-  const visiblePartnerPage = Math.min(partnerPage, partnerTotalPages - 1);
-  const paginatedBusinessPartners = useMemo(() => {
-    const start = visiblePartnerPage * partnerPageSize;
-    return filteredBusinessPartners.slice(start, start + partnerPageSize);
-  }, [filteredBusinessPartners, partnerPageSize, visiblePartnerPage]);
-  const selectedBusinessPartner =
-    partners.find((partner) => partner.id === selectedPartnerId) ?? null;
   const visibleSelectedSlipId =
     selectedSlipId != null &&
     salesSlipPageData.content.some((item) => item.id === selectedSlipId)
       ? selectedSlipId
       : (salesSlipPageData.content[0]?.id ?? null);
-  const partnerEditForm =
-    selectedBusinessPartner == null
-      ? createEmptyBusinessPartnerForm()
-      : partnerEditDraft.partnerId === selectedBusinessPartner.id
-        ? partnerEditDraft.form
-        : toBusinessPartnerForm(selectedBusinessPartner);
-
-  useEffect(() => {
-    if (visibleSelectedSlipId == null) return;
-
-    let canceled = false;
-    getSalesSlip(visibleSelectedSlipId)
-      .then((salesSlip) => {
-        if (!canceled) setSelectedSalesSlip(salesSlip);
-      })
-      .catch((error) => {
-        if (!canceled) {
-          setErrorMessage(
-            error instanceof Error
-              ? error.message
-              : "전표 상세를 불러오지 못했습니다.",
-          );
-          setSelectedSalesSlip(null);
-        }
-      });
-
-    return () => {
-      canceled = true;
-    };
-  }, [visibleSelectedSlipId]);
-
-  function updateBusinessPartnerForm<K extends keyof BusinessPartnerForm>(
-    field: K,
-    value: BusinessPartnerForm[K],
-  ) {
-    setBusinessPartnerForm((current) => ({ ...current, [field]: value }));
-  }
-
-  function updateBusinessPartnerEditForm<K extends keyof BusinessPartnerForm>(
-    field: K,
-    value: BusinessPartnerForm[K],
-  ) {
-    if (!selectedBusinessPartner) return;
-    setPartnerEditDraft((current) => ({
-      partnerId: selectedBusinessPartner.id,
-      form: {
-        ...(current.partnerId === selectedBusinessPartner.id
-          ? current.form
-          : toBusinessPartnerForm(selectedBusinessPartner)),
-        [field]: value,
-      },
-    }));
-  }
+  const salesSlipDetailQuery = useQuery({
+    queryKey: salesSlipKeys.detail(visibleSelectedSlipId ?? 0),
+    queryFn: () => getSalesSlip(visibleSelectedSlipId as number),
+    enabled: visibleSelectedSlipId != null,
+  });
+  const visibleSelectedSalesSlip =
+    selectedSalesSlip?.id === visibleSelectedSlipId
+      ? selectedSalesSlip
+      : (salesSlipDetailQuery.data ?? null);
 
   function updateSalesForm<K extends keyof SalesSlipForm>(
     field: K,
     value: SalesSlipForm[K],
   ) {
     setSalesForm((current) => ({ ...current, [field]: value }));
-  }
-
-  function updateFilters<K extends keyof SalesFilterState>(
-    field: K,
-    value: SalesFilterState[K],
-  ) {
-    setFilters((current) => ({ ...current, [field]: value }));
-  }
-
-  function updatePartnerFilters<K extends keyof BusinessPartnerFilterState>(
-    field: K,
-    value: BusinessPartnerFilterState[K],
-  ) {
-    setPartnerPage(0);
-    setPartnerFilters((current) => ({ ...current, [field]: value }));
-  }
-
-  function resetFilters() {
-    setFilters(createInitialSalesFilters());
-    setSalesSlipQueryState((current) => ({
-      ...current,
-      filters: createInitialSalesFilters(),
-      page: 0,
-    }));
-  }
-
-  function resetPartnerFilters() {
-    setPartnerPage(0);
-    setPartnerFilters(createInitialBusinessPartnerFilters());
   }
 
   function selectSalesType(salesType: SalesSlipForm["salesType"]) {
@@ -415,78 +284,6 @@ export function useSalesManager({
     }));
   }
 
-  function selectBusinessPartner(partnerId: number) {
-    setSelectedPartnerId(partnerId);
-    updateSalesForm("partnerId", String(partnerId));
-  }
-
-  async function handleCreateBusinessPartner(
-    event: FormEvent<HTMLFormElement>,
-  ) {
-    event.preventDefault();
-    setSavingBusinessPartner(true);
-    setErrorMessage(null);
-
-    try {
-      const partner = await createBusinessPartner(
-        toCreateBusinessPartnerPayload(partnerForm),
-      );
-      setBusinessPartners((current) => [...current, partner]);
-      setSelectedPartnerId(partner.id);
-      setPartnerPage(0);
-      if (partner.partnerType !== "AUCTION_HOUSE") {
-        setSalesForm((current) => ({
-          ...current,
-          partnerId: String(partner.id),
-        }));
-      }
-      setBusinessPartnerForm(createEmptyBusinessPartnerForm());
-      return true;
-    } catch (error) {
-      setErrorMessage(
-        error instanceof Error ? error.message : "요청 중 문제가 발생했습니다.",
-      );
-      return false;
-    } finally {
-      setSavingBusinessPartner(false);
-    }
-  }
-
-  async function handleUpdateBusinessPartner(
-    event: FormEvent<HTMLFormElement>,
-  ) {
-    event.preventDefault();
-    if (!selectedBusinessPartner) return false;
-
-    setSavingBusinessPartnerEdit(true);
-    setErrorMessage(null);
-    try {
-      const updated = await updateBusinessPartner(
-        selectedBusinessPartner.id,
-        toCreateBusinessPartnerPayload(partnerEditForm),
-      );
-      setBusinessPartners((current) =>
-        current.map((partner) =>
-          partner.id === updated.id ? updated : partner,
-        ),
-      );
-      setPartnerEditDraft({
-        partnerId: updated.id,
-        form: toBusinessPartnerForm(updated),
-      });
-      return true;
-    } catch (error) {
-      setErrorMessage(
-        error instanceof Error
-          ? error.message
-          : "거래처를 수정하지 못했습니다.",
-      );
-      return false;
-    } finally {
-      setSavingBusinessPartnerEdit(false);
-    }
-  }
-
   async function handleCreateSalesSlip(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setSavingSlip(true);
@@ -500,7 +297,7 @@ export function useSalesManager({
           : await requestUpdateSalesSlip(editingSlipId, payload);
       setSelectedSlipId(salesSlip.id);
       setSelectedSalesSlip(salesSlip);
-      setSalesSlipQueryState((current) => ({ ...current, page: 0 }));
+      listState.changePage(0);
       setShowCreateSlip(false);
       setSalesForm((current) => resetSalesSlipFormAfterSave(current));
       setEditingSlipId(null);
@@ -524,16 +321,21 @@ export function useSalesManager({
   }
 
   async function startEditSalesSlip(salesSlipId: number) {
-    const salesSlip =
-      selectedSalesSlip?.id === salesSlipId
-        ? selectedSalesSlip
-        : await getSalesSlip(salesSlipId);
-    setEditingSlipId(salesSlipId);
-    setSelectedSlipId(salesSlipId);
-    setSelectedSalesSlip(salesSlip);
-    setSalesForm(toSalesSlipForm(salesSlip));
-    setShowCreateSlip(true);
     setErrorMessage(null);
+    try {
+      const salesSlip =
+        visibleSelectedSalesSlip?.id === salesSlipId
+          ? visibleSelectedSalesSlip
+          : await getSalesSlip(salesSlipId);
+      setEditingSlipId(salesSlipId);
+      setSelectedSlipId(salesSlipId);
+      setSelectedSalesSlip(salesSlip);
+      queryClient.setQueryData(salesSlipKeys.detail(salesSlip.id), salesSlip);
+      setSalesForm(toSalesSlipForm(salesSlip));
+      setShowCreateSlip(true);
+    } catch (error) {
+      setErrorMessage(toMessage(error));
+    }
   }
 
   function cancelSalesSlipEditing() {
@@ -589,6 +391,7 @@ export function useSalesManager({
 
   function updateSalesSlip(salesSlip: SalesSlip) {
     setSelectedSalesSlip(salesSlip);
+    queryClient.setQueryData(salesSlipKeys.detail(salesSlip.id), salesSlip);
     queryClient.setQueriesData<SalesSlipPage>(
       { queryKey: salesSlipKeys.all },
       (current) =>
@@ -609,94 +412,55 @@ export function useSalesManager({
 
   return {
     partners,
-    filteredBusinessPartners,
-    paginatedBusinessPartners,
     salesSlips: salesSlipPageData.content,
-    filteredSalesSlips: salesSlipPageData.content,
-    paginatedSalesSlips: salesSlipPageData.content,
     salesSlipCurrentPage: visibleSalesSlipPage,
-    salesSlipPageSize: salesSlipPageData.size,
+    salesSlipPageSize: salesSlipQueryState.size,
     salesSlipTotalPages,
     salesSlipTotalElements: salesSlipPageData.totalElements,
-    partnerCurrentPage: visiblePartnerPage,
-    partnerPageSize,
-    partnerTotalPages,
     selectedSalesSlipId: visibleSelectedSlipId,
-    selectedSalesSlip:
-      selectedSalesSlip?.id === visibleSelectedSlipId
-        ? selectedSalesSlip
-        : null,
-    loadingSalesSlipDetail: false,
+    selectedSalesSlip: visibleSelectedSalesSlip,
+    loadingSalesSlipDetail: salesSlipDetailQuery.isFetching,
     loadingSalesSlipPage: salesSlipQuery.isFetching,
-    selectedPartnerId,
-    selectedBusinessPartner,
-    partnerForm,
-    partnerEditForm,
-    filters,
-    partnerFilters,
+    filters: listState.filters,
     salesForm,
     showCreateSlip,
     editingSlipId,
-    savingBusinessPartner,
-    savingBusinessPartnerEdit,
     savingSlip,
     updatingSlipStatus,
     errorMessage:
       errorMessage ??
-      (salesSlipQuery.error == null ? null : toMessage(salesSlipQuery.error)),
+      (salesSlipQuery.error == null
+        ? salesSlipDetailQuery.error == null
+          ? null
+          : toMessage(salesSlipDetailQuery.error)
+        : toMessage(salesSlipQuery.error)),
     totalAmount,
     addAllocation,
     addSalesItem,
     removeAllocation,
     removeSalesItem,
-    selectBusinessPartner,
     selectSalesSlip,
     selectSalesType,
     setShowCreateSlip,
     startCreateSalesSlip,
     startEditSalesSlip,
     cancelSalesSlipEditing,
-    resetFilters,
-    resetPartnerFilters,
-    setSalesSlipPage,
-    setSalesSlipPageSize,
-    searchSalesSlips,
-    setPartnerPage,
-    setPartnerPageSize,
+    resetFilters: listState.reset,
+    setSalesSlipPage: listState.changePage,
+    setSalesSlipPageSize: listState.changePageSize,
+    searchSalesSlips: listState.search,
     updateAllocation,
-    updateBusinessPartnerForm,
-    updateBusinessPartnerEditForm,
-    updateFilters,
-    updatePartnerFilters,
+    updateFilters: listState.updateFilter,
     updateSalesForm,
     updateItem,
     updateSalesSlip,
     handleCompleteSalesSlip,
     handleCancelSalesSlip,
-    handleCreateBusinessPartner,
-    handleUpdateBusinessPartner,
     handleCreateSalesSlip,
   };
 
   async function invalidateSalesSlips() {
     await queryClient.invalidateQueries({ queryKey: salesSlipKeys.all });
-  }
-
-  function searchSalesSlips(nextFilters = filters) {
-    setSalesSlipQueryState((current) => ({
-      ...current,
-      filters: nextFilters,
-      page: 0,
-    }));
-    void invalidateSalesSlips();
-  }
-
-  function setSalesSlipPage(page: number) {
-    setSalesSlipQueryState((current) => ({ ...current, page }));
-  }
-
-  function setSalesSlipPageSize(size: number) {
-    setSalesSlipQueryState((current) => ({ ...current, size, page: 0 }));
   }
 }
 

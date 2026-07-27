@@ -118,6 +118,52 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ApiResponseBusinessPartnerResponse'
+  /api/business-partners/page:
+    get:
+      tags:
+      - business-partner-controller
+      operationId: getPartnerPage
+      parameters:
+      - name: keyword
+        in: query
+        required: false
+        schema:
+          type: string
+      - name: partnerType
+        in: query
+        required: false
+        schema:
+          type: string
+          enum:
+          - WHOLESALE
+          - RETAIL
+          - AUCTION_HOUSE
+      - name: active
+        in: query
+        required: false
+        schema:
+          type: boolean
+      - name: page
+        in: query
+        required: false
+        schema:
+          type: integer
+          format: int32
+          default: 0
+      - name: size
+        in: query
+        required: false
+        schema:
+          type: integer
+          format: int32
+          default: 10
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponsePageResponseBusinessPartnerResponse'
 components:
   schemas:
     ApiResponseBusinessPartnerResponse:
@@ -134,6 +180,13 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/BusinessPartnerResponse'
+        message:
+          type: string
+    ApiResponsePageResponseBusinessPartnerResponse:
+      type: object
+      properties:
+        data:
+          $ref: '#/components/schemas/PageResponseBusinessPartnerResponse'
         message:
           type: string
     ApiResponsePartnerSettlementSettingsResponse:
@@ -231,6 +284,25 @@ components:
       required:
       - name
       - partnerType
+    PageResponseBusinessPartnerResponse:
+      type: object
+      properties:
+        content:
+          type: array
+          items:
+            $ref: '#/components/schemas/BusinessPartnerResponse'
+        page:
+          type: integer
+          format: int32
+        size:
+          type: integer
+          format: int32
+        totalElements:
+          type: integer
+          format: int64
+        totalPages:
+          type: integer
+          format: int32
     PartnerSettlementSettingsRequest:
       type: object
       properties:

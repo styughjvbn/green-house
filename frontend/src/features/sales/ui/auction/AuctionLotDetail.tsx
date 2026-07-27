@@ -1,10 +1,7 @@
 import { useState, type FormEvent, type ReactNode } from "react";
 import { Plus, RotateCcw, SlidersHorizontal } from "lucide-react";
-import type {
-  AuctionAttemptStatus,
-  AuctionInspectionStatus,
-  AuctionLot,
-} from "@/entities/farm/types";
+import type { AuctionLot } from "@/entities/farm/types";
+import type { AuctionResultFormPayload } from "../../api/types";
 import { formatShortDate } from "@/shared/lib/dateFormat";
 import { auctionAttemptStatusLabel } from "../../lib/auctionDisplay";
 import {
@@ -27,19 +24,7 @@ export function AuctionLotDetail({
 }: {
   lot: AuctionLot | null;
   loading: boolean;
-  onAddResult: (payload: {
-    auctionDate: string;
-    attemptStatus: AuctionAttemptStatus;
-    failedReason: string | null;
-    memo: string | null;
-    resultLines?: Array<{
-      auctionGrade: string | null;
-      quantity: number;
-      unitPrice: number;
-      note: string | null;
-      inspectionStatus: AuctionInspectionStatus | null;
-    }>;
-  }) => Promise<void>;
+  onAddResult: (payload: AuctionResultFormPayload) => Promise<void>;
   onConfirmReturn: (
     returnedQuantity: number,
     returnDate: string,

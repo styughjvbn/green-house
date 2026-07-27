@@ -1,11 +1,11 @@
 import type { BusinessPartner, SalesSlip } from "@/entities/farm/types";
 import type {
-  BusinessPartnerFilterState,
-  BusinessPartnerForm,
   CreateBusinessPartnerPayload,
   CreateSalesSlipPayload,
+} from "../api/types";
+import type {
+  BusinessPartnerForm,
   SalesAllocationForm,
-  SalesFilterState,
   SalesItemForm,
   SalesSlipForm,
 } from "../model/types";
@@ -78,62 +78,6 @@ export function createInitialSalesForm(
 
 export function todayIsoDate(): string {
   return new Date().toISOString().slice(0, 10);
-}
-
-export function filterSalesSlips(
-  salesSlips: SalesSlip[],
-  filters: SalesFilterState,
-): SalesSlip[] {
-  const keyword = filters.keyword.trim().toLowerCase();
-
-  return salesSlips.filter((slip) => {
-    if (filters.from && slip.saleDate < filters.from) return false;
-    if (filters.to && slip.saleDate > filters.to) return false;
-    if (filters.partnerId && String(slip.partner.id) !== filters.partnerId)
-      return false;
-    if (filters.paymentStatus && slip.paymentStatus !== filters.paymentStatus)
-      return false;
-    if (filters.salesStatus && slip.salesStatus !== filters.salesStatus)
-      return false;
-    if (!keyword) return true;
-
-    return [
-      slip.slipNumber,
-      slip.partner.name,
-      slip.partner.ownerName,
-      slip.partner.phone,
-      slip.memo,
-    ]
-      .filter(Boolean)
-      .some((value) => value?.toLowerCase().includes(keyword));
-  });
-}
-
-export function filterBusinessPartners(
-  partners: BusinessPartner[],
-  filters: BusinessPartnerFilterState,
-): BusinessPartner[] {
-  const keyword = filters.keyword.trim().toLowerCase();
-
-  return partners.filter((partner) => {
-    if (filters.partnerType && partner.partnerType !== filters.partnerType)
-      return false;
-    if (filters.active) {
-      const active = filters.active === "ACTIVE";
-      if (partner.active !== active) return false;
-    }
-    if (!keyword) return true;
-
-    return [
-      partner.name,
-      partner.ownerName,
-      partner.phone,
-      partner.address,
-      partner.memo,
-    ]
-      .filter(Boolean)
-      .some((value) => value?.toLowerCase().includes(keyword));
-  });
 }
 
 export function calculateSalesItemAmount(item: SalesItemForm): number {

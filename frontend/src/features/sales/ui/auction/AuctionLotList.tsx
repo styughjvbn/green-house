@@ -8,6 +8,7 @@ import { AuctionLotStatusBadge } from "@/features/sales/ui/common/SalesStatusBad
 
 export function AuctionLotList({
   lots,
+  loading,
   page,
   pageSize,
   totalElements,
@@ -18,6 +19,7 @@ export function AuctionLotList({
   onPageSizeChange,
 }: {
   lots: AuctionLot[];
+  loading: boolean;
   page: number;
   pageSize: number;
   totalElements: number;
@@ -106,7 +108,8 @@ export function AuctionLotList({
       data={lots}
       emptyMessage="조건에 맞는 출하 lot이 없습니다."
       getRowId={(row) => String(row.id)}
-      pageIndex={page - 1}
+      isLoading={loading}
+      pageIndex={page}
       pageSize={pageSize}
       pageSizeOptions={[20, 50, 100]}
       selectedRowId={selectedId == null ? null : String(selectedId)}
@@ -114,7 +117,7 @@ export function AuctionLotList({
       title="출하 lot 목록"
       totalLabel={`총 ${totalElements.toLocaleString()}건`}
       totalPages={totalPages}
-      onPageChange={(pageIndex) => onPageChange(pageIndex + 1)}
+      onPageChange={onPageChange}
       onPageSizeChange={onPageSizeChange}
       onRowClick={(row) => onSelect(row.id)}
     />

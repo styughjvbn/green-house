@@ -2,6 +2,7 @@ import {
   getAuctionLots,
   getAuctionSettlements,
   getAuctionTrackingSummary,
+  getBusinessPartnerPage,
   getBusinessPartners,
   getSalesSlipPage,
 } from "../api/salesApi";
@@ -10,6 +11,15 @@ import {
   createInitialBusinessPartnerFilters,
   createInitialSalesFilters,
 } from "../lib/salesUrlFilters";
+import {
+  readBooleanParam,
+  readEnumParam,
+  readPageParam,
+  readPageSizeParam,
+  readSearchParam,
+  type RouteSearchParams,
+} from "../lib/salesRouteParams";
+import { auctionStatusOptions } from "../lib/auctionDisplay";
 import type { SalesTab } from "../model/types";
 import type {
   AuctionFilterState,
@@ -28,12 +38,12 @@ export async function SalesRoutePage({
 }: {
   activeTab: SalesTab;
   createSlip?: boolean;
-  searchParams?: Record<string, string | string[] | undefined>;
+  searchParams?: RouteSearchParams;
 }) {
   if (activeTab === "auction") {
     const filters = readAuctionFilters(searchParams);
-    const page = readNumberParam(searchParams, "page", 0);
-    const size = readNumberParam(searchParams, "size", 20);
+    const page = readPageParam(searchParams);
+    const size = readPageSizeParam(searchParams, 20);
     const [auctionPage, auctionSummary] = await Promise.all([
       getAuctionLots(filters, page, size),
       getAuctionTrackingSummary(),
@@ -56,21 +66,21 @@ export async function SalesRoutePage({
 
   if (activeTab === "partners") {
     const filters = readBusinessPartnerFilters(searchParams);
-    const page = readNumberParam(searchParams, "page", 0);
-    const size = readNumberParam(searchParams, "size", 10);
-    const partners = await getBusinessPartners();
+    const page = readPageParam(searchParams);
+    const size = readPageSizeParam(searchParams, 10);
+    const partners = await getBusinessPartnerPage(filters, page, size);
     return (
       <SalesPartnersPage
         key={createRouteStateKey(filters, page, size)}
+        initialPage={partners}
         initialFilters={filters}
-        initialPage={createBusinessPartnerPage(partners, page, size)}
       />
     );
   }
 
   const filters = readSalesFilters(searchParams);
-  const page = readNumberParam(searchParams, "page", 0);
-  const size = readNumberParam(searchParams, "size", 10);
+  const page = readPageParam(searchParams);
+  const size = readPageSizeParam(searchParams, 10);
   const [partners, salesSlips] = await Promise.all([
     getBusinessPartners(),
     getSalesSlipPage(filters, page, size),
@@ -79,7 +89,7 @@ export async function SalesRoutePage({
   return (
     <SalesSlipsPage
       key={createRouteStateKey(filters, page, size)}
-      initialBusinessPartnerPage={createBusinessPartnerPage(partners)}
+      initialBusinessPartners={partners}
       initialFilters={filters}
       initialPage={salesSlips}
       initialShowCreateSlip={createSlip}
@@ -87,9 +97,7 @@ export async function SalesRoutePage({
   );
 }
 
-function readSalesFilters(
-  searchParams: Record<string, string | string[] | undefined> | undefined,
-): SalesFilterState {
+function readSalesFilters(searchParams: RouteSearchParams): SalesFilterState {
   return {
     ...createInitialSalesFilters(),
     from: readSearchParam(searchParams, "from") ?? "",
@@ -102,18 +110,22 @@ function readSalesFilters(
 }
 
 function readBusinessPartnerFilters(
-  searchParams: Record<string, string | string[] | undefined> | undefined,
+  searchParams: RouteSearchParams,
 ): BusinessPartnerFilterState {
   return {
     ...createInitialBusinessPartnerFilters(),
-    partnerType: readSearchParam(searchParams, "partnerType") ?? "",
-    active: readSearchParam(searchParams, "active") ?? "",
+    partnerType: readEnumParam(searchParams, "partnerType", [
+      "WHOLESALE",
+      "RETAIL",
+      "AUCTION_HOUSE",
+    ]),
+    active: readEnumParam(searchParams, "active", ["ACTIVE", "INACTIVE"]),
     keyword: readSearchParam(searchParams, "keyword") ?? "",
   };
 }
 
 function readAuctionFilters(
-  searchParams: Record<string, string | string[] | undefined> | undefined,
+  searchParams: RouteSearchParams,
 ): AuctionFilterState {
   return {
     ...createInitialAuctionFilters(),
@@ -122,43 +134,16 @@ function readAuctionFilters(
     market: readSearchParam(searchParams, "market") ?? "",
     variety: readSearchParam(searchParams, "variety") ?? "",
     grade: readSearchParam(searchParams, "grade") ?? "",
-    status: readSearchParam(searchParams, "status") ?? "",
+    status: readEnumParam(
+      searchParams,
+      "status",
+      auctionStatusOptions.map(([value]) => value),
+    ),
     keyword: readSearchParam(searchParams, "keyword") ?? "",
     reviewOnly: readBooleanParam(searchParams, "reviewOnly"),
     returnOnly: readBooleanParam(searchParams, "returnOnly"),
     waitingOnly: readBooleanParam(searchParams, "waitingOnly"),
   };
-}
-
-function readSearchParam(
-  searchParams: Record<string, string | string[] | undefined> | undefined,
-  key: string,
-) {
-  const value = searchParams?.[key];
-
-  if (Array.isArray(value)) {
-    return value[0];
-  }
-
-  return value;
-}
-
-function readNumberParam(
-  searchParams: Record<string, string | string[] | undefined> | undefined,
-  key: string,
-  defaultValue: number,
-) {
-  const value = readSearchParam(searchParams, key);
-  const parsed = value ? Number(value) : defaultValue;
-
-  return Number.isFinite(parsed) ? parsed : defaultValue;
-}
-
-function readBooleanParam(
-  searchParams: Record<string, string | string[] | undefined> | undefined,
-  key: string,
-) {
-  return readSearchParam(searchParams, key) === "true";
 }
 
 function createRouteStateKey(
@@ -167,18 +152,4 @@ function createRouteStateKey(
   size: number,
 ) {
   return JSON.stringify({ filters, page, size });
-}
-
-function createBusinessPartnerPage(
-  partners: Awaited<ReturnType<typeof getBusinessPartners>>,
-  page = 0,
-  size = Math.max(1, partners.length),
-) {
-  return {
-    content: partners,
-    page,
-    size,
-    totalElements: partners.length,
-    totalPages: Math.max(1, Math.ceil(partners.length / size)),
-  };
 }
