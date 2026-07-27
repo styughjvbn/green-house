@@ -3,7 +3,6 @@ package com.greenhouse.backend.farm.repository.variety;
 import static com.greenhouse.backend.farm.domain.variety.QVariety.variety;
 
 import com.greenhouse.backend.farm.domain.variety.Variety;
-import com.greenhouse.backend.farm.dto.variety.VarietyNameResponse;
 import com.querydsl.core.BooleanBuilder;
 import com.querydsl.core.types.Projections;
 import com.querydsl.core.types.dsl.BooleanExpression;
@@ -52,10 +51,10 @@ public class VarietyRepositoryImpl implements VarietyRepositoryCustom {
 	}
 
 	@Override
-	public List<VarietyNameResponse> findActiveNames() {
+	public List<VarietyNameProjection> findActiveNames() {
 		return queryFactory
 				.select(Projections.constructor(
-						VarietyNameResponse.class,
+						VarietyNameProjection.class,
 						variety.id,
 						variety.genus,
 						variety.name))
