@@ -1,7 +1,7 @@
 "use client";
 
-import { Plus, RefreshCw } from "lucide-react";
-import { useEffect, useMemo, useState } from "react";
+import { Plus, RefreshCw, Search } from "lucide-react";
+import { useState } from "react";
 import type {
   BedZone,
   House,
@@ -10,12 +10,13 @@ import type {
   WorkOperationStatus,
   WorkOperationTarget,
 } from "@/entities/farm/types";
+import { PaginationControls } from "@/shared/ui/PaginationControls";
 import {
   completeWorkOperation,
-  getWorkOperations,
   transitionWorkOperation,
   transitionWorkOperationTarget,
 } from "../../api/workRecordApi";
+import { useWorkOperations } from "../../model/useWorkOperations";
 import { OperationResult } from "./WorkOperationResult";
 import { StructureWorkExecutionDialog } from "./StructureWorkExecutionDialog";
 
@@ -34,74 +35,34 @@ export function WorkOperationList({
   view?: "MANAGEMENT" | "HISTORY";
   onCreateWork?: () => void;
 }) {
-  const [operations, setOperations] = useState<WorkOperation[]>([]);
+  const list = useWorkOperations({ refreshKey, view });
+  const operations = list.pageData.content;
   const [selectedId, setSelectedId] = useState<number | null>(null);
-  const [status, setStatus] = useState<WorkOperationStatus | "">("");
-  const [keyword, setKeyword] = useState("");
-  const [reloadVersion, setReloadVersion] = useState(0);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const [actionLoading, setActionLoading] = useState(false);
+  const [actionError, setActionError] = useState<string | null>(null);
   const [executionTarget, setExecutionTarget] =
     useState<WorkOperationTarget | null>(null);
-
-  useEffect(() => {
-    let active = true;
-    void getWorkOperations({ status, view })
-      .then((result) => {
-        if (!active) return;
-        setOperations(result);
-        setSelectedId((current) =>
-          result.some((item) => item.id === current) ? current : null,
-        );
-        setError(null);
-      })
-      .catch((cause: unknown) => {
-        if (active) {
-          setError(
-            cause instanceof Error
-              ? cause.message
-              : "작업 목록을 불러오지 못했습니다.",
-          );
-        }
-      })
-      .finally(() => {
-        if (active) setLoading(false);
-      });
-    return () => {
-      active = false;
-    };
-  }, [refreshKey, reloadVersion, status, view]);
-
-  const filtered = useMemo(() => {
-    const normalized = keyword.trim().toLowerCase();
-    if (!normalized) return operations;
-    return operations.filter((operation) =>
-      [operation.title, operation.workType, operation.worker, operation.memo]
-        .filter(Boolean)
-        .some((value) => value!.toLowerCase().includes(normalized)),
-    );
-  }, [keyword, operations]);
   const selected = operations.find((item) => item.id === selectedId) ?? null;
-
-  function updateOperation(updated: WorkOperation) {
-    setOperations((current) =>
-      current.map((item) => (item.id === updated.id ? updated : item)),
-    );
-  }
+  const loading = list.query.isFetching || actionLoading;
+  const error =
+    actionError ??
+    (list.query.error instanceof Error ? list.query.error.message : null);
 
   async function run(action: () => Promise<WorkOperation>) {
-    setLoading(true);
-    setError(null);
+    setActionLoading(true);
+    setActionError(null);
     try {
-      updateOperation(await action());
+      const updated = await action();
+      setSelectedId(updated.id);
+      await list.query.refetch();
     } catch (cause) {
-      setError(
+      setActionError(
         cause instanceof Error
           ? cause.message
           : "작업 상태를 변경하지 못했습니다.",
       );
     } finally {
-      setLoading(false);
+      setActionLoading(false);
     }
   }
 
@@ -115,8 +76,8 @@ export function WorkOperationList({
             </h2>
             <p className="mt-1 text-sm text-[#6a766e]">
               {view === "MANAGEMENT"
-                ? `진행할 작업과 오늘 변경된 작업 ${filtered.length}건`
-                : `완료·취소·보정된 작업 ${filtered.length}건`}
+                ? `진행할 작업과 오늘 변경된 작업 ${list.pageData.totalElements.toLocaleString()}건`
+                : `완료·취소·보정된 작업 ${list.pageData.totalElements.toLocaleString()}건`}
             </p>
           </div>
           {onCreateWork ? (
@@ -133,19 +94,28 @@ export function WorkOperationList({
           ) : null}
         </div>
 
-        <div className="mt-4 flex flex-wrap gap-2">
+        <form
+          className="mt-4 flex flex-wrap gap-2"
+          onSubmit={(event) => {
+            event.preventDefault();
+            list.search();
+          }}
+        >
           <input
             className="min-w-56 flex-1 rounded-md border border-[#cfd8cc] px-3 py-2 text-sm"
-            placeholder="작업명, 유형, 작업자 검색"
-            value={keyword}
-            onChange={(event) => setKeyword(event.target.value)}
+            placeholder="작업명, 유형, 작업자, 메모 검색"
+            value={list.filters.keyword}
+            onChange={(event) =>
+              list.updateFilter("keyword", event.target.value)
+            }
           />
           <select
             className="rounded-md border border-[#cfd8cc] bg-white px-3 py-2 text-sm"
-            value={status}
+            value={list.filters.status}
             onChange={(event) => {
-              setLoading(true);
-              setStatus(event.target.value as WorkOperationStatus | "");
+              const status = event.target.value as WorkOperationStatus | "";
+              list.updateFilter("status", status);
+              list.search({ ...list.filters, status });
             }}
           >
             <option value="">
@@ -163,17 +133,22 @@ export function WorkOperationList({
             <option value="CANCELED">취소</option>
           </select>
           <button
+            aria-label="작업 검색"
+            className="inline-flex items-center gap-2 rounded-md bg-[#159447] px-3 py-2 text-sm font-semibold text-white"
+            type="submit"
+          >
+            <Search className="h-4 w-4" aria-hidden="true" />
+            검색
+          </button>
+          <button
             aria-label="작업 목록 새로고침"
             className="rounded-md border border-[#cfd8cc] bg-white px-3 py-2 text-[#435047]"
             type="button"
-            onClick={() => {
-              setLoading(true);
-              setReloadVersion((current) => current + 1);
-            }}
+            onClick={() => void list.query.refetch()}
           >
             <RefreshCw className="h-4 w-4" aria-hidden="true" />
           </button>
-        </div>
+        </form>
 
         {error ? (
           <p className="mt-3 rounded-md border border-[#c25a3c] bg-[#fff1ec] p-3 text-sm text-[#8f2f19]">
@@ -196,7 +171,7 @@ export function WorkOperationList({
               </tr>
             </thead>
             <tbody>
-              {filtered.map((operation) => (
+              {operations.map((operation) => (
                 <tr
                   className={`cursor-pointer border-t border-[#edf0ec] hover:bg-[#eef7ec] ${selectedId === operation.id ? "bg-[#eaf7eb]" : "bg-white"}`}
                   key={operation.id}
@@ -227,7 +202,7 @@ export function WorkOperationList({
                   </td>
                 </tr>
               ))}
-              {!loading && filtered.length === 0 ? (
+              {!loading && operations.length === 0 ? (
                 <tr>
                   <td
                     className="px-3 py-12 text-center text-[#5c6a60]"
@@ -239,6 +214,16 @@ export function WorkOperationList({
               ) : null}
             </tbody>
           </table>
+        </div>
+        <div className="mt-3">
+          <PaginationControls
+            pageCount={Math.max(1, list.pageData.totalPages)}
+            pageIndex={list.queryState.page}
+            pageSize={list.queryState.size}
+            pageSizeOptions={[10, 20, 50]}
+            onPageChange={list.changePage}
+            onPageSizeChange={list.changePageSize}
+          />
         </div>
       </section>
 
@@ -289,7 +274,8 @@ export function WorkOperationList({
           target={executionTarget}
           onClose={() => setExecutionTarget(null)}
           onSaved={(updated) => {
-            updateOperation(updated);
+            setSelectedId(updated.id);
+            void list.query.refetch();
             setExecutionTarget(null);
           }}
         />

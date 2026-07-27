@@ -259,13 +259,32 @@ paths:
         schema:
           type: integer
           format: int64
+      - name: keyword
+        in: query
+        required: false
+        schema:
+          type: string
+      - name: page
+        in: query
+        required: false
+        schema:
+          type: integer
+          format: int32
+          default: 0
+      - name: size
+        in: query
+        required: false
+        schema:
+          type: integer
+          format: int32
+          default: 20
       responses:
         '200':
           description: OK
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ApiResponseListWorkOperationResponse'
+                $ref: '#/components/schemas/ApiResponsePageResponseWorkOperationResponse'
     post:
       tags:
       - work-operation-controller
@@ -5869,6 +5888,32 @@ components:
       required:
       - reason
       - status
+    ApiResponsePageResponseWorkOperationResponse:
+      type: object
+      properties:
+        data:
+          $ref: '#/components/schemas/PageResponseWorkOperationResponse'
+        message:
+          type: string
+    PageResponseWorkOperationResponse:
+      type: object
+      properties:
+        content:
+          type: array
+          items:
+            $ref: '#/components/schemas/WorkOperationResponse'
+        page:
+          type: integer
+          format: int32
+        size:
+          type: integer
+          format: int32
+        totalElements:
+          type: integer
+          format: int64
+        totalPages:
+          type: integer
+          format: int32
     ApiResponseMultiCreateCancellationEligibilityResponse:
       type: object
       properties:

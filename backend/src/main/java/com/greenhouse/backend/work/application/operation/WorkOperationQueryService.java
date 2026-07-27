@@ -45,20 +45,38 @@ public class WorkOperationQueryService {
 				.orElseThrow(() -> new NotFoundException("작업을 찾을 수 없습니다.")));
 	}
 
-	public List<WorkOperationResponse> search(
+	public PageResponse<WorkOperationResponse> search(
 			LocalDate fromDate,
 			LocalDate toDate,
 			WorkOperationStatus status,
 			WorkOperationSearchView view,
 			WorkSourceScopeType scopeType,
-			Long scopeId) {
+			Long scopeId,
+			String keyword,
+			int page,
+			int size) {
 		validateDates(fromDate, toDate);
+		validatePage(page, size);
 		if (scopeId != null && scopeType == null) {
 			throw new IllegalArgumentException("대상 범위 ID를 조회하려면 대상 범위 유형이 필요합니다.");
 		}
 		LocalDate farmToday = TimeConfig.farmToday(clock);
-		return responseAssembler.assembleAll(operationRepository.search(
-				fromDate, toDate, status, view, TimeConfig.farmDayStartUtc(farmToday), scopeType, scopeId));
+		var operationPage = operationRepository.search(
+				fromDate,
+				toDate,
+				status,
+				view,
+				TimeConfig.farmDayStartUtc(farmToday),
+				scopeType,
+				scopeId,
+				keyword,
+				PageRequest.of(page, size));
+		return new PageResponse<>(
+				responseAssembler.assembleAll(operationPage.getContent()),
+				operationPage.getNumber(),
+				operationPage.getSize(),
+				operationPage.getTotalElements(),
+				operationPage.getTotalPages());
 	}
 
 	public List<OrchidGroupWorkHistoryResponse> getOrchidGroupHistory(Long orchidGroupId) {

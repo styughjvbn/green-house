@@ -13,8 +13,10 @@ import com.querydsl.jpa.impl.JPAQueryFactory;
 import jakarta.persistence.EntityManager;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
-import java.util.List;
 import java.util.Optional;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.Pageable;
 
 public class WorkOperationRepositoryImpl implements WorkOperationRepositoryCustom {
 
@@ -43,21 +45,33 @@ public class WorkOperationRepositoryImpl implements WorkOperationRepositoryCusto
 	}
 
 	@Override
-	public List<WorkOperation> search(
+	public Page<WorkOperation> search(
 			LocalDate fromDate,
 			LocalDate toDate,
 			WorkOperationStatus status,
 			WorkOperationSearchView view,
 			LocalDateTime todayStartedAt,
 			WorkSourceScopeType scopeType,
-			Long scopeId) {
-		return queryFactory
+			Long scopeId,
+			String keyword,
+			Pageable pageable) {
+		BooleanBuilder conditions = searchConditions(
+				fromDate, toDate, status, view, todayStartedAt, scopeType, scopeId, keyword);
+		var content = queryFactory
 				.selectFrom(workOperation)
 				.join(workOperation.workType, workType).fetchJoin()
-				.where(searchConditions(
-						fromDate, toDate, status, view, todayStartedAt, scopeType, scopeId))
+				.where(conditions)
 				.orderBy(workOperation.plannedStartDate.desc(), workOperation.id.desc())
+				.offset(pageable.getOffset())
+				.limit(pageable.getPageSize())
 				.fetch();
+		Long total = queryFactory
+				.select(workOperation.count())
+				.from(workOperation)
+				.join(workOperation.workType, workType)
+				.where(conditions)
+				.fetchOne();
+		return new PageImpl<>(content, pageable, total == null ? 0 : total);
 	}
 
 	private BooleanBuilder searchConditions(
@@ -67,12 +81,14 @@ public class WorkOperationRepositoryImpl implements WorkOperationRepositoryCusto
 			WorkOperationSearchView view,
 			LocalDateTime todayStartedAt,
 			WorkSourceScopeType scopeType,
-			Long scopeId) {
+			Long scopeId,
+			String keyword) {
 		return new BooleanBuilder()
 				.and(statusEq(status))
 				.and(viewCondition(view, todayStartedAt))
 				.and(scopeTypeEq(scopeType))
 				.and(scopeIdEq(scopeId))
+				.and(keywordContains(keyword))
 				.and(periodEndsOnOrAfter(fromDate))
 				.and(periodStartsOnOrBefore(toDate));
 	}
@@ -101,6 +117,18 @@ public class WorkOperationRepositoryImpl implements WorkOperationRepositoryCusto
 
 	private BooleanExpression scopeIdEq(Long scopeId) {
 		return scopeId == null ? null : workOperation.sourceScopeId.eq(scopeId);
+	}
+
+	private BooleanExpression keywordContains(String keyword) {
+		if (keyword == null || keyword.isBlank()) {
+			return null;
+		}
+		String normalized = keyword.trim();
+		return workOperation.title.containsIgnoreCase(normalized)
+				.or(workType.name.containsIgnoreCase(normalized))
+				.or(workType.code.containsIgnoreCase(normalized))
+				.or(workOperation.worker.containsIgnoreCase(normalized))
+				.or(workOperation.memo.containsIgnoreCase(normalized));
 	}
 
 	private BooleanExpression periodEndsOnOrAfter(LocalDate fromDate) {

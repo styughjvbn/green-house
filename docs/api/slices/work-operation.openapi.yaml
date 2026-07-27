@@ -68,13 +68,32 @@ paths:
         schema:
           type: integer
           format: int64
+      - name: keyword
+        in: query
+        required: false
+        schema:
+          type: string
+      - name: page
+        in: query
+        required: false
+        schema:
+          type: integer
+          format: int32
+          default: 0
+      - name: size
+        in: query
+        required: false
+        schema:
+          type: integer
+          format: int32
+          default: 20
       responses:
         '200':
           description: OK
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ApiResponseListWorkOperationResponse'
+                $ref: '#/components/schemas/ApiResponsePageResponseWorkOperationResponse'
     post:
       tags:
       - work-operation-controller
@@ -684,6 +703,13 @@ components:
           $ref: '#/components/schemas/PageResponseOrchidGroupWorkHistoryResponse'
         message:
           type: string
+    ApiResponsePageResponseWorkOperationResponse:
+      type: object
+      properties:
+        data:
+          $ref: '#/components/schemas/PageResponseWorkOperationResponse'
+        message:
+          type: string
     ApiResponseWorkOperationCorrectionsResponse:
       type: object
       properties:
@@ -970,6 +996,25 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/OrchidGroupWorkHistoryResponse'
+        page:
+          type: integer
+          format: int32
+        size:
+          type: integer
+          format: int32
+        totalElements:
+          type: integer
+          format: int64
+        totalPages:
+          type: integer
+          format: int32
+    PageResponseWorkOperationResponse:
+      type: object
+      properties:
+        content:
+          type: array
+          items:
+            $ref: '#/components/schemas/WorkOperationResponse'
         page:
           type: integer
           format: int32

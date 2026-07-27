@@ -139,14 +139,18 @@ public class WorkOperationController {
 	}
 
 	@GetMapping("/work-operations")
-	public ApiResponse<List<WorkOperationResponse>> search(
+	public ApiResponse<PageResponse<WorkOperationResponse>> search(
 			@RequestParam(required = false) LocalDate from,
 			@RequestParam(required = false) LocalDate to,
 			@RequestParam(required = false) com.greenhouse.backend.work.domain.operation.WorkOperationStatus status,
 			@RequestParam(defaultValue = "ALL") com.greenhouse.backend.work.domain.operation.WorkOperationSearchView view,
 			@RequestParam(required = false) com.greenhouse.backend.work.domain.operation.WorkSourceScopeType scopeType,
-			@RequestParam(required = false) Long scopeId) {
-		return ApiResponse.ok(queryService.search(from, to, status, view, scopeType, scopeId));
+			@RequestParam(required = false) Long scopeId,
+			@RequestParam(required = false) String keyword,
+			@RequestParam(defaultValue = "0") int page,
+			@RequestParam(defaultValue = "20") int size) {
+		return ApiResponse.ok(queryService.search(
+				from, to, status, view, scopeType, scopeId, keyword, page, size));
 	}
 
 	@GetMapping("/work-operations/{workOperationId}")

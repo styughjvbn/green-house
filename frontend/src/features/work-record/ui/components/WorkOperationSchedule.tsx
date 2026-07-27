@@ -11,7 +11,7 @@ import type {
 } from "@/entities/farm/types";
 import {
   completeWorkOperation,
-  getWorkOperations,
+  getAllWorkOperations,
   transitionWorkOperation,
   transitionWorkOperationTarget,
 } from "../../api/workRecordApi";
@@ -48,7 +48,7 @@ export function WorkOperationSchedule({
 
   useEffect(() => {
     let active = true;
-    void getWorkOperations({ from: range.from, to: range.to, status })
+    void getAllWorkOperations({ from: range.from, to: range.to, status })
       .then((result) => {
         if (!active) return;
         setOperations(result);

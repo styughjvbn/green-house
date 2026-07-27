@@ -5,6 +5,7 @@ import type {
   WorkOperation,
   WorkTargetPreview,
 } from "@/entities/farm/types";
+import type { Page } from "@/shared/api/page";
 import type {
   CompletedWorkOperationPayload,
   CreateWorkOperationPayload,
@@ -184,23 +185,51 @@ export async function createInboundPottingPlansBatch(payload: {
   );
 }
 
+export type WorkOperationQuery = {
+  from?: string;
+  to?: string;
+  status?: WorkOperation["status"] | "";
+  view?: "ALL" | "MANAGEMENT" | "HISTORY";
+  scopeType?: WorkOperation["sourceScopeType"];
+  scopeId?: number;
+  keyword?: string;
+  page?: number;
+  size?: number;
+};
+
 export function getWorkOperations(
-  filters: {
-    from?: string;
-    to?: string;
-    status?: WorkOperation["status"] | "";
-    view?: "ALL" | "MANAGEMENT" | "HISTORY";
-  } = {},
-): Promise<WorkOperation[]> {
+  filters: WorkOperationQuery = {},
+): Promise<Page<WorkOperation>> {
   const params = new URLSearchParams();
   if (filters.from) params.set("from", filters.from);
   if (filters.to) params.set("to", filters.to);
   if (filters.status) params.set("status", filters.status);
   if (filters.view) params.set("view", filters.view);
+  if (filters.scopeType) params.set("scopeType", filters.scopeType);
+  if (filters.scopeId != null) params.set("scopeId", String(filters.scopeId));
+  if (filters.keyword?.trim()) params.set("keyword", filters.keyword.trim());
+  if (filters.page != null) params.set("page", String(filters.page));
+  if (filters.size != null) params.set("size", String(filters.size));
   const query = params.toString();
-  return fetchApi<WorkOperation[]>(
+  return fetchApi<Page<WorkOperation>>(
     `/work-operations${query ? `?${query}` : ""}`,
   );
+}
+
+export async function getAllWorkOperations(
+  filters: Omit<WorkOperationQuery, "page" | "size"> = {},
+): Promise<WorkOperation[]> {
+  const size = 100;
+  const firstPage = await getWorkOperations({ ...filters, page: 0, size });
+  const remainingPages = await Promise.all(
+    Array.from({ length: Math.max(0, firstPage.totalPages - 1) }, (_, index) =>
+      getWorkOperations({ ...filters, page: index + 1, size }),
+    ),
+  );
+  return [
+    ...firstPage.content,
+    ...remainingPages.flatMap((page) => page.content),
+  ];
 }
 
 export async function completeWorkOperation(

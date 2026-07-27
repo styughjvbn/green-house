@@ -44,6 +44,7 @@ export function WorkRecordManager(
 
       {activeTab === "list" ? (
         <WorkOperationList
+          key="management"
           bedZones={manager.bedZones}
           houses={props.houses}
           orchidGroups={manager.orchidGroups}
@@ -68,6 +69,7 @@ export function WorkRecordManager(
 
       {activeTab === "history" ? (
         <WorkOperationList
+          key="history"
           bedZones={manager.bedZones}
           houses={props.houses}
           orchidGroups={manager.orchidGroups}
