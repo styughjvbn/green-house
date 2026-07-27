@@ -46,7 +46,7 @@ export function WorkOperationDataTable({
         accessorKey: "plannedStartDate",
         header: "계획일",
         cell: ({ row }) => formatDateRange(row.original),
-        size: 150,
+        size: 100,
         meta: { cellClassName: "whitespace-nowrap" },
       },
       {
@@ -60,25 +60,25 @@ export function WorkOperationDataTable({
             <span className="text-[#738077]">{row.original.workType}</span>
           </>
         ),
-        size: 220,
+        size: 150,
       },
       {
         id: "scope",
         header: "범위",
         cell: ({ row }) => workOperationScopeLabel(row.original),
-        size: 120,
+        size: 70,
       },
       {
         accessorKey: "worker",
         header: "작업자",
         cell: ({ row }) => row.original.worker || "-",
-        size: 90,
+        size: 60,
       },
       {
         id: "progress",
         header: "진행률",
         cell: ({ row }) => `${row.original.progress.progressPercent}%`,
-        size: 75,
+        size: 60,
         meta: { align: "right" },
       },
       {

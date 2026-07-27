@@ -23,6 +23,7 @@ export function WorkOperationRegistrationDialog({
   onSaved?: () => void;
 }) {
   const registration = useWorkOperationRegistration({
+    houses,
     initialWorkTypeCode,
     onClose,
     onSaved,
@@ -52,13 +53,12 @@ export function WorkOperationRegistrationDialog({
         aria-label="작업 등록"
         onMouseDown={(event) => event.stopPropagation()}
       >
-        <header className="flex shrink-0 items-start justify-between gap-3 border-b border-[#dbe8dc] bg-white p-5">
-          <div>
-            <p className="text-sm font-semibold text-[#3d6f91]">작업 관리</p>
-            <h2 className="mt-1 text-xl font-semibold text-[#17251b]">
+        <header className="flex shrink-0 items-start justify-between border-b border-[#dbe8dc] bg-white py-3 px-5">
+          <div className="flex items-end gap-3">
+            <h2 className="text-xl font-semibold text-[#17251b]">
               작업 등록
             </h2>
-            <p className="mt-1 text-sm text-[#5c6a60]">
+            <p className="text-sm text-[#5c6a60]">
               완료된 작업을 기록하거나 기간을 정해 작업을 계획합니다.
             </p>
           </div>

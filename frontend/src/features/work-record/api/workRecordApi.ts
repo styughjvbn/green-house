@@ -1,6 +1,5 @@
 ﻿import { API_BASE_URL, fetchApi } from "@/shared/api/client";
 import type {
-  BedZone,
   OrchidGroup,
   WorkOperation,
   WorkTargetPreview,
@@ -11,7 +10,6 @@ import type {
   CreateWorkOperationPayload,
   InboundPottingCandidate,
   WorkOperationScopeOptions,
-  WorkTargetSelectionOptions,
   WorkDerivedGroupOption,
   WorkCollectionOption,
   WorkTargetPreviewPayload,
@@ -68,17 +66,6 @@ export async function getSelectableWorkTargetGroups(): Promise<OrchidGroup[]> {
 
 export function getOrchidGroups(): Promise<OrchidGroup[]> {
   return fetchApi<OrchidGroup[]>("/orchid-groups");
-}
-
-export async function getWorkTargetSelectionOptions(): Promise<WorkTargetSelectionOptions> {
-  const [orchidGroups, bedZones] = await Promise.all([
-    getSelectableWorkTargetGroups(),
-    fetchApi<BedZone[]>("/bed-zones"),
-  ]);
-  return {
-    orchidGroups,
-    bedZones: bedZones.filter((zone) => zone.active),
-  };
 }
 
 export async function createCompletedWorkOperation(

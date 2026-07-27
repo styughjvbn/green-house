@@ -1,27 +1,26 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
 import type { WorkRecordManagerProps } from "../model/types";
-import { useWorkRecordManager } from "../model/useWorkRecordManager";
+import { deriveWorkTargetSelectionOptions } from "../model/workTargetSelectionOptions";
 import { WorkOperationRegistrationDialog } from "./components/WorkOperationRegistrationDialog";
 import { WorkWorkspacePage } from "./WorkWorkspacePage";
 
 export function WorkRecordManager(props: WorkRecordManagerProps) {
-  const manager = useWorkRecordManager();
+  const router = useRouter();
+  const targetOptions = useMemo(
+    () => deriveWorkTargetSelectionOptions(props.houses),
+    [props.houses],
+  );
   const [showOperationForm, setShowOperationForm] = useState(false);
   const [operationInitialTypeCode, setOperationInitialTypeCode] = useState<
     string | null
   >(null);
   const [operationSavedVersion, setOperationSavedVersion] = useState(0);
-  const refreshKey = manager.operationCreatedVersion + operationSavedVersion;
 
   return (
     <div className="flex h-full min-h-0 flex-col gap-4">
-      {manager.errorMessage ? (
-        <div className="rounded-md border border-[#c25a3c] bg-[#fff1ec] p-3 text-sm text-[#8f2f19]">
-          {manager.errorMessage}
-        </div>
-      ) : null}
       {showOperationForm ? (
         <WorkOperationRegistrationDialog
           houses={props.houses}
@@ -30,16 +29,16 @@ export function WorkRecordManager(props: WorkRecordManagerProps) {
           onClose={() => setShowOperationForm(false)}
           onSaved={() => {
             setOperationSavedVersion((current) => current + 1);
-            manager.setOperationCreatedVersion((current) => current + 1);
+            router.refresh();
           }}
         />
       ) : null}
 
       <WorkWorkspacePage
-        bedZones={manager.bedZones}
+        bedZones={targetOptions.bedZones}
         houses={props.houses}
-        orchidGroups={manager.orchidGroups}
-        refreshKey={refreshKey}
+        orchidGroups={targetOptions.orchidGroups}
+        refreshKey={operationSavedVersion}
         onCreateWork={() => {
           setOperationInitialTypeCode(null);
           setShowOperationForm(true);

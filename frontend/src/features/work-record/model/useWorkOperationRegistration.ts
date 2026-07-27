@@ -1,19 +1,13 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import type {
-  BedZone,
-  OrchidGroup,
-  WorkTargetPreview,
-  WorkType,
-} from "@/entities/farm/types";
+import type { House, WorkTargetPreview, WorkType } from "@/entities/farm/types";
 import { getSchedulableWorkTypes } from "@/entities/farm/workTypes";
 import {
   createCompletedWorkOperation,
   createInboundPottingPlansBatch,
   createWorkOperationsBatch,
   getInboundPottingCandidates,
-  getWorkTargetSelectionOptions,
   previewWorkOperationTargets,
 } from "../api/workRecordApi";
 import type {
@@ -34,14 +28,17 @@ import {
   type WorkRegistrationMode,
 } from "./workOperationRegistration";
 import { getWorkTypeDefinition } from "./workTypeDefinition";
+import { deriveWorkTargetSelectionOptions } from "./workTargetSelectionOptions";
 
 export function useWorkOperationRegistration({
   initialWorkTypeCode,
+  houses,
   onClose,
   onSaved,
   workTypes,
 }: {
   initialWorkTypeCode?: string | null;
+  houses: House[];
   onClose: () => void;
   onSaved?: () => void;
   workTypes: WorkType[];
@@ -65,13 +62,16 @@ export function useWorkOperationRegistration({
   const [targetSelectorOpen, setTargetSelectorOpen] = useState(false);
   const [recordResultOpen, setRecordResultOpen] = useState(false);
   const [targetScopeLabel, setTargetScopeLabel] = useState<string | null>(null);
-  const [orchidGroups, setOrchidGroups] = useState<OrchidGroup[]>([]);
-  const [bedZones, setBedZones] = useState<BedZone[]>([]);
+  const { bedZones, orchidGroups } = useMemo(
+    () => deriveWorkTargetSelectionOptions(houses),
+    [houses],
+  );
   const [inboundCandidates, setInboundCandidates] = useState<
     InboundPottingCandidate[]
   >([]);
+  const [inboundCandidatesAttempted, setInboundCandidatesAttempted] =
+    useState(false);
   const [loading, setLoading] = useState(false);
-  const [optionsLoading, setOptionsLoading] = useState(true);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const selectedWorkType = schedulableWorkTypes.find(
     (workType) => String(workType.id) === form.workTypeId,
@@ -118,15 +118,11 @@ export function useWorkOperationRegistration({
   });
 
   useEffect(() => {
+    if (!isInboundPotting || inboundCandidatesAttempted) return;
     let cancelled = false;
-    void Promise.all([
-      getWorkTargetSelectionOptions(),
-      getInboundPottingCandidates(),
-    ])
-      .then(([result, candidates]) => {
+    void getInboundPottingCandidates()
+      .then((candidates) => {
         if (!cancelled) {
-          setOrchidGroups(result.orchidGroups);
-          setBedZones(result.bedZones);
           setInboundCandidates(candidates);
         }
       })
@@ -135,17 +131,17 @@ export function useWorkOperationRegistration({
           setErrorMessage(
             error instanceof Error
               ? error.message
-              : "작업 대상 목록을 불러오지 못했습니다.",
+              : "포트 작업 대상 목록을 불러오지 못했습니다.",
           );
         }
       })
       .finally(() => {
-        if (!cancelled) setOptionsLoading(false);
+        if (!cancelled) setInboundCandidatesAttempted(true);
       });
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [inboundCandidatesAttempted, isInboundPotting]);
 
   function updateForm<K extends keyof WorkOperationFormState>(
     field: K,
@@ -374,7 +370,7 @@ export function useWorkOperationRegistration({
     loading,
     manualIds,
     openTargetSelector: () => setTargetSelectorOpen(true),
-    optionsLoading,
+    optionsLoading: isInboundPotting && !inboundCandidatesAttempted,
     orchidGroups,
     preview,
     recordResultKind: workTypeDefinition.recordResult,
