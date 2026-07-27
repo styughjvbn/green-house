@@ -44,6 +44,7 @@ export function useWorkOperations({
 }) {
   const listState = usePagedListQuery({
     createEmptyFilters: createEmptyWorkOperationFilters,
+    hasInitialData: false,
     initialFilters,
     initialPage: createEmptyPage<WorkOperation>(initialSize, initialPage),
     queryKey: ({ filters, page, size }) =>

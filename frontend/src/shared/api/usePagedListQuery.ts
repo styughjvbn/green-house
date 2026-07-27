@@ -18,12 +18,14 @@ type PageMetadata = {
 
 export function usePagedListQuery<Filters, PageData extends PageMetadata>({
   createEmptyFilters,
+  hasInitialData = true,
   initialFilters,
   initialPage,
   queryKey,
   queryFn,
 }: {
   createEmptyFilters: () => Filters;
+  hasInitialData?: boolean;
   initialFilters: Filters;
   initialPage: PageData;
   queryKey: (state: PagedListQueryState<Filters>) => QueryKey;
@@ -42,7 +44,7 @@ export function usePagedListQuery<Filters, PageData extends PageMetadata>({
   const query = useQuery({
     queryKey: queryKey(queryState),
     queryFn: () => queryFn(queryState),
-    initialData: isInitialQuery ? initialPage : undefined,
+    initialData: hasInitialData && isInitialQuery ? initialPage : undefined,
     placeholderData: keepPreviousData,
   });
 
