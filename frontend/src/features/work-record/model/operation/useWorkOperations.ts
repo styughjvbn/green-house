@@ -6,9 +6,9 @@ import {
   WORK_LIST_FILTER_KEYS,
   writeWorkListFilterParams,
   type WorkRecordUrlState,
-} from "../lib/workRecordUrlState";
-import type { WorkOperationFilterState } from "./types";
-import { workOperationPageQueryOptions } from "./workRecordQueryOptions";
+} from "../../lib/workRecordUrlState";
+import type { WorkOperationFilterState } from "../types";
+import { workOperationPageQueryOptions } from "../workRecordQueryOptions";
 
 export function useWorkOperations(routeState: WorkRecordUrlState) {
   const query = useQuery(workOperationPageQueryOptions(routeState));

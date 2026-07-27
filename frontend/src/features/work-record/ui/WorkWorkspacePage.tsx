@@ -11,7 +11,7 @@ import {
   type WorkWorkspaceView,
 } from "../lib/workRecordUrlState";
 import { WorkOperationCalendarView } from "./calendar/WorkOperationCalendarView";
-import { WorkOperationListView } from "./WorkOperationListView";
+import { WorkOperationListView } from "./list/WorkOperationListView";
 
 export function WorkWorkspacePage({
   onCreateWork,

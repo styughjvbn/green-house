@@ -6,7 +6,7 @@ import {
   type PottingExecutionValues,
 } from "@/entities/farm/ui/PottingExecutionForm";
 import { transitionWorkOperationTarget } from "../../../api/workRecordApi";
-import type { WorkExecutionDialogProps } from "../../../model/workExecution";
+import type { WorkExecutionDialogProps } from "../../../model/operation/workExecution";
 
 export function PottingExecutionDialog({
   houses,

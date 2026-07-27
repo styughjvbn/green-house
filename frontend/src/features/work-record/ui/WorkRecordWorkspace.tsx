@@ -8,7 +8,7 @@ import {
   workTypesQueryOptions,
 } from "../model/workRecordQueryOptions";
 import { useWorkRecordInvalidation } from "../model/useWorkRecordInvalidation";
-import { WorkOperationRegistrationDialog } from "./components/WorkOperationRegistrationDialog";
+import { WorkOperationRegistrationDialog } from "./registration/WorkOperationRegistrationDialog";
 import { WorkWorkspacePage } from "./WorkWorkspacePage";
 
 export function WorkRecordWorkspace() {

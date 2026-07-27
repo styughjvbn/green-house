@@ -7,11 +7,11 @@ import {
   type WorkRecordNavigationItem,
 } from "@/shared/ui/WorkRecordVarietyNavigation";
 import type { StructureChangeExecutionPayload } from "../../../api/workRecordApi";
-import { TextField } from "../../components/FormFields";
+import { TextField } from "../../common/FormFields";
 import { StructureChangeResultFields } from "./StructureChangeResultFields";
 import { StructureChangeSourceFields } from "./StructureChangeSourceFields";
-import type { StructureChangeOperation } from "./structureChangeExecutionModel";
-import { useStructureChangeExecution } from "./useStructureChangeExecution";
+import type { StructureChangeOperation } from "../../../model/work-types/structure-change/structureChangeExecutionModel";
+import { useStructureChangeExecution } from "../../../model/work-types/structure-change/useStructureChangeExecution";
 
 export function StructureChangeExecutionDialog({
   houses,

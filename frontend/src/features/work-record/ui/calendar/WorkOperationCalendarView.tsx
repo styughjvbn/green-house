@@ -6,11 +6,11 @@ import { ChevronLeft, ChevronRight } from "lucide-react";
 import type { WorkOperation, WorkOperationStatus } from "@/entities/farm/types";
 import { useUrlSearchParamsWriter } from "@/shared/lib/useUrlSearchParamsWriter";
 import type { WorkRecordUrlState } from "../../lib/workRecordUrlState";
-import { useWorkOperationActions } from "../../model/useWorkOperationActions";
+import { useWorkOperationActions } from "../../model/operation/useWorkOperationActions";
 import { workOperationCalendarQueryOptions } from "../../model/workRecordQueryOptions";
 import { TabError, TabLayout, TabSplit } from "@/shared/ui/TabLayout";
 import { WorkCalendarFilters } from "./WorkCalendarFilters";
-import { WorkOperationDetailPanel } from "../WorkOperationDetailPanel";
+import { WorkOperationDetailPanel } from "../detail/WorkOperationDetailPanel";
 
 const WEEKDAYS = ["월", "화", "수", "목", "금", "토", "일"];
 

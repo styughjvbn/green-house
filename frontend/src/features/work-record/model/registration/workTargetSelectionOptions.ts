@@ -1,5 +1,5 @@
 import type { House } from "@/entities/farm/types";
-import type { WorkTargetSelectionOptions } from "./types";
+import type { WorkTargetSelectionOptions } from "../types";
 
 const EXCLUDED_GROUP_STATUSES = new Set(["종료", "폐기", "판매 완료"]);
 

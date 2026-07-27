@@ -1,5 +1,5 @@
 import type { WorkOperation } from "@/entities/farm/types";
-import { getWorkTypeDefinition } from "../../model/workTypeDefinition";
+import { getWorkTypeDefinition } from "../../model/work-types/workTypeDefinition";
 
 export function workPlanGuidance(code?: string) {
   return getWorkTypeDefinition(code ? { code } : null).planGuidance;

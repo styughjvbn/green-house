@@ -1,6 +1,6 @@
 import { useState } from "react";
 import type { WorkOperation } from "@/entities/farm/types";
-import { getWorkExecutionKind } from "../../model/workTypeDefinition";
+import { getWorkExecutionKind } from "../../model/work-types/workTypeDefinition";
 import { WorkCompletionDateDialog } from "./WorkCompletionDateDialog";
 import { WorkOperationDetails } from "./WorkOperationDetails";
 import {

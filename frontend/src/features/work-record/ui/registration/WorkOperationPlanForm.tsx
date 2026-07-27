@@ -4,8 +4,8 @@ import {
   isVisibleWorkRecordField,
 } from "@/entities/farm/workTypes";
 import type { WorkOperationFormState } from "../../model/types";
-import { getWorkTypeDefinition } from "../../model/workTypeDefinition";
-import { TextField } from "./FormFields";
+import { getWorkTypeDefinition } from "../../model/work-types/workTypeDefinition";
+import { TextField } from "../common/FormFields";
 import { WorkOperationTargetPreview } from "./WorkOperationTargetPreview";
 import { workPlanGuidance } from "../common/workOperationLabels";
 

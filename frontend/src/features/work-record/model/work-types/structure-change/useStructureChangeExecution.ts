@@ -8,7 +8,7 @@ import {
   getOrchidGroups,
   type StructureChangeExecutionPayload,
 } from "../../../api/workRecordApi";
-import { localDateValue } from "../../components/WorkCompletionDateDialog";
+import { localDateValue } from "../../../lib/localDateValue";
 import {
   collectPriorResultOrchidGroupIds,
   createExecutionPayload,

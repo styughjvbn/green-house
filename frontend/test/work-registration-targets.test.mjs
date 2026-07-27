@@ -3,7 +3,7 @@ import test from "node:test";
 import {
   getIncludedTargets,
   getRecordTargetIds,
-} from "../src/features/work-record/model/registrationTargetSelection.ts";
+} from "../src/features/work-record/model/registration/targetSelection.ts";
 
 const preview = {
   targets: [

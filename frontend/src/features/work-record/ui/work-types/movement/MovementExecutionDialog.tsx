@@ -3,9 +3,9 @@
 import { useState } from "react";
 import { X } from "lucide-react";
 import { transitionWorkOperationTarget } from "../../../api/workRecordApi";
-import type { WorkExecutionDialogProps } from "../../../model/workExecution";
-import { TextField } from "../../components/FormFields";
-import { localDateValue } from "../../components/WorkCompletionDateDialog";
+import { localDateValue } from "../../../lib/localDateValue";
+import type { WorkExecutionDialogProps } from "../../../model/operation/workExecution";
+import { TextField } from "../../common/FormFields";
 
 export function MovementExecutionDialog({
   bedZones,

@@ -3,10 +3,10 @@
 import { useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { TabError } from "@/shared/ui/TabLayout";
-import type { WorkOperationActions } from "../model/useWorkOperationActions";
-import { workHousesQueryOptions } from "../model/workRecordQueryOptions";
-import { deriveWorkTargetSelectionOptions } from "../model/workTargetSelectionOptions";
-import { OperationResult } from "./components/WorkOperationResult";
+import type { WorkOperationActions } from "../../model/operation/useWorkOperationActions";
+import { workHousesQueryOptions } from "../../model/workRecordQueryOptions";
+import { deriveWorkTargetSelectionOptions } from "../../model/registration/workTargetSelectionOptions";
+import { OperationResult } from "./WorkOperationResult";
 import { WorkExecutionDialog } from "./WorkExecutionDialog";
 
 export function WorkOperationDetailPanel({

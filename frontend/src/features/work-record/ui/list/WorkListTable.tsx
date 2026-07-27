@@ -1,7 +1,7 @@
 import type { ReactNode } from "react";
 import { Plus } from "lucide-react";
 import type { WorkOperation } from "@/entities/farm/types";
-import { WorkOperationDataTable } from "../common/WorkOperationDataTable";
+import { WorkOperationDataTable } from "./WorkOperationDataTable";
 
 export function WorkListTable({
   headerActions,

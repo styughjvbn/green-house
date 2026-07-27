@@ -1,12 +1,12 @@
 import type { House } from "@/entities/farm/types";
 import type { FarmPlacementSelection } from "@/entities/farm/model/placement";
 import { FarmPlacementField } from "@/entities/farm/ui/FarmPlacementPicker";
-import { TextField } from "../../components/FormFields";
+import { TextField } from "../../common/FormFields";
 import {
   sourceLocationLabel,
   sourcePositionLabel,
   type AvailableSource,
-} from "./structureChangeExecutionModel";
+} from "../../../model/work-types/structure-change/structureChangeExecutionModel";
 
 export function StructureChangeSourceFields({
   availableSources,

@@ -6,7 +6,7 @@ import type {
 } from "@/entities/farm/model/placement";
 import { FarmPlacementField } from "@/entities/farm/ui/FarmPlacementPicker";
 import { POT_SIZE_OPTIONS } from "@/entities/farm/potSizes";
-import { TextField } from "../../components/FormFields";
+import { TextField } from "../../common/FormFields";
 import {
   resultReferencePlacements,
   sourceReferencePlacements,
@@ -14,7 +14,7 @@ import {
   type ResultPurpose,
   type ResultRow,
   type StructureChangeOperation,
-} from "./structureChangeExecutionModel";
+} from "../../../model/work-types/structure-change/structureChangeExecutionModel";
 
 export function StructureChangeResultFields({
   commonAgeYear,

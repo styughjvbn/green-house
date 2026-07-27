@@ -9,13 +9,13 @@ import {
   createWorkOperationsBatch,
   getInboundPottingCandidates,
   previewWorkOperationTargets,
-} from "../api/workRecordApi";
+} from "../../api/workRecordApi";
 import type {
   InboundPottingCandidate,
   WorkOperationFormState,
   WorkTargetSelectionScope,
   WorkTargetPreviewPayload,
-} from "./types";
+} from "../types";
 import {
   buildCompletedRecordPayload,
   buildTargetSummary,
@@ -25,11 +25,8 @@ import {
   getSaveUnavailableReason,
   type WorkRegistrationMode,
 } from "./workOperationRegistration";
-import {
-  getIncludedTargets,
-  getRecordTargetIds,
-} from "./registrationTargetSelection";
-import { getWorkTypeDefinition } from "./workTypeDefinition";
+import { getIncludedTargets, getRecordTargetIds } from "./targetSelection";
+import { getWorkTypeDefinition } from "../work-types/workTypeDefinition";
 import { deriveWorkTargetSelectionOptions } from "./workTargetSelectionOptions";
 
 export function useWorkOperationRegistration({

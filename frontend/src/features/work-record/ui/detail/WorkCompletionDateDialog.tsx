@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { X } from "lucide-react";
+import { localDateValue } from "../../lib/localDateValue";
 
 export function WorkCompletionDateDialog({
   title,
@@ -75,9 +76,4 @@ export function WorkCompletionDateDialog({
       </section>
     </div>
   );
-}
-
-export function localDateValue(date: Date) {
-  const offset = date.getTimezoneOffset() * 60_000;
-  return new Date(date.getTime() - offset).toISOString().slice(0, 10);
 }

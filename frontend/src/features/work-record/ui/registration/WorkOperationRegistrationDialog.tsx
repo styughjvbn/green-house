@@ -3,8 +3,8 @@
 import { useEffect } from "react";
 import { X } from "lucide-react";
 import type { House, WorkType } from "@/entities/farm/types";
-import { useWorkOperationRegistration } from "../../model/useWorkOperationRegistration";
-import { WorkRecordResultDialog } from "../WorkRecordResultDialog";
+import { useWorkOperationRegistration } from "../../model/registration/useWorkOperationRegistration";
+import { WorkRecordResultDialog } from "./WorkRecordResultDialog";
 import { InboundPottingTargetDialog } from "./InboundPottingTargetDialog";
 import { WorkOperationPlanForm } from "./WorkOperationPlanForm";
 import { WorkTargetSelectionDialog } from "./WorkTargetSelectionDialog";

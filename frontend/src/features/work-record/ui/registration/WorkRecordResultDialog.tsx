@@ -10,15 +10,15 @@ import {
   createDiscardRecord,
   createInboundPottingRecord,
   createStructureChangeRecords,
-} from "../api/workRecordApi";
+} from "../../api/workRecordApi";
 import type {
   InboundPottingCandidate,
   WorkOperationFormState,
-} from "../model/types";
-import type { WorkRecordResultKind } from "../model/workTypeDefinition";
-import { DiscardWorkRecordDialog } from "./work-types/discard/DiscardWorkRecordDialog";
-import { PottingWorkRecordDialog } from "./work-types/potting/PottingWorkRecordDialog";
-import { StructureChangeWorkRecordDialog } from "./work-types/structure-change/StructureChangeWorkRecordDialog";
+} from "../../model/types";
+import type { WorkRecordResultKind } from "../../model/work-types/workTypeDefinition";
+import { DiscardWorkRecordDialog } from "../work-types/discard/DiscardWorkRecordDialog";
+import { PottingWorkRecordDialog } from "../work-types/potting/PottingWorkRecordDialog";
+import { StructureChangeWorkRecordDialog } from "../work-types/structure-change/StructureChangeWorkRecordDialog";
 
 type WorkRecordResultDialogProps = {
   candidates: InboundPottingCandidate[];

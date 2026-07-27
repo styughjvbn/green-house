@@ -7,7 +7,7 @@ import type { WorkOperation } from "@/entities/farm/types";
 import { formatShortDate } from "@/shared/lib/dateFormat";
 import { DataTable } from "@/shared/ui/DataTable";
 import { workOperationScopeLabel } from "../../lib/workOperationDisplay";
-import { operationStatusLabel } from "./workOperationLabels";
+import { operationStatusLabel } from "../common/workOperationLabels";
 
 export function WorkOperationDataTable({
   actions,

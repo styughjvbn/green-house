@@ -10,9 +10,9 @@ import type {
   InboundPottingCandidate,
   WorkOperationFormState,
   WorkTargetPreviewPayload,
-} from "./types";
-import { getWorkTypeDefinition } from "./workTypeDefinition";
-import { getIncludedTargets } from "./registrationTargetSelection";
+} from "../types";
+import { getWorkTypeDefinition } from "../work-types/workTypeDefinition";
+import { getIncludedTargets } from "./targetSelection";
 
 export type WorkRegistrationMode = "RECORD" | "PLAN";
 

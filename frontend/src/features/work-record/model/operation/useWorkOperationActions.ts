@@ -7,8 +7,8 @@ import {
   completeWorkOperation,
   transitionWorkOperation,
   transitionWorkOperationTarget,
-} from "../api/workRecordApi";
-import { useWorkRecordInvalidation } from "./useWorkRecordInvalidation";
+} from "../../api/workRecordApi";
+import { useWorkRecordInvalidation } from "../useWorkRecordInvalidation";
 
 export function useWorkOperationActions(operations: WorkOperation[]) {
   const { invalidateOperations, invalidateWorkData } =

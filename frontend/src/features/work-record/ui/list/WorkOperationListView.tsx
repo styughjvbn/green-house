@@ -2,12 +2,12 @@
 
 import type { ReactNode } from "react";
 import { TabError, TabLayout, TabSplit } from "@/shared/ui/TabLayout";
-import type { WorkRecordUrlState } from "../lib/workRecordUrlState";
-import { useWorkOperationActions } from "../model/useWorkOperationActions";
-import { useWorkOperations } from "../model/useWorkOperations";
-import { WorkOperationDetailPanel } from "./WorkOperationDetailPanel";
-import { WorkListFilters } from "./list/WorkListFilters";
-import { WorkListTable } from "./list/WorkListTable";
+import type { WorkRecordUrlState } from "../../lib/workRecordUrlState";
+import { useWorkOperationActions } from "../../model/operation/useWorkOperationActions";
+import { useWorkOperations } from "../../model/operation/useWorkOperations";
+import { WorkOperationDetailPanel } from "../detail/WorkOperationDetailPanel";
+import { WorkListFilters } from "./WorkListFilters";
+import { WorkListTable } from "./WorkListTable";
 
 export function WorkOperationListView({
   headerActions,
