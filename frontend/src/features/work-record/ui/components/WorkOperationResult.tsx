@@ -8,6 +8,7 @@ import {
 } from "./workOperationPanelUtils";
 
 export function OperationResult({
+  className = "mt-4",
   operation,
   loading,
   onComplete,
@@ -15,6 +16,7 @@ export function OperationResult({
   onTargetAction,
   onExecuteTarget,
 }: {
+  className?: string;
   operation: WorkOperation;
   loading: boolean;
   onComplete: (completedDate: string) => void;
@@ -53,7 +55,9 @@ export function OperationResult({
   );
 
   return (
-    <div className="mt-4 rounded-md border border-[#cfe0d2] bg-white p-4">
+    <div
+      className={`${className} rounded-md border border-[#cfe0d2] bg-white p-4`}
+    >
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <p className="font-bold text-[#17251b]">{operation.title}</p>

@@ -4,8 +4,10 @@ import { usePagedListQuery } from "@/shared/api/usePagedListQuery";
 import { getWorkOperations } from "../api/workRecordApi";
 
 export type WorkOperationFilterState = {
+  from: string;
   keyword: string;
   status: WorkOperationStatus | "";
+  to: string;
 };
 
 const workOperationQueryKeys = {
@@ -45,8 +47,10 @@ export function useWorkOperations({
       workOperationQueryKeys.page(view, filters, page, size, refreshKey),
     queryFn: ({ filters, page, size }) =>
       getWorkOperations({
+        from: filters.from,
         keyword: filters.keyword,
         status: filters.status,
+        to: filters.to,
         view,
         page,
         size,
@@ -61,7 +65,9 @@ export function useWorkOperations({
 
 function createEmptyWorkOperationFilters(): WorkOperationFilterState {
   return {
+    from: "",
     keyword: "",
     status: "",
+    to: "",
   };
 }

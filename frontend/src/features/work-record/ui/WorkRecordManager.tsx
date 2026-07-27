@@ -6,7 +6,8 @@ import type { WorkRecordManagerProps } from "../model/types";
 import { useWorkRecordManager } from "../model/useWorkRecordManager";
 import { WorkOperationPanel } from "./components/HouseWorkOperationPanel";
 import { WorkOperationSchedule } from "./components/WorkOperationSchedule";
-import { WorkOperationList } from "./components/WorkOperationList";
+import { WorkHistoryPage } from "./WorkHistoryPage";
+import { WorkListPage } from "./WorkListPage";
 
 export type WorkManagementTab = WorkRecordTab;
 
@@ -43,8 +44,7 @@ export function WorkRecordManager(
       ) : null}
 
       {activeTab === "list" ? (
-        <WorkOperationList
-          key="management"
+        <WorkListPage
           bedZones={manager.bedZones}
           houses={props.houses}
           orchidGroups={manager.orchidGroups}
@@ -68,14 +68,7 @@ export function WorkRecordManager(
       ) : null}
 
       {activeTab === "history" ? (
-        <WorkOperationList
-          key="history"
-          bedZones={manager.bedZones}
-          houses={props.houses}
-          orchidGroups={manager.orchidGroups}
-          refreshKey={refreshKey}
-          view="HISTORY"
-        />
+        <WorkHistoryPage refreshKey={refreshKey} />
       ) : null}
     </div>
   );
