@@ -3,7 +3,7 @@
 import { useState } from "react";
 import type { WorkRecordManagerProps } from "../model/types";
 import { useWorkRecordManager } from "../model/useWorkRecordManager";
-import { WorkOperationPanel } from "./components/HouseWorkOperationPanel";
+import { WorkOperationRegistrationDialog } from "./components/WorkOperationRegistrationDialog";
 import { WorkWorkspacePage } from "./WorkWorkspacePage";
 
 export function WorkRecordManager(props: WorkRecordManagerProps) {
@@ -23,7 +23,7 @@ export function WorkRecordManager(props: WorkRecordManagerProps) {
         </div>
       ) : null}
       {showOperationForm ? (
-        <WorkOperationPanel
+        <WorkOperationRegistrationDialog
           houses={props.houses}
           initialWorkTypeCode={operationInitialTypeCode}
           workTypes={props.workTypes}

@@ -6,7 +6,7 @@ import { WorkOperationDetails } from "./WorkOperationDetails";
 import {
   operationStatusLabel,
   targetStatusLabel,
-} from "./workOperationPanelUtils";
+} from "../common/workOperationLabels";
 
 export function OperationResult({
   className = "mt-4",

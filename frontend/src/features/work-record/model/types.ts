@@ -102,6 +102,20 @@ export type WorkTargetPreviewPayload = {
   orchidGroupIds?: number[];
 };
 
+export type WorkTargetSelectionScope =
+  | {
+      type: "DERIVED_GROUP";
+      scopeKey: string;
+      label: string;
+      memberIds: number[];
+    }
+  | {
+      type: "USER_COLLECTION";
+      collectionId: number;
+      label: string;
+      memberIds: number[];
+    };
+
 export type CreateWorkOperationPayload = {
   workTypeId: number;
   title: string;

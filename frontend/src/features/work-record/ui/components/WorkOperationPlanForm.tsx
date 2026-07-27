@@ -6,7 +6,7 @@ import {
 import type { WorkOperationFormState } from "../../model/types";
 import { TextField } from "./FormFields";
 import { WorkOperationTargetPreview } from "./WorkOperationTargetPreview";
-import { workPlanGuidance } from "./workOperationPanelUtils";
+import { workPlanGuidance } from "../common/workOperationLabels";
 
 type TargetSummary = {
   title: string;

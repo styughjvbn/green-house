@@ -10,6 +10,7 @@ import {
 import type {
   WorkCollectionOption,
   WorkDerivedGroupOption,
+  WorkTargetSelectionScope,
 } from "../../model/types";
 
 type ZoneNode = {
@@ -31,20 +32,6 @@ type HouseNode = {
   groups: OrchidGroup[];
   beds: BedNode[];
 };
-
-export type WorkTargetSelectionScope =
-  | {
-      type: "DERIVED_GROUP";
-      scopeKey: string;
-      label: string;
-      memberIds: number[];
-    }
-  | {
-      type: "USER_COLLECTION";
-      collectionId: number;
-      label: string;
-      memberIds: number[];
-    };
 
 export function WorkTargetSelectionDialog({
   bedZones,
