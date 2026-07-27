@@ -1,19 +1,24 @@
 import { useMemo, useState, type FormEvent } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import type {
-  AuctionLot,
-  AuctionLotPage,
-  AuctionTrackingSummary,
-} from "@/entities/farm/types";
-import { usePagedListQuery } from "@/shared/api/usePagedListQuery";
+import type { AuctionLot, AuctionTrackingSummary } from "@/entities/farm/types";
+import { createEmptyPage } from "@/shared/api/page";
+import { useUrlPagedListState } from "@/shared/api/useUrlPagedListState";
 import {
   adjustAuctionQuantity,
   confirmAuctionReturn,
   createAuctionResult,
-  getAuctionLots,
-  getAuctionTrackingSummary,
 } from "../api/salesApi";
-import { createInitialAuctionFilters } from "../lib/salesUrlFilters";
+import type { SalesRouteState } from "../lib/salesRouteParams";
+import {
+  AUCTION_FILTER_KEYS,
+  createInitialAuctionFilters,
+  writeAuctionFilterParams,
+} from "../lib/salesUrlFilters";
+import {
+  auctionLotPageQueryOptions,
+  auctionSummaryQueryOptions,
+} from "./salesQueryOptions";
+import { salesQueryKeys } from "./salesQueryKeys";
 import type { AuctionFilterState } from "./types";
 import type {
   AuctionQuantityAdjustmentPayload,
@@ -21,48 +26,25 @@ import type {
   AuctionReturnPayload,
 } from "../api/types";
 
-const auctionTrackingKeys = {
-  all: ["sales", "auctionTracking"] as const,
-  lots: (filters: AuctionFilterState, page: number, size: number) =>
-    [...auctionTrackingKeys.all, "lots", filters, page, size] as const,
-  summary: () => [...auctionTrackingKeys.all, "summary"] as const,
-};
-
 export function useAuctionTracking({
-  initialPage,
-  initialSummary,
-  initialFilters,
+  routeState,
 }: {
-  initialPage: AuctionLotPage;
-  initialSummary: AuctionTrackingSummary;
-  initialFilters: AuctionFilterState;
+  routeState: SalesRouteState<AuctionFilterState>;
 }) {
   const queryClient = useQueryClient();
-  const listState = usePagedListQuery({
-    createEmptyFilters: createInitialAuctionFilters,
-    initialFilters,
-    initialPage,
-    queryKey: ({ filters, page, size }) =>
-      auctionTrackingKeys.lots(filters, page, size),
-    queryFn: ({ filters, page, size }) => getAuctionLots(filters, page, size),
+  const lotsQuery = useQuery(auctionLotPageQueryOptions(routeState));
+  const summaryQuery = useQuery(auctionSummaryQueryOptions());
+  const listState = useUrlPagedListState({
+    emptyFilters: createInitialAuctionFilters,
+    filterKeys: AUCTION_FILTER_KEYS,
+    routeFilters: routeState.filters,
+    writeFilterParams: writeAuctionFilterParams,
   });
-  const {
-    filters: queryFilters,
-    page: queryPage,
-    size: querySize,
-  } = listState.queryState;
-  const [selectedId, setSelectedId] = useState<number | null>(
-    initialPage.content[0]?.id ?? null,
-  );
-  const lotsQuery = listState.query;
-  const summaryQuery = useQuery({
-    queryKey: auctionTrackingKeys.summary(),
-    queryFn: getAuctionTrackingSummary,
-    initialData: initialSummary,
-  });
-
-  const pageResult = listState.pageData ?? initialPage;
-  const summary = summaryQuery.data;
+  const [selectedId, setSelectedId] = useState<number | null>(null);
+  const pageResult =
+    lotsQuery.data ??
+    createEmptyPage<AuctionLot>(routeState.size, routeState.page);
+  const summary = summaryQuery.data ?? createEmptyAuctionSummary();
   const selectedLot = useMemo(
     () =>
       pageResult.content.find((lot) => lot.id === selectedId) ??
@@ -74,7 +56,7 @@ export function useAuctionTracking({
   async function invalidateAuctionTracking(changed: AuctionLot) {
     setSelectedId(changed.id);
     await queryClient.invalidateQueries({
-      queryKey: auctionTrackingKeys.all,
+      queryKey: salesQueryKeys.auction.all,
     });
   }
 
@@ -176,8 +158,8 @@ export function useAuctionTracking({
 
   return {
     lots: pageResult.content,
-    page: queryPage,
-    pageSize: querySize,
+    page: routeState.page,
+    pageSize: routeState.size,
     totalElements: pageResult.totalElements,
     totalPages: Math.max(1, pageResult.totalPages),
     summary,
@@ -195,6 +177,18 @@ export function useAuctionTracking({
     confirmReturn,
     adjustQuantity,
     addResult,
+  };
+}
+
+function createEmptyAuctionSummary(): AuctionTrackingSummary {
+  return {
+    lotCount: 0,
+    shippedQuantity: 0,
+    soldQuantity: 0,
+    waitingQuantity: 0,
+    returnedQuantity: 0,
+    reviewRequiredCount: 0,
+    totalAmount: 0,
   };
 }
 

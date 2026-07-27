@@ -1,19 +1,17 @@
 import { useMemo, useState, type FormEvent } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import type {
-  BusinessPartner,
   SalesOrchidGroupOption,
   SalesSlip,
   SalesSlipListItem,
   SalesSlipPage,
 } from "@/entities/farm/types";
 import { createEmptyPage } from "@/shared/api/page";
-import { usePagedListQuery } from "@/shared/api/usePagedListQuery";
+import { useUrlPagedListState } from "@/shared/api/useUrlPagedListState";
 import {
   changeSalesSlipStatus,
   createSalesSlip,
   getSalesSlip,
-  getSalesSlipPage,
   updateSalesSlip as requestUpdateSalesSlip,
 } from "../api/salesApi";
 import {
@@ -24,7 +22,17 @@ import {
   toCreateSalesSlipPayload,
   toSalesSlipForm,
 } from "../lib/salesForm";
-import { createInitialSalesFilters } from "../lib/salesUrlFilters";
+import type { SalesRouteState } from "../lib/salesRouteParams";
+import {
+  createInitialSalesFilters,
+  SALES_FILTER_KEYS,
+  writeSalesFilterParams,
+} from "../lib/salesUrlFilters";
+import {
+  businessPartnerLookupQueryOptions,
+  salesSlipPageQueryOptions,
+} from "./salesQueryOptions";
+import { salesQueryKeys } from "./salesQueryKeys";
 import type {
   SalesAllocationForm,
   SalesFilterState,
@@ -32,51 +40,35 @@ import type {
   SalesSlipForm,
 } from "./types";
 
-const salesSlipKeys = {
-  all: ["sales", "slips"] as const,
-  page: (filters: SalesFilterState, page: number, size: number) =>
-    [...salesSlipKeys.all, filters, page, size] as const,
-  detail: (salesSlipId: number) =>
-    [...salesSlipKeys.all, "detail", salesSlipId] as const,
-};
-
 export function useSalesSlips({
-  initialBusinessPartners,
-  initialPage,
   initialShowCreateSlip = false,
-  initialFilters = createInitialSalesFilters(),
+  routeState,
 }: {
-  initialBusinessPartners: BusinessPartner[];
-  initialPage: SalesSlipPage;
   initialShowCreateSlip?: boolean;
-  initialFilters?: SalesFilterState;
+  routeState: SalesRouteState<SalesFilterState>;
 }) {
   const queryClient = useQueryClient();
-  const partners = initialBusinessPartners;
-  const listState = usePagedListQuery({
-    createEmptyFilters: createInitialSalesFilters,
-    initialFilters: initialFilters,
-    initialPage,
-    queryKey: ({ filters, page, size }) =>
-      salesSlipKeys.page(filters, page, size),
-    queryFn: ({ filters, page, size }) => getSalesSlipPage(filters, page, size),
+  const salesSlipQuery = useQuery(salesSlipPageQueryOptions(routeState));
+  const partnersQuery = useQuery(businessPartnerLookupQueryOptions());
+  const partners = partnersQuery.data ?? [];
+  const listState = useUrlPagedListState({
+    emptyFilters: createInitialSalesFilters,
+    filterKeys: SALES_FILTER_KEYS,
+    routeFilters: routeState.filters,
+    writeFilterParams: writeSalesFilterParams,
   });
-  const salesSlipQueryState = listState.queryState;
-  const salesSlipQuery = listState.query;
   const salesSlipPageData =
-    listState.pageData ??
-    createEmptyPage<SalesSlipListItem>(salesSlipQueryState.size);
+    salesSlipQuery.data ??
+    createEmptyPage<SalesSlipListItem>(routeState.size, routeState.page);
   const [selectedSalesSlip, setSelectedSalesSlip] = useState<SalesSlip | null>(
     null,
   );
   const [salesForm, setSalesForm] = useState<SalesSlipForm>(() =>
-    createInitialSalesForm(initialBusinessPartners),
+    createInitialSalesForm(partners),
   );
   const [showCreateSlip, setShowCreateSlip] = useState(initialShowCreateSlip);
   const [editingSlipId, setEditingSlipId] = useState<number | null>(null);
-  const [selectedSlipId, setSelectedSlipId] = useState<number | null>(
-    initialPage.content[0]?.id ?? null,
-  );
+  const [selectedSlipId, setSelectedSlipId] = useState<number | null>(null);
   const [savingSlip, setSavingSlip] = useState(false);
   const [updatingSlipStatus, setUpdatingSlipStatus] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
@@ -87,7 +79,7 @@ export function useSalesSlips({
   );
   const salesSlipTotalPages = Math.max(1, salesSlipPageData.totalPages);
   const visibleSalesSlipPage = Math.min(
-    salesSlipQueryState.page,
+    routeState.page,
     salesSlipTotalPages - 1,
   );
   const visibleSelectedSlipId =
@@ -96,7 +88,7 @@ export function useSalesSlips({
       ? selectedSlipId
       : (salesSlipPageData.content[0]?.id ?? null);
   const salesSlipDetailQuery = useQuery({
-    queryKey: salesSlipKeys.detail(visibleSelectedSlipId ?? 0),
+    queryKey: salesQueryKeys.slips.detail(visibleSelectedSlipId ?? 0),
     queryFn: () => getSalesSlip(visibleSelectedSlipId as number),
     enabled: visibleSelectedSlipId != null,
   });
@@ -312,7 +304,10 @@ export function useSalesSlips({
       setEditingSlipId(salesSlipId);
       setSelectedSlipId(salesSlipId);
       setSelectedSalesSlip(salesSlip);
-      queryClient.setQueryData(salesSlipKeys.detail(salesSlip.id), salesSlip);
+      queryClient.setQueryData(
+        salesQueryKeys.slips.detail(salesSlip.id),
+        salesSlip,
+      );
       setSalesForm(toSalesSlipForm(salesSlip));
       setShowCreateSlip(true);
     } catch (error) {
@@ -373,9 +368,12 @@ export function useSalesSlips({
 
   function updateSalesSlip(salesSlip: SalesSlip) {
     setSelectedSalesSlip(salesSlip);
-    queryClient.setQueryData(salesSlipKeys.detail(salesSlip.id), salesSlip);
+    queryClient.setQueryData(
+      salesQueryKeys.slips.detail(salesSlip.id),
+      salesSlip,
+    );
     queryClient.setQueriesData<SalesSlipPage>(
-      { queryKey: salesSlipKeys.all },
+      { queryKey: salesQueryKeys.slips.pages },
       (current) =>
         current == null
           ? current
@@ -396,7 +394,7 @@ export function useSalesSlips({
     partners,
     salesSlips: salesSlipPageData.content,
     salesSlipCurrentPage: visibleSalesSlipPage,
-    salesSlipPageSize: salesSlipQueryState.size,
+    salesSlipPageSize: routeState.size,
     salesSlipTotalPages,
     salesSlipTotalElements: salesSlipPageData.totalElements,
     selectedSalesSlipId: visibleSelectedSlipId,
@@ -412,9 +410,11 @@ export function useSalesSlips({
     errorMessage:
       errorMessage ??
       (salesSlipQuery.error == null
-        ? salesSlipDetailQuery.error == null
-          ? null
-          : toMessage(salesSlipDetailQuery.error)
+        ? partnersQuery.error == null
+          ? salesSlipDetailQuery.error == null
+            ? null
+            : toMessage(salesSlipDetailQuery.error)
+          : toMessage(partnersQuery.error)
         : toMessage(salesSlipQuery.error)),
     totalAmount,
     addAllocation,
@@ -442,7 +442,9 @@ export function useSalesSlips({
   };
 
   async function invalidateSalesSlips() {
-    await queryClient.invalidateQueries({ queryKey: salesSlipKeys.all });
+    await queryClient.invalidateQueries({
+      queryKey: salesQueryKeys.slips.all,
+    });
   }
 }
 

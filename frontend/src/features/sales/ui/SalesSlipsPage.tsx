@@ -1,45 +1,23 @@
 "use client";
 
-import type { BusinessPartner, SalesSlipPage } from "@/entities/farm/types";
-import { usePagedListUrlActions } from "@/shared/api/usePagedListUrlActions";
+import { useSearchParams } from "next/navigation";
 import { TabError, TabLayout, TabSplit } from "@/shared/ui/TabLayout";
-import {
-  SALES_FILTER_KEYS,
-  writeSalesFilterParams,
-} from "../lib/salesUrlFilters";
+import { readSalesRouteState } from "../lib/salesRouteParams";
 import { useSalesSlips } from "../model/useSalesSlips";
-import type { SalesFilterState } from "../model/types";
 import { SalesFilters } from "./slips/SalesFilters";
 import { SalesSlipCreateForm } from "./slips/SalesSlipCreateForm";
 import { SalesSlipDetail } from "./slips/SalesSlipDetail";
 import { SalesSlipList } from "./slips/SalesSlipList";
 
 export function SalesSlipsPage({
-  initialBusinessPartners,
-  initialFilters,
-  initialPage,
   initialShowCreateSlip = false,
 }: {
-  initialBusinessPartners: BusinessPartner[];
-  initialFilters: SalesFilterState;
-  initialPage: SalesSlipPage;
   initialShowCreateSlip?: boolean;
 }) {
+  const routeState = readSalesRouteState(useSearchParams());
   const sales = useSalesSlips({
-    initialBusinessPartners,
-    initialPage,
     initialShowCreateSlip,
-    initialFilters,
-  });
-
-  const listActions = usePagedListUrlActions({
-    filters: sales.filters,
-    filterKeys: SALES_FILTER_KEYS,
-    writeFilterParams: writeSalesFilterParams,
-    onSearch: sales.searchSalesSlips,
-    onReset: sales.resetFilters,
-    onPageChange: sales.setSalesSlipPage,
-    onPageSizeChange: sales.setSalesSlipPageSize,
+    routeState,
   });
 
   function handleToggleCreateSalesSlip() {
@@ -58,8 +36,8 @@ export function SalesSlipsPage({
           partners={sales.partners}
           filters={sales.filters}
           onChange={sales.updateFilters}
-          onReset={listActions.reset}
-          onSearch={listActions.search}
+          onReset={sales.resetFilters}
+          onSearch={sales.searchSalesSlips}
         />
 
         {sales.showCreateSlip ? (
@@ -98,8 +76,8 @@ export function SalesSlipsPage({
             totalSalesSlips={sales.salesSlipTotalElements}
             onSelect={sales.selectSalesSlip}
             onCreateSalesSlip={handleToggleCreateSalesSlip}
-            onPageChange={listActions.changePage}
-            onPageSizeChange={listActions.changePageSize}
+            onPageChange={sales.setSalesSlipPage}
+            onPageSizeChange={sales.setSalesSlipPageSize}
           />
           <SalesSlipDetail
             loading={sales.loadingSalesSlipDetail}

@@ -14,18 +14,5 @@ export default async function Page({
   const { tab } = await params;
   if (!isSalesTab(tab)) notFound();
 
-  const resolvedSearchParams = await searchParams;
-  const requestedCreateSlip = resolvedSearchParams?.createSlip;
-  const createSlip =
-    (Array.isArray(requestedCreateSlip)
-      ? requestedCreateSlip[0]
-      : requestedCreateSlip) === "1";
-
-  return (
-    <SalesRoutePage
-      activeTab={tab}
-      createSlip={createSlip}
-      searchParams={resolvedSearchParams}
-    />
-  );
+  return <SalesRoutePage activeTab={tab} searchParams={searchParams} />;
 }

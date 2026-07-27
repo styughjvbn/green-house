@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from "react";
 import type { ColumnDef } from "@tanstack/react-table";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { RefreshCw } from "lucide-react";
 import type {
   AuctionSettlement,
@@ -13,6 +14,8 @@ import {
   confirmAuctionSettlementPayment,
   rebuildAuctionSettlement,
 } from "../../api/salesApi";
+import { auctionSettlementsQueryOptions } from "../../model/salesQueryOptions";
+import { salesQueryKeys } from "../../model/salesQueryKeys";
 import { ManualPaymentPanel } from "./ManualPaymentPanel";
 import { TabError, TabSplit, TabStack } from "@/shared/ui/TabLayout";
 import {
@@ -62,19 +65,15 @@ const settlementLineColumns: ColumnDef<AuctionSettlementLine, unknown>[] = [
   },
 ];
 
-export function AuctionSettlementView({
-  initialSettlements,
-}: {
-  initialSettlements: AuctionSettlement[];
-}) {
-  const [settlements, setSettlements] = useState(initialSettlements);
-  const [selectedId, setSelectedId] = useState<number | null>(
-    initialSettlements[0]?.id ?? null,
-  );
+export function AuctionSettlementView() {
+  const queryClient = useQueryClient();
+  const settlementsQuery = useQuery(auctionSettlementsQueryOptions());
+  const settlements = settlementsQuery.data ?? [];
+  const [selectedId, setSelectedId] = useState<number | null>(null);
   const [page, setPage] = useState(0);
   const [pageSize, setPageSize] = useState(10);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [mutating, setMutating] = useState(false);
+  const [mutationError, setMutationError] = useState<string | null>(null);
   const selected =
     settlements.find((settlement) => settlement.id === selectedId) ??
     settlements[0] ??
@@ -149,26 +148,43 @@ export function AuctionSettlementView({
 
   async function rebuildSelected() {
     if (!selected) return;
-    setLoading(true);
-    setError(null);
+    setMutating(true);
+    setMutationError(null);
     try {
       const rebuilt = await rebuildAuctionSettlement(
         selected.auctionHouseId,
         selected.auctionDate,
       );
-      setSettlements((current) =>
-        current.map((item) => (item.id === rebuilt.id ? rebuilt : item)),
-      );
+      updateSettlement(rebuilt);
     } catch (requestError) {
-      setError(
+      setMutationError(
         requestError instanceof Error
           ? requestError.message
           : "정산을 다시 계산하지 못했습니다.",
       );
     } finally {
-      setLoading(false);
+      setMutating(false);
     }
   }
+
+  function updateSettlement(updated: AuctionSettlement) {
+    queryClient.setQueryData<AuctionSettlement[]>(
+      salesQueryKeys.auction.settlements,
+      (current) =>
+        current?.map((item) => (item.id === updated.id ? updated : item)) ?? [
+          updated,
+        ],
+    );
+  }
+
+  const loading = settlementsQuery.isFetching || mutating;
+  const error =
+    mutationError ??
+    (settlementsQuery.error == null
+      ? null
+      : settlementsQuery.error instanceof Error
+        ? settlementsQuery.error.message
+        : "정산 목록을 조회하지 못했습니다.");
 
   return (
     <TabStack>
@@ -223,14 +239,7 @@ export function AuctionSettlementView({
           onRowClick={(row) => setSelectedId(row.id)}
         />
 
-        <SettlementDetail
-          settlement={selected}
-          onUpdate={(updated) =>
-            setSettlements((current) =>
-              current.map((item) => (item.id === updated.id ? updated : item)),
-            )
-          }
-        />
+        <SettlementDetail settlement={selected} onUpdate={updateSettlement} />
       </TabSplit>
     </TabStack>
   );

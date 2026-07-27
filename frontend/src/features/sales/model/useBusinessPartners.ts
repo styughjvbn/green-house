@@ -1,52 +1,45 @@
 import { useState, type FormEvent } from "react";
-import { useQueryClient } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import type {
   BusinessPartner,
   BusinessPartnerPage,
 } from "@/entities/farm/types";
 import { createEmptyPage } from "@/shared/api/page";
-import { usePagedListQuery } from "@/shared/api/usePagedListQuery";
-import {
-  createBusinessPartner,
-  getBusinessPartnerPage,
-  updateBusinessPartner,
-} from "../api/salesApi";
+import { useUrlPagedListState } from "@/shared/api/useUrlPagedListState";
+import { createBusinessPartner, updateBusinessPartner } from "../api/salesApi";
 import {
   createEmptyBusinessPartnerForm,
   toBusinessPartnerForm,
   toCreateBusinessPartnerPayload,
 } from "../lib/salesForm";
-import { createInitialBusinessPartnerFilters } from "../lib/salesUrlFilters";
+import type { SalesRouteState } from "../lib/salesRouteParams";
+import {
+  BUSINESS_PARTNER_FILTER_KEYS,
+  createInitialBusinessPartnerFilters,
+  writeBusinessPartnerFilterParams,
+} from "../lib/salesUrlFilters";
+import { businessPartnerPageQueryOptions } from "./salesQueryOptions";
+import { salesQueryKeys } from "./salesQueryKeys";
 import type { BusinessPartnerFilterState, BusinessPartnerForm } from "./types";
 
-const businessPartnerKeys = {
-  all: ["sales", "businessPartners"] as const,
-  page: (filters: BusinessPartnerFilterState, page: number, size: number) =>
-    [...businessPartnerKeys.all, filters, page, size] as const,
-};
-
 export function useBusinessPartners({
-  initialFilters,
-  initialPage,
+  routeState,
 }: {
-  initialFilters: BusinessPartnerFilterState;
-  initialPage: BusinessPartnerPage;
+  routeState: SalesRouteState<BusinessPartnerFilterState>;
 }) {
   const queryClient = useQueryClient();
-  const listState = usePagedListQuery({
-    createEmptyFilters: createInitialBusinessPartnerFilters,
-    initialFilters,
-    initialPage,
-    queryKey: ({ filters, page, size }) =>
-      businessPartnerKeys.page(filters, page, size),
-    queryFn: ({ filters, page, size }) =>
-      getBusinessPartnerPage(filters, page, size),
+  const pageQuery = useQuery(businessPartnerPageQueryOptions(routeState));
+  const listState = useUrlPagedListState({
+    emptyFilters: createInitialBusinessPartnerFilters,
+    filterKeys: BUSINESS_PARTNER_FILTER_KEYS,
+    routeFilters: routeState.filters,
+    writeFilterParams: writeBusinessPartnerFilterParams,
   });
-  const { filters, page, size } = listState.queryState;
-  const pageQuery = listState.query;
-  const pageData = listState.pageData ?? createEmptyPage<BusinessPartner>(size);
+  const pageData =
+    pageQuery.data ??
+    createEmptyPage<BusinessPartner>(routeState.size, routeState.page);
   const [selectedPartnerId, setSelectedPartnerId] = useState<number | null>(
-    initialPage.content[0]?.id ?? null,
+    null,
   );
   const [createForm, setCreateForm] = useState<BusinessPartnerForm>(
     createEmptyBusinessPartnerForm(),
@@ -55,9 +48,9 @@ export function useBusinessPartners({
     partnerId: number | null;
     form: BusinessPartnerForm;
   }>(() => ({
-    partnerId: initialPage.content[0]?.id ?? null,
-    form: initialPage.content[0]
-      ? toBusinessPartnerForm(initialPage.content[0])
+    partnerId: pageData.content[0]?.id ?? null,
+    form: pageData.content[0]
+      ? toBusinessPartnerForm(pageData.content[0])
       : createEmptyBusinessPartnerForm(),
   }));
   const [savingCreate, setSavingCreate] = useState(false);
@@ -148,7 +141,7 @@ export function useBusinessPartners({
 
   function updateCachedPartner(updated: BusinessPartner) {
     queryClient.setQueriesData<BusinessPartnerPage>(
-      { queryKey: businessPartnerKeys.all },
+      { queryKey: salesQueryKeys.partners.pages },
       (current) =>
         current == null
           ? current
@@ -162,14 +155,16 @@ export function useBusinessPartners({
   }
 
   async function invalidate() {
-    await queryClient.invalidateQueries({ queryKey: businessPartnerKeys.all });
+    await queryClient.invalidateQueries({
+      queryKey: salesQueryKeys.partners.all,
+    });
   }
 
   return {
     filters: listState.filters,
     partners: pageData.content,
-    currentPage: page,
-    pageSize: size,
+    currentPage: routeState.page,
+    pageSize: routeState.size,
     totalElements: pageData.totalElements,
     totalPages: Math.max(1, pageData.totalPages),
     selectedPartnerId: visibleSelectedPartnerId,

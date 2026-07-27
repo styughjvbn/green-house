@@ -2,15 +2,10 @@
 
 import type { SubmitEvent } from "react";
 import { useState } from "react";
-import type { BusinessPartnerPage } from "@/entities/farm/types";
-import { usePagedListUrlActions } from "@/shared/api/usePagedListUrlActions";
+import { useSearchParams } from "next/navigation";
 import { TabError, TabLayout, TabSplit } from "@/shared/ui/TabLayout";
-import {
-  BUSINESS_PARTNER_FILTER_KEYS,
-  writeBusinessPartnerFilterParams,
-} from "../lib/salesUrlFilters";
+import { readBusinessPartnerRouteState } from "../lib/salesRouteParams";
 import { useBusinessPartners } from "../model/useBusinessPartners";
-import type { BusinessPartnerFilterState } from "../model/types";
 import { BusinessPartnerCreateForm } from "./partners/BusinessPartnerCreateForm";
 import {
   BusinessPartnerEditSection,
@@ -20,30 +15,12 @@ import { BusinessPartnerFilters } from "./partners/BusinessPartnerFilters";
 import { BusinessPartnerList } from "./partners/BusinessPartnerList";
 import { PartnerSettlementSettingsSection } from "./partners/PartnerSettlementSettingsSection";
 
-export function SalesPartnersPage({
-  initialFilters,
-  initialPage,
-}: {
-  initialPage: BusinessPartnerPage;
-  initialFilters: BusinessPartnerFilterState;
-}) {
-  const partners = useBusinessPartners({
-    initialPage,
-    initialFilters,
-  });
+export function SalesPartnersPage() {
+  const routeState = readBusinessPartnerRouteState(useSearchParams());
+  const partners = useBusinessPartners({ routeState });
   const [showCreatePartner, setShowCreatePartner] = useState(false);
   const [partnerDetailMode, setPartnerDetailMode] =
     useState<BusinessPartnerDetailMode>("read");
-
-  const listActions = usePagedListUrlActions({
-    filters: partners.filters,
-    filterKeys: BUSINESS_PARTNER_FILTER_KEYS,
-    writeFilterParams: writeBusinessPartnerFilterParams,
-    onSearch: partners.search,
-    onReset: partners.resetFilters,
-    onPageChange: partners.setPage,
-    onPageSizeChange: partners.setPageSize,
-  });
 
   async function handleCreateBusinessPartner(
     event: SubmitEvent<HTMLFormElement>,
@@ -60,8 +37,8 @@ export function SalesPartnersPage({
         <BusinessPartnerFilters
           filters={partners.filters}
           onChange={partners.updateFilter}
-          onReset={listActions.reset}
-          onSearch={listActions.search}
+          onReset={partners.resetFilters}
+          onSearch={partners.search}
         />
         <TabError message={partners.errorMessage} />
         <TabSplit columns="lg:grid-cols-[520px_minmax(0,1fr)]">
@@ -79,8 +56,8 @@ export function SalesPartnersPage({
               partners.selectPartner(partnerId);
             }}
             onCreateBusinessPartner={() => setShowCreatePartner(true)}
-            onPageChange={listActions.changePage}
-            onPageSizeChange={listActions.changePageSize}
+            onPageChange={partners.setPage}
+            onPageSizeChange={partners.setPageSize}
           />
           <div>
             <BusinessPartnerEditSection
