@@ -1,1 +1,1 @@
-export { WorkRecordManager } from "./WorkRecordRoutePage";
+export { WorkRecordRoutePage } from "./WorkRecordRoutePage";

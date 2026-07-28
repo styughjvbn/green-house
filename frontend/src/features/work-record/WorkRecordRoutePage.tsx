@@ -13,11 +13,10 @@ import {
 import {
   workOperationCalendarQueryOptions,
   workOperationPageQueryOptions,
-  workTypesQueryOptions,
 } from "./model/workRecordQueryOptions";
-import { WorkRecordWorkspace } from "./ui/WorkRecordWorkspace";
+import { WorkRecordPage } from "./ui/WorkRecordPage";
 
-export async function WorkRecordManager({
+export async function WorkRecordRoutePage({
   resolvedSearchParams,
 }: {
   resolvedSearchParams: Record<string, string | string[] | undefined>;
@@ -39,14 +38,11 @@ export async function WorkRecordManager({
       ? queryClient.prefetchQuery(workOperationCalendarQueryOptions(routeState))
       : queryClient.prefetchQuery(workOperationPageQueryOptions(routeState));
 
-  await Promise.all([
-    queryClient.prefetchQuery(workTypesQueryOptions()),
-    operationPrefetch,
-  ]);
+  await operationPrefetch;
 
   return (
     <HydrationBoundary state={dehydrate(queryClient)}>
-      <WorkRecordWorkspace />
+      <WorkRecordPage />
     </HydrationBoundary>
   );
 }

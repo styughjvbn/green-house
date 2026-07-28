@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { CalendarDays, List, Plus } from "lucide-react";
 import { useUrlSearchParamsWriter } from "@/shared/lib/useUrlSearchParamsWriter";
@@ -10,14 +11,14 @@ import {
   type WorkWorkspaceScope,
   type WorkWorkspaceView,
 } from "../lib/workRecordUrlState";
+import { useWorkRecordInvalidation } from "../model/useWorkRecordInvalidation";
 import { WorkOperationCalendarView } from "./calendar/WorkOperationCalendarView";
 import { WorkOperationListView } from "./list/WorkOperationListView";
+import { WorkOperationRegistrationDialog } from "./registration/WorkOperationRegistrationDialog";
 
-export function WorkWorkspacePage({
-  onCreateWork,
-}: {
-  onCreateWork: () => void;
-}) {
+export function WorkRecordPage() {
+  const { invalidateWorkData } = useWorkRecordInvalidation();
+  const [showOperationForm, setShowOperationForm] = useState(false);
   const searchParams = useSearchParams();
   const writeUrlParams = useUrlSearchParamsWriter();
   const urlState = readWorkRecordUrlState(searchParams);
@@ -28,10 +29,9 @@ export function WorkWorkspacePage({
 
   function changeView(view: WorkWorkspaceView) {
     writeUrlParams((params) => {
-      setWorkWorkspaceView(params, view);
-      if (view === "CALENDAR" && !params.get("month")) {
-        params.set("month", urlState.month);
-      }
+      setWorkWorkspaceView(params, view, {
+        defaultMonth: urlState.month,
+      });
     });
   }
 
@@ -39,20 +39,25 @@ export function WorkWorkspacePage({
     <WorkspaceHeaderActions
       scope={urlState.scope}
       view={urlState.view}
-      onCreateWork={onCreateWork}
+      onCreateWork={() => setShowOperationForm(true)}
       onScopeChange={changeScope}
       onViewChange={changeView}
     />
   );
 
   return (
-    <main className="h-full min-h-0">
+    <div className="flex h-full min-h-0 flex-col">
+      {showOperationForm ? (
+        <WorkOperationRegistrationDialog
+          onClose={() => setShowOperationForm(false)}
+          onSaved={() => void invalidateWorkData()}
+        />
+      ) : null}
+
       {urlState.view === "LIST" ? (
         <WorkOperationListView
           headerActions={headerActions}
           routeState={urlState}
-          showCreateAction={false}
-          onCreateWork={onCreateWork}
         />
       ) : (
         <WorkOperationCalendarView
@@ -60,7 +65,7 @@ export function WorkWorkspacePage({
           routeState={urlState}
         />
       )}
-    </main>
+    </div>
   );
 }
 

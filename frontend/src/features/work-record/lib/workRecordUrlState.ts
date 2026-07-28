@@ -124,8 +124,15 @@ export function setWorkWorkspaceScope(
 export function setWorkWorkspaceView(
   params: URLSearchParams,
   view: WorkWorkspaceView,
+  options?: {
+    defaultMonth?: string;
+  },
 ) {
   params.set("view", view);
+
+  if (view === "CALENDAR" && !params.has("month") && options?.defaultMonth) {
+    params.set("month", options.defaultMonth);
+  }
 }
 
 function currentMonth() {

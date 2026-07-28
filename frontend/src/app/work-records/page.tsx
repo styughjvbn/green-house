@@ -1,4 +1,4 @@
-import { WorkRecordManager } from "@/features/work-record/WorkRecordRoutePage";
+import { WorkRecordRoutePage } from "@/features/work-record/WorkRecordRoutePage";
 
 export const dynamic = "force-dynamic";
 
@@ -9,5 +9,5 @@ export default async function Page({
 }) {
   const resolvedSearchParams = await searchParams;
 
-  return <WorkRecordManager resolvedSearchParams={resolvedSearchParams} />;
+  return <WorkRecordRoutePage resolvedSearchParams={resolvedSearchParams} />;
 }

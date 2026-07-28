@@ -1,8 +1,13 @@
 "use client";
 
 import { useEffect } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { X } from "lucide-react";
 import type { House, WorkType } from "@/entities/farm/types";
+import {
+  workHousesQueryOptions,
+  workTypesQueryOptions,
+} from "../../model/workRecordQueryOptions";
 import { useWorkOperationRegistration } from "../../model/registration/useWorkOperationRegistration";
 import { WorkRecordResultDialog } from "./WorkRecordResultDialog";
 import { InboundPottingTargetDialog } from "./InboundPottingTargetDialog";
@@ -10,6 +15,39 @@ import { WorkOperationPlanForm } from "./WorkOperationPlanForm";
 import { WorkTargetSelectionDialog } from "./WorkTargetSelectionDialog";
 
 export function WorkOperationRegistrationDialog({
+  onClose,
+  onSaved,
+}: {
+  onClose: () => void;
+  onSaved?: () => void;
+}) {
+  const housesQuery = useQuery(workHousesQueryOptions());
+  const workTypesQuery = useQuery(workTypesQueryOptions());
+  const error = housesQuery.error ?? workTypesQuery.error;
+
+  if (housesQuery.data == null || workTypesQuery.data == null) {
+    return (
+      <WorkOperationRegistrationStatusDialog
+        error={error}
+        onClose={onClose}
+        onRetry={() =>
+          void Promise.all([housesQuery.refetch(), workTypesQuery.refetch()])
+        }
+      />
+    );
+  }
+
+  return (
+    <WorkOperationRegistrationContent
+      houses={housesQuery.data}
+      workTypes={workTypesQuery.data}
+      onClose={onClose}
+      onSaved={onSaved}
+    />
+  );
+}
+
+function WorkOperationRegistrationContent({
   houses,
   workTypes,
   onClose,
@@ -143,6 +181,69 @@ export function WorkOperationRegistrationDialog({
           onSaved={registration.recordSaved}
         />
       ) : null}
+    </div>
+  );
+}
+
+function WorkOperationRegistrationStatusDialog({
+  error,
+  onClose,
+  onRetry,
+}: {
+  error: Error | null;
+  onClose: () => void;
+  onRetry: () => void;
+}) {
+  useEffect(() => {
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        onClose();
+      }
+    };
+    document.addEventListener("keydown", handleKeyDown);
+    return () => document.removeEventListener("keydown", handleKeyDown);
+  }, [onClose]);
+
+  return (
+    <div
+      className="fixed inset-0 z-[1000] flex items-center justify-center bg-black/35 p-4"
+      role="presentation"
+      onMouseDown={onClose}
+    >
+      <section
+        aria-label="작업 등록 정보"
+        aria-modal="true"
+        className="w-full max-w-sm rounded-md bg-white p-5 shadow-xl"
+        role="dialog"
+        onMouseDown={(event) => event.stopPropagation()}
+      >
+        <p className="text-sm font-semibold text-[#26352b]">
+          {error
+            ? "작업 등록 정보를 불러오지 못했습니다."
+            : "작업 등록 정보를 불러오는 중입니다."}
+        </p>
+        {error ? (
+          <p className="mt-2 text-sm text-[#8f2f19]">{error.message}</p>
+        ) : null}
+        <div className="mt-4 flex justify-end gap-2">
+          <button
+            className="rounded-md border border-[#cfd8cc] px-3 py-2 text-sm font-semibold text-[#435047]"
+            type="button"
+            onClick={onClose}
+          >
+            닫기
+          </button>
+          {error ? (
+            <button
+              className="rounded-md bg-[#159447] px-3 py-2 text-sm font-semibold text-white"
+              type="button"
+              onClick={onRetry}
+            >
+              다시 시도
+            </button>
+          ) : null}
+        </div>
+      </section>
     </div>
   );
 }

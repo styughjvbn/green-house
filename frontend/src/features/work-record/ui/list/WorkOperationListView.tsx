@@ -12,13 +12,9 @@ import { WorkListTable } from "./WorkListTable";
 export function WorkOperationListView({
   headerActions,
   routeState,
-  showCreateAction = true,
-  onCreateWork,
 }: {
   headerActions?: ReactNode;
   routeState: WorkRecordUrlState;
-  showCreateAction?: boolean;
-  onCreateWork: () => void;
 }) {
   const list = useWorkOperations(routeState);
   const operations = list.pageData.content;
@@ -60,7 +56,6 @@ export function WorkOperationListView({
             selectedId={actions.selectedId}
             totalElements={list.pageData.totalElements}
             totalPages={list.pageData.totalPages}
-            onCreate={showCreateAction ? onCreateWork : undefined}
             onPageChange={(page) => {
               actions.clearSelection();
               list.changePage(page);
