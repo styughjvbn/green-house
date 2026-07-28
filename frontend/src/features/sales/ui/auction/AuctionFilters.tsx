@@ -72,7 +72,13 @@ export function AuctionFilters({
         <FilterSelect
           label="상태"
           value={filters.status}
-          onChange={(value) => onChange("status", value)}
+          onChange={(value) =>
+            onChange(
+              "status",
+              auctionStatusOptions.find(([status]) => status === value)?.[0] ??
+                "",
+            )
+          }
         >
           <option value="">전체</option>
           {auctionStatusOptions.map(([value, label]) => (

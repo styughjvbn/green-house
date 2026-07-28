@@ -1,15 +1,15 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import type { Dispatch, ReactNode, SetStateAction } from "react";
 import { Plus, Trash2 } from "lucide-react";
 import type { House } from "@/entities/farm/types";
 import { isStandardPotSize, POT_SIZE_OPTIONS } from "@/entities/farm/potSizes";
-import {
-  FarmPlacementField,
-  type FarmPlacementReference,
-  type FarmPlacementSelection,
-} from "@/entities/farm/ui/FarmPlacementPicker";
+import type {
+  FarmPlacementReference,
+  FarmPlacementSelection,
+} from "@/entities/farm/model/placement";
+import { FarmPlacementField } from "@/entities/farm/ui/FarmPlacementPicker";
 import { createUuid } from "@/shared/lib/id";
 
 type PottingResultRow = {
@@ -45,6 +45,9 @@ export function PottingExecutionForm({
   initialAgeYear,
   initialPotSize,
   initialWorker,
+  fixedPottingDate,
+  recordItemMode = false,
+  onRecordDirty,
   subject,
   submitLabel = "포트 작업 완료",
   onCancel,
@@ -55,13 +58,16 @@ export function PottingExecutionForm({
   initialAgeYear?: number | null;
   initialPotSize?: string | null;
   initialWorker?: string | null;
+  fixedPottingDate?: string;
+  recordItemMode?: boolean;
+  onRecordDirty?: () => void;
   subject: string;
   submitLabel?: string;
   onCancel: () => void;
   onSubmit: (values: PottingExecutionValues) => Promise<void>;
 }) {
   const [pottingDate, setPottingDate] = useState(
-    new Date().toISOString().slice(0, 10),
+    fixedPottingDate ?? new Date().toISOString().slice(0, 10),
   );
   const [rows, setRows] = useState<PottingResultRow[]>(() => [
     newResultRow(initialActualQuantity, initialPotSize, initialAgeYear),
@@ -70,6 +76,17 @@ export function PottingExecutionForm({
   const [memo, setMemo] = useState("");
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const onRecordDirtyRef = useRef(onRecordDirty);
+
+  useEffect(() => {
+    onRecordDirtyRef.current = onRecordDirty;
+  }, [onRecordDirty]);
+
+  useEffect(() => {
+    if (recordItemMode) {
+      onRecordDirtyRef.current?.();
+    }
+  }, [memo, pottingDate, recordItemMode, rows, worker]);
 
   async function submit() {
     if (!pottingDate) {
@@ -132,6 +149,7 @@ export function PottingExecutionForm({
       <Field label="포트 작업 완료일">
         <input
           className={inputClass}
+          disabled={fixedPottingDate != null}
           required
           type="date"
           value={pottingDate}
@@ -250,21 +268,27 @@ export function PottingExecutionForm({
           {error}
         </p>
       ) : null}
-      <div className="flex justify-end gap-2 md:col-span-2">
-        <button
-          className="rounded-md border border-[#d4dbd5] px-4 py-2 text-sm font-semibold"
-          disabled={saving}
-          type="button"
-          onClick={onCancel}
-        >
-          취소
-        </button>
+      <div className="flex flex-wrap items-center justify-end gap-2 md:col-span-2">
+        {!recordItemMode ? (
+          <button
+            className="rounded-md border border-[#d4dbd5] px-4 py-2 text-sm font-semibold"
+            disabled={saving}
+            type="button"
+            onClick={onCancel}
+          >
+            취소
+          </button>
+        ) : null}
         <button
           className="rounded-md bg-[#159447] px-4 py-2 text-sm font-semibold text-white disabled:opacity-50"
           disabled={saving}
           type="submit"
         >
-          {saving ? "처리 중" : submitLabel}
+          {saving
+            ? "처리 중"
+            : recordItemMode
+              ? "현재 입고 결과 입력 완료"
+              : submitLabel}
         </button>
       </div>
     </form>

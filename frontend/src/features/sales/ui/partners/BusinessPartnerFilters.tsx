@@ -14,6 +14,7 @@ export function BusinessPartnerFilters({
   filters,
   onChange,
   onReset,
+  onSearch,
 }: {
   filters: BusinessPartnerFilterState;
   onChange: <K extends keyof BusinessPartnerFilterState>(
@@ -21,6 +22,7 @@ export function BusinessPartnerFilters({
     value: BusinessPartnerFilterState[K],
   ) => void;
   onReset: () => void;
+  onSearch: () => void;
 }) {
   return (
     <FilterPanel>
@@ -28,7 +30,14 @@ export function BusinessPartnerFilters({
         <FilterSelect
           label="거래처 유형"
           value={filters.partnerType}
-          onChange={(value) => onChange("partnerType", value)}
+          onChange={(value) =>
+            onChange(
+              "partnerType",
+              (["WHOLESALE", "RETAIL", "AUCTION_HOUSE"].find(
+                (partnerType) => partnerType === value,
+              ) ?? "") as BusinessPartnerFilterState["partnerType"],
+            )
+          }
         >
           <option value="">전체</option>
           <option value="WHOLESALE">도매</option>
@@ -39,7 +48,13 @@ export function BusinessPartnerFilters({
         <FilterSelect
           label="상태"
           value={filters.active}
-          onChange={(value) => onChange("active", value)}
+          onChange={(value) =>
+            onChange(
+              "active",
+              (["ACTIVE", "INACTIVE"].find((active) => active === value) ??
+                "") as BusinessPartnerFilterState["active"],
+            )
+          }
         >
           <option value="">전체</option>
           <option value="ACTIVE">사용중</option>
@@ -54,7 +69,7 @@ export function BusinessPartnerFilters({
         />
 
         <FilterResetButton onClick={onReset} />
-        <FilterSearchButton />
+        <FilterSearchButton type="button" onClick={onSearch} />
       </FilterGrid>
     </FilterPanel>
   );

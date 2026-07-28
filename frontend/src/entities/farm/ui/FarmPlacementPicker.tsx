@@ -6,6 +6,10 @@ import type {
   OrchidGroup,
   PhysicalBed,
 } from "@/entities/farm/types";
+import type {
+  FarmPlacementReference,
+  FarmPlacementSelection,
+} from "@/entities/farm/model/placement";
 import { MapPin, X } from "lucide-react";
 import { useMemo, useState } from "react";
 
@@ -13,19 +17,6 @@ type ResolvedZone = {
   house: House;
   bed: PhysicalBed;
   zone: BedZone;
-};
-
-export type FarmPlacementSelection = {
-  bedZoneId: number;
-  startCell: number;
-  endCell: number;
-  startPosition: number;
-  endPosition: number;
-  label: string;
-};
-
-export type FarmPlacementReference = FarmPlacementSelection & {
-  kind: "SOURCE" | "RESULT" | "SAVED_RESULT";
 };
 
 export function FarmPlacementField({

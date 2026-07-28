@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
+import { ANALYTICS_ROUTE } from "@/shared/config/routes";
 import { createAnalyticsViewModel } from "../lib/analyticsView";
 import type {
   AnalyticsFilters,
@@ -26,7 +27,7 @@ const DEFAULT_FILTERS: AnalyticsFilters = {
 
 export function AnalyticsPage(props: AnalyticsPageProps) {
   const router = useRouter();
-  const tab = props.activeTab ?? "SALES";
+  const tab = props.activeTab ?? "sales";
   const [draftFilters, setDraftFilters] = useState(DEFAULT_FILTERS);
   const [filters, setFilters] = useState(DEFAULT_FILTERS);
   const filteredProps = useMemo<AnalyticsPageProps>(() => {
@@ -61,14 +62,7 @@ export function AnalyticsPage(props: AnalyticsPageProps) {
   };
 
   function updateTab(nextTab: AnalyticsTab) {
-    const path = {
-      SALES: "/analytics/sales",
-      VARIETY: "/analytics/variety",
-      CUSTOMER: "/analytics/customer",
-      SPACE: "/analytics/space",
-      WORK: "/analytics/work",
-    }[nextTab];
-    router.push(path);
+    router.push(ANALYTICS_ROUTE.tab(nextTab));
   }
 
   return (

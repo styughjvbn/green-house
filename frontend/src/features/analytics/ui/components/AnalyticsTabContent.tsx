@@ -25,19 +25,19 @@ export function AnalyticsTabContent({
   props: AnalyticsPageProps;
   view: AnalyticsViewModel;
 }) {
-  if (tab === "SALES") return <SalesTab view={view} />;
-  if (tab === "VARIETY")
+  if (tab === "sales") return <SalesTab view={view} />;
+  if (tab === "variety")
     return (
       <VarietyTab values={view.varietySales} saleable={view.saleableQuantity} />
     );
-  if (tab === "CUSTOMER")
+  if (tab === "customer")
     return (
       <BusinessPartnerTab
         partnerStats={view.partnerStats}
         values={view.partnerSales}
       />
     );
-  if (tab === "SPACE") return <SpaceTab props={props} />;
+  if (tab === "space") return <SpaceTab props={props} />;
   return <WorkTab props={props} />;
 }
 
@@ -426,7 +426,7 @@ function WorkTab({ props }: { props: AnalyticsPageProps }) {
         </div>
         <Link
           className="mt-3 flex h-9 items-center justify-center rounded-md border border-[#d7ded8] text-xs font-semibold"
-          href="/work-records/history"
+          href="/work-records"
         >
           작업 이력 보기
         </Link>

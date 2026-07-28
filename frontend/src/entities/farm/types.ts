@@ -1,4 +1,8 @@
-﻿export type BedZoneSide = "LEFT" | "RIGHT" | "CUSTOM" | "HANGING";
+﻿import type { Page } from "@/shared/api/page";
+
+export type { Page } from "@/shared/api/page";
+
+export type BedZoneSide = "LEFT" | "RIGHT" | "CUSTOM" | "HANGING";
 
 export type BedZoneType = "DEFAULT" | "CUSTOM" | "HANGING" | "TRAY" | "GRID";
 
@@ -394,6 +398,8 @@ export type BusinessPartner = {
   active: boolean;
 };
 
+export type BusinessPartnerPage = Page<BusinessPartner>;
+
 export type SettlementUnit = "SALES_SLIP" | "MONTHLY_BATCH" | "AUCTION_DATE";
 export type PaymentDayMode = "CALENDAR_DAY" | "BUSINESS_DAY";
 
@@ -471,6 +477,10 @@ export type SalesSlip = {
   memo: string | null;
   items: SalesSlipItem[];
 };
+
+export type SalesSlipListItem = Omit<SalesSlip, "items">;
+
+export type SalesSlipPage = Page<SalesSlipListItem>;
 
 export type AuctionShipmentOption = {
   id: number;
@@ -572,13 +582,7 @@ export type AuctionLot = {
   statusHistory: AuctionStatusHistory[];
 };
 
-export type AuctionLotPage = {
-  content: AuctionLot[];
-  page: number;
-  size: number;
-  totalElements: number;
-  totalPages: number;
-};
+export type AuctionLotPage = Page<AuctionLot>;
 
 export type AuctionTrackingSummary = {
   lotCount: number;

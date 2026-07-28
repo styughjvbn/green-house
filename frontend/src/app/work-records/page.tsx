@@ -1,20 +1,13 @@
-import { redirect } from "next/navigation";
-import { appendSearchParams } from "@/shared/lib/route";
+import { WorkRecordRoutePage } from "@/features/work-record/WorkRecordRoutePage";
+
+export const dynamic = "force-dynamic";
 
 export default async function Page({
   searchParams,
 }: {
-  searchParams?: Promise<Record<string, string | string[] | undefined>>;
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
-  const resolvedSearchParams = searchParams ? await searchParams : undefined;
-  const requestedTab = resolvedSearchParams?.tab;
-  const tab = Array.isArray(requestedTab) ? requestedTab[0] : requestedTab;
-  const path =
-    {
-      LIST: "/work-records/list",
-      CALENDAR: "/work-records/calendar",
-      HISTORY: "/work-records/history",
-    }[tab ?? "LIST"] ?? "/work-records/list";
+  const resolvedSearchParams = await searchParams;
 
-  redirect(appendSearchParams(path, resolvedSearchParams, ["tab"]));
+  return <WorkRecordRoutePage resolvedSearchParams={resolvedSearchParams} />;
 }

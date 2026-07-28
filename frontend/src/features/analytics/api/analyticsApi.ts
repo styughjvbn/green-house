@@ -18,7 +18,7 @@ export async function getAnalyticsData(tab: AnalyticsTab) {
     fetchApi<FarmStatusMapData>("/farm-status/map"),
   ]);
 
-  if (tab === "SPACE") {
+  if (tab === "space") {
     const houses = await fetchApi<House[]>("/houses");
     return createAnalyticsData({
       houses,
@@ -27,7 +27,7 @@ export async function getAnalyticsData(tab: AnalyticsTab) {
     });
   }
 
-  if (tab === "WORK") {
+  if (tab === "work") {
     const workAnalytics = await fetchApi<WorkAnalyticsData>("/analytics/work");
     return createAnalyticsData({
       mapData,
@@ -38,7 +38,7 @@ export async function getAnalyticsData(tab: AnalyticsTab) {
 
   const salesAnalytics = await fetchApi<SalesAnalyticsData>("/analytics/sales");
 
-  if (tab === "CUSTOMER") {
+  if (tab === "customer") {
     const partnerAnalytics = await fetchApi<PartnerAnalyticsData>(
       "/analytics/partners",
     );

@@ -1,2 +1,2 @@
 export { getDashboardData } from "./api/dashboardApi";
-export { DashboardPage } from "./ui/DashboardPage";
+export { DashboardPage } from "./DashboardRoutePage";

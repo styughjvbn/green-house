@@ -7,4 +7,6 @@ export {
   deleteMaterial,
   deleteVariety,
 } from "./api/inventoryApi";
-export { InventoryPage } from "./ui/InventoryPage";
+export { InventoryInboundPage } from "./ui/InventoryInboundPage";
+export { InventoryMaterialPage } from "./ui/InventoryMaterialPage";
+export { InventoryVarietyPage } from "./ui/InventoryVarietyPage";

@@ -1,9 +1,9 @@
 import { API_BASE_URL, fetchApi } from "@/shared/api/client";
-import type { WorkOperation } from "@/entities/farm/types";
+import type { House, WorkOperation } from "@/entities/farm/types";
+import type { Page } from "@/shared/api/page";
 import type {
   ConnectedOrchidGroup,
   InboundPottingPayload,
-  InventoryPageResult,
   InboundRecord,
   InboundRecordPayload,
   InboundRecordUpdatePayload,
@@ -45,12 +45,15 @@ type VarietyResponse = {
   updatedAt: string;
 };
 
-type PageResponse<T> = {
-  content: T[];
-  page: number;
-  size: number;
-  totalElements: number;
-  totalPages: number;
+type VarietyNameResponse = {
+  id: number;
+  genus: string;
+  name: string;
+};
+
+type VarietyGeneraResponse = {
+  genera: string[];
+  varieties: VarietyNameResponse[];
 };
 
 type VarietyConnectedGroupResponse = {
@@ -155,13 +158,22 @@ type InboundQuery = {
 };
 
 export function getVarieties(query: VarietyQuery = {}) {
-  return fetchApi<PageResponse<VarietyResponse>>(
+  return fetchApi<Page<VarietyResponse>>(
     `/varieties${toQueryString(query)}`,
   ).then((result) => mapPage(result, toVariety));
 }
 
 export function getVarietyGenera() {
-  return fetchApi<string[]>("/varieties/genera");
+  return fetchApi<VarietyGeneraResponse>("/varieties/genera").then(
+    (result) => ({
+      genera: result.genera,
+      varieties: result.varieties.map(toVarietyName),
+    }),
+  );
+}
+
+export function getInventoryHouses() {
+  return fetchApi<House[]>("/houses");
 }
 
 export function getVarietyOrchidGroups(varietyId: number) {
@@ -225,7 +237,7 @@ export function deleteVariety(varietyId: number) {
 }
 
 export function getMaterials(query: MaterialQuery = {}) {
-  return fetchApi<PageResponse<MaterialResponse>>(
+  return fetchApi<Page<MaterialResponse>>(
     `/materials${toQueryString(query)}`,
   ).then((result) => mapPage(result, toMaterial));
 }
@@ -275,7 +287,7 @@ export function deleteMaterial(materialId: number) {
 }
 
 export function getInboundRecords(query: InboundQuery = {}) {
-  return fetchApi<PageResponse<InboundRecordResponse>>(
+  return fetchApi<Page<InboundRecordResponse>>(
     `/inbound-records${toQueryString(query)}`,
   ).then((result) => mapPage(result, toInboundRecord));
 }
@@ -367,6 +379,29 @@ function toVariety(item: VarietyResponse): Variety {
   };
 }
 
+function toVarietyName(item: VarietyNameResponse): Variety {
+  return {
+    id: item.id,
+    code: "",
+    genus: item.genus,
+    name: item.name,
+    alias: "",
+    potSize: "",
+    saleEnabled: true,
+    status: "ACTIVE",
+    description: "",
+    memo: "",
+    registeredAt: "",
+    updatedAt: "",
+    connectedGroupCount: 0,
+    totalQuantity: 0,
+    saleableQuantity: 0,
+    recentInboundDate: null,
+    recentWorkDate: null,
+    connectedGroups: [],
+  };
+}
+
 function toInboundRecord(item: InboundRecordResponse): InboundRecord {
   return {
     id: item.id,
@@ -416,9 +451,9 @@ function toMaterial(item: MaterialResponse): Material {
 }
 
 function mapPage<TSource, TTarget>(
-  result: PageResponse<TSource> | TSource[],
+  result: Page<TSource> | TSource[],
   mapper: (item: TSource) => TTarget,
-): InventoryPageResult<TTarget> {
+): Page<TTarget> {
   if (Array.isArray(result)) {
     return {
       content: result.map(mapper),

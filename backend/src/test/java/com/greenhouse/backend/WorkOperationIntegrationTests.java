@@ -198,6 +198,41 @@ class WorkOperationIntegrationTests extends AbstractBackendIntegrationTest {
 		org.assertj.core.api.Assertions.assertThat(fullyDiscarded.getStatus()).isEqualTo("폐기");
 	}
 
+	@Test
+	void createsCompletedDiscardRecordWithAllTargetResults() throws Exception {
+		mockMvc.perform(post("/api/work-operations/discard-records")
+				.contentType(MediaType.APPLICATION_JSON)
+				.content("""
+						{
+						  "operation": {
+						    "workTypeId": %d,
+						    "title": "폐기 작업 기록",
+						    "plannedStartDate": "2026-07-16",
+						    "plannedEndDate": "2026-07-16",
+						    "sourceScopeType": "MANUAL_SELECTION",
+						    "sourceOrchidGroupIds": [%d]
+						  },
+						  "completedDate": "2026-07-16",
+						  "worker": "폐기 담당자",
+						  "results": [
+						    {
+						      "orchidGroupId": %d,
+						      "discardQuantity": 25,
+						      "reason": "상태 불량"
+						    }
+						  ]
+						}
+						""".formatted(discardType.getId(), targetGroup.getId(), targetGroup.getId())))
+				.andExpect(status().isCreated())
+				.andExpect(jsonPath("$.data.status").value("COMPLETED"))
+				.andExpect(jsonPath("$.data.targets[0].resultDetails.discardedQuantity").value(25))
+				.andExpect(jsonPath("$.data.targets[0].resultDetails.remainingQuantity").value(75));
+
+		OrchidGroup updated = orchidGroupRepository.findById(targetGroup.getId()).orElseThrow();
+		org.assertj.core.api.Assertions.assertThat(updated.getQuantity()).isEqualTo(75);
+		org.assertj.core.api.Assertions.assertThat(workOperationRepository.count()).isEqualTo(1);
+	}
+
 	private Long createDiscardOperation(String title) throws Exception {
 		var result = mockMvc.perform(post("/api/work-operations")
 				.contentType(MediaType.APPLICATION_JSON)
@@ -448,6 +483,18 @@ class WorkOperationIntegrationTests extends AbstractBackendIntegrationTest {
 						}
 						""".formatted(pesticideType.getId(), sourceHouse.getId())))
 				.andExpect(status().isCreated());
+		mockMvc.perform(post("/api/work-operations")
+				.contentType(MediaType.APPLICATION_JSON)
+				.content("""
+						{
+						  "workTypeId": %d,
+						  "title": "7월 기간 농약 작업 2",
+						  "plannedStartDate": "2026-07-21",
+						  "sourceScopeType": "HOUSE",
+						  "sourceScopeId": %d
+						}
+						""".formatted(pesticideType.getId(), sourceHouse.getId())))
+				.andExpect(status().isCreated());
 
 		mockMvc.perform(get("/api/work-operations")
 				.param("from", "2026-07-15")
@@ -456,15 +503,49 @@ class WorkOperationIntegrationTests extends AbstractBackendIntegrationTest {
 				.param("scopeType", "HOUSE")
 				.param("scopeId", sourceHouse.getId().toString()))
 				.andExpect(status().isOk())
-				.andExpect(jsonPath("$.data", hasSize(1)))
-				.andExpect(jsonPath("$.data[0].title").value("7월 기간 농약 작업"))
-				.andExpect(jsonPath("$.data[0].targets", hasSize(1)));
+				.andExpect(jsonPath("$.data.content", hasSize(2)))
+				.andExpect(jsonPath("$.data.totalElements").value(2))
+				.andExpect(jsonPath("$.data.content[0].title").value("7월 기간 농약 작업 2"))
+				.andExpect(jsonPath("$.data.content[0].targets", hasSize(1)));
 
 		mockMvc.perform(get("/api/work-operations")
 				.param("from", "2026-08-01")
 				.param("to", "2026-08-31"))
 				.andExpect(status().isOk())
-				.andExpect(jsonPath("$.data", hasSize(0)));
+				.andExpect(jsonPath("$.data.content", hasSize(0)));
+
+		mockMvc.perform(get("/api/work-operations")
+				.param("keyword", "농약")
+				.param("page", "0")
+				.param("size", "1"))
+				.andExpect(status().isOk())
+				.andExpect(jsonPath("$.data.content", hasSize(1)))
+				.andExpect(jsonPath("$.data.page").value(0))
+				.andExpect(jsonPath("$.data.size").value(1))
+				.andExpect(jsonPath("$.data.totalElements").value(2))
+				.andExpect(jsonPath("$.data.totalPages").value(2))
+				.andExpect(jsonPath("$.data.content[0].title").value("7월 기간 농약 작업 2"));
+
+		mockMvc.perform(get("/api/work-operations")
+				.param("keyword", "농약")
+				.param("page", "1")
+				.param("size", "1"))
+				.andExpect(status().isOk())
+				.andExpect(jsonPath("$.data.content", hasSize(1)))
+				.andExpect(jsonPath("$.data.page").value(1))
+				.andExpect(jsonPath("$.data.content[0].title").value("7월 기간 농약 작업"));
+
+		mockMvc.perform(get("/api/work-operations/calendar")
+				.param("from", "2026-07-01")
+				.param("to", "2026-07-31")
+				.param("status", "PLANNED"))
+				.andExpect(status().isOk())
+				.andExpect(jsonPath("$.data", hasSize(2)))
+				.andExpect(jsonPath("$.data[0].title").value("7월 기간 농약 작업"))
+				.andExpect(jsonPath("$.data[1].title").value("7월 기간 농약 작업 2"));
+
+		mockMvc.perform(get("/api/work-operations").param("size", "101"))
+				.andExpect(status().isBadRequest());
 	}
 
 	@Test
@@ -487,23 +568,23 @@ class WorkOperationIntegrationTests extends AbstractBackendIntegrationTest {
 
 		mockMvc.perform(get("/api/work-operations").param("view", "MANAGEMENT"))
 				.andExpect(status().isOk())
-				.andExpect(jsonPath("$.data", hasSize(1)))
-				.andExpect(jsonPath("$.data[0].status").value("PLANNED"));
+				.andExpect(jsonPath("$.data.content", hasSize(1)))
+				.andExpect(jsonPath("$.data.content[0].status").value("PLANNED"));
 		mockMvc.perform(get("/api/work-operations").param("view", "HISTORY"))
 				.andExpect(status().isOk())
-				.andExpect(jsonPath("$.data", hasSize(0)));
+				.andExpect(jsonPath("$.data.content", hasSize(0)));
 
 		mockMvc.perform(post("/api/work-operations/{id}/cancel", operationId))
 				.andExpect(status().isOk());
 
 		mockMvc.perform(get("/api/work-operations").param("view", "MANAGEMENT"))
 				.andExpect(status().isOk())
-				.andExpect(jsonPath("$.data", hasSize(1)))
-				.andExpect(jsonPath("$.data[0].status").value("CANCELED"));
+				.andExpect(jsonPath("$.data.content", hasSize(1)))
+				.andExpect(jsonPath("$.data.content[0].status").value("CANCELED"));
 		mockMvc.perform(get("/api/work-operations").param("view", "HISTORY"))
 				.andExpect(status().isOk())
-				.andExpect(jsonPath("$.data", hasSize(1)))
-				.andExpect(jsonPath("$.data[0].status").value("CANCELED"));
+				.andExpect(jsonPath("$.data.content", hasSize(1)))
+				.andExpect(jsonPath("$.data.content[0].status").value("CANCELED"));
 	}
 
 	@Test

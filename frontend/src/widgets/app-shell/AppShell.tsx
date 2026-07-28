@@ -2,77 +2,23 @@
 
 import Image from "next/image";
 import Link from "next/link";
+import type { Route } from "next";
 import { usePathname } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import type { MouseEventHandler } from "react";
 import { SessionUserPanel } from "@/features/auth/ui/SessionUserPanel";
-import { PageHeader } from "@/widgets/page-header";
 import {
-  BarChart3,
-  ClipboardList,
-  Flower2,
-  Home,
-  PackageCheck,
-  PanelLeftClose,
-  PanelLeftOpen,
-  Printer,
-  Settings,
-  ShoppingBag,
-  Sprout,
-  type LucideIcon,
-} from "lucide-react";
-
-const pageMeta = [
-  {
-    href: "/",
-    title: "대시보드",
-    description: "농장 운영 현황을 한눈에 확인하세요.",
-  },
-  {
-    href: "/farm-status",
-    title: "농장 현황",
-    description: "전체 농장 구조와 묶음 현황을 한눈에 확인하세요.",
-  },
-  {
-    href: "/orchid-groups",
-    title: "난 묶음 관리",
-    description: "난 묶음의 위치와 상태를 등록하고 관리하세요.",
-  },
-  {
-    href: "/work-records",
-    title: "작업 관리",
-    description: "농장 작업을 등록하고 일정과 이력을 관리하세요.",
-  },
-  {
-    href: "/sales",
-    title: "판매 관리",
-    description: "판매 내역과 거래 정보를 관리하세요.",
-  },
-  {
-    href: "/print",
-    title: "출력",
-    description: "출하표, 전표, 문서를 출력하세요.",
-  },
-  {
-    href: "/analytics",
-    title: "분석",
-    description: "출하, 판매, 농장 현황 데이터를 분석하세요.",
-  },
-  {
-    href: "/inventory",
-    title: "품종/자재 관리",
-    description: "품종과 자재, 비료 정보를 등록하고 관리하세요.",
-  },
-  {
-    href: "/settings",
-    title: "설정",
-    description: "서비스 설정을 관리하세요.",
-  },
-];
+  NAVIGATION,
+  PAGE_META,
+  type NavigationChild,
+  type NavigationItem,
+} from "@/shared/config/navigation";
+import { PageHeader } from "@/widgets/page-header";
+import { PanelLeftClose, PanelLeftOpen, type LucideIcon } from "lucide-react";
 
 function getCurrentPageMeta(pathname: string) {
   return (
-    pageMeta.find((item) => {
+    PAGE_META.find((item) => {
       if (item.href === "/") {
         return pathname === "/";
       }
@@ -85,116 +31,24 @@ function getCurrentPageMeta(pathname: string) {
   );
 }
 
-const tabLabels: Record<string, Record<string, string>> = {
-  "work-records": {
-    list: "작업 목록",
-    calendar: "캘린더",
-    history: "작업 이력",
-  },
-  sales: {
-    slips: "판매 전표",
-    auction: "출하·경매 추적",
-    settlement: "경매 정산",
-    partners: "거래처 관리",
-  },
-  analytics: {
-    sales: "매출/출하",
-    variety: "품종 분석",
-    customer: "거래처 분석",
-    space: "농장 공간",
-    work: "작업/상태",
-  },
-  inventory: {
-    variety: "품종 관리",
-    inbound: "입고 관리",
-    material: "자재 관리",
-  },
-};
-
 function getBreadcrumbs(pathname: string, pageTitle: string) {
   const [section, tab] = pathname.split("/").filter(Boolean);
-  const tabLabel = section && tab ? tabLabels[section]?.[tab] : undefined;
+  const sectionHref = section ? `/${section}` : undefined;
+  const tabLabel =
+    sectionHref && tab
+      ? NAVIGATION.find(
+          (item) => item.sectionHref === sectionHref,
+        )?.children?.find((item) => item.tab === tab)?.label
+      : undefined;
   return tabLabel ? [pageTitle, tabLabel] : [pageTitle];
 }
 
-const navigation: {
-  href: string;
-  activeHref?: string;
-  label: string;
-  icon: LucideIcon;
-}[] = [
-  { href: "/", label: "대시보드", icon: Home },
-  { href: "/farm-status", label: "농장 현황", icon: Sprout },
-  { href: "/orchid-groups", label: "난 묶음 관리", icon: Flower2 },
-  {
-    href: "/work-records/list",
-    activeHref: "/work-records",
-    label: "작업 관리",
-    icon: ClipboardList,
-  },
-  {
-    href: "/sales/slips",
-    activeHref: "/sales",
-    label: "판매 관리",
-    icon: ShoppingBag,
-  },
-  {
-    href: "/analytics/sales",
-    activeHref: "/analytics",
-    label: "분석",
-    icon: BarChart3,
-  },
-  { href: "/print", label: "출력", icon: Printer },
-  {
-    href: "/inventory/variety",
-    activeHref: "/inventory",
-    label: "품종/자재 관리",
-    icon: PackageCheck,
-  },
-  { href: "/settings", label: "설정", icon: Settings },
-];
-
-const subNavigation: Record<
-  string,
-  {
-    href: string;
-    label: string;
-    tab: string;
-  }[]
-> = {
-  "/work-records": [
-    { href: "/work-records/list", label: "작업 목록", tab: "list" },
-    { href: "/work-records/calendar", label: "캘린더", tab: "calendar" },
-    { href: "/work-records/history", label: "작업 이력", tab: "history" },
-  ],
-  "/sales": [
-    { href: "/sales/slips", label: "판매 전표", tab: "slips" },
-    { href: "/sales/auction", label: "출하·경매 추적", tab: "auction" },
-    { href: "/sales/settlement", label: "경매 정산", tab: "settlement" },
-    { href: "/sales/partners", label: "거래처 관리", tab: "partners" },
-  ],
-  "/analytics": [
-    { href: "/analytics/sales", label: "매출/출하", tab: "sales" },
-    { href: "/analytics/variety", label: "품종 분석", tab: "variety" },
-    { href: "/analytics/customer", label: "거래처 분석", tab: "customer" },
-    { href: "/analytics/space", label: "농장 공간", tab: "space" },
-    { href: "/analytics/work", label: "작업/상태", tab: "work" },
-  ],
-  "/inventory": [
-    { href: "/inventory/variety", label: "품종 관리", tab: "variety" },
-    { href: "/inventory/inbound", label: "입고 관리", tab: "inbound" },
-    { href: "/inventory/material", label: "자재 관리", tab: "material" },
-  ],
-};
-
-function isNavigationActive(
-  pathname: string,
-  item: (typeof navigation)[number],
-) {
+function isNavigationActive(pathname: string, item: NavigationItem) {
   if (item.href === "/") return pathname === "/";
-  if (item.activeHref) {
+  if (item.sectionHref) {
     return (
-      pathname === item.activeHref || pathname.startsWith(`${item.activeHref}/`)
+      pathname === item.sectionHref ||
+      pathname.startsWith(`${item.sectionHref}/`)
     );
   }
   return pathname === item.href || pathname.startsWith(`${item.href}/`);
@@ -217,7 +71,7 @@ function NavItem({
 }) {
   return (
     <Link
-      href={href}
+      href={href as Route}
       title={collapsed ? label : undefined}
       onClick={(event) => {
         event.stopPropagation();
@@ -258,7 +112,7 @@ function SalesSubNavItem({
 }) {
   return (
     <Link
-      href={href}
+      href={href as Route}
       onClick={(event) => event.stopPropagation()}
       className={`block overflow-hidden rounded-md px-3 py-2 text-sm font-medium whitespace-nowrap transition ${
         active
@@ -276,7 +130,7 @@ function SubNavFlyout({
   activeTabPath,
   open,
 }: {
-  items: (typeof subNavigation)[string];
+  items: NavigationChild[];
   activeTabPath: string;
   open?: boolean;
 }) {
@@ -292,7 +146,7 @@ function SubNavFlyout({
         {items.map((item) => (
           <SalesSubNavItem
             key={item.href}
-            href={item.href}
+            href={item.href as Route}
             label={item.label}
             active={activeTabPath === item.tab}
           />
@@ -374,16 +228,15 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const currentPage = getCurrentPageMeta(pathname);
   const breadcrumbs = getBreadcrumbs(pathname, currentPage.title);
   const activeTabPath = pathname.split("/")[2] ?? "";
-  const isWorkPage = pathname.startsWith("/work-records");
-  const isSalesPage = pathname.startsWith("/sales");
   const isFarmStatusPage = pathname.startsWith("/farm-status");
   const sidebarCollapsed = !sidebarExpanded;
-  const activeNavigationItem = navigation.find((item) =>
+  const activeNavigationItem = NAVIGATION.find((item) =>
     isNavigationActive(pathname, item),
   );
+  const activeSubNavigation = activeNavigationItem?.children;
   const compactHeaderSubNavigation =
-    compactDesktopHeader && activeNavigationItem?.activeHref
-      ? subNavigation[activeNavigationItem.activeHref]?.map((item) => ({
+    compactDesktopHeader && activeSubNavigation
+      ? activeSubNavigation.map((item) => ({
           href: item.href,
           label: item.label,
           active: activeTabPath === item.tab,
@@ -393,7 +246,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   return (
     <div className="app-shell-root relative flex bg-[#f7f8f5]">
       <aside
-        className={`app-shell-sidebar sticky top-0 z-1500 hidden shrink-0 flex-col bg-[#003b1f] px-2 py-4 transition-[width,box-shadow] duration-200 lg:flex lg:max-2xl:absolute lg:max-2xl:left-0 ${
+        className={`app-shell-sidebar sticky top-0 z-750 hidden shrink-0 flex-col bg-[#003b1f] px-2 py-4 transition-[width,box-shadow] duration-200 lg:flex lg:max-2xl:absolute lg:max-2xl:left-0 ${
           sidebarCollapsed ? "w-12 cursor-pointer" : "w-44"
         } ${sidebarCollapsed ? "" : "lg:max-2xl:shadow-xl"}`}
         tabIndex={-1}
@@ -490,16 +343,14 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             compactDesktopHeader ? "overflow-visible" : "overflow-y-auto"
           }`}
         >
-          {navigation.map((item) => {
+          {NAVIGATION.map((item) => {
             const active = isNavigationActive(pathname, item);
-            const subNavItems = item.activeHref
-              ? subNavigation[item.activeHref]
-              : undefined;
+            const subNavItems = item.children;
             const flyoutOpen =
               sidebarCollapsed &&
               active &&
-              item.activeHref !== undefined &&
-              openSubNavFlyoutHref === item.activeHref;
+              item.sectionHref !== undefined &&
+              openSubNavFlyoutHref === item.sectionHref;
             const activeFlyoutOpen = !sidebarCollapsed && active;
             const shouldShowInlineSubNav =
               !compactDesktopHeader && !sidebarCollapsed && active;
@@ -507,7 +358,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             return (
               <div className="group/nav-item relative" key={item.href}>
                 <NavItem
-                  href={item.href}
+                  href={item.href as Route}
                   label={item.label}
                   icon={item.icon}
                   active={active}
@@ -517,11 +368,11 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                       compactDesktopHeader &&
                       sidebarCollapsed &&
                       active &&
-                      item.activeHref &&
+                      item.sectionHref &&
                       subNavItems
                     ) {
                       event.preventDefault();
-                      setOpenSubNavFlyoutHref(item.activeHref);
+                      setOpenSubNavFlyoutHref(item.sectionHref);
                     }
                   }}
                 />
@@ -541,7 +392,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                     {subNavItems.map((subItem) => (
                       <SalesSubNavItem
                         key={subItem.href}
-                        href={subItem.href}
+                        href={subItem.href as Route}
                         label={subItem.label}
                         active={activeTabPath === subItem.tab}
                       />
@@ -561,14 +412,14 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           <p className="text-xl font-semibold">난 농장 관리</p>
 
           <nav className="mt-3 flex gap-2 overflow-x-auto">
-            {navigation.map((item) => {
+            {NAVIGATION.map((item) => {
               const Icon = item.icon;
               const active = isNavigationActive(pathname, item);
 
               return (
                 <Link
                   key={item.href}
-                  href={item.href}
+                  href={item.href as Route}
                   className={`flex shrink-0 items-center gap-2 rounded-md px-4 py-2 text-base font-medium ${
                     active
                       ? "bg-[#e7f0e6] text-[#214f31]"
@@ -582,92 +433,19 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             })}
           </nav>
 
-          {isWorkPage ? (
+          {activeSubNavigation ? (
             <div className="mt-3 flex gap-2 overflow-x-auto">
-              {[
-                ["list", "작업 목록"],
-                ["calendar", "캘린더"],
-                ["history", "작업 이력"],
-              ].map(([tab, label]) => (
+              {activeSubNavigation.map((item) => (
                 <Link
-                  key={tab}
-                  href={`/work-records/${tab}`}
+                  key={item.href}
+                  href={item.href as Route}
                   className={`shrink-0 rounded-md px-3 py-2 text-sm font-medium ${
-                    activeTabPath === tab
+                    activeTabPath === item.tab
                       ? "bg-[#dcefe1] text-[#1c5f33]"
                       : "bg-[#f0f3ef] text-[#435047]"
                   }`}
                 >
-                  {label}
-                </Link>
-              ))}
-            </div>
-          ) : null}
-
-          {isSalesPage ? (
-            <div className="mt-3 flex gap-2 overflow-x-auto">
-              {[
-                ["slips", "판매 전표"],
-                ["auction", "출하·경매 추적"],
-                ["settlement", "경매 정산"],
-                ["partners", "거래처 관리"],
-              ].map(([tab, label]) => (
-                <Link
-                  key={tab}
-                  href={`/sales/${tab}`}
-                  className={`shrink-0 rounded-md px-3 py-2 text-sm font-medium ${
-                    activeTabPath === tab
-                      ? "bg-[#dcefe1] text-[#1c5f33]"
-                      : "bg-[#f0f3ef] text-[#435047]"
-                  }`}
-                >
-                  {label}
-                </Link>
-              ))}
-            </div>
-          ) : null}
-
-          {pathname.startsWith("/analytics") ? (
-            <div className="mt-3 flex gap-2 overflow-x-auto">
-              {[
-                ["sales", "매출/출하"],
-                ["variety", "품종 분석"],
-                ["customer", "거래처 분석"],
-                ["space", "농장 공간"],
-                ["work", "작업/상태"],
-              ].map(([tab, label]) => (
-                <Link
-                  key={tab}
-                  href={`/analytics/${tab}`}
-                  className={`shrink-0 rounded-md px-3 py-2 text-sm font-medium ${
-                    activeTabPath === tab
-                      ? "bg-[#dcefe1] text-[#1c5f33]"
-                      : "bg-[#f0f3ef] text-[#435047]"
-                  }`}
-                >
-                  {label}
-                </Link>
-              ))}
-            </div>
-          ) : null}
-
-          {pathname.startsWith("/inventory") ? (
-            <div className="mt-3 flex gap-2 overflow-x-auto">
-              {[
-                ["variety", "품종 관리"],
-                ["inbound", "입고 관리"],
-                ["material", "자재 관리"],
-              ].map(([tab, label]) => (
-                <Link
-                  key={tab}
-                  href={`/inventory/${tab}`}
-                  className={`shrink-0 rounded-md px-3 py-2 text-sm font-medium ${
-                    activeTabPath === tab
-                      ? "bg-[#dcefe1] text-[#1c5f33]"
-                      : "bg-[#f0f3ef] text-[#435047]"
-                  }`}
-                >
-                  {label}
+                  {item.label}
                 </Link>
               ))}
             </div>

@@ -1,16 +1,15 @@
 ﻿import type {
   BedZone,
-  House,
   OrchidGroup,
-  WorkOperation,
-  WorkTargetPreview,
+  WorkOperationStatus,
   WorkRecordTargetType,
-  WorkType,
 } from "@/entities/farm/types";
 
-export type WorkRecordManagerProps = {
-  houses: House[];
-  workTypes: WorkType[];
+export type WorkOperationFilterState = {
+  from: string;
+  keyword: string;
+  status: WorkOperationStatus | "";
+  to: string;
 };
 
 export type WorkTargetSelectionOptions = {
@@ -34,7 +33,6 @@ export type CompletedWorkOperationPayload = {
 export type WorkOperationFormState = {
   workTypeId: string;
   sourceScopeType: WorkOperationScopeType;
-  houseId: string;
   scopeKey: string;
   collectionId: string;
   title: string;
@@ -47,9 +45,8 @@ export type WorkOperationFormState = {
   memo: string;
 };
 
-export type WorkOperationScopeType =
+type WorkOperationScopeType =
   | "FARM"
-  | "HOUSE"
   | "DERIVED_GROUP"
   | "USER_COLLECTION"
   | "MANUAL_SELECTION"
@@ -76,7 +73,7 @@ export type WorkDerivedGroupOption = {
   totalQuantity: number;
 };
 
-export type WorkCollectionMemberOption = {
+type WorkCollectionMemberOption = {
   orchidGroupId: number;
 };
 
@@ -89,18 +86,26 @@ export type WorkCollectionOption = {
   members: WorkCollectionMemberOption[];
 };
 
-export type WorkOperationScopeOptions = {
-  derivedGroups: WorkDerivedGroupOption[];
-  collections: WorkCollectionOption[];
-  orchidGroups: OrchidGroup[];
-};
-
 export type WorkTargetPreviewPayload = {
   scopeType: WorkOperationScopeType;
   scopeId?: number;
   scopeKey?: string;
   orchidGroupIds?: number[];
 };
+
+export type WorkTargetSelectionScope =
+  | {
+      type: "DERIVED_GROUP";
+      scopeKey: string;
+      label: string;
+      memberIds: number[];
+    }
+  | {
+      type: "USER_COLLECTION";
+      collectionId: number;
+      label: string;
+      memberIds: number[];
+    };
 
 export type CreateWorkOperationPayload = {
   workTypeId: number;
@@ -115,9 +120,4 @@ export type CreateWorkOperationPayload = {
   worker: string | null;
   memo: string | null;
   excludedOrchidGroupIds: number[];
-};
-
-export type WorkOperationUiState = {
-  operation: WorkOperation | null;
-  preview: WorkTargetPreview | null;
 };

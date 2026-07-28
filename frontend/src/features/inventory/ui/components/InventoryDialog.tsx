@@ -8,9 +8,9 @@ import type {
   Variety,
   VarietyPayload,
 } from "../../model/types";
-import { Field, inputClass } from "./InventoryPrimitives";
-import { PotSizeInput } from "./PotSizeInput";
-import { VarietyCreatableFields } from "./VarietyCreatableFields";
+import { Field, inputClass } from "../common/InventoryPrimitives";
+import { PotSizeInput } from "../common/PotSizeInput";
+import { VarietyCreatableFields } from "../common/VarietyCreatableFields";
 
 type InventoryDialogProps =
   | {

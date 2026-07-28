@@ -43,6 +43,25 @@ class VarietyQueryIntegrationTests extends AbstractBackendIntegrationTest {
 				.andExpect(jsonPath("$.data.content[1].totalQuantity").value(7));
 	}
 
+	@Test
+	@Transactional
+	void returnsGeneraAndActiveVarietyNames() throws Exception {
+		varietyRepository.save(new Variety(
+				"GENERA-001", "카틀레야", "활성품종A", null, "2치", true, true, null, null));
+		varietyRepository.save(new Variety(
+				"GENERA-002", "덴드로비움", "활성품종B", null, "3치", true, true, null, null));
+		varietyRepository.save(new Variety(
+				"GENERA-003", "카틀레야", "비활성품종", null, "3치", true, false, null, null));
+
+		mockMvc.perform(get("/api/varieties/genera"))
+				.andExpect(status().isOk())
+				.andExpect(jsonPath("$.data.genera").isArray())
+				.andExpect(jsonPath("$.data.varieties").isArray())
+				.andExpect(jsonPath("$.data.varieties[?(@.name == '활성품종A')]").exists())
+				.andExpect(jsonPath("$.data.varieties[?(@.name == '활성품종B')]").exists())
+				.andExpect(jsonPath("$.data.varieties[?(@.name == '비활성품종')]").doesNotExist());
+	}
+
 	private OrchidGroup createGroup(BedZone zone, Variety variety, int quantity, int sortOrder) {
 		var group = new OrchidGroup(
 				zone,

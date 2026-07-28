@@ -1,4 +1,4 @@
-export { FarmStatusPage } from "./ui/FarmStatusPage";
+export { FarmStatusPage } from "./FarmStatusRoutePage";
 export { FarmStatusMap } from "./ui/FarmStatusMap";
 
 export {

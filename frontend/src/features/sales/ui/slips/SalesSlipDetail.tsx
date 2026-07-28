@@ -6,6 +6,7 @@ import { formatShortDate } from "@/shared/lib/dateFormat";
 import { DataTable } from "@/shared/ui/DataTable";
 import { confirmSalesSlipPayment } from "../../api/salesApi";
 import { ManualPaymentPanel } from "../auction/ManualPaymentPanel";
+import { SalesSlipPrintDialog } from "./SalesSlipPrintDialog";
 import {
   DetailCard,
   DetailActionButton,
@@ -102,6 +103,7 @@ export function SalesSlipDetail({
   onPaymentConfirmed: (salesSlip: SalesSlip) => void;
 }) {
   const [partnerInfoOpen, setPartnerInfoOpen] = useState(false);
+  const [printPreviewOpen, setPrintPreviewOpen] = useState(false);
   const [slipInfoOpen, setSlipInfoOpen] = useState(false);
 
   if (loading) {
@@ -125,147 +127,163 @@ export function SalesSlipDetail({
   const canCancel = salesSlip.salesStatus !== "취소";
 
   return (
-    <DetailCard>
-      <DetailHeader
-        eyebrow={`LOT #${salesSlip.slipNumber}`}
-        title="전표 상세"
-        summary={
-          <DetailSummary
-            align="left"
-            columns="lg:grid-cols-4"
-            items={[
-              {
-                label: "판매 유형",
-                value:
-                  salesSlip.salesType === "AUCTION" ? "경매 판매" : "일반 판매",
-              },
-              {
-                label: "판매일자",
-                value: formatShortDate(salesSlip.saleDate),
-              },
-              { label: "입금 상태", value: salesSlip.paymentStatus },
-              { label: "판매 상태", value: salesSlip.salesStatus },
-            ]}
-          />
-        }
-        actions={
-          <>
-            {canEdit ? (
+    <>
+      <DetailCard>
+        <DetailHeader
+          eyebrow={`LOT #${salesSlip.slipNumber}`}
+          title="전표 상세"
+          summary={
+            <DetailSummary
+              align="left"
+              columns="lg:grid-cols-4"
+              items={[
+                {
+                  label: "판매 유형",
+                  value:
+                    salesSlip.salesType === "AUCTION"
+                      ? "경매 판매"
+                      : "일반 판매",
+                },
+                {
+                  label: "판매일자",
+                  value: formatShortDate(salesSlip.saleDate),
+                },
+                { label: "입금 상태", value: salesSlip.paymentStatus },
+                { label: "판매 상태", value: salesSlip.salesStatus },
+              ]}
+            />
+          }
+          actions={
+            <>
+              {canEdit ? (
+                <DetailActionButton
+                  icon={Pencil}
+                  onClick={() => onEditSalesSlip(salesSlip.id)}
+                >
+                  전표 수정
+                </DetailActionButton>
+              ) : null}
+              {canComplete ? (
+                <DetailActionButton
+                  disabled={updatingSalesStatus}
+                  icon={Truck}
+                  tone="primary"
+                  onClick={() => void onCompleteSalesSlip(salesSlip.id)}
+                >
+                  {salesSlip.salesType === "AUCTION"
+                    ? "출하 완료"
+                    : "출고 완료"}
+                </DetailActionButton>
+              ) : null}
+              {canCancel ? (
+                <DetailActionButton
+                  disabled={updatingSalesStatus}
+                  icon={Ban}
+                  tone="danger"
+                  onClick={() => {
+                    if (
+                      window.confirm(
+                        "이 전표를 취소하시겠습니까? 취소 후 되돌릴 수 없습니다.",
+                      )
+                    ) {
+                      void onCancelSalesSlip(salesSlip.id);
+                    }
+                  }}
+                >
+                  전표 취소
+                </DetailActionButton>
+              ) : null}
               <DetailActionButton
-                icon={Pencil}
-                onClick={() => onEditSalesSlip(salesSlip.id)}
+                icon={Printer}
+                onClick={() => setPrintPreviewOpen(true)}
               >
-                전표 수정
+                인쇄(미리보기)
               </DetailActionButton>
-            ) : null}
-            {canComplete ? (
-              <DetailActionButton
-                disabled={updatingSalesStatus}
-                icon={Truck}
-                tone="primary"
-                onClick={() => void onCompleteSalesSlip(salesSlip.id)}
-              >
-                {salesSlip.salesType === "AUCTION" ? "출하 완료" : "출고 완료"}
-              </DetailActionButton>
-            ) : null}
-            {canCancel ? (
-              <DetailActionButton
-                disabled={updatingSalesStatus}
-                icon={Ban}
-                tone="danger"
-                onClick={() => {
-                  if (
-                    window.confirm(
-                      "이 전표를 취소하시겠습니까? 취소 후 되돌릴 수 없습니다.",
-                    )
-                  ) {
-                    void onCancelSalesSlip(salesSlip.id);
-                  }
-                }}
-              >
-                전표 취소
-              </DetailActionButton>
-            ) : null}
-            <DetailActionButton
-              href={`/print/sales-slips/${salesSlip.id}`}
-              icon={Printer}
+              <DetailActionButton icon={Copy}>전표 복사</DetailActionButton>
+            </>
+          }
+        />
+
+        <div className="p-4">
+          <div className="grid gap-3 lg:grid-cols-2">
+            <InfoBox
+              open={partnerInfoOpen}
+              preview={salesSlip.partner.name}
+              title="거래처"
+              onToggle={() => setPartnerInfoOpen((current) => !current)}
             >
-              인쇄(미리보기)
-            </DetailActionButton>
-            <DetailActionButton icon={Copy}>전표 복사</DetailActionButton>
-          </>
-        }
-      />
+              <Description
+                label="대표자명"
+                value={salesSlip.partner.ownerName}
+              />
+              <Description label="연락처" value={salesSlip.partner.phone} />
+              <Description label="주소" value={salesSlip.partner.address} />
+              <Description label="메모" value={salesSlip.partner.memo} />
+            </InfoBox>
 
-      <div className="p-4">
-        <div className="grid gap-3 lg:grid-cols-2">
-          <InfoBox
-            open={partnerInfoOpen}
-            preview={salesSlip.partner.name}
-            title="거래처"
-            onToggle={() => setPartnerInfoOpen((current) => !current)}
-          >
-            <Description label="대표자명" value={salesSlip.partner.ownerName} />
-            <Description label="연락처" value={salesSlip.partner.phone} />
-            <Description label="주소" value={salesSlip.partner.address} />
-            <Description label="메모" value={salesSlip.partner.memo} />
-          </InfoBox>
-
-          <InfoBox
-            open={slipInfoOpen}
-            title="전표 정보"
-            onToggle={() => setSlipInfoOpen((current) => !current)}
-          >
-            <Description label="경매장" value={salesSlip.auctionMarket} />
-            <Description label="결제 방식" value={salesSlip.paymentMethod} />
-            <Description label="담당자" value="관리자" />
-            <Description label="메모" value={salesSlip.memo} />
-          </InfoBox>
-        </div>
-
-        <div className="mt-4">
-          <DataTable
-            columns={salesSlipItemColumns}
-            data={salesSlip.items}
-            emptyMessage="판매 품목이 없습니다."
-            getRowId={(row) => String(row.id)}
-            settingsKey="sales.slipDetail.items"
-            title="판매 품목"
-            totalLabel={`총 ${salesSlip.items.length.toLocaleString()}건`}
-          />
-        </div>
-
-        <div className="mt-3 grid gap-3 rounded-md border border-[#dfe5dc] bg-white p-4 text-sm md:grid-cols-3 md:items-center">
-          <Amount label="공급가액" value={supplyAmount} />
-          <Amount label="부가세" value={vatAmount} />
-          <div className="text-right">
-            <p className="font-semibold text-[#344138]">총 금액</p>
-            <p className="mt-1 text-3xl font-bold text-[#159447]">
-              {salesSlip.totalAmount.toLocaleString()}
-              <span className="ml-1 text-sm text-[#17251b]">원</span>
-            </p>
+            <InfoBox
+              open={slipInfoOpen}
+              title="전표 정보"
+              onToggle={() => setSlipInfoOpen((current) => !current)}
+            >
+              <Description label="경매장" value={salesSlip.auctionMarket} />
+              <Description label="결제 방식" value={salesSlip.paymentMethod} />
+              <Description label="담당자" value="관리자" />
+              <Description label="메모" value={salesSlip.memo} />
+            </InfoBox>
           </div>
-        </div>
 
-        {salesSlip.salesType === "DIRECT" &&
-        salesSlip.salesStatus !== "취소" ? (
-          <div className="mt-3 rounded-md border border-[#dfe5dc]">
-            <ManualPaymentPanel
-              key={salesSlip.id}
-              targetType="SALES_SLIP"
-              targetId={salesSlip.id}
-              remainingAmount={salesSlip.remainingAmount}
-              expectedPaymentDate={salesSlip.expectedPaymentDate}
-              onConfirm={async (payload) => {
-                onPaymentConfirmed(
-                  await confirmSalesSlipPayment(salesSlip.id, payload),
-                );
-              }}
+          <div className="mt-4">
+            <DataTable
+              columns={salesSlipItemColumns}
+              data={salesSlip.items}
+              emptyMessage="판매 품목이 없습니다."
+              getRowId={(row) => String(row.id)}
+              settingsKey="sales.slipDetail.items"
+              title="판매 품목"
+              totalLabel={`총 ${salesSlip.items.length.toLocaleString()}건`}
             />
           </div>
-        ) : null}
-      </div>
-    </DetailCard>
+
+          <div className="mt-3 grid gap-3 rounded-md border border-[#dfe5dc] bg-white p-4 text-sm md:grid-cols-3 md:items-center">
+            <Amount label="공급가액" value={supplyAmount} />
+            <Amount label="부가세" value={vatAmount} />
+            <div className="text-right">
+              <p className="font-semibold text-[#344138]">총 금액</p>
+              <p className="mt-1 text-3xl font-bold text-[#159447]">
+                {salesSlip.totalAmount.toLocaleString()}
+                <span className="ml-1 text-sm text-[#17251b]">원</span>
+              </p>
+            </div>
+          </div>
+
+          {salesSlip.salesType === "DIRECT" &&
+          salesSlip.salesStatus !== "취소" ? (
+            <div className="mt-3 rounded-md border border-[#dfe5dc]">
+              <ManualPaymentPanel
+                key={salesSlip.id}
+                targetType="SALES_SLIP"
+                targetId={salesSlip.id}
+                remainingAmount={salesSlip.remainingAmount}
+                expectedPaymentDate={salesSlip.expectedPaymentDate}
+                onConfirm={async (payload) => {
+                  onPaymentConfirmed(
+                    await confirmSalesSlipPayment(salesSlip.id, payload),
+                  );
+                }}
+              />
+            </div>
+          ) : null}
+        </div>
+      </DetailCard>
+
+      {printPreviewOpen ? (
+        <SalesSlipPrintDialog
+          salesSlip={salesSlip}
+          onClose={() => setPrintPreviewOpen(false)}
+        />
+      ) : null}
+    </>
   );
 }
 

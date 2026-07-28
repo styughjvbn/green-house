@@ -25,29 +25,37 @@ export function PaginationControls({
   onPageSizeChange,
 }: PaginationControlsProps) {
   const pageRangeDisplayed = useResponsivePageRange();
+  const normalizedPageCount = Math.max(0, Math.floor(pageCount));
+  const normalizedPageIndex = Math.max(
+    0,
+    Math.min(pageIndex, normalizedPageCount - 1),
+  );
 
   return (
     <div className="flex w-full flex-wrap items-center justify-between gap-3">
-      <ReactPaginate
-        breakLabel={"..."}
-        containerClassName="flex items-center gap-1"
-        disabledClassName="pointer-events-none opacity-40"
-        forcePage={Math.max(0, Math.min(pageIndex, Math.max(pageCount - 1, 0)))}
-        nextClassName="h-8"
-        nextLabel={nextLabel}
-        nextLinkClassName="inline-flex h-8 min-w-8 items-center justify-center rounded border border-[#d7ddd8] px-2 text-xs font-semibold text-[#344138]"
-        pageClassName="h-8"
-        pageCount={pageCount}
-        pageLinkClassName="inline-flex h-8 min-w-8 items-center justify-center rounded border border-[#d7ddd8] px-2 text-xs text-[#344138]"
-        marginPagesDisplayed={1}
-        pageRangeDisplayed={pageRangeDisplayed}
-        previousClassName="h-8"
-        previousLabel={previousLabel}
-        previousLinkClassName="inline-flex h-8 min-w-8 items-center justify-center rounded border border-[#d7ddd8] px-2 text-xs font-semibold text-[#344138]"
-        renderOnZeroPageCount={null}
-        activeClassName="[&>a]:border-[#159447] [&>a]:bg-[#159447] [&>a]:font-bold [&>a]:text-white"
-        onPageChange={({ selected }) => onPageChange(selected)}
-      />
+      {normalizedPageCount > 0 ? (
+        <ReactPaginate
+          breakLabel={"..."}
+          containerClassName="flex items-center gap-1"
+          disabledClassName="pointer-events-none opacity-40"
+          forcePage={normalizedPageIndex}
+          nextClassName="h-8"
+          nextLabel={nextLabel}
+          nextLinkClassName="inline-flex h-8 min-w-8 items-center justify-center rounded border border-[#d7ddd8] px-2 text-xs font-semibold text-[#344138]"
+          pageClassName="h-8"
+          pageCount={normalizedPageCount}
+          pageLinkClassName="inline-flex h-8 min-w-8 items-center justify-center rounded border border-[#d7ddd8] px-2 text-xs text-[#344138]"
+          marginPagesDisplayed={1}
+          pageRangeDisplayed={pageRangeDisplayed}
+          previousClassName="h-8"
+          previousLabel={previousLabel}
+          previousLinkClassName="inline-flex h-8 min-w-8 items-center justify-center rounded border border-[#d7ddd8] px-2 text-xs font-semibold text-[#344138]"
+          activeClassName="[&>a]:border-[#159447] [&>a]:bg-[#159447] [&>a]:font-bold [&>a]:text-white"
+          onPageChange={({ selected }) => onPageChange(selected)}
+        />
+      ) : (
+        <span />
+      )}
 
       {pageSize && pageSizeOptions && onPageSizeChange ? (
         <label className="inline-flex items-center gap-2 rounded-md border border-[#dfe5dc] px-3 py-2 text-xs font-semibold text-[#344138]">

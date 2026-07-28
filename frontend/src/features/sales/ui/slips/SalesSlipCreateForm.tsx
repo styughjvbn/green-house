@@ -1,4 +1,4 @@
-import type { FormEvent } from "react";
+import type { SubmitEvent } from "react";
 import { X } from "lucide-react";
 import type {
   BusinessPartner,
@@ -52,7 +52,7 @@ export function SalesSlipCreateForm({
     value: SalesSlipForm[K],
   ) => void;
   onRemoveItem: (index: number) => void;
-  onSubmit: (event: FormEvent<HTMLFormElement>) => void;
+  onSubmit: (event: SubmitEvent<HTMLFormElement>) => void;
   onSalesTypeChange: (salesType: SalesSlipForm["salesType"]) => void;
   onUpdateItem: (
     index: number,

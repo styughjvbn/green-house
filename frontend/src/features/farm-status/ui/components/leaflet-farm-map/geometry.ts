@@ -304,6 +304,7 @@ export function getZoneGeometries(
   zones: BedZone[],
 ): Array<{ zone: BedZone; zoneRect: VisualZoneGeometry }> {
   const gap = 2;
+  const paddingY = 2;
   const zoneWidth = (bedRect.width - gap) / 2;
   const sortedZones = [...zones].sort((a, b) => {
     const sideOrder = (side: string) =>
@@ -316,9 +317,9 @@ export function getZoneGeometries(
     zoneRect: {
       side: zone.side,
       x: bedRect.x + index * (zoneWidth + gap),
-      y: bedRect.y + 8,
+      y: bedRect.y + paddingY,
       width: zoneWidth,
-      height: bedRect.height - 16,
+      height: bedRect.height - paddingY * 2,
     },
   }));
 }
@@ -340,8 +341,10 @@ export function getOrchidBlockGeometries(
     (group) => group.startPosition == null || group.endPosition == null,
   );
   const gap = 3;
-  const top = zoneRect.y + 34;
-  const availableHeight = zoneRect.height - 44;
+  const topPadding = 2;
+  const bottomPadding = 2;
+  const top = zoneRect.y + topPadding;
+  const availableHeight = zoneRect.height - topPadding - bottomPadding;
   const maxCell = Math.max(1, Math.floor(bed.positionUnitCount ?? 28));
   const cellHeight = availableHeight / maxCell;
   const positionedBlocks = positionedGroups.map((group) => {

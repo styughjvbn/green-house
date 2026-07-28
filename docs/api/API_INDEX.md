@@ -7,8 +7,8 @@
 
 - 기준 명세: `docs/api/openapi.yaml`
 - OpenAPI 버전: `3.1.0`
-- 현재 구현 API: `120` operations / `99` path entries
-- schema 수: `183`
+- 현재 구현 API: `125` operations / `104` path entries
+- schema 수: `192`
 - Base URL: `/api`
 - 공통 응답: `ApiResponse*` 래퍼 사용
 
@@ -120,7 +120,7 @@
 | `PATCH` | `/api/materials/{materialId}/deactivate` | `deactivate_1` | `-` | `200:ApiResponseMaterialResponse` |
 | `GET` | `/api/varieties` | `getVarieties` | `-` | `200:ApiResponsePageResponseVarietyResponse` |
 | `POST` | `/api/varieties` | `create_1` | `VarietyCreateRequest` | `201:ApiResponseVarietyResponse` |
-| `GET` | `/api/varieties/genera` | `getGenera` | `-` | `200:ApiResponseListString` |
+| `GET` | `/api/varieties/genera` | `getGenera` | `-` | `200:ApiResponseVarietyGeneraResponse` |
 | `GET` | `/api/varieties/{varietyId}` | `getVariety` | `-` | `200:ApiResponseVarietyResponse` |
 | `PATCH` | `/api/varieties/{varietyId}` | `update_2` | `VarietyUpdateRequest` | `200:ApiResponseVarietyResponse` |
 | `DELETE` | `/api/varieties/{varietyId}` | `delete_1` | `-` | `200:ApiResponseVoid` |
@@ -133,13 +133,17 @@
 - package: `com.greenhouse.backend.work`
 - controller tag: `work-operation-controller`
 - 역할: 범위별 기록형 작업의 미리보기·스냅샷·즉시 완료·기간 조회, 난 묶음 통합 이력, 구조 변경 보정 관계
-- operations: 17
+- operations: 21
 
 | Method | Path | Operation |
 |---|---|---|
 | `POST` | `/api/work-operations/target-preview` | 대상 미리보기 |
 | `POST` | `/api/work-operations` | 작업 생성과 대상 스냅샷 확정 |
 | `POST` | `/api/work-operations/record` | 기록형 작업을 생성하고 즉시 완료 |
+| `POST` | `/api/work-operations/structure-change-records` | 분갈이·분주·합식 전체 결과 작업 기록 |
+| `POST` | `/api/work-operations/structure-change-records/batch` | 혼합 품종의 품종별 구조 변경 기록 일괄 저장 |
+| `POST` | `/api/work-operations/discard-records` | 전체 대상 폐기 결과 작업 기록 |
+| `POST` | `/api/work-operations/inbound-potting-records` | 전체 입고 대상 포트 결과 작업 기록 |
 | `GET` | `/api/work-operations` | 기간·상태·범위별 작업 목록 |
 | `GET` | `/api/work-operations/{workOperationId}` | 작업 상세 |
 | `POST` | `/api/work-operations/{workOperationId}/complete` | 모든 대상 처리 후 전체 작업 완료 |
@@ -195,14 +199,16 @@
 - package 후보: `com.greenhouse.backend.partner`
 - controller tags: `business-partner-controller`, `partner-settlement-settings-controller`
 - 역할: 거래처 조회·등록과 거래처 정산 설정 API
-- operations: 4
+- operations: 6
 
 | Method | Path | Operation | Request | Response |
 |---|---|---|---|---|
 | `GET` | `/api/business-partners` | `getPartners` | `-` | `200:ApiResponseListBusinessPartnerResponse` |
-| `POST` | `/api/business-partners` | `create_2` | `BusinessPartnerCreateRequest` | `201:ApiResponseBusinessPartnerResponse` |
+| `POST` | `/api/business-partners` | `create_7` | `BusinessPartnerCreateRequest` | `201:ApiResponseBusinessPartnerResponse` |
+| `GET` | `/api/business-partners/page` | `getPartnerPage` | `-` | `200:ApiResponsePageResponseBusinessPartnerResponse` |
+| `PUT` | `/api/business-partners/{partnerId}` | `update` | `BusinessPartnerUpdateRequest` | `200:ApiResponseBusinessPartnerResponse` |
 | `GET` | `/api/business-partners/{partnerId}/settlement-settings` | `get` | `-` | `200:ApiResponsePartnerSettlementSettingsResponse` |
-| `PUT` | `/api/business-partners/{partnerId}/settlement-settings` | `update` | `PartnerSettlementSettingsRequest` | `200:ApiResponsePartnerSettlementSettingsResponse` |
+| `PUT` | `/api/business-partners/{partnerId}/settlement-settings` | `update_1` | `PartnerSettlementSettingsRequest` | `200:ApiResponsePartnerSettlementSettingsResponse` |
 
 ### 판매 전표
 

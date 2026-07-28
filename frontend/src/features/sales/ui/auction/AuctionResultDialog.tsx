@@ -1,10 +1,7 @@
 import { useState, type FormEvent } from "react";
 import { Plus, Trash2, X } from "lucide-react";
-import type {
-  AuctionAttemptStatus,
-  AuctionInspectionStatus,
-  AuctionLot,
-} from "@/entities/farm/types";
+import type { AuctionAttemptStatus, AuctionLot } from "@/entities/farm/types";
+import type { AuctionResultFormPayload } from "../../api/types";
 
 type ResultLineForm = {
   key: string;
@@ -12,20 +9,6 @@ type ResultLineForm = {
   quantity: string;
   unitPrice: string;
   note: string;
-};
-
-type AuctionResultPayload = {
-  auctionDate: string;
-  attemptStatus: AuctionAttemptStatus;
-  failedReason: string | null;
-  memo: string | null;
-  resultLines?: Array<{
-    auctionGrade: string | null;
-    quantity: number;
-    unitPrice: number;
-    note: string | null;
-    inspectionStatus: AuctionInspectionStatus | null;
-  }>;
 };
 
 export function AuctionResultDialog({
@@ -37,7 +20,7 @@ export function AuctionResultDialog({
   lot: AuctionLot;
   loading: boolean;
   onClose: () => void;
-  onSubmit: (payload: AuctionResultPayload) => Promise<void>;
+  onSubmit: (payload: AuctionResultFormPayload) => Promise<void>;
 }) {
   const [resultDate, setResultDate] = useState(
     lot.latestAuctionDate ?? lot.shipmentDate,
