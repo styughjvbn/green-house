@@ -13,7 +13,6 @@ import {
   Flower2,
   Home,
   PackageCheck,
-  Printer,
   Settings,
   ShoppingBag,
   Sprout,
@@ -67,11 +66,6 @@ export const PAGE_META = [
     description: "판매 내역과 거래 정보를 관리하세요.",
   },
   {
-    href: COMMON_ROUTES.print,
-    title: "출력",
-    description: "출하표, 전표, 문서를 출력하세요.",
-  },
-  {
     href: ANALYTICS_ROUTE.root,
     title: "분석",
     description: "출하, 판매, 농장 현황 데이터를 분석하세요.",
@@ -111,7 +105,6 @@ export const NAVIGATION = [
     icon: BarChart3,
     children: ANALYTICS_NAV_ITEMS,
   },
-  { href: COMMON_ROUTES.print, label: "출력", icon: Printer },
   {
     href: INVENTORY_ROUTE.tab("variety"),
     sectionHref: INVENTORY_ROUTE.root,

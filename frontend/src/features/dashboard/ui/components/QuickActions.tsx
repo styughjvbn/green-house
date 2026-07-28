@@ -5,7 +5,6 @@ import {
   FileText,
   Map,
   PlusCircle,
-  Printer,
   Search,
   type LucideIcon,
 } from "lucide-react";
@@ -17,7 +16,6 @@ export function QuickActions() {
     ["난 묶음 추가", "/orchid-groups", PlusCircle, "green"],
     ["작업 관리", "/work-records", ClipboardEdit, "green"],
     ["판매 전표 등록", "/sales/slips?createSlip=1", FileText, "green"],
-    ["출력하기", "/print", Printer, "blue"],
     ["검색하기", "/farm-status", Search, "blue"],
   ];
 

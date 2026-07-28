@@ -16,5 +16,10 @@ export default async function Page({
 
   const resolvedSearchParams = await searchParams;
 
-  return <InventoryRoutePage activeTab={tab} resolvedSearchParams={resolvedSearchParams} />;
+  return (
+    <InventoryRoutePage
+      activeTab={tab}
+      resolvedSearchParams={resolvedSearchParams}
+    />
+  );
 }

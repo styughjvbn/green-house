@@ -162,19 +162,36 @@ button:disabled {
     background: #ffffff;
   }
 
-  aside,
-  header,
-  .print-hidden {
-    display: none !important;
+  body * {
+    visibility: hidden !important;
   }
 
-  .app-content {
+  .sales-slip-print-sheet,
+  .sales-slip-print-sheet * {
+    visibility: visible !important;
+  }
+
+  .sales-slip-print-dialog,
+  .sales-slip-print-dialog > section,
+  .sales-slip-print-preview {
+    max-height: none !important;
+    overflow: visible !important;
+  }
+
+  .sales-slip-print-dialog {
+    display: block !important;
+    position: static !important;
     padding: 0 !important;
   }
 
-  .print-root {
-    max-width: none !important;
-    width: 148mm;
+  .sales-slip-print-preview {
+    padding: 0 !important;
+  }
+
+  .sales-slip-print-sheet {
+    position: absolute;
+    top: 0;
+    left: 0;
   }
 
   .a5-sheet {
