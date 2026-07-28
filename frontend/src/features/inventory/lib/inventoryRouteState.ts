@@ -36,11 +36,11 @@ const INBOUND_STATUSES: InboundStatus[] = [
 ];
 
 export function createServerSearchParamReader(
-  searchParams: ServerSearchParams,
+  resolvedSearchParams: Record<string, string | string[] | undefined>,
 ): SearchParamReader {
   return {
     get(name) {
-      const value = searchParams[name];
+      const value = resolvedSearchParams[name];
       return Array.isArray(value) ? (value[0] ?? null) : (value ?? null);
     },
   };

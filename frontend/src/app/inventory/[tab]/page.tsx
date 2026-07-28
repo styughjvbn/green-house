@@ -1,5 +1,5 @@
 import { notFound } from "next/navigation";
-import { InventoryRoutePage } from "@/features/inventory/ui/InventoryRoutePage";
+import { InventoryRoutePage } from "@/features/inventory/InventoryRoutePage";
 import { isInventoryTab } from "@/shared/config/routes";
 
 export const dynamic = "force-dynamic";
@@ -14,5 +14,7 @@ export default async function Page({
   const { tab } = await params;
   if (!isInventoryTab(tab)) notFound();
 
-  return <InventoryRoutePage activeTab={tab} searchParams={searchParams} />;
+  const resolvedSearchParams = await searchParams;
+
+  return <InventoryRoutePage activeTab={tab} resolvedSearchParams={resolvedSearchParams} />;
 }

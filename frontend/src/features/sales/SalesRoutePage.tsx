@@ -9,8 +9,7 @@ import {
   readBusinessPartnerRouteState,
   readCreateSlip,
   readSalesRouteState,
-  type RouteSearchParams,
-} from "../lib/salesRouteParams";
+} from "./lib/salesRouteParams";
 import {
   auctionLotPageQueryOptions,
   auctionSettlementsQueryOptions,
@@ -18,21 +17,21 @@ import {
   businessPartnerLookupQueryOptions,
   businessPartnerPageQueryOptions,
   salesSlipPageQueryOptions,
-} from "../model/salesQueryOptions";
-import type { SalesTab } from "../model/types";
-import { SalesAuctionPage } from "./SalesAuctionPage";
-import { SalesPartnersPage } from "./SalesPartnersPage";
-import { SalesSettlementPage } from "./SalesSettlementPage";
-import { SalesSlipsPage } from "./SalesSlipsPage";
+} from "./model/salesQueryOptions";
+import type { SalesTab } from "./model/types";
+import { SalesAuctionPage } from "./ui/SalesAuctionPage";
+import { SalesPartnersPage } from "./ui/SalesPartnersPage";
+import { SalesSettlementPage } from "./ui/SalesSettlementPage";
+import { SalesSlipsPage } from "./ui/SalesSlipsPage";
 
 export async function SalesRoutePage({
   activeTab,
-  searchParams,
+  resolvedSearchParams,
 }: {
   activeTab: SalesTab;
-  searchParams?: Promise<RouteSearchParams> | RouteSearchParams;
+  resolvedSearchParams: Record<string, string | string[] | undefined>;
 }) {
-  const reader = createServerSearchParamReader(await searchParams);
+  const reader = createServerSearchParamReader(resolvedSearchParams);
   const queryClient = new QueryClient();
 
   switch (activeTab) {

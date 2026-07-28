@@ -25,7 +25,7 @@ green-house/
   renderer를 사용하며 확대 단계에 필요한 HTML 라벨만 생성한다.
 - 농장 현황의 검색·선택 레이어는 기본 구조 레이어와 분리하고 좌표 계산
   결과를 메모이제이션한다.
-- 난 묶음 관리 맵은 `PhysicalBed`를 농장 전체 순서로 펼치고 Embla Carousel로 2~4개 다이 viewport를 관리한다. URL 동기화와 현재 표시 범위 계산은 `useBedViewport`에 두며 현재 viewport와 앞뒤 각각 표시 개수만큼의 이동 버퍼만 무거운 내부 콘텐츠를 마운트한다.
+- 난 묶음 관리의 앱 라우트는 검색 파라미터만 feature의 `OrchidManagementRoutePage`로 전달한다. `RoutePage`가 deep link 대상과 초기 viewport를 파싱하고 지도·작업 유형 데이터를 준비하며, 관리 맵은 `PhysicalBed`를 농장 전체 순서로 펼치고 Embla Carousel로 2~4개 다이 viewport를 관리한다. 이후 URL 동기화와 현재 표시 범위 계산은 `useBedViewport`에 두며 현재 viewport와 앞뒤 각각 표시 개수만큼의 이동 버퍼만 무거운 내부 콘텐츠를 마운트한다.
 - 선택 이력은 동·다이·구역·난 묶음 범위별 페이지 API로 조회한다. 요약은 첫 20건만 사용하고 난 묶음 상세는 10건 단위로 조회한다. 선택 키·상세 페이지별 메모리 캐시와 진행 요청 공유·취소를 적용하고, 캐러셀 이동 상태는 선택 상태와 분리해 단순 스와이프가 이력 조회를 유발하지 않게 한다.
 - 입고 관리와 작업 관리가 공통으로 사용하는 포트 실행·농장 배치 UI는 `entities/farm/ui`에 두고 저장 API는 각 `features/*`에서 연결한다.
 - 판매와 inventory의 서버 페이지 목록은 TanStack Query로 관리한다. 두 기능 모두 URL을 조회 조건의 단일 기준으로 사용하고 서버와 클라이언트가 같은 파서와 query option을 공유한다. 서버 컴포넌트는 현재 URL 조건을 prefetch해 hydration하며, 공통 URL 페이지 훅은 검색 초안과 URL 변경만 담당한다.

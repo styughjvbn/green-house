@@ -62,7 +62,10 @@ features/{feature}/
 `app`에서는 feature 내부 경로보다 `index.ts`를 통해 import한다.
 
 ```ts
-import { OrchidManagementPage, getHouse } from "@/features/orchid-management";
+import {
+  OrchidManagementRoutePage,
+  getHouse,
+} from "@/features/orchid-management";
 ```
 
 ## shared and entities

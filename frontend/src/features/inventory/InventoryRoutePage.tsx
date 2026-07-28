@@ -9,26 +9,25 @@ import {
   readInboundRouteState,
   readMaterialRouteState,
   readVarietyRouteState,
-  type ServerSearchParams,
-} from "../lib/inventoryRouteState";
+} from "./lib/inventoryRouteState";
 import {
   inboundPageQueryOptions,
   materialPageQueryOptions,
   varietyLookupQueryOptions,
   varietyPageQueryOptions,
-} from "../model/inventoryQueryOptions";
-import { InventoryInboundPage } from "./InventoryInboundPage";
-import { InventoryMaterialPage } from "./InventoryMaterialPage";
-import { InventoryVarietyPage } from "./InventoryVarietyPage";
+} from "./model/inventoryQueryOptions";
+import { InventoryInboundPage } from "./ui/InventoryInboundPage";
+import { InventoryMaterialPage } from "./ui/InventoryMaterialPage";
+import { InventoryVarietyPage } from "./ui/InventoryVarietyPage";
 
 export async function InventoryRoutePage({
   activeTab,
-  searchParams,
+  resolvedSearchParams,
 }: {
   activeTab: InventoryTab;
-  searchParams: Promise<ServerSearchParams>;
+  resolvedSearchParams: Record<string, string | string[] | undefined>;
 }) {
-  const reader = createServerSearchParamReader(await searchParams);
+  const reader = createServerSearchParamReader(resolvedSearchParams);
   const queryClient = new QueryClient();
 
   switch (activeTab) {

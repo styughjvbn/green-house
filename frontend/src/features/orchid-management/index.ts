@@ -1,4 +1,4 @@
-export { OrchidManagementPage } from "./ui/OrchidManagementPage";
+export { OrchidManagementRoutePage } from "./OrchidManagementRoutePage";
 export { OrchidManagementMap } from "./ui/OrchidManagementMap";
 
 export {

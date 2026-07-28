@@ -1,1 +1,1 @@
-export { WorkRecordManager } from "./ui/WorkRecordManager";
+export { WorkRecordManager } from "./WorkRecordRoutePage";

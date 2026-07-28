@@ -1,16 +1,13 @@
-import type { ServerSearchParams } from "@/features/work-record/lib/workRecordUrlState";
-import { WorkRecordManager } from "@/features/work-record/ui/WorkRecordManager";
+import { WorkRecordManager } from "@/features/work-record/WorkRecordRoutePage";
 
 export const dynamic = "force-dynamic";
 
-export default function Page({
+export default async function Page({
   searchParams,
 }: {
-  searchParams: Promise<ServerSearchParams>;
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
-  return (
-    <main className="h-full min-h-0">
-      <WorkRecordManager searchParams={searchParams} />
-    </main>
-  );
+  const resolvedSearchParams = await searchParams;
+
+  return <WorkRecordManager resolvedSearchParams={resolvedSearchParams} />;
 }

@@ -9,21 +9,19 @@ import {
   createServerSearchParamReader,
   needsWorkRecordUrlNormalization,
   readWorkRecordUrlState,
-  type ServerSearchParams,
-} from "../lib/workRecordUrlState";
+} from "./lib/workRecordUrlState";
 import {
   workOperationCalendarQueryOptions,
   workOperationPageQueryOptions,
   workTypesQueryOptions,
-} from "../model/workRecordQueryOptions";
-import { WorkRecordWorkspace } from "./WorkRecordWorkspace";
+} from "./model/workRecordQueryOptions";
+import { WorkRecordWorkspace } from "./ui/WorkRecordWorkspace";
 
 export async function WorkRecordManager({
-  searchParams,
+  resolvedSearchParams,
 }: {
-  searchParams: Promise<ServerSearchParams>;
+  resolvedSearchParams: Record<string, string | string[] | undefined>;
 }) {
-  const resolvedSearchParams = await searchParams;
   const routeState = readWorkRecordUrlState(
     createServerSearchParamReader(resolvedSearchParams),
   );

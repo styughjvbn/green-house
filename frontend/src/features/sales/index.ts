@@ -1,6 +1,6 @@
 ﻿export { SalesAuctionPage } from "./ui/SalesAuctionPage";
 export { SalesPartnersPage } from "./ui/SalesPartnersPage";
-export { SalesRoutePage } from "./ui/SalesRoutePage";
+export { SalesRoutePage } from "./SalesRoutePage";
 export { SalesSettlementPage } from "./ui/SalesSettlementPage";
 export { SalesSlipsPage } from "./ui/SalesSlipsPage";
 

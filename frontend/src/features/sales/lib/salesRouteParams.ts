@@ -36,11 +36,11 @@ const AUCTION_LOT_STATUSES: AuctionLotStatus[] = [
 ];
 
 export function createServerSearchParamReader(
-  searchParams: RouteSearchParams,
+  resolvedSearchParams: Record<string, string | string[] | undefined>,
 ): SearchParamReader {
   return {
     get(name) {
-      const value = searchParams?.[name];
+      const value = resolvedSearchParams?.[name];
       return Array.isArray(value) ? (value[0] ?? null) : (value ?? null);
     },
   };

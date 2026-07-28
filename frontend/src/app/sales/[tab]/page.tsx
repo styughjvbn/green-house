@@ -1,5 +1,5 @@
 import { notFound } from "next/navigation";
-import { SalesRoutePage } from "@/features/sales/ui/SalesRoutePage";
+import { SalesRoutePage } from "@/features/sales/SalesRoutePage";
 import { isSalesTab } from "@/shared/config/routes";
 
 export const dynamic = "force-dynamic";
@@ -14,5 +14,12 @@ export default async function Page({
   const { tab } = await params;
   if (!isSalesTab(tab)) notFound();
 
-  return <SalesRoutePage activeTab={tab} searchParams={searchParams} />;
+  const resolvedSearchParams = await searchParams;
+
+  return (
+    <SalesRoutePage
+      activeTab={tab}
+      resolvedSearchParams={resolvedSearchParams}
+    />
+  );
 }

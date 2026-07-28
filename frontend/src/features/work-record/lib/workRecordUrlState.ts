@@ -31,24 +31,22 @@ const WORK_STATUSES: WorkOperationStatus[] = [
 
 type SearchParamsReader = Pick<URLSearchParams, "get">;
 
-export type ServerSearchParams = Record<string, string | string[] | undefined>;
-
 export function createServerSearchParamReader(
-  searchParams: ServerSearchParams,
+  resolvedSearchParams: Record<string, string | string[] | undefined>,
 ): SearchParamsReader {
   return {
     get(name) {
-      const value = searchParams[name];
+      const value = resolvedSearchParams[name];
       return Array.isArray(value) ? (value[0] ?? null) : (value ?? null);
     },
   };
 }
 
 export function needsWorkRecordUrlNormalization(
-  searchParams: ServerSearchParams,
+  resolvedSearchParams: Record<string, string | string[] | undefined>,
   state: WorkRecordUrlState,
 ) {
-  const reader = createServerSearchParamReader(searchParams);
+  const reader = createServerSearchParamReader(resolvedSearchParams);
   const scope = reader.get("scope");
   const view = reader.get("view");
   const month = reader.get("month");
@@ -66,11 +64,11 @@ export function needsWorkRecordUrlNormalization(
 }
 
 export function createNormalizedWorkRecordSearchParams(
-  searchParams: ServerSearchParams,
+  resolvedSearchParams: Record<string, string | string[] | undefined>,
   state: WorkRecordUrlState,
 ) {
   const params = new URLSearchParams();
-  Object.entries(searchParams).forEach(([key, value]) => {
+  Object.entries(resolvedSearchParams).forEach(([key, value]) => {
     const values = Array.isArray(value) ? value : [value];
     values.forEach((item) => {
       if (item != null) params.append(key, item);

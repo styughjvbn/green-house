@@ -1,6 +1,6 @@
-import { getAnalyticsData } from "../api/analyticsApi";
-import type { AnalyticsTab } from "../model/types";
-import { AnalyticsPage } from "./AnalyticsPage";
+import { getAnalyticsData } from "./api/analyticsApi";
+import type { AnalyticsTab } from "./model/types";
+import { AnalyticsPage } from "./ui/AnalyticsPage";
 
 export async function AnalyticsRoutePage({
   activeTab,
