@@ -32,15 +32,41 @@ validate_target() {
   [[ "${PRICE_FACTOR}" =~ ^[2-9]$ ]] || fail "DEMO_PRICE_FACTOR must be an integer from 2 to 9"
   [[ "$(psql "${SANITIZE_DB_URL}" -Atqc 'SELECT current_database()')" == "${TEMP_DB_NAME}" ]] \
     || fail "SANITIZE_DB_URL does not target ${TEMP_DB_NAME}"
+  pg_dump "${SANITIZE_DB_URL}" --schema-only --no-owner --no-privileges \
+    --file=/dev/null \
+    || fail "pg_dump is incompatible with the temporary PostgreSQL server"
+
+  local sanitization_state
+  sanitization_state="$(
+    psql "${SANITIZE_DB_URL}" -Atqc "
+      SELECT CASE
+        WHEN to_regclass('demo_internal.sanitization_marker') IS NOT NULL
+          THEN 'MARKED'
+        WHEN EXISTS (SELECT 1 FROM business_partners)
+         AND NOT EXISTS (
+           SELECT 1
+           FROM business_partners
+           WHERE name NOT LIKE '데모 소매 거래처 %'
+             AND name NOT LIKE '데모 도매 거래처 %'
+             AND name NOT LIKE '데모 경매장 %'
+         )
+          THEN 'LEGACY_SANITIZED'
+        ELSE 'CLEAN'
+      END
+    "
+  )"
+  [[ "${sanitization_state}" == "CLEAN" ]] \
+    || fail "Temporary database is already sanitized (${sanitization_state}). Restore it from the source dump before running again."
 }
 
-run_sql() {
+run_validation_sql() {
   local directory="$1"
   shift
   local files=()
   while IFS= read -r file; do files+=(-f "${file}"); done < <(find "${directory}" -maxdepth 1 -name '*.sql' -print | sort)
   [[ ${#files[@]} -gt 0 ]] || fail "No SQL files found in ${directory}"
-  psql "${SANITIZE_DB_URL}" --set=ON_ERROR_STOP=1 "$@" --single-transaction "${files[@]}"
+  psql "${SANITIZE_DB_URL}" --quiet --set=ON_ERROR_STOP=1 "$@" \
+    --single-transaction "${files[@]}"
 }
 
 schema_allowlist_values() {
@@ -63,6 +89,7 @@ main() {
   require_command pg_dump
   require_command pg_restore
   require_command psql
+  require_command python3
   require_command sha256sum
   validate_target
 
@@ -74,7 +101,7 @@ main() {
   local allowlist_values
   allowlist_values="$(schema_allowlist_values)"
 
-  psql "${SANITIZE_DB_URL}" --set=ON_ERROR_STOP=1 \
+  psql "${SANITIZE_DB_URL}" --quiet --set=ON_ERROR_STOP=1 \
     --set=allowlist_values="${allowlist_values}" \
     --single-transaction \
     -f "${SCRIPT_DIR}/validate/schema-allowlist-check.sql"
@@ -84,8 +111,8 @@ main() {
   export DEMO_QUANTITY_FACTOR="${QUANTITY_FACTOR}"
   export DEMO_PRICE_FACTOR="${PRICE_FACTOR}"
 
-  run_sql "${SCRIPT_DIR}/sanitize"
-  run_sql "${SCRIPT_DIR}/validate" --set=allowlist_values="${allowlist_values}"
+  python3 "${SCRIPT_DIR}/sanitize_demo.py"
+  run_validation_sql "${SCRIPT_DIR}/validate" --set=allowlist_values="${allowlist_values}"
 
   local table_args=()
   while IFS=$'\t' read -r table_name _; do

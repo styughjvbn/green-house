@@ -177,9 +177,14 @@ APP_URL=https://green-house-demo.sjw-project.site \
 
 ## 7. 운영 데이터 비식별화
 
-운영 DB에는 비식별화 SQL을 직접 실행하지 않는다. PostgreSQL 외부 접속이 차단된
+운영 DB에는 비식별화 스크립트를 직접 실행하지 않는다. PostgreSQL 외부 접속이 차단된
 격리 작업 PC 또는 격리 컨테이너에서 다음 순서로 처리한다. `psql`, `pg_dump`,
 `pg_restore`, Flyway CLI는 운영 PostgreSQL과 같은 major 버전을 사용한다.
+Python 3와 PostgreSQL 드라이버도 준비한다.
+
+```bash
+python3 -m pip install -r scripts/demo/requirements.txt
+```
 
 ```text
 운영 custom-format dump
@@ -194,7 +199,7 @@ APP_URL=https://green-house-demo.sjw-project.site \
 
 현재 허용 목록과 스키마 지문은 `scripts/demo/schema-allowlist.tsv`에 있다. 신규
 테이블, 신규 컬럼, nullable/type 변경이 있으면 dump 생성이 실패한다. 검토 후
-비식별화 SQL과 허용 목록을 함께 갱신한다.
+비식별화 Python 스크립트와 허용 목록을 함께 갱신한다.
 
 격리 임시 DB 복구:
 
@@ -230,21 +235,32 @@ export DEMO_PRICE_FACTOR
   /secure/demo/greenhouse_demo_sanitized.dump
 ```
 
-생성 결과는 dump와 같은 디렉터리의 `.sha256` 파일이다. SQL 중 하나라도 실패하거나
-스키마·민감정보·외래키·수량·판매·정산 검증이 실패하면 dump가 생성되지 않는다.
+생성 결과는 dump와 같은 디렉터리의 `.sha256` 파일이다. Python 변환이나 SQL 검증,
+스키마·민감정보·외래키·수량·판매·정산 검증 중 하나라도 실패하면 dump가 생성되지
+않는다.
+비식별화가 시작된 임시 DB에는 내부 완료 마커가 남는다. 같은 임시 DB에 스크립트를
+다시 실행하면 수량과 금액이 중복 변환되므로 실행 전에 차단된다. 실패 후 재시도할
+때도 반드시 운영 원본 dump에서 `greenhouse_demo_sanitize_tmp`를 다시 복구한다.
 비식별화 키는 32자 이상이어야 하며 수량·단가 배율은 각각 2~9 범위에서 선택한다.
 날짜 이동값은 0이 아닌 정수다. 값은 저장소나 shell history에 남기지 않고 운영
 비밀 저장소에서 공급한다. 같은 키를 사용하면 같은 원본 문자열이 같은 데모 값으로
-변환된다. SQL은 격리 임시 DB에 `pgcrypto` extension을 설치하므로 작업 계정에 해당
-권한이 필요하다.
+변환된다. 정수 범위를 넘을 가능성이 있으면 Python 스크립트가 관계를 유지할 수 있는
+범위까지 배율을 자동으로 낮추고 실제 적용한 배율을 출력한다.
 
 변환 규칙:
 
 - ID, 외래키, 구역 배치와 상태 이력은 유지
 - 날짜와 audit timestamp는 모두 동일 일수만큼 이동
+- 원본 작업 이력의 종료시각이 시작시각보다 이르면 데모에서는 시작시각으로 정규화
 - 작업자와 입금자는 keyed HMAC 순서에 따른 결정적 데모명으로 치환
-- 거래처는 ID 기반 데모명, 품종·품목·자재명은 keyed HMAC 기반 데모명으로 치환
+- 거래처는 유형별 ID 순서에 따라 소매·도매·경매장이 각각 `001`부터 시작하는
+  데모명으로 치환하고, 자재명은 keyed HMAC 기반 데모명으로 치환
+- `scripts/demo/item-varieties.json`의 실제 경매 속·품종 조합을 품종 마스터에
+  중복 없이 결정적으로 배정
+- 난 묶음, 작업 대상 스냅샷, 판매 품목, 경매 lot에도 같은 방식의 실제 속·품종
+  조합을 반영
 - 수량과 단가는 외부 주입 배율로 변환하고 연관 금액은 두 배율의 곱으로 변환
+- 품목 금액과 판매·경매·정산 합계는 변환된 수량과 단가에서 다시 계산
 - 전화번호는 고정값, 주소는 데모 주소, 자유 메모와 외부 UID는 제거
 - JSON 구조와 숫자·불리언·허용 코드값은 유지하고 나머지 문자열은 `데모`로 치환
 

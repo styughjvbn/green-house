@@ -32,7 +32,8 @@ BEGIN
 
   IF EXISTS (
     SELECT 1 FROM business_partners
-    WHERE name NOT LIKE '데모 거래처 %'
+    WHERE name NOT LIKE '데모 소매 거래처 %'
+      AND name NOT LIKE '데모 도매 거래처 %'
       AND name NOT LIKE '데모 경매장 %'
   ) THEN
     RAISE EXCEPTION 'Unsanitized business partner name remains';
