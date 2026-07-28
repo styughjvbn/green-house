@@ -184,7 +184,6 @@ function WorkOperationRegistrationStatusDialog({
   onClose: () => void;
   onRetry: () => void;
 }) {
-
   return (
     <div
       className="fixed inset-0 z-[1000] flex items-center justify-center bg-black/35 p-4"

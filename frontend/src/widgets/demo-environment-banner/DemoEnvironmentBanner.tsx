@@ -3,7 +3,7 @@ import { RotateCcw } from "lucide-react";
 export function DemoEnvironmentBanner() {
   return (
     <div
-      className="flex min-h-10 shrink-0 items-center justify-center gap-2 bg-[#7a3e00] px-4 py-2 text-center text-sm font-semibold text-white"
+      className="flex shrink-0 items-center justify-center gap-2 bg-[#7a3e00] py-0.5 text-center text-xs font-semibold text-white"
       role="status"
     >
       <RotateCcw className="h-4 w-4 shrink-0" aria-hidden="true" />
