@@ -7,6 +7,7 @@ import {
   sourcePositionLabel,
   type AvailableSource,
 } from "../../../model/work-types/structure-change/structureChangeExecutionModel";
+import { isStructureChangeSourceLocked } from "../../../model/work-types/structure-change/structureChangeExecutionPolicy";
 
 export function StructureChangeSourceFields({
   availableSources,
@@ -34,6 +35,8 @@ export function StructureChangeSourceFields({
   ) => void;
   onToggleSource: (source: AvailableSource["group"]) => void;
 }) {
+  const sourceLocked = isStructureChangeSourceLocked(recordMode);
+
   return (
     <section className="rounded-md border border-[#cfe0d2] bg-[#f7faf6] p-3">
       <div className="flex items-center justify-between gap-3">
@@ -56,7 +59,7 @@ export function StructureChangeSourceFields({
             <input
               className="h-4 w-4 accent-[#159447]"
               checked={selectedSourceIds.has(group.id)}
-              disabled={recordMode}
+              disabled={sourceLocked}
               type="checkbox"
               onChange={() => onToggleSource(group)}
             />
@@ -71,7 +74,7 @@ export function StructureChangeSourceFields({
               </span>
             </span>
             <TextField
-              disabled
+              disabled={sourceLocked}
               label="작업 수량"
               type="number"
               value={inputQuantities[group.id] ?? ""}

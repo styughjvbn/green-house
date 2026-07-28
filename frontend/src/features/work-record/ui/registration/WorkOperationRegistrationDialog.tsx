@@ -65,16 +65,6 @@ function WorkOperationRegistrationContent({
     workTypes,
   });
 
-  useEffect(() => {
-    const handleKeyDown = (event: KeyboardEvent) => {
-      if (event.key === "Escape" && !registration.targetSelectorOpen) {
-        onClose();
-      }
-    };
-    document.addEventListener("keydown", handleKeyDown);
-    return () => document.removeEventListener("keydown", handleKeyDown);
-  }, [onClose, registration.targetSelectorOpen]);
-
   return (
     <div
       className="fixed inset-0 z-[1000] flex items-center justify-center bg-black/35 p-4"
@@ -194,15 +184,6 @@ function WorkOperationRegistrationStatusDialog({
   onClose: () => void;
   onRetry: () => void;
 }) {
-  useEffect(() => {
-    const handleKeyDown = (event: KeyboardEvent) => {
-      if (event.key === "Escape") {
-        onClose();
-      }
-    };
-    document.addEventListener("keydown", handleKeyDown);
-    return () => document.removeEventListener("keydown", handleKeyDown);
-  }, [onClose]);
 
   return (
     <div
