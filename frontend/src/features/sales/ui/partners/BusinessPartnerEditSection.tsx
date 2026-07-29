@@ -1,4 +1,4 @@
-import type { FormEvent, ReactNode } from "react";
+import type { SubmitEvent, ReactNode } from "react";
 import { useState } from "react";
 import { Pencil, Save, X } from "lucide-react";
 import type { BusinessPartner } from "@/entities/farm/types";
@@ -35,11 +35,11 @@ export function BusinessPartnerEditSection({
   onModeChange: (mode: BusinessPartnerDetailMode) => void;
   errorMessage: string | null;
   children?: ReactNode;
-  onSubmit: (event: FormEvent<HTMLFormElement>) => boolean | Promise<boolean>;
+  onSubmit: (event: SubmitEvent<HTMLFormElement>) => boolean | Promise<boolean>;
 }) {
   const [saved, setSaved] = useState(false);
 
-  async function submit(event: FormEvent<HTMLFormElement>) {
+  async function submit(event: SubmitEvent<HTMLFormElement>) {
     setSaved(false);
     const result = await onSubmit(event);
     setSaved(result);

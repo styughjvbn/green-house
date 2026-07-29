@@ -25,9 +25,12 @@ green-house/
   renderer를 사용하며 확대 단계에 필요한 HTML 라벨만 생성한다.
 - 농장 현황의 검색·선택 레이어는 기본 구조 레이어와 분리하고 좌표 계산
   결과를 메모이제이션한다.
-- 난 묶음 관리 맵은 `PhysicalBed`를 농장 전체 순서로 펼치고 Embla Carousel로 2~4개 다이 viewport를 관리한다. URL 동기화와 현재 표시 범위 계산은 `useBedViewport`에 두며 현재 viewport와 앞뒤 각각 표시 개수만큼의 이동 버퍼만 무거운 내부 콘텐츠를 마운트한다.
+- 난 묶음 관리의 앱 라우트는 검색 파라미터만 feature의 `OrchidManagementRoutePage`로 전달한다. `RoutePage`가 deep link 대상과 초기 viewport를 파싱하고 지도·작업 유형 데이터를 준비하며, 관리 맵은 `PhysicalBed`를 농장 전체 순서로 펼치고 Embla Carousel로 2~4개 다이 viewport를 관리한다. 이후 URL 동기화와 현재 표시 범위 계산은 `useBedViewport`에 두며 현재 viewport와 앞뒤 각각 표시 개수만큼의 이동 버퍼만 무거운 내부 콘텐츠를 마운트한다.
 - 선택 이력은 동·다이·구역·난 묶음 범위별 페이지 API로 조회한다. 요약은 첫 20건만 사용하고 난 묶음 상세는 10건 단위로 조회한다. 선택 키·상세 페이지별 메모리 캐시와 진행 요청 공유·취소를 적용하고, 캐러셀 이동 상태는 선택 상태와 분리해 단순 스와이프가 이력 조회를 유발하지 않게 한다.
 - 입고 관리와 작업 관리가 공통으로 사용하는 포트 실행·농장 배치 UI는 `entities/farm/ui`에 두고 저장 API는 각 `features/*`에서 연결한다.
+- 판매와 inventory의 서버 페이지 목록은 TanStack Query로 관리한다. 두 기능 모두 URL을 조회 조건의 단일 기준으로 사용하고 서버와 클라이언트가 같은 파서와 query option을 공유한다. 서버 컴포넌트는 현재 URL 조건을 prefetch해 hydration하며, 공통 URL 페이지 훅은 검색 초안과 URL 변경만 담당한다.
+- 작업 관리는 URL을 조회 범위·보기 방식·필터·페이지의 단일 기준으로 사용한다. 서버 진입 컴포넌트인 `WorkRecordRoutePage`는 현재 목록 또는 캘린더 query만 prefetch해 hydration하고, 작업 유형과 농장 전체 배치 정보는 등록 또는 실행 다이얼로그를 열 때 조회한다. 클라이언트 `WorkRecordPage`는 보기 전환과 등록 다이얼로그의 열림 상태만 관리하고, 등록 다이얼로그가 자체 참조 데이터의 로딩과 오류를 처리한다. 목록과 캘린더는 공통 작업 동작 훅과 상세 패널을 사용한다. 캘린더는 전용 기간 API를 한 번 호출하고, 작업 등록·실행 후 관련 작업 및 농장 query를 무효화한다.
+- 작업 관리는 조회·상태 변경을 `model/operation`, 등록 상태와 대상 계산을 `model/registration`, 작업 유형별 업무 규칙을 `model/work-types`로 구분한다. 화면은 `ui/list`, `ui/calendar`, `ui/detail`, `ui/registration`, `ui/work-types`에서 기능별로 구성하며, 작업 코드별 대상 출처와 실행·기록 UI는 `model/work-types/workTypeDefinition.ts`의 정의를 통해 선택한다.
 
 ### Backend
 
@@ -116,6 +119,7 @@ application|domain|repository|controller|dto/
 - `WorkOperation`과 작업 효과 연결 기반 난 묶음 이력 조회
 - 입고 포트 계획은 `work`의 대상 조회 인터페이스를 `farm`이 구현해 입고 저장소를 작업 모듈에서 직접 참조하지 않는다.
 - 작업 계획·진행·조회·구조 변경·입고 포트 계획·즉시 실행은 각각 application service로 분리한다.
+- 구조 변경 작업 기록은 기록 전용 application service가 계획 aggregate 생성과 기존 구조 변경·폐기·포트 실행기를 한 트랜잭션으로 조합한다. 입력 검증 실패 시 중간 계획이나 일부 결과를 남기지 않는다.
 - 목록 조회는 작업별 상세 재조회를 하지 않고 대상과 실행 상태를 일괄 조회해 응답을 조립한다.
 - 분갈이·분주·합식은 공통 구조 변경 실행기와 작업별 Strategy를 사용한다. 난 묶음 저장소가 필요한 Strategy 구현은 `farm` 모듈에 둔다.
 - 효과 실행과 효과 감사 저장을 분리하고 모든 신규 효과는 공통 저장 컴포넌트를 사용한다.

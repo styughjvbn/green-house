@@ -1,4 +1,5 @@
 import Link from "next/link";
+import type { Route } from "next";
 import { AlertTriangle, Info, TrendingUp } from "lucide-react";
 import type { AnalyticsSlipSummary, SalesInsight } from "../../model/types";
 import { Panel } from "./AnalyticsCharts";
@@ -103,7 +104,7 @@ export function InsightsPanel({ items }: { items: SalesInsight[] }) {
               {item.actionLabel && item.actionHref ? (
                 <Link
                   className="shrink-0 rounded border border-[#d7ded8] px-2 py-1 text-[10px] font-semibold"
-                  href={item.actionHref}
+                  href={item.actionHref as Route}
                 >
                   {item.actionLabel}
                 </Link>

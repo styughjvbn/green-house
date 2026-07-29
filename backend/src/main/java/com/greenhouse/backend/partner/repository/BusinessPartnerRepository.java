@@ -5,7 +5,8 @@ import com.greenhouse.backend.partner.domain.PartnerType;
 import java.util.List;
 import org.springframework.data.jpa.repository.JpaRepository;
 
-public interface BusinessPartnerRepository extends JpaRepository<BusinessPartner, Long> {
+public interface BusinessPartnerRepository
+		extends JpaRepository<BusinessPartner, Long>, BusinessPartnerRepositoryCustom {
 	List<BusinessPartner> findAllByActiveTrueOrderByNameAsc();
 
 	List<BusinessPartner> findAllByPartnerTypeAndActiveTrueOrderByNameAsc(PartnerType partnerType);

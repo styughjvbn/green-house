@@ -1,6 +1,7 @@
 package com.greenhouse.backend.partner.controller;
 
 import com.greenhouse.backend.common.api.ApiResponse;
+import com.greenhouse.backend.common.api.PageResponse;
 import com.greenhouse.backend.partner.application.BusinessPartnerService;
 import com.greenhouse.backend.partner.domain.PartnerType;
 import com.greenhouse.backend.partner.dto.BusinessPartnerCreateRequest;
@@ -32,6 +33,16 @@ public class BusinessPartnerController {
 			@RequestParam(required = false) String keyword,
 			@RequestParam(required = false) PartnerType partnerType) {
 		return ApiResponse.ok(service.getPartners(keyword, partnerType));
+	}
+
+	@GetMapping("/page")
+	public ApiResponse<PageResponse<BusinessPartnerResponse>> getPartnerPage(
+			@RequestParam(required = false) String keyword,
+			@RequestParam(required = false) PartnerType partnerType,
+			@RequestParam(required = false) Boolean active,
+			@RequestParam(defaultValue = "0") int page,
+			@RequestParam(defaultValue = "10") int size) {
+		return ApiResponse.ok(service.getPartnerPage(keyword, partnerType, active, page, size));
 	}
 
 	@PostMapping

@@ -1,5 +1,6 @@
 package com.greenhouse.backend.partner.application;
 
+import com.greenhouse.backend.common.api.PageResponse;
 import com.greenhouse.backend.common.exception.NotFoundException;
 import com.greenhouse.backend.partner.domain.BusinessPartner;
 import com.greenhouse.backend.partner.domain.PartnerType;
@@ -11,6 +12,7 @@ import com.greenhouse.backend.partner.repository.BusinessPartnerRepository;
 import lombok.RequiredArgsConstructor;
 
 import java.util.List;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -35,6 +37,21 @@ public class BusinessPartnerService {
 							partnerType);
 		}
 		return partners.stream().map(BusinessPartnerResponse::from).toList();
+	}
+
+	@Transactional(readOnly = true)
+	public PageResponse<BusinessPartnerResponse> getPartnerPage(
+			String keyword,
+			PartnerType partnerType,
+			Boolean active,
+			int page,
+			int size) {
+		PageRequest pageable = PageRequest.of(
+				Math.max(page, 0),
+				Math.min(Math.max(size, 1), 100));
+		return PageResponse.from(repository
+				.searchPage(keyword, partnerType, active, pageable)
+				.map(BusinessPartnerResponse::from));
 	}
 
 	public BusinessPartnerResponse create(BusinessPartnerCreateRequest request) {

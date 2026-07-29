@@ -3,6 +3,7 @@ import { Suspense } from "react";
 import { Geist } from "next/font/google";
 import { FontScaleInitializer } from "@/features/settings";
 import { DEFAULT_FONT_SCALE } from "@/features/settings/lib/fontScale";
+import { QueryProvider } from "@/shared/api/QueryProvider";
 import { PwaRuntime } from "@/shared/pwa";
 import { AppShell } from "@/widgets/app-shell/AppShell";
 import "./globals.css";
@@ -37,9 +38,11 @@ export default function RootLayout({
       <body className="min-h-full bg-[#f7f8f6] text-[#1f2a24]">
         <FontScaleInitializer />
         <PwaRuntime />
-        <Suspense fallback={null}>
-          <AppShell>{children}</AppShell>
-        </Suspense>
+        <QueryProvider>
+          <Suspense fallback={null}>
+            <AppShell>{children}</AppShell>
+          </Suspense>
+        </QueryProvider>
       </body>
     </html>
   );

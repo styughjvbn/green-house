@@ -4,6 +4,7 @@ import static com.greenhouse.backend.farm.domain.variety.QVariety.variety;
 
 import com.greenhouse.backend.farm.domain.variety.Variety;
 import com.querydsl.core.BooleanBuilder;
+import com.querydsl.core.types.Projections;
 import com.querydsl.core.types.dsl.BooleanExpression;
 import com.querydsl.jpa.impl.JPAQueryFactory;
 import jakarta.persistence.EntityManager;
@@ -46,6 +47,20 @@ public class VarietyRepositoryImpl implements VarietyRepositoryCustom {
 				.distinct()
 				.from(variety)
 				.orderBy(variety.genus.asc())
+				.fetch();
+	}
+
+	@Override
+	public List<VarietyNameProjection> findActiveNames() {
+		return queryFactory
+				.select(Projections.constructor(
+						VarietyNameProjection.class,
+						variety.id,
+						variety.genus,
+						variety.name))
+				.from(variety)
+				.where(variety.active.isTrue())
+				.orderBy(variety.genus.asc(), variety.name.asc())
 				.fetch();
 	}
 

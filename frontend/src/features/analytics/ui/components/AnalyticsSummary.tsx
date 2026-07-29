@@ -43,7 +43,7 @@ export function AnalyticsSummary({
       note: "전월 대비 ▲ 18.6%",
       tone: "green",
       icon: Banknote,
-      tab: "SALES",
+      tab: "sales",
     },
     {
       label: "이번 달 출하 수량",
@@ -51,7 +51,7 @@ export function AnalyticsSummary({
       note: "전월 대비 ▲ 12.4%",
       tone: "blue",
       icon: PackageOpen,
-      tab: "SALES",
+      tab: "sales",
     },
     {
       label: "미입금 금액",
@@ -59,7 +59,7 @@ export function AnalyticsSummary({
       note: "미입금 전표 확인",
       tone: "orange",
       icon: WalletCards,
-      tab: "CUSTOMER",
+      tab: "customer",
     },
     {
       label: "판매 가능 수량",
@@ -67,7 +67,7 @@ export function AnalyticsSummary({
       note: "정상 기준",
       tone: "purple",
       icon: Sprout,
-      tab: "VARIETY",
+      tab: "variety",
     },
     {
       label: "상태 이상 수",
@@ -75,7 +75,7 @@ export function AnalyticsSummary({
       note: "전월 대비 ▲ 27.8%",
       tone: "red",
       icon: AlertTriangle,
-      tab: "WORK",
+      tab: "work",
     },
     {
       label: "분갈이 예정 수",
@@ -83,7 +83,7 @@ export function AnalyticsSummary({
       note: "30일 이내",
       tone: "mint",
       icon: Sprout,
-      tab: "WORK",
+      tab: "work",
     },
   ];
 

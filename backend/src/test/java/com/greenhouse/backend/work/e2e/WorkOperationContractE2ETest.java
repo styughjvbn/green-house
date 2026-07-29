@@ -76,8 +76,8 @@ class WorkOperationContractE2ETest extends WorkE2ETestBase {
 
 		ApiResult list = get("/api/work-operations?view=ALL");
 		assertThat(list.status()).isEqualTo(200);
-		assertThat(list.data()).hasSize(1);
-		JsonNode listed = list.data().get(0);
+		assertThat(list.data().path("content")).hasSize(1);
+		JsonNode listed = list.data().path("content").get(0);
 		assertThat(listed.path("id").asLong()).isEqualTo(operationId);
 		assertThat(listed.path("targets").get(0).path("orchidGroupId").asLong())
 				.isEqualTo(scenario.orchidGroupId());
@@ -167,7 +167,7 @@ class WorkOperationContractE2ETest extends WorkE2ETestBase {
 
 		ApiResult historyView = get("/api/work-operations?view=HISTORY");
 		assertThat(historyView.status()).isEqualTo(200);
-		assertThat(historyView.data()).hasSize(2);
+		assertThat(historyView.data().path("content")).hasSize(2);
 	}
 
 	private ApiResult createOperation(String title) throws Exception {

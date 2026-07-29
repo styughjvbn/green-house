@@ -8,6 +8,8 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 
 public interface WorkOperationRepositoryCustom {
 
@@ -15,12 +17,21 @@ public interface WorkOperationRepositoryCustom {
 
 	Optional<WorkOperation> findByRequestKey(String requestKey);
 
-	List<WorkOperation> search(
+	Page<WorkOperation> search(
 			LocalDate fromDate,
 			LocalDate toDate,
 			WorkOperationStatus status,
 			WorkOperationSearchView view,
 			LocalDateTime todayStartedAt,
 			WorkSourceScopeType scopeType,
-			Long scopeId);
+			Long scopeId,
+			String keyword,
+			Pageable pageable);
+
+	List<WorkOperation> searchAll(
+			LocalDate fromDate,
+			LocalDate toDate,
+			WorkOperationStatus status,
+			WorkOperationSearchView view,
+			LocalDateTime todayStartedAt);
 }

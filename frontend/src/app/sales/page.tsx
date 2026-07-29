@@ -1,21 +1,6 @@
 import { redirect } from "next/navigation";
-import { appendSearchParams } from "@/shared/lib/route";
+import { DEFAULT_SALES_TAB, SALES_ROUTE } from "@/shared/config/routes";
 
-export default async function Page({
-  searchParams,
-}: {
-  searchParams?: Promise<Record<string, string | string[] | undefined>>;
-}) {
-  const resolvedSearchParams = searchParams ? await searchParams : undefined;
-  const requestedTab = resolvedSearchParams?.tab;
-  const tab = Array.isArray(requestedTab) ? requestedTab[0] : requestedTab;
-  const path =
-    {
-      AUCTION: "/sales/auction",
-      SETTLEMENT: "/sales/settlement",
-      PARTNERS: "/sales/partners",
-      SLIPS: "/sales/slips",
-    }[tab ?? "SLIPS"] ?? "/sales/slips";
-
-  redirect(appendSearchParams(path, resolvedSearchParams, ["tab"]));
+export default function Page() {
+  redirect(SALES_ROUTE.tab(DEFAULT_SALES_TAB));
 }

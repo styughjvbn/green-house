@@ -1,33 +1,25 @@
 import { notFound } from "next/navigation";
-import type { SalesTab } from "@/features/sales/model/types";
-import { SalesRoutePage } from "@/features/sales/ui/SalesRoutePage";
+import { SalesRoutePage } from "@/features/sales/SalesRoutePage";
+import { isSalesTab } from "@/shared/config/routes";
 
 export const dynamic = "force-dynamic";
-
-const SALES_TABS: Record<string, SalesTab> = {
-  slips: "SLIPS",
-  auction: "AUCTION",
-  settlement: "SETTLEMENT",
-  partners: "PARTNERS",
-};
 
 export default async function Page({
   params,
   searchParams,
 }: {
   params: Promise<{ tab: string }>;
-  searchParams?: Promise<Record<string, string | string[] | undefined>>;
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
   const { tab } = await params;
-  const activeTab = SALES_TABS[tab];
-  if (!activeTab) notFound();
+  if (!isSalesTab(tab)) notFound();
 
-  const resolvedSearchParams = searchParams ? await searchParams : undefined;
-  const requestedCreateSlip = resolvedSearchParams?.createSlip;
-  const createSlip =
-    (Array.isArray(requestedCreateSlip)
-      ? requestedCreateSlip[0]
-      : requestedCreateSlip) === "1";
+  const resolvedSearchParams = await searchParams;
 
-  return <SalesRoutePage activeTab={activeTab} createSlip={createSlip} />;
+  return (
+    <SalesRoutePage
+      activeTab={tab}
+      resolvedSearchParams={resolvedSearchParams}
+    />
+  );
 }

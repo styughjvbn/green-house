@@ -1,12 +1,24 @@
 export type InventoryStatus = "ACTIVE" | "INACTIVE";
 
-export interface InventoryPageResult<T> {
-  content: T[];
-  page: number;
-  size: number;
-  totalElements: number;
-  totalPages: number;
-}
+export type MaterialFilterState = {
+  category: string;
+  keyword: string;
+  manufacturer: string;
+  status: InventoryStatus | "";
+};
+
+export type VarietyFilterState = {
+  genus: string;
+  keyword: string;
+  status: InventoryStatus | "";
+  saleEnabled: "true" | "false" | "";
+};
+
+export type InboundFilterState = {
+  inboundType: InboundType | "";
+  status: InboundStatus | "";
+  keyword: string;
+};
 
 export interface Variety {
   id: number;
@@ -28,6 +40,11 @@ export interface Variety {
   recentWorkDate: string | null;
   connectedGroups: ConnectedOrchidGroup[];
 }
+
+export type VarietyLookup = {
+  genera: string[];
+  varieties: Variety[];
+};
 
 export interface ConnectedOrchidGroup {
   id: number;

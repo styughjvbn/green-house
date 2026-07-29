@@ -10,4 +10,6 @@ public interface VarietyRepositoryCustom {
 	Page<Variety> search(String keyword, String genus, Boolean saleEnabled, Boolean active, Pageable pageable);
 
 	List<String> findDistinctGenera();
+
+	List<VarietyNameProjection> findActiveNames();
 }

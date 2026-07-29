@@ -149,6 +149,70 @@ class DivideMergeWorkOperationIntegrationTests extends AbstractBackendIntegratio
 	}
 
 	@Test
+	void createsSeparateCompletedRecordsForMixedVarietiesInOneBatch() throws Exception {
+		OrchidGroup first = createSource(10, "0", "1");
+		Variety anotherVariety = varietyRepository.save(new Variety(
+				"STRUCTURE-002", "팔레놉시스", "다른 구조 변경 품종", null,
+				"3.5치", true, true, null, null));
+		OrchidGroup second = createSource(anotherVariety, 20, "1", "2");
+
+		mockMvc.perform(post("/api/work-operations/structure-change-records/batch")
+				.contentType(MediaType.APPLICATION_JSON)
+				.content("""
+						{
+						  "records": [
+						    {
+						      "operation": {
+						        "workTypeId": %d,
+						        "title": "혼합 분갈이 - 구조 변경 테스트",
+						        "plannedStartDate": "2026-07-16",
+						        "sourceScopeType": "MANUAL_SELECTION",
+						        "sourceOrchidGroupIds": [%d]
+						      },
+						      "execution": {
+						        "idempotencyKey": "mixed-record-first",
+						        "completedDate": "2026-07-16",
+						        "sources": [{"sourceOrchidGroupId": %d, "inputQuantity": 10}],
+						        "lossQuantity": 0,
+						        "results": [
+						          {"bedZoneId": %d, "quantity": 10, "sourceOrchidGroupIds": [%d], "potSize": "4치", "ageYear": 2, "purpose": "NORMAL", "startPosition": 0, "endPosition": 1}
+						        ]
+						      }
+						    },
+						    {
+						      "operation": {
+						        "workTypeId": %d,
+						        "title": "혼합 분갈이 - 다른 구조 변경 품종",
+						        "plannedStartDate": "2026-07-16",
+						        "sourceScopeType": "MANUAL_SELECTION",
+						        "sourceOrchidGroupIds": [%d]
+						      },
+						      "execution": {
+						        "idempotencyKey": "mixed-record-second",
+						        "completedDate": "2026-07-16",
+						        "sources": [{"sourceOrchidGroupId": %d, "inputQuantity": 20}],
+						        "lossQuantity": 0,
+						        "results": [
+						          {"bedZoneId": %d, "quantity": 20, "sourceOrchidGroupIds": [%d], "potSize": "4치", "ageYear": 2, "purpose": "NORMAL", "startPosition": 1, "endPosition": 2}
+						        ]
+						      }
+						    }
+						  ]
+						}
+						""".formatted(
+								repotType.getId(), first.getId(), first.getId(), resultZone.getId(), first.getId(),
+								repotType.getId(), second.getId(), second.getId(), resultZone.getId(), second.getId())))
+				.andExpect(status().isCreated())
+				.andExpect(jsonPath("$.data", hasSize(2)))
+				.andExpect(jsonPath("$.data[0].status").value("COMPLETED"))
+				.andExpect(jsonPath("$.data[1].status").value("COMPLETED"));
+
+		assertThat(operationRepository.count()).isEqualTo(2);
+		assertThat(orchidGroupRepository.findByBedZoneIdAndQuantityGreaterThanOrderBySortOrderAsc(
+				resultZone.getId(), 0)).hasSize(2);
+	}
+
+	@Test
 	void mergesMultipleSourcesIntoOneResultAtomically() throws Exception {
 		OrchidGroup first = createSource(10, "0", "1");
 		OrchidGroup second = createSource(20, "1", "2");
@@ -335,6 +399,92 @@ class DivideMergeWorkOperationIntegrationTests extends AbstractBackendIntegratio
 		assertThat(lineageRepository.findByResultOrchidGroupIdOrderByCreatedAtAscIdAsc(result.getId()))
 				.hasSize(2)
 				.allMatch(lineage -> lineage.getRelationType() == OrchidGroupLineageRelationType.MERGED_TO);
+	}
+
+	@Test
+	void createsCompletedStructureChangeRecordWithAllResults() throws Exception {
+		OrchidGroup source = createSource(30, "0", "3");
+
+		mockMvc.perform(post("/api/work-operations/structure-change-records")
+				.contentType(MediaType.APPLICATION_JSON)
+				.content("""
+						{
+						  "operation": {
+						    "workTypeId": %d,
+						    "title": "분갈이 작업 기록",
+						    "plannedStartDate": "2026-07-16",
+						    "plannedEndDate": "2026-07-16",
+						    "sourceScopeType": "MANUAL_SELECTION",
+						    "sourceOrchidGroupIds": [%d]
+						  },
+						  "execution": {
+						    "idempotencyKey": "repot-record-1",
+						    "completedDate": "2026-07-16",
+						    "worker": "기록 담당자",
+						    "sources": [
+						      {"sourceOrchidGroupId": %d, "inputQuantity": 30}
+						    ],
+						    "lossQuantity": 0,
+						    "results": [
+						      {"bedZoneId": %d, "quantity": 10, "sourceOrchidGroupIds": [%d], "potSize": "4치", "ageYear": 2, "purpose": "NORMAL", "startPosition": 0, "endPosition": 1},
+						      {"bedZoneId": %d, "quantity": 20, "sourceOrchidGroupIds": [%d], "potSize": "4치", "ageYear": 2, "purpose": "NORMAL", "startPosition": 1, "endPosition": 2}
+						    ]
+						  }
+						}
+						""".formatted(
+								repotType.getId(),
+								source.getId(),
+								source.getId(),
+								resultZone.getId(),
+								source.getId(),
+								resultZone.getId(),
+								source.getId())))
+				.andExpect(status().isCreated())
+				.andExpect(jsonPath("$.data.status").value("COMPLETED"))
+				.andExpect(jsonPath("$.data.targets[0].executionStatus").value("COMPLETED"));
+
+		assertThat(operationRepository.count()).isEqualTo(1);
+		assertThat(orchidGroupRepository.findById(source.getId()).orElseThrow().getQuantity()).isZero();
+		assertThat(orchidGroupRepository.findByBedZoneIdAndQuantityGreaterThanOrderBySortOrderAsc(
+				resultZone.getId(), 0)).hasSize(2);
+	}
+
+	@Test
+	void rejectsStructureChangeRecordWhenNotAllSourceQuantityIsProvided() throws Exception {
+		OrchidGroup source = createSource(30, "0", "3");
+
+		mockMvc.perform(post("/api/work-operations/structure-change-records")
+				.contentType(MediaType.APPLICATION_JSON)
+				.content("""
+						{
+						  "operation": {
+						    "workTypeId": %d,
+						    "title": "불완전한 분갈이 기록",
+						    "plannedStartDate": "2026-07-16",
+						    "sourceScopeType": "MANUAL_SELECTION",
+						    "sourceOrchidGroupIds": [%d]
+						  },
+						  "execution": {
+						    "idempotencyKey": "repot-record-incomplete",
+						    "completedDate": "2026-07-16",
+						    "sources": [
+						      {"sourceOrchidGroupId": %d, "inputQuantity": 10}
+						    ],
+						    "lossQuantity": 0,
+						    "results": [
+						      {"bedZoneId": %d, "quantity": 10, "sourceOrchidGroupIds": [%d], "potSize": "4치", "ageYear": 2, "purpose": "NORMAL", "startPosition": 0, "endPosition": 1}
+						    ]
+						  }
+						}
+						""".formatted(
+								repotType.getId(),
+								source.getId(),
+								source.getId(),
+								resultZone.getId(),
+								source.getId())))
+				.andExpect(status().isBadRequest());
+
+		assertThat(orchidGroupRepository.findById(source.getId()).orElseThrow().getQuantity()).isEqualTo(30);
 	}
 
 	private Long createPlan(WorkType workType, Long... sourceIds) throws Exception {

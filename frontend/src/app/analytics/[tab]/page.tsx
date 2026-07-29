@@ -1,16 +1,8 @@
 import { notFound } from "next/navigation";
-import type { AnalyticsTab } from "@/features/analytics/model/types";
-import { AnalyticsRoutePage } from "@/features/analytics/ui/AnalyticsRoutePage";
+import { AnalyticsRoutePage } from "@/features/analytics/AnalyticsRoutePage";
+import { isAnalyticsTab } from "@/shared/config/routes";
 
 export const dynamic = "force-dynamic";
-
-const ANALYTICS_TABS: Record<string, AnalyticsTab> = {
-  sales: "SALES",
-  variety: "VARIETY",
-  customer: "CUSTOMER",
-  space: "SPACE",
-  work: "WORK",
-};
 
 export default async function Page({
   params,
@@ -18,8 +10,7 @@ export default async function Page({
   params: Promise<{ tab: string }>;
 }) {
   const { tab } = await params;
-  const activeTab = ANALYTICS_TABS[tab];
-  if (!activeTab) notFound();
+  if (!isAnalyticsTab(tab)) notFound();
 
-  return <AnalyticsRoutePage activeTab={activeTab} />;
+  return <AnalyticsRoutePage activeTab={tab} />;
 }

@@ -6,6 +6,7 @@ import com.greenhouse.backend.work.application.correction.WorkOperationCorrectio
 import com.greenhouse.backend.work.application.operation.InboundPottingOperationService;
 import com.greenhouse.backend.work.application.operation.InboundPottingPlanService;
 import com.greenhouse.backend.work.application.operation.StructureChangeExecutionService;
+import com.greenhouse.backend.work.application.operation.StructureChangeRecordService;
 import com.greenhouse.backend.work.application.operation.WorkOperationPlanService;
 import com.greenhouse.backend.work.application.operation.WorkOperationProgressService;
 import com.greenhouse.backend.work.application.operation.WorkOperationQueryService;
@@ -26,6 +27,10 @@ import com.greenhouse.backend.work.dto.target.WorkTargetPreviewRequest;
 import com.greenhouse.backend.work.dto.target.WorkTargetPreviewResponse;
 import com.greenhouse.backend.work.dto.target.WorkTargetExecutionRequest;
 import com.greenhouse.backend.work.dto.effect.StructureChangeExecutionRequest;
+import com.greenhouse.backend.work.dto.effect.StructureChangeRecordCreateRequest;
+import com.greenhouse.backend.work.dto.effect.StructureChangeRecordBatchCreateRequest;
+import com.greenhouse.backend.work.dto.effect.DiscardRecordCreateRequest;
+import com.greenhouse.backend.work.dto.effect.InboundPottingRecordCreateRequest;
 import jakarta.validation.Valid;
 import java.util.List;
 import java.time.LocalDate;
@@ -49,6 +54,7 @@ public class WorkOperationController {
 	private final WorkOperationProgressService progressService;
 	private final WorkOperationQueryService queryService;
 	private final StructureChangeExecutionService structureChangeExecutionService;
+	private final StructureChangeRecordService structureChangeRecordService;
 	private final InboundPottingPlanService inboundPottingPlanService;
 	private final InboundPottingOperationService inboundPottingOperationService;
 	private final WorkOperationCorrectionService workOperationCorrectionService;
@@ -78,6 +84,34 @@ public class WorkOperationController {
 		return ApiResponse.ok(planService.createCompletedRecord(request));
 	}
 
+	@PostMapping("/work-operations/structure-change-records")
+	@ResponseStatus(HttpStatus.CREATED)
+	public ApiResponse<WorkOperationResponse> createStructureChangeRecord(
+			@Valid @RequestBody StructureChangeRecordCreateRequest request) {
+		return ApiResponse.ok(structureChangeRecordService.createStructureChangeRecord(request));
+	}
+
+	@PostMapping("/work-operations/structure-change-records/batch")
+	@ResponseStatus(HttpStatus.CREATED)
+	public ApiResponse<List<WorkOperationResponse>> createStructureChangeRecords(
+			@Valid @RequestBody StructureChangeRecordBatchCreateRequest request) {
+		return ApiResponse.ok(structureChangeRecordService.createStructureChangeRecords(request));
+	}
+
+	@PostMapping("/work-operations/discard-records")
+	@ResponseStatus(HttpStatus.CREATED)
+	public ApiResponse<WorkOperationResponse> createDiscardRecord(
+			@Valid @RequestBody DiscardRecordCreateRequest request) {
+		return ApiResponse.ok(structureChangeRecordService.createDiscardRecord(request));
+	}
+
+	@PostMapping("/work-operations/inbound-potting-records")
+	@ResponseStatus(HttpStatus.CREATED)
+	public ApiResponse<List<WorkOperationResponse>> createInboundPottingRecord(
+			@Valid @RequestBody InboundPottingRecordCreateRequest request) {
+		return ApiResponse.ok(structureChangeRecordService.createInboundPottingRecord(request));
+	}
+
 	@GetMapping("/work-operations/inbound-potting-candidates")
 	public ApiResponse<List<InboundPottingCandidateResponse>> getInboundPottingCandidates() {
 		return ApiResponse.ok(inboundPottingPlanService.getCandidates());
@@ -105,14 +139,27 @@ public class WorkOperationController {
 	}
 
 	@GetMapping("/work-operations")
-	public ApiResponse<List<WorkOperationResponse>> search(
+	public ApiResponse<PageResponse<WorkOperationResponse>> search(
 			@RequestParam(required = false) LocalDate from,
 			@RequestParam(required = false) LocalDate to,
 			@RequestParam(required = false) com.greenhouse.backend.work.domain.operation.WorkOperationStatus status,
 			@RequestParam(defaultValue = "ALL") com.greenhouse.backend.work.domain.operation.WorkOperationSearchView view,
 			@RequestParam(required = false) com.greenhouse.backend.work.domain.operation.WorkSourceScopeType scopeType,
-			@RequestParam(required = false) Long scopeId) {
-		return ApiResponse.ok(queryService.search(from, to, status, view, scopeType, scopeId));
+			@RequestParam(required = false) Long scopeId,
+			@RequestParam(required = false) String keyword,
+			@RequestParam(defaultValue = "0") int page,
+			@RequestParam(defaultValue = "20") int size) {
+		return ApiResponse.ok(queryService.search(
+				from, to, status, view, scopeType, scopeId, keyword, page, size));
+	}
+
+	@GetMapping("/work-operations/calendar")
+	public ApiResponse<List<WorkOperationResponse>> getCalendar(
+			@RequestParam LocalDate from,
+			@RequestParam LocalDate to,
+			@RequestParam(required = false) com.greenhouse.backend.work.domain.operation.WorkOperationStatus status,
+			@RequestParam(defaultValue = "ALL") com.greenhouse.backend.work.domain.operation.WorkOperationSearchView view) {
+		return ApiResponse.ok(queryService.getCalendar(from, to, status, view));
 	}
 
 	@GetMapping("/work-operations/{workOperationId}")

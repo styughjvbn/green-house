@@ -5,6 +5,7 @@ import com.greenhouse.backend.common.api.PageResponse;
 import com.greenhouse.backend.farm.application.variety.VarietyService;
 import com.greenhouse.backend.farm.dto.variety.VarietyConnectedOrchidGroupResponse;
 import com.greenhouse.backend.farm.dto.variety.VarietyCreateRequest;
+import com.greenhouse.backend.farm.dto.variety.VarietyGeneraResponse;
 import com.greenhouse.backend.farm.dto.variety.VarietyResponse;
 import com.greenhouse.backend.farm.dto.variety.VarietyUpdateRequest;
 import jakarta.validation.Valid;
@@ -41,7 +42,7 @@ public class VarietyController {
 	}
 
 	@GetMapping("/genera")
-	public ApiResponse<List<String>> getGenera() {
+	public ApiResponse<VarietyGeneraResponse> getGenera() {
 		return ApiResponse.ok(varietyService.getGenera());
 	}
 

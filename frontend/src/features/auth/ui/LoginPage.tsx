@@ -2,6 +2,7 @@
 
 import { FormEvent, useState } from "react";
 import Image from "next/image";
+import type { Route } from "next";
 import { useRouter, useSearchParams } from "next/navigation";
 import { LockKeyhole } from "lucide-react";
 import { login } from "../api/authApi";
@@ -21,7 +22,7 @@ export function LoginPage() {
 
     try {
       await login(username, password);
-      router.replace(searchParams.get("next") ?? "/");
+      router.replace((searchParams.get("next") ?? "/") as Route);
       router.refresh();
     } catch (error) {
       setErrorMessage(

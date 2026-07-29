@@ -259,13 +259,32 @@ paths:
         schema:
           type: integer
           format: int64
+      - name: keyword
+        in: query
+        required: false
+        schema:
+          type: string
+      - name: page
+        in: query
+        required: false
+        schema:
+          type: integer
+          format: int32
+          default: 0
+      - name: size
+        in: query
+        required: false
+        schema:
+          type: integer
+          format: int32
+          default: 20
       responses:
         '200':
           description: OK
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ApiResponseListWorkOperationResponse'
+                $ref: '#/components/schemas/ApiResponsePageResponseWorkOperationResponse'
     post:
       tags:
       - work-operation-controller
@@ -603,6 +622,42 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ApiResponseWorkTargetPreviewResponse'
+  /api/work-operations/structure-change-records:
+    post:
+      tags:
+      - work-operation-controller
+      operationId: createStructureChangeRecord
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/StructureChangeRecordCreateRequest'
+        required: true
+      responses:
+        '201':
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponseWorkOperationResponse'
+  /api/work-operations/structure-change-records/batch:
+    post:
+      tags:
+      - work-operation-controller
+      operationId: createStructureChangeRecords
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/StructureChangeRecordBatchCreateRequest'
+        required: true
+      responses:
+        '201':
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponseListWorkOperationResponse'
   /api/work-operations/repot:
     post:
       tags:
@@ -657,6 +712,24 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ApiResponseMultiCreateWorkOperationResponse'
+  /api/work-operations/inbound-potting-records:
+    post:
+      tags:
+      - work-operation-controller
+      operationId: createInboundPottingRecord
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/InboundPottingRecordCreateRequest'
+        required: true
+      responses:
+        '201':
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponseListWorkOperationResponse'
   /api/work-operations/inbound-potting-plans:
     post:
       tags:
@@ -703,6 +776,24 @@ paths:
           application/json:
             schema:
               $ref: '#/components/schemas/InboundPottingExecutionRequest'
+        required: true
+      responses:
+        '201':
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponseWorkOperationResponse'
+  /api/work-operations/discard-records:
+    post:
+      tags:
+      - work-operation-controller
+      operationId: createDiscardRecord
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DiscardRecordCreateRequest'
         required: true
       responses:
         '201':
@@ -1986,7 +2077,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ApiResponseListString'
+                $ref: '#/components/schemas/ApiResponseVarietyGeneraResponse'
   /api/sales/orchid-groups/search:
     get:
       tags:
@@ -2518,6 +2609,52 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ApiResponsePartnerBalanceSummaryResponse'
+  /api/business-partners/page:
+    get:
+      tags:
+      - business-partner-controller
+      operationId: getPartnerPage
+      parameters:
+      - name: keyword
+        in: query
+        required: false
+        schema:
+          type: string
+      - name: partnerType
+        in: query
+        required: false
+        schema:
+          type: string
+          enum:
+          - WHOLESALE
+          - RETAIL
+          - AUCTION_HOUSE
+      - name: active
+        in: query
+        required: false
+        schema:
+          type: boolean
+      - name: page
+        in: query
+        required: false
+        schema:
+          type: integer
+          format: int32
+          default: 0
+      - name: size
+        in: query
+        required: false
+        schema:
+          type: integer
+          format: int32
+          default: 10
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponsePageResponseBusinessPartnerResponse'
   /api/bed-zones:
     get:
       tags:
@@ -4024,6 +4161,36 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/WorkOperationTargetResponse'
+    StructureChangeRecordCreateRequest:
+      type: object
+      properties:
+        operation:
+          $ref: '#/components/schemas/WorkOperationCreateRequest'
+        execution:
+          $ref: '#/components/schemas/StructureChangeExecutionRequest'
+      required:
+      - execution
+      - operation
+    StructureChangeRecordBatchCreateRequest:
+      type: object
+      properties:
+        records:
+          type: array
+          items:
+            $ref: '#/components/schemas/StructureChangeRecordCreateRequest'
+          maxItems: 100
+          minItems: 0
+      required:
+      - records
+    ApiResponseListWorkOperationResponse:
+      type: object
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/WorkOperationResponse'
+        message:
+          type: string
     RepotResultOrchidGroupRequest:
       type: object
       properties:
@@ -4250,6 +4417,37 @@ components:
       - quantity
       - status
       - varietyId
+    InboundPottingExecutionRequest:
+      type: object
+      properties:
+        inboundRecordId:
+          type: integer
+          format: int64
+        pottingDate:
+          type: string
+          format: date
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/InboundPottingResultRequest'
+          maxItems: 100
+          minItems: 0
+        growthStage:
+          type: string
+          maxLength: 100
+          minLength: 0
+        worker:
+          type: string
+          maxLength: 50
+          minLength: 0
+        memo:
+          type: string
+          maxLength: 1000
+          minLength: 0
+      required:
+      - inboundRecordId
+      - pottingDate
+      - results
     InboundPottingPlanCreateRequest:
       type: object
       properties:
@@ -4282,53 +4480,20 @@ components:
       - inboundRecordIds
       - plannedStartDate
       - title
-    InboundPottingPlanBatchCreateRequest:
+    InboundPottingRecordCreateRequest:
       type: object
       properties:
         plan:
           $ref: '#/components/schemas/InboundPottingPlanCreateRequest'
-      required:
-      - plan
-    ApiResponseListWorkOperationResponse:
-      type: object
-      properties:
-        data:
+        executions:
           type: array
           items:
-            $ref: '#/components/schemas/WorkOperationResponse'
-        message:
-          type: string
-    InboundPottingExecutionRequest:
-      type: object
-      properties:
-        inboundRecordId:
-          type: integer
-          format: int64
-        pottingDate:
-          type: string
-          format: date
-        results:
-          type: array
-          items:
-            $ref: '#/components/schemas/InboundPottingResultRequest'
+            $ref: '#/components/schemas/InboundPottingExecutionRequest'
           maxItems: 100
           minItems: 0
-        growthStage:
-          type: string
-          maxLength: 100
-          minLength: 0
-        worker:
-          type: string
-          maxLength: 50
-          minLength: 0
-        memo:
-          type: string
-          maxLength: 1000
-          minLength: 0
       required:
-      - inboundRecordId
-      - pottingDate
-      - results
+      - executions
+      - plan
     InboundPottingResultRequest:
       type: object
       properties:
@@ -4372,6 +4537,52 @@ components:
       - endPosition
       - quantity
       - startPosition
+    InboundPottingPlanBatchCreateRequest:
+      type: object
+      properties:
+        plan:
+          $ref: '#/components/schemas/InboundPottingPlanCreateRequest'
+      required:
+      - plan
+    DiscardRecordCreateRequest:
+      type: object
+      properties:
+        operation:
+          $ref: '#/components/schemas/WorkOperationCreateRequest'
+        completedDate:
+          type: string
+          format: date
+        worker:
+          type: string
+          maxLength: 100
+          minLength: 0
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/DiscardRecordResultRequest'
+          maxItems: 100
+          minItems: 0
+      required:
+      - completedDate
+      - operation
+      - results
+    DiscardRecordResultRequest:
+      type: object
+      properties:
+        orchidGroupId:
+          type: integer
+          format: int64
+        discardQuantity:
+          type: integer
+          format: int32
+          minimum: 1
+        reason:
+          type: string
+          maxLength: 1000
+          minLength: 0
+      required:
+      - discardQuantity
+      - orchidGroupId
     WorkOperationBatchCreateRequest:
       type: object
       properties:
@@ -5677,6 +5888,32 @@ components:
       required:
       - reason
       - status
+    ApiResponsePageResponseWorkOperationResponse:
+      type: object
+      properties:
+        data:
+          $ref: '#/components/schemas/PageResponseWorkOperationResponse'
+        message:
+          type: string
+    PageResponseWorkOperationResponse:
+      type: object
+      properties:
+        content:
+          type: array
+          items:
+            $ref: '#/components/schemas/WorkOperationResponse'
+        page:
+          type: integer
+          format: int32
+        size:
+          type: integer
+          format: int32
+        totalElements:
+          type: integer
+          format: int64
+        totalPages:
+          type: integer
+          format: int32
     ApiResponseMultiCreateCancellationEligibilityResponse:
       type: object
       properties:
@@ -5871,14 +6108,33 @@ components:
         latestWorkDate:
           type: string
           format: date
-    ApiResponseListString:
+    ApiResponseVarietyGeneraResponse:
       type: object
       properties:
         data:
+          $ref: '#/components/schemas/VarietyGeneraResponse'
+        message:
+          type: string
+    VarietyGeneraResponse:
+      type: object
+      properties:
+        genera:
           type: array
           items:
             type: string
-        message:
+        varieties:
+          type: array
+          items:
+            $ref: '#/components/schemas/VarietyNameResponse'
+    VarietyNameResponse:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: int64
+        genus:
+          type: string
+        name:
           type: string
     ApiResponseListSalesOrchidGroupSearchResponse:
       type: object
@@ -6812,6 +7068,32 @@ components:
         receivableBalance:
           type: integer
           format: int64
+    ApiResponsePageResponseBusinessPartnerResponse:
+      type: object
+      properties:
+        data:
+          $ref: '#/components/schemas/PageResponseBusinessPartnerResponse'
+        message:
+          type: string
+    PageResponseBusinessPartnerResponse:
+      type: object
+      properties:
+        content:
+          type: array
+          items:
+            $ref: '#/components/schemas/BusinessPartnerResponse'
+        page:
+          type: integer
+          format: int32
+        size:
+          type: integer
+          format: int32
+        totalElements:
+          type: integer
+          format: int64
+        totalPages:
+          type: integer
+          format: int32
     ApiResponseListBedZoneResponse:
       type: object
       properties:

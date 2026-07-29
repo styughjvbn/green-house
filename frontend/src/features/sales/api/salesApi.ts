@@ -1,17 +1,16 @@
 ﻿import { API_BASE_URL, fetchApi } from "@/shared/api/client";
 import type {
   BusinessPartner,
+  BusinessPartnerPage,
   PartnerPaymentEvent,
   PartnerSettlementSettings,
   SalesOrchidGroupOption,
   SalesSlip,
+  SalesSlipPage,
 } from "@/entities/farm/types";
 import type {
   AuctionLot,
-  AuctionAttemptStatus,
-  AuctionInspectionStatus,
   AuctionLotPage,
-  AuctionLotStatus,
   AuctionTrackingSummary,
   AuctionShipmentOption,
   AuctionSettlement,
@@ -19,12 +18,20 @@ import type {
 } from "@/entities/farm/types";
 import type {
   AuctionFilterState,
+  BusinessPartnerFilterState,
+  SalesFilterState,
+} from "../model/types";
+import type {
+  AuctionLotStatusPayload,
+  AuctionQuantityAdjustmentPayload,
+  AuctionReturnPayload,
+  CreateAuctionResultPayload,
   CreateBusinessPartnerPayload,
   CreateSalesSlipPayload,
-  SalesFilterState,
-  SalesSlipPage,
+  ManualPaymentPayload,
+  PartnerSettlementSettingsPayload,
   UpdateBusinessPartnerPayload,
-} from "../model/types";
+} from "./types";
 
 type ApiSuccess<T> = {
   data: T;
@@ -62,8 +69,25 @@ export function getBusinessPartners() {
   return fetchApi<BusinessPartner[]>("/business-partners");
 }
 
-export function getSalesSlips() {
-  return fetchApi<SalesSlip[]>("/sales-slips");
+export function getBusinessPartnerPage(
+  filters?: Partial<BusinessPartnerFilterState>,
+  page = 0,
+  size = 10,
+) {
+  const params = new URLSearchParams();
+  const keyword = filters?.keyword?.trim();
+  if (keyword) {
+    params.set("keyword", keyword);
+  }
+  if (filters?.partnerType) {
+    params.set("partnerType", filters.partnerType);
+  }
+  if (filters?.active) {
+    params.set("active", String(filters.active === "ACTIVE"));
+  }
+  params.set("page", String(page));
+  params.set("size", String(size));
+  return fetchApi<BusinessPartnerPage>(`/business-partners/page?${params}`);
 }
 
 export function getSalesSlipPage(
@@ -163,14 +187,7 @@ export function rebuildAuctionSettlement(
   );
 }
 
-export type ManualPaymentPayload = {
-  amount: number;
-  paymentDate: string;
-  paymentMethod: string | null;
-  depositorName: string | null;
-  worker: string | null;
-  memo: string | null;
-};
+export type { ManualPaymentPayload } from "./types";
 
 export function confirmAuctionSettlementPayment(
   settlementId: number,
@@ -215,12 +232,7 @@ export function getPaymentEvents(
 
 export function confirmAuctionReturn(
   lotId: number,
-  payload: {
-    returnedQuantity: number;
-    returnDate: string;
-    worker: string | null;
-    memo: string | null;
-  },
+  payload: AuctionReturnPayload,
 ) {
   return requestJson<AuctionLot>(
     `/auction-lots/${lotId}/confirm-return`,
@@ -235,13 +247,7 @@ export function confirmAuctionReturn(
 
 export function adjustAuctionQuantity(
   lotId: number,
-  payload: {
-    soldQuantity: number;
-    waitingQuantity: number;
-    returnedQuantity: number;
-    worker: string | null;
-    memo: string | null;
-  },
+  payload: AuctionQuantityAdjustmentPayload,
 ) {
   return requestJson<AuctionLot>(
     `/auction-lots/${lotId}/adjust-quantity`,
@@ -256,20 +262,7 @@ export function adjustAuctionQuantity(
 
 export function createAuctionResult(
   lotId: number,
-  payload: {
-    auctionDate: string;
-    attemptNo: number | null;
-    attemptStatus: AuctionAttemptStatus;
-    failedReason: string | null;
-    memo: string | null;
-    resultLines?: Array<{
-      auctionGrade: string | null;
-      quantity: number;
-      unitPrice: number;
-      note: string | null;
-      inspectionStatus: AuctionInspectionStatus | null;
-    }>;
-  },
+  payload: CreateAuctionResultPayload,
 ) {
   return requestJson<AuctionLot>(
     `/auction-lots/${lotId}/results`,
@@ -284,12 +277,7 @@ export function createAuctionResult(
 
 export function changeAuctionLotStatus(
   lotId: number,
-  payload: {
-    status: AuctionLotStatus;
-    reason: string;
-    worker: string | null;
-    memo: string | null;
-  },
+  payload: AuctionLotStatusPayload,
 ) {
   return requestJson<AuctionLot>(
     `/auction-lots/${lotId}/status`,
@@ -339,7 +327,7 @@ export function getPartnerSettlementSettings(partnerId: number) {
 
 export function updatePartnerSettlementSettings(
   partnerId: number,
-  payload: Omit<PartnerSettlementSettings, "id" | "partnerId">,
+  payload: PartnerSettlementSettingsPayload,
 ) {
   return requestJson<PartnerSettlementSettings>(
     `/business-partners/${partnerId}/settlement-settings`,

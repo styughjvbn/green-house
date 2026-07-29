@@ -1,4 +1,4 @@
-﻿import type { FormEvent } from "react";
+﻿import type { SubmitEvent } from "react";
 import { X } from "lucide-react";
 import type { BusinessPartnerForm } from "../../model/types";
 import { TextField } from "../common/FormFields";
@@ -17,7 +17,7 @@ export function BusinessPartnerCreateForm({
     value: BusinessPartnerForm[K],
   ) => void;
   onClose: () => void;
-  onSubmit: (event: FormEvent<HTMLFormElement>) => void;
+  onSubmit: (event: SubmitEvent<HTMLFormElement>) => void;
 }) {
   return (
     <div

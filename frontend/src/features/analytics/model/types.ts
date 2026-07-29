@@ -7,8 +7,9 @@ import type {
   WorkOperationStatus,
   WorkTypeTemplate,
 } from "@/entities/farm/types";
+import type { AnalyticsTab } from "@/shared/config/routes";
 
-export type AnalyticsTab = "SALES" | "VARIETY" | "CUSTOMER" | "SPACE" | "WORK";
+export type { AnalyticsTab };
 
 export type AnalyticsPageProps = {
   activeTab?: AnalyticsTab;

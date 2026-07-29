@@ -3,6 +3,7 @@ const { spawnSync } = require("child_process");
 
 const commands = [
   ["npm", ["run", "format"]],
+  ["npm", ["test"]],
   ["npm", ["run", "lint"]],
   ["npm", ["run", "build"]],
 ];

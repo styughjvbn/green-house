@@ -518,7 +518,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ApiResponseListString'
+                $ref: '#/components/schemas/ApiResponseVarietyGeneraResponse'
 components:
   schemas:
     ApiResponseInboundRecordResponse:
@@ -526,15 +526,6 @@ components:
       properties:
         data:
           $ref: '#/components/schemas/InboundRecordResponse'
-        message:
-          type: string
-    ApiResponseListString:
-      type: object
-      properties:
-        data:
-          type: array
-          items:
-            type: string
         message:
           type: string
     ApiResponseListVarietyConnectedOrchidGroupResponse:
@@ -572,6 +563,13 @@ components:
       properties:
         data:
           $ref: '#/components/schemas/PageResponseVarietyResponse'
+        message:
+          type: string
+    ApiResponseVarietyGeneraResponse:
+      type: object
+      properties:
+        data:
+          $ref: '#/components/schemas/VarietyGeneraResponse'
         message:
           type: string
     ApiResponseVarietyResponse:
@@ -1101,6 +1099,27 @@ components:
       required:
       - genus
       - name
+    VarietyGeneraResponse:
+      type: object
+      properties:
+        genera:
+          type: array
+          items:
+            type: string
+        varieties:
+          type: array
+          items:
+            $ref: '#/components/schemas/VarietyNameResponse'
+    VarietyNameResponse:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: int64
+        genus:
+          type: string
+        name:
+          type: string
     VarietyResponse:
       type: object
       properties:

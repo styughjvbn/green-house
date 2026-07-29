@@ -29,17 +29,12 @@ src/
 예시:
 
 ```ts
-import { getBusinessPartners, getSalesSlips, SalesPage } from "@/features/sales";
+import { SalesRoutePage } from "@/features/sales";
 
 export const dynamic = "force-dynamic";
 
 export default async function Page() {
-  const [partners, salesSlips] = await Promise.all([
-    getBusinessPartners(),
-    getSalesSlips(),
-  ]);
-
-  return <SalesPage partners={partners} salesSlips={salesSlips} />;
+  return <SalesRoutePage activeTab="slips" />;
 }
 ```
 
@@ -61,13 +56,15 @@ features/{feature}/
 - `farm-status`: 농장 현황 맵
 - `orchid-management`: 난 묶음 관리 상세맵
 - `work-record`: 작업 이력
-- `sales`: 판매 전표/거래처
-- `print`: A5 출력
+- `sales`: 판매 전표/거래처/A5 출력 미리보기
 
 `app`에서는 feature 내부 경로보다 `index.ts`를 통해 import한다.
 
 ```ts
-import { OrchidManagementPage, getHouse } from "@/features/orchid-management";
+import {
+  OrchidManagementRoutePage,
+  getHouse,
+} from "@/features/orchid-management";
 ```
 
 ## shared and entities

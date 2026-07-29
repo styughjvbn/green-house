@@ -6,6 +6,7 @@ import { DataTable } from "@/shared/ui/DataTable";
 
 export function BusinessPartnerList({
   currentPage,
+  loading,
   pageSize,
   partners,
   selectedBusinessPartnerId,
@@ -17,6 +18,7 @@ export function BusinessPartnerList({
   onPageSizeChange,
 }: {
   currentPage: number;
+  loading: boolean;
   pageSize: number;
   partners: BusinessPartner[];
   selectedBusinessPartnerId: number | null;
@@ -79,6 +81,7 @@ export function BusinessPartnerList({
       data={partners}
       emptyMessage="등록된 거래처가 없습니다."
       getRowId={(row) => String(row.id)}
+      isLoading={loading}
       pageIndex={currentPage}
       pageSize={pageSize}
       pageSizeOptions={[10, 20, 50]}

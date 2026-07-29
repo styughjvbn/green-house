@@ -1,48 +1,50 @@
-import { FormEvent, useMemo, useState } from "react";
-import type {
-  AuctionLot,
-  AuctionLotPage,
-  AuctionTrackingSummary,
-} from "@/entities/farm/types";
+import { useMemo, useState, type FormEvent } from "react";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import type { AuctionLot, AuctionTrackingSummary } from "@/entities/farm/types";
+import { createEmptyPage } from "@/shared/api/page";
+import { useUrlPagedListState } from "@/shared/api/useUrlPagedListState";
 import {
   adjustAuctionQuantity,
   confirmAuctionReturn,
   createAuctionResult,
-  getAuctionLots,
-  getAuctionTrackingSummary,
 } from "../api/salesApi";
+import type { SalesRouteState } from "../lib/salesRouteParams";
+import {
+  AUCTION_FILTER_KEYS,
+  createInitialAuctionFilters,
+  writeAuctionFilterParams,
+} from "../lib/salesUrlFilters";
+import {
+  auctionLotPageQueryOptions,
+  auctionSummaryQueryOptions,
+} from "./salesQueryOptions";
+import { salesQueryKeys } from "./salesQueryKeys";
 import type { AuctionFilterState } from "./types";
 import type {
-  AuctionAttemptStatus,
-  AuctionInspectionStatus,
-} from "@/entities/farm/types";
+  AuctionQuantityAdjustmentPayload,
+  AuctionResultFormPayload,
+  AuctionReturnPayload,
+} from "../api/types";
 
-const emptyFilters: AuctionFilterState = {
-  from: "",
-  to: "",
-  market: "",
-  variety: "",
-  grade: "",
-  status: "",
-  keyword: "",
-  reviewOnly: false,
-  returnOnly: false,
-  waitingOnly: false,
-};
-
-export function useAuctionTracking(
-  initialPage: AuctionLotPage,
-  initialSummary: AuctionTrackingSummary,
-) {
-  const [pageResult, setPageResult] = useState(initialPage);
-  const [summary, setSummary] = useState(initialSummary);
-  const [filters, setFilters] = useState(emptyFilters);
-  const [selectedId, setSelectedId] = useState<number | null>(
-    initialPage.content[0]?.id ?? null,
-  );
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-
+export function useAuctionTracking({
+  routeState,
+}: {
+  routeState: SalesRouteState<AuctionFilterState>;
+}) {
+  const queryClient = useQueryClient();
+  const lotsQuery = useQuery(auctionLotPageQueryOptions(routeState));
+  const summaryQuery = useQuery(auctionSummaryQueryOptions());
+  const listState = useUrlPagedListState({
+    emptyFilters: createInitialAuctionFilters,
+    filterKeys: AUCTION_FILTER_KEYS,
+    routeFilters: routeState.filters,
+    writeFilterParams: writeAuctionFilterParams,
+  });
+  const [selectedId, setSelectedId] = useState<number | null>(null);
+  const pageResult =
+    lotsQuery.data ??
+    createEmptyPage<AuctionLot>(routeState.size, routeState.page);
+  const summary = summaryQuery.data ?? createEmptyAuctionSummary();
   const selectedLot = useMemo(
     () =>
       pageResult.content.find((lot) => lot.id === selectedId) ??
@@ -51,51 +53,43 @@ export function useAuctionTracking(
     [pageResult.content, selectedId],
   );
 
-  function updateFilter<K extends keyof AuctionFilterState>(
-    field: K,
-    value: AuctionFilterState[K],
-  ) {
-    setFilters((current) => ({ ...current, [field]: value }));
+  async function invalidateAuctionTracking(changed: AuctionLot) {
+    setSelectedId(changed.id);
+    await queryClient.invalidateQueries({
+      queryKey: salesQueryKeys.auction.all,
+    });
   }
 
-  async function refresh(
-    nextFilters = filters,
-    nextPage = 0,
-    nextSize = pageResult.size,
-  ) {
-    setLoading(true);
-    setError(null);
-    try {
-      const [nextPageResult, nextSummary] = await Promise.all([
-        getAuctionLots(nextFilters, nextPage, nextSize),
-        getAuctionTrackingSummary(),
-      ]);
-      setPageResult(nextPageResult);
-      setSummary(nextSummary);
-      setSelectedId((current) =>
-        nextPageResult.content.some((lot) => lot.id === current)
-          ? current
-          : (nextPageResult.content[0]?.id ?? null),
-      );
-    } catch (caught) {
-      setError(toMessage(caught));
-    } finally {
-      setLoading(false);
-    }
-  }
-
-  async function resetFilters() {
-    setFilters(emptyFilters);
-    await refresh(emptyFilters);
-  }
-
-  async function changePage(page: number) {
-    await refresh(filters, page - 1, pageResult.size);
-  }
-
-  async function changePageSize(size: number) {
-    await refresh(filters, 0, size);
-  }
+  const createResultMutation = useMutation({
+    mutationFn: ({
+      lotId,
+      payload,
+    }: {
+      lotId: number;
+      payload: AuctionResultFormPayload & { attemptNo: null };
+    }) => createAuctionResult(lotId, payload),
+    onSuccess: invalidateAuctionTracking,
+  });
+  const confirmReturnMutation = useMutation({
+    mutationFn: ({
+      lotId,
+      payload,
+    }: {
+      lotId: number;
+      payload: AuctionReturnPayload;
+    }) => confirmAuctionReturn(lotId, payload),
+    onSuccess: invalidateAuctionTracking,
+  });
+  const adjustQuantityMutation = useMutation({
+    mutationFn: ({
+      lotId,
+      payload,
+    }: {
+      lotId: number;
+      payload: AuctionQuantityAdjustmentPayload;
+    }) => adjustAuctionQuantity(lotId, payload),
+    onSuccess: invalidateAuctionTracking,
+  });
 
   async function confirmReturn(returnedQuantity: number, returnDate: string) {
     if (!selectedLot) return;
@@ -109,97 +103,92 @@ export function useAuctionTracking(
       )
     )
       return;
-    await mutate(() =>
-      confirmAuctionReturn(selectedLot.id, {
+    await confirmReturnMutation.mutateAsync({
+      lotId: selectedLot.id,
+      payload: {
         returnedQuantity,
         returnDate,
         worker: null,
         memo: "판매 관리 화면에서 반환 확인",
-      }),
-    );
+      },
+    });
   }
 
   async function adjustQuantity(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (!selectedLot) return;
     const data = new FormData(event.currentTarget);
-    await mutate(() =>
-      adjustAuctionQuantity(selectedLot.id, {
+    await adjustQuantityMutation.mutateAsync({
+      lotId: selectedLot.id,
+      payload: {
         soldQuantity: Number(data.get("soldQuantity")),
         waitingQuantity: Number(data.get("waitingQuantity")),
         returnedQuantity: Number(data.get("returnedQuantity")),
         worker: String(data.get("worker") || "") || null,
         memo: String(data.get("memo") || "") || null,
-      }),
-    );
+      },
+    });
   }
 
-  async function addResult(payload: {
-    auctionDate: string;
-    attemptStatus: AuctionAttemptStatus;
-    failedReason: string | null;
-    memo: string | null;
-    resultLines?: Array<{
-      auctionGrade: string | null;
-      quantity: number;
-      unitPrice: number;
-      note: string | null;
-      inspectionStatus: AuctionInspectionStatus | null;
-    }>;
-  }) {
+  async function addResult(payload: AuctionResultFormPayload) {
     if (!selectedLot) return;
-    await mutate(() =>
-      createAuctionResult(selectedLot.id, {
+    await createResultMutation.mutateAsync({
+      lotId: selectedLot.id,
+      payload: {
         auctionDate: payload.auctionDate,
         attemptNo: null,
         attemptStatus: payload.attemptStatus,
         failedReason: payload.failedReason,
         memo: payload.memo,
         resultLines: payload.resultLines,
-      }),
-    );
+      },
+    });
   }
 
-  async function mutate(request: () => Promise<AuctionLot>) {
-    setLoading(true);
-    setError(null);
-    try {
-      const changed = await request();
-      setPageResult((current) => ({
-        ...current,
-        content: current.content.map((lot) =>
-          lot.id === changed.id ? changed : lot,
-        ),
-      }));
-      setSelectedId(changed.id);
-      setSummary(await getAuctionTrackingSummary());
-    } catch (caught) {
-      setError(toMessage(caught));
-    } finally {
-      setLoading(false);
-    }
-  }
+  const mutationPending =
+    createResultMutation.isPending ||
+    confirmReturnMutation.isPending ||
+    adjustQuantityMutation.isPending;
+  const error =
+    lotsQuery.error ??
+    summaryQuery.error ??
+    createResultMutation.error ??
+    confirmReturnMutation.error ??
+    adjustQuantityMutation.error;
 
   return {
     lots: pageResult.content,
-    page: pageResult.page + 1,
-    pageSize: pageResult.size,
+    page: routeState.page,
+    pageSize: routeState.size,
     totalElements: pageResult.totalElements,
     totalPages: Math.max(1, pageResult.totalPages),
     summary,
-    filters,
+    filters: listState.filters,
     selectedLot,
-    loading,
-    error,
-    updateFilter,
+    loading: lotsQuery.isFetching || summaryQuery.isFetching || mutationPending,
+    listLoading: lotsQuery.isFetching,
+    error: error == null ? null : toMessage(error),
+    updateFilter: listState.updateFilter,
+    search: listState.search,
+    resetFilters: listState.reset,
+    setPage: listState.changePage,
+    setPageSize: listState.changePageSize,
     setSelectedId,
-    refresh,
-    resetFilters,
-    changePage,
-    changePageSize,
     confirmReturn,
     adjustQuantity,
     addResult,
+  };
+}
+
+function createEmptyAuctionSummary(): AuctionTrackingSummary {
+  return {
+    lotCount: 0,
+    shippedQuantity: 0,
+    soldQuantity: 0,
+    waitingQuantity: 0,
+    returnedQuantity: 0,
+    reviewRequiredCount: 0,
+    totalAmount: 0,
   };
 }
 
