@@ -21,7 +21,9 @@ type Card = {
 
 export function AnalyticsSummary({
   sales,
+  previousSales,
   shipped,
+  previousShipped,
   unpaid,
   saleable,
   warning,
@@ -29,7 +31,9 @@ export function AnalyticsSummary({
   onSelectTab,
 }: {
   sales: number;
+  previousSales: number;
   shipped: number;
+  previousShipped: number;
   unpaid: number;
   saleable: number;
   warning: number;
@@ -38,17 +42,17 @@ export function AnalyticsSummary({
 }) {
   const cards: Card[] = [
     {
-      label: "이번 달 매출",
+      label: "조회 종료월 매출",
       value: formatWon(sales),
-      note: "전월 대비 ▲ 18.6%",
+      note: comparisonNote(sales, previousSales),
       tone: "green",
       icon: Banknote,
       tab: "sales",
     },
     {
-      label: "이번 달 출하 수량",
+      label: "조회 종료월 출하 수량",
       value: `${shipped.toLocaleString()}분`,
-      note: "전월 대비 ▲ 12.4%",
+      note: comparisonNote(shipped, previousShipped),
       tone: "blue",
       icon: PackageOpen,
       tab: "sales",
@@ -72,7 +76,7 @@ export function AnalyticsSummary({
     {
       label: "상태 이상 수",
       value: `${warning.toLocaleString()}건`,
-      note: "전월 대비 ▲ 27.8%",
+      note: "현재 농장 기준",
       tone: "red",
       icon: AlertTriangle,
       tab: "work",
@@ -115,6 +119,15 @@ export function AnalyticsSummary({
       })}
     </section>
   );
+}
+
+function comparisonNote(current: number, previous: number) {
+  if (previous === 0) {
+    return current === 0 ? "전월과 동일" : "전월 비교 기준 없음";
+  }
+  const rate = ((current - previous) / previous) * 100;
+  if (rate === 0) return "전월과 동일";
+  return `전월 대비 ${rate > 0 ? "▲" : "▼"} ${Math.abs(rate).toFixed(1)}%`;
 }
 
 export function formatWon(value: number | null | undefined) {

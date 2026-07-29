@@ -26,10 +26,21 @@ public class AnalyticsQueryService {
 	public SalesAnalyticsResponse getSalesAnalytics(LocalDate from, LocalDate to) {
 		DateRange range = normalizeRange(from, to);
 		YearMonth currentMonth = YearMonth.from(range.to());
-		LocalDate currentMonthFrom = currentMonth.atDay(1);
-		LocalDate currentMonthTo = currentMonth.atEndOfMonth();
+		LocalDate currentMonthFrom = range.from().isAfter(currentMonth.atDay(1))
+				? range.from()
+				: currentMonth.atDay(1);
+		LocalDate currentMonthTo = range.to();
+		YearMonth previousMonth = currentMonth.minusMonths(1);
+		LocalDate previousMonthFrom = previousMonth.atDay(
+				Math.min(currentMonthFrom.getDayOfMonth(), previousMonth.lengthOfMonth()));
+		LocalDate previousMonthTo = previousMonth.atDay(
+				Math.min(currentMonthTo.getDayOfMonth(), previousMonth.lengthOfMonth()));
 		Long currentMonthSales = salesAnalyticsRepository.sumSales(currentMonthFrom, currentMonthTo);
+		Long previousMonthSales = salesAnalyticsRepository.sumSales(previousMonthFrom, previousMonthTo);
 		Long shippedQuantity = salesAnalyticsRepository.sumShippedQuantity(currentMonthFrom, currentMonthTo);
+		Long previousMonthShippedQuantity = salesAnalyticsRepository.sumShippedQuantity(
+				previousMonthFrom,
+				previousMonthTo);
 		Long unpaidAmount = salesAnalyticsRepository.sumUnpaidAmount(range.from(), range.to());
 		List<AnalyticsRankedValueResponse> monthlySales = monthlySales(range.from(), range.to());
 		List<AnalyticsRankedValueResponse> varietySales = ranked(salesAnalyticsRepository.varietySales(range.from(), range.to(), 10));
@@ -39,10 +50,14 @@ public class AnalyticsQueryService {
 		String formattedUnpaidAmount = NumberFormat.getNumberInstance().format(unpaidAmount);
 		return new SalesAnalyticsResponse(
 				currentMonthSales,
+				previousMonthSales,
 				shippedQuantity,
+				previousMonthShippedQuantity,
 				unpaidAmount,
+				salesAnalyticsRepository.sumSaleableQuantity(),
 				monthlySales,
 				varietySales,
+				salesAnalyticsRepository.varietyInventory(),
 				partnerSales,
 				paymentBreakdown(range.from(), range.to()),
 				recentSlips,
@@ -117,7 +132,10 @@ public class AnalyticsQueryService {
 		LocalDate normalizedTo = to == null ? LocalDate.now() : to;
 		LocalDate normalizedFrom = from == null ? normalizedTo.minusMonths(11).withDayOfMonth(1) : from;
 		if (normalizedFrom.isAfter(normalizedTo)) {
-			return new DateRange(normalizedTo, normalizedFrom);
+			throw new IllegalArgumentException("조회 시작일은 종료일보다 늦을 수 없습니다.");
+		}
+		if (normalizedFrom.isBefore(normalizedTo.minusYears(2))) {
+			throw new IllegalArgumentException("분석 기간은 최대 2년까지 조회할 수 있습니다.");
 		}
 		return new DateRange(normalizedFrom, normalizedTo);
 	}

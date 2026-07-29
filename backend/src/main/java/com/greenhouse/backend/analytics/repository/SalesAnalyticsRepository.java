@@ -1,6 +1,7 @@
 package com.greenhouse.backend.analytics.repository;
 
 import static com.greenhouse.backend.partner.domain.QBusinessPartner.businessPartner;
+import static com.greenhouse.backend.farm.domain.orchid.QOrchidGroup.orchidGroup;
 import static com.greenhouse.backend.sales.domain.QSalesSlip.salesSlip;
 import static com.greenhouse.backend.sales.domain.QSalesSlipItem.salesSlipItem;
 import static com.greenhouse.backend.settlement.domain.QPartnerBalanceSummary.partnerBalanceSummary;
@@ -10,6 +11,7 @@ import static com.greenhouse.backend.work.domain.operation.QWorkType.workType;
 import com.greenhouse.backend.analytics.dto.AnalyticsSlipSummaryResponse;
 import com.greenhouse.backend.analytics.dto.PartnerAnalyticsStatResponse;
 import com.greenhouse.backend.analytics.dto.WorkAnalyticsItemResponse;
+import com.greenhouse.backend.analytics.dto.VarietyInventoryAnalyticsResponse;
 import com.greenhouse.backend.work.domain.operation.WorkOperationStatus;
 import com.greenhouse.backend.work.domain.operation.WorkTypeTemplate;
 import com.querydsl.core.Tuple;
@@ -19,7 +21,10 @@ import com.querydsl.core.types.dsl.NumberExpression;
 import com.querydsl.jpa.impl.JPAQueryFactory;
 import jakarta.persistence.EntityManager;
 import java.time.LocalDate;
+import java.util.Comparator;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import org.springframework.stereotype.Repository;
 
 @Repository
@@ -35,7 +40,7 @@ public class SalesAnalyticsRepository {
 		return nullToZero(queryFactory
 				.select(salesSlip.totalAmount.sum().longValue())
 				.from(salesSlip)
-				.where(saleDateBetween(from, to), activeSalesSlip())
+				.where(saleDateBetween(from, to), completedSalesSlip())
 				.fetchOne());
 	}
 
@@ -44,15 +49,57 @@ public class SalesAnalyticsRepository {
 				.select(salesSlipItem.quantity.sum().longValue())
 				.from(salesSlipItem)
 				.join(salesSlipItem.salesSlip, salesSlip)
-				.where(saleDateBetween(from, to), activeSalesSlip())
+				.where(saleDateBetween(from, to), completedSalesSlip())
 				.fetchOne());
+	}
+
+	public Long sumSaleableQuantity() {
+		return nullToZero(queryFactory
+				.select(orchidGroup.quantity.subtract(orchidGroup.reservedQuantity).sum().longValue())
+				.from(orchidGroup)
+				.where(
+						orchidGroup.quantity.gt(0),
+						orchidGroup.status.notIn("주의", "이상", "병해충", "종료", "생성 취소"))
+				.fetchOne());
+	}
+
+	public List<VarietyInventoryAnalyticsResponse> varietyInventory() {
+		Map<String, long[]> values = new LinkedHashMap<>();
+		queryFactory
+				.select(
+						orchidGroup.varietyName,
+						orchidGroup.status,
+						orchidGroup.quantity,
+						orchidGroup.reservedQuantity)
+				.from(orchidGroup)
+				.where(orchidGroup.quantity.gt(0))
+				.fetch()
+				.forEach(tuple -> {
+					String name = tuple.get(orchidGroup.varietyName);
+					String status = tuple.get(orchidGroup.status);
+					Integer quantity = tuple.get(orchidGroup.quantity);
+					Integer reservedQuantity = tuple.get(orchidGroup.reservedQuantity);
+					long[] totals = values.computeIfAbsent(name, ignored -> new long[2]);
+					if (List.of("주의", "이상", "병해충").contains(status)) {
+						totals[1]++;
+					} else if (!List.of("종료", "생성 취소").contains(status)) {
+						totals[0] += Math.max(0, quantity - reservedQuantity);
+					}
+				});
+		return values.entrySet().stream()
+				.map(entry -> new VarietyInventoryAnalyticsResponse(
+						entry.getKey(),
+						entry.getValue()[0],
+						entry.getValue()[1]))
+				.sorted(Comparator.comparing(VarietyInventoryAnalyticsResponse::saleableQuantity).reversed())
+				.toList();
 	}
 
 	public Long sumUnpaidAmount(LocalDate from, LocalDate to) {
 		return nullToZero(queryFactory
 				.select(salesSlip.remainingAmount.sum())
 				.from(salesSlip)
-				.where(saleDateBetween(from, to), activeSalesSlip(), salesSlip.remainingAmount.gt(0L))
+				.where(saleDateBetween(from, to), completedSalesSlip(), salesSlip.remainingAmount.gt(0L))
 				.fetchOne());
 	}
 
@@ -63,7 +110,7 @@ public class SalesAnalyticsRepository {
 		return queryFactory
 				.select(year, month, totalAmount)
 				.from(salesSlip)
-				.where(saleDateBetween(from, to), activeSalesSlip())
+				.where(saleDateBetween(from, to), completedSalesSlip())
 				.groupBy(year, month)
 				.orderBy(year.asc(), month.asc())
 				.fetch()
@@ -78,7 +125,7 @@ public class SalesAnalyticsRepository {
 				.select(salesSlipItem.itemName, amount)
 				.from(salesSlipItem)
 				.join(salesSlipItem.salesSlip, salesSlip)
-				.where(saleDateBetween(from, to), activeSalesSlip())
+				.where(saleDateBetween(from, to), completedSalesSlip())
 				.groupBy(salesSlipItem.itemName)
 				.orderBy(amount.desc())
 				.limit(limit)
@@ -94,7 +141,7 @@ public class SalesAnalyticsRepository {
 				.select(businessPartner.name, totalAmount)
 				.from(salesSlip)
 				.join(salesSlip.partner, businessPartner)
-				.where(saleDateBetween(from, to), activeSalesSlip())
+				.where(saleDateBetween(from, to), completedSalesSlip())
 				.groupBy(businessPartner.name)
 				.orderBy(totalAmount.desc())
 				.limit(limit)
@@ -109,7 +156,7 @@ public class SalesAnalyticsRepository {
 		return queryFactory
 				.select(salesSlip.paymentStatus, totalAmount)
 				.from(salesSlip)
-				.where(saleDateBetween(from, to), activeSalesSlip())
+				.where(saleDateBetween(from, to), completedSalesSlip())
 				.groupBy(salesSlip.paymentStatus)
 				.fetch()
 				.stream()
@@ -155,7 +202,7 @@ public class SalesAnalyticsRepository {
 				.leftJoin(salesSlip).on(
 						salesSlip.partner.eq(businessPartner),
 						saleDateBetween(from, to),
-						activeSalesSlip())
+						completedSalesSlip())
 				.leftJoin(partnerBalanceSummary).on(partnerBalanceSummary.partner.eq(businessPartner))
 				.groupBy(
 						businessPartner.id,
@@ -255,7 +302,7 @@ public class SalesAnalyticsRepository {
 						salesSlip.salesStatus))
 				.from(salesSlip)
 				.join(salesSlip.partner, businessPartner)
-				.where(saleDateBetween(from, to), activeSalesSlip());
+				.where(saleDateBetween(from, to), completedSalesSlip());
 	}
 
 	private PartnerAnalyticsStatResponse partnerStat(
@@ -283,8 +330,8 @@ public class SalesAnalyticsRepository {
 		return salesSlip.saleDate.between(from, to);
 	}
 
-	private BooleanExpression activeSalesSlip() {
-		return salesSlip.salesStatus.ne("취소");
+	private BooleanExpression completedSalesSlip() {
+		return salesSlip.salesStatus.in("출고 완료", "출하 완료");
 	}
 
 	private BooleanExpression workDateBetween(LocalDate from, LocalDate to) {
