@@ -51,7 +51,7 @@ public class InboundWorkOperationRecorder {
 				null,
 				Map.of("inboundRecordIds", List.of(request.inboundRecordId())),
 				details,
-				normalize(request.worker()),
+				support.actor(request.worker()),
 				normalize(request.memo()),
 				support.now()));
 		WorkOperationTarget target = workOperationTargetRepository.save(
@@ -66,7 +66,7 @@ public class InboundWorkOperationRecorder {
 						support.now()));
 		WorkTargetExecution execution = workTargetExecutionRepository.save(new WorkTargetExecution(target));
 		LocalDateTime executedAt = support.now();
-		String worker = normalize(request.worker());
+		String worker = support.actor(request.worker());
 		operation.start(executedAt);
 		workEffectStore.save(
 				operation,

@@ -2,6 +2,7 @@ package com.greenhouse.backend.farm.application.inbound;
 
 import com.greenhouse.backend.farm.application.structure.OrchidPlacementPolicy;
 import com.greenhouse.backend.common.exception.NotFoundException;
+import com.greenhouse.backend.common.application.RequestActorProvider;
 import com.greenhouse.backend.farm.domain.structure.BedZone;
 import com.greenhouse.backend.farm.domain.inbound.InboundStatus;
 import com.greenhouse.backend.farm.domain.inbound.InboundType;
@@ -26,6 +27,7 @@ public class InboundPottingService {
 	private final BedZoneRepository bedZoneRepository;
 	private final OrchidGroupRepository orchidGroupRepository;
 	private final OrchidPlacementPolicy orchidPlacementPolicy;
+	private final RequestActorProvider requestActorProvider;
 
 	public InboundPottingResult potting(Long inboundRecordId, InboundRecordPottingRequest request) {
 		var inboundRecord = inboundRecordFinder.find(inboundRecordId);
@@ -86,7 +88,7 @@ public class InboundPottingService {
 				normalize(request.growthStage()),
 				representative.getPlacementType(),
 				representative.getTrayCount(),
-				normalize(request.worker()),
+				requestActorProvider.resolve(request.worker()),
 				appendMemo(inboundRecord.getMemo(), request.memo()));
 		inboundRecord.place(representative.getBedZone(), representative, request.pottingDate(), actualQuantity);
 		return new InboundPottingResult(

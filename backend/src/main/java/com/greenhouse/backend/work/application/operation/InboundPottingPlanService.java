@@ -65,7 +65,7 @@ public class InboundPottingPlanService {
 				null,
 				Map.of("inboundRecordIds", requestedIds),
 				Map.of(),
-				support.normalize(request.worker()),
+				support.actor(request.worker()),
 				support.normalize(request.memo()),
 				support.now());
 		List<InboundPottingPlanTarget> orderedRecords = records.stream()

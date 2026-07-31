@@ -39,6 +39,15 @@ FRONTEND_ORIGIN_PATTERNS=http://localhost:*,http://127.0.0.1:*
 
 테스트 프로필은 기존 API 테스트 보호를 위해 `AUTH_ENABLED=false`.
 
+## 데모 모드
+
+- `DEMO_MODE=true`이면 세션 없이 모든 API 요청에 `demo`, `ROLE_DEMO` 인증 주체를 적용한다.
+- 요청 본문의 작업자·생성자 값은 데모 환경에서 `demo`로 덮어쓴다.
+- 로그인과 로그아웃, 작업 유형 변경, 거래처 정산 설정 변경은 차단한다.
+- 읽기·쓰기 요청 한도와 요청 본문 크기 제한을 적용한다.
+- `AUTH_ENABLED=false`는 데모 모드가 아니라 테스트용 인증 비활성화 설정이다.
+- 프론트엔드는 로그인 화면을 우회하고 상단에 데이터 초기화 안내를 표시한다.
+
 ## 권한
 
 - `/api/auth/login`, `/api/auth/me`, `/api/auth/logout`: 인증 API

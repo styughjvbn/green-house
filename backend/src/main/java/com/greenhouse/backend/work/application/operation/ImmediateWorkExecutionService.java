@@ -50,6 +50,7 @@ public class ImmediateWorkExecutionService {
 			Long orchidGroupId,
 			Map<String, Object> details,
 			Object payload) {
+		worker = support.actor(worker);
 		var existing = operationRepository.findByRequestKey(requestKey);
 		if (existing.isPresent()) {
 			validateRequestKeyWorkType(existing.get(), workTypeCode);
@@ -86,6 +87,7 @@ public class ImmediateWorkExecutionService {
 			String memo,
 			Map<String, Object> details,
 			Object payload) {
+		worker = support.actor(worker);
 		var existing = operationRepository.findByRequestKey(requestKey);
 		if (existing.isPresent()) {
 			validateRequestKeyWorkType(existing.get(), workTypeCode);

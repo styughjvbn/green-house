@@ -7,6 +7,10 @@ spring:
     username: ${DATABASE_USERNAME:greenhouse}
     password: ${DATABASE_PASSWORD:greenhouse}
     driver-class-name: org.postgresql.Driver
+    hikari:
+      maximum-pool-size: ${DB_POOL_MAX_SIZE:10}
+      minimum-idle: ${DB_POOL_MIN_IDLE:2}
+      connection-timeout: ${DB_POOL_CONNECTION_TIMEOUT:30000}
 
   jpa:
     hibernate:
@@ -22,6 +26,9 @@ spring:
     enabled: true
     baseline-on-migrate: true
     baseline-version: 1
+    url: ${FLYWAY_URL:${DATABASE_URL:jdbc:postgresql://localhost:5432/greenhouse}}
+    user: ${FLYWAY_USERNAME:${DATABASE_USERNAME:greenhouse}}
+    password: ${FLYWAY_PASSWORD:${DATABASE_PASSWORD:greenhouse}}
 
 server:
   port: ${SERVER_PORT:8080}
@@ -41,6 +48,13 @@ app:
     admin-password: ${ADMIN_PASSWORD:admin}
     worker-username: ${WORKER_USERNAME:worker}
     worker-password: ${WORKER_PASSWORD:worker}
+  demo:
+    enabled: ${DEMO_MODE:false}
+    username: ${DEMO_USERNAME:demo}
+    request-limit-per-minute: ${DEMO_REQUEST_LIMIT_PER_MINUTE:120}
+    mutation-limit-per-minute: ${DEMO_MUTATION_LIMIT_PER_MINUTE:30}
+    mutation-limit-per-day: ${DEMO_MUTATION_LIMIT_PER_DAY:300}
+    max-request-bytes: ${DEMO_MAX_REQUEST_BYTES:262144}
   cors:
     frontend-origin-patterns: "${FRONTEND_ORIGIN_PATTERNS:${FRONTEND_ORIGINS:${FRONTEND_ORIGIN:http://localhost:*,http://127.0.0.1:*,http://192.168.0.201:*,http://192.168.0.*:*}}}"
 

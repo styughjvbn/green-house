@@ -1,0 +1,41 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+namespace: green-house-demo
+resources:
+  - ../../base
+  - network-policy.yaml
+patches:
+  - target:
+      kind: Namespace
+      name: green-house
+    patch: |-
+      - op: replace
+        path: /metadata/name
+        value: green-house-demo
+  - path: configmap-patch.yaml
+  - path: secret-patch.yaml
+  - path: postgres-endpoints-patch.yaml
+  - target:
+      kind: Ingress
+      name: green-house
+    patch: |-
+      - op: replace
+        path: /spec/rules
+        value:
+          - host: green-house-demo.sjw-project.site
+            http:
+              paths:
+                - path: /api
+                  pathType: Prefix
+                  backend:
+                    service:
+                      name: green-house-backend
+                      port:
+                        number: 8080
+                - path: /
+                  pathType: Prefix
+                  backend:
+                    service:
+                      name: green-house-frontend
+                      port:
+                        number: 3000

@@ -6,5 +6,6 @@
     "editor.formatOnSave": true
     },
     "java.format.settings.url": ".vscode/java-formatter.xml",
-    "java.format.settings.profile": "GoogleStyle"
+    "java.format.settings.profile": "GoogleStyle",
+    "python-envs.defaultEnvManager": "ms-python.python:system"
 }

@@ -1,6 +1,7 @@
 package com.greenhouse.backend.farm.application.collection;
 
 import com.greenhouse.backend.common.exception.NotFoundException;
+import com.greenhouse.backend.common.application.RequestActorProvider;
 import com.greenhouse.backend.farm.domain.orchid.OrchidGroup;
 import com.greenhouse.backend.farm.domain.collection.OrchidGroupCollection;
 import com.greenhouse.backend.farm.domain.collection.OrchidGroupCollectionMember;
@@ -30,6 +31,7 @@ public class OrchidGroupCollectionService {
 	private final OrchidGroupCollectionRepository collectionRepository;
 	private final OrchidGroupCollectionMemberRepository memberRepository;
 	private final OrchidGroupRepository orchidGroupRepository;
+	private final RequestActorProvider requestActorProvider;
 
 	@Transactional(readOnly = true)
 	public List<OrchidGroupCollectionResponse> getCollections(boolean includeArchived) {
@@ -42,7 +44,7 @@ public class OrchidGroupCollectionService {
 	public OrchidGroupCollectionResponse create(OrchidGroupCollectionCreateRequest request) {
 		OrchidGroupCollection collection = collectionRepository.save(new OrchidGroupCollection(
 				normalizeRequired(request.name()), normalize(request.description()), normalize(request.purpose()),
-				normalize(request.createdBy())));
+				requestActorProvider.resolve(request.createdBy())));
 		return toResponse(collection);
 	}
 
@@ -80,7 +82,8 @@ public class OrchidGroupCollectionService {
 				.stream().map(OrchidGroupCollectionMember::getOrchidGroupId).collect(Collectors.toSet());
 		List<OrchidGroupCollectionMember> additions = requestedIds.stream()
 				.filter(id -> !existingIds.contains(id))
-				.map(id -> new OrchidGroupCollectionMember(collectionId, id, normalize(request.createdBy())))
+				.map(id -> new OrchidGroupCollectionMember(
+						collectionId, id, requestActorProvider.resolve(request.createdBy())))
 				.toList();
 		memberRepository.saveAll(additions);
 		return toResponse(collection);
