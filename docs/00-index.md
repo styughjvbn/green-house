@@ -26,6 +26,7 @@ docs/
   08-roadmap.md
   10-work-operation-and-orchid-collection.md
   11-난 그룹·작업 실행·이력 전파 기능 구현 계획.md
+  12-demo-operations.md
 
   api/
     openapi.yaml
@@ -49,6 +50,7 @@ docs/
 | `08-roadmap.md` | 이후 확장 후보와 우선순위 |
 | `10-work-operation-and-orchid-collection.md` | 작업 실행, 대상 스냅샷, 그룹·전파 정책 |
 | `11-난 그룹·작업 실행·이력 전파 기능 구현 계획.md` | 작업 실행·그룹 기능의 단계별 구현 계획 |
+| `12-demo-operations.md` | 운영 PC의 데모 DB·Kubernetes·초기화·모니터링 절차 |
 
 ## 관리 규칙
 

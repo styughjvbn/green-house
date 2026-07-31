@@ -2,6 +2,7 @@ package com.greenhouse.backend.farm.application.inbound;
 
 import com.greenhouse.backend.farm.application.structure.OrchidPlacementPolicy;
 import com.greenhouse.backend.common.exception.NotFoundException;
+import com.greenhouse.backend.common.application.RequestActorProvider;
 import com.greenhouse.backend.farm.domain.structure.BedZone;
 import com.greenhouse.backend.farm.domain.inbound.InboundRecord;
 import com.greenhouse.backend.farm.domain.inbound.InboundStatus;
@@ -40,6 +41,7 @@ public class InboundRecordService {
 	private final OrchidPlacementPolicy orchidPlacementPolicy;
 	private final InboundRecordFinder inboundRecordFinder;
 	private final InboundWorkOperationRequestFactory workOperationRequestFactory;
+	private final RequestActorProvider requestActorProvider;
 
 	public InboundRecordResponse create(InboundRecordCreateRequest request) {
 		validateCreate(request, resolveCreateStatus(request));
@@ -62,7 +64,7 @@ public class InboundRecordService {
 				normalize(request.placementType()),
 				request.trayCount(),
 				bedZone,
-				normalize(request.worker()),
+				requestActorProvider.resolve(request.worker()),
 				normalize(request.memo()));
 		InboundRecord saved = inboundRecordRepository.save(inboundRecord);
 
@@ -100,7 +102,7 @@ public class InboundRecordService {
 				normalize(request.growthStage()),
 				normalize(request.placementType()),
 				request.trayCount(),
-				normalize(request.worker()),
+				requestActorProvider.resolve(request.worker()),
 				normalize(request.memo()));
 		return InboundRecordResponse.from(inboundRecord);
 	}

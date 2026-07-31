@@ -1,17 +1,28 @@
 package com.greenhouse.backend.work.application.operation;
 
 import com.greenhouse.backend.common.config.TimeConfig;
+import com.greenhouse.backend.common.application.RequestActorProvider;
 import java.time.Clock;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
-import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
 @Component
-@RequiredArgsConstructor
 public class WorkOperationSupport {
 
 	private final Clock clock;
+	private final RequestActorProvider requestActorProvider;
+
+	WorkOperationSupport(Clock clock) {
+		this(clock, new RequestActorProvider(false, "demo"));
+	}
+
+	@Autowired
+	public WorkOperationSupport(Clock clock, RequestActorProvider requestActorProvider) {
+		this.clock = clock;
+		this.requestActorProvider = requestActorProvider;
+	}
 
 	public LocalDate today() {
 		return TimeConfig.farmToday(clock);
@@ -50,5 +61,9 @@ public class WorkOperationSupport {
 			throw new IllegalArgumentException("필수 문자열 값은 비워둘 수 없습니다.");
 		}
 		return normalized;
+	}
+
+	public String actor(String requestedActor) {
+		return requestActorProvider.resolve(requestedActor);
 	}
 }

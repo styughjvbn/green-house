@@ -100,7 +100,7 @@ public class WorkOperationPlanService {
 		validatePeriodWorkType(workType);
 		WorkOperation operation = createOperation(request, workType, resolveIncluded(request));
 		LocalDateTime executedAt = support.completionTime(request.plannedStartDate());
-		String worker = support.normalize(request.worker());
+		String worker = support.actor(request.worker());
 		operation.start(executedAt);
 		List<WorkTargetExecution> executions = executionRepository
 				.findByTargetWorkOperationIdOrderByIdAsc(operation.getId());
@@ -130,7 +130,7 @@ public class WorkOperationPlanService {
 				request.sourceScopeId(),
 				conditionSnapshot(resolvedSelection.selection()),
 				request.details(),
-				support.normalize(request.worker()),
+				support.actor(request.worker()),
 				support.normalize(request.memo()),
 				support.now());
 		return aggregateCreator.createForOrchidGroups(

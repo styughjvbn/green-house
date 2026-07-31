@@ -9,7 +9,7 @@ import {
 import { useFontScaleSetting } from "../model/useFontScaleSetting";
 import { WorkTypeSettingsSection } from "./WorkTypeSettingsSection";
 
-export function SettingsPage() {
+export function SettingsPage({ demoMode = false }: { demoMode?: boolean }) {
   const { fontScale, resetFontScale, updateFontScale } = useFontScaleSetting();
 
   return (
@@ -73,7 +73,13 @@ export function SettingsPage() {
           </button>
         </div>
       </section>
-      <WorkTypeSettingsSection />
+      {demoMode ? (
+        <section className="rounded-md border border-[#ead6b8] bg-[#fff8ed] p-5 text-sm text-[#75430a]">
+          작업 유형과 운영 설정 변경은 데모 환경에서 사용할 수 없습니다.
+        </section>
+      ) : (
+        <WorkTypeSettingsSection />
+      )}
     </div>
   );
 }

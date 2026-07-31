@@ -1,0 +1,14 @@
+.git
+.github
+.vscode
+**/node_modules
+**/.next
+**/build
+**/__pycache__
+temp
+*.dump
+*.dump.gz
+*.pgdump
+*.backup
+.env
+.env.*

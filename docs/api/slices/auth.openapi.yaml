@@ -73,6 +73,7 @@ components:
           enum:
           - ADMIN
           - WORKER
+          - DEMO
     LoginRequest:
       type: object
       properties:

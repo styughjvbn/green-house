@@ -10,13 +10,18 @@ const PUBLIC_PATHS = [
 
 export function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
+  const demoMode = process.env.DEMO_MODE === "true";
+
+  if (demoMode && pathname === "/login") {
+    return NextResponse.redirect(new URL("/", request.url));
+  }
 
   const isPublicPath =
     PUBLIC_PATHS.includes(pathname) || pathname.startsWith("/icons/");
 
   const hasSession = request.cookies.has("JSESSIONID");
 
-  if (!isPublicPath && !hasSession) {
+  if (!demoMode && !isPublicPath && !hasSession) {
     const loginUrl = request.nextUrl.clone();
     loginUrl.pathname = "/login";
     loginUrl.searchParams.set("next", pathname);

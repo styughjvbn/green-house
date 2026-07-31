@@ -22,11 +22,18 @@ k8s/
     frontend-service.yaml
     ingress.yaml
     kustomization.yaml
+  overlays/
+    demo/
+      kustomization.yaml
+      configmap-patch.yaml
+      secret-patch.yaml
+      postgres-endpoints-patch.yaml
+      network-policy.yaml
 ```
 
 ## 적용 전 수정
 
-- `base/secret.yaml`: DB 비밀번호와 운영 계정 비밀번호 변경
+- `base/secret.yaml`: 운영 DB 비밀번호와 운영 로그인 비밀번호 변경
 - `base/postgres-host-service.yaml`: mini-pc host PostgreSQL IP 확인
 - `base/backend-deployment.yaml`: GHCR backend 이미지 태그 변경
 - `base/frontend-deployment.yaml`: GHCR frontend 이미지 태그 변경
@@ -47,6 +54,16 @@ kubectl -n green-house create secret docker-registry ghcr-secret \
 ```bash
 kubectl apply -k k8s/base
 ```
+
+데모 환경:
+
+```bash
+kubectl kustomize k8s/overlays/demo
+kubectl apply -k k8s/overlays/demo
+```
+
+데모 적용 전 도메인, PostgreSQL host IP, DB Secret을 반드시 설정한다. 상세 운영 PC
+절차는 `docs/12-demo-operations.md`를 따른다.
 
 ## 라우팅
 

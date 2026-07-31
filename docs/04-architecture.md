@@ -47,6 +47,9 @@ green-house/
 - PostgreSQL
 - 운영 초기에는 미니 PC 또는 개인 서버 가능
 - 외부 공개 시 Nginx/HTTPS 적용
+- 데모는 별도 Kubernetes namespace와 `greenhouse_demo` DB를 사용한다.
+- 운영·데모 애플리케이션 계정과 Flyway 계정을 각각 분리한다.
+- 데모 요청은 `ROLE_DEMO` 인증 주체와 서버 측 API 제한을 적용한다.
 
 ## 3. 백엔드 구조
 

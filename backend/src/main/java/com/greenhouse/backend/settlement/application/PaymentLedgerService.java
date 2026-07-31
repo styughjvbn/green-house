@@ -1,6 +1,7 @@
 package com.greenhouse.backend.settlement.application;
 
 import com.greenhouse.backend.partner.domain.BusinessPartner;
+import com.greenhouse.backend.common.application.RequestActorProvider;
 import com.greenhouse.backend.settlement.domain.PartnerPaymentEvent;
 import com.greenhouse.backend.settlement.domain.PaymentTargetType;
 import com.greenhouse.backend.settlement.dto.ManualPaymentRequest;
@@ -14,6 +15,7 @@ import org.springframework.stereotype.Service;
 @RequiredArgsConstructor
 public class PaymentLedgerService {
 	private final PartnerPaymentEventRepository eventRepository;
+	private final RequestActorProvider requestActorProvider;
 
 	public PartnerPaymentEvent recordManualPayment(
 			BusinessPartner partner,
@@ -29,14 +31,13 @@ public class PaymentLedgerService {
 				normalize(request.paymentMethod()),
 				normalize(request.depositorName()),
 				normalize(request.memo()),
-				worker(request.worker())));
+				defaultWorker(requestActorProvider.resolve(request.worker()))));
 		eventRepository.save(PartnerPaymentEvent.manualMatch(received));
 		return received;
 	}
 
-	private String worker(String value) {
-		String normalized = normalize(value);
-		return normalized == null ? "관리자" : normalized;
+	private String defaultWorker(String value) {
+		return value == null ? "관리자" : value;
 	}
 
 	private String normalize(String value) {

@@ -26,6 +26,14 @@ temp/
 __pycache__/
 *.py[cod]
 
+# PostgreSQL backup and demo sanitization artifacts
+*.dump
+*.dump.gz
+*.pgdump
+*.backup
+*.dump.sha256
+*.dump.gz.sha256
+
 scripts/seed_tools/__pycache__/
 # private seed input data
 scripts/seed_tools/raw/*.csv

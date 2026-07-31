@@ -6,6 +6,7 @@ import { DEFAULT_FONT_SCALE } from "@/features/settings/lib/fontScale";
 import { QueryProvider } from "@/shared/api/QueryProvider";
 import { PwaRuntime } from "@/shared/pwa";
 import { AppShell } from "@/widgets/app-shell/AppShell";
+import { DemoEnvironmentBanner } from "@/widgets/demo-environment-banner/DemoEnvironmentBanner";
 import "./globals.css";
 import "@/shared/pwa/pwa.css";
 import "leaflet/dist/leaflet.css";
@@ -20,11 +21,15 @@ export const metadata: Metadata = {
   description: "비닐하우스 난 농장 운영 관리 시스템",
 };
 
+export const dynamic = "force-dynamic";
+
 export default function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  const demoMode = process.env.DEMO_MODE === "true";
+
   return (
     <html
       lang="ko"
@@ -39,9 +44,20 @@ export default function RootLayout({
         <FontScaleInitializer />
         <PwaRuntime />
         <QueryProvider>
-          <Suspense fallback={null}>
-            <AppShell>{children}</AppShell>
-          </Suspense>
+          <div
+            className={
+              demoMode
+                ? "flex h-[var(--app-viewport-height)] flex-col"
+                : undefined
+            }
+          >
+            {demoMode ? <DemoEnvironmentBanner /> : null}
+            <div className={demoMode ? "min-h-0 flex-1" : undefined}>
+              <Suspense fallback={null}>
+                <AppShell demoMode={demoMode}>{children}</AppShell>
+              </Suspense>
+            </div>
+          </div>
         </QueryProvider>
       </body>
     </html>
