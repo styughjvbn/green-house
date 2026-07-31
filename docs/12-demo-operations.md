@@ -164,10 +164,48 @@ APP_URL=https://green-house-demo.sjw-project.site \
 
 ## 7. 운영 데이터 비식별화
 
-운영 DB에는 비식별화 스크립트를 직접 실행하지 않는다. PostgreSQL 외부 접속이 차단된
-격리 작업 PC 또는 격리 컨테이너에서 다음 순서로 처리한다. `psql`, `pg_dump`,
-`pg_restore`, Flyway CLI는 운영 PostgreSQL과 같은 major 버전을 사용한다.
-Python 3와 PostgreSQL 드라이버도 준비한다.
+운영 DB에는 비식별화 스크립트를 직접 실행하지 않는다. 운영 backup dump를 외부 접속이
+차단된 작업 PC 또는 격리 컨테이너로 전달해 처리한다.
+
+### Docker Compose 방식
+
+작업 PC에는 Docker Engine과 Docker Compose v2만 있으면 된다. PostgreSQL 14, Flyway,
+Python, PostgreSQL client는 Docker 컨테이너에 포함되어 있으므로 host에 설치하지 않는다.
+비식별화 컨테이너의 PostgreSQL major 버전은 운영·데모 DB와 같은 14로 고정한다.
+임시 PostgreSQL은 외부 포트를 열지 않는 Docker internal network에서 실행되고, 원본 dump는
+읽기 전용으로 마운트된다. 작업 종료 또는 실패 시 임시 DB volume은 자동 삭제된다.
+
+```bash
+cd /path/to/green-house
+
+read -rs DEMO_ANONYMIZATION_KEY
+export DEMO_ANONYMIZATION_KEY
+read -r DEMO_DATE_SHIFT_DAYS
+export DEMO_DATE_SHIFT_DAYS
+read -r DEMO_QUANTITY_FACTOR
+export DEMO_QUANTITY_FACTOR
+read -r DEMO_PRICE_FACTOR
+export DEMO_PRICE_FACTOR
+
+./scripts/demo/docker-sanitize.sh \
+  /secure/source/greenhouse-production.dump.gz \
+  /secure/demo/greenhouse_demo_sanitized.dump
+```
+
+`greenhouse_demo_sanitized.dump`와 `.sha256`만 운영 PC로 반입한다. 원본 dump는 자동
+삭제하지 않으므로, 생성 결과를 확인한 뒤 작업자가 보안 절차에 따라 폐기한다.
+체크섬은 dump와 같은 디렉터리에서 검증한다.
+
+```bash
+cd /secure/demo
+sha256sum -c greenhouse_demo_sanitized.dump.sha256
+```
+
+### Docker 없이 직접 실행하는 방식
+
+Docker를 쓸 수 없는 경우에만 아래 절차를 사용한다. `psql`, `pg_dump`, `pg_restore`,
+Flyway CLI는 운영 PostgreSQL과 같은 major 버전을 사용해야 하며 Python 3와 PostgreSQL
+드라이버도 필요하다.
 
 ```bash
 python3 -m pip install -r scripts/demo/requirements.txt
@@ -242,8 +280,9 @@ export DEMO_PRICE_FACTOR
 - 작업자와 입금자는 keyed HMAC 순서에 따른 결정적 데모명으로 치환
 - 거래처는 유형별 ID 순서에 따라 소매·도매·경매장이 각각 `001`부터 시작하는
   데모명으로 치환하고, 자재명은 keyed HMAC 기반 데모명으로 치환
-- `scripts/demo/item-varieties.json`의 실제 경매 속·품종 조합을 품종 마스터에
-  중복 없이 결정적으로 배정
+- `scripts/demo/item-varieties.json`의 실제 경매 속·품종 조합 중 운영 품종이나 자유
+  텍스트에 등장한 원본 문자열과 겹치는 품종은 제외하고, 나머지를 품종 마스터에 중복
+  없이 결정적으로 배정
 - 난 묶음, 작업 대상 스냅샷, 판매 품목, 경매 lot에도 같은 방식의 실제 속·품종
   조합을 반영
 - 수량과 단가는 외부 주입 배율로 변환하고 연관 금액은 두 배율의 곱으로 변환
@@ -251,10 +290,10 @@ export DEMO_PRICE_FACTOR
 - 전화번호는 고정값, 주소는 데모 주소, 자유 메모와 외부 UID는 제거
 - JSON 구조와 숫자·불리언·허용 코드값은 유지하고 나머지 문자열은 `데모`로 치환
 
-작업 성공 후 `greenhouse_demo_sanitize_tmp`를 삭제하고 운영 원본 dump를 보안 삭제한다.
-삭제 전 데모 dump와 SHA-256을 별도 보관 위치에 복사하고 `pg_restore --list`로 다시
-확인한다. 원본 dump 경로는 자동 삭제 대상이 아니므로 운영자가 정확한 파일을 확인한
-뒤 삭제한다.
+Docker 방식은 임시 DB volume을 자동 삭제한다. 직접 실행 방식은 작업 성공 후
+`greenhouse_demo_sanitize_tmp`를 삭제한다. 원본 dump는 두 방식 모두 자동 삭제 대상이
+아니므로, 데모 dump와 SHA-256을 별도 보관하고 `pg_restore --list`로 확인한 뒤 운영자가
+정확한 파일을 확인해 보안 절차에 따라 폐기한다.
 
 ## 8. 초기 데이터 복구
 

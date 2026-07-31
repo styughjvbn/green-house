@@ -268,6 +268,44 @@ def collect_original_sensitive_values(cursor: Any) -> set[str]:
     return values
 
 
+def catalog_without_original_varieties(
+    cursor: Any, catalog: Sequence[CatalogPair], original_sensitive_values: set[str]
+) -> list[CatalogPair]:
+    """Exclude catalog names that could reproduce original source text.
+
+    The catalog contains real auction-market names. A real catalog name can
+    nevertheless be one used by this farm or one mentioned in free text, so
+    reusing it would retain an original identifier in the demo data.
+    """
+    sources = (
+        ("varieties", "name"),
+        ("orchid_groups", "variety_name"),
+        ("work_operation_targets", "variety_name_snapshot"),
+        ("auction_shipment_lots", "variety_name"),
+        ("sales_slip_items", "item_name"),
+    )
+    original_names = set(original_sensitive_values)
+    for table, column in sources:
+        query = (
+            f"SELECT DISTINCT btrim({column}) FROM {table} "
+            f"WHERE {column} IS NOT NULL AND btrim({column})<>''"
+        )
+        for (value,) in fetch_all(cursor, query):
+            if len(value) >= 2:
+                original_names.add(value)
+
+    # assert_original_values_removed() intentionally uses substring matching,
+    # so an original such as "드림" must also rule out "화이트 드림".
+    filtered = [
+        pair
+        for pair in catalog
+        if not any(original_name in pair.variety for original_name in original_names)
+    ]
+    if not filtered:
+        raise SanitizationError("No catalog varieties remain after excluding source varieties")
+    return filtered
+
+
 def clear_sensitive_data(cursor: Any) -> None:
     statements = (
         "UPDATE auction_attempts SET memo=NULL, failed_reason=CASE WHEN failed_reason IS NULL THEN NULL ELSE '데모 사유' END",
@@ -817,6 +855,7 @@ def run() -> None:
                 )
 
             originals = collect_original_sensitive_values(cursor)
+            catalog = catalog_without_original_varieties(cursor, catalog, originals)
             clear_sensitive_data(cursor)
             anonymize_actors(cursor, key)
             anonymize_partners(cursor, key)

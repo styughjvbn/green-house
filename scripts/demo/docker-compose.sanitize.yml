@@ -1,0 +1,48 @@
+services:
+  db:
+    image: postgres:14-bookworm
+    environment:
+      POSTGRES_USER: sanitize_admin
+      POSTGRES_PASSWORD: ${SANITIZE_POSTGRES_PASSWORD:?SANITIZE_POSTGRES_PASSWORD is required}
+      POSTGRES_DB: postgres
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U sanitize_admin -d postgres"]
+      interval: 2s
+      timeout: 3s
+      retries: 30
+    volumes:
+      - sanitize-db-data:/var/lib/postgresql
+    networks:
+      - sanitize
+
+  runner:
+    build:
+      context: ../..
+      dockerfile: scripts/demo/Dockerfile.sanitize
+    environment:
+      PGPASSWORD: ${SANITIZE_POSTGRES_PASSWORD:?SANITIZE_POSTGRES_PASSWORD is required}
+      SANITIZE_DB_NAME: greenhouse_demo_sanitize_tmp
+      SANITIZE_DB_ADMIN_URL: postgresql://sanitize_admin:${SANITIZE_POSTGRES_PASSWORD}@db:5432/postgres
+      SANITIZE_DB_URL: postgresql://sanitize_admin:${SANITIZE_POSTGRES_PASSWORD}@db:5432/greenhouse_demo_sanitize_tmp
+      SANITIZE_RESTORE_CONFIRM: greenhouse_demo_sanitize_tmp
+      SANITIZE_FLYWAY_URL: jdbc:postgresql://db:5432/greenhouse_demo_sanitize_tmp
+      SANITIZE_FLYWAY_USER: sanitize_admin
+      SANITIZE_FLYWAY_PASSWORD: ${SANITIZE_POSTGRES_PASSWORD:?SANITIZE_POSTGRES_PASSWORD is required}
+      SANITIZE_DUMP_CONFIRM: greenhouse_demo_sanitize_tmp
+      DEMO_ANONYMIZATION_KEY: ${DEMO_ANONYMIZATION_KEY:?DEMO_ANONYMIZATION_KEY is required}
+      DEMO_DATE_SHIFT_DAYS: ${DEMO_DATE_SHIFT_DAYS:?DEMO_DATE_SHIFT_DAYS is required}
+      DEMO_QUANTITY_FACTOR: ${DEMO_QUANTITY_FACTOR:?DEMO_QUANTITY_FACTOR is required}
+      DEMO_PRICE_FACTOR: ${DEMO_PRICE_FACTOR:?DEMO_PRICE_FACTOR is required}
+    volumes:
+      - ../..:/workspace:ro
+      - ${SANITIZE_INPUT_DIR:?SANITIZE_INPUT_DIR is required}:/input:ro
+      - ${SANITIZE_OUTPUT_DIR:?SANITIZE_OUTPUT_DIR is required}:/output
+    networks:
+      - sanitize
+
+networks:
+  sanitize:
+    internal: true
+
+volumes:
+  sanitize-db-data:
