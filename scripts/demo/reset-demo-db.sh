@@ -2,8 +2,6 @@
 set -euo pipefail
 
 DEMO_DB_NAME="${DEMO_DB_NAME:-greenhouse_demo}"
-DEMO_DB_APP_ROLE="${DEMO_DB_APP_ROLE:-greenhouse_demo_app}"
-DEMO_DB_MIGRATOR_ROLE="${DEMO_DB_MIGRATOR_ROLE:-greenhouse_demo_migrator}"
 DEMO_NAMESPACE="${DEMO_NAMESPACE:-green-house-demo}"
 DEMO_BACKEND_DEPLOYMENT="${DEMO_BACKEND_DEPLOYMENT:-green-house-backend}"
 ROLLOUT_TIMEOUT="${ROLLOUT_TIMEOUT:-300s}"
@@ -27,10 +25,6 @@ validate_target() {
     || fail "DEMO_DB_NAME must be exactly greenhouse_demo"
   [[ "${DEMO_DB_NAME}" != *prod* ]] \
     || fail "Production-like database name is forbidden"
-  [[ "${DEMO_DB_APP_ROLE}" =~ ^[a-z_][a-z0-9_]*$ ]] \
-    || fail "Invalid DEMO_DB_APP_ROLE"
-  [[ "${DEMO_DB_MIGRATOR_ROLE}" =~ ^[a-z_][a-z0-9_]*$ ]] \
-    || fail "Invalid DEMO_DB_MIGRATOR_ROLE"
   [[ -n "${DEMO_DB_ADMIN_URL:-}" ]] || fail "DEMO_DB_ADMIN_URL is required"
   [[ -n "${DEMO_DB_TARGET_URL:-}" ]] || fail "DEMO_DB_TARGET_URL is required"
   [[ "${DEMO_RESET_CONFIRM:-}" == "greenhouse_demo" ]] \
@@ -64,7 +58,6 @@ restore_backup() {
     --dbname="${DEMO_DB_TARGET_URL}"
     --no-owner
     --no-privileges
-    --role="${DEMO_DB_MIGRATOR_ROLE}"
     --exit-on-error
   )
 
@@ -75,19 +68,10 @@ restore_backup() {
   fi
 }
 
-grant_application_privileges() {
+configure_application_schema() {
   psql "${DEMO_DB_TARGET_URL}" \
-    --set=ON_ERROR_STOP=1 \
-    --set=app_role="${DEMO_DB_APP_ROLE}" \
-    --set=migrator_role="${DEMO_DB_MIGRATOR_ROLE}" <<'SQL'
+    --set=ON_ERROR_STOP=1 <<'SQL'
 REVOKE CREATE ON SCHEMA public FROM PUBLIC;
-GRANT USAGE ON SCHEMA public TO :"app_role";
-GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA public TO :"app_role";
-GRANT USAGE, SELECT, UPDATE ON ALL SEQUENCES IN SCHEMA public TO :"app_role";
-ALTER DEFAULT PRIVILEGES FOR ROLE :"migrator_role" IN SCHEMA public
-  GRANT SELECT, INSERT, UPDATE, DELETE ON TABLES TO :"app_role";
-ALTER DEFAULT PRIVILEGES FOR ROLE :"migrator_role" IN SCHEMA public
-  GRANT USAGE, SELECT, UPDATE ON SEQUENCES TO :"app_role";
 SQL
 }
 
@@ -130,9 +114,9 @@ main() {
 
   dropdb --if-exists --force --maintenance-db="${DEMO_DB_ADMIN_URL}" "${DEMO_DB_NAME}"
   createdb --maintenance-db="${DEMO_DB_ADMIN_URL}" \
-    --owner="${DEMO_DB_MIGRATOR_ROLE}" "${DEMO_DB_NAME}"
+    --owner="${DEMO_DB_NAME}" "${DEMO_DB_NAME}"
   restore_backup "$1"
-  grant_application_privileges
+  configure_application_schema
 
   restore_backend
   trap - EXIT

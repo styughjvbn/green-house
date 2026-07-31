@@ -5,9 +5,7 @@ metadata:
   namespace: green-house
 data:
   DATABASE_URL: jdbc:postgresql://green-house-postgres-host:5432/greenhouse_demo
-  DATABASE_USERNAME: greenhouse_demo_app
-  FLYWAY_URL: jdbc:postgresql://green-house-postgres-host:5432/greenhouse_demo
-  FLYWAY_USERNAME: greenhouse_demo_migrator
+  DATABASE_USERNAME: greenhouse_demo
   FRONTEND_ORIGIN_PATTERNS: https://green-house-demo.sjw-project.site
   DEMO_MODE: "true"
   DEMO_USERNAME: demo

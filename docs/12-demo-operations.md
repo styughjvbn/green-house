@@ -10,8 +10,7 @@ PostgreSQL instance
 ├─ greenhouse
 │  └─ 기존 운영 계정
 └─ greenhouse_demo
-   ├─ greenhouse_demo_app
-   └─ greenhouse_demo_migrator
+   └─ greenhouse_demo (DB owner, Flyway, API)
 
 k3s
 ├─ green-house
@@ -39,19 +38,14 @@ CPU, 메모리, 디스크 I/O 장애까지 격리하지는 않는다.
 운영 계정은 이름이나 소유권을 변경하지 않는다.
 
 ```sql
-CREATE ROLE greenhouse_demo_app
-  LOGIN NOSUPERUSER NOCREATEDB NOCREATEROLE NOREPLICATION NOINHERIT
+CREATE ROLE greenhouse_demo
+  LOGIN NOSUPERUSER NOCREATEDB NOCREATEROLE NOREPLICATION INHERIT
   CONNECTION LIMIT 10;
 
-CREATE ROLE greenhouse_demo_migrator
-  LOGIN NOSUPERUSER NOCREATEDB NOCREATEROLE NOREPLICATION NOINHERIT
-  CONNECTION LIMIT 2;
-
-CREATE DATABASE greenhouse_demo OWNER greenhouse_demo_migrator;
+CREATE DATABASE greenhouse_demo OWNER greenhouse_demo;
 
 REVOKE ALL ON DATABASE greenhouse_demo FROM PUBLIC;
-GRANT CONNECT ON DATABASE greenhouse_demo TO greenhouse_demo_app;
-GRANT CONNECT ON DATABASE greenhouse_demo TO greenhouse_demo_migrator;
+GRANT CONNECT ON DATABASE greenhouse_demo TO greenhouse_demo;
 
 REVOKE CONNECT ON DATABASE greenhouse FROM PUBLIC;
 GRANT CONNECT ON DATABASE greenhouse TO greenhouse;
@@ -60,34 +54,27 @@ GRANT CONNECT ON DATABASE greenhouse TO greenhouse;
 비밀번호는 SQL 파일이나 shell history에 기록하지 않고 `psql`에서 설정한다.
 
 ```text
-\password greenhouse_demo_app
-\password greenhouse_demo_migrator
+\password greenhouse_demo
 ```
 
-데모 DB에 접속해 schema 권한과 기본 권한을 설정한다.
+데모 DB에 접속해 schema 권한을 설정한다. `greenhouse_demo`가 DB owner이므로
+Flyway와 API 읽기·쓰기에 같은 계정을 사용한다.
 
 ```sql
 REVOKE CREATE ON SCHEMA public FROM PUBLIC;
-GRANT USAGE ON SCHEMA public TO greenhouse_demo_app;
-GRANT USAGE, CREATE ON SCHEMA public TO greenhouse_demo_migrator;
-
-ALTER DEFAULT PRIVILEGES FOR ROLE greenhouse_demo_migrator IN SCHEMA public
-  GRANT SELECT, INSERT, UPDATE, DELETE ON TABLES TO greenhouse_demo_app;
-
-ALTER DEFAULT PRIVILEGES FOR ROLE greenhouse_demo_migrator IN SCHEMA public
-  GRANT USAGE, SELECT, UPDATE ON SEQUENCES TO greenhouse_demo_app;
+GRANT USAGE, CREATE ON SCHEMA public TO greenhouse_demo;
 ```
 
 ## 4. 데모 DB 자원 제한
 
 ```sql
-ALTER ROLE greenhouse_demo_app IN DATABASE greenhouse_demo
+ALTER ROLE greenhouse_demo IN DATABASE greenhouse_demo
   SET statement_timeout = '15s';
-ALTER ROLE greenhouse_demo_app IN DATABASE greenhouse_demo
+ALTER ROLE greenhouse_demo IN DATABASE greenhouse_demo
   SET lock_timeout = '3s';
-ALTER ROLE greenhouse_demo_app IN DATABASE greenhouse_demo
+ALTER ROLE greenhouse_demo IN DATABASE greenhouse_demo
   SET idle_in_transaction_session_timeout = '60s';
-ALTER ROLE greenhouse_demo_app IN DATABASE greenhouse_demo
+ALTER ROLE greenhouse_demo IN DATABASE greenhouse_demo
   SET temp_file_limit = '128MB';
 ```
 
@@ -113,8 +100,7 @@ WHERE rolname LIKE 'greenhouse_%';
 
 ```text
 host  greenhouse       greenhouse                 <k3s-pod-cidr>  scram-sha-256
-host  greenhouse_demo  greenhouse_demo_app       <k3s-pod-cidr>  scram-sha-256
-host  greenhouse_demo  greenhouse_demo_migrator  <k3s-pod-cidr>  scram-sha-256
+host  greenhouse_demo  greenhouse                 <k3s-pod-cidr>  scram-sha-256
 ```
 
 설정 변경 후 reload하고 허용·거부 조합을 모두 접속 테스트한다.
@@ -145,14 +131,12 @@ kubectl -n green-house-demo create secret docker-registry ghcr-secret \
 
 ```bash
 read -rs DEMO_APP_PASSWORD
-read -rs DEMO_MIGRATOR_PASSWORD
 
 kubectl -n green-house-demo create secret generic green-house-secret \
   --from-literal=DATABASE_PASSWORD="${DEMO_APP_PASSWORD}" \
-  --from-literal=FLYWAY_PASSWORD="${DEMO_MIGRATOR_PASSWORD}" \
   --dry-run=client -o yaml | kubectl apply -f -
 
-unset DEMO_APP_PASSWORD DEMO_MIGRATOR_PASSWORD
+unset DEMO_APP_PASSWORD
 ```
 
 렌더링과 적용:
@@ -277,7 +261,7 @@ export DEMO_PRICE_FACTOR
 
 ```bash
 export DEMO_DB_ADMIN_URL='postgresql://<admin>@127.0.0.1:5432/postgres'
-export DEMO_DB_TARGET_URL='postgresql://greenhouse_demo_migrator@127.0.0.1:5432/greenhouse_demo'
+export DEMO_DB_TARGET_URL='postgresql://greenhouse_demo@127.0.0.1:5432/greenhouse_demo'
 export DEMO_RESET_CONFIRM='greenhouse_demo'
 
 ./scripts/demo/reset-demo-db.sh /secure/demo/greenhouse_demo_sanitized.dump
