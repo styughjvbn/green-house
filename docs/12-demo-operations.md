@@ -40,7 +40,7 @@ CPU, 메모리, 디스크 I/O 장애까지 격리하지는 않는다.
 ```sql
 CREATE ROLE greenhouse_demo
   LOGIN NOSUPERUSER NOCREATEDB NOCREATEROLE NOREPLICATION INHERIT
-  CONNECTION LIMIT 10;
+  CONNECTION LIMIT 20;
 
 CREATE DATABASE greenhouse_demo OWNER greenhouse_demo;
 
@@ -77,6 +77,9 @@ ALTER ROLE greenhouse_demo IN DATABASE greenhouse_demo
 ALTER ROLE greenhouse_demo IN DATABASE greenhouse_demo
   SET temp_file_limit = '128MB';
 ```
+
+데모 백엔드는 Pod당 Hikari 연결을 최대 5개만 사용한다. 다만 RollingUpdate 중에는
+구버전·신버전 Pod와 Flyway 연결이 잠시 겹치므로 role 연결 제한은 20개로 둔다.
 
 설정 확인:
 
