@@ -1,12 +1,27 @@
 import type { OrchidGroup } from "./types";
 
 export function getOrchidVarietyColor(group: OrchidGroup) {
+  if (group.varietyColor) {
+    return {
+      fill: group.varietyColor,
+      border: darkenHexColor(group.varietyColor),
+    };
+  }
   const key = group.varietyId
     ? `variety:${group.varietyId}`
     : `${group.genus ?? ""}:${group.varietyName}`;
   const hash = hashString(key);
 
   return ORCHID_VARIETY_PALETTE[hash % ORCHID_VARIETY_PALETTE.length];
+}
+
+function darkenHexColor(color: string) {
+  const value = Number.parseInt(color.slice(1), 16);
+  const channel = (shift: number) =>
+    Math.round(((value >> shift) & 0xff) * 0.72);
+  return `#${[channel(16), channel(8), channel(0)]
+    .map((item) => item.toString(16).padStart(2, "0"))
+    .join("")}`;
 }
 
 const ORCHID_VARIETY_PALETTE = [

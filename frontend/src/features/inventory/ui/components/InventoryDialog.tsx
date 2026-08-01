@@ -9,6 +9,7 @@ import type {
   VarietyPayload,
 } from "../../model/types";
 import { Field, inputClass } from "../common/InventoryPrimitives";
+import { ColorField } from "../common/ColorField";
 import { PotSizeInput } from "../common/PotSizeInput";
 import { VarietyCreatableFields } from "../common/VarietyCreatableFields";
 
@@ -63,6 +64,7 @@ function VarietyDialogForm({
     name: "",
     alias: "",
     defaultPotSize: "",
+    color: null,
     saleEnabled: true,
     description: "",
     memo: "",
@@ -114,6 +116,10 @@ function VarietyDialogForm({
         onChange={(value) =>
           setForm((current) => ({ ...current, defaultPotSize: value }))
         }
+      />
+      <ColorField
+        color={form.color}
+        onChange={(color) => setForm((current) => ({ ...current, color }))}
       />
       <label className="flex items-center gap-2 text-sm font-semibold text-[#425047] md:col-span-2">
         <input

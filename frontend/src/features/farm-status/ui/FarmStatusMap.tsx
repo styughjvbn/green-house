@@ -146,6 +146,7 @@ function hydrateMapHouses(mapData: FarmStatusMapProps["mapData"]) {
       id: group.orchidGroupId,
       bedZoneId: group.bedZoneId,
       varietyId: group.varietyId,
+      varietyColor: group.varietyColor,
       genus: null,
       varietyName: group.varietyName,
       quantity: group.quantity,

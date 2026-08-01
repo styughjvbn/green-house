@@ -27,6 +27,7 @@ import type {
   VarietyPayload,
 } from "../../model/types";
 import { DetailRow, Field, inputClass } from "../common/InventoryPrimitives";
+import { ColorField } from "../common/ColorField";
 import { PotSizeInput } from "../common/PotSizeInput";
 
 export function VarietyView({
@@ -82,6 +83,7 @@ export function VarietyView({
     name: selected?.name ?? "",
     alias: selected?.alias ?? "",
     defaultPotSize: selected?.potSize ?? "",
+    color: selected?.color ?? null,
     saleEnabled: selected?.saleEnabled ?? true,
     description: selected?.description ?? "",
     memo: selected?.memo ?? "",
@@ -298,6 +300,7 @@ export function VarietyView({
                         name: selected.name,
                         alias: selected.alias,
                         defaultPotSize: selected.potSize,
+                        color: selected.color,
                         saleEnabled: selected.saleEnabled,
                         description: selected.description,
                         memo: selected.memo,
@@ -395,6 +398,12 @@ export function VarietyView({
                         ...current,
                         defaultPotSize: value,
                       }))
+                    }
+                  />
+                  <ColorField
+                    color={form.color}
+                    onChange={(color) =>
+                      setForm((current) => ({ ...current, color }))
                     }
                   />
                   <label className="flex items-center gap-2 text-sm font-semibold text-[#425047]">

@@ -365,6 +365,8 @@ components:
         varietyId:
           type: integer
           format: int64
+        varietyColor:
+          type: string
         genus:
           type: string
         varietyName:

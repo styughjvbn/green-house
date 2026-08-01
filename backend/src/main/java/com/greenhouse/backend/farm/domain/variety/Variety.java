@@ -39,6 +39,9 @@ public class Variety extends BaseEntity {
 	@Column(name = "default_pot_size", length = 50)
 	private String defaultPotSize;
 
+	@Column(length = 7)
+	private String color;
+
 	@Column(name = "sale_enabled", nullable = false)
 	private boolean saleEnabled;
 
@@ -61,11 +64,26 @@ public class Variety extends BaseEntity {
 			boolean active,
 			String description,
 			String memo) {
+		this(code, genus, name, alias, defaultPotSize, null, saleEnabled, active, description, memo);
+	}
+
+	public Variety(
+			String code,
+			String genus,
+			String name,
+			String alias,
+			String defaultPotSize,
+			String color,
+			boolean saleEnabled,
+			boolean active,
+			String description,
+			String memo) {
 		this.code = code;
 		this.genus = genus;
 		this.name = name;
 		this.alias = alias;
 		this.defaultPotSize = PotSizeCode.fromInput(defaultPotSize).getDisplayValue();
+		this.color = color;
 		this.saleEnabled = saleEnabled;
 		this.active = active;
 		this.description = description;
@@ -77,6 +95,7 @@ public class Variety extends BaseEntity {
 			String name,
 			String alias,
 			String defaultPotSize,
+			String color,
 			boolean saleEnabled,
 			String description,
 			String memo) {
@@ -84,6 +103,7 @@ public class Variety extends BaseEntity {
 		this.name = name;
 		this.alias = alias;
 		this.defaultPotSize = PotSizeCode.fromInput(defaultPotSize).getDisplayValue();
+		this.color = color;
 		this.saleEnabled = saleEnabled;
 		this.description = description;
 		this.memo = memo;

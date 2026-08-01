@@ -48,11 +48,24 @@ class VarietyCompositeKeyTests {
 				.hasMessageContaining("같은 속과 품종명");
 	}
 
+	@Test
+	void savesColorAsAnOptionalNormalizedHexValue() {
+		var created = varietyService.create(new VarietyCreateRequest(
+				"카틀레야", "색상 품종", null, null, "#aBcDeF", true, null, null));
+
+		assertThat(created.color()).isEqualTo("#ABCDEF");
+
+		var updated = varietyService.update(created.id(), new VarietyUpdateRequest(
+				"카틀레야", "색상 품종", null, null, null, true, null, null));
+
+		assertThat(updated.color()).isNull();
+	}
+
 	private VarietyCreateRequest createRequest(String genus, String name) {
-		return new VarietyCreateRequest(genus, name, null, null, true, null, null);
+		return new VarietyCreateRequest(genus, name, null, null, null, true, null, null);
 	}
 
 	private VarietyUpdateRequest updateRequest(String genus, String name) {
-		return new VarietyUpdateRequest(genus, name, null, null, true, null, null);
+		return new VarietyUpdateRequest(genus, name, null, null, null, true, null, null);
 	}
 }
