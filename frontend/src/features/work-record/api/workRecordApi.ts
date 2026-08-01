@@ -226,8 +226,6 @@ export type StructureChangeExecutionPayload = {
     releasedStartPosition: number | null;
     releasedEndPosition: number | null;
   }[];
-  lossQuantity: number;
-  lossReason: string | null;
   results: {
     bedZoneId: number;
     quantity: number;

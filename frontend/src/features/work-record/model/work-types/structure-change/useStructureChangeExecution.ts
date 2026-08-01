@@ -124,8 +124,6 @@ export function useStructureChangeExecution({
       newResultRow(group, inferredQuantity),
     ),
   );
-  const [lossQuantity, setLossQuantity] = useState("0");
-  const [lossReason, setLossReason] = useState("");
   const today = localDateValue(new Date());
   const [completedDate, setCompletedDate] = useState(
     recordMode ? operation.plannedStartDate : today,
@@ -166,8 +164,6 @@ export function useStructureChangeExecution({
   }, [
     completedDate,
     inputQuantities,
-    lossQuantity,
-    lossReason,
     memo,
     recordMode,
     releasedPlacements,
@@ -276,26 +272,6 @@ export function useStructureChangeExecution({
     );
   }
 
-  function changeLossQuantity(value: string) {
-    const delta = Number(value || 0) - Number(lossQuantity || 0);
-    if (Number.isInteger(delta) && delta !== 0) {
-      setRows((current) => {
-        const donor = [...current]
-          .filter((row) => row.autoQuantity)
-          .sort(
-            (left, right) => Number(right.quantity) - Number(left.quantity),
-          )[0];
-        if (!donor || Number(donor.quantity) - delta < 1) return current;
-        return current.map((row) =>
-          row.key === donor.key
-            ? { ...row, quantity: String(Number(row.quantity) - delta) }
-            : row,
-        );
-      });
-    }
-    setLossQuantity(value);
-  }
-
   function patchRow(key: string, patch: Partial<ResultRow>) {
     setRows((current) =>
       current.map((row) => (row.key === key ? { ...row, ...patch } : row)),
@@ -372,13 +348,12 @@ export function useStructureChangeExecution({
       availableSources,
       completedDate,
       inputQuantities,
-      lossQuantity,
-      lossReason,
       recordMode,
       releasedPlacements,
       rows,
       selectedSourceIds,
       selectedSources,
+      workTypeCode: operation.workTypeCode,
     });
     if (validation) {
       setError(validation);
@@ -390,8 +365,6 @@ export function useStructureChangeExecution({
       const payload = createExecutionPayload({
         completedDate,
         inputQuantities,
-        lossQuantity,
-        lossReason,
         memo,
         releasedPlacements,
         rows,
@@ -429,15 +402,12 @@ export function useStructureChangeExecution({
     addResult,
     availableSources,
     changeInputQuantity,
-    changeLossQuantity,
     changeReleasedPlacement,
     commonAgeYear,
     commonPotSize,
     completedDate,
     error,
     inputQuantities,
-    lossQuantity,
-    lossReason,
     memo,
     patchRow,
     releasedPlacements,
@@ -451,7 +421,6 @@ export function useStructureChangeExecution({
     setAllAgeYears,
     setAllPotSizes,
     setCompletedDate,
-    setLossReason,
     setMemo,
     setWorker,
     submit,

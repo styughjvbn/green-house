@@ -80,8 +80,6 @@ export async function executeRepotWork(payload: {
   memo: string | null;
   sourceOrchidGroupId: number;
   inputQuantity: number;
-  lossQuantity: number;
-  lossReason: string | null;
   results: RepotResultOrchidGroupRow[];
   inheritCollectionIds: number[];
 }): Promise<RepotWorkResult> {

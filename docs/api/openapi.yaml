@@ -3838,14 +3838,6 @@ components:
             $ref: '#/components/schemas/StructureChangeSourceRequest'
           maxItems: 100
           minItems: 0
-        lossQuantity:
-          type: integer
-          format: int32
-          minimum: 0
-        lossReason:
-          type: string
-          maxLength: 1000
-          minLength: 0
         results:
           type: array
           items:
@@ -3855,7 +3847,6 @@ components:
       required:
       - completedDate
       - idempotencyKey
-      - lossQuantity
       - results
       - sources
     StructureChangeResultRequest:
@@ -4263,14 +4254,6 @@ components:
           type: integer
           format: int32
           minimum: 1
-        lossQuantity:
-          type: integer
-          format: int32
-          minimum: 0
-        lossReason:
-          type: string
-          maxLength: 1000
-          minLength: 0
         results:
           type: array
           items:
@@ -4288,7 +4271,6 @@ components:
       required:
       - idempotencyKey
       - inputQuantity
-      - lossQuantity
       - results
       - sourceOrchidGroupId
       - title
@@ -4317,8 +4299,6 @@ components:
         lossQuantity:
           type: integer
           format: int32
-        lossReason:
-          type: string
     MultiCreateOrchidGroupRowRequest:
       type: object
       properties:

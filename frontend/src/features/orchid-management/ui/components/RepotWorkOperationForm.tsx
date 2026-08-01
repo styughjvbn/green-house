@@ -52,8 +52,6 @@ export default function RepotWorkOperationForm({
   const [worker, setWorker] = useState("");
   const [memo, setMemo] = useState("");
   const [inputQuantity, setInputQuantity] = useState(String(source.quantity));
-  const [lossQuantity, setLossQuantity] = useState("0");
-  const [lossReason, setLossReason] = useState("");
   const [rows, setRows] = useState<ResultRow[]>(() => [newRow(source)]);
   const [sourceCollections, setSourceCollections] = useState<
     OrchidGroupCollection[]
@@ -95,14 +93,13 @@ export default function RepotWorkOperationForm({
   }, [source.id]);
 
   const input = toInteger(inputQuantity);
-  const loss = toInteger(lossQuantity);
   const resultTotal = rows.reduce(
     (sum, row) => sum + (toInteger(row.quantity) ?? 0),
     0,
   );
   const remaining = input == null ? null : source.quantity - input;
-  const balanced =
-    input != null && loss != null && resultTotal + loss === input;
+  const loss = input == null ? null : Math.max(0, input - resultTotal);
+  const balanced = input != null && resultTotal <= input;
 
   function updateRow(key: string, patch: Partial<ResultRow>) {
     setRows((current) =>
@@ -128,8 +125,6 @@ export default function RepotWorkOperationForm({
         memo: memo.trim() || null,
         sourceOrchidGroupId: source.id,
         inputQuantity: input!,
-        lossQuantity: loss!,
-        lossReason: loss! > 0 ? lossReason.trim() : null,
         inheritCollectionIds,
         results: rows.map((row) => ({
           bedZoneId: Number(row.bedZoneId),
@@ -159,10 +154,7 @@ export default function RepotWorkOperationForm({
     if (input == null || input < 1 || input > source.quantity) {
       return `투입 수량은 1 이상 ${source.quantity} 이하로 입력해주세요.`;
     }
-    if (loss == null || loss < 0) return "손실 수량은 0 이상이어야 합니다.";
-    if (!balanced)
-      return "투입 수량과 결과 수량 합계 + 손실 수량이 같아야 합니다.";
-    if (loss > 0 && !lossReason.trim()) return "손실 사유를 입력해주세요.";
+    if (!balanced) return "결과 수량은 투입 수량보다 클 수 없습니다.";
     if (
       rows.some(
         (row) =>
@@ -260,27 +252,13 @@ export default function RepotWorkOperationForm({
               value={inputQuantity}
               onChange={setInputQuantity}
             />
-            <Field
-              label="손실 수량"
-              min="0"
-              type="number"
-              value={lossQuantity}
-              onChange={setLossQuantity}
-            />
           </div>
-          {loss != null && loss > 0 ? (
-            <Field
-              label="손실 사유"
-              value={lossReason}
-              onChange={setLossReason}
-            />
-          ) : null}
 
           <div
             className={`rounded-md p-2 text-xs font-semibold ${balanced && remaining != null && remaining >= 0 ? "bg-[#edf8ef] text-[#16713a]" : "bg-[#fff1ec] text-[#9c321d]"}`}
           >
-            투입 {input ?? "-"} = 결과 {resultTotal} + 손실 {loss ?? "-"} · 원본
-            잔여 {remaining ?? "-"}
+            투입 {input ?? "-"} · 결과 {resultTotal} · 손실 {loss ?? "-"} (자동
+            계산) · 원본 잔여 {remaining ?? "-"}
           </div>
 
           {rows.map((row, index) => (
