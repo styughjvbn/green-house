@@ -450,6 +450,70 @@ class DivideMergeWorkOperationIntegrationTests extends AbstractBackendIntegratio
 	}
 
 	@Test
+	void createsDivideRecordWhenResultQuantityExceedsSourceQuantity() throws Exception {
+		OrchidGroup source = createSource(30, "0", "3");
+
+		mockMvc.perform(post("/api/work-operations/structure-change-records")
+				.contentType(MediaType.APPLICATION_JSON)
+				.content("""
+						{
+						  "operation": {
+						    "workTypeId": %d,
+						    "title": "분주 작업 기록",
+						    "plannedStartDate": "2026-07-16",
+						    "sourceScopeType": "MANUAL_SELECTION",
+						    "sourceOrchidGroupIds": [%d]
+						  },
+						  "execution": {
+						    "idempotencyKey": "divide-record-expanded-quantity",
+						    "completedDate": "2026-07-16",
+						    "sources": [{"sourceOrchidGroupId": %d, "inputQuantity": 30}],
+						    "lossQuantity": 0,
+						    "results": [
+						      {"bedZoneId": %d, "quantity": 35, "sourceOrchidGroupIds": [%d], "potSize": "4치", "ageYear": 2, "purpose": "NORMAL", "startPosition": 0, "endPosition": 3}
+						    ]
+						  }
+						}
+						""".formatted(
+								divideType.getId(), source.getId(), source.getId(), resultZone.getId(), source.getId())))
+				.andExpect(status().isCreated())
+				.andExpect(jsonPath("$.data.status").value("COMPLETED"));
+
+		assertThat(orchidGroupRepository.findById(source.getId()).orElseThrow().getQuantity()).isZero();
+		assertThat(orchidGroupRepository.findByBedZoneIdAndQuantityGreaterThanOrderBySortOrderAsc(
+				resultZone.getId(), 0))
+				.extracting(OrchidGroup::getQuantity)
+				.containsExactly(35);
+	}
+
+	@Test
+	void allowsMergeExecutionWithOneSource() throws Exception {
+		OrchidGroup source = createSource(20, "0", "2");
+		Long operationId = createPlan(mergeType, source.getId());
+
+		mockMvc.perform(post("/api/work-operations/{id}/start", operationId))
+				.andExpect(status().isOk());
+		mockMvc.perform(post("/api/work-operations/{id}/structure-change-executions", operationId)
+				.contentType(MediaType.APPLICATION_JSON)
+				.content("""
+						{
+						  "idempotencyKey": "single-source-merge",
+						  "completedDate": "2026-07-16",
+						  "sources": [{"sourceOrchidGroupId": %d, "inputQuantity": 20}],
+						  "results": [
+						    {"bedZoneId": %d, "quantity": 20, "sourceOrchidGroupIds": [%d], "potSize": "4치", "ageYear": 2, "purpose": "NORMAL", "startPosition": 0, "endPosition": 2}
+						  ]
+						}
+						""".formatted(source.getId(), resultZone.getId(), source.getId())))
+				.andExpect(status().isCreated())
+				.andExpect(jsonPath("$.data.targets[0].executionStatus").value("COMPLETED"));
+
+		assertThat(lineageRepository.findBySourceOrchidGroupIdOrderByCreatedAtAscIdAsc(source.getId()))
+				.hasSize(1)
+				.allMatch(lineage -> lineage.getRelationType() == OrchidGroupLineageRelationType.MERGED_TO);
+	}
+
+	@Test
 	void rejectsStructureChangeRecordWhenNotAllSourceQuantityIsProvided() throws Exception {
 		OrchidGroup source = createSource(30, "0", "3");
 

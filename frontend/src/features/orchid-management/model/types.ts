@@ -124,7 +124,6 @@ export type RepotWorkResult = {
   resultOrchidGroups: OrchidGroup[];
   inputQuantity: number;
   lossQuantity: number;
-  lossReason: string | null;
 };
 
 export type WorkOperationCorrectionAdjustment = {

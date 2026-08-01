@@ -135,23 +135,10 @@ export function StructureChangeExecutionDialog({
               value={form.completedDate}
               onChange={form.setCompletedDate}
             />
-            <TextField
-              label="손실 수량"
-              type="number"
-              value={form.lossQuantity}
-              onChange={form.changeLossQuantity}
-            />
-            {Number(form.lossQuantity) > 0 ? (
-              <TextField
-                label="손실 사유"
-                value={form.lossReason}
-                onChange={form.setLossReason}
-              />
-            ) : (
-              <div className="rounded-md bg-[#f4f7f3] px-3 py-2 text-sm text-[#526057]">
-                투입 {form.totalInput}분 · 결과 {form.totalResult}분
-              </div>
-            )}
+            <div className="rounded-md bg-[#f4f7f3] px-3 py-2 text-sm text-[#526057]">
+              투입 {form.totalInput}분 · 결과 {form.totalResult}분 · 손실{" "}
+              {Math.max(0, form.totalInput - form.totalResult)}분 (자동 계산)
+            </div>
             <TextField
               label="작업자"
               value={form.worker}

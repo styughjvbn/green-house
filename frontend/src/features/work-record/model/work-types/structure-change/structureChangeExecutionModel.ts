@@ -39,8 +39,6 @@ export type AvailableSource = {
 export function createExecutionPayload({
   completedDate,
   inputQuantities,
-  lossQuantity,
-  lossReason,
   memo,
   releasedPlacements,
   rows,
@@ -49,8 +47,6 @@ export function createExecutionPayload({
 }: {
   completedDate: string;
   inputQuantities: Record<number, string>;
-  lossQuantity: string;
-  lossReason: string;
   memo: string;
   releasedPlacements: Record<number, FarmPlacementSelection | null | undefined>;
   rows: ResultRow[];
@@ -69,8 +65,6 @@ export function createExecutionPayload({
         releasedPlacements[group.id]?.startPosition ?? null,
       releasedEndPosition: releasedPlacements[group.id]?.endPosition ?? null,
     })),
-    lossQuantity: Number(lossQuantity),
-    lossReason: Number(lossQuantity) > 0 ? lossReason.trim() : null,
     results: rows.map((row) => ({
       bedZoneId: row.placement!.bedZoneId,
       quantity: Number(row.quantity),
@@ -92,24 +86,22 @@ export function validateExecution({
   availableSources,
   completedDate,
   inputQuantities,
-  lossQuantity,
-  lossReason,
   recordMode,
   releasedPlacements,
   rows,
   selectedSourceIds,
   selectedSources,
+  workTypeCode,
 }: {
   availableSources: AvailableSource[];
   completedDate: string;
   inputQuantities: Record<number, string>;
-  lossQuantity: string;
-  lossReason: string;
   recordMode: boolean;
   releasedPlacements: Record<number, FarmPlacementSelection | null | undefined>;
   rows: ResultRow[];
   selectedSourceIds: Set<number>;
   selectedSources: AvailableSource[];
+  workTypeCode: string;
 }) {
   if (!completedDate) return "완료일을 입력해주세요.";
   if (selectedSources.length === 0) return "이번에 작업할 원본을 선택해주세요.";
@@ -136,7 +128,6 @@ export function validateExecution({
   ) {
     return "작업 수량은 현재 수량과 계획 잔여 수량 이내로 입력해주세요.";
   }
-  const loss = Number(lossQuantity);
   const totalInput = selectedSources.reduce(
     (sum, { group }) => sum + Number(inputQuantities[group.id] || 0),
     0,
@@ -145,10 +136,8 @@ export function validateExecution({
     (sum, row) => sum + Number(row.quantity || 0),
     0,
   );
-  if (!Number.isInteger(loss) || loss < 0) return "손실 수량을 확인해주세요.";
-  if (totalInput !== totalResult + loss)
-    return "투입 수량과 결과·손실 수량 합계가 맞지 않습니다.";
-  if (loss > 0 && !lossReason.trim()) return "손실 사유를 입력해주세요.";
+  if (workTypeCode !== "DIVIDE" && totalResult > totalInput)
+    return "결과 수량은 투입 수량보다 클 수 없습니다.";
   if (
     rows.length === 0 ||
     rows.some(

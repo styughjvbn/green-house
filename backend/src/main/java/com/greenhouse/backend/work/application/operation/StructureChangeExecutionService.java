@@ -45,9 +45,6 @@ public class StructureChangeExecutionService {
 			Long operationId, WorkTargetExecutionRequest request) {
 		List<WorkTargetExecution> executions = executionRepository
 				.findForUpdateByTargetWorkOperationIdOrderByIdAsc(operationId);
-		if (executions.size() < 2) {
-			throw new IllegalArgumentException("합식은 작업 대상이 두 개 이상 필요합니다.");
-		}
 		WorkOperation operation = executions.getFirst().getTarget().getWorkOperation();
 		if (!WorkType.MERGE_CODE.equals(operation.getWorkType().getCode())) {
 			throw new IllegalArgumentException("합식 작업만 일괄 실행할 수 있습니다.");

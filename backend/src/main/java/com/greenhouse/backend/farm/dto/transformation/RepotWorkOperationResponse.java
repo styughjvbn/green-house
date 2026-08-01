@@ -9,6 +9,5 @@ public record RepotWorkOperationResponse(
 		OrchidGroupResponse sourceOrchidGroup,
 		List<OrchidGroupResponse> resultOrchidGroups,
 		Integer inputQuantity,
-		Integer lossQuantity,
-		String lossReason) {
+		Integer lossQuantity) {
 }
