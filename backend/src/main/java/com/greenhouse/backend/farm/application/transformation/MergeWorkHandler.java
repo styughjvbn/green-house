@@ -90,13 +90,10 @@ public class MergeWorkHandler implements WorkEffectHandler {
 			}
 		});
 		int totalInput = inputBySourceId.values().stream().mapToInt(Integer::intValue).sum();
-		if (request.result().quantity() + request.lossQuantity() != totalInput) {
-			throw new IllegalArgumentException("합식 투입 수량은 결과 수량과 손실 수량의 합과 같아야 합니다.");
+		if (request.result().quantity() > totalInput) {
+			throw new IllegalArgumentException("합식 결과 수량은 투입 수량보다 클 수 없습니다.");
 		}
-		if (request.lossQuantity() > 0
-				&& (request.lossReason() == null || request.lossReason().isBlank())) {
-			throw new IllegalArgumentException("손실 수량이 있으면 손실 사유를 입력해야 합니다.");
-		}
+		int lossQuantity = totalInput - request.result().quantity();
 
 		String resultStatus = first.getStatus();
 		inputBySourceId.forEach((sourceId, inputQuantity) ->
@@ -115,17 +112,14 @@ public class MergeWorkHandler implements WorkEffectHandler {
 		details.put("sourceOrchidGroupIds", sourceIds);
 		details.put("sourceInputQuantities", inputBySourceId);
 		details.put("totalInputQuantity", totalInput);
-		details.put("lossQuantity", request.lossQuantity());
-		if (request.lossReason() != null && !request.lossReason().isBlank()) {
-			details.put("lossReason", request.lossReason().trim());
-		}
+		details.put("lossQuantity", lossQuantity);
 		details.put("resultOrchidGroupId", result.getId());
 		return new WorkExecutionResult("MERGE", details, List.of(result.getId()));
 	}
 
 	private void validateRequest(WorkOperation operation, MergeWorkOperationRequest request) {
-		if (request == null || request.sources() == null || request.sources().size() < 2) {
-			throw new IllegalArgumentException("합식은 원본 난 묶음이 두 개 이상 필요합니다.");
+		if (request == null || request.sources() == null || request.sources().isEmpty()) {
+			throw new IllegalArgumentException("합식 원본 난 묶음이 필요합니다.");
 		}
 		if (request.sources().stream().anyMatch(source -> source == null
 				|| source.sourceOrchidGroupId() == null
@@ -133,8 +127,8 @@ public class MergeWorkHandler implements WorkEffectHandler {
 				|| source.inputQuantity() < 1)) {
 			throw new IllegalArgumentException("합식 원본 ID와 투입 수량을 확인해주세요.");
 		}
-		if (request.result() == null || request.lossQuantity() == null || request.lossQuantity() < 0) {
-			throw new IllegalArgumentException("합식 결과와 손실 수량이 필요합니다.");
+		if (request.result() == null) {
+			throw new IllegalArgumentException("합식 결과가 필요합니다.");
 		}
 		var result = request.result();
 		if (result.bedZoneId() == null || result.quantity() == null || result.quantity() < 1

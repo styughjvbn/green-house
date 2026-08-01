@@ -32,17 +32,14 @@ public class RepotWorkOperationService {
 	}
 
 	public RepotWorkOperationResponse execute(RepotWorkOperationRequest request) {
-		validateQuantityBalance(request);
+		int lossQuantity = calculateLossQuantity(request);
 		if (orchidGroupRepository.findAllForUpdateByIdIn(List.of(request.sourceOrchidGroupId())).isEmpty()) {
 			throw new NotFoundException("원본 난 묶음을 찾을 수 없습니다.");
 		}
 		Map<String, Object> details = new LinkedHashMap<>();
 		details.put("sourceOrchidGroupId", request.sourceOrchidGroupId());
 		details.put("inputQuantity", request.inputQuantity());
-		details.put("lossQuantity", request.lossQuantity());
-		if (request.lossReason() != null && !request.lossReason().isBlank()) {
-			details.put("lossReason", request.lossReason().trim());
-		}
+		details.put("lossQuantity", lossQuantity);
 		details.put("resultCount", request.results().size());
 		var operation = immediateWorkExecutionService.executeForTarget(
 				normalizeRequired(request.idempotencyKey()),
@@ -57,15 +54,12 @@ public class RepotWorkOperationService {
 		return response(operation.id());
 	}
 
-	private void validateQuantityBalance(RepotWorkOperationRequest request) {
+	private int calculateLossQuantity(RepotWorkOperationRequest request) {
 		long resultQuantity = request.results().stream().mapToLong(row -> row.quantity()).sum();
-		if (resultQuantity + request.lossQuantity() != request.inputQuantity()) {
-			throw new IllegalArgumentException("분갈이 투입 수량은 결과 수량 합계와 손실 수량의 합과 같아야 합니다.");
+		if (resultQuantity > request.inputQuantity()) {
+			throw new IllegalArgumentException("분갈이 결과 수량은 투입 수량보다 클 수 없습니다.");
 		}
-		if (request.lossQuantity() > 0
-				&& (request.lossReason() == null || request.lossReason().isBlank())) {
-			throw new IllegalArgumentException("손실 수량이 있으면 손실 사유를 입력해야 합니다.");
-		}
+		return (int) (request.inputQuantity() - resultQuantity);
 	}
 
 	@Transactional(readOnly = true)
@@ -91,18 +85,12 @@ public class RepotWorkOperationService {
 				OrchidGroupResponse.from(source),
 				results,
 				integerDetail(operation.details(), "inputQuantity"),
-				integerDetail(operation.details(), "lossQuantity"),
-				stringDetail(operation.details(), "lossReason"));
+				integerDetail(operation.details(), "lossQuantity"));
 	}
 
 	private Integer integerDetail(Map<String, Object> details, String key) {
 		Object value = details == null ? null : details.get(key);
 		return value instanceof Number number ? number.intValue() : null;
-	}
-
-	private String stringDetail(Map<String, Object> details, String key) {
-		Object value = details == null ? null : details.get(key);
-		return value == null ? null : value.toString();
 	}
 
 	private String normalize(String value) {

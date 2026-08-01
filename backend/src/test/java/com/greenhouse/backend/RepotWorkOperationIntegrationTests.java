@@ -225,17 +225,18 @@ class RepotWorkOperationIntegrationTests extends AbstractBackendIntegrationTest 
 	}
 
 	@Test
-	void rollsBackWhenInputQuantityDoesNotBalance() throws Exception {
+	void calculatesLossFromFinalResultQuantity() throws Exception {
 		OrchidGroup source = createSource(100, "0", "2");
 
 		mockMvc.perform(post("/api/work-operations/repot")
 				.contentType(MediaType.APPLICATION_JSON)
 				.content(repotRequest("repot-invalid", source.getId(), 40, 2, "손실", 37, "2", "4", "")))
-				.andExpect(status().isBadRequest());
+				.andExpect(status().isCreated())
+				.andExpect(jsonPath("$.data.lossQuantity").value(3));
 
-		assertThat(orchidGroupRepository.findById(source.getId()).orElseThrow().getQuantity()).isEqualTo(100);
-		assertThat(operationRepository.count()).isZero();
-		assertThat(lineageRepository.count()).isZero();
+		assertThat(orchidGroupRepository.findById(source.getId()).orElseThrow().getQuantity()).isEqualTo(60);
+		assertThat(operationRepository.count()).isEqualTo(1);
+		assertThat(lineageRepository.count()).isEqualTo(1);
 	}
 
 	private OrchidGroup createSource(int quantity, String start, String end) {

@@ -40,7 +40,6 @@ public class BatchStructureTransformationExecutor {
 			String handlerCode,
 			String workLabel,
 			OrchidGroupLineageRelationType relationType) {
-		validateBalance(request, workLabel);
 		List<Long> sourceIds = request.sources().stream()
 				.map(StructureChangeSourceRequest::sourceOrchidGroupId).sorted().toList();
 		if (sourceIds.stream().distinct().count() != sourceIds.size()) {
@@ -67,6 +66,8 @@ public class BatchStructureTransformationExecutor {
 		Map<Long, Integer> inputBySourceId = sourceRequests.values().stream().collect(Collectors.toMap(
 				StructureChangeSourceRequest::sourceOrchidGroupId,
 				StructureChangeSourceRequest::inputQuantity));
+		int lossQuantity = Math.max(0, inputBySourceId.values().stream()
+				.mapToInt(Integer::intValue).sum() - request.results().stream().mapToInt(row -> row.quantity()).sum());
 		Map<Long, String> sourceStatusById = sources.values().stream().collect(Collectors.toMap(
 				OrchidGroup::getId,
 				OrchidGroup::getStatus));
@@ -112,10 +113,7 @@ public class BatchStructureTransformationExecutor {
 		var details = new LinkedHashMap<String, Object>();
 		details.put("executionKey", request.idempotencyKey());
 		details.put("sourceInputQuantities", inputBySourceId);
-		details.put("lossQuantity", request.lossQuantity());
-		if (request.lossReason() != null && !request.lossReason().isBlank()) {
-			details.put("lossReason", request.lossReason().trim());
-		}
+		details.put("lossQuantity", lossQuantity);
 		details.put("results", java.util.stream.IntStream.range(0, results.size())
 				.mapToObj(index -> Map.of(
 						"orchidGroupId", results.get(index).getId(),
@@ -123,18 +121,6 @@ public class BatchStructureTransformationExecutor {
 						"purpose", request.results().get(index).purpose().name()))
 				.toList());
 		return new WorkExecutionResult(handlerCode, details, results.stream().map(OrchidGroup::getId).toList());
-	}
-
-	private void validateBalance(StructureChangeExecutionRequest request, String workLabel) {
-		long totalInput = request.sources().stream().mapToLong(StructureChangeSourceRequest::inputQuantity).sum();
-		long totalResult = request.results().stream().mapToLong(row -> row.quantity()).sum();
-		if (totalInput != totalResult + request.lossQuantity()) {
-			throw new IllegalArgumentException(workLabel + " 투입 수량은 결과 수량과 손실 수량의 합과 같아야 합니다.");
-		}
-		if (request.lossQuantity() > 0
-				&& (request.lossReason() == null || request.lossReason().isBlank())) {
-			throw new IllegalArgumentException("손실 수량이 있으면 손실 사유를 입력해야 합니다.");
-		}
 	}
 
 	private String resultStatus(String sourceStatus, StructureChangeResultPurpose purpose) {

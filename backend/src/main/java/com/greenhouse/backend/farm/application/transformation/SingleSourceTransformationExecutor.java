@@ -59,7 +59,7 @@ public class SingleSourceTransformationExecutor {
 		if (!target.getOrchidGroupId().equals(request.sourceOrchidGroupId())) {
 			throw new IllegalArgumentException(workLabel + " 작업 대상과 원본 난 묶음이 일치하지 않습니다.");
 		}
-		validateQuantityBalance(request, workLabel);
+		int lossQuantity = validateQuantityBalance(request, workLabel, "DIVIDE".equals(handlerCode));
 		OrchidGroup source = orchidGroupRepository.findAllForUpdateByIdIn(List.of(request.sourceOrchidGroupId()))
 				.stream().findFirst()
 				.orElseThrow(() -> new NotFoundException("원본 난 묶음을 찾을 수 없습니다."));
@@ -91,23 +91,18 @@ public class SingleSourceTransformationExecutor {
 		details.put("sourceOrchidGroupId", source.getId());
 		details.put("inputQuantity", request.inputQuantity());
 		details.put("remainingQuantity", source.getQuantity());
-		details.put("lossQuantity", request.lossQuantity());
-		if (request.lossReason() != null && !request.lossReason().isBlank()) {
-			details.put("lossReason", request.lossReason().trim());
-		}
+		details.put("lossQuantity", lossQuantity);
 		details.put("resultOrchidGroupIds", results.stream().map(OrchidGroup::getId).toList());
 		return new WorkExecutionResult(handlerCode, details, results.stream().map(OrchidGroup::getId).toList());
 	}
 
-	private void validateQuantityBalance(RepotWorkOperationRequest request, String workLabel) {
+	private int validateQuantityBalance(
+			RepotWorkOperationRequest request, String workLabel, boolean allowsResultQuantityIncrease) {
 		long resultQuantity = request.results().stream().mapToLong(row -> row.quantity()).sum();
-		if (resultQuantity + request.lossQuantity() != request.inputQuantity()) {
-			throw new IllegalArgumentException(workLabel + " 투입 수량은 결과 수량 합계와 손실 수량의 합과 같아야 합니다.");
+		if (!allowsResultQuantityIncrease && resultQuantity > request.inputQuantity()) {
+			throw new IllegalArgumentException(workLabel + " 결과 수량은 투입 수량보다 클 수 없습니다.");
 		}
-		if (request.lossQuantity() > 0
-				&& (request.lossReason() == null || request.lossReason().isBlank())) {
-			throw new IllegalArgumentException("손실 수량이 있으면 손실 사유를 입력해야 합니다.");
-		}
+		return (int) Math.max(0, request.inputQuantity() - resultQuantity);
 	}
 
 	private Set<Long> validateInheritedCollections(Long sourceId, Set<Long> requestedIds) {
