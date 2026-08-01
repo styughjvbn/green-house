@@ -461,6 +461,23 @@ export function VarietyView({
                   <DetailRow label="품종명" value={selected.name} />
                   <DetailRow label="별칭" value={selected.alias || "-"} />
                   <DetailRow label="기본 화분 크기" value={selected.potSize} />
+                  <DetailRow
+                    label="품종 색상"
+                    value={
+                      selected.color ? (
+                        <span className="inline-flex items-center gap-2">
+                          <span
+                            aria-label={`품종 색상 ${selected.color}`}
+                            className="h-4 w-4 rounded border border-black/15"
+                            style={{ backgroundColor: selected.color }}
+                          />
+                          {selected.color}
+                        </span>
+                      ) : (
+                        "미지정"
+                      )
+                    }
+                  />
                   <DetailRow label="특징/설명" value={selected.description} />
                   <DetailRow
                     label="판매 사용"
