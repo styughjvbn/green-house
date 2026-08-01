@@ -145,8 +145,8 @@ function WorkOperationRegistrationContent({
           />
         ) : (
           <WorkTargetSelectionDialog
-            bedZones={registration.bedZones}
             groups={registration.orchidGroups}
+            houses={houses}
             initialSelectedIds={registration.manualIds}
             onClose={registration.closeTargetSelector}
             onConfirm={registration.confirmManualTargets}

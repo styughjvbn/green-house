@@ -1,8 +1,17 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
-import { Layers3, LoaderCircle, Search, Users, X } from "lucide-react";
-import type { BedZone, BedZoneSide, OrchidGroup } from "@/entities/farm/types";
+import useEmblaCarousel from "embla-carousel-react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import {
+  ChevronLeft,
+  ChevronRight,
+  Layers3,
+  LoaderCircle,
+  Search,
+  Users,
+  X,
+} from "lucide-react";
+import type { BedZoneSide, House, OrchidGroup } from "@/entities/farm/types";
 import {
   getDerivedWorkTargetMembers,
   getWorkTargetGroupOptions,
@@ -21,7 +30,9 @@ type ZoneNode = {
 };
 
 type BedNode = {
+  id: number;
   number: number;
+  positionUnitCount: number | null;
   groups: OrchidGroup[];
   zones: ZoneNode[];
 };
@@ -34,14 +45,14 @@ type HouseNode = {
 };
 
 export function WorkTargetSelectionDialog({
-  bedZones,
   groups,
+  houses,
   initialSelectedIds,
   onClose,
   onConfirm,
 }: {
-  bedZones: BedZone[];
   groups: OrchidGroup[];
+  houses: House[];
   initialSelectedIds: Set<number>;
   onClose: () => void;
   onConfirm: (
@@ -65,21 +76,11 @@ export function WorkTargetSelectionDialog({
   const [groupError, setGroupError] = useState<string | null>(null);
   const [selectedScope, setSelectedScope] =
     useState<WorkTargetSelectionScope | null>(null);
-  const tree = useMemo(
-    () => buildTargetTree(groups, bedZones),
-    [bedZones, groups],
-  );
+  const tree = useMemo(() => buildTargetTree(groups, houses), [groups, houses]);
   const visibleTree = useMemo(
     () => filterTargetTree(tree, keyword),
     [keyword, tree],
   );
-  const [focusedHouseId, setFocusedHouseId] = useState<number | null>(
-    () => tree[0]?.id ?? null,
-  );
-  const focusedHouse =
-    visibleTree.find((house) => house.id === focusedHouseId) ??
-    visibleTree[0] ??
-    null;
   const selectedGroups = useMemo(
     () => groups.filter((group) => selectedIds.has(group.id)),
     [groups, selectedIds],
@@ -223,7 +224,7 @@ export function WorkTargetSelectionDialog({
       }}
     >
       <section
-        className="flex max-h-[calc(100dvh-1.5rem)] w-full max-w-4xl flex-col overflow-hidden rounded-lg bg-[#f7faf6] shadow-2xl sm:max-h-[calc(100dvh-3rem)]"
+        className="flex max-h-[calc(100dvh-1.5rem)] w-full max-w-6xl flex-col overflow-hidden rounded-lg bg-[#f7faf6] shadow-2xl sm:max-h-[calc(100dvh-3rem)]"
         role="dialog"
         aria-modal="true"
         aria-label="작업 대상 선택"
@@ -371,7 +372,7 @@ export function WorkTargetSelectionDialog({
         </div>
 
         <div className="min-h-0 flex-1 overflow-y-auto p-4 sm:p-5">
-          {focusedHouse ? (
+          {visibleTree.length > 0 ? (
             <div className="space-y-4">
               <section>
                 <div className="mb-2 flex items-center justify-between gap-2">
@@ -384,7 +385,6 @@ export function WorkTargetSelectionDialog({
                 <div className="overflow-x-auto pb-1">
                   <div className="flex min-w-max gap-2">
                     {visibleTree.map((house) => {
-                      const active = house.id === focusedHouse.id;
                       const originalHouse =
                         tree.find((item) => item.id === house.id) ?? house;
                       const selectedCount = countSelectedGroups(
@@ -394,11 +394,7 @@ export function WorkTargetSelectionDialog({
                       const searching = normalizedKeyword.length > 0;
                       return (
                         <div
-                          className={`flex min-w-32 items-center gap-2 rounded-md border p-2 ${
-                            active
-                              ? "border-[#159447] bg-[#edf8ef]"
-                              : "border-[#d7dfd5] bg-white"
-                          }`}
+                          className="flex min-w-32 items-center gap-2 rounded-md border border-[#d7dfd5] bg-white p-2"
                           key={house.id}
                         >
                           <SelectionCheckbox
@@ -407,11 +403,7 @@ export function WorkTargetSelectionDialog({
                             disabled={house.groups.length === 0}
                             onChange={() => toggleGroups(house.groups)}
                           />
-                          <button
-                            className="flex flex-1 flex-col items-start"
-                            type="button"
-                            onClick={() => setFocusedHouseId(house.id)}
-                          >
+                          <div className="flex flex-1 flex-col items-start">
                             <span className="text-sm font-bold text-[#26352b]">
                               {house.number}동
                             </span>
@@ -426,7 +418,7 @@ export function WorkTargetSelectionDialog({
                                 : ""}
                               전체 {originalHouse.groups.length}개
                             </span>
-                          </button>
+                          </div>
                         </div>
                       );
                     })}
@@ -436,64 +428,21 @@ export function WorkTargetSelectionDialog({
 
               <section>
                 <div className="mb-2 flex items-center justify-between gap-2">
-                  <p className="text-sm font-bold text-[#344138]">
-                    {focusedHouse.number}동 배치
-                  </p>
+                  <p className="text-sm font-bold text-[#344138]">전체 배치</p>
                   <p className="text-xs text-[#718077]">
                     다이 전체 또는 구역별로 선택하세요.
                   </p>
                 </div>
-                <div className="grid gap-3 lg:grid-cols-3">
-                  {focusedHouse.beds.map((bed) => (
-                    <div
-                      className="overflow-hidden rounded-md border border-[#cfd9cd] bg-white"
-                      key={`${focusedHouse.id}-${bed.number}`}
-                    >
-                      <div className="flex items-center gap-2 border-b border-[#dfe6dd] bg-[#f1f6f0] px-3 py-2.5">
-                        <SelectionCheckbox
-                          label={`${focusedHouse.number}동 ${bed.number}다이 전체`}
-                          {...selectionState(bed.groups, selectedIds)}
-                          disabled={bed.groups.length === 0}
-                          onChange={() => toggleGroups(bed.groups)}
-                        />
-                        <span className="text-sm font-bold text-[#26352b]">
-                          {bed.number}다이
-                        </span>
-                        <span className="ml-auto text-xs text-[#718077]">
-                          {bed.groups.length}묶음
-                        </span>
-                      </div>
-                      <div className="grid min-h-44 grid-cols-2 gap-px bg-[#dce4da]">
-                        {bedDisplayZones(bed).map(({ side, zone }, index) => {
-                          return zone ? (
-                            <BedSideZone
-                              key={zone.id}
-                              bedNumber={bed.number}
-                              houseNumber={focusedHouse.number}
-                              selectedIds={selectedIds}
-                              side={side}
-                              zone={zone}
-                              onToggle={toggleGroups}
-                            />
-                          ) : (
-                            <div
-                              className="flex min-h-44 flex-col items-center justify-center bg-[#edf0ed] px-2 text-center text-[#9aa39c]"
-                              key={`${side}-${index}`}
-                              aria-disabled="true"
-                            >
-                              <span className="text-xs font-bold">
-                                {sideLabel(side)}
-                              </span>
-                              <span className="mt-1 text-[11px]">
-                                비어 있음
-                              </span>
-                            </div>
-                          );
-                        })}
-                      </div>
-                    </div>
-                  ))}
-                </div>
+                <WorkTargetBedCarousel
+                  beds={visibleTree.flatMap((house) =>
+                    house.beds.map((bed) => ({
+                      ...bed,
+                      houseNumber: house.number,
+                    })),
+                  )}
+                  selectedIds={selectedIds}
+                  onToggleGroups={toggleGroups}
+                />
               </section>
             </div>
           ) : (
@@ -544,9 +493,181 @@ export function WorkTargetSelectionDialog({
   );
 }
 
+function WorkTargetBedCarousel({
+  beds,
+  selectedIds,
+  onToggleGroups,
+}: {
+  beds: Array<BedNode & { houseNumber: number }>;
+  selectedIds: Set<number>;
+  onToggleGroups: (groups: OrchidGroup[]) => void;
+}) {
+  const [emblaRef, emblaApi] = useEmblaCarousel({
+    align: "start",
+    containScroll: "trimSnaps",
+    dragFree: false,
+    loop: false,
+    slidesToScroll: 1,
+  });
+  const [canScrollPrevious, setCanScrollPrevious] = useState(false);
+  const [canScrollNext, setCanScrollNext] = useState(false);
+  const pointerStartRef = useRef<{ x: number; y: number } | null>(null);
+  const pointerDraggedRef = useRef(false);
+  const lastDragEndRef = useRef(0);
+
+  const syncControls = useCallback(() => {
+    if (!emblaApi) return;
+    setCanScrollPrevious(emblaApi.canScrollPrev());
+    setCanScrollNext(emblaApi.canScrollNext());
+  }, [emblaApi]);
+
+  useEffect(() => {
+    if (!emblaApi) return;
+    emblaApi.on("reInit", syncControls);
+    emblaApi.on("select", syncControls);
+    emblaApi.reInit();
+    return () => {
+      emblaApi.off("reInit", syncControls);
+      emblaApi.off("select", syncControls);
+    };
+  }, [emblaApi, syncControls]);
+
+  return (
+    <div className="space-y-2">
+      <div className="flex items-center justify-end gap-2">
+        <button
+          aria-label="이전 다이"
+          className="flex h-8 w-8 items-center justify-center rounded-md border border-[#d7dfd5] bg-white disabled:cursor-not-allowed disabled:opacity-40"
+          disabled={!canScrollPrevious}
+          type="button"
+          onClick={() => emblaApi?.scrollPrev()}
+        >
+          <ChevronLeft className="h-4 w-4" aria-hidden="true" />
+        </button>
+        <button
+          aria-label="다음 다이"
+          className="flex h-8 w-8 items-center justify-center rounded-md border border-[#d7dfd5] bg-white disabled:cursor-not-allowed disabled:opacity-40"
+          disabled={!canScrollNext}
+          type="button"
+          onClick={() => emblaApi?.scrollNext()}
+        >
+          <ChevronRight className="h-4 w-4" aria-hidden="true" />
+        </button>
+      </div>
+
+      <div
+        ref={emblaRef}
+        className="overflow-hidden"
+        data-testid="work-target-bed-carousel"
+        onClickCapture={(event) => {
+          if (Date.now() - lastDragEndRef.current < 400) {
+            event.preventDefault();
+            event.stopPropagation();
+          }
+        }}
+        onPointerDownCapture={(event) => {
+          pointerStartRef.current = { x: event.clientX, y: event.clientY };
+          pointerDraggedRef.current = false;
+        }}
+        onPointerMoveCapture={(event) => {
+          const start = pointerStartRef.current;
+          if (
+            start &&
+            Math.hypot(event.clientX - start.x, event.clientY - start.y) > 6
+          ) {
+            pointerDraggedRef.current = true;
+          }
+        }}
+        onPointerUpCapture={() => {
+          if (pointerDraggedRef.current) lastDragEndRef.current = Date.now();
+          pointerStartRef.current = null;
+          pointerDraggedRef.current = false;
+        }}
+        onPointerCancelCapture={() => {
+          pointerStartRef.current = null;
+          pointerDraggedRef.current = false;
+        }}
+      >
+        <div className="-ml-3 flex touch-pan-y">
+          {beds.map((bed) => (
+            <div
+              className="min-w-0 shrink-0 basis-full pl-3 md:basis-1/2 lg:basis-1/3"
+              key={bed.id}
+            >
+              <WorkTargetBedCard
+                bed={bed}
+                houseNumber={bed.houseNumber}
+                selectedIds={selectedIds}
+                onToggleGroups={onToggleGroups}
+              />
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function WorkTargetBedCard({
+  bed,
+  houseNumber,
+  selectedIds,
+  onToggleGroups,
+}: {
+  bed: BedNode;
+  houseNumber: number;
+  selectedIds: Set<number>;
+  onToggleGroups: (groups: OrchidGroup[]) => void;
+}) {
+  return (
+    <div className="overflow-hidden rounded-md border border-[#cfd9cd] bg-white">
+      <div className="flex items-center gap-2 border-b border-[#dfe6dd] bg-[#f1f6f0] px-3 py-2.5">
+        <SelectionCheckbox
+          label={`${houseNumber}동 ${bed.number}다이 전체`}
+          {...selectionState(bed.groups, selectedIds)}
+          disabled={bed.groups.length === 0}
+          onChange={() => onToggleGroups(bed.groups)}
+        />
+        <span className="text-sm font-bold text-[#26352b]">
+          {houseNumber}동 {bed.number}다이
+        </span>
+        <span className="ml-auto text-xs text-[#718077]">
+          {bed.groups.length}묶음
+        </span>
+      </div>
+      <div className="grid min-h-44 grid-cols-2 gap-px bg-[#dce4da]">
+        {bedDisplayZones(bed).map(({ side, zone }, index) =>
+          zone ? (
+            <BedSideZone
+              key={zone.id}
+              bedNumber={bed.number}
+              houseNumber={houseNumber}
+              maxCell={Math.max(1, Math.floor(bed.positionUnitCount ?? 28))}
+              selectedIds={selectedIds}
+              side={side}
+              zone={zone}
+              onToggle={onToggleGroups}
+            />
+          ) : (
+            <div
+              className="flex min-h-44 flex-col items-center justify-center bg-[#edf0ed] px-2 text-center text-[#9aa39c]"
+              key={`${side}-${index}`}
+              aria-disabled="true"
+            >
+              <span className="text-xs font-bold">{sideLabel(side)}</span>
+              <span className="mt-1 text-[11px]">비어 있음</span>
+            </div>
+          ),
+        )}
+      </div>
+    </div>
+  );
+}
+
 function BedSideZone({
   bedNumber,
   houseNumber,
+  maxCell,
   selectedIds,
   side,
   zone,
@@ -554,23 +675,12 @@ function BedSideZone({
 }: {
   bedNumber: number;
   houseNumber: number;
+  maxCell: number;
   selectedIds: Set<number>;
   side: BedZoneSide;
   zone: ZoneNode;
   onToggle: (groups: OrchidGroup[]) => void;
 }) {
-  if (zone.groups.length === 0) {
-    return (
-      <div
-        className="flex min-h-44 flex-col items-center justify-center bg-[#edf0ed] px-2 text-center text-[#9aa39c]"
-        aria-disabled="true"
-      >
-        <span className="text-xs font-bold">{sideLabel(side)}</span>
-        <span className="mt-1 text-[11px]">난 묶음 없음</span>
-      </div>
-    );
-  }
-
   return (
     <div className="min-h-44 bg-white p-2">
       <div className="flex items-center gap-2 border-b border-[#edf0ec] px-1 pb-2">
@@ -584,29 +694,60 @@ function BedSideZone({
           <p className="truncate text-[10px] text-[#7a867e]">{zone.name}</p>
         </div>
       </div>
-      <div className="mt-1 space-y-0.5">
-        {[...zone.groups].reverse().map((group) => (
-          <label
-            className="flex cursor-pointer items-center gap-1.5 rounded px-1 py-1.5 text-xs hover:bg-[#f4f8f3]"
-            key={group.id}
-          >
-            <SelectionCheckbox
-              label={`${group.varietyName} ${group.quantity}분`}
-              checked={selectedIds.has(group.id)}
-              indeterminate={false}
-              onChange={() => onToggle([group])}
-            />
-            <span className="min-w-0 flex-1 truncate text-[#344138]">
-              {group.varietyName}
-            </span>
-            <span className="shrink-0 text-[10px] text-[#6a766e]">
-              {group.quantity}분
-            </span>
-          </label>
-        ))}
+      <div
+        className="mt-1 grid overflow-hidden rounded border border-[#e4e8e4] bg-white"
+        style={{ gridTemplateRows: `repeat(${maxCell}, minmax(0, 1fr))` }}
+      >
+        {Array.from({ length: maxCell }, (_, index) => maxCell - index).map(
+          (cell) => {
+            const group = zone.groups.find((candidate) =>
+              isGroupInCell(candidate, cell),
+            );
+            const startsGroup = group?.endPosition === cell;
+            const selected = group != null && selectedIds.has(group.id);
+
+            return group ? (
+              <button
+                key={cell}
+                aria-label={`${zone.name} ${cell}칸 ${group.varietyName} ${group.quantity}분`}
+                className={`flex min-h-5 items-center px-1 text-left text-[10px] font-semibold transition first:border-t-0 ${startsGroup ? "border-t" : "border-t-0"} ${
+                  selected
+                    ? "border-[#0c7b38] bg-[#159447] text-white"
+                    : "border-[#cfd8cc] bg-[#f7faf6] text-[#344138] hover:bg-[#eef4ed]"
+                }`}
+                type="button"
+                onClick={() => onToggle([group])}
+              >
+                <span className="w-5 shrink-0 text-right text-[9px] opacity-70">
+                  {cell % 5 === 0 || cell === maxCell ? cell : ""}
+                </span>
+                {startsGroup ? (
+                  <span className="min-w-0 truncate pl-1">
+                    {group.varietyName} · {group.quantity}분
+                  </span>
+                ) : null}
+              </button>
+            ) : (
+              <div
+                key={cell}
+                aria-label={`${zone.name} ${cell}칸 빈 칸`}
+                className="flex min-h-5 items-center border-t border-[#edf1ec] bg-white px-1 first:border-t-0"
+              >
+                <span className="w-5 shrink-0 text-right text-[9px] font-semibold text-[#829087]">
+                  {cell % 5 === 0 || cell === maxCell ? cell : ""}
+                </span>
+              </div>
+            );
+          },
+        )}
       </div>
     </div>
   );
+}
+
+function isGroupInCell(group: OrchidGroup, cell: number) {
+  if (group.startPosition == null || group.endPosition == null) return false;
+  return cell >= group.startPosition + 1 && cell <= group.endPosition;
 }
 
 function SelectionCheckbox({
@@ -697,10 +838,7 @@ function sameIds(left: Set<number>, right: Set<number>) {
   return left.size === right.size && [...left].every((id) => right.has(id));
 }
 
-function buildTargetTree(
-  groups: OrchidGroup[],
-  bedZones: BedZone[],
-): HouseNode[] {
+function buildTargetTree(groups: OrchidGroup[], houses: House[]): HouseNode[] {
   const groupsByZone = new Map<number, OrchidGroup[]>();
   groups.forEach((group) => {
     const zoneGroups = groupsByZone.get(group.bedZoneId) ?? [];
@@ -708,41 +846,39 @@ function buildTargetTree(
     groupsByZone.set(group.bedZoneId, zoneGroups);
   });
 
-  const zonesByHouse = new Map<number, BedZone[]>();
-  bedZones.forEach((zone) => {
-    const houseZones = zonesByHouse.get(zone.houseId) ?? [];
-    houseZones.push(zone);
-    zonesByHouse.set(zone.houseId, houseZones);
-  });
-
-  return [...zonesByHouse.entries()]
-    .map(([houseId, houseZones]) => {
-      const bedNumbers = [
-        ...new Set(houseZones.map((zone) => zone.physicalBedNumber)),
-      ].sort((left, right) => left - right);
-      const beds = bedNumbers.map((bedNumber) => {
-        const zones = houseZones
-          .filter((zone) => zone.physicalBedNumber === bedNumber)
-          .map((zone) => ({
-            id: zone.id,
-            name: zone.name,
-            side: zone.side,
-            groups: [...(groupsByZone.get(zone.id) ?? [])].sort(compareGroups),
-          }))
-          .sort(compareZones);
-        return {
-          number: bedNumber,
-          groups: zones.flatMap((zone) => zone.groups),
-          zones,
-        };
-      });
+  return houses
+    .map((house) => {
+      const beds = house.physicalBeds
+        .map((bed) => {
+          const zones = bed.bedZones
+            .filter((zone) => zone.active)
+            .map((zone) => ({
+              id: zone.id,
+              name: zone.name,
+              side: zone.side,
+              groups: [...(groupsByZone.get(zone.id) ?? [])].sort(
+                compareGroups,
+              ),
+            }))
+            .sort(compareZones);
+          return {
+            id: bed.id,
+            number: bed.number,
+            positionUnitCount: bed.positionUnitCount,
+            groups: zones.flatMap((zone) => zone.groups),
+            zones,
+          };
+        })
+        .filter((bed) => bed.zones.length > 0)
+        .sort((left, right) => left.number - right.number);
       return {
-        id: houseId,
-        number: houseZones[0].houseNumber,
+        id: house.id,
+        number: house.number,
         groups: beds.flatMap((bed) => bed.groups),
         beds,
       };
     })
+    .filter((house) => house.beds.length > 0)
     .sort((a, b) => a.number - b.number);
 }
 
