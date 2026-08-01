@@ -15,6 +15,27 @@ export function getOrchidVarietyColor(group: OrchidGroup) {
   return ORCHID_VARIETY_PALETTE[hash % ORCHID_VARIETY_PALETTE.length];
 }
 
+export function getTextColor(
+  r: number,
+  g: number,
+  b: number,
+): "#000000" | "#FFFFFF" {
+  const toLinear = (value: number) => {
+    const s = value / 255;
+    return s <= 0.04045 ? s / 12.92 : Math.pow((s + 0.055) / 1.055, 2.4);
+  };
+
+  const luminance =
+    0.2126 * toLinear(r) + 0.7152 * toLinear(g) + 0.0722 * toLinear(b);
+
+  return luminance > 0.179 ? "#000000" : "#FFFFFF";
+}
+
+export function getTextColorForHex(color: string) {
+  const value = Number.parseInt(color.slice(1), 16);
+  return getTextColor((value >> 16) & 0xff, (value >> 8) & 0xff, value & 0xff);
+}
+
 function darkenHexColor(color: string) {
   const value = Number.parseInt(color.slice(1), 16);
   const channel = (shift: number) =>
