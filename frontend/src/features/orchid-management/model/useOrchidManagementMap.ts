@@ -607,12 +607,34 @@ export function useOrchidManagementMap(
 
   async function handleUpdate(payload: MutationPayload) {
     if (!selectedOrchidGroup) {
-      setErrorMessage("수정할 난 묶음을 선택하세요.");
+      setErrorMessage("보정할 난 묶음을 선택하세요.");
       return;
     }
-    await runMutation(async () =>
-      updateOrchidGroup(selectedOrchidGroup.id, payload),
-    );
+    const { bedZoneId, startPosition, endPosition, ...detailsPayload } =
+      payload;
+    const movedToAnotherZone =
+      bedZoneId != null && bedZoneId !== selectedOrchidGroup.bedZoneId;
+
+    await runMutation(async () => {
+      await updateOrchidGroup(selectedOrchidGroup.id, {
+        ...detailsPayload,
+        startPosition: movedToAnotherZone
+          ? selectedOrchidGroup.startPosition
+          : startPosition,
+        endPosition: movedToAnotherZone
+          ? selectedOrchidGroup.endPosition
+          : endPosition,
+      });
+
+      if (movedToAnotherZone) {
+        await moveOrchidGroup(selectedOrchidGroup.id, {
+          toBedZoneId: bedZoneId,
+          startPosition,
+          endPosition,
+          memo: "",
+        });
+      }
+    });
   }
 
   async function handleMove(payload: PreciseMovePayload) {

@@ -681,7 +681,7 @@ export default function OrchidSelectionPanel({
                                 />
                               </IconAction>
                               <IconAction
-                                label="수정"
+                                label="보정"
                                 onClick={onOpenEdit}
                                 disabled={!selected}
                               >
