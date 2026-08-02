@@ -2004,6 +2004,53 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ApiResponseListInboundPottingCandidateResponse'
+  /api/work-operations/calendar:
+    get:
+      tags:
+      - work-operation-controller
+      operationId: getCalendar
+      parameters:
+      - name: from
+        in: query
+        required: true
+        schema:
+          type: string
+          format: date
+      - name: to
+        in: query
+        required: true
+        schema:
+          type: string
+          format: date
+      - name: status
+        in: query
+        required: false
+        schema:
+          type: string
+          enum:
+          - PLANNED
+          - IN_PROGRESS
+          - PAUSED
+          - COMPLETED
+          - CANCELED
+          - CORRECTED
+      - name: view
+        in: query
+        required: false
+        schema:
+          type: string
+          default: ALL
+          enum:
+          - ALL
+          - MANAGEMENT
+          - HISTORY
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponseListWorkOperationResponse'
   /api/work-history:
     get:
       tags:
@@ -4048,6 +4095,8 @@ components:
         varietyId:
           type: integer
           format: int64
+        varietyColor:
+          type: string
         genus:
           type: string
         varietyName:
@@ -4589,6 +4638,9 @@ components:
           type: string
           maxLength: 50
           minLength: 0
+        color:
+          type: string
+          pattern: ^#[0-9A-Fa-f]{6}$
         saleEnabled:
           type: boolean
         description:
@@ -4624,6 +4676,8 @@ components:
         alias:
           type: string
         defaultPotSize:
+          type: string
+        color:
           type: string
         saleEnabled:
           type: boolean
@@ -5635,6 +5689,9 @@ components:
           type: string
           maxLength: 50
           minLength: 0
+        color:
+          type: string
+          pattern: ^#[0-9A-Fa-f]{6}$
         saleEnabled:
           type: boolean
         description:
@@ -6894,6 +6951,8 @@ components:
         varietyId:
           type: integer
           format: int64
+        varietyColor:
+          type: string
         varietyName:
           type: string
         quantity:

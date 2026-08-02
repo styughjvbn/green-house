@@ -73,6 +73,7 @@ public class VarietyService {
 				name,
 				normalize(request.alias()),
 				normalize(request.defaultPotSize()),
+				normalizeColor(request.color()),
 				request.saleEnabled() == null || request.saleEnabled(),
 				true,
 				normalize(request.description()),
@@ -90,6 +91,7 @@ public class VarietyService {
 				name,
 				normalize(request.alias()),
 				normalize(request.defaultPotSize()),
+				normalizeColor(request.color()),
 				request.saleEnabled() == null || request.saleEnabled(),
 				normalize(request.description()),
 				normalize(request.memo()));
@@ -144,6 +146,11 @@ public class VarietyService {
 			throw new IllegalArgumentException("필수 문자열 값은 비워둘 수 없습니다.");
 		}
 		return normalized;
+	}
+
+	private String normalizeColor(String value) {
+		String color = normalize(value);
+		return color == null ? null : color.toUpperCase();
 	}
 
 	private void validateUniqueVariety(String genus, String name, Long currentId) {

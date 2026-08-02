@@ -1,4 +1,5 @@
 import { divIcon, type LeafletMouseEvent } from "leaflet";
+import { getTextColorForHex } from "@/entities/farm/orchidColors";
 import type { OrchidGroup } from "@/entities/farm/types";
 
 export function stopLeafletClick(event: LeafletMouseEvent) {
@@ -91,6 +92,7 @@ export function createOrchidBlockIcon(
   mapZoom: number,
 ) {
   const bg = matched ? fillColor : "#9aa19a";
+  const textColor = getTextColorForHex(bg);
   const compact = mapZoom <= 2;
   const width = compact ? 46 : 96;
   const height = compact ? 32 : 46;
@@ -111,7 +113,7 @@ export function createOrchidBlockIcon(
 
   return divIcon({
     className: "",
-    html: `<div style="width:${width}px;height:${height}px;border-radius:7px;background:${bg};color:white;padding:${compact ? "4px 5px" : "4px 7px"};box-shadow:0 2px 6px rgba(20,50,20,.22);line-height:1.12;box-sizing:border-box;"><div style="font-size:${compact ? 10 : 11}px;font-weight:800;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${escapeHtml(title)}</div>${detailHtml}<div style="font-size:10px;font-weight:700;opacity:.95;">${escapeHtml(quantityText)}</div></div>`,
+    html: `<div style="width:${width}px;height:${height}px;border-radius:7px;background:${bg};color:${textColor};padding:${compact ? "4px 5px" : "4px 7px"};box-shadow:0 2px 6px rgba(20,50,20,.22);line-height:1.12;box-sizing:border-box;"><div style="font-size:${compact ? 10 : 11}px;font-weight:800;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${escapeHtml(title)}</div>${detailHtml}<div style="font-size:10px;font-weight:700;opacity:.95;">${escapeHtml(quantityText)}</div></div>`,
     iconAnchor: [width / 2, height / 2],
     iconSize: [width, height],
   });

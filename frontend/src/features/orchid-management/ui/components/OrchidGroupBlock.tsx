@@ -1,7 +1,10 @@
 "use client";
 
 import { memo, type MouseEvent, type PointerEvent } from "react";
-import { getOrchidVarietyColor } from "@/entities/farm/orchidColors";
+import {
+  getOrchidVarietyColor,
+  getTextColorForHex,
+} from "@/entities/farm/orchidColors";
 import type { OrchidGroup } from "@/entities/farm/types";
 
 function OrchidGroupBlock({
@@ -30,8 +33,11 @@ function OrchidGroupBlock({
     distinguishVarietyColors && !muted && !selected
       ? getOrchidVarietyColor(orchidGroup)
       : null;
-  const titleTextClass = varietyColor ? "text-white" : "text-[#1e2b21]";
-  const detailTextClass = varietyColor ? "text-white/85" : "text-[#435047]";
+  const textColor = varietyColor ? getTextColorForHex(varietyColor.fill) : null;
+  const titleTextClass = varietyColor ? "text-inherit" : "text-[#1e2b21]";
+  const detailTextClass = varietyColor
+    ? "text-inherit opacity-80"
+    : "text-[#435047]";
   const detailText = [
     orchidGroup.ageYear ? `${orchidGroup.ageYear}년생` : null,
     orchidGroup.potSize,
@@ -64,7 +70,7 @@ function OrchidGroupBlock({
       data-testid={`orchid-group-${orchidGroup.id}`}
       className={`h-full w-full min-w-0 touch-manipulation overflow-hidden border transition ${
         varietyColor
-          ? "text-white hover:brightness-95"
+          ? "hover:brightness-95"
           : selected
             ? "border-[#246df2] bg-[#dcecff]"
             : muted
@@ -81,6 +87,7 @@ function OrchidGroupBlock({
           ? {
               backgroundColor: varietyColor.fill,
               borderColor: varietyColor.border,
+              color: textColor,
             }
           : undefined
       }

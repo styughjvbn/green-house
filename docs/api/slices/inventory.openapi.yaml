@@ -1086,6 +1086,9 @@ components:
           type: string
           maxLength: 50
           minLength: 0
+        color:
+          type: string
+          pattern: ^#[0-9A-Fa-f]{6}$
         saleEnabled:
           type: boolean
         description:
@@ -1136,6 +1139,8 @@ components:
           type: string
         defaultPotSize:
           type: string
+        color:
+          type: string
         saleEnabled:
           type: boolean
         active:
@@ -1184,6 +1189,9 @@ components:
           type: string
           maxLength: 50
           minLength: 0
+        color:
+          type: string
+          pattern: ^#[0-9A-Fa-f]{6}$
         saleEnabled:
           type: boolean
         description:
