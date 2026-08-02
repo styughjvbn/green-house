@@ -13,7 +13,7 @@ import type {
 import { useFarmBedViewportCache } from "@/entities/farm/model/useFarmBedViewportCache";
 import useEmblaCarousel from "embla-carousel-react";
 import { ChevronLeft, ChevronRight, MapPin, X } from "lucide-react";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 type ResolvedZone = {
   house: House;
@@ -189,12 +189,12 @@ export function FarmPlacementPickerDialog({
         aria-label={dialogTitle}
         onMouseDown={(event) => event.stopPropagation()}
       >
-        <header className="flex items-center justify-between border-b border-[#e1e7df] px-4 py-3">
-          <div>
+        <header className="flex items-center justify-between border-b border-[#e1e7df] px-4 py-2">
+          <div className="flex items-center gap-2">
             <h2 className="text-base font-bold text-[#17251b]">
               {dialogTitle}
             </h2>
-            <p className="mt-0.5 text-xs text-[#66736a]">{dialogDescription}</p>
+            <p className="text-xs text-[#66736a]">{dialogDescription}</p>
           </div>
           <button
             className="flex h-8 w-8 items-center justify-center rounded-md border border-[#d7ddd4]"
@@ -336,7 +336,6 @@ function FarmPlacementBedCarousel({
     dragFree: false,
     loop: false,
     slidesToScroll: 1,
-    startIndex: Math.max(0, selectedBedIndex),
   });
   const [canScrollPrevious, setCanScrollPrevious] = useState(false);
   const [canScrollNext, setCanScrollNext] = useState(false);
@@ -361,11 +360,6 @@ function FarmPlacementBedCarousel({
       emblaApi.off("select", handleSelect);
     };
   }, [emblaApi, onViewportIndexChange, syncControls]);
-
-  useEffect(() => {
-    if (!emblaApi || selectedBedIndex < 0) return;
-    emblaApi.scrollTo(selectedBedIndex);
-  }, [emblaApi, selectedBedIndex]);
 
   useEffect(() => {
     if (selectedBedIndex >= 0) onViewportIndexChange(selectedBedIndex);
@@ -533,15 +527,53 @@ function ZonePreview({
             !reference &&
             orchidGroup != null &&
             Math.ceil(orchidGroup.endPosition ?? 0) === cell;
+          const continuesReference =
+            reference != null && referenceCells.get(cell - 1) === reference;
+          const startsReference =
+            reference != null && reference.endCell === cell;
           const hasBottomBorder = !lastCell && !continuesOrchidGroup;
           const orchidGroupBorderClass =
             !reference && orchidGroup != null
               ? `${startsOrchidGroup ? "border-t" : ""} ${!continuesOrchidGroup ? "border-b" : ""} border-x ${
-                  cellSelected ? "border-[#0c7b38]" : "border-[#9aac9e]"
+                  cellSelected ? "border-[#0c7b38]" : "border-[#b8c6bb]"
                 }`
               : hasBottomBorder
                 ? "border-b border-[#edf1ec]"
                 : "";
+          const referenceBorderClass = reference
+            ? `${startsReference ? "border-t" : ""} ${!continuesReference ? "border-b" : ""} border-x ${
+                cellSelected
+                  ? "border-[#0c7b38]"
+                  : reference.kind === "RESULT"
+                    ? "border-[#b7cde3]"
+                    : reference.kind === "SAVED_RESULT"
+                      ? "border-[#b8cda9]"
+                      : "border-[#e8d98b]"
+              }`
+            : "";
+          const cellLabel = reference
+            ? startsReference
+              ? `${referencePrefix(reference.kind)} · ${reference.label}`
+              : ""
+            : occupied
+              ? startsOrchidGroup
+                ? formatGroupLabel(orchidGroup)
+                : ""
+              : "빈 칸";
+          const selectedBlock =
+            selected &&
+            (reference
+              ? [...selectedCells].some(
+                  (selectedCell) =>
+                    selectedCell >= reference.startCell &&
+                    selectedCell <= reference.endCell,
+                )
+              : orchidGroup != null &&
+                [...selectedCells].some(
+                  (selectedCell) =>
+                    findGroup(zone.orchidGroups, selectedCell)?.id ===
+                    orchidGroup.id,
+                ));
 
           return (
             <div className="contents" key={cell}>
@@ -550,14 +582,11 @@ function ZonePreview({
                   lastCell ? "" : "border-b"
                 }`}
               >
-                {!lastCell ? (
-                  <span className="absolute right-0 bottom-0 h-px w-1.5 bg-[#aebbad]" />
-                ) : null}
                 {cell % 5 === 0 || cell === maxCell ? cell : ""}
               </div>
               <button
                 className={`flex h-5 min-w-0 items-center justify-between px-2 text-left text-[10px] transition ${
-                  orchidGroupBorderClass
+                  referenceBorderClass || orchidGroupBorderClass
                 } ${
                   cellSelected
                     ? "bg-[#159447] text-white"
@@ -574,21 +603,66 @@ function ZonePreview({
                 type="button"
                 onClick={() => onSelectCell(cell)}
               >
-                <span className="truncate pl-2 font-semibold">
-                  {reference
-                    ? `${referencePrefix(reference.kind)} · ${reference.label}`
-                    : occupied
-                      ? startsOrchidGroup
-                        ? formatGroupLabel(orchidGroup)
-                        : ""
-                      : "빈 칸"}
-                </span>
+                <OverflowMarquee animate={selectedBlock} label={cellLabel} />
               </button>
             </div>
           );
         })}
       </div>
     </div>
+  );
+}
+
+function OverflowMarquee({
+  animate,
+  label,
+}: {
+  animate: boolean;
+  label: string;
+}) {
+  const containerRef = useRef<HTMLSpanElement>(null);
+  const labelRef = useRef<HTMLSpanElement>(null);
+  const [overflowing, setOverflowing] = useState(false);
+
+  useEffect(() => {
+    const container = containerRef.current;
+    const content = labelRef.current;
+    if (!container || !content) return;
+
+    const updateOverflow = () => {
+      setOverflowing(
+        content.getBoundingClientRect().width > container.clientWidth,
+      );
+    };
+    updateOverflow();
+    const observer = new ResizeObserver(updateOverflow);
+    observer.observe(container);
+    return () => observer.disconnect();
+  }, [label]);
+
+  return (
+    <span
+      ref={containerRef}
+      className="placement-marquee relative block min-w-0 flex-1 overflow-hidden font-semibold"
+    >
+      <span
+        ref={labelRef}
+        className="pointer-events-none invisible absolute whitespace-nowrap"
+      >
+        {label}
+      </span>
+      {overflowing && animate ? (
+        <span
+          className="placement-marquee-track inline-flex min-w-max gap-8 whitespace-nowrap"
+          style={{ animation: "placement-marquee 6s linear infinite" }}
+        >
+          <span>{label}</span>
+          <span aria-hidden="true">{label}</span>
+        </span>
+      ) : (
+        <span className="block truncate">{label}</span>
+      )}
+    </span>
   );
 }
 
