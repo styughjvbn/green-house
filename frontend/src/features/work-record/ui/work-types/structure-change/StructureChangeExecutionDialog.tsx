@@ -67,7 +67,6 @@ export function StructureChangeExecutionDialog({
       }`}
       aria-hidden={!active}
       role="presentation"
-      onMouseDown={onClose}
     >
       <section
         className="flex max-h-[calc(100dvh-2rem)] w-full max-w-5xl flex-col overflow-hidden rounded-lg bg-white shadow-2xl"
@@ -76,14 +75,14 @@ export function StructureChangeExecutionDialog({
         aria-label={`${operation.workType} 실행 입력`}
         onMouseDown={(event) => event.stopPropagation()}
       >
-        <header className="flex items-start justify-between border-b p-4">
-          <div>
+        <header className="flex items-end justify-between border-b p-2">
+          <div className="flex items-baseline gap-3">
             <h3 className="font-bold text-[#17251b]">
               {recordMode
                 ? `${operation.workType} 작업 결과 입력`
                 : `${operation.workType} 실행 회차 등록`}
             </h3>
-            <p className="mt-1 text-xs text-[#6a766e]">
+            <p className="text-xs text-[#6a766e]">
               {recordMode
                 ? "선택한 모든 원본과 생성할 결과를 한 번에 입력하세요."
                 : "원본과 결과는 계획 대상에서 자동으로 채웠습니다. 이번 작업의 예외만 수정하세요."}
@@ -153,7 +152,7 @@ export function StructureChangeExecutionDialog({
           ) : null}
         </div>
 
-        <footer className="flex flex-wrap items-center justify-end gap-2 border-t p-4">
+        <footer className="flex flex-wrap items-center justify-end gap-2 border-t p-2">
           {recordMode && recordNavigation ? (
             <WorkRecordVarietyNavigation
               activeKey={recordNavigation.activeKey}

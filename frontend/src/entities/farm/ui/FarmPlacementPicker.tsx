@@ -10,8 +10,10 @@ import type {
   FarmPlacementReference,
   FarmPlacementSelection,
 } from "@/entities/farm/model/placement";
-import { MapPin, X } from "lucide-react";
-import { useMemo, useState } from "react";
+import { useFarmBedViewportCache } from "@/entities/farm/model/useFarmBedViewportCache";
+import useEmblaCarousel from "embla-carousel-react";
+import { ChevronLeft, ChevronRight, MapPin, X } from "lucide-react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 type ResolvedZone = {
   house: House;
@@ -114,11 +116,6 @@ export function FarmPlacementPickerDialog({
     initialValue?.bedZoneId ?? fallbackZoneId,
   );
   const selected = zones.find((item) => item.zone.id === bedZoneId) ?? zones[0];
-  const [houseId, setHouseId] = useState(selected?.house.id ?? houses[0]?.id);
-  const selectedHouse =
-    houses.find((house) => house.id === houseId) ??
-    selected?.house ??
-    houses[0];
   const maxCell = Math.max(
     1,
     Math.floor(selected?.bed.positionUnitCount ?? 28),
@@ -151,29 +148,9 @@ export function FarmPlacementPickerDialog({
   const selectedLabel = selected
     ? formatSelectionLabel(selected, normalizedStart, normalizedEnd)
     : "";
-
-  function updateZone(nextBedZoneId: number) {
-    const next = zones.find((item) => item.zone.id === nextBedZoneId);
-    const nextMaxCell = Math.max(
-      1,
-      Math.floor(next?.bed.positionUnitCount ?? 28),
-    );
-    setBedZoneId(nextBedZoneId);
-    if (next) {
-      setHouseId(next.house.id);
-    }
-    setStartCell(1);
-    setEndCell(Math.min(1, nextMaxCell));
-  }
-
-  function updateHouse(nextHouseId: number) {
-    const house = houses.find((item) => item.id === nextHouseId);
-    const nextZone = house?.physicalBeds[0]?.bedZones[0];
-    setHouseId(nextHouseId);
-    if (nextZone) {
-      updateZone(nextZone.id);
-    }
-  }
+  const { bedOrder, bedsById, loadAround } = useFarmBedViewportCache(
+    selected?.bed.id ?? houses[0]?.physicalBeds[0]?.id ?? null,
+  );
 
   function updateSpan(nextSpan: number) {
     const span = clamp(nextSpan, 1, maxCell);
@@ -212,12 +189,12 @@ export function FarmPlacementPickerDialog({
         aria-label={dialogTitle}
         onMouseDown={(event) => event.stopPropagation()}
       >
-        <header className="flex items-center justify-between border-b border-[#e1e7df] px-4 py-3">
-          <div>
+        <header className="flex items-center justify-between border-b border-[#e1e7df] px-4 py-2">
+          <div className="flex items-center gap-2">
             <h2 className="text-base font-bold text-[#17251b]">
               {dialogTitle}
             </h2>
-            <p className="mt-0.5 text-xs text-[#66736a]">{dialogDescription}</p>
+            <p className="text-xs text-[#66736a]">{dialogDescription}</p>
           </div>
           <button
             className="flex h-8 w-8 items-center justify-center rounded-md border border-[#d7ddd4]"
@@ -231,21 +208,6 @@ export function FarmPlacementPickerDialog({
 
         <div className="grid min-h-0 flex-1 lg:grid-cols-[220px_minmax(0,1fr)]">
           <aside className="space-y-4 border-b border-[#e1e7df] bg-[#f8faf7] p-4 lg:border-r lg:border-b-0">
-            <label className="block space-y-1">
-              <span className="text-xs font-semibold text-[#425047]">동</span>
-              <select
-                className={inputClass}
-                value={selectedHouse?.id ?? ""}
-                onChange={(event) => updateHouse(Number(event.target.value))}
-              >
-                {houses.map((house) => (
-                  <option key={house.id} value={house.id}>
-                    {house.number}동
-                  </option>
-                ))}
-              </select>
-            </label>
-
             <div className="grid grid-cols-3 gap-2">
               <NumberField
                 label="시작 칸"
@@ -287,14 +249,16 @@ export function FarmPlacementPickerDialog({
           </aside>
 
           <div className="min-h-0 overflow-y-auto p-4">
-            {selectedHouse ? (
-              <HousePreview
+            {houses.length > 0 ? (
+              <FarmPlacementBedCarousel
                 excludeOrchidGroupId={excludeOrchidGroupId}
                 excludeOrchidGroupIds={excludeOrchidGroupIds}
+                bedOrder={bedOrder}
+                bedsById={bedsById}
                 referencePlacements={referencePlacements}
                 selectedBedZoneId={selected?.zone.id ?? null}
                 selectedCells={selectedCells}
-                house={selectedHouse}
+                onViewportIndexChange={loadAround}
                 onSelectCell={selectCell}
               />
             ) : (
@@ -337,28 +301,85 @@ export function FarmPlacementPickerDialog({
   );
 }
 
-function HousePreview({
+function FarmPlacementBedCarousel({
+  bedOrder,
+  bedsById,
   excludeOrchidGroupId,
   excludeOrchidGroupIds,
-  house,
   referencePlacements,
   selectedBedZoneId,
   selectedCells,
+  onViewportIndexChange,
   onSelectCell,
 }: {
+  bedOrder: Array<{
+    id: number;
+    houseId: number;
+    houseNumber: number;
+    number: number;
+  }>;
+  bedsById: Map<number, import("../types").PhysicalBed>;
   excludeOrchidGroupId: number | null;
   excludeOrchidGroupIds: number[];
-  house: House;
   referencePlacements: FarmPlacementReference[];
   selectedBedZoneId: number | null;
   selectedCells: Set<number>;
+  onViewportIndexChange: (index: number) => void;
   onSelectCell: (bedZoneId: number, cell: number) => void;
 }) {
+  const selectedBedIndex = bedOrder.findIndex(({ id }) =>
+    bedsById.get(id)?.bedZones.some((zone) => zone.id === selectedBedZoneId),
+  );
+  const [emblaRef, emblaApi] = useEmblaCarousel({
+    align: "start",
+    containScroll: "trimSnaps",
+    dragFree: false,
+    loop: false,
+    slidesToScroll: 1,
+  });
+  const [canScrollPrevious, setCanScrollPrevious] = useState(false);
+  const [canScrollNext, setCanScrollNext] = useState(false);
+  const [activeBedIndex, setActiveBedIndex] = useState(0);
+  const houses = useMemo(
+    () =>
+      bedOrder.filter(
+        (bed, index) =>
+          index === 0 || bed.houseId !== bedOrder[index - 1]?.houseId,
+      ),
+    [bedOrder],
+  );
+
+  const syncControls = useCallback(() => {
+    if (!emblaApi) return;
+    setCanScrollPrevious(emblaApi.canScrollPrev());
+    setCanScrollNext(emblaApi.canScrollNext());
+  }, [emblaApi]);
+
+  useEffect(() => {
+    if (!emblaApi) return;
+    const handleSelect = () => {
+      syncControls();
+      const index = emblaApi.selectedScrollSnap();
+      setActiveBedIndex(index);
+      onViewportIndexChange(index);
+    };
+    emblaApi.on("reInit", syncControls);
+    emblaApi.on("select", handleSelect);
+    emblaApi.reInit();
+    return () => {
+      emblaApi.off("reInit", syncControls);
+      emblaApi.off("select", handleSelect);
+    };
+  }, [emblaApi, onViewportIndexChange, syncControls]);
+
+  useEffect(() => {
+    if (selectedBedIndex >= 0) onViewportIndexChange(selectedBedIndex);
+  }, [onViewportIndexChange, selectedBedIndex]);
+
   return (
-    <div className="space-y-4">
-      <div className="flex items-center justify-between">
-        <h3 className="text-sm font-bold text-[#17251b]">{house.number}동</h3>
-        <div className="flex items-center gap-3 text-xs font-semibold text-[#66736a]">
+    <div className="space-y-3">
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <div className="flex flex-wrap items-center gap-3 text-xs font-semibold text-[#66736a]">
           <Legend color="bg-[#159447]" label="선택" />
           {excludeOrchidGroupId != null ||
           excludeOrchidGroupIds.length > 0 ||
@@ -374,44 +395,93 @@ function HousePreview({
           <Legend color="bg-[#eef1ed]" label="사용 중" />
           <Legend color="bg-white" label="빈 칸" />
         </div>
+        <div className="flex items-center gap-2">
+          <select
+            aria-label="동으로 이동"
+            className="h-8 rounded-md border border-[#d7ddd4] bg-white px-2 text-xs font-semibold text-[#344138]"
+            value={bedOrder[activeBedIndex]?.houseId ?? ""}
+            onChange={(event) => {
+              const nextHouseId = Number(event.target.value);
+              const index = bedOrder.findIndex(
+                (bed) => bed.houseId === nextHouseId,
+              );
+              if (index >= 0) emblaApi?.scrollTo(index);
+            }}
+          >
+            {houses.map((house) => (
+              <option key={house.houseId} value={house.houseId}>
+                {house.houseNumber}동으로 이동
+              </option>
+            ))}
+          </select>
+          <button
+            aria-label="이전 다이"
+            className="flex h-8 w-8 items-center justify-center rounded-md border border-[#d7ddd4] bg-white disabled:cursor-not-allowed disabled:opacity-40"
+            disabled={!canScrollPrevious}
+            type="button"
+            onClick={() => emblaApi?.scrollPrev()}
+          >
+            <ChevronLeft className="h-4 w-4" aria-hidden="true" />
+          </button>
+          <button
+            aria-label="다음 다이"
+            className="flex h-8 w-8 items-center justify-center rounded-md border border-[#d7ddd4] bg-white disabled:cursor-not-allowed disabled:opacity-40"
+            disabled={!canScrollNext}
+            type="button"
+            onClick={() => emblaApi?.scrollNext()}
+          >
+            <ChevronRight className="h-4 w-4" aria-hidden="true" />
+          </button>
+        </div>
       </div>
 
-      <div
-        className="grid gap-4"
-        style={{
-          gridTemplateColumns: `repeat(${house.physicalBeds.length}, minmax(0, 1fr))`,
-        }}
-      >
-        {house.physicalBeds.map((bed) => (
-          <section
-            key={bed.id}
-            className="min-w-0 rounded-md border border-[#dce5da] bg-[#fbfcfb] p-3"
-          >
-            <div className="mb-3 flex items-center justify-between">
-              <h4 className="text-xs font-bold text-[#2d4a35]">
-                {bed.number}다이
-              </h4>
-              <span className="text-[11px] font-semibold text-[#7b867f]">
-                {Math.floor(bed.positionUnitCount ?? 28)}칸 기준
-              </span>
-            </div>
-            <div className="grid gap-3 sm:grid-cols-2">
-              {bed.bedZones.map((zone) => (
-                <ZonePreview
-                  key={zone.id}
-                  excludeOrchidGroupId={excludeOrchidGroupId}
-                  excludeOrchidGroupIds={excludeOrchidGroupIds}
-                  maxCell={Math.max(1, Math.floor(bed.positionUnitCount ?? 28))}
-                  referencePlacements={referencePlacements}
-                  selected={selectedBedZoneId === zone.id}
-                  selectedCells={selectedCells}
-                  zone={zone}
-                  onSelectCell={(cell) => onSelectCell(zone.id, cell)}
-                />
-              ))}
-            </div>
-          </section>
-        ))}
+      <div ref={emblaRef} className="overflow-hidden">
+        <div className="-ml-3 flex touch-pan-y">
+          {bedOrder.map((bedOrderItem, index) => {
+            const bed = bedsById.get(bedOrderItem.id);
+            const house = {
+              id: bedOrderItem.houseId,
+              number: bedOrderItem.houseNumber,
+            };
+            return (
+              <div
+                key={bedOrderItem.id}
+                className="min-w-0 shrink-0 basis-full pl-3 md:basis-1/2 xl:basis-1/3"
+              >
+                <section className="min-w-0 rounded-md border border-[#dce5da] bg-[#fbfcfb] p-3">
+                  <div className="mb-3 flex items-center justify-between">
+                    <h4 className="text-xs font-bold text-[#2d4a35]">
+                      {house.number}동 {bedOrderItem.number}다이
+                    </h4>
+                    <span className="text-[11px] font-semibold text-[#7b867f]">
+                      {bed
+                        ? `${Math.floor(bed.positionUnitCount ?? 28)}칸 기준`
+                        : "불러오는 중"}
+                    </span>
+                  </div>
+                  <div className="grid gap-3 sm:grid-cols-2">
+                    {bed?.bedZones.map((zone) => (
+                      <ZonePreview
+                        key={zone.id}
+                        excludeOrchidGroupId={excludeOrchidGroupId}
+                        excludeOrchidGroupIds={excludeOrchidGroupIds}
+                        maxCell={Math.max(
+                          1,
+                          Math.floor(bed.positionUnitCount ?? 28),
+                        )}
+                        referencePlacements={referencePlacements}
+                        selected={selectedBedZoneId === zone.id}
+                        selectedCells={selectedCells}
+                        zone={zone}
+                        onSelectCell={(cell) => onSelectCell(zone.id, cell)}
+                      />
+                    )) ?? <div className="min-h-40 rounded-md bg-[#f1f4f0]" />}
+                  </div>
+                </section>
+              </div>
+            );
+          })}
+        </div>
       </div>
     </div>
   );
@@ -471,27 +541,82 @@ function ZonePreview({
           {zone.orchidGroups.length}묶음
         </span>
       </div>
-      <div className="grid grid-cols-[34px_minmax(0,1fr)]">
-        <div className="border-r border-[#edf1ec]">
-          {cells.map((cell) => (
-            <div
-              key={cell}
-              className="flex h-5 items-center justify-end pr-1.5 text-[10px] font-bold text-[#2d5a3b]"
-            >
-              {cell % 5 === 0 || cell === maxCell ? cell : ""}
-            </div>
-          ))}
-        </div>
-        <div className="min-w-0">
-          {cells.map((cell) => {
-            const occupied = occupiedCells.has(cell);
-            const reference = referenceCells.get(cell);
-            const cellSelected = selected && selectedCells.has(cell);
+      <div className="grid grid-cols-[22px_minmax(0,1fr)]">
+        {cells.map((cell) => {
+          const occupied = occupiedCells.has(cell);
+          const reference = referenceCells.get(cell);
+          const cellSelected = selected && selectedCells.has(cell);
+          const lastCell = cell === 1;
+          const orchidGroup = findGroup(zone.orchidGroups, cell);
+          const continuesOrchidGroup =
+            !reference &&
+            orchidGroup != null &&
+            findGroup(zone.orchidGroups, cell - 1)?.id === orchidGroup.id;
+          const startsOrchidGroup =
+            !reference &&
+            orchidGroup != null &&
+            Math.ceil(orchidGroup.endPosition ?? 0) === cell;
+          const continuesReference =
+            reference != null && referenceCells.get(cell - 1) === reference;
+          const startsReference =
+            reference != null && reference.endCell === cell;
+          const hasBottomBorder = !lastCell && !continuesOrchidGroup;
+          const orchidGroupBorderClass =
+            !reference && orchidGroup != null
+              ? `${startsOrchidGroup ? "border-t" : ""} ${!continuesOrchidGroup ? "border-b" : ""} border-x ${
+                  cellSelected ? "border-[#0c7b38]" : "border-[#b8c6bb]"
+                }`
+              : hasBottomBorder
+                ? "border-b border-[#edf1ec]"
+                : "";
+          const referenceBorderClass = reference
+            ? `${startsReference ? "border-t" : ""} ${!continuesReference ? "border-b" : ""} border-x ${
+                cellSelected
+                  ? "border-[#0c7b38]"
+                  : reference.kind === "RESULT"
+                    ? "border-[#b7cde3]"
+                    : reference.kind === "SAVED_RESULT"
+                      ? "border-[#b8cda9]"
+                      : "border-[#e8d98b]"
+              }`
+            : "";
+          const cellLabel = reference
+            ? startsReference
+              ? `${referencePrefix(reference.kind)} · ${reference.label}`
+              : ""
+            : occupied
+              ? startsOrchidGroup
+                ? formatGroupLabel(orchidGroup)
+                : ""
+              : "빈 칸";
+          const selectedBlock =
+            selected &&
+            (reference
+              ? [...selectedCells].some(
+                  (selectedCell) =>
+                    selectedCell >= reference.startCell &&
+                    selectedCell <= reference.endCell,
+                )
+              : orchidGroup != null &&
+                [...selectedCells].some(
+                  (selectedCell) =>
+                    findGroup(zone.orchidGroups, selectedCell)?.id ===
+                    orchidGroup.id,
+                ));
 
-            return (
+          return (
+            <div className="contents" key={cell}>
+              <div
+                className={`relative flex items-center justify-end border-r border-[#edf1ec] pr-1 text-[9px] font-bold text-[#2d5a3b] ${
+                  lastCell ? "" : "border-b"
+                }`}
+              >
+                {cell % 5 === 0 || cell === maxCell ? cell : ""}
+              </div>
               <button
-                key={cell}
-                className={`flex h-5 w-full items-center justify-between border-b border-[#edf1ec] px-2 text-left text-[10px] transition last:border-b-0 ${
+                className={`flex h-5 min-w-0 items-center justify-between px-2 text-left text-[10px] transition ${
+                  referenceBorderClass || orchidGroupBorderClass
+                } ${
                   cellSelected
                     ? "bg-[#159447] text-white"
                     : reference
@@ -507,19 +632,66 @@ function ZonePreview({
                 type="button"
                 onClick={() => onSelectCell(cell)}
               >
-                <span className="truncate pl-2 font-semibold">
-                  {reference
-                    ? `${referencePrefix(reference.kind)} · ${reference.label}`
-                    : occupied
-                      ? findGroupLabel(zone.orchidGroups, cell)
-                      : "빈 칸"}
-                </span>
+                <OverflowMarquee animate={selectedBlock} label={cellLabel} />
               </button>
-            );
-          })}
-        </div>
+            </div>
+          );
+        })}
       </div>
     </div>
+  );
+}
+
+function OverflowMarquee({
+  animate,
+  label,
+}: {
+  animate: boolean;
+  label: string;
+}) {
+  const containerRef = useRef<HTMLSpanElement>(null);
+  const labelRef = useRef<HTMLSpanElement>(null);
+  const [overflowing, setOverflowing] = useState(false);
+
+  useEffect(() => {
+    const container = containerRef.current;
+    const content = labelRef.current;
+    if (!container || !content) return;
+
+    const updateOverflow = () => {
+      setOverflowing(
+        content.getBoundingClientRect().width > container.clientWidth,
+      );
+    };
+    updateOverflow();
+    const observer = new ResizeObserver(updateOverflow);
+    observer.observe(container);
+    return () => observer.disconnect();
+  }, [label]);
+
+  return (
+    <span
+      ref={containerRef}
+      className="placement-marquee relative block min-w-0 flex-1 overflow-hidden font-semibold"
+    >
+      <span
+        ref={labelRef}
+        className="pointer-events-none invisible absolute whitespace-nowrap"
+      >
+        {label}
+      </span>
+      {overflowing && animate ? (
+        <span
+          className="placement-marquee-track inline-flex min-w-max gap-8 whitespace-nowrap"
+          style={{ animation: "placement-marquee 6s linear infinite" }}
+        >
+          <span>{label}</span>
+          <span aria-hidden="true">{label}</span>
+        </span>
+      ) : (
+        <span className="block truncate">{label}</span>
+      )}
+    </span>
   );
 }
 
@@ -557,7 +729,7 @@ function NumberField({
     <label className="block space-y-1">
       <span className="text-xs font-semibold text-[#425047]">{label}</span>
       <input
-        className={inputClass}
+        className={"h-10 w-full rounded-md border border-[#d7ddd8] bg-white px-3 text-sm outline-none focus:border-[#159447] focus:ring-1 focus:ring-[#159447]"}
         max={max}
         min={min}
         type="number"
@@ -665,12 +837,12 @@ function buildReferenceCells(
   return cells;
 }
 
-function findGroupLabel(
+function findGroup(
   orchidGroups: OrchidGroup[],
   cell: number,
   groupIds?: Set<number>,
 ) {
-  const group = orchidGroups.find((item) => {
+  return orchidGroups.find((item) => {
     if (groupIds && !groupIds.has(item.id)) {
       return false;
     }
@@ -679,6 +851,9 @@ function findGroupLabel(
     }
     return item.startPosition < cell && item.endPosition > cell - 1;
   });
+}
+
+function formatGroupLabel(group: OrchidGroup | null | undefined) {
   return group
     ? `${group.varietyName} ${group.quantity.toLocaleString()}분`
     : "";
@@ -696,6 +871,3 @@ function clamp(value: number, min: number, max: number) {
   if (Number.isNaN(value)) return min;
   return Math.min(Math.max(value, min), max);
 }
-
-const inputClass =
-  "h-10 w-full rounded-md border border-[#d7ddd8] bg-white px-3 text-sm outline-none focus:border-[#159447] focus:ring-1 focus:ring-[#159447]";

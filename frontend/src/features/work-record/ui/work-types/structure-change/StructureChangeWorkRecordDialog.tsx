@@ -46,8 +46,18 @@ export function StructureChangeWorkRecordDialog({
     Map<string, StructureChangeRecordPayload>
   >(new Map());
   const [saving, setSaving] = useState(false);
+  const [isDirty, setIsDirty] = useState(false);
 
   if (groups.length === 0) return null;
+
+  function requestClose() {
+    if (
+      !isDirty ||
+      window.confirm("작성 중인 내용이 초기화됩니다. 닫을까요?")
+    ) {
+      onClose();
+    }
+  }
 
   function buildRecord(
     group: VarietyTargetGroup,
@@ -95,7 +105,9 @@ export function StructureChangeWorkRecordDialog({
     <div
       className="fixed inset-0 z-[1300] bg-black/45"
       role="presentation"
-      onMouseDown={onClose}
+      onMouseDown={() => {
+        if (!isDirty) onClose();
+      }}
     >
       {groups.map((group) => (
         <StructureChangeExecutionDialog
@@ -123,16 +135,18 @@ export function StructureChangeWorkRecordDialog({
             onSave: saveAll,
             onSelect: setActiveKey,
           }}
-          onClose={onClose}
-          onRecordDirty={() =>
+          onClose={requestClose}
+          onRecordDirty={() => {
+            setIsDirty(true);
             setRecords((current) => {
               if (!current.has(group.key)) return current;
               const next = new Map(current);
               next.delete(group.key);
               return next;
-            })
-          }
+            });
+          }}
           onSubmitRecord={async (execution) => {
+            setIsDirty(true);
             setRecords((current) => {
               const next = new Map(current);
               next.set(group.key, buildRecord(group, execution));

@@ -36,6 +36,16 @@ export function PottingWorkRecordDialog({
   >(new Map());
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [isDirty, setIsDirty] = useState(false);
+
+  function requestClose() {
+    if (
+      !isDirty ||
+      window.confirm("작성 중인 내용이 초기화됩니다. 닫을까요?")
+    ) {
+      onClose();
+    }
+  }
 
   if (candidates.length === 0) return null;
 
@@ -46,6 +56,7 @@ export function PottingWorkRecordDialog({
       executions.has(candidate.id),
     ),
   }));
+  const activeGroup = groups.find((group) => group.key === activeKey) ?? null;
 
   async function saveAll() {
     if (executions.size !== candidates.length) return;
@@ -73,7 +84,9 @@ export function PottingWorkRecordDialog({
     <div
       className="fixed inset-0 z-[1300] flex items-center justify-center bg-black/45 p-4"
       role="presentation"
-      onMouseDown={onClose}
+      onMouseDown={() => {
+        if (!isDirty) onClose();
+      }}
     >
       <section
         className="flex max-h-[calc(100dvh-2rem)] w-full max-w-4xl flex-col overflow-hidden rounded-lg bg-white shadow-2xl"
@@ -82,15 +95,14 @@ export function PottingWorkRecordDialog({
         aria-label="포트 작업 결과 입력"
         onMouseDown={(event) => event.stopPropagation()}
       >
-        <header className="flex items-start justify-between border-b p-4">
-          <div>
+        <header className="flex items-end justify-between border-b p-2">
+          <div className="flex gap-2">
             <h3 className="font-bold text-[#17251b]">포트 작업 결과 입력</h3>
             <p className="mt-1 text-xs text-[#6a766e]">
-              품종 버튼으로 자유롭게 이동하며 모든 결과 입력을 완료한 뒤 작업
-              기록을 저장합니다.
+              모든 결과 입력을 완료한 뒤 작업 기록을 저장합니다.
             </p>
           </div>
-          <button type="button" aria-label="닫기" onClick={onClose}>
+          <button type="button" aria-label="닫기" onClick={requestClose}>
             <X className="h-4 w-4" aria-hidden="true" />
           </button>
         </header>
@@ -115,6 +127,7 @@ export function PottingWorkRecordDialog({
                     </p>
                   ) : null}
                   <PottingExecutionForm
+                    formId={`potting-record-${candidate.id}`}
                     fixedPottingDate={workDate}
                     houses={houses}
                     initialActualQuantity={
@@ -123,17 +136,20 @@ export function PottingWorkRecordDialog({
                     initialPotSize={candidate.potSize}
                     initialWorker={worker}
                     recordItemMode
+                    showRecordSubmitButton={false}
                     subject={candidate.varietyName}
-                    onCancel={onClose}
-                    onRecordDirty={() =>
+                    onCancel={requestClose}
+                    onRecordDirty={() => {
+                      setIsDirty(true);
                       setExecutions((current) => {
                         if (!current.has(candidate.id)) return current;
                         const next = new Map(current);
                         next.delete(candidate.id);
                         return next;
-                      })
-                    }
+                      });
+                    }}
                     onSubmit={async (values: PottingExecutionValues) => {
+                      setIsDirty(true);
                       setExecutions((current) => {
                         const next = new Map(current);
                         next.set(candidate.id, {
@@ -152,7 +168,7 @@ export function PottingWorkRecordDialog({
             </div>
           ))}
         </div>
-        <footer className="border-t bg-white p-4">
+        <footer className="border-t bg-white p-2">
           {error ? (
             <p className="mb-3 rounded-md bg-[#fff1ec] p-3 text-sm text-[#9b341e]">
               {error}
@@ -164,11 +180,24 @@ export function PottingWorkRecordDialog({
               items={navigationItems}
               onSelect={setActiveKey}
             />
+            {activeGroup?.candidates.map((candidate, index) => (
+              <button
+                className="rounded-md bg-[#159447] px-4 py-2 text-sm font-semibold text-white disabled:opacity-50"
+                disabled={saving}
+                form={`potting-record-${candidate.id}`}
+                key={candidate.id}
+                type="submit"
+              >
+                {activeGroup.candidates.length > 1
+                  ? `입고 결과 ${index + 1} 입력 완료`
+                  : "현재 품종 입력 완료"}
+              </button>
+            ))}
             <button
               className="ml-2 rounded-md border border-[#d4dbd5] px-4 py-2 text-sm font-semibold"
               disabled={saving}
               type="button"
-              onClick={onClose}
+              onClick={requestClose}
             >
               취소
             </button>

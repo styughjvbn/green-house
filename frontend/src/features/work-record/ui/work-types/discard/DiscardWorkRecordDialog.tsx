@@ -40,6 +40,16 @@ export function DiscardWorkRecordDialog({
   );
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [isDirty, setIsDirty] = useState(false);
+
+  function requestClose() {
+    if (
+      !isDirty ||
+      window.confirm("작성 중인 내용이 초기화됩니다. 닫을까요?")
+    ) {
+      onClose();
+    }
+  }
 
   async function submit() {
     if (!completedDate) {
@@ -87,7 +97,9 @@ export function DiscardWorkRecordDialog({
     <div
       className="fixed inset-0 z-[1300] flex items-center justify-center bg-black/45 p-4"
       role="presentation"
-      onMouseDown={onClose}
+      onMouseDown={() => {
+        if (!isDirty) onClose();
+      }}
     >
       <section
         className="flex max-h-[calc(100dvh-2rem)] w-full max-w-3xl flex-col overflow-hidden rounded-lg bg-white shadow-2xl"
@@ -103,7 +115,7 @@ export function DiscardWorkRecordDialog({
               선택한 모든 난 묶음의 폐기 수량과 사유를 입력하세요.
             </p>
           </div>
-          <button type="button" aria-label="닫기" onClick={onClose}>
+          <button type="button" aria-label="닫기" onClick={requestClose}>
             <X className="h-4 w-4" aria-hidden="true" />
           </button>
         </header>
@@ -115,9 +127,19 @@ export function DiscardWorkRecordDialog({
               required
               type="date"
               value={completedDate}
-              onChange={setCompletedDate}
+              onChange={(value) => {
+                setIsDirty(true);
+                setCompletedDate(value);
+              }}
             />
-            <TextField label="작업자" value={worker} onChange={setWorker} />
+            <TextField
+              label="작업자"
+              value={worker}
+              onChange={(value) => {
+                setIsDirty(true);
+                setWorker(value);
+              }}
+            />
           </div>
           <div className="space-y-2">
             {groups.map((group) => (
@@ -139,22 +161,24 @@ export function DiscardWorkRecordDialog({
                   required
                   type="number"
                   value={quantities[group.id] ?? ""}
-                  onChange={(value) =>
+                  onChange={(value) => {
+                    setIsDirty(true);
                     setQuantities((current) => ({
                       ...current,
                       [group.id]: value,
-                    }))
-                  }
+                    }));
+                  }}
                 />
                 <TextField
                   label="폐기 사유"
                   value={reasons[group.id] ?? ""}
-                  onChange={(value) =>
+                  onChange={(value) => {
+                    setIsDirty(true);
                     setReasons((current) => ({
                       ...current,
                       [group.id]: value,
-                    }))
-                  }
+                    }));
+                  }}
                 />
               </section>
             ))}
@@ -175,7 +199,7 @@ export function DiscardWorkRecordDialog({
             className="rounded-md border px-4 py-2 text-sm"
             disabled={saving}
             type="button"
-            onClick={onClose}
+            onClick={requestClose}
           >
             취소
           </button>
