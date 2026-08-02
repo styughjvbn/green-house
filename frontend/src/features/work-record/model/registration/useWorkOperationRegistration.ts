@@ -69,6 +69,7 @@ export function useWorkOperationRegistration({
     useState(false);
   const [loading, setLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [isDirty, setIsDirty] = useState(false);
   const selectedWorkType = schedulableWorkTypes.find(
     (workType) => String(workType.id) === form.workTypeId,
   );
@@ -143,6 +144,7 @@ export function useWorkOperationRegistration({
     field: K,
     value: WorkOperationFormState[K],
   ) {
+    if (field !== "workTypeId") setIsDirty(true);
     setForm((current) => ({ ...current, [field]: value }));
     if (field === "workTypeId") {
       const workType = schedulableWorkTypes.find(
@@ -185,6 +187,7 @@ export function useWorkOperationRegistration({
   }
 
   async function selectFarmTarget() {
+    setIsDirty(true);
     setForm((current) => ({
       ...current,
       sourceScopeType: "FARM",
@@ -201,6 +204,7 @@ export function useWorkOperationRegistration({
   }
 
   function confirmInboundTargets(selectedIds: Set<number>) {
+    setIsDirty(true);
     setInboundRecordIds(selectedIds);
     setTargetSelectorOpen(false);
   }
@@ -209,6 +213,7 @@ export function useWorkOperationRegistration({
     selectedIds: Set<number>,
     scope: WorkTargetSelectionScope | null,
   ) {
+    setIsDirty(true);
     setManualIds(selectedIds);
     setTargetScopeLabel(scope?.label ?? null);
     const scopePayload: WorkTargetPreviewPayload = scope
@@ -240,12 +245,17 @@ export function useWorkOperationRegistration({
   }
 
   function toggleExcluded(id: number) {
+    setIsDirty(true);
     setExcludedIds((current) => {
       const next = new Set(current);
       if (next.has(id)) next.delete(id);
       else next.add(id);
       return next;
     });
+  }
+
+  function changeRegistrationMode(mode: WorkRegistrationMode) {
+    setRegistrationMode(mode);
   }
 
   async function saveOperation() {
@@ -369,6 +379,7 @@ export function useWorkOperationRegistration({
     includedTargets,
     isDedicatedWorkflow,
     isInboundPotting,
+    isDirty,
     loading,
     manualIds,
     openTargetSelector: () => setTargetSelectorOpen(true),
@@ -388,7 +399,7 @@ export function useWorkOperationRegistration({
     schedulableWorkTypes,
     selectFarmTarget,
     selectedWorkType,
-    setRegistrationMode,
+    setRegistrationMode: changeRegistrationMode,
     targetSelectorOpen,
     targetSummary,
     toggleExcluded,

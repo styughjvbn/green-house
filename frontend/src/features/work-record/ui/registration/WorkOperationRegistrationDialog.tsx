@@ -64,12 +64,22 @@ function WorkOperationRegistrationContent({
     onSaved,
     workTypes,
   });
+  const requestClose = () => {
+    if (
+      !registration.isDirty ||
+      window.confirm("작성 중인 내용이 초기화됩니다. 닫을까요?")
+    ) {
+      onClose();
+    }
+  };
 
   return (
     <div
       className="fixed inset-0 z-[1000] flex items-center justify-center bg-black/35 p-4"
       role="presentation"
-      onMouseDown={onClose}
+      onMouseDown={() => {
+        if (!registration.isDirty) onClose();
+      }}
     >
       <section
         className="flex max-h-[calc(100dvh-2rem)] w-full max-w-6xl flex-col overflow-hidden rounded-md bg-[#f5fbf5] shadow-xl"
@@ -88,7 +98,7 @@ function WorkOperationRegistrationContent({
           <button
             className="flex h-8 w-8 shrink-0 items-center justify-center rounded border border-[#d9dfda] text-[#435047] hover:bg-[#f4f7f3]"
             type="button"
-            onClick={onClose}
+            onClick={requestClose}
             aria-label="닫기"
           >
             <X className="h-4 w-4" strokeWidth={1.8} aria-hidden="true" />
@@ -123,7 +133,7 @@ function WorkOperationRegistrationContent({
             }
             targetSummary={registration.targetSummary}
             workTypes={registration.schedulableWorkTypes}
-            onCancel={onClose}
+            onCancel={requestClose}
             onChangeRegistrationMode={registration.setRegistrationMode}
             onLoadPreview={registration.loadPreview}
             onOpenTargetSelector={registration.openTargetSelector}

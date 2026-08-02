@@ -46,7 +46,9 @@ export function PottingExecutionForm({
   initialPotSize,
   initialWorker,
   fixedPottingDate,
+  formId,
   recordItemMode = false,
+  showRecordSubmitButton = true,
   onRecordDirty,
   subject,
   submitLabel = "포트 작업 완료",
@@ -59,7 +61,9 @@ export function PottingExecutionForm({
   initialPotSize?: string | null;
   initialWorker?: string | null;
   fixedPottingDate?: string;
+  formId?: string;
   recordItemMode?: boolean;
+  showRecordSubmitButton?: boolean;
   onRecordDirty?: () => void;
   subject: string;
   submitLabel?: string;
@@ -137,6 +141,7 @@ export function PottingExecutionForm({
 
   return (
     <form
+      id={formId}
       className="mt-4 grid gap-3 md:grid-cols-2"
       onSubmit={(event) => {
         event.preventDefault();
@@ -279,17 +284,19 @@ export function PottingExecutionForm({
             취소
           </button>
         ) : null}
-        <button
-          className="rounded-md bg-[#159447] px-4 py-2 text-sm font-semibold text-white disabled:opacity-50"
-          disabled={saving}
-          type="submit"
-        >
-          {saving
-            ? "처리 중"
-            : recordItemMode
-              ? "현재 입고 결과 입력 완료"
-              : submitLabel}
-        </button>
+        {!recordItemMode || showRecordSubmitButton ? (
+          <button
+            className="rounded-md bg-[#159447] px-4 py-2 text-sm font-semibold text-white disabled:opacity-50"
+            disabled={saving}
+            type="submit"
+          >
+            {saving
+              ? "처리 중"
+              : recordItemMode
+                ? "현재 품종 입력 완료"
+                : submitLabel}
+          </button>
+        ) : null}
       </div>
     </form>
   );
