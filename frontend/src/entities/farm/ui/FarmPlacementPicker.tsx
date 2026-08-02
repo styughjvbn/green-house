@@ -339,6 +339,15 @@ function FarmPlacementBedCarousel({
   });
   const [canScrollPrevious, setCanScrollPrevious] = useState(false);
   const [canScrollNext, setCanScrollNext] = useState(false);
+  const [activeBedIndex, setActiveBedIndex] = useState(0);
+  const houses = useMemo(
+    () =>
+      bedOrder.filter(
+        (bed, index) =>
+          index === 0 || bed.houseId !== bedOrder[index - 1]?.houseId,
+      ),
+    [bedOrder],
+  );
 
   const syncControls = useCallback(() => {
     if (!emblaApi) return;
@@ -350,7 +359,9 @@ function FarmPlacementBedCarousel({
     if (!emblaApi) return;
     const handleSelect = () => {
       syncControls();
-      onViewportIndexChange(emblaApi.selectedScrollSnap());
+      const index = emblaApi.selectedScrollSnap();
+      setActiveBedIndex(index);
+      onViewportIndexChange(index);
     };
     emblaApi.on("reInit", syncControls);
     emblaApi.on("select", handleSelect);
@@ -385,6 +396,24 @@ function FarmPlacementBedCarousel({
           <Legend color="bg-white" label="빈 칸" />
         </div>
         <div className="flex items-center gap-2">
+          <select
+            aria-label="동으로 이동"
+            className="h-8 rounded-md border border-[#d7ddd4] bg-white px-2 text-xs font-semibold text-[#344138]"
+            value={bedOrder[activeBedIndex]?.houseId ?? ""}
+            onChange={(event) => {
+              const nextHouseId = Number(event.target.value);
+              const index = bedOrder.findIndex(
+                (bed) => bed.houseId === nextHouseId,
+              );
+              if (index >= 0) emblaApi?.scrollTo(index);
+            }}
+          >
+            {houses.map((house) => (
+              <option key={house.houseId} value={house.houseId}>
+                {house.houseNumber}동으로 이동
+              </option>
+            ))}
+          </select>
           <button
             aria-label="이전 다이"
             className="flex h-8 w-8 items-center justify-center rounded-md border border-[#d7ddd4] bg-white disabled:cursor-not-allowed disabled:opacity-40"
@@ -700,7 +729,7 @@ function NumberField({
     <label className="block space-y-1">
       <span className="text-xs font-semibold text-[#425047]">{label}</span>
       <input
-        className={inputClass}
+        className={"h-10 w-full rounded-md border border-[#d7ddd8] bg-white px-3 text-sm outline-none focus:border-[#159447] focus:ring-1 focus:ring-[#159447]"}
         max={max}
         min={min}
         type="number"
@@ -842,6 +871,3 @@ function clamp(value: number, min: number, max: number) {
   if (Number.isNaN(value)) return min;
   return Math.min(Math.max(value, min), max);
 }
-
-const inputClass =
-  "h-10 w-full rounded-md border border-[#d7ddd8] bg-white px-3 text-sm outline-none focus:border-[#159447] focus:ring-1 focus:ring-[#159447]";
