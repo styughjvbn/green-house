@@ -66,6 +66,7 @@ export function useFarmStatusMap({
   });
   const [searchResults, setSearchResults] = useState<OrchidGroup[]>([]);
   const [loading, setLoading] = useState(false);
+  const [searchLoading, setSearchLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   const selectedHouse = useMemo(
@@ -107,7 +108,7 @@ export function useFarmStatusMap({
 
     let ignore = false;
     const timeout = window.setTimeout(() => {
-      setLoading(true);
+      setSearchLoading(true);
       searchFarmStatusOrchidGroups(searchFilters)
         .then((results) => {
           if (!ignore) {
@@ -126,7 +127,7 @@ export function useFarmStatusMap({
         })
         .finally(() => {
           if (!ignore) {
-            setLoading(false);
+            setSearchLoading(false);
           }
         });
     }, 0);
@@ -355,7 +356,7 @@ export function useFarmStatusMap({
     filterMatches,
     hasActiveSearch,
     searchFilters,
-    searchLoading: loading,
+    searchLoading,
     searchResults,
     zoomData,
     zoomLevel,

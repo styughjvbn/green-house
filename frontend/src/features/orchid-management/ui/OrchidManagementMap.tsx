@@ -206,14 +206,14 @@ export function OrchidManagementMap({
     }));
   }, []);
 
-  const selectOrchidGroupForEdit =
-    orchidManagement.actions.selectOrchidGroupForEdit;
+  const selectOrchidGroupOnMap =
+    orchidManagement.actions.selectOrchidGroupOnMap;
   const handleSelectOrchidGroup = useCallback(
     (orchidGroupId: number) => {
       clearMapCellRangePick();
-      selectOrchidGroupForEdit(orchidGroupId);
+      selectOrchidGroupOnMap(orchidGroupId);
     },
-    [clearMapCellRangePick, selectOrchidGroupForEdit],
+    [clearMapCellRangePick, selectOrchidGroupOnMap],
   );
 
   function pickMapCellRange(bedZoneId: number, cell: number) {
@@ -398,8 +398,8 @@ export function OrchidManagementMap({
               await orchidManagement.actions.create(payload);
               clearMapCellRangePick();
             }}
-            onDelete={async () => {
-              await orchidManagement.actions.delete();
+            onDelete={async (orchidGroupId) => {
+              await orchidManagement.actions.delete(orchidGroupId);
               clearMapCellRangePick();
             }}
             onEdit={async (payload) => {
@@ -410,9 +410,9 @@ export function OrchidManagementMap({
               await orchidManagement.actions.move(payload);
               clearMapCellRangePick();
             }}
-            onOpenEdit={() => {
+            onOpenEdit={(orchidGroupId) => {
               clearMapCellRangePick();
-              orchidManagement.actions.openEdit();
+              orchidManagement.actions.selectOrchidGroupForEdit(orchidGroupId);
             }}
             onOpenMove={() => {
               clearMapCellRangePick();
