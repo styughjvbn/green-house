@@ -15,12 +15,13 @@ import org.junit.jupiter.api.Test;
 class ModularArchitectureTests {
 	private static final Path SOURCE_ROOT = Path.of("src/main/java/com/greenhouse/backend");
 	private static final Set<String> MODULES = Set.of(
-		"common", "farm", "work", "partner", "sales", "auction", "settlement", "dashboard", "print");
+		"common", "audit", "farm", "work", "partner", "sales", "auction", "settlement", "dashboard", "print");
 	private static final Set<String> STANDARD_LAYERS = Set.of(
 		"domain", "repository", "application", "controller", "dto");
 	private static final Map<String, Set<String>> ALLOWED_DEPENDENCIES = Map.of(
 		"common", Set.of(),
-		"farm", Set.of("common", "work"),
+		"audit", Set.of("common"),
+		"farm", Set.of("common", "work", "audit"),
 		"work", Set.of("common"),
 		"partner", Set.of("common"),
 		"sales", Set.of("common", "auction", "farm", "partner", "settlement"),

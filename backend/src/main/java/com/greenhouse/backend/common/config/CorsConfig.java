@@ -23,6 +23,7 @@ public class CorsConfig implements WebMvcConfigurer {
 				.allowedOriginPatterns(frontendOriginPatterns)
 				.allowedMethods("GET", "POST", "PATCH", "DELETE", "OPTIONS")
 				.allowedHeaders("*")
+				.exposedHeaders("X-Request-Id")
 				.allowCredentials(true)
 				.maxAge(3600);
 		registry.addMapping("/actuator/**")
