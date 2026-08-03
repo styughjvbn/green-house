@@ -1,4 +1,8 @@
-import { API_BASE_URL, fetchApi } from "@/shared/api/client";
+import {
+  API_BASE_URL,
+  fetchApi,
+  fetchWithClientInstance as fetch,
+} from "@/shared/api/client";
 import type { House, WorkOperation } from "@/entities/farm/types";
 import type { Page } from "@/shared/api/page";
 import type {

@@ -1,4 +1,10 @@
-import { API_BASE_URL, fetchApi, handleAuthExpired } from "@/shared/api/client";
+import {
+  API_BASE_URL,
+  buildApiHeaders,
+  fetchApi,
+  fetchWithClientInstance as fetch,
+  handleAuthExpired,
+} from "@/shared/api/client";
 import type {
   BedZonePlacementProfile,
   FarmStatusMapData,
@@ -58,7 +64,7 @@ export async function createWorkOperationCorrection(
     {
       method: "POST",
       credentials: "include",
-      headers: { "Content-Type": "application/json" },
+      headers: buildApiHeaders({ "Content-Type": "application/json" }),
       body: JSON.stringify(payload),
     },
   );
@@ -86,7 +92,7 @@ export async function executeRepotWork(payload: {
   const response = await fetch(`${API_BASE_URL}/work-operations/repot`, {
     method: "POST",
     credentials: "include",
-    headers: { "Content-Type": "application/json" },
+    headers: buildApiHeaders({ "Content-Type": "application/json" }),
     body: JSON.stringify(payload),
   });
   const body = await readJson(response);
@@ -129,7 +135,7 @@ export async function createMultipleOrchidGroups(payload: {
   const response = await fetch(`${API_BASE_URL}/work-operations/multi-create`, {
     method: "POST",
     credentials: "include",
-    headers: { "Content-Type": "application/json" },
+    headers: buildApiHeaders({ "Content-Type": "application/json" }),
     body: JSON.stringify(payload),
   });
   const body = await readJson(response);
@@ -197,7 +203,7 @@ export async function moveOrchidGroup(
     {
       method: "PATCH",
       credentials: "include",
-      headers: { "Content-Type": "application/json" },
+      headers: buildApiHeaders({ "Content-Type": "application/json" }),
       body: JSON.stringify({ ...payload, memo: payload.memo.trim() || null }),
     },
   );
@@ -221,7 +227,7 @@ export async function saveBedZonePlacementProfile(
     {
       method: "PUT",
       credentials: "include",
-      headers: { "Content-Type": "application/json" },
+      headers: buildApiHeaders({ "Content-Type": "application/json" }),
       body: JSON.stringify({ capacities: profile.capacities }),
     },
   );
@@ -424,7 +430,7 @@ export async function createOrchidWorkOperation(
   const response = await fetch(`${API_BASE_URL}/work-operations/record`, {
     method: "POST",
     credentials: "include",
-    headers: { "Content-Type": "application/json" },
+    headers: buildApiHeaders({ "Content-Type": "application/json" }),
     body: JSON.stringify({
       workTypeId: payload.workTypeId,
       title: `${workTypeName} 작업`,
@@ -472,7 +478,7 @@ async function submitOrchidMutation(
   const response = await fetch(`${API_BASE_URL}${path}`, {
     method,
     credentials: "include",
-    headers: { "Content-Type": "application/json" },
+    headers: buildApiHeaders({ "Content-Type": "application/json" }),
     body: JSON.stringify(payload),
   });
   const body = await readJson(response);
@@ -489,7 +495,9 @@ async function submitCollectionMutation(
   const response = await fetch(`${API_BASE_URL}${path}`, {
     method,
     credentials: "include",
-    headers: payload ? { "Content-Type": "application/json" } : undefined,
+    headers: buildApiHeaders(
+      payload ? { "Content-Type": "application/json" } : undefined,
+    ),
     body: payload ? JSON.stringify(payload) : undefined,
   });
   await handleAuthExpired(response);
