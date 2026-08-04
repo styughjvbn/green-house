@@ -32,6 +32,7 @@ type VarietyResponse = {
   name: string;
   alias: string | null;
   defaultPotSize: string | null;
+  color: string | null;
   saleEnabled: boolean;
   active: boolean;
   description: string | null;
@@ -364,6 +365,7 @@ function toVariety(item: VarietyResponse): Variety {
     name: item.name,
     alias: item.alias ?? "",
     potSize: item.defaultPotSize ?? "",
+    color: item.color,
     saleEnabled: item.saleEnabled,
     status: item.active ? "ACTIVE" : "INACTIVE",
     description: item.description ?? "",
@@ -387,6 +389,7 @@ function toVarietyName(item: VarietyNameResponse): Variety {
     name: item.name,
     alias: "",
     potSize: "",
+    color: null,
     saleEnabled: true,
     status: "ACTIVE",
     description: "",

@@ -206,10 +206,19 @@ components:
         currentMonthSales:
           type: integer
           format: int64
+        previousMonthSales:
+          type: integer
+          format: int64
         shippedQuantity:
           type: integer
           format: int64
+        previousMonthShippedQuantity:
+          type: integer
+          format: int64
         unpaidAmount:
+          type: integer
+          format: int64
+        saleableQuantity:
           type: integer
           format: int64
         monthlySales:
@@ -220,6 +229,10 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/AnalyticsRankedValueResponse'
+        varietyInventory:
+          type: array
+          items:
+            $ref: '#/components/schemas/VarietyInventoryAnalyticsResponse'
         partnerSales:
           type: array
           items:
@@ -240,6 +253,17 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/AnalyticsInsightResponse'
+    VarietyInventoryAnalyticsResponse:
+      type: object
+      properties:
+        varietyName:
+          type: string
+        saleableQuantity:
+          type: integer
+          format: int64
+        warningGroupCount:
+          type: integer
+          format: int64
     WorkAnalyticsItemResponse:
       type: object
       properties:

@@ -3,6 +3,7 @@
 import {
   useEffect,
   useMemo,
+  useRef,
   useState,
   type ReactNode,
   type WheelEvent,
@@ -125,10 +126,10 @@ export default function OrchidSelectionPanel({
   onClearSelectedOrchidGroups: () => void;
   onCopyOrchidGroup: (orchidGroupId: number) => void;
   onCreate: (payload: MutationPayload) => Promise<void>;
-  onDelete: () => Promise<void>;
+  onDelete: (orchidGroupId: number) => Promise<void>;
   onEdit: (payload: MutationPayload) => Promise<void>;
   onMove: (payload: PreciseMovePayload) => Promise<void>;
-  onOpenEdit: () => void;
+  onOpenEdit: (orchidGroupId: number) => void;
   onOpenMove: () => void;
   onOpenPaste: () => void;
   onOpenRepot: () => void;
@@ -189,6 +190,7 @@ export default function OrchidSelectionPanel({
   >(null);
   const [searchGroupError, setSearchGroupError] = useState<string | null>(null);
   const [createDraft, setCreateDraft] = useState<OrchidFormDraft | null>(null);
+  const orchidGroupListRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -291,6 +293,16 @@ export default function OrchidSelectionPanel({
         ? currentListSearchResults
         : searchResults
       : sortedOrchidGroups;
+  const displayedOrchidGroupIds = displayedOrchidGroups
+    .map((orchidGroup) => orchidGroup.id)
+    .join(",");
+  useEffect(() => {
+    if (selectedOrchidGroup == null) return;
+    const item = orchidGroupListRef.current?.querySelector<HTMLElement>(
+      `[data-orchid-group-id="${selectedOrchidGroup.id}"]`,
+    );
+    item?.scrollIntoView({ block: "nearest" });
+  }, [displayedOrchidGroupIds, selectedOrchidGroup]);
   const displayedResultCount = displayedOrchidGroups.length;
   const screenSearchResultCount = currentListSearchResults.length;
   const farmSearchResultCount = searchResults.length;
@@ -591,6 +603,7 @@ export default function OrchidSelectionPanel({
           {hasListTarget ? (
             <div className="mt-3 flex min-h-0 flex-1 flex-col">
               <div
+                ref={orchidGroupListRef}
                 className={`space-y-2 overflow-y-auto pr-1 ${
                   compactList ? "max-h-28 shrink-0" : "min-h-0 flex-1"
                 }`}
@@ -613,6 +626,7 @@ export default function OrchidSelectionPanel({
                     return (
                       <div
                         key={orchidGroup.id}
+                        data-orchid-group-id={orchidGroup.id}
                         className={`cursor-pointer rounded-md border p-3 transition hover:border-[#159447] ${
                           selected
                             ? "border-[#b9d0ff] bg-[#f5f8ff] ring-1 ring-[#b9d0ff]/40"
@@ -681,9 +695,8 @@ export default function OrchidSelectionPanel({
                                 />
                               </IconAction>
                               <IconAction
-                                label="수정"
-                                onClick={onOpenEdit}
-                                disabled={!selected}
+                                label="보정"
+                                onClick={() => onOpenEdit(orchidGroup.id)}
                               >
                                 <Edit2
                                   className="h-4 w-4"
@@ -693,8 +706,8 @@ export default function OrchidSelectionPanel({
                               </IconAction>
                               <IconAction
                                 label="삭제"
-                                onClick={onDelete}
-                                disabled={!selected || saving}
+                                onClick={() => void onDelete(orchidGroup.id)}
+                                disabled={saving}
                               >
                                 <Trash2
                                   className="h-4 w-4"

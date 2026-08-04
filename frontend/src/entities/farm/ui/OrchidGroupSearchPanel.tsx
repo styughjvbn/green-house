@@ -1,7 +1,7 @@
 "use client";
 
 import { ChevronDown, ChevronUp, Search } from "lucide-react";
-import { type FocusEvent, useMemo, useState } from "react";
+import { type FocusEvent, useEffect, useMemo, useRef, useState } from "react";
 import type { OrchidGroup } from "@/entities/farm/types";
 
 export type OrchidGroupSearchFilters = {
@@ -48,6 +48,7 @@ export function OrchidGroupSearchPanel<
   ) => void;
 }) {
   const [collapsed, setCollapsed] = useState(false);
+  const resultListRef = useRef<HTMLDivElement>(null);
   const statuses = useMemo(
     () =>
       Array.from(
@@ -61,6 +62,15 @@ export function OrchidGroupSearchPanel<
   );
   const resultCount = hasActiveSearch ? (filteredCount ?? results.length) : 0;
   const open = hasActiveSearch && !collapsed;
+  const resultIds = results.map((orchidGroup) => orchidGroup.id).join(",");
+
+  useEffect(() => {
+    if (currentSelectedOrchidGroupId == null) return;
+    const selectedResult = resultListRef.current?.querySelector<HTMLElement>(
+      `[data-orchid-group-id="${currentSelectedOrchidGroupId}"]`,
+    );
+    selectedResult?.scrollIntoView({ block: "nearest" });
+  }, [currentSelectedOrchidGroupId, resultIds]);
 
   function handleBlur(event: FocusEvent<HTMLElement>) {
     if (event.currentTarget.contains(event.relatedTarget)) {
@@ -155,7 +165,10 @@ export function OrchidGroupSearchPanel<
               {loading ? (
                 <p className="px-3 py-3 text-sm text-[#5d6860]">검색 중</p>
               ) : (
-                <div className="max-h-[150px] overflow-y-auto">
+                <div
+                  ref={resultListRef}
+                  className="max-h-[150px] overflow-y-auto"
+                >
                   {results.map((orchidGroup, index) => (
                     <SearchResultButton
                       key={orchidGroup.id}
@@ -206,6 +219,7 @@ function SearchResultButton({
             ? "bg-[#f8fcf7] hover:bg-[#f2f8f0]"
             : "bg-white hover:bg-[#f7faf6]"
       }`}
+      data-orchid-group-id={orchidGroup.id}
       onClick={() => onSelectResult(orchidGroup)}
       type="button"
     >

@@ -85,7 +85,7 @@ export default function OrchidGroupForm({
   );
 
   const mapTargetZone =
-    mode === "CREATE" && mapCellRangePick.targetBedZoneId != null
+    mapCellRangePick.targetBedZoneId != null
       ? (findBedZone(house, mapCellRangePick.targetBedZoneId)?.zone ?? null)
       : null;
   const activeZone = mapTargetZone ?? targetZone;
@@ -122,12 +122,16 @@ export default function OrchidGroupForm({
     [activeZone, excludedOrchidGroupId, maxCell],
   );
   const [ignoredMapPickVersion, setIgnoredMapPickVersion] = useState(0);
+  const [
+    correctionConfirmedMapPickVersion,
+    setCorrectionConfirmedMapPickVersion,
+  ] = useState<number | null>(null);
+  const correctionSaveConfirmed =
+    correctionConfirmedMapPickVersion === mapCellRangePick.version;
   const rangePickActive =
     mapCellRangePick.active &&
-    (mode === "CREATE"
-      ? mapCellRangePick.targetBedZoneId == null ||
-        mapCellRangePick.targetBedZoneId === activeZone?.id
-      : mapCellRangePick.targetBedZoneId === activeZone?.id);
+    (mapCellRangePick.targetBedZoneId == null ||
+      mapCellRangePick.targetBedZoneId === activeZone?.id);
   const rangePickButtonLabel = rangePickActive
     ? "맵에서 지정 끄기"
     : "맵에서 지정 켜기";
@@ -158,6 +162,7 @@ export default function OrchidGroupForm({
   const submitBlocked = mode === "EDIT" && rangeBlocked;
 
   function saveFormDraft(next: OrchidFormState, nextVariety = selectedVariety) {
+    setCorrectionConfirmedMapPickVersion(null);
     setForm(next);
     onDraftChange?.({ form: next, selectedVariety: nextVariety });
   }
@@ -219,7 +224,6 @@ export default function OrchidGroupForm({
   }
 
   function handleToggleMapCellRangePick() {
-    if (mode === "EDIT" && !activeZone) return;
     if (rangePickActive && mapPickedRange) {
       saveFormDraft({
         ...form,
@@ -228,7 +232,7 @@ export default function OrchidGroupForm({
       });
     }
     onStartMapCellRangePick({
-      targetBedZoneId: mode === "CREATE" ? null : (activeZone?.id ?? null),
+      targetBedZoneId: null,
       excludeOrchidGroupId: mode === "EDIT" ? (initialValue?.id ?? null) : null,
       maxCell,
       startCell: startPositionValue,
@@ -239,6 +243,10 @@ export default function OrchidGroupForm({
   function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (!form.varietyId || !activeZone || submitBlocked) {
+      return;
+    }
+    if (mode === "EDIT" && !correctionSaveConfirmed) {
+      setCorrectionConfirmedMapPickVersion(mapCellRangePick.version);
       return;
     }
     const range = normalizeCellRange(
@@ -272,7 +280,7 @@ export default function OrchidGroupForm({
               ? initialValue
                 ? "난 묶음 복사"
                 : "난 묶음 추가"
-              : "난 묶음 수정"}
+              : "난 묶음 보정"}
           </p>
           <h3 className="mt-1 text-base font-semibold">
             {activeZone?.name ?? "맵에서 위치 지정"}
@@ -420,12 +428,18 @@ export default function OrchidGroupForm({
             onChange={(event) => updateField("memo", event.target.value)}
           />
         </label>
+        {mode === "EDIT" && correctionSaveConfirmed ? (
+          <p className="rounded-md border border-[#f0d299] bg-[#fff8e8] px-3 py-2 text-xs font-semibold text-[#96650f]">
+            보정은 작업 이력이 남지 않아 추후 문제가 될 수 있습니다. 그래도
+            보정하시겠다면 다시 한번 저장을 눌러주세요.
+          </p>
+        ) : null}
         <button
           className="w-full rounded-md bg-[#159447] px-3 py-2 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-60"
           disabled={saving || !activeZone || !form.varietyId || submitBlocked}
           type="submit"
         >
-          {saving ? "저장 중..." : "저장"}
+          {saving ? "저장 중..." : mode === "EDIT" ? "보정 저장" : "저장"}
         </button>
       </form>
     </section>

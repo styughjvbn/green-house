@@ -27,6 +27,7 @@ export interface Variety {
   name: string;
   alias: string;
   potSize: string;
+  color: string | null;
   saleEnabled: boolean;
   status: InventoryStatus;
   description: string;
@@ -59,6 +60,7 @@ export interface VarietyPayload {
   name: string;
   alias: string;
   defaultPotSize: string;
+  color: string | null;
   saleEnabled: boolean;
   description: string;
   memo: string;

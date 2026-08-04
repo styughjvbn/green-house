@@ -22,6 +22,7 @@ export type AnalyticsPageProps = {
   salesSlips: AnalyticsSlipSummary[];
   summary: DashboardSummary;
   workAnalytics: WorkAnalyticsData | null;
+  dateRange: AnalyticsFilters;
 };
 
 export type RankedValue = {
@@ -65,15 +66,25 @@ export type AnalyticsSlipSummary = {
 
 export type SalesAnalyticsData = {
   currentMonthSales: number;
+  previousMonthSales: number;
   shippedQuantity: number;
+  previousMonthShippedQuantity: number;
   unpaidAmount: number;
+  saleableQuantity: number;
   monthlySales: RankedValue[];
   varietySales: RankedValue[];
+  varietyInventory: VarietyInventoryStat[];
   partnerSales: RankedValue[];
   paymentBreakdown: RankedValue[];
   recentSlips: AnalyticsSlipSummary[];
   unpaidSlips: AnalyticsSlipSummary[];
   salesInsights: SalesInsight[];
+};
+
+export type VarietyInventoryStat = {
+  varietyName: string;
+  saleableQuantity: number;
+  warningGroupCount: number;
 };
 
 export type PartnerAnalyticsData = {
@@ -114,11 +125,14 @@ export type WorkAnalyticsItem = {
 
 export type AnalyticsViewModel = {
   currentMonthSales: number;
+  previousMonthSales: number;
   shippedQuantity: number;
+  previousMonthShippedQuantity: number;
   unpaidAmount: number;
   saleableQuantity: number;
   monthlySales: RankedValue[];
   varietySales: RankedValue[];
+  varietyInventory: VarietyInventoryStat[];
   partnerSales: RankedValue[];
   partnerStats: PartnerAnalyticsStat[];
   paymentBreakdown: RankedValue[];
@@ -130,9 +144,4 @@ export type AnalyticsViewModel = {
 export type AnalyticsFilters = {
   dateFrom: string;
   dateTo: string;
-  house: string;
-  bed: string;
-  zone: string;
-  variety: string;
-  partner: string;
 };

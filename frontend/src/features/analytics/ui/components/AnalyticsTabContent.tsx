@@ -6,6 +6,7 @@ import type {
   AnalyticsTab,
   AnalyticsViewModel,
   RankedValue,
+  VarietyInventoryStat,
 } from "../../model/types";
 import {
   Panel,
@@ -28,7 +29,10 @@ export function AnalyticsTabContent({
   if (tab === "sales") return <SalesTab view={view} />;
   if (tab === "variety")
     return (
-      <VarietyTab values={view.varietySales} saleable={view.saleableQuantity} />
+      <VarietyTab
+        values={view.varietySales}
+        inventory={view.varietyInventory}
+      />
     );
   if (tab === "customer")
     return (
@@ -60,11 +64,29 @@ function SalesTab({ view }: { view: AnalyticsViewModel }) {
 
 function VarietyTab({
   values,
-  saleable,
+  inventory,
 }: {
   values: RankedValue[];
-  saleable: number;
+  inventory: VarietyInventoryStat[];
 }) {
+  const salesByVariety = new Map(
+    values.map((item) => [item.label, item.value]),
+  );
+  const inventoryByVariety = new Map(
+    inventory.map((item) => [item.varietyName, item]),
+  );
+  const rows = Array.from(
+    new Set([...inventoryByVariety.keys(), ...salesByVariety.keys()]),
+  )
+    .map((varietyName) => ({
+      varietyName,
+      saleableQuantity:
+        inventoryByVariety.get(varietyName)?.saleableQuantity ?? 0,
+      warningGroupCount:
+        inventoryByVariety.get(varietyName)?.warningGroupCount ?? 0,
+      sales: salesByVariety.get(varietyName) ?? 0,
+    }))
+    .sort((left, right) => right.sales - left.sales);
   return (
     <div className="grid gap-3 xl:grid-cols-[0.9fr_1.1fr]">
       <RankingChart title="품종별 매출 순위" values={values} />
@@ -78,7 +100,6 @@ function VarietyTab({
                   "판매 매출",
                   "판매 가능",
                   "상태 이상",
-                  "분갈이 예정",
                   "바로가기",
                 ].map((label) => (
                   <th className="px-3 py-2 text-left" key={label}>
@@ -88,19 +109,21 @@ function VarietyTab({
               </tr>
             </thead>
             <tbody>
-              {values.map((item, index) => (
-                <tr className="border-b border-[#e5e9e5]" key={item.label}>
-                  <td className="px-3 py-2 font-semibold">{item.label}</td>
-                  <td className="px-3 py-2">{formatWon(item.value)}</td>
-                  <td className="px-3 py-2">
-                    {Math.max(
-                      Math.round(saleable / (values.length || 1)) - index * 4,
-                      0,
-                    )}
-                    분
+              {rows.map((item) => (
+                <tr
+                  className="border-b border-[#e5e9e5]"
+                  key={item.varietyName}
+                >
+                  <td className="px-3 py-2 font-semibold">
+                    {item.varietyName}
                   </td>
-                  <td className="px-3 py-2">{index % 3}</td>
-                  <td className="px-3 py-2">{index % 2}</td>
+                  <td className="px-3 py-2">{formatWon(item.sales)}</td>
+                  <td className="px-3 py-2">
+                    {item.saleableQuantity.toLocaleString()}분
+                  </td>
+                  <td className="px-3 py-2">
+                    {item.warningGroupCount.toLocaleString()}건
+                  </td>
                   <td className="px-3 py-2">
                     <Link
                       className="text-[#16843d] underline"
@@ -313,6 +336,7 @@ function WorkTab({ props }: { props: AnalyticsPageProps }) {
       <div className="grid gap-3 xl:grid-cols-[0.78fr_1.22fr]">
         <RankingChart
           title="작업 유형별 실행 건수"
+          unit="건"
           values={
             values.length ? values : [{ label: "작업 기록 없음", value: 0 }]
           }

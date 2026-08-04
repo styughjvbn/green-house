@@ -17,6 +17,7 @@ export type OrchidGroup = {
   id: number;
   bedZoneId: number;
   varietyId: number | null;
+  varietyColor: string | null;
   genus: string | null;
   varietyName: string;
   quantity: number;
@@ -152,6 +153,7 @@ export type FarmStatusMapOrchidGroup = {
   startPosition: number | null;
   endPosition: number | null;
   varietyId: number | null;
+  varietyColor: string | null;
   varietyName: string;
   quantity: number;
   status: string;

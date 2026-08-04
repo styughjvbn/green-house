@@ -140,8 +140,8 @@ export function SalesOrchidGroupSearchSelect({
             aria-label="난 묶음 선택"
             onMouseDown={(event) => event.stopPropagation()}
           >
-            <header className="flex items-center justify-between border-b border-[#e1e7df] px-4 py-3">
-              <div>
+            <header className="flex items-center justify-between border-b border-[#e1e7df] px-4 py-2">
+              <div className="flex items-center gap-2">
                 <h2 className="text-base font-bold text-[#17251b]">
                   난 묶음 선택
                 </h2>

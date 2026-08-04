@@ -460,6 +460,19 @@ export function useOrchidManagementMap(
     clearPasteSource();
   }
 
+  function selectOrchidGroupOnMap(orchidGroupId: number) {
+    const orchidGroup = findOrchidGroup(navigationHouse, orchidGroupId);
+    const bed = orchidGroup
+      ? findBedZone(navigationHouse, orchidGroup.bedZoneId)?.bed
+      : null;
+    if (!orchidGroup || !bed) return;
+
+    setSelection({ type: "ORCHID_GROUP", orchidGroupId });
+    setListSelection({ type: "PHYSICAL_BED", physicalBedId: bed.id });
+    setMutationMode(null);
+    clearPasteSource();
+  }
+
   const selectOrchidGroupForEdit = useCallback(
     (orchidGroupId: number) => {
       setSelection({ type: "ORCHID_GROUP", orchidGroupId });
@@ -607,12 +620,34 @@ export function useOrchidManagementMap(
 
   async function handleUpdate(payload: MutationPayload) {
     if (!selectedOrchidGroup) {
-      setErrorMessage("수정할 난 묶음을 선택하세요.");
+      setErrorMessage("보정할 난 묶음을 선택하세요.");
       return;
     }
-    await runMutation(async () =>
-      updateOrchidGroup(selectedOrchidGroup.id, payload),
-    );
+    const { bedZoneId, startPosition, endPosition, ...detailsPayload } =
+      payload;
+    const movedToAnotherZone =
+      bedZoneId != null && bedZoneId !== selectedOrchidGroup.bedZoneId;
+
+    await runMutation(async () => {
+      await updateOrchidGroup(selectedOrchidGroup.id, {
+        ...detailsPayload,
+        startPosition: movedToAnotherZone
+          ? selectedOrchidGroup.startPosition
+          : startPosition,
+        endPosition: movedToAnotherZone
+          ? selectedOrchidGroup.endPosition
+          : endPosition,
+      });
+
+      if (movedToAnotherZone) {
+        await moveOrchidGroup(selectedOrchidGroup.id, {
+          toBedZoneId: bedZoneId,
+          startPosition,
+          endPosition,
+          memo: "",
+        });
+      }
+    });
   }
 
   async function handleMove(payload: PreciseMovePayload) {
@@ -650,12 +685,15 @@ export function useOrchidManagementMap(
     });
   }
 
-  async function handleDelete() {
-    if (!selectedOrchidGroup) {
+  async function handleDelete(orchidGroupId?: number) {
+    const orchidGroup = orchidGroupId
+      ? findOrchidGroup(navigationHouse, orchidGroupId)
+      : selectedOrchidGroup;
+    if (!orchidGroup) {
       return;
     }
     const confirmed = window.confirm(
-      `${selectedOrchidGroup.varietyName} 난 묶음을 삭제할까요?`,
+      `${orchidGroup.varietyName} 난 묶음을 삭제할까요?`,
     );
     if (!confirmed) {
       return;
@@ -663,7 +701,7 @@ export function useOrchidManagementMap(
     setSaving(true);
     setErrorMessage(null);
     try {
-      await deleteOrchidGroup(selectedOrchidGroup.id);
+      await deleteOrchidGroup(orchidGroup.id);
       setSelection(
         resolvedZone ? { type: "BED_ZONE", bedZoneId: resolvedZone.id } : null,
       );
@@ -773,6 +811,7 @@ export function useOrchidManagementMap(
       selectHouse,
       selectPhysicalBed,
       selectOrchidGroup,
+      selectOrchidGroupOnMap,
       selectOrchidGroupForEdit,
       loadOrchidGroupHistoryPage,
       updateSearchFilter,

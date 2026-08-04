@@ -555,6 +555,8 @@ components:
         varietyId:
           type: integer
           format: int64
+        varietyColor:
+          type: string
         genus:
           type: string
         varietyName:
@@ -729,14 +731,6 @@ components:
           type: integer
           format: int32
           minimum: 1
-        lossQuantity:
-          type: integer
-          format: int32
-          minimum: 0
-        lossReason:
-          type: string
-          maxLength: 1000
-          minLength: 0
         results:
           type: array
           items:
@@ -754,7 +748,6 @@ components:
       required:
       - idempotencyKey
       - inputQuantity
-      - lossQuantity
       - results
       - sourceOrchidGroupId
       - title
@@ -776,8 +769,6 @@ components:
         lossQuantity:
           type: integer
           format: int32
-        lossReason:
-          type: string
     WorkOperationProgressResponse:
       type: object
       properties:

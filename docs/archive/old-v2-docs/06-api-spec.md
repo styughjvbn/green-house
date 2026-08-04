@@ -108,7 +108,7 @@ POST /api/orchid-groups
 }
 ```
 
-### 난 묶음 수정
+### 난 묶음 보정
 
 ```http
 PATCH /api/orchid-groups/{orchidGroupId}
@@ -761,7 +761,7 @@ POST /api/orchid-groups
 - 생성 위치는 반드시 논리 구역 기준이다.
 - 같은 논리 구역 안의 마지막 `sortOrder` 다음 값으로 생성한다.
 
-### 난 묶음 수정
+### 난 묶음 보정
 
 ```http
 PATCH /api/orchid-groups/{orchidGroupId}
