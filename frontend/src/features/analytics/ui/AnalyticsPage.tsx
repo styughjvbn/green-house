@@ -1,92 +1,70 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { ANALYTICS_ROUTE } from "@/shared/config/routes";
+import { defaultAnalyticsDateRange } from "../lib/analyticsDateRange";
 import { createAnalyticsViewModel } from "../lib/analyticsView";
-import type {
-  AnalyticsFilters,
-  AnalyticsPageProps,
-  AnalyticsTab,
-} from "../model/types";
+import type { AnalyticsPageProps, AnalyticsTab } from "../model/types";
 import { AnalyticsFilters as FilterBar } from "./components/AnalyticsFilters";
 import { AnalyticsSummary } from "./components/AnalyticsSummary";
 import { AnalyticsTabContent } from "./components/AnalyticsTabContent";
 
-const ALL_LABEL = "전체";
-
-const DEFAULT_FILTERS: AnalyticsFilters = {
-  dateFrom: "2026-01-01",
-  dateTo: "2026-12-31",
-  house: ALL_LABEL,
-  bed: ALL_LABEL,
-  zone: ALL_LABEL,
-  variety: ALL_LABEL,
-  partner: ALL_LABEL,
-};
-
 export function AnalyticsPage(props: AnalyticsPageProps) {
   const router = useRouter();
   const tab = props.activeTab ?? "sales";
-  const [draftFilters, setDraftFilters] = useState(DEFAULT_FILTERS);
-  const [filters, setFilters] = useState(DEFAULT_FILTERS);
-  const filteredProps = useMemo<AnalyticsPageProps>(() => {
-    if (!props.workAnalytics) return props;
-    return {
-      ...props,
-      workAnalytics: {
-        ...props.workAnalytics,
-        recentRecords: props.workAnalytics.recentRecords.filter(
-          (item) =>
-            item.workDate >= filters.dateFrom &&
-            item.workDate <= filters.dateTo,
-        ),
-      },
-    };
-  }, [filters.dateFrom, filters.dateTo, props]);
-  const view = useMemo(
-    () => createAnalyticsViewModel(filteredProps),
-    [filteredProps],
-  );
-  const varieties = useMemo(
-    () => view.varietySales.map((item) => item.label),
-    [view.varietySales],
-  );
-  const partners = useMemo(
-    () => view.partnerSales.map((item) => item.label),
-    [view.partnerSales],
-  );
+  const [draftFilters, setDraftFilters] = useState(props.dateRange);
+  const [isPending, startTransition] = useTransition();
+  const view = useMemo(() => createAnalyticsViewModel(props), [props]);
   const reset = () => {
-    setDraftFilters(DEFAULT_FILTERS);
-    setFilters(DEFAULT_FILTERS);
+    const defaults = defaultAnalyticsDateRange();
+    setDraftFilters(defaults);
+    startTransition(() => {
+      router.push(
+        `${ANALYTICS_ROUTE.tab(tab)}?from=${defaults.dateFrom}&to=${defaults.dateTo}`,
+      );
+    });
   };
 
   function updateTab(nextTab: AnalyticsTab) {
-    router.push(ANALYTICS_ROUTE.tab(nextTab));
+    router.push(
+      `${ANALYTICS_ROUTE.tab(nextTab)}?from=${props.dateRange.dateFrom}&to=${props.dateRange.dateTo}`,
+    );
+  }
+
+  function applyFilters() {
+    startTransition(() => {
+      router.push(
+        `${ANALYTICS_ROUTE.tab(tab)}?from=${draftFilters.dateFrom}&to=${draftFilters.dateTo}`,
+      );
+    });
   }
 
   return (
-    <main className="min-w-0 space-y-4">
+    <main className="flex h-full min-h-0 min-w-0 flex-col gap-3 overflow-hidden">
       <FilterBar
         values={draftFilters}
-        varieties={varieties}
-        partners={partners}
         onChange={(key, value) =>
           setDraftFilters((current) => ({ ...current, [key]: value }))
         }
-        onApply={() => setFilters(draftFilters)}
+        onApply={applyFilters}
         onReset={reset}
+        pending={isPending}
       />
       <AnalyticsSummary
         sales={view.currentMonthSales}
+        previousSales={view.previousMonthSales}
         shipped={view.shippedQuantity}
+        previousShipped={view.previousMonthShippedQuantity}
         unpaid={view.unpaidAmount}
         saleable={view.saleableQuantity}
         warning={props.summary.warningCount}
         repotDue={props.summary.repotDueCount}
         onSelectTab={updateTab}
       />
-      <AnalyticsTabContent tab={tab} props={filteredProps} view={view} />
+      <div className="min-h-0 flex-1 overflow-y-auto pb-1">
+        <AnalyticsTabContent tab={tab} props={props} view={view} />
+      </div>
     </main>
   );
 }
