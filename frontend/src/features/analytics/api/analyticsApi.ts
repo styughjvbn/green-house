@@ -12,10 +12,18 @@ import type {
   WorkAnalyticsData,
 } from "../model/types";
 
-export async function getAnalyticsData(tab: AnalyticsTab) {
-  const [summary, mapData] = await Promise.all([
+export async function getAnalyticsData(
+  tab: AnalyticsTab,
+  dateRange: { dateFrom: string; dateTo: string },
+) {
+  const query = new URLSearchParams({
+    from: dateRange.dateFrom,
+    to: dateRange.dateTo,
+  }).toString();
+  const [summary, mapData, salesAnalytics] = await Promise.all([
     fetchApi<DashboardSummary>("/dashboard/summary"),
     fetchApi<FarmStatusMapData>("/farm-status/map"),
+    fetchApi<SalesAnalyticsData>(`/analytics/sales?${query}`),
   ]);
 
   if (tab === "space") {
@@ -23,30 +31,35 @@ export async function getAnalyticsData(tab: AnalyticsTab) {
     return createAnalyticsData({
       houses,
       mapData,
+      salesAnalytics,
       summary,
+      dateRange,
     });
   }
 
   if (tab === "work") {
-    const workAnalytics = await fetchApi<WorkAnalyticsData>("/analytics/work");
+    const workAnalytics = await fetchApi<WorkAnalyticsData>(
+      `/analytics/work?${query}`,
+    );
     return createAnalyticsData({
       mapData,
+      salesAnalytics,
       summary,
       workAnalytics,
+      dateRange,
     });
   }
 
-  const salesAnalytics = await fetchApi<SalesAnalyticsData>("/analytics/sales");
-
   if (tab === "customer") {
     const partnerAnalytics = await fetchApi<PartnerAnalyticsData>(
-      "/analytics/partners",
+      `/analytics/partners?${query}`,
     );
     return createAnalyticsData({
       mapData,
       partnerAnalytics,
       salesAnalytics,
       summary,
+      dateRange,
     });
   }
 
@@ -54,6 +67,7 @@ export async function getAnalyticsData(tab: AnalyticsTab) {
     mapData,
     salesAnalytics,
     summary,
+    dateRange,
   });
 }
 
@@ -65,6 +79,7 @@ function createAnalyticsData({
   salesAnalytics = null,
   summary,
   workAnalytics = null,
+  dateRange,
 }: {
   houses?: House[];
   mapData: FarmStatusMapData;
@@ -73,6 +88,7 @@ function createAnalyticsData({
   salesAnalytics?: SalesAnalyticsData | null;
   summary: DashboardSummary;
   workAnalytics?: WorkAnalyticsData | null;
+  dateRange: { dateFrom: string; dateTo: string };
 }) {
   return {
     businessPartners: [],
@@ -84,5 +100,6 @@ function createAnalyticsData({
     salesSlips: salesAnalytics?.recentSlips ?? [],
     summary,
     workAnalytics,
+    dateRange,
   };
 }

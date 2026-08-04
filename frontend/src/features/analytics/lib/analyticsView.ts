@@ -5,11 +5,15 @@ export function createAnalyticsViewModel(
 ): AnalyticsViewModel {
   return {
     currentMonthSales: props.salesAnalytics?.currentMonthSales ?? 0,
+    previousMonthSales: props.salesAnalytics?.previousMonthSales ?? 0,
     shippedQuantity: props.salesAnalytics?.shippedQuantity ?? 0,
+    previousMonthShippedQuantity:
+      props.salesAnalytics?.previousMonthShippedQuantity ?? 0,
     unpaidAmount: props.salesAnalytics?.unpaidAmount ?? 0,
-    saleableQuantity: Math.max(props.summary.orchidGroupCount * 32, 0),
+    saleableQuantity: props.salesAnalytics?.saleableQuantity ?? 0,
     monthlySales: props.salesAnalytics?.monthlySales ?? emptyMonthlySales(),
     varietySales: props.salesAnalytics?.varietySales ?? [],
+    varietyInventory: props.salesAnalytics?.varietyInventory ?? [],
     partnerSales:
       props.partnerAnalytics?.partnerSales ??
       props.salesAnalytics?.partnerSales ??

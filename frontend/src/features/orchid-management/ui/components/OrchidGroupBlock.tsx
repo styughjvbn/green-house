@@ -33,7 +33,9 @@ function OrchidGroupBlock({
     distinguishVarietyColors && !muted && !selected
       ? getOrchidVarietyColor(orchidGroup)
       : null;
-  const textColor = varietyColor ? getTextColorForHex(varietyColor.fill) : null;
+  const textColor = varietyColor
+    ? getTextColorForHex(varietyColor.fill)
+    : undefined;
   const titleTextClass = varietyColor ? "text-inherit" : "text-[#1e2b21]";
   const detailTextClass = varietyColor
     ? "text-inherit opacity-80"
