@@ -729,7 +729,9 @@ function NumberField({
     <label className="block space-y-1">
       <span className="text-xs font-semibold text-[#425047]">{label}</span>
       <input
-        className={"h-10 w-full rounded-md border border-[#d7ddd8] bg-white px-3 text-sm outline-none focus:border-[#159447] focus:ring-1 focus:ring-[#159447]"}
+        className={
+          "h-10 w-full rounded-md border border-[#d7ddd8] bg-white px-3 text-sm outline-none focus:border-[#159447] focus:ring-1 focus:ring-[#159447]"
+        }
         max={max}
         min={min}
         type="number"
