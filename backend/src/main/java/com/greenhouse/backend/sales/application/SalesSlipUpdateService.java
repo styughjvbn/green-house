@@ -12,6 +12,8 @@ import com.greenhouse.backend.sales.repository.SalesSlipRepository;
 import com.greenhouse.backend.settlement.application.ExpectedPaymentDateCalculator;
 import com.greenhouse.backend.settlement.application.PartnerBalanceService;
 import java.util.List;
+import java.util.Map;
+import com.greenhouse.backend.audit.domain.AuditAction;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -27,10 +29,12 @@ public class SalesSlipUpdateService {
 	private final SalesSlipInventoryService salesSlipInventoryService;
 	private final ExpectedPaymentDateCalculator paymentDateCalculator;
 	private final PartnerBalanceService partnerBalanceService;
+	private final SalesSlipAuditSupport auditSupport;
 
 	public SalesSlipResponse update(Long salesSlipId, SalesSlipCreateRequest request) {
 		SalesSlip salesSlip = salesSlipRepository.findWithDetailsById(salesSlipId)
 				.orElseThrow(() -> new NotFoundException("판매 전표를 찾을 수 없습니다."));
+		Map<String, Object> before = auditSupport.snapshot(salesSlip);
 
 		validateEditable(salesSlip, request);
 		if (request.partnerId() == null) {
@@ -85,6 +89,7 @@ public class SalesSlipUpdateService {
 		salesSlipInventoryService.reserve(persisted);
 		partnerBalanceService.updateReceivable(
 				partner.getId(), salesSlipRepository.sumDirectReceivableByPartnerId(partner.getId()), null);
+		auditSupport.record(AuditAction.UPDATED, persisted, before, auditSupport.snapshot(persisted));
 
 		return SalesSlipResponse.from(persisted);
 	}

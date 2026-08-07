@@ -24,9 +24,9 @@ class ModularArchitectureTests {
 		"farm", Set.of("common", "work", "audit"),
 		"work", Set.of("common"),
 		"partner", Set.of("common"),
-		"sales", Set.of("common", "auction", "farm", "partner", "settlement"),
+		"sales", Set.of("common", "audit", "auction", "farm", "partner", "settlement"),
 		"auction", Set.of("common", "partner"),
-		"settlement", Set.of("common", "auction", "partner"),
+		"settlement", Set.of("common", "audit", "auction", "partner"),
 		"dashboard", Set.of("common", "farm"),
 		"print", Set.of("common", "sales"));
 	private static final Pattern MODULE_IMPORT = Pattern.compile(
