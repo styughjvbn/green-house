@@ -7,6 +7,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
+import static org.assertj.core.api.Assertions.assertThat;
 
 import com.greenhouse.backend.farm.domain.structure.BedZone;
 import com.greenhouse.backend.farm.domain.structure.BedZoneSide;
@@ -18,9 +19,14 @@ import java.math.BigDecimal;
 import org.junit.jupiter.api.Test;
 import org.springframework.http.MediaType;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.beans.factory.annotation.Autowired;
+import com.greenhouse.backend.audit.domain.AuditAction;
+import com.greenhouse.backend.audit.domain.AuditSource;
+import com.greenhouse.backend.audit.repository.AuditEventRepository;
 
 @Transactional
 class OrchidGroupCollectionIntegrationTests extends AbstractBackendIntegrationTest {
+	@Autowired AuditEventRepository auditEventRepository;
 
 	@Test
 	void keepsMultipleMembershipsUntilTheyAreExplicitlyRemoved() throws Exception {
@@ -76,6 +82,17 @@ class OrchidGroupCollectionIntegrationTests extends AbstractBackendIntegrationTe
 				.andExpect(status().isOk())
 				.andExpect(jsonPath("$.data", hasSize(1)))
 				.andExpect(jsonPath("$.data[0].status").value("ARCHIVED"));
+
+		var auditEvents = auditEventRepository.findAll().stream()
+				.filter(event -> event.getSource() == AuditSource.ORCHID_GROUP_COLLECTION)
+				.toList();
+		assertThat(auditEvents).extracting(event -> event.getAction())
+				.containsExactly(AuditAction.CREATED, AuditAction.CREATED, AuditAction.UPDATED,
+						AuditAction.UPDATED, AuditAction.DEACTIVATED, AuditAction.UPDATED);
+		assertThat(auditEvents.stream()
+				.filter(event -> event.getAction() == AuditAction.UPDATED)
+				.filter(event -> java.util.Arrays.asList(event.getChangedFields()).contains("memberIds")).toList())
+				.allSatisfy(event -> assertThat(event.getChangedFields()).containsExactly("memberIds"));
 	}
 
 	private Long createCollection(String name) throws Exception {
