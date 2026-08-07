@@ -105,8 +105,9 @@ public class OrchidGroupCommandService {
 				endPosition,
 				normalize(request.memo()));
 		orchidGroup.assignVariety(variety);
-		auditSupport.record(orchidGroupId, AuditAction.UPDATED, AuditSource.ORCHID_GROUP_CORRECTION,
-				before, auditSupport.snapshot(orchidGroup), Map.of("correctionMode", "SINGLE"));
+		OrchidGroupAuditSnapshot after = auditSupport.snapshot(orchidGroup);
+		auditSupport.record(orchidGroupId, auditSupport.actionForCorrection(before, after),
+				AuditSource.ORCHID_GROUP_CORRECTION, before, after, Map.of("correctionMode", "SINGLE"));
 		return OrchidGroupResponse.from(orchidGroup);
 	}
 

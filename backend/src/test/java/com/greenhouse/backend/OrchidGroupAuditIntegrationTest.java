@@ -90,6 +90,20 @@ class OrchidGroupAuditIntegrationTest extends AbstractBackendIntegrationTest {
 				.content(updatePayload(15)))
 				.andExpect(status().isOk());
 		assertThat(auditEventRepository.count()).isEqualTo(eventCount);
+
+		mockMvc.perform(patch("/api/orchid-groups/{id}", groupId)
+				.with(user("operator"))
+				.header("X-Request-Id", "req-deactivate")
+				.header("X-Client-Instance-Id", "browser-1")
+				.contentType(MediaType.APPLICATION_JSON)
+				.content(updatePayload(15, "종료")))
+				.andExpect(status().isOk());
+		var deactivation = auditEventRepository.findAll().stream()
+				.filter(event -> event.getAction() == AuditAction.DEACTIVATED)
+				.findFirst().orElseThrow();
+		assertThat(deactivation.getSource()).isEqualTo(AuditSource.ORCHID_GROUP_CORRECTION);
+		assertThat(deactivation.getChangedFields()).containsExactly("status");
+		assertThat(deactivation.getRequestId()).isEqualTo("req-deactivate");
 	}
 
 	private String payload(int quantity) {
@@ -100,9 +114,13 @@ class OrchidGroupAuditIntegrationTest extends AbstractBackendIntegrationTest {
 	}
 
 	private String updatePayload(int quantity) {
+		return updatePayload(quantity, "정상");
+	}
+
+	private String updatePayload(int quantity, String status) {
 		return """
 				{"varietyId":%d,"quantity":%d,"potSize":"4인치","ageYear":2,
-				 "status":"정상","startPosition":1,"endPosition":2}
-				""".formatted(varietyId, quantity);
+				 "status":"%s","startPosition":1,"endPosition":2}
+				""".formatted(varietyId, quantity, status);
 	}
 }

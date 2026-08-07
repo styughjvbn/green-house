@@ -10,10 +10,12 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Set;
 import org.springframework.stereotype.Component;
 
 @Component
 public class OrchidGroupAuditSupport {
+	private static final Set<String> INACTIVE_STATUSES = Set.of("종료", "폐기", "판매 완료", "생성 취소");
 	private static final List<String> FIELDS = List.of("varietyId", "ageYear", "potSize", "quantity",
 			"houseId", "physicalBedId", "zoneId", "startPosition", "endPosition", "status");
 	private final AuditRecorder auditRecorder;
@@ -41,6 +43,17 @@ public class OrchidGroupAuditSupport {
 			if (!Objects.equals(left[index], right[index])) changes.add(FIELDS.get(index));
 		}
 		return List.copyOf(changes);
+	}
+
+	public AuditAction actionForCorrection(
+			OrchidGroupAuditSnapshot before,
+			OrchidGroupAuditSnapshot after) {
+		if (before != null && after != null
+				&& !INACTIVE_STATUSES.contains(before.status())
+				&& INACTIVE_STATUSES.contains(after.status())) {
+			return AuditAction.DEACTIVATED;
+		}
+		return AuditAction.UPDATED;
 	}
 
 	public Long record(Long entityId, AuditAction action, AuditSource source,
