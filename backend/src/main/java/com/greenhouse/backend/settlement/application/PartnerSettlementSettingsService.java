@@ -17,6 +17,7 @@ import org.springframework.transaction.annotation.Transactional;
 public class PartnerSettlementSettingsService {
 	private final PartnerSettlementSettingsRepository settingsRepository;
 	private final BusinessPartnerReader partnerReader;
+	private final SettlementAuditSupport auditSupport;
 
 	public PartnerSettlementSettingsResponse getOrCreate(Long partnerId) {
 		return PartnerSettlementSettingsResponse.from(findOrCreate(partnerId));
@@ -24,6 +25,7 @@ public class PartnerSettlementSettingsService {
 
 	public PartnerSettlementSettingsResponse update(Long partnerId, PartnerSettlementSettingsRequest request) {
 		var settings = findOrCreate(partnerId);
+		var before = auditSupport.settingsSnapshot(settings);
 		settings.update(
 				request.settlementUnit(), request.paymentDelayDays(), request.paymentDayMode(),
 				request.autoMatchEnabled(), request.autoSettleEnabled(), request.amountTolerance(),
@@ -31,7 +33,9 @@ public class PartnerSettlementSettingsService {
 						.toList(),
 				request.allowPrepayment(), request.creditAutoApplyEnabled(), request.ruleJson(),
 				normalize(request.memo()));
-		return PartnerSettlementSettingsResponse.from(settingsRepository.save(settings));
+		var saved = settingsRepository.save(settings);
+		auditSupport.recordSettingsUpdate(saved, before, auditSupport.settingsSnapshot(saved));
+		return PartnerSettlementSettingsResponse.from(saved);
 	}
 
 	private PartnerSettlementSettings findOrCreate(Long partnerId) {

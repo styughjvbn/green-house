@@ -11,6 +11,8 @@ import com.greenhouse.backend.settlement.domain.PaymentTargetType;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import com.greenhouse.backend.audit.domain.AuditAction;
+import java.util.Map;
 
 @Service
 @Transactional
@@ -23,6 +25,7 @@ public class SalesSlipStatusService {
 	private final SalesSlipInventoryService salesSlipInventoryService;
 	private final PaymentEventReader paymentEventReader;
 	private final PartnerBalanceService partnerBalanceService;
+	private final SalesSlipAuditSupport auditSupport;
 
 	public SalesSlipResponse updateStatus(Long salesSlipId, SalesSlipStatusUpdateRequest request) {
 		var salesSlip = salesSlipRepository.findWithDetailsById(salesSlipId)
@@ -33,8 +36,10 @@ public class SalesSlipStatusService {
 		if (request.salesStatus().equals(salesSlip.getSalesStatus())) {
 			return SalesSlipResponse.from(salesSlip);
 		}
+		Map<String, Object> before = auditSupport.snapshot(salesSlip);
 		if ("취소".equals(request.salesStatus())) {
 			cancel(salesSlip);
+			auditSupport.record(AuditAction.DEACTIVATED, salesSlip, before, auditSupport.snapshot(salesSlip));
 			return SalesSlipResponse.from(salesSlip);
 		}
 		if (salesSlip.isOutboundCompleted()) {
@@ -46,6 +51,7 @@ public class SalesSlipStatusService {
 			auctionShipmentMaterializer.materialize(salesSlip);
 			salesSlipInventoryService.outbound(salesSlip);
 		}
+		auditSupport.record(AuditAction.UPDATED, salesSlip, before, auditSupport.snapshot(salesSlip));
 		return SalesSlipResponse.from(salesSlip);
 	}
 

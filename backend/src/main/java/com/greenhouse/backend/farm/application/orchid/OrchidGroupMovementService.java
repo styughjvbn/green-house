@@ -17,6 +17,8 @@ import java.util.UUID;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import com.greenhouse.backend.audit.domain.AuditAction;
+import com.greenhouse.backend.audit.domain.AuditSource;
 
 @Service
 @Transactional
@@ -27,6 +29,7 @@ public class OrchidGroupMovementService {
 	private final OrchidGroupReader orchidGroupReader;
 	private final Clock clock;
 	private final RequestActorProvider requestActorProvider;
+	private final OrchidGroupAuditSupport auditSupport;
 
 	public OrchidGroupResponse move(Long orchidGroupId, OrchidGroupMoveRequest request) {
 		var orchidGroup = orchidGroupReader.findDetailById(orchidGroupId)
@@ -34,6 +37,7 @@ public class OrchidGroupMovementService {
 		if (isSamePlacement(orchidGroup, request)) {
 			return OrchidGroupResponse.from(orchidGroup);
 		}
+		OrchidGroupAuditSnapshot before = auditSupport.snapshot(orchidGroup);
 
 		Map<String, Object> details = new LinkedHashMap<>();
 		details.put("toBedZoneId", request.toBedZoneId());
@@ -53,9 +57,11 @@ public class OrchidGroupMovementService {
 				orchidGroupId,
 				details,
 				request);
-		return orchidGroupReader.findDetailById(orchidGroupId)
-				.map(OrchidGroupResponse::from)
+		OrchidGroup moved = orchidGroupReader.findDetailById(orchidGroupId)
 				.orElseThrow(() -> new NotFoundException("난 묶음을 찾을 수 없습니다."));
+		auditSupport.record(orchidGroupId, AuditAction.MOVED, AuditSource.WORK_RECORD,
+				before, auditSupport.snapshot(moved), Map.of());
+		return OrchidGroupResponse.from(moved);
 	}
 
 	private boolean isSamePlacement(

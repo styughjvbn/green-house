@@ -21,6 +21,7 @@ import org.springframework.transaction.annotation.Transactional;
 @RequiredArgsConstructor
 public class BusinessPartnerService {
 	private final BusinessPartnerRepository repository;
+	private final BusinessPartnerAuditSupport auditSupport;
 
 	@Transactional(readOnly = true)
 	public List<BusinessPartnerResponse> getPartners(String keyword, PartnerType partnerType) {
@@ -58,12 +59,15 @@ public class BusinessPartnerService {
 		var partner = new BusinessPartner(
 				request.name().trim(), request.partnerType(), normalize(request.ownerName()),
 				normalize(request.phone()), normalize(request.address()), normalize(request.memo()));
-		return BusinessPartnerResponse.from(repository.save(partner));
+		var saved = repository.save(partner);
+		auditSupport.recordCreated(saved);
+		return BusinessPartnerResponse.from(saved);
 	}
 
 	public BusinessPartnerResponse update(Long partnerId, BusinessPartnerUpdateRequest request) {
 		var partner = repository.findById(partnerId)
 				.orElseThrow(() -> new NotFoundException("거래처를 찾을 수 없습니다."));
+		var before = auditSupport.snapshot(partner);
 		partner.update(
 				request.name().trim(),
 				request.partnerType(),
@@ -71,6 +75,7 @@ public class BusinessPartnerService {
 				normalize(request.phone()),
 				normalize(request.address()),
 				normalize(request.memo()));
+		auditSupport.recordUpdated(partner, before);
 		return BusinessPartnerResponse.from(partner);
 	}
 

@@ -1,4 +1,8 @@
-﻿import { API_BASE_URL, fetchApi } from "@/shared/api/client";
+﻿import {
+  API_BASE_URL,
+  fetchApi,
+  fetchWithClientInstance as fetch,
+} from "@/shared/api/client";
 import type {
   House,
   OrchidGroup,

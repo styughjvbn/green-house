@@ -19,14 +19,41 @@ export type ApiErrorResponse = {
   };
 };
 
+const CLIENT_INSTANCE_KEY = "greenhouse-client-instance-id";
+
+export function buildApiHeaders(initial?: HeadersInit): Headers {
+  const headers = new Headers(initial);
+  if (typeof window === "undefined") return headers;
+
+  let clientInstanceId = window.localStorage.getItem(CLIENT_INSTANCE_KEY);
+  if (!clientInstanceId) {
+    clientInstanceId = window.crypto.randomUUID();
+    window.localStorage.setItem(CLIENT_INSTANCE_KEY, clientInstanceId);
+  }
+  headers.set("X-Client-Instance-Id", clientInstanceId);
+  return headers;
+}
+
+export function fetchWithClientInstance(
+  input: RequestInfo | URL,
+  init?: RequestInit,
+): Promise<Response> {
+  return globalThis.fetch(input, {
+    ...init,
+    headers: buildApiHeaders(init?.headers),
+  });
+}
+
 async function buildRequestHeaders(): Promise<HeadersInit> {
+  const headers = buildApiHeaders();
   if (typeof window !== "undefined") {
-    return {};
+    return headers;
   }
 
   const { cookies } = await import("next/headers");
   const cookieHeader = (await cookies()).toString();
-  return cookieHeader ? { Cookie: cookieHeader } : {};
+  if (cookieHeader) headers.set("Cookie", cookieHeader);
+  return headers;
 }
 
 async function redirectToLogin() {

@@ -26,6 +26,7 @@ public class BedPlacementProfileService {
 	private static final Set<String> FIXED_TYPES = Set.of("TRAY_12", "TRAY_15", "TRAY_20", "TRAY_24", "SINGLE_POT", "HANGING");
 
 	private final BedZoneRepository bedZoneRepository;
+	private final BedPlacementAuditSupport auditSupport;
 
 	public BedZonePlacementProfileResponse getProfile(Long bedZoneId) {
 		return BedZonePlacementProfileResponse.from(findZone(bedZoneId));
@@ -34,8 +35,10 @@ public class BedPlacementProfileService {
 	@Transactional
 	public BedZonePlacementProfileResponse updateProfile(Long bedZoneId, BedZonePlacementProfileRequest request) {
 		BedZone bedZone = findZone(bedZoneId);
+		Map<String, Object> before = auditSupport.snapshot(bedZone);
 		validateCapacities(request.capacities());
 		bedZone.replaceCapacities(request.capacities().stream().map(this::toCapacity).toList());
+		auditSupport.record(bedZone, before, auditSupport.snapshot(bedZone));
 		return BedZonePlacementProfileResponse.from(bedZone);
 	}
 
