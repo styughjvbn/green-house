@@ -19,6 +19,8 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import com.greenhouse.backend.audit.domain.AuditAction;
+import java.util.Map;
 
 @Service
 @Transactional
@@ -28,6 +30,7 @@ public class VarietyService {
 	private final OrchidGroupRepository orchidGroupRepository;
 	private final InboundRecordRepository inboundRecordRepository;
 	private final VarietyResponseAssembler responseAssembler;
+	private final VarietyAuditSupport auditSupport;
 
 	@Transactional(readOnly = true)
 	public PageResponse<VarietyResponse> getVarieties(
@@ -78,11 +81,14 @@ public class VarietyService {
 				true,
 				normalize(request.description()),
 				normalize(request.memo()));
-		return responseAssembler.assemble(varietyRepository.save(variety));
+		Variety saved = varietyRepository.save(variety);
+		auditSupport.record(AuditAction.CREATED, saved, null, auditSupport.snapshot(saved));
+		return responseAssembler.assemble(saved);
 	}
 
 	public VarietyResponse update(Long varietyId, VarietyUpdateRequest request) {
 		var variety = findVariety(varietyId);
+		Map<String, Object> before = auditSupport.snapshot(variety);
 		String genus = normalizeRequired(request.genus());
 		String name = normalizeRequired(request.name());
 		validateUniqueVariety(genus, name, varietyId);
@@ -97,22 +103,27 @@ public class VarietyService {
 				normalize(request.memo()));
 		orchidGroupRepository.findByVarietyIdOrderByLocation(varietyId)
 				.forEach(group -> group.assignVariety(variety));
+		auditSupport.record(AuditAction.UPDATED, variety, before, auditSupport.snapshot(variety));
 		return responseAssembler.assemble(variety);
 	}
 
 	public VarietyResponse deactivate(Long varietyId) {
 		var variety = findVariety(varietyId);
+		Map<String, Object> before = auditSupport.snapshot(variety);
 		variety.deactivate();
+		auditSupport.record(AuditAction.DEACTIVATED, variety, before, auditSupport.snapshot(variety));
 		return responseAssembler.assemble(variety);
 	}
 
 	public void delete(Long varietyId) {
 		var variety = findVariety(varietyId);
+		Map<String, Object> before = auditSupport.snapshot(variety);
 		if (orchidGroupRepository.existsByVarietyId(varietyId)
 				|| inboundRecordRepository.existsByVarietyId(varietyId)) {
 			throw new IllegalArgumentException("연결된 난 묶음 또는 입고 기록이 있는 품종은 삭제할 수 없습니다.");
 		}
 		varietyRepository.delete(variety);
+		auditSupport.record(AuditAction.DELETED, variety, before, null);
 	}
 
 	@Transactional(readOnly = true)

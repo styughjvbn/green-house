@@ -13,6 +13,9 @@ import com.greenhouse.backend.auction.domain.AuctionResultLine;
 import com.greenhouse.backend.auction.domain.AuctionShipment;
 import com.greenhouse.backend.auction.domain.AuctionShipmentLot;
 import com.greenhouse.backend.auction.repository.AuctionShipmentRepository;
+import com.greenhouse.backend.audit.domain.AuditAction;
+import com.greenhouse.backend.audit.domain.AuditSource;
+import com.greenhouse.backend.audit.repository.AuditEventRepository;
 import com.greenhouse.backend.partner.domain.BusinessPartner;
 import com.greenhouse.backend.partner.domain.PartnerType;
 import com.greenhouse.backend.partner.repository.BusinessPartnerRepository;
@@ -43,6 +46,7 @@ class PaymentTests {
 	@Autowired AuctionShipmentRepository shipmentRepository;
 	@Autowired AuctionSettlementService settlementService;
 	@Autowired PartnerPaymentEventRepository eventRepository;
+	@Autowired AuditEventRepository auditEventRepository;
 
 	@Test
 	void confirmsPartialAndFullSalesSlipPayments() throws Exception {
@@ -78,6 +82,18 @@ class PaymentTests {
 			.containsExactlyInAnyOrder(
 				PaymentEventType.PAYMENT_RECEIVED, PaymentEventType.MANUAL_MATCH_CONFIRMED,
 				PaymentEventType.PAYMENT_RECEIVED, PaymentEventType.MANUAL_MATCH_CONFIRMED);
+		var audits = auditEventRepository.findAll().stream()
+				.filter(event -> event.getSource() == AuditSource.SETTLEMENT_MANAGEMENT)
+				.toList();
+		assertThat(audits).hasSize(4);
+		assertThat(audits).extracting(event -> event.getEntityType())
+				.containsExactly("PAYMENT_EVENT", "SALES_SLIP", "PAYMENT_EVENT", "SALES_SLIP");
+		assertThat(audits).extracting(event -> event.getAction())
+				.containsExactly(AuditAction.CREATED, AuditAction.UPDATED,
+						AuditAction.CREATED, AuditAction.UPDATED);
+		assertThat(audits.stream().filter(event -> event.getEntityType().equals("PAYMENT_EVENT")))
+				.allSatisfy(event -> assertThat(event.getAfterData().toString())
+						.doesNotContain("테스트 입금자", "수동 확인"));
 
 		mockMvc.perform(get("/api/business-partners/{id}/balance-summary", partner.getId()))
 			.andExpect(status().isOk())
@@ -112,6 +128,15 @@ class PaymentTests {
 				.content(paymentJson(70_000)))
 			.andExpect(status().isBadRequest())
 			.andExpect(jsonPath("$.error.message").exists());
+
+		var audits = auditEventRepository.findAll().stream()
+				.filter(event -> event.getSource() == AuditSource.SETTLEMENT_MANAGEMENT)
+				.toList();
+		assertThat(audits).hasSize(2);
+		assertThat(audits).extracting(event -> event.getEntityType())
+				.containsExactly("PAYMENT_EVENT", "AUCTION_SETTLEMENT");
+		assertThat(audits.getLast().getChangedFields())
+				.containsExactly("paidAmount", "remainingAmount", "paymentStatus");
 	}
 
 	private String paymentJson(long amount) {

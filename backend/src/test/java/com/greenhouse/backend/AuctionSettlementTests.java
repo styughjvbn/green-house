@@ -14,6 +14,8 @@ import com.greenhouse.backend.auction.domain.AuctionResultLine;
 import com.greenhouse.backend.auction.domain.AuctionShipment;
 import com.greenhouse.backend.auction.domain.AuctionShipmentLot;
 import com.greenhouse.backend.auction.repository.AuctionShipmentRepository;
+import com.greenhouse.backend.audit.domain.AuditSource;
+import com.greenhouse.backend.audit.repository.AuditEventRepository;
 import com.greenhouse.backend.partner.domain.BusinessPartner;
 import com.greenhouse.backend.partner.domain.PartnerType;
 import com.greenhouse.backend.partner.repository.BusinessPartnerRepository;
@@ -39,6 +41,7 @@ class AuctionSettlementTests {
 	@Autowired AuctionShipmentRepository shipmentRepository;
 	@Autowired BusinessPartnerRepository partnerRepository;
 	@Autowired MockMvc mockMvc;
+	@Autowired AuditEventRepository auditEventRepository;
 
 	@Test
 	void rebuildsAuctionDateSettlementFromSoldResultLines() throws Exception {
@@ -70,6 +73,14 @@ class AuctionSettlementTests {
 			.andExpect(status().isOk())
 			.andExpect(jsonPath("$.data.depositorAliases.length()").value(1))
 			.andExpect(jsonPath("$.data.ruleJson.auctionDays[0]").value("MON"));
+		var settingsAudit = auditEventRepository.findAll().stream()
+				.filter(event -> event.getSource() == AuditSource.SETTLEMENT_MANAGEMENT)
+				.findFirst().orElseThrow();
+		assertThat(settingsAudit.getEntityType()).isEqualTo("PARTNER_SETTLEMENT_SETTINGS");
+		assertThat(settingsAudit.getChangedFields())
+				.contains("paymentDelayDays", "paymentDayMode", "autoMatchEnabled",
+						"amountTolerance", "depositorAliasCount", "ruleJson");
+		assertThat(settingsAudit.getAfterData().toString()).doesNotContain("정산경매", "경매장 설정");
 
 		createResult(auctionHouse, LocalDate.of(2026, 7, 1), auctionDate, "카틀레야", 10, 12_000);
 		createResult(auctionHouse, LocalDate.of(2026, 7, 2), auctionDate, "덴드로비움", 5, 20_000);

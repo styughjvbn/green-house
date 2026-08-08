@@ -1,4 +1,7 @@
-import { API_BASE_URL } from "@/shared/api/client";
+import {
+  API_BASE_URL,
+  fetchWithClientInstance as fetch,
+} from "@/shared/api/client";
 import type { WorkType, WorkTypeTemplate } from "@/entities/farm/types";
 
 type WorkTypePayload = {

@@ -21,6 +21,8 @@ import com.greenhouse.backend.farm.repository.variety.VarietyRepository;
 import com.greenhouse.backend.work.application.operation.InboundWorkOperationRecorder;
 import com.greenhouse.backend.work.application.operation.InboundWorkOperationLifecycleService;
 import java.math.BigDecimal;
+import java.util.Map;
+import com.greenhouse.backend.audit.domain.AuditAction;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -42,6 +44,7 @@ public class InboundRecordService {
 	private final InboundRecordFinder inboundRecordFinder;
 	private final InboundWorkOperationRequestFactory workOperationRequestFactory;
 	private final RequestActorProvider requestActorProvider;
+	private final InboundRecordAuditSupport auditSupport;
 
 	public InboundRecordResponse create(InboundRecordCreateRequest request) {
 		validateCreate(request, resolveCreateStatus(request));
@@ -90,6 +93,7 @@ public class InboundRecordService {
 		if (inboundRecord.getStatus() == InboundStatus.CANCELED) {
 			throw new IllegalArgumentException("취소된 입고 기록은 수정할 수 없습니다.");
 		}
+		Map<String, Object> before = auditSupport.snapshot(inboundRecord);
 		inboundRecord.updateMetadata(
 				request.inboundDate(),
 				request.bottleCount(),
@@ -104,6 +108,7 @@ public class InboundRecordService {
 				request.trayCount(),
 				requestActorProvider.resolve(request.worker()),
 				normalize(request.memo()));
+		auditSupport.record(AuditAction.UPDATED, inboundRecord, before, auditSupport.snapshot(inboundRecord));
 		return InboundRecordResponse.from(inboundRecord);
 	}
 
@@ -112,13 +117,16 @@ public class InboundRecordService {
 		if (inboundRecord.getCreatedOrchidGroup() != null) {
 			throw new IllegalArgumentException("난 묶음이 생성된 입고 기록은 취소할 수 없습니다.");
 		}
+		Map<String, Object> before = auditSupport.snapshot(inboundRecord);
 		inboundWorkOperationLifecycleService.cancelForInboundRecord(inboundRecordId);
 		inboundRecord.cancel(normalize(request.memo()));
+		auditSupport.record(AuditAction.DEACTIVATED, inboundRecord, before, auditSupport.snapshot(inboundRecord));
 		return InboundRecordResponse.from(inboundRecord);
 	}
 
 	public void delete(Long inboundRecordId) {
 		InboundRecord inboundRecord = inboundRecordFinder.find(inboundRecordId);
+		Map<String, Object> before = auditSupport.snapshot(inboundRecord);
 		if (inboundRecord.getStatus() != InboundStatus.CANCELED) {
 			throw new IllegalArgumentException("취소된 입고 기록만 삭제할 수 있습니다.");
 		}
@@ -126,6 +134,7 @@ public class InboundRecordService {
 			throw new IllegalArgumentException("난 묶음이 생성된 입고 기록은 삭제할 수 없습니다.");
 		}
 		inboundRecordRepository.delete(inboundRecord);
+		auditSupport.record(AuditAction.DELETED, inboundRecord, before, null);
 	}
 
 	private void validateCreate(InboundRecordCreateRequest request, InboundStatus status) {

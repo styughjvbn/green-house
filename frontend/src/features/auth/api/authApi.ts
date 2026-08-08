@@ -1,5 +1,6 @@
 import {
   API_BASE_URL,
+  fetchWithClientInstance as fetch,
   type ApiErrorResponse,
   type ApiResponse,
 } from "@/shared/api/client";

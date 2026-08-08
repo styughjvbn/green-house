@@ -16,6 +16,7 @@ import org.springframework.stereotype.Service;
 public class PaymentLedgerService {
 	private final PartnerPaymentEventRepository eventRepository;
 	private final RequestActorProvider requestActorProvider;
+	private final SettlementAuditSupport auditSupport;
 
 	public PartnerPaymentEvent recordManualPayment(
 			BusinessPartner partner,
@@ -33,6 +34,7 @@ public class PaymentLedgerService {
 				normalize(request.memo()),
 				defaultWorker(requestActorProvider.resolve(request.worker()))));
 		eventRepository.save(PartnerPaymentEvent.manualMatch(received));
+		auditSupport.recordManualPayment(received);
 		return received;
 	}
 

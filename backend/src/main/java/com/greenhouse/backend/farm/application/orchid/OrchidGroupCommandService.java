@@ -19,6 +19,9 @@ import java.math.BigDecimal;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import com.greenhouse.backend.audit.domain.AuditAction;
+import com.greenhouse.backend.audit.domain.AuditSource;
+import java.util.Map;
 
 @Service
 @Transactional
@@ -31,9 +34,13 @@ public class OrchidGroupCommandService {
 	private final VarietyRepository varietyRepository;
 	private final WorkOrchidGroupUsageInspector workUsageInspector;
 	private final OrchidPlacementPolicy orchidPlacementPolicy;
+	private final OrchidGroupAuditSupport auditSupport;
 
 	public OrchidGroupResponse create(OrchidGroupCreateRequest request) {
-		return OrchidGroupResponse.from(createEntity(request));
+		OrchidGroup created = createEntity(request);
+		auditSupport.record(created.getId(), AuditAction.CREATED, AuditSource.ORCHID_GROUP_MANAGEMENT,
+				null, auditSupport.snapshot(created), Map.of("creationMode", "SINGLE"));
+		return OrchidGroupResponse.from(created);
 	}
 
 	public OrchidGroup createEntity(OrchidGroupCreateRequest request) {
@@ -78,6 +85,7 @@ public class OrchidGroupCommandService {
 	public OrchidGroupResponse update(Long orchidGroupId, OrchidGroupUpdateRequest request) {
 		OrchidGroup orchidGroup = orchidGroupRepository.findById(orchidGroupId)
 				.orElseThrow(() -> new NotFoundException("난 묶음을 찾을 수 없습니다."));
+		OrchidGroupAuditSnapshot before = auditSupport.snapshot(orchidGroup);
 		Variety variety = findVariety(request.varietyId());
 		BigDecimal startPosition = orchidPlacementPolicy.normalizeNumber(request.startPosition());
 		BigDecimal endPosition = orchidPlacementPolicy.normalizeNumber(request.endPosition());
@@ -97,18 +105,23 @@ public class OrchidGroupCommandService {
 				endPosition,
 				normalize(request.memo()));
 		orchidGroup.assignVariety(variety);
+		OrchidGroupAuditSnapshot after = auditSupport.snapshot(orchidGroup);
+		auditSupport.record(orchidGroupId, auditSupport.actionForCorrection(before, after),
+				AuditSource.ORCHID_GROUP_CORRECTION, before, after, Map.of("correctionMode", "SINGLE"));
 		return OrchidGroupResponse.from(orchidGroup);
 	}
 
 	public void delete(Long orchidGroupId) {
-		if (!orchidGroupRepository.existsById(orchidGroupId)) {
-			throw new NotFoundException("난 묶음을 찾을 수 없습니다.");
-		}
+		OrchidGroup orchidGroup = orchidGroupRepository.findById(orchidGroupId)
+				.orElseThrow(() -> new NotFoundException("난 묶음을 찾을 수 없습니다."));
+		OrchidGroupAuditSnapshot before = auditSupport.snapshot(orchidGroup);
 		if (workUsageInspector.hasEffectReference(orchidGroupId)) {
 			throw new ConflictException("작업 이력과 연결된 난 묶음은 삭제할 수 없습니다. 작업 취소, 보정 또는 폐기 작업으로 처리해주세요.");
 		}
 		inboundRecordRepository.clearCreatedOrchidGroup(orchidGroupId);
-		orchidGroupRepository.deleteById(orchidGroupId);
+		orchidGroupRepository.delete(orchidGroup);
+		auditSupport.record(orchidGroupId, AuditAction.DELETED, AuditSource.ORCHID_GROUP_MANAGEMENT,
+				before, null, Map.of());
 	}
 
 	public OrchidGroupResponse moveForOperation(Long orchidGroupId, OrchidGroupMoveRequest request) {

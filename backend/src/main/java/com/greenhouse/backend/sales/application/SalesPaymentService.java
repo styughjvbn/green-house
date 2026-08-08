@@ -6,6 +6,7 @@ import com.greenhouse.backend.sales.dto.SalesSlipResponse;
 import com.greenhouse.backend.sales.repository.SalesSlipRepository;
 import com.greenhouse.backend.settlement.application.PartnerBalanceService;
 import com.greenhouse.backend.settlement.application.PaymentLedgerService;
+import com.greenhouse.backend.settlement.application.SettlementAuditSupport;
 import com.greenhouse.backend.settlement.domain.PaymentTargetType;
 import com.greenhouse.backend.settlement.dto.ManualPaymentRequest;
 
@@ -21,6 +22,7 @@ public class SalesPaymentService {
 	private final SalesSlipRepository salesSlipRepository;
 	private final PaymentLedgerService paymentLedgerService;
 	private final PartnerBalanceService partnerBalanceService;
+	private final SettlementAuditSupport auditSupport;
 
 	public SalesSlipResponse confirmPayment(Long salesSlipId, ManualPaymentRequest request) {
 		var salesSlip = salesSlipRepository.findWithDetailsById(salesSlipId)
@@ -32,6 +34,8 @@ public class SalesPaymentService {
 			throw new IllegalArgumentException("취소된 전표는 입금을 확인할 수 없습니다.");
 		}
 
+		var before = auditSupport.paymentSnapshot(salesSlip.getPaidAmount(), salesSlip.getRemainingAmount(),
+				salesSlip.getPaymentStatus());
 		salesSlip.recordPayment(request.amount());
 		var saved = salesSlipRepository.save(salesSlip);
 		var received = paymentLedgerService.recordManualPayment(
@@ -40,6 +44,10 @@ public class SalesPaymentService {
 				salesSlip.getPartner().getId(),
 				salesSlipRepository.sumDirectReceivableByPartnerId(salesSlip.getPartner().getId()),
 				received);
+		auditSupport.recordTargetPayment("SALES_SLIP", saved.getId(), saved.getPartner().getId(),
+				PaymentTargetType.SALES_SLIP, before,
+				auditSupport.paymentSnapshot(saved.getPaidAmount(), saved.getRemainingAmount(),
+						saved.getPaymentStatus()));
 		return SalesSlipResponse.from(saved);
 	}
 }
