@@ -31,6 +31,20 @@ public class AuditEventWriter {
 				beforeData, afterData, contextData);
 	}
 
+	public Long recordWithChangedFields(
+			AuditAction action,
+			AuditSource source,
+			String entityType,
+			Long entityId,
+			List<String> changedFields,
+			Map<String, Object> beforeData,
+			Map<String, Object> afterData,
+			Map<String, Object> contextData) {
+		if (changedFields == null || changedFields.isEmpty()) return null;
+		return write(action, source, entityType, entityId, null, null, null, null,
+				List.copyOf(changedFields), beforeData, afterData, contextData);
+	}
+
 	public Long record(
 			AuditAction action,
 			AuditSource source,
@@ -45,6 +59,23 @@ public class AuditEventWriter {
 			Map<String, Object> contextData) {
 		List<String> changedFields = detectChanges(beforeData, afterData);
 		if (changedFields.isEmpty()) return null;
+		return write(action, source, entityType, entityId, houseId, physicalBedId, zoneId, varietyId,
+				changedFields, beforeData, afterData, contextData);
+	}
+
+	private Long write(
+			AuditAction action,
+			AuditSource source,
+			String entityType,
+			Long entityId,
+			Long houseId,
+			Long physicalBedId,
+			Long zoneId,
+			Long varietyId,
+			List<String> changedFields,
+			Map<String, Object> beforeData,
+			Map<String, Object> afterData,
+			Map<String, Object> contextData) {
 		var identity = requestContext.current();
 		return auditRecorder.record(new AuditEvent(identity.actorId(), identity.sessionId(),
 				identity.clientInstanceId(), identity.requestId(), action, source, entityType, entityId,

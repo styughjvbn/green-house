@@ -23,7 +23,7 @@ class ModularArchitectureTests {
 		"audit", Set.of("common"),
 		"farm", Set.of("common", "work", "audit"),
 		"work", Set.of("common"),
-		"partner", Set.of("common"),
+		"partner", Set.of("common", "audit"),
 		"sales", Set.of("common", "audit", "auction", "farm", "partner", "settlement"),
 		"auction", Set.of("common", "partner"),
 		"settlement", Set.of("common", "audit", "auction", "partner"),
