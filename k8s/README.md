@@ -63,7 +63,7 @@ kubectl apply -k k8s/overlays/demo
 ```
 
 데모 적용 전 도메인, PostgreSQL host IP, DB Secret을 반드시 설정한다. 상세 운영 PC
-절차는 `docs/12-demo-operations.md`를 따른다.
+절차는 `docs/features/demo-operations.md`를 따른다.
 
 ## 라우팅
 

@@ -49,10 +49,15 @@ docs/
   02-domain-model.md
   03-feature-summary.md
   04-architecture.md
-  05-sales-auction-settlement.md
   06-api-guide.md
   07-deployment.md
   08-roadmap.md
+  features/
+    README.md
+    sales-auction-settlement.md
+    authentication.md
+    work-operation-and-orchid-collection.md
+    demo-operations.md
 
   api/
     openapi.yaml
@@ -62,6 +67,8 @@ docs/
     slices/*.openapi.yaml
 
   archive/
+    plans/
+      README.md
     old-v2-docs/
 
 문서 역할:
@@ -71,12 +78,15 @@ docs/
 02-domain-model.md             핵심 도메인 모델과 도메인 규칙
 03-feature-summary.md          구현 기능 요약과 화면 흐름
 04-architecture.md             프론트엔드/백엔드 구조, 모듈 경계
-05-sales-auction-settlement.md 판매, 경매, 정산, 입금 관리
 06-api-guide.md                API 문서 사용 방법
 07-deployment.md               로컬 실행, 배포, 백업, 운영 체크리스트
 08-roadmap.md                  MVP 이후 확장 계획
+features/sales-auction-settlement.md 판매, 경매, 정산, 입금 관리
+features/authentication.md      세션 인증, 인가, 데모 인증
+features/work-operation-and-orchid-collection.md 작업 실행, 그룹, 이력 전파
+features/demo-operations.md     데모 DB, Kubernetes, 비식별화 운영
 
-`docs/archive/old-v2-docs/`는 참고용 보관 문서다.
+`docs/archive/`는 참고용 보관 문서다.
 새 작업의 기준 문서로 사용하지 않는다.
 
 ---
@@ -90,7 +100,10 @@ docs/
 도메인 모델 변경          → docs/02-domain-model.md
 화면 흐름 또는 기능 변경   → docs/03-feature-summary.md
 모듈 구조 변경             → docs/04-architecture.md
-판매/경매/정산 정책 변경   → docs/05-sales-auction-settlement.md
+판매/경매/정산 정책 변경   → docs/features/sales-auction-settlement.md
+인증/권한/세션 정책 변경   → docs/features/authentication.md
+작업 실행/그룹/이력 정책 변경 → docs/features/work-operation-and-orchid-collection.md
+데모 DB/Kubernetes 운영 변경 → docs/features/demo-operations.md
 API 사용 방식 변경         → docs/06-api-guide.md 또는 docs/api/*
 배포/환경/백업 방식 변경   → docs/07-deployment.md
 MVP 이후 범위 변경         → docs/08-roadmap.md
@@ -161,7 +174,7 @@ API를 추가하거나 수정한 경우 다음 순서로 갱신한다.
 - 경매 출하 lot, 경매 시도, 경매 결과, 반환, 정산, 입금은 이력을 보존한다.
 - 판매 수량 자동 차감은 MVP 범위가 아니므로 임의로 구현하지 않는다.
 - 부분입금, 예치금, 계좌 자동 매칭은 구현 범위를 문서에서 확인한 뒤 작업한다.
-- 관련 변경은 `docs/05-sales-auction-settlement.md`와 `docs/api/*`를 함께 확인한다.
+- 관련 변경은 `docs/features/sales-auction-settlement.md`와 `docs/api/*`를 함께 확인한다.
 
 ## 테스트와 결과 보고
 

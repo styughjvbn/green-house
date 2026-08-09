@@ -88,6 +88,8 @@
 ## 4. 작업 이력
 
 농약, 비료, 분갈이, 정리, 상태 기록, 메모, 위치 이동을 기록한다.
+상세 대상·상태·전파 정책은
+[`features/work-operation-and-orchid-collection.md`](features/work-operation-and-orchid-collection.md)를 따른다.
 
 주요 기능:
 
@@ -137,6 +139,8 @@
 ## 5. 판매 관리
 
 거래처와 판매 전표를 관리한다.
+판매·경매·정산·입금의 상태와 보존 정책은
+[`features/sales-auction-settlement.md`](features/sales-auction-settlement.md)를 따른다.
 
 주요 기능:
 
@@ -248,4 +252,4 @@
 - 입금 감사 스냅샷에는 입금자명과 메모를 중복 저장하지 않는다.
 - 거래처 생성·수정 시 이름·유형·활성 상태를 감사하고 개인정보 필드는 값 없이 변경 여부만 저장한다.
 - 동일 값 보정은 감사 이벤트를 만들지 않는다.
-- 조회 화면은 이번 범위에 포함하지 않으며 운영 분석은 `audit_events`를 직접 조회한다.
+- 조회 화면은 이번 범위에 포함하지 않으며 운영 분석은 `audit_events`와 `scripts/data-audit/audit-event-analysis.sql`을 사용한다.

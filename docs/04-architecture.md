@@ -60,13 +60,17 @@ MSA가 아니라 **모듈러 모놀리스**로 관리한다.
 ```text
 common
 audit
+auth
 farm
 work
 partner
 sales
 auction
-payment
+settlement
+dashboard
+analytics
 print
+demo
 ```
 
 ### common
@@ -167,12 +171,23 @@ application|domain|dto/
 - 수량 보정
 - 경매 정산
 
-### payment
+### settlement
 
 - 수동 입금 확인
 - 부분입금
 - 거래처 잔액
 - 입금 이벤트
+
+### auth / demo
+
+- 서버 세션 기반 로그인·로그아웃·현재 사용자 확인
+- 역할 기반 API 접근 제어
+- 데모 인증 주체, 변경 API 제한, 요청 횟수·본문 크기 제한
+
+### dashboard / analytics
+
+- 대시보드 운영 요약
+- 농장·판매·거래처·작업 분석 조회
 
 ## 4. 계층 구조
 

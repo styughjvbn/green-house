@@ -1,4 +1,4 @@
-# Authentication
+# 인증과 인가
 
 ## 방식
 
