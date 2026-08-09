@@ -17,6 +17,7 @@ import type {
   InboundPottingCandidate,
   WorkDerivedGroupOption,
   WorkCollectionOption,
+  WorkOperationDetail,
   WorkTargetPreviewPayload,
 } from "../model/types";
 
@@ -158,6 +159,14 @@ export function getWorkOperations(
   const query = params.toString();
   return fetchApi<Page<WorkOperation>>(
     `/work-operations${query ? `?${query}` : ""}`,
+  );
+}
+
+export function getWorkOperationDetails(
+  workOperationId: number,
+): Promise<WorkOperationDetail> {
+  return fetchApi<WorkOperationDetail>(
+    `/work-operations/${workOperationId}/details`,
   );
 }
 

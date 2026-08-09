@@ -64,6 +64,94 @@ export type InboundPottingCandidate = {
   potSize: string | null;
 };
 
+export type WorkOperationDetailField = {
+  key: string;
+  label: string;
+  value: string;
+};
+
+export type WorkExecutionSource = {
+  orchidGroupId: number;
+  inputQuantity: number | null;
+  beforeQuantity: number | null;
+  afterQuantity: number | null;
+  remainingQuantity: number | null;
+  beforeStatus: string | null;
+  afterStatus: string | null;
+  fromBedZoneId: number | null;
+  releasedStartPosition: number | null;
+  releasedEndPosition: number | null;
+};
+
+export type WorkExecutionResult = {
+  orchidGroupId: number | null;
+  quantity: number | null;
+  purpose: string | null;
+  bedZoneId: number | null;
+  startPosition: number | null;
+  endPosition: number | null;
+  potSize: string | null;
+  ageYear: number | null;
+  placementType: string | null;
+  trayCount: number | null;
+  memo: string | null;
+};
+
+export type WorkExecutionDetail = {
+  id: number;
+  executionKey: string;
+  resultType: string;
+  appliedAt: string;
+  canceledAt: string | null;
+  worker: string | null;
+  targetId: number | null;
+  inboundRecordId: number | null;
+  sources: WorkExecutionSource[];
+  results: WorkExecutionResult[];
+  lossQuantity: number | null;
+  actualQuantity: number | null;
+  reason: string | null;
+  linkedWorkOperationId: number | null;
+};
+
+export type WorkCorrectionDetail = {
+  id: number;
+  workOperationId: number;
+  title: string;
+  workDate: string;
+  createdAt: string;
+  worker: string | null;
+  reason: string;
+  adjustments: Array<{
+    orchidGroupId: number;
+    beforeQuantity: number;
+    afterQuantity: number;
+    beforeStatus: string;
+    afterStatus: string;
+  }>;
+};
+
+export type WorkOperationDetail = {
+  summary: Pick<
+    import("@/entities/farm/types").WorkOperation,
+    | "id"
+    | "workTypeId"
+    | "workTypeCode"
+    | "workType"
+    | "title"
+    | "status"
+    | "plannedStartDate"
+    | "plannedEndDate"
+    | "actualStartAt"
+    | "actualEndAt"
+    | "worker"
+    | "memo"
+  >;
+  fields: WorkOperationDetailField[];
+  executions: WorkExecutionDetail[];
+  corrections: WorkCorrectionDetail[];
+};
+
 export type WorkDerivedGroupOption = {
   groupKey: string;
   varietyName: string;

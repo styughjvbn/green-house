@@ -1,7 +1,10 @@
 import { useState } from "react";
+import { useQuery } from "@tanstack/react-query";
 import type { WorkOperation } from "@/entities/farm/types";
 import { getWorkExecutionKind } from "../../model/work-types/workTypeDefinition";
+import { workOperationDetailsQueryOptions } from "../../model/workRecordQueryOptions";
 import { WorkCompletionDateDialog } from "./WorkCompletionDateDialog";
+import { CompletedWorkDetails } from "./CompletedWorkDetails";
 import { WorkOperationDetails } from "./WorkOperationDetails";
 import {
   operationStatusLabel,
@@ -36,6 +39,10 @@ export function OperationResult({
   const canceled = operation.status === "CANCELED";
   const corrected = operation.status === "CORRECTED";
   const terminal = completed || canceled || corrected;
+  const completedDetailQuery = useQuery({
+    ...workOperationDetailsQueryOptions(operation.id),
+    enabled: completed || corrected,
+  });
   const active = operation.status === "IN_PROGRESS";
   const canComplete =
     active &&
@@ -151,7 +158,29 @@ export function OperationResult({
         )}
       </div>
 
-      <WorkOperationDetails operation={operation} />
+      <WorkOperationDetails
+        fields={
+          completed || corrected
+            ? (completedDetailQuery.data?.fields ?? [])
+            : undefined
+        }
+        operation={operation}
+      />
+
+      {completed || corrected ? (
+        <CompletedWorkDetails
+          corrected={corrected}
+          detail={completedDetailQuery.data ?? null}
+          error={
+            completedDetailQuery.error instanceof Error
+              ? completedDetailQuery.error.message
+              : completedDetailQuery.error
+                ? "완료 상세를 불러오지 못했습니다."
+                : null
+          }
+          loading={completedDetailQuery.isPending}
+        />
+      ) : null}
 
       <div className="mt-4 rounded-md bg-[#f4f7f3] p-3">
         <div className="flex items-center justify-between text-sm font-semibold text-[#344138]">
@@ -189,12 +218,9 @@ export function OperationResult({
                   ? `${target.locationSnapshot.tempLocation ?? "임시 위치 미지정"} · 입고 #${target.inboundRecordId}`
                   : `${target.locationSnapshot.houseNumber}동 ${target.locationSnapshot.physicalBedNumber}다이 ${target.locationSnapshot.bedZoneName}`}{" "}
                 · 계획 {target.quantitySnapshot}분
-                {operation.workTypeCode === "DISCARD" &&
-                typeof target.resultDetails?.discardedQuantity === "number"
-                  ? ` · 폐기 ${target.resultDetails.discardedQuantity}분 · 현재 ${target.resultDetails.remainingQuantity}분`
-                  : target.processedQuantity > 0
-                    ? ` · 작업 ${target.processedQuantity}분 · 잔여 ${target.remainingQuantity}분`
-                    : ""}
+                {target.processedQuantity > 0
+                  ? ` · 작업 ${target.processedQuantity}분 · 잔여 ${target.remainingQuantity}분`
+                  : ""}
                 {target.completedAt
                   ? ` · 완료 ${target.completedAt.slice(0, 10)}`
                   : ""}

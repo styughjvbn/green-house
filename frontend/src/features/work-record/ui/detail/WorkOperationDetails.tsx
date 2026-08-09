@@ -1,4 +1,5 @@
 import type { WorkOperation } from "@/entities/farm/types";
+import type { WorkOperationDetailField } from "../../model/types";
 import {
   getWorkRecordFieldLabel,
   isVisibleWorkRecordField,
@@ -8,16 +9,21 @@ const DETAIL_LABELS: Record<string, string> = {
   actualQuantity: "실제 수량",
   ageYear: "년생",
   bottleCount: "병 수",
+  createdCount: "생성된 난 묶음 수",
   dilutionRatio: "희석 배수",
   estimatedQuantity: "예상 수량",
   genus: "속명",
   growthStage: "생육 단계",
   inboundType: "입고 유형",
   materialName: "자재명",
+  originalWorkOperationId: "원본 작업",
   placementType: "배치 규격",
   potSize: "화분 크기",
   pottingDueDate: "포트 예정일",
   quantity: "사용량",
+  reason: "보정 사유",
+  resultCount: "결과 난 묶음 수",
+  rowCount: "생성 예정 건수",
   status: "상태",
   tempLocation: "임시 위치",
   trayCount: "판수",
@@ -33,22 +39,26 @@ const HIDDEN_DETAIL_KEYS = new Set([
 
 export function WorkOperationDetails({
   operation,
+  fields,
 }: {
   operation: WorkOperation;
+  fields?: WorkOperationDetailField[];
 }) {
-  const details = Object.entries(operation.details ?? {})
-    .filter(
-      ([key, value]) =>
-        !HIDDEN_DETAIL_KEYS.has(key) &&
-        value !== null &&
-        value !== undefined &&
-        value !== "",
-    )
-    .map(([key, value]) => ({
-      key,
-      label: detailLabel(operation, key),
-      value: formatDetailValue(value),
-    }));
+  const details =
+    fields ??
+    Object.entries(operation.details ?? {})
+      .filter(
+        ([key, value]) =>
+          !HIDDEN_DETAIL_KEYS.has(key) &&
+          value !== null &&
+          value !== undefined &&
+          value !== "",
+      )
+      .map(([key, value]) => ({
+        key,
+        label: detailLabel(operation, key),
+        value: formatDetailValue(value),
+      }));
 
   const items = [
     { key: "workType", label: "작업 유형", value: operation.workType },
