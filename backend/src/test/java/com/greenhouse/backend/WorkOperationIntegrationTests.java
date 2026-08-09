@@ -66,7 +66,7 @@ class WorkOperationIntegrationTests extends AbstractBackendIntegrationTest {
 		pesticideType = workTypeRepository.save(new WorkType(
 				"PESTICIDE", "농약", WorkTypeTemplate.PESTICIDE, true, false, true, 1));
 		movementType = workTypeRepository.save(new WorkType(
-				"MOVEMENT", "위치 이동", WorkTypeTemplate.MOVEMENT, true, true, true, 2));
+				"MOVEMENT", "자리 이동", WorkTypeTemplate.MOVEMENT, true, true, true, 2));
 		discardType = workTypeRepository.save(new WorkType(
 				"DISCARD", "폐기", WorkTypeTemplate.DISCARD, true, true, true, 3));
 		repotType = workTypeRepository.save(new WorkType(
@@ -422,7 +422,7 @@ class WorkOperationIntegrationTests extends AbstractBackendIntegrationTest {
 				.andExpect(jsonPath("$.data[?(@.sourceKind == 'WORK_OPERATION')].propagated").value(hasItem(true)))
 				.andExpect(jsonPath("$.data[?(@.sourceKind == 'WORK_OPERATION')].locationSnapshot.houseNumber").value(hasItem(3)))
 				.andExpect(jsonPath("$.data[?(@.sourceKind == 'WORK_OPERATION')].currentLocation.houseNumber").value(hasItem(5)))
-				.andExpect(jsonPath("$.data[?(@.sourceKind == 'WORK_OPERATION')].workType").value(hasItem("위치 이동")));
+				.andExpect(jsonPath("$.data[?(@.sourceKind == 'WORK_OPERATION')].workType").value(hasItem("자리 이동")));
 
 		mockMvc.perform(get("/api/work-history")
 				.param("scopeType", "ORCHID_GROUP")
@@ -435,7 +435,7 @@ class WorkOperationIntegrationTests extends AbstractBackendIntegrationTest {
 				.andExpect(jsonPath("$.data.size").value(1))
 				.andExpect(jsonPath("$.data.totalElements").value(2))
 				.andExpect(jsonPath("$.data.totalPages").value(2))
-				.andExpect(jsonPath("$.data.content[0].workType").value("위치 이동"))
+				.andExpect(jsonPath("$.data.content[0].workType").value("자리 이동"))
 				.andExpect(jsonPath("$.data.content[0].currentLocation.houseNumber").value(5));
 
 		mockMvc.perform(get("/api/work-history")

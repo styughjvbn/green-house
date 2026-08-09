@@ -2,6 +2,8 @@ package com.greenhouse.backend.farm.application.transformation;
 
 import com.greenhouse.backend.farm.domain.transformation.OrchidGroupLineageRelationType;
 import com.greenhouse.backend.work.dto.effect.StructureChangeExecutionRequest;
+import java.util.Map;
+import java.util.stream.Collectors;
 
 public interface StructureChangeStrategy {
 
@@ -10,6 +12,25 @@ public interface StructureChangeStrategy {
 	String workLabel();
 
 	OrchidGroupLineageRelationType lineageType();
+
+	default boolean allowsMixedVarieties() {
+		return false;
+	}
+
+	default boolean requiresEverySourceResult() {
+		return true;
+	}
+
+	default boolean preservesSourceAttributes() {
+		return false;
+	}
+
+	default Map<Long, Integer> transformedQuantities(
+			StructureChangeExecutionRequest request) {
+		return request.sources().stream().collect(Collectors.toMap(
+				source -> source.sourceOrchidGroupId(),
+				source -> source.inputQuantity()));
+	}
 
 	default void validate(StructureChangeExecutionRequest request) {
 		long totalInput = request.sources().stream().mapToLong(source -> source.inputQuantity()).sum();

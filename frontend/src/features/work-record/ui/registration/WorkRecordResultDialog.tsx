@@ -61,6 +61,7 @@ export function WorkRecordResultDialog({
   };
 
   switch (kind) {
+    case "MOVEMENT":
     case "STRUCTURE_CHANGE":
       return (
         <StructureChangeWorkRecordDialog

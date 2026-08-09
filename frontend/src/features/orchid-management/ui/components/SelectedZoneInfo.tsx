@@ -303,6 +303,7 @@ function lineageLabel(relationType: OrchidGroupLineageRelationType) {
       MERGED_TO: "병합",
       POTTED_TO: "포트 작업",
       CORRECTED_TO: "보정",
+      MOVED_TO: "자리 이동",
     } satisfies Record<OrchidGroupLineageRelationType, string>
   )[relationType];
 }

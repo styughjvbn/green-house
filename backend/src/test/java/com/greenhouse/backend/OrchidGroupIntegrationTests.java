@@ -446,7 +446,7 @@ class OrchidGroupIntegrationTests extends AbstractBackendIntegrationTest {
 
 		mockMvc.perform(get("/api/orchid-groups/{id}/work-history", createdId))
 				.andExpect(status().isOk())
-				.andExpect(jsonPath("$.data[0].workType").value("위치 이동"))
+				.andExpect(jsonPath("$.data[0].workType").value("자리 이동"))
 				.andExpect(jsonPath("$.data[0].sourceKind").value("WORK_OPERATION"));
 
 		mockMvc.perform(delete("/api/orchid-groups/{orchidGroupId}", createdId))

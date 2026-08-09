@@ -25,7 +25,6 @@ import type {
   OrchidListSelection,
   OrchidGroupBatchUpdateItem,
   OrchidSelection,
-  PreciseMovePayload,
 } from "./types";
 
 export function useOrchidManagementMap(
@@ -187,18 +186,6 @@ export function useOrchidManagementMap(
     setErrorMessage("붙여넣을 구역과 복사한 난 묶음을 확인하세요.");
   }
 
-  function openMove() {
-    if (selectedOrchidGroup) {
-      if (mutationMode === "MOVE") {
-        setMutationMode(null);
-        return;
-      }
-      clearPasteSource();
-      setMutationMode("MOVE");
-      setErrorMessage(null);
-    }
-  }
-
   function moveToOrchidGroup(orchidGroup: OrchidGroup) {
     if (findOrchidGroup(navigationHouse, orchidGroup.id)) {
       setSelection({ type: "ORCHID_GROUP", orchidGroupId: orchidGroup.id });
@@ -249,16 +236,6 @@ export function useOrchidManagementMap(
         });
       }
     });
-  }
-
-  async function handleMove(payload: PreciseMovePayload) {
-    if (!selectedOrchidGroup) {
-      setErrorMessage("이동할 난 묶음을 선택하세요.");
-      return;
-    }
-    await runMutation(async () =>
-      moveOrchidGroup(selectedOrchidGroup.id, payload),
-    );
   }
 
   async function handleBatchUpdate(items: OrchidGroupBatchUpdateItem[]) {
@@ -353,9 +330,7 @@ export function useOrchidManagementMap(
       edit: handleUpdate,
       editBatch: handleBatchUpdate,
       moveToOrchidGroup,
-      move: handleMove,
       openCreate,
-      openMove,
       openPaste,
       selectBedZone,
       selectHouse,

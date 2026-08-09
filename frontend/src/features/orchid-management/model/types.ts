@@ -31,7 +31,7 @@ export type OrchidListSelection =
   | SelectedPhysicalBed
   | SelectedBedZone;
 
-export type MutationMode = "CREATE" | "EDIT" | "MOVE" | null;
+export type MutationMode = "CREATE" | "EDIT" | null;
 
 export type MapCellRangePick = {
   active: boolean;
@@ -119,6 +119,7 @@ export type OrchidGroupLineageRelationType =
   | "REPOTTED_TO"
   | "SPLIT_TO"
   | "MERGED_TO"
+  | "MOVED_TO"
   | "POTTED_TO"
   | "CORRECTED_TO";
 

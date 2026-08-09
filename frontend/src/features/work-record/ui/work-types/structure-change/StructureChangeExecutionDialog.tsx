@@ -57,6 +57,7 @@ export function StructureChangeExecutionDialog({
     orchidGroups,
     recordMode,
   });
+  const movement = operation.workTypeCode === "MOVEMENT";
 
   return (
     <div
@@ -83,9 +84,11 @@ export function StructureChangeExecutionDialog({
                 : `${operation.workType} 실행 회차 등록`}
             </h3>
             <p className="text-xs text-[#6a766e]">
-              {recordMode
-                ? "선택한 모든 원본과 생성할 결과를 한 번에 입력하세요."
-                : "원본과 결과는 계획 대상에서 자동으로 채웠습니다. 이번 작업의 예외만 수정하세요."}
+              {movement
+                ? "작업 원본과 이동할 결과 위치를 한 번에 입력하세요. 이동하지 않은 수량은 폐기로 처리됩니다."
+                : recordMode
+                  ? "선택한 모든 원본과 생성할 결과를 한 번에 입력하세요."
+                  : "원본과 결과는 계획 대상에서 자동으로 채웠습니다. 이번 작업의 예외만 수정하세요."}
             </p>
           </div>
           <button type="button" aria-label="닫기" onClick={onClose}>
@@ -135,7 +138,8 @@ export function StructureChangeExecutionDialog({
               onChange={form.setCompletedDate}
             />
             <div className="rounded-md bg-[#f4f7f3] px-3 py-2 text-sm text-[#526057]">
-              투입 {form.totalInput}분 · 결과 {form.totalResult}분 · 손실{" "}
+              투입 {form.totalInput}분 · {movement ? "이동" : "결과"}{" "}
+              {form.totalResult}분 · {movement ? "폐기" : "손실"}{" "}
               {Math.max(0, form.totalInput - form.totalResult)}분 (자동 계산)
             </div>
             <TextField
