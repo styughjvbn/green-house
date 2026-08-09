@@ -104,6 +104,36 @@ class WorkOperationIntegrationTests extends AbstractBackendIntegrationTest {
 	}
 
 	@Test
+	void excludesLegacyMigrationMetadataFromOperationDetails() throws Exception {
+		mockMvc.perform(post("/api/work-operations")
+				.contentType(MediaType.APPLICATION_JSON)
+				.content("""
+						{
+						  "workTypeId": %d,
+						  "title": "레거시 메타데이터 필터 확인",
+						  "plannedStartDate": "2026-07-16",
+						  "sourceScopeType": "MANUAL_SELECTION",
+						  "sourceOrchidGroupIds": [%d],
+						  "details": {
+						    "materialName": "표시할 자재",
+						    "migrationSource": "LEGACY_WORK_RECORD",
+						    "legacyWorkRecordId": 99,
+						    "legacyStatus": "COMPLETED",
+						    "legacyTargetType": "FARM"
+						  }
+						}
+						""".formatted(pesticideType.getId(), targetGroup.getId())))
+				.andExpect(status().isCreated());
+
+		Long operationId = workOperationRepository.findAll().getFirst().getId();
+		mockMvc.perform(get("/api/work-operations/{id}/details", operationId))
+				.andExpect(status().isOk())
+				.andExpect(jsonPath("$.data.fields", hasSize(1)))
+				.andExpect(jsonPath("$.data.fields[0].key").value("materialName"))
+				.andExpect(jsonPath("$.data.fields[0].value").value("표시할 자재"));
+	}
+
+	@Test
 	void batchCreateSplitsSingleVarietyStructureWorkInOneRequest() throws Exception {
 		Variety anotherVariety = varietyRepository.save(new Variety(
 				"TEST-002", "카틀레야", "다른 품종", null, "3.5치", true, true, null, null));

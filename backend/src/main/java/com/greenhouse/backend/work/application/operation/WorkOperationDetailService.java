@@ -87,13 +87,19 @@ public class WorkOperationDetailService {
 	private List<WorkOperationDetailFieldResponse> fields(WorkOperation operation) {
 		if (operation.getDetails() == null) return List.of();
 		return operation.getDetails().entrySet().stream()
-				.filter(entry -> !HIDDEN_FIELD_KEYS.contains(entry.getKey()))
+				.filter(entry -> !isHiddenFieldKey(entry.getKey()))
 				.filter(entry -> isDisplayValue(entry.getValue()))
 				.map(entry -> new WorkOperationDetailFieldResponse(
 						entry.getKey(),
 						fieldLabel(operation, entry.getKey()),
 						formatValue(entry.getValue())))
 				.toList();
+	}
+
+	private boolean isHiddenFieldKey(String key) {
+		return HIDDEN_FIELD_KEYS.contains(key)
+				|| key.equals("migrationSource")
+				|| key.startsWith("legacy");
 	}
 
 	private String fieldLabel(WorkOperation operation, String key) {

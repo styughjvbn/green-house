@@ -4,7 +4,6 @@ import type { WorkOperation } from "@/entities/farm/types";
 import { getWorkExecutionKind } from "../../model/work-types/workTypeDefinition";
 import { workOperationDetailsQueryOptions } from "../../model/workRecordQueryOptions";
 import { WorkCompletionDateDialog } from "./WorkCompletionDateDialog";
-import { CompletedWorkDetails } from "./CompletedWorkDetails";
 import { WorkOperationDetails } from "./WorkOperationDetails";
 import {
   operationStatusLabel,
@@ -159,28 +158,17 @@ export function OperationResult({
       </div>
 
       <WorkOperationDetails
-        fields={
-          completed || corrected
-            ? (completedDetailQuery.data?.fields ?? [])
-            : undefined
+        detail={completedDetailQuery.data ?? null}
+        error={
+          completedDetailQuery.error instanceof Error
+            ? completedDetailQuery.error.message
+            : completedDetailQuery.error
+              ? "완료 상세를 불러오지 못했습니다."
+              : null
         }
+        loading={(completed || corrected) && completedDetailQuery.isPending}
         operation={operation}
       />
-
-      {completed || corrected ? (
-        <CompletedWorkDetails
-          corrected={corrected}
-          detail={completedDetailQuery.data ?? null}
-          error={
-            completedDetailQuery.error instanceof Error
-              ? completedDetailQuery.error.message
-              : completedDetailQuery.error
-                ? "완료 상세를 불러오지 못했습니다."
-                : null
-          }
-          loading={completedDetailQuery.isPending}
-        />
-      ) : null}
 
       <div className="mt-4 rounded-md bg-[#f4f7f3] p-3">
         <div className="flex items-center justify-between text-sm font-semibold text-[#344138]">
