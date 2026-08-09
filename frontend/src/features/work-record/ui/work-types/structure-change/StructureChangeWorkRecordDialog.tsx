@@ -13,6 +13,7 @@ import type {
   StructureChangeRecordPayload,
 } from "../../../api/workRecordApi";
 import { StructureChangeExecutionDialog } from "./StructureChangeExecutionDialog";
+import { movementDiscardConfirmation } from "../../../model/work-types/structure-change/useStructureChangeExecution";
 
 type VarietyTargetGroup = {
   key: string;
@@ -85,6 +86,30 @@ export function StructureChangeWorkRecordDialog({
 
   async function saveAll() {
     if (records.size !== groups.length) return;
+    if (workType.code === "MOVEMENT") {
+      const discardQuantity = [...records.values()].reduce(
+        (sum, record) =>
+          sum +
+          Math.max(
+            0,
+            record.execution.sources.reduce(
+              (sourceSum, source) => sourceSum + source.inputQuantity,
+              0,
+            ) -
+              record.execution.results.reduce(
+                (resultSum, result) => resultSum + result.quantity,
+                0,
+              ),
+          ),
+        0,
+      );
+      if (
+        discardQuantity > 0 &&
+        !window.confirm(movementDiscardConfirmation(discardQuantity))
+      ) {
+        return;
+      }
+    }
     setSaving(true);
     try {
       await onSubmit(

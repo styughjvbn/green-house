@@ -364,6 +364,15 @@ export function useStructureChangeExecution({
       setError(validation);
       return;
     }
+    const discardQuantity = Math.max(0, totalInput - totalResult);
+    if (
+      movement &&
+      !recordMode &&
+      discardQuantity > 0 &&
+      !window.confirm(movementDiscardConfirmation(discardQuantity))
+    ) {
+      return;
+    }
     setSaving(true);
     setError(null);
     try {
@@ -444,4 +453,8 @@ function resultRowForOperation(
 ) {
   const row = newResultRow(group, quantity);
   return movement ? { ...row, placement: null } : row;
+}
+
+export function movementDiscardConfirmation(discardQuantity: number) {
+  return `자동 계산된 폐기 수량이 ${discardQuantity.toLocaleString()}분입니다.\n자리 이동을 완료하면 별도의 폐기 작업이 함께 생성됩니다. 계속할까요?`;
 }
