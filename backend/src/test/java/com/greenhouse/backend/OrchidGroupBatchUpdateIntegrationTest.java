@@ -55,7 +55,7 @@ class OrchidGroupBatchUpdateIntegrationTest extends AbstractBackendIntegrationTe
 		house.addPhysicalBed(bed);
 		houseRepository.saveAndFlush(house);
 		Variety variety = varietyRepository.saveAndFlush(new Variety(
-				"BATCH-ROLLBACK-" + System.nanoTime(), "Phal", "롤백품종", null, "4인치", true, true, null, null));
+				"BATCH-ROLLBACK-" + System.nanoTime(), "Phal", "일괄롤백품종", null, "4인치", true, true, null, null));
 		OrchidGroup first = saveGroup(zone, variety, 10, 1, 2);
 
 		assertThatThrownBy(() -> commandService.updateBatch(new OrchidGroupBatchUpdateRequest(List.of(
