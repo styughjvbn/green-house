@@ -1,6 +1,6 @@
 "use client";
 
-import { memo, type MouseEvent, type PointerEvent } from "react";
+import { memo, useRef, type MouseEvent, type PointerEvent } from "react";
 import {
   getOrchidVarietyColor,
   getTextColorForHex,
@@ -26,6 +26,7 @@ function OrchidGroupBlock({
   selected: boolean;
   onSelect: (orchidGroupId: number) => void;
 }) {
+  const suppressClickRef = useRef(false);
   const warning =
     orchidGroup.status !== "정상" && orchidGroup.status !== "판매 가능";
   const density = resolveDensity(heightPx);
@@ -50,6 +51,10 @@ function OrchidGroupBlock({
 
   function handleClick(event: MouseEvent<HTMLDivElement>) {
     event.stopPropagation();
+    if (suppressClickRef.current) {
+      suppressClickRef.current = false;
+      return;
+    }
     if (muted) {
       return;
     }
@@ -64,6 +69,10 @@ function OrchidGroupBlock({
     if (muted) {
       return;
     }
+    suppressClickRef.current = true;
+    window.setTimeout(() => {
+      suppressClickRef.current = false;
+    }, 500);
     onSelect(orchidGroupId);
   }
 

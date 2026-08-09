@@ -4,6 +4,7 @@ import com.greenhouse.backend.common.api.ApiResponse;
 import com.greenhouse.backend.farm.application.orchid.OrchidGroupCommandService;
 import com.greenhouse.backend.farm.application.orchid.OrchidGroupMovementService;
 import com.greenhouse.backend.farm.dto.orchid.OrchidGroupCreateRequest;
+import com.greenhouse.backend.farm.dto.orchid.OrchidGroupBatchUpdateRequest;
 import com.greenhouse.backend.farm.dto.orchid.OrchidGroupMoveRequest;
 import com.greenhouse.backend.farm.dto.orchid.OrchidGroupResponse;
 import com.greenhouse.backend.farm.dto.orchid.OrchidGroupUpdateRequest;
@@ -19,6 +20,7 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
+import java.util.List;
 
 @RestController
 @RequestMapping("/api/orchid-groups")
@@ -39,6 +41,12 @@ public class OrchidGroupCommandController {
 			@PathVariable Long orchidGroupId,
 			@Valid @RequestBody OrchidGroupUpdateRequest request) {
 		return ApiResponse.ok(orchidGroupCommandService.update(orchidGroupId, request));
+	}
+
+	@PatchMapping("/batch")
+	public ApiResponse<List<OrchidGroupResponse>> updateBatch(
+			@Valid @RequestBody OrchidGroupBatchUpdateRequest request) {
+		return ApiResponse.ok(orchidGroupCommandService.updateBatch(request));
 	}
 
 	@DeleteMapping("/{orchidGroupId}")
