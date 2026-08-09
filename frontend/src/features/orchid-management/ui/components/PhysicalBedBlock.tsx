@@ -8,6 +8,8 @@ export default function PhysicalBedBlock({
   bed,
   distinguishVarietyColors,
   filteredOrchidGroupIds,
+  multiSelectEnabled,
+  selectedOrchidGroupIds,
   selection,
   showScale,
   cellRangePick,
@@ -19,6 +21,8 @@ export default function PhysicalBedBlock({
   bed: PhysicalBed;
   distinguishVarietyColors: boolean;
   filteredOrchidGroupIds: Set<number>;
+  multiSelectEnabled: boolean;
+  selectedOrchidGroupIds: Set<number>;
   selection: OrchidSelection | null;
   showScale: boolean;
   cellRangePick: MapCellRangePick;
@@ -72,6 +76,8 @@ export default function PhysicalBedBlock({
                 ? selection.orchidGroupId
                 : null
             }
+            multiSelectEnabled={multiSelectEnabled}
+            selectedOrchidGroupIds={selectedOrchidGroupIds}
             onPickCellRange={onPickCellRange}
             onSelectBedZone={onSelectBedZone}
             onSelectOrchidGroup={onSelectOrchidGroup}

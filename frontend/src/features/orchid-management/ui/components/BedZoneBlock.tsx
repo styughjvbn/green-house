@@ -21,6 +21,8 @@ export default function BedZoneBlock({
   zone,
   selected,
   selectedOrchidGroupId,
+  multiSelectEnabled,
+  selectedOrchidGroupIds,
   onPickCellRange,
   onSelectBedZone,
   onSelectOrchidGroup,
@@ -33,6 +35,8 @@ export default function BedZoneBlock({
   zone: BedZone;
   selected: boolean;
   selectedOrchidGroupId: number | null;
+  multiSelectEnabled: boolean;
+  selectedOrchidGroupIds: Set<number>;
   onPickCellRange: (bedZoneId: number, cell: number) => void;
   onSelectBedZone: (bedZoneId: number) => void;
   onSelectOrchidGroup: (orchidGroupId: number) => void;
@@ -247,7 +251,11 @@ export default function BedZoneBlock({
                       ? `${displayRange.startCell}-${displayRange.endCell}칸`
                       : formatCellRange(orchidGroup)
                   }
-                  selected={selectedOrchidGroupId === orchidGroup.id}
+                  selected={
+                    multiSelectEnabled
+                      ? selectedOrchidGroupIds.has(orchidGroup.id)
+                      : selectedOrchidGroupId === orchidGroup.id
+                  }
                   onSelect={onSelectOrchidGroup}
                 />
               </div>

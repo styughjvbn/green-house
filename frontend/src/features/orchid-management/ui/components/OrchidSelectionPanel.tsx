@@ -11,7 +11,13 @@ import type {
 import { formatPotSize } from "@/entities/farm/potSizes";
 import type { FarmPlacementSelection } from "@/entities/farm/model/placement";
 import { FarmPlacementPickerDialog } from "@/entities/farm/ui/FarmPlacementPicker";
-import { Clipboard, LoaderCircle, Move, Search } from "lucide-react";
+import {
+  Clipboard,
+  ListChecks,
+  LoaderCircle,
+  Move,
+  Search,
+} from "lucide-react";
 import {
   getDerivedOrchidGroupMembers,
   getDerivedOrchidGroups,
@@ -57,6 +63,8 @@ export default function OrchidSelectionPanel({
   workRecordForm,
   workTypes,
   mapCellRangePick,
+  multiSelectEnabled,
+  selectedOrchidGroupIds,
   onCancelMutation,
   onClearCopiedOrchidGroup,
   onCopyOrchidGroup,
@@ -73,6 +81,7 @@ export default function OrchidSelectionPanel({
   onSearchGroupSelectionChange,
   onStartMapCellRangePick,
   onSyncMapCellRangePick,
+  onToggleMultiSelect,
   onUpdateSearchFilter,
   onUpdateWorkRecordForm,
   onWorkRecordCreate,
@@ -96,6 +105,8 @@ export default function OrchidSelectionPanel({
   workRecordForm: WorkRecordQuickFormState;
   workTypes: WorkType[];
   mapCellRangePick: MapCellRangePick;
+  multiSelectEnabled: boolean;
+  selectedOrchidGroupIds: Set<number>;
   onCancelMutation: () => void;
   onClearCopiedOrchidGroup: () => void;
   onCopyOrchidGroup: (orchidGroupId: number) => void;
@@ -124,6 +135,7 @@ export default function OrchidSelectionPanel({
     startCell: string;
     targetBedZoneId: number;
   }) => void;
+  onToggleMultiSelect: () => void;
   onUpdateSearchFilter: <K extends keyof OrchidManagementSearchState>(
     field: K,
     value: OrchidManagementSearchState[K],
@@ -353,7 +365,7 @@ export default function OrchidSelectionPanel({
       ) : null}
 
       {!hideList ? (
-        <section className="flex min-h-0 flex-1 flex-col rounded-md border border-[#d7ddd4] bg-white p-3 shadow-sm">
+        <section className="flex min-h-0 flex-1 flex-col gap-2 rounded-md border border-[#d7ddd4] bg-white p-3 shadow-sm">
           <div className="flex shrink-0 items-center justify-between gap-3">
             <p className="text-sm font-semibold text-[#17251b]">
               {hasActiveSearch
@@ -372,8 +384,21 @@ export default function OrchidSelectionPanel({
                       : "난 묶음 목록"
                   } (${displayedResultCount}개)`}
             </p>
+            <button
+              aria-pressed={multiSelectEnabled}
+              className={`flex h-4 shrink-0 items-center gap-1.5 rounded-md border px-2.5 text-xs font-bold transition ${
+                multiSelectEnabled
+                  ? "border-[#159447] bg-[#eef8f0] text-[#176b37]"
+                  : "border-[#dfe5dc] bg-white text-[#526057] hover:border-[#159447] hover:text-[#176b37]"
+              }`}
+              onClick={onToggleMultiSelect}
+              type="button"
+            >
+              <ListChecks aria-hidden className="h-4 w-4" strokeWidth={1.8} />
+              {multiSelectEnabled ? "다중 선택 중" : "다중 선택"}
+            </button>
           </div>
-          <div className="mt-3 flex shrink-0 gap-1.5">
+          <div className="flex shrink-0 gap-1.5">
             <label className="relative min-w-0 flex-1">
               <Search
                 aria-hidden="true"
@@ -423,7 +448,7 @@ export default function OrchidSelectionPanel({
             relatedDerivedGroups.length > 0 ||
             relatedUserGroups.length > 0) ? (
             <div
-              className="mt-2 flex shrink-0 gap-2 overflow-x-auto pb-1"
+              className="flex shrink-0 gap-2 overflow-x-auto pb-1"
               onWheel={handleHorizontalWheel}
             >
               {searchGroupsLoading ? (
@@ -508,7 +533,7 @@ export default function OrchidSelectionPanel({
           ) : null}
 
           {hasListTarget ? (
-            <div className="mt-3 flex min-h-0 flex-1 flex-col">
+            <div className="flex min-h-0 flex-1 flex-col">
               <OrchidGroupList
                 compact={compactList}
                 displayedOrchidGroups={displayedOrchidGroups}
@@ -517,9 +542,11 @@ export default function OrchidSelectionPanel({
                 listOrchidGroupCount={orchidGroups.length}
                 listRef={orchidGroupListRef}
                 listTargetLabel={listTargetLabel}
+                multiSelectEnabled={multiSelectEnabled}
                 searchLoading={searchLoading}
                 searchScope={searchScope}
                 selectedOrchidGroupId={selectedOrchidGroup?.id ?? null}
+                selectedOrchidGroupIds={selectedOrchidGroupIds}
                 selectedSearchGroup={selectedSearchGroup != null}
                 saving={saving}
                 onCopy={onCopyOrchidGroup}
@@ -527,6 +554,7 @@ export default function OrchidSelectionPanel({
                 onEdit={onOpenEdit}
                 onSelect={onSelectOrchidGroup}
                 onSelectSearchResult={onSelectSearchResult}
+                onToggleSelected={onSelectOrchidGroup}
               />
 
               <div className="mt-3 grid shrink-0 grid-cols-2 gap-2">
@@ -535,13 +563,14 @@ export default function OrchidSelectionPanel({
                   label="작업 기록 추가"
                   onClick={onOpenWorkRecord}
                   active={mutationMode === "WORK_RECORD"}
+                  disabled={multiSelectEnabled}
                 />
                 <ActionButton
                   icon={<Move className="h-4 w-4" />}
                   label="자리 이동"
                   onClick={onOpenMove}
                   active={mutationMode === "MOVE"}
-                  disabled={!selectedOrchidGroup}
+                  disabled={multiSelectEnabled || !selectedOrchidGroup}
                 />
               </div>
             </div>

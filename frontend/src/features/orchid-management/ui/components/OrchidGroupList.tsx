@@ -10,9 +10,11 @@ export default function OrchidGroupList({
   listOrchidGroupCount,
   listRef,
   listTargetLabel,
+  multiSelectEnabled,
   searchLoading,
   searchScope,
   selectedOrchidGroupId,
+  selectedOrchidGroupIds,
   selectedSearchGroup,
   saving,
   onCopy,
@@ -20,6 +22,7 @@ export default function OrchidGroupList({
   onEdit,
   onSelect,
   onSelectSearchResult,
+  onToggleSelected,
 }: {
   compact: boolean;
   displayedOrchidGroups: OrchidGroup[];
@@ -28,9 +31,11 @@ export default function OrchidGroupList({
   listOrchidGroupCount: number;
   listRef: React.RefObject<HTMLDivElement | null>;
   listTargetLabel: string;
+  multiSelectEnabled: boolean;
   searchLoading: boolean;
   searchScope: "CURRENT_LIST" | "FARM";
   selectedOrchidGroupId: number | null;
+  selectedOrchidGroupIds: Set<number>;
   selectedSearchGroup: boolean;
   saving: boolean;
   onCopy: (orchidGroupId: number) => void;
@@ -38,6 +43,7 @@ export default function OrchidGroupList({
   onEdit: (orchidGroupId: number) => void;
   onSelect: (orchidGroupId: number) => void;
   onSelectSearchResult: (orchidGroup: OrchidGroup) => void;
+  onToggleSelected: (orchidGroupId: number) => void;
 }) {
   const resultVisible =
     !hasActiveSearch ||
@@ -62,88 +68,100 @@ export default function OrchidGroupList({
       ) : null}
 
       {resultVisible
-        ? displayedOrchidGroups.map((orchidGroup, index) => (
-            <div
-              key={orchidGroup.id}
-              data-orchid-group-id={orchidGroup.id}
-              className={`cursor-pointer rounded-md border p-3 transition hover:border-[#159447] ${
-                orchidGroup.id === selectedOrchidGroupId
-                  ? "border-[#b9d0ff] bg-[#f5f8ff] ring-1 ring-[#b9d0ff]/40"
-                  : "border-[#e1e6df] bg-white"
-              }`}
-              onClick={() =>
-                displayingFarmResults && hasActiveSearch
-                  ? onSelectSearchResult(orchidGroup)
-                  : onSelect(orchidGroup.id)
-              }
-            >
-              <div className="flex items-start justify-between gap-3">
-                <div className="flex min-w-0 flex-1 cursor-pointer items-start gap-2">
-                  <div className="min-w-0">
-                    <div className="flex items-center gap-2">
-                      <span
-                        className={`h-2.5 w-2.5 shrink-0 rounded-full ${getStatusDotClass(
-                          orchidGroup.status,
-                        )}`}
-                      />
-                      <p className="truncate text-sm font-bold text-[#17251b]">
-                        {orchidGroup.varietyName}
-                      </p>
-                    </div>
-                    <p className="mt-1 text-xs font-semibold text-[#344138]">
-                      {orchidGroup.quantity}분
-                    </p>
-                    <p className="mt-0.5 truncate text-[11px] text-[#6a766e]">
-                      {formatOrchidMeta(orchidGroup) || "-"}
-                    </p>
-                    {displayingFarmResults && hasActiveSearch ? (
-                      <p className="mt-0.5 truncate text-[11px] text-[#6a766e]">
-                        {orchidGroup.houseNumber}동{" "}
-                        {orchidGroup.physicalBedNumber}
-                        다이 {orchidGroup.bedZoneName}
-                      </p>
-                    ) : null}
-                  </div>
-                </div>
+        ? displayedOrchidGroups.map((orchidGroup, index) => {
+            const selected = multiSelectEnabled
+              ? selectedOrchidGroupIds.has(orchidGroup.id)
+              : orchidGroup.id === selectedOrchidGroupId;
 
-                <div className="flex shrink-0 flex-col items-end gap-2.5">
-                  <div className="flex items-center gap-1.5">
-                    <StatusBadge value={orchidGroup.status} />
-                    <IconAction
-                      label="복사"
-                      onClick={() => onCopy(orchidGroup.id)}
-                    >
-                      <Copy className="h-4 w-4" strokeWidth={1.8} aria-hidden />
-                    </IconAction>
-                    <IconAction
-                      label="보정"
-                      onClick={() => onEdit(orchidGroup.id)}
-                    >
-                      <Edit2
-                        className="h-4 w-4"
-                        strokeWidth={1.8}
-                        aria-hidden
-                      />
-                    </IconAction>
-                    <IconAction
-                      label="삭제"
-                      disabled={saving}
-                      onClick={() => onDelete(orchidGroup.id)}
-                    >
-                      <Trash2
-                        className="h-4 w-4"
-                        strokeWidth={1.8}
-                        aria-hidden
-                      />
-                    </IconAction>
+            return (
+              <div
+                key={orchidGroup.id}
+                data-orchid-group-id={orchidGroup.id}
+                className={`cursor-pointer rounded-md border p-3 transition hover:border-[#159447] ${
+                  selected
+                    ? "border-[#b9d0ff] bg-[#f5f8ff] ring-1 ring-[#b9d0ff]/40"
+                    : "border-[#e1e6df] bg-white"
+                }`}
+                onClick={() =>
+                  multiSelectEnabled
+                    ? onToggleSelected(orchidGroup.id)
+                    : displayingFarmResults && hasActiveSearch
+                      ? onSelectSearchResult(orchidGroup)
+                      : onSelect(orchidGroup.id)
+                }
+              >
+                <div className="flex items-start justify-between gap-3">
+                  <div className="flex min-w-0 flex-1 cursor-pointer items-start gap-2">
+                    <div className="min-w-0">
+                      <div className="flex items-center gap-2">
+                        <span
+                          className={`h-2.5 w-2.5 shrink-0 rounded-full ${getStatusDotClass(
+                            orchidGroup.status,
+                          )}`}
+                        />
+                        <p className="truncate text-sm font-bold text-[#17251b]">
+                          {orchidGroup.varietyName}
+                        </p>
+                      </div>
+                      <p className="mt-1 text-xs font-semibold text-[#344138]">
+                        {orchidGroup.quantity}분
+                      </p>
+                      <p className="mt-0.5 truncate text-[11px] text-[#6a766e]">
+                        {formatOrchidMeta(orchidGroup) || "-"}
+                      </p>
+                      {displayingFarmResults && hasActiveSearch ? (
+                        <p className="mt-0.5 truncate text-[11px] text-[#6a766e]">
+                          {orchidGroup.houseNumber}동{" "}
+                          {orchidGroup.physicalBedNumber}
+                          다이 {orchidGroup.bedZoneName}
+                        </p>
+                      ) : null}
+                    </div>
                   </div>
-                  <span className="text-[10px] font-semibold text-[#9aa49e]">
-                    #{index + 1}
-                  </span>
+
+                  <div className="flex shrink-0 flex-col items-end gap-2.5">
+                    <div className="flex items-center gap-1.5">
+                      <StatusBadge value={orchidGroup.status} />
+                      <IconAction
+                        label="복사"
+                        onClick={() => onCopy(orchidGroup.id)}
+                      >
+                        <Copy
+                          className="h-4 w-4"
+                          strokeWidth={1.8}
+                          aria-hidden
+                        />
+                      </IconAction>
+                      <IconAction
+                        label="보정"
+                        onClick={() => onEdit(orchidGroup.id)}
+                      >
+                        <Edit2
+                          className="h-4 w-4"
+                          strokeWidth={1.8}
+                          aria-hidden
+                        />
+                      </IconAction>
+                      <IconAction
+                        label="삭제"
+                        disabled={saving}
+                        onClick={() => onDelete(orchidGroup.id)}
+                      >
+                        <Trash2
+                          className="h-4 w-4"
+                          strokeWidth={1.8}
+                          aria-hidden
+                        />
+                      </IconAction>
+                    </div>
+                    <span className="text-[10px] font-semibold text-[#9aa49e]">
+                      #{index + 1}
+                    </span>
+                  </div>
                 </div>
               </div>
-            </div>
-          ))
+            );
+          })
         : null}
 
       {!hasActiveSearch && listOrchidGroupCount === 0 ? (

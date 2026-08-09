@@ -12,6 +12,8 @@ export default function ContinuousBedMap({
   visibleBedCount,
   distinguishVarietyColors,
   filteredOrchidGroupIds,
+  multiSelectEnabled,
+  selectedOrchidGroupIds,
   selection,
   showScale,
   cellRangePick,
@@ -26,6 +28,8 @@ export default function ContinuousBedMap({
   visibleBedCount: VisibleBedCount;
   distinguishVarietyColors: boolean;
   filteredOrchidGroupIds: Set<number>;
+  multiSelectEnabled: boolean;
+  selectedOrchidGroupIds: Set<number>;
   selection: OrchidSelection | null;
   showScale: boolean;
   cellRangePick: MapCellRangePick;
@@ -120,6 +124,8 @@ export default function ContinuousBedMap({
                   bed={bed}
                   distinguishVarietyColors={distinguishVarietyColors}
                   filteredOrchidGroupIds={filteredOrchidGroupIds}
+                  multiSelectEnabled={multiSelectEnabled}
+                  selectedOrchidGroupIds={selectedOrchidGroupIds}
                   selection={selection}
                   showScale={showScale}
                   cellRangePick={cellRangePick}

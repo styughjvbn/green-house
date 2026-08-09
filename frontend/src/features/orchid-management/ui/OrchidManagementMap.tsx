@@ -4,6 +4,7 @@ import { useCallback, useMemo, useState, useSyncExternalStore } from "react";
 import { normalizeCellRange } from "../lib/orchidManagementUtils";
 import { useBedViewport } from "../model/useBedViewport";
 import { useOrchidManagementMap } from "../model/useOrchidManagementMap";
+import { useOrchidMultiSelection } from "../model/useOrchidMultiSelection";
 import type {
   MapCellRangePick,
   OrchidManagementMapProps,
@@ -12,6 +13,7 @@ import BedNavigationToolbar from "./components/BedNavigationToolbar";
 import ContinuousBedMap from "./components/ContinuousBedMap";
 import WorkOperationCorrectionForm from "./components/WorkOperationCorrectionForm";
 import OrchidSelectionPanel from "./components/OrchidSelectionPanel";
+import SelectedOrchidGroupsInfo from "./components/SelectedOrchidGroupsInfo";
 import SelectedZoneInfo from "./components/SelectedZoneInfo";
 
 const VARIETY_COLOR_STORAGE_KEY =
@@ -48,6 +50,7 @@ export function OrchidManagementMap({
     initialSelectedBedZoneId ?? null,
     initialSearchFilters,
   );
+  const multiSelection = useOrchidMultiSelection(house);
   const selectedHistoryHouse = useMemo(() => {
     if (orchidManagement.selection?.type !== "HOUSE") return null;
     const selectedHouseId = orchidManagement.selection.houseId;
@@ -186,9 +189,13 @@ export function OrchidManagementMap({
   const handleSelectOrchidGroup = useCallback(
     (orchidGroupId: number) => {
       clearMapCellRangePick();
+      if (multiSelection.enabled) {
+        multiSelection.toggleOrchidGroup(orchidGroupId);
+        return;
+      }
       selectOrchidGroupOnMap(orchidGroupId);
     },
-    [clearMapCellRangePick, selectOrchidGroupOnMap],
+    [clearMapCellRangePick, multiSelection, selectOrchidGroupOnMap],
   );
 
   function pickMapCellRange(bedZoneId: number, cell: number) {
@@ -267,6 +274,8 @@ export function OrchidManagementMap({
               searchGroupOrchidGroupIds ??
               orchidManagement.filteredOrchidGroupIds
             }
+            multiSelectEnabled={multiSelection.enabled}
+            selectedOrchidGroupIds={multiSelection.selectedIds}
             selection={orchidManagement.selection}
             showScale={showScale}
             cellRangePick={mapCellRangePick}
@@ -283,31 +292,43 @@ export function OrchidManagementMap({
             onSelectOrchidGroup={handleSelectOrchidGroup}
           />
         </div>
-        <SelectedZoneInfo
-          house={historyHouse}
-          selectedBedZone={orchidManagement.selectedBedZone}
-          selectedOrchidGroup={orchidManagement.selectedOrchidGroup}
-          selectedPhysicalBed={orchidManagement.selectedPhysicalBed}
-          selection={orchidManagement.selection}
-          workRecordSummary={orchidManagement.workRecordSummary}
-          workRecordSummaryLoading={orchidManagement.workRecordSummaryLoading}
-          orchidGroupHistory={orchidManagement.orchidGroupHistory}
-          orchidGroupHistoryLoading={orchidManagement.orchidGroupHistoryLoading}
-          orchidGroupHistoryPage={orchidManagement.orchidGroupHistoryPage}
-          orchidGroupHistoryPageLoading={
-            orchidManagement.orchidGroupHistoryPageLoading
-          }
-          orchidGroupLineage={orchidManagement.orchidGroupLineage}
-          orchidGroupLineageLoading={orchidManagement.orchidGroupLineageLoading}
-          onOrchidGroupHistoryPageChange={
-            orchidManagement.actions.loadOrchidGroupHistoryPage
-          }
-          onOpenCorrection={(workOperationId) => {
-            if (!orchidManagement.selectedOrchidGroup) return;
-            clearMapCellRangePick();
-            setCorrectionOperationId(workOperationId);
-          }}
-        />
+        {multiSelection.enabled ? (
+          <SelectedOrchidGroupsInfo
+            orchidGroups={multiSelection.selectedOrchidGroups}
+            onClear={multiSelection.clear}
+            onRemove={multiSelection.toggleOrchidGroup}
+          />
+        ) : (
+          <SelectedZoneInfo
+            house={historyHouse}
+            selectedBedZone={orchidManagement.selectedBedZone}
+            selectedOrchidGroup={orchidManagement.selectedOrchidGroup}
+            selectedPhysicalBed={orchidManagement.selectedPhysicalBed}
+            selection={orchidManagement.selection}
+            workRecordSummary={orchidManagement.workRecordSummary}
+            workRecordSummaryLoading={orchidManagement.workRecordSummaryLoading}
+            orchidGroupHistory={orchidManagement.orchidGroupHistory}
+            orchidGroupHistoryLoading={
+              orchidManagement.orchidGroupHistoryLoading
+            }
+            orchidGroupHistoryPage={orchidManagement.orchidGroupHistoryPage}
+            orchidGroupHistoryPageLoading={
+              orchidManagement.orchidGroupHistoryPageLoading
+            }
+            orchidGroupLineage={orchidManagement.orchidGroupLineage}
+            orchidGroupLineageLoading={
+              orchidManagement.orchidGroupLineageLoading
+            }
+            onOrchidGroupHistoryPageChange={
+              orchidManagement.actions.loadOrchidGroupHistoryPage
+            }
+            onOpenCorrection={(workOperationId) => {
+              if (!orchidManagement.selectedOrchidGroup) return;
+              clearMapCellRangePick();
+              setCorrectionOperationId(workOperationId);
+            }}
+          />
+        )}
         {/* <BedPrecisionSettings zone={orchidManagement.resolvedZone} /> 26.07.11 비활성화*/}
       </section>
       <div className="flex h-full min-h-0 flex-col gap-3">
@@ -339,6 +360,8 @@ export function OrchidManagementMap({
             workRecordForm={orchidManagement.workRecordForm}
             workTypes={workTypes}
             mapCellRangePick={mapCellRangePick}
+            multiSelectEnabled={multiSelection.enabled}
+            selectedOrchidGroupIds={multiSelection.selectedIds}
             onCancelMutation={() => {
               clearMapCellRangePick();
               orchidManagement.actions.cancelMutation();
@@ -382,6 +405,10 @@ export function OrchidManagementMap({
             }}
             onSelectOrchidGroup={(orchidGroupId) => {
               clearMapCellRangePick();
+              if (multiSelection.enabled) {
+                multiSelection.toggleOrchidGroup(orchidGroupId);
+                return;
+              }
               orchidManagement.actions.selectOrchidGroup(orchidGroupId);
             }}
             onSelectSearchResult={(orchidGroup) => {
@@ -406,6 +433,11 @@ export function OrchidManagementMap({
             }
             onStartMapCellRangePick={startMapCellRangePick}
             onSyncMapCellRangePick={syncMapCellRangePick}
+            onToggleMultiSelect={() => {
+              clearMapCellRangePick();
+              orchidManagement.actions.cancelMutation();
+              multiSelection.toggleEnabled();
+            }}
             onUpdateSearchFilter={orchidManagement.actions.updateSearchFilter}
             onUpdateWorkRecordForm={
               orchidManagement.actions.updateWorkRecordForm
