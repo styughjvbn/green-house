@@ -1,13 +1,6 @@
 "use client";
 
-import {
-  useEffect,
-  useMemo,
-  useRef,
-  useState,
-  type ReactNode,
-  type WheelEvent,
-} from "react";
+import { useEffect, useMemo, useRef, useState, type WheelEvent } from "react";
 import type {
   BedZone,
   House,
@@ -18,15 +11,7 @@ import type {
 import { formatPotSize } from "@/entities/farm/potSizes";
 import type { FarmPlacementSelection } from "@/entities/farm/model/placement";
 import { FarmPlacementPickerDialog } from "@/entities/farm/ui/FarmPlacementPicker";
-import {
-  Clipboard,
-  Copy,
-  Edit2,
-  LoaderCircle,
-  Move,
-  Search,
-  Trash2,
-} from "lucide-react";
+import { Clipboard, LoaderCircle, Move, Search } from "lucide-react";
 import {
   getDerivedOrchidGroupMembers,
   getDerivedOrchidGroups,
@@ -41,14 +26,15 @@ import type {
   DerivedOrchidGroup,
   OrchidManagementSearchState,
   OrchidGroupCollection,
-  OrchidFormDraft,
   OrchidListSelection,
   OrchidSelection,
   PreciseMovePayload,
   WorkRecordQuickFormState,
 } from "../../model/types";
 import ActionButton from "./ActionButton";
-import OrchidGroupForm from "./OrchidGroupForm";
+import CopiedOrchidGroupPanel from "./CopiedOrchidGroupPanel";
+import OrchidGroupList from "./OrchidGroupList";
+import OrchidGroupMutationPanel from "./OrchidGroupMutationPanel";
 import OrchidWorkRecordForm from "./OrchidWorkRecordForm";
 
 export default function OrchidSelectionPanel({
@@ -62,7 +48,6 @@ export default function OrchidSelectionPanel({
   pasteSourceOrchidGroup,
   resolvedZone,
   saving,
-  selectedBedZone,
   selectedOrchidGroup,
   selectedPhysicalBed,
   selection,
@@ -102,7 +87,6 @@ export default function OrchidSelectionPanel({
   pasteSourceOrchidGroup: OrchidGroup | null;
   resolvedZone: BedZone | null;
   saving: boolean;
-  selectedBedZone: BedZone | null;
   selectedOrchidGroup: OrchidGroup | null;
   selectedPhysicalBed: PhysicalBed | null;
   selection: OrchidSelection | null;
@@ -173,7 +157,6 @@ export default function OrchidSelectionPanel({
     OrchidGroup[] | null
   >(null);
   const [searchGroupError, setSearchGroupError] = useState<string | null>(null);
-  const [createDraft, setCreateDraft] = useState<OrchidFormDraft | null>(null);
   const orchidGroupListRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -516,161 +499,35 @@ export default function OrchidSelectionPanel({
             </p>
           ) : null}
           {copiedOrchidGroup ? (
-            <div className="mt-3 flex items-center justify-between gap-2 rounded-md border border-[#dbe8d8] bg-[#f5faf3] px-3 py-2 text-xs">
-              <span className="min-w-0 truncate font-semibold text-[#34503b]">
-                복사됨: {copiedOrchidGroup.varietyName} /{" "}
-                {copiedOrchidGroup.quantity}분
-              </span>
-              <div className="flex shrink-0 items-center gap-1.5">
-                <button
-                  className="rounded-md bg-[#159447] px-2.5 py-1.5 font-semibold text-white disabled:cursor-not-allowed disabled:opacity-50"
-                  disabled={!resolvedZone}
-                  onClick={onOpenPaste}
-                  type="button"
-                >
-                  붙여넣기
-                </button>
-                <button
-                  className="rounded-md border border-[#cfd8cc] bg-white px-2.5 py-1.5 font-semibold text-[#435047]"
-                  onClick={onClearCopiedOrchidGroup}
-                  type="button"
-                >
-                  Clear
-                </button>
-              </div>
-            </div>
+            <CopiedOrchidGroupPanel
+              copiedOrchidGroup={copiedOrchidGroup}
+              resolvedZone={resolvedZone}
+              onClear={onClearCopiedOrchidGroup}
+              onPaste={onOpenPaste}
+            />
           ) : null}
 
           {hasListTarget ? (
             <div className="mt-3 flex min-h-0 flex-1 flex-col">
-              <div
-                ref={orchidGroupListRef}
-                className={`space-y-2 overflow-y-auto pr-1 ${
-                  compactList ? "max-h-28 shrink-0" : "min-h-0 flex-1"
-                }`}
-              >
-                {!selectedSearchGroup &&
-                searchScope === "FARM" &&
-                hasActiveSearch &&
-                searchLoading ? (
-                  <p className="rounded-md bg-[#f5f7f3] p-3 text-sm text-[#5c6a60]">
-                    전체 농장에서 검색 중입니다.
-                  </p>
-                ) : null}
-                {(!hasActiveSearch ||
-                  selectedSearchGroup ||
-                  searchScope === "CURRENT_LIST" ||
-                  !searchLoading) &&
-                  displayedOrchidGroups.map((orchidGroup, index) => {
-                    const selected = orchidGroup.id === selectedOrchidGroup?.id;
-
-                    return (
-                      <div
-                        key={orchidGroup.id}
-                        data-orchid-group-id={orchidGroup.id}
-                        className={`cursor-pointer rounded-md border p-3 transition hover:border-[#159447] ${
-                          selected
-                            ? "border-[#b9d0ff] bg-[#f5f8ff] ring-1 ring-[#b9d0ff]/40"
-                            : "border-[#e1e6df] bg-white"
-                        }`}
-                        onClick={() =>
-                          displayingFarmResults && hasActiveSearch
-                            ? onSelectSearchResult(orchidGroup)
-                            : onSelectOrchidGroup(orchidGroup.id)
-                        }
-                      >
-                        <div className="flex items-start justify-between gap-3">
-                          <div className="flex min-w-0 flex-1 cursor-pointer items-start gap-2">
-                            <div className="min-w-0">
-                              <div className="flex items-center gap-2">
-                                <span
-                                  className={`h-2.5 w-2.5 shrink-0 rounded-full ${getStatusDotClass(
-                                    orchidGroup.status,
-                                  )}`}
-                                />
-                                <p className="truncate text-sm font-bold text-[#17251b]">
-                                  {orchidGroup.varietyName}
-                                </p>
-                              </div>
-                              <p className="mt-1 text-xs font-semibold text-[#344138]">
-                                {orchidGroup.quantity}분
-                              </p>
-                              <p className="mt-0.5 truncate text-[11px] text-[#6a766e]">
-                                {formatOrchidMeta(orchidGroup) || "-"}
-                              </p>
-                              {displayingFarmResults && hasActiveSearch ? (
-                                <p className="mt-0.5 truncate text-[11px] text-[#6a766e]">
-                                  {orchidGroup.houseNumber}동{" "}
-                                  {orchidGroup.physicalBedNumber}다이{" "}
-                                  {orchidGroup.bedZoneName}
-                                </p>
-                              ) : null}
-                            </div>
-                          </div>
-
-                          <div className="flex shrink-0 flex-col items-end gap-2.5">
-                            <div className="flex items-center gap-1.5">
-                              <StatusBadge value={orchidGroup.status} />
-                              <IconAction
-                                label="복사"
-                                onClick={() =>
-                                  onCopyOrchidGroup(orchidGroup.id)
-                                }
-                              >
-                                <Copy
-                                  className="h-4 w-4"
-                                  strokeWidth={1.8}
-                                  aria-hidden="true"
-                                />
-                              </IconAction>
-                              <IconAction
-                                label="보정"
-                                onClick={() => onOpenEdit(orchidGroup.id)}
-                              >
-                                <Edit2
-                                  className="h-4 w-4"
-                                  strokeWidth={1.8}
-                                  aria-hidden="true"
-                                />
-                              </IconAction>
-                              <IconAction
-                                label="삭제"
-                                onClick={() => void onDelete(orchidGroup.id)}
-                                disabled={saving}
-                              >
-                                <Trash2
-                                  className="h-4 w-4"
-                                  strokeWidth={1.8}
-                                  aria-hidden="true"
-                                />
-                              </IconAction>
-                            </div>
-                            <span className="text-[10px] font-semibold text-[#9aa49e]">
-                              #{index + 1}
-                            </span>
-                          </div>
-                        </div>
-                      </div>
-                    );
-                  })}
-                {!hasActiveSearch && orchidGroups.length === 0 ? (
-                  <p className="rounded-md bg-[#f5f7f3] p-3 text-sm text-[#5c6a60]">
-                    {listTargetLabel}에 등록된 난 묶음이 없습니다.
-                  </p>
-                ) : hasActiveSearch &&
-                  (selectedSearchGroup ||
-                    searchScope === "CURRENT_LIST" ||
-                    !searchLoading) &&
-                  displayedResultCount === 0 ? (
-                  <p className="rounded-md border border-[#e4e8e2] bg-[#f6f8f5] p-3 text-sm text-[#5c6a60]">
-                    {selectedSearchGroup
-                      ? "선택한 그룹에 포함된 난 묶음이 없습니다."
-                      : searchScope === "CURRENT_LIST"
-                        ? "현재 목록에 검색 결과가 없습니다."
-                        : "전체 농장에 검색 결과가 없습니다."}
-                  </p>
-                ) : null}
-              </div>
+              <OrchidGroupList
+                compact={compactList}
+                displayedOrchidGroups={displayedOrchidGroups}
+                displayingFarmResults={displayingFarmResults}
+                hasActiveSearch={hasActiveSearch}
+                listOrchidGroupCount={orchidGroups.length}
+                listRef={orchidGroupListRef}
+                listTargetLabel={listTargetLabel}
+                searchLoading={searchLoading}
+                searchScope={searchScope}
+                selectedOrchidGroupId={selectedOrchidGroup?.id ?? null}
+                selectedSearchGroup={selectedSearchGroup != null}
+                saving={saving}
+                onCopy={onCopyOrchidGroup}
+                onDelete={(orchidGroupId) => void onDelete(orchidGroupId)}
+                onEdit={onOpenEdit}
+                onSelect={onSelectOrchidGroup}
+                onSelectSearchResult={onSelectSearchResult}
+              />
 
               <div className="mt-3 grid shrink-0 grid-cols-2 gap-2">
                 <ActionButton
@@ -705,35 +562,19 @@ export default function OrchidSelectionPanel({
       ) : null}
 
       {mutationMode === "CREATE" || mutationMode === "EDIT" ? (
-        <OrchidGroupForm
-          key={
-            mutationMode === "EDIT"
-              ? `edit-${selectedOrchidGroup?.id ?? "none"}`
-              : `create-${resolvedZone?.id ?? "none"}-${pasteSourceOrchidGroup?.id ?? "empty"}`
-          }
-          draft={mutationMode === "CREATE" ? createDraft : null}
+        <OrchidGroupMutationPanel
           house={house}
-          initialValue={
-            mutationMode === "EDIT"
-              ? selectedOrchidGroup
-              : pasteSourceOrchidGroup
-          }
           mode={mutationMode}
-          saving={saving}
           mapCellRangePick={mapCellRangePick}
-          targetZone={resolvedZone}
+          pasteSourceOrchidGroup={pasteSourceOrchidGroup}
+          resolvedZone={resolvedZone}
+          saving={saving}
+          selectedOrchidGroup={selectedOrchidGroup}
           onCancel={onCancelMutation}
-          onDraftChange={mutationMode === "CREATE" ? setCreateDraft : undefined}
+          onCreate={onCreate}
+          onEdit={onEdit}
           onStartMapCellRangePick={onStartMapCellRangePick}
           onSyncMapCellRangePick={onSyncMapCellRangePick}
-          onSubmit={
-            mutationMode === "EDIT"
-              ? onEdit
-              : async (payload) => {
-                  await onCreate(payload);
-                  setCreateDraft(null);
-                }
-          }
         />
       ) : null}
 
@@ -775,64 +616,6 @@ export default function OrchidSelectionPanel({
       ) : null}
     </aside>
   );
-}
-
-function IconAction({
-  children,
-  disabled = false,
-  label,
-  onClick,
-}: {
-  children: ReactNode;
-  disabled?: boolean;
-  label: string;
-  onClick: () => void;
-}) {
-  return (
-    <button
-      aria-label={label}
-      className="flex h-8 w-8 items-center justify-center rounded-md border border-[#dfe5dc] text-[#435047] disabled:opacity-40"
-      disabled={disabled}
-      type="button"
-      onClick={(event) => {
-        event.stopPropagation();
-        onClick();
-      }}
-    >
-      {children}
-    </button>
-  );
-}
-
-function StatusBadge({
-  muted = false,
-  value,
-}: {
-  muted?: boolean;
-  value: string;
-}) {
-  const className = muted
-    ? "bg-[#e9ece8] text-[#7d857d]"
-    : value === "정상" || value === "판매 가능"
-      ? "bg-[#e6f7e8] text-[#159447]"
-      : value.includes("주의")
-        ? "bg-[#fff1d6] text-[#d88400]"
-        : "bg-[#ffe7e7] text-[#d72d2d]";
-
-  return (
-    <span className={`rounded-md px-2 py-1 text-[11px] font-bold ${className}`}>
-      {value}
-    </span>
-  );
-}
-
-function formatOrchidMeta(orchidGroup: OrchidGroup) {
-  return [
-    orchidGroup.potSize,
-    orchidGroup.ageYear ? `${orchidGroup.ageYear}년생` : null,
-  ]
-    .filter(Boolean)
-    .join(" · ");
 }
 
 function matchesCurrentListSearch(
@@ -955,16 +738,6 @@ function bottomCell(orchidGroup: OrchidGroup) {
 
 function compareNumber(a: number | undefined, b: number | undefined) {
   return (a ?? Number.MAX_SAFE_INTEGER) - (b ?? Number.MAX_SAFE_INTEGER);
-}
-
-function getStatusDotClass(status: string) {
-  if (status === "정상" || status === "판매 가능") {
-    return "bg-[#159447]";
-  }
-  if (status.includes("주의")) {
-    return "bg-[#f59e0b]";
-  }
-  return "bg-[#e52d2d]";
 }
 
 function toPlacementSelection(

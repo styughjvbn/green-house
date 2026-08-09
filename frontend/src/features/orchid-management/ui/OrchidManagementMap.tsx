@@ -330,7 +330,6 @@ export function OrchidManagementMap({
             pasteSourceOrchidGroup={orchidManagement.pasteSourceOrchidGroup}
             resolvedZone={orchidManagement.resolvedZone}
             saving={orchidManagement.saving}
-            selectedBedZone={orchidManagement.selectedBedZone}
             selectedOrchidGroup={orchidManagement.selectedOrchidGroup}
             selectedPhysicalBed={orchidManagement.selectedPhysicalBed}
             selection={orchidManagement.selection}
