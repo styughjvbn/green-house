@@ -106,6 +106,8 @@ python3 scripts/generate_openapi.py --url http://localhost:8080/api-docs
 
 `GET /api/work-operations`의 `view=MANAGEMENT`는 계획·진행 중·일시중지 작업과 농장 기준 오늘 상태가 변경된 작업을 반환한다. `view=HISTORY`는 완료·취소·보정된 작업을 반환하며, `view=ALL` 또는 생략은 호환성을 위해 전체 작업을 반환한다.
 
+`GET /api/work-operations/{workOperationId}/details`는 완료 작업 화면용 정형 상세를 반환한다. `fields`는 작업 유형별 입력값을 표시용 키·라벨·값으로 변환하고, `executions`는 `WorkAppliedEffect`에 보존된 모든 실행 회차를 원본 투입·결과 난 묶음·수량/상태 변화·손실·위치 필드로 변환한다. `corrections`는 보정 사유와 난 묶음별 수량·상태 전후값을 시간순으로 반환한다. 클라이언트는 저장된 `details`, `commandDetails`, `resultDetails` JSON 키를 직접 해석하지 않는다. 과거 기록에 저장되지 않은 값은 응답에서 `null` 또는 빈 목록으로 유지한다.
+
 대상 완료와 구조 변경 실행에는 `completedDate`를 전달하고, 전체 작업 완료에도 완료 요청 본문의 `completedDate`를 전달한다. 화면 기본값은 농장 기준 오늘이며 오늘 이전 날짜로 수정할 수 있다. 포트 작업은 `pottingDate`를 대상과 전체 작업의 완료일로 함께 사용한다. 기존 호출 호환을 위해 일반 대상·전체 완료에서 날짜를 생략하면 농장 기준 오늘로 처리한다.
 
 `POST /api/work-operations/record`는 농장 전체, 동, 물리 배드, 논리 구역, 난 묶음 범위의 기록형 작업을 대상 스냅샷과 함께 즉시 완료한다. 직접 자리 이동도 완료된 `WorkOperation`과 작업 효과로 기록하며 모든 작업 이력 API는 `WorkOperation` 계약을 사용한다.

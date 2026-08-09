@@ -231,6 +231,17 @@ class WorkOperationIntegrationTests extends AbstractBackendIntegrationTest {
 		OrchidGroup updated = orchidGroupRepository.findById(targetGroup.getId()).orElseThrow();
 		org.assertj.core.api.Assertions.assertThat(updated.getQuantity()).isEqualTo(75);
 		org.assertj.core.api.Assertions.assertThat(workOperationRepository.count()).isEqualTo(1);
+
+		Long operationId = workOperationRepository.findAll().getFirst().getId();
+		mockMvc.perform(get("/api/work-operations/{id}/details", operationId))
+				.andExpect(status().isOk())
+				.andExpect(jsonPath("$.data.summary.id").value(operationId))
+				.andExpect(jsonPath("$.data.executions", hasSize(1)))
+				.andExpect(jsonPath("$.data.executions[0].resultType").value("DISCARD"))
+				.andExpect(jsonPath("$.data.executions[0].reason").value("상태 불량"))
+				.andExpect(jsonPath("$.data.executions[0].sources[0].beforeQuantity").value(100))
+				.andExpect(jsonPath("$.data.executions[0].sources[0].inputQuantity").value(25))
+				.andExpect(jsonPath("$.data.executions[0].sources[0].afterQuantity").value(75));
 	}
 
 	private Long createDiscardOperation(String title) throws Exception {
@@ -298,6 +309,15 @@ class WorkOperationIntegrationTests extends AbstractBackendIntegrationTest {
 		org.assertj.core.api.Assertions.assertThat(
 				orchidGroupRepository.findById(targetGroup.getId()).orElseThrow().getBedZone().getId())
 				.isEqualTo(destinationZone.getId());
+
+		mockMvc.perform(get("/api/work-operations/{id}/details", operationId))
+				.andExpect(status().isOk())
+				.andExpect(jsonPath("$.data.executions", hasSize(1)))
+				.andExpect(jsonPath("$.data.executions[0].resultType").value("MOVE"))
+				.andExpect(jsonPath("$.data.executions[0].sources[0].orchidGroupId").value(targetGroup.getId()))
+				.andExpect(jsonPath("$.data.executions[0].results[0].bedZoneId").value(destinationZone.getId()))
+				.andExpect(jsonPath("$.data.executions[0].results[0].startPosition").value(0))
+				.andExpect(jsonPath("$.data.executions[0].results[0].endPosition").value(10));
 	}
 
 	@Test
