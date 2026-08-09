@@ -1,3 +1,5 @@
+import { createUuid } from "@/shared/lib/id";
+
 export const API_BASE_URL =
   typeof window === "undefined"
     ? (process.env.BACKEND_API_URL ??
@@ -27,7 +29,7 @@ export function buildApiHeaders(initial?: HeadersInit): Headers {
 
   let clientInstanceId = window.localStorage.getItem(CLIENT_INSTANCE_KEY);
   if (!clientInstanceId) {
-    clientInstanceId = window.crypto.randomUUID();
+    clientInstanceId = createUuid();
     window.localStorage.setItem(CLIENT_INSTANCE_KEY, clientInstanceId);
   }
   headers.set("X-Client-Instance-Id", clientInstanceId);
