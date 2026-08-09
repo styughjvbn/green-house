@@ -1,4 +1,4 @@
-package com.greenhouse.backend.farm.application.transformation;
+package com.greenhouse.backend.work.application.effect;
 
 import com.greenhouse.backend.work.dto.effect.StructureChangeExecutionRequest;
 import java.util.ArrayDeque;
