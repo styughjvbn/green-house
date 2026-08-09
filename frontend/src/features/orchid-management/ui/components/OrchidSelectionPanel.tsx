@@ -3,8 +3,6 @@
 import { useEffect, useMemo, useRef, useState, type WheelEvent } from "react";
 import type { BedZone, House, OrchidGroup } from "@/entities/farm/types";
 import { formatPotSize } from "@/entities/farm/potSizes";
-import type { FarmPlacementSelection } from "@/entities/farm/model/placement";
-import { FarmPlacementPickerDialog } from "@/entities/farm/ui/FarmPlacementPicker";
 import {
   Clipboard,
   ListChecks,
@@ -27,7 +25,6 @@ import type {
   OrchidManagementSearchState,
   OrchidGroupCollection,
   OrchidListSelection,
-  PreciseMovePayload,
 } from "../../model/types";
 import ActionButton from "./ActionButton";
 import CopiedOrchidGroupPanel from "./CopiedOrchidGroupPanel";
@@ -39,7 +36,6 @@ export default function OrchidSelectionPanel({
   errorMessage,
   hasActiveSearch,
   house,
-  placementHouses,
   listSelection,
   mutationMode,
   pasteSourceOrchidGroup,
@@ -58,9 +54,8 @@ export default function OrchidSelectionPanel({
   onCreate,
   onDelete,
   onEdit,
-  onMove,
   onOpenEdit,
-  onOpenMove,
+  onOpenMovementRecord,
   onOpenPaste,
   onOpenWorkRecord,
   onSelectOrchidGroup,
@@ -75,7 +70,6 @@ export default function OrchidSelectionPanel({
   errorMessage: string | null;
   hasActiveSearch: boolean;
   house: House;
-  placementHouses: House[];
   listSelection: OrchidListSelection;
   mutationMode: MutationMode;
   pasteSourceOrchidGroup: OrchidGroup | null;
@@ -94,9 +88,8 @@ export default function OrchidSelectionPanel({
   onCreate: (payload: MutationPayload) => Promise<void>;
   onDelete: (orchidGroupId: number) => Promise<void>;
   onEdit: (payload: MutationPayload) => Promise<void>;
-  onMove: (payload: PreciseMovePayload) => Promise<void>;
   onOpenEdit: (orchidGroupId: number) => void;
-  onOpenMove: () => void;
+  onOpenMovementRecord: () => void;
   onOpenPaste: () => void;
   onOpenWorkRecord: () => void;
   onSelectOrchidGroup: (orchidGroupId: number) => void;
@@ -270,7 +263,6 @@ export default function OrchidSelectionPanel({
         ? visibleRangeLabel
         : "선택 대상";
   const hasListTarget = Boolean(listZone || listPhysicalBed || selectedHouse);
-  const compactList = mutationMode === "MOVE" && selectedOrchidGroup != null;
   const hideList = mutationMode === "CREATE" || mutationMode === "EDIT";
 
   async function selectDerivedSearchGroup(group: DerivedOrchidGroup) {
@@ -511,7 +503,7 @@ export default function OrchidSelectionPanel({
           {hasListTarget ? (
             <div className="flex min-h-0 flex-1 flex-col">
               <OrchidGroupList
-                compact={compactList}
+                compact={false}
                 displayedOrchidGroups={displayedOrchidGroups}
                 displayingFarmResults={displayingFarmResults}
                 hasActiveSearch={hasActiveSearch}
@@ -544,8 +536,7 @@ export default function OrchidSelectionPanel({
                   <ActionButton
                     icon={<Move className="h-4 w-4" />}
                     label="자리 이동"
-                    onClick={onOpenMove}
-                    active={mutationMode === "MOVE"}
+                    onClick={onOpenMovementRecord}
                     disabled={!selectedOrchidGroup}
                   />
                 </div>
@@ -581,27 +572,6 @@ export default function OrchidSelectionPanel({
           onEdit={onEdit}
           onStartMapCellRangePick={onStartMapCellRangePick}
           onSyncMapCellRangePick={onSyncMapCellRangePick}
-        />
-      ) : null}
-
-      {mutationMode === "MOVE" && selectedOrchidGroup ? (
-        <FarmPlacementPickerDialog
-          dialogDescription="이동할 동과 구역을 고른 뒤 시작 칸과 끝 칸을 지정하세요."
-          dialogTitle="난 묶음 자리 이동"
-          excludeOrchidGroupId={selectedOrchidGroup.id}
-          houses={placementHouses}
-          initialValue={toPlacementSelection(selectedOrchidGroup)}
-          submitDisabled={saving}
-          submitLabel={saving ? "이동 중..." : "이동 저장"}
-          onClose={onCancelMutation}
-          onSelect={(value) => {
-            void onMove({
-              toBedZoneId: value.bedZoneId,
-              startPosition: value.startPosition,
-              endPosition: value.endPosition,
-              memo: "",
-            });
-          }}
         />
       ) : null}
     </aside>
@@ -728,26 +698,4 @@ function bottomCell(orchidGroup: OrchidGroup) {
 
 function compareNumber(a: number | undefined, b: number | undefined) {
   return (a ?? Number.MAX_SAFE_INTEGER) - (b ?? Number.MAX_SAFE_INTEGER);
-}
-
-function toPlacementSelection(
-  orchidGroup: OrchidGroup,
-): FarmPlacementSelection {
-  const startCell =
-    orchidGroup.startPosition != null
-      ? Math.floor(orchidGroup.startPosition) + 1
-      : 1;
-  const endCell =
-    orchidGroup.endPosition != null
-      ? Math.ceil(orchidGroup.endPosition)
-      : startCell;
-
-  return {
-    bedZoneId: orchidGroup.bedZoneId,
-    startCell,
-    endCell,
-    startPosition: startCell - 1,
-    endPosition: endCell,
-    label: `${orchidGroup.houseNumber}동 ${orchidGroup.physicalBedNumber}다이 ${orchidGroup.bedZoneName} ${startCell}-${endCell}칸`,
-  };
 }

@@ -35,6 +35,7 @@ export function useWorkOperationRegistration({
   onSaved,
   presetOrchidGroupIds = [],
   presetPreview = null,
+  presetWorkTypeCode,
   workTypes,
 }: {
   houses: House[];
@@ -42,6 +43,7 @@ export function useWorkOperationRegistration({
   onSaved?: () => void;
   presetOrchidGroupIds?: number[];
   presetPreview?: WorkTargetPreview | null;
+  presetWorkTypeCode?: string;
   workTypes: WorkType[];
 }) {
   const targetLocked = presetOrchidGroupIds.length > 0;
@@ -51,7 +53,10 @@ export function useWorkOperationRegistration({
       (!targetLocked ||
         getWorkTypeDefinition(workType).targetSource === "ORCHID_GROUP"),
   );
-  const initialWorkType = schedulableWorkTypes[0];
+  const initialWorkType =
+    schedulableWorkTypes.find(
+      (workType) => workType.code === presetWorkTypeCode,
+    ) ?? schedulableWorkTypes[0];
   const [form, setForm] = useState<WorkOperationFormState>(() =>
     createInitialWorkOperationForm(initialWorkType),
   );

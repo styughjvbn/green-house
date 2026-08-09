@@ -16,10 +16,12 @@ import { WorkTargetSelectionDialog } from "./WorkTargetSelectionDialog";
 
 export function WorkOperationRegistrationDialog({
   presetOrchidGroupIds = [],
+  presetWorkTypeCode,
   onClose,
   onSaved,
 }: {
   presetOrchidGroupIds?: number[];
+  presetWorkTypeCode?: string;
   onClose: () => void;
   onSaved?: () => void;
 }) {
@@ -71,6 +73,7 @@ export function WorkOperationRegistrationDialog({
       houses={housesQuery.data}
       presetOrchidGroupIds={presetOrchidGroupIds}
       presetPreview={presetPreviewQuery.data ?? null}
+      presetWorkTypeCode={presetWorkTypeCode}
       workTypes={workTypesQuery.data}
       onClose={onClose}
       onSaved={onSaved}
@@ -82,6 +85,7 @@ function WorkOperationRegistrationContent({
   houses,
   presetOrchidGroupIds,
   presetPreview,
+  presetWorkTypeCode,
   workTypes,
   onClose,
   onSaved,
@@ -89,6 +93,7 @@ function WorkOperationRegistrationContent({
   houses: House[];
   presetOrchidGroupIds: number[];
   presetPreview: WorkTargetPreview | null;
+  presetWorkTypeCode?: string;
   workTypes: WorkType[];
   onClose: () => void;
   onSaved?: () => void;
@@ -99,6 +104,7 @@ function WorkOperationRegistrationContent({
     onSaved,
     presetOrchidGroupIds,
     presetPreview,
+    presetWorkTypeCode,
     workTypes,
   });
   const requestClose = () => {

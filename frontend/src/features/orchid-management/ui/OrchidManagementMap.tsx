@@ -1,5 +1,6 @@
 "use client";
 
+import { useRouter } from "next/navigation";
 import { useCallback, useMemo, useState, useSyncExternalStore } from "react";
 import {
   useWorkRecordInvalidation,
@@ -36,6 +37,7 @@ export function OrchidManagementMap({
   mapData,
   house,
 }: OrchidManagementMapProps) {
+  const router = useRouter();
   const bedViewport = useBedViewport(
     house.physicalBeds,
     initialStartBedId,
@@ -78,22 +80,12 @@ export function OrchidManagementMap({
     number | null
   >(null);
   const [showBulkCorrection, setShowBulkCorrection] = useState(false);
-  const [workRegistrationTargetIds, setWorkRegistrationTargetIds] = useState<
-    number[] | null
-  >(null);
+  const [workRegistrationPreset, setWorkRegistrationPreset] = useState<{
+    orchidGroupIds: number[];
+    workTypeCode?: string;
+  } | null>(null);
   const [searchGroupOrchidGroupIds, setSearchGroupOrchidGroupIds] =
     useState<Set<number> | null>(null);
-  const placementHouses = useMemo(
-    () =>
-      mapData.houses.map((item) => ({
-        id: item.houseId,
-        number: item.houseNumber,
-        name: item.houseName,
-        memo: null,
-        physicalBeds: item.physicalBeds,
-      })),
-    [mapData.houses],
-  );
   const distinguishVarietyColors = useSyncExternalStore(
     subscribeVarietyColorPreference,
     getVarietyColorPreference,
@@ -114,12 +106,15 @@ export function OrchidManagementMap({
     window.dispatchEvent(new Event(VARIETY_COLOR_CHANGE_EVENT));
   }
 
-  function openWorkRegistration(orchidGroupIds: number[]) {
+  function openWorkRegistration(
+    orchidGroupIds: number[],
+    workTypeCode?: string,
+  ) {
     if (orchidGroupIds.length === 0) return;
     clearMapCellRangePick();
     setShowBulkCorrection(false);
     orchidManagement.actions.cancelMutation();
-    setWorkRegistrationTargetIds(orchidGroupIds);
+    setWorkRegistrationPreset({ orchidGroupIds, workTypeCode });
   }
 
   function startMapCellRangePick({
@@ -253,13 +248,15 @@ export function OrchidManagementMap({
 
   return (
     <div className="grid h-full min-h-0 gap-4 lg:grid-cols-[minmax(0,1fr)_clamp(280px,28%,440px)]">
-      {workRegistrationTargetIds ? (
+      {workRegistrationPreset ? (
         <WorkOperationRegistrationDialog
-          presetOrchidGroupIds={workRegistrationTargetIds}
-          onClose={() => setWorkRegistrationTargetIds(null)}
+          presetOrchidGroupIds={workRegistrationPreset.orchidGroupIds}
+          presetWorkTypeCode={workRegistrationPreset.workTypeCode}
+          onClose={() => setWorkRegistrationPreset(null)}
           onSaved={() => {
             orchidManagement.actions.invalidateHistory();
             void invalidateWorkData();
+            router.refresh();
           }}
         />
       ) : null}
@@ -395,7 +392,6 @@ export function OrchidManagementMap({
             errorMessage={orchidManagement.errorMessage}
             hasActiveSearch={orchidManagement.hasActiveSearch}
             house={scopedHouse}
-            placementHouses={placementHouses}
             listSelection={orchidManagement.listSelection}
             mutationMode={orchidManagement.mutationMode}
             pasteSourceOrchidGroup={orchidManagement.pasteSourceOrchidGroup}
@@ -429,17 +425,15 @@ export function OrchidManagementMap({
               await orchidManagement.actions.edit(payload);
               clearMapCellRangePick();
             }}
-            onMove={async (payload) => {
-              await orchidManagement.actions.move(payload);
-              clearMapCellRangePick();
-            }}
             onOpenEdit={(orchidGroupId) => {
               clearMapCellRangePick();
               orchidManagement.actions.selectOrchidGroupForEdit(orchidGroupId);
             }}
-            onOpenMove={() => {
-              clearMapCellRangePick();
-              orchidManagement.actions.openMove();
+            onOpenMovementRecord={() => {
+              const orchidGroupId = orchidManagement.selectedOrchidGroup?.id;
+              if (orchidGroupId) {
+                openWorkRegistration([orchidGroupId], "MOVEMENT");
+              }
             }}
             onOpenPaste={() => {
               clearMapCellRangePick();
