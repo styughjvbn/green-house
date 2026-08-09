@@ -17,8 +17,8 @@ const geistSans = Geist({
 });
 
 export const metadata: Metadata = {
-  title: "난 농장 관리",
-  description: "비닐하우스 난 농장 운영 관리 시스템",
+  title: "농장 관리",
+  description: "농장 운영 관리 시스템",
 };
 
 export const dynamic = "force-dynamic";

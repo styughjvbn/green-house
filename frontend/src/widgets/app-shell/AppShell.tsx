@@ -322,7 +322,7 @@ export function AppShell({
           >
             <div className="min-w-0">
               <p className="text-base leading-none font-semibold whitespace-nowrap text-white">
-                난 농장
+                농장
               </p>
               <p className="mt-2 text-xs whitespace-nowrap text-[#c8d8cd]">
                 관리 시스템
@@ -419,7 +419,7 @@ export function AppShell({
 
       <div className="app-shell-main min-w-0 flex-1 lg:max-2xl:ml-12">
         <header className="border-b border-[#d7ddd4] bg-white px-4 py-4 lg:hidden">
-          <p className="text-xl font-semibold">난 농장 관리</p>
+          <p className="text-xl font-semibold">농장 관리</p>
 
           <nav className="mt-3 flex gap-2 overflow-x-auto">
             {NAVIGATION.map((item) => {
