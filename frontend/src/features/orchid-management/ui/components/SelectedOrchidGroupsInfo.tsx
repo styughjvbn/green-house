@@ -14,11 +14,13 @@ import {
 export default function SelectedOrchidGroupsInfo({
   orchidGroups,
   onBulkCorrection,
+  onCreateMovement,
   onCreateWork,
   onRemove,
 }: {
   orchidGroups: OrchidGroup[];
   onBulkCorrection: () => void;
+  onCreateMovement: () => void;
   onCreateWork: () => void;
   onRemove: (orchidGroupId: number) => void;
 }) {
@@ -119,6 +121,11 @@ export default function SelectedOrchidGroupsInfo({
               <BulkActionMenuItem
                 icon={<Move aria-hidden className="h-4 w-4" />}
                 label="자리 이동"
+                disabled={orchidGroups.length === 0}
+                onClick={() => {
+                  setMoreMenuOpen(false);
+                  onCreateMovement();
+                }}
               />
               <BulkActionMenuItem
                 icon={<Wrench aria-hidden className="h-4 w-4" />}

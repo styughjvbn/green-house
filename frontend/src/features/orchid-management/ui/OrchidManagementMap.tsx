@@ -319,6 +319,14 @@ export function OrchidManagementMap({
           <SelectedOrchidGroupsInfo
             orchidGroups={multiSelection.selectedOrchidGroups}
             onBulkCorrection={() => setShowBulkCorrection(true)}
+            onCreateMovement={() =>
+              openWorkRegistration(
+                multiSelection.selectedOrchidGroups.map(
+                  (orchidGroup) => orchidGroup.id,
+                ),
+                "MOVEMENT",
+              )
+            }
             onCreateWork={() =>
               openWorkRegistration(
                 multiSelection.selectedOrchidGroups.map(
