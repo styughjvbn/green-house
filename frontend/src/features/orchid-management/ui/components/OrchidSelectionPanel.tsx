@@ -1,13 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState, type WheelEvent } from "react";
-import type {
-  BedZone,
-  House,
-  OrchidGroup,
-  PhysicalBed,
-  WorkType,
-} from "@/entities/farm/types";
+import type { BedZone, House, OrchidGroup } from "@/entities/farm/types";
 import { formatPotSize } from "@/entities/farm/potSizes";
 import type { FarmPlacementSelection } from "@/entities/farm/model/placement";
 import { FarmPlacementPickerDialog } from "@/entities/farm/ui/FarmPlacementPicker";
@@ -33,15 +27,12 @@ import type {
   OrchidManagementSearchState,
   OrchidGroupCollection,
   OrchidListSelection,
-  OrchidSelection,
   PreciseMovePayload,
-  WorkRecordQuickFormState,
 } from "../../model/types";
 import ActionButton from "./ActionButton";
 import CopiedOrchidGroupPanel from "./CopiedOrchidGroupPanel";
 import OrchidGroupList from "./OrchidGroupList";
 import OrchidGroupMutationPanel from "./OrchidGroupMutationPanel";
-import OrchidWorkRecordForm from "./OrchidWorkRecordForm";
 
 export default function OrchidSelectionPanel({
   copiedOrchidGroup,
@@ -55,13 +46,9 @@ export default function OrchidSelectionPanel({
   resolvedZone,
   saving,
   selectedOrchidGroup,
-  selectedPhysicalBed,
-  selection,
   searchFilters,
   searchLoading,
   searchResults,
-  workRecordForm,
-  workTypes,
   mapCellRangePick,
   multiSelectEnabled,
   selectedOrchidGroupIds,
@@ -83,8 +70,6 @@ export default function OrchidSelectionPanel({
   onSyncMapCellRangePick,
   onToggleMultiSelect,
   onUpdateSearchFilter,
-  onUpdateWorkRecordForm,
-  onWorkRecordCreate,
 }: {
   copiedOrchidGroup: OrchidGroup | null;
   errorMessage: string | null;
@@ -97,13 +82,9 @@ export default function OrchidSelectionPanel({
   resolvedZone: BedZone | null;
   saving: boolean;
   selectedOrchidGroup: OrchidGroup | null;
-  selectedPhysicalBed: PhysicalBed | null;
-  selection: OrchidSelection | null;
   searchFilters: OrchidManagementSearchState;
   searchLoading: boolean;
   searchResults: OrchidGroup[];
-  workRecordForm: WorkRecordQuickFormState;
-  workTypes: WorkType[];
   mapCellRangePick: MapCellRangePick;
   multiSelectEnabled: boolean;
   selectedOrchidGroupIds: Set<number>;
@@ -140,11 +121,6 @@ export default function OrchidSelectionPanel({
     field: K,
     value: OrchidManagementSearchState[K],
   ) => void;
-  onUpdateWorkRecordForm: <K extends keyof WorkRecordQuickFormState>(
-    field: K,
-    value: WorkRecordQuickFormState[K],
-  ) => void;
-  onWorkRecordCreate: () => Promise<void>;
 }) {
   const [searchScope, setSearchScope] = useState<"CURRENT_LIST" | "FARM">(
     "CURRENT_LIST",
@@ -563,7 +539,7 @@ export default function OrchidSelectionPanel({
                     icon={<Clipboard className="h-4 w-4" />}
                     label="작업 기록 추가"
                     onClick={onOpenWorkRecord}
-                    active={mutationMode === "WORK_RECORD"}
+                    disabled={!selectedOrchidGroup}
                   />
                   <ActionButton
                     icon={<Move className="h-4 w-4" />}
@@ -626,22 +602,6 @@ export default function OrchidSelectionPanel({
               memo: "",
             });
           }}
-        />
-      ) : null}
-
-      {mutationMode === "WORK_RECORD" ? (
-        <OrchidWorkRecordForm
-          form={workRecordForm}
-          house={house}
-          resolvedZone={resolvedZone}
-          saving={saving}
-          selectedOrchidGroup={selectedOrchidGroup}
-          selectedPhysicalBed={selectedPhysicalBed}
-          selection={selection}
-          workTypes={workTypes}
-          onCancel={onCancelMutation}
-          onChange={onUpdateWorkRecordForm}
-          onSubmit={onWorkRecordCreate}
         />
       ) : null}
     </aside>

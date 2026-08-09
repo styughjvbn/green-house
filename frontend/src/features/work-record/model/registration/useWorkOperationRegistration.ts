@@ -33,23 +33,35 @@ export function useWorkOperationRegistration({
   houses,
   onClose,
   onSaved,
+  presetOrchidGroupIds = [],
+  presetPreview = null,
   workTypes,
 }: {
   houses: House[];
   onClose: () => void;
   onSaved?: () => void;
+  presetOrchidGroupIds?: number[];
+  presetPreview?: WorkTargetPreview | null;
   workTypes: WorkType[];
 }) {
+  const targetLocked = presetOrchidGroupIds.length > 0;
   const schedulableWorkTypes = getSchedulableWorkTypes(workTypes).filter(
-    (workType) => getWorkTypeDefinition(workType).category != null,
+    (workType) =>
+      getWorkTypeDefinition(workType).category != null &&
+      (!targetLocked ||
+        getWorkTypeDefinition(workType).targetSource === "ORCHID_GROUP"),
   );
   const initialWorkType = schedulableWorkTypes[0];
   const [form, setForm] = useState<WorkOperationFormState>(() =>
     createInitialWorkOperationForm(initialWorkType),
   );
-  const [preview, setPreview] = useState<WorkTargetPreview | null>(null);
+  const [preview, setPreview] = useState<WorkTargetPreview | null>(
+    () => presetPreview,
+  );
   const [excludedIds, setExcludedIds] = useState<Set<number>>(new Set());
-  const [manualIds, setManualIds] = useState<Set<number>>(new Set());
+  const [manualIds, setManualIds] = useState<Set<number>>(
+    () => new Set(presetOrchidGroupIds),
+  );
   const [registrationMode, setRegistrationMode] =
     useState<WorkRegistrationMode>("RECORD");
   const [inboundRecordIds, setInboundRecordIds] = useState<Set<number>>(
@@ -57,7 +69,9 @@ export function useWorkOperationRegistration({
   );
   const [targetSelectorOpen, setTargetSelectorOpen] = useState(false);
   const [recordResultOpen, setRecordResultOpen] = useState(false);
-  const [targetScopeLabel, setTargetScopeLabel] = useState<string | null>(null);
+  const [targetScopeLabel, setTargetScopeLabel] = useState<string | null>(
+    targetLocked ? "선택한 난 묶음" : null,
+  );
   const { bedZones, orchidGroups } = useMemo(
     () => deriveWorkTargetSelectionOptions(houses),
     [houses],
@@ -113,7 +127,6 @@ export function useWorkOperationRegistration({
     preview,
     targetScopeLabel,
   });
-
   useEffect(() => {
     if (!isInboundPotting || inboundCandidatesAttempted) return;
     let cancelled = false;
@@ -160,11 +173,11 @@ export function useWorkOperationRegistration({
             ? "INBOUND_RECORD_SELECTION"
             : "MANUAL_SELECTION",
       }));
-      setPreview(null);
+      if (!targetLocked) setPreview(null);
       setExcludedIds(new Set());
-      setManualIds(new Set());
+      setManualIds(targetLocked ? new Set(presetOrchidGroupIds) : new Set());
       setInboundRecordIds(new Set());
-      setTargetScopeLabel(null);
+      setTargetScopeLabel(targetLocked ? "선택한 난 묶음" : null);
       setRegistrationMode(
         definition.recordSupported && definition.category != null
           ? "RECORD"
@@ -401,6 +414,7 @@ export function useWorkOperationRegistration({
     selectedWorkType,
     setRegistrationMode: changeRegistrationMode,
     targetSelectorOpen,
+    targetLocked,
     targetSummary,
     toggleExcluded,
     updateForm,

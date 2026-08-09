@@ -1,6 +1,10 @@
 "use client";
 
 import { useCallback, useMemo, useState, useSyncExternalStore } from "react";
+import {
+  useWorkRecordInvalidation,
+  WorkOperationRegistrationDialog,
+} from "@/features/work-record";
 import { normalizeCellRange } from "../lib/orchidManagementUtils";
 import { useBedViewport } from "../model/useBedViewport";
 import { useOrchidManagementMap } from "../model/useOrchidManagementMap";
@@ -31,7 +35,6 @@ export function OrchidManagementMap({
   initialVisibleBedCount,
   mapData,
   house,
-  workTypes,
 }: OrchidManagementMapProps) {
   const bedViewport = useBedViewport(
     house.physicalBeds,
@@ -45,12 +48,12 @@ export function OrchidManagementMap({
   const orchidManagement = useOrchidManagementMap(
     scopedHouse,
     house,
-    workTypes,
     initialSelectedOrchidGroupId,
     initialSelectedPhysicalBedId ?? null,
     initialSelectedBedZoneId ?? null,
     initialSearchFilters,
   );
+  const { invalidateWorkData } = useWorkRecordInvalidation();
   const multiSelection = useOrchidMultiSelection(house);
   const selectedHistoryHouse = useMemo(() => {
     if (orchidManagement.selection?.type !== "HOUSE") return null;
@@ -75,6 +78,9 @@ export function OrchidManagementMap({
     number | null
   >(null);
   const [showBulkCorrection, setShowBulkCorrection] = useState(false);
+  const [workRegistrationTargetIds, setWorkRegistrationTargetIds] = useState<
+    number[] | null
+  >(null);
   const [searchGroupOrchidGroupIds, setSearchGroupOrchidGroupIds] =
     useState<Set<number> | null>(null);
   const placementHouses = useMemo(
@@ -106,6 +112,14 @@ export function OrchidManagementMap({
     const next = !distinguishVarietyColors;
     window.localStorage.setItem(VARIETY_COLOR_STORAGE_KEY, String(next));
     window.dispatchEvent(new Event(VARIETY_COLOR_CHANGE_EVENT));
+  }
+
+  function openWorkRegistration(orchidGroupIds: number[]) {
+    if (orchidGroupIds.length === 0) return;
+    clearMapCellRangePick();
+    setShowBulkCorrection(false);
+    orchidManagement.actions.cancelMutation();
+    setWorkRegistrationTargetIds(orchidGroupIds);
   }
 
   function startMapCellRangePick({
@@ -239,6 +253,16 @@ export function OrchidManagementMap({
 
   return (
     <div className="grid h-full min-h-0 gap-4 lg:grid-cols-[minmax(0,1fr)_clamp(280px,28%,440px)]">
+      {workRegistrationTargetIds ? (
+        <WorkOperationRegistrationDialog
+          presetOrchidGroupIds={workRegistrationTargetIds}
+          onClose={() => setWorkRegistrationTargetIds(null)}
+          onSaved={() => {
+            orchidManagement.actions.invalidateHistory();
+            void invalidateWorkData();
+          }}
+        />
+      ) : null}
       <section className="flex h-full min-h-0 flex-col gap-3">
         <BedNavigationToolbar
           createActive={
@@ -298,6 +322,13 @@ export function OrchidManagementMap({
           <SelectedOrchidGroupsInfo
             orchidGroups={multiSelection.selectedOrchidGroups}
             onBulkCorrection={() => setShowBulkCorrection(true)}
+            onCreateWork={() =>
+              openWorkRegistration(
+                multiSelection.selectedOrchidGroups.map(
+                  (orchidGroup) => orchidGroup.id,
+                ),
+              )
+            }
             onRemove={multiSelection.toggleOrchidGroup}
           />
         ) : (
@@ -371,13 +402,9 @@ export function OrchidManagementMap({
             resolvedZone={orchidManagement.resolvedZone}
             saving={orchidManagement.saving}
             selectedOrchidGroup={orchidManagement.selectedOrchidGroup}
-            selectedPhysicalBed={orchidManagement.selectedPhysicalBed}
-            selection={orchidManagement.selection}
             searchFilters={orchidManagement.searchFilters}
             searchLoading={orchidManagement.searchLoading}
             searchResults={orchidManagement.searchResults}
-            workRecordForm={orchidManagement.workRecordForm}
-            workTypes={workTypes}
             mapCellRangePick={mapCellRangePick}
             multiSelectEnabled={multiSelection.enabled}
             selectedOrchidGroupIds={multiSelection.selectedIds}
@@ -419,8 +446,8 @@ export function OrchidManagementMap({
               orchidManagement.actions.openPaste();
             }}
             onOpenWorkRecord={() => {
-              clearMapCellRangePick();
-              orchidManagement.actions.openWorkRecord();
+              const orchidGroupId = orchidManagement.selectedOrchidGroup?.id;
+              if (orchidGroupId) openWorkRegistration([orchidGroupId]);
             }}
             onSelectOrchidGroup={(orchidGroupId) => {
               clearMapCellRangePick();
@@ -459,13 +486,6 @@ export function OrchidManagementMap({
               multiSelection.toggleEnabled();
             }}
             onUpdateSearchFilter={orchidManagement.actions.updateSearchFilter}
-            onUpdateWorkRecordForm={
-              orchidManagement.actions.updateWorkRecordForm
-            }
-            onWorkRecordCreate={async () => {
-              await orchidManagement.actions.workRecordCreate();
-              clearMapCellRangePick();
-            }}
           />
         )}
       </div>

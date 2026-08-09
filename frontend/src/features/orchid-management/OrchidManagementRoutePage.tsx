@@ -2,12 +2,10 @@ import type {
   FarmStatusMapData,
   House,
   VisibleBedCount,
-  WorkType,
 } from "@/entities/farm/types";
 import {
   getOrchidManagementMap,
   getOrchidManagementViewport,
-  getOrchidWorkTypes,
 } from "./api/orchidManagementApi";
 import type { OrchidManagementSearchState } from "./model/types";
 import { OrchidManagementMap } from "./ui/OrchidManagementMap";
@@ -21,7 +19,6 @@ type OrchidManagementPageProps = {
   initialSelectedPhysicalBedId?: number | null;
   initialSelectedBedZoneId?: number | null;
   initialSearchFilters?: OrchidManagementSearchState;
-  workTypes: WorkType[];
 };
 
 export async function OrchidManagementRoutePage({
@@ -30,10 +27,7 @@ export async function OrchidManagementRoutePage({
   resolvedSearchParams: Record<string, string | string[] | undefined>;
 }) {
   const routeState = readOrchidManagementRouteState(resolvedSearchParams);
-  const [mapData, workTypes] = await Promise.all([
-    getOrchidManagementMap(),
-    getOrchidWorkTypes(),
-  ]);
+  const mapData = await getOrchidManagementMap();
   const defaultHouse =
     mapData.houses.find((house) => house.orchidGroupCount > 0) ??
     mapData.houses[0];
@@ -76,7 +70,6 @@ export async function OrchidManagementRoutePage({
       initialVisibleBedCount={viewport.bedCount}
       mapData={mapData}
       house={house}
-      workTypes={workTypes}
     />
   );
 }
@@ -90,7 +83,6 @@ function OrchidManagementPage({
   initialSelectedPhysicalBedId,
   initialSelectedBedZoneId,
   initialSearchFilters,
-  workTypes,
 }: OrchidManagementPageProps) {
   if (!house) {
     return (
@@ -119,7 +111,6 @@ function OrchidManagementPage({
         initialStartBedId={initialStartBedId}
         initialVisibleBedCount={initialVisibleBedCount}
         initialSelectedOrchidGroupId={initialSelectedOrchidGroupId}
-        workTypes={workTypes}
       />
     </main>
   );

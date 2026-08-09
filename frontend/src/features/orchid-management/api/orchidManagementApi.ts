@@ -12,8 +12,6 @@ import type {
   OrchidManagementViewport,
   OrchidGroup,
   VarietyOption,
-  WorkOperation,
-  WorkType,
 } from "@/entities/farm/types";
 import type {
   DerivedOrchidGroup,
@@ -23,7 +21,6 @@ import type {
   OrchidGroupLineage,
   PreciseMovePayload,
   WorkOperationCorrections,
-  WorkRecordQuickPayload,
   WorkHistoryPage,
 } from "../model/types";
 
@@ -278,10 +275,6 @@ export function getHouse(houseId: number) {
   return fetchApi<House>(`/houses/${houseId}`);
 }
 
-export function getOrchidWorkTypes() {
-  return fetchApi<WorkType[]>("/work-types");
-}
-
 export function getWorkHistory(
   scopeType: "HOUSE" | "PHYSICAL_BED" | "BED_ZONE" | "ORCHID_GROUP",
   scopeId: number,
@@ -327,39 +320,6 @@ export function getDerivedOrchidGroupMembers(
   return fetchApi<OrchidGroup[]>(
     `/orchid-groups/derived-groups/${encodeURIComponent(groupKey)}/members${query ? `?${query}` : ""}`,
   );
-}
-
-export async function createOrchidWorkOperation(
-  payload: WorkRecordQuickPayload,
-  workTypeName: string,
-): Promise<WorkOperation> {
-  const response = await fetch(`${API_BASE_URL}/work-operations/record`, {
-    method: "POST",
-    credentials: "include",
-    headers: buildApiHeaders({ "Content-Type": "application/json" }),
-    body: JSON.stringify({
-      workTypeId: payload.workTypeId,
-      title: `${workTypeName} 작업`,
-      plannedStartDate: payload.workDate,
-      sourceScopeType: payload.targetType,
-      sourceScopeId: payload.targetId,
-      sourceOrchidGroupIds: payload.targetIds,
-      details: {
-        materialName: payload.materialName,
-        dilutionRatio: payload.dilutionRatio,
-        quantity: payload.quantity,
-      },
-      worker: payload.worker,
-      memo: payload.memo,
-    }),
-  });
-  const body = await readJson(response);
-  if (!response.ok) {
-    throw new Error(
-      resolveErrorMessage(body, "작업 이력을 저장하지 못했습니다."),
-    );
-  }
-  return (body as { data: WorkOperation }).data;
 }
 
 export async function fetchHouse(houseId: number): Promise<House> {

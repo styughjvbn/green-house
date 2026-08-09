@@ -6,9 +6,7 @@ import type {
   OrchidGroupWorkHistory,
   SelectedBedZone,
   SelectedOrchidGroup,
-  WorkRecordTargetType,
   WorkOperation,
-  WorkType,
   VisibleBedCount,
 } from "@/entities/farm/types";
 
@@ -33,7 +31,7 @@ export type OrchidListSelection =
   | SelectedPhysicalBed
   | SelectedBedZone;
 
-export type MutationMode = "CREATE" | "EDIT" | "MOVE" | "WORK_RECORD" | null;
+export type MutationMode = "CREATE" | "EDIT" | "MOVE" | null;
 
 export type MapCellRangePick = {
   active: boolean;
@@ -148,32 +146,6 @@ export type PreciseMovePayload = {
   memo: string;
 };
 
-export type WorkRecordQuickFormState = {
-  workTypeId: string;
-  workDate: string;
-  targetType: WorkRecordTargetType | "MANUAL_SELECTION";
-  targetId: number | null;
-  targetIds: number[];
-  materialName: string;
-  dilutionRatio: string;
-  quantity: string;
-  worker: string;
-  memo: string;
-};
-
-export type WorkRecordQuickPayload = {
-  workTypeId: number;
-  workDate: string;
-  targetType: WorkRecordTargetType | "MANUAL_SELECTION";
-  targetId: number | null;
-  targetIds: number[];
-  materialName: string | null;
-  dilutionRatio: string | null;
-  quantity: string | null;
-  worker: string | null;
-  memo: string | null;
-};
-
 export type WorkRecordSummary = {
   latestRecords: OrchidGroupWorkHistory[];
   latestByType: {
@@ -246,7 +218,6 @@ export type OrchidManagementMapProps = {
   initialSelectedPhysicalBedId?: number | null;
   initialSelectedBedZoneId?: number | null;
   initialSearchFilters?: OrchidManagementSearchState;
-  workTypes: WorkType[];
 };
 
 export type OrchidMutationContext = {

@@ -3,10 +3,7 @@
 import { useMemo, useState, type FormEvent, type ReactNode } from "react";
 import type { OrchidGroup, VarietyOption } from "@/entities/farm/types";
 import { isStandardPotSize, POT_SIZE_OPTIONS } from "@/entities/farm/potSizes";
-import type {
-  MutationPayload,
-  OrchidGroupBatchUpdateItem,
-} from "../../model/types";
+import type { OrchidGroupBatchUpdateItem } from "../../model/types";
 import TextField from "./TextField";
 import VarietySearchSelect from "./VarietySearchSelect";
 import BulkCorrectionPreviewDialog from "./BulkCorrectionPreviewDialog";

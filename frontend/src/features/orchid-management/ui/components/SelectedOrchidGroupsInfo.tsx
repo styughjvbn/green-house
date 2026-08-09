@@ -14,10 +14,12 @@ import {
 export default function SelectedOrchidGroupsInfo({
   orchidGroups,
   onBulkCorrection,
+  onCreateWork,
   onRemove,
 }: {
   orchidGroups: OrchidGroup[];
   onBulkCorrection: () => void;
+  onCreateWork: () => void;
   onRemove: (orchidGroupId: number) => void;
 }) {
   const [moreMenuOpen, setMoreMenuOpen] = useState(false);
@@ -78,8 +80,9 @@ export default function SelectedOrchidGroupsInfo({
       <div className="flex shrink-0 items-center gap-1.5">
         <button
           aria-label="작업 추가"
-          className="flex h-8 w-8 cursor-not-allowed items-center justify-center rounded-md border border-[#cfd8cc] bg-white text-[#435047] opacity-45"
-          disabled
+          className="flex h-8 w-8 cursor-pointer items-center justify-center rounded-md border border-[#cfd8cc] bg-white text-[#435047] hover:bg-[#f5f7f3] disabled:cursor-not-allowed disabled:opacity-45"
+          disabled={orchidGroups.length === 0}
+          onClick={onCreateWork}
           title="작업 추가"
           type="button"
         >
