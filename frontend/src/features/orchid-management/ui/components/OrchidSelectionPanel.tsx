@@ -587,7 +587,7 @@ export default function OrchidSelectionPanel({
       {mutationMode === "MOVE" && selectedOrchidGroup ? (
         <FarmPlacementPickerDialog
           dialogDescription="이동할 동과 구역을 고른 뒤 시작 칸과 끝 칸을 지정하세요."
-          dialogTitle="난 묶음 위치 이동"
+          dialogTitle="난 묶음 자리 이동"
           excludeOrchidGroupId={selectedOrchidGroup.id}
           houses={placementHouses}
           initialValue={toPlacementSelection(selectedOrchidGroup)}

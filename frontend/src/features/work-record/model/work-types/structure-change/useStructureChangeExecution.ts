@@ -101,6 +101,7 @@ export function useStructureChangeExecution({
       ),
     [orchidGroupsById, priorResultOrchidGroupIds],
   );
+  const movement = operation.workTypeCode === "MOVEMENT";
   const [selectedSourceIds, setSelectedSourceIds] = useState<Set<number>>(
     () => new Set(availableSources.map(({ group }) => group.id)),
   );
@@ -121,7 +122,7 @@ export function useStructureChangeExecution({
   );
   const [rows, setRows] = useState<ResultRow[]>(() =>
     availableSources.map(({ group, inferredQuantity }) =>
-      newResultRow(group, inferredQuantity),
+      resultRowForOperation(group, inferredQuantity, movement),
     ),
   );
   const today = localDateValue(new Date());
@@ -217,7 +218,10 @@ export function useStructureChangeExecution({
       );
     } else {
       const quantity = Number(inputQuantities[group.id] || group.quantity);
-      setRows((current) => [...current, newResultRow(group, quantity)]);
+      setRows((current) => [
+        ...current,
+        resultRowForOperation(group, quantity, movement),
+      ]);
     }
   }
 
@@ -241,8 +245,9 @@ export function useStructureChangeExecution({
           ? {
               ...row,
               quantity: value,
-              placement:
-                Number(value) < (source?.quantity ?? 0)
+              placement: movement
+                ? row.placement
+                : Number(value) < (source?.quantity ?? 0)
                   ? released
                   : source
                     ? inferPlacement(source)
@@ -430,4 +435,13 @@ export function useStructureChangeExecution({
     totalResult,
     worker,
   };
+}
+
+function resultRowForOperation(
+  group: OrchidGroup,
+  quantity: number,
+  movement: boolean,
+) {
+  const row = newResultRow(group, quantity);
+  return movement ? { ...row, placement: null } : row;
 }

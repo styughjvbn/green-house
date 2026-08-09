@@ -13,7 +13,11 @@ type WorkExecutionKind =
   | "POTTING"
   | "STRUCTURE_CHANGE";
 
-export type WorkRecordResultKind = "DISCARD" | "POTTING" | "STRUCTURE_CHANGE";
+export type WorkRecordResultKind =
+  | "DISCARD"
+  | "MOVEMENT"
+  | "POTTING"
+  | "STRUCTURE_CHANGE";
 
 type WorkTypeDefinition = {
   category: "GENERAL" | "STRUCTURE_CHANGE" | null;
@@ -40,13 +44,13 @@ const GENERIC_DEFINITION: WorkTypeDefinition = {
 
 const SPECIAL_DEFINITIONS: Record<string, WorkTypeDefinition> = {
   MOVEMENT: {
-    category: null,
+    category: "STRUCTURE_CHANGE",
     execution: "MOVEMENT",
     planGuidance:
       "원본 난 묶음을 계획 대상으로 확정하고, 실행할 때 각 묶음의 목적 구역과 위치를 입력합니다.",
     planSupported: true,
-    recordSupported: false,
-    recordResult: null,
+    recordSupported: true,
+    recordResult: "MOVEMENT",
     targetSource: "ORCHID_GROUP",
     workflow: "MOVEMENT",
   },

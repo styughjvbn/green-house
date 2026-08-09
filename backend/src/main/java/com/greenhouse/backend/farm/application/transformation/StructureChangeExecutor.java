@@ -21,8 +21,6 @@ public class StructureChangeExecutor {
 		return transformationExecutor.execute(
 				operation,
 				request,
-				strategy.supports(),
-				strategy.workLabel(),
-				strategy.lineageType());
+				strategy);
 	}
 }

@@ -49,6 +49,7 @@ export function StructureChangeResultFields({
   onSetAllAgeYears: (ageYear: string) => void;
   onSetAllPotSizes: (potSize: string) => void;
 }) {
+  const movement = operation.workTypeCode === "MOVEMENT";
   const excludedSourceIds = selectedSources
     .map(({ group }) => group.id)
     .filter((sourceId) => {
@@ -65,9 +66,13 @@ export function StructureChangeResultFields({
     <section className="space-y-3">
       <div className="flex items-center justify-between gap-3">
         <div>
-          <p className="text-sm font-bold">결과 난 묶음</p>
+          <p className="text-sm font-bold">
+            {movement ? "이동 결과 난 묶음" : "결과 난 묶음"}
+          </p>
           <p className="mt-0.5 text-xs text-[#6a766e]">
-            원본별 속성·수량·현재 배치를 기본값으로 추론했습니다.
+            {movement
+              ? "이동할 수량과 위치를 지정하세요. 비워지는 원본 자리도 다시 선택할 수 있으며, 이동하지 않은 수량은 폐기로 기록됩니다."
+              : "원본별 속성·수량·현재 배치를 기본값으로 추론했습니다."}
           </p>
         </div>
         <button
@@ -75,32 +80,35 @@ export function StructureChangeResultFields({
           type="button"
           onClick={onAdd}
         >
-          <Plus className="h-3 w-3" aria-hidden="true" /> 결과 분리
+          <Plus className="h-3 w-3" aria-hidden="true" />
+          {movement ? "이동 위치 추가" : "결과 분리"}
         </button>
       </div>
-      <div className="grid gap-2 rounded-md border border-[#dfe7dd] bg-white p-3 sm:grid-cols-2">
-        <label className="block text-sm font-semibold text-[#435047]">
-          전체 결과 화분 크기
-          <select
-            className="mt-1 w-full rounded-md border border-[#cfd8cc] bg-white px-2 py-2 font-normal"
-            value={commonPotSize}
-            onChange={(event) => onSetAllPotSizes(event.target.value)}
-          >
-            <option value="">결과별 설정</option>
-            {POT_SIZE_OPTIONS.map((option) => (
-              <option key={option.value} value={option.value}>
-                {option.label}
-              </option>
-            ))}
-          </select>
-        </label>
-        <TextField
-          label="전체 결과 시작 년생"
-          type="number"
-          value={commonAgeYear}
-          onChange={onSetAllAgeYears}
-        />
-      </div>
+      {!movement ? (
+        <div className="grid gap-2 rounded-md border border-[#dfe7dd] bg-white p-3 sm:grid-cols-2">
+          <label className="block text-sm font-semibold text-[#435047]">
+            전체 결과 화분 크기
+            <select
+              className="mt-1 w-full rounded-md border border-[#cfd8cc] bg-white px-2 py-2 font-normal"
+              value={commonPotSize}
+              onChange={(event) => onSetAllPotSizes(event.target.value)}
+            >
+              <option value="">결과별 설정</option>
+              {POT_SIZE_OPTIONS.map((option) => (
+                <option key={option.value} value={option.value}>
+                  {option.label}
+                </option>
+              ))}
+            </select>
+          </label>
+          <TextField
+            label="전체 결과 시작 년생"
+            type="number"
+            value={commonAgeYear}
+            onChange={onSetAllAgeYears}
+          />
+        </div>
+      ) : null}
       {rows.map((row, index) => (
         <ResultRowFields
           excludeOrchidGroupIds={excludedSourceIds}
@@ -158,15 +166,27 @@ function ResultRowFields({
           >
             {operation.workTypeCode === "MERGE"
               ? "다른 결과에 합치기"
-              : "결과 합치기"}
+              : operation.workTypeCode === "MOVEMENT"
+                ? "다른 이동 결과에 합치기"
+                : "결과 합치기"}
             <Trash2 className="h-4 w-4 text-[#a33a24]" aria-hidden="true" />
           </button>
         ) : null}
       </div>
-      <div className="grid gap-2 sm:grid-cols-4">
-        <div className="sm:col-span-4">
+      <div
+        className={`grid gap-2 ${operation.workTypeCode === "MOVEMENT" ? "sm:grid-cols-1" : "sm:grid-cols-4"}`}
+      >
+        <div
+          className={
+            operation.workTypeCode === "MOVEMENT" ? "" : "sm:col-span-4"
+          }
+        >
           <FarmPlacementField
-            dialogDescription="자동 선택된 위치를 확인하거나 결과 난 묶음의 새 위치를 지정하세요."
+            dialogDescription={
+              operation.workTypeCode === "MOVEMENT"
+                ? "난 묶음을 옮길 새 위치를 지정하세요."
+                : "자동 선택된 위치를 확인하거나 결과 난 묶음의 새 위치를 지정하세요."
+            }
             dialogTitle={`${operation.workType} 결과 ${index + 1} 배치 위치`}
             fieldLabel="결과 배치"
             excludeOrchidGroupIds={excludeOrchidGroupIds}
@@ -177,45 +197,51 @@ function ResultRowFields({
           />
         </div>
         <TextField
-          label="결과 수량"
+          label={
+            operation.workTypeCode === "MOVEMENT" ? "이동 수량" : "결과 수량"
+          }
           type="number"
           value={row.quantity}
           onChange={(quantity) => onChange({ quantity, autoQuantity: false })}
         />
-        <label className="block text-sm font-semibold text-[#435047]">
-          화분 크기
-          <select
-            className="mt-1 w-full rounded-md border border-[#cfd8cc] bg-white px-2 py-2 font-normal"
-            value={row.potSize}
-            onChange={(event) => onChange({ potSize: event.target.value })}
-          >
-            {POT_SIZE_OPTIONS.map((option) => (
-              <option key={option.value} value={option.value}>
-                {option.label}
-              </option>
-            ))}
-          </select>
-        </label>
-        <TextField
-          label="시작 년생"
-          type="number"
-          value={row.ageYear}
-          onChange={(ageYear) => onChange({ ageYear })}
-        />
-        <label className="block text-sm font-semibold text-[#435047]">
-          결과 구분
-          <select
-            className="mt-1 w-full rounded-md border border-[#cfd8cc] bg-white px-2 py-2 font-normal"
-            value={row.purpose}
-            onChange={(event) =>
-              onChange({ purpose: event.target.value as ResultPurpose })
-            }
-          >
-            <option value="NORMAL">일반 결과</option>
-            <option value="DIVIDE_CANDIDATE">분주 후보</option>
-            <option value="HELD">별도 보관</option>
-          </select>
-        </label>
+        {operation.workTypeCode !== "MOVEMENT" ? (
+          <>
+            <label className="block text-sm font-semibold text-[#435047]">
+              화분 크기
+              <select
+                className="mt-1 w-full rounded-md border border-[#cfd8cc] bg-white px-2 py-2 font-normal"
+                value={row.potSize}
+                onChange={(event) => onChange({ potSize: event.target.value })}
+              >
+                {POT_SIZE_OPTIONS.map((option) => (
+                  <option key={option.value} value={option.value}>
+                    {option.label}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <TextField
+              label="시작 년생"
+              type="number"
+              value={row.ageYear}
+              onChange={(ageYear) => onChange({ ageYear })}
+            />
+            <label className="block text-sm font-semibold text-[#435047]">
+              결과 구분
+              <select
+                className="mt-1 w-full rounded-md border border-[#cfd8cc] bg-white px-2 py-2 font-normal"
+                value={row.purpose}
+                onChange={(event) =>
+                  onChange({ purpose: event.target.value as ResultPurpose })
+                }
+              >
+                <option value="NORMAL">일반 결과</option>
+                <option value="DIVIDE_CANDIDATE">분주 후보</option>
+                <option value="HELD">별도 보관</option>
+              </select>
+            </label>
+          </>
+        ) : null}
       </div>
     </section>
   );

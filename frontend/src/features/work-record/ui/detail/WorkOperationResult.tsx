@@ -45,7 +45,8 @@ export function OperationResult({
     operation.progress.failed === 0;
   const hasRemainingWork = !canComplete;
   const executionKind = getWorkExecutionKind(operation.workTypeCode);
-  const structureChange = executionKind === "STRUCTURE_CHANGE";
+  const structureChange =
+    executionKind === "STRUCTURE_CHANGE" || executionKind === "MOVEMENT";
   const potting = executionKind === "POTTING";
   const requiresResultEntry = executionKind != null;
   const firstExecutablePottingTarget = operation.targets.find(

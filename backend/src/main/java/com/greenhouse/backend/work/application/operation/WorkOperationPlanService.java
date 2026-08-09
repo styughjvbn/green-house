@@ -42,6 +42,7 @@ public class WorkOperationPlanService {
 			WorkType.DISCARD_CODE);
 	private static final Set<String> SINGLE_VARIETY_WORK_TYPES = Set.of(
 			WorkType.REPOT_CODE,
+			WorkType.MOVEMENT_CODE,
 			WorkType.DIVIDE_CODE,
 			WorkType.MERGE_CODE);
 
@@ -176,7 +177,7 @@ public class WorkOperationPlanService {
 		}
 		Long varietyId = targets.getFirst().varietyId();
 		if (varietyId == null || targets.stream().anyMatch(group -> !varietyId.equals(group.varietyId()))) {
-			throw new IllegalArgumentException("분갈이·분주·합식 작업은 하나의 품종만 대상으로 계획할 수 있습니다.");
+			throw new IllegalArgumentException("자리 이동·분갈이·분주·합식 작업은 하나의 품종만 대상으로 계획할 수 있습니다.");
 		}
 	}
 

@@ -119,6 +119,7 @@ export type OrchidGroupLineageRelationType =
   | "REPOTTED_TO"
   | "SPLIT_TO"
   | "MERGED_TO"
+  | "MOVED_TO"
   | "POTTED_TO"
   | "CORRECTED_TO";
 
