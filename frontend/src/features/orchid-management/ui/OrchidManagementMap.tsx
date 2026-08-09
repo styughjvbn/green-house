@@ -10,8 +10,6 @@ import type {
 } from "../model/types";
 import BedNavigationToolbar from "./components/BedNavigationToolbar";
 import ContinuousBedMap from "./components/ContinuousBedMap";
-import MultiCreateOrchidGroupForm from "./components/MultiCreateOrchidGroupForm";
-import RepotWorkOperationForm from "./components/RepotWorkOperationForm";
 import WorkOperationCorrectionForm from "./components/WorkOperationCorrectionForm";
 import OrchidSelectionPanel from "./components/OrchidSelectionPanel";
 import SelectedZoneInfo from "./components/SelectedZoneInfo";
@@ -69,15 +67,6 @@ export function OrchidManagementMap({
   }, [house, mapData.houses, orchidManagement.selection]);
   const historyHouse = selectedHistoryHouse ?? scopedHouse;
   const [showScale, setShowScale] = useState(true);
-  const [orchidGroupSelection, setOrchidGroupSelection] = useState<{
-    houseId: number;
-    ids: Set<number>;
-  }>(() => ({ houseId: house.id, ids: new Set() }));
-  const [showMultiCreate, setShowMultiCreate] = useState(false);
-  const [repotSource, setRepotSource] = useState(
-    orchidManagement.selectedOrchidGroup,
-  );
-  const [showRepot, setShowRepot] = useState(false);
   const [correctionOperationId, setCorrectionOperationId] = useState<
     number | null
   >(null);
@@ -108,20 +97,6 @@ export function OrchidManagementMap({
     endCell: null,
     version: 0,
   });
-  const selectedOrchidGroupIds =
-    orchidGroupSelection.houseId === house.id
-      ? orchidGroupSelection.ids
-      : new Set<number>();
-
-  function toggleSelectedOrchidGroup(orchidGroupId: number) {
-    setOrchidGroupSelection((current) => {
-      const next = new Set(current.houseId === house.id ? current.ids : []);
-      if (next.has(orchidGroupId)) next.delete(orchidGroupId);
-      else next.add(orchidGroupId);
-      return { houseId: house.id, ids: next };
-    });
-  }
-
   function toggleVarietyColors() {
     const next = !distinguishVarietyColors;
     window.localStorage.setItem(VARIETY_COLOR_STORAGE_KEY, String(next));
@@ -271,8 +246,6 @@ export function OrchidManagementMap({
           onToggleVarietyColors={toggleVarietyColors}
           onToggleScale={() => setShowScale((current) => !current)}
           onOpenCreate={() => {
-            setShowMultiCreate(false);
-            setShowRepot(false);
             clearMapCellRangePick();
             orchidManagement.actions.openCreate();
           }}
@@ -294,7 +267,6 @@ export function OrchidManagementMap({
               searchGroupOrchidGroupIds ??
               orchidManagement.filteredOrchidGroupIds
             }
-            selectedOrchidGroupIds={selectedOrchidGroupIds}
             selection={orchidManagement.selection}
             showScale={showScale}
             cellRangePick={mapCellRangePick}
@@ -333,8 +305,6 @@ export function OrchidManagementMap({
           onOpenCorrection={(workOperationId) => {
             if (!orchidManagement.selectedOrchidGroup) return;
             clearMapCellRangePick();
-            setShowMultiCreate(false);
-            setShowRepot(false);
             setCorrectionOperationId(workOperationId);
           }}
         />
@@ -347,17 +317,6 @@ export function OrchidManagementMap({
             originalWorkOperationId={correctionOperationId}
             orchidGroup={orchidManagement.selectedOrchidGroup}
             onClose={() => setCorrectionOperationId(null)}
-          />
-        ) : showRepot && repotSource ? (
-          <RepotWorkOperationForm
-            houses={placementHouses}
-            source={repotSource}
-            onClose={() => setShowRepot(false)}
-          />
-        ) : showMultiCreate ? (
-          <MultiCreateOrchidGroupForm
-            house={scopedHouse}
-            onClose={() => setShowMultiCreate(false)}
           />
         ) : (
           <OrchidSelectionPanel
@@ -372,7 +331,6 @@ export function OrchidManagementMap({
             resolvedZone={orchidManagement.resolvedZone}
             saving={orchidManagement.saving}
             selectedBedZone={orchidManagement.selectedBedZone}
-            selectedOrchidGroupIds={selectedOrchidGroupIds}
             selectedOrchidGroup={orchidManagement.selectedOrchidGroup}
             selectedPhysicalBed={orchidManagement.selectedPhysicalBed}
             selection={orchidManagement.selection}
@@ -390,9 +348,6 @@ export function OrchidManagementMap({
               clearMapCellRangePick();
               orchidManagement.actions.clearCopiedOrchidGroup();
             }}
-            onClearSelectedOrchidGroups={() =>
-              setOrchidGroupSelection({ houseId: house.id, ids: new Set() })
-            }
             onCopyOrchidGroup={orchidManagement.actions.copyOrchidGroup}
             onCreate={async (payload) => {
               await orchidManagement.actions.create(payload);
@@ -422,14 +377,6 @@ export function OrchidManagementMap({
               clearMapCellRangePick();
               orchidManagement.actions.openPaste();
             }}
-            onOpenRepot={() => {
-              if (!orchidManagement.selectedOrchidGroup) return;
-              clearMapCellRangePick();
-              orchidManagement.actions.cancelMutation();
-              setShowMultiCreate(false);
-              setRepotSource(orchidManagement.selectedOrchidGroup);
-              setShowRepot(true);
-            }}
             onOpenWorkRecord={() => {
               clearMapCellRangePick();
               orchidManagement.actions.openWorkRecord();
@@ -438,12 +385,6 @@ export function OrchidManagementMap({
               clearMapCellRangePick();
               orchidManagement.actions.selectOrchidGroup(orchidGroupId);
             }}
-            onSelectOrchidGroups={(orchidGroupIds) =>
-              setOrchidGroupSelection({
-                houseId: house.id,
-                ids: new Set(orchidGroupIds),
-              })
-            }
             onSelectSearchResult={(orchidGroup) => {
               clearMapCellRangePick();
               const targetBed = house.physicalBeds.find(
@@ -466,7 +407,6 @@ export function OrchidManagementMap({
             }
             onStartMapCellRangePick={startMapCellRangePick}
             onSyncMapCellRangePick={syncMapCellRangePick}
-            onToggleSelectedOrchidGroup={toggleSelectedOrchidGroup}
             onUpdateSearchFilter={orchidManagement.actions.updateSearchFilter}
             onUpdateWorkRecordForm={
               orchidManagement.actions.updateWorkRecordForm

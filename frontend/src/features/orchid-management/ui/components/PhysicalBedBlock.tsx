@@ -8,7 +8,6 @@ export default function PhysicalBedBlock({
   bed,
   distinguishVarietyColors,
   filteredOrchidGroupIds,
-  selectedOrchidGroupIds,
   selection,
   showScale,
   cellRangePick,
@@ -20,7 +19,6 @@ export default function PhysicalBedBlock({
   bed: PhysicalBed;
   distinguishVarietyColors: boolean;
   filteredOrchidGroupIds: Set<number>;
-  selectedOrchidGroupIds: Set<number>;
   selection: OrchidSelection | null;
   showScale: boolean;
   cellRangePick: MapCellRangePick;
@@ -74,7 +72,6 @@ export default function PhysicalBedBlock({
                 ? selection.orchidGroupId
                 : null
             }
-            selectedOrchidGroupIds={selectedOrchidGroupIds}
             onPickCellRange={onPickCellRange}
             onSelectBedZone={onSelectBedZone}
             onSelectOrchidGroup={onSelectOrchidGroup}

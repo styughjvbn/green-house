@@ -18,14 +18,9 @@ import type {
 import type {
   DerivedOrchidGroup,
   MutationPayload,
-  MultiCreateOrchidGroupRow,
-  MultiCreateCancellationEligibility,
-  MultiCreateWorkResult,
   OrchidGroupCollection,
   OrchidGroupLineage,
   PreciseMovePayload,
-  RepotResultOrchidGroupRow,
-  RepotWorkResult,
   WorkOperationCorrections,
   WorkRecordQuickPayload,
   WorkHistoryPage,
@@ -76,75 +71,6 @@ export async function createWorkOperationCorrection(
     );
   }
   return (body as { data: WorkOperationCorrections }).data;
-}
-
-export async function executeRepotWork(payload: {
-  idempotencyKey: string;
-  title: string;
-  workDate: string;
-  worker: string | null;
-  memo: string | null;
-  sourceOrchidGroupId: number;
-  inputQuantity: number;
-  results: RepotResultOrchidGroupRow[];
-  inheritCollectionIds: number[];
-}): Promise<RepotWorkResult> {
-  const response = await fetch(`${API_BASE_URL}/work-operations/repot`, {
-    method: "POST",
-    credentials: "include",
-    headers: buildApiHeaders({ "Content-Type": "application/json" }),
-    body: JSON.stringify(payload),
-  });
-  const body = await readJson(response);
-  if (!response.ok) {
-    throw new Error(
-      resolveErrorMessage(body, "분갈이 작업을 완료하지 못했습니다."),
-    );
-  }
-  return (body as { data: RepotWorkResult }).data;
-}
-
-export function getMultiCreateCancellationEligibility(workOperationId: number) {
-  return fetchApi<MultiCreateCancellationEligibility>(
-    `/work-operations/${workOperationId}/cancel-eligibility`,
-  );
-}
-
-export async function cancelMultiCreateWork(workOperationId: number) {
-  const response = await fetch(
-    `${API_BASE_URL}/work-operations/${workOperationId}/cancel-created-orchid-groups`,
-    { method: "POST", credentials: "include" },
-  );
-  const body = await readJson(response);
-  if (!response.ok) {
-    throw new Error(
-      resolveErrorMessage(body, "다중 생성 작업을 취소하지 못했습니다."),
-    );
-  }
-  return (body as { data: MultiCreateWorkResult }).data;
-}
-
-export async function createMultipleOrchidGroups(payload: {
-  idempotencyKey: string;
-  title: string;
-  workDate: string;
-  worker: string | null;
-  memo: string | null;
-  rows: MultiCreateOrchidGroupRow[];
-}): Promise<MultiCreateWorkResult> {
-  const response = await fetch(`${API_BASE_URL}/work-operations/multi-create`, {
-    method: "POST",
-    credentials: "include",
-    headers: buildApiHeaders({ "Content-Type": "application/json" }),
-    body: JSON.stringify(payload),
-  });
-  const body = await readJson(response);
-  if (!response.ok) {
-    throw new Error(
-      resolveErrorMessage(body, "난 묶음을 일괄 생성하지 못했습니다."),
-    );
-  }
-  return (body as { data: MultiCreateWorkResult }).data;
 }
 
 type ApiErrorPayload = {
@@ -385,44 +311,6 @@ export function getDerivedOrchidGroupMembers(
   );
 }
 
-export function createOrchidGroupCollection(name: string) {
-  return submitCollectionMutation("/orchid-group-collections", "POST", {
-    name,
-  });
-}
-
-export function addOrchidGroupCollectionMember(
-  collectionId: number,
-  orchidGroupIds: number | number[],
-) {
-  return submitCollectionMutation(
-    `/orchid-group-collections/${collectionId}/members`,
-    "POST",
-    {
-      orchidGroupIds: Array.isArray(orchidGroupIds)
-        ? orchidGroupIds
-        : [orchidGroupIds],
-    },
-  );
-}
-
-export function removeOrchidGroupCollectionMember(
-  collectionId: number,
-  orchidGroupId: number,
-) {
-  return submitCollectionMutation(
-    `/orchid-group-collections/${collectionId}/members/${orchidGroupId}`,
-    "DELETE",
-  );
-}
-
-export function archiveOrchidGroupCollection(collectionId: number) {
-  return submitCollectionMutation(
-    `/orchid-group-collections/${collectionId}/archive`,
-    "POST",
-  );
-}
-
 export async function createOrchidWorkOperation(
   payload: WorkRecordQuickPayload,
   workTypeName: string,
@@ -485,27 +373,4 @@ async function submitOrchidMutation(
   if (!response.ok) {
     throw new Error(resolveErrorMessage(body, "저장하지 못했습니다."));
   }
-}
-
-async function submitCollectionMutation(
-  path: string,
-  method: "POST" | "DELETE",
-  payload?: object,
-): Promise<OrchidGroupCollection> {
-  const response = await fetch(`${API_BASE_URL}${path}`, {
-    method,
-    credentials: "include",
-    headers: buildApiHeaders(
-      payload ? { "Content-Type": "application/json" } : undefined,
-    ),
-    body: payload ? JSON.stringify(payload) : undefined,
-  });
-  await handleAuthExpired(response);
-  const body = await readJson(response);
-  if (!response.ok) {
-    throw new Error(
-      resolveErrorMessage(body, "사용자 그룹을 변경하지 못했습니다."),
-    );
-  }
-  return (body as { data: OrchidGroupCollection }).data;
 }

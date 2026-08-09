@@ -25,7 +25,6 @@ import {
   LoaderCircle,
   Move,
   Search,
-  Sprout,
   Trash2,
 } from "lucide-react";
 import {
@@ -49,10 +48,8 @@ import type {
   WorkRecordQuickFormState,
 } from "../../model/types";
 import ActionButton from "./ActionButton";
-import DerivedGroupPanel from "./DerivedGroupPanel";
 import OrchidGroupForm from "./OrchidGroupForm";
 import OrchidWorkRecordForm from "./OrchidWorkRecordForm";
-import UserCollectionPanel from "./UserCollectionPanel";
 
 export default function OrchidSelectionPanel({
   copiedOrchidGroup,
@@ -66,7 +63,6 @@ export default function OrchidSelectionPanel({
   resolvedZone,
   saving,
   selectedBedZone,
-  selectedOrchidGroupIds,
   selectedOrchidGroup,
   selectedPhysicalBed,
   selection,
@@ -78,7 +74,6 @@ export default function OrchidSelectionPanel({
   mapCellRangePick,
   onCancelMutation,
   onClearCopiedOrchidGroup,
-  onClearSelectedOrchidGroups,
   onCopyOrchidGroup,
   onCreate,
   onDelete,
@@ -87,15 +82,12 @@ export default function OrchidSelectionPanel({
   onOpenEdit,
   onOpenMove,
   onOpenPaste,
-  onOpenRepot,
   onOpenWorkRecord,
   onSelectOrchidGroup,
-  onSelectOrchidGroups,
   onSelectSearchResult,
   onSearchGroupSelectionChange,
   onStartMapCellRangePick,
   onSyncMapCellRangePick,
-  onToggleSelectedOrchidGroup,
   onUpdateSearchFilter,
   onUpdateWorkRecordForm,
   onWorkRecordCreate,
@@ -111,7 +103,6 @@ export default function OrchidSelectionPanel({
   resolvedZone: BedZone | null;
   saving: boolean;
   selectedBedZone: BedZone | null;
-  selectedOrchidGroupIds: Set<number>;
   selectedOrchidGroup: OrchidGroup | null;
   selectedPhysicalBed: PhysicalBed | null;
   selection: OrchidSelection | null;
@@ -123,7 +114,6 @@ export default function OrchidSelectionPanel({
   mapCellRangePick: MapCellRangePick;
   onCancelMutation: () => void;
   onClearCopiedOrchidGroup: () => void;
-  onClearSelectedOrchidGroups: () => void;
   onCopyOrchidGroup: (orchidGroupId: number) => void;
   onCreate: (payload: MutationPayload) => Promise<void>;
   onDelete: (orchidGroupId: number) => Promise<void>;
@@ -132,10 +122,8 @@ export default function OrchidSelectionPanel({
   onOpenEdit: (orchidGroupId: number) => void;
   onOpenMove: () => void;
   onOpenPaste: () => void;
-  onOpenRepot: () => void;
   onOpenWorkRecord: () => void;
   onSelectOrchidGroup: (orchidGroupId: number) => void;
-  onSelectOrchidGroups: (orchidGroupIds: number[]) => void;
   onSelectSearchResult: (orchidGroup: OrchidGroup) => void;
   onSearchGroupSelectionChange: (orchidGroupIds: number[] | null) => void;
   onStartMapCellRangePick: (options: {
@@ -152,7 +140,6 @@ export default function OrchidSelectionPanel({
     startCell: string;
     targetBedZoneId: number;
   }) => void;
-  onToggleSelectedOrchidGroup: (orchidGroupId: number) => void;
   onUpdateSearchFilter: <K extends keyof OrchidManagementSearchState>(
     field: K,
     value: OrchidManagementSearchState[K],
@@ -163,9 +150,6 @@ export default function OrchidSelectionPanel({
   ) => void;
   onWorkRecordCreate: () => Promise<void>;
 }) {
-  const [viewMode, setViewMode] = useState<
-    "LOCATION" | "DERIVED" | "COLLECTION"
-  >("LOCATION");
   const [searchScope, setSearchScope] = useState<"CURRENT_LIST" | "FARM">(
     "CURRENT_LIST",
   );
@@ -243,15 +227,6 @@ export default function OrchidSelectionPanel({
     !allHouseOrchidGroups.some(
       (orchidGroup) => orchidGroup.id === selectedOrchidGroup.id,
     );
-  const batchSelectedGroups = allHouseOrchidGroups.filter((orchidGroup) =>
-    selectedOrchidGroupIds.has(orchidGroup.id),
-  );
-  const collectionTargets =
-    batchSelectedGroups.length > 0
-      ? batchSelectedGroups
-      : selectedOrchidGroup
-        ? [selectedOrchidGroup]
-        : [];
   const currentListSearchResults = hasActiveSearch
     ? sortedOrchidGroups.filter((orchidGroup) =>
         matchesCurrentListSearch(orchidGroup, searchFilters),
@@ -388,38 +363,13 @@ export default function OrchidSelectionPanel({
 
   return (
     <aside className="flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto">
-      {/* {!hideList ? (
-        <div className="grid shrink-0 grid-cols-3 gap-1 rounded-md border border-[#d7ddd4] bg-white p-1 shadow-sm">
-          {(
-            [
-              ["LOCATION", "위치별"],
-              ["DERIVED", "자동 그룹"],
-              ["COLLECTION", "사용자 그룹"],
-            ] as const
-          ).map(([mode, label]) => (
-            <button
-              className={`rounded-md px-2 py-2 text-xs font-bold transition ${
-                viewMode === mode
-                  ? "bg-[#2f8f4e] text-white"
-                  : "text-[#526057] hover:bg-[#eef5ed]"
-              }`}
-              key={mode}
-              type="button"
-              onClick={() => setViewMode(mode)}
-            >
-              {label}
-            </button>
-          ))}
-        </div>
-      ) : null}  TODO: 난 묶음 관리 페이지 맵 정리 후 활성화 */}
-
       {selectedOrchidGroupOutsideViewport ? (
         <p className="rounded-md border border-[#f0d58a] bg-[#fff9e8] px-3 py-2 text-xs font-semibold text-[#7a5b08]">
           선택한 난 묶음은 현재 화면 밖에 있습니다.
         </p>
       ) : null}
 
-      {!hideList && viewMode === "LOCATION" ? (
+      {!hideList ? (
         <section className="flex min-h-0 flex-1 flex-col rounded-md border border-[#d7ddd4] bg-white p-3 shadow-sm">
           <div className="flex shrink-0 items-center justify-between gap-3">
             <p className="text-sm font-semibold text-[#17251b]">
@@ -439,15 +389,6 @@ export default function OrchidSelectionPanel({
                       : "난 묶음 목록"
                   } (${displayedResultCount}개)`}
             </p>
-            {/* {selectedOrchidGroupIds.size > 0 ? (
-              <button
-                className="text-xs font-semibold text-[#159447]"
-                onClick={onClearSelectedOrchidGroups}
-                type="button"
-              >
-                {selectedOrchidGroupIds.size}개 선택 해제
-              </button>
-            ) : null}  TODO: 난 묶음 관리 페이지 맵 정리 후 활성화 */}
           </div>
           <div className="mt-3 flex shrink-0 gap-1.5">
             <label className="relative min-w-0 flex-1">
@@ -639,19 +580,7 @@ export default function OrchidSelectionPanel({
                         }
                       >
                         <div className="flex items-start justify-between gap-3">
-                          {/* TODO: 난 묶음 관리 페이지 맵 정리 후 체크박스 활성화 시 label과 클릭 전파 차단 복원 */}
                           <div className="flex min-w-0 flex-1 cursor-pointer items-start gap-2">
-                            {/* TODO: 난 묶음 관리 페이지 맵 정리 후 활성화 */}
-                            {/* <input
-                            aria-label={`${orchidGroup.varietyName} 다중 선택`}
-                            checked={selectedOrchidGroupIds.has(orchidGroup.id)}
-                            className="mt-0.5 h-4 w-4 accent-[#159447]"
-                            disabled
-                            onChange={() =>
-                              onToggleSelectedOrchidGroup(orchidGroup.id)
-                            }
-                            type="checkbox"
-                          /> */}
                             <div className="min-w-0">
                               <div className="flex items-center gap-2">
                                 <span
@@ -757,12 +686,6 @@ export default function OrchidSelectionPanel({
                   active={mutationMode === "MOVE"}
                   disabled={!selectedOrchidGroup}
                 />
-                {/* <ActionButton
-                  icon={<Sprout className="h-4 w-4" />}
-                  label="분갈이"
-                  onClick={onOpenRepot}
-                  disabled={!selectedOrchidGroup}
-                />  TODO: 난 묶음 관리 페이지 맵 정리 후 활성화 */}
               </div>
             </div>
           ) : (
@@ -779,29 +702,6 @@ export default function OrchidSelectionPanel({
             </p>
           ) : null}
         </section>
-      ) : null}
-
-      {!hideList && viewMode === "DERIVED" ? (
-        <DerivedGroupPanel
-          key={house.id}
-          houseId={house.id}
-          onSelectMembers={(members) => {
-            onSelectOrchidGroups(members.map((member) => member.id));
-            if (members[0]) onSelectOrchidGroup(members[0].id);
-          }}
-        />
-      ) : null}
-
-      {!hideList && viewMode === "COLLECTION" ? (
-        <UserCollectionPanel
-          key={`user-groups-${house.id}`}
-          houseNumber={house.number}
-          orchidGroups={collectionTargets}
-          onSelectMembers={(orchidGroupIds) => {
-            onSelectOrchidGroups(orchidGroupIds);
-            if (orchidGroupIds[0]) onSelectOrchidGroup(orchidGroupIds[0]);
-          }}
-        />
       ) : null}
 
       {mutationMode === "CREATE" || mutationMode === "EDIT" ? (

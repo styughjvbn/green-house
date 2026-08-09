@@ -88,44 +88,6 @@ export type MutationPayload = {
   memo: string | null;
 };
 
-export type MultiCreateOrchidGroupRow = {
-  orchidGroup: MutationPayload & { bedZoneId: number };
-  collectionIds: number[];
-};
-
-export type MultiCreateWorkResult = {
-  operation: { id: number; status: string; title: string };
-  createdOrchidGroups: OrchidGroup[];
-};
-
-export type MultiCreateCancellationEligibility = {
-  workOperationId: number;
-  cancelable: boolean;
-  createdOrchidGroupIds: number[];
-  blockers: Array<{ code: string; message: string; count: number }>;
-};
-
-export type RepotResultOrchidGroupRow = {
-  bedZoneId: number;
-  quantity: number;
-  potSize: string | null;
-  ageYear: number | null;
-  placementType: string | null;
-  trayCount: number | null;
-  splitPlacementAllowed: boolean;
-  startPosition: number;
-  endPosition: number;
-  memo: string | null;
-};
-
-export type RepotWorkResult = {
-  operation: { id: number; status: string; title: string };
-  sourceOrchidGroup: OrchidGroup;
-  resultOrchidGroups: OrchidGroup[];
-  inputQuantity: number;
-  lossQuantity: number;
-};
-
 export type WorkOperationCorrectionAdjustment = {
   orchidGroupId: number;
   beforeQuantity: number;
