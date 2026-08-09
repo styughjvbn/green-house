@@ -72,6 +72,7 @@
 | `POST` | `/api/orchid-groups` | `create_1` | `OrchidGroupCreateRequest` | `201:ApiResponseOrchidGroupResponse` |
 | `DELETE` | `/api/orchid-groups/{orchidGroupId}` | `delete` | `-` | `200:ApiResponseVoid` |
 | `PATCH` | `/api/orchid-groups/{orchidGroupId}` | `update_2` | `OrchidGroupUpdateRequest` | `200:ApiResponseOrchidGroupResponse` |
+| `PATCH` | `/api/orchid-groups/batch` | `updateBatch` | `OrchidGroupBatchUpdateRequest` | `200:ApiResponseListOrchidGroupResponse` |
 | `PATCH` | `/api/orchid-groups/{orchidGroupId}/move` | `move` | `OrchidGroupMoveRequest` | `200:ApiResponseOrchidGroupResponse` |
 | `POST` | `/api/work-operations/multi-create` | `create_2` | `MultiCreateWorkOperationRequest` | `201:ApiResponseMultiCreateWorkOperationResponse` |
 | `GET` | `/api/work-operations/{workOperationId}/created-orchid-groups` | `get_5` | `-` | `200:ApiResponseMultiCreateWorkOperationResponse` |

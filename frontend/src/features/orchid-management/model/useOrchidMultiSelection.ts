@@ -43,12 +43,7 @@ export function useOrchidMultiSelection(house: House) {
     });
   }
 
-  function clear() {
-    setSelectedIds(new Set());
-  }
-
   return {
-    clear,
     enabled,
     selectedIds,
     selectedOrchidGroups,

@@ -13,6 +13,7 @@ import {
   deleteOrchidGroup,
   moveOrchidGroup,
   updateOrchidGroup,
+  updateOrchidGroupsBatch,
 } from "../api/orchidManagementApi";
 import {
   findBedZone,
@@ -28,6 +29,7 @@ import type {
   MutationMode,
   MutationPayload,
   OrchidListSelection,
+  OrchidGroupBatchUpdateItem,
   OrchidSelection,
   PreciseMovePayload,
 } from "./types";
@@ -288,6 +290,10 @@ export function useOrchidManagementMap(
     );
   }
 
+  async function handleBatchUpdate(items: OrchidGroupBatchUpdateItem[]) {
+    return runMutation(() => updateOrchidGroupsBatch(items));
+  }
+
   async function handleDelete(orchidGroupId?: number) {
     const orchidGroup = orchidGroupId
       ? findOrchidGroup(navigationHouse, orchidGroupId)
@@ -328,10 +334,12 @@ export function useOrchidManagementMap(
       setMutationMode(null);
       clearPasteSource();
       router.refresh();
+      return true;
     } catch (error) {
       setErrorMessage(
         error instanceof Error ? error.message : "요청 중 문제가 발생했습니다.",
       );
+      return false;
     } finally {
       setSaving(false);
     }
@@ -373,6 +381,7 @@ export function useOrchidManagementMap(
       create: handleCreate,
       delete: handleDelete,
       edit: handleUpdate,
+      editBatch: handleBatchUpdate,
       moveToOrchidGroup,
       move: handleMove,
       openCreate,
@@ -388,7 +397,10 @@ export function useOrchidManagementMap(
       loadOrchidGroupHistoryPage: history.loadPage,
       updateSearchFilter: search.updateFilter,
       updateWorkRecordForm: workRecord.update,
-      workRecordCreate: () => workRecord.submit(runMutation),
+      workRecordCreate: () =>
+        workRecord.submit(async (action) => {
+          await runMutation(action);
+        }),
     },
   };
 }

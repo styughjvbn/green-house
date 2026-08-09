@@ -88,6 +88,11 @@ export type MutationPayload = {
   memo: string | null;
 };
 
+export type OrchidGroupBatchUpdateItem = {
+  orchidGroupId: number;
+  update: MutationPayload;
+};
+
 export type WorkOperationCorrectionAdjustment = {
   orchidGroupId: number;
   beforeQuantity: number;

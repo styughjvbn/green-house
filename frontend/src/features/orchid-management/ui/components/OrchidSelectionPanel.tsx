@@ -557,22 +557,23 @@ export default function OrchidSelectionPanel({
                 onToggleSelected={onSelectOrchidGroup}
               />
 
-              <div className="mt-3 grid shrink-0 grid-cols-2 gap-2">
-                <ActionButton
-                  icon={<Clipboard className="h-4 w-4" />}
-                  label="작업 기록 추가"
-                  onClick={onOpenWorkRecord}
-                  active={mutationMode === "WORK_RECORD"}
-                  disabled={multiSelectEnabled}
-                />
-                <ActionButton
-                  icon={<Move className="h-4 w-4" />}
-                  label="자리 이동"
-                  onClick={onOpenMove}
-                  active={mutationMode === "MOVE"}
-                  disabled={multiSelectEnabled || !selectedOrchidGroup}
-                />
-              </div>
+              {!multiSelectEnabled ? (
+                <div className="mt-3 grid shrink-0 grid-cols-2 gap-2">
+                  <ActionButton
+                    icon={<Clipboard className="h-4 w-4" />}
+                    label="작업 기록 추가"
+                    onClick={onOpenWorkRecord}
+                    active={mutationMode === "WORK_RECORD"}
+                  />
+                  <ActionButton
+                    icon={<Move className="h-4 w-4" />}
+                    label="자리 이동"
+                    onClick={onOpenMove}
+                    active={mutationMode === "MOVE"}
+                    disabled={!selectedOrchidGroup}
+                  />
+                </div>
+              ) : null}
             </div>
           ) : (
             <div className="mt-3 shrink-0">

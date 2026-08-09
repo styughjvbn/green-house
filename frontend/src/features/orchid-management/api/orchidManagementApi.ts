@@ -18,6 +18,7 @@ import type {
 import type {
   DerivedOrchidGroup,
   MutationPayload,
+  OrchidGroupBatchUpdateItem,
   OrchidGroupCollection,
   OrchidGroupLineage,
   PreciseMovePayload,
@@ -107,6 +108,23 @@ export async function updateOrchidGroup(
     "PATCH",
     payload,
   );
+}
+
+export async function updateOrchidGroupsBatch(
+  orchidGroups: OrchidGroupBatchUpdateItem[],
+): Promise<void> {
+  const response = await fetch(`${API_BASE_URL}/orchid-groups/batch`, {
+    method: "PATCH",
+    credentials: "include",
+    headers: buildApiHeaders({ "Content-Type": "application/json" }),
+    body: JSON.stringify({ orchidGroups }),
+  });
+  const body = await readJson(response);
+  if (!response.ok) {
+    throw new Error(
+      resolveErrorMessage(body, "일괄 보정을 완료하지 못했습니다."),
+    );
+  }
 }
 
 export async function deleteOrchidGroup(orchidGroupId: number): Promise<void> {

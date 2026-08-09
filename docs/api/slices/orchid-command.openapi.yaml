@@ -190,6 +190,24 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ApiResponseOrchidGroupResponse'
+  /api/orchid-groups/batch:
+    patch:
+      tags:
+      - orchid-group-command-controller
+      operationId: updateBatch
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/OrchidGroupBatchUpdateRequest'
+        required: true
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponseListOrchidGroupResponse'
   /api/work-operations/{workOperationId}/repot-results:
     get:
       tags:
@@ -254,6 +272,15 @@ components:
       properties:
         data:
           $ref: '#/components/schemas/BedZonePlacementProfileResponse'
+        message:
+          type: string
+    ApiResponseListOrchidGroupResponse:
+      type: object
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/OrchidGroupResponse'
         message:
           type: string
     ApiResponseMultiCreateCancellationEligibilityResponse:
@@ -471,6 +498,27 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/OrchidGroupResponse'
+    OrchidGroupBatchUpdateItem:
+      type: object
+      properties:
+        orchidGroupId:
+          type: integer
+          format: int64
+        update:
+          $ref: '#/components/schemas/OrchidGroupUpdateRequest'
+      required:
+      - orchidGroupId
+      - update
+    OrchidGroupBatchUpdateRequest:
+      type: object
+      properties:
+        orchidGroups:
+          type: array
+          items:
+            $ref: '#/components/schemas/OrchidGroupBatchUpdateItem'
+          minItems: 1
+      required:
+      - orchidGroups
     OrchidGroupCreateRequest:
       type: object
       properties:

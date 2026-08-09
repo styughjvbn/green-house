@@ -10,6 +10,7 @@ import type {
   OrchidManagementMapProps,
 } from "../model/types";
 import BedNavigationToolbar from "./components/BedNavigationToolbar";
+import BulkOrchidGroupCorrectionPanel from "./components/BulkOrchidGroupCorrectionPanel";
 import ContinuousBedMap from "./components/ContinuousBedMap";
 import WorkOperationCorrectionForm from "./components/WorkOperationCorrectionForm";
 import OrchidSelectionPanel from "./components/OrchidSelectionPanel";
@@ -73,6 +74,7 @@ export function OrchidManagementMap({
   const [correctionOperationId, setCorrectionOperationId] = useState<
     number | null
   >(null);
+  const [showBulkCorrection, setShowBulkCorrection] = useState(false);
   const [searchGroupOrchidGroupIds, setSearchGroupOrchidGroupIds] =
     useState<Set<number> | null>(null);
   const placementHouses = useMemo(
@@ -295,7 +297,7 @@ export function OrchidManagementMap({
         {multiSelection.enabled ? (
           <SelectedOrchidGroupsInfo
             orchidGroups={multiSelection.selectedOrchidGroups}
-            onClear={multiSelection.clear}
+            onBulkCorrection={() => setShowBulkCorrection(true)}
             onRemove={multiSelection.toggleOrchidGroup}
           />
         ) : (
@@ -332,7 +334,24 @@ export function OrchidManagementMap({
         {/* <BedPrecisionSettings zone={orchidManagement.resolvedZone} /> 26.07.11 비활성화*/}
       </section>
       <div className="flex h-full min-h-0 flex-col gap-3">
-        {correctionOperationId && orchidManagement.selectedOrchidGroup ? (
+        {showBulkCorrection &&
+        multiSelection.enabled &&
+        multiSelection.selectedOrchidGroups.length > 0 ? (
+          <BulkOrchidGroupCorrectionPanel
+            key={multiSelection.selectedOrchidGroups
+              .map((orchidGroup) => orchidGroup.id)
+              .join("-")}
+            errorMessage={orchidManagement.errorMessage}
+            orchidGroups={multiSelection.selectedOrchidGroups}
+            saving={orchidManagement.saving}
+            onCancel={() => setShowBulkCorrection(false)}
+            onSubmit={async (items) => {
+              const saved = await orchidManagement.actions.editBatch(items);
+              if (saved) setShowBulkCorrection(false);
+              return saved;
+            }}
+          />
+        ) : correctionOperationId && orchidManagement.selectedOrchidGroup ? (
           <WorkOperationCorrectionForm
             key={`${correctionOperationId}-${orchidManagement.selectedOrchidGroup.id}`}
             originalWorkOperationId={correctionOperationId}
@@ -435,6 +454,7 @@ export function OrchidManagementMap({
             onSyncMapCellRangePick={syncMapCellRangePick}
             onToggleMultiSelect={() => {
               clearMapCellRangePick();
+              setShowBulkCorrection(false);
               orchidManagement.actions.cancelMutation();
               multiSelection.toggleEnabled();
             }}

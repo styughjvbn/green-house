@@ -124,6 +124,7 @@ export default function OrchidGroupList({
                       <StatusBadge value={orchidGroup.status} />
                       <IconAction
                         label="복사"
+                        disabled={multiSelectEnabled}
                         onClick={() => onCopy(orchidGroup.id)}
                       >
                         <Copy
@@ -134,6 +135,7 @@ export default function OrchidGroupList({
                       </IconAction>
                       <IconAction
                         label="보정"
+                        disabled={multiSelectEnabled}
                         onClick={() => onEdit(orchidGroup.id)}
                       >
                         <Edit2
@@ -144,7 +146,7 @@ export default function OrchidGroupList({
                       </IconAction>
                       <IconAction
                         label="삭제"
-                        disabled={saving}
+                        disabled={multiSelectEnabled || saving}
                         onClick={() => onDelete(orchidGroup.id)}
                       >
                         <Trash2
