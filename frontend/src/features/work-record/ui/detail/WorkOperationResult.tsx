@@ -5,10 +5,7 @@ import { getWorkExecutionKind } from "../../model/work-types/workTypeDefinition"
 import { workOperationDetailsQueryOptions } from "../../model/workRecordQueryOptions";
 import { WorkCompletionDateDialog } from "./WorkCompletionDateDialog";
 import { WorkOperationDetails } from "./WorkOperationDetails";
-import {
-  operationStatusLabel,
-  targetStatusLabel,
-} from "../common/workOperationLabels";
+import { operationStatusLabel } from "../common/workOperationLabels";
 
 export function OperationResult({
   className = "mt-4",
@@ -40,7 +37,6 @@ export function OperationResult({
   const terminal = completed || canceled || corrected;
   const completedDetailQuery = useQuery({
     ...workOperationDetailsQueryOptions(operation.id),
-    enabled: completed || corrected,
   });
   const active = operation.status === "IN_PROGRESS";
   const canComplete =
@@ -54,7 +50,6 @@ export function OperationResult({
   const structureChange =
     executionKind === "STRUCTURE_CHANGE" || executionKind === "MOVEMENT";
   const potting = executionKind === "POTTING";
-  const requiresResultEntry = executionKind != null;
   const firstExecutablePottingTarget = operation.targets.find(
     (target) =>
       target.remainingQuantity > 0 &&
@@ -158,6 +153,8 @@ export function OperationResult({
       </div>
 
       <WorkOperationDetails
+        key={operation.id}
+        actionLoading={loading}
         detail={completedDetailQuery.data ?? null}
         error={
           completedDetailQuery.error instanceof Error
@@ -166,129 +163,12 @@ export function OperationResult({
               ? "완료 상세를 불러오지 못했습니다."
               : null
         }
-        loading={(completed || corrected) && completedDetailQuery.isPending}
+        loading={completedDetailQuery.isPending}
         operation={operation}
+        onExecuteTarget={onExecuteTarget}
+        onRequestTargetCompletion={setCompletionTargetId}
+        onTargetAction={(targetId, action) => onTargetAction(targetId, action)}
       />
-
-      <div className="mt-4 rounded-md bg-[#f4f7f3] p-3">
-        <div className="flex items-center justify-between text-sm font-semibold text-[#344138]">
-          <span>
-            완료 {operation.progress.completed} · 진행{" "}
-            {operation.progress.inProgress} · 부분 {operation.progress.partial}{" "}
-            · 대기 {operation.progress.pending} · 건너뜀{" "}
-            {operation.progress.skipped}
-          </span>
-          <span>{operation.progress.progressPercent}%</span>
-        </div>
-        <div className="mt-2 h-2 overflow-hidden rounded-full bg-[#dce5dc]">
-          <div
-            className="h-full rounded-full bg-[#159447] transition-all"
-            style={{ width: `${operation.progress.progressPercent}%` }}
-          />
-        </div>
-      </div>
-
-      <div className="mt-4 max-h-72 overflow-y-auto rounded-md border border-[#e1e6df]">
-        {operation.targets.map((target) => (
-          <div
-            className="flex flex-wrap items-center gap-2 border-b border-[#edf0ec] px-3 py-2 last:border-b-0"
-            key={
-              target.id ??
-              `${target.targetReferenceType}-${target.orchidGroupId ?? target.inboundRecordId}`
-            }
-          >
-            <div className="min-w-0 flex-1">
-              <p className="truncate text-sm font-semibold text-[#26352b]">
-                {target.varietyName}
-              </p>
-              <p className="mt-0.5 text-xs text-[#6a766e]">
-                {target.targetReferenceType === "INBOUND_RECORD"
-                  ? `${target.locationSnapshot.tempLocation ?? "임시 위치 미지정"} · 입고 #${target.inboundRecordId}`
-                  : `${target.locationSnapshot.houseNumber}동 ${target.locationSnapshot.physicalBedNumber}다이 ${target.locationSnapshot.bedZoneName}`}{" "}
-                · 계획 {target.quantitySnapshot}분
-                {target.processedQuantity > 0
-                  ? ` · 작업 ${target.processedQuantity}분 · 잔여 ${target.remainingQuantity}분`
-                  : ""}
-                {target.completedAt
-                  ? ` · 완료 ${target.completedAt.slice(0, 10)}`
-                  : ""}
-              </p>
-            </div>
-            <span className="rounded-full bg-[#eef2ed] px-2 py-1 text-xs font-semibold text-[#526057]">
-              {targetStatusLabel(target.executionStatus)}
-            </span>
-            {structureChange &&
-            active &&
-            target.id != null &&
-            (target.executionStatus === "PENDING" ||
-              target.executionStatus === "PARTIALLY_COMPLETED") ? (
-              <StatusAction
-                small
-                label={
-                  target.executionStatus === "PARTIALLY_COMPLETED"
-                    ? "잔여 제외"
-                    : "건너뛰기"
-                }
-                disabled={loading}
-                onClick={() => onTargetAction(target.id!, "skip")}
-              />
-            ) : null}
-            {!structureChange &&
-            !potting &&
-            active &&
-            target.id != null &&
-            target.executionStatus === "PENDING" ? (
-              <StatusAction
-                small
-                label="시작"
-                disabled={loading}
-                onClick={() => onTargetAction(target.id!, "start")}
-              />
-            ) : null}
-            {!structureChange &&
-            !potting &&
-            active &&
-            target.id != null &&
-            (target.executionStatus === "PENDING" ||
-              target.executionStatus === "IN_PROGRESS") ? (
-              <>
-                <StatusAction
-                  small
-                  primary
-                  label={requiresResultEntry ? "결과 입력" : "완료"}
-                  disabled={
-                    loading || (requiresResultEntry && !onExecuteTarget)
-                  }
-                  onClick={() => {
-                    if (requiresResultEntry) {
-                      onExecuteTarget?.(target);
-                    } else {
-                      setCompletionTargetId(target.id!);
-                    }
-                  }}
-                />
-                <StatusAction
-                  small
-                  label="건너뛰기"
-                  disabled={loading}
-                  onClick={() => onTargetAction(target.id!, "skip")}
-                />
-              </>
-            ) : null}
-            {potting &&
-            active &&
-            target.id != null &&
-            target.executionStatus === "PENDING" ? (
-              <StatusAction
-                small
-                label="건너뛰기"
-                disabled={loading}
-                onClick={() => onTargetAction(target.id!, "skip")}
-              />
-            ) : null}
-          </div>
-        ))}
-      </div>
       {completionTargetId != null ? (
         <WorkCompletionDateDialog
           title={
