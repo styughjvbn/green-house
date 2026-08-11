@@ -25,13 +25,17 @@ public class SalesPaymentService {
 	private final SettlementAuditSupport auditSupport;
 
 	public SalesSlipResponse confirmPayment(Long salesSlipId, ManualPaymentRequest request) {
-		var salesSlip = salesSlipRepository.findWithDetailsById(salesSlipId)
+		var salesSlip = salesSlipRepository.findForUpdateById(salesSlipId)
 				.orElseThrow(() -> new NotFoundException("판매 전표를 찾을 수 없습니다."));
 		if (salesSlip.getSalesType() != SalesType.DIRECT) {
 			throw new IllegalArgumentException("경매 판매전표는 경매장 정산에서 입금을 확인해야 합니다.");
 		}
 		if (salesSlip.isCanceled()) {
 			throw new IllegalArgumentException("취소된 전표는 입금을 확인할 수 없습니다.");
+		}
+		if (paymentLedgerService.findManualPayment(
+				PaymentTargetType.SALES_SLIP, salesSlipId, request).isPresent()) {
+			return SalesSlipResponse.from(salesSlip);
 		}
 
 		var before = auditSupport.paymentSnapshot(salesSlip.getPaidAmount(), salesSlip.getRemainingAmount(),

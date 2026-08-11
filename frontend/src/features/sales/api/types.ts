@@ -86,6 +86,7 @@ export type AuctionLotStatusPayload = {
 export type ManualPaymentPayload = {
   amount: number;
   paymentDate: string;
+  idempotencyKey: string;
   paymentMethod: string | null;
   depositorName: string | null;
   worker: string | null;

@@ -68,6 +68,13 @@ class PaymentTests {
 
 		mockMvc.perform(post("/api/sales-slips/{id}/confirm-payment", slip.getId())
 				.contentType("application/json")
+				.content(paymentJson(30_000)))
+			.andExpect(status().isOk())
+			.andExpect(jsonPath("$.data.paidAmount").value(30_000))
+			.andExpect(jsonPath("$.data.remainingAmount").value(70_000));
+
+		mockMvc.perform(post("/api/sales-slips/{id}/confirm-payment", slip.getId())
+				.contentType("application/json")
 				.content(paymentJson(70_000)))
 			.andExpect(status().isOk())
 			.andExpect(jsonPath("$.data.paidAmount").value(100_000))
@@ -144,11 +151,12 @@ class PaymentTests {
 			{
 			  "amount": %d,
 			  "paymentDate": "2026-07-06",
+			  "idempotencyKey": "manual-payment-%d",
 			  "paymentMethod": "계좌이체",
 			  "depositorName": "테스트 입금자",
 			  "worker": "관리자",
 			  "memo": "수동 확인"
 			}
-			""".formatted(amount);
+			""".formatted(amount, amount);
 	}
 }

@@ -116,6 +116,7 @@ public class PartnerPaymentEvent extends BaseEntity {
 			String paymentMethod,
 			String depositorName,
 			String description,
+			String externalUid,
 			PaymentEventStatus status,
 			String memo,
 			String createdBy) {
@@ -130,6 +131,7 @@ public class PartnerPaymentEvent extends BaseEntity {
 		this.paymentMethod = paymentMethod;
 		this.depositorName = depositorName;
 		this.description = description;
+		this.externalUid = externalUid;
 		this.status = status;
 		this.memo = memo;
 		this.createdBy = createdBy;
@@ -143,11 +145,13 @@ public class PartnerPaymentEvent extends BaseEntity {
 			Long targetId,
 			String paymentMethod,
 			String depositorName,
+			String externalUid,
 			String memo,
 			String createdBy) {
 		return new PartnerPaymentEvent(
 				partner, PaymentEventType.PAYMENT_RECEIVED, eventDate, amount, targetType, targetId, null,
-				paymentMethod, depositorName, "수동 입금 확인", PaymentEventStatus.FULLY_APPLIED, memo, createdBy);
+				paymentMethod, depositorName, "수동 입금 확인", externalUid,
+				PaymentEventStatus.FULLY_APPLIED, memo, createdBy);
 	}
 
 	public static PartnerPaymentEvent manualMatch(PartnerPaymentEvent receivedEvent) {
@@ -155,6 +159,6 @@ public class PartnerPaymentEvent extends BaseEntity {
 				receivedEvent.partner, PaymentEventType.MANUAL_MATCH_CONFIRMED, receivedEvent.eventDate,
 				receivedEvent.amount, receivedEvent.targetType, receivedEvent.targetId, receivedEvent,
 				receivedEvent.paymentMethod, receivedEvent.depositorName, "수동 입금 연결",
-				PaymentEventStatus.CONFIRMED, receivedEvent.memo, receivedEvent.createdBy);
+				null, PaymentEventStatus.CONFIRMED, receivedEvent.memo, receivedEvent.createdBy);
 	}
 }

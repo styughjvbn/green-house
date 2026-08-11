@@ -9,6 +9,8 @@ import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
+import org.springframework.data.jpa.repository.Lock;
+import jakarta.persistence.LockModeType;
 
 public interface AuctionSettlementRepository extends JpaRepository<AuctionSettlement, Long> {
 	@Query("""
@@ -39,4 +41,8 @@ public interface AuctionSettlementRepository extends JpaRepository<AuctionSettle
 	@EntityGraph(attributePaths = { "auctionHouse", "lines", "lines.auctionResultLine", "lines.auctionShipmentLot",
 			"lines.auctionShipmentLot.shipment" })
 	Optional<AuctionSettlement> findWithDetailsById(Long id);
+
+	@Lock(LockModeType.PESSIMISTIC_WRITE)
+	@Query("select settlement from AuctionSettlement settlement where settlement.id = :id")
+	Optional<AuctionSettlement> findForUpdateById(@Param("id") Long id);
 }

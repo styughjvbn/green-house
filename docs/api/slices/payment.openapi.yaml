@@ -213,6 +213,10 @@ components:
         paymentDate:
           type: string
           format: date
+        idempotencyKey:
+          type: string
+          maxLength: 100
+          minLength: 0
         paymentMethod:
           type: string
           maxLength: 30
@@ -231,6 +235,7 @@ components:
           minLength: 0
       required:
       - amount
+      - idempotencyKey
       - paymentDate
     PartnerBalanceSummaryResponse:
       type: object
