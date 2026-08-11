@@ -15,24 +15,30 @@ import org.junit.jupiter.api.Test;
 class ModularArchitectureTests {
 	private static final Path SOURCE_ROOT = Path.of("src/main/java/com/greenhouse/backend");
 	private static final Set<String> MODULES = Set.of(
-		"common", "audit", "farm", "work", "partner", "sales", "auction", "settlement", "dashboard", "print");
+		"common", "audit", "farm", "work", "partner", "sales", "auction", "settlement", "dashboard", "print",
+		"analytics", "auth", "demo");
+	private static final Set<String> LAYERED_MODULES = Set.of(
+		"audit", "farm", "work", "partner", "sales", "auction", "settlement", "dashboard", "print", "analytics");
 	private static final Set<String> STANDARD_LAYERS = Set.of(
 		"domain", "repository", "application", "controller", "dto");
-	private static final Map<String, Set<String>> ALLOWED_DEPENDENCIES = Map.of(
-		"common", Set.of(),
-		"audit", Set.of("common"),
-		"farm", Set.of("common", "work", "audit"),
-		"work", Set.of("common"),
-		"partner", Set.of("common", "audit"),
-		"sales", Set.of("common", "audit", "auction", "farm", "partner", "settlement"),
-		"auction", Set.of("common", "partner"),
-		"settlement", Set.of("common", "audit", "auction", "partner"),
-		"dashboard", Set.of("common", "farm"),
-		"print", Set.of("common", "sales"));
+	private static final Map<String, Set<String>> ALLOWED_DEPENDENCIES = Map.ofEntries(
+		Map.entry("common", Set.of()),
+		Map.entry("audit", Set.of("common")),
+		Map.entry("farm", Set.of("common", "work", "audit")),
+		Map.entry("work", Set.of("common")),
+		Map.entry("partner", Set.of("common", "audit")),
+		Map.entry("sales", Set.of("common", "audit", "auction", "farm", "partner", "settlement")),
+		Map.entry("auction", Set.of("common", "partner")),
+		Map.entry("settlement", Set.of("common", "audit", "auction", "partner")),
+		Map.entry("dashboard", Set.of("common", "farm")),
+		Map.entry("print", Set.of("common", "sales")),
+		Map.entry("analytics", Set.of("common", "farm", "partner", "sales", "settlement", "work")),
+		Map.entry("auth", Set.of("common", "demo")),
+		Map.entry("demo", Set.of()));
 	private static final Pattern MODULE_IMPORT = Pattern.compile(
-		"import com\\.greenhouse\\.backend\\.([a-z]+)\\.");
+		"\\bimport\\s+(?:static\\s+)?com\\.greenhouse\\.backend\\.([a-z]+)\\.");
 	private static final Pattern REPOSITORY_IMPORT = Pattern.compile(
-		"import com\\.greenhouse\\.backend\\.([a-z]+)\\.repository\\.");
+		"\\bimport\\s+(?:static\\s+)?com\\.greenhouse\\.backend\\.([a-z]+)\\.repository\\.");
 
 	@Test
 	void moduleRootsAndLayersAreExplicit() throws IOException {
@@ -40,7 +46,7 @@ class ModularArchitectureTests {
 			Path moduleRoot = SOURCE_ROOT.resolve(module);
 			assertThat(moduleRoot).isDirectory();
 			assertThat(moduleRoot.resolve("package-info.java")).exists();
-			if (module.equals("common")) continue;
+			if (!LAYERED_MODULES.contains(module)) continue;
 
 			try (Stream<Path> files = Files.walk(moduleRoot)) {
 				List<Path> misplaced = files

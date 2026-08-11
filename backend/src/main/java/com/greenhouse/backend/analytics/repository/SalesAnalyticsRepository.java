@@ -8,10 +8,6 @@ import static com.greenhouse.backend.settlement.domain.QPartnerBalanceSummary.pa
 import static com.greenhouse.backend.work.domain.operation.QWorkOperation.workOperation;
 import static com.greenhouse.backend.work.domain.operation.QWorkType.workType;
 
-import com.greenhouse.backend.analytics.dto.AnalyticsSlipSummaryResponse;
-import com.greenhouse.backend.analytics.dto.PartnerAnalyticsStatResponse;
-import com.greenhouse.backend.analytics.dto.WorkAnalyticsItemResponse;
-import com.greenhouse.backend.analytics.dto.VarietyInventoryAnalyticsResponse;
 import com.greenhouse.backend.work.domain.operation.WorkOperationStatus;
 import com.greenhouse.backend.work.domain.operation.WorkTypeTemplate;
 import com.querydsl.core.Tuple;
@@ -63,7 +59,7 @@ public class SalesAnalyticsRepository {
 				.fetchOne());
 	}
 
-	public List<VarietyInventoryAnalyticsResponse> varietyInventory() {
+	public List<VarietyInventoryAnalyticsRow> varietyInventory() {
 		Map<String, long[]> values = new LinkedHashMap<>();
 		queryFactory
 				.select(
@@ -87,11 +83,11 @@ public class SalesAnalyticsRepository {
 					}
 				});
 		return values.entrySet().stream()
-				.map(entry -> new VarietyInventoryAnalyticsResponse(
+				.map(entry -> new VarietyInventoryAnalyticsRow(
 						entry.getKey(),
 						entry.getValue()[0],
 						entry.getValue()[1]))
-				.sorted(Comparator.comparing(VarietyInventoryAnalyticsResponse::saleableQuantity).reversed())
+				.sorted(Comparator.comparing(VarietyInventoryAnalyticsRow::saleableQuantity).reversed())
 				.toList();
 	}
 
@@ -164,14 +160,14 @@ public class SalesAnalyticsRepository {
 				.toList();
 	}
 
-	public List<AnalyticsSlipSummaryResponse> recentSlips(LocalDate from, LocalDate to, int limit) {
+	public List<AnalyticsSlipSummaryRow> recentSlips(LocalDate from, LocalDate to, int limit) {
 		return slipSummaryQuery(from, to)
 				.orderBy(salesSlip.saleDate.desc(), salesSlip.id.desc())
 				.limit(limit)
 				.fetch();
 	}
 
-	public List<AnalyticsSlipSummaryResponse> unpaidSlips(LocalDate from, LocalDate to, int limit) {
+	public List<AnalyticsSlipSummaryRow> unpaidSlips(LocalDate from, LocalDate to, int limit) {
 		return slipSummaryQuery(from, to)
 				.where(salesSlip.remainingAmount.gt(0L))
 				.orderBy(salesSlip.remainingAmount.desc(), salesSlip.saleDate.desc())
@@ -179,7 +175,7 @@ public class SalesAnalyticsRepository {
 				.fetch();
 	}
 
-	public List<PartnerAnalyticsStatResponse> partnerStats(LocalDate from, LocalDate to) {
+	public List<PartnerAnalyticsStatRow> partnerStats(LocalDate from, LocalDate to) {
 		var totalSales = salesSlip.totalAmount.sum().longValue();
 		var transactionCount = salesSlip.id.count();
 		var unpaidAmount = salesSlip.remainingAmount.sum();
@@ -266,10 +262,10 @@ public class SalesAnalyticsRepository {
 				.toList();
 	}
 
-	public List<WorkAnalyticsItemResponse> recentWorkOperations(LocalDate from, LocalDate to, int limit) {
+	public List<WorkAnalyticsItemRow> recentWorkOperations(LocalDate from, LocalDate to, int limit) {
 		return queryFactory
 				.select(Projections.constructor(
-						WorkAnalyticsItemResponse.class,
+						WorkAnalyticsItemRow.class,
 						workOperation.id,
 						workOperation.plannedStartDate,
 						workType.name,
@@ -287,10 +283,10 @@ public class SalesAnalyticsRepository {
 				.fetch();
 	}
 
-	private com.querydsl.jpa.impl.JPAQuery<AnalyticsSlipSummaryResponse> slipSummaryQuery(LocalDate from, LocalDate to) {
+	private com.querydsl.jpa.impl.JPAQuery<AnalyticsSlipSummaryRow> slipSummaryQuery(LocalDate from, LocalDate to) {
 		return queryFactory
 				.select(Projections.constructor(
-						AnalyticsSlipSummaryResponse.class,
+						AnalyticsSlipSummaryRow.class,
 						salesSlip.id,
 						salesSlip.slipNumber,
 						salesSlip.saleDate,
@@ -305,14 +301,14 @@ public class SalesAnalyticsRepository {
 				.where(saleDateBetween(from, to), completedSalesSlip());
 	}
 
-	private PartnerAnalyticsStatResponse partnerStat(
+	private PartnerAnalyticsStatRow partnerStat(
 			Tuple tuple,
 			NumberExpression<Long> totalSales,
 			NumberExpression<Long> transactionCount,
 			NumberExpression<Long> unpaidAmount,
 			NumberExpression<Long> paidAmount,
 			com.querydsl.core.types.dsl.DateExpression<LocalDate> latestSaleDate) {
-		return new PartnerAnalyticsStatResponse(
+		return new PartnerAnalyticsStatRow(
 				tuple.get(businessPartner.id),
 				tuple.get(businessPartner.name),
 				tuple.get(businessPartner.partnerType),
