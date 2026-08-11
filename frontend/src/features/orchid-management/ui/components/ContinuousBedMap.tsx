@@ -139,6 +139,17 @@ export default function ContinuousBedMap({
               )}
             </div>
           ))}
+          {Array.from(
+            { length: Math.max(0, visibleBedCount - 1) },
+            (_, index) => (
+              <div
+                aria-hidden="true"
+                className="min-w-0 shrink-0 pl-3"
+                key={`end-placeholder-${index}`}
+                style={{ flexBasis: `${100 / visibleBedCount}%` }}
+              />
+            ),
+          )}
         </div>
       </div>
     </section>

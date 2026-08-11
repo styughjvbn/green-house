@@ -28,7 +28,7 @@ class FarmStatusServiceTest {
 			orchidGroupRepository);
 
 	@Test
-	void returnsContinuousBedsAndTrimsLastViewport() {
+	void preservesRequestedBedAtTheStartOfTheLastViewport() {
 		var beds = List.of(
 				bed(11L, 1L, 1, 1),
 				bed(12L, 1L, 1, 2),
@@ -39,8 +39,8 @@ class FarmStatusServiceTest {
 
 		var result = service.getOrchidManagementViewport(22L, 3);
 
-		assertThat(result.startBedId()).isEqualTo(13L);
-		assertThat(result.beds()).extracting("id").containsExactly(13L, 21L, 22L);
+		assertThat(result.startBedId()).isEqualTo(22L);
+		assertThat(result.beds()).extracting("id").containsExactly(22L);
 		assertThat(result.hasPrevious()).isTrue();
 		assertThat(result.hasNext()).isFalse();
 		assertThat(result.bedOrder()).extracting("id").containsExactly(11L, 12L, 13L, 21L, 22L);

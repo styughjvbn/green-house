@@ -270,8 +270,8 @@ export function OrchidManagementMap({
           houses={mapData.houses}
           startHouseId={bedViewport.visibleBeds[0]?.houseId ?? null}
           visibleBedCount={bedViewport.visibleBedCount}
-          hasPrevious={bedViewport.hasPrevious}
-          hasNext={bedViewport.hasNext}
+          hasPreviousHouse={bedViewport.hasPreviousHouse}
+          hasNextHouse={bedViewport.hasNextHouse}
           showScale={showScale}
           onToggleVarietyColors={toggleVarietyColors}
           onToggleScale={() => setShowScale((current) => !current)}
@@ -279,8 +279,8 @@ export function OrchidManagementMap({
             clearMapCellRangePick();
             orchidManagement.actions.openCreate();
           }}
-          onPrevious={bedViewport.actions.previous}
-          onNext={bedViewport.actions.next}
+          onPrevious={bedViewport.actions.previousHouse}
+          onNext={bedViewport.actions.nextHouse}
           onGoToHouse={(houseId) => {
             bedViewport.actions.goToHouse(houseId);
             orchidManagement.actions.selectHouse(houseId);

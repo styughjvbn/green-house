@@ -6,6 +6,6 @@ export type BedViewportState = {
   visibleBedCount: VisibleBedCount;
   visibleBedIds: number[];
   visibleBeds: PhysicalBed[];
-  hasPrevious: boolean;
-  hasNext: boolean;
+  hasPreviousHouse: boolean;
+  hasNextHouse: boolean;
 };

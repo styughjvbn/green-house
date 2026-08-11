@@ -95,7 +95,7 @@ public class FarmStatusService {
 				}
 			}
 		}
-		int startIndex = Math.min(requestedIndex, Math.max(0, allBeds.size() - bedCount));
+		int startIndex = Math.min(requestedIndex, allBeds.size() - 1);
 		var visibleBeds = allBeds.subList(startIndex, Math.min(startIndex + bedCount, allBeds.size()));
 
 		long orchidGroupCount = 0;

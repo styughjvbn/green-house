@@ -14,7 +14,7 @@ export function useBedViewport(
     beds.findIndex((bed) => bed.id === initialStartBedId),
   );
   const [startBedIndex, setStartBedIndex] = useState(() =>
-    clampStartIndex(initialIndex, beds.length, initialVisibleBedCount),
+    clampStartIndex(initialIndex, beds.length),
   );
   const [visibleBedCount, setVisibleBedCountState] = useState(
     initialVisibleBedCount,
@@ -41,11 +41,7 @@ export function useBedViewport(
 
   const setStartIndex = useCallback(
     (requestedIndex: number) => {
-      const nextIndex = clampStartIndex(
-        requestedIndex,
-        beds.length,
-        visibleBedCount,
-      );
+      const nextIndex = clampStartIndex(requestedIndex, beds.length);
       setStartBedIndex(nextIndex);
       replaceUrl(nextIndex, visibleBedCount);
     },
@@ -54,7 +50,7 @@ export function useBedViewport(
 
   const setVisibleBedCount = useCallback(
     (nextCount: VisibleBedCount) => {
-      const nextIndex = clampStartIndex(startBedIndex, beds.length, nextCount);
+      const nextIndex = clampStartIndex(startBedIndex, beds.length);
       setVisibleBedCountState(nextCount);
       setStartBedIndex(nextIndex);
       replaceUrl(nextIndex, nextCount);
@@ -67,22 +63,54 @@ export function useBedViewport(
       startBedIndex,
       startBedIndex + visibleBedCount,
     );
+    const currentHouseId = beds[startBedIndex]?.houseId;
+    const houseIds = beds.reduce<number[]>((ids, bed) => {
+      if (ids.at(-1) !== bed.houseId) ids.push(bed.houseId);
+      return ids;
+    }, []);
+    const currentHouseIndex =
+      currentHouseId == null ? -1 : houseIds.indexOf(currentHouseId);
     return {
       startBedId: visibleBeds[0]?.id ?? null,
       startBedIndex,
       visibleBedCount,
       visibleBedIds: visibleBeds.map((bed) => bed.id),
       visibleBeds,
-      hasPrevious: startBedIndex > 0,
-      hasNext: startBedIndex + visibleBedCount < beds.length,
+      hasPreviousHouse: currentHouseIndex > 0,
+      hasNextHouse:
+        currentHouseIndex >= 0 && currentHouseIndex < houseIds.length - 1,
     };
   }, [beds, startBedIndex, visibleBedCount]);
 
   return {
     ...state,
     actions: {
-      previous: () => setStartIndex(startBedIndex - 1),
-      next: () => setStartIndex(startBedIndex + 1),
+      previousHouse: () => {
+        const currentHouseId = beds[startBedIndex]?.houseId;
+        let previousIndex = startBedIndex - 1;
+        while (
+          previousIndex >= 0 &&
+          beds[previousIndex]?.houseId === currentHouseId
+        ) {
+          previousIndex -= 1;
+        }
+        const previousHouseId = beds[previousIndex]?.houseId;
+        while (
+          previousIndex > 0 &&
+          beds[previousIndex - 1]?.houseId === previousHouseId
+        ) {
+          previousIndex -= 1;
+        }
+        if (previousIndex >= 0) setStartIndex(previousIndex);
+      },
+      nextHouse: () => {
+        const currentHouseId = beds[startBedIndex]?.houseId;
+        const nextIndex = beds.findIndex(
+          (bed, index) =>
+            index > startBedIndex && bed.houseId !== currentHouseId,
+        );
+        if (nextIndex >= 0) setStartIndex(nextIndex);
+      },
       goToBed: (bedId: number) => {
         const index = beds.findIndex((bed) => bed.id === bedId);
         if (index >= 0) setStartIndex(index);
@@ -97,10 +125,6 @@ export function useBedViewport(
   };
 }
 
-function clampStartIndex(
-  index: number,
-  bedLength: number,
-  visibleBedCount: VisibleBedCount,
-) {
-  return Math.min(Math.max(index, 0), Math.max(0, bedLength - visibleBedCount));
+function clampStartIndex(index: number, bedLength: number) {
+  return Math.min(Math.max(index, 0), Math.max(0, bedLength - 1));
 }

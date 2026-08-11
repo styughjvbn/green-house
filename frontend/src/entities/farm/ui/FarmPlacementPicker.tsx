@@ -13,7 +13,7 @@ import type {
 import { useFarmBedViewportCache } from "@/entities/farm/model/useFarmBedViewportCache";
 import useEmblaCarousel from "embla-carousel-react";
 import { ChevronLeft, ChevronRight, MapPin, X } from "lucide-react";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 
 type ResolvedZone = {
   house: House;
@@ -349,8 +349,6 @@ function FarmPlacementBedCarousel({
     loop: false,
     slidesToScroll: 1,
   });
-  const [canScrollPrevious, setCanScrollPrevious] = useState(false);
-  const [canScrollNext, setCanScrollNext] = useState(false);
   const [activeBedIndex, setActiveBedIndex] = useState(0);
   const houses = useMemo(
     () =>
@@ -360,29 +358,32 @@ function FarmPlacementBedCarousel({
       ),
     [bedOrder],
   );
+  const activeHouseIndex = houses.findIndex(
+    (house) => house.houseId === bedOrder[activeBedIndex]?.houseId,
+  );
 
-  const syncControls = useCallback(() => {
-    if (!emblaApi) return;
-    setCanScrollPrevious(emblaApi.canScrollPrev());
-    setCanScrollNext(emblaApi.canScrollNext());
-  }, [emblaApi]);
+  function scrollToHouse(houseIndex: number) {
+    const houseId = houses[houseIndex]?.houseId;
+    if (houseId == null) return;
+    const bedIndex = bedOrder.findIndex((bed) => bed.houseId === houseId);
+    if (bedIndex >= 0) emblaApi?.scrollTo(bedIndex);
+  }
 
   useEffect(() => {
     if (!emblaApi) return;
     const handleSelect = () => {
-      syncControls();
       const index = emblaApi.selectedScrollSnap();
       setActiveBedIndex(index);
       onViewportIndexChange(index);
     };
-    emblaApi.on("reInit", syncControls);
+    emblaApi.on("reInit", handleSelect);
     emblaApi.on("select", handleSelect);
     emblaApi.reInit();
     return () => {
-      emblaApi.off("reInit", syncControls);
+      emblaApi.off("reInit", handleSelect);
       emblaApi.off("select", handleSelect);
     };
-  }, [emblaApi, onViewportIndexChange, syncControls]);
+  }, [emblaApi, onViewportIndexChange]);
 
   useEffect(() => {
     if (selectedBedIndex >= 0) onViewportIndexChange(selectedBedIndex);
@@ -424,10 +425,9 @@ function FarmPlacementBedCarousel({
             value={bedOrder[activeBedIndex]?.houseId ?? ""}
             onChange={(event) => {
               const nextHouseId = Number(event.target.value);
-              const index = bedOrder.findIndex(
-                (bed) => bed.houseId === nextHouseId,
+              scrollToHouse(
+                houses.findIndex((house) => house.houseId === nextHouseId),
               );
-              if (index >= 0) emblaApi?.scrollTo(index);
             }}
           >
             {houses.map((house) => (
@@ -437,20 +437,22 @@ function FarmPlacementBedCarousel({
             ))}
           </select>
           <button
-            aria-label="이전 다이"
+            aria-label="이전 동"
             className="flex h-8 w-8 items-center justify-center rounded-md border border-[#d7ddd4] bg-white disabled:cursor-not-allowed disabled:opacity-40"
-            disabled={!canScrollPrevious}
+            disabled={activeHouseIndex <= 0}
             type="button"
-            onClick={() => emblaApi?.scrollPrev()}
+            onClick={() => scrollToHouse(activeHouseIndex - 1)}
           >
             <ChevronLeft className="h-4 w-4" aria-hidden="true" />
           </button>
           <button
-            aria-label="다음 다이"
+            aria-label="다음 동"
             className="flex h-8 w-8 items-center justify-center rounded-md border border-[#d7ddd4] bg-white disabled:cursor-not-allowed disabled:opacity-40"
-            disabled={!canScrollNext}
+            disabled={
+              activeHouseIndex < 0 || activeHouseIndex >= houses.length - 1
+            }
             type="button"
-            onClick={() => emblaApi?.scrollNext()}
+            onClick={() => scrollToHouse(activeHouseIndex + 1)}
           >
             <ChevronRight className="h-4 w-4" aria-hidden="true" />
           </button>
@@ -504,6 +506,13 @@ function FarmPlacementBedCarousel({
               </div>
             );
           })}
+          {Array.from({ length: 2 }, (_, index) => (
+            <div
+              aria-hidden="true"
+              className="min-w-0 shrink-0 basis-full pl-3 md:basis-1/2 xl:basis-1/3"
+              key={`end-placeholder-${index}`}
+            />
+          ))}
         </div>
       </div>
     </div>
