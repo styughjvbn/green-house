@@ -139,6 +139,13 @@ public class BatchStructureTransformationExecutor {
 								? StructureChangeResultPurpose.NORMAL.name()
 								: request.results().get(index).purpose().name()))
 				.toList());
+		if (sourceIds.size() == 1) {
+			Long sourceId = sourceIds.getFirst();
+			details.put("sourceOrchidGroupId", sourceId);
+			details.put("inputQuantity", inputBySourceId.get(sourceId));
+			details.put("remainingQuantity", sources.get(sourceId).getQuantity());
+			details.put("resultOrchidGroupIds", results.stream().map(OrchidGroup::getId).toList());
+		}
 		return new WorkExecutionResult(strategy.supports(), details, results.stream().map(OrchidGroup::getId).toList());
 	}
 
