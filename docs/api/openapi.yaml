@@ -6110,6 +6110,17 @@ components:
         linkedWorkOperationId:
           type: integer
           format: int64
+    WorkExecutionLocationResponse:
+      type: object
+      properties:
+        houseNumber:
+          type: integer
+          format: int32
+        physicalBedNumber:
+          type: integer
+          format: int32
+        bedZoneName:
+          type: string
     WorkExecutionResultResponse:
       type: object
       properties:
@@ -6140,6 +6151,10 @@ components:
           format: int32
         memo:
           type: string
+        varietyName:
+          type: string
+        location:
+          $ref: '#/components/schemas/WorkExecutionLocationResponse'
     WorkExecutionSourceResponse:
       type: object
       properties:

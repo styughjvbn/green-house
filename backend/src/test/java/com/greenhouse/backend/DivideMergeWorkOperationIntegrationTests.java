@@ -325,7 +325,11 @@ class DivideMergeWorkOperationIntegrationTests extends AbstractBackendIntegratio
 				.andExpect(jsonPath("$.data.executions[1].executionKey").value("EXECUTION:divide-batch-2"))
 				.andExpect(jsonPath("$.data.executions[0].sources[0].inputQuantity").value(10))
 				.andExpect(jsonPath("$.data.executions[1].results[0].quantity").value(10))
-				.andExpect(jsonPath("$.data.executions[1].results[0].bedZoneId").value(resultZone.getId()));
+				.andExpect(jsonPath("$.data.executions[1].results[0].bedZoneId").value(resultZone.getId()))
+				.andExpect(jsonPath("$.data.executions[1].results[0].varietyName").value("구조 변경 테스트"))
+				.andExpect(jsonPath("$.data.executions[1].results[0].location.houseNumber").value(1))
+				.andExpect(jsonPath("$.data.executions[1].results[0].location.physicalBedNumber").value(1))
+				.andExpect(jsonPath("$.data.executions[1].results[0].location.bedZoneName").value("우측"));
 
 		Long targetId = operationTargetRepository
 				.findByWorkOperationIdAndExcludedAtIsNullOrderByIdAsc(operationId).getFirst().getId();

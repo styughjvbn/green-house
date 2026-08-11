@@ -13,5 +13,7 @@ public record WorkExecutionResultResponse(
 		Integer ageYear,
 		String placementType,
 		Integer trayCount,
-		String memo) {
+		String memo,
+		String varietyName,
+		WorkExecutionLocationResponse location) {
 }

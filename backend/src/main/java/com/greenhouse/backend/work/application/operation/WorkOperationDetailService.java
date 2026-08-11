@@ -9,6 +9,7 @@ import com.greenhouse.backend.work.domain.operation.WorkOperation;
 import com.greenhouse.backend.work.dto.operation.WorkCorrectionAdjustmentResponse;
 import com.greenhouse.backend.work.dto.operation.WorkCorrectionDetailResponse;
 import com.greenhouse.backend.work.dto.operation.WorkExecutionDetailResponse;
+import com.greenhouse.backend.work.dto.operation.WorkExecutionLocationResponse;
 import com.greenhouse.backend.work.dto.operation.WorkExecutionResultResponse;
 import com.greenhouse.backend.work.dto.operation.WorkExecutionSourceResponse;
 import com.greenhouse.backend.work.dto.operation.WorkOperationDetailFieldResponse;
@@ -21,6 +22,7 @@ import com.greenhouse.backend.work.repository.WorkOperationRepository;
 import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -64,22 +66,30 @@ public class WorkOperationDetailService {
 	private final WorkAppliedEffectRepository effectRepository;
 	private final WorkEffectOrchidGroupRepository effectGroupRepository;
 	private final WorkOperationCorrectionRepository correctionRepository;
+	private final WorkExecutionReferenceReader executionReferenceReader;
 
 	public WorkOperationDetailResponse get(Long operationId) {
 		WorkOperation operation = operationRepository.findWithWorkTypeById(operationId)
 				.orElseThrow(() -> new NotFoundException("작업을 찾을 수 없습니다."));
 		List<WorkAppliedEffect> effects = effectRepository.findByWorkOperationIdOrderByIdAsc(operationId);
-		Map<Long, List<WorkEffectOrchidGroup>> linksByEffectId = effectGroupRepository
-				.findByWorkAppliedEffectWorkOperationIdOrderByIdAsc(operationId).stream()
+		List<WorkEffectOrchidGroup> effectGroupLinks = effectGroupRepository
+				.findByWorkAppliedEffectWorkOperationIdOrderByIdAsc(operationId);
+		Map<Long, List<WorkEffectOrchidGroup>> linksByEffectId = effectGroupLinks.stream()
 				.collect(Collectors.groupingBy(
 						link -> link.getWorkAppliedEffect().getId(),
 						LinkedHashMap::new,
 						Collectors.toList()));
+		Map<Long, String> resultVarietyNames = resultVarietyNames(effects, linksByEffectId);
+		Map<Long, WorkExecutionLocationResponse> resultLocations = resultLocations(effects);
 		return new WorkOperationDetailResponse(
 				WorkOperationDetailSummaryResponse.from(operation),
 				fields(operation),
 				effects.stream()
-						.map(effect -> execution(effect, linksByEffectId.getOrDefault(effect.getId(), List.of())))
+						.map(effect -> execution(
+								effect,
+								linksByEffectId.getOrDefault(effect.getId(), List.of()),
+								resultVarietyNames,
+								resultLocations))
 						.toList(),
 				corrections(operationId));
 	}
@@ -121,7 +131,9 @@ public class WorkOperationDetailService {
 
 	private WorkExecutionDetailResponse execution(
 			WorkAppliedEffect effect,
-			List<WorkEffectOrchidGroup> links) {
+			List<WorkEffectOrchidGroup> links,
+			Map<Long, String> resultVarietyNames,
+			Map<Long, WorkExecutionLocationResponse> resultLocations) {
 		Map<String, Object> command = map(effect.getCommandDetails());
 		Map<String, Object> result = map(effect.getResultDetails());
 		return new WorkExecutionDetailResponse(
@@ -134,7 +146,7 @@ public class WorkOperationDetailService {
 				effect.getTarget() == null ? null : effect.getTarget().getId(),
 				longValue(result.get("inboundRecordId")),
 				sources(command, result, links),
-				results(command, result, links),
+				results(command, result, links, resultVarietyNames, resultLocations),
 				integerValue(result.get("lossQuantity")),
 				integerValue(result.get("actualQuantity")),
 				firstString(result.get("reason"), command.get("reason")),
@@ -197,7 +209,9 @@ public class WorkOperationDetailService {
 	private List<WorkExecutionResultResponse> results(
 			Map<String, Object> command,
 			Map<String, Object> result,
-			List<WorkEffectOrchidGroup> links) {
+			List<WorkEffectOrchidGroup> links,
+			Map<Long, String> resultVarietyNames,
+			Map<Long, WorkExecutionLocationResponse> resultLocations) {
 		List<Map<String, Object>> commandRows = mapList(command.get("results"));
 		List<Map<String, Object>> resultRows = mapList(result.get("results"));
 		List<Long> resultIds = resultIds(result, links);
@@ -209,27 +223,61 @@ public class WorkOperationDetailService {
 			Long orchidGroupId = firstLong(
 					applied.get("orchidGroupId"),
 					index < resultIds.size() ? resultIds.get(index) : null);
+			Long bedZoneId = firstLong(requested.get("bedZoneId"), result.get("toBedZoneId"));
 			rows.add(new WorkExecutionResultResponse(
 					orchidGroupId,
 					firstInteger(applied.get("quantity"), requested.get("quantity")),
 					firstString(applied.get("purpose"), requested.get("purpose")),
-					firstLong(requested.get("bedZoneId"), result.get("toBedZoneId")),
+					bedZoneId,
 					firstDecimal(requested.get("startPosition"), result.get("startPosition")),
 					firstDecimal(requested.get("endPosition"), result.get("endPosition")),
 					stringValue(requested.get("potSize")),
 					integerValue(requested.get("ageYear")),
 					stringValue(requested.get("placementType")),
 					integerValue(requested.get("trayCount")),
-					stringValue(requested.get("memo"))));
+					stringValue(requested.get("memo")),
+					orchidGroupId == null ? null : resultVarietyNames.get(orchidGroupId),
+					bedZoneId == null ? null : resultLocations.get(bedZoneId)));
 		}
 
 		if (rows.isEmpty() && result.containsKey("toBedZoneId")) {
+			Long orchidGroupId = longValue(result.get("orchidGroupId"));
+			Long bedZoneId = longValue(result.get("toBedZoneId"));
 			rows.add(new WorkExecutionResultResponse(
-					longValue(result.get("orchidGroupId")), null, null,
-					longValue(result.get("toBedZoneId")), decimalValue(result.get("startPosition")),
-					decimalValue(result.get("endPosition")), null, null, null, null, null));
+					orchidGroupId, null, null,
+					bedZoneId, decimalValue(result.get("startPosition")),
+					decimalValue(result.get("endPosition")), null, null, null, null, null,
+					orchidGroupId == null ? null : resultVarietyNames.get(orchidGroupId),
+					bedZoneId == null ? null : resultLocations.get(bedZoneId)));
 		}
 		return rows;
+	}
+
+	private Map<Long, String> resultVarietyNames(
+			List<WorkAppliedEffect> effects,
+			Map<Long, List<WorkEffectOrchidGroup>> linksByEffectId) {
+		Set<Long> ids = new LinkedHashSet<>();
+		for (WorkAppliedEffect effect : effects) {
+			ids.addAll(resultIds(
+					map(effect.getResultDetails()),
+					linksByEffectId.getOrDefault(effect.getId(), List.of())));
+		}
+		return executionReferenceReader.varietyNames(ids);
+	}
+
+	private Map<Long, WorkExecutionLocationResponse> resultLocations(List<WorkAppliedEffect> effects) {
+		Set<Long> ids = new LinkedHashSet<>();
+		for (WorkAppliedEffect effect : effects) {
+			Map<String, Object> command = map(effect.getCommandDetails());
+			Map<String, Object> result = map(effect.getResultDetails());
+			mapList(command.get("results")).stream()
+					.map(row -> longValue(row.get("bedZoneId")))
+					.filter(java.util.Objects::nonNull)
+					.forEach(ids::add);
+			Long directBedZoneId = firstLong(command.get("toBedZoneId"), result.get("toBedZoneId"));
+			if (directBedZoneId != null) ids.add(directBedZoneId);
+		}
+		return executionReferenceReader.locations(ids);
 	}
 
 	private List<Long> resultIds(

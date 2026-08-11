@@ -95,6 +95,12 @@ export type WorkExecutionResult = {
   placementType: string | null;
   trayCount: number | null;
   memo: string | null;
+  varietyName: string | null;
+  location: {
+    houseNumber: number;
+    physicalBedNumber: number;
+    bedZoneName: string;
+  } | null;
 };
 
 export type WorkExecutionDetail = {

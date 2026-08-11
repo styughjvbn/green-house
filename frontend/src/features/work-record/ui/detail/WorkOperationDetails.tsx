@@ -649,11 +649,17 @@ function ExecutionContent({ execution }: { execution: WorkExecutionDetail }) {
       {execution.sources.map((source, index) => (
         <p key={`${source.orchidGroupId}-${index}`}>{sourceLine(source)}</p>
       ))}
-      {execution.results.map((result, index) => (
-        <p key={`${result.orchidGroupId ?? "result"}-${index}`}>
-          {resultLine(result, index)}
-        </p>
-      ))}
+      {execution.results.length > 0 ? (
+        <div className="mt-3 space-y-2">
+          {execution.results.map((result, index) => (
+            <ExecutionResultCard
+              index={index}
+              key={`${result.orchidGroupId ?? "result"}-${index}`}
+              result={result}
+            />
+          ))}
+        </div>
+      ) : null}
       {execution.actualQuantity != null ? (
         <p>실제 수량 {execution.actualQuantity}분</p>
       ) : null}
@@ -694,21 +700,58 @@ function sourceLine(source: WorkExecutionSource) {
   return values.length > 0 ? `${id} · ${values.join(" · ")}` : id;
 }
 
-function resultLine(result: WorkExecutionResult, index: number) {
-  const title =
-    result.orchidGroupId == null
-      ? `결과 ${index + 1}`
-      : `결과 난 묶음 #${result.orchidGroupId}`;
-  const values: string[] = [];
-  if (result.quantity != null) values.push(`${result.quantity}분`);
-  if (result.purpose) values.push(purposeLabel(result.purpose));
-  if (result.bedZoneId != null) values.push(`구역 #${result.bedZoneId}`);
+function ExecutionResultCard({
+  result,
+  index,
+}: {
+  result: WorkExecutionResult;
+  index: number;
+}) {
+  const attributes: string[] = [];
+  if (result.quantity != null) attributes.push(`${result.quantity}분`);
+  if (result.purpose) attributes.push(purposeLabel(result.purpose));
+  if (result.potSize) attributes.push(result.potSize);
+  if (result.ageYear != null) attributes.push(`${result.ageYear}년생`);
+  if (result.placementType) attributes.push(result.placementType);
+  if (result.trayCount != null) attributes.push(`${result.trayCount}판`);
+
+  const location = result.location
+    ? `${result.location.houseNumber}동 ${result.location.physicalBedNumber}다이 ${result.location.bedZoneName}`
+    : result.bedZoneId != null
+      ? `구역 #${result.bedZoneId}`
+      : null;
+  const placement: string[] = [];
+  if (location) placement.push(location);
   if (result.startPosition != null && result.endPosition != null) {
-    values.push(`위치 ${result.startPosition}~${result.endPosition}`);
+    placement.push(`위치 ${result.startPosition}~${result.endPosition}`);
   }
-  if (result.potSize) values.push(result.potSize);
-  if (result.ageYear != null) values.push(`${result.ageYear}년생`);
-  return values.length > 0 ? `${title} · ${values.join(" · ")}` : title;
+
+  return (
+    <div className="rounded-md border border-[#e1e6df] bg-[#f8faf7] p-3">
+      <div className="flex flex-wrap items-baseline justify-between gap-2">
+        <p className="text-sm font-bold text-[#26352b]">
+          결과 {index + 1}
+          {result.varietyName ? ` · ${result.varietyName}` : ""}
+        </p>
+        {result.orchidGroupId != null ? (
+          <p className="text-[11px] text-[#7a857d]">
+            난 묶음 #{result.orchidGroupId}
+          </p>
+        ) : null}
+      </div>
+      {attributes.length > 0 ? (
+        <p className="mt-1.5 font-semibold text-[#344138]">
+          {attributes.join(" · ")}
+        </p>
+      ) : null}
+      {placement.length > 0 ? (
+        <p className="mt-1 text-[#526057]">{placement.join(" · ")}</p>
+      ) : null}
+      {result.memo ? (
+        <p className="mt-1 text-[#526057]">메모: {result.memo}</p>
+      ) : null}
+    </div>
+  );
 }
 
 function hasDisplayResult(execution: WorkExecutionDetail) {
