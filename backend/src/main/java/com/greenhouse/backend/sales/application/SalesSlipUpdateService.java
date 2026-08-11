@@ -32,8 +32,9 @@ public class SalesSlipUpdateService {
 	private final SalesSlipAuditSupport auditSupport;
 
 	public SalesSlipResponse update(Long salesSlipId, SalesSlipCreateRequest request) {
-		SalesSlip salesSlip = salesSlipRepository.findWithDetailsById(salesSlipId)
+		SalesSlip salesSlip = salesSlipRepository.findForUpdateById(salesSlipId)
 				.orElseThrow(() -> new NotFoundException("판매 전표를 찾을 수 없습니다."));
+		Long previousPartnerId = salesSlip.getPartner().getId();
 		Map<String, Object> before = auditSupport.snapshot(salesSlip);
 
 		validateEditable(salesSlip, request);
@@ -52,9 +53,7 @@ public class SalesSlipUpdateService {
 
 		salesSlipInventoryService.releaseForEdit(salesSlip);
 
-		List<SalesSlipItem> items = request.items().stream()
-				.map(salesSlipAllocationFactory::createItem)
-				.toList();
+		List<SalesSlipItem> items = salesSlipAllocationFactory.createItems(request.items());
 		if (salesSlip.getItems().size() != items.size()) {
 			throw new IllegalArgumentException("품목 개수 변경 수정은 아직 지원하지 않습니다.");
 		}
@@ -89,6 +88,12 @@ public class SalesSlipUpdateService {
 		salesSlipInventoryService.reserve(persisted);
 		partnerBalanceService.updateReceivable(
 				partner.getId(), salesSlipRepository.sumDirectReceivableByPartnerId(partner.getId()), null);
+		if (!previousPartnerId.equals(partner.getId())) {
+			partnerBalanceService.updateReceivable(
+					previousPartnerId,
+					salesSlipRepository.sumDirectReceivableByPartnerId(previousPartnerId),
+					null);
+		}
 		auditSupport.record(AuditAction.UPDATED, persisted, before, auditSupport.snapshot(persisted));
 
 		return SalesSlipResponse.from(persisted);

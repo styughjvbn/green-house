@@ -7,6 +7,8 @@ import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
+import org.springframework.data.jpa.repository.Lock;
+import jakarta.persistence.LockModeType;
 
 public interface SalesSlipRepository extends JpaRepository<SalesSlip, Long>, SalesSlipRepositoryCustom {
 
@@ -17,6 +19,10 @@ public interface SalesSlipRepository extends JpaRepository<SalesSlip, Long>, Sal
 	@EntityGraph(attributePaths = { "partner", "auctionShipment", "auctionShipment.auctionHouse", "items",
 			"items.auctionShipmentLot" })
 	Optional<SalesSlip> findWithDetailsById(Long id);
+
+	@Lock(LockModeType.PESSIMISTIC_WRITE)
+	@Query("select slip from SalesSlip slip where slip.id = :id")
+	Optional<SalesSlip> findForUpdateById(@Param("id") Long id);
 
 	@Query("""
 			select coalesce(sum(coalesce(s.remainingAmount, s.totalAmount)), 0)

@@ -13,6 +13,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import com.greenhouse.backend.audit.domain.AuditAction;
 import java.util.Map;
+import com.greenhouse.backend.sales.domain.SalesSlip;
 
 @Service
 @Transactional
@@ -28,16 +29,17 @@ public class SalesSlipStatusService {
 	private final SalesSlipAuditSupport auditSupport;
 
 	public SalesSlipResponse updateStatus(Long salesSlipId, SalesSlipStatusUpdateRequest request) {
-		var salesSlip = salesSlipRepository.findWithDetailsById(salesSlipId)
+		var salesSlip = salesSlipRepository.findForUpdateById(salesSlipId)
 				.orElseThrow(() -> new NotFoundException("판매 전표를 찾을 수 없습니다."));
+		String nextStatus = request.salesStatus().trim();
 		if (salesSlip.isCanceled()) {
 			throw new IllegalArgumentException("취소된 전표는 상태를 변경할 수 없습니다.");
 		}
-		if (request.salesStatus().equals(salesSlip.getSalesStatus())) {
+		if (nextStatus.equals(salesSlip.getSalesStatus())) {
 			return SalesSlipResponse.from(salesSlip);
 		}
 		Map<String, Object> before = auditSupport.snapshot(salesSlip);
-		if ("취소".equals(request.salesStatus())) {
+		if (SalesSlip.STATUS_CANCELED.equals(nextStatus)) {
 			cancel(salesSlip);
 			auditSupport.record(AuditAction.DEACTIVATED, salesSlip, before, auditSupport.snapshot(salesSlip));
 			return SalesSlipResponse.from(salesSlip);
@@ -46,7 +48,7 @@ public class SalesSlipStatusService {
 			throw new IllegalArgumentException("출고 완료된 전표는 판매 상태를 변경할 수 없습니다.");
 		}
 
-		salesSlip.updateSalesStatus(request.salesStatus());
+		salesSlip.updateSalesStatus(nextStatus);
 		if (salesSlip.isOutboundCompleted()) {
 			auctionShipmentMaterializer.materialize(salesSlip);
 			salesSlipInventoryService.outbound(salesSlip);
@@ -71,7 +73,7 @@ public class SalesSlipStatusService {
 			auctionSalesSlipCancellationPolicy.cancelShipmentIfPossible(salesSlip);
 		}
 
-		salesSlip.updateSalesStatus("취소");
+		salesSlip.updateSalesStatus(SalesSlip.STATUS_CANCELED);
 		if (salesSlip.getSalesType() == SalesType.DIRECT) {
 			partnerBalanceService.updateReceivable(
 					salesSlip.getPartner().getId(),

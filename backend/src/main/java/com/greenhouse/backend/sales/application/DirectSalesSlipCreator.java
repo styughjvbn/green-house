@@ -47,7 +47,7 @@ public class DirectSalesSlipCreator {
 				SalesTextNormalizer.normalize(request.paymentMethod()),
 				SalesTextNormalizer.normalize(request.memo()));
 
-		request.items().forEach(item -> salesSlip.addItem(salesSlipAllocationFactory.createItem(item)));
+		salesSlipAllocationFactory.createItems(request.items()).forEach(salesSlip::addItem);
 		salesSlip.updateExpectedPaymentDate(paymentDateCalculator.calculate(partner, request.saleDate()));
 		var saved = salesSlipRepository.save(salesSlip);
 		salesSlipInventoryService.reserve(saved);

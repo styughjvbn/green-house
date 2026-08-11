@@ -13,7 +13,7 @@ import jakarta.persistence.LockModeType;
 public interface OrchidGroupRepository extends JpaRepository<OrchidGroup, Long> {
 
 	@Lock(LockModeType.PESSIMISTIC_WRITE)
-	@Query("select g from OrchidGroup g where g.id in :orchidGroupIds")
+	@Query("select g from OrchidGroup g where g.id in :orchidGroupIds order by g.id")
 	List<OrchidGroup> findAllForUpdateByIdIn(@Param("orchidGroupIds") java.util.Collection<Long> orchidGroupIds);
 
 	boolean existsByVarietyName(String varietyName);

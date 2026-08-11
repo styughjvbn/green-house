@@ -3,6 +3,7 @@ package com.greenhouse.backend.farm.application.orchid;
 import com.greenhouse.backend.farm.domain.orchid.OrchidGroup;
 import com.greenhouse.backend.farm.repository.orchid.OrchidGroupRepository;
 import java.util.List;
+import java.util.Collection;
 import java.util.Optional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -20,6 +21,14 @@ public class OrchidGroupReader {
 
 	public Optional<OrchidGroup> findDetailById(Long orchidGroupId) {
 		return orchidGroupRepository.findDetailById(orchidGroupId);
+	}
+
+	@Transactional
+	public List<OrchidGroup> findAllForUpdateByIds(Collection<Long> orchidGroupIds) {
+		if (orchidGroupIds == null || orchidGroupIds.isEmpty()) {
+			return List.of();
+		}
+		return orchidGroupRepository.findAllForUpdateByIdIn(orchidGroupIds.stream().sorted().toList());
 	}
 
 	public List<OrchidGroup> searchSellable(String keyword, Long varietyId, String status) {

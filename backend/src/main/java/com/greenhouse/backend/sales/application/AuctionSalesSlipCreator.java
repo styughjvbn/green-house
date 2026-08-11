@@ -45,7 +45,7 @@ public class AuctionSalesSlipCreator {
 				SalesTextNormalizer.defaultText(request.paymentMethod(), "경매 정산"),
 				SalesTextNormalizer.normalize(request.memo()));
 
-		request.items().forEach(item -> salesSlip.addItem(salesSlipAllocationFactory.createItem(item)));
+		salesSlipAllocationFactory.createItems(request.items()).forEach(salesSlip::addItem);
 
 		var saved = salesSlipRepository.save(salesSlip);
 		salesSlipInventoryService.reserve(saved);
