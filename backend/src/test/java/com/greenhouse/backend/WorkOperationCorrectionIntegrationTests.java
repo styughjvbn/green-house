@@ -126,6 +126,28 @@ class WorkOperationCorrectionIntegrationTests extends AbstractBackendIntegration
 	}
 
 	@Test
+	void correctsOnlyTheOriginalWorkDateAndPreservesItsAuditHistory() throws Exception {
+		Long originalId = createMultiCreateOperation();
+
+		mockMvc.perform(post("/api/work-operations/{id}/corrections", originalId)
+				.contentType(MediaType.APPLICATION_JSON)
+				.content(dateOnlyCorrectionRequest()))
+				.andExpect(status().isCreated())
+				.andExpect(jsonPath("$.data.originalOperation.plannedStartDate").value("2026-07-14"))
+				.andExpect(jsonPath("$.data.originalOperation.plannedEndDate").value("2026-07-14"))
+				.andExpect(jsonPath("$.data.corrections[0].effectDetails.beforeWorkDate").value("2026-07-15"))
+				.andExpect(jsonPath("$.data.corrections[0].effectDetails.afterWorkDate").value("2026-07-14"))
+				.andExpect(jsonPath("$.data.corrections[0].effectDetails.adjustments", hasSize(0)));
+
+		var original = operationRepository.findWithWorkTypeById(originalId).orElseThrow();
+		assertThat(original.getPlannedStartDate()).isEqualTo(java.time.LocalDate.of(2026, 7, 14));
+		assertThat(original.getPlannedEndDate()).isEqualTo(java.time.LocalDate.of(2026, 7, 14));
+		var unchangedGroup = orchidGroupRepository.findById(createdGroupId).orElseThrow();
+		assertThat(unchangedGroup.getQuantity()).isEqualTo(30);
+		assertThat(unchangedGroup.getStatus()).isEqualTo("정상");
+	}
+
+	@Test
 	void rejectsAdjustmentWhenAResultHasDownstreamWork() throws Exception {
 		Long originalId = createMultiCreateOperation();
 		mockMvc.perform(post("/api/work-operations")
@@ -185,5 +207,22 @@ class WorkOperationCorrectionIntegrationTests extends AbstractBackendIntegration
 				  }]
 				}
 				""".formatted(idempotencyKey, createdGroupId);
+	}
+
+	private String dateOnlyCorrectionRequest() {
+		return """
+				{
+				  "idempotencyKey": "correction-date-only",
+				  "title": "다중 생성 작업일 보정",
+				  "workDate": "2026-07-14",
+				  "worker": "관리자",
+				  "reason": "작업일 입력 오류",
+				  "orchidGroupAdjustments": [{
+				    "orchidGroupId": %d,
+				    "quantity": 30,
+				    "status": "정상"
+				  }]
+				}
+				""".formatted(createdGroupId);
 	}
 }

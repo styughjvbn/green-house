@@ -105,6 +105,8 @@ export type WorkOperationCorrectionItem = {
   createdAt: string;
   correctionOperation: WorkOperation;
   effectDetails: {
+    beforeWorkDate?: string;
+    afterWorkDate?: string;
     adjustments?: WorkOperationCorrectionAdjustment[];
   };
 };

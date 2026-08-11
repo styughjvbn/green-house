@@ -16,6 +16,7 @@ import jakarta.persistence.Table;
 import jakarta.persistence.Version;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.temporal.ChronoUnit;
 import java.util.Map;
 import lombok.AccessLevel;
 import lombok.Getter;
@@ -210,5 +211,22 @@ public class WorkOperation extends BaseEntity {
 			throw new IllegalArgumentException("완료된 구조 변경 작업만 보정할 수 있습니다.");
 		}
 		status = WorkOperationStatus.CORRECTED;
+	}
+
+	public void correctWorkDate(LocalDate workDate) {
+		if (workDate == null) {
+			throw new IllegalArgumentException("보정 작업일이 필요합니다.");
+		}
+		if ((status != WorkOperationStatus.COMPLETED && status != WorkOperationStatus.CORRECTED)
+				|| workType.effectKind() != WorkEffectKind.STRUCTURE_CHANGE) {
+			throw new IllegalArgumentException("완료된 구조 변경 작업의 작업일만 보정할 수 있습니다.");
+		}
+		long durationDays = plannedEndDate == null
+				? 0
+				: Math.max(0, ChronoUnit.DAYS.between(plannedStartDate, plannedEndDate));
+		plannedStartDate = workDate;
+		if (plannedEndDate != null) {
+			plannedEndDate = workDate.plusDays(durationDays);
+		}
 	}
 }
