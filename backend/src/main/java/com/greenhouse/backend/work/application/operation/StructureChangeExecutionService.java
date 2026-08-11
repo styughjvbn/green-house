@@ -11,7 +11,7 @@ import com.greenhouse.backend.work.domain.operation.WorkType;
 import com.greenhouse.backend.work.dto.effect.StructureChangeExecutionRequest;
 import com.greenhouse.backend.work.dto.operation.WorkOperationResponse;
 import com.greenhouse.backend.work.dto.target.WorkTargetExecutionRequest;
-import com.greenhouse.backend.farm.application.transformation.MovementQuantityAllocator;
+import com.greenhouse.backend.work.application.effect.MovementQuantityAllocator;
 import com.greenhouse.backend.work.repository.WorkAppliedEffectRepository;
 import com.greenhouse.backend.work.repository.WorkTargetExecutionRepository;
 import java.time.LocalDateTime;

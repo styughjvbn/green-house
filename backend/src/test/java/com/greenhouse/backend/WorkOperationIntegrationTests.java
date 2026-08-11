@@ -104,6 +104,36 @@ class WorkOperationIntegrationTests extends AbstractBackendIntegrationTest {
 	}
 
 	@Test
+	void excludesLegacyMigrationMetadataFromOperationDetails() throws Exception {
+		mockMvc.perform(post("/api/work-operations")
+				.contentType(MediaType.APPLICATION_JSON)
+				.content("""
+						{
+						  "workTypeId": %d,
+						  "title": "레거시 메타데이터 필터 확인",
+						  "plannedStartDate": "2026-07-16",
+						  "sourceScopeType": "MANUAL_SELECTION",
+						  "sourceOrchidGroupIds": [%d],
+						  "details": {
+						    "materialName": "표시할 자재",
+						    "migrationSource": "LEGACY_WORK_RECORD",
+						    "legacyWorkRecordId": 99,
+						    "legacyStatus": "COMPLETED",
+						    "legacyTargetType": "FARM"
+						  }
+						}
+						""".formatted(pesticideType.getId(), targetGroup.getId())))
+				.andExpect(status().isCreated());
+
+		Long operationId = workOperationRepository.findAll().getFirst().getId();
+		mockMvc.perform(get("/api/work-operations/{id}/details", operationId))
+				.andExpect(status().isOk())
+				.andExpect(jsonPath("$.data.fields", hasSize(1)))
+				.andExpect(jsonPath("$.data.fields[0].key").value("materialName"))
+				.andExpect(jsonPath("$.data.fields[0].value").value("표시할 자재"));
+	}
+
+	@Test
 	void batchCreateSplitsSingleVarietyStructureWorkInOneRequest() throws Exception {
 		Variety anotherVariety = varietyRepository.save(new Variety(
 				"TEST-002", "카틀레야", "다른 품종", null, "3.5치", true, true, null, null));
@@ -231,6 +261,17 @@ class WorkOperationIntegrationTests extends AbstractBackendIntegrationTest {
 		OrchidGroup updated = orchidGroupRepository.findById(targetGroup.getId()).orElseThrow();
 		org.assertj.core.api.Assertions.assertThat(updated.getQuantity()).isEqualTo(75);
 		org.assertj.core.api.Assertions.assertThat(workOperationRepository.count()).isEqualTo(1);
+
+		Long operationId = workOperationRepository.findAll().getFirst().getId();
+		mockMvc.perform(get("/api/work-operations/{id}/details", operationId))
+				.andExpect(status().isOk())
+				.andExpect(jsonPath("$.data.summary.id").value(operationId))
+				.andExpect(jsonPath("$.data.executions", hasSize(1)))
+				.andExpect(jsonPath("$.data.executions[0].resultType").value("DISCARD"))
+				.andExpect(jsonPath("$.data.executions[0].reason").value("상태 불량"))
+				.andExpect(jsonPath("$.data.executions[0].sources[0].beforeQuantity").value(100))
+				.andExpect(jsonPath("$.data.executions[0].sources[0].inputQuantity").value(25))
+				.andExpect(jsonPath("$.data.executions[0].sources[0].afterQuantity").value(75));
 	}
 
 	private Long createDiscardOperation(String title) throws Exception {
@@ -298,6 +339,15 @@ class WorkOperationIntegrationTests extends AbstractBackendIntegrationTest {
 		org.assertj.core.api.Assertions.assertThat(
 				orchidGroupRepository.findById(targetGroup.getId()).orElseThrow().getBedZone().getId())
 				.isEqualTo(destinationZone.getId());
+
+		mockMvc.perform(get("/api/work-operations/{id}/details", operationId))
+				.andExpect(status().isOk())
+				.andExpect(jsonPath("$.data.executions", hasSize(1)))
+				.andExpect(jsonPath("$.data.executions[0].resultType").value("MOVE"))
+				.andExpect(jsonPath("$.data.executions[0].sources[0].orchidGroupId").value(targetGroup.getId()))
+				.andExpect(jsonPath("$.data.executions[0].results[0].bedZoneId").value(destinationZone.getId()))
+				.andExpect(jsonPath("$.data.executions[0].results[0].startPosition").value(0))
+				.andExpect(jsonPath("$.data.executions[0].results[0].endPosition").value(10));
 	}
 
 	@Test

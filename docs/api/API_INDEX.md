@@ -102,7 +102,7 @@
 - package 후보: `com.greenhouse.backend.farm`
 - controller tags: `variety-controller`, `material-controller`, `inbound-record-controller`
 - 역할: 품종 CRUD/삭제, 자재 CRUD/삭제, 입고 기록 생성·수정·포트 작업·취소·삭제 API
-- operations: 21
+- operations: 22
 
 | Method | Path | Operation | Request | Response |
 |---|---|---|---|---|
@@ -147,6 +147,7 @@
 | `POST` | `/api/work-operations/inbound-potting-records` | 전체 입고 대상 포트 결과 작업 기록 |
 | `GET` | `/api/work-operations` | 기간·상태·범위별 작업 목록 |
 | `GET` | `/api/work-operations/{workOperationId}` | 작업 상세 |
+| `GET` | `/api/work-operations/{workOperationId}/details` | 완료 작업의 정형 필드·전체 실행 회차·보정 내역 상세 |
 | `POST` | `/api/work-operations/{workOperationId}/complete` | 모든 대상 처리 후 전체 작업 완료 |
 | `POST` | `/api/work-operations/{workOperationId}/start` | 기간 작업 시작 |
 | `POST` | `/api/work-operations/{workOperationId}/pause` | 기간 작업 일시중지 |

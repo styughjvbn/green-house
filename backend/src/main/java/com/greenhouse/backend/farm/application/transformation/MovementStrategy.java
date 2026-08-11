@@ -1,5 +1,7 @@
 package com.greenhouse.backend.farm.application.transformation;
 
+import com.greenhouse.backend.work.application.effect.MovementQuantityAllocator;
+
 import com.greenhouse.backend.farm.domain.transformation.OrchidGroupLineageRelationType;
 import com.greenhouse.backend.work.domain.operation.WorkType;
 import com.greenhouse.backend.work.dto.effect.StructureChangeExecutionRequest;

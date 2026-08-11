@@ -10,6 +10,7 @@ import com.greenhouse.backend.work.application.operation.StructureChangeRecordSe
 import com.greenhouse.backend.work.application.operation.WorkOperationPlanService;
 import com.greenhouse.backend.work.application.operation.WorkOperationProgressService;
 import com.greenhouse.backend.work.application.operation.WorkOperationQueryService;
+import com.greenhouse.backend.work.application.operation.WorkOperationDetailService;
 import com.greenhouse.backend.work.domain.operation.WorkSourceScopeType;
 import com.greenhouse.backend.work.dto.operation.OrchidGroupWorkHistoryResponse;
 import com.greenhouse.backend.work.dto.operation.WorkHistoryScopeType;
@@ -23,6 +24,7 @@ import com.greenhouse.backend.work.dto.operation.WorkOperationCompleteRequest;
 import com.greenhouse.backend.work.dto.correction.WorkOperationCorrectionCreateRequest;
 import com.greenhouse.backend.work.dto.correction.WorkOperationCorrectionsResponse;
 import com.greenhouse.backend.work.dto.operation.WorkOperationResponse;
+import com.greenhouse.backend.work.dto.operation.WorkOperationDetailResponse;
 import com.greenhouse.backend.work.dto.target.WorkTargetPreviewRequest;
 import com.greenhouse.backend.work.dto.target.WorkTargetPreviewResponse;
 import com.greenhouse.backend.work.dto.target.WorkTargetExecutionRequest;
@@ -58,6 +60,7 @@ public class WorkOperationController {
 	private final InboundPottingPlanService inboundPottingPlanService;
 	private final InboundPottingOperationService inboundPottingOperationService;
 	private final WorkOperationCorrectionService workOperationCorrectionService;
+	private final WorkOperationDetailService workOperationDetailService;
 
 	@PostMapping("/work-operations/target-preview")
 	public ApiResponse<WorkTargetPreviewResponse> preview(@Valid @RequestBody WorkTargetPreviewRequest request) {
@@ -165,6 +168,11 @@ public class WorkOperationController {
 	@GetMapping("/work-operations/{workOperationId}")
 	public ApiResponse<WorkOperationResponse> get(@PathVariable Long workOperationId) {
 		return ApiResponse.ok(queryService.get(workOperationId));
+	}
+
+	@GetMapping("/work-operations/{workOperationId}/details")
+	public ApiResponse<WorkOperationDetailResponse> getDetails(@PathVariable Long workOperationId) {
+		return ApiResponse.ok(workOperationDetailService.get(workOperationId));
 	}
 
 	@PostMapping("/work-operations/{workOperationId}/complete")
