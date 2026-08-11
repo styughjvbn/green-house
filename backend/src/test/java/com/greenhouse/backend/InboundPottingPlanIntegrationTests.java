@@ -23,6 +23,7 @@ import com.greenhouse.backend.work.repository.WorkEffectOrchidGroupRepository;
 import com.greenhouse.backend.work.repository.WorkOperationRepository;
 import com.greenhouse.backend.work.repository.WorkOperationTargetRepository;
 import com.greenhouse.backend.work.repository.WorkTargetExecutionRepository;
+import com.greenhouse.backend.common.config.TimeConfig;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import org.junit.jupiter.api.BeforeEach;
@@ -197,9 +198,9 @@ class InboundPottingPlanIntegrationTests extends AbstractBackendIntegrationTest 
 		InboundRecord updated = inboundRecordRepository.findWithDetailsById(inboundRecord.getId()).orElseThrow();
 		assertThat(updated.getCreatedOrchidGroup()).isNotNull();
 		assertThat(updated.getStatus()).isEqualTo(InboundStatus.PLACED);
-		assertThat(targetExecutionRepository
+		assertThat(TimeConfig.toFarmTime(targetExecutionRepository
 				.findByTargetWorkOperationIdOrderByIdAsc(operationId)
-				.getFirst().getCompletedAt().toLocalDate())
+				.getFirst().getCompletedAt()).toLocalDate())
 				.isEqualTo(LocalDate.of(2026, 7, 16));
 	}
 

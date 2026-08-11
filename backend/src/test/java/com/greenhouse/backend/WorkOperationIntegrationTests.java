@@ -21,6 +21,7 @@ import com.greenhouse.backend.work.repository.WorkOperationTargetRepository;
 import com.greenhouse.backend.work.repository.WorkAppliedEffectRepository;
 import com.greenhouse.backend.work.repository.WorkEffectOrchidGroupRepository;
 import com.greenhouse.backend.work.repository.WorkTargetExecutionRepository;
+import com.greenhouse.backend.common.config.TimeConfig;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import org.junit.jupiter.api.BeforeEach;
@@ -418,12 +419,12 @@ class WorkOperationIntegrationTests extends AbstractBackendIntegrationTest {
 				.andExpect(status().isOk())
 				.andExpect(jsonPath("$.data.status").value("COMPLETED"))
 				.andExpect(jsonPath("$.data.targets[0].executionStatus").value("COMPLETED"));
-		org.assertj.core.api.Assertions.assertThat(
+		org.assertj.core.api.Assertions.assertThat(TimeConfig.toFarmTime(
 				workTargetExecutionRepository.findByTargetWorkOperationIdOrderByIdAsc(operationId)
-						.getFirst().getCompletedAt().toLocalDate())
+						.getFirst().getCompletedAt()).toLocalDate())
 				.isEqualTo(java.time.LocalDate.of(2026, 7, 15));
-		org.assertj.core.api.Assertions.assertThat(
-				workOperationRepository.findById(operationId).orElseThrow().getActualEndAt().toLocalDate())
+		org.assertj.core.api.Assertions.assertThat(TimeConfig.toFarmTime(
+				workOperationRepository.findById(operationId).orElseThrow().getActualEndAt()).toLocalDate())
 				.isEqualTo(java.time.LocalDate.of(2026, 7, 15));
 
 		mockMvc.perform(post("/api/work-operations/{id}/targets/{targetId}/complete", operationId, targetId)
