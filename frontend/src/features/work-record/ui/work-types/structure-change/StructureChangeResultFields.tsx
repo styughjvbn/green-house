@@ -24,7 +24,9 @@ export function StructureChangeResultFields({
   operation,
   orchidGroups,
   releasedPlacements,
+  hiddenOtherVarietySourceIds,
   rows,
+  otherVarietyReferences,
   savedResultReferences,
   selectedSources,
   onAdd,
@@ -40,7 +42,9 @@ export function StructureChangeResultFields({
   operation: StructureChangeOperation;
   orchidGroups: OrchidGroup[];
   releasedPlacements: Record<number, FarmPlacementSelection | null | undefined>;
+  hiddenOtherVarietySourceIds: number[];
   rows: ResultRow[];
+  otherVarietyReferences: FarmPlacementReference[];
   savedResultReferences: FarmPlacementReference[];
   selectedSources: AvailableSource[];
   onAdd: () => void;
@@ -113,12 +117,14 @@ export function StructureChangeResultFields({
         <ResultRowFields
           excludeOrchidGroupIds={excludedSourceIds}
           houses={houses}
+          hiddenOrchidGroupIds={hiddenOtherVarietySourceIds}
           index={index}
           key={row.key}
           operation={operation}
           referencePlacements={[
             ...sourceReferences,
             ...savedResultReferences,
+            ...otherVarietyReferences,
             ...resultReferencePlacements(rows, row.key),
           ]}
           removable={rows.length > 1}
@@ -134,6 +140,7 @@ export function StructureChangeResultFields({
 function ResultRowFields({
   excludeOrchidGroupIds,
   houses,
+  hiddenOrchidGroupIds,
   index,
   operation,
   referencePlacements,
@@ -144,6 +151,7 @@ function ResultRowFields({
 }: {
   excludeOrchidGroupIds: number[];
   houses: House[];
+  hiddenOrchidGroupIds: number[];
   index: number;
   operation: Pick<StructureChangeOperation, "workTypeCode" | "workType">;
   referencePlacements: FarmPlacementReference[];
@@ -190,10 +198,13 @@ function ResultRowFields({
             dialogTitle={`${operation.workType} 결과 ${index + 1} 배치 위치`}
             fieldLabel="결과 배치"
             excludeOrchidGroupIds={excludeOrchidGroupIds}
+            hiddenOrchidGroupIds={hiddenOrchidGroupIds}
             houses={houses}
             referencePlacements={referencePlacements}
             value={row.placement}
-            onChange={(placement) => onChange({ placement })}
+            onChange={(placement) =>
+              onChange({ placement, placementConfigured: true })
+            }
           />
         </div>
         <TextField

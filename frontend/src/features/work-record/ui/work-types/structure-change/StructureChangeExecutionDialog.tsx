@@ -2,6 +2,7 @@
 
 import { X } from "lucide-react";
 import type { House, OrchidGroup, WorkOperation } from "@/entities/farm/types";
+import type { FarmPlacementReference } from "@/entities/farm/model/placement";
 import {
   WorkRecordVarietyNavigation,
   type WorkRecordNavigationItem,
@@ -10,7 +11,10 @@ import type { StructureChangeExecutionPayload } from "../../../api/workRecordApi
 import { TextField } from "../../common/FormFields";
 import { StructureChangeResultFields } from "./StructureChangeResultFields";
 import { StructureChangeSourceFields } from "./StructureChangeSourceFields";
-import type { StructureChangeOperation } from "../../../model/work-types/structure-change/structureChangeExecutionModel";
+import type {
+  ResultRow,
+  StructureChangeOperation,
+} from "../../../model/work-types/structure-change/structureChangeExecutionModel";
 import { useStructureChangeExecution } from "../../../model/work-types/structure-change/useStructureChangeExecution";
 
 export function StructureChangeExecutionDialog({
@@ -22,7 +26,10 @@ export function StructureChangeExecutionDialog({
   active = true,
   embedded = false,
   recordNavigation,
+  hiddenOtherVarietySourceIds = [],
+  otherVarietyReferences = [],
   onRecordDirty,
+  onResultRowsChange,
   onClose,
   onSaved,
   onSubmitRecord,
@@ -42,7 +49,10 @@ export function StructureChangeExecutionDialog({
     onSave: () => Promise<void>;
     onSelect: (key: string) => void;
   };
+  hiddenOtherVarietySourceIds?: number[];
+  otherVarietyReferences?: FarmPlacementReference[];
   onRecordDirty?: () => void;
+  onResultRowsChange?: (rows: ResultRow[]) => void;
   onClose: () => void;
   onSaved?: (operation: WorkOperation) => void;
   onSubmitRecord?: (payload: StructureChangeExecutionPayload) => Promise<void>;
@@ -51,6 +61,7 @@ export function StructureChangeExecutionDialog({
     closeAfterSubmit,
     onClose,
     onRecordDirty,
+    onResultRowsChange,
     onSaved,
     onSubmitRecord,
     operation,
@@ -118,7 +129,9 @@ export function StructureChangeExecutionDialog({
             operation={operation}
             orchidGroups={orchidGroups}
             releasedPlacements={form.releasedPlacements}
+            hiddenOtherVarietySourceIds={hiddenOtherVarietySourceIds}
             rows={form.rows}
+            otherVarietyReferences={otherVarietyReferences}
             savedResultReferences={form.savedResultReferences}
             selectedSources={form.selectedSources}
             onAdd={form.addResult}

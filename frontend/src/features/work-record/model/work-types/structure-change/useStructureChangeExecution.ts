@@ -25,6 +25,7 @@ export function useStructureChangeExecution({
   closeAfterSubmit,
   onClose,
   onRecordDirty,
+  onResultRowsChange,
   onSaved,
   onSubmitRecord,
   operation,
@@ -34,6 +35,7 @@ export function useStructureChangeExecution({
   closeAfterSubmit: boolean;
   onClose: () => void;
   onRecordDirty?: () => void;
+  onResultRowsChange?: (rows: ResultRow[]) => void;
   onSaved?: (operation: WorkOperation) => void;
   onSubmitRecord?: (payload: StructureChangeExecutionPayload) => Promise<void>;
   operation: StructureChangeOperation;
@@ -153,10 +155,19 @@ export function useStructureChangeExecution({
       ? (rows[0]?.ageYear ?? "")
       : "";
   const onRecordDirtyRef = useRef(onRecordDirty);
+  const onResultRowsChangeRef = useRef(onResultRowsChange);
 
   useEffect(() => {
     onRecordDirtyRef.current = onRecordDirty;
   }, [onRecordDirty]);
+
+  useEffect(() => {
+    onResultRowsChangeRef.current = onResultRowsChange;
+  }, [onResultRowsChange]);
+
+  useEffect(() => {
+    onResultRowsChangeRef.current?.(rows);
+  }, [rows]);
 
   useEffect(() => {
     if (recordMode) {
@@ -271,7 +282,7 @@ export function useStructureChangeExecution({
         row.autoQuantity &&
         row.sourceOrchidGroupIds.length === 1 &&
         row.sourceOrchidGroupIds[0] === groupId
-          ? { ...row, placement }
+          ? { ...row, placement, placementConfigured: true }
           : row,
       ),
     );

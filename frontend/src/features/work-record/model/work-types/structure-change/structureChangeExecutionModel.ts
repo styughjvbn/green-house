@@ -28,6 +28,7 @@ export type ResultRow = {
   ageYear: string;
   purpose: ResultPurpose;
   autoQuantity: boolean;
+  placementConfigured: boolean;
 };
 
 export type AvailableSource = {
@@ -192,6 +193,7 @@ export function newResultRow(group: OrchidGroup, quantity: number): ResultRow {
     ageYear: group.ageYear == null ? "" : String(group.ageYear),
     purpose: "NORMAL",
     autoQuantity: true,
+    placementConfigured: false,
   };
 }
 
