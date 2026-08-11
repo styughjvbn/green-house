@@ -1,4 +1,8 @@
 import { createUuid } from "@/shared/lib/id";
+import { getApiErrorMessage, type ApiErrorResponse } from "./error";
+
+export { getApiErrorMessage } from "./error";
+export type { ApiErrorResponse } from "./error";
 
 export const API_BASE_URL =
   typeof window === "undefined"
@@ -11,14 +15,6 @@ export const API_BASE_URL =
 export type ApiResponse<T> = {
   data: T;
   message: string | null;
-};
-
-export type ApiErrorResponse = {
-  error: {
-    code: string;
-    message: string;
-    details: string[];
-  };
 };
 
 const CLIENT_INSTANCE_KEY = "greenhouse-client-instance-id";
@@ -89,11 +85,7 @@ export async function fetchApi<T>(
   const payload = (await response.json()) as ApiResponse<T> | ApiErrorResponse;
 
   if (!response.ok) {
-    const message =
-      "error" in payload
-        ? payload.error.message
-        : "요청을 처리하지 못했습니다.";
-    throw new Error(message);
+    throw new Error(getApiErrorMessage(payload, "요청을 처리하지 못했습니다."));
   }
 
   return (payload as ApiResponse<T>).data;

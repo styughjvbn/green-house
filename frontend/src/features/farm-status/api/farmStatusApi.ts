@@ -2,6 +2,7 @@
   API_BASE_URL,
   fetchApi,
   fetchWithClientInstance as fetch,
+  getApiErrorMessage,
 } from "@/shared/api/client";
 import type {
   FarmStatusMapData,
@@ -21,11 +22,10 @@ async function readJson<T>(
 ): Promise<T> {
   const body = (await response.json()) as
     | ApiPayload<T>
-    | { error?: { message?: string } };
+    | { error?: { message?: string; details?: string[] } };
 
   if (!response.ok) {
-    const message = "error" in body ? body.error?.message : undefined;
-    throw new Error(message ?? fallbackMessage);
+    throw new Error(getApiErrorMessage(body, fallbackMessage));
   }
 
   return (body as ApiPayload<T>).data;

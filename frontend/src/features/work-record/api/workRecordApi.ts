@@ -2,6 +2,7 @@
   API_BASE_URL,
   fetchApi,
   fetchWithClientInstance as fetch,
+  getApiErrorMessage,
 } from "@/shared/api/client";
 import type {
   House,
@@ -83,7 +84,9 @@ export async function createCompletedWorkOperation(
   });
   const body = await response.json().catch(() => null);
   if (!response.ok) {
-    throw new Error(body?.error?.message ?? "신규 작업을 처리하지 못했습니다.");
+    throw new Error(
+      getApiErrorMessage(body, "신규 작업을 처리하지 못했습니다."),
+    );
   }
   return body.data as WorkOperation;
 }
@@ -339,7 +342,9 @@ async function requestWorkOperation<T>(
   const body = await response.json().catch(() => null);
 
   if (!response.ok) {
-    throw new Error(body?.error?.message ?? "신규 작업을 처리하지 못했습니다.");
+    throw new Error(
+      getApiErrorMessage(body, "신규 작업을 처리하지 못했습니다."),
+    );
   }
 
   return body.data as T;

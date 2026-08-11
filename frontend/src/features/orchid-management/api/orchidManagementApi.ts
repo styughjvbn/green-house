@@ -3,6 +3,7 @@ import {
   buildApiHeaders,
   fetchApi,
   fetchWithClientInstance as fetch,
+  getApiErrorMessage,
   handleAuthExpired,
 } from "@/shared/api/client";
 import type {
@@ -71,12 +72,6 @@ export async function createWorkOperationCorrection(
   return (body as { data: WorkOperationCorrections }).data;
 }
 
-type ApiErrorPayload = {
-  error?: {
-    message?: string;
-  };
-};
-
 async function readJson(response: Response): Promise<unknown> {
   try {
     return await response.json();
@@ -86,8 +81,7 @@ async function readJson(response: Response): Promise<unknown> {
 }
 
 function resolveErrorMessage(payload: unknown, fallback: string): string {
-  const maybeError = payload as ApiErrorPayload | null;
-  return maybeError?.error?.message ?? fallback;
+  return getApiErrorMessage(payload, fallback);
 }
 
 export async function createOrchidGroup(

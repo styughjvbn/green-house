@@ -2,6 +2,7 @@ import {
   API_BASE_URL,
   fetchApi,
   fetchWithClientInstance as fetch,
+  getApiErrorMessage,
 } from "@/shared/api/client";
 import type { House, WorkOperation } from "@/entities/farm/types";
 import type { Page } from "@/shared/api/page";
@@ -125,10 +126,7 @@ async function requestJson<T>(
   const payload = (await response.json()) as ApiSuccess<T> | ApiFailure;
 
   if (!response.ok) {
-    const apiError = "error" in payload ? payload.error : undefined;
-    throw new Error(
-      apiError?.details?.find(Boolean) ?? apiError?.message ?? fallbackMessage,
-    );
+    throw new Error(getApiErrorMessage(payload, fallbackMessage));
   }
 
   return (payload as ApiSuccess<T>).data;

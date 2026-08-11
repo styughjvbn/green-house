@@ -2,6 +2,7 @@
   API_BASE_URL,
   fetchApi,
   fetchWithClientInstance as fetch,
+  getApiErrorMessage,
 } from "@/shared/api/client";
 import type {
   BusinessPartner,
@@ -61,9 +62,7 @@ async function requestJson<T>(
   const payload = (await response.json()) as ApiSuccess<T> | ApiFailure;
 
   if (!response.ok) {
-    const apiError = "error" in payload ? payload.error : undefined;
-    const detail = apiError?.details?.find(Boolean);
-    throw new Error(detail ?? apiError?.message ?? fallbackMessage);
+    throw new Error(getApiErrorMessage(payload, fallbackMessage));
   }
 
   return (payload as ApiSuccess<T>).data;

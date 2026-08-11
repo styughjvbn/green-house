@@ -1,6 +1,7 @@
 import {
   API_BASE_URL,
   fetchWithClientInstance as fetch,
+  getApiErrorMessage,
 } from "@/shared/api/client";
 import type { WorkType, WorkTypeTemplate } from "@/entities/farm/types";
 
@@ -56,7 +57,7 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
   const body = await response.json();
 
   if (!response.ok) {
-    throw new Error(body?.error?.message ?? "요청을 처리하지 못했습니다.");
+    throw new Error(getApiErrorMessage(body, "요청을 처리하지 못했습니다."));
   }
 
   return body.data as T;
