@@ -211,6 +211,7 @@ function ResultRowFields({
           label={
             operation.workTypeCode === "MOVEMENT" ? "이동 수량" : "결과 수량"
           }
+          selectOnFocus={operation.workTypeCode !== "MOVEMENT"}
           type="number"
           value={row.quantity}
           onChange={(quantity) => onChange({ quantity, autoQuantity: false })}

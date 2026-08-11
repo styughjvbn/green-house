@@ -6,6 +6,7 @@ type TextFieldProps = {
   max?: string;
   onChange: (value: string) => void;
   required?: boolean;
+  selectOnFocus?: boolean;
   type?: "date" | "number" | "text";
   value: string;
 };
@@ -16,6 +17,7 @@ export function TextField({
   max,
   onChange,
   required = false,
+  selectOnFocus = false,
   type = "text",
   value,
 }: TextFieldProps) {
@@ -30,6 +32,9 @@ export function TextField({
         type={type}
         value={value}
         onChange={(event) => onChange(event.target.value)}
+        onFocus={(event) => {
+          if (selectOnFocus) event.currentTarget.select();
+        }}
       />
     </label>
   );

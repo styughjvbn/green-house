@@ -275,6 +275,7 @@ export function PottingExecutionForm({
                   required
                   type="number"
                   value={row.actualQuantity}
+                  onFocus={(event) => event.currentTarget.select()}
                   onChange={(event) =>
                     updateRow(setRows, row.key, {
                       actualQuantity: event.target.value,
