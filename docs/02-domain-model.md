@@ -6,8 +6,8 @@
 House
  └─ PhysicalBed
     └─ BedZone
-       └─ BedZoneSegment
-          └─ OrchidGroup
+       ├─ BedZoneCapacity
+       └─ OrchidGroup
 ```
 
 ### House
@@ -34,25 +34,27 @@ House
 - 기본값은 각 배드의 좌/우 구역이다.
 - `LEFT`, `RIGHT`, `CUSTOM`, `HANGING` 같은 구역 방향/유형을 가진다.
 - 난 묶음 배치와 작업 이력의 기본 위치 단위다.
+- 배치 유형·화분 크기·수용 모드별 `BedZoneCapacity` 설정을 가질 수 있다.
 
-### BedZoneSegment
+### BedZoneCapacity
 
-논리 구역을 더 세분화한 배치 단위다.
+논리 구역의 배치 유형별 수용량 설정이다.
 
-- 앞/중간/끝 구간을 구분할 수 있다.
-- 자리 차지 계산과 구간 배치 검증에 사용한다.
-- `여유`, `표준`, `확장`, `압축`, `임시` 같은 수용 모드를 가질 수 있다.
+- 배치 유형, 표준 화분 크기, 수용 모드, 단위 길이, 수용 수량을 가진다.
+- 현재 코드에는 별도 `BedZoneSegment` 엔티티가 없다.
+- 난 묶음의 실제 구간은 `OrchidGroup.startPosition`, `endPosition` 숫자 범위로 저장한다.
 
 ### OrchidGroup
 
 난 묶음은 현재 시스템의 핵심 관리 단위다.
 
-- 모든 난 묶음은 반드시 하나의 품종 마스터와 연결된다.
+- 신규 생성·수정 난 묶음은 품종 마스터 연결이 필수다. 마이그레이션된 기존 행은 검수를 위해 품종 연결이 없을 수 있다.
 - 품종명, 속, 수량, 예약 수량, 화분 크기, 초기 년생, 상태, 메모를 가진다.
-- 하나의 논리 구역 또는 세그먼트에 배치된다.
+- 하나의 논리 구역에 속하고 구역 내부 시작·끝 위치로 배치된다.
 - 같은 구역 안에서 표시 순서를 가진다.
 - 이동 시 자리 이동 작업 이력이 자동 생성된다.
 - 가용 수량은 `수량 - 예약 수량`으로 계산한다.
+- 수량과 예약 수량 변경은 `0 <= reservedQuantity <= quantity`를 만족해야 하며, 판매 배분 변경은 난 묶음 행을 잠근 뒤 처리한다.
 - 화분 크기는 표준 `potSizeCode`를 가지며 원본 표시 문자열과 분리한다.
 - 의미가 불명확한 기존 화분 값은 임의 통합하지 않고 `UNMAPPED`로 검수한다.
 
@@ -233,22 +235,24 @@ BusinessPartner 1 ─ N SalesSlip 1 ─ N SalesSlipItem 1 ─ N SalesSlipItemAll
 - `SALES_RESERVE`
 - `SALES_RELEASE`
 - `SALES_OUTBOUND`
+- `SALES_CANCEL_RESERVE`
+- `SALES_CANCEL_OUTBOUND`
 
-전표 저장 시점에 바로 재고 차감하지 않는다. 전표 저장은 예약만 반영하고, 실제 수량 차감은 출고 완료 시점에 처리한다.
+전표 저장 시점에 바로 재고 차감하지 않는다. 전표 저장은 예약만 반영하고, 실제 수량 차감은 출고·출하 완료 시점에 처리한다. 작성중 전표 수정도 기존 예약 해제와 새 예약을 각각 이력으로 남긴다.
 
 ## 4. 경매 추적 도메인
 
 ```text
-AuctionLot
+AuctionShipmentLot
  ├─ AuctionAttempt
  │   └─ AuctionResultLine
- └─ AuctionStatusHistory
+ └─ AuctionLotStatusHistory
 
 AuctionSettlement
  └─ AuctionSettlementLine
 ```
 
-### AuctionLot
+### AuctionShipmentLot
 
 경매장에 출하된 물건의 추적 단위다.
 
@@ -274,7 +278,7 @@ AuctionSettlement
 
 - 같은 lot이 여러 단가로 나뉘어 판매될 수 있으므로 결과 행은 별도로 보존한다.
 
-### AuctionStatusHistory
+### AuctionLotStatusHistory
 
 상태 변경 이력이다.
 
@@ -312,11 +316,10 @@ PartnerBalanceSummary
 
 입금 이벤트다.
 
-- 판매 전표 입금
-- 경매 정산 입금
-- 대상 미지정 입금
-- 부분입금
-- 초과입금
+- 현재 공개 API는 일반 판매 전표 입금과 경매 정산 입금을 지원한다.
+- 부분입금은 지원하고 잔액 초과 입금은 거부한다.
+- 수동 입금 요청 키는 `externalUid`에 대상과 함께 저장해 같은 요청의 중복 반영을 막는다.
+- 대상 미지정 입금과 초과입금 예치금은 데이터 모델 확장 여지는 있으나 현재 API에는 없다.
 
 입금 처리는 삭제보다 이벤트 보존을 우선한다.
 

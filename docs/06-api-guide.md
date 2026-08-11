@@ -48,6 +48,7 @@ python3 scripts/generate_openapi.py --url http://localhost:8080/api-docs
 - `partnerId` 필수
 - `items` 필수
 - `auctionShipmentId` 사용 안 함
+- `salesStatus = 작성중 | 출고 완료`; 취소는 생성이 아니라 상태 변경 API로 처리
 
 경매 판매 전표:
 
@@ -67,6 +68,12 @@ python3 scripts/generate_openapi.py --url http://localhost:8080/api-docs
 - `attemptStatus`는 `SOLD`, `PARTIALLY_SOLD`, `FAILED`, `RETURN_INFERRED`
 - `SOLD`, `PARTIALLY_SOLD`는 `resultLines` 필요
 - `FAILED`, `RETURN_INFERRED`는 서버가 대기 수량 기준 결과 행을 자동 생성
+
+수동 입금 확인:
+
+- 일반 판매 전표와 경매 정산 입금 요청은 대상별 `idempotencyKey`가 필수다.
+- 같은 키·금액·입금일 재요청은 중복 입금으로 처리하지 않는다.
+- 같은 키를 다른 금액 또는 입금일에 재사용하면 검증 오류를 반환한다.
 
 ## 4. 공통 응답
 
@@ -125,7 +132,7 @@ python3 scripts/generate_openapi.py --url http://localhost:8080/api-docs
 
 신규 입고 등록은 입고 기록 대상을 가진 완료 상태의 `WorkOperation`을 생성한다.
 
-자리 이동·분갈이·분주·합식·입고 포트 작업은 계획 생성 시 대상을 스냅샷으로 확정하되 위치나 구조를 변경하지 않는다. 분갈이·분주·합식 실행 회차는 `POST /api/work-operations/{workOperationId}/structure-change-executions`에서 계획 대상 일부와 원본별 수량, 복수 결과를 처리하고 누적 작업 수량을 갱신한다. 기존 합식 완료 API는 이전 클라이언트 호환용이다. 다중 생성은 대상 없는 즉시 구조 변경 API로 유지한다.
+자리 이동·분갈이·분주·합식·입고 포트 작업은 계획 생성 시 대상을 스냅샷으로 확정하되 위치나 구조를 변경하지 않는다. 분갈이·분주·합식 실행 회차는 `POST /api/work-operations/{workOperationId}/structure-change-executions`에서 계획 대상 일부와 원본별 수량, 복수 결과를 처리하고 누적 작업 수량을 갱신한다. 기존 단일 대상 분갈이·분주 요청은 내부 변환 후 같은 N:M 실행 코어를 사용하고, 기존 합식 완료 API는 이전 클라이언트 호환용이다. 다중 생성은 대상 없는 즉시 구조 변경 API로 유지한다.
 
 분갈이·분주·합식 실행에서 원본 일부만 작업하면서 기존 배치의 뒤쪽 자리를 재사용하려면 `sources`의 `releasedStartPosition`, `releasedEndPosition`에 원본에서 비울 연속 구간을 전달한다. 비울 구간은 현재 원본 배치의 끝과 맞닿아야 하며, 서버는 원본 배치를 앞쪽 잔여 구간으로 줄인 뒤 해당 자리에 결과 난 묶음을 생성한다. 두 필드를 생략하면 원본 배치 범위는 수량이 줄어도 유지된다.
 

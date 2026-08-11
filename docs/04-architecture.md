@@ -56,7 +56,7 @@ green-house/
 
 MSA가 아니라 **모듈러 모놀리스**로 관리한다.
 
-권장 모듈 경계:
+실제 모듈 경계:
 
 ```text
 common
@@ -94,7 +94,7 @@ demo
 - 동
 - 물리 배드
 - 논리 구역
-- 세그먼트
+- 논리 구역별 수용량과 난 묶음 숫자 배치 구간
 - 난 묶음
 - 품종
 - 입고 기록
@@ -137,7 +137,7 @@ application|domain|repository|controller|dto/
 - 작업 계획·진행·조회·구조 변경·입고 포트 계획·즉시 실행은 각각 application service로 분리한다.
 - 구조 변경 작업 기록은 기록 전용 application service가 계획 aggregate 생성과 기존 구조 변경·폐기·포트 실행기를 한 트랜잭션으로 조합한다. 입력 검증 실패 시 중간 계획이나 일부 결과를 남기지 않는다.
 - 목록 조회는 작업별 상세 재조회를 하지 않고 대상과 실행 상태를 일괄 조회해 응답을 조립한다.
-- 분갈이·분주·합식은 공통 구조 변경 실행기와 작업별 Strategy를 사용한다. 난 묶음 저장소가 필요한 Strategy 구현은 `farm` 모듈에 둔다.
+- 분갈이·분주·합식은 공통 구조 변경 실행기와 작업별 Strategy를 사용한다. 기존 분갈이·분주 단일 대상 요청도 변환기를 거쳐 같은 실행 코어로 위임하고, 기존 합식 완료 API만 호환 경로로 남아 있다. 난 묶음 저장소가 필요한 Strategy 구현은 `farm` 모듈에 둔다.
 - 효과 실행과 효과 감사 저장을 분리하고 모든 신규 효과는 공통 저장 컴포넌트를 사용한다.
 - DB의 `timestamp without time zone` 시점 값은 UTC로 저장한다. 업무일자는 `Asia/Seoul` 기준으로
   계산하고 API 응답의 시점 값은 UTC에서 `Asia/Seoul`로 변환한다.
@@ -155,7 +155,6 @@ application|domain|dto/
 ### partner
 
 - 거래처
-- 거래처 정산 설정
 
 ### sales
 
@@ -170,7 +169,6 @@ application|domain|dto/
 - 경매 결과 행
 - 반환 확인
 - 수량 보정
-- 경매 정산
 
 ### settlement
 
@@ -178,12 +176,15 @@ application|domain|dto/
 - 부분입금
 - 거래처 잔액
 - 입금 이벤트
+- 거래처 정산 설정
+- 경매 정산과 정산 행
 
 ### auth / demo
 
 - 서버 세션 기반 로그인·로그아웃·현재 사용자 확인
 - 역할 기반 API 접근 제어
 - 데모 인증 주체, 변경 API 제한, 요청 횟수·본문 크기 제한
+- `auth`가 데모 필터를 조립하며 `demo`는 `auth` 타입을 참조하지 않아 모듈 순환을 만들지 않는다.
 
 ### dashboard / analytics
 
@@ -208,6 +209,8 @@ dto
 - Repository는 데이터 접근만 담당한다.
 - 다른 모듈의 Repository를 직접 참조하지 않고 해당 모듈의 application API 또는 port를 사용한다.
 - 외부로 노출되는 구조는 DTO로 제한한다.
+- `ModularArchitectureTests`는 `analytics`, `auth`, `demo`를 포함한 실제 13개 모듈의 선언 의존성, 순환, 타 모듈 Repository 직접 접근을 검사한다. 계층형 업무 모듈은 표준 레이어 규칙도 검사한다.
+- 분석 Repository는 조회 행 타입만 반환하며 API 응답 DTO 조립은 application 계층에서 담당한다.
 
 ## 5. 프론트엔드 구조
 
