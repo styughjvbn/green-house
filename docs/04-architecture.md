@@ -161,6 +161,9 @@ application|domain|dto/
 - 판매 전표
 - 판매 품목
 - A5 출력 데이터
+- 전표 품목 allocation의 신규 생성과 작성중 수정 복사는 `SalesSlipAllocationFactory`의 단일 생성 지점을 사용한다.
+- 출고·출하 완료는 `SalesSlipOutboundService`가 현재 allocation을 고정된 배치로 만든 뒤 난 묶음을 잠그고, 경매 shipment/lot 생성과 재고 차감을 순서대로 조율한다.
+- 전표 생성 시점과 출하 시점의 난 묶음 스냅샷은 각각 allocation 생성 지점과 잠긴 출하 배치를 확장해 추가한다.
 
 ### auction
 

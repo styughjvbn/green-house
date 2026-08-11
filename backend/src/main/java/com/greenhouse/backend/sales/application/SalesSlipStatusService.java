@@ -21,9 +21,9 @@ import com.greenhouse.backend.sales.domain.SalesSlip;
 public class SalesSlipStatusService {
 
 	private final SalesSlipRepository salesSlipRepository;
-	private final AuctionShipmentMaterializer auctionShipmentMaterializer;
 	private final AuctionSalesSlipCancellationPolicy auctionSalesSlipCancellationPolicy;
 	private final SalesSlipInventoryService salesSlipInventoryService;
+	private final SalesSlipOutboundService salesSlipOutboundService;
 	private final PaymentEventReader paymentEventReader;
 	private final PartnerBalanceService partnerBalanceService;
 	private final SalesSlipAuditSupport auditSupport;
@@ -50,8 +50,7 @@ public class SalesSlipStatusService {
 
 		salesSlip.updateSalesStatus(nextStatus);
 		if (salesSlip.isOutboundCompleted()) {
-			auctionShipmentMaterializer.materialize(salesSlip);
-			salesSlipInventoryService.outbound(salesSlip);
+			salesSlipOutboundService.complete(salesSlip);
 		}
 		auditSupport.record(AuditAction.UPDATED, salesSlip, before, auditSupport.snapshot(salesSlip));
 		return SalesSlipResponse.from(salesSlip);

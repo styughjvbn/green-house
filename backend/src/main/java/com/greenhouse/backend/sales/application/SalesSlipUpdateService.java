@@ -75,9 +75,7 @@ public class SalesSlipUpdateService {
 					nextItem.getUnitPrice(),
 					nextItem.getMemo());
 			currentItem.replaceAllocations(nextItem.getAllocations().stream()
-					.map(allocation -> new com.greenhouse.backend.sales.domain.SalesSlipItemAllocation(
-							allocation.getOrchidGroup(),
-							allocation.getAllocatedQuantity()))
+					.map(salesSlipAllocationFactory::copyAllocation)
 					.toList());
 		}
 		salesSlip.refreshAmounts();

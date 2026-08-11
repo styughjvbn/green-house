@@ -19,7 +19,7 @@ public class AuctionSalesSlipCreator {
 	private final SalesSlipNumberGenerator numberGenerator;
 	private final SalesSlipAllocationFactory salesSlipAllocationFactory;
 	private final SalesSlipInventoryService salesSlipInventoryService;
-	private final AuctionShipmentMaterializer auctionShipmentMaterializer;
+	private final SalesSlipOutboundService salesSlipOutboundService;
 
 	public SalesSlipResponse create(SalesSlipCreateRequest request) {
 		if (request.partnerId() == null) {
@@ -50,8 +50,7 @@ public class AuctionSalesSlipCreator {
 		var saved = salesSlipRepository.save(salesSlip);
 		salesSlipInventoryService.reserve(saved);
 		if (saved.isOutboundCompleted()) {
-			auctionShipmentMaterializer.materialize(saved);
-			salesSlipInventoryService.outbound(saved);
+			salesSlipOutboundService.complete(saved);
 		}
 		return SalesSlipResponse.from(saved);
 	}

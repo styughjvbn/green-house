@@ -6,10 +6,8 @@ import com.greenhouse.backend.sales.domain.SalesInventoryMovement;
 import com.greenhouse.backend.sales.domain.SalesInventoryMovementType;
 import com.greenhouse.backend.sales.domain.SalesSlip;
 import com.greenhouse.backend.sales.domain.SalesSlipItem;
-import com.greenhouse.backend.sales.domain.SalesSlipItemAllocation;
 import com.greenhouse.backend.sales.repository.SalesInventoryMovementRepository;
 import jakarta.persistence.EntityManager;
-import java.util.List;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
@@ -22,50 +20,44 @@ public class SalesSlipInventoryService {
 	private final OrchidGroupReader orchidGroupReader;
 
 	public void reserve(SalesSlip salesSlip) {
-		lockAllocations(salesSlip);
-		for (SalesSlipItem item : salesSlip.getItems()) {
-			for (SalesSlipItemAllocation allocation : item.getAllocations()) {
-				OrchidGroup orchidGroup = allocation.getOrchidGroup();
-				orchidGroup.reserve(allocation.getAllocatedQuantity());
-				salesInventoryMovementRepository.save(buildMovement(
-						orchidGroup,
-						salesSlip,
-						item,
-						SalesInventoryMovementType.SALES_RESERVE,
-						allocation.getAllocatedQuantity()));
-			}
+		SalesSlipAllocationBatch allocations = lockForUpdate(salesSlip);
+		for (SalesSlipAllocationBatch.Line line : allocations.lines()) {
+			OrchidGroup orchidGroup = line.orchidGroup();
+			orchidGroup.reserve(line.allocatedQuantity());
+			salesInventoryMovementRepository.save(buildMovement(
+					orchidGroup,
+					salesSlip,
+					line.item(),
+					SalesInventoryMovementType.SALES_RESERVE,
+					line.allocatedQuantity()));
 		}
 	}
 
 	public void release(SalesSlip salesSlip) {
-		lockAllocations(salesSlip);
-		for (SalesSlipItem item : salesSlip.getItems()) {
-			for (SalesSlipItemAllocation allocation : item.getAllocations()) {
-				OrchidGroup orchidGroup = allocation.getOrchidGroup();
-				orchidGroup.releaseReserved(allocation.getAllocatedQuantity());
-				salesInventoryMovementRepository.save(buildMovement(
-						orchidGroup,
-						salesSlip,
-						item,
-						SalesInventoryMovementType.SALES_RELEASE,
-						-allocation.getAllocatedQuantity()));
-			}
+		SalesSlipAllocationBatch allocations = lockForUpdate(salesSlip);
+		for (SalesSlipAllocationBatch.Line line : allocations.lines()) {
+			OrchidGroup orchidGroup = line.orchidGroup();
+			orchidGroup.releaseReserved(line.allocatedQuantity());
+			salesInventoryMovementRepository.save(buildMovement(
+					orchidGroup,
+					salesSlip,
+					line.item(),
+					SalesInventoryMovementType.SALES_RELEASE,
+					-line.allocatedQuantity()));
 		}
 	}
 
 	public void cancelReserve(SalesSlip salesSlip) {
-		lockAllocations(salesSlip);
-		for (SalesSlipItem item : salesSlip.getItems()) {
-			for (SalesSlipItemAllocation allocation : item.getAllocations()) {
-				OrchidGroup orchidGroup = allocation.getOrchidGroup();
-				orchidGroup.releaseReserved(allocation.getAllocatedQuantity());
-				salesInventoryMovementRepository.save(buildMovement(
-						orchidGroup,
-						salesSlip,
-						item,
-						SalesInventoryMovementType.SALES_CANCEL_RESERVE,
-						-allocation.getAllocatedQuantity()));
-			}
+		SalesSlipAllocationBatch allocations = lockForUpdate(salesSlip);
+		for (SalesSlipAllocationBatch.Line line : allocations.lines()) {
+			OrchidGroup orchidGroup = line.orchidGroup();
+			orchidGroup.releaseReserved(line.allocatedQuantity());
+			salesInventoryMovementRepository.save(buildMovement(
+					orchidGroup,
+					salesSlip,
+					line.item(),
+					SalesInventoryMovementType.SALES_CANCEL_RESERVE,
+					-line.allocatedQuantity()));
 		}
 	}
 
@@ -73,35 +65,30 @@ public class SalesSlipInventoryService {
 		release(salesSlip);
 	}
 
-	public void outbound(SalesSlip salesSlip) {
-		lockAllocations(salesSlip);
-		for (SalesSlipItem item : salesSlip.getItems()) {
-			for (SalesSlipItemAllocation allocation : item.getAllocations()) {
-				OrchidGroup orchidGroup = allocation.getOrchidGroup();
-				orchidGroup.outboundReserved(allocation.getAllocatedQuantity());
-				salesInventoryMovementRepository.save(buildMovement(
-						orchidGroup,
-						salesSlip,
-						item,
-						SalesInventoryMovementType.SALES_OUTBOUND,
-						-allocation.getAllocatedQuantity()));
-			}
+	void outbound(SalesSlipAllocationBatch allocations) {
+		for (SalesSlipAllocationBatch.Line line : allocations.lines()) {
+			OrchidGroup orchidGroup = line.orchidGroup();
+			orchidGroup.outboundReserved(line.allocatedQuantity());
+			salesInventoryMovementRepository.save(buildMovement(
+					orchidGroup,
+					allocations.salesSlip(),
+					line.item(),
+					SalesInventoryMovementType.SALES_OUTBOUND,
+					-line.allocatedQuantity()));
 		}
 	}
 
 	public void cancelOutbound(SalesSlip salesSlip) {
-		lockAllocations(salesSlip);
-		for (SalesSlipItem item : salesSlip.getItems()) {
-			for (SalesSlipItemAllocation allocation : item.getAllocations()) {
-				OrchidGroup orchidGroup = allocation.getOrchidGroup();
-				orchidGroup.restoreOutbound(allocation.getAllocatedQuantity());
-				salesInventoryMovementRepository.save(buildMovement(
-						orchidGroup,
-						salesSlip,
-						item,
-						SalesInventoryMovementType.SALES_CANCEL_OUTBOUND,
-						allocation.getAllocatedQuantity()));
-			}
+		SalesSlipAllocationBatch allocations = lockForUpdate(salesSlip);
+		for (SalesSlipAllocationBatch.Line line : allocations.lines()) {
+			OrchidGroup orchidGroup = line.orchidGroup();
+			orchidGroup.restoreOutbound(line.allocatedQuantity());
+			salesInventoryMovementRepository.save(buildMovement(
+					orchidGroup,
+					salesSlip,
+					line.item(),
+					SalesInventoryMovementType.SALES_CANCEL_OUTBOUND,
+					line.allocatedQuantity()));
 		}
 	}
 
@@ -117,13 +104,9 @@ public class SalesSlipInventoryService {
 		return new SalesInventoryMovement(groupRef, slipRef, itemRef, changeType, quantityDelta, salesSlip.getMemo());
 	}
 
-	private void lockAllocations(SalesSlip salesSlip) {
-		List<Long> orchidGroupIds = salesSlip.getItems().stream()
-				.flatMap(item -> item.getAllocations().stream())
-				.map(allocation -> allocation.getOrchidGroup().getId())
-				.distinct()
-				.sorted()
-				.toList();
-		orchidGroupReader.findAllForUpdateByIds(orchidGroupIds);
+	public SalesSlipAllocationBatch lockForUpdate(SalesSlip salesSlip) {
+		SalesSlipAllocationBatch allocations = SalesSlipAllocationBatch.from(salesSlip);
+		orchidGroupReader.findAllForUpdateByIds(allocations.orchidGroupIds());
+		return allocations;
 	}
 }

@@ -61,9 +61,17 @@ public class SalesSlipAllocationFactory {
 		for (SalesSlipItemAllocationRequest allocationRequest : mergeAllocations(request.allocations())) {
 			OrchidGroup orchidGroup = orchidGroups.get(allocationRequest.orchidGroupId());
 			validateItemVariety(request, orchidGroup);
-			item.addAllocation(new SalesSlipItemAllocation(orchidGroup, allocationRequest.quantity()));
+			item.addAllocation(createAllocation(orchidGroup, allocationRequest.quantity()));
 		}
 		return item;
+	}
+
+	public SalesSlipItemAllocation copyAllocation(SalesSlipItemAllocation allocation) {
+		return createAllocation(allocation.getOrchidGroup(), allocation.getAllocatedQuantity());
+	}
+
+	private SalesSlipItemAllocation createAllocation(OrchidGroup orchidGroup, Integer allocatedQuantity) {
+		return new SalesSlipItemAllocation(orchidGroup, allocatedQuantity);
 	}
 
 	private List<SalesSlipItemAllocationRequest> mergeAllocations(List<SalesSlipItemAllocationRequest> allocations) {

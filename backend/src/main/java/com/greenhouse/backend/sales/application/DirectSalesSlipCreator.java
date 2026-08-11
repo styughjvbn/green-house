@@ -23,6 +23,7 @@ public class DirectSalesSlipCreator {
 	private final ExpectedPaymentDateCalculator paymentDateCalculator;
 	private final SalesSlipNumberGenerator numberGenerator;
 	private final PartnerBalanceService partnerBalanceService;
+	private final SalesSlipOutboundService salesSlipOutboundService;
 
 	public SalesSlipResponse create(SalesSlipCreateRequest request) {
 		if (request.partnerId() == null) {
@@ -52,7 +53,7 @@ public class DirectSalesSlipCreator {
 		var saved = salesSlipRepository.save(salesSlip);
 		salesSlipInventoryService.reserve(saved);
 		if (saved.isOutboundCompleted()) {
-			salesSlipInventoryService.outbound(saved);
+			salesSlipOutboundService.complete(saved);
 		}
 		partnerBalanceService.updateReceivable(
 				partner.getId(), salesSlipRepository.sumDirectReceivableByPartnerId(partner.getId()), null);
