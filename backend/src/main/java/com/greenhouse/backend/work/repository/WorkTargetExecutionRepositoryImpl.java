@@ -27,9 +27,14 @@ public class WorkTargetExecutionRepositoryImpl implements WorkTargetExecutionRep
 
 	@Override
 	public List<WorkTargetExecution> findActiveInboundPottingForUpdate(Long inboundRecordId) {
+		return findActiveInboundPottingForUpdate(List.of(inboundRecordId));
+	}
+
+	@Override
+	public List<WorkTargetExecution> findActiveInboundPottingForUpdate(Collection<Long> inboundRecordIds) {
 		return executionWithOperationAndWorkType()
 				.where(
-						workOperationTarget.inboundRecordId.eq(inboundRecordId),
+						workOperationTarget.inboundRecordId.in(inboundRecordIds),
 						workType.code.eq(WorkType.POTTING_CODE),
 						workOperation.status.in(
 								WorkOperationStatus.PLANNED,
@@ -38,7 +43,7 @@ public class WorkTargetExecutionRepositoryImpl implements WorkTargetExecutionRep
 						workTargetExecution.status.in(
 								WorkTargetExecutionStatus.PENDING,
 								WorkTargetExecutionStatus.IN_PROGRESS))
-				.orderBy(workOperation.plannedStartDate.asc(), workOperation.id.asc())
+				.orderBy(workOperationTarget.inboundRecordId.asc(), workOperation.plannedStartDate.asc(), workOperation.id.asc())
 				.setLockMode(LockModeType.PESSIMISTIC_WRITE)
 				.fetch();
 	}

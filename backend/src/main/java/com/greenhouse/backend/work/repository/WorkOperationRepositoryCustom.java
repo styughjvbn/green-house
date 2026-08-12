@@ -8,12 +8,15 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
+import java.util.Collection;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 
 public interface WorkOperationRepositoryCustom {
 
 	Optional<WorkOperation> findWithWorkTypeById(Long id);
+
+	List<WorkOperation> findWithWorkTypeByIdIn(Collection<Long> ids);
 
 	Optional<WorkOperation> findByRequestKey(String requestKey);
 

@@ -21,6 +21,8 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.Collection;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -43,6 +45,25 @@ public class WorkOperationQueryService {
 	public WorkOperationResponse get(Long operationId) {
 		return responseAssembler.assemble(operationRepository.findWithWorkTypeById(operationId)
 				.orElseThrow(() -> new NotFoundException("작업을 찾을 수 없습니다.")));
+	}
+
+	public List<WorkOperationResponse> getAll(Collection<Long> operationIds) {
+		if (operationIds.isEmpty()) {
+			return List.of();
+		}
+		var operationsById = responseAssembler
+				.assembleAll(operationRepository.findWithWorkTypeByIdIn(operationIds))
+				.stream()
+				.collect(Collectors.toMap(WorkOperationResponse::id, Function.identity()));
+		return operationIds.stream()
+				.map(operationId -> {
+					var response = operationsById.get(operationId);
+					if (response == null) {
+						throw new NotFoundException("작업을 찾을 수 없습니다.");
+					}
+					return response;
+				})
+				.toList();
 	}
 
 	public PageResponse<WorkOperationResponse> search(

@@ -17,6 +17,8 @@ import com.greenhouse.backend.work.repository.WorkOperationRepository;
 import com.greenhouse.backend.work.repository.WorkAppliedEffectRepository;
 import java.util.LinkedHashMap;
 import java.util.Map;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -66,18 +68,28 @@ public class WorkOperationCorrectionService {
 
 	private WorkOperationCorrectionsResponse response(Long originalWorkOperationId) {
 		var original = queryService.get(originalWorkOperationId);
-		var corrections = correctionRepository
-				.findByOriginalWorkOperationIdOrderByCreatedAtAscIdAsc(originalWorkOperationId).stream()
+		var correctionEntities = correctionRepository
+				.findByOriginalWorkOperationIdOrderByCreatedAtAscIdAsc(originalWorkOperationId);
+		if (correctionEntities.isEmpty()) {
+			return new WorkOperationCorrectionsResponse(original, java.util.List.of());
+		}
+		var correctionOperationIds = correctionEntities.stream()
+				.map(correction -> correction.getCorrectionWorkOperation().getId())
+				.toList();
+		var operationsById = queryService.getAll(correctionOperationIds).stream()
+				.collect(Collectors.toMap(response -> response.id(), Function.identity()));
+		var effectsByOperationId = workAppliedEffectRepository
+				.findByWorkOperationIdInAndEffectKey(correctionOperationIds, "OPERATION")
+				.stream()
+				.collect(Collectors.toMap(effect -> effect.getWorkOperation().getId(), Function.identity()));
+		var corrections = correctionEntities.stream()
 				.map(correction -> {
 					Long correctionOperationId = correction.getCorrectionWorkOperation().getId();
-					Map<String, Object> effectDetails = workAppliedEffectRepository
-							.findByWorkOperationIdAndEffectKey(correctionOperationId, "OPERATION")
-							.map(effect -> effect.getResultDetails())
-							.orElse(Map.of());
+					var effect = effectsByOperationId.get(correctionOperationId);
 					return WorkOperationCorrectionItemResponse.from(
 							correction,
-							queryService.get(correctionOperationId),
-							effectDetails);
+							operationsById.get(correctionOperationId),
+							effect == null ? Map.of() : effect.getResultDetails());
 				})
 				.toList();
 		return new WorkOperationCorrectionsResponse(original, corrections);

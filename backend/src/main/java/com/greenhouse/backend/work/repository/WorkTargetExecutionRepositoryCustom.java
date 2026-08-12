@@ -9,6 +9,8 @@ public interface WorkTargetExecutionRepositoryCustom {
 
 	List<WorkTargetExecution> findActiveInboundPottingForUpdate(Long inboundRecordId);
 
+	List<WorkTargetExecution> findActiveInboundPottingForUpdate(Collection<Long> inboundRecordIds);
+
 	List<WorkTargetExecution> findForUpdateByTargetInboundRecordIdOrderByIdAsc(Long inboundRecordId);
 
 	List<WorkTargetExecution> findByTargetWorkOperationIdOrderByIdAsc(Long workOperationId);

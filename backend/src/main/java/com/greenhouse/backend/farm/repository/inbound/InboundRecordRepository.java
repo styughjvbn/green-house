@@ -13,7 +13,9 @@ import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.jpa.repository.Lock;
 import org.springframework.data.repository.query.Param;
+import jakarta.persistence.LockModeType;
 
 public interface InboundRecordRepository extends JpaRepository<InboundRecord, Long> {
 
@@ -28,6 +30,16 @@ public interface InboundRecordRepository extends JpaRepository<InboundRecord, Lo
 
 	@EntityGraph(attributePaths = { "variety", "createdOrchidGroup" })
 	List<InboundRecord> findByIdIn(Collection<Long> ids);
+
+	@Lock(LockModeType.PESSIMISTIC_WRITE)
+	@Query("""
+			select record from InboundRecord record
+			join fetch record.variety
+			left join fetch record.createdOrchidGroup
+			where record.id in :ids
+			order by record.id asc
+			""")
+	List<InboundRecord> findAllForUpdateByIdIn(@Param("ids") Collection<Long> ids);
 
 	@EntityGraph(attributePaths = { "variety", "createdOrchidGroup" })
 	List<InboundRecord> findByInboundTypeAndStatusInAndCreatedOrchidGroupIsNullOrderByPottingDueDateAscIdAsc(
