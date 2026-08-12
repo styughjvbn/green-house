@@ -10,6 +10,7 @@ import com.greenhouse.backend.sales.dto.SalesSlipResponse;
 import com.greenhouse.backend.sales.repository.SalesSlipRepository;
 import com.greenhouse.backend.settlement.application.ExpectedPaymentDateCalculator;
 import com.greenhouse.backend.settlement.application.PartnerBalanceService;
+import java.util.List;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
@@ -36,6 +37,7 @@ public class DirectSalesSlipCreator {
 		if (partner.getPartnerType() == PartnerType.AUCTION_HOUSE) {
 			throw new IllegalArgumentException("경매장 거래처는 경매 판매 전표에서 사용해야 합니다.");
 		}
+		partnerBalanceService.lockPartners(List.of(partner.getId()));
 
 		var salesSlip = new SalesSlip(
 				numberGenerator.generate(request.saleDate(), SalesType.DIRECT),

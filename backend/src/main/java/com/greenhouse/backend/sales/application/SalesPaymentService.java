@@ -14,6 +14,7 @@ import lombok.RequiredArgsConstructor;
 
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import java.util.List;
 
 @Service
 @Transactional
@@ -33,6 +34,7 @@ public class SalesPaymentService {
 		if (salesSlip.isCanceled()) {
 			throw new IllegalArgumentException("취소된 전표는 입금을 확인할 수 없습니다.");
 		}
+		partnerBalanceService.lockPartners(List.of(salesSlip.getPartner().getId()));
 		if (paymentLedgerService.findManualPayment(
 				PaymentTargetType.SALES_SLIP, salesSlipId, request).isPresent()) {
 			return SalesSlipResponse.from(salesSlip);

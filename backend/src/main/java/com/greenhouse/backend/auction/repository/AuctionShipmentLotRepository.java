@@ -6,6 +6,10 @@ import java.util.Optional;
 import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
 import com.greenhouse.backend.auction.domain.AuctionLotStatus;
+import jakarta.persistence.LockModeType;
+import org.springframework.data.jpa.repository.Lock;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 
 public interface AuctionShipmentLotRepository
 		extends JpaRepository<AuctionShipmentLot, Long>, AuctionShipmentLotRepositoryCustom {
@@ -16,4 +20,9 @@ public interface AuctionShipmentLotRepository
 
 	@EntityGraph(attributePaths = { "shipment", "shipment.auctionHouse" })
 	Optional<AuctionShipmentLot> findWithDetailsById(Long id);
+
+	@Lock(LockModeType.PESSIMISTIC_WRITE)
+	@EntityGraph(attributePaths = { "shipment", "shipment.auctionHouse" })
+	@Query("select lot from AuctionShipmentLot lot where lot.id = :id")
+	Optional<AuctionShipmentLot> findForUpdateById(@Param("id") Long id);
 }

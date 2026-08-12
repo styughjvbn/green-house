@@ -49,6 +49,7 @@ public class SalesSlipUpdateService {
 		if (partner.getPartnerType() == PartnerType.AUCTION_HOUSE) {
 			throw new IllegalArgumentException("경매장 거래처는 경매 판매 전표에서 사용해야 합니다.");
 		}
+		partnerBalanceService.lockPartners(List.of(previousPartnerId, partner.getId()));
 		var expectedPaymentDate = paymentDateCalculator.calculate(partner, request.saleDate());
 
 		salesSlipInventoryService.releaseForEdit(salesSlip);

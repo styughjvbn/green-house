@@ -14,6 +14,7 @@ import org.springframework.transaction.annotation.Transactional;
 import com.greenhouse.backend.audit.domain.AuditAction;
 import java.util.Map;
 import com.greenhouse.backend.sales.domain.SalesSlip;
+import java.util.List;
 
 @Service
 @Transactional
@@ -57,6 +58,9 @@ public class SalesSlipStatusService {
 	}
 
 	private void cancel(com.greenhouse.backend.sales.domain.SalesSlip salesSlip) {
+		if (salesSlip.getSalesType() == SalesType.DIRECT) {
+			partnerBalanceService.lockPartners(List.of(salesSlip.getPartner().getId()));
+		}
 		if (salesSlip.getSalesType() == SalesType.DIRECT
 				&& paymentEventReader.existsByTarget(PaymentTargetType.SALES_SLIP, salesSlip.getId())) {
 			throw new IllegalArgumentException("입금 이력이 있는 판매 전표는 취소할 수 없습니다.");
