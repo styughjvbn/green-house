@@ -12,28 +12,34 @@ docs/api/slices/*.openapi.yaml
 두 명세는 직접 수정하지 않는다. Controller와 요청/응답 DTO를 구현한 뒤 Springdoc 결과로 전체 명세와 slice를 함께 다시 만든다.
 
 ```bash
-# DB가 실행 중인 상태에서 백엔드를 임시 포트로 실행해 생성
+# 테스트 프로필의 임시 H2 DB로 백엔드를 실행해 생성
 python3 scripts/generate_openapi.py
 
 # 이미 실행 중인 백엔드를 이용해 생성
 python3 scripts/generate_openapi.py --url http://localhost:8080/api-docs
+
+# 프론트 TypeScript schema 갱신
+cd frontend
+npm run api:types
 ```
 
-생성 과정은 `AUTH_ENABLED=false`로 임시 백엔드를 실행한다. 분할 스크립트는 모든 operation이 controller tag 기준으로 정확히 하나의 slice에 포함되는지 검사하며, 새 controller tag의 매핑이 없으면 실패한다.
+기본 생성 과정은 `openApiRun` Gradle task와 테스트 프로필의 메모리 H2 DB를 사용하며 로컬 PostgreSQL에 의존하지 않는다. `AUTH_ENABLED=false`로 임시 백엔드를 실행한다. 분할 스크립트는 모든 operation이 controller tag 기준으로 정확히 하나의 slice에 포함되는지 검사하며, 새 controller tag의 매핑이 없으면 실패한다.
+
+프론트는 생성된 schema 중 API enum과 capability 타입을 사용한다. 전체 API client는 생성하지 않는다. `npm run check`는 `openapi.yaml`과 `shared/api/generated/openapi.d.ts`의 drift를 검사한다.
 
 ## 2. 주요 그룹
 
 | 파일 | 역할 |
 |---|---|
-| `auth.openapi.yaml` | 로그인, 로그아웃, 현재 사용자 조회 |
+| `auth.openapi.yaml` | 로그인, 로그아웃, 현재 사용자, 농장 업무일자·시간대 조회 |
 | `farm-structure.openapi.yaml` | 하우스, 물리 배드, 논리 구역, 난 묶음 조회 |
 | `farm-status.openapi.yaml` | 농장 현황 맵, 선택 범위 조회, 대시보드 요약 |
 | `orchid-command.openapi.yaml` | 난 묶음 생성, 다중 생성·분갈이 작업, 수정, 이동, 배치 |
 | `inventory.openapi.yaml` | 품종 CRUD/삭제, 자재 CRUD/삭제, 입고 기록 생성/수정/포트작업/취소/삭제, 목록 페이지네이션 |
 | `orchid-collection.openapi.yaml` | 난 묶음 사용자 그룹과 소속 관리 |
 | `derived-orchid-group.openapi.yaml` | 품종·년생·화분 크기 기준 자동 그룹 조회 |
-| `work.openapi.yaml` | 작업 유형과 기존 작업 이력 |
-| `work-operation.openapi.yaml` | 범위별 농약 작업 실행과 난 묶음 통합 이력 |
+| `work.openapi.yaml` | 작업 유형과 등록·실행 capability metadata |
+| `work-operation.openapi.yaml` | 범위별 작업 실행과 난 묶음 통합 이력 |
 | `partner.openapi.yaml` | 거래처, 정산 설정 |
 | `sales.openapi.yaml` | 판매 전표, 경매 판매 전표 |
 | `analytics.openapi.yaml` | 판매·거래처·작업 분석 |
@@ -61,6 +67,9 @@ python3 scripts/generate_openapi.py --url http://localhost:8080/api-docs
 - `auctionShipmentId`는 생성 요청에서 사용하지 않음
 
 즉, 현재 기준 경매 흐름은 `기존 출하 기록 선택 후 전표 생성`이 아니라 `전표를 먼저 저장하고 출하 완료 시 출하 기록과 lot 생성`이다.
+
+프론트 입력 기본 날짜는 공개 `GET /api/auth/context`의 `businessDate`를 사용한다.
+응답 `timeZone`은 현재 `Asia/Seoul`이며 브라우저의 `Date#toISOString()` 날짜를 업무일자로 사용하지 않는다.
 
 경매 결과 입력:
 

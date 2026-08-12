@@ -28,7 +28,7 @@ green-house/
 - 난 묶음 관리의 앱 라우트는 검색 파라미터만 feature의 `OrchidManagementRoutePage`로 전달한다. `RoutePage`가 deep link 대상과 초기 viewport를 파싱하고 지도·작업 유형 데이터를 준비하며, 관리 맵은 `PhysicalBed`를 농장 전체 순서로 펼치고 Embla Carousel로 2~4개 다이 viewport를 관리한다. 이후 URL 동기화와 현재 표시 범위 계산은 `useBedViewport`에 두며 현재 viewport와 앞뒤 각각 표시 개수만큼의 이동 버퍼만 무거운 내부 콘텐츠를 마운트한다.
 - 선택 이력은 동·다이·구역·난 묶음 범위별 페이지 API로 조회한다. 요약은 첫 20건만 사용하고 난 묶음 상세는 10건 단위로 조회한다. 선택 키·상세 페이지별 메모리 캐시와 진행 요청 공유·취소를 적용하고, 캐러셀 이동 상태는 선택 상태와 분리해 단순 스와이프가 이력 조회를 유발하지 않게 한다.
 - 입고 관리와 작업 관리가 공통으로 사용하는 포트 실행·농장 배치 UI는 `entities/farm/ui`에 두고 저장 API는 각 `features/*`에서 연결한다.
-- 판매와 inventory의 서버 페이지 목록은 TanStack Query로 관리한다. 두 기능 모두 URL을 조회 조건의 단일 기준으로 사용하고 서버와 클라이언트가 같은 파서와 query option을 공유한다. 서버 컴포넌트는 현재 URL 조건을 prefetch해 hydration하며, 공통 URL 페이지 훅은 검색 초안과 URL 변경만 담당한다.
+- 판매와 inventory의 서버 페이지 목록은 TanStack Query로 관리한다. 두 기능 모두 URL을 조회 조건의 단일 기준으로 사용하고 서버와 클라이언트가 같은 파서와 query option을 공유한다. 판매 전표의 상세 선택도 `slipId` URL 상태로 관리해 deep link와 브라우저 탐색을 지원하며 상세 서버 상태를 local state에 복제하지 않는다. 서버 컴포넌트는 현재 URL 조건을 prefetch해 hydration하며, 공통 URL 페이지 훅은 검색 초안과 URL 변경만 담당한다.
 - 작업 관리는 URL을 조회 범위·보기 방식·필터·페이지의 단일 기준으로 사용한다. 서버 진입 컴포넌트인 `WorkRecordRoutePage`는 현재 목록 또는 캘린더 query만 prefetch해 hydration하고, 작업 유형과 농장 전체 배치 정보는 등록 또는 실행 다이얼로그를 열 때 조회한다. 클라이언트 `WorkRecordPage`는 보기 전환과 등록 다이얼로그의 열림 상태만 관리하고, 등록 다이얼로그가 자체 참조 데이터의 로딩과 오류를 처리한다. 목록과 캘린더는 공통 작업 동작 훅과 상세 패널을 사용한다. 캘린더는 전용 기간 API를 한 번 호출하고, 작업 등록·실행 후 관련 작업 및 농장 query를 무효화한다.
 - 작업 관리는 조회·상태 변경을 `model/operation`, 등록 상태와 대상 계산을 `model/registration`, 작업 유형별 업무 규칙을 `model/work-types`로 구분한다. 화면은 `ui/list`, `ui/calendar`, `ui/detail`, `ui/registration`, `ui/work-types`에서 기능별로 구성하며, 작업 코드별 대상 출처와 실행·기록 UI는 `model/work-types/workTypeDefinition.ts`의 정의를 통해 선택한다.
 - 자리 이동 실행의 원본별 이동 수량 배분은 작업 모듈의 공통 효과 계산기로 처리하며, 농장 구조 변경 handler와 작업 실행 서비스가 같은 계산 규칙을 사용한다.
@@ -241,7 +241,19 @@ src/
 
 - `app/*/page.tsx`는 얇게 유지한다.
 - 실제 UI와 상태 로직은 `features/*`에 둔다.
+- `app`과 다른 feature는 `features/<name>/index.ts`에 공개된 API만 참조한다. feature는
+  `app` 또는 `widgets`에 의존하지 않고, `shared`와 `entities`는 상위 레이어에 의존하지 않는다.
+  이 의존 방향은 ESLint `no-restricted-imports`로 검사한다.
 - API 타입은 OpenAPI 또는 `entities` 타입과 맞춘다.
+- OpenAPI에서 생성한 `shared/api/generated/openapi.d.ts`를 API enum과 capability 타입의
+  기준으로 사용한다. 전체 client 코드는 생성하지 않고 기존 feature API 계층을 유지한다.
+  `npm run api:types`로 갱신하며 `npm run check`가 생성물 drift를 검사한다.
+- 루트 Server Component는 백엔드 런타임 컨텍스트를 조회하고 `businessDate`, `timeZone`을
+  Client Context로 전달한다. 날짜 입력 기본값은 브라우저 UTC 날짜로 계산하지 않는다.
+- 농장 현황의 선택·줌 요청은 직전 요청을 취소하고 최신 요청만 화면 상태에 반영한다.
+- 작업 유형 응답은 등록 가능 모드, 워크플로, 대상 종류, 설정 수정 가능 여부를 제공한다. 프론트엔드는 작업 코드 목록을 다시 조합하지 않고 이 capability로 등록 화면과 실행 화면을 구성한다.
+- 프론트 API 호출은 인증 요청을 제외하고 공통 `requestApi`를 사용해 쿠키·클라이언트 식별자·인증 만료·오류 메시지 처리를 공유한다.
+- 모달은 공통 Radix Dialog 기반을 우선 사용해 포커스 트랩, Esc 닫기, 포커스 복귀를 보장한다.
 - 화면별 복잡한 상태는 페이지 내부에 몰아넣지 않는다.
 - 범용 UI는 `shared/ui`에 두고 shadcn/Radix primitive는
   `shared/ui/primitives`에 둔다. 특정 도메인이나 기능에 종속된 UI는
@@ -287,7 +299,7 @@ cd backend
   지정한 경우에만 상한 초과로 실패한다.
 - 전후 비교가 필요하면 각 대상 커밋에서 `clean workE2eTest workBenchmark`를 실행하고 생성된
   `results.json`을 각각 `before.json`, `after.json`으로 별도 보관한다.
-- `CoreQueryRegressionTest`는 기본 테스트에서 농장 viewport 3회, 경매 lot 페이지 4회, 판매 전표 상세 2회의 SQL 상한을 검증한다.
+- `CoreQueryRegressionTest`는 기본 테스트에서 농장 viewport 3회, 경매 lot 페이지 4회, 판매 전표 상세 3회의 SQL 상한을 검증한다. 판매 전표 상세는 allocation과 서버 판정 액션을 각각 묶음 조회한다.
 
 ## 8. 프론트엔드 맵 성능 E2E
 
