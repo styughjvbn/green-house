@@ -46,7 +46,7 @@ export function OperationResult({
     operation.progress.partial === 0 &&
     operation.progress.failed === 0;
   const hasRemainingWork = !canComplete;
-  const executionKind = getWorkExecutionKind(operation.workTypeCode);
+  const executionKind = getWorkExecutionKind(operation.workTypeWorkflow);
   const structureChange =
     executionKind === "STRUCTURE_CHANGE" || executionKind === "MOVEMENT";
   const potting = executionKind === "POTTING";

@@ -4,6 +4,7 @@ import com.greenhouse.backend.common.api.ApiResponse;
 import com.greenhouse.backend.work.application.operation.WorkTypeService;
 import com.greenhouse.backend.work.dto.operation.WorkTypeCreateRequest;
 import com.greenhouse.backend.work.dto.operation.WorkTypeReorderRequest;
+import com.greenhouse.backend.work.dto.operation.WorkTypeMetadataResponse;
 import com.greenhouse.backend.work.dto.operation.WorkTypeResponse;
 import com.greenhouse.backend.work.dto.operation.WorkTypeUpdateRequest;
 import jakarta.validation.Valid;
@@ -31,6 +32,11 @@ public class WorkTypeController {
 	public ApiResponse<List<WorkTypeResponse>> getWorkTypes(
 			@RequestParam(defaultValue = "false") boolean includeInactive) {
 		return ApiResponse.ok(workTypeService.getWorkTypes(includeInactive));
+	}
+
+	@GetMapping("/metadata")
+	public ApiResponse<WorkTypeMetadataResponse> getWorkTypeMetadata() {
+		return ApiResponse.ok(workTypeService.getMetadata());
 	}
 
 	@PostMapping

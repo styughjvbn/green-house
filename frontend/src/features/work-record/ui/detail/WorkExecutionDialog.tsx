@@ -6,7 +6,7 @@ import { PottingExecutionDialog } from "../work-types/potting/PottingExecutionDi
 import { StructureChangeExecutionDialog } from "../work-types/structure-change/StructureChangeExecutionDialog";
 
 export function WorkExecutionDialog(props: WorkExecutionDialogProps) {
-  switch (getWorkExecutionKind(props.operation.workTypeCode)) {
+  switch (getWorkExecutionKind(props.operation.workTypeWorkflow)) {
     case "DISCARD":
       return <DiscardExecutionDialog {...props} />;
     case "MOVEMENT":

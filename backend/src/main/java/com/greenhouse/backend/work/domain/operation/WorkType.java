@@ -10,6 +10,8 @@ import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
+import com.greenhouse.backend.work.domain.target.WorkTargetReferenceType;
+import java.util.List;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.AccessLevel;
@@ -89,13 +91,55 @@ public class WorkType extends BaseEntity {
 		return active
 				&& !systemType
 				&& !INBOUND_CODE.equals(code)
-				&& !POTTING_CODE.equals(code);
+				&& !POTTING_CODE.equals(code)
+				&& effectKind() == WorkEffectKind.RECORD_ONLY;
 	}
 
 	public boolean isSettingsEditable() {
 		return !systemType
 				&& !INBOUND_CODE.equals(code)
 				&& !POTTING_CODE.equals(code);
+	}
+
+	public boolean isPeriodOperationAllowed() {
+		return active && (isManualCreateAllowed()
+				|| REPOT_CODE.equals(code)
+				|| MOVEMENT_CODE.equals(code)
+				|| DIVIDE_CODE.equals(code)
+				|| MERGE_CODE.equals(code)
+				|| DISCARD_CODE.equals(code));
+	}
+
+	public List<WorkRegistrationMode> registrationModes() {
+		if (!active) {
+			return List.of();
+		}
+		if (isPeriodOperationAllowed() || POTTING_CODE.equals(code)) {
+			return List.of(WorkRegistrationMode.RECORD, WorkRegistrationMode.PLAN);
+		}
+		return List.of();
+	}
+
+	public WorkTypeWorkflow workflow() {
+		if (MOVEMENT_CODE.equals(code)) {
+			return WorkTypeWorkflow.MOVEMENT;
+		}
+		if (DISCARD_CODE.equals(code)) {
+			return WorkTypeWorkflow.DISCARD;
+		}
+		if (POTTING_CODE.equals(code)) {
+			return WorkTypeWorkflow.POTTING;
+		}
+		if (REPOT_CODE.equals(code) || DIVIDE_CODE.equals(code) || MERGE_CODE.equals(code)) {
+			return WorkTypeWorkflow.STRUCTURE_CHANGE;
+		}
+		return WorkTypeWorkflow.GENERIC;
+	}
+
+	public WorkTargetReferenceType registrationTargetSource() {
+		return POTTING_CODE.equals(code)
+				? WorkTargetReferenceType.INBOUND_RECORD
+				: WorkTargetReferenceType.ORCHID_GROUP;
 	}
 
 	public WorkEffectKind effectKind() {

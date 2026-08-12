@@ -395,7 +395,7 @@ function TargetsTab({
   onRequestTargetCompletion: (targetId: number) => void;
 }) {
   const active = operation.status === "IN_PROGRESS";
-  const executionKind = getWorkExecutionKind(operation.workTypeCode);
+  const executionKind = getWorkExecutionKind(operation.workTypeWorkflow);
   const structureChange =
     executionKind === "STRUCTURE_CHANGE" || executionKind === "MOVEMENT";
   const potting = executionKind === "POTTING";

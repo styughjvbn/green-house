@@ -33,6 +33,7 @@ public class SalesQueryService {
 	private final SalesSlipRepository salesSlipRepository;
 	private final SalesSlipItemAllocationRepository allocationRepository;
 	private final AuctionDataReader auctionDataReader;
+	private final SalesSlipResponseAssembler responseAssembler;
 
 	public List<SalesSlipResponse> getSalesSlips(Long partnerId, LocalDate from, LocalDate to) {
 		return assembleSalesSlips(salesSlipRepository.search(partnerId, from, to, LEGACY_LIST_LIMIT));
@@ -86,9 +87,7 @@ public class SalesQueryService {
 						allocation -> allocation.getSalesSlipItem().getId(),
 						java.util.LinkedHashMap::new,
 						Collectors.toList()));
-		return salesSlips.stream()
-				.map(salesSlip -> SalesSlipResponse.from(salesSlip, allocationsByItemId))
-				.toList();
+		return responseAssembler.assemble(salesSlips, allocationsByItemId);
 	}
 
 	private String blankToNull(String value) {

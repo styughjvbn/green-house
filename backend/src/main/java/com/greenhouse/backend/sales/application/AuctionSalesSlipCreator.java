@@ -20,6 +20,7 @@ public class AuctionSalesSlipCreator {
 	private final SalesSlipAllocationFactory salesSlipAllocationFactory;
 	private final SalesSlipInventoryService salesSlipInventoryService;
 	private final SalesSlipOutboundService salesSlipOutboundService;
+	private final SalesSlipResponseAssembler responseAssembler;
 
 	public SalesSlipResponse create(SalesSlipCreateRequest request) {
 		if (request.partnerId() == null) {
@@ -52,6 +53,6 @@ public class AuctionSalesSlipCreator {
 		if (saved.isOutboundCompleted()) {
 			salesSlipOutboundService.complete(saved);
 		}
-		return SalesSlipResponse.from(saved);
+		return responseAssembler.assemble(saved);
 	}
 }

@@ -25,6 +25,7 @@ public class DirectSalesSlipCreator {
 	private final SalesSlipNumberGenerator numberGenerator;
 	private final PartnerBalanceService partnerBalanceService;
 	private final SalesSlipOutboundService salesSlipOutboundService;
+	private final SalesSlipResponseAssembler responseAssembler;
 
 	public SalesSlipResponse create(SalesSlipCreateRequest request) {
 		if (request.partnerId() == null) {
@@ -59,6 +60,6 @@ public class DirectSalesSlipCreator {
 		}
 		partnerBalanceService.updateReceivable(
 				partner.getId(), salesSlipRepository.sumDirectReceivableByPartnerId(partner.getId()), null);
-		return SalesSlipResponse.from(saved);
+		return responseAssembler.assemble(saved);
 	}
 }

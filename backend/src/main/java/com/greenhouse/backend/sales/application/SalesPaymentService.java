@@ -24,6 +24,7 @@ public class SalesPaymentService {
 	private final PaymentLedgerService paymentLedgerService;
 	private final PartnerBalanceService partnerBalanceService;
 	private final SettlementAuditSupport auditSupport;
+	private final SalesSlipResponseAssembler responseAssembler;
 
 	public SalesSlipResponse confirmPayment(Long salesSlipId, ManualPaymentRequest request) {
 		var salesSlip = salesSlipRepository.findForUpdateById(salesSlipId)
@@ -37,7 +38,7 @@ public class SalesPaymentService {
 		partnerBalanceService.lockPartners(List.of(salesSlip.getPartner().getId()));
 		if (paymentLedgerService.findManualPayment(
 				PaymentTargetType.SALES_SLIP, salesSlipId, request).isPresent()) {
-			return SalesSlipResponse.from(salesSlip);
+			return responseAssembler.assemble(salesSlip);
 		}
 
 		var before = auditSupport.paymentSnapshot(salesSlip.getPaidAmount(), salesSlip.getRemainingAmount(),
@@ -54,6 +55,6 @@ public class SalesPaymentService {
 				PaymentTargetType.SALES_SLIP, before,
 				auditSupport.paymentSnapshot(saved.getPaidAmount(), saved.getRemainingAmount(),
 						saved.getPaymentStatus()));
-		return SalesSlipResponse.from(saved);
+		return responseAssembler.assemble(saved);
 	}
 }

@@ -30,6 +30,7 @@ public class SalesSlipUpdateService {
 	private final ExpectedPaymentDateCalculator paymentDateCalculator;
 	private final PartnerBalanceService partnerBalanceService;
 	private final SalesSlipAuditSupport auditSupport;
+	private final SalesSlipResponseAssembler responseAssembler;
 
 	public SalesSlipResponse update(Long salesSlipId, SalesSlipCreateRequest request) {
 		SalesSlip salesSlip = salesSlipRepository.findForUpdateById(salesSlipId)
@@ -95,7 +96,7 @@ public class SalesSlipUpdateService {
 		}
 		auditSupport.record(AuditAction.UPDATED, persisted, before, auditSupport.snapshot(persisted));
 
-		return SalesSlipResponse.from(persisted);
+		return responseAssembler.assemble(persisted);
 	}
 
 	private void validateEditable(SalesSlip salesSlip, SalesSlipCreateRequest request) {

@@ -1,5 +1,9 @@
 ﻿import type { Page } from "@/shared/api/page";
 
+import type { components } from "@/shared/api/generated/openapi";
+
+type ApiSchemas = components["schemas"];
+
 export type { Page } from "@/shared/api/page";
 
 export type BedZoneSide = "LEFT" | "RIGHT" | "CUSTOM" | "HANGING";
@@ -236,17 +240,9 @@ export type WorkRecordTargetType =
   | "BED_ZONE"
   | "ORCHID_GROUP";
 
-export type WorkTypeTemplate =
-  | "PESTICIDE"
-  | "FERTILIZER"
-  | "REPOT"
-  | "CLEANUP"
-  | "DISCARD"
-  | "STATUS"
-  | "MEMO"
-  | "MOVEMENT"
-  | "MULTI_CREATE"
-  | "CORRECTION";
+export type WorkTypeTemplate = NonNullable<
+  ApiSchemas["WorkTypeResponse"]["template"]
+>;
 
 export type WorkType = {
   id: number;
@@ -257,24 +253,27 @@ export type WorkType = {
   systemType: boolean;
   active: boolean;
   sortOrder: number;
+  settingsEditable: boolean;
+  registrationModes: WorkRegistrationMode[];
+  workflow: WorkTypeWorkflow;
+  targetSource: NonNullable<ApiSchemas["WorkTypeResponse"]["targetSource"]>;
 };
 
-export type WorkOperationStatus =
-  | "PLANNED"
-  | "IN_PROGRESS"
-  | "PAUSED"
-  | "COMPLETED"
-  | "CANCELED"
-  | "CORRECTED";
+export type WorkRegistrationMode = NonNullable<
+  ApiSchemas["WorkTypeResponse"]["registrationModes"]
+>[number];
 
-export type WorkTargetExecutionStatus =
-  | "PENDING"
-  | "IN_PROGRESS"
-  | "PARTIALLY_COMPLETED"
-  | "COMPLETED"
-  | "SKIPPED"
-  | "CANCELED"
-  | "FAILED";
+export type WorkTypeWorkflow = NonNullable<
+  ApiSchemas["WorkTypeResponse"]["workflow"]
+>;
+
+export type WorkOperationStatus = NonNullable<
+  ApiSchemas["WorkOperationResponse"]["status"]
+>;
+
+export type WorkTargetExecutionStatus = NonNullable<
+  ApiSchemas["WorkOperationTargetResponse"]["executionStatus"]
+>;
 
 export type WorkLocationSnapshot = {
   houseId: number;
@@ -318,6 +317,7 @@ export type WorkOperationTarget = {
   effectAppliedAt: string | null;
   worker: string | null;
   resultDetails: Record<string, unknown> | null;
+  resultOrchidGroupIds: number[];
 };
 
 export type WorkTargetPreview = {
@@ -332,6 +332,7 @@ export type WorkOperation = {
   workTypeCode: string;
   workType: string;
   workTypeTemplate: WorkTypeTemplate;
+  workTypeWorkflow: WorkTypeWorkflow;
   title: string;
   status: WorkOperationStatus;
   plannedStartDate: string;
@@ -461,6 +462,10 @@ export type SalesOrchidGroupOption = {
   bedZoneName: string;
 };
 
+export type SalesSlipAction = NonNullable<
+  ApiSchemas["SalesSlipResponse"]["availableActions"]
+>[number];
+
 export type SalesSlip = {
   id: number;
   slipNumber: string;
@@ -478,9 +483,10 @@ export type SalesSlip = {
   paymentMethod: string | null;
   memo: string | null;
   items: SalesSlipItem[];
+  availableActions: SalesSlipAction[];
 };
 
-export type SalesSlipListItem = Omit<SalesSlip, "items">;
+export type SalesSlipListItem = Omit<SalesSlip, "items" | "availableActions">;
 
 export type SalesSlipPage = Page<SalesSlipListItem>;
 

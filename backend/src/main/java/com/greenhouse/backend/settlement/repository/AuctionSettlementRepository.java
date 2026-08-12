@@ -22,6 +22,13 @@ public interface AuctionSettlementRepository extends JpaRepository<AuctionSettle
 			""")
 	boolean existsByAuctionShipmentId(@Param("shipmentId") Long shipmentId);
 
+	@Query("""
+			select distinct line.auctionShipmentLot.shipment.id
+			from AuctionSettlementLine line
+			where line.auctionShipmentLot.shipment.id in :shipmentIds
+			""")
+	List<Long> findSettledAuctionShipmentIds(@Param("shipmentIds") Collection<Long> shipmentIds);
+
 	Optional<AuctionSettlement> findByAuctionHouseIdAndAuctionDate(Long auctionHouseId, LocalDate auctionDate);
 
 	@Query("""

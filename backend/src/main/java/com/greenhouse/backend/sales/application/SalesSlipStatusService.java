@@ -28,6 +28,7 @@ public class SalesSlipStatusService {
 	private final PaymentEventReader paymentEventReader;
 	private final PartnerBalanceService partnerBalanceService;
 	private final SalesSlipAuditSupport auditSupport;
+	private final SalesSlipResponseAssembler responseAssembler;
 
 	public SalesSlipResponse updateStatus(Long salesSlipId, SalesSlipStatusUpdateRequest request) {
 		var salesSlip = salesSlipRepository.findForUpdateById(salesSlipId)
@@ -37,13 +38,13 @@ public class SalesSlipStatusService {
 			throw new IllegalArgumentException("취소된 전표는 상태를 변경할 수 없습니다.");
 		}
 		if (nextStatus.equals(salesSlip.getSalesStatus())) {
-			return SalesSlipResponse.from(salesSlip);
+			return responseAssembler.assemble(salesSlip);
 		}
 		Map<String, Object> before = auditSupport.snapshot(salesSlip);
 		if (SalesSlip.STATUS_CANCELED.equals(nextStatus)) {
 			cancel(salesSlip);
 			auditSupport.record(AuditAction.DEACTIVATED, salesSlip, before, auditSupport.snapshot(salesSlip));
-			return SalesSlipResponse.from(salesSlip);
+			return responseAssembler.assemble(salesSlip);
 		}
 		if (salesSlip.isOutboundCompleted()) {
 			throw new IllegalArgumentException("출고 완료된 전표는 판매 상태를 변경할 수 없습니다.");
@@ -54,7 +55,7 @@ public class SalesSlipStatusService {
 			salesSlipOutboundService.complete(salesSlip);
 		}
 		auditSupport.record(AuditAction.UPDATED, salesSlip, before, auditSupport.snapshot(salesSlip));
-		return SalesSlipResponse.from(salesSlip);
+		return responseAssembler.assemble(salesSlip);
 	}
 
 	private void cancel(com.greenhouse.backend.sales.domain.SalesSlip salesSlip) {

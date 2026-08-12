@@ -1,6 +1,7 @@
 package com.greenhouse.backend;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.hamcrest.Matchers.containsInAnyOrder;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -58,13 +59,20 @@ class PaymentTests {
 		slip.addItem(new SalesSlipItem(null, "카틀레야", null, "A", 10, 10_000, null));
 		slip = salesSlipRepository.saveAndFlush(slip);
 
+		mockMvc.perform(get("/api/sales-slips/{id}", slip.getId()))
+			.andExpect(status().isOk())
+			.andExpect(jsonPath("$.data.availableActions", containsInAnyOrder(
+				"EDIT", "COMPLETE", "CANCEL", "CONFIRM_PAYMENT")));
+
 		mockMvc.perform(post("/api/sales-slips/{id}/confirm-payment", slip.getId())
 				.contentType("application/json")
 				.content(paymentJson(30_000)))
 			.andExpect(status().isOk())
 			.andExpect(jsonPath("$.data.paidAmount").value(30_000))
 			.andExpect(jsonPath("$.data.remainingAmount").value(70_000))
-			.andExpect(jsonPath("$.data.paymentStatus").value("부분입금"));
+			.andExpect(jsonPath("$.data.paymentStatus").value("부분입금"))
+			.andExpect(jsonPath("$.data.availableActions", containsInAnyOrder(
+				"COMPLETE", "CONFIRM_PAYMENT")));
 
 		mockMvc.perform(post("/api/sales-slips/{id}/confirm-payment", slip.getId())
 				.contentType("application/json")
@@ -79,7 +87,9 @@ class PaymentTests {
 			.andExpect(status().isOk())
 			.andExpect(jsonPath("$.data.paidAmount").value(100_000))
 			.andExpect(jsonPath("$.data.remainingAmount").value(0))
-			.andExpect(jsonPath("$.data.paymentStatus").value("입금 완료"));
+			.andExpect(jsonPath("$.data.paymentStatus").value("입금 완료"))
+			.andExpect(jsonPath("$.data.availableActions[0]").value("COMPLETE"))
+			.andExpect(jsonPath("$.data.availableActions.length()").value(1));
 
 		mockMvc.perform(get("/api/partner-payment-events")
 				.param("partnerId", partner.getId().toString()))

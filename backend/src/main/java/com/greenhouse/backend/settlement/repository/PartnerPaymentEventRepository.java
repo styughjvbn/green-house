@@ -11,6 +11,16 @@ import org.springframework.data.repository.query.Param;
 
 public interface PartnerPaymentEventRepository extends JpaRepository<PartnerPaymentEvent, Long> {
 	boolean existsByTargetTypeAndTargetId(PaymentTargetType targetType, Long targetId);
+
+	@Query("""
+			select distinct event.targetId from PartnerPaymentEvent event
+			where event.targetType = :targetType
+			  and event.targetId in :targetIds
+			""")
+	List<Long> findExistingTargetIds(
+			@Param("targetType") PaymentTargetType targetType,
+			@Param("targetIds") List<Long> targetIds);
+
 	Optional<PartnerPaymentEvent> findByExternalUid(String externalUid);
 
 	@EntityGraph(attributePaths = { "partner", "parentEvent" })

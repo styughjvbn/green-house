@@ -118,34 +118,14 @@ export function getManualWorkTypes(workTypes: WorkType[]) {
   return workTypes.filter(
     (workType) =>
       workType.active &&
-      !workType.systemType &&
-      workType.code !== "INBOUND" &&
-      workType.code !== "POTTING",
+      workType.workflow === "GENERIC" &&
+      workType.registrationModes.includes("RECORD"),
   );
 }
 
 export function getSchedulableWorkTypes(workTypes: WorkType[]) {
   return workTypes.filter(
-    (workType) =>
-      workType.active &&
-      (workType.code === "REPOT" ||
-        workType.code === "DIVIDE" ||
-        workType.code === "MERGE" ||
-        workType.code === "DISCARD" ||
-        workType.code === "POTTING" ||
-        workType.code === "MOVEMENT" ||
-        (!workType.systemType &&
-          workType.code !== "INBOUND" &&
-          workType.code !== "MULTI_CREATE" &&
-          workType.code !== "CORRECTION" &&
-          [
-            "PESTICIDE",
-            "FERTILIZER",
-            "CLEANUP",
-            "DISCARD",
-            "STATUS",
-            "MEMO",
-          ].includes(workType.template))),
+    (workType) => workType.active && workType.registrationModes.length > 0,
   );
 }
 

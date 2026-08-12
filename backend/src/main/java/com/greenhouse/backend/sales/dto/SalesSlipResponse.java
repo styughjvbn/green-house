@@ -24,15 +24,13 @@ public record SalesSlipResponse(
 		String salesStatus,
 		String paymentMethod,
 		String memo,
-		List<SalesSlipItemResponse> items) {
-
-	public static SalesSlipResponse from(SalesSlip salesSlip) {
-		return from(salesSlip, null);
-	}
+		List<SalesSlipItemResponse> items,
+		List<SalesSlipAction> availableActions) {
 
 	public static SalesSlipResponse from(
 			SalesSlip salesSlip,
-			Map<Long, List<SalesSlipItemAllocation>> allocationsByItemId) {
+			Map<Long, List<SalesSlipItemAllocation>> allocationsByItemId,
+			List<SalesSlipAction> availableActions) {
 		return new SalesSlipResponse(
 				salesSlip.getId(),
 				salesSlip.getSlipNumber(),
@@ -55,6 +53,7 @@ public record SalesSlipResponse(
 								: SalesSlipItemResponse.from(
 										item,
 										allocationsByItemId.getOrDefault(item.getId(), List.of())))
-						.toList());
+						.toList(),
+				availableActions);
 	}
 }

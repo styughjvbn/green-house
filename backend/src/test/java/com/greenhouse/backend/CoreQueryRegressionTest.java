@@ -91,7 +91,7 @@ class CoreQueryRegressionTest {
 	}
 
 	@Test
-	void salesSlipDetailLoadsAllocationsInOneBatch() {
+	void salesSlipDetailLoadsAllocationsAndActionsWithFixedQueryCount() {
 		OrchidGroup orchidGroup = createOrchidGroup(902, "판매 회귀 품종", 20);
 		BusinessPartner partner = partnerRepository.save(
 				new BusinessPartner("회귀 거래처", PartnerType.WHOLESALE, null, null, null, null));
@@ -112,7 +112,7 @@ class CoreQueryRegressionTest {
 
 		long queryCount = measure(() -> salesQueryService.getSalesSlip(slip.getId()));
 
-		assertThat(queryCount).isLessThanOrEqualTo(2L);
+		assertThat(queryCount).isLessThanOrEqualTo(3L);
 	}
 
 	private OrchidGroup createOrchidGroup(int houseNumber, String varietyName, int quantity) {
