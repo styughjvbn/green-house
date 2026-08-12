@@ -57,18 +57,20 @@ public interface OrchidGroupRepository extends JpaRepository<OrchidGroup, Long> 
 
 	@Query("""
 			select count(g) from OrchidGroup g
-			where g.status in ('주의', '이상', '병해충')
+			where g.status in :warningStatuses
 			  and g.quantity > 0
 			""")
-	long countWarningStatus();
+	long countWarningStatus(@Param("warningStatuses") java.util.Collection<String> warningStatuses);
 
 	@Query("""
 			select count(g) from OrchidGroup g
 			join g.bedZone z
 			join z.physicalBed b
-			where b.house.id = :houseId and g.status in ('주의', '이상', '병해충') and g.quantity > 0
+			where b.house.id = :houseId and g.status in :warningStatuses and g.quantity > 0
 			""")
-	long countWarningStatusByHouseId(@Param("houseId") Long houseId);
+	long countWarningStatusByHouseId(
+			@Param("houseId") Long houseId,
+			@Param("warningStatuses") java.util.Collection<String> warningStatuses);
 
 	@Query("""
 			select g from OrchidGroup g
@@ -151,7 +153,7 @@ public interface OrchidGroupRepository extends JpaRepository<OrchidGroup, Long> 
 			left join fetch g.inboundRecord
 			where h.id = :houseId
 			  and g.quantity > 0
-			  and g.status not in ('종료', '폐기', '판매 완료')
+			  and g.status not in ('종료', '폐기', '판매 완료', '생성 취소')
 			order by b.displayOrder asc, z.sortOrder asc, g.sortOrder asc
 			""")
 	List<OrchidGroup> findActiveWorkTargetsByHouseId(@Param("houseId") Long houseId);
@@ -166,7 +168,7 @@ public interface OrchidGroupRepository extends JpaRepository<OrchidGroup, Long> 
 			where (:physicalBedId is null or b.id = :physicalBedId)
 			  and (:bedZoneId is null or z.id = :bedZoneId)
 			  and g.quantity > 0
-			  and g.status not in ('종료', '폐기', '판매 완료')
+			  and g.status not in ('종료', '폐기', '판매 완료', '생성 취소')
 			order by b.house.number asc, b.displayOrder asc, z.sortOrder asc, g.sortOrder asc
 			""")
 	List<OrchidGroup> findActiveWorkTargets(
@@ -182,7 +184,7 @@ public interface OrchidGroupRepository extends JpaRepository<OrchidGroup, Long> 
 			left join fetch g.inboundRecord
 			where g.id in :orchidGroupIds
 			  and g.quantity > 0
-			  and g.status not in ('종료', '폐기', '판매 완료')
+			  and g.status not in ('종료', '폐기', '판매 완료', '생성 취소')
 			""")
 	List<OrchidGroup> findActiveWorkTargetsByIds(@Param("orchidGroupIds") java.util.Collection<Long> orchidGroupIds);
 
@@ -213,7 +215,7 @@ public interface OrchidGroupRepository extends JpaRepository<OrchidGroup, Long> 
 			join fetch g.variety v
 			left join fetch g.inboundRecord
 			where g.quantity > 0
-			  and g.status not in ('종료', '폐기', '판매 완료')
+			  and g.status not in ('종료', '폐기', '판매 완료', '생성 취소')
 			  and g.potSizeCode <> com.greenhouse.backend.farm.domain.orchid.PotSizeCode.UNMAPPED
 			  and (:varietyId is null or v.id = :varietyId)
 			  and (:potSizeCode is null or g.potSizeCode = :potSizeCode)

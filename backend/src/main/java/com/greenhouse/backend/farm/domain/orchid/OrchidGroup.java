@@ -182,14 +182,14 @@ public class OrchidGroup extends BaseEntity {
 	}
 
 	public void cancelCreation() {
-		if ("생성 취소".equals(status)) {
+		if (OrchidGroupStatusPolicy.CREATION_CANCELED.equals(status)) {
 			return;
 		}
 		if (reservedQuantity != 0) {
 			throw new IllegalArgumentException("예약 수량이 있는 난 묶음은 생성을 취소할 수 없습니다.");
 		}
 		this.quantity = 0;
-		this.status = "생성 취소";
+		this.status = OrchidGroupStatusPolicy.CREATION_CANCELED;
 	}
 
 	public void applyRepot(Integer inputQuantity) {
@@ -222,7 +222,7 @@ public class OrchidGroup extends BaseEntity {
 		}
 		this.quantity -= inputQuantity;
 		if (this.quantity == 0) {
-			this.status = "종료";
+			this.status = OrchidGroupStatusPolicy.CLOSED;
 		}
 	}
 
@@ -233,7 +233,7 @@ public class OrchidGroup extends BaseEntity {
 		}
 		this.quantity -= discardQuantity;
 		if (this.quantity == 0) {
-			this.status = "폐기";
+			this.status = OrchidGroupStatusPolicy.DISCARDED;
 		}
 	}
 

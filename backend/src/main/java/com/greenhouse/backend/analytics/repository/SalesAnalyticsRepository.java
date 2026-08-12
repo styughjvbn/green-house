@@ -10,6 +10,8 @@ import static com.greenhouse.backend.work.domain.operation.QWorkType.workType;
 
 import com.greenhouse.backend.work.domain.operation.WorkOperationStatus;
 import com.greenhouse.backend.work.domain.operation.WorkTypeTemplate;
+import com.greenhouse.backend.farm.domain.orchid.OrchidGroupStatusPolicy;
+import com.querydsl.core.types.dsl.CaseBuilder;
 import com.querydsl.core.Tuple;
 import com.querydsl.core.types.Projections;
 import com.querydsl.core.types.dsl.BooleanExpression;
@@ -17,10 +19,7 @@ import com.querydsl.core.types.dsl.NumberExpression;
 import com.querydsl.jpa.impl.JPAQueryFactory;
 import jakarta.persistence.EntityManager;
 import java.time.LocalDate;
-import java.util.Comparator;
-import java.util.LinkedHashMap;
 import java.util.List;
-import java.util.Map;
 import org.springframework.stereotype.Repository;
 
 @Repository
@@ -55,40 +54,34 @@ public class SalesAnalyticsRepository {
 				.from(orchidGroup)
 				.where(
 						orchidGroup.quantity.gt(0),
-						orchidGroup.status.notIn("주의", "이상", "병해충", "종료", "생성 취소"))
+						orchidGroup.status.notIn(OrchidGroupStatusPolicy.unavailableForSaleStatuses()))
 				.fetchOne());
 	}
 
 	public List<VarietyInventoryAnalyticsRow> varietyInventory() {
-		Map<String, long[]> values = new LinkedHashMap<>();
-		queryFactory
-				.select(
+		var saleableQuantity = new CaseBuilder()
+				.when(orchidGroup.status.notIn(OrchidGroupStatusPolicy.unavailableForSaleStatuses()))
+				.then(orchidGroup.quantity.subtract(orchidGroup.reservedQuantity))
+				.otherwise(0)
+				.sum()
+				.longValue();
+		var warningGroupCount = new CaseBuilder()
+				.when(orchidGroup.status.in(OrchidGroupStatusPolicy.warningStatuses()))
+				.then(1)
+				.otherwise(0)
+				.sum()
+				.longValue();
+		return queryFactory
+				.select(Projections.constructor(
+						VarietyInventoryAnalyticsRow.class,
 						orchidGroup.varietyName,
-						orchidGroup.status,
-						orchidGroup.quantity,
-						orchidGroup.reservedQuantity)
+						saleableQuantity,
+						warningGroupCount))
 				.from(orchidGroup)
 				.where(orchidGroup.quantity.gt(0))
-				.fetch()
-				.forEach(tuple -> {
-					String name = tuple.get(orchidGroup.varietyName);
-					String status = tuple.get(orchidGroup.status);
-					Integer quantity = tuple.get(orchidGroup.quantity);
-					Integer reservedQuantity = tuple.get(orchidGroup.reservedQuantity);
-					long[] totals = values.computeIfAbsent(name, ignored -> new long[2]);
-					if (List.of("주의", "이상", "병해충").contains(status)) {
-						totals[1]++;
-					} else if (!List.of("종료", "생성 취소").contains(status)) {
-						totals[0] += Math.max(0, quantity - reservedQuantity);
-					}
-				});
-		return values.entrySet().stream()
-				.map(entry -> new VarietyInventoryAnalyticsRow(
-						entry.getKey(),
-						entry.getValue()[0],
-						entry.getValue()[1]))
-				.sorted(Comparator.comparing(VarietyInventoryAnalyticsRow::saleableQuantity).reversed())
-				.toList();
+				.groupBy(orchidGroup.varietyName)
+				.orderBy(saleableQuantity.desc(), orchidGroup.varietyName.asc())
+				.fetch();
 	}
 
 	public Long sumUnpaidAmount(LocalDate from, LocalDate to) {

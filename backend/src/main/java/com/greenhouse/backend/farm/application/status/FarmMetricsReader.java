@@ -4,6 +4,7 @@ import com.greenhouse.backend.farm.repository.structure.BedZoneRepository;
 import com.greenhouse.backend.farm.repository.structure.HouseRepository;
 import com.greenhouse.backend.farm.repository.orchid.OrchidGroupRepository;
 import com.greenhouse.backend.farm.repository.structure.PhysicalBedRepository;
+import com.greenhouse.backend.farm.domain.orchid.OrchidGroupStatusPolicy;
 
 import lombok.RequiredArgsConstructor;
 
@@ -25,7 +26,7 @@ public class FarmMetricsReader {
 				physicalBedRepository.count(),
 				bedZoneRepository.count(),
 				orchidGroupRepository.count(),
-				orchidGroupRepository.countWarningStatus());
+				orchidGroupRepository.countWarningStatus(OrchidGroupStatusPolicy.warningStatuses()));
 	}
 
 	public record Snapshot(

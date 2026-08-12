@@ -4,6 +4,7 @@ import com.greenhouse.backend.common.exception.NotFoundException;
 import com.greenhouse.backend.farm.domain.status.FarmStatusTargetType;
 import com.greenhouse.backend.farm.domain.status.FarmZoomLevel;
 import com.greenhouse.backend.farm.domain.orchid.OrchidGroup;
+import com.greenhouse.backend.farm.domain.orchid.OrchidGroupStatusPolicy;
 import com.greenhouse.backend.farm.dto.structure.BedZoneResponse;
 import com.greenhouse.backend.farm.dto.status.FarmStatusMapResponse;
 import com.greenhouse.backend.farm.dto.status.FarmStatusMapOrchidGroupResponse;
@@ -25,7 +26,6 @@ import lombok.RequiredArgsConstructor;
 
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 import java.util.stream.Collectors;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -34,8 +34,6 @@ import org.springframework.transaction.annotation.Transactional;
 @Transactional(readOnly = true)
 @RequiredArgsConstructor
 public class FarmStatusService {
-	private static final Set<String> WARNING_STATUSES = Set.of("주의", "이상", "병해충");
-
 	private final HouseRepository houseRepository;
 	private final PhysicalBedRepository physicalBedRepository;
 	private final BedZoneRepository bedZoneRepository;
@@ -57,7 +55,7 @@ public class FarmStatusService {
 							house.getName(),
 							houseGroups.size(),
 							houseGroups.stream()
-									.filter(group -> WARNING_STATUSES.contains(group.getStatus()))
+									.filter(group -> OrchidGroupStatusPolicy.isWarning(group.getStatus()))
 									.count(),
 							0,
 							null,
@@ -116,7 +114,7 @@ public class FarmStatusService {
 					}
 					orchidGroupCount++;
 					totalQuantity += orchidGroup.getQuantity();
-					if (WARNING_STATUSES.contains(orchidGroup.getStatus())) {
+					if (OrchidGroupStatusPolicy.isWarning(orchidGroup.getStatus())) {
 						abnormalCount++;
 					}
 				}
