@@ -215,6 +215,15 @@ dto
 - `ModularArchitectureTests`는 `analytics`, `auth`, `demo`를 포함한 실제 13개 모듈의 선언 의존성, 순환, 타 모듈 Repository 직접 접근을 검사한다. 계층형 업무 모듈은 표준 레이어 규칙도 검사한다.
 - 분석 Repository는 조회 행 타입만 반환하며 API 응답 DTO 조립은 application 계층에서 담당한다.
 
+Persistence 조회 규칙:
+
+- 단순 식별자·고정 조건 CRUD는 Spring Data JPA 메서드를 사용한다.
+- 동적 검색·정렬·집계 조건은 QueryDSL을 사용한다.
+- 고정된 관계 일괄 로딩과 projection은 JPQL을 사용할 수 있다.
+- Native SQL은 PostgreSQL 원자 연산이나 DB 고유 분석 기능처럼 이유가 명확한 경우에만 저장소 내부에서 사용한다.
+- 페이지 조회에 collection fetch join을 적용하지 않는다. 먼저 root를 페이지 조회한 뒤 연관 collection을 ID `IN` 조회로 조립한다.
+- 목록 응답 조립 중 반복문 안에서 Repository를 호출하지 않고 필요한 ID를 모아 일괄 조회한다.
+
 ## 5. 프론트엔드 구조
 
 기능 중심 구조를 유지한다.
@@ -268,7 +277,7 @@ cd backend
 
 - `workE2eTest`: RANDOM_PORT의 실제 HTTP 요청으로 대상 미리보기, 일반·즉시 완료 작업,
   작업과 대상 상태 전이, 분갈이 수량·계보, 계획형 구조 변경, 요청 키 멱등성,
-  작업 상세·분갈이 결과·난 묶음 통합 이력을 검증한다.
+  작업 상세·분갈이 결과·난 묶음 통합 이력을 검증한다. 같은 PostgreSQL 환경에서 판매일별 전표 번호의 동시 원자 증가도 검증한다.
 - `workBenchmark`: 작업 100건과 대상 2,000건을 고정 생성하고 작업 목록·상세·난 묶음 통합 이력
   조회의 쿼리 수를 검증한다. API별 3회 워밍업 후 20회 측정한 median/p95는
   `backend/build/work-benchmark/results.json`에 기록한다.
@@ -278,6 +287,7 @@ cd backend
   지정한 경우에만 상한 초과로 실패한다.
 - 전후 비교가 필요하면 각 대상 커밋에서 `clean workE2eTest workBenchmark`를 실행하고 생성된
   `results.json`을 각각 `before.json`, `after.json`으로 별도 보관한다.
+- `CoreQueryRegressionTest`는 기본 테스트에서 농장 viewport 3회, 경매 lot 페이지 4회, 판매 전표 상세 2회의 SQL 상한을 검증한다.
 
 ## 8. 프론트엔드 맵 성능 E2E
 
