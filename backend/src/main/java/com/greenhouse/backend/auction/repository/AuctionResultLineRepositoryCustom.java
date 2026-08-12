@@ -8,5 +8,4 @@ public interface AuctionResultLineRepositoryCustom {
 
 	List<AuctionResultLine> findSoldLines(Long auctionHouseId, LocalDate auctionDate);
 
-	List<AuctionResultLine> findAllSoldLines();
 }

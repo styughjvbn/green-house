@@ -36,7 +36,4 @@ public class AuctionDataReader {
 		return resultLineRepository.findSoldLines(auctionHouseId, auctionDate);
 	}
 
-	public List<AuctionResultLine> getAllSoldResultLines() {
-		return resultLineRepository.findAllSoldLines();
-	}
 }

@@ -2,6 +2,8 @@ package com.greenhouse.backend.settlement.repository;
 
 import com.greenhouse.backend.settlement.domain.AuctionSettlement;
 import com.greenhouse.backend.settlement.domain.AuctionSettlementStatus;
+import com.greenhouse.backend.auction.domain.AuctionResultLine;
+import java.util.Collection;
 import java.time.LocalDate;
 import java.util.List;
 import java.util.Optional;
@@ -21,6 +23,33 @@ public interface AuctionSettlementRepository extends JpaRepository<AuctionSettle
 	boolean existsByAuctionShipmentId(@Param("shipmentId") Long shipmentId);
 
 	Optional<AuctionSettlement> findByAuctionHouseIdAndAuctionDate(Long auctionHouseId, LocalDate auctionDate);
+
+	@Query("""
+			select resultLine from AuctionResultLine resultLine
+			join fetch resultLine.auctionAttempt attempt
+			join fetch attempt.shipmentLot lot
+			join fetch lot.shipment shipment
+			join fetch shipment.auctionHouse
+			where resultLine.amount > 0
+			  and not exists (
+				select settlementLine.id from AuctionSettlementLine settlementLine
+				where settlementLine.auctionResultLine = resultLine
+			  )
+			order by resultLine.auctionDate asc, resultLine.id asc
+			""")
+	List<AuctionResultLine> findUnsettledSoldResultLines();
+
+	@EntityGraph(attributePaths = { "auctionHouse", "lines", "lines.auctionResultLine", "lines.auctionShipmentLot",
+			"lines.auctionShipmentLot.shipment" })
+	@Query("""
+			select distinct settlement from AuctionSettlement settlement
+			where settlement.auctionHouse.id in :auctionHouseIds
+			  and settlement.auctionDate between :fromDate and :toDate
+			""")
+	List<AuctionSettlement> findAllWithDetailsForRebuild(
+			@Param("auctionHouseIds") Collection<Long> auctionHouseIds,
+			@Param("fromDate") LocalDate fromDate,
+			@Param("toDate") LocalDate toDate);
 
 	@EntityGraph(attributePaths = { "auctionHouse", "lines", "lines.auctionResultLine", "lines.auctionShipmentLot",
 			"lines.auctionShipmentLot.shipment" })
