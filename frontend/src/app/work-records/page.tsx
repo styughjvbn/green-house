@@ -1,4 +1,4 @@
-import { WorkRecordRoutePage } from "@/features/work-record/WorkRecordRoutePage";
+import { WorkRecordRoutePage } from "@/features/work-record";
 
 export const dynamic = "force-dynamic";
 

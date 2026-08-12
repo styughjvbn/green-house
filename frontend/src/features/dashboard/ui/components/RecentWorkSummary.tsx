@@ -1,5 +1,5 @@
 import Link from "next/link";
-import type { WorkAnalyticsItem } from "@/features/analytics/model/types";
+import type { WorkAnalyticsItem } from "@/features/analytics";
 import { getRecentWorkLabel } from "../../lib/dashboardView";
 import { DashboardEmptyText, DashboardPanel } from "./DashboardPanel";
 

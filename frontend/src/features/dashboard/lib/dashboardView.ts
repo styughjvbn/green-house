@@ -1,7 +1,7 @@
 import type {
   AnalyticsSlipSummary,
   WorkAnalyticsItem,
-} from "@/features/analytics/model/types";
+} from "@/features/analytics";
 import type { DashboardPageProps, DashboardTone } from "../model/types";
 
 export function createDashboardViewModel({
