@@ -54,4 +54,8 @@ public class AuctionLotStatusHistory {
 		this.worker = worker;
 		this.memo = memo;
 	}
+
+	public Long getShipmentLotId() {
+		return shipmentLot.getId();
+	}
 }

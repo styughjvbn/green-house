@@ -11,6 +11,7 @@ import com.greenhouse.backend.farm.repository.structure.BedZoneRepository;
 import com.greenhouse.backend.farm.repository.structure.HouseRepository;
 import com.greenhouse.backend.farm.repository.orchid.OrchidGroupRepository;
 import com.greenhouse.backend.farm.repository.structure.PhysicalBedRepository;
+import com.greenhouse.backend.farm.repository.structure.PhysicalBedOrderRow;
 
 import java.util.List;
 import org.junit.jupiter.api.Test;
@@ -35,7 +36,10 @@ class FarmStatusServiceTest {
 				bed(13L, 1L, 1, 3),
 				bed(21L, 2L, 2, 1),
 				bed(22L, 2L, 2, 2));
-		when(physicalBedRepository.findAllInFarmOrder()).thenReturn(beds);
+		var rows = orderRows(beds);
+		when(physicalBedRepository.findAllOrderRows()).thenReturn(rows);
+		when(physicalBedRepository.findAllWithZonesByIdIn(List.of(22L))).thenReturn(List.of(beds.get(4)));
+		when(orchidGroupRepository.findByPhysicalBedIdInOrderByLocation(List.of(22L))).thenReturn(List.of());
 
 		var result = service.getOrchidManagementViewport(22L, 3);
 
@@ -52,7 +56,10 @@ class FarmStatusServiceTest {
 				bed(11L, 1L, 1, 1),
 				bed(12L, 1L, 1, 2),
 				bed(13L, 1L, 1, 3));
-		when(physicalBedRepository.findAllInFarmOrder()).thenReturn(beds);
+		var rows = orderRows(beds);
+		when(physicalBedRepository.findAllOrderRows()).thenReturn(rows);
+		when(physicalBedRepository.findAllWithZonesByIdIn(List.of(11L, 12L))).thenReturn(beds.subList(0, 2));
+		when(orchidGroupRepository.findByPhysicalBedIdInOrderByLocation(List.of(11L, 12L))).thenReturn(List.of());
 
 		var result = service.getOrchidManagementViewport(999L, 2);
 
@@ -100,5 +107,15 @@ class FarmStatusServiceTest {
 		when(bed.getDisplayOrder()).thenReturn(number);
 		when(bed.getBedZones()).thenReturn(List.of());
 		return bed;
+	}
+
+	private List<PhysicalBedOrderRow> orderRows(List<PhysicalBed> beds) {
+		return beds.stream()
+				.map(bed -> new PhysicalBedOrderRow(
+						bed.getId(),
+						bed.getHouse().getId(),
+						bed.getHouse().getNumber(),
+						bed.getNumber()))
+				.toList();
 	}
 }
