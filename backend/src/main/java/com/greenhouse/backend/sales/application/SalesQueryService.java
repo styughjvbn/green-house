@@ -7,11 +7,16 @@ import com.greenhouse.backend.sales.dto.AuctionShipmentOptionResponse;
 import com.greenhouse.backend.sales.dto.SalesSlipListItemResponse;
 import com.greenhouse.backend.sales.dto.SalesSlipResponse;
 import com.greenhouse.backend.sales.repository.SalesSlipRepository;
+import com.greenhouse.backend.sales.repository.SalesSlipItemAllocationRepository;
+import com.greenhouse.backend.sales.domain.SalesSlip;
+import com.greenhouse.backend.sales.domain.SalesSlipItemAllocation;
 
 import lombok.RequiredArgsConstructor;
 
 import java.time.LocalDate;
 import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
@@ -22,13 +27,15 @@ import org.springframework.transaction.annotation.Transactional;
 @Transactional(readOnly = true)
 @RequiredArgsConstructor
 public class SalesQueryService {
+	private static final int LEGACY_LIST_LIMIT = 500;
+	private static final int AUCTION_SHIPMENT_OPTION_LIMIT = 200;
+
 	private final SalesSlipRepository salesSlipRepository;
+	private final SalesSlipItemAllocationRepository allocationRepository;
 	private final AuctionDataReader auctionDataReader;
 
 	public List<SalesSlipResponse> getSalesSlips(Long partnerId, LocalDate from, LocalDate to) {
-		return salesSlipRepository.search(partnerId, from, to).stream()
-				.map(SalesSlipResponse::from)
-				.toList();
+		return assembleSalesSlips(salesSlipRepository.search(partnerId, from, to, LEGACY_LIST_LIMIT));
 	}
 
 	public PageResponse<SalesSlipListItemResponse> getSalesSlipPage(
@@ -54,15 +61,33 @@ public class SalesQueryService {
 	}
 
 	public SalesSlipResponse getSalesSlip(Long salesSlipId) {
-		return salesSlipRepository.findWithDetailsById(salesSlipId)
-				.map(SalesSlipResponse::from)
+		var salesSlip = salesSlipRepository.findWithDetailsById(salesSlipId)
 				.orElseThrow(() -> new NotFoundException("판매 전표를 찾을 수 없습니다."));
+		return assembleSalesSlips(List.of(salesSlip)).getFirst();
 	}
 
 	public List<AuctionShipmentOptionResponse> getAuctionShipmentOptions() {
-		return auctionDataReader.getShipmentsNewestFirst().stream()
-				.filter(shipment -> !salesSlipRepository.existsByAuctionShipmentId(shipment.getId()))
+		var shipmentIds = salesSlipRepository.findAvailableAuctionShipmentIds(
+				PageRequest.of(0, AUCTION_SHIPMENT_OPTION_LIMIT));
+		return auctionDataReader.getShipmentsWithLotsNewestFirst(shipmentIds).stream()
 				.map(AuctionShipmentOptionResponse::from)
+				.toList();
+	}
+
+	private List<SalesSlipResponse> assembleSalesSlips(List<SalesSlip> salesSlips) {
+		if (salesSlips.isEmpty()) {
+			return List.of();
+		}
+		var salesSlipIds = salesSlips.stream().map(SalesSlip::getId).toList();
+		Map<Long, List<SalesSlipItemAllocation>> allocationsByItemId = allocationRepository
+				.findAllWithLocationBySalesSlipIdIn(salesSlipIds)
+				.stream()
+				.collect(Collectors.groupingBy(
+						allocation -> allocation.getSalesSlipItem().getId(),
+						java.util.LinkedHashMap::new,
+						Collectors.toList()));
+		return salesSlips.stream()
+				.map(salesSlip -> SalesSlipResponse.from(salesSlip, allocationsByItemId))
 				.toList();
 	}
 

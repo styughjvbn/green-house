@@ -8,7 +8,7 @@ import org.springframework.data.domain.Pageable;
 
 public interface SalesSlipRepositoryCustom {
 
-	List<SalesSlip> search(Long partnerId, LocalDate from, LocalDate to);
+	List<SalesSlip> search(Long partnerId, LocalDate from, LocalDate to, int limit);
 
 	Page<SalesSlip> searchPage(
 			Long partnerId,
