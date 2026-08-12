@@ -8,7 +8,7 @@ import {
   getOrchidGroups,
   type StructureChangeExecutionPayload,
 } from "../../../api/workRecordApi";
-import { localDateValue } from "../../../lib/localDateValue";
+import { useRuntimeContext } from "@/shared/runtime/RuntimeContext";
 import {
   collectPriorResultOrchidGroupIds,
   createExecutionPayload,
@@ -42,6 +42,7 @@ export function useStructureChangeExecution({
   orchidGroups: OrchidGroup[];
   recordMode: boolean;
 }) {
+  const { businessDate } = useRuntimeContext();
   const priorResultOrchidGroupIds = useMemo(
     () => collectPriorResultOrchidGroupIds(operation),
     [operation],
@@ -127,9 +128,8 @@ export function useStructureChangeExecution({
       resultRowForOperation(group, inferredQuantity, movement),
     ),
   );
-  const today = localDateValue(new Date());
   const [completedDate, setCompletedDate] = useState(
-    recordMode ? operation.plannedStartDate : today,
+    recordMode ? operation.plannedStartDate : businessDate,
   );
   const [worker, setWorker] = useState(operation.worker ?? "");
   const [memo, setMemo] = useState("");
@@ -449,7 +449,7 @@ export function useStructureChangeExecution({
     setMemo,
     setWorker,
     submit,
-    today,
+    today: businessDate,
     toggleSource,
     totalInput,
     totalResult,

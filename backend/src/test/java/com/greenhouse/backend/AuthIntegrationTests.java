@@ -5,10 +5,17 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import java.time.Clock;
+import java.time.Instant;
+import java.time.ZoneOffset;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
+import org.springframework.boot.test.context.TestConfiguration;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Import;
+import org.springframework.context.annotation.Primary;
 import org.springframework.http.MediaType;
 import org.springframework.mock.web.MockHttpSession;
 import org.springframework.test.context.ActiveProfiles;
@@ -20,10 +27,19 @@ import org.springframework.test.web.servlet.MvcResult;
 @AutoConfigureMockMvc
 @ActiveProfiles("test")
 @TestPropertySource(properties = "app.auth.enabled=true")
+@Import(AuthIntegrationTests.FixedClockConfig.class)
 class AuthIntegrationTests {
 
 	@Autowired
 	MockMvc mockMvc;
+
+	@Test
+	void exposesFarmBusinessDateWithoutLogin() throws Exception {
+		mockMvc.perform(get("/api/auth/context"))
+				.andExpect(status().isOk())
+				.andExpect(jsonPath("$.data.businessDate").value("2026-07-22"))
+				.andExpect(jsonPath("$.data.timeZone").value("Asia/Seoul"));
+	}
 
 	@Test
 	void loginCreatesSession() throws Exception {
@@ -68,5 +84,15 @@ class AuthIntegrationTests {
 						.session(session))
 				.andExpect(status().isForbidden())
 				.andExpect(jsonPath("$.error.code").value("FORBIDDEN"));
+	}
+
+	@TestConfiguration
+	static class FixedClockConfig {
+
+		@Bean
+		@Primary
+		Clock fixedClock() {
+			return Clock.fixed(Instant.parse("2026-07-21T16:02:03Z"), ZoneOffset.UTC);
+		}
 	}
 }

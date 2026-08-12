@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { X } from "lucide-react";
 import { transitionWorkOperationTarget } from "../../../api/workRecordApi";
-import { localDateValue } from "../../../lib/localDateValue";
+import { useRuntimeContext } from "@/shared/runtime/RuntimeContext";
 import type { WorkExecutionDialogProps } from "../../../model/operation/workExecution";
 import { TextField } from "../../common/FormFields";
 
@@ -14,6 +14,7 @@ export function DiscardExecutionDialog({
   onClose,
   onSaved,
 }: WorkExecutionDialogProps) {
+  const { businessDate } = useRuntimeContext();
   const maximumQuantity = Math.min(
     source?.quantity ?? target.remainingQuantity,
     target.remainingQuantity,
@@ -23,8 +24,7 @@ export function DiscardExecutionDialog({
   );
   const [worker, setWorker] = useState(operation.worker ?? "");
   const [reason, setReason] = useState("");
-  const today = localDateValue(new Date());
-  const [completedDate, setCompletedDate] = useState(today);
+  const [completedDate, setCompletedDate] = useState(businessDate);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -126,7 +126,7 @@ export function DiscardExecutionDialog({
           <TextField label="작업자" value={worker} onChange={setWorker} />
           <TextField
             label="완료일"
-            max={today}
+            max={businessDate}
             required
             type="date"
             value={completedDate}

@@ -51,6 +51,10 @@ FRONTEND_ORIGIN_PATTERNS=http://localhost:*,http://127.0.0.1:*
 ## 권한
 
 - `/api/auth/login`, `/api/auth/me`, `/api/auth/logout`: 인증 API
+- `/api/auth/context`: 인증 여부와 무관하게 농장 업무일자와 시간대를 제공하는 런타임 컨텍스트 API
 - `/api/work-types/**`: `ADMIN` 전용
 - 그 외 `/api/**`: 로그인 필요
 - `/actuator/health`, Swagger/OpenAPI 문서: 공개
+
+프론트엔드는 루트 Server Component에서 `/api/auth/context`를 조회하고 모든 입력 폼의
+기본 날짜에 `businessDate`를 사용한다. 브라우저의 UTC 날짜를 업무일자로 사용하지 않는다.

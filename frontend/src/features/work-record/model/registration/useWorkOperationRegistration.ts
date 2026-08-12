@@ -28,6 +28,7 @@ import {
 import { getIncludedTargets, getRecordTargetIds } from "./targetSelection";
 import { getWorkTypeDefinition } from "../work-types/workTypeDefinition";
 import { deriveWorkTargetSelectionOptions } from "./workTargetSelectionOptions";
+import { useRuntimeContext } from "@/shared/runtime/RuntimeContext";
 
 export function useWorkOperationRegistration({
   houses,
@@ -46,6 +47,7 @@ export function useWorkOperationRegistration({
   presetWorkTypeCode?: string;
   workTypes: WorkType[];
 }) {
+  const { businessDate } = useRuntimeContext();
   const targetLocked = presetOrchidGroupIds.length > 0;
   const schedulableWorkTypes = getSchedulableWorkTypes(workTypes).filter(
     (workType) =>
@@ -58,7 +60,7 @@ export function useWorkOperationRegistration({
       (workType) => workType.code === presetWorkTypeCode,
     ) ?? schedulableWorkTypes[0];
   const [form, setForm] = useState<WorkOperationFormState>(() =>
-    createInitialWorkOperationForm(initialWorkType),
+    createInitialWorkOperationForm(businessDate, initialWorkType),
   );
   const [preview, setPreview] = useState<WorkTargetPreview | null>(
     () => presetPreview,

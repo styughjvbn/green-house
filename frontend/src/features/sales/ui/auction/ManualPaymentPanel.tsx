@@ -4,6 +4,7 @@ import { useState, type FormEvent, type ReactNode } from "react";
 import { Banknote, ChevronDown, ChevronUp } from "lucide-react";
 import type { PartnerPaymentEvent } from "@/entities/farm/types";
 import { formatShortDate } from "@/shared/lib/dateFormat";
+import { useRuntimeContext } from "@/shared/runtime/RuntimeContext";
 import {
   getPaymentEvents,
   type ManualPaymentPayload,
@@ -22,11 +23,10 @@ export function ManualPaymentPanel({
   expectedPaymentDate: string | null;
   onConfirm: (payload: ManualPaymentPayload) => Promise<void>;
 }) {
+  const { businessDate } = useRuntimeContext();
   const [open, setOpen] = useState(false);
   const [amount, setAmount] = useState(String(remainingAmount));
-  const [paymentDate, setPaymentDate] = useState(
-    new Date().toISOString().slice(0, 10),
-  );
+  const [paymentDate, setPaymentDate] = useState(businessDate);
   const [paymentMethod, setPaymentMethod] = useState("계좌이체");
   const [depositorName, setDepositorName] = useState("");
   const [worker, setWorker] = useState("관리자");

@@ -11,6 +11,7 @@ import type {
 } from "@/entities/farm/model/placement";
 import { FarmPlacementField } from "@/entities/farm/ui/FarmPlacementPicker";
 import { createUuid } from "@/shared/lib/id";
+import { useRuntimeContext } from "@/shared/runtime/RuntimeContext";
 
 type PottingResultRow = {
   key: string;
@@ -70,8 +71,9 @@ export function PottingExecutionForm({
   onCancel: () => void;
   onSubmit: (values: PottingExecutionValues) => Promise<void>;
 }) {
+  const { businessDate } = useRuntimeContext();
   const [pottingDate, setPottingDate] = useState(
-    fixedPottingDate ?? new Date().toISOString().slice(0, 10),
+    fixedPottingDate ?? businessDate,
   );
   const [rows, setRows] = useState<PottingResultRow[]>(() => [
     newResultRow(initialActualQuantity, initialPotSize, initialAgeYear),

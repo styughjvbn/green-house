@@ -1,8 +1,14 @@
 "use client";
 
 import { useState } from "react";
-import { X } from "lucide-react";
-import { localDateValue } from "../../lib/localDateValue";
+import { useRuntimeContext } from "@/shared/runtime/RuntimeContext";
+import {
+  Dialog,
+  DialogClose,
+  DialogContent,
+  DialogDescription,
+  DialogTitle,
+} from "@/shared/ui/primitives/dialog";
 
 export function WorkCompletionDateDialog({
   title,
@@ -15,37 +21,38 @@ export function WorkCompletionDateDialog({
   onClose: () => void;
   onConfirm: (completedDate: string) => void;
 }) {
-  const today = localDateValue(new Date());
-  const [completedDate, setCompletedDate] = useState(today);
+  const { businessDate } = useRuntimeContext();
+  const [completedDate, setCompletedDate] = useState(businessDate);
 
   return (
-    <div
-      className="fixed inset-0 z-[1400] flex items-center justify-center bg-black/45 p-4"
-      role="presentation"
-      onMouseDown={onClose}
-    >
-      <section
-        className="w-full max-w-sm rounded-lg bg-white shadow-2xl"
-        role="dialog"
-        aria-modal="true"
-        aria-label={title}
-        onMouseDown={(event) => event.stopPropagation()}
+    <Dialog open onOpenChange={(open) => !open && onClose()}>
+      <DialogContent
+        className="z-[1401] max-w-sm rounded-lg shadow-2xl"
+        overlayClassName="z-[1400] bg-black/45"
+        showCloseButton={false}
       >
         <header className="flex items-start justify-between gap-3 border-b p-4">
           <div>
-            <h3 className="font-bold text-[#17251b]">{title}</h3>
-            <p className="mt-1 text-sm text-[#6a766e]">{description}</p>
+            <DialogTitle className="font-bold text-[#17251b]">
+              {title}
+            </DialogTitle>
+            <DialogDescription className="mt-1 text-sm text-[#6a766e]">
+              {description}
+            </DialogDescription>
           </div>
-          <button type="button" aria-label="닫기" onClick={onClose}>
-            <X className="h-4 w-4" aria-hidden="true" />
-          </button>
+          <DialogClose
+            className="flex h-8 w-8 items-center justify-center rounded-md border border-[#d9dfda] text-[#435047]"
+            aria-label="닫기"
+          >
+            ×
+          </DialogClose>
         </header>
         <div className="p-4">
           <label className="block text-sm font-semibold text-[#435047]">
             완료일
             <input
               className="mt-1 w-full rounded-md border border-[#cfd8cc] bg-white px-3 py-2 font-normal"
-              max={today}
+              max={businessDate}
               required
               type="date"
               value={completedDate}
@@ -73,7 +80,7 @@ export function WorkCompletionDateDialog({
             완료 처리
           </button>
         </footer>
-      </section>
-    </div>
+      </DialogContent>
+    </Dialog>
   );
 }

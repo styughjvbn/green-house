@@ -11,7 +11,9 @@ export function createAnalyticsViewModel(
       props.salesAnalytics?.previousMonthShippedQuantity ?? 0,
     unpaidAmount: props.salesAnalytics?.unpaidAmount ?? 0,
     saleableQuantity: props.salesAnalytics?.saleableQuantity ?? 0,
-    monthlySales: props.salesAnalytics?.monthlySales ?? emptyMonthlySales(),
+    monthlySales:
+      props.salesAnalytics?.monthlySales ??
+      emptyMonthlySales(props.dateRange.dateTo),
     varietySales: props.salesAnalytics?.varietySales ?? [],
     varietyInventory: props.salesAnalytics?.varietyInventory ?? [],
     partnerSales:
@@ -35,12 +37,12 @@ export function createAnalyticsViewModel(
   };
 }
 
-function emptyMonthlySales() {
-  const today = new Date();
+function emptyMonthlySales(businessDate: string) {
+  const [year, month] = businessDate.split("-").map(Number);
   return Array.from({ length: 6 }, (_, index) => {
-    const date = new Date(today.getFullYear(), today.getMonth() - 5 + index, 1);
+    const date = new Date(Date.UTC(year, month - 6 + index, 1));
     return {
-      label: `${date.getMonth() + 1}월`,
+      label: `${date.getUTCMonth() + 1}월`,
       value: 0,
     };
   });
