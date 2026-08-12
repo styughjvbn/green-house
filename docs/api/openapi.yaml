@@ -3247,6 +3247,71 @@ components:
           type: string
         active:
           type: boolean
+    SalesOrchidGroupSnapshotResponse:
+      type: object
+      properties:
+        snapshotType:
+          type: string
+          enum:
+          - CREATION
+          - OUTBOUND
+        captureSource:
+          type: string
+          enum:
+          - LIVE
+          - MIGRATED_CURRENT_STATE
+        capturedAt:
+          type: string
+          format: date-time
+        orchidGroupId:
+          type: integer
+          format: int64
+        varietyId:
+          type: integer
+          format: int64
+        varietyName:
+          type: string
+        genus:
+          type: string
+        ageYear:
+          type: integer
+          format: int32
+        potSizeCode:
+          type: string
+        potSize:
+          type: string
+        quantity:
+          type: integer
+          format: int32
+        reservedQuantity:
+          type: integer
+          format: int32
+        status:
+          type: string
+        allocatedQuantity:
+          type: integer
+          format: int32
+        houseId:
+          type: integer
+          format: int64
+        houseNumber:
+          type: integer
+          format: int32
+        physicalBedId:
+          type: integer
+          format: int64
+        physicalBedNumber:
+          type: integer
+          format: int32
+        bedZoneId:
+          type: integer
+          format: int64
+        bedZoneName:
+          type: string
+        startPosition:
+          type: number
+        endPosition:
+          type: number
     SalesSlipItemAllocationResponse:
       type: object
       properties:
@@ -3272,6 +3337,10 @@ components:
           format: int32
         bedZoneName:
           type: string
+        creationSnapshot:
+          $ref: '#/components/schemas/SalesOrchidGroupSnapshotResponse'
+        outboundSnapshot:
+          $ref: '#/components/schemas/SalesOrchidGroupSnapshotResponse'
     SalesSlipItemResponse:
       type: object
       properties:
@@ -3873,6 +3942,16 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/WorkOperationTargetResponse'
+        availableActions:
+          type: array
+          items:
+            type: string
+            enum:
+            - START
+            - PAUSE
+            - RESUME
+            - COMPLETE
+            - CANCEL
     WorkOperationTargetResponse:
       type: object
       properties:
@@ -3953,6 +4032,15 @@ components:
           items:
             type: integer
             format: int64
+        availableActions:
+          type: array
+          items:
+            type: string
+            enum:
+            - START
+            - COMPLETE
+            - EXECUTE
+            - SKIP
     WorkTargetExecutionRequest:
       type: object
       properties:

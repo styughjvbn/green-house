@@ -187,6 +187,7 @@ WorkType 1 ─ N WorkOperation 1 ─ N WorkOperationTarget 1 ─ 1 WorkTargetExe
 
 ```text
 BusinessPartner 1 ─ N SalesSlip 1 ─ N SalesSlipItem 1 ─ N SalesSlipItemAllocation
+                                                    └─ N SalesOrchidGroupSnapshot
 ```
 
 ### BusinessPartner
@@ -227,6 +228,14 @@ BusinessPartner 1 ─ N SalesSlip 1 ─ N SalesSlipItem 1 ─ N SalesSlipItemAll
 - 배분 수량 합계는 품목 수량과 같아야 한다.
 - 판매 품목의 품종명과 난 묶음 품종명이 일치해야 한다.
 - 전표 저장 시 배분 수량만큼 난 묶음 `reservedQuantity`를 증가시킨다.
+
+### SalesOrchidGroupSnapshot
+
+판매 allocation에 배분된 난 묶음의 분석용 불변 스냅샷이다.
+
+- `CREATION`은 전표 저장에서 예약 수량을 반영하기 전의 품종·수량·상태·위치를 보존한다.
+- `OUTBOUND`는 출고·출하 완료에서 난 묶음을 잠그고 실제 수량을 차감하기 전의 값을 보존한다.
+- 신규 스냅샷은 `LIVE`, migration으로 복원한 기존 자료는 `MIGRATED_CURRENT_STATE`로 구분해 과거 시점의 정확한 값으로 오인하지 않는다.
 
 ### SalesInventoryMovement
 

@@ -483,6 +483,71 @@ components:
           format: int32
         bedZoneName:
           type: string
+    SalesOrchidGroupSnapshotResponse:
+      type: object
+      properties:
+        snapshotType:
+          type: string
+          enum:
+          - CREATION
+          - OUTBOUND
+        captureSource:
+          type: string
+          enum:
+          - LIVE
+          - MIGRATED_CURRENT_STATE
+        capturedAt:
+          type: string
+          format: date-time
+        orchidGroupId:
+          type: integer
+          format: int64
+        varietyId:
+          type: integer
+          format: int64
+        varietyName:
+          type: string
+        genus:
+          type: string
+        ageYear:
+          type: integer
+          format: int32
+        potSizeCode:
+          type: string
+        potSize:
+          type: string
+        quantity:
+          type: integer
+          format: int32
+        reservedQuantity:
+          type: integer
+          format: int32
+        status:
+          type: string
+        allocatedQuantity:
+          type: integer
+          format: int32
+        houseId:
+          type: integer
+          format: int64
+        houseNumber:
+          type: integer
+          format: int32
+        physicalBedId:
+          type: integer
+          format: int64
+        physicalBedNumber:
+          type: integer
+          format: int32
+        bedZoneId:
+          type: integer
+          format: int64
+        bedZoneName:
+          type: string
+        startPosition:
+          type: number
+        endPosition:
+          type: number
     SalesSlipCreateRequest:
       type: object
       properties:
@@ -561,6 +626,10 @@ components:
           format: int32
         bedZoneName:
           type: string
+        creationSnapshot:
+          $ref: '#/components/schemas/SalesOrchidGroupSnapshotResponse'
+        outboundSnapshot:
+          $ref: '#/components/schemas/SalesOrchidGroupSnapshotResponse'
     SalesSlipItemRequest:
       type: object
       properties:

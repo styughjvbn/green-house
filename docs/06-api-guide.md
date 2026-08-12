@@ -66,6 +66,8 @@ npm run api:types
 - `출하 완료` 시 `AuctionShipment`, `AuctionShipmentLot` 생성
 - `auctionShipmentId`는 생성 요청에서 사용하지 않음
 
+전표 상세의 allocation은 예약 반영 전 `creationSnapshot`과 출고·출하 재고 차감 전 `outboundSnapshot`을 제공한다. 작성중은 출고 스냅샷이 없고, 완료 전표는 두 시점의 값을 현재 난 묶음 정보와 독립적으로 반환한다. `MIGRATED_CURRENT_STATE`는 migration 시점의 현재 값으로 복원된 기존 자료라는 의미다.
+
 즉, 현재 기준 경매 흐름은 `기존 출하 기록 선택 후 전표 생성`이 아니라 `전표를 먼저 저장하고 출하 완료 시 출하 기록과 lot 생성`이다.
 
 프론트 입력 기본 날짜는 공개 `GET /api/auth/context`의 `businessDate`를 사용한다.
@@ -107,6 +109,8 @@ npm run api:types
 }
 ```
 
+프론트엔드 공통 `requestApi`는 실패를 `ApiError`로 변환하며 HTTP status, `error.code`, `error.details`를 그대로 보존한다. 화면 메시지만 필요한 경우 `getApiErrorMessage`를 사용하고, 업무 분기는 문자열 메시지가 아닌 status와 code를 기준으로 한다.
+
 ## 5. 변경 체크리스트
 
 - Controller 요청/응답 DTO
@@ -119,6 +123,8 @@ npm run api:types
 ## 6. 신규 작업 실행 API 범위
 
 기간 작업 실행 API는 난 묶음 범위의 일반 기록형 작업과 자리 이동·분갈이·분주·합식·폐기 계획, 입고 기록 범위의 포트 작업 계획을 지원한다. 대상 미리보기, 생성, 기간·상태·범위별 목록, 상세, 대상별 진행·실행·건너뛰기, 작업 시작·일시중지·재개·취소·완료, 난 묶음 통합 이력을 제공한다.
+
+작업과 대상 응답의 `availableActions`는 현재 상태, 미완료 대상, 전용 workflow, 남은 수량을 반영한 서버 판정값이다. 프론트는 버튼 문구와 dialog를 action에 매핑하고 상태 enum으로 가능 여부를 재구성하지 않는다. 실행 API는 요청 시점에 규칙을 다시 검증한다.
 
 `GET /api/work-operations`의 `view=MANAGEMENT`는 계획·진행 중·일시중지 작업과 농장 기준 오늘 상태가 변경된 작업을 반환한다. `view=HISTORY`는 완료·취소·보정된 작업을 반환하며, `view=ALL` 또는 생략은 호환성을 위해 전체 작업을 반환한다.
 

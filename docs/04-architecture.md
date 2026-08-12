@@ -163,7 +163,7 @@ application|domain|dto/
 - A5 출력 데이터
 - 전표 품목 allocation의 신규 생성과 작성중 수정 복사는 `SalesSlipAllocationFactory`의 단일 생성 지점을 사용한다.
 - 출고·출하 완료는 `SalesSlipOutboundService`가 현재 allocation을 고정된 배치로 만든 뒤 난 묶음을 잠그고, 경매 shipment/lot 생성과 재고 차감을 순서대로 조율한다.
-- 전표 생성 시점과 출하 시점의 난 묶음 스냅샷은 각각 allocation 생성 지점과 잠긴 출하 배치를 확장해 추가한다.
+- `SalesOrchidGroupSnapshot`은 allocation 생성 전의 `CREATION`과 잠긴 출하 배치의 재고 차감 전 `OUTBOUND`를 각각 같은 트랜잭션에서 보존한다. Controller나 응답 mapper에서 현재 난 묶음 값으로 재구성하지 않는다.
 
 ### auction
 
@@ -355,6 +355,7 @@ src/
 - 서로 독립적인 초기 요청은 `Promise.all`로 실행한다. 선택·검색처럼 연속 호출되는 요청은 `AbortSignal`을 전달하거나 request token으로 최신 응답만 commit한다.
 - mutation 후 전체 feature를 습관적으로 무효화하지 않는다. 상세 cache 직접 갱신, 관련 목록 무효화, 다른 도메인 무효화를 실제 변경 영향에 맞게 구분한다.
 - 인증 API처럼 응답 처리 의미가 다른 경우를 제외하고 feature API는 공통 `requestApi`를 사용한다.
+- 실패 응답은 `ApiError`로 변환해 HTTP status, 안정적인 error code, details를 보존한다. UI용 message를 만드는 과정에서 구조화 정보를 버리지 않는다.
 
 #### 컴포넌트와 hook
 

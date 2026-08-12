@@ -156,6 +156,8 @@
 - allocation 합계는 판매 품목 수량과 같아야 한다.
 - allocation 대상 난 묶음의 품종은 판매 품목명과 같아야 한다.
 - 전표 저장 시 난 묶음 `reservedQuantity`를 증가시킨다.
+- allocation 생성은 예약 반영 전 난 묶음을 `CREATION` 스냅샷으로, 출고·출하 완료는 난 묶음 잠금 후 재고 차감 전 값을 `OUTBOUND` 스냅샷으로 보존한다.
+- migration으로 생성한 기존 전표 스냅샷은 과거 시점의 정확한 값이 아닌 현재 상태 복원값이므로 source로 구분한다.
 - 난 묶음 변경은 `0 <= reservedQuantity <= quantity`를 유지해야 하며, 판매 예약·해제·출고는 관련 난 묶음을 ID 순서로 잠근 뒤 처리한다.
 - `PUT /api/sales-slips/{salesSlipId}`는 `작성중` 일반 판매 전표만 수정할 수 있다.
 - 현재 수정은 기존 품목 개수를 유지하는 경우만 지원한다.

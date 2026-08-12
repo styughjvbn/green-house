@@ -1715,6 +1715,16 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/WorkOperationTargetResponse'
+        availableActions:
+          type: array
+          items:
+            type: string
+            enum:
+            - START
+            - PAUSE
+            - RESUME
+            - COMPLETE
+            - CANCEL
     WorkOperationTargetResponse:
       type: object
       properties:
@@ -1795,6 +1805,15 @@ components:
           items:
             type: integer
             format: int64
+        availableActions:
+          type: array
+          items:
+            type: string
+            enum:
+            - START
+            - COMPLETE
+            - EXECUTE
+            - SKIP
     WorkTargetExecutionRequest:
       type: object
       properties:

@@ -1800,6 +1800,44 @@ export interface components {
             memo?: string;
             active?: boolean;
         };
+        SalesOrchidGroupSnapshotResponse: {
+            /** @enum {string} */
+            snapshotType?: "CREATION" | "OUTBOUND";
+            /** @enum {string} */
+            captureSource?: "LIVE" | "MIGRATED_CURRENT_STATE";
+            /** Format: date-time */
+            capturedAt?: string;
+            /** Format: int64 */
+            orchidGroupId?: number;
+            /** Format: int64 */
+            varietyId?: number;
+            varietyName?: string;
+            genus?: string;
+            /** Format: int32 */
+            ageYear?: number;
+            potSizeCode?: string;
+            potSize?: string;
+            /** Format: int32 */
+            quantity?: number;
+            /** Format: int32 */
+            reservedQuantity?: number;
+            status?: string;
+            /** Format: int32 */
+            allocatedQuantity?: number;
+            /** Format: int64 */
+            houseId?: number;
+            /** Format: int32 */
+            houseNumber?: number;
+            /** Format: int64 */
+            physicalBedId?: number;
+            /** Format: int32 */
+            physicalBedNumber?: number;
+            /** Format: int64 */
+            bedZoneId?: number;
+            bedZoneName?: string;
+            startPosition?: number;
+            endPosition?: number;
+        };
         SalesSlipItemAllocationResponse: {
             /** Format: int64 */
             id?: number;
@@ -1815,6 +1853,8 @@ export interface components {
             /** Format: int32 */
             physicalBedNumber?: number;
             bedZoneName?: string;
+            creationSnapshot?: components["schemas"]["SalesOrchidGroupSnapshotResponse"];
+            outboundSnapshot?: components["schemas"]["SalesOrchidGroupSnapshotResponse"];
         };
         SalesSlipItemResponse: {
             /** Format: int64 */
@@ -2073,6 +2113,7 @@ export interface components {
             memo?: string;
             progress?: components["schemas"]["WorkOperationProgressResponse"];
             targets?: components["schemas"]["WorkOperationTargetResponse"][];
+            availableActions?: ("START" | "PAUSE" | "RESUME" | "COMPLETE" | "CANCEL")[];
         };
         WorkOperationTargetResponse: {
             /** Format: int64 */
@@ -2112,6 +2153,7 @@ export interface components {
                 [key: string]: unknown;
             };
             resultOrchidGroupIds?: number[];
+            availableActions?: ("START" | "COMPLETE" | "EXECUTE" | "SKIP")[];
         };
         WorkTargetExecutionRequest: {
             worker?: string;
