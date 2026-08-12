@@ -74,19 +74,31 @@ export async function fetchApi<T>(
   path: string,
   options?: { signal?: AbortSignal },
 ): Promise<T> {
-  const headers = await buildRequestHeaders();
+  return requestApi<T>(path, { method: "GET", signal: options?.signal });
+}
+
+export async function requestApi<T>(
+  path: string,
+  init: RequestInit = {},
+  fallbackMessage = "요청을 처리하지 못했습니다.",
+): Promise<T> {
+  const headers = new Headers(await buildRequestHeaders());
+  new Headers(init.headers).forEach((value, key) => headers.set(key, value));
   const response = await fetch(`${API_BASE_URL}${path}`, {
+    ...init,
     cache: "no-store",
     credentials: "include",
     headers,
-    signal: options?.signal,
   });
   await handleAuthExpired(response);
-  const payload = (await response.json()) as ApiResponse<T> | ApiErrorResponse;
+  const payload = (await response.json().catch(() => null)) as
+    | ApiResponse<T>
+    | ApiErrorResponse
+    | null;
 
   if (!response.ok) {
-    throw new Error(getApiErrorMessage(payload, "요청을 처리하지 못했습니다."));
+    throw new Error(getApiErrorMessage(payload, fallbackMessage));
   }
 
-  return (payload as ApiResponse<T>).data;
+  return (payload as ApiResponse<T> | null)?.data as T;
 }

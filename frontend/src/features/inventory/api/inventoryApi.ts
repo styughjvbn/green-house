@@ -1,9 +1,4 @@
-import {
-  API_BASE_URL,
-  fetchApi,
-  fetchWithClientInstance as fetch,
-  getApiErrorMessage,
-} from "@/shared/api/client";
+import { fetchApi, requestApi } from "@/shared/api/client";
 import type { House, WorkOperation } from "@/entities/farm/types";
 import type { Page } from "@/shared/api/page";
 import type {
@@ -17,18 +12,6 @@ import type {
   Variety,
   VarietyPayload,
 } from "../model/types";
-
-type ApiSuccess<T> = {
-  data: T;
-  message: string | null;
-};
-
-type ApiFailure = {
-  error?: {
-    message?: string;
-    details?: string[];
-  };
-};
 
 type VarietyResponse = {
   id: number;
@@ -119,17 +102,7 @@ async function requestJson<T>(
   init: RequestInit,
   fallbackMessage: string,
 ) {
-  const response = await fetch(`${API_BASE_URL}${path}`, {
-    ...init,
-    credentials: "include",
-  });
-  const payload = (await response.json()) as ApiSuccess<T> | ApiFailure;
-
-  if (!response.ok) {
-    throw new Error(getApiErrorMessage(payload, fallbackMessage));
-  }
-
-  return (payload as ApiSuccess<T>).data;
+  return requestApi<T>(path, init, fallbackMessage);
 }
 
 type VarietyQuery = {

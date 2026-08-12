@@ -1,9 +1,4 @@
-﻿import {
-  API_BASE_URL,
-  fetchApi,
-  fetchWithClientInstance as fetch,
-  getApiErrorMessage,
-} from "@/shared/api/client";
+﻿import { fetchApi, requestApi } from "@/shared/api/client";
 import type {
   BusinessPartner,
   BusinessPartnerPage,
@@ -38,34 +33,12 @@ import type {
   UpdateBusinessPartnerPayload,
 } from "./types";
 
-type ApiSuccess<T> = {
-  data: T;
-  message: string | null;
-};
-
-type ApiFailure = {
-  error?: {
-    message?: string;
-    details?: string[];
-  };
-};
-
 async function requestJson<T>(
   path: string,
   init: RequestInit,
   fallbackMessage: string,
 ): Promise<T> {
-  const response = await fetch(`${API_BASE_URL}${path}`, {
-    ...init,
-    credentials: "include",
-  });
-  const payload = (await response.json()) as ApiSuccess<T> | ApiFailure;
-
-  if (!response.ok) {
-    throw new Error(getApiErrorMessage(payload, fallbackMessage));
-  }
-
-  return (payload as ApiSuccess<T>).data;
+  return requestApi<T>(path, init, fallbackMessage);
 }
 
 export function getBusinessPartners() {
