@@ -1,7 +1,7 @@
 import { createUuid } from "@/shared/lib/id";
-import { getApiErrorMessage, type ApiErrorResponse } from "./error";
+import { createApiError, type ApiErrorResponse } from "./error";
 
-export { getApiErrorMessage } from "./error";
+export { ApiError, createApiError, getApiErrorMessage } from "./error";
 export type { ApiErrorResponse } from "./error";
 
 export const API_BASE_URL =
@@ -97,7 +97,7 @@ export async function requestApi<T>(
     | null;
 
   if (!response.ok) {
-    throw new Error(getApiErrorMessage(payload, fallbackMessage));
+    throw createApiError(response.status, payload, fallbackMessage);
   }
 
   return (payload as ApiResponse<T> | null)?.data as T;
