@@ -717,6 +717,15 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/SalesSlipItemResponse'
+        availableActions:
+          type: array
+          items:
+            type: string
+            enum:
+            - EDIT
+            - COMPLETE
+            - CANCEL
+            - CONFIRM_PAYMENT
     SalesSlipStatusUpdateRequest:
       type: object
       properties:

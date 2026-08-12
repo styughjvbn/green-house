@@ -873,6 +873,14 @@ components:
           - MOVEMENT
           - MULTI_CREATE
           - CORRECTION
+        workTypeWorkflow:
+          type: string
+          enum:
+          - GENERIC
+          - MOVEMENT
+          - DISCARD
+          - POTTING
+          - STRUCTURE_CHANGE
         title:
           type: string
         status:
@@ -1006,3 +1014,8 @@ components:
         resultDetails:
           type: object
           additionalProperties: {}
+        resultOrchidGroupIds:
+          type: array
+          items:
+            type: integer
+            format: int64

@@ -85,6 +85,18 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ApiResponseListWorkTypeResponse'
+  /api/work-types/metadata:
+    get:
+      tags:
+      - work-type-controller
+      operationId: getWorkTypeMetadata
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponseWorkTypeMetadataResponse'
 components:
   schemas:
     ApiResponseListWorkTypeResponse:
@@ -94,6 +106,13 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/WorkTypeResponse'
+        message:
+          type: string
+    ApiResponseWorkTypeMetadataResponse:
+      type: object
+      properties:
+        data:
+          $ref: '#/components/schemas/WorkTypeMetadataResponse'
         message:
           type: string
     ApiResponseWorkTypeResponse:
@@ -126,6 +145,24 @@ components:
       required:
       - name
       - template
+    WorkTypeMetadataResponse:
+      type: object
+      properties:
+        customTypeTemplates:
+          type: array
+          items:
+            type: string
+            enum:
+            - PESTICIDE
+            - FERTILIZER
+            - REPOT
+            - CLEANUP
+            - DISCARD
+            - STATUS
+            - MEMO
+            - MOVEMENT
+            - MULTI_CREATE
+            - CORRECTION
     WorkTypeReorderRequest:
       type: object
       properties:
@@ -169,6 +206,28 @@ components:
         sortOrder:
           type: integer
           format: int32
+        settingsEditable:
+          type: boolean
+        registrationModes:
+          type: array
+          items:
+            type: string
+            enum:
+            - RECORD
+            - PLAN
+        workflow:
+          type: string
+          enum:
+          - GENERIC
+          - MOVEMENT
+          - DISCARD
+          - POTTING
+          - STRUCTURE_CHANGE
+        targetSource:
+          type: string
+          enum:
+          - ORCHID_GROUP
+          - INBOUND_RECORD
     WorkTypeUpdateRequest:
       type: object
       properties:

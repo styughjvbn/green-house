@@ -1934,6 +1934,18 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ApiResponseAuctionLotResponse'
+  /api/work-types/metadata:
+    get:
+      tags:
+      - work-type-controller
+      operationId: getWorkTypeMetadata
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponseWorkTypeMetadataResponse'
   /api/work-operations/{workOperationId}:
     get:
       tags:
@@ -2795,6 +2807,18 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ApiResponseAuthenticatedUserResponse'
+  /api/auth/context:
+    get:
+      tags:
+      - auth-controller
+      operationId: context
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponseApplicationContextResponse'
   /api/auction-tracking/summary:
     get:
       tags:
@@ -3325,6 +3349,15 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/SalesSlipItemResponse'
+        availableActions:
+          type: array
+          items:
+            type: string
+            enum:
+            - EDIT
+            - COMPLETE
+            - CANCEL
+            - CONFIRM_PAYMENT
     BusinessPartnerUpdateRequest:
       type: object
       properties:
@@ -3629,6 +3662,28 @@ components:
         sortOrder:
           type: integer
           format: int32
+        settingsEditable:
+          type: boolean
+        registrationModes:
+          type: array
+          items:
+            type: string
+            enum:
+            - RECORD
+            - PLAN
+        workflow:
+          type: string
+          enum:
+          - GENERIC
+          - MOVEMENT
+          - DISCARD
+          - POTTING
+          - STRUCTURE_CHANGE
+        targetSource:
+          type: string
+          enum:
+          - ORCHID_GROUP
+          - INBOUND_RECORD
     WorkOperationCreateRequest:
       type: object
       properties:
@@ -3752,6 +3807,14 @@ components:
           - MOVEMENT
           - MULTI_CREATE
           - CORRECTION
+        workTypeWorkflow:
+          type: string
+          enum:
+          - GENERIC
+          - MOVEMENT
+          - DISCARD
+          - POTTING
+          - STRUCTURE_CHANGE
         title:
           type: string
         status:
@@ -3885,6 +3948,11 @@ components:
         resultDetails:
           type: object
           additionalProperties: {}
+        resultOrchidGroupIds:
+          type: array
+          items:
+            type: integer
+            format: int64
     WorkTargetExecutionRequest:
       type: object
       properties:
@@ -5998,6 +6066,31 @@ components:
       required:
       - reason
       - status
+    ApiResponseWorkTypeMetadataResponse:
+      type: object
+      properties:
+        data:
+          $ref: '#/components/schemas/WorkTypeMetadataResponse'
+        message:
+          type: string
+    WorkTypeMetadataResponse:
+      type: object
+      properties:
+        customTypeTemplates:
+          type: array
+          items:
+            type: string
+            enum:
+            - PESTICIDE
+            - FERTILIZER
+            - REPOT
+            - CLEANUP
+            - DISCARD
+            - STATUS
+            - MEMO
+            - MOVEMENT
+            - MULTI_CREATE
+            - CORRECTION
     ApiResponsePageResponseWorkOperationResponse:
       type: object
       properties:
@@ -7444,6 +7537,21 @@ components:
         data:
           $ref: '#/components/schemas/BedZoneResponse'
         message:
+          type: string
+    ApiResponseApplicationContextResponse:
+      type: object
+      properties:
+        data:
+          $ref: '#/components/schemas/ApplicationContextResponse'
+        message:
+          type: string
+    ApplicationContextResponse:
+      type: object
+      properties:
+        businessDate:
+          type: string
+          format: date
+        timeZone:
           type: string
     ApiResponseAuctionTrackingSummaryResponse:
       type: object
