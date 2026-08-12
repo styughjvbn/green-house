@@ -197,6 +197,15 @@ public interface OrchidGroupRepository extends JpaRepository<OrchidGroup, Long> 
 	List<OrchidGroup> findDetailsByIds(@Param("orchidGroupIds") java.util.Collection<Long> orchidGroupIds);
 
 	@Query("""
+			select new com.greenhouse.backend.farm.repository.orchid.OrchidGroupNameRow(g.id, g.varietyName)
+			from OrchidGroup g
+			where g.id in :orchidGroupIds
+			order by g.id asc
+			""")
+	List<OrchidGroupNameRow> findNameRowsByIdIn(
+			@Param("orchidGroupIds") java.util.Collection<Long> orchidGroupIds);
+
+	@Query("""
 			select g from OrchidGroup g
 			join fetch g.bedZone z
 			join fetch z.physicalBed b
