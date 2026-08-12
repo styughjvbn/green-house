@@ -14,8 +14,6 @@ import jakarta.persistence.LockModeType;
 
 public interface SalesSlipRepository extends JpaRepository<SalesSlip, Long>, SalesSlipRepositoryCustom {
 
-	long countBySaleDate(LocalDate saleDate);
-
 	boolean existsByAuctionShipmentId(Long auctionShipmentId);
 
 	@Query("""
