@@ -10,12 +10,12 @@ export async function FarmStatusPage() {
   const firstHouse =
     mapData.houses.find((house) => house.orchidGroupCount > 0) ??
     mapData.houses[0];
-  const initialSelection = firstHouse
-    ? await getFarmStatusOrchidGroups("HOUSE", firstHouse.houseId)
-    : null;
-  const initialZoom = firstHouse
-    ? await getFarmStatusHouseZoom(firstHouse.houseId)
-    : null;
+  const [initialSelection, initialZoom] = firstHouse
+    ? await Promise.all([
+        getFarmStatusOrchidGroups("HOUSE", firstHouse.houseId),
+        getFarmStatusHouseZoom(firstHouse.houseId),
+      ])
+    : [null, null];
   return (
     <main className="h-full min-h-0">
       <FarmStatusMap
