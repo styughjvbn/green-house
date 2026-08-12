@@ -2,6 +2,7 @@ package com.greenhouse.backend;
 
 import static org.hamcrest.Matchers.hasSize;
 import static org.hamcrest.Matchers.hasItem;
+import static org.hamcrest.Matchers.containsInAnyOrder;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -102,6 +103,31 @@ class WorkOperationIntegrationTests extends AbstractBackendIntegrationTest {
 				BigDecimal.TEN);
 		targetGroup.assignVariety(variety);
 		targetGroup = orchidGroupRepository.save(targetGroup);
+	}
+
+	@Test
+	void exposesOperationAndTargetActionsFromTheBackendContract() throws Exception {
+		mockMvc.perform(post("/api/work-operations")
+				.contentType(MediaType.APPLICATION_JSON)
+				.content("""
+						{
+						  "workTypeId": %d,
+						  "title": "작업 가능 액션 확인",
+						  "plannedStartDate": "2026-07-16",
+						  "sourceScopeType": "MANUAL_SELECTION",
+						  "sourceOrchidGroupIds": [%d]
+						}
+						""".formatted(pesticideType.getId(), targetGroup.getId())))
+				.andExpect(status().isCreated())
+				.andExpect(jsonPath("$.data.availableActions", containsInAnyOrder("START", "CANCEL")))
+				.andExpect(jsonPath("$.data.targets[0].availableActions", hasSize(0)));
+
+		Long operationId = workOperationRepository.findAll().getFirst().getId();
+		mockMvc.perform(post("/api/work-operations/{id}/start", operationId))
+				.andExpect(status().isOk())
+				.andExpect(jsonPath("$.data.availableActions", containsInAnyOrder("PAUSE", "CANCEL")))
+				.andExpect(jsonPath("$.data.targets[0].availableActions",
+						containsInAnyOrder("START", "COMPLETE", "SKIP")));
 	}
 
 	@Test

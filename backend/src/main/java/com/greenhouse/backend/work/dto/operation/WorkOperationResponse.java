@@ -33,9 +33,13 @@ public record WorkOperationResponse(
 		String worker,
 		String memo,
 		WorkOperationProgressResponse progress,
-		List<WorkOperationTargetResponse> targets) {
+		List<WorkOperationTargetResponse> targets,
+		List<WorkOperationAction> availableActions) {
 
-	public static WorkOperationResponse from(WorkOperation operation, List<WorkOperationTargetResponse> targets) {
+	public static WorkOperationResponse from(
+			WorkOperation operation,
+			List<WorkOperationTargetResponse> targets,
+			List<WorkOperationAction> availableActions) {
 		return new WorkOperationResponse(
 				operation.getId(),
 				operation.getWorkType().getId(),
@@ -57,6 +61,7 @@ public record WorkOperationResponse(
 				operation.getWorker(),
 				operation.getMemo(),
 				WorkOperationProgressResponse.from(targets),
-				targets);
+				targets,
+				availableActions);
 	}
 }

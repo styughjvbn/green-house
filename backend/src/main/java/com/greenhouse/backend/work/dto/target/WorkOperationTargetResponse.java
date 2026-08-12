@@ -34,7 +34,8 @@ public record WorkOperationTargetResponse(
 		LocalDateTime effectAppliedAt,
 		String worker,
 		Map<String, Object> resultDetails,
-		List<Long> resultOrchidGroupIds) {
+		List<Long> resultOrchidGroupIds,
+		List<WorkTargetAction> availableActions) {
 
 	public static WorkOperationTargetResponse preview(
 			ResolvedWorkTarget target) {
@@ -58,19 +59,21 @@ public record WorkOperationTargetResponse(
 				null,
 				null,
 				null,
-				null);
+				List.of(),
+				List.of());
 	}
 
 	public static WorkOperationTargetResponse from(
 			WorkOperationTarget target,
 			WorkTargetExecution execution) {
-		return from(target, execution, null);
+		return from(target, execution, null, List.of());
 	}
 
 	public static WorkOperationTargetResponse from(
 			WorkOperationTarget target,
 			WorkTargetExecution execution,
-			InboundPottingPlanTarget currentInbound) {
+			InboundPottingPlanTarget currentInbound,
+			List<WorkTargetAction> availableActions) {
 		String varietyName = currentInbound == null
 				? target.getVarietyNameSnapshot()
 				: currentInbound.varietyName();
@@ -103,7 +106,8 @@ public record WorkOperationTargetResponse(
 				TimeConfig.toFarmTime(execution.getEffectAppliedAt()),
 				execution.getWorker(),
 				execution.getResultDetails(),
-				resultOrchidGroupIds(execution.getResultDetails()));
+				resultOrchidGroupIds(execution.getResultDetails()),
+				availableActions);
 	}
 
 	private static List<Long> resultOrchidGroupIds(Map<String, Object> details) {

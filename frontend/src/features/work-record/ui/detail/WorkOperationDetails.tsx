@@ -394,12 +394,10 @@ function TargetsTab({
   onExecuteTarget?: (target: WorkOperation["targets"][number]) => void;
   onRequestTargetCompletion: (targetId: number) => void;
 }) {
-  const active = operation.status === "IN_PROGRESS";
   const executionKind = getWorkExecutionKind(operation.workTypeWorkflow);
   const structureChange =
     executionKind === "STRUCTURE_CHANGE" || executionKind === "MOVEMENT";
   const potting = executionKind === "POTTING";
-  const requiresResultEntry = executionKind != null;
 
   return (
     <div>
@@ -427,94 +425,76 @@ function TargetsTab({
       </div>
       {operation.targets.length > 0 ? (
         <div className="mt-3 max-h-96 overflow-y-auto rounded-md border border-[#e1e6df] bg-white">
-          {operation.targets.map((target) => (
-            <div
-              className="flex flex-wrap items-center gap-2 border-b border-[#edf0ec] px-3 py-3 last:border-b-0"
-              key={targetKey(target)}
-            >
-              <div className="min-w-0 flex-1">
-                <p className="truncate text-sm font-semibold text-[#26352b]">
-                  {targetTitle(target)}
-                </p>
-                <p className="mt-0.5 text-xs text-[#6a766e]">
-                  {targetLocation(target)} · 계획 {target.quantitySnapshot}분
-                  {target.processedQuantity > 0
-                    ? ` · 작업 ${target.processedQuantity}분 · 잔여 ${target.remainingQuantity}분`
-                    : ""}
-                  {target.completedAt
-                    ? ` · 완료 ${formatDateTime(target.completedAt)}`
-                    : ""}
-                </p>
-              </div>
-              <span className="rounded-full bg-[#eef2ed] px-2 py-1 text-xs font-semibold text-[#526057]">
-                {targetStatusLabel(target.executionStatus)}
-              </span>
-              {structureChange &&
-              active &&
-              target.id != null &&
-              (target.executionStatus === "PENDING" ||
-                target.executionStatus === "PARTIALLY_COMPLETED") ? (
-                <TargetAction
-                  label={
-                    target.executionStatus === "PARTIALLY_COMPLETED"
-                      ? "잔여 제외"
-                      : "건너뛰기"
-                  }
-                  disabled={actionLoading}
-                  onClick={() => onTargetAction(target.id!, "skip")}
-                />
-              ) : null}
-              {!structureChange &&
-              !potting &&
-              active &&
-              target.id != null &&
-              target.executionStatus === "PENDING" ? (
-                <TargetAction
-                  label="시작"
-                  disabled={actionLoading}
-                  onClick={() => onTargetAction(target.id!, "start")}
-                />
-              ) : null}
-              {!structureChange &&
-              !potting &&
-              active &&
-              target.id != null &&
-              (target.executionStatus === "PENDING" ||
-                target.executionStatus === "IN_PROGRESS") ? (
-                <>
+          {operation.targets.map((target) => {
+            const opensDedicatedExecution =
+              target.availableActions.includes("EXECUTE") &&
+              !structureChange &&
+              !potting;
+            const canComplete = target.availableActions.includes("COMPLETE");
+            return (
+              <div
+                className="flex flex-wrap items-center gap-2 border-b border-[#edf0ec] px-3 py-3 last:border-b-0"
+                key={targetKey(target)}
+              >
+                <div className="min-w-0 flex-1">
+                  <p className="truncate text-sm font-semibold text-[#26352b]">
+                    {targetTitle(target)}
+                  </p>
+                  <p className="mt-0.5 text-xs text-[#6a766e]">
+                    {targetLocation(target)} · 계획 {target.quantitySnapshot}분
+                    {target.processedQuantity > 0
+                      ? ` · 작업 ${target.processedQuantity}분 · 잔여 ${target.remainingQuantity}분`
+                      : ""}
+                    {target.completedAt
+                      ? ` · 완료 ${formatDateTime(target.completedAt)}`
+                      : ""}
+                  </p>
+                </div>
+                <span className="rounded-full bg-[#eef2ed] px-2 py-1 text-xs font-semibold text-[#526057]">
+                  {targetStatusLabel(target.executionStatus)}
+                </span>
+                {target.id != null &&
+                target.availableActions.includes("START") ? (
+                  <TargetAction
+                    label="시작"
+                    disabled={actionLoading}
+                    onClick={() => onTargetAction(target.id!, "start")}
+                  />
+                ) : null}
+                {target.id != null &&
+                (canComplete || opensDedicatedExecution) ? (
                   <TargetAction
                     primary
-                    label={requiresResultEntry ? "결과 입력" : "완료"}
+                    label={opensDedicatedExecution ? "결과 입력" : "완료"}
                     disabled={
-                      actionLoading || (requiresResultEntry && !onExecuteTarget)
+                      actionLoading ||
+                      (opensDedicatedExecution && !onExecuteTarget)
                     }
                     onClick={() => {
-                      if (requiresResultEntry) {
+                      if (opensDedicatedExecution) {
                         onExecuteTarget?.(target);
                       } else {
                         onRequestTargetCompletion(target.id!);
                       }
                     }}
                   />
+                ) : null}
+                {target.id != null &&
+                target.availableActions.includes("SKIP") ? (
                   <TargetAction
-                    label="건너뛰기"
+                    label={
+                      structureChange &&
+                      target.executionStatus === "PARTIALLY_COMPLETED"
+                        ? "잔여 제외"
+                        : "건너뛰기"
+                    }
                     disabled={actionLoading}
                     onClick={() => onTargetAction(target.id!, "skip")}
                   />
-                </>
-              ) : null}
-              {potting &&
-              active &&
-              target.id != null &&
-              target.executionStatus === "PENDING" ? (
-                <TargetAction
-                  label="건너뛰기"
-                  disabled={actionLoading}
-                  onClick={() => onTargetAction(target.id!, "skip")}
-                />
-              ) : null}
-            </div>
-          ))}
+                ) : null}
+              </div>
+            );
+          })}
         </div>
       ) : (
         <EmptyText>이 작업에 포함된 대상이 없습니다.</EmptyText>

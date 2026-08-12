@@ -275,6 +275,14 @@ export type WorkTargetExecutionStatus = NonNullable<
   ApiSchemas["WorkOperationTargetResponse"]["executionStatus"]
 >;
 
+export type WorkOperationAction = NonNullable<
+  ApiSchemas["WorkOperationResponse"]["availableActions"]
+>[number];
+
+export type WorkTargetAction = NonNullable<
+  ApiSchemas["WorkOperationTargetResponse"]["availableActions"]
+>[number];
+
 export type WorkLocationSnapshot = {
   houseId: number;
   houseNumber: number;
@@ -318,6 +326,7 @@ export type WorkOperationTarget = {
   worker: string | null;
   resultDetails: Record<string, unknown> | null;
   resultOrchidGroupIds: number[];
+  availableActions: WorkTargetAction[];
 };
 
 export type WorkTargetPreview = {
@@ -364,6 +373,7 @@ export type WorkOperation = {
     progressPercent: number;
   };
   targets: WorkOperationTarget[];
+  availableActions: WorkOperationAction[];
 };
 
 export type OrchidGroupWorkHistory = {
