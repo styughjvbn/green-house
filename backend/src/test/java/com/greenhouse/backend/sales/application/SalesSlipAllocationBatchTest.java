@@ -11,6 +11,9 @@ import com.greenhouse.backend.sales.domain.SalesSlipItem;
 import com.greenhouse.backend.sales.domain.SalesSlipItemAllocation;
 import com.greenhouse.backend.sales.domain.SalesType;
 import java.time.LocalDate;
+import java.time.Clock;
+import java.time.Instant;
+import java.time.ZoneOffset;
 import org.junit.jupiter.api.Test;
 
 class SalesSlipAllocationBatchTest {
@@ -38,7 +41,9 @@ class SalesSlipAllocationBatchTest {
 	void copiesAllocationsThroughTheSameCreationSeam() {
 		OrchidGroup group = group(1L);
 		SalesSlipItemAllocation original = new SalesSlipItemAllocation(group, 4);
-		SalesSlipAllocationFactory factory = new SalesSlipAllocationFactory(mock(OrchidGroupReader.class));
+		SalesSlipAllocationFactory factory = new SalesSlipAllocationFactory(
+				mock(OrchidGroupReader.class),
+				Clock.fixed(Instant.parse("2026-08-12T01:02:03Z"), ZoneOffset.UTC));
 
 		SalesSlipItemAllocation copied = factory.copyAllocation(original);
 

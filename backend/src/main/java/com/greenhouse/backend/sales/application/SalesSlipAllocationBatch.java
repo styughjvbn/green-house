@@ -4,12 +4,14 @@ import com.greenhouse.backend.farm.domain.orchid.OrchidGroup;
 import com.greenhouse.backend.sales.domain.SalesSlip;
 import com.greenhouse.backend.sales.domain.SalesSlipItem;
 import com.greenhouse.backend.sales.domain.SalesSlipItemAllocation;
+import com.greenhouse.backend.sales.domain.SalesOrchidSnapshotType;
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Objects;
 
 /**
  * A stable view of the allocation lines participating in one sales use case.
- * Future creation and outbound snapshots can be captured from the same lines.
+ * Creation and outbound snapshots are captured from these same allocation lines.
  */
 public record SalesSlipAllocationBatch(
 		SalesSlip salesSlip,
@@ -34,6 +36,10 @@ public record SalesSlipAllocationBatch(
 				.distinct()
 				.sorted()
 				.toList();
+	}
+
+	public void captureSnapshot(SalesOrchidSnapshotType snapshotType, LocalDateTime capturedAt) {
+		lines.forEach(line -> line.allocation().captureSnapshot(snapshotType, capturedAt));
 	}
 
 	public record Line(

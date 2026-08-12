@@ -19,6 +19,7 @@ public interface SalesSlipItemAllocationRepository extends JpaRepository<SalesSl
 			join fetch orchidGroup.bedZone zone
 			join fetch zone.physicalBed bed
 			join fetch bed.house
+			left join fetch allocation.snapshots
 			where slip.id in :salesSlipIds
 			order by item.id asc, allocation.id asc
 			""")

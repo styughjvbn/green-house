@@ -31,6 +31,21 @@ public class OrchidGroupReader {
 		return orchidGroupRepository.findAllForUpdateByIdIn(orchidGroupIds.stream().sorted().toList());
 	}
 
+	@Transactional
+	public List<OrchidGroup> findAllDetailsForUpdateByIds(Collection<Long> orchidGroupIds) {
+		List<Long> sortedIds = orchidGroupIds == null
+				? List.of()
+				: orchidGroupIds.stream().distinct().sorted().toList();
+		if (sortedIds.isEmpty()) {
+			return List.of();
+		}
+		List<OrchidGroup> locked = orchidGroupRepository.findAllForUpdateByIdIn(sortedIds);
+		if (locked.size() != sortedIds.size()) {
+			return locked;
+		}
+		return orchidGroupRepository.findDetailsByIds(sortedIds);
+	}
+
 	public List<OrchidGroup> searchSellable(String keyword, Long varietyId, String status) {
 		return orchidGroupRepository.searchSellable(keyword, varietyId, status);
 	}

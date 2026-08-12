@@ -454,6 +454,33 @@ export type SalesSlipItemAllocation = {
   houseNumber: number;
   physicalBedNumber: number;
   bedZoneName: string;
+  creationSnapshot: SalesOrchidGroupSnapshot | null;
+  outboundSnapshot: SalesOrchidGroupSnapshot | null;
+};
+
+export type SalesOrchidGroupSnapshot = {
+  snapshotType: "CREATION" | "OUTBOUND";
+  captureSource: "LIVE" | "MIGRATED_CURRENT_STATE";
+  capturedAt: string;
+  orchidGroupId: number;
+  varietyId: number | null;
+  varietyName: string;
+  genus: string | null;
+  ageYear: number | null;
+  potSizeCode: string | null;
+  potSize: string | null;
+  quantity: number;
+  reservedQuantity: number;
+  status: string;
+  allocatedQuantity: number;
+  houseId: number;
+  houseNumber: number;
+  physicalBedId: number;
+  physicalBedNumber: number;
+  bedZoneId: number;
+  bedZoneName: string;
+  startPosition: number | null;
+  endPosition: number | null;
 };
 
 export type SalesOrchidGroupOption = {

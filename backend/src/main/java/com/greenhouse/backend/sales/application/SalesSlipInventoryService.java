@@ -2,12 +2,14 @@ package com.greenhouse.backend.sales.application;
 
 import com.greenhouse.backend.farm.application.orchid.OrchidGroupReader;
 import com.greenhouse.backend.farm.domain.orchid.OrchidGroup;
+import com.greenhouse.backend.common.exception.NotFoundException;
 import com.greenhouse.backend.sales.domain.SalesInventoryMovement;
 import com.greenhouse.backend.sales.domain.SalesInventoryMovementType;
 import com.greenhouse.backend.sales.domain.SalesSlip;
 import com.greenhouse.backend.sales.domain.SalesSlipItem;
 import com.greenhouse.backend.sales.repository.SalesInventoryMovementRepository;
 import jakarta.persistence.EntityManager;
+import java.util.List;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
@@ -105,8 +107,21 @@ public class SalesSlipInventoryService {
 	}
 
 	public SalesSlipAllocationBatch lockForUpdate(SalesSlip salesSlip) {
+		return lockForUpdate(salesSlip, false);
+	}
+
+	public SalesSlipAllocationBatch lockForOutbound(SalesSlip salesSlip) {
+		return lockForUpdate(salesSlip, true);
+	}
+
+	private SalesSlipAllocationBatch lockForUpdate(SalesSlip salesSlip, boolean loadSnapshotDetails) {
 		SalesSlipAllocationBatch allocations = SalesSlipAllocationBatch.from(salesSlip);
-		orchidGroupReader.findAllForUpdateByIds(allocations.orchidGroupIds());
+		List<OrchidGroup> lockedGroups = loadSnapshotDetails
+				? orchidGroupReader.findAllDetailsForUpdateByIds(allocations.orchidGroupIds())
+				: orchidGroupReader.findAllForUpdateByIds(allocations.orchidGroupIds());
+		if (lockedGroups.size() != allocations.orchidGroupIds().size()) {
+			throw new NotFoundException("난 묶음을 찾을 수 없습니다.");
+		}
 		return allocations;
 	}
 }
