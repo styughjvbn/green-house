@@ -3,14 +3,20 @@
 import { useCallback } from "react";
 
 export function useUrlSearchParamsWriter() {
-  return useCallback((updater: (params: URLSearchParams) => void) => {
-    const params = new URLSearchParams(window.location.search);
-    updater(params);
-    const query = params.toString();
-    window.history.replaceState(
-      null,
-      "",
-      query ? `${window.location.pathname}?${query}` : window.location.pathname,
-    );
-  }, []);
+  return useCallback(
+    (
+      updater: (params: URLSearchParams) => void,
+      historyMode: "replace" | "push" = "replace",
+    ) => {
+      const params = new URLSearchParams(window.location.search);
+      updater(params);
+      const query = params.toString();
+      const url = query
+        ? `${window.location.pathname}?${query}`
+        : window.location.pathname;
+      const method = historyMode === "push" ? "pushState" : "replaceState";
+      window.history[method](null, "", url);
+    },
+    [],
+  );
 }

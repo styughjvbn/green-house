@@ -1,4 +1,10 @@
-import { useMemo, useState, type FormEvent } from "react";
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useState,
+  type FormEvent,
+} from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import type {
   SalesOrchidGroupOption,
@@ -8,6 +14,8 @@ import type {
 } from "@/entities/farm/types";
 import { createEmptyPage } from "@/shared/api/page";
 import { useUrlPagedListState } from "@/shared/api/useUrlPagedListState";
+import { useUrlSearchParamsWriter } from "@/shared/lib/useUrlSearchParamsWriter";
+import { useRuntimeContext } from "@/shared/runtime/RuntimeContext";
 import {
   changeSalesSlipStatus,
   createSalesSlip,
@@ -22,7 +30,7 @@ import {
   toCreateSalesSlipPayload,
   toSalesSlipForm,
 } from "../lib/salesForm";
-import type { SalesRouteState } from "../lib/salesRouteParams";
+import type { SalesSlipsRouteState } from "../lib/salesRouteParams";
 import {
   createInitialSalesFilters,
   SALES_FILTER_KEYS,
@@ -30,12 +38,12 @@ import {
 } from "../lib/salesUrlFilters";
 import {
   businessPartnerLookupQueryOptions,
+  salesSlipDetailQueryOptions,
   salesSlipPageQueryOptions,
 } from "./salesQueryOptions";
 import { salesQueryKeys } from "./salesQueryKeys";
 import type {
   SalesAllocationForm,
-  SalesFilterState,
   SalesItemForm,
   SalesSlipForm,
 } from "./types";
@@ -45,30 +53,29 @@ export function useSalesSlips({
   routeState,
 }: {
   initialShowCreateSlip?: boolean;
-  routeState: SalesRouteState<SalesFilterState>;
+  routeState: SalesSlipsRouteState;
 }) {
   const queryClient = useQueryClient();
+  const writeUrlParams = useUrlSearchParamsWriter();
+  const { businessDate } = useRuntimeContext();
   const salesSlipQuery = useQuery(salesSlipPageQueryOptions(routeState));
   const partnersQuery = useQuery(businessPartnerLookupQueryOptions());
   const partners = partnersQuery.data ?? [];
   const listState = useUrlPagedListState({
     emptyFilters: createInitialSalesFilters,
     filterKeys: SALES_FILTER_KEYS,
+    resetParamKeys: ["slipId"],
     routeFilters: routeState.filters,
     writeFilterParams: writeSalesFilterParams,
   });
   const salesSlipPageData =
     salesSlipQuery.data ??
     createEmptyPage<SalesSlipListItem>(routeState.size, routeState.page);
-  const [selectedSalesSlip, setSelectedSalesSlip] = useState<SalesSlip | null>(
-    null,
-  );
   const [salesForm, setSalesForm] = useState<SalesSlipForm>(() =>
-    createInitialSalesForm(partners),
+    createInitialSalesForm(partners, businessDate),
   );
   const [showCreateSlip, setShowCreateSlip] = useState(initialShowCreateSlip);
   const [editingSlipId, setEditingSlipId] = useState<number | null>(null);
-  const [selectedSlipId, setSelectedSlipId] = useState<number | null>(null);
   const [savingSlip, setSavingSlip] = useState(false);
   const [updatingSlipStatus, setUpdatingSlipStatus] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
@@ -83,19 +90,36 @@ export function useSalesSlips({
     salesSlipTotalPages - 1,
   );
   const visibleSelectedSlipId =
-    selectedSlipId != null &&
-    salesSlipPageData.content.some((item) => item.id === selectedSlipId)
-      ? selectedSlipId
+    routeState.selectedSlipId != null
+      ? routeState.selectedSlipId
       : (salesSlipPageData.content[0]?.id ?? null);
   const salesSlipDetailQuery = useQuery({
-    queryKey: salesQueryKeys.slips.detail(visibleSelectedSlipId ?? 0),
-    queryFn: () => getSalesSlip(visibleSelectedSlipId as number),
+    ...salesSlipDetailQueryOptions(visibleSelectedSlipId ?? 0),
     enabled: visibleSelectedSlipId != null,
   });
-  const visibleSelectedSalesSlip =
-    selectedSalesSlip?.id === visibleSelectedSlipId
-      ? selectedSalesSlip
-      : (salesSlipDetailQuery.data ?? null);
+  const visibleSelectedSalesSlip = salesSlipDetailQuery.data ?? null;
+  const writeSelectedSlipId = useCallback(
+    (salesSlipId: number, historyMode: "replace" | "push") => {
+      writeUrlParams(
+        (params) => params.set("slipId", String(salesSlipId)),
+        historyMode,
+      );
+    },
+    [writeUrlParams],
+  );
+
+  useEffect(() => {
+    if (
+      routeState.selectedSlipId == null &&
+      salesSlipPageData.content[0]?.id != null
+    ) {
+      writeSelectedSlipId(salesSlipPageData.content[0].id, "replace");
+    }
+  }, [
+    routeState.selectedSlipId,
+    salesSlipPageData.content,
+    writeSelectedSlipId,
+  ]);
 
   function updateSalesForm<K extends keyof SalesSlipForm>(
     field: K,
@@ -269,9 +293,11 @@ export function useSalesSlips({
         editingSlipId == null
           ? await createSalesSlip(payload)
           : await requestUpdateSalesSlip(editingSlipId, payload);
-      setSelectedSlipId(salesSlip.id);
-      setSelectedSalesSlip(salesSlip);
-      listState.changePage(0);
+      updateSalesSlip(salesSlip);
+      writeUrlParams((params) => {
+        params.set("slipId", String(salesSlip.id));
+        params.set("page", "0");
+      });
       setShowCreateSlip(false);
       setSalesForm((current) => resetSalesSlipFormAfterSave(current));
       setEditingSlipId(null);
@@ -290,7 +316,7 @@ export function useSalesSlips({
   function startCreateSalesSlip() {
     setEditingSlipId(null);
     setErrorMessage(null);
-    setSalesForm(createInitialSalesForm(partners));
+    setSalesForm(createInitialSalesForm(partners, businessDate));
     setShowCreateSlip(true);
   }
 
@@ -302,8 +328,7 @@ export function useSalesSlips({
           ? visibleSelectedSalesSlip
           : await getSalesSlip(salesSlipId);
       setEditingSlipId(salesSlipId);
-      setSelectedSlipId(salesSlipId);
-      setSelectedSalesSlip(salesSlip);
+      writeSelectedSlipId(salesSlipId, "replace");
       queryClient.setQueryData(
         salesQueryKeys.slips.detail(salesSlip.id),
         salesSlip,
@@ -318,7 +343,7 @@ export function useSalesSlips({
   function cancelSalesSlipEditing() {
     setEditingSlipId(null);
     setShowCreateSlip(false);
-    setSalesForm(createInitialSalesForm(partners));
+    setSalesForm(createInitialSalesForm(partners, businessDate));
     setErrorMessage(null);
   }
 
@@ -327,8 +352,8 @@ export function useSalesSlips({
     setErrorMessage(null);
     try {
       const current =
-        selectedSalesSlip?.id === salesSlipId
-          ? selectedSalesSlip
+        visibleSelectedSalesSlip?.id === salesSlipId
+          ? visibleSelectedSalesSlip
           : salesSlipPageData.content.find((item) => item.id === salesSlipId);
       const nextStatus =
         current?.salesType === "AUCTION" ? "출하 완료" : "출고 완료";
@@ -367,7 +392,6 @@ export function useSalesSlips({
   }
 
   function updateSalesSlip(salesSlip: SalesSlip) {
-    setSelectedSalesSlip(salesSlip);
     queryClient.setQueryData(
       salesQueryKeys.slips.detail(salesSlip.id),
       salesSlip,
@@ -387,7 +411,7 @@ export function useSalesSlips({
   }
 
   function selectSalesSlip(salesSlipId: number) {
-    setSelectedSlipId(salesSlipId);
+    writeSelectedSlipId(salesSlipId, "push");
   }
 
   return {

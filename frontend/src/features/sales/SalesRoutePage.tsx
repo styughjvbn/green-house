@@ -16,6 +16,7 @@ import {
   auctionSummaryQueryOptions,
   businessPartnerLookupQueryOptions,
   businessPartnerPageQueryOptions,
+  salesSlipDetailQueryOptions,
   salesSlipPageQueryOptions,
 } from "./model/salesQueryOptions";
 import type { SalesTab } from "./model/types";
@@ -36,11 +37,17 @@ export async function SalesRoutePage({
 
   switch (activeTab) {
     case "slips": {
+      const routeState = readSalesRouteState(reader);
       await Promise.all([
-        queryClient.prefetchQuery(
-          salesSlipPageQueryOptions(readSalesRouteState(reader)),
-        ),
+        queryClient.prefetchQuery(salesSlipPageQueryOptions(routeState)),
         queryClient.prefetchQuery(businessPartnerLookupQueryOptions()),
+        ...(routeState.selectedSlipId == null
+          ? []
+          : [
+              queryClient.prefetchQuery(
+                salesSlipDetailQueryOptions(routeState.selectedSlipId),
+              ),
+            ]),
       ]);
       return (
         <HydrationBoundary state={dehydrate(queryClient)}>

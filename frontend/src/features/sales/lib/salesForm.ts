@@ -59,14 +59,14 @@ export function createEmptySalesItem(): SalesItemForm {
 
 export function createInitialSalesForm(
   partners: BusinessPartner[],
-  today = todayIsoDate(),
+  businessDate: string,
 ): SalesSlipForm {
   const directPartner = partners.find(
     (partner) => partner.partnerType !== "AUCTION_HOUSE",
   );
   return {
     salesType: "DIRECT",
-    saleDate: today,
+    saleDate: businessDate,
     partnerId: directPartner ? String(directPartner.id) : "",
     paymentStatus: "미입금",
     salesStatus: "작성중",
@@ -74,10 +74,6 @@ export function createInitialSalesForm(
     memo: "",
     items: [createEmptySalesItem()],
   };
-}
-
-export function todayIsoDate(): string {
-  return new Date().toISOString().slice(0, 10);
 }
 
 export function calculateSalesItemAmount(item: SalesItemForm): number {
