@@ -30,7 +30,7 @@ green-house/
 - 입고 관리와 작업 관리가 공통으로 사용하는 포트 실행·농장 배치 UI는 `entities/farm/ui`에 두고 저장 API는 각 `features/*`에서 연결한다.
 - 판매와 inventory의 서버 페이지 목록은 TanStack Query로 관리한다. 두 기능 모두 URL을 조회 조건의 단일 기준으로 사용하고 서버와 클라이언트가 같은 파서와 query option을 공유한다. 판매 전표의 상세 선택도 `slipId` URL 상태로 관리해 deep link와 브라우저 탐색을 지원하며 상세 서버 상태를 local state에 복제하지 않는다. 서버 컴포넌트는 현재 URL 조건을 prefetch해 hydration하며, 공통 URL 페이지 훅은 검색 초안과 URL 변경만 담당한다.
 - 작업 관리는 URL을 조회 범위·보기 방식·필터·페이지의 단일 기준으로 사용한다. 서버 진입 컴포넌트인 `WorkRecordRoutePage`는 현재 목록 또는 캘린더 query만 prefetch해 hydration하고, 작업 유형과 농장 전체 배치 정보는 등록 또는 실행 다이얼로그를 열 때 조회한다. 클라이언트 `WorkRecordPage`는 보기 전환과 등록 다이얼로그의 열림 상태만 관리하고, 등록 다이얼로그가 자체 참조 데이터의 로딩과 오류를 처리한다. 목록과 캘린더는 공통 작업 동작 훅과 상세 패널을 사용한다. 캘린더는 전용 기간 API를 한 번 호출하고, 작업 등록·실행 후 관련 작업 및 농장 query를 무효화한다.
-- 작업 관리는 조회·상태 변경을 `model/operation`, 등록 상태와 대상 계산을 `model/registration`, 작업 유형별 업무 규칙을 `model/work-types`로 구분한다. 화면은 `ui/list`, `ui/calendar`, `ui/detail`, `ui/registration`, `ui/work-types`에서 기능별로 구성하며, 작업 코드별 대상 출처와 실행·기록 UI는 `model/work-types/workTypeDefinition.ts`의 정의를 통해 선택한다.
+- 작업 관리는 조회·상태 변경을 `model/operation`, 등록 상태와 대상 계산을 `model/registration`, 작업 유형별 표현 구성을 `model/work-types`로 구분한다. 화면은 `ui/list`, `ui/calendar`, `ui/detail`, `ui/registration`, `ui/work-types`에서 기능별로 구성한다. 대상 출처, 등록 가능 모드, 실행 workflow는 백엔드 capability를 사용하고 `workTypeDefinition.ts`에는 안내 문구 같은 표현 규칙만 둔다.
 - 자리 이동 실행의 원본별 이동 수량 배분은 작업 모듈의 공통 효과 계산기로 처리하며, 농장 구조 변경 handler와 작업 실행 서비스가 같은 계산 규칙을 사용한다.
 
 ### Backend
@@ -224,6 +224,65 @@ Persistence 조회 규칙:
 - 페이지 조회에 collection fetch join을 적용하지 않는다. 먼저 root를 페이지 조회한 뒤 연관 collection을 ID `IN` 조회로 조립한다.
 - 목록 응답 조립 중 반복문 안에서 Repository를 호출하지 않고 필요한 ID를 모아 일괄 조회한다.
 
+### 4.1 백엔드 구현 기준
+
+#### 모듈 소유권과 호출 방향
+
+- Entity, Repository, DB table은 각각 하나의 업무 모듈이 소유한다. 소유 모듈 밖에서는 해당 Repository나 internal 구현을 직접 참조하지 않는다.
+- 다른 모듈의 기능이 필요하면 제공 모듈의 application API를 호출한다. 호출 측의 도메인 흐름에 필요한 조회 계약은 호출 측에 port를 두고 소유 모듈이 구현할 수 있다.
+- 모듈 간 계약은 필요한 값만 전달한다. 외부 모듈 Entity를 장기간 보관하거나 응답 조립 편의를 위해 aggregate 전체를 넘기지 않는다.
+- 외부 시스템은 application port 뒤의 adapter로 추가한다. 외부 시스템 DTO와 오류를 domain에 전파하지 않는다.
+
+```text
+호출 모듈 application → 제공 모듈 application API
+호출 모듈 port ← 제공 모듈 adapter
+
+금지: 호출 모듈 → 타 모듈 Repository/DB table
+```
+
+#### 유스케이스와 트랜잭션
+
+- Controller는 HTTP 변환과 validation 진입만 담당하고 application service가 유스케이스와 트랜잭션을 소유한다.
+- 쓰기 유스케이스는 하나의 public application method를 원자 경계로 삼는다. 중간 service 호출이 별도 트랜잭션을 암묵적으로 만들거나 self invocation에 의존하지 않게 한다.
+- Entity는 자기 상태의 불변식과 전이를 지키고 application service는 aggregate 조회, 순서 제어, 모듈 간 조율을 담당한다. 여러 Service에서 같은 상태 조건을 검사하면 Domain Policy 또는 상태 전이 메서드로 모은다.
+- 네트워크·파일·사용자 대기처럼 실패와 지연을 통제하기 어려운 작업은 DB 트랜잭션 안에서 수행하지 않는다.
+- 여러 행을 잠글 때는 ID 오름차순처럼 잠금 순서를 고정한다. 재고, 잔액, 순번, 상태 변경에는 도메인 검사와 함께 version, 비관적 잠금, UNIQUE/CHECK 또는 원자 갱신 중 필요한 DB 보호를 둔다.
+
+#### API 계약과 프론트엔드 경계
+
+- 상태 전이, 가능한 action, workflow, 대상 종류, 수정 가능 여부, 업무일자는 백엔드 도메인 계약이 결정한다. 프론트가 여러 필드나 enum 이름을 조합해 같은 규칙을 다시 만들지 않도록 `availableActions`, capability, derived status, metadata 또는 runtime context로 제공한다.
+- capability는 업무 의미만 표현한다. 화면 문구, 색상, 아이콘, 레이아웃 같은 표현 정보는 응답에 넣지 않고 프론트가 capability를 UI에 매핑한다.
+- 성공과 실패는 공통 `ApiResponse`와 `ErrorResponse` envelope를 유지한다. 프론트가 예외 메시지 문자열을 해석하지 않도록 의미 있는 실패는 HTTP status와 안정적인 error code로 구분한다.
+- API enum, capability, 요청/응답 DTO가 바뀌면 Controller·테스트를 먼저 수정하고 `python3 scripts/generate_openapi.py`와 `frontend`의 `npm run api:types`를 순서대로 실행한다. OpenAPI와 생성 TypeScript schema는 직접 수정하지 않는다.
+- 클라이언트의 날짜 입력 기본값은 공개 runtime context의 `businessDate`와 `timeZone`을 사용한다. 백엔드 내부 업무일 계산과 같은 `TimeConfig` 기준을 유지해 브라우저 시간대와 배포 서버 시간대에 따라 날짜가 달라지지 않게 한다.
+
+#### 조회와 응답 조립
+
+| 문제 유형 | 기본 선택 |
+|---|---|
+| 식별자·고정 조건 CRUD | Spring Data JPA |
+| 동적 조건·정렬·일반 집계 | QueryDSL |
+| 고정 projection·연관 일괄 조회 | JPQL |
+| CTE·Window Function·PostgreSQL 원자 연산 | 근거를 남긴 Native SQL |
+
+- root 목록과 collection을 한 쿼리에 억지로 합치지 않는다. 페이지 또는 제한된 root ID를 먼저 조회하고 연관 데이터를 `IN` 쿼리로 읽어 application 계층에서 조립한다.
+- DTO mapper가 lazy association을 순회하지 않게 조회 범위를 명시한다. mapper 호출 전 필요한 연관 데이터가 이미 로딩됐는지 확인한다.
+- 목록·옵션·분석 조회에는 pagination, 날짜 범위 또는 명시적 최대 건수 중 하나를 둔다. 장기 누적 테이블의 무제한 `findAll`을 API 경로에 사용하지 않는다.
+- DB 집계로 표현 가능한 값을 전체 Entity 조회 후 Java에서 다시 집계하지 않는다. 다만 데이터량이 작고 규칙 표현이 더 명확한 경우에는 측정 근거를 남기고 단순 구현을 유지할 수 있다.
+
+#### 이력과 스냅샷
+
+- 작업 효과, 출하, 전표, 정산처럼 과거 사실은 현재 Entity 상태와 분리해 보존한다. 과거 응답을 현재 난 묶음·거래처 값으로 다시 계산하지 않는다.
+- 스냅샷은 이력이 확정되는 생성·완료 경계에서 같은 트랜잭션으로 저장한다. 스냅샷 생성이 필요한 후속 기능은 이 경계를 확장하고 여러 Controller 또는 mapper에서 임의로 복제하지 않는다.
+- 이력 데이터는 물리 삭제보다 상태 변경, 취소, 보정 레코드를 우선한다. 보정은 원본과 변경 전후 값을 추적할 수 있어야 한다.
+
+#### 시간, migration, 검증
+
+- DB 시점은 UTC로 저장하고 농장 업무일 계산은 `Asia/Seoul` 기준 `TimeConfig`와 주입된 `Clock`을 사용한다.
+- Flyway migration은 `nullable 추가 → backfill → 제약 적용`처럼 기존 운영 데이터가 통과할 수 있는 순서를 사용한다. 대용량 table 변경은 lock 범위와 운영 적용 시간을 별도로 검토한다.
+- 수량·금액·정산·migration 변경은 정상 흐름뿐 아니라 rollback과 중복 요청을 검증한다. 동시성 보강은 병렬 실행 테스트, N+1 보강은 query count 상한 테스트를 둔다.
+- PostgreSQL 문법, lock, constraint, 원자 갱신은 H2 결과만 신뢰하지 않고 Testcontainers 또는 실제 PostgreSQL 검증을 수행한다.
+
 ## 5. 프론트엔드 구조
 
 기능 중심 구조를 유지한다.
@@ -260,6 +319,65 @@ src/
   `entities/*/ui` 또는 `features/*/ui`에 유지한다.
 - PWA 브라우저 런타임과 전용 스타일은 `shared/pwa`에 둔다. Next.js가 위치를
   규정하는 manifest는 `app/manifest.ts`, 서비스 워커와 아이콘은 `public/`에 둔다.
+
+### 5.1 프론트엔드 구현 기준
+
+#### 상태 소유권
+
+구현 전에 상태를 다음 중 하나로 분류한다.
+
+| 종류 | 기준 | 저장 위치 |
+|---|---|---|
+| Server state | API가 원본이며 재조회·무효화 대상 | React Query cache |
+| URL state | 공유, 새로고침, deep link, back/forward 복원이 필요 | path/search params |
+| Local UI state | 입력 중 값, dialog, hover, 임시 선택처럼 짧게 유지 | 가장 가까운 컴포넌트 또는 응집된 hook |
+| Derived state | 기존 props·state·query 결과로 계산 가능 | 렌더 중 계산, 비용이 클 때만 memoization |
+| Shared client state | API나 URL로 표현할 수 없고 먼 형제 트리가 함께 변경 | 필요한 최소 범위의 Context |
+
+- Query 결과를 local state나 Context에 복사하지 않는다. 수정 응답은 cache를 갱신하고 필요한 query만 무효화한다.
+- props나 query 결과에 맞추기 위한 `useEffect` state 동기화를 만들기 전에 derived 계산, event handler, URL, React Query로 대체할 수 있는지 확인한다.
+- Context는 런타임 컨텍스트처럼 넓은 트리에서 안정적으로 공유해야 하는 값에만 사용한다. feature 내부 편의를 위한 전역 Context는 만들지 않는다.
+- 목록의 탭·필터·정렬·페이지와 상세 선택 중 사용자 탐색 맥락에 포함되는 값은 URL을 단일 기준으로 사용한다. 폼 입력 중간값과 dialog 열림 여부는 URL에 두지 않는다.
+
+#### 도메인 계약과 표현 책임
+
+- 상태 전이, 가능한 업무 action, 수량·금액 계산, 파생 업무 상태, 변경 금지 조건, 도메인 validation의 source of truth는 백엔드다.
+- 프론트가 여러 응답 필드, 날짜, null 여부, raw JSON을 조합해 업무 의미를 추론해야 한다면 TypeScript helper를 만들기 전에 `availableActions`, capability, derived status, 정형 DTO 또는 metadata API를 검토한다.
+- 빠른 피드백을 위한 입력 형식·범위 검사는 프론트에도 둘 수 있다. 서버가 최종 검증하며, 서버 규칙 변경 시 조용히 달라질 수 있는 복잡한 계산은 복제하지 않는다.
+- 색상, 아이콘, 문구, 배치, 확대·축소, 선택·hover, 애니메이션은 프론트 표현 책임이다. 백엔드가 CSS나 화면 문구를 제공하지 않는다.
+- API enum과 capability는 생성 OpenAPI 타입을 참조한다. API DTO와 form draft, table row, view model은 목적이 다를 때 별도 타입으로 명시적으로 변환한다.
+
+#### Server Component와 데이터 패칭
+
+- `app` route는 params 검증과 feature RoutePage 호출만 담당한다. 현재 URL에서 바로 필요한 초기 데이터는 feature의 Server Component에서 prefetch하고 Client Component에 hydration한다.
+- 사용자 interaction이 많은 지도, 다중 선택, 폼, dialog는 Client Component에 둔다. `use client` 개수보다 전달되는 데이터 크기와 상태 소유권을 기준으로 경계를 정한다.
+- 서버 prefetch와 클라이언트 `useQuery`는 같은 query option과 key factory를 사용한다. key에는 filter, page, size, scope 등 실제 요청 결과를 바꾸는 조건을 모두 포함한다.
+- 서로 독립적인 초기 요청은 `Promise.all`로 실행한다. 선택·검색처럼 연속 호출되는 요청은 `AbortSignal`을 전달하거나 request token으로 최신 응답만 commit한다.
+- mutation 후 전체 feature를 습관적으로 무효화하지 않는다. 상세 cache 직접 갱신, 관련 목록 무효화, 다른 도메인 무효화를 실제 변경 영향에 맞게 구분한다.
+- 인증 API처럼 응답 처리 의미가 다른 경우를 제외하고 feature API는 공통 `requestApi`를 사용한다.
+
+#### 컴포넌트와 hook
+
+- 컴포넌트는 파일 길이가 아니라 변경 이유, 상태 공유 범위, UI 책임을 기준으로 분리한다. JSX 몇 줄을 감싸는 것만으로 새 컴포넌트를 만들지 않는다.
+- page나 section이 조회 상태, form state, dialog state, 도메인 변환을 모두 소유하면 응집된 feature hook 또는 하위 section으로 나눈다. hook 하나가 모든 화면 상태와 callback을 반환하는 God Object가 되지 않게 한다.
+- 동일한 변경 이유가 두 feature 이상에서 반복될 때만 `shared`로 이동한다. 농장 도메인 공통 타입·UI는 `entities/farm`, 한 feature에만 필요한 추상화는 해당 feature에 유지한다.
+- 다른 feature와 `app`·`widgets`는 `features/<name>/index.ts`의 공개 API만 사용한다. public API는 실제 외부 사용 항목만 export한다.
+- `useMemo`, `useCallback`, `memo`는 큰 목록·지도 또는 identity 안정성이 실제 dependency와 렌더 범위를 줄이는 경우에만 사용한다. 성능 판단이 불명확하면 Profiler나 기존 map E2E로 측정한다.
+
+#### Form, 오류, 접근성
+
+- form draft와 submit/pending/error는 form 또는 응집된 hook 가까이에 둔다. 수정 초기값을 effect로 계속 동기화하지 않고 dialog key, 명시적 open event, form 초기화 함수 중 하나를 사용한다.
+- submit 중복을 막고 서버 validation 메시지를 공통 API 오류 처리로 노출한다. loading, empty, error를 동시에 참으로 만들 수 있는 별도 boolean 조합보다 Query 상태나 명시적 union을 사용한다.
+- dialog는 `shared/ui/primitives/dialog.tsx`를 우선 사용한다. 입력에는 label, 아이콘 버튼에는 접근 가능한 이름, 비동기 버튼에는 disabled/pending 상태를 제공한다.
+- 태블릿 주요 동작은 hover 없이 사용할 수 있어야 한다. 반복 사용 버튼과 선택 대상은 충분한 touch target을 확보한다.
+
+#### 테스트와 변경 완료 기준
+
+- URL parser·writer, 날짜·payload 변환, selection coordinator처럼 React와 분리 가능한 규칙은 pure function unit test로 검증한다.
+- 서버 capability와 상태 전이는 백엔드 단위·통합 테스트를 기준으로 검증한다. 프론트 테스트에서 같은 전이 규칙을 다시 구현하지 않는다.
+- mutation과 cache 갱신, back/forward, dialog focus, 지도 연속 선택처럼 경계를 넘는 흐름은 회귀 위험에 따라 integration 또는 E2E 테스트를 추가한다.
+- API contract 변경은 Controller·DTO·테스트 수정 후 OpenAPI와 생성 타입을 갱신한다.
+- 프론트 변경 완료 전 `cd frontend && npm run check`를 실행한다. 실행하지 못한 검증과 기존 경고는 결과에 남긴다.
 
 ## 6. 데이터 보존 원칙
 
