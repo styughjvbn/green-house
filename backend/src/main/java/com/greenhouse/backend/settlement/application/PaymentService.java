@@ -27,8 +27,12 @@ public class PaymentService {
 	private final SettlementAuditSupport auditSupport;
 
 	public AuctionSettlementResponse confirmAuctionPayment(Long settlementId, ManualPaymentRequest request) {
-		var settlement = auctionSettlementRepository.findWithDetailsById(settlementId)
+		var settlement = auctionSettlementRepository.findForUpdateById(settlementId)
 				.orElseThrow(() -> new NotFoundException("경매 정산을 찾을 수 없습니다."));
+		if (paymentLedgerService.findManualPayment(
+				PaymentTargetType.AUCTION_SETTLEMENT, settlementId, request).isPresent()) {
+			return AuctionSettlementResponse.from(settlement);
+		}
 		var before = auditSupport.auctionPaymentSnapshot(settlement);
 		settlement.recordPayment(request.amount(), defaultWorker(requestActorProvider.resolve(request.worker())));
 		var received = paymentLedgerService.recordManualPayment(

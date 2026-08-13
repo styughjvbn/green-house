@@ -39,6 +39,7 @@ class WorkOperationResponseAssembler {
 	private final WorkOperationTargetRepository targetRepository;
 	private final WorkTargetExecutionRepository executionRepository;
 	private final InboundPottingPlanGateway inboundPottingPlanGateway;
+	private final WorkOperationActionResolver actionResolver;
 
 	WorkOperationResponse assemble(WorkOperation operation) {
 		return assembleAll(List.of(operation)).getFirst();
@@ -67,14 +68,26 @@ class WorkOperationResponseAssembler {
 			List<WorkOperationTargetResponse> targetResponses = targetsByOperationId
 					.getOrDefault(operation.getId(), List.of())
 					.stream()
-					.map(target -> WorkOperationTargetResponse.from(
-							target,
-							executionByTargetId.get(target.getId()),
-							target.getInboundRecordId() == null
-									? null
-									: inboundById.get(target.getInboundRecordId())))
+					.map(target -> {
+						WorkTargetExecution execution = executionByTargetId.get(target.getId());
+						InboundPottingPlanTarget currentInbound = target.getInboundRecordId() == null
+								? null
+								: inboundById.get(target.getInboundRecordId());
+						int currentQuantity = currentInbound == null
+								? target.getQuantitySnapshot()
+								: currentInbound.currentQuantity(target.getQuantitySnapshot());
+						int remainingQuantity = Math.max(0, currentQuantity - execution.getProcessedQuantity());
+						return WorkOperationTargetResponse.from(
+								target,
+								execution,
+								currentInbound,
+								actionResolver.resolveTarget(operation, execution, remainingQuantity));
+					})
 					.toList();
-			return WorkOperationResponse.from(operation, targetResponses);
+			return WorkOperationResponse.from(
+					operation,
+					targetResponses,
+					actionResolver.resolveOperation(operation, targetResponses));
 		}).toList();
 	}
 

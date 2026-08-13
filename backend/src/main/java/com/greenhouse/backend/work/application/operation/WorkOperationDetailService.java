@@ -10,6 +10,7 @@ import com.greenhouse.backend.work.dto.operation.WorkCorrectionAdjustmentRespons
 import com.greenhouse.backend.work.dto.operation.WorkCorrectionDetailResponse;
 import com.greenhouse.backend.work.dto.operation.WorkExecutionDetailResponse;
 import com.greenhouse.backend.work.dto.operation.WorkExecutionLocationResponse;
+import com.greenhouse.backend.work.application.target.WorkExecutionReferenceGateway;
 import com.greenhouse.backend.work.dto.operation.WorkExecutionResultResponse;
 import com.greenhouse.backend.work.dto.operation.WorkExecutionSourceResponse;
 import com.greenhouse.backend.work.dto.operation.WorkOperationDetailFieldResponse;
@@ -66,7 +67,7 @@ public class WorkOperationDetailService {
 	private final WorkAppliedEffectRepository effectRepository;
 	private final WorkEffectOrchidGroupRepository effectGroupRepository;
 	private final WorkOperationCorrectionRepository correctionRepository;
-	private final WorkExecutionReferenceReader executionReferenceReader;
+	private final WorkExecutionReferenceGateway executionReferenceGateway;
 
 	public WorkOperationDetailResponse get(Long operationId) {
 		WorkOperation operation = operationRepository.findWithWorkTypeById(operationId)
@@ -262,7 +263,7 @@ public class WorkOperationDetailService {
 					map(effect.getResultDetails()),
 					linksByEffectId.getOrDefault(effect.getId(), List.of())));
 		}
-		return executionReferenceReader.varietyNames(ids);
+		return executionReferenceGateway.varietyNames(ids);
 	}
 
 	private Map<Long, WorkExecutionLocationResponse> resultLocations(List<WorkAppliedEffect> effects) {
@@ -277,7 +278,7 @@ public class WorkOperationDetailService {
 			Long directBedZoneId = firstLong(command.get("toBedZoneId"), result.get("toBedZoneId"));
 			if (directBedZoneId != null) ids.add(directBedZoneId);
 		}
-		return executionReferenceReader.locations(ids);
+		return executionReferenceGateway.locations(ids);
 	}
 
 	private List<Long> resultIds(

@@ -9,15 +9,17 @@ import type { AnalyticsPageProps, AnalyticsTab } from "../model/types";
 import { AnalyticsFilters as FilterBar } from "./components/AnalyticsFilters";
 import { AnalyticsSummary } from "./components/AnalyticsSummary";
 import { AnalyticsTabContent } from "./components/AnalyticsTabContent";
+import { useRuntimeContext } from "@/shared/runtime/RuntimeContext";
 
 export function AnalyticsPage(props: AnalyticsPageProps) {
+  const { businessDate } = useRuntimeContext();
   const router = useRouter();
   const tab = props.activeTab ?? "sales";
   const [draftFilters, setDraftFilters] = useState(props.dateRange);
   const [isPending, startTransition] = useTransition();
   const view = useMemo(() => createAnalyticsViewModel(props), [props]);
   const reset = () => {
-    const defaults = defaultAnalyticsDateRange();
+    const defaults = defaultAnalyticsDateRange(businessDate);
     setDraftFilters(defaults);
     startTransition(() => {
       router.push(

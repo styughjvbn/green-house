@@ -20,8 +20,11 @@ public class AuctionDataReader {
 	private final AuctionShipmentRepository shipmentRepository;
 	private final AuctionResultLineRepository resultLineRepository;
 
-	public List<AuctionShipment> getShipmentsNewestFirst() {
-		return shipmentRepository.findAllByOrderByShipmentDateDescIdDesc();
+	public List<AuctionShipment> getShipmentsWithLotsNewestFirst(java.util.Collection<Long> shipmentIds) {
+		if (shipmentIds.isEmpty()) {
+			return List.of();
+		}
+		return shipmentRepository.findAllByIdInOrderByShipmentDateDescIdDesc(shipmentIds);
 	}
 
 	public AuctionShipment getShipmentWithLots(Long shipmentId) {
@@ -33,7 +36,4 @@ public class AuctionDataReader {
 		return resultLineRepository.findSoldLines(auctionHouseId, auctionDate);
 	}
 
-	public List<AuctionResultLine> getAllSoldResultLines() {
-		return resultLineRepository.findAllSoldLines();
-	}
 }

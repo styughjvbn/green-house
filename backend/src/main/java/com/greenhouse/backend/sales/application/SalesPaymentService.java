@@ -14,6 +14,7 @@ import lombok.RequiredArgsConstructor;
 
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import java.util.List;
 
 @Service
 @Transactional
@@ -23,15 +24,21 @@ public class SalesPaymentService {
 	private final PaymentLedgerService paymentLedgerService;
 	private final PartnerBalanceService partnerBalanceService;
 	private final SettlementAuditSupport auditSupport;
+	private final SalesSlipResponseAssembler responseAssembler;
 
 	public SalesSlipResponse confirmPayment(Long salesSlipId, ManualPaymentRequest request) {
-		var salesSlip = salesSlipRepository.findWithDetailsById(salesSlipId)
+		var salesSlip = salesSlipRepository.findForUpdateById(salesSlipId)
 				.orElseThrow(() -> new NotFoundException("판매 전표를 찾을 수 없습니다."));
 		if (salesSlip.getSalesType() != SalesType.DIRECT) {
 			throw new IllegalArgumentException("경매 판매전표는 경매장 정산에서 입금을 확인해야 합니다.");
 		}
 		if (salesSlip.isCanceled()) {
 			throw new IllegalArgumentException("취소된 전표는 입금을 확인할 수 없습니다.");
+		}
+		partnerBalanceService.lockPartners(List.of(salesSlip.getPartner().getId()));
+		if (paymentLedgerService.findManualPayment(
+				PaymentTargetType.SALES_SLIP, salesSlipId, request).isPresent()) {
+			return responseAssembler.assemble(salesSlip);
 		}
 
 		var before = auditSupport.paymentSnapshot(salesSlip.getPaidAmount(), salesSlip.getRemainingAmount(),
@@ -48,6 +55,6 @@ public class SalesPaymentService {
 				PaymentTargetType.SALES_SLIP, before,
 				auditSupport.paymentSnapshot(saved.getPaidAmount(), saved.getRemainingAmount(),
 						saved.getPaymentStatus()));
-		return SalesSlipResponse.from(saved);
+		return responseAssembler.assemble(saved);
 	}
 }

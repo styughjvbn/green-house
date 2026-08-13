@@ -30,10 +30,12 @@ public class SalesSlipUpdateService {
 	private final ExpectedPaymentDateCalculator paymentDateCalculator;
 	private final PartnerBalanceService partnerBalanceService;
 	private final SalesSlipAuditSupport auditSupport;
+	private final SalesSlipResponseAssembler responseAssembler;
 
 	public SalesSlipResponse update(Long salesSlipId, SalesSlipCreateRequest request) {
-		SalesSlip salesSlip = salesSlipRepository.findWithDetailsById(salesSlipId)
+		SalesSlip salesSlip = salesSlipRepository.findForUpdateById(salesSlipId)
 				.orElseThrow(() -> new NotFoundException("판매 전표를 찾을 수 없습니다."));
+		Long previousPartnerId = salesSlip.getPartner().getId();
 		Map<String, Object> before = auditSupport.snapshot(salesSlip);
 
 		validateEditable(salesSlip, request);
@@ -48,13 +50,12 @@ public class SalesSlipUpdateService {
 		if (partner.getPartnerType() == PartnerType.AUCTION_HOUSE) {
 			throw new IllegalArgumentException("경매장 거래처는 경매 판매 전표에서 사용해야 합니다.");
 		}
+		partnerBalanceService.lockPartners(List.of(previousPartnerId, partner.getId()));
 		var expectedPaymentDate = paymentDateCalculator.calculate(partner, request.saleDate());
 
 		salesSlipInventoryService.releaseForEdit(salesSlip);
 
-		List<SalesSlipItem> items = request.items().stream()
-				.map(salesSlipAllocationFactory::createItem)
-				.toList();
+		List<SalesSlipItem> items = salesSlipAllocationFactory.createItems(request.items());
 		if (salesSlip.getItems().size() != items.size()) {
 			throw new IllegalArgumentException("품목 개수 변경 수정은 아직 지원하지 않습니다.");
 		}
@@ -76,9 +77,7 @@ public class SalesSlipUpdateService {
 					nextItem.getUnitPrice(),
 					nextItem.getMemo());
 			currentItem.replaceAllocations(nextItem.getAllocations().stream()
-					.map(allocation -> new com.greenhouse.backend.sales.domain.SalesSlipItemAllocation(
-							allocation.getOrchidGroup(),
-							allocation.getAllocatedQuantity()))
+					.map(salesSlipAllocationFactory::copyAllocation)
 					.toList());
 		}
 		salesSlip.refreshAmounts();
@@ -89,9 +88,15 @@ public class SalesSlipUpdateService {
 		salesSlipInventoryService.reserve(persisted);
 		partnerBalanceService.updateReceivable(
 				partner.getId(), salesSlipRepository.sumDirectReceivableByPartnerId(partner.getId()), null);
+		if (!previousPartnerId.equals(partner.getId())) {
+			partnerBalanceService.updateReceivable(
+					previousPartnerId,
+					salesSlipRepository.sumDirectReceivableByPartnerId(previousPartnerId),
+					null);
+		}
 		auditSupport.record(AuditAction.UPDATED, persisted, before, auditSupport.snapshot(persisted));
 
-		return SalesSlipResponse.from(persisted);
+		return responseAssembler.assemble(persisted);
 	}
 
 	private void validateEditable(SalesSlip salesSlip, SalesSlipCreateRequest request) {

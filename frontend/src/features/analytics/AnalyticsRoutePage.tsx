@@ -2,6 +2,7 @@ import { getAnalyticsData } from "./api/analyticsApi";
 import { readAnalyticsDateRange } from "./lib/analyticsDateRange";
 import type { AnalyticsTab } from "./model/types";
 import { AnalyticsPage } from "./ui/AnalyticsPage";
+import { getRuntimeContext } from "@/shared/api/runtimeContext";
 
 export async function AnalyticsRoutePage({
   activeTab,
@@ -10,9 +11,11 @@ export async function AnalyticsRoutePage({
   activeTab: AnalyticsTab;
   resolvedSearchParams: Record<string, string | string[] | undefined>;
 }) {
+  const { businessDate } = await getRuntimeContext();
   const dateRange = readAnalyticsDateRange(
     readFirstValue(resolvedSearchParams.from),
     readFirstValue(resolvedSearchParams.to),
+    businessDate,
   );
   const data = await getAnalyticsData(activeTab, dateRange);
   return (

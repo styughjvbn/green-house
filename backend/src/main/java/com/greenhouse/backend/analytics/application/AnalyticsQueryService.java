@@ -5,6 +5,10 @@ import com.greenhouse.backend.analytics.dto.AnalyticsRankedValueResponse;
 import com.greenhouse.backend.analytics.dto.PartnerAnalyticsResponse;
 import com.greenhouse.backend.analytics.dto.SalesAnalyticsResponse;
 import com.greenhouse.backend.analytics.dto.WorkAnalyticsResponse;
+import com.greenhouse.backend.analytics.dto.AnalyticsSlipSummaryResponse;
+import com.greenhouse.backend.analytics.dto.PartnerAnalyticsStatResponse;
+import com.greenhouse.backend.analytics.dto.VarietyInventoryAnalyticsResponse;
+import com.greenhouse.backend.analytics.dto.WorkAnalyticsItemResponse;
 import com.greenhouse.backend.analytics.repository.SalesAnalyticsRepository;
 import java.time.LocalDate;
 import java.time.YearMonth;
@@ -45,8 +49,16 @@ public class AnalyticsQueryService {
 		List<AnalyticsRankedValueResponse> monthlySales = monthlySales(range.from(), range.to());
 		List<AnalyticsRankedValueResponse> varietySales = ranked(salesAnalyticsRepository.varietySales(range.from(), range.to(), 10));
 		List<AnalyticsRankedValueResponse> partnerSales = ranked(salesAnalyticsRepository.partnerSales(range.from(), range.to(), 10));
-		var recentSlips = salesAnalyticsRepository.recentSlips(range.from(), range.to(), 5);
-		var unpaidSlips = salesAnalyticsRepository.unpaidSlips(range.from(), range.to(), 5);
+		var recentSlips = salesAnalyticsRepository.recentSlips(range.from(), range.to(), 5).stream()
+				.map(row -> new AnalyticsSlipSummaryResponse(
+						row.id(), row.slipNumber(), row.saleDate(), row.partnerName(), row.totalAmount(),
+						row.paidAmount(), row.remainingAmount(), row.paymentStatus(), row.salesStatus()))
+				.toList();
+		var unpaidSlips = salesAnalyticsRepository.unpaidSlips(range.from(), range.to(), 5).stream()
+				.map(row -> new AnalyticsSlipSummaryResponse(
+						row.id(), row.slipNumber(), row.saleDate(), row.partnerName(), row.totalAmount(),
+						row.paidAmount(), row.remainingAmount(), row.paymentStatus(), row.salesStatus()))
+				.toList();
 		String formattedUnpaidAmount = NumberFormat.getNumberInstance().format(unpaidAmount);
 		return new SalesAnalyticsResponse(
 				currentMonthSales,
@@ -57,7 +69,10 @@ public class AnalyticsQueryService {
 				salesAnalyticsRepository.sumSaleableQuantity(),
 				monthlySales,
 				varietySales,
-				salesAnalyticsRepository.varietyInventory(),
+				salesAnalyticsRepository.varietyInventory().stream()
+						.map(row -> new VarietyInventoryAnalyticsResponse(
+								row.varietyName(), row.saleableQuantity(), row.warningGroupCount()))
+						.toList(),
 				partnerSales,
 				paymentBreakdown(range.from(), range.to()),
 				recentSlips,
@@ -73,7 +88,12 @@ public class AnalyticsQueryService {
 
 	public PartnerAnalyticsResponse getPartnerAnalytics(LocalDate from, LocalDate to) {
 		DateRange range = normalizeRange(from, to);
-		var partnerStats = salesAnalyticsRepository.partnerStats(range.from(), range.to());
+		var partnerStats = salesAnalyticsRepository.partnerStats(range.from(), range.to()).stream()
+				.map(row -> new PartnerAnalyticsStatResponse(
+						row.partnerId(), row.partnerName(), row.partnerType(), row.totalSales(), row.transactionCount(),
+						row.unpaidAmount(), row.paidAmount(), row.receivableBalance(), row.creditBalance(),
+						row.unappliedPaymentAmount(), row.latestSaleDate()))
+				.toList();
 		var partnerSales = partnerStats.stream()
 				.limit(10)
 				.map(stat -> new AnalyticsRankedValueResponse(stat.partnerName(), stat.totalSales()))
@@ -83,7 +103,11 @@ public class AnalyticsQueryService {
 
 	public WorkAnalyticsResponse getWorkAnalytics(LocalDate from, LocalDate to) {
 		DateRange range = normalizeRange(from, to);
-		var recentRecords = salesAnalyticsRepository.recentWorkOperations(range.from(), range.to(), 10);
+		var recentRecords = salesAnalyticsRepository.recentWorkOperations(range.from(), range.to(), 10).stream()
+				.map(row -> new WorkAnalyticsItemResponse(
+						row.id(), row.workDate(), row.workType(), row.workTypeTemplate(), row.title(),
+						row.sourceScopeType(), row.worker(), row.memo(), row.status()))
+				.toList();
 		return new WorkAnalyticsResponse(
 				salesAnalyticsRepository.countWorkOperations(range.from(), range.to()),
 				salesAnalyticsRepository.countWorkOperationsByTemplate(range.from(), range.to(), "MOVEMENT"),

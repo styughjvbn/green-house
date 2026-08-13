@@ -3,6 +3,7 @@ package com.greenhouse.backend.settlement.repository;
 import com.greenhouse.backend.settlement.domain.PartnerPaymentEvent;
 import com.greenhouse.backend.settlement.domain.PaymentTargetType;
 import java.util.List;
+import java.util.Optional;
 import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
@@ -10,6 +11,17 @@ import org.springframework.data.repository.query.Param;
 
 public interface PartnerPaymentEventRepository extends JpaRepository<PartnerPaymentEvent, Long> {
 	boolean existsByTargetTypeAndTargetId(PaymentTargetType targetType, Long targetId);
+
+	@Query("""
+			select distinct event.targetId from PartnerPaymentEvent event
+			where event.targetType = :targetType
+			  and event.targetId in :targetIds
+			""")
+	List<Long> findExistingTargetIds(
+			@Param("targetType") PaymentTargetType targetType,
+			@Param("targetIds") List<Long> targetIds);
+
+	Optional<PartnerPaymentEvent> findByExternalUid(String externalUid);
 
 	@EntityGraph(attributePaths = { "partner", "parentEvent" })
 	@Query("""

@@ -260,7 +260,7 @@ export function collectPriorResultOrchidGroupIds(
 ) {
   const ids = new Set<number>();
   operation.targets.forEach((target) => {
-    collectResultIds(target.resultDetails).forEach((id) => ids.add(id));
+    target.resultOrchidGroupIds.forEach((id) => ids.add(id));
   });
   return [...ids];
 }
@@ -309,34 +309,6 @@ export function inferReleasedPlacement(
     endPosition: endCell,
     label: `${sourceLocationLabel(group)} · ${startCell}~${endCell}칸`,
   };
-}
-
-function collectResultIds(details: Record<string, unknown> | null) {
-  if (!details) return [];
-  const ids: number[] = [];
-  collectNumber(details.resultOrchidGroupId, ids);
-  collectNumbers(details.resultOrchidGroupIds, ids);
-  if (Array.isArray(details.results)) {
-    details.results.forEach((item) => {
-      if (isRecord(item)) collectNumber(item.orchidGroupId, ids);
-    });
-  }
-  return ids;
-}
-
-function collectNumbers(value: unknown, ids: number[]) {
-  if (!Array.isArray(value)) return;
-  value.forEach((item) => collectNumber(item, ids));
-}
-
-function collectNumber(value: unknown, ids: number[]) {
-  if (typeof value === "number" && Number.isInteger(value)) {
-    ids.push(value);
-  }
-}
-
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === "object" && value != null;
 }
 
 function hasOverlappingPlacements(rows: ResultRow[]) {

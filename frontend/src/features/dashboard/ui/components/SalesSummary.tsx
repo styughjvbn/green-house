@@ -1,5 +1,5 @@
 import Link from "next/link";
-import type { AnalyticsSlipSummary } from "@/features/analytics/model/types";
+import type { AnalyticsSlipSummary } from "@/features/analytics";
 import { getPaymentStatusLabel } from "../../lib/dashboardView";
 import { DashboardMetric, DashboardPanel } from "./DashboardPanel";
 

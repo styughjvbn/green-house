@@ -1,10 +1,11 @@
 import type { Metadata } from "next";
 import { Suspense } from "react";
 import { Geist } from "next/font/google";
-import { FontScaleInitializer } from "@/features/settings";
-import { DEFAULT_FONT_SCALE } from "@/features/settings/lib/fontScale";
+import { DEFAULT_FONT_SCALE, FontScaleInitializer } from "@/features/settings";
 import { QueryProvider } from "@/shared/api/QueryProvider";
+import { getRuntimeContext } from "@/shared/api/runtimeContext";
 import { PwaRuntime } from "@/shared/pwa";
+import { RuntimeContextProvider } from "@/shared/runtime/RuntimeContext";
 import { AppShell } from "@/widgets/app-shell/AppShell";
 import { DemoEnvironmentBanner } from "@/widgets/demo-environment-banner/DemoEnvironmentBanner";
 import "./globals.css";
@@ -23,12 +24,13 @@ export const metadata: Metadata = {
 
 export const dynamic = "force-dynamic";
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
   const demoMode = process.env.DEMO_MODE === "true";
+  const runtimeContext = await getRuntimeContext().catch(() => null);
 
   return (
     <html
@@ -43,22 +45,24 @@ export default function RootLayout({
       <body className="min-h-full bg-[#f7f8f6] text-[#1f2a24]">
         <FontScaleInitializer />
         <PwaRuntime />
-        <QueryProvider>
-          <div
-            className={
-              demoMode
-                ? "flex h-[var(--app-viewport-height)] flex-col"
-                : undefined
-            }
-          >
-            {demoMode ? <DemoEnvironmentBanner /> : null}
-            <div className={demoMode ? "min-h-0 flex-1" : undefined}>
-              <Suspense fallback={null}>
-                <AppShell demoMode={demoMode}>{children}</AppShell>
-              </Suspense>
+        <RuntimeContextProvider value={runtimeContext}>
+          <QueryProvider>
+            <div
+              className={
+                demoMode
+                  ? "flex h-[var(--app-viewport-height)] flex-col"
+                  : undefined
+              }
+            >
+              {demoMode ? <DemoEnvironmentBanner /> : null}
+              <div className={demoMode ? "min-h-0 flex-1" : undefined}>
+                <Suspense fallback={null}>
+                  <AppShell demoMode={demoMode}>{children}</AppShell>
+                </Suspense>
+              </div>
             </div>
-          </div>
-        </QueryProvider>
+          </QueryProvider>
+        </RuntimeContextProvider>
       </body>
     </html>
   );

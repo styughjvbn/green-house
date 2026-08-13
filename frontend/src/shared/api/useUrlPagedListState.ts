@@ -6,11 +6,13 @@ import { useUrlSearchParamsWriter } from "@/shared/lib/useUrlSearchParamsWriter"
 export function useUrlPagedListState<Filters>({
   emptyFilters,
   filterKeys,
+  resetParamKeys = [],
   routeFilters,
   writeFilterParams,
 }: {
   emptyFilters: () => Filters;
   filterKeys: ReadonlyArray<string>;
+  resetParamKeys?: ReadonlyArray<string>;
   routeFilters: Filters;
   writeFilterParams: (params: URLSearchParams, filters: Filters) => void;
 }) {
@@ -32,6 +34,7 @@ export function useUrlPagedListState<Filters>({
   function search() {
     writeUrlParams((params) => {
       writeFilterParams(params, filters);
+      resetParamKeys.forEach((key) => params.delete(key));
       params.set("page", "0");
     });
   }
@@ -43,16 +46,21 @@ export function useUrlPagedListState<Filters>({
     });
     writeUrlParams((params) => {
       filterKeys.forEach((key) => params.delete(key));
+      resetParamKeys.forEach((key) => params.delete(key));
       params.set("page", "0");
     });
   }
 
   function changePage(page: number) {
-    writeUrlParams((params) => params.set("page", String(page)));
+    writeUrlParams((params) => {
+      resetParamKeys.forEach((key) => params.delete(key));
+      params.set("page", String(page));
+    });
   }
 
   function changePageSize(size: number) {
     writeUrlParams((params) => {
+      resetParamKeys.forEach((key) => params.delete(key));
       params.set("size", String(size));
       params.set("page", "0");
     });

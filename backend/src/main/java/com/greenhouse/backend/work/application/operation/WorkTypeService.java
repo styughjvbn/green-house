@@ -4,6 +4,7 @@ import com.greenhouse.backend.common.exception.NotFoundException;
 import com.greenhouse.backend.work.domain.operation.WorkType;
 import com.greenhouse.backend.work.domain.operation.WorkTypeTemplate;
 import com.greenhouse.backend.work.dto.operation.WorkTypeCreateRequest;
+import com.greenhouse.backend.work.dto.operation.WorkTypeMetadataResponse;
 import com.greenhouse.backend.work.dto.operation.WorkTypeReorderRequest;
 import com.greenhouse.backend.work.dto.operation.WorkTypeResponse;
 import com.greenhouse.backend.work.dto.operation.WorkTypeUpdateRequest;
@@ -13,6 +14,7 @@ import lombok.RequiredArgsConstructor;
 
 import java.util.List;
 import java.util.UUID;
+import java.util.Arrays;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -33,7 +35,15 @@ public class WorkTypeService {
 				.toList();
 	}
 
+	@Transactional(readOnly = true)
+	public WorkTypeMetadataResponse getMetadata() {
+		return new WorkTypeMetadataResponse(Arrays.stream(WorkTypeTemplate.values())
+				.filter(WorkTypeTemplate::isCustomTypeAllowed)
+				.toList());
+	}
+
 	public WorkTypeResponse create(WorkTypeCreateRequest request) {
+		validateCustomTemplate(request.template());
 		String name = normalizeRequired(request.name());
 		validateUniqueName(name, null);
 		WorkType workType = new WorkType(
@@ -52,6 +62,7 @@ public class WorkTypeService {
 		if (!workType.isSettingsEditable()) {
 			throw new IllegalArgumentException("Work type cannot be changed.");
 		}
+		validateCustomTemplate(request.template());
 		String name = normalizeRequired(request.name());
 		validateUniqueName(name, id);
 		workType.update(name, request.template(), request.active());
@@ -85,15 +96,7 @@ public class WorkTypeService {
 	@Transactional(readOnly = true)
 	public WorkType getActiveForPlan(Long workTypeId) {
 		WorkType workType = getById(workTypeId);
-		if (!workType.isActive()) {
-			throw new IllegalArgumentException("비활성 작업 유형은 계획할 수 없습니다.");
-		}
-		if (workType.isManualCreateAllowed()
-				|| WorkType.REPOT_CODE.equals(workType.getCode())
-				|| WorkType.MOVEMENT_CODE.equals(workType.getCode())
-				|| WorkType.DIVIDE_CODE.equals(workType.getCode())
-				|| WorkType.MERGE_CODE.equals(workType.getCode())
-				|| WorkType.DISCARD_CODE.equals(workType.getCode())) {
+		if (workType.isPeriodOperationAllowed()) {
 			return workType;
 		}
 		throw new IllegalArgumentException("기간 작업으로 계획할 수 없는 작업 유형입니다.");
@@ -124,6 +127,12 @@ public class WorkTypeService {
 				.mapToInt(WorkType::getSortOrder)
 				.max()
 				.orElse(0) + 1;
+	}
+
+	private void validateCustomTemplate(WorkTypeTemplate template) {
+		if (!template.isCustomTypeAllowed()) {
+			throw new IllegalArgumentException("사용자 작업 유형에서 지원하지 않는 템플릿입니다.");
+		}
 	}
 
 	private void validateUniqueName(String name, Long id) {

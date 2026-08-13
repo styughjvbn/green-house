@@ -7,6 +7,7 @@ import type { ReactNode } from "react";
 import type { CSSObjectWithLabel, SingleValue } from "react-select";
 import Select from "react-select";
 import { useState } from "react";
+import { useRuntimeContext } from "@/shared/runtime/RuntimeContext";
 import type {
   InboundPottingPayload,
   InboundRecord,
@@ -37,10 +38,9 @@ export function InboundCreateDialog({
   onClose: () => void;
   onSubmit: (payload: InboundRecordPayload) => Promise<void>;
 }) {
+  const { businessDate } = useRuntimeContext();
   const [inboundType, setInboundType] = useState<InboundType>("FLASK_SEEDLING");
-  const [inboundDate, setInboundDate] = useState(
-    new Date().toISOString().slice(0, 10),
-  );
+  const [inboundDate, setInboundDate] = useState(businessDate);
   const [varietyMode, setVarietyMode] = useState<"existing" | "new">(
     "existing",
   );

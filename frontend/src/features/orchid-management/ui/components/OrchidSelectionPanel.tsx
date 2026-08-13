@@ -170,15 +170,19 @@ export default function OrchidSelectionPanel({
         ) ?? null)
       : null;
   const selectedHouse = listSelection.type === "HOUSE";
-  const orchidGroups = listZone
-    ? listZone.orchidGroups
-    : listPhysicalBed
-      ? listPhysicalBed.bedZones.flatMap((bedZone) => bedZone.orchidGroups)
-      : selectedHouse
-        ? house.physicalBeds.flatMap((bed) =>
-            bed.bedZones.flatMap((bedZone) => bedZone.orchidGroups),
-          )
-        : [];
+  const orchidGroups = useMemo(
+    () =>
+      listZone
+        ? listZone.orchidGroups
+        : listPhysicalBed
+          ? listPhysicalBed.bedZones.flatMap((bedZone) => bedZone.orchidGroups)
+          : selectedHouse
+            ? house.physicalBeds.flatMap((bed) =>
+                bed.bedZones.flatMap((bedZone) => bedZone.orchidGroups),
+              )
+            : [],
+    [house.physicalBeds, listPhysicalBed, listZone, selectedHouse],
+  );
   const sortedOrchidGroups = useMemo(
     () => sortOrchidGroupsByMapOrder(orchidGroups, house),
     [house, orchidGroups],

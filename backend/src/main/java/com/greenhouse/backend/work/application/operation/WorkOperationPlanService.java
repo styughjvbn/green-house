@@ -5,7 +5,6 @@ import com.greenhouse.backend.work.application.target.WorkTargetResolver;
 import com.greenhouse.backend.work.application.target.WorkTargetSelection;
 import com.greenhouse.backend.work.application.effect.WorkEffectCommand;
 import com.greenhouse.backend.work.application.effect.WorkEffectProcessor;
-import com.greenhouse.backend.work.domain.effect.WorkEffectKind;
 import com.greenhouse.backend.work.domain.operation.WorkOperation;
 import com.greenhouse.backend.work.domain.target.WorkTargetExecution;
 import com.greenhouse.backend.work.domain.target.WorkTargetInclusionSource;
@@ -34,12 +33,6 @@ import org.springframework.transaction.annotation.Transactional;
 @RequiredArgsConstructor
 public class WorkOperationPlanService {
 
-	private static final Set<String> PERIOD_WORK_TYPES = Set.of(
-			WorkType.REPOT_CODE,
-			WorkType.MOVEMENT_CODE,
-			WorkType.DIVIDE_CODE,
-			WorkType.MERGE_CODE,
-			WorkType.DISCARD_CODE);
 	private static final Set<String> SINGLE_VARIETY_WORK_TYPES = Set.of(
 			WorkType.REPOT_CODE,
 			WorkType.MOVEMENT_CODE,
@@ -68,14 +61,12 @@ public class WorkOperationPlanService {
 
 	public WorkOperationResponse create(WorkOperationCreateRequest request) {
 		WorkType workType = workTypeService.getActiveForPlan(request.workTypeId());
-		validatePeriodWorkType(workType);
 		return queryService.get(createOperation(request, workType, resolveIncluded(request)).getId());
 	}
 
 	public List<WorkOperationResponse> createBatch(WorkOperationBatchCreateRequest request) {
 		WorkOperationCreateRequest operationRequest = request.operation();
 		WorkType workType = workTypeService.getActiveForPlan(operationRequest.workTypeId());
-		validatePeriodWorkType(workType);
 		ResolvedSelection resolvedSelection = resolveIncluded(operationRequest);
 		if (!requiresSingleVariety(workType.getCode())) {
 			return List.of(queryService.get(
@@ -96,9 +87,7 @@ public class WorkOperationPlanService {
 	}
 
 	public WorkOperationResponse createCompletedRecord(WorkOperationCreateRequest request) {
-		workTypeService.getActiveForCreate(request.workTypeId());
-		WorkType workType = workTypeService.getActiveForPlan(request.workTypeId());
-		validatePeriodWorkType(workType);
+		WorkType workType = workTypeService.getActiveForCreate(request.workTypeId());
 		WorkOperation operation = createOperation(request, workType, resolveIncluded(request));
 		LocalDateTime executedAt = support.completionTime(request.plannedStartDate());
 		String worker = support.actor(request.worker());
@@ -162,13 +151,6 @@ public class WorkOperationPlanService {
 			throw new IllegalArgumentException("작업 대상 난 묶음이 한 개 이상 필요합니다.");
 		}
 		return new ResolvedSelection(selection, resolved, included);
-	}
-
-	private void validatePeriodWorkType(WorkType workType) {
-		if (workType.effectKind() != WorkEffectKind.RECORD_ONLY
-				&& !PERIOD_WORK_TYPES.contains(workType.getCode())) {
-			throw new IllegalArgumentException("이 작업 유형은 난 묶음 대상 기간 작업으로 만들 수 없습니다.");
-		}
 	}
 
 	private void validateSingleVariety(String workTypeCode, List<ResolvedWorkTarget> targets) {

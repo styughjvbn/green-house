@@ -24,10 +24,21 @@ public class SalesSlipRepositoryImpl implements SalesSlipRepositoryCustom {
 	}
 
 	@Override
-	public List<SalesSlip> search(Long partnerId, LocalDate from, LocalDate to) {
+	public List<SalesSlip> search(Long partnerId, LocalDate from, LocalDate to, int limit) {
+		List<Long> salesSlipIds = queryFactory
+				.select(salesSlip.id)
+				.from(salesSlip)
+				.join(salesSlip.partner)
+				.where(conditions(partnerId, from, to, null, null, null))
+				.orderBy(defaultOrder())
+				.limit(limit)
+				.fetch();
+		if (salesSlipIds.isEmpty()) {
+			return List.of();
+		}
 		return baseQuery()
 				.leftJoin(salesSlip.items).fetchJoin()
-				.where(conditions(partnerId, from, to, null, null, null))
+				.where(salesSlip.id.in(salesSlipIds))
 				.orderBy(defaultOrder())
 				.distinct()
 				.fetch();

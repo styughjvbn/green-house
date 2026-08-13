@@ -10,6 +10,9 @@ import com.greenhouse.backend.work.domain.target.WorkTargetExecutionStatus;
 import com.greenhouse.backend.work.domain.target.WorkTargetReferenceType;
 import java.time.LocalDateTime;
 import java.util.Map;
+import java.util.ArrayList;
+import java.util.LinkedHashSet;
+import java.util.List;
 
 public record WorkOperationTargetResponse(
 		Long id,
@@ -30,7 +33,9 @@ public record WorkOperationTargetResponse(
 		LocalDateTime completedAt,
 		LocalDateTime effectAppliedAt,
 		String worker,
-		Map<String, Object> resultDetails) {
+		Map<String, Object> resultDetails,
+		List<Long> resultOrchidGroupIds,
+		List<WorkTargetAction> availableActions) {
 
 	public static WorkOperationTargetResponse preview(
 			ResolvedWorkTarget target) {
@@ -53,19 +58,22 @@ public record WorkOperationTargetResponse(
 				null,
 				null,
 				null,
-				null);
+				null,
+				List.of(),
+				List.of());
 	}
 
 	public static WorkOperationTargetResponse from(
 			WorkOperationTarget target,
 			WorkTargetExecution execution) {
-		return from(target, execution, null);
+		return from(target, execution, null, List.of());
 	}
 
 	public static WorkOperationTargetResponse from(
 			WorkOperationTarget target,
 			WorkTargetExecution execution,
-			InboundPottingPlanTarget currentInbound) {
+			InboundPottingPlanTarget currentInbound,
+			List<WorkTargetAction> availableActions) {
 		String varietyName = currentInbound == null
 				? target.getVarietyNameSnapshot()
 				: currentInbound.varietyName();
@@ -97,7 +105,39 @@ public record WorkOperationTargetResponse(
 				TimeConfig.toFarmTime(execution.getCompletedAt()),
 				TimeConfig.toFarmTime(execution.getEffectAppliedAt()),
 				execution.getWorker(),
-				execution.getResultDetails());
+				execution.getResultDetails(),
+				resultOrchidGroupIds(execution.getResultDetails()),
+				availableActions);
+	}
+
+	private static List<Long> resultOrchidGroupIds(Map<String, Object> details) {
+		if (details == null || details.isEmpty()) {
+			return List.of();
+		}
+		var ids = new LinkedHashSet<Long>();
+		addLong(ids, details.get("resultOrchidGroupId"));
+		addLongs(ids, details.get("resultOrchidGroupIds"));
+		addLongs(ids, details.get("createdOrchidGroupIds"));
+		if (details.get("results") instanceof List<?> results) {
+			for (Object result : results) {
+				if (result instanceof Map<?, ?> row) {
+					addLong(ids, row.get("orchidGroupId"));
+				}
+			}
+		}
+		return new ArrayList<>(ids);
+	}
+
+	private static void addLongs(LinkedHashSet<Long> ids, Object value) {
+		if (value instanceof List<?> values) {
+			values.forEach(item -> addLong(ids, item));
+		}
+	}
+
+	private static void addLong(LinkedHashSet<Long> ids, Object value) {
+		if (value instanceof Number number) {
+			ids.add(number.longValue());
+		}
 	}
 
 	private static Map<String, Object> inboundLocation(InboundPottingPlanTarget inbound) {

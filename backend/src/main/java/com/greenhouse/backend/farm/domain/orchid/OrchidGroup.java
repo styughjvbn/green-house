@@ -15,6 +15,7 @@ import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
+import jakarta.persistence.Version;
 import java.math.BigDecimal;
 import lombok.AccessLevel;
 import lombok.Getter;
@@ -29,6 +30,10 @@ public class OrchidGroup extends BaseEntity {
 	@Id
 	@GeneratedValue(strategy = GenerationType.IDENTITY)
 	private Long id;
+
+	@Version
+	@Column(nullable = false)
+	private Long version;
 
 	@ManyToOne(fetch = FetchType.LAZY, optional = false)
 	@JoinColumn(name = "bed_zone_id", nullable = false)
@@ -101,8 +106,9 @@ public class OrchidGroup extends BaseEntity {
 		this.bedZone = bedZone;
 		this.genus = genus;
 		this.varietyName = varietyName;
-		this.quantity = quantity;
 		this.reservedQuantity = 0;
+		validateQuantityInvariant(quantity);
+		this.quantity = quantity;
 		applyPotSize(potSize);
 		this.ageYear = ageYear;
 		this.status = status;
@@ -125,6 +131,7 @@ public class OrchidGroup extends BaseEntity {
 			BigDecimal startPosition,
 			BigDecimal endPosition,
 			String memo) {
+		validateQuantityInvariant(quantity);
 		this.genus = genus;
 		this.varietyName = varietyName;
 		this.quantity = quantity;
@@ -175,14 +182,14 @@ public class OrchidGroup extends BaseEntity {
 	}
 
 	public void cancelCreation() {
-		if ("생성 취소".equals(status)) {
+		if (OrchidGroupStatusPolicy.CREATION_CANCELED.equals(status)) {
 			return;
 		}
 		if (reservedQuantity != 0) {
 			throw new IllegalArgumentException("예약 수량이 있는 난 묶음은 생성을 취소할 수 없습니다.");
 		}
 		this.quantity = 0;
-		this.status = "생성 취소";
+		this.status = OrchidGroupStatusPolicy.CREATION_CANCELED;
 	}
 
 	public void applyRepot(Integer inputQuantity) {
@@ -215,7 +222,7 @@ public class OrchidGroup extends BaseEntity {
 		}
 		this.quantity -= inputQuantity;
 		if (this.quantity == 0) {
-			this.status = "종료";
+			this.status = OrchidGroupStatusPolicy.CLOSED;
 		}
 	}
 
@@ -226,7 +233,7 @@ public class OrchidGroup extends BaseEntity {
 		}
 		this.quantity -= discardQuantity;
 		if (this.quantity == 0) {
-			this.status = "폐기";
+			this.status = OrchidGroupStatusPolicy.DISCARDED;
 		}
 	}
 
@@ -280,6 +287,16 @@ public class OrchidGroup extends BaseEntity {
 	private void validatePositiveQuantity(Integer value, String label) {
 		if (value == null || value < 1) {
 			throw new IllegalArgumentException(label + "은 1 이상이어야 합니다.");
+		}
+	}
+
+	private void validateQuantityInvariant(Integer nextQuantity) {
+		if (nextQuantity == null || nextQuantity < 0) {
+			throw new IllegalArgumentException("난 묶음 수량은 0 이상이어야 합니다.");
+		}
+		int currentReservedQuantity = reservedQuantity == null ? 0 : reservedQuantity;
+		if (nextQuantity < currentReservedQuantity) {
+			throw new IllegalArgumentException("난 묶음 수량은 현재 예약 수량보다 작을 수 없습니다.");
 		}
 	}
 }

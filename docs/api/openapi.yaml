@@ -1934,6 +1934,18 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ApiResponseAuctionLotResponse'
+  /api/work-types/metadata:
+    get:
+      tags:
+      - work-type-controller
+      operationId: getWorkTypeMetadata
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponseWorkTypeMetadataResponse'
   /api/work-operations/{workOperationId}:
     get:
       tags:
@@ -2795,6 +2807,18 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ApiResponseAuthenticatedUserResponse'
+  /api/auth/context:
+    get:
+      tags:
+      - auth-controller
+      operationId: context
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponseApplicationContextResponse'
   /api/auction-tracking/summary:
     get:
       tags:
@@ -3223,6 +3247,71 @@ components:
           type: string
         active:
           type: boolean
+    SalesOrchidGroupSnapshotResponse:
+      type: object
+      properties:
+        snapshotType:
+          type: string
+          enum:
+          - CREATION
+          - OUTBOUND
+        captureSource:
+          type: string
+          enum:
+          - LIVE
+          - MIGRATED_CURRENT_STATE
+        capturedAt:
+          type: string
+          format: date-time
+        orchidGroupId:
+          type: integer
+          format: int64
+        varietyId:
+          type: integer
+          format: int64
+        varietyName:
+          type: string
+        genus:
+          type: string
+        ageYear:
+          type: integer
+          format: int32
+        potSizeCode:
+          type: string
+        potSize:
+          type: string
+        quantity:
+          type: integer
+          format: int32
+        reservedQuantity:
+          type: integer
+          format: int32
+        status:
+          type: string
+        allocatedQuantity:
+          type: integer
+          format: int32
+        houseId:
+          type: integer
+          format: int64
+        houseNumber:
+          type: integer
+          format: int32
+        physicalBedId:
+          type: integer
+          format: int64
+        physicalBedNumber:
+          type: integer
+          format: int32
+        bedZoneId:
+          type: integer
+          format: int64
+        bedZoneName:
+          type: string
+        startPosition:
+          type: number
+        endPosition:
+          type: number
     SalesSlipItemAllocationResponse:
       type: object
       properties:
@@ -3248,6 +3337,10 @@ components:
           format: int32
         bedZoneName:
           type: string
+        creationSnapshot:
+          $ref: '#/components/schemas/SalesOrchidGroupSnapshotResponse'
+        outboundSnapshot:
+          $ref: '#/components/schemas/SalesOrchidGroupSnapshotResponse'
     SalesSlipItemResponse:
       type: object
       properties:
@@ -3325,6 +3418,15 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/SalesSlipItemResponse'
+        availableActions:
+          type: array
+          items:
+            type: string
+            enum:
+            - EDIT
+            - COMPLETE
+            - CANCEL
+            - CONFIRM_PAYMENT
     BusinessPartnerUpdateRequest:
       type: object
       properties:
@@ -3629,6 +3731,28 @@ components:
         sortOrder:
           type: integer
           format: int32
+        settingsEditable:
+          type: boolean
+        registrationModes:
+          type: array
+          items:
+            type: string
+            enum:
+            - RECORD
+            - PLAN
+        workflow:
+          type: string
+          enum:
+          - GENERIC
+          - MOVEMENT
+          - DISCARD
+          - POTTING
+          - STRUCTURE_CHANGE
+        targetSource:
+          type: string
+          enum:
+          - ORCHID_GROUP
+          - INBOUND_RECORD
     WorkOperationCreateRequest:
       type: object
       properties:
@@ -3752,6 +3876,14 @@ components:
           - MOVEMENT
           - MULTI_CREATE
           - CORRECTION
+        workTypeWorkflow:
+          type: string
+          enum:
+          - GENERIC
+          - MOVEMENT
+          - DISCARD
+          - POTTING
+          - STRUCTURE_CHANGE
         title:
           type: string
         status:
@@ -3810,6 +3942,16 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/WorkOperationTargetResponse'
+        availableActions:
+          type: array
+          items:
+            type: string
+            enum:
+            - START
+            - PAUSE
+            - RESUME
+            - COMPLETE
+            - CANCEL
     WorkOperationTargetResponse:
       type: object
       properties:
@@ -3885,6 +4027,20 @@ components:
         resultDetails:
           type: object
           additionalProperties: {}
+        resultOrchidGroupIds:
+          type: array
+          items:
+            type: integer
+            format: int64
+        availableActions:
+          type: array
+          items:
+            type: string
+            enum:
+            - START
+            - COMPLETE
+            - EXECUTE
+            - SKIP
     WorkTargetExecutionRequest:
       type: object
       properties:
@@ -4754,6 +4910,10 @@ components:
         paymentDate:
           type: string
           format: date
+        idempotencyKey:
+          type: string
+          maxLength: 100
+          minLength: 0
         paymentMethod:
           type: string
           maxLength: 30
@@ -4772,6 +4932,7 @@ components:
           minLength: 0
       required:
       - amount
+      - idempotencyKey
       - paymentDate
     ApiResponseOrchidGroupResponse:
       type: object
@@ -5993,6 +6154,31 @@ components:
       required:
       - reason
       - status
+    ApiResponseWorkTypeMetadataResponse:
+      type: object
+      properties:
+        data:
+          $ref: '#/components/schemas/WorkTypeMetadataResponse'
+        message:
+          type: string
+    WorkTypeMetadataResponse:
+      type: object
+      properties:
+        customTypeTemplates:
+          type: array
+          items:
+            type: string
+            enum:
+            - PESTICIDE
+            - FERTILIZER
+            - REPOT
+            - CLEANUP
+            - DISCARD
+            - STATUS
+            - MEMO
+            - MOVEMENT
+            - MULTI_CREATE
+            - CORRECTION
     ApiResponsePageResponseWorkOperationResponse:
       type: object
       properties:
@@ -7439,6 +7625,21 @@ components:
         data:
           $ref: '#/components/schemas/BedZoneResponse'
         message:
+          type: string
+    ApiResponseApplicationContextResponse:
+      type: object
+      properties:
+        data:
+          $ref: '#/components/schemas/ApplicationContextResponse'
+        message:
+          type: string
+    ApplicationContextResponse:
+      type: object
+      properties:
+        businessDate:
+          type: string
+          format: date
+        timeZone:
           type: string
     ApiResponseAuctionTrackingSummaryResponse:
       type: object

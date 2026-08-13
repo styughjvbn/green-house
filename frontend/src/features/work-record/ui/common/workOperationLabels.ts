@@ -1,8 +1,8 @@
 import type { WorkOperation } from "@/entities/farm/types";
-import { getWorkTypeDefinition } from "../../model/work-types/workTypeDefinition";
+import { getWorkPlanGuidance } from "../../model/work-types/workTypeDefinition";
 
 export function workPlanGuidance(code?: string) {
-  return getWorkTypeDefinition(code ? { code } : null).planGuidance;
+  return getWorkPlanGuidance(code);
 }
 
 export function operationStatusLabel(status: WorkOperation["status"]) {

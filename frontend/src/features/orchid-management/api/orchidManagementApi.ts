@@ -1,11 +1,4 @@
-import {
-  API_BASE_URL,
-  buildApiHeaders,
-  fetchApi,
-  fetchWithClientInstance as fetch,
-  getApiErrorMessage,
-  handleAuthExpired,
-} from "@/shared/api/client";
+import { fetchApi, requestApi } from "@/shared/api/client";
 import type {
   BedZonePlacementProfile,
   FarmStatusMapData,
@@ -53,35 +46,15 @@ export async function createWorkOperationCorrection(
     }>;
   },
 ): Promise<WorkOperationCorrections> {
-  const response = await fetch(
-    `${API_BASE_URL}/work-operations/${workOperationId}/corrections`,
+  return requestApi<WorkOperationCorrections>(
+    `/work-operations/${workOperationId}/corrections`,
     {
       method: "POST",
-      credentials: "include",
-      headers: buildApiHeaders({ "Content-Type": "application/json" }),
+      headers: { "Content-Type": "application/json" },
       body: JSON.stringify(payload),
     },
+    "보정 작업을 완료하지 못했습니다.",
   );
-  await handleAuthExpired(response);
-  const body = await readJson(response);
-  if (!response.ok) {
-    throw new Error(
-      resolveErrorMessage(body, "보정 작업을 완료하지 못했습니다."),
-    );
-  }
-  return (body as { data: WorkOperationCorrections }).data;
-}
-
-async function readJson(response: Response): Promise<unknown> {
-  try {
-    return await response.json();
-  } catch {
-    return null;
-  }
-}
-
-function resolveErrorMessage(payload: unknown, fallback: string): string {
-  return getApiErrorMessage(payload, fallback);
 }
 
 export async function createOrchidGroup(
@@ -104,48 +77,38 @@ export async function updateOrchidGroup(
 export async function updateOrchidGroupsBatch(
   orchidGroups: OrchidGroupBatchUpdateItem[],
 ): Promise<void> {
-  const response = await fetch(`${API_BASE_URL}/orchid-groups/batch`, {
-    method: "PATCH",
-    credentials: "include",
-    headers: buildApiHeaders({ "Content-Type": "application/json" }),
-    body: JSON.stringify({ orchidGroups }),
-  });
-  const body = await readJson(response);
-  if (!response.ok) {
-    throw new Error(
-      resolveErrorMessage(body, "일괄 보정을 완료하지 못했습니다."),
-    );
-  }
+  await requestApi<void>(
+    "/orchid-groups/batch",
+    {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ orchidGroups }),
+    },
+    "일괄 보정을 완료하지 못했습니다.",
+  );
 }
 
 export async function deleteOrchidGroup(orchidGroupId: number): Promise<void> {
-  const response = await fetch(
-    `${API_BASE_URL}/orchid-groups/${orchidGroupId}`,
-    { method: "DELETE", credentials: "include" },
+  await requestApi<void>(
+    `/orchid-groups/${orchidGroupId}`,
+    { method: "DELETE" },
+    "삭제하지 못했습니다.",
   );
-  if (!response.ok) {
-    const body = await readJson(response);
-    throw new Error(resolveErrorMessage(body, "삭제하지 못했습니다."));
-  }
 }
 
 export async function moveOrchidGroup(
   orchidGroupId: number,
   payload: PreciseMovePayload,
 ): Promise<void> {
-  const response = await fetch(
-    `${API_BASE_URL}/orchid-groups/${orchidGroupId}/move`,
+  await requestApi<void>(
+    `/orchid-groups/${orchidGroupId}/move`,
     {
       method: "PATCH",
-      credentials: "include",
-      headers: buildApiHeaders({ "Content-Type": "application/json" }),
+      headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ ...payload, memo: payload.memo.trim() || null }),
     },
+    "이동하지 못했습니다.",
   );
-  const body = await readJson(response);
-  if (!response.ok) {
-    throw new Error(resolveErrorMessage(body, "이동하지 못했습니다."));
-  }
 }
 
 export function getBedZonePlacementProfile(bedZoneId: number) {
@@ -157,22 +120,15 @@ export function getBedZonePlacementProfile(bedZoneId: number) {
 export async function saveBedZonePlacementProfile(
   profile: BedZonePlacementProfile,
 ): Promise<BedZonePlacementProfile> {
-  const response = await fetch(
-    `${API_BASE_URL}/bed-zones/${profile.bedZoneId}/placement-profile`,
+  return requestApi<BedZonePlacementProfile>(
+    `/bed-zones/${profile.bedZoneId}/placement-profile`,
     {
       method: "PUT",
-      credentials: "include",
-      headers: buildApiHeaders({ "Content-Type": "application/json" }),
+      headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ capacities: profile.capacities }),
     },
+    "다이 정밀 설정을 저장하지 못했습니다.",
   );
-  const body = await readJson(response);
-  if (!response.ok) {
-    throw new Error(
-      resolveErrorMessage(body, "다이 정밀 설정을 저장하지 못했습니다."),
-    );
-  }
-  return (body as { data: BedZonePlacementProfile }).data;
 }
 
 export async function getOrchidManagementMap(): Promise<FarmStatusMapData> {
@@ -317,17 +273,11 @@ export function getDerivedOrchidGroupMembers(
 }
 
 export async function fetchHouse(houseId: number): Promise<House> {
-  const response = await fetch(`${API_BASE_URL}/houses/${houseId}`, {
-    cache: "no-store",
-    credentials: "include",
-  });
-  const payload = await readJson(response);
-  if (!response.ok) {
-    throw new Error(
-      resolveErrorMessage(payload, "대상 동을 불러오지 못했습니다."),
-    );
-  }
-  return (payload as { data: House }).data;
+  return requestApi<House>(
+    `/houses/${houseId}`,
+    {},
+    "대상 동을 불러오지 못했습니다.",
+  );
 }
 
 async function submitOrchidMutation(
@@ -335,14 +285,13 @@ async function submitOrchidMutation(
   method: "POST" | "PATCH",
   payload: MutationPayload & { bedZoneId?: number },
 ): Promise<void> {
-  const response = await fetch(`${API_BASE_URL}${path}`, {
-    method,
-    credentials: "include",
-    headers: buildApiHeaders({ "Content-Type": "application/json" }),
-    body: JSON.stringify(payload),
-  });
-  const body = await readJson(response);
-  if (!response.ok) {
-    throw new Error(resolveErrorMessage(body, "저장하지 못했습니다."));
-  }
+  await requestApi<void>(
+    path,
+    {
+      method,
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    },
+    "저장하지 못했습니다.",
+  );
 }

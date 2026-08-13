@@ -15,6 +15,10 @@ export type SalesRouteState<Filters> = {
   size: number;
 };
 
+export type SalesSlipsRouteState = SalesRouteState<SalesFilterState> & {
+  selectedSlipId: number | null;
+};
+
 export type SearchParamReader = {
   get(name: string): string | null;
 };
@@ -48,7 +52,7 @@ export function createServerSearchParamReader(
 
 export function readSalesRouteState(
   params: SearchParamReader,
-): SalesRouteState<SalesFilterState> {
+): SalesSlipsRouteState {
   return {
     filters: {
       from: params.get("from") ?? "",
@@ -65,6 +69,7 @@ export function readSalesRouteState(
       Number.MAX_SAFE_INTEGER,
     ),
     size: readBoundedIntegerValue(params.get("size"), 10, 1, 100),
+    selectedSlipId: readOptionalPositiveInteger(params.get("slipId")),
   };
 }
 
@@ -141,4 +146,10 @@ function readEnumValue<const Value extends string>(
   return value != null && allowedValues.includes(value as Value)
     ? (value as Value)
     : "";
+}
+
+function readOptionalPositiveInteger(value: string | null) {
+  if (value == null || value === "") return null;
+  const parsed = Number(value);
+  return Number.isSafeInteger(parsed) && parsed > 0 ? parsed : null;
 }

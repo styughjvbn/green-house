@@ -38,23 +38,12 @@ export function OperationResult({
   const completedDetailQuery = useQuery({
     ...workOperationDetailsQueryOptions(operation.id),
   });
-  const active = operation.status === "IN_PROGRESS";
-  const canComplete =
-    active &&
-    operation.progress.pending === 0 &&
-    operation.progress.inProgress === 0 &&
-    operation.progress.partial === 0 &&
-    operation.progress.failed === 0;
-  const hasRemainingWork = !canComplete;
-  const executionKind = getWorkExecutionKind(operation.workTypeCode);
+  const executionKind = getWorkExecutionKind(operation.workTypeWorkflow);
   const structureChange =
     executionKind === "STRUCTURE_CHANGE" || executionKind === "MOVEMENT";
   const potting = executionKind === "POTTING";
-  const firstExecutablePottingTarget = operation.targets.find(
-    (target) =>
-      target.remainingQuantity > 0 &&
-      (target.executionStatus === "PENDING" ||
-        target.executionStatus === "IN_PROGRESS"),
+  const firstExecutableTarget = operation.targets.find((target) =>
+    target.availableActions.includes("EXECUTE"),
   );
 
   return (
@@ -86,61 +75,52 @@ export function OperationResult({
           </span>
         ) : (
           <div className="flex flex-wrap gap-2">
-            {operation.status === "PLANNED" ? (
+            {operation.availableActions.includes("START") ? (
               <StatusAction
                 label="작업 시작"
                 disabled={loading}
                 onClick={() => onOperationAction("start")}
               />
             ) : null}
-            {active && hasRemainingWork ? (
+            {operation.availableActions.includes("PAUSE") ? (
               <StatusAction
                 label="일시중지"
                 disabled={loading}
                 onClick={() => onOperationAction("pause")}
               />
             ) : null}
-            {operation.status === "PAUSED" ? (
+            {operation.availableActions.includes("RESUME") ? (
               <StatusAction
                 label="작업 재개"
                 disabled={loading}
                 onClick={() => onOperationAction("resume")}
               />
             ) : null}
-            {active && hasRemainingWork && structureChange ? (
+            {structureChange && firstExecutableTarget ? (
               <StatusAction
                 label={`${operation.workType} 회차 등록`}
                 primary
                 disabled={loading || !onExecuteTarget}
-                onClick={() => {
-                  const firstTarget = operation.targets.find(
-                    (target) => target.remainingQuantity > 0,
-                  );
-                  if (firstTarget) onExecuteTarget?.(firstTarget);
-                }}
+                onClick={() => onExecuteTarget?.(firstExecutableTarget)}
               />
             ) : null}
-            {active && hasRemainingWork && potting ? (
+            {potting && firstExecutableTarget ? (
               <StatusAction
                 label="포트 작업 결과 입력"
                 primary
-                disabled={
-                  loading || !onExecuteTarget || !firstExecutablePottingTarget
-                }
-                onClick={() => {
-                  if (firstExecutablePottingTarget) {
-                    onExecuteTarget?.(firstExecutablePottingTarget);
-                  }
-                }}
+                disabled={loading || !onExecuteTarget}
+                onClick={() => onExecuteTarget?.(firstExecutableTarget)}
               />
             ) : null}
-            <StatusAction
-              label="전체 완료"
-              primary
-              disabled={loading || !canComplete}
-              onClick={() => setCompletionTargetId("operation")}
-            />
-            {hasRemainingWork ? (
+            {operation.availableActions.includes("COMPLETE") ? (
+              <StatusAction
+                label="전체 완료"
+                primary
+                disabled={loading}
+                onClick={() => setCompletionTargetId("operation")}
+              />
+            ) : null}
+            {operation.availableActions.includes("CANCEL") ? (
               <StatusAction
                 label="취소"
                 danger

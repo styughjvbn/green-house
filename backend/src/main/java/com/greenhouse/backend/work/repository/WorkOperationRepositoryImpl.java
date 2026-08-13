@@ -15,6 +15,7 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
+import java.util.Collection;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.Pageable;
@@ -50,6 +51,18 @@ public class WorkOperationRepositoryImpl implements WorkOperationRepositoryCusto
 				.join(workOperation.workType, workType).fetchJoin()
 				.where(workOperation.id.eq(id))
 				.fetchOne());
+	}
+
+	@Override
+	public List<WorkOperation> findWithWorkTypeByIdIn(Collection<Long> ids) {
+		if (ids.isEmpty()) {
+			return List.of();
+		}
+		return queryFactory
+				.selectFrom(workOperation)
+				.join(workOperation.workType, workType).fetchJoin()
+				.where(workOperation.id.in(ids))
+				.fetch();
 	}
 
 	@Override

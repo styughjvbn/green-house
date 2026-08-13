@@ -3,19 +3,20 @@
 import { ArrowDown, ArrowUp, Plus } from "lucide-react";
 import { useEffect, useState } from "react";
 import type { WorkType, WorkTypeTemplate } from "@/entities/farm/types";
-import {
-  getWorkTypeTemplateLabel,
-  WORK_TYPE_TEMPLATES,
-} from "@/entities/farm/workTypes";
+import { getWorkTypeTemplateLabel } from "@/entities/farm/workTypes";
 import {
   createSettingWorkType,
   getSettingWorkTypes,
+  getWorkTypeMetadata,
   reorderSettingWorkTypes,
   updateSettingWorkType,
 } from "../api/workTypeSettingsApi";
 
 export function WorkTypeSettingsSection() {
   const [workTypes, setWorkTypes] = useState<WorkType[]>([]);
+  const [customTypeTemplates, setCustomTypeTemplates] = useState<
+    WorkTypeTemplate[]
+  >([]);
   const [newName, setNewName] = useState("");
   const [newTemplate, setNewTemplate] = useState<WorkTypeTemplate>("MEMO");
   const [saving, setSaving] = useState(false);
@@ -27,7 +28,12 @@ export function WorkTypeSettingsSection() {
 
   async function load() {
     try {
-      setWorkTypes(await getSettingWorkTypes());
+      const [nextWorkTypes, metadata] = await Promise.all([
+        getSettingWorkTypes(),
+        getWorkTypeMetadata(),
+      ]);
+      setWorkTypes(nextWorkTypes);
+      setCustomTypeTemplates(metadata.customTypeTemplates);
       setErrorMessage(null);
     } catch (error) {
       setErrorMessage(
@@ -120,12 +126,18 @@ export function WorkTypeSettingsSection() {
 
       <div className="mt-5 grid gap-2 lg:grid-cols-[minmax(0,1fr)_180px_auto]">
         <input
+          aria-label="새 작업 유형 이름"
           className="rounded-md border border-[#cfd8cc] px-3 py-2 text-sm"
           placeholder="새 작업 유형 이름"
           value={newName}
           onChange={(event) => setNewName(event.target.value)}
         />
-        <TemplateSelect value={newTemplate} onChange={setNewTemplate} />
+        <TemplateSelect
+          label="새 작업 유형 입력 양식"
+          templates={customTypeTemplates}
+          value={newTemplate}
+          onChange={setNewTemplate}
+        />
         <button
           className="inline-flex items-center justify-center gap-2 rounded-md bg-[#159447] px-4 py-2 text-sm font-semibold text-white disabled:opacity-60"
           type="button"
@@ -154,6 +166,7 @@ export function WorkTypeSettingsSection() {
             >
               <div>
                 <input
+                  aria-label={`${workType.name} 작업 유형 이름`}
                   className="w-full rounded-md border border-[#cfd8cc] bg-white px-3 py-2 text-sm font-semibold disabled:bg-[#f0f2ef] disabled:text-[#6a766e]"
                   disabled={saving || !editable}
                   value={workType.name}
@@ -182,6 +195,8 @@ export function WorkTypeSettingsSection() {
               </div>
               <TemplateSelect
                 disabled={saving || !editable}
+                label={`${workType.name} 입력 양식`}
+                templates={customTypeTemplates}
                 value={workType.template}
                 onChange={(template) => updateWorkType(workType, { template })}
               />
@@ -201,6 +216,7 @@ export function WorkTypeSettingsSection() {
               </button>
               <div className="flex gap-1">
                 <button
+                  aria-label={`${workType.name} 위로 이동`}
                   className="h-10 flex-1 rounded-md border border-[#d7ddd4] disabled:opacity-40"
                   type="button"
                   disabled={saving || !editable || index === 0}
@@ -209,6 +225,7 @@ export function WorkTypeSettingsSection() {
                   <ArrowUp className="mx-auto h-4 w-4" aria-hidden="true" />
                 </button>
                 <button
+                  aria-label={`${workType.name} 아래로 이동`}
                   className="h-10 flex-1 rounded-md border border-[#d7ddd4] disabled:opacity-40"
                   type="button"
                   disabled={
@@ -228,11 +245,7 @@ export function WorkTypeSettingsSection() {
 }
 
 function isEditableWorkType(workType: WorkType) {
-  return (
-    !workType.systemType &&
-    workType.code !== "INBOUND" &&
-    workType.code !== "POTTING"
-  );
+  return workType.settingsEditable;
 }
 
 function getWorkTypeKey(workType: WorkType, index: number) {
@@ -241,29 +254,32 @@ function getWorkTypeKey(workType: WorkType, index: number) {
 
 function TemplateSelect({
   disabled = false,
+  label,
+  templates,
   value,
   onChange,
 }: {
   disabled?: boolean;
+  label: string;
+  templates: WorkTypeTemplate[];
   value: WorkTypeTemplate;
   onChange: (value: WorkTypeTemplate) => void;
 }) {
   return (
     <select
+      aria-label={label}
       className="rounded-md border border-[#cfd8cc] bg-white px-3 py-2 text-sm disabled:bg-[#f0f2ef]"
       disabled={disabled}
       value={value}
       onChange={(event) => onChange(event.target.value as WorkTypeTemplate)}
     >
-      {WORK_TYPE_TEMPLATES.filter((template) => template !== "MOVEMENT").map(
-        (template) => (
-          <option key={template} value={template}>
-            {getWorkTypeTemplateLabel(template)}
-          </option>
-        ),
-      )}
-      {value === "MOVEMENT" ? (
-        <option value="MOVEMENT">{getWorkTypeTemplateLabel("MOVEMENT")}</option>
+      {templates.map((template) => (
+        <option key={template} value={template}>
+          {getWorkTypeTemplateLabel(template)}
+        </option>
+      ))}
+      {!templates.includes(value) ? (
+        <option value={value}>{getWorkTypeTemplateLabel(value)}</option>
       ) : null}
     </select>
   );

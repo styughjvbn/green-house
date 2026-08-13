@@ -4,6 +4,7 @@ import { useRouter } from "next/navigation";
 import { type FormEvent, useEffect, useState } from "react";
 import type { OrchidGroup } from "@/entities/farm/types";
 import { createUuid } from "@/shared/lib/id";
+import { useRuntimeContext } from "@/shared/runtime/RuntimeContext";
 import {
   createWorkOperationCorrection,
   getWorkOperationCorrections,
@@ -20,11 +21,10 @@ export default function WorkOperationCorrectionForm({
   onClose: () => void;
 }) {
   const router = useRouter();
+  const { businessDate } = useRuntimeContext();
   const [idempotencyKey, setIdempotencyKey] = useState(createUuid);
   const [title, setTitle] = useState(`${orchidGroup.varietyName} 결과 보정`);
-  const [workDate, setWorkDate] = useState(() =>
-    new Date().toISOString().slice(0, 10),
-  );
+  const [workDate, setWorkDate] = useState(businessDate);
   const [quantity, setQuantity] = useState(String(orchidGroup.quantity));
   const [status, setStatus] = useState(orchidGroup.status);
   const [reason, setReason] = useState("");

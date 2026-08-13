@@ -4,6 +4,7 @@ import { useState, type FormEvent, type ReactNode } from "react";
 import { Banknote, ChevronDown, ChevronUp } from "lucide-react";
 import type { PartnerPaymentEvent } from "@/entities/farm/types";
 import { formatShortDate } from "@/shared/lib/dateFormat";
+import { useRuntimeContext } from "@/shared/runtime/RuntimeContext";
 import {
   getPaymentEvents,
   type ManualPaymentPayload,
@@ -22,11 +23,10 @@ export function ManualPaymentPanel({
   expectedPaymentDate: string | null;
   onConfirm: (payload: ManualPaymentPayload) => Promise<void>;
 }) {
+  const { businessDate } = useRuntimeContext();
   const [open, setOpen] = useState(false);
   const [amount, setAmount] = useState(String(remainingAmount));
-  const [paymentDate, setPaymentDate] = useState(
-    new Date().toISOString().slice(0, 10),
-  );
+  const [paymentDate, setPaymentDate] = useState(businessDate);
   const [paymentMethod, setPaymentMethod] = useState("계좌이체");
   const [depositorName, setDepositorName] = useState("");
   const [worker, setWorker] = useState("관리자");
@@ -34,6 +34,9 @@ export function ManualPaymentPanel({
   const [events, setEvents] = useState<PartnerPaymentEvent[]>([]);
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
+  const [idempotencyKey, setIdempotencyKey] = useState(
+    createPaymentIdempotencyKey,
+  );
 
   async function toggle() {
     const next = !open;
@@ -55,6 +58,7 @@ export function ManualPaymentPanel({
       await onConfirm({
         amount: Number(amount),
         paymentDate,
+        idempotencyKey,
         paymentMethod: paymentMethod.trim() || null,
         depositorName: depositorName.trim() || null,
         worker: worker.trim() || null,
@@ -64,6 +68,7 @@ export function ManualPaymentPanel({
       setMessage("입금 확인 완료");
       setAmount(String(Math.max(0, remainingAmount - Number(amount))));
       setMemo("");
+      setIdempotencyKey(createPaymentIdempotencyKey());
     } catch (error) {
       setMessage(
         error instanceof Error ? error.message : "입금을 확인하지 못했습니다.",
@@ -112,7 +117,10 @@ export function ManualPaymentPanel({
                   max={remainingAmount}
                   required
                   value={amount}
-                  onChange={(event) => setAmount(event.target.value)}
+                  onChange={(event) => {
+                    setAmount(event.target.value);
+                    setIdempotencyKey(createPaymentIdempotencyKey());
+                  }}
                 />
               </Field>
               <Field label="입금일">
@@ -121,7 +129,10 @@ export function ManualPaymentPanel({
                   type="date"
                   required
                   value={paymentDate}
-                  onChange={(event) => setPaymentDate(event.target.value)}
+                  onChange={(event) => {
+                    setPaymentDate(event.target.value);
+                    setIdempotencyKey(createPaymentIdempotencyKey());
+                  }}
                 />
               </Field>
               <Field label="입금 방식">
@@ -194,6 +205,13 @@ export function ManualPaymentPanel({
       ) : null}
     </div>
   );
+}
+
+function createPaymentIdempotencyKey() {
+  if (typeof crypto !== "undefined" && "randomUUID" in crypto) {
+    return crypto.randomUUID();
+  }
+  return `manual-payment-${Date.now()}-${Math.random().toString(36).slice(2)}`;
 }
 
 const controlClass =

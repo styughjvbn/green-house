@@ -11,7 +11,10 @@ const BUFFER_BED_COUNT = 3;
 export function useFarmBedViewportCache(initialBedId: number | null) {
   const [viewportIndex, setViewportIndex] = useState(0);
   const initialViewport = useQuery(farmBedViewportQueryOptions(initialBedId));
-  const bedOrder = initialViewport.data?.bedOrder ?? [];
+  const bedOrder = useMemo(
+    () => initialViewport.data?.bedOrder ?? [],
+    [initialViewport.data?.bedOrder],
+  );
   const viewportStartBedIds = useMemo(
     () => bufferStartBedIds(bedOrder, viewportIndex),
     [bedOrder, viewportIndex],

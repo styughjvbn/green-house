@@ -5,6 +5,7 @@ import com.greenhouse.backend.work.domain.operation.WorkOperation;
 import com.greenhouse.backend.work.domain.operation.WorkOperationStatus;
 import com.greenhouse.backend.work.domain.operation.WorkSourceScopeType;
 import com.greenhouse.backend.work.domain.operation.WorkTypeTemplate;
+import com.greenhouse.backend.work.domain.operation.WorkTypeWorkflow;
 import com.greenhouse.backend.work.dto.target.WorkOperationTargetResponse;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -17,6 +18,7 @@ public record WorkOperationResponse(
 		String workTypeCode,
 		String workType,
 		WorkTypeTemplate workTypeTemplate,
+		WorkTypeWorkflow workTypeWorkflow,
 		String title,
 		WorkOperationStatus status,
 		LocalDate plannedStartDate,
@@ -31,15 +33,20 @@ public record WorkOperationResponse(
 		String worker,
 		String memo,
 		WorkOperationProgressResponse progress,
-		List<WorkOperationTargetResponse> targets) {
+		List<WorkOperationTargetResponse> targets,
+		List<WorkOperationAction> availableActions) {
 
-	public static WorkOperationResponse from(WorkOperation operation, List<WorkOperationTargetResponse> targets) {
+	public static WorkOperationResponse from(
+			WorkOperation operation,
+			List<WorkOperationTargetResponse> targets,
+			List<WorkOperationAction> availableActions) {
 		return new WorkOperationResponse(
 				operation.getId(),
 				operation.getWorkType().getId(),
 				operation.getWorkType().getCode(),
 				operation.getWorkType().getName(),
 				operation.getWorkType().getTemplate(),
+				operation.getWorkType().workflow(),
 				operation.getTitle(),
 				operation.getStatus(),
 				operation.getPlannedStartDate(),
@@ -54,6 +61,7 @@ public record WorkOperationResponse(
 				operation.getWorker(),
 				operation.getMemo(),
 				WorkOperationProgressResponse.from(targets),
-				targets);
+				targets,
+				availableActions);
 	}
 }

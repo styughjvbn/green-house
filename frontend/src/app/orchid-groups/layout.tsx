@@ -1,5 +1,5 @@
 import type { ReactNode } from "react";
-import { OrchidClipboardProvider } from "@/features/orchid-management/model/OrchidClipboardContext";
+import { OrchidClipboardProvider } from "@/features/orchid-management";
 
 export default function OrchidGroupsLayout({
   children,

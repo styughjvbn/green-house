@@ -32,14 +32,6 @@ public class AuctionResultLineRepositoryImpl implements AuctionResultLineReposit
 				.fetch();
 	}
 
-	@Override
-	public List<AuctionResultLine> findAllSoldLines() {
-		return soldLineBaseQuery()
-				.where(auctionResultLine.amount.gt(0))
-				.orderBy(auctionResultLine.auctionDate.asc(), auctionResultLine.id.asc())
-				.fetch();
-	}
-
 	private JPAQuery<AuctionResultLine> soldLineBaseQuery() {
 		return queryFactory
 				.selectFrom(auctionResultLine)

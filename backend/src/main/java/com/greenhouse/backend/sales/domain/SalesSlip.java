@@ -16,6 +16,7 @@ import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.OneToMany;
 import jakarta.persistence.Table;
+import jakarta.persistence.Version;
 import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
@@ -28,10 +29,18 @@ import lombok.NoArgsConstructor;
 @Entity
 @Table(name = "sales_slips")
 public class SalesSlip extends BaseEntity {
+	public static final String STATUS_DRAFT = "작성중";
+	public static final String STATUS_DIRECT_OUTBOUND_COMPLETED = "출고 완료";
+	public static final String STATUS_AUCTION_SHIPMENT_COMPLETED = "출하 완료";
+	public static final String STATUS_CANCELED = "취소";
 
 	@Id
 	@GeneratedValue(strategy = GenerationType.IDENTITY)
 	private Long id;
+
+	@Version
+	@Column(nullable = false)
+	private Long version;
 
 	@Column(name = "slip_number", nullable = false, unique = true)
 	private String slipNumber;
@@ -94,7 +103,7 @@ public class SalesSlip extends BaseEntity {
 		this.auctionShipment = auctionShipment;
 		this.partner = partner;
 		this.paymentStatus = paymentStatus;
-		this.salesStatus = salesStatus;
+		this.salesStatus = validateInitialSalesStatus(salesType, salesStatus);
 		this.paymentMethod = paymentMethod;
 		this.memo = memo;
 		this.totalAmount = 0;
@@ -149,11 +158,24 @@ public class SalesSlip extends BaseEntity {
 	}
 
 	public void updateSalesStatus(String salesStatus) {
-		this.salesStatus = salesStatus;
+		String nextStatus = normalizeStatus(salesStatus);
+		if (nextStatus.equals(this.salesStatus)) {
+			return;
+		}
+		if (isCanceled()) {
+			throw new IllegalArgumentException("취소된 전표는 상태를 변경할 수 없습니다.");
+		}
+		if (isOutboundCompleted() && !STATUS_CANCELED.equals(nextStatus)) {
+			throw new IllegalArgumentException("출고 완료된 전표는 판매 상태를 변경할 수 없습니다.");
+		}
+		if (!STATUS_CANCELED.equals(nextStatus) && !completionStatus(salesType).equals(nextStatus)) {
+			throw new IllegalArgumentException("판매 유형에 맞지 않는 판매 상태입니다.");
+		}
+		this.salesStatus = nextStatus;
 	}
 
 	public boolean isCanceled() {
-		return "취소".equals(salesStatus);
+		return STATUS_CANCELED.equals(salesStatus);
 	}
 
 	public void assignAuctionShipment(AuctionShipment auctionShipment) {
@@ -165,11 +187,36 @@ public class SalesSlip extends BaseEntity {
 	}
 
 	public boolean isOutboundCompleted() {
-		return "출고 완료".equals(salesStatus) || "출하 완료".equals(salesStatus);
+		return STATUS_DIRECT_OUTBOUND_COMPLETED.equals(salesStatus)
+				|| STATUS_AUCTION_SHIPMENT_COMPLETED.equals(salesStatus);
 	}
 
 	private void recalculateAmounts() {
 		this.totalAmount = this.items.stream().mapToInt(SalesSlipItem::getAmount).sum();
 		this.remainingAmount = Math.max(0L, this.totalAmount.longValue() - getPaidAmount());
+	}
+
+	private String validateInitialSalesStatus(SalesType salesType, String salesStatus) {
+		String normalized = normalizeStatus(salesStatus);
+		if (!STATUS_DRAFT.equals(normalized) && !completionStatus(salesType).equals(normalized)) {
+			throw new IllegalArgumentException("판매 전표는 작성중 또는 판매 유형에 맞는 완료 상태로만 생성할 수 있습니다.");
+		}
+		return normalized;
+	}
+
+	private String completionStatus(SalesType salesType) {
+		if (salesType == null) {
+			throw new IllegalArgumentException("판매 유형이 필요합니다.");
+		}
+		return salesType == SalesType.DIRECT
+				? STATUS_DIRECT_OUTBOUND_COMPLETED
+				: STATUS_AUCTION_SHIPMENT_COMPLETED;
+	}
+
+	private String normalizeStatus(String salesStatus) {
+		if (salesStatus == null || salesStatus.isBlank()) {
+			throw new IllegalArgumentException("판매 상태가 필요합니다.");
+		}
+		return salesStatus.trim();
 	}
 }

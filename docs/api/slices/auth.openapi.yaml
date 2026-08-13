@@ -48,8 +48,27 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ApiResponseAuthenticatedUserResponse'
+  /api/auth/context:
+    get:
+      tags:
+      - auth-controller
+      operationId: context
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponseApplicationContextResponse'
 components:
   schemas:
+    ApiResponseApplicationContextResponse:
+      type: object
+      properties:
+        data:
+          $ref: '#/components/schemas/ApplicationContextResponse'
+        message:
+          type: string
     ApiResponseAuthenticatedUserResponse:
       type: object
       properties:
@@ -62,6 +81,14 @@ components:
       properties:
         data: {}
         message:
+          type: string
+    ApplicationContextResponse:
+      type: object
+      properties:
+        businessDate:
+          type: string
+          format: date
+        timeZone:
           type: string
     AuthenticatedUserResponse:
       type: object

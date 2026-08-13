@@ -5,6 +5,7 @@ import {
   getAuctionTrackingSummary,
   getBusinessPartnerPage,
   getBusinessPartners,
+  getSalesSlip,
   getSalesSlipPage,
 } from "../api/salesApi";
 import type { SalesRouteState } from "../lib/salesRouteParams";
@@ -21,6 +22,13 @@ export function salesSlipPageQueryOptions(
   return queryOptions({
     queryKey: salesQueryKeys.slips.page(state.filters, state.page, state.size),
     queryFn: () => getSalesSlipPage(state.filters, state.page, state.size),
+  });
+}
+
+export function salesSlipDetailQueryOptions(salesSlipId: number) {
+  return queryOptions({
+    queryKey: salesQueryKeys.slips.detail(salesSlipId),
+    queryFn: () => getSalesSlip(salesSlipId),
   });
 }
 

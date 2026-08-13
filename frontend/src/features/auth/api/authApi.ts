@@ -1,7 +1,7 @@
 import {
   API_BASE_URL,
+  createApiError,
   fetchWithClientInstance as fetch,
-  getApiErrorMessage,
   type ApiErrorResponse,
   type ApiResponse,
 } from "@/shared/api/client";
@@ -27,7 +27,7 @@ export async function login(username: string, password: string) {
     | ApiErrorResponse;
 
   if (!response.ok) {
-    throw new Error(getApiErrorMessage(payload, "로그인에 실패했습니다."));
+    throw createApiError(response.status, payload, "로그인에 실패했습니다.");
   }
 
   return (payload as ApiResponse<AuthenticatedUser>).data;
@@ -41,7 +41,7 @@ export async function logout() {
 
   if (!response.ok && response.status !== 401 && response.status !== 403) {
     const payload = await response.json().catch(() => null);
-    throw new Error(getApiErrorMessage(payload, "로그아웃에 실패했습니다."));
+    throw createApiError(response.status, payload, "로그아웃에 실패했습니다.");
   }
 }
 

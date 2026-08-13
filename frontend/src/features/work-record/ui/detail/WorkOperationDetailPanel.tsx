@@ -20,7 +20,7 @@ export function WorkOperationDetailPanel({
     ...workHousesQueryOptions(),
     enabled: actions.executionTarget != null,
   });
-  const houses = housesQuery.data ?? [];
+  const houses = useMemo(() => housesQuery.data ?? [], [housesQuery.data]);
   const targetOptions = useMemo(
     () => deriveWorkTargetSelectionOptions(houses),
     [houses],

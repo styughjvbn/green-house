@@ -4,6 +4,7 @@ out
 dist
 build
 coverage
+src/shared/api/generated/openapi.d.ts
 pnpm-lock.yaml
 package-lock.json
 yarn.lock

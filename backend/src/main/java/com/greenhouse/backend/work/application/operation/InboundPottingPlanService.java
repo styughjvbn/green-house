@@ -39,23 +39,77 @@ public class InboundPottingPlanService {
 	}
 
 	public WorkOperationResponse create(InboundPottingPlanCreateRequest request) {
+		WorkType workType = validatePlan(request);
+		List<Long> requestedIds = request.inboundRecordIds().stream().distinct().toList();
+		List<InboundPottingPlanTarget> records = inboundPottingPlanGateway.resolveForUpdate(requestedIds);
+		validateNoActivePlans(requestedIds);
+		Long varietyId = records.getFirst().varietyId();
+		if (varietyId == null || records.stream().anyMatch(record -> !varietyId.equals(record.varietyId()))) {
+			throw new IllegalArgumentException("포트 작업은 하나의 품종만 대상으로 계획할 수 있습니다.");
+		}
+		WorkOperation operation = createResolved(request, requestedIds, records, workType);
+		inboundPottingPlanGateway.markPottingPlanned(requestedIds);
+		return queryService.get(operation.getId());
+	}
+
+	public List<WorkOperationResponse> createBatch(InboundPottingPlanBatchCreateRequest request) {
+		InboundPottingPlanCreateRequest planRequest = request.plan();
+		List<Long> requestedIds = planRequest.inboundRecordIds().stream().distinct().toList();
+		if (requestedIds.isEmpty()) {
+			throw new IllegalArgumentException("포트 작업할 입고 기록이 한 개 이상 필요합니다.");
+		}
+		WorkType workType = validatePlan(planRequest);
+		List<InboundPottingPlanTarget> records = inboundPottingPlanGateway.resolveForUpdate(requestedIds);
+		validateNoActivePlans(requestedIds);
+		Map<String, List<Long>> idsByVariety = new LinkedHashMap<>();
+		Map<String, String> namesByVariety = new LinkedHashMap<>();
+		for (InboundPottingPlanTarget record : records) {
+			String key = record.varietyId() == null
+					? "name:" + record.varietyName()
+					: "id:" + record.varietyId();
+			idsByVariety.computeIfAbsent(key, ignored -> new ArrayList<>()).add(record.id());
+			namesByVariety.putIfAbsent(key, record.varietyName());
+		}
+		int varietyCount = idsByVariety.size();
+		Map<Long, InboundPottingPlanTarget> recordsById = records.stream()
+				.collect(java.util.stream.Collectors.toMap(InboundPottingPlanTarget::id, record -> record));
+		List<Long> operationIds = idsByVariety.entrySet().stream()
+				.map(entry -> {
+					var groupedRequest = new InboundPottingPlanCreateRequest(
+						varietyTitle(planRequest.title(), namesByVariety.get(entry.getKey()), varietyCount),
+						planRequest.plannedStartDate(),
+						planRequest.plannedEndDate(),
+						entry.getValue(),
+						planRequest.worker(),
+						planRequest.memo());
+					var groupedRecords = entry.getValue().stream().map(recordsById::get).toList();
+					return createResolved(groupedRequest, entry.getValue(), groupedRecords, workType).getId();
+				})
+				.toList();
+		inboundPottingPlanGateway.markPottingPlanned(requestedIds);
+		return queryService.getAll(operationIds);
+	}
+
+	private WorkType validatePlan(InboundPottingPlanCreateRequest request) {
 		support.validateDates(request.plannedStartDate(), request.plannedEndDate());
 		WorkType workType = workTypeService.getByCode(WorkType.POTTING_CODE);
 		if (!workType.isActive()) {
 			throw new IllegalArgumentException("포트 작업 유형이 비활성화되어 있습니다.");
 		}
-		List<Long> requestedIds = request.inboundRecordIds().stream().distinct().toList();
-		for (Long inboundRecordId : requestedIds) {
-			if (!executionRepository.findActiveInboundPottingForUpdate(inboundRecordId).isEmpty()) {
-				throw new IllegalArgumentException("이미 활성 포트 작업 계획에 포함된 입고 기록입니다.");
-			}
-		}
-		List<InboundPottingPlanTarget> records = inboundPottingPlanGateway.resolve(requestedIds);
-		Long varietyId = records.getFirst().varietyId();
-		if (varietyId == null || records.stream().anyMatch(record -> !varietyId.equals(record.varietyId()))) {
-			throw new IllegalArgumentException("포트 작업은 하나의 품종만 대상으로 계획할 수 있습니다.");
-		}
+		return workType;
+	}
 
+	private void validateNoActivePlans(List<Long> inboundRecordIds) {
+		if (!executionRepository.findActiveInboundPottingForUpdate(inboundRecordIds).isEmpty()) {
+			throw new IllegalArgumentException("이미 활성 포트 작업 계획에 포함된 입고 기록입니다.");
+		}
+	}
+
+	private WorkOperation createResolved(
+			InboundPottingPlanCreateRequest request,
+			List<Long> requestedIds,
+			List<InboundPottingPlanTarget> records,
+			WorkType workType) {
 		WorkOperation operation = new WorkOperation(
 				workType,
 				support.normalizeRequired(request.title()),
@@ -72,36 +126,7 @@ public class InboundPottingPlanService {
 				.sorted(Comparator.comparing(record -> requestedIds.indexOf(record.id())))
 				.toList();
 		aggregateCreator.createForInboundRecords(operation, orderedRecords);
-		inboundPottingPlanGateway.markPottingPlanned(requestedIds);
-		return queryService.get(operation.getId());
-	}
-
-	public List<WorkOperationResponse> createBatch(InboundPottingPlanBatchCreateRequest request) {
-		InboundPottingPlanCreateRequest planRequest = request.plan();
-		List<Long> requestedIds = planRequest.inboundRecordIds().stream().distinct().toList();
-		if (requestedIds.isEmpty()) {
-			throw new IllegalArgumentException("포트 작업할 입고 기록이 한 개 이상 필요합니다.");
-		}
-		List<InboundPottingPlanTarget> records = inboundPottingPlanGateway.resolve(requestedIds);
-		Map<String, List<Long>> idsByVariety = new LinkedHashMap<>();
-		Map<String, String> namesByVariety = new LinkedHashMap<>();
-		for (InboundPottingPlanTarget record : records) {
-			String key = record.varietyId() == null
-					? "name:" + record.varietyName()
-					: "id:" + record.varietyId();
-			idsByVariety.computeIfAbsent(key, ignored -> new ArrayList<>()).add(record.id());
-			namesByVariety.putIfAbsent(key, record.varietyName());
-		}
-		int varietyCount = idsByVariety.size();
-		return idsByVariety.entrySet().stream()
-				.map(entry -> create(new InboundPottingPlanCreateRequest(
-						varietyTitle(planRequest.title(), namesByVariety.get(entry.getKey()), varietyCount),
-						planRequest.plannedStartDate(),
-						planRequest.plannedEndDate(),
-						entry.getValue(),
-						planRequest.worker(),
-						planRequest.memo())))
-				.toList();
+		return operation;
 	}
 
 	private String varietyTitle(String baseTitle, String varietyName, int varietyCount) {

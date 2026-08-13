@@ -16,6 +16,7 @@ test("sales route state reads filters, paging, and create request", () => {
     keyword: "거래처",
     page: "2",
     size: "25",
+    slipId: "42",
     createSlip: "1",
   });
 
@@ -30,8 +31,18 @@ test("sales route state reads filters, paging, and create request", () => {
     },
     page: 2,
     size: 25,
+    selectedSlipId: 42,
   });
   assert.equal(readCreateSlip(params), true);
+});
+
+test("sales route state ignores invalid selected slip identifiers", () => {
+  for (const slipId of ["0", "-1", "1.5", "not-a-number"]) {
+    const state = readSalesRouteState(
+      createServerSearchParamReader({ slipId }),
+    );
+    assert.equal(state.selectedSlipId, null);
+  }
 });
 
 test("partner and auction route state reject unsupported enum values", () => {

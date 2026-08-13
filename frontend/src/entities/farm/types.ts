@@ -1,5 +1,9 @@
 ﻿import type { Page } from "@/shared/api/page";
 
+import type { components } from "@/shared/api/generated/openapi";
+
+type ApiSchemas = components["schemas"];
+
 export type { Page } from "@/shared/api/page";
 
 export type BedZoneSide = "LEFT" | "RIGHT" | "CUSTOM" | "HANGING";
@@ -236,17 +240,9 @@ export type WorkRecordTargetType =
   | "BED_ZONE"
   | "ORCHID_GROUP";
 
-export type WorkTypeTemplate =
-  | "PESTICIDE"
-  | "FERTILIZER"
-  | "REPOT"
-  | "CLEANUP"
-  | "DISCARD"
-  | "STATUS"
-  | "MEMO"
-  | "MOVEMENT"
-  | "MULTI_CREATE"
-  | "CORRECTION";
+export type WorkTypeTemplate = NonNullable<
+  ApiSchemas["WorkTypeResponse"]["template"]
+>;
 
 export type WorkType = {
   id: number;
@@ -257,24 +253,35 @@ export type WorkType = {
   systemType: boolean;
   active: boolean;
   sortOrder: number;
+  settingsEditable: boolean;
+  registrationModes: WorkRegistrationMode[];
+  workflow: WorkTypeWorkflow;
+  targetSource: NonNullable<ApiSchemas["WorkTypeResponse"]["targetSource"]>;
 };
 
-export type WorkOperationStatus =
-  | "PLANNED"
-  | "IN_PROGRESS"
-  | "PAUSED"
-  | "COMPLETED"
-  | "CANCELED"
-  | "CORRECTED";
+export type WorkRegistrationMode = NonNullable<
+  ApiSchemas["WorkTypeResponse"]["registrationModes"]
+>[number];
 
-export type WorkTargetExecutionStatus =
-  | "PENDING"
-  | "IN_PROGRESS"
-  | "PARTIALLY_COMPLETED"
-  | "COMPLETED"
-  | "SKIPPED"
-  | "CANCELED"
-  | "FAILED";
+export type WorkTypeWorkflow = NonNullable<
+  ApiSchemas["WorkTypeResponse"]["workflow"]
+>;
+
+export type WorkOperationStatus = NonNullable<
+  ApiSchemas["WorkOperationResponse"]["status"]
+>;
+
+export type WorkTargetExecutionStatus = NonNullable<
+  ApiSchemas["WorkOperationTargetResponse"]["executionStatus"]
+>;
+
+export type WorkOperationAction = NonNullable<
+  ApiSchemas["WorkOperationResponse"]["availableActions"]
+>[number];
+
+export type WorkTargetAction = NonNullable<
+  ApiSchemas["WorkOperationTargetResponse"]["availableActions"]
+>[number];
 
 export type WorkLocationSnapshot = {
   houseId: number;
@@ -318,6 +325,8 @@ export type WorkOperationTarget = {
   effectAppliedAt: string | null;
   worker: string | null;
   resultDetails: Record<string, unknown> | null;
+  resultOrchidGroupIds: number[];
+  availableActions: WorkTargetAction[];
 };
 
 export type WorkTargetPreview = {
@@ -332,6 +341,7 @@ export type WorkOperation = {
   workTypeCode: string;
   workType: string;
   workTypeTemplate: WorkTypeTemplate;
+  workTypeWorkflow: WorkTypeWorkflow;
   title: string;
   status: WorkOperationStatus;
   plannedStartDate: string;
@@ -363,6 +373,7 @@ export type WorkOperation = {
     progressPercent: number;
   };
   targets: WorkOperationTarget[];
+  availableActions: WorkOperationAction[];
 };
 
 export type OrchidGroupWorkHistory = {
@@ -443,6 +454,33 @@ export type SalesSlipItemAllocation = {
   houseNumber: number;
   physicalBedNumber: number;
   bedZoneName: string;
+  creationSnapshot: SalesOrchidGroupSnapshot | null;
+  outboundSnapshot: SalesOrchidGroupSnapshot | null;
+};
+
+export type SalesOrchidGroupSnapshot = {
+  snapshotType: "CREATION" | "OUTBOUND";
+  captureSource: "LIVE" | "MIGRATED_CURRENT_STATE";
+  capturedAt: string;
+  orchidGroupId: number;
+  varietyId: number | null;
+  varietyName: string;
+  genus: string | null;
+  ageYear: number | null;
+  potSizeCode: string | null;
+  potSize: string | null;
+  quantity: number;
+  reservedQuantity: number;
+  status: string;
+  allocatedQuantity: number;
+  houseId: number;
+  houseNumber: number;
+  physicalBedId: number;
+  physicalBedNumber: number;
+  bedZoneId: number;
+  bedZoneName: string;
+  startPosition: number | null;
+  endPosition: number | null;
 };
 
 export type SalesOrchidGroupOption = {
@@ -461,6 +499,10 @@ export type SalesOrchidGroupOption = {
   bedZoneName: string;
 };
 
+export type SalesSlipAction = NonNullable<
+  ApiSchemas["SalesSlipResponse"]["availableActions"]
+>[number];
+
 export type SalesSlip = {
   id: number;
   slipNumber: string;
@@ -478,9 +520,10 @@ export type SalesSlip = {
   paymentMethod: string | null;
   memo: string | null;
   items: SalesSlipItem[];
+  availableActions: SalesSlipAction[];
 };
 
-export type SalesSlipListItem = Omit<SalesSlip, "items">;
+export type SalesSlipListItem = Omit<SalesSlip, "items" | "availableActions">;
 
 export type SalesSlipPage = Page<SalesSlipListItem>;
 

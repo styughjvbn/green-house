@@ -1,6 +1,7 @@
 package com.greenhouse.backend.farm.application.variety;
 
 import com.greenhouse.backend.farm.domain.orchid.OrchidGroup;
+import com.greenhouse.backend.farm.domain.orchid.OrchidGroupStatusPolicy;
 import com.greenhouse.backend.farm.domain.variety.Variety;
 import com.greenhouse.backend.farm.dto.variety.VarietyConnectedOrchidGroupResponse;
 import com.greenhouse.backend.farm.dto.variety.VarietyResponse;
@@ -73,8 +74,8 @@ public class VarietyResponseAssembler {
 			LocalDate latestInboundDate) {
 		long totalQuantity = orchidGroups.stream().mapToLong(OrchidGroup::getQuantity).sum();
 		long saleableQuantity = orchidGroups.stream()
-				.filter(group -> !List.of("주의", "이상", "병해충").contains(group.getStatus()))
-				.mapToLong(OrchidGroup::getQuantity)
+				.filter(group -> OrchidGroupStatusPolicy.isSaleable(group.getStatus()))
+				.mapToLong(OrchidGroup::getAvailableQuantity)
 				.sum();
 		LocalDate recentWorkDate = latestWorkDates.values().stream()
 				.filter(java.util.Objects::nonNull)

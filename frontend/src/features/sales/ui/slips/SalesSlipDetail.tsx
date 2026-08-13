@@ -114,17 +114,11 @@ export function SalesSlipDetail({
     return <DetailEmpty>선택한 전표가 없습니다.</DetailEmpty>;
   }
 
-  const supplyAmount = Math.round(salesSlip.totalAmount / 1.1);
-  const vatAmount = salesSlip.totalAmount - supplyAmount;
-  const canComplete =
-    salesSlip.salesStatus !== "출고 완료" &&
-    salesSlip.salesStatus !== "출하 완료" &&
-    salesSlip.salesStatus !== "취소";
-  const canEdit =
-    salesSlip.salesType === "DIRECT" &&
-    salesSlip.salesStatus === "작성중" &&
-    salesSlip.paidAmount === 0;
-  const canCancel = salesSlip.salesStatus !== "취소";
+  const canComplete = salesSlip.availableActions.includes("COMPLETE");
+  const canEdit = salesSlip.availableActions.includes("EDIT");
+  const canCancel = salesSlip.availableActions.includes("CANCEL");
+  const canConfirmPayment =
+    salesSlip.availableActions.includes("CONFIRM_PAYMENT");
 
   return (
     <>
@@ -245,9 +239,7 @@ export function SalesSlipDetail({
             />
           </div>
 
-          <div className="mt-3 grid gap-3 rounded-md border border-[#dfe5dc] bg-white p-4 text-sm md:grid-cols-3 md:items-center">
-            <Amount label="공급가액" value={supplyAmount} />
-            <Amount label="부가세" value={vatAmount} />
+          <div className="mt-3 flex justify-end rounded-md border border-[#dfe5dc] bg-white p-4 text-sm">
             <div className="text-right">
               <p className="font-semibold text-[#344138]">총 금액</p>
               <p className="mt-1 text-3xl font-bold text-[#159447]">
@@ -257,8 +249,7 @@ export function SalesSlipDetail({
             </div>
           </div>
 
-          {salesSlip.salesType === "DIRECT" &&
-          salesSlip.salesStatus !== "취소" ? (
+          {canConfirmPayment ? (
             <div className="mt-3 rounded-md border border-[#dfe5dc]">
               <ManualPaymentPanel
                 key={salesSlip.id}
@@ -344,17 +335,6 @@ function Description({
     <div className="grid grid-cols-[72px_minmax(0,1fr)] gap-3">
       <dt className="text-[#6a766e]">{label}</dt>
       <dd className="truncate font-medium text-[#344138]">{value ?? "-"}</dd>
-    </div>
-  );
-}
-
-function Amount({ label, value }: { label: string; value: number }) {
-  return (
-    <div>
-      <p className="font-semibold text-[#6a766e]">{label}</p>
-      <p className="mt-1 text-lg font-semibold text-[#344138]">
-        {value.toLocaleString()}
-      </p>
     </div>
   );
 }

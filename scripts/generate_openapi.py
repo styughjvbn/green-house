@@ -76,7 +76,7 @@ def generate_from_temporary_backend(port: int, timeout_seconds: int) -> dict[str
 
     with tempfile.TemporaryFile() as log:
         process = subprocess.Popen(
-            ["./gradlew", "bootRun", "--no-daemon"],
+            ["./gradlew", "openApiRun", "--no-daemon"],
             cwd=BACKEND_DIR,
             env=environment,
             stdout=log,

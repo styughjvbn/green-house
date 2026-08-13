@@ -1,5 +1,5 @@
 import { notFound } from "next/navigation";
-import { SalesRoutePage } from "@/features/sales/SalesRoutePage";
+import { SalesRoutePage } from "@/features/sales";
 import { isSalesTab } from "@/shared/config/routes";
 
 export const dynamic = "force-dynamic";
