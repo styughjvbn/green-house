@@ -1,14 +1,21 @@
 package com.greenhouse.backend.sales.application;
 
+import com.greenhouse.backend.common.config.TimeConfig;
 import com.greenhouse.backend.common.exception.NotFoundException;
 import com.greenhouse.backend.farm.application.orchid.OrchidGroupReader;
 import com.greenhouse.backend.farm.domain.orchid.OrchidGroup;
+import com.greenhouse.backend.sales.domain.SalesOrchidSnapshotType;
 import com.greenhouse.backend.sales.domain.SalesSlipItem;
 import com.greenhouse.backend.sales.domain.SalesSlipItemAllocation;
 import com.greenhouse.backend.sales.dto.SalesSlipItemAllocationRequest;
 import com.greenhouse.backend.sales.dto.SalesSlipItemRequest;
+import java.time.Clock;
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 
@@ -17,9 +24,41 @@ import org.springframework.stereotype.Component;
 public class SalesSlipAllocationFactory {
 
 	private final OrchidGroupReader orchidGroupReader;
+	private final Clock clock;
 
-	public SalesSlipItem createItem(SalesSlipItemRequest request) {
-		validateAllocationSum(request);
+	public List<SalesSlipItem> createItems(List<SalesSlipItemRequest> requests) {
+		requests.forEach(this::validateAllocationSum);
+		List<Long> orchidGroupIds = requests.stream()
+				.flatMap(request -> request.allocations().stream())
+				.map(SalesSlipItemAllocationRequest::orchidGroupId)
+				.distinct()
+				.sorted()
+				.toList();
+		Map<Long, OrchidGroup> orchidGroups = orchidGroupReader.findAllDetailsForUpdateByIds(orchidGroupIds).stream()
+					.collect(Collectors.toMap(OrchidGroup::getId, Function.identity()));
+		if (orchidGroups.size() != orchidGroupIds.size()) {
+			throw new NotFoundException("난 묶음을 찾을 수 없습니다.");
+		}
+
+		Map<Long, Integer> requestedByOrchidGroupId = requests.stream()
+				.flatMap(request -> mergeAllocations(request.allocations()).stream())
+				.collect(Collectors.toMap(
+						SalesSlipItemAllocationRequest::orchidGroupId,
+						SalesSlipItemAllocationRequest::quantity,
+						Integer::sum));
+		requestedByOrchidGroupId.forEach((orchidGroupId, quantity) -> {
+			if (orchidGroups.get(orchidGroupId).getAvailableQuantity() < quantity) {
+				throw new IllegalArgumentException("난 묶음 가용 수량이 부족합니다.");
+			}
+		});
+		LocalDateTime capturedAt = TimeConfig.utcNow(clock);
+		return requests.stream().map(request -> createItem(request, orchidGroups, capturedAt)).toList();
+	}
+
+	private SalesSlipItem createItem(
+			SalesSlipItemRequest request,
+			Map<Long, OrchidGroup> orchidGroups,
+			LocalDateTime capturedAt) {
 		var item = new SalesSlipItem(
 				null,
 				SalesTextNormalizer.required(request.itemName()),
@@ -29,15 +68,24 @@ public class SalesSlipAllocationFactory {
 				request.unitPrice(),
 				SalesTextNormalizer.normalize(request.memo()));
 		for (SalesSlipItemAllocationRequest allocationRequest : mergeAllocations(request.allocations())) {
-			OrchidGroup orchidGroup = orchidGroupReader.findDetailById(allocationRequest.orchidGroupId())
-					.orElseThrow(() -> new NotFoundException("난 묶음을 찾을 수 없습니다."));
+			OrchidGroup orchidGroup = orchidGroups.get(allocationRequest.orchidGroupId());
 			validateItemVariety(request, orchidGroup);
-			if (orchidGroup.getAvailableQuantity() < allocationRequest.quantity()) {
-				throw new IllegalArgumentException("난 묶음 가용 수량이 부족합니다.");
-			}
-			item.addAllocation(new SalesSlipItemAllocation(orchidGroup, allocationRequest.quantity()));
+			item.addAllocation(createAllocation(orchidGroup, allocationRequest.quantity(), capturedAt));
 		}
 		return item;
+	}
+
+	public SalesSlipItemAllocation copyAllocation(SalesSlipItemAllocation allocation) {
+		return allocation.copy();
+	}
+
+	private SalesSlipItemAllocation createAllocation(
+			OrchidGroup orchidGroup,
+			Integer allocatedQuantity,
+			LocalDateTime capturedAt) {
+		SalesSlipItemAllocation allocation = new SalesSlipItemAllocation(orchidGroup, allocatedQuantity);
+		allocation.captureSnapshot(SalesOrchidSnapshotType.CREATION, capturedAt);
+		return allocation;
 	}
 
 	private List<SalesSlipItemAllocationRequest> mergeAllocations(List<SalesSlipItemAllocationRequest> allocations) {

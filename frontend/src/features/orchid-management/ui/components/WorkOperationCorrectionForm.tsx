@@ -4,6 +4,7 @@ import { useRouter } from "next/navigation";
 import { type FormEvent, useEffect, useState } from "react";
 import type { OrchidGroup } from "@/entities/farm/types";
 import { createUuid } from "@/shared/lib/id";
+import { useRuntimeContext } from "@/shared/runtime/RuntimeContext";
 import {
   createWorkOperationCorrection,
   getWorkOperationCorrections,
@@ -20,11 +21,10 @@ export default function WorkOperationCorrectionForm({
   onClose: () => void;
 }) {
   const router = useRouter();
+  const { businessDate } = useRuntimeContext();
   const [idempotencyKey, setIdempotencyKey] = useState(createUuid);
   const [title, setTitle] = useState(`${orchidGroup.varietyName} 결과 보정`);
-  const [workDate, setWorkDate] = useState(() =>
-    new Date().toISOString().slice(0, 10),
-  );
+  const [workDate, setWorkDate] = useState(businessDate);
   const [quantity, setQuantity] = useState(String(orchidGroup.quantity));
   const [status, setStatus] = useState(orchidGroup.status);
   const [reason, setReason] = useState("");
@@ -40,7 +40,10 @@ export default function WorkOperationCorrectionForm({
     let active = true;
     void getWorkOperationCorrections(originalWorkOperationId)
       .then((result) => {
-        if (active) setCorrections(result);
+        if (active) {
+          setCorrections(result);
+          setWorkDate(result.originalOperation.plannedStartDate);
+        }
       })
       .catch((cause: unknown) => {
         if (active) {
@@ -72,9 +75,10 @@ export default function WorkOperationCorrectionForm({
     }
     if (
       nextQuantity === orchidGroup.quantity &&
-      status.trim() === orchidGroup.status
+      status.trim() === orchidGroup.status &&
+      workDate === corrections?.originalOperation.plannedStartDate
     ) {
-      setError("수량 또는 상태를 기존 값과 다르게 입력해주세요.");
+      setError("수량, 상태 또는 작업일을 기존 값과 다르게 입력해주세요.");
       return;
     }
 
@@ -117,7 +121,7 @@ export default function WorkOperationCorrectionForm({
             구조 변경 결과 보정
           </p>
           <p className="mt-1 text-xs text-[#5c6a60]">
-            삭제하지 않고 수량·상태 변경 전후를 작업 이력에 남깁니다.
+            삭제하지 않고 작업일·수량·상태 변경 전후를 작업 이력에 남깁니다.
           </p>
         </div>
         <button
@@ -132,8 +136,9 @@ export default function WorkOperationCorrectionForm({
       <div className="mt-3 rounded-md border border-[#ead9b9] bg-[#fffaf0] p-3 text-sm">
         <p className="font-bold text-[#17251b]">{orchidGroup.varietyName}</p>
         <p className="mt-1 text-xs text-[#5c6a60]">
-          현재 {orchidGroup.quantity}분 · 상태 {orchidGroup.status} · 원본 작업
-          #{originalWorkOperationId}
+          현재 {orchidGroup.quantity}분 · 상태 {orchidGroup.status} · 작업일{" "}
+          {corrections?.originalOperation.plannedStartDate ?? "확인 중"} · 원본
+          작업 #{originalWorkOperationId}
         </p>
       </div>
 
@@ -141,7 +146,7 @@ export default function WorkOperationCorrectionForm({
         <div className="grid grid-cols-2 gap-2">
           <Field label="보정 작업명" value={title} onChange={setTitle} />
           <Field
-            label="작업일"
+            label="보정 후 작업일"
             type="date"
             value={workDate}
             onChange={setWorkDate}
@@ -206,6 +211,15 @@ export default function WorkOperationCorrectionForm({
                   {item.correctionOperation.title}
                 </p>
                 <p className="mt-1 text-[#5c6a60]">{item.reason}</p>
+                {item.effectDetails.beforeWorkDate &&
+                item.effectDetails.afterWorkDate &&
+                item.effectDetails.beforeWorkDate !==
+                  item.effectDetails.afterWorkDate ? (
+                  <p className="mt-1 text-[#435047]">
+                    작업일 {item.effectDetails.beforeWorkDate} →{" "}
+                    {item.effectDetails.afterWorkDate}
+                  </p>
+                ) : null}
                 {(item.effectDetails.adjustments ?? []).map((adjustment) => (
                   <p
                     className="mt-1 text-[#435047]"

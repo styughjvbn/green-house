@@ -11,8 +11,8 @@ export default function BedNavigationToolbar({
   houses,
   startHouseId,
   visibleBedCount,
-  hasPrevious,
-  hasNext,
+  hasPreviousHouse,
+  hasNextHouse,
   distinguishVarietyColors,
   createActive,
   showScale,
@@ -27,8 +27,8 @@ export default function BedNavigationToolbar({
   houses: HouseStatusSummary[];
   startHouseId: number | null;
   visibleBedCount: VisibleBedCount;
-  hasPrevious: boolean;
-  hasNext: boolean;
+  hasPreviousHouse: boolean;
+  hasNextHouse: boolean;
   distinguishVarietyColors: boolean;
   createActive: boolean;
   showScale: boolean;
@@ -43,9 +43,9 @@ export default function BedNavigationToolbar({
   return (
     <section className="flex flex-wrap items-center gap-2 rounded-md border border-[#e2e7df] bg-white px-3 py-2 shadow-sm">
       <button
-        aria-label="이전 다이"
+        aria-label="이전 동"
         className="flex h-8 w-8 items-center justify-center rounded-md border border-[#dfe5dc] disabled:cursor-not-allowed disabled:opacity-40"
-        disabled={!hasPrevious}
+        disabled={!hasPreviousHouse}
         type="button"
         onClick={onPrevious}
       >
@@ -64,9 +64,9 @@ export default function BedNavigationToolbar({
         ))}
       </select>
       <button
-        aria-label="다음 다이"
+        aria-label="다음 동"
         className="flex h-8 w-8 items-center justify-center rounded-md border border-[#dfe5dc] disabled:cursor-not-allowed disabled:opacity-40"
-        disabled={!hasNext}
+        disabled={!hasNextHouse}
         type="button"
         onClick={onNext}
       >

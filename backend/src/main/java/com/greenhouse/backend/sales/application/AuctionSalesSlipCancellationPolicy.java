@@ -4,6 +4,9 @@ import com.greenhouse.backend.auction.application.AuctionShipmentLifecycleServic
 import com.greenhouse.backend.sales.domain.SalesSlip;
 import com.greenhouse.backend.settlement.application.AuctionSettlementReader;
 import lombok.RequiredArgsConstructor;
+import java.util.Collection;
+import java.util.HashSet;
+import java.util.Set;
 import org.springframework.stereotype.Component;
 
 @Component
@@ -27,5 +30,15 @@ public class AuctionSalesSlipCancellationPolicy {
 		var shipment = salesSlip.getAuctionShipment();
 		salesSlip.clearAuctionShipment();
 		auctionShipmentLifecycleService.deleteDraftShipment(shipment);
+	}
+
+	public Set<Long> findNonCancelableShipmentIds(Collection<Long> shipmentIds) {
+		if (shipmentIds.isEmpty()) {
+			return Set.of();
+		}
+		Set<Long> blockedShipmentIds = new HashSet<>(
+				auctionSettlementReader.findSettledAuctionShipmentIds(shipmentIds));
+		blockedShipmentIds.addAll(auctionShipmentLifecycleService.findShipmentIdsWithResults(shipmentIds));
+		return Set.copyOf(blockedShipmentIds);
 	}
 }

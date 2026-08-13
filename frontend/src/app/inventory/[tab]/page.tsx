@@ -1,5 +1,5 @@
 import { notFound } from "next/navigation";
-import { InventoryRoutePage } from "@/features/inventory/InventoryRoutePage";
+import { InventoryRoutePage } from "@/features/inventory";
 import { isInventoryTab } from "@/shared/config/routes";
 
 export const dynamic = "force-dynamic";

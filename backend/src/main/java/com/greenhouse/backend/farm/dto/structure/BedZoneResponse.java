@@ -1,6 +1,7 @@
 package com.greenhouse.backend.farm.dto.structure;
 
 import com.greenhouse.backend.farm.dto.orchid.OrchidGroupResponse;
+import com.greenhouse.backend.farm.domain.orchid.OrchidGroup;
 import com.greenhouse.backend.farm.domain.structure.BedZone;
 import com.greenhouse.backend.farm.domain.structure.BedZoneSide;
 import com.greenhouse.backend.farm.domain.structure.BedZoneType;
@@ -21,6 +22,10 @@ public record BedZoneResponse(
 		List<OrchidGroupResponse> orchidGroups) {
 
 	public static BedZoneResponse from(BedZone bedZone) {
+		return from(bedZone, bedZone.getOrchidGroups());
+	}
+
+	public static BedZoneResponse from(BedZone bedZone, List<OrchidGroup> groups) {
 		var physicalBed = bedZone.getPhysicalBed();
 		var house = physicalBed.getHouse();
 		return new BedZoneResponse(
@@ -35,7 +40,7 @@ public record BedZoneResponse(
 				bedZone.getSortOrder(),
 				bedZone.getActive(),
 				bedZone.getMemo(),
-				bedZone.getOrchidGroups().stream()
+				groups.stream()
 						.filter(orchidGroup -> orchidGroup.getQuantity() != null && orchidGroup.getQuantity() > 0)
 						.map(OrchidGroupResponse::from)
 						.toList());

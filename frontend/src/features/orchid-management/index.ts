@@ -1,12 +1,11 @@
 export { OrchidManagementRoutePage } from "./OrchidManagementRoutePage";
 export { OrchidManagementMap } from "./ui/OrchidManagementMap";
+export { OrchidClipboardProvider } from "./model/OrchidClipboardContext";
 
 export {
   getHouse,
-  getOrchidWorkTypes,
   getOrchidManagementMap,
   getOrchidManagementViewport,
-  createOrchidWorkOperation,
   fetchHouse,
   createOrchidGroup,
   updateOrchidGroup,

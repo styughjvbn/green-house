@@ -50,7 +50,7 @@ public class OrchidGroupMovementService {
 		immediateWorkExecutionService.executeForTarget(
 				"DIRECT_MOVE:" + UUID.randomUUID(),
 				WorkType.MOVEMENT_CODE,
-				"위치 이동",
+				"자리 이동",
 				TimeConfig.farmToday(clock),
 				worker,
 				request.memo(),

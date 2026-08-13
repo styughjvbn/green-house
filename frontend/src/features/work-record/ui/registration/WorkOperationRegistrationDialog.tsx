@@ -1,9 +1,9 @@
 "use client";
 
-import { useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { X } from "lucide-react";
-import type { House, WorkType } from "@/entities/farm/types";
+import type { House, WorkTargetPreview, WorkType } from "@/entities/farm/types";
+import { previewWorkOperationTargets } from "../../api/workRecordApi";
 import {
   workHousesQueryOptions,
   workTypesQueryOptions,
@@ -15,23 +15,54 @@ import { WorkOperationPlanForm } from "./WorkOperationPlanForm";
 import { WorkTargetSelectionDialog } from "./WorkTargetSelectionDialog";
 
 export function WorkOperationRegistrationDialog({
+  presetOrchidGroupIds = [],
+  presetWorkTypeCode,
   onClose,
   onSaved,
 }: {
+  presetOrchidGroupIds?: number[];
+  presetWorkTypeCode?: string;
   onClose: () => void;
   onSaved?: () => void;
 }) {
   const housesQuery = useQuery(workHousesQueryOptions());
   const workTypesQuery = useQuery(workTypesQueryOptions());
-  const error = housesQuery.error ?? workTypesQuery.error;
+  const presetPreviewQuery = useQuery({
+    queryKey: [
+      "workRecords",
+      "registration",
+      "presetTargets",
+      ...presetOrchidGroupIds,
+    ],
+    queryFn: () =>
+      previewWorkOperationTargets({
+        scopeType: "MANUAL_SELECTION",
+        orchidGroupIds: presetOrchidGroupIds,
+      }),
+    enabled: presetOrchidGroupIds.length > 0,
+  });
+  const error =
+    housesQuery.error ?? workTypesQuery.error ?? presetPreviewQuery.error;
+  const presetPreviewLoading =
+    presetOrchidGroupIds.length > 0 && presetPreviewQuery.data == null;
 
-  if (housesQuery.data == null || workTypesQuery.data == null) {
+  if (
+    housesQuery.data == null ||
+    workTypesQuery.data == null ||
+    presetPreviewLoading
+  ) {
     return (
       <WorkOperationRegistrationStatusDialog
         error={error}
         onClose={onClose}
         onRetry={() =>
-          void Promise.all([housesQuery.refetch(), workTypesQuery.refetch()])
+          void Promise.all([
+            housesQuery.refetch(),
+            workTypesQuery.refetch(),
+            ...(presetOrchidGroupIds.length > 0
+              ? [presetPreviewQuery.refetch()]
+              : []),
+          ])
         }
       />
     );
@@ -40,6 +71,9 @@ export function WorkOperationRegistrationDialog({
   return (
     <WorkOperationRegistrationContent
       houses={housesQuery.data}
+      presetOrchidGroupIds={presetOrchidGroupIds}
+      presetPreview={presetPreviewQuery.data ?? null}
+      presetWorkTypeCode={presetWorkTypeCode}
       workTypes={workTypesQuery.data}
       onClose={onClose}
       onSaved={onSaved}
@@ -49,11 +83,17 @@ export function WorkOperationRegistrationDialog({
 
 function WorkOperationRegistrationContent({
   houses,
+  presetOrchidGroupIds,
+  presetPreview,
+  presetWorkTypeCode,
   workTypes,
   onClose,
   onSaved,
 }: {
   houses: House[];
+  presetOrchidGroupIds: number[];
+  presetPreview: WorkTargetPreview | null;
+  presetWorkTypeCode?: string;
   workTypes: WorkType[];
   onClose: () => void;
   onSaved?: () => void;
@@ -62,6 +102,9 @@ function WorkOperationRegistrationContent({
     houses,
     onClose,
     onSaved,
+    presetOrchidGroupIds,
+    presetPreview,
+    presetWorkTypeCode,
     workTypes,
   });
   const requestClose = () => {
@@ -131,6 +174,7 @@ function WorkOperationRegistrationContent({
                 ? registration.inboundRecordIds.size
                 : registration.manualIds.size
             }
+            targetLocked={registration.targetLocked}
             targetSummary={registration.targetSummary}
             workTypes={registration.schedulableWorkTypes}
             onCancel={requestClose}

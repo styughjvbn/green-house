@@ -22,17 +22,24 @@ import com.greenhouse.backend.sales.domain.SalesSlip;
 import com.greenhouse.backend.sales.domain.SalesSlipItem;
 import com.greenhouse.backend.sales.domain.SalesSlipItemAllocation;
 import com.greenhouse.backend.sales.domain.SalesType;
+import com.greenhouse.backend.sales.domain.SalesInventoryMovementType;
+import com.greenhouse.backend.sales.repository.SalesInventoryMovementRepository;
 import com.greenhouse.backend.sales.repository.SalesSlipRepository;
+import com.greenhouse.backend.settlement.repository.PartnerBalanceSummaryRepository;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.MediaType;
+import org.springframework.transaction.annotation.Transactional;
 
+@Transactional
 class SalesSlipAuditIntegrationTest extends AbstractBackendIntegrationTest {
 	@Autowired AuditEventRepository auditEventRepository;
 	@Autowired BusinessPartnerRepository partnerRepository;
 	@Autowired SalesSlipRepository salesSlipRepository;
+	@Autowired SalesInventoryMovementRepository inventoryMovementRepository;
+	@Autowired PartnerBalanceSummaryRepository balanceSummaryRepository;
 
 	@Test
 	void recordsDirectSlipEditAndCancellation() throws Exception {
@@ -50,6 +57,8 @@ class SalesSlipAuditIntegrationTest extends AbstractBackendIntegrationTest {
 		orchidGroupRepository.saveAndFlush(group);
 		BusinessPartner partner = partnerRepository.saveAndFlush(new BusinessPartner(
 				"판매 감사 거래처", PartnerType.WHOLESALE, null, null, null, null));
+		BusinessPartner nextPartner = partnerRepository.saveAndFlush(new BusinessPartner(
+				"판매 수정 거래처", PartnerType.WHOLESALE, null, null, null, null));
 		SalesSlip slip = new SalesSlip("AUDIT-" + System.nanoTime(), LocalDate.of(2026, 8, 1),
 				SalesType.DIRECT, null, partner, "미입금", "작성중", "현금", "최초");
 		SalesSlipItem item = new SalesSlipItem(null, variety.getName(), variety.getGenus(), "4인치", 2, 1000, "품목");
@@ -66,8 +75,16 @@ class SalesSlipAuditIntegrationTest extends AbstractBackendIntegrationTest {
 						 "paymentStatus":"미입금","salesStatus":"작성중","paymentMethod":"계좌이체","memo":"수정",
 						 "items":[{"itemName":"%s","genus":"%s","spec":"5인치","quantity":1,
 						 "unitPrice":2000,"memo":"수정 품목","allocations":[{"orchidGroupId":%d,"quantity":1}]}]}
-						""".formatted(partner.getId(), variety.getName(), variety.getGenus(), group.getId())))
+						""".formatted(nextPartner.getId(), variety.getName(), variety.getGenus(), group.getId())))
 				.andExpect(status().isOk());
+		assertThat(inventoryMovementRepository.findBySalesSlipIdAndChangeType(
+				slip.getId(), SalesInventoryMovementType.SALES_RELEASE)).hasSize(1);
+		assertThat(inventoryMovementRepository.findBySalesSlipIdAndChangeType(
+				slip.getId(), SalesInventoryMovementType.SALES_RESERVE)).hasSize(1);
+		assertThat(balanceSummaryRepository.findByPartnerId(partner.getId()).orElseThrow().getReceivableBalance())
+				.isZero();
+		assertThat(balanceSummaryRepository.findByPartnerId(nextPartner.getId()).orElseThrow().getReceivableBalance())
+				.isEqualTo(2_000L);
 		mockMvc.perform(patch("/api/sales-slips/{id}/sales-status", slip.getId())
 				.with(user("operator"))
 				.contentType(MediaType.APPLICATION_JSON)

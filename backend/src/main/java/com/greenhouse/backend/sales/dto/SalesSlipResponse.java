@@ -4,7 +4,9 @@ import com.greenhouse.backend.sales.domain.SalesSlip;
 import java.time.LocalDate;
 import java.util.List;
 import com.greenhouse.backend.sales.domain.SalesType;
+import com.greenhouse.backend.sales.domain.SalesSlipItemAllocation;
 import com.greenhouse.backend.partner.dto.BusinessPartnerResponse;
+import java.util.Map;
 
 public record SalesSlipResponse(
 		Long id,
@@ -22,9 +24,13 @@ public record SalesSlipResponse(
 		String salesStatus,
 		String paymentMethod,
 		String memo,
-		List<SalesSlipItemResponse> items) {
+		List<SalesSlipItemResponse> items,
+		List<SalesSlipAction> availableActions) {
 
-	public static SalesSlipResponse from(SalesSlip salesSlip) {
+	public static SalesSlipResponse from(
+			SalesSlip salesSlip,
+			Map<Long, List<SalesSlipItemAllocation>> allocationsByItemId,
+			List<SalesSlipAction> availableActions) {
 		return new SalesSlipResponse(
 				salesSlip.getId(),
 				salesSlip.getSlipNumber(),
@@ -41,6 +47,13 @@ public record SalesSlipResponse(
 				salesSlip.getSalesStatus(),
 				salesSlip.getPaymentMethod(),
 				salesSlip.getMemo(),
-				salesSlip.getItems().stream().map(SalesSlipItemResponse::from).toList());
+				salesSlip.getItems().stream()
+						.map(item -> allocationsByItemId == null
+								? SalesSlipItemResponse.from(item)
+								: SalesSlipItemResponse.from(
+										item,
+										allocationsByItemId.getOrDefault(item.getId(), List.of())))
+						.toList(),
+				availableActions);
 	}
 }

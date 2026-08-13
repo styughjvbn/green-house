@@ -1,273 +1,55 @@
 # API Index for Codex
 
-이 문서는 Codex가 API 영역을 빠르게 찾기 위한 색인이다.  
-요청/응답 필드 상세는 이 문서에 중복하지 말고 `docs/api/openapi.yaml`, `docs/api/slices/*.openapi.yaml`, 실제 Controller/Request/Response 코드를 확인한다.
+이 문서는 관련 API 도메인과 slice 위치를 빠르게 찾기 위한 색인이다.
+요청/응답 필드, required 여부, enum, endpoint 목록은 이 문서에 중복하지 않는다.
 
 ## 기준
 
-- 기준 명세: `docs/api/openapi.yaml`
+- 전체 명세: `docs/api/openapi.yaml`
+- 도메인 명세: `docs/api/slices/*.openapi.yaml`
 - OpenAPI 버전: `3.1.0`
-- 현재 구현 API: `125` operations / `104` path entries
-- schema 수: `192`
 - Base URL: `/api`
 - 공통 응답: `ApiResponse*` 래퍼 사용
+- 생성 명령: `python3 scripts/generate_openapi.py`
 
-## Codex 조회 순서
+## 조회 순서
 
-1. 먼저 이 파일에서 관련 도메인과 패키지를 찾는다.
-2. 도메인 규칙이 필요하면 `docs/api/DOMAIN_RULES.md`를 읽는다.
-3. 요청/응답 필드가 필요하면 해당 `docs/api/slices/*.openapi.yaml`만 읽는다.
-4. 전체 비교, 타입 생성, 명세 검증이 필요할 때만 `docs/api/openapi.yaml` 전체를 읽는다.
-5. 코드에서 바로 알 수 있는 필드/타입/required 여부를 새 md 문서에 중복 작성하지 않는다.
+1. 아래 표에서 관련 도메인과 slice를 찾는다.
+2. 요청/응답 계약은 해당 slice 또는 실제 Controller/DTO를 확인한다.
+3. 코드만 보고 오해하기 쉬운 정책은 `DOMAIN_RULES.md`를 확인한다.
+4. 미구현·과거 초안과의 차이는 `API_GAP_ANALYSIS.md`를 확인한다.
+5. 전체 비교와 타입 생성이 필요할 때만 `openapi.yaml` 전체를 읽는다.
 
 ## 도메인별 색인
 
-### 농장 구조
-
-- slice: `docs/api/slices/farm-structure.openapi.yaml`
-- package 후보: `com.greenhouse.backend.farm`
-- controller tags: `farm-structure-controller`, `orchid-group-query-controller`
-- 역할: 동, 물리 배드, 논리 구역, 난 묶음 조회 API
-- operations: 8
-
-| Method | Path | Operation | Request | Response |
+| 도메인 | Slice | Controller tag | Package 후보 | 역할 |
 |---|---|---|---|---|
-| `GET` | `/api/bed-zones` | `getBedZones` | `-` | `200:ApiResponseListBedZoneResponse` |
-| `GET` | `/api/bed-zones/{bedZoneId}` | `getBedZone` | `-` | `200:ApiResponseBedZoneResponse` |
-| `GET` | `/api/houses` | `getHouses` | `-` | `200:ApiResponseListHouseResponse` |
-| `GET` | `/api/houses/{houseId}` | `getHouse` | `-` | `200:ApiResponseHouseResponse` |
-| `GET` | `/api/orchid-groups` | `getOrchidGroups` | `-` | `200:ApiResponseListOrchidGroupResponse` |
-| `GET` | `/api/orchid-groups/{orchidGroupId}/lineage` | `getLineage` | `-` | `200:ApiResponseOrchidGroupLineageResponse` |
-| `GET` | `/api/physical-beds` | `getPhysicalBeds` | `-` | `200:ApiResponseListPhysicalBedResponse` |
-| `GET` | `/api/physical-beds/{physicalBedId}` | `getPhysicalBed` | `-` | `200:ApiResponsePhysicalBedResponse` |
+| 인증·앱 컨텍스트 | `auth.openapi.yaml` | `auth-controller` | `com.greenhouse.backend.auth` | 로그인, 로그아웃, 현재 사용자, 농장 업무일자·시간대 |
+| 농장 구조 | `farm-structure.openapi.yaml` | `farm-structure-controller`, `orchid-group-query-controller` | `com.greenhouse.backend.farm` | 동, 물리 배드, 논리 구역, 난 묶음 조회 |
+| 농장 현황 | `farm-status.openapi.yaml` | `farm-status-controller`, `dashboard-controller` | `com.greenhouse.backend.farm`, `dashboard` | 현황 맵, 줌, 선택 범위, 대시보드 요약 |
+| 난 묶음 명령 | `orchid-command.openapi.yaml` | `orchid-group-command-controller`, `bed-placement-controller`, `multi-create-work-operation-controller`, `repot-work-operation-controller` | `com.greenhouse.backend.farm` | 난 묶음 생성·수정·이동·배치와 구조 변경 호환 API |
+| 품종·입고·자재 | `inventory.openapi.yaml` | `variety-controller`, `material-controller`, `inbound-record-controller` | `com.greenhouse.backend.farm` | 품종, 입고 기록, 자재 관리 |
+| 난 묶음 사용자 그룹 | `orchid-collection.openapi.yaml` | `orchid-group-collection-controller` | `com.greenhouse.backend.farm` | 사용자 그룹과 난 묶음 소속 관리 |
+| 난 묶음 자동 그룹 | `derived-orchid-group.openapi.yaml` | `derived-orchid-group-controller` | `com.greenhouse.backend.farm` | 품종·년생·화분 크기 기준 자동 그룹 |
+| 작업 유형 | `work.openapi.yaml` | `work-type-controller` | `com.greenhouse.backend.work` | 작업 유형과 등록·실행 capability metadata |
+| 작업 실행·이력 | `work-operation.openapi.yaml` | `work-operation-controller` | `com.greenhouse.backend.work` | 작업 계획·실행·보정, 대상 스냅샷, 통합 이력 |
+| 거래처 | `partner.openapi.yaml` | `business-partner-controller`, `partner-settlement-settings-controller` | `com.greenhouse.backend.partner`, `settlement` | 거래처와 정산 설정 |
+| 판매 전표 | `sales.openapi.yaml` | `sales-controller`, `print-controller` | `com.greenhouse.backend.sales`, `print` | 판매 전표, 출력, 가능한 업무 action |
+| 분석 | `analytics.openapi.yaml` | `analytics-controller` | `com.greenhouse.backend.analytics` | 판매·거래처·작업 분석 |
+| 경매 | `auction.openapi.yaml` | `auction-tracking-controller`, `auction-settlement-controller` | `com.greenhouse.backend.auction`, `settlement` | lot, 결과, 반환, 수량 보정, 경매 정산 |
+| 입금·정산 이벤트 | `payment.openapi.yaml` | `payment-controller` | `com.greenhouse.backend.settlement` | 수동 입금, 거래처 잔액, 입금 이벤트 |
 
-### 농장 현황
+## 관련 정책 문서
 
-- slice: `docs/api/slices/farm-status.openapi.yaml`
-- package 후보: `com.greenhouse.backend.farm`
-- controller tags: `farm-status-controller`, `dashboard-controller`
-- 역할: 농장 현황 지도, 줌 단계, 선택 대상 난 묶음, 대시보드 요약 API
-- operations: 5
-
-| Method | Path | Operation | Request | Response |
-|---|---|---|---|---|
-| `GET` | `/api/dashboard/summary` | `getSummary` | `-` | `200:ApiResponseDashboardSummaryResponse` |
-| `GET` | `/api/farm-status/map` | `getMap` | `-` | `200:ApiResponseFarmStatusMapResponse` |
-| `GET` | `/api/farm-status/orchid-management` | `getOrchidManagementViewport` | `-` | `200:ApiResponseOrchidManagementViewportResponse` |
-| `GET` | `/api/farm-status/orchid-groups` | `getOrchidGroups_2` | `-` | `200:ApiResponseFarmStatusOrchidGroupListResponse` |
-| `GET` | `/api/farm-status/zoom` | `getZoom` | `-` | `200:ApiResponseFarmStatusZoomResponse` |
-
-### 난 묶음 명령/정밀 배치
-
-- slice: `docs/api/slices/orchid-command.openapi.yaml`
-- package 후보: `com.greenhouse.backend.farm`
-- controller tags: `orchid-group-command-controller`, `bed-placement-controller`, `multi-create-work-operation-controller`, `repot-work-operation-controller`
-- 역할: 난 묶음 생성·수정·삭제·이동, 정밀 배치, 다중 생성·분갈이 구조 변경 API
-- operations: 12
-
-| Method | Path | Operation | Request | Response |
-|---|---|---|---|---|
-| `GET` | `/api/bed-zones/{bedZoneId}/placement-profile` | `get_1` | `-` | `200:ApiResponseBedZonePlacementProfileResponse` |
-| `PUT` | `/api/bed-zones/{bedZoneId}/placement-profile` | `update_1` | `BedZonePlacementProfileRequest` | `200:ApiResponseBedZonePlacementProfileResponse` |
-| `POST` | `/api/orchid-groups` | `create_1` | `OrchidGroupCreateRequest` | `201:ApiResponseOrchidGroupResponse` |
-| `DELETE` | `/api/orchid-groups/{orchidGroupId}` | `delete` | `-` | `200:ApiResponseVoid` |
-| `PATCH` | `/api/orchid-groups/{orchidGroupId}` | `update_2` | `OrchidGroupUpdateRequest` | `200:ApiResponseOrchidGroupResponse` |
-| `PATCH` | `/api/orchid-groups/{orchidGroupId}/move` | `move` | `OrchidGroupMoveRequest` | `200:ApiResponseOrchidGroupResponse` |
-| `POST` | `/api/work-operations/multi-create` | `create_2` | `MultiCreateWorkOperationRequest` | `201:ApiResponseMultiCreateWorkOperationResponse` |
-| `GET` | `/api/work-operations/{workOperationId}/created-orchid-groups` | `get_5` | `-` | `200:ApiResponseMultiCreateWorkOperationResponse` |
-| `GET` | `/api/work-operations/{workOperationId}/cancel-eligibility` | `getCancellationEligibility` | `-` | `200:ApiResponseMultiCreateCancellationEligibilityResponse` |
-| `POST` | `/api/work-operations/{workOperationId}/cancel-created-orchid-groups` | `cancel_1` | `-` | `200:ApiResponseMultiCreateWorkOperationResponse` |
-| `POST` | `/api/work-operations/repot` | `execute` | `RepotWorkOperationRequest` | `201:ApiResponseRepotWorkOperationResponse` |
-| `GET` | `/api/work-operations/{workOperationId}/repot-results` | `get_4` | `-` | `200:ApiResponseRepotWorkOperationResponse` |
-
-### 작업 유형
-
-- slice: `docs/api/slices/work.openapi.yaml`
-- package 후보: `com.greenhouse.backend.work`
-- controller tags: `work-type-controller`
-- 역할: 작업 유형 관리 API
-- operations: 4
-
-| Method | Path | Operation | Request | Response |
-|---|---|---|---|---|
-| `GET` | `/api/work-types` | `getWorkTypes` | `-` | `200:ApiResponseListWorkTypeResponse` |
-| `POST` | `/api/work-types` | `createWorkType` | `WorkTypeCreateRequest` | `201:ApiResponseWorkTypeResponse` |
-| `PATCH` | `/api/work-types/reorder` | `reorderWorkTypes` | `WorkTypeReorderRequest` | `200:ApiResponseListWorkTypeResponse` |
-| `PATCH` | `/api/work-types/{workTypeId}` | `updateWorkType` | `WorkTypeUpdateRequest` | `200:ApiResponseWorkTypeResponse` |
-
-### 품종/입고/자재
-
-- slice: `docs/api/slices/inventory.openapi.yaml`
-- package 후보: `com.greenhouse.backend.farm`
-- controller tags: `variety-controller`, `material-controller`, `inbound-record-controller`
-- 역할: 품종 CRUD/삭제, 자재 CRUD/삭제, 입고 기록 생성·수정·포트 작업·취소·삭제 API
-- operations: 21
-
-| Method | Path | Operation | Request | Response |
-|---|---|---|---|---|
-| `GET` | `/api/inbound-records` | `getInboundRecords` | `-` | `200:ApiResponsePageResponseInboundRecordResponse` |
-| `POST` | `/api/inbound-records` | `create_4` | `InboundRecordCreateRequest` | `201:ApiResponseInboundRecordResponse` |
-| `GET` | `/api/inbound-records/{inboundRecordId}` | `getInboundRecord` | `-` | `200:ApiResponseInboundRecordResponse` |
-| `PATCH` | `/api/inbound-records/{inboundRecordId}` | `update_5` | `InboundRecordUpdateRequest` | `200:ApiResponseInboundRecordResponse` |
-| `DELETE` | `/api/inbound-records/{inboundRecordId}` | `delete` | `-` | `200:ApiResponseVoid` |
-| `POST` | `/api/inbound-records/{inboundRecordId}/cancel` | `cancel` | `InboundRecordCancelRequest` | `200:ApiResponseInboundRecordResponse` |
-| `POST` | `/api/inbound-records/{inboundRecordId}/potting` | `potting` | `InboundRecordPottingRequest` | `200:ApiResponseInboundRecordResponse` |
-| `GET` | `/api/materials` | `getMaterials` | `-` | `200:ApiResponsePageResponseMaterialResponse` |
-| `POST` | `/api/materials` | `create_3` | `MaterialCreateRequest` | `201:ApiResponseMaterialResponse` |
-| `GET` | `/api/materials/{materialId}` | `getMaterial` | `-` | `200:ApiResponseMaterialResponse` |
-| `PATCH` | `/api/materials/{materialId}` | `update_4` | `MaterialUpdateRequest` | `200:ApiResponseMaterialResponse` |
-| `DELETE` | `/api/materials/{materialId}` | `delete_2` | `-` | `200:ApiResponseVoid` |
-| `PATCH` | `/api/materials/{materialId}/deactivate` | `deactivate_1` | `-` | `200:ApiResponseMaterialResponse` |
-| `GET` | `/api/varieties` | `getVarieties` | `-` | `200:ApiResponsePageResponseVarietyResponse` |
-| `POST` | `/api/varieties` | `create_1` | `VarietyCreateRequest` | `201:ApiResponseVarietyResponse` |
-| `GET` | `/api/varieties/genera` | `getGenera` | `-` | `200:ApiResponseVarietyGeneraResponse` |
-| `GET` | `/api/varieties/{varietyId}` | `getVariety` | `-` | `200:ApiResponseVarietyResponse` |
-| `PATCH` | `/api/varieties/{varietyId}` | `update_2` | `VarietyUpdateRequest` | `200:ApiResponseVarietyResponse` |
-| `DELETE` | `/api/varieties/{varietyId}` | `delete_1` | `-` | `200:ApiResponseVoid` |
-| `PATCH` | `/api/varieties/{varietyId}/deactivate` | `deactivate` | `-` | `200:ApiResponseVarietyResponse` |
-| `GET` | `/api/varieties/{varietyId}/orchid-groups` | `getOrchidGroups_1` | `-` | `200:ApiResponseListVarietyConnectedOrchidGroupResponse` |
-
-### 신규 작업 실행
-
-- slice: `docs/api/slices/work-operation.openapi.yaml`
-- package: `com.greenhouse.backend.work`
-- controller tag: `work-operation-controller`
-- 역할: 범위별 기록형 작업의 미리보기·스냅샷·즉시 완료·기간 조회, 난 묶음 통합 이력, 구조 변경 보정 관계
-- operations: 21
-
-| Method | Path | Operation |
-|---|---|---|
-| `POST` | `/api/work-operations/target-preview` | 대상 미리보기 |
-| `POST` | `/api/work-operations` | 작업 생성과 대상 스냅샷 확정 |
-| `POST` | `/api/work-operations/record` | 기록형 작업을 생성하고 즉시 완료 |
-| `POST` | `/api/work-operations/structure-change-records` | 분갈이·분주·합식 전체 결과 작업 기록 |
-| `POST` | `/api/work-operations/structure-change-records/batch` | 혼합 품종의 품종별 구조 변경 기록 일괄 저장 |
-| `POST` | `/api/work-operations/discard-records` | 전체 대상 폐기 결과 작업 기록 |
-| `POST` | `/api/work-operations/inbound-potting-records` | 전체 입고 대상 포트 결과 작업 기록 |
-| `GET` | `/api/work-operations` | 기간·상태·범위별 작업 목록 |
-| `GET` | `/api/work-operations/{workOperationId}` | 작업 상세 |
-| `POST` | `/api/work-operations/{workOperationId}/complete` | 모든 대상 처리 후 전체 작업 완료 |
-| `POST` | `/api/work-operations/{workOperationId}/start` | 기간 작업 시작 |
-| `POST` | `/api/work-operations/{workOperationId}/pause` | 기간 작업 일시중지 |
-| `POST` | `/api/work-operations/{workOperationId}/resume` | 기간 작업 재개 |
-| `POST` | `/api/work-operations/{workOperationId}/cancel` | 미완료 작업 취소 |
-| `POST` | `/api/work-operations/{workOperationId}/targets/{targetId}/start` | 대상 작업 시작 |
-| `POST` | `/api/work-operations/{workOperationId}/targets/{targetId}/complete` | 대상 작업 완료 |
-| `POST` | `/api/work-operations/{workOperationId}/targets/{targetId}/skip` | 대상 건너뛰기 |
-| `GET` | `/api/work-history` | 동·다이·구역·난 묶음 범위의 페이지형 통합 작업 이력 |
-| `GET` | `/api/orchid-groups/{orchidGroupId}/work-history` | `WorkOperation` 기반 난 묶음 이력 |
-| `POST` | `/api/work-operations/{workOperationId}/corrections` | 완료된 구조 변경 작업에 보정 작업 연결 |
-| `GET` | `/api/work-operations/{workOperationId}/corrections` | 원본 작업과 연결된 보정 작업 조회 |
-
-기간 작업 범위는 `HOUSE`, `DERIVED_GROUP`, `USER_COLLECTION`, `MANUAL_SELECTION`을 지원한다. 즉시 완료 기록은 `FARM`, `HOUSE`, `PHYSICAL_BED`, `BED_ZONE`, `ORCHID_GROUP` 범위를 지원하며 일반 생성은 기록형 작업 유형으로 제한한다.
-
-### 난 묶음 사용자 그룹
-
-- slice: `docs/api/slices/orchid-collection.openapi.yaml`
-- package: `com.greenhouse.backend.farm`
-- controller tag: `orchid-group-collection-controller`
-- 역할: 사용자 그룹 생성·수정·보관, 난 묶음 소속 추가·해제·역조회
-- operations: 8
-
-| Method | Path | Operation |
-|---|---|---|
-| `GET` | `/api/orchid-group-collections` | 활성/보관 사용자 그룹 목록 |
-| `POST` | `/api/orchid-group-collections` | 사용자 그룹 생성 |
-| `GET` | `/api/orchid-group-collections/{collectionId}` | 사용자 그룹 상세 |
-| `PATCH` | `/api/orchid-group-collections/{collectionId}` | 이름·설명·목적 수정 |
-| `POST` | `/api/orchid-group-collections/{collectionId}/archive` | 사용자 그룹 보관 |
-| `POST` | `/api/orchid-group-collections/{collectionId}/members` | 난 묶음 소속 일괄 추가 |
-| `DELETE` | `/api/orchid-group-collections/{collectionId}/members/{orchidGroupId}` | 난 묶음 소속 해제 |
-| `GET` | `/api/orchid-groups/{orchidGroupId}/collections` | 난 묶음의 사용자 그룹 역조회 |
-
-### 난 묶음 자동 그룹
-
-- slice: `docs/api/slices/derived-orchid-group.openapi.yaml`
-- package: `com.greenhouse.backend.farm`
-- controller tag: `derived-orchid-group-controller`
-- 역할: 품종·현재 년생·화분 크기 기준 실시간 그룹 집계와 구성원 조회
-- operations: 2
-
-| Method | Path | Operation |
-|---|---|---|
-| `GET` | `/api/orchid-groups/derived-groups` | 자동 그룹 목록과 묶음 수·총수량·위치 수 집계 |
-| `GET` | `/api/orchid-groups/derived-groups/{groupKey}/members` | 현재 조건에 해당하는 구성원 조회 |
-
-### 거래처
-
-- slice: `docs/api/slices/partner.openapi.yaml`
-- package 후보: `com.greenhouse.backend.partner`
-- controller tags: `business-partner-controller`, `partner-settlement-settings-controller`
-- 역할: 거래처 조회·등록과 거래처 정산 설정 API
-- operations: 6
-
-| Method | Path | Operation | Request | Response |
-|---|---|---|---|---|
-| `GET` | `/api/business-partners` | `getPartners` | `-` | `200:ApiResponseListBusinessPartnerResponse` |
-| `POST` | `/api/business-partners` | `create_7` | `BusinessPartnerCreateRequest` | `201:ApiResponseBusinessPartnerResponse` |
-| `GET` | `/api/business-partners/page` | `getPartnerPage` | `-` | `200:ApiResponsePageResponseBusinessPartnerResponse` |
-| `PUT` | `/api/business-partners/{partnerId}` | `update` | `BusinessPartnerUpdateRequest` | `200:ApiResponseBusinessPartnerResponse` |
-| `GET` | `/api/business-partners/{partnerId}/settlement-settings` | `get` | `-` | `200:ApiResponsePartnerSettlementSettingsResponse` |
-| `PUT` | `/api/business-partners/{partnerId}/settlement-settings` | `update_1` | `PartnerSettlementSettingsRequest` | `200:ApiResponsePartnerSettlementSettingsResponse` |
-
-### 판매 전표
-
-- slice: `docs/api/slices/sales.openapi.yaml`
-- package 후보: `com.greenhouse.backend.sales`
-- controller tags: `sales-controller`
-- 역할: 판매 전표 조회·생성·출력, 경매 출하 전표 후보 API
-- operations: 11
-
-| Method | Path | Operation | Request | Response |
-|---|---|---|---|---|
-| `GET` | `/api/sales-slips` | `getSalesSlips` | `-` | `200:ApiResponseListSalesSlipResponse` |
-| `GET` | `/api/sales-slips/page` | `getSalesSlipPage` | `-` | `200:ApiResponsePageResponseSalesSlipListItemResponse` |
-| `GET` | `/api/analytics/sales` | `getSalesAnalytics` | `-` | `200:ApiResponseSalesAnalyticsResponse` |
-| `GET` | `/api/analytics/partners` | `getPartnerAnalytics` | `-` | `200:ApiResponsePartnerAnalyticsResponse` |
-| `GET` | `/api/analytics/work` | `getWorkAnalytics` | `-` | `200:ApiResponseWorkAnalyticsResponse` |
-| `POST` | `/api/sales-slips` | `createSalesSlip` | `SalesSlipCreateRequest` | `201:ApiResponseSalesSlipResponse` |
-| `GET` | `/api/sales-slips/auction-shipments` | `getAuctionShipmentOptions` | `-` | `200:ApiResponseListAuctionShipmentOptionResponse` |
-| `GET` | `/api/sales-slips/{salesSlipId}` | `getSalesSlip` | `-` | `200:ApiResponseSalesSlipResponse` |
-| `GET` | `/api/sales-slips/{salesSlipId}/print` | `getSalesSlipPrintData` | `-` | `200:ApiResponseSalesSlipResponse` |
-| `GET` | `/api/sales-slips/print` | `getPrintableSalesSlips` | `-` | `200:ApiResponsePageResponseSalesSlipListItemResponse` |
-
-### 출하·경매 추적/정산
-
-- slice: `docs/api/slices/auction.openapi.yaml`
-- package 후보: `com.greenhouse.backend.auction`
-- controller tags: `auction-tracking-controller`, `auction-settlement-controller`
-- 역할: 경매 lot 조회·상태 변경·반환 확인·수량 보정·경매 정산 API
-- operations: 11
-
-| Method | Path | Operation | Request | Response |
-|---|---|---|---|---|
-| `GET` | `/api/auction-lots` | `getLots` | `-` | `200:ApiResponsePageResponseAuctionLotResponse` |
-| `GET` | `/api/auction-lots/{id}` | `getLot` | `-` | `200:ApiResponseAuctionLotResponse` |
-| `POST` | `/api/auction-lots/{id}/adjust-quantity` | `adjust` | `AuctionLotAdjustmentRequest` | `200:ApiResponseAuctionLotResponse` |
-| `POST` | `/api/auction-lots/{id}/confirm-return` | `confirmReturn` | `AuctionLotReturnRequest` | `200:ApiResponseAuctionLotResponse` |
-| `PATCH` | `/api/auction-lots/{id}/status` | `changeStatus` | `AuctionLotStatusRequest` | `200:ApiResponseAuctionLotResponse` |
-| `GET` | `/api/auction-lots/{id}/timeline` | `getTimeline` | `-` | `200:ApiResponseAuctionLotResponse` |
-| `GET` | `/api/auction-settlements` | `getSettlements` | `-` | `200:ApiResponseListAuctionSettlementResponse` |
-| `POST` | `/api/auction-settlements/rebuild` | `rebuild` | `-` | `200:ApiResponseAuctionSettlementResponse` |
-| `GET` | `/api/auction-settlements/{settlementId}` | `getSettlement` | `-` | `200:ApiResponseAuctionSettlementResponse` |
-| `GET` | `/api/auction-tracking/summary` | `getSummary_1` | `-` | `200:ApiResponseAuctionTrackingSummaryResponse` |
-
-### 입금/정산 이벤트
-
-- slice: `docs/api/slices/payment.openapi.yaml`
-- package 후보: `com.greenhouse.backend.settlement`
-- controller tags: `payment-controller`
-- 역할: 수동 입금 확인, 입금 이벤트 조회, 거래처 잔액 요약 API
-- operations: 3
-
-| Method | Path | Operation | Request | Response |
-|---|---|---|---|---|
-| `POST` | `/api/auction-settlements/{settlementId}/confirm-payment` | `confirmAuctionPayment` | `ManualPaymentRequest` | `200:ApiResponseAuctionSettlementResponse` |
-| `GET` | `/api/business-partners/{partnerId}/balance-summary` | `getBalance` | `-` | `200:ApiResponsePartnerBalanceSummaryResponse` |
-| `GET` | `/api/partner-payment-events` | `getEvents` | `-` | `200:ApiResponseListPartnerPaymentEventResponse` |
-| `POST` | `/api/sales-slips/{salesSlipId}/confirm-payment` | `confirmSalesSlipPayment` | `ManualPaymentRequest` | `200:ApiResponseSalesSlipResponse` |
+| 변경 영역 | 함께 확인할 문서 |
+|---|---|
+| 판매·경매·정산·입금 | `docs/features/sales-auction-settlement.md` |
+| 인증·세션·공개 앱 컨텍스트 | `docs/features/authentication.md` |
+| 작업 실행·그룹·이력 | `docs/features/work-operation-and-orchid-collection.md` |
+| API 사용·생성 방식 | `docs/06-api-guide.md` |
+| 도메인 규칙 | `docs/api/DOMAIN_RULES.md` |
 
 ## 주의
 
-`docs/api/API_GAP_ANALYSIS.md`에 적힌 미구현/제안 API는 실제 구현으로 가정하지 않는다.  
-프론트나 테스트 코드를 작성할 때는 반드시 OpenAPI 또는 Controller 코드에 노출된 API만 호출한다.
+`API_GAP_ANALYSIS.md`에 적힌 미구현 또는 제안 API는 실제 구현으로 가정하지 않는다.
+프론트와 테스트는 반드시 생성된 OpenAPI 또는 실제 Controller에 노출된 API만 호출한다.

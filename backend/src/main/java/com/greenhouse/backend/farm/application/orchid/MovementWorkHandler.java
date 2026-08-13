@@ -2,6 +2,7 @@ package com.greenhouse.backend.farm.application.orchid;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.greenhouse.backend.farm.dto.orchid.OrchidGroupMoveRequest;
+import com.greenhouse.backend.farm.application.transformation.StructureChangeExecutor;
 import com.greenhouse.backend.work.application.effect.WorkEffectCommand;
 import com.greenhouse.backend.work.application.effect.WorkEffectHandler;
 import com.greenhouse.backend.work.application.effect.WorkExecutionResult;
@@ -9,6 +10,7 @@ import com.greenhouse.backend.work.domain.effect.WorkEffectKind;
 import com.greenhouse.backend.work.domain.operation.WorkOperation;
 import com.greenhouse.backend.work.domain.target.WorkOperationTarget;
 import com.greenhouse.backend.work.domain.target.WorkTargetReferenceType;
+import com.greenhouse.backend.work.dto.effect.StructureChangeExecutionRequest;
 import java.util.LinkedHashMap;
 import java.util.List;
 import org.springframework.stereotype.Component;
@@ -17,10 +19,14 @@ import org.springframework.stereotype.Component;
 public class MovementWorkHandler implements WorkEffectHandler {
 
 	private final OrchidGroupCommandService orchidGroupCommandService;
+	private final StructureChangeExecutor structureChangeExecutor;
 	private final ObjectMapper objectMapper = new ObjectMapper().findAndRegisterModules();
 
-	public MovementWorkHandler(OrchidGroupCommandService orchidGroupCommandService) {
+	public MovementWorkHandler(
+			OrchidGroupCommandService orchidGroupCommandService,
+			StructureChangeExecutor structureChangeExecutor) {
 		this.orchidGroupCommandService = orchidGroupCommandService;
+		this.structureChangeExecutor = structureChangeExecutor;
 	}
 
 	@Override public String supports() { return "MOVE"; }
@@ -31,6 +37,9 @@ public class MovementWorkHandler implements WorkEffectHandler {
 			WorkOperation operation,
 			WorkOperationTarget target,
 			WorkEffectCommand command) {
+		if (command.payload() instanceof StructureChangeExecutionRequest request) {
+			return structureChangeExecutor.execute(operation, request);
+		}
 		if (target == null || target.getTargetReferenceType() != WorkTargetReferenceType.ORCHID_GROUP) {
 			throw new IllegalArgumentException("자리 이동 작업에는 난 묶음 대상이 필요합니다.");
 		}

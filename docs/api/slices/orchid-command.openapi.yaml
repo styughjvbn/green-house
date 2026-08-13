@@ -190,6 +190,24 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ApiResponseOrchidGroupResponse'
+  /api/orchid-groups/batch:
+    patch:
+      tags:
+      - orchid-group-command-controller
+      operationId: updateBatch
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/OrchidGroupBatchUpdateRequest'
+        required: true
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponseListOrchidGroupResponse'
   /api/work-operations/{workOperationId}/repot-results:
     get:
       tags:
@@ -254,6 +272,15 @@ components:
       properties:
         data:
           $ref: '#/components/schemas/BedZonePlacementProfileResponse'
+        message:
+          type: string
+    ApiResponseListOrchidGroupResponse:
+      type: object
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/OrchidGroupResponse'
         message:
           type: string
     ApiResponseMultiCreateCancellationEligibilityResponse:
@@ -471,6 +498,27 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/OrchidGroupResponse'
+    OrchidGroupBatchUpdateItem:
+      type: object
+      properties:
+        orchidGroupId:
+          type: integer
+          format: int64
+        update:
+          $ref: '#/components/schemas/OrchidGroupUpdateRequest'
+      required:
+      - orchidGroupId
+      - update
+    OrchidGroupBatchUpdateRequest:
+      type: object
+      properties:
+        orchidGroups:
+          type: array
+          items:
+            $ref: '#/components/schemas/OrchidGroupBatchUpdateItem'
+          minItems: 1
+      required:
+      - orchidGroups
     OrchidGroupCreateRequest:
       type: object
       properties:
@@ -825,6 +873,14 @@ components:
           - MOVEMENT
           - MULTI_CREATE
           - CORRECTION
+        workTypeWorkflow:
+          type: string
+          enum:
+          - GENERIC
+          - MOVEMENT
+          - DISCARD
+          - POTTING
+          - STRUCTURE_CHANGE
         title:
           type: string
         status:
@@ -883,6 +939,16 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/WorkOperationTargetResponse'
+        availableActions:
+          type: array
+          items:
+            type: string
+            enum:
+            - START
+            - PAUSE
+            - RESUME
+            - COMPLETE
+            - CANCEL
     WorkOperationTargetResponse:
       type: object
       properties:
@@ -958,3 +1024,17 @@ components:
         resultDetails:
           type: object
           additionalProperties: {}
+        resultOrchidGroupIds:
+          type: array
+          items:
+            type: integer
+            format: int64
+        availableActions:
+          type: array
+          items:
+            type: string
+            enum:
+            - START
+            - COMPLETE
+            - EXECUTE
+            - SKIP

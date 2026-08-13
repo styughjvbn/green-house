@@ -1,6 +1,11 @@
 import type { FormEvent } from "react";
-import { X } from "lucide-react";
 import type { AuctionLot } from "@/entities/farm/types";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogTitle,
+} from "@/shared/ui/primitives/dialog";
 import { auctionInspectionLabel } from "../../lib/auctionDisplay";
 
 export function AuctionQuantityAdjustDialog({
@@ -20,33 +25,20 @@ export function AuctionQuantityAdjustDialog({
   }
 
   return (
-    <div
-      className="fixed inset-0 z-[1000] flex items-center justify-center bg-black/35 p-4"
-      role="presentation"
-      onMouseDown={onClose}
-    >
-      <section
-        className="flex max-h-[calc(100dvh-2rem)] w-full max-w-xl flex-col rounded-md bg-white shadow-xl"
-        role="dialog"
-        aria-modal="true"
-        aria-label="수량 보정"
-        onMouseDown={(event) => event.stopPropagation()}
-      >
+    <Dialog open onOpenChange={(open) => !open && onClose()}>
+      <DialogContent className="flex max-h-[calc(100dvh-2rem)] max-w-xl flex-col rounded-md">
         <div className="flex shrink-0 items-start justify-between gap-3 border-b border-[#edf0ec] p-5">
           <div>
             <p className="text-sm font-semibold text-[#3d6f91]">
               LOT #{lot.id}
             </p>
-            <h2 className="mt-1 text-xl font-semibold">수량 보정</h2>
+            <DialogTitle className="mt-1 text-xl font-semibold">
+              수량 보정
+            </DialogTitle>
+            <DialogDescription className="sr-only">
+              낙찰, 대기, 반환 수량을 보정합니다.
+            </DialogDescription>
           </div>
-          <button
-            className="flex h-8 w-8 shrink-0 items-center justify-center rounded border border-[#d9dfda] text-[#435047] hover:bg-[#f4f7f3]"
-            type="button"
-            onClick={onClose}
-            aria-label="닫기"
-          >
-            <X className="h-4 w-4" strokeWidth={1.8} aria-hidden="true" />
-          </button>
         </div>
 
         <form className="space-y-3 p-5" onSubmit={submitAdjustment}>
@@ -106,8 +98,8 @@ export function AuctionQuantityAdjustDialog({
             </button>
           </div>
         </form>
-      </section>
-    </div>
+      </DialogContent>
+    </Dialog>
   );
 }
 

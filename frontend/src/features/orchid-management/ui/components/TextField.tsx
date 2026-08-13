@@ -3,6 +3,7 @@
 import type { ReactNode } from "react";
 
 export default function TextField({
+  disabled = false,
   label,
   min,
   max,
@@ -13,6 +14,7 @@ export default function TextField({
   type = "text",
   value,
 }: {
+  disabled?: boolean;
   label: string;
   max?: number;
   min?: number;
@@ -27,7 +29,8 @@ export default function TextField({
     <label className="block">
       <span className="text-sm font-semibold text-[#435047]">{label}</span>
       <input
-        className="w-full rounded-md border border-[#cfd8cc] px-2 py-1 text-sm"
+        className="w-full rounded-md border border-[#cfd8cc] px-2 py-1 text-sm disabled:bg-[#f2f4f1] disabled:text-[#879087]"
+        disabled={disabled}
         max={type === "number" ? max : undefined}
         min={type === "number" ? (min ?? 0) : undefined}
         required={required}

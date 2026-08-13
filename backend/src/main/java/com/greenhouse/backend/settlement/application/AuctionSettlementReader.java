@@ -2,6 +2,8 @@ package com.greenhouse.backend.settlement.application;
 
 import com.greenhouse.backend.settlement.repository.AuctionSettlementRepository;
 import lombok.RequiredArgsConstructor;
+import java.util.Collection;
+import java.util.Set;
 import org.springframework.stereotype.Service;
 
 @Service
@@ -12,5 +14,12 @@ public class AuctionSettlementReader {
 
 	public boolean existsByAuctionShipmentId(Long shipmentId) {
 		return auctionSettlementRepository.existsByAuctionShipmentId(shipmentId);
+	}
+
+	public Set<Long> findSettledAuctionShipmentIds(Collection<Long> shipmentIds) {
+		if (shipmentIds.isEmpty()) {
+			return Set.of();
+		}
+		return Set.copyOf(auctionSettlementRepository.findSettledAuctionShipmentIds(shipmentIds));
 	}
 }

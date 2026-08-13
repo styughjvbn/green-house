@@ -6,16 +6,15 @@ import com.greenhouse.backend.audit.application.AuditRecorder;
 import com.greenhouse.backend.audit.application.AuditRequestContext;
 import com.greenhouse.backend.audit.domain.AuditSource;
 import com.greenhouse.backend.farm.domain.orchid.OrchidGroup;
+import com.greenhouse.backend.farm.domain.orchid.OrchidGroupStatusPolicy;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
-import java.util.Set;
 import org.springframework.stereotype.Component;
 
 @Component
 public class OrchidGroupAuditSupport {
-	private static final Set<String> INACTIVE_STATUSES = Set.of("종료", "폐기", "판매 완료", "생성 취소");
 	private static final List<String> FIELDS = List.of("varietyId", "ageYear", "potSize", "quantity",
 			"houseId", "physicalBedId", "zoneId", "startPosition", "endPosition", "status");
 	private final AuditRecorder auditRecorder;
@@ -49,8 +48,8 @@ public class OrchidGroupAuditSupport {
 			OrchidGroupAuditSnapshot before,
 			OrchidGroupAuditSnapshot after) {
 		if (before != null && after != null
-				&& !INACTIVE_STATUSES.contains(before.status())
-				&& INACTIVE_STATUSES.contains(after.status())) {
+				&& !OrchidGroupStatusPolicy.isInactive(before.status())
+				&& OrchidGroupStatusPolicy.isInactive(after.status())) {
 			return AuditAction.DEACTIVATED;
 		}
 		return AuditAction.UPDATED;

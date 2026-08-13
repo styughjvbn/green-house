@@ -1,5 +1,5 @@
 import { notFound } from "next/navigation";
-import { AnalyticsRoutePage } from "@/features/analytics/AnalyticsRoutePage";
+import { AnalyticsRoutePage } from "@/features/analytics";
 import { isAnalyticsTab } from "@/shared/config/routes";
 
 export const dynamic = "force-dynamic";

@@ -17,6 +17,10 @@ import {
   searchFarmStatusOrchidGroups,
 } from "../api/farmStatusApi";
 import { getNextZoomLevel, getPreviousZoomLevel } from "../lib/farmStatusView";
+import {
+  createLatestRequestCoordinator,
+  type LatestRequest,
+} from "./latestRequestCoordinator";
 import type {
   FarmStatusFilterMatches,
   FarmStatusMapProps,
@@ -68,6 +72,7 @@ export function useFarmStatusMap({
   const [loading, setLoading] = useState(false);
   const [searchLoading, setSearchLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [requestCoordinator] = useState(createLatestRequestCoordinator);
 
   const selectedHouse = useMemo(
     () =>
@@ -138,18 +143,37 @@ export function useFarmStatusMap({
     };
   }, [hasActiveSearch, searchFilters]);
 
-  async function runRequest(task: () => Promise<void>) {
+  useEffect(
+    () => () => {
+      requestCoordinator.cancel();
+    },
+    [requestCoordinator],
+  );
+
+  async function runRequest(task: (request: LatestRequest) => Promise<void>) {
+    const request = requestCoordinator.begin();
     setLoading(true);
     setErrorMessage(null);
     try {
-      await task();
+      await task(request);
     } catch (error) {
-      setErrorMessage(
-        error instanceof Error ? error.message : "요청 중 문제가 발생했습니다.",
-      );
+      if (request.isCurrent()) {
+        setErrorMessage(
+          error instanceof Error
+            ? error.message
+            : "요청 중 문제가 발생했습니다.",
+        );
+      }
     } finally {
-      setLoading(false);
+      if (requestCoordinator.complete(request)) {
+        setLoading(false);
+      }
     }
+  }
+
+  function cancelRequest() {
+    requestCoordinator.cancel();
+    setLoading(false);
   }
 
   async function loadSelectionInHouse({
@@ -157,20 +181,26 @@ export function useFarmStatusMap({
     id,
     houseId,
     nextLevel,
+    request,
   }: {
     type: FarmStatusTargetType;
     id: number;
     houseId: number;
     nextLevel: FarmZoomLevel;
+    request: LatestRequest;
   }) {
     const shouldLoadHouseZoom =
       selectedHouseId !== houseId || zoomData?.houseId !== houseId;
     const [selectionData, houseZoomData] = await Promise.all([
-      fetchFarmStatusOrchidGroups(type, id),
+      fetchFarmStatusOrchidGroups(type, id, request.signal),
       shouldLoadHouseZoom
-        ? fetchFarmStatusHouseZoom(houseId)
+        ? fetchFarmStatusHouseZoom(houseId, request.signal)
         : Promise.resolve(zoomData),
     ]);
+
+    if (!request.isCurrent()) {
+      return;
+    }
 
     setSelectedHouseId(houseId);
     setSelectedTarget({ type, id });
@@ -182,9 +212,13 @@ export function useFarmStatusMap({
 
   async function loadHouseZoom(
     houseId: number,
+    request: LatestRequest,
     nextLevel: FarmZoomLevel = "HOUSE",
   ) {
-    const data = await fetchFarmStatusHouseZoom(houseId);
+    const data = await fetchFarmStatusHouseZoom(houseId, request.signal);
+    if (!request.isCurrent()) {
+      return;
+    }
     setSelectedHouseId(houseId);
     setZoomData(data);
     setZoomLevel(nextLevel);
@@ -194,11 +228,15 @@ export function useFarmStatusMap({
     house: HouseStatusSummary,
     nextLevel: FarmZoomLevel = zoomLevel === "FARM" ? "HOUSE" : zoomLevel,
   ) {
-    await runRequest(async () => {
+    await runRequest(async (request) => {
       const [selectionData, houseZoomData] = await Promise.all([
-        fetchFarmStatusOrchidGroups("HOUSE", house.houseId),
-        fetchFarmStatusHouseZoom(house.houseId),
+        fetchFarmStatusOrchidGroups("HOUSE", house.houseId, request.signal),
+        fetchFarmStatusHouseZoom(house.houseId, request.signal),
       ]);
+
+      if (!request.isCurrent()) {
+        return;
+      }
 
       setSelectedTarget({ type: "HOUSE", id: house.houseId });
       setSelection(selectionData);
@@ -210,23 +248,25 @@ export function useFarmStatusMap({
   }
 
   async function handleSelectPhysicalBed(bed: PhysicalBed) {
-    await runRequest(() =>
+    await runRequest((request) =>
       loadSelectionInHouse({
         type: "PHYSICAL_BED",
         id: bed.id,
         houseId: bed.houseId,
         nextLevel: "PHYSICAL_BED",
+        request,
       }),
     );
   }
 
   async function handleSelectBedZone(zone: BedZone) {
-    await runRequest(() =>
+    await runRequest((request) =>
       loadSelectionInHouse({
         type: "BED_ZONE",
         id: zone.id,
         houseId: zone.houseId,
         nextLevel: "BED_ZONE",
+        request,
       }),
     );
   }
@@ -238,16 +278,21 @@ export function useFarmStatusMap({
     }
     if (nextLevel !== "FARM" && selectedHouseId) {
       if (zoomData?.houseId === selectedHouseId) {
+        cancelRequest();
         setZoomLevel(nextLevel);
         return;
       }
-      await runRequest(() => loadHouseZoom(selectedHouseId, nextLevel));
+      await runRequest((request) =>
+        loadHouseZoom(selectedHouseId, request, nextLevel),
+      );
       return;
     }
+    cancelRequest();
     setZoomLevel(nextLevel);
   }
 
   function handleZoomOut() {
+    cancelRequest();
     const nextLevel = getPreviousZoomLevel(zoomLevel);
     setZoomLevel(nextLevel);
     if (nextLevel === "FARM") {
@@ -258,6 +303,7 @@ export function useFarmStatusMap({
   }
 
   function resetToFarm() {
+    cancelRequest();
     setZoomLevel("FARM");
     setSelectedOrchidGroup(null);
     if (selectedHouseId) {
@@ -266,16 +312,23 @@ export function useFarmStatusMap({
   }
 
   async function handleSelectOrchidGroup(group: SelectedFarmStatusOrchidGroup) {
-    await runRequest(async () => {
+    await runRequest(async (request) => {
       const shouldLoadHouseZoom =
         selectedHouseId !== group.houseId ||
         zoomData?.houseId !== group.houseId;
       const [selectionData, houseZoomData] = await Promise.all([
-        fetchFarmStatusOrchidGroups("BED_ZONE", group.bedZoneId),
+        fetchFarmStatusOrchidGroups(
+          "BED_ZONE",
+          group.bedZoneId,
+          request.signal,
+        ),
         shouldLoadHouseZoom
-          ? fetchFarmStatusHouseZoom(group.houseId)
+          ? fetchFarmStatusHouseZoom(group.houseId, request.signal)
           : Promise.resolve(zoomData),
       ]);
+      if (!request.isCurrent()) {
+        return;
+      }
       const detailedGroup = findOrchidGroupInZoomData(
         houseZoomData,
         group.orchidGroupId,
@@ -294,11 +347,19 @@ export function useFarmStatusMap({
   }
 
   async function handleSelectSearchResult(group: OrchidGroup) {
-    await runRequest(async () => {
+    await runRequest(async (request) => {
       const [selectionData, houseZoomData] = await Promise.all([
-        fetchFarmStatusOrchidGroups("BED_ZONE", group.bedZoneId),
-        fetchFarmStatusHouseZoom(group.houseId),
+        fetchFarmStatusOrchidGroups(
+          "BED_ZONE",
+          group.bedZoneId,
+          request.signal,
+        ),
+        fetchFarmStatusHouseZoom(group.houseId, request.signal),
       ]);
+
+      if (!request.isCurrent()) {
+        return;
+      }
 
       setSelectedHouseId(group.houseId);
       setSelectedTarget({ type: "BED_ZONE", id: group.bedZoneId });

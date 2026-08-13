@@ -11,9 +11,11 @@ import com.greenhouse.backend.work.domain.operation.WorkType;
 import com.greenhouse.backend.work.dto.effect.StructureChangeExecutionRequest;
 import com.greenhouse.backend.work.dto.operation.WorkOperationResponse;
 import com.greenhouse.backend.work.dto.target.WorkTargetExecutionRequest;
+import com.greenhouse.backend.work.application.effect.MovementQuantityAllocator;
 import com.greenhouse.backend.work.repository.WorkAppliedEffectRepository;
 import com.greenhouse.backend.work.repository.WorkTargetExecutionRepository;
 import java.time.LocalDateTime;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -31,7 +33,8 @@ public class StructureChangeExecutionService {
 	private static final Set<String> SUPPORTED_TYPES = Set.of(
 			WorkType.REPOT_CODE,
 			WorkType.DIVIDE_CODE,
-			WorkType.MERGE_CODE);
+			WorkType.MERGE_CODE,
+			WorkType.MOVEMENT_CODE);
 
 	private final WorkTargetExecutionRepository executionRepository;
 	private final WorkAppliedEffectRepository appliedEffectRepository;
@@ -39,6 +42,7 @@ public class StructureChangeExecutionService {
 	private final WorkOperationProgressService progressService;
 	private final WorkOperationQueryService queryService;
 	private final WorkOperationSupport support;
+	private final DiscardRecordService discardRecordService;
 	private final ObjectMapper objectMapper = new ObjectMapper().findAndRegisterModules();
 
 	public WorkOperationResponse completeMerge(
@@ -77,7 +81,7 @@ public class StructureChangeExecutionService {
 		}
 		WorkOperation operation = executions.getFirst().getTarget().getWorkOperation();
 		if (!SUPPORTED_TYPES.contains(operation.getWorkType().getCode())) {
-			throw new IllegalArgumentException("분갈이·분주·합식 작업만 회차 실행할 수 있습니다.");
+			throw new IllegalArgumentException("분갈이·분주·합식·자리 이동 작업만 회차 실행할 수 있습니다.");
 		}
 		validateInProgress(operation);
 		String effectKey = "EXECUTION:" + request.idempotencyKey();
@@ -107,6 +111,15 @@ public class StructureChangeExecutionService {
 
 		LocalDateTime executedAt = support.completionTime(request.completedDate());
 		String worker = support.actor(request.worker());
+		WorkOperationResponse discardOperation = null;
+		if (WorkType.MOVEMENT_CODE.equals(operation.getWorkType().getCode())) {
+			discardOperation = discardRecordService.createForMovement(
+					operation,
+					request.completedDate(),
+					worker,
+					request.memo(),
+					movementDiscardQuantities(request));
+		}
 		Map<String, Object> commandDetails = objectMapper.convertValue(
 				request, new TypeReference<Map<String, Object>>() {});
 		var result = workEffectProcessor.applyBatch(
@@ -114,6 +127,12 @@ public class StructureChangeExecutionService {
 				request.idempotencyKey(),
 				requestedIds.stream().sorted().toList(),
 				new WorkEffectCommand(executedAt, worker, commandDetails, request));
+		Map<String, Object> resultDetails = result.resultDetails();
+		if (discardOperation != null) {
+			resultDetails = new LinkedHashMap<>(resultDetails);
+			resultDetails.put("discardWorkOperationId", discardOperation.id());
+		}
+		Map<String, Object> completedResultDetails = resultDetails;
 		request.sources().forEach(source -> {
 			WorkTargetExecution execution = executionByGroupId.get(source.sourceOrchidGroupId());
 			execution.recordPartialEffect(
@@ -121,15 +140,29 @@ public class StructureChangeExecutionService {
 					execution.getTarget().getQuantitySnapshot(),
 					executedAt,
 					worker,
-					result.resultDetails());
+					completedResultDetails);
 		});
 		progressService.completeIfAllTargetsClosed(operation, executedAt);
 		return queryService.get(operationId);
 	}
 
+	private Map<Long, Integer> movementDiscardQuantities(
+			StructureChangeExecutionRequest request) {
+		Map<Long, Integer> movedBySourceId = MovementQuantityAllocator.allocateMovedBySource(request);
+		Map<Long, Integer> discardQuantities = new LinkedHashMap<>();
+		request.sources().forEach(source -> {
+			int discardQuantity = source.inputQuantity()
+					- movedBySourceId.getOrDefault(source.sourceOrchidGroupId(), 0);
+			if (discardQuantity > 0) {
+				discardQuantities.put(source.sourceOrchidGroupId(), discardQuantity);
+			}
+		});
+		return discardQuantities;
+	}
+
 	private void validateInProgress(WorkOperation operation) {
 		if (operation.getStatus() != WorkOperationStatus.IN_PROGRESS) {
-			throw new IllegalArgumentException("진행 중인 구조 변경 작업만 실행할 수 있습니다.");
+			throw new IllegalArgumentException("진행 중인 구조 변경·자리 이동 작업만 실행할 수 있습니다.");
 		}
 	}
 }

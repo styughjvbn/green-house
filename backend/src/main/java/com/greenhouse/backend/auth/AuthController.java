@@ -1,13 +1,17 @@
 package com.greenhouse.backend.auth;
 
+import com.greenhouse.backend.auth.dto.ApplicationContextResponse;
 import com.greenhouse.backend.auth.dto.AuthenticatedUserResponse;
 import com.greenhouse.backend.auth.dto.LoginRequest;
 import com.greenhouse.backend.common.api.ApiResponse;
+import com.greenhouse.backend.common.config.TimeConfig;
 
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.servlet.http.HttpSession;
 import jakarta.validation.Valid;
+
+import java.time.Clock;
 
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.AnonymousAuthenticationToken;
@@ -29,11 +33,24 @@ public class AuthController {
 	private final AuthenticationManager authenticationManager;
 	private final AuthService authService;
 	private final AuthProperties authProperties;
+	private final Clock clock;
 
-	public AuthController(AuthenticationManager authenticationManager, AuthService authService, AuthProperties authProperties) {
+	public AuthController(
+			AuthenticationManager authenticationManager,
+			AuthService authService,
+			AuthProperties authProperties,
+			Clock clock) {
 		this.authenticationManager = authenticationManager;
 		this.authService = authService;
 		this.authProperties = authProperties;
+		this.clock = clock;
+	}
+
+	@GetMapping("/context")
+	public ApiResponse<ApplicationContextResponse> context() {
+		return ApiResponse.ok(new ApplicationContextResponse(
+				TimeConfig.farmToday(clock),
+				TimeConfig.FARM_TIME_ZONE.getId()));
 	}
 
 	@PostMapping("/login")

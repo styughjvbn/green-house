@@ -1,6 +1,9 @@
-# 난 농장 관리 시스템
+# 농장 관리 시스템
 
-비닐하우스 난 농장의 동, 물리 배드, 논리 구역, 난 묶음 데이터를 관리하기 위한 웹 기반 운영 시스템입니다.
+![](.github/img/농장현황.png)
+비닐하우스 농장의 동, 물리 배드, 논리 구역, 난 묶음 데이터를 관리하기 위한 웹 기반 운영 시스템입니다.
+
+2026-07-11 베타 버전을 배포하여 농장에서 활용중이며 [데모 사이트](green-house-demo.sjw-project.site/)를 통해 비식별화된 시스템을 확인할 수 있습니다.
 
 ## 구조
 
@@ -90,38 +93,17 @@ npm run dev
 
 프론트엔드는 기본적으로 `http://localhost:3000`에서 실행됩니다.
 
-## 구현된 API
+## 현재 범위
 
-```http
-GET /api/houses
-GET /api/houses/{houseId}
-GET /api/physical-beds?houseId=3
-GET /api/physical-beds/{physicalBedId}
-GET /api/bed-zones?houseId=3&physicalBedId=8
-GET /api/bed-zones/{bedZoneId}
-GET /api/orchid-groups?houseId=3&physicalBedId=8&bedZoneId=15&status=정상
-```
+- 농장 현황과 난 묶음 배치·이동
+- 작업 기록·기간 계획·구조 변경·보정
+- 품종·입고·자재 관리
+- 판매 전표·A5 출력·경매 lot·정산·입금
+- 농장·판매·작업 분석
+- 세션 인증, 데모 운영, 주요 운영 데이터 변경 감사
 
-성공 응답:
-
-```json
-{
-  "data": {},
-  "message": null
-}
-```
-
-에러 응답:
-
-```json
-{
-  "error": {
-    "code": "NOT_FOUND",
-    "message": "동을 찾을 수 없습니다.",
-    "details": []
-  }
-}
-```
+상세 기능은 [기능 요약](docs/03-feature-summary.md), API 요청·응답은
+[API 가이드](docs/06-api-guide.md)와 `docs/api/slices/*.openapi.yaml`을 기준으로 확인합니다.
 
 ## 검증
 
@@ -136,45 +118,5 @@ cd backend
 
 ```bash
 cd frontend
-npm run lint
-npm run build
-```
-
-## External access through a single forwarded port
-
-If the external port forwards to the frontend only, for example:
-
-```text
-external 3112 -> internal 80
-```
-
-run the services like this:
-
-```powershell
-docker compose up -d db
-cd backend
-.\gradlew.bat bootRun
-```
-
-In another shell:
-
-```powershell
-cd frontend
-npm run build
-npm run start -- -p 80
-```
-
-Open:
-
-```text
-http://<server-host>:3112
-```
-
-The browser calls `/api/*` on the same forwarded frontend origin. Next.js rewrites those requests to the internal backend at `http://localhost:8080/api/*`.
-
-Override the internal backend URL if needed:
-
-```powershell
-$env:BACKEND_API_URL="http://127.0.0.1:8080/api"
-npm run start -- -p 80
+npm run check
 ```

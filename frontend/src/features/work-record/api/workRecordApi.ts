@@ -1,8 +1,4 @@
-﻿import {
-  API_BASE_URL,
-  fetchApi,
-  fetchWithClientInstance as fetch,
-} from "@/shared/api/client";
+﻿import { fetchApi, requestApi } from "@/shared/api/client";
 import type {
   House,
   OrchidGroup,
@@ -17,6 +13,7 @@ import type {
   InboundPottingCandidate,
   WorkDerivedGroupOption,
   WorkCollectionOption,
+  WorkOperationDetail,
   WorkTargetPreviewPayload,
 } from "../model/types";
 
@@ -61,11 +58,10 @@ export async function createCompletedWorkOperation(
   workTypeName: string,
   title?: string | null,
 ): Promise<WorkOperation> {
-  const response = await fetch(`${API_BASE_URL}/work-operations/record`, {
-    method: "POST",
-    credentials: "include",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
+  return requestWorkOperation<WorkOperation>(
+    "/work-operations/record",
+    "POST",
+    {
       workTypeId: payload.workTypeId,
       title: title?.trim() || `${workTypeName} 작업`,
       plannedStartDate: payload.workDate,
@@ -78,13 +74,8 @@ export async function createCompletedWorkOperation(
       },
       worker: payload.worker,
       memo: payload.memo,
-    }),
-  });
-  const body = await response.json().catch(() => null);
-  if (!response.ok) {
-    throw new Error(body?.error?.message ?? "신규 작업을 처리하지 못했습니다.");
-  }
-  return body.data as WorkOperation;
+    },
+  );
 }
 
 export async function previewWorkOperationTargets(
@@ -158,6 +149,14 @@ export function getWorkOperations(
   const query = params.toString();
   return fetchApi<Page<WorkOperation>>(
     `/work-operations${query ? `?${query}` : ""}`,
+  );
+}
+
+export function getWorkOperationDetails(
+  workOperationId: number,
+): Promise<WorkOperationDetail> {
+  return fetchApi<WorkOperationDetail>(
+    `/work-operations/${workOperationId}/details`,
   );
 }
 
@@ -321,17 +320,13 @@ async function requestWorkOperation<T>(
   method: "POST",
   payload?: unknown,
 ): Promise<T> {
-  const response = await fetch(`${API_BASE_URL}${path}`, {
-    method,
-    credentials: "include",
-    headers: payload ? { "Content-Type": "application/json" } : undefined,
-    body: payload ? JSON.stringify(payload) : undefined,
-  });
-  const body = await response.json().catch(() => null);
-
-  if (!response.ok) {
-    throw new Error(body?.error?.message ?? "신규 작업을 처리하지 못했습니다.");
-  }
-
-  return body.data as T;
+  return requestApi<T>(
+    path,
+    {
+      method,
+      headers: payload ? { "Content-Type": "application/json" } : undefined,
+      body: payload ? JSON.stringify(payload) : undefined,
+    },
+    "신규 작업을 처리하지 못했습니다.",
+  );
 }

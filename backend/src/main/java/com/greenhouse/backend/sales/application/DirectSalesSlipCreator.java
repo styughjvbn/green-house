@@ -10,6 +10,7 @@ import com.greenhouse.backend.sales.dto.SalesSlipResponse;
 import com.greenhouse.backend.sales.repository.SalesSlipRepository;
 import com.greenhouse.backend.settlement.application.ExpectedPaymentDateCalculator;
 import com.greenhouse.backend.settlement.application.PartnerBalanceService;
+import java.util.List;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
@@ -23,6 +24,8 @@ public class DirectSalesSlipCreator {
 	private final ExpectedPaymentDateCalculator paymentDateCalculator;
 	private final SalesSlipNumberGenerator numberGenerator;
 	private final PartnerBalanceService partnerBalanceService;
+	private final SalesSlipOutboundService salesSlipOutboundService;
+	private final SalesSlipResponseAssembler responseAssembler;
 
 	public SalesSlipResponse create(SalesSlipCreateRequest request) {
 		if (request.partnerId() == null) {
@@ -35,6 +38,7 @@ public class DirectSalesSlipCreator {
 		if (partner.getPartnerType() == PartnerType.AUCTION_HOUSE) {
 			throw new IllegalArgumentException("경매장 거래처는 경매 판매 전표에서 사용해야 합니다.");
 		}
+		partnerBalanceService.lockPartners(List.of(partner.getId()));
 
 		var salesSlip = new SalesSlip(
 				numberGenerator.generate(request.saleDate(), SalesType.DIRECT),
@@ -47,15 +51,15 @@ public class DirectSalesSlipCreator {
 				SalesTextNormalizer.normalize(request.paymentMethod()),
 				SalesTextNormalizer.normalize(request.memo()));
 
-		request.items().forEach(item -> salesSlip.addItem(salesSlipAllocationFactory.createItem(item)));
+		salesSlipAllocationFactory.createItems(request.items()).forEach(salesSlip::addItem);
 		salesSlip.updateExpectedPaymentDate(paymentDateCalculator.calculate(partner, request.saleDate()));
 		var saved = salesSlipRepository.save(salesSlip);
 		salesSlipInventoryService.reserve(saved);
 		if (saved.isOutboundCompleted()) {
-			salesSlipInventoryService.outbound(saved);
+			salesSlipOutboundService.complete(saved);
 		}
 		partnerBalanceService.updateReceivable(
 				partner.getId(), salesSlipRepository.sumDirectReceivableByPartnerId(partner.getId()), null);
-		return SalesSlipResponse.from(saved);
+		return responseAssembler.assemble(saved);
 	}
 }

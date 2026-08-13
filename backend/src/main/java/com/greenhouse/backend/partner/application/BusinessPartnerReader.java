@@ -6,6 +6,9 @@ import com.greenhouse.backend.partner.repository.BusinessPartnerRepository;
 
 import lombok.RequiredArgsConstructor;
 
+import java.util.Collection;
+import java.util.HashSet;
+import java.util.List;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -25,5 +28,18 @@ public class BusinessPartnerReader {
 		if (!partner.isActive())
 			throw new IllegalArgumentException("비활성 거래처는 사용할 수 없습니다.");
 		return partner;
+	}
+
+	@Transactional
+	public List<BusinessPartner> getAllForUpdate(Collection<Long> partnerIds) {
+		var requestedIds = new HashSet<>(partnerIds);
+		if (requestedIds.isEmpty()) {
+			return List.of();
+		}
+		var partners = partnerRepository.findAllForUpdateByIdIn(requestedIds);
+		if (partners.size() != requestedIds.size()) {
+			throw new NotFoundException("거래처를 찾을 수 없습니다.");
+		}
+		return partners;
 	}
 }

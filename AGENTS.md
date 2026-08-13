@@ -49,10 +49,15 @@ docs/
   02-domain-model.md
   03-feature-summary.md
   04-architecture.md
-  05-sales-auction-settlement.md
   06-api-guide.md
   07-deployment.md
   08-roadmap.md
+  features/
+    README.md
+    sales-auction-settlement.md
+    authentication.md
+    work-operation-and-orchid-collection.md
+    demo-operations.md
 
   api/
     openapi.yaml
@@ -62,6 +67,8 @@ docs/
     slices/*.openapi.yaml
 
   archive/
+    plans/
+      README.md
     old-v2-docs/
 
 문서 역할:
@@ -71,12 +78,15 @@ docs/
 02-domain-model.md             핵심 도메인 모델과 도메인 규칙
 03-feature-summary.md          구현 기능 요약과 화면 흐름
 04-architecture.md             프론트엔드/백엔드 구조, 모듈 경계
-05-sales-auction-settlement.md 판매, 경매, 정산, 입금 관리
 06-api-guide.md                API 문서 사용 방법
 07-deployment.md               로컬 실행, 배포, 백업, 운영 체크리스트
 08-roadmap.md                  MVP 이후 확장 계획
+features/sales-auction-settlement.md 판매, 경매, 정산, 입금 관리
+features/authentication.md      세션 인증, 인가, 데모 인증
+features/work-operation-and-orchid-collection.md 작업 실행, 그룹, 이력 전파
+features/demo-operations.md     데모 DB, Kubernetes, 비식별화 운영
 
-`docs/archive/old-v2-docs/`는 참고용 보관 문서다.
+`docs/archive/`는 참고용 보관 문서다.
 새 작업의 기준 문서로 사용하지 않는다.
 
 ---
@@ -90,7 +100,10 @@ docs/
 도메인 모델 변경          → docs/02-domain-model.md
 화면 흐름 또는 기능 변경   → docs/03-feature-summary.md
 모듈 구조 변경             → docs/04-architecture.md
-판매/경매/정산 정책 변경   → docs/05-sales-auction-settlement.md
+판매/경매/정산 정책 변경   → docs/features/sales-auction-settlement.md
+인증/권한/세션 정책 변경   → docs/features/authentication.md
+작업 실행/그룹/이력 정책 변경 → docs/features/work-operation-and-orchid-collection.md
+데모 DB/Kubernetes 운영 변경 → docs/features/demo-operations.md
 API 사용 방식 변경         → docs/06-api-guide.md 또는 docs/api/*
 배포/환경/백업 방식 변경   → docs/07-deployment.md
 MVP 이후 범위 변경         → docs/08-roadmap.md
@@ -122,10 +135,12 @@ API를 수정하거나 호출 코드를 작성할 때는 다음 순서로 확인
 API를 추가하거나 수정한 경우 다음 순서로 갱신한다.
 
 1. Controller, Request/Response DTO, validation, 테스트를 먼저 수정한다.
-2. API가 새 도메인에 해당하면 `docs/api/API_INDEX.md`에 위치만 추가한다.
-3. 도메인 규칙이 바뀐 경우에만 `docs/api/DOMAIN_RULES.md`를 수정한다.
-4. 과거 초안과 구현 차이가 바뀌면 `docs/api/API_GAP_ANALYSIS.md`를 수정한다.
-5. API 사용 방식 자체가 바뀐 경우 `docs/06-api-guide.md`를 수정한다.
+2. `python3 scripts/generate_openapi.py`로 전체 명세와 slice를 다시 생성한다. 생성된 OpenAPI 파일을 직접 수정하지 않는다.
+3. 프론트가 사용하는 enum, capability, 요청/응답 schema가 바뀌면 `frontend`에서 `npm run api:types`를 실행한다. 생성된 TypeScript schema를 직접 수정하지 않는다.
+4. API가 새 도메인에 해당하면 `docs/api/API_INDEX.md`에 위치만 추가한다.
+5. 도메인 규칙이 바뀐 경우에만 `docs/api/DOMAIN_RULES.md`를 수정한다.
+6. 과거 초안과 구현 차이가 바뀌면 `docs/api/API_GAP_ANALYSIS.md`를 수정한다.
+7. API 사용 방식 자체가 바뀐 경우 `docs/06-api-guide.md`를 수정한다.
 
 ---
 
@@ -134,9 +149,45 @@ API를 추가하거나 수정한 경우 다음 순서로 갱신한다.
 ## 작업 전 확인
 
 - 작업 전 관련 문서를 먼저 확인한다.
+- 프론트엔드 작업은 `docs/04-architecture.md`의 `프론트엔드 구현 기준`을 먼저 확인한다.
+- 백엔드 작업은 `docs/04-architecture.md`의 `백엔드 구현 기준`을 먼저 확인한다.
 - 문서에 없는 큰 구조 변경은 임의로 하지 않는다.
 - `archive/old-v2-docs`의 내용은 과거 참고용으로만 사용한다.
 - 구현과 현재 문서가 충돌하면 코드와 OpenAPI를 우선 확인하고, 문서 수정 필요 여부를 작업 결과에 남긴다.
+
+## 프론트엔드 작업 원칙
+
+- 구현 전 상태를 Server state, URL state, Local UI state, Derived state로 분류한다.
+- API 응답은 React Query cache에 두고 같은 데이터를 `useState`나 Context에 복제하지 않는다.
+- 탭, 필터, 페이지, 공유·새로고침·뒤로가기가 필요한 선택은 URL을 단일 기준으로 사용한다.
+- 상태 전이, 업무 가능 여부, 계산, 도메인 validation을 프론트에서 새로 정의하지 않는다. 먼저 백엔드 domain contract 또는 capability 개선을 검토한다.
+- UX 사전 validation은 허용하지만 서버 검증을 대체하지 않으며 같은 규칙을 여러 UI에 반복하지 않는다.
+- API enum과 capability 타입은 생성된 `frontend/src/shared/api/generated/openapi.d.ts`를 기준으로 한다.
+- 인증 API 외 요청은 공통 `requestApi`를 사용한다. React Query key에는 실제 요청 조건을 모두 포함한다.
+- 독립 요청은 병렬화하고, 빠르게 바뀌는 검색·선택 요청은 취소하거나 최신 응답만 반영한다.
+- `app`과 다른 feature는 feature의 `index.ts` 공개 API를 사용하며 ESLint 경계 규칙을 우회하지 않는다.
+- 다이얼로그는 공통 Radix primitive를 우선 사용하고 label, keyboard, focus 복귀, pending/disabled 상태를 확인한다.
+- 구조 변경 없이 코드만 보면 알 수 있는 내용을 문서에 중복하지 않는다. 새로운 구현 원칙이나 경계가 생긴 경우에만 `docs/04-architecture.md`를 갱신한다.
+
+## 백엔드 작업 원칙
+
+- Entity와 Repository는 소유 모듈 안에서만 직접 사용한다. 다른 모듈 기능은 해당 모듈의 application API 또는 호출 모듈이 정의한 port를 통한다.
+- 다른 모듈의 테이블을 Native SQL로 직접 읽지 않는다. 모듈 간 계약에는 application DTO, 식별자와 값 객체를 사용하고 Repository projection을 외부 계약으로 노출하지 않는다.
+- 쓰기 유스케이스의 트랜잭션 경계는 최상위 application service에 둔다. 조회는 기본적으로 `readOnly = true`를 사용하고 self invocation에 의존하지 않는다.
+- 수량, 금액, 상태 전이, 변경 금지 조건은 Entity 또는 명시적인 Domain Policy 한 곳에 둔다. Controller와 여러 Service에 같은 조건문·상태 문자열을 복제하지 않는다.
+- 프론트가 상태 조합으로 업무 가능 여부를 추론하게 하지 않는다. 도메인 판단이 필요한 action, workflow, 대상 종류, 수정 가능 여부는 `availableActions`, capability, derived status 또는 metadata 계약으로 제공한다. 화면 문구와 CSS 같은 표현 정보는 백엔드 계약에 넣지 않는다.
+- Controller 성공·실패 응답은 공통 `ApiResponse`와 `ErrorResponse` 형식을 유지한다. 프론트 분기에 쓰이는 오류는 HTTP status와 안정적인 error code로 구분하고 예외 메시지 문자열 파싱에 의존하게 하지 않는다.
+- API enum, capability, 요청/응답 DTO의 변경은 프론트 계약 변경으로 취급한다. Controller와 테스트를 먼저 고친 뒤 OpenAPI와 생성 TypeScript schema를 같은 변경에서 갱신한다.
+- 동시 변경 가능 데이터는 읽고 저장하는 것만으로 안전하다고 가정하지 않는다. 잠금 순서를 고정하고 `@Version`, DB UNIQUE/CHECK, 원자 SQL 중 필요한 수단을 함께 검토한다.
+- 목록 응답을 조립할 때 반복문 안에서 Repository를 호출하지 않는다. 먼저 ID를 모은 뒤 `IN` 조회, projection, 집계 쿼리로 일괄 조회한다.
+- pagination 쿼리에 collection fetch join을 사용하지 않는다. root 페이지를 먼저 조회하고 필요한 연관 collection을 페이지 ID 기준으로 일괄 조회한다.
+- 단순 CRUD는 Spring Data JPA, 동적 검색은 QueryDSL, 고정 projection·일괄 로딩은 JPQL을 우선한다. Native SQL은 PostgreSQL 원자 연산·CTE·Window Function처럼 이유가 명확할 때만 Repository 내부에서 사용한다.
+- 무제한 목록 API를 새로 만들지 않는다. 운영 목록은 pagination을 기본으로 하고 호환용 전체 목록은 명시적인 상한을 둔다.
+- 출하, 전표, 작업 효과처럼 과거 사실을 보존해야 하는 경계에서는 현재 Entity를 나중에 다시 조회해 과거를 복원하지 않는다. 변경 시점의 스냅샷을 같은 트랜잭션에 저장할 수 있는 생성 지점을 유지한다.
+- 외부 시스템 연동은 application port와 adapter 경계에 추가한다. 외부 호출을 DB 트랜잭션 안에 넣지 않으며, 아직 연동이 없으면 불필요한 메시징·분산 시스템을 도입하지 않는다.
+- `LocalDateTime.now()`와 `LocalDate.now()`를 업무 코드에 직접 추가하지 않는다. 시점은 주입된 `Clock`, 농장 업무일은 `TimeConfig`를 사용하고 DB timestamp는 UTC 기준을 유지한다. 프론트의 업무일 기본값은 공개 runtime context의 `businessDate`와 `timeZone`을 기준으로 한다.
+- Flyway 변경은 기존 데이터 backfill, 제약조건 적용 순서, 재실행 불가 요소를 검토한다. PostgreSQL 전용 SQL은 H2 테스트만으로 완료 처리하지 않는다.
+- 구조 변경 없이 코드만 보면 알 수 있는 클래스 목록을 문서에 중복하지 않는다. 새 모듈 경계, 트랜잭션 규칙, 조회 규칙이 생긴 경우에만 `docs/04-architecture.md`를 갱신한다.
 
 ## MVP 범위 보호
 
@@ -159,16 +210,21 @@ API를 추가하거나 수정한 경우 다음 순서로 갱신한다.
 - 직접 판매와 경매 출하 추적을 혼동하지 않는다.
 - 경매장은 `AUCTION_HOUSE` 유형의 거래처로 관리한다.
 - 경매 출하 lot, 경매 시도, 경매 결과, 반환, 정산, 입금은 이력을 보존한다.
-- 판매 수량 자동 차감은 MVP 범위가 아니므로 임의로 구현하지 않는다.
+- 판매 전표 생성은 난 묶음 수량을 예약하고, `출고 완료`·`출하 완료` 전환에서만 실제 수량을 차감한다.
+- 전표 생성만으로 즉시 수량을 차감하거나 외부 주문만으로 자동 출고 처리하지 않는다.
 - 부분입금, 예치금, 계좌 자동 매칭은 구현 범위를 문서에서 확인한 뒤 작업한다.
-- 관련 변경은 `docs/05-sales-auction-settlement.md`와 `docs/api/*`를 함께 확인한다.
+- 관련 변경은 `docs/features/sales-auction-settlement.md`와 `docs/api/*`를 함께 확인한다.
 
 ## 테스트와 결과 보고
 
 - 빌드 또는 테스트가 가능하면 변경 후 반드시 실행한다.
 - 프론트엔드 검증은 프론트엔드 폴더에서 `npm run check` 를 실행한다.
+- URL parser, selection coordinator, 날짜·payload 변환은 pure function 단위 테스트를 우선한다.
+- 서버 상태 갱신, cache invalidation, 주요 dialog 흐름은 integration 또는 E2E 검증이 필요한지 확인한다.
 - 실행하지 못한 테스트는 PR 또는 작업 결과에 명시한다.
 - 데이터 마이그레이션, 정산, 입금, 수량 변경 로직은 테스트 없이 완료 처리하지 않는다.
+- 동시성 제어는 충돌 또는 병렬 실행 테스트를, bulk 조회 최적화는 데이터 건수와 무관한 query count 회귀 테스트를 우선 검토한다.
+- PostgreSQL 전용 SQL과 Flyway migration은 가능하면 Testcontainers 기반 실제 PostgreSQL 검증을 실행한다.
 
 ## 에이전트 응답 스타일
 

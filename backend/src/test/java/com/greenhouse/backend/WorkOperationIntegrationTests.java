@@ -2,6 +2,7 @@ package com.greenhouse.backend;
 
 import static org.hamcrest.Matchers.hasSize;
 import static org.hamcrest.Matchers.hasItem;
+import static org.hamcrest.Matchers.containsInAnyOrder;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -21,6 +22,7 @@ import com.greenhouse.backend.work.repository.WorkOperationTargetRepository;
 import com.greenhouse.backend.work.repository.WorkAppliedEffectRepository;
 import com.greenhouse.backend.work.repository.WorkEffectOrchidGroupRepository;
 import com.greenhouse.backend.work.repository.WorkTargetExecutionRepository;
+import com.greenhouse.backend.common.config.TimeConfig;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import org.junit.jupiter.api.BeforeEach;
@@ -66,7 +68,7 @@ class WorkOperationIntegrationTests extends AbstractBackendIntegrationTest {
 		pesticideType = workTypeRepository.save(new WorkType(
 				"PESTICIDE", "농약", WorkTypeTemplate.PESTICIDE, true, false, true, 1));
 		movementType = workTypeRepository.save(new WorkType(
-				"MOVEMENT", "위치 이동", WorkTypeTemplate.MOVEMENT, true, true, true, 2));
+				"MOVEMENT", "자리 이동", WorkTypeTemplate.MOVEMENT, true, true, true, 2));
 		discardType = workTypeRepository.save(new WorkType(
 				"DISCARD", "폐기", WorkTypeTemplate.DISCARD, true, true, true, 3));
 		repotType = workTypeRepository.save(new WorkType(
@@ -101,6 +103,61 @@ class WorkOperationIntegrationTests extends AbstractBackendIntegrationTest {
 				BigDecimal.TEN);
 		targetGroup.assignVariety(variety);
 		targetGroup = orchidGroupRepository.save(targetGroup);
+	}
+
+	@Test
+	void exposesOperationAndTargetActionsFromTheBackendContract() throws Exception {
+		mockMvc.perform(post("/api/work-operations")
+				.contentType(MediaType.APPLICATION_JSON)
+				.content("""
+						{
+						  "workTypeId": %d,
+						  "title": "작업 가능 액션 확인",
+						  "plannedStartDate": "2026-07-16",
+						  "sourceScopeType": "MANUAL_SELECTION",
+						  "sourceOrchidGroupIds": [%d]
+						}
+						""".formatted(pesticideType.getId(), targetGroup.getId())))
+				.andExpect(status().isCreated())
+				.andExpect(jsonPath("$.data.availableActions", containsInAnyOrder("START", "CANCEL")))
+				.andExpect(jsonPath("$.data.targets[0].availableActions", hasSize(0)));
+
+		Long operationId = workOperationRepository.findAll().getFirst().getId();
+		mockMvc.perform(post("/api/work-operations/{id}/start", operationId))
+				.andExpect(status().isOk())
+				.andExpect(jsonPath("$.data.availableActions", containsInAnyOrder("PAUSE", "CANCEL")))
+				.andExpect(jsonPath("$.data.targets[0].availableActions",
+						containsInAnyOrder("START", "COMPLETE", "SKIP")));
+	}
+
+	@Test
+	void excludesLegacyMigrationMetadataFromOperationDetails() throws Exception {
+		mockMvc.perform(post("/api/work-operations")
+				.contentType(MediaType.APPLICATION_JSON)
+				.content("""
+						{
+						  "workTypeId": %d,
+						  "title": "레거시 메타데이터 필터 확인",
+						  "plannedStartDate": "2026-07-16",
+						  "sourceScopeType": "MANUAL_SELECTION",
+						  "sourceOrchidGroupIds": [%d],
+						  "details": {
+						    "materialName": "표시할 자재",
+						    "migrationSource": "LEGACY_WORK_RECORD",
+						    "legacyWorkRecordId": 99,
+						    "legacyStatus": "COMPLETED",
+						    "legacyTargetType": "FARM"
+						  }
+						}
+						""".formatted(pesticideType.getId(), targetGroup.getId())))
+				.andExpect(status().isCreated());
+
+		Long operationId = workOperationRepository.findAll().getFirst().getId();
+		mockMvc.perform(get("/api/work-operations/{id}/details", operationId))
+				.andExpect(status().isOk())
+				.andExpect(jsonPath("$.data.fields", hasSize(1)))
+				.andExpect(jsonPath("$.data.fields[0].key").value("materialName"))
+				.andExpect(jsonPath("$.data.fields[0].value").value("표시할 자재"));
 	}
 
 	@Test
@@ -231,6 +288,17 @@ class WorkOperationIntegrationTests extends AbstractBackendIntegrationTest {
 		OrchidGroup updated = orchidGroupRepository.findById(targetGroup.getId()).orElseThrow();
 		org.assertj.core.api.Assertions.assertThat(updated.getQuantity()).isEqualTo(75);
 		org.assertj.core.api.Assertions.assertThat(workOperationRepository.count()).isEqualTo(1);
+
+		Long operationId = workOperationRepository.findAll().getFirst().getId();
+		mockMvc.perform(get("/api/work-operations/{id}/details", operationId))
+				.andExpect(status().isOk())
+				.andExpect(jsonPath("$.data.summary.id").value(operationId))
+				.andExpect(jsonPath("$.data.executions", hasSize(1)))
+				.andExpect(jsonPath("$.data.executions[0].resultType").value("DISCARD"))
+				.andExpect(jsonPath("$.data.executions[0].reason").value("상태 불량"))
+				.andExpect(jsonPath("$.data.executions[0].sources[0].beforeQuantity").value(100))
+				.andExpect(jsonPath("$.data.executions[0].sources[0].inputQuantity").value(25))
+				.andExpect(jsonPath("$.data.executions[0].sources[0].afterQuantity").value(75));
 	}
 
 	private Long createDiscardOperation(String title) throws Exception {
@@ -298,6 +366,15 @@ class WorkOperationIntegrationTests extends AbstractBackendIntegrationTest {
 		org.assertj.core.api.Assertions.assertThat(
 				orchidGroupRepository.findById(targetGroup.getId()).orElseThrow().getBedZone().getId())
 				.isEqualTo(destinationZone.getId());
+
+		mockMvc.perform(get("/api/work-operations/{id}/details", operationId))
+				.andExpect(status().isOk())
+				.andExpect(jsonPath("$.data.executions", hasSize(1)))
+				.andExpect(jsonPath("$.data.executions[0].resultType").value("MOVE"))
+				.andExpect(jsonPath("$.data.executions[0].sources[0].orchidGroupId").value(targetGroup.getId()))
+				.andExpect(jsonPath("$.data.executions[0].results[0].bedZoneId").value(destinationZone.getId()))
+				.andExpect(jsonPath("$.data.executions[0].results[0].startPosition").value(0))
+				.andExpect(jsonPath("$.data.executions[0].results[0].endPosition").value(10));
 	}
 
 	@Test
@@ -368,12 +445,12 @@ class WorkOperationIntegrationTests extends AbstractBackendIntegrationTest {
 				.andExpect(status().isOk())
 				.andExpect(jsonPath("$.data.status").value("COMPLETED"))
 				.andExpect(jsonPath("$.data.targets[0].executionStatus").value("COMPLETED"));
-		org.assertj.core.api.Assertions.assertThat(
+		org.assertj.core.api.Assertions.assertThat(TimeConfig.toFarmTime(
 				workTargetExecutionRepository.findByTargetWorkOperationIdOrderByIdAsc(operationId)
-						.getFirst().getCompletedAt().toLocalDate())
+						.getFirst().getCompletedAt()).toLocalDate())
 				.isEqualTo(java.time.LocalDate.of(2026, 7, 15));
-		org.assertj.core.api.Assertions.assertThat(
-				workOperationRepository.findById(operationId).orElseThrow().getActualEndAt().toLocalDate())
+		org.assertj.core.api.Assertions.assertThat(TimeConfig.toFarmTime(
+				workOperationRepository.findById(operationId).orElseThrow().getActualEndAt()).toLocalDate())
 				.isEqualTo(java.time.LocalDate.of(2026, 7, 15));
 
 		mockMvc.perform(post("/api/work-operations/{id}/targets/{targetId}/complete", operationId, targetId)
@@ -422,7 +499,7 @@ class WorkOperationIntegrationTests extends AbstractBackendIntegrationTest {
 				.andExpect(jsonPath("$.data[?(@.sourceKind == 'WORK_OPERATION')].propagated").value(hasItem(true)))
 				.andExpect(jsonPath("$.data[?(@.sourceKind == 'WORK_OPERATION')].locationSnapshot.houseNumber").value(hasItem(3)))
 				.andExpect(jsonPath("$.data[?(@.sourceKind == 'WORK_OPERATION')].currentLocation.houseNumber").value(hasItem(5)))
-				.andExpect(jsonPath("$.data[?(@.sourceKind == 'WORK_OPERATION')].workType").value(hasItem("위치 이동")));
+				.andExpect(jsonPath("$.data[?(@.sourceKind == 'WORK_OPERATION')].workType").value(hasItem("자리 이동")));
 
 		mockMvc.perform(get("/api/work-history")
 				.param("scopeType", "ORCHID_GROUP")
@@ -435,7 +512,7 @@ class WorkOperationIntegrationTests extends AbstractBackendIntegrationTest {
 				.andExpect(jsonPath("$.data.size").value(1))
 				.andExpect(jsonPath("$.data.totalElements").value(2))
 				.andExpect(jsonPath("$.data.totalPages").value(2))
-				.andExpect(jsonPath("$.data.content[0].workType").value("위치 이동"))
+				.andExpect(jsonPath("$.data.content[0].workType").value("자리 이동"))
 				.andExpect(jsonPath("$.data.content[0].currentLocation.houseNumber").value(5));
 
 		mockMvc.perform(get("/api/work-history")

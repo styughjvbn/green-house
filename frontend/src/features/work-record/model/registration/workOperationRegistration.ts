@@ -23,6 +23,7 @@ type WorkTargetSummary = {
 };
 
 export function createInitialWorkOperationForm(
+  businessDate: string,
   workType?: WorkType,
 ): WorkOperationFormState {
   return {
@@ -31,7 +32,7 @@ export function createInitialWorkOperationForm(
     scopeKey: "",
     collectionId: "",
     title: workType ? `${workType.name} 작업` : "기간 작업",
-    plannedStartDate: formatLocalDate(new Date()),
+    plannedStartDate: businessDate,
     plannedEndDate: "",
     materialName: "",
     dilutionRatio: "",
@@ -274,11 +275,4 @@ function groupByHouse(groups: OrchidGroup[]) {
     counts.set(group.houseNumber, (counts.get(group.houseNumber) ?? 0) + 1);
   });
   return counts;
-}
-
-function formatLocalDate(date: Date) {
-  const year = date.getFullYear();
-  const month = String(date.getMonth() + 1).padStart(2, "0");
-  const day = String(date.getDate()).padStart(2, "0");
-  return `${year}-${month}-${day}`;
 }

@@ -4,9 +4,9 @@ import Image from "next/image";
 import Link from "next/link";
 import type { Route } from "next";
 import { usePathname } from "next/navigation";
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import type { MouseEventHandler } from "react";
-import { SessionUserPanel } from "@/features/auth/ui/SessionUserPanel";
+import { SessionUserPanel } from "@/features/auth";
 import {
   NAVIGATION,
   PAGE_META,
@@ -174,14 +174,14 @@ export function AppShell({
     null,
   );
 
-  const clearSidebarIdleTimer = () => {
+  const clearSidebarIdleTimer = useCallback(() => {
     if (sidebarIdleTimerRef.current) {
       clearTimeout(sidebarIdleTimerRef.current);
       sidebarIdleTimerRef.current = null;
     }
-  };
+  }, []);
 
-  const scheduleSidebarIdleCollapse = () => {
+  const scheduleSidebarIdleCollapse = useCallback(() => {
     clearSidebarIdleTimer();
 
     if (!compactDesktopHeader || (!sidebarExpanded && !openSubNavFlyoutHref)) {
@@ -194,7 +194,12 @@ export function AppShell({
         setSidebarExpanded(false);
       }
     }, 2500);
-  };
+  }, [
+    clearSidebarIdleTimer,
+    compactDesktopHeader,
+    openSubNavFlyoutHref,
+    sidebarExpanded,
+  ]);
 
   useEffect(() => {
     const sidebarQuery = window.matchMedia("(min-width: 1536px)");
@@ -225,7 +230,7 @@ export function AppShell({
     scheduleSidebarIdleCollapse();
 
     return clearSidebarIdleTimer;
-  }, [compactDesktopHeader, openSubNavFlyoutHref, sidebarExpanded]);
+  }, [clearSidebarIdleTimer, scheduleSidebarIdleCollapse]);
 
   if (pathname === "/login") {
     return <>{children}</>;
@@ -322,7 +327,7 @@ export function AppShell({
           >
             <div className="min-w-0">
               <p className="text-base leading-none font-semibold whitespace-nowrap text-white">
-                난 농장
+                농장
               </p>
               <p className="mt-2 text-xs whitespace-nowrap text-[#c8d8cd]">
                 관리 시스템
@@ -419,7 +424,7 @@ export function AppShell({
 
       <div className="app-shell-main min-w-0 flex-1 lg:max-2xl:ml-12">
         <header className="border-b border-[#d7ddd4] bg-white px-4 py-4 lg:hidden">
-          <p className="text-xl font-semibold">난 농장 관리</p>
+          <p className="text-xl font-semibold">농장 관리</p>
 
           <nav className="mt-3 flex gap-2 overflow-x-auto">
             {NAVIGATION.map((item) => {

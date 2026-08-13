@@ -3,6 +3,8 @@ package com.greenhouse.backend.auction.dto;
 import com.greenhouse.backend.auction.domain.AuctionInspectionStatus;
 import com.greenhouse.backend.auction.domain.AuctionLotStatus;
 import com.greenhouse.backend.auction.domain.AuctionShipmentLot;
+import com.greenhouse.backend.auction.domain.AuctionAttempt;
+import com.greenhouse.backend.auction.domain.AuctionLotStatusHistory;
 import java.time.LocalDate;
 import java.util.Comparator;
 import java.util.List;
@@ -31,7 +33,14 @@ public record AuctionLotResponse(
 		List<AuctionStatusHistoryResponse> statusHistory) {
 
 	public static AuctionLotResponse from(AuctionShipmentLot lot) {
-		var lines = lot.getAttempts().stream().flatMap(attempt -> attempt.getResultLines().stream()).toList();
+		return from(lot, lot.getAttempts(), lot.getStatusHistory());
+	}
+
+	public static AuctionLotResponse from(
+			AuctionShipmentLot lot,
+			List<AuctionAttempt> attempts,
+			List<AuctionLotStatusHistory> statusHistory) {
+		var lines = attempts.stream().flatMap(attempt -> attempt.getResultLines().stream()).toList();
 		var inspection = lines.stream().map(line -> line.getInspectionStatus())
 				.max(Comparator.comparingInt(Enum::ordinal))
 				.orElse(AuctionInspectionStatus.NORMAL);
@@ -50,13 +59,13 @@ public record AuctionLotResponse(
 				lot.getReturnConfirmableQuantity(),
 				lot.getReturnConfirmedDate(),
 				lot.getCurrentStatus(),
-				lot.getAttempts().stream().map(attempt -> attempt.getAuctionDate()).max(LocalDate::compareTo).orElse(null),
-				(int) lot.getAttempts().stream().filter(attempt -> attempt.getAttemptStatus().name().contains("FAILED"))
+				attempts.stream().map(attempt -> attempt.getAuctionDate()).max(LocalDate::compareTo).orElse(null),
+				(int) attempts.stream().filter(attempt -> attempt.getAttemptStatus().name().contains("FAILED"))
 						.count(),
 				lines.stream().mapToInt(line -> line.getAmount()).sum(),
 				inspection,
 				lot.getMemo(),
-				lot.getAttempts().stream().map(AuctionAttemptResponse::from).toList(),
-				lot.getStatusHistory().stream().map(AuctionStatusHistoryResponse::from).toList());
+				attempts.stream().map(AuctionAttemptResponse::from).toList(),
+				statusHistory.stream().map(AuctionStatusHistoryResponse::from).toList());
 	}
 }

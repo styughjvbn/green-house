@@ -11,6 +11,7 @@ import type {
 } from "@/entities/farm/model/placement";
 import { FarmPlacementField } from "@/entities/farm/ui/FarmPlacementPicker";
 import { createUuid } from "@/shared/lib/id";
+import { useRuntimeContext } from "@/shared/runtime/RuntimeContext";
 
 type PottingResultRow = {
   key: string;
@@ -70,8 +71,9 @@ export function PottingExecutionForm({
   onCancel: () => void;
   onSubmit: (values: PottingExecutionValues) => Promise<void>;
 }) {
+  const { businessDate } = useRuntimeContext();
   const [pottingDate, setPottingDate] = useState(
-    fixedPottingDate ?? new Date().toISOString().slice(0, 10),
+    fixedPottingDate ?? businessDate,
   );
   const [rows, setRows] = useState<PottingResultRow[]>(() => [
     newResultRow(initialActualQuantity, initialPotSize, initialAgeYear),
@@ -81,6 +83,12 @@ export function PottingExecutionForm({
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const onRecordDirtyRef = useRef(onRecordDirty);
+  const potSizes = new Set(rows.map((row) => row.potSize));
+  const ageYears = new Set(rows.map((row) => row.ageYear));
+  const commonPotSize = potSizes.size === 1 ? (rows[0]?.potSize ?? "") : "";
+  const commonPotSizeSelectValue =
+    potSizes.size === 1 ? commonPotSize : "INDIVIDUAL";
+  const commonAgeYear = ageYears.size === 1 ? (rows[0]?.ageYear ?? "") : "";
 
   useEffect(() => {
     onRecordDirtyRef.current = onRecordDirty;
@@ -175,12 +183,60 @@ export function PottingExecutionForm({
             onClick={() =>
               setRows((current) => [
                 ...current,
-                newResultRow(null, initialPotSize, initialAgeYear),
+                newResultRow(
+                  null,
+                  potSizes.size === 1 ? commonPotSize : initialPotSize,
+                  ageYears.size === 1
+                    ? commonAgeYear
+                      ? Number(commonAgeYear)
+                      : null
+                    : initialAgeYear,
+                ),
               ])
             }
           >
             <Plus className="h-3.5 w-3.5" aria-hidden="true" /> 난 묶음 추가
           </button>
+        </div>
+        <div className="grid gap-3 rounded-md border border-[#dfe7dd] bg-white p-3 sm:grid-cols-2">
+          <Field label="전체 결과 화분 크기">
+            <select
+              className={inputClass}
+              value={commonPotSizeSelectValue}
+              onChange={(event) => {
+                const potSize = event.target.value;
+                setRows((current) =>
+                  current.map((row) => ({ ...row, potSize })),
+                );
+              }}
+            >
+              <option disabled value="INDIVIDUAL">
+                결과별 설정
+              </option>
+              {POT_SIZE_OPTIONS.map((option) => (
+                <option
+                  key={option.value || "unspecified"}
+                  value={option.value}
+                >
+                  {option.label}
+                </option>
+              ))}
+            </select>
+          </Field>
+          <Field label="전체 결과 시작 년생">
+            <input
+              className={inputClass}
+              min={0}
+              type="number"
+              value={commonAgeYear}
+              onChange={(event) => {
+                const ageYear = event.target.value;
+                setRows((current) =>
+                  current.map((row) => ({ ...row, ageYear })),
+                );
+              }}
+            />
+          </Field>
         </div>
         {rows.map((row, index) => (
           <section key={row.key} className="rounded-md border bg-[#f8faf7] p-3">
@@ -221,6 +277,7 @@ export function PottingExecutionForm({
                   required
                   type="number"
                   value={row.actualQuantity}
+                  onFocus={(event) => event.currentTarget.select()}
                   onChange={(event) =>
                     updateRow(setRows, row.key, {
                       actualQuantity: event.target.value,

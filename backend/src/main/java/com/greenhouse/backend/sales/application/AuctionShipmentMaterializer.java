@@ -2,7 +2,6 @@ package com.greenhouse.backend.sales.application;
 
 import com.greenhouse.backend.auction.application.AuctionShipmentCreator;
 import com.greenhouse.backend.auction.domain.AuctionShipment;
-import com.greenhouse.backend.auction.domain.AuctionShipmentLot;
 import com.greenhouse.backend.partner.domain.PartnerType;
 import com.greenhouse.backend.sales.domain.SalesSlip;
 import com.greenhouse.backend.sales.domain.SalesType;
@@ -14,6 +13,7 @@ import org.springframework.stereotype.Component;
 public class AuctionShipmentMaterializer {
 
 	private final AuctionShipmentCreator auctionShipmentCreator;
+	private final AuctionShipmentLotFactory auctionShipmentLotFactory;
 
 	public void materialize(SalesSlip salesSlip) {
 		if (salesSlip.getSalesType() != SalesType.AUCTION || salesSlip.getAuctionShipment() != null) {
@@ -24,12 +24,7 @@ public class AuctionShipmentMaterializer {
 		}
 
 		var shipment = new AuctionShipment(salesSlip.getSaleDate(), salesSlip.getPartner());
-		salesSlip.getItems().forEach(item -> shipment.addLot(new AuctionShipmentLot(
-				SalesTextNormalizer.required(item.getGenus() == null || item.getGenus().isBlank() ? item.getItemName() : item.getGenus()),
-				SalesTextNormalizer.required(item.getItemName()),
-				SalesTextNormalizer.normalize(item.getSpec()),
-				null,
-				item.getQuantity())));
+		salesSlip.getItems().forEach(item -> shipment.addLot(auctionShipmentLotFactory.create(item)));
 
 		var savedShipment = auctionShipmentCreator.save(shipment);
 		salesSlip.assignAuctionShipment(savedShipment);

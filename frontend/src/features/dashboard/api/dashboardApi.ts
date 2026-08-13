@@ -5,7 +5,7 @@ import type {
 import type {
   SalesAnalyticsData,
   WorkAnalyticsData,
-} from "@/features/analytics/model/types";
+} from "@/features/analytics";
 import { fetchApi } from "@/shared/api/client";
 
 export async function getDashboardData() {

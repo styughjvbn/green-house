@@ -19,7 +19,8 @@ public class AuctionSalesSlipCreator {
 	private final SalesSlipNumberGenerator numberGenerator;
 	private final SalesSlipAllocationFactory salesSlipAllocationFactory;
 	private final SalesSlipInventoryService salesSlipInventoryService;
-	private final AuctionShipmentMaterializer auctionShipmentMaterializer;
+	private final SalesSlipOutboundService salesSlipOutboundService;
+	private final SalesSlipResponseAssembler responseAssembler;
 
 	public SalesSlipResponse create(SalesSlipCreateRequest request) {
 		if (request.partnerId() == null) {
@@ -45,14 +46,13 @@ public class AuctionSalesSlipCreator {
 				SalesTextNormalizer.defaultText(request.paymentMethod(), "경매 정산"),
 				SalesTextNormalizer.normalize(request.memo()));
 
-		request.items().forEach(item -> salesSlip.addItem(salesSlipAllocationFactory.createItem(item)));
+		salesSlipAllocationFactory.createItems(request.items()).forEach(salesSlip::addItem);
 
 		var saved = salesSlipRepository.save(salesSlip);
 		salesSlipInventoryService.reserve(saved);
 		if (saved.isOutboundCompleted()) {
-			auctionShipmentMaterializer.materialize(saved);
-			salesSlipInventoryService.outbound(saved);
+			salesSlipOutboundService.complete(saved);
 		}
-		return SalesSlipResponse.from(saved);
+		return responseAssembler.assemble(saved);
 	}
 }

@@ -13,7 +13,7 @@ import type {
 import { useFarmBedViewportCache } from "@/entities/farm/model/useFarmBedViewportCache";
 import useEmblaCarousel from "embla-carousel-react";
 import { ChevronLeft, ChevronRight, MapPin, X } from "lucide-react";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 
 type ResolvedZone = {
   house: House;
@@ -28,6 +28,7 @@ export function FarmPlacementField({
   excludeOrchidGroupId = null,
   excludeOrchidGroupIds = [],
   fieldLabel = "배치 칸",
+  hiddenOrchidGroupIds = [],
   houses,
   referencePlacements = [],
   submitLabel = "선택 완료",
@@ -40,6 +41,7 @@ export function FarmPlacementField({
   excludeOrchidGroupId?: number | null;
   excludeOrchidGroupIds?: number[];
   fieldLabel?: string;
+  hiddenOrchidGroupIds?: number[];
   houses: House[];
   referencePlacements?: FarmPlacementReference[];
   submitLabel?: string;
@@ -70,6 +72,7 @@ export function FarmPlacementField({
           dialogTitle={dialogTitle}
           excludeOrchidGroupId={excludeOrchidGroupId}
           excludeOrchidGroupIds={excludeOrchidGroupIds}
+          hiddenOrchidGroupIds={hiddenOrchidGroupIds}
           houses={houses}
           initialValue={value}
           referencePlacements={referencePlacements}
@@ -90,6 +93,7 @@ export function FarmPlacementPickerDialog({
   dialogTitle = "배치 칸 선택",
   excludeOrchidGroupId = null,
   excludeOrchidGroupIds = [],
+  hiddenOrchidGroupIds = [],
   houses,
   initialValue,
   referencePlacements = [],
@@ -102,6 +106,7 @@ export function FarmPlacementPickerDialog({
   dialogTitle?: string;
   excludeOrchidGroupId?: number | null;
   excludeOrchidGroupIds?: number[];
+  hiddenOrchidGroupIds?: number[];
   houses: House[];
   initialValue: FarmPlacementSelection | null;
   referencePlacements?: FarmPlacementReference[];
@@ -134,15 +139,19 @@ export function FarmPlacementPickerDialog({
       ]),
     [excludeOrchidGroupId, excludeOrchidGroupIds],
   );
+  const occupancyExcludedOrchidGroupIds = useMemo(
+    () => new Set([...referenceOrchidGroupIds, ...hiddenOrchidGroupIds]),
+    [hiddenOrchidGroupIds, referenceOrchidGroupIds],
+  );
   const occupiedCells = useMemo(
     () =>
       buildOccupiedCells(
         selected?.zone.orchidGroups ?? [],
-        referenceOrchidGroupIds,
+        occupancyExcludedOrchidGroupIds,
         referencePlacements,
         selected?.zone.id ?? null,
       ),
-    [referenceOrchidGroupIds, referencePlacements, selected],
+    [occupancyExcludedOrchidGroupIds, referencePlacements, selected],
   );
   const hasOverlap = [...selectedCells].some((cell) => occupiedCells.has(cell));
   const selectedLabel = selected
@@ -253,6 +262,7 @@ export function FarmPlacementPickerDialog({
               <FarmPlacementBedCarousel
                 excludeOrchidGroupId={excludeOrchidGroupId}
                 excludeOrchidGroupIds={excludeOrchidGroupIds}
+                hiddenOrchidGroupIds={hiddenOrchidGroupIds}
                 bedOrder={bedOrder}
                 bedsById={bedsById}
                 referencePlacements={referencePlacements}
@@ -306,6 +316,7 @@ function FarmPlacementBedCarousel({
   bedsById,
   excludeOrchidGroupId,
   excludeOrchidGroupIds,
+  hiddenOrchidGroupIds,
   referencePlacements,
   selectedBedZoneId,
   selectedCells,
@@ -321,6 +332,7 @@ function FarmPlacementBedCarousel({
   bedsById: Map<number, import("../types").PhysicalBed>;
   excludeOrchidGroupId: number | null;
   excludeOrchidGroupIds: number[];
+  hiddenOrchidGroupIds: number[];
   referencePlacements: FarmPlacementReference[];
   selectedBedZoneId: number | null;
   selectedCells: Set<number>;
@@ -337,8 +349,6 @@ function FarmPlacementBedCarousel({
     loop: false,
     slidesToScroll: 1,
   });
-  const [canScrollPrevious, setCanScrollPrevious] = useState(false);
-  const [canScrollNext, setCanScrollNext] = useState(false);
   const [activeBedIndex, setActiveBedIndex] = useState(0);
   const houses = useMemo(
     () =>
@@ -348,29 +358,32 @@ function FarmPlacementBedCarousel({
       ),
     [bedOrder],
   );
+  const activeHouseIndex = houses.findIndex(
+    (house) => house.houseId === bedOrder[activeBedIndex]?.houseId,
+  );
 
-  const syncControls = useCallback(() => {
-    if (!emblaApi) return;
-    setCanScrollPrevious(emblaApi.canScrollPrev());
-    setCanScrollNext(emblaApi.canScrollNext());
-  }, [emblaApi]);
+  function scrollToHouse(houseIndex: number) {
+    const houseId = houses[houseIndex]?.houseId;
+    if (houseId == null) return;
+    const bedIndex = bedOrder.findIndex((bed) => bed.houseId === houseId);
+    if (bedIndex >= 0) emblaApi?.scrollTo(bedIndex);
+  }
 
   useEffect(() => {
     if (!emblaApi) return;
     const handleSelect = () => {
-      syncControls();
       const index = emblaApi.selectedScrollSnap();
       setActiveBedIndex(index);
       onViewportIndexChange(index);
     };
-    emblaApi.on("reInit", syncControls);
+    emblaApi.on("reInit", handleSelect);
     emblaApi.on("select", handleSelect);
     emblaApi.reInit();
     return () => {
-      emblaApi.off("reInit", syncControls);
+      emblaApi.off("reInit", handleSelect);
       emblaApi.off("select", handleSelect);
     };
-  }, [emblaApi, onViewportIndexChange, syncControls]);
+  }, [emblaApi, onViewportIndexChange]);
 
   useEffect(() => {
     if (selectedBedIndex >= 0) onViewportIndexChange(selectedBedIndex);
@@ -389,6 +402,16 @@ function FarmPlacementBedCarousel({
           {referencePlacements.some((item) => item.kind === "RESULT") ? (
             <Legend color="bg-[#dcecff]" label="다른 결과" />
           ) : null}
+          {referencePlacements.some(
+            (item) => item.kind === "OTHER_VARIETY_SOURCE",
+          ) ? (
+            <Legend color="bg-[#ffe3d8]" label="다른 품종 원본" />
+          ) : null}
+          {referencePlacements.some(
+            (item) => item.kind === "OTHER_VARIETY_RESULT",
+          ) ? (
+            <Legend color="bg-[#f1e8ff]" label="다른 품종 결과" />
+          ) : null}
           {referencePlacements.some((item) => item.kind === "SAVED_RESULT") ? (
             <Legend color="bg-[#e8f3df]" label="다른 회차 결과" />
           ) : null}
@@ -402,10 +425,9 @@ function FarmPlacementBedCarousel({
             value={bedOrder[activeBedIndex]?.houseId ?? ""}
             onChange={(event) => {
               const nextHouseId = Number(event.target.value);
-              const index = bedOrder.findIndex(
-                (bed) => bed.houseId === nextHouseId,
+              scrollToHouse(
+                houses.findIndex((house) => house.houseId === nextHouseId),
               );
-              if (index >= 0) emblaApi?.scrollTo(index);
             }}
           >
             {houses.map((house) => (
@@ -415,20 +437,22 @@ function FarmPlacementBedCarousel({
             ))}
           </select>
           <button
-            aria-label="이전 다이"
+            aria-label="이전 동"
             className="flex h-8 w-8 items-center justify-center rounded-md border border-[#d7ddd4] bg-white disabled:cursor-not-allowed disabled:opacity-40"
-            disabled={!canScrollPrevious}
+            disabled={activeHouseIndex <= 0}
             type="button"
-            onClick={() => emblaApi?.scrollPrev()}
+            onClick={() => scrollToHouse(activeHouseIndex - 1)}
           >
             <ChevronLeft className="h-4 w-4" aria-hidden="true" />
           </button>
           <button
-            aria-label="다음 다이"
+            aria-label="다음 동"
             className="flex h-8 w-8 items-center justify-center rounded-md border border-[#d7ddd4] bg-white disabled:cursor-not-allowed disabled:opacity-40"
-            disabled={!canScrollNext}
+            disabled={
+              activeHouseIndex < 0 || activeHouseIndex >= houses.length - 1
+            }
             type="button"
-            onClick={() => emblaApi?.scrollNext()}
+            onClick={() => scrollToHouse(activeHouseIndex + 1)}
           >
             <ChevronRight className="h-4 w-4" aria-hidden="true" />
           </button>
@@ -465,6 +489,7 @@ function FarmPlacementBedCarousel({
                         key={zone.id}
                         excludeOrchidGroupId={excludeOrchidGroupId}
                         excludeOrchidGroupIds={excludeOrchidGroupIds}
+                        hiddenOrchidGroupIds={hiddenOrchidGroupIds}
                         maxCell={Math.max(
                           1,
                           Math.floor(bed.positionUnitCount ?? 28),
@@ -481,6 +506,13 @@ function FarmPlacementBedCarousel({
               </div>
             );
           })}
+          {Array.from({ length: 2 }, (_, index) => (
+            <div
+              aria-hidden="true"
+              className="min-w-0 shrink-0 basis-full pl-3 md:basis-1/2 xl:basis-1/3"
+              key={`end-placeholder-${index}`}
+            />
+          ))}
         </div>
       </div>
     </div>
@@ -490,6 +522,7 @@ function FarmPlacementBedCarousel({
 function ZonePreview({
   excludeOrchidGroupId,
   excludeOrchidGroupIds,
+  hiddenOrchidGroupIds,
   maxCell,
   referencePlacements,
   selected,
@@ -499,6 +532,7 @@ function ZonePreview({
 }: {
   excludeOrchidGroupId: number | null;
   excludeOrchidGroupIds: number[];
+  hiddenOrchidGroupIds: number[];
   maxCell: number;
   referencePlacements: FarmPlacementReference[];
   selected: boolean;
@@ -511,6 +545,7 @@ function ZonePreview({
     zone.orchidGroups,
     new Set([
       ...excludeOrchidGroupIds,
+      ...hiddenOrchidGroupIds,
       ...(excludeOrchidGroupId == null ? [] : [excludeOrchidGroupId]),
     ]),
     referencePlacements,
@@ -575,9 +610,13 @@ function ZonePreview({
                   ? "border-[#0c7b38]"
                   : reference.kind === "RESULT"
                     ? "border-[#b7cde3]"
-                    : reference.kind === "SAVED_RESULT"
-                      ? "border-[#b8cda9]"
-                      : "border-[#e8d98b]"
+                    : reference.kind === "OTHER_VARIETY_SOURCE"
+                      ? "border-[#e8b7a5]"
+                      : reference.kind === "OTHER_VARIETY_RESULT"
+                        ? "border-[#cbb7e8]"
+                        : reference.kind === "SAVED_RESULT"
+                          ? "border-[#b8cda9]"
+                          : "border-[#e8d98b]"
               }`
             : "";
           const cellLabel = reference
@@ -622,9 +661,13 @@ function ZonePreview({
                     : reference
                       ? reference.kind === "RESULT"
                         ? "bg-[#dcecff] text-[#20518f] hover:bg-[#c7e0ff]"
-                        : reference.kind === "SAVED_RESULT"
-                          ? "bg-[#e8f3df] text-[#2f6334] hover:bg-[#d9ebca]"
-                          : "bg-[#fff1b8] text-[#6f5700] hover:bg-[#ffe99a]"
+                        : reference.kind === "OTHER_VARIETY_SOURCE"
+                          ? "bg-[#ffe3d8] text-[#8a3d24] hover:bg-[#ffd4c4]"
+                          : reference.kind === "OTHER_VARIETY_RESULT"
+                            ? "bg-[#f1e8ff] text-[#68429b] hover:bg-[#e5d6fa]"
+                            : reference.kind === "SAVED_RESULT"
+                              ? "bg-[#e8f3df] text-[#2f6334] hover:bg-[#d9ebca]"
+                              : "bg-[#fff1b8] text-[#6f5700] hover:bg-[#ffe99a]"
                       : occupied
                         ? "bg-[#eef1ed] text-[#77817a]"
                         : "bg-white text-[#425047] hover:bg-[#eef8ef]"
@@ -708,6 +751,8 @@ function Legend({ color, label }: { color: string; label: string }) {
 
 function referencePrefix(kind: FarmPlacementReference["kind"]) {
   if (kind === "SOURCE") return "원본";
+  if (kind === "OTHER_VARIETY_SOURCE") return "다른 품종 원본";
+  if (kind === "OTHER_VARIETY_RESULT") return "다른 품종";
   if (kind === "SAVED_RESULT") return "다른 회차";
   return "결과";
 }
@@ -785,7 +830,10 @@ function buildOccupiedCells(
   referencePlacements
     .filter(
       (reference) =>
-        (reference.kind === "RESULT" || reference.kind === "SAVED_RESULT") &&
+        (reference.kind === "RESULT" ||
+          reference.kind === "OTHER_VARIETY_SOURCE" ||
+          reference.kind === "OTHER_VARIETY_RESULT" ||
+          reference.kind === "SAVED_RESULT") &&
         (bedZoneId == null || reference.bedZoneId === bedZoneId),
     )
     .forEach((reference) => {

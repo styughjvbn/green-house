@@ -3,10 +3,12 @@ import type { WorkTargetPreview } from "@/entities/farm/types";
 export function WorkOperationTargetPreview({
   preview,
   excludedIds,
+  locked = false,
   onToggle,
 }: {
   preview: WorkTargetPreview;
   excludedIds: Set<number>;
+  locked?: boolean;
   onToggle: (id: number) => void;
 }) {
   return (
@@ -14,13 +16,14 @@ export function WorkOperationTargetPreview({
       {preview.targets.map((target) => (
         <label
           key={target.orchidGroupId ?? target.id}
-          className="flex cursor-pointer items-center gap-3 border-b border-[#edf0ec] px-3 py-2 text-sm last:border-b-0"
+          className={`flex items-center gap-3 border-b border-[#edf0ec] px-3 py-2 text-sm last:border-b-0 ${locked ? "cursor-default" : "cursor-pointer"}`}
         >
           <input
             checked={
               target.orchidGroupId != null &&
               !excludedIds.has(target.orchidGroupId)
             }
+            disabled={locked}
             type="checkbox"
             onChange={() => {
               if (target.orchidGroupId != null) onToggle(target.orchidGroupId);

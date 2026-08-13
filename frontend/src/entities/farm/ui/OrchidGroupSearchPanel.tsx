@@ -110,20 +110,6 @@ export function OrchidGroupSearchPanel<
             }
           />
         </label>
-        {/* <select
-          className="h-7 rounded-md border border-[#dfe5dc] bg-white px-3 text-sm text-[#17251b] outline-none"
-          value={filters.status}
-          onChange={(event) =>
-            onUpdateFilter("status", event.target.value as TFilters["status"])
-          }
-        >
-          <option value="">전체 상태</option>
-          {statuses.map((status) => (
-            <option key={status} value={status}>
-              {status}
-            </option>
-          ))}
-        </select> */}
         <button
           className={`h-7 rounded-md border px-3 text-sm font-semibold ${
             hasActiveSearch

@@ -1,0 +1,60 @@
+# 인증과 인가
+
+## 방식
+
+- JWT가 아닌 서버 세션 방식.
+- 로그인 성공 시 백엔드가 `JSESSIONID` 쿠키를 발급.
+- 프론트엔드는 API 요청에 쿠키를 포함해 인증 상태 유지.
+- 기본 권한은 `ADMIN`, `WORKER`.
+- 세션 유지 시간은 기본 7일.
+- 로그인된 요청이 계속 들어오면 서버 세션과 쿠키 만료 시간이 다시 7일로 연장.
+- 세션이 만료되어 API가 `401` 또는 `403`을 반환하면 프론트엔드는 로그인 화면으로 이동.
+
+## 기본 계정
+
+운영 배포 시 아래 환경변수로 반드시 변경.
+
+```text
+ADMIN_USERNAME
+ADMIN_PASSWORD
+WORKER_USERNAME
+WORKER_PASSWORD
+```
+
+로컬 기본값:
+
+```text
+admin / admin
+worker / worker
+```
+
+## 환경변수
+
+```text
+AUTH_ENABLED=true
+SESSION_TIMEOUT=7d
+SESSION_COOKIE_MAX_AGE=7d
+FRONTEND_ORIGIN_PATTERNS=http://localhost:*,http://127.0.0.1:*
+```
+
+테스트 프로필은 기존 API 테스트 보호를 위해 `AUTH_ENABLED=false`.
+
+## 데모 모드
+
+- `DEMO_MODE=true`이면 세션 없이 모든 API 요청에 `demo`, `ROLE_DEMO` 인증 주체를 적용한다.
+- 요청 본문의 작업자·생성자 값은 데모 환경에서 `demo`로 덮어쓴다.
+- 로그인과 로그아웃, 작업 유형 변경, 거래처 정산 설정 변경은 차단한다.
+- 읽기·쓰기 요청 한도와 요청 본문 크기 제한을 적용한다.
+- `AUTH_ENABLED=false`는 데모 모드가 아니라 테스트용 인증 비활성화 설정이다.
+- 프론트엔드는 로그인 화면을 우회하고 상단에 데이터 초기화 안내를 표시한다.
+
+## 권한
+
+- `/api/auth/login`, `/api/auth/me`, `/api/auth/logout`: 인증 API
+- `/api/auth/context`: 인증 여부와 무관하게 농장 업무일자와 시간대를 제공하는 런타임 컨텍스트 API
+- `/api/work-types/**`: `ADMIN` 전용
+- 그 외 `/api/**`: 로그인 필요
+- `/actuator/health`, Swagger/OpenAPI 문서: 공개
+
+프론트엔드는 루트 Server Component에서 `/api/auth/context`를 조회하고 모든 입력 폼의
+기본 날짜에 `businessDate`를 사용한다. 브라우저의 UTC 날짜를 업무일자로 사용하지 않는다.

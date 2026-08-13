@@ -68,7 +68,10 @@ const settlementLineColumns: ColumnDef<AuctionSettlementLine, unknown>[] = [
 export function AuctionSettlementView() {
   const queryClient = useQueryClient();
   const settlementsQuery = useQuery(auctionSettlementsQueryOptions());
-  const settlements = settlementsQuery.data ?? [];
+  const settlements = useMemo(
+    () => settlementsQuery.data ?? [],
+    [settlementsQuery.data],
+  );
   const [selectedId, setSelectedId] = useState<number | null>(null);
   const [page, setPage] = useState(0);
   const [pageSize, setPageSize] = useState(10);

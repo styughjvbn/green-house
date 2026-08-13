@@ -7,6 +7,7 @@ import com.greenhouse.backend.farm.domain.structure.BedZone;
 import com.greenhouse.backend.farm.domain.orchid.OrchidGroup;
 import com.greenhouse.backend.farm.domain.variety.Variety;
 import com.greenhouse.backend.farm.dto.orchid.OrchidGroupCreateRequest;
+import com.greenhouse.backend.farm.dto.orchid.OrchidGroupBatchUpdateRequest;
 import com.greenhouse.backend.farm.dto.orchid.OrchidGroupMoveRequest;
 import com.greenhouse.backend.farm.dto.orchid.OrchidGroupResponse;
 import com.greenhouse.backend.farm.dto.orchid.OrchidGroupUpdateRequest;
@@ -22,6 +23,7 @@ import org.springframework.transaction.annotation.Transactional;
 import com.greenhouse.backend.audit.domain.AuditAction;
 import com.greenhouse.backend.audit.domain.AuditSource;
 import java.util.Map;
+import java.util.List;
 
 @Service
 @Transactional
@@ -83,6 +85,16 @@ public class OrchidGroupCommandService {
 	}
 
 	public OrchidGroupResponse update(Long orchidGroupId, OrchidGroupUpdateRequest request) {
+		return update(orchidGroupId, request, "SINGLE");
+	}
+
+	public List<OrchidGroupResponse> updateBatch(OrchidGroupBatchUpdateRequest request) {
+		return request.orchidGroups().stream()
+				.map(item -> update(item.orchidGroupId(), item.update(), "BATCH"))
+				.toList();
+	}
+
+	private OrchidGroupResponse update(Long orchidGroupId, OrchidGroupUpdateRequest request, String correctionMode) {
 		OrchidGroup orchidGroup = orchidGroupRepository.findById(orchidGroupId)
 				.orElseThrow(() -> new NotFoundException("난 묶음을 찾을 수 없습니다."));
 		OrchidGroupAuditSnapshot before = auditSupport.snapshot(orchidGroup);
@@ -107,7 +119,7 @@ public class OrchidGroupCommandService {
 		orchidGroup.assignVariety(variety);
 		OrchidGroupAuditSnapshot after = auditSupport.snapshot(orchidGroup);
 		auditSupport.record(orchidGroupId, auditSupport.actionForCorrection(before, after),
-				AuditSource.ORCHID_GROUP_CORRECTION, before, after, Map.of("correctionMode", "SINGLE"));
+				AuditSource.ORCHID_GROUP_CORRECTION, before, after, Map.of("correctionMode", correctionMode));
 		return OrchidGroupResponse.from(orchidGroup);
 	}
 

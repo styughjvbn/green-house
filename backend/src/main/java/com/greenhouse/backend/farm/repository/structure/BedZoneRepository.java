@@ -34,4 +34,15 @@ public interface BedZoneRepository extends JpaRepository<BedZone, Long> {
 			@Param("houseNumber") Integer houseNumber,
 			@Param("physicalBedNumber") Integer physicalBedNumber,
 			@Param("side") BedZoneSide side);
+
+	@Query("""
+			select new com.greenhouse.backend.farm.repository.structure.BedZoneLocationRow(
+				z.id, h.number, b.number, z.name)
+			from BedZone z
+			join z.physicalBed b
+			join b.house h
+			where z.id in :bedZoneIds
+			order by z.id asc
+			""")
+	List<BedZoneLocationRow> findLocationRowsByIdIn(@Param("bedZoneIds") java.util.Collection<Long> bedZoneIds);
 }

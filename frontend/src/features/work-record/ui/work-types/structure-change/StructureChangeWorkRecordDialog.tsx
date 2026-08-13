@@ -7,12 +7,18 @@ import type {
   WorkOperationTarget,
   WorkType,
 } from "@/entities/farm/types";
+import type { FarmPlacementReference } from "@/entities/farm/model/placement";
 import type { CreateWorkOperationPayload } from "../../../model/types";
 import type {
   StructureChangeExecutionPayload,
   StructureChangeRecordPayload,
 } from "../../../api/workRecordApi";
 import { StructureChangeExecutionDialog } from "./StructureChangeExecutionDialog";
+import { movementDiscardConfirmation } from "../../../model/work-types/structure-change/useStructureChangeExecution";
+import {
+  sourceReferencePlacements,
+  type ResultRow,
+} from "../../../model/work-types/structure-change/structureChangeExecutionModel";
 
 type VarietyTargetGroup = {
   key: string;
@@ -44,6 +50,9 @@ export function StructureChangeWorkRecordDialog({
   const [activeKey, setActiveKey] = useState(groups[0]?.key ?? "");
   const [records, setRecords] = useState<
     Map<string, StructureChangeRecordPayload>
+  >(new Map());
+  const [resultRowsByGroup, setResultRowsByGroup] = useState<
+    Map<string, ResultRow[]>
   >(new Map());
   const [saving, setSaving] = useState(false);
   const [isDirty, setIsDirty] = useState(false);
@@ -85,6 +94,30 @@ export function StructureChangeWorkRecordDialog({
 
   async function saveAll() {
     if (records.size !== groups.length) return;
+    if (workType.code === "MOVEMENT") {
+      const discardQuantity = [...records.values()].reduce(
+        (sum, record) =>
+          sum +
+          Math.max(
+            0,
+            record.execution.sources.reduce(
+              (sourceSum, source) => sourceSum + source.inputQuantity,
+              0,
+            ) -
+              record.execution.results.reduce(
+                (resultSum, result) => resultSum + result.quantity,
+                0,
+              ),
+          ),
+        0,
+      );
+      if (
+        discardQuantity > 0 &&
+        !window.confirm(movementDiscardConfirmation(discardQuantity))
+      ) {
+        return;
+      }
+    }
     setSaving(true);
     try {
       await onSubmit(
@@ -127,6 +160,23 @@ export function StructureChangeWorkRecordDialog({
             workTypeCode: workType.code,
           }}
           recordMode
+          hiddenOtherVarietySourceIds={groups.flatMap((relatedGroup) => {
+            if (relatedGroup.key === group.key) return [];
+            return configuredSourceIds(
+              relatedGroup,
+              resultRowsByGroup.get(relatedGroup.key) ?? [],
+            );
+          })}
+          otherVarietyReferences={groups.flatMap(
+            (relatedGroup): FarmPlacementReference[] => {
+              if (relatedGroup.key === group.key) return [];
+              return otherVarietyPlacementReferences(
+                relatedGroup,
+                resultRowsByGroup.get(relatedGroup.key) ?? [],
+                orchidGroups,
+              );
+            },
+          )}
           recordNavigation={{
             activeKey,
             allCompleted: records.size === groups.length,
@@ -145,6 +195,14 @@ export function StructureChangeWorkRecordDialog({
               return next;
             });
           }}
+          onResultRowsChange={(rows) => {
+            setResultRowsByGroup((current) => {
+              if (current.get(group.key) === rows) return current;
+              const next = new Map(current);
+              next.set(group.key, rows);
+              return next;
+            });
+          }}
           onSubmitRecord={async (execution) => {
             setIsDirty(true);
             setRecords((current) => {
@@ -157,6 +215,65 @@ export function StructureChangeWorkRecordDialog({
       ))}
     </div>
   );
+}
+
+function configuredSourceIds(
+  group: VarietyTargetGroup,
+  rows: ResultRow[],
+): number[] {
+  return group.targets.flatMap((target) => {
+    const sourceId = target.orchidGroupId;
+    if (sourceId == null) return [];
+    const sourceRows = rows.filter((row) =>
+      row.sourceOrchidGroupIds.includes(sourceId),
+    );
+    return sourceRows.length > 0 &&
+      sourceRows.every(
+        (row) => row.placement != null && row.placementConfigured,
+      )
+      ? [sourceId]
+      : [];
+  });
+}
+
+function otherVarietyPlacementReferences(
+  group: VarietyTargetGroup,
+  rows: ResultRow[],
+  orchidGroups: OrchidGroup[],
+): FarmPlacementReference[] {
+  const configuredSourceIdSet = new Set(configuredSourceIds(group, rows));
+  const sourceReferences = sourceReferencePlacements(
+    group.targets.flatMap((target) => {
+      if (
+        target.orchidGroupId == null ||
+        configuredSourceIdSet.has(target.orchidGroupId)
+      ) {
+        return [];
+      }
+      const source = orchidGroups.find(
+        (orchidGroup) => orchidGroup.id === target.orchidGroupId,
+      );
+      return source ? [{ group: source }] : [];
+    }),
+  ).map(
+    (reference): FarmPlacementReference => ({
+      ...reference,
+      kind: "OTHER_VARIETY_SOURCE",
+    }),
+  );
+  const resultReferences = rows.flatMap(
+    (row, index): FarmPlacementReference[] =>
+      row.placement != null && row.placementConfigured
+        ? [
+            {
+              ...row.placement,
+              label: `${group.varietyName} · 결과 ${index + 1} · ${Number(row.quantity || 0).toLocaleString()}분`,
+              kind: "OTHER_VARIETY_RESULT",
+            },
+          ]
+        : [],
+  );
+  return [...sourceReferences, ...resultReferences];
 }
 
 function groupTargetsByVariety(

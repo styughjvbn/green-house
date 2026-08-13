@@ -2,6 +2,7 @@ package com.greenhouse.backend;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.hamcrest.Matchers.hasSize;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -298,6 +299,37 @@ class DivideMergeWorkOperationIntegrationTests extends AbstractBackendIntegratio
 				.extracting(OrchidGroup::getStatus)
 				.containsExactly("정상", "분주 예정");
 		assertThat(appliedEffectRepository.findByWorkOperationIdOrderByIdAsc(operationId)).hasSize(1);
+
+		mockMvc.perform(post("/api/work-operations/{id}/structure-change-executions", operationId)
+				.contentType(MediaType.APPLICATION_JSON)
+				.content("""
+						{
+						  "idempotencyKey": "divide-batch-2",
+						  "completedDate": "2026-07-17",
+						  "worker": "분주 담당자",
+						  "sources": [
+						    {"sourceOrchidGroupId": %d, "inputQuantity": 10}
+						  ],
+						  "results": [
+						    {"bedZoneId": %d, "quantity": 10, "sourceOrchidGroupIds": [%d], "potSize": "3.5치", "ageYear": 2, "purpose": "NORMAL", "startPosition": 2, "endPosition": 3}
+						  ]
+						}
+						""".formatted(source.getId(), resultZone.getId(), source.getId())))
+				.andExpect(status().isCreated())
+				.andExpect(jsonPath("$.data.targets[0].processedQuantity").value(20));
+
+		mockMvc.perform(get("/api/work-operations/{id}/details", operationId))
+				.andExpect(status().isOk())
+				.andExpect(jsonPath("$.data.executions", hasSize(2)))
+				.andExpect(jsonPath("$.data.executions[0].executionKey").value("EXECUTION:divide-batch-1"))
+				.andExpect(jsonPath("$.data.executions[1].executionKey").value("EXECUTION:divide-batch-2"))
+				.andExpect(jsonPath("$.data.executions[0].sources[0].inputQuantity").value(10))
+				.andExpect(jsonPath("$.data.executions[1].results[0].quantity").value(10))
+				.andExpect(jsonPath("$.data.executions[1].results[0].bedZoneId").value(resultZone.getId()))
+				.andExpect(jsonPath("$.data.executions[1].results[0].varietyName").value("구조 변경 테스트"))
+				.andExpect(jsonPath("$.data.executions[1].results[0].location.houseNumber").value(1))
+				.andExpect(jsonPath("$.data.executions[1].results[0].location.physicalBedNumber").value(1))
+				.andExpect(jsonPath("$.data.executions[1].results[0].location.bedZoneName").value("우측"));
 
 		Long targetId = operationTargetRepository
 				.findByWorkOperationIdAndExcludedAtIsNullOrderByIdAsc(operationId).getFirst().getId();

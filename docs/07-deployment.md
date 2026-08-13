@@ -48,9 +48,11 @@ DATABASE_USERNAME
 DATABASE_PASSWORD
 SPRING_PROFILES_ACTIVE
 JPA_DDL_AUTO
+SERVER_PORT
 FRONTEND_ORIGIN_PATTERNS
 AUTH_ENABLED
-DEMO_MODE
+SESSION_TIMEOUT
+SESSION_COOKIE_MAX_AGE
 DB_POOL_MAX_SIZE
 DB_POOL_MIN_IDLE
 DB_POOL_CONNECTION_TIMEOUT
@@ -59,6 +61,8 @@ FLYWAY_USERNAME
 FLYWAY_PASSWORD
 ```
 
+운영에서 `JPA_DDL_AUTO`는 `validate`로 두고 스키마 변경은 Flyway 마이그레이션으로만 적용한다.
+
 인증을 적용하는 경우 다음 값을 별도로 관리한다.
 
 ```text
@@ -66,6 +70,17 @@ ADMIN_USERNAME
 ADMIN_PASSWORD
 WORKER_USERNAME
 WORKER_PASSWORD
+```
+
+데모 배포에서는 다음 제한 값을 함께 관리한다.
+
+```text
+DEMO_MODE
+DEMO_USERNAME
+DEMO_REQUEST_LIMIT_PER_MINUTE
+DEMO_MUTATION_LIMIT_PER_MINUTE
+DEMO_MUTATION_LIMIT_PER_DAY
+DEMO_MAX_REQUEST_BYTES
 ```
 
 ### Frontend
@@ -156,7 +171,13 @@ pg_dump -U greenhouse greenhouse > backup_$(date +%Y%m%d).sql
 - 다른 PC 또는 외장 디스크에 복사
 - 복구 테스트 주기적으로 수행
 
-운영 백업을 V6 이하 스키마로 복원한 뒤 현재 백엔드를 시작하면 Flyway가 최신 스키마까지 순서대로 갱신한다. V7은 작업 V2 구조를 생성하고, V8은 기존 `work_records`를 `work_operations`·대상·실행 데이터로 변환하며 원본 행은 감사용으로 보존한다. 변환 작업의 `request_key`는 `LEGACY_WORK_RECORD:{id}` 형식이므로 같은 이력이 중복 생성되지 않는다.
+운영 백업을 이전 스키마로 복원한 뒤 현재 백엔드를 시작하면 Flyway가 V12까지 순서대로 갱신한다.
+
+- V7은 작업 V2 구조를 생성한다.
+- V8은 기존 `work_records`를 `work_operations`·대상·실행 데이터로 변환하고 원본 행을 보존한다. 변환 작업의 `request_key`는 `LEGACY_WORK_RECORD:{id}` 형식이다.
+- V9는 작업 시점 데이터를 UTC 기준으로 정규화한다.
+- V10~V11은 품종 선택 색상 필드와 제약을 추가·보정한다.
+- V12는 운영 변경 감사용 `audit_events`와 조회 인덱스를 추가한다.
 
 운영 custom dump로 로컬 개발 DB를 초기화할 때는 다음 스크립트를 사용한다. 백업을 생략하면 `temp/`의 최신 `*.dump.gz` 또는 `*.dump`를 선택한다. 스크립트는 로컬 DB만 허용하며 기존 백엔드를 종료하고, 복원 후 Flyway 적용·Hibernate 스키마 검증·작업 V2 무결성 검사를 수행한다.
 
@@ -177,7 +198,7 @@ pg_dump -U greenhouse greenhouse > backup_$(date +%Y%m%d).sql
 로그인 우회, 데모 인증 주체, 요청 제한은 `DEMO_MODE=true`에서만 활성화된다.
 
 운영 PC의 DB role 생성, Secret 적용, 초기화와 모니터링 절차는
-`docs/12-demo-operations.md`를 따른다. 비식별화가 끝나지 않은 운영 백업을 데모
+`docs/features/demo-operations.md`를 따른다. 비식별화가 끝나지 않은 운영 백업을 데모
 DB에 직접 복구하지 않는다.
 
 ## 6. 운영 전 체크리스트
@@ -191,6 +212,7 @@ DB에 직접 복구하지 않는다.
 - [ ] 경매 lot 조회/상태 변경 확인
 - [ ] 경매 정산 생성/입금 확인 확인
 - [ ] 거래처 잔액 조회 확인
+- [ ] 주요 변경 후 `audit_events`의 요청·사용자·변경 필드 기록 확인
 - [ ] 백업 파일 생성 확인
 - [ ] 서버 재시작 후 데이터 유지 확인
 
@@ -200,6 +222,10 @@ DB에 직접 복구하지 않는다.
 - 수정 전 백업을 만든다.
 - 전표, 작업 이력, 입금 이벤트, 경매 상태 이력은 삭제하지 않는다.
 - 잘못된 데이터는 취소/보정 이력으로 처리한다.
+
+감사 이벤트는 `scripts/data-audit/audit-event-analysis.sql`의 예시 쿼리로
+최근 변경과 연속 보정 후보를 확인한다. `request_id`는 API 응답의
+`X-Request-Id`와 서버 로그에도 같이 남으므로 장애 추적 키로 사용한다.
 
 ## 8. 난 묶음 관리 맵 성능 기준 측정
 

@@ -23,6 +23,7 @@ export function WorkOperationPlanForm({
   isDedicatedWorkflow,
   targetSummary,
   targetCount,
+  targetLocked,
   optionsLoading,
   loading,
   canPreview,
@@ -49,6 +50,7 @@ export function WorkOperationPlanForm({
   isDedicatedWorkflow: boolean;
   targetSummary: TargetSummary;
   targetCount: number;
+  targetLocked: boolean;
   optionsLoading: boolean;
   loading: boolean;
   canPreview: boolean;
@@ -146,7 +148,7 @@ export function WorkOperationPlanForm({
             ) : null}
           </div>
           <div className="flex flex-wrap gap-2">
-            {!isDedicatedWorkflow ? (
+            {!targetLocked && !isDedicatedWorkflow ? (
               <button
                 className="rounded-md border border-[#159447] bg-white px-4 py-2 text-sm font-semibold text-[#10783a] hover:bg-[#f1faf3] disabled:opacity-50"
                 disabled={optionsLoading}
@@ -156,14 +158,16 @@ export function WorkOperationPlanForm({
                 농장 전체
               </button>
             ) : null}
-            <button
-              className="rounded-md border border-[#159447] bg-white px-4 py-2 text-sm font-semibold text-[#10783a] hover:bg-[#f1faf3] disabled:opacity-50"
-              disabled={optionsLoading}
-              type="button"
-              onClick={onOpenTargetSelector}
-            >
-              작업 대상 확인
-            </button>
+            {!targetLocked ? (
+              <button
+                className="rounded-md border border-[#159447] bg-white px-4 py-2 text-sm font-semibold text-[#10783a] hover:bg-[#f1faf3] disabled:opacity-50"
+                disabled={optionsLoading}
+                type="button"
+                onClick={onOpenTargetSelector}
+              >
+                작업 대상 확인
+              </button>
+            ) : null}
             {!isInboundPotting ? (
               <button
                 className="rounded-md border border-[#cfd8cc] bg-white px-4 py-2 text-sm font-semibold text-[#435047] disabled:opacity-50"
@@ -185,6 +189,7 @@ export function WorkOperationPlanForm({
             <WorkOperationTargetPreview
               preview={preview}
               excludedIds={excludedIds}
+              locked={targetLocked}
               onToggle={onToggleExcluded}
             />
           </>

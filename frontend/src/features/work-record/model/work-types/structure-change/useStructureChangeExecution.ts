@@ -8,7 +8,7 @@ import {
   getOrchidGroups,
   type StructureChangeExecutionPayload,
 } from "../../../api/workRecordApi";
-import { localDateValue } from "../../../lib/localDateValue";
+import { useRuntimeContext } from "@/shared/runtime/RuntimeContext";
 import {
   collectPriorResultOrchidGroupIds,
   createExecutionPayload,
@@ -25,6 +25,7 @@ export function useStructureChangeExecution({
   closeAfterSubmit,
   onClose,
   onRecordDirty,
+  onResultRowsChange,
   onSaved,
   onSubmitRecord,
   operation,
@@ -34,12 +35,14 @@ export function useStructureChangeExecution({
   closeAfterSubmit: boolean;
   onClose: () => void;
   onRecordDirty?: () => void;
+  onResultRowsChange?: (rows: ResultRow[]) => void;
   onSaved?: (operation: WorkOperation) => void;
   onSubmitRecord?: (payload: StructureChangeExecutionPayload) => Promise<void>;
   operation: StructureChangeOperation;
   orchidGroups: OrchidGroup[];
   recordMode: boolean;
 }) {
+  const { businessDate } = useRuntimeContext();
   const priorResultOrchidGroupIds = useMemo(
     () => collectPriorResultOrchidGroupIds(operation),
     [operation],
@@ -101,6 +104,7 @@ export function useStructureChangeExecution({
       ),
     [orchidGroupsById, priorResultOrchidGroupIds],
   );
+  const movement = operation.workTypeCode === "MOVEMENT";
   const [selectedSourceIds, setSelectedSourceIds] = useState<Set<number>>(
     () => new Set(availableSources.map(({ group }) => group.id)),
   );
@@ -121,12 +125,11 @@ export function useStructureChangeExecution({
   );
   const [rows, setRows] = useState<ResultRow[]>(() =>
     availableSources.map(({ group, inferredQuantity }) =>
-      newResultRow(group, inferredQuantity),
+      resultRowForOperation(group, inferredQuantity, movement),
     ),
   );
-  const today = localDateValue(new Date());
   const [completedDate, setCompletedDate] = useState(
-    recordMode ? operation.plannedStartDate : today,
+    recordMode ? operation.plannedStartDate : businessDate,
   );
   const [worker, setWorker] = useState(operation.worker ?? "");
   const [memo, setMemo] = useState("");
@@ -152,10 +155,19 @@ export function useStructureChangeExecution({
       ? (rows[0]?.ageYear ?? "")
       : "";
   const onRecordDirtyRef = useRef(onRecordDirty);
+  const onResultRowsChangeRef = useRef(onResultRowsChange);
 
   useEffect(() => {
     onRecordDirtyRef.current = onRecordDirty;
   }, [onRecordDirty]);
+
+  useEffect(() => {
+    onResultRowsChangeRef.current = onResultRowsChange;
+  }, [onResultRowsChange]);
+
+  useEffect(() => {
+    onResultRowsChangeRef.current?.(rows);
+  }, [rows]);
 
   useEffect(() => {
     if (recordMode) {
@@ -217,7 +229,10 @@ export function useStructureChangeExecution({
       );
     } else {
       const quantity = Number(inputQuantities[group.id] || group.quantity);
-      setRows((current) => [...current, newResultRow(group, quantity)]);
+      setRows((current) => [
+        ...current,
+        resultRowForOperation(group, quantity, movement),
+      ]);
     }
   }
 
@@ -241,8 +256,9 @@ export function useStructureChangeExecution({
           ? {
               ...row,
               quantity: value,
-              placement:
-                Number(value) < (source?.quantity ?? 0)
+              placement: movement
+                ? row.placement
+                : Number(value) < (source?.quantity ?? 0)
                   ? released
                   : source
                     ? inferPlacement(source)
@@ -266,7 +282,7 @@ export function useStructureChangeExecution({
         row.autoQuantity &&
         row.sourceOrchidGroupIds.length === 1 &&
         row.sourceOrchidGroupIds[0] === groupId
-          ? { ...row, placement }
+          ? { ...row, placement, placementConfigured: true }
           : row,
       ),
     );
@@ -359,6 +375,15 @@ export function useStructureChangeExecution({
       setError(validation);
       return;
     }
+    const discardQuantity = Math.max(0, totalInput - totalResult);
+    if (
+      movement &&
+      !recordMode &&
+      discardQuantity > 0 &&
+      !window.confirm(movementDiscardConfirmation(discardQuantity))
+    ) {
+      return;
+    }
     setSaving(true);
     setError(null);
     try {
@@ -424,10 +449,23 @@ export function useStructureChangeExecution({
     setMemo,
     setWorker,
     submit,
-    today,
+    today: businessDate,
     toggleSource,
     totalInput,
     totalResult,
     worker,
   };
+}
+
+function resultRowForOperation(
+  group: OrchidGroup,
+  quantity: number,
+  movement: boolean,
+) {
+  const row = newResultRow(group, quantity);
+  return movement ? { ...row, placement: null } : row;
+}
+
+export function movementDiscardConfirmation(discardQuantity: number) {
+  return `자동 계산된 폐기 수량이 ${discardQuantity.toLocaleString()}분입니다.\n자리 이동을 완료하면 별도의 폐기 작업이 함께 생성됩니다. 계속할까요?`;
 }

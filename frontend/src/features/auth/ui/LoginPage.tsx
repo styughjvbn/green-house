@@ -39,7 +39,7 @@ export function LoginPage() {
         <div className="flex items-center gap-3">
           <Image src="/flower.png" alt="Logo" width={44} height={44} />
           <div>
-            <h1 className="text-xl font-semibold text-[#123524]">난 농장</h1>
+            <h1 className="text-xl font-semibold text-[#123524]">농장</h1>
             <p className="mt-1 text-sm text-[#68746b]">관리 시스템 로그인</p>
           </div>
         </div>

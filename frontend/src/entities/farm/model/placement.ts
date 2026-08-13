@@ -8,5 +8,10 @@ export type FarmPlacementSelection = {
 };
 
 export type FarmPlacementReference = FarmPlacementSelection & {
-  kind: "SOURCE" | "RESULT" | "SAVED_RESULT";
+  kind:
+    | "SOURCE"
+    | "RESULT"
+    | "OTHER_VARIETY_SOURCE"
+    | "OTHER_VARIETY_RESULT"
+    | "SAVED_RESULT";
 };

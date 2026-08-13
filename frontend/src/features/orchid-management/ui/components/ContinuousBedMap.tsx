@@ -12,6 +12,7 @@ export default function ContinuousBedMap({
   visibleBedCount,
   distinguishVarietyColors,
   filteredOrchidGroupIds,
+  multiSelectEnabled,
   selectedOrchidGroupIds,
   selection,
   showScale,
@@ -27,6 +28,7 @@ export default function ContinuousBedMap({
   visibleBedCount: VisibleBedCount;
   distinguishVarietyColors: boolean;
   filteredOrchidGroupIds: Set<number>;
+  multiSelectEnabled: boolean;
   selectedOrchidGroupIds: Set<number>;
   selection: OrchidSelection | null;
   showScale: boolean;
@@ -122,6 +124,7 @@ export default function ContinuousBedMap({
                   bed={bed}
                   distinguishVarietyColors={distinguishVarietyColors}
                   filteredOrchidGroupIds={filteredOrchidGroupIds}
+                  multiSelectEnabled={multiSelectEnabled}
                   selectedOrchidGroupIds={selectedOrchidGroupIds}
                   selection={selection}
                   showScale={showScale}
@@ -136,6 +139,17 @@ export default function ContinuousBedMap({
               )}
             </div>
           ))}
+          {Array.from(
+            { length: Math.max(0, visibleBedCount - 1) },
+            (_, index) => (
+              <div
+                aria-hidden="true"
+                className="min-w-0 shrink-0 pl-3"
+                key={`end-placeholder-${index}`}
+                style={{ flexBasis: `${100 / visibleBedCount}%` }}
+              />
+            ),
+          )}
         </div>
       </div>
     </section>

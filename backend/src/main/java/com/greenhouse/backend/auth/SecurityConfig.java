@@ -76,7 +76,7 @@ public class SecurityConfig {
 								writeError(response, HttpStatus.FORBIDDEN, "FORBIDDEN", "접근 권한이 없습니다."))
 				)
 				.authorizeHttpRequests(authorize -> authorize
-						.requestMatchers("/api/auth/login", "/api/auth/me").permitAll()
+						.requestMatchers("/api/auth/login", "/api/auth/me", "/api/auth/context").permitAll()
 						.requestMatchers("/actuator/health", "/api-docs/**", "/swagger-ui/**", "/swagger-ui.html").permitAll()
 						.requestMatchers("/api/work-types/**").hasRole(AuthRole.ADMIN.name())
 						.requestMatchers("/api/**").authenticated()

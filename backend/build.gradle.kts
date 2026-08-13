@@ -64,6 +64,15 @@ tasks.named<Test>("test") {
 	}
 }
 
+tasks.register<JavaExec>("openApiRun") {
+	group = "documentation"
+	description = "Runs the backend with the test-profile H2 database for OpenAPI generation."
+	dependsOn(tasks.named("testClasses"))
+	classpath = sourceSets["test"].runtimeClasspath
+	mainClass.set("com.greenhouse.backend.BackendApplication")
+	args("--spring.profiles.active=test")
+}
+
 tasks.register<Test>("workE2eTest") {
 	group = "verification"
 	description = "Runs the Work API contract E2E tests against PostgreSQL."

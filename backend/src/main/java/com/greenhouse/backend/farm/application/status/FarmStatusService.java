@@ -3,6 +3,8 @@ package com.greenhouse.backend.farm.application.status;
 import com.greenhouse.backend.common.exception.NotFoundException;
 import com.greenhouse.backend.farm.domain.status.FarmStatusTargetType;
 import com.greenhouse.backend.farm.domain.status.FarmZoomLevel;
+import com.greenhouse.backend.farm.domain.orchid.OrchidGroup;
+import com.greenhouse.backend.farm.domain.orchid.OrchidGroupStatusPolicy;
 import com.greenhouse.backend.farm.dto.structure.BedZoneResponse;
 import com.greenhouse.backend.farm.dto.status.FarmStatusMapResponse;
 import com.greenhouse.backend.farm.dto.status.FarmStatusMapOrchidGroupResponse;
@@ -23,7 +25,7 @@ import com.greenhouse.backend.farm.repository.structure.PhysicalBedRepository;
 import lombok.RequiredArgsConstructor;
 
 import java.util.List;
-import java.util.Set;
+import java.util.Map;
 import java.util.stream.Collectors;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -32,8 +34,6 @@ import org.springframework.transaction.annotation.Transactional;
 @Transactional(readOnly = true)
 @RequiredArgsConstructor
 public class FarmStatusService {
-	private static final Set<String> WARNING_STATUSES = Set.of("주의", "이상", "병해충");
-
 	private final HouseRepository houseRepository;
 	private final PhysicalBedRepository physicalBedRepository;
 	private final BedZoneRepository bedZoneRepository;
@@ -55,7 +55,7 @@ public class FarmStatusService {
 							house.getName(),
 							houseGroups.size(),
 							houseGroups.stream()
-									.filter(group -> WARNING_STATUSES.contains(group.getStatus()))
+									.filter(group -> OrchidGroupStatusPolicy.isWarning(group.getStatus()))
 									.count(),
 							0,
 							null,
@@ -74,8 +74,8 @@ public class FarmStatusService {
 			throw new IllegalArgumentException("bedCount must be between 2 and 4.");
 		}
 
-		var allBeds = physicalBedRepository.findAllInFarmOrder();
-		if (allBeds.isEmpty()) {
+		var allBedRows = physicalBedRepository.findAllOrderRows();
+		if (allBedRows.isEmpty()) {
 			return new OrchidManagementViewportResponse(
 					null,
 					bedCount,
@@ -88,15 +88,18 @@ public class FarmStatusService {
 
 		int requestedIndex = 0;
 		if (startBedId != null) {
-			for (int index = 0; index < allBeds.size(); index++) {
-				if (allBeds.get(index).getId().equals(startBedId)) {
+			for (int index = 0; index < allBedRows.size(); index++) {
+				if (allBedRows.get(index).id().equals(startBedId)) {
 					requestedIndex = index;
 					break;
 				}
 			}
 		}
-		int startIndex = Math.min(requestedIndex, Math.max(0, allBeds.size() - bedCount));
-		var visibleBeds = allBeds.subList(startIndex, Math.min(startIndex + bedCount, allBeds.size()));
+		int startIndex = Math.min(requestedIndex, allBedRows.size() - 1);
+		var visibleBedRows = allBedRows.subList(startIndex, Math.min(startIndex + bedCount, allBedRows.size()));
+		var visibleBedIds = visibleBedRows.stream().map(row -> row.id()).toList();
+		var visibleBeds = physicalBedRepository.findAllWithZonesByIdIn(visibleBedIds);
+		var groupsByZoneId = loadGroupsByZoneId(visibleBedIds);
 
 		long orchidGroupCount = 0;
 		long totalQuantity = 0;
@@ -105,13 +108,13 @@ public class FarmStatusService {
 		for (var bed : visibleBeds) {
 			bedZoneCount += bed.getBedZones().size();
 			for (var zone : bed.getBedZones()) {
-				for (var orchidGroup : zone.getOrchidGroups()) {
+				for (var orchidGroup : groupsByZoneId.getOrDefault(zone.getId(), List.of())) {
 					if (orchidGroup.getQuantity() == null || orchidGroup.getQuantity() <= 0) {
 						continue;
 					}
 					orchidGroupCount++;
 					totalQuantity += orchidGroup.getQuantity();
-					if (WARNING_STATUSES.contains(orchidGroup.getStatus())) {
+					if (OrchidGroupStatusPolicy.isWarning(orchidGroup.getStatus())) {
 						abnormalCount++;
 					}
 				}
@@ -119,17 +122,20 @@ public class FarmStatusService {
 		}
 
 		return new OrchidManagementViewportResponse(
-				visibleBeds.getFirst().getId(),
+				visibleBedRows.getFirst().id(),
 				bedCount,
-				visibleBeds.stream().map(PhysicalBedResponse::from).toList(),
+				visibleBeds.stream().map(bed -> PhysicalBedResponse.from(bed, groupsByZoneId)).toList(),
 				startIndex > 0,
-				startIndex + bedCount < allBeds.size(),
+				startIndex + bedCount < allBedRows.size(),
 				new OrchidManagementSummaryResponse(
 						orchidGroupCount,
 						totalQuantity,
 						abnormalCount,
 						bedZoneCount),
-				allBeds.stream().map(OrchidManagementBedOrderResponse::from).toList());
+				allBedRows.stream()
+						.map(row -> new OrchidManagementBedOrderResponse(
+								row.id(), row.houseId(), row.houseNumber(), row.number()))
+						.toList());
 	}
 
 	public FarmStatusOrchidGroupListResponse getOrchidGroups(FarmStatusTargetType targetType, Long targetId) {
@@ -148,19 +154,25 @@ public class FarmStatusService {
 				}
 				var house = houseRepository.findById(houseId)
 						.orElseThrow(() -> new NotFoundException("동을 찾을 수 없습니다."));
-				var beds = physicalBedRepository.findByHouseIdOrderByDisplayOrderAsc(houseId).stream()
-						.map(PhysicalBedResponse::from)
+				var beds = physicalBedRepository.findByHouseIdOrderByDisplayOrderAsc(houseId);
+				var bedIds = beds.stream().map(bed -> bed.getId()).toList();
+				var groupsByZoneId = loadGroupsByZoneId(bedIds);
+				var responses = beds.stream()
+						.map(bed -> PhysicalBedResponse.from(bed, groupsByZoneId))
 						.toList();
-				yield new FarmStatusZoomResponse(level, house.getId(), house.getNumber(), beds, List.of());
+				yield new FarmStatusZoomResponse(level, house.getId(), house.getNumber(), responses, List.of());
 			}
 			case BED_ZONE -> {
 				if (physicalBedId == null) {
 					throw new IllegalArgumentException("physicalBedId is required.");
 				}
-				var physicalBed = physicalBedRepository.findById(physicalBedId)
+				var physicalBed = physicalBedRepository.findWithHouseAndBedZonesById(physicalBedId)
 						.orElseThrow(() -> new NotFoundException("물리 다이를 찾을 수 없습니다."));
-				var zones = bedZoneRepository.findByPhysicalBedIdOrderBySortOrderAsc(physicalBedId).stream()
-						.map(BedZoneResponse::from)
+				var groupsByZoneId = loadGroupsByZoneId(List.of(physicalBedId));
+				var zones = physicalBed.getBedZones().stream()
+						.map(zone -> BedZoneResponse.from(
+								zone,
+								groupsByZoneId.getOrDefault(zone.getId(), List.of())))
 						.toList();
 				yield new FarmStatusZoomResponse(
 						level,
@@ -170,6 +182,18 @@ public class FarmStatusService {
 						zones);
 			}
 		};
+	}
+
+	private Map<Long, List<OrchidGroup>> loadGroupsByZoneId(
+			List<Long> physicalBedIds) {
+		if (physicalBedIds.isEmpty()) {
+			return Map.of();
+		}
+		return orchidGroupRepository.findByPhysicalBedIdInOrderByLocation(physicalBedIds).stream()
+				.collect(Collectors.groupingBy(
+						group -> group.getBedZone().getId(),
+						java.util.LinkedHashMap::new,
+						Collectors.toList()));
 	}
 
 	private String resolveTargetName(FarmStatusTargetType targetType, Long targetId) {
@@ -187,7 +211,7 @@ public class FarmStatusService {
 		};
 	}
 
-	private List<com.greenhouse.backend.farm.domain.orchid.OrchidGroup> searchOrchidGroupsByTarget(
+	private List<OrchidGroup> searchOrchidGroupsByTarget(
 			FarmStatusTargetType targetType,
 			Long targetId) {
 		return switch (targetType) {

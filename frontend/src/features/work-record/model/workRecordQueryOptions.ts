@@ -1,6 +1,7 @@
 import { queryOptions } from "@tanstack/react-query";
 import {
   getCalendarWorkOperations,
+  getWorkOperationDetails,
   getWorkHouses,
   getWorkOperations,
   getWorkTypes,
@@ -12,6 +13,13 @@ export function workTypesQueryOptions() {
   return queryOptions({
     queryKey: workRecordQueryKeys.references.workTypes,
     queryFn: getWorkTypes,
+  });
+}
+
+export function workOperationDetailsQueryOptions(workOperationId: number) {
+  return queryOptions({
+    queryKey: workRecordQueryKeys.operations.details(workOperationId),
+    queryFn: () => getWorkOperationDetails(workOperationId),
   });
 }
 

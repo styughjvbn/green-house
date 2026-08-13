@@ -14,9 +14,8 @@ import org.springframework.security.core.context.SecurityContext;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.filter.OncePerRequestFilter;
 
-import com.greenhouse.backend.auth.AuthRole;
-
 public class DemoAuthenticationFilter extends OncePerRequestFilter {
+	private static final String DEMO_AUTHORITY = "ROLE_DEMO";
 
 	private final DemoProperties properties;
 
@@ -38,7 +37,7 @@ public class DemoAuthenticationFilter extends OncePerRequestFilter {
 		var authentication = UsernamePasswordAuthenticationToken.authenticated(
 				properties.username(),
 				null,
-				List.of(new SimpleGrantedAuthority("ROLE_" + AuthRole.DEMO.name()))
+				List.of(new SimpleGrantedAuthority(DEMO_AUTHORITY))
 		);
 		SecurityContext context = SecurityContextHolder.createEmptyContext();
 		context.setAuthentication(authentication);

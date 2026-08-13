@@ -12,6 +12,8 @@ import com.greenhouse.backend.auction.dto.AuctionLotReturnRequest;
 import com.greenhouse.backend.auction.dto.AuctionLotStatusRequest;
 import com.greenhouse.backend.auction.dto.AuctionTrackingSummaryResponse;
 import com.greenhouse.backend.auction.repository.AuctionShipmentLotRepository;
+import com.greenhouse.backend.auction.repository.AuctionAttemptRepository;
+import com.greenhouse.backend.auction.repository.AuctionLotStatusHistoryRepository;
 import com.greenhouse.backend.common.api.PageResponse;
 import com.greenhouse.backend.common.exception.NotFoundException;
 import com.greenhouse.backend.common.application.RequestActorProvider;
@@ -20,7 +22,10 @@ import lombok.RequiredArgsConstructor;
 
 import java.time.LocalDate;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
+import java.util.stream.Collectors;
+import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
@@ -31,6 +36,8 @@ import org.springframework.transaction.annotation.Transactional;
 @RequiredArgsConstructor
 public class AuctionTrackingService {
 	private final AuctionShipmentLotRepository lotRepository;
+	private final AuctionAttemptRepository attemptRepository;
+	private final AuctionLotStatusHistoryRepository statusHistoryRepository;
 	private final RequestActorProvider requestActorProvider;
 
 	public PageResponse<AuctionLotResponse> getLots(LocalDate from, LocalDate to, String market, String variety, String grade,
@@ -59,13 +66,13 @@ public class AuctionTrackingService {
 				List.of(AuctionInspectionStatus.MANUAL_REVIEW, AuctionInspectionStatus.MATCH_FAILED,
 						AuctionInspectionStatus.QUANTITY_MISMATCH, AuctionInspectionStatus.RETURN_INFERRED,
 						AuctionInspectionStatus.SOURCE_ERROR),
-				pageable)
-				.map(AuctionLotResponse::from);
-		return PageResponse.from(result);
+				pageable);
+		var responses = assembleLots(result.getContent());
+		return PageResponse.from(new PageImpl<>(responses, result.getPageable(), result.getTotalElements()));
 	}
 
 	public AuctionLotResponse getLot(Long id) {
-		return AuctionLotResponse.from(findLot(id));
+		return assembleLots(List.of(findLot(id))).getFirst();
 	}
 
 	public AuctionTrackingSummaryResponse getSummary() {
@@ -82,7 +89,7 @@ public class AuctionTrackingService {
 
 	@Transactional
 	public AuctionLotResponse confirmReturn(Long id, AuctionLotReturnRequest request) {
-		var lot = findLot(id);
+		var lot = findLotForUpdate(id);
 		if (!List.of(AuctionLotStatus.REAUCTION_WAITING, AuctionLotStatus.RETURN_INFERRED,
 				AuctionLotStatus.PARTIALLY_RETURNED).contains(lot.getCurrentStatus()))
 			throw new IllegalArgumentException("재경매대기, 반환추정 또는 부분반환 상태에서만 반환을 확인할 수 있습니다.");
@@ -96,7 +103,7 @@ public class AuctionTrackingService {
 
 	@Transactional
 	public AuctionLotResponse adjust(Long id, AuctionLotAdjustmentRequest request) {
-		var lot = findLot(id);
+		var lot = findLotForUpdate(id);
 		lot.adjustQuantities(request.soldQuantity(), request.waitingQuantity(), request.returnedQuantity(),
 				requestActorProvider.resolve(request.worker()), normalize(request.memo()));
 		return AuctionLotResponse.from(lot);
@@ -104,7 +111,7 @@ public class AuctionTrackingService {
 
 	@Transactional
 	public AuctionLotResponse addResult(Long id, AuctionLotResultRequest request) {
-		var lot = findLot(id);
+		var lot = findLotForUpdate(id);
 		if (lot.getWaitingQuantity() <= 0)
 			throw new IllegalArgumentException("대기 수량이 없는 lot에는 경매 결과를 추가할 수 없습니다.");
 		int waitingQuantity = lot.getWaitingQuantity();
@@ -179,7 +186,7 @@ public class AuctionTrackingService {
 
 	@Transactional
 	public AuctionLotResponse changeStatus(Long id, AuctionLotStatusRequest request) {
-		var lot = findLot(id);
+		var lot = findLotForUpdate(id);
 		lot.changeStatus(request.status(), request.reason().trim(), requestActorProvider.resolve(request.worker()),
 				normalize(request.memo()));
 		return AuctionLotResponse.from(lot);
@@ -188,6 +195,37 @@ public class AuctionTrackingService {
 	private com.greenhouse.backend.auction.domain.AuctionShipmentLot findLot(Long id) {
 		return lotRepository.findWithDetailsById(id)
 				.orElseThrow(() -> new NotFoundException("경매 출하 lot를 찾을 수 없습니다."));
+	}
+
+	private com.greenhouse.backend.auction.domain.AuctionShipmentLot findLotForUpdate(Long id) {
+		return lotRepository.findForUpdateById(id)
+				.orElseThrow(() -> new NotFoundException("경매 출하 lot를 찾을 수 없습니다."));
+	}
+
+	private List<AuctionLotResponse> assembleLots(
+			List<com.greenhouse.backend.auction.domain.AuctionShipmentLot> lots) {
+		if (lots.isEmpty()) {
+			return List.of();
+		}
+		var lotIds = lots.stream().map(lot -> lot.getId()).toList();
+		Map<Long, List<AuctionAttempt>> attemptsByLotId = attemptRepository
+				.findAllWithResultLinesByLotIdIn(lotIds)
+				.stream()
+				.collect(Collectors.groupingBy(
+						attempt -> attempt.getShipmentLot().getId(),
+						java.util.LinkedHashMap::new,
+						Collectors.toList()));
+		var historiesByLotId = statusHistoryRepository.findAllByLotIdIn(lotIds).stream()
+				.collect(Collectors.groupingBy(
+						history -> history.getShipmentLotId(),
+						java.util.LinkedHashMap::new,
+						Collectors.toList()));
+		return lots.stream()
+				.map(lot -> AuctionLotResponse.from(
+						lot,
+						attemptsByLotId.getOrDefault(lot.getId(), List.of()),
+						historiesByLotId.getOrDefault(lot.getId(), List.of())))
+				.toList();
 	}
 
 	private int resolveAttemptNo(com.greenhouse.backend.auction.domain.AuctionShipmentLot lot, Integer attemptNo) {
