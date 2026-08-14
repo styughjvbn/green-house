@@ -37,10 +37,13 @@ green-house/
 
 - Spring Boot
 - Java 21
+- Lombok (`@RequiredArgsConstructor`, `@Getter`, `@Slf4j` 중심)
 - Spring Data JPA
 - Bean Validation
 - PostgreSQL
 - Flyway Migration
+
+Lombok은 생성자 주입, 반복 getter, 표준 로거처럼 동작을 바꾸지 않는 보일러플레이트 제거에 적극 사용한다. 다만 JPA 엔티티의 상태 전이·생성 규칙, 테스트용 생성자, 검증·조립 로직처럼 명시성이 필요한 코드는 수동 구현을 유지한다.
 
 ### Infra
 

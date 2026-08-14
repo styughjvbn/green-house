@@ -11,19 +11,16 @@ import com.greenhouse.backend.work.domain.target.WorkTargetExecutionStatus;
 import com.greenhouse.backend.work.domain.operation.WorkType;
 import com.querydsl.jpa.impl.JPAQuery;
 import com.querydsl.jpa.impl.JPAQueryFactory;
-import jakarta.persistence.EntityManager;
 import jakarta.persistence.LockModeType;
 import java.util.List;
 import java.util.Collection;
 import java.util.Optional;
+import lombok.RequiredArgsConstructor;
 
+@RequiredArgsConstructor
 public class WorkTargetExecutionRepositoryImpl implements WorkTargetExecutionRepositoryCustom {
 
 	private final JPAQueryFactory queryFactory;
-
-	public WorkTargetExecutionRepositoryImpl(EntityManager entityManager) {
-		this.queryFactory = new JPAQueryFactory(entityManager);
-	}
 
 	@Override
 	public List<WorkTargetExecution> findActiveInboundPottingForUpdate(Long inboundRecordId) {

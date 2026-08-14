@@ -7,17 +7,15 @@ import com.greenhouse.backend.work.application.effect.WorkExecutionResult;
 import com.greenhouse.backend.work.domain.target.WorkOperationTarget;
 import com.greenhouse.backend.work.domain.target.WorkTargetReferenceType;
 import java.util.LinkedHashMap;
+import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 
 @Component
+@RequiredArgsConstructor
 public class InboundPottingExecutor {
 
 	private final InboundPottingService inboundPottingService;
 	private final ObjectMapper objectMapper = new ObjectMapper().findAndRegisterModules();
-
-	public InboundPottingExecutor(InboundPottingService inboundPottingService) {
-		this.inboundPottingService = inboundPottingService;
-	}
 
 	public WorkExecutionResult execute(WorkOperationTarget target, WorkEffectCommand command) {
 		if (target == null || target.getTargetReferenceType() != WorkTargetReferenceType.INBOUND_RECORD) {

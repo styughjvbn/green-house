@@ -6,16 +6,14 @@ import com.greenhouse.backend.work.application.effect.WorkExecutionResult;
 import com.greenhouse.backend.work.domain.effect.WorkEffectKind;
 import com.greenhouse.backend.work.domain.operation.WorkOperation;
 import com.greenhouse.backend.work.domain.target.WorkOperationTarget;
+import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 
 @Component
+@RequiredArgsConstructor
 public class InboundPottingWorkHandler implements WorkEffectHandler {
 
 	private final InboundPottingExecutor executor;
-
-	public InboundPottingWorkHandler(InboundPottingExecutor executor) {
-		this.executor = executor;
-	}
 
 	@Override public String supports() { return "POTTING"; }
 	@Override public WorkEffectKind effectKind() { return WorkEffectKind.STRUCTURE_CHANGE; }

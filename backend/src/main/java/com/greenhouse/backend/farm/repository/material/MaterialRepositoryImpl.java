@@ -6,19 +6,16 @@ import com.greenhouse.backend.farm.domain.material.Material;
 import com.querydsl.core.BooleanBuilder;
 import com.querydsl.core.types.dsl.BooleanExpression;
 import com.querydsl.jpa.impl.JPAQueryFactory;
-import jakarta.persistence.EntityManager;
 import java.util.List;
+import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.Pageable;
 
+@RequiredArgsConstructor
 public class MaterialRepositoryImpl implements MaterialRepositoryCustom {
 
 	private final JPAQueryFactory queryFactory;
-
-	public MaterialRepositoryImpl(EntityManager entityManager) {
-		this.queryFactory = new JPAQueryFactory(entityManager);
-	}
 
 	@Override
 	public Page<Material> search(String keyword, String category, String manufacturer, Boolean active, Pageable pageable) {
