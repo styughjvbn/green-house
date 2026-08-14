@@ -142,6 +142,7 @@ application|domain|repository|controller|dto/
 - 목록 조회는 작업별 상세 재조회를 하지 않고 대상과 실행 상태를 일괄 조회해 응답을 조립한다.
 - 분갈이·분주·합식은 공통 구조 변경 실행기와 작업별 Strategy를 사용한다. 기존 분갈이·분주 단일 대상 요청도 변환기를 거쳐 같은 실행 코어로 위임하고, 기존 합식 완료 API만 호환 경로로 남아 있다. 난 묶음 저장소가 필요한 Strategy 구현은 `farm` 모듈에 둔다.
 - 효과 실행과 효과 감사 저장을 분리하고 모든 신규 효과는 공통 저장 컴포넌트를 사용한다.
+- 신규 즉시 완료 작업은 대상별 멱등성 조회를 반복하지 않고 효과 INSERT와 실행 상태 UPDATE를 모아 JDBC batch로 flush한다. 기존 작업 재실행 경로는 효과 키 조회와 DB UNIQUE 제약으로 멱등성을 유지한다.
 - DB의 `timestamp without time zone` 시점 값은 UTC로 저장한다. 업무일자는 `Asia/Seoul` 기준으로
   계산하고 API 응답의 시점 값은 UTC에서 `Asia/Seoul`로 변환한다.
 
@@ -247,6 +248,7 @@ Persistence 조회 규칙:
 
 - Controller는 HTTP 변환과 validation 진입만 담당하고 application service가 유스케이스와 트랜잭션을 소유한다.
 - 쓰기 유스케이스는 하나의 public application method를 원자 경계로 삼는다. 중간 service 호출이 별도 트랜잭션을 암묵적으로 만들거나 self invocation에 의존하지 않게 한다.
+- PostgreSQL 엔티티 ID는 테이블별 sequence와 `allocationSize = 50`을 사용한다. Hibernate JDBC batch와 insert 정렬을 활성화하며, 대량 저장은 같은 트랜잭션에서 동일 엔티티를 연속 저장해 JDBC batch가 유지되게 한다.
 - Entity는 자기 상태의 불변식과 전이를 지키고 application service는 aggregate 조회, 순서 제어, 모듈 간 조율을 담당한다. 여러 Service에서 같은 상태 조건을 검사하면 Domain Policy 또는 상태 전이 메서드로 모은다.
 - 네트워크·파일·사용자 대기처럼 실패와 지연을 통제하기 어려운 작업은 DB 트랜잭션 안에서 수행하지 않는다.
 - 여러 행을 잠글 때는 ID 오름차순처럼 잠금 순서를 고정한다. 재고, 잔액, 순번, 상태 변경에는 도메인 검사와 함께 version, 비관적 잠금, UNIQUE/CHECK 또는 원자 갱신 중 필요한 DB 보호를 둔다.

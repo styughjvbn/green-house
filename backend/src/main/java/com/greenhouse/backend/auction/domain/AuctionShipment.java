@@ -8,6 +8,7 @@ import jakarta.persistence.FetchType;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
+import jakarta.persistence.SequenceGenerator;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.OneToMany;
@@ -28,7 +29,8 @@ import com.greenhouse.backend.partner.domain.PartnerType;
 @Table(name = "auction_shipments")
 public class AuctionShipment extends BaseEntity {
 	@Id
-	@GeneratedValue(strategy = GenerationType.IDENTITY)
+	@GeneratedValue(strategy = GenerationType.SEQUENCE, generator = "auction_shipments_id_seq")
+	@SequenceGenerator(name = "auction_shipments_id_seq", sequenceName = "auction_shipments_id_seq", allocationSize = 50)
 	private Long id;
 	@Column(name = "shipment_date", nullable = false)
 	private LocalDate shipmentDate;

@@ -11,6 +11,7 @@ import jakarta.persistence.FetchType;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
+import jakarta.persistence.SequenceGenerator;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.OneToOne;
@@ -28,7 +29,8 @@ import org.hibernate.type.SqlTypes;
 @Table(name = "auction_settlement_lines")
 public class AuctionSettlementLine extends BaseEntity {
 	@Id
-	@GeneratedValue(strategy = GenerationType.IDENTITY)
+	@GeneratedValue(strategy = GenerationType.SEQUENCE, generator = "auction_settlement_lines_id_seq")
+	@SequenceGenerator(name = "auction_settlement_lines_id_seq", sequenceName = "auction_settlement_lines_id_seq", allocationSize = 50)
 	private Long id;
 
 	@Getter(AccessLevel.NONE)

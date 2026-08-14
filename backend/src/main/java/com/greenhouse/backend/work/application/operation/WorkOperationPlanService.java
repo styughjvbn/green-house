@@ -97,7 +97,7 @@ public class WorkOperationPlanService {
 		List<WorkTargetExecution> executions = executionRepository
 				.findByTargetWorkOperationIdOrderByIdAsc(operation.getId());
 		for (WorkTargetExecution execution : executions) {
-			var result = workEffectProcessor.apply(
+			var result = workEffectProcessor.applyNew(
 					operation,
 					execution.getTarget(),
 					new WorkEffectCommand(executedAt, worker, request.details(), null));

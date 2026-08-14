@@ -11,6 +11,7 @@ import jakarta.persistence.FetchType;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
+import jakarta.persistence.SequenceGenerator;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.OneToOne;
 import jakarta.persistence.Table;
@@ -30,7 +31,8 @@ import org.hibernate.type.SqlTypes;
 @Table(name = "partner_settlement_settings")
 public class PartnerSettlementSettings extends BaseEntity {
 	@Id
-	@GeneratedValue(strategy = GenerationType.IDENTITY)
+	@GeneratedValue(strategy = GenerationType.SEQUENCE, generator = "partner_settlement_settings_id_seq")
+	@SequenceGenerator(name = "partner_settlement_settings_id_seq", sequenceName = "partner_settlement_settings_id_seq", allocationSize = 50)
 	private Long id;
 
 	@OneToOne(fetch = FetchType.LAZY, optional = false)
