@@ -9,6 +9,7 @@ import com.greenhouse.backend.work.domain.target.WorkTargetExecution;
 import com.greenhouse.backend.work.domain.target.WorkTargetExecutionStatus;
 import com.greenhouse.backend.work.domain.target.WorkTargetReferenceType;
 import com.greenhouse.backend.work.domain.operation.WorkType;
+import com.greenhouse.backend.work.dto.operation.WorkOperationProgressResponse;
 import com.greenhouse.backend.work.dto.operation.WorkOperationResponse;
 import com.greenhouse.backend.work.dto.target.WorkOperationTargetResponse;
 import com.greenhouse.backend.work.repository.WorkOperationTargetRepository;
@@ -84,10 +85,11 @@ class WorkOperationResponseAssembler {
 								actionResolver.resolveTarget(operation, execution, remainingQuantity));
 					})
 					.toList();
+			WorkOperationProgressResponse progress = WorkOperationProgressResponse.from(targetResponses);
 			return WorkOperationResponse.from(
 					operation,
 					targetResponses,
-					actionResolver.resolveOperation(operation, targetResponses));
+					actionResolver.resolveOperation(operation, progress));
 		}).toList();
 	}
 

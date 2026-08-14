@@ -11,6 +11,7 @@ import com.greenhouse.backend.work.domain.operation.WorkSourceScopeType;
 import com.greenhouse.backend.work.dto.operation.OrchidGroupWorkHistoryResponse;
 import com.greenhouse.backend.work.dto.operation.WorkHistoryScopeType;
 import com.greenhouse.backend.work.dto.operation.WorkOperationResponse;
+import com.greenhouse.backend.work.dto.operation.WorkOperationSummaryResponse;
 import com.greenhouse.backend.work.repository.WorkEffectOrchidGroupRepository;
 import com.greenhouse.backend.work.repository.WorkOperationRepository;
 import com.greenhouse.backend.work.repository.WorkOperationTargetRepository;
@@ -40,6 +41,7 @@ public class WorkOperationQueryService {
 	private final WorkEffectOrchidGroupRepository effectOrchidGroupRepository;
 	private final WorkTargetResolver workTargetResolver;
 	private final WorkOperationResponseAssembler responseAssembler;
+	private final WorkOperationSummaryAssembler summaryAssembler;
 	private final Clock clock;
 
 	public WorkOperationResponse get(Long operationId) {
@@ -66,7 +68,7 @@ public class WorkOperationQueryService {
 				.toList();
 	}
 
-	public PageResponse<WorkOperationResponse> search(
+	public PageResponse<WorkOperationSummaryResponse> search(
 			LocalDate fromDate,
 			LocalDate toDate,
 			WorkOperationStatus status,
@@ -93,21 +95,21 @@ public class WorkOperationQueryService {
 				keyword,
 				PageRequest.of(page, size));
 		return new PageResponse<>(
-				responseAssembler.assembleAll(operationPage.getContent()),
+				summaryAssembler.assembleAll(operationPage.getContent()),
 				operationPage.getNumber(),
 				operationPage.getSize(),
 				operationPage.getTotalElements(),
 				operationPage.getTotalPages());
 	}
 
-	public List<WorkOperationResponse> getCalendar(
+	public List<WorkOperationSummaryResponse> getCalendar(
 			LocalDate fromDate,
 			LocalDate toDate,
 			WorkOperationStatus status,
 			WorkOperationSearchView view) {
 		validateDates(fromDate, toDate);
 		LocalDate farmToday = TimeConfig.farmToday(clock);
-		return responseAssembler.assembleAll(operationRepository.searchAll(
+		return summaryAssembler.assembleAll(operationRepository.searchAll(
 				fromDate,
 				toDate,
 				status,

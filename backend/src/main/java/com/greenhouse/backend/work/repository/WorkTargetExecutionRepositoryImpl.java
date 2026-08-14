@@ -9,6 +9,9 @@ import com.greenhouse.backend.work.domain.operation.WorkOperationStatus;
 import com.greenhouse.backend.work.domain.target.WorkTargetExecution;
 import com.greenhouse.backend.work.domain.target.WorkTargetExecutionStatus;
 import com.greenhouse.backend.work.domain.operation.WorkType;
+import com.querydsl.core.Tuple;
+import com.querydsl.core.types.dsl.NumberExpression;
+import com.querydsl.core.types.dsl.CaseBuilder;
 import com.querydsl.jpa.impl.JPAQuery;
 import com.querydsl.jpa.impl.JPAQueryFactory;
 import jakarta.persistence.LockModeType;
@@ -76,6 +79,64 @@ public class WorkTargetExecutionRepositoryImpl implements WorkTargetExecutionRep
 	}
 
 	@Override
+	public List<WorkOperationProgressProjection> findProgressByWorkOperationIdIn(
+			Collection<Long> workOperationIds) {
+		if (workOperationIds.isEmpty()) {
+			return List.of();
+		}
+		NumberExpression<Integer> pending = countStatus(WorkTargetExecutionStatus.PENDING);
+		NumberExpression<Integer> inProgress = countStatus(WorkTargetExecutionStatus.IN_PROGRESS);
+		NumberExpression<Integer> partial = countStatus(WorkTargetExecutionStatus.PARTIALLY_COMPLETED);
+		NumberExpression<Integer> completed = countStatus(WorkTargetExecutionStatus.COMPLETED);
+		NumberExpression<Integer> skipped = countStatus(WorkTargetExecutionStatus.SKIPPED);
+		NumberExpression<Integer> canceled = countStatus(WorkTargetExecutionStatus.CANCELED);
+		NumberExpression<Integer> failed = countStatus(WorkTargetExecutionStatus.FAILED);
+		NumberExpression<Integer> totalQuantity = workOperationTarget.quantitySnapshot.sum();
+		NumberExpression<Integer> processedQuantity = workTargetExecution.processedQuantity.sum();
+		NumberExpression<Integer> skippedQuantity = new CaseBuilder()
+				.when(workTargetExecution.status.eq(WorkTargetExecutionStatus.SKIPPED))
+				.then(workOperationTarget.quantitySnapshot.subtract(workTargetExecution.processedQuantity))
+				.otherwise(0)
+				.sum();
+		List<Tuple> rows = queryFactory
+				.select(
+						workOperationTarget.workOperation.id,
+						workOperationTarget.id.count(),
+						pending,
+						inProgress,
+						partial,
+						completed,
+						skipped,
+						canceled,
+						failed,
+						totalQuantity,
+						processedQuantity,
+						skippedQuantity)
+				.from(workOperationTarget)
+				.join(workTargetExecution).on(workTargetExecution.target.eq(workOperationTarget))
+				.where(
+						workOperationTarget.workOperation.id.in(workOperationIds),
+						workOperationTarget.excludedAt.isNull())
+				.groupBy(workOperationTarget.workOperation.id)
+				.fetch();
+		return rows.stream()
+				.map(row -> new WorkOperationProgressProjection(
+						row.get(workOperationTarget.workOperation.id),
+						intValue(row.get(workOperationTarget.id.count())),
+						intValue(row.get(pending)),
+						intValue(row.get(inProgress)),
+						intValue(row.get(partial)),
+						intValue(row.get(completed)),
+						intValue(row.get(skipped)),
+						intValue(row.get(canceled)),
+						intValue(row.get(failed)),
+						intValue(row.get(totalQuantity)),
+						intValue(row.get(processedQuantity)),
+						intValue(row.get(skippedQuantity))))
+				.toList();
+	}
+
+	@Override
 	public List<WorkTargetExecution> findForUpdateByTargetWorkOperationIdOrderByIdAsc(
 			Long workOperationId) {
 		return executionWithOperationAndWorkType()
@@ -118,5 +179,17 @@ public class WorkTargetExecutionRepositoryImpl implements WorkTargetExecutionRep
 	private JPAQuery<WorkTargetExecution> executionWithOperationAndWorkType() {
 		return executionWithOperation()
 				.join(workOperation.workType, workType).fetchJoin();
+	}
+
+	private NumberExpression<Integer> countStatus(WorkTargetExecutionStatus status) {
+		return new CaseBuilder()
+				.when(workTargetExecution.status.eq(status))
+				.then(1)
+				.otherwise(0)
+				.sum();
+	}
+
+	private int intValue(Number value) {
+		return value == null ? 0 : value.intValue();
 	}
 }

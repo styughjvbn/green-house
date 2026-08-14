@@ -26,6 +26,7 @@ import com.greenhouse.backend.work.dto.operation.WorkOperationCompleteRequest;
 import com.greenhouse.backend.work.dto.correction.WorkOperationCorrectionCreateRequest;
 import com.greenhouse.backend.work.dto.correction.WorkOperationCorrectionsResponse;
 import com.greenhouse.backend.work.dto.operation.WorkOperationResponse;
+import com.greenhouse.backend.work.dto.operation.WorkOperationSummaryResponse;
 import com.greenhouse.backend.work.dto.operation.WorkOperationDetailResponse;
 import com.greenhouse.backend.work.dto.target.WorkTargetPreviewRequest;
 import com.greenhouse.backend.work.dto.target.WorkTargetPreviewResponse;
@@ -144,7 +145,7 @@ public class WorkOperationController {
 	}
 
 	@GetMapping("/work-operations")
-	public ApiResponse<PageResponse<WorkOperationResponse>> search(
+	public ApiResponse<PageResponse<WorkOperationSummaryResponse>> search(
 			@RequestParam(required = false) LocalDate from,
 			@RequestParam(required = false) LocalDate to,
 			@RequestParam(required = false) WorkOperationStatus status,
@@ -159,7 +160,7 @@ public class WorkOperationController {
 	}
 
 	@GetMapping("/work-operations/calendar")
-	public ApiResponse<List<WorkOperationResponse>> getCalendar(
+	public ApiResponse<List<WorkOperationSummaryResponse>> getCalendar(
 			@RequestParam LocalDate from,
 			@RequestParam LocalDate to,
 			@RequestParam(required = false) WorkOperationStatus status,

@@ -24,7 +24,7 @@ class WorkOperationBenchmarkTest extends WorkE2ETestBase {
 	private static final int TARGETS_PER_OPERATION = 20;
 	private static final int WARMUP_COUNT = 3;
 	private static final int SAMPLE_COUNT = 20;
-	private static final long LIST_MAX_QUERY_COUNT = 5;
+	private static final long LIST_MAX_QUERY_COUNT = 3;
 	private static final long DETAIL_MAX_QUERY_COUNT = 4;
 	private static final long HISTORY_MAX_QUERY_COUNT = 5;
 	private static final boolean ENFORCE_QUERY_LIMITS =
@@ -117,7 +117,9 @@ class WorkOperationBenchmarkTest extends WorkE2ETestBase {
 	private void assertListResponse(ApiResult response) {
 		assertThat(response.status()).isEqualTo(200);
 		assertThat(response.data().path("content")).hasSize(OPERATION_COUNT);
-		assertThat(response.data().path("content").get(0).path("targets")).hasSize(TARGETS_PER_OPERATION);
+		assertThat(response.data().path("content").get(0).path("progress").path("total").asInt())
+				.isEqualTo(TARGETS_PER_OPERATION);
+		assertThat(response.data().path("content").get(0).has("targets")).isFalse();
 	}
 
 	private void assertDetailResponse(ApiResult response) {

@@ -93,7 +93,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ApiResponsePageResponseWorkOperationResponse'
+                $ref: '#/components/schemas/ApiResponsePageResponseWorkOperationSummaryResponse'
     post:
       tags:
       - work-operation-controller
@@ -670,7 +670,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ApiResponseListWorkOperationResponse'
+                $ref: '#/components/schemas/ApiResponseListWorkOperationSummaryResponse'
   /api/work-history:
     get:
       tags:
@@ -762,6 +762,15 @@ components:
             $ref: '#/components/schemas/WorkOperationResponse'
         message:
           type: string
+    ApiResponseListWorkOperationSummaryResponse:
+      type: object
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/WorkOperationSummaryResponse'
+        message:
+          type: string
     ApiResponsePageResponseOrchidGroupWorkHistoryResponse:
       type: object
       properties:
@@ -769,11 +778,11 @@ components:
           $ref: '#/components/schemas/PageResponseOrchidGroupWorkHistoryResponse'
         message:
           type: string
-    ApiResponsePageResponseWorkOperationResponse:
+    ApiResponsePageResponseWorkOperationSummaryResponse:
       type: object
       properties:
         data:
-          $ref: '#/components/schemas/PageResponseWorkOperationResponse'
+          $ref: '#/components/schemas/PageResponseWorkOperationSummaryResponse'
         message:
           type: string
     ApiResponseWorkOperationCorrectionsResponse:
@@ -1081,13 +1090,13 @@ components:
         totalPages:
           type: integer
           format: int32
-    PageResponseWorkOperationResponse:
+    PageResponseWorkOperationSummaryResponse:
       type: object
       properties:
         content:
           type: array
           items:
-            $ref: '#/components/schemas/WorkOperationResponse'
+            $ref: '#/components/schemas/WorkOperationSummaryResponse'
         page:
           type: integer
           format: int32
@@ -1715,6 +1724,104 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/WorkOperationTargetResponse'
+        availableActions:
+          type: array
+          items:
+            type: string
+            enum:
+            - START
+            - PAUSE
+            - RESUME
+            - COMPLETE
+            - CANCEL
+    WorkOperationSummaryResponse:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: int64
+        workTypeId:
+          type: integer
+          format: int64
+        workTypeCode:
+          type: string
+        workType:
+          type: string
+        workTypeTemplate:
+          type: string
+          enum:
+          - PESTICIDE
+          - FERTILIZER
+          - REPOT
+          - CLEANUP
+          - DISCARD
+          - STATUS
+          - MEMO
+          - MOVEMENT
+          - MULTI_CREATE
+          - CORRECTION
+        workTypeWorkflow:
+          type: string
+          enum:
+          - GENERIC
+          - MOVEMENT
+          - DISCARD
+          - POTTING
+          - STRUCTURE_CHANGE
+        title:
+          type: string
+        status:
+          type: string
+          enum:
+          - PLANNED
+          - IN_PROGRESS
+          - PAUSED
+          - COMPLETED
+          - CANCELED
+          - CORRECTED
+        plannedStartDate:
+          type: string
+          format: date
+        plannedEndDate:
+          type: string
+          format: date
+        actualStartAt:
+          type: string
+          format: date-time
+        actualEndAt:
+          type: string
+          format: date-time
+        sourceScopeType:
+          type: string
+          enum:
+          - NONE
+          - FARM
+          - HOUSE
+          - PHYSICAL_BED
+          - BED_ZONE
+          - ORCHID_GROUP
+          - DERIVED_GROUP
+          - USER_COLLECTION
+          - MANUAL_SELECTION
+          - INBOUND_RECORD_SELECTION
+        sourceScopeId:
+          type: integer
+          format: int64
+        sourceConditionSnapshot:
+          type: object
+          additionalProperties: {}
+        targetSnapshotAt:
+          type: string
+          format: date-time
+        details:
+          type: object
+          additionalProperties: {}
+        worker:
+          type: string
+        memo:
+          type: string
+        progress:
+          $ref: '#/components/schemas/WorkOperationProgressResponse'
         availableActions:
           type: array
           items:

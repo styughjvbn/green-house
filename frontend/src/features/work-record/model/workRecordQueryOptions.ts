@@ -1,6 +1,7 @@
 import { queryOptions } from "@tanstack/react-query";
 import {
   getCalendarWorkOperations,
+  getWorkOperation,
   getWorkOperationDetails,
   getWorkHouses,
   getWorkOperations,
@@ -20,6 +21,13 @@ export function workOperationDetailsQueryOptions(workOperationId: number) {
   return queryOptions({
     queryKey: workRecordQueryKeys.operations.details(workOperationId),
     queryFn: () => getWorkOperationDetails(workOperationId),
+  });
+}
+
+export function workOperationQueryOptions(workOperationId: number) {
+  return queryOptions({
+    queryKey: workRecordQueryKeys.operations.operation(workOperationId),
+    queryFn: () => getWorkOperation(workOperationId),
   });
 }
 
