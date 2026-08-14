@@ -9,6 +9,7 @@ import com.greenhouse.backend.work.domain.operation.WorkOperation;
 import com.greenhouse.backend.work.domain.target.WorkTargetExecution;
 import com.greenhouse.backend.work.domain.target.WorkTargetInclusionSource;
 import com.greenhouse.backend.work.domain.operation.WorkType;
+import com.greenhouse.backend.work.domain.operation.WorkSourceScopeType;
 import com.greenhouse.backend.work.dto.operation.WorkOperationBatchCreateRequest;
 import com.greenhouse.backend.work.dto.operation.WorkOperationCreateRequest;
 import com.greenhouse.backend.work.dto.operation.WorkOperationResponse;
@@ -82,7 +83,8 @@ public class WorkOperationPlanService {
 								resolvedSelection.resolved(),
 								resolvedSelection.included().stream()
 										.filter(target -> group.targetIds().contains(target.orchidGroupId()))
-										.toList())).getId()))
+										.toList()))
+						.getId()))
 				.toList();
 	}
 
@@ -204,7 +206,7 @@ public class WorkOperationPlanService {
 	}
 
 	private WorkTargetSelection selection(
-			com.greenhouse.backend.work.domain.operation.WorkSourceScopeType scopeType,
+			WorkSourceScopeType scopeType,
 			Long scopeId,
 			String scopeKey,
 			List<Long> orchidGroupIds) {
@@ -214,20 +216,24 @@ public class WorkOperationPlanService {
 				: orchidGroupIds.stream().filter(java.util.Objects::nonNull).distinct().toList();
 		switch (scopeType) {
 			case FARM -> {
-				if (scopeId != null) throw new IllegalArgumentException("전체 농장 작업에는 대상 범위 ID를 지정할 수 없습니다.");
+				if (scopeId != null)
+					throw new IllegalArgumentException("전체 농장 작업에는 대상 범위 ID를 지정할 수 없습니다.");
 			}
 			case HOUSE, PHYSICAL_BED, BED_ZONE, ORCHID_GROUP, USER_COLLECTION -> {
-				if (scopeId == null) throw new IllegalArgumentException("선택한 작업 대상의 ID가 필요합니다.");
+				if (scopeId == null)
+					throw new IllegalArgumentException("선택한 작업 대상의 ID가 필요합니다.");
 			}
 			case DERIVED_GROUP -> {
-				if (normalizedKey == null) throw new IllegalArgumentException("자동 그룹 키가 필요합니다.");
+				if (normalizedKey == null)
+					throw new IllegalArgumentException("자동 그룹 키가 필요합니다.");
 			}
 			case MANUAL_SELECTION -> {
-				if (normalizedIds.isEmpty()) throw new IllegalArgumentException("직접 선택한 난 묶음이 한 개 이상 필요합니다.");
+				if (normalizedIds.isEmpty())
+					throw new IllegalArgumentException("직접 선택한 난 묶음이 한 개 이상 필요합니다.");
 			}
 			default -> throw new IllegalArgumentException("아직 지원하지 않는 작업 대상 유형입니다.");
 		}
-		if (scopeType == com.greenhouse.backend.work.domain.operation.WorkSourceScopeType.ORCHID_GROUP) {
+		if (scopeType == WorkSourceScopeType.ORCHID_GROUP) {
 			normalizedIds = List.of(scopeId);
 		}
 		return new WorkTargetSelection(scopeType, scopeId, normalizedKey, normalizedIds);
@@ -250,7 +256,7 @@ public class WorkOperationPlanService {
 	}
 
 	private WorkTargetInclusionSource inclusionSource(
-			com.greenhouse.backend.work.domain.operation.WorkSourceScopeType scopeType) {
+			WorkSourceScopeType scopeType) {
 		return switch (scopeType) {
 			case FARM -> WorkTargetInclusionSource.FARM;
 			case HOUSE -> WorkTargetInclusionSource.HOUSE;

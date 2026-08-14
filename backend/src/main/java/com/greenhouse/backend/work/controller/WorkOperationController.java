@@ -12,6 +12,8 @@ import com.greenhouse.backend.work.application.operation.WorkOperationProgressSe
 import com.greenhouse.backend.work.application.operation.WorkOperationQueryService;
 import com.greenhouse.backend.work.application.operation.WorkOperationDetailService;
 import com.greenhouse.backend.work.domain.operation.WorkSourceScopeType;
+import com.greenhouse.backend.work.domain.operation.WorkOperationStatus;
+import com.greenhouse.backend.work.domain.operation.WorkOperationSearchView;
 import com.greenhouse.backend.work.dto.operation.OrchidGroupWorkHistoryResponse;
 import com.greenhouse.backend.work.dto.operation.WorkHistoryScopeType;
 import com.greenhouse.backend.work.dto.effect.InboundPottingPlanBatchCreateRequest;
@@ -145,9 +147,9 @@ public class WorkOperationController {
 	public ApiResponse<PageResponse<WorkOperationResponse>> search(
 			@RequestParam(required = false) LocalDate from,
 			@RequestParam(required = false) LocalDate to,
-			@RequestParam(required = false) com.greenhouse.backend.work.domain.operation.WorkOperationStatus status,
-			@RequestParam(defaultValue = "ALL") com.greenhouse.backend.work.domain.operation.WorkOperationSearchView view,
-			@RequestParam(required = false) com.greenhouse.backend.work.domain.operation.WorkSourceScopeType scopeType,
+			@RequestParam(required = false) WorkOperationStatus status,
+			@RequestParam(defaultValue = "ALL") WorkOperationSearchView view,
+			@RequestParam(required = false) WorkSourceScopeType scopeType,
 			@RequestParam(required = false) Long scopeId,
 			@RequestParam(required = false) String keyword,
 			@RequestParam(defaultValue = "0") int page,
@@ -160,8 +162,8 @@ public class WorkOperationController {
 	public ApiResponse<List<WorkOperationResponse>> getCalendar(
 			@RequestParam LocalDate from,
 			@RequestParam LocalDate to,
-			@RequestParam(required = false) com.greenhouse.backend.work.domain.operation.WorkOperationStatus status,
-			@RequestParam(defaultValue = "ALL") com.greenhouse.backend.work.domain.operation.WorkOperationSearchView view) {
+			@RequestParam(required = false) WorkOperationStatus status,
+			@RequestParam(defaultValue = "ALL") WorkOperationSearchView view) {
 		return ApiResponse.ok(queryService.getCalendar(from, to, status, view));
 	}
 
@@ -209,7 +211,8 @@ public class WorkOperationController {
 			@PathVariable Long targetId,
 			@Valid @RequestBody(required = false) WorkTargetExecutionRequest request) {
 		return ApiResponse.ok(progressService.startTarget(
-				workOperationId, targetId, request == null ? new WorkTargetExecutionRequest(null, null, null) : request));
+				workOperationId, targetId,
+				request == null ? new WorkTargetExecutionRequest(null, null, null) : request));
 	}
 
 	@PostMapping("/work-operations/{workOperationId}/targets/{targetId}/complete")
@@ -218,7 +221,8 @@ public class WorkOperationController {
 			@PathVariable Long targetId,
 			@Valid @RequestBody(required = false) WorkTargetExecutionRequest request) {
 		return ApiResponse.ok(progressService.completeTarget(
-				workOperationId, targetId, request == null ? new WorkTargetExecutionRequest(null, null, null) : request));
+				workOperationId, targetId,
+				request == null ? new WorkTargetExecutionRequest(null, null, null) : request));
 	}
 
 	@PostMapping("/work-operations/{workOperationId}/targets/{targetId}/skip")
@@ -227,7 +231,8 @@ public class WorkOperationController {
 			@PathVariable Long targetId,
 			@Valid @RequestBody(required = false) WorkTargetExecutionRequest request) {
 		return ApiResponse.ok(progressService.skipTarget(
-				workOperationId, targetId, request == null ? new WorkTargetExecutionRequest(null, null, null) : request));
+				workOperationId, targetId,
+				request == null ? new WorkTargetExecutionRequest(null, null, null) : request));
 	}
 
 	@PostMapping("/work-operations/{workOperationId}/merge/complete")
