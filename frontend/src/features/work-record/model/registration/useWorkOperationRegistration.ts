@@ -192,7 +192,7 @@ export function useWorkOperationRegistration({
       );
     } else if (
       field === "sourceScopeType" ||
-      field === "scopeKey" ||
+      field === "derivedGroupKey" ||
       field === "collectionId"
     ) {
       setPreview(null);
@@ -211,7 +211,7 @@ export function useWorkOperationRegistration({
     setForm((current) => ({
       ...current,
       sourceScopeType: "FARM",
-      scopeKey: "",
+      derivedGroupKey: "",
       collectionId: "",
     }));
     setManualIds(new Set());
@@ -238,7 +238,7 @@ export function useWorkOperationRegistration({
     setTargetScopeLabel(scope?.label ?? null);
     const scopePayload: WorkTargetPreviewPayload = scope
       ? scope.type === "DERIVED_GROUP"
-        ? { scopeType: "DERIVED_GROUP", scopeKey: scope.scopeKey }
+        ? { scopeType: "DERIVED_GROUP", derivedGroupKey: scope.derivedGroupKey }
         : {
             scopeType: "USER_COLLECTION",
             scopeId: scope.collectionId,
@@ -250,7 +250,8 @@ export function useWorkOperationRegistration({
     setForm((current) => ({
       ...current,
       sourceScopeType: scope?.type ?? "MANUAL_SELECTION",
-      scopeKey: scope?.type === "DERIVED_GROUP" ? scope.scopeKey : "",
+      derivedGroupKey:
+        scope?.type === "DERIVED_GROUP" ? scope.derivedGroupKey : "",
       collectionId:
         scope?.type === "USER_COLLECTION" ? String(scope.collectionId) : "",
       title:
@@ -329,7 +330,7 @@ export function useWorkOperationRegistration({
           plannedEndDate: form.plannedEndDate || null,
           sourceScopeType: scopePayload.scopeType,
           sourceScopeId: scopePayload.scopeId,
-          sourceScopeKey: scopePayload.scopeKey,
+          sourceDerivedGroupKey: scopePayload.derivedGroupKey,
           sourceOrchidGroupIds: scopePayload.orchidGroupIds,
           details: {
             materialName: form.materialName.trim() || null,

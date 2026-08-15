@@ -51,7 +51,7 @@ public class WorkOperationPlanService {
 	@Transactional(readOnly = true)
 	public WorkTargetPreviewResponse preview(WorkTargetPreviewRequest request) {
 		WorkTargetSelection selection = selection(
-				request.scopeType(), request.scopeId(), request.scopeKey(), request.orchidGroupIds());
+				request.scopeType(), request.scopeId(), request.derivedGroupKey(), request.orchidGroupIds());
 		List<ResolvedWorkTarget> groups = workTargetResolver.resolve(selection);
 		var targets = groups.stream().map(WorkOperationTargetResponse::preview).toList();
 		return new WorkTargetPreviewResponse(
@@ -134,7 +134,7 @@ public class WorkOperationPlanService {
 
 	private ResolvedSelection resolveIncluded(WorkOperationCreateRequest request) {
 		WorkTargetSelection selection = selection(
-				request.sourceScopeType(), request.sourceScopeId(), request.sourceScopeKey(),
+				request.sourceScopeType(), request.sourceScopeId(), request.sourceDerivedGroupKey(),
 				request.sourceOrchidGroupIds());
 		List<ResolvedWorkTarget> resolved = workTargetResolver.resolve(selection);
 		Set<Long> excludedIds = request.excludedOrchidGroupIds() == null
@@ -190,7 +190,7 @@ public class WorkOperationPlanService {
 				request.plannedEndDate(),
 				request.sourceScopeType(),
 				request.sourceScopeId(),
-				request.sourceScopeKey(),
+				request.sourceDerivedGroupKey(),
 				request.sourceOrchidGroupIds(),
 				request.details(),
 				request.worker(),
@@ -208,9 +208,9 @@ public class WorkOperationPlanService {
 	private WorkTargetSelection selection(
 			WorkSourceScopeType scopeType,
 			Long scopeId,
-			String scopeKey,
+			String derivedGroupKey,
 			List<Long> orchidGroupIds) {
-		String normalizedKey = support.normalize(scopeKey);
+		String normalizedKey = support.normalize(derivedGroupKey);
 		List<Long> normalizedIds = orchidGroupIds == null
 				? List.of()
 				: orchidGroupIds.stream().filter(java.util.Objects::nonNull).distinct().toList();
@@ -248,7 +248,7 @@ public class WorkOperationPlanService {
 			case BED_ZONE -> snapshot.put("bedZoneId", selection.scopeId());
 			case ORCHID_GROUP -> snapshot.put("orchidGroupId", selection.scopeId());
 			case USER_COLLECTION -> snapshot.put("collectionId", selection.scopeId());
-			case DERIVED_GROUP -> snapshot.put("groupKey", selection.scopeKey());
+			case DERIVED_GROUP -> snapshot.put("groupKey", selection.derivedGroupKey());
 			case MANUAL_SELECTION -> snapshot.put("orchidGroupIds", selection.orchidGroupIds());
 			default -> throw new IllegalArgumentException("아직 지원하지 않는 작업 대상 유형입니다.");
 		}

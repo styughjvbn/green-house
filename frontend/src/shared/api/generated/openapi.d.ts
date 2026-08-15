@@ -2042,7 +2042,7 @@ export interface components {
             sourceScopeType: "NONE" | "FARM" | "HOUSE" | "PHYSICAL_BED" | "BED_ZONE" | "ORCHID_GROUP" | "DERIVED_GROUP" | "USER_COLLECTION" | "MANUAL_SELECTION" | "INBOUND_RECORD_SELECTION";
             /** Format: int64 */
             sourceScopeId?: number;
-            sourceScopeKey?: string;
+            sourceDerivedGroupKey?: string;
             sourceOrchidGroupIds?: number[];
             details?: {
                 [key: string]: unknown;
@@ -2287,7 +2287,7 @@ export interface components {
             scopeType: "NONE" | "FARM" | "HOUSE" | "PHYSICAL_BED" | "BED_ZONE" | "ORCHID_GROUP" | "DERIVED_GROUP" | "USER_COLLECTION" | "MANUAL_SELECTION" | "INBOUND_RECORD_SELECTION";
             /** Format: int64 */
             scopeId?: number;
-            scopeKey?: string;
+            derivedGroupKey?: string;
             orchidGroupIds?: number[];
         };
         ApiResponseWorkTargetPreviewResponse: {

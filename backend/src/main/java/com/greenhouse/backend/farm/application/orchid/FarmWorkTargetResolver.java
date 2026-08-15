@@ -46,7 +46,7 @@ public class FarmWorkTargetResolver implements WorkTargetResolver {
 			case BED_ZONE -> resolveBedZone(selection.scopeId());
 			case ORCHID_GROUP -> resolveManual(selection.orchidGroupIds());
 			case DERIVED_GROUP -> resolveActiveIds(derivedOrchidGroupService
-					.getMembers(selection.scopeKey(), null, null, null).stream()
+					.getMembers(selection.derivedGroupKey(), null, null, null).stream()
 					.map(member -> member.id())
 					.collect(Collectors.toSet()));
 			case USER_COLLECTION -> resolveCollection(selection.scopeId());

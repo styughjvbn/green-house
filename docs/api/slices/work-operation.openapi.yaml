@@ -1508,7 +1508,7 @@ components:
         sourceScopeId:
           type: integer
           format: int64
-        sourceScopeKey:
+        sourceDerivedGroupKey:
           type: string
         sourceOrchidGroupIds:
           type: array
@@ -1953,7 +1953,7 @@ components:
         scopeId:
           type: integer
           format: int64
-        scopeKey:
+        derivedGroupKey:
           type: string
         orchidGroupIds:
           type: array

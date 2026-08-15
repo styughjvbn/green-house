@@ -82,7 +82,7 @@ export function StructureChangeWorkRecordDialog({
         title,
         sourceScopeType: "MANUAL_SELECTION" as const,
         sourceScopeId: undefined,
-        sourceScopeKey: undefined,
+        sourceDerivedGroupKey: undefined,
         sourceOrchidGroupIds: group.targets.flatMap((target) =>
           target.orchidGroupId == null ? [] : [target.orchidGroupId],
         ),
