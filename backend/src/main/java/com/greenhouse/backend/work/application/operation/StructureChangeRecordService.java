@@ -36,6 +36,12 @@ public class StructureChangeRecordService {
 	private final DiscardRecordService discardRecordService;
 
 	public WorkOperationResponse createStructureChangeRecord(StructureChangeRecordCreateRequest request) {
+		return createStructureChangeRecord(request, Set.of());
+	}
+
+	private WorkOperationResponse createStructureChangeRecord(
+			StructureChangeRecordCreateRequest request,
+			Set<Long> placementExclusionOrchidGroupIds) {
 		WorkOperationResponse planned = planService.create(request.operation());
 		if (!BATCH_STRUCTURE_CODES.contains(planned.workTypeCode())) {
 			throw new IllegalArgumentException("분갈이·분주·합식·자리 이동 작업 기록만 이 방식으로 저장할 수 있습니다.");
@@ -57,7 +63,7 @@ public class StructureChangeRecordService {
 		}
 		progressService.start(planned.id());
 		WorkOperationResponse completed = structureChangeExecutionService.execute(
-				planned.id(), request.execution());
+				planned.id(), request.execution(), placementExclusionOrchidGroupIds);
 		if (!"COMPLETED".equals(completed.status().name())) {
 			throw new IllegalStateException("구조 변경 작업 기록의 모든 대상을 완료하지 못했습니다.");
 		}
@@ -66,8 +72,16 @@ public class StructureChangeRecordService {
 
 	public List<WorkOperationResponse> createStructureChangeRecords(
 			StructureChangeRecordBatchCreateRequest request) {
+		List<Long> sourceOrchidGroupIds = request.records().stream()
+				.flatMap(record -> record.execution().sources().stream())
+				.map(source -> source.sourceOrchidGroupId())
+				.toList();
+		Set<Long> placementExclusionOrchidGroupIds = new HashSet<>(sourceOrchidGroupIds);
+		if (placementExclusionOrchidGroupIds.size() != sourceOrchidGroupIds.size()) {
+			throw new IllegalArgumentException("품종별 작업 기록에서 같은 원본 난 묶음을 중복 사용할 수 없습니다.");
+		}
 		return request.records().stream()
-				.map(this::createStructureChangeRecord)
+				.map(record -> createStructureChangeRecord(record, placementExclusionOrchidGroupIds))
 				.toList();
 	}
 

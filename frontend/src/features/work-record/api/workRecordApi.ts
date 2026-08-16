@@ -3,6 +3,7 @@ import type {
   House,
   OrchidGroup,
   WorkOperation,
+  WorkOperationSummary,
   WorkTargetPreview,
   WorkType,
 } from "@/entities/farm/types";
@@ -135,7 +136,7 @@ type WorkOperationQuery = {
 
 export function getWorkOperations(
   filters: WorkOperationQuery = {},
-): Promise<Page<WorkOperation>> {
+): Promise<Page<WorkOperationSummary>> {
   const params = new URLSearchParams();
   if (filters.from) params.set("from", filters.from);
   if (filters.to) params.set("to", filters.to);
@@ -147,9 +148,15 @@ export function getWorkOperations(
   if (filters.page != null) params.set("page", String(filters.page));
   if (filters.size != null) params.set("size", String(filters.size));
   const query = params.toString();
-  return fetchApi<Page<WorkOperation>>(
+  return fetchApi<Page<WorkOperationSummary>>(
     `/work-operations${query ? `?${query}` : ""}`,
   );
+}
+
+export function getWorkOperation(
+  workOperationId: number,
+): Promise<WorkOperation> {
+  return fetchApi<WorkOperation>(`/work-operations/${workOperationId}`);
 }
 
 export function getWorkOperationDetails(
@@ -162,13 +169,15 @@ export function getWorkOperationDetails(
 
 export function getCalendarWorkOperations(
   filters: Omit<WorkOperationQuery, "page" | "size"> = {},
-): Promise<WorkOperation[]> {
+): Promise<WorkOperationSummary[]> {
   const params = new URLSearchParams();
   if (filters.from) params.set("from", filters.from);
   if (filters.to) params.set("to", filters.to);
   if (filters.status) params.set("status", filters.status);
   if (filters.view) params.set("view", filters.view);
-  return fetchApi<WorkOperation[]>(`/work-operations/calendar?${params}`);
+  return fetchApi<WorkOperationSummary[]>(
+    `/work-operations/calendar?${params}`,
+  );
 }
 
 export async function completeWorkOperation(
@@ -232,7 +241,7 @@ export type StructureChangeExecutionPayload = {
   results: {
     bedZoneId: number;
     quantity: number;
-    sourceOrchidGroupIds: number[];
+    attributeSourceOrchidGroupId: number;
     potSize: string | null;
     ageYear: number | null;
     purpose: "NORMAL" | "DIVIDE_CANDIDATE" | "HELD";

@@ -6,15 +6,13 @@ import com.greenhouse.backend.audit.domain.AuditSource;
 import com.greenhouse.backend.farm.domain.variety.Variety;
 import java.util.LinkedHashMap;
 import java.util.Map;
+import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 
 @Component
+@RequiredArgsConstructor
 public class VarietyAuditSupport {
 	private final AuditEventWriter auditWriter;
-
-	public VarietyAuditSupport(AuditEventWriter auditWriter) {
-		this.auditWriter = auditWriter;
-	}
 
 	public Map<String, Object> snapshot(Variety variety) {
 		var data = new LinkedHashMap<String, Object>();

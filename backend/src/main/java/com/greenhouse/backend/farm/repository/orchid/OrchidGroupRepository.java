@@ -194,6 +194,7 @@ public interface OrchidGroupRepository extends JpaRepository<OrchidGroup, Long> 
 			join fetch z.physicalBed b
 			join fetch b.house
 			left join fetch g.variety
+			left join fetch g.inboundRecord
 			where g.id in :orchidGroupIds
 			""")
 	List<OrchidGroup> findDetailsByIds(@Param("orchidGroupIds") java.util.Collection<Long> orchidGroupIds);

@@ -191,7 +191,7 @@ export function WorkTargetSelectionDialog({
         selecting
           ? {
               type: "DERIVED_GROUP",
-              scopeKey: group.groupKey,
+              derivedGroupKey: group.groupKey,
               label: group.varietyName,
               memberIds: availableIds,
             }
@@ -211,7 +211,7 @@ export function WorkTargetSelectionDialog({
       toggleIds(memberIds);
       setSelectedScope({
         type: "DERIVED_GROUP",
-        scopeKey: group.groupKey,
+        derivedGroupKey: group.groupKey,
         label: group.varietyName,
         memberIds: memberIds.filter((id) => selectableIds.has(id)),
       });

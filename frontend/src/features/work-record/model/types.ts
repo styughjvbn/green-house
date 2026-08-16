@@ -33,7 +33,7 @@ export type CompletedWorkOperationPayload = {
 export type WorkOperationFormState = {
   workTypeId: string;
   sourceScopeType: WorkOperationScopeType;
-  scopeKey: string;
+  derivedGroupKey: string;
   collectionId: string;
   title: string;
   plannedStartDate: string;
@@ -183,14 +183,14 @@ export type WorkCollectionOption = {
 export type WorkTargetPreviewPayload = {
   scopeType: WorkOperationScopeType;
   scopeId?: number;
-  scopeKey?: string;
+  derivedGroupKey?: string;
   orchidGroupIds?: number[];
 };
 
 export type WorkTargetSelectionScope =
   | {
       type: "DERIVED_GROUP";
-      scopeKey: string;
+      derivedGroupKey: string;
       label: string;
       memberIds: number[];
     }
@@ -208,7 +208,7 @@ export type CreateWorkOperationPayload = {
   plannedEndDate: string | null;
   sourceScopeType: WorkOperationScopeType;
   sourceScopeId?: number;
-  sourceScopeKey?: string;
+  sourceDerivedGroupKey?: string;
   sourceOrchidGroupIds?: number[];
   details: Record<string, unknown>;
   worker: string | null;

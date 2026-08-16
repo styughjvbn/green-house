@@ -8,15 +8,13 @@ import com.greenhouse.backend.farm.domain.structure.BedZoneCapacity;
 import java.util.Comparator;
 import java.util.LinkedHashMap;
 import java.util.Map;
+import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 
 @Component
+@RequiredArgsConstructor
 public class BedPlacementAuditSupport {
 	private final AuditEventWriter auditWriter;
-
-	public BedPlacementAuditSupport(AuditEventWriter auditWriter) {
-		this.auditWriter = auditWriter;
-	}
 
 	public Map<String, Object> snapshot(BedZone zone) {
 		var data = new LinkedHashMap<String, Object>();

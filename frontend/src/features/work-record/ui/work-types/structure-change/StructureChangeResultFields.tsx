@@ -163,9 +163,7 @@ function ResultRowFields({
   return (
     <section className="rounded-md border bg-[#f8faf7] p-3">
       <div className="mb-2 flex items-center justify-between">
-        <p className="text-xs font-bold">
-          결과 {index + 1} · 원본 {row.sourceOrchidGroupIds.length}묶음
-        </p>
+        <p className="text-xs font-bold">결과 {index + 1}</p>
         {removable ? (
           <button
             className="inline-flex items-center gap-1 text-xs font-semibold text-[#7b4b3e]"

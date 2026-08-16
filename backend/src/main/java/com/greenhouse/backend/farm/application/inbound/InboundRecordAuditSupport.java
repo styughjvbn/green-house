@@ -6,15 +6,13 @@ import com.greenhouse.backend.audit.domain.AuditSource;
 import com.greenhouse.backend.farm.domain.inbound.InboundRecord;
 import java.util.LinkedHashMap;
 import java.util.Map;
+import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 
 @Component
+@RequiredArgsConstructor
 public class InboundRecordAuditSupport {
 	private final AuditEventWriter auditWriter;
-
-	public InboundRecordAuditSupport(AuditEventWriter auditWriter) {
-		this.auditWriter = auditWriter;
-	}
 
 	public Map<String, Object> snapshot(InboundRecord record) {
 		var data = new LinkedHashMap<String, Object>();

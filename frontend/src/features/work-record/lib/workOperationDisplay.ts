@@ -1,6 +1,6 @@
-import type { WorkOperation } from "@/entities/farm/types";
+import type { WorkOperationSummary } from "@/entities/farm/types";
 
-export function workOperationScopeLabel(operation: WorkOperation) {
+export function workOperationScopeLabel(operation: WorkOperationSummary) {
   const label = {
     NONE: "대상 없음",
     FARM: "농장 전체",

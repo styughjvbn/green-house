@@ -8,7 +8,6 @@ import com.greenhouse.backend.work.dto.effect.StructureChangeExecutionRequest;
 import com.greenhouse.backend.work.dto.effect.StructureChangeResultRequest;
 import com.greenhouse.backend.work.dto.effect.StructureChangeSourceRequest;
 import java.util.List;
-import java.util.Set;
 import org.springframework.stereotype.Component;
 
 @Component
@@ -33,7 +32,7 @@ public class LegacyStructureChangeRequestMapper {
 						.map(result -> new StructureChangeResultRequest(
 								result.bedZoneId(),
 								result.quantity(),
-								Set.of(sourceId),
+								sourceId,
 								result.potSize(),
 								result.ageYear(),
 								StructureChangeResultPurpose.NORMAL,

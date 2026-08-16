@@ -6,6 +6,7 @@ import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
+import jakarta.persistence.SequenceGenerator;
 import jakarta.persistence.Table;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -18,7 +19,8 @@ import lombok.AccessLevel;
 public class Material extends BaseEntity {
 
 	@Id
-	@GeneratedValue(strategy = GenerationType.IDENTITY)
+	@GeneratedValue(strategy = GenerationType.SEQUENCE, generator = "materials_id_seq")
+	@SequenceGenerator(name = "materials_id_seq", sequenceName = "materials_id_seq", allocationSize = 50)
 	private Long id;
 
 	@Column(nullable = false, unique = true, length = 50)

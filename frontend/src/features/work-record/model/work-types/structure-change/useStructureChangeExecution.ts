@@ -221,11 +221,15 @@ export function useStructureChangeExecution({
     });
     if (selected) {
       setRows((current) =>
-        current.filter(
-          (row) =>
-            row.sourceOrchidGroupIds.length !== 1 ||
-            row.sourceOrchidGroupIds[0] !== group.id,
-        ),
+        current.flatMap((row) => {
+          if (!row.basisOrchidGroupIds.includes(group.id)) return [row];
+          const basisOrchidGroupIds = row.basisOrchidGroupIds.filter(
+            (id) => id !== group.id,
+          );
+          return basisOrchidGroupIds.length > 0
+            ? [{ ...row, basisOrchidGroupIds }]
+            : [];
+        }),
       );
     } else {
       const quantity = Number(inputQuantities[group.id] || group.quantity);
@@ -251,8 +255,8 @@ export function useStructureChangeExecution({
     setRows((current) =>
       current.map((row) =>
         row.autoQuantity &&
-        row.sourceOrchidGroupIds.length === 1 &&
-        row.sourceOrchidGroupIds[0] === groupId
+        row.basisOrchidGroupIds.length === 1 &&
+        row.basisOrchidGroupIds[0] === groupId
           ? {
               ...row,
               quantity: value,
@@ -280,8 +284,8 @@ export function useStructureChangeExecution({
     setRows((current) =>
       current.map((row) =>
         row.autoQuantity &&
-        row.sourceOrchidGroupIds.length === 1 &&
-        row.sourceOrchidGroupIds[0] === groupId
+        row.basisOrchidGroupIds.length === 1 &&
+        row.basisOrchidGroupIds[0] === groupId
           ? { ...row, placement, placementConfigured: true }
           : row,
       ),
@@ -298,7 +302,7 @@ export function useStructureChangeExecution({
     const donor = [...rows]
       .filter((row) => Number(row.quantity) > 1)
       .sort((left, right) => Number(right.quantity) - Number(left.quantity))[0];
-    const sourceId = donor?.sourceOrchidGroupIds[0];
+    const sourceId = donor?.basisOrchidGroupIds[0];
     const source =
       availableSources.find(({ group }) => group.id === sourceId)?.group ??
       selectedSources[0]?.group;
@@ -312,7 +316,7 @@ export function useStructureChangeExecution({
       {
         ...newResultRow(source, 1),
         placement: null,
-        sourceOrchidGroupIds: donor?.sourceOrchidGroupIds ?? [source.id],
+        basisOrchidGroupIds: donor?.basisOrchidGroupIds ?? [source.id],
         autoQuantity: false,
       },
     ]);
@@ -324,8 +328,8 @@ export function useStructureChangeExecution({
       const next = current.filter((row) => row.key !== removed.key);
       if (next.length === 0) return current;
       const receiverIndex = next.findIndex((row) =>
-        row.sourceOrchidGroupIds.some((id) =>
-          removed.sourceOrchidGroupIds.includes(id),
+        row.basisOrchidGroupIds.some((id) =>
+          removed.basisOrchidGroupIds.includes(id),
         ),
       );
       const fallbackReceiverIndex = Math.max(
@@ -336,10 +340,10 @@ export function useStructureChangeExecution({
         receiverIndex >= 0 ? receiverIndex : fallbackReceiverIndex;
       next[targetIndex] = {
         ...next[targetIndex],
-        sourceOrchidGroupIds: [
+        basisOrchidGroupIds: [
           ...new Set([
-            ...next[targetIndex].sourceOrchidGroupIds,
-            ...removed.sourceOrchidGroupIds,
+            ...next[targetIndex].basisOrchidGroupIds,
+            ...removed.basisOrchidGroupIds,
           ]),
         ],
         quantity: String(

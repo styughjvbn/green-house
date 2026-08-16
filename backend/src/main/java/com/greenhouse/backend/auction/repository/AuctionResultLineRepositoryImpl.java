@@ -9,17 +9,14 @@ import static com.greenhouse.backend.partner.domain.QBusinessPartner.businessPar
 import com.greenhouse.backend.auction.domain.AuctionResultLine;
 import com.querydsl.jpa.impl.JPAQuery;
 import com.querydsl.jpa.impl.JPAQueryFactory;
-import jakarta.persistence.EntityManager;
 import java.time.LocalDate;
 import java.util.List;
+import lombok.RequiredArgsConstructor;
 
+@RequiredArgsConstructor
 public class AuctionResultLineRepositoryImpl implements AuctionResultLineRepositoryCustom {
 
 	private final JPAQueryFactory queryFactory;
-
-	public AuctionResultLineRepositoryImpl(EntityManager entityManager) {
-		this.queryFactory = new JPAQueryFactory(entityManager);
-	}
 
 	@Override
 	public List<AuctionResultLine> findSoldLines(Long auctionHouseId, LocalDate auctionDate) {

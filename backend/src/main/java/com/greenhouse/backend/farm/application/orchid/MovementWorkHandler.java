@@ -38,7 +38,8 @@ public class MovementWorkHandler implements WorkEffectHandler {
 			WorkOperationTarget target,
 			WorkEffectCommand command) {
 		if (command.payload() instanceof StructureChangeExecutionRequest request) {
-			return structureChangeExecutor.execute(operation, request);
+			return structureChangeExecutor.execute(
+					operation, request, command.placementExclusionOrchidGroupIds());
 		}
 		if (target == null || target.getTargetReferenceType() != WorkTargetReferenceType.ORCHID_GROUP) {
 			throw new IllegalArgumentException("자리 이동 작업에는 난 묶음 대상이 필요합니다.");

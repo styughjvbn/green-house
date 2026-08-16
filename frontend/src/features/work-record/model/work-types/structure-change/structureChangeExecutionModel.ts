@@ -21,7 +21,7 @@ export type ResultPurpose = "NORMAL" | "DIVIDE_CANDIDATE" | "HELD";
 
 export type ResultRow = {
   key: string;
-  sourceOrchidGroupIds: number[];
+  basisOrchidGroupIds: number[];
   placement: FarmPlacementSelection | null;
   quantity: string;
   potSize: string;
@@ -69,7 +69,7 @@ export function createExecutionPayload({
     results: rows.map((row) => ({
       bedZoneId: row.placement!.bedZoneId,
       quantity: Number(row.quantity),
-      sourceOrchidGroupIds: row.sourceOrchidGroupIds,
+      attributeSourceOrchidGroupId: row.basisOrchidGroupIds[0],
       potSize: row.potSize || null,
       ageYear: row.ageYear ? Number(row.ageYear) : null,
       purpose: row.purpose,
@@ -146,8 +146,8 @@ export function validateExecution({
         !row.placement ||
         !Number.isInteger(Number(row.quantity)) ||
         Number(row.quantity) < 1 ||
-        row.sourceOrchidGroupIds.length === 0 ||
-        row.sourceOrchidGroupIds.some((id) => !selectedSourceIds.has(id)),
+        row.basisOrchidGroupIds.length === 0 ||
+        row.basisOrchidGroupIds.some((id) => !selectedSourceIds.has(id)),
     )
   ) {
     return "결과 난 묶음의 원본·위치·수량을 확인해주세요.";
@@ -171,11 +171,7 @@ export function validateExecution({
     }
     if (
       inputQuantity < group.quantity &&
-      overlapsRemainingSource(
-        rows.filter((row) => row.sourceOrchidGroupIds.includes(group.id)),
-        group,
-        released,
-      )
+      overlapsRemainingSource(rows, group, released)
     ) {
       return "일부만 작업하는 원본의 잔여 배치와 결과 배치가 겹칠 수 없습니다.";
     }
@@ -186,7 +182,7 @@ export function validateExecution({
 export function newResultRow(group: OrchidGroup, quantity: number): ResultRow {
   return {
     key: createUuid(),
-    sourceOrchidGroupIds: [group.id],
+    basisOrchidGroupIds: [group.id],
     placement: inferPlacement(group),
     quantity: String(quantity),
     potSize: group.potSize ?? "",

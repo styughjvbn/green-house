@@ -79,8 +79,8 @@ class WorkOperationContractE2ETest extends WorkE2ETestBase {
 		assertThat(list.data().path("content")).hasSize(1);
 		JsonNode listed = list.data().path("content").get(0);
 		assertThat(listed.path("id").asLong()).isEqualTo(operationId);
-		assertThat(listed.path("targets").get(0).path("orchidGroupId").asLong())
-				.isEqualTo(scenario.orchidGroupId());
+		assertThat(listed.path("progress").path("completed").asInt()).isEqualTo(1);
+		assertThat(listed.has("targets")).isFalse();
 
 		assertThat(count("work_operations")).isEqualTo(1);
 		assertThat(count("work_operation_targets")).isEqualTo(1);

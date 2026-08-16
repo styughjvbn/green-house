@@ -14,13 +14,14 @@ import com.querydsl.core.Tuple;
 import com.querydsl.core.types.dsl.BooleanExpression;
 import com.querydsl.jpa.JPAExpressions;
 import com.querydsl.jpa.impl.JPAQueryFactory;
-import jakarta.persistence.EntityManager;
 import java.time.LocalDate;
 import java.util.List;
+import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.Pageable;
 
+@RequiredArgsConstructor
 public class AuctionShipmentLotRepositoryImpl implements AuctionShipmentLotRepositoryCustom {
 
 	private static final List<AuctionLotStatus> SUMMARY_REVIEW_STATUSES = List.of(
@@ -36,10 +37,6 @@ public class AuctionShipmentLotRepositoryImpl implements AuctionShipmentLotRepos
 			AuctionInspectionStatus.SOURCE_ERROR);
 
 	private final JPAQueryFactory queryFactory;
-
-	public AuctionShipmentLotRepositoryImpl(EntityManager entityManager) {
-		this.queryFactory = new JPAQueryFactory(entityManager);
-	}
 
 	@Override
 	public Page<AuctionShipmentLot> search(

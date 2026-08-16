@@ -8,6 +8,7 @@ import jakarta.persistence.FetchType;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
+import jakarta.persistence.SequenceGenerator;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
@@ -24,7 +25,8 @@ import java.time.ZoneOffset;
 @Table(name = "auction_lot_status_history")
 public class AuctionLotStatusHistory {
 	@Id
-	@GeneratedValue(strategy = GenerationType.IDENTITY)
+	@GeneratedValue(strategy = GenerationType.SEQUENCE, generator = "auction_lot_status_history_id_seq")
+	@SequenceGenerator(name = "auction_lot_status_history_id_seq", sequenceName = "auction_lot_status_history_id_seq", allocationSize = 50)
 	private Long id;
 	@Getter(AccessLevel.NONE)
 	@ManyToOne(fetch = FetchType.LAZY, optional = false)

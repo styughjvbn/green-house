@@ -5,16 +5,14 @@ import com.greenhouse.backend.common.application.OrchidGroupUsageInspector;
 import com.greenhouse.backend.farm.repository.inbound.InboundRecordRepository;
 import java.util.List;
 import java.util.Set;
+import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 
 @Component
+@RequiredArgsConstructor
 public class FarmOrchidGroupUsageInspector implements OrchidGroupUsageInspector {
 
 	private final InboundRecordRepository inboundRecordRepository;
-
-	public FarmOrchidGroupUsageInspector(InboundRecordRepository inboundRecordRepository) {
-		this.inboundRecordRepository = inboundRecordRepository;
-	}
 
 	@Override
 	public List<OrchidGroupUsage> inspect(Set<Long> orchidGroupIds, Long sourceWorkOperationId) {

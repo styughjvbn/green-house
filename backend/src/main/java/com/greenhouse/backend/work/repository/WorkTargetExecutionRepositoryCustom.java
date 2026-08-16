@@ -17,6 +17,8 @@ public interface WorkTargetExecutionRepositoryCustom {
 
 	List<WorkTargetExecution> findByTargetWorkOperationIdInOrderByIdAsc(Collection<Long> workOperationIds);
 
+	List<WorkOperationProgressProjection> findProgressByWorkOperationIdIn(Collection<Long> workOperationIds);
+
 	List<WorkTargetExecution> findForUpdateByTargetWorkOperationIdOrderByIdAsc(Long workOperationId);
 
 	Optional<WorkTargetExecution> findByTargetIdAndTargetWorkOperationId(

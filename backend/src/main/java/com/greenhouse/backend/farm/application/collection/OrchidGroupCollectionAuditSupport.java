@@ -7,15 +7,13 @@ import com.greenhouse.backend.farm.domain.collection.OrchidGroupCollection;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 
 @Component
+@RequiredArgsConstructor
 public class OrchidGroupCollectionAuditSupport {
 	private final AuditEventWriter auditWriter;
-
-	public OrchidGroupCollectionAuditSupport(AuditEventWriter auditWriter) {
-		this.auditWriter = auditWriter;
-	}
 
 	public Map<String, Object> snapshot(OrchidGroupCollection collection, List<Long> memberIds) {
 		var data = new LinkedHashMap<String, Object>();

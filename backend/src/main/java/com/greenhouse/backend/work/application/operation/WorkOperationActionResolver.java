@@ -6,6 +6,7 @@ import com.greenhouse.backend.work.domain.operation.WorkTypeWorkflow;
 import com.greenhouse.backend.work.domain.target.WorkTargetExecution;
 import com.greenhouse.backend.work.domain.target.WorkTargetExecutionStatus;
 import com.greenhouse.backend.work.dto.operation.WorkOperationAction;
+import com.greenhouse.backend.work.dto.operation.WorkOperationProgressResponse;
 import com.greenhouse.backend.work.dto.target.WorkOperationTargetResponse;
 import com.greenhouse.backend.work.dto.target.WorkTargetAction;
 import java.util.ArrayList;
@@ -18,10 +19,16 @@ class WorkOperationActionResolver {
 	List<WorkOperationAction> resolveOperation(
 			WorkOperation operation,
 			List<WorkOperationTargetResponse> targets) {
+		return resolveOperation(operation, WorkOperationProgressResponse.from(targets));
+	}
+
+	List<WorkOperationAction> resolveOperation(
+			WorkOperation operation,
+			WorkOperationProgressResponse progress) {
 		return switch (operation.getStatus()) {
 			case PLANNED -> List.of(WorkOperationAction.START, WorkOperationAction.CANCEL);
 			case PAUSED -> List.of(WorkOperationAction.RESUME, WorkOperationAction.CANCEL);
-			case IN_PROGRESS -> allTargetsClosed(targets)
+			case IN_PROGRESS -> allTargetsClosed(progress)
 					? List.of(WorkOperationAction.COMPLETE)
 					: List.of(WorkOperationAction.PAUSE, WorkOperationAction.CANCEL);
 			case COMPLETED, CANCELED, CORRECTED -> List.of();
@@ -51,11 +58,12 @@ class WorkOperationActionResolver {
 		return List.copyOf(actions);
 	}
 
-	private boolean allTargetsClosed(List<WorkOperationTargetResponse> targets) {
-		return !targets.isEmpty() && targets.stream().allMatch(target -> switch (target.executionStatus()) {
-			case COMPLETED, SKIPPED, CANCELED -> true;
-			case PENDING, IN_PROGRESS, PARTIALLY_COMPLETED, FAILED -> false;
-		});
+	private boolean allTargetsClosed(WorkOperationProgressResponse progress) {
+		return progress.total() > 0
+				&& progress.pending() == 0
+				&& progress.inProgress() == 0
+				&& progress.partial() == 0
+				&& progress.failed() == 0;
 	}
 
 	private boolean isOpen(WorkTargetExecutionStatus status) {

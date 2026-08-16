@@ -1,5 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
-import type { WorkOperation } from "@/entities/farm/types";
+import type { WorkOperationSummary } from "@/entities/farm/types";
 import { createEmptyPage } from "@/shared/api/page";
 import { useUrlPagedListState } from "@/shared/api/useUrlPagedListState";
 import {
@@ -24,7 +24,7 @@ export function useWorkOperations(routeState: WorkRecordUrlState) {
     query,
     pageData:
       query.data ??
-      createEmptyPage<WorkOperation>(routeState.size, routeState.page),
+      createEmptyPage<WorkOperationSummary>(routeState.size, routeState.page),
   };
 }
 

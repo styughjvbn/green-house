@@ -7,6 +7,6 @@ import java.util.List;
 public record WorkTargetPreviewRequest(
 		@NotNull WorkSourceScopeType scopeType,
 		Long scopeId,
-		String scopeKey,
+		String derivedGroupKey,
 		List<Long> orchidGroupIds) {
 }

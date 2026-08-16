@@ -7,6 +7,7 @@ import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
+import jakarta.persistence.SequenceGenerator;
 import jakarta.persistence.Table;
 import jakarta.persistence.UniqueConstraint;
 import lombok.Getter;
@@ -21,7 +22,8 @@ import lombok.AccessLevel;
 public class Variety extends BaseEntity {
 
 	@Id
-	@GeneratedValue(strategy = GenerationType.IDENTITY)
+	@GeneratedValue(strategy = GenerationType.SEQUENCE, generator = "varieties_id_seq")
+	@SequenceGenerator(name = "varieties_id_seq", sequenceName = "varieties_id_seq", allocationSize = 50)
 	private Long id;
 
 	@Column(nullable = false, unique = true, length = 50)

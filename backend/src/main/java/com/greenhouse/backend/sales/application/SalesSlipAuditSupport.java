@@ -7,15 +7,13 @@ import com.greenhouse.backend.sales.domain.SalesSlip;
 import java.util.Comparator;
 import java.util.LinkedHashMap;
 import java.util.Map;
+import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 
 @Component
+@RequiredArgsConstructor
 public class SalesSlipAuditSupport {
 	private final AuditEventWriter auditWriter;
-
-	public SalesSlipAuditSupport(AuditEventWriter auditWriter) {
-		this.auditWriter = auditWriter;
-	}
 
 	public Map<String, Object> snapshot(SalesSlip slip) {
 		var data = new LinkedHashMap<String, Object>();

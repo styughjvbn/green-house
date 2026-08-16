@@ -29,7 +29,7 @@ export function createInitialWorkOperationForm(
   return {
     workTypeId: workType ? String(workType.id) : "",
     sourceScopeType: "MANUAL_SELECTION",
-    scopeKey: "",
+    derivedGroupKey: "",
     collectionId: "",
     title: workType ? `${workType.name} 작업` : "기간 작업",
     plannedStartDate: businessDate,
@@ -247,8 +247,8 @@ export function buildWorkTargetScopePayload(
     case "FARM":
       return { scopeType: "FARM" };
     case "DERIVED_GROUP":
-      return form.scopeKey
-        ? { scopeType: "DERIVED_GROUP", scopeKey: form.scopeKey }
+      return form.derivedGroupKey
+        ? { scopeType: "DERIVED_GROUP", derivedGroupKey: form.derivedGroupKey }
         : null;
     case "USER_COLLECTION":
       return form.collectionId

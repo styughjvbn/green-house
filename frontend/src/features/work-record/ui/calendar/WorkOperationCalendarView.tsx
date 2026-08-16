@@ -3,7 +3,10 @@
 import type { ReactNode } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { ChevronLeft, ChevronRight } from "lucide-react";
-import type { WorkOperation, WorkOperationStatus } from "@/entities/farm/types";
+import type {
+  WorkOperationStatus,
+  WorkOperationSummary,
+} from "@/entities/farm/types";
 import { useUrlSearchParamsWriter } from "@/shared/lib/useUrlSearchParamsWriter";
 import type { WorkRecordUrlState } from "../../lib/workRecordUrlState";
 import { useWorkOperationActions } from "../../model/operation/useWorkOperationActions";
@@ -179,7 +182,7 @@ function calendarCells(month: string): Array<string | null> {
   return cells;
 }
 
-function includesDate(operation: WorkOperation, date: string) {
+function includesDate(operation: WorkOperationSummary, date: string) {
   return (
     operation.plannedStartDate <= date &&
     (operation.plannedEndDate ?? operation.plannedStartDate) >= date

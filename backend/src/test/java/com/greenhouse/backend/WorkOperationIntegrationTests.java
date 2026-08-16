@@ -583,7 +583,8 @@ class WorkOperationIntegrationTests extends AbstractBackendIntegrationTest {
 				.andExpect(jsonPath("$.data.content", hasSize(2)))
 				.andExpect(jsonPath("$.data.totalElements").value(2))
 				.andExpect(jsonPath("$.data.content[0].title").value("7월 기간 농약 작업 2"))
-				.andExpect(jsonPath("$.data.content[0].targets", hasSize(1)));
+				.andExpect(jsonPath("$.data.content[0].progress.total").value(1))
+				.andExpect(jsonPath("$.data.content[0].targets").doesNotExist());
 
 		mockMvc.perform(get("/api/work-operations")
 				.param("from", "2026-08-01")
@@ -601,7 +602,9 @@ class WorkOperationIntegrationTests extends AbstractBackendIntegrationTest {
 				.andExpect(jsonPath("$.data.size").value(1))
 				.andExpect(jsonPath("$.data.totalElements").value(2))
 				.andExpect(jsonPath("$.data.totalPages").value(2))
-				.andExpect(jsonPath("$.data.content[0].title").value("7월 기간 농약 작업 2"));
+				.andExpect(jsonPath("$.data.content[0].title").value("7월 기간 농약 작업 2"))
+				.andExpect(jsonPath("$.data.content[0].progress.total").value(1))
+				.andExpect(jsonPath("$.data.content[0].targets").doesNotExist());
 
 		mockMvc.perform(get("/api/work-operations")
 				.param("keyword", "농약")
@@ -619,7 +622,8 @@ class WorkOperationIntegrationTests extends AbstractBackendIntegrationTest {
 				.andExpect(status().isOk())
 				.andExpect(jsonPath("$.data", hasSize(2)))
 				.andExpect(jsonPath("$.data[0].title").value("7월 기간 농약 작업"))
-				.andExpect(jsonPath("$.data[1].title").value("7월 기간 농약 작업 2"));
+				.andExpect(jsonPath("$.data[1].title").value("7월 기간 농약 작업 2"))
+				.andExpect(jsonPath("$.data[0].targets").doesNotExist());
 
 		mockMvc.perform(get("/api/work-operations").param("size", "101"))
 				.andExpect(status().isBadRequest());

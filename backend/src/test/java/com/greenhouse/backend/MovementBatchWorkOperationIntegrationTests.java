@@ -2,6 +2,7 @@ package com.greenhouse.backend;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.hamcrest.Matchers.hasSize;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -11,7 +12,6 @@ import com.greenhouse.backend.farm.domain.structure.BedZone;
 import com.greenhouse.backend.farm.domain.structure.BedZoneSide;
 import com.greenhouse.backend.farm.domain.structure.House;
 import com.greenhouse.backend.farm.domain.structure.PhysicalBed;
-import com.greenhouse.backend.farm.domain.transformation.OrchidGroupLineageRelationType;
 import com.greenhouse.backend.farm.domain.variety.Variety;
 import com.greenhouse.backend.farm.repository.transformation.OrchidGroupLineageRepository;
 import com.greenhouse.backend.work.domain.operation.WorkType;
@@ -114,8 +114,15 @@ class MovementBatchWorkOperationIntegrationTests extends AbstractBackendIntegrat
 		assertThat(results.getFirst().getPotSize()).isEqualTo(first.getPotSize());
 		assertThat(results.getFirst().getAgeYear()).isEqualTo(first.getAgeYear());
 		assertThat(results.getFirst().getStatus()).isEqualTo("정상");
-		assertThat(lineageRepository.findAll()).hasSize(2).allMatch(lineage ->
-				lineage.getRelationType() == OrchidGroupLineageRelationType.MOVED_TO);
+		assertThat(lineageRepository.findAll()).isEmpty();
+		mockMvc.perform(get("/api/orchid-groups/{id}/lineage", results.getFirst().getId()))
+				.andExpect(status().isOk())
+				.andExpect(jsonPath("$.data.transformations", hasSize(1)))
+				.andExpect(jsonPath("$.data.transformations[0].relationType").value("MOVED_TO"))
+				.andExpect(jsonPath("$.data.transformations[0].totalInputQuantity").value(30))
+				.andExpect(jsonPath("$.data.transformations[0].totalResultQuantity").value(26))
+				.andExpect(jsonPath("$.data.transformations[0].sources", hasSize(2)))
+				.andExpect(jsonPath("$.data.transformations[0].results", hasSize(1)));
 		var discardOperations = operationRepository.findAll().stream()
 				.filter(operation -> WorkType.DISCARD_CODE.equals(operation.getWorkType().getCode()))
 				.toList();
@@ -173,6 +180,87 @@ class MovementBatchWorkOperationIntegrationTests extends AbstractBackendIntegrat
 	}
 
 	@Test
+	void reusesPositionsReleasedByAnotherVarietyInTheSameRecordBatch() throws Exception {
+		OrchidGroup first = createSource(firstVariety, 10, 0, 5, 1);
+		OrchidGroup second = createSource(secondVariety, 20, 5, 15, 2);
+
+		mockMvc.perform(post("/api/work-operations/structure-change-records/batch")
+				.contentType(MediaType.APPLICATION_JSON)
+				.content("""
+						{
+						  "records": [
+						    {
+						      "operation": {
+						        "workTypeId": %d,
+						        "title": "품종 A 자리 이동",
+						        "plannedStartDate": "2026-08-09",
+						        "sourceScopeType": "MANUAL_SELECTION",
+						        "sourceOrchidGroupIds": [%d]
+						      },
+						      "execution": {
+						        "idempotencyKey": "cross-variety-position-a",
+						        "completedDate": "2026-08-09",
+						        "sources": [{"sourceOrchidGroupId": %d, "inputQuantity": 10}],
+						        "results": [{
+						          "bedZoneId": %d,
+						          "quantity": 10,
+						          "attributeSourceOrchidGroupId": %d,
+						          "purpose": "NORMAL",
+						          "startPosition": 10,
+						          "endPosition": 15
+						        }]
+						      }
+						    },
+						    {
+						      "operation": {
+						        "workTypeId": %d,
+						        "title": "품종 B 자리 이동",
+						        "plannedStartDate": "2026-08-09",
+						        "sourceScopeType": "MANUAL_SELECTION",
+						        "sourceOrchidGroupIds": [%d]
+						      },
+						      "execution": {
+						        "idempotencyKey": "cross-variety-position-b",
+						        "completedDate": "2026-08-09",
+						        "sources": [{"sourceOrchidGroupId": %d, "inputQuantity": 20}],
+						        "results": [{
+						          "bedZoneId": %d,
+						          "quantity": 20,
+						          "attributeSourceOrchidGroupId": %d,
+						          "purpose": "NORMAL",
+						          "startPosition": 5,
+						          "endPosition": 10
+						        }]
+						      }
+						    }
+						  ]
+						}
+						""".formatted(
+						movementType.getId(), first.getId(), first.getId(), sourceZone.getId(), first.getId(),
+						movementType.getId(), second.getId(), second.getId(), sourceZone.getId(), second.getId())))
+				.andExpect(status().isCreated())
+				.andExpect(jsonPath("$.data", hasSize(2)))
+				.andExpect(jsonPath("$.data[0].status").value("COMPLETED"))
+				.andExpect(jsonPath("$.data[1].status").value("COMPLETED"));
+
+		assertThat(orchidGroupRepository.findById(first.getId()).orElseThrow().getQuantity()).isZero();
+		assertThat(orchidGroupRepository.findById(second.getId()).orElseThrow().getQuantity()).isZero();
+		var results = orchidGroupRepository.findByBedZoneIdAndQuantityGreaterThanOrderBySortOrderAsc(
+				sourceZone.getId(), 0);
+		assertThat(results).hasSize(2);
+		assertThat(results).anySatisfy(result -> {
+			assertThat(result.getVariety().getId()).isEqualTo(firstVariety.getId());
+			assertThat(result.getStartPosition()).isEqualByComparingTo("10.00");
+			assertThat(result.getEndPosition()).isEqualByComparingTo("15.00");
+		});
+		assertThat(results).anySatisfy(result -> {
+			assertThat(result.getVariety().getId()).isEqualTo(secondVariety.getId());
+			assertThat(result.getStartPosition()).isEqualByComparingTo("5.00");
+			assertThat(result.getEndPosition()).isEqualByComparingTo("10.00");
+		});
+	}
+
+	@Test
 	void createsSeparateMovementPlansForEachVariety() throws Exception {
 		OrchidGroup first = createSource(firstVariety, 10, 0, 1, 1);
 		OrchidGroup second = createSource(secondVariety, 20, 1, 3, 2);
@@ -198,7 +286,7 @@ class MovementBatchWorkOperationIntegrationTests extends AbstractBackendIntegrat
 	}
 
 	@Test
-	void rejectsMovementWhenOneSourceMovesMoreThanItsInputQuantity() throws Exception {
+	void poolsSourceQuantitiesBeforeSplittingMovementResults() throws Exception {
 		OrchidGroup first = createSource(firstVariety, 10, 0, 1, 1);
 		OrchidGroup second = createSource(firstVariety, 20, 1, 3, 2);
 
@@ -239,10 +327,15 @@ class MovementBatchWorkOperationIntegrationTests extends AbstractBackendIntegrat
 						first.getId(), second.getId(),
 						destinationZone.getId(), first.getId(),
 						destinationZone.getId(), second.getId())))
-				.andExpect(status().isBadRequest());
+				.andExpect(status().isCreated())
+				.andExpect(jsonPath("$.data.status").value("COMPLETED"));
 
-		assertThat(orchidGroupRepository.findById(first.getId()).orElseThrow().getQuantity()).isEqualTo(10);
-		assertThat(orchidGroupRepository.findById(second.getId()).orElseThrow().getQuantity()).isEqualTo(20);
+		assertThat(orchidGroupRepository.findById(first.getId()).orElseThrow().getQuantity()).isZero();
+		assertThat(orchidGroupRepository.findById(second.getId()).orElseThrow().getQuantity()).isZero();
+		assertThat(orchidGroupRepository.findByBedZoneIdAndQuantityGreaterThanOrderBySortOrderAsc(
+				destinationZone.getId(), 0))
+				.extracting(OrchidGroup::getQuantity)
+				.containsExactly(15, 10);
 	}
 
 	private OrchidGroup createSource(

@@ -12,16 +12,14 @@ import com.greenhouse.backend.work.domain.target.WorkTargetReferenceType;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 
 @Component
+@RequiredArgsConstructor
 public class DiscardWorkHandler implements WorkEffectHandler {
 
 	private final OrchidGroupRepository orchidGroupRepository;
-
-	public DiscardWorkHandler(OrchidGroupRepository orchidGroupRepository) {
-		this.orchidGroupRepository = orchidGroupRepository;
-	}
 
 	@Override
 	public String supports() {
