@@ -17,6 +17,7 @@ import type {
   WorkOperationDetail,
   WorkTargetPreviewPayload,
 } from "../model/types";
+import { manualWorkTargetSource } from "../model/workTargetSource";
 
 export function getWorkTypes(): Promise<WorkType[]> {
   return fetchApi<WorkType[]>("/work-types");
@@ -63,11 +64,10 @@ export async function createCompletedWorkOperation(
     "/work-operations/record",
     "POST",
     {
+      ...manualWorkTargetSource(payload.orchidGroupIds),
       workTypeId: payload.workTypeId,
       title: title?.trim() || `${workTypeName} 작업`,
       plannedStartDate: payload.workDate,
-      sourceScopeType: "MANUAL_SELECTION",
-      sourceOrchidGroupIds: payload.orchidGroupIds,
       details: {
         materialName: payload.materialName,
         dilutionRatio: payload.dilutionRatio,

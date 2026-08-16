@@ -190,11 +190,8 @@ public class WorkOperationQueryService {
 			Long historyScopeId) {
 		validateHistoryScope(historyScopeType, historyScopeId);
 		WorkSourceScopeType sourceScopeType = historyScopeType.toSourceScopeType();
-		List<Long> directIds = historyScopeType == WorkHistoryScopeType.ORCHID_GROUP
-				? List.of(historyScopeId)
-				: List.of();
-		var resolvedTargets = workTargetResolver.resolve(new WorkTargetSelection(
-				sourceScopeType, historyScopeId, null, directIds));
+		var resolvedTargets = workTargetResolver.resolve(
+				WorkTargetSelection.identifiedScope(sourceScopeType, historyScopeId));
 		Set<Long> orchidGroupIds = resolvedTargets.stream()
 				.map(target -> target.orchidGroupId())
 				.collect(Collectors.toSet());

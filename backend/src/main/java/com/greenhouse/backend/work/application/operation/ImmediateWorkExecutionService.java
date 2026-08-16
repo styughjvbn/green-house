@@ -2,6 +2,7 @@ package com.greenhouse.backend.work.application.operation;
 
 import com.greenhouse.backend.work.application.target.ResolvedWorkTarget;
 import com.greenhouse.backend.work.application.target.WorkTargetResolver;
+import com.greenhouse.backend.work.application.target.WorkTargetSelection;
 import com.greenhouse.backend.common.exception.NotFoundException;
 import com.greenhouse.backend.work.application.effect.WorkEffectCommand;
 import com.greenhouse.backend.work.application.effect.WorkEffectProcessor;
@@ -9,7 +10,6 @@ import com.greenhouse.backend.work.domain.effect.WorkEffectOrchidGroupRelationTy
 import com.greenhouse.backend.work.domain.operation.WorkOperation;
 import com.greenhouse.backend.work.domain.operation.WorkOperationStatus;
 import com.greenhouse.backend.work.domain.operation.WorkSourceScopeType;
-import com.greenhouse.backend.work.domain.target.WorkTargetInclusionSource;
 import com.greenhouse.backend.work.domain.operation.WorkType;
 import com.greenhouse.backend.work.dto.operation.WorkOperationResponse;
 import com.greenhouse.backend.work.repository.WorkAppliedEffectRepository;
@@ -58,13 +58,15 @@ public class ImmediateWorkExecutionService {
 		}
 
 		ResolvedWorkTarget resolved = workTargetResolver.getCurrent(orchidGroupId);
+		WorkTargetSelection targetSelection = WorkTargetSelection.orchidGroup(orchidGroupId);
 		WorkOperation operation = new WorkOperation(
 				workTypeService.getByCode(workTypeCode), title, workDate, workDate,
-				WorkSourceScopeType.ORCHID_GROUP, orchidGroupId, Map.of(), details, worker, memo,
+				targetSelection.sourceScopeType(), targetSelection.sourceScopeId(),
+				targetSelection.conditionSnapshot(), details, worker, memo,
 				support.now());
 		operation.assignRequestKey(requestKey);
 		aggregateCreator.createForOrchidGroups(
-				operation, List.of(resolved), WorkTargetInclusionSource.DIRECT, orchidGroupId);
+				operation, List.of(resolved), targetSelection.inclusionSource(), targetSelection.sourceScopeId());
 		var execution = executionRepository
 				.findByTargetWorkOperationIdOrderByIdAsc(operation.getId()).getFirst();
 		LocalDateTime executedAt = support.now();

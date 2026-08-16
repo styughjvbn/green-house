@@ -15,6 +15,7 @@ import type {
   InboundPottingCandidate,
   WorkOperationFormState,
 } from "../../model/types";
+import { manualWorkTargetSource } from "../../model/workTargetSource";
 import type { WorkRecordResultKind } from "../../model/work-types/workTypeDefinition";
 import { DiscardWorkRecordDialog } from "../work-types/discard/DiscardWorkRecordDialog";
 import { PottingWorkRecordDialog } from "../work-types/potting/PottingWorkRecordDialog";
@@ -48,12 +49,11 @@ export function WorkRecordResultDialog({
   onSaved,
 }: WorkRecordResultDialogProps) {
   const operation = {
+    ...manualWorkTargetSource(orchidGroupIds),
     workTypeId: workType.id,
     title: form.title.trim(),
     plannedStartDate: form.plannedStartDate,
     plannedEndDate: form.plannedStartDate,
-    sourceScopeType: "MANUAL_SELECTION" as const,
-    sourceOrchidGroupIds: orchidGroupIds,
     details: {},
     worker: form.worker.trim() || null,
     memo: form.memo.trim() || null,

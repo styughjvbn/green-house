@@ -9,7 +9,6 @@ import type {
   CompletedWorkOperationPayload,
   InboundPottingCandidate,
   WorkOperationFormState,
-  WorkTargetPreviewPayload,
 } from "../types";
 import { getWorkTypeDefinition } from "../work-types/workTypeDefinition";
 import { getIncludedTargets } from "./targetSelection";
@@ -218,8 +217,6 @@ export function buildCompletedRecordPayload(
   return {
     workTypeId: workType.id,
     workDate: form.plannedStartDate,
-    targetType: "ORCHID_GROUP",
-    targetId: null,
     orchidGroupIds,
     materialName: isVisibleWorkRecordField(template, "materialName")
       ? form.materialName.trim() || null
@@ -237,39 +234,6 @@ export function buildCompletedRecordPayload(
       ? form.memo.trim() || null
       : null,
   };
-}
-
-export function buildWorkTargetScopePayload(
-  form: WorkOperationFormState,
-  manualIds: Set<number>,
-): WorkTargetPreviewPayload | null {
-  switch (form.sourceScopeType) {
-    case "FARM":
-      return { sourceScopeType: "FARM" };
-    case "DERIVED_GROUP":
-      return form.derivedGroupKey
-        ? {
-            sourceScopeType: "DERIVED_GROUP",
-            sourceDerivedGroupKey: form.derivedGroupKey,
-          }
-        : null;
-    case "USER_COLLECTION":
-      return form.collectionId
-        ? {
-            sourceScopeType: "USER_COLLECTION",
-            sourceScopeId: Number(form.collectionId),
-          }
-        : null;
-    case "MANUAL_SELECTION":
-      return manualIds.size > 0
-        ? {
-            sourceScopeType: "MANUAL_SELECTION",
-            sourceOrchidGroupIds: [...manualIds],
-          }
-        : null;
-    case "INBOUND_RECORD_SELECTION":
-      return null;
-  }
 }
 
 function groupByHouse(groups: OrchidGroup[]) {

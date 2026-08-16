@@ -2,7 +2,6 @@
   BedZone,
   OrchidGroup,
   WorkOperationStatus,
-  WorkRecordTargetType,
 } from "@/entities/farm/types";
 
 export type WorkOperationFilterState = {
@@ -20,8 +19,6 @@ export type WorkTargetSelectionOptions = {
 export type CompletedWorkOperationPayload = {
   workTypeId: number;
   workDate: string;
-  targetType: WorkRecordTargetType;
-  targetId: number | null;
   orchidGroupIds: number[];
   materialName: string | null;
   dilutionRatio: string | null;
@@ -180,12 +177,22 @@ export type WorkCollectionOption = {
   members: WorkCollectionMemberOption[];
 };
 
-export type WorkTargetPreviewPayload = {
-  sourceScopeType: WorkOperationScopeType;
-  sourceScopeId?: number;
-  sourceDerivedGroupKey?: string;
-  sourceOrchidGroupIds?: number[];
-};
+export type WorkTargetSourcePayload =
+  | { sourceScopeType: "FARM" }
+  | {
+      sourceScopeType: "DERIVED_GROUP";
+      sourceDerivedGroupKey: string;
+    }
+  | {
+      sourceScopeType: "USER_COLLECTION";
+      sourceScopeId: number;
+    }
+  | {
+      sourceScopeType: "MANUAL_SELECTION";
+      sourceOrchidGroupIds: number[];
+    };
+
+export type WorkTargetPreviewPayload = WorkTargetSourcePayload;
 
 export type WorkTargetGroupChoice =
   | {
@@ -201,15 +208,11 @@ export type WorkTargetGroupChoice =
       memberIds: number[];
     };
 
-export type CreateWorkOperationPayload = {
+export type CreateWorkOperationPayload = WorkTargetSourcePayload & {
   workTypeId: number;
   title: string;
   plannedStartDate: string;
   plannedEndDate: string | null;
-  sourceScopeType: WorkOperationScopeType;
-  sourceScopeId?: number;
-  sourceDerivedGroupKey?: string;
-  sourceOrchidGroupIds?: number[];
   details: Record<string, unknown>;
   worker: string | null;
   memo: string | null;
