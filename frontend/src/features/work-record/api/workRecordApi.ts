@@ -241,7 +241,7 @@ export type StructureChangeExecutionPayload = {
   results: {
     bedZoneId: number;
     quantity: number;
-    sourceOrchidGroupIds: number[];
+    attributeSourceOrchidGroupId: number;
     potSize: string | null;
     ageYear: number | null;
     purpose: "NORMAL" | "DIVIDE_CANDIDATE" | "HELD";

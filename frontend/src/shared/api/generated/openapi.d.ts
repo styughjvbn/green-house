@@ -2177,7 +2177,8 @@ export interface components {
             bedZoneId: number;
             /** Format: int32 */
             quantity: number;
-            sourceOrchidGroupIds?: number[];
+            /** Format: int64 */
+            attributeSourceOrchidGroupId?: number;
             potSize?: string;
             /** Format: int32 */
             ageYear?: number;
@@ -3512,11 +3513,35 @@ export interface components {
             sourceOrchidGroup?: components["schemas"]["OrchidGroupResponse"];
             resultOrchidGroup?: components["schemas"]["OrchidGroupResponse"];
         };
+        OrchidGroupLineageNodeResponse: {
+            /** Format: int32 */
+            quantity?: number;
+            orchidGroup?: components["schemas"]["OrchidGroupResponse"];
+        };
         OrchidGroupLineageResponse: {
             /** Format: int64 */
             orchidGroupId?: number;
             sources?: components["schemas"]["OrchidGroupLineageItemResponse"][];
             results?: components["schemas"]["OrchidGroupLineageItemResponse"][];
+            transformations?: components["schemas"]["OrchidGroupLineageTransformationResponse"][];
+        };
+        OrchidGroupLineageTransformationResponse: {
+            /** Format: int64 */
+            id?: number;
+            /** @enum {string} */
+            relationType?: "CREATED_FROM_INBOUND" | "REPOTTED_TO" | "SPLIT_TO" | "MERGED_TO" | "MOVED_TO" | "POTTED_TO" | "CORRECTED_TO";
+            /** Format: int64 */
+            workOperationId?: number;
+            /** Format: int32 */
+            totalInputQuantity?: number;
+            /** Format: int32 */
+            totalResultQuantity?: number;
+            /** Format: int32 */
+            lossQuantity?: number;
+            /** Format: date-time */
+            createdAt?: string;
+            sources?: components["schemas"]["OrchidGroupLineageNodeResponse"][];
+            results?: components["schemas"]["OrchidGroupLineageNodeResponse"][];
         };
         ApiResponseListOrchidGroupCollectionResponse: {
             data?: components["schemas"]["OrchidGroupCollectionResponse"][];

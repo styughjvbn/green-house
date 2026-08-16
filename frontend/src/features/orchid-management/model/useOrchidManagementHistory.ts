@@ -168,6 +168,7 @@ export function useOrchidManagementHistory(
               orchidGroupId: selectedOrchidGroup.id,
               sources: [],
               results: [],
+              transformations: [],
             },
           });
         }

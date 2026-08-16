@@ -225,7 +225,7 @@ function configuredSourceIds(
     const sourceId = target.orchidGroupId;
     if (sourceId == null) return [];
     const sourceRows = rows.filter((row) =>
-      row.sourceOrchidGroupIds.includes(sourceId),
+      row.basisOrchidGroupIds.includes(sourceId),
     );
     return sourceRows.length > 0 &&
       sourceRows.every(
