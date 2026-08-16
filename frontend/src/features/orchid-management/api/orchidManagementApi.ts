@@ -226,15 +226,15 @@ export function getHouse(houseId: number) {
 }
 
 export function getWorkHistory(
-  scopeType: "HOUSE" | "PHYSICAL_BED" | "BED_ZONE" | "ORCHID_GROUP",
-  scopeId: number,
+  historyScopeType: "HOUSE" | "PHYSICAL_BED" | "BED_ZONE" | "ORCHID_GROUP",
+  historyScopeId: number,
   page: number,
   size: number,
   signal?: AbortSignal,
 ) {
   const params = new URLSearchParams({
-    scopeType,
-    scopeId: String(scopeId),
+    historyScopeType,
+    historyScopeId: String(historyScopeId),
     page: String(page),
     size: String(size),
   });

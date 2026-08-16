@@ -383,8 +383,8 @@ class WorkOperationIntegrationTests extends AbstractBackendIntegrationTest {
 				.contentType(MediaType.APPLICATION_JSON)
 				.content("""
 						{
-						  "scopeType": "HOUSE",
-						  "scopeId": %d
+						  "sourceScopeType": "HOUSE",
+						  "sourceScopeId": %d
 						}
 						""".formatted(sourceHouse.getId())))
 				.andExpect(status().isOk())
@@ -470,8 +470,8 @@ class WorkOperationIntegrationTests extends AbstractBackendIntegrationTest {
 			.isEqualTo(1);
 
 		mockMvc.perform(get("/api/work-history")
-				.param("scopeType", "HOUSE")
-				.param("scopeId", sourceHouse.getId().toString())
+				.param("historyScopeType", "HOUSE")
+				.param("historyScopeId", sourceHouse.getId().toString())
 				.param("page", "0")
 				.param("size", "20"))
 				.andExpect(status().isOk())
@@ -502,8 +502,8 @@ class WorkOperationIntegrationTests extends AbstractBackendIntegrationTest {
 				.andExpect(jsonPath("$.data[?(@.sourceKind == 'WORK_OPERATION')].workType").value(hasItem("자리 이동")));
 
 		mockMvc.perform(get("/api/work-history")
-				.param("scopeType", "ORCHID_GROUP")
-				.param("scopeId", targetGroup.getId().toString())
+				.param("historyScopeType", "ORCHID_GROUP")
+				.param("historyScopeId", targetGroup.getId().toString())
 				.param("page", "0")
 				.param("size", "1"))
 				.andExpect(status().isOk())
@@ -516,8 +516,8 @@ class WorkOperationIntegrationTests extends AbstractBackendIntegrationTest {
 				.andExpect(jsonPath("$.data.content[0].currentLocation.houseNumber").value(5));
 
 		mockMvc.perform(get("/api/work-history")
-				.param("scopeType", "ORCHID_GROUP")
-				.param("scopeId", targetGroup.getId().toString())
+				.param("historyScopeType", "ORCHID_GROUP")
+				.param("historyScopeId", targetGroup.getId().toString())
 				.param("page", "1")
 				.param("size", "1"))
 				.andExpect(status().isOk())
@@ -577,8 +577,8 @@ class WorkOperationIntegrationTests extends AbstractBackendIntegrationTest {
 				.param("from", "2026-07-15")
 				.param("to", "2026-07-31")
 				.param("status", "PLANNED")
-				.param("scopeType", "HOUSE")
-				.param("scopeId", sourceHouse.getId().toString()))
+				.param("sourceScopeType", "HOUSE")
+				.param("sourceScopeId", sourceHouse.getId().toString()))
 				.andExpect(status().isOk())
 				.andExpect(jsonPath("$.data.content", hasSize(2)))
 				.andExpect(jsonPath("$.data.totalElements").value(2))

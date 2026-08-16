@@ -36,8 +36,8 @@ export function WorkOperationRegistrationDialog({
     ],
     queryFn: () =>
       previewWorkOperationTargets({
-        scopeType: "MANUAL_SELECTION",
-        orchidGroupIds: presetOrchidGroupIds,
+        sourceScopeType: "MANUAL_SELECTION",
+        sourceOrchidGroupIds: presetOrchidGroupIds,
       }),
     enabled: presetOrchidGroupIds.length > 0,
   });

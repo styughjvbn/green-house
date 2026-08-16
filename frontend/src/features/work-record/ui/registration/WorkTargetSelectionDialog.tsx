@@ -21,7 +21,7 @@ import {
 import type {
   WorkCollectionOption,
   WorkDerivedGroupOption,
-  WorkTargetSelectionScope,
+  WorkTargetGroupChoice,
 } from "../../model/types";
 
 type ZoneNode = {
@@ -59,7 +59,7 @@ export function WorkTargetSelectionDialog({
   onClose: () => void;
   onConfirm: (
     selectedIds: Set<number>,
-    scope: WorkTargetSelectionScope | null,
+    groupChoice: WorkTargetGroupChoice | null,
   ) => void;
 }) {
   const [selectedIds, setSelectedIds] = useState(
@@ -77,8 +77,8 @@ export function WorkTargetSelectionDialog({
   const [loadingGroups, setLoadingGroups] = useState(true);
   const [loadingGroupKey, setLoadingGroupKey] = useState<string | null>(null);
   const [groupError, setGroupError] = useState<string | null>(null);
-  const [selectedScope, setSelectedScope] =
-    useState<WorkTargetSelectionScope | null>(null);
+  const [selectedGroupChoice, setSelectedGroupChoice] =
+    useState<WorkTargetGroupChoice | null>(null);
   const tree = useMemo(() => buildTargetTree(groups, houses), [groups, houses]);
   const visibleTree = useMemo(
     () => filterTargetTree(tree, keyword),
@@ -176,7 +176,7 @@ export function WorkTargetSelectionDialog({
   }
 
   function toggleGroups(targetGroups: OrchidGroup[]) {
-    setSelectedScope(null);
+    setSelectedGroupChoice(null);
     toggleIds(targetGroups.map((group) => group.id));
   }
 
@@ -187,7 +187,7 @@ export function WorkTargetSelectionDialog({
       const availableIds = cachedIds.filter((id) => selectableIds.has(id));
       const selecting = availableIds.some((id) => !selectedIds.has(id));
       toggleIds(cachedIds);
-      setSelectedScope(
+      setSelectedGroupChoice(
         selecting
           ? {
               type: "DERIVED_GROUP",
@@ -209,7 +209,7 @@ export function WorkTargetSelectionDialog({
         new Map(current).set(group.groupKey, memberIds),
       );
       toggleIds(memberIds);
-      setSelectedScope({
+      setSelectedGroupChoice({
         type: "DERIVED_GROUP",
         derivedGroupKey: group.groupKey,
         label: group.varietyName,
@@ -328,7 +328,7 @@ export function WorkTargetSelectionDialog({
                               (id) => !selectedIds.has(id),
                             );
                             toggleIds(memberIds);
-                            setSelectedScope(
+                            setSelectedGroupChoice(
                               selecting
                                 ? {
                                     type: "USER_COLLECTION",
@@ -506,9 +506,9 @@ export function WorkTargetSelectionDialog({
               onClick={() =>
                 onConfirm(
                   new Set(selectedIds),
-                  selectedScope &&
-                    sameIds(selectedIds, new Set(selectedScope.memberIds))
-                    ? selectedScope
+                  selectedGroupChoice &&
+                    sameIds(selectedIds, new Set(selectedGroupChoice.memberIds))
+                    ? selectedGroupChoice
                     : null,
                 )
               }

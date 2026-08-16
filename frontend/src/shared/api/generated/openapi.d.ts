@@ -2285,11 +2285,11 @@ export interface components {
         };
         WorkTargetPreviewRequest: {
             /** @enum {string} */
-            scopeType: "NONE" | "FARM" | "HOUSE" | "PHYSICAL_BED" | "BED_ZONE" | "ORCHID_GROUP" | "DERIVED_GROUP" | "USER_COLLECTION" | "MANUAL_SELECTION" | "INBOUND_RECORD_SELECTION";
+            sourceScopeType: "NONE" | "FARM" | "HOUSE" | "PHYSICAL_BED" | "BED_ZONE" | "ORCHID_GROUP" | "DERIVED_GROUP" | "USER_COLLECTION" | "MANUAL_SELECTION" | "INBOUND_RECORD_SELECTION";
             /** Format: int64 */
-            scopeId?: number;
-            derivedGroupKey?: string;
-            orchidGroupIds?: number[];
+            sourceScopeId?: number;
+            sourceDerivedGroupKey?: string;
+            sourceOrchidGroupIds?: number[];
         };
         ApiResponseWorkTargetPreviewResponse: {
             data?: components["schemas"]["WorkTargetPreviewResponse"];
@@ -4255,8 +4255,8 @@ export interface operations {
                 to?: string;
                 status?: "PLANNED" | "IN_PROGRESS" | "PAUSED" | "COMPLETED" | "CANCELED" | "CORRECTED";
                 view?: "ALL" | "MANAGEMENT" | "HISTORY";
-                scopeType?: "NONE" | "FARM" | "HOUSE" | "PHYSICAL_BED" | "BED_ZONE" | "ORCHID_GROUP" | "DERIVED_GROUP" | "USER_COLLECTION" | "MANUAL_SELECTION" | "INBOUND_RECORD_SELECTION";
-                scopeId?: number;
+                sourceScopeType?: "NONE" | "FARM" | "HOUSE" | "PHYSICAL_BED" | "BED_ZONE" | "ORCHID_GROUP" | "DERIVED_GROUP" | "USER_COLLECTION" | "MANUAL_SELECTION" | "INBOUND_RECORD_SELECTION";
+                sourceScopeId?: number;
                 keyword?: string;
                 page?: number;
                 size?: number;
@@ -6229,8 +6229,8 @@ export interface operations {
     getWorkHistory: {
         parameters: {
             query: {
-                scopeType: "HOUSE" | "PHYSICAL_BED" | "BED_ZONE" | "ORCHID_GROUP";
-                scopeId: number;
+                historyScopeType: "HOUSE" | "PHYSICAL_BED" | "BED_ZONE" | "ORCHID_GROUP";
+                historyScopeId: number;
                 page?: number;
                 size?: number;
             };

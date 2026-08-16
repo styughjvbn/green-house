@@ -5,8 +5,8 @@ import jakarta.validation.constraints.NotNull;
 import java.util.List;
 
 public record WorkTargetPreviewRequest(
-		@NotNull WorkSourceScopeType scopeType,
-		Long scopeId,
-		String derivedGroupKey,
-		List<Long> orchidGroupIds) {
+		@NotNull WorkSourceScopeType sourceScopeType,
+		Long sourceScopeId,
+		String sourceDerivedGroupKey,
+		List<Long> sourceOrchidGroupIds) {
 }

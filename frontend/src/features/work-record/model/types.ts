@@ -181,13 +181,13 @@ export type WorkCollectionOption = {
 };
 
 export type WorkTargetPreviewPayload = {
-  scopeType: WorkOperationScopeType;
-  scopeId?: number;
-  derivedGroupKey?: string;
-  orchidGroupIds?: number[];
+  sourceScopeType: WorkOperationScopeType;
+  sourceScopeId?: number;
+  sourceDerivedGroupKey?: string;
+  sourceOrchidGroupIds?: number[];
 };
 
-export type WorkTargetSelectionScope =
+export type WorkTargetGroupChoice =
   | {
       type: "DERIVED_GROUP";
       derivedGroupKey: string;

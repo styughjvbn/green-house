@@ -150,13 +150,13 @@ public class WorkOperationController {
 			@RequestParam(required = false) LocalDate to,
 			@RequestParam(required = false) WorkOperationStatus status,
 			@RequestParam(defaultValue = "ALL") WorkOperationSearchView view,
-			@RequestParam(required = false) WorkSourceScopeType scopeType,
-			@RequestParam(required = false) Long scopeId,
+			@RequestParam(required = false) WorkSourceScopeType sourceScopeType,
+			@RequestParam(required = false) Long sourceScopeId,
 			@RequestParam(required = false) String keyword,
 			@RequestParam(defaultValue = "0") int page,
 			@RequestParam(defaultValue = "20") int size) {
 		return ApiResponse.ok(queryService.search(
-				from, to, status, view, scopeType, scopeId, keyword, page, size));
+				from, to, status, view, sourceScopeType, sourceScopeId, keyword, page, size));
 	}
 
 	@GetMapping("/work-operations/calendar")
@@ -259,11 +259,11 @@ public class WorkOperationController {
 
 	@GetMapping("/work-history")
 	public ApiResponse<PageResponse<OrchidGroupWorkHistoryResponse>> getWorkHistory(
-			@RequestParam WorkHistoryScopeType scopeType,
-			@RequestParam Long scopeId,
+			@RequestParam WorkHistoryScopeType historyScopeType,
+			@RequestParam Long historyScopeId,
 			@RequestParam(defaultValue = "0") int page,
 			@RequestParam(defaultValue = "20") int size) {
-		return ApiResponse.ok(queryService.getWorkHistory(scopeType, scopeId, page, size));
+		return ApiResponse.ok(queryService.getWorkHistory(historyScopeType, historyScopeId, page, size));
 	}
 
 	@PostMapping("/work-operations/{workOperationId}/corrections")

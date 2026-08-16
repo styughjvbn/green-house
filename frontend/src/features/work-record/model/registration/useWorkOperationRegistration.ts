@@ -13,7 +13,7 @@ import {
 import type {
   InboundPottingCandidate,
   WorkOperationFormState,
-  WorkTargetSelectionScope,
+  WorkTargetGroupChoice,
   WorkTargetPreviewPayload,
 } from "../types";
 import {
@@ -218,7 +218,7 @@ export function useWorkOperationRegistration({
     setTargetScopeLabel("농장 전체");
     setExcludedIds(new Set());
     await loadTargetPreview(
-      { scopeType: "FARM" },
+      { sourceScopeType: "FARM" },
       "농장 전체 대상을 확인하지 못했습니다.",
     );
   }
@@ -231,21 +231,24 @@ export function useWorkOperationRegistration({
 
   function confirmManualTargets(
     selectedIds: Set<number>,
-    scope: WorkTargetSelectionScope | null,
+    scope: WorkTargetGroupChoice | null,
   ) {
     setIsDirty(true);
     setManualIds(selectedIds);
     setTargetScopeLabel(scope?.label ?? null);
     const scopePayload: WorkTargetPreviewPayload = scope
       ? scope.type === "DERIVED_GROUP"
-        ? { scopeType: "DERIVED_GROUP", derivedGroupKey: scope.derivedGroupKey }
+        ? {
+            sourceScopeType: "DERIVED_GROUP",
+            sourceDerivedGroupKey: scope.derivedGroupKey,
+          }
         : {
-            scopeType: "USER_COLLECTION",
-            scopeId: scope.collectionId,
+            sourceScopeType: "USER_COLLECTION",
+            sourceScopeId: scope.collectionId,
           }
       : {
-          scopeType: "MANUAL_SELECTION",
-          orchidGroupIds: [...selectedIds],
+          sourceScopeType: "MANUAL_SELECTION",
+          sourceOrchidGroupIds: [...selectedIds],
         };
     setForm((current) => ({
       ...current,
@@ -328,10 +331,10 @@ export function useWorkOperationRegistration({
           title: form.title.trim(),
           plannedStartDate: form.plannedStartDate,
           plannedEndDate: form.plannedEndDate || null,
-          sourceScopeType: scopePayload.scopeType,
-          sourceScopeId: scopePayload.scopeId,
-          sourceDerivedGroupKey: scopePayload.derivedGroupKey,
-          sourceOrchidGroupIds: scopePayload.orchidGroupIds,
+          sourceScopeType: scopePayload.sourceScopeType,
+          sourceScopeId: scopePayload.sourceScopeId,
+          sourceDerivedGroupKey: scopePayload.sourceDerivedGroupKey,
+          sourceOrchidGroupIds: scopePayload.sourceOrchidGroupIds,
           details: {
             materialName: form.materialName.trim() || null,
             dilutionRatio: form.dilutionRatio.trim() || null,

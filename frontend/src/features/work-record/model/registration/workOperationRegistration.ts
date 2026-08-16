@@ -245,23 +245,26 @@ export function buildWorkTargetScopePayload(
 ): WorkTargetPreviewPayload | null {
   switch (form.sourceScopeType) {
     case "FARM":
-      return { scopeType: "FARM" };
+      return { sourceScopeType: "FARM" };
     case "DERIVED_GROUP":
       return form.derivedGroupKey
-        ? { scopeType: "DERIVED_GROUP", derivedGroupKey: form.derivedGroupKey }
+        ? {
+            sourceScopeType: "DERIVED_GROUP",
+            sourceDerivedGroupKey: form.derivedGroupKey,
+          }
         : null;
     case "USER_COLLECTION":
       return form.collectionId
         ? {
-            scopeType: "USER_COLLECTION",
-            scopeId: Number(form.collectionId),
+            sourceScopeType: "USER_COLLECTION",
+            sourceScopeId: Number(form.collectionId),
           }
         : null;
     case "MANUAL_SELECTION":
       return manualIds.size > 0
         ? {
-            scopeType: "MANUAL_SELECTION",
-            orchidGroupIds: [...manualIds],
+            sourceScopeType: "MANUAL_SELECTION",
+            sourceOrchidGroupIds: [...manualIds],
           }
         : null;
     case "INBOUND_RECORD_SELECTION":

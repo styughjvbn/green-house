@@ -4,12 +4,12 @@ import com.greenhouse.backend.work.domain.operation.WorkSourceScopeType;
 import java.util.List;
 
 public record WorkTargetSelection(
-		WorkSourceScopeType scopeType,
-		Long scopeId,
-		String derivedGroupKey,
-		List<Long> orchidGroupIds) {
+		WorkSourceScopeType sourceScopeType,
+		Long sourceScopeId,
+		String sourceDerivedGroupKey,
+		List<Long> sourceOrchidGroupIds) {
 
 	public WorkTargetSelection {
-		orchidGroupIds = orchidGroupIds == null ? List.of() : List.copyOf(orchidGroupIds);
+		sourceOrchidGroupIds = sourceOrchidGroupIds == null ? List.of() : List.copyOf(sourceOrchidGroupIds);
 	}
 }

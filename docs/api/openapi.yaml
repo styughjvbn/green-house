@@ -237,7 +237,7 @@ paths:
           - ALL
           - MANAGEMENT
           - HISTORY
-      - name: scopeType
+      - name: sourceScopeType
         in: query
         required: false
         schema:
@@ -253,7 +253,7 @@ paths:
           - USER_COLLECTION
           - MANUAL_SELECTION
           - INBOUND_RECORD_SELECTION
-      - name: scopeId
+      - name: sourceScopeId
         in: query
         required: false
         schema:
@@ -2106,7 +2106,7 @@ paths:
       - work-operation-controller
       operationId: getWorkHistory
       parameters:
-      - name: scopeType
+      - name: historyScopeType
         in: query
         required: true
         schema:
@@ -2116,7 +2116,7 @@ paths:
           - PHYSICAL_BED
           - BED_ZONE
           - ORCHID_GROUP
-      - name: scopeId
+      - name: historyScopeId
         in: query
         required: true
         schema:
@@ -4344,7 +4344,7 @@ components:
     WorkTargetPreviewRequest:
       type: object
       properties:
-        scopeType:
+        sourceScopeType:
           type: string
           enum:
           - NONE
@@ -4357,18 +4357,18 @@ components:
           - USER_COLLECTION
           - MANUAL_SELECTION
           - INBOUND_RECORD_SELECTION
-        scopeId:
+        sourceScopeId:
           type: integer
           format: int64
-        derivedGroupKey:
+        sourceDerivedGroupKey:
           type: string
-        orchidGroupIds:
+        sourceOrchidGroupIds:
           type: array
           items:
             type: integer
             format: int64
       required:
-      - scopeType
+      - sourceScopeType
     ApiResponseWorkTargetPreviewResponse:
       type: object
       properties:

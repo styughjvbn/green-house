@@ -98,8 +98,8 @@ class WorkOperationContractE2ETest extends WorkE2ETestBase {
 
 		ApiResult preview = post("/api/work-operations/target-preview", """
 				{
-				  "scopeType": "MANUAL_SELECTION",
-				  "orchidGroupIds": [%d]
+				  "sourceScopeType": "MANUAL_SELECTION",
+				  "sourceOrchidGroupIds": [%d]
 				}
 				""".formatted(scenario.orchidGroupId()));
 		assertThat(preview.status()).isEqualTo(200);
