@@ -4099,14 +4099,9 @@ components:
           type: integer
           format: int32
           minimum: 1
-        sourceOrchidGroupIds:
-          type: array
-          items:
-            type: integer
-            format: int64
-          maxItems: 100
-          minItems: 0
-          uniqueItems: true
+        attributeSourceOrchidGroupId:
+          type: integer
+          format: int64
         potSize:
           type: string
           maxLength: 50
@@ -7156,6 +7151,14 @@ components:
           $ref: '#/components/schemas/OrchidGroupResponse'
         resultOrchidGroup:
           $ref: '#/components/schemas/OrchidGroupResponse'
+    OrchidGroupLineageNodeResponse:
+      type: object
+      properties:
+        quantity:
+          type: integer
+          format: int32
+        orchidGroup:
+          $ref: '#/components/schemas/OrchidGroupResponse'
     OrchidGroupLineageResponse:
       type: object
       properties:
@@ -7170,6 +7173,49 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/OrchidGroupLineageItemResponse'
+        transformations:
+          type: array
+          items:
+            $ref: '#/components/schemas/OrchidGroupLineageTransformationResponse'
+    OrchidGroupLineageTransformationResponse:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: int64
+        relationType:
+          type: string
+          enum:
+          - CREATED_FROM_INBOUND
+          - REPOTTED_TO
+          - SPLIT_TO
+          - MERGED_TO
+          - MOVED_TO
+          - POTTED_TO
+          - CORRECTED_TO
+        workOperationId:
+          type: integer
+          format: int64
+        totalInputQuantity:
+          type: integer
+          format: int32
+        totalResultQuantity:
+          type: integer
+          format: int32
+        lossQuantity:
+          type: integer
+          format: int32
+        createdAt:
+          type: string
+          format: date-time
+        sources:
+          type: array
+          items:
+            $ref: '#/components/schemas/OrchidGroupLineageNodeResponse'
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/OrchidGroupLineageNodeResponse'
     ApiResponseListOrchidGroupCollectionResponse:
       type: object
       properties:

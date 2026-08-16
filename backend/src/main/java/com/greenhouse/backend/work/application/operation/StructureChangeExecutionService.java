@@ -62,9 +62,15 @@ public class StructureChangeExecutionService {
 		validateInProgress(operation);
 		LocalDateTime completedAt = support.completionTime(request.completedDate());
 		String worker = support.actor(request.worker());
-		var result = workEffectProcessor.apply(
+		List<Long> sourceOrchidGroupIds = executions.stream()
+				.map(execution -> execution.getTarget().getOrchidGroupId())
+				.filter(java.util.Objects::nonNull)
+				.sorted()
+				.toList();
+		var result = workEffectProcessor.applyBatch(
 				operation,
-				null,
+				"LEGACY_MERGE",
+				sourceOrchidGroupIds,
 				new WorkEffectCommand(completedAt, worker, request.resultDetails(), null));
 		executions.forEach(execution ->
 				execution.completeWithEffect(completedAt, worker, result.resultDetails()));

@@ -4,7 +4,6 @@ import com.greenhouse.backend.farm.application.orchid.OrchidGroupCommandService;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.greenhouse.backend.common.exception.NotFoundException;
 import com.greenhouse.backend.farm.domain.orchid.OrchidGroup;
-import com.greenhouse.backend.farm.domain.transformation.OrchidGroupLineageRelationType;
 import com.greenhouse.backend.farm.dto.transformation.MergeSourceInputRequest;
 import com.greenhouse.backend.farm.dto.transformation.MergeWorkOperationRequest;
 import com.greenhouse.backend.farm.dto.orchid.OrchidGroupCreateRequest;
@@ -29,7 +28,6 @@ public class MergeWorkHandler implements WorkEffectHandler {
 
 	private final OrchidGroupRepository orchidGroupRepository;
 	private final OrchidGroupCommandService orchidGroupCommandService;
-	private final OrchidGroupLineageService lineageService;
 	private final StructureChangeReferenceReader structureChangeReferenceReader;
 	private final StructureChangeExecutor structureChangeExecutor;
 	private final ObjectMapper objectMapper = new ObjectMapper().findAndRegisterModules();
@@ -37,12 +35,10 @@ public class MergeWorkHandler implements WorkEffectHandler {
 	public MergeWorkHandler(
 			OrchidGroupRepository orchidGroupRepository,
 			OrchidGroupCommandService orchidGroupCommandService,
-			OrchidGroupLineageService lineageService,
 			StructureChangeReferenceReader structureChangeReferenceReader,
 			StructureChangeExecutor structureChangeExecutor) {
 		this.orchidGroupRepository = orchidGroupRepository;
 		this.orchidGroupCommandService = orchidGroupCommandService;
-		this.lineageService = lineageService;
 		this.structureChangeReferenceReader = structureChangeReferenceReader;
 		this.structureChangeExecutor = structureChangeExecutor;
 	}
@@ -103,11 +99,6 @@ public class MergeWorkHandler implements WorkEffectHandler {
 				row.bedZoneId(), varietyId, row.quantity(), row.potSize(), row.ageYear(), resultStatus,
 				row.placementType(), row.trayCount(), row.splitPlacementAllowed(),
 				row.startPosition(), row.endPosition(), row.memo()));
-		request.sources().forEach(sourceInput -> lineageService.record(
-				sourcesById.get(sourceInput.sourceOrchidGroupId()), result,
-				OrchidGroupLineageRelationType.MERGED_TO, operation.getId(),
-				sourceInput.inputQuantity(), result.getQuantity()));
-
 		var details = new LinkedHashMap<String, Object>();
 		details.put("sourceOrchidGroupIds", sourceIds);
 		details.put("sourceInputQuantities", inputBySourceId);

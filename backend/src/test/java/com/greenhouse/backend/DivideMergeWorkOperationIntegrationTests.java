@@ -256,9 +256,14 @@ class DivideMergeWorkOperationIntegrationTests extends AbstractBackendIntegratio
 			assertThat(result.getQuantity()).isEqualTo(30);
 			assertThat(result.getStatus()).isEqualTo("정상");
 			assertThat(lineageRepository.findByResultOrchidGroupIdOrderByCreatedAtAscIdAsc(result.getId()))
-					.hasSize(2)
-					.allMatch(lineage -> lineage.getRelationType() == OrchidGroupLineageRelationType.MERGED_TO);
+					.isEmpty();
 		});
+		mockMvc.perform(get("/api/orchid-groups/{id}/lineage", resultGroups.getFirst().getId()))
+				.andExpect(status().isOk())
+				.andExpect(jsonPath("$.data.transformations", hasSize(1)))
+				.andExpect(jsonPath("$.data.transformations[0].sources", hasSize(2)))
+				.andExpect(jsonPath("$.data.transformations[0].totalInputQuantity").value(30))
+				.andExpect(jsonPath("$.data.transformations[0].totalResultQuantity").value(30));
 	}
 
 	@Test
@@ -429,8 +434,13 @@ class DivideMergeWorkOperationIntegrationTests extends AbstractBackendIntegratio
 				.findByBedZoneIdAndQuantityGreaterThanOrderBySortOrderAsc(resultZone.getId(), 0).getFirst();
 		assertThat(result.getStatus()).isEqualTo("정상");
 		assertThat(lineageRepository.findByResultOrchidGroupIdOrderByCreatedAtAscIdAsc(result.getId()))
-				.hasSize(2)
-				.allMatch(lineage -> lineage.getRelationType() == OrchidGroupLineageRelationType.MERGED_TO);
+				.isEmpty();
+		mockMvc.perform(get("/api/orchid-groups/{id}/lineage", result.getId()))
+				.andExpect(status().isOk())
+				.andExpect(jsonPath("$.data.transformations", hasSize(1)))
+				.andExpect(jsonPath("$.data.transformations[0].relationType").value("MERGED_TO"))
+				.andExpect(jsonPath("$.data.transformations[0].sources", hasSize(2)))
+				.andExpect(jsonPath("$.data.transformations[0].results", hasSize(1)));
 	}
 
 	@Test

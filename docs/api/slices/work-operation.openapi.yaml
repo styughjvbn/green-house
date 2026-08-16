@@ -1175,14 +1175,9 @@ components:
           type: integer
           format: int32
           minimum: 1
-        sourceOrchidGroupIds:
-          type: array
-          items:
-            type: integer
-            format: int64
-          maxItems: 100
-          minItems: 0
-          uniqueItems: true
+        attributeSourceOrchidGroupId:
+          type: integer
+          format: int64
         potSize:
           type: string
           maxLength: 50

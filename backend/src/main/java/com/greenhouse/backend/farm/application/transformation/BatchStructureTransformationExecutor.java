@@ -69,15 +69,6 @@ public class BatchStructureTransformationExecutor {
 		Map<Long, String> sourceStatusById = sources.values().stream().collect(Collectors.toMap(
 				OrchidGroup::getId,
 				OrchidGroup::getStatus));
-		var referencedSourceIds = request.results().stream()
-				.flatMap(row -> row.sourceOrchidGroupIds() == null || row.sourceOrchidGroupIds().isEmpty()
-						? inputBySourceId.keySet().stream()
-						: row.sourceOrchidGroupIds().stream())
-				.collect(Collectors.toSet());
-		if (strategy.requiresEverySourceResult()
-				&& !referencedSourceIds.containsAll(inputBySourceId.keySet())) {
-			throw new IllegalArgumentException("모든 작업 원본은 결과 난 묶음 한 개 이상에 연결되어야 합니다.");
-		}
 		transformedBySourceId.forEach((sourceId, transformedQuantity) -> {
 			OrchidGroup source = sources.get(sourceId);
 			if (transformedQuantity > source.getQuantity()) {
@@ -95,18 +86,14 @@ public class BatchStructureTransformationExecutor {
 		});
 
 		List<OrchidGroup> results = request.results().stream().map(row -> {
-			var lineageSourceIds = row.sourceOrchidGroupIds() == null || row.sourceOrchidGroupIds().isEmpty()
-					? inputBySourceId.keySet()
-					: row.sourceOrchidGroupIds();
-			if (!inputBySourceId.keySet().containsAll(lineageSourceIds)) {
-				throw new IllegalArgumentException("결과 난 묶음의 원본은 이번 실행에 포함된 대상이어야 합니다.");
+			Long attributeSourceId = row.attributeSourceOrchidGroupId() == null
+					? first.getId()
+					: row.attributeSourceOrchidGroupId();
+			OrchidGroup resultSource = sources.get(attributeSourceId);
+			if (resultSource == null) {
+				throw new IllegalArgumentException("결과 속성 기준 난 묶음은 이번 실행 원본이어야 합니다.");
 			}
-			OrchidGroup resultSource = sources.get(lineageSourceIds.iterator().next());
 			Long resultVarietyId = resultSource.getVariety().getId();
-			if (lineageSourceIds.stream().anyMatch(sourceId ->
-					!resultVarietyId.equals(sources.get(sourceId).getVariety().getId()))) {
-				throw new IllegalArgumentException("결과 난 묶음에는 같은 품종의 원본만 연결할 수 있습니다.");
-			}
 			String resultPotSize = strategy.preservesSourceAttributes()
 					? resultSource.getPotSize()
 					: row.potSize();
@@ -121,9 +108,12 @@ public class BatchStructureTransformationExecutor {
 					resultStatus(sourceStatusById.get(resultSource.getId()), resultPurpose),
 					row.placementType(), row.trayCount(),
 					row.splitPlacementAllowed(), row.startPosition(), row.endPosition(), row.memo()));
-			lineageSourceIds.forEach(sourceId -> lineageService.record(
-					sources.get(sourceId), result, strategy.lineageType(), operation.getId(),
-					transformedBySourceId.get(sourceId), result.getQuantity()));
+			if (sourceIds.size() == 1) {
+				Long sourceId = sourceIds.getFirst();
+				lineageService.record(
+						sources.get(sourceId), result, strategy.lineageType(), operation.getId(),
+						transformedBySourceId.get(sourceId), result.getQuantity());
+			}
 			return result;
 		}).toList();
 
