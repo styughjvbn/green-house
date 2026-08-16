@@ -7,17 +7,14 @@ import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 
 @Component
+@RequiredArgsConstructor
 public class AuditEventWriter {
 	private final AuditRecorder auditRecorder;
 	private final AuditRequestContext requestContext;
-
-	public AuditEventWriter(AuditRecorder auditRecorder, AuditRequestContext requestContext) {
-		this.auditRecorder = auditRecorder;
-		this.requestContext = requestContext;
-	}
 
 	public Long record(
 			AuditAction action,

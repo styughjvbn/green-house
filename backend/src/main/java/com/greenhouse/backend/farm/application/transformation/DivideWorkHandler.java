@@ -32,7 +32,8 @@ public class DivideWorkHandler implements WorkEffectHandler {
 	public WorkExecutionResult execute(
 			WorkOperation operation, WorkOperationTarget target, WorkEffectCommand command) {
 		if (command.payload() instanceof com.greenhouse.backend.work.dto.effect.StructureChangeExecutionRequest request) {
-			return structureChangeExecutor.execute(operation, request);
+			return structureChangeExecutor.execute(
+					operation, request, command.placementExclusionOrchidGroupIds());
 		}
 		if (target == null) throw new IllegalArgumentException("분주 작업에는 원본 난 묶음이 필요합니다.");
 		RepotWorkOperationRequest request = legacyRequestMapper.read(command);

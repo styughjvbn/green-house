@@ -23,7 +23,7 @@ class OrchidGroupBatchUpdateIntegrationTest extends AbstractBackendIntegrationTe
 
 	@Test
 	void updatesEverySelectedOrchidGroupInOneRequest() {
-		House house = new House(9910, "일괄 보정동");
+		House house = new House(9912, "일괄 보정동");
 		PhysicalBed bed = new PhysicalBed(1, 1);
 		bed.updatePositionUnits(new BigDecimal("20"), "칸");
 		BedZone zone = new BedZone("왼쪽", BedZoneSide.LEFT, 1);

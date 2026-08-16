@@ -7,19 +7,16 @@ import com.querydsl.core.BooleanBuilder;
 import com.querydsl.core.types.Projections;
 import com.querydsl.core.types.dsl.BooleanExpression;
 import com.querydsl.jpa.impl.JPAQueryFactory;
-import jakarta.persistence.EntityManager;
 import java.util.List;
+import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.Pageable;
 
+@RequiredArgsConstructor
 public class VarietyRepositoryImpl implements VarietyRepositoryCustom {
 
 	private final JPAQueryFactory queryFactory;
-
-	public VarietyRepositoryImpl(EntityManager entityManager) {
-		this.queryFactory = new JPAQueryFactory(entityManager);
-	}
 
 	@Override
 	public Page<Variety> search(String keyword, String genus, Boolean saleEnabled, Boolean active, Pageable pageable) {

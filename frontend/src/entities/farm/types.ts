@@ -376,6 +376,8 @@ export type WorkOperation = {
   availableActions: WorkOperationAction[];
 };
 
+export type WorkOperationSummary = Omit<WorkOperation, "targets">;
+
 export type OrchidGroupWorkHistory = {
   sourceKind: "WORK_OPERATION" | "WORK_OPERATION_EFFECT";
   workOperationId: number;

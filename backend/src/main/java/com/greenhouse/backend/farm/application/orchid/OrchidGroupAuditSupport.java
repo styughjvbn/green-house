@@ -11,19 +11,16 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 
 @Component
+@RequiredArgsConstructor
 public class OrchidGroupAuditSupport {
 	private static final List<String> FIELDS = List.of("varietyId", "ageYear", "potSize", "quantity",
 			"houseId", "physicalBedId", "zoneId", "startPosition", "endPosition", "status");
 	private final AuditRecorder auditRecorder;
 	private final AuditRequestContext requestContext;
-
-	public OrchidGroupAuditSupport(AuditRecorder auditRecorder, AuditRequestContext requestContext) {
-		this.auditRecorder = auditRecorder;
-		this.requestContext = requestContext;
-	}
 
 	public OrchidGroupAuditSnapshot snapshot(OrchidGroup group) {
 		var zone = group.getBedZone();

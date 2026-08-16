@@ -1,17 +1,18 @@
 package com.greenhouse.backend.work.dto.effect;
 
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.greenhouse.backend.work.domain.effect.StructureChangeResultPurpose;
 import jakarta.validation.constraints.DecimalMin;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
 import java.math.BigDecimal;
-import java.util.Set;
 
+@JsonIgnoreProperties(ignoreUnknown = true)
 public record StructureChangeResultRequest(
 		@NotNull Long bedZoneId,
 		@NotNull @Min(1) Integer quantity,
-		@Size(max = 100) Set<@NotNull Long> sourceOrchidGroupIds,
+		Long attributeSourceOrchidGroupId,
 		@Size(max = 50) String potSize,
 		@Min(0) Integer ageYear,
 		@NotNull StructureChangeResultPurpose purpose,

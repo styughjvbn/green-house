@@ -15,7 +15,7 @@ public record WorkOperationCreateRequest(
 		LocalDate plannedEndDate,
 		@NotNull WorkSourceScopeType sourceScopeType,
 		Long sourceScopeId,
-		String sourceScopeKey,
+		String sourceDerivedGroupKey,
 		List<Long> sourceOrchidGroupIds,
 		Map<String, Object> details,
 		@Size(max = 100) String worker,

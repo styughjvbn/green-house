@@ -10,6 +10,7 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.servlet.http.HttpSession;
 import jakarta.validation.Valid;
+import lombok.RequiredArgsConstructor;
 
 import java.time.Clock;
 
@@ -28,23 +29,13 @@ import org.springframework.web.bind.annotation.RestController;
 
 @RestController
 @RequestMapping("/api/auth")
+@RequiredArgsConstructor
 public class AuthController {
 
 	private final AuthenticationManager authenticationManager;
 	private final AuthService authService;
 	private final AuthProperties authProperties;
 	private final Clock clock;
-
-	public AuthController(
-			AuthenticationManager authenticationManager,
-			AuthService authService,
-			AuthProperties authProperties,
-			Clock clock) {
-		this.authenticationManager = authenticationManager;
-		this.authService = authService;
-		this.authProperties = authProperties;
-		this.clock = clock;
-	}
 
 	@GetMapping("/context")
 	public ApiResponse<ApplicationContextResponse> context() {
@@ -57,11 +48,9 @@ public class AuthController {
 	public ApiResponse<AuthenticatedUserResponse> login(
 			@Valid @RequestBody LoginRequest request,
 			HttpServletRequest servletRequest,
-			HttpServletResponse response
-	) {
+			HttpServletResponse response) {
 		Authentication authentication = authenticationManager.authenticate(
-				new UsernamePasswordAuthenticationToken(request.username(), request.password())
-		);
+				new UsernamePasswordAuthenticationToken(request.username(), request.password()));
 		SecurityContext context = SecurityContextHolder.createEmptyContext();
 		context.setAuthentication(authentication);
 		SecurityContextHolder.setContext(context);
@@ -73,8 +62,7 @@ public class AuthController {
 		response.addHeader(
 				"Set-Cookie",
 				"JSESSIONID=%s; Path=/; Max-Age=%d; HttpOnly; SameSite=Lax"
-						.formatted(session.getId(), maxAgeSeconds)
-		);
+						.formatted(session.getId(), maxAgeSeconds));
 
 		return ApiResponse.ok(authService.toResponse(authentication));
 	}

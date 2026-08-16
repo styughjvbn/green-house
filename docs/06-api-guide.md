@@ -128,6 +128,10 @@ npm run api:types
 
 `GET /api/work-operations`의 `view=MANAGEMENT`는 계획·진행 중·일시중지 작업과 농장 기준 오늘 상태가 변경된 작업을 반환한다. `view=HISTORY`는 완료·취소·보정된 작업을 반환하며, `view=ALL` 또는 생략은 호환성을 위해 전체 작업을 반환한다.
 
+작업 목록과 캘린더 응답은 `WorkOperationSummaryResponse`를 사용한다. 진행률과 전체 작업 `availableActions`는 포함하지만 대상 배열은 포함하지 않는다. 사용자가 작업을 선택하면 `GET /api/work-operations/{workOperationId}`로 `WorkOperationResponse`를 조회해 대상별 상태와 action을 표시한다.
+
+대상 미리보기와 작업 생성 요청에서 `scopeType = DERIVED_GROUP`이면 `derivedGroupKey`를 사용한다. 이는 품종·년생·화분 크기로 만든 자동 그룹의 복합 식별자이며, `scopeType`의 문자열 표현이나 저장된 범위 Entity의 ID가 아니다.
+
 `GET /api/work-operations/{workOperationId}/details`는 완료 작업 화면용 정형 상세를 반환한다. `fields`는 작업 유형별 입력값을 표시용 키·라벨·값으로 변환하고, `executions`는 `WorkAppliedEffect`에 보존된 모든 실행 회차를 원본 투입·결과 난 묶음·수량/상태 변화·손실·위치 필드로 변환한다. `corrections`는 보정 사유와 난 묶음별 수량·상태 전후값을 시간순으로 반환한다. 클라이언트는 저장된 `details`, `commandDetails`, `resultDetails` JSON 키를 직접 해석하지 않는다. 과거 기록에 저장되지 않은 값은 응답에서 `null` 또는 빈 목록으로 유지한다.
 
 대상 완료와 구조 변경 실행에는 `completedDate`를 전달하고, 전체 작업 완료에도 완료 요청 본문의 `completedDate`를 전달한다. 화면 기본값은 농장 기준 오늘이며 오늘 이전 날짜로 수정할 수 있다. 포트 작업은 `pottingDate`를 대상과 전체 작업의 완료일로 함께 사용한다. 기존 호출 호환을 위해 일반 대상·전체 완료에서 날짜를 생략하면 농장 기준 오늘로 처리한다.
@@ -147,7 +151,9 @@ npm run api:types
 
 신규 입고 등록은 입고 기록 대상을 가진 완료 상태의 `WorkOperation`을 생성한다.
 
-자리 이동·분갈이·분주·합식·입고 포트 작업은 계획 생성 시 대상을 스냅샷으로 확정하되 위치나 구조를 변경하지 않는다. 분갈이·분주·합식 실행 회차는 `POST /api/work-operations/{workOperationId}/structure-change-executions`에서 계획 대상 일부와 원본별 수량, 복수 결과를 처리하고 누적 작업 수량을 갱신한다. 기존 단일 대상 분갈이·분주 요청은 내부 변환 후 같은 N:M 실행 코어를 사용하고, 기존 합식 완료 API는 이전 클라이언트 호환용이다. 다중 생성은 대상 없는 즉시 구조 변경 API로 유지한다.
+자리 이동·분갈이·분주·합식·입고 포트 작업은 계획 생성 시 대상을 스냅샷으로 확정하되 위치나 구조를 변경하지 않는다. 자리 이동·분갈이·분주·합식 실행 회차는 `POST /api/work-operations/{workOperationId}/structure-change-executions`에서 같은 품종의 계획 대상 일부와 원본별 투입 수량을 하나의 풀로 합친 뒤 복수 결과를 생성하고 누적 작업 수량을 갱신한다. 결과 요청은 직접 원본 ID를 받지 않으며 기존 `sourceOrchidGroupIds` 입력은 호환상 무시한다. `attributeSourceOrchidGroupId`는 기존 결과 속성 상속 기준만 전달하며 수량 배분이나 직접 계보를 뜻하지 않는다. 기존 단일 대상 분갈이·분주 요청은 내부 변환 후 같은 N:M 실행 코어를 사용하고, 기존 합식 완료 API는 이전 클라이언트 호환용이다. 다중 생성은 대상 없는 즉시 구조 변경 API로 유지한다.
+
+`GET /api/orchid-groups/{orchidGroupId}/lineage`의 `transformations`는 저장된 실행 회차별 원본 목록·결과 목록·총 투입·총 결과·손실을 반환한다. `sources`와 `results`는 단일 원본 및 기존 직접 계보 호환 필드다.
 
 분갈이·분주·합식 실행에서 원본 일부만 작업하면서 기존 배치의 뒤쪽 자리를 재사용하려면 `sources`의 `releasedStartPosition`, `releasedEndPosition`에 원본에서 비울 연속 구간을 전달한다. 비울 구간은 현재 원본 배치의 끝과 맞닿아야 하며, 서버는 원본 배치를 앞쪽 잔여 구간으로 줄인 뒤 해당 자리에 결과 난 묶음을 생성한다. 두 필드를 생략하면 원본 배치 범위는 수량이 줄어도 유지된다.
 

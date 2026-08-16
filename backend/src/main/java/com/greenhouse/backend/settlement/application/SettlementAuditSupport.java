@@ -9,15 +9,13 @@ import com.greenhouse.backend.settlement.domain.PartnerSettlementSettings;
 import com.greenhouse.backend.settlement.domain.PaymentTargetType;
 import java.util.LinkedHashMap;
 import java.util.Map;
+import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 
 @Component
+@RequiredArgsConstructor
 public class SettlementAuditSupport {
 	private final AuditEventWriter auditWriter;
-
-	public SettlementAuditSupport(AuditEventWriter auditWriter) {
-		this.auditWriter = auditWriter;
-	}
 
 	public Map<String, Object> settingsSnapshot(PartnerSettlementSettings settings) {
 		var data = new LinkedHashMap<String, Object>();

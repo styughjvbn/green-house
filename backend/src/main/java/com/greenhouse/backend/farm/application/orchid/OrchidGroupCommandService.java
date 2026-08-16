@@ -24,6 +24,7 @@ import com.greenhouse.backend.audit.domain.AuditAction;
 import com.greenhouse.backend.audit.domain.AuditSource;
 import java.util.Map;
 import java.util.List;
+import java.util.Set;
 
 @Service
 @Transactional
@@ -46,6 +47,12 @@ public class OrchidGroupCommandService {
 	}
 
 	public OrchidGroup createEntity(OrchidGroupCreateRequest request) {
+		return createEntity(request, Set.of());
+	}
+
+	public OrchidGroup createEntity(
+			OrchidGroupCreateRequest request,
+			Set<Long> placementExclusionOrchidGroupIds) {
 		BedZone bedZone = findZone(request.bedZoneId());
 		Variety variety = findVariety(request.varietyId());
 		if (!variety.isActive()) {
@@ -53,7 +60,8 @@ public class OrchidGroupCommandService {
 		}
 		BigDecimal startPosition = orchidPlacementPolicy.normalizeNumber(request.startPosition());
 		BigDecimal endPosition = orchidPlacementPolicy.normalizeNumber(request.endPosition());
-		orchidPlacementPolicy.validatePlacement(bedZone, startPosition, endPosition, null);
+		orchidPlacementPolicy.validatePlacementExcluding(
+				bedZone, startPosition, endPosition, placementExclusionOrchidGroupIds);
 
 		int nextSortOrder = orchidGroupRepository.findMaxSortOrderByBedZoneId(bedZone.getId()) + 1;
 		OrchidGroup orchidGroup = new OrchidGroup(

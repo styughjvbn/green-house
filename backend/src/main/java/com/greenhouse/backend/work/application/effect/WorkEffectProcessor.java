@@ -38,6 +38,20 @@ public class WorkEffectProcessor {
 						: List.of());
 	}
 
+	public WorkExecutionResult applyNew(
+			WorkOperation operation,
+			WorkOperationTarget target,
+			WorkEffectCommand command) {
+		return executeAndPersist(
+				operation,
+				target,
+				command,
+				"TARGET:" + target.getId(),
+				target.getOrchidGroupId() == null
+						? List.of()
+						: List.of(target.getOrchidGroupId()));
+	}
+
 	public WorkExecutionResult applyBatch(
 			WorkOperation operation,
 			String executionKey,
@@ -56,6 +70,15 @@ public class WorkEffectProcessor {
 		if (existing.isPresent()) {
 			return existing.get();
 		}
+		return executeAndPersist(operation, target, command, effectKey, sourceOrchidGroupIds);
+	}
+
+	private WorkExecutionResult executeAndPersist(
+			WorkOperation operation,
+			WorkOperationTarget target,
+			WorkEffectCommand command,
+			String effectKey,
+			List<Long> sourceOrchidGroupIds) {
 		String handlerCode = operation.getWorkType().handlerCode();
 		WorkEffectHandler handler = handlers.get(handlerCode);
 		if (handler == null) {

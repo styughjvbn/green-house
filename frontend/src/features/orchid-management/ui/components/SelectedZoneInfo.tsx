@@ -13,7 +13,9 @@ import { findBedZone } from "../../lib/orchidManagementUtils";
 import type {
   OrchidGroupLineage,
   OrchidGroupLineageItem,
+  OrchidGroupLineageNode,
   OrchidGroupLineageRelationType,
+  OrchidGroupLineageTransformation,
   OrchidSelection,
   WorkHistoryPage,
   WorkRecordSummary,
@@ -214,6 +216,7 @@ function OrchidGroupLineageDetail({
 }) {
   const sources = lineage?.sources ?? [];
   const results = lineage?.results ?? [];
+  const transformations = lineage?.transformations ?? [];
 
   return (
     <div className="mt-3 border-t border-[#e1e6df] pt-3">
@@ -221,24 +224,92 @@ function OrchidGroupLineageDetail({
         <h3 className="text-sm font-bold text-[#344138]">난 묶음 계보</h3>
         {!loading ? (
           <span className="text-xs text-[#6f7b72]">
-            원본 {sources.length} · 결과 {results.length}
+            실행 {transformations.length} · 직접 연결{" "}
+            {sources.length + results.length}
           </span>
         ) : null}
       </div>
       {loading ? (
         <p className="mt-2 text-xs text-[#5c6a60]">계보 확인 중</p>
-      ) : sources.length === 0 && results.length === 0 ? (
+      ) : transformations.length === 0 &&
+        sources.length === 0 &&
+        results.length === 0 ? (
         <p className="mt-2 text-xs text-[#5c6a60]">연결된 계보가 없습니다.</p>
       ) : (
-        <div className="mt-2 grid gap-2 lg:grid-cols-2">
-          {sources.length > 0 ? (
-            <LineageGroup direction="SOURCE" items={sources} />
-          ) : null}
-          {results.length > 0 ? (
-            <LineageGroup direction="RESULT" items={results} />
+        <div className="mt-2 space-y-2">
+          {transformations.map((transformation) => (
+            <LineageTransformation
+              key={transformation.id}
+              transformation={transformation}
+            />
+          ))}
+          {sources.length > 0 || results.length > 0 ? (
+            <div className="grid gap-2 lg:grid-cols-2">
+              {sources.length > 0 ? (
+                <LineageGroup direction="SOURCE" items={sources} />
+              ) : null}
+              {results.length > 0 ? (
+                <LineageGroup direction="RESULT" items={results} />
+              ) : null}
+            </div>
           ) : null}
         </div>
       )}
+    </div>
+  );
+}
+
+function LineageTransformation({
+  transformation,
+}: {
+  transformation: OrchidGroupLineageTransformation;
+}) {
+  return (
+    <section className="rounded-md border border-[#cfe0d0] bg-[#f7fbf6] p-2.5 text-xs">
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <p className="font-bold text-[#16713a]">
+          {lineageLabel(transformation.relationType)} 실행 · 작업 #
+          {transformation.workOperationId}
+        </p>
+        <p className="text-[#435047]">
+          총 투입 {transformation.totalInputQuantity}분 → 총 결과{" "}
+          {transformation.totalResultQuantity}분
+          {transformation.lossQuantity
+            ? ` · 손실 ${transformation.lossQuantity}분`
+            : ""}
+        </p>
+      </div>
+      <div className="mt-2 grid gap-2 lg:grid-cols-[1fr_auto_1fr] lg:items-stretch">
+        <LineageNodes label="원본" nodes={transformation.sources} />
+        <div className="hidden items-center font-bold text-[#16713a] lg:flex">
+          →
+        </div>
+        <LineageNodes label="결과" nodes={transformation.results} />
+      </div>
+    </section>
+  );
+}
+
+function LineageNodes({
+  label,
+  nodes,
+}: {
+  label: string;
+  nodes: OrchidGroupLineageNode[];
+}) {
+  return (
+    <div className="rounded border bg-white p-2">
+      <p className="font-bold text-[#435047]">{label}</p>
+      <ul className="mt-1 space-y-1">
+        {nodes.map((node) => (
+          <li key={node.orchidGroup.id} className="flex justify-between gap-2">
+            <span className="truncate">{node.orchidGroup.varietyName}</span>
+            <span className="shrink-0 font-semibold">
+              작업 {node.quantity ?? "-"}분 · 현재 {node.orchidGroup.quantity}분
+            </span>
+          </li>
+        ))}
+      </ul>
     </div>
   );
 }
@@ -329,7 +400,9 @@ function OrchidGroupActivityView({
 }) {
   const [detailOpen, setDetailOpen] = useState(false);
   const lineageCount =
-    (lineage?.sources.length ?? 0) + (lineage?.results.length ?? 0);
+    (lineage?.sources.length ?? 0) +
+    (lineage?.results.length ?? 0) +
+    (lineage?.transformations.length ?? 0);
   const hasDetails = history.length > 0 || lineageLoading || lineageCount > 0;
 
   useEffect(() => {

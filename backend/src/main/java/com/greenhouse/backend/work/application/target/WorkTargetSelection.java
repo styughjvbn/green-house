@@ -6,7 +6,7 @@ import java.util.List;
 public record WorkTargetSelection(
 		WorkSourceScopeType scopeType,
 		Long scopeId,
-		String scopeKey,
+		String derivedGroupKey,
 		List<Long> orchidGroupIds) {
 
 	public WorkTargetSelection {

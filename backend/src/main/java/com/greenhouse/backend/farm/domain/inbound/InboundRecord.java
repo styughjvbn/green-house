@@ -13,6 +13,7 @@ import jakarta.persistence.FetchType;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
+import jakarta.persistence.SequenceGenerator;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.OneToMany;
@@ -32,7 +33,8 @@ import java.util.List;
 public class InboundRecord extends BaseEntity {
 
 	@Id
-	@GeneratedValue(strategy = GenerationType.IDENTITY)
+	@GeneratedValue(strategy = GenerationType.SEQUENCE, generator = "inbound_records_id_seq")
+	@SequenceGenerator(name = "inbound_records_id_seq", sequenceName = "inbound_records_id_seq", allocationSize = 50)
 	private Long id;
 
 	@Column(name = "inbound_date", nullable = false)

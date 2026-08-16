@@ -15,6 +15,28 @@ public record WorkOperationProgressResponse(
 		int failed,
 		int progressPercent) {
 
+	public static WorkOperationProgressResponse empty() {
+		return fromCounts(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+	}
+
+	public static WorkOperationProgressResponse fromCounts(
+			int total,
+			int pending,
+			int inProgress,
+			int partial,
+			int completed,
+			int skipped,
+			int canceled,
+			int failed,
+			int totalQuantity,
+			int processedQuantity,
+			int skippedQuantity) {
+		int percent = totalQuantity == 0 ? 0
+				: (int) Math.round((processedQuantity + skippedQuantity) * 100.0 / totalQuantity);
+		return new WorkOperationProgressResponse(
+				total, pending, inProgress, partial, completed, skipped, canceled, failed, percent);
+	}
+
 	public static WorkOperationProgressResponse from(List<WorkOperationTargetResponse> targets) {
 		int total = targets.size();
 		int pending = count(targets, WorkTargetExecutionStatus.PENDING);
@@ -29,10 +51,18 @@ public record WorkOperationProgressResponse(
 		int skippedQuantity = targets.stream()
 				.filter(target -> target.executionStatus() == WorkTargetExecutionStatus.SKIPPED)
 				.mapToInt(WorkOperationTargetResponse::remainingQuantity).sum();
-		int percent = totalQuantity == 0 ? 0
-				: (int) Math.round((processedQuantity + skippedQuantity) * 100.0 / totalQuantity);
-		return new WorkOperationProgressResponse(
-				total, pending, inProgress, partial, completed, skipped, canceled, failed, percent);
+		return fromCounts(
+				total,
+				pending,
+				inProgress,
+				partial,
+				completed,
+				skipped,
+				canceled,
+				failed,
+				totalQuantity,
+				processedQuantity,
+				skippedQuantity);
 	}
 
 	private static int count(List<WorkOperationTargetResponse> targets, WorkTargetExecutionStatus status) {

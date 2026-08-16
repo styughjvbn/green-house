@@ -7,16 +7,14 @@ import com.greenhouse.backend.farm.repository.inbound.InboundRecordRepository;
 import com.greenhouse.backend.work.application.target.InboundPottingPlanGateway;
 import com.greenhouse.backend.work.application.target.InboundPottingPlanTarget;
 import java.util.List;
+import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 
 @Component
+@RequiredArgsConstructor
 public class FarmInboundPottingPlanGateway implements InboundPottingPlanGateway {
 
 	private final InboundRecordRepository inboundRecordRepository;
-
-	public FarmInboundPottingPlanGateway(InboundRecordRepository inboundRecordRepository) {
-		this.inboundRecordRepository = inboundRecordRepository;
-	}
 
 	@Override
 	public List<InboundPottingPlanTarget> findCandidates() {

@@ -7,6 +7,7 @@ import jakarta.persistence.Enumerated;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
+import jakarta.persistence.SequenceGenerator;
 import jakarta.persistence.Table;
 import java.time.Instant;
 import lombok.AccessLevel;
@@ -20,7 +21,9 @@ import org.hibernate.type.SqlTypes;
 @Table(name = "audit_events")
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class AuditEventEntity {
-	@Id @GeneratedValue(strategy = GenerationType.IDENTITY)
+	@Id
+	@GeneratedValue(strategy = GenerationType.SEQUENCE, generator = "audit_events_id_seq")
+	@SequenceGenerator(name = "audit_events_id_seq", sequenceName = "audit_events_id_seq", allocationSize = 50)
 	private Long id;
 	@Column(nullable = false) private Instant occurredAt;
 	private String actorId;

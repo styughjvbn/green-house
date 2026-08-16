@@ -61,7 +61,7 @@ class WorkOperationScopeIntegrationTests extends AbstractBackendIntegrationTest 
 
 		String derivedKey = variety.getId() + ":2:POT_3_5";
 		preview("""
-				{"scopeType":"DERIVED_GROUP","scopeKey":"%s"}
+				{"scopeType":"DERIVED_GROUP","derivedGroupKey":"%s"}
 				""".formatted(derivedKey))
 				.andExpect(status().isOk())
 				.andExpect(jsonPath("$.data.orchidGroupCount").value(2))
@@ -87,7 +87,7 @@ class WorkOperationScopeIntegrationTests extends AbstractBackendIntegrationTest 
 						  "title": "자동 그룹 농약 작업",
 						  "plannedStartDate": "2026-07-15",
 						  "sourceScopeType": "DERIVED_GROUP",
-						  "sourceScopeKey": "%s"
+						  "sourceDerivedGroupKey": "%s"
 						}
 						""".formatted(pesticide.getId(), derivedKey)))
 				.andExpect(status().isCreated())
@@ -106,7 +106,7 @@ class WorkOperationScopeIntegrationTests extends AbstractBackendIntegrationTest 
 		orchidGroupRepository.saveAndFlush(second);
 
 		preview("""
-				{"scopeType":"DERIVED_GROUP","scopeKey":"%s"}
+				{"scopeType":"DERIVED_GROUP","derivedGroupKey":"%s"}
 				""".formatted(derivedKey))
 				.andExpect(status().isOk())
 				.andExpect(jsonPath("$.data.orchidGroupCount").value(1));

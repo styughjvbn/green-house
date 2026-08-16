@@ -140,6 +140,24 @@ export type OrchidGroupLineage = {
   orchidGroupId: number;
   sources: OrchidGroupLineageItem[];
   results: OrchidGroupLineageItem[];
+  transformations: OrchidGroupLineageTransformation[];
+};
+
+export type OrchidGroupLineageNode = {
+  quantity: number | null;
+  orchidGroup: OrchidGroup;
+};
+
+export type OrchidGroupLineageTransformation = {
+  id: number;
+  relationType: OrchidGroupLineageRelationType;
+  workOperationId: number;
+  totalInputQuantity: number;
+  totalResultQuantity: number;
+  lossQuantity: number | null;
+  createdAt: string;
+  sources: OrchidGroupLineageNode[];
+  results: OrchidGroupLineageNode[];
 };
 
 export type PreciseMovePayload = {

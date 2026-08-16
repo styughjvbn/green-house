@@ -62,9 +62,15 @@ public class StructureChangeExecutionService {
 		validateInProgress(operation);
 		LocalDateTime completedAt = support.completionTime(request.completedDate());
 		String worker = support.actor(request.worker());
-		var result = workEffectProcessor.apply(
+		List<Long> sourceOrchidGroupIds = executions.stream()
+				.map(execution -> execution.getTarget().getOrchidGroupId())
+				.filter(java.util.Objects::nonNull)
+				.sorted()
+				.toList();
+		var result = workEffectProcessor.applyBatch(
 				operation,
-				null,
+				"LEGACY_MERGE",
+				sourceOrchidGroupIds,
 				new WorkEffectCommand(completedAt, worker, request.resultDetails(), null));
 		executions.forEach(execution ->
 				execution.completeWithEffect(completedAt, worker, result.resultDetails()));
@@ -74,6 +80,13 @@ public class StructureChangeExecutionService {
 
 	public WorkOperationResponse execute(
 			Long operationId, StructureChangeExecutionRequest request) {
+		return execute(operationId, request, Set.of());
+	}
+
+	WorkOperationResponse execute(
+			Long operationId,
+			StructureChangeExecutionRequest request,
+			Set<Long> placementExclusionOrchidGroupIds) {
 		List<WorkTargetExecution> executions = executionRepository
 				.findForUpdateByTargetWorkOperationIdOrderByIdAsc(operationId);
 		if (executions.isEmpty()) {
@@ -126,7 +139,12 @@ public class StructureChangeExecutionService {
 				operation,
 				request.idempotencyKey(),
 				requestedIds.stream().sorted().toList(),
-				new WorkEffectCommand(executedAt, worker, commandDetails, request));
+				new WorkEffectCommand(
+						executedAt,
+						worker,
+						commandDetails,
+						request,
+						placementExclusionOrchidGroupIds));
 		Map<String, Object> resultDetails = result.resultDetails();
 		if (discardOperation != null) {
 			resultDetails = new LinkedHashMap<>(resultDetails);

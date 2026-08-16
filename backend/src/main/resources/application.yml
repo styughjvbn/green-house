@@ -11,6 +11,8 @@ spring:
       maximum-pool-size: ${DB_POOL_MAX_SIZE:10}
       minimum-idle: ${DB_POOL_MIN_IDLE:2}
       connection-timeout: ${DB_POOL_CONNECTION_TIMEOUT:30000}
+      data-source-properties:
+        reWriteBatchedInserts: ${POSTGRES_REWRITE_BATCHED_INSERTS:true}
 
   jpa:
     hibernate:
@@ -21,6 +23,9 @@ spring:
         format_sql: true
         jdbc:
           time_zone: UTC
+          batch_size: ${HIBERNATE_JDBC_BATCH_SIZE:50}
+        order_inserts: true
+        order_updates: true
 
   flyway:
     enabled: true

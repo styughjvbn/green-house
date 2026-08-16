@@ -28,6 +28,8 @@ export const workRecordQueryKeys = {
         state.month,
         state.filters.status,
       ] as const,
+    operation: (workOperationId: number) =>
+      ["workRecords", "operations", workOperationId] as const,
     details: (workOperationId: number) =>
       ["workRecords", "operations", workOperationId, "details"] as const,
   },

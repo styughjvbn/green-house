@@ -7,6 +7,7 @@ import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
+import jakarta.persistence.SequenceGenerator;
 import jakarta.persistence.OneToMany;
 import jakarta.persistence.OrderBy;
 import jakarta.persistence.Table;
@@ -24,7 +25,8 @@ import java.util.List;
 public class House extends BaseEntity {
 
 	@Id
-	@GeneratedValue(strategy = GenerationType.IDENTITY)
+	@GeneratedValue(strategy = GenerationType.SEQUENCE, generator = "houses_id_seq")
+	@SequenceGenerator(name = "houses_id_seq", sequenceName = "houses_id_seq", allocationSize = 50)
 	private Long id;
 
 	@Column(nullable = false, unique = true)

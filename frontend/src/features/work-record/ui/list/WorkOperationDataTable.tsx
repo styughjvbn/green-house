@@ -3,7 +3,7 @@
 import type { ReactNode } from "react";
 import { useMemo } from "react";
 import type { ColumnDef } from "@tanstack/react-table";
-import type { WorkOperation } from "@/entities/farm/types";
+import type { WorkOperationSummary } from "@/entities/farm/types";
 import { formatShortDate } from "@/shared/lib/dateFormat";
 import { DataTable } from "@/shared/ui/DataTable";
 import { workOperationScopeLabel } from "../../lib/workOperationDisplay";
@@ -28,7 +28,7 @@ export function WorkOperationDataTable({
   actions?: ReactNode;
   emptyMessage: string;
   loading: boolean;
-  operations: WorkOperation[];
+  operations: WorkOperationSummary[];
   page: number;
   pageSize: number;
   selectedId: number | null;
@@ -40,7 +40,7 @@ export function WorkOperationDataTable({
   onPageSizeChange: (size: number) => void;
   onSelect: (id: number) => void;
 }) {
-  const columns = useMemo<ColumnDef<WorkOperation, unknown>[]>(
+  const columns = useMemo<ColumnDef<WorkOperationSummary, unknown>[]>(
     () => [
       {
         accessorKey: "plannedStartDate",
@@ -118,7 +118,7 @@ export function WorkOperationDataTable({
   );
 }
 
-function formatDateRange(operation: WorkOperation) {
+function formatDateRange(operation: WorkOperationSummary) {
   const from = formatShortDate(operation.plannedStartDate);
   const to = operation.plannedEndDate
     ? formatShortDate(operation.plannedEndDate)

@@ -2042,7 +2042,7 @@ export interface components {
             sourceScopeType: "NONE" | "FARM" | "HOUSE" | "PHYSICAL_BED" | "BED_ZONE" | "ORCHID_GROUP" | "DERIVED_GROUP" | "USER_COLLECTION" | "MANUAL_SELECTION" | "INBOUND_RECORD_SELECTION";
             /** Format: int64 */
             sourceScopeId?: number;
-            sourceScopeKey?: string;
+            sourceDerivedGroupKey?: string;
             sourceOrchidGroupIds?: number[];
             details?: {
                 [key: string]: unknown;
@@ -2177,7 +2177,8 @@ export interface components {
             bedZoneId: number;
             /** Format: int32 */
             quantity: number;
-            sourceOrchidGroupIds?: number[];
+            /** Format: int64 */
+            attributeSourceOrchidGroupId?: number;
             potSize?: string;
             /** Format: int32 */
             ageYear?: number;
@@ -2287,7 +2288,7 @@ export interface components {
             scopeType: "NONE" | "FARM" | "HOUSE" | "PHYSICAL_BED" | "BED_ZONE" | "ORCHID_GROUP" | "DERIVED_GROUP" | "USER_COLLECTION" | "MANUAL_SELECTION" | "INBOUND_RECORD_SELECTION";
             /** Format: int64 */
             scopeId?: number;
-            scopeKey?: string;
+            derivedGroupKey?: string;
             orchidGroupIds?: number[];
         };
         ApiResponseWorkTargetPreviewResponse: {
@@ -3001,12 +3002,12 @@ export interface components {
         WorkTypeMetadataResponse: {
             customTypeTemplates?: ("PESTICIDE" | "FERTILIZER" | "REPOT" | "CLEANUP" | "DISCARD" | "STATUS" | "MEMO" | "MOVEMENT" | "MULTI_CREATE" | "CORRECTION")[];
         };
-        ApiResponsePageResponseWorkOperationResponse: {
-            data?: components["schemas"]["PageResponseWorkOperationResponse"];
+        ApiResponsePageResponseWorkOperationSummaryResponse: {
+            data?: components["schemas"]["PageResponseWorkOperationSummaryResponse"];
             message?: string;
         };
-        PageResponseWorkOperationResponse: {
-            content?: components["schemas"]["WorkOperationResponse"][];
+        PageResponseWorkOperationSummaryResponse: {
+            content?: components["schemas"]["WorkOperationSummaryResponse"][];
             /** Format: int32 */
             page?: number;
             /** Format: int32 */
@@ -3015,6 +3016,45 @@ export interface components {
             totalElements?: number;
             /** Format: int32 */
             totalPages?: number;
+        };
+        WorkOperationSummaryResponse: {
+            /** Format: int64 */
+            id?: number;
+            /** Format: int64 */
+            workTypeId?: number;
+            workTypeCode?: string;
+            workType?: string;
+            /** @enum {string} */
+            workTypeTemplate?: "PESTICIDE" | "FERTILIZER" | "REPOT" | "CLEANUP" | "DISCARD" | "STATUS" | "MEMO" | "MOVEMENT" | "MULTI_CREATE" | "CORRECTION";
+            /** @enum {string} */
+            workTypeWorkflow?: "GENERIC" | "MOVEMENT" | "DISCARD" | "POTTING" | "STRUCTURE_CHANGE";
+            title?: string;
+            /** @enum {string} */
+            status?: "PLANNED" | "IN_PROGRESS" | "PAUSED" | "COMPLETED" | "CANCELED" | "CORRECTED";
+            /** Format: date */
+            plannedStartDate?: string;
+            /** Format: date */
+            plannedEndDate?: string;
+            /** Format: date-time */
+            actualStartAt?: string;
+            /** Format: date-time */
+            actualEndAt?: string;
+            /** @enum {string} */
+            sourceScopeType?: "NONE" | "FARM" | "HOUSE" | "PHYSICAL_BED" | "BED_ZONE" | "ORCHID_GROUP" | "DERIVED_GROUP" | "USER_COLLECTION" | "MANUAL_SELECTION" | "INBOUND_RECORD_SELECTION";
+            /** Format: int64 */
+            sourceScopeId?: number;
+            sourceConditionSnapshot?: {
+                [key: string]: unknown;
+            };
+            /** Format: date-time */
+            targetSnapshotAt?: string;
+            details?: {
+                [key: string]: unknown;
+            };
+            worker?: string;
+            memo?: string;
+            progress?: components["schemas"]["WorkOperationProgressResponse"];
+            availableActions?: ("START" | "PAUSE" | "RESUME" | "COMPLETE" | "CANCEL")[];
         };
         ApiResponseWorkOperationDetailResponse: {
             data?: components["schemas"]["WorkOperationDetailResponse"];
@@ -3181,6 +3221,10 @@ export interface components {
             /** Format: date */
             pottingDueDate?: string;
             potSize?: string;
+        };
+        ApiResponseListWorkOperationSummaryResponse: {
+            data?: components["schemas"]["WorkOperationSummaryResponse"][];
+            message?: string;
         };
         ApiResponsePageResponseOrchidGroupWorkHistoryResponse: {
             data?: components["schemas"]["PageResponseOrchidGroupWorkHistoryResponse"];
@@ -3469,11 +3513,35 @@ export interface components {
             sourceOrchidGroup?: components["schemas"]["OrchidGroupResponse"];
             resultOrchidGroup?: components["schemas"]["OrchidGroupResponse"];
         };
+        OrchidGroupLineageNodeResponse: {
+            /** Format: int32 */
+            quantity?: number;
+            orchidGroup?: components["schemas"]["OrchidGroupResponse"];
+        };
         OrchidGroupLineageResponse: {
             /** Format: int64 */
             orchidGroupId?: number;
             sources?: components["schemas"]["OrchidGroupLineageItemResponse"][];
             results?: components["schemas"]["OrchidGroupLineageItemResponse"][];
+            transformations?: components["schemas"]["OrchidGroupLineageTransformationResponse"][];
+        };
+        OrchidGroupLineageTransformationResponse: {
+            /** Format: int64 */
+            id?: number;
+            /** @enum {string} */
+            relationType?: "CREATED_FROM_INBOUND" | "REPOTTED_TO" | "SPLIT_TO" | "MERGED_TO" | "MOVED_TO" | "POTTED_TO" | "CORRECTED_TO";
+            /** Format: int64 */
+            workOperationId?: number;
+            /** Format: int32 */
+            totalInputQuantity?: number;
+            /** Format: int32 */
+            totalResultQuantity?: number;
+            /** Format: int32 */
+            lossQuantity?: number;
+            /** Format: date-time */
+            createdAt?: string;
+            sources?: components["schemas"]["OrchidGroupLineageNodeResponse"][];
+            results?: components["schemas"]["OrchidGroupLineageNodeResponse"][];
         };
         ApiResponseListOrchidGroupCollectionResponse: {
             data?: components["schemas"]["OrchidGroupCollectionResponse"][];
@@ -4205,7 +4273,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["ApiResponsePageResponseWorkOperationResponse"];
+                    "application/json": components["schemas"]["ApiResponsePageResponseWorkOperationSummaryResponse"];
                 };
             };
         };
@@ -6153,7 +6221,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["ApiResponseListWorkOperationResponse"];
+                    "application/json": components["schemas"]["ApiResponseListWorkOperationSummaryResponse"];
                 };
             };
         };

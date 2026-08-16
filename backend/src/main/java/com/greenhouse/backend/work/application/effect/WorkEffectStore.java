@@ -45,7 +45,7 @@ public class WorkEffectStore {
 				command.resultDetails(),
 				result.resultDetails()));
 		var groupLinks = new ArrayList<WorkEffectOrchidGroup>();
-		if (effectKind == WorkEffectKind.STRUCTURE_CHANGE) {
+		if (effectKind == WorkEffectKind.STRUCTURE_CHANGE || effectKey.startsWith("EXECUTION:")) {
 			sourceOrchidGroupIds.stream().distinct().forEach(groupId -> groupLinks.add(
 					new WorkEffectOrchidGroup(
 							appliedEffect, groupId, WorkEffectOrchidGroupRelationType.SOURCE)));

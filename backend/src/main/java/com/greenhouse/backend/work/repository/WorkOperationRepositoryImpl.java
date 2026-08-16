@@ -10,23 +10,20 @@ import com.greenhouse.backend.work.domain.operation.WorkSourceScopeType;
 import com.querydsl.core.BooleanBuilder;
 import com.querydsl.core.types.dsl.BooleanExpression;
 import com.querydsl.jpa.impl.JPAQueryFactory;
-import jakarta.persistence.EntityManager;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 import java.util.Collection;
+import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.Pageable;
 
+@RequiredArgsConstructor
 public class WorkOperationRepositoryImpl implements WorkOperationRepositoryCustom {
 
 	private final JPAQueryFactory queryFactory;
-
-	public WorkOperationRepositoryImpl(EntityManager entityManager) {
-		this.queryFactory = new JPAQueryFactory(entityManager);
-	}
 
 	@Override
 	public List<WorkOperation> searchAll(

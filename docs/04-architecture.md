@@ -31,16 +31,19 @@ green-house/
 - 판매와 inventory의 서버 페이지 목록은 TanStack Query로 관리한다. 두 기능 모두 URL을 조회 조건의 단일 기준으로 사용하고 서버와 클라이언트가 같은 파서와 query option을 공유한다. 판매 전표의 상세 선택도 `slipId` URL 상태로 관리해 deep link와 브라우저 탐색을 지원하며 상세 서버 상태를 local state에 복제하지 않는다. 서버 컴포넌트는 현재 URL 조건을 prefetch해 hydration하며, 공통 URL 페이지 훅은 검색 초안과 URL 변경만 담당한다.
 - 작업 관리는 URL을 조회 범위·보기 방식·필터·페이지의 단일 기준으로 사용한다. 서버 진입 컴포넌트인 `WorkRecordRoutePage`는 현재 목록 또는 캘린더 query만 prefetch해 hydration하고, 작업 유형과 농장 전체 배치 정보는 등록 또는 실행 다이얼로그를 열 때 조회한다. 클라이언트 `WorkRecordPage`는 보기 전환과 등록 다이얼로그의 열림 상태만 관리하고, 등록 다이얼로그가 자체 참조 데이터의 로딩과 오류를 처리한다. 목록과 캘린더는 공통 작업 동작 훅과 상세 패널을 사용한다. 캘린더는 전용 기간 API를 한 번 호출하고, 작업 등록·실행 후 관련 작업 및 농장 query를 무효화한다.
 - 작업 관리는 조회·상태 변경을 `model/operation`, 등록 상태와 대상 계산을 `model/registration`, 작업 유형별 표현 구성을 `model/work-types`로 구분한다. 화면은 `ui/list`, `ui/calendar`, `ui/detail`, `ui/registration`, `ui/work-types`에서 기능별로 구성한다. 대상 출처, 등록 가능 모드, 실행 workflow는 백엔드 capability를 사용하고 `workTypeDefinition.ts`에는 안내 문구 같은 표현 규칙만 둔다.
-- 자리 이동 실행의 원본별 이동 수량 배분은 작업 모듈의 공통 효과 계산기로 처리하며, 농장 구조 변경 handler와 작업 실행 서비스가 같은 계산 규칙을 사용한다.
+- 자리 이동 실행은 같은 품종의 원본 투입 수량을 실행 회차에서 합친 뒤 결과 합계를 차감한다. 별도 폐기 작업에 필요한 원본별 차감은 ID 순서의 결정적인 내부 배분을 사용하며 결과 계보와 직접 연결하지 않는다.
 
 ### Backend
 
 - Spring Boot
 - Java 21
+- Lombok (`@RequiredArgsConstructor`, `@Getter`, `@Slf4j` 중심)
 - Spring Data JPA
 - Bean Validation
 - PostgreSQL
 - Flyway Migration
+
+Lombok은 생성자 주입, 반복 getter, 표준 로거처럼 동작을 바꾸지 않는 보일러플레이트 제거에 적극 사용한다. 다만 JPA 엔티티의 상태 전이·생성 규칙, 테스트용 생성자, 검증·조립 로직처럼 명시성이 필요한 코드는 수동 구현을 유지한다.
 
 ### Infra
 
@@ -132,13 +135,14 @@ application|domain|repository|controller|dto/
 - 작업 유형별 효과 handler와 효과 적용 감사 기록
 - 자리 이동·입고 포트 계획의 전용 실행 handler와 분갈이·분주·합식 공통 N:M 실행기
 - 원본 대상 없는 작업 효과 실행 facade와 생성 결과 ID 연결
-- `WorkOperation`과 작업 효과 연결 기반 난 묶음 이력 조회
+- `WorkOperation`과 작업 효과 연결 기반 난 묶음 이력 및 실행 회차 중심 계보 조회
 - 입고 포트 계획과 작업 상세의 난 묶음·위치 참조 조회는 `work`가 port를 정의하고 `farm`이 구현한다. `work`는 농장 테이블이나 저장소를 직접 참조하지 않는다.
 - 작업 계획·진행·조회·구조 변경·입고 포트 계획·즉시 실행은 각각 application service로 분리한다.
 - 구조 변경 작업 기록은 기록 전용 application service가 계획 aggregate 생성과 기존 구조 변경·폐기·포트 실행기를 한 트랜잭션으로 조합한다. 입력 검증 실패 시 중간 계획이나 일부 결과를 남기지 않는다.
-- 목록 조회는 작업별 상세 재조회를 하지 않고 대상과 실행 상태를 일괄 조회해 응답을 조립한다.
+- 작업 목록·캘린더는 대상 배열을 제외한 요약 응답을 사용하고 진행률과 가능한 전체 작업 action은 대상·실행 상태의 DB 집계로 조립한다. 대상별 상세는 사용자가 작업을 선택할 때 단건 조회한다.
 - 분갈이·분주·합식은 공통 구조 변경 실행기와 작업별 Strategy를 사용한다. 기존 분갈이·분주 단일 대상 요청도 변환기를 거쳐 같은 실행 코어로 위임하고, 기존 합식 완료 API만 호환 경로로 남아 있다. 난 묶음 저장소가 필요한 Strategy 구현은 `farm` 모듈에 둔다.
-- 효과 실행과 효과 감사 저장을 분리하고 모든 신규 효과는 공통 저장 컴포넌트를 사용한다.
+- 효과 실행과 효과 감사 저장을 분리하고 모든 신규 효과는 공통 저장 컴포넌트를 사용한다. 구조 변경 실행의 `WorkAppliedEffect`는 원본 `SOURCE`와 결과 `RESULT`를 연결하는 계보 노드다.
+- 신규 즉시 완료 작업은 대상별 멱등성 조회를 반복하지 않고 효과 INSERT와 실행 상태 UPDATE를 모아 JDBC batch로 flush한다. 기존 작업 재실행 경로는 효과 키 조회와 DB UNIQUE 제약으로 멱등성을 유지한다.
 - DB의 `timestamp without time zone` 시점 값은 UTC로 저장한다. 업무일자는 `Asia/Seoul` 기준으로
   계산하고 API 응답의 시점 값은 UTC에서 `Asia/Seoul`로 변환한다.
 
@@ -244,6 +248,7 @@ Persistence 조회 규칙:
 
 - Controller는 HTTP 변환과 validation 진입만 담당하고 application service가 유스케이스와 트랜잭션을 소유한다.
 - 쓰기 유스케이스는 하나의 public application method를 원자 경계로 삼는다. 중간 service 호출이 별도 트랜잭션을 암묵적으로 만들거나 self invocation에 의존하지 않게 한다.
+- PostgreSQL 엔티티 ID는 테이블별 sequence와 `allocationSize = 50`을 사용한다. Hibernate JDBC batch와 insert 정렬을 활성화하며, 대량 저장은 같은 트랜잭션에서 동일 엔티티를 연속 저장해 JDBC batch가 유지되게 한다.
 - Entity는 자기 상태의 불변식과 전이를 지키고 application service는 aggregate 조회, 순서 제어, 모듈 간 조율을 담당한다. 여러 Service에서 같은 상태 조건을 검사하면 Domain Policy 또는 상태 전이 메서드로 모은다.
 - 네트워크·파일·사용자 대기처럼 실패와 지연을 통제하기 어려운 작업은 DB 트랜잭션 안에서 수행하지 않는다.
 - 여러 행을 잠글 때는 ID 오름차순처럼 잠금 순서를 고정한다. 재고, 잔액, 순번, 상태 변경에는 도메인 검사와 함께 version, 비관적 잠금, UNIQUE/CHECK 또는 원자 갱신 중 필요한 DB 보호를 둔다.

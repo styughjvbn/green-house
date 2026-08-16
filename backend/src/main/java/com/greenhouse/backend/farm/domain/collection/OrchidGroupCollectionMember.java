@@ -5,6 +5,7 @@ import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
+import jakarta.persistence.SequenceGenerator;
 import jakarta.persistence.Table;
 import java.time.LocalDateTime;
 import java.time.ZoneOffset;
@@ -19,7 +20,8 @@ import lombok.NoArgsConstructor;
 public class OrchidGroupCollectionMember {
 
 	@Id
-	@GeneratedValue(strategy = GenerationType.IDENTITY)
+	@GeneratedValue(strategy = GenerationType.SEQUENCE, generator = "orchid_group_collection_members_id_seq")
+	@SequenceGenerator(name = "orchid_group_collection_members_id_seq", sequenceName = "orchid_group_collection_members_id_seq", allocationSize = 50)
 	private Long id;
 
 	@Column(name = "collection_id", nullable = false)

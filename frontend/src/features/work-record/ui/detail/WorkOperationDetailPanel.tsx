@@ -46,6 +46,10 @@ export function WorkOperationDetailPanel({
             onTargetAction={actions.runTargetAction}
             onExecuteTarget={actions.openExecution}
           />
+        ) : actions.detailLoading ? (
+          <div className="flex h-full min-h-40 items-center justify-center rounded-md border border-[#dfe5dc] bg-white p-8 text-center text-sm text-[#5c6a60] shadow-sm">
+            작업 상세를 불러오는 중입니다.
+          </div>
         ) : (
           <div className="flex h-full min-h-40 items-center justify-center rounded-md border border-[#dfe5dc] bg-white p-8 text-center text-sm text-[#5c6a60] shadow-sm">
             {emptyMessage}

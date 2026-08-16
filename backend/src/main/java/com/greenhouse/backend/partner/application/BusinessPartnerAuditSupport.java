@@ -10,16 +10,14 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 
 @Component
+@RequiredArgsConstructor
 public class BusinessPartnerAuditSupport {
 	private static final List<String> REDACTED_FIELDS = List.of("ownerName", "phone", "address", "memo");
 	private final AuditEventWriter auditWriter;
-
-	public BusinessPartnerAuditSupport(AuditEventWriter auditWriter) {
-		this.auditWriter = auditWriter;
-	}
 
 	public Snapshot snapshot(BusinessPartner partner) {
 		return new Snapshot(partner.getName(), partner.getPartnerType(), partner.getOwnerName(),

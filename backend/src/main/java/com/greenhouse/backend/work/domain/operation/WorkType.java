@@ -9,6 +9,7 @@ import jakarta.persistence.Enumerated;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
+import jakarta.persistence.SequenceGenerator;
 import jakarta.persistence.Table;
 import com.greenhouse.backend.work.domain.target.WorkTargetReferenceType;
 import java.util.List;
@@ -33,7 +34,8 @@ public class WorkType extends BaseEntity {
 	public static final String CORRECTION_CODE = "CORRECTION";
 
 	@Id
-	@GeneratedValue(strategy = GenerationType.IDENTITY)
+	@GeneratedValue(strategy = GenerationType.SEQUENCE, generator = "work_types_id_seq")
+	@SequenceGenerator(name = "work_types_id_seq", sequenceName = "work_types_id_seq", allocationSize = 50)
 	private Long id;
 
 	@Column(nullable = false, unique = true, length = 50)

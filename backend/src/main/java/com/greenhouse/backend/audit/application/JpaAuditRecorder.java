@@ -4,19 +4,16 @@ import com.greenhouse.backend.audit.domain.AuditEventEntity;
 import com.greenhouse.backend.audit.repository.AuditEventRepository;
 import java.time.Clock;
 import java.time.Instant;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 
 @Component
+@RequiredArgsConstructor
+@Slf4j
 public class JpaAuditRecorder implements AuditRecorder {
-	private static final Logger log = LoggerFactory.getLogger(JpaAuditRecorder.class);
 	private final AuditEventRepository repository;
 	private final Clock clock;
-
-	public JpaAuditRecorder(AuditEventRepository repository, Clock clock) {
-		this.repository = repository; this.clock = clock;
-	}
 
 	@Override
 	public Long record(AuditEvent event) {
