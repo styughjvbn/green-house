@@ -50,7 +50,8 @@ public class MergeWorkHandler implements WorkEffectHandler {
 	public WorkExecutionResult execute(
 			WorkOperation operation, WorkOperationTarget target, WorkEffectCommand command) {
 		if (command.payload() instanceof com.greenhouse.backend.work.dto.effect.StructureChangeExecutionRequest request) {
-			return structureChangeExecutor.execute(operation, request);
+			return structureChangeExecutor.execute(
+					operation, request, command.placementExclusionOrchidGroupIds());
 		}
 		if (target != null) {
 			throw new IllegalArgumentException("합식은 작업 전체 대상을 한 번에 실행해야 합니다.");

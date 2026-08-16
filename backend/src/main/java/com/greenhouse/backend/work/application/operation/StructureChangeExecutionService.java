@@ -80,6 +80,13 @@ public class StructureChangeExecutionService {
 
 	public WorkOperationResponse execute(
 			Long operationId, StructureChangeExecutionRequest request) {
+		return execute(operationId, request, Set.of());
+	}
+
+	WorkOperationResponse execute(
+			Long operationId,
+			StructureChangeExecutionRequest request,
+			Set<Long> placementExclusionOrchidGroupIds) {
 		List<WorkTargetExecution> executions = executionRepository
 				.findForUpdateByTargetWorkOperationIdOrderByIdAsc(operationId);
 		if (executions.isEmpty()) {
@@ -132,7 +139,12 @@ public class StructureChangeExecutionService {
 				operation,
 				request.idempotencyKey(),
 				requestedIds.stream().sorted().toList(),
-				new WorkEffectCommand(executedAt, worker, commandDetails, request));
+				new WorkEffectCommand(
+						executedAt,
+						worker,
+						commandDetails,
+						request,
+						placementExclusionOrchidGroupIds));
 		Map<String, Object> resultDetails = result.resultDetails();
 		if (discardOperation != null) {
 			resultDetails = new LinkedHashMap<>(resultDetails);

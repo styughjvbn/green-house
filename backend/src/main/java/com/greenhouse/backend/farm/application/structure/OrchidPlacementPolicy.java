@@ -7,6 +7,7 @@ import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.util.Comparator;
 import java.util.List;
+import java.util.Set;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 
@@ -26,6 +27,18 @@ public class OrchidPlacementPolicy {
 	}
 
 	public void validatePlacement(BedZone bedZone, BigDecimal startPosition, BigDecimal endPosition, Long excludeOrchidGroupId) {
+		validatePlacementExcluding(
+				bedZone,
+				startPosition,
+				endPosition,
+				excludeOrchidGroupId == null ? Set.of() : Set.of(excludeOrchidGroupId));
+	}
+
+	public void validatePlacementExcluding(
+			BedZone bedZone,
+			BigDecimal startPosition,
+			BigDecimal endPosition,
+			Set<Long> excludeOrchidGroupIds) {
 		if (startPosition == null || endPosition == null) {
 			throw new IllegalArgumentException("시작 위치와 종료 위치를 모두 입력해야 합니다.");
 		}
@@ -39,7 +52,7 @@ public class OrchidPlacementPolicy {
 		if (maxPosition != null && endPosition.compareTo(maxPosition) > 0) {
 			throw new IllegalArgumentException("종료 위치는 배드 최대 칸 수를 넘을 수 없습니다.");
 		}
-		validateNoOverlap(bedZone, startPosition, endPosition, excludeOrchidGroupId);
+		validateNoOverlap(bedZone, startPosition, endPosition, excludeOrchidGroupIds);
 	}
 
 	public PlacementRange findFirstAvailableSingleSlot(BedZone bedZone) {
@@ -75,10 +88,14 @@ public class OrchidPlacementPolicy {
 		throw new IllegalArgumentException("선택한 구역에 1칸 이상 비어 있는 공간이 없습니다.");
 	}
 
-	private void validateNoOverlap(BedZone bedZone, BigDecimal startPosition, BigDecimal endPosition, Long excludeOrchidGroupId) {
+	private void validateNoOverlap(
+			BedZone bedZone,
+			BigDecimal startPosition,
+			BigDecimal endPosition,
+			Set<Long> excludeOrchidGroupIds) {
 		for (OrchidGroup group :
 				orchidGroupRepository.findByBedZoneIdAndQuantityGreaterThanOrderBySortOrderAsc(bedZone.getId(), 0)) {
-			if (excludeOrchidGroupId != null && excludeOrchidGroupId.equals(group.getId())) {
+			if (excludeOrchidGroupIds.contains(group.getId())) {
 				continue;
 			}
 			if (group.getStartPosition() == null || group.getEndPosition() == null) {

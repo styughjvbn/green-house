@@ -180,6 +180,87 @@ class MovementBatchWorkOperationIntegrationTests extends AbstractBackendIntegrat
 	}
 
 	@Test
+	void reusesPositionsReleasedByAnotherVarietyInTheSameRecordBatch() throws Exception {
+		OrchidGroup first = createSource(firstVariety, 10, 0, 5, 1);
+		OrchidGroup second = createSource(secondVariety, 20, 5, 15, 2);
+
+		mockMvc.perform(post("/api/work-operations/structure-change-records/batch")
+				.contentType(MediaType.APPLICATION_JSON)
+				.content("""
+						{
+						  "records": [
+						    {
+						      "operation": {
+						        "workTypeId": %d,
+						        "title": "품종 A 자리 이동",
+						        "plannedStartDate": "2026-08-09",
+						        "sourceScopeType": "MANUAL_SELECTION",
+						        "sourceOrchidGroupIds": [%d]
+						      },
+						      "execution": {
+						        "idempotencyKey": "cross-variety-position-a",
+						        "completedDate": "2026-08-09",
+						        "sources": [{"sourceOrchidGroupId": %d, "inputQuantity": 10}],
+						        "results": [{
+						          "bedZoneId": %d,
+						          "quantity": 10,
+						          "attributeSourceOrchidGroupId": %d,
+						          "purpose": "NORMAL",
+						          "startPosition": 10,
+						          "endPosition": 15
+						        }]
+						      }
+						    },
+						    {
+						      "operation": {
+						        "workTypeId": %d,
+						        "title": "품종 B 자리 이동",
+						        "plannedStartDate": "2026-08-09",
+						        "sourceScopeType": "MANUAL_SELECTION",
+						        "sourceOrchidGroupIds": [%d]
+						      },
+						      "execution": {
+						        "idempotencyKey": "cross-variety-position-b",
+						        "completedDate": "2026-08-09",
+						        "sources": [{"sourceOrchidGroupId": %d, "inputQuantity": 20}],
+						        "results": [{
+						          "bedZoneId": %d,
+						          "quantity": 20,
+						          "attributeSourceOrchidGroupId": %d,
+						          "purpose": "NORMAL",
+						          "startPosition": 5,
+						          "endPosition": 10
+						        }]
+						      }
+						    }
+						  ]
+						}
+						""".formatted(
+						movementType.getId(), first.getId(), first.getId(), sourceZone.getId(), first.getId(),
+						movementType.getId(), second.getId(), second.getId(), sourceZone.getId(), second.getId())))
+				.andExpect(status().isCreated())
+				.andExpect(jsonPath("$.data", hasSize(2)))
+				.andExpect(jsonPath("$.data[0].status").value("COMPLETED"))
+				.andExpect(jsonPath("$.data[1].status").value("COMPLETED"));
+
+		assertThat(orchidGroupRepository.findById(first.getId()).orElseThrow().getQuantity()).isZero();
+		assertThat(orchidGroupRepository.findById(second.getId()).orElseThrow().getQuantity()).isZero();
+		var results = orchidGroupRepository.findByBedZoneIdAndQuantityGreaterThanOrderBySortOrderAsc(
+				sourceZone.getId(), 0);
+		assertThat(results).hasSize(2);
+		assertThat(results).anySatisfy(result -> {
+			assertThat(result.getVariety().getId()).isEqualTo(firstVariety.getId());
+			assertThat(result.getStartPosition()).isEqualByComparingTo("10.00");
+			assertThat(result.getEndPosition()).isEqualByComparingTo("15.00");
+		});
+		assertThat(results).anySatisfy(result -> {
+			assertThat(result.getVariety().getId()).isEqualTo(secondVariety.getId());
+			assertThat(result.getStartPosition()).isEqualByComparingTo("5.00");
+			assertThat(result.getEndPosition()).isEqualByComparingTo("10.00");
+		});
+	}
+
+	@Test
 	void createsSeparateMovementPlansForEachVariety() throws Exception {
 		OrchidGroup first = createSource(firstVariety, 10, 0, 1, 1);
 		OrchidGroup second = createSource(secondVariety, 20, 1, 3, 2);

@@ -13,6 +13,7 @@ import com.greenhouse.backend.work.dto.effect.StructureChangeSourceRequest;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 import org.springframework.stereotype.Component;
@@ -36,7 +37,8 @@ public class BatchStructureTransformationExecutor {
 	public WorkExecutionResult execute(
 			WorkOperation operation,
 			StructureChangeExecutionRequest request,
-			StructureChangeStrategy strategy) {
+			StructureChangeStrategy strategy,
+			Set<Long> placementExclusionOrchidGroupIds) {
 		List<Long> sourceIds = request.sources().stream()
 				.map(StructureChangeSourceRequest::sourceOrchidGroupId).sorted().toList();
 		if (sourceIds.stream().distinct().count() != sourceIds.size()) {
@@ -107,7 +109,8 @@ public class BatchStructureTransformationExecutor {
 					row.bedZoneId(), resultVarietyId, row.quantity(), resultPotSize, resultAgeYear,
 					resultStatus(sourceStatusById.get(resultSource.getId()), resultPurpose),
 					row.placementType(), row.trayCount(),
-					row.splitPlacementAllowed(), row.startPosition(), row.endPosition(), row.memo()));
+					row.splitPlacementAllowed(), row.startPosition(), row.endPosition(), row.memo()),
+					placementExclusionOrchidGroupIds);
 			if (sourceIds.size() == 1) {
 				Long sourceId = sourceIds.getFirst();
 				lineageService.record(
