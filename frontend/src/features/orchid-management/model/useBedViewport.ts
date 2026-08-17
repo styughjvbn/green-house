@@ -1,28 +1,67 @@
 "use client";
 
+import { useQueries } from "@tanstack/react-query";
 import { useCallback, useMemo, useState } from "react";
-import type { PhysicalBed, VisibleBedCount } from "@/entities/farm/types";
+import type {
+  OrchidManagementViewport,
+  VisibleBedCount,
+} from "@/entities/farm/types";
+import { getOrchidManagementViewport } from "../api/orchidManagementApi";
+import {
+  clampBedViewportIndex,
+  mergeViewportRequestKeys,
+  viewportRequestKeys,
+} from "../lib/bedViewportUtils";
 import type { BedViewportState } from "./bedViewportTypes";
 
-export function useBedViewport(
-  beds: PhysicalBed[],
-  initialStartBedId: number | null,
-  initialVisibleBedCount: VisibleBedCount,
-) {
+export function useBedViewport(initialViewport: OrchidManagementViewport) {
+  const bedOrder = initialViewport.bedOrder;
   const initialIndex = Math.max(
     0,
-    beds.findIndex((bed) => bed.id === initialStartBedId),
+    bedOrder.findIndex((bed) => bed.id === initialViewport.startBedId),
   );
   const [startBedIndex, setStartBedIndex] = useState(() =>
-    clampStartIndex(initialIndex, beds.length),
+    clampBedViewportIndex(initialIndex, bedOrder.length),
   );
   const [visibleBedCount, setVisibleBedCountState] = useState(
-    initialVisibleBedCount,
+    initialViewport.bedCount,
+  );
+  const [requestedViewports, setRequestedViewports] = useState(() =>
+    viewportRequestKeys(bedOrder, initialIndex, initialViewport.bedCount),
+  );
+  const viewportQueries = useQueries({
+    queries: requestedViewports.map(({ startBedId, bedCount }) => ({
+      queryKey: orchidManagementViewportQueryKey(startBedId, bedCount),
+      queryFn: () => getOrchidManagementViewport(startBedId, bedCount),
+      initialData:
+        startBedId === initialViewport.startBedId &&
+        bedCount === initialViewport.bedCount
+          ? initialViewport
+          : undefined,
+      staleTime: 30_000,
+    })),
+  });
+  const bedsById = useMemo(() => {
+    const beds = new Map<number, OrchidManagementViewport["beds"][number]>();
+    viewportQueries.forEach((query) => {
+      query.data?.beds.forEach((bed) => beds.set(bed.id, bed));
+    });
+    return beds;
+  }, [viewportQueries]);
+
+  const requestAround = useCallback(
+    (index: number, count: VisibleBedCount) => {
+      const nextKeys = viewportRequestKeys(bedOrder, index, count);
+      setRequestedViewports((current) =>
+        mergeViewportRequestKeys(current, nextKeys),
+      );
+    },
+    [bedOrder],
   );
 
   const replaceUrl = useCallback(
     (nextIndex: number, nextCount: VisibleBedCount) => {
-      const startBed = beds[nextIndex];
+      const startBed = bedOrder[nextIndex];
       const url = new URL(window.location.href);
       const params = url.searchParams;
       params.delete("houseId");
@@ -36,35 +75,40 @@ export function useBedViewport(
         `${url.pathname}${query ? `?${query}` : ""}${url.hash}`,
       );
     },
-    [beds],
+    [bedOrder],
   );
 
   const setStartIndex = useCallback(
     (requestedIndex: number) => {
-      const nextIndex = clampStartIndex(requestedIndex, beds.length);
+      const nextIndex = clampBedViewportIndex(requestedIndex, bedOrder.length);
       setStartBedIndex(nextIndex);
+      requestAround(nextIndex, visibleBedCount);
       replaceUrl(nextIndex, visibleBedCount);
     },
-    [beds.length, replaceUrl, visibleBedCount],
+    [bedOrder.length, replaceUrl, requestAround, visibleBedCount],
   );
 
   const setVisibleBedCount = useCallback(
     (nextCount: VisibleBedCount) => {
-      const nextIndex = clampStartIndex(startBedIndex, beds.length);
+      const nextIndex = clampBedViewportIndex(startBedIndex, bedOrder.length);
       setVisibleBedCountState(nextCount);
       setStartBedIndex(nextIndex);
+      requestAround(nextIndex, nextCount);
       replaceUrl(nextIndex, nextCount);
     },
-    [beds.length, replaceUrl, startBedIndex],
+    [bedOrder.length, replaceUrl, requestAround, startBedIndex],
   );
 
   const state = useMemo<BedViewportState>(() => {
-    const visibleBeds = beds.slice(
+    const visibleBedOrder = bedOrder.slice(
       startBedIndex,
       startBedIndex + visibleBedCount,
     );
-    const currentHouseId = beds[startBedIndex]?.houseId;
-    const houseIds = beds.reduce<number[]>((ids, bed) => {
+    const visibleBeds = visibleBedOrder
+      .map((bed) => bedsById.get(bed.id))
+      .filter((bed) => bed != null);
+    const currentHouseId = bedOrder[startBedIndex]?.houseId;
+    const houseIds = bedOrder.reduce<number[]>((ids, bed) => {
       if (ids.at(-1) !== bed.houseId) ids.push(bed.houseId);
       return ids;
     }, []);
@@ -74,49 +118,59 @@ export function useBedViewport(
       startBedId: visibleBeds[0]?.id ?? null,
       startBedIndex,
       visibleBedCount,
-      visibleBedIds: visibleBeds.map((bed) => bed.id),
+      visibleBedIds: visibleBedOrder.map((bed) => bed.id),
       visibleBeds,
       hasPreviousHouse: currentHouseIndex > 0,
       hasNextHouse:
         currentHouseIndex >= 0 && currentHouseIndex < houseIds.length - 1,
     };
-  }, [beds, startBedIndex, visibleBedCount]);
+  }, [bedOrder, bedsById, startBedIndex, visibleBedCount]);
+
+  const loadedBeds = useMemo(
+    () =>
+      bedOrder.map((bed) => bedsById.get(bed.id)).filter((bed) => bed != null),
+    [bedOrder, bedsById],
+  );
 
   return {
     ...state,
+    bedOrder,
+    bedsById,
+    loadedBeds,
+    loading: state.visibleBedIds.some((bedId) => !bedsById.has(bedId)),
     actions: {
       previousHouse: () => {
-        const currentHouseId = beds[startBedIndex]?.houseId;
+        const currentHouseId = bedOrder[startBedIndex]?.houseId;
         let previousIndex = startBedIndex - 1;
         while (
           previousIndex >= 0 &&
-          beds[previousIndex]?.houseId === currentHouseId
+          bedOrder[previousIndex]?.houseId === currentHouseId
         ) {
           previousIndex -= 1;
         }
-        const previousHouseId = beds[previousIndex]?.houseId;
+        const previousHouseId = bedOrder[previousIndex]?.houseId;
         while (
           previousIndex > 0 &&
-          beds[previousIndex - 1]?.houseId === previousHouseId
+          bedOrder[previousIndex - 1]?.houseId === previousHouseId
         ) {
           previousIndex -= 1;
         }
         if (previousIndex >= 0) setStartIndex(previousIndex);
       },
       nextHouse: () => {
-        const currentHouseId = beds[startBedIndex]?.houseId;
-        const nextIndex = beds.findIndex(
+        const currentHouseId = bedOrder[startBedIndex]?.houseId;
+        const nextIndex = bedOrder.findIndex(
           (bed, index) =>
             index > startBedIndex && bed.houseId !== currentHouseId,
         );
         if (nextIndex >= 0) setStartIndex(nextIndex);
       },
       goToBed: (bedId: number) => {
-        const index = beds.findIndex((bed) => bed.id === bedId);
+        const index = bedOrder.findIndex((bed) => bed.id === bedId);
         if (index >= 0) setStartIndex(index);
       },
       goToHouse: (houseId: number) => {
-        const index = beds.findIndex((bed) => bed.houseId === houseId);
+        const index = bedOrder.findIndex((bed) => bed.houseId === houseId);
         if (index >= 0) setStartIndex(index);
       },
       setStartIndex,
@@ -125,6 +179,14 @@ export function useBedViewport(
   };
 }
 
-function clampStartIndex(index: number, bedLength: number) {
-  return Math.min(Math.max(index, 0), Math.max(0, bedLength - 1));
+export function orchidManagementViewportQueryKey(
+  startBedId: number,
+  bedCount: VisibleBedCount,
+) {
+  return [
+    "farm-status",
+    "orchid-management-viewport",
+    startBedId,
+    bedCount,
+  ] as const;
 }

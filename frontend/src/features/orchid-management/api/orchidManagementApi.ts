@@ -1,7 +1,6 @@
 import { fetchApi, requestApi } from "@/shared/api/client";
 import type {
   BedZonePlacementProfile,
-  FarmStatusMapData,
   House,
   OrchidManagementViewport,
   OrchidGroup,
@@ -129,31 +128,6 @@ export async function saveBedZonePlacementProfile(
     },
     "다이 정밀 설정을 저장하지 못했습니다.",
   );
-}
-
-export async function getOrchidManagementMap(): Promise<FarmStatusMapData> {
-  const houses = await fetchApi<House[]>("/houses");
-
-  return {
-    houses: houses.map((house) => {
-      const orchidGroups = house.physicalBeds.flatMap((bed) =>
-        bed.bedZones.flatMap((zone) => zone.orchidGroups),
-      );
-      return {
-        houseId: house.id,
-        houseNumber: house.number,
-        houseName: house.name,
-        orchidGroupCount: orchidGroups.length,
-        warningCount: orchidGroups.filter((group) =>
-          ["주의", "이상", "병해충"].includes(group.status),
-        ).length,
-        repotDueCount: 0,
-        latestWorkDate: null,
-        physicalBeds: house.physicalBeds,
-      };
-    }),
-    orchidGroups: [],
-  };
 }
 
 export function getOrchidManagementViewport(

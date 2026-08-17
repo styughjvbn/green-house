@@ -1,6 +1,6 @@
 ﻿"use client";
 
-import { useRouter } from "next/navigation";
+import { useQueryClient } from "@tanstack/react-query";
 import { useCallback, useState } from "react";
 import type { House, OrchidGroup } from "@/entities/farm/types";
 import {
@@ -35,7 +35,7 @@ export function useOrchidManagementMap(
   initialSelectedBedZoneId: number | null,
   initialSearchFilters?: OrchidManagementSearchState,
 ) {
-  const router = useRouter();
+  const queryClient = useQueryClient();
   const [selection, setSelection] = useState<OrchidSelection | null>(
     () =>
       createInitialSelections({
@@ -57,6 +57,12 @@ export function useOrchidManagementMap(
       }).listSelection,
   );
   const [mutationMode, setMutationMode] = useState<MutationMode>(null);
+  const [selectedOrchidGroupSnapshot, setSelectedOrchidGroupSnapshot] =
+    useState<OrchidGroup | null>(() =>
+      initialSelectedOrchidGroupId
+        ? findOrchidGroup(navigationHouse, initialSelectedOrchidGroupId)
+        : null,
+    );
   const {
     copiedOrchidGroup,
     pasteSourceOrchidGroup,
@@ -77,10 +83,16 @@ export function useOrchidManagementMap(
       ? listSelection
       : { type: "HOUSE", houseId: house.id };
 
-  const selectedOrchidGroup =
+  const loadedSelectedOrchidGroup =
     selection?.type === "ORCHID_GROUP"
       ? findOrchidGroup(navigationHouse, selection.orchidGroupId)
       : null;
+  const selectedOrchidGroup =
+    loadedSelectedOrchidGroup ??
+    (selection?.type === "ORCHID_GROUP" &&
+    selectedOrchidGroupSnapshot?.id === selection.orchidGroupId
+      ? selectedOrchidGroupSnapshot
+      : null);
   const selectedBedZone =
     selection?.type === "BED_ZONE"
       ? (findBedZone(navigationHouse, selection.bedZoneId)?.zone ?? null)
@@ -117,6 +129,9 @@ export function useOrchidManagementMap(
   }
 
   function selectOrchidGroup(orchidGroupId: number) {
+    setSelectedOrchidGroupSnapshot(
+      findOrchidGroup(navigationHouse, orchidGroupId),
+    );
     setSelection({ type: "ORCHID_GROUP", orchidGroupId });
     setMutationMode(null);
     clearPasteSource();
@@ -129,6 +144,7 @@ export function useOrchidManagementMap(
       : null;
     if (!orchidGroup || !bed) return;
 
+    setSelectedOrchidGroupSnapshot(orchidGroup);
     setSelection({ type: "ORCHID_GROUP", orchidGroupId });
     setListSelection({ type: "PHYSICAL_BED", physicalBedId: bed.id });
     setMutationMode(null);
@@ -137,12 +153,15 @@ export function useOrchidManagementMap(
 
   const selectOrchidGroupForEdit = useCallback(
     (orchidGroupId: number) => {
+      setSelectedOrchidGroupSnapshot(
+        findOrchidGroup(navigationHouse, orchidGroupId),
+      );
       setSelection({ type: "ORCHID_GROUP", orchidGroupId });
       setMutationMode("EDIT");
       clearPasteSource();
       setErrorMessage(null);
     },
-    [clearPasteSource],
+    [clearPasteSource, navigationHouse],
   );
 
   function openCreate() {
@@ -187,12 +206,10 @@ export function useOrchidManagementMap(
   }
 
   function moveToOrchidGroup(orchidGroup: OrchidGroup) {
-    if (findOrchidGroup(navigationHouse, orchidGroup.id)) {
-      setSelection({ type: "ORCHID_GROUP", orchidGroupId: orchidGroup.id });
-      setMutationMode(null);
-      clearPasteSource();
-      return;
-    }
+    setSelectedOrchidGroupSnapshot(orchidGroup);
+    setSelection({ type: "ORCHID_GROUP", orchidGroupId: orchidGroup.id });
+    setMutationMode(null);
+    clearPasteSource();
   }
 
   async function handleCreate(payload: MutationPayload) {
@@ -262,8 +279,9 @@ export function useOrchidManagementMap(
       setSelection(
         resolvedZone ? { type: "BED_ZONE", bedZoneId: resolvedZone.id } : null,
       );
+      setSelectedOrchidGroupSnapshot(null);
       setMutationMode(null);
-      router.refresh();
+      await invalidateViewportQueries();
     } catch (error) {
       setErrorMessage(
         error instanceof Error ? error.message : "요청 중 문제가 발생했습니다.",
@@ -281,7 +299,7 @@ export function useOrchidManagementMap(
       history.invalidate();
       setMutationMode(null);
       clearPasteSource();
-      router.refresh();
+      await invalidateViewportQueries();
       return true;
     } catch (error) {
       setErrorMessage(
@@ -291,6 +309,12 @@ export function useOrchidManagementMap(
     } finally {
       setSaving(false);
     }
+  }
+
+  function invalidateViewportQueries() {
+    return queryClient.invalidateQueries({
+      queryKey: ["farm-status", "orchid-management-viewport"],
+    });
   }
 
   return {

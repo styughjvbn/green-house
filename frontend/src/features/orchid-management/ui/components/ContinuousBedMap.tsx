@@ -2,12 +2,17 @@
 
 import useEmblaCarousel from "embla-carousel-react";
 import { useEffect, useRef } from "react";
-import type { PhysicalBed, VisibleBedCount } from "@/entities/farm/types";
+import type {
+  OrchidManagementViewport,
+  PhysicalBed,
+  VisibleBedCount,
+} from "@/entities/farm/types";
 import type { MapCellRangePick, OrchidSelection } from "../../model/types";
 import PhysicalBedBlock from "./PhysicalBedBlock";
 
 export default function ContinuousBedMap({
-  beds,
+  bedOrder,
+  bedsById,
   startBedIndex,
   visibleBedCount,
   distinguishVarietyColors,
@@ -23,7 +28,8 @@ export default function ContinuousBedMap({
   onSelectPhysicalBed,
   onSelectOrchidGroup,
 }: {
-  beds: PhysicalBed[];
+  bedOrder: OrchidManagementViewport["bedOrder"];
+  bedsById: Map<number, PhysicalBed>;
   startBedIndex: number;
   visibleBedCount: VisibleBedCount;
   distinguishVarietyColors: boolean;
@@ -69,7 +75,7 @@ export default function ContinuousBedMap({
 
   const renderStartIndex = Math.max(0, startBedIndex - visibleBedCount);
   const renderEndIndex = Math.min(
-    beds.length,
+    bedOrder.length,
     startBedIndex + visibleBedCount * 2,
   );
 
@@ -113,32 +119,42 @@ export default function ContinuousBedMap({
         }}
       >
         <div className="-ml-3 flex h-full touch-pan-y">
-          {beds.map((bed, index) => (
-            <div
-              key={bed.id}
-              className="min-w-0 shrink-0 pl-3"
-              style={{ flexBasis: `${100 / visibleBedCount}%` }}
-            >
-              {index >= renderStartIndex && index < renderEndIndex ? (
-                <PhysicalBedBlock
-                  bed={bed}
-                  distinguishVarietyColors={distinguishVarietyColors}
-                  filteredOrchidGroupIds={filteredOrchidGroupIds}
-                  multiSelectEnabled={multiSelectEnabled}
-                  selectedOrchidGroupIds={selectedOrchidGroupIds}
-                  selection={selection}
-                  showScale={showScale}
-                  cellRangePick={cellRangePick}
-                  onPickCellRange={onPickCellRange}
-                  onSelectBedZone={onSelectBedZone}
-                  onSelectPhysicalBed={onSelectPhysicalBed}
-                  onSelectOrchidGroup={onSelectOrchidGroup}
-                />
-              ) : (
-                <div aria-hidden="true" className="h-full" />
-              )}
-            </div>
-          ))}
+          {bedOrder.map((bedOrderItem, index) => {
+            const bed = bedsById.get(bedOrderItem.id);
+            return (
+              <div
+                key={bedOrderItem.id}
+                className="min-w-0 shrink-0 pl-3"
+                style={{ flexBasis: `${100 / visibleBedCount}%` }}
+              >
+                {bed && index >= renderStartIndex && index < renderEndIndex ? (
+                  <PhysicalBedBlock
+                    bed={bed}
+                    distinguishVarietyColors={distinguishVarietyColors}
+                    filteredOrchidGroupIds={filteredOrchidGroupIds}
+                    multiSelectEnabled={multiSelectEnabled}
+                    selectedOrchidGroupIds={selectedOrchidGroupIds}
+                    selection={selection}
+                    showScale={showScale}
+                    cellRangePick={cellRangePick}
+                    onPickCellRange={onPickCellRange}
+                    onSelectBedZone={onSelectBedZone}
+                    onSelectPhysicalBed={onSelectPhysicalBed}
+                    onSelectOrchidGroup={onSelectOrchidGroup}
+                  />
+                ) : (
+                  <div
+                    aria-hidden="true"
+                    className="flex h-full items-center justify-center rounded-md bg-[#f4f7f3] text-sm text-[#839087]"
+                  >
+                    {index >= renderStartIndex && index < renderEndIndex
+                      ? `${bedOrderItem.houseNumber}동 ${bedOrderItem.number}다이 불러오는 중`
+                      : null}
+                  </div>
+                )}
+              </div>
+            );
+          })}
           {Array.from(
             { length: Math.max(0, visibleBedCount - 1) },
             (_, index) => (
