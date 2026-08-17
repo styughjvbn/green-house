@@ -1,8 +1,6 @@
 import { useState } from "react";
-import { useQuery } from "@tanstack/react-query";
 import type { WorkOperation } from "@/entities/farm/types";
 import { getWorkExecutionKind } from "../../model/work-types/workTypeDefinition";
-import { workOperationDetailsQueryOptions } from "../../model/workRecordQueryOptions";
 import { WorkCompletionDateDialog } from "./WorkCompletionDateDialog";
 import { WorkOperationDetails } from "./WorkOperationDetails";
 import { operationStatusLabel } from "../common/workOperationLabels";
@@ -35,9 +33,6 @@ export function OperationResult({
   const canceled = operation.status === "CANCELED";
   const corrected = operation.status === "CORRECTED";
   const terminal = completed || canceled || corrected;
-  const completedDetailQuery = useQuery({
-    ...workOperationDetailsQueryOptions(operation.id),
-  });
   const executionKind = getWorkExecutionKind(operation.workTypeWorkflow);
   const structureChange =
     executionKind === "STRUCTURE_CHANGE" || executionKind === "MOVEMENT";
@@ -135,15 +130,6 @@ export function OperationResult({
       <WorkOperationDetails
         key={operation.id}
         actionLoading={loading}
-        detail={completedDetailQuery.data ?? null}
-        error={
-          completedDetailQuery.error instanceof Error
-            ? completedDetailQuery.error.message
-            : completedDetailQuery.error
-              ? "완료 상세를 불러오지 못했습니다."
-              : null
-        }
-        loading={completedDetailQuery.isPending}
         operation={operation}
         onExecuteTarget={onExecuteTarget}
         onRequestTargetCompletion={setCompletionTargetId}
