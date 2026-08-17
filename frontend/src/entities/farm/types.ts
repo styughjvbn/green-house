@@ -173,6 +173,13 @@ export type FarmStatusMapData = {
 
 export type VisibleBedCount = 2 | 3 | 4;
 
+export type OrchidManagementBedOrderItem = {
+  id: number;
+  houseId: number;
+  houseNumber: number;
+  number: number;
+};
+
 export type OrchidManagementViewport = {
   startBedId: number | null;
   bedCount: VisibleBedCount;
@@ -185,12 +192,6 @@ export type OrchidManagementViewport = {
     abnormalCount: number;
     bedZoneCount: number;
   };
-  bedOrder: Array<{
-    id: number;
-    houseId: number;
-    houseNumber: number;
-    number: number;
-  }>;
 };
 
 export type FarmStatusOrchidGroupItem = {

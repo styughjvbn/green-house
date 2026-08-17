@@ -120,6 +120,8 @@ npm run api:types
 - `python3 scripts/generate_openapi.py` 실행
 - seed 데이터 영향
 
+난 묶음 관리 화면은 `GET /api/farm-status/orchid-management/bed-order`로 전체 다이 순서만 한 번 조회하고, `GET /api/farm-status/orchid-management`에서는 현재 viewport의 상세 데이터만 조회한다. 두 초기 요청은 서로 독립적이므로 병렬 실행한다.
+
 ## 6. 신규 작업 실행 API 범위
 
 기간 작업 실행 API는 난 묶음 범위의 일반 기록형 작업과 자리 이동·분갈이·분주·합식·폐기 계획, 입고 기록 범위의 포트 작업 계획을 지원한다. 대상 미리보기, 생성, 기간·상태·범위별 목록, 상세, 대상별 진행·실행·건너뛰기, 작업 시작·일시중지·재개·취소·완료, 난 묶음 통합 이력을 제공한다.

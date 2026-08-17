@@ -66,6 +66,18 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ApiResponseOrchidManagementViewportResponse'
+  /api/farm-status/orchid-management/bed-order:
+    get:
+      tags:
+      - farm-status-controller
+      operationId: getOrchidManagementBedOrder
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponseListOrchidManagementBedOrderResponse'
   /api/farm-status/orchid-groups:
     get:
       tags:
@@ -146,6 +158,15 @@ components:
       properties:
         data:
           $ref: '#/components/schemas/FarmStatusZoomResponse'
+        message:
+          type: string
+    ApiResponseListOrchidManagementBedOrderResponse:
+      type: object
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/OrchidManagementBedOrderResponse'
         message:
           type: string
     ApiResponseOrchidManagementViewportResponse:
@@ -576,10 +597,6 @@ components:
           type: boolean
         summary:
           $ref: '#/components/schemas/OrchidManagementSummaryResponse'
-        bedOrder:
-          type: array
-          items:
-            $ref: '#/components/schemas/OrchidManagementBedOrderResponse'
     PhysicalBedResponse:
       type: object
       properties:

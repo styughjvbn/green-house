@@ -1,5 +1,6 @@
 import type {
   BedZone,
+  OrchidManagementBedOrderItem,
   OrchidManagementViewport,
   OrchidGroup,
   OrchidGroupWorkHistory,
@@ -230,6 +231,7 @@ export type DerivedOrchidGroup = {
 
 export type OrchidManagementMapProps = {
   initialViewport: OrchidManagementViewport;
+  initialBedOrder: OrchidManagementBedOrderItem[];
   initialSelectedOrchidGroupId: number | null;
   initialSelectedPhysicalBedId?: number | null;
   initialSelectedBedZoneId?: number | null;

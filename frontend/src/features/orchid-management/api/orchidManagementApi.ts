@@ -2,6 +2,7 @@ import { fetchApi, requestApi } from "@/shared/api/client";
 import type {
   BedZonePlacementProfile,
   House,
+  OrchidManagementBedOrderItem,
   OrchidManagementViewport,
   OrchidGroup,
   VarietyOption,
@@ -140,6 +141,12 @@ export function getOrchidManagementViewport(
   }
   return fetchApi<OrchidManagementViewport>(
     `/farm-status/orchid-management?${params.toString()}`,
+  );
+}
+
+export function getOrchidManagementBedOrder() {
+  return fetchApi<OrchidManagementBedOrderItem[]>(
+    "/farm-status/orchid-management/bed-order",
   );
 }
 

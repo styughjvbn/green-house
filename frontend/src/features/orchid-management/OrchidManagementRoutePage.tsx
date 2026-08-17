@@ -1,10 +1,17 @@
-import type { VisibleBedCount } from "@/entities/farm/types";
-import { getOrchidManagementViewport } from "./api/orchidManagementApi";
+import type {
+  OrchidManagementBedOrderItem,
+  VisibleBedCount,
+} from "@/entities/farm/types";
+import {
+  getOrchidManagementBedOrder,
+  getOrchidManagementViewport,
+} from "./api/orchidManagementApi";
 import type { OrchidManagementSearchState } from "./model/types";
 import { OrchidManagementMap } from "./ui/OrchidManagementMap";
 
 type OrchidManagementPageProps = {
   initialViewport: Awaited<ReturnType<typeof getOrchidManagementViewport>>;
+  initialBedOrder: OrchidManagementBedOrderItem[];
   initialSelectedOrchidGroupId: number | null;
   initialSelectedPhysicalBedId?: number | null;
   initialSelectedBedZoneId?: number | null;
@@ -19,13 +26,14 @@ export async function OrchidManagementRoutePage({
   const routeState = readOrchidManagementRouteState(resolvedSearchParams);
   const startBedId =
     routeState.startBedId ?? routeState.selectedPhysicalBedId ?? null;
-  const viewport = await getOrchidManagementViewport(
-    startBedId,
-    routeState.bedCount,
-  );
+  const [bedOrder, viewport] = await Promise.all([
+    getOrchidManagementBedOrder(),
+    getOrchidManagementViewport(startBedId, routeState.bedCount),
+  ]);
   return (
     <OrchidManagementPage
       initialSearchFilters={routeState.searchFilters}
+      initialBedOrder={bedOrder}
       initialSelectedBedZoneId={routeState.selectedBedZoneId}
       initialSelectedOrchidGroupId={routeState.selectedOrchidGroupId}
       initialSelectedPhysicalBedId={routeState.selectedPhysicalBedId}
@@ -36,12 +44,13 @@ export async function OrchidManagementRoutePage({
 
 function OrchidManagementPage({
   initialViewport,
+  initialBedOrder,
   initialSelectedOrchidGroupId,
   initialSelectedPhysicalBedId,
   initialSelectedBedZoneId,
   initialSearchFilters,
 }: OrchidManagementPageProps) {
-  if (initialViewport.bedOrder.length === 0) {
+  if (initialBedOrder.length === 0) {
     return (
       <main className="space-y-4">
         <div className="rounded-md border border-[#d7ddd4] bg-white p-5 text-sm text-[#5c6a60]">
@@ -63,6 +72,7 @@ function OrchidManagementPage({
         initialSelectedBedZoneId={initialSelectedBedZoneId}
         initialSelectedPhysicalBedId={initialSelectedPhysicalBedId}
         initialSearchFilters={initialSearchFilters}
+        initialBedOrder={initialBedOrder}
         initialViewport={initialViewport}
         initialSelectedOrchidGroupId={initialSelectedOrchidGroupId}
       />

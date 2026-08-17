@@ -34,10 +34,11 @@ export function OrchidManagementMap({
   initialSelectedBedZoneId,
   initialSearchFilters,
   initialViewport,
+  initialBedOrder,
 }: OrchidManagementMapProps) {
   const router = useRouter();
   const queryClient = useQueryClient();
-  const bedViewport = useBedViewport(initialViewport);
+  const bedViewport = useBedViewport(initialViewport, initialBedOrder);
   const currentBedOrder = bedViewport.bedOrder[bedViewport.startBedIndex];
   const navigationHouse = useMemo(
     () => ({

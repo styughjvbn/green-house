@@ -3,7 +3,7 @@
 import useEmblaCarousel from "embla-carousel-react";
 import { useEffect, useRef } from "react";
 import type {
-  OrchidManagementViewport,
+  OrchidManagementBedOrderItem,
   PhysicalBed,
   VisibleBedCount,
 } from "@/entities/farm/types";
@@ -28,7 +28,7 @@ export default function ContinuousBedMap({
   onSelectPhysicalBed,
   onSelectOrchidGroup,
 }: {
-  bedOrder: OrchidManagementViewport["bedOrder"];
+  bedOrder: OrchidManagementBedOrderItem[];
   bedsById: Map<number, PhysicalBed>;
   startBedIndex: number;
   visibleBedCount: VisibleBedCount;

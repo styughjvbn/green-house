@@ -1444,6 +1444,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/farm-status/orchid-management/bed-order": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["getOrchidManagementBedOrder"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/farm-status/orchid-groups": {
         parameters: {
             query?: never;
@@ -3634,16 +3650,6 @@ export interface components {
             data?: components["schemas"]["OrchidManagementViewportResponse"];
             message?: string;
         };
-        OrchidManagementBedOrderResponse: {
-            /** Format: int64 */
-            id?: number;
-            /** Format: int64 */
-            houseId?: number;
-            /** Format: int32 */
-            houseNumber?: number;
-            /** Format: int32 */
-            number?: number;
-        };
         OrchidManagementSummaryResponse: {
             /** Format: int64 */
             orchidGroupCount?: number;
@@ -3663,7 +3669,20 @@ export interface components {
             hasPrevious?: boolean;
             hasNext?: boolean;
             summary?: components["schemas"]["OrchidManagementSummaryResponse"];
-            bedOrder?: components["schemas"]["OrchidManagementBedOrderResponse"][];
+        };
+        ApiResponseListOrchidManagementBedOrderResponse: {
+            data?: components["schemas"]["OrchidManagementBedOrderResponse"][];
+            message?: string;
+        };
+        OrchidManagementBedOrderResponse: {
+            /** Format: int64 */
+            id?: number;
+            /** Format: int64 */
+            houseId?: number;
+            /** Format: int32 */
+            houseNumber?: number;
+            /** Format: int32 */
+            number?: number;
         };
         ApiResponseFarmStatusOrchidGroupListResponse: {
             data?: components["schemas"]["FarmStatusOrchidGroupListResponse"];
@@ -6683,6 +6702,26 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ApiResponseOrchidManagementViewportResponse"];
+                };
+            };
+        };
+    };
+    getOrchidManagementBedOrder: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiResponseListOrchidManagementBedOrderResponse"];
                 };
             };
         };

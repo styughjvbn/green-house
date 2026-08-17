@@ -3,6 +3,7 @@
 import { useQueries } from "@tanstack/react-query";
 import { useCallback, useMemo, useState } from "react";
 import type {
+  OrchidManagementBedOrderItem,
   OrchidManagementViewport,
   VisibleBedCount,
 } from "@/entities/farm/types";
@@ -14,8 +15,10 @@ import {
 } from "../lib/bedViewportUtils";
 import type { BedViewportState } from "./bedViewportTypes";
 
-export function useBedViewport(initialViewport: OrchidManagementViewport) {
-  const bedOrder = initialViewport.bedOrder;
+export function useBedViewport(
+  initialViewport: OrchidManagementViewport,
+  bedOrder: OrchidManagementBedOrderItem[],
+) {
   const initialIndex = Math.max(
     0,
     bedOrder.findIndex((bed) => bed.id === initialViewport.startBedId),

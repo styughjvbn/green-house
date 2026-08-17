@@ -7,10 +7,12 @@ import com.greenhouse.backend.farm.domain.status.FarmZoomLevel;
 import com.greenhouse.backend.farm.dto.status.FarmStatusMapResponse;
 import com.greenhouse.backend.farm.dto.status.FarmStatusOrchidGroupListResponse;
 import com.greenhouse.backend.farm.dto.status.FarmStatusZoomResponse;
+import com.greenhouse.backend.farm.dto.orchid.OrchidManagementBedOrderResponse;
 import com.greenhouse.backend.farm.dto.orchid.OrchidManagementViewportResponse;
 
 import lombok.RequiredArgsConstructor;
 
+import java.util.List;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
@@ -40,6 +42,11 @@ public class FarmStatusController {
 			@RequestParam(required = false) Long startBedId,
 			@RequestParam(defaultValue = "3") int bedCount) {
 		return ApiResponse.ok(farmStatusService.getOrchidManagementViewport(startBedId, bedCount));
+	}
+
+	@GetMapping("/orchid-management/bed-order")
+	public ApiResponse<List<OrchidManagementBedOrderResponse>> getOrchidManagementBedOrder() {
+		return ApiResponse.ok(farmStatusService.getOrchidManagementBedOrder());
 	}
 
 	@GetMapping("/zoom")

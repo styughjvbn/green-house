@@ -2,7 +2,7 @@
 
 import { ChevronLeft, ChevronRight, Palette, Plus, Ruler } from "lucide-react";
 import type {
-  OrchidManagementViewport,
+  OrchidManagementBedOrderItem,
   VisibleBedCount,
 } from "@/entities/farm/types";
 import VisibleBedCountSelector from "./VisibleBedCountSelector";
@@ -24,7 +24,7 @@ export default function BedNavigationToolbar({
   onOpenCreate,
   onToggleScale,
 }: {
-  houses: OrchidManagementViewport["bedOrder"];
+  houses: OrchidManagementBedOrderItem[];
   startHouseId: number | null;
   visibleBedCount: VisibleBedCount;
   hasPreviousHouse: boolean;
@@ -115,7 +115,7 @@ export default function BedNavigationToolbar({
   );
 }
 
-function uniqueHouses(houses: OrchidManagementViewport["bedOrder"]) {
+function uniqueHouses(houses: OrchidManagementBedOrderItem[]) {
   return houses.filter(
     (house, index) =>
       index === 0 || houses[index - 1]?.houseId !== house.houseId,
