@@ -128,7 +128,7 @@ npm run api:types
 
 작업과 대상 응답의 `availableActions`는 현재 상태, 미완료 대상, 전용 workflow, 남은 수량을 반영한 서버 판정값이다. 프론트는 버튼 문구와 dialog를 action에 매핑하고 상태 enum으로 가능 여부를 재구성하지 않는다. 실행 API는 요청 시점에 규칙을 다시 검증한다.
 
-`GET /api/work-operations`의 `view=MANAGEMENT`는 계획·진행 중·일시중지 작업과 농장 기준 오늘 상태가 변경된 작업을 반환한다. `view=HISTORY`는 완료·취소·보정된 작업을 반환하며, `view=ALL` 또는 생략은 호환성을 위해 전체 작업을 반환한다.
+`GET /api/work-operations`의 `view=MANAGEMENT`는 계획·진행 중·일시중지 작업과 농장 기준 오늘 상태가 변경된 작업을 반환한다. `view=ALL` 또는 생략은 상태와 관계없이 전체 작업을 반환한다.
 
 작업 목록과 캘린더 응답은 `WorkOperationSummaryResponse`를 사용한다. 진행률과 전체 작업 `availableActions`는 포함하지만 대상 배열은 포함하지 않는다. 사용자가 작업을 선택하면 `GET /api/work-operations/{workOperationId}`로 `WorkOperationResponse`를 조회해 대상별 상태와 action을 표시한다.
 

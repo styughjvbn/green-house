@@ -630,7 +630,7 @@ class WorkOperationIntegrationTests extends AbstractBackendIntegrationTest {
 	}
 
 	@Test
-	void separatesManagementListFromOperationHistory() throws Exception {
+	void includesTodayChangedOperationInManagementList() throws Exception {
 		var created = mockMvc.perform(post("/api/work-operations")
 						.contentType(MediaType.APPLICATION_JSON)
 						.content("""
@@ -651,18 +651,10 @@ class WorkOperationIntegrationTests extends AbstractBackendIntegrationTest {
 				.andExpect(status().isOk())
 				.andExpect(jsonPath("$.data.content", hasSize(1)))
 				.andExpect(jsonPath("$.data.content[0].status").value("PLANNED"));
-		mockMvc.perform(get("/api/work-operations").param("view", "HISTORY"))
-				.andExpect(status().isOk())
-				.andExpect(jsonPath("$.data.content", hasSize(0)));
-
 		mockMvc.perform(post("/api/work-operations/{id}/cancel", operationId))
 				.andExpect(status().isOk());
 
 		mockMvc.perform(get("/api/work-operations").param("view", "MANAGEMENT"))
-				.andExpect(status().isOk())
-				.andExpect(jsonPath("$.data.content", hasSize(1)))
-				.andExpect(jsonPath("$.data.content[0].status").value("CANCELED"));
-		mockMvc.perform(get("/api/work-operations").param("view", "HISTORY"))
 				.andExpect(status().isOk())
 				.andExpect(jsonPath("$.data.content", hasSize(1)))
 				.andExpect(jsonPath("$.data.content[0].status").value("CANCELED"));

@@ -45,7 +45,6 @@ paths:
           enum:
           - ALL
           - MANAGEMENT
-          - HISTORY
       - name: sourceScopeType
         in: query
         required: false
@@ -663,7 +662,6 @@ paths:
           enum:
           - ALL
           - MANAGEMENT
-          - HISTORY
       responses:
         '200':
           description: OK

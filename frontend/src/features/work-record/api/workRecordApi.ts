@@ -126,7 +126,7 @@ type WorkOperationQuery = {
   from?: string;
   to?: string;
   status?: WorkOperation["status"] | "";
-  view?: "ALL" | "MANAGEMENT" | "HISTORY";
+  view?: "ALL" | "MANAGEMENT";
   sourceScopeType?: WorkOperation["sourceScopeType"];
   sourceScopeId?: number;
   keyword?: string;

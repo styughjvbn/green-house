@@ -121,17 +121,18 @@ public class WorkOperationRepositoryImpl implements WorkOperationRepositoryCusto
 	}
 
 	private BooleanExpression viewCondition(WorkOperationSearchView view, LocalDateTime todayStartedAt) {
-		if (view == null || view == WorkOperationSearchView.ALL) {
+		if (view == null) {
 			return null;
 		}
-		BooleanExpression active = workOperation.status.in(
-				WorkOperationStatus.PLANNED,
-				WorkOperationStatus.IN_PROGRESS,
-				WorkOperationStatus.PAUSED);
-		if (view == WorkOperationSearchView.MANAGEMENT) {
-			return active.or(workOperation.updatedAt.goe(todayStartedAt));
-		}
-		return active.not();
+
+		return switch (view) {
+			case ALL -> null;
+			case MANAGEMENT -> workOperation.status
+					.in(WorkOperationStatus.PLANNED,
+							WorkOperationStatus.IN_PROGRESS,
+							WorkOperationStatus.PAUSED)
+					.or(workOperation.updatedAt.goe(todayStartedAt));
+		};
 	}
 
 	private BooleanExpression statusEq(WorkOperationStatus status) {

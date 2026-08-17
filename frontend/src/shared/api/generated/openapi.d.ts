@@ -4273,7 +4273,7 @@ export interface operations {
                 from?: string;
                 to?: string;
                 status?: "PLANNED" | "IN_PROGRESS" | "PAUSED" | "COMPLETED" | "CANCELED" | "CORRECTED";
-                view?: "ALL" | "MANAGEMENT" | "HISTORY";
+                view?: "ALL" | "MANAGEMENT";
                 sourceScopeType?: "NONE" | "FARM" | "HOUSE" | "PHYSICAL_BED" | "BED_ZONE" | "ORCHID_GROUP" | "DERIVED_GROUP" | "USER_COLLECTION" | "MANUAL_SELECTION" | "INBOUND_RECORD_SELECTION";
                 sourceScopeId?: number;
                 keyword?: string;
@@ -6226,7 +6226,7 @@ export interface operations {
                 from: string;
                 to: string;
                 status?: "PLANNED" | "IN_PROGRESS" | "PAUSED" | "COMPLETED" | "CANCELED" | "CORRECTED";
-                view?: "ALL" | "MANAGEMENT" | "HISTORY";
+                view?: "ALL" | "MANAGEMENT";
             };
             header?: never;
             path?: never;
