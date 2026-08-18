@@ -70,6 +70,10 @@ public class WorkOperationController {
 		return ApiResponse.ok(planService.preview(request));
 	}
 
+	/**
+	 * @deprecated Use {@code POST /api/work-operations/batch}, which also supports a single work operation.
+	 */
+	@Deprecated(since = "2026-08", forRemoval = false)
 	@PostMapping("/work-operations")
 	@ResponseStatus(HttpStatus.CREATED)
 	public ApiResponse<WorkOperationResponse> create(@Valid @RequestBody WorkOperationCreateRequest request) {
@@ -90,6 +94,10 @@ public class WorkOperationController {
 		return ApiResponse.ok(planService.createCompletedRecord(request));
 	}
 
+	/**
+	 * @deprecated Use {@code POST /api/work-operations/structure-change-records/batch}.
+	 */
+	@Deprecated(since = "2026-08", forRemoval = false)
 	@PostMapping("/work-operations/structure-change-records")
 	@ResponseStatus(HttpStatus.CREATED)
 	public ApiResponse<WorkOperationResponse> createStructureChangeRecord(
@@ -123,6 +131,10 @@ public class WorkOperationController {
 		return ApiResponse.ok(inboundPottingPlanService.getCandidates());
 	}
 
+	/**
+	 * @deprecated Use {@code POST /api/work-operations/inbound-potting-plans/batch}.
+	 */
+	@Deprecated(since = "2026-08", forRemoval = false)
 	@PostMapping("/work-operations/inbound-potting-plans")
 	@ResponseStatus(HttpStatus.CREATED)
 	public ApiResponse<WorkOperationResponse> createInboundPottingPlan(

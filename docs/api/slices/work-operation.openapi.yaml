@@ -110,6 +110,7 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ApiResponseWorkOperationResponse'
+      deprecated: true
   /api/work-operations/{workOperationId}/targets/{targetId}/start:
     post:
       tags:
@@ -430,6 +431,7 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ApiResponseWorkOperationResponse'
+      deprecated: true
   /api/work-operations/structure-change-records/batch:
     post:
       tags:
@@ -502,6 +504,7 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ApiResponseWorkOperationResponse'
+      deprecated: true
   /api/work-operations/inbound-potting-plans/batch:
     post:
       tags:

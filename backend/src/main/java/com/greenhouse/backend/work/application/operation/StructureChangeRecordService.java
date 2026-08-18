@@ -35,6 +35,10 @@ public class StructureChangeRecordService {
 	private final WorkOperationQueryService queryService;
 	private final DiscardRecordService discardRecordService;
 
+	/**
+	 * @deprecated Use {@link #createStructureChangeRecords(StructureChangeRecordBatchCreateRequest)}.
+	 */
+	@Deprecated(since = "2026-08", forRemoval = false)
 	public WorkOperationResponse createStructureChangeRecord(StructureChangeRecordCreateRequest request) {
 		return createStructureChangeRecord(request, Set.of());
 	}
