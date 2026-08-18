@@ -70,6 +70,10 @@ public class InboundRecordController {
 		return ApiResponse.ok(inboundRecordService.update(inboundRecordId, request));
 	}
 
+	/**
+	 * @deprecated Use {@code POST /api/work-operations/inbound-potting-executions}.
+	 */
+	@Deprecated(since = "2026-08", forRemoval = false)
 	@PostMapping("/{inboundRecordId}/potting")
 	public ApiResponse<InboundRecordResponse> potting(
 			@PathVariable Long inboundRecordId,

@@ -35,6 +35,10 @@ public class SalesQueryService {
 	private final AuctionDataReader auctionDataReader;
 	private final SalesSlipResponseAssembler responseAssembler;
 
+	/**
+	 * @deprecated Use {@link #getSalesSlipPage(Long, LocalDate, LocalDate, String, String, String, int, int)}.
+	 */
+	@Deprecated(since = "2026-08", forRemoval = false)
 	public List<SalesSlipResponse> getSalesSlips(Long partnerId, LocalDate from, LocalDate to) {
 		return assembleSalesSlips(salesSlipRepository.search(partnerId, from, to, LEGACY_LIST_LIMIT));
 	}

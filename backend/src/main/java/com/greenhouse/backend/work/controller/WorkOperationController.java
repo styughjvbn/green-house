@@ -236,6 +236,10 @@ public class WorkOperationController {
 				request == null ? new WorkTargetExecutionRequest(null, null, null) : request));
 	}
 
+	/**
+	 * @deprecated Use {@code POST /api/work-operations/{workOperationId}/structure-change-executions}.
+	 */
+	@Deprecated(since = "2026-08", forRemoval = false)
 	@PostMapping("/work-operations/{workOperationId}/merge/complete")
 	public ApiResponse<WorkOperationResponse> completeMerge(
 			@PathVariable Long workOperationId,
@@ -251,6 +255,10 @@ public class WorkOperationController {
 		return ApiResponse.ok(structureChangeExecutionService.execute(workOperationId, request));
 	}
 
+	/**
+	 * @deprecated Use {@code GET /api/work-history} with {@code historyScopeType=ORCHID_GROUP}.
+	 */
+	@Deprecated(since = "2026-08", forRemoval = false)
 	@GetMapping("/orchid-groups/{orchidGroupId}/work-history")
 	public ApiResponse<List<OrchidGroupWorkHistoryResponse>> getOrchidGroupHistory(
 			@PathVariable Long orchidGroupId) {

@@ -498,6 +498,7 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ApiResponseWorkOperationResponse'
+      deprecated: true
   /api/work-operations/{workOperationId}/corrections:
     get:
       tags:
@@ -914,6 +915,7 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ApiResponseListSalesSlipResponse'
+      deprecated: true
     post:
       tags:
       - sales-controller
@@ -1267,6 +1269,7 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ApiResponseInboundRecordResponse'
+      deprecated: true
   /api/inbound-records/{inboundRecordId}/cancel:
     post:
       tags:
@@ -2410,6 +2413,7 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ApiResponseListOrchidGroupWorkHistoryResponse'
+      deprecated: true
   /api/orchid-groups/{orchidGroupId}/lineage:
     get:
       tags:

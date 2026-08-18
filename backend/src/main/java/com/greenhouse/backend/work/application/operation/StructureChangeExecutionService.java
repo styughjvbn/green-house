@@ -45,6 +45,10 @@ public class StructureChangeExecutionService {
 	private final DiscardRecordService discardRecordService;
 	private final ObjectMapper objectMapper = new ObjectMapper().findAndRegisterModules();
 
+	/**
+	 * @deprecated Use {@link #execute(Long, StructureChangeExecutionRequest)}.
+	 */
+	@Deprecated(since = "2026-08", forRemoval = false)
 	public WorkOperationResponse completeMerge(
 			Long operationId, WorkTargetExecutionRequest request) {
 		List<WorkTargetExecution> executions = executionRepository

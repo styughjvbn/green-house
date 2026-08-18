@@ -307,6 +307,7 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ApiResponseWorkOperationResponse'
+      deprecated: true
   /api/work-operations/{workOperationId}/corrections:
     get:
       tags:
@@ -731,6 +732,7 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ApiResponseListOrchidGroupWorkHistoryResponse'
+      deprecated: true
 components:
   schemas:
     ApiResponseListInboundPottingCandidateResponse:

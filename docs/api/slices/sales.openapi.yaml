@@ -80,6 +80,7 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ApiResponseListSalesSlipResponse'
+      deprecated: true
     post:
       tags:
       - sales-controller
