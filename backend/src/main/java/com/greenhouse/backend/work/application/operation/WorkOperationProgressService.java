@@ -87,6 +87,14 @@ public class WorkOperationProgressService {
 
 	public WorkOperationResponse completeTarget(
 			Long operationId, Long targetId, WorkTargetExecutionRequest request) {
+		return completeTarget(operationId, targetId, request, null);
+	}
+
+	WorkOperationResponse completeTarget(
+			Long operationId,
+			Long targetId,
+			WorkTargetExecutionRequest request,
+			String executionKey) {
 		WorkTargetExecution execution = findExecutionForUpdate(operationId, targetId);
 		if (execution.isEffectApplied()) {
 			return queryService.get(operationId);
@@ -98,10 +106,12 @@ public class WorkOperationProgressService {
 		refreshInboundSnapshot(operation, execution.getTarget());
 		LocalDateTime completedAt = support.completionTime(request.completedDate());
 		String worker = support.actor(request.worker());
-		var result = workEffectProcessor.apply(
-				operation,
-				execution.getTarget(),
-				new WorkEffectCommand(completedAt, worker, request.resultDetails(), null));
+		WorkEffectCommand command = new WorkEffectCommand(
+				completedAt, worker, request.resultDetails(), null);
+		var result = executionKey == null
+				? workEffectProcessor.apply(operation, execution.getTarget(), command)
+				: workEffectProcessor.applyTargetExecution(
+						operation, execution.getTarget(), executionKey, command);
 		execution.completeWithEffect(completedAt, worker, result.resultDetails());
 		completeIfAllTargetsClosed(operation, completedAt);
 		return queryService.get(operationId);

@@ -93,6 +93,7 @@ export interface paths {
         };
         get: operations["search"];
         put?: never;
+        /** @deprecated */
         post: operations["create"];
         delete?: never;
         options?: never;
@@ -221,6 +222,7 @@ export interface paths {
         };
         get?: never;
         put?: never;
+        /** @deprecated */
         post: operations["completeMerge"];
         delete?: never;
         options?: never;
@@ -317,6 +319,7 @@ export interface paths {
         };
         get?: never;
         put?: never;
+        /** @deprecated */
         post: operations["createStructureChangeRecord"];
         delete?: never;
         options?: never;
@@ -413,6 +416,7 @@ export interface paths {
         };
         get?: never;
         put?: never;
+        /** @deprecated */
         post: operations["createInboundPottingPlan"];
         delete?: never;
         options?: never;
@@ -445,6 +449,7 @@ export interface paths {
         };
         get?: never;
         put?: never;
+        /** @deprecated */
         post: operations["executeInboundPotting"];
         delete?: never;
         options?: never;
@@ -507,6 +512,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
+        /** @deprecated */
         get: operations["getSalesSlips"];
         put?: never;
         post: operations["createSalesSlip"];
@@ -637,6 +643,7 @@ export interface paths {
         };
         get?: never;
         put?: never;
+        /** @deprecated */
         post: operations["potting"];
         delete?: never;
         options?: never;
@@ -1307,6 +1314,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
+        /** @deprecated */
         get: operations["getOrchidGroupHistory"];
         put?: never;
         post?: never;
@@ -2405,6 +2413,7 @@ export interface components {
             memo?: string;
         };
         InboundPottingExecutionRequest: {
+            idempotencyKey: string;
             /** Format: int64 */
             inboundRecordId: number;
             /** Format: date */

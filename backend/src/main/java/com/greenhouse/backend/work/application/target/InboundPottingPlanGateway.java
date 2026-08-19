@@ -6,6 +6,7 @@ public interface InboundPottingPlanGateway {
 	List<InboundPottingPlanTarget> findCandidates();
 	List<InboundPottingPlanTarget> resolve(List<Long> inboundRecordIds);
 	List<InboundPottingPlanTarget> resolveForUpdate(List<Long> inboundRecordIds);
+	void lockForPottingExecution(List<Long> inboundRecordIds);
 	List<InboundPottingPlanTarget> findCurrent(List<Long> inboundRecordIds);
 	void markPottingPlanned(List<Long> inboundRecordIds);
 	void closePottingPlan(List<Long> inboundRecordIds);

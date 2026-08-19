@@ -60,6 +60,19 @@ public class WorkEffectProcessor {
 		return apply(operation, null, command, "EXECUTION:" + executionKey, sourceOrchidGroupIds);
 	}
 
+	public WorkExecutionResult applyTargetExecution(
+			WorkOperation operation,
+			WorkOperationTarget target,
+			String executionKey,
+			WorkEffectCommand command) {
+		return apply(
+				operation,
+				target,
+				command,
+				"POTTING:" + executionKey,
+				target.getOrchidGroupId() == null ? List.of() : List.of(target.getOrchidGroupId()));
+	}
+
 	private WorkExecutionResult apply(
 			WorkOperation operation,
 			WorkOperationTarget target,

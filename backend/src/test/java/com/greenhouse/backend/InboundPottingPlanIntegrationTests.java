@@ -495,6 +495,7 @@ class InboundPottingPlanIntegrationTests extends AbstractBackendIntegrationTest 
 				.contentType(MediaType.APPLICATION_JSON)
 				.content("""
 						{
+						  "idempotencyKey": "immediate-potting-multiple-results",
 						  "inboundRecordId": %d,
 						  "pottingDate": "2026-07-16",
 						  "results": [
@@ -565,6 +566,7 @@ class InboundPottingPlanIntegrationTests extends AbstractBackendIntegrationTest 
 						  },
 						  "executions": [
 						    {
+						      "idempotencyKey": "completed-potting-record",
 						      "inboundRecordId": %d,
 						      "pottingDate": "2026-07-16",
 						      "results": [
@@ -621,28 +623,52 @@ class InboundPottingPlanIntegrationTests extends AbstractBackendIntegrationTest 
 						""".formatted(inboundRecord.getId())))
 				.andExpect(status().isBadRequest());
 
-		mockMvc.perform(post("/api/work-operations/inbound-potting-executions")
+		String executionRequest = """
+				{
+				  "plan": {
+				    "title": "입고 화면 포트 작업",
+				    "plannedStartDate": "2026-07-16",
+				    "plannedEndDate": "2026-07-16",
+				    "inboundRecordIds": [%d],
+				    "worker": "입고 담당"
+				  },
+				  "executions": [{
+				    "idempotencyKey": "reuse-existing-potting-plan",
+				    "inboundRecordId": %d,
+				    "pottingDate": "2026-07-16",
+				    "results": [{
+				      "quantity": 100,
+				      "potSize": "2치",
+				      "ageYear": 1,
+				      "bedZoneId": %d,
+				      "startPosition": 0,
+				      "endPosition": 4
+				    }],
+				    "worker": "입고 담당"
+				  }]
+				}
+				""".formatted(inboundRecord.getId(), inboundRecord.getId(), bedZone.getId());
+
+		mockMvc.perform(post("/api/work-operations/inbound-potting-records")
 				.contentType(MediaType.APPLICATION_JSON)
-				.content("""
-						{
-						  "inboundRecordId": %d,
-						  "pottingDate": "2026-07-16",
-						  "results": [{
-						    "quantity": 100,
-						    "potSize": "2치",
-						    "ageYear": 1,
-						    "bedZoneId": %d,
-						    "startPosition": 0,
-						    "endPosition": 4
-						  }],
-						  "worker": "입고 담당"
-						}
-						""".formatted(inboundRecord.getId(), bedZone.getId())))
+				.content(executionRequest))
 				.andExpect(status().isCreated())
-				.andExpect(jsonPath("$.data.id").value(operationId))
-				.andExpect(jsonPath("$.data.status").value("COMPLETED"))
-				.andExpect(jsonPath("$.data.targets[0].executionStatus").value("COMPLETED"));
+				.andExpect(jsonPath("$.data[0].id").value(operationId))
+				.andExpect(jsonPath("$.data[0].status").value("COMPLETED"))
+				.andExpect(jsonPath("$.data[0].targets[0].executionStatus").value("COMPLETED"));
+
+		mockMvc.perform(post("/api/work-operations/inbound-potting-records")
+				.contentType(MediaType.APPLICATION_JSON)
+				.content(executionRequest))
+				.andExpect(status().isCreated())
+				.andExpect(jsonPath("$.data[0].id").value(operationId));
+		mockMvc.perform(post("/api/work-operations/inbound-potting-records")
+				.contentType(MediaType.APPLICATION_JSON)
+				.content(executionRequest.replace("\"worker\": \"입고 담당\"", "\"worker\": \"다른 담당\"")))
+				.andExpect(status().isBadRequest());
 
 		assertThat(operationRepository.count()).isEqualTo(1);
+		assertThat(appliedEffectRepository.count()).isEqualTo(1);
+		assertThat(orchidGroupRepository.findAll()).hasSize(1);
 	}
 }

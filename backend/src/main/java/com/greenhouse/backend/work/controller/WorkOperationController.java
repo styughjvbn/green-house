@@ -150,6 +150,7 @@ public class WorkOperationController {
 	}
 
 	@PostMapping("/work-operations/inbound-potting-executions")
+	@Deprecated(since = "2026-08", forRemoval = false)
 	@ResponseStatus(HttpStatus.CREATED)
 	public ApiResponse<WorkOperationResponse> executeInboundPotting(
 			@Valid @RequestBody InboundPottingExecutionRequest request) {

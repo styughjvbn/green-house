@@ -18,6 +18,7 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 
 import java.time.LocalDate;
+import java.util.UUID;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -80,6 +81,7 @@ public class InboundRecordController {
 			@Valid @RequestBody InboundRecordPottingRequest request) {
 		inboundPottingOperationService.executeNow(
 				new InboundPottingExecutionRequest(
+						"LEGACY:" + UUID.randomUUID(),
 						inboundRecordId,
 						request.pottingDate(),
 						request.results().stream().map(row -> new InboundPottingResultRequest(

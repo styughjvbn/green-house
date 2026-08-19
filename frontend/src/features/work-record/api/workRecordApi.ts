@@ -289,6 +289,7 @@ export function createDiscardRecord(payload: {
 }
 
 export type InboundPottingExecutionPayload = {
+  idempotencyKey: string;
   inboundRecordId: number;
   pottingDate: string;
   results: Array<{

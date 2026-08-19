@@ -541,6 +541,7 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ApiResponseWorkOperationResponse'
+      deprecated: true
   /api/work-operations/discard-records:
     post:
       tags:
@@ -884,6 +885,10 @@ components:
     InboundPottingExecutionRequest:
       type: object
       properties:
+        idempotencyKey:
+          type: string
+          maxLength: 80
+          minLength: 0
         inboundRecordId:
           type: integer
           format: int64
@@ -909,6 +914,7 @@ components:
           maxLength: 1000
           minLength: 0
       required:
+      - idempotencyKey
       - inboundRecordId
       - pottingDate
       - results

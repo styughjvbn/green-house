@@ -109,6 +109,7 @@ export function InventoryInboundPage() {
 
         <InboundPottingDialog
           houses={inbound.houses}
+          key={selected?.id ?? "no-inbound-selection"}
           open={dialog === "potting" && !!selected && !placementDialogWaiting}
           record={selected}
           onClose={() => setDialog(null)}
