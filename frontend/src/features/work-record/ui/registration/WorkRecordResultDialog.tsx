@@ -48,6 +48,34 @@ export function WorkRecordResultDialog({
   onClose,
   onSaved,
 }: WorkRecordResultDialogProps) {
+  if (kind === "POTTING") {
+    return (
+      <PottingWorkRecordDialog
+        candidates={candidates.filter((candidate) =>
+          inboundRecordIds.has(candidate.id),
+        )}
+        houses={houses}
+        workDate={form.plannedStartDate}
+        worker={form.worker}
+        onClose={onClose}
+        onSubmit={async (executions) => {
+          await createInboundPottingRecord({
+            plan: {
+              title: form.title.trim(),
+              plannedStartDate: form.plannedStartDate,
+              plannedEndDate: form.plannedStartDate,
+              inboundRecordIds: [...inboundRecordIds],
+              worker: form.worker.trim() || null,
+              memo: form.memo.trim() || null,
+            },
+            executions,
+          });
+          onSaved();
+        }}
+      />
+    );
+  }
+
   const operation = {
     ...manualWorkTargetSource(orchidGroupIds),
     workTypeId: workType.id,
@@ -92,32 +120,6 @@ export function WorkRecordResultDialog({
               completedDate,
               worker,
               results,
-            });
-            onSaved();
-          }}
-        />
-      );
-    case "POTTING":
-      return (
-        <PottingWorkRecordDialog
-          candidates={candidates.filter((candidate) =>
-            inboundRecordIds.has(candidate.id),
-          )}
-          houses={houses}
-          workDate={form.plannedStartDate}
-          worker={form.worker}
-          onClose={onClose}
-          onSubmit={async (executions) => {
-            await createInboundPottingRecord({
-              plan: {
-                title: form.title.trim(),
-                plannedStartDate: form.plannedStartDate,
-                plannedEndDate: form.plannedStartDate,
-                inboundRecordIds: [...inboundRecordIds],
-                worker: form.worker.trim() || null,
-                memo: form.memo.trim() || null,
-              },
-              executions,
             });
             onSaved();
           }}
