@@ -34,7 +34,7 @@ public class WorkEffectStore {
 			List<Long> sourceOrchidGroupIds,
 			WorkEffectKind effectKind,
 			WorkExecutionResult result) {
-		WorkAppliedEffect appliedEffect = appliedEffectRepository.save(new WorkAppliedEffect(
+		WorkAppliedEffect appliedEffect = new WorkAppliedEffect(
 				operation,
 				target,
 				effectKey,
@@ -43,7 +43,13 @@ public class WorkEffectStore {
 				command.executedAt(),
 				command.worker(),
 				command.resultDetails(),
-				result.resultDetails()));
+				result.resultDetails());
+		if (result.mutationLink() != null) {
+			appliedEffect.linkMutation(
+					result.mutationLink().mutationId(),
+					result.mutationLink().correlationId());
+		}
+		appliedEffectRepository.save(appliedEffect);
 		var groupLinks = new ArrayList<WorkEffectOrchidGroup>();
 		if (effectKind == WorkEffectKind.STRUCTURE_CHANGE || effectKey.startsWith("EXECUTION:")) {
 			sourceOrchidGroupIds.stream().distinct().forEach(groupId -> groupLinks.add(
@@ -67,6 +73,10 @@ public class WorkEffectStore {
 				.filter(link -> link.getRelationType() != WorkEffectOrchidGroupRelationType.SOURCE)
 				.map(WorkEffectOrchidGroup::getOrchidGroupId)
 				.toList();
-		return new WorkExecutionResult(effect.getHandlerCode(), effect.getResultDetails(), resultIds);
+		WorkMutationLink mutationLink = effect.getMutationId() == null && effect.getCorrelationId() == null
+				? null
+				: new WorkMutationLink(effect.getMutationId(), effect.getCorrelationId());
+		return new WorkExecutionResult(
+				effect.getHandlerCode(), effect.getResultDetails(), resultIds, mutationLink);
 	}
 }

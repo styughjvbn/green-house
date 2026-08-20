@@ -6,5 +6,13 @@ import java.util.Map;
 public record WorkExecutionResult(
 		String handlerCode,
 		Map<String, Object> resultDetails,
-		List<Long> resultOrchidGroupIds) {
+		List<Long> resultOrchidGroupIds,
+		WorkMutationLink mutationLink) {
+
+	public WorkExecutionResult(
+			String handlerCode,
+			Map<String, Object> resultDetails,
+			List<Long> resultOrchidGroupIds) {
+		this(handlerCode, resultDetails, resultOrchidGroupIds, null);
+	}
 }
