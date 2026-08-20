@@ -205,9 +205,25 @@ public class OrchidGroup extends BaseEntity {
 			Integer inputQuantity,
 			BigDecimal releasedStartPosition,
 			BigDecimal releasedEndPosition) {
-		validatePositiveQuantity(inputQuantity, "분갈이 투입 수량");
+		applyTransformation(inputQuantity, releasedStartPosition, releasedEndPosition, "분갈이");
+	}
+
+	public void applyTransformation(
+			Integer inputQuantity,
+			BigDecimal releasedStartPosition,
+			BigDecimal releasedEndPosition) {
+		applyTransformation(inputQuantity, releasedStartPosition, releasedEndPosition, "구조 변경");
+	}
+
+	private void applyTransformation(
+			Integer inputQuantity,
+			BigDecimal releasedStartPosition,
+			BigDecimal releasedEndPosition,
+			String operationLabel) {
+		validatePositiveQuantity(inputQuantity, operationLabel + " 투입 수량");
 		if (getAvailableQuantity() < inputQuantity) {
-			throw new IllegalArgumentException("난 묶음 가용 수량보다 많이 분갈이할 수 없습니다.");
+			throw new IllegalArgumentException(
+					"난 묶음 가용 수량보다 많이 " + operationLabel + "할 수 없습니다.");
 		}
 		boolean partial = inputQuantity < this.quantity;
 		if ((releasedStartPosition == null) != (releasedEndPosition == null)) {

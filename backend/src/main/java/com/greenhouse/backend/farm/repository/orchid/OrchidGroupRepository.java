@@ -22,6 +22,17 @@ public interface OrchidGroupRepository extends JpaRepository<OrchidGroup, Long> 
 	int findMaxSortOrderByBedZoneId(@Param("bedZoneId") Long bedZoneId);
 
 	@Query("""
+			select new com.greenhouse.backend.farm.repository.orchid.OrchidGroupZoneMaxSortOrderRow(
+				g.bedZone.id, max(g.sortOrder))
+			from OrchidGroup g
+			where g.bedZone.id in :bedZoneIds
+			group by g.bedZone.id
+			order by g.bedZone.id
+			""")
+	List<OrchidGroupZoneMaxSortOrderRow> findMaxSortOrdersByBedZoneIdIn(
+			@Param("bedZoneIds") java.util.Collection<Long> bedZoneIds);
+
+	@Query("""
 			select g from OrchidGroup g
 			join fetch g.bedZone z
 			join fetch z.physicalBed b

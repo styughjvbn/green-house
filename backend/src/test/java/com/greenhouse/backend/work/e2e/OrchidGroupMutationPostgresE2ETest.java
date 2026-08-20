@@ -3,8 +3,13 @@ package com.greenhouse.backend.work.e2e;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import com.greenhouse.backend.farm.application.orchid.mutation.CreateOrchidGroupMutationCommand;
+import com.greenhouse.backend.farm.application.orchid.mutation.BaselineOrchidGroupsCommand;
+import com.greenhouse.backend.farm.application.orchid.mutation.OrchidGroupLedgerPreparationService;
 import com.greenhouse.backend.farm.application.orchid.mutation.OrchidGroupMutationDetails;
 import com.greenhouse.backend.farm.application.orchid.mutation.OrchidGroupMutationEngine;
+import com.greenhouse.backend.farm.application.orchid.mutation.TransformOrchidGroupMutationResult;
+import com.greenhouse.backend.farm.application.orchid.mutation.TransformOrchidGroupMutationSource;
+import com.greenhouse.backend.farm.application.orchid.mutation.TransformOrchidGroupsMutationCommand;
 import com.greenhouse.backend.farm.domain.orchid.mutation.OrchidGroupMutationSource;
 import com.greenhouse.backend.farm.domain.orchid.mutation.OrchidGroupMutationSourceDomain;
 import java.math.BigDecimal;
@@ -27,6 +32,7 @@ class OrchidGroupMutationPostgresE2ETest extends WorkE2ETestBase {
 
 	@Autowired private WorkTestDataSeeder seeder;
 	@Autowired private OrchidGroupMutationEngine mutationEngine;
+	@Autowired private OrchidGroupLedgerPreparationService ledgerPreparationService;
 	@Autowired private PlatformTransactionManager transactionManager;
 	@Autowired private JdbcTemplate jdbcTemplate;
 
@@ -84,6 +90,62 @@ class OrchidGroupMutationPostgresE2ETest extends WorkE2ETestBase {
 				Long.class)).isEqualTo(1L);
 	}
 
+	@Test
+	void serializesConcurrentTransformsSharingTheSameSource() throws Exception {
+		UUID cutoverKey = UUID.randomUUID();
+		LocalDate businessDate = LocalDate.of(2026, 8, 20);
+		ledgerPreparationService.prepare(cutoverKey, businessDate, "mutation-engine-e2e");
+		ledgerPreparationService.start(cutoverKey);
+		ledgerPreparationService.baselineBatch(new BaselineOrchidGroupsCommand(
+				cutoverKey,
+				"GROUPS-0001",
+				List.of(scenario.orchidGroupId()),
+				businessDate));
+		var ready = new CountDownLatch(2);
+		var start = new CountDownLatch(1);
+		var executor = Executors.newFixedThreadPool(2);
+		try {
+			var futures = List.of(
+					executor.submit(() -> transformConcurrently(
+							"transform-a", "6", "8", ready, start)),
+					executor.submit(() -> transformConcurrently(
+							"transform-b", "8", "10", ready, start)));
+			assertThat(ready.await(5, TimeUnit.SECONDS)).isTrue();
+			start.countDown();
+			var outcomes = futures.stream().map(future -> {
+				try {
+					return future.get(10, TimeUnit.SECONDS);
+				} catch (Exception exception) {
+					throw new AssertionError(exception);
+				}
+			}).toList();
+
+			assertThat(outcomes).filteredOn(outcome -> outcome.mutationId() != null).hasSize(1);
+			assertThat(outcomes).filteredOn(outcome -> outcome.failure() != null)
+					.singleElement()
+					.satisfies(outcome -> assertThat(outcome.failure())
+							.isInstanceOf(IllegalArgumentException.class)
+							.hasMessageContaining("가용 수량"));
+		} finally {
+			start.countDown();
+			executor.shutdownNow();
+		}
+
+		assertThat(jdbcTemplate.queryForObject(
+				"SELECT quantity FROM orchid_groups WHERE id = ?",
+				Integer.class,
+				scenario.orchidGroupId())).isEqualTo(40);
+		assertThat(jdbcTemplate.queryForObject(
+				"SELECT COUNT(*) FROM orchid_groups",
+				Long.class)).isEqualTo(2L);
+		assertThat(jdbcTemplate.queryForObject(
+				"SELECT COUNT(*) FROM orchid_group_mutations",
+				Long.class)).isEqualTo(2L);
+		assertThat(jdbcTemplate.queryForObject(
+				"SELECT COUNT(*) FROM orchid_group_mutation_entries",
+				Long.class)).isEqualTo(3L);
+	}
+
 	private Outcome createConcurrently(
 			String referenceId,
 			CountDownLatch ready,
@@ -116,6 +178,50 @@ class OrchidGroupMutationPostgresE2ETest extends WorkE2ETestBase {
 									null),
 							LocalDate.of(2026, 8, 20),
 							"동시 생성 검증"))
+					.mutationId());
+			return new Outcome(mutationId, null);
+		} catch (RuntimeException exception) {
+			return new Outcome(null, exception);
+		}
+	}
+
+	private Outcome transformConcurrently(
+			String referenceId,
+			String startPosition,
+			String endPosition,
+			CountDownLatch ready,
+			CountDownLatch start) throws Exception {
+		ready.countDown();
+		if (!start.await(5, TimeUnit.SECONDS)) {
+			throw new IllegalStateException("동시 구조 변경 요청 시작 신호를 기다리지 못했습니다.");
+		}
+		try {
+			Long mutationId = new TransactionTemplate(transactionManager).execute(status -> mutationEngine.transform(
+					new TransformOrchidGroupsMutationCommand(
+							new OrchidGroupMutationSource(
+									OrchidGroupMutationSourceDomain.WORK,
+									"WORK_EFFECT",
+									referenceId,
+									"EXECUTION:round-1",
+									UUID.randomUUID()),
+							List.of(new TransformOrchidGroupMutationSource(
+									scenario.orchidGroupId(), 60, null, null)),
+							List.of(new TransformOrchidGroupMutationResult(
+									scenario.bedZoneId(),
+									new OrchidGroupMutationDetails(
+											varietyId,
+											60,
+											"4치",
+											2,
+											"정상",
+											"POT",
+											null,
+											false,
+											new BigDecimal(startPosition),
+											new BigDecimal(endPosition),
+											null))),
+							LocalDate.of(2026, 8, 20),
+							"동시 구조 변경 검증"))
 					.mutationId());
 			return new Outcome(mutationId, null);
 		} catch (RuntimeException exception) {

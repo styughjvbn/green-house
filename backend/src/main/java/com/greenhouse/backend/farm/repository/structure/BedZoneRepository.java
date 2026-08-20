@@ -30,6 +30,16 @@ public interface BedZoneRepository extends JpaRepository<BedZone, Long> {
 	@Query("select z from BedZone z join fetch z.physicalBed b join fetch b.house where z.id = :id")
 	Optional<BedZone> findForUpdateById(@Param("id") Long id);
 
+	@Lock(LockModeType.PESSIMISTIC_WRITE)
+	@Query("""
+			select z from BedZone z
+			join fetch z.physicalBed b
+			join fetch b.house
+			where z.id in :ids
+			order by z.id
+			""")
+	List<BedZone> findAllForUpdateByIdIn(@Param("ids") java.util.Collection<Long> ids);
+
 	@Query("""
 			select z from BedZone z
 			join z.physicalBed b
