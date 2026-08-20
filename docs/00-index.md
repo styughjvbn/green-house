@@ -31,6 +31,9 @@ docs/
     work-operation-and-orchid-collection.md
     demo-operations.md
 
+  adr/
+    ADR-001-orchid-group-mutation-engine.md
+
   api/
     openapi.yaml
     API_INDEX.md
@@ -55,6 +58,7 @@ docs/
 | `06-api-guide.md` | OpenAPI 사용 방법과 API 그룹 |
 | `07-deployment.md` | 로컬 실행, 운영 배포, 백업 체크리스트 |
 | `08-roadmap.md` | 이후 확장 후보와 우선순위 |
+| `adr/ADR-001-orchid-group-mutation-engine.md` | OrchidGroup 단일 쓰기 엔진, 운영 데이터 baseline과 전환 원칙 |
 | `api/API_INDEX.md` | 도메인별 OpenAPI slice와 endpoint 위치 |
 | `api/DOMAIN_RULES.md` | API만으로 판단하기 어려운 도메인 규칙 |
 | `api/API_GAP_ANALYSIS.md` | 과거 초안과 현재 구현 API의 차이 |
