@@ -16,6 +16,7 @@ import com.greenhouse.backend.farm.domain.inbound.InboundStatus;
 import com.greenhouse.backend.farm.domain.inbound.InboundType;
 import com.greenhouse.backend.farm.domain.structure.PhysicalBed;
 import com.greenhouse.backend.farm.domain.variety.Variety;
+import com.greenhouse.backend.work.domain.effect.WorkEffectOrchidGroupRelationType;
 import com.greenhouse.backend.work.domain.operation.WorkType;
 import com.greenhouse.backend.work.domain.operation.WorkTypeTemplate;
 import com.greenhouse.backend.work.repository.WorkAppliedEffectRepository;
@@ -198,6 +199,22 @@ class InboundPottingPlanIntegrationTests extends AbstractBackendIntegrationTest 
 		InboundRecord updated = inboundRecordRepository.findWithDetailsById(inboundRecord.getId()).orElseThrow();
 		assertThat(updated.getCreatedOrchidGroup()).isNotNull();
 		assertThat(updated.getStatus()).isEqualTo(InboundStatus.PLACED);
+		var createdGroup = orchidGroupRepository.findById(updated.getCreatedOrchidGroup().getId()).orElseThrow();
+		assertThat(createdGroup.getQuantity()).isEqualTo(100);
+		assertThat(createdGroup.getReservedQuantity()).isZero();
+		assertThat(createdGroup.getStatus()).isEqualTo("정상");
+		assertThat(createdGroup.getPotSize()).isEqualTo("2\"");
+		assertThat(createdGroup.getAgeYear()).isEqualTo(1);
+		assertThat(createdGroup.getVariety().getId()).isEqualTo(inboundRecord.getVariety().getId());
+		assertThat(createdGroup.getBedZone().getId()).isEqualTo(bedZone.getId());
+		assertThat(createdGroup.getInboundRecord().getId()).isEqualTo(inboundRecord.getId());
+		assertThat(appliedEffectRepository.findByWorkOperationIdOrderByIdAsc(operationId)).hasSize(1);
+		assertThat(effectOrchidGroupRepository
+				.findByWorkAppliedEffectWorkOperationIdAndRelationTypeOrderByIdAsc(
+						operationId,
+						WorkEffectOrchidGroupRelationType.RESULT))
+				.singleElement()
+				.satisfies(result -> assertThat(result.getOrchidGroupId()).isEqualTo(createdGroup.getId()));
 		assertThat(TimeConfig.toFarmTime(targetExecutionRepository
 				.findByTargetWorkOperationIdOrderByIdAsc(operationId)
 				.getFirst().getCompletedAt()).toLocalDate())

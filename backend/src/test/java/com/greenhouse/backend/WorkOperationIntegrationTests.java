@@ -229,6 +229,28 @@ class WorkOperationIntegrationTests extends AbstractBackendIntegrationTest {
 		org.assertj.core.api.Assertions.assertThat(partiallyDiscarded.getQuantity()).isEqualTo(70);
 		org.assertj.core.api.Assertions.assertThat(partiallyDiscarded.getStatus()).isEqualTo("정상");
 
+		mockMvc.perform(post(
+				"/api/work-operations/{id}/targets/{targetId}/complete", partialOperationId, partialTargetId)
+				.contentType(MediaType.APPLICATION_JSON)
+				.content("""
+						{
+						  "worker": "중복 폐기 담당자",
+						  "resultDetails": {
+						    "discardQuantity": 10,
+						    "reason": "중복 요청"
+						  }
+						}
+						"""))
+				.andExpect(status().isOk())
+				.andExpect(jsonPath("$.data.targets[0].resultDetails.discardedQuantity").value(30))
+				.andExpect(jsonPath("$.data.targets[0].resultDetails.remainingQuantity").value(70));
+
+		OrchidGroup afterDuplicate = orchidGroupRepository.findById(targetGroup.getId()).orElseThrow();
+		org.assertj.core.api.Assertions.assertThat(afterDuplicate.getQuantity()).isEqualTo(70);
+		org.assertj.core.api.Assertions.assertThat(
+				workAppliedEffectRepository.countByWorkOperationIdAndTargetId(partialOperationId, partialTargetId))
+				.isEqualTo(1);
+
 		mockMvc.perform(post("/api/work-operations/{id}/complete", partialOperationId))
 				.andExpect(status().isOk());
 
