@@ -5,6 +5,8 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import com.greenhouse.backend.common.exception.ConflictException;
 import com.greenhouse.backend.farm.application.orchid.mutation.BaselineOrchidGroupsCommand;
+import com.greenhouse.backend.farm.application.orchid.mutation.OrchidGroupLedgerCutoverCommand;
+import com.greenhouse.backend.farm.application.orchid.mutation.OrchidGroupLedgerCutoverService;
 import com.greenhouse.backend.farm.application.orchid.mutation.OrchidGroupLedgerPreparationService;
 import com.greenhouse.backend.farm.application.orchid.mutation.OrchidGroupLedgerReconciliationService;
 import com.greenhouse.backend.farm.application.orchid.mutation.OrchidGroupLedgerReconciliationStage;
@@ -35,6 +37,7 @@ class OrchidGroupLedgerReconciliationIntegrationTest extends AbstractBackendInte
 
 	@Autowired private OrchidGroupLedgerReconciliationService reconciliationService;
 	@Autowired private OrchidGroupLedgerPreparationService preparationService;
+	@Autowired private OrchidGroupLedgerCutoverService cutoverService;
 	@Autowired private OrchidGroupLedgerCoverageRepository coverageRepository;
 	@Autowired private EntityManager entityManager;
 
@@ -120,6 +123,35 @@ class OrchidGroupLedgerReconciliationIntegrationTest extends AbstractBackendInte
 				.hasMessageContaining("PREPARING");
 	}
 
+	@Test
+	void resumesDeterministicBaselineBatchesAndActivatesOnlyAfterReconciliation() {
+		createOrchidGroup(954);
+		createOrchidGroup(955);
+		UUID cutoverKey = UUID.randomUUID();
+		var baselineCommand = new OrchidGroupLedgerCutoverCommand(
+				cutoverKey, BUSINESS_DATE, "1.0.0", "1.1.0", false);
+
+		var first = cutoverService.execute(baselineCommand);
+		var replayed = cutoverService.execute(baselineCommand);
+
+		assertThat(first.activated()).isFalse();
+		assertThat(first.baselineBatchCount()).isEqualTo(1);
+		assertThat(first.baselineGroupCount()).isEqualTo(2);
+		assertThat(replayed.reconciliation().ready()).isTrue();
+		assertThat(replayed.reconciliation().mutationCount()).isEqualTo(1);
+		assertThat(replayed.reconciliation().entryCount()).isEqualTo(2);
+
+		var activated = cutoverService.execute(new OrchidGroupLedgerCutoverCommand(
+				cutoverKey, BUSINESS_DATE, "1.0.0", "1.1.0", true));
+
+		assertThat(activated.activated()).isTrue();
+		assertThat(activated.reconciliation().stage())
+				.isEqualTo(OrchidGroupLedgerReconciliationStage.ACTIVE);
+		var coverage = coverageRepository.findByCutoverKey(cutoverKey).orElseThrow();
+		assertThat(coverage.getBaselineGroupCount()).isEqualTo(2);
+		assertThat(coverage.getBaselineFingerprint()).hasSize(64);
+	}
+
 	private OrchidGroup createOrchidGroup(int houseNumber) {
 		House house = new House(houseNumber, "Ledger 대사 테스트동");
 		PhysicalBed bed = new PhysicalBed(1, 1);
@@ -131,7 +163,7 @@ class OrchidGroupLedgerReconciliationIntegrationTest extends AbstractBackendInte
 		Variety variety = varietyRepository.save(new Variety(
 				"LEDGER-RECONCILIATION-" + houseNumber,
 				"Phalaenopsis",
-				"Ledger Reconciliation",
+				"Ledger Reconciliation " + houseNumber,
 				null,
 				"3.5치",
 				true,

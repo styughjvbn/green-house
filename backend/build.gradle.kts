@@ -81,6 +81,14 @@ tasks.register<JavaExec>("orchidLedgerReconcile") {
 	mainClass.set("com.greenhouse.backend.farm.application.orchid.mutation.OrchidGroupLedgerReconciliationCli")
 }
 
+tasks.register<JavaExec>("orchidLedgerCutover") {
+	group = "verification"
+	description = "Runs resumable OrchidGroup baseline preparation and optional activation."
+	dependsOn(tasks.named("classes"))
+	classpath = sourceSets["main"].runtimeClasspath
+	mainClass.set("com.greenhouse.backend.farm.application.orchid.mutation.OrchidGroupLedgerCutoverCli")
+}
+
 tasks.register<Test>("workE2eTest") {
 	group = "verification"
 	description = "Runs the Work API contract E2E tests against PostgreSQL."

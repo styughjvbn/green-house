@@ -15,6 +15,7 @@ import com.greenhouse.backend.farm.repository.orchid.OrchidGroupRepository;
 import com.greenhouse.backend.farm.repository.orchid.mutation.OrchidGroupLedgerCoverageRepository;
 import com.greenhouse.backend.farm.repository.orchid.mutation.OrchidGroupMutationEntryRepository;
 import com.greenhouse.backend.farm.repository.orchid.mutation.OrchidGroupMutationRepository;
+import com.greenhouse.backend.farm.repository.orchid.mutation.OrchidGroupWriteFenceRepository;
 import java.time.Clock;
 import java.time.Instant;
 import java.time.LocalDate;
@@ -38,6 +39,8 @@ public class OrchidGroupLedgerPreparationService {
 	private final OrchidGroupMutationEntryRepository entryRepository;
 	private final OrchidGroupMutationFingerprint fingerprint;
 	private final OrchidGroupMutationReplayResolver replayResolver;
+	private final OrchidGroupWriteFenceRepository writeFenceRepository;
+	private final OrchidGroupLedgerReconciliationService reconciliationService;
 	private final Clock clock;
 
 	@Transactional
@@ -74,6 +77,21 @@ public class OrchidGroupLedgerPreparationService {
 				});
 	}
 
+	@Transactional(readOnly = true)
+	public void validatePreparation(
+			UUID cutoverKey,
+			LocalDate effectiveBusinessDate,
+			String minimumWriterVersion) {
+		OrchidGroupLedgerCoverage coverage = findCoverage(cutoverKey);
+		if (!coverage.hasSamePreparation(
+				ENGINE_SCHEMA_VERSION,
+				SNAPSHOT_SCHEMA_VERSION,
+				effectiveBusinessDate,
+				minimumWriterVersion)) {
+			throw new ConflictException("Cutover command와 기존 coverage 설정이 다릅니다.");
+		}
+	}
+
 	@Transactional
 	public void start(UUID cutoverKey) {
 		OrchidGroupLedgerCoverage coverage = findCoverage(cutoverKey);
@@ -91,6 +109,9 @@ public class OrchidGroupLedgerPreparationService {
 		if (coverage.getStatus() != OrchidGroupLedgerCoverageStatus.PREPARING
 				|| coverage.getBaselineStartedAt() == null) {
 			throw new IllegalStateException("시작된 PREPARING coverage에서만 baseline batch를 실행할 수 있습니다.");
+		}
+		if (!coverage.getEffectiveBusinessDate().equals(command.effectiveBusinessDate())) {
+			throw new ConflictException("Baseline batch 업무일은 coverage 적용 업무일과 같아야 합니다.");
 		}
 
 		List<OrchidGroup> groups = orchidGroupRepository.findAllForUpdateByIdIn(command.orchidGroupIds());
@@ -126,6 +147,7 @@ public class OrchidGroupLedgerPreparationService {
 				command.effectiveBusinessDate(),
 				"OrchidGroup mutation ledger baseline",
 				ENGINE_SCHEMA_VERSION));
+		writeFenceRepository.authorizeBaseline(command.cutoverKey());
 		List<OrchidGroupMutationEntry> entries = IntStream.range(0, groups.size())
 				.mapToObj(index -> {
 					OrchidGroup group = groups.get(index);
@@ -136,6 +158,40 @@ public class OrchidGroupLedgerPreparationService {
 				.toList();
 		entryRepository.saveAll(entries);
 		return OrchidGroupMutationResult.from(mutation, entries);
+	}
+
+	@Transactional
+	public OrchidGroupLedgerReconciliationReport activate(
+			UUID cutoverKey,
+			String currentWriterVersion) {
+		OrchidGroupLedgerCoverage coverage = coverageRepository.findForUpdateByCutoverKey(cutoverKey)
+				.orElseThrow(() -> new NotFoundException("OrchidGroup ledger coverage를 찾을 수 없습니다."));
+		if (!OrchidGroupLedgerWriterVersion.satisfiesMinimum(
+				currentWriterVersion, coverage.getMinimumWriterVersion())) {
+			throw new ConflictException("현재 writer version이 coverage 최소 버전보다 낮습니다.");
+		}
+		writeFenceRepository.lockOrchidGroupsForCutover();
+		OrchidGroupLedgerReconciliationReport report = reconciliationService.reconcile();
+		if (!report.ready() || !cutoverKey.equals(report.cutoverKey())) {
+			throw new ConflictException("대사를 통과한 동일 cutover coverage만 ACTIVE로 전환할 수 있습니다.");
+		}
+		if (coverage.getStatus() == OrchidGroupLedgerCoverageStatus.ACTIVE) {
+			return report;
+		}
+		if (coverage.getStatus() != OrchidGroupLedgerCoverageStatus.PREPARING) {
+			throw new ConflictException("PREPARING coverage만 ACTIVE로 전환할 수 있습니다.");
+		}
+		coverage.activate(
+				Instant.now(clock),
+				report.baselineGroupCount(),
+				report.baselineFingerprint());
+		coverageRepository.flush();
+		OrchidGroupLedgerReconciliationReport activeReport = reconciliationService.reconcile();
+		if (!activeReport.ready()
+				|| activeReport.stage() != OrchidGroupLedgerReconciliationStage.ACTIVE) {
+			throw new ConflictException("ACTIVE 전환 후 ledger 대사가 일치하지 않습니다.");
+		}
+		return activeReport;
 	}
 
 	private OrchidGroupLedgerCoverage findCoverage(UUID cutoverKey) {

@@ -60,6 +60,10 @@ app:
     mutation-limit-per-minute: ${DEMO_MUTATION_LIMIT_PER_MINUTE:30}
     mutation-limit-per-day: ${DEMO_MUTATION_LIMIT_PER_DAY:300}
     max-request-bytes: ${DEMO_MAX_REQUEST_BYTES:262144}
+  orchid-ledger:
+    writer-mode: ${ORCHID_LEDGER_WRITER_MODE:LEGACY}
+    writer-version: ${ORCHID_LEDGER_WRITER_VERSION:0.0.0}
+    startup-guard-enabled: ${ORCHID_LEDGER_STARTUP_GUARD_ENABLED:true}
   cors:
     frontend-origin-patterns: "${FRONTEND_ORIGIN_PATTERNS:${FRONTEND_ORIGINS:${FRONTEND_ORIGIN:http://localhost:*,http://127.0.0.1:*,http://192.168.0.201:*,http://192.168.0.*:*}}}"
 

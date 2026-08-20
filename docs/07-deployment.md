@@ -61,10 +61,17 @@ POSTGRES_REWRITE_BATCHED_INSERTS
 FLYWAY_URL
 FLYWAY_USERNAME
 FLYWAY_PASSWORD
+ORCHID_LEDGER_WRITER_MODE
+ORCHID_LEDGER_WRITER_VERSION
+ORCHID_LEDGER_STARTUP_GUARD_ENABLED
 ```
 
 운영에서 `JPA_DDL_AUTO`는 `validate`로 두고 스키마 변경은 Flyway 마이그레이션으로만 적용한다.
 `HIBERNATE_JDBC_BATCH_SIZE`의 기본값은 `50`이며 PostgreSQL JDBC batch 재작성은 기본 활성화한다.
+난 묶음 ledger가 `ACTIVE`인 DB에는 `ORCHID_LEDGER_WRITER_MODE=ENGINE`과 coverage의
+최소 버전 이상인 `ORCHID_LEDGER_WRITER_VERSION`을 설정한다. 조건을 만족하지 못한
+인스턴스는 startup guard에서 기동이 거부된다. guard 비활성화는 전용 점검·cutover
+명령 내부에서만 사용한다.
 
 인증을 적용하는 경우 다음 값을 별도로 관리한다.
 
@@ -183,6 +190,7 @@ pg_dump -U greenhouse greenhouse > backup_$(date +%Y%m%d).sql
 - V12는 운영 변경 감사용 `audit_events`와 조회 인덱스를 추가한다.
 - V20은 기존 자리 이동·합식 실행 효과의 JSON 원본 목록을 `work_effect_orchid_groups`의 `SOURCE` 관계로 보강한다. 난 묶음 수량·상태와 기존 직접 계보 행은 변경하지 않는다.
 - V21~V22는 난 묶음 Mutation ledger와 coverage를 추가하고 동시에 하나의 `PREPARING` 또는 `ACTIVE` coverage만 존재하도록 제한한다. 기존 난 묶음의 baseline은 자동 생성하지 않는다.
+- V23은 `ACTIVE` coverage에서 Mutation context 없는 난 묶음 INSERT·UPDATE와 모든 DELETE를 차단하고, 커밋 시 변경 revision에 대응하는 MutationEntry를 검증한다. `PREPARING`에서는 아직 차단하지 않는다.
 
 운영 custom dump로 로컬 개발 DB를 초기화할 때는 다음 스크립트를 사용한다. 백업을 생략하면 `temp/`의 최신 `*.dump.gz` 또는 `*.dump`를 선택한다. 스크립트는 로컬 DB만 허용하며 기존 백엔드를 종료하고, 복원 후 Flyway 적용·Hibernate 스키마 검증·작업 V2 무결성 검사를 수행한다.
 
@@ -224,8 +232,35 @@ fingerprint를 포함한다. `PRE_BASELINE`, `BASELINE_PREPARING`, `ACTIVE` 단�
 
 이 명령은 baseline 생성, coverage 활성화, 데이터 보정을 수행하지 않는다. 오류가
 있으면 대상 ID와 코드로 원인을 보정한 뒤 새 복원본에서 rehearsal을 다시 시작한다.
-실제 cutover와 `ACTIVE` 전환은 write fence와 writer version 검증이 구현된 후 별도
-승인된 절차로만 수행한다.
+
+baseline 쓰기 rehearsal은 DB writer 계정과 고정한 cutover key로 실행한다. 500개 ID
+단위의 결정적 batch key를 사용하므로 동일 명령을 재실행하면 완료 batch는 기존
+결과를 반환하고 나머지를 이어서 적재한다.
+
+```bash
+cd backend
+CUTOVER_KEY='00000000-0000-0000-0000-000000000000'
+DATABASE_URL=jdbc:postgresql://localhost:5432/greenhouse_rehearsal \
+DATABASE_USERNAME=greenhouse_rehearsal_writer \
+DATABASE_PASSWORD='...' \
+./gradlew orchidLedgerCutover --args="\
+  --cutover-key=${CUTOVER_KEY} \
+  --effective-business-date=2026-08-20 \
+  --minimum-writer-version=1.0.0 \
+  --current-writer-version=1.0.0 \
+  --activate=false \
+  --confirmation=BASELINE:${CUTOVER_KEY}"
+```
+
+`--activate=true`는 애플리케이션 쓰기를 중단하고 구버전 인스턴스를 모두 종료한
+상태에서만 사용한다. 명령은 난 묶음 테이블을 잠근 뒤 최종 대사를 다시 수행하며,
+확인 문구도 `ACTIVATE:{cutoverKey}`로 바뀐다. ACTIVE 이후에는 DB fence를 해제하거나
+LEGACY writer로 fallback하지 않고 roll-forward한다.
+
+현재 구현 단계에서는 기존 Farm·Work·Sales·Inbound write path의 Engine routing이
+아직 완료되지 않았다. 따라서 복원 DB의 `--activate=false` rehearsal까지만 허용하며,
+retirement inventory가 비고 전체 회귀·smoke 절차가 준비되기 전 운영 DB의
+`--activate=true` 실행은 금지한다.
 
 ### 데모 환경
 

@@ -1,6 +1,7 @@
 package com.greenhouse.backend.work.e2e;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import com.greenhouse.backend.farm.application.orchid.mutation.CreateOrchidGroupMutationCommand;
 import com.greenhouse.backend.farm.application.orchid.mutation.BaselineOrchidGroupsCommand;
@@ -11,6 +12,9 @@ import com.greenhouse.backend.farm.application.orchid.mutation.CorrectOrchidGrou
 import com.greenhouse.backend.farm.application.orchid.mutation.ConsumeOrchidGroupReservationsMutationCommand;
 import com.greenhouse.backend.farm.application.orchid.mutation.DiscardOrchidGroupMutationCommand;
 import com.greenhouse.backend.farm.application.orchid.mutation.OrchidGroupLedgerPreparationService;
+import com.greenhouse.backend.farm.application.orchid.mutation.OrchidGroupLedgerCutoverCommand;
+import com.greenhouse.backend.farm.application.orchid.mutation.OrchidGroupLedgerCutoverService;
+import com.greenhouse.backend.farm.application.orchid.mutation.OrchidGroupLedgerReconciliationService;
 import com.greenhouse.backend.farm.application.orchid.mutation.OrchidGroupMutationDetails;
 import com.greenhouse.backend.farm.application.orchid.mutation.OrchidGroupMutationEngine;
 import com.greenhouse.backend.farm.application.orchid.mutation.OrchidGroupQuantityMutationItem;
@@ -33,6 +37,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.support.TransactionTemplate;
@@ -43,6 +48,8 @@ class OrchidGroupMutationPostgresE2ETest extends WorkE2ETestBase {
 	@Autowired private WorkTestDataSeeder seeder;
 	@Autowired private OrchidGroupMutationEngine mutationEngine;
 	@Autowired private OrchidGroupLedgerPreparationService ledgerPreparationService;
+	@Autowired private OrchidGroupLedgerCutoverService ledgerCutoverService;
+	@Autowired private OrchidGroupLedgerReconciliationService ledgerReconciliationService;
 	@Autowired private PlatformTransactionManager transactionManager;
 	@Autowired private JdbcTemplate jdbcTemplate;
 
@@ -401,6 +408,166 @@ class OrchidGroupMutationPostgresE2ETest extends WorkE2ETestBase {
 				Long.class)).isEqualTo(1L);
 	}
 
+	@Test
+	void enforcesTheActiveLedgerWriteFenceAndRollsBackMutationContext() {
+		UUID cutoverKey = UUID.randomUUID();
+		LocalDate businessDate = LocalDate.of(2026, 8, 20);
+		var cutover = ledgerCutoverService.execute(new OrchidGroupLedgerCutoverCommand(
+				cutoverKey, businessDate, "1.0.0", "1.0.0", true));
+
+		assertThat(cutover.activated()).isTrue();
+		assertThat(cutover.reconciliation().ready()).isTrue();
+		assertThatThrownBy(() -> jdbcTemplate.update(
+				"UPDATE orchid_groups SET state_revision = state_revision + 1 WHERE id = ?",
+				scenario.orchidGroupId()))
+				.isInstanceOf(DataIntegrityViolationException.class)
+				.hasMessageContaining("Mutation context");
+		assertThatThrownBy(() -> jdbcTemplate.update("""
+				INSERT INTO orchid_groups (
+				  created_at, updated_at, age_year, genus, placement_type, pot_size, pot_size_code,
+				  quantity, sort_order, status, variety_name, bed_zone_id, split_placement_allowed,
+				  variety_id, start_position, end_position, reserved_quantity, state_revision
+				)
+				SELECT CURRENT_TIMESTAMP, CURRENT_TIMESTAMP, age_year, genus, placement_type,
+				       pot_size, pot_size_code, quantity, sort_order + 100, status, variety_name,
+				       bed_zone_id, split_placement_allowed, variety_id, 11, 12, 0, 1
+				FROM orchid_groups WHERE id = ?
+				""", scenario.orchidGroupId()))
+				.isInstanceOf(DataIntegrityViolationException.class)
+				.hasMessageContaining("Mutation context");
+		assertThatThrownBy(() -> jdbcTemplate.update(
+				"DELETE FROM orchid_groups WHERE id = ?", scenario.orchidGroupId()))
+				.isInstanceOf(DataIntegrityViolationException.class)
+				.hasMessageContaining("물리 삭제");
+
+		var created = new TransactionTemplate(transactionManager).execute(status ->
+				mutationEngine.create(new CreateOrchidGroupMutationCommand(
+						new OrchidGroupMutationSource(
+								OrchidGroupMutationSourceDomain.FARM,
+								"ORCHID_GROUP_COMMAND",
+								"active-fence-create",
+								"CREATE",
+								UUID.randomUUID()),
+						scenario.bedZoneId(),
+						new OrchidGroupMutationDetails(
+								varietyId,
+								10,
+								"4치",
+								2,
+								"정상",
+								"POT",
+								null,
+								false,
+								new BigDecimal("6"),
+								new BigDecimal("8"),
+								null),
+						businessDate,
+						"ACTIVE 생성 검증")));
+		assertThat(created).isNotNull();
+		Long createdGroupId = created.entries().getFirst().orchidGroupId();
+		new TransactionTemplate(transactionManager).executeWithoutResult(status ->
+				mutationEngine.discard(new DiscardOrchidGroupMutationCommand(
+						new OrchidGroupMutationSource(
+								OrchidGroupMutationSourceDomain.FARM,
+								"ORCHID_GROUP_COMMAND",
+								"active-fence-discard",
+								"DISCARD",
+								UUID.randomUUID()),
+						scenario.orchidGroupId(),
+						10,
+						businessDate,
+						"ACTIVE 수정 검증")));
+
+		new TransactionTemplate(transactionManager).executeWithoutResult(status ->
+				mutationEngine.correct(new CorrectOrchidGroupsMutationCommand(
+						new OrchidGroupMutationSource(
+								OrchidGroupMutationSourceDomain.WORK,
+								"WORK_EFFECT",
+								"active-fence-correction",
+								"CORRECTION",
+								UUID.randomUUID()),
+						List.of(new CorrectOrchidGroupMutationItem(createdGroupId, 11, "수량 보정")),
+						RelatedOrchidGroupMutations.current(List.of(created.mutationId())),
+						businessDate,
+						"ACTIVE 보정 flush 순서 검증")));
+		new TransactionTemplate(transactionManager).executeWithoutResult(status ->
+				mutationEngine.transform(new TransformOrchidGroupsMutationCommand(
+						new OrchidGroupMutationSource(
+								OrchidGroupMutationSourceDomain.WORK,
+								"WORK_EFFECT",
+								"active-fence-transform",
+								"EXECUTION:round-1",
+								UUID.randomUUID()),
+						List.of(new TransformOrchidGroupMutationSource(
+								scenario.orchidGroupId(), 10, null, null)),
+						List.of(new TransformOrchidGroupMutationResult(
+								scenario.bedZoneId(),
+								new OrchidGroupMutationDetails(
+										varietyId,
+										10,
+										"4치",
+										2,
+										"정상",
+										"POT",
+										null,
+										false,
+										new BigDecimal("9"),
+										new BigDecimal("10"),
+										null))),
+						businessDate,
+						"ACTIVE transform flush 순서 검증")));
+
+		assertThat(jdbcTemplate.queryForObject(
+				"SELECT state_revision FROM orchid_groups WHERE id = ?",
+				Long.class,
+				createdGroupId)).isEqualTo(2L);
+		assertThat(jdbcTemplate.queryForObject(
+				"SELECT quantity FROM orchid_groups WHERE id = ?",
+				Integer.class,
+				scenario.orchidGroupId())).isEqualTo(80);
+
+		assertThatThrownBy(() -> new TransactionTemplate(transactionManager).executeWithoutResult(status -> {
+			mutationEngine.discard(new DiscardOrchidGroupMutationCommand(
+					new OrchidGroupMutationSource(
+							OrchidGroupMutationSourceDomain.FARM,
+							"ORCHID_GROUP_COMMAND",
+							"active-fence-rollback",
+							"DISCARD",
+							UUID.randomUUID()),
+					scenario.orchidGroupId(),
+					5,
+					businessDate,
+					"ACTIVE rollback 검증"));
+			throw new RollbackProbeException();
+		})).isInstanceOf(RollbackProbeException.class);
+		assertThat(jdbcTemplate.queryForObject(
+				"SELECT quantity FROM orchid_groups WHERE id = ?",
+				Integer.class,
+				scenario.orchidGroupId())).isEqualTo(80);
+		assertThatThrownBy(() -> jdbcTemplate.update(
+				"UPDATE orchid_groups SET state_revision = state_revision + 1 WHERE id = ?",
+				scenario.orchidGroupId()))
+				.isInstanceOf(DataIntegrityViolationException.class)
+				.hasMessageContaining("Mutation context");
+
+		assertThatThrownBy(() -> new TransactionTemplate(transactionManager).executeWithoutResult(status -> {
+			jdbcTemplate.queryForObject(
+					"SELECT set_config('greenhouse.orchid_group_mutation', 'MUTATION:999999', TRUE)",
+					String.class);
+			jdbcTemplate.update(
+					"UPDATE orchid_groups SET state_revision = state_revision + 1 WHERE id = ?",
+					scenario.orchidGroupId());
+		}))
+				.rootCause()
+				.hasMessageContaining("MutationEntry");
+
+		assertThat(jdbcTemplate.queryForObject(
+				"SELECT COUNT(*) FROM orchid_group_mutations", Long.class)).isEqualTo(5L);
+		assertThat(jdbcTemplate.queryForObject(
+				"SELECT COUNT(*) FROM orchid_group_mutation_entries", Long.class)).isEqualTo(6L);
+		assertThat(ledgerReconciliationService.reconcile().ready()).isTrue();
+	}
+
 	private Outcome createConcurrently(
 			String referenceId,
 			CountDownLatch ready,
@@ -622,5 +789,8 @@ class OrchidGroupMutationPostgresE2ETest extends WorkE2ETestBase {
 	}
 
 	private record MutationIds(Long consumedMutationId, Long restoredMutationId) {
+	}
+
+	private static final class RollbackProbeException extends RuntimeException {
 	}
 }

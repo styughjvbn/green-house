@@ -19,6 +19,7 @@ import com.greenhouse.backend.farm.repository.inbound.InboundRecordRepository;
 import com.greenhouse.backend.farm.repository.orchid.mutation.OrchidGroupMutationEntryRepository;
 import com.greenhouse.backend.farm.repository.orchid.mutation.OrchidGroupMutationRelationRepository;
 import com.greenhouse.backend.farm.repository.orchid.mutation.OrchidGroupMutationRepository;
+import com.greenhouse.backend.farm.repository.orchid.mutation.OrchidGroupWriteFenceRepository;
 import com.greenhouse.backend.farm.repository.structure.BedZoneRepository;
 import com.greenhouse.backend.farm.repository.variety.VarietyRepository;
 import java.math.BigDecimal;
@@ -54,6 +55,7 @@ public class OrchidGroupMutationEngine {
 	private final OrchidGroupMutationRepository mutationRepository;
 	private final OrchidGroupMutationEntryRepository entryRepository;
 	private final OrchidGroupMutationRelationRepository relationRepository;
+	private final OrchidGroupWriteFenceRepository writeFenceRepository;
 	private final OrchidPlacementPolicy orchidPlacementPolicy;
 	private final OrchidGroupMutationFingerprint fingerprint;
 	private final OrchidGroupMutationReplayResolver replayResolver;
@@ -236,6 +238,13 @@ public class OrchidGroupMutationEngine {
 		Map<Long, Variety> varieties = findVarieties(command.results().stream()
 				.map(result -> result.details().varietyId())
 				.collect(Collectors.toSet()));
+		Map<Long, Integer> nextSortOrderByZoneId = currentMaxSortOrders(zones.keySet());
+		OrchidGroupMutation mutation = saveMutation(
+				OrchidGroupMutationType.TRANSFORM,
+				command.source(),
+				commandFingerprint,
+				command.effectiveBusinessDate(),
+				command.reason());
 		List<PendingChange> sourceChanges = new ArrayList<>();
 		for (TransformOrchidGroupMutationSource sourceCommand : command.sources()) {
 			OrchidGroup sourceGroup = sourceById.get(sourceCommand.orchidGroupId());
@@ -251,7 +260,6 @@ public class OrchidGroupMutationEngine {
 					sourceGroup, revisionBefore, beforeState, afterState));
 		}
 
-		Map<Long, Integer> nextSortOrderByZoneId = currentMaxSortOrders(zones.keySet());
 		List<OrchidGroup> resultGroups = new ArrayList<>();
 		for (TransformOrchidGroupMutationResult resultCommand : command.results()) {
 			BedZone zone = zones.get(resultCommand.bedZoneId());
@@ -268,12 +276,6 @@ public class OrchidGroupMutationEngine {
 					zone, variety, resultCommand.details(), nextSortOrder));
 		}
 
-		OrchidGroupMutation mutation = saveMutation(
-				OrchidGroupMutationType.TRANSFORM,
-				command.source(),
-				commandFingerprint,
-				command.effectiveBusinessDate(),
-				command.reason());
 		List<OrchidGroupMutationEntry> entries = new ArrayList<>();
 		sourceChanges.forEach(change -> entries.add(OrchidGroupMutationEntry.changed(
 				mutation,
@@ -611,37 +613,43 @@ public class OrchidGroupMutationEngine {
 			return replay.get();
 		}
 
-		List<PendingChange> changes = new ArrayList<>();
-		for (CorrectOrchidGroupMutationItem item : command.items()) {
-			OrchidGroup group = groupsById.get(item.orchidGroupId());
-			requireBaseline(group);
-			long revisionBefore = group.getStateRevision();
-			OrchidGroupStateSnapshot beforeState = OrchidGroupStateSnapshot.from(group);
-			group.correctQuantityAndStatus(item.correctedQuantity(), item.correctedStatus());
-			OrchidGroupStateSnapshot afterState = OrchidGroupStateSnapshot.from(group);
-			if (beforeState.equals(afterState)) {
-				continue;
-			}
-			group.advanceStateRevision();
-			changes.add(new PendingChange(group, revisionBefore, beforeState, afterState));
-		}
-		if (changes.isEmpty()) {
+		Set<Long> changedGroupIds = command.items().stream()
+				.filter(item -> {
+					OrchidGroup group = groupsById.get(item.orchidGroupId());
+					requireBaseline(group);
+					return !group.getQuantity().equals(item.correctedQuantity())
+							|| !group.getStatus().equals(item.correctedStatus());
+				})
+				.map(CorrectOrchidGroupMutationItem::orchidGroupId)
+				.collect(Collectors.toCollection(LinkedHashSet::new));
+		if (changedGroupIds.isEmpty()) {
 			throw new IllegalArgumentException("보정 Mutation에는 현재 상태와 다른 값이 필요합니다.");
 		}
-		Set<Long> changedGroupIds = changes.stream()
-				.map(change -> change.group().getId())
-				.collect(Collectors.toCollection(LinkedHashSet::new));
 		List<OrchidGroupMutation> relationTargets = findRelationTargets(
 				command.correctedMutations(),
 				changedGroupIds,
 				Set.of(OrchidGroupMutationType.CREATE, OrchidGroupMutationType.TRANSFORM));
-
 		OrchidGroupMutation mutation = saveMutation(
 				OrchidGroupMutationType.CORRECTION,
 				command.source(),
 				commandFingerprint,
 				command.effectiveBusinessDate(),
 				command.reason());
+
+		List<PendingChange> changes = new ArrayList<>();
+		for (CorrectOrchidGroupMutationItem item : command.items()) {
+			if (!changedGroupIds.contains(item.orchidGroupId())) {
+				continue;
+			}
+			OrchidGroup group = groupsById.get(item.orchidGroupId());
+			long revisionBefore = group.getStateRevision();
+			OrchidGroupStateSnapshot beforeState = OrchidGroupStateSnapshot.from(group);
+			group.correctQuantityAndStatus(item.correctedQuantity(), item.correctedStatus());
+			OrchidGroupStateSnapshot afterState = OrchidGroupStateSnapshot.from(group);
+			group.advanceStateRevision();
+			changes.add(new PendingChange(group, revisionBefore, beforeState, afterState));
+		}
+
 		List<OrchidGroupMutationEntry> entries = changes.stream()
 				.map(change -> OrchidGroupMutationEntry.changed(
 						mutation,
@@ -780,7 +788,7 @@ public class OrchidGroupMutationEngine {
 			String commandFingerprint,
 			LocalDate effectiveBusinessDate,
 			String reason) {
-		return mutationRepository.save(new OrchidGroupMutation(
+		OrchidGroupMutation mutation = mutationRepository.save(new OrchidGroupMutation(
 				mutationType,
 				source,
 				commandFingerprint,
@@ -788,6 +796,8 @@ public class OrchidGroupMutationEngine {
 				effectiveBusinessDate,
 				reason,
 				MUTATION_SCHEMA_VERSION));
+		writeFenceRepository.authorizeMutation(mutation.getId());
+		return mutation;
 	}
 
 	private OrchidGroup findGroupForUpdate(Long orchidGroupId) {

@@ -15,7 +15,8 @@ public final class OrchidGroupLedgerReconciliationCli {
 			"--spring.flyway.enabled",
 			"--spring.jpa.hibernate.ddl-auto",
 			"--spring.datasource.hikari.read-only",
-			"--app.settlement.rebuild-on-startup");
+			"--app.settlement.rebuild-on-startup",
+			"--app.orchid-ledger.startup-guard-enabled");
 
 	private OrchidGroupLedgerReconciliationCli() {
 	}
@@ -26,6 +27,7 @@ public final class OrchidGroupLedgerReconciliationCli {
 		System.setProperty("spring.jpa.hibernate.ddl-auto", "validate");
 		System.setProperty("spring.datasource.hikari.read-only", "true");
 		System.setProperty("app.settlement.rebuild-on-startup", "false");
+		System.setProperty("app.orchid-ledger.startup-guard-enabled", "false");
 
 		int exitCode;
 		try (ConfigurableApplicationContext context = new SpringApplicationBuilder(BackendApplication.class)
