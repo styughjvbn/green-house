@@ -4,6 +4,8 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import com.greenhouse.backend.farm.application.orchid.mutation.CreateOrchidGroupMutationCommand;
 import com.greenhouse.backend.farm.application.orchid.mutation.BaselineOrchidGroupsCommand;
+import com.greenhouse.backend.farm.application.orchid.mutation.CreateInboundOrchidGroupsMutationCommand;
+import com.greenhouse.backend.farm.application.orchid.mutation.CreateOrchidGroupMutationItem;
 import com.greenhouse.backend.farm.application.orchid.mutation.OrchidGroupLedgerPreparationService;
 import com.greenhouse.backend.farm.application.orchid.mutation.OrchidGroupMutationDetails;
 import com.greenhouse.backend.farm.application.orchid.mutation.OrchidGroupMutationEngine;
@@ -146,6 +148,63 @@ class OrchidGroupMutationPostgresE2ETest extends WorkE2ETestBase {
 				Long.class)).isEqualTo(3L);
 	}
 
+	@Test
+	void allowsOnlyOneCreationMutationForTheSameInboundRecord() throws Exception {
+		Long inboundRecordId = jdbcTemplate.queryForObject("""
+				INSERT INTO inbound_records (
+				  created_at, updated_at, inbound_date, inbound_type, status,
+				  bottle_count, estimated_quantity, temp_location, pot_size, variety_id
+				) VALUES (
+				  TIMESTAMP '2026-08-20 00:00:00', TIMESTAMP '2026-08-20 00:00:00',
+				  DATE '2026-08-20', 'FLASK_SEEDLING', 'POTTING_PENDING',
+				  10, 100, '배양실', '2"', ?
+				)
+				RETURNING id
+				""", Long.class, varietyId);
+		var ready = new CountDownLatch(2);
+		var start = new CountDownLatch(1);
+		var executor = Executors.newFixedThreadPool(2);
+		try {
+			var futures = List.of("inbound-a", "inbound-b").stream()
+					.map(referenceId -> executor.submit(() -> createInboundConcurrently(
+							referenceId, inboundRecordId, ready, start)))
+					.toList();
+			assertThat(ready.await(5, TimeUnit.SECONDS)).isTrue();
+			start.countDown();
+			var outcomes = futures.stream().map(future -> {
+				try {
+					return future.get(10, TimeUnit.SECONDS);
+				} catch (Exception exception) {
+					throw new AssertionError(exception);
+				}
+			}).toList();
+
+			assertThat(outcomes).filteredOn(outcome -> outcome.mutationId() != null).hasSize(1);
+			assertThat(outcomes).filteredOn(outcome -> outcome.failure() != null)
+					.singleElement()
+					.satisfies(outcome -> assertThat(outcome.failure())
+							.isInstanceOf(IllegalStateException.class)
+							.hasMessageContaining("이미 난 묶음이 생성"));
+		} finally {
+			start.countDown();
+			executor.shutdownNow();
+		}
+
+		assertThat(jdbcTemplate.queryForObject(
+				"SELECT COUNT(*) FROM orchid_groups",
+				Long.class)).isEqualTo(2L);
+		assertThat(jdbcTemplate.queryForObject(
+				"SELECT COUNT(*) FROM orchid_groups WHERE inbound_record_id = ?",
+				Long.class,
+				inboundRecordId)).isEqualTo(1L);
+		assertThat(jdbcTemplate.queryForObject(
+				"SELECT COUNT(*) FROM orchid_group_mutations",
+				Long.class)).isEqualTo(1L);
+		assertThat(jdbcTemplate.queryForObject(
+				"SELECT COUNT(*) FROM orchid_group_mutation_entries",
+				Long.class)).isEqualTo(1L);
+	}
+
 	private Outcome createConcurrently(
 			String referenceId,
 			CountDownLatch ready,
@@ -223,6 +282,48 @@ class OrchidGroupMutationPostgresE2ETest extends WorkE2ETestBase {
 							LocalDate.of(2026, 8, 20),
 							"동시 구조 변경 검증"))
 					.mutationId());
+			return new Outcome(mutationId, null);
+		} catch (RuntimeException exception) {
+			return new Outcome(null, exception);
+		}
+	}
+
+	private Outcome createInboundConcurrently(
+			String referenceId,
+			Long inboundRecordId,
+			CountDownLatch ready,
+			CountDownLatch start) throws Exception {
+		ready.countDown();
+		if (!start.await(5, TimeUnit.SECONDS)) {
+			throw new IllegalStateException("동시 입고 생성 요청 시작 신호를 기다리지 못했습니다.");
+		}
+		try {
+			Long mutationId = new TransactionTemplate(transactionManager).execute(status ->
+					mutationEngine.createFromInbound(new CreateInboundOrchidGroupsMutationCommand(
+							new OrchidGroupMutationSource(
+									OrchidGroupMutationSourceDomain.INBOUND,
+									"INBOUND_RECORD",
+									referenceId,
+									"CREATE_GROUPS",
+									UUID.randomUUID()),
+							inboundRecordId,
+							List.of(new CreateOrchidGroupMutationItem(
+									scenario.bedZoneId(),
+									new OrchidGroupMutationDetails(
+											varietyId,
+											100,
+											"2치",
+											1,
+											"정상",
+											"TRAY",
+											1,
+											false,
+											null,
+											null,
+											null))),
+							LocalDate.of(2026, 8, 20),
+							"동시 입고 생성 검증"))
+						.mutationId());
 			return new Outcome(mutationId, null);
 		} catch (RuntimeException exception) {
 			return new Outcome(null, exception);

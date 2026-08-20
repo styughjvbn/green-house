@@ -3,6 +3,7 @@ package com.greenhouse.backend.work.application.operation;
 import com.greenhouse.backend.work.application.effect.WorkEffectCommand;
 import com.greenhouse.backend.work.application.effect.WorkEffectStore;
 import com.greenhouse.backend.work.application.effect.WorkExecutionResult;
+import com.greenhouse.backend.work.application.effect.WorkMutationLink;
 import com.greenhouse.backend.work.domain.effect.WorkEffectKind;
 import com.greenhouse.backend.work.domain.operation.WorkOperation;
 import com.greenhouse.backend.work.domain.target.WorkOperationTarget;
@@ -34,6 +35,12 @@ public class InboundWorkOperationRecorder {
 	private final WorkOperationSupport support;
 
 	public void record(InboundWorkOperationCreateRequest request) {
+		record(request, null);
+	}
+
+	public void record(
+			InboundWorkOperationCreateRequest request,
+			WorkMutationLink mutationLink) {
 		WorkType workType = workTypeService.getByCode(WorkType.INBOUND_CODE);
 		if (!workType.isActive()) {
 			throw new IllegalArgumentException("입고 작업 유형이 비활성화되어 있습니다.");
@@ -80,7 +87,8 @@ public class InboundWorkOperationRecorder {
 						details,
 						request.createdOrchidGroupId() == null
 								? List.of()
-								: List.of(request.createdOrchidGroupId())));
+								: List.of(request.createdOrchidGroupId()),
+						mutationLink));
 		execution.completeWithEffect(executedAt, worker, details);
 		operation.complete(executedAt);
 	}

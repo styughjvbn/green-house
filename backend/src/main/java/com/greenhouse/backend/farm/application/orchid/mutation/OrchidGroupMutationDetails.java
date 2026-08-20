@@ -41,4 +41,21 @@ public record OrchidGroupMutationDetails(
 		endPosition = normalizeNumber(endPosition);
 		memo = normalizeText(memo);
 	}
+
+	public OrchidGroupMutationDetails withPlacement(
+			BigDecimal resolvedStartPosition,
+			BigDecimal resolvedEndPosition) {
+		return new OrchidGroupMutationDetails(
+				varietyId,
+				quantity,
+				potSize,
+				ageYear,
+				status,
+				placementType,
+				trayCount,
+				splitPlacementAllowed,
+				resolvedStartPosition,
+				resolvedEndPosition,
+				memo);
+	}
 }

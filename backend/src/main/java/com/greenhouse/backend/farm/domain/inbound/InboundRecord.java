@@ -182,6 +182,10 @@ public class InboundRecord extends BaseEntity {
 		}
 	}
 
+	public boolean hasCreatedOrchidGroups() {
+		return createdOrchidGroup != null || !createdOrchidGroups.isEmpty();
+	}
+
 	public void markPottingPending(InboundStatus status) {
 		this.status = status;
 	}
@@ -189,7 +193,7 @@ public class InboundRecord extends BaseEntity {
 	public void markPottingPlanned() {
 		if (inboundType != InboundType.FLASK_SEEDLING
 				|| status == InboundStatus.CANCELED
-				|| createdOrchidGroup != null) {
+				|| hasCreatedOrchidGroups()) {
 			throw new IllegalStateException("포트 작업을 계획할 수 없는 입고 기록입니다.");
 		}
 		this.status = InboundStatus.POTTING_IN_PROGRESS;
