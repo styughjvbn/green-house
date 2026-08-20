@@ -6,13 +6,24 @@ import com.greenhouse.backend.farm.domain.orchid.mutation.OrchidGroupMutationSou
 import java.time.LocalDate;
 import java.util.Comparator;
 import java.util.List;
+import java.util.Set;
 
 public record TransformOrchidGroupsMutationCommand(
 		OrchidGroupMutationSource source,
 		List<TransformOrchidGroupMutationSource> sources,
 		List<TransformOrchidGroupMutationResult> results,
 		LocalDate effectiveBusinessDate,
-		String reason) {
+		String reason,
+		Set<Long> placementExclusionOrchidGroupIds) {
+
+	public TransformOrchidGroupsMutationCommand(
+			OrchidGroupMutationSource source,
+			List<TransformOrchidGroupMutationSource> sources,
+			List<TransformOrchidGroupMutationResult> results,
+			LocalDate effectiveBusinessDate,
+			String reason) {
+		this(source, sources, results, effectiveBusinessDate, reason, Set.of());
+	}
 
 	public TransformOrchidGroupsMutationCommand {
 		if (source == null || effectiveBusinessDate == null) {
@@ -36,5 +47,11 @@ public record TransformOrchidGroupsMutationCommand(
 				.toList();
 		results = List.copyOf(results);
 		reason = normalizeText(reason);
+		placementExclusionOrchidGroupIds = placementExclusionOrchidGroupIds == null
+				? Set.of()
+				: Set.copyOf(placementExclusionOrchidGroupIds);
+		if (placementExclusionOrchidGroupIds.stream().anyMatch(id -> id == null || id < 1)) {
+			throw new IllegalArgumentException("배치 검사 제외 난 묶음 ID가 올바르지 않습니다.");
+		}
 	}
 }

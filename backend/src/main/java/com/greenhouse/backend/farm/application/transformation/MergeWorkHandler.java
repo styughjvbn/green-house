@@ -1,7 +1,9 @@
 package com.greenhouse.backend.farm.application.transformation;
 
 import com.greenhouse.backend.farm.application.orchid.OrchidGroupCommandService;
+import com.greenhouse.backend.farm.application.orchid.mutation.OrchidGroupMutationRoutingPolicy;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.greenhouse.backend.common.config.TimeConfig;
 import com.greenhouse.backend.common.exception.NotFoundException;
 import com.greenhouse.backend.farm.domain.orchid.OrchidGroup;
 import com.greenhouse.backend.farm.dto.transformation.MergeSourceInputRequest;
@@ -13,8 +15,12 @@ import com.greenhouse.backend.work.application.effect.WorkEffectHandler;
 import com.greenhouse.backend.work.application.effect.WorkExecutionResult;
 import com.greenhouse.backend.work.application.correction.StructureChangeReferenceReader;
 import com.greenhouse.backend.work.domain.effect.WorkEffectKind;
+import com.greenhouse.backend.work.domain.effect.StructureChangeResultPurpose;
 import com.greenhouse.backend.work.domain.operation.WorkOperation;
 import com.greenhouse.backend.work.domain.target.WorkOperationTarget;
+import com.greenhouse.backend.work.dto.effect.StructureChangeExecutionRequest;
+import com.greenhouse.backend.work.dto.effect.StructureChangeResultRequest;
+import com.greenhouse.backend.work.dto.effect.StructureChangeSourceRequest;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -30,17 +36,20 @@ public class MergeWorkHandler implements WorkEffectHandler {
 	private final OrchidGroupCommandService orchidGroupCommandService;
 	private final StructureChangeReferenceReader structureChangeReferenceReader;
 	private final StructureChangeExecutor structureChangeExecutor;
+	private final OrchidGroupMutationRoutingPolicy mutationRoutingPolicy;
 	private final ObjectMapper objectMapper = new ObjectMapper().findAndRegisterModules();
 
 	public MergeWorkHandler(
 			OrchidGroupRepository orchidGroupRepository,
 			OrchidGroupCommandService orchidGroupCommandService,
 			StructureChangeReferenceReader structureChangeReferenceReader,
-			StructureChangeExecutor structureChangeExecutor) {
+			StructureChangeExecutor structureChangeExecutor,
+			OrchidGroupMutationRoutingPolicy mutationRoutingPolicy) {
 		this.orchidGroupRepository = orchidGroupRepository;
 		this.orchidGroupCommandService = orchidGroupCommandService;
 		this.structureChangeReferenceReader = structureChangeReferenceReader;
 		this.structureChangeExecutor = structureChangeExecutor;
+		this.mutationRoutingPolicy = mutationRoutingPolicy;
 	}
 
 	@Override public String supports() { return "MERGE"; }
@@ -59,6 +68,9 @@ public class MergeWorkHandler implements WorkEffectHandler {
 		MergeWorkOperationRequest request = objectMapper.convertValue(
 				command.resultDetails(), MergeWorkOperationRequest.class);
 		validateRequest(operation, request);
+		if (mutationRoutingPolicy.routesToEngine()) {
+			return structureChangeExecutor.execute(operation, toStructureChangeRequest(command, request));
+		}
 
 		List<Long> sourceIds = request.sources().stream()
 				.map(MergeSourceInputRequest::sourceOrchidGroupId).sorted().toList();
@@ -107,6 +119,37 @@ public class MergeWorkHandler implements WorkEffectHandler {
 		details.put("lossQuantity", lossQuantity);
 		details.put("resultOrchidGroupId", result.getId());
 		return new WorkExecutionResult("MERGE", details, List.of(result.getId()));
+	}
+
+	private StructureChangeExecutionRequest toStructureChangeRequest(
+			WorkEffectCommand command,
+			MergeWorkOperationRequest request) {
+		String executionKey = command.effectKey().startsWith("EXECUTION:")
+				? command.effectKey().substring("EXECUTION:".length())
+				: command.effectKey();
+		var result = request.result();
+		return new StructureChangeExecutionRequest(
+				executionKey,
+				TimeConfig.toFarmTime(command.executedAt()).toLocalDate(),
+				command.worker(),
+				result.memo(),
+				request.sources().stream()
+						.map(source -> new StructureChangeSourceRequest(
+								source.sourceOrchidGroupId(), source.inputQuantity(), null, null))
+						.toList(),
+				List.of(new StructureChangeResultRequest(
+						result.bedZoneId(),
+						result.quantity(),
+						null,
+						result.potSize(),
+						result.ageYear(),
+						StructureChangeResultPurpose.NORMAL,
+						result.placementType(),
+						result.trayCount(),
+						result.splitPlacementAllowed(),
+						result.startPosition(),
+						result.endPosition(),
+						result.memo())));
 	}
 
 	private void validateRequest(WorkOperation operation, MergeWorkOperationRequest request) {

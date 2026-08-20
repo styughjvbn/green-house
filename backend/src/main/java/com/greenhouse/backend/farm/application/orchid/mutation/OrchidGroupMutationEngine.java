@@ -196,7 +196,8 @@ public class OrchidGroupMutationEngine {
 				command.sources(),
 				command.results(),
 				command.effectiveBusinessDate(),
-				command.reason()));
+				command.reason(),
+				command.placementExclusionOrchidGroupIds()));
 		var replay = replayResolver.findExisting(command.source(), commandFingerprint);
 		if (replay.isPresent()) {
 			return replay.get();
@@ -265,11 +266,11 @@ public class OrchidGroupMutationEngine {
 			BedZone zone = zones.get(resultCommand.bedZoneId());
 			Variety variety = varieties.get(resultCommand.details().varietyId());
 			requireActive(variety);
-			orchidPlacementPolicy.validatePlacement(
+			orchidPlacementPolicy.validatePlacementExcluding(
 					zone,
 					resultCommand.details().startPosition(),
 					resultCommand.details().endPosition(),
-					null);
+					command.placementExclusionOrchidGroupIds());
 			int nextSortOrder = nextSortOrderByZoneId.compute(
 					zone.getId(), (id, current) -> current + 1);
 			resultGroups.add(createGroup(
@@ -946,7 +947,8 @@ public class OrchidGroupMutationEngine {
 			List<TransformOrchidGroupMutationSource> sources,
 			List<TransformOrchidGroupMutationResult> results,
 			LocalDate effectiveBusinessDate,
-			String reason) {
+			String reason,
+			Set<Long> placementExclusionOrchidGroupIds) {
 	}
 
 	private record UpdateFingerprintPayload(

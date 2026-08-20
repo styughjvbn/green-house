@@ -23,6 +23,6 @@ public class InboundPottingWorkHandler implements WorkEffectHandler {
 			WorkOperation operation,
 			WorkOperationTarget target,
 			WorkEffectCommand command) {
-		return executor.execute(target, command);
+		return executor.execute(operation, target, command);
 	}
 }

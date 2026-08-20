@@ -1,6 +1,12 @@
 package com.greenhouse.backend.farm.application.inbound;
 
 import com.greenhouse.backend.farm.application.structure.OrchidPlacementPolicy;
+import com.greenhouse.backend.farm.application.orchid.mutation.CreateInboundOrchidGroupsMutationCommand;
+import com.greenhouse.backend.farm.application.orchid.mutation.CreateOrchidGroupMutationItem;
+import com.greenhouse.backend.farm.application.orchid.mutation.OrchidGroupMutationDetails;
+import com.greenhouse.backend.farm.application.orchid.mutation.OrchidGroupMutationEngine;
+import com.greenhouse.backend.farm.application.orchid.mutation.OrchidGroupMutationRoutingPolicy;
+import com.greenhouse.backend.farm.application.orchid.mutation.OrchidGroupMutationSources;
 import com.greenhouse.backend.common.exception.NotFoundException;
 import com.greenhouse.backend.common.application.RequestActorProvider;
 import com.greenhouse.backend.farm.domain.structure.BedZone;
@@ -11,7 +17,9 @@ import com.greenhouse.backend.farm.dto.inbound.InboundRecordPottingRequest;
 import com.greenhouse.backend.farm.dto.inbound.InboundRecordResponse;
 import com.greenhouse.backend.farm.repository.structure.BedZoneRepository;
 import com.greenhouse.backend.farm.repository.orchid.OrchidGroupRepository;
+import com.greenhouse.backend.work.application.effect.WorkMutationLink;
 import java.math.BigDecimal;
+import java.util.List;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -28,8 +36,14 @@ public class InboundPottingService {
 	private final OrchidGroupRepository orchidGroupRepository;
 	private final OrchidPlacementPolicy orchidPlacementPolicy;
 	private final RequestActorProvider requestActorProvider;
+	private final OrchidGroupMutationEngine mutationEngine;
+	private final OrchidGroupMutationRoutingPolicy mutationRoutingPolicy;
 
-	public InboundPottingResult potting(Long inboundRecordId, InboundRecordPottingRequest request) {
+	public InboundPottingResult potting(
+			Long inboundRecordId,
+			InboundRecordPottingRequest request,
+			Long workOperationId,
+			String effectKey) {
 		var inboundRecord = inboundRecordFinder.find(inboundRecordId);
 		if (inboundRecord.getInboundType() != InboundType.FLASK_SEEDLING) {
 			throw new IllegalArgumentException("유리병 모종 입고만 포트 작업을 등록할 수 있습니다.");
@@ -41,7 +55,40 @@ public class InboundPottingService {
 			throw new IllegalArgumentException("이미 난 묶음이 생성된 입고 기록입니다.");
 		}
 
-		var createdGroups = request.results().stream().map(row -> {
+		WorkMutationLink mutationLink = null;
+		List<OrchidGroup> createdGroups;
+		if (mutationRoutingPolicy.routesToEngine()) {
+			var mutation = mutationEngine.createFromInbound(
+					new CreateInboundOrchidGroupsMutationCommand(
+							OrchidGroupMutationSources.work(workOperationId, effectKey),
+							inboundRecord.getId(),
+							request.results().stream()
+									.map(row -> new CreateOrchidGroupMutationItem(
+											row.bedZoneId(),
+											new OrchidGroupMutationDetails(
+													inboundRecord.getVariety().getId(),
+													row.quantity(),
+													firstNonBlank(row.potSize(), inboundRecord.getPotSize()),
+													row.ageYear(),
+													DEFAULT_ORCHID_STATUS,
+													row.placementType(),
+													row.trayCount(),
+													row.splitPlacementAllowed(),
+													row.startPosition(),
+													row.endPosition(),
+													row.memo())))
+									.toList(),
+							request.pottingDate(),
+							request.memo()));
+			List<Long> groupIds = mutation.entries().stream()
+					.map(entry -> entry.orchidGroupId())
+					.toList();
+			var groupsById = orchidGroupRepository.findAllById(groupIds).stream()
+					.collect(java.util.stream.Collectors.toMap(OrchidGroup::getId, group -> group));
+			createdGroups = groupIds.stream().map(groupsById::get).toList();
+			mutationLink = new WorkMutationLink(mutation.mutationId(), mutation.correlationId());
+		} else {
+			createdGroups = request.results().stream().map(row -> {
 			BedZone bedZone = findBedZone(row.bedZoneId());
 			OrchidPlacementPolicy.PlacementRange placementRange = resolvePlacementRange(
 					bedZone, row.startPosition(), row.endPosition());
@@ -72,7 +119,8 @@ public class InboundPottingService {
 			orchidGroup.assignVariety(inboundRecord.getVariety());
 			orchidGroup.assignInboundRecord(inboundRecord);
 			return orchidGroupRepository.saveAndFlush(orchidGroup);
-		}).toList();
+			}).toList();
+		}
 
 		OrchidGroup representative = createdGroups.getFirst();
 		int actualQuantity = createdGroups.stream().mapToInt(OrchidGroup::getQuantity).sum();
@@ -94,7 +142,8 @@ public class InboundPottingService {
 		return new InboundPottingResult(
 				InboundRecordResponse.from(inboundRecordFinder.find(inboundRecord.getId())),
 				createdGroups.stream().map(OrchidGroup::getId).toList(),
-				actualQuantity);
+				actualQuantity,
+				mutationLink);
 	}
 
 	private BedZone findBedZone(Long bedZoneId) {

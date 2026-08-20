@@ -113,6 +113,8 @@ demo
 - ledger coverage가 `ACTIVE`이면 PostgreSQL write fence가 transaction-local Mutation context 없는 `orchid_groups` INSERT·UPDATE와 모든 DELETE를 차단한다. 커밋 시에는 변경 revision에 대응하는 MutationEntry도 확인한다.
 - 실행 인스턴스는 ACTIVE coverage의 `minimumWriterVersion` 이상인 `ENGINE` writer mode여야 한다. baseline 적재는 재실행 가능한 고정 ID batch로 수행하고, 테이블 잠금 아래 최종 대사를 통과한 경우에만 한 번에 ACTIVE로 전환한다.
 - PREPARING 동안 DB fence는 아직 활성화되지 않으므로 운영 baseline에는 외부 write-stop이 필수다. 모든 write path의 Engine routing이 끝나기 전에는 ACTIVE로 전환하지 않는다.
+- 현재 Farm·Inbound·Work·Sales의 알려진 난 묶음 writer는 `LEGACY|ENGINE` 단일 경로 스위치를 공유한다. `ENGINE` 선택 시 Work 효과와 Sales 재고 이동은 같은 transaction에서 Mutation ID·correlation ID를 연결하며 dual write하지 않는다.
+- 기본값은 운영 호환을 위한 `LEGACY`다. 복원 DB baseline과 ENGINE smoke test가 끝난 뒤 aggregate 전체를 한 번에 전환하고, 검증 완료 전에는 `ACTIVE` coverage를 만들지 않는다.
 
 `farm`의 각 계층은 동일한 기능 경계를 사용한다.
 

@@ -83,6 +83,8 @@
 - 직접 자리 이동과 입고를 포함한 신규 시스템 작업도 `WorkOperation`으로 기록한다.
 - 난 묶음 이력 API는 `WorkOperationTarget`과 `WorkEffectOrchidGroup` 연결만 조회한다.
 - V8에서 변환된 기존 이력은 변환 결과인 `WorkOperation`을 통해 조회한다.
+- Mutation Engine writer에서는 난 묶음 상태를 바꾸는 효과가 기존 effect key를 그대로 Mutation 원인 키로 사용한다. 효과 저장과 함께 `WorkAppliedEffect.mutationId`, `correlationId`를 기록하며 단일 원본 호환 계보에도 같은 Mutation ID를 연결한다.
+- 기록 전용 효과와 작업일만 바뀐 보정은 난 묶음 상태 변경이 없으므로 Mutation 연결을 만들지 않는다.
 
 ## 7. 작업 모듈 내부 구조
 

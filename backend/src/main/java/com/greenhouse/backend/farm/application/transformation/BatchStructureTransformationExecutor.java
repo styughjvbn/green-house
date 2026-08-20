@@ -1,11 +1,20 @@
 package com.greenhouse.backend.farm.application.transformation;
 
 import com.greenhouse.backend.farm.application.orchid.OrchidGroupCommandService;
+import com.greenhouse.backend.farm.application.orchid.mutation.OrchidGroupMutationDetails;
+import com.greenhouse.backend.farm.application.orchid.mutation.OrchidGroupMutationEngine;
+import com.greenhouse.backend.farm.application.orchid.mutation.OrchidGroupMutationRoutingPolicy;
+import com.greenhouse.backend.farm.application.orchid.mutation.OrchidGroupMutationSources;
+import com.greenhouse.backend.farm.application.orchid.mutation.TransformOrchidGroupMutationResult;
+import com.greenhouse.backend.farm.application.orchid.mutation.TransformOrchidGroupMutationSource;
+import com.greenhouse.backend.farm.application.orchid.mutation.TransformOrchidGroupsMutationCommand;
 import com.greenhouse.backend.common.exception.NotFoundException;
 import com.greenhouse.backend.farm.domain.orchid.OrchidGroup;
+import com.greenhouse.backend.farm.domain.orchid.mutation.OrchidGroupMutationEntryRole;
 import com.greenhouse.backend.farm.dto.orchid.OrchidGroupCreateRequest;
 import com.greenhouse.backend.farm.repository.orchid.OrchidGroupRepository;
 import com.greenhouse.backend.work.application.effect.WorkExecutionResult;
+import com.greenhouse.backend.work.application.effect.WorkMutationLink;
 import com.greenhouse.backend.work.domain.effect.StructureChangeResultPurpose;
 import com.greenhouse.backend.work.domain.operation.WorkOperation;
 import com.greenhouse.backend.work.dto.effect.StructureChangeExecutionRequest;
@@ -24,14 +33,20 @@ public class BatchStructureTransformationExecutor {
 	private final OrchidGroupRepository orchidGroupRepository;
 	private final OrchidGroupCommandService orchidGroupCommandService;
 	private final OrchidGroupLineageService lineageService;
+	private final OrchidGroupMutationEngine mutationEngine;
+	private final OrchidGroupMutationRoutingPolicy mutationRoutingPolicy;
 
 	public BatchStructureTransformationExecutor(
 			OrchidGroupRepository orchidGroupRepository,
 			OrchidGroupCommandService orchidGroupCommandService,
-			OrchidGroupLineageService lineageService) {
+			OrchidGroupLineageService lineageService,
+			OrchidGroupMutationEngine mutationEngine,
+			OrchidGroupMutationRoutingPolicy mutationRoutingPolicy) {
 		this.orchidGroupRepository = orchidGroupRepository;
 		this.orchidGroupCommandService = orchidGroupCommandService;
 		this.lineageService = lineageService;
+		this.mutationEngine = mutationEngine;
+		this.mutationRoutingPolicy = mutationRoutingPolicy;
 	}
 
 	public WorkExecutionResult execute(
@@ -77,6 +92,21 @@ public class BatchStructureTransformationExecutor {
 				throw new IllegalArgumentException("작업 수량은 원본 난 묶음의 현재 수량보다 클 수 없습니다.");
 			}
 		});
+		if (mutationRoutingPolicy.routesToEngine()) {
+			return executeWithEngine(
+					operation,
+					request,
+					strategy,
+					placementExclusionOrchidGroupIds,
+					sourceIds,
+					sources,
+					sourceRequests,
+					inputBySourceId,
+					transformedBySourceId,
+					sourceStatusById,
+					first,
+					lossQuantity);
+		}
 		sourceRequests.forEach((sourceId, sourceRequest) -> {
 			int transformedQuantity = transformedBySourceId.get(sourceId);
 			if (transformedQuantity > 0) {
@@ -140,6 +170,118 @@ public class BatchStructureTransformationExecutor {
 			details.put("resultOrchidGroupIds", results.stream().map(OrchidGroup::getId).toList());
 		}
 		return new WorkExecutionResult(strategy.supports(), details, results.stream().map(OrchidGroup::getId).toList());
+	}
+
+	private WorkExecutionResult executeWithEngine(
+			WorkOperation operation,
+			StructureChangeExecutionRequest request,
+			StructureChangeStrategy strategy,
+			Set<Long> placementExclusionOrchidGroupIds,
+			List<Long> sourceIds,
+			Map<Long, OrchidGroup> sources,
+			Map<Long, StructureChangeSourceRequest> sourceRequests,
+			Map<Long, Integer> inputBySourceId,
+			Map<Long, Integer> transformedBySourceId,
+			Map<Long, String> sourceStatusById,
+			OrchidGroup first,
+			int lossQuantity) {
+		List<TransformOrchidGroupMutationSource> mutationSources = sourceIds.stream()
+				.filter(sourceId -> transformedBySourceId.get(sourceId) > 0)
+				.map(sourceId -> {
+					StructureChangeSourceRequest source = sourceRequests.get(sourceId);
+					return new TransformOrchidGroupMutationSource(
+							sourceId,
+							transformedBySourceId.get(sourceId),
+							source.releasedStartPosition(),
+							source.releasedEndPosition());
+				})
+				.toList();
+		List<TransformOrchidGroupMutationResult> mutationResults = request.results().stream()
+				.map(row -> {
+					Long attributeSourceId = row.attributeSourceOrchidGroupId() == null
+							? first.getId()
+							: row.attributeSourceOrchidGroupId();
+					OrchidGroup resultSource = sources.get(attributeSourceId);
+					if (resultSource == null) {
+						throw new IllegalArgumentException("결과 속성 기준 난 묶음은 이번 실행 원본이어야 합니다.");
+					}
+					String resultPotSize = strategy.preservesSourceAttributes()
+							? resultSource.getPotSize()
+							: row.potSize();
+					Integer resultAgeYear = strategy.preservesSourceAttributes()
+							? resultSource.getAgeYear()
+							: row.ageYear();
+					StructureChangeResultPurpose resultPurpose = strategy.preservesSourceAttributes()
+							? StructureChangeResultPurpose.NORMAL
+							: row.purpose();
+					return new TransformOrchidGroupMutationResult(
+							row.bedZoneId(),
+							new OrchidGroupMutationDetails(
+									resultSource.getVariety().getId(),
+									row.quantity(),
+									resultPotSize,
+									resultAgeYear,
+									resultStatus(sourceStatusById.get(resultSource.getId()), resultPurpose),
+									row.placementType(),
+									row.trayCount(),
+									row.splitPlacementAllowed(),
+									row.startPosition(),
+									row.endPosition(),
+									row.memo()));
+				})
+				.toList();
+		var mutation = mutationEngine.transform(new TransformOrchidGroupsMutationCommand(
+				OrchidGroupMutationSources.work(
+						operation.getId(), "EXECUTION:" + request.idempotencyKey()),
+				mutationSources,
+				mutationResults,
+				request.completedDate(),
+				request.memo(),
+				placementExclusionOrchidGroupIds));
+		List<Long> resultIds = mutation.entries().stream()
+				.filter(entry -> entry.role() == OrchidGroupMutationEntryRole.RESULT)
+				.map(entry -> entry.orchidGroupId())
+				.toList();
+		Map<Long, OrchidGroup> resultsById = orchidGroupRepository.findAllById(resultIds).stream()
+				.collect(Collectors.toMap(OrchidGroup::getId, Function.identity()));
+		if (sourceIds.size() == 1) {
+			Long sourceId = sourceIds.getFirst();
+			for (Long resultId : resultIds) {
+				var lineage = lineageService.record(
+						sources.get(sourceId),
+						resultsById.get(resultId),
+						strategy.lineageType(),
+						operation.getId(),
+						transformedBySourceId.get(sourceId),
+						resultsById.get(resultId).getQuantity());
+				lineage.linkMutation(mutation.mutationId());
+			}
+		}
+
+		var details = new LinkedHashMap<String, Object>();
+		details.put("executionKey", request.idempotencyKey());
+		details.put("sourceInputQuantities", inputBySourceId);
+		details.put("lossQuantity", lossQuantity);
+		details.put("results", java.util.stream.IntStream.range(0, resultIds.size())
+				.mapToObj(index -> Map.of(
+						"orchidGroupId", resultIds.get(index),
+						"quantity", resultsById.get(resultIds.get(index)).getQuantity(),
+						"purpose", strategy.preservesSourceAttributes()
+								? StructureChangeResultPurpose.NORMAL.name()
+								: request.results().get(index).purpose().name()))
+				.toList());
+		if (sourceIds.size() == 1) {
+			Long sourceId = sourceIds.getFirst();
+			details.put("sourceOrchidGroupId", sourceId);
+			details.put("inputQuantity", inputBySourceId.get(sourceId));
+			details.put("remainingQuantity", sources.get(sourceId).getQuantity());
+			details.put("resultOrchidGroupIds", resultIds);
+		}
+		return new WorkExecutionResult(
+				strategy.supports(),
+				details,
+				resultIds,
+				new WorkMutationLink(mutation.mutationId(), mutation.correlationId()));
 	}
 
 	private String resultStatus(String sourceStatus, StructureChangeResultPurpose purpose) {

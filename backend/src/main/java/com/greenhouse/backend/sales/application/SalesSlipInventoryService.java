@@ -1,6 +1,16 @@
 package com.greenhouse.backend.sales.application;
 
 import com.greenhouse.backend.farm.application.orchid.OrchidGroupReader;
+import com.greenhouse.backend.farm.application.orchid.mutation.ConsumeOrchidGroupReservationsMutationCommand;
+import com.greenhouse.backend.farm.application.orchid.mutation.OrchidGroupMutationEngine;
+import com.greenhouse.backend.farm.application.orchid.mutation.OrchidGroupMutationResult;
+import com.greenhouse.backend.farm.application.orchid.mutation.OrchidGroupMutationRoutingPolicy;
+import com.greenhouse.backend.farm.application.orchid.mutation.OrchidGroupMutationSources;
+import com.greenhouse.backend.farm.application.orchid.mutation.OrchidGroupQuantityMutationItem;
+import com.greenhouse.backend.farm.application.orchid.mutation.RelatedOrchidGroupMutations;
+import com.greenhouse.backend.farm.application.orchid.mutation.ReleaseOrchidGroupReservationsMutationCommand;
+import com.greenhouse.backend.farm.application.orchid.mutation.ReserveOrchidGroupsMutationCommand;
+import com.greenhouse.backend.farm.application.orchid.mutation.RestoreOutboundOrchidGroupsMutationCommand;
 import com.greenhouse.backend.farm.domain.orchid.OrchidGroup;
 import com.greenhouse.backend.common.exception.NotFoundException;
 import com.greenhouse.backend.sales.domain.SalesInventoryMovement;
@@ -10,6 +20,8 @@ import com.greenhouse.backend.sales.domain.SalesSlipItem;
 import com.greenhouse.backend.sales.repository.SalesInventoryMovementRepository;
 import jakarta.persistence.EntityManager;
 import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
@@ -20,46 +32,78 @@ public class SalesSlipInventoryService {
 	private final SalesInventoryMovementRepository salesInventoryMovementRepository;
 	private final EntityManager entityManager;
 	private final OrchidGroupReader orchidGroupReader;
+	private final OrchidGroupMutationEngine mutationEngine;
+	private final OrchidGroupMutationRoutingPolicy mutationRoutingPolicy;
 
 	public void reserve(SalesSlip salesSlip) {
 		SalesSlipAllocationBatch allocations = lockForUpdate(salesSlip);
+		OrchidGroupMutationResult mutation = mutationRoutingPolicy.routesToEngine()
+				? mutationEngine.reserve(new ReserveOrchidGroupsMutationCommand(
+						OrchidGroupMutationSources.sales(
+								salesSlip.getId(), "RESERVE:" + salesSlip.getVersion()),
+						mutationItems(allocations),
+						salesSlip.getSaleDate(),
+						salesSlip.getMemo()))
+				: null;
 		for (SalesSlipAllocationBatch.Line line : allocations.lines()) {
 			OrchidGroup orchidGroup = line.orchidGroup();
-			orchidGroup.reserve(line.allocatedQuantity());
-			salesInventoryMovementRepository.save(buildMovement(
+			if (mutation == null) {
+				orchidGroup.reserve(line.allocatedQuantity());
+			}
+			salesInventoryMovementRepository.save(linkMutation(buildMovement(
 					orchidGroup,
 					salesSlip,
 					line.item(),
 					SalesInventoryMovementType.SALES_RESERVE,
-					line.allocatedQuantity()));
+					line.allocatedQuantity()), mutation));
 		}
 	}
 
 	public void release(SalesSlip salesSlip) {
 		SalesSlipAllocationBatch allocations = lockForUpdate(salesSlip);
+		OrchidGroupMutationResult mutation = mutationRoutingPolicy.routesToEngine()
+				? mutationEngine.releaseReservation(new ReleaseOrchidGroupReservationsMutationCommand(
+						OrchidGroupMutationSources.sales(
+								salesSlip.getId(), "RELEASE_EDIT:" + salesSlip.getVersion()),
+						mutationItems(allocations),
+						salesSlip.getSaleDate(),
+						salesSlip.getMemo()))
+				: null;
 		for (SalesSlipAllocationBatch.Line line : allocations.lines()) {
 			OrchidGroup orchidGroup = line.orchidGroup();
-			orchidGroup.releaseReserved(line.allocatedQuantity());
-			salesInventoryMovementRepository.save(buildMovement(
+			if (mutation == null) {
+				orchidGroup.releaseReserved(line.allocatedQuantity());
+			}
+			salesInventoryMovementRepository.save(linkMutation(buildMovement(
 					orchidGroup,
 					salesSlip,
 					line.item(),
 					SalesInventoryMovementType.SALES_RELEASE,
-					-line.allocatedQuantity()));
+					-line.allocatedQuantity()), mutation));
 		}
 	}
 
 	public void cancelReserve(SalesSlip salesSlip) {
 		SalesSlipAllocationBatch allocations = lockForUpdate(salesSlip);
+		OrchidGroupMutationResult mutation = mutationRoutingPolicy.routesToEngine()
+				? mutationEngine.releaseReservation(new ReleaseOrchidGroupReservationsMutationCommand(
+						OrchidGroupMutationSources.sales(
+								salesSlip.getId(), "CANCEL_RESERVE:" + salesSlip.getVersion()),
+						mutationItems(allocations),
+						salesSlip.getSaleDate(),
+						salesSlip.getMemo()))
+				: null;
 		for (SalesSlipAllocationBatch.Line line : allocations.lines()) {
 			OrchidGroup orchidGroup = line.orchidGroup();
-			orchidGroup.releaseReserved(line.allocatedQuantity());
-			salesInventoryMovementRepository.save(buildMovement(
+			if (mutation == null) {
+				orchidGroup.releaseReserved(line.allocatedQuantity());
+			}
+			salesInventoryMovementRepository.save(linkMutation(buildMovement(
 					orchidGroup,
 					salesSlip,
 					line.item(),
 					SalesInventoryMovementType.SALES_CANCEL_RESERVE,
-					-line.allocatedQuantity()));
+					-line.allocatedQuantity()), mutation));
 		}
 	}
 
@@ -68,30 +112,88 @@ public class SalesSlipInventoryService {
 	}
 
 	void outbound(SalesSlipAllocationBatch allocations) {
+		SalesSlip salesSlip = allocations.salesSlip();
+		OrchidGroupMutationResult mutation = mutationRoutingPolicy.routesToEngine()
+				? mutationEngine.consumeReservation(new ConsumeOrchidGroupReservationsMutationCommand(
+						OrchidGroupMutationSources.sales(
+								salesSlip.getId(), "OUTBOUND:" + salesSlip.getVersion()),
+						mutationItems(allocations),
+						salesSlip.getSaleDate(),
+						salesSlip.getMemo()))
+				: null;
 		for (SalesSlipAllocationBatch.Line line : allocations.lines()) {
 			OrchidGroup orchidGroup = line.orchidGroup();
-			orchidGroup.outboundReserved(line.allocatedQuantity());
-			salesInventoryMovementRepository.save(buildMovement(
+			if (mutation == null) {
+				orchidGroup.outboundReserved(line.allocatedQuantity());
+			}
+			salesInventoryMovementRepository.save(linkMutation(buildMovement(
 					orchidGroup,
 					allocations.salesSlip(),
 					line.item(),
 					SalesInventoryMovementType.SALES_OUTBOUND,
-					-line.allocatedQuantity()));
+					-line.allocatedQuantity()), mutation));
 		}
 	}
 
 	public void cancelOutbound(SalesSlip salesSlip) {
 		SalesSlipAllocationBatch allocations = lockForUpdate(salesSlip);
+		OrchidGroupMutationResult mutation = mutationRoutingPolicy.routesToEngine()
+				? mutationEngine.restoreOutbound(new RestoreOutboundOrchidGroupsMutationCommand(
+						OrchidGroupMutationSources.sales(
+								salesSlip.getId(), "CANCEL_OUTBOUND:" + salesSlip.getVersion()),
+						mutationItems(allocations),
+						outboundMutationReferences(salesSlip),
+						salesSlip.getSaleDate(),
+						salesSlip.getMemo()))
+				: null;
 		for (SalesSlipAllocationBatch.Line line : allocations.lines()) {
 			OrchidGroup orchidGroup = line.orchidGroup();
-			orchidGroup.restoreOutbound(line.allocatedQuantity());
-			salesInventoryMovementRepository.save(buildMovement(
+			if (mutation == null) {
+				orchidGroup.restoreOutbound(line.allocatedQuantity());
+			}
+			salesInventoryMovementRepository.save(linkMutation(buildMovement(
 					orchidGroup,
 					salesSlip,
 					line.item(),
 					SalesInventoryMovementType.SALES_CANCEL_OUTBOUND,
-					line.allocatedQuantity()));
+					line.allocatedQuantity()), mutation));
 		}
+	}
+
+	private List<OrchidGroupQuantityMutationItem> mutationItems(
+			SalesSlipAllocationBatch allocations) {
+		return allocations.lines().stream()
+				.collect(Collectors.groupingBy(
+						line -> line.orchidGroup().getId(),
+						Collectors.summingInt(SalesSlipAllocationBatch.Line::allocatedQuantity)))
+				.entrySet().stream()
+				.sorted(Map.Entry.comparingByKey())
+				.map(entry -> new OrchidGroupQuantityMutationItem(entry.getKey(), entry.getValue()))
+				.toList();
+	}
+
+	private RelatedOrchidGroupMutations outboundMutationReferences(SalesSlip salesSlip) {
+		List<SalesInventoryMovement> outboundMovements = salesInventoryMovementRepository
+				.findBySalesSlipIdAndChangeType(
+						salesSlip.getId(), SalesInventoryMovementType.SALES_OUTBOUND);
+		if (outboundMovements.isEmpty()
+				|| outboundMovements.stream().anyMatch(movement -> movement.getMutationId() == null)) {
+			return RelatedOrchidGroupMutations.legacy();
+		}
+		return RelatedOrchidGroupMutations.current(outboundMovements.stream()
+				.map(SalesInventoryMovement::getMutationId)
+				.distinct()
+				.sorted()
+				.toList());
+	}
+
+	private SalesInventoryMovement linkMutation(
+			SalesInventoryMovement movement,
+			OrchidGroupMutationResult mutation) {
+		if (mutation != null) {
+			movement.linkMutation(mutation.mutationId(), mutation.correlationId());
+		}
+		return movement;
 	}
 
 	private SalesInventoryMovement buildMovement(

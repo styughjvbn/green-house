@@ -703,6 +703,32 @@ Feature flag는 적용 기준 시점 전의 routing·shadow 검증에만 사용�
 허용하지 않는다. cutover 이후 구버전 인스턴스가 다시 붙지 않도록 coverage의
 `minimum_writer_version`, 배포 절차와 DB write fence를 함께 사용한다.
 
+현재 구현은 `app.orchid-ledger.writer-mode=LEGACY|ENGINE`으로 aggregate 전체의
+writer를 선택한다. 기본값은 `LEGACY`이고, `ENGINE`에서는 다음 운영 경로가 typed
+command로 라우팅된다.
+
+- Farm 단건·일괄 생성/수정, 생성 취소, 이동과 품종명 전파
+- Inbound 즉시 배치와 Work 기반 포트 결과 생성
+- Work 폐기, 이동, 분갈이, 분주, 합식, 다중 생성·취소와 보정
+- Sales 예약, 수정 예약 해제·재예약, 출고, 예약 취소와 출고 복구
+
+각 요청은 둘 중 한 writer만 실행한다. Work 효과는 기존 `TARGET:{id}`,
+`EXECUTION:{key}`, `POTTING:{key}`, `OPERATION` identity를 Mutation source operation
+key로 전달하고 `WorkAppliedEffect`와 호환 `OrchidGroupLineage`에 Mutation ID를
+연결한다. Sales는 전표 ID와 전표 version을 포함한 동작별 operation key를 사용하고
+각 `SalesInventoryMovement`에 Mutation ID와 correlation ID를 연결한다.
+
+이는 복원 DB와 수동 smoke test를 위한 routing 완료 상태이지 운영 cutover 완료를
+뜻하지 않는다. 다음 retirement inventory는 검증 후 별도 단계에서 제거한다.
+
+- 각 adapter에 남아 있는 `LEGACY` 직접 mutator 분기와 routing flag
+- `OrchidGroupCommandService.createEntity` 등 전환 호환용 내부 writer
+- Farm 패키지에서 Work handler interface를 직접 구현하는 전환 adapter
+- ledger 조회가 대체할 수 있는 Work 결과 snapshot과 단일 원본 Lineage 중복 write
+
+복원 PostgreSQL에서 baseline, ENGINE 전체 회귀와 진행 중 업무 호환 검증을 마치기
+전에는 coverage를 `ACTIVE`로 바꾸지 않는다.
+
 ### 19. 구조와 데이터 검증을 자동화한다
 
 기존 타 모듈 Repository 직접 접근 금지 규칙을 유지하고 다음 검사를 추가한다.

@@ -47,4 +47,30 @@ public class StructureChangeReferenceReader {
 				.distinct()
 				.toList();
 	}
+
+	public StructureChangeMutationReferences getMutationReferences(
+			Long operationId,
+			Set<Long> orchidGroupIds) {
+		if (orchidGroupIds.isEmpty()) {
+			return StructureChangeMutationReferences.legacy();
+		}
+		var links = workEffectOrchidGroupRepository
+				.findByWorkAppliedEffectWorkOperationIdOrderByIdAsc(operationId).stream()
+				.filter(link -> link.getRelationType() == WorkEffectOrchidGroupRelationType.CREATED
+						|| link.getRelationType() == WorkEffectOrchidGroupRelationType.RESULT)
+				.filter(link -> orchidGroupIds.contains(link.getOrchidGroupId()))
+				.toList();
+		Set<Long> linkedGroupIds = links.stream()
+				.map(link -> link.getOrchidGroupId())
+				.collect(Collectors.toSet());
+		if (!linkedGroupIds.containsAll(orchidGroupIds)
+				|| links.stream().anyMatch(link -> link.getWorkAppliedEffect().getMutationId() == null)) {
+			return StructureChangeMutationReferences.legacy();
+		}
+		return StructureChangeMutationReferences.current(links.stream()
+				.map(link -> link.getWorkAppliedEffect().getMutationId())
+				.distinct()
+				.sorted()
+				.toList());
+	}
 }

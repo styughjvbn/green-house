@@ -1,6 +1,12 @@
 package com.greenhouse.backend.farm.application.transformation;
 
 import com.greenhouse.backend.farm.application.orchid.OrchidGroupCommandService;
+import com.greenhouse.backend.farm.application.orchid.mutation.CreateOrchidGroupMutationItem;
+import com.greenhouse.backend.farm.application.orchid.mutation.CreateOrchidGroupsMutationCommand;
+import com.greenhouse.backend.farm.application.orchid.mutation.OrchidGroupMutationDetails;
+import com.greenhouse.backend.farm.application.orchid.mutation.OrchidGroupMutationEngine;
+import com.greenhouse.backend.farm.application.orchid.mutation.OrchidGroupMutationRoutingPolicy;
+import com.greenhouse.backend.farm.application.orchid.mutation.OrchidGroupMutationSources;
 import com.greenhouse.backend.common.exception.NotFoundException;
 import com.greenhouse.backend.farm.domain.orchid.OrchidGroup;
 import com.greenhouse.backend.farm.domain.collection.OrchidGroupCollection;
@@ -8,9 +14,11 @@ import com.greenhouse.backend.farm.domain.collection.OrchidGroupCollectionMember
 import com.greenhouse.backend.farm.dto.transformation.MultiCreateWorkOperationRequest;
 import com.greenhouse.backend.farm.repository.collection.OrchidGroupCollectionMemberRepository;
 import com.greenhouse.backend.farm.repository.collection.OrchidGroupCollectionRepository;
+import com.greenhouse.backend.farm.repository.orchid.OrchidGroupRepository;
 import com.greenhouse.backend.work.application.effect.WorkEffectCommand;
 import com.greenhouse.backend.work.application.effect.WorkEffectHandler;
 import com.greenhouse.backend.work.application.effect.WorkExecutionResult;
+import com.greenhouse.backend.work.application.effect.WorkMutationLink;
 import com.greenhouse.backend.work.domain.effect.WorkEffectKind;
 import com.greenhouse.backend.work.domain.operation.WorkOperation;
 import com.greenhouse.backend.work.domain.target.WorkOperationTarget;
@@ -26,14 +34,23 @@ public class MultiCreateWorkHandler implements WorkEffectHandler {
 	private final OrchidGroupCommandService orchidGroupCommandService;
 	private final OrchidGroupCollectionRepository collectionRepository;
 	private final OrchidGroupCollectionMemberRepository memberRepository;
+	private final OrchidGroupRepository orchidGroupRepository;
+	private final OrchidGroupMutationEngine mutationEngine;
+	private final OrchidGroupMutationRoutingPolicy mutationRoutingPolicy;
 
 	public MultiCreateWorkHandler(
 			OrchidGroupCommandService orchidGroupCommandService,
 			OrchidGroupCollectionRepository collectionRepository,
-			OrchidGroupCollectionMemberRepository memberRepository) {
+			OrchidGroupCollectionMemberRepository memberRepository,
+			OrchidGroupRepository orchidGroupRepository,
+			OrchidGroupMutationEngine mutationEngine,
+			OrchidGroupMutationRoutingPolicy mutationRoutingPolicy) {
 		this.orchidGroupCommandService = orchidGroupCommandService;
 		this.collectionRepository = collectionRepository;
 		this.memberRepository = memberRepository;
+		this.orchidGroupRepository = orchidGroupRepository;
+		this.mutationEngine = mutationEngine;
+		this.mutationRoutingPolicy = mutationRoutingPolicy;
 	}
 
 	@Override public String supports() { return "MULTI_CREATE"; }
@@ -45,17 +62,56 @@ public class MultiCreateWorkHandler implements WorkEffectHandler {
 		if (target != null) throw new IllegalArgumentException("다중 생성 작업에는 원본 난 묶음 대상이 없어야 합니다.");
 		MultiCreateWorkOperationRequest request = command.payloadAs(MultiCreateWorkOperationRequest.class);
 		validateCollections(request);
-		List<OrchidGroup> groups = request.rows().stream().map(row -> {
-			OrchidGroup group = orchidGroupCommandService.createEntity(row.orchidGroup());
+		WorkMutationLink mutationLink = null;
+		List<OrchidGroup> groups;
+		if (mutationRoutingPolicy.routesToEngine()) {
+			var mutation = mutationEngine.createMany(new CreateOrchidGroupsMutationCommand(
+					OrchidGroupMutationSources.work(operation.getId(), command.effectKey()),
+					request.rows().stream()
+							.map(row -> new CreateOrchidGroupMutationItem(
+									row.orchidGroup().bedZoneId(),
+									new OrchidGroupMutationDetails(
+											row.orchidGroup().varietyId(),
+											row.orchidGroup().quantity(),
+											row.orchidGroup().potSize(),
+											row.orchidGroup().ageYear(),
+											row.orchidGroup().status(),
+											row.orchidGroup().placementType(),
+											row.orchidGroup().trayCount(),
+											row.orchidGroup().splitPlacementAllowed(),
+											row.orchidGroup().startPosition(),
+											row.orchidGroup().endPosition(),
+											row.orchidGroup().memo())))
+							.toList(),
+					operation.getPlannedStartDate(),
+					operation.getMemo()));
+			List<Long> groupIds = mutation.entries().stream()
+					.map(entry -> entry.orchidGroupId())
+					.toList();
+			var groupsById = orchidGroupRepository.findAllById(groupIds).stream()
+					.collect(java.util.stream.Collectors.toMap(OrchidGroup::getId, group -> group));
+			groups = groupIds.stream().map(groupsById::get).toList();
+			mutationLink = new WorkMutationLink(mutation.mutationId(), mutation.correlationId());
+		} else {
+			groups = request.rows().stream()
+					.map(row -> orchidGroupCommandService.createEntity(row.orchidGroup()))
+					.toList();
+		}
+		for (int index = 0; index < groups.size(); index++) {
+			OrchidGroup group = groups.get(index);
+			var row = request.rows().get(index);
 			Set<Long> collectionIds = row.collectionIds() == null ? Set.of() : row.collectionIds();
 			memberRepository.saveAll(collectionIds.stream()
 					.map(id -> new OrchidGroupCollectionMember(id, group.getId(), command.worker())).toList());
-			return group;
-		}).toList();
+		}
 		var details = new LinkedHashMap<String, Object>();
 		details.put("createdCount", groups.size());
 		details.put("createdOrchidGroupIds", groups.stream().map(OrchidGroup::getId).toList());
-		return new WorkExecutionResult("MULTI_CREATE", details, groups.stream().map(OrchidGroup::getId).toList());
+		return new WorkExecutionResult(
+				"MULTI_CREATE",
+				details,
+				groups.stream().map(OrchidGroup::getId).toList(),
+				mutationLink);
 	}
 
 	private void validateCollections(MultiCreateWorkOperationRequest request) {

@@ -4,6 +4,11 @@ import com.greenhouse.backend.farm.dto.transformation.MultiCreateWorkOperationRe
 import com.greenhouse.backend.farm.dto.transformation.MultiCreateWorkOperationResponse;
 import com.greenhouse.backend.farm.dto.transformation.MultiCreateCancellationEligibilityResponse;
 import com.greenhouse.backend.common.application.OrchidGroupUsageInspector;
+import com.greenhouse.backend.common.config.TimeConfig;
+import com.greenhouse.backend.farm.application.orchid.mutation.CancelOrchidGroupCreationMutationCommand;
+import com.greenhouse.backend.farm.application.orchid.mutation.OrchidGroupMutationEngine;
+import com.greenhouse.backend.farm.application.orchid.mutation.OrchidGroupMutationRoutingPolicy;
+import com.greenhouse.backend.farm.application.orchid.mutation.OrchidGroupMutationSources;
 import com.greenhouse.backend.farm.dto.orchid.OrchidGroupResponse;
 import com.greenhouse.backend.farm.repository.orchid.OrchidGroupRepository;
 import com.greenhouse.backend.farm.repository.collection.OrchidGroupCollectionMemberRepository;
@@ -14,6 +19,7 @@ import com.greenhouse.backend.work.domain.operation.WorkType;
 import java.util.Map;
 import java.util.List;
 import java.util.LinkedHashSet;
+import java.time.Clock;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -26,18 +32,27 @@ public class MultiCreateWorkOperationService {
 	private final OrchidGroupRepository orchidGroupRepository;
 	private final List<OrchidGroupUsageInspector> usageInspectors;
 	private final OrchidGroupCollectionMemberRepository memberRepository;
+	private final OrchidGroupMutationEngine mutationEngine;
+	private final OrchidGroupMutationRoutingPolicy mutationRoutingPolicy;
+	private final Clock clock;
 
 	public MultiCreateWorkOperationService(
 			ImmediateWorkExecutionService immediateWorkExecutionService,
 			WorkOperationQueryService queryService,
 			OrchidGroupRepository orchidGroupRepository,
 			List<OrchidGroupUsageInspector> usageInspectors,
-			OrchidGroupCollectionMemberRepository memberRepository) {
+			OrchidGroupCollectionMemberRepository memberRepository,
+			OrchidGroupMutationEngine mutationEngine,
+			OrchidGroupMutationRoutingPolicy mutationRoutingPolicy,
+			Clock clock) {
 		this.immediateWorkExecutionService = immediateWorkExecutionService;
 		this.queryService = queryService;
 		this.orchidGroupRepository = orchidGroupRepository;
 		this.usageInspectors = usageInspectors;
 		this.memberRepository = memberRepository;
+		this.mutationEngine = mutationEngine;
+		this.mutationRoutingPolicy = mutationRoutingPolicy;
+		this.clock = clock;
 	}
 
 	public MultiCreateWorkOperationResponse create(MultiCreateWorkOperationRequest request) {
@@ -89,7 +104,17 @@ public class MultiCreateWorkOperationService {
 		}
 		memberRepository.findByOrchidGroupIdInAndRemovedAtIsNull(groupIds)
 				.forEach(member -> member.remove());
-		groups.forEach(group -> group.cancelCreation());
+		if (mutationRoutingPolicy.routesToEngine()) {
+			groups.forEach(group -> mutationEngine.cancelCreation(
+					new CancelOrchidGroupCreationMutationCommand(
+							OrchidGroupMutationSources.work(
+									operationId, "CANCEL_RESULT:" + group.getId()),
+							group.getId(),
+							TimeConfig.farmToday(clock),
+							"다중 생성 작업 취소")));
+		} else {
+			groups.forEach(group -> group.cancelCreation());
+		}
 		immediateWorkExecutionService.cancelMultiCreate(operationId);
 		return response(operationId);
 	}

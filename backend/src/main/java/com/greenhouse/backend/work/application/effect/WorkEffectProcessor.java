@@ -99,8 +99,9 @@ public class WorkEffectProcessor {
 		}
 		WorkEffectKind effectKind = handler.effectKind();
 
-		WorkExecutionResult result = handler.execute(operation, target, command);
-		return persist(operation, target, command, effectKey, sourceOrchidGroupIds, effectKind, result);
+		WorkEffectCommand routedCommand = command.withEffectKey(effectKey);
+		WorkExecutionResult result = handler.execute(operation, target, routedCommand);
+		return persist(operation, target, routedCommand, effectKey, sourceOrchidGroupIds, effectKind, result);
 	}
 
 	private WorkExecutionResult persist(

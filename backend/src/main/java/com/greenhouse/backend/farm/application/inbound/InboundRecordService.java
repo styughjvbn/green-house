@@ -1,6 +1,12 @@
 package com.greenhouse.backend.farm.application.inbound;
 
 import com.greenhouse.backend.farm.application.structure.OrchidPlacementPolicy;
+import com.greenhouse.backend.farm.application.orchid.mutation.CreateInboundOrchidGroupsMutationCommand;
+import com.greenhouse.backend.farm.application.orchid.mutation.CreateOrchidGroupMutationItem;
+import com.greenhouse.backend.farm.application.orchid.mutation.OrchidGroupMutationDetails;
+import com.greenhouse.backend.farm.application.orchid.mutation.OrchidGroupMutationEngine;
+import com.greenhouse.backend.farm.application.orchid.mutation.OrchidGroupMutationRoutingPolicy;
+import com.greenhouse.backend.farm.application.orchid.mutation.OrchidGroupMutationSources;
 import com.greenhouse.backend.common.exception.NotFoundException;
 import com.greenhouse.backend.common.application.RequestActorProvider;
 import com.greenhouse.backend.farm.domain.structure.BedZone;
@@ -20,7 +26,9 @@ import com.greenhouse.backend.farm.repository.orchid.OrchidGroupRepository;
 import com.greenhouse.backend.farm.repository.variety.VarietyRepository;
 import com.greenhouse.backend.work.application.operation.InboundWorkOperationRecorder;
 import com.greenhouse.backend.work.application.operation.InboundWorkOperationLifecycleService;
+import com.greenhouse.backend.work.application.effect.WorkMutationLink;
 import java.math.BigDecimal;
+import java.util.List;
 import java.util.Map;
 import com.greenhouse.backend.audit.domain.AuditAction;
 import lombok.RequiredArgsConstructor;
@@ -45,6 +53,8 @@ public class InboundRecordService {
 	private final InboundWorkOperationRequestFactory workOperationRequestFactory;
 	private final RequestActorProvider requestActorProvider;
 	private final InboundRecordAuditSupport auditSupport;
+	private final OrchidGroupMutationEngine mutationEngine;
+	private final OrchidGroupMutationRoutingPolicy mutationRoutingPolicy;
 
 	public InboundRecordResponse create(InboundRecordCreateRequest request) {
 		validateCreate(request, resolveCreateStatus(request));
@@ -70,12 +80,43 @@ public class InboundRecordService {
 				requestActorProvider.resolve(request.worker()),
 				normalize(request.memo()));
 		InboundRecord saved = inboundRecordRepository.save(inboundRecord);
+		WorkMutationLink mutationLink = null;
 
 		if (requiresPlacement(request.inboundType())) {
-			OrchidGroup orchidGroup = createPlacedOrchidGroup(variety, request, bedZone);
-			orchidGroup.assignVariety(variety);
-			orchidGroup.assignInboundRecord(saved);
-			orchidGroupRepository.save(orchidGroup);
+			OrchidGroup orchidGroup;
+			if (mutationRoutingPolicy.routesToEngine()) {
+				OrchidPlacementPolicy.PlacementRange placementRange = resolvePlacementRange(
+						bedZone, request.startPosition(), request.endPosition());
+				var mutation = mutationEngine.createFromInbound(
+						new CreateInboundOrchidGroupsMutationCommand(
+								OrchidGroupMutationSources.inbound(saved.getId(), "CREATE_PLACED_GROUP"),
+								saved.getId(),
+								List.of(new CreateOrchidGroupMutationItem(
+										bedZone.getId(),
+										new OrchidGroupMutationDetails(
+												variety.getId(),
+												resolveQuantity(request.actualQuantity(), request.estimatedQuantity()),
+												request.potSize(),
+												request.ageYear(),
+												DEFAULT_ORCHID_STATUS,
+												request.placementType(),
+												request.trayCount(),
+												false,
+												placementRange.startPosition(),
+												placementRange.endPosition(),
+												request.memo()))),
+								request.inboundDate(),
+								"즉시 배치 입고"));
+				Long orchidGroupId = mutation.entries().getFirst().orchidGroupId();
+				orchidGroup = orchidGroupRepository.findById(orchidGroupId)
+						.orElseThrow(() -> new NotFoundException("생성된 난 묶음을 찾을 수 없습니다."));
+				mutationLink = new WorkMutationLink(mutation.mutationId(), mutation.correlationId());
+			} else {
+				orchidGroup = createPlacedOrchidGroup(variety, request, bedZone);
+				orchidGroup.assignVariety(variety);
+				orchidGroup.assignInboundRecord(saved);
+				orchidGroupRepository.save(orchidGroup);
+			}
 			saved.place(
 					bedZone,
 					orchidGroup,
@@ -84,7 +125,7 @@ public class InboundRecordService {
 		} else {
 			saved.markPottingPending(status);
 		}
-		inboundWorkOperationRecorder.record(workOperationRequestFactory.create(saved));
+		inboundWorkOperationRecorder.record(workOperationRequestFactory.create(saved), mutationLink);
 		return InboundRecordResponse.from(inboundRecordFinder.find(saved.getId()));
 	}
 

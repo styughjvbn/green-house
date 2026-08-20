@@ -16,4 +16,8 @@ public record OrchidGroupLedgerWriterProperties(
 		}
 		writerVersion = writerVersion == null ? null : writerVersion.trim();
 	}
+
+	public boolean routesToMutationEngine() {
+		return writerMode == OrchidGroupLedgerWriterMode.ENGINE;
+	}
 }

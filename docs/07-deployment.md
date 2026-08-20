@@ -257,10 +257,53 @@ DATABASE_PASSWORD='...' \
 확인 문구도 `ACTIVATE:{cutoverKey}`로 바뀐다. ACTIVE 이후에는 DB fence를 해제하거나
 LEGACY writer로 fallback하지 않고 roll-forward한다.
 
-현재 구현 단계에서는 기존 Farm·Work·Sales·Inbound write path의 Engine routing이
-아직 완료되지 않았다. 따라서 복원 DB의 `--activate=false` rehearsal까지만 허용하며,
-retirement inventory가 비고 전체 회귀·smoke 절차가 준비되기 전 운영 DB의
-`--activate=true` 실행은 금지한다.
+현재 구현은 Farm·Work·Sales·Inbound의 알려진 난 묶음 write path를 하나의
+`LEGACY|ENGINE` 스위치로 라우팅한다. 기존 writer 제거와 운영 복원 DB 전체 검증은
+아직 남아 있으므로 `--activate=false` rehearsal까지만 허용한다. retirement
+inventory가 비고 전체 회귀·smoke 절차가 통과하기 전 운영 DB의 `--activate=true`
+실행은 금지한다.
+
+### ENGINE writer 수동 smoke test
+
+운영 primary가 아닌 복원 또는 별도 테스트 PostgreSQL에서만 실행한다. 기존 데이터가
+있으면 위 `orchidLedgerCutover --activate=false` 명령으로 baseline을 먼저 만든다.
+그 뒤 애플리케이션을 다음처럼 시작한다.
+
+```bash
+cd backend
+ORCHID_LEDGER_WRITER_MODE=ENGINE \
+ORCHID_LEDGER_WRITER_VERSION=1.0.0 \
+DATABASE_URL=jdbc:postgresql://localhost:5432/greenhouse_rehearsal \
+DATABASE_USERNAME=greenhouse_rehearsal_writer \
+DATABASE_PASSWORD='...' \
+./gradlew bootRun
+```
+
+화면에서 다음 순서로 확인한다.
+
+1. 난 묶음 단건·다중 생성, 상세 수정, 이동과 새로 만든 묶음의 생성 취소
+2. 즉시 배치 입고와 유리병 모종 포트 작업
+3. 폐기, 자리 이동, 분갈이, 분주, 합식, 다중 생성·취소와 완료 결과 보정
+4. 판매 작성중 예약, 전표 수정, 작성중 취소, 출고 완료와 출고 완료 취소
+5. 같은 Work 실행 키와 즉시 작업 요청 키 재호출 시 수량·결과가 중복되지 않는지 확인
+
+애플리케이션을 종료한 뒤 같은 DB를 read-only 계정으로 `orchidLedgerReconcile`하여
+revision chain과 latest snapshot 대사를 다시 통과시킨다. 추가로 새 Work 효과와
+판매 이동에서 반쪽짜리 연결이 없는지 확인한다.
+
+```sql
+SELECT id
+FROM work_applied_effects
+WHERE (mutation_id IS NULL) <> (correlation_id IS NULL);
+
+SELECT id
+FROM sales_inventory_movements
+WHERE (mutation_id IS NULL) <> (correlation_id IS NULL);
+```
+
+두 조회 결과는 비어 있어야 한다. 기록 전용 Work 효과의 두 값이 모두 `NULL`인 것은
+정상이다. smoke test 중에도 coverage는 `PREPARING`으로 유지하고 `ACTIVE` 전환은
+수행하지 않는다.
 
 ### 데모 환경
 

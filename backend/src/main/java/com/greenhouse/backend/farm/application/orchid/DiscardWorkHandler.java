@@ -1,10 +1,15 @@
 package com.greenhouse.backend.farm.application.orchid;
 
 import com.greenhouse.backend.farm.domain.orchid.OrchidGroup;
+import com.greenhouse.backend.farm.application.orchid.mutation.DiscardOrchidGroupMutationCommand;
+import com.greenhouse.backend.farm.application.orchid.mutation.OrchidGroupMutationEngine;
+import com.greenhouse.backend.farm.application.orchid.mutation.OrchidGroupMutationRoutingPolicy;
+import com.greenhouse.backend.farm.application.orchid.mutation.OrchidGroupMutationSources;
 import com.greenhouse.backend.farm.repository.orchid.OrchidGroupRepository;
 import com.greenhouse.backend.work.application.effect.WorkEffectCommand;
 import com.greenhouse.backend.work.application.effect.WorkEffectHandler;
 import com.greenhouse.backend.work.application.effect.WorkExecutionResult;
+import com.greenhouse.backend.work.application.effect.WorkMutationLink;
 import com.greenhouse.backend.work.domain.effect.WorkEffectKind;
 import com.greenhouse.backend.work.domain.operation.WorkOperation;
 import com.greenhouse.backend.work.domain.target.WorkOperationTarget;
@@ -20,6 +25,8 @@ import org.springframework.stereotype.Component;
 public class DiscardWorkHandler implements WorkEffectHandler {
 
 	private final OrchidGroupRepository orchidGroupRepository;
+	private final OrchidGroupMutationEngine mutationEngine;
+	private final OrchidGroupMutationRoutingPolicy mutationRoutingPolicy;
 
 	@Override
 	public String supports() {
@@ -47,7 +54,18 @@ public class DiscardWorkHandler implements WorkEffectHandler {
 				.orElseThrow(() -> new IllegalArgumentException("폐기할 난 묶음을 찾을 수 없습니다."));
 		int beforeQuantity = orchidGroup.getQuantity();
 		String beforeStatus = orchidGroup.getStatus();
-		orchidGroup.discard(discardQuantity);
+		WorkMutationLink mutationLink = null;
+		if (mutationRoutingPolicy.routesToEngine()) {
+			var mutation = mutationEngine.discard(new DiscardOrchidGroupMutationCommand(
+					OrchidGroupMutationSources.work(operation.getId(), command.effectKey()),
+					orchidGroup.getId(),
+					discardQuantity,
+					operation.getPlannedStartDate(),
+					reason(command.resultDetails())));
+			mutationLink = new WorkMutationLink(mutation.mutationId(), mutation.correlationId());
+		} else {
+			orchidGroup.discard(discardQuantity);
+		}
 
 		Map<String, Object> details = new LinkedHashMap<>();
 		details.put("orchidGroupId", orchidGroup.getId());
@@ -62,7 +80,15 @@ public class DiscardWorkHandler implements WorkEffectHandler {
 				details.put("reason", value.trim());
 			}
 		}
-		return new WorkExecutionResult("DISCARD", details, List.of(orchidGroup.getId()));
+		return new WorkExecutionResult(
+				"DISCARD", details, List.of(orchidGroup.getId()), mutationLink);
+	}
+
+	private String reason(Map<String, Object> details) {
+		Object value = details == null ? null : details.get("reason");
+		return value instanceof String reason && !reason.isBlank()
+				? reason.trim()
+				: "폐기 작업 실행";
 	}
 
 	private int readDiscardQuantity(Map<String, Object> details) {
