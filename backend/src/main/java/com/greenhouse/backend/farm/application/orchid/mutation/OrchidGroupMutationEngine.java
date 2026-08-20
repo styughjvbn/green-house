@@ -28,6 +28,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.function.BiConsumer;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
@@ -457,6 +458,109 @@ public class OrchidGroupMutationEngine {
 				afterState);
 	}
 
+	public OrchidGroupMutationResult reserve(ReserveOrchidGroupsMutationCommand command) {
+		return applyQuantityMutation(
+				OrchidGroupMutationType.RESERVE,
+				command.source(),
+				command.items(),
+				command.effectiveBusinessDate(),
+				command.reason(),
+				OrchidGroup::reserve);
+	}
+
+	public OrchidGroupMutationResult releaseReservation(
+			ReleaseOrchidGroupReservationsMutationCommand command) {
+		return applyQuantityMutation(
+				OrchidGroupMutationType.RELEASE_RESERVATION,
+				command.source(),
+				command.items(),
+				command.effectiveBusinessDate(),
+				command.reason(),
+				OrchidGroup::releaseReserved);
+	}
+
+	public OrchidGroupMutationResult consumeReservation(
+			ConsumeOrchidGroupReservationsMutationCommand command) {
+		return applyQuantityMutation(
+				OrchidGroupMutationType.CONSUME_RESERVATION,
+				command.source(),
+				command.items(),
+				command.effectiveBusinessDate(),
+				command.reason(),
+				OrchidGroup::outboundReserved);
+	}
+
+	public OrchidGroupMutationResult restoreOutbound(
+			RestoreOutboundOrchidGroupsMutationCommand command) {
+		return applyQuantityMutation(
+				OrchidGroupMutationType.RESTORE_OUTBOUND,
+				command.source(),
+				command.items(),
+				command.effectiveBusinessDate(),
+				command.reason(),
+				OrchidGroup::restoreOutbound);
+	}
+
+	private OrchidGroupMutationResult applyQuantityMutation(
+			OrchidGroupMutationType mutationType,
+			OrchidGroupMutationSource source,
+			List<OrchidGroupQuantityMutationItem> items,
+			LocalDate effectiveBusinessDate,
+			String reason,
+			BiConsumer<OrchidGroup, Integer> mutationAction) {
+		String commandFingerprint = fingerprint.calculate(new QuantityMutationFingerprintPayload(
+				mutationType,
+				items,
+				effectiveBusinessDate,
+				reason));
+		var replay = replayResolver.findExisting(source, commandFingerprint);
+		if (replay.isPresent()) {
+			return replay.get();
+		}
+
+		List<Long> orchidGroupIds = items.stream()
+				.map(OrchidGroupQuantityMutationItem::orchidGroupId)
+				.toList();
+		Map<Long, OrchidGroup> groupsById = orchidGroupRepository
+				.findAllForUpdateByIdIn(orchidGroupIds)
+				.stream()
+				.collect(Collectors.toMap(OrchidGroup::getId, Function.identity()));
+		if (groupsById.size() != orchidGroupIds.size()) {
+			throw new NotFoundException("수량 Mutation 대상 난 묶음을 모두 찾을 수 없습니다.");
+		}
+		replay = replayResolver.findExisting(source, commandFingerprint);
+		if (replay.isPresent()) {
+			return replay.get();
+		}
+
+		List<PendingChange> changes = new ArrayList<>();
+		for (OrchidGroupQuantityMutationItem item : items) {
+			OrchidGroup group = groupsById.get(item.orchidGroupId());
+			requireBaseline(group);
+			long revisionBefore = group.getStateRevision();
+			OrchidGroupStateSnapshot beforeState = OrchidGroupStateSnapshot.from(group);
+			mutationAction.accept(group, item.quantity());
+			OrchidGroupStateSnapshot afterState = OrchidGroupStateSnapshot.from(group);
+			requireStateChange(beforeState, afterState);
+			group.advanceStateRevision();
+			changes.add(new PendingChange(group, revisionBefore, beforeState, afterState));
+		}
+
+		OrchidGroupMutation mutation = saveMutation(
+				mutationType, source, commandFingerprint, effectiveBusinessDate, reason);
+		List<OrchidGroupMutationEntry> entries = changes.stream()
+				.map(change -> OrchidGroupMutationEntry.changed(
+						mutation,
+						change.group().getId(),
+						OrchidGroupMutationEntryRole.AFFECTED,
+						change.revisionBefore(),
+						change.beforeState(),
+						change.afterState()))
+				.toList();
+		entryRepository.saveAll(entries);
+		return OrchidGroupMutationResult.from(mutation, entries);
+	}
+
 	private OrchidGroupMutationResult recordCreated(
 			OrchidGroupMutationSource source,
 			String commandFingerprint,
@@ -716,6 +820,13 @@ public class OrchidGroupMutationEngine {
 			OrchidGroupMutationType mutationType,
 			Long orchidGroupId,
 			Integer quantity,
+			LocalDate effectiveBusinessDate,
+			String reason) {
+	}
+
+	private record QuantityMutationFingerprintPayload(
+			OrchidGroupMutationType mutationType,
+			List<OrchidGroupQuantityMutationItem> items,
 			LocalDate effectiveBusinessDate,
 			String reason) {
 	}

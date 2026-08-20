@@ -6,9 +6,12 @@ import com.greenhouse.backend.farm.application.orchid.mutation.CreateOrchidGroup
 import com.greenhouse.backend.farm.application.orchid.mutation.BaselineOrchidGroupsCommand;
 import com.greenhouse.backend.farm.application.orchid.mutation.CreateInboundOrchidGroupsMutationCommand;
 import com.greenhouse.backend.farm.application.orchid.mutation.CreateOrchidGroupMutationItem;
+import com.greenhouse.backend.farm.application.orchid.mutation.DiscardOrchidGroupMutationCommand;
 import com.greenhouse.backend.farm.application.orchid.mutation.OrchidGroupLedgerPreparationService;
 import com.greenhouse.backend.farm.application.orchid.mutation.OrchidGroupMutationDetails;
 import com.greenhouse.backend.farm.application.orchid.mutation.OrchidGroupMutationEngine;
+import com.greenhouse.backend.farm.application.orchid.mutation.OrchidGroupQuantityMutationItem;
+import com.greenhouse.backend.farm.application.orchid.mutation.ReserveOrchidGroupsMutationCommand;
 import com.greenhouse.backend.farm.application.orchid.mutation.TransformOrchidGroupMutationResult;
 import com.greenhouse.backend.farm.application.orchid.mutation.TransformOrchidGroupMutationSource;
 import com.greenhouse.backend.farm.application.orchid.mutation.TransformOrchidGroupsMutationCommand;
@@ -149,6 +152,68 @@ class OrchidGroupMutationPostgresE2ETest extends WorkE2ETestBase {
 	}
 
 	@Test
+	void serializesConcurrentSalesReservationAndDiscardForTheSameGroup() throws Exception {
+		UUID cutoverKey = UUID.randomUUID();
+		LocalDate businessDate = LocalDate.of(2026, 8, 20);
+		ledgerPreparationService.prepare(cutoverKey, businessDate, "mutation-engine-e2e");
+		ledgerPreparationService.start(cutoverKey);
+		ledgerPreparationService.baselineBatch(new BaselineOrchidGroupsCommand(
+				cutoverKey,
+				"GROUPS-0001",
+				List.of(scenario.orchidGroupId()),
+				businessDate));
+		var ready = new CountDownLatch(2);
+		var start = new CountDownLatch(1);
+		var executor = Executors.newFixedThreadPool(2);
+		try {
+			var futures = List.of(
+					executor.submit(() -> reserveConcurrently("sales-slip-a", ready, start)),
+					executor.submit(() -> discardConcurrently(ready, start)));
+			assertThat(ready.await(5, TimeUnit.SECONDS)).isTrue();
+			start.countDown();
+			var outcomes = futures.stream().map(future -> {
+				try {
+					return future.get(10, TimeUnit.SECONDS);
+				} catch (Exception exception) {
+					throw new AssertionError(exception);
+				}
+			}).toList();
+
+			assertThat(outcomes).filteredOn(outcome -> outcome.mutationId() != null).hasSize(1);
+			assertThat(outcomes).filteredOn(outcome -> outcome.failure() != null)
+					.singleElement()
+					.satisfies(outcome -> assertThat(outcome.failure())
+							.isInstanceOf(IllegalArgumentException.class)
+							.hasMessageContaining("가용 수량"));
+		} finally {
+			start.countDown();
+			executor.shutdownNow();
+		}
+
+		Integer quantity = jdbcTemplate.queryForObject(
+				"SELECT quantity FROM orchid_groups WHERE id = ?",
+				Integer.class,
+				scenario.orchidGroupId());
+		Integer reservedQuantity = jdbcTemplate.queryForObject(
+				"SELECT reserved_quantity FROM orchid_groups WHERE id = ?",
+				Integer.class,
+				scenario.orchidGroupId());
+		assertThat(List.of(quantity, reservedQuantity))
+				.isIn(List.of(100, 60), List.of(40, 0));
+		assertThat(quantity - reservedQuantity).isEqualTo(40);
+		assertThat(jdbcTemplate.queryForObject(
+				"SELECT state_revision FROM orchid_groups WHERE id = ?",
+				Long.class,
+				scenario.orchidGroupId())).isEqualTo(1L);
+		assertThat(jdbcTemplate.queryForObject(
+				"SELECT COUNT(*) FROM orchid_group_mutations",
+				Long.class)).isEqualTo(2L);
+		assertThat(jdbcTemplate.queryForObject(
+				"SELECT COUNT(*) FROM orchid_group_mutation_entries",
+				Long.class)).isEqualTo(2L);
+	}
+
+	@Test
 	void allowsOnlyOneCreationMutationForTheSameInboundRecord() throws Exception {
 		Long inboundRecordId = jdbcTemplate.queryForObject("""
 				INSERT INTO inbound_records (
@@ -281,6 +346,61 @@ class OrchidGroupMutationPostgresE2ETest extends WorkE2ETestBase {
 											null))),
 							LocalDate.of(2026, 8, 20),
 							"동시 구조 변경 검증"))
+					.mutationId());
+			return new Outcome(mutationId, null);
+		} catch (RuntimeException exception) {
+			return new Outcome(null, exception);
+		}
+	}
+
+	private Outcome reserveConcurrently(
+			String referenceId,
+			CountDownLatch ready,
+			CountDownLatch start) throws Exception {
+		ready.countDown();
+		if (!start.await(5, TimeUnit.SECONDS)) {
+			throw new IllegalStateException("동시 판매 예약 요청 시작 신호를 기다리지 못했습니다.");
+		}
+		try {
+			Long mutationId = new TransactionTemplate(transactionManager).execute(status -> mutationEngine.reserve(
+					new ReserveOrchidGroupsMutationCommand(
+							new OrchidGroupMutationSource(
+									OrchidGroupMutationSourceDomain.SALES,
+									"SALES_SLIP",
+									referenceId,
+									"RESERVE",
+									UUID.randomUUID()),
+							List.of(new OrchidGroupQuantityMutationItem(
+									scenario.orchidGroupId(), 60)),
+							LocalDate.of(2026, 8, 20),
+							"동시 판매 예약 검증"))
+					.mutationId());
+			return new Outcome(mutationId, null);
+		} catch (RuntimeException exception) {
+			return new Outcome(null, exception);
+		}
+	}
+
+	private Outcome discardConcurrently(
+			CountDownLatch ready,
+			CountDownLatch start) throws Exception {
+		ready.countDown();
+		if (!start.await(5, TimeUnit.SECONDS)) {
+			throw new IllegalStateException("동시 폐기 요청 시작 신호를 기다리지 못했습니다.");
+		}
+		try {
+			Long mutationId = new TransactionTemplate(transactionManager).execute(status -> mutationEngine.discard(
+					new DiscardOrchidGroupMutationCommand(
+							new OrchidGroupMutationSource(
+									OrchidGroupMutationSourceDomain.FARM,
+									"ORCHID_GROUP_COMMAND",
+									"concurrent-discard",
+									"DISCARD",
+									UUID.randomUUID()),
+							scenario.orchidGroupId(),
+							60,
+							LocalDate.of(2026, 8, 20),
+							"판매 예약과 동시 폐기 검증"))
 					.mutationId());
 			return new Outcome(mutationId, null);
 		} catch (RuntimeException exception) {
