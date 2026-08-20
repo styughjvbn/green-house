@@ -9,6 +9,5 @@ public record OrchidManagementViewportResponse(
 		List<PhysicalBedResponse> beds,
 		boolean hasPrevious,
 		boolean hasNext,
-		OrchidManagementSummaryResponse summary,
-		List<OrchidManagementBedOrderResponse> bedOrder) {
+		OrchidManagementSummaryResponse summary) {
 }

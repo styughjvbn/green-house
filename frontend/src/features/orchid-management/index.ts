@@ -4,7 +4,7 @@ export { OrchidClipboardProvider } from "./model/OrchidClipboardContext";
 
 export {
   getHouse,
-  getOrchidManagementMap,
+  getOrchidManagementBedOrder,
   getOrchidManagementViewport,
   fetchHouse,
   createOrchidGroup,

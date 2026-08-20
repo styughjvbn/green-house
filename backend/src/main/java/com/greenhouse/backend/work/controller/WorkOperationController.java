@@ -70,6 +70,10 @@ public class WorkOperationController {
 		return ApiResponse.ok(planService.preview(request));
 	}
 
+	/**
+	 * @deprecated Use {@code POST /api/work-operations/batch}, which also supports a single work operation.
+	 */
+	@Deprecated(since = "2026-08", forRemoval = false)
 	@PostMapping("/work-operations")
 	@ResponseStatus(HttpStatus.CREATED)
 	public ApiResponse<WorkOperationResponse> create(@Valid @RequestBody WorkOperationCreateRequest request) {
@@ -90,6 +94,10 @@ public class WorkOperationController {
 		return ApiResponse.ok(planService.createCompletedRecord(request));
 	}
 
+	/**
+	 * @deprecated Use {@code POST /api/work-operations/structure-change-records/batch}.
+	 */
+	@Deprecated(since = "2026-08", forRemoval = false)
 	@PostMapping("/work-operations/structure-change-records")
 	@ResponseStatus(HttpStatus.CREATED)
 	public ApiResponse<WorkOperationResponse> createStructureChangeRecord(
@@ -123,6 +131,10 @@ public class WorkOperationController {
 		return ApiResponse.ok(inboundPottingPlanService.getCandidates());
 	}
 
+	/**
+	 * @deprecated Use {@code POST /api/work-operations/inbound-potting-plans/batch}.
+	 */
+	@Deprecated(since = "2026-08", forRemoval = false)
 	@PostMapping("/work-operations/inbound-potting-plans")
 	@ResponseStatus(HttpStatus.CREATED)
 	public ApiResponse<WorkOperationResponse> createInboundPottingPlan(
@@ -138,6 +150,7 @@ public class WorkOperationController {
 	}
 
 	@PostMapping("/work-operations/inbound-potting-executions")
+	@Deprecated(since = "2026-08", forRemoval = false)
 	@ResponseStatus(HttpStatus.CREATED)
 	public ApiResponse<WorkOperationResponse> executeInboundPotting(
 			@Valid @RequestBody InboundPottingExecutionRequest request) {
@@ -150,13 +163,13 @@ public class WorkOperationController {
 			@RequestParam(required = false) LocalDate to,
 			@RequestParam(required = false) WorkOperationStatus status,
 			@RequestParam(defaultValue = "ALL") WorkOperationSearchView view,
-			@RequestParam(required = false) WorkSourceScopeType scopeType,
-			@RequestParam(required = false) Long scopeId,
+			@RequestParam(required = false) WorkSourceScopeType sourceScopeType,
+			@RequestParam(required = false) Long sourceScopeId,
 			@RequestParam(required = false) String keyword,
 			@RequestParam(defaultValue = "0") int page,
 			@RequestParam(defaultValue = "20") int size) {
 		return ApiResponse.ok(queryService.search(
-				from, to, status, view, scopeType, scopeId, keyword, page, size));
+				from, to, status, view, sourceScopeType, sourceScopeId, keyword, page, size));
 	}
 
 	@GetMapping("/work-operations/calendar")
@@ -236,6 +249,10 @@ public class WorkOperationController {
 				request == null ? new WorkTargetExecutionRequest(null, null, null) : request));
 	}
 
+	/**
+	 * @deprecated Use {@code POST /api/work-operations/{workOperationId}/structure-change-executions}.
+	 */
+	@Deprecated(since = "2026-08", forRemoval = false)
 	@PostMapping("/work-operations/{workOperationId}/merge/complete")
 	public ApiResponse<WorkOperationResponse> completeMerge(
 			@PathVariable Long workOperationId,
@@ -251,6 +268,10 @@ public class WorkOperationController {
 		return ApiResponse.ok(structureChangeExecutionService.execute(workOperationId, request));
 	}
 
+	/**
+	 * @deprecated Use {@code GET /api/work-history} with {@code historyScopeType=ORCHID_GROUP}.
+	 */
+	@Deprecated(since = "2026-08", forRemoval = false)
 	@GetMapping("/orchid-groups/{orchidGroupId}/work-history")
 	public ApiResponse<List<OrchidGroupWorkHistoryResponse>> getOrchidGroupHistory(
 			@PathVariable Long orchidGroupId) {
@@ -259,11 +280,11 @@ public class WorkOperationController {
 
 	@GetMapping("/work-history")
 	public ApiResponse<PageResponse<OrchidGroupWorkHistoryResponse>> getWorkHistory(
-			@RequestParam WorkHistoryScopeType scopeType,
-			@RequestParam Long scopeId,
+			@RequestParam WorkHistoryScopeType historyScopeType,
+			@RequestParam Long historyScopeId,
 			@RequestParam(defaultValue = "0") int page,
 			@RequestParam(defaultValue = "20") int size) {
-		return ApiResponse.ok(queryService.getWorkHistory(scopeType, scopeId, page, size));
+		return ApiResponse.ok(queryService.getWorkHistory(historyScopeType, historyScopeId, page, size));
 	}
 
 	@PostMapping("/work-operations/{workOperationId}/corrections")

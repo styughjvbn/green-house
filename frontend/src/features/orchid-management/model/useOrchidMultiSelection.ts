@@ -5,40 +5,35 @@ import type { House } from "@/entities/farm/types";
 
 export function useOrchidMultiSelection(house: House) {
   const [enabled, setEnabled] = useState(false);
-  const [selectedIds, setSelectedIds] = useState<Set<number>>(() => new Set());
+  const [selectedById, setSelectedById] = useState(
+    () => new Map<number, ReturnType<typeof orchidGroupsFromHouse>[number]>(),
+  );
   const orchidGroupsById = useMemo(
     () =>
-      new Map(
-        house.physicalBeds.flatMap((bed) =>
-          bed.bedZones.flatMap((zone) =>
-            zone.orchidGroups.map(
-              (orchidGroup) => [orchidGroup.id, orchidGroup] as const,
-            ),
-          ),
-        ),
-      ),
+      new Map(orchidGroupsFromHouse(house).map((group) => [group.id, group])),
     [house],
   );
+  const selectedIds = useMemo(
+    () => new Set(selectedById.keys()),
+    [selectedById],
+  );
   const selectedOrchidGroups = useMemo(
-    () =>
-      Array.from(selectedIds)
-        .reverse()
-        .map((orchidGroupId) => orchidGroupsById.get(orchidGroupId))
-        .filter((orchidGroup) => orchidGroup != null),
-    [orchidGroupsById, selectedIds],
+    () => Array.from(selectedById.values()).reverse(),
+    [selectedById],
   );
 
   function toggleEnabled() {
-    if (enabled) setSelectedIds(new Set());
+    if (enabled) setSelectedById(new Map());
     setEnabled((current) => !current);
   }
 
   function toggleOrchidGroup(orchidGroupId: number) {
-    if (!orchidGroupsById.has(orchidGroupId)) return;
-    setSelectedIds((current) => {
-      const next = new Set(current);
+    const orchidGroup = orchidGroupsById.get(orchidGroupId);
+    if (!orchidGroup) return;
+    setSelectedById((current) => {
+      const next = new Map(current);
       if (next.has(orchidGroupId)) next.delete(orchidGroupId);
-      else next.add(orchidGroupId);
+      else next.set(orchidGroupId, orchidGroup);
       return next;
     });
   }
@@ -50,4 +45,10 @@ export function useOrchidMultiSelection(house: House) {
     toggleEnabled,
     toggleOrchidGroup,
   };
+}
+
+function orchidGroupsFromHouse(house: House) {
+  return house.physicalBeds.flatMap((bed) =>
+    bed.bedZones.flatMap((zone) => zone.orchidGroups),
+  );
 }

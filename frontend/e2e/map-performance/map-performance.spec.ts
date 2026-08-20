@@ -84,8 +84,8 @@ type HistoryResponseMetric = {
   payloadBytes: number;
   records: WorkHistory[];
   requestStartedAtEpoch: number;
-  scopeId: number | null;
-  scopeType: string | null;
+  historyScopeId: number | null;
+  historyScopeType: string | null;
   status: number;
   totalElements: number;
   totalPages: number;
@@ -992,8 +992,8 @@ async function verifyAccuracy(
   if (
     !responses.some(
       (response) =>
-        response.scopeType === selectionType &&
-        response.scopeId === selectionId,
+        response.historyScopeType === selectionType &&
+        response.historyScopeId === selectionId,
     )
   ) {
     violations.push("선택 범위와 work-history 요청 대상이 다름");
@@ -1221,7 +1221,8 @@ function compareHistoryDesc(a: WorkHistory, b: WorkHistory) {
 function duplicateRequestCount(responses: HistoryResponseMetric[]) {
   const counts = countBy(
     responses,
-    (response) => `${response.scopeType}:${response.scopeId}:${response.page}`,
+    (response) =>
+      `${response.historyScopeType}:${response.historyScopeId}:${response.page}`,
   );
   return Object.values(counts).reduce(
     (sum, count) => sum + Math.max(0, count - 1),
@@ -1267,13 +1268,17 @@ function isWorkHistoryUrl(url: string) {
 function parseHistoryScope(url: string) {
   const match = url.match(/\/orchid-groups\/(\d+)\/work-history/);
   if (match?.[1]) {
-    return { page: 0, scopeType: "ORCHID_GROUP", scopeId: Number(match[1]) };
+    return {
+      page: 0,
+      historyScopeType: "ORCHID_GROUP",
+      historyScopeId: Number(match[1]),
+    };
   }
   const parsed = new URL(url);
   return {
     page: Number(parsed.searchParams.get("page")) || 0,
-    scopeType: parsed.searchParams.get("scopeType"),
-    scopeId: Number(parsed.searchParams.get("scopeId")) || null,
+    historyScopeType: parsed.searchParams.get("historyScopeType"),
+    historyScopeId: Number(parsed.searchParams.get("historyScopeId")) || null,
   };
 }
 

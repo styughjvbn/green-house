@@ -82,8 +82,7 @@ public class FarmStatusService {
 					List.of(),
 					false,
 					false,
-					new OrchidManagementSummaryResponse(0, 0, 0, 0),
-					List.of());
+					new OrchidManagementSummaryResponse(0, 0, 0, 0));
 		}
 
 		int requestedIndex = 0;
@@ -131,11 +130,14 @@ public class FarmStatusService {
 						orchidGroupCount,
 						totalQuantity,
 						abnormalCount,
-						bedZoneCount),
-				allBedRows.stream()
-						.map(row -> new OrchidManagementBedOrderResponse(
-								row.id(), row.houseId(), row.houseNumber(), row.number()))
-						.toList());
+						bedZoneCount));
+	}
+
+	public List<OrchidManagementBedOrderResponse> getOrchidManagementBedOrder() {
+		return physicalBedRepository.findAllOrderRows().stream()
+				.map(row -> new OrchidManagementBedOrderResponse(
+						row.id(), row.houseId(), row.houseNumber(), row.number()))
+				.toList();
 	}
 
 	public FarmStatusOrchidGroupListResponse getOrchidGroups(FarmStatusTargetType targetType, Long targetId) {

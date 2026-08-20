@@ -1,7 +1,7 @@
 package com.greenhouse.backend.work.application.operation;
 
+import com.greenhouse.backend.work.application.target.WorkTargetSelection;
 import com.greenhouse.backend.work.domain.operation.WorkOperation;
-import com.greenhouse.backend.work.domain.operation.WorkSourceScopeType;
 import com.greenhouse.backend.work.domain.operation.WorkType;
 import com.greenhouse.backend.work.dto.effect.DiscardRecordCreateRequest;
 import com.greenhouse.backend.work.dto.effect.DiscardRecordResultRequest;
@@ -88,10 +88,7 @@ public class DiscardRecordService {
 						movementOperation.getTitle() + " - 동시 폐기",
 						completedDate,
 						completedDate,
-						WorkSourceScopeType.MANUAL_SELECTION,
-						null,
-						null,
-						orchidGroupIds,
+						WorkTargetSelection.manualSelection(orchidGroupIds),
 						details,
 						worker,
 						memo,

@@ -78,12 +78,12 @@ public class WorkOperationRepositoryImpl implements WorkOperationRepositoryCusto
 			WorkOperationStatus status,
 			WorkOperationSearchView view,
 			LocalDateTime todayStartedAt,
-			WorkSourceScopeType scopeType,
-			Long scopeId,
+			WorkSourceScopeType sourceScopeType,
+			Long sourceScopeId,
 			String keyword,
 			Pageable pageable) {
 		BooleanBuilder conditions = searchConditions(
-				fromDate, toDate, status, view, todayStartedAt, scopeType, scopeId, keyword);
+				fromDate, toDate, status, view, todayStartedAt, sourceScopeType, sourceScopeId, keyword);
 		var content = queryFactory
 				.selectFrom(workOperation)
 				.join(workOperation.workType, workType).fetchJoin()
@@ -107,43 +107,44 @@ public class WorkOperationRepositoryImpl implements WorkOperationRepositoryCusto
 			WorkOperationStatus status,
 			WorkOperationSearchView view,
 			LocalDateTime todayStartedAt,
-			WorkSourceScopeType scopeType,
-			Long scopeId,
+			WorkSourceScopeType sourceScopeType,
+			Long sourceScopeId,
 			String keyword) {
 		return new BooleanBuilder()
 				.and(statusEq(status))
 				.and(viewCondition(view, todayStartedAt))
-				.and(scopeTypeEq(scopeType))
-				.and(scopeIdEq(scopeId))
+				.and(sourceScopeTypeEq(sourceScopeType))
+				.and(sourceScopeIdEq(sourceScopeId))
 				.and(keywordContains(keyword))
 				.and(periodEndsOnOrAfter(fromDate))
 				.and(periodStartsOnOrBefore(toDate));
 	}
 
 	private BooleanExpression viewCondition(WorkOperationSearchView view, LocalDateTime todayStartedAt) {
-		if (view == null || view == WorkOperationSearchView.ALL) {
+		if (view == null) {
 			return null;
 		}
-		BooleanExpression active = workOperation.status.in(
-				WorkOperationStatus.PLANNED,
-				WorkOperationStatus.IN_PROGRESS,
-				WorkOperationStatus.PAUSED);
-		if (view == WorkOperationSearchView.MANAGEMENT) {
-			return active.or(workOperation.updatedAt.goe(todayStartedAt));
-		}
-		return active.not();
+
+		return switch (view) {
+			case ALL -> null;
+			case MANAGEMENT -> workOperation.status
+					.in(WorkOperationStatus.PLANNED,
+							WorkOperationStatus.IN_PROGRESS,
+							WorkOperationStatus.PAUSED)
+					.or(workOperation.updatedAt.goe(todayStartedAt));
+		};
 	}
 
 	private BooleanExpression statusEq(WorkOperationStatus status) {
 		return status == null ? null : workOperation.status.eq(status);
 	}
 
-	private BooleanExpression scopeTypeEq(WorkSourceScopeType scopeType) {
-		return scopeType == null ? null : workOperation.sourceScopeType.eq(scopeType);
+	private BooleanExpression sourceScopeTypeEq(WorkSourceScopeType sourceScopeType) {
+		return sourceScopeType == null ? null : workOperation.sourceScopeType.eq(sourceScopeType);
 	}
 
-	private BooleanExpression scopeIdEq(Long scopeId) {
-		return scopeId == null ? null : workOperation.sourceScopeId.eq(scopeId);
+	private BooleanExpression sourceScopeIdEq(Long sourceScopeId) {
+		return sourceScopeId == null ? null : workOperation.sourceScopeId.eq(sourceScopeId);
 	}
 
 	private BooleanExpression keywordContains(String keyword) {

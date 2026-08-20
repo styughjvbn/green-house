@@ -165,6 +165,7 @@ export interface InboundRecordUpdatePayload {
 }
 
 export interface InboundPottingPayload {
+  idempotencyKey: string;
   pottingDate: string;
   results: Array<{
     bedZoneId: number;

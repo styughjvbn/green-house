@@ -43,6 +43,10 @@ public class SalesController {
 	private final SalesSlipStatusService salesSlipStatusService;
 	private final SalesOrchidGroupQueryService salesOrchidGroupQueryService;
 
+	/**
+	 * @deprecated Use {@code GET /api/sales-slips/page}.
+	 */
+	@Deprecated(since = "2026-08", forRemoval = false)
 	@GetMapping("/sales-slips")
 	public ApiResponse<List<SalesSlipResponse>> getSalesSlips(
 			@RequestParam(required = false) Long partnerId,

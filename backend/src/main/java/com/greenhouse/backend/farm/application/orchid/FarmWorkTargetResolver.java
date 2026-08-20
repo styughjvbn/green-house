@@ -39,18 +39,18 @@ public class FarmWorkTargetResolver implements WorkTargetResolver {
 
 	@Override
 	public List<ResolvedWorkTarget> resolve(WorkTargetSelection selection) {
-		return switch (selection.scopeType()) {
+		return switch (selection.sourceScopeType()) {
 			case FARM -> resolveLocation(null, null);
-			case HOUSE -> resolveHouse(selection.scopeId());
-			case PHYSICAL_BED -> resolvePhysicalBed(selection.scopeId());
-			case BED_ZONE -> resolveBedZone(selection.scopeId());
-			case ORCHID_GROUP -> resolveManual(selection.orchidGroupIds());
+			case HOUSE -> resolveHouse(selection.sourceScopeId());
+			case PHYSICAL_BED -> resolvePhysicalBed(selection.sourceScopeId());
+			case BED_ZONE -> resolveBedZone(selection.sourceScopeId());
+			case ORCHID_GROUP -> resolveManual(selection.sourceOrchidGroupIds());
 			case DERIVED_GROUP -> resolveActiveIds(derivedOrchidGroupService
-					.getMembers(selection.derivedGroupKey(), null, null, null).stream()
+					.getMembers(selection.sourceDerivedGroupKey(), null, null, null).stream()
 					.map(member -> member.id())
 					.collect(Collectors.toSet()));
-			case USER_COLLECTION -> resolveCollection(selection.scopeId());
-			case MANUAL_SELECTION -> resolveManual(selection.orchidGroupIds());
+			case USER_COLLECTION -> resolveCollection(selection.sourceScopeId());
+			case MANUAL_SELECTION -> resolveManual(selection.sourceOrchidGroupIds());
 			default -> throw new IllegalArgumentException("아직 지원하지 않는 작업 대상 유형입니다.");
 		};
 	}

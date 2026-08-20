@@ -47,7 +47,18 @@ class FarmStatusServiceTest {
 		assertThat(result.beds()).extracting("id").containsExactly(22L);
 		assertThat(result.hasPrevious()).isTrue();
 		assertThat(result.hasNext()).isFalse();
-		assertThat(result.bedOrder()).extracting("id").containsExactly(11L, 12L, 13L, 21L, 22L);
+	}
+
+	@Test
+	void returnsBedOrderSeparatelyFromViewport() {
+		var rows = List.of(
+				new PhysicalBedOrderRow(11L, 1L, 1, 1),
+				new PhysicalBedOrderRow(21L, 2L, 2, 1));
+		when(physicalBedRepository.findAllOrderRows()).thenReturn(rows);
+
+		var result = service.getOrchidManagementBedOrder();
+
+		assertThat(result).extracting("id").containsExactly(11L, 21L);
 	}
 
 	@Test

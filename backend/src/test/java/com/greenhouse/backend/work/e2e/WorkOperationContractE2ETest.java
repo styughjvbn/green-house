@@ -98,8 +98,8 @@ class WorkOperationContractE2ETest extends WorkE2ETestBase {
 
 		ApiResult preview = post("/api/work-operations/target-preview", """
 				{
-				  "scopeType": "MANUAL_SELECTION",
-				  "orchidGroupIds": [%d]
+				  "sourceScopeType": "MANUAL_SELECTION",
+				  "sourceOrchidGroupIds": [%d]
 				}
 				""".formatted(scenario.orchidGroupId()));
 		assertThat(preview.status()).isEqualTo(200);
@@ -165,9 +165,9 @@ class WorkOperationContractE2ETest extends WorkE2ETestBase {
 				.isEqualTo("SKIPPED");
 		assertThat(skipped.data().path("status").asText()).isEqualTo("COMPLETED");
 
-		ApiResult historyView = get("/api/work-operations?view=HISTORY");
-		assertThat(historyView.status()).isEqualTo(200);
-		assertThat(historyView.data().path("content")).hasSize(2);
+		ApiResult allView = get("/api/work-operations?view=ALL");
+		assertThat(allView.status()).isEqualTo(200);
+		assertThat(allView.data().path("content")).hasSize(2);
 	}
 
 	private ApiResult createOperation(String title) throws Exception {

@@ -45,8 +45,7 @@ paths:
           enum:
           - ALL
           - MANAGEMENT
-          - HISTORY
-      - name: scopeType
+      - name: sourceScopeType
         in: query
         required: false
         schema:
@@ -62,7 +61,7 @@ paths:
           - USER_COLLECTION
           - MANUAL_SELECTION
           - INBOUND_RECORD_SELECTION
-      - name: scopeId
+      - name: sourceScopeId
         in: query
         required: false
         schema:
@@ -111,6 +110,7 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ApiResponseWorkOperationResponse'
+      deprecated: true
   /api/work-operations/{workOperationId}/targets/{targetId}/start:
     post:
       tags:
@@ -308,6 +308,7 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ApiResponseWorkOperationResponse'
+      deprecated: true
   /api/work-operations/{workOperationId}/corrections:
     get:
       tags:
@@ -430,6 +431,7 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ApiResponseWorkOperationResponse'
+      deprecated: true
   /api/work-operations/structure-change-records/batch:
     post:
       tags:
@@ -502,6 +504,7 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ApiResponseWorkOperationResponse'
+      deprecated: true
   /api/work-operations/inbound-potting-plans/batch:
     post:
       tags:
@@ -538,6 +541,7 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ApiResponseWorkOperationResponse'
+      deprecated: true
   /api/work-operations/discard-records:
     post:
       tags:
@@ -663,7 +667,6 @@ paths:
           enum:
           - ALL
           - MANAGEMENT
-          - HISTORY
       responses:
         '200':
           description: OK
@@ -677,7 +680,7 @@ paths:
       - work-operation-controller
       operationId: getWorkHistory
       parameters:
-      - name: scopeType
+      - name: historyScopeType
         in: query
         required: true
         schema:
@@ -687,7 +690,7 @@ paths:
           - PHYSICAL_BED
           - BED_ZONE
           - ORCHID_GROUP
-      - name: scopeId
+      - name: historyScopeId
         in: query
         required: true
         schema:
@@ -733,6 +736,7 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ApiResponseListOrchidGroupWorkHistoryResponse'
+      deprecated: true
 components:
   schemas:
     ApiResponseListInboundPottingCandidateResponse:
@@ -881,6 +885,10 @@ components:
     InboundPottingExecutionRequest:
       type: object
       properties:
+        idempotencyKey:
+          type: string
+          maxLength: 80
+          minLength: 0
         inboundRecordId:
           type: integer
           format: int64
@@ -906,6 +914,7 @@ components:
           maxLength: 1000
           minLength: 0
       required:
+      - idempotencyKey
       - inboundRecordId
       - pottingDate
       - results
@@ -1932,7 +1941,7 @@ components:
     WorkTargetPreviewRequest:
       type: object
       properties:
-        scopeType:
+        sourceScopeType:
           type: string
           enum:
           - NONE
@@ -1945,18 +1954,18 @@ components:
           - USER_COLLECTION
           - MANUAL_SELECTION
           - INBOUND_RECORD_SELECTION
-        scopeId:
+        sourceScopeId:
           type: integer
           format: int64
-        derivedGroupKey:
+        sourceDerivedGroupKey:
           type: string
-        orchidGroupIds:
+        sourceOrchidGroupIds:
           type: array
           items:
             type: integer
             format: int64
       required:
-      - scopeType
+      - sourceScopeType
     WorkTargetPreviewResponse:
       type: object
       properties:

@@ -73,14 +73,14 @@ public class WorkOperationQueryService {
 			LocalDate toDate,
 			WorkOperationStatus status,
 			WorkOperationSearchView view,
-			WorkSourceScopeType scopeType,
-			Long scopeId,
+			WorkSourceScopeType sourceScopeType,
+			Long sourceScopeId,
 			String keyword,
 			int page,
 			int size) {
 		validateDates(fromDate, toDate);
 		validatePage(page, size);
-		if (scopeId != null && scopeType == null) {
+		if (sourceScopeId != null && sourceScopeType == null) {
 			throw new IllegalArgumentException("대상 범위 ID를 조회하려면 대상 범위 유형이 필요합니다.");
 		}
 		LocalDate farmToday = TimeConfig.farmToday(clock);
@@ -90,8 +90,8 @@ public class WorkOperationQueryService {
 				status,
 				view,
 				TimeConfig.farmDayStartUtc(farmToday),
-				scopeType,
-				scopeId,
+				sourceScopeType,
+				sourceScopeId,
 				keyword,
 				PageRequest.of(page, size));
 		return new PageResponse<>(
@@ -122,12 +122,12 @@ public class WorkOperationQueryService {
 	}
 
 	public PageResponse<OrchidGroupWorkHistoryResponse> getWorkHistory(
-			WorkHistoryScopeType scopeType,
-			Long scopeId,
+			WorkHistoryScopeType historyScopeType,
+			Long historyScopeId,
 			int page,
 			int size) {
 		validatePage(page, size);
-		ResolvedHistoryScope scope = resolveHistoryScope(scopeType, scopeId);
+		ResolvedHistoryScope scope = resolveHistoryScope(historyScopeType, historyScopeId);
 		if (scope.orchidGroupIds().isEmpty()) {
 			return new PageResponse<>(List.of(), page, size, 0, 0);
 		}
@@ -154,9 +154,9 @@ public class WorkOperationQueryService {
 	}
 
 	private List<OrchidGroupWorkHistoryResponse> getAllWorkHistory(
-			WorkHistoryScopeType scopeType,
-			Long scopeId) {
-		ResolvedHistoryScope scope = resolveHistoryScope(scopeType, scopeId);
+			WorkHistoryScopeType historyScopeType,
+			Long historyScopeId) {
+		ResolvedHistoryScope scope = resolveHistoryScope(historyScopeType, historyScopeId);
 		if (scope.orchidGroupIds().isEmpty()) {
 			return List.of();
 		}
@@ -186,13 +186,12 @@ public class WorkOperationQueryService {
 	}
 
 	private ResolvedHistoryScope resolveHistoryScope(
-			WorkHistoryScopeType scopeType,
-			Long scopeId) {
-		validateHistoryScope(scopeType, scopeId);
-		WorkSourceScopeType sourceScopeType = scopeType.toSourceScopeType();
-		List<Long> directIds = scopeType == WorkHistoryScopeType.ORCHID_GROUP ? List.of(scopeId) : List.of();
-		var resolvedTargets = workTargetResolver.resolve(new WorkTargetSelection(
-				sourceScopeType, scopeId, null, directIds));
+			WorkHistoryScopeType historyScopeType,
+			Long historyScopeId) {
+		validateHistoryScope(historyScopeType, historyScopeId);
+		WorkSourceScopeType sourceScopeType = historyScopeType.toSourceScopeType();
+		var resolvedTargets = workTargetResolver.resolve(
+				WorkTargetSelection.identifiedScope(sourceScopeType, historyScopeId));
 		Set<Long> orchidGroupIds = resolvedTargets.stream()
 				.map(target -> target.orchidGroupId())
 				.collect(Collectors.toSet());
@@ -228,8 +227,8 @@ public class WorkOperationQueryService {
 		return historyByOperationId;
 	}
 
-	private void validateHistoryScope(WorkHistoryScopeType scopeType, Long scopeId) {
-		if (scopeType == null || scopeId == null) {
+	private void validateHistoryScope(WorkHistoryScopeType historyScopeType, Long historyScopeId) {
+		if (historyScopeType == null || historyScopeId == null) {
 			throw new IllegalArgumentException("작업 이력 조회 범위 유형과 ID가 필요합니다.");
 		}
 	}

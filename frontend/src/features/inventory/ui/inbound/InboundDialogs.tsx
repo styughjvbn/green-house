@@ -2,11 +2,12 @@
 
 import type { House } from "@/entities/farm/types";
 import { PottingExecutionForm } from "@/entities/farm/ui/PottingExecutionForm";
+import { createUuid } from "@/shared/lib/id";
 import { X } from "lucide-react";
 import type { ReactNode } from "react";
 import type { CSSObjectWithLabel, SingleValue } from "react-select";
 import Select from "react-select";
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { useRuntimeContext } from "@/shared/runtime/RuntimeContext";
 import type {
   InboundPottingPayload,
@@ -394,6 +395,7 @@ export function InboundPottingDialog({
   onClose: () => void;
   onSubmit: (payload: InboundPottingPayload) => Promise<void>;
 }) {
+  const requestKey = useRef(createUuid());
   if (!open || !record) return null;
 
   return (
@@ -411,7 +413,12 @@ export function InboundPottingDialog({
         subject={record.varietyName}
         submitLabel="작업 실행 및 완료"
         onCancel={onClose}
-        onSubmit={onSubmit}
+        onSubmit={(values) =>
+          onSubmit({
+            ...values,
+            idempotencyKey: requestKey.current,
+          })
+        }
       />
     </DialogShell>
   );

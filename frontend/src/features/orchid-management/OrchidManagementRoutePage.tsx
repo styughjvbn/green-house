@@ -1,20 +1,17 @@
 import type {
-  FarmStatusMapData,
-  House,
+  OrchidManagementBedOrderItem,
   VisibleBedCount,
 } from "@/entities/farm/types";
 import {
-  getOrchidManagementMap,
+  getOrchidManagementBedOrder,
   getOrchidManagementViewport,
 } from "./api/orchidManagementApi";
 import type { OrchidManagementSearchState } from "./model/types";
 import { OrchidManagementMap } from "./ui/OrchidManagementMap";
 
 type OrchidManagementPageProps = {
-  mapData: FarmStatusMapData;
-  house: House | null;
-  initialStartBedId: number | null;
-  initialVisibleBedCount: VisibleBedCount;
+  initialViewport: Awaited<ReturnType<typeof getOrchidManagementViewport>>;
+  initialBedOrder: OrchidManagementBedOrderItem[];
   initialSelectedOrchidGroupId: number | null;
   initialSelectedPhysicalBedId?: number | null;
   initialSelectedBedZoneId?: number | null;
@@ -27,64 +24,33 @@ export async function OrchidManagementRoutePage({
   resolvedSearchParams: Record<string, string | string[] | undefined>;
 }) {
   const routeState = readOrchidManagementRouteState(resolvedSearchParams);
-  const mapData = await getOrchidManagementMap();
-  const defaultHouse =
-    mapData.houses.find((house) => house.orchidGroupCount > 0) ??
-    mapData.houses[0];
-  const allBeds = mapData.houses.flatMap((house) => house.physicalBeds);
-  const deepLinkedBed = allBeds.find(
-    (bed) =>
-      bed.id === routeState.selectedPhysicalBedId ||
-      bed.bedZones.some(
-        (zone) =>
-          zone.id === routeState.selectedBedZoneId ||
-          zone.orchidGroups.some(
-            (orchidGroup) =>
-              orchidGroup.id === routeState.selectedOrchidGroupId,
-          ),
-      ),
-  );
   const startBedId =
-    routeState.startBedId ?? deepLinkedBed?.id ?? allBeds[0]?.id ?? null;
-  const viewport = await getOrchidManagementViewport(
-    startBedId,
-    routeState.bedCount,
-  );
-  const house = defaultHouse
-    ? {
-        id: defaultHouse.houseId,
-        number: defaultHouse.houseNumber,
-        name: "전체 농장",
-        memo: null,
-        physicalBeds: allBeds,
-      }
-    : null;
-
+    routeState.startBedId ?? routeState.selectedPhysicalBedId ?? null;
+  const [bedOrder, viewport] = await Promise.all([
+    getOrchidManagementBedOrder(),
+    getOrchidManagementViewport(startBedId, routeState.bedCount),
+  ]);
   return (
     <OrchidManagementPage
       initialSearchFilters={routeState.searchFilters}
+      initialBedOrder={bedOrder}
       initialSelectedBedZoneId={routeState.selectedBedZoneId}
       initialSelectedOrchidGroupId={routeState.selectedOrchidGroupId}
       initialSelectedPhysicalBedId={routeState.selectedPhysicalBedId}
-      initialStartBedId={viewport.startBedId}
-      initialVisibleBedCount={viewport.bedCount}
-      mapData={mapData}
-      house={house}
+      initialViewport={viewport}
     />
   );
 }
 
 function OrchidManagementPage({
-  mapData,
-  house,
-  initialStartBedId,
-  initialVisibleBedCount,
+  initialViewport,
+  initialBedOrder,
   initialSelectedOrchidGroupId,
   initialSelectedPhysicalBedId,
   initialSelectedBedZoneId,
   initialSearchFilters,
 }: OrchidManagementPageProps) {
-  if (!house) {
+  if (initialBedOrder.length === 0) {
     return (
       <main className="space-y-4">
         <div className="rounded-md border border-[#d7ddd4] bg-white p-5 text-sm text-[#5c6a60]">
@@ -98,7 +64,7 @@ function OrchidManagementPage({
     <main className="h-full min-h-0">
       <OrchidManagementMap
         key={[
-          house.id,
+          initialViewport.startBedId ?? "empty",
           initialSelectedOrchidGroupId ?? "group-default",
           initialSelectedPhysicalBedId ?? "bed-default",
           initialSelectedBedZoneId ?? "zone-default",
@@ -106,10 +72,8 @@ function OrchidManagementPage({
         initialSelectedBedZoneId={initialSelectedBedZoneId}
         initialSelectedPhysicalBedId={initialSelectedPhysicalBedId}
         initialSearchFilters={initialSearchFilters}
-        mapData={mapData}
-        house={house}
-        initialStartBedId={initialStartBedId}
-        initialVisibleBedCount={initialVisibleBedCount}
+        initialBedOrder={initialBedOrder}
+        initialViewport={initialViewport}
         initialSelectedOrchidGroupId={initialSelectedOrchidGroupId}
       />
     </main>

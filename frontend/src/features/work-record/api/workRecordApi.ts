@@ -17,6 +17,7 @@ import type {
   WorkOperationDetail,
   WorkTargetPreviewPayload,
 } from "../model/types";
+import { manualWorkTargetSource } from "../model/workTargetSource";
 
 export function getWorkTypes(): Promise<WorkType[]> {
   return fetchApi<WorkType[]>("/work-types");
@@ -63,11 +64,10 @@ export async function createCompletedWorkOperation(
     "/work-operations/record",
     "POST",
     {
+      ...manualWorkTargetSource(payload.orchidGroupIds),
       workTypeId: payload.workTypeId,
       title: title?.trim() || `${workTypeName} 작업`,
       plannedStartDate: payload.workDate,
-      sourceScopeType: "MANUAL_SELECTION",
-      sourceOrchidGroupIds: payload.orchidGroupIds,
       details: {
         materialName: payload.materialName,
         dilutionRatio: payload.dilutionRatio,
@@ -126,9 +126,9 @@ type WorkOperationQuery = {
   from?: string;
   to?: string;
   status?: WorkOperation["status"] | "";
-  view?: "ALL" | "MANAGEMENT" | "HISTORY";
-  scopeType?: WorkOperation["sourceScopeType"];
-  scopeId?: number;
+  view?: "ALL" | "MANAGEMENT";
+  sourceScopeType?: WorkOperation["sourceScopeType"];
+  sourceScopeId?: number;
   keyword?: string;
   page?: number;
   size?: number;
@@ -142,8 +142,10 @@ export function getWorkOperations(
   if (filters.to) params.set("to", filters.to);
   if (filters.status) params.set("status", filters.status);
   if (filters.view) params.set("view", filters.view);
-  if (filters.scopeType) params.set("scopeType", filters.scopeType);
-  if (filters.scopeId != null) params.set("scopeId", String(filters.scopeId));
+  if (filters.sourceScopeType)
+    params.set("sourceScopeType", filters.sourceScopeType);
+  if (filters.sourceScopeId != null)
+    params.set("sourceScopeId", String(filters.sourceScopeId));
   if (filters.keyword?.trim()) params.set("keyword", filters.keyword.trim());
   if (filters.page != null) params.set("page", String(filters.page));
   if (filters.size != null) params.set("size", String(filters.size));
@@ -287,6 +289,7 @@ export function createDiscardRecord(payload: {
 }
 
 export type InboundPottingExecutionPayload = {
+  idempotencyKey: string;
   inboundRecordId: number;
   pottingDate: string;
   results: Array<{

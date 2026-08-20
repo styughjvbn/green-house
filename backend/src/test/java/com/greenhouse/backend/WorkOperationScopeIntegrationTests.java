@@ -61,19 +61,19 @@ class WorkOperationScopeIntegrationTests extends AbstractBackendIntegrationTest 
 
 		String derivedKey = variety.getId() + ":2:POT_3_5";
 		preview("""
-				{"scopeType":"DERIVED_GROUP","derivedGroupKey":"%s"}
+				{"sourceScopeType":"DERIVED_GROUP","sourceDerivedGroupKey":"%s"}
 				""".formatted(derivedKey))
 				.andExpect(status().isOk())
 				.andExpect(jsonPath("$.data.orchidGroupCount").value(2))
 				.andExpect(jsonPath("$.data.totalQuantity").value(70));
 		preview("""
-				{"scopeType":"USER_COLLECTION","scopeId":%d}
+				{"sourceScopeType":"USER_COLLECTION","sourceScopeId":%d}
 				""".formatted(collection.getId()))
 				.andExpect(status().isOk())
 				.andExpect(jsonPath("$.data.orchidGroupCount").value(2))
 				.andExpect(jsonPath("$.data.totalQuantity").value(60));
 		preview("""
-				{"scopeType":"MANUAL_SELECTION","orchidGroupIds":[%d,%d]}
+				{"sourceScopeType":"MANUAL_SELECTION","sourceOrchidGroupIds":[%d,%d]}
 				""".formatted(second.getId(), third.getId()))
 				.andExpect(status().isOk())
 				.andExpect(jsonPath("$.data.orchidGroupCount").value(2))
@@ -106,7 +106,7 @@ class WorkOperationScopeIntegrationTests extends AbstractBackendIntegrationTest 
 		orchidGroupRepository.saveAndFlush(second);
 
 		preview("""
-				{"scopeType":"DERIVED_GROUP","derivedGroupKey":"%s"}
+				{"sourceScopeType":"DERIVED_GROUP","sourceDerivedGroupKey":"%s"}
 				""".formatted(derivedKey))
 				.andExpect(status().isOk())
 				.andExpect(jsonPath("$.data.orchidGroupCount").value(1));

@@ -8,6 +8,7 @@ import {
   type PottingExecutionValues,
 } from "@/entities/farm/ui/PottingExecutionForm";
 import { WorkRecordVarietyNavigation } from "@/shared/ui/WorkRecordVarietyNavigation";
+import { createUuid } from "@/shared/lib/id";
 import type { InboundPottingExecutionPayload } from "../../../api/workRecordApi";
 import type { InboundPottingCandidate } from "../../../model/types";
 
@@ -153,6 +154,9 @@ export function PottingWorkRecordDialog({
                       setExecutions((current) => {
                         const next = new Map(current);
                         next.set(candidate.id, {
+                          idempotencyKey:
+                            current.get(candidate.id)?.idempotencyKey ??
+                            createUuid(),
                           inboundRecordId: candidate.id,
                           pottingDate: values.pottingDate,
                           results: values.results,

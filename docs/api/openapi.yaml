@@ -236,8 +236,7 @@ paths:
           enum:
           - ALL
           - MANAGEMENT
-          - HISTORY
-      - name: scopeType
+      - name: sourceScopeType
         in: query
         required: false
         schema:
@@ -253,7 +252,7 @@ paths:
           - USER_COLLECTION
           - MANUAL_SELECTION
           - INBOUND_RECORD_SELECTION
-      - name: scopeId
+      - name: sourceScopeId
         in: query
         required: false
         schema:
@@ -302,6 +301,7 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ApiResponseWorkOperationResponse'
+      deprecated: true
   /api/work-operations/{workOperationId}/targets/{targetId}/start:
     post:
       tags:
@@ -499,6 +499,7 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ApiResponseWorkOperationResponse'
+      deprecated: true
   /api/work-operations/{workOperationId}/corrections:
     get:
       tags:
@@ -640,6 +641,7 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ApiResponseWorkOperationResponse'
+      deprecated: true
   /api/work-operations/structure-change-records/batch:
     post:
       tags:
@@ -748,6 +750,7 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ApiResponseWorkOperationResponse'
+      deprecated: true
   /api/work-operations/inbound-potting-plans/batch:
     post:
       tags:
@@ -784,6 +787,7 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ApiResponseWorkOperationResponse'
+      deprecated: true
   /api/work-operations/discard-records:
     post:
       tags:
@@ -915,6 +919,7 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ApiResponseListSalesSlipResponse'
+      deprecated: true
     post:
       tags:
       - sales-controller
@@ -1268,6 +1273,7 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ApiResponseInboundRecordResponse'
+      deprecated: true
   /api/inbound-records/{inboundRecordId}/cancel:
     post:
       tags:
@@ -2092,7 +2098,6 @@ paths:
           enum:
           - ALL
           - MANAGEMENT
-          - HISTORY
       responses:
         '200':
           description: OK
@@ -2106,7 +2111,7 @@ paths:
       - work-operation-controller
       operationId: getWorkHistory
       parameters:
-      - name: scopeType
+      - name: historyScopeType
         in: query
         required: true
         schema:
@@ -2116,7 +2121,7 @@ paths:
           - PHYSICAL_BED
           - BED_ZONE
           - ORCHID_GROUP
-      - name: scopeId
+      - name: historyScopeId
         in: query
         required: true
         schema:
@@ -2412,6 +2417,7 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ApiResponseListOrchidGroupWorkHistoryResponse'
+      deprecated: true
   /api/orchid-groups/{orchidGroupId}/lineage:
     get:
       tags:
@@ -2634,6 +2640,18 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ApiResponseOrchidManagementViewportResponse'
+  /api/farm-status/orchid-management/bed-order:
+    get:
+      tags:
+      - farm-status-controller
+      operationId: getOrchidManagementBedOrder
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponseListOrchidManagementBedOrderResponse'
   /api/farm-status/orchid-groups:
     get:
       tags:
@@ -4344,7 +4362,7 @@ components:
     WorkTargetPreviewRequest:
       type: object
       properties:
-        scopeType:
+        sourceScopeType:
           type: string
           enum:
           - NONE
@@ -4357,18 +4375,18 @@ components:
           - USER_COLLECTION
           - MANUAL_SELECTION
           - INBOUND_RECORD_SELECTION
-        scopeId:
+        sourceScopeId:
           type: integer
           format: int64
-        derivedGroupKey:
+        sourceDerivedGroupKey:
           type: string
-        orchidGroupIds:
+        sourceOrchidGroupIds:
           type: array
           items:
             type: integer
             format: int64
       required:
-      - scopeType
+      - sourceScopeType
     ApiResponseWorkTargetPreviewResponse:
       type: object
       properties:
@@ -4637,6 +4655,10 @@ components:
     InboundPottingExecutionRequest:
       type: object
       properties:
+        idempotencyKey:
+          type: string
+          maxLength: 80
+          minLength: 0
         inboundRecordId:
           type: integer
           format: int64
@@ -4662,6 +4684,7 @@ components:
           maxLength: 1000
           minLength: 0
       required:
+      - idempotencyKey
       - inboundRecordId
       - pottingDate
       - results
@@ -7397,21 +7420,6 @@ components:
           $ref: '#/components/schemas/OrchidManagementViewportResponse'
         message:
           type: string
-    OrchidManagementBedOrderResponse:
-      type: object
-      properties:
-        id:
-          type: integer
-          format: int64
-        houseId:
-          type: integer
-          format: int64
-        houseNumber:
-          type: integer
-          format: int32
-        number:
-          type: integer
-          format: int32
     OrchidManagementSummaryResponse:
       type: object
       properties:
@@ -7446,10 +7454,30 @@ components:
           type: boolean
         summary:
           $ref: '#/components/schemas/OrchidManagementSummaryResponse'
-        bedOrder:
+    ApiResponseListOrchidManagementBedOrderResponse:
+      type: object
+      properties:
+        data:
           type: array
           items:
             $ref: '#/components/schemas/OrchidManagementBedOrderResponse'
+        message:
+          type: string
+    OrchidManagementBedOrderResponse:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: int64
+        houseId:
+          type: integer
+          format: int64
+        houseNumber:
+          type: integer
+          format: int32
+        number:
+          type: integer
+          format: int32
     ApiResponseFarmStatusOrchidGroupListResponse:
       type: object
       properties:

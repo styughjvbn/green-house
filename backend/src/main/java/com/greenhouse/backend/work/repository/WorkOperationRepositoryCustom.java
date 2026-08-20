@@ -26,8 +26,8 @@ public interface WorkOperationRepositoryCustom {
 			WorkOperationStatus status,
 			WorkOperationSearchView view,
 			LocalDateTime todayStartedAt,
-			WorkSourceScopeType scopeType,
-			Long scopeId,
+			WorkSourceScopeType sourceScopeType,
+			Long sourceScopeId,
 			String keyword,
 			Pageable pageable);
 

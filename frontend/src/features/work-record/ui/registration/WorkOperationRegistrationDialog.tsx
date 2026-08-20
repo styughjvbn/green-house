@@ -9,6 +9,7 @@ import {
   workTypesQueryOptions,
 } from "../../model/workRecordQueryOptions";
 import { useWorkOperationRegistration } from "../../model/registration/useWorkOperationRegistration";
+import { manualWorkTargetSource } from "../../model/workTargetSource";
 import { WorkRecordResultDialog } from "./WorkRecordResultDialog";
 import { InboundPottingTargetDialog } from "./InboundPottingTargetDialog";
 import { WorkOperationPlanForm } from "./WorkOperationPlanForm";
@@ -35,10 +36,7 @@ export function WorkOperationRegistrationDialog({
       ...presetOrchidGroupIds,
     ],
     queryFn: () =>
-      previewWorkOperationTargets({
-        scopeType: "MANUAL_SELECTION",
-        orchidGroupIds: presetOrchidGroupIds,
-      }),
+      previewWorkOperationTargets(manualWorkTargetSource(presetOrchidGroupIds)),
     enabled: presetOrchidGroupIds.length > 0,
   });
   const error =

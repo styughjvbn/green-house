@@ -8,7 +8,7 @@ const PUBLIC_PATHS = [
   "/icon-512.png",
 ];
 
-export function middleware(request: NextRequest) {
+export function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
   const demoMode = process.env.DEMO_MODE === "true";
 

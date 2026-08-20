@@ -93,6 +93,7 @@ export interface paths {
         };
         get: operations["search"];
         put?: never;
+        /** @deprecated */
         post: operations["create"];
         delete?: never;
         options?: never;
@@ -221,6 +222,7 @@ export interface paths {
         };
         get?: never;
         put?: never;
+        /** @deprecated */
         post: operations["completeMerge"];
         delete?: never;
         options?: never;
@@ -317,6 +319,7 @@ export interface paths {
         };
         get?: never;
         put?: never;
+        /** @deprecated */
         post: operations["createStructureChangeRecord"];
         delete?: never;
         options?: never;
@@ -413,6 +416,7 @@ export interface paths {
         };
         get?: never;
         put?: never;
+        /** @deprecated */
         post: operations["createInboundPottingPlan"];
         delete?: never;
         options?: never;
@@ -445,6 +449,7 @@ export interface paths {
         };
         get?: never;
         put?: never;
+        /** @deprecated */
         post: operations["executeInboundPotting"];
         delete?: never;
         options?: never;
@@ -507,6 +512,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
+        /** @deprecated */
         get: operations["getSalesSlips"];
         put?: never;
         post: operations["createSalesSlip"];
@@ -637,6 +643,7 @@ export interface paths {
         };
         get?: never;
         put?: never;
+        /** @deprecated */
         post: operations["potting"];
         delete?: never;
         options?: never;
@@ -1307,6 +1314,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
+        /** @deprecated */
         get: operations["getOrchidGroupHistory"];
         put?: never;
         post?: never;
@@ -1436,6 +1444,22 @@ export interface paths {
             cookie?: never;
         };
         get: operations["getOrchidManagementViewport"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/farm-status/orchid-management/bed-order": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["getOrchidManagementBedOrder"];
         put?: never;
         post?: never;
         delete?: never;
@@ -2285,11 +2309,11 @@ export interface components {
         };
         WorkTargetPreviewRequest: {
             /** @enum {string} */
-            scopeType: "NONE" | "FARM" | "HOUSE" | "PHYSICAL_BED" | "BED_ZONE" | "ORCHID_GROUP" | "DERIVED_GROUP" | "USER_COLLECTION" | "MANUAL_SELECTION" | "INBOUND_RECORD_SELECTION";
+            sourceScopeType: "NONE" | "FARM" | "HOUSE" | "PHYSICAL_BED" | "BED_ZONE" | "ORCHID_GROUP" | "DERIVED_GROUP" | "USER_COLLECTION" | "MANUAL_SELECTION" | "INBOUND_RECORD_SELECTION";
             /** Format: int64 */
-            scopeId?: number;
-            derivedGroupKey?: string;
-            orchidGroupIds?: number[];
+            sourceScopeId?: number;
+            sourceDerivedGroupKey?: string;
+            sourceOrchidGroupIds?: number[];
         };
         ApiResponseWorkTargetPreviewResponse: {
             data?: components["schemas"]["WorkTargetPreviewResponse"];
@@ -2389,6 +2413,7 @@ export interface components {
             memo?: string;
         };
         InboundPottingExecutionRequest: {
+            idempotencyKey: string;
             /** Format: int64 */
             inboundRecordId: number;
             /** Format: date */
@@ -3634,16 +3659,6 @@ export interface components {
             data?: components["schemas"]["OrchidManagementViewportResponse"];
             message?: string;
         };
-        OrchidManagementBedOrderResponse: {
-            /** Format: int64 */
-            id?: number;
-            /** Format: int64 */
-            houseId?: number;
-            /** Format: int32 */
-            houseNumber?: number;
-            /** Format: int32 */
-            number?: number;
-        };
         OrchidManagementSummaryResponse: {
             /** Format: int64 */
             orchidGroupCount?: number;
@@ -3663,7 +3678,20 @@ export interface components {
             hasPrevious?: boolean;
             hasNext?: boolean;
             summary?: components["schemas"]["OrchidManagementSummaryResponse"];
-            bedOrder?: components["schemas"]["OrchidManagementBedOrderResponse"][];
+        };
+        ApiResponseListOrchidManagementBedOrderResponse: {
+            data?: components["schemas"]["OrchidManagementBedOrderResponse"][];
+            message?: string;
+        };
+        OrchidManagementBedOrderResponse: {
+            /** Format: int64 */
+            id?: number;
+            /** Format: int64 */
+            houseId?: number;
+            /** Format: int32 */
+            houseNumber?: number;
+            /** Format: int32 */
+            number?: number;
         };
         ApiResponseFarmStatusOrchidGroupListResponse: {
             data?: components["schemas"]["FarmStatusOrchidGroupListResponse"];
@@ -4254,9 +4282,9 @@ export interface operations {
                 from?: string;
                 to?: string;
                 status?: "PLANNED" | "IN_PROGRESS" | "PAUSED" | "COMPLETED" | "CANCELED" | "CORRECTED";
-                view?: "ALL" | "MANAGEMENT" | "HISTORY";
-                scopeType?: "NONE" | "FARM" | "HOUSE" | "PHYSICAL_BED" | "BED_ZONE" | "ORCHID_GROUP" | "DERIVED_GROUP" | "USER_COLLECTION" | "MANUAL_SELECTION" | "INBOUND_RECORD_SELECTION";
-                scopeId?: number;
+                view?: "ALL" | "MANAGEMENT";
+                sourceScopeType?: "NONE" | "FARM" | "HOUSE" | "PHYSICAL_BED" | "BED_ZONE" | "ORCHID_GROUP" | "DERIVED_GROUP" | "USER_COLLECTION" | "MANUAL_SELECTION" | "INBOUND_RECORD_SELECTION";
+                sourceScopeId?: number;
                 keyword?: string;
                 page?: number;
                 size?: number;
@@ -6207,7 +6235,7 @@ export interface operations {
                 from: string;
                 to: string;
                 status?: "PLANNED" | "IN_PROGRESS" | "PAUSED" | "COMPLETED" | "CANCELED" | "CORRECTED";
-                view?: "ALL" | "MANAGEMENT" | "HISTORY";
+                view?: "ALL" | "MANAGEMENT";
             };
             header?: never;
             path?: never;
@@ -6229,8 +6257,8 @@ export interface operations {
     getWorkHistory: {
         parameters: {
             query: {
-                scopeType: "HOUSE" | "PHYSICAL_BED" | "BED_ZONE" | "ORCHID_GROUP";
-                scopeId: number;
+                historyScopeType: "HOUSE" | "PHYSICAL_BED" | "BED_ZONE" | "ORCHID_GROUP";
+                historyScopeId: number;
                 page?: number;
                 size?: number;
             };
@@ -6683,6 +6711,26 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ApiResponseOrchidManagementViewportResponse"];
+                };
+            };
+        };
+    };
+    getOrchidManagementBedOrder: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiResponseListOrchidManagementBedOrderResponse"];
                 };
             };
         };

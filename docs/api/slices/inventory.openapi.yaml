@@ -243,6 +243,7 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ApiResponseInboundRecordResponse'
+      deprecated: true
   /api/inbound-records/{inboundRecordId}/cancel:
     post:
       tags:

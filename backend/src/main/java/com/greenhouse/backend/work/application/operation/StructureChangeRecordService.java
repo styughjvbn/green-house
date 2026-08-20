@@ -3,7 +3,6 @@ package com.greenhouse.backend.work.application.operation;
 import com.greenhouse.backend.work.domain.operation.WorkType;
 import com.greenhouse.backend.work.dto.effect.DiscardRecordCreateRequest;
 import com.greenhouse.backend.work.dto.effect.InboundPottingRecordCreateRequest;
-import com.greenhouse.backend.work.dto.effect.InboundPottingPlanBatchCreateRequest;
 import com.greenhouse.backend.work.dto.effect.StructureChangeRecordCreateRequest;
 import com.greenhouse.backend.work.dto.effect.StructureChangeRecordBatchCreateRequest;
 import com.greenhouse.backend.work.dto.operation.WorkOperationResponse;
@@ -30,11 +29,14 @@ public class StructureChangeRecordService {
 	private final WorkOperationPlanService planService;
 	private final WorkOperationProgressService progressService;
 	private final StructureChangeExecutionService structureChangeExecutionService;
-	private final InboundPottingPlanService inboundPottingPlanService;
 	private final InboundPottingOperationService inboundPottingOperationService;
 	private final WorkOperationQueryService queryService;
 	private final DiscardRecordService discardRecordService;
 
+	/**
+	 * @deprecated Use {@link #createStructureChangeRecords(StructureChangeRecordBatchCreateRequest)}.
+	 */
+	@Deprecated(since = "2026-08", forRemoval = false)
 	public WorkOperationResponse createStructureChangeRecord(StructureChangeRecordCreateRequest request) {
 		return createStructureChangeRecord(request, Set.of());
 	}
@@ -104,10 +106,7 @@ public class StructureChangeRecordService {
 			throw new IllegalArgumentException("포트 작업 기록의 완료일은 작업일과 같아야 합니다.");
 		}
 
-		List<WorkOperationResponse> planned = inboundPottingPlanService.createBatch(
-				new InboundPottingPlanBatchCreateRequest(request.plan()));
-		request.executions().forEach(inboundPottingOperationService::executeNow);
-		return planned.stream().map(operation -> queryService.get(operation.id())).toList();
+		return inboundPottingOperationService.executeRecord(request.plan(), request.executions());
 	}
 
 }
