@@ -7,6 +7,8 @@ import com.greenhouse.backend.farm.domain.orchid.OrchidGroup;
 import com.greenhouse.backend.farm.domain.orchid.mutation.OrchidGroupMutation;
 import com.greenhouse.backend.farm.domain.orchid.mutation.OrchidGroupMutationEntry;
 import com.greenhouse.backend.farm.domain.orchid.mutation.OrchidGroupMutationEntryRole;
+import com.greenhouse.backend.farm.domain.orchid.mutation.OrchidGroupMutationRelation;
+import com.greenhouse.backend.farm.domain.orchid.mutation.OrchidGroupMutationRelationType;
 import com.greenhouse.backend.farm.domain.orchid.mutation.OrchidGroupMutationSource;
 import com.greenhouse.backend.farm.domain.orchid.mutation.OrchidGroupMutationType;
 import com.greenhouse.backend.farm.domain.orchid.mutation.OrchidGroupStateSnapshot;
@@ -15,6 +17,7 @@ import com.greenhouse.backend.farm.domain.variety.Variety;
 import com.greenhouse.backend.farm.repository.orchid.OrchidGroupRepository;
 import com.greenhouse.backend.farm.repository.inbound.InboundRecordRepository;
 import com.greenhouse.backend.farm.repository.orchid.mutation.OrchidGroupMutationEntryRepository;
+import com.greenhouse.backend.farm.repository.orchid.mutation.OrchidGroupMutationRelationRepository;
 import com.greenhouse.backend.farm.repository.orchid.mutation.OrchidGroupMutationRepository;
 import com.greenhouse.backend.farm.repository.structure.BedZoneRepository;
 import com.greenhouse.backend.farm.repository.variety.VarietyRepository;
@@ -25,6 +28,7 @@ import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -49,6 +53,7 @@ public class OrchidGroupMutationEngine {
 	private final VarietyRepository varietyRepository;
 	private final OrchidGroupMutationRepository mutationRepository;
 	private final OrchidGroupMutationEntryRepository entryRepository;
+	private final OrchidGroupMutationRelationRepository relationRepository;
 	private final OrchidPlacementPolicy orchidPlacementPolicy;
 	private final OrchidGroupMutationFingerprint fingerprint;
 	private final OrchidGroupMutationReplayResolver replayResolver;
@@ -463,6 +468,8 @@ public class OrchidGroupMutationEngine {
 				OrchidGroupMutationType.RESERVE,
 				command.source(),
 				command.items(),
+				null,
+				null,
 				command.effectiveBusinessDate(),
 				command.reason(),
 				OrchidGroup::reserve);
@@ -474,6 +481,8 @@ public class OrchidGroupMutationEngine {
 				OrchidGroupMutationType.RELEASE_RESERVATION,
 				command.source(),
 				command.items(),
+				null,
+				null,
 				command.effectiveBusinessDate(),
 				command.reason(),
 				OrchidGroup::releaseReserved);
@@ -485,6 +494,8 @@ public class OrchidGroupMutationEngine {
 				OrchidGroupMutationType.CONSUME_RESERVATION,
 				command.source(),
 				command.items(),
+				null,
+				null,
 				command.effectiveBusinessDate(),
 				command.reason(),
 				OrchidGroup::outboundReserved);
@@ -496,6 +507,8 @@ public class OrchidGroupMutationEngine {
 				OrchidGroupMutationType.RESTORE_OUTBOUND,
 				command.source(),
 				command.items(),
+				command.compensatedMutations(),
+				OrchidGroupMutationRelationType.COMPENSATES,
 				command.effectiveBusinessDate(),
 				command.reason(),
 				OrchidGroup::restoreOutbound);
@@ -505,12 +518,15 @@ public class OrchidGroupMutationEngine {
 			OrchidGroupMutationType mutationType,
 			OrchidGroupMutationSource source,
 			List<OrchidGroupQuantityMutationItem> items,
+			RelatedOrchidGroupMutations relatedMutations,
+			OrchidGroupMutationRelationType relationType,
 			LocalDate effectiveBusinessDate,
 			String reason,
 			BiConsumer<OrchidGroup, Integer> mutationAction) {
 		String commandFingerprint = fingerprint.calculate(new QuantityMutationFingerprintPayload(
 				mutationType,
 				items,
+				relatedMutations,
 				effectiveBusinessDate,
 				reason));
 		var replay = replayResolver.findExisting(source, commandFingerprint);
@@ -532,6 +548,12 @@ public class OrchidGroupMutationEngine {
 		if (replay.isPresent()) {
 			return replay.get();
 		}
+		List<OrchidGroupMutation> relationTargets = findRelationTargets(
+				relatedMutations,
+				new LinkedHashSet<>(orchidGroupIds),
+				relationType == OrchidGroupMutationRelationType.COMPENSATES
+						? Set.of(OrchidGroupMutationType.CONSUME_RESERVATION)
+						: Set.of());
 
 		List<PendingChange> changes = new ArrayList<>();
 		for (OrchidGroupQuantityMutationItem item : items) {
@@ -558,7 +580,133 @@ public class OrchidGroupMutationEngine {
 						change.afterState()))
 				.toList();
 		entryRepository.saveAll(entries);
+		recordRelations(mutation, relationTargets, relationType);
 		return OrchidGroupMutationResult.from(mutation, entries);
+	}
+
+	public OrchidGroupMutationResult correct(CorrectOrchidGroupsMutationCommand command) {
+		String commandFingerprint = fingerprint.calculate(new CorrectionFingerprintPayload(
+				OrchidGroupMutationType.CORRECTION,
+				command.items(),
+				command.correctedMutations(),
+				command.effectiveBusinessDate(),
+				command.reason()));
+		var replay = replayResolver.findExisting(command.source(), commandFingerprint);
+		if (replay.isPresent()) {
+			return replay.get();
+		}
+
+		List<Long> orchidGroupIds = command.items().stream()
+				.map(CorrectOrchidGroupMutationItem::orchidGroupId)
+				.toList();
+		Map<Long, OrchidGroup> groupsById = orchidGroupRepository
+				.findAllForUpdateByIdIn(orchidGroupIds)
+				.stream()
+				.collect(Collectors.toMap(OrchidGroup::getId, Function.identity()));
+		if (groupsById.size() != orchidGroupIds.size()) {
+			throw new NotFoundException("보정 Mutation 대상 난 묶음을 모두 찾을 수 없습니다.");
+		}
+		replay = replayResolver.findExisting(command.source(), commandFingerprint);
+		if (replay.isPresent()) {
+			return replay.get();
+		}
+
+		List<PendingChange> changes = new ArrayList<>();
+		for (CorrectOrchidGroupMutationItem item : command.items()) {
+			OrchidGroup group = groupsById.get(item.orchidGroupId());
+			requireBaseline(group);
+			long revisionBefore = group.getStateRevision();
+			OrchidGroupStateSnapshot beforeState = OrchidGroupStateSnapshot.from(group);
+			group.correctQuantityAndStatus(item.correctedQuantity(), item.correctedStatus());
+			OrchidGroupStateSnapshot afterState = OrchidGroupStateSnapshot.from(group);
+			if (beforeState.equals(afterState)) {
+				continue;
+			}
+			group.advanceStateRevision();
+			changes.add(new PendingChange(group, revisionBefore, beforeState, afterState));
+		}
+		if (changes.isEmpty()) {
+			throw new IllegalArgumentException("보정 Mutation에는 현재 상태와 다른 값이 필요합니다.");
+		}
+		Set<Long> changedGroupIds = changes.stream()
+				.map(change -> change.group().getId())
+				.collect(Collectors.toCollection(LinkedHashSet::new));
+		List<OrchidGroupMutation> relationTargets = findRelationTargets(
+				command.correctedMutations(),
+				changedGroupIds,
+				Set.of(OrchidGroupMutationType.CREATE, OrchidGroupMutationType.TRANSFORM));
+
+		OrchidGroupMutation mutation = saveMutation(
+				OrchidGroupMutationType.CORRECTION,
+				command.source(),
+				commandFingerprint,
+				command.effectiveBusinessDate(),
+				command.reason());
+		List<OrchidGroupMutationEntry> entries = changes.stream()
+				.map(change -> OrchidGroupMutationEntry.changed(
+						mutation,
+						change.group().getId(),
+						OrchidGroupMutationEntryRole.AFFECTED,
+						change.revisionBefore(),
+						change.beforeState(),
+						change.afterState()))
+				.toList();
+		entryRepository.saveAll(entries);
+		recordRelations(mutation, relationTargets, OrchidGroupMutationRelationType.CORRECTS);
+		return OrchidGroupMutationResult.from(mutation, entries);
+	}
+
+	private List<OrchidGroupMutation> findRelationTargets(
+			RelatedOrchidGroupMutations relatedMutations,
+			Set<Long> affectedGroupIds,
+			Set<OrchidGroupMutationType> allowedMutationTypes) {
+		if (relatedMutations == null || relatedMutations.legacySource()) {
+			return List.of();
+		}
+		Map<Long, OrchidGroupMutation> mutationsById = mutationRepository
+				.findAllById(relatedMutations.mutationIds())
+				.stream()
+				.collect(Collectors.toMap(OrchidGroupMutation::getId, Function.identity()));
+		if (mutationsById.size() != relatedMutations.mutationIds().size()) {
+			throw new NotFoundException("관련 Mutation을 모두 찾을 수 없습니다.");
+		}
+		if (allowedMutationTypes.isEmpty() || mutationsById.values().stream()
+				.anyMatch(mutation -> !allowedMutationTypes.contains(mutation.getMutationType()))) {
+			throw new IllegalArgumentException("관련 Mutation 유형이 보정·보상 대상과 일치하지 않습니다.");
+		}
+		Map<Long, Set<Long>> groupIdsByMutationId = new LinkedHashMap<>();
+		entryRepository.findByMutationIdInOrderByMutationIdAscIdAsc(relatedMutations.mutationIds())
+				.forEach(entry -> groupIdsByMutationId
+						.computeIfAbsent(entry.getMutation().getId(), ignored -> new LinkedHashSet<>())
+						.add(entry.getOrchidGroupId()));
+		for (Long mutationId : relatedMutations.mutationIds()) {
+			Set<Long> relatedGroupIds = groupIdsByMutationId.getOrDefault(mutationId, Set.of());
+			if (relatedGroupIds.stream().noneMatch(affectedGroupIds::contains)) {
+				throw new IllegalArgumentException("관련 Mutation은 변경 대상 난 묶음과 연결되어야 합니다.");
+			}
+		}
+		Set<Long> allRelatedGroupIds = groupIdsByMutationId.values().stream()
+				.flatMap(Collection::stream)
+				.collect(Collectors.toSet());
+		if (!allRelatedGroupIds.containsAll(affectedGroupIds)) {
+			throw new IllegalArgumentException("모든 변경 대상은 관련 Mutation에 포함되어야 합니다.");
+		}
+		return relatedMutations.mutationIds().stream().map(mutationsById::get).toList();
+	}
+
+	private void recordRelations(
+			OrchidGroupMutation mutation,
+			List<OrchidGroupMutation> relatedMutations,
+			OrchidGroupMutationRelationType relationType) {
+		if (relatedMutations.isEmpty()) {
+			return;
+		}
+		if (relationType == null) {
+			throw new IllegalArgumentException("Mutation 관계 유형이 필요합니다.");
+		}
+		relationRepository.saveAll(relatedMutations.stream()
+				.map(related -> new OrchidGroupMutationRelation(mutation, related, relationType))
+				.toList());
 	}
 
 	private OrchidGroupMutationResult recordCreated(
@@ -827,6 +975,15 @@ public class OrchidGroupMutationEngine {
 	private record QuantityMutationFingerprintPayload(
 			OrchidGroupMutationType mutationType,
 			List<OrchidGroupQuantityMutationItem> items,
+			RelatedOrchidGroupMutations relatedMutations,
+			LocalDate effectiveBusinessDate,
+			String reason) {
+	}
+
+	private record CorrectionFingerprintPayload(
+			OrchidGroupMutationType mutationType,
+			List<CorrectOrchidGroupMutationItem> items,
+			RelatedOrchidGroupMutations correctedMutations,
 			LocalDate effectiveBusinessDate,
 			String reason) {
 	}

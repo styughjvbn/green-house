@@ -9,6 +9,9 @@ public interface OrchidGroupMutationEntryRepository extends JpaRepository<Orchid
 
 	List<OrchidGroupMutationEntry> findByMutationIdOrderByIdAsc(Long mutationId);
 
+	List<OrchidGroupMutationEntry> findByMutationIdInOrderByMutationIdAscIdAsc(
+			Collection<Long> mutationIds);
+
 	List<OrchidGroupMutationEntry> findByOrchidGroupIdInOrderByOrchidGroupIdAscStateRevisionAfterAsc(
 			Collection<Long> orchidGroupIds);
 }

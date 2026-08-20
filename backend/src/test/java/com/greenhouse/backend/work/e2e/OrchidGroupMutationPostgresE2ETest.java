@@ -6,12 +6,17 @@ import com.greenhouse.backend.farm.application.orchid.mutation.CreateOrchidGroup
 import com.greenhouse.backend.farm.application.orchid.mutation.BaselineOrchidGroupsCommand;
 import com.greenhouse.backend.farm.application.orchid.mutation.CreateInboundOrchidGroupsMutationCommand;
 import com.greenhouse.backend.farm.application.orchid.mutation.CreateOrchidGroupMutationItem;
+import com.greenhouse.backend.farm.application.orchid.mutation.CorrectOrchidGroupMutationItem;
+import com.greenhouse.backend.farm.application.orchid.mutation.CorrectOrchidGroupsMutationCommand;
+import com.greenhouse.backend.farm.application.orchid.mutation.ConsumeOrchidGroupReservationsMutationCommand;
 import com.greenhouse.backend.farm.application.orchid.mutation.DiscardOrchidGroupMutationCommand;
 import com.greenhouse.backend.farm.application.orchid.mutation.OrchidGroupLedgerPreparationService;
 import com.greenhouse.backend.farm.application.orchid.mutation.OrchidGroupMutationDetails;
 import com.greenhouse.backend.farm.application.orchid.mutation.OrchidGroupMutationEngine;
 import com.greenhouse.backend.farm.application.orchid.mutation.OrchidGroupQuantityMutationItem;
+import com.greenhouse.backend.farm.application.orchid.mutation.RelatedOrchidGroupMutations;
 import com.greenhouse.backend.farm.application.orchid.mutation.ReserveOrchidGroupsMutationCommand;
+import com.greenhouse.backend.farm.application.orchid.mutation.RestoreOutboundOrchidGroupsMutationCommand;
 import com.greenhouse.backend.farm.application.orchid.mutation.TransformOrchidGroupMutationResult;
 import com.greenhouse.backend.farm.application.orchid.mutation.TransformOrchidGroupMutationSource;
 import com.greenhouse.backend.farm.application.orchid.mutation.TransformOrchidGroupsMutationCommand;
@@ -214,6 +219,132 @@ class OrchidGroupMutationPostgresE2ETest extends WorkE2ETestBase {
 	}
 
 	@Test
+	void serializesConcurrentCorrectionAndSalesReservationForTheSameGroup() throws Exception {
+		UUID cutoverKey = UUID.randomUUID();
+		LocalDate businessDate = LocalDate.of(2026, 8, 20);
+		ledgerPreparationService.prepare(cutoverKey, businessDate, "mutation-engine-e2e");
+		ledgerPreparationService.start(cutoverKey);
+		ledgerPreparationService.baselineBatch(new BaselineOrchidGroupsCommand(
+				cutoverKey,
+				"GROUPS-0001",
+				List.of(scenario.orchidGroupId()),
+				businessDate));
+		var ready = new CountDownLatch(2);
+		var start = new CountDownLatch(1);
+		var executor = Executors.newFixedThreadPool(2);
+		try {
+			var futures = List.of(
+					executor.submit(() -> reserveConcurrently("sales-slip-correction", ready, start)),
+					executor.submit(() -> correctConcurrently(ready, start)));
+			assertThat(ready.await(5, TimeUnit.SECONDS)).isTrue();
+			start.countDown();
+			var outcomes = futures.stream().map(future -> {
+				try {
+					return future.get(10, TimeUnit.SECONDS);
+				} catch (Exception exception) {
+					throw new AssertionError(exception);
+				}
+			}).toList();
+
+			assertThat(outcomes).filteredOn(outcome -> outcome.mutationId() != null).hasSize(1);
+			assertThat(outcomes).filteredOn(outcome -> outcome.failure() != null)
+					.singleElement()
+					.satisfies(outcome -> {
+						assertThat(outcome.failure()).isInstanceOf(IllegalArgumentException.class);
+						assertThat(outcome.failure().getMessage())
+								.containsAnyOf("가용 수량", "예약 수량");
+					});
+		} finally {
+			start.countDown();
+			executor.shutdownNow();
+		}
+
+		Integer quantity = jdbcTemplate.queryForObject(
+				"SELECT quantity FROM orchid_groups WHERE id = ?",
+				Integer.class,
+				scenario.orchidGroupId());
+		Integer reservedQuantity = jdbcTemplate.queryForObject(
+				"SELECT reserved_quantity FROM orchid_groups WHERE id = ?",
+				Integer.class,
+				scenario.orchidGroupId());
+		String status = jdbcTemplate.queryForObject(
+				"SELECT status FROM orchid_groups WHERE id = ?",
+				String.class,
+				scenario.orchidGroupId());
+		assertThat(quantity == 50 && reservedQuantity == 0 && "수량 보정".equals(status)
+				|| quantity == 100 && reservedQuantity == 60 && "정상".equals(status))
+				.isTrue();
+		assertThat(jdbcTemplate.queryForObject(
+				"SELECT state_revision FROM orchid_groups WHERE id = ?",
+				Long.class,
+				scenario.orchidGroupId())).isEqualTo(1L);
+		assertThat(jdbcTemplate.queryForObject(
+				"SELECT COUNT(*) FROM orchid_group_mutations",
+				Long.class)).isEqualTo(2L);
+		assertThat(jdbcTemplate.queryForObject(
+				"SELECT COUNT(*) FROM orchid_group_mutation_entries",
+				Long.class)).isEqualTo(2L);
+	}
+
+	@Test
+	void recordsACompensationRelationForCurrentSalesOutboundOnPostgres() {
+		UUID cutoverKey = UUID.randomUUID();
+		LocalDate businessDate = LocalDate.of(2026, 8, 20);
+		ledgerPreparationService.prepare(cutoverKey, businessDate, "mutation-engine-e2e");
+		ledgerPreparationService.start(cutoverKey);
+		ledgerPreparationService.baselineBatch(new BaselineOrchidGroupsCommand(
+				cutoverKey,
+				"GROUPS-0001",
+				List.of(scenario.orchidGroupId()),
+				businessDate));
+		UUID correlationId = UUID.randomUUID();
+		MutationIds mutationIds = new TransactionTemplate(transactionManager).execute(status -> {
+			mutationEngine.reserve(new ReserveOrchidGroupsMutationCommand(
+					salesSource("RESERVE", correlationId),
+					List.of(new OrchidGroupQuantityMutationItem(scenario.orchidGroupId(), 10)),
+					businessDate,
+					"판매 예약"));
+			var consumed = mutationEngine.consumeReservation(
+					new ConsumeOrchidGroupReservationsMutationCommand(
+							salesSource("OUTBOUND", correlationId),
+							List.of(new OrchidGroupQuantityMutationItem(scenario.orchidGroupId(), 10)),
+							businessDate,
+							"판매 출고"));
+			var restored = mutationEngine.restoreOutbound(
+					new RestoreOutboundOrchidGroupsMutationCommand(
+							salesSource("RESTORE_OUTBOUND", correlationId),
+							List.of(new OrchidGroupQuantityMutationItem(scenario.orchidGroupId(), 10)),
+							RelatedOrchidGroupMutations.current(List.of(consumed.mutationId())),
+							businessDate,
+							"판매 출고 취소"));
+			return new MutationIds(consumed.mutationId(), restored.mutationId());
+		});
+
+		assertThat(mutationIds).isNotNull();
+		assertThat(jdbcTemplate.queryForObject(
+				"SELECT quantity FROM orchid_groups WHERE id = ?",
+				Integer.class,
+				scenario.orchidGroupId())).isEqualTo(100);
+		assertThat(jdbcTemplate.queryForObject(
+				"SELECT reserved_quantity FROM orchid_groups WHERE id = ?",
+				Integer.class,
+				scenario.orchidGroupId())).isZero();
+		assertThat(jdbcTemplate.queryForObject(
+				"SELECT state_revision FROM orchid_groups WHERE id = ?",
+				Long.class,
+				scenario.orchidGroupId())).isEqualTo(3L);
+		assertThat(jdbcTemplate.queryForObject(
+				"""
+				SELECT COUNT(*)
+				FROM orchid_group_mutation_relations
+				WHERE mutation_id = ? AND related_mutation_id = ? AND relation_type = 'COMPENSATES'
+				""",
+				Long.class,
+				mutationIds.restoredMutationId(),
+				mutationIds.consumedMutationId())).isEqualTo(1L);
+	}
+
+	@Test
 	void allowsOnlyOneCreationMutationForTheSameInboundRecord() throws Exception {
 		Long inboundRecordId = jdbcTemplate.queryForObject("""
 				INSERT INTO inbound_records (
@@ -408,6 +539,43 @@ class OrchidGroupMutationPostgresE2ETest extends WorkE2ETestBase {
 		}
 	}
 
+	private Outcome correctConcurrently(
+			CountDownLatch ready,
+			CountDownLatch start) throws Exception {
+		ready.countDown();
+		if (!start.await(5, TimeUnit.SECONDS)) {
+			throw new IllegalStateException("동시 보정 요청 시작 신호를 기다리지 못했습니다.");
+		}
+		try {
+			Long mutationId = new TransactionTemplate(transactionManager).execute(status -> mutationEngine.correct(
+					new CorrectOrchidGroupsMutationCommand(
+							new OrchidGroupMutationSource(
+									OrchidGroupMutationSourceDomain.WORK,
+									"WORK_EFFECT",
+									"concurrent-correction",
+									"OPERATION",
+									UUID.randomUUID()),
+							List.of(new CorrectOrchidGroupMutationItem(
+									scenario.orchidGroupId(), 50, "수량 보정")),
+							RelatedOrchidGroupMutations.legacy(),
+							LocalDate.of(2026, 8, 20),
+							"판매 예약과 동시 보정 검증"))
+					.mutationId());
+			return new Outcome(mutationId, null);
+		} catch (RuntimeException exception) {
+			return new Outcome(null, exception);
+		}
+	}
+
+	private OrchidGroupMutationSource salesSource(String operationKey, UUID correlationId) {
+		return new OrchidGroupMutationSource(
+				OrchidGroupMutationSourceDomain.SALES,
+				"SALES_SLIP",
+				"sales-slip-relation",
+				operationKey,
+				correlationId);
+	}
+
 	private Outcome createInboundConcurrently(
 			String referenceId,
 			Long inboundRecordId,
@@ -451,5 +619,8 @@ class OrchidGroupMutationPostgresE2ETest extends WorkE2ETestBase {
 	}
 
 	private record Outcome(Long mutationId, RuntimeException failure) {
+	}
+
+	private record MutationIds(Long consumedMutationId, Long restoredMutationId) {
 	}
 }

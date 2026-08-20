@@ -10,12 +10,14 @@ import com.greenhouse.backend.farm.application.orchid.mutation.OrchidGroupMutati
 import com.greenhouse.backend.farm.application.orchid.mutation.OrchidGroupMutationResult;
 import com.greenhouse.backend.farm.application.orchid.mutation.OrchidGroupQuantityMutationItem;
 import com.greenhouse.backend.farm.application.orchid.mutation.ReleaseOrchidGroupReservationsMutationCommand;
+import com.greenhouse.backend.farm.application.orchid.mutation.RelatedOrchidGroupMutations;
 import com.greenhouse.backend.farm.application.orchid.mutation.ReserveOrchidGroupsMutationCommand;
 import com.greenhouse.backend.farm.application.orchid.mutation.RestoreOutboundOrchidGroupsMutationCommand;
 import com.greenhouse.backend.farm.domain.orchid.OrchidGroup;
 import com.greenhouse.backend.farm.domain.orchid.mutation.OrchidGroupMutationEntryRole;
 import com.greenhouse.backend.farm.domain.orchid.mutation.OrchidGroupMutationSource;
 import com.greenhouse.backend.farm.domain.orchid.mutation.OrchidGroupMutationSourceDomain;
+import com.greenhouse.backend.farm.domain.orchid.mutation.OrchidGroupMutationRelationType;
 import com.greenhouse.backend.farm.domain.orchid.mutation.OrchidGroupMutationType;
 import com.greenhouse.backend.farm.domain.structure.BedZone;
 import com.greenhouse.backend.farm.domain.structure.BedZoneSide;
@@ -23,6 +25,7 @@ import com.greenhouse.backend.farm.domain.structure.House;
 import com.greenhouse.backend.farm.domain.structure.PhysicalBed;
 import com.greenhouse.backend.farm.domain.variety.Variety;
 import com.greenhouse.backend.farm.repository.orchid.mutation.OrchidGroupMutationEntryRepository;
+import com.greenhouse.backend.farm.repository.orchid.mutation.OrchidGroupMutationRelationRepository;
 import com.greenhouse.backend.farm.repository.orchid.mutation.OrchidGroupMutationRepository;
 import jakarta.persistence.EntityManager;
 import java.math.BigDecimal;
@@ -40,6 +43,7 @@ class SalesOrchidGroupMutationEngineIntegrationTest extends AbstractBackendInteg
 	@Autowired private OrchidGroupMutationEngine mutationEngine;
 	@Autowired private OrchidGroupMutationRepository mutationRepository;
 	@Autowired private OrchidGroupMutationEntryRepository entryRepository;
+	@Autowired private OrchidGroupMutationRelationRepository relationRepository;
 	@Autowired private EntityManager entityManager;
 
 	@Test
@@ -113,12 +117,20 @@ class SalesOrchidGroupMutationEngineIntegrationTest extends AbstractBackendInteg
 						List.of(
 								new OrchidGroupQuantityMutationItem(fixture.first().getId(), 3),
 								new OrchidGroupQuantityMutationItem(fixture.second().getId(), 4)),
+						RelatedOrchidGroupMutations.current(List.of(consumed.mutationId())),
 						businessDate,
 						"판매 출고 취소"));
 		assertThat(restored.mutationType()).isEqualTo(OrchidGroupMutationType.RESTORE_OUTBOUND);
 		assertAffectedEntries(restored.entries(), 3L, 4L);
 		assertGroupState(fixture.first().getId(), 20, 0, 4L);
 		assertGroupState(fixture.second().getId(), 30, 0, 4L);
+		assertThat(relationRepository.findByMutationIdOrderByIdAsc(restored.mutationId()))
+				.singleElement()
+				.satisfies(relation -> {
+					assertThat(relation.getRelatedMutation().getId()).isEqualTo(consumed.mutationId());
+					assertThat(relation.getRelationType())
+							.isEqualTo(OrchidGroupMutationRelationType.COMPENSATES);
+				});
 
 		assertThat(mutationRepository.count()).isEqualTo(mutationCountBefore + 5);
 		assertThat(entryRepository.count()).isEqualTo(entryCountBefore + 10);
@@ -135,6 +147,32 @@ class SalesOrchidGroupMutationEngineIntegrationTest extends AbstractBackendInteg
 				null))
 				.isInstanceOf(IllegalArgumentException.class)
 				.hasMessageContaining("중복될 수 없습니다");
+	}
+
+	@Test
+	void restoresLegacyOutboundWithoutInventingAPastCompensationRelation() {
+		Fixture fixture = createFixture();
+		LocalDate businessDate = LocalDate.of(2026, 8, 20);
+		UUID cutoverKey = UUID.randomUUID();
+		ledgerPreparationService.prepare(cutoverKey, businessDate, "mutation-engine-test");
+		ledgerPreparationService.start(cutoverKey);
+		ledgerPreparationService.baselineBatch(new BaselineOrchidGroupsCommand(
+				cutoverKey,
+				"GROUPS-0001",
+				List.of(fixture.first().getId()),
+				businessDate));
+
+		var restored = mutationEngine.restoreOutbound(
+				new RestoreOutboundOrchidGroupsMutationCommand(
+						salesSource("RESTORE:legacy-cancel"),
+						List.of(new OrchidGroupQuantityMutationItem(fixture.first().getId(), 3)),
+						RelatedOrchidGroupMutations.legacy(),
+						businessDate,
+						"전환 전 판매 출고 취소"));
+
+		assertThat(restored.mutationType()).isEqualTo(OrchidGroupMutationType.RESTORE_OUTBOUND);
+		assertThat(relationRepository.findByMutationIdOrderByIdAsc(restored.mutationId())).isEmpty();
+		assertGroupState(fixture.first().getId(), 23, 0, 1L);
 	}
 
 	private Fixture createFixture() {
