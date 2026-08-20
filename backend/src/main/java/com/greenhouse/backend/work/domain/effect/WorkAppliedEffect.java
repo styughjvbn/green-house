@@ -18,6 +18,7 @@ import jakarta.persistence.Table;
 import jakarta.persistence.UniqueConstraint;
 import java.time.LocalDateTime;
 import java.util.Map;
+import java.util.UUID;
 import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -74,6 +75,12 @@ public class WorkAppliedEffect extends BaseEntity {
 	@Column(name = "result_details", columnDefinition = "jsonb")
 	private Map<String, Object> resultDetails;
 
+	@Column(name = "mutation_id")
+	private Long mutationId;
+
+	@Column(name = "correlation_id")
+	private UUID correlationId;
+
 	public WorkAppliedEffect(
 			WorkOperation workOperation,
 			WorkOperationTarget target,
@@ -99,5 +106,16 @@ public class WorkAppliedEffect extends BaseEntity {
 		if (this.canceledAt == null) {
 			this.canceledAt = canceledAt;
 		}
+	}
+
+	public void linkMutation(Long mutationId, UUID correlationId) {
+		if (mutationId == null || correlationId == null) {
+			throw new IllegalArgumentException("작업 효과에 연결할 Mutation 정보가 필요합니다.");
+		}
+		if (this.mutationId != null && !this.mutationId.equals(mutationId)) {
+			throw new IllegalStateException("작업 효과는 다른 Mutation으로 변경할 수 없습니다.");
+		}
+		this.mutationId = mutationId;
+		this.correlationId = correlationId;
 	}
 }

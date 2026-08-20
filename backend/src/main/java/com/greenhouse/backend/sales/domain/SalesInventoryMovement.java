@@ -17,6 +17,7 @@ import jakarta.persistence.Table;
 import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
+import java.util.UUID;
 
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
@@ -51,6 +52,12 @@ public class SalesInventoryMovement extends BaseEntity {
 	@Column(columnDefinition = "text")
 	private String memo;
 
+	@Column(name = "mutation_id")
+	private Long mutationId;
+
+	@Column(name = "correlation_id")
+	private UUID correlationId;
+
 	public SalesInventoryMovement(
 			OrchidGroup orchidGroup,
 			SalesSlip salesSlip,
@@ -64,5 +71,16 @@ public class SalesInventoryMovement extends BaseEntity {
 		this.changeType = changeType;
 		this.quantityDelta = quantityDelta;
 		this.memo = memo;
+	}
+
+	public void linkMutation(Long mutationId, UUID correlationId) {
+		if (mutationId == null || correlationId == null) {
+			throw new IllegalArgumentException("판매 재고 이동에 연결할 Mutation 정보가 필요합니다.");
+		}
+		if (this.mutationId != null && !this.mutationId.equals(mutationId)) {
+			throw new IllegalStateException("판매 재고 이동은 다른 Mutation으로 변경할 수 없습니다.");
+		}
+		this.mutationId = mutationId;
+		this.correlationId = correlationId;
 	}
 }

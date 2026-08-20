@@ -37,6 +37,9 @@ public class OrchidGroup extends BaseEntity {
 	@Column(nullable = false)
 	private Long version;
 
+	@Column(name = "state_revision")
+	private Long stateRevision;
+
 	@ManyToOne(fetch = FetchType.LAZY, optional = false)
 	@JoinColumn(name = "bed_zone_id", nullable = false)
 	private BedZone bedZone;
@@ -284,6 +287,28 @@ public class OrchidGroup extends BaseEntity {
 	public void restoreOutbound(Integer restoreQuantity) {
 		validatePositiveQuantity(restoreQuantity, "출고 복구 수량");
 		this.quantity += restoreQuantity;
+	}
+
+	public void establishBaselineRevision() {
+		if (stateRevision != null) {
+			throw new IllegalStateException("이미 mutation ledger revision이 설정된 난 묶음입니다.");
+		}
+		this.stateRevision = 0L;
+	}
+
+	public void establishCreationRevision() {
+		if (stateRevision != null) {
+			throw new IllegalStateException("이미 mutation ledger revision이 설정된 난 묶음입니다.");
+		}
+		this.stateRevision = 1L;
+	}
+
+	public long advanceStateRevision() {
+		if (stateRevision == null) {
+			throw new IllegalStateException("baseline이 없는 난 묶음은 mutation을 적용할 수 없습니다.");
+		}
+		this.stateRevision += 1;
+		return stateRevision;
 	}
 
 	private void validatePositiveQuantity(Integer value, String label) {

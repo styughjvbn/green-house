@@ -56,6 +56,9 @@ public class OrchidGroupLineage {
 	@Column(name = "result_quantity", nullable = false)
 	private Integer resultQuantity;
 
+	@Column(name = "mutation_id")
+	private Long mutationId;
+
 	@CreationTimestamp
 	@Column(name = "created_at", nullable = false, updatable = false)
 	private LocalDateTime createdAt;
@@ -82,6 +85,16 @@ public class OrchidGroupLineage {
 		this.workOperationId = workOperationId;
 		this.sourceQuantity = sourceQuantity;
 		this.resultQuantity = resultQuantity;
+	}
+
+	public void linkMutation(Long mutationId) {
+		if (mutationId == null) {
+			throw new IllegalArgumentException("계보에 연결할 Mutation ID가 필요합니다.");
+		}
+		if (this.mutationId != null && !this.mutationId.equals(mutationId)) {
+			throw new IllegalStateException("계보는 다른 Mutation으로 변경할 수 없습니다.");
+		}
+		this.mutationId = mutationId;
 	}
 
 	private void validatePositive(Integer quantity, String label) {
