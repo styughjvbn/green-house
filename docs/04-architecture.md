@@ -108,6 +108,8 @@ demo
 - 입고 작업 스냅샷과 메모 조립은 전용 factory가 담당한다.
 - 품종 목록의 난 묶음·최근 입고일·최근 작업일은 페이지 단위로 일괄 조회한다.
 - 난 묶음 계보는 `work` 엔티티를 직접 참조하지 않고 `workOperationId` 값으로 연결한다.
+- 난 묶음 물리 상태 변경과 revision ledger는 `farm.orchid.mutation`이 소유한다. Work·Sales·Inbound는 typed command와 식별자 계약으로 이 경계를 호출하고 업무 lifecycle은 각 모듈에 유지한다.
+- ledger rehearsal 대사는 `farm`의 현재 상태·revision chain과 모듈별 read-only application 계약을 조합한다. 각 모듈은 Work 진행 상태와 효과 연결, Sales 활성 allocation과 예약 수량처럼 자신이 소유한 정합성만 판정하며 데이터를 자동 보정하지 않는다.
 
 `farm`의 각 계층은 동일한 기능 경계를 사용한다.
 

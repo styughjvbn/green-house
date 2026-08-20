@@ -182,6 +182,7 @@ pg_dump -U greenhouse greenhouse > backup_$(date +%Y%m%d).sql
 - V10~V11은 품종 선택 색상 필드와 제약을 추가·보정한다.
 - V12는 운영 변경 감사용 `audit_events`와 조회 인덱스를 추가한다.
 - V20은 기존 자리 이동·합식 실행 효과의 JSON 원본 목록을 `work_effect_orchid_groups`의 `SOURCE` 관계로 보강한다. 난 묶음 수량·상태와 기존 직접 계보 행은 변경하지 않는다.
+- V21~V22는 난 묶음 Mutation ledger와 coverage를 추가하고 동시에 하나의 `PREPARING` 또는 `ACTIVE` coverage만 존재하도록 제한한다. 기존 난 묶음의 baseline은 자동 생성하지 않는다.
 
 운영 custom dump로 로컬 개발 DB를 초기화할 때는 다음 스크립트를 사용한다. 백업을 생략하면 `temp/`의 최신 `*.dump.gz` 또는 `*.dump`를 선택한다. 스크립트는 로컬 DB만 허용하며 기존 백엔드를 종료하고, 복원 후 Flyway 적용·Hibernate 스키마 검증·작업 V2 무결성 검사를 수행한다.
 
@@ -195,6 +196,36 @@ pg_dump -U greenhouse greenhouse > backup_$(date +%Y%m%d).sql
 # CI 또는 반복 개발 작업
 ./scripts/reset-dev-db.sh --yes
 ```
+
+### 난 묶음 ledger 복원 DB rehearsal
+
+Mutation Engine 전환 전에는 운영 백업을 격리된 PostgreSQL에 복원한 뒤 read-only
+대사를 실행한다. 운영 primary DB에는 실행하지 않는다.
+
+```bash
+cd backend
+DATABASE_URL=jdbc:postgresql://localhost:5432/greenhouse_rehearsal \
+DATABASE_USERNAME=greenhouse_rehearsal_reader \
+DATABASE_PASSWORD='...' \
+./gradlew orchidLedgerReconcile
+```
+
+명령은 Flyway를 비활성화하고 Hibernate schema validation과 read-only DB connection을
+강제한다. 시작 시 정산 재구축도 실행하지 않는다. 다음 종료 코드를 사용한다.
+
+- `0`: 현재 단계의 모든 대사 통과
+- `1`: 연결·schema·실행 오류
+- `2`: JSON 보고서에 정합성 오류가 존재함
+
+보고서는 현재 난 묶음 invariant와 배치 범위, Collection 참조, Work 진행·효과 연결,
+작성중 Sales allocation과 예약 수량, ledger revision·snapshot 연속성, baseline 행 수와
+fingerprint를 포함한다. `PRE_BASELINE`, `BASELINE_PREPARING`, `ACTIVE` 단계별로 같은
+명령을 반복해 결과와 소요 시간을 보관한다.
+
+이 명령은 baseline 생성, coverage 활성화, 데이터 보정을 수행하지 않는다. 오류가
+있으면 대상 ID와 코드로 원인을 보정한 뒤 새 복원본에서 rehearsal을 다시 시작한다.
+실제 cutover와 `ACTIVE` 전환은 write fence와 writer version 검증이 구현된 후 별도
+승인된 절차로만 수행한다.
 
 ### 데모 환경
 

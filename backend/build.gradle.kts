@@ -73,6 +73,14 @@ tasks.register<JavaExec>("openApiRun") {
 	args("--spring.profiles.active=test")
 }
 
+tasks.register<JavaExec>("orchidLedgerReconcile") {
+	group = "verification"
+	description = "Runs the read-only OrchidGroup ledger rehearsal checks against a restored database."
+	dependsOn(tasks.named("classes"))
+	classpath = sourceSets["main"].runtimeClasspath
+	mainClass.set("com.greenhouse.backend.farm.application.orchid.mutation.OrchidGroupLedgerReconciliationCli")
+}
+
 tasks.register<Test>("workE2eTest") {
 	group = "verification"
 	description = "Runs the Work API contract E2E tests against PostgreSQL."

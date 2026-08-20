@@ -5,8 +5,13 @@ import java.util.List;
 import java.util.Collection;
 import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Query;
 
 public interface WorkOperationTargetRepository extends JpaRepository<WorkOperationTarget, Long> {
+
+	@Query("select distinct target.orchidGroupId from WorkOperationTarget target "
+			+ "where target.orchidGroupId is not null order by target.orchidGroupId")
+	List<Long> findDistinctOrchidGroupIds();
 
 	long countByOrchidGroupIdInAndWorkOperationIdNot(Collection<Long> orchidGroupIds, Long workOperationId);
 

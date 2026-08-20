@@ -1,0 +1,155 @@
+package com.greenhouse.backend;
+
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
+
+import com.greenhouse.backend.common.exception.ConflictException;
+import com.greenhouse.backend.farm.application.orchid.mutation.BaselineOrchidGroupsCommand;
+import com.greenhouse.backend.farm.application.orchid.mutation.OrchidGroupLedgerPreparationService;
+import com.greenhouse.backend.farm.application.orchid.mutation.OrchidGroupLedgerReconciliationService;
+import com.greenhouse.backend.farm.application.orchid.mutation.OrchidGroupLedgerReconciliationStage;
+import com.greenhouse.backend.farm.domain.orchid.OrchidGroup;
+import com.greenhouse.backend.farm.domain.orchid.mutation.OrchidGroupLedgerCoverageStatus;
+import com.greenhouse.backend.farm.domain.structure.BedZone;
+import com.greenhouse.backend.farm.domain.structure.BedZoneSide;
+import com.greenhouse.backend.farm.domain.structure.House;
+import com.greenhouse.backend.farm.domain.structure.PhysicalBed;
+import com.greenhouse.backend.farm.domain.variety.Variety;
+import com.greenhouse.backend.farm.repository.orchid.mutation.OrchidGroupLedgerCoverageRepository;
+import jakarta.persistence.EntityManager;
+import java.math.BigDecimal;
+import java.time.Instant;
+import java.time.LocalDate;
+import java.util.List;
+import java.util.UUID;
+import org.junit.jupiter.api.Test;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.test.annotation.DirtiesContext;
+import org.springframework.transaction.annotation.Transactional;
+
+@Transactional
+@DirtiesContext(classMode = DirtiesContext.ClassMode.BEFORE_CLASS)
+class OrchidGroupLedgerReconciliationIntegrationTest extends AbstractBackendIntegrationTest {
+
+	private static final LocalDate BUSINESS_DATE = LocalDate.of(2026, 8, 20);
+
+	@Autowired private OrchidGroupLedgerReconciliationService reconciliationService;
+	@Autowired private OrchidGroupLedgerPreparationService preparationService;
+	@Autowired private OrchidGroupLedgerCoverageRepository coverageRepository;
+	@Autowired private EntityManager entityManager;
+
+	@Test
+	void reportsAValidPreBaselineDatabaseWithoutWritingLedgerState() {
+		OrchidGroup group = createOrchidGroup(951);
+
+		var report = reconciliationService.reconcile();
+
+		assertThat(report.stage()).isEqualTo(OrchidGroupLedgerReconciliationStage.PRE_BASELINE);
+		assertThat(report.ready()).isTrue();
+		assertThat(report.orchidGroupCount()).isEqualTo(1);
+		assertThat(report.revisionedGroupCount()).isZero();
+		assertThat(report.mutationCount()).isZero();
+		assertThat(report.entryCount()).isZero();
+		assertThat(report.currentStateFingerprint()).hasSize(64);
+		assertThat(orchidGroupRepository.findById(group.getId()).orElseThrow().getStateRevision()).isNull();
+		assertThat(coverageRepository.count()).isZero();
+	}
+
+	@Test
+	void validatesBaselineAndStoredActiveCoverageFingerprint() {
+		OrchidGroup group = createOrchidGroup(952);
+		UUID cutoverKey = UUID.randomUUID();
+		preparationService.prepare(cutoverKey, BUSINESS_DATE, "rehearsal-test");
+		preparationService.start(cutoverKey);
+		preparationService.baselineBatch(new BaselineOrchidGroupsCommand(
+				cutoverKey,
+				"GROUPS-0001",
+				List.of(group.getId()),
+				BUSINESS_DATE));
+
+		var preparingReport = reconciliationService.reconcile();
+
+		assertThat(preparingReport.stage())
+				.isEqualTo(OrchidGroupLedgerReconciliationStage.BASELINE_PREPARING);
+		assertThat(preparingReport.ready()).isTrue();
+		assertThat(preparingReport.baselineGroupCount()).isEqualTo(1);
+		assertThat(preparingReport.baselineFingerprint()).hasSize(64);
+		var coverage = coverageRepository.findByCutoverKey(cutoverKey).orElseThrow();
+		coverage.activate(Instant.parse("2026-08-20T00:00:00Z"), 1, preparingReport.baselineFingerprint());
+		entityManager.flush();
+		entityManager.clear();
+
+		var activeReport = reconciliationService.reconcile();
+
+		assertThat(activeReport.stage()).isEqualTo(OrchidGroupLedgerReconciliationStage.ACTIVE);
+		assertThat(activeReport.coverageStatus()).isEqualTo(OrchidGroupLedgerCoverageStatus.ACTIVE);
+		assertThat(activeReport.issues()).isEmpty();
+		assertThat(activeReport.ready()).isTrue();
+		assertThat(activeReport.baselineFingerprint()).isEqualTo(preparingReport.baselineFingerprint());
+	}
+
+	@Test
+	void detectsAStateChangeThatBypassedTheMutationLedger() {
+		OrchidGroup group = createOrchidGroup(953);
+		UUID cutoverKey = UUID.randomUUID();
+		preparationService.prepare(cutoverKey, BUSINESS_DATE, "rehearsal-test");
+		preparationService.start(cutoverKey);
+		preparationService.baselineBatch(new BaselineOrchidGroupsCommand(
+				cutoverKey,
+				"GROUPS-0001",
+				List.of(group.getId()),
+				BUSINESS_DATE));
+		group.reserve(1);
+		entityManager.flush();
+		entityManager.clear();
+
+		var report = reconciliationService.reconcile();
+
+		assertThat(report.ready()).isFalse();
+		assertThat(report.issues()).extracting("code")
+				.contains("CURRENT_SNAPSHOT_MISMATCH", "SALES_RESERVATION_MISMATCH");
+	}
+
+	@Test
+	void rejectsACompetingPreparingCoverage() {
+		preparationService.prepare(UUID.randomUUID(), BUSINESS_DATE, "rehearsal-test");
+
+		assertThatThrownBy(() -> preparationService.prepare(
+				UUID.randomUUID(), BUSINESS_DATE, "rehearsal-test"))
+				.isInstanceOf(ConflictException.class)
+				.hasMessageContaining("PREPARING");
+	}
+
+	private OrchidGroup createOrchidGroup(int houseNumber) {
+		House house = new House(houseNumber, "Ledger 대사 테스트동");
+		PhysicalBed bed = new PhysicalBed(1, 1);
+		bed.updatePositionUnits(new BigDecimal("20"), "칸");
+		BedZone zone = new BedZone("Ledger 대사 구역", BedZoneSide.LEFT, 1);
+		bed.addBedZone(zone);
+		house.addPhysicalBed(bed);
+		houseRepository.save(house);
+		Variety variety = varietyRepository.save(new Variety(
+				"LEDGER-RECONCILIATION-" + houseNumber,
+				"Phalaenopsis",
+				"Ledger Reconciliation",
+				null,
+				"3.5치",
+				true,
+				true,
+				null,
+				null));
+		OrchidGroup group = new OrchidGroup(
+				zone,
+				variety.getGenus(),
+				variety.getName(),
+				20,
+				"3.5치",
+				2,
+				"정상",
+				1,
+				BigDecimal.ZERO,
+				BigDecimal.ONE);
+		group.assignVariety(variety);
+		return orchidGroupRepository.save(group);
+	}
+}

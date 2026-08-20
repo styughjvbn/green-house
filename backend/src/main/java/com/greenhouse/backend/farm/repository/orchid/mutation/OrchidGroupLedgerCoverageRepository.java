@@ -11,4 +11,9 @@ public interface OrchidGroupLedgerCoverageRepository extends JpaRepository<Orchi
 	Optional<OrchidGroupLedgerCoverage> findByCutoverKey(UUID cutoverKey);
 
 	Optional<OrchidGroupLedgerCoverage> findFirstByStatus(OrchidGroupLedgerCoverageStatus status);
+
+	Optional<OrchidGroupLedgerCoverage> findFirstByStatusOrderByIdDesc(
+			OrchidGroupLedgerCoverageStatus status);
+
+	long countByStatus(OrchidGroupLedgerCoverageStatus status);
 }

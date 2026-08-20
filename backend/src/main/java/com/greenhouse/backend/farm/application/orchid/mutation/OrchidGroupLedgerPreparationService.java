@@ -59,12 +59,19 @@ public class OrchidGroupLedgerPreparationService {
 					}
 					return existing.getId();
 				})
-				.orElseGet(() -> coverageRepository.save(new OrchidGroupLedgerCoverage(
-						cutoverKey,
-						ENGINE_SCHEMA_VERSION,
-						SNAPSHOT_SCHEMA_VERSION,
-						effectiveBusinessDate,
-						minimumWriterVersion)).getId());
+				.orElseGet(() -> {
+					coverageRepository.findFirstByStatus(OrchidGroupLedgerCoverageStatus.PREPARING)
+							.ifPresent(preparing -> {
+								throw new ConflictException(
+										"다른 PREPARING OrchidGroup ledger coverage가 이미 있습니다.");
+							});
+					return coverageRepository.save(new OrchidGroupLedgerCoverage(
+							cutoverKey,
+							ENGINE_SCHEMA_VERSION,
+							SNAPSHOT_SCHEMA_VERSION,
+							effectiveBusinessDate,
+							minimumWriterVersion)).getId();
+				});
 	}
 
 	@Transactional

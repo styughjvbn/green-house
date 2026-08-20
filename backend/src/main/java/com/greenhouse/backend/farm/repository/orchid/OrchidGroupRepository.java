@@ -4,6 +4,7 @@ import com.greenhouse.backend.farm.domain.orchid.OrchidGroup;
 import com.greenhouse.backend.farm.domain.orchid.PotSizeCode;
 import java.util.List;
 import java.util.Optional;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
@@ -11,6 +12,9 @@ import org.springframework.data.jpa.repository.Lock;
 import jakarta.persistence.LockModeType;
 
 public interface OrchidGroupRepository extends JpaRepository<OrchidGroup, Long> {
+
+	@Query("select g.id from OrchidGroup g where g.id > :afterId order by g.id")
+	List<Long> findIdsAfter(@Param("afterId") Long afterId, Pageable pageable);
 
 	@Lock(LockModeType.PESSIMISTIC_WRITE)
 	@Query("select g from OrchidGroup g where g.id in :orchidGroupIds order by g.id")

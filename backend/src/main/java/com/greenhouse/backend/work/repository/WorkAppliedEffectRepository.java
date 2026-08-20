@@ -31,4 +31,13 @@ public interface WorkAppliedEffectRepository extends JpaRepository<WorkAppliedEf
 
 	@EntityGraph(attributePaths = "workOperation")
 	List<WorkAppliedEffect> findByWorkOperationIdInAndEffectKey(Collection<Long> workOperationIds, String effectKey);
+
+	@Query("""
+			select effect.id
+			from WorkAppliedEffect effect
+			where (effect.mutationId is null and effect.correlationId is not null)
+			   or (effect.mutationId is not null and effect.correlationId is null)
+			order by effect.id
+			""")
+	List<Long> findIdsWithIncompleteMutationLink();
 }
