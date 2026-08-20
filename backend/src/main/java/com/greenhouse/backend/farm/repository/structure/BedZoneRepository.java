@@ -4,8 +4,10 @@ import com.greenhouse.backend.farm.domain.structure.BedZone;
 import com.greenhouse.backend.farm.domain.structure.BedZoneSide;
 import java.util.List;
 import java.util.Optional;
+import jakarta.persistence.LockModeType;
 import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Lock;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
@@ -23,6 +25,10 @@ public interface BedZoneRepository extends JpaRepository<BedZone, Long> {
 
 	@EntityGraph(attributePaths = { "physicalBed", "physicalBed.house", "orchidGroups", "capacities" })
 	Optional<BedZone> findWithDetailsById(Long id);
+
+	@Lock(LockModeType.PESSIMISTIC_WRITE)
+	@Query("select z from BedZone z join fetch z.physicalBed b join fetch b.house where z.id = :id")
+	Optional<BedZone> findForUpdateById(@Param("id") Long id);
 
 	@Query("""
 			select z from BedZone z

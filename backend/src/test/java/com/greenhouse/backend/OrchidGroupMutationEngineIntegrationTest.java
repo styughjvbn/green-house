@@ -5,11 +5,17 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import com.greenhouse.backend.common.exception.ConflictException;
 import com.greenhouse.backend.farm.application.orchid.mutation.BaselineOrchidGroupsCommand;
+import com.greenhouse.backend.farm.application.orchid.mutation.CancelOrchidGroupCreationMutationCommand;
+import com.greenhouse.backend.farm.application.orchid.mutation.CreateOrchidGroupMutationCommand;
 import com.greenhouse.backend.farm.application.orchid.mutation.DiscardOrchidGroupMutationCommand;
+import com.greenhouse.backend.farm.application.orchid.mutation.MoveOrchidGroupMutationCommand;
 import com.greenhouse.backend.farm.application.orchid.mutation.OrchidGroupLedgerPreparationService;
 import com.greenhouse.backend.farm.application.orchid.mutation.OrchidGroupMutationEngine;
+import com.greenhouse.backend.farm.application.orchid.mutation.OrchidGroupMutationDetails;
+import com.greenhouse.backend.farm.application.orchid.mutation.UpdateOrchidGroupMutationCommand;
 import com.greenhouse.backend.farm.domain.orchid.OrchidGroup;
 import com.greenhouse.backend.farm.domain.orchid.mutation.OrchidGroupMutationEntryKind;
+import com.greenhouse.backend.farm.domain.orchid.mutation.OrchidGroupMutationEntryRole;
 import com.greenhouse.backend.farm.domain.orchid.mutation.OrchidGroupMutationSource;
 import com.greenhouse.backend.farm.domain.orchid.mutation.OrchidGroupMutationSourceDomain;
 import com.greenhouse.backend.farm.domain.orchid.mutation.OrchidGroupMutationType;
@@ -39,8 +45,155 @@ class OrchidGroupMutationEngineIntegrationTest extends AbstractBackendIntegratio
 	@Autowired EntityManager entityManager;
 
 	@Test
+	void createsANewRevisionChainAndReturnsTheSameGroupOnReplay() {
+		FarmFixture fixture = createFarmFixture(902);
+		long groupCountBefore = orchidGroupRepository.count();
+		long mutationCountBefore = mutationRepository.count();
+		long entryCountBefore = entryRepository.count();
+		LocalDate businessDate = LocalDate.of(2026, 8, 20);
+		var source = farmSource("create-1", "CREATE");
+		var command = new CreateOrchidGroupMutationCommand(
+				source,
+				fixture.sourceZone().getId(),
+				new OrchidGroupMutationDetails(
+						fixture.variety().getId(),
+						15,
+						"4치",
+						3,
+						"정상",
+						" POT ",
+						2,
+						false,
+						new BigDecimal("2"),
+						new BigDecimal("4"),
+						" 생성 메모 "),
+				businessDate,
+				"직접 생성");
+
+		var created = mutationEngine.create(command);
+		entityManager.flush();
+		entityManager.clear();
+		var replayed = mutationEngine.create(new CreateOrchidGroupMutationCommand(
+				source,
+				fixture.sourceZone().getId(),
+				new OrchidGroupMutationDetails(
+						fixture.variety().getId(),
+						15,
+						"4\"",
+						3,
+						" 정상 ",
+						"POT",
+						2,
+						false,
+						new BigDecimal("2.0"),
+						new BigDecimal("4.00"),
+						"생성 메모"),
+				businessDate,
+				" 직접 생성 "));
+
+		assertThat(replayed.mutationId()).isEqualTo(created.mutationId());
+		assertThat(created.mutationType()).isEqualTo(OrchidGroupMutationType.CREATE);
+		assertThat(created.entries()).singleElement().satisfies(entry -> {
+			assertThat(entry.entryKind()).isEqualTo(OrchidGroupMutationEntryKind.CREATE);
+			assertThat(entry.role()).isEqualTo(OrchidGroupMutationEntryRole.RESULT);
+			assertThat(entry.stateRevisionBefore()).isNull();
+			assertThat(entry.stateRevisionAfter()).isEqualTo(1L);
+			assertThat(entry.afterState().quantity()).isEqualTo(15);
+			assertThat(entry.afterState().potSizeCode()).isEqualTo("POT_4");
+			assertThat(entry.afterState().placementType()).isEqualTo("POT");
+			assertThat(entry.afterState().memo()).isEqualTo("생성 메모");
+		});
+		Long createdGroupId = created.entries().getFirst().orchidGroupId();
+		OrchidGroup group = orchidGroupRepository.findById(createdGroupId).orElseThrow();
+		assertThat(group.getStateRevision()).isEqualTo(1L);
+		assertThat(group.getStartPosition()).isEqualByComparingTo("2.00");
+		assertThat(group.getEndPosition()).isEqualByComparingTo("4.00");
+		assertThat(orchidGroupRepository.count()).isEqualTo(groupCountBefore + 1);
+		assertThat(mutationRepository.count()).isEqualTo(mutationCountBefore + 1);
+		assertThat(entryRepository.count()).isEqualTo(entryCountBefore + 1);
+	}
+
+	@Test
+	void updatesMovesAndCancelsCreationWhileKeepingAContinuousRevisionChain() {
+		FarmFixture fixture = createFarmFixture(903);
+		OrchidGroup group = createOrchidGroup(fixture, 20);
+		Variety nextVariety = varietyRepository.save(new Variety(
+				"MUTATION-NEXT", "Cattleya", "Mutation Next", null, "4치",
+				true, true, null, null));
+		UUID cutoverKey = UUID.randomUUID();
+		LocalDate businessDate = LocalDate.of(2026, 8, 20);
+		long mutationCountBefore = mutationRepository.count();
+		long entryCountBefore = entryRepository.count();
+		ledgerPreparationService.prepare(cutoverKey, businessDate, "mutation-engine-test");
+		ledgerPreparationService.start(cutoverKey);
+		ledgerPreparationService.baselineBatch(new BaselineOrchidGroupsCommand(
+				cutoverKey, "GROUPS-0001", List.of(group.getId()), businessDate));
+
+		var updated = mutationEngine.updateDetails(new UpdateOrchidGroupMutationCommand(
+				farmSource("update-1", "UPDATE_DETAILS"),
+				group.getId(),
+				new OrchidGroupMutationDetails(
+						nextVariety.getId(), 12, "4치", 4, "관리",
+						"TRAY", 3, true,
+						new BigDecimal("1"), new BigDecimal("3"), "상태 수정"),
+				businessDate,
+				"운영 보정"));
+		var moved = mutationEngine.move(new MoveOrchidGroupMutationCommand(
+				farmSource("move-1", "MOVE"),
+				group.getId(),
+				fixture.destinationZone().getId(),
+				new BigDecimal("3"),
+				new BigDecimal("5"),
+				businessDate,
+				"배치 이동"));
+		var canceled = mutationEngine.cancelCreation(new CancelOrchidGroupCreationMutationCommand(
+				farmSource("cancel-1", "CANCEL_CREATION"),
+				group.getId(),
+				businessDate,
+				"오생성 취소"));
+
+		assertThat(updated.entries()).singleElement().satisfies(entry -> {
+			assertThat(entry.stateRevisionBefore()).isZero();
+			assertThat(entry.stateRevisionAfter()).isEqualTo(1L);
+			assertThat(entry.beforeState().quantity()).isEqualTo(20);
+			assertThat(entry.afterState().quantity()).isEqualTo(12);
+			assertThat(entry.afterState().varietyId()).isEqualTo(nextVariety.getId());
+		});
+		assertThat(moved.entries()).singleElement().satisfies(entry -> {
+			assertThat(entry.stateRevisionBefore()).isEqualTo(1L);
+			assertThat(entry.stateRevisionAfter()).isEqualTo(2L);
+			assertThat(entry.beforeState().bedZoneId()).isEqualTo(fixture.sourceZone().getId());
+			assertThat(entry.afterState().bedZoneId()).isEqualTo(fixture.destinationZone().getId());
+		});
+		assertThat(canceled.entries()).singleElement().satisfies(entry -> {
+			assertThat(entry.stateRevisionBefore()).isEqualTo(2L);
+			assertThat(entry.stateRevisionAfter()).isEqualTo(3L);
+			assertThat(entry.afterState().quantity()).isZero();
+			assertThat(entry.afterState().status()).isEqualTo("생성 취소");
+		});
+		assertThat(group.getStateRevision()).isEqualTo(3L);
+		assertThat(group.getQuantity()).isZero();
+		assertThat(group.getStatus()).isEqualTo("생성 취소");
+		assertThat(group.getBedZone().getId()).isEqualTo(fixture.destinationZone().getId());
+		assertThat(mutationRepository.count()).isEqualTo(mutationCountBefore + 4);
+		assertThat(entryRepository.count()).isEqualTo(entryCountBefore + 4);
+		assertThat(entryRepository.findByMutationIdOrderByIdAsc(canceled.mutationId())).hasSize(1);
+
+		assertThatThrownBy(() -> mutationEngine.cancelCreation(new CancelOrchidGroupCreationMutationCommand(
+				farmSource("cancel-2", "CANCEL_CREATION"),
+				group.getId(),
+				businessDate,
+				"다른 취소 요청")))
+				.isInstanceOf(IllegalArgumentException.class)
+				.hasMessageContaining("변경 전후");
+		assertThat(mutationRepository.count()).isEqualTo(mutationCountBefore + 4);
+	}
+
+	@Test
 	void establishesBaselineAndAppliesDiscardExactlyOnce() {
 		OrchidGroup group = createOrchidGroup(20);
+		long mutationCountBefore = mutationRepository.count();
+		long entryCountBefore = entryRepository.count();
 		UUID cutoverKey = UUID.randomUUID();
 		LocalDate businessDate = LocalDate.of(2026, 8, 20);
 		ledgerPreparationService.prepare(cutoverKey, businessDate, "mutation-engine-test");
@@ -84,8 +237,8 @@ class OrchidGroupMutationEngineIntegrationTest extends AbstractBackendIntegratio
 			assertThat(entry.beforeState().quantity()).isEqualTo(20);
 			assertThat(entry.afterState().quantity()).isEqualTo(16);
 		});
-		assertThat(mutationRepository.count()).isEqualTo(2);
-		assertThat(entryRepository.count()).isEqualTo(2);
+		assertThat(mutationRepository.count()).isEqualTo(mutationCountBefore + 2);
+		assertThat(entryRepository.count()).isEqualTo(entryCountBefore + 2);
 	}
 
 	@Test
@@ -115,17 +268,13 @@ class OrchidGroupMutationEngineIntegrationTest extends AbstractBackendIntegratio
 	}
 
 	private OrchidGroup createOrchidGroup(int quantity) {
-		House house = new House(901, "Mutation 테스트동");
-		PhysicalBed bed = new PhysicalBed(1, 1);
-		BedZone zone = new BedZone("테스트 구역", BedZoneSide.LEFT, 1);
-		bed.addBedZone(zone);
-		house.addPhysicalBed(bed);
-		houseRepository.save(house);
-		Variety variety = varietyRepository.save(new Variety(
-				"MUTATION-TEST", "Phalaenopsis", "Mutation Test", null, "3.5치",
-				true, true, null, null));
+		return createOrchidGroup(createFarmFixture(901), quantity);
+	}
+
+	private OrchidGroup createOrchidGroup(FarmFixture fixture, int quantity) {
+		Variety variety = fixture.variety();
 		OrchidGroup group = new OrchidGroup(
-				zone,
+				fixture.sourceZone(),
 				variety.getGenus(),
 				variety.getName(),
 				quantity,
@@ -137,5 +286,33 @@ class OrchidGroupMutationEngineIntegrationTest extends AbstractBackendIntegratio
 				BigDecimal.ONE);
 		group.assignVariety(variety);
 		return orchidGroupRepository.save(group);
+	}
+
+	private FarmFixture createFarmFixture(int houseNumber) {
+		House house = new House(houseNumber, "Mutation 테스트동");
+		PhysicalBed bed = new PhysicalBed(1, 1);
+		bed.updatePositionUnits(new BigDecimal("20"), "칸");
+		BedZone sourceZone = new BedZone("원본 구역", BedZoneSide.LEFT, 1);
+		BedZone destinationZone = new BedZone("목적 구역", BedZoneSide.RIGHT, 2);
+		bed.addBedZone(sourceZone);
+		bed.addBedZone(destinationZone);
+		house.addPhysicalBed(bed);
+		houseRepository.save(house);
+		Variety variety = varietyRepository.save(new Variety(
+				"MUTATION-TEST-" + houseNumber, "Phalaenopsis", "Mutation Test", null, "3.5치",
+				true, true, null, null));
+		return new FarmFixture(sourceZone, destinationZone, variety);
+	}
+
+	private OrchidGroupMutationSource farmSource(String referenceId, String operationKey) {
+		return new OrchidGroupMutationSource(
+				OrchidGroupMutationSourceDomain.FARM,
+				"ORCHID_GROUP_COMMAND",
+				referenceId,
+				operationKey,
+				UUID.randomUUID());
+	}
+
+	private record FarmFixture(BedZone sourceZone, BedZone destinationZone, Variety variety) {
 	}
 }
