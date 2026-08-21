@@ -236,7 +236,9 @@ fingerprint를 포함한다. `PRE_BASELINE`, `BASELINE_PREPARING`, `ACTIVE` 단�
 
 baseline 쓰기 rehearsal은 DB writer 계정과 고정한 cutover key로 실행한다. 500개 ID
 단위의 결정적 batch key를 사용하므로 동일 명령을 재실행하면 완료 batch는 기존
-결과를 반환하고 나머지를 이어서 적재한다.
+결과를 반환하고 나머지를 이어서 적재한다. 재개 시에는 `state_revision IS NULL`인
+그룹만 baseline 대상으로 선택한다. 이미 baseline된 그룹과 ENGINE smoke test에서
+CREATE Entry·revision 1로 생성된 그룹은 다시 baseline하지 않는다.
 
 ```bash
 cd backend
@@ -259,10 +261,14 @@ DATABASE_PASSWORD=greenhouse_rehearsal_test \
 LEGACY writer로 fallback하지 않고 roll-forward한다.
 
 현재 구현은 Farm·Work·Sales·Inbound의 알려진 난 묶음 write path를 하나의
-`LEGACY|ENGINE` 스위치로 라우팅한다. 기존 writer 제거와 운영 복원 DB 전체 검증은
-아직 남아 있으므로 `--activate=false` rehearsal까지만 허용한다. retirement
-inventory가 비고 전체 회귀·smoke 절차가 통과하기 전 운영 DB의 `--activate=true`
-실행은 금지한다.
+`LEGACY|ENGINE` 스위치로 라우팅한다. `ACTIVE` 전에는 모든 운영 writer가 inventory에
+식별되어 Engine을 지원하고, 스위치 밖의 미확인 직접 writer가 없어야 한다. 이는
+legacy 호환 코드를 먼저 삭제한다는 뜻은 아니다. 호환 분기는 전환 안정화 기간에
+남겨 둘 수 있지만 모든 실행 인스턴스는 `ENGINE`으로 고정하고 DB fence로 실행을
+차단한다. 안정화 후 routing flag와 legacy 직접 writer를 별도 릴리스에서 제거한다.
+
+운영 DB의 `--activate=true` 실행 전에는 최신 운영 백업과 배포 후보 코드로 baseline,
+ENGINE 전체 회귀·smoke 및 아래 `ACTIVE` 전환 rehearsal까지 통과해야 한다.
 
 ### ENGINE writer 수동 smoke test
 
@@ -352,7 +358,41 @@ WHERE (mutation_id IS NULL) <> (correlation_id IS NULL);
 정상이다. 결과가 있거나 대사 결과가 `ready=false`이면 `issues.code`와 `referenceId`로
 원인을 확인하고 해당 테스트 DB를 보존한다. baseline 재실행, ledger 직접 수정,
 `ACTIVE` 전환으로 문제를 덮지 않는다. smoke test 중에도 coverage는 `PREPARING`으로
-유지하고 `ACTIVE` 전환은 수행하지 않는다.
+유지한다. 이 단계가 통과하면 운영 primary가 아닌 폐기 가능한 DB 사본에서 실제
+전환 절차를 한 번 더 rehearsal한다.
+
+#### ACTIVE 전환 rehearsal
+
+ENGINE 백엔드를 종료해 쓰기를 막고, 구버전 인스턴스와 실행 중 transaction이 없는지
+확인한다. baseline에 사용한 cutover key와 배포 후보 writer version으로 활성화한다.
+
+```bash
+cd backend
+CUTOVER_KEY='00000000-0000-0000-0000-000000000000'
+DATABASE_URL=jdbc:postgresql://localhost:5432/greenhouse_rehearsal \
+DATABASE_USERNAME=greenhouse_rehearsal_test \
+DATABASE_PASSWORD=greenhouse_rehearsal_test \
+./gradlew orchidLedgerCutover --args="\
+  --cutover-key=${CUTOVER_KEY} \
+  --effective-business-date=2026-08-20 \
+  --minimum-writer-version=1.0.0 \
+  --current-writer-version=1.0.0 \
+  --activate=true \
+  --confirmation=ACTIVATE:${CUTOVER_KEY}"
+```
+
+그 뒤 `ORCHID_LEDGER_WRITER_MODE=ENGINE`과 최소 version 이상의
+`ORCHID_LEDGER_WRITER_VERSION`으로 백엔드를 시작한다. 앞의 smoke test, reconciliation,
+Work/Sales 연결 SQL을 다시 수행하며 성공 기준은 다음과 같다.
+
+- reconciliation의 `stage=ACTIVE`, `ready=true`, `issues=[]`
+- ENGINE 시작 성공과 `LEGACY` 또는 최소 version 미만 인스턴스의 startup guard 실패
+- Mutation context 없는 `orchid_groups` 직접 INSERT·UPDATE와 모든 DELETE의 DB fence 차단
+- 전환 후 생성·수정과 Work·Sales 효과의 새 revision 및 Mutation 연결 정상
+
+이 rehearsal DB는 `ACTIVE` 이후 LEGACY 테스트에 재사용하지 않는다. 실패하면 DB를
+보존해 원인을 조사하고 새 복원본에서 전체 절차를 다시 수행한다. 운영 primary는
+동일 절차의 결과와 소요 시간이 승인된 뒤에만 전환한다.
 
 ### 데모 환경
 

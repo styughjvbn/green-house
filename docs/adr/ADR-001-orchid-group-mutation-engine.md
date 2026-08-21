@@ -596,6 +596,12 @@ DDL과 제약의 expand 단계는 Flyway로 수행한다. cross-domain 판정, s
 writer를 재개하지 않으며, idempotent resume 또는 검증된 전체 rollback 절차 중
 하나를 수행한다.
 
+baseline resume은 `state_revision IS NULL`인 그룹만 다음 batch 대상으로 선택한다.
+이미 BASELINE Entry가 있는 그룹과 PREPARING smoke test 중 Engine이 CREATE Entry와
+revision 1로 생성한 그룹은 다시 baseline하지 않는다. 따라서 smoke test 후 같은
+cutover command로 `ACTIVE`를 실행해도 기존 baseline fingerprint와 CREATE chain을
+보존한다.
+
 ### 16. 진행 중인 업무도 baseline 위에서 계속 수행한다
 
 현재 상태만 baseline으로 옮기고 진행 중 Work·Sales·Inbound를 초기화하지 않는다.
@@ -703,6 +709,19 @@ Feature flag는 적용 기준 시점 전의 routing·shadow 검증에만 사용�
 허용하지 않는다. cutover 이후 구버전 인스턴스가 다시 붙지 않도록 coverage의
 `minimum_writer_version`, 배포 절차와 DB write fence를 함께 사용한다.
 
+운영 권한 전환과 전환 코드 정리는 서로 다른 gate로 관리한다.
+
+- `ACTIVE` 전에는 write-path inventory를 닫는다. 이는 운영에서 호출될 수 있는 모든
+  writer가 식별되어 Engine을 지원하고, 스위치 밖의 미확인 직접 writer가 없다는
+  뜻이다. 전환 실패 시점이 `ACTIVE` 전이라도 PREPARING baseline 위에서 기존
+  writer를 재개하지 않고 검증된 전체 rollback 또는 baseline resume만 허용한다.
+- `ACTIVE` 전환 릴리스에는 짧은 안정화 기간을 위해 식별된 `LEGACY` 호환 분기가
+  남아 있을 수 있다. 그러나 모든 실행 인스턴스는 `ENGINE`으로 고정하며 DB fence가
+  legacy 실행을 최종 차단한다. `ACTIVE` 이후 flag 변경이나 fallback은 금지한다.
+- smoke test와 상시 대사가 안정적으로 통과하면 다음 릴리스에서 routing flag와
+  legacy 직접 writer를 물리적으로 제거한다. 이때 retirement inventory가 비면
+  완전 전환이 완료된다.
+
 현재 구현은 `app.orchid-ledger.writer-mode=LEGACY|ENGINE`으로 aggregate 전체의
 writer를 선택한다. 기본값은 `LEGACY`이고, `ENGINE`에서는 다음 운영 경로가 typed
 command로 라우팅된다.
@@ -719,15 +738,16 @@ key로 전달하고 `WorkAppliedEffect`와 호환 `OrchidGroupLineage`에 Mutati
 각 `SalesInventoryMovement`에 Mutation ID와 correlation ID를 연결한다.
 
 이는 복원 DB와 수동 smoke test를 위한 routing 완료 상태이지 운영 cutover 완료를
-뜻하지 않는다. 다음 retirement inventory는 검증 후 별도 단계에서 제거한다.
+뜻하지 않는다. 다음 retirement inventory는 `ACTIVE` 전까지 모두 식별·라우팅하고,
+안정화 후 별도 릴리스에서 물리적으로 제거한다.
 
 - 각 adapter에 남아 있는 `LEGACY` 직접 mutator 분기와 routing flag
 - `OrchidGroupCommandService.createEntity` 등 전환 호환용 내부 writer
 - Farm 패키지에서 Work handler interface를 직접 구현하는 전환 adapter
 - ledger 조회가 대체할 수 있는 Work 결과 snapshot과 단일 원본 Lineage 중복 write
 
-복원 PostgreSQL에서 baseline, ENGINE 전체 회귀와 진행 중 업무 호환 검증을 마치기
-전에는 coverage를 `ACTIVE`로 바꾸지 않는다.
+복원 PostgreSQL에서 baseline, ENGINE 전체 회귀, 진행 중 업무 호환 검증과 실제
+`ACTIVE` 전환 rehearsal을 마치기 전에는 운영 coverage를 `ACTIVE`로 바꾸지 않는다.
 
 ### 19. 구조와 데이터 검증을 자동화한다
 
@@ -871,7 +891,17 @@ coverage 시점이 달라지고, 아직 접근되지 않은 행의 직접 변경
 
 ## 완료 기준
 
-핵심 전환은 다음 조건을 모두 만족할 때 완료한다.
+운영 write authority 전환은 다음 조건을 만족하면 완료한다.
+
+- write-path inventory의 모든 writer가 식별되어 Engine으로 라우팅되고 미확인 직접
+  writer가 없다.
+- 복원 운영 DB에서 baseline·ENGINE 회귀와 `ACTIVE` 전환 rehearsal이 통과한다.
+- 운영 DB coverage가 `ACTIVE`이고 모든 실행 인스턴스가 최소 writer version 이상의
+  `ENGINE`이며 DB fence가 legacy write를 차단한다.
+- 전환 직후 smoke test와 read-only reconciliation이 통과한다.
+
+완전한 코드 전환은 안정화 후 legacy writer와 routing flag까지 제거되어 다음 조건을
+모두 만족할 때 완료한다.
 
 - 적용 기준 시점 이후 커밋된 모든 `OrchidGroup` 상태 revision에 정확히 하나의
   MutationEntry가 존재한다.

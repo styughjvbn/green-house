@@ -114,7 +114,9 @@ demo
 - 실행 인스턴스는 ACTIVE coverage의 `minimumWriterVersion` 이상인 `ENGINE` writer mode여야 한다. baseline 적재는 재실행 가능한 고정 ID batch로 수행하고, 테이블 잠금 아래 최종 대사를 통과한 경우에만 한 번에 ACTIVE로 전환한다.
 - PREPARING 동안 DB fence는 아직 활성화되지 않으므로 운영 baseline에는 외부 write-stop이 필수다. 모든 write path의 Engine routing이 끝나기 전에는 ACTIVE로 전환하지 않는다.
 - 현재 Farm·Inbound·Work·Sales의 알려진 난 묶음 writer는 `LEGACY|ENGINE` 단일 경로 스위치를 공유한다. `ENGINE` 선택 시 Work 효과와 Sales 재고 이동은 같은 transaction에서 Mutation ID·correlation ID를 연결하며 dual write하지 않는다.
-- 기본값은 운영 호환을 위한 `LEGACY`다. 복원 DB baseline과 ENGINE smoke test가 끝난 뒤 aggregate 전체를 한 번에 전환하고, 검증 완료 전에는 `ACTIVE` coverage를 만들지 않는다.
+- PREPARING 전환 코드의 routing flag 호출자, `OrchidGroup` 직접 상태 변경자, 생성자와 repository write 호출자는 실행 가능한 architecture test의 명시적 inventory로 고정한다. 신규 writer는 inventory 허용 항목만 늘리지 않고 먼저 typed Engine command로 편입한다.
+- 기본값은 운영 호환을 위한 `LEGACY`다. 복원 DB baseline, ENGINE smoke test와 `ACTIVE` 전환 rehearsal이 끝난 뒤 aggregate 전체를 한 번에 전환하고, 검증 완료 전에는 운영 `ACTIVE` coverage를 만들지 않는다.
+- 운영 `ACTIVE`에서는 모든 인스턴스를 `ENGINE`으로 고정하고 DB fence로 legacy 실행을 차단한다. 안정화 후 routing flag와 legacy 직접 writer를 제거하며, 기존 Work·Sales·Lineage 사실 데이터는 별도 소비 전환 없이 삭제하지 않는다.
 
 `farm`의 각 계층은 동일한 기능 경계를 사용한다.
 
