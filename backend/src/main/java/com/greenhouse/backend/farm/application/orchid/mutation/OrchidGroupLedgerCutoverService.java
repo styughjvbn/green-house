@@ -37,7 +37,7 @@ public class OrchidGroupLedgerCutoverService {
 		int batchCount = 0;
 		long afterId = 0L;
 		while (true) {
-			List<Long> groupIds = orchidGroupRepository.findIdsAfter(
+			List<Long> groupIds = orchidGroupRepository.findUnrevisionedIdsAfter(
 					afterId, PageRequest.of(0, BASELINE_BATCH_SIZE));
 			if (groupIds.isEmpty()) {
 				break;

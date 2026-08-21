@@ -5,13 +5,18 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import com.greenhouse.backend.common.exception.ConflictException;
 import com.greenhouse.backend.farm.application.orchid.mutation.BaselineOrchidGroupsCommand;
+import com.greenhouse.backend.farm.application.orchid.mutation.CreateOrchidGroupMutationCommand;
 import com.greenhouse.backend.farm.application.orchid.mutation.OrchidGroupLedgerCutoverCommand;
 import com.greenhouse.backend.farm.application.orchid.mutation.OrchidGroupLedgerCutoverService;
 import com.greenhouse.backend.farm.application.orchid.mutation.OrchidGroupLedgerPreparationService;
 import com.greenhouse.backend.farm.application.orchid.mutation.OrchidGroupLedgerReconciliationService;
 import com.greenhouse.backend.farm.application.orchid.mutation.OrchidGroupLedgerReconciliationStage;
+import com.greenhouse.backend.farm.application.orchid.mutation.OrchidGroupMutationDetails;
+import com.greenhouse.backend.farm.application.orchid.mutation.OrchidGroupMutationEngine;
 import com.greenhouse.backend.farm.domain.orchid.OrchidGroup;
 import com.greenhouse.backend.farm.domain.orchid.mutation.OrchidGroupLedgerCoverageStatus;
+import com.greenhouse.backend.farm.domain.orchid.mutation.OrchidGroupMutationSource;
+import com.greenhouse.backend.farm.domain.orchid.mutation.OrchidGroupMutationSourceDomain;
 import com.greenhouse.backend.farm.domain.structure.BedZone;
 import com.greenhouse.backend.farm.domain.structure.BedZoneSide;
 import com.greenhouse.backend.farm.domain.structure.House;
@@ -38,6 +43,7 @@ class OrchidGroupLedgerReconciliationIntegrationTest extends AbstractBackendInte
 	@Autowired private OrchidGroupLedgerReconciliationService reconciliationService;
 	@Autowired private OrchidGroupLedgerPreparationService preparationService;
 	@Autowired private OrchidGroupLedgerCutoverService cutoverService;
+	@Autowired private OrchidGroupMutationEngine mutationEngine;
 	@Autowired private OrchidGroupLedgerCoverageRepository coverageRepository;
 	@Autowired private EntityManager entityManager;
 
@@ -150,6 +156,47 @@ class OrchidGroupLedgerReconciliationIntegrationTest extends AbstractBackendInte
 		var coverage = coverageRepository.findByCutoverKey(cutoverKey).orElseThrow();
 		assertThat(coverage.getBaselineGroupCount()).isEqualTo(2);
 		assertThat(coverage.getBaselineFingerprint()).hasSize(64);
+	}
+
+	@Test
+	void activatesWithoutRebaseliningAnEngineCreatedPreparingGroup() {
+		OrchidGroup baselineGroup = createOrchidGroup(956);
+		UUID cutoverKey = UUID.randomUUID();
+		cutoverService.execute(new OrchidGroupLedgerCutoverCommand(
+				cutoverKey, BUSINESS_DATE, "1.0.0", "1.1.0", false));
+
+		var created = mutationEngine.create(new CreateOrchidGroupMutationCommand(
+				new OrchidGroupMutationSource(
+						OrchidGroupMutationSourceDomain.FARM,
+						"ORCHID_GROUP_COMMAND",
+						"post-baseline-create",
+						"CREATE",
+						UUID.randomUUID()),
+				baselineGroup.getBedZone().getId(),
+				new OrchidGroupMutationDetails(
+						baselineGroup.getVariety().getId(),
+						10,
+						"3.5치",
+						2,
+						"정상",
+						null,
+						null,
+						false,
+						new BigDecimal("2"),
+						new BigDecimal("3"),
+						null),
+				BUSINESS_DATE,
+				"PREPARING 이후 생성"));
+
+		var activated = cutoverService.execute(new OrchidGroupLedgerCutoverCommand(
+				cutoverKey, BUSINESS_DATE, "1.0.0", "1.1.0", true));
+
+		assertThat(created.entries()).singleElement().satisfies(entry ->
+				assertThat(entry.stateRevisionAfter()).isEqualTo(1L));
+		assertThat(activated.activated()).isTrue();
+		assertThat(activated.baselineGroupCount()).isEqualTo(1);
+		assertThat(activated.reconciliation().orchidGroupCount()).isEqualTo(2);
+		assertThat(activated.reconciliation().ready()).isTrue();
 	}
 
 	private OrchidGroup createOrchidGroup(int houseNumber) {

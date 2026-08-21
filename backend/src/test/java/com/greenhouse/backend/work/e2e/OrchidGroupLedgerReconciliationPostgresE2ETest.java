@@ -5,6 +5,8 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import com.greenhouse.backend.farm.application.orchid.mutation.BaselineOrchidGroupsCommand;
 import com.greenhouse.backend.farm.application.orchid.mutation.CreateOrchidGroupMutationCommand;
+import com.greenhouse.backend.farm.application.orchid.mutation.OrchidGroupLedgerCutoverCommand;
+import com.greenhouse.backend.farm.application.orchid.mutation.OrchidGroupLedgerCutoverService;
 import com.greenhouse.backend.farm.application.orchid.mutation.OrchidGroupLedgerPreparationService;
 import com.greenhouse.backend.farm.application.orchid.mutation.OrchidGroupLedgerReconciliationService;
 import com.greenhouse.backend.farm.application.orchid.mutation.OrchidGroupLedgerReconciliationStage;
@@ -30,6 +32,7 @@ class OrchidGroupLedgerReconciliationPostgresE2ETest extends WorkE2ETestBase {
 
 	@Autowired private WorkTestDataSeeder seeder;
 	@Autowired private OrchidGroupLedgerPreparationService preparationService;
+	@Autowired private OrchidGroupLedgerCutoverService cutoverService;
 	@Autowired private OrchidGroupLedgerReconciliationService reconciliationService;
 	@Autowired private OrchidGroupMutationEngine mutationEngine;
 	@Autowired private JdbcTemplate jdbcTemplate;
@@ -89,16 +92,11 @@ class OrchidGroupLedgerReconciliationPostgresE2ETest extends WorkE2ETestBase {
 	}
 
 	@Test
-	void acceptsAnEngineCreatedGroupWhileCoverageIsPreparing() {
+	void activatesAfterAnEngineCreatedGroupWhileCoverageIsPreparing() {
 		UUID cutoverKey = UUID.randomUUID();
 		LocalDate businessDate = LocalDate.of(2026, 8, 20);
-		preparationService.prepare(cutoverKey, businessDate, "postgres-rehearsal-test");
-		preparationService.start(cutoverKey);
-		preparationService.baselineBatch(new BaselineOrchidGroupsCommand(
-				cutoverKey,
-				"GROUPS-0001",
-				List.of(scenario.orchidGroupId()),
-				businessDate));
+		cutoverService.execute(new OrchidGroupLedgerCutoverCommand(
+				cutoverKey, businessDate, "1.0.0", "1.0.0", false));
 		Long varietyId = jdbcTemplate.queryForObject(
 				"SELECT variety_id FROM orchid_groups WHERE id = ?",
 				Long.class,
@@ -128,14 +126,17 @@ class OrchidGroupLedgerReconciliationPostgresE2ETest extends WorkE2ETestBase {
 				businessDate.plusDays(1),
 				"PREPARING smoke test 생성")));
 
-		var report = reconciliationService.reconcile();
+		var activated = cutoverService.execute(new OrchidGroupLedgerCutoverCommand(
+				cutoverKey, businessDate, "1.0.0", "1.0.0", true));
+		var report = activated.reconciliation();
 
 		assertThat(created.entries()).singleElement().satisfies(entry ->
 				assertThat(entry.entryKind()).isEqualTo(OrchidGroupMutationEntryKind.CREATE));
 		assertThat(report.stage())
-				.isEqualTo(OrchidGroupLedgerReconciliationStage.BASELINE_PREPARING);
+				.isEqualTo(OrchidGroupLedgerReconciliationStage.ACTIVE);
 		assertThat(report.orchidGroupCount()).isEqualTo(2);
 		assertThat(report.baselineGroupCount()).isEqualTo(1);
+		assertThat(activated.activated()).isTrue();
 		assertThat(report.ready()).isTrue();
 		assertThat(report.issues()).isEmpty();
 	}
