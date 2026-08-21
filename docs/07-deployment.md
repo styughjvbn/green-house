@@ -191,6 +191,7 @@ pg_dump -U greenhouse greenhouse > backup_$(date +%Y%m%d).sql
 - V20은 기존 자리 이동·합식 실행 효과의 JSON 원본 목록을 `work_effect_orchid_groups`의 `SOURCE` 관계로 보강한다. 난 묶음 수량·상태와 기존 직접 계보 행은 변경하지 않는다.
 - V21~V22는 난 묶음 Mutation ledger와 coverage를 추가하고 동시에 하나의 `PREPARING` 또는 `ACTIVE` coverage만 존재하도록 제한한다. 기존 난 묶음의 baseline은 자동 생성하지 않는다.
 - V23은 `ACTIVE` coverage에서 Mutation context 없는 난 묶음 INSERT·UPDATE와 모든 DELETE를 차단하고, 커밋 시 변경 revision에 대응하는 MutationEntry를 검증한다. `PREPARING`에서는 아직 차단하지 않는다.
+- V24는 `UNMAPPED`으로 남은 기존 난 묶음 중 의미가 명확한 스마트 따옴표 3·4인치 값만 표준 화분 코드로 보정한다. 다른 `UNMAPPED` 값은 자동 변환하지 않는다.
 
 운영 custom dump로 로컬 개발 DB를 초기화할 때는 다음 스크립트를 사용한다. 백업을 생략하면 `temp/`의 최신 `*.dump.gz` 또는 `*.dump`를 선택한다. 스크립트는 로컬 DB만 허용하며 기존 백엔드를 종료하고, 복원 후 Flyway 적용·Hibernate 스키마 검증·작업 V2 무결성 검사를 수행한다.
 
@@ -213,8 +214,8 @@ Mutation Engine 전환 전에는 운영 백업을 격리된 PostgreSQL에 복원
 ```bash
 cd backend
 DATABASE_URL=jdbc:postgresql://localhost:5432/greenhouse_rehearsal \
-DATABASE_USERNAME=greenhouse_rehearsal_reader \
-DATABASE_PASSWORD='...' \
+DATABASE_USERNAME=greenhouse_rehearsal_test \
+DATABASE_PASSWORD=greenhouse_rehearsal_test \
 ./gradlew orchidLedgerReconcile
 ```
 
@@ -241,8 +242,8 @@ baseline 쓰기 rehearsal은 DB writer 계정과 고정한 cutover key로 실행
 cd backend
 CUTOVER_KEY='00000000-0000-0000-0000-000000000000'
 DATABASE_URL=jdbc:postgresql://localhost:5432/greenhouse_rehearsal \
-DATABASE_USERNAME=greenhouse_rehearsal_writer \
-DATABASE_PASSWORD='...' \
+DATABASE_USERNAME=greenhouse_rehearsal_test \
+DATABASE_PASSWORD=greenhouse_rehearsal_test \
 ./gradlew orchidLedgerCutover --args="\
   --cutover-key=${CUTOVER_KEY} \
   --effective-business-date=2026-08-20 \
@@ -274,8 +275,8 @@ cd backend
 ORCHID_LEDGER_WRITER_MODE=ENGINE \
 ORCHID_LEDGER_WRITER_VERSION=1.0.0 \
 DATABASE_URL=jdbc:postgresql://localhost:5432/greenhouse_rehearsal \
-DATABASE_USERNAME=greenhouse_rehearsal_writer \
-DATABASE_PASSWORD='...' \
+DATABASE_USERNAME=greenhouse_rehearsal_test \
+DATABASE_PASSWORD=greenhouse_rehearsal_test \
 ./gradlew bootRun
 ```
 
@@ -284,12 +285,58 @@ DATABASE_PASSWORD='...' \
 1. 난 묶음 단건·다중 생성, 상세 수정, 이동과 새로 만든 묶음의 생성 취소
 2. 즉시 배치 입고와 유리병 모종 포트 작업
 3. 폐기, 자리 이동, 분갈이, 분주, 합식, 다중 생성·취소와 완료 결과 보정
-4. 판매 작성중 예약, 전표 수정, 작성중 취소, 출고 완료와 출고 완료 취소
+4. 판매 전표 등록, 작성중 예약, 전표 수정·취소, 출고 완료와 출고 완료 취소
 5. 같은 Work 실행 키와 즉시 작업 요청 키 재호출 시 수량·결과가 중복되지 않는지 확인
 
-애플리케이션을 종료한 뒤 같은 DB를 read-only 계정으로 `orchidLedgerReconcile`하여
-revision chain과 latest snapshot 대사를 다시 통과시킨다. 추가로 새 Work 효과와
-판매 이동에서 반쪽짜리 연결이 없는지 확인한다.
+#### smoke test 사후 ledger 검증
+
+화면 검증은 업무 결과를 확인하고, 사후 ledger 검증은 그 결과가 Mutation 이력과
+기존 Work·Sales 기록에 빠짐없이 저장됐는지 확인한다. 검증 중 상태가 바뀌지 않도록
+먼저 ENGINE 백엔드를 종료한 뒤 같은 DB에서 다음 명령을 실행한다.
+
+```bash
+cd backend
+DEBUG=false \
+DATABASE_URL=jdbc:postgresql://localhost:5432/greenhouse_rehearsal \
+DATABASE_USERNAME=greenhouse_rehearsal_test \
+DATABASE_PASSWORD=greenhouse_rehearsal_test \
+./gradlew orchidLedgerReconcile --args="--debug=false --logging.level.org.hibernate.SQL=OFF"
+```
+
+명령은 데이터를 변경하지 않고 다음 조건을 전수 검사한다.
+
+- cutover 당시 존재한 그룹은 해당 coverage의 `BASELINE` Entry, 이후 생성된 그룹은
+  `CREATE` Entry로 revision chain을 시작한다.
+- 인접 Entry의 `stateRevisionAfter`와 다음 `stateRevisionBefore`가 연속된다.
+- 이전 `afterState`와 다음 `beforeState`가 같고, 현재 난 묶음 상태와 마지막
+  `afterState`가 같다.
+- 수량·예약 수량, 화분 코드, 품종·구역, 배치 범위, Collection 참조가 유효하다.
+- Work 진행·효과와 Sales 작성중 allocation이 현재 난 묶음 상태와 일치한다.
+- Entry 없는 Mutation이나 Mutation ID·correlation ID가 한쪽만 저장된 연결이 없다.
+
+성공 기준은 종료 코드 `0`과 다음 JSON 필드다.
+
+```json
+{
+  "stage": "BASELINE_PREPARING",
+  "ready": true,
+  "issues": []
+}
+```
+
+`baselineGroupCount`는 운영 백업에서 baseline으로 시작한 그룹 수이므로 smoke test 중
+새 그룹을 만들더라도 증가하지 않는다. `orchidGroupCount`, `mutationCount`,
+`entryCount`는 테스트 결과에 따라 증가하는 것이 정상이다. `baselineFingerprint`는
+초기 기준을 나타내므로 유지되고 `currentStateFingerprint`는 상태 변경에 따라 바뀐다.
+
+대사 통과 후 새 Work 효과와 판매 이동에서 반쪽짜리 연결이 없는지 SQL로 한 번 더
+확인한다.
+
+```bash
+PGPASSWORD=greenhouse_rehearsal_test psql \
+  -h 127.0.0.1 -p 5432 \
+  -U greenhouse_rehearsal_test -d greenhouse_rehearsal
+```
 
 ```sql
 SELECT id
@@ -302,8 +349,10 @@ WHERE (mutation_id IS NULL) <> (correlation_id IS NULL);
 ```
 
 두 조회 결과는 비어 있어야 한다. 기록 전용 Work 효과의 두 값이 모두 `NULL`인 것은
-정상이다. smoke test 중에도 coverage는 `PREPARING`으로 유지하고 `ACTIVE` 전환은
-수행하지 않는다.
+정상이다. 결과가 있거나 대사 결과가 `ready=false`이면 `issues.code`와 `referenceId`로
+원인을 확인하고 해당 테스트 DB를 보존한다. baseline 재실행, ledger 직접 수정,
+`ACTIVE` 전환으로 문제를 덮지 않는다. smoke test 중에도 coverage는 `PREPARING`으로
+유지하고 `ACTIVE` 전환은 수행하지 않는다.
 
 ### 데모 환경
 
