@@ -41,4 +41,10 @@ public interface SalesSlipRepository extends JpaRepository<SalesSlip, Long>, Sal
 			  and s.salesStatus <> '취소'
 			""")
 	Long sumDirectReceivableByPartnerId(@Param("partnerId") Long partnerId);
+
+	@Query("select count(item) from SalesSlipItem item")
+	long countItems();
+
+	@Query("select count(snapshot) from SalesOrchidGroupSnapshot snapshot")
+	long countOrchidGroupSnapshots();
 }

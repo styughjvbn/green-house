@@ -63,6 +63,27 @@ public final class OrchidGroupMutationSources {
 				"SALES_SLIP:" + salesSlipId);
 	}
 
+	public static OrchidGroupMutationSource historicalAudit(Long auditEventId, String action) {
+		return stable(
+				OrchidGroupMutationSourceDomain.FARM,
+				"AUDIT_EVENT",
+				auditEventId.toString(),
+				action,
+				"AUDIT_EVENT:" + auditEventId);
+	}
+
+	public static OrchidGroupMutationSource migration(
+			String sourceType,
+			String referenceId,
+			String operationKey) {
+		return stable(
+				OrchidGroupMutationSourceDomain.MIGRATION,
+				sourceType,
+				referenceId,
+				operationKey,
+				sourceType + ":" + referenceId);
+	}
+
 	private static OrchidGroupMutationSource stable(
 			OrchidGroupMutationSourceDomain domain,
 			String sourceType,

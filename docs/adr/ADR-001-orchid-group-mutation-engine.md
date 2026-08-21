@@ -654,10 +654,11 @@ minimum_writer_version
 ```
 
 `ACTIVE` 시각 이후 커밋된 모든 상태 revision은 ledger가 완전해야 한다. 적용 기준
-이전의 상세 이력은 기존 Work, Sales, Inbound와 Audit 기록으로 조회하고 baseline은
-그 시점의 현재 상태만 증명한다. 이후 신뢰 가능한 과거 이력을 별도 backfill할 수
-있지만 실시간 revision chain에 끼워 넣지 않고 `HISTORICAL_BACKFILL` source와
-coverage를 명확히 구분한다.
+이전의 상세 이력은 [ADR-002](ADR-002-orchid-group-historical-migration.md)에 따라
+기존 Work, Sales, Inbound와 Audit source를 공통 Mutation identity와
+HistoricalEvidence로 이관한다. baseline은 cutover 시점의 현재 상태와 이후
+StateChain만 증명한다. 불완전한 과거 evidence는 실시간 revision chain에 끼워 넣지
+않고 ORIGIN·GAP과 신뢰 수준을 명시한다.
 
 API와 Timeline은 `historyAvailableFrom`, baseline 여부 또는 동등한 coverage 정보를
 제공해 적용 기준 이전 기록을 완전한 Mutation 이력처럼 표현하지 않는다.
@@ -695,13 +696,13 @@ ADR, write-path·retirement inventory와 운영 데이터 profiling
 → Inbound 생성·포트 command 준비
 → Sales 예약·해제·출고·취소 command 준비
 → Correction·Compensation과 legacy source 처리 준비
+→ historical evidence 완전 이관과 SHADOW 비교
 → 복원 운영 DB rehearsal과 전체 회귀 테스트
 → 쓰기 중단, baseline, coverage ACTIVE와 write fence 활성화
 → smoke test와 쓰기 재개
 → 기존 직접 writer·호환 handler·feature flag 제거
 → ledger 연속성 상시 검증
 → Timeline
-→ 필요 시 과거 사실의 제한적 backfill
 ```
 
 Feature flag는 적용 기준 시점 전의 routing·shadow 검증에만 사용할 수 있다. 하나의
@@ -930,6 +931,8 @@ coverage 시점이 달라지고, 아직 접근되지 않은 행의 직접 변경
   차단된다.
 - 복원한 운영 DB 사본에서 baseline rehearsal과 핵심 진행 업무 회귀 테스트가
   통과한다.
+- ADR-002의 historical source count·fingerprint와 import 결과가 일치하고, 모든
+  origin·gap이 분류되어 통합 Timeline이 legacy source별 조립에 의존하지 않는다.
 - retirement inventory가 비어 있고 전환용 feature flag, 기존 직접 쓰기 경로와
   중복 상태 snapshot write가 제거되어 있다.
 

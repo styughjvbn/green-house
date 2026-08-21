@@ -16,15 +16,16 @@ class ModularArchitectureTests {
 	private static final Path SOURCE_ROOT = Path.of("src/main/java/com/greenhouse/backend");
 	private static final Set<String> MODULES = Set.of(
 		"common", "audit", "farm", "work", "partner", "sales", "auction", "settlement", "dashboard", "print",
-		"analytics", "auth", "demo");
+		"analytics", "auth", "demo", "migration");
 	private static final Set<String> LAYERED_MODULES = Set.of(
-		"audit", "farm", "work", "partner", "sales", "auction", "settlement", "dashboard", "print", "analytics");
+		"audit", "farm", "work", "partner", "sales", "auction", "settlement", "dashboard", "print", "analytics",
+		"migration");
 	private static final Set<String> STANDARD_LAYERS = Set.of(
 		"domain", "repository", "application", "controller", "dto");
 	private static final Map<String, Set<String>> ALLOWED_DEPENDENCIES = Map.ofEntries(
 		Map.entry("common", Set.of()),
 		Map.entry("audit", Set.of("common")),
-		Map.entry("farm", Set.of("common", "work", "audit")),
+		Map.entry("farm", Set.of("common", "work", "audit", "migration")),
 		Map.entry("work", Set.of("common")),
 		Map.entry("partner", Set.of("common", "audit")),
 		Map.entry("sales", Set.of("common", "audit", "auction", "farm", "partner", "settlement")),
@@ -34,7 +35,8 @@ class ModularArchitectureTests {
 		Map.entry("print", Set.of("common", "sales")),
 		Map.entry("analytics", Set.of("common", "farm", "partner", "sales", "settlement", "work")),
 		Map.entry("auth", Set.of("common", "demo")),
-		Map.entry("demo", Set.of()));
+		Map.entry("demo", Set.of()),
+		Map.entry("migration", Set.of("common")));
 	private static final Pattern MODULE_IMPORT = Pattern.compile(
 		"\\bimport\\s+(?:static\\s+)?com\\.greenhouse\\.backend\\.([a-z]+)\\.");
 	private static final Pattern REPOSITORY_IMPORT = Pattern.compile(

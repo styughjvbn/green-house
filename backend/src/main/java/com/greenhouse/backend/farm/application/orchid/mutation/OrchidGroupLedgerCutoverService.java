@@ -15,6 +15,7 @@ public class OrchidGroupLedgerCutoverService {
 
 	private final OrchidGroupLedgerReconciliationService reconciliationService;
 	private final OrchidGroupLedgerPreparationService preparationService;
+	private final OrchidGroupHistoryMigrationService historyMigrationService;
 	private final OrchidGroupRepository orchidGroupRepository;
 
 	public OrchidGroupLedgerCutoverResult execute(OrchidGroupLedgerCutoverCommand command) {
@@ -77,6 +78,7 @@ public class OrchidGroupLedgerCutoverService {
 			if (!report.ready()) {
 				throw new ConflictException("Baseline 시작 전 운영 데이터 대사를 통과해야 합니다.");
 			}
+			historyMigrationService.validateCutoverReady(report);
 			return;
 		}
 		if (!command.cutoverKey().equals(report.cutoverKey())) {

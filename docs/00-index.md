@@ -59,10 +59,12 @@ docs/
 | `07-deployment.md` | 로컬 실행, 운영 배포, 백업 체크리스트 |
 | `08-roadmap.md` | 이후 확장 후보와 우선순위 |
 | `adr/ADR-001-orchid-group-mutation-engine.md` | OrchidGroup 단일 쓰기 엔진, 운영 데이터 baseline과 전환 원칙 |
+| `adr/ADR-002-orchid-group-historical-migration.md` | cutover 이전 난 묶음 이력의 완전 이관과 gap 보존 원칙 |
 | `api/API_INDEX.md` | 도메인별 OpenAPI slice와 endpoint 위치 |
 | `api/DOMAIN_RULES.md` | API만으로 판단하기 어려운 도메인 규칙 |
 | `api/API_GAP_ANALYSIS.md` | 과거 초안과 현재 구현 API의 차이 |
 | `scripts/data-audit/audit-event-analysis.sql` | 운영 변경 감사 이벤트 조회 예시 |
+| `scripts/data-audit/orchid-history-migration-profile.sql` | 복원 DB의 난 묶음 과거 이력 이관 가능성·gap 분석 |
 
 ## 기능·운영 특화 문서
 

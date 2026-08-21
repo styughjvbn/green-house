@@ -65,6 +65,7 @@ MSA가 아니라 **모듈러 모놀리스**로 관리한다.
 common
 audit
 auth
+migration
 farm
 work
 partner
@@ -92,6 +93,14 @@ demo
 - 요청 ID, 세션 ID, 인증 계정명, 브라우저 인스턴스 ID를 변경 이벤트와 연결한다.
 - 감사 저장 실패는 같은 트랜잭션의 원본 변경도 롤백한다.
 
+### migration
+
+- 업무 aggregate가 아니라 일회성 운영 데이터 이관의 run, fingerprint와 상태 전이를 소유한다.
+- 같은 애플리케이션 DB의 control-plane 테이블을 사용하며 별도 DB나 별도 배포 단위가 아니다.
+- `farm`은 Migration Repository나 Entity를 참조하지 않고 application API로 run을 등록·잠금·완료한다.
+- `HistoricalEvidence`는 Farm 이력 모델에 남고 Migration run은 scalar ID로만 연결한다.
+- 전환 안정화 후 operator runtime 코드는 제거할 수 있지만 run 결과는 감사 근거로 보존한다.
+
 ### farm
 
 - 동
@@ -109,6 +118,8 @@ demo
 - 품종 목록의 난 묶음·최근 입고일·최근 작업일은 페이지 단위로 일괄 조회한다.
 - 난 묶음 계보는 `work` 엔티티를 직접 참조하지 않고 `workOperationId` 값으로 연결한다.
 - 난 묶음 물리 상태 변경과 revision ledger는 `farm.orchid.mutation`이 소유한다. Work·Sales·Inbound는 typed command와 식별자 계약으로 이 경계를 호출하고 업무 lifecycle은 각 모듈에 유지한다.
+- cutover 이전 부분 이력은 같은 Mutation header 아래 `HistoricalEvidence`로 저장하고 완전 snapshot revision chain과 분리한다. operator migrator는 baseline 전에만 실행하며 현재 난 묶음 상태와 `state_revision`을 변경하지 않는다.
+- historical migrator는 Work·Audit 저장소를 직접 읽지 않는다. 각 소유 모듈의 read-only application reader로 source를 받고, 이관 후 Work 효과는 Work application API로 Mutation에 연결한다. Lineage 연결은 소유 모듈인 `farm`에서 수행한다.
 - ledger rehearsal 대사는 `farm`의 현재 상태·revision chain과 모듈별 read-only application 계약을 조합한다. 각 모듈은 Work 진행 상태와 효과 연결, Sales 활성 allocation과 예약 수량처럼 자신이 소유한 정합성만 판정하며 데이터를 자동 보정하지 않는다.
 - ledger coverage가 `ACTIVE`이면 PostgreSQL write fence가 transaction-local Mutation context 없는 `orchid_groups` INSERT·UPDATE와 모든 DELETE를 차단한다. 커밋 시에는 변경 revision에 대응하는 MutationEntry도 확인한다.
 - 실행 인스턴스는 ACTIVE coverage의 `minimumWriterVersion` 이상인 `ENGINE` writer mode여야 한다. baseline 적재는 재실행 가능한 고정 ID batch로 수행하고, 테이블 잠금 아래 최종 대사를 통과한 경우에만 한 번에 ACTIVE로 전환한다.
@@ -151,6 +162,7 @@ application|domain|repository|controller|dto/
 - 작업 목록·캘린더는 대상 배열을 제외한 요약 응답을 사용하고 진행률과 가능한 전체 작업 action은 대상·실행 상태의 DB 집계로 조립한다. 대상별 상세는 사용자가 작업을 선택할 때 단건 조회한다.
 - 분갈이·분주·합식은 공통 구조 변경 실행기와 작업별 Strategy를 사용한다. 기존 분갈이·분주 단일 대상 요청도 변환기를 거쳐 같은 실행 코어로 위임하고, 기존 합식 완료 API만 호환 경로로 남아 있다. 난 묶음 저장소가 필요한 Strategy 구현은 `farm` 모듈에 둔다.
 - 효과 실행과 효과 감사 저장을 분리하고 모든 신규 효과는 공통 저장 컴포넌트를 사용한다. 구조 변경 실행의 `WorkAppliedEffect`는 원본 `SOURCE`와 결과 `RESULT`를 연결하는 계보 노드다.
+- historical migration용 Work reader와 Mutation link API는 상태 변경 효과만 제한된 batch로 제공한다. `farm` migrator가 Work Repository나 테이블을 직접 읽지 않게 하는 모듈 경계다.
 - 신규 즉시 완료 작업은 대상별 멱등성 조회를 반복하지 않고 효과 INSERT와 실행 상태 UPDATE를 모아 JDBC batch로 flush한다. 기존 작업 재실행 경로는 효과 키 조회와 DB UNIQUE 제약으로 멱등성을 유지한다.
 - DB의 `timestamp without time zone` 시점 값은 UTC로 저장한다. 업무일자는 `Asia/Seoul` 기준으로
   계산하고 API 응답의 시점 값은 UTC에서 `Asia/Seoul`로 변환한다.

@@ -61,6 +61,9 @@ public class OrchidGroupMutation {
 	@Column(name = "recorded_at", nullable = false)
 	private Instant recordedAt;
 
+	@Column(name = "occurred_at", nullable = false)
+	private Instant occurredAt;
+
 	@Column(name = "effective_business_date", nullable = false)
 	private LocalDate effectiveBusinessDate;
 
@@ -78,7 +81,28 @@ public class OrchidGroupMutation {
 			LocalDate effectiveBusinessDate,
 			String reason,
 			int schemaVersion) {
-		if (mutationType == null || source == null || recordedAt == null || effectiveBusinessDate == null) {
+		this(
+				mutationType,
+				source,
+				commandFingerprint,
+				recordedAt,
+				recordedAt,
+				effectiveBusinessDate,
+				reason,
+				schemaVersion);
+	}
+
+	public OrchidGroupMutation(
+			OrchidGroupMutationType mutationType,
+			OrchidGroupMutationSource source,
+			String commandFingerprint,
+			Instant occurredAt,
+			Instant recordedAt,
+			LocalDate effectiveBusinessDate,
+			String reason,
+			int schemaVersion) {
+		if (mutationType == null || source == null || occurredAt == null
+				|| recordedAt == null || effectiveBusinessDate == null) {
 			throw new IllegalArgumentException("Mutation type, source와 적용 시점이 필요합니다.");
 		}
 		if (commandFingerprint == null || !commandFingerprint.matches("[0-9a-f]{64}")) {
@@ -94,6 +118,7 @@ public class OrchidGroupMutation {
 		this.sourceOperationKey = source.operationKey();
 		this.correlationId = source.correlationId();
 		this.commandFingerprint = commandFingerprint;
+		this.occurredAt = occurredAt;
 		this.recordedAt = recordedAt;
 		this.effectiveBusinessDate = effectiveBusinessDate;
 		this.reason = normalize(reason);

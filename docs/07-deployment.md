@@ -206,6 +206,95 @@ pg_dump -U greenhouse greenhouse > backup_$(date +%Y%m%d).sql
 ./scripts/reset-dev-db.sh --yes
 ```
 
+### 난 묶음 과거 이력 migration profiling
+
+완전한 과거 이력 이관 설계와 rehearsal은 baseline을 만들기 전에 수행한다. 이미
+`ACTIVE`로 사용한 rehearsal DB는 재사용하지 않고 최신 운영 백업으로 다시
+초기화한다. profiling SQL은 read-only이며 `orchid_groups`나 source 이력을 변경하지
+않는다.
+
+```bash
+PGPASSWORD=greenhouse_rehearsal_test psql \
+  -h 127.0.0.1 -p 5432 \
+  -U greenhouse_rehearsal_test -d greenhouse_rehearsal \
+  -f scripts/data-audit/orchid-history-migration-profile.sql
+```
+
+최소 확인 항목은 다음과 같다.
+
+- `EXPECTED_WORK_EFFECT_LINK_MISMATCHES`의 두 결과가 모두 0
+- `LINEAGE_MATCHABILITY`의 `no_match=0`, `ambiguous=0`
+- `WORK_EFFECT_SOURCE_IDENTITIES`의 누락·중복 identity가 0
+- `SYNTHETIC_ORIGIN_QUANTITY_FEASIBILITY`의 `invalid_origins=0`
+- `SOURCE_REFERENCE_INTEGRITY`의 모든 결과가 0
+- 생성 근거가 있는 그룹의 quantity replay 불일치를 `ATTESTED` 보정 또는 GAP으로 분류
+- 시스템 운영 전 참고 전표는 `LEGACY_REFERENCE_ONLY`로 분류하고 Orchid Mutation에서 제외
+
+2026-08-21 백업 profiling에서는 난 묶음 269개 중 29개만 생성 근거가 있었고 240개는
+합성 ORIGIN이 필요했다. 상태 변경 Work 효과 42건과 link 76개, Lineage 16개는 모두
+결정적으로 변환 가능했고 합성 origin 수량 240개도 모두 0 이상으로 역산됐다.
+그룹 234의 `+12` 차이는 운영자가 실제 수량 보정으로 확인했으므로
+`ATTESTED CORRECTION` 이관 대상이다. 기존 판매 전표 148건·품목 868건은 모두 시스템 운영 전
+자료를 바탕으로 등록한 참고 정보이므로 `LEGACY_REFERENCE_ONLY`로 분류하고 Orchid
+Mutation 이관에서 제외한다. 현재 백업에서 미분류 수량 gap은 0건이다.
+이 결과의 해석과 이관 모델은
+`docs/adr/ADR-002-orchid-group-historical-migration.md`를 따른다.
+
+### 난 묶음 과거 이력 migration rehearsal
+
+`reset-dev-db.sh`로 복원하면 현재 코드의 Flyway V25와 Hibernate validation까지
+적용된다. 다음 operator command는 반드시 `PRE_BASELINE` 복원 DB에서 실행한다.
+`source-cutoff`은 파일 수정 시각이 아니라 백업 생성 완료 시각의 UTC 값이다.
+
+먼저 백업과 manifest fingerprint, 고정 run key를 준비한다.
+
+```bash
+sha256sum temp/green-house_20260821_030001.dump.gz
+uuidgen
+```
+
+첫 실행은 plan만 생성한다. `apply=false`도 재현 가능한 plan과 현재 상태 fingerprint를
+DB의 `DRY_RUN` run으로 기록하지만 Mutation·Evidence와 원본 link는 만들지 않는다.
+
+```bash
+cd backend
+RUN_KEY='<RUN_KEY>'
+SOURCE_CUTOFF='<BACKUP_COMPLETED_AT_UTC>'
+BACKUP_SHA256='<BACKUP_SHA256>'
+CUTOVER_BUSINESS_DATE='<CUTOVER_BUSINESS_DATE>'
+DATABASE_URL=jdbc:postgresql://localhost:5432/greenhouse_rehearsal \
+DATABASE_USERNAME=greenhouse_rehearsal_test \
+DATABASE_PASSWORD=greenhouse_rehearsal_test \
+./gradlew orchidHistoryMigrate --args="--run-key=${RUN_KEY} --source-cutoff=${SOURCE_CUTOFF} --backup-fingerprint=${BACKUP_SHA256} --manifest=../scripts/data-audit/orchid-history-migration-manifest.json --effective-business-date=${CUTOVER_BUSINESS_DATE} --apply=false --confirmation=PLAN:${RUN_KEY}"
+```
+
+plan의 source count가 profiling SQL과 같고 다음 gate를 만족할 때만 같은 run key로
+적재한다. 더 최신 백업에서 판매 참고자료나 운영자 확인 보정이 달라졌다면 먼저
+manifest와 ADR을 승인된 사실에 맞게 갱신한다.
+
+- `UNCLASSIFIED_GAPS=0`
+- Work·Audit·ORIGIN·ATTESTED 건수가 profiling 결과와 일치
+- `LEGACY_REFERENCE_SALES_*`가 profiling의 참고 판매 자료 건수와 일치
+- operator가 Sales allocation·inventory movement·난 묶음 snapshot 0건을 실제 DB에서 확인
+- `MUTATIONS`와 `EVIDENCE`가 예상 건수와 일치
+
+```bash
+DATABASE_URL=jdbc:postgresql://localhost:5432/greenhouse_rehearsal \
+DATABASE_USERNAME=greenhouse_rehearsal_test \
+DATABASE_PASSWORD=greenhouse_rehearsal_test \
+./gradlew orchidHistoryMigrate --args="--run-key=${RUN_KEY} --source-cutoff=${SOURCE_CUTOFF} --backup-fingerprint=${BACKUP_SHA256} --manifest=../scripts/data-audit/orchid-history-migration-manifest.json --effective-business-date=${CUTOVER_BUSINESS_DATE} --apply=true --confirmation=IMPORT:${RUN_KEY}"
+```
+
+성공 기준은 `verification.ready=true`, 미연결 Work·Lineage와 entry 없는 Mutation이
+모두 0이고 현재 상태 fingerprint가 plan 때와 같은 것이다. 같은 명령을 다시 실행해
+`importedMutations=0`, 모든 Mutation이 `replayedMutations`로 반환되는지도 확인한다.
+마지막으로 `orchidLedgerReconcile`의 `PRE_BASELINE`, `ready=true`, `issues=[]`를 확인한
+후에만 baseline rehearsal로 진행한다.
+
+2026-08-21 백업 rehearsal 결과는 Mutation 287건, Evidence 321건, Work 연결 42건,
+Lineage 연결 16건이었다. 재실행은 신규 0건·replay 287건이었고 현재 상태 fingerprint는
+이관 전후 동일했다.
+
 ### 난 묶음 ledger 복원 DB rehearsal
 
 Mutation Engine 전환 전에는 운영 백업을 격리된 PostgreSQL에 복원한 뒤 read-only
