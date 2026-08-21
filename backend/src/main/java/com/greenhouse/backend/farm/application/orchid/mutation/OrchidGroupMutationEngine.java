@@ -178,8 +178,7 @@ public class OrchidGroupMutationEngine {
 			int nextSortOrder = nextSortOrderByZoneId.compute(
 					zone.getId(), (id, current) -> current + 1);
 			OrchidGroup group = createGroup(
-					zone, inboundRecord.getVariety(), details, nextSortOrder);
-			group.assignInboundRecord(inboundRecord);
+					zone, inboundRecord.getVariety(), details, nextSortOrder, inboundRecord);
 			groups.add(group);
 		}
 		return recordCreated(
@@ -863,6 +862,15 @@ public class OrchidGroupMutationEngine {
 			Variety variety,
 			OrchidGroupMutationDetails details,
 			int sortOrder) {
+		return createGroup(bedZone, variety, details, sortOrder, null);
+	}
+
+	private OrchidGroup createGroup(
+			BedZone bedZone,
+			Variety variety,
+			OrchidGroupMutationDetails details,
+			int sortOrder,
+			InboundRecord inboundRecord) {
 		OrchidGroup group = new OrchidGroup(
 				bedZone,
 				variety.getGenus(),
@@ -888,6 +896,7 @@ public class OrchidGroupMutationEngine {
 				details.endPosition(),
 				details.memo());
 		group.assignVariety(variety);
+		group.assignInboundRecord(inboundRecord);
 		group.establishCreationRevision();
 		return orchidGroupRepository.save(group);
 	}

@@ -3,13 +3,23 @@ package com.greenhouse.backend.work.e2e;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
+import com.greenhouse.backend.farm.application.inbound.InboundRecordService;
 import com.greenhouse.backend.farm.application.orchid.OrchidGroupCommandService;
 import com.greenhouse.backend.farm.application.orchid.mutation.OrchidGroupLedgerCutoverCommand;
 import com.greenhouse.backend.farm.application.orchid.mutation.OrchidGroupLedgerCutoverService;
 import com.greenhouse.backend.farm.application.orchid.mutation.OrchidGroupLedgerReconciliationService;
+import com.greenhouse.backend.farm.domain.inbound.InboundStatus;
+import com.greenhouse.backend.farm.domain.inbound.InboundType;
+import com.greenhouse.backend.farm.dto.inbound.InboundRecordCreateRequest;
 import com.greenhouse.backend.farm.dto.orchid.OrchidGroupUpdateRequest;
 import com.greenhouse.backend.farm.repository.orchid.OrchidGroupRepository;
+import com.greenhouse.backend.work.application.operation.InboundPottingOperationService;
+import com.greenhouse.backend.work.dto.effect.InboundPottingExecutionRequest;
+import com.greenhouse.backend.work.dto.effect.InboundPottingResultRequest;
+import com.greenhouse.backend.work.repository.WorkAppliedEffectRepository;
+import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.util.List;
 import java.util.UUID;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Tag;
@@ -31,6 +41,9 @@ class OrchidGroupMutationRoutingPostgresE2ETest extends WorkE2ETestBase {
 	@Autowired private OrchidGroupLedgerReconciliationService reconciliationService;
 	@Autowired private OrchidGroupCommandService orchidGroupCommandService;
 	@Autowired private OrchidGroupRepository orchidGroupRepository;
+	@Autowired private InboundRecordService inboundRecordService;
+	@Autowired private InboundPottingOperationService inboundPottingOperationService;
+	@Autowired private WorkAppliedEffectRepository workAppliedEffectRepository;
 	@Autowired private JdbcTemplate jdbcTemplate;
 
 	private WorkTestDataSeeder.ContractScenario scenario;
@@ -80,5 +93,59 @@ class OrchidGroupMutationRoutingPostgresE2ETest extends WorkE2ETestBase {
 				scenario.orchidGroupId()))
 				.isInstanceOf(DataIntegrityViolationException.class)
 				.hasMessageContaining("Mutation context");
+	}
+
+	@Test
+	void completesInboundPottingThroughEngineAfterActiveCutover() {
+		var varietyId = orchidGroupRepository.findById(scenario.orchidGroupId())
+				.orElseThrow()
+				.getVariety()
+				.getId();
+		var inbound = inboundRecordService.create(new InboundRecordCreateRequest(
+				LocalDate.of(2026, 8, 19),
+				InboundType.FLASK_SEEDLING,
+				varietyId,
+				null,
+				3,
+				30,
+				null,
+				"배양실",
+				LocalDate.of(2026, 8, 20),
+				"2인치",
+				1,
+				null,
+				null,
+				null,
+				null,
+				null,
+				null,
+				InboundStatus.POTTING_PENDING,
+				"입고 담당",
+				null));
+
+		var operation = inboundPottingOperationService.executeNow(
+				new InboundPottingExecutionRequest(
+						"active-potting-postgres",
+						inbound.id(),
+						LocalDate.of(2026, 8, 20),
+						List.of(new InboundPottingResultRequest(
+								scenario.bedZoneId(), 28, "2인치", 1, "트레이", 2, false,
+								new BigDecimal("10"), new BigDecimal("11"), null)),
+						"유묘",
+						"포트 담당",
+						"포트 완료"));
+
+		var effect = workAppliedEffectRepository
+				.findByWorkOperationIdOrderByIdAsc(operation.id())
+				.stream()
+				.filter(item -> item.getEffectKey().equals("POTTING:active-potting-postgres"))
+				.findFirst()
+				.orElseThrow();
+		Long groupId = ((Number) ((List<?>) effect.getResultDetails()
+				.get("createdOrchidGroupIds")).getFirst()).longValue();
+		assertThat(orchidGroupRepository.findById(groupId).orElseThrow().getStateRevision())
+				.isEqualTo(1L);
+		assertThat(effect.getMutationId()).isNotNull();
+		assertThat(reconciliationService.reconcile().ready()).isTrue();
 	}
 }

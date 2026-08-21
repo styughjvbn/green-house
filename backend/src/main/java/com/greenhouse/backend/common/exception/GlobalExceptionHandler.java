@@ -36,7 +36,7 @@ public class GlobalExceptionHandler {
 		return ResponseEntity.status(HttpStatus.CONFLICT)
 				.body(ErrorResponse.of(
 						"DATA_INTEGRITY_CONFLICT",
-						"연결된 이력이 있어 삭제할 수 없습니다.",
+						"데이터 정합성 제약으로 요청을 처리할 수 없습니다.",
 						List.of()));
 	}
 
