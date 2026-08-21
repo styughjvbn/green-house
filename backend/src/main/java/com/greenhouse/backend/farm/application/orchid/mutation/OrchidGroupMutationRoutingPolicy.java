@@ -12,4 +12,12 @@ public class OrchidGroupMutationRoutingPolicy {
 	public boolean routesToEngine() {
 		return writerProperties.routesToMutationEngine();
 	}
+
+	public boolean capturesShadowComparison() {
+		return writerProperties.capturesShadowComparison();
+	}
+
+	public boolean usesMutationContract() {
+		return writerProperties.usesMutationContract();
+	}
 }

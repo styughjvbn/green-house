@@ -6,6 +6,7 @@ import com.greenhouse.backend.farm.application.transformation.StructureChangeExe
 import com.greenhouse.backend.farm.application.orchid.mutation.MoveOrchidGroupMutationCommand;
 import com.greenhouse.backend.farm.application.orchid.mutation.OrchidGroupMutationEngine;
 import com.greenhouse.backend.farm.application.orchid.mutation.OrchidGroupMutationRoutingPolicy;
+import com.greenhouse.backend.farm.application.orchid.mutation.OrchidGroupMutationShadowService;
 import com.greenhouse.backend.farm.application.orchid.mutation.OrchidGroupMutationSources;
 import com.greenhouse.backend.farm.repository.orchid.OrchidGroupRepository;
 import com.greenhouse.backend.work.application.effect.WorkEffectCommand;
@@ -29,6 +30,7 @@ public class MovementWorkHandler implements WorkEffectHandler {
 	private final OrchidGroupRepository orchidGroupRepository;
 	private final OrchidGroupMutationEngine mutationEngine;
 	private final OrchidGroupMutationRoutingPolicy mutationRoutingPolicy;
+	private final OrchidGroupMutationShadowService mutationShadowService;
 	private final ObjectMapper objectMapper = new ObjectMapper().findAndRegisterModules();
 
 	public MovementWorkHandler(
@@ -36,12 +38,14 @@ public class MovementWorkHandler implements WorkEffectHandler {
 			StructureChangeExecutor structureChangeExecutor,
 			OrchidGroupRepository orchidGroupRepository,
 			OrchidGroupMutationEngine mutationEngine,
-			OrchidGroupMutationRoutingPolicy mutationRoutingPolicy) {
+			OrchidGroupMutationRoutingPolicy mutationRoutingPolicy,
+			OrchidGroupMutationShadowService mutationShadowService) {
 		this.orchidGroupCommandService = orchidGroupCommandService;
 		this.structureChangeExecutor = structureChangeExecutor;
 		this.orchidGroupRepository = orchidGroupRepository;
 		this.mutationEngine = mutationEngine;
 		this.mutationRoutingPolicy = mutationRoutingPolicy;
+		this.mutationShadowService = mutationShadowService;
 	}
 
 	@Override public String supports() { return "MOVE"; }
@@ -64,7 +68,7 @@ public class MovementWorkHandler implements WorkEffectHandler {
 				: command.payloadAs(OrchidGroupMoveRequest.class);
 		var moved = mutationRoutingPolicy.routesToEngine()
 				? moveWithEngine(operation, target.getOrchidGroupId(), command, request)
-				: new RoutedMove(orchidGroupCommandService.moveForOperation(target.getOrchidGroupId(), request));
+				: moveWithLegacy(operation, target.getOrchidGroupId(), command, request);
 		var details = new LinkedHashMap<String, Object>();
 		details.put("orchidGroupId", target.getOrchidGroupId());
 		details.put("fromBedZoneId", target.getLocationSnapshot().get("bedZoneId"));
@@ -76,6 +80,38 @@ public class MovementWorkHandler implements WorkEffectHandler {
 				details,
 				List.of(target.getOrchidGroupId()),
 				moved.mutationLink());
+	}
+
+	private RoutedMove moveWithLegacy(
+			WorkOperation operation,
+			Long orchidGroupId,
+			WorkEffectCommand command,
+			OrchidGroupMoveRequest request) {
+		var current = orchidGroupRepository.findById(orchidGroupId)
+				.orElseThrow(() -> new IllegalArgumentException("이동할 난 묶음을 찾을 수 없습니다."));
+		if (current.getBedZone().getId().equals(request.toBedZoneId())
+				&& equalPosition(current.getStartPosition(), request.startPosition())
+				&& equalPosition(current.getEndPosition(), request.endPosition())) {
+			return new RoutedMove(
+					current.getBedZone().getId(),
+					current.getStartPosition(),
+					current.getEndPosition(),
+					null);
+		}
+		var mutationCommand = mutationRoutingPolicy.usesMutationContract()
+				? new MoveOrchidGroupMutationCommand(
+				OrchidGroupMutationSources.work(operation.getId(), command.effectKey()),
+				orchidGroupId,
+				request.toBedZoneId(),
+				request.startPosition(),
+				request.endPosition(),
+				operation.getPlannedStartDate(),
+				request.memo())
+				: null;
+		var shadowPlan = mutationShadowService.prepare(mutationCommand);
+		var moved = new RoutedMove(orchidGroupCommandService.moveLegacyForOperation(orchidGroupId, request));
+		mutationShadowService.complete(shadowPlan);
+		return moved;
 	}
 
 	private RoutedMove moveWithEngine(

@@ -20,4 +20,12 @@ public record OrchidGroupLedgerWriterProperties(
 	public boolean routesToMutationEngine() {
 		return writerMode == OrchidGroupLedgerWriterMode.ENGINE;
 	}
+
+	public boolean capturesShadowComparison() {
+		return writerMode == OrchidGroupLedgerWriterMode.SHADOW;
+	}
+
+	public boolean usesMutationContract() {
+		return writerMode != OrchidGroupLedgerWriterMode.LEGACY;
+	}
 }

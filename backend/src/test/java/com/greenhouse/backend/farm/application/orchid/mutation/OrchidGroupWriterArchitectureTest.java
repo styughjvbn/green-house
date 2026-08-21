@@ -61,13 +61,16 @@ class OrchidGroupWriterArchitectureTest {
 			"com.greenhouse.backend.farm.application.transformation.MergeWorkHandler",
 			"com.greenhouse.backend.farm.application.transformation.MultiCreateWorkOperationService",
 			"com.greenhouse.backend.farm.application.variety.VarietyService",
+			"com.greenhouse.backend.farm.domain.orchid.OrchidGroupStateSimulation",
 			"com.greenhouse.backend.sales.application.SalesSlipInventoryService");
 
 	private static final Set<String> CONSTRUCTOR_WRITER_INVENTORY = Set.of(
 			"com.greenhouse.backend.farm.application.inbound.InboundPottingService",
 			"com.greenhouse.backend.farm.application.inbound.InboundRecordService",
 			"com.greenhouse.backend.farm.application.orchid.OrchidGroupCommandService",
-			"com.greenhouse.backend.farm.application.orchid.mutation.OrchidGroupMutationEngine");
+			"com.greenhouse.backend.farm.application.orchid.mutation.OrchidGroupMutationEngine",
+			"com.greenhouse.backend.farm.domain.orchid.OrchidGroup",
+			"com.greenhouse.backend.farm.domain.orchid.OrchidGroupStateSimulation");
 
 	private static final Set<String> REPOSITORY_WRITER_INVENTORY = Set.of(
 			"com.greenhouse.backend.farm.application.inbound.InboundPottingService",
@@ -90,6 +93,12 @@ class OrchidGroupWriterArchitectureTest {
 	@Test
 	void routingFlagCallersMatchTheTransitionInventory() {
 		assertThat(methodCallers(OrchidGroupMutationRoutingPolicy.class, Set.of("routesToEngine")))
+				.containsExactlyInAnyOrderElementsOf(ROUTING_INVENTORY);
+	}
+
+	@Test
+	void shadowCaptureCallersMatchTheTransitionInventory() {
+		assertThat(methodCallers(OrchidGroupMutationShadowService.class, Set.of("prepare")))
 				.containsExactlyInAnyOrderElementsOf(ROUTING_INVENTORY);
 	}
 

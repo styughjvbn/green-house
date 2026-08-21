@@ -4,6 +4,7 @@ import com.greenhouse.backend.farm.application.orchid.OrchidGroupCommandService;
 import com.greenhouse.backend.farm.application.orchid.mutation.OrchidGroupMutationDetails;
 import com.greenhouse.backend.farm.application.orchid.mutation.OrchidGroupMutationEngine;
 import com.greenhouse.backend.farm.application.orchid.mutation.OrchidGroupMutationRoutingPolicy;
+import com.greenhouse.backend.farm.application.orchid.mutation.OrchidGroupMutationShadowService;
 import com.greenhouse.backend.farm.application.orchid.mutation.OrchidGroupMutationSources;
 import com.greenhouse.backend.farm.application.orchid.mutation.TransformOrchidGroupMutationResult;
 import com.greenhouse.backend.farm.application.orchid.mutation.TransformOrchidGroupMutationSource;
@@ -35,18 +36,21 @@ public class BatchStructureTransformationExecutor {
 	private final OrchidGroupLineageService lineageService;
 	private final OrchidGroupMutationEngine mutationEngine;
 	private final OrchidGroupMutationRoutingPolicy mutationRoutingPolicy;
+	private final OrchidGroupMutationShadowService mutationShadowService;
 
 	public BatchStructureTransformationExecutor(
 			OrchidGroupRepository orchidGroupRepository,
 			OrchidGroupCommandService orchidGroupCommandService,
 			OrchidGroupLineageService lineageService,
 			OrchidGroupMutationEngine mutationEngine,
-			OrchidGroupMutationRoutingPolicy mutationRoutingPolicy) {
+			OrchidGroupMutationRoutingPolicy mutationRoutingPolicy,
+			OrchidGroupMutationShadowService mutationShadowService) {
 		this.orchidGroupRepository = orchidGroupRepository;
 		this.orchidGroupCommandService = orchidGroupCommandService;
 		this.lineageService = lineageService;
 		this.mutationEngine = mutationEngine;
 		this.mutationRoutingPolicy = mutationRoutingPolicy;
+		this.mutationShadowService = mutationShadowService;
 	}
 
 	public WorkExecutionResult execute(
@@ -92,21 +96,32 @@ public class BatchStructureTransformationExecutor {
 				throw new IllegalArgumentException("작업 수량은 원본 난 묶음의 현재 수량보다 클 수 없습니다.");
 			}
 		});
+		var mutationCommand = mutationRoutingPolicy.usesMutationContract()
+				? mutationCommand(
+				operation,
+				request,
+				strategy,
+				placementExclusionOrchidGroupIds,
+				sourceIds,
+				sources,
+				sourceRequests,
+				transformedBySourceId,
+				sourceStatusById,
+				first)
+				: null;
 		if (mutationRoutingPolicy.routesToEngine()) {
 			return executeWithEngine(
 					operation,
 					request,
 					strategy,
-					placementExclusionOrchidGroupIds,
+					mutationCommand,
 					sourceIds,
 					sources,
-					sourceRequests,
 					inputBySourceId,
 					transformedBySourceId,
-					sourceStatusById,
-					first,
 					lossQuantity);
 		}
+		var shadowPlan = mutationShadowService.prepare(mutationCommand);
 		sourceRequests.forEach((sourceId, sourceRequest) -> {
 			int transformedQuantity = transformedBySourceId.get(sourceId);
 			if (transformedQuantity > 0) {
@@ -149,6 +164,8 @@ public class BatchStructureTransformationExecutor {
 			}
 			return result;
 		}).toList();
+		mutationShadowService.completeCreated(
+				shadowPlan, results.stream().map(OrchidGroup::getId).toList());
 
 		var details = new LinkedHashMap<String, Object>();
 		details.put("executionKey", request.idempotencyKey());
@@ -172,7 +189,7 @@ public class BatchStructureTransformationExecutor {
 		return new WorkExecutionResult(strategy.supports(), details, results.stream().map(OrchidGroup::getId).toList());
 	}
 
-	private WorkExecutionResult executeWithEngine(
+	private TransformOrchidGroupsMutationCommand mutationCommand(
 			WorkOperation operation,
 			StructureChangeExecutionRequest request,
 			StructureChangeStrategy strategy,
@@ -180,11 +197,9 @@ public class BatchStructureTransformationExecutor {
 			List<Long> sourceIds,
 			Map<Long, OrchidGroup> sources,
 			Map<Long, StructureChangeSourceRequest> sourceRequests,
-			Map<Long, Integer> inputBySourceId,
 			Map<Long, Integer> transformedBySourceId,
 			Map<Long, String> sourceStatusById,
-			OrchidGroup first,
-			int lossQuantity) {
+			OrchidGroup first) {
 		List<TransformOrchidGroupMutationSource> mutationSources = sourceIds.stream()
 				.filter(sourceId -> transformedBySourceId.get(sourceId) > 0)
 				.map(sourceId -> {
@@ -230,14 +245,27 @@ public class BatchStructureTransformationExecutor {
 									row.memo()));
 				})
 				.toList();
-		var mutation = mutationEngine.transform(new TransformOrchidGroupsMutationCommand(
+		return new TransformOrchidGroupsMutationCommand(
 				OrchidGroupMutationSources.work(
 						operation.getId(), "EXECUTION:" + request.idempotencyKey()),
 				mutationSources,
 				mutationResults,
 				request.completedDate(),
 				request.memo(),
-				placementExclusionOrchidGroupIds));
+				placementExclusionOrchidGroupIds);
+	}
+
+	private WorkExecutionResult executeWithEngine(
+			WorkOperation operation,
+			StructureChangeExecutionRequest request,
+			StructureChangeStrategy strategy,
+			TransformOrchidGroupsMutationCommand mutationCommand,
+			List<Long> sourceIds,
+			Map<Long, OrchidGroup> sources,
+			Map<Long, Integer> inputBySourceId,
+			Map<Long, Integer> transformedBySourceId,
+			int lossQuantity) {
+		var mutation = mutationEngine.transform(mutationCommand);
 		List<Long> resultIds = mutation.entries().stream()
 				.filter(entry -> entry.role() == OrchidGroupMutationEntryRole.RESULT)
 				.map(entry -> entry.orchidGroupId())

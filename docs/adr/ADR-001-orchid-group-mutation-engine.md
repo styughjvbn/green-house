@@ -656,9 +656,9 @@ minimum_writer_version
 `ACTIVE` 시각 이후 커밋된 모든 상태 revision은 ledger가 완전해야 한다. 적용 기준
 이전의 상세 이력은 [ADR-002](ADR-002-orchid-group-historical-migration.md)에 따라
 기존 Work, Sales, Inbound와 Audit source를 공통 Mutation identity와
-HistoricalEvidence로 이관한다. baseline은 cutover 시점의 현재 상태와 이후
-StateChain만 증명한다. 불완전한 과거 evidence는 실시간 revision chain에 끼워 넣지
-않고 ORIGIN·GAP과 신뢰 수준을 명시한다.
+`HISTORICAL` MutationEntry로 이관한다. baseline은 cutover 시점의 현재 상태와 이후
+StateChain만 증명한다. 과거 Entry는 snapshot·revision 없이 원본 사건과 난 묶음의
+관계만 나타내므로 실시간 revision chain에 끼워 넣지 않는다.
 
 API와 Timeline은 `historyAvailableFrom`, baseline 여부 또는 동등한 coverage 정보를
 제공해 적용 기준 이전 기록을 완전한 Mutation 이력처럼 표현하지 않는다.
@@ -696,7 +696,7 @@ ADR, write-path·retirement inventory와 운영 데이터 profiling
 → Inbound 생성·포트 command 준비
 → Sales 예약·해제·출고·취소 command 준비
 → Correction·Compensation과 legacy source 처리 준비
-→ historical evidence 완전 이관과 SHADOW 비교
+→ historical Entry 완전 이관과 SHADOW 비교
 → 복원 운영 DB rehearsal과 전체 회귀 테스트
 → 쓰기 중단, baseline, coverage ACTIVE와 write fence 활성화
 → smoke test와 쓰기 재개
@@ -723,20 +723,36 @@ Feature flag는 적용 기준 시점 전의 routing·shadow 검증에만 사용�
   legacy 직접 writer를 물리적으로 제거한다. 이때 retirement inventory가 비면
   완전 전환이 완료된다.
 
-현재 구현은 `app.orchid-ledger.writer-mode=LEGACY|ENGINE`으로 aggregate 전체의
-writer를 선택한다. 기본값은 `LEGACY`이고, `ENGINE`에서는 다음 운영 경로가 typed
-command로 라우팅된다.
+현재 구현은 `app.orchid-ledger.writer-mode=LEGACY|SHADOW|ENGINE`으로 aggregate
+전체의 실행 모드를 선택한다. 기본값은 `LEGACY`이고, `ENGINE`에서는 다음 운영
+경로가 typed command로 라우팅된다.
 
 - Farm 단건·일괄 생성/수정, 생성 취소, 이동과 품종명 전파
 - Inbound 즉시 배치와 Work 기반 포트 결과 생성
 - Work 폐기, 이동, 분갈이, 분주, 합식, 다중 생성·취소와 보정
 - Sales 예약, 수정 예약 해제·재예약, 출고, 예약 취소와 출고 복구
 
-각 요청은 둘 중 한 writer만 실행한다. Work 효과는 기존 `TARGET:{id}`,
+각 요청은 Legacy 또는 Engine 중 한 writer만 실행한다. Work 효과는 기존 `TARGET:{id}`,
 `EXECUTION:{key}`, `POTTING:{key}`, `OPERATION` identity를 Mutation source operation
 key로 전달하고 `WorkAppliedEffect`와 호환 `OrchidGroupLineage`에 Mutation ID를
 연결한다. Sales는 전표 ID와 전표 version을 포함한 동작별 operation key를 사용하고
 각 `SalesInventoryMovement`에 Mutation ID와 correlation ID를 연결한다.
+
+`SHADOW`는 운영 authority 전환 전 검증 모드다. Legacy가 유일한 상태 writer로
+동작하며, 같은 typed command를 detached `OrchidGroup` simulation에 적용해 Engine
+예상 snapshot을 만든다. Legacy 변경 후 실제 snapshot과 비교하고 원 transaction이
+커밋된 뒤 `orchid_group_shadow_comparisons`에 다음 결과를 별도 transaction으로
+저장한다.
+
+- `MATCHED`: Engine 예상 상태와 Legacy 결과가 같다.
+- `MISMATCHED`: 둘의 상태 또는 생성 결과 개수가 다르다.
+- `ENGINE_REJECTED`: Legacy는 처리했지만 Engine plan validation이 거부했다.
+
+SHADOW는 `orchid_group_mutations`, Entry, revision, Work·Sales Mutation link를 만들지
+않는다. plan의 도메인 거부는 호출 transaction 안에서 정상 결과로 격리하고,
+커밋 후 비교 저장 오류는 로그만 남겨 Legacy 업무 transaction을 실패시키지 않는다.
+같은 source identity 재시도는 비교 행을 중복 생성하지 않는다. `ACTIVE`
+coverage에는 `ENGINE`만 허용하므로 startup guard가 `SHADOW` 기동도 거부한다.
 
 이는 복원 DB와 수동 smoke test를 위한 routing 완료 상태이지 운영 cutover 완료를
 뜻하지 않는다. 다음 retirement inventory는 `ACTIVE` 전까지 모두 식별·라우팅하고,

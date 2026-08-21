@@ -2,6 +2,12 @@ package com.greenhouse.backend.farm.application.transformation;
 
 import com.greenhouse.backend.farm.application.orchid.OrchidGroupCommandService;
 import com.greenhouse.backend.farm.application.orchid.mutation.OrchidGroupMutationRoutingPolicy;
+import com.greenhouse.backend.farm.application.orchid.mutation.OrchidGroupMutationDetails;
+import com.greenhouse.backend.farm.application.orchid.mutation.OrchidGroupMutationShadowService;
+import com.greenhouse.backend.farm.application.orchid.mutation.OrchidGroupMutationSources;
+import com.greenhouse.backend.farm.application.orchid.mutation.TransformOrchidGroupMutationResult;
+import com.greenhouse.backend.farm.application.orchid.mutation.TransformOrchidGroupMutationSource;
+import com.greenhouse.backend.farm.application.orchid.mutation.TransformOrchidGroupsMutationCommand;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.greenhouse.backend.common.config.TimeConfig;
 import com.greenhouse.backend.common.exception.NotFoundException;
@@ -37,6 +43,7 @@ public class MergeWorkHandler implements WorkEffectHandler {
 	private final StructureChangeReferenceReader structureChangeReferenceReader;
 	private final StructureChangeExecutor structureChangeExecutor;
 	private final OrchidGroupMutationRoutingPolicy mutationRoutingPolicy;
+	private final OrchidGroupMutationShadowService mutationShadowService;
 	private final ObjectMapper objectMapper = new ObjectMapper().findAndRegisterModules();
 
 	public MergeWorkHandler(
@@ -44,12 +51,14 @@ public class MergeWorkHandler implements WorkEffectHandler {
 			OrchidGroupCommandService orchidGroupCommandService,
 			StructureChangeReferenceReader structureChangeReferenceReader,
 			StructureChangeExecutor structureChangeExecutor,
-			OrchidGroupMutationRoutingPolicy mutationRoutingPolicy) {
+			OrchidGroupMutationRoutingPolicy mutationRoutingPolicy,
+			OrchidGroupMutationShadowService mutationShadowService) {
 		this.orchidGroupRepository = orchidGroupRepository;
 		this.orchidGroupCommandService = orchidGroupCommandService;
 		this.structureChangeReferenceReader = structureChangeReferenceReader;
 		this.structureChangeExecutor = structureChangeExecutor;
 		this.mutationRoutingPolicy = mutationRoutingPolicy;
+		this.mutationShadowService = mutationShadowService;
 	}
 
 	@Override public String supports() { return "MERGE"; }
@@ -105,13 +114,42 @@ public class MergeWorkHandler implements WorkEffectHandler {
 		int lossQuantity = totalInput - request.result().quantity();
 
 		String resultStatus = first.getStatus();
+		var row = request.result();
+		var structureRequest = toStructureChangeRequest(command, request);
+		var mutationCommand = mutationRoutingPolicy.usesMutationContract()
+				? new TransformOrchidGroupsMutationCommand(
+				OrchidGroupMutationSources.work(
+						operation.getId(), "EXECUTION:" + structureRequest.idempotencyKey()),
+				request.sources().stream()
+						.map(source -> new TransformOrchidGroupMutationSource(
+								source.sourceOrchidGroupId(), source.inputQuantity(), null, null))
+						.toList(),
+				List.of(new TransformOrchidGroupMutationResult(
+						row.bedZoneId(),
+						new OrchidGroupMutationDetails(
+								varietyId,
+								row.quantity(),
+								row.potSize(),
+								row.ageYear(),
+								resultStatus,
+								row.placementType(),
+								row.trayCount(),
+								row.splitPlacementAllowed(),
+								row.startPosition(),
+								row.endPosition(),
+								row.memo()))),
+				structureRequest.completedDate(),
+				structureRequest.memo(),
+				Set.of())
+				: null;
+		var shadowPlan = mutationShadowService.prepare(mutationCommand);
 		inputBySourceId.forEach((sourceId, inputQuantity) ->
 				sourcesById.get(sourceId).applyRepot(inputQuantity));
-		var row = request.result();
 		OrchidGroup result = orchidGroupCommandService.createEntity(new OrchidGroupCreateRequest(
 				row.bedZoneId(), varietyId, row.quantity(), row.potSize(), row.ageYear(), resultStatus,
 				row.placementType(), row.trayCount(), row.splitPlacementAllowed(),
 				row.startPosition(), row.endPosition(), row.memo()));
+		mutationShadowService.completeCreated(shadowPlan, List.of(result.getId()));
 		var details = new LinkedHashMap<String, Object>();
 		details.put("sourceOrchidGroupIds", sourceIds);
 		details.put("sourceInputQuantities", inputBySourceId);

@@ -98,7 +98,7 @@ demo
 - 업무 aggregate가 아니라 일회성 운영 데이터 이관의 run, fingerprint와 상태 전이를 소유한다.
 - 같은 애플리케이션 DB의 control-plane 테이블을 사용하며 별도 DB나 별도 배포 단위가 아니다.
 - `farm`은 Migration Repository나 Entity를 참조하지 않고 application API로 run을 등록·잠금·완료한다.
-- `HistoricalEvidence`는 Farm 이력 모델에 남고 Migration run은 scalar ID로만 연결한다.
+- 과거 이관 Entry는 Farm의 공통 `orchid_group_mutation_entries`에 남고 Migration run은 scalar ID로만 연결한다.
 - 전환 안정화 후 operator runtime 코드는 제거할 수 있지만 run 결과는 감사 근거로 보존한다.
 
 ### farm
@@ -118,15 +118,15 @@ demo
 - 품종 목록의 난 묶음·최근 입고일·최근 작업일은 페이지 단위로 일괄 조회한다.
 - 난 묶음 계보는 `work` 엔티티를 직접 참조하지 않고 `workOperationId` 값으로 연결한다.
 - 난 묶음 물리 상태 변경과 revision ledger는 `farm.orchid.mutation`이 소유한다. Work·Sales·Inbound는 typed command와 식별자 계약으로 이 경계를 호출하고 업무 lifecycle은 각 모듈에 유지한다.
-- cutover 이전 부분 이력은 같은 Mutation header 아래 `HistoricalEvidence`로 저장하고 완전 snapshot revision chain과 분리한다. operator migrator는 baseline 전에만 실행하며 현재 난 묶음 상태와 `state_revision`을 변경하지 않는다.
+- cutover 이전 이력도 같은 Mutation header와 `orchid_group_mutation_entries`에 `HISTORICAL` kind로 저장한다. `HISTORICAL` Entry에는 snapshot·revision을 넣지 않아 `BASELINE`·`CREATE`·`CHANGE` 상태 chain과 논리적으로 분리한다. operator migrator는 baseline 전에만 실행하며 현재 난 묶음 상태와 `state_revision`을 변경하지 않는다.
 - historical migrator는 Work·Audit 저장소를 직접 읽지 않는다. 각 소유 모듈의 read-only application reader로 source를 받고, 이관 후 Work 효과는 Work application API로 Mutation에 연결한다. Lineage 연결은 소유 모듈인 `farm`에서 수행한다.
 - ledger rehearsal 대사는 `farm`의 현재 상태·revision chain과 모듈별 read-only application 계약을 조합한다. 각 모듈은 Work 진행 상태와 효과 연결, Sales 활성 allocation과 예약 수량처럼 자신이 소유한 정합성만 판정하며 데이터를 자동 보정하지 않는다.
 - ledger coverage가 `ACTIVE`이면 PostgreSQL write fence가 transaction-local Mutation context 없는 `orchid_groups` INSERT·UPDATE와 모든 DELETE를 차단한다. 커밋 시에는 변경 revision에 대응하는 MutationEntry도 확인한다.
 - 실행 인스턴스는 ACTIVE coverage의 `minimumWriterVersion` 이상인 `ENGINE` writer mode여야 한다. baseline 적재는 재실행 가능한 고정 ID batch로 수행하고, 테이블 잠금 아래 최종 대사를 통과한 경우에만 한 번에 ACTIVE로 전환한다.
 - PREPARING 동안 DB fence는 아직 활성화되지 않으므로 운영 baseline에는 외부 write-stop이 필수다. 모든 write path의 Engine routing이 끝나기 전에는 ACTIVE로 전환하지 않는다.
-- 현재 Farm·Inbound·Work·Sales의 알려진 난 묶음 writer는 `LEGACY|ENGINE` 단일 경로 스위치를 공유한다. `ENGINE` 선택 시 Work 효과와 Sales 재고 이동은 같은 transaction에서 Mutation ID·correlation ID를 연결하며 dual write하지 않는다.
+- 현재 Farm·Inbound·Work·Sales의 알려진 난 묶음 writer는 `LEGACY|SHADOW|ENGINE` 단일 경로 스위치를 공유한다. `SHADOW`는 실제 엔티티와 ledger를 변경하지 않는 detached Engine plan을 만든 뒤 Legacy 결과 snapshot과 비교하고, 원 transaction 커밋 후 비교 결과만 별도 transaction에 저장한다. plan의 도메인 거부와 커밋 후 비교 저장 실패는 Legacy transaction을 rollback하지 않는다. `ENGINE` 선택 시 Work 효과와 Sales 재고 이동은 같은 transaction에서 Mutation ID·correlation ID를 연결하며 dual write하지 않는다.
 - PREPARING 전환 코드의 routing flag 호출자, `OrchidGroup` 직접 상태 변경자, 생성자와 repository write 호출자는 실행 가능한 architecture test의 명시적 inventory로 고정한다. 신규 writer는 inventory 허용 항목만 늘리지 않고 먼저 typed Engine command로 편입한다.
-- 기본값은 운영 호환을 위한 `LEGACY`다. 복원 DB baseline, ENGINE smoke test와 `ACTIVE` 전환 rehearsal이 끝난 뒤 aggregate 전체를 한 번에 전환하고, 검증 완료 전에는 운영 `ACTIVE` coverage를 만들지 않는다.
+- 기본값은 운영 호환을 위한 `LEGACY`다. 운영 관찰은 `SHADOW`, 복원 DB 상태 변경 검증은 `ENGINE`으로 분리한다. 복원 DB baseline, ENGINE smoke test와 `ACTIVE` 전환 rehearsal이 끝난 뒤 aggregate 전체를 한 번에 전환하고, 검증 완료 전에는 운영 `ACTIVE` coverage를 만들지 않는다.
 - 운영 `ACTIVE`에서는 모든 인스턴스를 `ENGINE`으로 고정하고 DB fence로 legacy 실행을 차단한다. 안정화 후 routing flag와 legacy 직접 writer를 제거하며, 기존 Work·Sales·Lineage 사실 데이터는 별도 소비 전환 없이 삭제하지 않는다.
 
 `farm`의 각 계층은 동일한 기능 경계를 사용한다.

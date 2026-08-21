@@ -57,24 +57,19 @@ public class OrchidGroupMutationEngine {
 	private final OrchidGroupMutationRelationRepository relationRepository;
 	private final OrchidGroupWriteFenceRepository writeFenceRepository;
 	private final OrchidPlacementPolicy orchidPlacementPolicy;
-	private final OrchidGroupMutationFingerprint fingerprint;
+	private final OrchidGroupMutationCommandFingerprint commandFingerprint;
 	private final OrchidGroupMutationReplayResolver replayResolver;
 	private final Clock clock;
 
 	public OrchidGroupMutationResult create(CreateOrchidGroupMutationCommand command) {
-		String commandFingerprint = fingerprint.calculate(new CreateFingerprintPayload(
-				OrchidGroupMutationType.CREATE,
-				command.bedZoneId(),
-				command.details(),
-				command.effectiveBusinessDate(),
-				command.reason()));
-		var replay = replayResolver.findExisting(command.source(), commandFingerprint);
+		String fingerprint = commandFingerprint.calculate(command);
+		var replay = replayResolver.findExisting(command.source(), fingerprint);
 		if (replay.isPresent()) {
 			return replay.get();
 		}
 
 		BedZone bedZone = findZoneForUpdate(command.bedZoneId());
-		replay = replayResolver.findExisting(command.source(), commandFingerprint);
+		replay = replayResolver.findExisting(command.source(), fingerprint);
 		if (replay.isPresent()) {
 			return replay.get();
 		}
@@ -90,19 +85,15 @@ public class OrchidGroupMutationEngine {
 
 		return recordCreated(
 				command.source(),
-				commandFingerprint,
+				fingerprint,
 				command.effectiveBusinessDate(),
 				command.reason(),
 				group);
 	}
 
 	public OrchidGroupMutationResult createMany(CreateOrchidGroupsMutationCommand command) {
-		String commandFingerprint = fingerprint.calculate(new CreateManyFingerprintPayload(
-				OrchidGroupMutationType.CREATE,
-				command.groups(),
-				command.effectiveBusinessDate(),
-				command.reason()));
-		var replay = replayResolver.findExisting(command.source(), commandFingerprint);
+		String fingerprint = commandFingerprint.calculate(command);
+		var replay = replayResolver.findExisting(command.source(), fingerprint);
 		if (replay.isPresent()) {
 			return replay.get();
 		}
@@ -110,7 +101,7 @@ public class OrchidGroupMutationEngine {
 		Map<Long, BedZone> zones = findZonesForUpdate(command.groups().stream()
 				.map(CreateOrchidGroupMutationItem::bedZoneId)
 				.collect(Collectors.toSet()));
-		replay = replayResolver.findExisting(command.source(), commandFingerprint);
+		replay = replayResolver.findExisting(command.source(), fingerprint);
 		if (replay.isPresent()) {
 			return replay.get();
 		}
@@ -135,7 +126,7 @@ public class OrchidGroupMutationEngine {
 
 		return recordCreated(
 				command.source(),
-				commandFingerprint,
+				fingerprint,
 				command.effectiveBusinessDate(),
 				command.reason(),
 				groups);
@@ -143,19 +134,14 @@ public class OrchidGroupMutationEngine {
 
 	public OrchidGroupMutationResult createFromInbound(
 			CreateInboundOrchidGroupsMutationCommand command) {
-		String commandFingerprint = fingerprint.calculate(new CreateInboundFingerprintPayload(
-				OrchidGroupMutationType.CREATE,
-				command.inboundRecordId(),
-				command.groups(),
-				command.effectiveBusinessDate(),
-				command.reason()));
-		var replay = replayResolver.findExisting(command.source(), commandFingerprint);
+		String fingerprint = commandFingerprint.calculate(command);
+		var replay = replayResolver.findExisting(command.source(), fingerprint);
 		if (replay.isPresent()) {
 			return replay.get();
 		}
 
 		InboundRecord inboundRecord = findInboundRecordForUpdate(command.inboundRecordId());
-		replay = replayResolver.findExisting(command.source(), commandFingerprint);
+		replay = replayResolver.findExisting(command.source(), fingerprint);
 		if (replay.isPresent()) {
 			return replay.get();
 		}
@@ -183,21 +169,15 @@ public class OrchidGroupMutationEngine {
 		}
 		return recordCreated(
 				command.source(),
-				commandFingerprint,
+				fingerprint,
 				command.effectiveBusinessDate(),
 				command.reason(),
 				groups);
 	}
 
 	public OrchidGroupMutationResult transform(TransformOrchidGroupsMutationCommand command) {
-		String commandFingerprint = fingerprint.calculate(new TransformFingerprintPayload(
-				OrchidGroupMutationType.TRANSFORM,
-				command.sources(),
-				command.results(),
-				command.effectiveBusinessDate(),
-				command.reason(),
-				command.placementExclusionOrchidGroupIds()));
-		var replay = replayResolver.findExisting(command.source(), commandFingerprint);
+		String fingerprint = commandFingerprint.calculate(command);
+		var replay = replayResolver.findExisting(command.source(), fingerprint);
 		if (replay.isPresent()) {
 			return replay.get();
 		}
@@ -215,7 +195,7 @@ public class OrchidGroupMutationEngine {
 		if (sourceById.size() != sourceIds.size()) {
 			throw new NotFoundException("구조 변경 원본 난 묶음을 모두 찾을 수 없습니다.");
 		}
-		replay = replayResolver.findExisting(command.source(), commandFingerprint);
+		replay = replayResolver.findExisting(command.source(), fingerprint);
 		if (replay.isPresent()) {
 			return replay.get();
 		}
@@ -242,7 +222,7 @@ public class OrchidGroupMutationEngine {
 		OrchidGroupMutation mutation = saveMutation(
 				OrchidGroupMutationType.TRANSFORM,
 				command.source(),
-				commandFingerprint,
+				fingerprint,
 				command.effectiveBusinessDate(),
 				command.reason());
 		List<PendingChange> sourceChanges = new ArrayList<>();
@@ -294,19 +274,14 @@ public class OrchidGroupMutationEngine {
 	}
 
 	public OrchidGroupMutationResult updateDetails(UpdateOrchidGroupMutationCommand command) {
-		String commandFingerprint = fingerprint.calculate(new UpdateFingerprintPayload(
-				OrchidGroupMutationType.UPDATE_DETAILS,
-				command.orchidGroupId(),
-				command.details(),
-				command.effectiveBusinessDate(),
-				command.reason()));
-		var replay = replayResolver.findExisting(command.source(), commandFingerprint);
+		String fingerprint = commandFingerprint.calculate(command);
+		var replay = replayResolver.findExisting(command.source(), fingerprint);
 		if (replay.isPresent()) {
 			return replay.get();
 		}
 
 		OrchidGroup group = findGroupForUpdate(command.orchidGroupId());
-		replay = replayResolver.findExisting(command.source(), commandFingerprint);
+		replay = replayResolver.findExisting(command.source(), fingerprint);
 		if (replay.isPresent()) {
 			return replay.get();
 		}
@@ -339,7 +314,7 @@ public class OrchidGroupMutationEngine {
 		return recordChanged(
 				OrchidGroupMutationType.UPDATE_DETAILS,
 				command.source(),
-				commandFingerprint,
+				fingerprint,
 				command.effectiveBusinessDate(),
 				command.reason(),
 				group,
@@ -349,21 +324,14 @@ public class OrchidGroupMutationEngine {
 	}
 
 	public OrchidGroupMutationResult move(MoveOrchidGroupMutationCommand command) {
-		String commandFingerprint = fingerprint.calculate(new MoveFingerprintPayload(
-				OrchidGroupMutationType.MOVE,
-				command.orchidGroupId(),
-				command.toBedZoneId(),
-				command.startPosition(),
-				command.endPosition(),
-				command.effectiveBusinessDate(),
-				command.reason()));
-		var replay = replayResolver.findExisting(command.source(), commandFingerprint);
+		String fingerprint = commandFingerprint.calculate(command);
+		var replay = replayResolver.findExisting(command.source(), fingerprint);
 		if (replay.isPresent()) {
 			return replay.get();
 		}
 
 		OrchidGroup group = findGroupForUpdate(command.orchidGroupId());
-		replay = replayResolver.findExisting(command.source(), commandFingerprint);
+		replay = replayResolver.findExisting(command.source(), fingerprint);
 		if (replay.isPresent()) {
 			return replay.get();
 		}
@@ -384,7 +352,7 @@ public class OrchidGroupMutationEngine {
 		return recordChanged(
 				OrchidGroupMutationType.MOVE,
 				command.source(),
-				commandFingerprint,
+				fingerprint,
 				command.effectiveBusinessDate(),
 				command.reason(),
 				group,
@@ -394,18 +362,14 @@ public class OrchidGroupMutationEngine {
 	}
 
 	public OrchidGroupMutationResult cancelCreation(CancelOrchidGroupCreationMutationCommand command) {
-		String commandFingerprint = fingerprint.calculate(new CancelCreationFingerprintPayload(
-				OrchidGroupMutationType.CANCEL_CREATION,
-				command.orchidGroupId(),
-				command.effectiveBusinessDate(),
-				command.reason()));
-		var replay = replayResolver.findExisting(command.source(), commandFingerprint);
+		String fingerprint = commandFingerprint.calculate(command);
+		var replay = replayResolver.findExisting(command.source(), fingerprint);
 		if (replay.isPresent()) {
 			return replay.get();
 		}
 
 		OrchidGroup group = findGroupForUpdate(command.orchidGroupId());
-		replay = replayResolver.findExisting(command.source(), commandFingerprint);
+		replay = replayResolver.findExisting(command.source(), fingerprint);
 		if (replay.isPresent()) {
 			return replay.get();
 		}
@@ -420,7 +384,7 @@ public class OrchidGroupMutationEngine {
 		return recordChanged(
 				OrchidGroupMutationType.CANCEL_CREATION,
 				command.source(),
-				commandFingerprint,
+				fingerprint,
 				command.effectiveBusinessDate(),
 				command.reason(),
 				group,
@@ -430,19 +394,14 @@ public class OrchidGroupMutationEngine {
 	}
 
 	public OrchidGroupMutationResult discard(DiscardOrchidGroupMutationCommand command) {
-		String commandFingerprint = fingerprint.calculate(new DiscardFingerprintPayload(
-				OrchidGroupMutationType.DISCARD,
-				command.orchidGroupId(),
-				command.quantity(),
-				command.effectiveBusinessDate(),
-				command.reason()));
-		var replay = replayResolver.findExisting(command.source(), commandFingerprint);
+		String fingerprint = commandFingerprint.calculate(command);
+		var replay = replayResolver.findExisting(command.source(), fingerprint);
 		if (replay.isPresent()) {
 			return replay.get();
 		}
 
 		OrchidGroup group = findGroupForUpdate(command.orchidGroupId());
-		replay = replayResolver.findExisting(command.source(), commandFingerprint);
+		replay = replayResolver.findExisting(command.source(), fingerprint);
 		if (replay.isPresent()) {
 			return replay.get();
 		}
@@ -456,7 +415,7 @@ public class OrchidGroupMutationEngine {
 		return recordChanged(
 				OrchidGroupMutationType.DISCARD,
 				command.source(),
-				commandFingerprint,
+				fingerprint,
 				command.effectiveBusinessDate(),
 				command.reason(),
 				group,
@@ -467,6 +426,7 @@ public class OrchidGroupMutationEngine {
 
 	public OrchidGroupMutationResult reserve(ReserveOrchidGroupsMutationCommand command) {
 		return applyQuantityMutation(
+				command,
 				OrchidGroupMutationType.RESERVE,
 				command.source(),
 				command.items(),
@@ -480,6 +440,7 @@ public class OrchidGroupMutationEngine {
 	public OrchidGroupMutationResult releaseReservation(
 			ReleaseOrchidGroupReservationsMutationCommand command) {
 		return applyQuantityMutation(
+				command,
 				OrchidGroupMutationType.RELEASE_RESERVATION,
 				command.source(),
 				command.items(),
@@ -493,6 +454,7 @@ public class OrchidGroupMutationEngine {
 	public OrchidGroupMutationResult consumeReservation(
 			ConsumeOrchidGroupReservationsMutationCommand command) {
 		return applyQuantityMutation(
+				command,
 				OrchidGroupMutationType.CONSUME_RESERVATION,
 				command.source(),
 				command.items(),
@@ -506,6 +468,7 @@ public class OrchidGroupMutationEngine {
 	public OrchidGroupMutationResult restoreOutbound(
 			RestoreOutboundOrchidGroupsMutationCommand command) {
 		return applyQuantityMutation(
+				command,
 				OrchidGroupMutationType.RESTORE_OUTBOUND,
 				command.source(),
 				command.items(),
@@ -517,6 +480,7 @@ public class OrchidGroupMutationEngine {
 	}
 
 	private OrchidGroupMutationResult applyQuantityMutation(
+			Object command,
 			OrchidGroupMutationType mutationType,
 			OrchidGroupMutationSource source,
 			List<OrchidGroupQuantityMutationItem> items,
@@ -525,13 +489,8 @@ public class OrchidGroupMutationEngine {
 			LocalDate effectiveBusinessDate,
 			String reason,
 			BiConsumer<OrchidGroup, Integer> mutationAction) {
-		String commandFingerprint = fingerprint.calculate(new QuantityMutationFingerprintPayload(
-				mutationType,
-				items,
-				relatedMutations,
-				effectiveBusinessDate,
-				reason));
-		var replay = replayResolver.findExisting(source, commandFingerprint);
+		String fingerprint = commandFingerprint.calculate(command);
+		var replay = replayResolver.findExisting(source, fingerprint);
 		if (replay.isPresent()) {
 			return replay.get();
 		}
@@ -546,7 +505,7 @@ public class OrchidGroupMutationEngine {
 		if (groupsById.size() != orchidGroupIds.size()) {
 			throw new NotFoundException("수량 Mutation 대상 난 묶음을 모두 찾을 수 없습니다.");
 		}
-		replay = replayResolver.findExisting(source, commandFingerprint);
+		replay = replayResolver.findExisting(source, fingerprint);
 		if (replay.isPresent()) {
 			return replay.get();
 		}
@@ -571,7 +530,7 @@ public class OrchidGroupMutationEngine {
 		}
 
 		OrchidGroupMutation mutation = saveMutation(
-				mutationType, source, commandFingerprint, effectiveBusinessDate, reason);
+				mutationType, source, fingerprint, effectiveBusinessDate, reason);
 		List<OrchidGroupMutationEntry> entries = changes.stream()
 				.map(change -> OrchidGroupMutationEntry.changed(
 						mutation,
@@ -587,13 +546,8 @@ public class OrchidGroupMutationEngine {
 	}
 
 	public OrchidGroupMutationResult correct(CorrectOrchidGroupsMutationCommand command) {
-		String commandFingerprint = fingerprint.calculate(new CorrectionFingerprintPayload(
-				OrchidGroupMutationType.CORRECTION,
-				command.items(),
-				command.correctedMutations(),
-				command.effectiveBusinessDate(),
-				command.reason()));
-		var replay = replayResolver.findExisting(command.source(), commandFingerprint);
+		String fingerprint = commandFingerprint.calculate(command);
+		var replay = replayResolver.findExisting(command.source(), fingerprint);
 		if (replay.isPresent()) {
 			return replay.get();
 		}
@@ -608,7 +562,7 @@ public class OrchidGroupMutationEngine {
 		if (groupsById.size() != orchidGroupIds.size()) {
 			throw new NotFoundException("보정 Mutation 대상 난 묶음을 모두 찾을 수 없습니다.");
 		}
-		replay = replayResolver.findExisting(command.source(), commandFingerprint);
+		replay = replayResolver.findExisting(command.source(), fingerprint);
 		if (replay.isPresent()) {
 			return replay.get();
 		}
@@ -632,7 +586,7 @@ public class OrchidGroupMutationEngine {
 		OrchidGroupMutation mutation = saveMutation(
 				OrchidGroupMutationType.CORRECTION,
 				command.source(),
-				commandFingerprint,
+				fingerprint,
 				command.effectiveBusinessDate(),
 				command.reason());
 
@@ -926,87 +880,6 @@ public class OrchidGroupMutationEngine {
 		if (beforeState.equals(afterState)) {
 			throw new IllegalArgumentException("변경 전후 난 묶음 상태가 같습니다.");
 		}
-	}
-
-	private record CreateFingerprintPayload(
-			OrchidGroupMutationType mutationType,
-			Long bedZoneId,
-			OrchidGroupMutationDetails details,
-			LocalDate effectiveBusinessDate,
-			String reason) {
-	}
-
-	private record CreateManyFingerprintPayload(
-			OrchidGroupMutationType mutationType,
-			List<CreateOrchidGroupMutationItem> groups,
-			LocalDate effectiveBusinessDate,
-			String reason) {
-	}
-
-	private record CreateInboundFingerprintPayload(
-			OrchidGroupMutationType mutationType,
-			Long inboundRecordId,
-			List<CreateOrchidGroupMutationItem> groups,
-			LocalDate effectiveBusinessDate,
-			String reason) {
-	}
-
-	private record TransformFingerprintPayload(
-			OrchidGroupMutationType mutationType,
-			List<TransformOrchidGroupMutationSource> sources,
-			List<TransformOrchidGroupMutationResult> results,
-			LocalDate effectiveBusinessDate,
-			String reason,
-			Set<Long> placementExclusionOrchidGroupIds) {
-	}
-
-	private record UpdateFingerprintPayload(
-			OrchidGroupMutationType mutationType,
-			Long orchidGroupId,
-			OrchidGroupMutationDetails details,
-			LocalDate effectiveBusinessDate,
-			String reason) {
-	}
-
-	private record MoveFingerprintPayload(
-			OrchidGroupMutationType mutationType,
-			Long orchidGroupId,
-			Long toBedZoneId,
-			BigDecimal startPosition,
-			BigDecimal endPosition,
-			LocalDate effectiveBusinessDate,
-			String reason) {
-	}
-
-	private record CancelCreationFingerprintPayload(
-			OrchidGroupMutationType mutationType,
-			Long orchidGroupId,
-			LocalDate effectiveBusinessDate,
-			String reason) {
-	}
-
-	private record DiscardFingerprintPayload(
-			OrchidGroupMutationType mutationType,
-			Long orchidGroupId,
-			Integer quantity,
-			LocalDate effectiveBusinessDate,
-			String reason) {
-	}
-
-	private record QuantityMutationFingerprintPayload(
-			OrchidGroupMutationType mutationType,
-			List<OrchidGroupQuantityMutationItem> items,
-			RelatedOrchidGroupMutations relatedMutations,
-			LocalDate effectiveBusinessDate,
-			String reason) {
-	}
-
-	private record CorrectionFingerprintPayload(
-			OrchidGroupMutationType mutationType,
-			List<CorrectOrchidGroupMutationItem> items,
-			RelatedOrchidGroupMutations correctedMutations,
-			LocalDate effectiveBusinessDate,
-			String reason) {
 	}
 
 	private record PendingChange(

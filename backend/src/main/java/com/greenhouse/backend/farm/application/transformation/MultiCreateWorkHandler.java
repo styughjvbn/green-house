@@ -6,6 +6,7 @@ import com.greenhouse.backend.farm.application.orchid.mutation.CreateOrchidGroup
 import com.greenhouse.backend.farm.application.orchid.mutation.OrchidGroupMutationDetails;
 import com.greenhouse.backend.farm.application.orchid.mutation.OrchidGroupMutationEngine;
 import com.greenhouse.backend.farm.application.orchid.mutation.OrchidGroupMutationRoutingPolicy;
+import com.greenhouse.backend.farm.application.orchid.mutation.OrchidGroupMutationShadowService;
 import com.greenhouse.backend.farm.application.orchid.mutation.OrchidGroupMutationSources;
 import com.greenhouse.backend.common.exception.NotFoundException;
 import com.greenhouse.backend.farm.domain.orchid.OrchidGroup;
@@ -37,6 +38,7 @@ public class MultiCreateWorkHandler implements WorkEffectHandler {
 	private final OrchidGroupRepository orchidGroupRepository;
 	private final OrchidGroupMutationEngine mutationEngine;
 	private final OrchidGroupMutationRoutingPolicy mutationRoutingPolicy;
+	private final OrchidGroupMutationShadowService mutationShadowService;
 
 	public MultiCreateWorkHandler(
 			OrchidGroupCommandService orchidGroupCommandService,
@@ -44,13 +46,15 @@ public class MultiCreateWorkHandler implements WorkEffectHandler {
 			OrchidGroupCollectionMemberRepository memberRepository,
 			OrchidGroupRepository orchidGroupRepository,
 			OrchidGroupMutationEngine mutationEngine,
-			OrchidGroupMutationRoutingPolicy mutationRoutingPolicy) {
+			OrchidGroupMutationRoutingPolicy mutationRoutingPolicy,
+			OrchidGroupMutationShadowService mutationShadowService) {
 		this.orchidGroupCommandService = orchidGroupCommandService;
 		this.collectionRepository = collectionRepository;
 		this.memberRepository = memberRepository;
 		this.orchidGroupRepository = orchidGroupRepository;
 		this.mutationEngine = mutationEngine;
 		this.mutationRoutingPolicy = mutationRoutingPolicy;
+		this.mutationShadowService = mutationShadowService;
 	}
 
 	@Override public String supports() { return "MULTI_CREATE"; }
@@ -64,27 +68,30 @@ public class MultiCreateWorkHandler implements WorkEffectHandler {
 		validateCollections(request);
 		WorkMutationLink mutationLink = null;
 		List<OrchidGroup> groups;
+		var mutationCommand = mutationRoutingPolicy.usesMutationContract()
+				? new CreateOrchidGroupsMutationCommand(
+				OrchidGroupMutationSources.work(operation.getId(), command.effectKey()),
+				request.rows().stream()
+						.map(row -> new CreateOrchidGroupMutationItem(
+								row.orchidGroup().bedZoneId(),
+								new OrchidGroupMutationDetails(
+										row.orchidGroup().varietyId(),
+										row.orchidGroup().quantity(),
+										row.orchidGroup().potSize(),
+										row.orchidGroup().ageYear(),
+										row.orchidGroup().status(),
+										row.orchidGroup().placementType(),
+										row.orchidGroup().trayCount(),
+										row.orchidGroup().splitPlacementAllowed(),
+										row.orchidGroup().startPosition(),
+										row.orchidGroup().endPosition(),
+										row.orchidGroup().memo())))
+						.toList(),
+				operation.getPlannedStartDate(),
+				operation.getMemo())
+				: null;
 		if (mutationRoutingPolicy.routesToEngine()) {
-			var mutation = mutationEngine.createMany(new CreateOrchidGroupsMutationCommand(
-					OrchidGroupMutationSources.work(operation.getId(), command.effectKey()),
-					request.rows().stream()
-							.map(row -> new CreateOrchidGroupMutationItem(
-									row.orchidGroup().bedZoneId(),
-									new OrchidGroupMutationDetails(
-											row.orchidGroup().varietyId(),
-											row.orchidGroup().quantity(),
-											row.orchidGroup().potSize(),
-											row.orchidGroup().ageYear(),
-											row.orchidGroup().status(),
-											row.orchidGroup().placementType(),
-											row.orchidGroup().trayCount(),
-											row.orchidGroup().splitPlacementAllowed(),
-											row.orchidGroup().startPosition(),
-											row.orchidGroup().endPosition(),
-											row.orchidGroup().memo())))
-							.toList(),
-					operation.getPlannedStartDate(),
-					operation.getMemo()));
+			var mutation = mutationEngine.createMany(mutationCommand);
 			List<Long> groupIds = mutation.entries().stream()
 					.map(entry -> entry.orchidGroupId())
 					.toList();
@@ -93,9 +100,12 @@ public class MultiCreateWorkHandler implements WorkEffectHandler {
 			groups = groupIds.stream().map(groupsById::get).toList();
 			mutationLink = new WorkMutationLink(mutation.mutationId(), mutation.correlationId());
 		} else {
+			var shadowPlan = mutationShadowService.prepare(mutationCommand);
 			groups = request.rows().stream()
 					.map(row -> orchidGroupCommandService.createEntity(row.orchidGroup()))
 					.toList();
+			mutationShadowService.completeCreated(
+					shadowPlan, groups.stream().map(OrchidGroup::getId).toList());
 		}
 		for (int index = 0; index < groups.size(); index++) {
 			OrchidGroup group = groups.get(index);

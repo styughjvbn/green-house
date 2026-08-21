@@ -327,6 +327,32 @@ public class OrchidGroup extends BaseEntity {
 		return stateRevision;
 	}
 
+	OrchidGroup copyForSimulation() {
+		OrchidGroup copy = new OrchidGroup();
+		copy.id = id;
+		copy.version = version;
+		copy.stateRevision = stateRevision;
+		copy.bedZone = bedZone;
+		copy.variety = variety;
+		copy.inboundRecord = inboundRecord;
+		copy.genus = genus;
+		copy.varietyName = varietyName;
+		copy.quantity = quantity;
+		copy.reservedQuantity = reservedQuantity;
+		copy.potSize = potSize;
+		copy.potSizeCode = potSizeCode;
+		copy.ageYear = ageYear;
+		copy.status = status;
+		copy.placementType = placementType;
+		copy.trayCount = trayCount;
+		copy.splitPlacementAllowed = splitPlacementAllowed;
+		copy.sortOrder = sortOrder;
+		copy.memo = memo;
+		copy.startPosition = startPosition;
+		copy.endPosition = endPosition;
+		return copy;
+	}
+
 	private void validatePositiveQuantity(Integer value, String label) {
 		if (value == null || value < 1) {
 			throw new IllegalArgumentException(label + "은 1 이상이어야 합니다.");

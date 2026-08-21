@@ -6,6 +6,7 @@ import com.greenhouse.backend.common.config.TimeConfig;
 import com.greenhouse.backend.farm.application.orchid.mutation.OrchidGroupMutationDetails;
 import com.greenhouse.backend.farm.application.orchid.mutation.OrchidGroupMutationEngine;
 import com.greenhouse.backend.farm.application.orchid.mutation.OrchidGroupMutationRoutingPolicy;
+import com.greenhouse.backend.farm.application.orchid.mutation.OrchidGroupMutationShadowService;
 import com.greenhouse.backend.farm.application.orchid.mutation.OrchidGroupMutationSources;
 import com.greenhouse.backend.farm.application.orchid.mutation.UpdateOrchidGroupMutationCommand;
 import com.greenhouse.backend.farm.domain.variety.Variety;
@@ -41,6 +42,7 @@ public class VarietyService {
 	private final VarietyAuditSupport auditSupport;
 	private final OrchidGroupMutationEngine mutationEngine;
 	private final OrchidGroupMutationRoutingPolicy mutationRoutingPolicy;
+	private final OrchidGroupMutationShadowService mutationShadowService;
 	private final Clock clock;
 
 	@Transactional(readOnly = true)
@@ -113,12 +115,13 @@ public class VarietyService {
 				normalize(request.description()),
 				normalize(request.memo()));
 		var connectedGroups = orchidGroupRepository.findByVarietyIdOrderByLocation(varietyId);
+		UUID correlationId = UUID.randomUUID();
+		var changedGroups = connectedGroups.stream()
+				.filter(group -> !java.util.Objects.equals(group.getGenus(), variety.getGenus())
+						|| !java.util.Objects.equals(group.getVarietyName(), variety.getName()))
+				.toList();
 		if (mutationRoutingPolicy.routesToEngine()) {
-			UUID correlationId = UUID.randomUUID();
-			connectedGroups.stream()
-					.filter(group -> !java.util.Objects.equals(group.getGenus(), variety.getGenus())
-							|| !java.util.Objects.equals(group.getVarietyName(), variety.getName()))
-					.forEach(group -> mutationEngine.updateDetails(
+			changedGroups.forEach(group -> mutationEngine.updateDetails(
 					new UpdateOrchidGroupMutationCommand(
 							OrchidGroupMutationSources.farmBatch(
 									"VARIETY",
@@ -141,7 +144,34 @@ public class VarietyService {
 							TimeConfig.farmToday(clock),
 							"품종 정보 변경 전파")));
 		} else {
-			connectedGroups.forEach(group -> group.assignVariety(variety));
+			changedGroups.forEach(group -> {
+				var command = mutationRoutingPolicy.usesMutationContract()
+						? new UpdateOrchidGroupMutationCommand(
+						OrchidGroupMutationSources.farmBatch(
+								"VARIETY",
+								varietyId.toString(),
+								"PROPAGATE:" + correlationId + ":" + group.getId(),
+								correlationId),
+						group.getId(),
+						new OrchidGroupMutationDetails(
+								varietyId,
+								group.getQuantity(),
+								group.getPotSize(),
+								group.getAgeYear(),
+								group.getStatus(),
+								group.getPlacementType(),
+								group.getTrayCount(),
+								group.getSplitPlacementAllowed(),
+								group.getStartPosition(),
+								group.getEndPosition(),
+								group.getMemo()),
+						TimeConfig.farmToday(clock),
+						"품종 정보 변경 전파")
+						: null;
+				var shadowPlan = mutationShadowService.prepare(command);
+				group.assignVariety(variety);
+				mutationShadowService.complete(shadowPlan);
+			});
 		}
 		auditSupport.record(AuditAction.UPDATED, variety, before, auditSupport.snapshot(variety));
 		return responseAssembler.assemble(variety);

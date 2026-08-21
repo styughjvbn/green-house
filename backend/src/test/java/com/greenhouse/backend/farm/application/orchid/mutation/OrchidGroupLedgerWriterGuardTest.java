@@ -19,6 +19,23 @@ import org.springframework.boot.ApplicationArguments;
 class OrchidGroupLedgerWriterGuardTest {
 
 	@Test
+	void separatesLegacyShadowAndEngineResponsibilities() {
+		var legacy = new OrchidGroupLedgerWriterProperties(OrchidGroupLedgerWriterMode.LEGACY, "1.0.0");
+		var shadow = new OrchidGroupLedgerWriterProperties(OrchidGroupLedgerWriterMode.SHADOW, "1.0.0");
+		var engine = new OrchidGroupLedgerWriterProperties(OrchidGroupLedgerWriterMode.ENGINE, "1.0.0");
+
+		assertThat(legacy.routesToMutationEngine()).isFalse();
+		assertThat(legacy.capturesShadowComparison()).isFalse();
+		assertThat(legacy.usesMutationContract()).isFalse();
+		assertThat(shadow.routesToMutationEngine()).isFalse();
+		assertThat(shadow.capturesShadowComparison()).isTrue();
+		assertThat(shadow.usesMutationContract()).isTrue();
+		assertThat(engine.routesToMutationEngine()).isTrue();
+		assertThat(engine.capturesShadowComparison()).isFalse();
+		assertThat(engine.usesMutationContract()).isTrue();
+	}
+
+	@Test
 	void comparesSemanticVersionsAndRequiresExactMatchForOpaqueVersions() {
 		assertThat(OrchidGroupLedgerWriterVersion.satisfiesMinimum("1.3.0", "1.2.9")).isTrue();
 		assertThat(OrchidGroupLedgerWriterVersion.satisfiesMinimum("1.2.8", "1.2.9")).isFalse();
@@ -35,6 +52,12 @@ class OrchidGroupLedgerWriterGuardTest {
 		assertThatThrownBy(() -> new OrchidGroupLedgerWriterStartupGuard(
 				repository,
 				new OrchidGroupLedgerWriterProperties(OrchidGroupLedgerWriterMode.LEGACY, "1.2.0"))
+				.run(arguments))
+				.isInstanceOf(IllegalStateException.class)
+				.hasMessageContaining("ENGINE");
+		assertThatThrownBy(() -> new OrchidGroupLedgerWriterStartupGuard(
+				repository,
+				new OrchidGroupLedgerWriterProperties(OrchidGroupLedgerWriterMode.SHADOW, "1.2.0"))
 				.run(arguments))
 				.isInstanceOf(IllegalStateException.class)
 				.hasMessageContaining("ENGINE");

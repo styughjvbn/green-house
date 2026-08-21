@@ -10,6 +10,7 @@ import com.greenhouse.backend.farm.application.orchid.mutation.MoveOrchidGroupMu
 import com.greenhouse.backend.farm.application.orchid.mutation.OrchidGroupMutationDetails;
 import com.greenhouse.backend.farm.application.orchid.mutation.OrchidGroupMutationEngine;
 import com.greenhouse.backend.farm.application.orchid.mutation.OrchidGroupMutationRoutingPolicy;
+import com.greenhouse.backend.farm.application.orchid.mutation.OrchidGroupMutationShadowService;
 import com.greenhouse.backend.farm.application.orchid.mutation.OrchidGroupMutationSources;
 import com.greenhouse.backend.farm.application.orchid.mutation.UpdateOrchidGroupMutationCommand;
 import com.greenhouse.backend.farm.domain.structure.BedZone;
@@ -50,12 +51,24 @@ public class OrchidGroupCommandService {
 	private final OrchidGroupAuditSupport auditSupport;
 	private final OrchidGroupMutationEngine mutationEngine;
 	private final OrchidGroupMutationRoutingPolicy mutationRoutingPolicy;
+	private final OrchidGroupMutationShadowService mutationShadowService;
 	private final Clock clock;
 
 	public OrchidGroupResponse create(OrchidGroupCreateRequest request) {
+		var command = mutationRoutingPolicy.usesMutationContract()
+				? new CreateOrchidGroupMutationCommand(
+				OrchidGroupMutationSources.farmRequest(
+						"ORCHID_GROUP_COMMAND", "DIRECT", "CREATE"),
+				request.bedZoneId(),
+				mutationDetails(request),
+				TimeConfig.farmToday(clock),
+				"난 묶음 등록")
+				: null;
+		var shadowPlan = mutationShadowService.prepare(command);
 		OrchidGroup created = mutationRoutingPolicy.routesToEngine()
-				? createWithEngine(request)
+				? createWithEngine(command)
 				: createEntity(request);
+		mutationShadowService.completeCreated(shadowPlan, List.of(created.getId()));
 		auditSupport.record(created.getId(), AuditAction.CREATED, AuditSource.ORCHID_GROUP_MANAGEMENT,
 				null, auditSupport.snapshot(created), Map.of("creationMode", "SINGLE"));
 		return OrchidGroupResponse.from(created);
@@ -121,16 +134,12 @@ public class OrchidGroupCommandService {
 		OrchidGroup orchidGroup = orchidGroupRepository.findById(orchidGroupId)
 				.orElseThrow(() -> new NotFoundException("난 묶음을 찾을 수 없습니다."));
 		OrchidGroupAuditSnapshot before = auditSupport.snapshot(orchidGroup);
+		OrchidGroupMutationDetails details = mutationRoutingPolicy.usesMutationContract()
+				? mutationDetails(request)
+				: null;
 		if (mutationRoutingPolicy.routesToEngine()) {
-			OrchidGroupMutationDetails details = mutationDetails(request);
 			if (!hasSameDetails(orchidGroup, details)) {
-				mutationEngine.updateDetails(new UpdateOrchidGroupMutationCommand(
-						OrchidGroupMutationSources.farmRequest(
-								"ORCHID_GROUP_COMMAND", orchidGroupId.toString(), "UPDATE"),
-						orchidGroupId,
-						details,
-						TimeConfig.farmToday(clock),
-						"난 묶음 상세 수정"));
+				mutationEngine.updateDetails(updateCommand(orchidGroupId, details));
 			}
 			OrchidGroup updated = orchidGroupRepository.findById(orchidGroupId)
 					.orElseThrow(() -> new NotFoundException("난 묶음을 찾을 수 없습니다."));
@@ -140,6 +149,9 @@ public class OrchidGroupCommandService {
 					Map.of("correctionMode", correctionMode));
 			return OrchidGroupResponse.from(updated);
 		}
+		var shadowPlan = details == null || hasSameDetails(orchidGroup, details)
+				? null
+				: mutationShadowService.prepare(updateCommand(orchidGroupId, details));
 		Variety variety = findVariety(request.varietyId());
 		BigDecimal startPosition = orchidPlacementPolicy.normalizeNumber(request.startPosition());
 		BigDecimal endPosition = orchidPlacementPolicy.normalizeNumber(request.endPosition());
@@ -159,6 +171,7 @@ public class OrchidGroupCommandService {
 				endPosition,
 				normalize(request.memo()));
 		orchidGroup.assignVariety(variety);
+		mutationShadowService.complete(shadowPlan);
 		OrchidGroupAuditSnapshot after = auditSupport.snapshot(orchidGroup);
 		auditSupport.record(orchidGroupId, auditSupport.actionForCorrection(before, after),
 				AuditSource.ORCHID_GROUP_CORRECTION, before, after, Map.of("correctionMode", correctionMode));
@@ -172,13 +185,16 @@ public class OrchidGroupCommandService {
 		if (workUsageInspector.hasEffectReference(orchidGroupId)) {
 			throw new ConflictException("작업 이력과 연결된 난 묶음은 삭제할 수 없습니다. 작업 취소, 보정 또는 폐기 작업으로 처리해주세요.");
 		}
-		if (mutationRoutingPolicy.routesToEngine()) {
-			mutationEngine.cancelCreation(new CancelOrchidGroupCreationMutationCommand(
+		var command = mutationRoutingPolicy.usesMutationContract()
+				? new CancelOrchidGroupCreationMutationCommand(
 					OrchidGroupMutationSources.farmRequest(
 							"ORCHID_GROUP_COMMAND", orchidGroupId.toString(), "CANCEL_CREATION"),
 					orchidGroupId,
 					TimeConfig.farmToday(clock),
-					"난 묶음 삭제 요청에 따른 생성 취소"));
+					"난 묶음 삭제 요청에 따른 생성 취소")
+				: null;
+		if (mutationRoutingPolicy.routesToEngine()) {
+			mutationEngine.cancelCreation(command);
 			auditSupport.record(orchidGroupId, AuditAction.DEACTIVATED,
 					AuditSource.ORCHID_GROUP_MANAGEMENT,
 					before,
@@ -186,13 +202,26 @@ public class OrchidGroupCommandService {
 					Map.of("deleteMode", "CANCEL_CREATION"));
 			return;
 		}
+		var shadowPlan = mutationShadowService.prepare(command);
 		inboundRecordRepository.clearCreatedOrchidGroup(orchidGroupId);
 		orchidGroupRepository.delete(orchidGroup);
+		mutationShadowService.completeDeleted(shadowPlan, Set.of(orchidGroupId));
 		auditSupport.record(orchidGroupId, AuditAction.DELETED, AuditSource.ORCHID_GROUP_MANAGEMENT,
 				before, null, Map.of());
 	}
 
 	public OrchidGroupResponse moveForOperation(Long orchidGroupId, OrchidGroupMoveRequest request) {
+		return moveForOperation(orchidGroupId, request, true);
+	}
+
+	OrchidGroupResponse moveLegacyForOperation(Long orchidGroupId, OrchidGroupMoveRequest request) {
+		return moveForOperation(orchidGroupId, request, false);
+	}
+
+	private OrchidGroupResponse moveForOperation(
+			Long orchidGroupId,
+			OrchidGroupMoveRequest request,
+			boolean applyRouting) {
 		OrchidGroup orchidGroup = orchidGroupRepository.findById(orchidGroupId)
 				.orElseThrow(() -> new NotFoundException("난 묶음을 찾을 수 없습니다."));
 		BedZone toBedZone = findZone(request.toBedZoneId());
@@ -206,8 +235,8 @@ public class OrchidGroupCommandService {
 				&& equalPosition(orchidGroup.getEndPosition(), endPosition)) {
 			return OrchidGroupResponse.from(orchidGroup);
 		}
-		if (mutationRoutingPolicy.routesToEngine()) {
-			mutationEngine.move(new MoveOrchidGroupMutationCommand(
+		var command = applyRouting && mutationRoutingPolicy.usesMutationContract()
+				? new MoveOrchidGroupMutationCommand(
 					OrchidGroupMutationSources.farmRequest(
 							"ORCHID_GROUP_COMMAND", orchidGroupId.toString(), "MOVE"),
 					orchidGroupId,
@@ -215,9 +244,13 @@ public class OrchidGroupCommandService {
 					startPosition,
 					endPosition,
 					TimeConfig.farmToday(clock),
-					request.memo()));
+					request.memo())
+				: null;
+		if (applyRouting && mutationRoutingPolicy.routesToEngine()) {
+			mutationEngine.move(command);
 			return OrchidGroupResponse.from(orchidGroup);
 		}
+		var shadowPlan = applyRouting ? mutationShadowService.prepare(command) : null;
 
 		if (!fromBedZoneId.equals(toBedZone.getId())) {
 			int nextSortOrder = orchidGroupRepository.findMaxSortOrderByBedZoneId(toBedZone.getId()) + 1;
@@ -225,21 +258,28 @@ public class OrchidGroupCommandService {
 		} else {
 			orchidGroup.moveTo(toBedZone, orchidGroup.getSortOrder(), startPosition, endPosition);
 		}
+		mutationShadowService.complete(shadowPlan);
 
 		return OrchidGroupResponse.from(orchidGroup);
 	}
 
-	private OrchidGroup createWithEngine(OrchidGroupCreateRequest request) {
-		var result = mutationEngine.create(new CreateOrchidGroupMutationCommand(
-				OrchidGroupMutationSources.farmRequest(
-						"ORCHID_GROUP_COMMAND", "DIRECT", "CREATE"),
-				request.bedZoneId(),
-				mutationDetails(request),
-				TimeConfig.farmToday(clock),
-				"난 묶음 등록"));
+	private OrchidGroup createWithEngine(CreateOrchidGroupMutationCommand command) {
+		var result = mutationEngine.create(command);
 		Long orchidGroupId = result.entries().getFirst().orchidGroupId();
 		return orchidGroupRepository.findById(orchidGroupId)
 				.orElseThrow(() -> new NotFoundException("생성된 난 묶음을 찾을 수 없습니다."));
+	}
+
+	private UpdateOrchidGroupMutationCommand updateCommand(
+			Long orchidGroupId,
+			OrchidGroupMutationDetails details) {
+		return new UpdateOrchidGroupMutationCommand(
+				OrchidGroupMutationSources.farmRequest(
+						"ORCHID_GROUP_COMMAND", orchidGroupId.toString(), "UPDATE"),
+				orchidGroupId,
+				details,
+				TimeConfig.farmToday(clock),
+				"난 묶음 상세 수정");
 	}
 
 	private OrchidGroupMutationDetails mutationDetails(OrchidGroupCreateRequest request) {
