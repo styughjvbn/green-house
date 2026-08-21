@@ -36,7 +36,7 @@ public final class OrchidGroupLedgerReconciliationCli {
 			OrchidGroupLedgerReconciliationReport report = context
 					.getBean(OrchidGroupLedgerReconciliationService.class)
 					.reconcile();
-			printReport(context.getBean(ObjectMapper.class), report);
+			printReport(new ObjectMapper().findAndRegisterModules(), report);
 			exitCode = report.ready() ? 0 : 2;
 		} catch (RuntimeException exception) {
 			exception.printStackTrace(System.err);

@@ -49,7 +49,7 @@ public final class OrchidGroupLedgerCutoverCli {
 			OrchidGroupLedgerCutoverResult result = context
 					.getBean(OrchidGroupLedgerCutoverService.class)
 					.execute(parsed.command());
-			printResult(context.getBean(ObjectMapper.class), result);
+			printResult(new ObjectMapper().findAndRegisterModules(), result);
 			exitCode = result.reconciliation().ready() ? 0 : 2;
 		} catch (RuntimeException exception) {
 			exception.printStackTrace(System.err);

@@ -14,6 +14,7 @@ import lombok.RequiredArgsConstructor;
 
 import java.time.Clock;
 
+import org.springframework.boot.autoconfigure.condition.ConditionalOnWebApplication;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.AnonymousAuthenticationToken;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
@@ -28,6 +29,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
+@ConditionalOnWebApplication(type = ConditionalOnWebApplication.Type.SERVLET)
 @RequestMapping("/api/auth")
 @RequiredArgsConstructor
 public class AuthController {

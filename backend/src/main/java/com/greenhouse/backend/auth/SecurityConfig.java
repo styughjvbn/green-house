@@ -3,6 +3,7 @@ package com.greenhouse.backend.auth;
 import java.io.IOException;
 import jakarta.servlet.http.HttpServletResponse;
 
+import org.springframework.boot.autoconfigure.condition.ConditionalOnWebApplication;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -29,6 +30,7 @@ import com.greenhouse.backend.demo.DemoProperties;
 import com.greenhouse.backend.demo.DemoProtectionFilter;
 
 @Configuration
+@ConditionalOnWebApplication(type = ConditionalOnWebApplication.Type.SERVLET)
 @EnableWebSecurity
 @EnableMethodSecurity
 @EnableConfigurationProperties({AuthProperties.class, DemoProperties.class})
