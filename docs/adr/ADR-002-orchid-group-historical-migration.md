@@ -73,7 +73,7 @@ PGPASSWORD=greenhouse_rehearsal_test psql \
 
 ## 결정
 
-### 1. 공통 Mutation header와 엄격한 상태 chain을 유지한다
+### 1. 모든 난 묶음 참여 관계를 하나의 Entry 테이블에 저장한다
 
 cutover 이전 자료도 `orchid_group_mutations`의 공통 identity를 사용한다. 하지만
 불완전한 자료를 `OrchidGroupMutationEntry`의 완전한 before/after snapshot으로
@@ -81,48 +81,41 @@ cutover 이전 자료도 `orchid_group_mutations`의 공통 identity를 사용�
 
 ```text
 OrchidGroupMutation
-├─ StateChainEntry
-│    BASELINE / CREATE / CHANGE
-│    완전 snapshot + 연속 revision
-└─ HistoricalEvidence
-     legacy source fragment + 알려진 필드 + 신뢰 수준
+└─ OrchidGroupMutationEntry
+     ├─ HISTORICAL              원본 사건과 난 묶음의 관계
+     └─ BASELINE/CREATE/CHANGE  완전 snapshot + 연속 revision
 ```
 
-- 기존 `orchid_group_mutation_entries`는 현재와 같이 엄격한 상태 chain 전용으로
-  유지한다. 제약조건과 write fence를 완화하지 않는다.
-- `orchid_group_historical_evidence`를 추가해 cutover 이전의 부분 사실을 저장한다.
-- 하나의 Mutation은 StateChainEntry 또는 HistoricalEvidence 중 적어도 하나를
-  가져야 한다. 두 종류의 entry가 모두 없는 Mutation은 오류다.
-- Timeline 조회는 두 entry를 공통 Mutation header 기준으로 합성한다.
+- 물리적인 난 묶음 참여 테이블은 `orchid_group_mutation_entries` 하나만 사용한다.
+- `HISTORICAL` Entry는 `mutation_id`, `orchid_group_id`, `role`, `migration_run_id`만
+  의미 있게 사용하고 revision과 before/after snapshot은 `NULL`이다.
+- `BASELINE`, `CREATE`, `CHANGE` Entry는 기존처럼 완전한 상태와 연속 revision을
+  요구한다. DB 제약과 write fence도 이 세 kind만 상태 chain으로 인정한다.
+- 모든 Mutation은 kind와 관계없이 Entry를 하나 이상 가져야 한다.
+- `orchid_group_mutations` 헤더와 migration run control-plane 테이블은 사건 identity와
+  실행 감사를 위한 별도 책임이므로 유지한다. 여기서 하나의 테이블은 과거 관계와
+  실시간 관계를 별도 자식 테이블로 나누지 않는다는 의미다.
 
 이 구조는 과거와 현재를 하나의 Engine 언어로 제공하면서, 불완전한 과거 자료가
 운영 상태 revision의 신뢰성을 낮추지 않게 한다.
 
-### 2. HistoricalEvidence는 불확실성을 데이터로 보존한다
+### 2. 과거 Entry에는 추정 상태를 저장하지 않는다
 
-HistoricalEvidence는 최소한 다음 정보를 가진다.
+과거 Entry에 별도 snapshot, 부분 fragment, known fields, 신뢰도 필드를 두지 않는다.
+과거 사건의 의미와 근거는 다음 기존 정보로 판단한다.
 
 ```text
-mutation_id
-orchid_group_id
-role: SOURCE | RESULT | AFFECTED
-evidence_kind: ORIGIN | CREATE | CHANGE | GAP
-evidence_quality: VERIFIED | DERIVED | ATTESTED | GAP
-known_fields
-before_fragment
-after_fragment
-change_set
-source_payload_fingerprint
+Mutation.sourceDomain/sourceType/sourceReferenceId/sourceOperationKey
+Mutation.mutationType/occurredAt/reason/commandFingerprint
+MutationEntry.orchidGroupId/role
+원본 Work·Audit·Lineage 데이터
+버전 관리되는 migration manifest와 run fingerprint
 ```
 
-- `VERIFIED`: 단일 원본 command/result가 대상과 변화를 직접 증명한다.
-- `DERIVED`: 둘 이상의 보존된 원본으로 결정적으로 계산할 수 있다.
-- `ATTESTED`: 원본 이벤트는 없지만 운영 책임자가 사건과 변화를 확인했다.
-- `GAP`: 현재 상태와 증명 가능한 변화의 차이만 알 수 있다.
-
-`known_fields` 밖의 값은 현재 값으로 채우거나 기본값을 추정하지 않는다. 예를 들어
-과거 Work target snapshot에는 위치 단위의 시작·끝, 상태, 예약 수량과 sort order가
-없으므로 해당 필드를 완전 snapshot처럼 기록하지 않는다.
+Work와 Audit의 상세는 원본 테이블이 계속 소유한다. 합성 origin과 운영자 확인 보정은
+`sourceType`으로 구분하고 입력 내용은 manifest와 command fingerprint로 고정한다.
+planner가 수량 replay에 사용하는 생성 수량과 변화량은 이관 검증용 일시 데이터이며
+Entry에 영속화하지 않는다. 원본에 없는 상태는 어떤 테이블에도 만들어 넣지 않는다.
 
 ### 3. 발생 시각과 적재 시각을 구분한다
 
@@ -141,12 +134,12 @@ source_payload_fingerprint
 
 | 원본 | Mutation 유형 | 처리 |
 |---|---|---|
-| Audit 생성 | `CREATE` | after fragment와 audit ID 보존 |
-| Audit 보정 | `CORRECTION` 또는 `UPDATE_DETAILS` | before/after fragment 보존 |
-| Work `DISCARD` | `DISCARD` | 수량·상태 before/after를 VERIFIED로 이관 |
-| Work `MOVE` | `MOVE` | 구역·배치 변경 fragment 이관 |
-| Work `DIVIDE`, `MOVEMENT`, `REPOT` | `TRANSFORM` | N:M source/result를 하나의 Mutation으로 이관 |
-| Work `POTTING` | `CREATE` | Inbound ID와 생성 결과를 하나의 Mutation으로 이관 |
+| Audit 생성 | `CREATE` | Audit identity와 결과 난 묶음 Entry를 연결 |
+| Audit 보정 | `CORRECTION` 또는 `UPDATE_DETAILS` | Audit identity와 대상 Entry를 연결 |
+| Work `DISCARD` | `DISCARD` | Work 효과와 대상 Entry를 연결 |
+| Work `MOVE` | `MOVE` | Work 효과와 대상 Entry를 연결 |
+| Work `DIVIDE`, `MOVEMENT`, `REPOT` | `TRANSFORM` | N:M source/result Entry를 하나의 Mutation으로 연결 |
+| Work `POTTING` | `CREATE` | Inbound ID와 생성 결과 Entry를 하나의 Mutation으로 연결 |
 | Lineage | 새 Mutation 없음 | 대응하는 Work Mutation에 `mutation_id` 연결 |
 | SalesInventoryMovement | 동작별 예약·출고 Mutation | 난 묶음 ID가 있는 행만 이관 |
 | 시스템 운영 전 참고 판매 전표 | Orchid Mutation 제외 | `LEGACY_REFERENCE_ONLY`로 Sales 원본 사실만 보존 |
@@ -164,28 +157,21 @@ sourceOperationKey = effectKey
 correlation ID도 `WORK_OPERATION:{workOperationId}`에서 결정적으로 생성한다. 따라서
 이관 후 기존 효과 재조회와 새 Engine Mutation의 추적 규칙이 같다.
 
-### 5. origin, 운영자 확인 보정과 gap도 이관 결과에 포함한다
+### 5. origin과 운영자 확인 보정도 같은 Entry로 이관한다
 
 생성 근거가 없는 240개 그룹에는 `MIGRATION/LEGACY_ORIGIN/{groupId}` identity의
-ORIGIN evidence를 만든다. `created_at`은 존재 시점으로 사용할 수 있지만 당시의
-전체 상태라고 주장하지 않는다. 수량은 기록된 delta를 현재 상태에서 역산할 수
-있을 때만 `DERIVED`로 기록한다.
+Mutation과 `HISTORICAL` Entry를 만든다. `created_at`은 존재 시점으로 사용할 수 있지만
+당시의 전체 상태라고 주장하거나 Entry snapshot으로 저장하지 않는다. 역산 수량은
+replay 검증에만 사용한다.
 
 그룹 234의 `+12`는 운영자가 실제 수량 보정으로 확인했으므로
-`MIGRATION/OPERATOR_ATTESTATION/234` identity의 `CORRECTION` Mutation과 `ATTESTED`
-evidence로 이관한다. 수량 fragment는 before 1,362, after 1,374로 기록하고 다른
-상태 필드는 추정하지 않는다. `orchid_groups.updated_at`은 원본 이벤트 시각이 아니라
-발생 시각의 근거로만 사용하며, migration 입력에 확인자·확인 시각·사유를 함께
-기록한다. 이 확인 정보는 코드에 하드코딩하지 않고 버전 관리되는 migration 입력과
-run 결과에 보존한다.
+`MIGRATION/OPERATOR_ATTESTATION/234` identity의 `CORRECTION` Mutation과 `HISTORICAL`
+Entry로 이관한다. before 1,362, after 1,374와 확인자·확인 시각·사유는 버전 관리되는
+manifest 입력과 fingerprint로 고정하고 Entry에는 복제하지 않는다.
 
-운영자 확인이 없는 replay 불일치는 `MIGRATION/HISTORY_GAP/{groupId}`의 GAP evidence로
-만든다. gap을 조용히 correction Mutation으로 바꾸거나 임의의 업무 원인을 붙이지
-않는다. 대상, 차이, 탐지 시점, 가능한 시간 범위와 승인자를 기록한다.
-
-새 운영 백업에서 발견되는 모든 gap도 같은 규칙으로 처리한다. 미분류 gap이 하나라도
-있으면 cutover를 중단한다. 분류되고 승인된 gap은 완전 이관의 실패가 아니라 원본
-자료의 한계를 명시적으로 보존한 결과다.
+운영자 확인이 없는 replay 불일치는 별도 GAP 행을 만들지 않고
+`UNCLASSIFIED_GAPS`로 보고해 cutover를 중단한다. 원인이 확인되면 원본 변환 규칙이나
+승인된 attestation을 manifest에 추가한 뒤 새 plan을 만든다.
 
 ### 6. 원본 업무 사실은 삭제하지 않는다
 
@@ -218,14 +204,14 @@ DRY_RUN
 source별 행 수·fingerprint, 변환 수, origin·attested correction·gap 수,
 `LEGACY_REFERENCE_ONLY` 제외 수와 검증 결과를 저장한다.
 이 테이블과 상태 전이는 Farm 핵심 도메인이 아닌 `migration` 지원 모듈이 소유한다.
-Farm의 `HistoricalEvidence`는 run Entity 연관을 갖지 않고 감사 추적용 scalar run ID만
+Farm의 `HISTORICAL` Entry는 run Entity 연관을 갖지 않고 감사 추적용 scalar run ID만
 보존하며, Farm application은 Migration application API를 통해 실행 상태를 제어한다.
 
 실행 절차는 다음과 같다.
 
 1. 운영 백업을 격리 DB에 복원하고 profiling SQL을 실행한다.
 2. stable source identity와 payload fingerprint로 dry-run plan을 만든다.
-3. Historical Mutation과 evidence를 batch로 적재한다.
+3. Historical Mutation과 `HISTORICAL` Entry를 batch로 적재한다.
 4. Work 효과와 Lineage를 대응 Mutation에 연결한다.
 5. source count, link 집합, 수량 delta와 현재 상태를 다시 검증한다.
 6. SHADOW 기간에 추가된 legacy source를 cutoff watermark 이후부터 반복 적재한다.
@@ -264,14 +250,13 @@ ENGINE만 허용한다.
 - expected Work source/result link의 누락과 초과가 0이다.
 - 모든 Lineage가 정확히 하나의 Mutation에 연결되고 ambiguous link가 0이다.
 - Audit와 Work의 중복 변환이 없다.
-- 생성 근거 그룹의 replay 결과가 현재 상태와 일치하거나 승인된 `ATTESTED` 보정 또는
-  GAP으로 설명된다.
-- synthetic ORIGIN, ATTESTED 보정, 미분류 GAP과 `LEGACY_REFERENCE_ONLY` Sales 건수가
+- 생성 근거 그룹의 replay 결과가 현재 상태와 일치하거나 승인된 보정으로 설명된다.
+- synthetic ORIGIN, 운영자 확인 보정, 미분류 GAP과 `LEGACY_REFERENCE_ONLY` Sales 건수가
   보고서에 명시된다.
 - 미분류 gap과 dangling source reference가 0이다.
 - historical import가 `orchid_groups`와 state revision을 변경하지 않는다.
 - baseline 이후 기존 reconciliation의 `ready=true`, `issues=[]`가 유지된다.
-- 같은 import를 재실행해 Mutation, evidence와 원본 link가 증가하지 않는다.
+- 같은 import를 재실행해 Mutation, Entry와 원본 link가 증가하지 않는다.
 
 ## 기각한 대안
 
@@ -311,14 +296,14 @@ profiling SQL과 attestation·gap 승인 기준
 | 항목 | 결과 |
 |---|---:|
 | Historical Mutation | 287 |
-| HistoricalEvidence | 321 |
+| HISTORICAL Entry | 321 |
 | Work Mutation / 연결 | 42 / 42 |
 | Audit Mutation | 4 |
 | 합성 ORIGIN | 240 |
 | ATTESTED CORRECTION | 1 |
 | Lineage 연결 | 16 |
 | 미분류 GAP | 0 |
-| Entry·Evidence 없는 Mutation | 0 |
+| Entry 없는 Mutation | 0 |
 | 재실행 신규 Mutation | 0 |
 | 재실행 replay Mutation | 287 |
 

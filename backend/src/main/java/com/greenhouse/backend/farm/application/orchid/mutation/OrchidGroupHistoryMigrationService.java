@@ -2,11 +2,11 @@ package com.greenhouse.backend.farm.application.orchid.mutation;
 
 import com.greenhouse.backend.common.exception.ConflictException;
 import com.greenhouse.backend.common.exception.NotFoundException;
-import com.greenhouse.backend.farm.domain.orchid.mutation.OrchidGroupHistoricalEvidence;
 import com.greenhouse.backend.farm.domain.orchid.mutation.OrchidGroupMutation;
+import com.greenhouse.backend.farm.domain.orchid.mutation.OrchidGroupMutationEntry;
 import com.greenhouse.backend.farm.repository.orchid.OrchidGroupRepository;
-import com.greenhouse.backend.farm.repository.orchid.mutation.OrchidGroupHistoricalEvidenceRepository;
 import com.greenhouse.backend.farm.repository.orchid.mutation.OrchidGroupLedgerCoverageRepository;
+import com.greenhouse.backend.farm.repository.orchid.mutation.OrchidGroupMutationEntryRepository;
 import com.greenhouse.backend.farm.repository.orchid.mutation.OrchidGroupMutationRepository;
 import com.greenhouse.backend.farm.repository.transformation.OrchidGroupLineageRepository;
 import com.greenhouse.backend.migration.application.orchid.OrchidGroupHistoryMigrationRunPhase;
@@ -37,7 +37,7 @@ public class OrchidGroupHistoryMigrationService {
 	private static final int ENGINE_SCHEMA_VERSION = 1;
 
 	private final OrchidGroupHistoryMigrationRunService runService;
-	private final OrchidGroupHistoricalEvidenceRepository evidenceRepository;
+	private final OrchidGroupMutationEntryRepository entryRepository;
 	private final OrchidGroupMutationRepository mutationRepository;
 	private final OrchidGroupRepository orchidGroupRepository;
 	private final OrchidGroupLedgerCoverageRepository coverageRepository;
@@ -84,7 +84,7 @@ public class OrchidGroupHistoryMigrationService {
 
 		int imported = 0;
 		int replayed = 0;
-		int evidenceCount = 0;
+		int entryCount = 0;
 		List<OrchidGroupHistoryMigrationImportedSource> importedSources = new ArrayList<>();
 		Instant recordedAt = Instant.now(clock);
 		for (OrchidGroupHistoricalMutationInput candidate : candidates) {
@@ -100,7 +100,7 @@ public class OrchidGroupHistoryMigrationService {
 				importedSources.add(new OrchidGroupHistoryMigrationImportedSource(
 						candidate.source(), existing.get().getId()));
 				replayed++;
-				evidenceCount += candidate.evidence().size();
+				entryCount += candidate.entries().size();
 				continue;
 			}
 			if (replayOnly) {
@@ -116,28 +116,18 @@ public class OrchidGroupHistoryMigrationService {
 					candidate.effectiveBusinessDate(),
 					candidate.reason(),
 					ENGINE_SCHEMA_VERSION));
-			List<OrchidGroupHistoricalEvidence> evidence = candidate.evidence().stream()
-					.map(input -> new OrchidGroupHistoricalEvidence(
-							run.id(),
-							mutation,
-							input.orchidGroupId(),
-							input.role(),
-							input.evidenceKind(),
-							input.evidenceQuality(),
-							input.knownFields(),
-							input.beforeFragment(),
-							input.afterFragment(),
-							input.changeSet(),
-							fingerprint.calculate(input)))
+			List<OrchidGroupMutationEntry> entries = candidate.entries().stream()
+					.map(input -> OrchidGroupMutationEntry.historical(
+							mutation, run.id(), input.orchidGroupId(), input.role()))
 					.toList();
-			evidenceRepository.saveAll(evidence);
+			entryRepository.saveAll(entries);
 			importedSources.add(new OrchidGroupHistoryMigrationImportedSource(
 					candidate.source(), mutation.getId()));
 			imported++;
-			evidenceCount += evidence.size();
+			entryCount += entries.size();
 		}
 		return new OrchidGroupHistoryMigrationBatchResult(
-				runKey, candidates.size(), imported, replayed, evidenceCount, importedSources);
+				runKey, candidates.size(), imported, replayed, entryCount, importedSources);
 	}
 
 	@Transactional
@@ -171,9 +161,9 @@ public class OrchidGroupHistoryMigrationService {
 		if (!run.sourceStateFingerprint().equals(reconciliation.currentStateFingerprint())) {
 			throw new ConflictException("Historical import 중 현재 난 묶음 상태가 변경되었습니다.");
 		}
-		long mutationWithoutEvidenceOrEntry = mutationRepository.countWithoutEntries();
-		if (mutationWithoutEvidenceOrEntry != 0) {
-			throw new ConflictException("Entry 또는 historical evidence가 없는 Mutation이 존재합니다.");
+		long mutationWithoutEntry = mutationRepository.countWithoutEntries();
+		if (mutationWithoutEntry != 0) {
+			throw new ConflictException("Entry가 없는 Mutation이 존재합니다.");
 		}
 		List<Long> unlinkedWorkEffectIds = workHistoricalEffectService.findUnlinkedIds(run.sourceCutoff());
 		if (!unlinkedWorkEffectIds.isEmpty()) {
@@ -190,8 +180,8 @@ public class OrchidGroupHistoryMigrationService {
 		result.put("ready", true);
 		result.put("currentStateFingerprint", reconciliation.currentStateFingerprint());
 		result.put("mutations", actualCounts.get(OrchidGroupHistoryMigrationPlanCommand.MUTATIONS));
-		result.put("evidence", actualCounts.get(OrchidGroupHistoryMigrationPlanCommand.EVIDENCE));
-		result.put("mutationWithoutEvidenceOrEntry", mutationWithoutEvidenceOrEntry);
+		result.put("entries", actualCounts.get(OrchidGroupHistoryMigrationPlanCommand.ENTRIES));
+		result.put("mutationWithoutEntry", mutationWithoutEntry);
 		result.put("unlinkedWorkEffects", 0);
 		result.put("unlinkedLineages", unlinkedLineageCount);
 		runService.verify(runKey, result, Instant.now(clock));
@@ -249,14 +239,14 @@ public class OrchidGroupHistoryMigrationService {
 
 	private void validateGroupsExist(List<OrchidGroupHistoricalMutationInput> candidates) {
 		Set<Long> groupIds = new HashSet<>();
-		candidates.forEach(candidate -> candidate.evidence().forEach(input ->
+		candidates.forEach(candidate -> candidate.entries().forEach(input ->
 				groupIds.add(input.orchidGroupId())));
 		Set<Long> existingIds = new HashSet<>();
 		orchidGroupRepository.findAllById(groupIds).forEach(group -> existingIds.add(group.getId()));
 		if (!existingIds.equals(groupIds)) {
 			Set<Long> missing = new HashSet<>(groupIds);
 			missing.removeAll(existingIds);
-			throw new NotFoundException("Historical evidence 대상 난 묶음을 찾을 수 없습니다: " + missing);
+			throw new NotFoundException("Historical Entry 대상 난 묶음을 찾을 수 없습니다: " + missing);
 		}
 	}
 
@@ -268,19 +258,19 @@ public class OrchidGroupHistoryMigrationService {
 		if (!mutation.hasSameCommandFingerprint(mutationFingerprint)) {
 			throw new ConflictException("같은 historical source identity의 payload가 변경되었습니다.");
 		}
-		List<OrchidGroupHistoricalEvidence> existingEvidence = evidenceRepository
+		List<OrchidGroupMutationEntry> existingEntries = entryRepository
 				.findByMutationIdOrderByOrchidGroupIdAsc(mutation.getId());
-		Map<Long, OrchidGroupHistoricalEvidence> byGroupId = new LinkedHashMap<>();
-		existingEvidence.forEach(evidence -> byGroupId.put(evidence.getOrchidGroupId(), evidence));
-		if (existingEvidence.size() != candidate.evidence().size()
-				|| existingEvidence.stream().anyMatch(evidence ->
-						!evidence.getMigrationRunId().equals(run.id()))) {
-			throw new ConflictException("Historical source identity가 다른 migration run 또는 evidence와 연결되어 있습니다.");
+		Map<Long, OrchidGroupMutationEntry> byGroupId = new LinkedHashMap<>();
+		existingEntries.forEach(entry -> byGroupId.put(entry.getOrchidGroupId(), entry));
+		if (existingEntries.size() != candidate.entries().size()
+				|| existingEntries.stream().anyMatch(entry ->
+						!run.id().equals(entry.getMigrationRunId()))) {
+			throw new ConflictException("Historical source identity가 다른 migration run 또는 Entry와 연결되어 있습니다.");
 		}
-		for (OrchidGroupHistoricalEvidenceInput input : candidate.evidence()) {
-			OrchidGroupHistoricalEvidence existing = byGroupId.get(input.orchidGroupId());
-			if (existing == null || !existing.getSourcePayloadFingerprint().equals(fingerprint.calculate(input))) {
-				throw new ConflictException("Historical source identity의 evidence payload가 변경되었습니다.");
+		for (OrchidGroupHistoricalEntryInput input : candidate.entries()) {
+			OrchidGroupMutationEntry existing = byGroupId.get(input.orchidGroupId());
+			if (existing == null || existing.getRole() != input.role()) {
+				throw new ConflictException("Historical source identity의 Entry 구성이 변경되었습니다.");
 			}
 		}
 	}
@@ -289,10 +279,10 @@ public class OrchidGroupHistoryMigrationService {
 		Map<String, Long> counts = new LinkedHashMap<>();
 		counts.put(
 				OrchidGroupHistoryMigrationPlanCommand.MUTATIONS,
-				evidenceRepository.countDistinctMutationsByMigrationRunId(runId));
+				entryRepository.countDistinctMutationsByMigrationRunId(runId));
 		counts.put(
-				OrchidGroupHistoryMigrationPlanCommand.EVIDENCE,
-				evidenceRepository.countByMigrationRunId(runId));
+				OrchidGroupHistoryMigrationPlanCommand.ENTRIES,
+				entryRepository.countByMigrationRunId(runId));
 		return Map.copyOf(counts);
 	}
 
@@ -302,7 +292,7 @@ public class OrchidGroupHistoryMigrationService {
 		List<String> mismatches = new ArrayList<>();
 		for (String key : List.of(
 				OrchidGroupHistoryMigrationPlanCommand.MUTATIONS,
-				OrchidGroupHistoryMigrationPlanCommand.EVIDENCE)) {
+				OrchidGroupHistoryMigrationPlanCommand.ENTRIES)) {
 			if (!actualCounts.get(key).equals(run.plannedCounts().get(key))) {
 				mismatches.add(key + " expected=" + run.plannedCounts().get(key)
 						+ " actual=" + actualCounts.get(key));

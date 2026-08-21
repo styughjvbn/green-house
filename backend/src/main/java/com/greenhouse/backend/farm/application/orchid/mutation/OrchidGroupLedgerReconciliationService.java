@@ -214,7 +214,7 @@ public class OrchidGroupLedgerReconciliationService {
 			List<Long> ids = groups.subList(offset, Math.min(offset + BATCH_SIZE, groups.size())).stream()
 					.map(OrchidGroupLedgerReconciliationGroup::orchidGroupId)
 					.toList();
-			entryRepository.findByOrchidGroupIdInOrderByOrchidGroupIdAscStateRevisionAfterAsc(ids)
+			entryRepository.findStateChainByOrchidGroupIdIn(ids)
 					.forEach(entry -> result.computeIfAbsent(entry.getOrchidGroupId(), ignored -> new ArrayList<>())
 							.add(entry));
 		}

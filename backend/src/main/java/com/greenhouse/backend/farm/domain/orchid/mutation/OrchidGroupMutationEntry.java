@@ -60,7 +60,7 @@ public class OrchidGroupMutationEntry {
 	@Column(name = "state_revision_before")
 	private Long stateRevisionBefore;
 
-	@Column(name = "state_revision_after", nullable = false)
+	@Column(name = "state_revision_after")
 	private Long stateRevisionAfter;
 
 	@JdbcTypeCode(SqlTypes.JSON)
@@ -68,8 +68,11 @@ public class OrchidGroupMutationEntry {
 	private OrchidGroupStateSnapshot beforeState;
 
 	@JdbcTypeCode(SqlTypes.JSON)
-	@Column(name = "after_state", nullable = false, columnDefinition = "jsonb")
+	@Column(name = "after_state", columnDefinition = "jsonb")
 	private OrchidGroupStateSnapshot afterState;
+
+	@Column(name = "migration_run_id")
+	private Long migrationRunId;
 
 	private OrchidGroupMutationEntry(
 			OrchidGroupMutation mutation,
@@ -79,11 +82,12 @@ public class OrchidGroupMutationEntry {
 			Long stateRevisionBefore,
 			Long stateRevisionAfter,
 			OrchidGroupStateSnapshot beforeState,
-			OrchidGroupStateSnapshot afterState) {
-		if (mutation == null || orchidGroupId == null || entryKind == null || role == null || afterState == null) {
+			OrchidGroupStateSnapshot afterState,
+			Long migrationRunId) {
+		if (mutation == null || orchidGroupId == null || entryKind == null || role == null) {
 			throw new IllegalArgumentException("Mutation entry 필수 값이 누락되었습니다.");
 		}
-		validateRevisions(entryKind, stateRevisionBefore, stateRevisionAfter, beforeState);
+		validateState(entryKind, stateRevisionBefore, stateRevisionAfter, beforeState, afterState, migrationRunId);
 		this.mutation = mutation;
 		this.orchidGroupId = orchidGroupId;
 		this.entryKind = entryKind;
@@ -92,6 +96,7 @@ public class OrchidGroupMutationEntry {
 		this.stateRevisionAfter = stateRevisionAfter;
 		this.beforeState = beforeState;
 		this.afterState = afterState;
+		this.migrationRunId = migrationRunId;
 	}
 
 	public static OrchidGroupMutationEntry baseline(
@@ -100,7 +105,7 @@ public class OrchidGroupMutationEntry {
 			OrchidGroupStateSnapshot afterState) {
 		return new OrchidGroupMutationEntry(
 				mutation, orchidGroupId, OrchidGroupMutationEntryKind.BASELINE,
-				OrchidGroupMutationEntryRole.AFFECTED, null, 0L, null, afterState);
+				OrchidGroupMutationEntryRole.AFFECTED, null, 0L, null, afterState, null);
 	}
 
 	public static OrchidGroupMutationEntry created(
@@ -110,7 +115,7 @@ public class OrchidGroupMutationEntry {
 			OrchidGroupStateSnapshot afterState) {
 		return new OrchidGroupMutationEntry(
 				mutation, orchidGroupId, OrchidGroupMutationEntryKind.CREATE,
-				role, null, 1L, null, afterState);
+				role, null, 1L, null, afterState, null);
 	}
 
 	public static OrchidGroupMutationEntry changed(
@@ -122,19 +127,35 @@ public class OrchidGroupMutationEntry {
 			OrchidGroupStateSnapshot afterState) {
 		return new OrchidGroupMutationEntry(
 				mutation, orchidGroupId, OrchidGroupMutationEntryKind.CHANGE,
-				role, stateRevisionBefore, stateRevisionBefore + 1, beforeState, afterState);
+				role, stateRevisionBefore, stateRevisionBefore + 1, beforeState, afterState, null);
 	}
 
-	private void validateRevisions(
+	public static OrchidGroupMutationEntry historical(
+			OrchidGroupMutation mutation,
+			Long migrationRunId,
+			Long orchidGroupId,
+			OrchidGroupMutationEntryRole role) {
+		return new OrchidGroupMutationEntry(
+				mutation, orchidGroupId, OrchidGroupMutationEntryKind.HISTORICAL,
+				role, null, null, null, null, migrationRunId);
+	}
+
+	private void validateState(
 			OrchidGroupMutationEntryKind kind,
 			Long before,
 			Long after,
-			OrchidGroupStateSnapshot beforeState) {
+			OrchidGroupStateSnapshot beforeState,
+			OrchidGroupStateSnapshot afterState,
+			Long migrationRunId) {
 		boolean valid = switch (kind) {
-			case BASELINE -> before == null && Long.valueOf(0).equals(after) && beforeState == null;
-			case CREATE -> before == null && Long.valueOf(1).equals(after) && beforeState == null;
+			case BASELINE -> before == null && Long.valueOf(0).equals(after)
+					&& beforeState == null && afterState != null && migrationRunId == null;
+			case CREATE -> before == null && Long.valueOf(1).equals(after)
+					&& beforeState == null && afterState != null && migrationRunId == null;
 			case CHANGE -> before != null && before >= 0 && Long.valueOf(before + 1).equals(after)
-					&& beforeState != null;
+					&& beforeState != null && afterState != null && migrationRunId == null;
+			case HISTORICAL -> before == null && after == null && beforeState == null
+					&& afterState == null && migrationRunId != null;
 		};
 		if (!valid) {
 			throw new IllegalArgumentException("Mutation entry revision이 entry kind와 일치하지 않습니다.");

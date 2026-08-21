@@ -8,7 +8,7 @@ public record OrchidGroupHistoryMigrationBatchResult(
 		int requestedMutations,
 		int importedMutations,
 		int replayedMutations,
-		int evidenceCount,
+		int entryCount,
 		List<OrchidGroupHistoryMigrationImportedSource> importedSources) {
 
 	public OrchidGroupHistoryMigrationBatchResult {

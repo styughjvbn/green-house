@@ -4,7 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import com.greenhouse.backend.common.exception.ConflictException;
-import com.greenhouse.backend.farm.application.orchid.mutation.OrchidGroupHistoricalEvidenceInput;
+import com.greenhouse.backend.farm.application.orchid.mutation.OrchidGroupHistoricalEntryInput;
 import com.greenhouse.backend.farm.application.orchid.mutation.OrchidGroupHistoricalMutationInput;
 import com.greenhouse.backend.farm.application.orchid.mutation.OrchidGroupHistoryMigrationPlanCommand;
 import com.greenhouse.backend.farm.application.orchid.mutation.OrchidGroupHistoryMigrationService;
@@ -12,8 +12,6 @@ import com.greenhouse.backend.farm.application.orchid.mutation.OrchidGroupLedger
 import com.greenhouse.backend.farm.application.orchid.mutation.OrchidGroupLedgerCutoverService;
 import com.greenhouse.backend.farm.application.orchid.mutation.OrchidGroupLedgerReconciliationStage;
 import com.greenhouse.backend.farm.application.orchid.mutation.OrchidGroupMutationFingerprint;
-import com.greenhouse.backend.farm.domain.orchid.mutation.OrchidGroupHistoricalEvidenceKind;
-import com.greenhouse.backend.farm.domain.orchid.mutation.OrchidGroupHistoricalEvidenceQuality;
 import com.greenhouse.backend.farm.domain.orchid.mutation.OrchidGroupMutationEntryRole;
 import com.greenhouse.backend.farm.domain.orchid.mutation.OrchidGroupMutationSource;
 import com.greenhouse.backend.farm.domain.orchid.mutation.OrchidGroupMutationSourceDomain;
@@ -48,7 +46,7 @@ class OrchidGroupHistoricalMigrationPostgresE2ETest extends WorkE2ETestBase {
 	}
 
 	@Test
-	void importsAttestedEvidenceIdempotentlyWithoutChangingCurrentStateThenAllowsCutover() {
+	void importsHistoricalEntriesIdempotentlyWithoutChangingCurrentStateThenAllowsCutover() {
 		UUID runKey = UUID.randomUUID();
 		Instant sourceCutoff = Instant.parse("2026-08-21T00:00:00Z");
 		LocalDate businessDate = LocalDate.of(2026, 8, 21);
@@ -59,7 +57,7 @@ class OrchidGroupHistoricalMigrationPostgresE2ETest extends WorkE2ETestBase {
 				fingerprint("manifest"),
 				businessDate,
 				Map.of("ORCHID_GROUP", 1L),
-				Map.of("MUTATIONS", 1L, "EVIDENCE", 1L));
+				Map.of("MUTATIONS", 1L, "ENTRIES", 1L));
 		var candidate = correctionCandidate(scenario.orchidGroupId(), 88, 100);
 
 		Long firstRunId = migrationService.plan(plan);
@@ -83,10 +81,13 @@ class OrchidGroupHistoricalMigrationPostgresE2ETest extends WorkE2ETestBase {
 				scenario.orchidGroupId())).isNull();
 		assertThat(jdbcTemplate.queryForObject(
 				"SELECT COUNT(*) FROM orchid_group_mutation_entries",
-				Long.class)).isZero();
-		assertThat(jdbcTemplate.queryForObject(
-				"SELECT COUNT(*) FROM orchid_group_historical_evidence",
 				Long.class)).isEqualTo(1);
+		assertThat(jdbcTemplate.queryForObject(
+				"SELECT COUNT(*) FROM orchid_group_mutation_entries WHERE entry_kind = 'HISTORICAL'",
+				Long.class)).isEqualTo(1);
+		assertThat(jdbcTemplate.queryForObject(
+				"SELECT to_regclass('orchid_group_historical_evidence')",
+				String.class)).isNull();
 
 		assertThatThrownBy(() -> migrationService.importBatch(
 				runKey,
@@ -96,7 +97,7 @@ class OrchidGroupHistoricalMigrationPostgresE2ETest extends WorkE2ETestBase {
 
 		assertThat(migrationService.completeImport(runKey))
 				.containsEntry("MUTATIONS", 1L)
-				.containsEntry("EVIDENCE", 1L);
+				.containsEntry("ENTRIES", 1L);
 		assertThat(migrationService.verify(runKey)).containsEntry("ready", true);
 		assertThat(migrationService.importBatch(runKey, List.of(candidate)).replayedMutations())
 				.isEqualTo(1);
@@ -109,11 +110,8 @@ class OrchidGroupHistoricalMigrationPostgresE2ETest extends WorkE2ETestBase {
 				.isEqualTo(OrchidGroupLedgerReconciliationStage.BASELINE_PREPARING);
 		assertThat(cutover.reconciliation().ready()).isTrue();
 		assertThat(jdbcTemplate.queryForObject(
-				"SELECT COUNT(*) FROM orchid_group_historical_evidence",
-				Long.class)).isEqualTo(1);
-		assertThat(jdbcTemplate.queryForObject(
 				"SELECT COUNT(*) FROM orchid_group_mutation_entries",
-				Long.class)).isEqualTo(1);
+				Long.class)).isEqualTo(2);
 	}
 
 	@Test
@@ -127,7 +125,7 @@ class OrchidGroupHistoricalMigrationPostgresE2ETest extends WorkE2ETestBase {
 				fingerprint("manifest"),
 				businessDate,
 				Map.of("ORCHID_GROUP", 1L),
-				Map.of("MUTATIONS", 1L, "EVIDENCE", 1L)));
+				Map.of("MUTATIONS", 1L, "ENTRIES", 1L)));
 
 		assertThatThrownBy(() -> cutoverService.execute(new OrchidGroupLedgerCutoverCommand(
 				UUID.randomUUID(), businessDate, "1.0.0", "1.0.0", false)))
@@ -151,16 +149,15 @@ class OrchidGroupHistoricalMigrationPostgresE2ETest extends WorkE2ETestBase {
 				Instant.parse("2026-08-08T23:49:32Z"),
 				LocalDate.of(2026, 8, 9),
 				"운영자 확인 과거 수량 보정",
-				List.of(new OrchidGroupHistoricalEvidenceInput(
+				List.of(new OrchidGroupHistoricalEntryInput(
 						groupId,
 						OrchidGroupMutationEntryRole.AFFECTED,
-						OrchidGroupHistoricalEvidenceKind.CHANGE,
-						OrchidGroupHistoricalEvidenceQuality.ATTESTED,
-						List.of("quantity"),
-						Map.of("quantity", beforeQuantity),
-						Map.of("quantity", afterQuantity),
-						Map.of("quantityDelta", afterQuantity - beforeQuantity),
-						Map.of("attestationReference", "OWNER_CONFIRMATION:2026-08-21"))));
+						null,
+						afterQuantity - beforeQuantity)),
+				Map.of(
+						"beforeQuantity", beforeQuantity,
+						"afterQuantity", afterQuantity,
+						"attestationReference", "OWNER_CONFIRMATION:2026-08-21"));
 	}
 
 	private String fingerprint(String value) {

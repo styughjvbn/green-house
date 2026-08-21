@@ -7,8 +7,6 @@ import com.greenhouse.backend.audit.application.OrchidGroupAuditHistoryReader;
 import com.greenhouse.backend.audit.domain.AuditAction;
 import com.greenhouse.backend.common.config.TimeConfig;
 import com.greenhouse.backend.common.exception.ConflictException;
-import com.greenhouse.backend.farm.domain.orchid.mutation.OrchidGroupHistoricalEvidenceKind;
-import com.greenhouse.backend.farm.domain.orchid.mutation.OrchidGroupHistoricalEvidenceQuality;
 import com.greenhouse.backend.farm.domain.orchid.mutation.OrchidGroupMutationEntryRole;
 import com.greenhouse.backend.farm.domain.orchid.mutation.OrchidGroupMutationSource;
 import com.greenhouse.backend.farm.domain.orchid.mutation.OrchidGroupMutationType;
@@ -40,9 +38,6 @@ public class OrchidGroupHistoryMigrationPlanner {
 
 	private static final int BATCH_SIZE = 500;
 	private static final TypeReference<List<Map<String, Object>>> MAP_LIST_TYPE = new TypeReference<>() { };
-	private static final Set<String> RESULT_STATE_FIELDS = Set.of(
-			"quantity", "bedZoneId", "ageYear", "potSize", "trayCount", "endPosition",
-			"placementType", "startPosition", "splitPlacementAllowed", "memo");
 
 	private final WorkHistoricalEffectService workEffectService;
 	private final OrchidGroupAuditHistoryReader auditHistoryReader;
@@ -89,17 +84,16 @@ public class OrchidGroupHistoryMigrationPlanner {
 		ReplayState replay = replayState(candidates);
 		Map<Long, OrchidGroupHistoricalStateRow> groupsById = new LinkedHashMap<>();
 		groups.forEach(group -> groupsById.put(group.orchidGroupId(), group));
-		validateReferencedGroups(replay, groupsById);
+		validateReferencedGroups(candidates, groupsById);
 		addSyntheticOrigins(candidates, replay, groups);
 		validateReplay(candidates, groupsById);
 		validateUniqueSources(candidates);
 
 		candidates.sort(Comparator.comparing(OrchidGroupHistoricalMutationInput::occurredAt)
 				.thenComparing(candidate -> sourceKey(candidate.source())));
-		long evidenceCount = candidates.stream().mapToLong(candidate -> candidate.evidence().size()).sum();
+		long entryCount = candidates.stream().mapToLong(candidate -> candidate.entries().size()).sum();
 		long originCount = candidates.stream()
-				.flatMap(candidate -> candidate.evidence().stream())
-				.filter(evidence -> evidence.evidenceKind() == OrchidGroupHistoricalEvidenceKind.ORIGIN)
+				.filter(candidate -> candidate.source().type().equals("LEGACY_ORIGIN"))
 				.count();
 		Map<String, Long> sourceCounts = orderedCounts(
 				"ORCHID_GROUP", (long) groups.size(),
@@ -109,7 +103,7 @@ public class OrchidGroupHistoryMigrationPlanner {
 				"LEGACY_REFERENCE_SALES_ITEM", salesReferenceCounts.salesItems());
 		Map<String, Long> plannedCounts = orderedCounts(
 				OrchidGroupHistoryMigrationPlanCommand.MUTATIONS, (long) candidates.size(),
-				OrchidGroupHistoryMigrationPlanCommand.EVIDENCE, evidenceCount,
+				OrchidGroupHistoryMigrationPlanCommand.ENTRIES, entryCount,
 				"WORK_MUTATIONS", (long) workEffects.size(),
 				"AUDIT_MUTATIONS", (long) auditEvents.size(),
 				"SYNTHETIC_ORIGINS", originCount,
@@ -187,7 +181,7 @@ public class OrchidGroupHistoryMigrationPlanner {
 		if (effect.links().isEmpty()) {
 			throw new ConflictException("Historical Work 효과에 난 묶음 link가 없습니다: " + effect.effectId());
 		}
-		List<OrchidGroupHistoricalEvidenceInput> evidence = effect.links().stream()
+		List<OrchidGroupHistoricalEntryInput> entries = effect.links().stream()
 				.map(link -> fromWorkLink(effect, link))
 				.toList();
 		return new OrchidGroupHistoricalMutationInput(
@@ -196,66 +190,50 @@ public class OrchidGroupHistoryMigrationPlanner {
 				effect.appliedAt(),
 				businessDate(effect.appliedAt()),
 				"Legacy Work effect " + effect.handlerCode(),
-				evidence);
+				entries,
+				workPayload(effect));
 	}
 
-	private OrchidGroupHistoricalEvidenceInput fromWorkLink(
+	private OrchidGroupHistoricalEntryInput fromWorkLink(
 			HistoricalWorkEffect effect,
 			HistoricalWorkEffectLink link) {
-		Map<String, Object> sourcePayload = linkedWorkPayload(effect, link);
 		return switch (effect.handlerCode()) {
-			case "DISCARD" -> discardEvidence(effect, link, sourcePayload);
-			case "MOVE" -> moveEvidence(effect, link, sourcePayload);
-			case "DIVIDE", "MOVEMENT", "REPOT" -> transformEvidence(effect, link, sourcePayload);
-			case "POTTING" -> pottingEvidence(effect, link, sourcePayload);
-			default -> throw new IllegalArgumentException("지원하지 않는 Work evidence입니다.");
+			case "DISCARD" -> discardEntry(effect, link);
+			case "MOVE" -> moveEntry(effect, link);
+			case "DIVIDE", "MOVEMENT", "REPOT" -> transformEntry(effect, link);
+			case "POTTING" -> pottingEntry(effect, link);
+			default -> throw new IllegalArgumentException("지원하지 않는 Work historical Entry입니다.");
 		};
 	}
 
-	private OrchidGroupHistoricalEvidenceInput discardEvidence(
+	private OrchidGroupHistoricalEntryInput discardEntry(
 			HistoricalWorkEffect effect,
-			HistoricalWorkEffectLink link,
-			Map<String, Object> sourcePayload) {
+			HistoricalWorkEffectLink link) {
 		Map<String, Object> result = effect.resultDetails();
 		requireGroup(result, "orchidGroupId", link.orchidGroupId(), effect.effectId());
 		int discarded = intValue(result.get("discardedQuantity"), "discardedQuantity");
-		return evidence(
+		return historicalEntry(
 				link.orchidGroupId(),
 				OrchidGroupMutationEntryRole.AFFECTED,
-				OrchidGroupHistoricalEvidenceKind.CHANGE,
-				OrchidGroupHistoricalEvidenceQuality.VERIFIED,
-				List.of("quantity", "status"),
-				mapOf("quantity", result.get("beforeQuantity"), "status", result.get("beforeStatus")),
-				mapOf("quantity", result.get("remainingQuantity"), "status", result.get("status")),
-				mapOf("quantityDelta", -discarded, "reason", result.get("reason")),
-				sourcePayload);
+				null,
+				-discarded);
 	}
 
-	private OrchidGroupHistoricalEvidenceInput moveEvidence(
+	private OrchidGroupHistoricalEntryInput moveEntry(
 			HistoricalWorkEffect effect,
-			HistoricalWorkEffectLink link,
-			Map<String, Object> sourcePayload) {
+			HistoricalWorkEffectLink link) {
 		Map<String, Object> result = effect.resultDetails();
 		requireGroup(result, "orchidGroupId", link.orchidGroupId(), effect.effectId());
-		return evidence(
+		return historicalEntry(
 				link.orchidGroupId(),
 				OrchidGroupMutationEntryRole.AFFECTED,
-				OrchidGroupHistoricalEvidenceKind.CHANGE,
-				OrchidGroupHistoricalEvidenceQuality.VERIFIED,
-				List.of("bedZoneId", "startPosition", "endPosition"),
-				mapOf("bedZoneId", result.get("fromBedZoneId")),
-				mapOf(
-						"bedZoneId", result.get("toBedZoneId"),
-						"startPosition", result.get("startPosition"),
-						"endPosition", result.get("endPosition")),
-				mapOf("movement", "ZONE"),
-				sourcePayload);
+				null,
+				null);
 	}
 
-	private OrchidGroupHistoricalEvidenceInput transformEvidence(
+	private OrchidGroupHistoricalEntryInput transformEntry(
 			HistoricalWorkEffect effect,
-			HistoricalWorkEffectLink link,
-			Map<String, Object> sourcePayload) {
+			HistoricalWorkEffectLink link) {
 		if (link.relationType() == WorkEffectOrchidGroupRelationType.SOURCE) {
 			Map<String, Object> sourceRow = findByGroupId(
 					listOfMaps(effect.commandDetails().get("sources")),
@@ -263,16 +241,11 @@ public class OrchidGroupHistoryMigrationPlanner {
 					link.orchidGroupId(),
 					effect.effectId());
 			int inputQuantity = intValue(sourceRow.get("inputQuantity"), "inputQuantity");
-			return evidence(
+			return historicalEntry(
 					link.orchidGroupId(),
 					OrchidGroupMutationEntryRole.SOURCE,
-					OrchidGroupHistoricalEvidenceKind.CHANGE,
-					OrchidGroupHistoricalEvidenceQuality.VERIFIED,
-					List.of("quantity"),
 					null,
-					null,
-					mapOf("inputQuantity", inputQuantity, "quantityDelta", -inputQuantity),
-					sourcePayload);
+					-inputQuantity);
 		}
 		Map<String, Object> resultRow = findByGroupId(
 				listOfMaps(effect.resultDetails().get("results")),
@@ -285,23 +258,19 @@ public class OrchidGroupHistoryMigrationPlanner {
 		if (resultIndex < 0 || resultIndex >= commandRows.size()) {
 			throw new ConflictException("Work 결과 command/result 순서를 대응할 수 없습니다: " + effect.effectId());
 		}
-		Map<String, Object> after = stateFragment(commandRows.get(resultIndex), resultRow);
-		return evidence(
+		Object quantity = resultRow.get("quantity") != null
+				? resultRow.get("quantity")
+				: commandRows.get(resultIndex).get("quantity");
+		return historicalEntry(
 				link.orchidGroupId(),
 				OrchidGroupMutationEntryRole.RESULT,
-				OrchidGroupHistoricalEvidenceKind.CREATE,
-				OrchidGroupHistoricalEvidenceQuality.VERIFIED,
-				knownFields(after),
-				null,
-				after,
-				null,
-				sourcePayload);
+				intValue(quantity, "result quantity"),
+				null);
 	}
 
-	private OrchidGroupHistoricalEvidenceInput pottingEvidence(
+	private OrchidGroupHistoricalEntryInput pottingEntry(
 			HistoricalWorkEffect effect,
-			HistoricalWorkEffectLink link,
-			Map<String, Object> sourcePayload) {
+			HistoricalWorkEffectLink link) {
 		List<Object> groupIds = list(effect.resultDetails().get("createdOrchidGroupIds"));
 		int index = -1;
 		for (int candidateIndex = 0; candidateIndex < groupIds.size(); candidateIndex++) {
@@ -315,19 +284,11 @@ public class OrchidGroupHistoryMigrationPlanner {
 		if (index < 0 || index >= resultCommands.size()) {
 			throw new ConflictException("포트 Work 결과를 난 묶음과 대응할 수 없습니다: " + effect.effectId());
 		}
-		Map<String, Object> after = stateFragment(
-				resultCommands.get(index),
-				mapOf("quantity", resultCommands.get(index).get("quantity")));
-		return evidence(
+		return historicalEntry(
 				link.orchidGroupId(),
 				OrchidGroupMutationEntryRole.RESULT,
-				OrchidGroupHistoricalEvidenceKind.CREATE,
-				OrchidGroupHistoricalEvidenceQuality.VERIFIED,
-				knownFields(after),
-				null,
-				after,
-				null,
-				sourcePayload);
+				intValue(resultCommands.get(index).get("quantity"), "potting quantity"),
+				null);
 	}
 
 	private OrchidGroupHistoricalMutationInput fromAuditEvent(OrchidGroupAuditHistoryEvent event) {
@@ -341,15 +302,15 @@ public class OrchidGroupHistoryMigrationPlanner {
 			default -> throw new ConflictException(
 					"지원하지 않는 OrchidGroup Audit action입니다: " + event.action());
 		};
-		Map<String, Object> changeSet = new LinkedHashMap<>();
-		changeSet.put("changedFields", event.changedFields());
-		if (event.beforeData().get("quantity") != null && event.afterData().get("quantity") != null) {
-			changeSet.put("quantityDelta",
-					intValue(event.afterData().get("quantity"), "after quantity")
-							- intValue(event.beforeData().get("quantity"), "before quantity"));
+		Integer creationQuantity = null;
+		Integer quantityDelta = null;
+		if (event.action() == AuditAction.CREATED && event.afterData().get("quantity") != null) {
+			creationQuantity = intValue(event.afterData().get("quantity"), "created quantity");
 		}
-		Set<String> knownFields = new HashSet<>(event.beforeData().keySet());
-		knownFields.addAll(event.afterData().keySet());
+		if (event.beforeData().get("quantity") != null && event.afterData().get("quantity") != null) {
+			quantityDelta = intValue(event.afterData().get("quantity"), "after quantity")
+					- intValue(event.beforeData().get("quantity"), "before quantity");
+		}
 		Map<String, Object> sourcePayload = mapOf(
 				"auditEventId", event.auditEventId(),
 				"action", event.action().name(),
@@ -363,20 +324,14 @@ public class OrchidGroupHistoryMigrationPlanner {
 				event.occurredAt(),
 				businessDate(event.occurredAt()),
 				"Legacy OrchidGroup audit " + event.action(),
-				List.of(evidence(
+				List.of(historicalEntry(
 						event.orchidGroupId(),
 						event.action() == AuditAction.CREATED
 								? OrchidGroupMutationEntryRole.RESULT
 								: OrchidGroupMutationEntryRole.AFFECTED,
-						event.action() == AuditAction.CREATED
-								? OrchidGroupHistoricalEvidenceKind.CREATE
-								: OrchidGroupHistoricalEvidenceKind.CHANGE,
-						OrchidGroupHistoricalEvidenceQuality.VERIFIED,
-						knownFields.stream().sorted().toList(),
-						event.beforeData().isEmpty() ? null : event.beforeData(),
-						event.afterData().isEmpty() ? null : event.afterData(),
-						Collections.unmodifiableMap(changeSet),
-						sourcePayload)));
+						creationQuantity,
+						quantityDelta)),
+				sourcePayload);
 	}
 
 	private OrchidGroupHistoricalMutationInput fromAttestation(
@@ -398,16 +353,12 @@ public class OrchidGroupHistoryMigrationPlanner {
 				correction.occurredAt(),
 				businessDate(correction.occurredAt()),
 				correction.reason(),
-				List.of(evidence(
+				List.of(historicalEntry(
 						correction.orchidGroupId(),
 						OrchidGroupMutationEntryRole.AFFECTED,
-						OrchidGroupHistoricalEvidenceKind.CHANGE,
-						OrchidGroupHistoricalEvidenceQuality.ATTESTED,
-						List.of("quantity"),
-						mapOf("quantity", correction.beforeQuantity()),
-						mapOf("quantity", correction.afterQuantity()),
-						mapOf("quantityDelta", delta),
-						sourcePayload)));
+						null,
+						delta)),
+				sourcePayload);
 	}
 
 	private void addSyntheticOrigins(
@@ -437,16 +388,12 @@ public class OrchidGroupHistoryMigrationPlanner {
 					occurredAt,
 					businessDate(occurredAt),
 					"생성 근거가 없는 legacy 난 묶음 origin",
-					List.of(evidence(
+					List.of(historicalEntry(
 							group.orchidGroupId(),
 							OrchidGroupMutationEntryRole.RESULT,
-							OrchidGroupHistoricalEvidenceKind.ORIGIN,
-							OrchidGroupHistoricalEvidenceQuality.DERIVED,
-							List.of("quantity"),
-							null,
-							mapOf("quantity", originQuantity),
-							null,
-							sourcePayload))));
+							originQuantity,
+							null)),
+					sourcePayload));
 		}
 	}
 
@@ -454,22 +401,16 @@ public class OrchidGroupHistoryMigrationPlanner {
 		Map<Long, Integer> creations = new HashMap<>();
 		Map<Long, Integer> deltas = new HashMap<>();
 		for (OrchidGroupHistoricalMutationInput candidate : candidates) {
-			for (OrchidGroupHistoricalEvidenceInput evidence : candidate.evidence()) {
-				Object creationQuantity = evidence.afterFragment() == null
-						? null
-						: evidence.afterFragment().get("quantity");
-				if ((evidence.evidenceKind() == OrchidGroupHistoricalEvidenceKind.CREATE
-						|| evidence.evidenceKind() == OrchidGroupHistoricalEvidenceKind.ORIGIN)
-						&& creationQuantity != null) {
+			for (OrchidGroupHistoricalEntryInput entry : candidate.entries()) {
+				if (entry.creationQuantity() != null) {
 					Integer previous = creations.putIfAbsent(
-							evidence.orchidGroupId(), intValue(creationQuantity, "creation quantity"));
+							entry.orchidGroupId(), entry.creationQuantity());
 					if (previous != null) {
-						throw new ConflictException("난 묶음 생성 근거가 중복됩니다: " + evidence.orchidGroupId());
+						throw new ConflictException("난 묶음 생성 근거가 중복됩니다: " + entry.orchidGroupId());
 					}
 				}
-				Object delta = evidence.changeSet() == null ? null : evidence.changeSet().get("quantityDelta");
-				if (delta != null) {
-					deltas.merge(evidence.orchidGroupId(), intValue(delta, "quantity delta"), Integer::sum);
+				if (entry.quantityDelta() != null) {
+					deltas.merge(entry.orchidGroupId(), entry.quantityDelta(), Integer::sum);
 				}
 			}
 		}
@@ -477,10 +418,11 @@ public class OrchidGroupHistoryMigrationPlanner {
 	}
 
 	private void validateReferencedGroups(
-			ReplayState replay,
+			List<OrchidGroupHistoricalMutationInput> candidates,
 			Map<Long, OrchidGroupHistoricalStateRow> groupsById) {
-		Set<Long> referenced = new HashSet<>(replay.creationQuantities().keySet());
-		referenced.addAll(replay.quantityDeltas().keySet());
+		Set<Long> referenced = new HashSet<>();
+		candidates.forEach(candidate -> candidate.entries().forEach(entry ->
+				referenced.add(entry.orchidGroupId())));
 		referenced.removeAll(groupsById.keySet());
 		if (!referenced.isEmpty()) {
 			throw new ConflictException("Historical source가 없는 난 묶음을 참조합니다: " + referenced);
@@ -516,23 +458,15 @@ public class OrchidGroupHistoryMigrationPlanner {
 		});
 	}
 
-	private OrchidGroupHistoricalEvidenceInput evidence(
+	private OrchidGroupHistoricalEntryInput historicalEntry(
 			Long groupId,
 			OrchidGroupMutationEntryRole role,
-			OrchidGroupHistoricalEvidenceKind kind,
-			OrchidGroupHistoricalEvidenceQuality quality,
-			List<String> knownFields,
-			Map<String, Object> before,
-			Map<String, Object> after,
-			Map<String, Object> changeSet,
-			Map<String, Object> sourcePayload) {
-		return new OrchidGroupHistoricalEvidenceInput(
-				groupId, role, kind, quality, knownFields, before, after, changeSet, sourcePayload);
+			Integer creationQuantity,
+			Integer quantityDelta) {
+		return new OrchidGroupHistoricalEntryInput(groupId, role, creationQuantity, quantityDelta);
 	}
 
-	private Map<String, Object> linkedWorkPayload(
-			HistoricalWorkEffect effect,
-			HistoricalWorkEffectLink link) {
+	private Map<String, Object> workPayload(HistoricalWorkEffect effect) {
 		return mapOf(
 				"effectId", effect.effectId(),
 				"workOperationId", effect.workOperationId(),
@@ -541,29 +475,7 @@ public class OrchidGroupHistoryMigrationPlanner {
 				"appliedAt", effect.appliedAt(),
 				"commandDetails", effect.commandDetails(),
 				"resultDetails", effect.resultDetails(),
-				"orchidGroupId", link.orchidGroupId(),
-				"relationType", link.relationType().name());
-	}
-
-	private Map<String, Object> stateFragment(
-			Map<String, Object> commandRow,
-			Map<String, Object> resultRow) {
-		Map<String, Object> result = new LinkedHashMap<>();
-		RESULT_STATE_FIELDS.forEach(field -> {
-			if (commandRow.containsKey(field)) {
-				result.put(field, commandRow.get(field));
-			}
-		});
-		RESULT_STATE_FIELDS.forEach(field -> {
-			if (resultRow.containsKey(field)) {
-				result.put(field, resultRow.get(field));
-			}
-		});
-		return Collections.unmodifiableMap(result);
-	}
-
-	private List<String> knownFields(Map<String, Object> fragment) {
-		return fragment.keySet().stream().sorted().toList();
+				"links", effect.links());
 	}
 
 	private Map<String, Object> findByGroupId(

@@ -16,7 +16,7 @@ public record OrchidGroupHistoryMigrationPlanCommand(
 		Map<String, Long> plannedCounts) {
 
 	public static final String MUTATIONS = "MUTATIONS";
-	public static final String EVIDENCE = "EVIDENCE";
+	public static final String ENTRIES = "ENTRIES";
 
 	public OrchidGroupHistoryMigrationPlanCommand {
 		if (runKey == null || sourceCutoff == null || effectiveBusinessDate == null) {
@@ -26,8 +26,8 @@ public record OrchidGroupHistoryMigrationPlanCommand(
 		manifestFingerprint = requireFingerprint(manifestFingerprint, "manifest");
 		sourceCounts = immutableCounts(sourceCounts, "source counts");
 		plannedCounts = immutableCounts(plannedCounts, "planned counts");
-		if (!plannedCounts.containsKey(MUTATIONS) || !plannedCounts.containsKey(EVIDENCE)) {
-			throw new IllegalArgumentException("planned counts에는 MUTATIONS와 EVIDENCE가 필요합니다.");
+		if (!plannedCounts.containsKey(MUTATIONS) || !plannedCounts.containsKey(ENTRIES)) {
+			throw new IllegalArgumentException("planned counts에는 MUTATIONS와 ENTRIES가 필요합니다.");
 		}
 	}
 

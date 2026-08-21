@@ -15,8 +15,6 @@ public interface OrchidGroupMutationRepository extends JpaRepository<OrchidGroup
 			String sourceOperationKey);
 
 	@Query("select count(m) from OrchidGroupMutation m where not exists "
-			+ "(select e.id from OrchidGroupMutationEntry e where e.mutation = m) "
-			+ "and not exists "
-			+ "(select h.id from OrchidGroupHistoricalEvidence h where h.mutation = m)")
+			+ "(select e.id from OrchidGroupMutationEntry e where e.mutation = m)")
 	long countWithoutEntries();
 }
