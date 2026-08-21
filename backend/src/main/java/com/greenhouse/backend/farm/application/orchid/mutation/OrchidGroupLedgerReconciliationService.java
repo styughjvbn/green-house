@@ -336,9 +336,10 @@ public class OrchidGroupLedgerReconciliationService {
 			}
 			OrchidGroupMutationEntry first = entries.getFirst();
 			if (stage == OrchidGroupLedgerReconciliationStage.BASELINE_PREPARING
+					&& first.getEntryKind() != OrchidGroupMutationEntryKind.CREATE
 					&& !isCoverageBaseline(first, coverage)) {
 				issues.add(groupIssue("MISSING_CUTOVER_BASELINE", group,
-						"PREPARING coverage의 첫 Entry가 해당 cutover baseline이 아닙니다."));
+						"PREPARING revision chain은 cutover baseline 또는 전환 후 CREATE로 시작해야 합니다."));
 			}
 			if (stage == OrchidGroupLedgerReconciliationStage.ACTIVE
 					&& first.getEntryKind() != OrchidGroupMutationEntryKind.CREATE

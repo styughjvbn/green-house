@@ -4,9 +4,16 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import com.greenhouse.backend.farm.application.orchid.mutation.BaselineOrchidGroupsCommand;
+import com.greenhouse.backend.farm.application.orchid.mutation.CreateOrchidGroupMutationCommand;
 import com.greenhouse.backend.farm.application.orchid.mutation.OrchidGroupLedgerPreparationService;
 import com.greenhouse.backend.farm.application.orchid.mutation.OrchidGroupLedgerReconciliationService;
 import com.greenhouse.backend.farm.application.orchid.mutation.OrchidGroupLedgerReconciliationStage;
+import com.greenhouse.backend.farm.application.orchid.mutation.OrchidGroupMutationDetails;
+import com.greenhouse.backend.farm.application.orchid.mutation.OrchidGroupMutationEngine;
+import com.greenhouse.backend.farm.domain.orchid.mutation.OrchidGroupMutationEntryKind;
+import com.greenhouse.backend.farm.domain.orchid.mutation.OrchidGroupMutationSource;
+import com.greenhouse.backend.farm.domain.orchid.mutation.OrchidGroupMutationSourceDomain;
+import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.List;
 import java.util.UUID;
@@ -16,6 +23,7 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.transaction.support.TransactionTemplate;
 
 @Tag("work-e2e")
 class OrchidGroupLedgerReconciliationPostgresE2ETest extends WorkE2ETestBase {
@@ -23,7 +31,9 @@ class OrchidGroupLedgerReconciliationPostgresE2ETest extends WorkE2ETestBase {
 	@Autowired private WorkTestDataSeeder seeder;
 	@Autowired private OrchidGroupLedgerPreparationService preparationService;
 	@Autowired private OrchidGroupLedgerReconciliationService reconciliationService;
+	@Autowired private OrchidGroupMutationEngine mutationEngine;
 	@Autowired private JdbcTemplate jdbcTemplate;
+	@Autowired private TransactionTemplate transactionTemplate;
 
 	private WorkTestDataSeeder.ContractScenario scenario;
 
@@ -76,5 +86,57 @@ class OrchidGroupLedgerReconciliationPostgresE2ETest extends WorkE2ETestBase {
 		assertThat(corruptedReport.ready()).isFalse();
 		assertThat(corruptedReport.issues()).extracting("code")
 				.contains("CURRENT_SNAPSHOT_MISMATCH", "SALES_RESERVATION_MISMATCH");
+	}
+
+	@Test
+	void acceptsAnEngineCreatedGroupWhileCoverageIsPreparing() {
+		UUID cutoverKey = UUID.randomUUID();
+		LocalDate businessDate = LocalDate.of(2026, 8, 20);
+		preparationService.prepare(cutoverKey, businessDate, "postgres-rehearsal-test");
+		preparationService.start(cutoverKey);
+		preparationService.baselineBatch(new BaselineOrchidGroupsCommand(
+				cutoverKey,
+				"GROUPS-0001",
+				List.of(scenario.orchidGroupId()),
+				businessDate));
+		Long varietyId = jdbcTemplate.queryForObject(
+				"SELECT variety_id FROM orchid_groups WHERE id = ?",
+				Long.class,
+				scenario.orchidGroupId());
+
+		var created = transactionTemplate.execute(status -> mutationEngine.create(
+				new CreateOrchidGroupMutationCommand(
+				new OrchidGroupMutationSource(
+						OrchidGroupMutationSourceDomain.WORK,
+						"WORK_EFFECT",
+						"post-baseline-work",
+						"EXECUTION:post-baseline-create",
+						UUID.randomUUID()),
+				scenario.bedZoneId(),
+				new OrchidGroupMutationDetails(
+						varietyId,
+						10,
+						"3.5치",
+						2,
+						"정상",
+						"POT",
+						null,
+						false,
+						new BigDecimal("6"),
+						new BigDecimal("7"),
+						null),
+				businessDate.plusDays(1),
+				"PREPARING smoke test 생성")));
+
+		var report = reconciliationService.reconcile();
+
+		assertThat(created.entries()).singleElement().satisfies(entry ->
+				assertThat(entry.entryKind()).isEqualTo(OrchidGroupMutationEntryKind.CREATE));
+		assertThat(report.stage())
+				.isEqualTo(OrchidGroupLedgerReconciliationStage.BASELINE_PREPARING);
+		assertThat(report.orchidGroupCount()).isEqualTo(2);
+		assertThat(report.baselineGroupCount()).isEqualTo(1);
+		assertThat(report.ready()).isTrue();
+		assertThat(report.issues()).isEmpty();
 	}
 }
