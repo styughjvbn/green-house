@@ -32,6 +32,10 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+/**
+ * ORCHID-CUTOVER: TRANSITION_ONLY — legacy 사실을 Historical Mutation plan으로 변환한다.
+ * Removal gate: 최종 historical catch-up과 검증 완료.
+ */
 @Service
 @RequiredArgsConstructor
 public class OrchidGroupHistoryMigrationPlanner {

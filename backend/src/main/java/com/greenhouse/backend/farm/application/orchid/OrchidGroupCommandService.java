@@ -37,6 +37,10 @@ import java.util.Map;
 import java.util.List;
 import java.util.Set;
 
+/**
+ * ORCHID-CUTOVER: LEGACY_RETIRE — Engine 경로와 전환 후 제거할 직접 writer를 함께 가진다.
+ * Removal gate: 운영 ACTIVE 안정화 및 writer inventory 승인.
+ */
 @Service
 @Transactional
 @RequiredArgsConstructor

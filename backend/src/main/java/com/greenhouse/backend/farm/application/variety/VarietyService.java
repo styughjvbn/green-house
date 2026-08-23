@@ -31,6 +31,10 @@ import org.springframework.transaction.annotation.Transactional;
 import com.greenhouse.backend.audit.domain.AuditAction;
 import java.util.Map;
 
+/**
+ * ORCHID-CUTOVER: LEGACY_RETIRE — Engine 경로와 전환 후 제거할 직접 품종 전파 분기를 함께 가진다.
+ * Removal gate: 운영 ACTIVE 안정화 및 writer inventory 승인.
+ */
 @Service
 @Transactional
 @RequiredArgsConstructor

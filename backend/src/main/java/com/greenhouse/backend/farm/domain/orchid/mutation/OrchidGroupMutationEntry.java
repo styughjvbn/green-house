@@ -21,6 +21,9 @@ import org.hibernate.type.SqlTypes;
 
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
+/**
+ * ORCHID-CUTOVER: TARGET — 난 묶음별 revision과 전후 상태 또는 Historical 사실을 보존한다.
+ */
 @Entity
 @Table(
 		name = "orchid_group_mutation_entries",

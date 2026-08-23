@@ -26,6 +26,10 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+/**
+ * ORCHID-CUTOVER: TRANSITION_ONLY — coverage 준비, baseline과 최초 활성화를 수행한다.
+ * Removal gate: 운영 cutover 완료 및 재수행 불필요 승인.
+ */
 @Service
 @RequiredArgsConstructor
 public class OrchidGroupLedgerPreparationService {

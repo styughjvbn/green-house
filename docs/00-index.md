@@ -29,6 +29,7 @@ docs/
     sales-auction-settlement.md
     authentication.md
     work-operation-and-orchid-collection.md
+    orchid-group-mutation-transition.md
     demo-operations.md
 
   adr/
@@ -73,6 +74,7 @@ docs/
 | [`features/sales-auction-settlement.md`](features/sales-auction-settlement.md) | 판매, 경매 출하, 정산, 입금 정책 |
 | [`features/authentication.md`](features/authentication.md) | 세션 인증·인가와 데모 인증 |
 | [`features/work-operation-and-orchid-collection.md`](features/work-operation-and-orchid-collection.md) | 작업 실행, 대상 스냅샷, 그룹·전파 정책 |
+| [`features/orchid-group-mutation-transition.md`](features/orchid-group-mutation-transition.md) | 난 묶음 Mutation Engine 전환 코드의 수명과 제거 inventory |
 | [`features/demo-operations.md`](features/demo-operations.md) | 운영 PC의 데모 DB·Kubernetes·초기화·모니터링 절차 |
 
 구현이 완료된 계획서와 과거 설계는 `archive/`에 보관한다. 현재 정책을

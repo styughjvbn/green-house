@@ -19,6 +19,9 @@ import lombok.NoArgsConstructor;
 
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
+/**
+ * ORCHID-CUTOVER: TARGET, DATA_RETAIN — ledger 적용 범위와 ACTIVE 전환 증거를 보존한다.
+ */
 @Entity
 @Table(
 		name = "orchid_group_ledger_coverages",

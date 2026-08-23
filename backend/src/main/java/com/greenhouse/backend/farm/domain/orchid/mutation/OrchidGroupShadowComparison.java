@@ -21,6 +21,10 @@ import org.hibernate.type.SqlTypes;
 
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
+/**
+ * ORCHID-CUTOVER: TRANSITION_ONLY runtime, DATA_RETAIN rows — SHADOW 비교 결과를 보존한다.
+ * Removal gate: SHADOW 종료 후 runtime 제거. 보존 정책 전에는 테이블과 행을 삭제하지 않는다.
+ */
 @Entity
 @Table(
 		name = "orchid_group_shadow_comparisons",

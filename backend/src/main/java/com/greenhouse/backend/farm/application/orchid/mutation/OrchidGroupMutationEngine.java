@@ -41,6 +41,9 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
+/**
+ * ORCHID-CUTOVER: TARGET — 전환 후 난 묶음 상태 변경의 단일 application writer다.
+ */
 @Service
 @RequiredArgsConstructor
 @Transactional(propagation = Propagation.MANDATORY)

@@ -29,6 +29,10 @@ import java.util.List;
 import java.util.Set;
 import org.springframework.stereotype.Component;
 
+/**
+ * ORCHID-CUTOVER: LEGACY_RETIRE — Engine 경로와 전환 후 제거할 직접 다중 생성 분기를 함께 가진다.
+ * Removal gate: 운영 ACTIVE 안정화 및 writer inventory 승인.
+ */
 @Component
 public class MultiCreateWorkHandler implements WorkEffectHandler {
 

@@ -22,6 +22,10 @@ import org.springframework.boot.WebApplicationType;
 import org.springframework.boot.builder.SpringApplicationBuilder;
 import org.springframework.context.ConfigurableApplicationContext;
 
+/**
+ * ORCHID-CUTOVER: TRANSITION_ONLY — cutover 이전 이력을 적재하는 operator CLI다.
+ * Removal gate: 최종 historical catch-up과 검증 완료.
+ */
 public final class OrchidGroupHistoryMigrationCli {
 
 	private static final Set<String> OPERATOR_OPTIONS = Set.of(

@@ -5,6 +5,10 @@ import com.greenhouse.backend.farm.domain.structure.BedZone;
 import com.greenhouse.backend.farm.domain.variety.Variety;
 import java.math.BigDecimal;
 
+/**
+ * ORCHID-CUTOVER: TRANSITION_ONLY — SHADOW 예상 상태 계산에만 사용한다.
+ * Removal gate: 운영 ACTIVE 안정화 및 SHADOW 종료.
+ */
 public final class OrchidGroupStateSimulation {
 
 	private final OrchidGroup group;

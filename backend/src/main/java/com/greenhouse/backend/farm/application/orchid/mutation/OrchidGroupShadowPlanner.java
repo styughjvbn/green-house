@@ -33,6 +33,10 @@ import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
+/**
+ * ORCHID-CUTOVER: TRANSITION_ONLY — 실제 상태를 쓰지 않는 SHADOW plan을 계산한다.
+ * Removal gate: 운영 ACTIVE 안정화 및 SHADOW 결과 승인.
+ */
 @Service
 @RequiredArgsConstructor
 public class OrchidGroupShadowPlanner {

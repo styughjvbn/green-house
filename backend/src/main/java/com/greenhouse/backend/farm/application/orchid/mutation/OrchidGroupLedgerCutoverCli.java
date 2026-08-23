@@ -15,6 +15,10 @@ import org.springframework.boot.WebApplicationType;
 import org.springframework.boot.builder.SpringApplicationBuilder;
 import org.springframework.context.ConfigurableApplicationContext;
 
+/**
+ * ORCHID-CUTOVER: TRANSITION_ONLY — baseline과 ACTIVE 전환을 실행하는 operator CLI다.
+ * Removal gate: 운영 cutover 완료 및 재수행 불필요 승인.
+ */
 public final class OrchidGroupLedgerCutoverCli {
 
 	private static final Set<String> OPERATOR_OPTIONS = Set.of(

@@ -30,6 +30,10 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+/**
+ * ORCHID-CUTOVER: TRANSITION_ONLY — Historical Mutation을 검증하고 batch로 적재한다.
+ * Removal gate: 최종 historical catch-up과 검증 완료.
+ */
 @Service
 @RequiredArgsConstructor
 public class OrchidGroupHistoryMigrationService {

@@ -23,6 +23,10 @@ import org.hibernate.type.SqlTypes;
 
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
+/**
+ * ORCHID-CUTOVER: TRANSITION_ONLY runtime, DATA_RETAIN rows — historical migration 실행 증거다.
+ * Removal gate: migration 종료 후 runtime 제거. 저장된 run은 감사 자료로 보존한다.
+ */
 @Entity
 @Table(
 		name = "orchid_group_history_migration_runs",

@@ -9,6 +9,10 @@ import java.util.Map;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
+/**
+ * ORCHID-CUTOVER: TRANSITION_ONLY — historical migration run과 Farm 적재를 조율한다.
+ * Removal gate: 최종 historical catch-up과 검증 완료.
+ */
 @Service
 @RequiredArgsConstructor
 public class OrchidGroupHistoryMigrationOperatorService {

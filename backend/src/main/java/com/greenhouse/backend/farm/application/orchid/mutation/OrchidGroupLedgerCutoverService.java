@@ -7,6 +7,10 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 
+/**
+ * ORCHID-CUTOVER: TRANSITION_ONLY — baseline 적재와 ACTIVE 전환을 조율한다.
+ * Removal gate: 운영 cutover 완료 및 재수행 불필요 승인.
+ */
 @Service
 @RequiredArgsConstructor
 public class OrchidGroupLedgerCutoverService {

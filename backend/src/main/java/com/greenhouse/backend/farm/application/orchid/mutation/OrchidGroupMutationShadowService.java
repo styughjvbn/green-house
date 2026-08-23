@@ -21,6 +21,10 @@ import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+/**
+ * ORCHID-CUTOVER: TRANSITION_ONLY — Legacy 결과와 Engine 예상 결과를 비교한다.
+ * Removal gate: 운영 ACTIVE 안정화 및 SHADOW 결과 승인.
+ */
 @Slf4j
 @Service
 @RequiredArgsConstructor

@@ -19,6 +19,9 @@ import lombok.NoArgsConstructor;
 
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
+/**
+ * ORCHID-CUTOVER: TARGET — 난 묶음 상태 변경 원인을 보존하는 영구 ledger header다.
+ */
 @Entity
 @Table(
 		name = "orchid_group_mutations",

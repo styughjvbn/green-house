@@ -758,6 +758,9 @@ coverage에는 `ENGINE`만 허용하므로 startup guard가 `SHADOW` 기동도 �
 뜻하지 않는다. 다음 retirement inventory는 `ACTIVE` 전까지 모두 식별·라우팅하고,
 안정화 후 별도 릴리스에서 물리적으로 제거한다.
 
+구현 파일별 수명과 제거 gate는
+`docs/features/orchid-group-mutation-transition.md`를 기준 원장으로 관리한다.
+
 - 각 adapter에 남아 있는 `LEGACY` 직접 mutator 분기와 routing flag
 - `OrchidGroupCommandService.createEntity` 등 전환 호환용 내부 writer
 - Farm 패키지에서 Work handler interface를 직접 구현하는 전환 adapter

@@ -128,6 +128,7 @@ demo
 - PREPARING 전환 코드의 routing flag 호출자, `OrchidGroup` 직접 상태 변경자, 생성자와 repository write 호출자는 실행 가능한 architecture test의 명시적 inventory로 고정한다. 신규 writer는 inventory 허용 항목만 늘리지 않고 먼저 typed Engine command로 편입한다.
 - 기본값은 운영 호환을 위한 `LEGACY`다. 운영 관찰은 `SHADOW`, 복원 DB 상태 변경 검증은 `ENGINE`으로 분리한다. 복원 DB baseline, ENGINE smoke test와 `ACTIVE` 전환 rehearsal이 끝난 뒤 aggregate 전체를 한 번에 전환하고, 검증 완료 전에는 운영 `ACTIVE` coverage를 만들지 않는다.
 - 운영 `ACTIVE`에서는 모든 인스턴스를 `ENGINE`으로 고정하고 DB fence로 legacy 실행을 차단한다. 안정화 후 routing flag와 legacy 직접 writer를 제거하며, 기존 Work·Sales·Lineage 사실 데이터는 별도 소비 전환 없이 삭제하지 않는다.
+- 전환 코드의 수명은 `features/orchid-group-mutation-transition.md`의 `TARGET`, `TRANSITION_ONLY`, `LEGACY_RETIRE`, `DATA_RETAIN` inventory를 기준으로 판단한다. 코드 제거 gate와 데이터 보존 기간을 분리하고, writer 호출자 분류는 architecture test로 고정한다.
 
 `farm`의 각 계층은 동일한 기능 경계를 사용한다.
 

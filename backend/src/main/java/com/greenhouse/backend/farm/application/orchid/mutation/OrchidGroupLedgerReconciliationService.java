@@ -35,6 +35,9 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+/**
+ * ORCHID-CUTOVER: TARGET — 전환 전후 ledger 연속성과 업무 연결을 상시 검증한다.
+ */
 @Service
 @RequiredArgsConstructor
 public class OrchidGroupLedgerReconciliationService {

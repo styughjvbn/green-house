@@ -10,6 +10,10 @@ import org.springframework.core.Ordered;
 import org.springframework.core.annotation.Order;
 import org.springframework.stereotype.Component;
 
+/**
+ * ORCHID-CUTOVER: TRANSITION_ONLY — coverage와 전환 writer mode/version 조합을 검사한다.
+ * Removal gate: writer mode 제거 후 Engine 전용 기동 검증으로 대체.
+ */
 @Component
 @Order(Ordered.HIGHEST_PRECEDENCE)
 @RequiredArgsConstructor

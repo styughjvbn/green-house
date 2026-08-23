@@ -26,6 +26,10 @@ import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
+/**
+ * ORCHID-CUTOVER: LEGACY_RETIRE — Engine 경로와 전환 후 제거할 직접 재고 변경 분기를 함께 가진다.
+ * Removal gate: 운영 ACTIVE 안정화 및 writer inventory 승인.
+ */
 @Service
 @RequiredArgsConstructor
 public class SalesSlipInventoryService {

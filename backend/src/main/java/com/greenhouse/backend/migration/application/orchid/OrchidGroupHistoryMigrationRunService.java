@@ -13,6 +13,10 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
+/**
+ * ORCHID-CUTOVER: TRANSITION_ONLY — historical migration run의 잠금과 상태를 관리한다.
+ * Removal gate: 최종 historical migration 종료. 저장된 run 데이터는 보존한다.
+ */
 @Service
 @RequiredArgsConstructor
 public class OrchidGroupHistoryMigrationRunService {
