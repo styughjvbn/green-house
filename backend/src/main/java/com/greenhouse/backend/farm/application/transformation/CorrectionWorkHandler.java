@@ -6,7 +6,6 @@ import com.greenhouse.backend.farm.application.orchid.mutation.CorrectOrchidGrou
 import com.greenhouse.backend.farm.application.orchid.mutation.CorrectOrchidGroupsMutationCommand;
 import com.greenhouse.backend.farm.application.orchid.mutation.OrchidGroupMutationEngine;
 import com.greenhouse.backend.farm.application.orchid.mutation.OrchidGroupMutationRoutingPolicy;
-import com.greenhouse.backend.farm.application.orchid.mutation.OrchidGroupMutationShadowService;
 import com.greenhouse.backend.farm.application.orchid.mutation.OrchidGroupMutationSources;
 import com.greenhouse.backend.farm.application.orchid.mutation.RelatedOrchidGroupMutations;
 import com.greenhouse.backend.farm.domain.orchid.OrchidGroup;
@@ -44,7 +43,6 @@ public class CorrectionWorkHandler implements WorkEffectHandler {
 	private final List<OrchidGroupUsageInspector> usageInspectors;
 	private final OrchidGroupMutationEngine mutationEngine;
 	private final OrchidGroupMutationRoutingPolicy mutationRoutingPolicy;
-	private final OrchidGroupMutationShadowService mutationShadowService;
 
 	public CorrectionWorkHandler(
 			StructureChangeReferenceReader structureChangeReferenceReader,
@@ -52,15 +50,13 @@ public class CorrectionWorkHandler implements WorkEffectHandler {
 			OrchidGroupRepository orchidGroupRepository,
 			List<OrchidGroupUsageInspector> usageInspectors,
 			OrchidGroupMutationEngine mutationEngine,
-			OrchidGroupMutationRoutingPolicy mutationRoutingPolicy,
-			OrchidGroupMutationShadowService mutationShadowService) {
+			OrchidGroupMutationRoutingPolicy mutationRoutingPolicy) {
 		this.structureChangeReferenceReader = structureChangeReferenceReader;
 		this.workOperationDateCorrectionService = workOperationDateCorrectionService;
 		this.orchidGroupRepository = orchidGroupRepository;
 		this.usageInspectors = usageInspectors;
 		this.mutationEngine = mutationEngine;
 		this.mutationRoutingPolicy = mutationRoutingPolicy;
-		this.mutationShadowService = mutationShadowService;
 	}
 
 	@Override public String supports() { return "CORRECTION"; }
@@ -123,7 +119,7 @@ public class CorrectionWorkHandler implements WorkEffectHandler {
 		WorkMutationLink mutationLink = null;
 		if (!changedAdjustmentIds.isEmpty()) {
 			CorrectOrchidGroupsMutationCommand mutationCommand = null;
-			if (mutationRoutingPolicy.usesMutationContract()) {
+			if (mutationRoutingPolicy.routesToEngine()) {
 				var references = structureChangeReferenceReader
 						.getMutationReferences(originalOperationId, changedAdjustmentIds);
 				RelatedOrchidGroupMutations related = references.legacySource()
@@ -146,12 +142,10 @@ public class CorrectionWorkHandler implements WorkEffectHandler {
 				var mutation = mutationEngine.correct(mutationCommand);
 				mutationLink = new WorkMutationLink(mutation.mutationId(), mutation.correlationId());
 			} else {
-				var shadowPlan = mutationShadowService.prepare(mutationCommand);
 				request.orchidGroupAdjustments().stream()
 						.filter(adjustment -> changedAdjustmentIds.contains(adjustment.orchidGroupId()))
 						.forEach(adjustment -> groupsById.get(adjustment.orchidGroupId())
 								.correctQuantityAndStatus(adjustment.quantity(), adjustment.status()));
-				mutationShadowService.complete(shadowPlan);
 			}
 		}
 		Map<String, Object> resultDetails = new LinkedHashMap<>();

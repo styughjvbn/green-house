@@ -6,7 +6,6 @@ import com.greenhouse.backend.farm.application.orchid.mutation.CreateOrchidGroup
 import com.greenhouse.backend.farm.application.orchid.mutation.OrchidGroupMutationDetails;
 import com.greenhouse.backend.farm.application.orchid.mutation.OrchidGroupMutationEngine;
 import com.greenhouse.backend.farm.application.orchid.mutation.OrchidGroupMutationRoutingPolicy;
-import com.greenhouse.backend.farm.application.orchid.mutation.OrchidGroupMutationShadowService;
 import com.greenhouse.backend.farm.application.orchid.mutation.OrchidGroupMutationSources;
 import com.greenhouse.backend.common.exception.NotFoundException;
 import com.greenhouse.backend.common.application.RequestActorProvider;
@@ -43,7 +42,6 @@ public class InboundPottingService {
 	private final RequestActorProvider requestActorProvider;
 	private final OrchidGroupMutationEngine mutationEngine;
 	private final OrchidGroupMutationRoutingPolicy mutationRoutingPolicy;
-	private final OrchidGroupMutationShadowService mutationShadowService;
 
 	public InboundPottingResult potting(
 			Long inboundRecordId,
@@ -63,7 +61,7 @@ public class InboundPottingService {
 
 		WorkMutationLink mutationLink = null;
 		List<OrchidGroup> createdGroups;
-		var mutationCommand = mutationRoutingPolicy.usesMutationContract()
+		var mutationCommand = mutationRoutingPolicy.routesToEngine()
 				? new CreateInboundOrchidGroupsMutationCommand(
 				OrchidGroupMutationSources.work(workOperationId, effectKey),
 				inboundRecord.getId(),
@@ -96,7 +94,6 @@ public class InboundPottingService {
 			createdGroups = groupIds.stream().map(groupsById::get).toList();
 			mutationLink = new WorkMutationLink(mutation.mutationId(), mutation.correlationId());
 		} else {
-			var shadowPlan = mutationShadowService.prepare(mutationCommand);
 			createdGroups = request.results().stream().map(row -> {
 			BedZone bedZone = findBedZone(row.bedZoneId());
 			OrchidPlacementPolicy.PlacementRange placementRange = resolvePlacementRange(
@@ -129,8 +126,6 @@ public class InboundPottingService {
 			orchidGroup.assignInboundRecord(inboundRecord);
 			return orchidGroupRepository.saveAndFlush(orchidGroup);
 			}).toList();
-			mutationShadowService.completeCreated(
-					shadowPlan, createdGroups.stream().map(OrchidGroup::getId).toList());
 		}
 
 		OrchidGroup representative = createdGroups.getFirst();

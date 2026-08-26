@@ -38,13 +38,11 @@
 
 | 범위 | 역할 | 제거 gate | 데이터 처리 |
 |---|---|---|---|
-| `OrchidGroupMutationShadowService`, `OrchidGroupShadow*`, `OrchidGroupStateSimulation` | Legacy 결과와 detached Engine plan 비교 | 운영 `ACTIVE` 안정화, SHADOW 결과 승인 | comparison 행은 보존 가능 |
-| `OrchidGroupLedgerWriterMode`, writer properties/configuration, routing policy와 startup guard | `LEGACY\|SHADOW\|ENGINE` 선택과 구버전 차단 | 모든 환경을 Engine으로 고정하고 fallback 금지 확인 | coverage는 보존 |
+| `OrchidGroupLedgerWriterMode`, writer properties/configuration, routing policy와 startup guard | `LEGACY\|ENGINE` 선택과 구버전 차단 | 모든 환경을 Engine으로 고정하고 fallback 금지 확인 | coverage는 보존 |
 | `OrchidGroupLedgerCutover*`, `OrchidGroupLedgerPreparationService` | baseline 생성과 `ACTIVE` 전환 | 운영 cutover 성공 및 재수행 불필요 승인 | baseline과 coverage는 보존 |
 | `OrchidGroupHistoryMigration*`, Historical 입력·연결 서비스 | cutover 이전 이력 계획·적재·검증 | 최종 catch-up과 manifest 검증 완료 | Historical Entry와 run 결과는 보존 |
 | `migration.*.orchid` operator runtime | migration run 잠금·상태 전이 | historical migration 종료와 감사 보존 확인 | run 테이블과 행은 보존 |
 | Work·Sales historical reader/link adapter | 소유 모듈의 과거 사실을 migrator에 제공 | historical migration 종료 | 원본 Work·Sales 사실은 보존 |
-| `scripts/data-audit/orchid-shadow-report.sql` | SHADOW 관찰 보고 | SHADOW 종료 및 결과 승인 | 산출 보고서는 운영 기록으로 보존 가능 |
 
 전환 전용 클래스의 Javadoc에는 다음 표식을 사용한다.
 
@@ -56,8 +54,8 @@ Inventory: docs/features/orchid-group-mutation-transition.md
 
 ## LEGACY_RETIRE
 
-다음 클래스 전체가 Legacy라는 뜻은 아니다. 해당 클래스 안의 routing flag, SHADOW 호출과
-Engine을 사용하지 않을 때 실행되는 직접 상태 변경 분기만 제거 대상이다.
+다음 클래스 전체가 Legacy라는 뜻은 아니다. 해당 클래스 안의 routing flag와 Engine을
+사용하지 않을 때 실행되는 직접 상태 변경 분기만 제거 대상이다.
 
 | 혼합 writer | 제거 대상 |
 |---|---|
@@ -80,11 +78,10 @@ inventory에 추가해 우회하지 않고 typed Engine command로 편입한다.
 
 다음 대상은 runtime 제거와 구분한다.
 
-- 적용된 Flyway V21~V26 파일은 삭제하거나 수정하지 않는다.
+- 적용된 Flyway V21~V27 파일은 삭제하거나 수정하지 않는다. 사용하지 않는 비교 테이블은
+  V26을 수정하지 않고 V27에서 제거한다.
 - `orchid_group_mutations`, `orchid_group_mutation_entries`와 historical Entry를 유지한다.
 - migration run 결과는 실행 코드가 제거되어도 감사 근거로 유지한다.
-- `orchid_group_shadow_comparisons`는 업무 상태가 아니지만 전환 승인 근거다. 보존 기간이
-  결정되기 전에는 테이블이나 행을 삭제하지 않는다.
 - Work·Sales·Lineage 원본 사실은 별도 소비 전환과 보존 정책 없이 삭제하지 않는다.
 
 ## 제거 gate
@@ -95,7 +92,7 @@ inventory에 추가해 우회하지 않고 typed Engine command로 편입한다.
 1. 운영 coverage가 `ACTIVE`이고 모든 backend 인스턴스가 승인된 Engine writer
    version으로 고정되어 있다.
 2. 운영 smoke test와 정기 reconciliation이 합의한 안정화 기간 동안 통과한다.
-3. SHADOW의 `MISMATCHED`, `ENGINE_REJECTED`가 모두 판정·승인되었다.
+3. 복원 운영 DB에서 전체 ENGINE 시나리오와 `ACTIVE` 전환 rehearsal이 통과한다.
 4. 진행 중 Work와 전환 전 Sales 예약의 후속 실행 회귀가 통과한다.
 5. architecture inventory에서 미확인 직접 writer가 없다.
 6. rollback이 Legacy flag 복귀가 아니라 백업 복구 또는 검증된 전환 재개 절차로

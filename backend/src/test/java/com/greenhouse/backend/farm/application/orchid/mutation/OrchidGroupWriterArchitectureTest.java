@@ -54,8 +54,7 @@ class OrchidGroupWriterArchitectureTest {
 			"com.greenhouse.backend.farm.application.orchid.mutation.OrchidGroupMutationEngine");
 
 	private static final Set<String> TRANSITION_ONLY_DIRECT_STATE_WRITER_INVENTORY = Set.of(
-			"com.greenhouse.backend.farm.application.orchid.mutation.OrchidGroupLedgerPreparationService",
-			"com.greenhouse.backend.farm.domain.orchid.OrchidGroupStateSimulation");
+			"com.greenhouse.backend.farm.application.orchid.mutation.OrchidGroupLedgerPreparationService");
 
 	private static final Set<String> LEGACY_RETIRE_DIRECT_STATE_WRITER_INVENTORY = Set.of(
 			"com.greenhouse.backend.farm.application.inbound.InboundPottingService",
@@ -70,11 +69,7 @@ class OrchidGroupWriterArchitectureTest {
 			"com.greenhouse.backend.sales.application.SalesSlipInventoryService");
 
 	private static final Set<String> TARGET_CONSTRUCTOR_WRITER_INVENTORY = Set.of(
-			"com.greenhouse.backend.farm.application.orchid.mutation.OrchidGroupMutationEngine",
-			"com.greenhouse.backend.farm.domain.orchid.OrchidGroup");
-
-	private static final Set<String> TRANSITION_ONLY_CONSTRUCTOR_WRITER_INVENTORY = Set.of(
-			"com.greenhouse.backend.farm.domain.orchid.OrchidGroupStateSimulation");
+			"com.greenhouse.backend.farm.application.orchid.mutation.OrchidGroupMutationEngine");
 
 	private static final Set<String> LEGACY_RETIRE_CONSTRUCTOR_WRITER_INVENTORY = Set.of(
 			"com.greenhouse.backend.farm.application.inbound.InboundPottingService",
@@ -108,12 +103,6 @@ class OrchidGroupWriterArchitectureTest {
 	}
 
 	@Test
-	void shadowCaptureCallersMatchTheTransitionInventory() {
-		assertThat(methodCallers(OrchidGroupMutationShadowService.class, Set.of("prepare")))
-				.containsExactlyInAnyOrderElementsOf(LEGACY_RETIRE_ROUTING_CALLER_INVENTORY);
-	}
-
-	@Test
 	void directStateMutationCallersMatchTheLifecycleInventories() {
 		assertThat(methodCallers(OrchidGroup.class, ORCHID_GROUP_STATE_METHODS))
 				.containsExactlyInAnyOrderElementsOf(union(
@@ -133,7 +122,6 @@ class OrchidGroupWriterArchitectureTest {
 		assertThat(constructorCallers)
 				.containsExactlyInAnyOrderElementsOf(union(
 						TARGET_CONSTRUCTOR_WRITER_INVENTORY,
-						TRANSITION_ONLY_CONSTRUCTOR_WRITER_INVENTORY,
 						LEGACY_RETIRE_CONSTRUCTOR_WRITER_INVENTORY));
 		assertThat(methodCallers(OrchidGroupRepository.class, REPOSITORY_WRITE_METHODS))
 				.containsExactlyInAnyOrderElementsOf(union(
@@ -149,9 +137,6 @@ class OrchidGroupWriterArchitectureTest {
 		assertThat(TRANSITION_ONLY_DIRECT_STATE_WRITER_INVENTORY)
 				.doesNotContainAnyElementsOf(LEGACY_RETIRE_DIRECT_STATE_WRITER_INVENTORY);
 		assertThat(TARGET_CONSTRUCTOR_WRITER_INVENTORY)
-				.doesNotContainAnyElementsOf(TRANSITION_ONLY_CONSTRUCTOR_WRITER_INVENTORY)
-				.doesNotContainAnyElementsOf(LEGACY_RETIRE_CONSTRUCTOR_WRITER_INVENTORY);
-		assertThat(TRANSITION_ONLY_CONSTRUCTOR_WRITER_INVENTORY)
 				.doesNotContainAnyElementsOf(LEGACY_RETIRE_CONSTRUCTOR_WRITER_INVENTORY);
 		assertThat(TARGET_REPOSITORY_WRITER_INVENTORY)
 				.doesNotContainAnyElementsOf(LEGACY_RETIRE_REPOSITORY_WRITER_INVENTORY);

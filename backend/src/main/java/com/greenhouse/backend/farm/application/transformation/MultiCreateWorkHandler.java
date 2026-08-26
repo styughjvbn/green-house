@@ -6,7 +6,6 @@ import com.greenhouse.backend.farm.application.orchid.mutation.CreateOrchidGroup
 import com.greenhouse.backend.farm.application.orchid.mutation.OrchidGroupMutationDetails;
 import com.greenhouse.backend.farm.application.orchid.mutation.OrchidGroupMutationEngine;
 import com.greenhouse.backend.farm.application.orchid.mutation.OrchidGroupMutationRoutingPolicy;
-import com.greenhouse.backend.farm.application.orchid.mutation.OrchidGroupMutationShadowService;
 import com.greenhouse.backend.farm.application.orchid.mutation.OrchidGroupMutationSources;
 import com.greenhouse.backend.common.exception.NotFoundException;
 import com.greenhouse.backend.farm.domain.orchid.OrchidGroup;
@@ -42,7 +41,6 @@ public class MultiCreateWorkHandler implements WorkEffectHandler {
 	private final OrchidGroupRepository orchidGroupRepository;
 	private final OrchidGroupMutationEngine mutationEngine;
 	private final OrchidGroupMutationRoutingPolicy mutationRoutingPolicy;
-	private final OrchidGroupMutationShadowService mutationShadowService;
 
 	public MultiCreateWorkHandler(
 			OrchidGroupCommandService orchidGroupCommandService,
@@ -50,15 +48,13 @@ public class MultiCreateWorkHandler implements WorkEffectHandler {
 			OrchidGroupCollectionMemberRepository memberRepository,
 			OrchidGroupRepository orchidGroupRepository,
 			OrchidGroupMutationEngine mutationEngine,
-			OrchidGroupMutationRoutingPolicy mutationRoutingPolicy,
-			OrchidGroupMutationShadowService mutationShadowService) {
+			OrchidGroupMutationRoutingPolicy mutationRoutingPolicy) {
 		this.orchidGroupCommandService = orchidGroupCommandService;
 		this.collectionRepository = collectionRepository;
 		this.memberRepository = memberRepository;
 		this.orchidGroupRepository = orchidGroupRepository;
 		this.mutationEngine = mutationEngine;
 		this.mutationRoutingPolicy = mutationRoutingPolicy;
-		this.mutationShadowService = mutationShadowService;
 	}
 
 	@Override public String supports() { return "MULTI_CREATE"; }
@@ -72,7 +68,7 @@ public class MultiCreateWorkHandler implements WorkEffectHandler {
 		validateCollections(request);
 		WorkMutationLink mutationLink = null;
 		List<OrchidGroup> groups;
-		var mutationCommand = mutationRoutingPolicy.usesMutationContract()
+		var mutationCommand = mutationRoutingPolicy.routesToEngine()
 				? new CreateOrchidGroupsMutationCommand(
 				OrchidGroupMutationSources.work(operation.getId(), command.effectKey()),
 				request.rows().stream()
@@ -104,12 +100,9 @@ public class MultiCreateWorkHandler implements WorkEffectHandler {
 			groups = groupIds.stream().map(groupsById::get).toList();
 			mutationLink = new WorkMutationLink(mutation.mutationId(), mutation.correlationId());
 		} else {
-			var shadowPlan = mutationShadowService.prepare(mutationCommand);
 			groups = request.rows().stream()
 					.map(row -> orchidGroupCommandService.createEntity(row.orchidGroup()))
 					.toList();
-			mutationShadowService.completeCreated(
-					shadowPlan, groups.stream().map(OrchidGroup::getId).toList());
 		}
 		for (int index = 0; index < groups.size(); index++) {
 			OrchidGroup group = groups.get(index);

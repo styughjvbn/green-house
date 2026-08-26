@@ -676,7 +676,7 @@ transaction까지 함께 되돌려도 되는 재해 복구 상황에서만 사�
 1. 기존 유스케이스 입력을 typed Farm command로 변환한다.
 2. command별 policy와 공통 Mutation pipeline을 구현한다.
 3. 기존 결과 보존, rollback, 재시도와 동시성 테스트를 추가한다.
-4. read-only shadow plan 또는 복제 DB 테스트로 기존 결과와 비교한다.
+4. 운영 백업을 복원한 격리 DB에서 기존 결과와 Engine 결과를 시나리오별로 검증한다.
 5. 삭제할 기존 mutator·handler·중복 snapshot 목록을 retirement inventory에 남긴다.
 
 하지만 동일한 `OrchidGroup`을 일부 경로는 Engine이, 다른 경로는 기존 코드가
@@ -696,7 +696,7 @@ ADR, write-path·retirement inventory와 운영 데이터 profiling
 → Inbound 생성·포트 command 준비
 → Sales 예약·해제·출고·취소 command 준비
 → Correction·Compensation과 legacy source 처리 준비
-→ historical Entry 완전 이관과 SHADOW 비교
+→ historical Entry 완전 이관과 복원 DB ENGINE 시나리오 검증
 → 복원 운영 DB rehearsal과 전체 회귀 테스트
 → 쓰기 중단, baseline, coverage ACTIVE와 write fence 활성화
 → smoke test와 쓰기 재개
@@ -705,7 +705,7 @@ ADR, write-path·retirement inventory와 운영 데이터 profiling
 → Timeline
 ```
 
-Feature flag는 적용 기준 시점 전의 routing·shadow 검증에만 사용할 수 있다. 하나의
+Feature flag는 적용 기준 시점 전의 Legacy/Engine routing에만 사용할 수 있다. 하나의
 유스케이스에서 기존 경로와 Engine 경로가 동시에 상태를 변경하는 dual write는
 허용하지 않는다. cutover 이후 구버전 인스턴스가 다시 붙지 않도록 coverage의
 `minimum_writer_version`, 배포 절차와 DB write fence를 함께 사용한다.
@@ -723,7 +723,7 @@ Feature flag는 적용 기준 시점 전의 routing·shadow 검증에만 사용�
   legacy 직접 writer를 물리적으로 제거한다. 이때 retirement inventory가 비면
   완전 전환이 완료된다.
 
-현재 구현은 `app.orchid-ledger.writer-mode=LEGACY|SHADOW|ENGINE`으로 aggregate
+현재 구현은 `app.orchid-ledger.writer-mode=LEGACY|ENGINE`으로 aggregate
 전체의 실행 모드를 선택한다. 기본값은 `LEGACY`이고, `ENGINE`에서는 다음 운영
 경로가 typed command로 라우팅된다.
 
@@ -738,25 +738,14 @@ key로 전달하고 `WorkAppliedEffect`와 호환 `OrchidGroupLineage`에 Mutati
 연결한다. Sales는 전표 ID와 전표 version을 포함한 동작별 operation key를 사용하고
 각 `SalesInventoryMovement`에 Mutation ID와 correlation ID를 연결한다.
 
-`SHADOW`는 운영 authority 전환 전 검증 모드다. Legacy가 유일한 상태 writer로
-동작하며, 같은 typed command를 detached `OrchidGroup` simulation에 적용해 Engine
-예상 snapshot을 만든다. Legacy 변경 후 실제 snapshot과 비교하고 원 transaction이
-커밋된 뒤 `orchid_group_shadow_comparisons`에 다음 결과를 별도 transaction으로
-저장한다.
+운영 트래픽을 복제해 비교하는 모드는 사용하지 않는다. 사용자 수와 변경 이벤트가 적어
+관찰 기간을 늘려도 의미 있는 시나리오 coverage를 얻기 어렵기 때문이다. 대신 최신 운영
+백업을 복원한 격리 PostgreSQL에서 생성·수정·이동·입고·구조 변경·보정·폐기와 판매
+예약·출고·취소 시나리오를 의도적으로 실행하고 baseline, ENGINE 회귀와 실제 `ACTIVE`
+전환 rehearsal을 통과해야 한다.
 
-- `MATCHED`: Engine 예상 상태와 Legacy 결과가 같다.
-- `MISMATCHED`: 둘의 상태 또는 생성 결과 개수가 다르다.
-- `ENGINE_REJECTED`: Legacy는 처리했지만 Engine plan validation이 거부했다.
-
-SHADOW는 `orchid_group_mutations`, Entry, revision, Work·Sales Mutation link를 만들지
-않는다. plan의 도메인 거부는 호출 transaction 안에서 정상 결과로 격리하고,
-커밋 후 비교 저장 오류는 로그만 남겨 Legacy 업무 transaction을 실패시키지 않는다.
-같은 source identity 재시도는 비교 행을 중복 생성하지 않는다. `ACTIVE`
-coverage에는 `ENGINE`만 허용하므로 startup guard가 `SHADOW` 기동도 거부한다.
-
-이는 복원 DB와 수동 smoke test를 위한 routing 완료 상태이지 운영 cutover 완료를
-뜻하지 않는다. 다음 retirement inventory는 `ACTIVE` 전까지 모두 식별·라우팅하고,
-안정화 후 별도 릴리스에서 물리적으로 제거한다.
+이 검증 완료 상태는 운영 cutover 완료를 뜻하지 않는다. 다음 retirement inventory는
+`ACTIVE` 전까지 모두 식별·라우팅하고, 안정화 후 별도 릴리스에서 물리적으로 제거한다.
 
 구현 파일별 수명과 제거 gate는
 `docs/features/orchid-group-mutation-transition.md`를 기준 원장으로 관리한다.
@@ -906,7 +895,7 @@ coverage 시점이 달라지고, 아직 접근되지 않은 행의 직접 변경
 ### 기존 writer와 Engine의 dual write
 
 비교를 위해 두 경로가 같은 상태를 각각 저장하면 중복 차감, flush 순서와 ledger
-불일치가 발생할 수 있다. 비교는 read-only shadow plan이나 복제 DB에서 수행하고
+불일치가 발생할 수 있다. 비교는 운영 백업을 복원한 격리 DB에서 수행하고
 운영 transaction의 상태 write는 항상 한 경로만 담당한다.
 
 ## 완료 기준

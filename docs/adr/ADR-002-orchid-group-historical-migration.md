@@ -214,7 +214,7 @@ Farm의 `HISTORICAL` Entry는 run Entity 연관을 갖지 않고 감사 추적�
 3. Historical Mutation과 `HISTORICAL` Entry를 batch로 적재한다.
 4. Work 효과와 Lineage를 대응 Mutation에 연결한다.
 5. source count, link 집합, 수량 delta와 현재 상태를 다시 검증한다.
-6. SHADOW 기간에 추가된 legacy source를 cutoff watermark 이후부터 반복 적재한다.
+6. 최초 이관 이후 운영 중 추가된 legacy source를 cutoff watermark 이후부터 반복 적재한다.
 7. 실제 cutover에서 쓰기를 중단하고 마지막 catch-up을 실행한다.
 8. 최신 `orchid_groups` 전체를 StateChain BASELINE revision 0으로 기록한다.
 9. historical 검증과 baseline reconciliation이 모두 통과한 경우에만 ACTIVE로 바꾼다.
@@ -231,15 +231,11 @@ allocation·inventory movement·난 묶음 snapshot이 모두 0인지 실제 DB�
 기존 판매 자료를 `LEGACY_REFERENCE_ONLY`로 제외한다. VERIFIED run이 존재하면 같은 현재
 상태 fingerprint에서만 baseline을 시작할 수 있다.
 
-### 8. SHADOW와 historical migration을 함께 사용한다
+### 8. 운영 중 historical catch-up을 반복한다
 
-SHADOW에서는 Legacy가 유일한 상태 writer이고 Engine은 read-only plan만 계산한다.
-동시에 accepted legacy 요청의 typed command와 비교 결과를 보존한다. 이 기록은 최종
-historical catch-up의 source 누락 검사에도 사용한다.
-
-장기간 SHADOW 중에는 BASELINE을 만들지 않는다. 최종 write-stop 이후 historical
-catch-up과 현재 상태 baseline을 순서대로 수행한다. ACTIVE coverage에서는 계속
-ENGINE만 허용한다.
+최초 historical import 이후에도 운영 Legacy writer가 만든 Work·Audit source를
+cutoff watermark 기준으로 반복 적재한다. 최종 write-stop 이후 마지막 catch-up과
+현재 상태 baseline을 순서대로 수행한다. ACTIVE coverage에서는 계속 ENGINE만 허용한다.
 
 ## 검증 gate
 
@@ -271,8 +267,8 @@ snapshot은 조회 편의 때문에 사실성을 희생하고 live chain 제약�
 
 ### 같은 운영 DB에 Legacy와 Engine을 동시에 write
 
-중복 수량 변경과 서로 다른 revision을 만들 수 있으므로 기각한다. 비교는 SHADOW
-plan 또는 격리 DB에서만 수행한다.
+중복 수량 변경과 서로 다른 revision을 만들 수 있으므로 기각한다. 비교는 운영 백업을
+복원한 격리 DB에서만 수행한다.
 
 ## 구현 순서
 
@@ -283,8 +279,8 @@ profiling SQL과 attestation·gap 승인 기준
 → Audit·Inbound·Sales movement importer
 → ORIGIN·ATTESTED·GAP 분류와 quantity replay verifier
 → 통합 Timeline query
-→ SHADOW capture와 비교
 → 복원 DB 전체 historical migration rehearsal
+→ 복원 DB ENGINE 시나리오 회귀
 → write-stop, final catch-up, BASELINE, ACTIVE
 → legacy writer와 legacy Timeline 조립 제거
 ```

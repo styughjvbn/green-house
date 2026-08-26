@@ -124,9 +124,9 @@ demo
 - ledger coverage가 `ACTIVE`이면 PostgreSQL write fence가 transaction-local Mutation context 없는 `orchid_groups` INSERT·UPDATE와 모든 DELETE를 차단한다. 커밋 시에는 변경 revision에 대응하는 MutationEntry도 확인한다.
 - 실행 인스턴스는 ACTIVE coverage의 `minimumWriterVersion` 이상인 `ENGINE` writer mode여야 한다. baseline 적재는 재실행 가능한 고정 ID batch로 수행하고, 테이블 잠금 아래 최종 대사를 통과한 경우에만 한 번에 ACTIVE로 전환한다.
 - PREPARING 동안 DB fence는 아직 활성화되지 않으므로 운영 baseline에는 외부 write-stop이 필수다. 모든 write path의 Engine routing이 끝나기 전에는 ACTIVE로 전환하지 않는다.
-- 현재 Farm·Inbound·Work·Sales의 알려진 난 묶음 writer는 `LEGACY|SHADOW|ENGINE` 단일 경로 스위치를 공유한다. `SHADOW`는 실제 엔티티와 ledger를 변경하지 않는 detached Engine plan을 만든 뒤 Legacy 결과 snapshot과 비교하고, 원 transaction 커밋 후 비교 결과만 별도 transaction에 저장한다. plan의 도메인 거부와 커밋 후 비교 저장 실패는 Legacy transaction을 rollback하지 않는다. `ENGINE` 선택 시 Work 효과와 Sales 재고 이동은 같은 transaction에서 Mutation ID·correlation ID를 연결하며 dual write하지 않는다.
+- 현재 Farm·Inbound·Work·Sales의 알려진 난 묶음 writer는 `LEGACY|ENGINE` 단일 경로 스위치를 공유한다. `ENGINE` 선택 시 Work 효과와 Sales 재고 이동은 같은 transaction에서 Mutation ID·correlation ID를 연결하며 dual write하지 않는다.
 - PREPARING 전환 코드의 routing flag 호출자, `OrchidGroup` 직접 상태 변경자, 생성자와 repository write 호출자는 실행 가능한 architecture test의 명시적 inventory로 고정한다. 신규 writer는 inventory 허용 항목만 늘리지 않고 먼저 typed Engine command로 편입한다.
-- 기본값은 운영 호환을 위한 `LEGACY`다. 운영 관찰은 `SHADOW`, 복원 DB 상태 변경 검증은 `ENGINE`으로 분리한다. 복원 DB baseline, ENGINE smoke test와 `ACTIVE` 전환 rehearsal이 끝난 뒤 aggregate 전체를 한 번에 전환하고, 검증 완료 전에는 운영 `ACTIVE` coverage를 만들지 않는다.
+- 기본값은 운영 호환을 위한 `LEGACY`다. 최신 운영 백업을 복원한 격리 DB에서 baseline, ENGINE 시나리오 회귀와 `ACTIVE` 전환 rehearsal을 마친 뒤 aggregate 전체를 한 번에 전환하고, 검증 완료 전에는 운영 `ACTIVE` coverage를 만들지 않는다.
 - 운영 `ACTIVE`에서는 모든 인스턴스를 `ENGINE`으로 고정하고 DB fence로 legacy 실행을 차단한다. 안정화 후 routing flag와 legacy 직접 writer를 제거하며, 기존 Work·Sales·Lineage 사실 데이터는 별도 소비 전환 없이 삭제하지 않는다.
 - 전환 코드의 수명은 `features/orchid-group-mutation-transition.md`의 `TARGET`, `TRANSITION_ONLY`, `LEGACY_RETIRE`, `DATA_RETAIN` inventory를 기준으로 판단한다. 코드 제거 gate와 데이터 보존 기간을 분리하고, writer 호출자 분류는 architecture test로 고정한다.
 

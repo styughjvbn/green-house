@@ -194,6 +194,7 @@ pg_dump -U greenhouse greenhouse > backup_$(date +%Y%m%d).sql
 - V24는 `UNMAPPED`으로 남은 기존 난 묶음 중 의미가 명확한 스마트 따옴표 3·4인치 값만 표준 화분 코드로 보정한다. 다른 `UNMAPPED` 값은 자동 변환하지 않는다.
 - V25는 historical migration run과 공통 `HISTORICAL` MutationEntry 제약을 추가한다. 과거 이관은 Flyway가 자동 실행하지 않는다.
 - V26은 운영 전환 전 Legacy 결과와 read-only Engine plan을 비교하는 `orchid_group_shadow_comparisons`를 추가한다. 이 테이블은 업무 상태나 ledger가 아니다.
+- V27은 운영 SHADOW 단계를 사용하지 않기로 한 결정에 따라 V26의 비교 테이블과 sequence를 제거한다. 이미 적용된 V26 파일은 수정하거나 삭제하지 않는다.
 
 운영 custom dump로 로컬 개발 DB를 초기화할 때는 다음 스크립트를 사용한다. 백업을 생략하면 `temp/`의 최신 `*.dump.gz` 또는 `*.dump`를 선택한다. 스크립트는 로컬 DB만 허용하며 기존 백엔드를 종료하고, 복원 후 Flyway 적용·Hibernate 스키마 검증·작업 V2 무결성 검사를 수행한다.
 
@@ -352,7 +353,7 @@ DATABASE_PASSWORD=greenhouse_rehearsal_test \
 LEGACY writer로 fallback하지 않고 roll-forward한다.
 
 현재 구현은 Farm·Work·Sales·Inbound의 알려진 난 묶음 write path를 하나의
-`LEGACY|SHADOW|ENGINE` 스위치로 라우팅한다. `ACTIVE` 전에는 모든 운영 writer가 inventory에
+`LEGACY|ENGINE` 스위치로 라우팅한다. `ACTIVE` 전에는 모든 운영 writer가 inventory에
 식별되어 Engine을 지원하고, 스위치 밖의 미확인 직접 writer가 없어야 한다. 이는
 legacy 호환 코드를 먼저 삭제한다는 뜻은 아니다. 호환 분기는 전환 안정화 기간에
 남겨 둘 수 있지만 모든 실행 인스턴스는 `ENGINE`으로 고정하고 DB fence로 실행을
@@ -360,53 +361,6 @@ legacy 호환 코드를 먼저 삭제한다는 뜻은 아니다. 호환 분기�
 
 운영 DB의 `--activate=true` 실행 전에는 최신 운영 백업과 배포 후보 코드로 baseline,
 ENGINE 전체 회귀·smoke 및 아래 `ACTIVE` 전환 rehearsal까지 통과해야 한다.
-
-### 운영 SHADOW 관찰
-
-SHADOW는 운영 DB에서 Legacy 동작을 유지한 채 Engine 예상 결과를 비교하기 위한
-전환 전 모드다. V26 적용 후 coverage가 `ACTIVE`가 아닌 상태에서 모든 백엔드
-인스턴스를 같은 배포 후보 버전과 다음 설정으로 시작한다.
-
-```bash
-cd backend
-ORCHID_LEDGER_WRITER_MODE=SHADOW \
-ORCHID_LEDGER_WRITER_VERSION=1.1.0 \
-./gradlew bootRun
-```
-
-이 모드의 보장 범위는 다음과 같다.
-
-- Legacy만 `orchid_groups`를 변경한다. Mutation, Entry, revision과 Work·Sales Mutation
-  link는 생성하지 않는다.
-- Engine은 실제 Entity를 복사한 detached simulation에 domain method를 적용한다.
-- 비교 행은 원 업무 transaction 커밋 후 별도 transaction으로 저장된다.
-- Engine plan 또는 비교 저장이 실패해도 Legacy 업무 결과는 유지된다. plan 거부는
-  `ENGINE_REJECTED` 행, 비교 생성·저장 실패는 오류 로그로 조사한다.
-- `ACTIVE` coverage가 존재하면 startup guard가 SHADOW 기동을 거부한다.
-
-관찰 기간에는 단건·다중 생성, 수정·이동·삭제, 입고·포트, 구조 변경·보정, 폐기와
-판매 예약·출고·취소를 실제 운영 흐름으로 포함한다. 집계와 불일치 상세는 read-only
-스크립트로 확인한다. 다음 명령은 저장소 루트에서 실행한다.
-
-```bash
-PGPASSWORD="$DATABASE_PASSWORD" psql \
-  -h 127.0.0.1 -p 5432 \
-  -U "$DATABASE_USERNAME" -d greenhouse \
-  -f scripts/data-audit/orchid-shadow-report.sql
-```
-
-`MATCHED`는 예상과 실제 snapshot이 같다는 뜻이다. `MISMATCHED`와
-`ENGINE_REJECTED`는 source identity, `engine_error`, `mismatches`를 기준으로 전건
-원인을 분류한다. Legacy 물리 삭제와 Engine 생성 취소의 의도된 정책 차이는
-`LEGACY_PHYSICAL_DELETE`로 나타난다. 이를 포함한 차이를 승인할지 Engine 전환 전에
-Legacy 동작을 맞출지 결정한다. 분류되지 않은 차이가 하나라도 있으면 cutover하지
-않는다.
-
-SHADOW 관찰은 baseline이나 historical 이관을 대신하지 않는다. 관찰 중 생성된
-Legacy Work·Audit source는 historical migrator의 마지막 catch-up 대상으로 포함하고,
-운영 전환은 최신 백업의 ENGINE rehearsal과 write-stop 아래 최종 catch-up·baseline을
-거친다. `ACTIVE` 전에는 SHADOW에서 LEGACY로 되돌려도 업무 상태 rollback은 필요 없지만,
-`ACTIVE` 이후에는 fallback하지 않는다.
 
 ### ENGINE writer 수동 smoke test
 

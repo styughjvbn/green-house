@@ -5,7 +5,7 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.validation.annotation.Validated;
 
 /**
- * ORCHID-CUTOVER: TRANSITION_ONLY — LEGACY, SHADOW, ENGINE 전환 모드를 제공한다.
+ * ORCHID-CUTOVER: TRANSITION_ONLY — LEGACY와 ENGINE 전환 모드를 제공한다.
  * Removal gate: 모든 환경의 Engine 단일 writer 고정.
  */
 @Validated
@@ -23,13 +23,5 @@ public record OrchidGroupLedgerWriterProperties(
 
 	public boolean routesToMutationEngine() {
 		return writerMode == OrchidGroupLedgerWriterMode.ENGINE;
-	}
-
-	public boolean capturesShadowComparison() {
-		return writerMode == OrchidGroupLedgerWriterMode.SHADOW;
-	}
-
-	public boolean usesMutationContract() {
-		return writerMode != OrchidGroupLedgerWriterMode.LEGACY;
 	}
 }

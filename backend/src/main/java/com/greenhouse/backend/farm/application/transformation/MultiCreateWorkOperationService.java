@@ -8,7 +8,6 @@ import com.greenhouse.backend.common.config.TimeConfig;
 import com.greenhouse.backend.farm.application.orchid.mutation.CancelOrchidGroupCreationMutationCommand;
 import com.greenhouse.backend.farm.application.orchid.mutation.OrchidGroupMutationEngine;
 import com.greenhouse.backend.farm.application.orchid.mutation.OrchidGroupMutationRoutingPolicy;
-import com.greenhouse.backend.farm.application.orchid.mutation.OrchidGroupMutationShadowService;
 import com.greenhouse.backend.farm.application.orchid.mutation.OrchidGroupMutationSources;
 import com.greenhouse.backend.farm.dto.orchid.OrchidGroupResponse;
 import com.greenhouse.backend.farm.repository.orchid.OrchidGroupRepository;
@@ -39,7 +38,6 @@ public class MultiCreateWorkOperationService {
 	private final OrchidGroupCollectionMemberRepository memberRepository;
 	private final OrchidGroupMutationEngine mutationEngine;
 	private final OrchidGroupMutationRoutingPolicy mutationRoutingPolicy;
-	private final OrchidGroupMutationShadowService mutationShadowService;
 	private final Clock clock;
 
 	public MultiCreateWorkOperationService(
@@ -50,7 +48,6 @@ public class MultiCreateWorkOperationService {
 			OrchidGroupCollectionMemberRepository memberRepository,
 			OrchidGroupMutationEngine mutationEngine,
 			OrchidGroupMutationRoutingPolicy mutationRoutingPolicy,
-			OrchidGroupMutationShadowService mutationShadowService,
 			Clock clock) {
 		this.immediateWorkExecutionService = immediateWorkExecutionService;
 		this.queryService = queryService;
@@ -59,7 +56,6 @@ public class MultiCreateWorkOperationService {
 		this.memberRepository = memberRepository;
 		this.mutationEngine = mutationEngine;
 		this.mutationRoutingPolicy = mutationRoutingPolicy;
-		this.mutationShadowService = mutationShadowService;
 		this.clock = clock;
 	}
 
@@ -121,19 +117,7 @@ public class MultiCreateWorkOperationService {
 							TimeConfig.farmToday(clock),
 							"다중 생성 작업 취소")));
 		} else {
-			groups.forEach(group -> {
-				var command = mutationRoutingPolicy.usesMutationContract()
-						? new CancelOrchidGroupCreationMutationCommand(
-						OrchidGroupMutationSources.work(
-								operationId, "CANCEL_RESULT:" + group.getId()),
-						group.getId(),
-						TimeConfig.farmToday(clock),
-						"다중 생성 작업 취소")
-						: null;
-				var shadowPlan = mutationShadowService.prepare(command);
-				group.cancelCreation();
-				mutationShadowService.complete(shadowPlan);
-			});
+			groups.forEach(group -> group.cancelCreation());
 		}
 		immediateWorkExecutionService.cancelMultiCreate(operationId);
 		return response(operationId);

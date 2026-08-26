@@ -5,7 +5,6 @@ import com.greenhouse.backend.farm.application.orchid.mutation.ConsumeOrchidGrou
 import com.greenhouse.backend.farm.application.orchid.mutation.OrchidGroupMutationEngine;
 import com.greenhouse.backend.farm.application.orchid.mutation.OrchidGroupMutationResult;
 import com.greenhouse.backend.farm.application.orchid.mutation.OrchidGroupMutationRoutingPolicy;
-import com.greenhouse.backend.farm.application.orchid.mutation.OrchidGroupMutationShadowService;
 import com.greenhouse.backend.farm.application.orchid.mutation.OrchidGroupMutationSources;
 import com.greenhouse.backend.farm.application.orchid.mutation.OrchidGroupQuantityMutationItem;
 import com.greenhouse.backend.farm.application.orchid.mutation.RelatedOrchidGroupMutations;
@@ -39,11 +38,10 @@ public class SalesSlipInventoryService {
 	private final OrchidGroupReader orchidGroupReader;
 	private final OrchidGroupMutationEngine mutationEngine;
 	private final OrchidGroupMutationRoutingPolicy mutationRoutingPolicy;
-	private final OrchidGroupMutationShadowService mutationShadowService;
 
 	public void reserve(SalesSlip salesSlip) {
 		SalesSlipAllocationBatch allocations = lockForUpdate(salesSlip);
-		var command = mutationRoutingPolicy.usesMutationContract()
+		var command = mutationRoutingPolicy.routesToEngine()
 				? new ReserveOrchidGroupsMutationCommand(
 				OrchidGroupMutationSources.sales(
 						salesSlip.getId(), "RESERVE:" + salesSlip.getVersion()),
@@ -51,7 +49,6 @@ public class SalesSlipInventoryService {
 				salesSlip.getSaleDate(),
 				salesSlip.getMemo())
 				: null;
-		var shadowPlan = mutationShadowService.prepare(command);
 		OrchidGroupMutationResult mutation = mutationRoutingPolicy.routesToEngine()
 				? mutationEngine.reserve(command)
 				: null;
@@ -67,12 +64,11 @@ public class SalesSlipInventoryService {
 					SalesInventoryMovementType.SALES_RESERVE,
 					line.allocatedQuantity()), mutation));
 		}
-		mutationShadowService.complete(shadowPlan);
 	}
 
 	public void release(SalesSlip salesSlip) {
 		SalesSlipAllocationBatch allocations = lockForUpdate(salesSlip);
-		var command = mutationRoutingPolicy.usesMutationContract()
+		var command = mutationRoutingPolicy.routesToEngine()
 				? new ReleaseOrchidGroupReservationsMutationCommand(
 				OrchidGroupMutationSources.sales(
 						salesSlip.getId(), "RELEASE_EDIT:" + salesSlip.getVersion()),
@@ -80,7 +76,6 @@ public class SalesSlipInventoryService {
 				salesSlip.getSaleDate(),
 				salesSlip.getMemo())
 				: null;
-		var shadowPlan = mutationShadowService.prepare(command);
 		OrchidGroupMutationResult mutation = mutationRoutingPolicy.routesToEngine()
 				? mutationEngine.releaseReservation(command)
 				: null;
@@ -96,12 +91,11 @@ public class SalesSlipInventoryService {
 					SalesInventoryMovementType.SALES_RELEASE,
 					-line.allocatedQuantity()), mutation));
 		}
-		mutationShadowService.complete(shadowPlan);
 	}
 
 	public void cancelReserve(SalesSlip salesSlip) {
 		SalesSlipAllocationBatch allocations = lockForUpdate(salesSlip);
-		var command = mutationRoutingPolicy.usesMutationContract()
+		var command = mutationRoutingPolicy.routesToEngine()
 				? new ReleaseOrchidGroupReservationsMutationCommand(
 				OrchidGroupMutationSources.sales(
 						salesSlip.getId(), "CANCEL_RESERVE:" + salesSlip.getVersion()),
@@ -109,7 +103,6 @@ public class SalesSlipInventoryService {
 				salesSlip.getSaleDate(),
 				salesSlip.getMemo())
 				: null;
-		var shadowPlan = mutationShadowService.prepare(command);
 		OrchidGroupMutationResult mutation = mutationRoutingPolicy.routesToEngine()
 				? mutationEngine.releaseReservation(command)
 				: null;
@@ -125,7 +118,6 @@ public class SalesSlipInventoryService {
 					SalesInventoryMovementType.SALES_CANCEL_RESERVE,
 					-line.allocatedQuantity()), mutation));
 		}
-		mutationShadowService.complete(shadowPlan);
 	}
 
 	public void releaseForEdit(SalesSlip salesSlip) {
@@ -134,7 +126,7 @@ public class SalesSlipInventoryService {
 
 	void outbound(SalesSlipAllocationBatch allocations) {
 		SalesSlip salesSlip = allocations.salesSlip();
-		var command = mutationRoutingPolicy.usesMutationContract()
+		var command = mutationRoutingPolicy.routesToEngine()
 				? new ConsumeOrchidGroupReservationsMutationCommand(
 				OrchidGroupMutationSources.sales(
 						salesSlip.getId(), "OUTBOUND:" + salesSlip.getVersion()),
@@ -142,7 +134,6 @@ public class SalesSlipInventoryService {
 				salesSlip.getSaleDate(),
 				salesSlip.getMemo())
 				: null;
-		var shadowPlan = mutationShadowService.prepare(command);
 		OrchidGroupMutationResult mutation = mutationRoutingPolicy.routesToEngine()
 				? mutationEngine.consumeReservation(command)
 				: null;
@@ -158,12 +149,11 @@ public class SalesSlipInventoryService {
 					SalesInventoryMovementType.SALES_OUTBOUND,
 					-line.allocatedQuantity()), mutation));
 		}
-		mutationShadowService.complete(shadowPlan);
 	}
 
 	public void cancelOutbound(SalesSlip salesSlip) {
 		SalesSlipAllocationBatch allocations = lockForUpdate(salesSlip);
-		var command = mutationRoutingPolicy.usesMutationContract()
+		var command = mutationRoutingPolicy.routesToEngine()
 				? new RestoreOutboundOrchidGroupsMutationCommand(
 				OrchidGroupMutationSources.sales(
 						salesSlip.getId(), "CANCEL_OUTBOUND:" + salesSlip.getVersion()),
@@ -172,7 +162,6 @@ public class SalesSlipInventoryService {
 				salesSlip.getSaleDate(),
 				salesSlip.getMemo())
 				: null;
-		var shadowPlan = mutationShadowService.prepare(command);
 		OrchidGroupMutationResult mutation = mutationRoutingPolicy.routesToEngine()
 				? mutationEngine.restoreOutbound(command)
 				: null;
@@ -188,7 +177,6 @@ public class SalesSlipInventoryService {
 					SalesInventoryMovementType.SALES_CANCEL_OUTBOUND,
 					line.allocatedQuantity()), mutation));
 		}
-		mutationShadowService.complete(shadowPlan);
 	}
 
 	private List<OrchidGroupQuantityMutationItem> mutationItems(

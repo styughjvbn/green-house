@@ -4,7 +4,6 @@ import com.greenhouse.backend.farm.domain.orchid.OrchidGroup;
 import com.greenhouse.backend.farm.application.orchid.mutation.DiscardOrchidGroupMutationCommand;
 import com.greenhouse.backend.farm.application.orchid.mutation.OrchidGroupMutationEngine;
 import com.greenhouse.backend.farm.application.orchid.mutation.OrchidGroupMutationRoutingPolicy;
-import com.greenhouse.backend.farm.application.orchid.mutation.OrchidGroupMutationShadowService;
 import com.greenhouse.backend.farm.application.orchid.mutation.OrchidGroupMutationSources;
 import com.greenhouse.backend.farm.repository.orchid.OrchidGroupRepository;
 import com.greenhouse.backend.work.application.effect.WorkEffectCommand;
@@ -32,7 +31,6 @@ public class DiscardWorkHandler implements WorkEffectHandler {
 	private final OrchidGroupRepository orchidGroupRepository;
 	private final OrchidGroupMutationEngine mutationEngine;
 	private final OrchidGroupMutationRoutingPolicy mutationRoutingPolicy;
-	private final OrchidGroupMutationShadowService mutationShadowService;
 
 	@Override
 	public String supports() {
@@ -61,7 +59,7 @@ public class DiscardWorkHandler implements WorkEffectHandler {
 		int beforeQuantity = orchidGroup.getQuantity();
 		String beforeStatus = orchidGroup.getStatus();
 		WorkMutationLink mutationLink = null;
-		var mutationCommand = mutationRoutingPolicy.usesMutationContract()
+		var mutationCommand = mutationRoutingPolicy.routesToEngine()
 				? new DiscardOrchidGroupMutationCommand(
 				OrchidGroupMutationSources.work(operation.getId(), command.effectKey()),
 				orchidGroup.getId(),
@@ -73,9 +71,7 @@ public class DiscardWorkHandler implements WorkEffectHandler {
 			var mutation = mutationEngine.discard(mutationCommand);
 			mutationLink = new WorkMutationLink(mutation.mutationId(), mutation.correlationId());
 		} else {
-			var shadowPlan = mutationShadowService.prepare(mutationCommand);
 			orchidGroup.discard(discardQuantity);
-			mutationShadowService.complete(shadowPlan);
 		}
 
 		Map<String, Object> details = new LinkedHashMap<>();
