@@ -122,7 +122,7 @@ demo
 - historical migrator는 Work·Audit 저장소를 직접 읽지 않는다. 각 소유 모듈의 read-only application reader로 source를 받고, 이관 후 Work 효과는 Work application API로 Mutation에 연결한다. Lineage 연결은 소유 모듈인 `farm`에서 수행한다.
 - ledger rehearsal 대사는 `farm`의 현재 상태·revision chain과 모듈별 read-only application 계약을 조합한다. 각 모듈은 Work 진행 상태와 효과 연결, Sales 활성 allocation과 예약 수량처럼 자신이 소유한 정합성만 판정하며 데이터를 자동 보정하지 않는다.
 - ledger coverage가 `ACTIVE`이면 PostgreSQL write fence가 transaction-local Mutation context 없는 `orchid_groups` INSERT·UPDATE와 모든 DELETE를 차단한다. 커밋 시에는 변경 revision에 대응하는 MutationEntry도 확인한다.
-- 실행 인스턴스는 ACTIVE coverage의 `minimumWriterVersion` 이상인 `ENGINE` writer mode여야 한다. baseline 적재는 재실행 가능한 고정 ID batch로 수행하고, 테이블 잠금 아래 최종 대사를 통과한 경우에만 한 번에 ACTIVE로 전환한다.
+- baseline이 시작된 `PREPARING`과 `ACTIVE` coverage의 실행 인스턴스는 `minimumWriterVersion` 이상인 `ENGINE` writer mode여야 한다. startup guard는 부분 baseline 위의 Legacy 재기동을 거부한다. baseline 적재는 재실행 가능한 고정 ID batch로 수행하고, 테이블 잠금 아래 최종 대사를 통과한 경우에만 한 번에 ACTIVE로 전환한다.
 - PREPARING 동안 DB fence는 아직 활성화되지 않으므로 운영 baseline에는 외부 write-stop이 필수다. 모든 write path의 Engine routing이 끝나기 전에는 ACTIVE로 전환하지 않는다.
 - 현재 Farm·Inbound·Work·Sales의 알려진 난 묶음 writer는 `LEGACY|ENGINE` 단일 경로 스위치를 공유한다. `ENGINE` 선택 시 Work 효과와 Sales 재고 이동은 같은 transaction에서 Mutation ID·correlation ID를 연결하며 dual write하지 않는다.
 - PREPARING 전환 코드의 routing flag 호출자, `OrchidGroup` 직접 상태 변경자, 생성자와 repository write 호출자는 실행 가능한 architecture test의 명시적 inventory로 고정한다. 신규 writer는 inventory 허용 항목만 늘리지 않고 먼저 typed Engine command로 편입한다.

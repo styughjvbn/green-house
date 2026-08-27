@@ -38,7 +38,7 @@
 
 | 범위 | 역할 | 제거 gate | 데이터 처리 |
 |---|---|---|---|
-| `OrchidGroupLedgerWriterMode`, writer properties/configuration, routing policy와 startup guard | `LEGACY\|ENGINE` 선택과 구버전 차단 | 모든 환경을 Engine으로 고정하고 fallback 금지 확인 | coverage는 보존 |
+| `OrchidGroupLedgerWriterMode`, writer properties/configuration, routing policy와 startup guard | `LEGACY\|ENGINE` 선택, 시작된 `PREPARING`의 Legacy 재기동과 구버전 차단 | 모든 환경을 Engine으로 고정하고 fallback 금지 확인 | coverage는 보존 |
 | `OrchidGroupLedgerCutover*`, `OrchidGroupLedgerPreparationService` | baseline 생성과 `ACTIVE` 전환 | 운영 cutover 성공 및 재수행 불필요 승인 | baseline과 coverage는 보존 |
 | `OrchidGroupHistoryMigration*`, Historical 입력·연결 서비스 | cutover 이전 이력 계획·적재·검증 | 최종 catch-up과 manifest 검증 완료 | Historical Entry와 run 결과는 보존 |
 | `migration.*.orchid` operator runtime | migration run 잠금·상태 전이 | historical migration 종료와 감사 보존 확인 | run 테이블과 행은 보존 |

@@ -57,17 +57,70 @@ class OrchidGroupLedgerWriterGuardTest {
 				repository,
 				new OrchidGroupLedgerWriterProperties(OrchidGroupLedgerWriterMode.ENGINE, "1.2.1"))
 				.run(arguments))
+					.doesNotThrowAnyException();
+	}
+
+	@Test
+	void rejectsLegacyOrOlderWritersAfterPreparingBaselineStarts() {
+		OrchidGroupLedgerCoverageRepository repository = preparingCoverageRepository("1.2.0", true);
+		ApplicationArguments arguments = mock(ApplicationArguments.class);
+
+		assertThatThrownBy(() -> new OrchidGroupLedgerWriterStartupGuard(
+				repository,
+				new OrchidGroupLedgerWriterProperties(OrchidGroupLedgerWriterMode.LEGACY, "1.2.0"))
+				.run(arguments))
+				.isInstanceOf(IllegalStateException.class)
+				.hasMessageContaining("PREPARING")
+				.hasMessageContaining("ENGINE");
+		assertThatThrownBy(() -> new OrchidGroupLedgerWriterStartupGuard(
+				repository,
+				new OrchidGroupLedgerWriterProperties(OrchidGroupLedgerWriterMode.ENGINE, "1.1.9"))
+				.run(arguments))
+				.isInstanceOf(IllegalStateException.class)
+				.hasMessageContaining("최소 버전");
+		assertThatCode(() -> new OrchidGroupLedgerWriterStartupGuard(
+				repository,
+				new OrchidGroupLedgerWriterProperties(OrchidGroupLedgerWriterMode.ENGINE, "1.2.1"))
+				.run(arguments))
+				.doesNotThrowAnyException();
+	}
+
+	@Test
+	void allowsLegacyBeforePreparingBaselineStarts() {
+		OrchidGroupLedgerCoverageRepository repository = preparingCoverageRepository("1.2.0", false);
+
+		assertThatCode(() -> new OrchidGroupLedgerWriterStartupGuard(
+				repository,
+				new OrchidGroupLedgerWriterProperties(OrchidGroupLedgerWriterMode.LEGACY, "1.2.0"))
+				.run(mock(ApplicationArguments.class)))
 				.doesNotThrowAnyException();
 	}
 
 	private OrchidGroupLedgerCoverageRepository activeCoverageRepository(String minimumWriterVersion) {
-		OrchidGroupLedgerCoverage coverage = new OrchidGroupLedgerCoverage(
-				UUID.randomUUID(), 1, 1, LocalDate.of(2026, 8, 20), minimumWriterVersion);
+		OrchidGroupLedgerCoverage coverage = coverage(minimumWriterVersion);
 		coverage.startBaseline(Instant.parse("2026-08-20T00:00:00Z"));
 		coverage.activate(Instant.parse("2026-08-20T00:01:00Z"), 0, "a".repeat(64));
 		OrchidGroupLedgerCoverageRepository repository = mock(OrchidGroupLedgerCoverageRepository.class);
 		when(repository.findFirstByStatus(OrchidGroupLedgerCoverageStatus.ACTIVE))
+					.thenReturn(Optional.of(coverage));
+		return repository;
+	}
+
+	private OrchidGroupLedgerCoverageRepository preparingCoverageRepository(
+			String minimumWriterVersion,
+			boolean baselineStarted) {
+		OrchidGroupLedgerCoverage coverage = coverage(minimumWriterVersion);
+		if (baselineStarted) {
+			coverage.startBaseline(Instant.parse("2026-08-20T00:00:00Z"));
+		}
+		OrchidGroupLedgerCoverageRepository repository = mock(OrchidGroupLedgerCoverageRepository.class);
+		when(repository.findFirstByStatus(OrchidGroupLedgerCoverageStatus.PREPARING))
 				.thenReturn(Optional.of(coverage));
 		return repository;
+	}
+
+	private OrchidGroupLedgerCoverage coverage(String minimumWriterVersion) {
+		return new OrchidGroupLedgerCoverage(
+				UUID.randomUUID(), 1, 1, LocalDate.of(2026, 8, 20), minimumWriterVersion);
 	}
 }

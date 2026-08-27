@@ -341,14 +341,16 @@ DATABASE_PASSWORD=greenhouse_rehearsal_test \
 ./gradlew orchidLedgerCutover --args="\
   --cutover-key=${CUTOVER_KEY} \
   --effective-business-date=2026-08-20 \
-  --minimum-writer-version=1.0.0 \
-  --current-writer-version=1.0.0 \
+  --minimum-writer-version=1.1.0 \
+  --current-writer-version=1.1.0 \
   --activate=false \
   --confirmation=BASELINE:${CUTOVER_KEY}"
 ```
 
-`--activate=true`는 애플리케이션 쓰기를 중단하고 구버전 인스턴스를 모두 종료한
-상태에서만 사용한다. 명령은 난 묶음 테이블을 잠근 뒤 최종 대사를 다시 수행하며,
+운영 primary에서는 `--activate=false` baseline을 시작하기 전부터 애플리케이션 쓰기를
+중단하고 구버전 인스턴스를 모두 종료해야 한다. `PREPARING`에는 DB fence가 없으며,
+baseline 시작 후 `LEGACY` backend는 startup guard가 기동을 거부한다. 명령은 난 묶음
+테이블을 잠근 뒤 최종 대사를 다시 수행하며,
 확인 문구도 `ACTIVATE:{cutoverKey}`로 바뀐다. ACTIVE 이후에는 DB fence를 해제하거나
 LEGACY writer로 fallback하지 않고 roll-forward한다.
 
@@ -371,7 +373,7 @@ ENGINE 전체 회귀·smoke 및 아래 `ACTIVE` 전환 rehearsal까지 통과해
 ```bash
 cd backend
 ORCHID_LEDGER_WRITER_MODE=ENGINE \
-ORCHID_LEDGER_WRITER_VERSION=1.0.0 \
+ORCHID_LEDGER_WRITER_VERSION=1.1.0 \
 DATABASE_URL=jdbc:postgresql://localhost:5432/greenhouse_rehearsal \
 DATABASE_USERNAME=greenhouse_rehearsal_test \
 DATABASE_PASSWORD=greenhouse_rehearsal_test \
@@ -467,8 +469,8 @@ DATABASE_PASSWORD=greenhouse_rehearsal_test \
 ./gradlew orchidLedgerCutover --args="\
   --cutover-key=${CUTOVER_KEY} \
   --effective-business-date=2026-08-20 \
-  --minimum-writer-version=1.0.0 \
-  --current-writer-version=1.0.0 \
+  --minimum-writer-version=1.1.0 \
+  --current-writer-version=1.1.0 \
   --activate=true \
   --confirmation=ACTIVATE:${CUTOVER_KEY}"
 ```
@@ -485,6 +487,116 @@ Work/Sales 연결 SQL을 다시 수행하며 성공 기준은 다음과 같다.
 이 rehearsal DB는 `ACTIVE` 이후 LEGACY 테스트에 재사용하지 않는다. 실패하면 DB를
 보존해 원인을 조사하고 새 복원본에서 전체 절차를 다시 수행한다. 운영 primary는
 동일 절차의 결과와 소요 시간이 승인된 뒤에만 전환한다.
+
+### 운영 primary cutover runbook
+
+이 절차는 위 historical migration, ENGINE smoke test와 `ACTIVE` rehearsal을 최신 운영
+백업에서 모두 통과한 뒤 한 번만 실행한다. 모든 명령은 최종 배포 이미지와 같은 commit의
+checkout에서 실행하고 JSON 결과, SQL 결과, 백업 fingerprint와 시작·종료 시각을 보관한다.
+
+사전에 다음 값을 확정한다.
+
+```bash
+NAMESPACE=green-house
+DEPLOYMENT=green-house-backend
+CUTOVER_KEY='<APPROVED_CUTOVER_UUID>'
+EFFECTIVE_BUSINESS_DATE='<YYYY-MM-DD>'
+WRITER_VERSION='1.1.0'
+RELEASE_IMAGE='ghcr.io/styughjvbn/green-house-backend:sha-<PUBLISHED_COMMIT>'
+export DATABASE_URL='jdbc:postgresql://<PRODUCTION_DB_HOST>:5432/greenhouse'
+export DATABASE_USERNAME='<PRODUCTION_DB_WRITER>'
+read -rs DATABASE_PASSWORD
+export DATABASE_PASSWORD
+```
+
+`RELEASE_IMAGE`는 GHCR에 실제 발행된 태그여야 한다. 현재 repository manifest의 고정
+태그를 그대로 신뢰하지 않고 다음 결과와 `k8s/base/backend-deployment.yaml`의 image가
+일치하는지 확인한다. GHCR workflow는 `main` push 또는 수동 실행에서만 이미지를 발행한다.
+
+```bash
+docker manifest inspect "${RELEASE_IMAGE}" >/dev/null
+kubectl -n "${NAMESPACE}" get deployment "${DEPLOYMENT}" \
+  -o jsonpath='{.spec.template.spec.containers[0].image}{"\n"}'
+kubectl -n "${NAMESPACE}" get configmap green-house-config \
+  -o jsonpath='{.data.ORCHID_LEDGER_WRITER_MODE}{" "}{.data.ORCHID_LEDGER_WRITER_VERSION}{"\n"}'
+```
+
+전환 전 실행 중인 backend도 위 `RELEASE_IMAGE`여야 하며, `LEGACY`, writer version
+`1.1.0`으로 먼저 배포해 기존 기능을 확인한 상태여야 한다. 운영 DB에서
+`orchidLedgerReconcile`을 read-only로 실행해 `stage=PRE_BASELINE`, `ready=true`,
+`issues=[]`를 확인한다.
+
+유지보수 시작을 공지하고 backend를 완전히 종료한다. baseline 이후에는 Legacy를 다시
+기동하지 않는다.
+
+```bash
+kubectl -n "${NAMESPACE}" scale deployment/"${DEPLOYMENT}" --replicas=0
+kubectl -n "${NAMESPACE}" wait --for=delete pod \
+  -l app.kubernetes.io/name=green-house,app.kubernetes.io/component=backend \
+  --timeout=180s
+```
+
+DB에서 다른 application transaction이 없는지 확인한다. 결과는 비어 있어야 한다.
+
+```sql
+SELECT pid, usename, state, xact_start, query
+FROM pg_stat_activity
+WHERE datname = current_database()
+  AND pid <> pg_backend_pid()
+  AND xact_start IS NOT NULL;
+```
+
+이 상태에서 최종 운영 백업을 만들고 `pg_restore --list`로 읽을 수 있는지 확인한 뒤
+SHA-256을 기록한다. final historical migration은 새 run key, 이 백업 완료 시각의 UTC
+`source-cutoff`, 이 fingerprint를 사용해 앞 절의 plan과 apply를 다시 수행한다.
+`verification.ready=true`와 재실행 시 신규 Mutation 0건을 확인한다.
+
+같은 release checkout에서 baseline과 `ACTIVE`를 순서대로 실행한다. 두 명령 사이에도
+backend replicas는 계속 0이어야 한다.
+
+```bash
+cd backend
+./gradlew orchidLedgerCutover --args="\
+  --cutover-key=${CUTOVER_KEY} \
+  --effective-business-date=${EFFECTIVE_BUSINESS_DATE} \
+  --minimum-writer-version=${WRITER_VERSION} \
+  --current-writer-version=${WRITER_VERSION} \
+  --activate=false \
+  --confirmation=BASELINE:${CUTOVER_KEY}"
+
+./gradlew orchidLedgerCutover --args="\
+  --cutover-key=${CUTOVER_KEY} \
+  --effective-business-date=${EFFECTIVE_BUSINESS_DATE} \
+  --minimum-writer-version=${WRITER_VERSION} \
+  --current-writer-version=${WRITER_VERSION} \
+  --activate=true \
+  --confirmation=ACTIVATE:${CUTOVER_KEY}"
+```
+
+첫 결과는 `stage=BASELINE_PREPARING`, 두 번째 결과는 `stage=ACTIVE`이고 모두
+`ready=true`, `issues=[]`여야 한다. 그 뒤에만 `k8s/base/configmap.yaml`을 `ENGINE`과
+`1.1.0`으로, backend deployment를 검증한 `RELEASE_IMAGE`로 갱신하여 적용한다.
+ConfigMap만 변경하면 기존 Pod 환경 변수는 갱신되지 않으므로 새 Pod 기동을 반드시
+확인한다. base manifest의 `replicas: 1` 적용이 backend를 다시 기동한다.
+
+```bash
+cd ..
+kubectl apply -k k8s/base
+kubectl -n "${NAMESPACE}" rollout status deployment/"${DEPLOYMENT}" --timeout=300s
+kubectl -n "${NAMESPACE}" get deployment "${DEPLOYMENT}" \
+  -o jsonpath='{.spec.template.spec.containers[0].image}{"\n"}'
+kubectl -n "${NAMESPACE}" get configmap green-house-config \
+  -o jsonpath='{.data.ORCHID_LEDGER_WRITER_MODE}{" "}{.data.ORCHID_LEDGER_WRITER_VERSION}{"\n"}'
+```
+
+기동 후 `orchidLedgerReconcile`의 `stage=ACTIVE`, `ready=true`, `issues=[]`, Work/Sales
+연결 SQL 빈 결과와 ENGINE smoke test를 확인한 뒤 유지보수를 종료한다.
+
+`ACTIVE` 전 실패하면 backend를 0으로 유지하고 동일 cutover key로 resume하거나 최종
+백업 전체를 복원한다. 시작된 `PREPARING` coverage를 수동 삭제하거나 Legacy backend를
+재기동하지 않는다. `ACTIVE` 후에는 `LEGACY` flag로 되돌리지 않는다. 일반 장애는
+roll-forward하고, 복구가 불가능하면 전환 직전 DB 전체 백업과 그에 맞는 Legacy
+application/config를 함께 복원한다.
 
 ### 데모 환경
 
