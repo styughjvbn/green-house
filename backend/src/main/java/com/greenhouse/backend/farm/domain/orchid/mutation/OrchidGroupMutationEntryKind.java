@@ -4,5 +4,5 @@ public enum OrchidGroupMutationEntryKind {
 	BASELINE,
 	CREATE,
 	CHANGE,
-	HISTORICAL
+	DELETE
 }

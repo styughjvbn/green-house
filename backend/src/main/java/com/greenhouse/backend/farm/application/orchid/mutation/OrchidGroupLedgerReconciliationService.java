@@ -16,7 +16,6 @@ import com.greenhouse.backend.farm.repository.orchid.mutation.OrchidGroupMutatio
 import com.greenhouse.backend.farm.repository.orchid.mutation.OrchidGroupMutationRepository;
 import com.greenhouse.backend.work.application.effect.WorkOrchidGroupLedgerRehearsalInspector;
 import java.math.BigDecimal;
-import java.math.RoundingMode;
 import java.time.Clock;
 import java.time.Instant;
 import java.util.ArrayList;
@@ -75,6 +74,12 @@ public class OrchidGroupLedgerReconciliationService {
 					"ACTIVE coverage가 있는 동안 새 PREPARING coverage를 둘 수 없습니다."));
 		}
 		OrchidGroupLedgerCoverage coverage = activeCoverage.orElseGet(() -> preparingCoverage.orElse(null));
+		if (coverage != null
+				&& coverage.getStatus() == OrchidGroupLedgerCoverageStatus.ACTIVE
+				&& coverage.getImportFingerprint() == null) {
+			issues.add(issue("MISSING_IMPORT_FINGERPRINT", "COVERAGE", coverage.getCutoverKey().toString(),
+					"ACTIVE coverage에는 complete state-chain manifest fingerprint가 필요합니다."));
+		}
 		OrchidGroupLedgerReconciliationStage stage = coverage == null
 				? OrchidGroupLedgerReconciliationStage.PRE_BASELINE
 				: coverage.getStatus() == OrchidGroupLedgerCoverageStatus.ACTIVE
@@ -90,6 +95,7 @@ public class OrchidGroupLedgerReconciliationService {
 
 		Map<Long, List<OrchidGroupMutationEntry>> entriesByGroupId = loadEntries(groups);
 		inspectLedger(stage, coverage, groups, entriesByGroupId, issues);
+		inspectDeletedLedger(stage, entryRepository.findChainsWithoutCurrentGroup(), issues);
 		long mutationCount = mutationRepository.count();
 		long entryCount = entryRepository.count();
 		long emptyMutationCount = mutationRepository.countWithoutEntries();
@@ -361,6 +367,52 @@ public class OrchidGroupLedgerReconciliationService {
 		}
 	}
 
+	private void inspectDeletedLedger(
+			OrchidGroupLedgerReconciliationStage stage,
+			List<OrchidGroupMutationEntry> orphanEntries,
+			List<OrchidGroupLedgerReconciliationIssue> issues) {
+		Map<Long, List<OrchidGroupMutationEntry>> entriesByGroup = orphanEntries.stream()
+				.collect(Collectors.groupingBy(
+						OrchidGroupMutationEntry::getOrchidGroupId,
+						LinkedHashMap::new,
+						Collectors.toList()));
+		for (var groupEntries : entriesByGroup.entrySet()) {
+			Long groupId = groupEntries.getKey();
+			List<OrchidGroupMutationEntry> entries = groupEntries.getValue();
+			if (stage == OrchidGroupLedgerReconciliationStage.PRE_BASELINE) {
+				issues.add(issue("LEDGER_STATE_BEFORE_COVERAGE", "FARM", groupId.toString(),
+						"Coverage가 없는데 삭제된 난 묶음 revision chain이 존재합니다."));
+				continue;
+			}
+			OrchidGroupMutationEntry previous = null;
+			for (OrchidGroupMutationEntry entry : entries) {
+				if (previous != null) {
+					if (!Objects.equals(previous.getStateRevisionAfter(), entry.getStateRevisionBefore())) {
+						issues.add(issue("REVISION_GAP", "FARM", groupId.toString(),
+								"삭제된 난 묶음 MutationEntry revision이 연속되지 않습니다."));
+					}
+					if (!sameSnapshot(previous.getAfterState(), entry.getBeforeState())) {
+						issues.add(issue("SNAPSHOT_CHAIN_MISMATCH", "FARM", groupId.toString(),
+								"삭제된 난 묶음의 snapshot chain이 연속되지 않습니다."));
+					}
+				}
+				previous = entry;
+			}
+			OrchidGroupMutationEntry first = entries.getFirst();
+			if (first.getEntryKind() != OrchidGroupMutationEntryKind.CREATE
+					&& first.getEntryKind() != OrchidGroupMutationEntryKind.BASELINE) {
+				issues.add(issue("INVALID_LEDGER_ORIGIN", "FARM", groupId.toString(),
+						"삭제된 난 묶음 chain은 BASELINE 또는 CREATE로 시작해야 합니다."));
+			}
+			OrchidGroupMutationEntry last = entries.getLast();
+			if (last.getEntryKind() != OrchidGroupMutationEntryKind.DELETE
+					|| last.getAfterState() != null) {
+				issues.add(issue("MISSING_DELETE_TOMBSTONE", "FARM", groupId.toString(),
+						"현재 행이 없는 난 묶음 chain은 DELETE로 종료되어야 합니다."));
+			}
+		}
+	}
+
 	private boolean isCoverageBaseline(
 			OrchidGroupMutationEntry entry,
 			OrchidGroupLedgerCoverage coverage) {
@@ -396,28 +448,7 @@ public class OrchidGroupLedgerReconciliationService {
 		if (snapshot == null) {
 			return null;
 		}
-		return new OrchidGroupStateSnapshot(
-				snapshot.quantity(),
-				snapshot.reservedQuantity(),
-				snapshot.status(),
-				snapshot.bedZoneId(),
-				snapshot.sortOrder(),
-				canonicalPosition(snapshot.startPosition()),
-				canonicalPosition(snapshot.endPosition()),
-				snapshot.varietyId(),
-				snapshot.genus(),
-				snapshot.varietyName(),
-				snapshot.ageYear(),
-				snapshot.potSizeCode(),
-				snapshot.placementType(),
-				snapshot.trayCount(),
-				snapshot.splitPlacementAllowed(),
-				snapshot.inboundRecordId(),
-				snapshot.memo());
-	}
-
-	private BigDecimal canonicalPosition(BigDecimal value) {
-		return value == null ? null : value.setScale(2, RoundingMode.UNNECESSARY);
+		return snapshot.canonical();
 	}
 
 	private OrchidGroupLedgerReconciliationIssue groupIssue(

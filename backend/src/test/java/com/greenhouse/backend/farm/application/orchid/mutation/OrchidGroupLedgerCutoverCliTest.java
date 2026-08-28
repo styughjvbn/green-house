@@ -19,7 +19,7 @@ class OrchidGroupLedgerCutoverCliTest {
 				"--minimum-writer-version=1.0.0",
 				"--current-writer-version=1.1.0",
 				"--activate=false",
-				"--confirmation=BASELINE:" + cutoverKey,
+				"--confirmation=VERIFY:" + cutoverKey,
 				"--spring.profiles.active=e2e"
 		});
 
@@ -38,7 +38,7 @@ class OrchidGroupLedgerCutoverCliTest {
 				"--minimum-writer-version=1.0.0",
 				"--current-writer-version=1.0.0",
 				"--activate=true",
-				"--confirmation=BASELINE:" + cutoverKey
+				"--confirmation=WRONG:" + cutoverKey
 		};
 
 		assertThatThrownBy(() -> OrchidGroupLedgerCutoverCli.parse(baseArguments))

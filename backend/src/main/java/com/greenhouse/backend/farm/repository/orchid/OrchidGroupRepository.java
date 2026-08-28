@@ -16,24 +16,6 @@ public interface OrchidGroupRepository extends JpaRepository<OrchidGroup, Long> 
 	@Query("select g.id from OrchidGroup g where g.id > :afterId order by g.id")
 	List<Long> findIdsAfter(@Param("afterId") Long afterId, Pageable pageable);
 
-	@Query("""
-			select new com.greenhouse.backend.farm.repository.orchid.OrchidGroupHistoricalStateRow(
-				g.id, g.quantity, g.createdAt, g.updatedAt)
-			from OrchidGroup g
-			where g.id > :afterId
-			order by g.id
-			""")
-	List<OrchidGroupHistoricalStateRow> findHistoricalStateRowsAfter(
-			@Param("afterId") Long afterId,
-			Pageable pageable);
-
-	@Query("""
-			select g.id from OrchidGroup g
-			where g.id > :afterId and g.stateRevision is null
-			order by g.id
-			""")
-	List<Long> findUnrevisionedIdsAfter(@Param("afterId") Long afterId, Pageable pageable);
-
 	@Lock(LockModeType.PESSIMISTIC_WRITE)
 	@Query("select g from OrchidGroup g where g.id in :orchidGroupIds order by g.id")
 	List<OrchidGroup> findAllForUpdateByIdIn(@Param("orchidGroupIds") java.util.Collection<Long> orchidGroupIds);

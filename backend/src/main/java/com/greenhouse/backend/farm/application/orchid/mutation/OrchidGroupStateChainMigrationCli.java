@@ -8,7 +8,6 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
-import java.time.Instant;
 import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -23,17 +22,16 @@ import org.springframework.boot.builder.SpringApplicationBuilder;
 import org.springframework.context.ConfigurableApplicationContext;
 
 /**
- * ORCHID-CUTOVER: TRANSITION_ONLY — cutover 이전 이력을 적재하는 operator CLI다.
- * Removal gate: 최종 historical catch-up과 검증 완료.
+ * ORCHID-CUTOVER: TRANSITION_ONLY — complete state-chain manifest를 검증·적재하는 operator CLI다.
+ * Removal gate: 운영 cutover 완료 및 사후 복구 도구 보존 정책 확정.
  */
-public final class OrchidGroupHistoryMigrationCli {
+public final class OrchidGroupStateChainMigrationCli {
 
 	private static final Set<String> OPERATOR_OPTIONS = Set.of(
-			"run-key",
-			"source-cutoff",
-			"backup-fingerprint",
+			"cutover-key",
 			"manifest",
 			"effective-business-date",
+			"minimum-writer-version",
 			"apply",
 			"confirmation");
 	private static final Set<String> PROTECTED_OPTIONS = Set.of(
@@ -43,7 +41,7 @@ public final class OrchidGroupHistoryMigrationCli {
 			"--app.settlement.rebuild-on-startup",
 			"--app.orchid-ledger.startup-guard-enabled");
 
-	private OrchidGroupHistoryMigrationCli() {
+	private OrchidGroupStateChainMigrationCli() {
 	}
 
 	public static void main(String[] args) {
@@ -58,17 +56,28 @@ public final class OrchidGroupHistoryMigrationCli {
 		ObjectMapper objectMapper = new ObjectMapper().findAndRegisterModules();
 		try {
 			byte[] manifestBytes = Files.readAllBytes(parsed.manifestPath());
-			OrchidGroupHistoryMigrationManifest manifest = objectMapper.readValue(
-					manifestBytes, OrchidGroupHistoryMigrationManifest.class);
-			OrchidGroupHistoryMigrationOperatorCommand command = parsed.command(sha256(manifestBytes));
+			OrchidGroupStateChainMigrationManifest manifest = objectMapper.readValue(
+					manifestBytes, OrchidGroupStateChainMigrationManifest.class);
 			try (ConfigurableApplicationContext context = new SpringApplicationBuilder(BackendApplication.class)
 					.web(WebApplicationType.NONE)
 					.run(parsed.springArguments().toArray(String[]::new))) {
-				OrchidGroupHistoryMigrationOperatorResult result = context
-						.getBean(OrchidGroupHistoryMigrationOperatorService.class)
-						.execute(command, manifest);
+				OrchidGroupStateChainMigrationService service = context
+						.getBean(OrchidGroupStateChainMigrationService.class);
+				OrchidGroupStateChainMigrationResult result = parsed.apply()
+						? service.importManifest(
+								parsed.cutoverKey(),
+								parsed.effectiveBusinessDate(),
+								parsed.minimumWriterVersion(),
+								sha256(manifestBytes),
+								manifest)
+						: service.validate(
+								parsed.cutoverKey(),
+								parsed.effectiveBusinessDate(),
+								parsed.minimumWriterVersion(),
+								sha256(manifestBytes),
+								manifest);
 				printResult(objectMapper, result);
-				exitCode = !command.apply() || Boolean.TRUE.equals(result.verification().get("ready")) ? 0 : 2;
+				exitCode = result.reconciliation().ready() ? 0 : 2;
 			}
 		} catch (IOException | RuntimeException exception) {
 			exception.printStackTrace(System.err);
@@ -98,22 +107,17 @@ public final class OrchidGroupHistoryMigrationCli {
 			}
 		}
 
-		UUID runKey = UUID.fromString(required(values, "run-key"));
+		UUID cutoverKey = UUID.fromString(required(values, "cutover-key"));
 		boolean apply = parseBoolean(values.getOrDefault("apply", "false"));
-		String expectedConfirmation = (apply ? "IMPORT:" : "PLAN:") + runKey;
+		String expectedConfirmation = (apply ? "IMPORT:" : "PLAN:") + cutoverKey;
 		if (!expectedConfirmation.equals(required(values, "confirmation"))) {
 			throw new IllegalArgumentException("확인 문구가 일치하지 않습니다: " + expectedConfirmation);
 		}
-		String backupFingerprint = required(values, "backup-fingerprint");
-		if (!backupFingerprint.matches("[0-9a-f]{64}")) {
-			throw new IllegalArgumentException("백업 fingerprint 형식이 올바르지 않습니다.");
-		}
 		return new ParsedArguments(
-				runKey,
-				Instant.parse(required(values, "source-cutoff")),
-				backupFingerprint,
+				cutoverKey,
 				Path.of(required(values, "manifest")).toAbsolutePath().normalize(),
 				LocalDate.parse(required(values, "effective-business-date")),
+				required(values, "minimum-writer-version"),
 				apply,
 				List.copyOf(springArguments));
 	}
@@ -141,7 +145,7 @@ public final class OrchidGroupHistoryMigrationCli {
 				.filter(argument -> PROTECTED_OPTIONS.stream()
 						.anyMatch(option -> argument.equals(option) || argument.startsWith(option + "=")))
 				.forEach(argument -> {
-					throw new IllegalArgumentException("Historical migration 안전 옵션은 변경할 수 없습니다: "
+					throw new IllegalArgumentException("State-chain migration 안전 옵션은 변경할 수 없습니다: "
 							+ argument);
 				});
 	}
@@ -156,31 +160,20 @@ public final class OrchidGroupHistoryMigrationCli {
 
 	private static void printResult(
 			ObjectMapper objectMapper,
-			OrchidGroupHistoryMigrationOperatorResult result) {
+			OrchidGroupStateChainMigrationResult result) {
 		try {
 			System.out.println(objectMapper.writerWithDefaultPrettyPrinter().writeValueAsString(result));
 		} catch (JsonProcessingException exception) {
-			throw new IllegalStateException("Historical migration 결과를 JSON으로 출력할 수 없습니다.", exception);
+			throw new IllegalStateException("State-chain migration 결과를 출력할 수 없습니다.", exception);
 		}
 	}
 
 	record ParsedArguments(
-			UUID runKey,
-			Instant sourceCutoff,
-			String backupFingerprint,
+			UUID cutoverKey,
 			Path manifestPath,
 			LocalDate effectiveBusinessDate,
+			String minimumWriterVersion,
 			boolean apply,
 			List<String> springArguments) {
-
-		OrchidGroupHistoryMigrationOperatorCommand command(String manifestFingerprint) {
-			return new OrchidGroupHistoryMigrationOperatorCommand(
-					runKey,
-					sourceCutoff,
-					backupFingerprint,
-					manifestFingerprint,
-					effectiveBusinessDate,
-					apply);
-		}
 	}
 }

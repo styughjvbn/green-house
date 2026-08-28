@@ -4,16 +4,15 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import com.greenhouse.backend.common.exception.ConflictException;
-import com.greenhouse.backend.farm.application.orchid.mutation.BaselineOrchidGroupsCommand;
 import com.greenhouse.backend.farm.application.orchid.mutation.CancelOrchidGroupCreationMutationCommand;
 import com.greenhouse.backend.farm.application.orchid.mutation.CreateOrchidGroupMutationCommand;
 import com.greenhouse.backend.farm.application.orchid.mutation.CreateOrchidGroupMutationItem;
 import com.greenhouse.backend.farm.application.orchid.mutation.CreateOrchidGroupsMutationCommand;
 import com.greenhouse.backend.farm.application.orchid.mutation.DiscardOrchidGroupMutationCommand;
 import com.greenhouse.backend.farm.application.orchid.mutation.MoveOrchidGroupMutationCommand;
-import com.greenhouse.backend.farm.application.orchid.mutation.OrchidGroupLedgerPreparationService;
 import com.greenhouse.backend.farm.application.orchid.mutation.OrchidGroupMutationEngine;
 import com.greenhouse.backend.farm.application.orchid.mutation.OrchidGroupMutationDetails;
+import com.greenhouse.backend.farm.application.orchid.mutation.OrchidGroupStateChainMigrationService;
 import com.greenhouse.backend.farm.application.orchid.mutation.TransformOrchidGroupMutationResult;
 import com.greenhouse.backend.farm.application.orchid.mutation.TransformOrchidGroupMutationSource;
 import com.greenhouse.backend.farm.application.orchid.mutation.TransformOrchidGroupsMutationCommand;
@@ -43,7 +42,7 @@ import org.springframework.transaction.annotation.Transactional;
 @Transactional
 class OrchidGroupMutationEngineIntegrationTest extends AbstractBackendIntegrationTest {
 
-	@Autowired OrchidGroupLedgerPreparationService ledgerPreparationService;
+	@Autowired OrchidGroupStateChainMigrationService stateChainMigrationService;
 	@Autowired OrchidGroupMutationEngine mutationEngine;
 	@Autowired OrchidGroupMutationRepository mutationRepository;
 	@Autowired OrchidGroupMutationEntryRepository entryRepository;
@@ -129,10 +128,8 @@ class OrchidGroupMutationEngineIntegrationTest extends AbstractBackendIntegratio
 		LocalDate businessDate = LocalDate.of(2026, 8, 20);
 		long mutationCountBefore = mutationRepository.count();
 		long entryCountBefore = entryRepository.count();
-		ledgerPreparationService.prepare(cutoverKey, businessDate, "mutation-engine-test");
-		ledgerPreparationService.start(cutoverKey);
-		ledgerPreparationService.baselineBatch(new BaselineOrchidGroupsCommand(
-				cutoverKey, "GROUPS-0001", List.of(group.getId()), businessDate));
+		OrchidGroupStateChainTestSupport.importCurrentGroups(
+				stateChainMigrationService, orchidGroupRepository, cutoverKey, businessDate, "mutation-engine-test");
 
 		var updated = mutationEngine.updateDetails(new UpdateOrchidGroupMutationCommand(
 				farmSource("update-1", "UPDATE_DETAILS"),
@@ -201,19 +198,20 @@ class OrchidGroupMutationEngineIntegrationTest extends AbstractBackendIntegratio
 		long entryCountBefore = entryRepository.count();
 		UUID cutoverKey = UUID.randomUUID();
 		LocalDate businessDate = LocalDate.of(2026, 8, 20);
-		ledgerPreparationService.prepare(cutoverKey, businessDate, "mutation-engine-test");
-		ledgerPreparationService.start(cutoverKey);
+		var imported = OrchidGroupStateChainTestSupport.importCurrentGroups(
+				stateChainMigrationService, orchidGroupRepository, cutoverKey, businessDate, "mutation-engine-test");
 
-		var baseline = ledgerPreparationService.baselineBatch(new BaselineOrchidGroupsCommand(
-				cutoverKey, "GROUPS-0001", List.of(group.getId()), businessDate));
-
-		assertThat(baseline.mutationType()).isEqualTo(OrchidGroupMutationType.BASELINE_IMPORT);
-		assertThat(baseline.entries()).singleElement().satisfies(entry -> {
-			assertThat(entry.entryKind()).isEqualTo(OrchidGroupMutationEntryKind.BASELINE);
-			assertThat(entry.stateRevisionBefore()).isNull();
-			assertThat(entry.stateRevisionAfter()).isZero();
-			assertThat(entry.afterState().quantity()).isEqualTo(20);
-		});
+		assertThat(imported.importedMutationCount()).isEqualTo(1);
+		assertThat(entryRepository.findStateChainByOrchidGroupIdIn(List.of(group.getId())))
+				.singleElement()
+				.satisfies(entry -> {
+					assertThat(entry.getMutation().getMutationType())
+							.isEqualTo(OrchidGroupMutationType.BASELINE_IMPORT);
+					assertThat(entry.getEntryKind()).isEqualTo(OrchidGroupMutationEntryKind.BASELINE);
+					assertThat(entry.getStateRevisionBefore()).isNull();
+					assertThat(entry.getStateRevisionAfter()).isZero();
+					assertThat(entry.getAfterState().quantity()).isEqualTo(20);
+				});
 		assertThat(group.getStateRevision()).isZero();
 
 		UUID correlationId = UUID.randomUUID();
@@ -251,10 +249,8 @@ class OrchidGroupMutationEngineIntegrationTest extends AbstractBackendIntegratio
 		OrchidGroup group = createOrchidGroup(20);
 		UUID cutoverKey = UUID.randomUUID();
 		LocalDate businessDate = LocalDate.of(2026, 8, 20);
-		ledgerPreparationService.prepare(cutoverKey, businessDate, "mutation-engine-test");
-		ledgerPreparationService.start(cutoverKey);
-		ledgerPreparationService.baselineBatch(new BaselineOrchidGroupsCommand(
-				cutoverKey, "GROUPS-0001", List.of(group.getId()), businessDate));
+		OrchidGroupStateChainTestSupport.importCurrentGroups(
+				stateChainMigrationService, orchidGroupRepository, cutoverKey, businessDate, "mutation-engine-test");
 		var source = new OrchidGroupMutationSource(
 				OrchidGroupMutationSourceDomain.WORK,
 				"WORK_EFFECT",
@@ -333,13 +329,8 @@ class OrchidGroupMutationEngineIntegrationTest extends AbstractBackendIntegratio
 				fixture, 30, new BigDecimal("2"), new BigDecimal("4"), 2);
 		UUID cutoverKey = UUID.randomUUID();
 		LocalDate businessDate = LocalDate.of(2026, 8, 20);
-		ledgerPreparationService.prepare(cutoverKey, businessDate, "mutation-engine-test");
-		ledgerPreparationService.start(cutoverKey);
-		ledgerPreparationService.baselineBatch(new BaselineOrchidGroupsCommand(
-				cutoverKey,
-				"GROUPS-0001",
-				List.of(firstSource.getId(), secondSource.getId()),
-				businessDate));
+		OrchidGroupStateChainTestSupport.importCurrentGroups(
+				stateChainMigrationService, orchidGroupRepository, cutoverKey, businessDate, "mutation-engine-test");
 		long groupCountBefore = orchidGroupRepository.count();
 		long mutationCountBefore = mutationRepository.count();
 		long entryCountBefore = entryRepository.count();

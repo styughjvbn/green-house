@@ -1,7 +1,7 @@
 \set ON_ERROR_STOP on
 \pset pager off
 
--- Read-only profiling for an OrchidGroup historical migration rehearsal.
+-- Read-only profiling for an OrchidGroup complete state-chain rehearsal.
 -- Run only against a restored backup or another read-only operational copy.
 
 \echo 'SOURCE_COUNTS'

@@ -54,7 +54,7 @@ class OrchidGroupWriterArchitectureTest {
 			"com.greenhouse.backend.farm.application.orchid.mutation.OrchidGroupMutationEngine");
 
 	private static final Set<String> TRANSITION_ONLY_DIRECT_STATE_WRITER_INVENTORY = Set.of(
-			"com.greenhouse.backend.farm.application.orchid.mutation.OrchidGroupLedgerPreparationService");
+			"com.greenhouse.backend.farm.application.orchid.mutation.OrchidGroupStateChainMigrationService");
 
 	private static final Set<String> LEGACY_RETIRE_DIRECT_STATE_WRITER_INVENTORY = Set.of(
 			"com.greenhouse.backend.farm.application.inbound.InboundPottingService",

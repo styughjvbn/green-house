@@ -2,6 +2,7 @@ package com.greenhouse.backend.farm.domain.orchid.mutation;
 
 import com.greenhouse.backend.farm.domain.orchid.OrchidGroup;
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 
 public record OrchidGroupStateSnapshot(
 		Integer quantity,
@@ -44,5 +45,30 @@ public record OrchidGroupStateSnapshot(
 				group.getSplitPlacementAllowed(),
 				group.getInboundRecord() == null ? null : group.getInboundRecord().getId(),
 				group.getMemo());
+	}
+
+	public OrchidGroupStateSnapshot canonical() {
+		return new OrchidGroupStateSnapshot(
+				quantity,
+				reservedQuantity,
+				status,
+				bedZoneId,
+				sortOrder,
+				canonicalPosition(startPosition),
+				canonicalPosition(endPosition),
+				varietyId,
+				genus,
+				varietyName,
+				ageYear,
+				potSizeCode,
+				placementType,
+				trayCount,
+				splitPlacementAllowed,
+				inboundRecordId,
+				memo);
+	}
+
+	private BigDecimal canonicalPosition(BigDecimal value) {
+		return value == null ? null : value.setScale(2, RoundingMode.UNNECESSARY);
 	}
 }

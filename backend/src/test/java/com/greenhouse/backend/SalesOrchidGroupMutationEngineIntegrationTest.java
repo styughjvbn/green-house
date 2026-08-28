@@ -3,11 +3,10 @@ package com.greenhouse.backend;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
-import com.greenhouse.backend.farm.application.orchid.mutation.BaselineOrchidGroupsCommand;
 import com.greenhouse.backend.farm.application.orchid.mutation.ConsumeOrchidGroupReservationsMutationCommand;
-import com.greenhouse.backend.farm.application.orchid.mutation.OrchidGroupLedgerPreparationService;
 import com.greenhouse.backend.farm.application.orchid.mutation.OrchidGroupMutationEngine;
 import com.greenhouse.backend.farm.application.orchid.mutation.OrchidGroupMutationResult;
+import com.greenhouse.backend.farm.application.orchid.mutation.OrchidGroupStateChainMigrationService;
 import com.greenhouse.backend.farm.application.orchid.mutation.OrchidGroupQuantityMutationItem;
 import com.greenhouse.backend.farm.application.orchid.mutation.ReleaseOrchidGroupReservationsMutationCommand;
 import com.greenhouse.backend.farm.application.orchid.mutation.RelatedOrchidGroupMutations;
@@ -39,7 +38,7 @@ import org.springframework.transaction.annotation.Transactional;
 @Transactional
 class SalesOrchidGroupMutationEngineIntegrationTest extends AbstractBackendIntegrationTest {
 
-	@Autowired private OrchidGroupLedgerPreparationService ledgerPreparationService;
+	@Autowired private OrchidGroupStateChainMigrationService stateChainMigrationService;
 	@Autowired private OrchidGroupMutationEngine mutationEngine;
 	@Autowired private OrchidGroupMutationRepository mutationRepository;
 	@Autowired private OrchidGroupMutationEntryRepository entryRepository;
@@ -53,13 +52,8 @@ class SalesOrchidGroupMutationEngineIntegrationTest extends AbstractBackendInteg
 		long mutationCountBefore = mutationRepository.count();
 		long entryCountBefore = entryRepository.count();
 		UUID cutoverKey = UUID.randomUUID();
-		ledgerPreparationService.prepare(cutoverKey, businessDate, "mutation-engine-test");
-		ledgerPreparationService.start(cutoverKey);
-		ledgerPreparationService.baselineBatch(new BaselineOrchidGroupsCommand(
-				cutoverKey,
-				"GROUPS-0001",
-				List.of(fixture.first().getId(), fixture.second().getId()),
-				businessDate));
+		OrchidGroupStateChainTestSupport.importCurrentGroups(
+				stateChainMigrationService, orchidGroupRepository, cutoverKey, businessDate, "mutation-engine-test");
 
 		var reserveCommand = new ReserveOrchidGroupsMutationCommand(
 				salesSource("RESERVE:create"),
@@ -154,13 +148,8 @@ class SalesOrchidGroupMutationEngineIntegrationTest extends AbstractBackendInteg
 		Fixture fixture = createFixture();
 		LocalDate businessDate = LocalDate.of(2026, 8, 20);
 		UUID cutoverKey = UUID.randomUUID();
-		ledgerPreparationService.prepare(cutoverKey, businessDate, "mutation-engine-test");
-		ledgerPreparationService.start(cutoverKey);
-		ledgerPreparationService.baselineBatch(new BaselineOrchidGroupsCommand(
-				cutoverKey,
-				"GROUPS-0001",
-				List.of(fixture.first().getId()),
-				businessDate));
+		OrchidGroupStateChainTestSupport.importCurrentGroups(
+				stateChainMigrationService, orchidGroupRepository, cutoverKey, businessDate, "mutation-engine-test");
 
 		var restored = mutationEngine.restoreOutbound(
 				new RestoreOutboundOrchidGroupsMutationCommand(

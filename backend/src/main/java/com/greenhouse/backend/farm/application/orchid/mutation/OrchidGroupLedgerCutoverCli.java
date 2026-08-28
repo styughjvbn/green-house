@@ -16,7 +16,7 @@ import org.springframework.boot.builder.SpringApplicationBuilder;
 import org.springframework.context.ConfigurableApplicationContext;
 
 /**
- * ORCHID-CUTOVER: TRANSITION_ONLY — baseline과 ACTIVE 전환을 실행하는 operator CLI다.
+ * ORCHID-CUTOVER: TRANSITION_ONLY — complete state-chain 검증과 ACTIVE 전환을 실행하는 operator CLI다.
  * Removal gate: 운영 cutover 완료 및 재수행 불필요 승인.
  */
 public final class OrchidGroupLedgerCutoverCli {
@@ -87,7 +87,7 @@ public final class OrchidGroupLedgerCutoverCli {
 		LocalDate effectiveBusinessDate = LocalDate.parse(required(values, "effective-business-date"));
 		boolean activate = parseBoolean(values.getOrDefault("activate", "false"));
 		String confirmation = required(values, "confirmation");
-		String expectedConfirmation = (activate ? "ACTIVATE:" : "BASELINE:") + cutoverKey;
+		String expectedConfirmation = (activate ? "ACTIVATE:" : "VERIFY:") + cutoverKey;
 		if (!expectedConfirmation.equals(confirmation)) {
 			throw new IllegalArgumentException("확인 문구가 일치하지 않습니다: " + expectedConfirmation);
 		}

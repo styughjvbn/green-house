@@ -52,10 +52,10 @@ public class OrchidGroupLedgerCoverage {
 	private Integer snapshotSchemaVersion;
 
 	@Column(name = "baseline_started_at")
-	private Instant baselineStartedAt;
+	private Instant importStartedAt;
 
 	@Column(name = "baseline_completed_at")
-	private Instant baselineCompletedAt;
+	private Instant transitionCompletedAt;
 
 	@Column(name = "effective_business_date", nullable = false)
 	private LocalDate effectiveBusinessDate;
@@ -65,6 +65,9 @@ public class OrchidGroupLedgerCoverage {
 
 	@Column(name = "baseline_fingerprint", length = 64)
 	private String baselineFingerprint;
+
+	@Column(name = "import_fingerprint", length = 64)
+	private String importFingerprint;
 
 	@Column(name = "minimum_writer_version", nullable = false, length = 50)
 	private String minimumWriterVersion;
@@ -106,23 +109,36 @@ public class OrchidGroupLedgerCoverage {
 				&& this.minimumWriterVersion.equals(minimumWriterVersion == null ? null : minimumWriterVersion.trim());
 	}
 
-	public void startBaseline(Instant startedAt) {
+	public void startImport(Instant startedAt) {
 		if (status != OrchidGroupLedgerCoverageStatus.PREPARING || startedAt == null) {
-			throw new IllegalStateException("PREPARING coverage만 baseline을 시작할 수 있습니다.");
+			throw new IllegalStateException("PREPARING coverage만 state-chain 적재를 시작할 수 있습니다.");
 		}
-		this.baselineStartedAt = startedAt;
+		this.importStartedAt = startedAt;
+	}
+
+	public void claimImport(String fingerprint) {
+		if (fingerprint == null || !fingerprint.matches("[0-9a-f]{64}")) {
+			throw new IllegalArgumentException("State-chain manifest fingerprint 형식이 올바르지 않습니다.");
+		}
+		if (importFingerprint != null && !importFingerprint.equals(fingerprint)) {
+			throw new IllegalStateException("같은 cutover에 다른 state-chain manifest를 사용할 수 없습니다.");
+		}
+		this.importFingerprint = fingerprint;
 	}
 
 	public void activate(Instant completedAt, long groupCount, String fingerprint) {
-		if (status != OrchidGroupLedgerCoverageStatus.PREPARING || baselineStartedAt == null) {
+		if (status != OrchidGroupLedgerCoverageStatus.PREPARING || importStartedAt == null) {
 			throw new IllegalStateException("시작된 PREPARING coverage만 활성화할 수 있습니다.");
+		}
+		if (importFingerprint == null) {
+			throw new IllegalStateException("Complete state-chain manifest 적재 후 활성화할 수 있습니다.");
 		}
 		if (completedAt == null || groupCount < 0 || fingerprint == null
 				|| !fingerprint.matches("[0-9a-f]{64}")) {
-			throw new IllegalArgumentException("Baseline 완료 정보가 올바르지 않습니다.");
+			throw new IllegalArgumentException("Ledger 활성화 정보가 올바르지 않습니다.");
 		}
 		this.status = OrchidGroupLedgerCoverageStatus.ACTIVE;
-		this.baselineCompletedAt = completedAt;
+		this.transitionCompletedAt = completedAt;
 		this.baselineGroupCount = groupCount;
 		this.baselineFingerprint = fingerprint;
 	}
@@ -132,6 +148,6 @@ public class OrchidGroupLedgerCoverage {
 			throw new IllegalStateException("ACTIVE coverage는 실패 상태로 되돌릴 수 없습니다.");
 		}
 		this.status = OrchidGroupLedgerCoverageStatus.FAILED;
-		this.baselineCompletedAt = failedAt;
+		this.transitionCompletedAt = failedAt;
 	}
 }

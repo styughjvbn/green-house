@@ -3,20 +3,20 @@ package com.greenhouse.backend.work.e2e;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
+import com.greenhouse.backend.OrchidGroupStateChainTestSupport;
 import com.greenhouse.backend.farm.application.orchid.mutation.CreateOrchidGroupMutationCommand;
-import com.greenhouse.backend.farm.application.orchid.mutation.BaselineOrchidGroupsCommand;
 import com.greenhouse.backend.farm.application.orchid.mutation.CreateInboundOrchidGroupsMutationCommand;
 import com.greenhouse.backend.farm.application.orchid.mutation.CreateOrchidGroupMutationItem;
 import com.greenhouse.backend.farm.application.orchid.mutation.CorrectOrchidGroupMutationItem;
 import com.greenhouse.backend.farm.application.orchid.mutation.CorrectOrchidGroupsMutationCommand;
 import com.greenhouse.backend.farm.application.orchid.mutation.ConsumeOrchidGroupReservationsMutationCommand;
 import com.greenhouse.backend.farm.application.orchid.mutation.DiscardOrchidGroupMutationCommand;
-import com.greenhouse.backend.farm.application.orchid.mutation.OrchidGroupLedgerPreparationService;
 import com.greenhouse.backend.farm.application.orchid.mutation.OrchidGroupLedgerCutoverCommand;
 import com.greenhouse.backend.farm.application.orchid.mutation.OrchidGroupLedgerCutoverService;
 import com.greenhouse.backend.farm.application.orchid.mutation.OrchidGroupLedgerReconciliationService;
 import com.greenhouse.backend.farm.application.orchid.mutation.OrchidGroupMutationDetails;
 import com.greenhouse.backend.farm.application.orchid.mutation.OrchidGroupMutationEngine;
+import com.greenhouse.backend.farm.application.orchid.mutation.OrchidGroupStateChainMigrationService;
 import com.greenhouse.backend.farm.application.orchid.mutation.OrchidGroupQuantityMutationItem;
 import com.greenhouse.backend.farm.application.orchid.mutation.RelatedOrchidGroupMutations;
 import com.greenhouse.backend.farm.application.orchid.mutation.ReserveOrchidGroupsMutationCommand;
@@ -26,6 +26,7 @@ import com.greenhouse.backend.farm.application.orchid.mutation.TransformOrchidGr
 import com.greenhouse.backend.farm.application.orchid.mutation.TransformOrchidGroupsMutationCommand;
 import com.greenhouse.backend.farm.domain.orchid.mutation.OrchidGroupMutationSource;
 import com.greenhouse.backend.farm.domain.orchid.mutation.OrchidGroupMutationSourceDomain;
+import com.greenhouse.backend.farm.repository.orchid.OrchidGroupRepository;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.List;
@@ -47,9 +48,10 @@ class OrchidGroupMutationPostgresE2ETest extends WorkE2ETestBase {
 
 	@Autowired private WorkTestDataSeeder seeder;
 	@Autowired private OrchidGroupMutationEngine mutationEngine;
-	@Autowired private OrchidGroupLedgerPreparationService ledgerPreparationService;
 	@Autowired private OrchidGroupLedgerCutoverService ledgerCutoverService;
 	@Autowired private OrchidGroupLedgerReconciliationService ledgerReconciliationService;
+	@Autowired private OrchidGroupStateChainMigrationService stateChainMigrationService;
+	@Autowired private OrchidGroupRepository orchidGroupRepository;
 	@Autowired private PlatformTransactionManager transactionManager;
 	@Autowired private JdbcTemplate jdbcTemplate;
 
@@ -111,13 +113,8 @@ class OrchidGroupMutationPostgresE2ETest extends WorkE2ETestBase {
 	void serializesConcurrentTransformsSharingTheSameSource() throws Exception {
 		UUID cutoverKey = UUID.randomUUID();
 		LocalDate businessDate = LocalDate.of(2026, 8, 20);
-		ledgerPreparationService.prepare(cutoverKey, businessDate, "mutation-engine-e2e");
-		ledgerPreparationService.start(cutoverKey);
-		ledgerPreparationService.baselineBatch(new BaselineOrchidGroupsCommand(
-				cutoverKey,
-				"GROUPS-0001",
-				List.of(scenario.orchidGroupId()),
-				businessDate));
+		OrchidGroupStateChainTestSupport.importCurrentGroups(
+				stateChainMigrationService, orchidGroupRepository, cutoverKey, businessDate, "mutation-engine-e2e");
 		var ready = new CountDownLatch(2);
 		var start = new CountDownLatch(1);
 		var executor = Executors.newFixedThreadPool(2);
@@ -167,13 +164,8 @@ class OrchidGroupMutationPostgresE2ETest extends WorkE2ETestBase {
 	void serializesConcurrentSalesReservationAndDiscardForTheSameGroup() throws Exception {
 		UUID cutoverKey = UUID.randomUUID();
 		LocalDate businessDate = LocalDate.of(2026, 8, 20);
-		ledgerPreparationService.prepare(cutoverKey, businessDate, "mutation-engine-e2e");
-		ledgerPreparationService.start(cutoverKey);
-		ledgerPreparationService.baselineBatch(new BaselineOrchidGroupsCommand(
-				cutoverKey,
-				"GROUPS-0001",
-				List.of(scenario.orchidGroupId()),
-				businessDate));
+		OrchidGroupStateChainTestSupport.importCurrentGroups(
+				stateChainMigrationService, orchidGroupRepository, cutoverKey, businessDate, "mutation-engine-e2e");
 		var ready = new CountDownLatch(2);
 		var start = new CountDownLatch(1);
 		var executor = Executors.newFixedThreadPool(2);
@@ -229,13 +221,8 @@ class OrchidGroupMutationPostgresE2ETest extends WorkE2ETestBase {
 	void serializesConcurrentCorrectionAndSalesReservationForTheSameGroup() throws Exception {
 		UUID cutoverKey = UUID.randomUUID();
 		LocalDate businessDate = LocalDate.of(2026, 8, 20);
-		ledgerPreparationService.prepare(cutoverKey, businessDate, "mutation-engine-e2e");
-		ledgerPreparationService.start(cutoverKey);
-		ledgerPreparationService.baselineBatch(new BaselineOrchidGroupsCommand(
-				cutoverKey,
-				"GROUPS-0001",
-				List.of(scenario.orchidGroupId()),
-				businessDate));
+		OrchidGroupStateChainTestSupport.importCurrentGroups(
+				stateChainMigrationService, orchidGroupRepository, cutoverKey, businessDate, "mutation-engine-e2e");
 		var ready = new CountDownLatch(2);
 		var start = new CountDownLatch(1);
 		var executor = Executors.newFixedThreadPool(2);
@@ -297,13 +284,8 @@ class OrchidGroupMutationPostgresE2ETest extends WorkE2ETestBase {
 	void recordsACompensationRelationForCurrentSalesOutboundOnPostgres() {
 		UUID cutoverKey = UUID.randomUUID();
 		LocalDate businessDate = LocalDate.of(2026, 8, 20);
-		ledgerPreparationService.prepare(cutoverKey, businessDate, "mutation-engine-e2e");
-		ledgerPreparationService.start(cutoverKey);
-		ledgerPreparationService.baselineBatch(new BaselineOrchidGroupsCommand(
-				cutoverKey,
-				"GROUPS-0001",
-				List.of(scenario.orchidGroupId()),
-				businessDate));
+		OrchidGroupStateChainTestSupport.importCurrentGroups(
+				stateChainMigrationService, orchidGroupRepository, cutoverKey, businessDate, "mutation-engine-e2e");
 		UUID correlationId = UUID.randomUUID();
 		MutationIds mutationIds = new TransactionTemplate(transactionManager).execute(status -> {
 			mutationEngine.reserve(new ReserveOrchidGroupsMutationCommand(
@@ -412,6 +394,12 @@ class OrchidGroupMutationPostgresE2ETest extends WorkE2ETestBase {
 	void enforcesTheActiveLedgerWriteFenceAndRollsBackMutationContext() {
 		UUID cutoverKey = UUID.randomUUID();
 		LocalDate businessDate = LocalDate.of(2026, 8, 20);
+		OrchidGroupStateChainTestSupport.importCurrentGroups(
+				stateChainMigrationService,
+				orchidGroupRepository,
+				cutoverKey,
+				businessDate,
+				"1.0.0");
 		var cutover = ledgerCutoverService.execute(new OrchidGroupLedgerCutoverCommand(
 				cutoverKey, businessDate, "1.0.0", "1.0.0", true));
 

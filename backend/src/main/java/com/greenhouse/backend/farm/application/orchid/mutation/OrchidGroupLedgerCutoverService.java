@@ -1,26 +1,19 @@
 package com.greenhouse.backend.farm.application.orchid.mutation;
 
 import com.greenhouse.backend.common.exception.ConflictException;
-import com.greenhouse.backend.farm.repository.orchid.OrchidGroupRepository;
-import java.util.List;
 import lombok.RequiredArgsConstructor;
-import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 
 /**
- * ORCHID-CUTOVER: TRANSITION_ONLY — baseline 적재와 ACTIVE 전환을 조율한다.
+ * ORCHID-CUTOVER: TRANSITION_ONLY — complete state-chain 적재 확인과 ACTIVE 전환을 조율한다.
  * Removal gate: 운영 cutover 완료 및 재수행 불필요 승인.
  */
 @Service
 @RequiredArgsConstructor
 public class OrchidGroupLedgerCutoverService {
 
-	private static final int BASELINE_BATCH_SIZE = 500;
-
 	private final OrchidGroupLedgerReconciliationService reconciliationService;
 	private final OrchidGroupLedgerPreparationService preparationService;
-	private final OrchidGroupHistoryMigrationService historyMigrationService;
-	private final OrchidGroupRepository orchidGroupRepository;
 
 	public OrchidGroupLedgerCutoverResult execute(OrchidGroupLedgerCutoverCommand command) {
 		OrchidGroupLedgerReconciliationReport initialReport = reconciliationService.reconcile();
@@ -30,43 +23,21 @@ public class OrchidGroupLedgerCutoverService {
 					command.cutoverKey(),
 					command.effectiveBusinessDate(),
 					command.minimumWriterVersion());
-			return result(command, 0, initialReport);
-		}
-
-		preparationService.prepare(
-				command.cutoverKey(),
-				command.effectiveBusinessDate(),
-				command.minimumWriterVersion());
-		preparationService.start(command.cutoverKey());
-
-		int batchCount = 0;
-		long afterId = 0L;
-		while (true) {
-			List<Long> groupIds = orchidGroupRepository.findUnrevisionedIdsAfter(
-					afterId, PageRequest.of(0, BASELINE_BATCH_SIZE));
-			if (groupIds.isEmpty()) {
-				break;
-			}
-			preparationService.baselineBatch(new BaselineOrchidGroupsCommand(
-					command.cutoverKey(),
-					batchKey(groupIds),
-					groupIds,
-					command.effectiveBusinessDate()));
-			batchCount++;
-			afterId = groupIds.getLast();
+			return result(command, initialReport);
 		}
 
 		OrchidGroupLedgerReconciliationReport finalReport = reconciliationService.reconcile();
 		if (!finalReport.ready()
 				|| finalReport.stage() != OrchidGroupLedgerReconciliationStage.BASELINE_PREPARING
 				|| !command.cutoverKey().equals(finalReport.cutoverKey())) {
-			throw new ConflictException("Baseline 적재 후 ledger 대사를 통과하지 못했습니다.");
+			throw new ConflictException("Complete state-chain 적재 후 ledger 대사를 통과하지 못했습니다.");
 		}
+		preparationService.validateStateChainImported(command.cutoverKey());
 		if (command.activate()) {
 			finalReport = preparationService.activate(
 					command.cutoverKey(), command.currentWriterVersion());
 		}
-		return result(command, batchCount, finalReport);
+		return result(command, finalReport);
 	}
 
 	private void validateInitialState(
@@ -79,39 +50,27 @@ public class OrchidGroupLedgerCutoverService {
 			return;
 		}
 		if (report.stage() == OrchidGroupLedgerReconciliationStage.PRE_BASELINE) {
-			if (!report.ready()) {
-				throw new ConflictException("Baseline 시작 전 운영 데이터 대사를 통과해야 합니다.");
-			}
-			historyMigrationService.validateCutoverReady(report);
-			return;
+			throw new ConflictException("Cutover 전에 complete state-chain manifest를 적재해야 합니다.");
 		}
 		if (!command.cutoverKey().equals(report.cutoverKey())) {
 			throw new ConflictException("다른 PREPARING coverage가 존재합니다.");
 		}
-		var unexpectedIssues = report.issues().stream()
-				.filter(issue -> !"MISSING_LEDGER_CHAIN".equals(issue.code()))
-				.toList();
-		if (!unexpectedIssues.isEmpty()) {
+		if (!report.ready()) {
 			throw new ConflictException(
-					"Baseline 재개 전에 해결할 대사 오류가 있습니다: "
-							+ unexpectedIssues.getFirst().code());
+					"Cutover 전에 해결할 대사 오류가 있습니다: "
+							+ report.issues().getFirst().code());
 		}
-	}
-
-	private String batchKey(List<Long> groupIds) {
-		return "GROUPS:%020d-%020d".formatted(groupIds.getFirst(), groupIds.getLast());
+		preparationService.validateStateChainImported(command.cutoverKey());
 	}
 
 	private OrchidGroupLedgerCutoverResult result(
 			OrchidGroupLedgerCutoverCommand command,
-			int batchCount,
 			OrchidGroupLedgerReconciliationReport report) {
 		return new OrchidGroupLedgerCutoverResult(
 				command.cutoverKey(),
 				command.effectiveBusinessDate(),
 				command.minimumWriterVersion(),
 				command.currentWriterVersion(),
-				batchCount,
 				report.baselineGroupCount(),
 				report.stage() == OrchidGroupLedgerReconciliationStage.ACTIVE,
 				report);

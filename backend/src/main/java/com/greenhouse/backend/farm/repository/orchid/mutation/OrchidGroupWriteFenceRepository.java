@@ -1,6 +1,5 @@
 package com.greenhouse.backend.farm.repository.orchid.mutation;
 
-import java.util.UUID;
 import lombok.RequiredArgsConstructor;
 import org.springframework.jdbc.core.ConnectionCallback;
 import org.springframework.jdbc.core.JdbcTemplate;
@@ -20,13 +19,6 @@ public class OrchidGroupWriteFenceRepository {
 			throw new IllegalArgumentException("Write fence에 전달할 Mutation ID가 필요합니다.");
 		}
 		setTransactionContext("MUTATION:" + mutationId);
-	}
-
-	public void authorizeBaseline(UUID cutoverKey) {
-		if (cutoverKey == null) {
-			throw new IllegalArgumentException("Write fence에 전달할 cutover key가 필요합니다.");
-		}
-		setTransactionContext("BASELINE:" + cutoverKey);
 	}
 
 	public void lockOrchidGroupsForCutover() {

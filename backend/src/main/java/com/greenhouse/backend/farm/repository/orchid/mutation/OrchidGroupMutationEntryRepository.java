@@ -18,16 +18,15 @@ public interface OrchidGroupMutationEntryRepository extends JpaRepository<Orchid
 	@EntityGraph(attributePaths = "mutation")
 	@Query("select entry from OrchidGroupMutationEntry entry "
 			+ "where entry.orchidGroupId in :orchidGroupIds "
-			+ "and entry.entryKind <> com.greenhouse.backend.farm.domain.orchid.mutation.OrchidGroupMutationEntryKind.HISTORICAL "
 			+ "order by entry.orchidGroupId, entry.stateRevisionAfter")
 	List<OrchidGroupMutationEntry> findStateChainByOrchidGroupIdIn(
 			@Param("orchidGroupIds") Collection<Long> orchidGroupIds);
 
 	List<OrchidGroupMutationEntry> findByMutationIdOrderByOrchidGroupIdAsc(Long mutationId);
 
-	long countByMigrationRunId(Long migrationRunId);
-
-	@Query("select count(distinct entry.mutation.id) from OrchidGroupMutationEntry entry "
-			+ "where entry.migrationRunId = :migrationRunId")
-	long countDistinctMutationsByMigrationRunId(@Param("migrationRunId") Long migrationRunId);
+	@EntityGraph(attributePaths = "mutation")
+	@Query("select entry from OrchidGroupMutationEntry entry "
+			+ "where not exists (select group.id from OrchidGroup group where group.id = entry.orchidGroupId) "
+			+ "order by entry.orchidGroupId, entry.stateRevisionAfter")
+	List<OrchidGroupMutationEntry> findChainsWithoutCurrentGroup();
 }

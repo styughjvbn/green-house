@@ -2,14 +2,14 @@ package com.greenhouse.backend.work.application.effect;
 
 import java.util.UUID;
 
-public record WorkHistoricalMutationLinkCommand(
+public record WorkStateChainMutationLinkCommand(
 		Long workEffectId,
 		Long mutationId,
 		UUID correlationId) {
 
-	public WorkHistoricalMutationLinkCommand {
+	public WorkStateChainMutationLinkCommand {
 		if (workEffectId == null || mutationId == null || correlationId == null) {
-			throw new IllegalArgumentException("Historical Work Mutation 연결 정보가 필요합니다.");
+			throw new IllegalArgumentException("Work state-chain Mutation 연결 정보가 필요합니다.");
 		}
 	}
 }

@@ -3,11 +3,13 @@ package com.greenhouse.backend.work.e2e;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
+import com.greenhouse.backend.OrchidGroupStateChainTestSupport;
 import com.greenhouse.backend.farm.application.inbound.InboundRecordService;
 import com.greenhouse.backend.farm.application.orchid.OrchidGroupCommandService;
 import com.greenhouse.backend.farm.application.orchid.mutation.OrchidGroupLedgerCutoverCommand;
 import com.greenhouse.backend.farm.application.orchid.mutation.OrchidGroupLedgerCutoverService;
 import com.greenhouse.backend.farm.application.orchid.mutation.OrchidGroupLedgerReconciliationService;
+import com.greenhouse.backend.farm.application.orchid.mutation.OrchidGroupStateChainMigrationService;
 import com.greenhouse.backend.farm.domain.inbound.InboundStatus;
 import com.greenhouse.backend.farm.domain.inbound.InboundType;
 import com.greenhouse.backend.farm.dto.inbound.InboundRecordCreateRequest;
@@ -39,6 +41,7 @@ class OrchidGroupMutationRoutingPostgresE2ETest extends WorkE2ETestBase {
 	@Autowired private WorkTestDataSeeder seeder;
 	@Autowired private OrchidGroupLedgerCutoverService cutoverService;
 	@Autowired private OrchidGroupLedgerReconciliationService reconciliationService;
+	@Autowired private OrchidGroupStateChainMigrationService stateChainMigrationService;
 	@Autowired private OrchidGroupCommandService orchidGroupCommandService;
 	@Autowired private OrchidGroupRepository orchidGroupRepository;
 	@Autowired private InboundRecordService inboundRecordService;
@@ -52,8 +55,15 @@ class OrchidGroupMutationRoutingPostgresE2ETest extends WorkE2ETestBase {
 	void setUp() {
 		seeder.reset();
 		scenario = seeder.seedContractScenario();
+		UUID cutoverKey = UUID.randomUUID();
+		OrchidGroupStateChainTestSupport.importCurrentGroups(
+				stateChainMigrationService,
+				orchidGroupRepository,
+				cutoverKey,
+				LocalDate.of(2026, 8, 20),
+				"1.0.0");
 		cutoverService.execute(new OrchidGroupLedgerCutoverCommand(
-				UUID.randomUUID(),
+				cutoverKey,
 				LocalDate.of(2026, 8, 20),
 				"1.0.0",
 				"1.1.0",

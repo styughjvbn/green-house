@@ -61,7 +61,7 @@ class OrchidGroupLedgerWriterGuardTest {
 	}
 
 	@Test
-	void rejectsLegacyOrOlderWritersAfterPreparingBaselineStarts() {
+	void rejectsLegacyOrOlderWritersAfterStateChainImportStarts() {
 		OrchidGroupLedgerCoverageRepository repository = preparingCoverageRepository("1.2.0", true);
 		ApplicationArguments arguments = mock(ApplicationArguments.class);
 
@@ -86,7 +86,7 @@ class OrchidGroupLedgerWriterGuardTest {
 	}
 
 	@Test
-	void allowsLegacyBeforePreparingBaselineStarts() {
+	void allowsLegacyBeforeStateChainImportStarts() {
 		OrchidGroupLedgerCoverageRepository repository = preparingCoverageRepository("1.2.0", false);
 
 		assertThatCode(() -> new OrchidGroupLedgerWriterStartupGuard(
@@ -96,9 +96,21 @@ class OrchidGroupLedgerWriterGuardTest {
 				.doesNotThrowAnyException();
 	}
 
+	@Test
+	void rejectsActivationWithoutCompleteStateChainImport() {
+		OrchidGroupLedgerCoverage coverage = coverage("1.2.0");
+		coverage.startImport(Instant.parse("2026-08-20T00:00:00Z"));
+
+		assertThatThrownBy(() -> coverage.activate(
+				Instant.parse("2026-08-20T00:01:00Z"), 0, "a".repeat(64)))
+				.isInstanceOf(IllegalStateException.class)
+				.hasMessageContaining("state-chain manifest");
+	}
+
 	private OrchidGroupLedgerCoverageRepository activeCoverageRepository(String minimumWriterVersion) {
 		OrchidGroupLedgerCoverage coverage = coverage(minimumWriterVersion);
-		coverage.startBaseline(Instant.parse("2026-08-20T00:00:00Z"));
+		coverage.startImport(Instant.parse("2026-08-20T00:00:00Z"));
+		coverage.claimImport("b".repeat(64));
 		coverage.activate(Instant.parse("2026-08-20T00:01:00Z"), 0, "a".repeat(64));
 		OrchidGroupLedgerCoverageRepository repository = mock(OrchidGroupLedgerCoverageRepository.class);
 		when(repository.findFirstByStatus(OrchidGroupLedgerCoverageStatus.ACTIVE))
@@ -108,10 +120,10 @@ class OrchidGroupLedgerWriterGuardTest {
 
 	private OrchidGroupLedgerCoverageRepository preparingCoverageRepository(
 			String minimumWriterVersion,
-			boolean baselineStarted) {
+			boolean importStarted) {
 		OrchidGroupLedgerCoverage coverage = coverage(minimumWriterVersion);
-		if (baselineStarted) {
-			coverage.startBaseline(Instant.parse("2026-08-20T00:00:00Z"));
+		if (importStarted) {
+			coverage.startImport(Instant.parse("2026-08-20T00:00:00Z"));
 		}
 		OrchidGroupLedgerCoverageRepository repository = mock(OrchidGroupLedgerCoverageRepository.class);
 		when(repository.findFirstByStatus(OrchidGroupLedgerCoverageStatus.PREPARING))

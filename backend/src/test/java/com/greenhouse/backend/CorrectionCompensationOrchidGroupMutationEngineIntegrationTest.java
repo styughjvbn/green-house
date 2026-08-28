@@ -2,14 +2,13 @@ package com.greenhouse.backend;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import com.greenhouse.backend.farm.application.orchid.mutation.BaselineOrchidGroupsCommand;
 import com.greenhouse.backend.farm.application.orchid.mutation.CorrectOrchidGroupMutationItem;
 import com.greenhouse.backend.farm.application.orchid.mutation.CorrectOrchidGroupsMutationCommand;
 import com.greenhouse.backend.farm.application.orchid.mutation.CreateOrchidGroupMutationItem;
 import com.greenhouse.backend.farm.application.orchid.mutation.CreateOrchidGroupsMutationCommand;
-import com.greenhouse.backend.farm.application.orchid.mutation.OrchidGroupLedgerPreparationService;
 import com.greenhouse.backend.farm.application.orchid.mutation.OrchidGroupMutationDetails;
 import com.greenhouse.backend.farm.application.orchid.mutation.OrchidGroupMutationEngine;
+import com.greenhouse.backend.farm.application.orchid.mutation.OrchidGroupStateChainMigrationService;
 import com.greenhouse.backend.farm.application.orchid.mutation.RelatedOrchidGroupMutations;
 import com.greenhouse.backend.farm.domain.orchid.OrchidGroup;
 import com.greenhouse.backend.farm.domain.orchid.mutation.OrchidGroupMutationRelationType;
@@ -35,8 +34,8 @@ import org.springframework.transaction.annotation.Transactional;
 class CorrectionCompensationOrchidGroupMutationEngineIntegrationTest
 		extends AbstractBackendIntegrationTest {
 
-	@Autowired private OrchidGroupLedgerPreparationService ledgerPreparationService;
 	@Autowired private OrchidGroupMutationEngine mutationEngine;
+	@Autowired private OrchidGroupStateChainMigrationService stateChainMigrationService;
 	@Autowired private OrchidGroupMutationRelationRepository relationRepository;
 	@Autowired private EntityManager entityManager;
 
@@ -116,10 +115,8 @@ class CorrectionCompensationOrchidGroupMutationEngineIntegrationTest
 		orchidGroupRepository.save(group);
 		UUID cutoverKey = UUID.randomUUID();
 		LocalDate businessDate = LocalDate.of(2026, 8, 20);
-		ledgerPreparationService.prepare(cutoverKey, businessDate, "mutation-engine-test");
-		ledgerPreparationService.start(cutoverKey);
-		ledgerPreparationService.baselineBatch(new BaselineOrchidGroupsCommand(
-				cutoverKey, "GROUPS-0001", List.of(group.getId()), businessDate));
+		OrchidGroupStateChainTestSupport.importCurrentGroups(
+				stateChainMigrationService, orchidGroupRepository, cutoverKey, businessDate, "mutation-engine-test");
 
 		var corrected = mutationEngine.correct(new CorrectOrchidGroupsMutationCommand(
 				workSource("correction-legacy"),

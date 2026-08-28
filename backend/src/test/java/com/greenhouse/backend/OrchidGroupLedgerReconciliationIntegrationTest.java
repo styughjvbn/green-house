@@ -4,7 +4,6 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import com.greenhouse.backend.common.exception.ConflictException;
-import com.greenhouse.backend.farm.application.orchid.mutation.BaselineOrchidGroupsCommand;
 import com.greenhouse.backend.farm.application.orchid.mutation.CreateOrchidGroupMutationCommand;
 import com.greenhouse.backend.farm.application.orchid.mutation.OrchidGroupLedgerCutoverCommand;
 import com.greenhouse.backend.farm.application.orchid.mutation.OrchidGroupLedgerCutoverService;
@@ -13,6 +12,7 @@ import com.greenhouse.backend.farm.application.orchid.mutation.OrchidGroupLedger
 import com.greenhouse.backend.farm.application.orchid.mutation.OrchidGroupLedgerReconciliationStage;
 import com.greenhouse.backend.farm.application.orchid.mutation.OrchidGroupMutationDetails;
 import com.greenhouse.backend.farm.application.orchid.mutation.OrchidGroupMutationEngine;
+import com.greenhouse.backend.farm.application.orchid.mutation.OrchidGroupStateChainMigrationService;
 import com.greenhouse.backend.farm.domain.orchid.OrchidGroup;
 import com.greenhouse.backend.farm.domain.orchid.mutation.OrchidGroupLedgerCoverageStatus;
 import com.greenhouse.backend.farm.domain.orchid.mutation.OrchidGroupMutationSource;
@@ -44,6 +44,7 @@ class OrchidGroupLedgerReconciliationIntegrationTest extends AbstractBackendInte
 	@Autowired private OrchidGroupLedgerPreparationService preparationService;
 	@Autowired private OrchidGroupLedgerCutoverService cutoverService;
 	@Autowired private OrchidGroupMutationEngine mutationEngine;
+	@Autowired private OrchidGroupStateChainMigrationService stateChainMigrationService;
 	@Autowired private OrchidGroupLedgerCoverageRepository coverageRepository;
 	@Autowired private EntityManager entityManager;
 
@@ -65,16 +66,11 @@ class OrchidGroupLedgerReconciliationIntegrationTest extends AbstractBackendInte
 	}
 
 	@Test
-	void validatesBaselineAndStoredActiveCoverageFingerprint() {
+	void validatesImportedStateChainAndStoredActiveCoverageFingerprint() {
 		OrchidGroup group = createOrchidGroup(952);
 		UUID cutoverKey = UUID.randomUUID();
-		preparationService.prepare(cutoverKey, BUSINESS_DATE, "rehearsal-test");
-		preparationService.start(cutoverKey);
-		preparationService.baselineBatch(new BaselineOrchidGroupsCommand(
-				cutoverKey,
-				"GROUPS-0001",
-				List.of(group.getId()),
-				BUSINESS_DATE));
+		OrchidGroupStateChainTestSupport.importCurrentGroups(
+				stateChainMigrationService, orchidGroupRepository, cutoverKey, BUSINESS_DATE, "rehearsal-test");
 
 		var preparingReport = reconciliationService.reconcile();
 
@@ -101,13 +97,8 @@ class OrchidGroupLedgerReconciliationIntegrationTest extends AbstractBackendInte
 	void detectsAStateChangeThatBypassedTheMutationLedger() {
 		OrchidGroup group = createOrchidGroup(953);
 		UUID cutoverKey = UUID.randomUUID();
-		preparationService.prepare(cutoverKey, BUSINESS_DATE, "rehearsal-test");
-		preparationService.start(cutoverKey);
-		preparationService.baselineBatch(new BaselineOrchidGroupsCommand(
-				cutoverKey,
-				"GROUPS-0001",
-				List.of(group.getId()),
-				BUSINESS_DATE));
+		OrchidGroupStateChainTestSupport.importCurrentGroups(
+				stateChainMigrationService, orchidGroupRepository, cutoverKey, BUSINESS_DATE, "rehearsal-test");
 		group.reserve(1);
 		entityManager.flush();
 		entityManager.clear();
@@ -130,19 +121,18 @@ class OrchidGroupLedgerReconciliationIntegrationTest extends AbstractBackendInte
 	}
 
 	@Test
-	void resumesDeterministicBaselineBatchesAndActivatesOnlyAfterReconciliation() {
+	void replaysTheCompleteStateChainAndActivatesOnlyAfterReconciliation() {
 		createOrchidGroup(954);
 		createOrchidGroup(955);
 		UUID cutoverKey = UUID.randomUUID();
-		var baselineCommand = new OrchidGroupLedgerCutoverCommand(
-				cutoverKey, BUSINESS_DATE, "1.0.0", "1.1.0", false);
+		var first = OrchidGroupStateChainTestSupport.importCurrentGroups(
+				stateChainMigrationService, orchidGroupRepository, cutoverKey, BUSINESS_DATE, "1.0.0");
+		var replayed = OrchidGroupStateChainTestSupport.importCurrentGroups(
+				stateChainMigrationService, orchidGroupRepository, cutoverKey, BUSINESS_DATE, "1.0.0");
 
-		var first = cutoverService.execute(baselineCommand);
-		var replayed = cutoverService.execute(baselineCommand);
-
-		assertThat(first.activated()).isFalse();
-		assertThat(first.baselineBatchCount()).isEqualTo(1);
-		assertThat(first.baselineGroupCount()).isEqualTo(2);
+		assertThat(first.importedMutationCount()).isEqualTo(1);
+		assertThat(first.reconciliation().baselineGroupCount()).isEqualTo(2);
+		assertThat(replayed.replayedMutationCount()).isEqualTo(1);
 		assertThat(replayed.reconciliation().ready()).isTrue();
 		assertThat(replayed.reconciliation().mutationCount()).isEqualTo(1);
 		assertThat(replayed.reconciliation().entryCount()).isEqualTo(2);
@@ -162,8 +152,8 @@ class OrchidGroupLedgerReconciliationIntegrationTest extends AbstractBackendInte
 	void activatesWithoutRebaseliningAnEngineCreatedPreparingGroup() {
 		OrchidGroup baselineGroup = createOrchidGroup(956);
 		UUID cutoverKey = UUID.randomUUID();
-		cutoverService.execute(new OrchidGroupLedgerCutoverCommand(
-				cutoverKey, BUSINESS_DATE, "1.0.0", "1.1.0", false));
+		OrchidGroupStateChainTestSupport.importCurrentGroups(
+				stateChainMigrationService, orchidGroupRepository, cutoverKey, BUSINESS_DATE, "1.0.0");
 
 		var created = mutationEngine.create(new CreateOrchidGroupMutationCommand(
 				new OrchidGroupMutationSource(

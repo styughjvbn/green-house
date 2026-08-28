@@ -3,18 +3,19 @@ package com.greenhouse.backend.work.e2e;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
-import com.greenhouse.backend.farm.application.orchid.mutation.BaselineOrchidGroupsCommand;
+import com.greenhouse.backend.OrchidGroupStateChainTestSupport;
 import com.greenhouse.backend.farm.application.orchid.mutation.CreateOrchidGroupMutationCommand;
 import com.greenhouse.backend.farm.application.orchid.mutation.OrchidGroupLedgerCutoverCommand;
 import com.greenhouse.backend.farm.application.orchid.mutation.OrchidGroupLedgerCutoverService;
-import com.greenhouse.backend.farm.application.orchid.mutation.OrchidGroupLedgerPreparationService;
 import com.greenhouse.backend.farm.application.orchid.mutation.OrchidGroupLedgerReconciliationService;
 import com.greenhouse.backend.farm.application.orchid.mutation.OrchidGroupLedgerReconciliationStage;
 import com.greenhouse.backend.farm.application.orchid.mutation.OrchidGroupMutationDetails;
 import com.greenhouse.backend.farm.application.orchid.mutation.OrchidGroupMutationEngine;
+import com.greenhouse.backend.farm.application.orchid.mutation.OrchidGroupStateChainMigrationService;
 import com.greenhouse.backend.farm.domain.orchid.mutation.OrchidGroupMutationEntryKind;
 import com.greenhouse.backend.farm.domain.orchid.mutation.OrchidGroupMutationSource;
 import com.greenhouse.backend.farm.domain.orchid.mutation.OrchidGroupMutationSourceDomain;
+import com.greenhouse.backend.farm.repository.orchid.OrchidGroupRepository;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.List;
@@ -31,10 +32,11 @@ import org.springframework.transaction.support.TransactionTemplate;
 class OrchidGroupLedgerReconciliationPostgresE2ETest extends WorkE2ETestBase {
 
 	@Autowired private WorkTestDataSeeder seeder;
-	@Autowired private OrchidGroupLedgerPreparationService preparationService;
 	@Autowired private OrchidGroupLedgerCutoverService cutoverService;
 	@Autowired private OrchidGroupLedgerReconciliationService reconciliationService;
 	@Autowired private OrchidGroupMutationEngine mutationEngine;
+	@Autowired private OrchidGroupStateChainMigrationService stateChainMigrationService;
+	@Autowired private OrchidGroupRepository orchidGroupRepository;
 	@Autowired private JdbcTemplate jdbcTemplate;
 	@Autowired private TransactionTemplate transactionTemplate;
 
@@ -47,7 +49,7 @@ class OrchidGroupLedgerReconciliationPostgresE2ETest extends WorkE2ETestBase {
 	}
 
 	@Test
-	void rehearsesBaselineAndDetectsAnOutOfLedgerDatabaseUpdate() {
+	void rehearsesImportedStateChainAndDetectsAnOutOfLedgerDatabaseUpdate() {
 		var preBaselineReport = reconciliationService.reconcile();
 
 		assertThat(preBaselineReport.stage())
@@ -58,13 +60,12 @@ class OrchidGroupLedgerReconciliationPostgresE2ETest extends WorkE2ETestBase {
 
 		UUID cutoverKey = UUID.randomUUID();
 		LocalDate businessDate = LocalDate.of(2026, 8, 20);
-		preparationService.prepare(cutoverKey, businessDate, "postgres-rehearsal-test");
-		preparationService.start(cutoverKey);
-		preparationService.baselineBatch(new BaselineOrchidGroupsCommand(
+		OrchidGroupStateChainTestSupport.importCurrentGroups(
+				stateChainMigrationService,
+				orchidGroupRepository,
 				cutoverKey,
-				"GROUPS-0001",
-				List.of(scenario.orchidGroupId()),
-				businessDate));
+				businessDate,
+				"postgres-rehearsal-test");
 
 		var baselineReport = reconciliationService.reconcile();
 
@@ -95,8 +96,12 @@ class OrchidGroupLedgerReconciliationPostgresE2ETest extends WorkE2ETestBase {
 	void activatesAfterAnEngineCreatedGroupWhileCoverageIsPreparing() {
 		UUID cutoverKey = UUID.randomUUID();
 		LocalDate businessDate = LocalDate.of(2026, 8, 20);
-		cutoverService.execute(new OrchidGroupLedgerCutoverCommand(
-				cutoverKey, businessDate, "1.0.0", "1.0.0", false));
+		OrchidGroupStateChainTestSupport.importCurrentGroups(
+				stateChainMigrationService,
+				orchidGroupRepository,
+				cutoverKey,
+				businessDate,
+				"1.0.0");
 		Long varietyId = jdbcTemplate.queryForObject(
 				"SELECT variety_id FROM orchid_groups WHERE id = ?",
 				Long.class,

@@ -8,7 +8,6 @@ public record OrchidGroupLedgerCutoverResult(
 		LocalDate effectiveBusinessDate,
 		String minimumWriterVersion,
 		String currentWriterVersion,
-		int baselineBatchCount,
 		long baselineGroupCount,
 		boolean activated,
 		OrchidGroupLedgerReconciliationReport reconciliation) {

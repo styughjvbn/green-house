@@ -36,7 +36,7 @@ public class OrchidGroupLedgerWriterStartupGuard implements ApplicationRunner {
 		}
 
 		coverageRepository.findFirstByStatus(OrchidGroupLedgerCoverageStatus.PREPARING)
-				.filter(coverage -> coverage.getBaselineStartedAt() != null)
+				.filter(coverage -> coverage.getImportStartedAt() != null)
 				.ifPresent(coverage -> requireEngineWriter(coverage, "baseline이 시작된 PREPARING"));
 	}
 

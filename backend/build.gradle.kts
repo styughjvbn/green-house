@@ -84,18 +84,18 @@ tasks.register<JavaExec>("orchidLedgerReconcile") {
 
 tasks.register<JavaExec>("orchidLedgerCutover") {
 	group = "verification"
-	description = "Runs resumable OrchidGroup baseline preparation and optional activation."
+	description = "Verifies the imported OrchidGroup state-chain and optionally activates it."
 	dependsOn(tasks.named("classes"))
 	classpath = sourceSets["main"].runtimeClasspath
 	mainClass.set("com.greenhouse.backend.farm.application.orchid.mutation.OrchidGroupLedgerCutoverCli")
 }
 
-tasks.register<JavaExec>("orchidHistoryMigrate") {
+tasks.register<JavaExec>("orchidStateChainMigrate") {
 	group = "verification"
-	description = "Plans or imports historical OrchidGroup mutations before ledger baseline."
+	description = "Validates or imports the complete OrchidGroup state-chain manifest."
 	dependsOn(tasks.named("classes"))
 	classpath = sourceSets["main"].runtimeClasspath
-	mainClass.set("com.greenhouse.backend.farm.application.orchid.mutation.OrchidGroupHistoryMigrationCli")
+	mainClass.set("com.greenhouse.backend.farm.application.orchid.mutation.OrchidGroupStateChainMigrationCli")
 }
 
 tasks.register<Test>("workE2eTest") {
