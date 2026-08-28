@@ -29,7 +29,7 @@
 | Work·Sales Mutation 연결 | 업무 사실과 난 묶음 상태 변경의 상관관계 보존 |
 | ledger coverage와 PostgreSQL write fence | 적용 범위 증명과 Engine 밖 직접 쓰기 차단 |
 | ledger reconciliation service와 모듈별 rehearsal inspector | 전환 후에도 revision·snapshot·업무 연결 정합성 검사 |
-| `HISTORICAL` Mutation/Entry | cutover 이전 업무 이력의 영구 조회 자료 |
+| complete state-chain Mutation/Entry와 삭제 tombstone | cutover 이전부터 이후까지 하나의 revision 규칙으로 조회 |
 
 상시 reconciliation을 어떤 scheduler나 운영 명령으로 호출할지는 별도 운영 정책이지만,
 대사 로직 자체는 전환 코드로 보지 않는다.
@@ -39,10 +39,9 @@
 | 범위 | 역할 | 제거 gate | 데이터 처리 |
 |---|---|---|---|
 | `OrchidGroupLedgerWriterMode`, writer properties/configuration, routing policy와 startup guard | `LEGACY\|ENGINE` 선택, 시작된 `PREPARING`의 Legacy 재기동과 구버전 차단 | 모든 환경을 Engine으로 고정하고 fallback 금지 확인 | coverage는 보존 |
-| `OrchidGroupLedgerCutover*`, `OrchidGroupLedgerPreparationService` | baseline 생성과 `ACTIVE` 전환 | 운영 cutover 성공 및 재수행 불필요 승인 | baseline과 coverage는 보존 |
-| `OrchidGroupHistoryMigration*`, Historical 입력·연결 서비스 | cutover 이전 이력 계획·적재·검증 | 최종 catch-up과 manifest 검증 완료 | Historical Entry와 run 결과는 보존 |
-| `migration.*.orchid` operator runtime | migration run 잠금·상태 전이 | historical migration 종료와 감사 보존 확인 | run 테이블과 행은 보존 |
-| Work·Sales historical reader/link adapter | 소유 모듈의 과거 사실을 migrator에 제공 | historical migration 종료 | 원본 Work·Sales 사실은 보존 |
+| `OrchidGroupLedgerCutover*`, `OrchidGroupLedgerPreparationService` | import coverage 준비·확인과 `ACTIVE` 전환 | 운영 cutover 성공 및 재수행 불필요 승인 | state-chain과 coverage는 보존 |
+| `OrchidGroupStateChainMigration*` | 승인 manifest 검증·원자 적재·재실행 | 운영 import와 복구 artifact 정책 확정 | Mutation/Entry와 manifest fingerprint는 보존 |
+| Work state-chain source 조회·link adapter | 기존 Work 효과를 지정 Mutation에 연결 | 운영 import 종료 | 원본 Work 사실과 Mutation 연결은 보존 |
 
 전환 전용 클래스의 Javadoc에는 다음 표식을 사용한다.
 
@@ -78,10 +77,10 @@ inventory에 추가해 우회하지 않고 typed Engine command로 편입한다.
 
 다음 대상은 runtime 제거와 구분한다.
 
-- 적용된 Flyway V21~V27 파일은 삭제하거나 수정하지 않는다. 사용하지 않는 비교 테이블은
+- 적용된 Flyway V21~V28 파일은 삭제하거나 수정하지 않는다. 사용하지 않는 비교 테이블은
   V26을 수정하지 않고 V27에서 제거한다.
-- `orchid_group_mutations`, `orchid_group_mutation_entries`와 historical Entry를 유지한다.
-- migration run 결과는 실행 코드가 제거되어도 감사 근거로 유지한다.
+- `orchid_group_mutations`, 연속 revision의 `orchid_group_mutation_entries`와 삭제 tombstone을 유지한다.
+- coverage의 manifest fingerprint와 버전 관리되는 manifest provenance를 감사 근거로 유지한다.
 - Work·Sales·Lineage 원본 사실은 별도 소비 전환과 보존 정책 없이 삭제하지 않는다.
 
 ## 제거 gate

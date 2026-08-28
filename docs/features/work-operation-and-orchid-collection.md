@@ -84,8 +84,8 @@
 - 난 묶음 이력 API는 `WorkOperationTarget`과 `WorkEffectOrchidGroup` 연결만 조회한다.
 - V8에서 변환된 기존 이력은 변환 결과인 `WorkOperation`을 통해 조회한다.
 - Mutation Engine writer에서는 난 묶음 상태를 바꾸는 효과가 기존 effect key를 그대로 Mutation 원인 키로 사용한다. 효과 저장과 함께 `WorkAppliedEffect.mutationId`, `correlationId`를 기록하며 단일 원본 호환 계보에도 같은 Mutation ID를 연결한다.
-- cutover 이전 상태 변경 Work 효과도 동일한 `(workOperationId, effectKey)` identity로 Historical Mutation에 이관한다. `DISCARD`, `MOVE`, `DIVIDE`, `MOVEMENT`, `REPOT`, `POTTING`만 대상이며 난 묶음 관계는 공통 `HISTORICAL` Entry로 연결하고 원본 command/result는 Work 사실 데이터에 보존한다.
-- historical migrator는 Work application의 제한된 batch reader와 link API만 사용한다. 이관 후 상태 변경 효과와 대응 Lineage는 같은 Mutation ID로 연결하고, 재실행 시 기존 연결을 반환한다.
+- cutover 이전 상태 변경 Work 효과도 동일한 `(workOperationId, effectKey)` identity로 complete state-chain Mutation에 이관한다. `DISCARD`, `MOVE`, `DIVIDE`, `MOVEMENT`, `REPOT`, `POTTING`만 대상이며 난 묶음 관계는 연속 `CREATE/CHANGE/DELETE` Entry로 연결하고 원본 command/result는 Work 사실 데이터에 보존한다.
+- 전환용 importer는 Work application의 제한된 source 조회와 link API만 사용한다. 이관 후 상태 변경 효과와 대응 Lineage는 같은 Mutation ID로 연결하고, 재실행 시 기존 연결을 반환한다.
 - 기록 전용 효과와 작업일만 바뀐 보정은 난 묶음 상태 변경이 없으므로 Mutation 연결을 만들지 않는다.
 
 ## 7. 작업 모듈 내부 구조

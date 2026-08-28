@@ -192,9 +192,10 @@ pg_dump -U greenhouse greenhouse > backup_$(date +%Y%m%d).sql
 - V21~V22는 난 묶음 Mutation ledger와 coverage를 추가하고 동시에 하나의 `PREPARING` 또는 `ACTIVE` coverage만 존재하도록 제한한다. 기존 난 묶음의 baseline은 자동 생성하지 않는다.
 - V23은 `ACTIVE` coverage에서 Mutation context 없는 난 묶음 INSERT·UPDATE와 모든 DELETE를 차단하고, 커밋 시 변경 revision에 대응하는 MutationEntry를 검증한다. `PREPARING`에서는 아직 차단하지 않는다.
 - V24는 `UNMAPPED`으로 남은 기존 난 묶음 중 의미가 명확한 스마트 따옴표 3·4인치 값만 표준 화분 코드로 보정한다. 다른 `UNMAPPED` 값은 자동 변환하지 않는다.
-- V25는 historical migration run과 공통 `HISTORICAL` MutationEntry 제약을 추가한다. 과거 이관은 Flyway가 자동 실행하지 않는다.
+- V25는 이전 과거 이관 방식의 run과 Entry 제약을 추가했다. 적용된 Flyway 파일은 변경하지 않는다.
 - V26은 운영 전환 전 Legacy 결과와 read-only Engine plan을 비교하는 `orchid_group_shadow_comparisons`를 추가한다. 이 테이블은 업무 상태나 ledger가 아니다.
 - V27은 운영 SHADOW 단계를 사용하지 않기로 한 결정에 따라 V26의 비교 테이블과 sequence를 제거한다. 이미 적용된 V26 파일은 수정하거나 삭제하지 않는다.
+- V28은 revision 없는 과거 Entry 방식과 전용 run 테이블을 제거하고 `BASELINE/CREATE/CHANGE/DELETE` complete state-chain 제약, 삭제 tombstone과 manifest fingerprint를 추가한다. 기존 방식의 Entry가 실제로 존재하면 자동 삭제하지 않고 migration을 중단한다.
 
 운영 custom dump로 로컬 개발 DB를 초기화할 때는 다음 스크립트를 사용한다. 백업을 생략하면 `temp/`의 최신 `*.dump.gz` 또는 `*.dump`를 선택한다. 스크립트는 로컬 DB만 허용하며 기존 백엔드를 종료하고, 복원 후 Flyway 적용·Hibernate 스키마 검증·작업 V2 무결성 검사를 수행한다.
 
@@ -209,12 +210,11 @@ pg_dump -U greenhouse greenhouse > backup_$(date +%Y%m%d).sql
 ./scripts/reset-dev-db.sh --yes
 ```
 
-### 난 묶음 과거 이력 migration profiling
+### 난 묶음 complete state-chain artifact 확인
 
-완전한 과거 이력 이관 설계와 rehearsal은 baseline을 만들기 전에 수행한다. 이미
-`ACTIVE`로 사용한 rehearsal DB는 재사용하지 않고 최신 운영 백업으로 다시
-초기화한다. profiling SQL은 read-only이며 `orchid_groups`나 source 이력을 변경하지
-않는다.
+complete state-chain rehearsal은 `ACTIVE` 전 최신 운영 백업에서 수행한다. 이미
+`ACTIVE`로 사용한 rehearsal DB는 재사용하지 않는다. profiling SQL과 profiler는
+read-only이며 `orchid_groups`나 source 이력을 변경하지 않는다.
 
 ```bash
 PGPASSWORD=greenhouse_rehearsal_test psql \
@@ -233,9 +233,10 @@ PGPASSWORD=greenhouse_rehearsal_test psql \
 - 생성 근거가 있는 그룹의 quantity replay 불일치를 `ATTESTED` 보정 또는 GAP으로 분류
 - 시스템 운영 전 참고 전표는 `LEGACY_REFERENCE_ONLY`로 분류하고 Orchid Mutation에서 제외
 
-2026-08-21 백업 profiling에서는 난 묶음 269개 중 29개만 생성 근거가 있었고 240개는
-합성 ORIGIN이 필요했다. 상태 변경 Work 효과 42건과 link 76개, Lineage 16개는 모두
-결정적으로 변환 가능했고 합성 origin 수량 240개도 모두 0 이상으로 역산됐다.
+2026-08-26 백업의 초기 운영 지표에서는 현존 난 묶음 269개 중 직접 생성 근거가 있는
+그룹이 29개였고 240개는 최초 관측 근거가 필요했다. 전체 백업 구간을 재구성한 최종
+manifest는 최초 신뢰 백업의 `BASELINE` 114개와 이후 `CREATE` 161개 chain으로 확정됐다.
+상태 변경 Work 효과 42건과 link 76개, Lineage 16개는 모두 결정적으로 변환 가능했다.
 그룹 234의 `+12` 차이는 운영자가 실제 수량 보정으로 확인했으므로
 `ATTESTED CORRECTION` 이관 대상이다. 기존 판매 전표 148건·품목 868건은 모두 시스템 운영 전
 자료를 바탕으로 등록한 참고 정보이므로 `LEGACY_REFERENCE_ONLY`로 분류하고 Orchid
@@ -243,60 +244,63 @@ Mutation 이관에서 제외한다. 현재 백업에서 미분류 수량 gap은 
 이 결과의 해석과 이관 모델은
 `docs/adr/ADR-002-orchid-group-historical-migration.md`를 따른다.
 
-### 난 묶음 과거 이력 migration rehearsal
+### 난 묶음 complete state-chain migration rehearsal
 
-`reset-dev-db.sh`로 복원하면 현재 코드의 Flyway V25와 Hibernate validation까지
-적용된다. 다음 operator command는 반드시 `PRE_BASELINE` 복원 DB에서 실행한다.
-`source-cutoff`은 파일 수정 시각이 아니라 백업 생성 완료 시각의 UTC 값이다.
-
-먼저 백업과 manifest fingerprint, 고정 run key를 준비한다.
+profiler가 만든 schema 1 manifest를 현재 Engine 계약인 schema 2로 정규화한다. 정규화는
+원인을 새로 추론하지 않으며 revision kind, 필드명과 canonical 값만 변환한다.
 
 ```bash
-sha256sum temp/green-house_20260821_030001.dump.gz
-uuidgen
+python3 scripts/data-audit/normalize_orchid_state_chain_manifest.py \
+  --input temp/migration/migration_manifest.json \
+  --output scripts/data-audit/orchid-state-chain-migration-manifest.json
+
+sha256sum temp/migration/migration_manifest.json \
+  scripts/data-audit/orchid-state-chain-migration-manifest.json
 ```
 
-첫 실행은 plan만 생성한다. `apply=false`도 재현 가능한 plan과 현재 상태 fingerprint를
-DB의 `DRY_RUN` run으로 기록하지만 Mutation·Entry와 원본 link는 만들지 않는다.
+최종 manifest는 `migration_ready=true`, `blocking_issues=[]`여야 한다. 더 최신 백업의
+현재 ID 집합이나 마지막 snapshot이 달라지면 importer가 거부하므로 해당 백업으로
+profiler artifact를 다시 만들고 검토해야 한다.
+
+고정 cutover key로 read-only 검증을 먼저 실행한다.
 
 ```bash
 cd backend
-RUN_KEY='<RUN_KEY>'
-SOURCE_CUTOFF='<BACKUP_COMPLETED_AT_UTC>'
-BACKUP_SHA256='<BACKUP_SHA256>'
+CUTOVER_KEY='<CUTOVER_KEY>'
 CUTOVER_BUSINESS_DATE='<CUTOVER_BUSINESS_DATE>'
 DATABASE_URL=jdbc:postgresql://localhost:5432/greenhouse_rehearsal \
 DATABASE_USERNAME=greenhouse_rehearsal_test \
 DATABASE_PASSWORD=greenhouse_rehearsal_test \
-./gradlew orchidHistoryMigrate --args="--run-key=${RUN_KEY} --source-cutoff=${SOURCE_CUTOFF} --backup-fingerprint=${BACKUP_SHA256} --manifest=../scripts/data-audit/orchid-history-migration-manifest.json --effective-business-date=${CUTOVER_BUSINESS_DATE} --apply=false --confirmation=PLAN:${RUN_KEY}"
+./gradlew orchidStateChainMigrate --args="\
+  --cutover-key=${CUTOVER_KEY} \
+  --manifest=../scripts/data-audit/orchid-state-chain-migration-manifest.json \
+  --effective-business-date=${CUTOVER_BUSINESS_DATE} \
+  --minimum-writer-version=1.1.0 \
+  --apply=false \
+  --confirmation=PLAN:${CUTOVER_KEY}"
 ```
 
-plan의 source count가 profiling SQL과 같고 다음 gate를 만족할 때만 같은 run key로
-적재한다. 더 최신 백업에서 판매 참고자료나 운영자 확인 보정이 달라졌다면 먼저
-manifest와 ADR을 승인된 사실에 맞게 갱신한다.
-
-- `UNCLASSIFIED_GAPS=0`
-- Work·Audit·ORIGIN·ATTESTED 건수가 profiling 결과와 일치
-- `LEGACY_REFERENCE_SALES_*`가 profiling의 참고 판매 자료 건수와 일치
-- operator가 Sales allocation·inventory movement·난 묶음 snapshot 0건을 실제 DB에서 확인
-- `MUTATIONS`와 `ENTRIES`가 예상 건수와 일치
+`PRE_BASELINE`, `ready=true`, `issues=[]`이고 manifest의 Mutation·Entry·현존·삭제 건수가
+승인값과 같을 때만 적재한다.
 
 ```bash
 DATABASE_URL=jdbc:postgresql://localhost:5432/greenhouse_rehearsal \
 DATABASE_USERNAME=greenhouse_rehearsal_test \
 DATABASE_PASSWORD=greenhouse_rehearsal_test \
-./gradlew orchidHistoryMigrate --args="--run-key=${RUN_KEY} --source-cutoff=${SOURCE_CUTOFF} --backup-fingerprint=${BACKUP_SHA256} --manifest=../scripts/data-audit/orchid-history-migration-manifest.json --effective-business-date=${CUTOVER_BUSINESS_DATE} --apply=true --confirmation=IMPORT:${RUN_KEY}"
+./gradlew orchidStateChainMigrate --args="\
+  --cutover-key=${CUTOVER_KEY} \
+  --manifest=../scripts/data-audit/orchid-state-chain-migration-manifest.json \
+  --effective-business-date=${CUTOVER_BUSINESS_DATE} \
+  --minimum-writer-version=1.1.0 \
+  --apply=true \
+  --confirmation=IMPORT:${CUTOVER_KEY}"
 ```
 
-성공 기준은 `verification.ready=true`, 미연결 Work·Lineage와 entry 없는 Mutation이
-모두 0이고 현재 상태 fingerprint가 plan 때와 같은 것이다. 같은 명령을 다시 실행해
-`importedMutations=0`, 모든 Mutation이 `replayedMutations`로 반환되는지도 확인한다.
-마지막으로 `orchidLedgerReconcile`의 `PRE_BASELINE`, `ready=true`, `issues=[]`를 확인한
-후에만 baseline rehearsal로 진행한다.
-
-2026-08-21 백업 rehearsal 결과는 Mutation 287건, `HISTORICAL` Entry 321건, Work 연결 42건,
-Lineage 연결 16건이었다. 재실행은 신규 0건·replay 287건이었고 현재 상태 fingerprint는
-이관 전후 동일했다.
+같은 import를 다시 실행해 `importedMutationCount=0`과 전체
+`replayedMutationCount`를 확인한다. 2026-08-28 rehearsal 결과는 Mutation 314,
+Entry 348, 현존 그룹 269, 삭제 tombstone 그룹 6, Work/Lineage 연결 42/16이며
+재실행 신규 0·replay 314였다. 같은 복원 DB의 VERIFY와 ACTIVE 전환도 통과했고,
+최종 reconciliation은 `ACTIVE`, `ready=true`, `issues=[]`였다.
 
 ### 난 묶음 ledger 복원 DB rehearsal
 
@@ -323,36 +327,15 @@ DATABASE_PASSWORD=greenhouse_rehearsal_test \
 fingerprint를 포함한다. `PRE_BASELINE`, `BASELINE_PREPARING`, `ACTIVE` 단계별로 같은
 명령을 반복해 결과와 소요 시간을 보관한다.
 
-이 명령은 baseline 생성, coverage 활성화, 데이터 보정을 수행하지 않는다. 오류가
+이 명령은 state-chain 생성, coverage 활성화, 데이터 보정을 수행하지 않는다. 오류가
 있으면 대상 ID와 코드로 원인을 보정한 뒤 새 복원본에서 rehearsal을 다시 시작한다.
 
-baseline 쓰기 rehearsal은 DB writer 계정과 고정한 cutover key로 실행한다. 500개 ID
-단위의 결정적 batch key를 사용하므로 동일 명령을 재실행하면 완료 batch는 기존
-결과를 반환하고 나머지를 이어서 적재한다. 재개 시에는 `state_revision IS NULL`인
-그룹만 baseline 대상으로 선택한다. 이미 baseline된 그룹과 ENGINE smoke test에서
-CREATE Entry·revision 1로 생성된 그룹은 다시 baseline하지 않는다.
-
-```bash
-cd backend
-CUTOVER_KEY='00000000-0000-0000-0000-000000000000'
-DATABASE_URL=jdbc:postgresql://localhost:5432/greenhouse_rehearsal \
-DATABASE_USERNAME=greenhouse_rehearsal_test \
-DATABASE_PASSWORD=greenhouse_rehearsal_test \
-./gradlew orchidLedgerCutover --args="\
-  --cutover-key=${CUTOVER_KEY} \
-  --effective-business-date=2026-08-20 \
-  --minimum-writer-version=1.1.0 \
-  --current-writer-version=1.1.0 \
-  --activate=false \
-  --confirmation=BASELINE:${CUTOVER_KEY}"
-```
-
-운영 primary에서는 `--activate=false` baseline을 시작하기 전부터 애플리케이션 쓰기를
-중단하고 구버전 인스턴스를 모두 종료해야 한다. `PREPARING`에는 DB fence가 없으며,
-baseline 시작 후 `LEGACY` backend는 startup guard가 기동을 거부한다. 명령은 난 묶음
-테이블을 잠근 뒤 최종 대사를 다시 수행하며,
-확인 문구도 `ACTIVATE:{cutoverKey}`로 바뀐다. ACTIVE 이후에는 DB fence를 해제하거나
-LEGACY writer로 fallback하지 않고 roll-forward한다.
+complete state-chain import 뒤 결과는 `BASELINE_PREPARING`, `ready=true`, `issues=[]`여야
+한다. `orchidLedgerCutover --activate=false --confirmation=VERIFY:{cutoverKey}`는 데이터를
+만들지 않고 동일 cutover의 import 완료와 대사 결과만 재확인한다. 운영 primary에서는
+import 전부터 애플리케이션 쓰기를 중단하고 구버전 인스턴스를 모두 종료해야 한다.
+`PREPARING`에는 DB fence가 없으며 import 시작 후 `LEGACY` backend는 startup guard가
+기동을 거부한다. ACTIVE 이후에는 LEGACY writer로 fallback하지 않고 roll-forward한다.
 
 현재 구현은 Farm·Work·Sales·Inbound의 알려진 난 묶음 write path를 하나의
 `LEGACY|ENGINE` 스위치로 라우팅한다. `ACTIVE` 전에는 모든 운영 writer가 inventory에
@@ -361,13 +344,13 @@ legacy 호환 코드를 먼저 삭제한다는 뜻은 아니다. 호환 분기�
 남겨 둘 수 있지만 모든 실행 인스턴스는 `ENGINE`으로 고정하고 DB fence로 실행을
 차단한다. 안정화 후 routing flag와 legacy 직접 writer를 별도 릴리스에서 제거한다.
 
-운영 DB의 `--activate=true` 실행 전에는 최신 운영 백업과 배포 후보 코드로 baseline,
+운영 DB의 `--activate=true` 실행 전에는 최신 운영 백업과 배포 후보 코드로 state-chain import,
 ENGINE 전체 회귀·smoke 및 아래 `ACTIVE` 전환 rehearsal까지 통과해야 한다.
 
 ### ENGINE writer 수동 smoke test
 
 운영 primary가 아닌 복원 또는 별도 테스트 PostgreSQL에서만 실행한다. 기존 데이터가
-있으면 위 `orchidLedgerCutover --activate=false` 명령으로 baseline을 먼저 만든다.
+있으면 위 `orchidStateChainMigrate` 명령으로 complete chain을 먼저 적재한다.
 그 뒤 애플리케이션을 다음처럼 시작한다.
 
 ```bash
@@ -405,8 +388,8 @@ DATABASE_PASSWORD=greenhouse_rehearsal_test \
 
 명령은 데이터를 변경하지 않고 다음 조건을 전수 검사한다.
 
-- cutover 당시 존재한 그룹은 해당 coverage의 `BASELINE` Entry, 이후 생성된 그룹은
-  `CREATE` Entry로 revision chain을 시작한다.
+- 최초 관측 그룹은 해당 coverage의 `BASELINE` Entry, 이후 생성 근거가 있는 그룹은
+  `CREATE` Entry로 revision chain을 시작한다. 삭제된 그룹은 `DELETE`로 끝난다.
 - 인접 Entry의 `stateRevisionAfter`와 다음 `stateRevisionBefore`가 연속된다.
 - 이전 `afterState`와 다음 `beforeState`가 같고, 현재 난 묶음 상태와 마지막
   `afterState`가 같다.
@@ -424,7 +407,7 @@ DATABASE_PASSWORD=greenhouse_rehearsal_test \
 }
 ```
 
-`baselineGroupCount`는 운영 백업에서 baseline으로 시작한 그룹 수이므로 smoke test 중
+`baselineGroupCount`는 complete chain에서 `BASELINE`으로 시작한 그룹 수이므로 smoke test 중
 새 그룹을 만들더라도 증가하지 않는다. `orchidGroupCount`, `mutationCount`,
 `entryCount`는 테스트 결과에 따라 증가하는 것이 정상이다. `baselineFingerprint`는
 초기 기준을 나타내므로 유지되고 `currentStateFingerprint`는 상태 변경에 따라 바뀐다.
@@ -450,7 +433,7 @@ WHERE (mutation_id IS NULL) <> (correlation_id IS NULL);
 
 두 조회 결과는 비어 있어야 한다. 기록 전용 Work 효과의 두 값이 모두 `NULL`인 것은
 정상이다. 결과가 있거나 대사 결과가 `ready=false`이면 `issues.code`와 `referenceId`로
-원인을 확인하고 해당 테스트 DB를 보존한다. baseline 재실행, ledger 직접 수정,
+원인을 확인하고 해당 테스트 DB를 보존한다. manifest 교체, ledger 직접 수정,
 `ACTIVE` 전환으로 문제를 덮지 않는다. smoke test 중에도 coverage는 `PREPARING`으로
 유지한다. 이 단계가 통과하면 운영 primary가 아닌 폐기 가능한 DB 사본에서 실제
 전환 절차를 한 번 더 rehearsal한다.
@@ -458,7 +441,7 @@ WHERE (mutation_id IS NULL) <> (correlation_id IS NULL);
 #### ACTIVE 전환 rehearsal
 
 ENGINE 백엔드를 종료해 쓰기를 막고, 구버전 인스턴스와 실행 중 transaction이 없는지
-확인한다. baseline에 사용한 cutover key와 배포 후보 writer version으로 활성화한다.
+확인한다. state-chain import에 사용한 cutover key와 배포 후보 writer version으로 활성화한다.
 
 ```bash
 cd backend
@@ -490,7 +473,7 @@ Work/Sales 연결 SQL을 다시 수행하며 성공 기준은 다음과 같다.
 
 ### 운영 primary cutover runbook
 
-이 절차는 위 historical migration, ENGINE smoke test와 `ACTIVE` rehearsal을 최신 운영
+이 절차는 위 complete state-chain migration, ENGINE smoke test와 `ACTIVE` rehearsal을 최신 운영
 백업에서 모두 통과한 뒤 한 번만 실행한다. 모든 명령은 최종 배포 이미지와 같은 commit의
 checkout에서 실행하고 JSON 결과, SQL 결과, 백업 fingerprint와 시작·종료 시각을 보관한다.
 
@@ -526,7 +509,7 @@ kubectl -n "${NAMESPACE}" get configmap green-house-config \
 `orchidLedgerReconcile`을 read-only로 실행해 `stage=PRE_BASELINE`, `ready=true`,
 `issues=[]`를 확인한다.
 
-유지보수 시작을 공지하고 backend를 완전히 종료한다. baseline 이후에는 Legacy를 다시
+유지보수 시작을 공지하고 backend를 완전히 종료한다. state-chain import 이후에는 Legacy를 다시
 기동하지 않는다.
 
 ```bash
@@ -547,22 +530,42 @@ WHERE datname = current_database()
 ```
 
 이 상태에서 최종 운영 백업을 만들고 `pg_restore --list`로 읽을 수 있는지 확인한 뒤
-SHA-256을 기록한다. final historical migration은 새 run key, 이 백업 완료 시각의 UTC
-`source-cutoff`, 이 fingerprint를 사용해 앞 절의 plan과 apply를 다시 수행한다.
-`verification.ready=true`와 재실행 시 신규 Mutation 0건을 확인한다.
+SHA-256을 기록한다. 최종 백업으로 profiler schema 1 manifest를 다시 생성·승인하고
+정규화한다. 더 이전 백업의 tracked manifest를 그대로 사용하지 않는다.
 
-같은 release checkout에서 baseline과 `ACTIVE`를 순서대로 실행한다. 두 명령 사이에도
-backend replicas는 계속 0이어야 한다.
+같은 release checkout에서 plan, import, 재실행과 `ACTIVE`를 순서대로 수행한다. 전체
+과정에서 backend replicas는 계속 0이어야 한다.
 
 ```bash
 cd backend
+python3 ../scripts/data-audit/normalize_orchid_state_chain_manifest.py \
+  --input ../temp/migration/migration_manifest.json \
+  --output ../scripts/data-audit/orchid-state-chain-migration-manifest.json
+
+./gradlew orchidStateChainMigrate --args="\
+  --cutover-key=${CUTOVER_KEY} \
+  --manifest=../scripts/data-audit/orchid-state-chain-migration-manifest.json \
+  --effective-business-date=${EFFECTIVE_BUSINESS_DATE} \
+  --minimum-writer-version=${WRITER_VERSION} \
+  --apply=false \
+  --confirmation=PLAN:${CUTOVER_KEY}"
+
+./gradlew orchidStateChainMigrate --args="\
+  --cutover-key=${CUTOVER_KEY} \
+  --manifest=../scripts/data-audit/orchid-state-chain-migration-manifest.json \
+  --effective-business-date=${EFFECTIVE_BUSINESS_DATE} \
+  --minimum-writer-version=${WRITER_VERSION} \
+  --apply=true \
+  --confirmation=IMPORT:${CUTOVER_KEY}"
+
+# 위 import 명령을 한 번 더 실행해 신규 0·전체 replay를 확인한다.
 ./gradlew orchidLedgerCutover --args="\
   --cutover-key=${CUTOVER_KEY} \
   --effective-business-date=${EFFECTIVE_BUSINESS_DATE} \
   --minimum-writer-version=${WRITER_VERSION} \
   --current-writer-version=${WRITER_VERSION} \
   --activate=false \
-  --confirmation=BASELINE:${CUTOVER_KEY}"
+  --confirmation=VERIFY:${CUTOVER_KEY}"
 
 ./gradlew orchidLedgerCutover --args="\
   --cutover-key=${CUTOVER_KEY} \
@@ -573,7 +576,7 @@ cd backend
   --confirmation=ACTIVATE:${CUTOVER_KEY}"
 ```
 
-첫 결과는 `stage=BASELINE_PREPARING`, 두 번째 결과는 `stage=ACTIVE`이고 모두
+import와 VERIFY 결과는 `stage=BASELINE_PREPARING`, 활성화 결과는 `stage=ACTIVE`이고 모두
 `ready=true`, `issues=[]`여야 한다. 그 뒤에만 `k8s/base/configmap.yaml`을 `ENGINE`과
 `1.1.0`으로, backend deployment를 검증한 `RELEASE_IMAGE`로 갱신하여 적용한다.
 ConfigMap만 변경하면 기존 Pod 환경 변수는 갱신되지 않으므로 새 Pod 기동을 반드시

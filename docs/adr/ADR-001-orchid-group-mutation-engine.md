@@ -34,6 +34,19 @@
 
 ## 결정
 
+### 0. Revision
+
+`stateRevision`은 하나의 OrchidGroup aggregate가 Mutation Engine을 통해 확정한 불변 상태 버전의 순번이다. 하나의 `revision`은 해당 시점의 수량뿐 아니라 품종, 예약 수량, lifecycle 상태, 위치, 배치 범위, 화분·년생 등 Mutation 관리 대상 전체 상태를 나타낸다.
+
+예를 들어:
+```text
+MutationEntry
+beforeRevision = N
+afterRevision  = N+1
+```
+의 뜻은
+"N번째 전체 상태가 하나의 Mutation에 의해 N+1번째 전체 상태로 전환" 을 의미한다.
+
 ### 1. Farm이 상태 변경 엔진을 소유한다
 
 현재 `OrchidGroup`과 `orchid_groups` 테이블의 소유 Bounded Context는 `farm`이다.
@@ -249,7 +262,7 @@ Mutation context가 있을 때만 허용하고 DELETE는 거부하는 PostgreSQL
 설정한 뒤 상태를 flush한다. 기존 버전 애플리케이션, 남은 직접 저장 코드와 일반
 운영 SQL은 이 context가 없으므로 커밋할 수 없다.
 
-baseline 이관은 `ACTIVE` 이전의 제한된 migration context로만 수행한다. write
+complete state-chain 이관은 `ACTIVE` 이전의 제한된 migration context로만 수행한다. write
 fence의 활성화 순서와 context 누락·위조·rollback 동작은 실제 PostgreSQL에서
 검증한다. 이 fence는 권한 체계를 대신하는 보안 장치가 아니라 잘못된 writer와
 혼합 버전 배포를 막는 정합성 장치다.
@@ -527,37 +540,15 @@ Timeline은 cursor 또는 page 기반 제한 조회를 사용하고 source ID를
 모아 일괄 조회한다. 적용일 이전 데이터를 완전한 Mutation 이력처럼 표시하지
 않고 `historyAvailableFrom` 또는 동등한 coverage 정보를 제공한다.
 
-### 15. 기존 운영 데이터는 baseline으로 ledger에 편입한다
+### 15. 기존 운영 데이터는 complete state-chain으로 편입한다
 
 전환 시 기존 `orchid_groups` 행을 새로 생성하거나 ID를 바꾸지 않는다. 현재 PK와
-Work·Sales·Inbound·Collection·Lineage의 FK 및 scalar 참조를 그대로 유지하고,
-현재 상태 주위에 revision과 baseline ledger를 추가한다.
+Work·Sales·Inbound·Collection·Lineage의 FK 및 scalar 참조를 유지하면서, 운영 백업과
+업무 근거에서 복원한 전체 revision chain을 적재한다. 최초 관측 상태는 `BASELINE`,
+생성 근거가 있는 그룹은 `CREATE`, 이후 변경과 삭제는 `CHANGE/DELETE`로 이어진다.
+현재 행이 없는 그룹도 terminal `DELETE` Entry로 보존한다.
 
-기존 행마다 다음 BASELINE Entry를 만든다.
-
-```text
-Mutation
-- mutation_type: BASELINE_IMPORT
-- source_domain: MIGRATION
-- source_type: LEDGER_BASELINE
-- source_reference_id: cutoverId
-- source_operation_key: batchKey
-- command_fingerprint: 해당 batch snapshot의 canonical fingerprint
-
-MutationEntry
-- entry_kind: BASELINE
-- state_revision_before: null
-- state_revision_after: 0
-- before_state: null
-- after_state: 전환 직전 orchid_groups 현재 상태
-```
-
-하나의 baseline Mutation에 운영 데이터 전체를 넣지 않고 결정적인 ID 범위로
-batch를 나눈다. batch key와 fingerprint를 고정해 중단 후에도 동일 결과로 재실행할
-수 있게 한다. BASELINE은 생성·입고·작업 실행을 의미하지 않으며 과거 업무
-이력에 임의로 `mutationId`를 연결하지 않는다.
-
-baseline 전에 운영 데이터 profiling과 정합성 검사를 실행한다.
+이관 전에 운영 데이터 profiling과 정합성 검사를 실행한다.
 
 - `quantity >= 0`, `0 <= reserved_quantity <= quantity`
 - 현재 status, pot size와 기타 코드의 canonical mapping 가능 여부
@@ -573,10 +564,11 @@ baseline 전에 운영 데이터 profiling과 정합성 검사를 실행한다.
 재계산하지 않는다. 운영자가 원인을 확인해 전환 전 보정하거나 전환을 중단한다.
 Engine의 핵심 invariant를 위반한 행이 하나라도 남으면 `ACTIVE`로 전환하지 않는다.
 
-DDL과 제약의 expand 단계는 Flyway로 수행한다. cross-domain 판정, snapshot 생성과
-대량 baseline 적재는 애플리케이션 시작 시 자동 실행되는 Flyway에 넣지 않고
-버전이 고정된 operator-run migration command로 수행한다. 이 command는 dry-run,
-재실행, batch 진행 상태, 검증 결과와 종료 코드를 제공한다.
+DDL과 제약의 expand 단계는 Flyway로 수행한다. cross-domain 판정과 snapshot chain
+생성은 애플리케이션 시작 시 자동 실행되는 Flyway에 넣지 않는다. profiler가 만든
+승인 manifest를 정규화한 뒤 operator-run importer가 원자적으로 적재한다. importer는
+과거 사실을 다시 추론하지 않으며 dry-run, fingerprint 검증, 재실행 결과와 종료 코드를
+제공한다.
 
 운영 cutover는 기본적으로 짧은 쓰기 중단 창에서 다음 순서로 수행한다.
 
@@ -584,57 +576,47 @@ DDL과 제약의 expand 단계는 Flyway로 수행한다. cross-domain 판정, s
 2. 전체 DB backup과 restore 가능성을 확인한다.
 3. 모든 난 묶음 write API를 차단하고 실행 중 transaction과 구버전 인스턴스를
    종료한다.
-4. 대상 행을 다시 잠그고 profiling 결과가 여전히 유효한지 확인한다.
-5. `state_revision = 0`과 BASELINE Mutation·Entry를 적재한다.
-6. 행 수, snapshot fingerprint, FK, reservation과 revision 정합성을 검증한다.
+4. 최종 백업으로 profiler manifest를 다시 만들고 승인 artifact와 현재 DB가 일치하는지 확인한다.
+5. `BASELINE/CREATE/CHANGE/DELETE` Mutation·Entry와 업무 연결을 적재한다.
+6. revision 연속성, 마지막 snapshot, fingerprint, FK와 reservation 정합성을 검증한다.
 7. coverage를 `ACTIVE`로 바꾸고 DB write fence와 신버전 writer를 활성화한다.
 8. 핵심 Work·Sales·Inbound 시나리오를 smoke test한 뒤 쓰기를 재개한다.
 
-데이터 규모가 한 transaction에 안전하면 5~7단계를 하나의 transaction으로
-처리한다. batch commit이 필요하면 쓰기 중단을 계속 유지하고 모든 batch 검증이
-끝나기 전에는 `ACTIVE`로 바꾸지 않는다. 실패한 PREPARING baseline 위에서 기존
-writer를 재개하지 않으며, idempotent resume 또는 검증된 전체 rollback 절차 중
-하나를 수행한다.
+현재 규모의 import는 하나의 transaction으로 처리한다. manifest 전체 검증, Mutation과
+Entry, Work·Lineage 연결, 현존 그룹의 최종 `state_revision`, coverage fingerprint와
+reconciliation 중 하나라도 실패하면 모두 rollback한다. 같은 manifest 재실행은 기존
+Mutation을 replay하고 신규 행을 만들지 않는다. 다른 payload나 fingerprint는 충돌로
+중단한다. 실패한 PREPARING import 위에서 기존 writer를 재개하지 않고 검증된 전체 DB
+restore 또는 동일 manifest 재실행만 허용한다.
 
-baseline resume은 `state_revision IS NULL`인 그룹만 다음 batch 대상으로 선택한다.
-이미 BASELINE Entry가 있는 그룹과 PREPARING smoke test 중 Engine이 CREATE Entry와
-revision 1로 생성한 그룹은 다시 baseline하지 않는다. 따라서 smoke test 후 같은
-cutover command로 `ACTIVE`를 실행해도 기존 baseline fingerprint와 CREATE chain을
-보존한다.
+### 16. 진행 중인 업무를 complete chain 위에서 계속 수행한다
 
-### 16. 진행 중인 업무도 baseline 위에서 계속 수행한다
-
-현재 상태만 baseline으로 옮기고 진행 중 Work·Sales·Inbound를 초기화하지 않는다.
-전환 전 업무 사실은 기존 모델이, 전환 후 물리 변경은 새 Mutation이 설명한다.
+과거 revision을 이관하되 진행 중 Work·Sales·Inbound를 초기화하지 않는다. 원본 업무
+객체는 해당 모듈의 사실로 보존하고, 난 묶음 상태 변화만 공통 Mutation chain으로
+연결한다.
 
 Work는 다음 원칙으로 이어받는다.
 
 - 기존 `WorkOperation`, target, execution, `processedQuantity`와 완료 상태를 보존한다.
-- 이미 적용된 `WorkAppliedEffect`는 `mutationId = null`인 legacy effect로 유지한다.
-  같은 effect 재시도는 저장된 기존 결과를 반환하고 Mutation을 새로 만들지 않는다.
-- prefix 기반 effect key는 가능한 범위에서 구조화된 scope와 key로 결정적으로
-  backfill한다.
-- 저장된 command로 fingerprint를 재구성할 수 없는 기존 effect는 이를 명시하는
-  legacy fingerprint version을 사용한다. 같은 key의 payload 변경을 허용하지 않고
-  기존 결과 조회만 허용한다.
-- 전환 후 새 실행 회차나 미적용 대상 효과부터 새 Mutation을 만들고
-  `mutationId`와 `correlationId`를 연결한다.
+- 상태를 변경한 기존 `WorkAppliedEffect`는 manifest가 지정한 Mutation ID와
+  `correlationId`에 연결한다. 기록 전용 효과는 연결하지 않는다.
+- 같은 effect 재시도는 기존 결과와 연결된 Mutation을 반환하고 새 Mutation을 만들지 않는다.
+- 전환 후 새 실행 회차나 미적용 대상 효과는 Engine command로 새 Mutation을 만든다.
 
 기존 `requestKey`가 있는 즉시 작업은 결과를 복원할 수 있을 때
 `WorkCommandReceipt`로 backfill한다. 일반 계획처럼 과거 요청 identity를 알 수
 없는 작업에는 receipt를 발명하지 않는다. 전환 후 새 생성 요청부터 receipt를
 필수로 적용한다.
 
-Sales는 활성 전표 allocation과 baseline의 `reserved_quantity`를 전환 전에
+Sales는 활성 전표 allocation과 최종 imported snapshot의 `reserved_quantity`를 전환 전에
 대조한다. 전환 전에 생성된 예약도 이후 해제·출고·출고 취소는 Engine command로
-처리하고 그 시점의 Mutation을 새 `SalesInventoryMovement`와 연결한다. 기존
-movement에는 과거 Mutation을 추정해 연결하지 않는다.
+처리하고 그 시점의 Mutation을 새 `SalesInventoryMovement`와 연결한다. 시스템 운영 전
+자료를 토대로 등록해 난 묶음 귀속이 원래 없는 기존 전표에는 Mutation을 추정하지 않는다.
 
-전환 전 효과나 판매 이동에는 대응 Mutation이 없으므로 이를 취소·보정할 때
-존재하지 않는 과거 Mutation과 `COMPENSATES` 관계를 만들지 않는다. 기존 업무
-객체를 source로 하는 명시적인 correction 또는 release command가 baseline 현재
-상태에서 새 Mutation을 만든다. Inbound, Collection과 Lineage의 기존 연결도 ID를
-유지하고 전환 후 새 변경부터 Mutation을 연결한다.
+기존 업무 객체를 취소·보정할 때는 실제 연결된 과거 Mutation이 있을 때만
+`COMPENSATES` 관계를 만든다. 연결 근거가 없다면 해당 업무 객체를 source로 하는
+명시적인 correction 또는 release Mutation을 현재 chain 끝에 추가한다. Inbound와
+Collection의 기존 연결은 ID를 유지하고, Lineage는 manifest가 지정한 Mutation에 연결한다.
 
 ### 17. Ledger 적용 범위와 전환 상태를 영속적으로 관리한다
 
@@ -650,18 +632,17 @@ baseline_completed_at
 effective_business_date
 baseline_group_count
 baseline_fingerprint
+import_fingerprint
 minimum_writer_version
 ```
 
 `ACTIVE` 시각 이후 커밋된 모든 상태 revision은 ledger가 완전해야 한다. 적용 기준
 이전의 상세 이력은 [ADR-002](ADR-002-orchid-group-historical-migration.md)에 따라
-기존 Work, Sales, Inbound와 Audit source를 공통 Mutation identity와
-`HISTORICAL` MutationEntry로 이관한다. baseline은 cutover 시점의 현재 상태와 이후
-StateChain만 증명한다. 과거 Entry는 snapshot·revision 없이 원본 사건과 난 묶음의
-관계만 나타내므로 실시간 revision chain에 끼워 넣지 않는다.
-
-API와 Timeline은 `historyAvailableFrom`, baseline 여부 또는 동등한 coverage 정보를
-제공해 적용 기준 이전 기록을 완전한 Mutation 이력처럼 표현하지 않는다.
+기존 Work, Inbound와 Audit source를 공통 Mutation identity와 연속
+`BASELINE/CREATE/CHANGE/DELETE` Entry로 이관한다. coverage의 `import_fingerprint`는
+승인된 complete state-chain manifest를 고정하며, cutover는 이 적재가 끝난 뒤에만
+허용한다. 기존 참고 판매 전표처럼 난 묶음 귀속이 원래 없는 자료에는 Mutation을
+추정해 만들지 않는다.
 
 `ACTIVE` 이후에는 Engine을 비활성화하거나 기존 직접 경로로 fallback할 수 없다.
 일반 장애는 roll-forward로 복구한다. 전체 DB restore는 cutover 이후 다른 업무
@@ -682,7 +663,7 @@ transaction까지 함께 되돌려도 되는 재해 복구 상황에서만 사�
 하지만 동일한 `OrchidGroup`을 일부 경로는 Engine이, 다른 경로는 기존 코드가
 수정하도록 운영 활성화를 write path별로 나누지 않는다. 직접 경로의 변경은
 revision을 증가시키지 않아 ledger 공백을 만들기 때문이다. 구현은 점진적으로
-완료하되 모든 운영 writer가 Engine 경로를 지원하고 baseline 검증이 끝난 뒤
+완료하되 모든 운영 writer가 Engine 경로를 지원하고 complete state-chain 검증이 끝난 뒤
 cutover 창에서 aggregate 전체의 write authority를 한 번에 전환한다.
 
 권장 순서는 다음과 같다.
@@ -690,15 +671,15 @@ cutover 창에서 aggregate 전체의 write authority를 한 번에 전환한다
 ```text
 ADR, write-path·retirement inventory와 운영 데이터 profiling
 → Work command receipt·effect identity·fingerprint 정리
-→ Mutation schema, core와 operator-run baseline migrator
+→ Mutation schema, core와 operator-run state-chain importer
 → Farm 생성·수정·생성 취소·이동 command 준비
 → 폐기·다중 생성과 Work N:M 구조 변경 command 준비
 → Inbound 생성·포트 command 준비
 → Sales 예약·해제·출고·취소 command 준비
 → Correction·Compensation과 legacy source 처리 준비
-→ historical Entry 완전 이관과 복원 DB ENGINE 시나리오 검증
+→ complete state-chain manifest 적재와 복원 DB ENGINE 시나리오 검증
 → 복원 운영 DB rehearsal과 전체 회귀 테스트
-→ 쓰기 중단, baseline, coverage ACTIVE와 write fence 활성화
+→ 쓰기 중단, 최종 manifest 적재, coverage ACTIVE와 write fence 활성화
 → smoke test와 쓰기 재개
 → 기존 직접 writer·호환 handler·feature flag 제거
 → ledger 연속성 상시 검증
@@ -714,8 +695,8 @@ Feature flag는 적용 기준 시점 전의 Legacy/Engine routing에만 사용�
 
 - `ACTIVE` 전에는 write-path inventory를 닫는다. 이는 운영에서 호출될 수 있는 모든
   writer가 식별되어 Engine을 지원하고, 스위치 밖의 미확인 직접 writer가 없다는
-  뜻이다. 전환 실패 시점이 `ACTIVE` 전이라도 PREPARING baseline 위에서 기존
-  writer를 재개하지 않고 검증된 전체 rollback 또는 baseline resume만 허용한다.
+  뜻이다. 전환 실패 시점이 `ACTIVE` 전이라도 PREPARING import 위에서 기존
+  writer를 재개하지 않고 검증된 전체 restore 또는 동일 manifest 재실행만 허용한다.
 - `ACTIVE` 전환 릴리스에는 짧은 안정화 기간을 위해 식별된 `LEGACY` 호환 분기가
   남아 있을 수 있다. 그러나 모든 실행 인스턴스는 `ENGINE`으로 고정하며 DB fence가
   legacy 실행을 최종 차단한다. `ACTIVE` 이후 flag 변경이나 fallback은 금지한다.
@@ -741,7 +722,7 @@ key로 전달하고 `WorkAppliedEffect`와 호환 `OrchidGroupLineage`에 Mutati
 운영 트래픽을 복제해 비교하는 모드는 사용하지 않는다. 사용자 수와 변경 이벤트가 적어
 관찰 기간을 늘려도 의미 있는 시나리오 coverage를 얻기 어렵기 때문이다. 대신 최신 운영
 백업을 복원한 격리 PostgreSQL에서 생성·수정·이동·입고·구조 변경·보정·폐기와 판매
-예약·출고·취소 시나리오를 의도적으로 실행하고 baseline, ENGINE 회귀와 실제 `ACTIVE`
+예약·출고·취소 시나리오를 의도적으로 실행하고 state-chain import, ENGINE 회귀와 실제 `ACTIVE`
 전환 rehearsal을 통과해야 한다.
 
 이 검증 완료 상태는 운영 cutover 완료를 뜻하지 않는다. 다음 retirement inventory는
@@ -755,7 +736,7 @@ key로 전달하고 `WorkAppliedEffect`와 호환 `OrchidGroupLineage`에 Mutati
 - Farm 패키지에서 Work handler interface를 직접 구현하는 전환 adapter
 - ledger 조회가 대체할 수 있는 Work 결과 snapshot과 단일 원본 Lineage 중복 write
 
-복원 PostgreSQL에서 baseline, ENGINE 전체 회귀, 진행 중 업무 호환 검증과 실제
+복원 PostgreSQL에서 state-chain import, ENGINE 전체 회귀, 진행 중 업무 호환 검증과 실제
 `ACTIVE` 전환 rehearsal을 마치기 전에는 운영 coverage를 `ACTIVE`로 바꾸지 않는다.
 
 ### 19. 구조와 데이터 검증을 자동화한다
@@ -815,10 +796,9 @@ revision, source 연결과 coverage를 검사한다. 불일치는 자동 수정�
 - Mutation과 기존 업무 이력을 같은 transaction에서 저장하므로 쓰기 비용과
   장애 지점이 증가한다.
 - 다중 대상 snapshot으로 저장량이 증가한다.
-- 적용 기준 시점 이전 데이터는 완전한 replay를 보장하지 않는다.
-- baseline profiling, backup·restore rehearsal과 짧은 운영 쓰기 중단이 필요하다.
-- 진행 중 업무와 legacy effect를 이어받는 호환 규칙을 cutover 기간에 유지해야
-  한다.
+- 최초 신뢰 가능한 백업 이전 상태는 복원하지 않으므로 그 이전 시점 replay는 보장하지 않는다.
+- state-chain profiling, backup·restore rehearsal과 짧은 운영 쓰기 중단이 필요하다.
+- 진행 중 업무와 과거 effect 연결 규칙을 cutover 기간에 유지해야 한다.
 - PostgreSQL write fence와 operator-run migration command의 운영·테스트 비용이
   추가된다.
 - 엔진이 지나치게 범용화되면 도메인 규칙을 우회하는 거대한 service가 될 수
@@ -889,8 +869,7 @@ Lineage를 하나의 Bounded Context로 함께 이동한다.
 
 난 묶음이 처음 변경될 때 현재 상태를 baseline으로 만드는 방식은 그룹마다
 coverage 시점이 달라지고, 아직 접근되지 않은 행의 직접 변경과 진행 중 예약을
-일관되게 검증하기 어렵다. 전환 창에서 모든 기존 행의 baseline을 확정하는 방식을
-사용한다.
+일관되게 검증하기 어렵다. 승인된 manifest로 모든 기존 chain을 한 번에 확정한다.
 
 ### 기존 writer와 Engine의 dual write
 
@@ -904,7 +883,7 @@ coverage 시점이 달라지고, 아직 접근되지 않은 행의 직접 변경
 
 - write-path inventory의 모든 writer가 식별되어 Engine으로 라우팅되고 미확인 직접
   writer가 없다.
-- 복원 운영 DB에서 baseline·ENGINE 회귀와 `ACTIVE` 전환 rehearsal이 통과한다.
+- 복원 운영 DB에서 state-chain import·ENGINE 회귀와 `ACTIVE` 전환 rehearsal이 통과한다.
 - 운영 DB coverage가 `ACTIVE`이고 모든 실행 인스턴스가 최소 writer version 이상의
   `ENGINE`이며 DB fence가 legacy write를 차단한다.
 - 전환 직후 smoke test와 read-only reconciliation이 통과한다.
@@ -914,9 +893,10 @@ coverage 시점이 달라지고, 아직 접근되지 않은 행의 직접 변경
 
 - 적용 기준 시점 이후 커밋된 모든 `OrchidGroup` 상태 revision에 정확히 하나의
   MutationEntry가 존재한다.
-- 전환 시점에 존재한 모든 `OrchidGroup`이 동일한 `cutoverId` coverage 아래 정확히
-  하나의 BASELINE Entry와 `state_revision = 0`을 가진다.
-- baseline 행 수와 fingerprint가 전환 직전 current state와 일치한다.
+- 전환 대상 모든 그룹이 동일한 `cutoverId` coverage 아래 `BASELINE` 또는 `CREATE`로
+  시작하는 연속 chain을 가지며, 삭제 그룹은 `DELETE`로 끝난다.
+- 현존 그룹의 마지막 revision·snapshot이 전환 직전 current state와 일치하고,
+  manifest와 baseline fingerprint가 승인값과 같다.
 - 각 Entry의 before/after revision이 그룹별로 연속된다.
 - Farm의 Engine 밖에서 수량·예약·상태·위치·속성·구조를 직접 변경할 수 없다.
 - Work, Sales, Inbound가 `OrchidGroupRepository`나 관리 상태 엔티티를 직접
@@ -930,17 +910,17 @@ coverage 시점이 달라지고, 아직 접근되지 않은 행의 직접 변경
 - 동일 source operation 재시도에서 상태와 Mutation이 중복 생성되지 않는다.
 - 경매 출하에서 재고 차감은 한 번만 발생한다.
 - 기존 effect 재시도는 새 Mutation을 만들지 않고, 진행 중 Work의 후속 실행과
-  전환 전 판매 예약의 해제·출고는 baseline revision에서 정상적으로 이어진다.
+  전환 전 판매 예약의 해제·출고는 imported chain의 마지막 revision에서 이어진다.
 - 수량·예약·N:M transform·목적지 배치 동시성 테스트가 실제 PostgreSQL에서
   통과한다.
 - 운영 DB의 coverage가 `ACTIVE`이고 적용 기준 시점, baseline fingerprint,
   ledger schema version과 minimum writer version이 기록되어 있다.
 - Engine context가 없는 INSERT·UPDATE와 모든 물리 DELETE가 DB write fence에서
   차단된다.
-- 복원한 운영 DB 사본에서 baseline rehearsal과 핵심 진행 업무 회귀 테스트가
+- 복원한 운영 DB 사본에서 state-chain import rehearsal과 핵심 진행 업무 회귀 테스트가
   통과한다.
-- ADR-002의 historical source count·fingerprint와 import 결과가 일치하고, 모든
-  origin·gap이 분류되어 통합 Timeline이 legacy source별 조립에 의존하지 않는다.
+- ADR-002의 manifest fingerprint와 import 결과가 일치하고, 모든 그룹의 revision·snapshot
+  chain과 삭제 tombstone이 연속이며 통합 Timeline이 legacy source별 조립에 의존하지 않는다.
 - retirement inventory가 비어 있고 전환용 feature flag, 기존 직접 쓰기 경로와
   중복 상태 snapshot write가 제거되어 있다.
 
