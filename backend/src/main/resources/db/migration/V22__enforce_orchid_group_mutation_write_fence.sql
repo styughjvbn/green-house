@@ -66,6 +66,7 @@ BEGIN
           FROM orchid_group_mutation_entries entry
          WHERE entry.orchid_group_id = NEW.id
            AND entry.state_revision_after = NEW.state_revision
+           AND entry.entry_kind IN ('CREATE', 'CHANGE')
     ) THEN
         RAISE EXCEPTION 'OrchidGroup revision에 대응하는 MutationEntry가 없습니다.'
             USING ERRCODE = '23514';

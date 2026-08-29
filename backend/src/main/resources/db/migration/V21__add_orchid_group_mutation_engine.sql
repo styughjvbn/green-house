@@ -17,6 +17,7 @@ CREATE TABLE orchid_group_mutations (
     source_operation_key VARCHAR(200) NOT NULL,
     correlation_id UUID NOT NULL,
     command_fingerprint VARCHAR(64) NOT NULL,
+    occurred_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
     recorded_at TIMESTAMPTZ NOT NULL,
     effective_business_date DATE NOT NULL,
     reason TEXT,
@@ -34,6 +35,9 @@ ALTER SEQUENCE orchid_group_mutations_id_seq
 CREATE INDEX idx_orchid_group_mutations_correlation
     ON orchid_group_mutations(correlation_id, id);
 
+CREATE INDEX idx_orchid_group_mutations_occurred_at
+    ON orchid_group_mutations(occurred_at, id);
+
 CREATE INDEX idx_orchid_group_mutations_recorded_at
     ON orchid_group_mutations(recorded_at, id);
 
@@ -43,19 +47,19 @@ CREATE SEQUENCE orchid_group_mutation_entries_id_seq
 CREATE TABLE orchid_group_mutation_entries (
     id BIGINT PRIMARY KEY DEFAULT nextval('orchid_group_mutation_entries_id_seq'),
     mutation_id BIGINT NOT NULL REFERENCES orchid_group_mutations(id),
-    orchid_group_id BIGINT NOT NULL REFERENCES orchid_groups(id),
+    orchid_group_id BIGINT NOT NULL,
     entry_kind VARCHAR(20) NOT NULL,
     role VARCHAR(20) NOT NULL,
     state_revision_before BIGINT,
     state_revision_after BIGINT NOT NULL,
     before_state JSONB,
-    after_state JSONB NOT NULL,
+    after_state JSONB,
     CONSTRAINT uk_orchid_group_mutation_entry_group
         UNIQUE (mutation_id, orchid_group_id),
     CONSTRAINT uk_orchid_group_mutation_entry_revision
         UNIQUE (orchid_group_id, state_revision_after),
     CONSTRAINT ck_orchid_group_mutation_entry_kind
-        CHECK (entry_kind IN ('BASELINE', 'CREATE', 'CHANGE')),
+        CHECK (entry_kind IN ('BASELINE', 'CREATE', 'CHANGE', 'DELETE')),
     CONSTRAINT ck_orchid_group_mutation_entry_role
         CHECK (role IN ('SOURCE', 'RESULT', 'AFFECTED')),
     CONSTRAINT ck_orchid_group_mutation_entry_revision
@@ -63,17 +67,26 @@ CREATE TABLE orchid_group_mutation_entries (
             (entry_kind = 'BASELINE'
                 AND state_revision_before IS NULL
                 AND state_revision_after = 0
-                AND before_state IS NULL)
+                AND before_state IS NULL
+                AND after_state IS NOT NULL)
             OR
             (entry_kind = 'CREATE'
                 AND state_revision_before IS NULL
                 AND state_revision_after = 1
-                AND before_state IS NULL)
+                AND before_state IS NULL
+                AND after_state IS NOT NULL)
             OR
             (entry_kind = 'CHANGE'
                 AND state_revision_before >= 0
                 AND state_revision_after = state_revision_before + 1
-                AND before_state IS NOT NULL)
+                AND before_state IS NOT NULL
+                AND after_state IS NOT NULL)
+            OR
+            (entry_kind = 'DELETE'
+                AND state_revision_before >= 0
+                AND state_revision_after = state_revision_before + 1
+                AND before_state IS NOT NULL
+                AND after_state IS NULL)
         )
 );
 
@@ -119,6 +132,7 @@ CREATE TABLE orchid_group_ledger_coverages (
     effective_business_date DATE NOT NULL,
     baseline_group_count BIGINT,
     baseline_fingerprint VARCHAR(64),
+    import_fingerprint VARCHAR(64),
     minimum_writer_version VARCHAR(50) NOT NULL,
     CONSTRAINT uk_orchid_group_ledger_coverage_cutover UNIQUE (cutover_key),
     CONSTRAINT ck_orchid_group_ledger_coverage_status
@@ -128,15 +142,17 @@ CREATE TABLE orchid_group_ledger_coverages (
     CONSTRAINT ck_orchid_group_ledger_coverage_count
         CHECK (baseline_group_count IS NULL OR baseline_group_count >= 0),
     CONSTRAINT ck_orchid_group_ledger_coverage_fingerprint
-        CHECK (baseline_fingerprint IS NULL OR baseline_fingerprint ~ '^[0-9a-f]{64}$')
+        CHECK (baseline_fingerprint IS NULL OR baseline_fingerprint ~ '^[0-9a-f]{64}$'),
+    CONSTRAINT ck_orchid_group_ledger_coverage_import_fingerprint
+        CHECK (import_fingerprint IS NULL OR import_fingerprint ~ '^[0-9a-f]{64}$')
 );
 
 ALTER SEQUENCE orchid_group_ledger_coverages_id_seq
     OWNED BY orchid_group_ledger_coverages.id;
 
-CREATE UNIQUE INDEX uk_orchid_group_ledger_coverage_active
-    ON orchid_group_ledger_coverages(status)
-    WHERE status = 'ACTIVE';
+CREATE UNIQUE INDEX uk_orchid_group_ledger_coverage_open
+    ON orchid_group_ledger_coverages ((1))
+    WHERE status IN ('PREPARING', 'ACTIVE');
 
 ALTER TABLE work_applied_effects
     ADD COLUMN mutation_id BIGINT REFERENCES orchid_group_mutations(id),

@@ -77,8 +77,9 @@ inventory에 추가해 우회하지 않고 typed Engine command로 편입한다.
 
 다음 대상은 runtime 제거와 구분한다.
 
-- 적용된 Flyway V21~V28 파일은 삭제하거나 수정하지 않는다. 사용하지 않는 비교 테이블은
-  V26을 수정하지 않고 V27에서 제거한다.
+- 운영에 적용되는 통합 Flyway V21~V23은 배포 후 삭제하거나 수정하지 않는다. 운영에
+  배포되지 않은 기존 V21~V28 실험 migration은 V20에서 최종 스키마로 바로 가도록
+  통합했으며, 이를 적용했던 개발·rehearsal DB는 V20 운영 백업으로 다시 초기화한다.
 - `orchid_group_mutations`, 연속 revision의 `orchid_group_mutation_entries`와 삭제 tombstone을 유지한다.
 - coverage의 manifest fingerprint와 버전 관리되는 manifest provenance를 감사 근거로 유지한다.
 - Work·Sales·Lineage 원본 사실은 별도 소비 전환과 보존 정책 없이 삭제하지 않는다.

@@ -189,13 +189,15 @@ pg_dump -U greenhouse greenhouse > backup_$(date +%Y%m%d).sql
 - V10~V11은 품종 선택 색상 필드와 제약을 추가·보정한다.
 - V12는 운영 변경 감사용 `audit_events`와 조회 인덱스를 추가한다.
 - V20은 기존 자리 이동·합식 실행 효과의 JSON 원본 목록을 `work_effect_orchid_groups`의 `SOURCE` 관계로 보강한다. 난 묶음 수량·상태와 기존 직접 계보 행은 변경하지 않는다.
-- V21~V22는 난 묶음 Mutation ledger와 coverage를 추가하고 동시에 하나의 `PREPARING` 또는 `ACTIVE` coverage만 존재하도록 제한한다. 기존 난 묶음의 baseline은 자동 생성하지 않는다.
-- V23은 `ACTIVE` coverage에서 Mutation context 없는 난 묶음 INSERT·UPDATE와 모든 DELETE를 차단하고, 커밋 시 변경 revision에 대응하는 MutationEntry를 검증한다. `PREPARING`에서는 아직 차단하지 않는다.
-- V24는 `UNMAPPED`으로 남은 기존 난 묶음 중 의미가 명확한 스마트 따옴표 3·4인치 값만 표준 화분 코드로 보정한다. 다른 `UNMAPPED` 값은 자동 변환하지 않는다.
-- V25는 이전 과거 이관 방식의 run과 Entry 제약을 추가했다. 적용된 Flyway 파일은 변경하지 않는다.
-- V26은 운영 전환 전 Legacy 결과와 read-only Engine plan을 비교하는 `orchid_group_shadow_comparisons`를 추가한다. 이 테이블은 업무 상태나 ledger가 아니다.
-- V27은 운영 SHADOW 단계를 사용하지 않기로 한 결정에 따라 V26의 비교 테이블과 sequence를 제거한다. 이미 적용된 V26 파일은 수정하거나 삭제하지 않는다.
-- V28은 revision 없는 과거 Entry 방식과 전용 run 테이블을 제거하고 `BASELINE/CREATE/CHANGE/DELETE` complete state-chain 제약, 삭제 tombstone과 manifest fingerprint를 추가한다. 기존 방식의 Entry가 실제로 존재하면 자동 삭제하지 않고 migration을 중단한다.
+- V21은 난 묶음 Mutation, complete state-chain Entry, 관계, coverage와 Work·Sales·Lineage 연결 필드를 최종 형태로 생성한다. 기존 난 묶음의 chain은 자동 생성하지 않으며 manifest importer가 적재한다.
+- V22는 `ACTIVE` coverage에서 Mutation context 없는 난 묶음 INSERT·UPDATE와 모든 DELETE를 차단하고, 커밋 시 변경 revision에 대응하는 `CREATE` 또는 `CHANGE` Entry를 검증한다. `PREPARING`에서는 차단하지 않는다.
+- V23은 `UNMAPPED`으로 남은 기존 난 묶음 중 의미가 명확한 스마트 따옴표 3·4인치 값만 표준 화분 코드로 보정한다. 다른 `UNMAPPED` 값은 자동 변환하지 않는다.
+
+V21~V23은 아직 운영에 배포되지 않은 기존 V21~V28 실험 migration을 V20 기준으로
+통합한 이력이다. 지원하는 업그레이드 경로는 `V20 → V21~V23`이다. 통합 전
+V21~V28을 적용했던 개발·rehearsal DB는 checksum repair나 수동 스키마 변경을 하지
+않고 V20 운영 백업으로 다시 초기화한다. 이 통합본을 운영에 적용한 뒤에는 파일을
+수정하거나 번호를 다시 사용하지 않는다.
 
 운영 custom dump로 로컬 개발 DB를 초기화할 때는 다음 스크립트를 사용한다. 백업을 생략하면 `temp/`의 최신 `*.dump.gz` 또는 `*.dump`를 선택한다. 스크립트는 로컬 DB만 허용하며 기존 백엔드를 종료하고, 복원 후 Flyway 적용·Hibernate 스키마 검증·작업 V2 무결성 검사를 수행한다.
 

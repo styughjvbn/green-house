@@ -149,7 +149,9 @@ reconciliation과 Work/Lineage의 Mutation 연결은 전환 후에도 유지하�
 
 ## 2026-08-28 복원 DB rehearsal
 
-V27 상태의 `greenhouse_rehearsal`에 V28을 적용한 뒤 실제 schema 2 manifest를 실행했다.
+통합 전 실험 migration의 최종 스키마를 적용한 `greenhouse_rehearsal`에서 실제 schema 2
+manifest를 실행했다. 운영 배포본은 같은 최종 스키마를 V20에서 통합 V21~V23으로 바로
+구성한다.
 
 | 단계 | 결과 |
 |---|---|

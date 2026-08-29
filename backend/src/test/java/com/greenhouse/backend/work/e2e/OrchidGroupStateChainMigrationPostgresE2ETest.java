@@ -46,6 +46,52 @@ class OrchidGroupStateChainMigrationPostgresE2ETest extends WorkE2ETestBase {
 	}
 
 	@Test
+	void appliesConsolidatedFinalMutationSchemaWithoutTransitionTables() {
+		assertThat(jdbcTemplate.queryForList("""
+				SELECT version || ':' || description
+				FROM flyway_schema_history
+				WHERE success = TRUE
+				  AND version::INTEGER > 20
+				ORDER BY installed_rank
+				""", String.class))
+				.containsExactly(
+						"21:add orchid group mutation engine",
+						"22:enforce orchid group mutation write fence",
+						"23:normalize legacy orchid group pot sizes");
+
+		assertThat(jdbcTemplate.queryForObject("""
+				SELECT COUNT(*)
+				FROM information_schema.tables
+				WHERE table_schema = 'public'
+				  AND table_name IN (
+				      'orchid_group_history_migration_runs',
+				      'orchid_group_shadow_comparisons'
+				  )
+				""", Long.class)).isZero();
+
+		assertThat(jdbcTemplate.queryForObject("""
+				SELECT COUNT(*)
+				FROM information_schema.columns
+				WHERE table_schema = 'public'
+				  AND table_name = 'orchid_group_mutation_entries'
+				  AND column_name = 'migration_run_id'
+				""", Long.class)).isZero();
+
+		assertThat(jdbcTemplate.queryForObject("""
+				SELECT COUNT(*)
+				FROM information_schema.table_constraints constraint_info
+				JOIN information_schema.key_column_usage column_info
+				  ON column_info.constraint_catalog = constraint_info.constraint_catalog
+				 AND column_info.constraint_schema = constraint_info.constraint_schema
+				 AND column_info.constraint_name = constraint_info.constraint_name
+				WHERE constraint_info.table_schema = 'public'
+				  AND constraint_info.table_name = 'orchid_group_mutation_entries'
+				  AND constraint_info.constraint_type = 'FOREIGN KEY'
+				  AND column_info.column_name = 'orchid_group_id'
+				""", Long.class)).isZero();
+	}
+
+	@Test
 	void importsCompleteChainsReplaysIdempotentlyAndActivatesCoverage() {
 		UUID cutoverKey = UUID.randomUUID();
 		OrchidGroupStateSnapshot current = OrchidGroupStateSnapshot.from(
