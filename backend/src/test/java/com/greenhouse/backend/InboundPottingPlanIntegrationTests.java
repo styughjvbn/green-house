@@ -614,6 +614,94 @@ class InboundPottingPlanIntegrationTests extends AbstractBackendIntegrationTest 
 	}
 
 	@Test
+	void createsAndReusesOneCompletedPottingRecordForMultipleInboundRecords() throws Exception {
+		InboundRecord secondInbound = inboundRecordRepository.save(new InboundRecord(
+				LocalDate.of(2026, 7, 2),
+				InboundType.FLASK_SEEDLING,
+				inboundRecord.getVariety(),
+				InboundStatus.POTTING_PENDING,
+				4,
+				60,
+				null,
+				"배양실 B",
+				LocalDate.of(2026, 7, 16),
+				"2치",
+				1,
+				null,
+				null,
+				null,
+				null,
+				"입고 담당",
+				null));
+		String request = """
+				{
+				  "plan": {
+				    "title": "복수 포트 작업 기록",
+				    "plannedStartDate": "2026-07-16",
+				    "plannedEndDate": "2026-07-16",
+				    "inboundRecordIds": [%d, %d],
+				    "worker": "포트 담당"
+				  },
+				  "executions": [
+				    {
+				      "idempotencyKey": "completed-potting-record-first",
+				      "inboundRecordId": %d,
+				      "pottingDate": "2026-07-16",
+				      "results": [{
+				        "quantity": 100,
+				        "potSize": "2치",
+				        "ageYear": 1,
+				        "bedZoneId": %d,
+				        "startPosition": 0,
+				        "endPosition": 4
+				      }],
+				      "worker": "포트 담당"
+				    },
+				    {
+				      "idempotencyKey": "completed-potting-record-second",
+				      "inboundRecordId": %d,
+				      "pottingDate": "2026-07-16",
+				      "results": [{
+				        "quantity": 60,
+				        "potSize": "2치",
+				        "ageYear": 1,
+				        "bedZoneId": %d,
+				        "startPosition": 4,
+				        "endPosition": 8
+				      }],
+				      "worker": "포트 담당"
+				    }
+				  ]
+				}
+				""".formatted(
+				inboundRecord.getId(),
+				secondInbound.getId(),
+				inboundRecord.getId(),
+				bedZone.getId(),
+				secondInbound.getId(),
+				bedZone.getId());
+
+		mockMvc.perform(post("/api/work-operations/inbound-potting-records")
+				.contentType(MediaType.APPLICATION_JSON)
+				.content(request))
+				.andExpect(status().isCreated())
+				.andExpect(jsonPath("$.data", hasSize(1)))
+				.andExpect(jsonPath("$.data[0].status").value("COMPLETED"))
+				.andExpect(jsonPath("$.data[0].targets", hasSize(2)));
+
+		mockMvc.perform(post("/api/work-operations/inbound-potting-records")
+				.contentType(MediaType.APPLICATION_JSON)
+				.content(request))
+				.andExpect(status().isCreated())
+				.andExpect(jsonPath("$.data", hasSize(1)))
+				.andExpect(jsonPath("$.data[0].status").value("COMPLETED"));
+
+		assertThat(operationRepository.count()).isEqualTo(1);
+		assertThat(appliedEffectRepository.count()).isEqualTo(2);
+		assertThat(orchidGroupRepository.count()).isEqualTo(2);
+	}
+
+	@Test
 	void immediateExecutionReusesTheExistingPottingPlan() throws Exception {
 		var planned = mockMvc.perform(post("/api/work-operations/inbound-potting-plans")
 				.contentType(MediaType.APPLICATION_JSON)

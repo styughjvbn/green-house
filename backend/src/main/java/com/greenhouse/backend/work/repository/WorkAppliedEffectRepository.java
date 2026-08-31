@@ -1,9 +1,9 @@
 package com.greenhouse.backend.work.repository;
 
 import com.greenhouse.backend.work.domain.effect.WorkAppliedEffect;
+import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
-import java.util.Collection;
 import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
@@ -28,6 +28,17 @@ public interface WorkAppliedEffectRepository extends JpaRepository<WorkAppliedEf
 	Optional<WorkAppliedEffect> findInboundPottingEffect(
 			@Param("inboundRecordId") Long inboundRecordId,
 			@Param("effectKey") String effectKey);
+
+	@EntityGraph(attributePaths = {"workOperation", "workOperation.workType", "target"})
+	@Query("""
+			select effect from WorkAppliedEffect effect
+			join effect.target target
+			where target.inboundRecordId in :inboundRecordIds
+			  and effect.effectKey in :effectKeys
+			""")
+	List<WorkAppliedEffect> findInboundPottingEffects(
+			@Param("inboundRecordIds") Collection<Long> inboundRecordIds,
+			@Param("effectKeys") Collection<String> effectKeys);
 
 	@EntityGraph(attributePaths = "workOperation")
 	List<WorkAppliedEffect> findByWorkOperationIdInAndEffectKey(Collection<Long> workOperationIds, String effectKey);
