@@ -2,7 +2,7 @@
 
 - 기준일: 2026-09-05
 - 기준 코드: `feature/orchid-group-mutation-engine`, `3aa8fc54`
-- 상태: 단계별 구현 진행 중. 1차 구현 범위와 남은 작업은 아래 실행 기록 참고.
+- 상태: 단계별 구현 진행 중. 1·2차 구현 범위와 남은 작업은 아래 실행 기록 참고.
 - 작업 브랜치: `feature/backend-refactoring`.
 - 범위: **13개 모듈 전체**, Controller·application·domain·Repository·DTO·설정·DB migration·테스트·CI.
 - 목표: **확장에는 열려 있고 수정에는 닫힌 구조(OCP)**. 새 기능을 추가할 때 기존 유스케이스와 타 모듈 내부를 수정하는 범위를 줄인다.
@@ -499,3 +499,45 @@ application Bean 이후 평가되는 기본 계정 자동 구성으로 분리했
 - usage blocker 순서와 Clock 생성 제한 보강 후 관련 6건 추가 회귀 통과. `git diff --check` 통과.
 - 프론트 코드·생성 schema 변경 없음. 프론트 검증과 벤치마크는 이번 단계에서 실행하지 않음.
 - DB migration과 운영 Mutation cutover 변경 없음. B-04~07·09~10·13~17의 본 작업은 남아 있다.
+
+## 11. 실행 기록 — 2차 기반 계약·배치 정책
+
+2026-09-05, `feature/backend-refactoring`. 1차 변경을 목적별 9개 커밋으로 나눈 뒤 진행했다.
+이번 범위는 B-04와 B-08의 일부이며 두 작업 전체의 완료를 뜻하지 않는다.
+
+| 작업 | 적용한 변경 | 남은 범위 |
+|---|---|---|
+| B-04 | 거래처 application 조회값과 호출 트랜잭션에 참여하는 잠금 API 분리. Settlement 정산 설정·잔액의 거래처 Entity 연관을 ID로 전환. 예상 입금일 계산도 거래처 ID 사용 | Sales·Auction·입금 이벤트의 Entity 연관, 운영 목록·선택지 계약, 남은 Entity 반환 제거 |
+| B-08 | 배치 프로필 정규화·중복·강도별 수용량 검사를 순수 domain policy로 이동. 명시적 모드 강도를 검증·응답·감사 정렬에 사용 | Farm 조회·입고·자재·Mutation 관련 나머지 경계와 정책 |
+| B-01~02 | 실제 제거된 Entity 의존 5쌍만 이식 목록에서 삭제: 137 → 132. 거래처 값·잠금·입금일·잔액 조회·배치 정책 회귀 추가 | 직접 JPQL 2곳과 기존 disabled 43건을 포함한 나머지 경계·테스트 복구 |
+
+보존한 계약:
+
+- 거래처의 이름·유형·활성 여부는 현재 기준 정보의 복사본이다. 잔액과 분석 조회는 현재 거래처 이름을 사용하며 과거 전표 스냅샷을 변경하지 않는다.
+- 잠금은 중복 ID를 제거하고 ID 오름차순으로 획득한다. 잠금만 획득하는 API는 기존 트랜잭션을 필수로 요구하며, 비활성 거래처도 기존 거래 처리에 필요한 조회·잠금은 허용한다. 신규 사용의 활성 검사는 별도로 유지한다.
+- 거래처 ID로 바꾼 정산 설정·잔액에도 기존 UNIQUE·FK와 잔액 `@Version`을 유지한다. DB migration은 추가하지 않았다.
+- 배치 프로필은 기존 기본 규격과 `CUSTOM:` 규격을 허용한다. 전체 검증이 성공한 뒤 규칙을 교체하고 감사 기록을 남긴다. DTO·enum 문자열과 응답 순서는 유지한다.
+
+책임 분리와 구분한 수정:
+
+- `fix`: PostgreSQL에서 같은 거래처의 정산 설정 최초 조회 8개를 동시에 실행하면 `partner_settlement_settings_partner_id_key` 중복 오류가 발생하는 문제를 재현했다. 거래처 잠금 후 설정 조회·생성을 수행하도록 수정했으며 8개 요청이 동일한 기본 설정을 반환하는 회귀를 추가했다. 설정 변경의 전후 감사 값도 같은 잠금 안에서 읽고 저장한다.
+
+검증:
+
+- Partner 계약 전환 직후 기본 테스트 288건 중 245건 통과, 기존 disabled 43건. PostgreSQL 잠금 유지·역순 입력·동시 입금/재요청·외래키 회귀 4건 통과.
+- 정산 설정 수정 후 관련 PostgreSQL 5건 통과. Farm 정책·배치·감사·아키텍처 집중 회귀 통과.
+- 최종 `./gradlew test workE2eTest --offline --no-daemon`: 기본 306건 중 263건 통과·기존 disabled 43건, 실제 PostgreSQL 27건 전부 통과. 실패 0건.
+- 임시 H2 서버에서 OpenAPI 131 operations·110 paths·217 schemas 재생성. 전체 명세·slice 차이 없음. 임시 서버 종료, `git diff --check` 통과.
+- 프론트 코드·생성 schema 변경 없음. 프론트 검증·벤치마크는 실행하지 않았다.
+
+코드 커밋:
+
+- `5ba917e5 refactor: separate partner values and transaction locks`
+- `816365cd fix: serialize initial partner settlement settings creation`
+- `84a10f65 refactor: isolate bed placement profile domain rules`
+
+다음 이식 순서:
+
+1. B-04의 남은 소비자가 Partner Entity 없이 생성·조회할 수 있도록 각 모듈의 ID·snapshot 계약 전환.
+2. 이 계약 위에서 B-05 Auction 생성·결과 연결 API, B-06 Settlement 원장·계산 책임 분리.
+3. Farm B-08의 나머지 조회·command 경계와 B-09~10 Mutation/Work 계약을 계속 정리.
