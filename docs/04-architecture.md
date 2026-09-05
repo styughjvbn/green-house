@@ -258,6 +258,7 @@ Persistence 조회 규칙:
 - Entity, Repository, DB table은 각각 하나의 업무 모듈이 소유한다. 소유 모듈 밖에서는 해당 Repository나 internal 구현을 직접 참조하지 않는다.
 - 다른 모듈의 기능이 필요하면 제공 모듈의 application API를 호출한다. 호출 측의 도메인 흐름에 필요한 조회 계약은 호출 측에 port를 두고 소유 모듈이 구현할 수 있다.
 - 모듈 간 계약은 필요한 값만 전달한다. 외부 모듈 Entity를 장기간 보관하거나 응답 조립 편의를 위해 aggregate 전체를 넘기지 않는다.
+- Partner의 새 조회 계약은 이름·유형·활성 여부를 복사한 application 값이다. Settlement의 정산 설정·잔액은 거래처 ID로 연결하고 기존 DB 외래키를 유지한다. 남은 Sales·Auction·입금 원장의 Entity 연관은 단계별로 전환하며, deprecated Entity 조회를 새 호출부에 사용하지 않는다.
 - 외부 시스템은 application port 뒤의 adapter로 추가한다. 외부 시스템 DTO와 오류를 domain에 전파하지 않는다.
 
 ```text
@@ -275,6 +276,7 @@ Persistence 조회 규칙:
 - Entity는 자기 상태의 불변식과 전이를 지키고 application service는 aggregate 조회, 순서 제어, 모듈 간 조율을 담당한다. 여러 Service에서 같은 상태 조건을 검사하면 Domain Policy 또는 상태 전이 메서드로 모은다.
 - 네트워크·파일·사용자 대기처럼 실패와 지연을 통제하기 어려운 작업은 DB 트랜잭션 안에서 수행하지 않는다.
 - 여러 행을 잠글 때는 ID 오름차순처럼 잠금 순서를 고정한다. 재고, 잔액, 순번, 상태 변경에는 도메인 검사와 함께 version, 비관적 잠금, UNIQUE/CHECK 또는 원자 갱신 중 필요한 DB 보호를 둔다.
+- Partner 잠금 API는 호출자의 트랜잭션을 필수로 요구하고 거래처 ID 오름차순으로 잠근다. 잠금 획득만 하는 호출이 독립 트랜잭션을 열고 즉시 반환하는 방식은 허용하지 않는다. 잔액 생성·갱신은 거래처 잠금 후 잔액 행 잠금 순서를 유지한다.
 
 #### API 계약과 프론트엔드 경계
 

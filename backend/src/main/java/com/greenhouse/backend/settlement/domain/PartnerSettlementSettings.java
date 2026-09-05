@@ -1,19 +1,15 @@
 package com.greenhouse.backend.settlement.domain;
 
 import com.greenhouse.backend.common.domain.BaseEntity;
-import com.greenhouse.backend.partner.domain.BusinessPartner;
 import com.greenhouse.backend.partner.domain.PartnerType;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
 import jakarta.persistence.Enumerated;
-import jakarta.persistence.FetchType;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.SequenceGenerator;
-import jakarta.persistence.JoinColumn;
-import jakarta.persistence.OneToOne;
 import jakarta.persistence.Table;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -35,9 +31,8 @@ public class PartnerSettlementSettings extends BaseEntity {
 	@SequenceGenerator(name = "partner_settlement_settings_id_seq", sequenceName = "partner_settlement_settings_id_seq", allocationSize = 50)
 	private Long id;
 
-	@OneToOne(fetch = FetchType.LAZY, optional = false)
-	@JoinColumn(name = "partner_id", nullable = false, unique = true)
-	private BusinessPartner partner;
+	@Column(name = "partner_id", nullable = false, unique = true)
+	private Long partnerId;
 
 	@Enumerated(EnumType.STRING)
 	@Column(name = "settlement_unit", nullable = false)
@@ -76,9 +71,9 @@ public class PartnerSettlementSettings extends BaseEntity {
 	@Column(columnDefinition = "text")
 	private String memo;
 
-	public PartnerSettlementSettings(BusinessPartner partner) {
-		this.partner = partner;
-		this.settlementUnit = partner.getPartnerType() == PartnerType.AUCTION_HOUSE
+	public PartnerSettlementSettings(Long partnerId, PartnerType partnerType) {
+		this.partnerId = partnerId;
+		this.settlementUnit = partnerType == PartnerType.AUCTION_HOUSE
 				? SettlementUnit.AUCTION_DATE
 				: SettlementUnit.SALES_SLIP;
 		this.paymentDelayDays = 0;

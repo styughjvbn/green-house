@@ -40,8 +40,8 @@ public class PartnerSettlementSettingsService {
 
 	private PartnerSettlementSettings findOrCreate(Long partnerId) {
 		return settingsRepository.findByPartnerId(partnerId).orElseGet(() -> {
-			var partner = partnerReader.get(partnerId);
-			return settingsRepository.save(new PartnerSettlementSettings(partner));
+			var partner = partnerReader.getInfo(partnerId);
+			return settingsRepository.save(new PartnerSettlementSettings(partner.id(), partner.partnerType()));
 		});
 	}
 

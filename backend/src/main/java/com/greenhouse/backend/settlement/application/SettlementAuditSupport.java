@@ -36,7 +36,7 @@ public class SettlementAuditSupport {
 			Map<String, Object> before, Map<String, Object> after) {
 		auditWriter.record(AuditAction.UPDATED, AuditSource.SETTLEMENT_MANAGEMENT,
 				"PARTNER_SETTLEMENT_SETTINGS", settings.getId(), before, after,
-				Map.of("partnerId", settings.getPartner().getId()));
+				Map.of("partnerId", settings.getPartnerId()));
 	}
 
 	public Map<String, Object> auctionPaymentSnapshot(AuctionSettlement settlement) {

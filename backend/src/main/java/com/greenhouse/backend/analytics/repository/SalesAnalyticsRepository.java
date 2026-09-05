@@ -189,7 +189,7 @@ public class SalesAnalyticsRepository {
 						salesSlip.partner.eq(businessPartner),
 						saleDateBetween(from, to),
 						completedSalesSlip())
-				.leftJoin(partnerBalanceSummary).on(partnerBalanceSummary.partner.eq(businessPartner))
+				.leftJoin(partnerBalanceSummary).on(partnerBalanceSummary.partnerId.eq(businessPartner.id))
 				.groupBy(
 						businessPartner.id,
 						businessPartner.name,

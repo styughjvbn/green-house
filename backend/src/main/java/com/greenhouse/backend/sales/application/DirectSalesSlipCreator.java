@@ -52,7 +52,7 @@ public class DirectSalesSlipCreator {
 				SalesTextNormalizer.normalize(request.memo()));
 
 		salesSlipAllocationFactory.createItems(request.items()).forEach(salesSlip::addItem);
-		salesSlip.updateExpectedPaymentDate(paymentDateCalculator.calculate(partner, request.saleDate()));
+		salesSlip.updateExpectedPaymentDate(paymentDateCalculator.calculate(partner.getId(), request.saleDate()));
 		var saved = salesSlipRepository.save(salesSlip);
 		salesSlipInventoryService.reserve(saved);
 		if (saved.isOutboundCompleted()) {

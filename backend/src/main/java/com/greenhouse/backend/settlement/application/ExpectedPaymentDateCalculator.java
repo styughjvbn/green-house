@@ -1,7 +1,7 @@
 package com.greenhouse.backend.settlement.application;
 
-import com.greenhouse.backend.partner.domain.BusinessPartner;
 import com.greenhouse.backend.settlement.domain.PaymentDayMode;
+import com.greenhouse.backend.settlement.domain.PartnerSettlementSettings;
 import com.greenhouse.backend.settlement.repository.PartnerSettlementSettingsRepository;
 
 import lombok.RequiredArgsConstructor;
@@ -18,8 +18,8 @@ import org.springframework.stereotype.Component;
 public class ExpectedPaymentDateCalculator {
 	private final PartnerSettlementSettingsRepository settingsRepository;
 
-	public LocalDate calculate(BusinessPartner partner, LocalDate baseDate) {
-		var settings = settingsRepository.findByPartnerId(partner.getId()).orElse(null);
+	public LocalDate calculate(Long partnerId, LocalDate baseDate) {
+		var settings = settingsRepository.findByPartnerId(partnerId).orElse(null);
 		return calculate(baseDate, settings);
 	}
 
@@ -30,7 +30,7 @@ public class ExpectedPaymentDateCalculator {
 		var settingsByPartnerId = settingsRepository.findByPartnerIdIn(
 				targets.stream().map(PaymentDateTarget::partnerId).collect(Collectors.toSet()))
 				.stream()
-				.collect(Collectors.toMap(settings -> settings.getPartner().getId(), Function.identity()));
+				.collect(Collectors.toMap(PartnerSettlementSettings::getPartnerId, Function.identity()));
 		return targets.stream().collect(Collectors.toMap(
 				Function.identity(),
 				target -> calculate(target.baseDate(), settingsByPartnerId.get(target.partnerId()))));
@@ -38,7 +38,7 @@ public class ExpectedPaymentDateCalculator {
 
 	private LocalDate calculate(
 			LocalDate baseDate,
-			com.greenhouse.backend.settlement.domain.PartnerSettlementSettings settings) {
+			PartnerSettlementSettings settings) {
 		if (settings == null || settings.getPaymentDelayDays() == 0)
 			return baseDate;
 		if (settings.getPaymentDayMode() == PaymentDayMode.CALENDAR_DAY) {

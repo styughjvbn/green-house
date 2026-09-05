@@ -6,9 +6,6 @@ import com.greenhouse.backend.partner.repository.BusinessPartnerRepository;
 
 import lombok.RequiredArgsConstructor;
 
-import java.util.Collection;
-import java.util.HashSet;
-import java.util.List;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -18,28 +15,27 @@ import org.springframework.transaction.annotation.Transactional;
 public class BusinessPartnerReader {
 	private final BusinessPartnerRepository partnerRepository;
 
+	public BusinessPartnerInfo getInfo(Long partnerId) {
+		return BusinessPartnerInfo.from(get(partnerId));
+	}
+
+	public BusinessPartnerInfo getActiveInfo(Long partnerId) {
+		return BusinessPartnerInfo.from(getActive(partnerId));
+	}
+
+	/** @deprecated Remaining legacy associations must migrate to {@link #getInfo(Long)}. */
+	@Deprecated
 	public BusinessPartner get(Long partnerId) {
 		return partnerRepository.findById(partnerId)
 				.orElseThrow(() -> new NotFoundException("거래처를 찾을 수 없습니다."));
 	}
 
+	/** @deprecated Remaining legacy associations must migrate to {@link #getActiveInfo(Long)}. */
+	@Deprecated
 	public BusinessPartner getActive(Long partnerId) {
 		var partner = get(partnerId);
 		if (!partner.isActive())
 			throw new IllegalArgumentException("비활성 거래처는 사용할 수 없습니다.");
 		return partner;
-	}
-
-	@Transactional
-	public List<BusinessPartner> getAllForUpdate(Collection<Long> partnerIds) {
-		var requestedIds = new HashSet<>(partnerIds);
-		if (requestedIds.isEmpty()) {
-			return List.of();
-		}
-		var partners = partnerRepository.findAllForUpdateByIdIn(requestedIds);
-		if (partners.size() != requestedIds.size()) {
-			throw new NotFoundException("거래처를 찾을 수 없습니다.");
-		}
-		return partners;
 	}
 }

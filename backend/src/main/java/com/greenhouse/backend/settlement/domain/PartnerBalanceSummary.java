@@ -1,7 +1,6 @@
 package com.greenhouse.backend.settlement.domain;
 
 import com.greenhouse.backend.common.domain.BaseEntity;
-import com.greenhouse.backend.partner.domain.BusinessPartner;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.FetchType;
@@ -35,9 +34,8 @@ public class PartnerBalanceSummary extends BaseEntity {
 	@Column(nullable = false)
 	private Long version;
 
-	@OneToOne(fetch = FetchType.LAZY, optional = false)
-	@JoinColumn(name = "partner_id", nullable = false, unique = true)
-	private BusinessPartner partner;
+	@Column(name = "partner_id", nullable = false, unique = true)
+	private Long partnerId;
 
 	@Column(name = "credit_balance", nullable = false)
 	private Long creditBalance;
@@ -57,8 +55,8 @@ public class PartnerBalanceSummary extends BaseEntity {
 	@Column(name = "summary_json", columnDefinition = "jsonb")
 	private Map<String, Object> summaryJson;
 
-	public PartnerBalanceSummary(BusinessPartner partner) {
-		this.partner = partner;
+	public PartnerBalanceSummary(Long partnerId) {
+		this.partnerId = partnerId;
 		this.creditBalance = 0L;
 		this.unappliedPaymentAmount = 0L;
 		this.receivableBalance = 0L;

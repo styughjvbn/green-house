@@ -55,7 +55,7 @@ public class AuctionSettlementService {
 		var settlement = settlementRepository.findByAuctionHouseIdAndAuctionDate(auctionHouseId, auctionDate)
 				.orElseGet(() -> new AuctionSettlement(auctionHouse, auctionDate));
 		settlement.synchronizeLines(auctionDataReader.getSoldResultLines(auctionHouseId, auctionDate));
-		settlement.updateExpectedPaymentDate(paymentDateCalculator.calculate(auctionHouse, auctionDate));
+		settlement.updateExpectedPaymentDate(paymentDateCalculator.calculate(auctionHouseId, auctionDate));
 		return AuctionSettlementResponse.from(settlementRepository.save(settlement));
 	}
 

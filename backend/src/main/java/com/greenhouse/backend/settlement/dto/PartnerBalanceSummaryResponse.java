@@ -8,9 +8,9 @@ public record PartnerBalanceSummaryResponse(
 		Long creditBalance,
 		Long unappliedPaymentAmount,
 		Long receivableBalance) {
-	public static PartnerBalanceSummaryResponse from(PartnerBalanceSummary summary) {
+	public static PartnerBalanceSummaryResponse from(PartnerBalanceSummary summary, String partnerName) {
 		return new PartnerBalanceSummaryResponse(
-				summary.getPartner().getId(), summary.getPartner().getName(), summary.getCreditBalance(),
+				summary.getPartnerId(), partnerName, summary.getCreditBalance(),
 				summary.getUnappliedPaymentAmount(), summary.getReceivableBalance());
 	}
 }

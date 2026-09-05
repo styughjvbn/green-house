@@ -16,6 +16,7 @@ import com.greenhouse.backend.sales.domain.SalesSlip;
 import com.greenhouse.backend.sales.domain.SalesSlipItem;
 import com.greenhouse.backend.sales.domain.SalesType;
 import com.greenhouse.backend.sales.repository.SalesSlipRepository;
+import com.greenhouse.backend.settlement.application.PartnerBalanceService;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import org.junit.jupiter.api.Test;
@@ -29,6 +30,31 @@ class AnalyticsIntegrationTests extends AbstractBackendIntegrationTest {
 	private BusinessPartnerRepository businessPartnerRepository;
 	@Autowired
 	private SalesSlipRepository salesSlipRepository;
+	@Autowired
+	private PartnerBalanceService partnerBalanceService;
+
+	@Test
+	@Transactional
+	void joinsPartnerBalancesByIdIncludingPartnersWithoutPeriodSales() throws Exception {
+		var partner = businessPartnerRepository.saveAndFlush(new BusinessPartner(
+				"잔액 거래처", PartnerType.WHOLESALE, null, null, null, null));
+		partnerBalanceService.updateReceivable(partner.getId(), 12_345L, null);
+		partner.update("변경된 거래처명", PartnerType.WHOLESALE, null, null, null, null);
+
+		mockMvc.perform(get("/api/analytics/partners")
+				.param("from", "2026-07-01")
+				.param("to", "2026-07-31"))
+				.andExpect(status().isOk())
+				.andExpect(jsonPath("$.data.partnerStats.length()").value(1))
+				.andExpect(jsonPath("$.data.partnerStats[0].partnerId").value(partner.getId()))
+				.andExpect(jsonPath("$.data.partnerStats[0].partnerName").value("변경된 거래처명"))
+				.andExpect(jsonPath("$.data.partnerStats[0].totalSales").value(0))
+				.andExpect(jsonPath("$.data.partnerStats[0].receivableBalance").value(12_345));
+		mockMvc.perform(get("/api/business-partners/{id}/balance-summary", partner.getId()))
+				.andExpect(status().isOk())
+				.andExpect(jsonPath("$.data.partnerName").value("변경된 거래처명"))
+				.andExpect(jsonPath("$.data.receivableBalance").value(12_345));
+	}
 
 	@Test
 	void returnsSalesAnalyticsWithoutSeedData() throws Exception {

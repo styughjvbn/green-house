@@ -22,7 +22,7 @@ public record PartnerSettlementSettingsResponse(
 		String memo) {
 	public static PartnerSettlementSettingsResponse from(PartnerSettlementSettings settings) {
 		return new PartnerSettlementSettingsResponse(
-				settings.getId(), settings.getPartner().getId(), settings.getSettlementUnit(),
+				settings.getId(), settings.getPartnerId(), settings.getSettlementUnit(),
 				settings.getPaymentDelayDays(), settings.getPaymentDayMode(), settings.isAutoMatchEnabled(),
 				settings.isAutoSettleEnabled(), settings.getAmountTolerance(), settings.getDepositorAliases(),
 				settings.isAllowPrepayment(), settings.isCreditAutoApplyEnabled(), settings.getRuleJson(),
