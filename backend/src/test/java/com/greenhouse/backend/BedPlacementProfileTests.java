@@ -62,6 +62,25 @@ class BedPlacementProfileTests {
 	}
 
 	@Test
+	void rejectedReplacementPreservesExistingRules() {
+		profileService.updateProfile(zoneId, new BedZonePlacementProfileRequest(List.of(
+				capacity(PlacementCapacityMode.STANDARD, 5))));
+		entityManager.flush();
+		entityManager.clear();
+
+		assertThatThrownBy(() -> profileService.updateProfile(zoneId, new BedZonePlacementProfileRequest(List.of(
+				capacity(PlacementCapacityMode.SPACIOUS, 8),
+				capacity(PlacementCapacityMode.STANDARD, 5)))))
+				.isInstanceOf(IllegalArgumentException.class);
+
+		assertThat(profileService.getProfile(zoneId).capacities())
+				.singleElement().satisfies(capacity -> {
+					assertThat(capacity.capacityMode()).isEqualTo(PlacementCapacityMode.STANDARD);
+					assertThat(capacity.capacityValue()).isEqualTo(5);
+				});
+	}
+
+	@Test
 	void rejectsCapacityThatDecreasesInStrongerMode() {
 		var request = new BedZonePlacementProfileRequest(List.of(
 				capacity(PlacementCapacityMode.STANDARD, 5),

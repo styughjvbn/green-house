@@ -21,7 +21,7 @@ public class BedPlacementAuditSupport {
 		data.put("zoneId", zone.getId());
 		data.put("zoneSide", zone.getSide());
 		data.put("capacities", zone.getCapacities().stream()
-				.sorted(Comparator.comparing(BedZoneCapacity::getCapacityMode)
+				.sorted(Comparator.comparingInt((BedZoneCapacity capacity) -> capacity.getCapacityMode().strength())
 						.thenComparing(BedZoneCapacity::getPlacementType)
 						.thenComparing(capacity -> capacity.getPotSize() == null ? "" : capacity.getPotSize()))
 				.map(capacity -> {

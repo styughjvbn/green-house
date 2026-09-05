@@ -1,7 +1,9 @@
 package com.greenhouse.backend.farm.dto.structure;
 
 import com.greenhouse.backend.farm.domain.structure.BedZone;
+import com.greenhouse.backend.farm.domain.structure.BedZoneCapacity;
 import java.math.BigDecimal;
+import java.util.Comparator;
 import java.util.List;
 
 public record BedZonePlacementProfileResponse(
@@ -21,7 +23,7 @@ public record BedZonePlacementProfileResponse(
 				bedZone.getPhysicalBed().getPositionUnitCount(),
 				bedZone.getPhysicalBed().getPositionUnitLabel(),
 				bedZone.getCapacities().stream()
-						.sorted((left, right) -> left.getCapacityMode().compareTo(right.getCapacityMode()))
+						.sorted(Comparator.comparingInt((BedZoneCapacity capacity) -> capacity.getCapacityMode().strength()))
 						.map(BedZoneCapacityResponse::from)
 						.toList());
 	}
