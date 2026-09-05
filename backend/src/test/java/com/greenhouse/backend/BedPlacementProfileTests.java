@@ -11,10 +11,11 @@ import com.greenhouse.backend.farm.application.structure.BedPlacementProfileServ
 import com.greenhouse.backend.farm.domain.structure.PlacementCapacityMode;
 import com.greenhouse.backend.farm.dto.structure.BedZoneCapacityRequest;
 import com.greenhouse.backend.farm.dto.structure.BedZonePlacementProfileRequest;
-import com.greenhouse.backend.farm.repository.structure.BedZoneRepository;
+import com.greenhouse.backend.farm.support.FarmTestFixtures;
+import jakarta.persistence.EntityManager;
 import java.math.BigDecimal;
 import java.util.List;
-import org.junit.jupiter.api.Disabled;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -27,17 +28,20 @@ import org.springframework.transaction.annotation.Transactional;
 @AutoConfigureMockMvc
 @ActiveProfiles("test")
 @Transactional
-@Disabled("Seed data is currently disabled; re-enable after deterministic test fixtures are restored.")
 class BedPlacementProfileTests {
 
 	@Autowired MockMvc mockMvc;
-	@Autowired BedZoneRepository bedZoneRepository;
+	@Autowired EntityManager entityManager;
 	@Autowired BedPlacementProfileService profileService;
+	private Long zoneId;
+
+	@BeforeEach
+	void createFixture() {
+		zoneId = new FarmTestFixtures(entityManager).layout(981).left().getId();
+	}
 
 	@Test
 	void returnsPlacementProfile() throws Exception {
-		Long zoneId = bedZoneRepository.findAll().getFirst().getId();
-
 		mockMvc.perform(get("/api/bed-zones/{bedZoneId}/placement-profile", zoneId))
 				.andExpect(status().isOk())
 				.andExpect(jsonPath("$.data.bedZoneId").value(zoneId))
@@ -46,7 +50,6 @@ class BedPlacementProfileTests {
 
 	@Test
 	void savesIncreasingCapacityModes() {
-		Long zoneId = bedZoneRepository.findAll().getFirst().getId();
 		var request = new BedZonePlacementProfileRequest(List.of(
 				capacity(PlacementCapacityMode.SPACIOUS, 3),
 				capacity(PlacementCapacityMode.STANDARD, 4),
@@ -60,7 +63,6 @@ class BedPlacementProfileTests {
 
 	@Test
 	void rejectsCapacityThatDecreasesInStrongerMode() {
-		Long zoneId = bedZoneRepository.findAll().getFirst().getId();
 		var request = new BedZonePlacementProfileRequest(List.of(
 				capacity(PlacementCapacityMode.STANDARD, 5),
 				capacity(PlacementCapacityMode.EXPANDED, 4)));
