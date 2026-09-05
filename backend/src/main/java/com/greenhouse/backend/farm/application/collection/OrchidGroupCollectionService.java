@@ -1,11 +1,12 @@
 package com.greenhouse.backend.farm.application.collection;
 
-import com.greenhouse.backend.common.exception.NotFoundException;
+import com.greenhouse.backend.audit.domain.AuditAction;
 import com.greenhouse.backend.common.application.RequestActorProvider;
-import com.greenhouse.backend.farm.domain.orchid.OrchidGroup;
+import com.greenhouse.backend.common.exception.NotFoundException;
 import com.greenhouse.backend.farm.domain.collection.OrchidGroupCollection;
 import com.greenhouse.backend.farm.domain.collection.OrchidGroupCollectionMember;
 import com.greenhouse.backend.farm.domain.collection.OrchidGroupCollectionStatus;
+import com.greenhouse.backend.farm.domain.orchid.OrchidGroup;
 import com.greenhouse.backend.farm.dto.collection.OrchidGroupCollectionCreateRequest;
 import com.greenhouse.backend.farm.dto.collection.OrchidGroupCollectionMemberAddRequest;
 import com.greenhouse.backend.farm.dto.collection.OrchidGroupCollectionMemberResponse;
@@ -14,6 +15,7 @@ import com.greenhouse.backend.farm.dto.collection.OrchidGroupCollectionUpdateReq
 import com.greenhouse.backend.farm.repository.collection.OrchidGroupCollectionMemberRepository;
 import com.greenhouse.backend.farm.repository.collection.OrchidGroupCollectionRepository;
 import com.greenhouse.backend.farm.repository.orchid.OrchidGroupRepository;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -22,8 +24,6 @@ import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import com.greenhouse.backend.audit.domain.AuditAction;
-import java.util.LinkedHashMap;
 
 @Service
 @Transactional
@@ -41,7 +41,7 @@ public class OrchidGroupCollectionService {
 		List<OrchidGroupCollection> collections = includeArchived
 				? collectionRepository.findAllByOrderByUpdatedAtDesc()
 				: collectionRepository.findByStatusOrderByUpdatedAtDesc(OrchidGroupCollectionStatus.ACTIVE);
-		return collections.stream().map(this::toResponse).toList();
+		return toResponses(collections);
 	}
 
 	public OrchidGroupCollectionResponse create(OrchidGroupCollectionCreateRequest request) {
@@ -131,23 +131,35 @@ public class OrchidGroupCollectionService {
 		Set<Long> collectionIds = memberRepository
 				.findByOrchidGroupIdAndRemovedAtIsNullOrderByJoinedAtAsc(orchidGroupId)
 				.stream().map(OrchidGroupCollectionMember::getCollectionId).collect(Collectors.toSet());
-		return collectionRepository.findAllById(collectionIds).stream().map(this::toResponse).toList();
+		return toResponses(collectionRepository.findAllById(collectionIds));
 	}
 
 	private OrchidGroupCollectionResponse toResponse(OrchidGroupCollection collection) {
+		return toResponses(List.of(collection)).getFirst();
+	}
+
+	private List<OrchidGroupCollectionResponse> toResponses(List<OrchidGroupCollection> collections) {
+		if (collections.isEmpty()) return List.of();
 		List<OrchidGroupCollectionMember> members = memberRepository
-				.findByCollectionIdAndRemovedAtIsNullOrderByJoinedAtAsc(collection.getId());
-		if (members.isEmpty()) {
-			return OrchidGroupCollectionResponse.from(collection, List.of());
-		}
-		Map<Long, OrchidGroup> groupsById = orchidGroupRepository
-				.findDetailsByIds(members.stream().map(OrchidGroupCollectionMember::getOrchidGroupId).toList())
+				.findByCollectionIdInAndRemovedAtIsNullOrderByJoinedAtAsc(
+						collections.stream().map(OrchidGroupCollection::getId).toList());
+		Set<Long> groupIds = members.stream().map(OrchidGroupCollectionMember::getOrchidGroupId).collect(Collectors.toSet());
+		Map<Long, OrchidGroup> groupsById = groupIds.isEmpty() ? Map.of() : orchidGroupRepository.findDetailsByIds(groupIds)
 				.stream().collect(Collectors.toMap(OrchidGroup::getId, Function.identity()));
-		List<OrchidGroupCollectionMemberResponse> memberResponses = members.stream()
+		Map<Long, List<OrchidGroupCollectionMember>> membersByCollection = members.stream()
+				.collect(Collectors.groupingBy(OrchidGroupCollectionMember::getCollectionId));
+		return collections.stream()
+				.map(collection -> OrchidGroupCollectionResponse.from(collection,
+						memberResponses(membersByCollection.getOrDefault(collection.getId(), List.of()), groupsById)))
+				.toList();
+	}
+
+	private List<OrchidGroupCollectionMemberResponse> memberResponses(
+			List<OrchidGroupCollectionMember> members, Map<Long, OrchidGroup> groupsById) {
+		return members.stream()
 				.filter(member -> groupsById.containsKey(member.getOrchidGroupId()))
 				.map(member -> OrchidGroupCollectionMemberResponse.from(member, groupsById.get(member.getOrchidGroupId())))
 				.toList();
-		return OrchidGroupCollectionResponse.from(collection, memberResponses);
 	}
 
 	private OrchidGroupCollection findCollection(Long collectionId) {

@@ -13,6 +13,8 @@ public interface OrchidGroupCollectionMemberRepository extends JpaRepository<Orc
 
 	List<OrchidGroupCollectionMember> findByCollectionIdAndRemovedAtIsNullOrderByJoinedAtAsc(Long collectionId);
 
+	List<OrchidGroupCollectionMember> findByCollectionIdInAndRemovedAtIsNullOrderByJoinedAtAsc(Collection<Long> collectionIds);
+
 	List<OrchidGroupCollectionMember> findByOrchidGroupIdAndRemovedAtIsNullOrderByJoinedAtAsc(Long orchidGroupId);
 
 	List<OrchidGroupCollectionMember> findByOrchidGroupIdInAndRemovedAtIsNull(Collection<Long> orchidGroupIds);
