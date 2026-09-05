@@ -2,6 +2,7 @@ package com.greenhouse.backend;
 
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -52,6 +53,15 @@ class DemoModeIntegrationTests {
 				.andExpect(jsonPath("$.error.code").value("DEMO_OPERATION_BLOCKED"));
 
 		mockMvc.perform(post("/api/work-types")
+						.contentType(MediaType.APPLICATION_JSON)
+						.content("{}"))
+				.andExpect(status().isForbidden())
+				.andExpect(jsonPath("$.error.code").value("DEMO_OPERATION_BLOCKED"));
+	}
+
+	@Test
+	void blocksTheActualPartnerSettlementSettingsEndpoint() throws Exception {
+		mockMvc.perform(put("/api/business-partners/1/settlement-settings")
 						.contentType(MediaType.APPLICATION_JSON)
 						.content("{}"))
 				.andExpect(status().isForbidden())

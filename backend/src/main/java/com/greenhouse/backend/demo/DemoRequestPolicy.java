@@ -10,7 +10,8 @@ final class DemoRequestPolicy {
 		if (path.equals("/api/auth/login") || path.equals("/api/auth/logout")) return true;
 		if (!isMutation(method)) return false;
 		return path.startsWith("/api/work-types")
-				|| path.startsWith("/api/partner-settlement-settings");
+				|| path.startsWith("/api/partner-settlement-settings")
+				|| path.matches("/api/business-partners/[^/]+/settlement-settings(?:/.*)?");
 	}
 
 	static boolean isMutation(String method) {
