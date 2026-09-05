@@ -30,6 +30,8 @@ docs/
     authentication.md
     work-operation-and-orchid-collection.md
     orchid-group-mutation-transition.md
+    backend-refactoring-plan.md
+    orchid-group-mutation-refactoring-detail.md
     demo-operations.md
 
   adr/
@@ -78,6 +80,8 @@ docs/
 | [`features/authentication.md`](features/authentication.md) | 세션 인증·인가와 데모 인증 |
 | [`features/work-operation-and-orchid-collection.md`](features/work-operation-and-orchid-collection.md) | 작업 실행, 대상 스냅샷, 그룹·전파 정책 |
 | [`features/orchid-group-mutation-transition.md`](features/orchid-group-mutation-transition.md) | 난 묶음 Mutation Engine 전환 코드의 수명과 제거 inventory |
+| [`features/backend-refactoring-plan.md`](features/backend-refactoring-plan.md) | 전체 13개 백엔드 모듈의 현황 진단, 확장 경계와 단계별 리팩터링 계획 |
+| [`features/orchid-group-mutation-refactoring-detail.md`](features/orchid-group-mutation-refactoring-detail.md) | 전체 계획에 포함된 Mutation Engine 및 호출부의 상세 변경·검증 계획 |
 | [`features/demo-operations.md`](features/demo-operations.md) | 운영 PC의 데모 DB·Kubernetes·초기화·모니터링 절차 |
 
 구현이 완료된 계획서와 과거 설계는 `archive/`에 보관한다. 현재 정책을

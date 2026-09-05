@@ -80,10 +80,12 @@ demo
 ### common
 
 - 공통 응답
+- MVC 예외 응답과 인증·데모 filter의 실패는 같은 `ErrorResponse`를 사용한다. filter는 공통 JSON writer로 직렬화한다.
 - 페이지 목록 응답은 `PageResponse<T>`로 통일한다.
 - 예외 처리
 - 공통 유틸
 - 공통 검증
+- 요청의 작업자 이름 정규화와 인증된 감사 actor는 별도 계약이다. 데모의 요청 작업자 대체가 감사 actor 판정을 대신하지 않는다.
 
 ### audit
 
@@ -108,6 +110,8 @@ demo
 - 입고 작업 스냅샷과 메모 조립은 전용 factory가 담당한다.
 - 품종 목록의 난 묶음·최근 입고일·최근 작업일은 페이지 단위로 일괄 조회한다.
 - 난 묶음 계보는 `work` 엔티티를 직접 참조하지 않고 `workOperationId` 값으로 연결한다.
+- 난 묶음 취소·보정의 사용 여부 port는 Farm이 소유한다. Sales는 이 port를 구현하고, Farm adapter는 Work의 개수 조회를 Farm blocker로 변환한다. Work가 Farm에 의존하지 않는다. 차단 사유는 기존 입고→판매→작업 순서를 명시적으로 유지한다.
+- 사용자 그룹 목록은 그룹 목록→소속 일괄 조회→난 묶음 상세 일괄 조회 순서로 조립한다. 목록의 각 그룹마다 조회를 반복하지 않는다.
 - 난 묶음 물리 상태 변경과 revision ledger는 `farm.orchid.mutation`이 소유한다. Work·Sales·Inbound는 typed command와 식별자 계약으로 이 경계를 호출하고 업무 lifecycle은 각 모듈에 유지한다.
 - cutover 이전 이력도 같은 Mutation header와 `orchid_group_mutation_entries`의 `BASELINE`·`CREATE`·`CHANGE`·`DELETE`로 저장한다. 모든 Entry는 연속 revision과 full snapshot 규칙을 사용하며 현재 행이 없는 삭제 그룹은 terminal `DELETE`로 보존한다.
 - 전환 전용 importer는 승인된 complete state-chain manifest만 적재한다. Work 효과는 Work application의 제한된 source 조회·연결 API를 사용하고 Lineage 연결은 소유 모듈인 `farm`에서 수행한다. 별도 migration 모듈이나 과거 전용 Entry 모델은 두지 않는다.
@@ -205,11 +209,16 @@ application|domain|dto/
 - 역할 기반 API 접근 제어
 - 데모 인증 주체, 변경 API 제한, 요청 횟수·본문 크기 제한
 - `auth`가 데모 필터를 조립하며 `demo`는 `auth` 타입을 참조하지 않아 모듈 순환을 만들지 않는다.
+- 로그인·로그아웃의 세션 lifecycle은 AuthService, 쿠키 생성·갱신·만료는 한 writer가 담당한다.
+- 기본 계정은 application의 계정 조회 Bean이 없는 경우에만 자동 구성한다. 다른 `UserDetailsService`를 등록해도 로그인·세션 유스케이스를 변경하지 않는다.
+- Demo filter는 요청 전달과 오류 응답만 조율하고, 차단 경로 판정과 UTC 기준 요청 횟수 집계는 분리한다. Clock은 Auth 조립 지점에서 주입한다.
+- `demo → common` 의존은 공통 오류 직렬화에 사용한다. 요청 제한은 기존처럼 프로세스·클라이언트별로 유지한다.
 
 ### dashboard / analytics
 
 - 대시보드 운영 요약
 - 농장·판매·거래처·작업 분석 조회
+- 분석 기간의 기본 종료일은 주입된 Clock의 농장 업무일이며 서버 기본 시간대를 사용하지 않는다.
 
 ## 4. 계층 구조
 
@@ -230,6 +239,7 @@ dto
 - 다른 모듈의 Repository를 직접 참조하지 않고 해당 모듈의 application API 또는 port를 사용한다.
 - 외부로 노출되는 구조는 DTO로 제한한다.
 - `ModularArchitectureTests`는 `analytics`, `auth`, `demo`를 포함한 실제 13개 모듈의 선언 의존성, 순환, 타 모듈 Repository 직접 접근을 검사한다. 계층형 업무 모듈은 표준 레이어 규칙도 검사한다.
+- `ModuleBoundaryInventoryTest`는 컴파일된 의존성과 `@Query`를 추가 검사한다. 기존 Entity·Q 타입·HTTP DTO 결합과 직접 시간 조회의 예외는 `backend/src/test/resources/architecture/`에서 정확한 호출자별로 추적하며 이식 시 삭제한다. 신규 우회와 남아 있는 불필요한 예외 모두 실패 조건이다. SQL 별칭·동적 쿼리는 별도 코드 검토가 필요하다.
 - 분석 Repository는 조회 행 타입만 반환하며 API 응답 DTO 조립은 application 계층에서 담당한다.
 
 Persistence 조회 규칙:
@@ -437,6 +447,9 @@ cd backend
 - 전후 비교가 필요하면 각 대상 커밋에서 `clean workE2eTest workBenchmark`를 실행하고 생성된
   `results.json`을 각각 `before.json`, `after.json`으로 별도 보관한다.
 - `CoreQueryRegressionTest`는 기본 테스트에서 농장 viewport 3회, 경매 lot 페이지 4회, 판매 전표 상세 3회의 SQL 상한을 검증한다. 판매 전표 상세는 allocation과 서버 판정 액션을 각각 묶음 조회한다.
+- 사용자 그룹 목록은 1·10·50개에서 SQL 3회, 난 묶음별 소속 그룹 조회는 5회 이내인지 검증한다. 보관·탈퇴 제외와 소속 순서도 함께 확인한다.
+- 기본 검증과 별도로 CI의 `backend-postgres` job이 Docker 사용 가능 여부와 `workE2eTest`를 실행한다. PostgreSQL 테스트를 실행하지 못한 경우 완료로 취급하지 않는다.
+- 백엔드의 편집 기준은 `backend/.editorconfig`를 따른다. 이 설정 자체는 자동 formatter나 CI 포맷 검사가 아니며, 기존 전체 파일을 일괄 포맷하지 않는다.
 
 ## 8. 프론트엔드 맵 성능 E2E
 
