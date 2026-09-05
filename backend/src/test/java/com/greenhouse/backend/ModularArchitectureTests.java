@@ -21,7 +21,7 @@ class ModularArchitectureTests {
 		"audit", "farm", "work", "partner", "sales", "auction", "settlement", "dashboard", "print", "analytics");
 	private static final Set<String> STANDARD_LAYERS = Set.of(
 		"domain", "repository", "application", "controller", "dto");
-	private static final Map<String, Set<String>> ALLOWED_DEPENDENCIES = Map.ofEntries(
+	static final Map<String, Set<String>> ALLOWED_DEPENDENCIES = Map.ofEntries(
 		Map.entry("common", Set.of()),
 		Map.entry("audit", Set.of("common")),
 		Map.entry("farm", Set.of("common", "work", "audit")),
@@ -34,7 +34,7 @@ class ModularArchitectureTests {
 		Map.entry("print", Set.of("common", "sales")),
 		Map.entry("analytics", Set.of("common", "farm", "partner", "sales", "settlement", "work")),
 		Map.entry("auth", Set.of("common", "demo")),
-		Map.entry("demo", Set.of()));
+		Map.entry("demo", Set.of("common")));
 	private static final Pattern MODULE_IMPORT = Pattern.compile(
 		"\\bimport\\s+(?:static\\s+)?com\\.greenhouse\\.backend\\.([a-z]+)\\.");
 	private static final Pattern REPOSITORY_IMPORT = Pattern.compile(

@@ -1,5 +1,6 @@
 package com.greenhouse.backend;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -11,8 +12,8 @@ import java.time.ZoneOffset;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.TestConfiguration;
+import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Import;
 import org.springframework.context.annotation.Primary;
@@ -60,6 +61,53 @@ class AuthIntegrationTests {
 						throw new AssertionError("Session cookie max age is not seven days");
 					}
 				});
+	}
+
+	@Test
+	void doesNotAuthenticateInvalidCredentials() throws Exception {
+		mockMvc.perform(post("/api/auth/login")
+						.contentType(MediaType.APPLICATION_JSON)
+						.content("""
+								{"username":"admin","password":"wrong-password"}
+								"""))
+				.andExpect(status().isUnauthorized())
+				.andExpect(jsonPath("$.error.code").value("UNAUTHORIZED"))
+				.andExpect(result -> {
+					var session = result.getRequest().getSession(false);
+					if (session != null) assertThat(session.getAttribute("SPRING_SECURITY_CONTEXT")).isNull();
+				});
+	}
+
+	@Test
+	void refreshesTheSessionAndExpiresItOnLogout() throws Exception {
+		var login = mockMvc.perform(post("/api/auth/login")
+						.contentType(MediaType.APPLICATION_JSON)
+						.content("""
+								{"username":"admin","password":"admin"}
+								"""))
+				.andExpect(status().isOk()).andReturn();
+		var session = (MockHttpSession) login.getRequest().getSession(false);
+		session.setMaxInactiveInterval(1);
+
+		mockMvc.perform(get("/api/auth/me").session(session))
+				.andExpect(status().isOk())
+				.andExpect(jsonPath("$.data.username").value("admin"))
+				.andExpect(result -> {
+					assertThat(session.getMaxInactiveInterval()).isEqualTo(604800);
+					assertThat(result.getResponse().getHeaders("Set-Cookie"))
+							.singleElement().asString()
+							.contains("JSESSIONID=" + session.getId(), "Path=/", "Max-Age=604800", "HttpOnly", "SameSite=Lax");
+				});
+
+		mockMvc.perform(post("/api/auth/logout").session(session))
+				.andExpect(status().isOk())
+				.andExpect(result -> assertThat(result.getResponse().getHeaders("Set-Cookie"))
+						.singleElement().asString()
+						.contains("JSESSIONID=;", "Path=/", "Max-Age=0", "HttpOnly", "SameSite=Lax"));
+		assertThat(session.isInvalid()).isTrue();
+		mockMvc.perform(get("/api/auth/me"))
+				.andExpect(status().isOk())
+				.andExpect(jsonPath("$.data").doesNotExist());
 	}
 
 	@Test

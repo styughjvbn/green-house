@@ -1,13 +1,11 @@
 package com.greenhouse.backend.auth;
 
-import java.io.IOException;
-
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.servlet.http.HttpSession;
-
+import java.io.IOException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnWebApplication;
 import org.springframework.security.authentication.AnonymousAuthenticationToken;
@@ -22,6 +20,7 @@ import org.springframework.web.filter.OncePerRequestFilter;
 public class SessionCookieRefreshFilter extends OncePerRequestFilter {
 
 	private final AuthProperties authProperties;
+	private final SessionCookieWriter sessionCookieWriter;
 
 	@Override
 	protected void doFilterInternal(
@@ -46,12 +45,6 @@ public class SessionCookieRefreshFilter extends OncePerRequestFilter {
 			return;
 		}
 
-		int maxAgeSeconds = Math.toIntExact(authProperties.sessionTimeout().toSeconds());
-		session.setMaxInactiveInterval(maxAgeSeconds);
-		response.addHeader(
-				"Set-Cookie",
-				"JSESSIONID=%s; Path=/; Max-Age=%d; HttpOnly; SameSite=Lax"
-						.formatted(session.getId(), maxAgeSeconds)
-		);
+		sessionCookieWriter.refresh(session, response);
 	}
 }

@@ -1,14 +1,15 @@
 package com.greenhouse.backend.auth;
 
-import java.io.IOException;
-import jakarta.servlet.http.HttpServletResponse;
-
+import com.greenhouse.backend.common.api.ErrorResponseWriter;
+import com.greenhouse.backend.demo.DemoAuthenticationFilter;
+import com.greenhouse.backend.demo.DemoProperties;
+import com.greenhouse.backend.demo.DemoProtectionFilter;
+import java.time.Clock;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnWebApplication;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpStatus;
-import org.springframework.http.MediaType;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.config.Customizer;
 import org.springframework.security.config.annotation.authentication.configuration.AuthenticationConfiguration;
@@ -17,17 +18,10 @@ import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
 import org.springframework.security.config.http.SessionCreationPolicy;
-import org.springframework.security.core.userdetails.User;
-import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
-import org.springframework.security.provisioning.InMemoryUserDetailsManager;
-import org.springframework.security.web.authentication.AnonymousAuthenticationFilter;
 import org.springframework.security.web.SecurityFilterChain;
-
-import com.greenhouse.backend.demo.DemoAuthenticationFilter;
-import com.greenhouse.backend.demo.DemoProperties;
-import com.greenhouse.backend.demo.DemoProtectionFilter;
+import org.springframework.security.web.authentication.AnonymousAuthenticationFilter;
 
 @Configuration
 @ConditionalOnWebApplication(type = ConditionalOnWebApplication.Type.SERVLET)
@@ -40,7 +34,9 @@ public class SecurityConfig {
 	SecurityFilterChain securityFilterChain(
 			HttpSecurity http,
 			AuthProperties authProperties,
-			DemoProperties demoProperties
+			DemoProperties demoProperties,
+			ErrorResponseWriter errorResponseWriter,
+			Clock clock
 	) throws Exception {
 		http
 				.csrf(AbstractHttpConfigurer::disable)
@@ -52,7 +48,7 @@ public class SecurityConfig {
 
 		if (demoProperties.enabled()) {
 			var authenticationFilter = new DemoAuthenticationFilter(demoProperties);
-			var protectionFilter = new DemoProtectionFilter(demoProperties);
+			var protectionFilter = new DemoProtectionFilter(demoProperties, clock, errorResponseWriter);
 			http
 					.sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
 					.addFilterBefore(authenticationFilter, AnonymousAuthenticationFilter.class)
@@ -73,9 +69,9 @@ public class SecurityConfig {
 		http
 				.exceptionHandling(exceptions -> exceptions
 						.authenticationEntryPoint((request, response, exception) ->
-								writeError(response, HttpStatus.UNAUTHORIZED, "UNAUTHORIZED", "로그인이 필요합니다."))
+								errorResponseWriter.write(response, HttpStatus.UNAUTHORIZED.value(), "UNAUTHORIZED", "로그인이 필요합니다."))
 						.accessDeniedHandler((request, response, exception) ->
-								writeError(response, HttpStatus.FORBIDDEN, "FORBIDDEN", "접근 권한이 없습니다."))
+								errorResponseWriter.write(response, HttpStatus.FORBIDDEN.value(), "FORBIDDEN", "접근 권한이 없습니다."))
 				)
 				.authorizeHttpRequests(authorize -> authorize
 						.requestMatchers("/api/auth/login", "/api/auth/me", "/api/auth/context").permitAll()
@@ -89,20 +85,6 @@ public class SecurityConfig {
 	}
 
 	@Bean
-	UserDetailsService userDetailsService(AuthProperties authProperties, PasswordEncoder passwordEncoder) {
-		return new InMemoryUserDetailsManager(
-				User.withUsername(authProperties.adminUsername())
-						.password(passwordEncoder.encode(authProperties.adminPassword()))
-						.roles(AuthRole.ADMIN.name())
-						.build(),
-				User.withUsername(authProperties.workerUsername())
-						.password(passwordEncoder.encode(authProperties.workerPassword()))
-						.roles(AuthRole.WORKER.name())
-						.build()
-		);
-	}
-
-	@Bean
 	PasswordEncoder passwordEncoder() {
 		return new BCryptPasswordEncoder();
 	}
@@ -112,17 +94,4 @@ public class SecurityConfig {
 		return authenticationConfiguration.getAuthenticationManager();
 	}
 
-	private void writeError(
-			HttpServletResponse response,
-			HttpStatus status,
-			String code,
-			String message
-	) throws IOException {
-		response.setStatus(status.value());
-		response.setCharacterEncoding("UTF-8");
-		response.setContentType(MediaType.APPLICATION_JSON_VALUE);
-		response.getWriter().write("""
-				{"error":{"code":"%s","message":"%s","details":[]}}
-				""".formatted(code, message));
-	}
 }
