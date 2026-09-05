@@ -1,7 +1,7 @@
 package com.greenhouse.backend.farm.application.transformation;
 
-import com.greenhouse.backend.common.application.OrchidGroupUsageInspector;
 import com.greenhouse.backend.common.exception.NotFoundException;
+import com.greenhouse.backend.farm.application.orchid.OrchidGroupUsageInspector;
 import com.greenhouse.backend.farm.application.orchid.mutation.CorrectOrchidGroupMutationItem;
 import com.greenhouse.backend.farm.application.orchid.mutation.CorrectOrchidGroupsMutationCommand;
 import com.greenhouse.backend.farm.application.orchid.mutation.OrchidGroupMutationEngine;

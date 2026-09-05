@@ -1,14 +1,16 @@
 package com.greenhouse.backend.sales.application;
 
-import com.greenhouse.backend.common.application.OrchidGroupUsage;
-import com.greenhouse.backend.common.application.OrchidGroupUsageInspector;
+import com.greenhouse.backend.farm.application.orchid.OrchidGroupUsage;
+import com.greenhouse.backend.farm.application.orchid.OrchidGroupUsageInspector;
 import com.greenhouse.backend.sales.repository.SalesInventoryMovementRepository;
 import com.greenhouse.backend.sales.repository.SalesSlipItemAllocationRepository;
 import java.util.List;
 import java.util.Set;
+import org.springframework.core.annotation.Order;
 import org.springframework.stereotype.Component;
 
 @Component
+@Order(200)
 public class SalesOrchidGroupUsageInspector implements OrchidGroupUsageInspector {
 
 	private final SalesSlipItemAllocationRepository allocationRepository;

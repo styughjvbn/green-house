@@ -1,4 +1,4 @@
-package com.greenhouse.backend.common.application;
+package com.greenhouse.backend.farm.application.orchid;
 
 public record OrchidGroupUsage(
 		String code,
