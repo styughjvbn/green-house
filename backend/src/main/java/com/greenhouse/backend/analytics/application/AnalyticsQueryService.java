@@ -1,18 +1,21 @@
 package com.greenhouse.backend.analytics.application;
 
+import com.greenhouse.backend.analytics.domain.AnalyticsDateRange;
 import com.greenhouse.backend.analytics.dto.AnalyticsInsightResponse;
 import com.greenhouse.backend.analytics.dto.AnalyticsRankedValueResponse;
-import com.greenhouse.backend.analytics.dto.PartnerAnalyticsResponse;
-import com.greenhouse.backend.analytics.dto.SalesAnalyticsResponse;
-import com.greenhouse.backend.analytics.dto.WorkAnalyticsResponse;
 import com.greenhouse.backend.analytics.dto.AnalyticsSlipSummaryResponse;
+import com.greenhouse.backend.analytics.dto.PartnerAnalyticsResponse;
 import com.greenhouse.backend.analytics.dto.PartnerAnalyticsStatResponse;
+import com.greenhouse.backend.analytics.dto.SalesAnalyticsResponse;
 import com.greenhouse.backend.analytics.dto.VarietyInventoryAnalyticsResponse;
 import com.greenhouse.backend.analytics.dto.WorkAnalyticsItemResponse;
+import com.greenhouse.backend.analytics.dto.WorkAnalyticsResponse;
 import com.greenhouse.backend.analytics.repository.SalesAnalyticsRepository;
+import com.greenhouse.backend.common.config.TimeConfig;
+import java.text.NumberFormat;
+import java.time.Clock;
 import java.time.LocalDate;
 import java.time.YearMonth;
-import java.text.NumberFormat;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -26,9 +29,10 @@ import org.springframework.transaction.annotation.Transactional;
 public class AnalyticsQueryService {
 
 	private final SalesAnalyticsRepository salesAnalyticsRepository;
+	private final Clock clock;
 
 	public SalesAnalyticsResponse getSalesAnalytics(LocalDate from, LocalDate to) {
-		DateRange range = normalizeRange(from, to);
+		AnalyticsDateRange range = dateRange(from, to);
 		YearMonth currentMonth = YearMonth.from(range.to());
 		LocalDate currentMonthFrom = range.from().isAfter(currentMonth.atDay(1))
 				? range.from()
@@ -87,7 +91,7 @@ public class AnalyticsQueryService {
 	}
 
 	public PartnerAnalyticsResponse getPartnerAnalytics(LocalDate from, LocalDate to) {
-		DateRange range = normalizeRange(from, to);
+		AnalyticsDateRange range = dateRange(from, to);
 		var partnerStats = salesAnalyticsRepository.partnerStats(range.from(), range.to()).stream()
 				.map(row -> new PartnerAnalyticsStatResponse(
 						row.partnerId(), row.partnerName(), row.partnerType(), row.totalSales(), row.transactionCount(),
@@ -102,7 +106,7 @@ public class AnalyticsQueryService {
 	}
 
 	public WorkAnalyticsResponse getWorkAnalytics(LocalDate from, LocalDate to) {
-		DateRange range = normalizeRange(from, to);
+		AnalyticsDateRange range = dateRange(from, to);
 		var recentRecords = salesAnalyticsRepository.recentWorkOperations(range.from(), range.to(), 10).stream()
 				.map(row -> new WorkAnalyticsItemResponse(
 						row.id(), row.workDate(), row.workType(), row.workTypeTemplate(), row.title(),
@@ -152,18 +156,7 @@ public class AnalyticsQueryService {
 		return "미입금";
 	}
 
-	private DateRange normalizeRange(LocalDate from, LocalDate to) {
-		LocalDate normalizedTo = to == null ? LocalDate.now() : to;
-		LocalDate normalizedFrom = from == null ? normalizedTo.minusMonths(11).withDayOfMonth(1) : from;
-		if (normalizedFrom.isAfter(normalizedTo)) {
-			throw new IllegalArgumentException("조회 시작일은 종료일보다 늦을 수 없습니다.");
-		}
-		if (normalizedFrom.isBefore(normalizedTo.minusYears(2))) {
-			throw new IllegalArgumentException("분석 기간은 최대 2년까지 조회할 수 있습니다.");
-		}
-		return new DateRange(normalizedFrom, normalizedTo);
-	}
-
-	private record DateRange(LocalDate from, LocalDate to) {
+	private AnalyticsDateRange dateRange(LocalDate from, LocalDate to) {
+		return AnalyticsDateRange.resolve(from, to, TimeConfig.farmToday(clock));
 	}
 }
