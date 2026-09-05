@@ -15,10 +15,13 @@ import com.greenhouse.backend.sales.domain.SalesType;
 import com.greenhouse.backend.sales.dto.SalesSlipResponse;
 import com.greenhouse.backend.sales.repository.SalesSlipRepository;
 import com.greenhouse.backend.settlement.application.PartnerBalanceService;
+import com.greenhouse.backend.settlement.application.PartnerSettlementSettingsService;
 import com.greenhouse.backend.settlement.domain.PartnerBalanceSummary;
 import com.greenhouse.backend.settlement.domain.PartnerSettlementSettings;
 import com.greenhouse.backend.settlement.domain.PaymentEventType;
+import com.greenhouse.backend.settlement.domain.SettlementUnit;
 import com.greenhouse.backend.settlement.dto.ManualPaymentRequest;
+import com.greenhouse.backend.settlement.dto.PartnerSettlementSettingsResponse;
 import com.greenhouse.backend.settlement.repository.PartnerBalanceSummaryRepository;
 import com.greenhouse.backend.settlement.repository.PartnerPaymentEventRepository;
 import com.greenhouse.backend.settlement.repository.PartnerSettlementSettingsRepository;
@@ -48,6 +51,7 @@ class PartnerSettlementPostgresE2ETest extends WorkE2ETestBase {
 	@Autowired PartnerBalanceService balanceService;
 	@Autowired PartnerBalanceSummaryRepository balanceRepository;
 	@Autowired PartnerSettlementSettingsRepository settingsRepository;
+	@Autowired PartnerSettlementSettingsService settingsService;
 	@Autowired PartnerPaymentEventRepository eventRepository;
 	@Autowired SalesSlipRepository salesSlipRepository;
 	@Autowired SalesPaymentService salesPaymentService;
@@ -123,6 +127,26 @@ class PartnerSettlementPostgresE2ETest extends WorkE2ETestBase {
 				.extracting(event -> event.getEventType()).containsExactlyInAnyOrder(
 						PaymentEventType.PAYMENT_RECEIVED, PaymentEventType.MANUAL_MATCH_CONFIRMED,
 						PaymentEventType.PAYMENT_RECEIVED, PaymentEventType.MANUAL_MATCH_CONFIRMED);
+	}
+
+	@Test
+	void concurrentFirstReadsReturnTheSameDefaultSettings() throws Exception {
+		var partner = createPartner("동시 기본 설정");
+		var tasks = new ArrayList<Callable<PartnerSettlementSettingsResponse>>();
+		for (int index = 0; index < 8; index++) {
+			tasks.add(() -> settingsService.getOrCreate(partner.getId()));
+		}
+
+		var settings = concurrently(tasks);
+
+		assertThat(settings).extracting(PartnerSettlementSettingsResponse::id)
+				.containsOnly(settings.getFirst().id());
+		assertThat(settings).allSatisfy(value -> {
+			assertThat(value.partnerId()).isEqualTo(partner.getId());
+			assertThat(value.settlementUnit()).isEqualTo(SettlementUnit.SALES_SLIP);
+			assertThat(value.paymentDelayDays()).isZero();
+		});
+		assertThat(settingsRepository.findByPartnerIdIn(List.of(partner.getId()))).hasSize(1);
 	}
 
 	@Test

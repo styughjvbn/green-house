@@ -1,6 +1,6 @@
 package com.greenhouse.backend.settlement.application;
 
-import com.greenhouse.backend.partner.application.BusinessPartnerReader;
+import com.greenhouse.backend.partner.application.BusinessPartnerLock;
 import com.greenhouse.backend.settlement.domain.PartnerSettlementSettings;
 import com.greenhouse.backend.settlement.dto.PartnerSettlementSettingsRequest;
 import com.greenhouse.backend.settlement.dto.PartnerSettlementSettingsResponse;
@@ -8,6 +8,7 @@ import com.greenhouse.backend.settlement.repository.PartnerSettlementSettingsRep
 
 import lombok.RequiredArgsConstructor;
 
+import java.util.List;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -16,7 +17,7 @@ import org.springframework.transaction.annotation.Transactional;
 @RequiredArgsConstructor
 public class PartnerSettlementSettingsService {
 	private final PartnerSettlementSettingsRepository settingsRepository;
-	private final BusinessPartnerReader partnerReader;
+	private final BusinessPartnerLock partnerLock;
 	private final SettlementAuditSupport auditSupport;
 
 	public PartnerSettlementSettingsResponse getOrCreate(Long partnerId) {
@@ -39,10 +40,10 @@ public class PartnerSettlementSettingsService {
 	}
 
 	private PartnerSettlementSettings findOrCreate(Long partnerId) {
-		return settingsRepository.findByPartnerId(partnerId).orElseGet(() -> {
-			var partner = partnerReader.getInfo(partnerId);
-			return settingsRepository.save(new PartnerSettlementSettings(partner.id(), partner.partnerType()));
-		});
+		var partner = partnerLock.lockAll(List.of(partnerId)).getFirst();
+		return settingsRepository.findByPartnerId(partnerId)
+				.orElseGet(() -> settingsRepository.save(
+						new PartnerSettlementSettings(partner.id(), partner.partnerType())));
 	}
 
 	private String normalize(String value) {
