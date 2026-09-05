@@ -658,3 +658,10 @@ Playwright 실행을 순서대로 수행한다. 결과는
 `e2e:map:debug`는 기존 `_map_e2e` DB를 재사용하고 migration과 seed를 실행하지
 않는다. Chromium headed 모드와 Playwright Inspector를 사용하며, 축소된 반복 횟수로
 디버깅한다.
+
+## 9. CI 검증
+
+`.github/workflows/verify.yml`에서 기본 백엔드 테스트와 PostgreSQL E2E를 별도 job으로 실행한다.
+PostgreSQL job은 먼저 `docker info`로 실행 환경을 확인하고 Testcontainers가 만든 격리 DB에서
+`./gradlew workE2eTest --no-daemon`을 실행한다. 운영 DB 접속 정보는 사용하지 않는다.
+로컬에서 Docker가 없어 PostgreSQL 테스트가 skip된 결과는 검증 완료로 취급하지 않는다.
