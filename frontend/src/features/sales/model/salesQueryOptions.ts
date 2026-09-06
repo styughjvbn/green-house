@@ -7,7 +7,8 @@ import {
   getAuctionSettlementSummary,
   getAuctionTrackingSummary,
   getBusinessPartnerPage,
-  getBusinessPartners,
+  getBusinessPartnerOptions,
+  getBusinessPartnerOption,
   getReceivedPaymentPage,
   getSalesSlip,
   getSalesSlipPage,
@@ -53,10 +54,30 @@ export function businessPartnerPageQueryOptions(
   });
 }
 
-export function businessPartnerLookupQueryOptions() {
+export function businessPartnerOptionsQueryOptions(
+  keyword = "",
+  page = 0,
+  auctionHouse?: boolean,
+  active?: boolean,
+) {
+  const normalized = keyword.trim();
   return queryOptions({
-    queryKey: salesQueryKeys.partners.lookup,
-    queryFn: getBusinessPartners,
+    queryKey: salesQueryKeys.partners.options(
+      normalized,
+      page,
+      auctionHouse,
+      active,
+    ),
+    queryFn: ({ signal }) =>
+      getBusinessPartnerOptions(normalized, page, auctionHouse, active, signal),
+  });
+}
+
+export function businessPartnerOptionQueryOptions(id: number) {
+  return queryOptions({
+    queryKey: salesQueryKeys.partners.option(id),
+    queryFn: ({ signal }) => getBusinessPartnerOption(id, signal),
+    staleTime: 30_000,
   });
 }
 

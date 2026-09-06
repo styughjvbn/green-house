@@ -33,7 +33,6 @@ export function SalesSlipsPage({
     <main className="h-full min-h-0">
       <TabLayout>
         <SalesFilters
-          partners={sales.partners}
           filters={sales.filters}
           onChange={sales.updateFilters}
           onReset={sales.resetFilters}
@@ -42,7 +41,6 @@ export function SalesSlipsPage({
 
         {sales.showCreateSlip ? (
           <SalesSlipCreateForm
-            partners={sales.partners}
             errorMessage={sales.errorMessage}
             form={sales.salesForm}
             mode={sales.editingSlipId == null ? "create" : "edit"}

@@ -7,7 +7,6 @@ export { SalesSlipsPage } from "./ui/SalesSlipsPage";
 export {
   confirmAuctionSettlementPayment,
   confirmSalesSlipPayment,
-  getBusinessPartners,
   getBusinessPartnerPage,
   getSalesSlip,
   getSalesSlipPage,

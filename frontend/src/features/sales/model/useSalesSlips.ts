@@ -37,7 +37,6 @@ import {
   writeSalesFilterParams,
 } from "../lib/salesUrlFilters";
 import {
-  businessPartnerLookupQueryOptions,
   salesSlipDetailQueryOptions,
   salesSlipPageQueryOptions,
 } from "./salesQueryOptions";
@@ -59,8 +58,6 @@ export function useSalesSlips({
   const writeUrlParams = useUrlSearchParamsWriter();
   const { businessDate } = useRuntimeContext();
   const salesSlipQuery = useQuery(salesSlipPageQueryOptions(routeState));
-  const partnersQuery = useQuery(businessPartnerLookupQueryOptions());
-  const partners = partnersQuery.data ?? [];
   const listState = useUrlPagedListState({
     emptyFilters: createInitialSalesFilters,
     filterKeys: SALES_FILTER_KEYS,
@@ -72,7 +69,7 @@ export function useSalesSlips({
     salesSlipQuery.data ??
     createEmptyPage<SalesSlipListItem>(routeState.size, routeState.page);
   const [salesForm, setSalesForm] = useState<SalesSlipForm>(() =>
-    createInitialSalesForm(partners, businessDate),
+    createInitialSalesForm(businessDate),
   );
   const [showCreateSlip, setShowCreateSlip] = useState(initialShowCreateSlip);
   const [editingSlipId, setEditingSlipId] = useState<number | null>(null);
@@ -129,23 +126,11 @@ export function useSalesSlips({
   }
 
   function selectSalesType(salesType: SalesSlipForm["salesType"]) {
-    const auctionPartner = partners.find(
-      (partner) => partner.partnerType === "AUCTION_HOUSE",
-    );
-    const directPartner = partners.find(
-      (partner) => partner.partnerType !== "AUCTION_HOUSE",
-    );
+    if (salesForm.salesType === salesType) return;
     setSalesForm((current) => ({
       ...current,
       salesType,
-      partnerId:
-        salesType === "AUCTION"
-          ? auctionPartner
-            ? String(auctionPartner.id)
-            : ""
-          : directPartner
-            ? String(directPartner.id)
-            : current.partnerId,
+      partnerId: "",
       paymentStatus: salesType === "AUCTION" ? "정산 대기" : "미입금",
       salesStatus: "작성중",
       paymentMethod: salesType === "AUCTION" ? "경매 정산" : "",
@@ -317,7 +302,7 @@ export function useSalesSlips({
   function startCreateSalesSlip() {
     setEditingSlipId(null);
     setErrorMessage(null);
-    setSalesForm(createInitialSalesForm(partners, businessDate));
+    setSalesForm(createInitialSalesForm(businessDate));
     setShowCreateSlip(true);
   }
 
@@ -344,7 +329,7 @@ export function useSalesSlips({
   function cancelSalesSlipEditing() {
     setEditingSlipId(null);
     setShowCreateSlip(false);
-    setSalesForm(createInitialSalesForm(partners, businessDate));
+    setSalesForm(createInitialSalesForm(businessDate));
     setErrorMessage(null);
   }
 
@@ -416,7 +401,6 @@ export function useSalesSlips({
   }
 
   return {
-    partners,
     salesSlips: salesSlipPageData.content,
     salesSlipCurrentPage: visibleSalesSlipPage,
     salesSlipPageSize: routeState.size,
@@ -435,11 +419,9 @@ export function useSalesSlips({
     errorMessage:
       errorMessage ??
       (salesSlipQuery.error == null
-        ? partnersQuery.error == null
-          ? salesSlipDetailQuery.error == null
-            ? null
-            : toMessage(salesSlipDetailQuery.error)
-          : toMessage(partnersQuery.error)
+        ? salesSlipDetailQuery.error == null
+          ? null
+          : toMessage(salesSlipDetailQuery.error)
         : toMessage(salesSlipQuery.error)),
     totalAmount,
     addAllocation,

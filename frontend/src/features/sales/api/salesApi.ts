@@ -1,6 +1,8 @@
 ﻿import { fetchApi, requestApi } from "@/shared/api/client";
 import type {
   BusinessPartner,
+  BusinessPartnerOption,
+  BusinessPartnerOptionPage,
   BusinessPartnerPage,
   PartnerPaymentEventPage,
   PaymentTargetType,
@@ -43,8 +45,34 @@ async function requestJson<T>(
   return requestApi<T>(path, init, fallbackMessage);
 }
 
-export function getBusinessPartners() {
-  return fetchApi<BusinessPartner[]>("/business-partners");
+export function getBusinessPartnerOptions(
+  keyword: string,
+  page: number,
+  auctionHouse?: boolean,
+  active?: boolean,
+  signal?: AbortSignal,
+) {
+  const params = new URLSearchParams({
+    keyword,
+    page: String(page),
+    size: "10",
+  });
+  if (auctionHouse != null) params.set("auctionHouse", String(auctionHouse));
+  if (active != null) params.set("active", String(active));
+  return fetchApi<BusinessPartnerOptionPage>(
+    `/business-partners/options?${params}`,
+    { signal },
+  );
+}
+
+export function getBusinessPartnerOption(
+  partnerId: number,
+  signal?: AbortSignal,
+) {
+  return fetchApi<BusinessPartnerOption>(
+    `/business-partners/${partnerId}/option`,
+    { signal },
+  );
 }
 
 export function getBusinessPartnerPage(

@@ -401,7 +401,14 @@ export type OrchidGroupWorkHistory = {
   memo: string | null;
 };
 
-export type PartnerType = "WHOLESALE" | "RETAIL" | "AUCTION_HOUSE";
+export type PartnerType = NonNullable<
+  ApiSchemas["BusinessPartnerResponse"]["partnerType"]
+>;
+
+export type BusinessPartnerOption = Required<
+  ApiSchemas["BusinessPartnerOptionResponse"]
+>;
+export type BusinessPartnerOptionPage = Page<BusinessPartnerOption>;
 
 export type BusinessPartner = {
   id: number;

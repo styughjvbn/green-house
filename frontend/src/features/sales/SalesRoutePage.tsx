@@ -17,7 +17,7 @@ import {
   auctionSettlementSummaryQueryOptions,
   auctionSettlementDetailQueryOptions,
   auctionSummaryQueryOptions,
-  businessPartnerLookupQueryOptions,
+  businessPartnerOptionsQueryOptions,
   businessPartnerPageQueryOptions,
   salesSlipDetailQueryOptions,
   salesSlipPageQueryOptions,
@@ -43,7 +43,7 @@ export async function SalesRoutePage({
       const routeState = readSalesRouteState(reader);
       await Promise.all([
         queryClient.prefetchQuery(salesSlipPageQueryOptions(routeState)),
-        queryClient.prefetchQuery(businessPartnerLookupQueryOptions()),
+        queryClient.prefetchQuery(businessPartnerOptionsQueryOptions()),
         ...(routeState.selectedSlipId == null
           ? []
           : [

@@ -20,7 +20,23 @@ export const salesQueryKeys = {
     pages: ["sales", "businessPartners", "pages"] as const,
     page: (filters: BusinessPartnerFilterState, page: number, size: number) =>
       ["sales", "businessPartners", "pages", filters, page, size] as const,
-    lookup: ["sales", "businessPartners", "lookup"] as const,
+    options: (
+      keyword: string,
+      page: number,
+      auctionHouse?: boolean,
+      active?: boolean,
+    ) =>
+      [
+        "sales",
+        "businessPartners",
+        "options",
+        keyword,
+        page,
+        auctionHouse,
+        active,
+      ] as const,
+    option: (id: number) =>
+      ["sales", "businessPartners", "option", id] as const,
   },
   payments: {
     target: (targetType: PaymentTargetType, targetId: number) =>
