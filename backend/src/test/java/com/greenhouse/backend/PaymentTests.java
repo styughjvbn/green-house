@@ -2,6 +2,8 @@ package com.greenhouse.backend;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.hamcrest.Matchers.containsInAnyOrder;
+import static org.hamcrest.Matchers.hasItem;
+import static org.hamcrest.Matchers.not;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -30,7 +32,10 @@ import com.greenhouse.backend.settlement.domain.PaymentEventType;
 import com.greenhouse.backend.settlement.domain.PaymentTargetType;
 import com.greenhouse.backend.settlement.repository.PartnerPaymentEventRepository;
 import java.time.LocalDate;
+import java.util.List;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.CsvSource;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
@@ -93,6 +98,23 @@ class PaymentTests {
 			.andExpect(jsonPath("$.data.availableActions[0]").value("COMPLETE"))
 			.andExpect(jsonPath("$.data.availableActions.length()").value(1));
 
+		mockMvc.perform(post("/api/sales-slips/{id}/confirm-payment", slip.getId())
+				.contentType("application/json")
+				.content(paymentJson(70_000)))
+			.andExpect(status().isOk())
+			.andExpect(jsonPath("$.data.paidAmount").value(100_000))
+			.andExpect(jsonPath("$.data.remainingAmount").value(0));
+
+		for (String rejectedPayment : List.of(
+				paymentJson(70_000).replace("\"amount\": 70000", "\"amount\": 60000"),
+				paymentJson(70_000).replace("2026-07-06", "2026-07-07"),
+				paymentJson(1))) {
+			mockMvc.perform(post("/api/sales-slips/{id}/confirm-payment", slip.getId())
+					.contentType("application/json").content(rejectedPayment))
+				.andExpect(status().isBadRequest())
+				.andExpect(jsonPath("$.error.code").value("VALIDATION_ERROR"));
+		}
+
 		mockMvc.perform(get("/api/partner-payment-events")
 				.param("partnerId", partner.getId().toString()))
 			.andExpect(status().isOk())
@@ -117,6 +139,31 @@ class PaymentTests {
 		mockMvc.perform(get("/api/business-partners/{id}/balance-summary", partner.getId()))
 			.andExpect(status().isOk())
 			.andExpect(jsonPath("$.data.receivableBalance").value(0));
+	}
+
+	@ParameterizedTest
+	@CsvSource({"DIRECT, 취소", "AUCTION, 작성중", "AUCTION, 출하 완료"})
+	void rejectsPaymentToCanceledOrAuctionSalesSlip(SalesType salesType, String salesStatus) throws Exception {
+		var partner = partnerRepository.saveAndFlush(
+				new BusinessPartner("입금 거절 거래처", PartnerType.AUCTION_HOUSE, null, null, null, null));
+		var slip = new SalesSlip("REJECT-PAYMENT", LocalDate.of(2026, 7, 6), salesType, null,
+				partner.getId(), "미입금", SalesSlip.STATUS_DRAFT, null, null);
+		slip.addItem(new SalesSlipItem(null, "카틀레야", null, "A", 10, 10_000, null));
+		slip.updateSalesStatus(salesStatus);
+		salesSlipRepository.saveAndFlush(slip);
+
+		mockMvc.perform(get("/api/sales-slips/{id}", slip.getId()))
+			.andExpect(status().isOk())
+			.andExpect(jsonPath("$.data.availableActions", not(hasItem("CONFIRM_PAYMENT"))));
+		mockMvc.perform(post("/api/sales-slips/{id}/confirm-payment", slip.getId())
+				.contentType("application/json").content(paymentJson(30_000)))
+			.andExpect(status().isBadRequest())
+			.andExpect(jsonPath("$.error.code").value("VALIDATION_ERROR"));
+
+		assertThat(slip.getPaidAmount()).isZero();
+		assertThat(slip.getRemainingAmount()).isEqualTo(100_000L);
+		assertThat(eventRepository.count()).isZero();
+		assertThat(auditEventRepository.count()).isZero();
 	}
 
 	@Test

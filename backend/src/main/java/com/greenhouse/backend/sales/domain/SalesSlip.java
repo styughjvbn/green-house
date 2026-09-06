@@ -141,6 +141,7 @@ public class SalesSlip extends BaseEntity {
 	}
 
 	public void recordPayment(Long amount) {
+		validatePaymentTarget();
 		if (amount <= 0) {
 			throw new IllegalArgumentException("입금액은 0보다 커야 합니다.");
 		}
@@ -150,6 +151,28 @@ public class SalesSlip extends BaseEntity {
 		this.paidAmount = getPaidAmount() + amount;
 		this.remainingAmount = Math.max(0L, totalAmount.longValue() - paidAmount);
 		this.paymentStatus = remainingAmount == 0 ? "입금 완료" : "부분입금";
+	}
+
+	public boolean canConfirmPayment() {
+		return paymentTargetRejectionReason() == null && remainingAmount != null && remainingAmount > 0;
+	}
+
+	// 잔액 검사는 새 입금에만 적용한다. 완납 후에도 기존 입금의 재요청은 확인할 수 있다.
+	public void validatePaymentTarget() {
+		String reason = paymentTargetRejectionReason();
+		if (reason != null) {
+			throw new IllegalArgumentException(reason);
+		}
+	}
+
+	private String paymentTargetRejectionReason() {
+		if (salesType != SalesType.DIRECT) {
+			return "경매 판매전표는 경매장 정산에서 입금을 확인해야 합니다.";
+		}
+		if (isCanceled()) {
+			return "취소된 전표는 입금을 확인할 수 없습니다.";
+		}
+		return null;
 	}
 
 	public void updateSalesStatus(String salesStatus) {

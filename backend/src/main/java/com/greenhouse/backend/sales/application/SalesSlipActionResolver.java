@@ -70,9 +70,7 @@ public class SalesSlipActionResolver {
 		if (canCancel(salesSlip, hasPaymentEvent, nonCancelableShipmentIds)) {
 			actions.add(SalesSlipAction.CANCEL);
 		}
-		if (salesSlip.getSalesType() == SalesType.DIRECT
-				&& salesSlip.getRemainingAmount() != null
-				&& salesSlip.getRemainingAmount() > 0) {
+		if (salesSlip.canConfirmPayment()) {
 			actions.add(SalesSlipAction.CONFIRM_PAYMENT);
 		}
 

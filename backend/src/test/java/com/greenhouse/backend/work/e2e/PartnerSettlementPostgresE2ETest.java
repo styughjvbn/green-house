@@ -156,6 +156,32 @@ class PartnerSettlementPostgresE2ETest extends WorkE2ETestBase {
 	}
 
 	@Test
+	void concurrentFullPaymentRetriesRecordPaymentOnlyOnce() throws Exception {
+		var partner = createPartner("완납 재요청");
+		var slip = createSlip(partner, "S20400102-FULL-PAYMENT-RETRY");
+		var payment = payment(100_000L, "full-payment");
+
+		List<SalesSlipResponse> results = concurrently(List.of(
+				() -> salesPaymentService.confirmPayment(slip.getId(), payment),
+				() -> salesPaymentService.confirmPayment(slip.getId(), payment)));
+
+		assertThat(results).allSatisfy(result -> {
+			assertThat(result.paidAmount()).isEqualTo(100_000L);
+			assertThat(result.remainingAmount()).isZero();
+			assertThat(result.paymentStatus()).isEqualTo("입금 완료");
+		});
+		assertThat(salesSlipRepository.findById(slip.getId()).orElseThrow().getPaidAmount()).isEqualTo(100_000L);
+		assertThat(balanceService.getBalance(partner.getId()).receivableBalance()).isZero();
+		assertThat(eventRepository.search(partner.getId(), null, null, null, PageRequest.of(0, 100)).getContent())
+				.extracting(PartnerPaymentEvent::getEventType).containsExactlyInAnyOrder(
+						PaymentEventType.PAYMENT_RECEIVED, PaymentEventType.MANUAL_MATCH_CONFIRMED);
+		assertThat(auditRepository.findAll().stream()
+				.filter(event -> "SALES_SLIP".equals(event.getEntityType())
+						&& slip.getId().equals(event.getEntityId())))
+				.hasSize(1);
+	}
+
+	@Test
 	void concurrentFirstReadsReturnTheSameDefaultSettings() throws Exception {
 		var partner = createPartner("동시 기본 설정");
 		var tasks = new ArrayList<Callable<PartnerSettlementSettingsResponse>>();

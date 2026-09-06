@@ -1,7 +1,6 @@
 package com.greenhouse.backend.sales.application;
 
 import com.greenhouse.backend.common.exception.NotFoundException;
-import com.greenhouse.backend.sales.domain.SalesType;
 import com.greenhouse.backend.sales.dto.SalesSlipResponse;
 import com.greenhouse.backend.sales.repository.SalesSlipRepository;
 import com.greenhouse.backend.settlement.application.PartnerBalanceService;
@@ -28,12 +27,7 @@ public class SalesPaymentService {
 		var payment = request.toCommand();
 		var salesSlip = salesSlipRepository.findForUpdateById(salesSlipId)
 				.orElseThrow(() -> new NotFoundException("판매 전표를 찾을 수 없습니다."));
-		if (salesSlip.getSalesType() != SalesType.DIRECT) {
-			throw new IllegalArgumentException("경매 판매전표는 경매장 정산에서 입금을 확인해야 합니다.");
-		}
-		if (salesSlip.isCanceled()) {
-			throw new IllegalArgumentException("취소된 전표는 입금을 확인할 수 없습니다.");
-		}
+		salesSlip.validatePaymentTarget();
 		partnerBalanceService.lockPartners(List.of(salesSlip.getPartnerId()));
 		if (paymentLedgerService.findManualPayment(
 				PaymentTargetType.SALES_SLIP, salesSlipId, payment).isPresent()) {

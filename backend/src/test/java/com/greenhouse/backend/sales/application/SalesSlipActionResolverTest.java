@@ -5,14 +5,17 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 import com.greenhouse.backend.sales.domain.SalesSlip;
+import com.greenhouse.backend.sales.domain.SalesSlipItem;
 import com.greenhouse.backend.sales.domain.SalesType;
 import com.greenhouse.backend.sales.dto.SalesSlipAction;
 import com.greenhouse.backend.settlement.application.PaymentEventReader;
 import com.greenhouse.backend.settlement.domain.PaymentTargetType;
+import java.time.LocalDate;
 import java.util.List;
 import java.util.Set;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.springframework.test.util.ReflectionTestUtils;
 
 class SalesSlipActionResolverTest {
 
@@ -53,11 +56,8 @@ class SalesSlipActionResolverTest {
 
 	@Test
 	void blocksAuctionCancellationAfterResultOrSettlementProgress() {
-		SalesSlip salesSlip = mock(SalesSlip.class);
-		when(salesSlip.getId()).thenReturn(2L);
-		when(salesSlip.getSalesType()).thenReturn(SalesType.AUCTION);
-		when(salesSlip.getSalesStatus()).thenReturn(SalesSlip.STATUS_AUCTION_SHIPMENT_COMPLETED);
-		when(salesSlip.getAuctionShipmentId()).thenReturn(20L);
+		SalesSlip salesSlip = salesSlip(2L, SalesType.AUCTION, SalesSlip.STATUS_AUCTION_SHIPMENT_COMPLETED);
+		salesSlip.assignAuctionShipment(20L);
 		when(auctionCancellationPolicy.findNonCancelableShipmentIds(List.of(20L)))
 				.thenReturn(Set.of(20L));
 
@@ -65,11 +65,18 @@ class SalesSlipActionResolverTest {
 	}
 
 	private SalesSlip directSalesSlip(Long id, String status, Long remainingAmount) {
-		SalesSlip salesSlip = mock(SalesSlip.class);
-		when(salesSlip.getId()).thenReturn(id);
-		when(salesSlip.getSalesType()).thenReturn(SalesType.DIRECT);
-		when(salesSlip.getSalesStatus()).thenReturn(status);
-		when(salesSlip.getRemainingAmount()).thenReturn(remainingAmount);
+		SalesSlip salesSlip = salesSlip(id, SalesType.DIRECT, status);
+		if (remainingAmount < 100_000L) {
+			salesSlip.recordPayment(100_000L - remainingAmount);
+		}
+		return salesSlip;
+	}
+
+	private SalesSlip salesSlip(Long id, SalesType salesType, String status) {
+		SalesSlip salesSlip = new SalesSlip("ACTION-" + id, LocalDate.of(2026, 8, 1), salesType,
+				null, 1L, "미입금", status, null, null);
+		ReflectionTestUtils.setField(salesSlip, "id", id);
+		salesSlip.addItem(new SalesSlipItem(null, "카틀레야", null, "A", 10, 10_000, null));
 		return salesSlip;
 	}
 }
