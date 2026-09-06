@@ -2368,6 +2368,7 @@ paths:
     get:
       tags:
       - payment-controller
+      description: 호환용 목록. 입금일·ID 역순으로 최신 500건까지 반환합니다. 운영 화면은 /partner-payment-events/page를 사용합니다.
       operationId: getEvents
       parameters:
       - name: partnerId
@@ -2398,6 +2399,73 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ApiResponseListPartnerPaymentEventResponse'
+      deprecated: true
+  /api/partner-payment-events/page:
+    get:
+      tags:
+      - payment-controller
+      description: 조건에 맞는 입금 이벤트를 입금일·ID 역순으로 조회합니다. 유형 필터는 페이지 조회 전 적용됩니다. page는 0 이상, size는 1~100으로 보정합니다.
+      operationId: getPaymentEventPage
+      parameters:
+      - name: partnerId
+        in: query
+        required: false
+        schema:
+          type: integer
+          format: int64
+      - name: targetType
+        in: query
+        required: false
+        schema:
+          type: string
+          enum:
+          - SALES_SLIP
+          - AUCTION_SETTLEMENT
+          - NONE
+      - name: targetId
+        in: query
+        required: false
+        schema:
+          type: integer
+          format: int64
+      - name: eventType
+        in: query
+        required: false
+        schema:
+          type: string
+          enum:
+          - PAYMENT_RECEIVED
+          - PAYMENT_ALLOCATED
+          - PREPAYMENT_RECEIVED
+          - CREDIT_APPLIED
+          - CREDIT_REFUND
+          - AUTO_MATCH_CANDIDATE
+          - AUTO_MATCH_CONFIRMED
+          - MANUAL_MATCH_CONFIRMED
+          - MATCH_REJECTED
+          - PAYMENT_UNLINKED
+          - ADJUSTMENT
+      - name: page
+        in: query
+        required: false
+        schema:
+          type: integer
+          format: int32
+          default: 0
+      - name: size
+        in: query
+        required: false
+        schema:
+          type: integer
+          format: int32
+          default: 10
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponsePageResponsePartnerPaymentEventResponse'
   /api/orchid-groups/{orchidGroupId}/work-history:
     get:
       tags:
@@ -7232,6 +7300,32 @@ components:
           type: string
         createdBy:
           type: string
+    ApiResponsePageResponsePartnerPaymentEventResponse:
+      type: object
+      properties:
+        data:
+          $ref: '#/components/schemas/PageResponsePartnerPaymentEventResponse'
+        message:
+          type: string
+    PageResponsePartnerPaymentEventResponse:
+      type: object
+      properties:
+        content:
+          type: array
+          items:
+            $ref: '#/components/schemas/PartnerPaymentEventResponse'
+        page:
+          type: integer
+          format: int32
+        size:
+          type: integer
+          format: int32
+        totalElements:
+          type: integer
+          format: int64
+        totalPages:
+          type: integer
+          format: int32
     ApiResponseListOrchidGroupWorkHistoryResponse:
       type: object
       properties:

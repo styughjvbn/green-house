@@ -64,7 +64,7 @@ export function useSalesSlips({
   const listState = useUrlPagedListState({
     emptyFilters: createInitialSalesFilters,
     filterKeys: SALES_FILTER_KEYS,
-    resetParamKeys: ["slipId"],
+    resetParamKeys: ["slipId", "paymentPage"],
     routeFilters: routeState.filters,
     writeFilterParams: writeSalesFilterParams,
   });
@@ -100,10 +100,10 @@ export function useSalesSlips({
   const visibleSelectedSalesSlip = salesSlipDetailQuery.data ?? null;
   const writeSelectedSlipId = useCallback(
     (salesSlipId: number, historyMode: "replace" | "push") => {
-      writeUrlParams(
-        (params) => params.set("slipId", String(salesSlipId)),
-        historyMode,
-      );
+      writeUrlParams((params) => {
+        params.set("slipId", String(salesSlipId));
+        params.delete("paymentPage");
+      }, historyMode);
     },
     [writeUrlParams],
   );
@@ -296,6 +296,7 @@ export function useSalesSlips({
       updateSalesSlip(salesSlip);
       writeUrlParams((params) => {
         params.set("slipId", String(salesSlip.id));
+        params.delete("paymentPage");
         params.set("page", "0");
       });
       setShowCreateSlip(false);

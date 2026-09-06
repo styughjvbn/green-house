@@ -1,3 +1,4 @@
+import type { PaymentTargetType } from "@/entities/farm/types";
 import type {
   AuctionFilterState,
   BusinessPartnerFilterState,
@@ -20,6 +21,25 @@ export const salesQueryKeys = {
     page: (filters: BusinessPartnerFilterState, page: number, size: number) =>
       ["sales", "businessPartners", "pages", filters, page, size] as const,
     lookup: ["sales", "businessPartners", "lookup"] as const,
+  },
+  payments: {
+    target: (targetType: PaymentTargetType, targetId: number) =>
+      ["sales", "paymentEvents", targetType, targetId] as const,
+    receivedPage: (
+      targetType: PaymentTargetType,
+      targetId: number,
+      page: number,
+      size: number,
+    ) =>
+      [
+        "sales",
+        "paymentEvents",
+        targetType,
+        targetId,
+        "PAYMENT_RECEIVED",
+        page,
+        size,
+      ] as const,
   },
   auction: {
     all: ["sales", "auctionTracking"] as const,

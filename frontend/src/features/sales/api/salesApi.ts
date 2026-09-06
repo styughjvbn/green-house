@@ -2,7 +2,8 @@
 import type {
   BusinessPartner,
   BusinessPartnerPage,
-  PartnerPaymentEvent,
+  PartnerPaymentEventPage,
+  PaymentTargetType,
   PartnerSettlementSettings,
   SalesOrchidGroupOption,
   SalesSlip,
@@ -207,15 +208,24 @@ export function confirmSalesSlipPayment(
   );
 }
 
-export function getPaymentEvents(
-  targetType: "SALES_SLIP" | "AUCTION_SETTLEMENT",
+export function getReceivedPaymentPage(
+  targetType: PaymentTargetType,
   targetId: number,
+  page: number,
+  size: number,
+  signal?: AbortSignal,
 ) {
   const params = new URLSearchParams({
     targetType,
     targetId: String(targetId),
+    eventType: "PAYMENT_RECEIVED",
+    page: String(page),
+    size: String(size),
   });
-  return fetchApi<PartnerPaymentEvent[]>(`/partner-payment-events?${params}`);
+  return fetchApi<PartnerPaymentEventPage>(
+    `/partner-payment-events/page?${params}`,
+    { signal },
+  );
 }
 
 export function confirmAuctionReturn(

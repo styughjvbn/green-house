@@ -191,6 +191,20 @@ class SettlementPartnerQueryTest {
 			assertThat(received.partnerName()).isEqualTo(match.partnerName());
 		}
 		assertThat(statistics.getPrepareStatementCount()).isLessThanOrEqualTo(2);
+
+		statistics = flushAndResetStatistics();
+		var page = paymentService.getEventPage(null, PaymentTargetType.SALES_SLIP, 99881L,
+				PaymentEventType.MANUAL_MATCH_CONFIRMED, 0, partnerCount);
+		assertThat(page.totalElements()).isEqualTo(partnerCount);
+		assertThat(page.content()).hasSize(partnerCount).allSatisfy(event -> {
+			assertThat(event.eventType()).isEqualTo(PaymentEventType.MANUAL_MATCH_CONFIRMED);
+			assertThat(event.parentEventId()).isNotNull();
+			assertThat(event.partnerName()).startsWith("변경 이름 ");
+		});
+		// Page + count + partner names; parent identifiers must not load parent events.
+		assertThat(statistics.getPrepareStatementCount()).isEqualTo(3);
+		assertThat(statistics.getEntityStatistics(PartnerPaymentEvent.class.getName()).getLoadCount())
+				.isEqualTo(partnerCount);
 	}
 
 	private Statistics flushAndResetStatistics() {

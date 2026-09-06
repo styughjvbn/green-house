@@ -1,10 +1,12 @@
 package com.greenhouse.backend.settlement.application;
 
+import com.greenhouse.backend.common.api.PageResponse;
 import com.greenhouse.backend.common.application.RequestActorProvider;
 import com.greenhouse.backend.common.config.TimeConfig;
 import com.greenhouse.backend.common.exception.NotFoundException;
 import com.greenhouse.backend.partner.application.BusinessPartnerReader;
 import com.greenhouse.backend.settlement.domain.PartnerPaymentEvent;
+import com.greenhouse.backend.settlement.domain.PaymentEventType;
 import com.greenhouse.backend.settlement.domain.PaymentTargetType;
 import com.greenhouse.backend.settlement.dto.AuctionSettlementResponse;
 import com.greenhouse.backend.settlement.dto.ManualPaymentRequest;
@@ -14,6 +16,8 @@ import com.greenhouse.backend.settlement.repository.PartnerPaymentEventRepositor
 import java.time.Clock;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -21,6 +25,7 @@ import org.springframework.transaction.annotation.Transactional;
 @Transactional
 @RequiredArgsConstructor
 public class PaymentService {
+	private static final int LEGACY_LIST_LIMIT = 500;
 	private final PartnerPaymentEventRepository eventRepository;
 	private final AuctionSettlementRepository auctionSettlementRepository;
 	private final PaymentLedgerService paymentLedgerService;
@@ -57,11 +62,20 @@ public class PaymentService {
 			Long partnerId,
 			PaymentTargetType targetType,
 			Long targetId) {
-		var events = eventRepository.search(partnerId, targetType, targetId);
+		return eventResponses(eventRepository.search(partnerId, targetType, targetId, null,
+				PageRequest.of(0, LEGACY_LIST_LIMIT))).getContent();
+	}
+
+	@Transactional(readOnly = true)
+	public PageResponse<PartnerPaymentEventResponse> getEventPage(Long partnerId, PaymentTargetType targetType,
+			Long targetId, PaymentEventType eventType, int page, int size) {
+		return PageResponse.from(eventResponses(eventRepository.search(partnerId, targetType, targetId, eventType,
+				PageRequest.of(Math.max(page, 0), Math.min(Math.max(size, 1), 100)))));
+	}
+
+	private Page<PartnerPaymentEventResponse> eventResponses(Page<PartnerPaymentEvent> events) {
 		var partners = partnerReader.getAllInfo(events.stream().map(PartnerPaymentEvent::getPartnerId).toList());
-		return events.stream()
-				.map(event -> PartnerPaymentEventResponse.from(event, partners.get(event.getPartnerId()).name()))
-				.toList();
+		return events.map(event -> PartnerPaymentEventResponse.from(event, partners.get(event.getPartnerId()).name()));
 	}
 
 	private String defaultWorker(String value) {

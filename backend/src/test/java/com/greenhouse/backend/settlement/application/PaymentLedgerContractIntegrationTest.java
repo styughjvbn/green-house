@@ -13,6 +13,7 @@ import com.greenhouse.backend.settlement.repository.PartnerBalanceSummaryReposit
 import com.greenhouse.backend.settlement.repository.PartnerPaymentEventRepository;
 import jakarta.persistence.EntityManager;
 import java.time.LocalDate;
+import org.springframework.data.domain.PageRequest;
 import java.util.concurrent.atomic.AtomicReference;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -51,7 +52,7 @@ class PaymentLedgerContractIntegrationTest {
 		entityManager.flush();
 		entityManager.clear();
 
-		var events = eventRepository.search(partner.getId(), PaymentTargetType.SALES_SLIP, TARGET_ID);
+		var events = eventRepository.search(partner.getId(), PaymentTargetType.SALES_SLIP, TARGET_ID, null, PageRequest.of(0, 100)).getContent();
 		assertThat(events).hasSize(2);
 		assertThat(events.getFirst().getEventType()).isEqualTo(PaymentEventType.MANUAL_MATCH_CONFIRMED);
 		assertThat(events.getFirst().getParentEvent().getId()).isEqualTo(receipt);
@@ -87,7 +88,7 @@ class PaymentLedgerContractIntegrationTest {
 		assertThatThrownBy(() -> ledger.findManualPayment(
 				PaymentTargetType.SALES_SLIP, TARGET_ID, payment(1_000L, PAYMENT_DATE.plusDays(1))))
 				.isInstanceOf(IllegalArgumentException.class);
-		assertThat(eventRepository.search(partner.getId(), null, null)).hasSize(2);
+		assertThat(eventRepository.search(partner.getId(), null, null, null, PageRequest.of(0, 100)).getContent()).hasSize(2);
 	}
 
 	@Test
@@ -111,7 +112,7 @@ class PaymentLedgerContractIntegrationTest {
 			throw new IllegalStateException("후속 처리 실패");
 		})).isInstanceOf(IllegalStateException.class).hasMessage("후속 처리 실패");
 
-		assertThat(eventRepository.search(partner.getId(), null, null)).isEmpty();
+		assertThat(eventRepository.search(partner.getId(), null, null, null, PageRequest.of(0, 100)).getContent()).isEmpty();
 		assertThat(balanceRepository.findByPartnerId(partner.getId())).isEmpty();
 		assertThat(auditRepository.findAll().stream()
 				.filter(event -> event.getEntityType().equals("PAYMENT_EVENT"))

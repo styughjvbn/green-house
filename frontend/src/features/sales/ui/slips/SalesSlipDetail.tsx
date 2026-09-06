@@ -258,9 +258,12 @@ export function SalesSlipDetail({
                 remainingAmount={salesSlip.remainingAmount}
                 expectedPaymentDate={salesSlip.expectedPaymentDate}
                 onConfirm={async (payload) => {
-                  onPaymentConfirmed(
-                    await confirmSalesSlipPayment(salesSlip.id, payload),
+                  const updated = await confirmSalesSlipPayment(
+                    salesSlip.id,
+                    payload,
                   );
+                  onPaymentConfirmed(updated);
+                  return updated.remainingAmount;
                 }}
               />
             </div>

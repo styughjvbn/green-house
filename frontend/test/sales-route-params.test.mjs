@@ -7,6 +7,7 @@ import {
   readCreateSlip,
   readSalesRouteState,
   readSettlementRouteState,
+  readPaymentHistoryPage,
 } from "../src/features/sales/lib/salesRouteParams.ts";
 
 test("sales route state reads filters, paging, and create request", () => {
@@ -47,6 +48,23 @@ test("settlement pages and detail selection have the same server and browser URL
   assert.deepEqual(
     readSettlementRouteState(new URLSearchParams(values)),
     expected,
+  );
+});
+
+test("payment history URL distinguishes closed, first, and later pages", () => {
+  assert.equal(readPaymentHistoryPage(new URLSearchParams()), null);
+  for (const value of ["", "0", "-1", "invalid", "Infinity", "1.5"]) {
+    assert.equal(
+      readPaymentHistoryPage(new URLSearchParams({ paymentPage: value })),
+      0,
+    );
+  }
+  assert.equal(readPaymentHistoryPage(new URLSearchParams("paymentPage=2")), 2);
+  assert.equal(
+    readPaymentHistoryPage(
+      createServerSearchParamReader({ paymentPage: ["2", "4"] }),
+    ),
+    2,
   );
 });
 

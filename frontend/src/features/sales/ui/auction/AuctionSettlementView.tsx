@@ -104,6 +104,7 @@ export function AuctionSettlementView() {
       params.set("page", String(page));
       params.set("size", String(size));
       params.delete("settlementId");
+      params.delete("paymentPage");
     }, "push");
   }
   const columns = useMemo<ColumnDef<AuctionSettlementListItem, unknown>[]>(
@@ -252,10 +253,10 @@ export function AuctionSettlementView() {
           onPageChange={(page) => changePage(page)}
           onPageSizeChange={(size) => changePage(0, size)}
           onRowClick={(row) =>
-            writeUrlParams(
-              (params) => params.set("settlementId", String(row.id)),
-              "push",
-            )
+            writeUrlParams((params) => {
+              params.set("settlementId", String(row.id));
+              params.delete("paymentPage");
+            }, "push")
           }
         />
 
@@ -334,9 +335,12 @@ function SettlementDetail({
         remainingAmount={settlement.remainingAmount}
         expectedPaymentDate={settlement.expectedPaymentDate}
         onConfirm={async (payload) => {
-          await onUpdate(
-            await confirmAuctionSettlementPayment(settlement.id, payload),
+          const updated = await confirmAuctionSettlementPayment(
+            settlement.id,
+            payload,
           );
+          await onUpdate(updated);
+          return updated.remainingAmount;
         }}
       />
     </DetailCard>

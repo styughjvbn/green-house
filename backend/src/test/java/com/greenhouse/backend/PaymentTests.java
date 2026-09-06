@@ -25,7 +25,9 @@ import com.greenhouse.backend.sales.domain.SalesSlipItem;
 import com.greenhouse.backend.sales.domain.SalesType;
 import com.greenhouse.backend.sales.repository.SalesSlipRepository;
 import com.greenhouse.backend.settlement.application.AuctionSettlementService;
+import com.greenhouse.backend.settlement.domain.PartnerPaymentEvent;
 import com.greenhouse.backend.settlement.domain.PaymentEventType;
+import com.greenhouse.backend.settlement.domain.PaymentTargetType;
 import com.greenhouse.backend.settlement.repository.PartnerPaymentEventRepository;
 import java.time.LocalDate;
 import org.junit.jupiter.api.Test;
@@ -154,6 +156,81 @@ class PaymentTests {
 				.containsExactly("PAYMENT_EVENT", "AUCTION_SETTLEMENT");
 		assertThat(audits.getLast().getChangedFields())
 				.containsExactly("paidAmount", "remainingAmount", "paymentStatus");
+	}
+
+	@Test
+	void filtersBeforePagingAndPreservesOrderAndParentIdentifiers() throws Exception {
+		var partner = partnerRepository.saveAndFlush(
+				new BusinessPartner("입금 이력", PartnerType.AUCTION_HOUSE, null, null, null, null));
+		var other = partnerRepository.saveAndFlush(
+				new BusinessPartner("다른 거래처", PartnerType.WHOLESALE, null, null, null, null));
+		var date = LocalDate.of(2046, 1, 1);
+		var oldest = createPayment(partner, PaymentTargetType.AUCTION_SETTLEMENT, 88L, date, 100L);
+		var firstOnLatestDate = createPayment(partner, PaymentTargetType.AUCTION_SETTLEMENT, 88L, date.plusDays(1), 200L);
+		var latest = createPayment(partner, PaymentTargetType.AUCTION_SETTLEMENT, 88L, date.plusDays(1), 300L);
+		createPayment(other, PaymentTargetType.AUCTION_SETTLEMENT, 88L, date.plusDays(1), 400L);
+		createPayment(partner, PaymentTargetType.SALES_SLIP, 88L, date.plusDays(1), 500L);
+		createPayment(partner, PaymentTargetType.AUCTION_SETTLEMENT, 89L, date.plusDays(1), 600L);
+
+		mockMvc.perform(get("/api/partner-payment-events/page")
+				.param("partnerId", partner.getId().toString()).param("targetType", "AUCTION_SETTLEMENT")
+				.param("targetId", "88").param("eventType", "PAYMENT_RECEIVED").param("size", "2"))
+				.andExpect(status().isOk()).andExpect(jsonPath("$.data.totalElements").value(3))
+				.andExpect(jsonPath("$.data.totalPages").value(2))
+				.andExpect(jsonPath("$.data.content.length()").value(2))
+				.andExpect(jsonPath("$.data.content[0].id").value(latest.getId()))
+				.andExpect(jsonPath("$.data.content[1].id").value(firstOnLatestDate.getId()));
+		mockMvc.perform(get("/api/partner-payment-events/page")
+				.param("partnerId", partner.getId().toString()).param("targetType", "AUCTION_SETTLEMENT")
+				.param("targetId", "88").param("eventType", "PAYMENT_RECEIVED").param("size", "2").param("page", "1"))
+				.andExpect(status().isOk()).andExpect(jsonPath("$.data.totalElements").value(3))
+				.andExpect(jsonPath("$.data.content.length()").value(1))
+				.andExpect(jsonPath("$.data.content[0].id").value(oldest.getId()));
+		mockMvc.perform(get("/api/partner-payment-events/page")
+				.param("partnerId", partner.getId().toString()).param("targetType", "AUCTION_SETTLEMENT")
+				.param("targetId", "88").param("eventType", "MANUAL_MATCH_CONFIRMED"))
+				.andExpect(status().isOk()).andExpect(jsonPath("$.data.totalElements").value(3))
+				.andExpect(jsonPath("$.data.content[0].parentEventId").value(latest.getId()));
+		mockMvc.perform(get("/api/partner-payment-events/page"))
+				.andExpect(status().isOk()).andExpect(jsonPath("$.data.totalElements").value(12))
+				.andExpect(jsonPath("$.data.size").value(10));
+		mockMvc.perform(get("/api/partner-payment-events/page").param("page", "99").param("size", "2"))
+				.andExpect(status().isOk()).andExpect(jsonPath("$.data.content").isEmpty())
+				.andExpect(jsonPath("$.data.totalElements").value(12));
+		mockMvc.perform(get("/api/partner-payment-events/page").param("partnerId", "-1"))
+				.andExpect(status().isOk()).andExpect(jsonPath("$.data.totalElements").value(0));
+		mockMvc.perform(get("/api/partner-payment-events/page").param("page", "-1").param("size", "0"))
+				.andExpect(status().isOk()).andExpect(jsonPath("$.data.page").value(0))
+				.andExpect(jsonPath("$.data.size").value(1));
+		mockMvc.perform(get("/api/partner-payment-events/page").param("size", "101"))
+				.andExpect(status().isOk()).andExpect(jsonPath("$.data.size").value(100));
+	}
+
+	@Test
+	void compatibilityLimitPreservesTheFullLedgerAndPagedHistory() throws Exception {
+		var partner = partnerRepository.saveAndFlush(
+				new BusinessPartner("누적 입금 이력", PartnerType.WHOLESALE, null, null, null, null));
+		for (int index = 0; index < 251; index++) {
+			createPayment(partner, PaymentTargetType.SALES_SLIP, 88L, LocalDate.of(2046, 1, 1).plusDays(index), 100L);
+		}
+		mockMvc.perform(get("/api/partner-payment-events").param("partnerId", partner.getId().toString()))
+				.andExpect(status().isOk()).andExpect(jsonPath("$.data.length()").value(500))
+				.andExpect(jsonPath("$.data[0].eventDate").value(LocalDate.of(2046, 1, 1).plusDays(250).toString()))
+				.andExpect(jsonPath("$.data[499].eventDate").value("2046-01-02"));
+		mockMvc.perform(get("/api/partner-payment-events/page").param("partnerId", partner.getId().toString())
+				.param("eventType", "PAYMENT_RECEIVED").param("page", "25"))
+				.andExpect(status().isOk()).andExpect(jsonPath("$.data.totalElements").value(251))
+				.andExpect(jsonPath("$.data.content.length()").value(1))
+				.andExpect(jsonPath("$.data.content[0].eventDate").value("2046-01-01"));
+		assertThat(eventRepository.count()).isEqualTo(502);
+	}
+
+	private PartnerPaymentEvent createPayment(BusinessPartner partner, PaymentTargetType type, Long targetId,
+			LocalDate date, long amount) {
+		var received = eventRepository.saveAndFlush(PartnerPaymentEvent.received(partner.getId(), date, amount,
+				type, targetId, "계좌이체", "입금자", null, null, "확인자"));
+		eventRepository.saveAndFlush(PartnerPaymentEvent.manualMatch(received));
+		return received;
 	}
 
 	private String paymentJson(long amount) {

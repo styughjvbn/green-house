@@ -88,6 +88,8 @@ npm run api:types
 
 경매 정산 조회는 `/api/auction-settlements/page`로 요약 목록을, `/api/auction-settlements/summary`로 같은 조건의 전체 금액 합계를 요청한다. 정산 결과 행은 단건 조회에서 받는다. 기존 `/api/auction-settlements`는 최신 500건으로 제한된 호환 경로이므로 전체 합계 계산에 사용하지 않는다.
 
+입금 이력은 `/api/partner-payment-events/page`를 사용한다. 입금만 표시할 때는 이벤트 유형을 서버 필터로 지정해야 페이지 총건수와 내용이 일치한다. 유형을 생략하면 연결 이벤트를 포함한 전체 원장을 조회한다. 기존 `/api/partner-payment-events`는 최신 500개 이벤트로 제한된 호환 경로다.
+
 ## 4. 공통 응답
 
 성공:

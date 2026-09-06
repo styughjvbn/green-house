@@ -44,6 +44,7 @@ import com.greenhouse.backend.settlement.repository.AuctionSettlementRepository;
 import com.greenhouse.backend.settlement.repository.PartnerPaymentEventRepository;
 import com.greenhouse.backend.settlement.repository.PartnerSettlementSettingsRepository;
 import java.time.LocalDate;
+import org.springframework.data.domain.PageRequest;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.Callable;
@@ -148,7 +149,7 @@ class PartnerSettlementPostgresE2ETest extends WorkE2ETestBase {
 
 		assertThat(balanceService.getBalance(partner.getId()).receivableBalance()).isEqualTo(150_000L);
 		assertThat(balanceRepository.findByPartnerId(partner.getId())).isPresent();
-		assertThat(eventRepository.search(partner.getId(), null, null))
+		assertThat(eventRepository.search(partner.getId(), null, null, null, PageRequest.of(0, 100)).getContent())
 				.extracting(event -> event.getEventType()).containsExactlyInAnyOrder(
 						PaymentEventType.PAYMENT_RECEIVED, PaymentEventType.MANUAL_MATCH_CONFIRMED,
 						PaymentEventType.PAYMENT_RECEIVED, PaymentEventType.MANUAL_MATCH_CONFIRMED);
@@ -176,6 +177,7 @@ class PartnerSettlementPostgresE2ETest extends WorkE2ETestBase {
 
 	@Test
 	void concurrentAuctionPaymentsAndReplaysKeepOneLedgerResultPerKey() throws Exception {
+		long originalEventCount = eventRepository.count();
 		var house = partnerRepository.saveAndFlush(new BusinessPartner(
 				"동시 경매 입금", PartnerType.AUCTION_HOUSE, null, null, null, null));
 		var date = LocalDate.of(2040, 1, 3);
@@ -209,8 +211,16 @@ class PartnerSettlementPostgresE2ETest extends WorkE2ETestBase {
 		assertThat(totals.expectedDepositAmount()).isEqualTo(100_000L);
 		assertThat(totals.remainingAmount()).isEqualTo(50_000L);
 		assertThat(settlementService.getSummary(-1L, null, null, null).remainingAmount()).isZero();
-		assertThat(eventRepository.search(house.getId(), PaymentTargetType.AUCTION_SETTLEMENT, settlement.id()))
+		assertThat(eventRepository.search(house.getId(), PaymentTargetType.AUCTION_SETTLEMENT, settlement.id(), null, PageRequest.of(0, 100)).getContent())
 				.hasSize(4);
+		var history = paymentService.getEventPage(house.getId(), PaymentTargetType.AUCTION_SETTLEMENT, settlement.id(),
+				PaymentEventType.PAYMENT_RECEIVED, 0, 1);
+		assertThat(history.totalElements()).isEqualTo(2);
+		assertThat(history.content()).singleElement().satisfies(event ->
+				assertThat(event.eventType()).isEqualTo(PaymentEventType.PAYMENT_RECEIVED));
+		assertThat(paymentService.getEventPage(null, null, null, null, 0, 100).totalElements())
+				.isEqualTo(originalEventCount + 4);
+		assertThat(paymentService.getEventPage(-1L, null, null, null, 0, 100).totalElements()).isZero();
 		assertThat(balanceService.getBalance(house.getId()).receivableBalance()).isZero();
 	}
 
@@ -225,7 +235,7 @@ class PartnerSettlementPostgresE2ETest extends WorkE2ETestBase {
 		})).isInstanceOf(IllegalStateException.class).hasMessage("후속 처리 실패");
 
 		assertThat(salesSlipRepository.findById(slip.getId()).orElseThrow().getPaidAmount()).isZero();
-		assertThat(eventRepository.search(partner.getId(), null, null)).isEmpty();
+		assertThat(eventRepository.search(partner.getId(), null, null, null, PageRequest.of(0, 100)).getContent()).isEmpty();
 		assertThat(balanceRepository.findByPartnerId(partner.getId())).isEmpty();
 		assertThat(auditRepository.findAll().stream()
 				.filter(event -> event.getEntityType().equals("SALES_SLIP"))

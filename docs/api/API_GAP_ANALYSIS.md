@@ -119,6 +119,7 @@
 - `POST /api/auction-settlements/{settlementId}/confirm-payment`
 - `GET /api/business-partners/{partnerId}/balance-summary`
 - `GET /api/partner-payment-events`
+- `GET /api/partner-payment-events/page`
 - `POST /api/sales-slips/{salesSlipId}/confirm-payment`
 
 ## 과거 초안에는 있으나 현재 OpenAPI에 없는 endpoint

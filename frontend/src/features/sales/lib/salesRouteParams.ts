@@ -144,6 +144,15 @@ export function readSettlementRouteState(
   };
 }
 
+export function readPaymentHistoryPage(
+  params: SearchParamReader,
+): number | null {
+  const value = params.get("paymentPage");
+  return value == null
+    ? null
+    : readBoundedIntegerValue(value, 0, 0, 2_147_483_647);
+}
+
 function readBoundedIntegerValue(
   value: string | null,
   defaultValue: number,

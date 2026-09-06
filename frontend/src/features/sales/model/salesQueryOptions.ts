@@ -1,3 +1,4 @@
+import type { PaymentTargetType } from "@/entities/farm/types";
 import { queryOptions } from "@tanstack/react-query";
 import {
   getAuctionLots,
@@ -7,6 +8,7 @@ import {
   getAuctionTrackingSummary,
   getBusinessPartnerPage,
   getBusinessPartners,
+  getReceivedPaymentPage,
   getSalesSlip,
   getSalesSlipPage,
 } from "../api/salesApi";
@@ -97,5 +99,23 @@ export function auctionSettlementDetailQueryOptions(id: number) {
   return queryOptions({
     queryKey: salesQueryKeys.auction.settlementDetail(id),
     queryFn: ({ signal }) => getAuctionSettlement(id, signal),
+  });
+}
+
+export function receivedPaymentPageQueryOptions(
+  targetType: PaymentTargetType,
+  targetId: number,
+  page: number,
+) {
+  const size = 10;
+  return queryOptions({
+    queryKey: salesQueryKeys.payments.receivedPage(
+      targetType,
+      targetId,
+      page,
+      size,
+    ),
+    queryFn: ({ signal }) =>
+      getReceivedPaymentPage(targetType, targetId, page, size, signal),
   });
 }

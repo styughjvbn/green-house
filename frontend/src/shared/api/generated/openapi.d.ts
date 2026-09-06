@@ -1298,7 +1298,28 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
+        /**
+         * @deprecated
+         * @description 호환용 목록. 입금일·ID 역순으로 최신 500건까지 반환합니다. 운영 화면은 /partner-payment-events/page를 사용합니다.
+         */
         get: operations["getEvents"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/partner-payment-events/page": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description 조건에 맞는 입금 이벤트를 입금일·ID 역순으로 조회합니다. 유형 필터는 페이지 조회 전 적용됩니다. page는 0 이상, size는 1~100으로 보정합니다. */
+        get: operations["getPaymentEventPage"];
         put?: never;
         post?: never;
         delete?: never;
@@ -3551,6 +3572,21 @@ export interface components {
             status?: "UNAPPLIED" | "PARTIALLY_APPLIED" | "FULLY_APPLIED" | "CANDIDATE" | "CONFIRMED" | "REJECTED" | "CANCELLED";
             memo?: string;
             createdBy?: string;
+        };
+        ApiResponsePageResponsePartnerPaymentEventResponse: {
+            data?: components["schemas"]["PageResponsePartnerPaymentEventResponse"];
+            message?: string;
+        };
+        PageResponsePartnerPaymentEventResponse: {
+            content?: components["schemas"]["PartnerPaymentEventResponse"][];
+            /** Format: int32 */
+            page?: number;
+            /** Format: int32 */
+            size?: number;
+            /** Format: int64 */
+            totalElements?: number;
+            /** Format: int32 */
+            totalPages?: number;
         };
         ApiResponseListOrchidGroupWorkHistoryResponse: {
             data?: components["schemas"]["OrchidGroupWorkHistoryResponse"][];
@@ -6583,6 +6619,33 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ApiResponseListPartnerPaymentEventResponse"];
+                };
+            };
+        };
+    };
+    getPaymentEventPage: {
+        parameters: {
+            query?: {
+                partnerId?: number;
+                targetType?: "SALES_SLIP" | "AUCTION_SETTLEMENT" | "NONE";
+                targetId?: number;
+                eventType?: "PAYMENT_RECEIVED" | "PAYMENT_ALLOCATED" | "PREPAYMENT_RECEIVED" | "CREDIT_APPLIED" | "CREDIT_REFUND" | "AUTO_MATCH_CANDIDATE" | "AUTO_MATCH_CONFIRMED" | "MANUAL_MATCH_CONFIRMED" | "MATCH_REJECTED" | "PAYMENT_UNLINKED" | "ADJUSTMENT";
+                page?: number;
+                size?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiResponsePageResponsePartnerPaymentEventResponse"];
                 };
             };
         };

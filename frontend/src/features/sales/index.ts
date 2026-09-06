@@ -17,7 +17,6 @@ export {
   rebuildAuctionSettlement,
   createBusinessPartner,
   getPartnerSettlementSettings,
-  getPaymentEvents,
   updatePartnerSettlementSettings,
   createSalesSlip,
 } from "./api/salesApi";

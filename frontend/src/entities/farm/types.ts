@@ -687,37 +687,13 @@ export type AuctionSettlement = {
   lines: AuctionSettlementLine[];
 };
 
-export type PaymentTargetType = "SALES_SLIP" | "AUCTION_SETTLEMENT" | "NONE";
-
-export type PartnerPaymentEvent = {
-  id: number;
-  partnerId: number;
-  partnerName: string;
-  eventType:
-    | "PAYMENT_RECEIVED"
-    | "PAYMENT_ALLOCATED"
-    | "PREPAYMENT_RECEIVED"
-    | "CREDIT_APPLIED"
-    | "CREDIT_REFUND"
-    | "AUTO_MATCH_CANDIDATE"
-    | "AUTO_MATCH_CONFIRMED"
-    | "MANUAL_MATCH_CONFIRMED"
-    | "MATCH_REJECTED"
-    | "PAYMENT_UNLINKED"
-    | "ADJUSTMENT";
-  eventDate: string;
-  amount: number;
-  unappliedAmount: number;
-  targetType: PaymentTargetType;
-  targetId: number;
-  parentEventId: number | null;
-  paymentMethod: string | null;
-  depositorName: string | null;
-  description: string | null;
-  status: string;
-  memo: string | null;
-  createdBy: string | null;
-};
+export type PaymentTargetType = NonNullable<
+  ApiSchemas["PartnerPaymentEventResponse"]["targetType"]
+>;
+export type PartnerPaymentEvent = Required<
+  ApiSchemas["PartnerPaymentEventResponse"]
+>;
+export type PartnerPaymentEventPage = Page<PartnerPaymentEvent>;
 
 export type PartnerBalanceSummary = {
   partnerId: number;
