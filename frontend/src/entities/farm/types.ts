@@ -642,14 +642,17 @@ export type AuctionTrackingSummary = {
   totalAmount: number;
 };
 
-export type AuctionSettlementStatus =
-  | "CREATED"
-  | "PAYMENT_WAITING"
-  | "PARTIALLY_PAID"
-  | "PAID"
-  | "AMOUNT_MISMATCH"
-  | "REVIEW_REQUIRED"
-  | "CANCELLED";
+export type AuctionSettlementStatus = NonNullable<
+  ApiSchemas["AuctionSettlementResponse"]["status"]
+>;
+
+export type AuctionSettlementListItem = Required<
+  ApiSchemas["AuctionSettlementListItemResponse"]
+>;
+export type AuctionSettlementPage = Page<AuctionSettlementListItem>;
+export type AuctionSettlementSummary = Required<
+  ApiSchemas["AuctionSettlementSummaryResponse"]
+>;
 
 export type AuctionSettlementLine = {
   id: number;

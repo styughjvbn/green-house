@@ -20,9 +20,11 @@ import com.greenhouse.backend.partner.domain.BusinessPartner;
 import com.greenhouse.backend.partner.domain.PartnerType;
 import com.greenhouse.backend.partner.repository.BusinessPartnerRepository;
 import com.greenhouse.backend.settlement.application.AuctionSettlementService;
+import com.greenhouse.backend.settlement.domain.AuctionSettlement;
 import com.greenhouse.backend.settlement.domain.AuctionSettlementStatus;
 import com.greenhouse.backend.settlement.repository.AuctionSettlementRepository;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -117,6 +119,109 @@ class AuctionSettlementTests {
 				.param("auctionDate", auctionDate.toString()))
 			.andExpect(status().isOk())
 			.andExpect(jsonPath("$.data.id").value(rebuilt.id()));
+	}
+
+	@Test
+	void pagesSummariesAndAggregatesTheSameFiltersAcrossAllPages() throws Exception {
+		var house = partnerRepository.saveAndFlush(
+				new BusinessPartner("목록 경매장", PartnerType.AUCTION_HOUSE, null, null, null, null));
+		var otherHouse = partnerRepository.saveAndFlush(
+				new BusinessPartner("다른 경매장", PartnerType.AUCTION_HOUSE, null, null, null, null));
+		var firstDate = LocalDate.of(2044, 1, 1);
+		var first = createSettlement(house, firstDate, 1_000_000_000);
+		var second = createSettlement(house, firstDate.plusDays(1), 1_000_000_000);
+		var third = createSettlement(house, firstDate.plusDays(2), 1_000_000_000);
+		var other = createSettlement(otherHouse, firstDate.plusDays(1), 1_000_000_000);
+		first.recordPayment(1_000_000_000L, "테스트", LocalDateTime.of(2044, 1, 4, 0, 0));
+		second.recordPayment(100_000_000L, "테스트", LocalDateTime.of(2044, 1, 4, 0, 0));
+		settlementRepository.flush();
+
+		mockMvc.perform(get("/api/auction-settlements/page").param("size", "2"))
+				.andExpect(status().isOk())
+				.andExpect(jsonPath("$.data.totalElements").value(4))
+				.andExpect(jsonPath("$.data.totalPages").value(2))
+				.andExpect(jsonPath("$.data.content.length()").value(2))
+				.andExpect(jsonPath("$.data.content[0].id").value(third.getId()))
+				.andExpect(jsonPath("$.data.content[1].id").value(other.getId()))
+				.andExpect(jsonPath("$.data.content[0].lines").doesNotExist());
+		mockMvc.perform(get("/api/auction-settlements/page").param("page", "1").param("size", "2"))
+				.andExpect(status().isOk())
+				.andExpect(jsonPath("$.data.content[0].id").value(second.getId()))
+				.andExpect(jsonPath("$.data.content[1].id").value(first.getId()));
+		mockMvc.perform(get("/api/auction-settlements/summary"))
+				.andExpect(status().isOk())
+				.andExpect(jsonPath("$.data.expectedDepositAmount").value(4_000_000_000L))
+				.andExpect(jsonPath("$.data.remainingAmount").value(2_900_000_000L));
+		mockMvc.perform(get("/api/auction-settlements/page")
+				.param("auctionHouseId", house.getId().toString())
+				.param("from", firstDate.toString()).param("to", firstDate.plusDays(1).toString()))
+				.andExpect(status().isOk()).andExpect(jsonPath("$.data.totalElements").value(2))
+				.andExpect(jsonPath("$.data.content[0].id").value(second.getId()))
+				.andExpect(jsonPath("$.data.content[1].id").value(first.getId()));
+		mockMvc.perform(get("/api/auction-settlements/summary")
+				.param("auctionHouseId", house.getId().toString())
+				.param("from", firstDate.toString()).param("to", firstDate.plusDays(1).toString()))
+				.andExpect(status().isOk()).andExpect(jsonPath("$.data.expectedDepositAmount").value(2_000_000_000L))
+				.andExpect(jsonPath("$.data.remainingAmount").value(900_000_000L));
+
+		for (var path : new String[] { "/page", "/summary" }) {
+			var result = mockMvc.perform(get("/api/auction-settlements" + path)
+					.param("auctionHouseId", house.getId().toString())
+					.param("from", firstDate.toString()).param("to", firstDate.plusDays(1).toString())
+					.param("status", "PARTIALLY_PAID"))
+					.andExpect(status().isOk());
+			if (path.equals("/page")) {
+				result.andExpect(jsonPath("$.data.totalElements").value(1))
+						.andExpect(jsonPath("$.data.content[0].id").value(second.getId()));
+			} else {
+				result.andExpect(jsonPath("$.data.expectedDepositAmount").value(1_000_000_000L))
+						.andExpect(jsonPath("$.data.remainingAmount").value(900_000_000L));
+			}
+		}
+		mockMvc.perform(get("/api/auction-settlements/page").param("page", "8").param("size", "2"))
+				.andExpect(status().isOk())
+				.andExpect(jsonPath("$.data.content").isEmpty())
+				.andExpect(jsonPath("$.data.totalElements").value(4));
+		mockMvc.perform(get("/api/auction-settlements/page").param("page", "-1").param("size", "0"))
+				.andExpect(status().isOk()).andExpect(jsonPath("$.data.page").value(0))
+				.andExpect(jsonPath("$.data.size").value(1));
+		mockMvc.perform(get("/api/auction-settlements/page").param("size", "101"))
+				.andExpect(status().isOk()).andExpect(jsonPath("$.data.size").value(100));
+		mockMvc.perform(get("/api/auction-settlements/{id}", second.getId()))
+				.andExpect(status().isOk()).andExpect(jsonPath("$.data.lines.length()").value(1));
+	}
+
+	@Test
+	void emptySummaryIsZeroAndLegacyLimitDoesNotTruncateGlobalTotals() throws Exception {
+		mockMvc.perform(get("/api/auction-settlements/summary").param("auctionHouseId", "-1"))
+				.andExpect(status().isOk()).andExpect(jsonPath("$.data.expectedDepositAmount").value(0))
+				.andExpect(jsonPath("$.data.remainingAmount").value(0));
+		var house = partnerRepository.saveAndFlush(
+				new BusinessPartner("누적 경매장", PartnerType.AUCTION_HOUSE, null, null, null, null));
+		var firstDate = LocalDate.of(2045, 1, 1);
+		var oldest = createSettlement(house, firstDate, 1_000);
+		for (int index = 1; index <= 500; index++) {
+			settlementRepository.save(new AuctionSettlement(house.getId(), firstDate.plusDays(index)));
+		}
+		settlementRepository.flush();
+
+		var legacy = settlementService.getSettlements(house.getId(), null, null, null);
+		assertThat(legacy).hasSize(500);
+		assertThat(legacy.getFirst().auctionDate()).isEqualTo(firstDate.plusDays(500));
+		assertThat(legacy.getLast().auctionDate()).isEqualTo(firstDate.plusDays(1));
+		assertThat(legacy).noneMatch(row -> row.id().equals(oldest.getId()));
+		mockMvc.perform(get("/api/auction-settlements/page").param("auctionHouseId", house.getId().toString()))
+				.andExpect(status().isOk()).andExpect(jsonPath("$.data.totalElements").value(501))
+				.andExpect(jsonPath("$.data.size").value(10));
+		mockMvc.perform(get("/api/auction-settlements/summary").param("auctionHouseId", house.getId().toString()))
+				.andExpect(status().isOk()).andExpect(jsonPath("$.data.expectedDepositAmount").value(1_000))
+				.andExpect(jsonPath("$.data.remainingAmount").value(1_000));
+	}
+
+	private AuctionSettlement createSettlement(BusinessPartner house, LocalDate date, int amount) {
+		createResult(house, date.minusDays(1), date, "카틀레야", 1, amount);
+		var response = settlementService.rebuild(house.getId(), date);
+		return settlementRepository.findById(response.id()).orElseThrow();
 	}
 
 	private void createResult(

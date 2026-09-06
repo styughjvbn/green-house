@@ -14,7 +14,6 @@ export {
   getAuctionShipmentOptions,
   getAuctionLots,
   getAuctionTrackingSummary,
-  getAuctionSettlements,
   rebuildAuctionSettlement,
   createBusinessPartner,
   getPartnerSettlementSettings,

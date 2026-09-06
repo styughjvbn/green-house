@@ -26,6 +26,11 @@ export const salesQueryKeys = {
     lots: (filters: AuctionFilterState, page: number, size: number) =>
       ["sales", "auctionTracking", "lots", filters, page, size] as const,
     summary: ["sales", "auctionTracking", "summary"] as const,
-    settlements: ["sales", "auctionSettlements"] as const,
+    settlementPages: ["sales", "auctionSettlements", "pages"] as const,
+    settlementPage: (page: number, size: number) =>
+      ["sales", "auctionSettlements", "pages", page, size] as const,
+    settlementSummary: ["sales", "auctionSettlements", "summary"] as const,
+    settlementDetail: (id: number) =>
+      ["sales", "auctionSettlements", "detail", id] as const,
   },
 };

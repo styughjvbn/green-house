@@ -14,7 +14,8 @@ import type {
   AuctionTrackingSummary,
   AuctionShipmentOption,
   AuctionSettlement,
-  AuctionSettlementStatus,
+  AuctionSettlementPage,
+  AuctionSettlementSummary,
 } from "@/entities/farm/types";
 import type {
   AuctionFilterState,
@@ -134,18 +135,29 @@ export function getAuctionTrackingSummary() {
   return fetchApi<AuctionTrackingSummary>("/auction-tracking/summary");
 }
 
-export function getAuctionSettlements(filters?: {
-  auctionHouseId?: number;
-  from?: string;
-  to?: string;
-  status?: AuctionSettlementStatus;
-}) {
-  const params = new URLSearchParams();
-  Object.entries(filters ?? {}).forEach(([key, value]) => {
-    if (value != null && value !== "") params.set(key, String(value));
+export function getAuctionSettlementPage(
+  page: number,
+  size: number,
+  signal?: AbortSignal,
+) {
+  const params = new URLSearchParams({
+    page: String(page),
+    size: String(size),
   });
-  const query = params.size > 0 ? `?${params}` : "";
-  return fetchApi<AuctionSettlement[]>(`/auction-settlements${query}`);
+  return fetchApi<AuctionSettlementPage>(
+    `/auction-settlements/page?${params}`,
+    { signal },
+  );
+}
+
+export function getAuctionSettlementSummary(signal?: AbortSignal) {
+  return fetchApi<AuctionSettlementSummary>("/auction-settlements/summary", {
+    signal,
+  });
+}
+
+export function getAuctionSettlement(id: number, signal?: AbortSignal) {
+  return fetchApi<AuctionSettlement>(`/auction-settlements/${id}`, { signal });
 }
 
 export function rebuildAuctionSettlement(

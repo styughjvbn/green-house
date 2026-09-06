@@ -1,14 +1,19 @@
 import { queryOptions } from "@tanstack/react-query";
 import {
   getAuctionLots,
-  getAuctionSettlements,
+  getAuctionSettlement,
+  getAuctionSettlementPage,
+  getAuctionSettlementSummary,
   getAuctionTrackingSummary,
   getBusinessPartnerPage,
   getBusinessPartners,
   getSalesSlip,
   getSalesSlipPage,
 } from "../api/salesApi";
-import type { SalesRouteState } from "../lib/salesRouteParams";
+import type {
+  SalesRouteState,
+  SettlementRouteState,
+} from "../lib/salesRouteParams";
 import type {
   AuctionFilterState,
   BusinessPartnerFilterState,
@@ -73,9 +78,24 @@ export function auctionSummaryQueryOptions() {
   });
 }
 
-export function auctionSettlementsQueryOptions() {
+export function auctionSettlementPageQueryOptions(state: SettlementRouteState) {
   return queryOptions({
-    queryKey: salesQueryKeys.auction.settlements,
-    queryFn: () => getAuctionSettlements(),
+    queryKey: salesQueryKeys.auction.settlementPage(state.page, state.size),
+    queryFn: ({ signal }) =>
+      getAuctionSettlementPage(state.page, state.size, signal),
+  });
+}
+
+export function auctionSettlementSummaryQueryOptions() {
+  return queryOptions({
+    queryKey: salesQueryKeys.auction.settlementSummary,
+    queryFn: ({ signal }) => getAuctionSettlementSummary(signal),
+  });
+}
+
+export function auctionSettlementDetailQueryOptions(id: number) {
+  return queryOptions({
+    queryKey: salesQueryKeys.auction.settlementDetail(id),
+    queryFn: ({ signal }) => getAuctionSettlement(id, signal),
   });
 }

@@ -199,6 +199,16 @@ class PartnerSettlementPostgresE2ETest extends WorkE2ETestBase {
 
 		assertThat(settlementService.getSettlement(settlement.id()).paidAmount()).isEqualTo(50_000L);
 		assertThat(settlementService.getSettlement(settlement.id()).remainingAmount()).isEqualTo(50_000L);
+		var page = settlementService.getSettlementPage(house.getId(), date, date, null, 0, 1);
+		assertThat(page.totalElements()).isEqualTo(1);
+		assertThat(page.content()).singleElement().satisfies(row -> {
+			assertThat(row.id()).isEqualTo(settlement.id());
+			assertThat(row.remainingAmount()).isEqualTo(50_000L);
+		});
+		var totals = settlementService.getSummary(house.getId(), date, date, null);
+		assertThat(totals.expectedDepositAmount()).isEqualTo(100_000L);
+		assertThat(totals.remainingAmount()).isEqualTo(50_000L);
+		assertThat(settlementService.getSummary(-1L, null, null, null).remainingAmount()).isZero();
 		assertThat(eventRepository.search(house.getId(), PaymentTargetType.AUCTION_SETTLEMENT, settlement.id()))
 				.hasSize(4);
 		assertThat(balanceService.getBalance(house.getId()).receivableBalance()).isZero();

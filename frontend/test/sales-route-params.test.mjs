@@ -6,6 +6,7 @@ import {
   readBusinessPartnerRouteState,
   readCreateSlip,
   readSalesRouteState,
+  readSettlementRouteState,
 } from "../src/features/sales/lib/salesRouteParams.ts";
 
 test("sales route state reads filters, paging, and create request", () => {
@@ -34,6 +35,55 @@ test("sales route state reads filters, paging, and create request", () => {
     selectedSlipId: 42,
   });
   assert.equal(readCreateSlip(params), true);
+});
+
+test("settlement pages and detail selection have the same server and browser URL state", () => {
+  const values = { page: "2", size: "20", settlementId: "42" };
+  const expected = { page: 2, size: 20, selectedSettlementId: 42 };
+  assert.deepEqual(
+    readSettlementRouteState(createServerSearchParamReader(values)),
+    expected,
+  );
+  assert.deepEqual(
+    readSettlementRouteState(new URLSearchParams(values)),
+    expected,
+  );
+});
+
+test("settlement URLs normalize page bounds and reject invalid detail identifiers", () => {
+  assert.deepEqual(readSettlementRouteState(new URLSearchParams()), {
+    page: 0,
+    size: 10,
+    selectedSettlementId: null,
+  });
+  assert.deepEqual(
+    readSettlementRouteState(
+      new URLSearchParams("page=-1&size=200&settlementId=-2"),
+    ),
+    {
+      page: 0,
+      size: 100,
+      selectedSettlementId: null,
+    },
+  );
+  for (const value of ["NaN", "Infinity", "1.5", "not-a-number"]) {
+    assert.deepEqual(
+      readSettlementRouteState(
+        new URLSearchParams({ page: value, size: value, settlementId: value }),
+      ),
+      {
+        page: 0,
+        size: 10,
+        selectedSettlementId: null,
+      },
+    );
+  }
+  assert.equal(
+    readSettlementRouteState(new URLSearchParams("page=9999999999&size=0"))
+      .page,
+    2_147_483_647,
+  );
+  assert.equal(readSettlementRouteState(new URLSearchParams("size=0")).size, 1);
 });
 
 test("sales route state ignores invalid selected slip identifiers", () => {

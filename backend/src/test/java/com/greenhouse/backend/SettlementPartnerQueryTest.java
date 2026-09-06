@@ -49,7 +49,7 @@ class SettlementPartnerQueryTest {
 
 	@ParameterizedTest
 	@ValueSource(ints = { 1, 10, 50 })
-	void loadsSettlementNamesAndLinesWithoutPerRowQueries(int partnerCount) {
+	void pagesSettlementNamesWithoutLoadingLinesAndBoundsLegacyDetailQueries(int partnerCount) {
 		LocalDate from = LocalDate.of(2026, 9, 6);
 		for (int index = 0; index < partnerCount; index++) {
 			var house = new BusinessPartner("기존 경매장", PartnerType.AUCTION_HOUSE, null, null, null, null);
@@ -70,6 +70,17 @@ class SettlementPartnerQueryTest {
 		}
 		var statistics = flushAndResetStatistics();
 
+		var page = settlementService.getSettlementPage(null, from, from.plusDays(partnerCount),
+				AuctionSettlementStatus.PAYMENT_WAITING, 0, partnerCount);
+		assertThat(page.content()).hasSize(partnerCount);
+		assertThat(page.totalElements()).isEqualTo(partnerCount);
+		assertThat(page.content().getFirst().auctionHouseName()).isEqualTo("변경 경매장 " + (partnerCount - 1));
+		// Root page + count + one batch of partner names, regardless of row count.
+		assertThat(statistics.getPrepareStatementCount()).isEqualTo(3);
+		assertThat(statistics.getEntityStatistics(AuctionSettlementLine.class.getName()).getLoadCount()).isZero();
+		assertThat(statistics.getEntityStatistics(AuctionResultLine.class.getName()).getLoadCount()).isZero();
+		statistics = flushAndResetStatistics();
+
 		var settlements = settlementService.getSettlements(null, from, from.plusDays(partnerCount),
 				AuctionSettlementStatus.PAYMENT_WAITING);
 
@@ -84,7 +95,8 @@ class SettlementPartnerQueryTest {
 				assertThat(line.quantity()).isEqualTo(10);
 			});
 		}
-		assertThat(statistics.getPrepareStatementCount()).isLessThanOrEqualTo(3);
+		// Bounded roots + batch of lines + partner names + source display values.
+		assertThat(statistics.getPrepareStatementCount()).isEqualTo(4);
 	}
 
 	@Test

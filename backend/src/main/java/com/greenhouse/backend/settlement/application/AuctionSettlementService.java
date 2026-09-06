@@ -2,6 +2,7 @@ package com.greenhouse.backend.settlement.application;
 
 import com.greenhouse.backend.auction.application.AuctionDataReader.Result;
 import com.greenhouse.backend.auction.application.AuctionDataReader;
+import com.greenhouse.backend.common.api.PageResponse;
 import com.greenhouse.backend.common.config.TimeConfig;
 import com.greenhouse.backend.common.exception.NotFoundException;
 import com.greenhouse.backend.partner.application.BusinessPartnerReader;
@@ -10,7 +11,9 @@ import com.greenhouse.backend.settlement.application.ExpectedPaymentDateCalculat
 import com.greenhouse.backend.settlement.domain.AuctionSettlement;
 import com.greenhouse.backend.settlement.domain.AuctionSettlementLine;
 import com.greenhouse.backend.settlement.domain.AuctionSettlementStatus;
+import com.greenhouse.backend.settlement.dto.AuctionSettlementListItemResponse;
 import com.greenhouse.backend.settlement.dto.AuctionSettlementResponse;
+import com.greenhouse.backend.settlement.dto.AuctionSettlementSummaryResponse;
 import com.greenhouse.backend.settlement.repository.AuctionSettlementRepository;
 import java.time.Clock;
 import java.time.LocalDate;
@@ -23,6 +26,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -31,6 +35,7 @@ import org.springframework.transaction.annotation.Transactional;
 @RequiredArgsConstructor
 public class AuctionSettlementService {
 	private static final int RESULT_BATCH_SIZE = 500;
+	private static final int LEGACY_LIST_LIMIT = 500;
 	private final AuctionSettlementRepository settlementRepository;
 	private final AuctionDataReader auctionDataReader;
 	private final BusinessPartnerReader partnerReader;
@@ -44,7 +49,27 @@ public class AuctionSettlementService {
 			LocalDate from,
 			LocalDate to,
 			AuctionSettlementStatus status) {
-		return responseAssembler.assembleAll(settlementRepository.search(auctionHouseId, from, to, status));
+		var ids = settlementRepository.search(auctionHouseId, from, to, status, PageRequest.of(0, LEGACY_LIST_LIMIT))
+				.map(AuctionSettlement::getId).getContent();
+		return ids.isEmpty() ? List.of()
+				: responseAssembler.assembleAll(settlementRepository.findAllByIdInOrderByAuctionDateDescIdDesc(ids));
+	}
+
+	@Transactional(readOnly = true)
+	public PageResponse<AuctionSettlementListItemResponse> getSettlementPage(Long auctionHouseId, LocalDate from,
+			LocalDate to, AuctionSettlementStatus status, int page, int size) {
+		var result = settlementRepository.search(auctionHouseId, from, to, status,
+				PageRequest.of(Math.max(page, 0), Math.min(Math.max(size, 1), 100)));
+		var partners = partnerReader.getAllInfo(result.map(AuctionSettlement::getAuctionHouseId).getContent());
+		return PageResponse.from(result.map(settlement -> AuctionSettlementListItemResponse.from(
+				settlement, partners.get(settlement.getAuctionHouseId()).name())));
+	}
+
+	@Transactional(readOnly = true)
+	public AuctionSettlementSummaryResponse getSummary(Long auctionHouseId, LocalDate from, LocalDate to,
+			AuctionSettlementStatus status) {
+		var totals = settlementRepository.summarize(auctionHouseId, from, to, status);
+		return new AuctionSettlementSummaryResponse(totals.getExpectedDepositAmount(), totals.getRemainingAmount());
 	}
 
 	@Transactional(readOnly = true)

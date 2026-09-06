@@ -1635,6 +1635,10 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
+        /**
+         * @deprecated
+         * @description 호환용 목록. 최신 500건만 반환합니다. 운영 목록은 /page, 전체 합계는 /summary를 사용합니다.
+         */
         get: operations["getSettlements"];
         put?: never;
         post?: never;
@@ -1652,6 +1656,40 @@ export interface paths {
             cookie?: never;
         };
         get: operations["getSettlement"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/auction-settlements/summary": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description 조회 조건에 해당하는 전체 정산의 합계. 페이지 크기와 무관하게 집계합니다. */
+        get: operations["getAuctionSettlementSummary"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/auction-settlements/page": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description 정산 요약의 서버 페이지 목록. page는 0 이상, size는 1~100으로 보정합니다. 상세 행은 단건 API에서 조회합니다. */
+        get: operations["getAuctionSettlementPage"];
         put?: never;
         post?: never;
         delete?: never;
@@ -3911,6 +3949,48 @@ export interface components {
         ApiResponseListAuctionSettlementResponse: {
             data?: components["schemas"]["AuctionSettlementResponse"][];
             message?: string;
+        };
+        ApiResponseAuctionSettlementSummaryResponse: {
+            data?: components["schemas"]["AuctionSettlementSummaryResponse"];
+            message?: string;
+        };
+        AuctionSettlementSummaryResponse: {
+            /** Format: int64 */
+            expectedDepositAmount?: number;
+            /** Format: int64 */
+            remainingAmount?: number;
+        };
+        ApiResponsePageResponseAuctionSettlementListItemResponse: {
+            data?: components["schemas"]["PageResponseAuctionSettlementListItemResponse"];
+            message?: string;
+        };
+        AuctionSettlementListItemResponse: {
+            /** Format: int64 */
+            id?: number;
+            /** Format: int64 */
+            auctionHouseId?: number;
+            auctionHouseName?: string;
+            /** Format: date */
+            auctionDate?: string;
+            /** Format: int64 */
+            grossAmount?: number;
+            /** Format: int64 */
+            expectedDepositAmount?: number;
+            /** Format: int64 */
+            remainingAmount?: number;
+            /** @enum {string} */
+            status?: "CREATED" | "PAYMENT_WAITING" | "PARTIALLY_PAID" | "PAID" | "AMOUNT_MISMATCH" | "REVIEW_REQUIRED" | "CANCELLED";
+        };
+        PageResponseAuctionSettlementListItemResponse: {
+            content?: components["schemas"]["AuctionSettlementListItemResponse"][];
+            /** Format: int32 */
+            page?: number;
+            /** Format: int32 */
+            size?: number;
+            /** Format: int64 */
+            totalElements?: number;
+            /** Format: int32 */
+            totalPages?: number;
         };
         ApiResponsePageResponseAuctionLotResponse: {
             data?: components["schemas"]["PageResponseAuctionLotResponse"];
@@ -6994,6 +7074,58 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ApiResponseAuctionSettlementResponse"];
+                };
+            };
+        };
+    };
+    getAuctionSettlementSummary: {
+        parameters: {
+            query?: {
+                auctionHouseId?: number;
+                from?: string;
+                to?: string;
+                status?: "CREATED" | "PAYMENT_WAITING" | "PARTIALLY_PAID" | "PAID" | "AMOUNT_MISMATCH" | "REVIEW_REQUIRED" | "CANCELLED";
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiResponseAuctionSettlementSummaryResponse"];
+                };
+            };
+        };
+    };
+    getAuctionSettlementPage: {
+        parameters: {
+            query?: {
+                auctionHouseId?: number;
+                from?: string;
+                to?: string;
+                status?: "CREATED" | "PAYMENT_WAITING" | "PARTIALLY_PAID" | "PAID" | "AMOUNT_MISMATCH" | "REVIEW_REQUIRED" | "CANCELLED";
+                page?: number;
+                size?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiResponsePageResponseAuctionSettlementListItemResponse"];
                 };
             };
         };

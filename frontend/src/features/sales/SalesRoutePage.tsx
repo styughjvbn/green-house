@@ -9,10 +9,13 @@ import {
   readBusinessPartnerRouteState,
   readCreateSlip,
   readSalesRouteState,
+  readSettlementRouteState,
 } from "./lib/salesRouteParams";
 import {
   auctionLotPageQueryOptions,
-  auctionSettlementsQueryOptions,
+  auctionSettlementPageQueryOptions,
+  auctionSettlementSummaryQueryOptions,
+  auctionSettlementDetailQueryOptions,
   auctionSummaryQueryOptions,
   businessPartnerLookupQueryOptions,
   businessPartnerPageQueryOptions,
@@ -69,7 +72,18 @@ export async function SalesRoutePage({
       );
     }
     case "settlement": {
-      await queryClient.prefetchQuery(auctionSettlementsQueryOptions());
+      const state = readSettlementRouteState(reader);
+      await Promise.all([
+        queryClient.prefetchQuery(auctionSettlementPageQueryOptions(state)),
+        queryClient.prefetchQuery(auctionSettlementSummaryQueryOptions()),
+        ...(state.selectedSettlementId == null
+          ? []
+          : [
+              queryClient.prefetchQuery(
+                auctionSettlementDetailQueryOptions(state.selectedSettlementId),
+              ),
+            ]),
+      ]);
       return (
         <HydrationBoundary state={dehydrate(queryClient)}>
           <SalesSettlementPage />
