@@ -21,7 +21,6 @@ import lombok.AccessLevel;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
-import java.time.ZoneOffset;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
@@ -107,7 +106,7 @@ public class AuctionSettlement extends BaseEntity {
 		this.status = AuctionSettlementStatus.CREATED;
 	}
 
-	public void synchronizeLines(List<AuctionResultLine> resultLines) {
+	public void synchronizeLines(List<AuctionResultLine> resultLines, LocalDateTime receivedAt) {
 		Set<Long> resultIds = new HashSet<>(resultLines.stream().map(AuctionResultLine::getId).toList());
 		lines.removeIf(line -> !resultIds.contains(line.getAuctionResultLine().getId()));
 		Set<Long> existingIds = new HashSet<>(lines.stream()
@@ -121,7 +120,7 @@ public class AuctionSettlement extends BaseEntity {
 		grossAmount = lines.stream().mapToLong(AuctionSettlementLine::getAmount).sum();
 		expectedDepositAmount = Math.max(0L, grossAmount - feeAmount - deductionAmount);
 		remainingAmount = Math.max(0L, expectedDepositAmount - paidAmount);
-		resultReceivedAt = LocalDateTime.now(ZoneOffset.UTC);
+		resultReceivedAt = receivedAt;
 		if (paidAmount > 0 && remainingAmount > 0)
 			status = AuctionSettlementStatus.PARTIALLY_PAID;
 		else if (paidAmount > 0 && remainingAmount == 0)
@@ -134,7 +133,7 @@ public class AuctionSettlement extends BaseEntity {
 		this.expectedPaymentDate = expectedPaymentDate;
 	}
 
-	public void recordPayment(Long amount, String worker) {
+	public void recordPayment(Long amount, String worker, LocalDateTime confirmedAt) {
 		if (amount <= 0)
 			throw new IllegalArgumentException("입금액은 0원보다 커야 합니다.");
 		if (amount > remainingAmount)
@@ -142,7 +141,7 @@ public class AuctionSettlement extends BaseEntity {
 		this.paidAmount += amount;
 		this.remainingAmount = Math.max(0L, expectedDepositAmount - paidAmount);
 		this.status = remainingAmount == 0 ? AuctionSettlementStatus.PAID : AuctionSettlementStatus.PARTIALLY_PAID;
-		this.confirmedAt = LocalDateTime.now(ZoneOffset.UTC);
+		this.confirmedAt = confirmedAt;
 		this.confirmedBy = worker;
 	}
 

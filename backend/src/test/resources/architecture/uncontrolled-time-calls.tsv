@@ -3,4 +3,3 @@ com.greenhouse.backend.auction.domain.AuctionLotStatusHistory	java.time.LocalDat
 com.greenhouse.backend.common.domain.BaseEntity	java.time.LocalDateTime.now(java.time.ZoneId)
 com.greenhouse.backend.farm.domain.collection.OrchidGroupCollectionMember	java.time.LocalDateTime.now(java.time.ZoneId)
 com.greenhouse.backend.farm.dto.orchid.OrchidGroupResponse	java.time.LocalDate.now(java.time.ZoneId)
-com.greenhouse.backend.settlement.domain.AuctionSettlement	java.time.LocalDateTime.now(java.time.ZoneId)

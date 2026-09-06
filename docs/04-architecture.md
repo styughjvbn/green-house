@@ -313,6 +313,7 @@ Persistence 조회 규칙:
 #### 시간, migration, 검증
 
 - DB 시점은 UTC로 저장하고 농장 업무일 계산은 `Asia/Seoul` 기준 `TimeConfig`와 주입된 `Clock`을 사용한다.
+- 경매 정산의 결과 수신·입금 확인 시각은 application service가 `Clock`에서 UTC 값으로 정해 domain에 전달한다. 일괄 재구성은 같은 처리 시각을 사용하고, 정산에 이미 연결된 결과는 다시 재구성하지 않는다.
 - Flyway migration은 `nullable 추가 → backfill → 제약 적용`처럼 기존 운영 데이터가 통과할 수 있는 순서를 사용한다. 대용량 table 변경은 lock 범위와 운영 적용 시간을 별도로 검토한다.
 - 수량·금액·정산·migration 변경은 정상 흐름뿐 아니라 rollback과 중복 요청을 검증한다. 동시성 보강은 병렬 실행 테스트, N+1 보강은 query count 상한 테스트를 둔다.
 - PostgreSQL 문법, lock, constraint, 원자 갱신은 H2 결과만 신뢰하지 않고 Testcontainers 또는 실제 PostgreSQL 검증을 수행한다.

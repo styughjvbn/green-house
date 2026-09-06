@@ -1,7 +1,8 @@
 package com.greenhouse.backend.settlement.application;
 
-import com.greenhouse.backend.common.exception.NotFoundException;
 import com.greenhouse.backend.common.application.RequestActorProvider;
+import com.greenhouse.backend.common.config.TimeConfig;
+import com.greenhouse.backend.common.exception.NotFoundException;
 import com.greenhouse.backend.partner.application.BusinessPartnerReader;
 import com.greenhouse.backend.settlement.domain.PartnerPaymentEvent;
 import com.greenhouse.backend.settlement.domain.PaymentTargetType;
@@ -11,9 +12,9 @@ import com.greenhouse.backend.settlement.dto.PartnerPaymentEventResponse;
 import com.greenhouse.backend.settlement.repository.AuctionSettlementRepository;
 import com.greenhouse.backend.settlement.repository.PartnerPaymentEventRepository;
 
-import lombok.RequiredArgsConstructor;
-
+import java.time.Clock;
 import java.util.List;
+import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -29,6 +30,7 @@ public class PaymentService {
 	private final SettlementAuditSupport auditSupport;
 	private final BusinessPartnerReader partnerReader;
 	private final AuctionSettlementResponseAssembler settlementResponseAssembler;
+	private final Clock clock;
 
 	public AuctionSettlementResponse confirmAuctionPayment(Long settlementId, ManualPaymentRequest request) {
 		var payment = request.toCommand();
@@ -39,7 +41,8 @@ public class PaymentService {
 			return settlementResponseAssembler.assemble(settlement);
 		}
 		var before = auditSupport.auctionPaymentSnapshot(settlement);
-		settlement.recordPayment(request.amount(), defaultWorker(requestActorProvider.resolve(request.worker())));
+		settlement.recordPayment(request.amount(), defaultWorker(requestActorProvider.resolve(request.worker())),
+				TimeConfig.utcNow(clock));
 		var received = paymentLedgerService.recordManualPayment(
 				settlement.getAuctionHouseId(), PaymentTargetType.AUCTION_SETTLEMENT, settlementId, payment);
 		partnerBalanceService.recordActivity(settlement.getAuctionHouseId(), received.eventId());

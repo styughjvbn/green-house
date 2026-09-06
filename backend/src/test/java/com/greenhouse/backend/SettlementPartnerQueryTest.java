@@ -22,6 +22,7 @@ import com.greenhouse.backend.settlement.domain.PaymentTargetType;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.EntityManagerFactory;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.List;
 import org.hibernate.SessionFactory;
 import org.hibernate.stat.Statistics;
@@ -62,7 +63,7 @@ class SettlementPartnerQueryTest {
 			shipment.addLot(lot);
 			entityManager.persist(shipment);
 			var settlement = new AuctionSettlement(house.getId(), date);
-			settlement.synchronizeLines(List.of(result));
+			settlement.synchronizeLines(List.of(result), LocalDateTime.of(2026, 9, 6, 0, 0));
 			entityManager.persist(settlement);
 			house.update("변경 경매장 " + index, PartnerType.AUCTION_HOUSE, null, null, null, null);
 		}

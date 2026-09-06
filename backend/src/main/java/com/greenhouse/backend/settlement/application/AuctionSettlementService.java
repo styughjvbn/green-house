@@ -2,21 +2,25 @@ package com.greenhouse.backend.settlement.application;
 
 import com.greenhouse.backend.auction.application.AuctionDataReader;
 import com.greenhouse.backend.auction.domain.AuctionResultLine;
+import com.greenhouse.backend.common.config.TimeConfig;
 import com.greenhouse.backend.common.exception.NotFoundException;
 import com.greenhouse.backend.partner.application.BusinessPartnerReader;
 import com.greenhouse.backend.partner.domain.PartnerType;
+import com.greenhouse.backend.settlement.application.ExpectedPaymentDateCalculator.PaymentDateTarget;
 import com.greenhouse.backend.settlement.domain.AuctionSettlement;
 import com.greenhouse.backend.settlement.domain.AuctionSettlementStatus;
 import com.greenhouse.backend.settlement.dto.AuctionSettlementResponse;
 import com.greenhouse.backend.settlement.repository.AuctionSettlementRepository;
 
-import lombok.RequiredArgsConstructor;
-
+import java.time.Clock;
 import java.time.LocalDate;
-import java.util.LinkedHashMap;
 import java.util.ArrayList;
-import java.util.Map;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import java.util.stream.Collectors;
+import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -29,6 +33,7 @@ public class AuctionSettlementService {
 	private final BusinessPartnerReader partnerReader;
 	private final ExpectedPaymentDateCalculator paymentDateCalculator;
 	private final AuctionSettlementResponseAssembler responseAssembler;
+	private final Clock clock;
 
 	@Transactional(readOnly = true)
 	public List<AuctionSettlementResponse> getSettlements(
@@ -53,61 +58,65 @@ public class AuctionSettlementService {
 		}
 		var settlement = settlementRepository.findByAuctionHouseIdAndAuctionDate(auctionHouseId, auctionDate)
 				.orElseGet(() -> new AuctionSettlement(auctionHouseId, auctionDate));
-		settlement.synchronizeLines(auctionDataReader.getSoldResultLines(auctionHouseId, auctionDate));
+		settlement.synchronizeLines(auctionDataReader.getSoldResultLines(auctionHouseId, auctionDate),
+				TimeConfig.utcNow(clock));
 		settlement.updateExpectedPaymentDate(paymentDateCalculator.calculate(auctionHouseId, auctionDate));
 		return responseAssembler.assemble(settlementRepository.save(settlement));
 	}
 
 	public int rebuildExistingResults() {
-		var grouped = new LinkedHashMap<SettlementKey, List<AuctionResultLine>>();
-		settlementRepository.findUnsettledSoldResultLines().stream()
-				.collect(java.util.stream.Collectors.groupingBy(
-						line -> new SettlementKey(
-								line.getAuctionAttempt().getShipmentLot().getShipment().getAuctionHouseId(),
-								line.getAuctionDate()),
-						LinkedHashMap::new,
-						java.util.stream.Collectors.toList()))
-				.forEach(grouped::put);
+		var grouped = groupUnsettledResults();
 		if (grouped.isEmpty()) {
 			return 0;
 		}
 
-		var auctionHouseIds = grouped.keySet().stream()
-				.map(SettlementKey::auctionHouseId)
-				.collect(java.util.stream.Collectors.toSet());
-		var firstAuctionDate = grouped.keySet().stream().map(SettlementKey::auctionDate).min(LocalDate::compareTo).orElseThrow();
-		var lastAuctionDate = grouped.keySet().stream().map(SettlementKey::auctionDate).max(LocalDate::compareTo).orElseThrow();
-		Map<SettlementKey, AuctionSettlement> settlementsByKey = settlementRepository
-				.findAllWithDetailsForRebuild(auctionHouseIds, firstAuctionDate, lastAuctionDate)
-				.stream()
-				.collect(java.util.stream.Collectors.toMap(
-						settlement -> new SettlementKey(
-								settlement.getAuctionHouseId(), settlement.getAuctionDate()),
-						settlement -> settlement));
+		var settlementsByKey = loadExistingSettlements(grouped.keySet());
 		var paymentTargets = grouped.keySet().stream()
-				.map(key -> new ExpectedPaymentDateCalculator.PaymentDateTarget(
-						key.auctionHouseId(), key.auctionDate()))
+				.map(key -> new PaymentDateTarget(key.auctionHouseId(), key.auctionDate()))
 				.toList();
 		var expectedPaymentDates = paymentDateCalculator.calculateAll(paymentTargets);
 		var affectedSettlements = new ArrayList<AuctionSettlement>();
-		grouped.forEach((key, newLines) -> {
-			var settlement = settlementsByKey.get(key);
-			if (settlement == null) {
-				settlement = new AuctionSettlement(key.auctionHouseId(), key.auctionDate());
-			}
-			var resultLinesById = new LinkedHashMap<Long, AuctionResultLine>();
-			settlement.getLines().stream()
-					.map(line -> line.getAuctionResultLine())
-					.forEach(line -> resultLinesById.put(line.getId(), line));
-			newLines.forEach(line -> resultLinesById.put(line.getId(), line));
-			settlement.synchronizeLines(new ArrayList<>(resultLinesById.values()));
+		var receivedAt = TimeConfig.utcNow(clock);
+		for (var entry : grouped.entrySet()) {
+			var key = entry.getKey();
+			var settlement = settlementsByKey.computeIfAbsent(key,
+					missing -> new AuctionSettlement(missing.auctionHouseId(), missing.auctionDate()));
+			settlement.synchronizeLines(mergeResultLines(settlement, entry.getValue()), receivedAt);
 			settlement.updateExpectedPaymentDate(expectedPaymentDates.get(
-					new ExpectedPaymentDateCalculator.PaymentDateTarget(
-							key.auctionHouseId(), key.auctionDate())));
+					new PaymentDateTarget(key.auctionHouseId(), key.auctionDate())));
 			affectedSettlements.add(settlement);
-		});
+		}
 		settlementRepository.saveAll(affectedSettlements);
 		return grouped.size();
+	}
+
+	private Map<SettlementKey, List<AuctionResultLine>> groupUnsettledResults() {
+		return settlementRepository.findUnsettledSoldResultLines().stream()
+				.collect(Collectors.groupingBy(
+						line -> new SettlementKey(
+								line.getAuctionAttempt().getShipmentLot().getShipment().getAuctionHouseId(),
+								line.getAuctionDate()),
+						LinkedHashMap::new, Collectors.toList()));
+	}
+
+	private Map<SettlementKey, AuctionSettlement> loadExistingSettlements(Set<SettlementKey> keys) {
+		var auctionHouseIds = keys.stream().map(SettlementKey::auctionHouseId).collect(Collectors.toSet());
+		var firstDate = keys.stream().map(SettlementKey::auctionDate).min(LocalDate::compareTo).orElseThrow();
+		var lastDate = keys.stream().map(SettlementKey::auctionDate).max(LocalDate::compareTo).orElseThrow();
+		return settlementRepository.findAllWithDetailsForRebuild(auctionHouseIds, firstDate, lastDate).stream()
+				.collect(Collectors.toMap(
+						settlement -> new SettlementKey(settlement.getAuctionHouseId(), settlement.getAuctionDate()),
+						settlement -> settlement));
+	}
+
+	private List<AuctionResultLine> mergeResultLines(AuctionSettlement settlement, List<AuctionResultLine> newLines) {
+		var linesById = new LinkedHashMap<Long, AuctionResultLine>();
+		for (var line : settlement.getLines()) {
+			var result = line.getAuctionResultLine();
+			linesById.put(result.getId(), result);
+		}
+		newLines.forEach(line -> linesById.put(line.getId(), line));
+		return new ArrayList<>(linesById.values());
 	}
 
 	private record SettlementKey(Long auctionHouseId, LocalDate auctionDate) {
