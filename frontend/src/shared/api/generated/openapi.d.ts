@@ -674,6 +674,10 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
+        /**
+         * @deprecated
+         * @description 호환용 활성 거래처 목록. 이름·ID 순으로 최대 500건을 반환합니다. 관리 목록은 /page, 선택지는 /options를 사용합니다.
+         */
         get: operations["getPartners"];
         put?: never;
         post: operations["create_7"];
@@ -1537,6 +1541,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/business-partners/{partnerId}/option": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description 검색·페이지 범위 밖의 선택값을 표시합니다. 기존 기록의 비활성 거래처도 반환하며 신규 업무 사용 허용을 뜻하지 않습니다. */
+        get: operations["getOption"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/business-partners/{partnerId}/balance-summary": {
         parameters: {
             query?: never;
@@ -1561,6 +1582,23 @@ export interface paths {
             cookie?: never;
         };
         get: operations["getPartnerPage"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/business-partners/options": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description 거래처 선택지를 이름·ID 순으로 검색합니다. 검색·활성·경매장 여부를 페이지 조회 전 적용하며, 조건 생략 시 전체를 포함합니다. page는 0 이상, size는 1~100으로 보정합니다. */
+        get: operations["getOptions"];
         put?: never;
         post?: never;
         delete?: never;
@@ -3915,6 +3953,16 @@ export interface components {
             data?: components["schemas"]["BusinessPartnerResponse"][];
             message?: string;
         };
+        ApiResponseBusinessPartnerOptionResponse: {
+            data?: components["schemas"]["BusinessPartnerOptionResponse"];
+            message?: string;
+        };
+        BusinessPartnerOptionResponse: {
+            /** Format: int64 */
+            id?: number;
+            name?: string;
+            active?: boolean;
+        };
         ApiResponsePartnerBalanceSummaryResponse: {
             data?: components["schemas"]["PartnerBalanceSummaryResponse"];
             message?: string;
@@ -3936,6 +3984,21 @@ export interface components {
         };
         PageResponseBusinessPartnerResponse: {
             content?: components["schemas"]["BusinessPartnerResponse"][];
+            /** Format: int32 */
+            page?: number;
+            /** Format: int32 */
+            size?: number;
+            /** Format: int64 */
+            totalElements?: number;
+            /** Format: int32 */
+            totalPages?: number;
+        };
+        ApiResponsePageResponseBusinessPartnerOptionResponse: {
+            data?: components["schemas"]["PageResponseBusinessPartnerOptionResponse"];
+            message?: string;
+        };
+        PageResponseBusinessPartnerOptionResponse: {
+            content?: components["schemas"]["BusinessPartnerOptionResponse"][];
             /** Format: int32 */
             page?: number;
             /** Format: int32 */
@@ -6941,6 +7004,28 @@ export interface operations {
             };
         };
     };
+    getOption: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                partnerId: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiResponseBusinessPartnerOptionResponse"];
+                };
+            };
+        };
+    };
     getBalance: {
         parameters: {
             query?: never;
@@ -6985,6 +7070,32 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ApiResponsePageResponseBusinessPartnerResponse"];
+                };
+            };
+        };
+    };
+    getOptions: {
+        parameters: {
+            query?: {
+                keyword?: string;
+                auctionHouse?: boolean;
+                active?: boolean;
+                page?: number;
+                size?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiResponsePageResponseBusinessPartnerOptionResponse"];
                 };
             };
         };

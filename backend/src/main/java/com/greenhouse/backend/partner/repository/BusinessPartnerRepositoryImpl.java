@@ -8,6 +8,7 @@ import com.querydsl.core.BooleanBuilder;
 import com.querydsl.core.types.dsl.BooleanExpression;
 import com.querydsl.jpa.impl.JPAQueryFactory;
 import java.util.List;
+import java.util.Locale;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
@@ -19,12 +20,28 @@ public class BusinessPartnerRepositoryImpl implements BusinessPartnerRepositoryC
 	private final JPAQueryFactory queryFactory;
 
 	@Override
+	public List<BusinessPartner> findActiveByName(String keyword, PartnerType partnerType, int limit) {
+		return queryFactory.selectFrom(businessPartner)
+				.where(businessPartner.active.isTrue(), partnerTypeEq(partnerType),
+						keyword == null || keyword.isBlank() ? null
+								: businessPartner.name.containsIgnoreCase(keyword.trim()))
+				.orderBy(businessPartner.name.asc(), businessPartner.id.asc())
+				.limit(limit)
+				.fetch();
+	}
+
+	@Override
 	public Page<BusinessPartner> searchPage(
 			String keyword,
 			PartnerType partnerType,
 			Boolean active,
+			Boolean auctionHouse,
 			Pageable pageable) {
 		BooleanBuilder conditions = conditions(keyword, partnerType, active);
+		if (auctionHouse != null) {
+			conditions.and(auctionHouse ? businessPartner.partnerType.eq(PartnerType.AUCTION_HOUSE)
+					: businessPartner.partnerType.ne(PartnerType.AUCTION_HOUSE));
+		}
 		List<BusinessPartner> content = queryFactory
 				.selectFrom(businessPartner)
 				.where(conditions)
@@ -52,7 +69,7 @@ public class BusinessPartnerRepositoryImpl implements BusinessPartnerRepositoryC
 		if (keyword == null || keyword.isBlank()) {
 			return null;
 		}
-		String normalized = keyword.trim().toLowerCase();
+		String normalized = keyword.trim().toLowerCase(Locale.ROOT);
 		return new BooleanBuilder()
 				.or(businessPartner.name.lower().contains(normalized))
 				.or(businessPartner.ownerName.lower().contains(normalized))

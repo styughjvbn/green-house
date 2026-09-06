@@ -5,6 +5,7 @@ import com.greenhouse.backend.common.exception.NotFoundException;
 import com.greenhouse.backend.partner.domain.BusinessPartner;
 import com.greenhouse.backend.partner.domain.PartnerType;
 import com.greenhouse.backend.partner.dto.BusinessPartnerCreateRequest;
+import com.greenhouse.backend.partner.dto.BusinessPartnerOptionResponse;
 import com.greenhouse.backend.partner.dto.BusinessPartnerResponse;
 import com.greenhouse.backend.partner.dto.BusinessPartnerUpdateRequest;
 import com.greenhouse.backend.partner.repository.BusinessPartnerRepository;
@@ -25,19 +26,8 @@ public class BusinessPartnerService {
 
 	@Transactional(readOnly = true)
 	public List<BusinessPartnerResponse> getPartners(String keyword, PartnerType partnerType) {
-		String normalized = keyword == null ? "" : keyword.trim();
-		List<BusinessPartner> partners;
-		if (normalized.isEmpty()) {
-			partners = partnerType == null
-					? repository.findAllByActiveTrueOrderByNameAsc()
-					: repository.findAllByPartnerTypeAndActiveTrueOrderByNameAsc(partnerType);
-		} else {
-			partners = partnerType == null
-					? repository.findByNameContainingIgnoreCaseAndActiveTrueOrderByNameAsc(normalized)
-					: repository.findByNameContainingIgnoreCaseAndPartnerTypeAndActiveTrueOrderByNameAsc(normalized,
-							partnerType);
-		}
-		return partners.stream().map(BusinessPartnerResponse::from).toList();
+		return repository.findActiveByName(keyword, partnerType, 500).stream()
+				.map(BusinessPartnerResponse::from).toList();
 	}
 
 	@Transactional(readOnly = true)
@@ -47,12 +37,26 @@ public class BusinessPartnerService {
 			Boolean active,
 			int page,
 			int size) {
-		PageRequest pageable = PageRequest.of(
-				Math.max(page, 0),
-				Math.min(Math.max(size, 1), 100));
 		return PageResponse.from(repository
-				.searchPage(keyword, partnerType, active, pageable)
+				.searchPage(keyword, partnerType, active, null, pageRequest(page, size))
 				.map(BusinessPartnerResponse::from));
+	}
+
+	@Transactional(readOnly = true)
+	public PageResponse<BusinessPartnerOptionResponse> getOptions(
+			String keyword, Boolean auctionHouse, Boolean active, int page, int size) {
+		return PageResponse.from(repository.searchPage(keyword, null, active, auctionHouse, pageRequest(page, size))
+				.map(BusinessPartnerOptionResponse::from));
+	}
+
+	@Transactional(readOnly = true)
+	public BusinessPartnerOptionResponse getOption(Long partnerId) {
+		return repository.findById(partnerId).map(BusinessPartnerOptionResponse::from)
+				.orElseThrow(() -> new NotFoundException("거래처를 찾을 수 없습니다."));
+	}
+
+	private PageRequest pageRequest(int page, int size) {
+		return PageRequest.of(Math.max(page, 0), Math.min(Math.max(size, 1), 100));
 	}
 
 	public BusinessPartnerResponse create(BusinessPartnerCreateRequest request) {
