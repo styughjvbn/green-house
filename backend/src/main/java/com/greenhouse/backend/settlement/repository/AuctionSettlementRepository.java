@@ -36,7 +36,6 @@ public interface AuctionSettlementRepository extends JpaRepository<AuctionSettle
 			join fetch resultLine.auctionAttempt attempt
 			join fetch attempt.shipmentLot lot
 			join fetch lot.shipment shipment
-			join fetch shipment.auctionHouse
 			where resultLine.amount > 0
 			  and not exists (
 				select settlementLine.id from AuctionSettlementLine settlementLine
@@ -46,11 +45,11 @@ public interface AuctionSettlementRepository extends JpaRepository<AuctionSettle
 			""")
 	List<AuctionResultLine> findUnsettledSoldResultLines();
 
-	@EntityGraph(attributePaths = { "auctionHouse", "lines", "lines.auctionResultLine", "lines.auctionShipmentLot",
+	@EntityGraph(attributePaths = { "lines", "lines.auctionResultLine", "lines.auctionShipmentLot",
 			"lines.auctionShipmentLot.shipment" })
 	@Query("""
 			select distinct settlement from AuctionSettlement settlement
-			where settlement.auctionHouse.id in :auctionHouseIds
+			where settlement.auctionHouseId in :auctionHouseIds
 			  and settlement.auctionDate between :fromDate and :toDate
 			""")
 	List<AuctionSettlement> findAllWithDetailsForRebuild(
@@ -58,11 +57,11 @@ public interface AuctionSettlementRepository extends JpaRepository<AuctionSettle
 			@Param("fromDate") LocalDate fromDate,
 			@Param("toDate") LocalDate toDate);
 
-	@EntityGraph(attributePaths = { "auctionHouse", "lines", "lines.auctionResultLine", "lines.auctionShipmentLot",
+	@EntityGraph(attributePaths = { "lines", "lines.auctionResultLine", "lines.auctionShipmentLot",
 			"lines.auctionShipmentLot.shipment" })
 	@Query("""
 			select distinct settlement from AuctionSettlement settlement
-			where (:auctionHouseId is null or settlement.auctionHouse.id = :auctionHouseId)
+			where (:auctionHouseId is null or settlement.auctionHouseId = :auctionHouseId)
 			  and (:fromDate is null or settlement.auctionDate >= :fromDate)
 			  and (:toDate is null or settlement.auctionDate <= :toDate)
 			  and (:status is null or settlement.status = :status)
@@ -74,7 +73,7 @@ public interface AuctionSettlementRepository extends JpaRepository<AuctionSettle
 			@Param("toDate") LocalDate to,
 			@Param("status") AuctionSettlementStatus status);
 
-	@EntityGraph(attributePaths = { "auctionHouse", "lines", "lines.auctionResultLine", "lines.auctionShipmentLot",
+	@EntityGraph(attributePaths = { "lines", "lines.auctionResultLine", "lines.auctionShipmentLot",
 			"lines.auctionShipmentLot.shipment" })
 	Optional<AuctionSettlement> findWithDetailsById(Long id);
 

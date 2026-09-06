@@ -28,6 +28,7 @@ public class AuctionSettlementService {
 	private final AuctionDataReader auctionDataReader;
 	private final BusinessPartnerReader partnerReader;
 	private final ExpectedPaymentDateCalculator paymentDateCalculator;
+	private final AuctionSettlementResponseAssembler responseAssembler;
 
 	@Transactional(readOnly = true)
 	public List<AuctionSettlementResponse> getSettlements(
@@ -35,28 +36,26 @@ public class AuctionSettlementService {
 			LocalDate from,
 			LocalDate to,
 			AuctionSettlementStatus status) {
-		return settlementRepository.search(auctionHouseId, from, to, status).stream()
-				.map(AuctionSettlementResponse::from)
-				.toList();
+		return responseAssembler.assembleAll(settlementRepository.search(auctionHouseId, from, to, status));
 	}
 
 	@Transactional(readOnly = true)
 	public AuctionSettlementResponse getSettlement(Long settlementId) {
 		return settlementRepository.findWithDetailsById(settlementId)
-				.map(AuctionSettlementResponse::from)
+				.map(responseAssembler::assemble)
 				.orElseThrow(() -> new NotFoundException("경매 정산을 찾을 수 없습니다."));
 	}
 
 	public AuctionSettlementResponse rebuild(Long auctionHouseId, LocalDate auctionDate) {
-		var auctionHouse = partnerReader.get(auctionHouseId);
-		if (auctionHouse.getPartnerType() != PartnerType.AUCTION_HOUSE) {
+		var auctionHouse = partnerReader.getInfo(auctionHouseId);
+		if (auctionHouse.partnerType() != PartnerType.AUCTION_HOUSE) {
 			throw new IllegalArgumentException("경매장 유형 거래처만 정산할 수 있습니다.");
 		}
 		var settlement = settlementRepository.findByAuctionHouseIdAndAuctionDate(auctionHouseId, auctionDate)
-				.orElseGet(() -> new AuctionSettlement(auctionHouse, auctionDate));
+				.orElseGet(() -> new AuctionSettlement(auctionHouseId, auctionDate));
 		settlement.synchronizeLines(auctionDataReader.getSoldResultLines(auctionHouseId, auctionDate));
 		settlement.updateExpectedPaymentDate(paymentDateCalculator.calculate(auctionHouseId, auctionDate));
-		return AuctionSettlementResponse.from(settlementRepository.save(settlement));
+		return responseAssembler.assemble(settlementRepository.save(settlement));
 	}
 
 	public int rebuildExistingResults() {
@@ -64,7 +63,7 @@ public class AuctionSettlementService {
 		settlementRepository.findUnsettledSoldResultLines().stream()
 				.collect(java.util.stream.Collectors.groupingBy(
 						line -> new SettlementKey(
-								line.getAuctionAttempt().getShipmentLot().getShipment().getAuctionHouse().getId(),
+								line.getAuctionAttempt().getShipmentLot().getShipment().getAuctionHouseId(),
 								line.getAuctionDate()),
 						LinkedHashMap::new,
 						java.util.stream.Collectors.toList()))
@@ -83,7 +82,7 @@ public class AuctionSettlementService {
 				.stream()
 				.collect(java.util.stream.Collectors.toMap(
 						settlement -> new SettlementKey(
-								settlement.getAuctionHouse().getId(), settlement.getAuctionDate()),
+								settlement.getAuctionHouseId(), settlement.getAuctionDate()),
 						settlement -> settlement));
 		var paymentTargets = grouped.keySet().stream()
 				.map(key -> new ExpectedPaymentDateCalculator.PaymentDateTarget(
@@ -92,10 +91,9 @@ public class AuctionSettlementService {
 		var expectedPaymentDates = paymentDateCalculator.calculateAll(paymentTargets);
 		var affectedSettlements = new ArrayList<AuctionSettlement>();
 		grouped.forEach((key, newLines) -> {
-			var auctionHouse = newLines.getFirst().getAuctionAttempt().getShipmentLot().getShipment().getAuctionHouse();
 			var settlement = settlementsByKey.get(key);
 			if (settlement == null) {
-				settlement = new AuctionSettlement(auctionHouse, key.auctionDate());
+				settlement = new AuctionSettlement(key.auctionHouseId(), key.auctionDate());
 			}
 			var resultLinesById = new LinkedHashMap<Long, AuctionResultLine>();
 			settlement.getLines().stream()

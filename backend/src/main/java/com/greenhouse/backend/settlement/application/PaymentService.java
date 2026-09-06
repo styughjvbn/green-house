@@ -28,6 +28,7 @@ public class PaymentService {
 	private final RequestActorProvider requestActorProvider;
 	private final SettlementAuditSupport auditSupport;
 	private final BusinessPartnerReader partnerReader;
+	private final AuctionSettlementResponseAssembler settlementResponseAssembler;
 
 	public AuctionSettlementResponse confirmAuctionPayment(Long settlementId, ManualPaymentRequest request) {
 		var payment = request.toCommand();
@@ -35,18 +36,18 @@ public class PaymentService {
 				.orElseThrow(() -> new NotFoundException("경매 정산을 찾을 수 없습니다."));
 		if (paymentLedgerService.findManualPayment(
 				PaymentTargetType.AUCTION_SETTLEMENT, settlementId, payment).isPresent()) {
-			return AuctionSettlementResponse.from(settlement);
+			return settlementResponseAssembler.assemble(settlement);
 		}
 		var before = auditSupport.auctionPaymentSnapshot(settlement);
 		settlement.recordPayment(request.amount(), defaultWorker(requestActorProvider.resolve(request.worker())));
 		var received = paymentLedgerService.recordManualPayment(
-				settlement.getAuctionHouse().getId(), PaymentTargetType.AUCTION_SETTLEMENT, settlementId, payment);
-		partnerBalanceService.recordActivity(settlement.getAuctionHouse().getId(), received.eventId());
+				settlement.getAuctionHouseId(), PaymentTargetType.AUCTION_SETTLEMENT, settlementId, payment);
+		partnerBalanceService.recordActivity(settlement.getAuctionHouseId(), received.eventId());
 		var saved = auctionSettlementRepository.save(settlement);
 		auditSupport.recordTargetPayment("AUCTION_SETTLEMENT", saved.getId(),
-				saved.getAuctionHouse().getId(), PaymentTargetType.AUCTION_SETTLEMENT,
+				saved.getAuctionHouseId(), PaymentTargetType.AUCTION_SETTLEMENT,
 				before, auditSupport.auctionPaymentSnapshot(saved));
-		return AuctionSettlementResponse.from(saved);
+		return settlementResponseAssembler.assemble(saved);
 	}
 
 	@Transactional(readOnly = true)

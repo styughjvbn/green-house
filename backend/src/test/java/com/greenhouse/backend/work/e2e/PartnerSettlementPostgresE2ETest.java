@@ -3,6 +3,14 @@ package com.greenhouse.backend.work.e2e;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
+import com.greenhouse.backend.auction.domain.AuctionAttempt;
+import com.greenhouse.backend.auction.domain.AuctionAttemptStatus;
+import com.greenhouse.backend.auction.domain.AuctionInspectionStatus;
+import com.greenhouse.backend.auction.domain.AuctionResultLine;
+import com.greenhouse.backend.auction.domain.AuctionShipment;
+import com.greenhouse.backend.auction.domain.AuctionShipmentLot;
+import com.greenhouse.backend.auction.repository.AuctionShipmentRepository;
+import com.greenhouse.backend.audit.repository.AuditEventRepository;
 import com.greenhouse.backend.partner.application.BusinessPartnerInfo;
 import com.greenhouse.backend.partner.application.BusinessPartnerLock;
 import com.greenhouse.backend.partner.domain.BusinessPartner;
@@ -16,13 +24,19 @@ import com.greenhouse.backend.sales.dto.SalesSlipResponse;
 import com.greenhouse.backend.sales.repository.SalesSlipRepository;
 import com.greenhouse.backend.settlement.application.PartnerBalanceService;
 import com.greenhouse.backend.settlement.application.PartnerSettlementSettingsService;
+import com.greenhouse.backend.settlement.application.AuctionSettlementService;
+import com.greenhouse.backend.settlement.application.PaymentService;
+import com.greenhouse.backend.settlement.domain.AuctionSettlement;
+import com.greenhouse.backend.settlement.domain.PartnerPaymentEvent;
 import com.greenhouse.backend.settlement.domain.PartnerBalanceSummary;
 import com.greenhouse.backend.settlement.domain.PartnerSettlementSettings;
 import com.greenhouse.backend.settlement.domain.PaymentEventType;
+import com.greenhouse.backend.settlement.domain.PaymentTargetType;
 import com.greenhouse.backend.settlement.domain.SettlementUnit;
 import com.greenhouse.backend.settlement.dto.ManualPaymentRequest;
 import com.greenhouse.backend.settlement.dto.PartnerSettlementSettingsResponse;
 import com.greenhouse.backend.settlement.repository.PartnerBalanceSummaryRepository;
+import com.greenhouse.backend.settlement.repository.AuctionSettlementRepository;
 import com.greenhouse.backend.settlement.repository.PartnerPaymentEventRepository;
 import com.greenhouse.backend.settlement.repository.PartnerSettlementSettingsRepository;
 import java.time.LocalDate;
@@ -55,6 +69,11 @@ class PartnerSettlementPostgresE2ETest extends WorkE2ETestBase {
 	@Autowired PartnerPaymentEventRepository eventRepository;
 	@Autowired SalesSlipRepository salesSlipRepository;
 	@Autowired SalesPaymentService salesPaymentService;
+	@Autowired AuctionShipmentRepository shipmentRepository;
+	@Autowired AuctionSettlementRepository settlementRepository;
+	@Autowired AuctionSettlementService settlementService;
+	@Autowired PaymentService paymentService;
+	@Autowired AuditEventRepository auditRepository;
 	@Autowired PlatformTransactionManager transactionManager;
 	@Autowired JdbcTemplate jdbcTemplate;
 
@@ -150,6 +169,54 @@ class PartnerSettlementPostgresE2ETest extends WorkE2ETestBase {
 	}
 
 	@Test
+	void concurrentAuctionPaymentsAndReplaysKeepOneLedgerResultPerKey() throws Exception {
+		var house = partnerRepository.saveAndFlush(new BusinessPartner(
+				"동시 경매 입금", PartnerType.AUCTION_HOUSE, null, null, null, null));
+		var date = LocalDate.of(2040, 1, 3);
+		var shipment = new AuctionShipment(date.minusDays(1), house);
+		var lot = new AuctionShipmentLot("난", "카틀레야", "A", 1, 10);
+		var attempt = new AuctionAttempt(date, 1, AuctionAttemptStatus.SOLD, null, null);
+		attempt.addResultLine(new AuctionResultLine(date, "A", 10, 10_000, 100_000, null, AuctionInspectionStatus.NORMAL));
+		lot.addAttempt(attempt);
+		shipment.addLot(lot);
+		shipmentRepository.saveAndFlush(shipment);
+		var settlement = settlementService.rebuild(house.getId(), date);
+		var first = payment(20_000L, "auction-first");
+		var second = payment(30_000L, "auction-second");
+
+		concurrently(List.of(
+				() -> paymentService.confirmAuctionPayment(settlement.id(), first),
+				() -> paymentService.confirmAuctionPayment(settlement.id(), second)));
+		concurrently(List.of(
+				() -> paymentService.confirmAuctionPayment(settlement.id(), first),
+				() -> paymentService.confirmAuctionPayment(settlement.id(), second)));
+
+		assertThat(settlementService.getSettlement(settlement.id()).paidAmount()).isEqualTo(50_000L);
+		assertThat(settlementService.getSettlement(settlement.id()).remainingAmount()).isEqualTo(50_000L);
+		assertThat(eventRepository.search(house.getId(), PaymentTargetType.AUCTION_SETTLEMENT, settlement.id()))
+				.hasSize(4);
+		assertThat(balanceService.getBalance(house.getId()).receivableBalance()).isZero();
+	}
+
+	@Test
+	void aLaterFailureRollsBackTheSalesPaymentAndAllLedgerEffects() {
+		var partner = createPartner("입금 전체 rollback");
+		var slip = createSlip(partner, "S20400102-803");
+		assertThatThrownBy(() -> transaction().executeWithoutResult(status -> {
+			salesPaymentService.confirmPayment(slip.getId(), payment(20_000L, "rollback"));
+			salesSlipRepository.flush();
+			throw new IllegalStateException("후속 처리 실패");
+		})).isInstanceOf(IllegalStateException.class).hasMessage("후속 처리 실패");
+
+		assertThat(salesSlipRepository.findById(slip.getId()).orElseThrow().getPaidAmount()).isZero();
+		assertThat(eventRepository.search(partner.getId(), null, null)).isEmpty();
+		assertThat(balanceRepository.findByPartnerId(partner.getId())).isEmpty();
+		assertThat(auditRepository.findAll().stream()
+				.filter(event -> event.getEntityType().equals("SALES_SLIP"))
+				.filter(event -> event.getEntityId().equals(slip.getId()))).isEmpty();
+	}
+
+	@Test
 	void scalarPartnerReferencesRetainTheExistingForeignKeys() {
 		assertThatThrownBy(() -> balanceRepository.saveAndFlush(new PartnerBalanceSummary(-1L)))
 				.isInstanceOf(DataIntegrityViolationException.class)
@@ -158,6 +225,15 @@ class PartnerSettlementPostgresE2ETest extends WorkE2ETestBase {
 				new PartnerSettlementSettings(-1L, PartnerType.WHOLESALE)))
 				.isInstanceOf(DataIntegrityViolationException.class)
 				.hasMessageContaining("partner_settlement_settings_partner_id_fkey");
+		assertThatThrownBy(() -> eventRepository.saveAndFlush(PartnerPaymentEvent.received(
+				-1L, LocalDate.of(2040, 1, 2), 1_000L, PaymentTargetType.SALES_SLIP, 1L,
+				null, null, "foreign-key", null, null)))
+				.isInstanceOf(DataIntegrityViolationException.class)
+				.hasMessageContaining("partner_payment_events_partner_id_fkey");
+		assertThatThrownBy(() -> settlementRepository.saveAndFlush(
+				new AuctionSettlement(-1L, LocalDate.of(2040, 1, 2))))
+				.isInstanceOf(DataIntegrityViolationException.class)
+				.hasMessageContaining("auction_settlements_auction_house_id_fkey");
 	}
 
 	private BusinessPartner createPartner(String name) {

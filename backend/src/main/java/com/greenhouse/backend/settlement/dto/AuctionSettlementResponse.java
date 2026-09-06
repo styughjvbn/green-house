@@ -25,9 +25,9 @@ public record AuctionSettlementResponse(
 		LocalDateTime confirmedAt,
 		String confirmedBy,
 		List<AuctionSettlementLineResponse> lines) {
-	public static AuctionSettlementResponse from(AuctionSettlement settlement) {
+	public static AuctionSettlementResponse from(AuctionSettlement settlement, String auctionHouseName) {
 		return new AuctionSettlementResponse(
-				settlement.getId(), settlement.getAuctionHouse().getId(), settlement.getAuctionHouse().getName(),
+				settlement.getId(), settlement.getAuctionHouseId(), auctionHouseName,
 				settlement.getAuctionDate(), TimeConfig.toFarmTime(settlement.getResultReceivedAt()),
 				settlement.getExpectedPaymentDate(),
 				settlement.getGrossAmount(), settlement.getFeeAmount(), settlement.getDeductionAmount(),

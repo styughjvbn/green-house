@@ -258,7 +258,7 @@ Persistence 조회 규칙:
 - Entity, Repository, DB table은 각각 하나의 업무 모듈이 소유한다. 소유 모듈 밖에서는 해당 Repository나 internal 구현을 직접 참조하지 않는다.
 - 다른 모듈의 기능이 필요하면 제공 모듈의 application API를 호출한다. 호출 측의 도메인 흐름에 필요한 조회 계약은 호출 측에 port를 두고 소유 모듈이 구현할 수 있다.
 - 모듈 간 계약은 필요한 값만 전달한다. 외부 모듈 Entity를 장기간 보관하거나 응답 조립 편의를 위해 aggregate 전체를 넘기지 않는다.
-- Partner의 새 조회 계약은 이름·유형·활성 여부를 복사한 application 값이다. Settlement의 정산 설정·잔액은 거래처 ID로 연결하고 기존 DB 외래키를 유지한다. 남은 Sales·Auction·입금 원장의 Entity 연관은 단계별로 전환하며, deprecated Entity 조회를 새 호출부에 사용하지 않는다.
+- Partner의 새 조회 계약은 이름·유형·활성 여부를 복사한 application 값이다. Settlement의 정산 설정·잔액·입금 이벤트·경매 정산은 거래처 ID로 연결하고 기존 DB 외래키를 유지한다. 남은 Sales·Auction의 Entity 연관은 단계별로 전환하며, deprecated Entity 조회를 새 호출부에 사용하지 않는다.
 - 외부 시스템은 application port 뒤의 adapter로 추가한다. 외부 시스템 DTO와 오류를 domain에 전파하지 않는다.
 
 ```text
@@ -300,6 +300,7 @@ Persistence 조회 규칙:
 
 - root 목록과 collection을 한 쿼리에 억지로 합치지 않는다. 페이지 또는 제한된 root ID를 먼저 조회하고 연관 데이터를 `IN` 쿼리로 읽어 application 계층에서 조립한다.
 - DTO mapper가 lazy association을 순회하지 않게 조회 범위를 명시한다. mapper 호출 전 필요한 연관 데이터가 이미 로딩됐는지 확인한다.
+- 입금 이벤트와 경매 정산 목록은 root와 정산 행을 조회한 뒤 거래처 ID를 모아 Partner application API로 이름을 일괄 조회한다. 거래처 이름은 현재 기준 정보이며, 원장의 금액·입금자·날짜나 기존 정산 행의 보존된 값은 다시 계산하지 않는다.
 - 목록·옵션·분석 조회에는 pagination, 날짜 범위 또는 명시적 최대 건수 중 하나를 둔다. 장기 누적 테이블의 무제한 `findAll`을 API 경로에 사용하지 않는다.
 - DB 집계로 표현 가능한 값을 전체 Entity 조회 후 Java에서 다시 집계하지 않는다. 다만 데이터량이 작고 규칙 표현이 더 명확한 경우에는 측정 근거를 남기고 단순 구현을 유지할 수 있다.
 

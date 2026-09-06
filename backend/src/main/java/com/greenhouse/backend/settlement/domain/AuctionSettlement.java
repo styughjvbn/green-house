@@ -2,19 +2,15 @@ package com.greenhouse.backend.settlement.domain;
 
 import com.greenhouse.backend.auction.domain.AuctionResultLine;
 import com.greenhouse.backend.common.domain.BaseEntity;
-import com.greenhouse.backend.partner.domain.BusinessPartner;
 import jakarta.persistence.CascadeType;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
 import jakarta.persistence.Enumerated;
-import jakarta.persistence.FetchType;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.SequenceGenerator;
-import jakarta.persistence.JoinColumn;
-import jakarta.persistence.ManyToOne;
 import jakarta.persistence.OneToMany;
 import jakarta.persistence.Table;
 import jakarta.persistence.UniqueConstraint;
@@ -48,9 +44,8 @@ public class AuctionSettlement extends BaseEntity {
 	@Column(nullable = false)
 	private Long version;
 
-	@ManyToOne(fetch = FetchType.LAZY, optional = false)
-	@JoinColumn(name = "auction_house_id", nullable = false)
-	private BusinessPartner auctionHouse;
+	@Column(name = "auction_house_id", nullable = false)
+	private Long auctionHouseId;
 
 	@Column(name = "auction_date", nullable = false)
 	private LocalDate auctionDate;
@@ -99,8 +94,8 @@ public class AuctionSettlement extends BaseEntity {
 	@OneToMany(mappedBy = "settlement", cascade = CascadeType.ALL, orphanRemoval = true)
 	private List<AuctionSettlementLine> lines = new ArrayList<>();
 
-	public AuctionSettlement(BusinessPartner auctionHouse, LocalDate auctionDate) {
-		this.auctionHouse = auctionHouse;
+	public AuctionSettlement(Long auctionHouseId, LocalDate auctionDate) {
+		this.auctionHouseId = auctionHouseId;
 		this.auctionDate = auctionDate;
 		this.expectedPaymentDate = auctionDate;
 		this.grossAmount = 0L;

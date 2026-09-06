@@ -61,4 +61,8 @@ public class AuctionShipment extends BaseEntity {
 	public String getAuctionMarket() {
 		return auctionHouse.getName();
 	}
+
+	public Long getAuctionHouseId() {
+		return auctionHouse.getId();
+	}
 }
