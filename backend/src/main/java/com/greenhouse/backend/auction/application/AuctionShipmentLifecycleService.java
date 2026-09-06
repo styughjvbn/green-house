@@ -7,14 +7,18 @@ import lombok.RequiredArgsConstructor;
 import java.util.Collection;
 import java.util.Set;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Propagation;
+import org.springframework.transaction.annotation.Transactional;
 
 @Service
+@Transactional(readOnly = true)
 @RequiredArgsConstructor
 public class AuctionShipmentLifecycleService {
 
 	private final AuctionShipmentRepository auctionShipmentRepository;
 	private final AuctionShipmentLotRepository auctionShipmentLotRepository;
 
+	@Transactional(propagation = Propagation.MANDATORY)
 	public void deleteDraftShipment(Long shipmentId) {
 		if (shipmentId == null) {
 			return;

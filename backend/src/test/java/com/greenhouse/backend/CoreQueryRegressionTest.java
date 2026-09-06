@@ -174,6 +174,34 @@ class CoreQueryRegressionTest {
 		assertThat(queries).isEqualTo(5);
 	}
 
+	@Test
+	void shipmentOptionsFillTheLimitAfterSkippingUsedCandidatePages() {
+		var house = partnerRepository.save(new BusinessPartner(
+				"선택지 경매장", PartnerType.AUCTION_HOUSE, null, null, null, null));
+		var available = new java.util.ArrayList<Long>();
+		var date = LocalDate.of(2042, 1, 1);
+		for (int index = 0; index < 420; index++) {
+			var shipment = new AuctionShipment(date, house.getId(), house.getPartnerType());
+			shipment.addLot(new AuctionShipmentLot("난", "선택 품종", "A", null, 10));
+			auctionShipmentRepository.save(shipment);
+			if (index < 210) {
+				available.add(shipment.getId());
+			} else {
+				salesSlipRepository.save(new SalesSlip("USED-" + index, date, SalesType.AUCTION, shipment.getId(),
+						house.getId(), "정산 대기", "출하 완료", null, null));
+			}
+		}
+		long queries = measure(() -> {
+			var options = salesQueryService.getAuctionShipmentOptions();
+			assertThat(options).extracting(option -> option.id()).containsExactlyElementsOf(available.reversed().subList(0, 200));
+			assertThat(options).allSatisfy(option -> {
+				assertThat(option.auctionMarket()).isEqualTo("선택지 경매장");
+				assertThat(option.lots()).singleElement().satisfies(lot -> assertThat(lot.shippedQuantity()).isEqualTo(10));
+			});
+		});
+		assertThat(queries).isEqualTo(8);
+	}
+
 	private OrchidGroup createOrchidGroup(int houseNumber, String varietyName, int quantity) {
 		House house = new House(houseNumber, houseNumber + "동");
 		PhysicalBed bed = new PhysicalBed(1, 1);

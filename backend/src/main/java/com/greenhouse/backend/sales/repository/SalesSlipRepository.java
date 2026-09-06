@@ -4,11 +4,11 @@ import com.greenhouse.backend.sales.domain.SalesSlip;
 import java.time.LocalDate;
 import java.util.Optional;
 import java.util.List;
+import java.util.Collection;
 import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
-import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.Lock;
 import jakarta.persistence.LockModeType;
 
@@ -17,13 +17,10 @@ public interface SalesSlipRepository extends JpaRepository<SalesSlip, Long>, Sal
 	boolean existsByAuctionShipmentId(Long auctionShipmentId);
 
 	@Query("""
-			select shipment.id from AuctionShipment shipment
-			where not exists (
-				select 1 from SalesSlip slip where slip.auctionShipmentId = shipment.id
-			)
-			order by shipment.shipmentDate desc, shipment.id desc
+			select slip.auctionShipmentId from SalesSlip slip
+			where slip.auctionShipmentId in :shipmentIds
 			""")
-	List<Long> findAvailableAuctionShipmentIds(Pageable pageable);
+	List<Long> findUsedAuctionShipmentIds(@Param("shipmentIds") Collection<Long> shipmentIds);
 
 	@EntityGraph(attributePaths = { "items" })
 	Optional<SalesSlip> findWithDetailsById(Long id);

@@ -4,6 +4,10 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import com.greenhouse.backend.auction.domain.AuctionAttempt;
+import com.greenhouse.backend.auction.application.AuctionShipmentCreator;
+import com.greenhouse.backend.auction.application.AuctionShipmentCreator.LotDraft;
+import com.greenhouse.backend.sales.application.SalesSlipStatusService;
+import com.greenhouse.backend.sales.dto.SalesSlipStatusUpdateRequest;
 import com.greenhouse.backend.auction.domain.AuctionAttemptStatus;
 import com.greenhouse.backend.auction.domain.AuctionInspectionStatus;
 import com.greenhouse.backend.auction.domain.AuctionResultLine;
@@ -61,6 +65,8 @@ import org.springframework.transaction.support.TransactionTemplate;
 class PartnerSettlementPostgresE2ETest extends WorkE2ETestBase {
 
 	@Autowired BusinessPartnerRepository partnerRepository;
+	@Autowired AuctionShipmentCreator shipmentCreator;
+	@Autowired SalesSlipStatusService salesStatusService;
 	@Autowired BusinessPartnerLock partnerLock;
 	@Autowired PartnerBalanceService balanceService;
 	@Autowired PartnerBalanceSummaryRepository balanceRepository;
@@ -234,6 +240,45 @@ class PartnerSettlementPostgresE2ETest extends WorkE2ETestBase {
 				new AuctionSettlement(-1L, LocalDate.of(2040, 1, 2))))
 				.isInstanceOf(DataIntegrityViolationException.class)
 				.hasMessageContaining("auction_settlements_auction_house_id_fkey");
+		assertThatThrownBy(() -> shipmentRepository.saveAndFlush(
+				new AuctionShipment(LocalDate.of(2040, 1, 2), -1L, PartnerType.AUCTION_HOUSE)))
+				.isInstanceOf(DataIntegrityViolationException.class)
+				.hasMessageContaining("auction_shipments_auction_house_id_fkey");
+		assertThatThrownBy(() -> salesSlipRepository.saveAndFlush(new SalesSlip("INVALID-PARTNER",
+				LocalDate.of(2040, 1, 2), SalesType.DIRECT, null, -1L, "미입금", "작성중", null, null)))
+				.isInstanceOf(DataIntegrityViolationException.class)
+				.hasMessageContaining("sales_slips_partner_id_fkey");
+	}
+
+	@Test
+	void shipmentCreationAndCancellationPreserveForeignKeysAndCallerRollback() {
+		var house = partnerRepository.saveAndFlush(new BusinessPartner(
+				"출하 계약", PartnerType.AUCTION_HOUSE, null, null, null, null));
+		var date = LocalDate.of(2040, 1, 2);
+		var drafts = List.of(new LotDraft(20L, "난", "호접란", "A", 3));
+		assertThatThrownBy(() -> shipmentCreator.create(date, house.getId(), drafts))
+				.isInstanceOf(org.springframework.transaction.IllegalTransactionStateException.class);
+		long before = shipmentRepository.count();
+		assertThatThrownBy(() -> transaction().executeWithoutResult(status -> {
+			shipmentCreator.create(date, house.getId(), drafts);
+			shipmentRepository.flush();
+			throw new IllegalStateException("후속 실패");
+		})).isInstanceOf(IllegalStateException.class).hasMessage("후속 실패");
+		assertThat(shipmentRepository.count()).isEqualTo(before);
+
+		Long slipId = transaction().execute(status -> {
+			var created = shipmentCreator.create(date, house.getId(), drafts);
+			var slip = new SalesSlip("SHIPMENT-LINK", date, SalesType.AUCTION, created.id(), house.getId(),
+					"정산 대기", "출하 완료", null, null);
+			slip.addItem(new SalesSlipItem(created.lotIdsBySourceItemId().get(20L), "호접란", "난", "A", 3, 0, null));
+			return salesSlipRepository.saveAndFlush(slip).getId();
+		});
+		assertThat(shipmentRepository.count()).isEqualTo(before + 1);
+		var canceled = salesStatusService.updateStatus(slipId, new SalesSlipStatusUpdateRequest("취소", null));
+		assertThat(canceled.auctionShipmentId()).isNull();
+		assertThat(canceled.items().getFirst().auctionShipmentLotId()).isNull();
+		assertThat(shipmentRepository.count()).isEqualTo(before);
+		assertThat(salesSlipRepository.findById(slipId).orElseThrow().isCanceled()).isTrue();
 	}
 
 	private BusinessPartner createPartner(String name) {

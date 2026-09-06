@@ -1,3 +1,2 @@
 # Temporary pre-refactoring dependencies at 3aa8fc54. Delete entries when their callers migrate.
-JPQL	com.greenhouse.backend.sales.repository.SalesSlipRepository.findAvailableAuctionShipmentIds(org.springframework.data.domain.Pageable)	com.greenhouse.backend.auction.domain.AuctionShipment
 JPQL	com.greenhouse.backend.settlement.repository.AuctionSettlementRepository.findUnsettledSoldResultLines()	com.greenhouse.backend.auction.domain.AuctionResultLine

@@ -15,9 +15,10 @@ import lombok.RequiredArgsConstructor;
 
 import java.time.LocalDate;
 import java.util.List;
+import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.Map;
 import java.util.stream.Collectors;
-import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
@@ -71,11 +72,21 @@ public class SalesQueryService {
 	}
 
 	public List<AuctionShipmentOptionResponse> getAuctionShipmentOptions() {
-		var shipmentIds = salesSlipRepository.findAvailableAuctionShipmentIds(
-				PageRequest.of(0, AUCTION_SHIPMENT_OPTION_LIMIT));
-		var marketNames = auctionDataReader.getMarketNames(shipmentIds);
-		return auctionDataReader.getShipmentsWithLotsNewestFirst(shipmentIds).stream()
-				.map(shipment -> AuctionShipmentOptionResponse.from(shipment, marketNames.get(shipment.getId())))
+		var availableIds = new ArrayList<Long>();
+		for (int page = 0; availableIds.size() < AUCTION_SHIPMENT_OPTION_LIMIT; page++) {
+			var candidates = auctionDataReader.getShipmentIdsNewestFirst(page, AUCTION_SHIPMENT_OPTION_LIMIT);
+			if (candidates.isEmpty()) {
+				break;
+			}
+			var usedIds = new HashSet<>(salesSlipRepository.findUsedAuctionShipmentIds(candidates));
+			candidates.stream().filter(id -> !usedIds.contains(id))
+					.limit(AUCTION_SHIPMENT_OPTION_LIMIT - availableIds.size()).forEach(availableIds::add);
+			if (candidates.size() < AUCTION_SHIPMENT_OPTION_LIMIT) {
+				break;
+			}
+		}
+		return auctionDataReader.getShipmentsWithLotsNewestFirst(availableIds).stream()
+				.map(AuctionShipmentOptionResponse::from)
 				.toList();
 	}
 

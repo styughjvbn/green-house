@@ -184,6 +184,7 @@ application|domain|dto/
 - A5 출력 데이터
 - 전표 품목 allocation의 신규 생성과 작성중 수정 복사는 `SalesSlipAllocationFactory`의 단일 생성 지점을 사용한다.
 - 출고·출하 완료는 `SalesSlipOutboundService`가 현재 allocation을 고정된 배치로 만든 뒤 난 묶음을 잠그고, 경매 shipment/lot 생성과 재고 차감을 순서대로 조율한다.
+- 출하·lot 생성과 삭제는 Auction application API가 소유하며 호출 트랜잭션에 참여한다. Sales는 출하와 lot ID만 보관한다. 원본 품목 ID로 생성된 lot를 연결하고, 판매 품목 배열과 출하 lot 배열의 순서가 같다고 가정하지 않는다.
 - `SalesOrchidGroupSnapshot`은 allocation 생성 전의 `CREATION`과 잠긴 출하 배치의 재고 차감 전 `OUTBOUND`를 각각 같은 트랜잭션에서 보존한다. Controller나 응답 mapper에서 현재 난 묶음 값으로 재구성하지 않는다.
 
 ### auction
@@ -300,6 +301,7 @@ Persistence 조회 규칙:
 | CTE·Window Function·PostgreSQL 원자 연산 | 근거를 남긴 Native SQL |
 
 - root 목록과 collection을 한 쿼리에 억지로 합치지 않는다. 페이지 또는 제한된 root ID를 먼저 조회하고 연관 데이터를 `IN` 쿼리로 읽어 application 계층에서 조립한다.
+- 출하 선택지는 Auction이 최신 후보 ID를 페이지로 제공하고 Sales가 자기 전표에 연결된 ID를 제외한다. 미사용 200건을 채우거나 후보가 끝날 때까지 확인한 뒤 선택된 출하·lot만 일괄 조회한다. 다른 모듈의 Entity를 JPQL 하위 쿼리에 직접 넣지 않는다.
 - DTO mapper가 lazy association을 순회하지 않게 조회 범위를 명시한다. mapper 호출 전 필요한 연관 데이터가 이미 로딩됐는지 확인한다.
 - 입금 이벤트와 경매 정산 목록은 root와 정산 행을 조회한 뒤 거래처 ID를 모아 Partner application API로 이름을 일괄 조회한다. 거래처 이름은 현재 기준 정보이며, 원장의 금액·입금자·날짜나 기존 정산 행의 보존된 값은 다시 계산하지 않는다.
 - 목록·옵션·분석 조회에는 pagination, 날짜 범위 또는 명시적 최대 건수 중 하나를 둔다. 장기 누적 테이블의 무제한 `findAll`을 API 경로에 사용하지 않는다.

@@ -20,10 +20,6 @@ ENTITY	com.greenhouse.backend.farm.application.transformation.RepotWorkHandler	c
 ENTITY	com.greenhouse.backend.farm.application.transformation.RepotWorkHandler	com.greenhouse.backend.work.domain.target.WorkOperationTarget
 ENTITY	com.greenhouse.backend.farm.application.transformation.StructureChangeExecutor	com.greenhouse.backend.work.domain.operation.WorkOperation
 ENTITY	com.greenhouse.backend.farm.application.transformation.StructureChangeExecutor	com.greenhouse.backend.work.domain.operation.WorkType
-ENTITY	com.greenhouse.backend.sales.application.AuctionShipmentLotFactory	com.greenhouse.backend.auction.domain.AuctionShipmentLot
-ENTITY	com.greenhouse.backend.sales.application.AuctionShipmentMaterializer	com.greenhouse.backend.auction.domain.AuctionShipment
-ENTITY	com.greenhouse.backend.sales.application.AuctionShipmentMaterializer	com.greenhouse.backend.auction.domain.AuctionShipmentLot
-ENTITY	com.greenhouse.backend.sales.application.SalesQueryService	com.greenhouse.backend.auction.domain.AuctionShipment
 ENTITY	com.greenhouse.backend.sales.application.SalesSlipAllocationBatch	com.greenhouse.backend.farm.domain.orchid.OrchidGroup
 ENTITY	com.greenhouse.backend.sales.application.SalesSlipAllocationBatch$Line	com.greenhouse.backend.farm.domain.orchid.OrchidGroup
 ENTITY	com.greenhouse.backend.sales.application.SalesSlipAllocationFactory	com.greenhouse.backend.farm.domain.orchid.OrchidGroup
@@ -36,8 +32,6 @@ ENTITY	com.greenhouse.backend.sales.domain.SalesOrchidGroupSnapshot	com.greenhou
 ENTITY	com.greenhouse.backend.sales.domain.SalesOrchidGroupSnapshot	com.greenhouse.backend.farm.domain.structure.PhysicalBed
 ENTITY	com.greenhouse.backend.sales.domain.SalesOrchidGroupSnapshot	com.greenhouse.backend.farm.domain.variety.Variety
 ENTITY	com.greenhouse.backend.sales.domain.SalesSlipItemAllocation	com.greenhouse.backend.farm.domain.orchid.OrchidGroup
-ENTITY	com.greenhouse.backend.sales.dto.AuctionShipmentOptionResponse	com.greenhouse.backend.auction.domain.AuctionShipment
-ENTITY	com.greenhouse.backend.sales.dto.AuctionShipmentOptionResponse	com.greenhouse.backend.auction.domain.AuctionShipmentLot
 ENTITY	com.greenhouse.backend.sales.dto.SalesOrchidGroupSearchResponse	com.greenhouse.backend.farm.domain.orchid.OrchidGroup
 ENTITY	com.greenhouse.backend.sales.dto.SalesOrchidGroupSearchResponse	com.greenhouse.backend.farm.domain.structure.BedZone
 ENTITY	com.greenhouse.backend.sales.dto.SalesOrchidGroupSearchResponse	com.greenhouse.backend.farm.domain.structure.House
