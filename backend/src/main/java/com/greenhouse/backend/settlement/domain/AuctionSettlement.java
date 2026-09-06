@@ -118,14 +118,8 @@ public class AuctionSettlement extends BaseEntity {
 
 		grossAmount = lines.stream().mapToLong(AuctionSettlementLine::getAmount).sum();
 		expectedDepositAmount = Math.max(0L, grossAmount - feeAmount - deductionAmount);
-		remainingAmount = Math.max(0L, expectedDepositAmount - paidAmount);
 		resultReceivedAt = receivedAt;
-		if (paidAmount > 0 && remainingAmount > 0)
-			status = AuctionSettlementStatus.PARTIALLY_PAID;
-		else if (paidAmount > 0 && remainingAmount == 0)
-			status = AuctionSettlementStatus.PAID;
-		else
-			status = lines.isEmpty() ? AuctionSettlementStatus.CREATED : AuctionSettlementStatus.PAYMENT_WAITING;
+		refreshPaymentState();
 	}
 
 	public void updateExpectedPaymentDate(LocalDate expectedPaymentDate) {
@@ -133,15 +127,25 @@ public class AuctionSettlement extends BaseEntity {
 	}
 
 	public void recordPayment(Long amount, String worker, LocalDateTime confirmedAt) {
-		if (amount <= 0)
+		if (amount <= 0) {
 			throw new IllegalArgumentException("입금액은 0원보다 커야 합니다.");
-		if (amount > remainingAmount)
+		}
+		if (amount > remainingAmount) {
 			throw new IllegalArgumentException("입금액은 현재 잔액을 초과할 수 없습니다.");
+		}
 		this.paidAmount += amount;
-		this.remainingAmount = Math.max(0L, expectedDepositAmount - paidAmount);
-		this.status = remainingAmount == 0 ? AuctionSettlementStatus.PAID : AuctionSettlementStatus.PARTIALLY_PAID;
+		refreshPaymentState();
 		this.confirmedAt = confirmedAt;
 		this.confirmedBy = worker;
+	}
+
+	private void refreshPaymentState() {
+		remainingAmount = Math.max(0L, expectedDepositAmount - paidAmount);
+		if (paidAmount > 0) {
+			status = remainingAmount == 0 ? AuctionSettlementStatus.PAID : AuctionSettlementStatus.PARTIALLY_PAID;
+		} else {
+			status = lines.isEmpty() ? AuctionSettlementStatus.CREATED : AuctionSettlementStatus.PAYMENT_WAITING;
+		}
 	}
 
 	private void addLine(AuctionSettlementLine line) {
