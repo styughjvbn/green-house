@@ -1,6 +1,5 @@
 package com.greenhouse.backend.settlement.domain;
 
-import com.greenhouse.backend.auction.domain.AuctionResultLine;
 import com.greenhouse.backend.common.domain.BaseEntity;
 import jakarta.persistence.CascadeType;
 import jakarta.persistence.Column;
@@ -10,21 +9,20 @@ import jakarta.persistence.Enumerated;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
-import jakarta.persistence.SequenceGenerator;
 import jakarta.persistence.OneToMany;
+import jakarta.persistence.SequenceGenerator;
 import jakarta.persistence.Table;
 import jakarta.persistence.UniqueConstraint;
 import jakarta.persistence.Version;
-import lombok.Getter;
-import lombok.NoArgsConstructor;
-import lombok.AccessLevel;
-
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
+import lombok.AccessLevel;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
 import org.hibernate.annotations.JdbcTypeCode;
 import org.hibernate.type.SqlTypes;
 
@@ -106,16 +104,17 @@ public class AuctionSettlement extends BaseEntity {
 		this.status = AuctionSettlementStatus.CREATED;
 	}
 
-	public void synchronizeLines(List<AuctionResultLine> resultLines, LocalDateTime receivedAt) {
-		Set<Long> resultIds = new HashSet<>(resultLines.stream().map(AuctionResultLine::getId).toList());
-		lines.removeIf(line -> !resultIds.contains(line.getAuctionResultLine().getId()));
+	public void synchronizeLines(List<AuctionSettlementLine> resultLines, LocalDateTime receivedAt) {
+		Set<Long> resultIds = new HashSet<>(resultLines.stream().map(AuctionSettlementLine::getAuctionResultLineId).toList());
+		lines.removeIf(line -> !resultIds.contains(line.getAuctionResultLineId()));
 		Set<Long> existingIds = new HashSet<>(lines.stream()
-				.map(line -> line.getAuctionResultLine().getId())
+				.map(AuctionSettlementLine::getAuctionResultLineId)
 				.toList());
-		resultLines.stream()
-				.filter(line -> !existingIds.contains(line.getId()))
-				.map(AuctionSettlementLine::new)
-				.forEach(this::addLine);
+		for (var line : resultLines) {
+			if (existingIds.add(line.getAuctionResultLineId())) {
+				addLine(line);
+			}
+		}
 
 		grossAmount = lines.stream().mapToLong(AuctionSettlementLine::getAmount).sum();
 		expectedDepositAmount = Math.max(0L, grossAmount - feeAmount - deductionAmount);

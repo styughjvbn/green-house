@@ -11,13 +11,13 @@ import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.SequenceGenerator;
 import jakarta.persistence.Table;
-import lombok.Getter;
-import lombok.NoArgsConstructor;
-import lombok.AccessLevel;
-
+import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import lombok.AccessLevel;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
 import org.hibernate.annotations.JdbcTypeCode;
 import org.hibernate.type.SqlTypes;
 
@@ -84,6 +84,25 @@ public class PartnerSettlementSettings extends BaseEntity {
 		this.depositorAliases = new ArrayList<>();
 		this.allowPrepayment = false;
 		this.creditAutoApplyEnabled = false;
+	}
+
+	public LocalDate calculateExpectedPaymentDate(LocalDate baseDate) {
+		if (paymentDelayDays == 0) {
+			return baseDate;
+		}
+		if (paymentDayMode == PaymentDayMode.CALENDAR_DAY) {
+			return baseDate.plusDays(paymentDelayDays);
+		}
+		LocalDate result = baseDate;
+		int remainingDays = paymentDelayDays;
+		while (remainingDays > 0) {
+			result = result.plusDays(1);
+			switch (result.getDayOfWeek()) {
+				case SATURDAY, SUNDAY -> { }
+				default -> remainingDays--;
+			}
+		}
+		return result;
 	}
 
 	public void update(

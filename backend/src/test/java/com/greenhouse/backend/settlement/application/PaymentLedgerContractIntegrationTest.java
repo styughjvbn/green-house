@@ -46,7 +46,7 @@ class PaymentLedgerContractIntegrationTest {
 		var partner = createPartner();
 		var receipt = ledger.recordManualPayment(partner.getId(), PaymentTargetType.SALES_SLIP,
 				TARGET_ID, payment(1_000L, PAYMENT_DATE));
-		balanceService.updateReceivable(partner.getId(), 2_000L, receipt.eventId());
+		balanceService.updateReceivable(partner.getId(), 2_000L, receipt);
 		balanceService.updateReceivable(partner.getId(), 1_500L, null);
 		entityManager.flush();
 		entityManager.clear();
@@ -54,7 +54,7 @@ class PaymentLedgerContractIntegrationTest {
 		var events = eventRepository.search(partner.getId(), PaymentTargetType.SALES_SLIP, TARGET_ID);
 		assertThat(events).hasSize(2);
 		assertThat(events.getFirst().getEventType()).isEqualTo(PaymentEventType.MANUAL_MATCH_CONFIRMED);
-		assertThat(events.getFirst().getParentEvent().getId()).isEqualTo(receipt.eventId());
+		assertThat(events.getFirst().getParentEvent().getId()).isEqualTo(receipt);
 		assertThat(events).allSatisfy(event -> {
 			assertThat(event.getPartnerId()).isEqualTo(partner.getId());
 			assertThat(event.getAmount()).isEqualTo(1_000L);
@@ -66,10 +66,10 @@ class PaymentLedgerContractIntegrationTest {
 		var lastEventId = (Number) entityManager.createNativeQuery(
 				"select last_payment_event_id from partner_balance_summaries where partner_id = :partnerId")
 				.setParameter("partnerId", partner.getId()).getSingleResult();
-		assertThat(lastEventId.longValue()).isEqualTo(receipt.eventId());
+		assertThat(lastEventId.longValue()).isEqualTo(receipt);
 		assertThat(auditRepository.findAll().stream()
 				.filter(event -> event.getEntityType().equals("PAYMENT_EVENT"))
-				.filter(event -> event.getEntityId().equals(receipt.eventId())))
+				.filter(event -> event.getEntityId().equals(receipt)))
 				.singleElement().satisfies(event -> assertThat(event.getAfterData().toString())
 						.doesNotContain("입금자", "민감 메모"));
 	}
@@ -102,11 +102,11 @@ class PaymentLedgerContractIntegrationTest {
 	@Transactional(propagation = Propagation.NOT_SUPPORTED)
 	void rollsBackEventsBalanceAndAuditWithTheCallingUseCase() {
 		var partner = createPartner();
-		var receipt = new AtomicReference<PaymentReceipt>();
+		var receipt = new AtomicReference<Long>();
 		assertThatThrownBy(() -> new TransactionTemplate(transactionManager).executeWithoutResult(status -> {
 			receipt.set(ledger.recordManualPayment(partner.getId(), PaymentTargetType.SALES_SLIP,
 					TARGET_ID, payment(1_000L, PAYMENT_DATE)));
-			balanceService.updateReceivable(partner.getId(), 2_000L, receipt.get().eventId());
+			balanceService.updateReceivable(partner.getId(), 2_000L, receipt.get());
 			entityManager.flush();
 			throw new IllegalStateException("후속 처리 실패");
 		})).isInstanceOf(IllegalStateException.class).hasMessage("후속 처리 실패");
@@ -115,7 +115,7 @@ class PaymentLedgerContractIntegrationTest {
 		assertThat(balanceRepository.findByPartnerId(partner.getId())).isEmpty();
 		assertThat(auditRepository.findAll().stream()
 				.filter(event -> event.getEntityType().equals("PAYMENT_EVENT"))
-				.filter(event -> event.getEntityId().equals(receipt.get().eventId()))).isEmpty();
+				.filter(event -> event.getEntityId().equals(receipt.get()))).isEmpty();
 	}
 
 	private BusinessPartner createPartner() {

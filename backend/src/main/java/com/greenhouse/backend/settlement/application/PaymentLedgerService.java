@@ -18,7 +18,7 @@ public class PaymentLedgerService {
 	private final RequestActorProvider requestActorProvider;
 	private final SettlementAuditSupport auditSupport;
 
-	public PaymentReceipt recordManualPayment(
+	public Long recordManualPayment(
 			Long partnerId,
 			PaymentTargetType targetType,
 			Long targetId,
@@ -36,17 +36,17 @@ public class PaymentLedgerService {
 				defaultWorker(requestActorProvider.resolve(request.worker()))));
 		eventRepository.save(PartnerPaymentEvent.manualMatch(received));
 		auditSupport.recordManualPayment(received);
-		return new PaymentReceipt(received.getId());
+		return received.getId();
 	}
 
-	public Optional<PaymentReceipt> findManualPayment(
+	public Optional<Long> findManualPayment(
 			PaymentTargetType targetType,
 			Long targetId,
 			ManualPaymentCommand request) {
 		return eventRepository.findByExternalUid(externalUid(targetType, targetId, request.idempotencyKey()))
 				.map(event -> {
 					event.validateReplay(request.amount(), request.paymentDate());
-					return new PaymentReceipt(event.getId());
+					return event.getId();
 				});
 	}
 

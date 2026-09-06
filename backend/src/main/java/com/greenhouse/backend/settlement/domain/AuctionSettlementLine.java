@@ -1,7 +1,5 @@
 package com.greenhouse.backend.settlement.domain;
 
-import com.greenhouse.backend.auction.domain.AuctionResultLine;
-import com.greenhouse.backend.auction.domain.AuctionShipmentLot;
 import com.greenhouse.backend.common.domain.BaseEntity;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
@@ -11,15 +9,13 @@ import jakarta.persistence.FetchType;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
-import jakarta.persistence.SequenceGenerator;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
-import jakarta.persistence.OneToOne;
+import jakarta.persistence.SequenceGenerator;
 import jakarta.persistence.Table;
+import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
-import lombok.AccessLevel;
-
 import org.hibernate.annotations.JdbcTypeCode;
 import org.hibernate.type.SqlTypes;
 
@@ -38,13 +34,11 @@ public class AuctionSettlementLine extends BaseEntity {
 	@JoinColumn(name = "settlement_id", nullable = false)
 	private AuctionSettlement settlement;
 
-	@OneToOne(fetch = FetchType.LAZY, optional = false)
-	@JoinColumn(name = "auction_result_line_id", nullable = false, unique = true)
-	private AuctionResultLine auctionResultLine;
+	@Column(name = "auction_result_line_id", nullable = false, unique = true)
+	private Long auctionResultLineId;
 
-	@ManyToOne(fetch = FetchType.LAZY, optional = false)
-	@JoinColumn(name = "auction_shipment_lot_id", nullable = false)
-	private AuctionShipmentLot auctionShipmentLot;
+	@Column(name = "auction_shipment_lot_id", nullable = false)
+	private Long auctionShipmentLotId;
 
 	@Column(nullable = false)
 	private Integer quantity;
@@ -63,12 +57,12 @@ public class AuctionSettlementLine extends BaseEntity {
 	@JdbcTypeCode(SqlTypes.JSON)
 	private String lineMetaJson;
 
-	public AuctionSettlementLine(AuctionResultLine resultLine) {
-		this.auctionResultLine = resultLine;
-		this.auctionShipmentLot = resultLine.getAuctionAttempt().getShipmentLot();
-		this.quantity = resultLine.getQuantity();
-		this.unitPrice = resultLine.getUnitPrice();
-		this.amount = resultLine.getAmount().longValue();
+	public AuctionSettlementLine(Long resultLineId, Long shipmentLotId, Integer quantity, Integer unitPrice, Long amount) {
+		this.auctionResultLineId = resultLineId;
+		this.auctionShipmentLotId = shipmentLotId;
+		this.quantity = quantity;
+		this.unitPrice = unitPrice;
+		this.amount = amount;
 		this.status = AuctionSettlementLineStatus.UNPAID;
 	}
 

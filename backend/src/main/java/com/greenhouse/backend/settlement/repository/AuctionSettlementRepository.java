@@ -2,51 +2,27 @@ package com.greenhouse.backend.settlement.repository;
 
 import com.greenhouse.backend.settlement.domain.AuctionSettlement;
 import com.greenhouse.backend.settlement.domain.AuctionSettlementStatus;
-import com.greenhouse.backend.auction.domain.AuctionResultLine;
-import java.util.Collection;
+import jakarta.persistence.LockModeType;
 import java.time.LocalDate;
+import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Lock;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
-import org.springframework.data.jpa.repository.Lock;
-import jakarta.persistence.LockModeType;
 
 public interface AuctionSettlementRepository extends JpaRepository<AuctionSettlement, Long> {
-	@Query("""
-			select count(line) > 0
-			from AuctionSettlementLine line
-			where line.auctionShipmentLot.shipment.id = :shipmentId
-			""")
-	boolean existsByAuctionShipmentId(@Param("shipmentId") Long shipmentId);
+	@Query("select distinct line.auctionShipmentLotId from AuctionSettlementLine line where line.auctionShipmentLotId in :lotIds")
+	List<Long> findSettledLotIds(@Param("lotIds") Collection<Long> lotIds);
 
-	@Query("""
-			select distinct line.auctionShipmentLot.shipment.id
-			from AuctionSettlementLine line
-			where line.auctionShipmentLot.shipment.id in :shipmentIds
-			""")
-	List<Long> findSettledAuctionShipmentIds(@Param("shipmentIds") Collection<Long> shipmentIds);
+	@Query("select line.auctionResultLineId from AuctionSettlementLine line where line.auctionResultLineId in :resultIds")
+	List<Long> findLinkedResultIds(@Param("resultIds") Collection<Long> resultIds);
 
 	Optional<AuctionSettlement> findByAuctionHouseIdAndAuctionDate(Long auctionHouseId, LocalDate auctionDate);
 
-	@Query("""
-			select resultLine from AuctionResultLine resultLine
-			join fetch resultLine.auctionAttempt attempt
-			join fetch attempt.shipmentLot lot
-			join fetch lot.shipment shipment
-			where resultLine.amount > 0
-			  and not exists (
-				select settlementLine.id from AuctionSettlementLine settlementLine
-				where settlementLine.auctionResultLine = resultLine
-			  )
-			order by resultLine.auctionDate asc, resultLine.id asc
-			""")
-	List<AuctionResultLine> findUnsettledSoldResultLines();
-
-	@EntityGraph(attributePaths = { "lines", "lines.auctionResultLine", "lines.auctionShipmentLot",
-			"lines.auctionShipmentLot.shipment" })
+	@EntityGraph(attributePaths = { "lines" })
 	@Query("""
 			select distinct settlement from AuctionSettlement settlement
 			where settlement.auctionHouseId in :auctionHouseIds
@@ -57,8 +33,7 @@ public interface AuctionSettlementRepository extends JpaRepository<AuctionSettle
 			@Param("fromDate") LocalDate fromDate,
 			@Param("toDate") LocalDate toDate);
 
-	@EntityGraph(attributePaths = { "lines", "lines.auctionResultLine", "lines.auctionShipmentLot",
-			"lines.auctionShipmentLot.shipment" })
+	@EntityGraph(attributePaths = { "lines" })
 	@Query("""
 			select distinct settlement from AuctionSettlement settlement
 			where (:auctionHouseId is null or settlement.auctionHouseId = :auctionHouseId)
@@ -73,8 +48,7 @@ public interface AuctionSettlementRepository extends JpaRepository<AuctionSettle
 			@Param("toDate") LocalDate to,
 			@Param("status") AuctionSettlementStatus status);
 
-	@EntityGraph(attributePaths = { "lines", "lines.auctionResultLine", "lines.auctionShipmentLot",
-			"lines.auctionShipmentLot.shipment" })
+	@EntityGraph(attributePaths = { "lines" })
 	Optional<AuctionSettlement> findWithDetailsById(Long id);
 
 	@Lock(LockModeType.PESSIMISTIC_WRITE)

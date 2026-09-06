@@ -11,7 +11,6 @@ import com.greenhouse.backend.settlement.dto.ManualPaymentRequest;
 import com.greenhouse.backend.settlement.dto.PartnerPaymentEventResponse;
 import com.greenhouse.backend.settlement.repository.AuctionSettlementRepository;
 import com.greenhouse.backend.settlement.repository.PartnerPaymentEventRepository;
-
 import java.time.Clock;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
@@ -43,9 +42,9 @@ public class PaymentService {
 		var before = auditSupport.auctionPaymentSnapshot(settlement);
 		settlement.recordPayment(request.amount(), defaultWorker(requestActorProvider.resolve(request.worker())),
 				TimeConfig.utcNow(clock));
-		var received = paymentLedgerService.recordManualPayment(
+		var receivedEventId = paymentLedgerService.recordManualPayment(
 				settlement.getAuctionHouseId(), PaymentTargetType.AUCTION_SETTLEMENT, settlementId, payment);
-		partnerBalanceService.recordActivity(settlement.getAuctionHouseId(), received.eventId());
+		partnerBalanceService.recordActivity(settlement.getAuctionHouseId(), receivedEventId);
 		var saved = auctionSettlementRepository.save(settlement);
 		auditSupport.recordTargetPayment("AUCTION_SETTLEMENT", saved.getId(),
 				saved.getAuctionHouseId(), PaymentTargetType.AUCTION_SETTLEMENT,

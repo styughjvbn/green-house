@@ -15,6 +15,7 @@ import com.greenhouse.backend.partner.domain.PartnerType;
 import com.greenhouse.backend.settlement.application.AuctionSettlementService;
 import com.greenhouse.backend.settlement.application.PaymentService;
 import com.greenhouse.backend.settlement.domain.AuctionSettlement;
+import com.greenhouse.backend.settlement.domain.AuctionSettlementLine;
 import com.greenhouse.backend.settlement.domain.AuctionSettlementStatus;
 import com.greenhouse.backend.settlement.domain.PartnerPaymentEvent;
 import com.greenhouse.backend.settlement.domain.PaymentEventType;
@@ -63,7 +64,7 @@ class SettlementPartnerQueryTest {
 			shipment.addLot(lot);
 			entityManager.persist(shipment);
 			var settlement = new AuctionSettlement(house.getId(), date);
-			settlement.synchronizeLines(List.of(result), LocalDateTime.of(2026, 9, 6, 0, 0));
+			settlement.synchronizeLines(List.of(new AuctionSettlementLine(result.getId(), lot.getId(), 10, 1_000, 10_000L)), LocalDateTime.of(2026, 9, 6, 0, 0));
 			entityManager.persist(settlement);
 			house.update("변경 경매장 " + index, PartnerType.AUCTION_HOUSE, null, null, null, null);
 		}
@@ -83,7 +84,7 @@ class SettlementPartnerQueryTest {
 				assertThat(line.quantity()).isEqualTo(10);
 			});
 		}
-		assertThat(statistics.getPrepareStatementCount()).isLessThanOrEqualTo(2);
+		assertThat(statistics.getPrepareStatementCount()).isLessThanOrEqualTo(3);
 	}
 
 	@Test
@@ -108,6 +109,47 @@ class SettlementPartnerQueryTest {
 		entityManager.persist(partner);
 		assertThatThrownBy(() -> settlementService.rebuild(partner.getId(), LocalDate.of(2026, 9, 6)))
 				.isInstanceOf(IllegalArgumentException.class).hasMessage("경매장 유형 거래처만 정산할 수 있습니다.");
+	}
+
+	@Test
+	void rebuildScansResultIdsInBatchesAndKeepsExistingFinancialSnapshots() {
+		var date = LocalDate.of(2043, 1, 1);
+		var house = new BusinessPartner("배치 경매장", PartnerType.AUCTION_HOUSE, null, null, null, null);
+		entityManager.persist(house);
+		var shipment = new AuctionShipment(date, house.getId(), house.getPartnerType());
+		var lot = new AuctionShipmentLot("난", "배치 품종", "A", null, 502);
+		var attempt = new AuctionAttempt(date, 1, AuctionAttemptStatus.SOLD, null, null);
+		for (int index = 0; index < 501; index++) {
+			attempt.addResultLine(new AuctionResultLine(date, "A", 1, 1_000, 1_000, null, AuctionInspectionStatus.NORMAL));
+		}
+		lot.addAttempt(attempt);
+		shipment.addLot(lot);
+		entityManager.persist(shipment);
+		var original = settlementService.rebuild(house.getId(), date);
+		assertThat(original.lines()).hasSize(501);
+		var firstResult = attempt.getResultLines().getFirst();
+		Long firstResultId = firstResult.getId();
+		// A later change to a source must not rewrite an already recorded settlement amount.
+		org.springframework.test.util.ReflectionTestUtils.setField(firstResult, "amount", 9_000);
+		org.springframework.test.util.ReflectionTestUtils.setField(firstResult, "unitPrice", 9_000);
+		var additional = new AuctionResultLine(date, "A", 1, 2_000, 2_000, null, AuctionInspectionStatus.NORMAL);
+		attempt.addResultLine(additional);
+		entityManager.persist(additional);
+		flushAndResetStatistics();
+
+		assertThat(settlementService.rebuildExistingResults()).isEqualTo(1);
+		var updated = settlementService.getSettlement(original.id());
+		assertThat(updated.lines()).hasSize(502);
+		assertThat(updated.grossAmount()).isEqualTo(503_000L);
+		assertThat(updated.lines().stream().filter(line -> line.auctionResultLineId().equals(firstResultId)))
+				.singleElement().satisfies(line -> {
+					assertThat(line.amount()).isEqualTo(1_000L);
+					assertThat(line.unitPrice()).isEqualTo(1_000);
+				});
+		var statistics = flushAndResetStatistics();
+		assertThat(settlementService.rebuildExistingResults()).isZero();
+		// Two pages of IDs + two local link checks; no source details or settlements are loaded again.
+		assertThat(statistics.getPrepareStatementCount()).isEqualTo(4);
 	}
 
 	@ParameterizedTest

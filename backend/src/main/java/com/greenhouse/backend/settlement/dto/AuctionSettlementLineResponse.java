@@ -1,5 +1,6 @@
 package com.greenhouse.backend.settlement.dto;
 
+import com.greenhouse.backend.auction.application.AuctionDataReader.Result;
 import com.greenhouse.backend.settlement.domain.AuctionSettlementLine;
 import com.greenhouse.backend.settlement.domain.AuctionSettlementLineStatus;
 import java.time.LocalDate;
@@ -15,11 +16,10 @@ public record AuctionSettlementLineResponse(
 		Integer unitPrice,
 		Long amount,
 		AuctionSettlementLineStatus status) {
-	public static AuctionSettlementLineResponse from(AuctionSettlementLine line) {
-		var lot = line.getAuctionShipmentLot();
+	public static AuctionSettlementLineResponse from(AuctionSettlementLine line, Result result) {
 		return new AuctionSettlementLineResponse(
-				line.getId(), line.getAuctionResultLine().getId(), lot.getId(),
-				lot.getShipment().getShipmentDate(), lot.getVarietyName(), lot.getShipmentGrade(),
+				line.getId(), line.getAuctionResultLineId(), line.getAuctionShipmentLotId(),
+				result.shipmentDate(), result.varietyName(), result.shipmentGrade(),
 				line.getQuantity(), line.getUnitPrice(), line.getAmount(), line.getStatus());
 	}
 }

@@ -1,19 +1,21 @@
 package com.greenhouse.backend.auction.repository;
 
+import com.greenhouse.backend.auction.domain.AuctionLotStatus;
 import com.greenhouse.backend.auction.domain.AuctionShipmentLot;
+import jakarta.persistence.LockModeType;
+import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
-import java.util.Collection;
 import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
-import com.greenhouse.backend.auction.domain.AuctionLotStatus;
-import jakarta.persistence.LockModeType;
 import org.springframework.data.jpa.repository.Lock;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
 public interface AuctionShipmentLotRepository
 		extends JpaRepository<AuctionShipmentLot, Long>, AuctionShipmentLotRepositoryCustom {
+	List<AuctionShipmentLot> findAllByShipmentIdIn(Collection<Long> shipmentIds);
+
 	boolean existsByShipmentIdAndCurrentStatusNot(Long shipmentId, AuctionLotStatus status);
 
 	@Query("""

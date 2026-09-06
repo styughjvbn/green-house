@@ -9,12 +9,10 @@ import com.greenhouse.backend.settlement.application.PaymentLedgerService;
 import com.greenhouse.backend.settlement.application.SettlementAuditSupport;
 import com.greenhouse.backend.settlement.domain.PaymentTargetType;
 import com.greenhouse.backend.settlement.dto.ManualPaymentRequest;
-
+import java.util.List;
 import lombok.RequiredArgsConstructor;
-
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import java.util.List;
 
 @Service
 @Transactional
@@ -46,12 +44,12 @@ public class SalesPaymentService {
 				salesSlip.getPaymentStatus());
 		salesSlip.recordPayment(request.amount());
 		var saved = salesSlipRepository.save(salesSlip);
-		var received = paymentLedgerService.recordManualPayment(
+		var receivedEventId = paymentLedgerService.recordManualPayment(
 				salesSlip.getPartnerId(), PaymentTargetType.SALES_SLIP, salesSlipId, payment);
 		partnerBalanceService.updateReceivable(
 				salesSlip.getPartnerId(),
 				salesSlipRepository.sumDirectReceivableByPartnerId(salesSlip.getPartnerId()),
-				received.eventId());
+				receivedEventId);
 		auditSupport.recordTargetPayment("SALES_SLIP", saved.getId(), saved.getPartnerId(),
 				PaymentTargetType.SALES_SLIP, before,
 				auditSupport.paymentSnapshot(saved.getPaidAmount(), saved.getRemainingAmount(),
