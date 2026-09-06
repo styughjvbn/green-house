@@ -23,10 +23,10 @@ public interface PartnerPaymentEventRepository extends JpaRepository<PartnerPaym
 
 	Optional<PartnerPaymentEvent> findByExternalUid(String externalUid);
 
-	@EntityGraph(attributePaths = { "partner", "parentEvent" })
+	@EntityGraph(attributePaths = "parentEvent")
 	@Query("""
 			select event from PartnerPaymentEvent event
-			where (:partnerId is null or event.partner.id = :partnerId)
+			where (:partnerId is null or event.partnerId = :partnerId)
 			  and (:targetType is null or event.targetType = :targetType)
 			  and (:targetId is null or event.targetId = :targetId)
 			order by event.eventDate desc, event.id desc

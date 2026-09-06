@@ -27,6 +27,7 @@ public class SalesPaymentService {
 	private final SalesSlipResponseAssembler responseAssembler;
 
 	public SalesSlipResponse confirmPayment(Long salesSlipId, ManualPaymentRequest request) {
+		var payment = request.toCommand();
 		var salesSlip = salesSlipRepository.findForUpdateById(salesSlipId)
 				.orElseThrow(() -> new NotFoundException("판매 전표를 찾을 수 없습니다."));
 		if (salesSlip.getSalesType() != SalesType.DIRECT) {
@@ -37,7 +38,7 @@ public class SalesPaymentService {
 		}
 		partnerBalanceService.lockPartners(List.of(salesSlip.getPartner().getId()));
 		if (paymentLedgerService.findManualPayment(
-				PaymentTargetType.SALES_SLIP, salesSlipId, request).isPresent()) {
+				PaymentTargetType.SALES_SLIP, salesSlipId, payment).isPresent()) {
 			return responseAssembler.assemble(salesSlip);
 		}
 
@@ -46,11 +47,11 @@ public class SalesPaymentService {
 		salesSlip.recordPayment(request.amount());
 		var saved = salesSlipRepository.save(salesSlip);
 		var received = paymentLedgerService.recordManualPayment(
-				salesSlip.getPartner(), PaymentTargetType.SALES_SLIP, salesSlipId, request);
+				salesSlip.getPartner().getId(), PaymentTargetType.SALES_SLIP, salesSlipId, payment);
 		partnerBalanceService.updateReceivable(
 				salesSlip.getPartner().getId(),
 				salesSlipRepository.sumDirectReceivableByPartnerId(salesSlip.getPartner().getId()),
-				received);
+				received.eventId());
 		auditSupport.recordTargetPayment("SALES_SLIP", saved.getId(), saved.getPartner().getId(),
 				PaymentTargetType.SALES_SLIP, before,
 				auditSupport.paymentSnapshot(saved.getPaidAmount(), saved.getRemainingAmount(),

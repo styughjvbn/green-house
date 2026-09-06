@@ -6,6 +6,11 @@ import com.greenhouse.backend.partner.repository.BusinessPartnerRepository;
 
 import lombok.RequiredArgsConstructor;
 
+import java.util.Collection;
+import java.util.HashSet;
+import java.util.Map;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -21,6 +26,19 @@ public class BusinessPartnerReader {
 
 	public BusinessPartnerInfo getActiveInfo(Long partnerId) {
 		return BusinessPartnerInfo.from(getActive(partnerId));
+	}
+
+	public Map<Long, BusinessPartnerInfo> getAllInfo(Collection<Long> partnerIds) {
+		var requestedIds = new HashSet<>(partnerIds);
+		if (requestedIds.isEmpty()) {
+			return Map.of();
+		}
+		var partners = partnerRepository.findAllById(requestedIds);
+		if (partners.size() != requestedIds.size()) {
+			throw new NotFoundException("거래처를 찾을 수 없습니다.");
+		}
+		return partners.stream().map(BusinessPartnerInfo::from)
+				.collect(Collectors.toUnmodifiableMap(BusinessPartnerInfo::id, Function.identity()));
 	}
 
 	/** @deprecated Remaining legacy associations must migrate to {@link #getInfo(Long)}. */

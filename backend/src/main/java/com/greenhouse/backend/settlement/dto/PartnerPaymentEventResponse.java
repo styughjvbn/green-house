@@ -23,9 +23,9 @@ public record PartnerPaymentEventResponse(
 		PaymentEventStatus status,
 		String memo,
 		String createdBy) {
-	public static PartnerPaymentEventResponse from(PartnerPaymentEvent event) {
+	public static PartnerPaymentEventResponse from(PartnerPaymentEvent event, String partnerName) {
 		return new PartnerPaymentEventResponse(
-				event.getId(), event.getPartner().getId(), event.getPartner().getName(), event.getEventType(),
+				event.getId(), event.getPartnerId(), partnerName, event.getEventType(),
 				event.getEventDate(), event.getAmount(), event.getUnappliedAmount(), event.getTargetType(),
 				event.getTargetId(), event.getParentEvent() == null ? null : event.getParentEvent().getId(),
 				event.getPaymentMethod(), event.getDepositorName(), event.getDescription(), event.getStatus(),

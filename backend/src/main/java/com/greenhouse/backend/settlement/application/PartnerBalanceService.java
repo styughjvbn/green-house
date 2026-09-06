@@ -5,6 +5,7 @@ import com.greenhouse.backend.settlement.domain.PartnerBalanceSummary;
 import com.greenhouse.backend.settlement.domain.PartnerPaymentEvent;
 import com.greenhouse.backend.settlement.dto.PartnerBalanceSummaryResponse;
 import com.greenhouse.backend.settlement.repository.PartnerBalanceSummaryRepository;
+import com.greenhouse.backend.settlement.repository.PartnerPaymentEventRepository;
 
 import lombok.RequiredArgsConstructor;
 
@@ -19,6 +20,7 @@ import org.springframework.transaction.annotation.Transactional;
 @RequiredArgsConstructor
 public class PartnerBalanceService {
 	private final PartnerBalanceSummaryRepository balanceRepository;
+	private final PartnerPaymentEventRepository eventRepository;
 	private final BusinessPartnerLock partnerLock;
 
 	@Transactional(propagation = Propagation.MANDATORY)
@@ -26,17 +28,17 @@ public class PartnerBalanceService {
 		partnerLock.lockAll(partnerIds);
 	}
 
-	public void updateReceivable(Long partnerId, Long receivableBalance, PartnerPaymentEvent lastPaymentEvent) {
+	public void updateReceivable(Long partnerId, Long receivableBalance, Long lastPaymentEventId) {
 		partnerLock.lockAll(List.of(partnerId));
 		var summary = findOrCreateForUpdate(partnerId);
-		summary.updateReceivableBalance(receivableBalance, lastPaymentEvent);
+		summary.updateReceivableBalance(receivableBalance, paymentEventReference(lastPaymentEventId));
 		balanceRepository.save(summary);
 	}
 
-	public void recordActivity(Long partnerId, PartnerPaymentEvent lastPaymentEvent) {
+	public void recordActivity(Long partnerId, Long lastPaymentEventId) {
 		partnerLock.lockAll(List.of(partnerId));
 		var summary = findOrCreateForUpdate(partnerId);
-		summary.updateReceivableBalance(summary.getReceivableBalance(), lastPaymentEvent);
+		summary.updateReceivableBalance(summary.getReceivableBalance(), paymentEventReference(lastPaymentEventId));
 		balanceRepository.save(summary);
 	}
 
@@ -48,5 +50,9 @@ public class PartnerBalanceService {
 	private PartnerBalanceSummary findOrCreateForUpdate(Long partnerId) {
 		return balanceRepository.findForUpdateByPartnerId(partnerId)
 				.orElseGet(() -> balanceRepository.save(new PartnerBalanceSummary(partnerId)));
+	}
+
+	private PartnerPaymentEvent paymentEventReference(Long eventId) {
+		return eventId == null ? null : eventRepository.getReferenceById(eventId);
 	}
 }

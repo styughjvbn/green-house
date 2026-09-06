@@ -67,6 +67,26 @@ class BusinessPartnerContractIntegrationTest {
 	}
 
 	@Test
+	void bulkReadsReturnEachRequestedPartnerOnce() {
+		var first = createPartner("일괄 조회 1");
+		var second = createPartner("일괄 조회 2");
+
+		var partners = partnerReader.getAllInfo(List.of(second.getId(), first.getId(), second.getId()));
+
+		assertThat(partners).containsOnlyKeys(first.getId(), second.getId());
+		assertThat(partners.get(first.getId()).name()).isEqualTo("일괄 조회 1");
+		assertThatThrownBy(() -> partners.clear()).isInstanceOf(UnsupportedOperationException.class);
+		assertThat(partnerReader.getAllInfo(List.of())).isEmpty();
+	}
+
+	@Test
+	void rejectsPartialBulkReadResults() {
+		var partner = createPartner("일괄 조회 누락");
+		assertThatThrownBy(() -> partnerReader.getAllInfo(List.of(partner.getId(), -1L)))
+				.isInstanceOf(NotFoundException.class);
+	}
+
+	@Test
 	void rejectsMissingPartnerReads() {
 		assertThatThrownBy(() -> partnerReader.getInfo(-1L)).isInstanceOf(NotFoundException.class);
 	}

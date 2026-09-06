@@ -1,7 +1,6 @@
 package com.greenhouse.backend.settlement.domain;
 
 import com.greenhouse.backend.common.domain.BaseEntity;
-import com.greenhouse.backend.partner.domain.BusinessPartner;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
@@ -22,6 +21,7 @@ import lombok.AccessLevel;
 import java.time.LocalDate;
 import java.time.LocalTime;
 import java.util.Map;
+import java.util.Objects;
 import org.hibernate.annotations.JdbcTypeCode;
 import org.hibernate.type.SqlTypes;
 
@@ -38,9 +38,8 @@ public class PartnerPaymentEvent extends BaseEntity {
 	@SequenceGenerator(name = "partner_payment_events_id_seq", sequenceName = "partner_payment_events_id_seq", allocationSize = 50)
 	private Long id;
 
-	@ManyToOne(fetch = FetchType.LAZY, optional = false)
-	@JoinColumn(name = "partner_id", nullable = false)
-	private BusinessPartner partner;
+	@Column(name = "partner_id", nullable = false)
+	private Long partnerId;
 
 	@Enumerated(EnumType.STRING)
 	@Column(name = "event_type", nullable = false)
@@ -108,7 +107,7 @@ public class PartnerPaymentEvent extends BaseEntity {
 	private String createdBy;
 
 	private PartnerPaymentEvent(
-			BusinessPartner partner,
+			Long partnerId,
 			PaymentEventType eventType,
 			LocalDate eventDate,
 			Long amount,
@@ -122,7 +121,7 @@ public class PartnerPaymentEvent extends BaseEntity {
 			PaymentEventStatus status,
 			String memo,
 			String createdBy) {
-		this.partner = partner;
+		this.partnerId = partnerId;
 		this.eventType = eventType;
 		this.eventDate = eventDate;
 		this.amount = amount;
@@ -140,7 +139,7 @@ public class PartnerPaymentEvent extends BaseEntity {
 	}
 
 	public static PartnerPaymentEvent received(
-			BusinessPartner partner,
+			Long partnerId,
 			LocalDate eventDate,
 			Long amount,
 			PaymentTargetType targetType,
@@ -151,16 +150,22 @@ public class PartnerPaymentEvent extends BaseEntity {
 			String memo,
 			String createdBy) {
 		return new PartnerPaymentEvent(
-				partner, PaymentEventType.PAYMENT_RECEIVED, eventDate, amount, targetType, targetId, null,
+				partnerId, PaymentEventType.PAYMENT_RECEIVED, eventDate, amount, targetType, targetId, null,
 				paymentMethod, depositorName, "수동 입금 확인", externalUid,
 				PaymentEventStatus.FULLY_APPLIED, memo, createdBy);
 	}
 
 	public static PartnerPaymentEvent manualMatch(PartnerPaymentEvent receivedEvent) {
 		return new PartnerPaymentEvent(
-				receivedEvent.partner, PaymentEventType.MANUAL_MATCH_CONFIRMED, receivedEvent.eventDate,
+				receivedEvent.partnerId, PaymentEventType.MANUAL_MATCH_CONFIRMED, receivedEvent.eventDate,
 				receivedEvent.amount, receivedEvent.targetType, receivedEvent.targetId, receivedEvent,
 				receivedEvent.paymentMethod, receivedEvent.depositorName, "수동 입금 연결",
 				null, PaymentEventStatus.CONFIRMED, receivedEvent.memo, receivedEvent.createdBy);
+	}
+
+	public void validateReplay(Long amount, LocalDate eventDate) {
+		if (!Objects.equals(this.amount, amount) || !Objects.equals(this.eventDate, eventDate)) {
+			throw new IllegalArgumentException("같은 입금 멱등 키를 다른 금액 또는 입금일에 재사용할 수 없습니다.");
+		}
 	}
 }

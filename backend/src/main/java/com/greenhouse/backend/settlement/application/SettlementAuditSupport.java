@@ -61,7 +61,7 @@ public class SettlementAuditSupport {
 
 	public void recordManualPayment(PartnerPaymentEvent event) {
 		var after = new LinkedHashMap<String, Object>();
-		after.put("partnerId", event.getPartner().getId());
+		after.put("partnerId", event.getPartnerId());
 		after.put("eventType", event.getEventType());
 		after.put("eventDate", event.getEventDate());
 		after.put("amount", event.getAmount());
@@ -72,7 +72,7 @@ public class SettlementAuditSupport {
 		after.put("createdBy", event.getCreatedBy());
 		auditWriter.record(AuditAction.CREATED, AuditSource.SETTLEMENT_MANAGEMENT,
 				"PAYMENT_EVENT", event.getId(), Map.of(), after,
-				Map.of("partnerId", event.getPartner().getId(),
+				Map.of("partnerId", event.getPartnerId(),
 						"targetType", event.getTargetType().name(), "targetId", event.getTargetId()));
 	}
 }

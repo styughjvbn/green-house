@@ -2,6 +2,8 @@ package com.greenhouse.backend.settlement.application;
 
 import com.greenhouse.backend.common.exception.NotFoundException;
 import com.greenhouse.backend.common.application.RequestActorProvider;
+import com.greenhouse.backend.partner.application.BusinessPartnerReader;
+import com.greenhouse.backend.settlement.domain.PartnerPaymentEvent;
 import com.greenhouse.backend.settlement.domain.PaymentTargetType;
 import com.greenhouse.backend.settlement.dto.AuctionSettlementResponse;
 import com.greenhouse.backend.settlement.dto.ManualPaymentRequest;
@@ -25,19 +27,21 @@ public class PaymentService {
 	private final PartnerBalanceService partnerBalanceService;
 	private final RequestActorProvider requestActorProvider;
 	private final SettlementAuditSupport auditSupport;
+	private final BusinessPartnerReader partnerReader;
 
 	public AuctionSettlementResponse confirmAuctionPayment(Long settlementId, ManualPaymentRequest request) {
+		var payment = request.toCommand();
 		var settlement = auctionSettlementRepository.findForUpdateById(settlementId)
 				.orElseThrow(() -> new NotFoundException("경매 정산을 찾을 수 없습니다."));
 		if (paymentLedgerService.findManualPayment(
-				PaymentTargetType.AUCTION_SETTLEMENT, settlementId, request).isPresent()) {
+				PaymentTargetType.AUCTION_SETTLEMENT, settlementId, payment).isPresent()) {
 			return AuctionSettlementResponse.from(settlement);
 		}
 		var before = auditSupport.auctionPaymentSnapshot(settlement);
 		settlement.recordPayment(request.amount(), defaultWorker(requestActorProvider.resolve(request.worker())));
 		var received = paymentLedgerService.recordManualPayment(
-				settlement.getAuctionHouse(), PaymentTargetType.AUCTION_SETTLEMENT, settlementId, request);
-		partnerBalanceService.recordActivity(settlement.getAuctionHouse().getId(), received);
+				settlement.getAuctionHouse().getId(), PaymentTargetType.AUCTION_SETTLEMENT, settlementId, payment);
+		partnerBalanceService.recordActivity(settlement.getAuctionHouse().getId(), received.eventId());
 		var saved = auctionSettlementRepository.save(settlement);
 		auditSupport.recordTargetPayment("AUCTION_SETTLEMENT", saved.getId(),
 				saved.getAuctionHouse().getId(), PaymentTargetType.AUCTION_SETTLEMENT,
@@ -50,8 +54,10 @@ public class PaymentService {
 			Long partnerId,
 			PaymentTargetType targetType,
 			Long targetId) {
-		return eventRepository.search(partnerId, targetType, targetId).stream()
-				.map(PartnerPaymentEventResponse::from)
+		var events = eventRepository.search(partnerId, targetType, targetId);
+		var partners = partnerReader.getAllInfo(events.stream().map(PartnerPaymentEvent::getPartnerId).toList());
+		return events.stream()
+				.map(event -> PartnerPaymentEventResponse.from(event, partners.get(event.getPartnerId()).name()))
 				.toList();
 	}
 
