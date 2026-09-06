@@ -34,8 +34,8 @@ public class SalesSlipActionResolver {
 				directSalesSlipIds);
 		List<Long> auctionShipmentIds = salesSlips.stream()
 				.filter(salesSlip -> salesSlip.getSalesType() == SalesType.AUCTION)
-				.filter(salesSlip -> salesSlip.getAuctionShipment() != null)
-				.map(salesSlip -> salesSlip.getAuctionShipment().getId())
+				.filter(salesSlip -> salesSlip.getAuctionShipmentId() != null)
+				.map(salesSlip -> salesSlip.getAuctionShipmentId())
 				.toList();
 		Set<Long> nonCancelableShipmentIds = auctionCancellationPolicy
 				.findNonCancelableShipmentIds(auctionShipmentIds);
@@ -86,7 +86,7 @@ public class SalesSlipActionResolver {
 		if (salesSlip.getSalesType() == SalesType.DIRECT) {
 			return !hasPaymentEvent;
 		}
-		return salesSlip.getAuctionShipment() == null
-				|| !nonCancelableShipmentIds.contains(salesSlip.getAuctionShipment().getId());
+		return salesSlip.getAuctionShipmentId() == null
+				|| !nonCancelableShipmentIds.contains(salesSlip.getAuctionShipmentId());
 	}
 }

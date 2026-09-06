@@ -25,14 +25,14 @@ public interface AuctionShipmentLotRepository
 			@Param("shipmentIds") Collection<Long> shipmentIds,
 			@Param("status") AuctionLotStatus status);
 
-	@EntityGraph(attributePaths = { "shipment", "shipment.auctionHouse" })
+	@EntityGraph(attributePaths = { "shipment" })
 	List<AuctionShipmentLot> findAllByOrderByIdDesc();
 
-	@EntityGraph(attributePaths = { "shipment", "shipment.auctionHouse" })
+	@EntityGraph(attributePaths = { "shipment" })
 	Optional<AuctionShipmentLot> findWithDetailsById(Long id);
 
 	@Lock(LockModeType.PESSIMISTIC_WRITE)
-	@EntityGraph(attributePaths = { "shipment", "shipment.auctionHouse" })
+	@EntityGraph(attributePaths = { "shipment" })
 	@Query("select lot from AuctionShipmentLot lot where lot.id = :id")
 	Optional<AuctionShipmentLot> findForUpdateById(@Param("id") Long id);
 }

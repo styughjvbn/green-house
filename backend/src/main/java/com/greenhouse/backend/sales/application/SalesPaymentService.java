@@ -36,7 +36,7 @@ public class SalesPaymentService {
 		if (salesSlip.isCanceled()) {
 			throw new IllegalArgumentException("취소된 전표는 입금을 확인할 수 없습니다.");
 		}
-		partnerBalanceService.lockPartners(List.of(salesSlip.getPartner().getId()));
+		partnerBalanceService.lockPartners(List.of(salesSlip.getPartnerId()));
 		if (paymentLedgerService.findManualPayment(
 				PaymentTargetType.SALES_SLIP, salesSlipId, payment).isPresent()) {
 			return responseAssembler.assemble(salesSlip);
@@ -47,12 +47,12 @@ public class SalesPaymentService {
 		salesSlip.recordPayment(request.amount());
 		var saved = salesSlipRepository.save(salesSlip);
 		var received = paymentLedgerService.recordManualPayment(
-				salesSlip.getPartner().getId(), PaymentTargetType.SALES_SLIP, salesSlipId, payment);
+				salesSlip.getPartnerId(), PaymentTargetType.SALES_SLIP, salesSlipId, payment);
 		partnerBalanceService.updateReceivable(
-				salesSlip.getPartner().getId(),
-				salesSlipRepository.sumDirectReceivableByPartnerId(salesSlip.getPartner().getId()),
+				salesSlip.getPartnerId(),
+				salesSlipRepository.sumDirectReceivableByPartnerId(salesSlip.getPartnerId()),
 				received.eventId());
-		auditSupport.recordTargetPayment("SALES_SLIP", saved.getId(), saved.getPartner().getId(),
+		auditSupport.recordTargetPayment("SALES_SLIP", saved.getId(), saved.getPartnerId(),
 				PaymentTargetType.SALES_SLIP, before,
 				auditSupport.paymentSnapshot(saved.getPaidAmount(), saved.getRemainingAmount(),
 						saved.getPaymentStatus()));

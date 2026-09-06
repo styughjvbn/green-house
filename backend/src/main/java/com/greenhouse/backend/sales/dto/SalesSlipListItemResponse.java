@@ -1,6 +1,7 @@
 package com.greenhouse.backend.sales.dto;
 
 import com.greenhouse.backend.partner.dto.BusinessPartnerResponse;
+import com.greenhouse.backend.partner.application.BusinessPartnerInfo;
 import com.greenhouse.backend.sales.domain.SalesSlip;
 import com.greenhouse.backend.sales.domain.SalesType;
 import java.time.LocalDate;
@@ -22,15 +23,15 @@ public record SalesSlipListItemResponse(
 		String paymentMethod,
 		String memo) {
 
-	public static SalesSlipListItemResponse from(SalesSlip salesSlip) {
+	public static SalesSlipListItemResponse from(SalesSlip salesSlip, BusinessPartnerInfo partner, String auctionMarket) {
 		return new SalesSlipListItemResponse(
 				salesSlip.getId(),
 				salesSlip.getSlipNumber(),
 				salesSlip.getSaleDate(),
 				salesSlip.getSalesType(),
-				salesSlip.getAuctionShipment() == null ? null : salesSlip.getAuctionShipment().getId(),
-				salesSlip.getAuctionShipment() == null ? null : salesSlip.getAuctionShipment().getAuctionMarket(),
-				BusinessPartnerResponse.from(salesSlip.getPartner()),
+				salesSlip.getAuctionShipmentId(),
+				auctionMarket,
+				BusinessPartnerResponse.from(partner),
 				salesSlip.getTotalAmount(),
 				salesSlip.getExpectedPaymentDate(),
 				salesSlip.getPaidAmount(),

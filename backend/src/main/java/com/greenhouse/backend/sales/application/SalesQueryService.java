@@ -59,10 +59,9 @@ public class SalesQueryService {
 		String normalizedPaymentStatus = blankToNull(paymentStatus);
 		String normalizedSalesStatus = blankToNull(salesStatus);
 		String normalizedKeyword = blankToNull(keyword);
-		Page<SalesSlipListItemResponse> result = salesSlipRepository
-				.searchPage(partnerId, from, to, normalizedPaymentStatus, normalizedSalesStatus, normalizedKeyword, pageable)
-				.map(SalesSlipListItemResponse::from);
-		return PageResponse.from(result);
+		var result = salesSlipRepository
+				.searchPage(partnerId, from, to, normalizedPaymentStatus, normalizedSalesStatus, normalizedKeyword, pageable);
+		return PageResponse.from(responseAssembler.assemblePage(result));
 	}
 
 	public SalesSlipResponse getSalesSlip(Long salesSlipId) {
@@ -74,8 +73,9 @@ public class SalesQueryService {
 	public List<AuctionShipmentOptionResponse> getAuctionShipmentOptions() {
 		var shipmentIds = salesSlipRepository.findAvailableAuctionShipmentIds(
 				PageRequest.of(0, AUCTION_SHIPMENT_OPTION_LIMIT));
+		var marketNames = auctionDataReader.getMarketNames(shipmentIds);
 		return auctionDataReader.getShipmentsWithLotsNewestFirst(shipmentIds).stream()
-				.map(AuctionShipmentOptionResponse::from)
+				.map(shipment -> AuctionShipmentOptionResponse.from(shipment, marketNames.get(shipment.getId())))
 				.toList();
 	}
 

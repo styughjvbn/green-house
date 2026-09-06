@@ -73,7 +73,7 @@ public class AuctionShipmentLotRepositoryImpl implements AuctionShipmentLotRepos
 		List<AuctionShipmentLot> content = queryFactory
 				.selectFrom(auctionShipmentLot)
 				.join(auctionShipmentLot.shipment, auctionShipment).fetchJoin()
-				.join(auctionShipment.auctionHouse, businessPartner).fetchJoin()
+				.join(businessPartner).on(auctionShipment.auctionHouseId.eq(businessPartner.id))
 				.where(conditions)
 				.orderBy(auctionShipmentLot.id.desc())
 				.offset(pageable.getOffset())
@@ -83,7 +83,7 @@ public class AuctionShipmentLotRepositoryImpl implements AuctionShipmentLotRepos
 				.select(auctionShipmentLot.id.count())
 				.from(auctionShipmentLot)
 				.join(auctionShipmentLot.shipment, auctionShipment)
-				.join(auctionShipment.auctionHouse, businessPartner)
+				.join(businessPartner).on(auctionShipment.auctionHouseId.eq(businessPartner.id))
 				.where(conditions)
 				.fetchOne();
 

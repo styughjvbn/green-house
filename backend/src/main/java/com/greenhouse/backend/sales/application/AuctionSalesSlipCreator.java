@@ -1,7 +1,6 @@
 package com.greenhouse.backend.sales.application;
 
 import com.greenhouse.backend.partner.application.BusinessPartnerReader;
-import com.greenhouse.backend.partner.domain.BusinessPartner;
 import com.greenhouse.backend.partner.domain.PartnerType;
 import com.greenhouse.backend.sales.domain.SalesSlip;
 import com.greenhouse.backend.sales.domain.SalesType;
@@ -30,8 +29,8 @@ public class AuctionSalesSlipCreator {
 			throw new IllegalArgumentException("경매 판매는 1개 이상의 lot 품목이 필요합니다.");
 		}
 
-		BusinessPartner partner = partnerReader.getActive(request.partnerId());
-		if (partner.getPartnerType() != PartnerType.AUCTION_HOUSE) {
+		var partner = partnerReader.getActiveInfo(request.partnerId());
+		if (partner.partnerType() != PartnerType.AUCTION_HOUSE) {
 			throw new IllegalArgumentException("경매 판매는 경매장 거래처만 선택할 수 있습니다.");
 		}
 
@@ -40,7 +39,7 @@ public class AuctionSalesSlipCreator {
 				request.saleDate(),
 				SalesType.AUCTION,
 				null,
-				partner,
+				partner.id(),
 				SalesTextNormalizer.defaultText(request.paymentStatus(), "정산 대기"),
 				SalesTextNormalizer.defaultText(request.salesStatus(), "작성중"),
 				SalesTextNormalizer.defaultText(request.paymentMethod(), "경매 정산"),

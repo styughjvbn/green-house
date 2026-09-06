@@ -19,14 +19,13 @@ public interface SalesSlipRepository extends JpaRepository<SalesSlip, Long>, Sal
 	@Query("""
 			select shipment.id from AuctionShipment shipment
 			where not exists (
-				select 1 from SalesSlip slip where slip.auctionShipment = shipment
+				select 1 from SalesSlip slip where slip.auctionShipmentId = shipment.id
 			)
 			order by shipment.shipmentDate desc, shipment.id desc
 			""")
 	List<Long> findAvailableAuctionShipmentIds(Pageable pageable);
 
-	@EntityGraph(attributePaths = { "partner", "auctionShipment", "auctionShipment.auctionHouse", "items",
-			"items.auctionShipmentLot" })
+	@EntityGraph(attributePaths = { "items" })
 	Optional<SalesSlip> findWithDetailsById(Long id);
 
 	@Lock(LockModeType.PESSIMISTIC_WRITE)
@@ -36,7 +35,7 @@ public interface SalesSlipRepository extends JpaRepository<SalesSlip, Long>, Sal
 	@Query("""
 			select coalesce(sum(coalesce(s.remainingAmount, s.totalAmount)), 0)
 			from SalesSlip s
-			where s.partner.id = :partnerId
+			where s.partnerId = :partnerId
 			  and (s.salesType is null or s.salesType = com.greenhouse.backend.sales.domain.SalesType.DIRECT)
 			  and s.salesStatus <> '취소'
 			""")

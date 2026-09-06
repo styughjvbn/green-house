@@ -173,7 +173,7 @@ class PartnerSettlementPostgresE2ETest extends WorkE2ETestBase {
 		var house = partnerRepository.saveAndFlush(new BusinessPartner(
 				"동시 경매 입금", PartnerType.AUCTION_HOUSE, null, null, null, null));
 		var date = LocalDate.of(2040, 1, 3);
-		var shipment = new AuctionShipment(date.minusDays(1), house);
+		var shipment = new AuctionShipment(date.minusDays(1), house.getId(), house.getPartnerType());
 		var lot = new AuctionShipmentLot("난", "카틀레야", "A", 1, 10);
 		var attempt = new AuctionAttempt(date, 1, AuctionAttemptStatus.SOLD, null, null);
 		attempt.addResultLine(new AuctionResultLine(date, "A", 10, 10_000, 100_000, null, AuctionInspectionStatus.NORMAL));
@@ -243,7 +243,7 @@ class PartnerSettlementPostgresE2ETest extends WorkE2ETestBase {
 
 	private SalesSlip createSlip(BusinessPartner partner, String number) {
 		var slip = new SalesSlip(number, LocalDate.of(2040, 1, 2), SalesType.DIRECT, null,
-				partner, "미입금", "작성중", "계좌이체", null);
+				partner.getId(), "미입금", "작성중", "계좌이체", null);
 		slip.addItem(new SalesSlipItem(null, "카틀레야", null, "A", 10, 10_000, null));
 		return salesSlipRepository.saveAndFlush(slip);
 	}

@@ -35,7 +35,7 @@ public class SalesSlipUpdateService {
 	public SalesSlipResponse update(Long salesSlipId, SalesSlipCreateRequest request) {
 		SalesSlip salesSlip = salesSlipRepository.findForUpdateById(salesSlipId)
 				.orElseThrow(() -> new NotFoundException("판매 전표를 찾을 수 없습니다."));
-		Long previousPartnerId = salesSlip.getPartner().getId();
+		Long previousPartnerId = salesSlip.getPartnerId();
 		Map<String, Object> before = auditSupport.snapshot(salesSlip);
 
 		validateEditable(salesSlip, request);
@@ -46,12 +46,12 @@ public class SalesSlipUpdateService {
 			throw new IllegalArgumentException("일반 판매 품목은 1개 이상 입력해야 합니다.");
 		}
 
-		var partner = businessPartnerReader.getActive(request.partnerId());
-		if (partner.getPartnerType() == PartnerType.AUCTION_HOUSE) {
+		var partner = businessPartnerReader.getActiveInfo(request.partnerId());
+		if (partner.partnerType() == PartnerType.AUCTION_HOUSE) {
 			throw new IllegalArgumentException("경매장 거래처는 경매 판매 전표에서 사용해야 합니다.");
 		}
-		partnerBalanceService.lockPartners(List.of(previousPartnerId, partner.getId()));
-		var expectedPaymentDate = paymentDateCalculator.calculate(partner.getId(), request.saleDate());
+		partnerBalanceService.lockPartners(List.of(previousPartnerId, partner.id()));
+		var expectedPaymentDate = paymentDateCalculator.calculate(partner.id(), request.saleDate());
 
 		salesSlipInventoryService.releaseForEdit(salesSlip);
 
@@ -62,7 +62,7 @@ public class SalesSlipUpdateService {
 
 		salesSlip.updateDraftInfo(
 				request.saleDate(),
-				partner,
+				partner.id(),
 				SalesTextNormalizer.defaultText(request.paymentStatus(), "미입금"),
 				SalesTextNormalizer.normalize(request.paymentMethod()),
 				SalesTextNormalizer.normalize(request.memo()));
@@ -87,8 +87,8 @@ public class SalesSlipUpdateService {
 				.orElseThrow(() -> new NotFoundException("판매 전표를 찾을 수 없습니다."));
 		salesSlipInventoryService.reserve(persisted);
 		partnerBalanceService.updateReceivable(
-				partner.getId(), salesSlipRepository.sumDirectReceivableByPartnerId(partner.getId()), null);
-		if (!previousPartnerId.equals(partner.getId())) {
+				partner.id(), salesSlipRepository.sumDirectReceivableByPartnerId(partner.id()), null);
+		if (!previousPartnerId.equals(partner.id())) {
 			partnerBalanceService.updateReceivable(
 					previousPartnerId,
 					salesSlipRepository.sumDirectReceivableByPartnerId(previousPartnerId),

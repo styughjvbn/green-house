@@ -6,6 +6,7 @@ import java.util.List;
 import com.greenhouse.backend.sales.domain.SalesType;
 import com.greenhouse.backend.sales.domain.SalesSlipItemAllocation;
 import com.greenhouse.backend.partner.dto.BusinessPartnerResponse;
+import com.greenhouse.backend.partner.application.BusinessPartnerInfo;
 import java.util.Map;
 
 public record SalesSlipResponse(
@@ -28,7 +29,7 @@ public record SalesSlipResponse(
 		List<SalesSlipAction> availableActions) {
 
 	public static SalesSlipResponse from(
-			SalesSlip salesSlip,
+			SalesSlip salesSlip, BusinessPartnerInfo partner, String auctionMarket,
 			Map<Long, List<SalesSlipItemAllocation>> allocationsByItemId,
 			List<SalesSlipAction> availableActions) {
 		return new SalesSlipResponse(
@@ -36,9 +37,9 @@ public record SalesSlipResponse(
 				salesSlip.getSlipNumber(),
 				salesSlip.getSaleDate(),
 				salesSlip.getSalesType(),
-				salesSlip.getAuctionShipment() == null ? null : salesSlip.getAuctionShipment().getId(),
-				salesSlip.getAuctionShipment() == null ? null : salesSlip.getAuctionShipment().getAuctionMarket(),
-				BusinessPartnerResponse.from(salesSlip.getPartner()),
+				salesSlip.getAuctionShipmentId(),
+				auctionMarket,
+				BusinessPartnerResponse.from(partner),
 				salesSlip.getTotalAmount(),
 				salesSlip.getExpectedPaymentDate(),
 				salesSlip.getPaidAmount(),

@@ -17,17 +17,17 @@ public class AuctionSalesSlipCancellationPolicy {
 	private final AuctionSettlementReader auctionSettlementReader;
 
 	public void cancelShipmentIfPossible(SalesSlip salesSlip) {
-		if (salesSlip.getAuctionShipment() == null) {
+		if (salesSlip.getAuctionShipmentId() == null) {
 			return;
 		}
 
-		Long shipmentId = salesSlip.getAuctionShipment().getId();
+		Long shipmentId = salesSlip.getAuctionShipmentId();
 		if (auctionSettlementReader.existsByAuctionShipmentId(shipmentId)) {
 			throw new IllegalArgumentException("정산에 반영된 경매 출하 전표는 취소할 수 없습니다.");
 		}
 
 		salesSlip.getItems().forEach(item -> item.clearAuctionShipmentLot());
-		var shipment = salesSlip.getAuctionShipment();
+		var shipment = salesSlip.getAuctionShipmentId();
 		salesSlip.clearAuctionShipment();
 		auctionShipmentLifecycleService.deleteDraftShipment(shipment);
 	}

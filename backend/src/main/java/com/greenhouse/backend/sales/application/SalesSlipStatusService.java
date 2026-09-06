@@ -60,7 +60,7 @@ public class SalesSlipStatusService {
 
 	private void cancel(com.greenhouse.backend.sales.domain.SalesSlip salesSlip) {
 		if (salesSlip.getSalesType() == SalesType.DIRECT) {
-			partnerBalanceService.lockPartners(List.of(salesSlip.getPartner().getId()));
+			partnerBalanceService.lockPartners(List.of(salesSlip.getPartnerId()));
 		}
 		if (salesSlip.getSalesType() == SalesType.DIRECT
 				&& paymentEventReader.existsByTarget(PaymentTargetType.SALES_SLIP, salesSlip.getId())) {
@@ -80,8 +80,8 @@ public class SalesSlipStatusService {
 		salesSlip.updateSalesStatus(SalesSlip.STATUS_CANCELED);
 		if (salesSlip.getSalesType() == SalesType.DIRECT) {
 			partnerBalanceService.updateReceivable(
-					salesSlip.getPartner().getId(),
-					salesSlipRepository.sumDirectReceivableByPartnerId(salesSlip.getPartner().getId()),
+					salesSlip.getPartnerId(),
+					salesSlipRepository.sumDirectReceivableByPartnerId(salesSlip.getPartnerId()),
 					null);
 		}
 	}

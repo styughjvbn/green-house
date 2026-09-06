@@ -173,7 +173,7 @@ class AnalyticsIntegrationTests extends AbstractBackendIntegrationTest {
 				saleDate,
 				SalesType.DIRECT,
 				null,
-				partner,
+				partner.getId(),
 				"미입금",
 				status,
 				null,

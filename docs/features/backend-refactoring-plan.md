@@ -143,6 +143,8 @@ Controller / 향후 입력 adapter
 
 ### 3.3 OCP 적용 범위의 제한
 
+- 단계별로 운영 코드·테스트·문서의 증감을 따로 확인한다. 새 클래스를 추가할 때는 대체·삭제한 기존 책임과 호출 단계를 함께 검토한다. 파일 분리나 의존 수 감소만으로 완료 판단하지 않는다.
+- 한 필드 wrapper, 단순 전달 service, 구·신 API 병존을 남기지 않는다. 기존 Entity의 정책 메서드나 application service의 private method로 충분하면 그 안에서 정리한다.
 - 같은 변형이 실제로 둘 이상 존재하거나 확정된 기능이 기존 코드를 여러 곳 수정하게 할 때 strategy/port를 도입한다.
 - 상속 기반 BaseService, 범용 CRUD engine, 전역 command bus, 임의 JSON rule engine은 도입하지 않는다.
 - DIRECT와 AUCTION은 업무 유형이다. 외부 판매 채널을 무조건 새로운 SalesType으로 추가하지 않는다.

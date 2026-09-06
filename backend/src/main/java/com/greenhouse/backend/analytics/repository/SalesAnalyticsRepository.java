@@ -126,7 +126,7 @@ public class SalesAnalyticsRepository {
 		return queryFactory
 				.select(businessPartner.name, totalAmount)
 				.from(salesSlip)
-				.join(salesSlip.partner, businessPartner)
+				.join(businessPartner).on(salesSlip.partnerId.eq(businessPartner.id))
 				.where(saleDateBetween(from, to), completedSalesSlip())
 				.groupBy(businessPartner.name)
 				.orderBy(totalAmount.desc())
@@ -186,7 +186,7 @@ public class SalesAnalyticsRepository {
 						latestSaleDate)
 				.from(businessPartner)
 				.leftJoin(salesSlip).on(
-						salesSlip.partner.eq(businessPartner),
+						salesSlip.partnerId.eq(businessPartner.id),
 						saleDateBetween(from, to),
 						completedSalesSlip())
 				.leftJoin(partnerBalanceSummary).on(partnerBalanceSummary.partnerId.eq(businessPartner.id))
@@ -287,7 +287,7 @@ public class SalesAnalyticsRepository {
 						salesSlip.paymentStatus,
 						salesSlip.salesStatus))
 				.from(salesSlip)
-				.join(salesSlip.partner, businessPartner)
+				.join(businessPartner).on(salesSlip.partnerId.eq(businessPartner.id))
 				.where(saleDateBetween(from, to), completedSalesSlip());
 	}
 

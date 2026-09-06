@@ -1,6 +1,5 @@
 package com.greenhouse.backend.sales.domain;
 
-import com.greenhouse.backend.auction.domain.AuctionShipmentLot;
 import jakarta.persistence.CascadeType;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
@@ -34,9 +33,8 @@ public class SalesSlipItem {
 	@JoinColumn(name = "sales_slip_id", nullable = false)
 	private SalesSlip salesSlip;
 
-	@ManyToOne(fetch = FetchType.LAZY)
-	@JoinColumn(name = "auction_shipment_lot_id", unique = true)
-	private AuctionShipmentLot auctionShipmentLot;
+	@Column(name = "auction_shipment_lot_id", unique = true)
+	private Long auctionShipmentLotId;
 
 	@OneToMany(mappedBy = "salesSlipItem", cascade = CascadeType.ALL, orphanRemoval = true)
 	private List<SalesSlipItemAllocation> allocations = new ArrayList<>();
@@ -61,14 +59,14 @@ public class SalesSlipItem {
 	private String memo;
 
 	public SalesSlipItem(
-			AuctionShipmentLot auctionShipmentLot,
+			Long auctionShipmentLotId,
 			String itemName,
 			String genus,
 			String spec,
 			Integer quantity,
 			Integer unitPrice,
 			String memo) {
-		this.auctionShipmentLot = auctionShipmentLot;
+		this.auctionShipmentLotId = auctionShipmentLotId;
 		this.itemName = itemName;
 		this.genus = genus;
 		this.spec = spec;
@@ -108,11 +106,11 @@ public class SalesSlipItem {
 		allocations.forEach(this::addAllocation);
 	}
 
-	public void assignAuctionShipmentLot(AuctionShipmentLot auctionShipmentLot) {
-		this.auctionShipmentLot = auctionShipmentLot;
+	public void assignAuctionShipmentLot(Long auctionShipmentLotId) {
+		this.auctionShipmentLotId = auctionShipmentLotId;
 	}
 
 	public void clearAuctionShipmentLot() {
-		this.auctionShipmentLot = null;
+		this.auctionShipmentLotId = null;
 	}
 }

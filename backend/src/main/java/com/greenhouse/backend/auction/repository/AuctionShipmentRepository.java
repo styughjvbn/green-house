@@ -7,9 +7,9 @@ import java.util.Optional;
 import org.springframework.data.jpa.repository.EntityGraph;
 
 public interface AuctionShipmentRepository extends JpaRepository<AuctionShipment, Long> {
-	@EntityGraph(attributePaths = { "lots", "auctionHouse" })
+	@EntityGraph(attributePaths = { "lots" })
 	List<AuctionShipment> findAllByIdInOrderByShipmentDateDescIdDesc(java.util.Collection<Long> ids);
 
-	@EntityGraph(attributePaths = { "lots", "auctionHouse" })
+	@EntityGraph(attributePaths = { "lots" })
 	Optional<AuctionShipment> findWithLotsById(Long id);
 }

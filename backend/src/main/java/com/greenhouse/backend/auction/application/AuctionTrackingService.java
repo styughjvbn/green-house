@@ -1,6 +1,7 @@
 package com.greenhouse.backend.auction.application;
 
 import com.greenhouse.backend.auction.domain.AuctionAttempt;
+import com.greenhouse.backend.partner.application.BusinessPartnerReader;
 import com.greenhouse.backend.auction.domain.AuctionInspectionStatus;
 import com.greenhouse.backend.auction.domain.AuctionLotStatus;
 import com.greenhouse.backend.auction.domain.AuctionResultLine;
@@ -35,6 +36,7 @@ import org.springframework.transaction.annotation.Transactional;
 @Transactional(readOnly = true)
 @RequiredArgsConstructor
 public class AuctionTrackingService {
+	private final BusinessPartnerReader partnerReader;
 	private final AuctionShipmentLotRepository lotRepository;
 	private final AuctionAttemptRepository attemptRepository;
 	private final AuctionLotStatusHistoryRepository statusHistoryRepository;
@@ -98,7 +100,7 @@ public class AuctionTrackingService {
 		int quantity = request.returnedQuantity() == null ? lot.getReturnConfirmableQuantity()
 				: request.returnedQuantity();
 		lot.confirmReturn(quantity, request.returnDate(), requestActorProvider.resolve(request.worker()), normalize(request.memo()));
-		return AuctionLotResponse.from(lot);
+		return AuctionLotResponse.from(lot, partnerReader.getInfo(lot.getShipment().getAuctionHouseId()).name());
 	}
 
 	@Transactional
@@ -106,7 +108,7 @@ public class AuctionTrackingService {
 		var lot = findLotForUpdate(id);
 		lot.adjustQuantities(request.soldQuantity(), request.waitingQuantity(), request.returnedQuantity(),
 				requestActorProvider.resolve(request.worker()), normalize(request.memo()));
-		return AuctionLotResponse.from(lot);
+		return AuctionLotResponse.from(lot, partnerReader.getInfo(lot.getShipment().getAuctionHouseId()).name());
 	}
 
 	@Transactional
@@ -181,7 +183,7 @@ public class AuctionTrackingService {
 			default -> throw new IllegalArgumentException("지원하지 않는 경매 결과 상태입니다.");
 		}
 
-		return AuctionLotResponse.from(lot);
+		return AuctionLotResponse.from(lot, partnerReader.getInfo(lot.getShipment().getAuctionHouseId()).name());
 	}
 
 	@Transactional
@@ -189,7 +191,7 @@ public class AuctionTrackingService {
 		var lot = findLotForUpdate(id);
 		lot.changeStatus(request.status(), request.reason().trim(), requestActorProvider.resolve(request.worker()),
 				normalize(request.memo()));
-		return AuctionLotResponse.from(lot);
+		return AuctionLotResponse.from(lot, partnerReader.getInfo(lot.getShipment().getAuctionHouseId()).name());
 	}
 
 	private com.greenhouse.backend.auction.domain.AuctionShipmentLot findLot(Long id) {
@@ -207,6 +209,7 @@ public class AuctionTrackingService {
 		if (lots.isEmpty()) {
 			return List.of();
 		}
+		var partners = partnerReader.getAllInfo(lots.stream().map(lot -> lot.getShipment().getAuctionHouseId()).toList());
 		var lotIds = lots.stream().map(lot -> lot.getId()).toList();
 		Map<Long, List<AuctionAttempt>> attemptsByLotId = attemptRepository
 				.findAllWithResultLinesByLotIdIn(lotIds)
@@ -222,7 +225,7 @@ public class AuctionTrackingService {
 						Collectors.toList()));
 		return lots.stream()
 				.map(lot -> AuctionLotResponse.from(
-						lot,
+						lot, partners.get(lot.getShipment().getAuctionHouseId()).name(),
 						attemptsByLotId.getOrDefault(lot.getId(), List.of()),
 						historiesByLotId.getOrDefault(lot.getId(), List.of())))
 				.toList();

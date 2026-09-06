@@ -32,12 +32,13 @@ public record AuctionLotResponse(
 		List<AuctionAttemptResponse> attempts,
 		List<AuctionStatusHistoryResponse> statusHistory) {
 
-	public static AuctionLotResponse from(AuctionShipmentLot lot) {
-		return from(lot, lot.getAttempts(), lot.getStatusHistory());
+	public static AuctionLotResponse from(AuctionShipmentLot lot, String auctionMarket) {
+		return from(lot, auctionMarket, lot.getAttempts(), lot.getStatusHistory());
 	}
 
 	public static AuctionLotResponse from(
 			AuctionShipmentLot lot,
+			String auctionMarket,
 			List<AuctionAttempt> attempts,
 			List<AuctionLotStatusHistory> statusHistory) {
 		var lines = attempts.stream().flatMap(attempt -> attempt.getResultLines().stream()).toList();
@@ -47,7 +48,7 @@ public record AuctionLotResponse(
 		return new AuctionLotResponse(
 				lot.getId(),
 				lot.getShipment().getShipmentDate(),
-				lot.getShipment().getAuctionMarket(),
+				auctionMarket,
 				lot.getItemName(),
 				lot.getVarietyName(),
 				lot.getShipmentGrade(),

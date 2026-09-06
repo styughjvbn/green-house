@@ -445,7 +445,7 @@ class AuctionTrackingTests {
 		String grade,
 		int quantity
 	) {
-		var shipment = new AuctionShipment(shipmentDate, createAuctionHouse(market));
+		var shipment = new AuctionShipment(shipmentDate, createAuctionHouse(market).getId(), PartnerType.AUCTION_HOUSE);
 		var lot = new AuctionShipmentLot("절화", variety, grade, 1, quantity);
 		shipment.addLot(lot);
 		shipmentRepository.saveAndFlush(shipment);

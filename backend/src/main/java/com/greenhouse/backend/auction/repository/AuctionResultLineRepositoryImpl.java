@@ -4,7 +4,6 @@ import static com.greenhouse.backend.auction.domain.QAuctionAttempt.auctionAttem
 import static com.greenhouse.backend.auction.domain.QAuctionResultLine.auctionResultLine;
 import static com.greenhouse.backend.auction.domain.QAuctionShipment.auctionShipment;
 import static com.greenhouse.backend.auction.domain.QAuctionShipmentLot.auctionShipmentLot;
-import static com.greenhouse.backend.partner.domain.QBusinessPartner.businessPartner;
 
 import com.greenhouse.backend.auction.domain.AuctionResultLine;
 import com.querydsl.jpa.impl.JPAQuery;
@@ -24,7 +23,7 @@ public class AuctionResultLineRepositoryImpl implements AuctionResultLineReposit
 				.where(
 						auctionResultLine.amount.gt(0),
 						auctionResultLine.auctionDate.eq(auctionDate),
-						businessPartner.id.eq(auctionHouseId))
+						auctionShipment.auctionHouseId.eq(auctionHouseId))
 				.orderBy(auctionResultLine.id.asc())
 				.fetch();
 	}
@@ -34,7 +33,6 @@ public class AuctionResultLineRepositoryImpl implements AuctionResultLineReposit
 				.selectFrom(auctionResultLine)
 				.join(auctionResultLine.auctionAttempt, auctionAttempt).fetchJoin()
 				.join(auctionAttempt.shipmentLot, auctionShipmentLot).fetchJoin()
-				.join(auctionShipmentLot.shipment, auctionShipment).fetchJoin()
-				.join(auctionShipment.auctionHouse, businessPartner).fetchJoin();
+				.join(auctionShipmentLot.shipment, auctionShipment).fetchJoin();
 	}
 }

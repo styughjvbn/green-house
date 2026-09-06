@@ -20,7 +20,7 @@ public class SalesSlipAuditSupport {
 		data.put("slipNumber", slip.getSlipNumber());
 		data.put("saleDate", slip.getSaleDate());
 		data.put("salesType", slip.getSalesType());
-		data.put("partnerId", slip.getPartner().getId());
+		data.put("partnerId", slip.getPartnerId());
 		data.put("totalAmount", slip.getTotalAmount());
 		data.put("expectedPaymentDate", slip.getExpectedPaymentDate());
 		data.put("paidAmount", slip.getPaidAmount());

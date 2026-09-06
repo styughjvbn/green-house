@@ -54,7 +54,7 @@ class PaymentTests {
 		var partner = partnerRepository.saveAndFlush(
 			new BusinessPartner("직거래 화원", PartnerType.WHOLESALE, null, null, null, null));
 		var slip = new SalesSlip(
-			"S20260706-900", LocalDate.of(2026, 7, 6), SalesType.DIRECT, null, partner,
+			"S20260706-900", LocalDate.of(2026, 7, 6), SalesType.DIRECT, null, partner.getId(),
 			"미입금", "작성중", "계좌이체", null);
 		slip.addItem(new SalesSlipItem(null, "카틀레야", null, "A", 10, 10_000, null));
 		slip = salesSlipRepository.saveAndFlush(slip);
@@ -122,7 +122,7 @@ class PaymentTests {
 		var auctionHouse = partnerRepository.saveAndFlush(
 			new BusinessPartner("입금 경매장", PartnerType.AUCTION_HOUSE, null, null, null, null));
 		LocalDate auctionDate = LocalDate.of(2026, 7, 6);
-		var shipment = new AuctionShipment(LocalDate.of(2026, 7, 5), auctionHouse);
+		var shipment = new AuctionShipment(LocalDate.of(2026, 7, 5), auctionHouse.getId(), auctionHouse.getPartnerType());
 		var lot = new AuctionShipmentLot("난", "덴드로비움", "A", 1, 10);
 		var attempt = new AuctionAttempt(auctionDate, 1, AuctionAttemptStatus.SOLD, null, null);
 		attempt.addResultLine(new AuctionResultLine(

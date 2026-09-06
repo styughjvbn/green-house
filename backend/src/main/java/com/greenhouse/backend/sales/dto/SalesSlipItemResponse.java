@@ -23,7 +23,7 @@ public record SalesSlipItemResponse(
 	public static SalesSlipItemResponse from(SalesSlipItem item, List<SalesSlipItemAllocation> allocations) {
 		return new SalesSlipItemResponse(
 				item.getId(),
-				item.getAuctionShipmentLot() == null ? null : item.getAuctionShipmentLot().getId(),
+				item.getAuctionShipmentLotId(),
 				item.getItemName(),
 				item.getGenus(),
 				item.getSpec(),

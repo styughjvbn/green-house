@@ -1,20 +1,15 @@
 package com.greenhouse.backend.sales.domain;
 
-import com.greenhouse.backend.auction.domain.AuctionShipment;
 import com.greenhouse.backend.common.domain.BaseEntity;
-import com.greenhouse.backend.partner.domain.BusinessPartner;
 import jakarta.persistence.CascadeType;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
 import jakarta.persistence.Enumerated;
-import jakarta.persistence.FetchType;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.SequenceGenerator;
-import jakarta.persistence.JoinColumn;
-import jakarta.persistence.ManyToOne;
 import jakarta.persistence.OneToMany;
 import jakarta.persistence.Table;
 import jakarta.persistence.Version;
@@ -54,13 +49,11 @@ public class SalesSlip extends BaseEntity {
 	@Column(name = "sales_type")
 	private SalesType salesType;
 
-	@ManyToOne(fetch = FetchType.LAZY)
-	@JoinColumn(name = "auction_shipment_id", unique = true)
-	private AuctionShipment auctionShipment;
+	@Column(name = "auction_shipment_id", unique = true)
+	private Long auctionShipmentId;
 
-	@ManyToOne(fetch = FetchType.LAZY, optional = false)
-	@JoinColumn(name = "partner_id", nullable = false)
-	private BusinessPartner partner;
+	@Column(name = "partner_id", nullable = false)
+	private Long partnerId;
 
 	@Column(name = "total_amount", nullable = false)
 	private Integer totalAmount;
@@ -93,8 +86,8 @@ public class SalesSlip extends BaseEntity {
 			String slipNumber,
 			LocalDate saleDate,
 			SalesType salesType,
-			AuctionShipment auctionShipment,
-			BusinessPartner partner,
+			Long auctionShipmentId,
+			Long partnerId,
 			String paymentStatus,
 			String salesStatus,
 			String paymentMethod,
@@ -102,8 +95,8 @@ public class SalesSlip extends BaseEntity {
 		this.slipNumber = slipNumber;
 		this.saleDate = saleDate;
 		this.salesType = salesType;
-		this.auctionShipment = auctionShipment;
-		this.partner = partner;
+		this.auctionShipmentId = auctionShipmentId;
+		this.partnerId = partnerId;
 		this.paymentStatus = paymentStatus;
 		this.salesStatus = validateInitialSalesStatus(salesType, salesStatus);
 		this.paymentMethod = paymentMethod;
@@ -132,12 +125,12 @@ public class SalesSlip extends BaseEntity {
 
 	public void updateDraftInfo(
 			LocalDate saleDate,
-			BusinessPartner partner,
+			Long partnerId,
 			String paymentStatus,
 			String paymentMethod,
 			String memo) {
 		this.saleDate = saleDate;
-		this.partner = partner;
+		this.partnerId = partnerId;
 		this.paymentStatus = paymentStatus;
 		this.paymentMethod = paymentMethod;
 		this.memo = memo;
@@ -180,12 +173,12 @@ public class SalesSlip extends BaseEntity {
 		return STATUS_CANCELED.equals(salesStatus);
 	}
 
-	public void assignAuctionShipment(AuctionShipment auctionShipment) {
-		this.auctionShipment = auctionShipment;
+	public void assignAuctionShipment(Long auctionShipmentId) {
+		this.auctionShipmentId = auctionShipmentId;
 	}
 
 	public void clearAuctionShipment() {
-		this.auctionShipment = null;
+		this.auctionShipmentId = null;
 	}
 
 	public boolean isOutboundCompleted() {

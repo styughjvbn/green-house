@@ -34,6 +34,8 @@ import java.time.LocalDate;
 import org.hibernate.SessionFactory;
 import org.hibernate.stat.Statistics;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.context.ActiveProfiles;
@@ -70,7 +72,7 @@ class CoreQueryRegressionTest {
 	void auctionLotPageUsesFixedQueryCount() {
 		BusinessPartner auctionHouse = partnerRepository.save(
 				new BusinessPartner("회귀 경매장", PartnerType.AUCTION_HOUSE, null, null, null, null));
-		AuctionShipment shipment = new AuctionShipment(LocalDate.of(2030, 2, 1), auctionHouse);
+		AuctionShipment shipment = new AuctionShipment(LocalDate.of(2030, 2, 1), auctionHouse.getId(), auctionHouse.getPartnerType());
 		for (int index = 0; index < 3; index++) {
 			AuctionShipmentLot lot = new AuctionShipmentLot("난", "품종 " + index, "특", 1, 10);
 			AuctionAttempt attempt = new AuctionAttempt(
@@ -87,7 +89,8 @@ class CoreQueryRegressionTest {
 		long queryCount = measure(() -> auctionTrackingService.getLots(
 				null, null, null, null, null, null, false, false, false, null, 0, 10));
 
-		assertThat(queryCount).isLessThanOrEqualTo(4L);
+		// One bulk lookup supplies current auction house names.
+		assertThat(queryCount).isLessThanOrEqualTo(5L);
 	}
 
 	@Test
@@ -100,7 +103,7 @@ class CoreQueryRegressionTest {
 				LocalDate.of(2030, 3, 1),
 				SalesType.DIRECT,
 				null,
-				partner,
+				partner.getId(),
 				"미입금",
 				SalesSlip.STATUS_DRAFT,
 				null,
@@ -112,7 +115,63 @@ class CoreQueryRegressionTest {
 
 		long queryCount = measure(() -> salesQueryService.getSalesSlip(slip.getId()));
 
-		assertThat(queryCount).isLessThanOrEqualTo(3L);
+		// The partner is loaded through its application contract.
+		assertThat(queryCount).isLessThanOrEqualTo(4L);
+	}
+
+	@ParameterizedTest
+	@ValueSource(ints = { 1, 10, 50 })
+	void salesPageLoadsCurrentPartnerDetailsInOneBatch(int count) {
+		var date = LocalDate.of(2041, 1, 1);
+		for (int index = 0; index < count; index++) {
+			var partner = partnerRepository.save(new BusinessPartner(
+					"이전 이름", PartnerType.WHOLESALE, null, null, null, null));
+			salesSlipRepository.save(new SalesSlip("PARTNER-PAGE-" + index, date, SalesType.DIRECT, null,
+					partner.getId(), "미입금", "작성중", null, null));
+			partner.update("현재 이름 " + index, PartnerType.WHOLESALE, "대표 Search", "010-7890", "주소", "메모");
+		}
+		long queries = measure(() -> {
+			var page = salesQueryService.getSalesSlipPage(null, date, date, null, null, "search", 0, 100);
+			assertThat(page.totalElements()).isEqualTo(count);
+			assertThat(page.content()).hasSize(count);
+			for (int index = 0; index < count; index++) {
+				var partner = page.content().get(index).partner();
+				assertThat(partner.name()).isEqualTo("현재 이름 " + (count - index - 1));
+				assertThat(partner.ownerName()).isEqualTo("대표 Search");
+				assertThat(partner.phone()).isEqualTo("010-7890");
+				assertThat(partner.address()).isEqualTo("주소");
+				assertThat(partner.memo()).isEqualTo("메모");
+			}
+		});
+		assertThat(queries).isEqualTo(3);
+		assertThat(salesQueryService.getSalesSlipPage(null, date, date, null, null, "7890", 0, 1).totalElements())
+				.isEqualTo(count);
+		assertThat(salesQueryService.getSalesSlipPage(null, date, date, null, null, "현재 이름", 0, 1).totalElements())
+				.isEqualTo(count);
+	}
+
+	@ParameterizedTest
+	@ValueSource(ints = { 1, 10, 50 })
+	void auctionPageKeepsConcatenatedSearchAndBatchesCurrentMarketNames(int count) {
+		var date = LocalDate.of(2041, 2, 1);
+		for (int index = 0; index < count; index++) {
+			var house = partnerRepository.save(new BusinessPartner(
+					"이전 경매장", PartnerType.AUCTION_HOUSE, null, null, null, null));
+			var shipment = new AuctionShipment(date, house.getId(), house.getPartnerType());
+			shipment.addLot(new AuctionShipmentLot("난", "Cattleya", "A", null, 10));
+			auctionShipmentRepository.save(shipment);
+			house.update("Market " + index, PartnerType.AUCTION_HOUSE, null, null, null, null);
+		}
+		long queries = measure(() -> {
+			var page = auctionTrackingService.getLots(date, date, null, null, null, null,
+					false, false, false, "cattleya market", 0, 100);
+			assertThat(page.totalElements()).isEqualTo(count);
+			assertThat(page.content()).hasSize(count);
+			for (int index = 0; index < count; index++) {
+				assertThat(page.content().get(index).auctionMarket()).isEqualTo("Market " + (count - index - 1));
+			}
+		});
+		assertThat(queries).isEqualTo(5);
 	}
 
 	private OrchidGroup createOrchidGroup(int houseNumber, String varietyName, int quantity) {

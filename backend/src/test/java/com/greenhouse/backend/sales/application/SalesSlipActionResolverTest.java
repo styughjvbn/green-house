@@ -4,7 +4,6 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
-import com.greenhouse.backend.auction.domain.AuctionShipment;
 import com.greenhouse.backend.sales.domain.SalesSlip;
 import com.greenhouse.backend.sales.domain.SalesType;
 import com.greenhouse.backend.sales.dto.SalesSlipAction;
@@ -55,12 +54,10 @@ class SalesSlipActionResolverTest {
 	@Test
 	void blocksAuctionCancellationAfterResultOrSettlementProgress() {
 		SalesSlip salesSlip = mock(SalesSlip.class);
-		AuctionShipment shipment = mock(AuctionShipment.class);
 		when(salesSlip.getId()).thenReturn(2L);
 		when(salesSlip.getSalesType()).thenReturn(SalesType.AUCTION);
 		when(salesSlip.getSalesStatus()).thenReturn(SalesSlip.STATUS_AUCTION_SHIPMENT_COMPLETED);
-		when(salesSlip.getAuctionShipment()).thenReturn(shipment);
-		when(shipment.getId()).thenReturn(20L);
+		when(salesSlip.getAuctionShipmentId()).thenReturn(20L);
 		when(auctionCancellationPolicy.findNonCancelableShipmentIds(List.of(20L)))
 				.thenReturn(Set.of(20L));
 

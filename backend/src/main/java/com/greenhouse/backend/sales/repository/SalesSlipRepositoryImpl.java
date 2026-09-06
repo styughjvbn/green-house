@@ -1,6 +1,7 @@
 package com.greenhouse.backend.sales.repository;
 
 import static com.greenhouse.backend.sales.domain.QSalesSlip.salesSlip;
+import static com.greenhouse.backend.partner.domain.QBusinessPartner.businessPartner;
 
 import com.greenhouse.backend.sales.domain.SalesSlip;
 import com.querydsl.core.BooleanBuilder;
@@ -25,7 +26,7 @@ public class SalesSlipRepositoryImpl implements SalesSlipRepositoryCustom {
 		List<Long> salesSlipIds = queryFactory
 				.select(salesSlip.id)
 				.from(salesSlip)
-				.join(salesSlip.partner)
+				.join(businessPartner).on(salesSlip.partnerId.eq(businessPartner.id))
 				.where(conditions(partnerId, from, to, null, null, null))
 				.orderBy(defaultOrder())
 				.limit(limit)
@@ -60,7 +61,7 @@ public class SalesSlipRepositoryImpl implements SalesSlipRepositoryCustom {
 		Long total = queryFactory
 				.select(salesSlip.count())
 				.from(salesSlip)
-				.join(salesSlip.partner)
+				.join(businessPartner).on(salesSlip.partnerId.eq(businessPartner.id))
 				.where(conditions)
 				.fetchOne();
 
@@ -70,9 +71,7 @@ public class SalesSlipRepositoryImpl implements SalesSlipRepositoryCustom {
 	private JPAQuery<SalesSlip> baseQuery() {
 		return queryFactory
 				.selectFrom(salesSlip)
-				.join(salesSlip.partner).fetchJoin()
-				.leftJoin(salesSlip.auctionShipment).fetchJoin()
-				.leftJoin(salesSlip.auctionShipment.auctionHouse).fetchJoin();
+				.join(businessPartner).on(salesSlip.partnerId.eq(businessPartner.id));
 	}
 
 	private BooleanBuilder conditions(
@@ -92,7 +91,7 @@ public class SalesSlipRepositoryImpl implements SalesSlipRepositoryCustom {
 	}
 
 	private BooleanExpression partnerIdEq(Long partnerId) {
-		return partnerId == null ? null : salesSlip.partner.id.eq(partnerId);
+		return partnerId == null ? null : salesSlip.partnerId.eq(partnerId);
 	}
 
 	private BooleanExpression saleDateGoe(LocalDate from) {
@@ -118,9 +117,9 @@ public class SalesSlipRepositoryImpl implements SalesSlipRepositoryCustom {
 		String normalizedKeyword = keyword.trim().toLowerCase();
 		return new BooleanBuilder()
 				.or(salesSlip.slipNumber.lower().contains(normalizedKeyword))
-				.or(salesSlip.partner.name.lower().contains(normalizedKeyword))
-				.or(salesSlip.partner.ownerName.lower().contains(normalizedKeyword))
-				.or(salesSlip.partner.phone.lower().contains(normalizedKeyword))
+				.or(businessPartner.name.lower().contains(normalizedKeyword))
+				.or(businessPartner.ownerName.lower().contains(normalizedKeyword))
+				.or(businessPartner.phone.lower().contains(normalizedKeyword))
 				.or(salesSlip.memo.lower().contains(normalizedKeyword));
 	}
 

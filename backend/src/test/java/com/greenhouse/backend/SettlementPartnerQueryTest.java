@@ -54,7 +54,7 @@ class SettlementPartnerQueryTest {
 			var house = new BusinessPartner("기존 경매장", PartnerType.AUCTION_HOUSE, null, null, null, null);
 			entityManager.persist(house);
 			var date = from.plusDays(index);
-			var shipment = new AuctionShipment(date.minusDays(1), house);
+			var shipment = new AuctionShipment(date.minusDays(1), house.getId(), house.getPartnerType());
 			var lot = new AuctionShipmentLot("난", "카틀레야", "A", 1, 10);
 			var attempt = new AuctionAttempt(date, 1, AuctionAttemptStatus.SOLD, null, null);
 			var result = new AuctionResultLine(date, "A", 10, 1_000, 10_000, null, AuctionInspectionStatus.NORMAL);

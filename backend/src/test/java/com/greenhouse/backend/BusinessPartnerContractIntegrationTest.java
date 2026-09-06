@@ -37,9 +37,9 @@ class BusinessPartnerContractIntegrationTest {
 		partner.update("새 이름", PartnerType.RETAIL, "대표", "연락처", "주소", "메모");
 
 		assertThat(info).isEqualTo(new BusinessPartnerInfo(
-				partner.getId(), "기존 이름", PartnerType.WHOLESALE, true));
+				partner.getId(), "기존 이름", PartnerType.WHOLESALE, true, "대표", "연락처", "주소", "메모"));
 		assertThat(partnerReader.getInfo(partner.getId())).isEqualTo(new BusinessPartnerInfo(
-				partner.getId(), "새 이름", PartnerType.RETAIL, true));
+				partner.getId(), "새 이름", PartnerType.RETAIL, true, "대표", "연락처", "주소", "메모"));
 	}
 
 	@Test

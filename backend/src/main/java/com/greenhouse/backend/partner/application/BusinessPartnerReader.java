@@ -1,7 +1,6 @@
 package com.greenhouse.backend.partner.application;
 
 import com.greenhouse.backend.common.exception.NotFoundException;
-import com.greenhouse.backend.partner.domain.BusinessPartner;
 import com.greenhouse.backend.partner.repository.BusinessPartnerRepository;
 
 import lombok.RequiredArgsConstructor;
@@ -21,11 +20,16 @@ public class BusinessPartnerReader {
 	private final BusinessPartnerRepository partnerRepository;
 
 	public BusinessPartnerInfo getInfo(Long partnerId) {
-		return BusinessPartnerInfo.from(get(partnerId));
+		return partnerRepository.findById(partnerId).map(BusinessPartnerInfo::from)
+				.orElseThrow(() -> new NotFoundException("거래처를 찾을 수 없습니다."));
 	}
 
 	public BusinessPartnerInfo getActiveInfo(Long partnerId) {
-		return BusinessPartnerInfo.from(getActive(partnerId));
+		var partner = getInfo(partnerId);
+		if (!partner.active()) {
+			throw new IllegalArgumentException("비활성 거래처는 사용할 수 없습니다.");
+		}
+		return partner;
 	}
 
 	public Map<Long, BusinessPartnerInfo> getAllInfo(Collection<Long> partnerIds) {
@@ -41,19 +45,4 @@ public class BusinessPartnerReader {
 				.collect(Collectors.toUnmodifiableMap(BusinessPartnerInfo::id, Function.identity()));
 	}
 
-	/** @deprecated Remaining legacy associations must migrate to {@link #getInfo(Long)}. */
-	@Deprecated
-	public BusinessPartner get(Long partnerId) {
-		return partnerRepository.findById(partnerId)
-				.orElseThrow(() -> new NotFoundException("거래처를 찾을 수 없습니다."));
-	}
-
-	/** @deprecated Remaining legacy associations must migrate to {@link #getActiveInfo(Long)}. */
-	@Deprecated
-	public BusinessPartner getActive(Long partnerId) {
-		var partner = get(partnerId);
-		if (!partner.isActive())
-			throw new IllegalArgumentException("비활성 거래처는 사용할 수 없습니다.");
-		return partner;
-	}
 }

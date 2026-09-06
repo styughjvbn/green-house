@@ -60,7 +60,7 @@ class OrchidGroupUsageContractTest {
 		OrchidGroup group = fixtures.orchidGroup(fixtures.layout(985).left(), "SALES-USAGE", 20);
 		var partner = new BusinessPartner("참조 거래처", PartnerType.WHOLESALE, null, null, null, null);
 		entityManager.persist(partner);
-		var slip = new SalesSlip("USAGE-TEST", LocalDate.of(2026, 9, 5), SalesType.DIRECT, null, partner,
+		var slip = new SalesSlip("USAGE-TEST", LocalDate.of(2026, 9, 5), SalesType.DIRECT, null, partner.getId(),
 				"미입금", SalesSlip.STATUS_DRAFT, null, null);
 		var item = new SalesSlipItem(null, group.getVarietyName(), null, null, 2, 1000, null);
 		item.addAllocation(new SalesSlipItemAllocation(group, 2));

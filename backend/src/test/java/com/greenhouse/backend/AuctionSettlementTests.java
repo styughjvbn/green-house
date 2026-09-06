@@ -127,7 +127,7 @@ class AuctionSettlementTests {
 		int quantity,
 		int unitPrice
 	) {
-		var shipment = new AuctionShipment(shipmentDate, auctionHouse);
+		var shipment = new AuctionShipment(shipmentDate, auctionHouse.getId(), auctionHouse.getPartnerType());
 		var lot = new AuctionShipmentLot("난", variety, "A", 1, quantity);
 		var attempt = new AuctionAttempt(
 			auctionDate,

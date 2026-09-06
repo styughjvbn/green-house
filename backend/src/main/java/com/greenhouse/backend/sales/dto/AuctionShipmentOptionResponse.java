@@ -10,12 +10,12 @@ public record AuctionShipmentOptionResponse(
 		Long auctionHouseId,
 		String auctionMarket,
 		List<Lot> lots) {
-	public static AuctionShipmentOptionResponse from(AuctionShipment shipment) {
+	public static AuctionShipmentOptionResponse from(AuctionShipment shipment, String auctionMarket) {
 		return new AuctionShipmentOptionResponse(
 				shipment.getId(),
 				shipment.getShipmentDate(),
-				shipment.getAuctionHouse().getId(),
-				shipment.getAuctionMarket(),
+				shipment.getAuctionHouseId(),
+				auctionMarket,
 				shipment.getLots().stream()
 						.map(lot -> new Lot(
 								lot.getId(),

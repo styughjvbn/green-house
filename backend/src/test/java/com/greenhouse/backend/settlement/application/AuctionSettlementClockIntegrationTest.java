@@ -102,7 +102,7 @@ class AuctionSettlementClockIntegrationTest {
 	}
 
 	private void createResult(BusinessPartner house, LocalDate date, int amount) {
-		var shipment = new AuctionShipment(date.minusDays(1), house);
+		var shipment = new AuctionShipment(date.minusDays(1), house.getId(), house.getPartnerType());
 		var lot = new AuctionShipmentLot("난", "카틀레야", "A", 1, 10);
 		var attempt = new AuctionAttempt(date, 1,
 				amount > 0 ? AuctionAttemptStatus.SOLD : AuctionAttemptStatus.FAILED, null, null);

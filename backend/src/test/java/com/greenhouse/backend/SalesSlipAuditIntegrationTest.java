@@ -60,7 +60,7 @@ class SalesSlipAuditIntegrationTest extends AbstractBackendIntegrationTest {
 		BusinessPartner nextPartner = partnerRepository.saveAndFlush(new BusinessPartner(
 				"판매 수정 거래처", PartnerType.WHOLESALE, null, null, null, null));
 		SalesSlip slip = new SalesSlip("AUDIT-" + System.nanoTime(), LocalDate.of(2026, 8, 1),
-				SalesType.DIRECT, null, partner, "미입금", "작성중", "현금", "최초");
+				SalesType.DIRECT, null, partner.getId(), "미입금", "작성중", "현금", "최초");
 		SalesSlipItem item = new SalesSlipItem(null, variety.getName(), variety.getGenus(), "4인치", 2, 1000, "품목");
 		item.addAllocation(new SalesSlipItemAllocation(group, 2));
 		slip.addItem(item);
