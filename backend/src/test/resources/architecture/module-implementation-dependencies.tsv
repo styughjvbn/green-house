@@ -75,8 +75,6 @@ HTTP_DTO	com.greenhouse.backend.print.application.PrintQueryService	com.greenhou
 HTTP_DTO	com.greenhouse.backend.print.application.PrintQueryService	com.greenhouse.backend.sales.dto.SalesSlipResponse
 HTTP_DTO	com.greenhouse.backend.print.controller.PrintController	com.greenhouse.backend.sales.dto.SalesSlipListItemResponse
 HTTP_DTO	com.greenhouse.backend.print.controller.PrintController	com.greenhouse.backend.sales.dto.SalesSlipResponse
-HTTP_DTO	com.greenhouse.backend.sales.application.SalesPaymentService	com.greenhouse.backend.settlement.dto.ManualPaymentRequest
-HTTP_DTO	com.greenhouse.backend.sales.controller.SalesController	com.greenhouse.backend.settlement.dto.ManualPaymentRequest
 HTTP_DTO	com.greenhouse.backend.sales.dto.SalesSlipListItemResponse	com.greenhouse.backend.partner.dto.BusinessPartnerResponse
 HTTP_DTO	com.greenhouse.backend.sales.dto.SalesSlipResponse	com.greenhouse.backend.partner.dto.BusinessPartnerResponse
 QUERY_TYPE	com.greenhouse.backend.analytics.repository.SalesAnalyticsRepository	com.greenhouse.backend.farm.domain.orchid.QOrchidGroup

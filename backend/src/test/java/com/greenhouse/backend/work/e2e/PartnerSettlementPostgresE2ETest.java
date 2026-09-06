@@ -26,6 +26,7 @@ import com.greenhouse.backend.sales.domain.SalesSlipItem;
 import com.greenhouse.backend.sales.domain.SalesType;
 import com.greenhouse.backend.sales.dto.SalesSlipResponse;
 import com.greenhouse.backend.sales.repository.SalesSlipRepository;
+import com.greenhouse.backend.settlement.application.ManualPaymentCommand;
 import com.greenhouse.backend.settlement.application.PartnerBalanceService;
 import com.greenhouse.backend.settlement.application.PartnerSettlementSettingsService;
 import com.greenhouse.backend.settlement.application.AuctionSettlementService;
@@ -37,7 +38,6 @@ import com.greenhouse.backend.settlement.domain.PartnerSettlementSettings;
 import com.greenhouse.backend.settlement.domain.PaymentEventType;
 import com.greenhouse.backend.settlement.domain.PaymentTargetType;
 import com.greenhouse.backend.settlement.domain.SettlementUnit;
-import com.greenhouse.backend.settlement.dto.ManualPaymentRequest;
 import com.greenhouse.backend.settlement.dto.PartnerSettlementSettingsResponse;
 import com.greenhouse.backend.settlement.repository.PartnerBalanceSummaryRepository;
 import com.greenhouse.backend.settlement.repository.AuctionSettlementRepository;
@@ -339,8 +339,8 @@ class PartnerSettlementPostgresE2ETest extends WorkE2ETestBase {
 		return salesSlipRepository.saveAndFlush(slip);
 	}
 
-	private ManualPaymentRequest payment(long amount, String key) {
-		return new ManualPaymentRequest(amount, LocalDate.of(2040, 1, 2), key,
+	private ManualPaymentCommand payment(long amount, String key) {
+		return new ManualPaymentCommand(amount, LocalDate.of(2040, 1, 2), key,
 				"계좌이체", null, "테스트", null);
 	}
 

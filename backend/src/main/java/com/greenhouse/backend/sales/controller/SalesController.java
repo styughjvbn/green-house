@@ -14,7 +14,7 @@ import com.greenhouse.backend.sales.dto.SalesSlipCreateRequest;
 import com.greenhouse.backend.sales.dto.SalesSlipListItemResponse;
 import com.greenhouse.backend.sales.dto.SalesSlipResponse;
 import com.greenhouse.backend.sales.dto.SalesSlipStatusUpdateRequest;
-import com.greenhouse.backend.settlement.dto.ManualPaymentRequest;
+import com.greenhouse.backend.settlement.application.ManualPaymentCommand;
 import jakarta.validation.Valid;
 import java.time.LocalDate;
 import java.util.List;
@@ -103,7 +103,7 @@ public class SalesController {
 	@PostMapping("/sales-slips/{salesSlipId}/confirm-payment")
 	public ApiResponse<SalesSlipResponse> confirmPayment(
 			@PathVariable Long salesSlipId,
-			@Valid @RequestBody ManualPaymentRequest request) {
+			@Valid @RequestBody ManualPaymentCommand request) {
 		return ApiResponse.ok(salesPaymentService.confirmPayment(salesSlipId, request));
 	}
 

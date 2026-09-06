@@ -12,7 +12,6 @@ import com.greenhouse.backend.auction.repository.AuctionShipmentRepository;
 import com.greenhouse.backend.partner.domain.BusinessPartner;
 import com.greenhouse.backend.partner.domain.PartnerType;
 import com.greenhouse.backend.partner.repository.BusinessPartnerRepository;
-import com.greenhouse.backend.settlement.dto.ManualPaymentRequest;
 import com.greenhouse.backend.settlement.repository.AuctionSettlementRepository;
 import java.time.Clock;
 import java.time.Instant;
@@ -55,7 +54,7 @@ class AuctionSettlementClockIntegrationTest {
 		assertThat(settlement.resultReceivedAt()).isEqualTo(FARM_TIME);
 		assertThat(settlementRepository.findById(settlement.id()).orElseThrow().getResultReceivedAt()).isEqualTo(UTC_TIME);
 
-		var paid = paymentService.confirmAuctionPayment(settlement.id(), new ManualPaymentRequest(
+		var paid = paymentService.confirmAuctionPayment(settlement.id(), new ManualPaymentCommand(
 				1_000L, FARM_TIME.toLocalDate(), "clock-payment", "계좌이체", null, "작성자", null));
 		assertThat(paid.confirmedAt()).isEqualTo(FARM_TIME);
 		assertThat(paid.paidAmount()).isEqualTo(1_000L);

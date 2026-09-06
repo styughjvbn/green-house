@@ -3,11 +3,11 @@ package com.greenhouse.backend.sales.application;
 import com.greenhouse.backend.common.exception.NotFoundException;
 import com.greenhouse.backend.sales.dto.SalesSlipResponse;
 import com.greenhouse.backend.sales.repository.SalesSlipRepository;
+import com.greenhouse.backend.settlement.application.ManualPaymentCommand;
 import com.greenhouse.backend.settlement.application.PartnerBalanceService;
 import com.greenhouse.backend.settlement.application.PaymentLedgerService;
 import com.greenhouse.backend.settlement.application.SettlementAuditSupport;
 import com.greenhouse.backend.settlement.domain.PaymentTargetType;
-import com.greenhouse.backend.settlement.dto.ManualPaymentRequest;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -23,8 +23,7 @@ public class SalesPaymentService {
 	private final SettlementAuditSupport auditSupport;
 	private final SalesSlipResponseAssembler responseAssembler;
 
-	public SalesSlipResponse confirmPayment(Long salesSlipId, ManualPaymentRequest request) {
-		var payment = request.toCommand();
+	public SalesSlipResponse confirmPayment(Long salesSlipId, ManualPaymentCommand payment) {
 		var salesSlip = salesSlipRepository.findForUpdateById(salesSlipId)
 				.orElseThrow(() -> new NotFoundException("판매 전표를 찾을 수 없습니다."));
 		salesSlip.validatePaymentTarget();
@@ -36,7 +35,7 @@ public class SalesPaymentService {
 
 		var before = auditSupport.paymentSnapshot(salesSlip.getPaidAmount(), salesSlip.getRemainingAmount(),
 				salesSlip.getPaymentStatus());
-		salesSlip.recordPayment(request.amount());
+		salesSlip.recordPayment(payment.amount());
 		var saved = salesSlipRepository.save(salesSlip);
 		var receivedEventId = paymentLedgerService.recordManualPayment(
 				salesSlip.getPartnerId(), PaymentTargetType.SALES_SLIP, salesSlipId, payment);

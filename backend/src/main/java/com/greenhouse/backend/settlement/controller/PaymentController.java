@@ -2,12 +2,12 @@ package com.greenhouse.backend.settlement.controller;
 
 import com.greenhouse.backend.common.api.ApiResponse;
 import com.greenhouse.backend.common.api.PageResponse;
+import com.greenhouse.backend.settlement.application.ManualPaymentCommand;
 import com.greenhouse.backend.settlement.application.PartnerBalanceService;
 import com.greenhouse.backend.settlement.application.PaymentService;
 import com.greenhouse.backend.settlement.domain.PaymentEventType;
 import com.greenhouse.backend.settlement.domain.PaymentTargetType;
 import com.greenhouse.backend.settlement.dto.AuctionSettlementResponse;
-import com.greenhouse.backend.settlement.dto.ManualPaymentRequest;
 import com.greenhouse.backend.settlement.dto.PartnerBalanceSummaryResponse;
 import com.greenhouse.backend.settlement.dto.PartnerPaymentEventResponse;
 import io.swagger.v3.oas.annotations.Operation;
@@ -32,7 +32,7 @@ public class PaymentController {
 	@PostMapping("/auction-settlements/{settlementId}/confirm-payment")
 	public ApiResponse<AuctionSettlementResponse> confirmAuctionPayment(
 			@PathVariable Long settlementId,
-			@Valid @RequestBody ManualPaymentRequest request) {
+			@Valid @RequestBody ManualPaymentCommand request) {
 		return ApiResponse.ok(paymentService.confirmAuctionPayment(settlementId, request));
 	}
 

@@ -9,7 +9,6 @@ import com.greenhouse.backend.settlement.domain.PartnerPaymentEvent;
 import com.greenhouse.backend.settlement.domain.PaymentEventType;
 import com.greenhouse.backend.settlement.domain.PaymentTargetType;
 import com.greenhouse.backend.settlement.dto.AuctionSettlementResponse;
-import com.greenhouse.backend.settlement.dto.ManualPaymentRequest;
 import com.greenhouse.backend.settlement.dto.PartnerPaymentEventResponse;
 import com.greenhouse.backend.settlement.repository.AuctionSettlementRepository;
 import com.greenhouse.backend.settlement.repository.PartnerPaymentEventRepository;
@@ -36,8 +35,7 @@ public class PaymentService {
 	private final AuctionSettlementResponseAssembler settlementResponseAssembler;
 	private final Clock clock;
 
-	public AuctionSettlementResponse confirmAuctionPayment(Long settlementId, ManualPaymentRequest request) {
-		var payment = request.toCommand();
+	public AuctionSettlementResponse confirmAuctionPayment(Long settlementId, ManualPaymentCommand payment) {
 		var settlement = auctionSettlementRepository.findForUpdateById(settlementId)
 				.orElseThrow(() -> new NotFoundException("경매 정산을 찾을 수 없습니다."));
 		if (paymentLedgerService.findManualPayment(
@@ -45,7 +43,7 @@ public class PaymentService {
 			return settlementResponseAssembler.assemble(settlement);
 		}
 		var before = auditSupport.auctionPaymentSnapshot(settlement);
-		settlement.recordPayment(request.amount(), defaultWorker(requestActorProvider.resolve(request.worker())),
+		settlement.recordPayment(payment.amount(), defaultWorker(requestActorProvider.resolve(payment.worker())),
 				TimeConfig.utcNow(clock));
 		var receivedEventId = paymentLedgerService.recordManualPayment(
 				settlement.getAuctionHouseId(), PaymentTargetType.AUCTION_SETTLEMENT, settlementId, payment);

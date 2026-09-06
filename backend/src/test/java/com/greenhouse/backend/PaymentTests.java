@@ -32,16 +32,23 @@ import com.greenhouse.backend.settlement.domain.PaymentEventType;
 import com.greenhouse.backend.settlement.domain.PaymentTargetType;
 import com.greenhouse.backend.settlement.repository.PartnerPaymentEventRepository;
 import java.time.LocalDate;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
+import java.util.stream.Stream;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.CsvSource;
+import org.junit.jupiter.params.provider.MethodSource;
+import org.junit.jupiter.params.provider.ValueSource;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.transaction.annotation.Transactional;
+import tools.jackson.databind.json.JsonMapper;
 
 @SpringBootTest
 @AutoConfigureMockMvc
@@ -55,6 +62,67 @@ class PaymentTests {
 	@Autowired AuctionSettlementService settlementService;
 	@Autowired PartnerPaymentEventRepository eventRepository;
 	@Autowired AuditEventRepository auditEventRepository;
+
+	@ParameterizedTest
+	@MethodSource("invalidPaymentFields")
+	void validatesManualPaymentFieldsBeforeLoadingEitherTarget(String field, Object invalidValue) throws Exception {
+		var payload = new LinkedHashMap<String, Object>(Map.of(
+				"amount", 1L, "paymentDate", "2026-07-06", "idempotencyKey", "validation"));
+		if (field == null) {
+			payload.clear();
+		} else {
+			payload.put(field, invalidValue);
+		}
+		String json = JsonMapper.builder().build().writeValueAsString(payload);
+		for (String target : List.of("sales-slips", "auction-settlements")) {
+			mockMvc.perform(post("/api/{target}/-1/confirm-payment", target)
+					.contentType("application/json").content(json))
+				.andExpect(status().isBadRequest())
+				.andExpect(jsonPath("$.error.code").value("VALIDATION_ERROR"));
+		}
+	}
+
+	static Stream<Arguments> invalidPaymentFields() {
+		return Stream.of(
+				Arguments.of(null, null),
+				Arguments.of("amount", null),
+				Arguments.of("amount", 0),
+				Arguments.of("amount", -1),
+				Arguments.of("paymentDate", null),
+				Arguments.of("idempotencyKey", null),
+				Arguments.of("idempotencyKey", ""),
+				Arguments.of("idempotencyKey", " "),
+				Arguments.of("idempotencyKey", "k".repeat(101)),
+				Arguments.of("paymentMethod", "m".repeat(31)),
+				Arguments.of("depositorName", "d".repeat(101)),
+				Arguments.of("worker", "w".repeat(101)),
+				Arguments.of("memo", "m".repeat(1001)));
+	}
+
+	@ParameterizedTest
+	@ValueSource(strings = {"sales-slips", "auction-settlements"})
+	void acceptsFieldLengthLimitsAndAbsentOptionalPaymentFields(String target) throws Exception {
+		var payload = new LinkedHashMap<String, Object>(Map.of(
+				"amount", Long.MAX_VALUE, "paymentDate", "2026-07-06", "idempotencyKey", "k".repeat(100),
+				"paymentMethod", "m".repeat(30), "depositorName", "d".repeat(100),
+				"worker", "w".repeat(100), "memo", "m".repeat(1000)));
+		var mapper = JsonMapper.builder().build();
+		mockMvc.perform(post("/api/{target}/-1/confirm-payment", target)
+				.contentType("application/json").content(mapper.writeValueAsString(payload)))
+			.andExpect(status().isNotFound())
+			.andExpect(jsonPath("$.error.code").value("NOT_FOUND"));
+
+		payload.keySet().retainAll(List.of("amount", "paymentDate", "idempotencyKey"));
+		mockMvc.perform(post("/api/{target}/-1/confirm-payment", target)
+				.contentType("application/json").content(mapper.writeValueAsString(payload)))
+			.andExpect(status().isNotFound())
+			.andExpect(jsonPath("$.error.code").value("NOT_FOUND"));
+
+		payload.put("paymentDate", "invalid-date");
+		mockMvc.perform(post("/api/{target}/-1/confirm-payment", target)
+				.contentType("application/json").content(mapper.writeValueAsString(payload)))
+			.andExpect(status().isBadRequest());
+	}
 
 	@Test
 	void confirmsPartialAndFullSalesSlipPayments() throws Exception {

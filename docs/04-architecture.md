@@ -274,6 +274,7 @@ Persistence 조회 규칙:
 #### 유스케이스와 트랜잭션
 
 - Controller는 HTTP 변환과 validation 진입만 담당하고 application service가 유스케이스와 트랜잭션을 소유한다.
+- 수동 입금처럼 HTTP 입력과 유스케이스 입력의 의미·필드가 같으면 application 명령을 그대로 바인딩하고 표준 validation도 해당 명령에 둔다. 값만 복사하는 Request·변환 메서드는 두지 않는다. 기존 OpenAPI 이름은 명시적으로 유지하며, 입력 의미나 변환이 달라지는 경우에만 HTTP DTO를 분리한다.
 - 쓰기 유스케이스는 하나의 public application method를 원자 경계로 삼는다. 중간 service 호출이 별도 트랜잭션을 암묵적으로 만들거나 self invocation에 의존하지 않게 한다.
 - PostgreSQL 엔티티 ID는 테이블별 sequence와 `allocationSize = 50`을 사용한다. Hibernate JDBC batch와 insert 정렬을 활성화하며, 대량 저장은 같은 트랜잭션에서 동일 엔티티를 연속 저장해 JDBC batch가 유지되게 한다.
 - Entity는 자기 상태의 불변식과 전이를 지키고 application service는 aggregate 조회, 순서 제어, 모듈 간 조율을 담당한다. 여러 Service에서 같은 상태 조건을 검사하면 Domain Policy 또는 상태 전이 메서드로 모은다.
