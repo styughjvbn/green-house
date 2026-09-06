@@ -2,7 +2,7 @@
 
 - 기준일: 2026-09-05
 - 기준 코드: `feature/orchid-group-mutation-engine`, `3aa8fc54`
-- 상태: 단계별 구현 진행 중. 1·2차 구현 범위와 남은 작업은 아래 실행 기록 참고.
+- 상태: 단계별 구현 진행 중. 1~3차 구현 범위와 남은 작업은 아래 실행 기록 참고.
 - 작업 브랜치: `feature/backend-refactoring`.
 - 범위: **13개 모듈 전체**, Controller·application·domain·Repository·DTO·설정·DB migration·테스트·CI.
 - 목표: **확장에는 열려 있고 수정에는 닫힌 구조(OCP)**. 새 기능을 추가할 때 기존 유스케이스와 타 모듈 내부를 수정하는 범위를 줄인다.
@@ -541,3 +541,44 @@ application Bean 이후 평가되는 기본 계정 자동 구성으로 분리했
 1. B-04의 남은 소비자가 Partner Entity 없이 생성·조회할 수 있도록 각 모듈의 ID·snapshot 계약 전환.
 2. 이 계약 위에서 B-05 Auction 생성·결과 연결 API, B-06 Settlement 원장·계산 책임 분리.
 3. Farm B-08의 나머지 조회·command 경계와 B-09~10 Mutation/Work 계약을 계속 정리.
+
+## 12. 실행 기록 — 3차 정산·입금 계약
+
+2026-09-06, `feature/backend-refactoring`. B-04의 Settlement 소비자 전환과 B-06의 원장·재구성 책임 분리를 진행했다.
+Sales·Auction을 포함한 B-04 전체와 B-06 전체 완료를 뜻하지 않는다.
+
+| 작업 | 적용한 변경 | 남은 범위 |
+|---|---|---|
+| B-04 | 입금 이벤트·경매 정산의 거래처 Entity 연관을 ID로 전환. Settlement의 Partner Entity 직접 의존 제거. 이름 조회는 Partner application 값의 일괄 조회로 처리 | Sales·Auction의 Entity 연관과 deprecated 조회, 운영 목록·선택지 계약 |
+| B-06 | 원장은 application 입금 명령을 받고 이벤트 ID를 반환. 중복 요청의 금액·입금일 검증은 domain 소유. 정산 재구성을 그룹 조회·기존 정산 조회·결과 병합으로 분리 | Auction 결과 연결의 소유권, 전체 원장·금액·상태 정책 정리, 누적 목록 pagination |
+| B-01~03 | Entity 의존 8쌍 제거: 132 → 124. 정산의 직접 현재 시각 조회를 제거해 남은 시간 예외 클래스 5 → 4 | 나머지 Entity/Q/HTTP DTO·직접 JPQL 2곳, 기존 disabled 43건과 시간 예외 4개 클래스 |
+
+보존·명시한 계약:
+
+- 원장의 공개 명령은 HTTP DTO와 분리하며 거래처 Entity나 원장 Entity를 다른 모듈로 넘기지 않는다. 잔액의 마지막 입금 이벤트 연결은 Settlement 안에서 이벤트 ID로 해석한다.
+- 원장 API는 호출 트랜잭션을 필수로 요구한다. 대상 입금 상태, 입금·연결 이벤트, 잔액, 감사가 함께 반영되거나 rollback된다. 부분입금·초과입금 거절·멱등 키 형식·개인정보 감사 제외 규칙은 유지한다.
+- 입금 이벤트와 경매 정산의 거래처 이름은 현재 기준 정보다. root 순서·원본/연결 이벤트 관계·정산 행의 수량과 금액은 유지하며 이름만 일괄 조립한다. 빈 목록은 거래처를 조회하지 않는다.
+- 잘못된 유형·없는 경매장은 거절하고, 비활성 경매장의 기존 결과 재구성은 허용한다. 기존 FK·UNIQUE·버전을 유지했으며 DB migration은 없다.
+- 결과 수신·입금 확인 시각은 application이 주입된 Clock에서 UTC 값으로 결정한다. 응답은 기존 한국 시간 변환을 유지하고 일괄 재구성은 같은 시각을 사용한다. 이미 연결된 결과는 반복 반영하지 않는다.
+
+검증:
+
+- 원장 명령·결과, 마지막 이벤트 연결 보존, 멱등 요청, 트랜잭션 밖 호출 거절, 후속 실패 rollback, 개인정보 감사 회귀 통과.
+- 입금 이벤트·경매 정산 각각 거래처 1·10·50개에서 SQL 2회 이내. 정산 행·목록 순서·변경된 거래처 이름 검증. 빈 목록은 SQL 1회.
+- PostgreSQL 집중 회귀 7건 통과: 기존 잠금·직거래 입금·동시 설정 생성에 경매 동시 입금/재요청·입금 전체 rollback·추가 FK 확인 포함.
+- 고정 Clock으로 UTC 저장과 한국 날짜 경계 응답, 기존/신규 결과 병합, 일괄 재구성 재실행 검증 통과.
+- 최종 `./gradlew test workE2eTest --offline --no-daemon`: 기본 324건 중 281건 통과·기존 disabled 43건, 실제 PostgreSQL 29건 전부 통과. 실패 0건.
+- 임시 H2 서버에서 OpenAPI 131 operations·110 paths·217 schemas 재생성. 전체 명세·slice 차이 없음. 임시 서버 종료, `git diff --check` 통과.
+- 프론트 코드·생성 schema 변경 없음. 프론트 검증·벤치마크는 실행하지 않았다.
+
+코드 커밋:
+
+- `4b18efbb refactor: define value contracts for the payment ledger`
+- `216bfd6e refactor: decouple auction settlements from partner entities`
+- `fdc2f974 refactor: make auction settlement rebuilding deterministic`
+
+다음 범위:
+
+1. B-04의 Sales·Auction 거래처 Entity 연관과 공개 조회 반환을 값 계약으로 전환.
+2. B-05의 출하 생성·결과 조회 API를 정리해 Sales/Settlement의 Auction 내부 접근 제거.
+3. B-06의 남은 금액·상태 정책과 목록 계약, B-08~10 Farm/Work 경계 작업을 이어간다.
