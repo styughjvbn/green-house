@@ -12,6 +12,8 @@ import com.greenhouse.backend.analytics.dto.WorkAnalyticsItemResponse;
 import com.greenhouse.backend.analytics.dto.WorkAnalyticsResponse;
 import com.greenhouse.backend.analytics.repository.SalesAnalyticsRepository;
 import com.greenhouse.backend.common.config.TimeConfig;
+import com.greenhouse.backend.farm.application.status.FarmMetricsReader;
+import com.greenhouse.backend.work.application.operation.WorkOperationMetricsReader;
 import java.text.NumberFormat;
 import java.time.Clock;
 import java.time.LocalDate;
@@ -29,6 +31,8 @@ import org.springframework.transaction.annotation.Transactional;
 public class AnalyticsQueryService {
 
 	private final SalesAnalyticsRepository salesAnalyticsRepository;
+	private final FarmMetricsReader farmMetricsReader;
+	private final WorkOperationMetricsReader workMetricsReader;
 	private final Clock clock;
 
 	public SalesAnalyticsResponse getSalesAnalytics(LocalDate from, LocalDate to) {
@@ -63,6 +67,7 @@ public class AnalyticsQueryService {
 						row.id(), row.slipNumber(), row.saleDate(), row.partnerName(), row.totalAmount(),
 						row.paidAmount(), row.remainingAmount(), row.paymentStatus(), row.salesStatus()))
 				.toList();
+		var inventory = farmMetricsReader.getInventorySummary();
 		String formattedUnpaidAmount = NumberFormat.getNumberInstance().format(unpaidAmount);
 		return new SalesAnalyticsResponse(
 				currentMonthSales,
@@ -70,10 +75,10 @@ public class AnalyticsQueryService {
 				shippedQuantity,
 				previousMonthShippedQuantity,
 				unpaidAmount,
-				salesAnalyticsRepository.sumSaleableQuantity(),
+				inventory.saleableQuantity(),
 				monthlySales,
 				varietySales,
-				salesAnalyticsRepository.varietyInventory().stream()
+				inventory.varieties().stream()
 						.map(row -> new VarietyInventoryAnalyticsResponse(
 								row.varietyName(), row.saleableQuantity(), row.warningGroupCount()))
 						.toList(),
@@ -107,17 +112,19 @@ public class AnalyticsQueryService {
 
 	public WorkAnalyticsResponse getWorkAnalytics(LocalDate from, LocalDate to) {
 		AnalyticsDateRange range = dateRange(from, to);
-		var recentRecords = salesAnalyticsRepository.recentWorkOperations(range.from(), range.to(), 10).stream()
+		var summary = workMetricsReader.getSummary(range.from(), range.to());
+		var recentRecords = summary.recentRecords().stream()
 				.map(row -> new WorkAnalyticsItemResponse(
 						row.id(), row.workDate(), row.workType(), row.workTypeTemplate(), row.title(),
 						row.sourceScopeType(), row.worker(), row.memo(), row.status()))
 				.toList();
 		return new WorkAnalyticsResponse(
-				salesAnalyticsRepository.countWorkOperations(range.from(), range.to()),
-				salesAnalyticsRepository.countWorkOperationsByTemplate(range.from(), range.to(), "MOVEMENT"),
-				salesAnalyticsRepository.countWorkOperationsByTemplate(range.from(), range.to(), "STATUS"),
-				salesAnalyticsRepository.latestWorkDate(range.from(), range.to()),
-				ranked(salesAnalyticsRepository.workTypeCounts(range.from(), range.to())),
+				summary.totalCount(),
+				summary.movementCount(),
+				summary.statusCount(),
+				summary.latestWorkDate(),
+				summary.typeCounts().stream()
+						.map(count -> new AnalyticsRankedValueResponse(count.name(), count.count())).toList(),
 				recentRecords);
 	}
 

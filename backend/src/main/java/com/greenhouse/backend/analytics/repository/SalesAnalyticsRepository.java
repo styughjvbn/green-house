@@ -1,17 +1,10 @@
 package com.greenhouse.backend.analytics.repository;
 
 import static com.greenhouse.backend.partner.domain.QBusinessPartner.businessPartner;
-import static com.greenhouse.backend.farm.domain.orchid.QOrchidGroup.orchidGroup;
 import static com.greenhouse.backend.sales.domain.QSalesSlip.salesSlip;
 import static com.greenhouse.backend.sales.domain.QSalesSlipItem.salesSlipItem;
 import static com.greenhouse.backend.settlement.domain.QPartnerBalanceSummary.partnerBalanceSummary;
-import static com.greenhouse.backend.work.domain.operation.QWorkOperation.workOperation;
-import static com.greenhouse.backend.work.domain.operation.QWorkType.workType;
 
-import com.greenhouse.backend.work.domain.operation.WorkOperationStatus;
-import com.greenhouse.backend.work.domain.operation.WorkTypeTemplate;
-import com.greenhouse.backend.farm.domain.orchid.OrchidGroupStatusPolicy;
-import com.querydsl.core.types.dsl.CaseBuilder;
 import com.querydsl.core.Tuple;
 import com.querydsl.core.types.Projections;
 import com.querydsl.core.types.dsl.BooleanExpression;
@@ -43,42 +36,6 @@ public class SalesAnalyticsRepository {
 				.join(salesSlipItem.salesSlip, salesSlip)
 				.where(saleDateBetween(from, to), completedSalesSlip())
 				.fetchOne());
-	}
-
-	public Long sumSaleableQuantity() {
-		return nullToZero(queryFactory
-				.select(orchidGroup.quantity.subtract(orchidGroup.reservedQuantity).sum().longValue())
-				.from(orchidGroup)
-				.where(
-						orchidGroup.quantity.gt(0),
-						orchidGroup.status.notIn(OrchidGroupStatusPolicy.unavailableForSaleStatuses()))
-				.fetchOne());
-	}
-
-	public List<VarietyInventoryAnalyticsRow> varietyInventory() {
-		var saleableQuantity = new CaseBuilder()
-				.when(orchidGroup.status.notIn(OrchidGroupStatusPolicy.unavailableForSaleStatuses()))
-				.then(orchidGroup.quantity.subtract(orchidGroup.reservedQuantity))
-				.otherwise(0)
-				.sum()
-				.longValue();
-		var warningGroupCount = new CaseBuilder()
-				.when(orchidGroup.status.in(OrchidGroupStatusPolicy.warningStatuses()))
-				.then(1)
-				.otherwise(0)
-				.sum()
-				.longValue();
-		return queryFactory
-				.select(Projections.constructor(
-						VarietyInventoryAnalyticsRow.class,
-						orchidGroup.varietyName,
-						saleableQuantity,
-						warningGroupCount))
-				.from(orchidGroup)
-				.where(orchidGroup.quantity.gt(0))
-				.groupBy(orchidGroup.varietyName)
-				.orderBy(saleableQuantity.desc(), orchidGroup.varietyName.asc())
-				.fetch();
 	}
 
 	public Long sumUnpaidAmount(LocalDate from, LocalDate to) {
@@ -209,70 +166,6 @@ public class SalesAnalyticsRepository {
 				.toList();
 	}
 
-	public Long countWorkOperations(LocalDate from, LocalDate to) {
-		return nullToZero(queryFactory
-				.select(workOperation.id.count())
-				.from(workOperation)
-				.where(workDateBetween(from, to), completedWorkOperation())
-				.fetchOne());
-	}
-
-	public Long countWorkOperationsByTemplate(LocalDate from, LocalDate to, String template) {
-		return nullToZero(queryFactory
-				.select(workOperation.id.count())
-				.from(workOperation)
-				.join(workOperation.workType, workType)
-				.where(
-						workDateBetween(from, to),
-						completedWorkOperation(),
-						workType.template.eq(WorkTypeTemplate.valueOf(template)))
-				.fetchOne());
-	}
-
-	public LocalDate latestWorkDate(LocalDate from, LocalDate to) {
-		return queryFactory
-				.select(workOperation.plannedStartDate.max())
-				.from(workOperation)
-				.where(workDateBetween(from, to), completedWorkOperation())
-				.fetchOne();
-	}
-
-	public List<Object[]> workTypeCounts(LocalDate from, LocalDate to) {
-		var count = workOperation.id.count();
-		return queryFactory
-				.select(workType.name, count)
-				.from(workOperation)
-				.join(workOperation.workType, workType)
-				.where(workDateBetween(from, to), completedWorkOperation())
-				.groupBy(workType.name)
-				.orderBy(count.desc())
-				.fetch()
-				.stream()
-				.map(tuple -> new Object[] { tuple.get(workType.name), nullToZero(tuple.get(count)) })
-				.toList();
-	}
-
-	public List<WorkAnalyticsItemRow> recentWorkOperations(LocalDate from, LocalDate to, int limit) {
-		return queryFactory
-				.select(Projections.constructor(
-						WorkAnalyticsItemRow.class,
-						workOperation.id,
-						workOperation.plannedStartDate,
-						workType.name,
-						workType.template,
-						workOperation.title,
-						workOperation.sourceScopeType,
-						workOperation.worker,
-						workOperation.memo,
-						workOperation.status))
-				.from(workOperation)
-				.join(workOperation.workType, workType)
-				.where(workDateBetween(from, to), completedWorkOperation())
-				.orderBy(workOperation.plannedStartDate.desc(), workOperation.id.desc())
-				.limit(limit)
-				.fetch();
-	}
-
 	private com.querydsl.jpa.impl.JPAQuery<AnalyticsSlipSummaryRow> slipSummaryQuery(LocalDate from, LocalDate to) {
 		return queryFactory
 				.select(Projections.constructor(
@@ -318,14 +211,6 @@ public class SalesAnalyticsRepository {
 
 	private BooleanExpression completedSalesSlip() {
 		return salesSlip.salesStatus.in("출고 완료", "출하 완료");
-	}
-
-	private BooleanExpression workDateBetween(LocalDate from, LocalDate to) {
-		return workOperation.plannedStartDate.between(from, to);
-	}
-
-	private BooleanExpression completedWorkOperation() {
-		return workOperation.status.in(WorkOperationStatus.COMPLETED, WorkOperationStatus.CORRECTED);
 	}
 
 	private Long nullToZero(Long value) {

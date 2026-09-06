@@ -4,6 +4,11 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import com.greenhouse.backend.farm.domain.orchid.OrchidGroup;
+import com.greenhouse.backend.farm.domain.structure.BedZone;
+import com.greenhouse.backend.farm.domain.structure.BedZoneSide;
+import com.greenhouse.backend.farm.domain.structure.House;
+import com.greenhouse.backend.farm.domain.structure.PhysicalBed;
 import com.greenhouse.backend.work.domain.operation.WorkOperation;
 import com.greenhouse.backend.work.domain.operation.WorkSourceScopeType;
 import com.greenhouse.backend.work.domain.operation.WorkType;
@@ -63,6 +68,30 @@ class AnalyticsIntegrationTests extends AbstractBackendIntegrationTest {
 				.andExpect(jsonPath("$.data.currentMonthSales").value(0))
 				.andExpect(jsonPath("$.data.monthlySales").isArray())
 				.andExpect(jsonPath("$.data.recentSlips").isArray());
+	}
+
+	@Test
+	@Transactional
+	void salesAnalyticsIncludesCurrentInventoryRegardlessOfSalesPeriod() throws Exception {
+		var house = new House(990, "분석 테스트동");
+		var bed = new PhysicalBed(1, 1);
+		var zone = new BedZone("구역", BedZoneSide.LEFT, 1);
+		bed.addBedZone(zone);
+		house.addPhysicalBed(bed);
+		houseRepository.save(house);
+		var reserved = new OrchidGroup(zone, "카틀레야", "분석 품종", 20, "3.5치", 2, "정상", 1, null, null);
+		reserved.reserve(7);
+		orchidGroupRepository.save(reserved);
+		orchidGroupRepository.save(new OrchidGroup(zone, "카틀레야", "분석 품종", 10, "3.5치", 2, "주의", 2, null, null));
+
+		mockMvc.perform(get("/api/analytics/sales").param("from", "2020-01-01").param("to", "2020-01-31"))
+				.andExpect(status().isOk())
+				.andExpect(jsonPath("$.data.currentMonthSales").value(0))
+				.andExpect(jsonPath("$.data.saleableQuantity").value(13))
+				.andExpect(jsonPath("$.data.varietyInventory.length()").value(1))
+				.andExpect(jsonPath("$.data.varietyInventory[0].varietyName").value("분석 품종"))
+				.andExpect(jsonPath("$.data.varietyInventory[0].saleableQuantity").value(13))
+				.andExpect(jsonPath("$.data.varietyInventory[0].warningGroupCount").value(1));
 	}
 
 	@Test
@@ -156,7 +185,15 @@ class AnalyticsIntegrationTests extends AbstractBackendIntegrationTest {
 				.param("to", "2026-07-31"))
 				.andExpect(status().isOk())
 				.andExpect(jsonPath("$.data.totalCount").value(1))
+				.andExpect(jsonPath("$.data.latestWorkDate").value("2026-07-15"))
+				.andExpect(jsonPath("$.data.workTypeCounts[0].label").value("분석 메모"))
+				.andExpect(jsonPath("$.data.workTypeCounts[0].value").value(1))
 				.andExpect(jsonPath("$.data.recentRecords[0].id").value(operation.getId()))
+				.andExpect(jsonPath("$.data.recentRecords[0].workDate").value("2026-07-15"))
+				.andExpect(jsonPath("$.data.recentRecords[0].workTypeTemplate").value("MEMO"))
+				.andExpect(jsonPath("$.data.recentRecords[0].sourceScopeType").value("FARM"))
+				.andExpect(jsonPath("$.data.recentRecords[0].worker").value("테스터"))
+				.andExpect(jsonPath("$.data.recentRecords[0].memo").value("분석 메모"))
 				.andExpect(jsonPath("$.data.recentRecords[0].title").value("분석 대상 작업"))
 				.andExpect(jsonPath("$.data.recentRecords[0].status").value("COMPLETED"));
 	}

@@ -13,6 +13,25 @@ import jakarta.persistence.LockModeType;
 
 public interface OrchidGroupRepository extends JpaRepository<OrchidGroup, Long> {
 
+	@Query("""
+			select g.varietyName as varietyName,
+			       sum(case when g.status not in :unavailableStatuses then g.quantity - g.reservedQuantity else 0 end) as saleableQuantity,
+			       sum(case when g.status in :warningStatuses then 1 else 0 end) as warningGroupCount
+			from OrchidGroup g
+			where g.quantity > 0
+			group by g.varietyName
+			order by saleableQuantity desc, g.varietyName asc
+			""")
+	List<VarietyInventory> summarizeInventory(
+			@Param("unavailableStatuses") java.util.Collection<String> unavailableStatuses,
+			@Param("warningStatuses") java.util.Collection<String> warningStatuses);
+
+	interface VarietyInventory {
+		String getVarietyName();
+		long getSaleableQuantity();
+		long getWarningGroupCount();
+	}
+
 	@Query("select g.id from OrchidGroup g where g.id > :afterId order by g.id")
 	List<Long> findIdsAfter(@Param("afterId") Long afterId, Pageable pageable);
 
