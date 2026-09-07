@@ -2,7 +2,7 @@
 
 - 기준일: 2026-09-05
 - 기준 코드: `feature/orchid-group-mutation-engine`, `3aa8fc54`
-- 상태: 단계별 구현 진행 중. 1~15차 구현 범위와 남은 작업은 아래 실행 기록 참고.
+- 상태: 단계별 구현 진행 중. 1~17차 구현 범위와 남은 작업은 아래 실행 기록 참고.
 - 작업 브랜치: `feature/backend-refactoring`.
 - 범위: **13개 모듈 전체**, Controller·application·domain·Repository·DTO·설정·DB migration·테스트·CI.
 - 목표: **확장에는 열려 있고 수정에는 닫힌 구조(OCP)**. 새 기능을 추가할 때 기존 유스케이스와 타 모듈 내부를 수정하는 범위를 줄인다.
@@ -244,7 +244,7 @@ Controller / 향후 입력 adapter
 근거: `WorkType`, `WorkEffectProcessor`, `WorkEffectStore`, `WorkTargetSelection`, 각 실행 service와 `WorkOperationDetailService`.
 
 1. 시스템 작업별 handler·workflow·대상 종류·등록 모드를 정의하는 불변 descriptor를 모음. capability와 실행 handler 선택이 같은 정의를 사용하도록 함.
-2. active/system 설정에 따른 허용 여부와 작업·대상의 상태 전이는 기존 domain policy가 유지. Entity가 Spring registry를 조회하지 않도록 application이 정의를 제공.
+2. active/system 설정에 따른 허용 여부와 작업·대상의 상태 전이는 기존 domain policy가 유지. 고정 정의는 순수 domain 값으로 두며 Entity가 Spring registry를 조회하지 않게 함. 단순 정의 전달을 위한 application 계층은 추가하지 않음.
 3. 기존 handler 등록·중복 검사를 재사용하고 definition↔handler↔codec 누락도 시작/계약 테스트에서 검사.
 4. 계획·진행·즉시 실행·구조 변경·포트·보정의 최상위 트랜잭션은 분리 유지. Controller는 목적별 분리가 유용한 범위만 나누며 URL은 유지.
 5. 대상 해석은 snapshot 생성 이전 경계로 제한. 새로운 선택 방식이 기존 실행 이력을 재해석하게 하지 않음.
@@ -870,3 +870,49 @@ B-11 전체 완료는 아니다. 다음 우선 범위는 Analytics의 입금 상
 - `python3 scripts/generate_openapi.py`로 **136 operations·115 paths·228 schemas**를 재생성했으며 전체 명세·slice 차이는 없다. 프론트 코드·생성 타입 변경이 없어 프론트 검증과 브라우저 E2E는 실행하지 않았다. DB migration과 대용량 시간·메모리 벤치마크는 이번 범위에 없다. 임시 명세 서버 종료와 `git diff --check`를 확인했다.
 
 다음 우선 범위는 B-08~10의 구조 변경 실행에서 Legacy/Engine이 중복 계산하는 속성·결과·계보 조립이다. 실행 전 원본 상태와 기존 JSON 의미를 보존하면서 공통 계산을 한 곳으로 모은다. Work 유형 정의·codec·상세 조회·멱등성 보강, 남은 HTTP DTO·Partner Q 경계는 전체 계획에서 계속 추적한다.
+
+## 23. 실행 기록 — 16차 구조 변경·Mutation 중복 정리
+
+2026-09-07, `feature/backend-refactoring`. B-08~10의 구조 변경 결과 계산과 Mutation 기록 책임을 정리했다.
+
+커밋: `99556b9b fix: authorize orchid creation before placement queries flush`, `b9334474 refactor: unify transformation results and mutation ledger recording`.
+
+- 구조 변경은 원본을 잠근 뒤 상속 속성·결과 목적·상태를 한 번 계산하고 Legacy/Engine을 한 번 선택한다. 결과 순서·단일 원본 계보·Work JSON 조립을 공통 경로로 모았다. 원본이 소진돼도 작업 전 상태를 상속하며, Legacy의 기존 생성 입력과 Engine의 정규화 의미는 각각 유지한다.
+- Engine의 header·fence·Entry·Relation 기록과 관련 Mutation 검증을 내부 recorder로 모았다. 그룹 조회·잠금·누락 확인도 공통화했다. Entity 변경과 revision 증가는 Engine에 남고 잠금 전후 replay, ID 순서 잠금, 최상위 유스케이스 트랜잭션을 유지한다.
+- 별도 버그 수정으로 생성 전에 Mutation header와 쓰기 context를 설정했다. ACTIVE 다중 생성과 결과 2개의 포트 작업에서 다음 배치 조회가 앞선 INSERT를 자동 flush할 때 context가 없던 실패를 재현하고 수정했다. fence를 완화하거나 트랜잭션을 나누지 않았다.
+
+복잡성 점검 (`039a5125` 대비):
+
+- 운영 Java **573 → 574파일**, 순감 **153줄**이다. Engine은 **894 → 699줄**, 구조 변경 실행기는 **306 → 198줄**이다. 내부 기록 컴포넌트 하나를 추가했고 새 인터페이스·범용 실행 프레임워크는 없다.
+- 테스트 Java **107 → 108파일**, 순증 **166줄**이다. 두 writer 모드의 결과·롤백 비교와 ACTIVE 생성 회귀를 추가했다. 모듈 내부 구현 의존 **38쌍**, Entity 예외 **0쌍**, writer inventory는 유지한다.
+
+검증:
+
+- PostgreSQL에서 분갈이·분주·합식·이동의 두 모드 8건과 두 번째 배치 실패의 전체 롤백 2건을 추가했다. 작업 전 상태·포트 크기·연차, 결과 목적·순서, 손실/증가 수량, 계보와 Mutation 연결을 확인했다. ACTIVE 다중 생성 replay와 다중 포트도 통과했다.
+- `./gradlew test workE2eTest --offline --no-daemon`: 기본 **413건 중 370건 통과·기존 disabled 43건**, PostgreSQL **76건 전부 통과**, 실패 0건. 기존 판매·폐기·보정·수량 충돌·query count·모듈 경계 검사도 통과했다.
+
+command/fingerprint 타입, 결과별 배치 점유 조회 최적화와 이관·대사 책임 정리는 후속 범위다. 운영 cutover나 Legacy 제거 완료를 뜻하지 않는다. API 검증은 이어진 17차의 최종 코드에서 함께 수행한다.
+
+## 24. 실행 기록 — 17차 Work 유형 정의·capability 통합
+
+2026-09-07, `feature/backend-refactoring`. B-09의 고정 작업 정의를 실행과 capability가 함께 사용하도록 정리했다.
+
+구현·회귀 검증 커밋: `2082d059 refactor: unify work type definitions and capabilities`.
+
+- 코드별 workflow·대상 출처·등록 제한·handler 우선 규칙은 순수 domain 정의에 모았다. 기본 handler·효과 분류·사용자 정의 허용은 기존 template이 소유하고, 활성·시스템 여부는 Entity가 결합한다. 정의 전달용 service나 Spring 조회를 Entity에 추가하지 않았다.
+- 계획·기록·실행의 구조 변경 유형 목록 세 개를 제거했다. 유형 코드 상수는 Entity에서 제거해 Farm의 Work Entity 소스 import도 없앴다. 이동·입고 취소·보정 등 서로 다른 업무 lifecycle의 명시적 분기는 유지한다.
+- 기존 효과 handler와 구조 변경 strategy registry가 시작 시 필수 구현의 누락을 검사한다. 중복 등록·실행 시 미등록 오류와 기존 효과를 먼저 반환하는 replay 순서는 유지한다.
+- 기존 코드·template 조합을 임의로 교정하지 않았다. 코드 우선 handler 네 종류와 나머지 template fallback, 사용자 정의 기록 유형 다섯 종류를 유지한다. 특히 CORRECTION template의 유형 분류와 보정 handler가 저장하는 실제 효과 종류는 기존처럼 구분한다.
+
+복잡성 점검 (`b9334474` 대비):
+
+- 운영 Java **574 → 575파일**, 순증 **29줄**이다. 순수 정의 enum 하나를 추가했고 WorkType은 **177 → 119줄**로 줄었다. 새 registry·service·전달 계층은 없으며 증가분에는 시작 시 누락 검증이 포함된다.
+- 테스트 Java **108 → 109파일**, 순증 **122줄**이다. 코드·template·활성·시스템 조합 400개와 사용자 정의 metadata, handler·strategy 누락/중복 검증을 추가했다.
+- **16~17차 합계는 운영 Java 순감 124줄·파일 2개 증가, 테스트 Java 순증 288줄·파일 2개 증가**다. 모듈 내부 구현 의존 **38쌍(HTTP DTO 36·Partner Q 2)**, Entity 예외 **0쌍**, writer inventory는 유지한다.
+
+최종 검증:
+
+- `./gradlew test workE2eTest --offline --no-daemon`: 기본 **427건 중 384건 통과·기존 disabled 43건**, PostgreSQL **76건 전부 통과**, 실패 0건. 모듈·계층·writer 검사와 실제 구조 변경·포트·폐기·판매·보정·동시성·query count 회귀를 포함한다.
+- `python3 scripts/generate_openapi.py`: **136 operations·115 paths·228 schemas**, 전체 명세와 slice 차이 없음. 임시 명세 서버 종료와 `git diff --check`를 확인했다. API·DB schema·프론트 변경이 없어 생성 TypeScript 갱신, 프론트 검증과 브라우저 E2E는 실행하지 않았다.
+
+요청한 두 범위인 구조 변경·Mutation 중복 정리와 Work 유형 정의·capability 통합을 마쳤다. Work codec·상세 조회·요청 멱등성, Mutation command/fingerprint·배치 조회·대사, 남은 HTTP DTO·Partner Q 경계는 전체 계획의 후속 작업으로 남는다.
