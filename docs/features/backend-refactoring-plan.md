@@ -2,7 +2,7 @@
 
 - 기준일: 2026-09-05
 - 기준 코드: `feature/orchid-group-mutation-engine`, `3aa8fc54`
-- 상태: 단계별 구현 진행 중. 1~14차 구현 범위와 남은 작업은 아래 실행 기록 참고.
+- 상태: 단계별 구현 진행 중. 1~15차 구현 범위와 남은 작업은 아래 실행 기록 참고.
 - 작업 브랜치: `feature/backend-refactoring`.
 - 범위: **13개 모듈 전체**, Controller·application·domain·Repository·DTO·설정·DB migration·테스트·CI.
 - 목표: **확장에는 열려 있고 수정에는 닫힌 구조(OCP)**. 새 기능을 추가할 때 기존 유스케이스와 타 모듈 내부를 수정하는 범위를 줄인다.
@@ -844,3 +844,29 @@ B-11 전체 완료는 아니다. 다음 우선 범위는 Analytics의 입금 상
 - `python3 scripts/generate_openapi.py`로 **136 operations·115 paths·228 schemas**를 재생성했고 전체 명세·slice 차이는 없다. 프론트 코드·생성 타입 변경이 없어 프론트 검증과 브라우저 E2E는 실행하지 않았다. DB migration·대용량 응답 시간/메모리 벤치마크는 이번 범위에 없다. 임시 명세 서버 종료와 `git diff --check`를 확인했다.
 
 다음 우선 범위는 B-08~10의 Work handler가 Farm에 전달하는 Work Entity 계약이다. 구조 변경의 Legacy/Engine 변환 중복과 Mutation 내부 책임도 이어서 정리한다. Sales 전체 완료를 뜻하지 않으며, 남은 Partner Q 조회·HTTP DTO 경계와 전표 생성/상태 정책은 전체 계획에서 계속 추적한다. 기존 판매 검색의 무제한 호환 목록은 이번 응답 내부 이식에서 변경하지 않았고, 페이지 계약은 별도 검토 대상이다.
+
+## 22. 실행 기록 — 15차 Work–Farm 효과 실행 계약
+
+2026-09-07, `feature/backend-refactoring`. B-08~09의 효과 handler가 Work Entity를 받아 Farm 내부로 전달하던 경로를 실행 값 계약으로 바꿨다.
+
+구현·회귀 검증 커밋: `dacb9167 refactor: pass work effect values across the farm boundary`.
+
+- Work가 필요한 실행 값과 대상 스냅샷을 만든다. Farm handler는 `WorkEffectContext`를 소비하고, 하위 구조 변환 실행기는 작업 ID만 받는다. 작업 유형 코드와 handler 코드는 구분하며 기존 등록·중복 검사 방식을 재사용한다.
+- 관리 중인 작업·대상 Entity는 Work 안에 남는다. 효과 저장과 대상·작업 상태 전이는 기존 최상위 유스케이스 트랜잭션에서 처리하며, Farm handler가 Work aggregate에 직접 접근하는 계약을 제거했다.
+- 대상 위치 Map은 기존 JSON 값과 null을 보존해 복사하고 수정 불가능하게 전달한다. 현재 Farm 위치를 다시 조회해 과거 스냅샷을 구성하지 않는다. 기존 명령·결과 JSON, Mutation 연결, `TARGET`·`OPERATION`·`EXECUTION`·`POTTING` 효과 키는 변경하지 않았다.
+- 단순 전달만 하던 포트 작업 handler를 삭제하고 기존 executor를 직접 등록했다. 효과 저장의 전달 메서드와 수정한 클래스의 할당 전용 생성자도 정리했다. Legacy/Engine의 물리 writer·잠금 순서·전환 gate는 유지한다.
+
+복잡성 점검 (`2214d7d8` 대비):
+
+- 운영 Java는 **573파일 유지**, 순감 **86줄**이다. 실행 값 파일 하나를 추가하고 포트 전달 클래스 하나를 삭제했다. 새 registry·추상 계층·범용 실행 프레임워크는 추가하지 않았다.
+- 테스트 Java는 **106 → 107파일**, 순증 **260줄**이다. 실행 계약 8건과 실제 PostgreSQL 롤백·재시도 1건을 추가했다.
+- 컴파일된 모듈 내부 구현 직접 의존은 **59 → 38쌍**이다. Farm–Work Entity 의존 21쌍을 정확한 예외 목록에서 제거해 Entity 예외는 **0쌍**이다. 남은 예외는 HTTP DTO 36쌍·Partner Q 타입 2쌍이며 writer inventory는 바뀌지 않았다. 컴파일 시 인라인되는 `WorkType` 코드 상수의 소스 참조까지 제거한 것은 아니다.
+
+보존·검증:
+
+- 테스트 전용 handler를 등록해 실행 유형·업무일·메모·대상 값을 받고 Work가 원래 Entity로 효과를 저장하는지 확인했다. 위치 Map의 수정 차단·복사 독립성·null 값, 대상 없는 실행과 입고 대상, 효과 키별 원본 그룹 연결, 기존 효과의 handler 재호출 방지, handler 실패 시 저장 생략을 검증했다.
+- PostgreSQL ACTIVE 모드에서 폐기 수량과 Mutation·효과를 실제 flush한 뒤 상위 트랜잭션을 실패시켰다. 수량·Mutation·효과·대상 상태가 함께 rollback되며 재시도와 중복 완료 후 수량 차감·revision·효과가 한 번만 남는지 확인했다. 작업 ID·효과 키·업무일·사유·correlation 연결과 대사 결과도 검증했다.
+- `./gradlew test workE2eTest --offline --no-daemon`: 기본 **413건 중 370건 통과·기존 disabled 43건**, PostgreSQL **65건 전부 통과**, 실패 0건. 기존 구조 변경·포트·보정·동시 폐기와 120개 대상 완료 기록의 SQL 상한 30회 회귀가 통과했다. 모듈·계층·정확한 예외 목록·writer 검사도 통과했다.
+- `python3 scripts/generate_openapi.py`로 **136 operations·115 paths·228 schemas**를 재생성했으며 전체 명세·slice 차이는 없다. 프론트 코드·생성 타입 변경이 없어 프론트 검증과 브라우저 E2E는 실행하지 않았다. DB migration과 대용량 시간·메모리 벤치마크는 이번 범위에 없다. 임시 명세 서버 종료와 `git diff --check`를 확인했다.
+
+다음 우선 범위는 B-08~10의 구조 변경 실행에서 Legacy/Engine이 중복 계산하는 속성·결과·계보 조립이다. 실행 전 원본 상태와 기존 JSON 의미를 보존하면서 공통 계산을 한 곳으로 모은다. Work 유형 정의·codec·상세 조회·멱등성 보강, 남은 HTTP DTO·Partner Q 경계는 전체 계획에서 계속 추적한다.
