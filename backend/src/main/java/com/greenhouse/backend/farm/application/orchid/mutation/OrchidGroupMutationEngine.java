@@ -84,14 +84,12 @@ public class OrchidGroupMutationEngine {
 		orchidPlacementPolicy.validatePlacement(
 				bedZone, details.startPosition(), details.endPosition(), null);
 		int nextSortOrder = orchidGroupRepository.findMaxSortOrderByBedZoneId(bedZone.getId()) + 1;
+		OrchidGroupMutation mutation = saveMutation(
+				OrchidGroupMutationType.CREATE, command.source(), fingerprint,
+				command.effectiveBusinessDate(), command.reason());
 		OrchidGroup group = createGroup(bedZone, variety, details, nextSortOrder);
 
-		return recordCreated(
-				command.source(),
-				fingerprint,
-				command.effectiveBusinessDate(),
-				command.reason(),
-				group);
+		return recordCreated(mutation, List.of(group));
 	}
 
 	public OrchidGroupMutationResult createMany(CreateOrchidGroupsMutationCommand command) {
@@ -112,6 +110,9 @@ public class OrchidGroupMutationEngine {
 				.map(item -> item.details().varietyId())
 				.collect(Collectors.toSet()));
 		Map<Long, Integer> nextSortOrderByZoneId = currentMaxSortOrders(zones.keySet());
+		OrchidGroupMutation mutation = saveMutation(
+				OrchidGroupMutationType.CREATE, command.source(), fingerprint,
+				command.effectiveBusinessDate(), command.reason());
 		List<OrchidGroup> groups = new ArrayList<>();
 		for (CreateOrchidGroupMutationItem item : command.groups()) {
 			BedZone zone = zones.get(item.bedZoneId());
@@ -127,12 +128,7 @@ public class OrchidGroupMutationEngine {
 			groups.add(createGroup(zone, variety, item.details(), nextSortOrder));
 		}
 
-		return recordCreated(
-				command.source(),
-				fingerprint,
-				command.effectiveBusinessDate(),
-				command.reason(),
-				groups);
+		return recordCreated(mutation, groups);
 	}
 
 	public OrchidGroupMutationResult createFromInbound(
@@ -160,6 +156,9 @@ public class OrchidGroupMutationEngine {
 				.map(CreateOrchidGroupMutationItem::bedZoneId)
 				.collect(Collectors.toSet()));
 		Map<Long, Integer> nextSortOrderByZoneId = currentMaxSortOrders(zones.keySet());
+		OrchidGroupMutation mutation = saveMutation(
+				OrchidGroupMutationType.CREATE, command.source(), fingerprint,
+				command.effectiveBusinessDate(), command.reason());
 		List<OrchidGroup> groups = new ArrayList<>();
 		for (CreateOrchidGroupMutationItem item : command.groups()) {
 			BedZone zone = zones.get(item.bedZoneId());
@@ -170,12 +169,7 @@ public class OrchidGroupMutationEngine {
 					zone, inboundRecord.getVariety(), details, nextSortOrder, inboundRecord);
 			groups.add(group);
 		}
-		return recordCreated(
-				command.source(),
-				fingerprint,
-				command.effectiveBusinessDate(),
-				command.reason(),
-				groups);
+		return recordCreated(mutation, groups);
 	}
 
 	public OrchidGroupMutationResult transform(TransformOrchidGroupsMutationCommand command) {
@@ -675,37 +669,8 @@ public class OrchidGroupMutationEngine {
 	}
 
 	private OrchidGroupMutationResult recordCreated(
-			OrchidGroupMutationSource source,
-			String commandFingerprint,
-			LocalDate effectiveBusinessDate,
-			String reason,
-			OrchidGroup group) {
-		OrchidGroupMutation mutation = saveMutation(
-				OrchidGroupMutationType.CREATE,
-				source,
-				commandFingerprint,
-				effectiveBusinessDate,
-				reason);
-		OrchidGroupMutationEntry entry = entryRepository.save(OrchidGroupMutationEntry.created(
-				mutation,
-				group.getId(),
-				OrchidGroupMutationEntryRole.RESULT,
-				OrchidGroupStateSnapshot.from(group)));
-		return OrchidGroupMutationResult.from(mutation, List.of(entry));
-	}
-
-	private OrchidGroupMutationResult recordCreated(
-			OrchidGroupMutationSource source,
-			String commandFingerprint,
-			LocalDate effectiveBusinessDate,
-			String reason,
+			OrchidGroupMutation mutation,
 			List<OrchidGroup> groups) {
-		OrchidGroupMutation mutation = saveMutation(
-				OrchidGroupMutationType.CREATE,
-				source,
-				commandFingerprint,
-				effectiveBusinessDate,
-				reason);
 		List<OrchidGroupMutationEntry> entries = groups.stream()
 				.map(group -> OrchidGroupMutationEntry.created(
 						mutation,

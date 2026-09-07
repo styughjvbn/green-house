@@ -6,6 +6,11 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import com.greenhouse.backend.OrchidGroupStateChainTestSupport;
 import com.greenhouse.backend.farm.application.inbound.InboundRecordService;
 import com.greenhouse.backend.farm.application.orchid.OrchidGroupCommandService;
+import com.greenhouse.backend.farm.application.orchid.mutation.CreateOrchidGroupMutationItem;
+import com.greenhouse.backend.farm.application.orchid.mutation.CreateOrchidGroupsMutationCommand;
+import com.greenhouse.backend.farm.application.orchid.mutation.OrchidGroupMutationDetails;
+import com.greenhouse.backend.farm.application.orchid.mutation.OrchidGroupMutationEngine;
+import com.greenhouse.backend.farm.application.orchid.mutation.OrchidGroupMutationSources;
 import com.greenhouse.backend.farm.application.orchid.mutation.OrchidGroupLedgerCutoverCommand;
 import com.greenhouse.backend.farm.application.orchid.mutation.OrchidGroupLedgerCutoverService;
 import com.greenhouse.backend.farm.application.orchid.mutation.OrchidGroupLedgerReconciliationService;
@@ -56,6 +61,7 @@ class OrchidGroupMutationRoutingPostgresE2ETest extends WorkE2ETestBase {
 	@Autowired private WorkOperationProgressService progressService;
 	@Autowired private PlatformTransactionManager transactionManager;
 	@Autowired private EntityManager entityManager;
+	@Autowired private OrchidGroupMutationEngine mutationEngine;
 	@Autowired private JdbcTemplate jdbcTemplate;
 
 	private WorkTestDataSeeder.ContractScenario scenario;
@@ -112,6 +118,29 @@ class OrchidGroupMutationRoutingPostgresE2ETest extends WorkE2ETestBase {
 				scenario.orchidGroupId()))
 				.isInstanceOf(DataIntegrityViolationException.class)
 				.hasMessageContaining("Mutation context");
+	}
+
+	@Test
+	void createsMultipleGroupsUnderTheActiveFenceBeforePlacementQueriesCanFlush() {
+		Long varietyId = orchidGroupRepository.findById(scenario.orchidGroupId()).orElseThrow().getVariety().getId();
+		var groups = List.of(5, 6).stream().map(start -> new CreateOrchidGroupMutationItem(
+				scenario.bedZoneId(), new OrchidGroupMutationDetails(varietyId, 10, "3.5치", 2, "정상",
+				"POT", null, false, BigDecimal.valueOf(start), BigDecimal.valueOf(start + 1), null))).toList();
+		var command = new CreateOrchidGroupsMutationCommand(
+				OrchidGroupMutationSources.farmRequest("BATCH_CREATE", "active-batch", "CREATE"),
+				groups, LocalDate.of(2026, 8, 20), "다중 생성");
+		var transaction = new TransactionTemplate(transactionManager);
+		var result = transaction.execute(status -> mutationEngine.createMany(command));
+		var replay = transaction.execute(status -> mutationEngine.createMany(command));
+
+		assertThat(result.entries()).hasSize(2);
+		assertThat(replay.mutationId()).isEqualTo(result.mutationId());
+		assertThat(result.entries()).allSatisfy(entry -> {
+			var group = orchidGroupRepository.findById(entry.orchidGroupId()).orElseThrow();
+			assertThat(group.getQuantity()).isEqualTo(10);
+			assertThat(group.getStateRevision()).isEqualTo(1L);
+		});
+		assertThat(reconciliationService.reconcile().ready()).isTrue();
 	}
 
 	@Test
@@ -220,8 +249,11 @@ class OrchidGroupMutationRoutingPostgresE2ETest extends WorkE2ETestBase {
 						inbound.id(),
 						LocalDate.of(2026, 8, 20),
 						List.of(new InboundPottingResultRequest(
-								scenario.bedZoneId(), 28, "2인치", 1, "트레이", 2, false,
-								new BigDecimal("10"), new BigDecimal("11"), null)),
+								scenario.bedZoneId(), 20, "2인치", 1, "트레이", 2, false,
+								new BigDecimal("10"), new BigDecimal("11"), null),
+								new InboundPottingResultRequest(
+										scenario.bedZoneId(), 8, "2인치", 1, "트레이", 1, false,
+										new BigDecimal("11"), new BigDecimal("12"), null)),
 						"유묘",
 						"포트 담당",
 						"포트 완료"));
@@ -234,6 +266,7 @@ class OrchidGroupMutationRoutingPostgresE2ETest extends WorkE2ETestBase {
 				.orElseThrow();
 		Long groupId = ((Number) ((List<?>) effect.getResultDetails()
 				.get("createdOrchidGroupIds")).getFirst()).longValue();
+		assertThat((List<?>) effect.getResultDetails().get("createdOrchidGroupIds")).hasSize(2);
 		assertThat(orchidGroupRepository.findById(groupId).orElseThrow().getStateRevision())
 				.isEqualTo(1L);
 		assertThat(effect.getMutationId()).isNotNull();
