@@ -100,19 +100,8 @@ public class WorkEffectProcessor {
 		WorkEffectKind effectKind = handler.effectKind();
 
 		WorkEffectCommand routedCommand = command.withEffectKey(effectKey);
-		WorkExecutionResult result = handler.execute(operation, target, routedCommand);
-		return persist(operation, target, routedCommand, effectKey, sourceOrchidGroupIds, effectKind, result);
-	}
-
-	private WorkExecutionResult persist(
-			WorkOperation operation,
-			WorkOperationTarget target,
-			WorkEffectCommand command,
-			String effectKey,
-			List<Long> sourceOrchidGroupIds,
-			WorkEffectKind effectKind,
-			WorkExecutionResult result) {
+		WorkExecutionResult result = handler.execute(WorkEffectContext.from(operation, target), routedCommand);
 		return effectStore.save(
-				operation, target, command, effectKey, sourceOrchidGroupIds, effectKind, result);
+				operation, target, routedCommand, effectKey, sourceOrchidGroupIds, effectKind, result);
 	}
 }

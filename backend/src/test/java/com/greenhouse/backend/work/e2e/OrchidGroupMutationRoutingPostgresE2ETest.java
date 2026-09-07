@@ -16,12 +16,16 @@ import com.greenhouse.backend.farm.dto.inbound.InboundRecordCreateRequest;
 import com.greenhouse.backend.farm.dto.orchid.OrchidGroupUpdateRequest;
 import com.greenhouse.backend.farm.repository.orchid.OrchidGroupRepository;
 import com.greenhouse.backend.work.application.operation.InboundPottingOperationService;
+import com.greenhouse.backend.work.application.operation.WorkOperationProgressService;
 import com.greenhouse.backend.work.dto.effect.InboundPottingExecutionRequest;
 import com.greenhouse.backend.work.dto.effect.InboundPottingResultRequest;
+import com.greenhouse.backend.work.dto.target.WorkTargetExecutionRequest;
 import com.greenhouse.backend.work.repository.WorkAppliedEffectRepository;
+import jakarta.persistence.EntityManager;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Tag;
@@ -30,6 +34,8 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.test.context.TestPropertySource;
+import org.springframework.transaction.PlatformTransactionManager;
+import org.springframework.transaction.support.TransactionTemplate;
 
 @Tag("work-e2e")
 @TestPropertySource(properties = {
@@ -47,6 +53,9 @@ class OrchidGroupMutationRoutingPostgresE2ETest extends WorkE2ETestBase {
 	@Autowired private InboundRecordService inboundRecordService;
 	@Autowired private InboundPottingOperationService inboundPottingOperationService;
 	@Autowired private WorkAppliedEffectRepository workAppliedEffectRepository;
+	@Autowired private WorkOperationProgressService progressService;
+	@Autowired private PlatformTransactionManager transactionManager;
+	@Autowired private EntityManager entityManager;
 	@Autowired private JdbcTemplate jdbcTemplate;
 
 	private WorkTestDataSeeder.ContractScenario scenario;
@@ -103,6 +112,78 @@ class OrchidGroupMutationRoutingPostgresE2ETest extends WorkE2ETestBase {
 				scenario.orchidGroupId()))
 				.isInstanceOf(DataIntegrityViolationException.class)
 				.hasMessageContaining("Mutation context");
+	}
+
+	@Test
+	void workDiscardRollsBackWithItsEffectAndRetriesWithTheSameMutationIdentity() throws Exception {
+		Long discardWorkTypeId = jdbcTemplate.queryForObject(
+				"SELECT id FROM work_types WHERE code = 'DISCARD'", Long.class);
+		ApiResult planned = post("/api/work-operations", """
+				{
+				  "workTypeId": %d,
+				  "title": "ACTIVE 폐기",
+				  "plannedStartDate": "2026-08-20",
+				  "sourceScopeType": "MANUAL_SELECTION",
+				  "sourceOrchidGroupIds": [%d]
+				}
+				""".formatted(discardWorkTypeId, scenario.orchidGroupId()));
+		assertThat(planned.status()).isEqualTo(201);
+		long operationId = planned.data().path("id").asLong();
+		Long targetId = jdbcTemplate.queryForObject(
+				"SELECT id FROM work_operation_targets WHERE work_operation_id = ?", Long.class, operationId);
+		assertThat(post("/api/work-operations/%d/start".formatted(operationId), "").status()).isEqualTo(200);
+
+		var transaction = new TransactionTemplate(transactionManager);
+		assertThatThrownBy(() -> transaction.executeWithoutResult(status -> {
+			progressService.completeTarget(operationId, targetId, new WorkTargetExecutionRequest(
+					"폐기 담당", Map.of("discardQuantity", 30, "reason", "폐기 사유"),
+					LocalDate.of(2026, 8, 21)));
+			entityManager.flush();
+			assertThat(orchidGroupRepository.findById(scenario.orchidGroupId()).orElseThrow().getQuantity())
+					.isEqualTo(70);
+			assertThat(workAppliedEffectRepository.findByWorkOperationIdOrderByIdAsc(operationId))
+					.singleElement().satisfies(effect -> assertThat(effect.getMutationId()).isNotNull());
+			throw new IllegalStateException("효과 저장 후 실패");
+		})).isInstanceOf(IllegalStateException.class).hasMessage("효과 저장 후 실패");
+
+		assertThat(orchidGroupRepository.findById(scenario.orchidGroupId()).orElseThrow().getQuantity())
+				.isEqualTo(100);
+		assertThat(workAppliedEffectRepository.findByWorkOperationIdOrderByIdAsc(operationId)).isEmpty();
+		assertThat(jdbcTemplate.queryForObject(
+				"SELECT COUNT(*) FROM orchid_group_mutations WHERE source_domain = 'WORK'",
+				Long.class)).isZero();
+		assertThat(jdbcTemplate.queryForObject(
+				"SELECT status FROM work_target_executions WHERE work_operation_target_id = ?",
+				String.class, targetId)).isEqualTo("PENDING");
+
+		String completePath = "/api/work-operations/%d/targets/%d/complete".formatted(operationId, targetId);
+		String request = """
+				{"worker":"폐기 담당", "completedDate":"2026-08-21",
+				 "resultDetails":{"discardQuantity":30,"reason":"폐기 사유"}}
+				""";
+		assertThat(post(completePath, request).status()).isEqualTo(200);
+		assertThat(post(completePath, request).status()).isEqualTo(200);
+
+		var group = orchidGroupRepository.findById(scenario.orchidGroupId()).orElseThrow();
+		assertThat(group.getQuantity()).isEqualTo(70);
+		assertThat(group.getStateRevision()).isEqualTo(1L);
+		var effects = workAppliedEffectRepository.findByWorkOperationIdOrderByIdAsc(operationId);
+		assertThat(effects).hasSize(1);
+		var effect = effects.getFirst();
+		assertThat(effect.getEffectKey()).isEqualTo("TARGET:" + targetId);
+		var mutation = jdbcTemplate.queryForMap("""
+				SELECT source_domain, source_type, source_reference_id, source_operation_key,
+				       effective_business_date, reason, correlation_id
+				FROM orchid_group_mutations WHERE id = ?
+				""", effect.getMutationId());
+		assertThat(mutation).containsEntry("source_domain", "WORK")
+				.containsEntry("source_type", "WORK_EFFECT")
+				.containsEntry("source_reference_id", Long.toString(operationId))
+				.containsEntry("source_operation_key", effect.getEffectKey())
+				.containsEntry("effective_business_date", java.sql.Date.valueOf("2026-08-20"))
+				.containsEntry("reason", "폐기 사유")
+				.containsEntry("correlation_id", effect.getCorrelationId());
+		assertThat(reconciliationService.reconcile().ready()).isTrue();
 	}
 
 	@Test

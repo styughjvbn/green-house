@@ -1,18 +1,17 @@
 package com.greenhouse.backend.farm.application.orchid;
 
-import com.greenhouse.backend.farm.domain.orchid.OrchidGroup;
 import com.greenhouse.backend.farm.application.orchid.mutation.DiscardOrchidGroupMutationCommand;
 import com.greenhouse.backend.farm.application.orchid.mutation.OrchidGroupMutationEngine;
 import com.greenhouse.backend.farm.application.orchid.mutation.OrchidGroupMutationRoutingPolicy;
 import com.greenhouse.backend.farm.application.orchid.mutation.OrchidGroupMutationSources;
+import com.greenhouse.backend.farm.domain.orchid.OrchidGroup;
 import com.greenhouse.backend.farm.repository.orchid.OrchidGroupRepository;
 import com.greenhouse.backend.work.application.effect.WorkEffectCommand;
+import com.greenhouse.backend.work.application.effect.WorkEffectContext;
 import com.greenhouse.backend.work.application.effect.WorkEffectHandler;
 import com.greenhouse.backend.work.application.effect.WorkExecutionResult;
 import com.greenhouse.backend.work.application.effect.WorkMutationLink;
 import com.greenhouse.backend.work.domain.effect.WorkEffectKind;
-import com.greenhouse.backend.work.domain.operation.WorkOperation;
-import com.greenhouse.backend.work.domain.target.WorkOperationTarget;
 import com.greenhouse.backend.work.domain.target.WorkTargetReferenceType;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -43,16 +42,14 @@ public class DiscardWorkHandler implements WorkEffectHandler {
 	}
 
 	@Override
-	public WorkExecutionResult execute(
-			WorkOperation operation,
-			WorkOperationTarget target,
-			WorkEffectCommand command) {
-		if (target == null || target.getTargetReferenceType() != WorkTargetReferenceType.ORCHID_GROUP) {
+	public WorkExecutionResult execute(WorkEffectContext context, WorkEffectCommand command) {
+		var target = context.target();
+		if (target == null || target.referenceType() != WorkTargetReferenceType.ORCHID_GROUP) {
 			throw new IllegalArgumentException("폐기 작업에는 난 묶음 대상이 필요합니다.");
 		}
 		int discardQuantity = readDiscardQuantity(command.resultDetails());
 		OrchidGroup orchidGroup = orchidGroupRepository
-				.findAllForUpdateByIdIn(List.of(target.getOrchidGroupId()))
+				.findAllForUpdateByIdIn(List.of(target.orchidGroupId()))
 				.stream()
 				.findFirst()
 				.orElseThrow(() -> new IllegalArgumentException("폐기할 난 묶음을 찾을 수 없습니다."));
@@ -61,10 +58,10 @@ public class DiscardWorkHandler implements WorkEffectHandler {
 		WorkMutationLink mutationLink = null;
 		var mutationCommand = mutationRoutingPolicy.routesToEngine()
 				? new DiscardOrchidGroupMutationCommand(
-				OrchidGroupMutationSources.work(operation.getId(), command.effectKey()),
+				OrchidGroupMutationSources.work(context.operationId(), command.effectKey()),
 				orchidGroup.getId(),
 				discardQuantity,
-				operation.getPlannedStartDate(),
+				context.plannedStartDate(),
 				reason(command.resultDetails()))
 				: null;
 		if (mutationRoutingPolicy.routesToEngine()) {

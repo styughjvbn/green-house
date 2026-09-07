@@ -1,5 +1,6 @@
 package com.greenhouse.backend.farm.application.transformation;
 
+import com.greenhouse.backend.common.exception.NotFoundException;
 import com.greenhouse.backend.farm.application.orchid.OrchidGroupCommandService;
 import com.greenhouse.backend.farm.application.orchid.mutation.CreateOrchidGroupMutationItem;
 import com.greenhouse.backend.farm.application.orchid.mutation.CreateOrchidGroupsMutationCommand;
@@ -7,25 +8,24 @@ import com.greenhouse.backend.farm.application.orchid.mutation.OrchidGroupMutati
 import com.greenhouse.backend.farm.application.orchid.mutation.OrchidGroupMutationEngine;
 import com.greenhouse.backend.farm.application.orchid.mutation.OrchidGroupMutationRoutingPolicy;
 import com.greenhouse.backend.farm.application.orchid.mutation.OrchidGroupMutationSources;
-import com.greenhouse.backend.common.exception.NotFoundException;
-import com.greenhouse.backend.farm.domain.orchid.OrchidGroup;
 import com.greenhouse.backend.farm.domain.collection.OrchidGroupCollection;
 import com.greenhouse.backend.farm.domain.collection.OrchidGroupCollectionMember;
+import com.greenhouse.backend.farm.domain.orchid.OrchidGroup;
 import com.greenhouse.backend.farm.dto.transformation.MultiCreateWorkOperationRequest;
 import com.greenhouse.backend.farm.repository.collection.OrchidGroupCollectionMemberRepository;
 import com.greenhouse.backend.farm.repository.collection.OrchidGroupCollectionRepository;
 import com.greenhouse.backend.farm.repository.orchid.OrchidGroupRepository;
 import com.greenhouse.backend.work.application.effect.WorkEffectCommand;
+import com.greenhouse.backend.work.application.effect.WorkEffectContext;
 import com.greenhouse.backend.work.application.effect.WorkEffectHandler;
 import com.greenhouse.backend.work.application.effect.WorkExecutionResult;
 import com.greenhouse.backend.work.application.effect.WorkMutationLink;
 import com.greenhouse.backend.work.domain.effect.WorkEffectKind;
-import com.greenhouse.backend.work.domain.operation.WorkOperation;
-import com.greenhouse.backend.work.domain.target.WorkOperationTarget;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Set;
+import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 
 /**
@@ -33,6 +33,7 @@ import org.springframework.stereotype.Component;
  * Removal gate: 운영 ACTIVE 안정화 및 writer inventory 승인.
  */
 @Component
+@RequiredArgsConstructor
 public class MultiCreateWorkHandler implements WorkEffectHandler {
 
 	private final OrchidGroupCommandService orchidGroupCommandService;
@@ -42,27 +43,12 @@ public class MultiCreateWorkHandler implements WorkEffectHandler {
 	private final OrchidGroupMutationEngine mutationEngine;
 	private final OrchidGroupMutationRoutingPolicy mutationRoutingPolicy;
 
-	public MultiCreateWorkHandler(
-			OrchidGroupCommandService orchidGroupCommandService,
-			OrchidGroupCollectionRepository collectionRepository,
-			OrchidGroupCollectionMemberRepository memberRepository,
-			OrchidGroupRepository orchidGroupRepository,
-			OrchidGroupMutationEngine mutationEngine,
-			OrchidGroupMutationRoutingPolicy mutationRoutingPolicy) {
-		this.orchidGroupCommandService = orchidGroupCommandService;
-		this.collectionRepository = collectionRepository;
-		this.memberRepository = memberRepository;
-		this.orchidGroupRepository = orchidGroupRepository;
-		this.mutationEngine = mutationEngine;
-		this.mutationRoutingPolicy = mutationRoutingPolicy;
-	}
-
 	@Override public String supports() { return "MULTI_CREATE"; }
 	@Override public WorkEffectKind effectKind() { return WorkEffectKind.STRUCTURE_CHANGE; }
 
 	@Override
-	public WorkExecutionResult execute(
-			WorkOperation operation, WorkOperationTarget target, WorkEffectCommand command) {
+	public WorkExecutionResult execute(WorkEffectContext context, WorkEffectCommand command) {
+		var target = context.target();
 		if (target != null) throw new IllegalArgumentException("다중 생성 작업에는 원본 난 묶음 대상이 없어야 합니다.");
 		MultiCreateWorkOperationRequest request = command.payloadAs(MultiCreateWorkOperationRequest.class);
 		validateCollections(request);
@@ -70,7 +56,7 @@ public class MultiCreateWorkHandler implements WorkEffectHandler {
 		List<OrchidGroup> groups;
 		var mutationCommand = mutationRoutingPolicy.routesToEngine()
 				? new CreateOrchidGroupsMutationCommand(
-				OrchidGroupMutationSources.work(operation.getId(), command.effectKey()),
+				OrchidGroupMutationSources.work(context.operationId(), command.effectKey()),
 				request.rows().stream()
 						.map(row -> new CreateOrchidGroupMutationItem(
 								row.orchidGroup().bedZoneId(),
@@ -87,8 +73,8 @@ public class MultiCreateWorkHandler implements WorkEffectHandler {
 										row.orchidGroup().endPosition(),
 										row.orchidGroup().memo())))
 						.toList(),
-				operation.getPlannedStartDate(),
-				operation.getMemo())
+				context.plannedStartDate(),
+				context.memo())
 				: null;
 		if (mutationRoutingPolicy.routesToEngine()) {
 			var mutation = mutationEngine.createMany(mutationCommand);

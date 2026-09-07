@@ -1,5 +1,6 @@
 package com.greenhouse.backend.farm.application.transformation;
 
+import com.greenhouse.backend.common.exception.NotFoundException;
 import com.greenhouse.backend.farm.application.orchid.OrchidGroupCommandService;
 import com.greenhouse.backend.farm.application.orchid.mutation.OrchidGroupMutationDetails;
 import com.greenhouse.backend.farm.application.orchid.mutation.OrchidGroupMutationEngine;
@@ -8,7 +9,6 @@ import com.greenhouse.backend.farm.application.orchid.mutation.OrchidGroupMutati
 import com.greenhouse.backend.farm.application.orchid.mutation.TransformOrchidGroupMutationResult;
 import com.greenhouse.backend.farm.application.orchid.mutation.TransformOrchidGroupMutationSource;
 import com.greenhouse.backend.farm.application.orchid.mutation.TransformOrchidGroupsMutationCommand;
-import com.greenhouse.backend.common.exception.NotFoundException;
 import com.greenhouse.backend.farm.domain.orchid.OrchidGroup;
 import com.greenhouse.backend.farm.domain.orchid.mutation.OrchidGroupMutationEntryRole;
 import com.greenhouse.backend.farm.dto.orchid.OrchidGroupCreateRequest;
@@ -16,7 +16,6 @@ import com.greenhouse.backend.farm.repository.orchid.OrchidGroupRepository;
 import com.greenhouse.backend.work.application.effect.WorkExecutionResult;
 import com.greenhouse.backend.work.application.effect.WorkMutationLink;
 import com.greenhouse.backend.work.domain.effect.StructureChangeResultPurpose;
-import com.greenhouse.backend.work.domain.operation.WorkOperation;
 import com.greenhouse.backend.work.dto.effect.StructureChangeExecutionRequest;
 import com.greenhouse.backend.work.dto.effect.StructureChangeSourceRequest;
 import java.util.LinkedHashMap;
@@ -25,6 +24,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.function.Function;
 import java.util.stream.Collectors;
+import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 
 /**
@@ -32,6 +32,7 @@ import org.springframework.stereotype.Component;
  * Removal gate: 운영 ACTIVE 안정화 및 writer inventory 승인.
  */
 @Component
+@RequiredArgsConstructor
 public class BatchStructureTransformationExecutor {
 
 	private final OrchidGroupRepository orchidGroupRepository;
@@ -40,21 +41,8 @@ public class BatchStructureTransformationExecutor {
 	private final OrchidGroupMutationEngine mutationEngine;
 	private final OrchidGroupMutationRoutingPolicy mutationRoutingPolicy;
 
-	public BatchStructureTransformationExecutor(
-			OrchidGroupRepository orchidGroupRepository,
-			OrchidGroupCommandService orchidGroupCommandService,
-			OrchidGroupLineageService lineageService,
-			OrchidGroupMutationEngine mutationEngine,
-			OrchidGroupMutationRoutingPolicy mutationRoutingPolicy) {
-		this.orchidGroupRepository = orchidGroupRepository;
-		this.orchidGroupCommandService = orchidGroupCommandService;
-		this.lineageService = lineageService;
-		this.mutationEngine = mutationEngine;
-		this.mutationRoutingPolicy = mutationRoutingPolicy;
-	}
-
 	public WorkExecutionResult execute(
-			WorkOperation operation,
+			Long operationId,
 			StructureChangeExecutionRequest request,
 			StructureChangeStrategy strategy,
 			Set<Long> placementExclusionOrchidGroupIds) {
@@ -98,7 +86,7 @@ public class BatchStructureTransformationExecutor {
 		});
 		var mutationCommand = mutationRoutingPolicy.routesToEngine()
 				? mutationCommand(
-				operation,
+				operationId,
 				request,
 				strategy,
 				placementExclusionOrchidGroupIds,
@@ -111,7 +99,7 @@ public class BatchStructureTransformationExecutor {
 				: null;
 		if (mutationRoutingPolicy.routesToEngine()) {
 			return executeWithEngine(
-					operation,
+					operationId,
 					request,
 					strategy,
 					mutationCommand,
@@ -158,7 +146,7 @@ public class BatchStructureTransformationExecutor {
 			if (sourceIds.size() == 1) {
 				Long sourceId = sourceIds.getFirst();
 				lineageService.record(
-						sources.get(sourceId), result, strategy.lineageType(), operation.getId(),
+						sources.get(sourceId), result, strategy.lineageType(), operationId,
 						transformedBySourceId.get(sourceId), result.getQuantity());
 			}
 			return result;
@@ -186,7 +174,7 @@ public class BatchStructureTransformationExecutor {
 	}
 
 	private TransformOrchidGroupsMutationCommand mutationCommand(
-			WorkOperation operation,
+			Long operationId,
 			StructureChangeExecutionRequest request,
 			StructureChangeStrategy strategy,
 			Set<Long> placementExclusionOrchidGroupIds,
@@ -243,7 +231,7 @@ public class BatchStructureTransformationExecutor {
 				.toList();
 		return new TransformOrchidGroupsMutationCommand(
 				OrchidGroupMutationSources.work(
-						operation.getId(), "EXECUTION:" + request.idempotencyKey()),
+						operationId, "EXECUTION:" + request.idempotencyKey()),
 				mutationSources,
 				mutationResults,
 				request.completedDate(),
@@ -252,7 +240,7 @@ public class BatchStructureTransformationExecutor {
 	}
 
 	private WorkExecutionResult executeWithEngine(
-			WorkOperation operation,
+			Long operationId,
 			StructureChangeExecutionRequest request,
 			StructureChangeStrategy strategy,
 			TransformOrchidGroupsMutationCommand mutationCommand,
@@ -275,7 +263,7 @@ public class BatchStructureTransformationExecutor {
 						sources.get(sourceId),
 						resultsById.get(resultId),
 						strategy.lineageType(),
-						operation.getId(),
+						operationId,
 						transformedBySourceId.get(sourceId),
 						resultsById.get(resultId).getQuantity());
 				lineage.linkMutation(mutation.mutationId());

@@ -13,12 +13,11 @@ import com.greenhouse.backend.farm.repository.orchid.OrchidGroupRepository;
 import com.greenhouse.backend.work.application.correction.StructureChangeReferenceReader;
 import com.greenhouse.backend.work.application.correction.WorkOperationDateCorrectionService;
 import com.greenhouse.backend.work.application.effect.WorkEffectCommand;
+import com.greenhouse.backend.work.application.effect.WorkEffectContext;
 import com.greenhouse.backend.work.application.effect.WorkEffectHandler;
 import com.greenhouse.backend.work.application.effect.WorkExecutionResult;
 import com.greenhouse.backend.work.application.effect.WorkMutationLink;
 import com.greenhouse.backend.work.domain.effect.WorkEffectKind;
-import com.greenhouse.backend.work.domain.operation.WorkOperation;
-import com.greenhouse.backend.work.domain.target.WorkOperationTarget;
 import com.greenhouse.backend.work.dto.correction.OrchidGroupCorrectionRequest;
 import com.greenhouse.backend.work.dto.correction.WorkOperationCorrectionCreateRequest;
 import java.util.LinkedHashMap;
@@ -28,6 +27,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.function.Function;
 import java.util.stream.Collectors;
+import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 
 /**
@@ -35,6 +35,7 @@ import org.springframework.stereotype.Component;
  * Removal gate: 운영 ACTIVE 안정화 및 writer inventory 승인.
  */
 @Component
+@RequiredArgsConstructor
 public class CorrectionWorkHandler implements WorkEffectHandler {
 
 	private final StructureChangeReferenceReader structureChangeReferenceReader;
@@ -44,27 +45,12 @@ public class CorrectionWorkHandler implements WorkEffectHandler {
 	private final OrchidGroupMutationEngine mutationEngine;
 	private final OrchidGroupMutationRoutingPolicy mutationRoutingPolicy;
 
-	public CorrectionWorkHandler(
-			StructureChangeReferenceReader structureChangeReferenceReader,
-			WorkOperationDateCorrectionService workOperationDateCorrectionService,
-			OrchidGroupRepository orchidGroupRepository,
-			List<OrchidGroupUsageInspector> usageInspectors,
-			OrchidGroupMutationEngine mutationEngine,
-			OrchidGroupMutationRoutingPolicy mutationRoutingPolicy) {
-		this.structureChangeReferenceReader = structureChangeReferenceReader;
-		this.workOperationDateCorrectionService = workOperationDateCorrectionService;
-		this.orchidGroupRepository = orchidGroupRepository;
-		this.usageInspectors = usageInspectors;
-		this.mutationEngine = mutationEngine;
-		this.mutationRoutingPolicy = mutationRoutingPolicy;
-	}
-
 	@Override public String supports() { return "CORRECTION"; }
 	@Override public WorkEffectKind effectKind() { return WorkEffectKind.ATTRIBUTE_CHANGE; }
 
 	@Override
-	public WorkExecutionResult execute(
-			WorkOperation operation, WorkOperationTarget target, WorkEffectCommand command) {
+	public WorkExecutionResult execute(WorkEffectContext context, WorkEffectCommand command) {
+		var target = context.target();
 		if (target != null) throw new IllegalArgumentException("보정 작업은 작업 단위로 실행해야 합니다.");
 		WorkOperationCorrectionCreateRequest request = command.payloadAs(WorkOperationCorrectionCreateRequest.class);
 		Long originalOperationId = originalOperationId(command.resultDetails());
@@ -126,7 +112,7 @@ public class CorrectionWorkHandler implements WorkEffectHandler {
 						? RelatedOrchidGroupMutations.legacy()
 						: RelatedOrchidGroupMutations.current(references.mutationIds());
 				mutationCommand = new CorrectOrchidGroupsMutationCommand(
-						OrchidGroupMutationSources.work(operation.getId(), command.effectKey()),
+						OrchidGroupMutationSources.work(context.operationId(), command.effectKey()),
 						request.orchidGroupAdjustments().stream()
 								.filter(adjustment -> changedAdjustmentIds.contains(adjustment.orchidGroupId()))
 								.map(adjustment -> new CorrectOrchidGroupMutationItem(
@@ -136,7 +122,7 @@ public class CorrectionWorkHandler implements WorkEffectHandler {
 								.toList(),
 						related,
 						request.workDate(),
-						operation.getMemo());
+						context.memo());
 			}
 			if (mutationRoutingPolicy.routesToEngine()) {
 				var mutation = mutationEngine.correct(mutationCommand);

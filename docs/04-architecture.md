@@ -263,6 +263,7 @@ Persistence 조회 규칙:
 - 모듈 간 계약은 필요한 값만 전달한다. 외부 모듈 Entity를 장기간 보관하거나 응답 조립 편의를 위해 aggregate 전체를 넘기지 않는다.
 - Partner 조회는 현재 기준 정보의 application 값을 반환한다. Sales·Auction·Settlement는 거래처 ID로 연결하며 기존 DB 외래키를 유지한다. Entity를 반환하는 호환 조회는 제거했다. 판매 응답의 연락처를 포함한 현재 거래처 정보와 경매장 이름은 ID를 모아 일괄 조회한다.
 - Sales는 난 묶음 Entity 대신 ID와 Farm application의 현재 상태 값을 사용한다. 배분·재고 이동의 기존 DB 외래키는 유지하며, 상세 응답은 Sales의 배분·보존 스냅샷과 Farm의 상태 값을 따로 일괄 조회해 조립한다. 현재 상태 조회는 500개 ID씩 처리한다.
+- Work 효과 handler는 Work가 만든 application 실행 값을 받으며 Work Entity에 접근하지 않는다. 효과 저장과 대상·작업 상태 전이는 Work가 기존 유스케이스 트랜잭션 안에서 처리한다. 대상 위치는 저장된 스냅샷의 값을 복사해 전달한다. 재실행 시 기존 효과를 먼저 조회하고, 새 완료 기록은 대상마다 중복 조회를 추가하지 않는다.
 - 외부 시스템은 application port 뒤의 adapter로 추가한다. 외부 시스템 DTO와 오류를 domain에 전파하지 않는다.
 
 ```text

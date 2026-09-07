@@ -99,6 +99,8 @@ Legacy 실행기는 전환 수명 표식을 유지한다. 12개 서비스 각각
 
 근거: [OrchidGroupReader](../../backend/src/main/java/com/greenhouse/backend/farm/application/orchid/OrchidGroupReader.java), [SalesSlipAllocationBatch](../../backend/src/main/java/com/greenhouse/backend/sales/application/SalesSlipAllocationBatch.java), [SalesSlipItemAllocation](../../backend/src/main/java/com/greenhouse/backend/sales/domain/SalesSlipItemAllocation.java), [SalesInventoryMovement](../../backend/src/main/java/com/greenhouse/backend/sales/domain/SalesInventoryMovement.java).
 
+초기 진단이며, 아래 14·15차 이식 기록에 현재 상태를 정리한다.
+
 - Reader의 반환값이 `OrchidGroup`이며, Sales가 그 Entity와 JPA 연관을 사용한다.
 - Engine 모드에서도 Sales가 Entity로 allocation과 스냅샷을 조립하고 Farm 잠금 조회를 호출한다.
 - [WorkEffectHandler](../../backend/src/main/java/com/greenhouse/backend/work/application/effect/WorkEffectHandler.java)도 Farm 구현체에 Work Entity를 전달하는 계약이다.
@@ -108,7 +110,9 @@ Legacy 실행기는 전환 수명 표식을 유지한다. 12개 서비스 각각
 단순히 클래스 이름을 Reader에서 Gateway로 바꾸는 것으로 완료 처리하지 않는다.
 기존 Legacy 직접 writer와 JPA 연관 제거는 단계가 다르므로 아래 PR-09에서 나눠 진행한다.
 
-2026-09-07, 백엔드 14차에서 Sales–Farm의 Entity 노출과 JPA 연관을 제거했다. 기존 DB 외래키를 유지하는 ID와 Farm application 상태 값을 사용하고, 이전 Entity 잠금 반환 API는 삭제했다. Legacy 쓰기는 Farm 내부 예약 API로 이관했으며 제거 gate는 유지한다. `ModuleBoundaryInventoryTest`의 정확한 예외 목록에서 해당 의존 21쌍을 삭제했다. Work handler의 Entity 전달은 다음 경계 작업으로 남는다.
+2026-09-07, 백엔드 14차에서 Sales–Farm의 Entity 노출과 JPA 연관을 제거했다. 기존 DB 외래키를 유지하는 ID와 Farm application 상태 값을 사용하고, 이전 Entity 잠금 반환 API는 삭제했다. Legacy 쓰기는 Farm 내부 예약 API로 이관했으며 제거 gate는 유지한다. `ModuleBoundaryInventoryTest`의 정확한 예외 목록에서 해당 의존 21쌍을 삭제했다.
+
+같은 날 백엔드 15차에서 Work–Farm handler 인자를 `WorkEffectContext`의 실행 값으로 바꿨다. Work는 관리 중인 작업·대상과 효과 저장을 소유하고, Farm은 필요한 값과 명령만 소비한다. 하위 구조 변환 실행기는 작업 ID만 받으며 포트 작업의 단순 전달 handler는 제거했다. 위치 스냅샷의 기존 JSON 값·null과 효과 키·결과 형식은 유지한다. 컴파일된 모듈 간 Entity 의존 예외 21쌍을 추가 제거했다. 소스에 남은 `WorkType` 코드 상수 참조, HTTP DTO와 비정형 JSON 계약은 별도 후속 범위이며, Legacy writer 제거 gate는 변경하지 않는다.
 
 ### F5. typed command 내부에 다시 비정형 타입과 긴 인자 조합이 있음 — P1
 
@@ -363,7 +367,7 @@ Repository join·snapshot 생성·인쇄 및 조회 조립의 영향도 함께 �
 
 완료: Engine 업무 계약에 managed `OrchidGroup` 노출 없음, 예약·출고·보상 원자성과 snapshot 시점 유지, 판매 상세 query 상한 유지.
 모듈 외 Entity 직접 사용 금지 검사는 정리된 계약부터 적용하고 잔여 예외는 명시적으로 추적.
-Work–Farm Entity 인자는 같은 방식으로 후속 정리하되 Sales와 한 PR에 묶지 않음.
+Work–Farm Entity 인자는 백엔드 15차에서 Sales와 분리해 실행 값으로 이식했다. Work 유형 정의·HTTP DTO·JSON 계약은 후속 범위다.
 
 ### 별도 작업 A. Work 멱등성 계약 보강
 

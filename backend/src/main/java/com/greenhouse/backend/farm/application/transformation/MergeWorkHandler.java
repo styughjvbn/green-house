@@ -1,23 +1,22 @@
 package com.greenhouse.backend.farm.application.transformation;
 
-import com.greenhouse.backend.farm.application.orchid.OrchidGroupCommandService;
-import com.greenhouse.backend.farm.application.orchid.mutation.OrchidGroupMutationRoutingPolicy;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.greenhouse.backend.common.config.TimeConfig;
 import com.greenhouse.backend.common.exception.NotFoundException;
+import com.greenhouse.backend.farm.application.orchid.OrchidGroupCommandService;
+import com.greenhouse.backend.farm.application.orchid.mutation.OrchidGroupMutationRoutingPolicy;
 import com.greenhouse.backend.farm.domain.orchid.OrchidGroup;
+import com.greenhouse.backend.farm.dto.orchid.OrchidGroupCreateRequest;
 import com.greenhouse.backend.farm.dto.transformation.MergeSourceInputRequest;
 import com.greenhouse.backend.farm.dto.transformation.MergeWorkOperationRequest;
-import com.greenhouse.backend.farm.dto.orchid.OrchidGroupCreateRequest;
 import com.greenhouse.backend.farm.repository.orchid.OrchidGroupRepository;
+import com.greenhouse.backend.work.application.correction.StructureChangeReferenceReader;
 import com.greenhouse.backend.work.application.effect.WorkEffectCommand;
+import com.greenhouse.backend.work.application.effect.WorkEffectContext;
 import com.greenhouse.backend.work.application.effect.WorkEffectHandler;
 import com.greenhouse.backend.work.application.effect.WorkExecutionResult;
-import com.greenhouse.backend.work.application.correction.StructureChangeReferenceReader;
-import com.greenhouse.backend.work.domain.effect.WorkEffectKind;
 import com.greenhouse.backend.work.domain.effect.StructureChangeResultPurpose;
-import com.greenhouse.backend.work.domain.operation.WorkOperation;
-import com.greenhouse.backend.work.domain.target.WorkOperationTarget;
+import com.greenhouse.backend.work.domain.effect.WorkEffectKind;
 import com.greenhouse.backend.work.dto.effect.StructureChangeExecutionRequest;
 import com.greenhouse.backend.work.dto.effect.StructureChangeResultRequest;
 import com.greenhouse.backend.work.dto.effect.StructureChangeSourceRequest;
@@ -27,6 +26,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.function.Function;
 import java.util.stream.Collectors;
+import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 
 /**
@@ -34,6 +34,7 @@ import org.springframework.stereotype.Component;
  * Removal gate: 운영 ACTIVE 안정화 및 writer inventory 승인.
  */
 @Component
+@RequiredArgsConstructor
 public class MergeWorkHandler implements WorkEffectHandler {
 
 	private final OrchidGroupRepository orchidGroupRepository;
@@ -43,37 +44,24 @@ public class MergeWorkHandler implements WorkEffectHandler {
 	private final OrchidGroupMutationRoutingPolicy mutationRoutingPolicy;
 	private final ObjectMapper objectMapper = new ObjectMapper().findAndRegisterModules();
 
-	public MergeWorkHandler(
-			OrchidGroupRepository orchidGroupRepository,
-			OrchidGroupCommandService orchidGroupCommandService,
-			StructureChangeReferenceReader structureChangeReferenceReader,
-			StructureChangeExecutor structureChangeExecutor,
-			OrchidGroupMutationRoutingPolicy mutationRoutingPolicy) {
-		this.orchidGroupRepository = orchidGroupRepository;
-		this.orchidGroupCommandService = orchidGroupCommandService;
-		this.structureChangeReferenceReader = structureChangeReferenceReader;
-		this.structureChangeExecutor = structureChangeExecutor;
-		this.mutationRoutingPolicy = mutationRoutingPolicy;
-	}
-
 	@Override public String supports() { return "MERGE"; }
 	@Override public WorkEffectKind effectKind() { return WorkEffectKind.STRUCTURE_CHANGE; }
 
 	@Override
-	public WorkExecutionResult execute(
-			WorkOperation operation, WorkOperationTarget target, WorkEffectCommand command) {
+	public WorkExecutionResult execute(WorkEffectContext context, WorkEffectCommand command) {
+		var target = context.target();
 		if (command.payload() instanceof com.greenhouse.backend.work.dto.effect.StructureChangeExecutionRequest request) {
 			return structureChangeExecutor.execute(
-					operation, request, command.placementExclusionOrchidGroupIds());
+					context, request, command.placementExclusionOrchidGroupIds());
 		}
 		if (target != null) {
 			throw new IllegalArgumentException("합식은 작업 전체 대상을 한 번에 실행해야 합니다.");
 		}
 		MergeWorkOperationRequest request = objectMapper.convertValue(
 				command.resultDetails(), MergeWorkOperationRequest.class);
-		validateRequest(operation, request);
+		validateRequest(context, request);
 		if (mutationRoutingPolicy.routesToEngine()) {
-			return structureChangeExecutor.execute(operation, toStructureChangeRequest(command, request));
+			return structureChangeExecutor.execute(context, toStructureChangeRequest(command, request));
 		}
 
 		List<Long> sourceIds = request.sources().stream()
@@ -156,7 +144,7 @@ public class MergeWorkHandler implements WorkEffectHandler {
 						result.memo())));
 	}
 
-	private void validateRequest(WorkOperation operation, MergeWorkOperationRequest request) {
+	private void validateRequest(WorkEffectContext context, MergeWorkOperationRequest request) {
 		if (request == null || request.sources() == null || request.sources().isEmpty()) {
 			throw new IllegalArgumentException("합식 원본 난 묶음이 필요합니다.");
 		}
@@ -181,7 +169,7 @@ public class MergeWorkHandler implements WorkEffectHandler {
 		if (requestedIds.size() != request.sources().size()) {
 			throw new IllegalArgumentException("합식 원본 난 묶음은 중복될 수 없습니다.");
 		}
-		Set<Long> targetIds = structureChangeReferenceReader.getActiveOrchidGroupIds(operation.getId());
+		Set<Long> targetIds = structureChangeReferenceReader.getActiveOrchidGroupIds(context.operationId());
 		if (!targetIds.equals(requestedIds)) {
 			throw new IllegalArgumentException("합식 원본은 계획에 확정된 작업 대상과 일치해야 합니다.");
 		}

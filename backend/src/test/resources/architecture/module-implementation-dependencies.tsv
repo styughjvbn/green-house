@@ -1,25 +1,4 @@
 # Temporary pre-refactoring dependencies at 3aa8fc54. Delete entries when their callers migrate.
-ENTITY	com.greenhouse.backend.farm.application.inbound.InboundPottingExecutor	com.greenhouse.backend.work.domain.operation.WorkOperation
-ENTITY	com.greenhouse.backend.farm.application.inbound.InboundPottingExecutor	com.greenhouse.backend.work.domain.target.WorkOperationTarget
-ENTITY	com.greenhouse.backend.farm.application.inbound.InboundPottingWorkHandler	com.greenhouse.backend.work.domain.operation.WorkOperation
-ENTITY	com.greenhouse.backend.farm.application.inbound.InboundPottingWorkHandler	com.greenhouse.backend.work.domain.target.WorkOperationTarget
-ENTITY	com.greenhouse.backend.farm.application.orchid.DiscardWorkHandler	com.greenhouse.backend.work.domain.operation.WorkOperation
-ENTITY	com.greenhouse.backend.farm.application.orchid.DiscardWorkHandler	com.greenhouse.backend.work.domain.target.WorkOperationTarget
-ENTITY	com.greenhouse.backend.farm.application.orchid.MovementWorkHandler	com.greenhouse.backend.work.domain.operation.WorkOperation
-ENTITY	com.greenhouse.backend.farm.application.orchid.MovementWorkHandler	com.greenhouse.backend.work.domain.target.WorkOperationTarget
-ENTITY	com.greenhouse.backend.farm.application.transformation.BatchStructureTransformationExecutor	com.greenhouse.backend.work.domain.operation.WorkOperation
-ENTITY	com.greenhouse.backend.farm.application.transformation.CorrectionWorkHandler	com.greenhouse.backend.work.domain.operation.WorkOperation
-ENTITY	com.greenhouse.backend.farm.application.transformation.CorrectionWorkHandler	com.greenhouse.backend.work.domain.target.WorkOperationTarget
-ENTITY	com.greenhouse.backend.farm.application.transformation.DivideWorkHandler	com.greenhouse.backend.work.domain.operation.WorkOperation
-ENTITY	com.greenhouse.backend.farm.application.transformation.DivideWorkHandler	com.greenhouse.backend.work.domain.target.WorkOperationTarget
-ENTITY	com.greenhouse.backend.farm.application.transformation.MergeWorkHandler	com.greenhouse.backend.work.domain.operation.WorkOperation
-ENTITY	com.greenhouse.backend.farm.application.transformation.MergeWorkHandler	com.greenhouse.backend.work.domain.target.WorkOperationTarget
-ENTITY	com.greenhouse.backend.farm.application.transformation.MultiCreateWorkHandler	com.greenhouse.backend.work.domain.operation.WorkOperation
-ENTITY	com.greenhouse.backend.farm.application.transformation.MultiCreateWorkHandler	com.greenhouse.backend.work.domain.target.WorkOperationTarget
-ENTITY	com.greenhouse.backend.farm.application.transformation.RepotWorkHandler	com.greenhouse.backend.work.domain.operation.WorkOperation
-ENTITY	com.greenhouse.backend.farm.application.transformation.RepotWorkHandler	com.greenhouse.backend.work.domain.target.WorkOperationTarget
-ENTITY	com.greenhouse.backend.farm.application.transformation.StructureChangeExecutor	com.greenhouse.backend.work.domain.operation.WorkOperation
-ENTITY	com.greenhouse.backend.farm.application.transformation.StructureChangeExecutor	com.greenhouse.backend.work.domain.operation.WorkType
 HTTP_DTO	com.greenhouse.backend.farm.application.inbound.InboundWorkOperationRequestFactory	com.greenhouse.backend.work.dto.operation.InboundWorkOperationCreateRequest
 HTTP_DTO	com.greenhouse.backend.farm.application.orchid.FarmWorkExecutionReferenceGateway	com.greenhouse.backend.work.dto.operation.WorkExecutionLocationResponse
 HTTP_DTO	com.greenhouse.backend.farm.application.orchid.MovementWorkHandler	com.greenhouse.backend.work.dto.effect.StructureChangeExecutionRequest

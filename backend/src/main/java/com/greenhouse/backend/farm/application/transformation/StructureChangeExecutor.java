@@ -1,7 +1,7 @@
 package com.greenhouse.backend.farm.application.transformation;
 
+import com.greenhouse.backend.work.application.effect.WorkEffectContext;
 import com.greenhouse.backend.work.application.effect.WorkExecutionResult;
-import com.greenhouse.backend.work.domain.operation.WorkOperation;
 import com.greenhouse.backend.work.dto.effect.StructureChangeExecutionRequest;
 import java.util.Set;
 import lombok.RequiredArgsConstructor;
@@ -15,19 +15,19 @@ public class StructureChangeExecutor {
 	private final BatchStructureTransformationExecutor transformationExecutor;
 
 	public WorkExecutionResult execute(
-			WorkOperation operation,
+			WorkEffectContext context,
 			StructureChangeExecutionRequest request) {
-		return execute(operation, request, Set.of());
+		return execute(context, request, Set.of());
 	}
 
 	public WorkExecutionResult execute(
-			WorkOperation operation,
+			WorkEffectContext context,
 			StructureChangeExecutionRequest request,
 			Set<Long> placementExclusionOrchidGroupIds) {
-		StructureChangeStrategy strategy = strategyRegistry.get(operation.getWorkType().getCode());
+		StructureChangeStrategy strategy = strategyRegistry.get(context.workTypeCode());
 		strategy.validate(request);
 		return transformationExecutor.execute(
-				operation,
+				context.operationId(),
 				request,
 				strategy,
 				placementExclusionOrchidGroupIds);

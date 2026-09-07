@@ -1,24 +1,24 @@
 package com.greenhouse.backend.farm.application.orchid;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.greenhouse.backend.farm.dto.orchid.OrchidGroupMoveRequest;
-import com.greenhouse.backend.farm.application.transformation.StructureChangeExecutor;
 import com.greenhouse.backend.farm.application.orchid.mutation.MoveOrchidGroupMutationCommand;
 import com.greenhouse.backend.farm.application.orchid.mutation.OrchidGroupMutationEngine;
 import com.greenhouse.backend.farm.application.orchid.mutation.OrchidGroupMutationRoutingPolicy;
 import com.greenhouse.backend.farm.application.orchid.mutation.OrchidGroupMutationSources;
+import com.greenhouse.backend.farm.application.transformation.StructureChangeExecutor;
+import com.greenhouse.backend.farm.dto.orchid.OrchidGroupMoveRequest;
 import com.greenhouse.backend.farm.repository.orchid.OrchidGroupRepository;
 import com.greenhouse.backend.work.application.effect.WorkEffectCommand;
+import com.greenhouse.backend.work.application.effect.WorkEffectContext;
 import com.greenhouse.backend.work.application.effect.WorkEffectHandler;
 import com.greenhouse.backend.work.application.effect.WorkExecutionResult;
 import com.greenhouse.backend.work.application.effect.WorkMutationLink;
 import com.greenhouse.backend.work.domain.effect.WorkEffectKind;
-import com.greenhouse.backend.work.domain.operation.WorkOperation;
-import com.greenhouse.backend.work.domain.target.WorkOperationTarget;
 import com.greenhouse.backend.work.domain.target.WorkTargetReferenceType;
 import com.greenhouse.backend.work.dto.effect.StructureChangeExecutionRequest;
 import java.util.LinkedHashMap;
 import java.util.List;
+import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 
 /**
@@ -26,6 +26,7 @@ import org.springframework.stereotype.Component;
  * Removal gate: 운영 ACTIVE 안정화 및 writer inventory 승인.
  */
 @Component
+@RequiredArgsConstructor
 public class MovementWorkHandler implements WorkEffectHandler {
 
 	private final OrchidGroupCommandService orchidGroupCommandService;
@@ -35,50 +36,35 @@ public class MovementWorkHandler implements WorkEffectHandler {
 	private final OrchidGroupMutationRoutingPolicy mutationRoutingPolicy;
 	private final ObjectMapper objectMapper = new ObjectMapper().findAndRegisterModules();
 
-	public MovementWorkHandler(
-			OrchidGroupCommandService orchidGroupCommandService,
-			StructureChangeExecutor structureChangeExecutor,
-			OrchidGroupRepository orchidGroupRepository,
-			OrchidGroupMutationEngine mutationEngine,
-			OrchidGroupMutationRoutingPolicy mutationRoutingPolicy) {
-		this.orchidGroupCommandService = orchidGroupCommandService;
-		this.structureChangeExecutor = structureChangeExecutor;
-		this.orchidGroupRepository = orchidGroupRepository;
-		this.mutationEngine = mutationEngine;
-		this.mutationRoutingPolicy = mutationRoutingPolicy;
-	}
-
 	@Override public String supports() { return "MOVE"; }
 	@Override public WorkEffectKind effectKind() { return WorkEffectKind.ATTRIBUTE_CHANGE; }
 
 	@Override
-	public WorkExecutionResult execute(
-			WorkOperation operation,
-			WorkOperationTarget target,
-			WorkEffectCommand command) {
+	public WorkExecutionResult execute(WorkEffectContext context, WorkEffectCommand command) {
+		var target = context.target();
 		if (command.payload() instanceof StructureChangeExecutionRequest request) {
 			return structureChangeExecutor.execute(
-					operation, request, command.placementExclusionOrchidGroupIds());
+					context, request, command.placementExclusionOrchidGroupIds());
 		}
-		if (target == null || target.getTargetReferenceType() != WorkTargetReferenceType.ORCHID_GROUP) {
+		if (target == null || target.referenceType() != WorkTargetReferenceType.ORCHID_GROUP) {
 			throw new IllegalArgumentException("자리 이동 작업에는 난 묶음 대상이 필요합니다.");
 		}
 		OrchidGroupMoveRequest request = command.payload() == null
 				? objectMapper.convertValue(command.resultDetails(), OrchidGroupMoveRequest.class)
 				: command.payloadAs(OrchidGroupMoveRequest.class);
 		var moved = mutationRoutingPolicy.routesToEngine()
-				? moveWithEngine(operation, target.getOrchidGroupId(), command, request)
-				: moveWithLegacy(target.getOrchidGroupId(), request);
+				? moveWithEngine(context, target.orchidGroupId(), command, request)
+				: moveWithLegacy(target.orchidGroupId(), request);
 		var details = new LinkedHashMap<String, Object>();
-		details.put("orchidGroupId", target.getOrchidGroupId());
-		details.put("fromBedZoneId", target.getLocationSnapshot().get("bedZoneId"));
+		details.put("orchidGroupId", target.orchidGroupId());
+		details.put("fromBedZoneId", target.locationSnapshot().get("bedZoneId"));
 		details.put("toBedZoneId", moved.bedZoneId());
 		details.put("startPosition", moved.startPosition());
 		details.put("endPosition", moved.endPosition());
 		return new WorkExecutionResult(
 				"MOVE",
 				details,
-				List.of(target.getOrchidGroupId()),
+				List.of(target.orchidGroupId()),
 				moved.mutationLink());
 	}
 
@@ -98,7 +84,7 @@ public class MovementWorkHandler implements WorkEffectHandler {
 	}
 
 	private RoutedMove moveWithEngine(
-			WorkOperation operation,
+			WorkEffectContext context,
 			Long orchidGroupId,
 			WorkEffectCommand command,
 			OrchidGroupMoveRequest request) {
@@ -114,12 +100,12 @@ public class MovementWorkHandler implements WorkEffectHandler {
 					null);
 		}
 		var mutation = mutationEngine.move(new MoveOrchidGroupMutationCommand(
-				OrchidGroupMutationSources.work(operation.getId(), command.effectKey()),
+				OrchidGroupMutationSources.work(context.operationId(), command.effectKey()),
 				orchidGroupId,
 				request.toBedZoneId(),
 				request.startPosition(),
 				request.endPosition(),
-				operation.getPlannedStartDate(),
+				context.plannedStartDate(),
 				request.memo()));
 		var group = orchidGroupRepository.findById(orchidGroupId)
 				.orElseThrow(() -> new IllegalArgumentException("이동한 난 묶음을 찾을 수 없습니다."));
