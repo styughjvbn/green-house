@@ -2,7 +2,7 @@
 
 - 기준일: 2026-09-05
 - 기준 코드: `feature/orchid-group-mutation-engine`, `3aa8fc54`
-- 상태: 단계별 구현 진행 중. 1~11차 구현 범위와 남은 작업은 아래 실행 기록 참고.
+- 상태: 단계별 구현 진행 중. 1~12차 구현 범위와 남은 작업은 아래 실행 기록 참고.
 - 작업 브랜치: `feature/backend-refactoring`.
 - 범위: **13개 모듈 전체**, Controller·application·domain·Repository·DTO·설정·DB migration·테스트·CI.
 - 목표: **확장에는 열려 있고 수정에는 닫힌 구조(OCP)**. 새 기능을 추가할 때 기존 유스케이스와 타 모듈 내부를 수정하는 범위를 줄인다.
@@ -58,7 +58,7 @@ Repository import를 금지하는 것만으로는 확장 시 변경 전파를 �
 
 ### 2.2 조회가 모듈 경계를 우회
 
-[SalesAnalyticsRepository](../../backend/src/main/java/com/greenhouse/backend/analytics/repository/SalesAnalyticsRepository.java)는 Sales뿐 아니라 Farm·Partner·Settlement·Work의 Q Entity를 직접 사용한다.
+기준 코드의 `SalesAnalyticsRepository`는 Sales뿐 아니라 Farm·Partner·Settlement·Work의 Q Entity를 직접 사용했다. 11·12차에서 제거했으며 현재 판매 집계는 [SalesMetricsReader](../../backend/src/main/java/com/greenhouse/backend/sales/application/SalesMetricsReader.java)가 소유한다.
 [AuctionSettlementRepository](../../backend/src/main/java/com/greenhouse/backend/settlement/repository/AuctionSettlementRepository.java)의 `findUnsettledSoldResultLines`는 Auction Entity를 직접 조회한다.
 Native SQL 여부와 무관한 소유권 문제다.
 
@@ -758,3 +758,33 @@ B-06 전체 완료는 아니다. 다음 우선 범위는 일반 판매의 입금
 - `python3 scripts/generate_openapi.py`로 **136 operations·115 paths·228 schemas**를 재생성했으며 전체 명세·slice 차이가 없다. 프론트·생성 타입 변경이 없어 프론트 검증과 브라우저 E2E는 실행하지 않았다. DB migration과 대용량 벤치마크는 이번 범위에 없다. 임시 명세 서버 종료와 `git diff --check`를 확인했다.
 
 다음 우선 범위는 B-11의 판매·거래처·잔액 결합 분석이다. 동일 이름의 거래처 합산, 기간 판매가 없는 거래처의 현재 잔액, 전체 기준 상위 순위를 보존하는 조회 계약이 필요하다. 독립 페이지나 대량 Entity 배열을 Java에서 합쳐 기존 DB 집계를 대체하지 않는다. 전체 백엔드 리팩터링과 Sales–Farm/Mutation/Work 경계 정리는 계속 진행 중이다.
+
+## 19. 실행 기록 — 12차 판매·거래처·잔액 분석의 조회 경계
+
+2026-09-07, `feature/backend-refactoring`. B-11의 남은 타 모듈 Q 타입 조회를 소유 모듈의 application 값 계약으로 이식했다.
+
+구현·회귀 검증 커밋: `bdaf9d6c refactor: move sales analytics behind module APIs`.
+
+- 판매 합계·출하 수량·월별 매출·품종별 매출·입금 상태별 매출·최근/미수 전표 조회를 Sales로 옮겼다. 완료 상태는 기존 전표 도메인의 상수를 사용한다. 월별 합계는 `YearMonth`, 나머지는 의미 있는 record로 전달하고 Analytics의 `Object[]` 해석과 저장소 행 타입을 제거했다.
+- Sales는 DB에서 거래처 ID별 기간 매출·건수·미수·입금·최근 판매일을 먼저 집계한다. Partner의 기존 reader는 이름·유형만 500개 ID씩 조회하며 활성 여부로 과거 기록을 제외하지 않는다. 판매 분석은 같은 현재 이름을 합산한 뒤 전체 상위 10개를 고르고, 최근/미수 전표 5건에도 같은 이름 조회 결과를 사용한다.
+- Settlement의 기존 service에 잔액을 생성하거나 잠그지 않는 읽기 API를 추가했다. 0이 아닌 잔액 값만 제공하며, 거래처 분석은 기간 매출이 있거나 현재 잔액 중 양수가 있는 ID를 포함한다. 거래처별 현재 잔액과 기간 내 전표의 미수·입금액은 구분하고 금액을 재구성하지 않는다.
+- 분석의 최상위 읽기 트랜잭션에 `REPEATABLE_READ`를 적용했다. 별도 트랜잭션이 전표·거래처 이름·잔액을 변경하더라도 요청 안의 모듈별 조회는 같은 시점의 값을 사용한다. 원본 쓰기·입금·감사·잠금 순서는 유지한다.
+- 기존 PostgreSQL에서는 기간 매출이 없는 양수 잔액 거래처의 SQL 매출 합계가 `NULL`이어서 역순 정렬 시 앞에 나온다. 리팩터링 전 테스트로 확인한 이 순서를 보존했다. 기존에 미정이던 동률에는 거래처 ID, 이름별 순위에는 이름, 미수 전표에는 ID를 보조 정렬로 지정했다. 매출 0원 전표는 거래가 없는 경우와 구분한다.
+
+복잡성 점검 (`5a5b2a0f` 대비):
+
+- 운영 Java **571 → 569파일**, 순감 **44줄**. Analytics 저장소와 행 타입 두 개를 제거하고 Sales의 실제 집계 reader 한 개로 대체했다. Partner·Settlement에는 기존 service와 저장소를 활용했으며 전달 전용 service나 별도 보고용 DB 구조를 추가하지 않았다.
+- 테스트 Java는 순증 **282줄**이다. PostgreSQL 집계의 기존 의미·규모별 조회 비용·트랜잭션 간 변경 회귀를 추가했다. 프론트 코드와 생성 타입은 변경하지 않았다.
+- 모듈 내부 구현 직접 의존 **84 → 80쌍**. Analytics의 네 Q 타입 의존만 이식 목록에서 제거했으며 Analytics에는 타 모듈 Entity·Repository·Q 타입 직접 조회가 남아 있지 않다. 전체 잔여 목록은 Entity 42·HTTP DTO 36·Q 타입 2쌍이다.
+- 거래처 1·10·50개에서 Hibernate 통계 기준 조회 SQL은 판매 분석 **12 → 13회**, 거래처 분석 **1 → 3회**다. 501개에서는 각각 **14회·4회**, Entity 로딩은 모두 **0건**이다. 이름 조회의 배치 횟수가 추가되며 결합 조회의 분리 비용을 숨기지 않는다. 비어 있는 경우에는 이름 조회를 생략한다. `REPEATABLE_READ`는 요청이 끝날 때까지 읽기 스냅샷을 유지하며, 위 수치는 JDBC 트랜잭션 설정 비용을 포함한 응답 시간 측정이 아니다.
+- Java에 전표·품목 원본을 적재하지 않고 거래처별 합계와 현재 잔액만 조합한다. 다만 판매 상위 10개를 위해서도 기간 내 전체 거래처 합계가 필요하므로, 이름별 집계를 DB에서 하던 이전보다 application 메모리 사용량이 늘 수 있다. 거래처 분석의 전체 목록 계약과 현재 잔액의 기간 비제한도 유지했다. 원본 DB 스캔과 거래처 수에 비례하는 메모리 비용은 남으며, 큰 운영 규모에서는 측정 후 보고용 projection이나 별도 페이지 계약을 검토한다.
+
+보존·검증:
+
+- 실제 PostgreSQL의 기존 결과를 먼저 고정한 뒤 이식했다. 같은 이름의 개별 매출은 10위 밖이어도 합산 후 1위가 되는 경우, 이름·유형 변경·비활성 거래처, 기간 판매가 없는 잔액, 예치·미연결 금액, 0·음수 잔액의 포함 여부와 기존 정렬을 검증했다.
+- 기간 양 끝·기간 밖, 윤년 월말의 직전 월 비교, 여러 품목으로 인한 전표 금액 중복 없음, 부분입금·완납, 작성중·취소 제외, 경매 출하·0원 전표 포함, 빈 결과·잔액 미생성, 32비트 범위를 넘는 합계와 최근 전표 상한을 확인했다. 501개 거래처·1,002개 전표에서 전체 거래처 행의 누락과 Entity 로딩 없이 집계한다.
+- 첫 판매 조회 후 별도 트랜잭션이 이름·유형·잔액을 변경하고 전표를 추가해도 현재 요청은 변경 전 값을, 다음 요청은 변경 후 값을 반환한다. PostgreSQL의 실제 격리 수준도 함께 확인했다.
+- 최종 `./gradlew test workE2eTest --offline --no-daemon`: 기본 **374건 중 331건 통과·기존 disabled 43건**, PostgreSQL **50건 전부 통과**, 실패 0건. 모듈 경계와 기존 서울 업무일 회귀도 통과했다.
+- `python3 scripts/generate_openapi.py`로 **136 operations·115 paths·228 schemas**를 재생성했고 전체 명세·slice 차이는 없다. 프론트 코드·생성 타입 변경이 없어 프론트 검증과 브라우저 E2E는 실행하지 않았다. DB migration과 대용량 응답 시간·메모리 벤치마크는 이번 범위에 없다. 임시 명세 서버 종료와 `git diff --check`를 확인했다.
+
+B-11 전체 완료는 아니다. 다음 우선 범위는 Analytics의 입금 상태 문자열 해석과 기간·표현 조립 책임이다. 기존 입금 상태 호환·표시 문구·색상·링크는 이번 이식에서 변경하지 않았다. 전체 백엔드 범위와 Sales–Farm/Mutation/Work 경계 정리도 계속 진행 중이다.
