@@ -9,11 +9,11 @@ import com.greenhouse.backend.farm.repository.orchid.OrchidGroupRepository;
 import com.greenhouse.backend.work.application.effect.WorkEffectCommand;
 import com.greenhouse.backend.work.application.effect.WorkEffectContext;
 import com.greenhouse.backend.work.application.effect.WorkEffectHandler;
+import com.greenhouse.backend.work.application.effect.WorkEffectResults;
 import com.greenhouse.backend.work.application.effect.WorkExecutionResult;
 import com.greenhouse.backend.work.application.effect.WorkMutationLink;
 import com.greenhouse.backend.work.domain.effect.WorkEffectKind;
 import com.greenhouse.backend.work.domain.target.WorkTargetReferenceType;
-import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import lombok.RequiredArgsConstructor;
@@ -71,19 +71,10 @@ public class DiscardWorkHandler implements WorkEffectHandler {
 			orchidGroup.discard(discardQuantity);
 		}
 
-		Map<String, Object> details = new LinkedHashMap<>();
-		details.put("orchidGroupId", orchidGroup.getId());
-		details.put("beforeQuantity", beforeQuantity);
-		details.put("discardedQuantity", discardQuantity);
-		details.put("remainingQuantity", orchidGroup.getQuantity());
-		details.put("beforeStatus", beforeStatus);
-		details.put("status", orchidGroup.getStatus());
-		if (command.resultDetails() != null) {
-			Object reason = command.resultDetails().get("reason");
-			if (reason instanceof String value && !value.isBlank()) {
-				details.put("reason", value.trim());
-			}
-		}
+		Object requestedReason = command.resultDetails() == null ? null : command.resultDetails().get("reason");
+		var details = new WorkEffectResults.Discarded(orchidGroup.getId(), beforeQuantity, discardQuantity,
+				orchidGroup.getQuantity(), beforeStatus, orchidGroup.getStatus(),
+				requestedReason instanceof String value ? value : null).toMap();
 		return new WorkExecutionResult(
 				"DISCARD", details, List.of(orchidGroup.getId()), mutationLink);
 	}

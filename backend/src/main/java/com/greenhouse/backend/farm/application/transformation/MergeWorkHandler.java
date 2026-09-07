@@ -14,13 +14,13 @@ import com.greenhouse.backend.work.application.correction.StructureChangeReferen
 import com.greenhouse.backend.work.application.effect.WorkEffectCommand;
 import com.greenhouse.backend.work.application.effect.WorkEffectContext;
 import com.greenhouse.backend.work.application.effect.WorkEffectHandler;
+import com.greenhouse.backend.work.application.effect.WorkEffectResults;
 import com.greenhouse.backend.work.application.effect.WorkExecutionResult;
 import com.greenhouse.backend.work.domain.effect.StructureChangeResultPurpose;
 import com.greenhouse.backend.work.domain.effect.WorkEffectKind;
 import com.greenhouse.backend.work.dto.effect.StructureChangeExecutionRequest;
 import com.greenhouse.backend.work.dto.effect.StructureChangeResultRequest;
 import com.greenhouse.backend.work.dto.effect.StructureChangeSourceRequest;
-import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -104,12 +104,7 @@ public class MergeWorkHandler implements WorkEffectHandler {
 				row.bedZoneId(), varietyId, row.quantity(), row.potSize(), row.ageYear(), resultStatus,
 				row.placementType(), row.trayCount(), row.splitPlacementAllowed(),
 				row.startPosition(), row.endPosition(), row.memo()));
-		var details = new LinkedHashMap<String, Object>();
-		details.put("sourceOrchidGroupIds", sourceIds);
-		details.put("sourceInputQuantities", inputBySourceId);
-		details.put("totalInputQuantity", totalInput);
-		details.put("lossQuantity", lossQuantity);
-		details.put("resultOrchidGroupId", result.getId());
+		var details = new WorkEffectResults.Merged(sourceIds, inputBySourceId, totalInput, lossQuantity, result.getId()).toMap();
 		return new WorkExecutionResult("MERGE", details, List.of(result.getId()));
 	}
 

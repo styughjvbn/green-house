@@ -266,6 +266,7 @@ Persistence 조회 규칙:
 - Work 효과 handler는 Work가 만든 application 실행 값을 받으며 Work Entity에 접근하지 않는다. 효과 저장과 대상·작업 상태 전이는 Work가 기존 유스케이스 트랜잭션 안에서 처리한다. 대상 위치는 저장된 스냅샷의 값을 복사해 전달한다. 재실행 시 기존 효과를 먼저 조회하고, 새 완료 기록은 대상마다 중복 조회를 추가하지 않는다.
 - Work의 고정 유형 규칙은 순수 domain 정의에 두고 실행 분기와 capability가 함께 사용한다. 코드별 workflow·대상 출처·등록 제한은 `WorkTypeDefinition`, 기본 handler·효과 분류·사용자 정의 허용은 `WorkTypeTemplate`이 소유한다. 활성·시스템 여부는 Entity에서 결합한다. 다른 모듈은 코드 상수를 위해 Work Entity를 참조하지 않는다.
 - 새 Work 유형은 정의와 필요한 handler·구조 변경 strategy를 등록한다. 기존 registry가 애플리케이션 시작 시 필수 구현의 누락을 검사하며, 같은 유형 목록을 계획·기록·실행 서비스에 복제하지 않는다. 기존 코드 우선 handler와 저장된 template의 fallback을 유지하고, 유형의 효과 분류와 실제 실행 결과의 효과 종류를 임의로 합치지 않는다.
+- Work 효과의 고정 결과는 유형별 내부 값에서 기존 JSON으로 변환한다. 저장 필드 유무·null·날짜와 결과 순서를 유지하며, 자유 기록형 결과는 원래 값을 보존한다. 상세의 구형 JSON 해석은 조회 없는 codec에, 필드 라벨·표시는 assembler에 둔다. 상세 service는 참조와 보정 효과를 일괄 조회하며, 보정마다 Repository를 호출하지 않는다. 기존 품종·위치 참조 표시와 저장된 수량·상태 이력의 의미를 임의로 바꾸지 않는다.
 - 외부 시스템은 application port 뒤의 adapter로 추가한다. 외부 시스템 DTO와 오류를 domain에 전파하지 않는다.
 
 ```text

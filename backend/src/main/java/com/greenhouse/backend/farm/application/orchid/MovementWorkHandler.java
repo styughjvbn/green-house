@@ -11,12 +11,12 @@ import com.greenhouse.backend.farm.repository.orchid.OrchidGroupRepository;
 import com.greenhouse.backend.work.application.effect.WorkEffectCommand;
 import com.greenhouse.backend.work.application.effect.WorkEffectContext;
 import com.greenhouse.backend.work.application.effect.WorkEffectHandler;
+import com.greenhouse.backend.work.application.effect.WorkEffectResults;
 import com.greenhouse.backend.work.application.effect.WorkExecutionResult;
 import com.greenhouse.backend.work.application.effect.WorkMutationLink;
 import com.greenhouse.backend.work.domain.effect.WorkEffectKind;
 import com.greenhouse.backend.work.domain.target.WorkTargetReferenceType;
 import com.greenhouse.backend.work.dto.effect.StructureChangeExecutionRequest;
-import java.util.LinkedHashMap;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
@@ -55,12 +55,8 @@ public class MovementWorkHandler implements WorkEffectHandler {
 		var moved = mutationRoutingPolicy.routesToEngine()
 				? moveWithEngine(context, target.orchidGroupId(), command, request)
 				: moveWithLegacy(target.orchidGroupId(), request);
-		var details = new LinkedHashMap<String, Object>();
-		details.put("orchidGroupId", target.orchidGroupId());
-		details.put("fromBedZoneId", target.locationSnapshot().get("bedZoneId"));
-		details.put("toBedZoneId", moved.bedZoneId());
-		details.put("startPosition", moved.startPosition());
-		details.put("endPosition", moved.endPosition());
+		var details = new WorkEffectResults.Moved(target.orchidGroupId(), target.locationSnapshot().get("bedZoneId"),
+				moved.bedZoneId(), moved.startPosition(), moved.endPosition()).toMap();
 		return new WorkExecutionResult(
 				"MOVE",
 				details,

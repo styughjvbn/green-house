@@ -18,11 +18,11 @@ import com.greenhouse.backend.farm.repository.orchid.OrchidGroupRepository;
 import com.greenhouse.backend.work.application.effect.WorkEffectCommand;
 import com.greenhouse.backend.work.application.effect.WorkEffectContext;
 import com.greenhouse.backend.work.application.effect.WorkEffectHandler;
+import com.greenhouse.backend.work.application.effect.WorkEffectResults;
 import com.greenhouse.backend.work.application.effect.WorkExecutionResult;
 import com.greenhouse.backend.work.application.effect.WorkMutationLink;
 import com.greenhouse.backend.work.domain.effect.WorkEffectKind;
 import java.util.HashSet;
-import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Set;
 import lombok.RequiredArgsConstructor;
@@ -97,13 +97,12 @@ public class MultiCreateWorkHandler implements WorkEffectHandler {
 			memberRepository.saveAll(collectionIds.stream()
 					.map(id -> new OrchidGroupCollectionMember(id, group.getId(), command.worker())).toList());
 		}
-		var details = new LinkedHashMap<String, Object>();
-		details.put("createdCount", groups.size());
-		details.put("createdOrchidGroupIds", groups.stream().map(OrchidGroup::getId).toList());
+		var resultIds = groups.stream().map(OrchidGroup::getId).toList();
+		var details = new WorkEffectResults.Created(resultIds).toMap();
 		return new WorkExecutionResult(
 				"MULTI_CREATE",
 				details,
-				groups.stream().map(OrchidGroup::getId).toList(),
+				resultIds,
 				mutationLink);
 	}
 

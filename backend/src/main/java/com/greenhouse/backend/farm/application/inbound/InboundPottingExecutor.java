@@ -5,10 +5,10 @@ import com.greenhouse.backend.farm.dto.inbound.InboundRecordPottingRequest;
 import com.greenhouse.backend.work.application.effect.WorkEffectCommand;
 import com.greenhouse.backend.work.application.effect.WorkEffectContext;
 import com.greenhouse.backend.work.application.effect.WorkEffectHandler;
+import com.greenhouse.backend.work.application.effect.WorkEffectResults;
 import com.greenhouse.backend.work.application.effect.WorkExecutionResult;
 import com.greenhouse.backend.work.domain.effect.WorkEffectKind;
 import com.greenhouse.backend.work.domain.target.WorkTargetReferenceType;
-import java.util.LinkedHashMap;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 
@@ -39,11 +39,8 @@ public class InboundPottingExecutor implements WorkEffectHandler {
 				command.resultDetails(), InboundRecordPottingRequest.class);
 		var result = inboundPottingService.potting(
 				target.inboundRecordId(), request, context.operationId(), command.effectKey());
-		var details = new LinkedHashMap<String, Object>();
-		details.put("inboundRecordId", target.inboundRecordId());
-		details.put("createdOrchidGroupIds", result.createdOrchidGroupIds());
-		details.put("actualQuantity", result.actualQuantity());
-		details.put("resultCount", result.createdOrchidGroupIds().size());
+		var details = new WorkEffectResults.Potted(target.inboundRecordId(),
+				result.createdOrchidGroupIds(), result.actualQuantity()).toMap();
 		return new WorkExecutionResult(
 				"POTTING", details, result.createdOrchidGroupIds(), result.mutationLink());
 	}

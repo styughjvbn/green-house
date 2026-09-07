@@ -15,12 +15,12 @@ import com.greenhouse.backend.work.application.correction.WorkOperationDateCorre
 import com.greenhouse.backend.work.application.effect.WorkEffectCommand;
 import com.greenhouse.backend.work.application.effect.WorkEffectContext;
 import com.greenhouse.backend.work.application.effect.WorkEffectHandler;
+import com.greenhouse.backend.work.application.effect.WorkEffectResults;
 import com.greenhouse.backend.work.application.effect.WorkExecutionResult;
 import com.greenhouse.backend.work.application.effect.WorkMutationLink;
 import com.greenhouse.backend.work.domain.effect.WorkEffectKind;
 import com.greenhouse.backend.work.dto.correction.OrchidGroupCorrectionRequest;
 import com.greenhouse.backend.work.dto.correction.WorkOperationCorrectionCreateRequest;
-import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
@@ -90,17 +90,12 @@ public class CorrectionWorkHandler implements WorkEffectHandler {
 			throw new IllegalArgumentException(blockers.getFirst().message());
 		}
 
-		List<Map<String, Object>> auditRows = request.orchidGroupAdjustments().stream()
+		List<WorkEffectResults.Adjustment> auditRows = request.orchidGroupAdjustments().stream()
 				.filter(adjustment -> changedAdjustmentIds.contains(adjustment.orchidGroupId()))
 				.map(adjustment -> {
 					OrchidGroup group = groupsById.get(adjustment.orchidGroupId());
-					Map<String, Object> audit = new LinkedHashMap<>();
-					audit.put("orchidGroupId", group.getId());
-					audit.put("beforeQuantity", group.getQuantity());
-					audit.put("beforeStatus", group.getStatus());
-					audit.put("afterQuantity", adjustment.quantity());
-					audit.put("afterStatus", adjustment.status().trim());
-					return audit;
+					return new WorkEffectResults.Adjustment(group.getId(), group.getQuantity(), group.getStatus(),
+							adjustment.quantity(), adjustment.status().trim());
 				}).toList();
 		WorkMutationLink mutationLink = null;
 		if (!changedAdjustmentIds.isEmpty()) {
@@ -134,12 +129,9 @@ public class CorrectionWorkHandler implements WorkEffectHandler {
 								.correctQuantityAndStatus(adjustment.quantity(), adjustment.status()));
 			}
 		}
-		Map<String, Object> resultDetails = new LinkedHashMap<>();
-		resultDetails.put("originalWorkOperationId", originalOperationId);
 		var dateCorrection = workOperationDateCorrectionService.correct(originalOperationId, request.workDate());
-		resultDetails.put("beforeWorkDate", dateCorrection.before());
-		resultDetails.put("afterWorkDate", dateCorrection.after());
-		resultDetails.put("adjustments", auditRows);
+		var resultDetails = new WorkEffectResults.Corrected(originalOperationId,
+				dateCorrection.before(), dateCorrection.after(), auditRows).toMap();
 		return new WorkExecutionResult(
 				"CORRECTION", resultDetails, List.copyOf(changedAdjustmentIds), mutationLink);
 	}

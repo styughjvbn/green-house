@@ -13,12 +13,12 @@ import com.greenhouse.backend.farm.domain.orchid.OrchidGroup;
 import com.greenhouse.backend.farm.domain.orchid.mutation.OrchidGroupMutationEntryRole;
 import com.greenhouse.backend.farm.dto.orchid.OrchidGroupCreateRequest;
 import com.greenhouse.backend.farm.repository.orchid.OrchidGroupRepository;
+import com.greenhouse.backend.work.application.effect.WorkEffectResults;
 import com.greenhouse.backend.work.application.effect.WorkExecutionResult;
 import com.greenhouse.backend.work.application.effect.WorkMutationLink;
 import com.greenhouse.backend.work.domain.effect.StructureChangeResultPurpose;
 import com.greenhouse.backend.work.dto.effect.StructureChangeExecutionRequest;
 import com.greenhouse.backend.work.dto.effect.StructureChangeSourceRequest;
-import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -117,23 +117,11 @@ public class BatchStructureTransformationExecutor {
 			}
 		}
 		List<Long> resultIds = results.stream().map(OrchidGroup::getId).toList();
-		var details = new LinkedHashMap<String, Object>();
-		details.put("executionKey", request.idempotencyKey());
-		details.put("sourceInputQuantities", inputBySourceId);
-		details.put("lossQuantity", lossQuantity);
-		details.put("results", java.util.stream.IntStream.range(0, results.size())
-				.mapToObj(index -> Map.of(
-						"orchidGroupId", resultIds.get(index),
-						"quantity", results.get(index).getQuantity(),
-						"purpose", plannedResults.get(index).purpose().name()))
-				.toList());
-		if (sourceIds.size() == 1) {
-			Long sourceId = sourceIds.getFirst();
-			details.put("sourceOrchidGroupId", sourceId);
-			details.put("inputQuantity", inputBySourceId.get(sourceId));
-			details.put("remainingQuantity", sources.get(sourceId).getQuantity());
-			details.put("resultOrchidGroupIds", resultIds);
-		}
+		var resultRows = java.util.stream.IntStream.range(0, results.size())
+				.mapToObj(index -> new WorkEffectResults.ResultGroup(resultIds.get(index),
+						results.get(index).getQuantity(), plannedResults.get(index).purpose())).toList();
+		var details = new WorkEffectResults.Transformation(request.idempotencyKey(), inputBySourceId,
+				lossQuantity, resultRows, sourceIds.size() == 1 ? sources.get(sourceIds.getFirst()).getQuantity() : null).toMap();
 		return new WorkExecutionResult(strategy.supports(), details, resultIds, mutationLink);
 	}
 

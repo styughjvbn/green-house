@@ -1,8 +1,13 @@
 package com.greenhouse.backend.work.application.effect;
 
+import static com.greenhouse.backend.work.application.effect.WorkEffectResults.integerValue;
+import static com.greenhouse.backend.work.application.effect.WorkEffectResults.resultQuantities;
+import static com.greenhouse.backend.work.application.effect.WorkEffectResults.sourceQuantities;
+
 import com.greenhouse.backend.work.domain.effect.WorkAppliedEffect;
 import com.greenhouse.backend.work.domain.effect.WorkEffectOrchidGroup;
 import com.greenhouse.backend.work.domain.effect.WorkEffectOrchidGroupRelationType;
+import com.greenhouse.backend.work.domain.operation.WorkTypeDefinition;
 import com.greenhouse.backend.work.dto.effect.StructureChangeLineageEffectView;
 import com.greenhouse.backend.work.dto.effect.StructureChangeLineageGroupView;
 import com.greenhouse.backend.work.repository.WorkEffectOrchidGroupRepository;
@@ -10,7 +15,6 @@ import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
@@ -21,8 +25,6 @@ import org.springframework.transaction.annotation.Transactional;
 @Transactional(readOnly = true)
 @RequiredArgsConstructor
 public class StructureChangeLineageQueryService {
-
-	private static final Set<String> HANDLER_CODES = Set.of("MOVEMENT", "REPOT", "DIVIDE", "MERGE");
 
 	private final WorkEffectOrchidGroupRepository effectOrchidGroupRepository;
 
@@ -55,7 +57,7 @@ public class StructureChangeLineageQueryService {
 	}
 
 	private boolean isStructureChangeExecution(WorkAppliedEffect effect) {
-		return HANDLER_CODES.contains(effect.getHandlerCode())
+		return WorkTypeDefinition.forCode(effect.getHandlerCode()).supportsStructureExecution()
 				&& (effect.getEffectKey().startsWith("EXECUTION:")
 						|| hasSourceRows(effect.getCommandDetails()));
 	}
@@ -95,45 +97,4 @@ public class StructureChangeLineageQueryService {
 				.toList();
 	}
 
-	private Map<Long, Integer> sourceQuantities(Map<String, Object> commandDetails) {
-		return quantityMap(commandDetails.get("sources"), "sourceOrchidGroupId", "inputQuantity");
-	}
-
-	private Map<Long, Integer> resultQuantities(Map<String, Object> resultDetails) {
-		Map<Long, Integer> quantities = quantityMap(resultDetails.get("results"), "orchidGroupId", "quantity");
-		if (!quantities.isEmpty()) {
-			return quantities;
-		}
-		Long resultId = longValue(resultDetails.get("resultOrchidGroupId"));
-		Integer totalInput = integerValue(resultDetails.get("totalInputQuantity"));
-		Integer loss = integerValue(resultDetails.get("lossQuantity"));
-		if (resultId != null && totalInput != null) {
-			quantities.put(resultId, totalInput - (loss == null ? 0 : loss));
-		}
-		return quantities;
-	}
-
-	private Map<Long, Integer> quantityMap(Object value, String idKey, String quantityKey) {
-		Map<Long, Integer> quantities = new LinkedHashMap<>();
-		if (!(value instanceof List<?> rows)) {
-			return quantities;
-		}
-		for (Object rowValue : rows) {
-			if (!(rowValue instanceof Map<?, ?> row)) continue;
-			Long id = longValue(row.get(idKey));
-			Integer quantity = integerValue(row.get(quantityKey));
-			if (id != null && quantity != null) {
-				quantities.put(id, quantity);
-			}
-		}
-		return quantities;
-	}
-
-	private Long longValue(Object value) {
-		return value instanceof Number number ? number.longValue() : null;
-	}
-
-	private Integer integerValue(Object value) {
-		return value instanceof Number number ? number.intValue() : null;
-	}
 }
