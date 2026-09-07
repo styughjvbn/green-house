@@ -2,7 +2,7 @@
 
 - 기준일: 2026-09-05
 - 기준 코드: `feature/orchid-group-mutation-engine`, `3aa8fc54`
-- 상태: 단계별 구현 진행 중. 1~13차 구현 범위와 남은 작업은 아래 실행 기록 참고.
+- 상태: 단계별 구현 진행 중. 1~14차 구현 범위와 남은 작업은 아래 실행 기록 참고.
 - 작업 브랜치: `feature/backend-refactoring`.
 - 범위: **13개 모듈 전체**, Controller·application·domain·Repository·DTO·설정·DB migration·테스트·CI.
 - 목표: **확장에는 열려 있고 수정에는 닫힌 구조(OCP)**. 새 기능을 추가할 때 기존 유스케이스와 타 모듈 내부를 수정하는 범위를 줄인다.
@@ -814,3 +814,33 @@ B-11 전체 완료는 아니다. 다음 우선 범위는 Analytics의 입금 상
 - `python3 scripts/generate_openapi.py`로 **136 operations·115 paths·228 schemas**를 재생성했고 전체 명세·slice 차이는 없다. 새 분류 enum은 내부 집계 계약이며 HTTP enum·요청·응답을 바꾸지 않았다. 프론트 검증·브라우저 E2E는 프론트 변경이 없어 실행하지 않았다. DB migration과 대용량 벤치마크도 이번 범위에 없다. 임시 명세 서버 종료와 `git diff --check`를 확인했다.
 
 현재 분석 기능의 조회 경계·기간·표현 책임 이식은 마무리했다. 자유 입금 상태의 표준화·분류 교정, 표현의 프론트 이전, 대규모 보고용 projection은 API·데이터 의미 또는 측정 근거가 필요한 별도 작업이다. 다음 우선 범위는 B-07~08의 판매 스냅샷·재고 처리에 남은 Sales–Farm 경계이며, 전체 백엔드와 Mutation/Work 정리는 계속 진행 중이다.
+
+
+## 21. 실행 기록 — 14차 Sales–Farm 스냅샷·재고 경계
+
+2026-09-07, `feature/backend-refactoring`. B-07~08의 판매 배분·스냅샷·재고 변경과 Farm 사이의 Entity 의존을 제거했다.
+
+구현·회귀 검증 커밋: `fbcfa61b refactor: isolate sales inventory and snapshot ownership`.
+
+- 판매 배분과 재고 이동은 난 묶음 ID를 보관하며 기존 DB 외래키를 유지한다. Sales의 Entity·DTO·감사·조회 코드에서 Farm Entity 순회와 타 모듈 연관 fetch join을 제거했다. DB 스키마와 HTTP 필드는 변경하지 않는다.
+- Farm의 기존 Reader가 현재 상태 값을 반환한다. 판매 생성은 예약 전, 출고·출하는 차감 전 ID 오름차순으로 잠근 값을 받는다. 기존 배분 application 코드가 Sales 스냅샷을 조립하며 domain은 application 계층을 참조하지 않는다. 스냅샷 복사는 저장된 값만 복사하고 Entity 식별자·배분 연결은 새로 부여한다. 현재 위치·가용 수량 조회가 과거 스냅샷을 덮어쓰지 않는다.
+- Farm 예약 API가 기존 typed command로 Engine/Legacy를 한 번 선택하고 실제 수량을 변경한다. 호출자의 트랜잭션을 필수로 요구한다. Legacy 직접 writer를 Sales에서 Farm으로 옮겼으며 전환 완료나 Legacy 제거로 처리하지 않는다. writer inventory는 해당 호출자의 위치만 교체했다.
+- Sales는 같은 난 묶음의 수량을 합쳐 명령을 보내고 배분별 재고 이동을 남긴다. 다섯 경로의 movement 저장·Mutation 연결을 하나로 합쳤으며, 수정 해제와 작성중 취소의 operation key·이력 유형은 구분한다. Engine 출고 복구의 COMPENSATES와 전환 전 출고의 legacy 참조를 유지한다.
+- 가용 수량 비교는 Farm Entity의 예약 불변식으로 통일했다. Sales의 사전 중복 검사를 제거했으며 실패하면 상위 트랜잭션이 배분·스냅샷·기존 예약 해제까지 되돌린다. 배분 병합은 최초 입력 순서를 보존하는 Map으로 바꾸고, 단순 복사 전달 메서드를 제거했다.
+
+복잡성 점검 (`c2d6d76b` 대비):
+
+- 운영 Java **571 → 573파일**, 순감 **50줄**이다. 새 파일은 Farm의 불변 현재 상태 값과 예약 변경 API 두 개다. 재고 서비스는 **248 → 117줄**, 배분 factory는 **129 → 92줄**로 줄었다. 새 인터페이스·범용 실행 프레임워크·별도 저장 테이블은 추가하지 않았다.
+- 테스트 Java는 순증 **394줄**, 파일은 **105 → 106개**다. 추가 코드는 실제 PostgreSQL의 재고 충돌·롤백·이력 연결과 HTTP·외래키 검증에 사용한다. 프론트 코드는 변경하지 않았다.
+- 모듈 내부 구현 직접 의존은 **80 → 59쌍**이다. Sales–Farm의 Entity 의존 21쌍을 정확히 제거했고, 남은 예외는 Farm–Work Entity 21쌍·HTTP DTO 36쌍·Partner Q 타입 2쌍이다.
+- 일반 판매 상세 조회는 모듈별 일괄 조회로 **4 → 5회**가 된다. 서로 다른 난 묶음 배분 1·10·50개에서 5회로 고정된다. Farm 상태 조회는 500개 ID씩 처리하며, 0·1·500·501개에서 각각 0·1·1·2회다. 모듈 경계를 지키기 위해 증가한 고정 조회 비용으로 기록한다.
+
+보존·검증:
+
+- 일반 판매·경매의 예약 전/출고 전 수량, 같은 난 묶음의 중복 배분 병합과 배분별 이력, 출고 재요청의 중복 차감 방지, 수정·작성중 취소·완료 취소를 검증했다. 현재 위치를 바꾼 뒤 영속성 컨텍스트를 비워도 두 시점의 보존 스냅샷이 유지되는지 확인했다.
+- PostgreSQL에서 routing spy로 두 writer 모드를 선택하고 실제 ACTIVE fence를 적용해 재고·Mutation 연결·대사를 검증했다. 서로 다른 거래처·판매일의 동시 요청이 같은 두 난 묶음을 반대 순서로 지정해도 ID 순서로 잠그며, 과다 예약 시 하나만 성공하는지 확인했다. 전표 번호·거래처 잠금 때문에 경쟁 자체가 직렬화되지 않도록 Farm 잠금 진입 직전에 두 요청을 동기화한다.
+- 예약 변경 뒤 실패와 출하 생성·차감 뒤 실패가 재고·전표·스냅샷·출하·재고 이동을 함께 rollback하는지 확인했다. 전환 전 출고를 Engine으로 복구할 때 과거 Mutation 관계를 만들지 않는지, ID로 바꾼 배분·재고 이동에 실제 PostgreSQL 외래키가 계속 적용되는지 검증했다.
+- 최종 `./gradlew test workE2eTest --offline --no-daemon`: 기본 **405건 중 362건 통과·기존 disabled 43건**, PostgreSQL **64건 전부 통과**, 실패 0건. 초기 검사에서 발견한 domain→application 의존을 제거했고, 새 경계·기존 모듈·writer inventory 검사도 통과했다.
+- `python3 scripts/generate_openapi.py`로 **136 operations·115 paths·228 schemas**를 재생성했고 전체 명세·slice 차이는 없다. 프론트 코드·생성 타입 변경이 없어 프론트 검증과 브라우저 E2E는 실행하지 않았다. DB migration·대용량 응답 시간/메모리 벤치마크는 이번 범위에 없다. 임시 명세 서버 종료와 `git diff --check`를 확인했다.
+
+다음 우선 범위는 B-08~10의 Work handler가 Farm에 전달하는 Work Entity 계약이다. 구조 변경의 Legacy/Engine 변환 중복과 Mutation 내부 책임도 이어서 정리한다. Sales 전체 완료를 뜻하지 않으며, 남은 Partner Q 조회·HTTP DTO 경계와 전표 생성/상태 정책은 전체 계획에서 계속 추적한다. 기존 판매 검색의 무제한 호환 목록은 이번 응답 내부 이식에서 변경하지 않았고, 페이지 계약은 별도 검토 대상이다.
