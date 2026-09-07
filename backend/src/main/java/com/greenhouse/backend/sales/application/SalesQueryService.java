@@ -3,22 +3,20 @@ package com.greenhouse.backend.sales.application;
 import com.greenhouse.backend.auction.application.AuctionDataReader;
 import com.greenhouse.backend.common.api.PageResponse;
 import com.greenhouse.backend.common.exception.NotFoundException;
+import com.greenhouse.backend.sales.domain.SalesSlip;
+import com.greenhouse.backend.sales.domain.SalesSlipItemAllocation;
 import com.greenhouse.backend.sales.dto.AuctionShipmentOptionResponse;
 import com.greenhouse.backend.sales.dto.SalesSlipListItemResponse;
 import com.greenhouse.backend.sales.dto.SalesSlipResponse;
-import com.greenhouse.backend.sales.repository.SalesSlipRepository;
 import com.greenhouse.backend.sales.repository.SalesSlipItemAllocationRepository;
-import com.greenhouse.backend.sales.domain.SalesSlip;
-import com.greenhouse.backend.sales.domain.SalesSlipItemAllocation;
-
-import lombok.RequiredArgsConstructor;
-
+import com.greenhouse.backend.sales.repository.SalesSlipRepository;
 import java.time.LocalDate;
-import java.util.List;
 import java.util.ArrayList;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
+import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
@@ -96,7 +94,7 @@ public class SalesQueryService {
 		}
 		var salesSlipIds = salesSlips.stream().map(SalesSlip::getId).toList();
 		Map<Long, List<SalesSlipItemAllocation>> allocationsByItemId = allocationRepository
-				.findAllWithLocationBySalesSlipIdIn(salesSlipIds)
+				.findAllWithSnapshotsBySalesSlipIdIn(salesSlipIds)
 				.stream()
 				.collect(Collectors.groupingBy(
 						allocation -> allocation.getSalesSlipItem().getId(),

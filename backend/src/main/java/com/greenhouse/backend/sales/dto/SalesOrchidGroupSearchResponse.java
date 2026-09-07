@@ -1,6 +1,6 @@
 package com.greenhouse.backend.sales.dto;
 
-import com.greenhouse.backend.farm.domain.orchid.OrchidGroup;
+import com.greenhouse.backend.farm.application.orchid.OrchidGroupState;
 
 public record SalesOrchidGroupSearchResponse(
 		Long id,
@@ -17,22 +17,20 @@ public record SalesOrchidGroupSearchResponse(
 		Integer physicalBedNumber,
 		String bedZoneName) {
 
-	public static SalesOrchidGroupSearchResponse from(OrchidGroup orchidGroup) {
-		var zone = orchidGroup.getBedZone();
-		var bed = zone.getPhysicalBed();
+	public static SalesOrchidGroupSearchResponse from(OrchidGroupState group) {
 		return new SalesOrchidGroupSearchResponse(
-				orchidGroup.getId(),
-				orchidGroup.getVariety() == null ? null : orchidGroup.getVariety().getId(),
-				orchidGroup.getVarietyName(),
-				orchidGroup.getGenus(),
-				orchidGroup.getStatus(),
-				orchidGroup.getQuantity(),
-				orchidGroup.getReservedQuantity(),
-				orchidGroup.getAvailableQuantity(),
-				orchidGroup.getPotSize(),
-				orchidGroup.getAgeYear(),
-				bed.getHouse().getNumber(),
-				bed.getNumber(),
-				zone.getName());
+				group.id(),
+				group.varietyId(),
+				group.varietyName(),
+				group.genus(),
+				group.status(),
+				group.quantity(),
+				group.reservedQuantity(),
+				group.availableQuantity(),
+				group.potSize(),
+				group.ageYear(),
+				group.houseNumber(),
+				group.physicalBedNumber(),
+				group.bedZoneName());
 	}
 }

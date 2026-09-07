@@ -63,7 +63,7 @@ class OrchidGroupUsageContractTest {
 		var slip = new SalesSlip("USAGE-TEST", LocalDate.of(2026, 9, 5), SalesType.DIRECT, null, partner.getId(),
 				"미입금", SalesSlip.STATUS_DRAFT, null, null);
 		var item = new SalesSlipItem(null, group.getVarietyName(), null, null, 2, 1000, null);
-		item.addAllocation(new SalesSlipItemAllocation(group, 2));
+		item.addAllocation(new SalesSlipItemAllocation(group.getId(), 2));
 		slip.addItem(item);
 		entityManager.persist(slip);
 

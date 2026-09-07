@@ -2,6 +2,7 @@ package com.greenhouse.backend;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import com.greenhouse.backend.auction.repository.AuctionShipmentRepository;
 import com.greenhouse.backend.farm.domain.orchid.OrchidGroup;
 import com.greenhouse.backend.farm.domain.structure.BedZone;
 import com.greenhouse.backend.farm.domain.structure.BedZoneSide;
@@ -14,6 +15,7 @@ import com.greenhouse.backend.farm.repository.variety.VarietyRepository;
 import com.greenhouse.backend.partner.domain.BusinessPartner;
 import com.greenhouse.backend.partner.domain.PartnerType;
 import com.greenhouse.backend.partner.repository.BusinessPartnerRepository;
+import com.greenhouse.backend.sales.application.SalesQueryService;
 import com.greenhouse.backend.sales.application.SalesSlipCreationService;
 import com.greenhouse.backend.sales.application.SalesSlipStatusService;
 import com.greenhouse.backend.sales.domain.SalesOrchidSnapshotSource;
@@ -24,13 +26,12 @@ import com.greenhouse.backend.sales.dto.SalesSlipCreateRequest;
 import com.greenhouse.backend.sales.dto.SalesSlipItemAllocationRequest;
 import com.greenhouse.backend.sales.dto.SalesSlipItemRequest;
 import com.greenhouse.backend.sales.dto.SalesSlipStatusUpdateRequest;
+import jakarta.persistence.EntityManager;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.List;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.EnumSource;
-import com.greenhouse.backend.auction.repository.AuctionShipmentRepository;
-import jakarta.persistence.EntityManager;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.context.ActiveProfiles;
@@ -43,6 +44,7 @@ class SalesOrchidGroupSnapshotIntegrationTest {
 
 	@Autowired SalesSlipCreationService creationService;
 	@Autowired SalesSlipStatusService statusService;
+	@Autowired SalesQueryService queryService;
 	@Autowired HouseRepository houseRepository;
 	@Autowired VarietyRepository varietyRepository;
 	@Autowired OrchidGroupRepository orchidGroupRepository;
@@ -134,6 +136,23 @@ class SalesOrchidGroupSnapshotIntegrationTest {
 		assertThat(snapshots.outboundSnapshot().reservedQuantity()).isEqualTo(2);
 		assertThat(snapshots.outboundSnapshot().status()).isEqualTo("출하 준비");
 		assertThat(orchidGroupRepository.findById(group.getId()).orElseThrow().getQuantity()).isEqualTo(16);
+		entityManager.flush();
+		entityManager.clear();
+		var persistedSnapshots = queryService.getSalesSlip(completed.id()).items().getFirst().allocations().getFirst();
+		House nextHouse = new House(991, "이동한 테스트동");
+		PhysicalBed nextBed = new PhysicalBed(8, 1);
+		BedZone nextZone = new BedZone("이동 구역", BedZoneSide.LEFT, 1);
+		nextBed.addBedZone(nextZone);
+		nextHouse.addPhysicalBed(nextBed);
+		houseRepository.save(nextHouse);
+		orchidGroupRepository.findById(group.getId()).orElseThrow().moveTo(nextZone, 1, BigDecimal.TWO, BigDecimal.TEN);
+		entityManager.flush();
+		entityManager.clear();
+		var reloaded = queryService.getSalesSlip(completed.id()).items().getFirst().allocations().getFirst();
+		assertThat(reloaded.houseNumber()).isEqualTo(991);
+		assertThat(reloaded.bedZoneName()).isEqualTo("이동 구역");
+		assertThat(reloaded.creationSnapshot()).isEqualTo(persistedSnapshots.creationSnapshot());
+		assertThat(reloaded.outboundSnapshot()).isEqualTo(persistedSnapshots.outboundSnapshot());
 		if (salesType == SalesType.AUCTION) {
 			entityManager.flush();
 			entityManager.clear();

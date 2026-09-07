@@ -1,7 +1,6 @@
 package com.greenhouse.backend.sales.domain;
 
 import com.greenhouse.backend.common.domain.BaseEntity;
-import com.greenhouse.backend.farm.domain.orchid.OrchidGroup;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
@@ -10,14 +9,14 @@ import jakarta.persistence.FetchType;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
-import jakarta.persistence.SequenceGenerator;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
+import jakarta.persistence.SequenceGenerator;
 import jakarta.persistence.Table;
+import java.util.UUID;
 import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
-import java.util.UUID;
 
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
@@ -30,9 +29,8 @@ public class SalesInventoryMovement extends BaseEntity {
 	@SequenceGenerator(name = "sales_inventory_movements_id_seq", sequenceName = "sales_inventory_movements_id_seq", allocationSize = 50)
 	private Long id;
 
-	@ManyToOne(fetch = FetchType.LAZY, optional = false)
-	@JoinColumn(name = "orchid_group_id", nullable = false)
-	private OrchidGroup orchidGroup;
+	@Column(name = "orchid_group_id", nullable = false)
+	private Long orchidGroupId;
 
 	@ManyToOne(fetch = FetchType.LAZY, optional = false)
 	@JoinColumn(name = "sales_slip_id", nullable = false)
@@ -59,13 +57,13 @@ public class SalesInventoryMovement extends BaseEntity {
 	private UUID correlationId;
 
 	public SalesInventoryMovement(
-			OrchidGroup orchidGroup,
+			Long orchidGroupId,
 			SalesSlip salesSlip,
 			SalesSlipItem salesSlipItem,
 			SalesInventoryMovementType changeType,
 			Integer quantityDelta,
 			String memo) {
-		this.orchidGroup = orchidGroup;
+		this.orchidGroupId = orchidGroupId;
 		this.salesSlip = salesSlip;
 		this.salesSlipItem = salesSlipItem;
 		this.changeType = changeType;

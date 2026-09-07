@@ -1,10 +1,11 @@
 package com.greenhouse.backend.sales.application;
 
-import com.greenhouse.backend.common.config.TimeConfig;
-import com.greenhouse.backend.auction.application.AuctionShipmentCreator;
 import com.greenhouse.backend.auction.application.AuctionShipmentCreator.LotDraft;
-import com.greenhouse.backend.sales.domain.SalesSlip;
+import com.greenhouse.backend.auction.application.AuctionShipmentCreator;
+import com.greenhouse.backend.common.config.TimeConfig;
+import com.greenhouse.backend.farm.application.orchid.OrchidGroupReader;
 import com.greenhouse.backend.sales.domain.SalesOrchidSnapshotType;
+import com.greenhouse.backend.sales.domain.SalesSlip;
 import com.greenhouse.backend.sales.domain.SalesType;
 import java.time.Clock;
 import lombok.RequiredArgsConstructor;
@@ -16,11 +17,13 @@ public class SalesSlipOutboundService {
 
 	private final SalesSlipInventoryService inventoryService;
 	private final AuctionShipmentCreator shipmentCreator;
+	private final OrchidGroupReader orchidGroupReader;
 	private final Clock clock;
 
 	public void complete(SalesSlip salesSlip) {
-		SalesSlipAllocationBatch allocations = inventoryService.lockForOutbound(salesSlip);
-		allocations.captureSnapshot(SalesOrchidSnapshotType.OUTBOUND, TimeConfig.utcNow(clock));
+		SalesSlipAllocationBatch allocations = SalesSlipAllocationBatch.from(salesSlip);
+		var states = orchidGroupReader.lockStates(allocations.orchidGroupIds());
+		allocations.captureSnapshot(SalesOrchidSnapshotType.OUTBOUND, TimeConfig.utcNow(clock), states);
 		createAuctionShipment(salesSlip);
 		inventoryService.outbound(allocations);
 	}

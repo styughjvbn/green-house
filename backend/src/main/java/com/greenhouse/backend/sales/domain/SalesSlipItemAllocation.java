@@ -1,20 +1,19 @@
 package com.greenhouse.backend.sales.domain;
 
 import com.greenhouse.backend.common.domain.BaseEntity;
-import com.greenhouse.backend.farm.domain.orchid.OrchidGroup;
 import jakarta.persistence.CascadeType;
+import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.FetchType;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
-import jakarta.persistence.SequenceGenerator;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.OneToMany;
 import jakarta.persistence.OrderBy;
+import jakarta.persistence.SequenceGenerator;
 import jakarta.persistence.Table;
-import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 import lombok.AccessLevel;
@@ -36,9 +35,8 @@ public class SalesSlipItemAllocation extends BaseEntity {
 	@JoinColumn(name = "sales_slip_item_id", nullable = false)
 	private SalesSlipItem salesSlipItem;
 
-	@ManyToOne(fetch = FetchType.LAZY, optional = false)
-	@JoinColumn(name = "orchid_group_id", nullable = false)
-	private OrchidGroup orchidGroup;
+	@Column(name = "orchid_group_id", nullable = false)
+	private Long orchidGroupId;
 
 	private Integer allocatedQuantity;
 
@@ -46,8 +44,8 @@ public class SalesSlipItemAllocation extends BaseEntity {
 	@OrderBy("snapshotType ASC")
 	private List<SalesOrchidGroupSnapshot> snapshots = new ArrayList<>();
 
-	public SalesSlipItemAllocation(OrchidGroup orchidGroup, Integer allocatedQuantity) {
-		this.orchidGroup = orchidGroup;
+	public SalesSlipItemAllocation(Long orchidGroupId, Integer allocatedQuantity) {
+		this.orchidGroupId = orchidGroupId;
 		this.allocatedQuantity = allocatedQuantity;
 	}
 
@@ -55,18 +53,12 @@ public class SalesSlipItemAllocation extends BaseEntity {
 		this.salesSlipItem = salesSlipItem;
 	}
 
-	public SalesOrchidGroupSnapshot captureSnapshot(
-			SalesOrchidSnapshotType snapshotType,
-			LocalDateTime capturedAt) {
-		return snapshots.stream()
-				.filter(snapshot -> snapshot.getSnapshotType() == snapshotType)
-				.findFirst()
-				.orElseGet(() -> addSnapshot(new SalesOrchidGroupSnapshot(
-						snapshotType,
-						SalesOrchidSnapshotSource.LIVE,
-						capturedAt,
-						allocatedQuantity,
-						orchidGroup)));
+	public SalesOrchidGroupSnapshot captureSnapshot(SalesOrchidGroupSnapshot snapshot) {
+		if (!orchidGroupId.equals(snapshot.getOrchidGroupId()) || !allocatedQuantity.equals(snapshot.getAllocatedQuantity())) {
+			throw new IllegalArgumentException("배분과 스냅샷의 난 묶음·수량이 일치하지 않습니다.");
+		}
+		var existing = findSnapshot(snapshot.getSnapshotType());
+		return existing == null ? addSnapshot(snapshot) : existing;
 	}
 
 	public SalesOrchidGroupSnapshot findSnapshot(SalesOrchidSnapshotType snapshotType) {
@@ -77,7 +69,7 @@ public class SalesSlipItemAllocation extends BaseEntity {
 	}
 
 	public SalesSlipItemAllocation copy() {
-		SalesSlipItemAllocation copy = new SalesSlipItemAllocation(orchidGroup, allocatedQuantity);
+		SalesSlipItemAllocation copy = new SalesSlipItemAllocation(orchidGroupId, allocatedQuantity);
 		snapshots.stream().map(SalesOrchidGroupSnapshot::copy).forEach(copy::addSnapshot);
 		return copy;
 	}

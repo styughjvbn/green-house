@@ -1,5 +1,6 @@
 package com.greenhouse.backend.sales.dto;
 
+import com.greenhouse.backend.farm.application.orchid.OrchidGroupState;
 import com.greenhouse.backend.sales.domain.SalesOrchidSnapshotType;
 import com.greenhouse.backend.sales.domain.SalesSlipItemAllocation;
 
@@ -15,19 +16,16 @@ public record SalesSlipItemAllocationResponse(
 		SalesOrchidGroupSnapshotResponse creationSnapshot,
 		SalesOrchidGroupSnapshotResponse outboundSnapshot) {
 
-	public static SalesSlipItemAllocationResponse from(SalesSlipItemAllocation allocation) {
-		var group = allocation.getOrchidGroup();
-		var zone = group.getBedZone();
-		var bed = zone.getPhysicalBed();
+	public static SalesSlipItemAllocationResponse from(SalesSlipItemAllocation allocation, OrchidGroupState group) {
 		return new SalesSlipItemAllocationResponse(
 				allocation.getId(),
-				group.getId(),
-				group.getVarietyName(),
+				group.id(),
+				group.varietyName(),
 				allocation.getAllocatedQuantity(),
-				group.getAvailableQuantity(),
-				bed.getHouse().getNumber(),
-				bed.getNumber(),
-				zone.getName(),
+				group.availableQuantity(),
+				group.houseNumber(),
+				group.physicalBedNumber(),
+				group.bedZoneName(),
 				SalesOrchidGroupSnapshotResponse.from(allocation.findSnapshot(SalesOrchidSnapshotType.CREATION)),
 				SalesOrchidGroupSnapshotResponse.from(allocation.findSnapshot(SalesOrchidSnapshotType.OUTBOUND)));
 	}

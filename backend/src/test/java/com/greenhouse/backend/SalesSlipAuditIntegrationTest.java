@@ -18,11 +18,11 @@ import com.greenhouse.backend.farm.domain.variety.Variety;
 import com.greenhouse.backend.partner.domain.BusinessPartner;
 import com.greenhouse.backend.partner.domain.PartnerType;
 import com.greenhouse.backend.partner.repository.BusinessPartnerRepository;
+import com.greenhouse.backend.sales.domain.SalesInventoryMovementType;
 import com.greenhouse.backend.sales.domain.SalesSlip;
 import com.greenhouse.backend.sales.domain.SalesSlipItem;
 import com.greenhouse.backend.sales.domain.SalesSlipItemAllocation;
 import com.greenhouse.backend.sales.domain.SalesType;
-import com.greenhouse.backend.sales.domain.SalesInventoryMovementType;
 import com.greenhouse.backend.sales.repository.SalesInventoryMovementRepository;
 import com.greenhouse.backend.sales.repository.SalesSlipRepository;
 import com.greenhouse.backend.settlement.repository.PartnerBalanceSummaryRepository;
@@ -62,7 +62,7 @@ class SalesSlipAuditIntegrationTest extends AbstractBackendIntegrationTest {
 		SalesSlip slip = new SalesSlip("AUDIT-" + System.nanoTime(), LocalDate.of(2026, 8, 1),
 				SalesType.DIRECT, null, partner.getId(), "미입금", "작성중", "현금", "최초");
 		SalesSlipItem item = new SalesSlipItem(null, variety.getName(), variety.getGenus(), "4인치", 2, 1000, "품목");
-		item.addAllocation(new SalesSlipItemAllocation(group, 2));
+		item.addAllocation(new SalesSlipItemAllocation(group.getId(), 2));
 		slip.addItem(item);
 		salesSlipRepository.saveAndFlush(slip);
 

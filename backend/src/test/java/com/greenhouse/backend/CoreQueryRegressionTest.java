@@ -11,6 +11,7 @@ import com.greenhouse.backend.auction.domain.AuctionShipment;
 import com.greenhouse.backend.auction.domain.AuctionShipmentLot;
 import com.greenhouse.backend.auction.repository.AuctionShipmentRepository;
 import com.greenhouse.backend.farm.application.status.FarmStatusService;
+import com.greenhouse.backend.farm.application.orchid.OrchidGroupReader;
 import com.greenhouse.backend.farm.domain.orchid.OrchidGroup;
 import com.greenhouse.backend.farm.domain.structure.BedZone;
 import com.greenhouse.backend.farm.domain.structure.BedZoneSide;
@@ -31,11 +32,13 @@ import jakarta.persistence.EntityManager;
 import jakarta.persistence.EntityManagerFactory;
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.util.ArrayList;
 import org.hibernate.SessionFactory;
 import org.hibernate.stat.Statistics;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
+import org.junit.jupiter.params.provider.CsvSource;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.context.ActiveProfiles;
@@ -49,6 +52,7 @@ import org.springframework.transaction.annotation.Transactional;
 class CoreQueryRegressionTest {
 
 	@Autowired FarmStatusService farmStatusService;
+	@Autowired OrchidGroupReader orchidGroupReader;
 	@Autowired AuctionTrackingService auctionTrackingService;
 	@Autowired SalesQueryService salesQueryService;
 	@Autowired HouseRepository houseRepository;
@@ -66,6 +70,29 @@ class CoreQueryRegressionTest {
 		long queryCount = measure(() -> farmStatusService.getOrchidManagementViewport(null, 2));
 
 		assertThat(queryCount).isLessThanOrEqualTo(3L);
+	}
+
+	@ParameterizedTest
+	@CsvSource({ "0,0", "1,1", "500,1", "501,2" })
+	void farmStateValuesAreLoadedInBoundedBatchesWithoutLazyQueries(int count, long expectedQueries) {
+		var ids = new ArrayList<Long>();
+		for (int index = 0; index < count; index++) {
+			ids.add(createOrchidGroup(10_000 + index, "상태 계약 " + index, 20).getId());
+		}
+		if (!ids.isEmpty()) ids.add(ids.getFirst());
+		long queryCount = measure(() -> {
+			var states = orchidGroupReader.getStates(ids.reversed());
+			entityManager.clear();
+			assertThat(states).hasSize(count);
+			for (int index = 0; index < count; index++) {
+				var state = states.get(ids.get(index));
+				assertThat(state.varietyId()).isNull();
+				assertThat(state.varietyName()).isEqualTo("상태 계약 " + index);
+				assertThat(state.houseNumber()).isEqualTo(10_000 + index);
+				assertThat(state.availableQuantity()).isEqualTo(20);
+			}
+		});
+		assertThat(queryCount).isEqualTo(expectedQueries);
 	}
 
 	@Test
@@ -93,9 +120,9 @@ class CoreQueryRegressionTest {
 		assertThat(queryCount).isLessThanOrEqualTo(5L);
 	}
 
-	@Test
-	void salesSlipDetailLoadsAllocationsAndActionsWithFixedQueryCount() {
-		OrchidGroup orchidGroup = createOrchidGroup(902, "판매 회귀 품종", 20);
+	@ParameterizedTest
+	@ValueSource(ints = { 1, 10, 50 })
+	void salesSlipDetailLoadsAllocationsAndActionsWithFixedQueryCount(int count) {
 		BusinessPartner partner = partnerRepository.save(
 				new BusinessPartner("회귀 거래처", PartnerType.WHOLESALE, null, null, null, null));
 		SalesSlip slip = new SalesSlip(
@@ -108,15 +135,18 @@ class CoreQueryRegressionTest {
 				SalesSlip.STATUS_DRAFT,
 				null,
 				null);
-		SalesSlipItem item = new SalesSlipItem(null, orchidGroup.getVarietyName(), null, null, 2, 1_000, null);
-		item.addAllocation(new SalesSlipItemAllocation(orchidGroup, 2));
-		slip.addItem(item);
+		for (int index = 0; index < count; index++) {
+			var group = createOrchidGroup(902 + index, "판매 회귀 품종 " + index, 20);
+			var item = new SalesSlipItem(null, group.getVarietyName(), null, null, 2, 1_000, null);
+			item.addAllocation(new SalesSlipItemAllocation(group.getId(), 2));
+			slip.addItem(item);
+		}
 		salesSlipRepository.save(slip);
 
 		long queryCount = measure(() -> salesQueryService.getSalesSlip(slip.getId()));
 
-		// The partner is loaded through its application contract.
-		assertThat(queryCount).isLessThanOrEqualTo(4L);
+		// Root/items, allocations/snapshots, Farm states and partner values are loaded in bulk.
+		assertThat(queryCount).isEqualTo(5L);
 	}
 
 	@ParameterizedTest

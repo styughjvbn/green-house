@@ -1,10 +1,12 @@
 package com.greenhouse.backend.sales.application;
 
+import com.greenhouse.backend.audit.domain.AuditAction;
 import com.greenhouse.backend.common.exception.NotFoundException;
 import com.greenhouse.backend.partner.application.BusinessPartnerReader;
 import com.greenhouse.backend.partner.domain.PartnerType;
 import com.greenhouse.backend.sales.domain.SalesSlip;
 import com.greenhouse.backend.sales.domain.SalesSlipItem;
+import com.greenhouse.backend.sales.domain.SalesSlipItemAllocation;
 import com.greenhouse.backend.sales.domain.SalesType;
 import com.greenhouse.backend.sales.dto.SalesSlipCreateRequest;
 import com.greenhouse.backend.sales.dto.SalesSlipResponse;
@@ -13,7 +15,6 @@ import com.greenhouse.backend.settlement.application.ExpectedPaymentDateCalculat
 import com.greenhouse.backend.settlement.application.PartnerBalanceService;
 import java.util.List;
 import java.util.Map;
-import com.greenhouse.backend.audit.domain.AuditAction;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -77,7 +78,7 @@ public class SalesSlipUpdateService {
 					nextItem.getUnitPrice(),
 					nextItem.getMemo());
 			currentItem.replaceAllocations(nextItem.getAllocations().stream()
-					.map(salesSlipAllocationFactory::copyAllocation)
+					.map(SalesSlipItemAllocation::copy)
 					.toList());
 		}
 		salesSlip.refreshAmounts();

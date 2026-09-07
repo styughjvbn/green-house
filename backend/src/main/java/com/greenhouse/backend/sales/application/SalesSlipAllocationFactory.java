@@ -1,9 +1,8 @@
 package com.greenhouse.backend.sales.application;
 
 import com.greenhouse.backend.common.config.TimeConfig;
-import com.greenhouse.backend.common.exception.NotFoundException;
 import com.greenhouse.backend.farm.application.orchid.OrchidGroupReader;
-import com.greenhouse.backend.farm.domain.orchid.OrchidGroup;
+import com.greenhouse.backend.farm.application.orchid.OrchidGroupState;
 import com.greenhouse.backend.sales.domain.SalesOrchidSnapshotType;
 import com.greenhouse.backend.sales.domain.SalesSlipItem;
 import com.greenhouse.backend.sales.domain.SalesSlipItemAllocation;
@@ -11,11 +10,9 @@ import com.greenhouse.backend.sales.dto.SalesSlipItemAllocationRequest;
 import com.greenhouse.backend.sales.dto.SalesSlipItemRequest;
 import java.time.Clock;
 import java.time.LocalDateTime;
-import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.function.Function;
-import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 
@@ -34,30 +31,15 @@ public class SalesSlipAllocationFactory {
 				.distinct()
 				.sorted()
 				.toList();
-		Map<Long, OrchidGroup> orchidGroups = orchidGroupReader.findAllDetailsForUpdateByIds(orchidGroupIds).stream()
-					.collect(Collectors.toMap(OrchidGroup::getId, Function.identity()));
-		if (orchidGroups.size() != orchidGroupIds.size()) {
-			throw new NotFoundException("난 묶음을 찾을 수 없습니다.");
-		}
+		var orchidGroups = orchidGroupReader.lockStates(orchidGroupIds);
 
-		Map<Long, Integer> requestedByOrchidGroupId = requests.stream()
-				.flatMap(request -> mergeAllocations(request.allocations()).stream())
-				.collect(Collectors.toMap(
-						SalesSlipItemAllocationRequest::orchidGroupId,
-						SalesSlipItemAllocationRequest::quantity,
-						Integer::sum));
-		requestedByOrchidGroupId.forEach((orchidGroupId, quantity) -> {
-			if (orchidGroups.get(orchidGroupId).getAvailableQuantity() < quantity) {
-				throw new IllegalArgumentException("난 묶음 가용 수량이 부족합니다.");
-			}
-		});
 		LocalDateTime capturedAt = TimeConfig.utcNow(clock);
 		return requests.stream().map(request -> createItem(request, orchidGroups, capturedAt)).toList();
 	}
 
 	private SalesSlipItem createItem(
 			SalesSlipItemRequest request,
-			Map<Long, OrchidGroup> orchidGroups,
+			Map<Long, OrchidGroupState> orchidGroups,
 			LocalDateTime capturedAt) {
 		var item = new SalesSlipItem(
 				null,
@@ -68,46 +50,27 @@ public class SalesSlipAllocationFactory {
 				request.unitPrice(),
 				SalesTextNormalizer.normalize(request.memo()));
 		for (SalesSlipItemAllocationRequest allocationRequest : mergeAllocations(request.allocations())) {
-			OrchidGroup orchidGroup = orchidGroups.get(allocationRequest.orchidGroupId());
+			OrchidGroupState orchidGroup = orchidGroups.get(allocationRequest.orchidGroupId());
 			validateItemVariety(request, orchidGroup);
 			item.addAllocation(createAllocation(orchidGroup, allocationRequest.quantity(), capturedAt));
 		}
 		return item;
 	}
 
-	public SalesSlipItemAllocation copyAllocation(SalesSlipItemAllocation allocation) {
-		return allocation.copy();
-	}
-
 	private SalesSlipItemAllocation createAllocation(
-			OrchidGroup orchidGroup,
+			OrchidGroupState orchidGroup,
 			Integer allocatedQuantity,
 			LocalDateTime capturedAt) {
-		SalesSlipItemAllocation allocation = new SalesSlipItemAllocation(orchidGroup, allocatedQuantity);
-		allocation.captureSnapshot(SalesOrchidSnapshotType.CREATION, capturedAt);
+		SalesSlipItemAllocation allocation = new SalesSlipItemAllocation(orchidGroup.id(), allocatedQuantity);
+		SalesSlipAllocationBatch.captureSnapshot(allocation, SalesOrchidSnapshotType.CREATION, capturedAt, orchidGroup);
 		return allocation;
 	}
 
 	private List<SalesSlipItemAllocationRequest> mergeAllocations(List<SalesSlipItemAllocationRequest> allocations) {
-		List<SalesSlipItemAllocationRequest> merged = new ArrayList<>();
-		for (SalesSlipItemAllocationRequest allocation : allocations) {
-			int existingIndex = -1;
-			for (int index = 0; index < merged.size(); index++) {
-				if (merged.get(index).orchidGroupId().equals(allocation.orchidGroupId())) {
-					existingIndex = index;
-					break;
-				}
-			}
-			if (existingIndex >= 0) {
-				var existing = merged.get(existingIndex);
-				merged.set(existingIndex, new SalesSlipItemAllocationRequest(
-						existing.orchidGroupId(),
-						existing.quantity() + allocation.quantity()));
-			} else {
-				merged.add(allocation);
-			}
-		}
-		return merged;
+		Map<Long, Integer> quantities = new LinkedHashMap<>();
+		allocations.forEach(allocation -> quantities.merge(allocation.orchidGroupId(), allocation.quantity(), Integer::sum));
+		return quantities.entrySet().stream()
+				.map(entry -> new SalesSlipItemAllocationRequest(entry.getKey(), entry.getValue())).toList();
 	}
 
 	private void validateAllocationSum(SalesSlipItemRequest request) {
@@ -120,9 +83,9 @@ public class SalesSlipAllocationFactory {
 		}
 	}
 
-	private void validateItemVariety(SalesSlipItemRequest request, OrchidGroup orchidGroup) {
+	private void validateItemVariety(SalesSlipItemRequest request, OrchidGroupState orchidGroup) {
 		String itemName = SalesTextNormalizer.required(request.itemName());
-		if (!itemName.equals(orchidGroup.getVarietyName())) {
+		if (!itemName.equals(orchidGroup.varietyName())) {
 			throw new IllegalArgumentException("난 묶음 품종과 판매 품목명이 일치하지 않습니다.");
 		}
 	}

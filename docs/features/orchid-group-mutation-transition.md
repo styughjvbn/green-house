@@ -64,7 +64,7 @@ Inventory: docs/features/orchid-group-mutation-transition.md
 | `BatchStructureTransformationExecutor`, `CorrectionWorkHandler`, `MergeWorkHandler` | 직접 구조 변경·보정 분기 |
 | `MultiCreateWorkHandler`, `MultiCreateWorkOperationService` | 직접 다중 생성·생성 취소 분기 |
 | `VarietyService` | 품종 변경을 난 묶음에 직접 전파하는 분기 |
-| `SalesSlipInventoryService` | 예약·해제·출고·복구를 난 묶음에 직접 적용하는 분기 |
+| `OrchidGroupReservationService` | Sales에서 이관한 예약·해제·출고·복구의 Legacy 직접 변경 분기 |
 
 혼합 writer의 클래스 Javadoc에는 `ORCHID-CUTOVER: LEGACY_RETIRE` 표식을 두고,
 정확한 호출자 집합은 `OrchidGroupWriterArchitectureTest`가 고정한다. 신규 writer를

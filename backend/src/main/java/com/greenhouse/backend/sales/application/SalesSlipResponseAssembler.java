@@ -1,16 +1,19 @@
 package com.greenhouse.backend.sales.application;
 
-import com.greenhouse.backend.sales.domain.SalesSlip;
 import com.greenhouse.backend.auction.application.AuctionDataReader;
+import com.greenhouse.backend.farm.application.orchid.OrchidGroupReader;
 import com.greenhouse.backend.partner.application.BusinessPartnerReader;
-import com.greenhouse.backend.sales.dto.SalesSlipListItemResponse;
-import org.springframework.data.domain.Page;
+import com.greenhouse.backend.sales.domain.SalesSlip;
+import com.greenhouse.backend.sales.domain.SalesSlipItem;
 import com.greenhouse.backend.sales.domain.SalesSlipItemAllocation;
 import com.greenhouse.backend.sales.dto.SalesSlipAction;
+import com.greenhouse.backend.sales.dto.SalesSlipListItemResponse;
 import com.greenhouse.backend.sales.dto.SalesSlipResponse;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
 import org.springframework.stereotype.Component;
 
 @Component
@@ -20,6 +23,7 @@ public class SalesSlipResponseAssembler {
 	private final BusinessPartnerReader partnerReader;
 	private final AuctionDataReader auctionReader;
 	private final SalesSlipActionResolver actionResolver;
+	private final OrchidGroupReader orchidGroupReader;
 
 	public Page<SalesSlipListItemResponse> assemblePage(Page<SalesSlip> page) {
 		var partners = partnerReader.getAllInfo(page.map(SalesSlip::getPartnerId).getContent());
@@ -34,12 +38,16 @@ public class SalesSlipResponseAssembler {
 	}
 
 	public SalesSlipResponse assemble(SalesSlip salesSlip) {
-		return assemble(List.of(salesSlip), null).getFirst();
+		var allocations = salesSlip.getItems().stream()
+				.collect(Collectors.toMap(SalesSlipItem::getId, SalesSlipItem::getAllocations));
+		return assemble(List.of(salesSlip), allocations).getFirst();
 	}
 
 	public List<SalesSlipResponse> assemble(
 			List<SalesSlip> salesSlips,
 			Map<Long, List<SalesSlipItemAllocation>> allocationsByItemId) {
+		var states = orchidGroupReader.getStates(allocationsByItemId.values().stream()
+				.flatMap(List::stream).map(SalesSlipItemAllocation::getOrchidGroupId).toList());
 		var partners = partnerReader.getAllInfo(salesSlips.stream().map(SalesSlip::getPartnerId).toList());
 		var marketNames = marketNames(salesSlips);
 		Map<Long, List<SalesSlipAction>> actionsBySalesSlipId =
@@ -48,7 +56,7 @@ public class SalesSlipResponseAssembler {
 				.map(salesSlip -> SalesSlipResponse.from(
 						salesSlip, partners.get(salesSlip.getPartnerId()),
 						salesSlip.getAuctionShipmentId() == null ? null : marketNames.get(salesSlip.getAuctionShipmentId()),
-						allocationsByItemId,
+						allocationsByItemId, states,
 						actionsBySalesSlipId.getOrDefault(salesSlip.getId(), List.of())))
 				.toList();
 	}

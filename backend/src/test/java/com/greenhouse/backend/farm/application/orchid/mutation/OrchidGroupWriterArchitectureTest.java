@@ -30,7 +30,7 @@ class OrchidGroupWriterArchitectureTest {
 			"com.greenhouse.backend.farm.application.transformation.MultiCreateWorkHandler",
 			"com.greenhouse.backend.farm.application.transformation.MultiCreateWorkOperationService",
 			"com.greenhouse.backend.farm.application.variety.VarietyService",
-			"com.greenhouse.backend.sales.application.SalesSlipInventoryService");
+			"com.greenhouse.backend.farm.application.orchid.mutation.OrchidGroupReservationService");
 
 	private static final Set<String> ORCHID_GROUP_STATE_METHODS = Set.of(
 			"updateDetails",
@@ -66,7 +66,7 @@ class OrchidGroupWriterArchitectureTest {
 			"com.greenhouse.backend.farm.application.transformation.MergeWorkHandler",
 			"com.greenhouse.backend.farm.application.transformation.MultiCreateWorkOperationService",
 			"com.greenhouse.backend.farm.application.variety.VarietyService",
-			"com.greenhouse.backend.sales.application.SalesSlipInventoryService");
+			"com.greenhouse.backend.farm.application.orchid.mutation.OrchidGroupReservationService");
 
 	private static final Set<String> TARGET_CONSTRUCTOR_WRITER_INVENTORY = Set.of(
 			"com.greenhouse.backend.farm.application.orchid.mutation.OrchidGroupMutationEngine");

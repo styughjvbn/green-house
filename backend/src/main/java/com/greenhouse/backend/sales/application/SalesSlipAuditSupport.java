@@ -41,9 +41,9 @@ public class SalesSlipAuditSupport {
 					value.put("amount", item.getAmount());
 					value.put("memo", item.getMemo());
 					value.put("allocations", item.getAllocations().stream()
-							.sorted(Comparator.comparing(allocation -> allocation.getOrchidGroup().getId()))
+							.sorted(Comparator.comparing(allocation -> allocation.getOrchidGroupId()))
 							.map(allocation -> Map.of(
-									"orchidGroupId", allocation.getOrchidGroup().getId(),
+									"orchidGroupId", allocation.getOrchidGroupId(),
 									"quantity", allocation.getAllocatedQuantity()))
 							.toList());
 					return value;

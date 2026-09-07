@@ -93,6 +93,8 @@ ACTIVE에서 결과 2개 이상을 같은 구역/서로 다른 구역에 만드�
 개선: 공통 업무 입력·결과 모델을 먼저 만들고 writer 선택을 한 번의 명시적 분기로 모은다.
 Legacy 실행기는 전환 수명 표식을 유지한다. 12개 서비스 각각에 interface와 구현체 두 개를 기계적으로 만들지는 않는다.
 
+2026-09-07, 백엔드 14차에서 Sales 부분을 이식했다. Farm 예약 API가 기존 typed command로 Engine/Legacy를 선택하고 수량을 변경하며, Sales의 반복 모드 검사·직접 Entity 변경을 제거했다. 배분별 movement 생성과 Mutation 연결은 하나의 경로로 합쳤다. 구조 변경 결과의 양쪽 변환 중복은 후속 범위로 남는다.
+
 ### F4. application Reader를 거쳐도 타 모듈 Entity가 노출됨 — P1
 
 근거: [OrchidGroupReader](../../backend/src/main/java/com/greenhouse/backend/farm/application/orchid/OrchidGroupReader.java), [SalesSlipAllocationBatch](../../backend/src/main/java/com/greenhouse/backend/sales/application/SalesSlipAllocationBatch.java), [SalesSlipItemAllocation](../../backend/src/main/java/com/greenhouse/backend/sales/domain/SalesSlipItemAllocation.java), [SalesInventoryMovement](../../backend/src/main/java/com/greenhouse/backend/sales/domain/SalesInventoryMovement.java).
@@ -105,6 +107,8 @@ Legacy 실행기는 전환 수명 표식을 유지한다. 12개 서비스 각각
 개선: 변경 우선순위가 높은 Sales–Farm 계약부터 식별자와 immutable application 값으로 바꾼다.
 단순히 클래스 이름을 Reader에서 Gateway로 바꾸는 것으로 완료 처리하지 않는다.
 기존 Legacy 직접 writer와 JPA 연관 제거는 단계가 다르므로 아래 PR-09에서 나눠 진행한다.
+
+2026-09-07, 백엔드 14차에서 Sales–Farm의 Entity 노출과 JPA 연관을 제거했다. 기존 DB 외래키를 유지하는 ID와 Farm application 상태 값을 사용하고, 이전 Entity 잠금 반환 API는 삭제했다. Legacy 쓰기는 Farm 내부 예약 API로 이관했으며 제거 gate는 유지한다. `ModuleBoundaryInventoryTest`의 정확한 예외 목록에서 해당 의존 21쌍을 삭제했다. Work handler의 Entity 전달은 다음 경계 작업으로 남는다.
 
 ### F5. typed command 내부에 다시 비정형 타입과 긴 인자 조합이 있음 — P1
 

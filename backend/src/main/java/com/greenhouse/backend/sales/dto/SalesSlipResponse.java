@@ -1,12 +1,13 @@
 package com.greenhouse.backend.sales.dto;
 
+import com.greenhouse.backend.farm.application.orchid.OrchidGroupState;
+import com.greenhouse.backend.partner.application.BusinessPartnerInfo;
+import com.greenhouse.backend.partner.dto.BusinessPartnerResponse;
 import com.greenhouse.backend.sales.domain.SalesSlip;
+import com.greenhouse.backend.sales.domain.SalesSlipItemAllocation;
+import com.greenhouse.backend.sales.domain.SalesType;
 import java.time.LocalDate;
 import java.util.List;
-import com.greenhouse.backend.sales.domain.SalesType;
-import com.greenhouse.backend.sales.domain.SalesSlipItemAllocation;
-import com.greenhouse.backend.partner.dto.BusinessPartnerResponse;
-import com.greenhouse.backend.partner.application.BusinessPartnerInfo;
 import java.util.Map;
 
 public record SalesSlipResponse(
@@ -31,7 +32,7 @@ public record SalesSlipResponse(
 	public static SalesSlipResponse from(
 			SalesSlip salesSlip, BusinessPartnerInfo partner, String auctionMarket,
 			Map<Long, List<SalesSlipItemAllocation>> allocationsByItemId,
-			List<SalesSlipAction> availableActions) {
+			Map<Long, OrchidGroupState> states, List<SalesSlipAction> availableActions) {
 		return new SalesSlipResponse(
 				salesSlip.getId(),
 				salesSlip.getSlipNumber(),
@@ -49,11 +50,8 @@ public record SalesSlipResponse(
 				salesSlip.getPaymentMethod(),
 				salesSlip.getMemo(),
 				salesSlip.getItems().stream()
-						.map(item -> allocationsByItemId == null
-								? SalesSlipItemResponse.from(item)
-								: SalesSlipItemResponse.from(
-										item,
-										allocationsByItemId.getOrDefault(item.getId(), List.of())))
+						.map(item -> SalesSlipItemResponse.from(item,
+								allocationsByItemId.getOrDefault(item.getId(), List.of()), states))
 						.toList(),
 				availableActions);
 	}

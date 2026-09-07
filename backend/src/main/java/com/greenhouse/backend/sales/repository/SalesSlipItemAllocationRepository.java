@@ -13,14 +13,14 @@ public interface SalesSlipItemAllocationRepository extends JpaRepository<SalesSl
 
 	@Query("""
 			select new com.greenhouse.backend.sales.repository.SalesReservationReconciliationRow(
-				allocation.orchidGroup.id, sum(allocation.allocatedQuantity))
+				allocation.orchidGroupId, sum(allocation.allocatedQuantity))
 			from SalesSlipItemAllocation allocation
 			join allocation.salesSlipItem item
 			join item.salesSlip slip
-			where allocation.orchidGroup.id in :orchidGroupIds
+			where allocation.orchidGroupId in :orchidGroupIds
 			  and slip.salesStatus = :draftStatus
-			group by allocation.orchidGroup.id
-			order by allocation.orchidGroup.id
+			group by allocation.orchidGroupId
+			order by allocation.orchidGroupId
 			""")
 	List<SalesReservationReconciliationRow> sumDraftReservationsByOrchidGroupIdIn(
 			@Param("orchidGroupIds") Collection<Long> orchidGroupIds,
@@ -30,14 +30,10 @@ public interface SalesSlipItemAllocationRepository extends JpaRepository<SalesSl
 			select allocation from SalesSlipItemAllocation allocation
 			join fetch allocation.salesSlipItem item
 			join fetch item.salesSlip slip
-			join fetch allocation.orchidGroup orchidGroup
-			join fetch orchidGroup.bedZone zone
-			join fetch zone.physicalBed bed
-			join fetch bed.house
 			left join fetch allocation.snapshots
 			where slip.id in :salesSlipIds
 			order by item.id asc, allocation.id asc
 			""")
-	List<SalesSlipItemAllocation> findAllWithLocationBySalesSlipIdIn(
+	List<SalesSlipItemAllocation> findAllWithSnapshotsBySalesSlipIdIn(
 			@Param("salesSlipIds") Collection<Long> salesSlipIds);
 }

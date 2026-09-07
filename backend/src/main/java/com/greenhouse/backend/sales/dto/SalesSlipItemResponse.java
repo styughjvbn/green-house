@@ -1,8 +1,10 @@
 package com.greenhouse.backend.sales.dto;
 
+import com.greenhouse.backend.farm.application.orchid.OrchidGroupState;
 import com.greenhouse.backend.sales.domain.SalesSlipItem;
 import com.greenhouse.backend.sales.domain.SalesSlipItemAllocation;
 import java.util.List;
+import java.util.Map;
 
 public record SalesSlipItemResponse(
 		Long id,
@@ -16,11 +18,8 @@ public record SalesSlipItemResponse(
 		String memo,
 		List<SalesSlipItemAllocationResponse> allocations) {
 
-	public static SalesSlipItemResponse from(SalesSlipItem item) {
-		return from(item, item.getAllocations());
-	}
-
-	public static SalesSlipItemResponse from(SalesSlipItem item, List<SalesSlipItemAllocation> allocations) {
+	public static SalesSlipItemResponse from(SalesSlipItem item, List<SalesSlipItemAllocation> allocations,
+			Map<Long, OrchidGroupState> states) {
 		return new SalesSlipItemResponse(
 				item.getId(),
 				item.getAuctionShipmentLotId(),
@@ -31,6 +30,7 @@ public record SalesSlipItemResponse(
 				item.getUnitPrice(),
 				item.getAmount(),
 				item.getMemo(),
-				allocations.stream().map(SalesSlipItemAllocationResponse::from).toList());
+				allocations.stream().map(allocation -> SalesSlipItemAllocationResponse.from(
+						allocation, states.get(allocation.getOrchidGroupId()))).toList());
 	}
 }
