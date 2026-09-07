@@ -1,16 +1,16 @@
 package com.greenhouse.backend.work.application.operation;
 
-import com.greenhouse.backend.work.application.target.ResolvedWorkTarget;
-import com.greenhouse.backend.work.application.target.WorkTargetResolver;
-import com.greenhouse.backend.work.application.target.WorkTargetSelection;
 import com.greenhouse.backend.common.exception.NotFoundException;
 import com.greenhouse.backend.work.application.effect.WorkEffectCommand;
 import com.greenhouse.backend.work.application.effect.WorkEffectProcessor;
+import com.greenhouse.backend.work.application.target.ResolvedWorkTarget;
+import com.greenhouse.backend.work.application.target.WorkTargetResolver;
+import com.greenhouse.backend.work.application.target.WorkTargetSelection;
 import com.greenhouse.backend.work.domain.effect.WorkEffectOrchidGroupRelationType;
 import com.greenhouse.backend.work.domain.operation.WorkOperation;
 import com.greenhouse.backend.work.domain.operation.WorkOperationStatus;
 import com.greenhouse.backend.work.domain.operation.WorkSourceScopeType;
-import com.greenhouse.backend.work.domain.operation.WorkType;
+import com.greenhouse.backend.work.domain.operation.WorkTypeDefinition;
 import com.greenhouse.backend.work.dto.operation.WorkOperationResponse;
 import com.greenhouse.backend.work.repository.WorkAppliedEffectRepository;
 import com.greenhouse.backend.work.repository.WorkEffectOrchidGroupRepository;
@@ -111,7 +111,7 @@ public class ImmediateWorkExecutionService {
 
 	@Transactional(readOnly = true)
 	public List<Long> getResultOrchidGroupIds(Long operationId) {
-		validateWorkType(operationId, WorkType.MULTI_CREATE_CODE, "다중 생성 작업만 생성 결과를 조회할 수 있습니다.");
+		validateWorkType(operationId, WorkTypeDefinition.MULTI_CREATE.name(), "다중 생성 작업만 생성 결과를 조회할 수 있습니다.");
 		return effectOrchidGroupRepository.findByWorkAppliedEffectWorkOperationIdOrderByIdAsc(operationId)
 				.stream().map(link -> link.getOrchidGroupId()).toList();
 	}
@@ -128,7 +128,7 @@ public class ImmediateWorkExecutionService {
 	public WorkOperationResponse cancelMultiCreate(Long operationId) {
 		WorkOperation operation = operationRepository.findWithWorkTypeById(operationId)
 				.orElseThrow(() -> new NotFoundException("작업을 찾을 수 없습니다."));
-		if (!WorkType.MULTI_CREATE_CODE.equals(operation.getWorkType().getCode())) {
+		if (!WorkTypeDefinition.MULTI_CREATE.name().equals(operation.getWorkType().getCode())) {
 			throw new IllegalArgumentException("다중 생성 작업만 결과 취소할 수 있습니다.");
 		}
 		if (operation.getStatus() == WorkOperationStatus.CANCELED) {

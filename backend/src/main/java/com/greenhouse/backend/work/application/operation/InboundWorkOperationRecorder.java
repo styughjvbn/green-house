@@ -6,10 +6,11 @@ import com.greenhouse.backend.work.application.effect.WorkExecutionResult;
 import com.greenhouse.backend.work.application.effect.WorkMutationLink;
 import com.greenhouse.backend.work.domain.effect.WorkEffectKind;
 import com.greenhouse.backend.work.domain.operation.WorkOperation;
-import com.greenhouse.backend.work.domain.target.WorkOperationTarget;
 import com.greenhouse.backend.work.domain.operation.WorkSourceScopeType;
-import com.greenhouse.backend.work.domain.target.WorkTargetExecution;
 import com.greenhouse.backend.work.domain.operation.WorkType;
+import com.greenhouse.backend.work.domain.operation.WorkTypeDefinition;
+import com.greenhouse.backend.work.domain.target.WorkOperationTarget;
+import com.greenhouse.backend.work.domain.target.WorkTargetExecution;
 import com.greenhouse.backend.work.dto.operation.InboundWorkOperationCreateRequest;
 import com.greenhouse.backend.work.repository.WorkOperationRepository;
 import com.greenhouse.backend.work.repository.WorkOperationTargetRepository;
@@ -41,7 +42,7 @@ public class InboundWorkOperationRecorder {
 	public void record(
 			InboundWorkOperationCreateRequest request,
 			WorkMutationLink mutationLink) {
-		WorkType workType = workTypeService.getByCode(WorkType.INBOUND_CODE);
+		WorkType workType = workTypeService.getByCode(WorkTypeDefinition.INBOUND.name());
 		if (!workType.isActive()) {
 			throw new IllegalArgumentException("입고 작업 유형이 비활성화되어 있습니다.");
 		}

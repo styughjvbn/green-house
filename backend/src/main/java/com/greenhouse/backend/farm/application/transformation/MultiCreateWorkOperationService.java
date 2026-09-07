@@ -15,7 +15,7 @@ import com.greenhouse.backend.farm.repository.orchid.OrchidGroupRepository;
 import com.greenhouse.backend.work.application.operation.ImmediateWorkExecutionService;
 import com.greenhouse.backend.work.application.operation.WorkOperationQueryService;
 import com.greenhouse.backend.work.domain.operation.WorkOperationStatus;
-import com.greenhouse.backend.work.domain.operation.WorkType;
+import com.greenhouse.backend.work.domain.operation.WorkTypeDefinition;
 import java.time.Clock;
 import java.util.LinkedHashSet;
 import java.util.List;
@@ -61,7 +61,7 @@ public class MultiCreateWorkOperationService {
 
 	public MultiCreateWorkOperationResponse create(MultiCreateWorkOperationRequest request) {
 		var operation = immediateWorkExecutionService.execute(
-				normalizeRequired(request.idempotencyKey()), WorkType.MULTI_CREATE_CODE,
+				normalizeRequired(request.idempotencyKey()), WorkTypeDefinition.MULTI_CREATE.name(),
 				normalizeRequired(request.title()), request.workDate(), normalize(request.worker()),
 				normalize(request.memo()), Map.of("rowCount", request.rows().size()), request);
 		return response(operation.id());

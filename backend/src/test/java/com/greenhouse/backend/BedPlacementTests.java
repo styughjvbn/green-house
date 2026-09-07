@@ -11,6 +11,7 @@ import com.greenhouse.backend.farm.repository.orchid.OrchidGroupRepository;
 import com.greenhouse.backend.farm.repository.structure.BedZoneRepository;
 import com.greenhouse.backend.farm.support.FarmTestFixtures;
 import com.greenhouse.backend.work.domain.operation.WorkType;
+import com.greenhouse.backend.work.domain.operation.WorkTypeDefinition;
 import com.greenhouse.backend.work.domain.operation.WorkTypeTemplate;
 import com.greenhouse.backend.work.repository.WorkOperationRepository;
 import com.greenhouse.backend.work.repository.WorkTypeRepository;
@@ -44,8 +45,8 @@ class BedPlacementTests {
 		var fixtures = new FarmTestFixtures(entityManager);
 		var layout = fixtures.layout(982);
 		var group = fixtures.orchidGroup(layout.left(), "PLACEMENT-TEST", 20);
-		if (workTypeRepository.findByCode(WorkType.MOVEMENT_CODE).isEmpty()) {
-			workTypeRepository.save(new WorkType(WorkType.MOVEMENT_CODE, "자리 이동",
+		if (workTypeRepository.findByCode(WorkTypeDefinition.MOVEMENT.name()).isEmpty()) {
+			workTypeRepository.save(new WorkType(WorkTypeDefinition.MOVEMENT.name(), "자리 이동",
 					WorkTypeTemplate.MOVEMENT, true, true, true, 1));
 		}
 		groupId = group.getId();

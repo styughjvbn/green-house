@@ -1,13 +1,14 @@
 package com.greenhouse.backend.work.application.operation;
 
+import com.greenhouse.backend.work.application.effect.WorkEffectCommand;
+import com.greenhouse.backend.work.application.effect.WorkEffectProcessor;
 import com.greenhouse.backend.work.application.target.ResolvedWorkTarget;
 import com.greenhouse.backend.work.application.target.WorkTargetResolver;
 import com.greenhouse.backend.work.application.target.WorkTargetSelection;
-import com.greenhouse.backend.work.application.effect.WorkEffectCommand;
-import com.greenhouse.backend.work.application.effect.WorkEffectProcessor;
 import com.greenhouse.backend.work.domain.operation.WorkOperation;
-import com.greenhouse.backend.work.domain.target.WorkTargetExecution;
 import com.greenhouse.backend.work.domain.operation.WorkType;
+import com.greenhouse.backend.work.domain.operation.WorkTypeDefinition;
+import com.greenhouse.backend.work.domain.target.WorkTargetExecution;
 import com.greenhouse.backend.work.dto.operation.WorkOperationBatchCreateRequest;
 import com.greenhouse.backend.work.dto.operation.WorkOperationCreateRequest;
 import com.greenhouse.backend.work.dto.operation.WorkOperationResponse;
@@ -31,12 +32,6 @@ import org.springframework.transaction.annotation.Transactional;
 @Transactional
 @RequiredArgsConstructor
 public class WorkOperationPlanService {
-
-	private static final Set<String> SINGLE_VARIETY_WORK_TYPES = Set.of(
-			WorkType.REPOT_CODE,
-			WorkType.MOVEMENT_CODE,
-			WorkType.DIVIDE_CODE,
-			WorkType.MERGE_CODE);
 
 	private final WorkTargetResolver workTargetResolver;
 	private final WorkTypeService workTypeService;
@@ -66,7 +61,7 @@ public class WorkOperationPlanService {
 		WorkOperationCreateRequest operationRequest = request.operation();
 		WorkType workType = workTypeService.getActiveForPlan(operationRequest.workTypeId());
 		ResolvedSelection resolvedSelection = resolveIncluded(operationRequest);
-		if (!requiresSingleVariety(workType.getCode())) {
+		if (!workType.definition().supportsStructureExecution()) {
 			return List.of(queryService.get(
 					createOperation(operationRequest, workType, resolvedSelection).getId()));
 		}
@@ -152,17 +147,13 @@ public class WorkOperationPlanService {
 	}
 
 	private void validateSingleVariety(String workTypeCode, List<ResolvedWorkTarget> targets) {
-		if (!requiresSingleVariety(workTypeCode)) {
+		if (!WorkTypeDefinition.forCode(workTypeCode).supportsStructureExecution()) {
 			return;
 		}
 		Long varietyId = targets.getFirst().varietyId();
 		if (varietyId == null || targets.stream().anyMatch(group -> !varietyId.equals(group.varietyId()))) {
 			throw new IllegalArgumentException("자리 이동·분갈이·분주·합식 작업은 하나의 품종만 대상으로 계획할 수 있습니다.");
 		}
-	}
-
-	private boolean requiresSingleVariety(String workTypeCode) {
-		return SINGLE_VARIETY_WORK_TYPES.contains(workTypeCode);
 	}
 
 	private List<VarietyTargetGroup> groupTargetsByVariety(List<ResolvedWorkTarget> targets) {

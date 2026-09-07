@@ -5,6 +5,7 @@ import com.greenhouse.backend.work.application.target.InboundPottingPlanTarget;
 import com.greenhouse.backend.work.domain.operation.WorkOperation;
 import com.greenhouse.backend.work.domain.operation.WorkSourceScopeType;
 import com.greenhouse.backend.work.domain.operation.WorkType;
+import com.greenhouse.backend.work.domain.operation.WorkTypeDefinition;
 import com.greenhouse.backend.work.dto.effect.InboundPottingCandidateResponse;
 import com.greenhouse.backend.work.dto.effect.InboundPottingPlanBatchCreateRequest;
 import com.greenhouse.backend.work.dto.effect.InboundPottingPlanCreateRequest;
@@ -92,7 +93,7 @@ public class InboundPottingPlanService {
 
 	private WorkType validatePlan(InboundPottingPlanCreateRequest request) {
 		support.validateDates(request.plannedStartDate(), request.plannedEndDate());
-		WorkType workType = workTypeService.getByCode(WorkType.POTTING_CODE);
+		WorkType workType = workTypeService.getByCode(WorkTypeDefinition.POTTING.name());
 		if (!workType.isActive()) {
 			throw new IllegalArgumentException("포트 작업 유형이 비활성화되어 있습니다.");
 		}

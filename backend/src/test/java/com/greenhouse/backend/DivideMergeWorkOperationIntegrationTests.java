@@ -7,15 +7,16 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import com.greenhouse.backend.farm.domain.orchid.OrchidGroup;
 import com.greenhouse.backend.farm.domain.structure.BedZone;
 import com.greenhouse.backend.farm.domain.structure.BedZoneSide;
 import com.greenhouse.backend.farm.domain.structure.House;
-import com.greenhouse.backend.farm.domain.orchid.OrchidGroup;
-import com.greenhouse.backend.farm.domain.transformation.OrchidGroupLineageRelationType;
 import com.greenhouse.backend.farm.domain.structure.PhysicalBed;
+import com.greenhouse.backend.farm.domain.transformation.OrchidGroupLineageRelationType;
 import com.greenhouse.backend.farm.domain.variety.Variety;
 import com.greenhouse.backend.farm.repository.transformation.OrchidGroupLineageRepository;
 import com.greenhouse.backend.work.domain.operation.WorkType;
+import com.greenhouse.backend.work.domain.operation.WorkTypeDefinition;
 import com.greenhouse.backend.work.domain.operation.WorkTypeTemplate;
 import com.greenhouse.backend.work.repository.WorkAppliedEffectRepository;
 import com.greenhouse.backend.work.repository.WorkEffectOrchidGroupRepository;
@@ -62,11 +63,11 @@ class DivideMergeWorkOperationIntegrationTests extends AbstractBackendIntegratio
 		workTypeRepository.deleteAll();
 
 		repotType = workTypeRepository.save(new WorkType(
-				WorkType.REPOT_CODE, "분갈이", WorkTypeTemplate.REPOT, true, true, true, 1));
+				WorkTypeDefinition.REPOT.name(), "분갈이", WorkTypeTemplate.REPOT, true, true, true, 1));
 		divideType = workTypeRepository.save(new WorkType(
-				WorkType.DIVIDE_CODE, "분주", WorkTypeTemplate.REPOT, true, true, true, 2));
+				WorkTypeDefinition.DIVIDE.name(), "분주", WorkTypeTemplate.REPOT, true, true, true, 2));
 		mergeType = workTypeRepository.save(new WorkType(
-				WorkType.MERGE_CODE, "합식", WorkTypeTemplate.REPOT, true, true, true, 3));
+				WorkTypeDefinition.MERGE.name(), "합식", WorkTypeTemplate.REPOT, true, true, true, 3));
 		House house = new House(1, "1동");
 		PhysicalBed bed = new PhysicalBed(1, 1);
 		bed.updatePositionUnits(new BigDecimal("24"), "칸");

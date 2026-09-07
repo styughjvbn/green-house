@@ -2,16 +2,16 @@ package com.greenhouse.backend.work.application.operation;
 
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.greenhouse.backend.work.application.effect.MovementQuantityAllocator;
 import com.greenhouse.backend.work.application.effect.WorkEffectCommand;
 import com.greenhouse.backend.work.application.effect.WorkEffectProcessor;
 import com.greenhouse.backend.work.domain.operation.WorkOperation;
 import com.greenhouse.backend.work.domain.operation.WorkOperationStatus;
+import com.greenhouse.backend.work.domain.operation.WorkTypeDefinition;
 import com.greenhouse.backend.work.domain.target.WorkTargetExecution;
-import com.greenhouse.backend.work.domain.operation.WorkType;
 import com.greenhouse.backend.work.dto.effect.StructureChangeExecutionRequest;
 import com.greenhouse.backend.work.dto.operation.WorkOperationResponse;
 import com.greenhouse.backend.work.dto.target.WorkTargetExecutionRequest;
-import com.greenhouse.backend.work.application.effect.MovementQuantityAllocator;
 import com.greenhouse.backend.work.repository.WorkAppliedEffectRepository;
 import com.greenhouse.backend.work.repository.WorkTargetExecutionRepository;
 import java.time.LocalDateTime;
@@ -29,12 +29,6 @@ import org.springframework.transaction.annotation.Transactional;
 @Transactional
 @RequiredArgsConstructor
 public class StructureChangeExecutionService {
-
-	private static final Set<String> SUPPORTED_TYPES = Set.of(
-			WorkType.REPOT_CODE,
-			WorkType.DIVIDE_CODE,
-			WorkType.MERGE_CODE,
-			WorkType.MOVEMENT_CODE);
 
 	private final WorkTargetExecutionRepository executionRepository;
 	private final WorkAppliedEffectRepository appliedEffectRepository;
@@ -54,7 +48,7 @@ public class StructureChangeExecutionService {
 		List<WorkTargetExecution> executions = executionRepository
 				.findForUpdateByTargetWorkOperationIdOrderByIdAsc(operationId);
 		WorkOperation operation = executions.getFirst().getTarget().getWorkOperation();
-		if (!WorkType.MERGE_CODE.equals(operation.getWorkType().getCode())) {
+		if (!WorkTypeDefinition.MERGE.name().equals(operation.getWorkType().getCode())) {
 			throw new IllegalArgumentException("합식 작업만 일괄 실행할 수 있습니다.");
 		}
 		if (executions.stream().allMatch(WorkTargetExecution::isEffectApplied)) {
@@ -97,7 +91,7 @@ public class StructureChangeExecutionService {
 			throw new IllegalArgumentException("구조 변경 작업 대상이 없습니다.");
 		}
 		WorkOperation operation = executions.getFirst().getTarget().getWorkOperation();
-		if (!SUPPORTED_TYPES.contains(operation.getWorkType().getCode())) {
+		if (!operation.getWorkType().definition().supportsStructureExecution()) {
 			throw new IllegalArgumentException("분갈이·분주·합식·자리 이동 작업만 회차 실행할 수 있습니다.");
 		}
 		validateInProgress(operation);
@@ -129,7 +123,7 @@ public class StructureChangeExecutionService {
 		LocalDateTime executedAt = support.completionTime(request.completedDate());
 		String worker = support.actor(request.worker());
 		WorkOperationResponse discardOperation = null;
-		if (WorkType.MOVEMENT_CODE.equals(operation.getWorkType().getCode())) {
+		if (WorkTypeDefinition.MOVEMENT.name().equals(operation.getWorkType().getCode())) {
 			discardOperation = discardRecordService.createForMovement(
 					operation,
 					request.completedDate(),

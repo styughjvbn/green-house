@@ -10,9 +10,9 @@ import jakarta.persistence.FetchType;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
-import jakarta.persistence.SequenceGenerator;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
+import jakarta.persistence.SequenceGenerator;
 import jakarta.persistence.Table;
 import jakarta.persistence.Version;
 import java.time.LocalDate;
@@ -197,7 +197,7 @@ public class WorkOperation extends BaseEntity {
 			return;
 		}
 		if (status != WorkOperationStatus.COMPLETED
-				|| !WorkType.INBOUND_CODE.equals(workType.getCode())) {
+				|| !WorkTypeDefinition.INBOUND.name().equals(workType.getCode())) {
 			throw new IllegalArgumentException("완료된 입고 작업만 입고 취소와 함께 취소할 수 있습니다.");
 		}
 		actualEndAt = canceledAt;

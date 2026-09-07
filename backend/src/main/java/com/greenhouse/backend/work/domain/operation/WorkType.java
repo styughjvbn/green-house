@@ -2,6 +2,7 @@ package com.greenhouse.backend.work.domain.operation;
 
 import com.greenhouse.backend.common.domain.BaseEntity;
 import com.greenhouse.backend.work.domain.effect.WorkEffectKind;
+import com.greenhouse.backend.work.domain.target.WorkTargetReferenceType;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
@@ -11,27 +12,16 @@ import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.SequenceGenerator;
 import jakarta.persistence.Table;
-import com.greenhouse.backend.work.domain.target.WorkTargetReferenceType;
 import java.util.List;
+import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
-import lombok.AccessLevel;
 
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 @Entity
 @Table(name = "work_types")
 public class WorkType extends BaseEntity {
-
-	public static final String MOVEMENT_CODE = "MOVEMENT";
-	public static final String INBOUND_CODE = "INBOUND";
-	public static final String POTTING_CODE = "POTTING";
-	public static final String MULTI_CREATE_CODE = "MULTI_CREATE";
-	public static final String REPOT_CODE = "REPOT";
-	public static final String DIVIDE_CODE = "DIVIDE";
-	public static final String MERGE_CODE = "MERGE";
-	public static final String DISCARD_CODE = "DISCARD";
-	public static final String CORRECTION_CODE = "CORRECTION";
 
 	@Id
 	@GeneratedValue(strategy = GenerationType.SEQUENCE, generator = "work_types_id_seq")
@@ -89,89 +79,41 @@ public class WorkType extends BaseEntity {
 		this.sortOrder = sortOrder;
 	}
 
+	public WorkTypeDefinition definition() {
+		return WorkTypeDefinition.forCode(code);
+	}
+
 	public boolean isManualCreateAllowed() {
-		return active
-				&& !systemType
-				&& !INBOUND_CODE.equals(code)
-				&& !POTTING_CODE.equals(code)
+		return active && !systemType && definition().allowsManualRegistration()
 				&& effectKind() == WorkEffectKind.RECORD_ONLY;
 	}
 
 	public boolean isSettingsEditable() {
-		return !systemType
-				&& !INBOUND_CODE.equals(code)
-				&& !POTTING_CODE.equals(code);
+		return !systemType && definition().allowsManualRegistration();
 	}
 
 	public boolean isPeriodOperationAllowed() {
-		return active && (isManualCreateAllowed()
-				|| REPOT_CODE.equals(code)
-				|| MOVEMENT_CODE.equals(code)
-				|| DIVIDE_CODE.equals(code)
-				|| MERGE_CODE.equals(code)
-				|| DISCARD_CODE.equals(code));
+		return active && (isManualCreateAllowed() || definition().supportsPeriodPlanning());
 	}
 
 	public List<WorkRegistrationMode> registrationModes() {
-		if (!active) {
-			return List.of();
-		}
-		if (isPeriodOperationAllowed() || POTTING_CODE.equals(code)) {
-			return List.of(WorkRegistrationMode.RECORD, WorkRegistrationMode.PLAN);
-		}
-		return List.of();
+		return active && (isManualCreateAllowed() || definition().hasDedicatedRegistration())
+				? List.of(WorkRegistrationMode.RECORD, WorkRegistrationMode.PLAN) : List.of();
 	}
 
 	public WorkTypeWorkflow workflow() {
-		if (MOVEMENT_CODE.equals(code)) {
-			return WorkTypeWorkflow.MOVEMENT;
-		}
-		if (DISCARD_CODE.equals(code)) {
-			return WorkTypeWorkflow.DISCARD;
-		}
-		if (POTTING_CODE.equals(code)) {
-			return WorkTypeWorkflow.POTTING;
-		}
-		if (REPOT_CODE.equals(code) || DIVIDE_CODE.equals(code) || MERGE_CODE.equals(code)) {
-			return WorkTypeWorkflow.STRUCTURE_CHANGE;
-		}
-		return WorkTypeWorkflow.GENERIC;
+		return definition().workflow();
 	}
 
 	public WorkTargetReferenceType registrationTargetSource() {
-		return POTTING_CODE.equals(code)
-				? WorkTargetReferenceType.INBOUND_RECORD
-				: WorkTargetReferenceType.ORCHID_GROUP;
+		return definition().targetSource();
 	}
 
 	public WorkEffectKind effectKind() {
-		return switch (template) {
-			case PESTICIDE, FERTILIZER, CLEANUP, STATUS, MEMO, CORRECTION -> WorkEffectKind.RECORD_ONLY;
-			case DISCARD, MOVEMENT -> WorkEffectKind.ATTRIBUTE_CHANGE;
-			case REPOT, MULTI_CREATE -> WorkEffectKind.STRUCTURE_CHANGE;
-		};
+		return template.effectKind();
 	}
 
 	public String handlerCode() {
-		if (POTTING_CODE.equals(code)) {
-			return "POTTING";
-		}
-		if (DIVIDE_CODE.equals(code)) {
-			return "DIVIDE";
-		}
-		if (MERGE_CODE.equals(code)) {
-			return "MERGE";
-		}
-		if (DISCARD_CODE.equals(code)) {
-			return "DISCARD";
-		}
-		return switch (template) {
-			case PESTICIDE, FERTILIZER, CLEANUP, STATUS, MEMO -> "RECORD_ONLY";
-			case CORRECTION -> "CORRECTION";
-			case DISCARD -> "DISCARD";
-			case MOVEMENT -> "MOVE";
-			case REPOT -> "REPOT";
-			case MULTI_CREATE -> "MULTI_CREATE";
-		};
+		return definition().handlerCode(template);
 	}
 }

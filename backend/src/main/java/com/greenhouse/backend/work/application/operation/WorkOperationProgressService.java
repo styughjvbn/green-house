@@ -1,17 +1,17 @@
 package com.greenhouse.backend.work.application.operation;
 
-import com.greenhouse.backend.work.application.target.InboundPottingPlanGateway;
-import com.greenhouse.backend.work.application.target.InboundPottingPlanTarget;
 import com.greenhouse.backend.common.exception.NotFoundException;
 import com.greenhouse.backend.work.application.effect.WorkEffectCommand;
 import com.greenhouse.backend.work.application.effect.WorkEffectProcessor;
+import com.greenhouse.backend.work.application.target.InboundPottingPlanGateway;
+import com.greenhouse.backend.work.application.target.InboundPottingPlanTarget;
 import com.greenhouse.backend.work.domain.operation.WorkOperation;
 import com.greenhouse.backend.work.domain.operation.WorkOperationStatus;
+import com.greenhouse.backend.work.domain.operation.WorkTypeDefinition;
 import com.greenhouse.backend.work.domain.target.WorkOperationTarget;
 import com.greenhouse.backend.work.domain.target.WorkTargetExecution;
 import com.greenhouse.backend.work.domain.target.WorkTargetExecutionStatus;
 import com.greenhouse.backend.work.domain.target.WorkTargetReferenceType;
-import com.greenhouse.backend.work.domain.operation.WorkType;
 import com.greenhouse.backend.work.dto.operation.WorkOperationResponse;
 import com.greenhouse.backend.work.dto.target.WorkTargetExecutionRequest;
 import com.greenhouse.backend.work.repository.WorkOperationRepository;
@@ -139,7 +139,7 @@ public class WorkOperationProgressService {
 	}
 
 	private void refreshInboundSnapshot(WorkOperation operation, WorkOperationTarget target) {
-		if (!WorkType.POTTING_CODE.equals(operation.getWorkType().getCode())
+		if (!WorkTypeDefinition.POTTING.name().equals(operation.getWorkType().getCode())
 				|| target.getTargetReferenceType() != WorkTargetReferenceType.INBOUND_RECORD) {
 			return;
 		}
@@ -165,7 +165,7 @@ public class WorkOperationProgressService {
 
 	private void closeInboundPottingPlans(
 			WorkOperation operation, List<WorkTargetExecution> executions) {
-		if (!WorkType.POTTING_CODE.equals(operation.getWorkType().getCode())) {
+		if (!WorkTypeDefinition.POTTING.name().equals(operation.getWorkType().getCode())) {
 			return;
 		}
 		List<Long> inboundRecordIds = executions.stream()

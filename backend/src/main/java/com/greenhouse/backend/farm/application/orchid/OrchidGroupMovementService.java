@@ -1,15 +1,16 @@
 package com.greenhouse.backend.farm.application.orchid;
 
+import com.greenhouse.backend.audit.domain.AuditAction;
+import com.greenhouse.backend.audit.domain.AuditSource;
+import com.greenhouse.backend.common.application.RequestActorProvider;
 import com.greenhouse.backend.common.config.TimeConfig;
 import com.greenhouse.backend.common.exception.NotFoundException;
-import com.greenhouse.backend.common.application.RequestActorProvider;
 import com.greenhouse.backend.farm.domain.orchid.OrchidGroup;
 import com.greenhouse.backend.farm.dto.orchid.OrchidGroupMoveRequest;
 import com.greenhouse.backend.farm.dto.orchid.OrchidGroupResponse;
 import com.greenhouse.backend.work.application.operation.ImmediateWorkExecutionService;
-import com.greenhouse.backend.work.domain.operation.WorkType;
+import com.greenhouse.backend.work.domain.operation.WorkTypeDefinition;
 import java.math.BigDecimal;
-import java.time.LocalDate;
 import java.time.Clock;
 import java.util.LinkedHashMap;
 import java.util.Map;
@@ -17,8 +18,6 @@ import java.util.UUID;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import com.greenhouse.backend.audit.domain.AuditAction;
-import com.greenhouse.backend.audit.domain.AuditSource;
 
 @Service
 @Transactional
@@ -49,7 +48,7 @@ public class OrchidGroupMovementService {
 
 		immediateWorkExecutionService.executeForTarget(
 				"DIRECT_MOVE:" + UUID.randomUUID(),
-				WorkType.MOVEMENT_CODE,
+				WorkTypeDefinition.MOVEMENT.name(),
 				"자리 이동",
 				TimeConfig.farmToday(clock),
 				worker,

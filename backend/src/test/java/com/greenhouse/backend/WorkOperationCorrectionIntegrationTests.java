@@ -14,6 +14,7 @@ import com.greenhouse.backend.farm.domain.structure.PhysicalBed;
 import com.greenhouse.backend.farm.domain.variety.Variety;
 import com.greenhouse.backend.work.domain.operation.WorkOperationStatus;
 import com.greenhouse.backend.work.domain.operation.WorkType;
+import com.greenhouse.backend.work.domain.operation.WorkTypeDefinition;
 import com.greenhouse.backend.work.domain.operation.WorkTypeTemplate;
 import com.greenhouse.backend.work.repository.WorkAppliedEffectRepository;
 import com.greenhouse.backend.work.repository.WorkEffectOrchidGroupRepository;
@@ -53,10 +54,10 @@ class WorkOperationCorrectionIntegrationTests extends AbstractBackendIntegration
 		workTypeRepository.deleteAll();
 
 		workTypeRepository.save(new WorkType(
-				WorkType.MULTI_CREATE_CODE, "난 묶음 다중 생성", WorkTypeTemplate.MULTI_CREATE,
+				WorkTypeDefinition.MULTI_CREATE.name(), "난 묶음 다중 생성", WorkTypeTemplate.MULTI_CREATE,
 				true, true, true, 1));
 		workTypeRepository.save(new WorkType(
-				WorkType.CORRECTION_CODE, "구조 변경 보정", WorkTypeTemplate.CORRECTION,
+				WorkTypeDefinition.CORRECTION.name(), "구조 변경 보정", WorkTypeTemplate.CORRECTION,
 				true, true, true, 2));
 		pesticideType = workTypeRepository.save(new WorkType(
 				"PESTICIDE", "농약", WorkTypeTemplate.PESTICIDE, true, false, true, 3));
@@ -104,7 +105,7 @@ class WorkOperationCorrectionIntegrationTests extends AbstractBackendIntegration
 		assertThat(correctedGroup.getQuantity()).isEqualTo(25);
 		assertThat(correctedGroup.getStatus()).isEqualTo("수량 보정");
 		var correctionEffect = appliedEffectRepository.findAll().stream()
-				.filter(effect -> WorkType.CORRECTION_CODE.equals(effect.getHandlerCode()))
+				.filter(effect -> WorkTypeDefinition.CORRECTION.name().equals(effect.getHandlerCode()))
 				.findFirst().orElseThrow();
 		assertThat(correctionEffect.getResultDetails()).containsKey("adjustments");
 	}

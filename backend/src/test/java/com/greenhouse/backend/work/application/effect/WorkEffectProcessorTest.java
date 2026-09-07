@@ -15,6 +15,7 @@ import static org.mockito.Mockito.when;
 import com.greenhouse.backend.work.domain.effect.WorkEffectKind;
 import com.greenhouse.backend.work.domain.operation.WorkOperation;
 import com.greenhouse.backend.work.domain.operation.WorkType;
+import com.greenhouse.backend.work.domain.operation.WorkTypeDefinition;
 import com.greenhouse.backend.work.domain.target.WorkOperationTarget;
 import com.greenhouse.backend.work.domain.target.WorkTargetReferenceType;
 import java.time.LocalDate;
@@ -65,6 +66,19 @@ class WorkEffectProcessorTest {
 		when(store.save(any(), any(), any(), anyString(), anyList(), any(), any()))
 				.thenAnswer(invocation -> invocation.getArgument(6));
 		processor = new WorkEffectProcessor(List.of(handler), store);
+	}
+
+	@Test
+	void missingDeclaredHandlerIsRejectedAtStartup() {
+		var registered = WorkTypeDefinition.requiredHandlerCodes().stream()
+				.filter(code -> !code.equals("POTTING")).map(code -> {
+					var implementation = mock(WorkEffectHandler.class);
+					when(implementation.supports()).thenReturn(code);
+					return implementation;
+				}).toList();
+		var incomplete = new WorkEffectProcessor(registered, store);
+		assertThatThrownBy(incomplete::validateDefinitions)
+				.isInstanceOf(IllegalStateException.class).hasMessageContaining("POTTING");
 	}
 
 	@Test

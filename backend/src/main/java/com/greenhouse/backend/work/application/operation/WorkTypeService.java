@@ -2,6 +2,7 @@ package com.greenhouse.backend.work.application.operation;
 
 import com.greenhouse.backend.common.exception.NotFoundException;
 import com.greenhouse.backend.work.domain.operation.WorkType;
+import com.greenhouse.backend.work.domain.operation.WorkTypeDefinition;
 import com.greenhouse.backend.work.domain.operation.WorkTypeTemplate;
 import com.greenhouse.backend.work.dto.operation.WorkTypeCreateRequest;
 import com.greenhouse.backend.work.dto.operation.WorkTypeMetadataResponse;
@@ -9,12 +10,10 @@ import com.greenhouse.backend.work.dto.operation.WorkTypeReorderRequest;
 import com.greenhouse.backend.work.dto.operation.WorkTypeResponse;
 import com.greenhouse.backend.work.dto.operation.WorkTypeUpdateRequest;
 import com.greenhouse.backend.work.repository.WorkTypeRepository;
-
-import lombok.RequiredArgsConstructor;
-
+import java.util.Arrays;
 import java.util.List;
 import java.util.UUID;
-import java.util.Arrays;
+import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -104,7 +103,7 @@ public class WorkTypeService {
 
 	@Transactional(readOnly = true)
 	public WorkType getMovementType() {
-		return workTypeRepository.findByCode(WorkType.MOVEMENT_CODE)
+		return workTypeRepository.findByCode(WorkTypeDefinition.MOVEMENT.name())
 				.orElseThrow(() -> new NotFoundException("Movement work type not found."));
 	}
 

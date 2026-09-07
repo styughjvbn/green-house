@@ -1,20 +1,20 @@
 package com.greenhouse.backend.work.application.correction;
 
-import com.greenhouse.backend.work.application.operation.ImmediateWorkExecutionService;
-import com.greenhouse.backend.work.application.operation.WorkOperationQueryService;
 import com.greenhouse.backend.common.application.RequestActorProvider;
 import com.greenhouse.backend.common.exception.NotFoundException;
+import com.greenhouse.backend.work.application.operation.ImmediateWorkExecutionService;
+import com.greenhouse.backend.work.application.operation.WorkOperationQueryService;
+import com.greenhouse.backend.work.domain.correction.WorkOperationCorrection;
 import com.greenhouse.backend.work.domain.effect.WorkEffectKind;
 import com.greenhouse.backend.work.domain.operation.WorkOperation;
-import com.greenhouse.backend.work.domain.correction.WorkOperationCorrection;
 import com.greenhouse.backend.work.domain.operation.WorkOperationStatus;
-import com.greenhouse.backend.work.domain.operation.WorkType;
+import com.greenhouse.backend.work.domain.operation.WorkTypeDefinition;
 import com.greenhouse.backend.work.dto.correction.WorkOperationCorrectionCreateRequest;
 import com.greenhouse.backend.work.dto.correction.WorkOperationCorrectionItemResponse;
 import com.greenhouse.backend.work.dto.correction.WorkOperationCorrectionsResponse;
+import com.greenhouse.backend.work.repository.WorkAppliedEffectRepository;
 import com.greenhouse.backend.work.repository.WorkOperationCorrectionRepository;
 import com.greenhouse.backend.work.repository.WorkOperationRepository;
-import com.greenhouse.backend.work.repository.WorkAppliedEffectRepository;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.function.Function;
@@ -45,7 +45,7 @@ public class WorkOperationCorrectionService {
 		details.put("reason", reason);
 		var correctionOperation = immediateWorkExecutionService.execute(
 				normalizeRequired(request.idempotencyKey()),
-				WorkType.CORRECTION_CODE,
+				WorkTypeDefinition.CORRECTION.name(),
 				normalizeRequired(request.title()),
 				request.workDate(),
 				requestActorProvider.resolve(request.worker()),

@@ -3,6 +3,7 @@ package com.greenhouse.backend.work.application.operation;
 import com.greenhouse.backend.work.application.target.WorkTargetSelection;
 import com.greenhouse.backend.work.domain.operation.WorkOperation;
 import com.greenhouse.backend.work.domain.operation.WorkType;
+import com.greenhouse.backend.work.domain.operation.WorkTypeDefinition;
 import com.greenhouse.backend.work.dto.effect.DiscardRecordCreateRequest;
 import com.greenhouse.backend.work.dto.effect.DiscardRecordResultRequest;
 import com.greenhouse.backend.work.dto.operation.WorkOperationCreateRequest;
@@ -33,7 +34,7 @@ public class DiscardRecordService {
 
 	public WorkOperationResponse create(DiscardRecordCreateRequest request) {
 		WorkOperationResponse planned = planService.create(request.operation());
-		if (!WorkType.DISCARD_CODE.equals(planned.workTypeCode())) {
+		if (!WorkTypeDefinition.DISCARD.name().equals(planned.workTypeCode())) {
 			throw new IllegalArgumentException("폐기 작업 기록만 이 방식으로 저장할 수 있습니다.");
 		}
 		Map<Long, DiscardRecordResultRequest> resultByGroupId = request.results().stream()
@@ -77,7 +78,7 @@ public class DiscardRecordService {
 		if (discardQuantities.isEmpty()) {
 			return null;
 		}
-		WorkType discardType = workTypeService.getByCode(WorkType.DISCARD_CODE);
+		WorkType discardType = workTypeService.getByCode(WorkTypeDefinition.DISCARD.name());
 		List<Long> orchidGroupIds = discardQuantities.keySet().stream().sorted().toList();
 		Map<String, Object> details = Map.of(
 				"movementOperationId", movementOperation.getId(),

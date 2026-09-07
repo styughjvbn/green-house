@@ -15,6 +15,7 @@ import com.greenhouse.backend.farm.domain.structure.PhysicalBed;
 import com.greenhouse.backend.farm.domain.variety.Variety;
 import com.greenhouse.backend.farm.repository.transformation.OrchidGroupLineageRepository;
 import com.greenhouse.backend.work.domain.operation.WorkType;
+import com.greenhouse.backend.work.domain.operation.WorkTypeDefinition;
 import com.greenhouse.backend.work.domain.operation.WorkTypeTemplate;
 import com.greenhouse.backend.work.repository.WorkOperationRepository;
 import java.math.BigDecimal;
@@ -39,9 +40,9 @@ class MovementBatchWorkOperationIntegrationTests extends AbstractBackendIntegrat
 	@BeforeEach
 	void setUp() {
 		movementType = workTypeRepository.save(new WorkType(
-				WorkType.MOVEMENT_CODE, "자리 이동", WorkTypeTemplate.MOVEMENT, true, true, true, 1));
+				WorkTypeDefinition.MOVEMENT.name(), "자리 이동", WorkTypeTemplate.MOVEMENT, true, true, true, 1));
 		workTypeRepository.save(new WorkType(
-				WorkType.DISCARD_CODE, "폐기", WorkTypeTemplate.DISCARD, true, true, true, 2));
+				WorkTypeDefinition.DISCARD.name(), "폐기", WorkTypeTemplate.DISCARD, true, true, true, 2));
 		House house = new House(9920, "자리 이동 테스트동");
 		PhysicalBed bed = new PhysicalBed(1, 1);
 		bed.updatePositionUnits(new BigDecimal("30"), "칸");
@@ -124,7 +125,7 @@ class MovementBatchWorkOperationIntegrationTests extends AbstractBackendIntegrat
 				.andExpect(jsonPath("$.data.transformations[0].sources", hasSize(2)))
 				.andExpect(jsonPath("$.data.transformations[0].results", hasSize(1)));
 		var discardOperations = operationRepository.findAll().stream()
-				.filter(operation -> WorkType.DISCARD_CODE.equals(operation.getWorkType().getCode()))
+				.filter(operation -> WorkTypeDefinition.DISCARD.name().equals(operation.getWorkType().getCode()))
 				.toList();
 		assertThat(discardOperations).hasSize(1);
 		assertThat(discardOperations.getFirst().getStatus().name()).isEqualTo("COMPLETED");

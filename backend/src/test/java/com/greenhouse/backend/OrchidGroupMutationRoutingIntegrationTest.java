@@ -4,8 +4,8 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import com.greenhouse.backend.farm.application.inbound.InboundRecordService;
 import com.greenhouse.backend.farm.application.orchid.OrchidGroupCommandService;
-import com.greenhouse.backend.farm.application.transformation.RepotWorkOperationService;
 import com.greenhouse.backend.farm.application.transformation.MultiCreateWorkOperationService;
+import com.greenhouse.backend.farm.application.transformation.RepotWorkOperationService;
 import com.greenhouse.backend.farm.application.variety.VarietyService;
 import com.greenhouse.backend.farm.domain.inbound.InboundStatus;
 import com.greenhouse.backend.farm.domain.inbound.InboundType;
@@ -19,13 +19,13 @@ import com.greenhouse.backend.farm.domain.variety.Variety;
 import com.greenhouse.backend.farm.dto.inbound.InboundRecordCreateRequest;
 import com.greenhouse.backend.farm.dto.orchid.OrchidGroupCreateRequest;
 import com.greenhouse.backend.farm.dto.orchid.OrchidGroupUpdateRequest;
-import com.greenhouse.backend.farm.dto.transformation.RepotResultOrchidGroupRequest;
-import com.greenhouse.backend.farm.dto.transformation.RepotWorkOperationRequest;
 import com.greenhouse.backend.farm.dto.transformation.MultiCreateOrchidGroupRowRequest;
 import com.greenhouse.backend.farm.dto.transformation.MultiCreateWorkOperationRequest;
+import com.greenhouse.backend.farm.dto.transformation.RepotResultOrchidGroupRequest;
+import com.greenhouse.backend.farm.dto.transformation.RepotWorkOperationRequest;
 import com.greenhouse.backend.farm.dto.variety.VarietyUpdateRequest;
-import com.greenhouse.backend.farm.repository.orchid.mutation.OrchidGroupMutationRepository;
 import com.greenhouse.backend.farm.repository.orchid.mutation.OrchidGroupMutationRelationRepository;
+import com.greenhouse.backend.farm.repository.orchid.mutation.OrchidGroupMutationRepository;
 import com.greenhouse.backend.farm.repository.transformation.OrchidGroupLineageRepository;
 import com.greenhouse.backend.partner.domain.BusinessPartner;
 import com.greenhouse.backend.partner.domain.PartnerType;
@@ -41,20 +41,21 @@ import com.greenhouse.backend.sales.dto.SalesSlipItemAllocationRequest;
 import com.greenhouse.backend.sales.dto.SalesSlipItemRequest;
 import com.greenhouse.backend.sales.dto.SalesSlipStatusUpdateRequest;
 import com.greenhouse.backend.sales.repository.SalesInventoryMovementRepository;
-import com.greenhouse.backend.work.domain.operation.WorkType;
-import com.greenhouse.backend.work.domain.operation.WorkTypeTemplate;
 import com.greenhouse.backend.work.application.correction.WorkOperationCorrectionService;
 import com.greenhouse.backend.work.application.operation.DiscardRecordService;
 import com.greenhouse.backend.work.application.operation.InboundPottingOperationService;
 import com.greenhouse.backend.work.application.operation.WorkOperationPlanService;
 import com.greenhouse.backend.work.application.operation.WorkOperationProgressService;
 import com.greenhouse.backend.work.application.target.WorkTargetSelection;
+import com.greenhouse.backend.work.domain.operation.WorkType;
+import com.greenhouse.backend.work.domain.operation.WorkTypeDefinition;
+import com.greenhouse.backend.work.domain.operation.WorkTypeTemplate;
+import com.greenhouse.backend.work.dto.correction.OrchidGroupCorrectionRequest;
+import com.greenhouse.backend.work.dto.correction.WorkOperationCorrectionCreateRequest;
 import com.greenhouse.backend.work.dto.effect.DiscardRecordCreateRequest;
 import com.greenhouse.backend.work.dto.effect.DiscardRecordResultRequest;
 import com.greenhouse.backend.work.dto.effect.InboundPottingExecutionRequest;
 import com.greenhouse.backend.work.dto.effect.InboundPottingResultRequest;
-import com.greenhouse.backend.work.dto.correction.OrchidGroupCorrectionRequest;
-import com.greenhouse.backend.work.dto.correction.WorkOperationCorrectionCreateRequest;
 import com.greenhouse.backend.work.dto.operation.WorkOperationCreateRequest;
 import com.greenhouse.backend.work.dto.target.WorkTargetExecutionRequest;
 import com.greenhouse.backend.work.repository.WorkAppliedEffectRepository;
@@ -96,7 +97,7 @@ class OrchidGroupMutationRoutingIntegrationTest extends AbstractBackendIntegrati
 	@Test
 	void routesFarmAndImmediateInboundWritesToMutationEngine() {
 		Fixture fixture = createFixture(9961, "라우팅 Farm/Inbound");
-		ensureWorkType(WorkType.INBOUND_CODE, "입고", WorkTypeTemplate.MEMO, 1);
+		ensureWorkType(WorkTypeDefinition.INBOUND.name(), "입고", WorkTypeTemplate.MEMO, 1);
 
 		var created = orchidGroupCommandService.create(groupRequest(
 				fixture, 20, "0", "1", "정상"));
@@ -156,7 +157,7 @@ class OrchidGroupMutationRoutingIntegrationTest extends AbstractBackendIntegrati
 	@Test
 	void routesRepotWorkAndLinksEffectAndLineageToOneMutation() {
 		Fixture fixture = createFixture(9962, "라우팅 Work");
-		ensureWorkType(WorkType.REPOT_CODE, "분갈이", WorkTypeTemplate.REPOT, 2);
+		ensureWorkType(WorkTypeDefinition.REPOT.name(), "분갈이", WorkTypeTemplate.REPOT, 2);
 		var source = orchidGroupCommandService.create(groupRequest(
 				fixture, 20, "0", "2", "정상"));
 
@@ -246,8 +247,8 @@ class OrchidGroupMutationRoutingIntegrationTest extends AbstractBackendIntegrati
 	@Test
 	void routesMultiCreateCorrectionAndCreationCancellation() {
 		Fixture fixture = createFixture(9964, "라우팅 다중 생성/보정");
-		ensureWorkType(WorkType.MULTI_CREATE_CODE, "난 묶음 다중 생성", WorkTypeTemplate.MULTI_CREATE, 3);
-		ensureWorkType(WorkType.CORRECTION_CODE, "구조 변경 보정", WorkTypeTemplate.CORRECTION, 4);
+		ensureWorkType(WorkTypeDefinition.MULTI_CREATE.name(), "난 묶음 다중 생성", WorkTypeTemplate.MULTI_CREATE, 3);
+		ensureWorkType(WorkTypeDefinition.CORRECTION.name(), "구조 변경 보정", WorkTypeTemplate.CORRECTION, 4);
 		var created = multiCreateWorkOperationService.create(new MultiCreateWorkOperationRequest(
 				"routing-multi-create-9964",
 				"라우팅 다중 생성",
@@ -302,10 +303,10 @@ class OrchidGroupMutationRoutingIntegrationTest extends AbstractBackendIntegrati
 	@Test
 	void routesDiscardEffectAndLinksItsMutation() {
 		Fixture fixture = createFixture(9965, "라우팅 폐기");
-		ensureWorkType(WorkType.DISCARD_CODE, "폐기", WorkTypeTemplate.DISCARD, 5);
+		ensureWorkType(WorkTypeDefinition.DISCARD.name(), "폐기", WorkTypeTemplate.DISCARD, 5);
 		var group = orchidGroupCommandService.create(groupRequest(
 				fixture, 15, "0", "1", "정상"));
-		WorkType discardType = workTypeRepository.findByCode(WorkType.DISCARD_CODE).orElseThrow();
+		WorkType discardType = workTypeRepository.findByCode(WorkTypeDefinition.DISCARD.name()).orElseThrow();
 
 		var operation = discardRecordService.create(new DiscardRecordCreateRequest(
 				new WorkOperationCreateRequest(
@@ -334,8 +335,8 @@ class OrchidGroupMutationRoutingIntegrationTest extends AbstractBackendIntegrati
 	@Test
 	void routesInboundPottingResultsThroughWorkMutation() {
 		Fixture fixture = createFixture(9966, "라우팅 포트 작업");
-		ensureWorkType(WorkType.INBOUND_CODE, "입고", WorkTypeTemplate.MEMO, 6);
-		ensureWorkType(WorkType.POTTING_CODE, "포트 작업", WorkTypeTemplate.REPOT, 7);
+		ensureWorkType(WorkTypeDefinition.INBOUND.name(), "입고", WorkTypeTemplate.MEMO, 6);
+		ensureWorkType(WorkTypeDefinition.POTTING.name(), "포트 작업", WorkTypeTemplate.REPOT, 7);
 		var inbound = inboundRecordService.create(new InboundRecordCreateRequest(
 				LocalDate.of(2026, 8, 19),
 				InboundType.FLASK_SEEDLING,
@@ -389,10 +390,10 @@ class OrchidGroupMutationRoutingIntegrationTest extends AbstractBackendIntegrati
 	@Test
 	void routesDirectMovementEffectAndPreservesItsWorkIdentity() {
 		Fixture fixture = createFixture(9967, "라우팅 이동");
-		ensureWorkType(WorkType.MOVEMENT_CODE, "위치 이동", WorkTypeTemplate.MOVEMENT, 8);
+		ensureWorkType(WorkTypeDefinition.MOVEMENT.name(), "위치 이동", WorkTypeTemplate.MOVEMENT, 8);
 		var group = orchidGroupCommandService.create(groupRequest(
 				fixture, 8, "0", "1", "정상"));
-		WorkType movementType = workTypeRepository.findByCode(WorkType.MOVEMENT_CODE).orElseThrow();
+		WorkType movementType = workTypeRepository.findByCode(WorkTypeDefinition.MOVEMENT.name()).orElseThrow();
 		var planned = workOperationPlanService.create(new WorkOperationCreateRequest(
 				movementType.getId(),
 				"라우팅 직접 이동",

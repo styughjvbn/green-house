@@ -1,10 +1,10 @@
 package com.greenhouse.backend.work.application.operation;
 
-import com.greenhouse.backend.work.domain.operation.WorkType;
+import com.greenhouse.backend.work.domain.operation.WorkTypeDefinition;
 import com.greenhouse.backend.work.dto.effect.DiscardRecordCreateRequest;
 import com.greenhouse.backend.work.dto.effect.InboundPottingRecordCreateRequest;
-import com.greenhouse.backend.work.dto.effect.StructureChangeRecordCreateRequest;
 import com.greenhouse.backend.work.dto.effect.StructureChangeRecordBatchCreateRequest;
+import com.greenhouse.backend.work.dto.effect.StructureChangeRecordCreateRequest;
 import com.greenhouse.backend.work.dto.operation.WorkOperationResponse;
 import java.util.HashSet;
 import java.util.List;
@@ -19,12 +19,6 @@ import org.springframework.transaction.annotation.Transactional;
 @Transactional
 @RequiredArgsConstructor
 public class StructureChangeRecordService {
-
-	private static final Set<String> BATCH_STRUCTURE_CODES = Set.of(
-			WorkType.REPOT_CODE,
-			WorkType.DIVIDE_CODE,
-			WorkType.MERGE_CODE,
-			WorkType.MOVEMENT_CODE);
 
 	private final WorkOperationPlanService planService;
 	private final WorkOperationProgressService progressService;
@@ -45,7 +39,7 @@ public class StructureChangeRecordService {
 			StructureChangeRecordCreateRequest request,
 			Set<Long> placementExclusionOrchidGroupIds) {
 		WorkOperationResponse planned = planService.create(request.operation());
-		if (!BATCH_STRUCTURE_CODES.contains(planned.workTypeCode())) {
+		if (!WorkTypeDefinition.forCode(planned.workTypeCode()).supportsStructureExecution()) {
 			throw new IllegalArgumentException("분갈이·분주·합식·자리 이동 작업 기록만 이 방식으로 저장할 수 있습니다.");
 		}
 		Map<Long, Integer> plannedQuantities = planned.targets().stream()

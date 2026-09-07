@@ -2,9 +2,9 @@ package com.greenhouse.backend.work.application.operation;
 
 import com.greenhouse.backend.work.domain.operation.WorkOperation;
 import com.greenhouse.backend.work.domain.operation.WorkOperationStatus;
+import com.greenhouse.backend.work.domain.operation.WorkTypeDefinition;
 import com.greenhouse.backend.work.domain.target.WorkTargetExecution;
 import com.greenhouse.backend.work.domain.target.WorkTargetExecutionStatus;
-import com.greenhouse.backend.work.domain.operation.WorkType;
 import com.greenhouse.backend.work.repository.WorkAppliedEffectRepository;
 import com.greenhouse.backend.work.repository.WorkTargetExecutionRepository;
 import java.time.LocalDateTime;
@@ -34,7 +34,7 @@ public class InboundWorkOperationLifecycleService {
 						execution -> execution.getTarget().getWorkOperation().getId()));
 		for (List<WorkTargetExecution> executions : byOperationId.values()) {
 			WorkOperation operation = executions.getFirst().getTarget().getWorkOperation();
-			if (WorkType.INBOUND_CODE.equals(operation.getWorkType().getCode())) {
+			if (WorkTypeDefinition.INBOUND.name().equals(operation.getWorkType().getCode())) {
 				cancelInboundRecordOperation(operation, canceledAt);
 			} else {
 				cancelPottingTarget(operation, executions.getFirst(), canceledAt);
@@ -80,8 +80,8 @@ public class InboundWorkOperationLifecycleService {
 	}
 
 	private boolean isInboundLifecycleWork(WorkOperation operation) {
-		return WorkType.INBOUND_CODE.equals(operation.getWorkType().getCode())
-				|| WorkType.POTTING_CODE.equals(operation.getWorkType().getCode());
+		return WorkTypeDefinition.INBOUND.name().equals(operation.getWorkType().getCode())
+				|| WorkTypeDefinition.POTTING.name().equals(operation.getWorkType().getCode());
 	}
 
 	private boolean isActive(WorkOperationStatus status) {

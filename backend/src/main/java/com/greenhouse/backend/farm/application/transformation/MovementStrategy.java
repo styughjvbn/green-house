@@ -1,9 +1,8 @@
 package com.greenhouse.backend.farm.application.transformation;
 
-import com.greenhouse.backend.work.application.effect.MovementQuantityAllocator;
-
 import com.greenhouse.backend.farm.domain.transformation.OrchidGroupLineageRelationType;
-import com.greenhouse.backend.work.domain.operation.WorkType;
+import com.greenhouse.backend.work.application.effect.MovementQuantityAllocator;
+import com.greenhouse.backend.work.domain.operation.WorkTypeDefinition;
 import com.greenhouse.backend.work.dto.effect.StructureChangeExecutionRequest;
 import java.util.Map;
 import org.springframework.stereotype.Component;
@@ -11,7 +10,7 @@ import org.springframework.stereotype.Component;
 @Component
 public class MovementStrategy implements StructureChangeStrategy {
 
-	@Override public String supports() { return WorkType.MOVEMENT_CODE; }
+	@Override public String supports() { return WorkTypeDefinition.MOVEMENT.name(); }
 	@Override public String workLabel() { return "자리 이동"; }
 	@Override public OrchidGroupLineageRelationType lineageType() {
 		return OrchidGroupLineageRelationType.MOVED_TO;

@@ -4,17 +4,16 @@ import com.greenhouse.backend.work.application.target.InboundPottingPlanGateway;
 import com.greenhouse.backend.work.application.target.InboundPottingPlanTarget;
 import com.greenhouse.backend.work.domain.operation.WorkOperation;
 import com.greenhouse.backend.work.domain.operation.WorkOperationStatus;
+import com.greenhouse.backend.work.domain.operation.WorkTypeDefinition;
 import com.greenhouse.backend.work.domain.target.WorkOperationTarget;
 import com.greenhouse.backend.work.domain.target.WorkTargetExecution;
 import com.greenhouse.backend.work.domain.target.WorkTargetExecutionStatus;
 import com.greenhouse.backend.work.domain.target.WorkTargetReferenceType;
-import com.greenhouse.backend.work.domain.operation.WorkType;
 import com.greenhouse.backend.work.dto.operation.WorkOperationProgressResponse;
 import com.greenhouse.backend.work.dto.operation.WorkOperationResponse;
 import com.greenhouse.backend.work.dto.target.WorkOperationTargetResponse;
 import com.greenhouse.backend.work.repository.WorkOperationTargetRepository;
 import com.greenhouse.backend.work.repository.WorkTargetExecutionRepository;
-import java.util.Collection;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -98,7 +97,7 @@ class WorkOperationResponseAssembler {
 			List<WorkOperationTarget> targets,
 			Map<Long, WorkTargetExecution> executionByTargetId) {
 		Set<Long> activePottingOperationIds = operations.stream()
-				.filter(operation -> WorkType.POTTING_CODE.equals(operation.getWorkType().getCode()))
+				.filter(operation -> WorkTypeDefinition.POTTING.name().equals(operation.getWorkType().getCode()))
 				.filter(operation -> ACTIVE_STATUSES.contains(operation.getStatus()))
 				.map(WorkOperation::getId)
 				.collect(Collectors.toSet());

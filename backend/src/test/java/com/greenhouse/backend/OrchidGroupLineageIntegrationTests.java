@@ -10,11 +10,12 @@ import com.greenhouse.backend.farm.application.transformation.OrchidGroupLineage
 import com.greenhouse.backend.farm.domain.structure.BedZone;
 import com.greenhouse.backend.farm.domain.structure.BedZoneSide;
 import com.greenhouse.backend.farm.domain.structure.House;
-import com.greenhouse.backend.farm.domain.transformation.OrchidGroupLineageRelationType;
 import com.greenhouse.backend.farm.domain.structure.PhysicalBed;
+import com.greenhouse.backend.farm.domain.transformation.OrchidGroupLineageRelationType;
 import com.greenhouse.backend.farm.domain.variety.Variety;
 import com.greenhouse.backend.farm.repository.transformation.OrchidGroupLineageRepository;
 import com.greenhouse.backend.work.domain.operation.WorkType;
+import com.greenhouse.backend.work.domain.operation.WorkTypeDefinition;
 import com.greenhouse.backend.work.domain.operation.WorkTypeTemplate;
 import com.greenhouse.backend.work.repository.WorkAppliedEffectRepository;
 import com.greenhouse.backend.work.repository.WorkEffectOrchidGroupRepository;
@@ -52,7 +53,7 @@ class OrchidGroupLineageIntegrationTests extends AbstractBackendIntegrationTest 
 		workTypeRepository.deleteAll();
 
 		workTypeRepository.save(new WorkType(
-				WorkType.MULTI_CREATE_CODE, "난 묶음 다중 생성", WorkTypeTemplate.MULTI_CREATE,
+				WorkTypeDefinition.MULTI_CREATE.name(), "난 묶음 다중 생성", WorkTypeTemplate.MULTI_CREATE,
 				true, true, true, 1));
 		House house = new House(1, "1동");
 		PhysicalBed bed = new PhysicalBed(1, 1);

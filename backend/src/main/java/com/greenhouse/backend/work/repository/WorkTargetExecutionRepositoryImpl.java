@@ -1,22 +1,22 @@
 package com.greenhouse.backend.work.repository;
 
 import static com.greenhouse.backend.work.domain.operation.QWorkOperation.workOperation;
+import static com.greenhouse.backend.work.domain.operation.QWorkType.workType;
 import static com.greenhouse.backend.work.domain.target.QWorkOperationTarget.workOperationTarget;
 import static com.greenhouse.backend.work.domain.target.QWorkTargetExecution.workTargetExecution;
-import static com.greenhouse.backend.work.domain.operation.QWorkType.workType;
 
 import com.greenhouse.backend.work.domain.operation.WorkOperationStatus;
+import com.greenhouse.backend.work.domain.operation.WorkTypeDefinition;
 import com.greenhouse.backend.work.domain.target.WorkTargetExecution;
 import com.greenhouse.backend.work.domain.target.WorkTargetExecutionStatus;
-import com.greenhouse.backend.work.domain.operation.WorkType;
 import com.querydsl.core.Tuple;
-import com.querydsl.core.types.dsl.NumberExpression;
 import com.querydsl.core.types.dsl.CaseBuilder;
+import com.querydsl.core.types.dsl.NumberExpression;
 import com.querydsl.jpa.impl.JPAQuery;
 import com.querydsl.jpa.impl.JPAQueryFactory;
 import jakarta.persistence.LockModeType;
-import java.util.List;
 import java.util.Collection;
+import java.util.List;
 import java.util.Optional;
 import lombok.RequiredArgsConstructor;
 
@@ -35,7 +35,7 @@ public class WorkTargetExecutionRepositoryImpl implements WorkTargetExecutionRep
 		return executionWithOperationAndWorkType()
 				.where(
 						workOperationTarget.inboundRecordId.in(inboundRecordIds),
-						workType.code.eq(WorkType.POTTING_CODE),
+						workType.code.eq(WorkTypeDefinition.POTTING.name()),
 						workOperation.status.in(
 								WorkOperationStatus.PLANNED,
 								WorkOperationStatus.IN_PROGRESS,

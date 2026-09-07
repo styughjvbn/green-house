@@ -7,7 +7,7 @@ import com.greenhouse.backend.farm.dto.transformation.RepotWorkOperationResponse
 import com.greenhouse.backend.farm.repository.orchid.OrchidGroupRepository;
 import com.greenhouse.backend.work.application.operation.ImmediateWorkExecutionService;
 import com.greenhouse.backend.work.application.operation.WorkOperationQueryService;
-import com.greenhouse.backend.work.domain.operation.WorkType;
+import com.greenhouse.backend.work.domain.operation.WorkTypeDefinition;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -43,7 +43,7 @@ public class RepotWorkOperationService {
 		details.put("resultCount", request.results().size());
 		var operation = immediateWorkExecutionService.executeForTarget(
 				normalizeRequired(request.idempotencyKey()),
-				WorkType.REPOT_CODE,
+				WorkTypeDefinition.REPOT.name(),
 				normalizeRequired(request.title()),
 				request.workDate(),
 				normalize(request.worker()),
@@ -70,7 +70,7 @@ public class RepotWorkOperationService {
 	private RepotWorkOperationResponse response(Long operationId) {
 		var operation = queryService.get(operationId);
 		var resultIds = immediateWorkExecutionService.getStructureChangeResultOrchidGroupIds(
-				operationId, WorkType.REPOT_CODE);
+				operationId, WorkTypeDefinition.REPOT.name());
 		var source = orchidGroupRepository.findDetailById(operation.sourceScopeId())
 				.orElseThrow(() -> new NotFoundException(
 						"원본 난 묶음을 찾을 수 없습니다."));

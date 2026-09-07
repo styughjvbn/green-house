@@ -8,23 +8,24 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
-import com.greenhouse.backend.farm.domain.structure.BedZone;
-import com.greenhouse.backend.farm.domain.structure.BedZoneSide;
-import com.greenhouse.backend.farm.domain.structure.House;
+import com.greenhouse.backend.common.config.TimeConfig;
 import com.greenhouse.backend.farm.domain.inbound.InboundRecord;
 import com.greenhouse.backend.farm.domain.inbound.InboundStatus;
 import com.greenhouse.backend.farm.domain.inbound.InboundType;
+import com.greenhouse.backend.farm.domain.structure.BedZone;
+import com.greenhouse.backend.farm.domain.structure.BedZoneSide;
+import com.greenhouse.backend.farm.domain.structure.House;
 import com.greenhouse.backend.farm.domain.structure.PhysicalBed;
 import com.greenhouse.backend.farm.domain.variety.Variety;
 import com.greenhouse.backend.work.domain.effect.WorkEffectOrchidGroupRelationType;
 import com.greenhouse.backend.work.domain.operation.WorkType;
+import com.greenhouse.backend.work.domain.operation.WorkTypeDefinition;
 import com.greenhouse.backend.work.domain.operation.WorkTypeTemplate;
 import com.greenhouse.backend.work.repository.WorkAppliedEffectRepository;
 import com.greenhouse.backend.work.repository.WorkEffectOrchidGroupRepository;
 import com.greenhouse.backend.work.repository.WorkOperationRepository;
 import com.greenhouse.backend.work.repository.WorkOperationTargetRepository;
 import com.greenhouse.backend.work.repository.WorkTargetExecutionRepository;
-import com.greenhouse.backend.common.config.TimeConfig;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import org.junit.jupiter.api.BeforeEach;
@@ -62,9 +63,9 @@ class InboundPottingPlanIntegrationTests extends AbstractBackendIntegrationTest 
 		workTypeRepository.deleteAll();
 
 		pottingType = workTypeRepository.save(new WorkType(
-				WorkType.POTTING_CODE, "포트 작업", WorkTypeTemplate.REPOT, true, false, true, 1));
+				WorkTypeDefinition.POTTING.name(), "포트 작업", WorkTypeTemplate.REPOT, true, false, true, 1));
 		workTypeRepository.save(new WorkType(
-				WorkType.INBOUND_CODE, "입고", WorkTypeTemplate.MEMO, true, false, true, 0));
+				WorkTypeDefinition.INBOUND.name(), "입고", WorkTypeTemplate.MEMO, true, false, true, 0));
 		House house = new House(1, "1동");
 		PhysicalBed bed = new PhysicalBed(1, 1);
 		bed.updatePositionUnits(new BigDecimal("24"), "칸");
@@ -121,7 +122,7 @@ class InboundPottingPlanIntegrationTests extends AbstractBackendIntegrationTest 
 				".*?\\\"data\\\":\\{\\\"id\\\":(\\d+).*", "$1"));
 
 		assertThat(operationRepository.findAll()).singleElement().satisfies(operation -> {
-			assertThat(operation.getWorkType().getCode()).isEqualTo(WorkType.INBOUND_CODE);
+			assertThat(operation.getWorkType().getCode()).isEqualTo(WorkTypeDefinition.INBOUND.name());
 			assertThat(operation.getStatus().name()).isEqualTo("COMPLETED");
 			assertThat(operation.getPlannedStartDate()).isEqualTo(LocalDate.of(2026, 7, 17));
 		});
@@ -410,7 +411,7 @@ class InboundPottingPlanIntegrationTests extends AbstractBackendIntegrationTest 
 				.anySatisfy(execution -> {
 					assertThat(execution.getTarget().getInboundRecordId()).isEqualTo(inboundRecordId);
 					assertThat(execution.getTarget().getWorkOperation().getWorkType().getCode())
-							.isEqualTo(WorkType.POTTING_CODE);
+							.isEqualTo(WorkTypeDefinition.POTTING.name());
 					assertThat(execution.getStatus().name()).isEqualTo("CANCELED");
 				});
 		assertThat(appliedEffectRepository.findAll())
@@ -555,7 +556,7 @@ class InboundPottingPlanIntegrationTests extends AbstractBackendIntegrationTest 
 
 		var operations = operationRepository.findAll();
 		assertThat(operations).hasSize(1);
-		assertThat(operations.getFirst().getWorkType().getCode()).isEqualTo(WorkType.POTTING_CODE);
+		assertThat(operations.getFirst().getWorkType().getCode()).isEqualTo(WorkTypeDefinition.POTTING.name());
 		assertThat(operations.getFirst().getStatus().name()).isEqualTo("COMPLETED");
 		var targets = operationTargetRepository
 				.findByWorkOperationIdAndExcludedAtIsNullOrderByIdAsc(operations.getFirst().getId());

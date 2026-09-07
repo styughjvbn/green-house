@@ -2,7 +2,9 @@ package com.greenhouse.backend.work.application.effect;
 
 import com.greenhouse.backend.work.domain.effect.WorkEffectKind;
 import com.greenhouse.backend.work.domain.operation.WorkOperation;
+import com.greenhouse.backend.work.domain.operation.WorkTypeDefinition;
 import com.greenhouse.backend.work.domain.target.WorkOperationTarget;
+import jakarta.annotation.PostConstruct;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -25,6 +27,15 @@ public class WorkEffectProcessor {
 			}
 		}
 		this.effectStore = effectStore;
+	}
+
+	@PostConstruct
+	void validateDefinitions() {
+		for (String code : WorkTypeDefinition.requiredHandlerCodes()) {
+			if (!handlers.containsKey(code)) {
+				throw new IllegalStateException("작업 정의에 필요한 효과 handler가 없습니다: " + code);
+			}
+		}
 	}
 
 	public WorkExecutionResult apply(
