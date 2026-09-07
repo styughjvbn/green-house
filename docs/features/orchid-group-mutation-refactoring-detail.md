@@ -69,6 +69,8 @@ Work의 작업 진행, Sales의 예약·출고 업무, Inbound의 입고 lifecyc
 개선: 엔진의 public 업무 메서드는 유지하고 잠금 로딩, ledger 기록, 관련 Mutation 검증을 응집된 내부 책임으로 분리한다.
 잠금 후 두 번째 replay는 동시 요청을 위한 것이므로 단순 중복으로 삭제하지 않는다.
 
+2026-09-07, 백엔드 16차에서 header·fence·Entry·Relation 기록과 관련 Mutation 검증을 내부 recorder로 모았다. Engine의 그룹 잠금·누락 확인도 공통 메서드로 정리했다. 상태 변경과 revision writer는 Engine에 유지하고, 잠금 전후 replay와 생성·변환·단건 변경별 기록 시점은 보존한다. command 타입과 배치 점유 조회 최적화는 별도 범위다.
+
 ### F2. 배치 생성의 조회·저장 순서가 JPA 자동 flush에 의존 — P0 확인, P1 개선
 
 근거: [MutationEngine](../../backend/src/main/java/com/greenhouse/backend/farm/application/orchid/mutation/OrchidGroupMutationEngine.java) `createMany:97`, `createFromInbound:138`, `createGroup:825`, `saveMutation:742`와 [OrchidPlacementPolicy](../../backend/src/main/java/com/greenhouse/backend/farm/application/structure/OrchidPlacementPolicy.java).
@@ -92,6 +94,8 @@ Work의 작업 진행, Sales의 예약·출고 업무, Inbound의 입고 lifecyc
 Legacy 실행기는 전환 수명 표식을 유지한다. 12개 서비스 각각에 interface와 구현체 두 개를 기계적으로 만들지는 않는다.
 
 2026-09-07, 백엔드 14차에서 Sales 부분을 이식했다. Farm 예약 API가 기존 typed command로 Engine/Legacy를 선택하고 수량을 변경하며, Sales의 반복 모드 검사·직접 Entity 변경을 제거했다. 배분별 movement 생성과 Mutation 연결은 하나의 경로로 합쳤다. 구조 변경 결과의 양쪽 변환 중복은 후속 범위로 남는다.
+
+백엔드 16차에서 구조 변경의 상속 속성·목적·상태를 쓰기 전에 한 번 계산하도록 바꿨다. writer를 한 번 선택하고 결과 순서·계보·Work JSON은 공통 경로로 조립한다. 기존 Legacy 입력과 Engine 정규화의 의미는 각각 유지한다. PostgreSQL에서 분갈이·분주·합식·이동의 두 모드 결과와 두 번째 배치 실패 시 전체 rollback을 검증했다.
 
 ### F4. application Reader를 거쳐도 타 모듈 Entity가 노출됨 — P1
 

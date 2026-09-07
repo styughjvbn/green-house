@@ -5,9 +5,6 @@ import com.greenhouse.backend.farm.application.structure.OrchidPlacementPolicy;
 import com.greenhouse.backend.farm.domain.inbound.InboundRecord;
 import com.greenhouse.backend.farm.domain.orchid.OrchidGroup;
 import com.greenhouse.backend.farm.domain.orchid.mutation.OrchidGroupMutation;
-import com.greenhouse.backend.farm.domain.orchid.mutation.OrchidGroupMutationEntry;
-import com.greenhouse.backend.farm.domain.orchid.mutation.OrchidGroupMutationEntryRole;
-import com.greenhouse.backend.farm.domain.orchid.mutation.OrchidGroupMutationRelation;
 import com.greenhouse.backend.farm.domain.orchid.mutation.OrchidGroupMutationRelationType;
 import com.greenhouse.backend.farm.domain.orchid.mutation.OrchidGroupMutationSource;
 import com.greenhouse.backend.farm.domain.orchid.mutation.OrchidGroupMutationType;
@@ -16,15 +13,8 @@ import com.greenhouse.backend.farm.domain.structure.BedZone;
 import com.greenhouse.backend.farm.domain.variety.Variety;
 import com.greenhouse.backend.farm.repository.orchid.OrchidGroupRepository;
 import com.greenhouse.backend.farm.repository.inbound.InboundRecordRepository;
-import com.greenhouse.backend.farm.repository.orchid.mutation.OrchidGroupMutationEntryRepository;
-import com.greenhouse.backend.farm.repository.orchid.mutation.OrchidGroupMutationRelationRepository;
-import com.greenhouse.backend.farm.repository.orchid.mutation.OrchidGroupMutationRepository;
-import com.greenhouse.backend.farm.repository.orchid.mutation.OrchidGroupWriteFenceRepository;
 import com.greenhouse.backend.farm.repository.structure.BedZoneRepository;
 import com.greenhouse.backend.farm.repository.variety.VarietyRepository;
-import java.math.BigDecimal;
-import java.time.Clock;
-import java.time.Instant;
 import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -49,20 +39,14 @@ import org.springframework.transaction.annotation.Transactional;
 @Transactional(propagation = Propagation.MANDATORY)
 public class OrchidGroupMutationEngine {
 
-	private static final int MUTATION_SCHEMA_VERSION = 1;
-
 	private final OrchidGroupRepository orchidGroupRepository;
 	private final InboundRecordRepository inboundRecordRepository;
 	private final BedZoneRepository bedZoneRepository;
 	private final VarietyRepository varietyRepository;
-	private final OrchidGroupMutationRepository mutationRepository;
-	private final OrchidGroupMutationEntryRepository entryRepository;
-	private final OrchidGroupMutationRelationRepository relationRepository;
-	private final OrchidGroupWriteFenceRepository writeFenceRepository;
 	private final OrchidPlacementPolicy orchidPlacementPolicy;
 	private final OrchidGroupMutationCommandFingerprint commandFingerprint;
 	private final OrchidGroupMutationReplayResolver replayResolver;
-	private final Clock clock;
+	private final OrchidGroupMutationRecorder recorder;
 
 	public OrchidGroupMutationResult create(CreateOrchidGroupMutationCommand command) {
 		String fingerprint = commandFingerprint.calculate(command);
@@ -84,12 +68,12 @@ public class OrchidGroupMutationEngine {
 		orchidPlacementPolicy.validatePlacement(
 				bedZone, details.startPosition(), details.endPosition(), null);
 		int nextSortOrder = orchidGroupRepository.findMaxSortOrderByBedZoneId(bedZone.getId()) + 1;
-		OrchidGroupMutation mutation = saveMutation(
+		OrchidGroupMutation mutation = recorder.start(
 				OrchidGroupMutationType.CREATE, command.source(), fingerprint,
 				command.effectiveBusinessDate(), command.reason());
 		OrchidGroup group = createGroup(bedZone, variety, details, nextSortOrder);
 
-		return recordCreated(mutation, List.of(group));
+		return recorder.created(mutation, List.of(group));
 	}
 
 	public OrchidGroupMutationResult createMany(CreateOrchidGroupsMutationCommand command) {
@@ -110,7 +94,7 @@ public class OrchidGroupMutationEngine {
 				.map(item -> item.details().varietyId())
 				.collect(Collectors.toSet()));
 		Map<Long, Integer> nextSortOrderByZoneId = currentMaxSortOrders(zones.keySet());
-		OrchidGroupMutation mutation = saveMutation(
+		OrchidGroupMutation mutation = recorder.start(
 				OrchidGroupMutationType.CREATE, command.source(), fingerprint,
 				command.effectiveBusinessDate(), command.reason());
 		List<OrchidGroup> groups = new ArrayList<>();
@@ -128,7 +112,7 @@ public class OrchidGroupMutationEngine {
 			groups.add(createGroup(zone, variety, item.details(), nextSortOrder));
 		}
 
-		return recordCreated(mutation, groups);
+		return recorder.created(mutation, groups);
 	}
 
 	public OrchidGroupMutationResult createFromInbound(
@@ -156,7 +140,7 @@ public class OrchidGroupMutationEngine {
 				.map(CreateOrchidGroupMutationItem::bedZoneId)
 				.collect(Collectors.toSet()));
 		Map<Long, Integer> nextSortOrderByZoneId = currentMaxSortOrders(zones.keySet());
-		OrchidGroupMutation mutation = saveMutation(
+		OrchidGroupMutation mutation = recorder.start(
 				OrchidGroupMutationType.CREATE, command.source(), fingerprint,
 				command.effectiveBusinessDate(), command.reason());
 		List<OrchidGroup> groups = new ArrayList<>();
@@ -169,7 +153,7 @@ public class OrchidGroupMutationEngine {
 					zone, inboundRecord.getVariety(), details, nextSortOrder, inboundRecord);
 			groups.add(group);
 		}
-		return recordCreated(mutation, groups);
+		return recorder.created(mutation, groups);
 	}
 
 	public OrchidGroupMutationResult transform(TransformOrchidGroupsMutationCommand command) {
@@ -182,16 +166,7 @@ public class OrchidGroupMutationEngine {
 		List<Long> sourceIds = command.sources().stream()
 				.map(TransformOrchidGroupMutationSource::orchidGroupId)
 				.toList();
-		Map<Long, OrchidGroup> sourceById = orchidGroupRepository.findAllForUpdateByIdIn(sourceIds)
-				.stream()
-				.collect(Collectors.toMap(
-						OrchidGroup::getId,
-						Function.identity(),
-						(left, right) -> left,
-						LinkedHashMap::new));
-		if (sourceById.size() != sourceIds.size()) {
-			throw new NotFoundException("구조 변경 원본 난 묶음을 모두 찾을 수 없습니다.");
-		}
+		Map<Long, OrchidGroup> sourceById = findGroupsForUpdate(sourceIds, "구조 변경 원본 난 묶음을 모두 찾을 수 없습니다.");
 		replay = replayResolver.findExisting(command.source(), fingerprint);
 		if (replay.isPresent()) {
 			return replay.get();
@@ -216,13 +191,13 @@ public class OrchidGroupMutationEngine {
 				.map(result -> result.details().varietyId())
 				.collect(Collectors.toSet()));
 		Map<Long, Integer> nextSortOrderByZoneId = currentMaxSortOrders(zones.keySet());
-		OrchidGroupMutation mutation = saveMutation(
+		OrchidGroupMutation mutation = recorder.start(
 				OrchidGroupMutationType.TRANSFORM,
 				command.source(),
 				fingerprint,
 				command.effectiveBusinessDate(),
 				command.reason());
-		List<PendingChange> sourceChanges = new ArrayList<>();
+		List<OrchidGroupMutationRecorder.Change> sourceChanges = new ArrayList<>();
 		for (TransformOrchidGroupMutationSource sourceCommand : command.sources()) {
 			OrchidGroup sourceGroup = sourceById.get(sourceCommand.orchidGroupId());
 			long revisionBefore = sourceGroup.getStateRevision();
@@ -233,8 +208,8 @@ public class OrchidGroupMutationEngine {
 					sourceCommand.releasedEndPosition());
 			OrchidGroupStateSnapshot afterState = OrchidGroupStateSnapshot.from(sourceGroup);
 			sourceGroup.advanceStateRevision();
-			sourceChanges.add(new PendingChange(
-					sourceGroup, revisionBefore, beforeState, afterState));
+			sourceChanges.add(new OrchidGroupMutationRecorder.Change(
+					sourceGroup.getId(), revisionBefore, beforeState, afterState));
 		}
 
 		List<OrchidGroup> resultGroups = new ArrayList<>();
@@ -253,21 +228,7 @@ public class OrchidGroupMutationEngine {
 					zone, variety, resultCommand.details(), nextSortOrder));
 		}
 
-		List<OrchidGroupMutationEntry> entries = new ArrayList<>();
-		sourceChanges.forEach(change -> entries.add(OrchidGroupMutationEntry.changed(
-				mutation,
-				change.group().getId(),
-				OrchidGroupMutationEntryRole.SOURCE,
-				change.revisionBefore(),
-				change.beforeState(),
-				change.afterState())));
-		resultGroups.forEach(group -> entries.add(OrchidGroupMutationEntry.created(
-				mutation,
-				group.getId(),
-				OrchidGroupMutationEntryRole.RESULT,
-				OrchidGroupStateSnapshot.from(group))));
-		entryRepository.saveAll(entries);
-		return OrchidGroupMutationResult.from(mutation, entries);
+		return recorder.transformed(mutation, sourceChanges, resultGroups);
 	}
 
 	public OrchidGroupMutationResult updateDetails(UpdateOrchidGroupMutationCommand command) {
@@ -495,25 +456,19 @@ public class OrchidGroupMutationEngine {
 		List<Long> orchidGroupIds = items.stream()
 				.map(OrchidGroupQuantityMutationItem::orchidGroupId)
 				.toList();
-		Map<Long, OrchidGroup> groupsById = orchidGroupRepository
-				.findAllForUpdateByIdIn(orchidGroupIds)
-				.stream()
-				.collect(Collectors.toMap(OrchidGroup::getId, Function.identity()));
-		if (groupsById.size() != orchidGroupIds.size()) {
-			throw new NotFoundException("수량 Mutation 대상 난 묶음을 모두 찾을 수 없습니다.");
-		}
+		Map<Long, OrchidGroup> groupsById = findGroupsForUpdate(orchidGroupIds, "수량 Mutation 대상 난 묶음을 모두 찾을 수 없습니다.");
 		replay = replayResolver.findExisting(source, fingerprint);
 		if (replay.isPresent()) {
 			return replay.get();
 		}
-		List<OrchidGroupMutation> relationTargets = findRelationTargets(
+		List<OrchidGroupMutation> relationTargets = recorder.findRelated(
 				relatedMutations,
 				new LinkedHashSet<>(orchidGroupIds),
 				relationType == OrchidGroupMutationRelationType.COMPENSATES
 						? Set.of(OrchidGroupMutationType.CONSUME_RESERVATION)
 						: Set.of());
 
-		List<PendingChange> changes = new ArrayList<>();
+		List<OrchidGroupMutationRecorder.Change> changes = new ArrayList<>();
 		for (OrchidGroupQuantityMutationItem item : items) {
 			OrchidGroup group = groupsById.get(item.orchidGroupId());
 			requireBaseline(group);
@@ -523,23 +478,14 @@ public class OrchidGroupMutationEngine {
 			OrchidGroupStateSnapshot afterState = OrchidGroupStateSnapshot.from(group);
 			requireStateChange(beforeState, afterState);
 			group.advanceStateRevision();
-			changes.add(new PendingChange(group, revisionBefore, beforeState, afterState));
+			changes.add(new OrchidGroupMutationRecorder.Change(group.getId(), revisionBefore, beforeState, afterState));
 		}
 
-		OrchidGroupMutation mutation = saveMutation(
+		OrchidGroupMutation mutation = recorder.start(
 				mutationType, source, fingerprint, effectiveBusinessDate, reason);
-		List<OrchidGroupMutationEntry> entries = changes.stream()
-				.map(change -> OrchidGroupMutationEntry.changed(
-						mutation,
-						change.group().getId(),
-						OrchidGroupMutationEntryRole.AFFECTED,
-						change.revisionBefore(),
-						change.beforeState(),
-						change.afterState()))
-				.toList();
-		entryRepository.saveAll(entries);
-		recordRelations(mutation, relationTargets, relationType);
-		return OrchidGroupMutationResult.from(mutation, entries);
+		OrchidGroupMutationResult result = recorder.changed(mutation, changes);
+		recorder.relate(mutation, relationTargets, relationType);
+		return result;
 	}
 
 	public OrchidGroupMutationResult correct(CorrectOrchidGroupsMutationCommand command) {
@@ -552,13 +498,7 @@ public class OrchidGroupMutationEngine {
 		List<Long> orchidGroupIds = command.items().stream()
 				.map(CorrectOrchidGroupMutationItem::orchidGroupId)
 				.toList();
-		Map<Long, OrchidGroup> groupsById = orchidGroupRepository
-				.findAllForUpdateByIdIn(orchidGroupIds)
-				.stream()
-				.collect(Collectors.toMap(OrchidGroup::getId, Function.identity()));
-		if (groupsById.size() != orchidGroupIds.size()) {
-			throw new NotFoundException("보정 Mutation 대상 난 묶음을 모두 찾을 수 없습니다.");
-		}
+		Map<Long, OrchidGroup> groupsById = findGroupsForUpdate(orchidGroupIds, "보정 Mutation 대상 난 묶음을 모두 찾을 수 없습니다.");
 		replay = replayResolver.findExisting(command.source(), fingerprint);
 		if (replay.isPresent()) {
 			return replay.get();
@@ -576,18 +516,18 @@ public class OrchidGroupMutationEngine {
 		if (changedGroupIds.isEmpty()) {
 			throw new IllegalArgumentException("보정 Mutation에는 현재 상태와 다른 값이 필요합니다.");
 		}
-		List<OrchidGroupMutation> relationTargets = findRelationTargets(
+		List<OrchidGroupMutation> relationTargets = recorder.findRelated(
 				command.correctedMutations(),
 				changedGroupIds,
 				Set.of(OrchidGroupMutationType.CREATE, OrchidGroupMutationType.TRANSFORM));
-		OrchidGroupMutation mutation = saveMutation(
+		OrchidGroupMutation mutation = recorder.start(
 				OrchidGroupMutationType.CORRECTION,
 				command.source(),
 				fingerprint,
 				command.effectiveBusinessDate(),
 				command.reason());
 
-		List<PendingChange> changes = new ArrayList<>();
+		List<OrchidGroupMutationRecorder.Change> changes = new ArrayList<>();
 		for (CorrectOrchidGroupMutationItem item : command.items()) {
 			if (!changedGroupIds.contains(item.orchidGroupId())) {
 				continue;
@@ -598,88 +538,12 @@ public class OrchidGroupMutationEngine {
 			group.correctQuantityAndStatus(item.correctedQuantity(), item.correctedStatus());
 			OrchidGroupStateSnapshot afterState = OrchidGroupStateSnapshot.from(group);
 			group.advanceStateRevision();
-			changes.add(new PendingChange(group, revisionBefore, beforeState, afterState));
+			changes.add(new OrchidGroupMutationRecorder.Change(group.getId(), revisionBefore, beforeState, afterState));
 		}
 
-		List<OrchidGroupMutationEntry> entries = changes.stream()
-				.map(change -> OrchidGroupMutationEntry.changed(
-						mutation,
-						change.group().getId(),
-						OrchidGroupMutationEntryRole.AFFECTED,
-						change.revisionBefore(),
-						change.beforeState(),
-						change.afterState()))
-				.toList();
-		entryRepository.saveAll(entries);
-		recordRelations(mutation, relationTargets, OrchidGroupMutationRelationType.CORRECTS);
-		return OrchidGroupMutationResult.from(mutation, entries);
-	}
-
-	private List<OrchidGroupMutation> findRelationTargets(
-			RelatedOrchidGroupMutations relatedMutations,
-			Set<Long> affectedGroupIds,
-			Set<OrchidGroupMutationType> allowedMutationTypes) {
-		if (relatedMutations == null || relatedMutations.legacySource()) {
-			return List.of();
-		}
-		Map<Long, OrchidGroupMutation> mutationsById = mutationRepository
-				.findAllById(relatedMutations.mutationIds())
-				.stream()
-				.collect(Collectors.toMap(OrchidGroupMutation::getId, Function.identity()));
-		if (mutationsById.size() != relatedMutations.mutationIds().size()) {
-			throw new NotFoundException("관련 Mutation을 모두 찾을 수 없습니다.");
-		}
-		if (allowedMutationTypes.isEmpty() || mutationsById.values().stream()
-				.anyMatch(mutation -> !allowedMutationTypes.contains(mutation.getMutationType()))) {
-			throw new IllegalArgumentException("관련 Mutation 유형이 보정·보상 대상과 일치하지 않습니다.");
-		}
-		Map<Long, Set<Long>> groupIdsByMutationId = new LinkedHashMap<>();
-		entryRepository.findByMutationIdInOrderByMutationIdAscIdAsc(relatedMutations.mutationIds())
-				.forEach(entry -> groupIdsByMutationId
-						.computeIfAbsent(entry.getMutation().getId(), ignored -> new LinkedHashSet<>())
-						.add(entry.getOrchidGroupId()));
-		for (Long mutationId : relatedMutations.mutationIds()) {
-			Set<Long> relatedGroupIds = groupIdsByMutationId.getOrDefault(mutationId, Set.of());
-			if (relatedGroupIds.stream().noneMatch(affectedGroupIds::contains)) {
-				throw new IllegalArgumentException("관련 Mutation은 변경 대상 난 묶음과 연결되어야 합니다.");
-			}
-		}
-		Set<Long> allRelatedGroupIds = groupIdsByMutationId.values().stream()
-				.flatMap(Collection::stream)
-				.collect(Collectors.toSet());
-		if (!allRelatedGroupIds.containsAll(affectedGroupIds)) {
-			throw new IllegalArgumentException("모든 변경 대상은 관련 Mutation에 포함되어야 합니다.");
-		}
-		return relatedMutations.mutationIds().stream().map(mutationsById::get).toList();
-	}
-
-	private void recordRelations(
-			OrchidGroupMutation mutation,
-			List<OrchidGroupMutation> relatedMutations,
-			OrchidGroupMutationRelationType relationType) {
-		if (relatedMutations.isEmpty()) {
-			return;
-		}
-		if (relationType == null) {
-			throw new IllegalArgumentException("Mutation 관계 유형이 필요합니다.");
-		}
-		relationRepository.saveAll(relatedMutations.stream()
-				.map(related -> new OrchidGroupMutationRelation(mutation, related, relationType))
-				.toList());
-	}
-
-	private OrchidGroupMutationResult recordCreated(
-			OrchidGroupMutation mutation,
-			List<OrchidGroup> groups) {
-		List<OrchidGroupMutationEntry> entries = groups.stream()
-				.map(group -> OrchidGroupMutationEntry.created(
-						mutation,
-						group.getId(),
-						OrchidGroupMutationEntryRole.RESULT,
-						OrchidGroupStateSnapshot.from(group)))
-				.toList();
-		entryRepository.saveAll(entries);
-		return OrchidGroupMutationResult.from(mutation, entries);
+		OrchidGroupMutationResult result = recorder.changed(mutation, changes);
+		recorder.relate(mutation, relationTargets, OrchidGroupMutationRelationType.CORRECTS);
+		return result;
 	}
 
 	private OrchidGroupMutationResult recordChanged(
@@ -692,41 +556,23 @@ public class OrchidGroupMutationEngine {
 			long revisionBefore,
 			OrchidGroupStateSnapshot beforeState,
 			OrchidGroupStateSnapshot afterState) {
-		OrchidGroupMutation mutation = saveMutation(
+		OrchidGroupMutation mutation = recorder.start(
 				mutationType, source, commandFingerprint, effectiveBusinessDate, reason);
-		OrchidGroupMutationEntry entry = entryRepository.save(OrchidGroupMutationEntry.changed(
-				mutation,
-				group.getId(),
-				OrchidGroupMutationEntryRole.AFFECTED,
-				revisionBefore,
-				beforeState,
-				afterState));
-		return OrchidGroupMutationResult.from(mutation, List.of(entry));
-	}
-
-	private OrchidGroupMutation saveMutation(
-			OrchidGroupMutationType mutationType,
-			OrchidGroupMutationSource source,
-			String commandFingerprint,
-			LocalDate effectiveBusinessDate,
-			String reason) {
-		OrchidGroupMutation mutation = mutationRepository.save(new OrchidGroupMutation(
-				mutationType,
-				source,
-				commandFingerprint,
-				Instant.now(clock),
-				effectiveBusinessDate,
-				reason,
-				MUTATION_SCHEMA_VERSION));
-		writeFenceRepository.authorizeMutation(mutation.getId());
-		return mutation;
+		return recorder.changed(mutation, List.of(new OrchidGroupMutationRecorder.Change(
+				group.getId(), revisionBefore, beforeState, afterState)));
 	}
 
 	private OrchidGroup findGroupForUpdate(Long orchidGroupId) {
-		return orchidGroupRepository.findAllForUpdateByIdIn(List.of(orchidGroupId))
-				.stream()
-				.findFirst()
-				.orElseThrow(() -> new NotFoundException("난 묶음을 찾을 수 없습니다."));
+		return findGroupsForUpdate(List.of(orchidGroupId), "난 묶음을 찾을 수 없습니다.").get(orchidGroupId);
+	}
+
+	private Map<Long, OrchidGroup> findGroupsForUpdate(List<Long> ids, String missingMessage) {
+		Map<Long, OrchidGroup> groups = orchidGroupRepository.findAllForUpdateByIdIn(ids.stream().sorted().toList())
+				.stream().collect(Collectors.toMap(OrchidGroup::getId, Function.identity()));
+		if (groups.size() != ids.size()) {
+			throw new NotFoundException(missingMessage);
+		}
+		return groups;
 	}
 
 	private BedZone findZoneForUpdate(Long bedZoneId) {
@@ -850,10 +696,4 @@ public class OrchidGroupMutationEngine {
 		}
 	}
 
-	private record PendingChange(
-			OrchidGroup group,
-			long revisionBefore,
-			OrchidGroupStateSnapshot beforeState,
-			OrchidGroupStateSnapshot afterState) {
-	}
 }
