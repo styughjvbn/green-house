@@ -12,10 +12,12 @@ import com.greenhouse.backend.partner.domain.PartnerType;
 import com.greenhouse.backend.sales.domain.SalesSlip;
 import com.greenhouse.backend.sales.domain.SalesSlipItem;
 import com.greenhouse.backend.sales.domain.SalesType;
+import com.greenhouse.backend.sales.domain.SalesPaymentCategory;
 import com.greenhouse.backend.sales.application.SalesMetricsReader;
 import com.greenhouse.backend.settlement.domain.PartnerBalanceSummary;
 import jakarta.persistence.EntityManager;
 import java.time.LocalDate;
+import java.util.Map;
 import org.hibernate.SessionFactory;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
@@ -44,6 +46,33 @@ class SalesAnalyticsPostgresE2ETest extends WorkE2ETestBase {
 	@Autowired private JdbcTemplate jdbc;
 	@MockitoSpyBean private SalesMetricsReader salesMetrics;
 	private int slipSequence;
+
+	@Test
+	void combinesLegacyPaymentLabelsWithoutChangingStoredAmountsOrStatuses() {
+		var partner = partner("Payment categories");
+		var labels = new String[] { "입금 완료", "PAID", "미완료", "부분입금", "부분 처리 완료",
+				"미입금", "정산 대기", "PARTIALLY_PAID", "paid", " PAID ", "" };
+		for (int index = 0; index < labels.length; index++) {
+			var slip = new SalesSlip("PAYMENT-CATEGORY-" + index, FROM, SalesType.DIRECT, null, partner.getId(),
+					labels[index], "출고 완료", null, null);
+			slip.addItem(new SalesSlipItem(null, "Variety", "난", null, 1, 1_000_000_000, null));
+			entityManager.persist(slip);
+		}
+		entityManager.flush();
+		entityManager.clear();
+
+		assertThat(salesMetrics.paymentBreakdown(FROM, TO)).containsExactlyInAnyOrderEntriesOf(Map.of(
+				SalesPaymentCategory.PAID, 3_000_000_000L, SalesPaymentCategory.PARTIAL, 2_000_000_000L,
+				SalesPaymentCategory.UNPAID, 6_000_000_000L));
+		var result = analytics.getSalesAnalytics(FROM, TO);
+		assertThat(result.paymentBreakdown()).containsExactly(
+				new AnalyticsRankedValueResponse("입금 완료", 3_000_000_000L),
+				new AnalyticsRankedValueResponse("부분입금", 2_000_000_000L),
+				new AnalyticsRankedValueResponse("미입금", 6_000_000_000L));
+		assertThat(result.unpaidAmount()).isEqualTo(11_000_000_000L);
+		assertThat(jdbc.queryForList("select payment_status from sales_slips where partner_id = ?", String.class, partner.getId()))
+				.containsExactlyInAnyOrder(labels);
+	}
 
 	@Test
 	void returnsEmptySalesAndPartnerSummariesWithoutCreatingBalances() {

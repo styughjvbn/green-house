@@ -3,6 +3,7 @@ package com.greenhouse.backend.sales.application;
 import static com.greenhouse.backend.sales.domain.QSalesSlip.salesSlip;
 import static com.greenhouse.backend.sales.domain.QSalesSlipItem.salesSlipItem;
 
+import com.greenhouse.backend.sales.domain.SalesPaymentCategory;
 import com.greenhouse.backend.sales.domain.SalesSlip;
 import com.querydsl.core.types.Projections;
 import com.querydsl.core.types.dsl.BooleanExpression;
@@ -70,11 +71,13 @@ public class SalesMetricsReader {
 				.collect(Collectors.toUnmodifiableMap(PartnerSales::partnerId, Function.identity()));
 	}
 
-	public List<NamedAmount> paymentBreakdown(LocalDate from, LocalDate to) {
+	public Map<SalesPaymentCategory, Long> paymentBreakdown(LocalDate from, LocalDate to) {
 		return queryFactory.select(Projections.constructor(NamedAmount.class,
 						salesSlip.paymentStatus, salesSlip.totalAmount.sum().longValue()))
 				.from(salesSlip).where(completedInPeriod(from, to))
-				.groupBy(salesSlip.paymentStatus).fetch();
+				.groupBy(salesSlip.paymentStatus).fetch().stream()
+				.collect(Collectors.toUnmodifiableMap(
+						row -> SalesPaymentCategory.fromStoredStatus(row.name()), NamedAmount::amount, Long::sum));
 	}
 
 	public List<SlipSummary> recentSlips(LocalDate from, LocalDate to) {

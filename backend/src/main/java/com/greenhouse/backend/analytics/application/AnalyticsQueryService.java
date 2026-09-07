@@ -1,7 +1,6 @@
 package com.greenhouse.backend.analytics.application;
 
 import com.greenhouse.backend.analytics.domain.AnalyticsDateRange;
-import com.greenhouse.backend.analytics.dto.AnalyticsInsightResponse;
 import com.greenhouse.backend.analytics.dto.AnalyticsRankedValueResponse;
 import com.greenhouse.backend.analytics.dto.AnalyticsSlipSummaryResponse;
 import com.greenhouse.backend.analytics.dto.PartnerAnalyticsResponse;
@@ -10,30 +9,28 @@ import com.greenhouse.backend.analytics.dto.SalesAnalyticsResponse;
 import com.greenhouse.backend.analytics.dto.VarietyInventoryAnalyticsResponse;
 import com.greenhouse.backend.analytics.dto.WorkAnalyticsItemResponse;
 import com.greenhouse.backend.analytics.dto.WorkAnalyticsResponse;
-import com.greenhouse.backend.sales.application.SalesMetricsReader;
+import com.greenhouse.backend.common.config.TimeConfig;
+import com.greenhouse.backend.farm.application.status.FarmMetricsReader;
+import com.greenhouse.backend.partner.application.BusinessPartnerReader.Identity;
+import com.greenhouse.backend.partner.application.BusinessPartnerReader;
 import com.greenhouse.backend.sales.application.SalesMetricsReader.NamedAmount;
 import com.greenhouse.backend.sales.application.SalesMetricsReader.PartnerSales;
 import com.greenhouse.backend.sales.application.SalesMetricsReader.SlipSummary;
-import com.greenhouse.backend.partner.application.BusinessPartnerReader;
-import com.greenhouse.backend.partner.application.BusinessPartnerReader.Identity;
-import com.greenhouse.backend.settlement.application.PartnerBalanceService;
+import com.greenhouse.backend.sales.application.SalesMetricsReader;
 import com.greenhouse.backend.settlement.application.PartnerBalanceService.Balance;
-import com.greenhouse.backend.common.config.TimeConfig;
-import com.greenhouse.backend.farm.application.status.FarmMetricsReader;
+import com.greenhouse.backend.settlement.application.PartnerBalanceService;
 import com.greenhouse.backend.work.application.operation.WorkOperationMetricsReader;
-import java.text.NumberFormat;
 import java.time.Clock;
 import java.time.LocalDate;
-import java.time.YearMonth;
-import java.util.List;
-import java.util.Map;
 import java.util.Comparator;
 import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 import org.springframework.transaction.annotation.Isolation;
+import org.springframework.transaction.annotation.Transactional;
 
 @Service
 @Transactional(readOnly = true, isolation = Isolation.REPEATABLE_READ)
@@ -49,24 +46,15 @@ public class AnalyticsQueryService {
 
 	public SalesAnalyticsResponse getSalesAnalytics(LocalDate from, LocalDate to) {
 		AnalyticsDateRange range = dateRange(from, to);
-		YearMonth currentMonth = YearMonth.from(range.to());
-		LocalDate currentMonthFrom = range.from().isAfter(currentMonth.atDay(1))
-				? range.from()
-				: currentMonth.atDay(1);
-		LocalDate currentMonthTo = range.to();
-		YearMonth previousMonth = currentMonth.minusMonths(1);
-		LocalDate previousMonthFrom = previousMonth.atDay(
-				Math.min(currentMonthFrom.getDayOfMonth(), previousMonth.lengthOfMonth()));
-		LocalDate previousMonthTo = previousMonth.atDay(
-				Math.min(currentMonthTo.getDayOfMonth(), previousMonth.lengthOfMonth()));
-		Long currentMonthSales = salesMetrics.sumSales(currentMonthFrom, currentMonthTo);
-		Long previousMonthSales = salesMetrics.sumSales(previousMonthFrom, previousMonthTo);
-		Long shippedQuantity = salesMetrics.sumShippedQuantity(currentMonthFrom, currentMonthTo);
-		Long previousMonthShippedQuantity = salesMetrics.sumShippedQuantity(
-				previousMonthFrom,
-				previousMonthTo);
+		var currentMonth = range.endingMonth();
+		var previousMonth = range.previousMonthComparison();
+		Long currentMonthSales = salesMetrics.sumSales(currentMonth.from(), currentMonth.to());
+		Long previousMonthSales = salesMetrics.sumSales(previousMonth.from(), previousMonth.to());
+		Long shippedQuantity = salesMetrics.sumShippedQuantity(currentMonth.from(), currentMonth.to());
+		Long previousMonthShippedQuantity = salesMetrics.sumShippedQuantity(previousMonth.from(), previousMonth.to());
 		Long unpaidAmount = salesMetrics.sumUnpaidAmount(range.from(), range.to());
-		List<AnalyticsRankedValueResponse> monthlySales = monthlySales(range.from(), range.to());
+		var monthlySales = SalesAnalyticsResponseAssembler.monthlySales(
+				range.to(), salesMetrics.monthlySales(range.from(), range.to()));
 		var varietySales = ranked(salesMetrics.varietySales(range.from(), range.to()));
 		var salesByPartner = salesMetrics.partnerSales(range.from(), range.to());
 		var partners = partnerReader.getIdentities(salesByPartner.keySet());
@@ -79,7 +67,6 @@ public class AnalyticsQueryService {
 		var recentSlips = slips(salesMetrics.recentSlips(range.from(), range.to()), partners);
 		var unpaidSlips = slips(salesMetrics.unpaidSlips(range.from(), range.to()), partners);
 		var inventory = farmMetricsReader.getInventorySummary();
-		String formattedUnpaidAmount = NumberFormat.getNumberInstance().format(unpaidAmount);
 		return new SalesAnalyticsResponse(
 				currentMonthSales,
 				previousMonthSales,
@@ -94,16 +81,10 @@ public class AnalyticsQueryService {
 								row.varietyName(), row.saleableQuantity(), row.warningGroupCount()))
 						.toList(),
 				partnerSales,
-				paymentBreakdown(range.from(), range.to()),
+				SalesAnalyticsResponseAssembler.paymentBreakdown(salesMetrics.paymentBreakdown(range.from(), range.to())),
 				recentSlips,
 				unpaidSlips,
-				List.of(new AnalyticsInsightResponse(
-						unpaidAmount > 0 ? "red" : "green",
-						unpaidAmount > 0
-								? "미수 전표 확인 필요: " + formattedUnpaidAmount + "원"
-								: "현재 기간 미수 전표 없음",
-						unpaidAmount > 0 ? "판매 관리" : null,
-						unpaidAmount > 0 ? "/sales" : null)));
+				SalesAnalyticsResponseAssembler.salesInsights(unpaidAmount));
 	}
 
 	public PartnerAnalyticsResponse getPartnerAnalytics(LocalDate from, LocalDate to) {
@@ -157,17 +138,6 @@ public class AnalyticsQueryService {
 				recentRecords);
 	}
 
-	private List<AnalyticsRankedValueResponse> monthlySales(LocalDate from, LocalDate to) {
-		var values = salesMetrics.monthlySales(from, to);
-		YearMonth end = YearMonth.from(to);
-		return java.util.stream.IntStream.rangeClosed(0, 5)
-				.mapToObj(index -> end.minusMonths(5L - index))
-				.map(month -> new AnalyticsRankedValueResponse(
-						month.getMonthValue() + "월",
-						values.getOrDefault(month, 0L)))
-				.toList();
-	}
-
 	private List<AnalyticsRankedValueResponse> ranked(List<NamedAmount> rows) {
 		return rows.stream()
 				.map(row -> new AnalyticsRankedValueResponse(row.name(), row.amount()))
@@ -178,21 +148,6 @@ public class AnalyticsQueryService {
 		return rows.stream().map(row -> new AnalyticsSlipSummaryResponse(
 				row.id(), row.slipNumber(), row.saleDate(), partners.get(row.partnerId()).name(), row.totalAmount(),
 				row.paidAmount(), row.remainingAmount(), row.paymentStatus(), row.salesStatus())).toList();
-	}
-
-	private List<AnalyticsRankedValueResponse> paymentBreakdown(LocalDate from, LocalDate to) {
-		Map<String, Long> values = salesMetrics.paymentBreakdown(from, to).stream()
-				.collect(Collectors.toMap(row -> normalizePaymentStatus(row.name()), NamedAmount::amount, Long::sum));
-		return List.of(
-				new AnalyticsRankedValueResponse("입금 완료", values.getOrDefault("입금 완료", 0L)),
-				new AnalyticsRankedValueResponse("부분입금", values.getOrDefault("부분입금", 0L)),
-				new AnalyticsRankedValueResponse("미입금", values.getOrDefault("미입금", 0L)));
-	}
-
-	private String normalizePaymentStatus(String status) {
-		if (status.contains("부분")) return "부분입금";
-		if (status.contains("완료") || status.equals("PAID")) return "입금 완료";
-		return "미입금";
 	}
 
 	private AnalyticsDateRange dateRange(LocalDate from, LocalDate to) {

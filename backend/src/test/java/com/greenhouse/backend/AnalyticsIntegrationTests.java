@@ -66,6 +66,10 @@ class AnalyticsIntegrationTests extends AbstractBackendIntegrationTest {
 		mockMvc.perform(get("/api/analytics/sales"))
 				.andExpect(status().isOk())
 				.andExpect(jsonPath("$.data.currentMonthSales").value(0))
+				.andExpect(jsonPath("$.data.salesInsights.length()").value(1))
+				.andExpect(jsonPath("$.data.salesInsights[0].tone").value("green"))
+				.andExpect(jsonPath("$.data.salesInsights[0].text").value("현재 기간 미수 전표 없음"))
+				.andExpect(jsonPath("$.data.salesInsights[0].actionHref").value(org.hamcrest.Matchers.nullValue()))
 				.andExpect(jsonPath("$.data.monthlySales").isArray())
 				.andExpect(jsonPath("$.data.recentSlips").isArray());
 	}
@@ -135,6 +139,9 @@ class AnalyticsIntegrationTests extends AbstractBackendIntegrationTest {
 				.andExpect(jsonPath("$.data.previousMonthSales").value(0))
 				.andExpect(jsonPath("$.data.shippedQuantity").value(2))
 				.andExpect(jsonPath("$.data.unpaidAmount").value(2000))
+				.andExpect(jsonPath("$.data.salesInsights[0].tone").value("red"))
+				.andExpect(jsonPath("$.data.salesInsights[0].actionLabel").value("판매 관리"))
+				.andExpect(jsonPath("$.data.salesInsights[0].actionHref").value("/sales"))
 				.andExpect(jsonPath("$.data.recentSlips.length()").value(1))
 				.andExpect(jsonPath("$.data.recentSlips[0].id").value(completed.getId()));
 	}

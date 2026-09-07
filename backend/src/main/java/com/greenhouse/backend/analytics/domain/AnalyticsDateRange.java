@@ -18,4 +18,14 @@ public record AnalyticsDateRange(LocalDate from, LocalDate to) {
 		LocalDate start = from == null ? end.minusMonths(11).withDayOfMonth(1) : from;
 		return new AnalyticsDateRange(start, end);
 	}
+
+	public AnalyticsDateRange endingMonth() {
+		LocalDate monthStart = to.withDayOfMonth(1);
+		return new AnalyticsDateRange(from.isAfter(monthStart) ? from : monthStart, to);
+	}
+
+	public AnalyticsDateRange previousMonthComparison() {
+		var current = endingMonth();
+		return new AnalyticsDateRange(current.from().minusMonths(1), current.to().minusMonths(1));
+	}
 }
