@@ -77,9 +77,5 @@ HTTP_DTO	com.greenhouse.backend.print.controller.PrintController	com.greenhouse.
 HTTP_DTO	com.greenhouse.backend.print.controller.PrintController	com.greenhouse.backend.sales.dto.SalesSlipResponse
 HTTP_DTO	com.greenhouse.backend.sales.dto.SalesSlipListItemResponse	com.greenhouse.backend.partner.dto.BusinessPartnerResponse
 HTTP_DTO	com.greenhouse.backend.sales.dto.SalesSlipResponse	com.greenhouse.backend.partner.dto.BusinessPartnerResponse
-QUERY_TYPE	com.greenhouse.backend.analytics.repository.SalesAnalyticsRepository	com.greenhouse.backend.partner.domain.QBusinessPartner
-QUERY_TYPE	com.greenhouse.backend.analytics.repository.SalesAnalyticsRepository	com.greenhouse.backend.sales.domain.QSalesSlip
-QUERY_TYPE	com.greenhouse.backend.analytics.repository.SalesAnalyticsRepository	com.greenhouse.backend.sales.domain.QSalesSlipItem
-QUERY_TYPE	com.greenhouse.backend.analytics.repository.SalesAnalyticsRepository	com.greenhouse.backend.settlement.domain.QPartnerBalanceSummary
 QUERY_TYPE	com.greenhouse.backend.auction.repository.AuctionShipmentLotRepositoryImpl	com.greenhouse.backend.partner.domain.QBusinessPartner
 QUERY_TYPE	com.greenhouse.backend.sales.repository.SalesSlipRepositoryImpl	com.greenhouse.backend.partner.domain.QBusinessPartner

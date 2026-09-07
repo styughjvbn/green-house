@@ -11,6 +11,8 @@ import lombok.RequiredArgsConstructor;
 
 import java.util.Collection;
 import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
@@ -22,6 +24,21 @@ public class PartnerBalanceService {
 	private final PartnerBalanceSummaryRepository balanceRepository;
 	private final PartnerPaymentEventRepository eventRepository;
 	private final BusinessPartnerLock partnerLock;
+
+	@Transactional(readOnly = true)
+	public Map<Long, Balance> getNonzeroBalances() {
+		return balanceRepository.findNonzeroBalances().stream().collect(Collectors.toUnmodifiableMap(
+				row -> row.getPartnerId(), row -> new Balance(
+						row.getReceivableBalance(), row.getCreditBalance(), row.getUnappliedPaymentAmount())));
+	}
+
+	public record Balance(long receivableBalance, long creditBalance, long unappliedPaymentAmount) {
+		public static final Balance ZERO = new Balance(0, 0, 0);
+
+		public boolean hasPositiveBalance() {
+			return receivableBalance > 0 || creditBalance > 0 || unappliedPaymentAmount > 0;
+		}
+	}
 
 	@Transactional(propagation = Propagation.MANDATORY)
 	public void lockPartners(Collection<Long> partnerIds) {

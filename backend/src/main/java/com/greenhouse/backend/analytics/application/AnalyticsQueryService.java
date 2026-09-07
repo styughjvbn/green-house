@@ -10,7 +10,14 @@ import com.greenhouse.backend.analytics.dto.SalesAnalyticsResponse;
 import com.greenhouse.backend.analytics.dto.VarietyInventoryAnalyticsResponse;
 import com.greenhouse.backend.analytics.dto.WorkAnalyticsItemResponse;
 import com.greenhouse.backend.analytics.dto.WorkAnalyticsResponse;
-import com.greenhouse.backend.analytics.repository.SalesAnalyticsRepository;
+import com.greenhouse.backend.sales.application.SalesMetricsReader;
+import com.greenhouse.backend.sales.application.SalesMetricsReader.NamedAmount;
+import com.greenhouse.backend.sales.application.SalesMetricsReader.PartnerSales;
+import com.greenhouse.backend.sales.application.SalesMetricsReader.SlipSummary;
+import com.greenhouse.backend.partner.application.BusinessPartnerReader;
+import com.greenhouse.backend.partner.application.BusinessPartnerReader.Identity;
+import com.greenhouse.backend.settlement.application.PartnerBalanceService;
+import com.greenhouse.backend.settlement.application.PartnerBalanceService.Balance;
 import com.greenhouse.backend.common.config.TimeConfig;
 import com.greenhouse.backend.farm.application.status.FarmMetricsReader;
 import com.greenhouse.backend.work.application.operation.WorkOperationMetricsReader;
@@ -20,19 +27,24 @@ import java.time.LocalDate;
 import java.time.YearMonth;
 import java.util.List;
 import java.util.Map;
+import java.util.Comparator;
+import java.util.HashSet;
 import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.annotation.Isolation;
 
 @Service
-@Transactional(readOnly = true)
+@Transactional(readOnly = true, isolation = Isolation.REPEATABLE_READ)
 @RequiredArgsConstructor
 public class AnalyticsQueryService {
 
-	private final SalesAnalyticsRepository salesAnalyticsRepository;
+	private final SalesMetricsReader salesMetrics;
 	private final FarmMetricsReader farmMetricsReader;
 	private final WorkOperationMetricsReader workMetricsReader;
+	private final BusinessPartnerReader partnerReader;
+	private final PartnerBalanceService balanceService;
 	private final Clock clock;
 
 	public SalesAnalyticsResponse getSalesAnalytics(LocalDate from, LocalDate to) {
@@ -47,26 +59,25 @@ public class AnalyticsQueryService {
 				Math.min(currentMonthFrom.getDayOfMonth(), previousMonth.lengthOfMonth()));
 		LocalDate previousMonthTo = previousMonth.atDay(
 				Math.min(currentMonthTo.getDayOfMonth(), previousMonth.lengthOfMonth()));
-		Long currentMonthSales = salesAnalyticsRepository.sumSales(currentMonthFrom, currentMonthTo);
-		Long previousMonthSales = salesAnalyticsRepository.sumSales(previousMonthFrom, previousMonthTo);
-		Long shippedQuantity = salesAnalyticsRepository.sumShippedQuantity(currentMonthFrom, currentMonthTo);
-		Long previousMonthShippedQuantity = salesAnalyticsRepository.sumShippedQuantity(
+		Long currentMonthSales = salesMetrics.sumSales(currentMonthFrom, currentMonthTo);
+		Long previousMonthSales = salesMetrics.sumSales(previousMonthFrom, previousMonthTo);
+		Long shippedQuantity = salesMetrics.sumShippedQuantity(currentMonthFrom, currentMonthTo);
+		Long previousMonthShippedQuantity = salesMetrics.sumShippedQuantity(
 				previousMonthFrom,
 				previousMonthTo);
-		Long unpaidAmount = salesAnalyticsRepository.sumUnpaidAmount(range.from(), range.to());
+		Long unpaidAmount = salesMetrics.sumUnpaidAmount(range.from(), range.to());
 		List<AnalyticsRankedValueResponse> monthlySales = monthlySales(range.from(), range.to());
-		List<AnalyticsRankedValueResponse> varietySales = ranked(salesAnalyticsRepository.varietySales(range.from(), range.to(), 10));
-		List<AnalyticsRankedValueResponse> partnerSales = ranked(salesAnalyticsRepository.partnerSales(range.from(), range.to(), 10));
-		var recentSlips = salesAnalyticsRepository.recentSlips(range.from(), range.to(), 5).stream()
-				.map(row -> new AnalyticsSlipSummaryResponse(
-						row.id(), row.slipNumber(), row.saleDate(), row.partnerName(), row.totalAmount(),
-						row.paidAmount(), row.remainingAmount(), row.paymentStatus(), row.salesStatus()))
-				.toList();
-		var unpaidSlips = salesAnalyticsRepository.unpaidSlips(range.from(), range.to(), 5).stream()
-				.map(row -> new AnalyticsSlipSummaryResponse(
-						row.id(), row.slipNumber(), row.saleDate(), row.partnerName(), row.totalAmount(),
-						row.paidAmount(), row.remainingAmount(), row.paymentStatus(), row.salesStatus()))
-				.toList();
+		var varietySales = ranked(salesMetrics.varietySales(range.from(), range.to()));
+		var salesByPartner = salesMetrics.partnerSales(range.from(), range.to());
+		var partners = partnerReader.getIdentities(salesByPartner.keySet());
+		var partnerSales = salesByPartner.values().stream().collect(Collectors.toMap(
+				row -> partners.get(row.partnerId()).name(), PartnerSales::totalSales, Long::sum))
+				.entrySet().stream().map(entry -> new AnalyticsRankedValueResponse(entry.getKey(), entry.getValue()))
+				.sorted(Comparator.comparing(AnalyticsRankedValueResponse::value).reversed()
+						.thenComparing(AnalyticsRankedValueResponse::label))
+				.limit(10).toList();
+		var recentSlips = slips(salesMetrics.recentSlips(range.from(), range.to()), partners);
+		var unpaidSlips = slips(salesMetrics.unpaidSlips(range.from(), range.to()), partners);
 		var inventory = farmMetricsReader.getInventorySummary();
 		String formattedUnpaidAmount = NumberFormat.getNumberInstance().format(unpaidAmount);
 		return new SalesAnalyticsResponse(
@@ -97,11 +108,29 @@ public class AnalyticsQueryService {
 
 	public PartnerAnalyticsResponse getPartnerAnalytics(LocalDate from, LocalDate to) {
 		AnalyticsDateRange range = dateRange(from, to);
-		var partnerStats = salesAnalyticsRepository.partnerStats(range.from(), range.to()).stream()
-				.map(row -> new PartnerAnalyticsStatResponse(
-						row.partnerId(), row.partnerName(), row.partnerType(), row.totalSales(), row.transactionCount(),
-						row.unpaidAmount(), row.paidAmount(), row.receivableBalance(), row.creditBalance(),
-						row.unappliedPaymentAmount(), row.latestSaleDate()))
+		var sales = salesMetrics.partnerSales(range.from(), range.to());
+		var balances = balanceService.getNonzeroBalances();
+		var ids = new HashSet<>(sales.keySet());
+		balances.forEach((id, balance) -> {
+			if (balance.hasPositiveBalance()) {
+				ids.add(id);
+			}
+		});
+		var partners = partnerReader.getIdentities(ids);
+		var partnerStats = ids.stream().map(id -> {
+			var partner = partners.get(id);
+			var totals = sales.getOrDefault(id, new PartnerSales(id, 0, 0, 0, 0, null));
+			var balance = balances.getOrDefault(id, Balance.ZERO);
+			return new PartnerAnalyticsStatResponse(id, partner.name(), partner.partnerType(),
+					totals.totalSales(), totals.transactionCount(), totals.unpaidAmount(), totals.paidAmount(),
+					balance.receivableBalance(), balance.creditBalance(), balance.unappliedPaymentAmount(), totals.latestSaleDate());
+		})
+				// Preserve PostgreSQL's DESC NULLS FIRST for partners without period sales.
+				.sorted(Comparator.comparing(
+						(PartnerAnalyticsStatResponse row) -> row.transactionCount() == 0 ? null : row.totalSales(),
+						Comparator.nullsFirst(Comparator.reverseOrder()))
+						.thenComparing(PartnerAnalyticsStatResponse::transactionCount, Comparator.reverseOrder())
+						.thenComparing(PartnerAnalyticsStatResponse::partnerId))
 				.toList();
 		var partnerSales = partnerStats.stream()
 				.limit(10)
@@ -129,28 +158,31 @@ public class AnalyticsQueryService {
 	}
 
 	private List<AnalyticsRankedValueResponse> monthlySales(LocalDate from, LocalDate to) {
-		Map<String, Long> values = salesAnalyticsRepository.monthlySales(from, to).stream()
-				.collect(Collectors.toMap(
-						row -> String.format("%04d-%02d", ((Number) row[0]).intValue(), ((Number) row[1]).intValue()),
-						row -> ((Number) row[2]).longValue()));
+		var values = salesMetrics.monthlySales(from, to);
 		YearMonth end = YearMonth.from(to);
 		return java.util.stream.IntStream.rangeClosed(0, 5)
 				.mapToObj(index -> end.minusMonths(5L - index))
 				.map(month -> new AnalyticsRankedValueResponse(
 						month.getMonthValue() + "월",
-						values.getOrDefault(month.toString(), 0L)))
+						values.getOrDefault(month, 0L)))
 				.toList();
 	}
 
-	private List<AnalyticsRankedValueResponse> ranked(List<Object[]> rows) {
+	private List<AnalyticsRankedValueResponse> ranked(List<NamedAmount> rows) {
 		return rows.stream()
-				.map(row -> new AnalyticsRankedValueResponse(String.valueOf(row[0]), ((Number) row[1]).longValue()))
+				.map(row -> new AnalyticsRankedValueResponse(row.name(), row.amount()))
 				.toList();
+	}
+
+	private List<AnalyticsSlipSummaryResponse> slips(List<SlipSummary> rows, Map<Long, Identity> partners) {
+		return rows.stream().map(row -> new AnalyticsSlipSummaryResponse(
+				row.id(), row.slipNumber(), row.saleDate(), partners.get(row.partnerId()).name(), row.totalAmount(),
+				row.paidAmount(), row.remainingAmount(), row.paymentStatus(), row.salesStatus())).toList();
 	}
 
 	private List<AnalyticsRankedValueResponse> paymentBreakdown(LocalDate from, LocalDate to) {
-		Map<String, Long> values = salesAnalyticsRepository.paymentBreakdown(from, to).stream()
-				.collect(Collectors.toMap(row -> normalizePaymentStatus(String.valueOf(row[0])), row -> ((Number) row[1]).longValue(), Long::sum));
+		Map<String, Long> values = salesMetrics.paymentBreakdown(from, to).stream()
+				.collect(Collectors.toMap(row -> normalizePaymentStatus(row.name()), NamedAmount::amount, Long::sum));
 		return List.of(
 				new AnalyticsRankedValueResponse("입금 완료", values.getOrDefault("입금 완료", 0L)),
 				new AnalyticsRankedValueResponse("부분입금", values.getOrDefault("부분입금", 0L)),

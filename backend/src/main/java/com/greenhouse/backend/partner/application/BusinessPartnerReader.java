@@ -2,10 +2,13 @@ package com.greenhouse.backend.partner.application;
 
 import com.greenhouse.backend.common.exception.NotFoundException;
 import com.greenhouse.backend.partner.repository.BusinessPartnerRepository;
+import com.greenhouse.backend.partner.domain.PartnerType;
 
 import lombok.RequiredArgsConstructor;
 
 import java.util.Collection;
+import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.function.Function;
@@ -17,7 +20,26 @@ import org.springframework.transaction.annotation.Transactional;
 @Transactional(readOnly = true)
 @RequiredArgsConstructor
 public class BusinessPartnerReader {
+	private static final int ID_BATCH_SIZE = 500;
 	private final BusinessPartnerRepository partnerRepository;
+
+	public Map<Long, Identity> getIdentities(Collection<Long> partnerIds) {
+		var ids = new ArrayList<>(new HashSet<>(partnerIds));
+		var identities = new HashMap<Long, Identity>();
+		for (int start = 0; start < ids.size(); start += ID_BATCH_SIZE) {
+			var batch = ids.subList(start, Math.min(start + ID_BATCH_SIZE, ids.size()));
+			for (var row : partnerRepository.findIdentities(batch)) {
+				identities.put(row.getId(), new Identity(row.getId(), row.getName(), row.getPartnerType()));
+			}
+		}
+		if (identities.size() != ids.size()) {
+			throw new NotFoundException("거래처를 찾을 수 없습니다.");
+		}
+		return Map.copyOf(identities);
+	}
+
+	public record Identity(Long id, String name, PartnerType partnerType) {
+	}
 
 	public BusinessPartnerInfo getInfo(Long partnerId) {
 		return partnerRepository.findById(partnerId).map(BusinessPartnerInfo::from)
