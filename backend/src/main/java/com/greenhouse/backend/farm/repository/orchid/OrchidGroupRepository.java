@@ -14,6 +14,40 @@ import jakarta.persistence.LockModeType;
 public interface OrchidGroupRepository extends JpaRepository<OrchidGroup, Long> {
 
 	@Query("""
+			select g.id as orchidGroupId, h.id as houseId, b.id as physicalBedId, z.id as bedZoneId,
+			       g.startPosition as startPosition, g.endPosition as endPosition,
+			       v.id as varietyId, v.color as varietyColor, coalesce(v.name, g.varietyName) as varietyName,
+			       g.quantity as quantity, g.status as status, g.ageYear as ageYear,
+			       g.potSize as potSize, g.sortOrder as sortOrder,
+			       i.id as inboundRecordId, i.inboundDate as inboundDate, g.createdAt as createdAt
+			from OrchidGroup g join g.bedZone z join z.physicalBed b join b.house h
+			left join g.variety v left join g.inboundRecord i
+			where g.quantity > 0
+			order by h.number, b.displayOrder, z.sortOrder, g.sortOrder
+			""")
+	List<MapRow> findMapRows();
+
+	interface MapRow {
+		Long getOrchidGroupId();
+		Long getHouseId();
+		Long getPhysicalBedId();
+		Long getBedZoneId();
+		java.math.BigDecimal getStartPosition();
+		java.math.BigDecimal getEndPosition();
+		Long getVarietyId();
+		String getVarietyColor();
+		String getVarietyName();
+		Integer getQuantity();
+		String getStatus();
+		Integer getAgeYear();
+		String getPotSize();
+		Integer getSortOrder();
+		Long getInboundRecordId();
+		java.time.LocalDate getInboundDate();
+		java.time.LocalDateTime getCreatedAt();
+	}
+
+	@Query("""
 			select g.varietyName as varietyName,
 			       sum(case when g.status not in :unavailableStatuses then g.quantity - g.reservedQuantity else 0 end) as saleableQuantity,
 			       sum(case when g.status in :warningStatuses then 1 else 0 end) as warningGroupCount

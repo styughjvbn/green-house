@@ -13,6 +13,7 @@ import org.springframework.data.repository.query.Param;
 
 public interface BedZoneRepository extends JpaRepository<BedZone, Long> {
 
+	@EntityGraph(attributePaths = {"physicalBed", "physicalBed.house"})
 	List<BedZone> findByPhysicalBedIdOrderBySortOrderAsc(Long physicalBedId);
 
 	@Query("""
@@ -21,7 +22,15 @@ public interface BedZoneRepository extends JpaRepository<BedZone, Long> {
 			where b.house.id = :houseId
 			order by b.displayOrder asc, z.sortOrder asc
 			""")
+	@EntityGraph(attributePaths = {"physicalBed", "physicalBed.house"})
 	List<BedZone> findByHouseId(@Param("houseId") Long houseId);
+
+	@EntityGraph(attributePaths = {"physicalBed", "physicalBed.house"})
+	@Query("select z from BedZone z order by z.id")
+	List<BedZone> findAllWithLocation();
+
+	@EntityGraph(attributePaths = {"physicalBed", "physicalBed.house"})
+	Optional<BedZone> findWithLocationById(Long id);
 
 	@EntityGraph(attributePaths = { "physicalBed", "physicalBed.house", "orchidGroups", "capacities" })
 	Optional<BedZone> findWithDetailsById(Long id);

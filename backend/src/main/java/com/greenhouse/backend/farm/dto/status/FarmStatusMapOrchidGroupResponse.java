@@ -1,7 +1,5 @@
 package com.greenhouse.backend.farm.dto.status;
 
-import com.greenhouse.backend.farm.dto.orchid.OrchidGroupResponse;
-import com.greenhouse.backend.farm.domain.orchid.OrchidGroup;
 import java.math.BigDecimal;
 
 public record FarmStatusMapOrchidGroupResponse(
@@ -20,22 +18,4 @@ public record FarmStatusMapOrchidGroupResponse(
 		String potSize,
 		Integer sortOrder) {
 
-	public static FarmStatusMapOrchidGroupResponse from(OrchidGroup orchidGroup) {
-		var detail = OrchidGroupResponse.from(orchidGroup);
-		return new FarmStatusMapOrchidGroupResponse(
-				orchidGroup.getId(),
-				detail.houseId(),
-				orchidGroup.getBedZone().getPhysicalBed().getId(),
-				detail.bedZoneId(),
-				orchidGroup.getStartPosition(),
-				orchidGroup.getEndPosition(),
-				detail.varietyId(),
-				detail.varietyColor(),
-				detail.varietyName(),
-				detail.quantity(),
-				detail.status(),
-				detail.ageYear(),
-				detail.potSize(),
-				detail.sortOrder());
-	}
 }

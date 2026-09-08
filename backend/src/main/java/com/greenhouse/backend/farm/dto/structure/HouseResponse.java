@@ -10,12 +10,12 @@ public record HouseResponse(
 		String memo,
 		List<PhysicalBedResponse> physicalBeds) {
 
-	public static HouseResponse from(House house) {
+	public static HouseResponse from(House house, List<PhysicalBedResponse> physicalBeds) {
 		return new HouseResponse(
 				house.getId(),
 				house.getNumber(),
 				house.getName(),
 				house.getMemo(),
-				house.getPhysicalBeds().stream().map(PhysicalBedResponse::from).toList());
+				physicalBeds);
 	}
 }

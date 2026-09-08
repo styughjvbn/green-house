@@ -1,6 +1,8 @@
 package com.greenhouse.backend.farm.application.status;
 
 import com.greenhouse.backend.common.exception.NotFoundException;
+import com.greenhouse.backend.common.config.TimeConfig;
+import com.greenhouse.backend.farm.dto.orchid.OrchidGroupResponse;
 import com.greenhouse.backend.farm.domain.status.FarmStatusTargetType;
 import com.greenhouse.backend.farm.domain.status.FarmZoomLevel;
 import com.greenhouse.backend.farm.domain.orchid.OrchidGroup;
@@ -40,9 +42,9 @@ public class FarmStatusService {
 	private final OrchidGroupRepository orchidGroupRepository;
 
 	public FarmStatusMapResponse getMap() {
-		var mapOrchidGroups = orchidGroupRepository.search(null, "", null, null, null);
+		var mapOrchidGroups = orchidGroupRepository.findMapRows();
 		var groupsByHouseId = mapOrchidGroups.stream().collect(Collectors.groupingBy(
-				group -> group.getBedZone().getPhysicalBed().getHouse().getId()));
+				group -> group.getHouseId()));
 		var bedsByHouseId = physicalBedRepository.findAllInFarmOrder().stream()
 				.collect(Collectors.groupingBy(bed -> bed.getHouse().getId()));
 		var houses = houseRepository.findAll().stream()
@@ -66,7 +68,7 @@ public class FarmStatusService {
 				.toList();
 		return new FarmStatusMapResponse(
 				houses,
-				mapOrchidGroups.stream().map(FarmStatusMapOrchidGroupResponse::from).toList());
+				mapOrchidGroups.stream().map(this::mapGroup).toList());
 	}
 
 	public OrchidManagementViewportResponse getOrchidManagementViewport(Long startBedId, int bedCount) {
@@ -221,5 +223,15 @@ public class FarmStatusService {
 			case PHYSICAL_BED -> orchidGroupRepository.search(null, "", targetId, null, null);
 			case BED_ZONE -> orchidGroupRepository.search(null, "", null, targetId, null);
 		};
+	}
+
+	private FarmStatusMapOrchidGroupResponse mapGroup(OrchidGroupRepository.MapRow row) {
+		var referenceDate = row.getInboundRecordId() != null ? row.getInboundDate()
+				: row.getCreatedAt() == null ? null : TimeConfig.toFarmTime(row.getCreatedAt()).toLocalDate();
+		return new FarmStatusMapOrchidGroupResponse(
+				row.getOrchidGroupId(), row.getHouseId(), row.getPhysicalBedId(), row.getBedZoneId(),
+				row.getStartPosition(), row.getEndPosition(), row.getVarietyId(), row.getVarietyColor(),
+				row.getVarietyName(), row.getQuantity(), row.getStatus(),
+				OrchidGroupResponse.calculateAgeYear(row.getAgeYear(), referenceDate), row.getPotSize(), row.getSortOrder());
 	}
 }

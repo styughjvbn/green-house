@@ -72,6 +72,11 @@ public record OrchidGroupResponse(
 				: orchidGroup.getCreatedAt() != null
 						? TimeConfig.toFarmTime(orchidGroup.getCreatedAt()).toLocalDate()
 						: null;
+		return calculateAgeYear(baseAgeYear, referenceDate);
+	}
+
+	public static Integer calculateAgeYear(Integer baseAgeYear, LocalDate referenceDate) {
+		if (baseAgeYear == null) return null;
 		if (referenceDate == null) {
 			return baseAgeYear;
 		}
