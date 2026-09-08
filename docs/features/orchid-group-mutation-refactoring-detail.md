@@ -1,5 +1,9 @@
 # Mutation Engine 및 호출부 리팩터링 상세
 
+> 2026-09-08 후속 적용: 키가 있는 Work 요청 멱등성과 Legacy writer 제거를 완료하는 변경을 진행했다.
+> 최신 구현·복원 근거는 [전환 검증](orchid-engine-cutover-20260908.md)과
+> [코드·복구 수명](orchid-group-mutation-transition.md)을 기준으로 한다. 아래 발견·계획은 당시 기록이다.
+
 - 작성일: 2026-09-05
 - 검토 기준: `feature/orchid-group-mutation-engine`, `3aa8fc54`
 - 상태: 기준 시점의 진단·제안. 구현 결과는 [전체 계획의 1~23차 실행 기록](backend-refactoring-plan.md)을 따른다.

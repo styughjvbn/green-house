@@ -12,3 +12,5 @@
 
 전체 문서 읽는 순서는 [`../00-index.md`](../00-index.md), API 상세는
 [`../06-api-guide.md`](../06-api-guide.md)와 `../api/`를 기준으로 확인한다.
+
+- [2026-09-08 Engine 전환 검증](orchid-engine-cutover-20260908.md) — 최신 저장 백업 복원·ACTIVE·멱등성·API smoke 결과

@@ -61,17 +61,16 @@ POSTGRES_REWRITE_BATCHED_INSERTS
 FLYWAY_URL
 FLYWAY_USERNAME
 FLYWAY_PASSWORD
-ORCHID_LEDGER_WRITER_MODE
 ORCHID_LEDGER_WRITER_VERSION
 ORCHID_LEDGER_STARTUP_GUARD_ENABLED
 ```
 
 운영에서 `JPA_DDL_AUTO`는 `validate`로 두고 스키마 변경은 Flyway 마이그레이션으로만 적용한다.
 `HIBERNATE_JDBC_BATCH_SIZE`의 기본값은 `50`이며 PostgreSQL JDBC batch 재작성은 기본 활성화한다.
-난 묶음 ledger가 `ACTIVE`인 DB에는 `ORCHID_LEDGER_WRITER_MODE=ENGINE`과 coverage의
+난 묶음 ledger가 `ACTIVE`인 DB에는 coverage의
 최소 버전 이상인 `ORCHID_LEDGER_WRITER_VERSION`을 설정한다. 조건을 만족하지 못한
 인스턴스는 startup guard에서 기동이 거부된다. guard 비활성화는 전용 점검·cutover
-명령 내부에서만 사용한다.
+명령 내부에서만 사용한다. Legacy 모드는 제거됐으며 기본 writer version은 `2.0.0`이다. 원장 없는 난 묶음이나 PREPARING coverage가 남아 있으면 먼저 복구 CLI로 전환을 완료한다.
 
 인증을 적용하는 경우 다음 값을 별도로 관리한다.
 
@@ -202,7 +201,7 @@ V21~V28을 적용했던 개발·rehearsal DB는 checksum repair나 수동 스키
 않고 V20 운영 백업으로 다시 초기화한다. 이 통합본을 운영에 적용한 뒤에는 파일을
 수정하거나 번호를 다시 사용하지 않는다.
 
-운영 custom dump로 로컬 개발 DB를 초기화할 때는 다음 스크립트를 사용한다. 백업을 생략하면 `temp/`의 최신 `*.dump.gz` 또는 `*.dump`를 선택한다. 스크립트는 로컬 DB만 허용하며 기존 백엔드를 종료하고, 복원 후 Flyway 적용·Hibernate 스키마 검증·작업 V2 무결성 검사를 수행한다.
+운영 custom dump로 로컬 개발 DB를 초기화할 때는 다음 스크립트를 사용한다. 백업을 생략하면 `temp/`의 최신 `*.dump.gz` 또는 `*.dump`를 선택한다. 스크립트는 로컬 DB만 허용하며 기존 백엔드를 종료하고, 복원 후 HTTP 서버 없이 Flyway 적용·Hibernate 스키마 검증·작업 V2 무결성 검사를 수행한다. V20 백업처럼 상태 원장이 없거나 PREPARING인 경우 복원 후 종료 코드 2로 전환 필요를 알린다. 아래 PLAN/IMPORT/VERIFY/ACTIVE 절차를 완료한 뒤 업무 서버를 시작한다.
 
 ```bash
 # 확인 문구 입력 후 실행
@@ -280,7 +279,7 @@ DATABASE_PASSWORD=greenhouse_rehearsal_test \
   --cutover-key=${CUTOVER_KEY} \
   --manifest=../scripts/data-audit/orchid-state-chain-migration-manifest.json \
   --effective-business-date=${CUTOVER_BUSINESS_DATE} \
-  --minimum-writer-version=1.1.0 \
+  --minimum-writer-version=2.0.0 \
   --apply=false \
   --confirmation=PLAN:${CUTOVER_KEY}"
 ```
@@ -296,7 +295,7 @@ DATABASE_PASSWORD=greenhouse_rehearsal_test \
   --cutover-key=${CUTOVER_KEY} \
   --manifest=../scripts/data-audit/orchid-state-chain-migration-manifest.json \
   --effective-business-date=${CUTOVER_BUSINESS_DATE} \
-  --minimum-writer-version=1.1.0 \
+  --minimum-writer-version=2.0.0 \
   --apply=true \
   --confirmation=IMPORT:${CUTOVER_KEY}"
 ```
@@ -360,8 +359,7 @@ ENGINE 전체 회귀·smoke 및 아래 `ACTIVE` 전환 rehearsal까지 통과해
 
 ```bash
 cd backend
-ORCHID_LEDGER_WRITER_MODE=ENGINE \
-ORCHID_LEDGER_WRITER_VERSION=1.1.0 \
+ORCHID_LEDGER_WRITER_VERSION=2.0.0 \
 DATABASE_URL=jdbc:postgresql://localhost:5432/greenhouse_rehearsal \
 DATABASE_USERNAME=greenhouse_rehearsal_test \
 DATABASE_PASSWORD=greenhouse_rehearsal_test \
@@ -457,13 +455,13 @@ DATABASE_PASSWORD=greenhouse_rehearsal_test \
 ./gradlew orchidLedgerCutover --args="\
   --cutover-key=${CUTOVER_KEY} \
   --effective-business-date=2026-08-20 \
-  --minimum-writer-version=1.1.0 \
-  --current-writer-version=1.1.0 \
+  --minimum-writer-version=2.0.0 \
+  --current-writer-version=2.0.0 \
   --activate=true \
   --confirmation=ACTIVATE:${CUTOVER_KEY}"
 ```
 
-그 뒤 `ORCHID_LEDGER_WRITER_MODE=ENGINE`과 최소 version 이상의
+그 뒤 최소 version 이상의
 `ORCHID_LEDGER_WRITER_VERSION`으로 백엔드를 시작한다. 앞의 smoke test, reconciliation,
 Work/Sales 연결 SQL을 다시 수행하며 성공 기준은 다음과 같다.
 
@@ -506,7 +504,7 @@ docker manifest inspect "${RELEASE_IMAGE}" >/dev/null
 kubectl -n "${NAMESPACE}" get deployment "${DEPLOYMENT}" \
   -o jsonpath='{.spec.template.spec.containers[0].image}{"\n"}'
 kubectl -n "${NAMESPACE}" get configmap green-house-config \
-  -o jsonpath='{.data.ORCHID_LEDGER_WRITER_MODE}{" "}{.data.ORCHID_LEDGER_WRITER_VERSION}{"\n"}'
+  -o jsonpath='{.data.ORCHID_LEDGER_WRITER_VERSION}{"\n"}'
 ```
 
 전환 전 실행 중인 backend도 위 `RELEASE_IMAGE`여야 하며, `LEGACY`, writer version
@@ -594,7 +592,7 @@ kubectl -n "${NAMESPACE}" rollout status deployment/"${DEPLOYMENT}" --timeout=30
 kubectl -n "${NAMESPACE}" get deployment "${DEPLOYMENT}" \
   -o jsonpath='{.spec.template.spec.containers[0].image}{"\n"}'
 kubectl -n "${NAMESPACE}" get configmap green-house-config \
-  -o jsonpath='{.data.ORCHID_LEDGER_WRITER_MODE}{" "}{.data.ORCHID_LEDGER_WRITER_VERSION}{"\n"}'
+  -o jsonpath='{.data.ORCHID_LEDGER_WRITER_VERSION}{"\n"}'
 ```
 
 기동 후 `orchidLedgerReconcile`의 `stage=ACTIVE`, `ready=true`, `issues=[]`, Work/Sales

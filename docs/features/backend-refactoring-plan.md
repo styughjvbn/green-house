@@ -1134,3 +1134,34 @@ V24 운영 적용 순서는 [배포 문서](../07-deployment.md)에 반영했다
 - **Legacy 제거:** 실제 운영 DB의 cutover·안정화 여부를 이번 테스트로 대신 판단하지 않는다. 기존 전환 inventory와 데이터 보존 gate를 통과한 후 코드만 제거한다.
 - **규모 확대:** 검색 matching ID 수에 따라 SQL 인자·메모리가 증가한다. 아래 실험은 5,001개까지이며 무제한 확장을 보장하지 않는다. Mutation의 결과별 점유 검증은 앞선 상태 변경을 반영하는 기존 순서를 유지했고 대규모 생성의 일정한 query count를 입증한 것은 아니다. 대규모 입력·목록 계약 변경이 필요할 때 측정 근거와 클라이언트 전환을 함께 다룬다.
 - 이번 작업은 DB migration·운영 배포를 포함하지 않는다. 브라우저 E2E와 실제 운영 데이터 리허설은 실행하지 않았다.
+
+## 후속 실행 완료: Work 멱등성과 Legacy 제거 (2026-09-08)
+
+사용자 승인에 따라 최신 저장 백업을 다시 복원하고 추가 대기 대신 전환·회귀 검증을
+수행했다. 이전 절의 보류 상태는 이번 결과로 갱신한다.
+
+- 키가 있는 즉시 Work·구조 변경 기록·포트 기록에 원자 접수 기록, 요청 지문과 결과 ID를 추가했다. 같은 키의 병렬 생성은 한 번만 적용하고 실패 시 접수 기록도 롤백한다. 변경된 payload는 409로 거절한다.
+- 완료된 작업 효과도 원문을 확인한다. 효과 UNIQUE를 `(workOperationId, effectKey)`로 맞추고 포트 키는 입고 ID로 구분한다. 원문이 없는 과거 즉시 요청 18건은 결과 조회를 유지하며 재실행만 거절한다.
+- Transform 제외 ID 집합을 정렬했다. 이번 대상 V20 백업에는 Mutation 원장이 없어 새 지문으로 재구성한다. 이전 실험용 Engine 원장에 정렬된 새 지문을 소급 적용하지 않는다.
+- Legacy 직접 writer·라우팅 모드·예약 중간 래퍼를 제거했다. Entity 직접 변경은 Engine과 복구 importer, 생성·Repository 쓰기는 Engine만 허용한다. 복구 importer·cutover·대사와 과거 사실 데이터는 유지한다.
+- 기본 writer version은 2.0.0이다. 원장 없는 난 묶음·PREPARING·ACTIVE 최소 버전 위반은 서버 기동 시 차단한다.
+- 시작 커밋 `ea68c5b6` 대비 운영 Java **580 → 581파일, 27,827 → 27,623줄(204줄 순감)**. 요청 접수에 필요한 4개 타입을 추가하고 라우팅 타입 3개와 12곳의 Legacy 분기를 제거했다. 범용 실행 프레임워크는 추가하지 않았다.
+
+검증: `./gradlew format check workE2eTest bootJar --offline --no-daemon` 통과.
+기본 **460건**, 실제 PostgreSQL **96건**, 실패·skip **0건**. OpenAPI
+**136 operations·115 paths·228 schemas**와 생성 TypeScript 변경 없음.
+`npm run check`, `npm run api:types:check`, `bash -n scripts/reset-dev-db.sh`,
+`git diff --check` 통과. 변경한 reset 스크립트의 파괴적 전체 실행은 하지 않았으며,
+같은 비웹 기동 방식의 Flyway·Hibernate 검증은 복원 PostgreSQL에서 실행했다.
+
+복원·ACTIVE·API smoke·사후 대사와 산출물은
+[Engine 전환 검증](orchid-engine-cutover-20260908.md)에 기록했다. 깨끗한 전환 DB와
+검증용 복제 DB를 분리했다. 기존 로컬 DB 교체·운영 Kubernetes 배포는 실행하지 않았다.
+키 없는 계획·일반 기록의 신규 멱등 요청 계약, request correlation 확장은 현재
+구현 범위를 넘어서는 별도 API 변경이며 이번 완료 범위에 포함하지 않는다.
+
+목적별 커밋:
+
+- `a5143342 fix: serialize keyed work requests and validate replay contents`
+- `4a8cb212 refactor: retire legacy orchid group writers`
+- 복원·배포 설정·검증 보고서는 별도 운영 변경 커밋으로 기록한다.

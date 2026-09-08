@@ -36,7 +36,7 @@ k8s/
 - `base/secret.yaml`: 운영 DB 비밀번호와 운영 로그인 비밀번호 변경
 - `base/postgres-host-service.yaml`: mini-pc host PostgreSQL IP 확인
 - `base/backend-deployment.yaml`: GHCR에 실제 발행된 backend `sha-<commit>` 태그로 변경하고 `docker manifest inspect`로 존재 확인
-- `base/configmap.yaml`: 운영 전환 단계에 맞는 `ORCHID_LEDGER_WRITER_MODE`와 배포 후보 `ORCHID_LEDGER_WRITER_VERSION` 확인
+- `base/configmap.yaml`: `ACTIVE`로 전환한 DB와 coverage 최소 버전 이상인 `ORCHID_LEDGER_WRITER_VERSION` 확인 (기본 2.0.0, Legacy 모드 제거)
 - `base/frontend-deployment.yaml`: GHCR frontend 이미지 태그 변경
 - `base/ingress.yaml`: TLS secret 이름이 기존 Traefik 설정과 다르면 변경
 
