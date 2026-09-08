@@ -6,18 +6,16 @@ import static org.hamcrest.Matchers.hasSize;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
-import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 
-@Disabled("Seed data is currently disabled; re-enable after deterministic test fixtures are restored.")
-class FarmStructureIntegrationTests extends AbstractBackendIntegrationTest {
+class FarmStructureIntegrationTests extends FarmFixtureIntegrationTest {
 
 	@Test
 	void contextLoads() {
 	}
 
 	@Test
-	void createsInitialFarmStructureSeedData() {
+	void createsIndependentFarmFixture() {
 		assertThat(houseRepository.count()).isEqualTo(15);
 		assertThat(physicalBedRepository.count()).isEqualTo(45);
 		assertThat(bedZoneRepository.count()).isEqualTo(90);

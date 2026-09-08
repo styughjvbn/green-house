@@ -8,13 +8,11 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
-import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import org.springframework.http.MediaType;
 import org.springframework.transaction.annotation.Transactional;
 
-@Disabled("Seed data is currently disabled; re-enable after deterministic test fixtures are restored.")
-class SalesIntegrationTests extends AbstractBackendIntegrationTest {
+class SalesIntegrationTests extends FarmFixtureIntegrationTest {
 
 	@Test
 	void createsBusinessPartnersAndSalesSlipsWithCalculatedAmounts() throws Exception {
@@ -73,8 +71,8 @@ class SalesIntegrationTests extends AbstractBackendIntegrationTest {
 						{
 						  "saleDate": "2026-06-24",
 						  "partnerId": %d,
-						  "paymentStatus": "???",
-						  "salesStatus": "???",
+						  "paymentStatus": "미입금",
+						  "salesStatus": "작성중",
 						  "paymentMethod": "??",
 						  "memo": "?? ??",
 						  "items": [

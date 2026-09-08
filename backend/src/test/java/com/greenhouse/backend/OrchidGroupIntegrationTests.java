@@ -9,13 +9,11 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 import java.time.LocalDate;
-import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import org.springframework.http.MediaType;
 import org.springframework.transaction.annotation.Transactional;
 
-@Disabled("Seed data is currently disabled; re-enable after deterministic test fixtures are restored.")
-class OrchidGroupIntegrationTests extends AbstractBackendIntegrationTest {
+class OrchidGroupIntegrationTests extends FarmFixtureIntegrationTest {
 
 	@Test
 	void createsUpdatesAndDeletesOrchidGroup() throws Exception {
@@ -32,7 +30,7 @@ class OrchidGroupIntegrationTests extends AbstractBackendIntegrationTest {
 				.skip(1)
 				.findFirst()
 				.orElseThrow();
-		var beforeCount = orchidGroupRepository.search(null, null, null, sampleZone.getId(), null).size();
+		var beforeCount = orchidGroupRepository.search(null, "", null, sampleZone.getId(), null).size();
 
 		var createResult = mockMvc.perform(post("/api/orchid-groups")
 				.contentType(MediaType.APPLICATION_JSON)
@@ -95,7 +93,7 @@ class OrchidGroupIntegrationTests extends AbstractBackendIntegrationTest {
 
 	@Test
 	@Transactional
-	void deletesOrchidGroupEvenWhenInboundRecordReferencesIt() throws Exception {
+	void preservesOrchidGroupLinkedToInboundWorkHistory() throws Exception {
 		var sampleVariety = varietyRepository.findAll().stream()
 				.findFirst()
 				.orElseThrow();
@@ -134,14 +132,14 @@ class OrchidGroupIntegrationTests extends AbstractBackendIntegrationTest {
 						"$1"));
 
 		mockMvc.perform(delete("/api/orchid-groups/{orchidGroupId}", createdOrchidGroupId))
-				.andExpect(status().isOk())
-				.andExpect(jsonPath("$.data").doesNotExist());
+				.andExpect(status().isConflict())
+				.andExpect(jsonPath("$.error.code").value("CONFLICT"));
 
-		assertThat(orchidGroupRepository.existsById(createdOrchidGroupId)).isFalse();
+		assertThat(orchidGroupRepository.existsById(createdOrchidGroupId)).isTrue();
 		assertThat(inboundRecordRepository.findWithDetailsById(inboundRecordId))
 				.get()
 				.extracting(record -> record.getCreatedOrchidGroup())
-				.isNull();
+				.isNotNull();
 	}
 
 	@Test
@@ -206,7 +204,7 @@ class OrchidGroupIntegrationTests extends AbstractBackendIntegrationTest {
 						  "bedZoneId": %d,
 						  "varietyId": %d,
 						  "quantity": 10,
-						  "status": "?뺤긽",
+						  "status": "정상",
 						  "startPosition": 6,
 						  "endPosition": 8
 						}
@@ -234,7 +232,7 @@ class OrchidGroupIntegrationTests extends AbstractBackendIntegrationTest {
 						  "bedZoneId": %d,
 						  "varietyId": %d,
 						  "quantity": 10,
-						  "status": "?뺤긽",
+						  "status": "정상",
 						  "startPosition": 21,
 						  "endPosition": 21.5
 						}
@@ -264,12 +262,12 @@ class OrchidGroupIntegrationTests extends AbstractBackendIntegrationTest {
 						  "inboundType": "PRODUCT_POT",
 						  "varietyId": %d,
 						  "actualQuantity": 60,
-						  "potSize": "4in",
+						  "potSize": "4치",
 						  "ageYear": 2,
 						  "placementType": "TRAY",
 						  "trayCount": 2,
 						  "bedZoneId": %d,
-						  "worker": "愿由ъ옄"
+						  "worker": "관리자"
 						}
 						""".formatted(sampleVariety.getId(), sampleZone.getId())))
 				.andExpect(status().isCreated())
@@ -306,7 +304,7 @@ class OrchidGroupIntegrationTests extends AbstractBackendIntegrationTest {
 							  "bedZoneId": %d,
 							  "varietyId": %d,
 							  "quantity": 5,
-							  "status": "?뺤긽",
+							  "status": "정상",
 							  "startPosition": %d,
 							  "endPosition": %d
 							}
@@ -323,9 +321,9 @@ class OrchidGroupIntegrationTests extends AbstractBackendIntegrationTest {
 						  "varietyId": %d,
 						  "bottleCount": 10,
 						  "estimatedQuantity": 100,
-						  "tempLocation": "?묒뾽???좊컲",
+						  "tempLocation": "작업장 선반",
 						  "pottingDueDate": "2026-07-12",
-						  "worker": "愿由ъ옄"
+						  "worker": "관리자"
 						}
 						""".formatted(sampleVariety.getId())))
 				.andExpect(status().isCreated())
@@ -338,16 +336,16 @@ class OrchidGroupIntegrationTests extends AbstractBackendIntegrationTest {
 				.content("""
 						{
 						  "pottingDate": "2026-07-12",
-						  "actualQuantity": 20,
-						  "potSize": "3_5in",
+						  "results": [{"quantity": 20, "bedZoneId": %d, "startPosition": 21, "endPosition": 22, "potSize": "3.5치", "ageYear": 1}],
+						  "potSize": "3.5치",
 						  "ageYear": 1,
-						  "growthStage": "?좊쵖",
+						  "growthStage": "유묘",
 						  "placementType": "TRAY",
 						  "trayCount": 1,
 						  "bedZoneId": %d,
-						  "worker": "愿由ъ옄"
+						  "worker": "관리자"
 						}
-						""".formatted(sampleZone.getId())))
+						""".formatted(sampleZone.getId(), sampleZone.getId())))
 				.andExpect(status().isBadRequest())
 				.andExpect(jsonPath("$.error.code").value("VALIDATION_ERROR"));
 	}
@@ -450,7 +448,8 @@ class OrchidGroupIntegrationTests extends AbstractBackendIntegrationTest {
 				.andExpect(jsonPath("$.data[0].sourceKind").value("WORK_OPERATION"));
 
 		mockMvc.perform(delete("/api/orchid-groups/{orchidGroupId}", createdId))
-				.andExpect(status().isOk());
+				.andExpect(status().isConflict())
+				.andExpect(jsonPath("$.error.code").value("CONFLICT"));
 	}
 
 	@Test
@@ -471,7 +470,7 @@ class OrchidGroupIntegrationTests extends AbstractBackendIntegrationTest {
 				.orElseThrow();
 		var sampleBed = physicalBedRepository.findByHouseIdOrderByDisplayOrderAsc(sampleHouse.getId()).get(1);
 		var sampleZone = bedZoneRepository.findByPhysicalBedIdOrderBySortOrderAsc(sampleBed.getId()).getFirst();
-		var sampleGroup = orchidGroupRepository.search(null, null, null, sampleZone.getId(), null).getFirst();
+		var sampleGroup = orchidGroupRepository.search(null, "", null, sampleZone.getId(), null).getFirst();
 
 		mockMvc.perform(patch("/api/orchid-groups/{orchidGroupId}/move", sampleGroup.getId())
 				.contentType(MediaType.APPLICATION_JSON)

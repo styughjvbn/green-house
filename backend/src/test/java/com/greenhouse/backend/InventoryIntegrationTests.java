@@ -8,13 +8,11 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
-import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import org.springframework.http.MediaType;
 import org.springframework.transaction.annotation.Transactional;
 
-@Disabled("Seed data is currently disabled; re-enable after deterministic test fixtures are restored.")
-class InventoryIntegrationTests extends AbstractBackendIntegrationTest {
+class InventoryIntegrationTests extends FarmFixtureIntegrationTest {
 
 	@Test
 	void returnsVarietiesAndConnectedOrchidGroups() throws Exception {
@@ -139,7 +137,7 @@ class InventoryIntegrationTests extends AbstractBackendIntegrationTest {
 				.content("""
 						{
 						  "pottingDate": "2026-07-12",
-						  "actualQuantity": 210,
+						  "results": [{"quantity": 210, "bedZoneId": %d, "startPosition": 21, "endPosition": 22, "potSize": "3.5치", "ageYear": 1}],
 						  "potSize": "3.5치",
 						  "ageYear": 1,
 						  "growthStage": "유묘",
@@ -149,7 +147,7 @@ class InventoryIntegrationTests extends AbstractBackendIntegrationTest {
 						  "worker": "관리자",
 						  "memo": "포트 작업 완료"
 						}
-						""".formatted(sampleZone.getId())))
+						""".formatted(sampleZone.getId(), sampleZone.getId())))
 				.andExpect(status().isOk())
 				.andExpect(jsonPath("$.data.status").value("PLACED"))
 				.andExpect(jsonPath("$.data.actualQuantity").value(210))
