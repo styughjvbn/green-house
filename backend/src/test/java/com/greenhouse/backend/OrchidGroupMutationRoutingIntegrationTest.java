@@ -36,9 +36,9 @@ import com.greenhouse.backend.sales.application.SalesSlipUpdateService;
 import com.greenhouse.backend.sales.domain.SalesInventoryMovementType;
 import com.greenhouse.backend.sales.domain.SalesSlip;
 import com.greenhouse.backend.sales.domain.SalesType;
-import com.greenhouse.backend.sales.dto.SalesSlipCreateRequest;
-import com.greenhouse.backend.sales.dto.SalesSlipItemAllocationRequest;
-import com.greenhouse.backend.sales.dto.SalesSlipItemRequest;
+import com.greenhouse.backend.sales.application.command.SalesSlipCommand;
+import com.greenhouse.backend.sales.application.command.SalesSlipAllocationInput;
+import com.greenhouse.backend.sales.application.command.SalesSlipItemInput;
 import com.greenhouse.backend.sales.dto.SalesSlipStatusUpdateRequest;
 import com.greenhouse.backend.sales.repository.SalesInventoryMovementRepository;
 import com.greenhouse.backend.work.application.correction.WorkOperationCorrectionService;
@@ -196,7 +196,7 @@ class OrchidGroupMutationRoutingIntegrationTest extends AbstractBackendIntegrati
 				fixture, 20, "0", "2", "정상"));
 		BusinessPartner partner = businessPartnerRepository.save(new BusinessPartner(
 				"라우팅 판매처", PartnerType.WHOLESALE, null, null, null, null));
-		var slip = salesSlipCreationService.create(new SalesSlipCreateRequest(
+		var slip = salesSlipCreationService.create(new SalesSlipCommand(
 				LocalDate.of(2026, 8, 20),
 				SalesType.DIRECT,
 				partner.getId(),
@@ -205,11 +205,11 @@ class OrchidGroupMutationRoutingIntegrationTest extends AbstractBackendIntegrati
 				SalesSlip.STATUS_DRAFT,
 				null,
 				"엔진 판매",
-				List.of(new SalesSlipItemRequest(
+				List.of(new SalesSlipItemInput(
 						fixture.variety().getName(), fixture.variety().getGenus(), "4인치",
 						3, 10_000, null,
-						List.of(new SalesSlipItemAllocationRequest(group.id(), 3))))));
-		salesSlipUpdateService.update(slip.id(), new SalesSlipCreateRequest(
+						List.of(new SalesSlipAllocationInput(group.id(), 3))))));
+		salesSlipUpdateService.update(slip.id(), new SalesSlipCommand(
 				LocalDate.of(2026, 8, 20),
 				SalesType.DIRECT,
 				partner.getId(),
@@ -218,10 +218,10 @@ class OrchidGroupMutationRoutingIntegrationTest extends AbstractBackendIntegrati
 				SalesSlip.STATUS_DRAFT,
 				null,
 				"엔진 판매 수정",
-				List.of(new SalesSlipItemRequest(
+				List.of(new SalesSlipItemInput(
 						fixture.variety().getName(), fixture.variety().getGenus(), "4인치",
 						4, 10_000, null,
-						List.of(new SalesSlipItemAllocationRequest(group.id(), 4))))));
+						List.of(new SalesSlipAllocationInput(group.id(), 4))))));
 
 		salesSlipStatusService.updateStatus(slip.id(), new SalesSlipStatusUpdateRequest(
 				SalesSlip.STATUS_DIRECT_OUTBOUND_COMPLETED, null));

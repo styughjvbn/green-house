@@ -8,11 +8,11 @@ import com.greenhouse.backend.sales.application.SalesQueryService;
 import com.greenhouse.backend.sales.application.SalesSlipCreationService;
 import com.greenhouse.backend.sales.application.SalesSlipStatusService;
 import com.greenhouse.backend.sales.application.SalesSlipUpdateService;
+import com.greenhouse.backend.sales.application.command.SalesSlipCommand;
+import com.greenhouse.backend.sales.application.document.SalesSlipDocument;
+import com.greenhouse.backend.sales.application.document.SalesSlipSummary;
 import com.greenhouse.backend.sales.dto.AuctionShipmentOptionResponse;
 import com.greenhouse.backend.sales.dto.SalesOrchidGroupSearchResponse;
-import com.greenhouse.backend.sales.dto.SalesSlipCreateRequest;
-import com.greenhouse.backend.sales.application.document.SalesSlipSummary;
-import com.greenhouse.backend.sales.application.document.SalesSlipDocument;
 import com.greenhouse.backend.sales.dto.SalesSlipStatusUpdateRequest;
 import com.greenhouse.backend.settlement.application.ManualPaymentCommand;
 import jakarta.validation.Valid;
@@ -89,14 +89,14 @@ public class SalesController {
 
 	@PostMapping("/sales-slips")
 	@ResponseStatus(HttpStatus.CREATED)
-	public ApiResponse<SalesSlipDocument> createSalesSlip(@Valid @RequestBody SalesSlipCreateRequest request) {
+	public ApiResponse<SalesSlipDocument> createSalesSlip(@Valid @RequestBody SalesSlipCommand request) {
 		return ApiResponse.ok(salesSlipCreationService.create(request));
 	}
 
 	@PutMapping("/sales-slips/{salesSlipId}")
 	public ApiResponse<SalesSlipDocument> updateSalesSlip(
 			@PathVariable Long salesSlipId,
-			@Valid @RequestBody SalesSlipCreateRequest request) {
+			@Valid @RequestBody SalesSlipCommand request) {
 		return ApiResponse.ok(salesSlipUpdateService.update(salesSlipId, request));
 	}
 

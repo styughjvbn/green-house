@@ -16,9 +16,9 @@ import com.greenhouse.backend.sales.application.SalesSlipStatusService;
 import com.greenhouse.backend.sales.domain.SalesInventoryMovementType;
 import com.greenhouse.backend.sales.domain.SalesSlip;
 import com.greenhouse.backend.sales.domain.SalesType;
-import com.greenhouse.backend.sales.dto.SalesSlipCreateRequest;
-import com.greenhouse.backend.sales.dto.SalesSlipItemAllocationRequest;
-import com.greenhouse.backend.sales.dto.SalesSlipItemRequest;
+import com.greenhouse.backend.sales.application.command.SalesSlipCommand;
+import com.greenhouse.backend.sales.application.command.SalesSlipAllocationInput;
+import com.greenhouse.backend.sales.application.command.SalesSlipItemInput;
 import com.greenhouse.backend.sales.application.document.SalesSlipDocument;
 import com.greenhouse.backend.sales.dto.SalesSlipStatusUpdateRequest;
 import com.greenhouse.backend.sales.repository.SalesInventoryMovementRepository;
@@ -83,7 +83,7 @@ class SalesInventoryMutationContractIntegrationTest extends AbstractBackendInteg
 	}
 
 	private SalesSlipDocument createDraft(Fixture fixture, int quantity) {
-		return creationService.create(new SalesSlipCreateRequest(
+		return creationService.create(new SalesSlipCommand(
 				LocalDate.of(2026, 8, 20),
 				SalesType.DIRECT,
 				fixture.partner().getId(),
@@ -92,14 +92,14 @@ class SalesInventoryMutationContractIntegrationTest extends AbstractBackendInteg
 				SalesSlip.STATUS_DRAFT,
 				null,
 				"특성 테스트",
-				List.of(new SalesSlipItemRequest(
+				List.of(new SalesSlipItemInput(
 						fixture.variety().getName(),
 						fixture.variety().getGenus(),
 						"4인치",
 						quantity,
 						10_000,
 						null,
-						List.of(new SalesSlipItemAllocationRequest(fixture.group().getId(), quantity))))));
+						List.of(new SalesSlipAllocationInput(fixture.group().getId(), quantity))))));
 	}
 
 	private Fixture createFixture(String suffix) {

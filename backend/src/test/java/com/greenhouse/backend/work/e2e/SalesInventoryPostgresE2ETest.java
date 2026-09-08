@@ -27,9 +27,9 @@ import com.greenhouse.backend.sales.domain.SalesSlip;
 import com.greenhouse.backend.sales.domain.SalesSlipItem;
 import com.greenhouse.backend.sales.domain.SalesSlipItemAllocation;
 import com.greenhouse.backend.sales.domain.SalesType;
-import com.greenhouse.backend.sales.dto.SalesSlipCreateRequest;
-import com.greenhouse.backend.sales.dto.SalesSlipItemAllocationRequest;
-import com.greenhouse.backend.sales.dto.SalesSlipItemRequest;
+import com.greenhouse.backend.sales.application.command.SalesSlipCommand;
+import com.greenhouse.backend.sales.application.command.SalesSlipAllocationInput;
+import com.greenhouse.backend.sales.application.command.SalesSlipItemInput;
 import com.greenhouse.backend.sales.dto.SalesSlipStatusUpdateRequest;
 import com.greenhouse.backend.sales.repository.SalesInventoryMovementRepository;
 import com.greenhouse.backend.sales.repository.SalesSlipRepository;
@@ -295,24 +295,24 @@ class SalesInventoryPostgresE2ETest extends WorkE2ETestBase {
 				null, null, null, null)).getId();
 	}
 
-	private SalesSlipCreateRequest request(Long partner, SalesType type, LocalDate date, int first, int second) {
-		return new SalesSlipCreateRequest(date, type, partner, null, "미입금", SalesSlip.STATUS_DRAFT, null, null,
-				List.of(item(List.of(new SalesSlipItemAllocationRequest(groupId, 1),
-						new SalesSlipItemAllocationRequest(groupId, first - 1))),
-						item(List.of(new SalesSlipItemAllocationRequest(groupId, second)))));
+	private SalesSlipCommand request(Long partner, SalesType type, LocalDate date, int first, int second) {
+		return new SalesSlipCommand(date, type, partner, null, "미입금", SalesSlip.STATUS_DRAFT, null, null,
+				List.of(item(List.of(new SalesSlipAllocationInput(groupId, 1),
+						new SalesSlipAllocationInput(groupId, first - 1))),
+						item(List.of(new SalesSlipAllocationInput(groupId, second)))));
 	}
 
-	private SalesSlipCreateRequest request(Long partner, List<Long> ids, LocalDate date) {
-		return new SalesSlipCreateRequest(date, SalesType.DIRECT, partner, null, "미입금", SalesSlip.STATUS_DRAFT, null, null,
-				List.of(item(ids.stream().map(id -> new SalesSlipItemAllocationRequest(id, 70)).toList())));
+	private SalesSlipCommand request(Long partner, List<Long> ids, LocalDate date) {
+		return new SalesSlipCommand(date, SalesType.DIRECT, partner, null, "미입금", SalesSlip.STATUS_DRAFT, null, null,
+				List.of(item(ids.stream().map(id -> new SalesSlipAllocationInput(id, 70)).toList())));
 	}
 
-	private SalesSlipItemRequest item(List<SalesSlipItemAllocationRequest> allocations) {
-		return new SalesSlipItemRequest("E2E 난", "팔레놉시스", null,
-				allocations.stream().mapToInt(SalesSlipItemAllocationRequest::quantity).sum(), 100, null, allocations);
+	private SalesSlipItemInput item(List<SalesSlipAllocationInput> allocations) {
+		return new SalesSlipItemInput("E2E 난", "팔레놉시스", null,
+				allocations.stream().mapToInt(SalesSlipAllocationInput::quantity).sum(), 100, null, allocations);
 	}
 
-	private boolean tryCreate(SalesSlipCreateRequest request) {
+	private boolean tryCreate(SalesSlipCommand request) {
 		try {
 			creation.create(request);
 			return true;

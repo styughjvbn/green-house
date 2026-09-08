@@ -2,10 +2,10 @@ package com.greenhouse.backend.sales.application;
 
 import com.greenhouse.backend.partner.application.BusinessPartnerReader;
 import com.greenhouse.backend.partner.domain.PartnerType;
+import com.greenhouse.backend.sales.application.command.SalesSlipCommand;
 import com.greenhouse.backend.sales.application.document.SalesSlipDocument;
 import com.greenhouse.backend.sales.domain.SalesSlip;
 import com.greenhouse.backend.sales.domain.SalesType;
-import com.greenhouse.backend.sales.dto.SalesSlipCreateRequest;
 import com.greenhouse.backend.sales.repository.SalesSlipRepository;
 import com.greenhouse.backend.settlement.application.ExpectedPaymentDateCalculator;
 import com.greenhouse.backend.settlement.application.PartnerBalanceService;
@@ -28,7 +28,7 @@ public class SalesSlipCreationService {
 	private final SalesSlipOutboundService salesSlipOutboundService;
 	private final SalesSlipDocumentAssembler responseAssembler;
 
-	public SalesSlipDocument create(SalesSlipCreateRequest request) {
+	public SalesSlipDocument create(SalesSlipCommand request) {
 		SalesType type = request.salesType() == null ? SalesType.DIRECT : request.salesType();
 		if (request.partnerId() == null) {
 			throw new IllegalArgumentException(type == SalesType.DIRECT

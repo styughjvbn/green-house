@@ -22,9 +22,9 @@ import com.greenhouse.backend.sales.domain.SalesOrchidSnapshotSource;
 import com.greenhouse.backend.sales.domain.SalesOrchidSnapshotType;
 import com.greenhouse.backend.sales.domain.SalesSlip;
 import com.greenhouse.backend.sales.domain.SalesType;
-import com.greenhouse.backend.sales.dto.SalesSlipCreateRequest;
-import com.greenhouse.backend.sales.dto.SalesSlipItemAllocationRequest;
-import com.greenhouse.backend.sales.dto.SalesSlipItemRequest;
+import com.greenhouse.backend.sales.application.command.SalesSlipCommand;
+import com.greenhouse.backend.sales.application.command.SalesSlipAllocationInput;
+import com.greenhouse.backend.sales.application.command.SalesSlipItemInput;
 import com.greenhouse.backend.sales.dto.SalesSlipStatusUpdateRequest;
 import jakarta.persistence.EntityManager;
 import java.math.BigDecimal;
@@ -81,7 +81,7 @@ class SalesOrchidGroupSnapshotIntegrationTest {
 				"스냅샷 거래처", salesType == SalesType.DIRECT ? PartnerType.WHOLESALE : PartnerType.AUCTION_HOUSE,
 				null, null, null, null));
 
-		var created = creationService.create(new SalesSlipCreateRequest(
+		var created = creationService.create(new SalesSlipCommand(
 				LocalDate.of(2026, 8, 12),
 				salesType,
 				partner.getId(),
@@ -90,14 +90,14 @@ class SalesOrchidGroupSnapshotIntegrationTest {
 				SalesSlip.STATUS_DRAFT,
 				null,
 				null,
-				List.of(new SalesSlipItemRequest(
+				List.of(new SalesSlipItemInput(
 						variety.getName(),
 						variety.getGenus(),
 						null,
 						2,
 						10_000,
 						null,
-						List.of(new SalesSlipItemAllocationRequest(group.getId(), 2))))));
+						List.of(new SalesSlipAllocationInput(group.getId(), 2))))));
 
 		var creationSnapshot = created.items().getFirst().allocations().getFirst().creationSnapshot();
 		assertThat(creationSnapshot.snapshotType()).isEqualTo(SalesOrchidSnapshotType.CREATION);

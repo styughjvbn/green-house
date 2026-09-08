@@ -1,20 +1,20 @@
 package com.greenhouse.backend.sales.application;
 
+import com.greenhouse.backend.audit.domain.AuditAction;
 import com.greenhouse.backend.common.exception.NotFoundException;
-import com.greenhouse.backend.sales.domain.SalesType;
 import com.greenhouse.backend.sales.application.document.SalesSlipDocument;
+import com.greenhouse.backend.sales.domain.SalesSlip;
+import com.greenhouse.backend.sales.domain.SalesType;
 import com.greenhouse.backend.sales.dto.SalesSlipStatusUpdateRequest;
 import com.greenhouse.backend.sales.repository.SalesSlipRepository;
-import com.greenhouse.backend.settlement.application.PaymentEventReader;
 import com.greenhouse.backend.settlement.application.PartnerBalanceService;
+import com.greenhouse.backend.settlement.application.PaymentEventReader;
 import com.greenhouse.backend.settlement.domain.PaymentTargetType;
+import java.util.List;
+import java.util.Map;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import com.greenhouse.backend.audit.domain.AuditAction;
-import java.util.Map;
-import com.greenhouse.backend.sales.domain.SalesSlip;
-import java.util.List;
 
 @Service
 @Transactional
@@ -58,7 +58,7 @@ public class SalesSlipStatusService {
 		return responseAssembler.assemble(salesSlip);
 	}
 
-	private void cancel(com.greenhouse.backend.sales.domain.SalesSlip salesSlip) {
+	private void cancel(SalesSlip salesSlip) {
 		if (salesSlip.getSalesType() == SalesType.DIRECT) {
 			partnerBalanceService.lockPartners(List.of(salesSlip.getPartnerId()));
 		}

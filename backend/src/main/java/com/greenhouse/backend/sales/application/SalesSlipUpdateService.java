@@ -4,12 +4,12 @@ import com.greenhouse.backend.audit.domain.AuditAction;
 import com.greenhouse.backend.common.exception.NotFoundException;
 import com.greenhouse.backend.partner.application.BusinessPartnerReader;
 import com.greenhouse.backend.partner.domain.PartnerType;
+import com.greenhouse.backend.sales.application.command.SalesSlipCommand;
 import com.greenhouse.backend.sales.application.document.SalesSlipDocument;
 import com.greenhouse.backend.sales.domain.SalesSlip;
 import com.greenhouse.backend.sales.domain.SalesSlipItem;
 import com.greenhouse.backend.sales.domain.SalesSlipItemAllocation;
 import com.greenhouse.backend.sales.domain.SalesType;
-import com.greenhouse.backend.sales.dto.SalesSlipCreateRequest;
 import com.greenhouse.backend.sales.repository.SalesSlipRepository;
 import com.greenhouse.backend.settlement.application.ExpectedPaymentDateCalculator;
 import com.greenhouse.backend.settlement.application.PartnerBalanceService;
@@ -36,7 +36,7 @@ public class SalesSlipUpdateService {
 	private final SalesSlipAuditSupport auditSupport;
 	private final SalesSlipDocumentAssembler responseAssembler;
 
-	public SalesSlipDocument update(Long salesSlipId, SalesSlipCreateRequest request) {
+	public SalesSlipDocument update(Long salesSlipId, SalesSlipCommand request) {
 		SalesSlip salesSlip = salesSlipRepository.findForUpdateById(salesSlipId)
 				.orElseThrow(() -> new NotFoundException("판매 전표를 찾을 수 없습니다."));
 		Long previousPartnerId = salesSlip.getPartnerId();
@@ -103,7 +103,7 @@ public class SalesSlipUpdateService {
 		return responseAssembler.assemble(persisted);
 	}
 
-	private void validateEditable(SalesSlip salesSlip, SalesSlipCreateRequest request) {
+	private void validateEditable(SalesSlip salesSlip, SalesSlipCommand request) {
 		if (request.salesType() == SalesType.AUCTION) {
 			throw new IllegalArgumentException("경매 판매 전표 수정은 아직 지원하지 않습니다.");
 		}
