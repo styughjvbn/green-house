@@ -16,4 +16,5 @@ public interface WorkTypeRepository extends JpaRepository<WorkType, Long> {
 	List<WorkType> findAllByActiveTrueOrderBySortOrderAscIdAsc();
 
 	List<WorkType> findAllByOrderBySortOrderAscIdAsc();
+
 }

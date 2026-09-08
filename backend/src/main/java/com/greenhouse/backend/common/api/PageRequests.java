@@ -5,6 +5,7 @@ import org.springframework.data.domain.Sort;
 
 /** Preserve each API's existing choice between rejecting and clamping page input. */
 public final class PageRequests {
+
 	private static final int MAX_SIZE = 100;
 
 	private PageRequests() {
@@ -26,4 +27,5 @@ public final class PageRequests {
 	public static PageRequest clamped(int page, int size, Sort sort) {
 		return PageRequest.of(Math.max(page, 0), Math.min(Math.max(size, 1), MAX_SIZE), sort);
 	}
+
 }

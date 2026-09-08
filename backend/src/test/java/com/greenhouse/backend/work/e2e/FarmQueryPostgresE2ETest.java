@@ -27,19 +27,36 @@ import org.springframework.transaction.support.TransactionTemplate;
 
 @Tag("work-e2e")
 class FarmQueryPostgresE2ETest extends WorkE2ETestBase {
-	@Autowired FarmQueryService query;
-	@Autowired FarmStatusService status;
-	@Autowired HouseRepository houses;
-	@Autowired OrchidGroupRepository groups;
-	@Autowired VarietyRepository varieties;
-	@Autowired TransactionTemplate transactions;
-	@Autowired EntityManagerFactory entityManagerFactory;
-	@Autowired JdbcTemplate jdbc;
+
+	@Autowired
+	FarmQueryService query;
+
+	@Autowired
+	FarmStatusService status;
+
+	@Autowired
+	HouseRepository houses;
+
+	@Autowired
+	OrchidGroupRepository groups;
+
+	@Autowired
+	VarietyRepository varieties;
+
+	@Autowired
+	TransactionTemplate transactions;
+
+	@Autowired
+	EntityManagerFactory entityManagerFactory;
+
+	@Autowired
+	JdbcTemplate jdbc;
 
 	@ParameterizedTest
-	@ValueSource(ints = {1, 10, 50})
+	@ValueSource(ints = { 1, 10, 50 })
 	void structureQueriesStayBoundedAndMapDoesNotLoadGroupEntities(int bedCount) {
-		// Keep database sequences aligned with Hibernate's pooled IDs across parameter cases.
+		// Keep database sequences aligned with Hibernate's pooled IDs across parameter
+		// cases.
 		jdbc.execute("TRUNCATE TABLE orchid_groups, varieties CONTINUE IDENTITY CASCADE");
 		Long houseId = transactions.execute(tx -> {
 			var house = new House(10000 + bedCount, "조회 회귀");
@@ -51,16 +68,16 @@ class FarmQueryPostgresE2ETest extends WorkE2ETestBase {
 			}
 			houses.save(house);
 			for (var bed : house.getPhysicalBeds()) {
-				var variety = varieties.save(new Variety("QUERY-" + bed.getId(), "속", "현재 " + bed.getNumber(),
-						null, "3치", true, true, null, null));
+				var variety = varieties.save(new Variety("QUERY-" + bed.getId(), "속", "현재 " + bed.getNumber(), null,
+						"3치", true, true, null, null));
 				var group = new OrchidGroup(bed.getBedZones().getFirst(), "과거 속", "과거 품종", 10, "3치", 2,
 						bed.getNumber() % 2 == 0 ? "문제" : "정상", 1, BigDecimal.ZERO, BigDecimal.ONE);
 				group.assignVariety(variety);
 				groups.save(group);
-				groups.save(new OrchidGroup(bed.getBedZones().getLast(), "기타 속", "직접 입력", 5, "3치", 1,
-						"정상", 1, BigDecimal.ZERO, BigDecimal.ONE));
-				groups.save(new OrchidGroup(bed.getBedZones().getLast(), "기타 속", "소진", 1, "3치", 1,
-						"정상", 2, BigDecimal.ONE, BigDecimal.TWO));
+				groups.save(new OrchidGroup(bed.getBedZones().getLast(), "기타 속", "직접 입력", 5, "3치", 1, "정상", 1,
+						BigDecimal.ZERO, BigDecimal.ONE));
+				groups.save(new OrchidGroup(bed.getBedZones().getLast(), "기타 속", "소진", 1, "3치", 1, "정상", 2,
+						BigDecimal.ONE, BigDecimal.TWO));
 			}
 			return house.getId();
 		});
@@ -68,10 +85,12 @@ class FarmQueryPostgresE2ETest extends WorkE2ETestBase {
 		jdbc.update("UPDATE orchid_groups SET quantity = 0 WHERE variety_name = '소진'");
 		jdbc.update("UPDATE varieties SET name = name || ' 변경', color = '#AABBCC'");
 		var expectedMap = transactions.execute(tx -> groups.search(null, "", null, null, null).stream().map(group -> {
-			var detail = OrchidGroupResponse.from(group, com.greenhouse.backend.common.config.TimeConfig.farmToday(java.time.Clock.systemUTC()));
-			return new FarmStatusMapOrchidGroupResponse(detail.id(), detail.houseId(), group.getBedZone().getPhysicalBed().getId(),
-					detail.bedZoneId(), detail.startPosition(), detail.endPosition(), detail.varietyId(), detail.varietyColor(),
-					detail.varietyName(), detail.quantity(), detail.status(), detail.ageYear(), detail.potSize(), detail.sortOrder());
+			var detail = OrchidGroupResponse.from(group,
+					com.greenhouse.backend.common.config.TimeConfig.farmToday(java.time.Clock.systemUTC()));
+			return new FarmStatusMapOrchidGroupResponse(detail.id(), detail.houseId(),
+					group.getBedZone().getPhysicalBed().getId(), detail.bedZoneId(), detail.startPosition(),
+					detail.endPosition(), detail.varietyId(), detail.varietyColor(), detail.varietyName(),
+					detail.quantity(), detail.status(), detail.ageYear(), detail.potSize(), detail.sortOrder());
 		}).toList());
 		var stats = entityManagerFactory.unwrap(SessionFactory.class).getStatistics();
 		stats.clear();
@@ -104,4 +123,5 @@ class FarmQueryPostgresE2ETest extends WorkE2ETestBase {
 		assertThat(query.getBedZone(firstBed.bedZones().getLast().id())).isEqualTo(firstBed.bedZones().getLast());
 		assertThat(stats.getPrepareStatementCount()).isEqualTo(2);
 	}
+
 }

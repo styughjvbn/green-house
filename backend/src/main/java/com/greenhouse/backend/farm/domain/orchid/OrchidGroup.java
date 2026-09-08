@@ -1,9 +1,9 @@
 package com.greenhouse.backend.farm.domain.orchid;
 
+import com.greenhouse.backend.common.domain.BaseEntity;
 import com.greenhouse.backend.farm.domain.inbound.InboundRecord;
 import com.greenhouse.backend.farm.domain.structure.BedZone;
 import com.greenhouse.backend.farm.domain.variety.Variety;
-import com.greenhouse.backend.common.domain.BaseEntity;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
@@ -12,9 +12,9 @@ import jakarta.persistence.FetchType;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
-import jakarta.persistence.SequenceGenerator;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
+import jakarta.persistence.SequenceGenerator;
 import jakarta.persistence.Table;
 import jakarta.persistence.Version;
 import java.math.BigDecimal;
@@ -97,17 +97,8 @@ public class OrchidGroup extends BaseEntity {
 	@Column(name = "end_position", precision = 6, scale = 2)
 	private BigDecimal endPosition;
 
-	public OrchidGroup(
-			BedZone bedZone,
-			String genus,
-			String varietyName,
-			Integer quantity,
-			String potSize,
-			Integer ageYear,
-			String status,
-			Integer sortOrder,
-			BigDecimal startPosition,
-			BigDecimal endPosition) {
+	public OrchidGroup(BedZone bedZone, String genus, String varietyName, Integer quantity, String potSize,
+			Integer ageYear, String status, Integer sortOrder, BigDecimal startPosition, BigDecimal endPosition) {
 		this.bedZone = bedZone;
 		this.genus = genus;
 		this.varietyName = varietyName;
@@ -123,19 +114,9 @@ public class OrchidGroup extends BaseEntity {
 		this.endPosition = endPosition;
 	}
 
-	public void updateDetails(
-			String genus,
-			String varietyName,
-			Integer quantity,
-			String potSize,
-			Integer ageYear,
-			String status,
-			String placementType,
-			Integer trayCount,
-			Boolean splitPlacementAllowed,
-			BigDecimal startPosition,
-			BigDecimal endPosition,
-			String memo) {
+	public void updateDetails(String genus, String varietyName, Integer quantity, String potSize, Integer ageYear,
+			String status, String placementType, Integer trayCount, Boolean splitPlacementAllowed,
+			BigDecimal startPosition, BigDecimal endPosition, String memo) {
 		validateQuantityInvariant(quantity);
 		this.genus = genus;
 		this.varietyName = varietyName;
@@ -201,29 +182,20 @@ public class OrchidGroup extends BaseEntity {
 		applyRepot(inputQuantity, null, null);
 	}
 
-	public void applyRepot(
-			Integer inputQuantity,
-			BigDecimal releasedStartPosition,
-			BigDecimal releasedEndPosition) {
+	public void applyRepot(Integer inputQuantity, BigDecimal releasedStartPosition, BigDecimal releasedEndPosition) {
 		applyTransformation(inputQuantity, releasedStartPosition, releasedEndPosition, "분갈이");
 	}
 
-	public void applyTransformation(
-			Integer inputQuantity,
-			BigDecimal releasedStartPosition,
+	public void applyTransformation(Integer inputQuantity, BigDecimal releasedStartPosition,
 			BigDecimal releasedEndPosition) {
 		applyTransformation(inputQuantity, releasedStartPosition, releasedEndPosition, "구조 변경");
 	}
 
-	private void applyTransformation(
-			Integer inputQuantity,
-			BigDecimal releasedStartPosition,
-			BigDecimal releasedEndPosition,
-			String operationLabel) {
+	private void applyTransformation(Integer inputQuantity, BigDecimal releasedStartPosition,
+			BigDecimal releasedEndPosition, String operationLabel) {
 		validatePositiveQuantity(inputQuantity, operationLabel + " 투입 수량");
 		if (getAvailableQuantity() < inputQuantity) {
-			throw new IllegalArgumentException(
-					"난 묶음 가용 수량보다 많이 " + operationLabel + "할 수 없습니다.");
+			throw new IllegalArgumentException("난 묶음 가용 수량보다 많이 " + operationLabel + "할 수 없습니다.");
 		}
 		boolean partial = inputQuantity < this.quantity;
 		if ((releasedStartPosition == null) != (releasedEndPosition == null)) {
@@ -233,8 +205,7 @@ public class OrchidGroup extends BaseEntity {
 			if (!partial) {
 				throw new IllegalArgumentException("일부 작업할 때만 원본에서 비울 위치를 지정할 수 있습니다.");
 			}
-			if (startPosition == null || endPosition == null
-					|| releasedStartPosition.compareTo(startPosition) <= 0
+			if (startPosition == null || endPosition == null || releasedStartPosition.compareTo(startPosition) <= 0
 					|| releasedStartPosition.compareTo(endPosition) >= 0
 					|| releasedEndPosition.compareTo(endPosition) != 0) {
 				throw new IllegalArgumentException("원본 배치의 뒤쪽 연속 구간만 비울 수 있습니다.");
@@ -342,4 +313,5 @@ public class OrchidGroup extends BaseEntity {
 			throw new IllegalArgumentException("난 묶음 수량은 현재 예약 수량보다 작을 수 없습니다.");
 		}
 	}
+
 }

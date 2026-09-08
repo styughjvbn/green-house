@@ -3,9 +3,9 @@ package com.greenhouse.backend.auction.application;
 import com.greenhouse.backend.auction.domain.AuctionLotStatus;
 import com.greenhouse.backend.auction.repository.AuctionShipmentLotRepository;
 import com.greenhouse.backend.auction.repository.AuctionShipmentRepository;
-import lombok.RequiredArgsConstructor;
 import java.util.Collection;
 import java.util.Set;
+import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
@@ -16,6 +16,7 @@ import org.springframework.transaction.annotation.Transactional;
 public class AuctionShipmentLifecycleService {
 
 	private final AuctionShipmentRepository auctionShipmentRepository;
+
 	private final AuctionShipmentLotRepository auctionShipmentLotRepository;
 
 	@Transactional(propagation = Propagation.MANDATORY)
@@ -33,8 +34,8 @@ public class AuctionShipmentLifecycleService {
 		if (shipmentIds.isEmpty()) {
 			return Set.of();
 		}
-		return Set.copyOf(auctionShipmentLotRepository.findShipmentIdsWithStatusNot(
-				shipmentIds,
-				AuctionLotStatus.WAITING));
+		return Set
+			.copyOf(auctionShipmentLotRepository.findShipmentIdsWithStatusNot(shipmentIds, AuctionLotStatus.WAITING));
 	}
+
 }

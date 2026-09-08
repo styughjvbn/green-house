@@ -11,9 +11,9 @@ import jakarta.persistence.FetchType;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
-import jakarta.persistence.SequenceGenerator;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
+import jakarta.persistence.SequenceGenerator;
 import jakarta.persistence.Table;
 import jakarta.persistence.UniqueConstraint;
 import java.time.LocalDateTime;
@@ -28,16 +28,15 @@ import org.hibernate.type.SqlTypes;
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 @Entity
-@Table(
-		name = "work_applied_effects",
-		uniqueConstraints = @UniqueConstraint(
-				name = "uk_work_applied_effect_operation_key_kind",
-				columnNames = {"work_operation_id", "effect_key", "effect_kind"}))
+@Table(name = "work_applied_effects",
+		uniqueConstraints = @UniqueConstraint(name = "uk_work_applied_effect_operation_key_kind",
+				columnNames = { "work_operation_id", "effect_key", "effect_kind" }))
 public class WorkAppliedEffect extends BaseEntity {
 
 	@Id
 	@GeneratedValue(strategy = GenerationType.SEQUENCE, generator = "work_applied_effects_id_seq")
-	@SequenceGenerator(name = "work_applied_effects_id_seq", sequenceName = "work_applied_effects_id_seq", allocationSize = 50)
+	@SequenceGenerator(name = "work_applied_effects_id_seq", sequenceName = "work_applied_effects_id_seq",
+			allocationSize = 50)
 	private Long id;
 
 	@ManyToOne(fetch = FetchType.LAZY, optional = false)
@@ -81,16 +80,9 @@ public class WorkAppliedEffect extends BaseEntity {
 	@Column(name = "correlation_id")
 	private UUID correlationId;
 
-	public WorkAppliedEffect(
-			WorkOperation workOperation,
-			WorkOperationTarget target,
-			String effectKey,
-			WorkEffectKind effectKind,
-			String handlerCode,
-			LocalDateTime appliedAt,
-			String worker,
-			Map<String, Object> commandDetails,
-			Map<String, Object> resultDetails) {
+	public WorkAppliedEffect(WorkOperation workOperation, WorkOperationTarget target, String effectKey,
+			WorkEffectKind effectKind, String handlerCode, LocalDateTime appliedAt, String worker,
+			Map<String, Object> commandDetails, Map<String, Object> resultDetails) {
 		this.workOperation = workOperation;
 		this.target = target;
 		this.effectKey = effectKey;
@@ -118,4 +110,5 @@ public class WorkAppliedEffect extends BaseEntity {
 		this.mutationId = mutationId;
 		this.correlationId = correlationId;
 	}
+
 }

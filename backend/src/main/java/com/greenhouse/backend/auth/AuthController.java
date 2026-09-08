@@ -25,20 +25,18 @@ import org.springframework.web.bind.annotation.RestController;
 public class AuthController {
 
 	private final AuthService authService;
+
 	private final Clock clock;
 
 	@GetMapping("/context")
 	public ApiResponse<ApplicationContextResponse> context() {
-		return ApiResponse.ok(new ApplicationContextResponse(
-				TimeConfig.farmToday(clock),
-				TimeConfig.FARM_TIME_ZONE.getId()));
+		return ApiResponse
+			.ok(new ApplicationContextResponse(TimeConfig.farmToday(clock), TimeConfig.FARM_TIME_ZONE.getId()));
 	}
 
 	@PostMapping("/login")
-	public ApiResponse<AuthenticatedUserResponse> login(
-			@Valid @RequestBody LoginRequest request,
-			HttpServletRequest servletRequest,
-			HttpServletResponse response) {
+	public ApiResponse<AuthenticatedUserResponse> login(@Valid @RequestBody LoginRequest request,
+			HttpServletRequest servletRequest, HttpServletResponse response) {
 		return ApiResponse.ok(authService.login(request.username(), request.password(), servletRequest, response));
 	}
 
@@ -52,4 +50,5 @@ public class AuthController {
 		authService.logout(request, response);
 		return ApiResponse.ok(null);
 	}
+
 }

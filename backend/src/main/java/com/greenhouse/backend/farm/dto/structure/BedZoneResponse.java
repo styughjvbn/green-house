@@ -1,45 +1,26 @@
 package com.greenhouse.backend.farm.dto.structure;
 
-import java.time.LocalDate;
-import com.greenhouse.backend.farm.dto.orchid.OrchidGroupResponse;
 import com.greenhouse.backend.farm.domain.orchid.OrchidGroup;
 import com.greenhouse.backend.farm.domain.structure.BedZone;
 import com.greenhouse.backend.farm.domain.structure.BedZoneSide;
 import com.greenhouse.backend.farm.domain.structure.BedZoneType;
+import com.greenhouse.backend.farm.dto.orchid.OrchidGroupResponse;
+import java.time.LocalDate;
 import java.util.List;
 
-public record BedZoneResponse(
-		Long id,
-		Long physicalBedId,
-		Integer physicalBedNumber,
-		Long houseId,
-		Integer houseNumber,
-		String name,
-		BedZoneSide side,
-		BedZoneType zoneType,
-		Integer sortOrder,
-		Boolean active,
-		String memo,
+public record BedZoneResponse(Long id, Long physicalBedId, Integer physicalBedNumber, Long houseId, Integer houseNumber,
+		String name, BedZoneSide side, BedZoneType zoneType, Integer sortOrder, Boolean active, String memo,
 		List<OrchidGroupResponse> orchidGroups) {
 
 	public static BedZoneResponse from(BedZone bedZone, List<OrchidGroup> groups, LocalDate businessDate) {
 		var physicalBed = bedZone.getPhysicalBed();
 		var house = physicalBed.getHouse();
-		return new BedZoneResponse(
-				bedZone.getId(),
-				physicalBed.getId(),
-				physicalBed.getNumber(),
-				house.getId(),
-				house.getNumber(),
-				bedZone.getName(),
-				bedZone.getSide(),
-				bedZone.getZoneType(),
-				bedZone.getSortOrder(),
-				bedZone.getActive(),
-				bedZone.getMemo(),
+		return new BedZoneResponse(bedZone.getId(), physicalBed.getId(), physicalBed.getNumber(), house.getId(),
+				house.getNumber(), bedZone.getName(), bedZone.getSide(), bedZone.getZoneType(), bedZone.getSortOrder(),
+				bedZone.getActive(), bedZone.getMemo(),
 				groups.stream()
-						.filter(orchidGroup -> orchidGroup.getQuantity() != null && orchidGroup.getQuantity() > 0)
-						.map(group -> OrchidGroupResponse.from(group, businessDate))
-						.toList());
+					.filter(orchidGroup -> orchidGroup.getQuantity() != null && orchidGroup.getQuantity() > 0)
+					.map(group -> OrchidGroupResponse.from(group, businessDate))
+					.toList());
 	}
 }

@@ -17,6 +17,7 @@ import org.springframework.stereotype.Component;
 public class InboundPottingExecutor implements WorkEffectHandler {
 
 	private final InboundPottingService inboundPottingService;
+
 	private final ObjectMapper objectMapper = new ObjectMapper().findAndRegisterModules();
 
 	@Override
@@ -35,13 +36,14 @@ public class InboundPottingExecutor implements WorkEffectHandler {
 		if (target == null || target.referenceType() != WorkTargetReferenceType.INBOUND_RECORD) {
 			throw new IllegalArgumentException("포트 작업에는 입고 기록 대상이 필요합니다.");
 		}
-		InboundRecordPottingRequest request = objectMapper.convertValue(
-				command.resultDetails(), InboundRecordPottingRequest.class);
-		var result = inboundPottingService.potting(
-				target.inboundRecordId(), request, context.operationId(), command.effectKey());
-		var details = new WorkEffectResults.Potted(target.inboundRecordId(),
-				result.createdOrchidGroupIds(), result.actualQuantity()).toMap();
-		return new WorkExecutionResult(
-				"POTTING", details, result.createdOrchidGroupIds(), result.mutationLink());
+		InboundRecordPottingRequest request = objectMapper.convertValue(command.resultDetails(),
+				InboundRecordPottingRequest.class);
+		var result = inboundPottingService.potting(target.inboundRecordId(), request, context.operationId(),
+				command.effectKey());
+		var details = new WorkEffectResults.Potted(target.inboundRecordId(), result.createdOrchidGroupIds(),
+				result.actualQuantity())
+			.toMap();
+		return new WorkExecutionResult("POTTING", details, result.createdOrchidGroupIds(), result.mutationLink());
 	}
+
 }

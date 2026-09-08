@@ -7,13 +7,8 @@ import com.greenhouse.backend.farm.domain.orchid.mutation.OrchidGroupMutationSou
 import java.math.BigDecimal;
 import java.time.LocalDate;
 
-public record MoveOrchidGroupMutationCommand(
-		OrchidGroupMutationSource source,
-		Long orchidGroupId,
-		Long toBedZoneId,
-		BigDecimal startPosition,
-		BigDecimal endPosition,
-		LocalDate effectiveBusinessDate,
+public record MoveOrchidGroupMutationCommand(OrchidGroupMutationSource source, Long orchidGroupId, Long toBedZoneId,
+		BigDecimal startPosition, BigDecimal endPosition, LocalDate effectiveBusinessDate,
 		String reason) implements OrchidGroupMutationCommand {
 
 	public MoveOrchidGroupMutationCommand {

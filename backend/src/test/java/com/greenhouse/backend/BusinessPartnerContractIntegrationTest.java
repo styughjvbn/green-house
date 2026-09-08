@@ -25,9 +25,14 @@ import org.springframework.transaction.annotation.Transactional;
 @Transactional
 class BusinessPartnerContractIntegrationTest {
 
-	@Autowired BusinessPartnerRepository partnerRepository;
-	@Autowired BusinessPartnerReader partnerReader;
-	@Autowired BusinessPartnerLock partnerLock;
+	@Autowired
+	BusinessPartnerRepository partnerRepository;
+
+	@Autowired
+	BusinessPartnerReader partnerReader;
+
+	@Autowired
+	BusinessPartnerLock partnerLock;
 
 	@Test
 	void returnsAnImmutableCopyOfCurrentMasterData() {
@@ -36,10 +41,10 @@ class BusinessPartnerContractIntegrationTest {
 
 		partner.update("새 이름", PartnerType.RETAIL, "대표", "연락처", "주소", "메모");
 
-		assertThat(info).isEqualTo(new BusinessPartnerInfo(
-				partner.getId(), "기존 이름", PartnerType.WHOLESALE, true, "대표", "연락처", "주소", "메모"));
-		assertThat(partnerReader.getInfo(partner.getId())).isEqualTo(new BusinessPartnerInfo(
-				partner.getId(), "새 이름", PartnerType.RETAIL, true, "대표", "연락처", "주소", "메모"));
+		assertThat(info).isEqualTo(new BusinessPartnerInfo(partner.getId(), "기존 이름", PartnerType.WHOLESALE, true, "대표",
+				"연락처", "주소", "메모"));
+		assertThat(partnerReader.getInfo(partner.getId())).isEqualTo(
+				new BusinessPartnerInfo(partner.getId(), "새 이름", PartnerType.RETAIL, true, "대표", "연락처", "주소", "메모"));
 	}
 
 	@Test
@@ -49,11 +54,11 @@ class BusinessPartnerContractIntegrationTest {
 		partnerRepository.flush();
 
 		assertThat(partnerReader.getInfo(partner.getId()).active()).isFalse();
-		assertThat(partnerLock.lockAll(List.of(partner.getId())))
-				.extracting(BusinessPartnerInfo::active).containsExactly(false);
+		assertThat(partnerLock.lockAll(List.of(partner.getId()))).extracting(BusinessPartnerInfo::active)
+			.containsExactly(false);
 		assertThatThrownBy(() -> partnerReader.getActiveInfo(partner.getId()))
-				.isInstanceOf(IllegalArgumentException.class)
-				.hasMessage("비활성 거래처는 사용할 수 없습니다.");
+			.isInstanceOf(IllegalArgumentException.class)
+			.hasMessage("비활성 거래처는 사용할 수 없습니다.");
 	}
 
 	@Test
@@ -62,7 +67,8 @@ class BusinessPartnerContractIntegrationTest {
 		var second = createPartner("둘째 거래처");
 
 		assertThat(partnerLock.lockAll(List.of(second.getId(), first.getId(), second.getId())))
-				.extracting(BusinessPartnerInfo::id).containsExactly(first.getId(), second.getId());
+			.extracting(BusinessPartnerInfo::id)
+			.containsExactly(first.getId(), second.getId());
 		assertThat(partnerLock.lockAll(List.of())).isEmpty();
 	}
 
@@ -83,7 +89,7 @@ class BusinessPartnerContractIntegrationTest {
 	void rejectsPartialBulkReadResults() {
 		var partner = createPartner("일괄 조회 누락");
 		assertThatThrownBy(() -> partnerReader.getAllInfo(List.of(partner.getId(), -1L)))
-				.isInstanceOf(NotFoundException.class);
+			.isInstanceOf(NotFoundException.class);
 	}
 
 	@Test
@@ -95,18 +101,18 @@ class BusinessPartnerContractIntegrationTest {
 	void rejectsPartialLockResults() {
 		var partner = createPartner("일부만 존재");
 		assertThatThrownBy(() -> partnerLock.lockAll(List.of(partner.getId(), -1L)))
-				.isInstanceOf(NotFoundException.class);
+			.isInstanceOf(NotFoundException.class);
 	}
 
 	@Test
 	@Transactional(propagation = Propagation.NOT_SUPPORTED)
 	void requiresTheCallingUseCaseToOwnTheLockTransaction() {
-		assertThatThrownBy(() -> partnerLock.lockAll(List.of(1L)))
-				.isInstanceOf(IllegalTransactionStateException.class);
+		assertThatThrownBy(() -> partnerLock.lockAll(List.of(1L))).isInstanceOf(IllegalTransactionStateException.class);
 	}
 
 	private BusinessPartner createPartner(String name) {
-		return partnerRepository.saveAndFlush(
-				new BusinessPartner(name, PartnerType.WHOLESALE, "대표", "연락처", "주소", "메모"));
+		return partnerRepository
+			.saveAndFlush(new BusinessPartner(name, PartnerType.WHOLESALE, "대표", "연락처", "주소", "메모"));
 	}
+
 }

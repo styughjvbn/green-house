@@ -13,20 +13,20 @@ import org.springframework.stereotype.Component;
 class OrchidGroupMutationReplayResolver {
 
 	private final OrchidGroupMutationRepository mutationRepository;
+
 	private final OrchidGroupMutationEntryRepository entryRepository;
 
-	Optional<OrchidGroupMutationResult> findExisting(
-			OrchidGroupMutationSource source,
-			String commandFingerprint) {
+	Optional<OrchidGroupMutationResult> findExisting(OrchidGroupMutationSource source, String commandFingerprint) {
 		return mutationRepository
-				.findBySourceDomainAndSourceTypeAndSourceReferenceIdAndSourceOperationKey(
-						source.domain(), source.type(), source.referenceId(), source.operationKey())
-				.map(existing -> {
-					if (!existing.hasSameCommandFingerprint(commandFingerprint)) {
-						throw new ConflictException("같은 Mutation source key를 다른 command에 재사용할 수 없습니다.");
-					}
-					return OrchidGroupMutationResult.from(
-							existing, entryRepository.findByMutationIdOrderByIdAsc(existing.getId()));
-				});
+			.findBySourceDomainAndSourceTypeAndSourceReferenceIdAndSourceOperationKey(source.domain(), source.type(),
+					source.referenceId(), source.operationKey())
+			.map(existing -> {
+				if (!existing.hasSameCommandFingerprint(commandFingerprint)) {
+					throw new ConflictException("같은 Mutation source key를 다른 command에 재사용할 수 없습니다.");
+				}
+				return OrchidGroupMutationResult.from(existing,
+						entryRepository.findByMutationIdOrderByIdAsc(existing.getId()));
+			});
 	}
+
 }

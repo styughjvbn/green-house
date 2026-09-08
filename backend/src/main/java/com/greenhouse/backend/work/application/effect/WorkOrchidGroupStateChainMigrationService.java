@@ -33,8 +33,8 @@ public class WorkOrchidGroupStateChainMigrationService {
 		}
 		Map<Long, WorkStateChainMutationSource> result = new HashMap<>();
 		for (WorkAppliedEffect effect : effects) {
-			result.put(effect.getId(), new WorkStateChainMutationSource(
-					effect.getId(), effect.getWorkOperation().getId(), effect.getEffectKey()));
+			result.put(effect.getId(), new WorkStateChainMutationSource(effect.getId(),
+					effect.getWorkOperation().getId(), effect.getEffectKey()));
 		}
 		return Map.copyOf(result);
 	}
@@ -59,4 +59,5 @@ public class WorkOrchidGroupStateChainMigrationService {
 			effect.linkMutation(command.mutationId(), command.correlationId());
 		});
 	}
+
 }

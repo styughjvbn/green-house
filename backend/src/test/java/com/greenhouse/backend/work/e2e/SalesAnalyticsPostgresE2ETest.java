@@ -9,11 +9,11 @@ import com.greenhouse.backend.analytics.dto.AnalyticsRankedValueResponse;
 import com.greenhouse.backend.analytics.dto.PartnerAnalyticsStatResponse;
 import com.greenhouse.backend.partner.domain.BusinessPartner;
 import com.greenhouse.backend.partner.domain.PartnerType;
+import com.greenhouse.backend.sales.application.SalesMetricsReader;
+import com.greenhouse.backend.sales.domain.SalesPaymentCategory;
 import com.greenhouse.backend.sales.domain.SalesSlip;
 import com.greenhouse.backend.sales.domain.SalesSlipItem;
 import com.greenhouse.backend.sales.domain.SalesType;
-import com.greenhouse.backend.sales.domain.SalesPaymentCategory;
-import com.greenhouse.backend.sales.application.SalesMetricsReader;
 import com.greenhouse.backend.settlement.domain.PartnerBalanceSummary;
 import jakarta.persistence.EntityManager;
 import java.time.LocalDate;
@@ -24,9 +24,9 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.test.util.ReflectionTestUtils;
-import org.springframework.test.context.bean.override.mockito.MockitoSpyBean;
 import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.test.context.bean.override.mockito.MockitoSpyBean;
+import org.springframework.test.util.ReflectionTestUtils;
 import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.TransactionDefinition;
 import org.springframework.transaction.annotation.Propagation;
@@ -38,20 +38,31 @@ import org.springframework.transaction.support.TransactionTemplate;
 class SalesAnalyticsPostgresE2ETest extends WorkE2ETestBase {
 
 	private static final LocalDate FROM = LocalDate.of(2040, 7, 1);
+
 	private static final LocalDate TO = LocalDate.of(2040, 7, 31);
 
-	@Autowired private EntityManager entityManager;
-	@Autowired private AnalyticsQueryService analytics;
-	@Autowired private PlatformTransactionManager transactionManager;
-	@Autowired private JdbcTemplate jdbc;
-	@MockitoSpyBean private SalesMetricsReader salesMetrics;
+	@Autowired
+	private EntityManager entityManager;
+
+	@Autowired
+	private AnalyticsQueryService analytics;
+
+	@Autowired
+	private PlatformTransactionManager transactionManager;
+
+	@Autowired
+	private JdbcTemplate jdbc;
+
+	@MockitoSpyBean
+	private SalesMetricsReader salesMetrics;
+
 	private int slipSequence;
 
 	@Test
 	void combinesLegacyPaymentLabelsWithoutChangingStoredAmountsOrStatuses() {
 		var partner = partner("Payment categories");
-		var labels = new String[] { "입금 완료", "PAID", "미완료", "부분입금", "부분 처리 완료",
-				"미입금", "정산 대기", "PARTIALLY_PAID", "paid", " PAID ", "" };
+		var labels = new String[] { "입금 완료", "PAID", "미완료", "부분입금", "부분 처리 완료", "미입금", "정산 대기", "PARTIALLY_PAID",
+				"paid", " PAID ", "" };
 		for (int index = 0; index < labels.length; index++) {
 			var slip = new SalesSlip("PAYMENT-CATEGORY-" + index, FROM, SalesType.DIRECT, null, partner.getId(),
 					labels[index], "출고 완료", null, null);
@@ -61,17 +72,17 @@ class SalesAnalyticsPostgresE2ETest extends WorkE2ETestBase {
 		entityManager.flush();
 		entityManager.clear();
 
-		assertThat(salesMetrics.paymentBreakdown(FROM, TO)).containsExactlyInAnyOrderEntriesOf(Map.of(
-				SalesPaymentCategory.PAID, 3_000_000_000L, SalesPaymentCategory.PARTIAL, 2_000_000_000L,
-				SalesPaymentCategory.UNPAID, 6_000_000_000L));
+		assertThat(salesMetrics.paymentBreakdown(FROM, TO))
+			.containsExactlyInAnyOrderEntriesOf(Map.of(SalesPaymentCategory.PAID, 3_000_000_000L,
+					SalesPaymentCategory.PARTIAL, 2_000_000_000L, SalesPaymentCategory.UNPAID, 6_000_000_000L));
 		var result = analytics.getSalesAnalytics(FROM, TO);
-		assertThat(result.paymentBreakdown()).containsExactly(
-				new AnalyticsRankedValueResponse("입금 완료", 3_000_000_000L),
+		assertThat(result.paymentBreakdown()).containsExactly(new AnalyticsRankedValueResponse("입금 완료", 3_000_000_000L),
 				new AnalyticsRankedValueResponse("부분입금", 2_000_000_000L),
 				new AnalyticsRankedValueResponse("미입금", 6_000_000_000L));
 		assertThat(result.unpaidAmount()).isEqualTo(11_000_000_000L);
-		assertThat(jdbc.queryForList("select payment_status from sales_slips where partner_id = ?", String.class, partner.getId()))
-				.containsExactlyInAnyOrder(labels);
+		assertThat(jdbc.queryForList("select payment_status from sales_slips where partner_id = ?", String.class,
+				partner.getId()))
+			.containsExactlyInAnyOrder(labels);
 	}
 
 	@Test
@@ -92,8 +103,8 @@ class SalesAnalyticsPostgresE2ETest extends WorkE2ETestBase {
 	void includesAuctionAndZeroAmountCompletedSlipsButExcludesCanceledSlips() {
 		var house = partner("Auction");
 		house.update("Auction", PartnerType.AUCTION_HOUSE, null, null, null, null);
-		var auction = new SalesSlip("ANALYTICS-AUCTION", TO, SalesType.AUCTION, null, house.getId(),
-				"정산 대기", "출하 완료", null, null);
+		var auction = new SalesSlip("ANALYTICS-AUCTION", TO, SalesType.AUCTION, null, house.getId(), "정산 대기", "출하 완료",
+				null, null);
 		auction.addItem(new SalesSlipItem(null, "Variety", "난", null, 10, 100, null));
 		entityManager.persist(auction);
 		var zero = partner("Zero sale");
@@ -110,9 +121,9 @@ class SalesAnalyticsPostgresE2ETest extends WorkE2ETestBase {
 		assertThat(sales.unpaidAmount()).isEqualTo(1_000);
 		assertThat(sales.paymentBreakdown().getLast()).isEqualTo(new AnalyticsRankedValueResponse("미입금", 1_000L));
 		assertThat(sales.recentSlips()).hasSize(2);
-		assertThat(analytics.getPartnerAnalytics(FROM, TO).partnerStats().getLast()).isEqualTo(
-				new PartnerAnalyticsStatResponse(zero.getId(), "Zero sale", PartnerType.WHOLESALE,
-						0L, 1L, 0L, 0L, 0L, 0L, 0L, FROM));
+		assertThat(analytics.getPartnerAnalytics(FROM, TO).partnerStats().getLast())
+			.isEqualTo(new PartnerAnalyticsStatResponse(zero.getId(), "Zero sale", PartnerType.WHOLESALE, 0L, 1L, 0L,
+					0L, 0L, 0L, 0L, FROM));
 	}
 
 	@ParameterizedTest
@@ -135,8 +146,8 @@ class SalesAnalyticsPostgresE2ETest extends WorkE2ETestBase {
 		assertThat(statistics.getEntityLoadCount()).isZero();
 		assertThat(sales.currentMonthSales()).isEqualTo(3_000_000_000L * size);
 		assertThat(sales.shippedQuantity()).isEqualTo(2L * size);
-		assertThat(sales.partnerSales()).hasSize(Math.min(10, size)).allSatisfy(row ->
-				assertThat(row.value()).isEqualTo(3_000_000_000L));
+		assertThat(sales.partnerSales()).hasSize(Math.min(10, size))
+			.allSatisfy(row -> assertThat(row.value()).isEqualTo(3_000_000_000L));
 		assertThat(sales.recentSlips()).hasSize(Math.min(5, 2 * size));
 		statistics.clear();
 
@@ -165,27 +176,32 @@ class SalesAnalyticsPostgresE2ETest extends WorkE2ETestBase {
 		try {
 			doAnswer(invocation -> {
 				var result = invocation.callRealMethod();
-				assertThat(jdbc.queryForObject("show transaction_isolation", String.class)).isEqualTo("repeatable read");
+				assertThat(jdbc.queryForObject("show transaction_isolation", String.class))
+					.isEqualTo("repeatable read");
 				transaction.executeWithoutResult(status -> {
 					var partner = entityManager.find(BusinessPartner.class, partnerId);
 					partner.update("Snapshot after", PartnerType.RETAIL, null, null, null, null);
 					slip(partner, TO, 1, 500);
-					jdbc.update("update partner_balance_summaries set receivable_balance = 1200 where partner_id = ?", partnerId);
+					jdbc.update("update partner_balance_summaries set receivable_balance = 1200 where partner_id = ?",
+							partnerId);
 				});
 				return result;
 			}).when(salesMetrics).partnerSales(FROM, TO);
 
 			var before = analytics.getPartnerAnalytics(FROM, TO);
 
-			assertThat(before.partnerStats()).containsExactly(new PartnerAnalyticsStatResponse(
-					partnerId, "Snapshot before", PartnerType.WHOLESALE, 300L, 1L, 300L, 0L, 700L, 0L, 0L, FROM));
+			assertThat(before.partnerStats()).containsExactly(new PartnerAnalyticsStatResponse(partnerId,
+					"Snapshot before", PartnerType.WHOLESALE, 300L, 1L, 300L, 0L, 700L, 0L, 0L, FROM));
 			doCallRealMethod().when(salesMetrics).partnerSales(FROM, TO);
 			var after = analytics.getPartnerAnalytics(FROM, TO);
-			assertThat(after.partnerStats()).containsExactly(new PartnerAnalyticsStatResponse(
-					partnerId, "Snapshot after", PartnerType.RETAIL, 800L, 2L, 800L, 0L, 1200L, 0L, 0L, TO));
-		} finally {
+			assertThat(after.partnerStats()).containsExactly(new PartnerAnalyticsStatResponse(partnerId,
+					"Snapshot after", PartnerType.RETAIL, 800L, 2L, 800L, 0L, 1200L, 0L, 0L, TO));
+		}
+		finally {
 			transaction.executeWithoutResult(status -> {
-				jdbc.update("delete from sales_slip_items where sales_slip_id in (select id from sales_slips where partner_id = ?)", partnerId);
+				jdbc.update(
+						"delete from sales_slip_items where sales_slip_id in (select id from sales_slips where partner_id = ?)",
+						partnerId);
 				jdbc.update("delete from sales_slips where partner_id = ?", partnerId);
 				jdbc.update("delete from partner_balance_summaries where partner_id = ?", partnerId);
 				jdbc.update("delete from business_partners where id = ?", partnerId);
@@ -219,9 +235,9 @@ class SalesAnalyticsPostgresE2ETest extends WorkE2ETestBase {
 		assertThat(result.partnerStats()).hasSize(3);
 		// PostgreSQL DESC places the original left-join NULL sales totals first.
 		assertThat(result.partnerStats().subList(0, 2)).extracting(PartnerAnalyticsStatResponse::partnerId)
-				.containsExactlyInAnyOrder(creditOnly.getId(), unappliedOnly.getId());
-		assertThat(result.partnerStats().getLast()).isEqualTo(new PartnerAnalyticsStatResponse(
-				sold.getId(), "Current name", PartnerType.RETAIL, 500L, 2L, 400L, 100L, 700L, 0L, 0L, TO));
+			.containsExactlyInAnyOrder(creditOnly.getId(), unappliedOnly.getId());
+		assertThat(result.partnerStats().getLast()).isEqualTo(new PartnerAnalyticsStatResponse(sold.getId(),
+				"Current name", PartnerType.RETAIL, 500L, 2L, 400L, 100L, 700L, 0L, 0L, TO));
 		assertThat(result.partnerStats().getFirst().latestSaleDate()).isNull();
 		assertThat(result.partnerSales().getFirst().value()).isZero();
 	}
@@ -243,7 +259,7 @@ class SalesAnalyticsPostgresE2ETest extends WorkE2ETestBase {
 		assertThat(result.partnerSales()).hasSize(10);
 		assertThat(result.partnerSales().getFirst()).isEqualTo(new AnalyticsRankedValueResponse("Shared name", 120L));
 		assertThat(result.partnerSales()).extracting(AnalyticsRankedValueResponse::value)
-				.containsExactly(120L, 110L, 109L, 108L, 107L, 106L, 105L, 104L, 103L, 102L);
+			.containsExactly(120L, 110L, 109L, 108L, 107L, 106L, 105L, 104L, 103L, 102L);
 		assertThat(result.recentSlips().getFirst().partnerName()).isEqualTo("Shared name");
 		assertThat(result.recentSlips()).hasSize(5);
 		assertThat(result.unpaidSlips()).hasSize(5);
@@ -261,8 +277,8 @@ class SalesAnalyticsPostgresE2ETest extends WorkE2ETestBase {
 		paid.recordPayment(100L);
 		slip(partner, LocalDate.of(2040, 2, 29), 1, 300);
 		slip(partner, LocalDate.of(2040, 2, 28), 1, 9_999);
-		var draft = new SalesSlip("ANALYTICS-DRAFT", to, SalesType.DIRECT, null, partner.getId(),
-				"미입금", "작성중", null, null);
+		var draft = new SalesSlip("ANALYTICS-DRAFT", to, SalesType.DIRECT, null, partner.getId(), "미입금", "작성중", null,
+				null);
 		draft.addItem(new SalesSlipItem(null, "Excluded", null, null, 1, 9_999, null));
 		entityManager.persist(draft);
 		entityManager.flush();
@@ -291,8 +307,8 @@ class SalesAnalyticsPostgresE2ETest extends WorkE2ETestBase {
 	}
 
 	private SalesSlip slip(BusinessPartner partner, LocalDate date, int quantity, int price) {
-		var slip = new SalesSlip("ANALYTICS-" + (++slipSequence), date, SalesType.DIRECT, null, partner.getId(),
-				"미입금", "출고 완료", null, null);
+		var slip = new SalesSlip("ANALYTICS-" + (++slipSequence), date, SalesType.DIRECT, null, partner.getId(), "미입금",
+				"출고 완료", null, null);
 		slip.addItem(new SalesSlipItem(null, "Variety", "난", null, quantity, price, null));
 		entityManager.persist(slip);
 		return slip;
@@ -305,4 +321,5 @@ class SalesAnalyticsPostgresE2ETest extends WorkE2ETestBase {
 		ReflectionTestUtils.setField(balance, "unappliedPaymentAmount", unapplied);
 		entityManager.persist(balance);
 	}
+
 }

@@ -8,9 +8,9 @@ import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.SequenceGenerator;
 import jakarta.persistence.Table;
+import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
-import lombok.AccessLevel;
 
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
@@ -50,16 +50,8 @@ public class Material extends BaseEntity {
 	@Column(name = "is_active", nullable = false)
 	private boolean active;
 
-	public Material(
-			String code,
-			String category,
-			String name,
-			String manufacturer,
-			String specification,
-			String stockQuantity,
-			String storageLocation,
-			String usage,
-			boolean active) {
+	public Material(String code, String category, String name, String manufacturer, String specification,
+			String stockQuantity, String storageLocation, String usage, boolean active) {
 		this.code = code;
 		this.category = category;
 		this.name = name;
@@ -71,14 +63,8 @@ public class Material extends BaseEntity {
 		this.active = active;
 	}
 
-	public void update(
-			String category,
-			String name,
-			String manufacturer,
-			String specification,
-			String stockQuantity,
-			String storageLocation,
-			String usage) {
+	public void update(String category, String name, String manufacturer, String specification, String stockQuantity,
+			String storageLocation, String usage) {
 		this.category = category;
 		this.name = name;
 		this.manufacturer = manufacturer;
@@ -91,4 +77,5 @@ public class Material extends BaseEntity {
 	public void deactivate() {
 		this.active = false;
 	}
+
 }

@@ -18,10 +18,10 @@ public class OrchidGroupMutationFingerprint {
 
 	public OrchidGroupMutationFingerprint() {
 		this.canonicalObjectMapper = JsonMapper.builder()
-				.findAndAddModules()
-				.enable(MapperFeature.SORT_PROPERTIES_ALPHABETICALLY)
-				.enable(SerializationFeature.ORDER_MAP_ENTRIES_BY_KEYS)
-				.build();
+			.findAndAddModules()
+			.enable(MapperFeature.SORT_PROPERTIES_ALPHABETICALLY)
+			.enable(SerializationFeature.ORDER_MAP_ENTRIES_BY_KEYS)
+			.build();
 	}
 
 	public String calculate(Object semanticCommand) {
@@ -30,12 +30,15 @@ public class OrchidGroupMutationFingerprint {
 		}
 		try {
 			byte[] canonicalBytes = canonicalObjectMapper.writeValueAsString(semanticCommand)
-					.getBytes(StandardCharsets.UTF_8);
+				.getBytes(StandardCharsets.UTF_8);
 			return HexFormat.of().formatHex(MessageDigest.getInstance("SHA-256").digest(canonicalBytes));
-		} catch (JsonProcessingException exception) {
+		}
+		catch (JsonProcessingException exception) {
 			throw new IllegalArgumentException("Mutation command를 정규화할 수 없습니다.", exception);
-		} catch (NoSuchAlgorithmException exception) {
+		}
+		catch (NoSuchAlgorithmException exception) {
 			throw new IllegalStateException("SHA-256 fingerprint를 사용할 수 없습니다.", exception);
 		}
 	}
+
 }

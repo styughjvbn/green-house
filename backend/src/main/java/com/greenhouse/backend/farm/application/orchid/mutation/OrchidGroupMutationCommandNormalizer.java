@@ -27,4 +27,5 @@ final class OrchidGroupMutationCommandNormalizer {
 		String normalized = value.trim();
 		return normalized.isEmpty() ? null : normalized;
 	}
+
 }

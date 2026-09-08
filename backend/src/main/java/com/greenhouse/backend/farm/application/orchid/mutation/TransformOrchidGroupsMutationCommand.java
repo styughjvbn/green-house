@@ -8,20 +8,14 @@ import java.util.Comparator;
 import java.util.List;
 import java.util.Set;
 
-public record TransformOrchidGroupsMutationCommand(
-		OrchidGroupMutationSource source,
-		List<TransformOrchidGroupMutationSource> sources,
-		List<TransformOrchidGroupMutationResult> results,
-		LocalDate effectiveBusinessDate,
-		String reason,
+public record TransformOrchidGroupsMutationCommand(OrchidGroupMutationSource source,
+		List<TransformOrchidGroupMutationSource> sources, List<TransformOrchidGroupMutationResult> results,
+		LocalDate effectiveBusinessDate, String reason,
 		Set<Long> placementExclusionOrchidGroupIds) implements OrchidGroupMutationCommand {
 
-	public TransformOrchidGroupsMutationCommand(
-			OrchidGroupMutationSource source,
-			List<TransformOrchidGroupMutationSource> sources,
-			List<TransformOrchidGroupMutationResult> results,
-			LocalDate effectiveBusinessDate,
-			String reason) {
+	public TransformOrchidGroupsMutationCommand(OrchidGroupMutationSource source,
+			List<TransformOrchidGroupMutationSource> sources, List<TransformOrchidGroupMutationResult> results,
+			LocalDate effectiveBusinessDate, String reason) {
 		this(source, sources, results, effectiveBusinessDate, reason, Set.of());
 	}
 
@@ -36,19 +30,18 @@ public record TransformOrchidGroupsMutationCommand(
 			throw new IllegalArgumentException("구조 변경 결과가 필요합니다.");
 		}
 		long distinctSourceCount = sources.stream()
-				.map(TransformOrchidGroupMutationSource::orchidGroupId)
-				.distinct()
-				.count();
+			.map(TransformOrchidGroupMutationSource::orchidGroupId)
+			.distinct()
+			.count();
 		if (distinctSourceCount != sources.size()) {
 			throw new IllegalArgumentException("구조 변경 원본 난 묶음은 중복될 수 없습니다.");
 		}
 		sources = sources.stream()
-				.sorted(Comparator.comparing(TransformOrchidGroupMutationSource::orchidGroupId))
-				.toList();
+			.sorted(Comparator.comparing(TransformOrchidGroupMutationSource::orchidGroupId))
+			.toList();
 		results = List.copyOf(results);
 		reason = normalizeText(reason);
-		placementExclusionOrchidGroupIds = placementExclusionOrchidGroupIds == null
-				? Set.of()
+		placementExclusionOrchidGroupIds = placementExclusionOrchidGroupIds == null ? Set.of()
 				: Set.copyOf(placementExclusionOrchidGroupIds);
 		if (placementExclusionOrchidGroupIds.stream().anyMatch(id -> id == null || id < 1)) {
 			throw new IllegalArgumentException("배치 검사 제외 난 묶음 ID가 올바르지 않습니다.");

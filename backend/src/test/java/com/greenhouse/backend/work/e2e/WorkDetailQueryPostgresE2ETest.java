@@ -13,12 +13,18 @@ import org.springframework.jdbc.core.JdbcTemplate;
 
 @Tag("work-e2e")
 class WorkDetailQueryPostgresE2ETest extends WorkE2ETestBase {
-	@Autowired WorkTestDataSeeder seeder;
-	@Autowired JdbcTemplate jdbc;
-	@Autowired EntityManagerFactory entityManagerFactory;
+
+	@Autowired
+	WorkTestDataSeeder seeder;
+
+	@Autowired
+	JdbcTemplate jdbc;
+
+	@Autowired
+	EntityManagerFactory entityManagerFactory;
 
 	@ParameterizedTest
-	@ValueSource(ints = {0, 1, 10, 50})
+	@ValueSource(ints = { 0, 1, 10, 50 })
 	void correctionDetailsUseBoundedQueriesAndKeepMissingHistory(int count) throws Exception {
 		seeder.reset();
 		List<Long> operations = jdbc.queryForList("""
@@ -35,7 +41,8 @@ class WorkDetailQueryPostgresE2ETest extends WorkE2ETestBase {
 					(original_work_operation_id, correction_work_operation_id, reason, created_at)
 					VALUES (?, ?, ?, TIMESTAMP '2026-08-20 00:00:00')
 					""", operations.getFirst(), operations.get(index), "보정 " + index);
-			if (index == count) continue; // A historical correction may have no effect.
+			if (index == count)
+				continue; // A historical correction may have no effect.
 			jdbc.update("""
 					INSERT INTO work_applied_effects (work_operation_id, effect_key, effect_kind, handler_code,
 					 applied_at, worker, command_details, result_details, created_at, updated_at)
@@ -58,4 +65,5 @@ class WorkDetailQueryPostgresE2ETest extends WorkE2ETestBase {
 			assertThat(corrections.get(index).path("adjustments")).hasSize(index >= count - 2 ? 0 : 1);
 		}
 	}
+
 }

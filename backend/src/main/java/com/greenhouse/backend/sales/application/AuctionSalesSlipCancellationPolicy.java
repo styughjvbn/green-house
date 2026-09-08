@@ -3,10 +3,10 @@ package com.greenhouse.backend.sales.application;
 import com.greenhouse.backend.auction.application.AuctionShipmentLifecycleService;
 import com.greenhouse.backend.sales.domain.SalesSlip;
 import com.greenhouse.backend.settlement.application.AuctionSettlementReader;
-import lombok.RequiredArgsConstructor;
 import java.util.Collection;
 import java.util.HashSet;
 import java.util.Set;
+import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 
 @Component
@@ -14,6 +14,7 @@ import org.springframework.stereotype.Component;
 public class AuctionSalesSlipCancellationPolicy {
 
 	private final AuctionShipmentLifecycleService auctionShipmentLifecycleService;
+
 	private final AuctionSettlementReader auctionSettlementReader;
 
 	public void cancelShipmentIfPossible(SalesSlip salesSlip) {
@@ -41,4 +42,5 @@ public class AuctionSalesSlipCancellationPolicy {
 		blockedShipmentIds.addAll(auctionShipmentLifecycleService.findShipmentIdsWithResults(shipmentIds));
 		return Set.copyOf(blockedShipmentIds);
 	}
+
 }

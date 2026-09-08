@@ -7,12 +7,9 @@ import com.greenhouse.backend.farm.domain.orchid.mutation.OrchidGroupMutationSou
 import java.time.LocalDate;
 import java.util.List;
 
-public record RestoreOutboundOrchidGroupsMutationCommand(
-		OrchidGroupMutationSource source,
-		List<OrchidGroupQuantityMutationItem> items,
-		RelatedOrchidGroupMutations compensatedMutations,
-		LocalDate effectiveBusinessDate,
-		String reason) implements OrchidGroupMutationCommand {
+public record RestoreOutboundOrchidGroupsMutationCommand(OrchidGroupMutationSource source,
+		List<OrchidGroupQuantityMutationItem> items, RelatedOrchidGroupMutations compensatedMutations,
+		LocalDate effectiveBusinessDate, String reason) implements OrchidGroupMutationCommand {
 
 	public RestoreOutboundOrchidGroupsMutationCommand {
 		if (source == null || compensatedMutations == null || effectiveBusinessDate == null) {

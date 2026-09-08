@@ -3,11 +3,9 @@ package com.greenhouse.backend.work.e2e;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
-import com.greenhouse.backend.auction.domain.AuctionAttempt;
-import com.greenhouse.backend.auction.application.AuctionShipmentCreator;
 import com.greenhouse.backend.auction.application.AuctionShipmentCreator.LotDraft;
-import com.greenhouse.backend.sales.application.SalesSlipStatusService;
-import com.greenhouse.backend.sales.dto.SalesSlipStatusUpdateRequest;
+import com.greenhouse.backend.auction.application.AuctionShipmentCreator;
+import com.greenhouse.backend.auction.domain.AuctionAttempt;
 import com.greenhouse.backend.auction.domain.AuctionAttemptStatus;
 import com.greenhouse.backend.auction.domain.AuctionInspectionStatus;
 import com.greenhouse.backend.auction.domain.AuctionResultLine;
@@ -21,30 +19,31 @@ import com.greenhouse.backend.partner.domain.BusinessPartner;
 import com.greenhouse.backend.partner.domain.PartnerType;
 import com.greenhouse.backend.partner.repository.BusinessPartnerRepository;
 import com.greenhouse.backend.sales.application.SalesPaymentService;
+import com.greenhouse.backend.sales.application.SalesSlipStatusService;
+import com.greenhouse.backend.sales.application.document.SalesSlipDocument;
 import com.greenhouse.backend.sales.domain.SalesSlip;
 import com.greenhouse.backend.sales.domain.SalesSlipItem;
 import com.greenhouse.backend.sales.domain.SalesType;
-import com.greenhouse.backend.sales.application.document.SalesSlipDocument;
+import com.greenhouse.backend.sales.dto.SalesSlipStatusUpdateRequest;
 import com.greenhouse.backend.sales.repository.SalesSlipRepository;
+import com.greenhouse.backend.settlement.application.AuctionSettlementService;
 import com.greenhouse.backend.settlement.application.ManualPaymentCommand;
 import com.greenhouse.backend.settlement.application.PartnerBalanceService;
 import com.greenhouse.backend.settlement.application.PartnerSettlementSettingsService;
-import com.greenhouse.backend.settlement.application.AuctionSettlementService;
 import com.greenhouse.backend.settlement.application.PaymentService;
 import com.greenhouse.backend.settlement.domain.AuctionSettlement;
-import com.greenhouse.backend.settlement.domain.PartnerPaymentEvent;
 import com.greenhouse.backend.settlement.domain.PartnerBalanceSummary;
+import com.greenhouse.backend.settlement.domain.PartnerPaymentEvent;
 import com.greenhouse.backend.settlement.domain.PartnerSettlementSettings;
 import com.greenhouse.backend.settlement.domain.PaymentEventType;
 import com.greenhouse.backend.settlement.domain.PaymentTargetType;
 import com.greenhouse.backend.settlement.domain.SettlementUnit;
 import com.greenhouse.backend.settlement.dto.PartnerSettlementSettingsResponse;
-import com.greenhouse.backend.settlement.repository.PartnerBalanceSummaryRepository;
 import com.greenhouse.backend.settlement.repository.AuctionSettlementRepository;
+import com.greenhouse.backend.settlement.repository.PartnerBalanceSummaryRepository;
 import com.greenhouse.backend.settlement.repository.PartnerPaymentEventRepository;
 import com.greenhouse.backend.settlement.repository.PartnerSettlementSettingsRepository;
 import java.time.LocalDate;
-import org.springframework.data.domain.PageRequest;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.Callable;
@@ -57,6 +56,7 @@ import org.junit.jupiter.api.Timeout;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.dao.PessimisticLockingFailureException;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.support.TransactionTemplate;
@@ -65,24 +65,59 @@ import org.springframework.transaction.support.TransactionTemplate;
 @Timeout(60)
 class PartnerSettlementPostgresE2ETest extends WorkE2ETestBase {
 
-	@Autowired BusinessPartnerRepository partnerRepository;
-	@Autowired AuctionShipmentCreator shipmentCreator;
-	@Autowired SalesSlipStatusService salesStatusService;
-	@Autowired BusinessPartnerLock partnerLock;
-	@Autowired PartnerBalanceService balanceService;
-	@Autowired PartnerBalanceSummaryRepository balanceRepository;
-	@Autowired PartnerSettlementSettingsRepository settingsRepository;
-	@Autowired PartnerSettlementSettingsService settingsService;
-	@Autowired PartnerPaymentEventRepository eventRepository;
-	@Autowired SalesSlipRepository salesSlipRepository;
-	@Autowired SalesPaymentService salesPaymentService;
-	@Autowired AuctionShipmentRepository shipmentRepository;
-	@Autowired AuctionSettlementRepository settlementRepository;
-	@Autowired AuctionSettlementService settlementService;
-	@Autowired PaymentService paymentService;
-	@Autowired AuditEventRepository auditRepository;
-	@Autowired PlatformTransactionManager transactionManager;
-	@Autowired JdbcTemplate jdbcTemplate;
+	@Autowired
+	BusinessPartnerRepository partnerRepository;
+
+	@Autowired
+	AuctionShipmentCreator shipmentCreator;
+
+	@Autowired
+	SalesSlipStatusService salesStatusService;
+
+	@Autowired
+	BusinessPartnerLock partnerLock;
+
+	@Autowired
+	PartnerBalanceService balanceService;
+
+	@Autowired
+	PartnerBalanceSummaryRepository balanceRepository;
+
+	@Autowired
+	PartnerSettlementSettingsRepository settingsRepository;
+
+	@Autowired
+	PartnerSettlementSettingsService settingsService;
+
+	@Autowired
+	PartnerPaymentEventRepository eventRepository;
+
+	@Autowired
+	SalesSlipRepository salesSlipRepository;
+
+	@Autowired
+	SalesPaymentService salesPaymentService;
+
+	@Autowired
+	AuctionShipmentRepository shipmentRepository;
+
+	@Autowired
+	AuctionSettlementRepository settlementRepository;
+
+	@Autowired
+	AuctionSettlementService settlementService;
+
+	@Autowired
+	PaymentService paymentService;
+
+	@Autowired
+	AuditEventRepository auditRepository;
+
+	@Autowired
+	PlatformTransactionManager transactionManager;
+
+	@Autowired
+	JdbcTemplate jdbcTemplate;
 
 	@Test
 	void holdsPartnerLocksUntilTheCallingTransactionCompletes() throws Exception {
@@ -106,9 +141,9 @@ class PartnerSettlementPostgresE2ETest extends WorkE2ETestBase {
 			release.countDown();
 			owner.get(10, TimeUnit.SECONDS);
 			var reacquired = transaction().execute(status -> partnerLock.lockAll(List.of(partner.getId())));
-			assertThat(reacquired)
-					.extracting(BusinessPartnerInfo::id).containsExactly(partner.getId());
-		} finally {
+			assertThat(reacquired).extracting(BusinessPartnerInfo::id).containsExactly(partner.getId());
+		}
+		finally {
 			release.countDown();
 			executor.shutdownNow();
 		}
@@ -123,8 +158,8 @@ class PartnerSettlementPostgresE2ETest extends WorkE2ETestBase {
 				() -> transaction().execute(status -> partnerLock.lockAll(List.of(first.getId(), second.getId()))),
 				() -> transaction().execute(status -> partnerLock.lockAll(List.of(second.getId(), first.getId())))));
 
-		assertThat(results).allSatisfy(partners -> assertThat(partners)
-				.extracting(BusinessPartnerInfo::id).containsExactly(first.getId(), second.getId()));
+		assertThat(results).allSatisfy(partners -> assertThat(partners).extracting(BusinessPartnerInfo::id)
+			.containsExactly(first.getId(), second.getId()));
 	}
 
 	@Test
@@ -135,24 +170,23 @@ class PartnerSettlementPostgresE2ETest extends WorkE2ETestBase {
 		var firstPayment = payment(20_000L, "first");
 		var secondPayment = payment(30_000L, "second");
 
-		List<SalesSlipDocument> paid = concurrently(List.of(
-				() -> salesPaymentService.confirmPayment(first.getId(), firstPayment),
-				() -> salesPaymentService.confirmPayment(second.getId(), secondPayment)));
+		List<SalesSlipDocument> paid = concurrently(
+				List.of(() -> salesPaymentService.confirmPayment(first.getId(), firstPayment),
+						() -> salesPaymentService.confirmPayment(second.getId(), secondPayment)));
 		assertThat(paid).extracting(slip -> slip.paidAmount()).containsExactly(20_000L, 30_000L);
 		assertThat(balanceService.getBalance(partner.getId()).receivableBalance()).isEqualTo(150_000L);
 
-		concurrently(List.of(
-				() -> salesPaymentService.confirmPayment(first.getId(), firstPayment),
+		concurrently(List.of(() -> salesPaymentService.confirmPayment(first.getId(), firstPayment),
 				() -> salesPaymentService.confirmPayment(second.getId(), secondPayment)));
 		assertThatThrownBy(() -> salesPaymentService.confirmPayment(first.getId(), payment(90_000L, "overpay")))
-				.isInstanceOf(IllegalArgumentException.class);
+			.isInstanceOf(IllegalArgumentException.class);
 
 		assertThat(balanceService.getBalance(partner.getId()).receivableBalance()).isEqualTo(150_000L);
 		assertThat(balanceRepository.findByPartnerId(partner.getId())).isPresent();
 		assertThat(eventRepository.search(partner.getId(), null, null, null, PageRequest.of(0, 100)).getContent())
-				.extracting(event -> event.getEventType()).containsExactlyInAnyOrder(
-						PaymentEventType.PAYMENT_RECEIVED, PaymentEventType.MANUAL_MATCH_CONFIRMED,
-						PaymentEventType.PAYMENT_RECEIVED, PaymentEventType.MANUAL_MATCH_CONFIRMED);
+			.extracting(event -> event.getEventType())
+			.containsExactlyInAnyOrder(PaymentEventType.PAYMENT_RECEIVED, PaymentEventType.MANUAL_MATCH_CONFIRMED,
+					PaymentEventType.PAYMENT_RECEIVED, PaymentEventType.MANUAL_MATCH_CONFIRMED);
 	}
 
 	@Test
@@ -161,9 +195,9 @@ class PartnerSettlementPostgresE2ETest extends WorkE2ETestBase {
 		var slip = createSlip(partner, "S20400102-FULL-PAYMENT-RETRY");
 		var payment = payment(100_000L, "full-payment");
 
-		List<SalesSlipDocument> results = concurrently(List.of(
-				() -> salesPaymentService.confirmPayment(slip.getId(), payment),
-				() -> salesPaymentService.confirmPayment(slip.getId(), payment)));
+		List<SalesSlipDocument> results = concurrently(
+				List.of(() -> salesPaymentService.confirmPayment(slip.getId(), payment),
+						() -> salesPaymentService.confirmPayment(slip.getId(), payment)));
 
 		assertThat(results).allSatisfy(result -> {
 			assertThat(result.paidAmount()).isEqualTo(100_000L);
@@ -173,12 +207,12 @@ class PartnerSettlementPostgresE2ETest extends WorkE2ETestBase {
 		assertThat(salesSlipRepository.findById(slip.getId()).orElseThrow().getPaidAmount()).isEqualTo(100_000L);
 		assertThat(balanceService.getBalance(partner.getId()).receivableBalance()).isZero();
 		assertThat(eventRepository.search(partner.getId(), null, null, null, PageRequest.of(0, 100)).getContent())
-				.extracting(PartnerPaymentEvent::getEventType).containsExactlyInAnyOrder(
-						PaymentEventType.PAYMENT_RECEIVED, PaymentEventType.MANUAL_MATCH_CONFIRMED);
-		assertThat(auditRepository.findAll().stream()
-				.filter(event -> "SALES_SLIP".equals(event.getEntityType())
-						&& slip.getId().equals(event.getEntityId())))
-				.hasSize(1);
+			.extracting(PartnerPaymentEvent::getEventType)
+			.containsExactlyInAnyOrder(PaymentEventType.PAYMENT_RECEIVED, PaymentEventType.MANUAL_MATCH_CONFIRMED);
+		assertThat(auditRepository.findAll()
+			.stream()
+			.filter(event -> "SALES_SLIP".equals(event.getEntityType()) && slip.getId().equals(event.getEntityId())))
+			.hasSize(1);
 	}
 
 	@Test
@@ -191,8 +225,7 @@ class PartnerSettlementPostgresE2ETest extends WorkE2ETestBase {
 
 		var settings = concurrently(tasks);
 
-		assertThat(settings).extracting(PartnerSettlementSettingsResponse::id)
-				.containsOnly(settings.getFirst().id());
+		assertThat(settings).extracting(PartnerSettlementSettingsResponse::id).containsOnly(settings.getFirst().id());
 		assertThat(settings).allSatisfy(value -> {
 			assertThat(value.partnerId()).isEqualTo(partner.getId());
 			assertThat(value.settlementUnit()).isEqualTo(SettlementUnit.SALES_SLIP);
@@ -204,13 +237,14 @@ class PartnerSettlementPostgresE2ETest extends WorkE2ETestBase {
 	@Test
 	void concurrentAuctionPaymentsAndReplaysKeepOneLedgerResultPerKey() throws Exception {
 		long originalEventCount = eventRepository.count();
-		var house = partnerRepository.saveAndFlush(new BusinessPartner(
-				"동시 경매 입금", PartnerType.AUCTION_HOUSE, null, null, null, null));
+		var house = partnerRepository
+			.saveAndFlush(new BusinessPartner("동시 경매 입금", PartnerType.AUCTION_HOUSE, null, null, null, null));
 		var date = LocalDate.of(2040, 1, 3);
 		var shipment = new AuctionShipment(date.minusDays(1), house.getId(), house.getPartnerType());
 		var lot = new AuctionShipmentLot("난", "카틀레야", "A", 1, 10);
 		var attempt = new AuctionAttempt(date, 1, AuctionAttemptStatus.SOLD, null, null);
-		attempt.addResultLine(new AuctionResultLine(date, "A", 10, 10_000, 100_000, null, AuctionInspectionStatus.NORMAL));
+		attempt
+			.addResultLine(new AuctionResultLine(date, "A", 10, 10_000, 100_000, null, AuctionInspectionStatus.NORMAL));
 		lot.addAttempt(attempt);
 		shipment.addLot(lot);
 		shipmentRepository.saveAndFlush(shipment);
@@ -218,11 +252,9 @@ class PartnerSettlementPostgresE2ETest extends WorkE2ETestBase {
 		var first = payment(20_000L, "auction-first");
 		var second = payment(30_000L, "auction-second");
 
-		concurrently(List.of(
-				() -> paymentService.confirmAuctionPayment(settlement.id(), first),
+		concurrently(List.of(() -> paymentService.confirmAuctionPayment(settlement.id(), first),
 				() -> paymentService.confirmAuctionPayment(settlement.id(), second)));
-		concurrently(List.of(
-				() -> paymentService.confirmAuctionPayment(settlement.id(), first),
+		concurrently(List.of(() -> paymentService.confirmAuctionPayment(settlement.id(), first),
 				() -> paymentService.confirmAuctionPayment(settlement.id(), second)));
 
 		assertThat(settlementService.getSettlement(settlement.id()).paidAmount()).isEqualTo(50_000L);
@@ -237,15 +269,16 @@ class PartnerSettlementPostgresE2ETest extends WorkE2ETestBase {
 		assertThat(totals.expectedDepositAmount()).isEqualTo(100_000L);
 		assertThat(totals.remainingAmount()).isEqualTo(50_000L);
 		assertThat(settlementService.getSummary(-1L, null, null, null).remainingAmount()).isZero();
-		assertThat(eventRepository.search(house.getId(), PaymentTargetType.AUCTION_SETTLEMENT, settlement.id(), null, PageRequest.of(0, 100)).getContent())
-				.hasSize(4);
+		assertThat(eventRepository
+			.search(house.getId(), PaymentTargetType.AUCTION_SETTLEMENT, settlement.id(), null, PageRequest.of(0, 100))
+			.getContent()).hasSize(4);
 		var history = paymentService.getEventPage(house.getId(), PaymentTargetType.AUCTION_SETTLEMENT, settlement.id(),
 				PaymentEventType.PAYMENT_RECEIVED, 0, 1);
 		assertThat(history.totalElements()).isEqualTo(2);
-		assertThat(history.content()).singleElement().satisfies(event ->
-				assertThat(event.eventType()).isEqualTo(PaymentEventType.PAYMENT_RECEIVED));
+		assertThat(history.content()).singleElement()
+			.satisfies(event -> assertThat(event.eventType()).isEqualTo(PaymentEventType.PAYMENT_RECEIVED));
 		assertThat(paymentService.getEventPage(null, null, null, null, 0, 100).totalElements())
-				.isEqualTo(originalEventCount + 4);
+			.isEqualTo(originalEventCount + 4);
 		assertThat(paymentService.getEventPage(-1L, null, null, null, 0, 100).totalElements()).isZero();
 		assertThat(balanceService.getBalance(house.getId()).receivableBalance()).isZero();
 	}
@@ -261,49 +294,51 @@ class PartnerSettlementPostgresE2ETest extends WorkE2ETestBase {
 		})).isInstanceOf(IllegalStateException.class).hasMessage("후속 처리 실패");
 
 		assertThat(salesSlipRepository.findById(slip.getId()).orElseThrow().getPaidAmount()).isZero();
-		assertThat(eventRepository.search(partner.getId(), null, null, null, PageRequest.of(0, 100)).getContent()).isEmpty();
+		assertThat(eventRepository.search(partner.getId(), null, null, null, PageRequest.of(0, 100)).getContent())
+			.isEmpty();
 		assertThat(balanceRepository.findByPartnerId(partner.getId())).isEmpty();
-		assertThat(auditRepository.findAll().stream()
-				.filter(event -> event.getEntityType().equals("SALES_SLIP"))
-				.filter(event -> event.getEntityId().equals(slip.getId()))).isEmpty();
+		assertThat(auditRepository.findAll()
+			.stream()
+			.filter(event -> event.getEntityType().equals("SALES_SLIP"))
+			.filter(event -> event.getEntityId().equals(slip.getId()))).isEmpty();
 	}
 
 	@Test
 	void scalarPartnerReferencesRetainTheExistingForeignKeys() {
 		assertThatThrownBy(() -> balanceRepository.saveAndFlush(new PartnerBalanceSummary(-1L)))
-				.isInstanceOf(DataIntegrityViolationException.class)
-				.hasMessageContaining("partner_balance_summaries_partner_id_fkey");
-		assertThatThrownBy(() -> settingsRepository.saveAndFlush(
-				new PartnerSettlementSettings(-1L, PartnerType.WHOLESALE)))
-				.isInstanceOf(DataIntegrityViolationException.class)
-				.hasMessageContaining("partner_settlement_settings_partner_id_fkey");
-		assertThatThrownBy(() -> eventRepository.saveAndFlush(PartnerPaymentEvent.received(
-				-1L, LocalDate.of(2040, 1, 2), 1_000L, PaymentTargetType.SALES_SLIP, 1L,
-				null, null, "foreign-key", null, null)))
-				.isInstanceOf(DataIntegrityViolationException.class)
-				.hasMessageContaining("partner_payment_events_partner_id_fkey");
-		assertThatThrownBy(() -> settlementRepository.saveAndFlush(
-				new AuctionSettlement(-1L, LocalDate.of(2040, 1, 2))))
-				.isInstanceOf(DataIntegrityViolationException.class)
-				.hasMessageContaining("auction_settlements_auction_house_id_fkey");
-		assertThatThrownBy(() -> shipmentRepository.saveAndFlush(
-				new AuctionShipment(LocalDate.of(2040, 1, 2), -1L, PartnerType.AUCTION_HOUSE)))
-				.isInstanceOf(DataIntegrityViolationException.class)
-				.hasMessageContaining("auction_shipments_auction_house_id_fkey");
+			.isInstanceOf(DataIntegrityViolationException.class)
+			.hasMessageContaining("partner_balance_summaries_partner_id_fkey");
+		assertThatThrownBy(
+				() -> settingsRepository.saveAndFlush(new PartnerSettlementSettings(-1L, PartnerType.WHOLESALE)))
+			.isInstanceOf(DataIntegrityViolationException.class)
+			.hasMessageContaining("partner_settlement_settings_partner_id_fkey");
+		assertThatThrownBy(
+				() -> eventRepository.saveAndFlush(PartnerPaymentEvent.received(-1L, LocalDate.of(2040, 1, 2), 1_000L,
+						PaymentTargetType.SALES_SLIP, 1L, null, null, "foreign-key", null, null)))
+			.isInstanceOf(DataIntegrityViolationException.class)
+			.hasMessageContaining("partner_payment_events_partner_id_fkey");
+		assertThatThrownBy(
+				() -> settlementRepository.saveAndFlush(new AuctionSettlement(-1L, LocalDate.of(2040, 1, 2))))
+			.isInstanceOf(DataIntegrityViolationException.class)
+			.hasMessageContaining("auction_settlements_auction_house_id_fkey");
+		assertThatThrownBy(() -> shipmentRepository
+			.saveAndFlush(new AuctionShipment(LocalDate.of(2040, 1, 2), -1L, PartnerType.AUCTION_HOUSE)))
+			.isInstanceOf(DataIntegrityViolationException.class)
+			.hasMessageContaining("auction_shipments_auction_house_id_fkey");
 		assertThatThrownBy(() -> salesSlipRepository.saveAndFlush(new SalesSlip("INVALID-PARTNER",
 				LocalDate.of(2040, 1, 2), SalesType.DIRECT, null, -1L, "미입금", "작성중", null, null)))
-				.isInstanceOf(DataIntegrityViolationException.class)
-				.hasMessageContaining("sales_slips_partner_id_fkey");
+			.isInstanceOf(DataIntegrityViolationException.class)
+			.hasMessageContaining("sales_slips_partner_id_fkey");
 	}
 
 	@Test
 	void shipmentCreationAndCancellationPreserveForeignKeysAndCallerRollback() {
-		var house = partnerRepository.saveAndFlush(new BusinessPartner(
-				"출하 계약", PartnerType.AUCTION_HOUSE, null, null, null, null));
+		var house = partnerRepository
+			.saveAndFlush(new BusinessPartner("출하 계약", PartnerType.AUCTION_HOUSE, null, null, null, null));
 		var date = LocalDate.of(2040, 1, 2);
 		var drafts = List.of(new LotDraft(20L, "난", "호접란", "A", 3));
 		assertThatThrownBy(() -> shipmentCreator.create(date, house.getId(), drafts))
-				.isInstanceOf(org.springframework.transaction.IllegalTransactionStateException.class);
+			.isInstanceOf(org.springframework.transaction.IllegalTransactionStateException.class);
 		long before = shipmentRepository.count();
 		assertThatThrownBy(() -> transaction().executeWithoutResult(status -> {
 			shipmentCreator.create(date, house.getId(), drafts);
@@ -314,8 +349,8 @@ class PartnerSettlementPostgresE2ETest extends WorkE2ETestBase {
 
 		Long slipId = transaction().execute(status -> {
 			var created = shipmentCreator.create(date, house.getId(), drafts);
-			var slip = new SalesSlip("SHIPMENT-LINK", date, SalesType.AUCTION, created.id(), house.getId(),
-					"정산 대기", "출하 완료", null, null);
+			var slip = new SalesSlip("SHIPMENT-LINK", date, SalesType.AUCTION, created.id(), house.getId(), "정산 대기",
+					"출하 완료", null, null);
 			slip.addItem(new SalesSlipItem(created.lotIdsBySourceItemId().get(20L), "호접란", "난", "A", 3, 0, null));
 			return salesSlipRepository.saveAndFlush(slip).getId();
 		});
@@ -329,18 +364,20 @@ class PartnerSettlementPostgresE2ETest extends WorkE2ETestBase {
 
 	@Test
 	void concurrentRebuildsAndPaymentKeepOneSettlementAndPreservedPayment() throws Exception {
-		var house = partnerRepository.saveAndFlush(new BusinessPartner(
-				"재구성 경합", PartnerType.AUCTION_HOUSE, null, null, null, null));
+		var house = partnerRepository
+			.saveAndFlush(new BusinessPartner("재구성 경합", PartnerType.AUCTION_HOUSE, null, null, null, null));
 		var date = LocalDate.of(2041, 2, 3);
 		var shipment = new AuctionShipment(date, house.getId(), house.getPartnerType());
 		var lot = new AuctionShipmentLot("난", "카틀레야", "A", 1, 10);
 		var attempt = new AuctionAttempt(date, 1, AuctionAttemptStatus.SOLD, null, null);
-		attempt.addResultLine(new AuctionResultLine(date, "A", 10, 10000, 100000, null, AuctionInspectionStatus.NORMAL));
+		attempt
+			.addResultLine(new AuctionResultLine(date, "A", 10, 10000, 100000, null, AuctionInspectionStatus.NORMAL));
 		lot.addAttempt(attempt);
 		shipment.addLot(lot);
 		shipmentRepository.saveAndFlush(shipment);
-		List<com.greenhouse.backend.settlement.dto.AuctionSettlementResponse> created = concurrently(List.of(() -> settlementService.rebuild(house.getId(), date),
-				() -> settlementService.rebuild(house.getId(), date)));
+		List<com.greenhouse.backend.settlement.dto.AuctionSettlementResponse> created = concurrently(
+				List.of(() -> settlementService.rebuild(house.getId(), date),
+						() -> settlementService.rebuild(house.getId(), date)));
 		assertThat(created).extracting(value -> value.id()).containsOnly(created.getFirst().id());
 		Long id = created.getFirst().id();
 		concurrently(List.of(() -> settlementService.rebuild(house.getId(), date),
@@ -349,19 +386,22 @@ class PartnerSettlementPostgresE2ETest extends WorkE2ETestBase {
 		assertThat(result.paidAmount()).isEqualTo(20000);
 		assertThat(result.remainingAmount()).isEqualTo(80000);
 		assertThat(result.lines()).hasSize(1);
-		assertThat(paymentService.getEventPage(house.getId(), PaymentTargetType.AUCTION_SETTLEMENT, id,
-				PaymentEventType.PAYMENT_RECEIVED, 0, 100).totalElements()).isEqualTo(1);
+		assertThat(paymentService
+			.getEventPage(house.getId(), PaymentTargetType.AUCTION_SETTLEMENT, id, PaymentEventType.PAYMENT_RECEIVED, 0,
+					100)
+			.totalElements()).isEqualTo(1);
 	}
 
 	@Test
 	void concurrentInitializersLinkEachResultOnlyOnce() throws Exception {
-		var house = partnerRepository.saveAndFlush(new BusinessPartner(
-				"초기 정산 경합", PartnerType.AUCTION_HOUSE, null, null, null, null));
+		var house = partnerRepository
+			.saveAndFlush(new BusinessPartner("초기 정산 경합", PartnerType.AUCTION_HOUSE, null, null, null, null));
 		var date = LocalDate.of(2041, 3, 4);
 		var shipment = new AuctionShipment(date, house.getId(), house.getPartnerType());
 		var lot = new AuctionShipmentLot("난", "카틀레야", "A", 1, 10);
 		var attempt = new AuctionAttempt(date, 1, AuctionAttemptStatus.SOLD, null, null);
-		attempt.addResultLine(new AuctionResultLine(date, "A", 10, 10000, 100000, null, AuctionInspectionStatus.NORMAL));
+		attempt
+			.addResultLine(new AuctionResultLine(date, "A", 10, 10000, 100000, null, AuctionInspectionStatus.NORMAL));
 		lot.addAttempt(attempt);
 		shipment.addLot(lot);
 		shipmentRepository.saveAndFlush(shipment);
@@ -373,20 +413,18 @@ class PartnerSettlementPostgresE2ETest extends WorkE2ETestBase {
 	}
 
 	private BusinessPartner createPartner(String name) {
-		return partnerRepository.saveAndFlush(
-				new BusinessPartner(name, PartnerType.WHOLESALE, null, null, null, null));
+		return partnerRepository.saveAndFlush(new BusinessPartner(name, PartnerType.WHOLESALE, null, null, null, null));
 	}
 
 	private SalesSlip createSlip(BusinessPartner partner, String number) {
-		var slip = new SalesSlip(number, LocalDate.of(2040, 1, 2), SalesType.DIRECT, null,
-				partner.getId(), "미입금", "작성중", "계좌이체", null);
+		var slip = new SalesSlip(number, LocalDate.of(2040, 1, 2), SalesType.DIRECT, null, partner.getId(), "미입금",
+				"작성중", "계좌이체", null);
 		slip.addItem(new SalesSlipItem(null, "카틀레야", null, "A", 10, 10_000, null));
 		return salesSlipRepository.saveAndFlush(slip);
 	}
 
 	private ManualPaymentCommand payment(long amount, String key) {
-		return new ManualPaymentCommand(amount, LocalDate.of(2040, 1, 2), key,
-				"계좌이체", null, "테스트", null);
+		return new ManualPaymentCommand(amount, LocalDate.of(2040, 1, 2), key, "계좌이체", null, "테스트", null);
 	}
 
 	private TransactionTemplate transaction() {
@@ -410,7 +448,8 @@ class PartnerSettlementPostgresE2ETest extends WorkE2ETestBase {
 				results.add(future.get(20, TimeUnit.SECONDS));
 			}
 			return results;
-		} finally {
+		}
+		finally {
 			start.countDown();
 			executor.shutdownNow();
 		}
@@ -419,9 +458,11 @@ class PartnerSettlementPostgresE2ETest extends WorkE2ETestBase {
 	private void await(CountDownLatch latch) {
 		try {
 			assertThat(latch.await(10, TimeUnit.SECONDS)).as("Concurrent request coordination").isTrue();
-		} catch (InterruptedException exception) {
+		}
+		catch (InterruptedException exception) {
 			Thread.currentThread().interrupt();
 			throw new AssertionError(exception);
 		}
 	}
+
 }

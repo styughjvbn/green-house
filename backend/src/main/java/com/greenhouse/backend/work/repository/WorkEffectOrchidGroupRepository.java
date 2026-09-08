@@ -15,7 +15,7 @@ public interface WorkEffectOrchidGroupRepository extends JpaRepository<WorkEffec
 
 	List<WorkEffectOrchidGroup> findByWorkAppliedEffectIdOrderByIdAsc(Long workAppliedEffectId);
 
-	@EntityGraph(attributePaths = {"workAppliedEffect", "workAppliedEffect.workOperation"})
+	@EntityGraph(attributePaths = { "workAppliedEffect", "workAppliedEffect.workOperation" })
 	List<WorkEffectOrchidGroup> findByWorkAppliedEffectIdInOrderByWorkAppliedEffectIdAscIdAsc(
 			Collection<Long> workAppliedEffectIds);
 
@@ -23,22 +23,24 @@ public interface WorkEffectOrchidGroupRepository extends JpaRepository<WorkEffec
 	List<WorkEffectOrchidGroup> findByWorkAppliedEffectWorkOperationIdOrderByIdAsc(Long workOperationId);
 
 	@EntityGraph(attributePaths = "workAppliedEffect")
-	List<WorkEffectOrchidGroup> findByWorkAppliedEffectWorkOperationIdAndRelationTypeOrderByIdAsc(
-			Long workOperationId,
+	List<WorkEffectOrchidGroup> findByWorkAppliedEffectWorkOperationIdAndRelationTypeOrderByIdAsc(Long workOperationId,
 			WorkEffectOrchidGroupRelationType relationType);
 
-	@EntityGraph(attributePaths = {"workAppliedEffect", "workAppliedEffect.workOperation", "workAppliedEffect.workOperation.workType"})
+	@EntityGraph(attributePaths = { "workAppliedEffect", "workAppliedEffect.workOperation",
+			"workAppliedEffect.workOperation.workType" })
 	List<WorkEffectOrchidGroup> findByOrchidGroupIdOrderByWorkAppliedEffectAppliedAtDescWorkAppliedEffectIdDesc(
 			Long orchidGroupId);
 
-	@EntityGraph(attributePaths = {"workAppliedEffect", "workAppliedEffect.workOperation", "workAppliedEffect.workOperation.workType"})
+	@EntityGraph(attributePaths = { "workAppliedEffect", "workAppliedEffect.workOperation",
+			"workAppliedEffect.workOperation.workType" })
 	List<WorkEffectOrchidGroup> findByOrchidGroupIdInOrderByWorkAppliedEffectAppliedAtDescWorkAppliedEffectIdDesc(
 			Collection<Long> orchidGroupIds);
 
-	@EntityGraph(attributePaths = {"workAppliedEffect", "workAppliedEffect.workOperation", "workAppliedEffect.workOperation.workType"})
+	@EntityGraph(attributePaths = { "workAppliedEffect", "workAppliedEffect.workOperation",
+			"workAppliedEffect.workOperation.workType" })
 	List<WorkEffectOrchidGroup> findByWorkAppliedEffectWorkOperationIdInAndOrchidGroupIdInOrderByWorkAppliedEffectWorkOperationIdAscIdAsc(
-			Collection<Long> workOperationIds,
-			Collection<Long> orchidGroupIds);
+			Collection<Long> workOperationIds, Collection<Long> orchidGroupIds);
 
 	boolean existsByOrchidGroupId(Long orchidGroupId);
+
 }

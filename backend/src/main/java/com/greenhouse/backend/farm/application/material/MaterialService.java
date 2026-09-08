@@ -8,9 +8,7 @@ import com.greenhouse.backend.farm.dto.material.MaterialCreateRequest;
 import com.greenhouse.backend.farm.dto.material.MaterialResponse;
 import com.greenhouse.backend.farm.dto.material.MaterialUpdateRequest;
 import com.greenhouse.backend.farm.repository.material.MaterialRepository;
-
 import lombok.RequiredArgsConstructor;
-
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
@@ -24,24 +22,16 @@ public class MaterialService {
 	private final MaterialRepository materialRepository;
 
 	@Transactional(readOnly = true)
-	public PageResponse<MaterialResponse> getMaterials(
-			String keyword,
-			String category,
-			String manufacturer,
-			Boolean active,
-			int page,
-			int size) {
+	public PageResponse<MaterialResponse> getMaterials(String keyword, String category, String manufacturer,
+			Boolean active, int page, int size) {
 		PageRequests.validate(page, size);
-		return PageResponse.from(materialRepository.search(
-				normalize(keyword) == null ? "" : normalize(keyword),
-				normalize(category) == null ? "" : normalize(category),
-				normalize(manufacturer) == null ? "" : normalize(manufacturer),
-				active,
-				PageRequest.of(page, size, Sort.by(
-						Sort.Order.desc("active"),
-						Sort.Order.asc("category"),
-						Sort.Order.asc("name"))))
-				.map(MaterialResponse::from));
+		return PageResponse.from(materialRepository
+			.search(normalize(keyword) == null ? "" : normalize(keyword),
+					normalize(category) == null ? "" : normalize(category),
+					normalize(manufacturer) == null ? "" : normalize(manufacturer), active,
+					PageRequest.of(page, size,
+							Sort.by(Sort.Order.desc("active"), Sort.Order.asc("category"), Sort.Order.asc("name"))))
+			.map(MaterialResponse::from));
 	}
 
 	@Transactional(readOnly = true)
@@ -50,29 +40,18 @@ public class MaterialService {
 	}
 
 	public MaterialResponse create(MaterialCreateRequest request) {
-		Material material = materialRepository.save(new Material(
-				nextCode(),
-				normalizeRequired(request.category()),
-				normalizeRequired(request.name()),
-				normalize(request.manufacturer()),
-				normalize(request.specification()),
-				normalize(request.stockQuantity()),
-				normalize(request.storageLocation()),
-				normalize(request.usage()),
-				true));
+		Material material = materialRepository.save(new Material(nextCode(), normalizeRequired(request.category()),
+				normalizeRequired(request.name()), normalize(request.manufacturer()),
+				normalize(request.specification()), normalize(request.stockQuantity()),
+				normalize(request.storageLocation()), normalize(request.usage()), true));
 		return MaterialResponse.from(material);
 	}
 
 	public MaterialResponse update(Long materialId, MaterialUpdateRequest request) {
 		Material material = findMaterial(materialId);
-		material.update(
-				normalizeRequired(request.category()),
-				normalizeRequired(request.name()),
-				normalize(request.manufacturer()),
-				normalize(request.specification()),
-				normalize(request.stockQuantity()),
-				normalize(request.storageLocation()),
-				normalize(request.usage()));
+		material.update(normalizeRequired(request.category()), normalizeRequired(request.name()),
+				normalize(request.manufacturer()), normalize(request.specification()),
+				normalize(request.stockQuantity()), normalize(request.storageLocation()), normalize(request.usage()));
 		return MaterialResponse.from(material);
 	}
 
@@ -87,8 +66,7 @@ public class MaterialService {
 	}
 
 	private Material findMaterial(Long materialId) {
-		return materialRepository.findById(materialId)
-				.orElseThrow(() -> new NotFoundException("자재를 찾을 수 없습니다."));
+		return materialRepository.findById(materialId).orElseThrow(() -> new NotFoundException("자재를 찾을 수 없습니다."));
 	}
 
 	private String nextCode() {
@@ -110,4 +88,5 @@ public class MaterialService {
 		}
 		return normalized;
 	}
+
 }

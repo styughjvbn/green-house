@@ -19,32 +19,30 @@ import org.springframework.transaction.annotation.Transactional;
 @Tag("work-e2e")
 class SequenceBatchInsertPostgresE2ETest extends WorkE2ETestBase {
 
-	@Autowired BusinessPartnerRepository businessPartnerRepository;
-	@Autowired EntityManager entityManager;
-	@Autowired EntityManagerFactory entityManagerFactory;
+	@Autowired
+	BusinessPartnerRepository businessPartnerRepository;
+
+	@Autowired
+	EntityManager entityManager;
+
+	@Autowired
+	EntityManagerFactory entityManagerFactory;
 
 	@Test
 	@Transactional
 	void insertsEntitiesWithPooledSequenceAndJdbcBatchOnPostgres() {
 		List<BusinessPartner> partners = IntStream.range(0, 120)
-				.mapToObj(index -> new BusinessPartner(
-						"PostgreSQL 배치 거래처 " + index,
-						PartnerType.WHOLESALE,
-						null,
-						null,
-						null,
-						null))
-				.toList();
+			.mapToObj(index -> new BusinessPartner("PostgreSQL 배치 거래처 " + index, PartnerType.WHOLESALE, null, null,
+					null, null))
+			.toList();
 		Statistics statistics = entityManagerFactory.unwrap(SessionFactory.class).getStatistics();
 		statistics.clear();
 
 		businessPartnerRepository.saveAll(partners);
 		entityManager.flush();
 
-		assertThat(partners)
-				.extracting(BusinessPartner::getId)
-				.doesNotContainNull()
-				.doesNotHaveDuplicates();
+		assertThat(partners).extracting(BusinessPartner::getId).doesNotContainNull().doesNotHaveDuplicates();
 		assertThat(statistics.getPrepareStatementCount()).isLessThan(10L);
 	}
+
 }

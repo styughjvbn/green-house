@@ -6,7 +6,6 @@ import com.greenhouse.backend.farm.dto.structure.BedZonePlacementProfileRequest;
 import com.greenhouse.backend.farm.dto.structure.BedZonePlacementProfileResponse;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
-
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PutMapping;
@@ -18,6 +17,7 @@ import org.springframework.web.bind.annotation.RestController;
 @RequestMapping("/api/bed-zones/{bedZoneId}/placement-profile")
 @RequiredArgsConstructor
 public class BedPlacementController {
+
 	private final BedPlacementProfileService service;
 
 	@GetMapping
@@ -30,4 +30,5 @@ public class BedPlacementController {
 			@Valid @RequestBody BedZonePlacementProfileRequest request) {
 		return ApiResponse.ok(service.updateProfile(bedZoneId, request));
 	}
+
 }

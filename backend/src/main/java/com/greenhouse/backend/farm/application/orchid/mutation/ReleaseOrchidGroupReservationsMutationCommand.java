@@ -7,10 +7,8 @@ import com.greenhouse.backend.farm.domain.orchid.mutation.OrchidGroupMutationSou
 import java.time.LocalDate;
 import java.util.List;
 
-public record ReleaseOrchidGroupReservationsMutationCommand(
-		OrchidGroupMutationSource source,
-		List<OrchidGroupQuantityMutationItem> items,
-		LocalDate effectiveBusinessDate,
+public record ReleaseOrchidGroupReservationsMutationCommand(OrchidGroupMutationSource source,
+		List<OrchidGroupQuantityMutationItem> items, LocalDate effectiveBusinessDate,
 		String reason) implements OrchidGroupMutationCommand {
 
 	public ReleaseOrchidGroupReservationsMutationCommand {

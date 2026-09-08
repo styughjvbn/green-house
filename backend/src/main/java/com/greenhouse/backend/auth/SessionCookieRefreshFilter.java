@@ -20,14 +20,12 @@ import org.springframework.web.filter.OncePerRequestFilter;
 public class SessionCookieRefreshFilter extends OncePerRequestFilter {
 
 	private final AuthProperties authProperties;
+
 	private final SessionCookieWriter sessionCookieWriter;
 
 	@Override
-	protected void doFilterInternal(
-			HttpServletRequest request,
-			HttpServletResponse response,
-			FilterChain filterChain
-	) throws ServletException, IOException {
+	protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain)
+			throws ServletException, IOException {
 		filterChain.doFilter(request, response);
 
 		if (!authProperties.enabled()) {
@@ -47,4 +45,5 @@ public class SessionCookieRefreshFilter extends OncePerRequestFilter {
 
 		sessionCookieWriter.refresh(session, response);
 	}
+
 }

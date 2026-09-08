@@ -1,7 +1,6 @@
 package com.greenhouse.backend.farm.application.structure;
 
 import com.greenhouse.backend.common.config.TimeConfig;
-import java.time.Clock;
 import com.greenhouse.backend.common.exception.NotFoundException;
 import com.greenhouse.backend.farm.domain.orchid.OrchidGroup;
 import com.greenhouse.backend.farm.domain.structure.BedZone;
@@ -14,6 +13,7 @@ import com.greenhouse.backend.farm.repository.orchid.OrchidGroupRepository;
 import com.greenhouse.backend.farm.repository.structure.BedZoneRepository;
 import com.greenhouse.backend.farm.repository.structure.HouseRepository;
 import com.greenhouse.backend.farm.repository.structure.PhysicalBedRepository;
+import java.time.Clock;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -28,9 +28,13 @@ import org.springframework.transaction.annotation.Transactional;
 public class FarmQueryService {
 
 	private final Clock clock;
+
 	private final HouseRepository houseRepository;
+
 	private final PhysicalBedRepository physicalBedRepository;
+
 	private final BedZoneRepository bedZoneRepository;
+
 	private final OrchidGroupRepository orchidGroupRepository;
 
 	public List<HouseResponse> getHouses() {
@@ -39,9 +43,14 @@ public class FarmQueryService {
 		var beds = physicalBedRepository.findAllInFarmOrder();
 		var groups = groupsByZone(beds.stream().map(PhysicalBed::getId).toList());
 		var bedsByHouse = beds.stream().collect(Collectors.groupingBy(bed -> bed.getHouse().getId()));
-		return houses.stream().sorted(java.util.Comparator.comparing(house -> house.getNumber()))
-				.map(house -> HouseResponse.from(house, bedsByHouse.getOrDefault(house.getId(), List.of()).stream()
-						.map(bed -> PhysicalBedResponse.from(bed, groups, businessDate)).toList())).toList();
+		return houses.stream()
+			.sorted(java.util.Comparator.comparing(house -> house.getNumber()))
+			.map(house -> HouseResponse.from(house,
+					bedsByHouse.getOrDefault(house.getId(), List.of())
+						.stream()
+						.map(bed -> PhysicalBedResponse.from(bed, groups, businessDate))
+						.toList()))
+			.toList();
 	}
 
 	public HouseResponse getHouse(Long houseId) {
@@ -59,7 +68,7 @@ public class FarmQueryService {
 	public PhysicalBedResponse getPhysicalBed(Long physicalBedId) {
 		var businessDate = TimeConfig.farmToday(clock);
 		var bed = physicalBedRepository.findWithHouseAndBedZonesById(physicalBedId)
-				.orElseThrow(() -> new NotFoundException("다이를 찾을 수 없습니다."));
+			.orElseThrow(() -> new NotFoundException("다이를 찾을 수 없습니다."));
 		return PhysicalBedResponse.from(bed, groupsByZone(List.of(physicalBedId)), businessDate);
 	}
 
@@ -68,41 +77,46 @@ public class FarmQueryService {
 		List<BedZone> zones;
 		if (physicalBedId != null) {
 			zones = bedZoneRepository.findByPhysicalBedIdOrderBySortOrderAsc(physicalBedId);
-		} else if (houseId != null) {
+		}
+		else if (houseId != null) {
 			zones = bedZoneRepository.findByHouseId(houseId);
-		} else {
+		}
+		else {
 			zones = bedZoneRepository.findAllWithLocation();
 		}
 		var groups = groupsByZone(zones.stream().map(zone -> zone.getPhysicalBed().getId()).distinct().toList());
-		return zones.stream().map(zone -> BedZoneResponse.from(zone, groups.getOrDefault(zone.getId(), List.of()), businessDate)).toList();
+		return zones.stream()
+			.map(zone -> BedZoneResponse.from(zone, groups.getOrDefault(zone.getId(), List.of()), businessDate))
+			.toList();
 	}
 
 	public BedZoneResponse getBedZone(Long bedZoneId) {
 		var businessDate = TimeConfig.farmToday(clock);
 		var zone = bedZoneRepository.findWithLocationById(bedZoneId)
-				.orElseThrow(() -> new NotFoundException("논리 구역을 찾을 수 없습니다."));
-		return BedZoneResponse.from(zone, groupsByZone(List.of(zone.getPhysicalBed().getId()))
-				.getOrDefault(zone.getId(), List.of()), businessDate);
+			.orElseThrow(() -> new NotFoundException("논리 구역을 찾을 수 없습니다."));
+		return BedZoneResponse.from(zone,
+				groupsByZone(List.of(zone.getPhysicalBed().getId())).getOrDefault(zone.getId(), List.of()),
+				businessDate);
 	}
 
 	private Map<Long, List<OrchidGroup>> groupsByZone(List<Long> bedIds) {
 		if (bedIds.isEmpty()) {
 			return Map.of();
 		}
-		return orchidGroupRepository.findByPhysicalBedIdInOrderByLocation(bedIds).stream()
-				.collect(Collectors.groupingBy(group -> group.getBedZone().getId(), LinkedHashMap::new, Collectors.toList()));
+		return orchidGroupRepository.findByPhysicalBedIdInOrderByLocation(bedIds)
+			.stream()
+			.collect(Collectors.groupingBy(group -> group.getBedZone().getId(), LinkedHashMap::new,
+					Collectors.toList()));
 	}
 
-	public List<OrchidGroupResponse> getOrchidGroups(
-			Long houseId,
-			String keyword,
-			Long physicalBedId,
-			Long bedZoneId,
+	public List<OrchidGroupResponse> getOrchidGroups(Long houseId, String keyword, Long physicalBedId, Long bedZoneId,
 			String status) {
 		var businessDate = TimeConfig.farmToday(clock);
 		return orchidGroupRepository
-				.search(houseId, keyword == null ? "" : keyword.trim(), physicalBedId, bedZoneId, status).stream()
-				.map(group -> OrchidGroupResponse.from(group, businessDate))
-				.toList();
+			.search(houseId, keyword == null ? "" : keyword.trim(), physicalBedId, bedZoneId, status)
+			.stream()
+			.map(group -> OrchidGroupResponse.from(group, businessDate))
+			.toList();
 	}
+
 }

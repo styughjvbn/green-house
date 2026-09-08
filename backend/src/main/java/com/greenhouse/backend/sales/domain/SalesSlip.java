@@ -25,9 +25,13 @@ import lombok.NoArgsConstructor;
 @Entity
 @Table(name = "sales_slips")
 public class SalesSlip extends BaseEntity {
+
 	public static final String STATUS_DRAFT = "작성중";
+
 	public static final String STATUS_DIRECT_OUTBOUND_COMPLETED = "출고 완료";
+
 	public static final String STATUS_AUCTION_SHIPMENT_COMPLETED = "출하 완료";
+
 	public static final String STATUS_CANCELED = "취소";
 
 	@Id
@@ -82,16 +86,8 @@ public class SalesSlip extends BaseEntity {
 	@OneToMany(mappedBy = "salesSlip", cascade = CascadeType.ALL, orphanRemoval = true)
 	private List<SalesSlipItem> items = new ArrayList<>();
 
-	public SalesSlip(
-			String slipNumber,
-			LocalDate saleDate,
-			SalesType salesType,
-			Long auctionShipmentId,
-			Long partnerId,
-			String paymentStatus,
-			String salesStatus,
-			String paymentMethod,
-			String memo) {
+	public SalesSlip(String slipNumber, LocalDate saleDate, SalesType salesType, Long auctionShipmentId, Long partnerId,
+			String paymentStatus, String salesStatus, String paymentMethod, String memo) {
 		this.slipNumber = slipNumber;
 		this.saleDate = saleDate;
 		this.salesType = salesType;
@@ -123,11 +119,7 @@ public class SalesSlip extends BaseEntity {
 		recalculateAmounts();
 	}
 
-	public void updateDraftInfo(
-			LocalDate saleDate,
-			Long partnerId,
-			String paymentStatus,
-			String paymentMethod,
+	public void updateDraftInfo(LocalDate saleDate, Long partnerId, String paymentStatus, String paymentMethod,
 			String memo) {
 		this.saleDate = saleDate;
 		this.partnerId = partnerId;
@@ -159,17 +151,23 @@ public class SalesSlip extends BaseEntity {
 
 	public void requireEditable(boolean hasPaymentEvent) {
 		String reason = editRejectionReason(hasPaymentEvent);
-		if (reason != null) throw new IllegalArgumentException(reason);
+		if (reason != null)
+			throw new IllegalArgumentException(reason);
 	}
 
 	private String editRejectionReason(boolean hasPaymentEvent) {
-		if (salesType != SalesType.DIRECT) return "경매 판매 전표 수정은 아직 지원하지 않습니다.";
-		if (!STATUS_DRAFT.equals(salesStatus)) return "작성중 상태 전표만 수정할 수 있습니다.";
-		if (hasPaymentEvent || (paidAmount != null && paidAmount > 0)) return "입금 이력이 있는 전표는 수정할 수 없습니다.";
+		if (salesType != SalesType.DIRECT)
+			return "경매 판매 전표 수정은 아직 지원하지 않습니다.";
+		if (!STATUS_DRAFT.equals(salesStatus))
+			return "작성중 상태 전표만 수정할 수 있습니다.";
+		if (hasPaymentEvent || (paidAmount != null && paidAmount > 0))
+			return "입금 이력이 있는 전표는 수정할 수 없습니다.";
 		return null;
 	}
 
-	public boolean canComplete() { return STATUS_DRAFT.equals(salesStatus); }
+	public boolean canComplete() {
+		return STATUS_DRAFT.equals(salesStatus);
+	}
 
 	public boolean canConfirmPayment() {
 		return paymentTargetRejectionReason() == null && remainingAmount != null && remainingAmount > 0;
@@ -244,9 +242,7 @@ public class SalesSlip extends BaseEntity {
 		if (salesType == null) {
 			throw new IllegalArgumentException("판매 유형이 필요합니다.");
 		}
-		return salesType == SalesType.DIRECT
-				? STATUS_DIRECT_OUTBOUND_COMPLETED
-				: STATUS_AUCTION_SHIPMENT_COMPLETED;
+		return salesType == SalesType.DIRECT ? STATUS_DIRECT_OUTBOUND_COMPLETED : STATUS_AUCTION_SHIPMENT_COMPLETED;
 	}
 
 	private String normalizeStatus(String salesStatus) {
@@ -255,4 +251,5 @@ public class SalesSlip extends BaseEntity {
 		}
 		return salesStatus.trim();
 	}
+
 }

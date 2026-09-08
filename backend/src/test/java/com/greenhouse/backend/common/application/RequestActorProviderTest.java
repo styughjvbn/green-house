@@ -20,4 +20,5 @@ class RequestActorProviderTest {
 		assertThat(provider.resolve("forged-worker")).isEqualTo("farm-demo");
 		assertThat(provider.resolve(null)).isEqualTo("farm-demo");
 	}
+
 }

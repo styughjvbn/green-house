@@ -23,8 +23,7 @@ public interface SalesSlipItemAllocationRepository extends JpaRepository<SalesSl
 			order by allocation.orchidGroupId
 			""")
 	List<SalesReservationReconciliationRow> sumDraftReservationsByOrchidGroupIdIn(
-			@Param("orchidGroupIds") Collection<Long> orchidGroupIds,
-			@Param("draftStatus") String draftStatus);
+			@Param("orchidGroupIds") Collection<Long> orchidGroupIds, @Param("draftStatus") String draftStatus);
 
 	@Query("""
 			select allocation from SalesSlipItemAllocation allocation
@@ -36,4 +35,5 @@ public interface SalesSlipItemAllocationRepository extends JpaRepository<SalesSl
 			""")
 	List<SalesSlipItemAllocation> findAllWithSnapshotsBySalesSlipIdIn(
 			@Param("salesSlipIds") Collection<Long> salesSlipIds);
+
 }

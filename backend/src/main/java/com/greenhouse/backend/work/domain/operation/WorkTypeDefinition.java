@@ -10,9 +10,12 @@ import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import lombok.RequiredArgsConstructor;
 
-/** Stable work behavior; active/system flags and lifecycle state remain on the entities. */
+/**
+ * Stable work behavior; active/system flags and lifecycle state remain on the entities.
+ */
 @RequiredArgsConstructor
 public enum WorkTypeDefinition {
+
 	GENERIC(null, WorkTypeWorkflow.GENERIC, WorkTargetReferenceType.ORCHID_GROUP, true),
 	INBOUND(null, WorkTypeWorkflow.GENERIC, WorkTargetReferenceType.ORCHID_GROUP, false),
 	POTTING("POTTING", WorkTypeWorkflow.POTTING, WorkTargetReferenceType.INBOUND_RECORD, false),
@@ -25,11 +28,14 @@ public enum WorkTypeDefinition {
 	CORRECTION(null, WorkTypeWorkflow.GENERIC, WorkTargetReferenceType.ORCHID_GROUP, true);
 
 	private static final Map<String, WorkTypeDefinition> BY_CODE = Arrays.stream(values())
-			.collect(Collectors.toUnmodifiableMap(Enum::name, Function.identity()));
+		.collect(Collectors.toUnmodifiableMap(Enum::name, Function.identity()));
 
 	private final String handlerOverride;
+
 	private final WorkTypeWorkflow workflow;
+
 	private final WorkTargetReferenceType targetSource;
+
 	private final boolean manualRegistrationAllowed;
 
 	public static WorkTypeDefinition forCode(String code) {
@@ -37,7 +43,8 @@ public enum WorkTypeDefinition {
 	}
 
 	public String handlerCode(WorkTypeTemplate template) {
-		// Existing code overrides take precedence; other codes retain their stored template's handler.
+		// Existing code overrides take precedence; other codes retain their stored
+		// template's handler.
 		return handlerOverride == null ? template.handlerCode() : handlerOverride;
 	}
 
@@ -66,9 +73,10 @@ public enum WorkTypeDefinition {
 	}
 
 	public static Set<String> requiredHandlerCodes() {
-		return Stream.concat(
-				Arrays.stream(values()).map(definition -> definition.handlerOverride).filter(Objects::nonNull),
-				Arrays.stream(WorkTypeTemplate.values()).map(WorkTypeTemplate::handlerCode))
-				.collect(Collectors.toUnmodifiableSet());
+		return Stream
+			.concat(Arrays.stream(values()).map(definition -> definition.handlerOverride).filter(Objects::nonNull),
+					Arrays.stream(WorkTypeTemplate.values()).map(WorkTypeTemplate::handlerCode))
+			.collect(Collectors.toUnmodifiableSet());
 	}
+
 }

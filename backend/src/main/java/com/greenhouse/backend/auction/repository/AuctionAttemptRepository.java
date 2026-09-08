@@ -16,4 +16,5 @@ public interface AuctionAttemptRepository extends JpaRepository<AuctionAttempt, 
 			order by attempt.shipmentLot.id asc, attempt.auctionDate asc, attempt.attemptNo asc
 			""")
 	List<AuctionAttempt> findAllWithResultLinesByLotIdIn(@Param("lotIds") Collection<Long> lotIds);
+
 }

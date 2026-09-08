@@ -22,17 +22,14 @@ public class AuditRequestContext {
 		HttpSession session = request.getSession(false);
 		Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
 		String actorId = authentication != null && authentication.isAuthenticated()
-				&& !(authentication instanceof AnonymousAuthenticationToken)
-				? authentication.getName() : null;
-		return new AuditEvent.Identity(
-				actorId,
-				session == null ? null : session.getId(),
-				normalize(request.getHeader("X-Client-Instance-Id"), 100),
-				MDC.get(RequestIdFilter.MDC_KEY));
+				&& !(authentication instanceof AnonymousAuthenticationToken) ? authentication.getName() : null;
+		return new AuditEvent.Identity(actorId, session == null ? null : session.getId(),
+				normalize(request.getHeader("X-Client-Instance-Id"), 100), MDC.get(RequestIdFilter.MDC_KEY));
 	}
 
 	private String normalize(String value, int maxLength) {
-		if (value == null || value.isBlank()) return null;
+		if (value == null || value.isBlank())
+			return null;
 		String trimmed = value.trim();
 		return trimmed.length() <= maxLength ? trimmed : trimmed.substring(0, maxLength);
 	}

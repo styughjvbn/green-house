@@ -9,7 +9,9 @@ import org.springframework.http.MediaType;
 import org.springframework.stereotype.Component;
 import tools.jackson.databind.ObjectMapper;
 
-/** Writes the same error envelope as MVC advice for failures raised before a controller. */
+/**
+ * Writes the same error envelope as MVC advice for failures raised before a controller.
+ */
 @Component
 @RequiredArgsConstructor
 public class ErrorResponseWriter {
@@ -22,4 +24,5 @@ public class ErrorResponseWriter {
 		response.setContentType(MediaType.APPLICATION_JSON_VALUE);
 		response.getWriter().write(objectMapper.writeValueAsString(ErrorResponse.of(code, message, List.of())));
 	}
+
 }

@@ -17,6 +17,7 @@ class WorkStructureChangeE2ETest extends WorkE2ETestBase {
 
 	@Autowired
 	private WorkTestDataSeeder seeder;
+
 	@Autowired
 	private JdbcTemplate jdbcTemplate;
 
@@ -59,8 +60,7 @@ class WorkStructureChangeE2ETest extends WorkE2ETestBase {
 		long operationId = first.data().path("operation").path("id").asLong();
 		long resultGroupId = first.data().path("resultOrchidGroups").get(0).path("id").asLong();
 		assertThat(duplicate.data().path("operation").path("id").asLong()).isEqualTo(operationId);
-		assertThat(duplicate.data().path("resultOrchidGroups").get(0).path("id").asLong())
-				.isEqualTo(resultGroupId);
+		assertThat(duplicate.data().path("resultOrchidGroups").get(0).path("id").asLong()).isEqualTo(resultGroupId);
 		assertThat(first.data().path("sourceOrchidGroup").path("quantity").asInt()).isEqualTo(60);
 		assertThat(first.data().path("resultOrchidGroups").get(0).path("quantity").asInt()).isEqualTo(38);
 		assertThat(first.data().path("lossQuantity").asInt()).isEqualTo(2);
@@ -69,16 +69,15 @@ class WorkStructureChangeE2ETest extends WorkE2ETestBase {
 		assertThat(count("orchid_group_lineage")).isEqualTo(1);
 		assertThat(count("work_applied_effects")).isEqualTo(1);
 		assertThat(count("work_effect_orchid_groups")).isEqualTo(2);
-		assertThat(jdbcTemplate.queryForObject(
-				"SELECT quantity FROM orchid_groups WHERE id = ?", Integer.class, scenario.orchidGroupId()))
-				.isEqualTo(60);
+		assertThat(jdbcTemplate.queryForObject("SELECT quantity FROM orchid_groups WHERE id = ?", Integer.class,
+				scenario.orchidGroupId()))
+			.isEqualTo(60);
 
 		ApiResult results = get("/api/work-operations/%d/repot-results".formatted(operationId));
 		assertThat(results.status()).isEqualTo(200);
 		assertThat(results.data().path("operation").path("id").asLong()).isEqualTo(operationId);
 		assertThat(results.data().path("sourceOrchidGroup").path("quantity").asInt()).isEqualTo(60);
-		assertThat(results.data().path("resultOrchidGroups").get(0).path("id").asLong())
-				.isEqualTo(resultGroupId);
+		assertThat(results.data().path("resultOrchidGroups").get(0).path("id").asLong()).isEqualTo(resultGroupId);
 		assertThat(results.data().path("resultOrchidGroups").get(0).path("quantity").asInt()).isEqualTo(38);
 
 		ApiResult history = get("/api/orchid-groups/%d/work-history".formatted(resultGroupId));
@@ -101,8 +100,7 @@ class WorkStructureChangeE2ETest extends WorkE2ETestBase {
 				""".formatted(scenario.repotWorkTypeId(), scenario.orchidGroupId()));
 		assertThat(planned.status()).isEqualTo(201);
 		long operationId = planned.data().path("id").asLong();
-		assertThat(post("/api/work-operations/%d/start".formatted(operationId), "").status())
-				.isEqualTo(200);
+		assertThat(post("/api/work-operations/%d/start".formatted(operationId), "").status()).isEqualTo(200);
 
 		String executionRequest = """
 				{
@@ -125,14 +123,11 @@ class WorkStructureChangeE2ETest extends WorkE2ETestBase {
 				    "endPosition": 8
 				  }]
 				}
-				""".formatted(
-				scenario.orchidGroupId(), scenario.bedZoneId(), scenario.orchidGroupId());
+				""".formatted(scenario.orchidGroupId(), scenario.bedZoneId(), scenario.orchidGroupId());
 
-		ApiResult first = post(
-				"/api/work-operations/%d/structure-change-executions".formatted(operationId),
+		ApiResult first = post("/api/work-operations/%d/structure-change-executions".formatted(operationId),
 				executionRequest);
-		ApiResult duplicate = post(
-				"/api/work-operations/%d/structure-change-executions".formatted(operationId),
+		ApiResult duplicate = post("/api/work-operations/%d/structure-change-executions".formatted(operationId),
 				executionRequest);
 
 		assertThat(first.status()).isEqualTo(201);
@@ -143,15 +138,15 @@ class WorkStructureChangeE2ETest extends WorkE2ETestBase {
 		assertThat(duplicate.data().path("targets").get(0).path("processedQuantity").asInt()).isEqualTo(40);
 		assertThat(count("work_applied_effects")).isEqualTo(1);
 		assertThat(count("orchid_group_lineage")).isEqualTo(1);
-		assertThat(jdbcTemplate.queryForObject(
-				"SELECT quantity FROM orchid_groups WHERE id = ?", Integer.class, scenario.orchidGroupId()))
-				.isEqualTo(60);
+		assertThat(jdbcTemplate.queryForObject("SELECT quantity FROM orchid_groups WHERE id = ?", Integer.class,
+				scenario.orchidGroupId()))
+			.isEqualTo(60);
 	}
 
 	@Test
 	void serializesConcurrentTargetCompletionAndAppliesDiscardOnlyOnce() throws Exception {
-		Long discardWorkTypeId = jdbcTemplate.queryForObject(
-				"SELECT id FROM work_types WHERE code = 'DISCARD'", Long.class);
+		Long discardWorkTypeId = jdbcTemplate.queryForObject("SELECT id FROM work_types WHERE code = 'DISCARD'",
+				Long.class);
 		ApiResult planned = post("/api/work-operations", """
 				{
 				  "workTypeId": %d,
@@ -163,10 +158,9 @@ class WorkStructureChangeE2ETest extends WorkE2ETestBase {
 				""".formatted(discardWorkTypeId, scenario.orchidGroupId()));
 		assertThat(planned.status()).isEqualTo(201);
 		long operationId = planned.data().path("id").asLong();
-		Long targetId = jdbcTemplate.queryForObject(
-				"SELECT id FROM work_operation_targets WHERE work_operation_id = ?", Long.class, operationId);
-		assertThat(post("/api/work-operations/%d/start".formatted(operationId), "").status())
-				.isEqualTo(200);
+		Long targetId = jdbcTemplate.queryForObject("SELECT id FROM work_operation_targets WHERE work_operation_id = ?",
+				Long.class, operationId);
+		assertThat(post("/api/work-operations/%d/start".formatted(operationId), "").status()).isEqualTo(200);
 
 		String path = "/api/work-operations/%d/targets/%d/complete".formatted(operationId, targetId);
 		String request = """
@@ -191,35 +185,33 @@ class WorkStructureChangeE2ETest extends WorkE2ETestBase {
 			var responses = futures.stream().map(future -> {
 				try {
 					return future.get(10, TimeUnit.SECONDS);
-				} catch (Exception exception) {
+				}
+				catch (Exception exception) {
 					throw new AssertionError(exception);
 				}
 			}).toList();
 
 			assertThat(responses).extracting(ApiResult::status).containsExactlyInAnyOrder(200, 200);
-		} finally {
+		}
+		finally {
 			start.countDown();
 			executor.shutdownNow();
 		}
 
-		assertThat(jdbcTemplate.queryForObject(
-				"SELECT quantity FROM orchid_groups WHERE id = ?", Integer.class, scenario.orchidGroupId()))
-				.isEqualTo(70);
-		assertThat(jdbcTemplate.queryForObject(
-				"SELECT COUNT(*) FROM work_applied_effects WHERE work_operation_id = ?",
-				Long.class,
-				operationId)).isEqualTo(1L);
+		assertThat(jdbcTemplate.queryForObject("SELECT quantity FROM orchid_groups WHERE id = ?", Integer.class,
+				scenario.orchidGroupId()))
+			.isEqualTo(70);
+		assertThat(jdbcTemplate.queryForObject("SELECT COUNT(*) FROM work_applied_effects WHERE work_operation_id = ?",
+				Long.class, operationId))
+			.isEqualTo(1L);
 		assertThat(jdbcTemplate.queryForObject(
 				"SELECT COUNT(*) FROM work_target_executions WHERE work_operation_target_id = ? AND effect_applied_at IS NOT NULL",
-				Long.class,
-				targetId)).isEqualTo(1L);
+				Long.class, targetId))
+			.isEqualTo(1L);
 	}
 
-	private ApiResult completeConcurrently(
-			String path,
-			String request,
-			CountDownLatch ready,
-			CountDownLatch start) throws Exception {
+	private ApiResult completeConcurrently(String path, String request, CountDownLatch ready, CountDownLatch start)
+			throws Exception {
 		ready.countDown();
 		if (!start.await(5, TimeUnit.SECONDS)) {
 			throw new IllegalStateException("동시 완료 요청 시작 신호를 기다리지 못했습니다.");
@@ -230,4 +222,5 @@ class WorkStructureChangeE2ETest extends WorkE2ETestBase {
 	private long count(String table) {
 		return jdbcTemplate.queryForObject("SELECT COUNT(*) FROM " + table, Long.class);
 	}
+
 }

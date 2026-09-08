@@ -3,12 +3,8 @@ package com.greenhouse.backend.farm.application.orchid.mutation;
 import com.greenhouse.backend.farm.domain.orchid.mutation.OrchidGroupMutationSource;
 import java.time.LocalDate;
 
-public record DiscardOrchidGroupMutationCommand(
-		OrchidGroupMutationSource source,
-		Long orchidGroupId,
-		Integer quantity,
-		LocalDate effectiveBusinessDate,
-		String reason) implements OrchidGroupMutationCommand {
+public record DiscardOrchidGroupMutationCommand(OrchidGroupMutationSource source, Long orchidGroupId, Integer quantity,
+		LocalDate effectiveBusinessDate, String reason) implements OrchidGroupMutationCommand {
 
 	public DiscardOrchidGroupMutationCommand {
 		if (source == null || orchidGroupId == null || effectiveBusinessDate == null) {

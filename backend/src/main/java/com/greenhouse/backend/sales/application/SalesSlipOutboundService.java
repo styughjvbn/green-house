@@ -16,8 +16,11 @@ import org.springframework.stereotype.Service;
 public class SalesSlipOutboundService {
 
 	private final SalesSlipInventoryService inventoryService;
+
 	private final AuctionShipmentCreator shipmentCreator;
+
 	private final OrchidGroupReader orchidGroupReader;
+
 	private final Clock clock;
 
 	public void complete(SalesSlip salesSlip) {
@@ -32,14 +35,18 @@ public class SalesSlipOutboundService {
 		if (slip.getSalesType() != SalesType.AUCTION || slip.getAuctionShipmentId() != null) {
 			return;
 		}
-		var drafts = slip.getItems().stream().map(item -> new LotDraft(
-				item.getId(),
-				SalesTextNormalizer.required(item.getGenus() == null || item.getGenus().isBlank()
-						? item.getItemName() : item.getGenus()),
-				SalesTextNormalizer.required(item.getItemName()),
-				SalesTextNormalizer.normalize(item.getSpec()), item.getQuantity())).toList();
+		var drafts = slip.getItems()
+			.stream()
+			.map(item -> new LotDraft(item.getId(),
+					SalesTextNormalizer.required(item.getGenus() == null || item.getGenus().isBlank()
+							? item.getItemName() : item.getGenus()),
+					SalesTextNormalizer.required(item.getItemName()), SalesTextNormalizer.normalize(item.getSpec()),
+					item.getQuantity()))
+			.toList();
 		var shipment = shipmentCreator.create(slip.getSaleDate(), slip.getPartnerId(), drafts);
 		slip.assignAuctionShipment(shipment.id());
-		slip.getItems().forEach(item -> item.assignAuctionShipmentLot(shipment.lotIdsBySourceItemId().get(item.getId())));
+		slip.getItems()
+			.forEach(item -> item.assignAuctionShipmentLot(shipment.lotIdsBySourceItemId().get(item.getId())));
 	}
+
 }

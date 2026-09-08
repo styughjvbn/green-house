@@ -3,9 +3,7 @@ package com.greenhouse.backend.farm.application.orchid.mutation;
 import java.util.Comparator;
 import java.util.List;
 
-public record RelatedOrchidGroupMutations(
-		boolean legacySource,
-		List<Long> mutationIds) {
+public record RelatedOrchidGroupMutations(boolean legacySource, List<Long> mutationIds) {
 
 	public RelatedOrchidGroupMutations {
 		if (mutationIds == null || mutationIds.stream().anyMatch(id -> id == null || id < 1)) {

@@ -26,6 +26,7 @@ import org.springframework.web.bind.annotation.RestController;
 @RequestMapping("/api")
 @RequiredArgsConstructor
 public class AuctionTrackingController {
+
 	private final AuctionTrackingService trackingService;
 
 	@GetMapping("/auction-lots")
@@ -78,4 +79,5 @@ public class AuctionTrackingController {
 			@Valid @RequestBody AuctionLotStatusRequest request) {
 		return ApiResponse.ok(trackingService.changeStatus(id, request));
 	}
+
 }

@@ -20,7 +20,8 @@ public class OrchidGroupCollectionMember {
 
 	@Id
 	@GeneratedValue(strategy = GenerationType.SEQUENCE, generator = "orchid_group_collection_members_id_seq")
-	@SequenceGenerator(name = "orchid_group_collection_members_id_seq", sequenceName = "orchid_group_collection_members_id_seq", allocationSize = 50)
+	@SequenceGenerator(name = "orchid_group_collection_members_id_seq",
+			sequenceName = "orchid_group_collection_members_id_seq", allocationSize = 50)
 	private Long id;
 
 	@Column(name = "collection_id", nullable = false)
@@ -38,7 +39,8 @@ public class OrchidGroupCollectionMember {
 	@Column(name = "created_by", length = 100)
 	private String createdBy;
 
-	public OrchidGroupCollectionMember(Long collectionId, Long orchidGroupId, String createdBy, LocalDateTime joinedAt) {
+	public OrchidGroupCollectionMember(Long collectionId, Long orchidGroupId, String createdBy,
+			LocalDateTime joinedAt) {
 		this.collectionId = collectionId;
 		this.orchidGroupId = orchidGroupId;
 		this.createdBy = createdBy;
@@ -50,4 +52,5 @@ public class OrchidGroupCollectionMember {
 			this.removedAt = removedAt;
 		}
 	}
+
 }

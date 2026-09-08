@@ -1,5 +1,6 @@
 package com.greenhouse.backend.farm.domain.orchid.mutation;
 
+import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
 import jakarta.persistence.Enumerated;
@@ -12,7 +13,6 @@ import jakarta.persistence.ManyToOne;
 import jakarta.persistence.SequenceGenerator;
 import jakarta.persistence.Table;
 import jakarta.persistence.UniqueConstraint;
-import jakarta.persistence.Column;
 import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -20,19 +20,15 @@ import lombok.NoArgsConstructor;
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 @Entity
-@Table(
-		name = "orchid_group_mutation_relations",
-		uniqueConstraints = @UniqueConstraint(
-				name = "uk_orchid_group_mutation_relation",
-				columnNames = {"mutation_id", "related_mutation_id", "relation_type"}))
+@Table(name = "orchid_group_mutation_relations",
+		uniqueConstraints = @UniqueConstraint(name = "uk_orchid_group_mutation_relation",
+				columnNames = { "mutation_id", "related_mutation_id", "relation_type" }))
 public class OrchidGroupMutationRelation {
 
 	@Id
 	@GeneratedValue(strategy = GenerationType.SEQUENCE, generator = "orchid_group_mutation_relations_id_seq")
-	@SequenceGenerator(
-			name = "orchid_group_mutation_relations_id_seq",
-			sequenceName = "orchid_group_mutation_relations_id_seq",
-			allocationSize = 50)
+	@SequenceGenerator(name = "orchid_group_mutation_relations_id_seq",
+			sequenceName = "orchid_group_mutation_relations_id_seq", allocationSize = 50)
 	private Long id;
 
 	@ManyToOne(fetch = FetchType.LAZY, optional = false)
@@ -47,9 +43,7 @@ public class OrchidGroupMutationRelation {
 	@Column(name = "relation_type", nullable = false, length = 20)
 	private OrchidGroupMutationRelationType relationType;
 
-	public OrchidGroupMutationRelation(
-			OrchidGroupMutation mutation,
-			OrchidGroupMutation relatedMutation,
+	public OrchidGroupMutationRelation(OrchidGroupMutation mutation, OrchidGroupMutation relatedMutation,
 			OrchidGroupMutationRelationType relationType) {
 		if (mutation == null || relatedMutation == null || relationType == null) {
 			throw new IllegalArgumentException("Mutation 관계 필수 값이 누락되었습니다.");
@@ -62,4 +56,5 @@ public class OrchidGroupMutationRelation {
 		this.relatedMutation = relatedMutation;
 		this.relationType = relationType;
 	}
+
 }

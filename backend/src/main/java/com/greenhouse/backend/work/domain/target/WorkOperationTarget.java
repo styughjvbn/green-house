@@ -9,9 +9,9 @@ import jakarta.persistence.FetchType;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
-import jakarta.persistence.SequenceGenerator;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
+import jakarta.persistence.SequenceGenerator;
 import jakarta.persistence.Table;
 import java.time.LocalDateTime;
 import java.util.Map;
@@ -30,7 +30,8 @@ public class WorkOperationTarget {
 
 	@Id
 	@GeneratedValue(strategy = GenerationType.SEQUENCE, generator = "work_operation_targets_id_seq")
-	@SequenceGenerator(name = "work_operation_targets_id_seq", sequenceName = "work_operation_targets_id_seq", allocationSize = 50)
+	@SequenceGenerator(name = "work_operation_targets_id_seq", sequenceName = "work_operation_targets_id_seq",
+			allocationSize = 50)
 	private Long id;
 
 	@ManyToOne(fetch = FetchType.LAZY, optional = false)
@@ -89,19 +90,10 @@ public class WorkOperationTarget {
 	@Column(name = "created_at", nullable = false, updatable = false)
 	private LocalDateTime createdAt;
 
-	public WorkOperationTarget(
-			WorkOperation workOperation,
-			Long orchidGroupId,
-			WorkTargetInclusionSource inclusionSource,
-			Long sourceReferenceId,
-			Long varietyIdSnapshot,
-			String varietyNameSnapshot,
-			Integer ageYearSnapshot,
-			String potSizeCodeSnapshot,
-			String potSizeSnapshot,
-			Integer quantitySnapshot,
-			Map<String, Object> locationSnapshot,
-			LocalDateTime includedAt) {
+	public WorkOperationTarget(WorkOperation workOperation, Long orchidGroupId,
+			WorkTargetInclusionSource inclusionSource, Long sourceReferenceId, Long varietyIdSnapshot,
+			String varietyNameSnapshot, Integer ageYearSnapshot, String potSizeCodeSnapshot, String potSizeSnapshot,
+			Integer quantitySnapshot, Map<String, Object> locationSnapshot, LocalDateTime includedAt) {
 		this.workOperation = workOperation;
 		this.orchidGroupId = orchidGroupId;
 		this.targetReferenceType = WorkTargetReferenceType.ORCHID_GROUP;
@@ -117,15 +109,9 @@ public class WorkOperationTarget {
 		this.locationSnapshot = locationSnapshot;
 	}
 
-	public static WorkOperationTarget inboundRecord(
-			WorkOperation workOperation,
-			Long inboundRecordId,
-			Long varietyIdSnapshot,
-			String varietyNameSnapshot,
-			Integer quantitySnapshot,
-			String potSizeSnapshot,
-			Map<String, Object> locationSnapshot,
-			LocalDateTime includedAt) {
+	public static WorkOperationTarget inboundRecord(WorkOperation workOperation, Long inboundRecordId,
+			Long varietyIdSnapshot, String varietyNameSnapshot, Integer quantitySnapshot, String potSizeSnapshot,
+			Map<String, Object> locationSnapshot, LocalDateTime includedAt) {
 		WorkOperationTarget target = new WorkOperationTarget();
 		target.workOperation = workOperation;
 		target.targetReferenceType = WorkTargetReferenceType.INBOUND_RECORD;
@@ -141,12 +127,8 @@ public class WorkOperationTarget {
 		return target;
 	}
 
-	public void refreshInboundSnapshot(
-			Long varietyIdSnapshot,
-			String varietyNameSnapshot,
-			Integer quantitySnapshot,
-			String potSizeSnapshot,
-			Map<String, Object> locationSnapshot) {
+	public void refreshInboundSnapshot(Long varietyIdSnapshot, String varietyNameSnapshot, Integer quantitySnapshot,
+			String potSizeSnapshot, Map<String, Object> locationSnapshot) {
 		if (targetReferenceType != WorkTargetReferenceType.INBOUND_RECORD) {
 			throw new IllegalStateException("입고 기록 대상만 최신 입고 정보로 갱신할 수 있습니다.");
 		}
@@ -156,4 +138,5 @@ public class WorkOperationTarget {
 		this.potSizeSnapshot = potSizeSnapshot;
 		this.locationSnapshot = locationSnapshot;
 	}
+
 }

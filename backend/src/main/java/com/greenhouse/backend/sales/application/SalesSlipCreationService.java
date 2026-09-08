@@ -18,25 +18,34 @@ import org.springframework.transaction.annotation.Transactional;
 @Transactional
 @RequiredArgsConstructor
 public class SalesSlipCreationService {
+
 	private final BusinessPartnerReader partnerReader;
+
 	private final SalesSlipRepository salesSlipRepository;
+
 	private final SalesSlipAllocationFactory salesSlipAllocationFactory;
+
 	private final SalesSlipInventoryService salesSlipInventoryService;
+
 	private final ExpectedPaymentDateCalculator paymentDateCalculator;
+
 	private final SalesSlipNumberGenerator numberGenerator;
+
 	private final PartnerBalanceService partnerBalanceService;
+
 	private final SalesSlipOutboundService salesSlipOutboundService;
+
 	private final SalesSlipDocumentAssembler responseAssembler;
 
 	public SalesSlipDocument create(SalesSlipCommand request) {
 		SalesType type = request.salesType() == null ? SalesType.DIRECT : request.salesType();
 		if (request.partnerId() == null) {
-			throw new IllegalArgumentException(type == SalesType.DIRECT
-					? "일반 판매는 거래처를 선택해야 합니다." : "경매 판매는 경매장을 선택해야 합니다.");
+			throw new IllegalArgumentException(
+					type == SalesType.DIRECT ? "일반 판매는 거래처를 선택해야 합니다." : "경매 판매는 경매장을 선택해야 합니다.");
 		}
 		if (request.items().isEmpty()) {
-			throw new IllegalArgumentException(type == SalesType.DIRECT
-					? "일반 판매 품목은 1개 이상 입력해야 합니다." : "경매 판매는 1개 이상의 lot 품목이 필요합니다.");
+			throw new IllegalArgumentException(
+					type == SalesType.DIRECT ? "일반 판매 품목은 1개 이상 입력해야 합니다." : "경매 판매는 1개 이상의 lot 품목이 필요합니다.");
 		}
 		var partner = partnerReader.getActiveInfo(request.partnerId());
 		if (type == SalesType.DIRECT && partner.partnerType() == PartnerType.AUCTION_HOUSE) {
@@ -49,12 +58,8 @@ public class SalesSlipCreationService {
 			partnerBalanceService.lockPartners(List.of(partner.id()));
 		}
 
-		var salesSlip = new SalesSlip(
-				numberGenerator.generate(request.saleDate(), type),
-				request.saleDate(),
-				type,
-				null,
-				partner.id(),
+		var salesSlip = new SalesSlip(numberGenerator.generate(request.saleDate(), type), request.saleDate(), type,
+				null, partner.id(),
 				SalesTextNormalizer.defaultText(request.paymentStatus(), type.defaultPaymentStatus()),
 				SalesTextNormalizer.defaultText(request.salesStatus(), "작성중"),
 				SalesTextNormalizer.defaultText(request.paymentMethod(), type.defaultPaymentMethod()),
@@ -70,9 +75,10 @@ public class SalesSlipCreationService {
 			salesSlipOutboundService.complete(saved);
 		}
 		if (type == SalesType.DIRECT) {
-			partnerBalanceService.updateReceivable(
-					partner.id(), salesSlipRepository.sumDirectReceivableByPartnerId(partner.id()), null);
+			partnerBalanceService.updateReceivable(partner.id(),
+					salesSlipRepository.sumDirectReceivableByPartnerId(partner.id()), null);
 		}
 		return responseAssembler.assemble(saved);
 	}
+
 }

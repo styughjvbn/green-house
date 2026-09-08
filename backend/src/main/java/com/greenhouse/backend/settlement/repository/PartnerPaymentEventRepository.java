@@ -12,6 +12,7 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
 public interface PartnerPaymentEventRepository extends JpaRepository<PartnerPaymentEvent, Long> {
+
 	boolean existsByTargetTypeAndTargetId(PaymentTargetType targetType, Long targetId);
 
 	@Query("""
@@ -19,8 +20,7 @@ public interface PartnerPaymentEventRepository extends JpaRepository<PartnerPaym
 			where event.targetType = :targetType
 			  and event.targetId in :targetIds
 			""")
-	List<Long> findExistingTargetIds(
-			@Param("targetType") PaymentTargetType targetType,
+	List<Long> findExistingTargetIds(@Param("targetType") PaymentTargetType targetType,
 			@Param("targetIds") List<Long> targetIds);
 
 	Optional<PartnerPaymentEvent> findByExternalUid(String externalUid);
@@ -33,10 +33,8 @@ public interface PartnerPaymentEventRepository extends JpaRepository<PartnerPaym
 			  and (:eventType is null or event.eventType = :eventType)
 			order by event.eventDate desc, event.id desc
 			""")
-	Page<PartnerPaymentEvent> search(
-			@Param("partnerId") Long partnerId,
-			@Param("targetType") PaymentTargetType targetType,
-			@Param("targetId") Long targetId,
-			@Param("eventType") PaymentEventType eventType,
-			Pageable pageable);
+	Page<PartnerPaymentEvent> search(@Param("partnerId") Long partnerId,
+			@Param("targetType") PaymentTargetType targetType, @Param("targetId") Long targetId,
+			@Param("eventType") PaymentEventType eventType, Pageable pageable);
+
 }

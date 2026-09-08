@@ -6,8 +6,7 @@ import java.util.regex.Pattern;
 
 final class OrchidGroupLedgerWriterVersion {
 
-	private static final Pattern SEMANTIC_VERSION = Pattern.compile(
-			"^(\\d+)\\.(\\d+)\\.(\\d+)$");
+	private static final Pattern SEMANTIC_VERSION = Pattern.compile("^(\\d+)\\.(\\d+)\\.(\\d+)$");
 
 	private OrchidGroupLedgerWriterVersion() {
 	}
@@ -25,7 +24,7 @@ final class OrchidGroupLedgerWriterVersion {
 		}
 		for (int group = 1; group <= 3; group++) {
 			int comparison = new BigInteger(currentMatcher.group(group))
-					.compareTo(new BigInteger(minimumMatcher.group(group)));
+				.compareTo(new BigInteger(minimumMatcher.group(group)));
 			if (comparison != 0) {
 				return comparison > 0;
 			}
@@ -39,4 +38,5 @@ final class OrchidGroupLedgerWriterVersion {
 		}
 		return version.trim();
 	}
+
 }

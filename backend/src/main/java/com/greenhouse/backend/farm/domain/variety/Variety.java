@@ -1,7 +1,7 @@
 package com.greenhouse.backend.farm.domain.variety;
 
-import com.greenhouse.backend.farm.domain.orchid.PotSizeCode;
 import com.greenhouse.backend.common.domain.BaseEntity;
+import com.greenhouse.backend.farm.domain.orchid.PotSizeCode;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
@@ -10,15 +10,15 @@ import jakarta.persistence.Id;
 import jakarta.persistence.SequenceGenerator;
 import jakarta.persistence.Table;
 import jakarta.persistence.UniqueConstraint;
+import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
-import lombok.AccessLevel;
 
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 @Entity
-@Table(name = "varieties", uniqueConstraints = @UniqueConstraint(name = "uk_varieties_genus_name", columnNames = {
-		"genus", "name" }))
+@Table(name = "varieties",
+		uniqueConstraints = @UniqueConstraint(name = "uk_varieties_genus_name", columnNames = { "genus", "name" }))
 public class Variety extends BaseEntity {
 
 	@Id
@@ -56,30 +56,13 @@ public class Variety extends BaseEntity {
 	@Column(columnDefinition = "text")
 	private String memo;
 
-	public Variety(
-			String code,
-			String genus,
-			String name,
-			String alias,
-			String defaultPotSize,
-			boolean saleEnabled,
-			boolean active,
-			String description,
-			String memo) {
+	public Variety(String code, String genus, String name, String alias, String defaultPotSize, boolean saleEnabled,
+			boolean active, String description, String memo) {
 		this(code, genus, name, alias, defaultPotSize, null, saleEnabled, active, description, memo);
 	}
 
-	public Variety(
-			String code,
-			String genus,
-			String name,
-			String alias,
-			String defaultPotSize,
-			String color,
-			boolean saleEnabled,
-			boolean active,
-			String description,
-			String memo) {
+	public Variety(String code, String genus, String name, String alias, String defaultPotSize, String color,
+			boolean saleEnabled, boolean active, String description, String memo) {
 		this.code = code;
 		this.genus = genus;
 		this.name = name;
@@ -92,15 +75,8 @@ public class Variety extends BaseEntity {
 		this.memo = memo;
 	}
 
-	public void update(
-			String genus,
-			String name,
-			String alias,
-			String defaultPotSize,
-			String color,
-			boolean saleEnabled,
-			String description,
-			String memo) {
+	public void update(String genus, String name, String alias, String defaultPotSize, String color,
+			boolean saleEnabled, String description, String memo) {
 		this.genus = genus;
 		this.name = name;
 		this.alias = alias;
@@ -114,4 +90,5 @@ public class Variety extends BaseEntity {
 	public void deactivate() {
 		this.active = false;
 	}
+
 }

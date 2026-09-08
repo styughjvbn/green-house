@@ -49,20 +49,24 @@ class DemoRequestLimiterTest {
 		var limiter = limiter(100, 10, 100);
 		try (var executor = Executors.newFixedThreadPool(8)) {
 			var requests = IntStream.range(0, 50)
-					.<Callable<DemoRequestLimit>>mapToObj(index -> () -> limiter.record("a", true)).toList();
+				.<Callable<DemoRequestLimit>>mapToObj(index -> () -> limiter.record("a", true))
+				.toList();
 			int allowed = 0;
 			for (var response : executor.invokeAll(requests)) {
-				if (response.get() == DemoRequestLimit.ALLOWED) allowed++;
+				if (response.get() == DemoRequestLimit.ALLOWED)
+					allowed++;
 			}
 			assertThat(allowed).isEqualTo(10);
 		}
 	}
 
 	private DemoRequestLimiter limiter(int requests, int mutations, int dailyMutations) {
-		return new DemoRequestLimiter(new DemoProperties(true, "demo", requests, mutations, dailyMutations, 1024), clock);
+		return new DemoRequestLimiter(new DemoProperties(true, "demo", requests, mutations, dailyMutations, 1024),
+				clock);
 	}
 
 	private static final class MutableClock extends Clock {
+
 		private Instant current;
 
 		MutableClock(String current) {
@@ -87,5 +91,7 @@ class DemoRequestLimiterTest {
 		public Instant instant() {
 			return current;
 		}
+
 	}
+
 }

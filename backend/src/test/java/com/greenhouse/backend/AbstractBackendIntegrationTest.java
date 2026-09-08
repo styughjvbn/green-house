@@ -1,10 +1,10 @@
 package com.greenhouse.backend;
 
-import com.greenhouse.backend.farm.repository.structure.BedZoneRepository;
-import com.greenhouse.backend.farm.repository.structure.HouseRepository;
 import com.greenhouse.backend.farm.repository.inbound.InboundRecordRepository;
 import com.greenhouse.backend.farm.repository.material.MaterialRepository;
 import com.greenhouse.backend.farm.repository.orchid.OrchidGroupRepository;
+import com.greenhouse.backend.farm.repository.structure.BedZoneRepository;
+import com.greenhouse.backend.farm.repository.structure.HouseRepository;
 import com.greenhouse.backend.farm.repository.structure.PhysicalBedRepository;
 import com.greenhouse.backend.farm.repository.variety.VarietyRepository;
 import com.greenhouse.backend.work.repository.WorkTypeRepository;
@@ -13,26 +13,37 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
+
 @SpringBootTest
 @AutoConfigureMockMvc
 @ActiveProfiles("test")
 abstract class AbstractBackendIntegrationTest {
-    @Autowired
-    protected MockMvc mockMvc;
-    @Autowired
-    protected HouseRepository houseRepository;
-    @Autowired
-    protected PhysicalBedRepository physicalBedRepository;
-    @Autowired
-    protected BedZoneRepository bedZoneRepository;
-    @Autowired
-    protected OrchidGroupRepository orchidGroupRepository;
-    @Autowired
-    protected WorkTypeRepository workTypeRepository;
-    @Autowired
-    protected VarietyRepository varietyRepository;
-    @Autowired
-    protected InboundRecordRepository inboundRecordRepository;
-    @Autowired
-    protected MaterialRepository materialRepository;
+
+	@Autowired
+	protected MockMvc mockMvc;
+
+	@Autowired
+	protected HouseRepository houseRepository;
+
+	@Autowired
+	protected PhysicalBedRepository physicalBedRepository;
+
+	@Autowired
+	protected BedZoneRepository bedZoneRepository;
+
+	@Autowired
+	protected OrchidGroupRepository orchidGroupRepository;
+
+	@Autowired
+	protected WorkTypeRepository workTypeRepository;
+
+	@Autowired
+	protected VarietyRepository varietyRepository;
+
+	@Autowired
+	protected InboundRecordRepository inboundRecordRepository;
+
+	@Autowired
+	protected MaterialRepository materialRepository;
+
 }

@@ -20,17 +20,23 @@ import org.springframework.transaction.annotation.Transactional;
 @Transactional(readOnly = true)
 @RequiredArgsConstructor
 public class BusinessPartnerReader {
+
 	private static final int ID_BATCH_SIZE = 500;
+
 	private final BusinessPartnerRepository partnerRepository;
 
-	/** All matching IDs, read in bounded batches; historical searches include inactive partners. */
+	/**
+	 * All matching IDs, read in bounded batches; historical searches include inactive
+	 * partners.
+	 */
 	public List<Long> findMatchingIds(PartnerTextMatch match, String value) {
 		var matches = new ArrayList<Long>();
 		long afterId = 0;
 		while (true) {
 			var batch = partnerRepository.findMatchingIds(match, value, afterId, ID_BATCH_SIZE);
 			matches.addAll(batch);
-			if (batch.size() < ID_BATCH_SIZE) return List.copyOf(matches);
+			if (batch.size() < ID_BATCH_SIZE)
+				return List.copyOf(matches);
 			afterId = batch.getLast();
 		}
 	}
@@ -54,8 +60,9 @@ public class BusinessPartnerReader {
 	}
 
 	public BusinessPartnerInfo getInfo(Long partnerId) {
-		return partnerRepository.findById(partnerId).map(BusinessPartnerInfo::from)
-				.orElseThrow(() -> new NotFoundException("거래처를 찾을 수 없습니다."));
+		return partnerRepository.findById(partnerId)
+			.map(BusinessPartnerInfo::from)
+			.orElseThrow(() -> new NotFoundException("거래처를 찾을 수 없습니다."));
 	}
 
 	public BusinessPartnerInfo getActiveInfo(Long partnerId) {
@@ -75,8 +82,9 @@ public class BusinessPartnerReader {
 		if (partners.size() != requestedIds.size()) {
 			throw new NotFoundException("거래처를 찾을 수 없습니다.");
 		}
-		return partners.stream().map(BusinessPartnerInfo::from)
-				.collect(Collectors.toUnmodifiableMap(BusinessPartnerInfo::id, Function.identity()));
+		return partners.stream()
+			.map(BusinessPartnerInfo::from)
+			.collect(Collectors.toUnmodifiableMap(BusinessPartnerInfo::id, Function.identity()));
 	}
 
 }

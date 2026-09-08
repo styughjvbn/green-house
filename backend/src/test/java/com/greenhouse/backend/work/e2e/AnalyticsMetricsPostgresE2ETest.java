@@ -2,16 +2,16 @@ package com.greenhouse.backend.work.e2e;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import com.greenhouse.backend.farm.application.status.FarmMetricsReader;
 import com.greenhouse.backend.farm.application.status.FarmMetricsReader.VarietyInventory;
+import com.greenhouse.backend.farm.application.status.FarmMetricsReader;
 import com.greenhouse.backend.farm.domain.orchid.OrchidGroup;
 import com.greenhouse.backend.farm.domain.structure.BedZone;
 import com.greenhouse.backend.farm.domain.structure.BedZoneSide;
 import com.greenhouse.backend.farm.domain.structure.House;
 import com.greenhouse.backend.farm.domain.structure.PhysicalBed;
-import com.greenhouse.backend.work.application.operation.WorkOperationMetricsReader;
 import com.greenhouse.backend.work.application.operation.WorkOperationMetricsReader.RecentRecord;
 import com.greenhouse.backend.work.application.operation.WorkOperationMetricsReader.TypeCount;
+import com.greenhouse.backend.work.application.operation.WorkOperationMetricsReader;
 import com.greenhouse.backend.work.domain.operation.WorkOperation;
 import com.greenhouse.backend.work.domain.operation.WorkOperationStatus;
 import com.greenhouse.backend.work.domain.operation.WorkSourceScopeType;
@@ -35,11 +35,17 @@ import org.springframework.transaction.annotation.Transactional;
 class AnalyticsMetricsPostgresE2ETest extends WorkE2ETestBase {
 
 	private static final LocalDate FROM = LocalDate.of(2040, 7, 1);
+
 	private static final LocalDate TO = LocalDate.of(2040, 7, 31);
 
-	@Autowired private EntityManager entityManager;
-	@Autowired private WorkOperationMetricsReader workMetrics;
-	@Autowired private FarmMetricsReader farmMetrics;
+	@Autowired
+	private EntityManager entityManager;
+
+	@Autowired
+	private WorkOperationMetricsReader workMetrics;
+
+	@Autowired
+	private FarmMetricsReader farmMetrics;
 
 	@Test
 	void countsCompletedAndCorrectedWorkByPlannedStartAndCurrentTypeName() {
@@ -51,8 +57,8 @@ class AnalyticsMetricsPostgresE2ETest extends WorkE2ETestBase {
 		var corrected = work(repot, TO, WorkOperationStatus.CORRECTED);
 		work(movement, FROM.minusDays(1), WorkOperationStatus.COMPLETED);
 		work(movement, TO.plusDays(1), WorkOperationStatus.COMPLETED);
-		for (var excluded : new WorkOperationStatus[] { WorkOperationStatus.PLANNED,
-				WorkOperationStatus.IN_PROGRESS, WorkOperationStatus.PAUSED, WorkOperationStatus.CANCELED }) {
+		for (var excluded : new WorkOperationStatus[] { WorkOperationStatus.PLANNED, WorkOperationStatus.IN_PROGRESS,
+				WorkOperationStatus.PAUSED, WorkOperationStatus.CANCELED }) {
 			work(movement, TO, excluded);
 		}
 		status.update("Shared", WorkTypeTemplate.STATUS, false);
@@ -66,9 +72,8 @@ class AnalyticsMetricsPostgresE2ETest extends WorkE2ETestBase {
 		assertThat(summary.latestWorkDate()).isEqualTo(TO);
 		assertThat(summary.typeCounts()).containsExactly(new TypeCount("Shared", 2), new TypeCount("Repot", 1));
 		assertThat(summary.recentRecords()).hasSize(3);
-		assertThat(summary.recentRecords().getFirst()).isEqualTo(new RecentRecord(
-				corrected.getId(), TO, "Repot", WorkTypeTemplate.REPOT, "통계 작업",
-				WorkSourceScopeType.FARM, "작업자", "메모", WorkOperationStatus.CORRECTED));
+		assertThat(summary.recentRecords().getFirst()).isEqualTo(new RecentRecord(corrected.getId(), TO, "Repot",
+				WorkTypeTemplate.REPOT, "통계 작업", WorkSourceScopeType.FARM, "작업자", "메모", WorkOperationStatus.CORRECTED));
 		assertThat(summary.recentRecords().get(1).workType()).isEqualTo("Shared");
 	}
 
@@ -89,7 +94,7 @@ class AnalyticsMetricsPostgresE2ETest extends WorkE2ETestBase {
 		assertThat(summary.totalCount()).isEqualTo(size);
 		assertThat(summary.typeCounts()).hasSize(size).isSortedAccordingTo(Comparator.comparing(TypeCount::name));
 		assertThat(summary.recentRecords()).extracting(RecentRecord::id)
-				.containsExactlyElementsOf(ids.reversed().stream().limit(10).toList());
+			.containsExactlyElementsOf(ids.reversed().stream().limit(10).toList());
 	}
 
 	@Test
@@ -112,9 +117,9 @@ class AnalyticsMetricsPostgresE2ETest extends WorkE2ETestBase {
 		var inventory = farmMetrics.getInventorySummary();
 
 		assertThat(inventory.saleableQuantity()).isEqualTo(46);
-		assertThat(inventory.varieties()).containsExactly(
-				new VarietyInventory("Custom", 23, 0), new VarietyInventory("Shared", 23, 3),
-				new VarietyInventory("Reserved", 0, 0), new VarietyInventory("Unavailable", 0, 0));
+		assertThat(inventory.varieties()).containsExactly(new VarietyInventory("Custom", 23, 0),
+				new VarietyInventory("Shared", 23, 3), new VarietyInventory("Reserved", 0, 0),
+				new VarietyInventory("Unavailable", 0, 0));
 	}
 
 	@ParameterizedTest
@@ -160,8 +165,8 @@ class AnalyticsMetricsPostgresE2ETest extends WorkE2ETestBase {
 
 	private WorkOperation work(WorkType type, LocalDate date, WorkOperationStatus status) {
 		var actualTime = TO.plusDays(5).atStartOfDay();
-		var work = new WorkOperation(type, "통계 작업", date, TO.plusDays(10), WorkSourceScopeType.FARM,
-				null, null, null, "작업자", "메모", actualTime);
+		var work = new WorkOperation(type, "통계 작업", date, TO.plusDays(10), WorkSourceScopeType.FARM, null, null, null,
+				"작업자", "메모", actualTime);
 		switch (status) {
 			case COMPLETED -> work.complete(actualTime);
 			case CORRECTED -> {
@@ -174,7 +179,8 @@ class AnalyticsMetricsPostgresE2ETest extends WorkE2ETestBase {
 				work.pause();
 			}
 			case CANCELED -> work.cancel(actualTime);
-			case PLANNED -> { }
+			case PLANNED -> {
+			}
 		}
 		entityManager.persist(work);
 		return work;
@@ -203,4 +209,5 @@ class AnalyticsMetricsPostgresE2ETest extends WorkE2ETestBase {
 		statistics.clear();
 		return statistics;
 	}
+
 }

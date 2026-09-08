@@ -18,8 +18,8 @@ class PotSizeCodeTests {
 
 	@Test
 	void rejectsUnknownValuesInsteadOfMergingThem() {
-		assertThatThrownBy(() -> PotSizeCode.fromInput("23\""))
-				.isInstanceOf(IllegalArgumentException.class)
-				.hasMessageContaining("표준 규격");
+		assertThatThrownBy(() -> PotSizeCode.fromInput("23\"")).isInstanceOf(IllegalArgumentException.class)
+			.hasMessageContaining("표준 규격");
 	}
+
 }

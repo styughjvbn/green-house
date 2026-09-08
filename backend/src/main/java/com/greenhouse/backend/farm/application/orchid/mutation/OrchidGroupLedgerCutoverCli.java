@@ -16,24 +16,17 @@ import org.springframework.boot.builder.SpringApplicationBuilder;
 import org.springframework.context.ConfigurableApplicationContext;
 
 /**
- * ORCHID-CUTOVER: TRANSITION_ONLY — complete state-chain 검증과 ACTIVE 전환을 실행하는 operator CLI다.
- * Removal gate: 운영 cutover 완료 및 재수행 불필요 승인.
+ * ORCHID-CUTOVER: TRANSITION_ONLY — complete state-chain 검증과 ACTIVE 전환을 실행하는 operator
+ * CLI다. Removal gate: 운영 cutover 완료 및 재수행 불필요 승인.
  */
 public final class OrchidGroupLedgerCutoverCli {
 
-	private static final Set<String> OPERATOR_OPTIONS = Set.of(
-			"cutover-key",
-			"effective-business-date",
-			"minimum-writer-version",
-			"current-writer-version",
-			"activate",
-			"confirmation");
-	private static final Set<String> PROTECTED_OPTIONS = Set.of(
-			"--spring.flyway.enabled",
-			"--spring.jpa.hibernate.ddl-auto",
-			"--spring.datasource.hikari.read-only",
-			"--app.settlement.rebuild-on-startup",
-			"--app.orchid-ledger.startup-guard-enabled");
+	private static final Set<String> OPERATOR_OPTIONS = Set.of("cutover-key", "effective-business-date",
+			"minimum-writer-version", "current-writer-version", "activate", "confirmation");
+
+	private static final Set<String> PROTECTED_OPTIONS = Set.of("--spring.flyway.enabled",
+			"--spring.jpa.hibernate.ddl-auto", "--spring.datasource.hikari.read-only",
+			"--app.settlement.rebuild-on-startup", "--app.orchid-ledger.startup-guard-enabled");
 
 	private OrchidGroupLedgerCutoverCli() {
 	}
@@ -48,14 +41,14 @@ public final class OrchidGroupLedgerCutoverCli {
 
 		int exitCode;
 		try (ConfigurableApplicationContext context = new SpringApplicationBuilder(BackendApplication.class)
-				.web(WebApplicationType.NONE)
-				.run(parsed.springArguments().toArray(String[]::new))) {
-			OrchidGroupLedgerCutoverResult result = context
-					.getBean(OrchidGroupLedgerCutoverService.class)
-					.execute(parsed.command());
+			.web(WebApplicationType.NONE)
+			.run(parsed.springArguments().toArray(String[]::new))) {
+			OrchidGroupLedgerCutoverResult result = context.getBean(OrchidGroupLedgerCutoverService.class)
+				.execute(parsed.command());
 			printResult(new ObjectMapper().findAndRegisterModules(), result);
 			exitCode = result.reconciliation().ready() ? 0 : 2;
-		} catch (RuntimeException exception) {
+		}
+		catch (RuntimeException exception) {
 			exception.printStackTrace(System.err);
 			exitCode = 1;
 		}
@@ -91,12 +84,8 @@ public final class OrchidGroupLedgerCutoverCli {
 		if (!expectedConfirmation.equals(confirmation)) {
 			throw new IllegalArgumentException("확인 문구가 일치하지 않습니다: " + expectedConfirmation);
 		}
-		OrchidGroupLedgerCutoverCommand command = new OrchidGroupLedgerCutoverCommand(
-				cutoverKey,
-				effectiveBusinessDate,
-				required(values, "minimum-writer-version"),
-				required(values, "current-writer-version"),
-				activate);
+		OrchidGroupLedgerCutoverCommand command = new OrchidGroupLedgerCutoverCommand(cutoverKey, effectiveBusinessDate,
+				required(values, "minimum-writer-version"), required(values, "current-writer-version"), activate);
 		return new ParsedArguments(command, List.copyOf(springArguments));
 	}
 
@@ -120,23 +109,23 @@ public final class OrchidGroupLedgerCutoverCli {
 
 	private static void rejectUnsafeOverrides(String[] args) {
 		Arrays.stream(args)
-				.filter(argument -> PROTECTED_OPTIONS.stream()
-						.anyMatch(option -> argument.equals(option) || argument.startsWith(option + "=")))
-				.forEach(argument -> {
-					throw new IllegalArgumentException("Cutover 안전 옵션은 변경할 수 없습니다: " + argument);
-				});
+			.filter(argument -> PROTECTED_OPTIONS.stream()
+				.anyMatch(option -> argument.equals(option) || argument.startsWith(option + "=")))
+			.forEach(argument -> {
+				throw new IllegalArgumentException("Cutover 안전 옵션은 변경할 수 없습니다: " + argument);
+			});
 	}
 
 	private static void printResult(ObjectMapper objectMapper, OrchidGroupLedgerCutoverResult result) {
 		try {
 			System.out.println(objectMapper.writerWithDefaultPrettyPrinter().writeValueAsString(result));
-		} catch (JsonProcessingException exception) {
+		}
+		catch (JsonProcessingException exception) {
 			throw new IllegalStateException("Cutover 결과를 JSON으로 출력할 수 없습니다.", exception);
 		}
 	}
 
-	record ParsedArguments(
-			OrchidGroupLedgerCutoverCommand command,
-			List<String> springArguments) {
+	record ParsedArguments(OrchidGroupLedgerCutoverCommand command, List<String> springArguments) {
 	}
+
 }

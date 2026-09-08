@@ -18,6 +18,7 @@ import org.springframework.stereotype.Component;
 public class SalesSlipActionResolver {
 
 	private final PaymentEventReader paymentEventReader;
+
 	private final AuctionSalesSlipCancellationPolicy auctionCancellationPolicy;
 
 	public List<SalesSlipAction> resolve(SalesSlip salesSlip) {
@@ -26,32 +27,26 @@ public class SalesSlipActionResolver {
 
 	public Map<Long, List<SalesSlipAction>> resolveAll(List<SalesSlip> salesSlips) {
 		List<Long> directSalesSlipIds = salesSlips.stream()
-				.filter(salesSlip -> salesSlip.getSalesType() == SalesType.DIRECT)
-				.map(SalesSlip::getId)
-				.toList();
-		Set<Long> paidSalesSlipIds = paymentEventReader.findExistingTargetIds(
-				PaymentTargetType.SALES_SLIP,
+			.filter(salesSlip -> salesSlip.getSalesType() == SalesType.DIRECT)
+			.map(SalesSlip::getId)
+			.toList();
+		Set<Long> paidSalesSlipIds = paymentEventReader.findExistingTargetIds(PaymentTargetType.SALES_SLIP,
 				directSalesSlipIds);
 		List<Long> auctionShipmentIds = salesSlips.stream()
-				.filter(salesSlip -> salesSlip.getSalesType() == SalesType.AUCTION)
-				.filter(salesSlip -> salesSlip.getAuctionShipmentId() != null)
-				.map(salesSlip -> salesSlip.getAuctionShipmentId())
-				.toList();
-		Set<Long> nonCancelableShipmentIds = auctionCancellationPolicy
-				.findNonCancelableShipmentIds(auctionShipmentIds);
+			.filter(salesSlip -> salesSlip.getSalesType() == SalesType.AUCTION)
+			.filter(salesSlip -> salesSlip.getAuctionShipmentId() != null)
+			.map(salesSlip -> salesSlip.getAuctionShipmentId())
+			.toList();
+		Set<Long> nonCancelableShipmentIds = auctionCancellationPolicy.findNonCancelableShipmentIds(auctionShipmentIds);
 
 		Map<Long, List<SalesSlipAction>> actionsBySalesSlipId = new LinkedHashMap<>();
 		for (SalesSlip salesSlip : salesSlips) {
-			actionsBySalesSlipId.put(
-					salesSlip.getId(),
-					resolve(salesSlip, paidSalesSlipIds, nonCancelableShipmentIds));
+			actionsBySalesSlipId.put(salesSlip.getId(), resolve(salesSlip, paidSalesSlipIds, nonCancelableShipmentIds));
 		}
 		return actionsBySalesSlipId;
 	}
 
-	private List<SalesSlipAction> resolve(
-			SalesSlip salesSlip,
-			Set<Long> paidSalesSlipIds,
+	private List<SalesSlipAction> resolve(SalesSlip salesSlip, Set<Long> paidSalesSlipIds,
 			Set<Long> nonCancelableShipmentIds) {
 		if (salesSlip.isCanceled()) {
 			return List.of();
@@ -76,14 +71,12 @@ public class SalesSlipActionResolver {
 		return List.copyOf(actions);
 	}
 
-	private boolean canCancel(
-			SalesSlip salesSlip,
-			boolean hasPaymentEvent,
-			Set<Long> nonCancelableShipmentIds) {
+	private boolean canCancel(SalesSlip salesSlip, boolean hasPaymentEvent, Set<Long> nonCancelableShipmentIds) {
 		if (salesSlip.getSalesType() == SalesType.DIRECT) {
 			return !hasPaymentEvent;
 		}
 		return salesSlip.getAuctionShipmentId() == null
 				|| !nonCancelableShipmentIds.contains(salesSlip.getAuctionShipmentId());
 	}
+
 }

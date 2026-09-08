@@ -27,10 +27,8 @@ class SalesSlipAllocationBatchTest {
 		SalesSlipAllocationBatch batch = SalesSlipAllocationBatch.from(salesSlip);
 
 		assertThat(batch.orchidGroupIds()).containsExactly(1L, 2L);
-		assertThat(batch.lines()).extracting(SalesSlipAllocationBatch.Line::item)
-				.containsExactly(item, item);
-		assertThat(batch.lines()).extracting(SalesSlipAllocationBatch.Line::allocatedQuantity)
-				.containsExactly(2, 1);
+		assertThat(batch.lines()).extracting(SalesSlipAllocationBatch.Line::item).containsExactly(item, item);
+		assertThat(batch.lines()).extracting(SalesSlipAllocationBatch.Line::allocatedQuantity).containsExactly(2, 1);
 	}
 
 	@Test
@@ -40,7 +38,8 @@ class SalesSlipAllocationBatchTest {
 		when(state.quantity()).thenReturn(20);
 		SalesSlipItemAllocation original = new SalesSlipItemAllocation(1L, 4);
 		var capturedAt = LocalDateTime.of(2026, 8, 12, 1, 2, 3);
-		var snapshot = SalesSlipAllocationBatch.captureSnapshot(original, SalesOrchidSnapshotType.CREATION, capturedAt, state);
+		var snapshot = SalesSlipAllocationBatch.captureSnapshot(original, SalesOrchidSnapshotType.CREATION, capturedAt,
+				state);
 		when(state.quantity()).thenReturn(16);
 
 		SalesSlipItemAllocation copied = original.copy();
@@ -53,8 +52,9 @@ class SalesSlipAllocationBatchTest {
 		assertThat(copy.getQuantity()).isEqualTo(20);
 		assertThat(copy.getCapturedAt()).isEqualTo(capturedAt);
 		assertThat(copy.getCaptureSource()).isEqualTo(snapshot.getCaptureSource());
-		assertThat(SalesSlipAllocationBatch.captureSnapshot(copied, SalesOrchidSnapshotType.CREATION, capturedAt.plusDays(1), state))
-				.isSameAs(copy);
+		assertThat(SalesSlipAllocationBatch.captureSnapshot(copied, SalesOrchidSnapshotType.CREATION,
+				capturedAt.plusDays(1), state))
+			.isSameAs(copy);
 	}
 
 	private SalesSlipItem item() {
@@ -62,15 +62,8 @@ class SalesSlipAllocationBatchTest {
 	}
 
 	private SalesSlip slip() {
-		return new SalesSlip(
-				"SNAPSHOT-SEAM",
-				LocalDate.of(2026, 8, 11),
-				SalesType.DIRECT,
-				null,
-				null,
-				"미입금",
-				SalesSlip.STATUS_DRAFT,
-				null,
-				null);
+		return new SalesSlip("SNAPSHOT-SEAM", LocalDate.of(2026, 8, 11), SalesType.DIRECT, null, null, "미입금",
+				SalesSlip.STATUS_DRAFT, null, null);
 	}
+
 }

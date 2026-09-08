@@ -21,4 +21,5 @@ public class SalesSlipDailySequence {
 
 	@Column(name = "last_value", nullable = false)
 	private Long lastValue;
+
 }

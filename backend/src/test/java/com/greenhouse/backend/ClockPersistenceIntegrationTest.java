@@ -32,11 +32,21 @@ import org.springframework.transaction.annotation.Transactional;
 
 @Transactional
 class ClockPersistenceIntegrationTest extends AbstractBackendIntegrationTest {
-	@MockitoBean(name = "farmClock") Clock clock;
-	@Autowired EntityManager entityManager;
-	@Autowired FarmQueryService queries;
-	@Autowired AuctionTrackingService auctions;
-	@Autowired OrchidGroupCollectionService collections;
+
+	@MockitoBean(name = "farmClock")
+	Clock clock;
+
+	@Autowired
+	EntityManager entityManager;
+
+	@Autowired
+	FarmQueryService queries;
+
+	@Autowired
+	AuctionTrackingService auctions;
+
+	@Autowired
+	OrchidGroupCollectionService collections;
 
 	@BeforeEach
 	void fixedClock() {
@@ -52,14 +62,17 @@ class ClockPersistenceIntegrationTest extends AbstractBackendIntegrationTest {
 		assertThat(group.getCreatedAt()).isEqualTo(LocalDateTime.of(2040, 12, 31, 15, 0));
 		assertThat(group.getUpdatedAt()).isEqualTo(group.getCreatedAt());
 		when(clock.instant()).thenReturn(Instant.parse("2041-12-31T14:59:59Z"));
-		assertThat(queries.getOrchidGroups(layout.house().getId(), null, null, null, null).getFirst().ageYear()).isEqualTo(1);
+		assertThat(queries.getOrchidGroups(layout.house().getId(), null, null, null, null).getFirst().ageYear())
+			.isEqualTo(1);
 		when(clock.instant()).thenReturn(Instant.parse("2041-12-31T15:00:00Z"));
-		assertThat(queries.getOrchidGroups(layout.house().getId(), null, null, null, null).getFirst().ageYear()).isEqualTo(2);
+		assertThat(queries.getOrchidGroups(layout.house().getId(), null, null, null, null).getFirst().ageYear())
+			.isEqualTo(2);
 		layout.bed().updatePositionUnits(java.math.BigDecimal.valueOf(65), "칸");
 		entityManager.flush();
 		assertThat(layout.bed().getUpdatedAt()).isEqualTo(TimeConfig.utcNow(clock));
 		assertThat(layout.bed().getCreatedAt()).isEqualTo(LocalDateTime.of(2040, 12, 31, 15, 0));
-		assertThat(OrchidGroupResponse.calculateAgeYear(2, LocalDate.of(2044, 1, 1), TimeConfig.farmToday(clock))).isEqualTo(2);
+		assertThat(OrchidGroupResponse.calculateAgeYear(2, LocalDate.of(2044, 1, 1), TimeConfig.farmToday(clock)))
+			.isEqualTo(2);
 		assertThat(OrchidGroupResponse.calculateAgeYear(null, null, TimeConfig.farmToday(clock))).isNull();
 	}
 
@@ -73,15 +86,18 @@ class ClockPersistenceIntegrationTest extends AbstractBackendIntegrationTest {
 		entityManager.persist(shipment);
 		auctions.addResult(lot.getId(), new RecordAuctionResultCommand(LocalDate.of(2041, 1, 1), null,
 				AuctionAttemptStatus.FAILED, null, null, null));
-		assertThat(lot.getStatusHistory()).singleElement().satisfies(history ->
-				assertThat(history.getChangedAt()).isEqualTo(TimeConfig.utcNow(clock)));
+		assertThat(lot.getStatusHistory()).singleElement()
+			.satisfies(history -> assertThat(history.getChangedAt()).isEqualTo(TimeConfig.utcNow(clock)));
 		var fixture = new FarmTestFixtures(entityManager);
 		var layout = fixture.layout(909);
 		var group = fixture.orchidGroup(layout.left(), "CLOCK-MEMBER", 10);
 		var collection = collections.create(new OrchidGroupCollectionCreateRequest("시각 확인", null, null, "작성자"));
-		collections.addMembers(collection.id(), new OrchidGroupCollectionMemberAddRequest(Set.of(group.getId()), "작성자"));
-		var member = entityManager.createQuery("from OrchidGroupCollectionMember where collectionId = :id", OrchidGroupCollectionMember.class)
-				.setParameter("id", collection.id()).getSingleResult();
+		collections.addMembers(collection.id(),
+				new OrchidGroupCollectionMemberAddRequest(Set.of(group.getId()), "작성자"));
+		var member = entityManager
+			.createQuery("from OrchidGroupCollectionMember where collectionId = :id", OrchidGroupCollectionMember.class)
+			.setParameter("id", collection.id())
+			.getSingleResult();
 		assertThat(member.getJoinedAt()).isEqualTo(TimeConfig.utcNow(clock));
 		when(clock.instant()).thenReturn(Instant.parse("2041-01-01T01:00:00Z"));
 		collections.removeMember(collection.id(), group.getId());
@@ -89,4 +105,5 @@ class ClockPersistenceIntegrationTest extends AbstractBackendIntegrationTest {
 		member.remove(LocalDateTime.of(2042, 1, 1, 0, 0));
 		assertThat(member.getRemovedAt()).isEqualTo(TimeConfig.utcNow(clock));
 	}
+
 }

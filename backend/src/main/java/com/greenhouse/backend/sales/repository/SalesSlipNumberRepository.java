@@ -12,6 +12,7 @@ import org.springframework.stereotype.Repository;
 public class SalesSlipNumberRepository {
 
 	private final JdbcTemplate jdbcTemplate;
+
 	private volatile Boolean h2Database;
 
 	public long nextDailySequence(LocalDate saleDate) {
@@ -42,10 +43,8 @@ public class SalesSlipNumberRepository {
 					where current_sequence.sale_date = ?
 				), 1))
 				""", date, date);
-		Long nextValue = jdbcTemplate.queryForObject(
-				"select last_value from sales_slip_daily_sequences where sale_date = ?",
-				Long.class,
-				date);
+		Long nextValue = jdbcTemplate
+			.queryForObject("select last_value from sales_slip_daily_sequences where sale_date = ?", Long.class, date);
 		if (nextValue == null) {
 			throw new IllegalStateException("판매 전표 일련번호를 생성할 수 없습니다.");
 		}
@@ -57,9 +56,11 @@ public class SalesSlipNumberRepository {
 		if (cached != null) {
 			return cached;
 		}
-		Boolean detected = jdbcTemplate.execute((ConnectionCallback<Boolean>) connection ->
-				connection.getMetaData().getDatabaseProductName().startsWith("H2"));
+		Boolean detected = jdbcTemplate.execute((ConnectionCallback<Boolean>) connection -> connection.getMetaData()
+			.getDatabaseProductName()
+			.startsWith("H2"));
 		h2Database = Boolean.TRUE.equals(detected);
 		return h2Database;
 	}
+
 }

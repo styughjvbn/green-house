@@ -1,9 +1,9 @@
 package com.greenhouse.backend.farm.application.inbound;
 
-import com.greenhouse.backend.farm.domain.structure.BedZone;
 import com.greenhouse.backend.farm.domain.inbound.InboundRecord;
 import com.greenhouse.backend.farm.domain.inbound.InboundStatus;
 import com.greenhouse.backend.farm.domain.inbound.InboundType;
+import com.greenhouse.backend.farm.domain.structure.BedZone;
 import com.greenhouse.backend.work.application.operation.RecordInboundWorkCommand;
 import java.util.LinkedHashMap;
 import java.util.Map;
@@ -13,18 +13,12 @@ import org.springframework.stereotype.Component;
 public class InboundWorkOperationRequestFactory {
 
 	public RecordInboundWorkCommand create(InboundRecord record) {
-		return new RecordInboundWorkCommand(
-				record.getId(),
-				record.getInboundDate(),
-				record.getVariety().getId(),
+		return new RecordInboundWorkCommand(record.getId(), record.getInboundDate(), record.getVariety().getId(),
 				record.getVariety().getName(),
 				InboundRecord.resolveQuantity(record.getActualQuantity(), record.getEstimatedQuantity()),
-				record.getPotSize(),
-				locationSnapshot(record),
+				record.getPotSize(), locationSnapshot(record),
 				record.getCreatedOrchidGroup() == null ? null : record.getCreatedOrchidGroup().getId(),
-				record.getWorker(),
-				workMemo(record),
-				workDetails(record));
+				record.getWorker(), workMemo(record), workDetails(record));
 	}
 
 	private Map<String, Object> workDetails(InboundRecord record) {
@@ -61,7 +55,8 @@ public class InboundWorkOperationRequestFactory {
 			putDetail(location, "physicalBedNumber", zone.getPhysicalBed().getNumber());
 			putDetail(location, "bedZoneId", zone.getId());
 			putDetail(location, "bedZoneName", zone.getName());
-		} else {
+		}
+		else {
 			putDetail(location, "tempLocation", record.getTempLocation());
 			putDetail(location, "pottingDueDate", record.getPottingDueDate());
 		}
@@ -69,8 +64,7 @@ public class InboundWorkOperationRequestFactory {
 	}
 
 	private String workMemo(InboundRecord record) {
-		String autoMemo = String.join("\n",
-				"입고 유형: " + formatInboundType(record.getInboundType()),
+		String autoMemo = String.join("\n", "입고 유형: " + formatInboundType(record.getInboundType()),
 				"품종: " + record.getVariety().getName(),
 				"병수: " + (record.getBottleCount() == null ? "-" : record.getBottleCount() + "병"),
 				"상태: " + formatInboundStatus(record.getStatus()));
@@ -123,4 +117,5 @@ public class InboundWorkOperationRequestFactory {
 		String trimmed = value.trim();
 		return trimmed.isEmpty() ? null : trimmed;
 	}
+
 }

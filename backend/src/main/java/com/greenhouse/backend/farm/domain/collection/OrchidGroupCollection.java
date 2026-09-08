@@ -23,7 +23,8 @@ public class OrchidGroupCollection extends BaseEntity {
 
 	@Id
 	@GeneratedValue(strategy = GenerationType.SEQUENCE, generator = "orchid_group_collections_id_seq")
-	@SequenceGenerator(name = "orchid_group_collections_id_seq", sequenceName = "orchid_group_collections_id_seq", allocationSize = 50)
+	@SequenceGenerator(name = "orchid_group_collections_id_seq", sequenceName = "orchid_group_collections_id_seq",
+			allocationSize = 50)
 	private Long id;
 
 	@Column(nullable = false, length = 100)
@@ -70,4 +71,5 @@ public class OrchidGroupCollection extends BaseEntity {
 	public boolean isArchived() {
 		return status == OrchidGroupCollectionStatus.ARCHIVED;
 	}
+
 }

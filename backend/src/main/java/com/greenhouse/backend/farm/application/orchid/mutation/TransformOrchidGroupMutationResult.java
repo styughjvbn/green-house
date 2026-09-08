@@ -1,8 +1,6 @@
 package com.greenhouse.backend.farm.application.orchid.mutation;
 
-public record TransformOrchidGroupMutationResult(
-		Long bedZoneId,
-		OrchidGroupMutationDetails details) {
+public record TransformOrchidGroupMutationResult(Long bedZoneId, OrchidGroupMutationDetails details) {
 
 	public TransformOrchidGroupMutationResult {
 		if (bedZoneId == null || details == null) {

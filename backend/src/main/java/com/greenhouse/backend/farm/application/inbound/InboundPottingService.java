@@ -22,8 +22,8 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 /**
- * ORCHID-CUTOVER: LEGACY_RETIRE — Engine 경로와 전환 후 제거할 직접 생성 분기를 함께 가진다.
- * Removal gate: 운영 ACTIVE 안정화 및 writer inventory 승인.
+ * ORCHID-CUTOVER: LEGACY_RETIRE — Engine 경로와 전환 후 제거할 직접 생성 분기를 함께 가진다. Removal gate: 운영
+ * ACTIVE 안정화 및 writer inventory 승인.
  */
 @Service
 @Transactional
@@ -33,17 +33,20 @@ public class InboundPottingService {
 	private static final String DEFAULT_ORCHID_STATUS = "정상";
 
 	private final InboundRecordFinder inboundRecordFinder;
+
 	private final BedZoneRepository bedZoneRepository;
+
 	private final OrchidGroupRepository orchidGroupRepository;
+
 	private final OrchidPlacementPolicy orchidPlacementPolicy;
+
 	private final RequestActorProvider requestActorProvider;
+
 	private final OrchidGroupMutationEngine mutationEngine;
+
 	private final OrchidGroupMutationRoutingPolicy mutationRoutingPolicy;
 
-	public InboundPottingResult potting(
-			Long inboundRecordId,
-			InboundRecordPottingRequest request,
-			Long workOperationId,
+	public InboundPottingResult potting(Long inboundRecordId, InboundRecordPottingRequest request, Long workOperationId,
 			String effectKey) {
 		var inboundRecord = inboundRecordFinder.find(inboundRecordId);
 		inboundRecord.requirePottingAllowed();
@@ -52,63 +55,40 @@ public class InboundPottingService {
 		List<OrchidGroup> createdGroups;
 		if (mutationRoutingPolicy.routesToEngine()) {
 			var mutationCommand = new CreateInboundOrchidGroupsMutationCommand(
-					OrchidGroupMutationSources.work(workOperationId, effectKey),
-					inboundRecord.getId(),
-					request.results().stream()
-							.map(row -> new CreateOrchidGroupMutationItem(
-									row.bedZoneId(),
-									new OrchidGroupMutationDetails(
-											inboundRecord.getVariety().getId(),
-											row.quantity(),
-											firstNonBlank(row.potSize(), inboundRecord.getPotSize()),
-											row.ageYear(),
-											DEFAULT_ORCHID_STATUS,
-											row.placementType(),
-											row.trayCount(),
-											row.splitPlacementAllowed(),
-											row.startPosition(),
-											row.endPosition(),
-											row.memo())))
-							.toList(),
-					request.pottingDate(),
-					request.memo());
+					OrchidGroupMutationSources.work(workOperationId, effectKey), inboundRecord.getId(),
+					request.results()
+						.stream()
+						.map(row -> new CreateOrchidGroupMutationItem(row.bedZoneId(),
+								new OrchidGroupMutationDetails(inboundRecord.getVariety().getId(), row.quantity(),
+										firstNonBlank(row.potSize(), inboundRecord.getPotSize()), row.ageYear(),
+										DEFAULT_ORCHID_STATUS, row.placementType(), row.trayCount(),
+										row.splitPlacementAllowed(), row.startPosition(), row.endPosition(),
+										row.memo())))
+						.toList(),
+					request.pottingDate(), request.memo());
 			var mutation = mutationEngine.createFromInbound(mutationCommand);
-			List<Long> groupIds = mutation.entries().stream()
-					.map(entry -> entry.orchidGroupId())
-					.toList();
-			var groupsById = orchidGroupRepository.findAllById(groupIds).stream()
-					.collect(java.util.stream.Collectors.toMap(OrchidGroup::getId, group -> group));
+			List<Long> groupIds = mutation.entries().stream().map(entry -> entry.orchidGroupId()).toList();
+			var groupsById = orchidGroupRepository.findAllById(groupIds)
+				.stream()
+				.collect(java.util.stream.Collectors.toMap(OrchidGroup::getId, group -> group));
 			createdGroups = groupIds.stream().map(groupsById::get).toList();
 			mutationLink = new WorkMutationLink(mutation.mutationId(), mutation.correlationId());
-		} else {
+		}
+		else {
 			createdGroups = request.results().stream().map(row -> {
 				BedZone bedZone = findBedZone(row.bedZoneId());
-				OrchidPlacementPolicy.PlacementRange placementRange = orchidPlacementPolicy.resolveRange(
-						bedZone, row.startPosition(), row.endPosition());
-				OrchidGroup orchidGroup = new OrchidGroup(
-						bedZone,
-						inboundRecord.getVariety().getGenus(),
-						inboundRecord.getVariety().getName(),
-						row.quantity(),
-						firstNonBlank(row.potSize(), inboundRecord.getPotSize()),
-						row.ageYear(),
-						DEFAULT_ORCHID_STATUS,
+				OrchidPlacementPolicy.PlacementRange placementRange = orchidPlacementPolicy.resolveRange(bedZone,
+						row.startPosition(), row.endPosition());
+				OrchidGroup orchidGroup = new OrchidGroup(bedZone, inboundRecord.getVariety().getGenus(),
+						inboundRecord.getVariety().getName(), row.quantity(),
+						firstNonBlank(row.potSize(), inboundRecord.getPotSize()), row.ageYear(), DEFAULT_ORCHID_STATUS,
 						orchidGroupRepository.findMaxSortOrderByBedZoneId(bedZone.getId()) + 1,
-						placementRange.startPosition(),
-						placementRange.endPosition());
-				orchidGroup.updateDetails(
-						inboundRecord.getVariety().getGenus(),
-						inboundRecord.getVariety().getName(),
-						row.quantity(),
-						firstNonBlank(row.potSize(), inboundRecord.getPotSize()),
-						row.ageYear(),
-						DEFAULT_ORCHID_STATUS,
-						normalize(row.placementType()),
-						row.trayCount(),
-						Boolean.TRUE.equals(row.splitPlacementAllowed()),
-						placementRange.startPosition(),
-						placementRange.endPosition(),
-						normalize(row.memo()));
+						placementRange.startPosition(), placementRange.endPosition());
+				orchidGroup.updateDetails(inboundRecord.getVariety().getGenus(), inboundRecord.getVariety().getName(),
+						row.quantity(), firstNonBlank(row.potSize(), inboundRecord.getPotSize()), row.ageYear(),
+						DEFAULT_ORCHID_STATUS, normalize(row.placementType()), row.trayCount(),
+						Boolean.TRUE.equals(row.splitPlacementAllowed()), placementRange.startPosition(),
+						placementRange.endPosition(), normalize(row.memo()));
 				orchidGroup.assignVariety(inboundRecord.getVariety());
 				orchidGroup.assignInboundRecord(inboundRecord);
 				return orchidGroupRepository.saveAndFlush(orchidGroup);
@@ -117,26 +97,14 @@ public class InboundPottingService {
 
 		OrchidGroup representative = createdGroups.getFirst();
 		int actualQuantity = createdGroups.stream().mapToInt(OrchidGroup::getQuantity).sum();
-		inboundRecord.updateMetadata(
-				inboundRecord.getInboundDate(),
-				inboundRecord.getBottleCount(),
-				inboundRecord.getEstimatedQuantity(),
-				actualQuantity,
-				inboundRecord.getTempLocation(),
-				inboundRecord.getPottingDueDate(),
-				representative.getPotSize(),
-				representative.getAgeYear(),
-				normalize(request.growthStage()),
-				representative.getPlacementType(),
-				representative.getTrayCount(),
-				requestActorProvider.resolve(request.worker()),
-				appendMemo(inboundRecord.getMemo(), request.memo()));
+		inboundRecord.updateMetadata(inboundRecord.getInboundDate(), inboundRecord.getBottleCount(),
+				inboundRecord.getEstimatedQuantity(), actualQuantity, inboundRecord.getTempLocation(),
+				inboundRecord.getPottingDueDate(), representative.getPotSize(), representative.getAgeYear(),
+				normalize(request.growthStage()), representative.getPlacementType(), representative.getTrayCount(),
+				requestActorProvider.resolve(request.worker()), appendMemo(inboundRecord.getMemo(), request.memo()));
 		inboundRecord.place(representative.getBedZone(), representative, request.pottingDate(), actualQuantity);
-		return new InboundPottingResult(
-				InboundRecordResponse.from(inboundRecordFinder.find(inboundRecord.getId())),
-				createdGroups.stream().map(OrchidGroup::getId).toList(),
-				actualQuantity,
-				mutationLink);
+		return new InboundPottingResult(InboundRecordResponse.from(inboundRecordFinder.find(inboundRecord.getId())),
+				createdGroups.stream().map(OrchidGroup::getId).toList(), actualQuantity, mutationLink);
 	}
 
 	private BedZone findBedZone(Long bedZoneId) {
@@ -144,7 +112,7 @@ public class InboundPottingService {
 			throw new IllegalArgumentException("배치 구역이 필요합니다.");
 		}
 		return bedZoneRepository.findWithDetailsById(bedZoneId)
-				.orElseThrow(() -> new NotFoundException("논리 구역을 찾을 수 없습니다."));
+			.orElseThrow(() -> new NotFoundException("논리 구역을 찾을 수 없습니다."));
 	}
 
 	private String firstNonBlank(String first, String second) {
@@ -171,4 +139,5 @@ public class InboundPottingService {
 		String trimmed = value.trim();
 		return trimmed.isEmpty() ? null : trimmed;
 	}
+
 }

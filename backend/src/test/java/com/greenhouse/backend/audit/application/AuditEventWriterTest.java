@@ -13,15 +13,20 @@ import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 
 class AuditEventWriterTest {
+
 	private final AuditRecorder recorder = mock(AuditRecorder.class);
+
 	private final AuditRequestContext context = mock(AuditRequestContext.class);
+
 	private final AuditEventWriter writer = new AuditEventWriter(recorder, context);
+
 	private final AuditEvent.Target target = new AuditEvent.Target("VARIETY", 1L, null, null, null, 1L);
 
 	@Test
 	void noChangesSkipContextAndPersistence() {
-		assertThat(writer.record(AuditAction.UPDATED, AuditSource.VARIETY_MANAGEMENT, target,
-				Map.of("name", "난"), Map.of("name", "난"), null)).isNull();
+		assertThat(writer.record(AuditAction.UPDATED, AuditSource.VARIETY_MANAGEMENT, target, Map.of("name", "난"),
+				Map.of("name", "난"), null))
+			.isNull();
 		verifyNoInteractions(recorder, context);
 	}
 
@@ -52,9 +57,9 @@ class AuditEventWriterTest {
 		var metadata = new LinkedHashMap<String, Object>();
 		metadata.put("job", "import");
 		metadata.put("optional", null);
-		var event = new AuditEvent(new AuditEvent.Identity("cli-user", null, null, "job-1"),
-				AuditAction.UPDATED, AuditSource.VARIETY_MANAGEMENT, target, changes,
-				Map.of("quantity", 1), Map.of("quantity", 2), metadata);
+		var event = new AuditEvent(new AuditEvent.Identity("cli-user", null, null, "job-1"), AuditAction.UPDATED,
+				AuditSource.VARIETY_MANAGEMENT, target, changes, Map.of("quantity", 1), Map.of("quantity", 2),
+				metadata);
 		changes.clear();
 		metadata.clear();
 		assertThat(event.identity().sessionId()).isNull();
@@ -62,4 +67,5 @@ class AuditEventWriterTest {
 		assertThat(event.contextData()).containsEntry("job", "import").containsKey("optional");
 		verifyNoInteractions(context);
 	}
+
 }

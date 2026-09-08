@@ -19,7 +19,9 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 
 class OrchidGroupBatchUpdateIntegrationTest extends AbstractBackendIntegrationTest {
-	@Autowired OrchidGroupCommandService commandService;
+
+	@Autowired
+	OrchidGroupCommandService commandService;
 
 	@Test
 	void updatesEverySelectedOrchidGroupInOneRequest() {
@@ -30,14 +32,14 @@ class OrchidGroupBatchUpdateIntegrationTest extends AbstractBackendIntegrationTe
 		bed.addBedZone(zone);
 		house.addPhysicalBed(bed);
 		houseRepository.saveAndFlush(house);
-		Variety variety = varietyRepository.saveAndFlush(new Variety(
-				"BATCH-" + System.nanoTime(), "Phal", "일괄품종", null, "4인치", true, true, null, null));
+		Variety variety = varietyRepository.saveAndFlush(
+				new Variety("BATCH-" + System.nanoTime(), "Phal", "일괄품종", null, "4인치", true, true, null, null));
 		OrchidGroup first = saveGroup(zone, variety, 10, 1, 2);
 		OrchidGroup second = saveGroup(zone, variety, 20, 3, 4);
 
-		commandService.updateBatch(new OrchidGroupBatchUpdateRequest(List.of(
-				new OrchidGroupBatchUpdateItem(first.getId(), update(variety.getId(), 15, 1, 2)),
-				new OrchidGroupBatchUpdateItem(second.getId(), update(variety.getId(), 20, 3, 4)))));
+		commandService.updateBatch(new OrchidGroupBatchUpdateRequest(
+				List.of(new OrchidGroupBatchUpdateItem(first.getId(), update(variety.getId(), 15, 1, 2)),
+						new OrchidGroupBatchUpdateItem(second.getId(), update(variety.getId(), 20, 3, 4)))));
 
 		assertThat(orchidGroupRepository.findById(first.getId()).orElseThrow().getQuantity()).isEqualTo(15);
 		assertThat(orchidGroupRepository.findById(second.getId()).orElseThrow().getQuantity()).isEqualTo(20);
@@ -54,21 +56,21 @@ class OrchidGroupBatchUpdateIntegrationTest extends AbstractBackendIntegrationTe
 		bed.addBedZone(zone);
 		house.addPhysicalBed(bed);
 		houseRepository.saveAndFlush(house);
-		Variety variety = varietyRepository.saveAndFlush(new Variety(
-				"BATCH-ROLLBACK-" + System.nanoTime(), "Phal", "일괄롤백품종", null, "4인치", true, true, null, null));
+		Variety variety = varietyRepository.saveAndFlush(new Variety("BATCH-ROLLBACK-" + System.nanoTime(), "Phal",
+				"일괄롤백품종", null, "4인치", true, true, null, null));
 		OrchidGroup first = saveGroup(zone, variety, 10, 1, 2);
 
-		assertThatThrownBy(() -> commandService.updateBatch(new OrchidGroupBatchUpdateRequest(List.of(
-				new OrchidGroupBatchUpdateItem(first.getId(), update(variety.getId(), 99, 1, 2)),
-				new OrchidGroupBatchUpdateItem(Long.MAX_VALUE, update(variety.getId(), 20, 3, 4))))))
-				.hasMessage("난 묶음을 찾을 수 없습니다.");
+		assertThatThrownBy(() -> commandService.updateBatch(new OrchidGroupBatchUpdateRequest(
+				List.of(new OrchidGroupBatchUpdateItem(first.getId(), update(variety.getId(), 99, 1, 2)),
+						new OrchidGroupBatchUpdateItem(Long.MAX_VALUE, update(variety.getId(), 20, 3, 4))))))
+			.hasMessage("난 묶음을 찾을 수 없습니다.");
 
 		assertThat(orchidGroupRepository.findById(first.getId()).orElseThrow().getQuantity()).isEqualTo(10);
 	}
 
 	private OrchidGroup saveGroup(BedZone zone, Variety variety, int quantity, int start, int end) {
-		OrchidGroup group = new OrchidGroup(zone, variety.getGenus(), variety.getName(), quantity, "4인치", 2,
-				"정상", start, BigDecimal.valueOf(start), BigDecimal.valueOf(end));
+		OrchidGroup group = new OrchidGroup(zone, variety.getGenus(), variety.getName(), quantity, "4인치", 2, "정상",
+				start, BigDecimal.valueOf(start), BigDecimal.valueOf(end));
 		group.assignVariety(variety);
 		return orchidGroupRepository.saveAndFlush(group);
 	}
@@ -77,4 +79,5 @@ class OrchidGroupBatchUpdateIntegrationTest extends AbstractBackendIntegrationTe
 		return new OrchidGroupUpdateRequest(varietyId, quantity, "4인치", 4, "정상", null, null, false,
 				BigDecimal.valueOf(start), BigDecimal.valueOf(end), null);
 	}
+
 }

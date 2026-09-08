@@ -17,7 +17,9 @@ import org.springframework.transaction.annotation.Transactional;
 @Transactional(readOnly = true)
 @RequiredArgsConstructor
 public class OrchidGroupReader {
+
 	private static final int ID_BATCH_SIZE = 500;
+
 	private final OrchidGroupRepository orchidGroupRepository;
 
 	public Optional<OrchidGroup> findById(Long orchidGroupId) {
@@ -56,7 +58,10 @@ public class OrchidGroupReader {
 	}
 
 	public List<OrchidGroupState> searchSellable(String keyword, Long varietyId, String status) {
-		return orchidGroupRepository.searchSellable(keyword, varietyId, status).stream()
-				.map(OrchidGroupState::from).toList();
+		return orchidGroupRepository.searchSellable(keyword, varietyId, status)
+			.stream()
+			.map(OrchidGroupState::from)
+			.toList();
 	}
+
 }

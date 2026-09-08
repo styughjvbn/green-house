@@ -21,4 +21,5 @@ public class WorkOrchidGroupUsageAdapter implements OrchidGroupUsageInspector {
 		return count == 0 ? List.of()
 				: List.of(new OrchidGroupUsage("WORK_OPERATION", "다른 작업에 포함된 난 묶음이 있습니다.", count));
 	}
+
 }

@@ -14,6 +14,7 @@ import org.springframework.data.repository.query.Param;
 
 public interface AuctionShipmentLotRepository
 		extends JpaRepository<AuctionShipmentLot, Long>, AuctionShipmentLotRepositoryCustom {
+
 	List<AuctionShipmentLot> findAllByShipmentIdIn(Collection<Long> shipmentIds);
 
 	boolean existsByShipmentIdAndCurrentStatusNot(Long shipmentId, AuctionLotStatus status);
@@ -23,8 +24,7 @@ public interface AuctionShipmentLotRepository
 			where lot.shipment.id in :shipmentIds
 			  and lot.currentStatus <> :status
 			""")
-	List<Long> findShipmentIdsWithStatusNot(
-			@Param("shipmentIds") Collection<Long> shipmentIds,
+	List<Long> findShipmentIdsWithStatusNot(@Param("shipmentIds") Collection<Long> shipmentIds,
 			@Param("status") AuctionLotStatus status);
 
 	@EntityGraph(attributePaths = { "shipment" })
@@ -37,4 +37,5 @@ public interface AuctionShipmentLotRepository
 	@EntityGraph(attributePaths = { "shipment" })
 	@Query("select lot from AuctionShipmentLot lot where lot.id = :id")
 	Optional<AuctionShipmentLot> findForUpdateById(@Param("id") Long id);
+
 }

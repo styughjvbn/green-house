@@ -25,15 +25,19 @@ import org.springframework.transaction.annotation.Transactional;
 public class OrchidGroupMovementService {
 
 	private final ImmediateWorkExecutionService immediateWorkExecutionService;
+
 	private final OrchidGroupReader orchidGroupReader;
+
 	private final Clock clock;
+
 	private final RequestActorProvider requestActorProvider;
+
 	private final OrchidGroupAuditSupport auditSupport;
 
 	public OrchidGroupResponse move(Long orchidGroupId, OrchidGroupMoveRequest request) {
 		var businessDate = TimeConfig.farmToday(clock);
 		var orchidGroup = orchidGroupReader.findDetailById(orchidGroupId)
-				.orElseThrow(() -> new NotFoundException("난 묶음을 찾을 수 없습니다."));
+			.orElseThrow(() -> new NotFoundException("난 묶음을 찾을 수 없습니다."));
 		if (isSamePlacement(orchidGroup, request)) {
 			return OrchidGroupResponse.from(orchidGroup, businessDate);
 		}
@@ -47,26 +51,17 @@ public class OrchidGroupMovementService {
 		putIfNotNull(details, "worker", worker);
 		putIfNotNull(details, "memo", request.memo());
 
-		immediateWorkExecutionService.executeForTarget(
-				"DIRECT_MOVE:" + UUID.randomUUID(),
-				WorkTypeDefinition.MOVEMENT.name(),
-				"자리 이동",
-				businessDate,
-				worker,
-				request.memo(),
-				orchidGroupId,
-				details,
-				request);
+		immediateWorkExecutionService.executeForTarget("DIRECT_MOVE:" + UUID.randomUUID(),
+				WorkTypeDefinition.MOVEMENT.name(), "자리 이동", businessDate, worker, request.memo(), orchidGroupId,
+				details, request);
 		OrchidGroup moved = orchidGroupReader.findDetailById(orchidGroupId)
-				.orElseThrow(() -> new NotFoundException("난 묶음을 찾을 수 없습니다."));
-		auditSupport.record(orchidGroupId, AuditAction.MOVED, AuditSource.WORK_RECORD,
-				before, auditSupport.snapshot(moved), Map.of());
+			.orElseThrow(() -> new NotFoundException("난 묶음을 찾을 수 없습니다."));
+		auditSupport.record(orchidGroupId, AuditAction.MOVED, AuditSource.WORK_RECORD, before,
+				auditSupport.snapshot(moved), Map.of());
 		return OrchidGroupResponse.from(moved, businessDate);
 	}
 
-	private boolean isSamePlacement(
-			OrchidGroup orchidGroup,
-			OrchidGroupMoveRequest request) {
+	private boolean isSamePlacement(OrchidGroup orchidGroup, OrchidGroupMoveRequest request) {
 		return orchidGroup.getBedZone().getId().equals(request.toBedZoneId())
 				&& isSameNumber(orchidGroup.getStartPosition(), request.startPosition())
 				&& isSameNumber(orchidGroup.getEndPosition(), request.endPosition());
@@ -84,4 +79,5 @@ public class OrchidGroupMovementService {
 			details.put(key, value);
 		}
 	}
+
 }

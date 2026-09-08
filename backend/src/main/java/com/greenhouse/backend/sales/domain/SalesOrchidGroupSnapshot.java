@@ -23,16 +23,15 @@ import lombok.NoArgsConstructor;
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 @Entity
-@Table(
-		name = "sales_orchid_group_snapshots",
-		uniqueConstraints = @UniqueConstraint(
-				name = "uk_sales_orchid_snapshot_allocation_type",
+@Table(name = "sales_orchid_group_snapshots",
+		uniqueConstraints = @UniqueConstraint(name = "uk_sales_orchid_snapshot_allocation_type",
 				columnNames = { "sales_slip_item_allocation_id", "snapshot_type" }))
 public class SalesOrchidGroupSnapshot {
 
 	@Id
 	@GeneratedValue(strategy = GenerationType.SEQUENCE, generator = "sales_orchid_group_snapshots_id_seq")
-	@SequenceGenerator(name = "sales_orchid_group_snapshots_id_seq", sequenceName = "sales_orchid_group_snapshots_id_seq", allocationSize = 50)
+	@SequenceGenerator(name = "sales_orchid_group_snapshots_id_seq",
+			sequenceName = "sales_orchid_group_snapshots_id_seq", allocationSize = 50)
 	private Long id;
 
 	@ManyToOne(fetch = FetchType.LAZY, optional = false)
@@ -108,28 +107,11 @@ public class SalesOrchidGroupSnapshot {
 	private BigDecimal endPosition;
 
 	@Builder(toBuilder = true)
-	private SalesOrchidGroupSnapshot(
-			SalesOrchidSnapshotType snapshotType,
-			SalesOrchidSnapshotSource captureSource,
-			LocalDateTime capturedAt,
-			Long orchidGroupId,
-			Long varietyId,
-			String varietyName,
-			String genus,
-			Integer ageYear,
-			String potSizeCode,
-			String potSize,
-			Integer quantity,
-			Integer reservedQuantity,
-			String status,
-			Integer allocatedQuantity,
-			Long houseId,
-			Integer houseNumber,
-			Long physicalBedId,
-			Integer physicalBedNumber,
-			Long bedZoneId,
-			String bedZoneName,
-			BigDecimal startPosition,
+	private SalesOrchidGroupSnapshot(SalesOrchidSnapshotType snapshotType, SalesOrchidSnapshotSource captureSource,
+			LocalDateTime capturedAt, Long orchidGroupId, Long varietyId, String varietyName, String genus,
+			Integer ageYear, String potSizeCode, String potSize, Integer quantity, Integer reservedQuantity,
+			String status, Integer allocatedQuantity, Long houseId, Integer houseNumber, Long physicalBedId,
+			Integer physicalBedNumber, Long bedZoneId, String bedZoneName, BigDecimal startPosition,
 			BigDecimal endPosition) {
 		this.snapshotType = snapshotType;
 		this.captureSource = captureSource;
@@ -162,4 +144,5 @@ public class SalesOrchidGroupSnapshot {
 	SalesOrchidGroupSnapshot copy() {
 		return toBuilder().build();
 	}
+
 }

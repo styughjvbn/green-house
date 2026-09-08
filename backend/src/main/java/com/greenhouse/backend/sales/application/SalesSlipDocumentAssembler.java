@@ -21,8 +21,11 @@ import org.springframework.stereotype.Component;
 public class SalesSlipDocumentAssembler {
 
 	private final BusinessPartnerReader partnerReader;
+
 	private final AuctionDataReader auctionReader;
+
 	private final SalesSlipActionResolver actionResolver;
+
 	private final OrchidGroupReader orchidGroupReader;
 
 	public Page<SalesSlipSummary> assemblePage(Page<SalesSlip> page) {
@@ -33,31 +36,35 @@ public class SalesSlipDocumentAssembler {
 	}
 
 	private Map<Long, String> marketNames(List<SalesSlip> slips) {
-		return auctionReader.getMarketNames(slips.stream().filter(slip -> slip.getAuctionShipmentId() != null)
-				.map(slip -> slip.getAuctionShipmentId()).distinct().toList());
+		return auctionReader.getMarketNames(slips.stream()
+			.filter(slip -> slip.getAuctionShipmentId() != null)
+			.map(slip -> slip.getAuctionShipmentId())
+			.distinct()
+			.toList());
 	}
 
 	public SalesSlipDocument assemble(SalesSlip salesSlip) {
-		var allocations = salesSlip.getItems().stream()
-				.collect(Collectors.toMap(SalesSlipItem::getId, SalesSlipItem::getAllocations));
+		var allocations = salesSlip.getItems()
+			.stream()
+			.collect(Collectors.toMap(SalesSlipItem::getId, SalesSlipItem::getAllocations));
 		return assemble(List.of(salesSlip), allocations).getFirst();
 	}
 
-	public List<SalesSlipDocument> assemble(
-			List<SalesSlip> salesSlips,
+	public List<SalesSlipDocument> assemble(List<SalesSlip> salesSlips,
 			Map<Long, List<SalesSlipItemAllocation>> allocationsByItemId) {
-		var states = orchidGroupReader.getStates(allocationsByItemId.values().stream()
-				.flatMap(List::stream).map(SalesSlipItemAllocation::getOrchidGroupId).toList());
+		var states = orchidGroupReader.getStates(allocationsByItemId.values()
+			.stream()
+			.flatMap(List::stream)
+			.map(SalesSlipItemAllocation::getOrchidGroupId)
+			.toList());
 		var partners = partnerReader.getAllInfo(salesSlips.stream().map(SalesSlip::getPartnerId).toList());
 		var marketNames = marketNames(salesSlips);
-		Map<Long, List<SalesSlipAction>> actionsBySalesSlipId =
-				actionResolver.resolveAll(salesSlips);
+		Map<Long, List<SalesSlipAction>> actionsBySalesSlipId = actionResolver.resolveAll(salesSlips);
 		return salesSlips.stream()
-				.map(salesSlip -> SalesSlipDocument.from(
-						salesSlip, partners.get(salesSlip.getPartnerId()),
-						salesSlip.getAuctionShipmentId() == null ? null : marketNames.get(salesSlip.getAuctionShipmentId()),
-						allocationsByItemId, states,
-						actionsBySalesSlipId.getOrDefault(salesSlip.getId(), List.of())))
-				.toList();
+			.map(salesSlip -> SalesSlipDocument.from(salesSlip, partners.get(salesSlip.getPartnerId()),
+					salesSlip.getAuctionShipmentId() == null ? null : marketNames.get(salesSlip.getAuctionShipmentId()),
+					allocationsByItemId, states, actionsBySalesSlipId.getOrDefault(salesSlip.getId(), List.of())))
+			.toList();
 	}
+
 }

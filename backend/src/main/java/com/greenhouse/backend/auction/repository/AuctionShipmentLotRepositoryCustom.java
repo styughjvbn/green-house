@@ -10,4 +10,5 @@ public interface AuctionShipmentLotRepositoryCustom {
 	Page<AuctionShipmentLot> search(AuctionLotSearchCriteria criteria, Pageable pageable);
 
 	AuctionTrackingSummaryProjection summarize();
+
 }

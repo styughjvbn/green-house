@@ -13,6 +13,7 @@ import org.springframework.stereotype.Component;
 public class AuctionSettlementResponseAssembler {
 
 	private final BusinessPartnerReader partnerReader;
+
 	private final AuctionDataReader auctionReader;
 
 	public AuctionSettlementResponse assemble(AuctionSettlement settlement) {
@@ -20,10 +21,16 @@ public class AuctionSettlementResponseAssembler {
 	}
 
 	public List<AuctionSettlementResponse> assembleAll(List<AuctionSettlement> settlements) {
-		var partners = partnerReader.getAllInfo(settlements.stream().map(AuctionSettlement::getAuctionHouseId).toList());
-		var results = auctionReader.getResults(settlements.stream().flatMap(settlement -> settlement.getLines().stream())
-				.map(line -> line.getAuctionResultLineId()).toList());
-		return settlements.stream().map(settlement -> AuctionSettlementResponse.from(
-				settlement, partners.get(settlement.getAuctionHouseId()).name(), results)).toList();
+		var partners = partnerReader
+			.getAllInfo(settlements.stream().map(AuctionSettlement::getAuctionHouseId).toList());
+		var results = auctionReader.getResults(settlements.stream()
+			.flatMap(settlement -> settlement.getLines().stream())
+			.map(line -> line.getAuctionResultLineId())
+			.toList());
+		return settlements.stream()
+			.map(settlement -> AuctionSettlementResponse.from(settlement,
+					partners.get(settlement.getAuctionHouseId()).name(), results))
+			.toList();
 	}
+
 }

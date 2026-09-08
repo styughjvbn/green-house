@@ -7,10 +7,10 @@ import jakarta.persistence.FetchType;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
-import jakarta.persistence.SequenceGenerator;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.OneToMany;
+import jakarta.persistence.SequenceGenerator;
 import jakarta.persistence.Table;
 import java.util.ArrayList;
 import java.util.List;
@@ -58,14 +58,8 @@ public class SalesSlipItem {
 	@Column(columnDefinition = "text")
 	private String memo;
 
-	public SalesSlipItem(
-			Long auctionShipmentLotId,
-			String itemName,
-			String genus,
-			String spec,
-			Integer quantity,
-			Integer unitPrice,
-			String memo) {
+	public SalesSlipItem(Long auctionShipmentLotId, String itemName, String genus, String spec, Integer quantity,
+			Integer unitPrice, String memo) {
 		this.auctionShipmentLotId = auctionShipmentLotId;
 		this.itemName = itemName;
 		this.genus = genus;
@@ -85,12 +79,7 @@ public class SalesSlipItem {
 		this.allocations.add(allocation);
 	}
 
-	public void updateDetails(
-			String itemName,
-			String genus,
-			String spec,
-			Integer quantity,
-			Integer unitPrice,
+	public void updateDetails(String itemName, String genus, String spec, Integer quantity, Integer unitPrice,
 			String memo) {
 		this.itemName = itemName;
 		this.genus = genus;
@@ -113,4 +102,5 @@ public class SalesSlipItem {
 	public void clearAuctionShipmentLot() {
 		this.auctionShipmentLotId = null;
 	}
+
 }

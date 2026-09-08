@@ -23,19 +23,15 @@ import lombok.NoArgsConstructor;
  * ORCHID-CUTOVER: TARGET, DATA_RETAIN — ledger 적용 범위와 ACTIVE 전환 증거를 보존한다.
  */
 @Entity
-@Table(
-		name = "orchid_group_ledger_coverages",
-		uniqueConstraints = @UniqueConstraint(
-				name = "uk_orchid_group_ledger_coverage_cutover",
+@Table(name = "orchid_group_ledger_coverages",
+		uniqueConstraints = @UniqueConstraint(name = "uk_orchid_group_ledger_coverage_cutover",
 				columnNames = "cutover_key"))
 public class OrchidGroupLedgerCoverage {
 
 	@Id
 	@GeneratedValue(strategy = GenerationType.SEQUENCE, generator = "orchid_group_ledger_coverages_id_seq")
-	@SequenceGenerator(
-			name = "orchid_group_ledger_coverages_id_seq",
-			sequenceName = "orchid_group_ledger_coverages_id_seq",
-			allocationSize = 50)
+	@SequenceGenerator(name = "orchid_group_ledger_coverages_id_seq",
+			sequenceName = "orchid_group_ledger_coverages_id_seq", allocationSize = 50)
 	private Long id;
 
 	@Column(name = "cutover_key", nullable = false)
@@ -72,12 +68,8 @@ public class OrchidGroupLedgerCoverage {
 	@Column(name = "minimum_writer_version", nullable = false, length = 50)
 	private String minimumWriterVersion;
 
-	public OrchidGroupLedgerCoverage(
-			UUID cutoverKey,
-			int engineSchemaVersion,
-			int snapshotSchemaVersion,
-			LocalDate effectiveBusinessDate,
-			String minimumWriterVersion) {
+	public OrchidGroupLedgerCoverage(UUID cutoverKey, int engineSchemaVersion, int snapshotSchemaVersion,
+			LocalDate effectiveBusinessDate, String minimumWriterVersion) {
 		if (cutoverKey == null || effectiveBusinessDate == null) {
 			throw new IllegalArgumentException("Ledger cutover key와 업무일이 필요합니다.");
 		}
@@ -98,13 +90,9 @@ public class OrchidGroupLedgerCoverage {
 		this.minimumWriterVersion = minimumWriterVersion.trim();
 	}
 
-	public boolean hasSamePreparation(
-			int engineSchemaVersion,
-			int snapshotSchemaVersion,
-			LocalDate effectiveBusinessDate,
-			String minimumWriterVersion) {
-		return this.engineSchemaVersion == engineSchemaVersion
-				&& this.snapshotSchemaVersion == snapshotSchemaVersion
+	public boolean hasSamePreparation(int engineSchemaVersion, int snapshotSchemaVersion,
+			LocalDate effectiveBusinessDate, String minimumWriterVersion) {
+		return this.engineSchemaVersion == engineSchemaVersion && this.snapshotSchemaVersion == snapshotSchemaVersion
 				&& this.effectiveBusinessDate.equals(effectiveBusinessDate)
 				&& this.minimumWriterVersion.equals(minimumWriterVersion == null ? null : minimumWriterVersion.trim());
 	}
@@ -133,8 +121,7 @@ public class OrchidGroupLedgerCoverage {
 		if (importFingerprint == null) {
 			throw new IllegalStateException("Complete state-chain manifest 적재 후 활성화할 수 있습니다.");
 		}
-		if (completedAt == null || groupCount < 0 || fingerprint == null
-				|| !fingerprint.matches("[0-9a-f]{64}")) {
+		if (completedAt == null || groupCount < 0 || fingerprint == null || !fingerprint.matches("[0-9a-f]{64}")) {
 			throw new IllegalArgumentException("Ledger 활성화 정보가 올바르지 않습니다.");
 		}
 		this.status = OrchidGroupLedgerCoverageStatus.ACTIVE;
@@ -150,4 +137,5 @@ public class OrchidGroupLedgerCoverage {
 		this.status = OrchidGroupLedgerCoverageStatus.FAILED;
 		this.transitionCompletedAt = failedAt;
 	}
+
 }

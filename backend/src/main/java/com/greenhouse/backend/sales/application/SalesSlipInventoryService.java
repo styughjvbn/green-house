@@ -24,6 +24,7 @@ import org.springframework.stereotype.Service;
 public class SalesSlipInventoryService {
 
 	private final SalesInventoryMovementRepository salesInventoryMovementRepository;
+
 	private final OrchidGroupReservationService reservations;
 
 	public void reserve(SalesSlip salesSlip) {
@@ -72,46 +73,49 @@ public class SalesSlipInventoryService {
 		if (allocations.lines().isEmpty()) {
 			return;
 		}
-		var mutation = reservations.restoreOutbound(new RestoreOutboundOrchidGroupsMutationCommand(
-				OrchidGroupMutationSources.sales(salesSlip.getId(), "CANCEL_OUTBOUND:" + salesSlip.getVersion()),
-				mutationItems(allocations), outboundMutationReferences(salesSlip),
-				salesSlip.getSaleDate(), salesSlip.getMemo()));
+		var mutation = reservations.restoreOutbound(
+				new RestoreOutboundOrchidGroupsMutationCommand(
+						OrchidGroupMutationSources.sales(salesSlip.getId(),
+								"CANCEL_OUTBOUND:" + salesSlip.getVersion()),
+						mutationItems(allocations), outboundMutationReferences(salesSlip), salesSlip.getSaleDate(),
+						salesSlip.getMemo()));
 		recordMovements(allocations, SalesInventoryMovementType.SALES_CANCEL_OUTBOUND, 1, mutation);
 	}
 
 	private List<OrchidGroupQuantityMutationItem> mutationItems(SalesSlipAllocationBatch allocations) {
-		return allocations.lines().stream()
-				.collect(Collectors.groupingBy(SalesSlipAllocationBatch.Line::orchidGroupId,
-						Collectors.summingInt(SalesSlipAllocationBatch.Line::allocatedQuantity)))
-				.entrySet().stream().sorted(Map.Entry.comparingByKey())
-				.map(entry -> new OrchidGroupQuantityMutationItem(entry.getKey(), entry.getValue())).toList();
+		return allocations.lines()
+			.stream()
+			.collect(Collectors.groupingBy(SalesSlipAllocationBatch.Line::orchidGroupId,
+					Collectors.summingInt(SalesSlipAllocationBatch.Line::allocatedQuantity)))
+			.entrySet()
+			.stream()
+			.sorted(Map.Entry.comparingByKey())
+			.map(entry -> new OrchidGroupQuantityMutationItem(entry.getKey(), entry.getValue()))
+			.toList();
 	}
 
 	private RelatedOrchidGroupMutations outboundMutationReferences(SalesSlip salesSlip) {
 		List<SalesInventoryMovement> outboundMovements = salesInventoryMovementRepository
-				.findBySalesSlipIdAndChangeType(
-						salesSlip.getId(), SalesInventoryMovementType.SALES_OUTBOUND);
+			.findBySalesSlipIdAndChangeType(salesSlip.getId(), SalesInventoryMovementType.SALES_OUTBOUND);
 		if (outboundMovements.isEmpty()
 				|| outboundMovements.stream().anyMatch(movement -> movement.getMutationId() == null)) {
 			return RelatedOrchidGroupMutations.legacy();
 		}
-		return RelatedOrchidGroupMutations.current(outboundMovements.stream()
-				.map(SalesInventoryMovement::getMutationId)
-				.distinct()
-				.sorted()
-				.toList());
+		return RelatedOrchidGroupMutations.current(
+				outboundMovements.stream().map(SalesInventoryMovement::getMutationId).distinct().sorted().toList());
 	}
 
-	private void recordMovements(SalesSlipAllocationBatch allocations, SalesInventoryMovementType type,
-			int direction, OrchidGroupMutationResult mutation) {
+	private void recordMovements(SalesSlipAllocationBatch allocations, SalesInventoryMovementType type, int direction,
+			OrchidGroupMutationResult mutation) {
 		var salesSlip = allocations.salesSlip();
 		for (var line : allocations.lines()) {
-			var movement = new SalesInventoryMovement(line.orchidGroupId(), salesSlip, line.item(),
-					type, direction * line.allocatedQuantity(), salesSlip.getMemo());
+			var movement = new SalesInventoryMovement(line.orchidGroupId(), salesSlip, line.item(), type,
+					direction * line.allocatedQuantity(), salesSlip.getMemo());
 			if (mutation != null) {
 				movement.linkMutation(mutation.mutationId(), mutation.correlationId());
 			}
 			salesInventoryMovementRepository.save(movement);
 		}
 	}
+
 }

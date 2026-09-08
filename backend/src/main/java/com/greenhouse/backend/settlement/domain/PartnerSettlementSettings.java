@@ -26,9 +26,11 @@ import org.hibernate.type.SqlTypes;
 @Entity
 @Table(name = "partner_settlement_settings")
 public class PartnerSettlementSettings extends BaseEntity {
+
 	@Id
 	@GeneratedValue(strategy = GenerationType.SEQUENCE, generator = "partner_settlement_settings_id_seq")
-	@SequenceGenerator(name = "partner_settlement_settings_id_seq", sequenceName = "partner_settlement_settings_id_seq", allocationSize = 50)
+	@SequenceGenerator(name = "partner_settlement_settings_id_seq", sequenceName = "partner_settlement_settings_id_seq",
+			allocationSize = 50)
 	private Long id;
 
 	@Column(name = "partner_id", nullable = false, unique = true)
@@ -73,8 +75,7 @@ public class PartnerSettlementSettings extends BaseEntity {
 
 	public PartnerSettlementSettings(Long partnerId, PartnerType partnerType) {
 		this.partnerId = partnerId;
-		this.settlementUnit = partnerType == PartnerType.AUCTION_HOUSE
-				? SettlementUnit.AUCTION_DATE
+		this.settlementUnit = partnerType == PartnerType.AUCTION_HOUSE ? SettlementUnit.AUCTION_DATE
 				: SettlementUnit.SALES_SLIP;
 		this.paymentDelayDays = 0;
 		this.paymentDayMode = PaymentDayMode.CALENDAR_DAY;
@@ -98,25 +99,17 @@ public class PartnerSettlementSettings extends BaseEntity {
 		while (remainingDays > 0) {
 			result = result.plusDays(1);
 			switch (result.getDayOfWeek()) {
-				case SATURDAY, SUNDAY -> { }
+				case SATURDAY, SUNDAY -> {
+				}
 				default -> remainingDays--;
 			}
 		}
 		return result;
 	}
 
-	public void update(
-			SettlementUnit settlementUnit,
-			Integer paymentDelayDays,
-			PaymentDayMode paymentDayMode,
-			boolean autoMatchEnabled,
-			boolean autoSettleEnabled,
-			Long amountTolerance,
-			List<String> depositorAliases,
-			boolean allowPrepayment,
-			boolean creditAutoApplyEnabled,
-			Map<String, Object> ruleJson,
-			String memo) {
+	public void update(SettlementUnit settlementUnit, Integer paymentDelayDays, PaymentDayMode paymentDayMode,
+			boolean autoMatchEnabled, boolean autoSettleEnabled, Long amountTolerance, List<String> depositorAliases,
+			boolean allowPrepayment, boolean creditAutoApplyEnabled, Map<String, Object> ruleJson, String memo) {
 		this.settlementUnit = settlementUnit;
 		this.paymentDelayDays = paymentDelayDays;
 		this.paymentDayMode = paymentDayMode;
@@ -129,4 +122,5 @@ public class PartnerSettlementSettings extends BaseEntity {
 		this.ruleJson = ruleJson;
 		this.memo = memo;
 	}
+
 }

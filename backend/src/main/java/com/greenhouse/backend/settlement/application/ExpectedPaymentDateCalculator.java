@@ -13,6 +13,7 @@ import org.springframework.stereotype.Component;
 @Component
 @RequiredArgsConstructor
 public class ExpectedPaymentDateCalculator {
+
 	private final PartnerSettlementSettingsRepository settingsRepository;
 
 	public LocalDate calculate(Long partnerId, LocalDate baseDate) {
@@ -24,13 +25,13 @@ public class ExpectedPaymentDateCalculator {
 		if (targets.isEmpty()) {
 			return Map.of();
 		}
-		var settingsByPartnerId = settingsRepository.findByPartnerIdIn(
-				targets.stream().map(PaymentDateTarget::partnerId).collect(Collectors.toSet()))
-				.stream()
-				.collect(Collectors.toMap(PartnerSettlementSettings::getPartnerId, Function.identity()));
-		return targets.stream().collect(Collectors.toMap(
-				Function.identity(),
-				target -> calculate(target.baseDate(), settingsByPartnerId.get(target.partnerId()))));
+		var settingsByPartnerId = settingsRepository
+			.findByPartnerIdIn(targets.stream().map(PaymentDateTarget::partnerId).collect(Collectors.toSet()))
+			.stream()
+			.collect(Collectors.toMap(PartnerSettlementSettings::getPartnerId, Function.identity()));
+		return targets.stream()
+			.collect(Collectors.toMap(Function.identity(),
+					target -> calculate(target.baseDate(), settingsByPartnerId.get(target.partnerId()))));
 	}
 
 	private LocalDate calculate(LocalDate baseDate, PartnerSettlementSettings settings) {
@@ -39,4 +40,5 @@ public class ExpectedPaymentDateCalculator {
 
 	public record PaymentDateTarget(Long partnerId, LocalDate baseDate) {
 	}
+
 }

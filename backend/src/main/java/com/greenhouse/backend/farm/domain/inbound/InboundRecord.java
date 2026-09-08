@@ -1,10 +1,10 @@
 package com.greenhouse.backend.farm.domain.inbound;
 
+import com.greenhouse.backend.common.domain.BaseEntity;
 import com.greenhouse.backend.farm.domain.orchid.OrchidGroup;
 import com.greenhouse.backend.farm.domain.orchid.PotSizeCode;
 import com.greenhouse.backend.farm.domain.structure.BedZone;
 import com.greenhouse.backend.farm.domain.variety.Variety;
-import com.greenhouse.backend.common.domain.BaseEntity;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
@@ -13,18 +13,17 @@ import jakarta.persistence.FetchType;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
-import jakarta.persistence.SequenceGenerator;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.OneToMany;
+import jakarta.persistence.SequenceGenerator;
 import jakarta.persistence.Table;
-import lombok.Getter;
-import lombok.NoArgsConstructor;
-import lombok.AccessLevel;
-
 import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
+import lombok.AccessLevel;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
 
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
@@ -102,24 +101,10 @@ public class InboundRecord extends BaseEntity {
 	@Column(columnDefinition = "text")
 	private String memo;
 
-	public InboundRecord(
-			LocalDate inboundDate,
-			InboundType inboundType,
-			Variety variety,
-			InboundStatus status,
-			Integer bottleCount,
-			Integer estimatedQuantity,
-			Integer actualQuantity,
-			String tempLocation,
-			LocalDate pottingDueDate,
-			String potSize,
-			Integer ageYear,
-			String growthStage,
-			String placementType,
-			Integer trayCount,
-			BedZone bedZone,
-			String worker,
-			String memo) {
+	public InboundRecord(LocalDate inboundDate, InboundType inboundType, Variety variety, InboundStatus status,
+			Integer bottleCount, Integer estimatedQuantity, Integer actualQuantity, String tempLocation,
+			LocalDate pottingDueDate, String potSize, Integer ageYear, String growthStage, String placementType,
+			Integer trayCount, BedZone bedZone, String worker, String memo) {
 		this.inboundDate = inboundDate;
 		this.inboundType = inboundType;
 		this.variety = variety;
@@ -139,20 +124,9 @@ public class InboundRecord extends BaseEntity {
 		this.memo = memo;
 	}
 
-	public void updateMetadata(
-			LocalDate inboundDate,
-			Integer bottleCount,
-			Integer estimatedQuantity,
-			Integer actualQuantity,
-			String tempLocation,
-			LocalDate pottingDueDate,
-			String potSize,
-			Integer ageYear,
-			String growthStage,
-			String placementType,
-			Integer trayCount,
-			String worker,
-			String memo) {
+	public void updateMetadata(LocalDate inboundDate, Integer bottleCount, Integer estimatedQuantity,
+			Integer actualQuantity, String tempLocation, LocalDate pottingDueDate, String potSize, Integer ageYear,
+			String growthStage, String placementType, Integer trayCount, String worker, String memo) {
 		if (status == InboundStatus.CANCELED) {
 			throw new IllegalArgumentException("취소된 입고 기록은 수정할 수 없습니다.");
 		}
@@ -194,9 +168,7 @@ public class InboundRecord extends BaseEntity {
 	}
 
 	public void markPottingPlanned() {
-		if (inboundType != InboundType.FLASK_SEEDLING
-				|| status == InboundStatus.CANCELED
-				|| hasCreatedOrchidGroups()) {
+		if (inboundType != InboundType.FLASK_SEEDLING || status == InboundStatus.CANCELED || hasCreatedOrchidGroups()) {
 			throw new IllegalStateException("포트 작업을 계획할 수 없는 입고 기록입니다.");
 		}
 		this.status = InboundStatus.POTTING_IN_PROGRESS;
@@ -206,9 +178,7 @@ public class InboundRecord extends BaseEntity {
 		if (status != InboundStatus.POTTING_IN_PROGRESS) {
 			return;
 		}
-		this.status = pottingDueDate == null
-				? InboundStatus.TEMP_STORED
-				: InboundStatus.POTTING_PENDING;
+		this.status = pottingDueDate == null ? InboundStatus.TEMP_STORED : InboundStatus.POTTING_PENDING;
 	}
 
 	public void cancel(String memo) {
@@ -253,4 +223,5 @@ public class InboundRecord extends BaseEntity {
 		}
 		return resolved;
 	}
+
 }

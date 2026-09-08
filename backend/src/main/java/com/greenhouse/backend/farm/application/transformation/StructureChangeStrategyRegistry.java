@@ -36,4 +36,5 @@ public class StructureChangeStrategyRegistry {
 		}
 		return strategy;
 	}
+
 }

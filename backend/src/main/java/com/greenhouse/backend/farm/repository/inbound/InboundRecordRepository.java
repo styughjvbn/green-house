@@ -3,29 +3,24 @@ package com.greenhouse.backend.farm.repository.inbound;
 import com.greenhouse.backend.farm.domain.inbound.InboundRecord;
 import com.greenhouse.backend.farm.domain.inbound.InboundStatus;
 import com.greenhouse.backend.farm.domain.inbound.InboundType;
+import jakarta.persistence.LockModeType;
 import java.time.LocalDate;
-import java.util.Optional;
 import java.util.Collection;
 import java.util.List;
+import java.util.Optional;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.EntityGraph;
-import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.JpaRepository;
-import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.jpa.repository.Lock;
+import org.springframework.data.jpa.repository.Modifying;
+import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
-import jakarta.persistence.LockModeType;
 
 public interface InboundRecordRepository extends JpaRepository<InboundRecord, Long> {
 
-	@EntityGraph(attributePaths = {
-			"variety",
-			"bedZone",
-			"bedZone.physicalBed",
-			"bedZone.physicalBed.house",
-			"createdOrchidGroup"
-	})
+	@EntityGraph(attributePaths = { "variety", "bedZone", "bedZone.physicalBed", "bedZone.physicalBed.house",
+			"createdOrchidGroup" })
 	Optional<InboundRecord> findWithDetailsById(Long id);
 
 	@EntityGraph(attributePaths = { "variety", "createdOrchidGroup" })
@@ -43,8 +38,7 @@ public interface InboundRecordRepository extends JpaRepository<InboundRecord, Lo
 
 	@EntityGraph(attributePaths = { "variety", "createdOrchidGroup" })
 	List<InboundRecord> findByInboundTypeAndStatusInAndCreatedOrchidGroupIsNullOrderByPottingDueDateAscIdAsc(
-			InboundType inboundType,
-			Collection<InboundStatus> statuses);
+			InboundType inboundType, Collection<InboundStatus> statuses);
 
 	@Query("""
 			select record from InboundRecord record
@@ -59,20 +53,11 @@ public interface InboundRecordRepository extends JpaRepository<InboundRecord, Lo
 			  and (:varietyKeyword = '' or lower(variety.name) like lower(concat('%', :varietyKeyword, '%')))
 			order by record.inboundDate desc, record.id desc
 			""")
-	@EntityGraph(attributePaths = {
-			"variety",
-			"bedZone",
-			"bedZone.physicalBed",
-			"bedZone.physicalBed.house",
-			"createdOrchidGroup"
-	})
-	Page<InboundRecord> search(
-			@Param("from") LocalDate from,
-			@Param("to") LocalDate to,
-			@Param("inboundType") InboundType inboundType,
-			@Param("status") InboundStatus status,
-			@Param("varietyKeyword") String varietyKeyword,
-			Pageable pageable);
+	@EntityGraph(attributePaths = { "variety", "bedZone", "bedZone.physicalBed", "bedZone.physicalBed.house",
+			"createdOrchidGroup" })
+	Page<InboundRecord> search(@Param("from") LocalDate from, @Param("to") LocalDate to,
+			@Param("inboundType") InboundType inboundType, @Param("status") InboundStatus status,
+			@Param("varietyKeyword") String varietyKeyword, Pageable pageable);
 
 	boolean existsByVarietyId(Long varietyId);
 
@@ -100,4 +85,5 @@ public interface InboundRecordRepository extends JpaRepository<InboundRecord, Lo
 			group by record.variety.id
 			""")
 	List<Object[]> findLatestInboundDatesByVarietyIds(@Param("varietyIds") Collection<Long> varietyIds);
+
 }

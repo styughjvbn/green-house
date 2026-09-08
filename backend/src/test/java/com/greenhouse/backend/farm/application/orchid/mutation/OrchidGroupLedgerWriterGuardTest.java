@@ -41,23 +41,15 @@ class OrchidGroupLedgerWriterGuardTest {
 		OrchidGroupLedgerCoverageRepository repository = activeCoverageRepository("1.2.0");
 		ApplicationArguments arguments = mock(ApplicationArguments.class);
 
-		assertThatThrownBy(() -> new OrchidGroupLedgerWriterStartupGuard(
-				repository,
+		assertThatThrownBy(() -> new OrchidGroupLedgerWriterStartupGuard(repository,
 				new OrchidGroupLedgerWriterProperties(OrchidGroupLedgerWriterMode.LEGACY, "1.2.0"))
-				.run(arguments))
-				.isInstanceOf(IllegalStateException.class)
-				.hasMessageContaining("ENGINE");
-		assertThatThrownBy(() -> new OrchidGroupLedgerWriterStartupGuard(
-				repository,
+			.run(arguments)).isInstanceOf(IllegalStateException.class).hasMessageContaining("ENGINE");
+		assertThatThrownBy(() -> new OrchidGroupLedgerWriterStartupGuard(repository,
 				new OrchidGroupLedgerWriterProperties(OrchidGroupLedgerWriterMode.ENGINE, "1.1.9"))
-				.run(arguments))
-				.isInstanceOf(IllegalStateException.class)
-				.hasMessageContaining("최소 버전");
-		assertThatCode(() -> new OrchidGroupLedgerWriterStartupGuard(
-				repository,
+			.run(arguments)).isInstanceOf(IllegalStateException.class).hasMessageContaining("최소 버전");
+		assertThatCode(() -> new OrchidGroupLedgerWriterStartupGuard(repository,
 				new OrchidGroupLedgerWriterProperties(OrchidGroupLedgerWriterMode.ENGINE, "1.2.1"))
-				.run(arguments))
-					.doesNotThrowAnyException();
+			.run(arguments)).doesNotThrowAnyException();
 	}
 
 	@Test
@@ -65,35 +57,26 @@ class OrchidGroupLedgerWriterGuardTest {
 		OrchidGroupLedgerCoverageRepository repository = preparingCoverageRepository("1.2.0", true);
 		ApplicationArguments arguments = mock(ApplicationArguments.class);
 
-		assertThatThrownBy(() -> new OrchidGroupLedgerWriterStartupGuard(
-				repository,
+		assertThatThrownBy(() -> new OrchidGroupLedgerWriterStartupGuard(repository,
 				new OrchidGroupLedgerWriterProperties(OrchidGroupLedgerWriterMode.LEGACY, "1.2.0"))
-				.run(arguments))
-				.isInstanceOf(IllegalStateException.class)
-				.hasMessageContaining("PREPARING")
-				.hasMessageContaining("ENGINE");
-		assertThatThrownBy(() -> new OrchidGroupLedgerWriterStartupGuard(
-				repository,
+			.run(arguments)).isInstanceOf(IllegalStateException.class)
+			.hasMessageContaining("PREPARING")
+			.hasMessageContaining("ENGINE");
+		assertThatThrownBy(() -> new OrchidGroupLedgerWriterStartupGuard(repository,
 				new OrchidGroupLedgerWriterProperties(OrchidGroupLedgerWriterMode.ENGINE, "1.1.9"))
-				.run(arguments))
-				.isInstanceOf(IllegalStateException.class)
-				.hasMessageContaining("최소 버전");
-		assertThatCode(() -> new OrchidGroupLedgerWriterStartupGuard(
-				repository,
+			.run(arguments)).isInstanceOf(IllegalStateException.class).hasMessageContaining("최소 버전");
+		assertThatCode(() -> new OrchidGroupLedgerWriterStartupGuard(repository,
 				new OrchidGroupLedgerWriterProperties(OrchidGroupLedgerWriterMode.ENGINE, "1.2.1"))
-				.run(arguments))
-				.doesNotThrowAnyException();
+			.run(arguments)).doesNotThrowAnyException();
 	}
 
 	@Test
 	void allowsLegacyBeforeStateChainImportStarts() {
 		OrchidGroupLedgerCoverageRepository repository = preparingCoverageRepository("1.2.0", false);
 
-		assertThatCode(() -> new OrchidGroupLedgerWriterStartupGuard(
-				repository,
+		assertThatCode(() -> new OrchidGroupLedgerWriterStartupGuard(repository,
 				new OrchidGroupLedgerWriterProperties(OrchidGroupLedgerWriterMode.LEGACY, "1.2.0"))
-				.run(mock(ApplicationArguments.class)))
-				.doesNotThrowAnyException();
+			.run(mock(ApplicationArguments.class))).doesNotThrowAnyException();
 	}
 
 	@Test
@@ -101,10 +84,9 @@ class OrchidGroupLedgerWriterGuardTest {
 		OrchidGroupLedgerCoverage coverage = coverage("1.2.0");
 		coverage.startImport(Instant.parse("2026-08-20T00:00:00Z"));
 
-		assertThatThrownBy(() -> coverage.activate(
-				Instant.parse("2026-08-20T00:01:00Z"), 0, "a".repeat(64)))
-				.isInstanceOf(IllegalStateException.class)
-				.hasMessageContaining("state-chain manifest");
+		assertThatThrownBy(() -> coverage.activate(Instant.parse("2026-08-20T00:01:00Z"), 0, "a".repeat(64)))
+			.isInstanceOf(IllegalStateException.class)
+			.hasMessageContaining("state-chain manifest");
 	}
 
 	private OrchidGroupLedgerCoverageRepository activeCoverageRepository(String minimumWriterVersion) {
@@ -113,26 +95,23 @@ class OrchidGroupLedgerWriterGuardTest {
 		coverage.claimImport("b".repeat(64));
 		coverage.activate(Instant.parse("2026-08-20T00:01:00Z"), 0, "a".repeat(64));
 		OrchidGroupLedgerCoverageRepository repository = mock(OrchidGroupLedgerCoverageRepository.class);
-		when(repository.findFirstByStatus(OrchidGroupLedgerCoverageStatus.ACTIVE))
-					.thenReturn(Optional.of(coverage));
+		when(repository.findFirstByStatus(OrchidGroupLedgerCoverageStatus.ACTIVE)).thenReturn(Optional.of(coverage));
 		return repository;
 	}
 
-	private OrchidGroupLedgerCoverageRepository preparingCoverageRepository(
-			String minimumWriterVersion,
+	private OrchidGroupLedgerCoverageRepository preparingCoverageRepository(String minimumWriterVersion,
 			boolean importStarted) {
 		OrchidGroupLedgerCoverage coverage = coverage(minimumWriterVersion);
 		if (importStarted) {
 			coverage.startImport(Instant.parse("2026-08-20T00:00:00Z"));
 		}
 		OrchidGroupLedgerCoverageRepository repository = mock(OrchidGroupLedgerCoverageRepository.class);
-		when(repository.findFirstByStatus(OrchidGroupLedgerCoverageStatus.PREPARING))
-				.thenReturn(Optional.of(coverage));
+		when(repository.findFirstByStatus(OrchidGroupLedgerCoverageStatus.PREPARING)).thenReturn(Optional.of(coverage));
 		return repository;
 	}
 
 	private OrchidGroupLedgerCoverage coverage(String minimumWriterVersion) {
-		return new OrchidGroupLedgerCoverage(
-				UUID.randomUUID(), 1, 1, LocalDate.of(2026, 8, 20), minimumWriterVersion);
+		return new OrchidGroupLedgerCoverage(UUID.randomUUID(), 1, 1, LocalDate.of(2026, 8, 20), minimumWriterVersion);
 	}
+
 }

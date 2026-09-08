@@ -1,6 +1,4 @@
 package com.greenhouse.backend.sales.repository;
 
-public record SalesReservationReconciliationRow(
-		Long orchidGroupId,
-		Long allocatedQuantity) {
+public record SalesReservationReconciliationRow(Long orchidGroupId, Long allocatedQuantity) {
 }

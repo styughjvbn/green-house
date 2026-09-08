@@ -16,8 +16,11 @@ class WorkCompletedRecordBatchPostgresE2ETest extends WorkE2ETestBase {
 
 	private static final int TARGET_COUNT = 120;
 
-	@Autowired WorkTestDataSeeder seeder;
-	@Autowired EntityManagerFactory entityManagerFactory;
+	@Autowired
+	WorkTestDataSeeder seeder;
+
+	@Autowired
+	EntityManagerFactory entityManagerFactory;
 
 	@BeforeEach
 	void setUp() {
@@ -57,4 +60,5 @@ class WorkCompletedRecordBatchPostgresE2ETest extends WorkE2ETestBase {
 		}
 		throw new AssertionError("PESTICIDE 작업 유형을 찾을 수 없습니다.");
 	}
+
 }

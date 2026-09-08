@@ -9,7 +9,10 @@ import com.greenhouse.backend.farm.domain.variety.Variety;
 import jakarta.persistence.EntityManager;
 import java.math.BigDecimal;
 
-/** Small, caller-owned fixtures; no production seeds, fixed IDs, cleanup or committed writes. */
+/**
+ * Small, caller-owned fixtures; no production seeds, fixed IDs, cleanup or committed
+ * writes.
+ */
 public final class FarmTestFixtures {
 
 	private final EntityManager entityManager;
@@ -34,8 +37,8 @@ public final class FarmTestFixtures {
 	public OrchidGroup orchidGroup(BedZone zone, String varietyCode, int quantity) {
 		var variety = new Variety(varietyCode, "난", varietyCode, null, "3치", true, true, null, null);
 		entityManager.persist(variety);
-		var group = new OrchidGroup(zone, variety.getGenus(), variety.getName(), quantity, "3치", 1,
-				"정상", 1, BigDecimal.ZERO, BigDecimal.TEN);
+		var group = new OrchidGroup(zone, variety.getGenus(), variety.getName(), quantity, "3치", 1, "정상", 1,
+				BigDecimal.ZERO, BigDecimal.TEN);
 		group.assignVariety(variety);
 		entityManager.persist(group);
 		return group;
@@ -43,4 +46,5 @@ public final class FarmTestFixtures {
 
 	public record Layout(House house, PhysicalBed bed, BedZone left, BedZone right) {
 	}
+
 }

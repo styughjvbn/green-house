@@ -2,14 +2,14 @@ package com.greenhouse.backend.farm.repository.orchid;
 
 import com.greenhouse.backend.farm.domain.orchid.OrchidGroup;
 import com.greenhouse.backend.farm.domain.orchid.PotSizeCode;
+import jakarta.persistence.LockModeType;
 import java.util.List;
 import java.util.Optional;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Lock;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
-import org.springframework.data.jpa.repository.Lock;
-import jakarta.persistence.LockModeType;
 
 public interface OrchidGroupRepository extends JpaRepository<OrchidGroup, Long> {
 
@@ -28,23 +28,41 @@ public interface OrchidGroupRepository extends JpaRepository<OrchidGroup, Long> 
 	List<MapRow> findMapRows();
 
 	interface MapRow {
+
 		Long getOrchidGroupId();
+
 		Long getHouseId();
+
 		Long getPhysicalBedId();
+
 		Long getBedZoneId();
+
 		java.math.BigDecimal getStartPosition();
+
 		java.math.BigDecimal getEndPosition();
+
 		Long getVarietyId();
+
 		String getVarietyColor();
+
 		String getVarietyName();
+
 		Integer getQuantity();
+
 		String getStatus();
+
 		Integer getAgeYear();
+
 		String getPotSize();
+
 		Integer getSortOrder();
+
 		Long getInboundRecordId();
+
 		java.time.LocalDate getInboundDate();
+
 		java.time.LocalDateTime getCreatedAt();
+
 	}
 
 	@Query("""
@@ -61,9 +79,13 @@ public interface OrchidGroupRepository extends JpaRepository<OrchidGroup, Long> 
 			@Param("warningStatuses") java.util.Collection<String> warningStatuses);
 
 	interface VarietyInventory {
+
 		String getVarietyName();
+
 		long getSaleableQuantity();
+
 		long getWarningGroupCount();
+
 	}
 
 	@Query("select g.id from OrchidGroup g where g.id > :afterId order by g.id")
@@ -107,11 +129,8 @@ public interface OrchidGroupRepository extends JpaRepository<OrchidGroup, Long> 
 			    and g.quantity > 0
 			order by h.number asc, b.displayOrder asc, z.sortOrder asc, g.sortOrder asc
 			""")
-	List<OrchidGroup> search(
-			@Param("houseId") Long houseId,
-			@Param("keyword") String keyword,
-			@Param("physicalBedId") Long physicalBedId,
-			@Param("bedZoneId") Long bedZoneId,
+	List<OrchidGroup> search(@Param("houseId") Long houseId, @Param("keyword") String keyword,
+			@Param("physicalBedId") Long physicalBedId, @Param("bedZoneId") Long bedZoneId,
 			@Param("status") String status);
 
 	@Query("""
@@ -136,8 +155,7 @@ public interface OrchidGroupRepository extends JpaRepository<OrchidGroup, Long> 
 			join z.physicalBed b
 			where b.house.id = :houseId and g.status in :warningStatuses and g.quantity > 0
 			""")
-	long countWarningStatusByHouseId(
-			@Param("houseId") Long houseId,
+	long countWarningStatusByHouseId(@Param("houseId") Long houseId,
 			@Param("warningStatuses") java.util.Collection<String> warningStatuses);
 
 	@Query("""
@@ -197,9 +215,7 @@ public interface OrchidGroupRepository extends JpaRepository<OrchidGroup, Long> 
 			  and (g.quantity - g.reservedQuantity) > 0
 			order by h.number asc, b.displayOrder asc, z.sortOrder asc, g.sortOrder asc
 			""")
-	List<OrchidGroup> searchSellable(
-			@Param("keyword") String keyword,
-			@Param("varietyId") Long varietyId,
+	List<OrchidGroup> searchSellable(@Param("keyword") String keyword, @Param("varietyId") Long varietyId,
 			@Param("status") String status);
 
 	@Query("""
@@ -239,8 +255,7 @@ public interface OrchidGroupRepository extends JpaRepository<OrchidGroup, Long> 
 			  and g.status not in ('종료', '폐기', '판매 완료', '생성 취소')
 			order by b.house.number asc, b.displayOrder asc, z.sortOrder asc, g.sortOrder asc
 			""")
-	List<OrchidGroup> findActiveWorkTargets(
-			@Param("physicalBedId") Long physicalBedId,
+	List<OrchidGroup> findActiveWorkTargets(@Param("physicalBedId") Long physicalBedId,
 			@Param("bedZoneId") Long bedZoneId);
 
 	@Query("""
@@ -273,8 +288,7 @@ public interface OrchidGroupRepository extends JpaRepository<OrchidGroup, Long> 
 			where g.id in :orchidGroupIds
 			order by g.id asc
 			""")
-	List<OrchidGroupNameRow> findNameRowsByIdIn(
-			@Param("orchidGroupIds") java.util.Collection<Long> orchidGroupIds);
+	List<OrchidGroupNameRow> findNameRowsByIdIn(@Param("orchidGroupIds") java.util.Collection<Long> orchidGroupIds);
 
 	@Query("""
 			select g from OrchidGroup g
@@ -296,10 +310,8 @@ public interface OrchidGroupRepository extends JpaRepository<OrchidGroup, Long> 
 			order by v.name asc, g.ageYear asc, g.potSizeCode asc,
 			         h.number asc, b.displayOrder asc, z.sortOrder asc, g.sortOrder asc
 			""")
-	List<OrchidGroup> findDerivedGroupCandidates(
-			@Param("varietyId") Long varietyId,
-			@Param("potSizeCode") PotSizeCode potSizeCode,
-			@Param("houseId") Long houseId,
-			@Param("status") String status,
-			@Param("keyword") String keyword);
+	List<OrchidGroup> findDerivedGroupCandidates(@Param("varietyId") Long varietyId,
+			@Param("potSizeCode") PotSizeCode potSizeCode, @Param("houseId") Long houseId,
+			@Param("status") String status, @Param("keyword") String keyword);
+
 }

@@ -12,6 +12,7 @@ public class OrchidGroupWriteFenceRepository {
 	private static final String CONTEXT_SETTING = "greenhouse.orchid_group_mutation";
 
 	private final JdbcTemplate jdbcTemplate;
+
 	private volatile Boolean postgresqlDatabase;
 
 	public void authorizeMutation(Long mutationId) {
@@ -29,11 +30,7 @@ public class OrchidGroupWriteFenceRepository {
 
 	private void setTransactionContext(String context) {
 		if (isPostgresqlDatabase()) {
-			jdbcTemplate.queryForObject(
-					"SELECT set_config(?, ?, TRUE)",
-					String.class,
-					CONTEXT_SETTING,
-					context);
+			jdbcTemplate.queryForObject("SELECT set_config(?, ?, TRUE)", String.class, CONTEXT_SETTING, context);
 		}
 	}
 
@@ -42,9 +39,11 @@ public class OrchidGroupWriteFenceRepository {
 		if (cached != null) {
 			return cached;
 		}
-		Boolean detected = jdbcTemplate.execute((ConnectionCallback<Boolean>) connection ->
-				connection.getMetaData().getDatabaseProductName().startsWith("PostgreSQL"));
+		Boolean detected = jdbcTemplate.execute((ConnectionCallback<Boolean>) connection -> connection.getMetaData()
+			.getDatabaseProductName()
+			.startsWith("PostgreSQL"));
 		postgresqlDatabase = Boolean.TRUE.equals(detected);
 		return postgresqlDatabase;
 	}
+
 }

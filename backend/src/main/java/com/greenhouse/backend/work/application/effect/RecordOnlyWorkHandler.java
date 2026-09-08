@@ -23,4 +23,5 @@ public class RecordOnlyWorkHandler implements WorkEffectHandler {
 	public WorkExecutionResult execute(WorkEffectContext context, WorkEffectCommand command) {
 		return new WorkExecutionResult(CODE, command.resultDetails(), List.of());
 	}
+
 }

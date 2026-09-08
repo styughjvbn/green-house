@@ -10,10 +10,8 @@ import com.greenhouse.backend.partner.dto.BusinessPartnerOptionResponse;
 import com.greenhouse.backend.partner.dto.BusinessPartnerResponse;
 import com.greenhouse.backend.partner.dto.BusinessPartnerUpdateRequest;
 import com.greenhouse.backend.partner.repository.BusinessPartnerRepository;
-
-import lombok.RequiredArgsConstructor;
-
 import java.util.List;
+import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -21,43 +19,44 @@ import org.springframework.transaction.annotation.Transactional;
 @Transactional
 @RequiredArgsConstructor
 public class BusinessPartnerService {
+
 	private final BusinessPartnerRepository repository;
+
 	private final BusinessPartnerAuditSupport auditSupport;
 
 	@Transactional(readOnly = true)
 	public List<BusinessPartnerResponse> getPartners(String keyword, PartnerType partnerType) {
-		return repository.findActiveByName(keyword, partnerType, 500).stream()
-				.map(BusinessPartnerResponse::from).toList();
+		return repository.findActiveByName(keyword, partnerType, 500)
+			.stream()
+			.map(BusinessPartnerResponse::from)
+			.toList();
 	}
 
 	@Transactional(readOnly = true)
-	public PageResponse<BusinessPartnerResponse> getPartnerPage(
-			String keyword,
-			PartnerType partnerType,
-			Boolean active,
-			int page,
-			int size) {
-		return PageResponse.from(repository
-				.searchPage(keyword, partnerType, active, null, PageRequests.clamped(page, size))
+	public PageResponse<BusinessPartnerResponse> getPartnerPage(String keyword, PartnerType partnerType, Boolean active,
+			int page, int size) {
+		return PageResponse
+			.from(repository.searchPage(keyword, partnerType, active, null, PageRequests.clamped(page, size))
 				.map(BusinessPartnerResponse::from));
 	}
 
 	@Transactional(readOnly = true)
-	public PageResponse<BusinessPartnerOptionResponse> getOptions(
-			String keyword, Boolean auctionHouse, Boolean active, int page, int size) {
-		return PageResponse.from(repository.searchPage(keyword, null, active, auctionHouse, PageRequests.clamped(page, size))
+	public PageResponse<BusinessPartnerOptionResponse> getOptions(String keyword, Boolean auctionHouse, Boolean active,
+			int page, int size) {
+		return PageResponse
+			.from(repository.searchPage(keyword, null, active, auctionHouse, PageRequests.clamped(page, size))
 				.map(BusinessPartnerOptionResponse::from));
 	}
 
 	@Transactional(readOnly = true)
 	public BusinessPartnerOptionResponse getOption(Long partnerId) {
-		return repository.findById(partnerId).map(BusinessPartnerOptionResponse::from)
-				.orElseThrow(() -> new NotFoundException("거래처를 찾을 수 없습니다."));
+		return repository.findById(partnerId)
+			.map(BusinessPartnerOptionResponse::from)
+			.orElseThrow(() -> new NotFoundException("거래처를 찾을 수 없습니다."));
 	}
 
 	public BusinessPartnerResponse create(BusinessPartnerCreateRequest request) {
-		var partner = new BusinessPartner(
-				request.name().trim(), request.partnerType(), normalize(request.ownerName()),
+		var partner = new BusinessPartner(request.name().trim(), request.partnerType(), normalize(request.ownerName()),
 				normalize(request.phone()), normalize(request.address()), normalize(request.memo()));
 		var saved = repository.save(partner);
 		auditSupport.recordCreated(saved);
@@ -65,16 +64,10 @@ public class BusinessPartnerService {
 	}
 
 	public BusinessPartnerResponse update(Long partnerId, BusinessPartnerUpdateRequest request) {
-		var partner = repository.findById(partnerId)
-				.orElseThrow(() -> new NotFoundException("거래처를 찾을 수 없습니다."));
+		var partner = repository.findById(partnerId).orElseThrow(() -> new NotFoundException("거래처를 찾을 수 없습니다."));
 		var before = auditSupport.snapshot(partner);
-		partner.update(
-				request.name().trim(),
-				request.partnerType(),
-				normalize(request.ownerName()),
-				normalize(request.phone()),
-				normalize(request.address()),
-				normalize(request.memo()));
+		partner.update(request.name().trim(), request.partnerType(), normalize(request.ownerName()),
+				normalize(request.phone()), normalize(request.address()), normalize(request.memo()));
 		auditSupport.recordUpdated(partner, before);
 		return BusinessPartnerResponse.from(partner);
 	}
@@ -84,4 +77,5 @@ public class BusinessPartnerService {
 			return null;
 		return value.trim();
 	}
+
 }

@@ -32,17 +32,33 @@ import org.springframework.transaction.annotation.Transactional;
 @Transactional
 class MultiCreateWorkOperationIntegrationTests extends AbstractBackendIntegrationTest {
 
-	@Autowired private WorkOperationRepository workOperationRepository;
-	@Autowired private WorkOperationTargetRepository workOperationTargetRepository;
-	@Autowired private WorkTargetExecutionRepository workTargetExecutionRepository;
-	@Autowired private WorkAppliedEffectRepository workAppliedEffectRepository;
-	@Autowired private WorkEffectOrchidGroupRepository workEffectOrchidGroupRepository;
-	@Autowired private OrchidGroupCollectionRepository collectionRepository;
-	@Autowired private OrchidGroupCollectionMemberRepository memberRepository;
+	@Autowired
+	private WorkOperationRepository workOperationRepository;
+
+	@Autowired
+	private WorkOperationTargetRepository workOperationTargetRepository;
+
+	@Autowired
+	private WorkTargetExecutionRepository workTargetExecutionRepository;
+
+	@Autowired
+	private WorkAppliedEffectRepository workAppliedEffectRepository;
+
+	@Autowired
+	private WorkEffectOrchidGroupRepository workEffectOrchidGroupRepository;
+
+	@Autowired
+	private OrchidGroupCollectionRepository collectionRepository;
+
+	@Autowired
+	private OrchidGroupCollectionMemberRepository memberRepository;
 
 	private BedZone bedZone;
+
 	private Variety variety;
+
 	private OrchidGroupCollection collection;
+
 	private WorkType pesticideType;
 
 	@BeforeEach
@@ -61,11 +77,10 @@ class MultiCreateWorkOperationIntegrationTests extends AbstractBackendIntegratio
 		houseRepository.deleteAll();
 		workTypeRepository.deleteAll();
 
-		workTypeRepository.save(new WorkType(
-				WorkTypeDefinition.MULTI_CREATE.name(), "난 묶음 다중 생성", WorkTypeTemplate.MULTI_CREATE,
-				true, true, true, 1));
-		pesticideType = workTypeRepository.save(new WorkType(
-				"PESTICIDE", "농약", WorkTypeTemplate.PESTICIDE, true, false, true, 2));
+		workTypeRepository.save(new WorkType(WorkTypeDefinition.MULTI_CREATE.name(), "난 묶음 다중 생성",
+				WorkTypeTemplate.MULTI_CREATE, true, true, true, 1));
+		pesticideType = workTypeRepository
+			.save(new WorkType("PESTICIDE", "농약", WorkTypeTemplate.PESTICIDE, true, false, true, 2));
 		House house = new House(3, "3동");
 		PhysicalBed bed = new PhysicalBed(1, 1);
 		bed.updatePositionUnits(new BigDecimal("24"), "칸");
@@ -74,8 +89,8 @@ class MultiCreateWorkOperationIntegrationTests extends AbstractBackendIntegratio
 		house.addPhysicalBed(bed);
 		houseRepository.save(house);
 
-		variety = varietyRepository.save(new Variety(
-				"TEST-001", "팔레놉시스", "테스트 난", null, "3.5치", true, true, null, null));
+		variety = varietyRepository
+			.save(new Variety("TEST-001", "팔레놉시스", "테스트 난", null, "3.5치", true, true, null, null));
 		collection = collectionRepository.save(new OrchidGroupCollection("봄 출하", null, null, "테스터"));
 	}
 
@@ -83,22 +98,20 @@ class MultiCreateWorkOperationIntegrationTests extends AbstractBackendIntegratio
 	void createsMultipleGroupsOnceAndLinksTheCauseOperation() throws Exception {
 		String request = multiCreateRequest("multi-create-test-1");
 
-		mockMvc.perform(post("/api/work-operations/multi-create")
-				.contentType(MediaType.APPLICATION_JSON)
-				.content(request))
-				.andExpect(status().isCreated())
-				.andExpect(jsonPath("$.data.operation.status").value("COMPLETED"))
-				.andExpect(jsonPath("$.data.operation.sourceScopeType").value("NONE"))
-				.andExpect(jsonPath("$.data.createdOrchidGroups", hasSize(2)))
-				.andExpect(jsonPath("$.data.createdOrchidGroups[0].potSizeCode").value("POT_3_5"));
+		mockMvc
+			.perform(post("/api/work-operations/multi-create").contentType(MediaType.APPLICATION_JSON).content(request))
+			.andExpect(status().isCreated())
+			.andExpect(jsonPath("$.data.operation.status").value("COMPLETED"))
+			.andExpect(jsonPath("$.data.operation.sourceScopeType").value("NONE"))
+			.andExpect(jsonPath("$.data.createdOrchidGroups", hasSize(2)))
+			.andExpect(jsonPath("$.data.createdOrchidGroups[0].potSizeCode").value("POT_3_5"));
 
 		Long operationId = workOperationRepository.findByRequestKey("multi-create-test-1").orElseThrow().getId();
-		mockMvc.perform(post("/api/work-operations/multi-create")
-				.contentType(MediaType.APPLICATION_JSON)
-				.content(request))
-				.andExpect(status().isCreated())
-				.andExpect(jsonPath("$.data.operation.id").value(operationId))
-				.andExpect(jsonPath("$.data.createdOrchidGroups", hasSize(2)));
+		mockMvc
+			.perform(post("/api/work-operations/multi-create").contentType(MediaType.APPLICATION_JSON).content(request))
+			.andExpect(status().isCreated())
+			.andExpect(jsonPath("$.data.operation.id").value(operationId))
+			.andExpect(jsonPath("$.data.createdOrchidGroups", hasSize(2)));
 
 		org.assertj.core.api.Assertions.assertThat(orchidGroupRepository.count()).isEqualTo(2);
 		org.assertj.core.api.Assertions.assertThat(workAppliedEffectRepository.count()).isEqualTo(1);
@@ -106,61 +119,57 @@ class MultiCreateWorkOperationIntegrationTests extends AbstractBackendIntegratio
 		org.assertj.core.api.Assertions.assertThat(memberRepository.count()).isEqualTo(1);
 
 		mockMvc.perform(get("/api/work-operations/{id}/cancel-eligibility", operationId))
-				.andExpect(status().isOk())
-				.andExpect(jsonPath("$.data.cancelable").value(true))
-				.andExpect(jsonPath("$.data.blockers", hasSize(0)));
+			.andExpect(status().isOk())
+			.andExpect(jsonPath("$.data.cancelable").value(true))
+			.andExpect(jsonPath("$.data.blockers", hasSize(0)));
 
 		Long createdGroupId = orchidGroupRepository.findAll().getFirst().getId();
 		mockMvc.perform(get("/api/orchid-groups/{id}/work-history", createdGroupId))
-				.andExpect(status().isOk())
-				.andExpect(jsonPath("$.data", hasSize(1)))
-				.andExpect(jsonPath("$.data[0].sourceKind").value("WORK_OPERATION_EFFECT"))
-				.andExpect(jsonPath("$.data[0].workOperationId").value(operationId));
+			.andExpect(status().isOk())
+			.andExpect(jsonPath("$.data", hasSize(1)))
+			.andExpect(jsonPath("$.data[0].sourceKind").value("WORK_OPERATION_EFFECT"))
+			.andExpect(jsonPath("$.data[0].workOperationId").value(operationId));
 
-		mockMvc.perform(post("/api/work-operations")
-				.contentType(MediaType.APPLICATION_JSON)
-				.content("""
-						{
-						  "workTypeId": %d,
-						  "title": "생성 후 농약 작업",
-						  "plannedStartDate": "2026-07-16",
-						  "sourceScopeType": "MANUAL_SELECTION",
-						  "sourceOrchidGroupIds": [%d]
-						}
-						""".formatted(pesticideType.getId(), createdGroupId)))
-				.andExpect(status().isCreated());
+		mockMvc.perform(post("/api/work-operations").contentType(MediaType.APPLICATION_JSON).content("""
+				{
+				  "workTypeId": %d,
+				  "title": "생성 후 농약 작업",
+				  "plannedStartDate": "2026-07-16",
+				  "sourceScopeType": "MANUAL_SELECTION",
+				  "sourceOrchidGroupIds": [%d]
+				}
+				""".formatted(pesticideType.getId(), createdGroupId))).andExpect(status().isCreated());
 
 		mockMvc.perform(get("/api/work-operations/{id}/cancel-eligibility", operationId))
-				.andExpect(status().isOk())
-				.andExpect(jsonPath("$.data.cancelable").value(false))
-				.andExpect(jsonPath("$.data.blockers[0].code").value("WORK_OPERATION"));
+			.andExpect(status().isOk())
+			.andExpect(jsonPath("$.data.cancelable").value(false))
+			.andExpect(jsonPath("$.data.blockers[0].code").value("WORK_OPERATION"));
 	}
 
 	@Test
 	void cancelsUnconnectedCreatedGroupsWithoutDeletingAuditHistory() throws Exception {
-		mockMvc.perform(post("/api/work-operations/multi-create")
-				.contentType(MediaType.APPLICATION_JSON)
+		mockMvc
+			.perform(post("/api/work-operations/multi-create").contentType(MediaType.APPLICATION_JSON)
 				.content(multiCreateRequest("multi-create-cancel-1")))
-				.andExpect(status().isCreated());
+			.andExpect(status().isCreated());
 		Long operationId = workOperationRepository.findByRequestKey("multi-create-cancel-1").orElseThrow().getId();
 
 		mockMvc.perform(post("/api/work-operations/{id}/cancel-created-orchid-groups", operationId))
-				.andExpect(status().isOk())
-				.andExpect(jsonPath("$.data.operation.status").value("CANCELED"))
-				.andExpect(jsonPath("$.data.createdOrchidGroups", hasSize(2)))
-				.andExpect(jsonPath("$.data.createdOrchidGroups[0].quantity").value(0))
-				.andExpect(jsonPath("$.data.createdOrchidGroups[0].status").value("생성 취소"));
+			.andExpect(status().isOk())
+			.andExpect(jsonPath("$.data.operation.status").value("CANCELED"))
+			.andExpect(jsonPath("$.data.createdOrchidGroups", hasSize(2)))
+			.andExpect(jsonPath("$.data.createdOrchidGroups[0].quantity").value(0))
+			.andExpect(jsonPath("$.data.createdOrchidGroups[0].status").value("생성 취소"));
 		mockMvc.perform(post("/api/work-operations/{id}/cancel-created-orchid-groups", operationId))
-				.andExpect(status().isOk())
-				.andExpect(jsonPath("$.data.operation.status").value("CANCELED"));
+			.andExpect(status().isOk())
+			.andExpect(jsonPath("$.data.operation.status").value("CANCELED"));
 
 		org.assertj.core.api.Assertions.assertThat(orchidGroupRepository.count()).isEqualTo(2);
-		org.assertj.core.api.Assertions.assertThat(
-				memberRepository.findByOrchidGroupIdInAndRemovedAtIsNull(
-						orchidGroupRepository.findAll().stream().map(group -> group.getId()).toList()))
-				.isEmpty();
+		org.assertj.core.api.Assertions.assertThat(memberRepository.findByOrchidGroupIdInAndRemovedAtIsNull(
+				orchidGroupRepository.findAll().stream().map(group -> group.getId()).toList()))
+			.isEmpty();
 		org.assertj.core.api.Assertions.assertThat(workAppliedEffectRepository.findAll().getFirst().getCanceledAt())
-				.isNotNull();
+			.isNotNull();
 	}
 
 	private String multiCreateRequest(String idempotencyKey) {
@@ -188,7 +197,8 @@ class MultiCreateWorkOperationIntegrationTests extends AbstractBackendIntegratio
 				    }
 				  ]
 				}
-				""".formatted(
-				idempotencyKey, bedZone.getId(), variety.getId(), collection.getId(), bedZone.getId(), variety.getId());
+				""".formatted(idempotencyKey, bedZone.getId(), variety.getId(), collection.getId(), bedZone.getId(),
+				variety.getId());
 	}
+
 }

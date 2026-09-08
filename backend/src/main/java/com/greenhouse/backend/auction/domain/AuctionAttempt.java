@@ -10,42 +10,49 @@ import jakarta.persistence.FetchType;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
-import jakarta.persistence.SequenceGenerator;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.OneToMany;
+import jakarta.persistence.SequenceGenerator;
 import jakarta.persistence.Table;
-import lombok.Getter;
-import lombok.NoArgsConstructor;
-import lombok.AccessLevel;
-
 import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
+import lombok.AccessLevel;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
 
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 @Entity
 @Table(name = "auction_attempts")
 public class AuctionAttempt extends BaseEntity {
+
 	@Id
 	@GeneratedValue(strategy = GenerationType.SEQUENCE, generator = "auction_attempts_id_seq")
 	@SequenceGenerator(name = "auction_attempts_id_seq", sequenceName = "auction_attempts_id_seq", allocationSize = 50)
 	private Long id;
+
 	@ManyToOne(fetch = FetchType.LAZY, optional = false)
 	@JoinColumn(name = "shipment_lot_id", nullable = false)
 	private AuctionShipmentLot shipmentLot;
+
 	@Column(name = "auction_date", nullable = false)
 	private LocalDate auctionDate;
+
 	@Column(name = "attempt_no", nullable = false)
 	private Integer attemptNo;
+
 	@Enumerated(EnumType.STRING)
 	@Column(name = "attempt_status", nullable = false)
 	private AuctionAttemptStatus attemptStatus;
+
 	@Column(name = "failed_reason")
 	private String failedReason;
+
 	@Column(columnDefinition = "text")
 	private String memo;
+
 	@OneToMany(mappedBy = "auctionAttempt", cascade = CascadeType.ALL, orphanRemoval = true)
 	private List<AuctionResultLine> resultLines = new ArrayList<>();
 
@@ -74,7 +81,7 @@ public class AuctionAttempt extends BaseEntity {
 		boolean hasSold = resultLines.stream().anyMatch(line -> line.getAmount() > 0);
 		boolean hasFailed = resultLines.stream().anyMatch(line -> line.getAmount() == 0);
 		boolean hasReturn = resultLines.stream()
-				.anyMatch(line -> line.getInspectionStatus() == AuctionInspectionStatus.RETURN_INFERRED);
+			.anyMatch(line -> line.getInspectionStatus() == AuctionInspectionStatus.RETURN_INFERRED);
 		if (hasReturn)
 			attemptStatus = AuctionAttemptStatus.RETURN_INFERRED;
 		else if (hasSold && hasFailed)
@@ -84,4 +91,5 @@ public class AuctionAttempt extends BaseEntity {
 		else
 			attemptStatus = AuctionAttemptStatus.FAILED;
 	}
+
 }

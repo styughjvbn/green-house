@@ -9,11 +9,14 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
-/** Normalizes and validates a complete replacement before any existing capacity is removed. */
+/**
+ * Normalizes and validates a complete replacement before any existing capacity is
+ * removed.
+ */
 public final class BedPlacementProfilePolicy {
 
-	private static final Set<String> FIXED_TYPES = Set.of(
-			"TRAY_12", "TRAY_15", "TRAY_20", "TRAY_24", "SINGLE_POT", "HANGING");
+	private static final Set<String> FIXED_TYPES = Set.of("TRAY_12", "TRAY_15", "TRAY_20", "TRAY_24", "SINGLE_POT",
+			"HANGING");
 
 	private BedPlacementProfilePolicy() {
 	}
@@ -21,17 +24,19 @@ public final class BedPlacementProfilePolicy {
 	public static List<BedZoneCapacity> createCapacities(List<CapacityRule> rules) {
 		var normalized = rules.stream().map(CapacityRule::normalized).toList();
 		validate(normalized);
-		return normalized.stream().map(rule -> new BedZoneCapacity(
-				rule.placementType(), rule.potSize(), rule.capacityMode(),
-				rule.unitSpan().setScale(2, RoundingMode.HALF_UP),
-				rule.capacityValue(), rule.allowed(), rule.memo())).toList();
+		return normalized.stream()
+			.map(rule -> new BedZoneCapacity(rule.placementType(), rule.potSize(), rule.capacityMode(),
+					rule.unitSpan().setScale(2, RoundingMode.HALF_UP), rule.capacityValue(), rule.allowed(),
+					rule.memo()))
+			.toList();
 	}
 
 	private static void validate(List<CapacityRule> rules) {
 		Map<CapacityKey, Integer> previousByKey = new HashMap<>();
 		Set<ModeKey> seen = new HashSet<>();
 		for (var rule : rules.stream()
-				.sorted(Comparator.comparingInt(value -> value.capacityMode().strength())).toList()) {
+			.sorted(Comparator.comparingInt(value -> value.capacityMode().strength()))
+			.toList()) {
 			var key = new CapacityKey(rule.placementType(), rule.potSize());
 			if (!seen.add(new ModeKey(key, rule.capacityMode()))) {
 				throw new IllegalArgumentException("같은 수용 규칙이 중복되었습니다.");
@@ -67,18 +72,12 @@ public final class BedPlacementProfilePolicy {
 		return trimmed.isEmpty() ? null : trimmed;
 	}
 
-	public record CapacityRule(
-			String placementType,
-			String potSize,
-			PlacementCapacityMode capacityMode,
-			BigDecimal unitSpan,
-			Integer capacityValue,
-			Boolean allowed,
-			String memo) {
+	public record CapacityRule(String placementType, String potSize, PlacementCapacityMode capacityMode,
+			BigDecimal unitSpan, Integer capacityValue, Boolean allowed, String memo) {
 
 		private CapacityRule normalized() {
-			return new CapacityRule(normalizePlacementType(placementType), normalize(potSize),
-					capacityMode, unitSpan, capacityValue, allowed, normalize(memo));
+			return new CapacityRule(normalizePlacementType(placementType), normalize(potSize), capacityMode, unitSpan,
+					capacityValue, allowed, normalize(memo));
 		}
 	}
 
@@ -87,4 +86,5 @@ public final class BedPlacementProfilePolicy {
 
 	private record ModeKey(CapacityKey capacity, PlacementCapacityMode mode) {
 	}
+
 }

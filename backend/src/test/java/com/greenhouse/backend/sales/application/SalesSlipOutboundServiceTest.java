@@ -51,8 +51,7 @@ class SalesSlipOutboundServiceTest {
 		first.addAllocation(allocation);
 		when(salesSlip.getItems()).thenReturn(List.of(first, second));
 		var allocations = SalesSlipAllocationBatch.from(salesSlip);
-		var drafts = List.of(new LotDraft(9L, "팔레놉시스", "호접란", "특품", 12),
-				new LotDraft(3L, "호접란", "호접란", null, 3));
+		var drafts = List.of(new LotDraft(9L, "팔레놉시스", "호접란", "특품", 12), new LotDraft(3L, "호접란", "호접란", null, 3));
 		when(creator.create(date, 4L, drafts)).thenReturn(new CreatedShipment(5L, Map.of(3L, 300L, 9L, 900L)));
 		Clock clock = Clock.fixed(Instant.parse("2026-08-12T01:02:03Z"), ZoneOffset.UTC);
 
@@ -60,14 +59,15 @@ class SalesSlipOutboundServiceTest {
 
 		InOrder order = inOrder(reader, inventoryService, allocation, creator, salesSlip);
 		order.verify(reader).lockStates(List.of(7L));
-		order.verify(allocation).captureSnapshot(argThat(snapshot ->
-				snapshot.getSnapshotType() == SalesOrchidSnapshotType.OUTBOUND
-						&& snapshot.getCapturedAt().equals(LocalDateTime.of(2026, 8, 12, 1, 2, 3))
-						&& snapshot.getOrchidGroupId().equals(7L)));
+		order.verify(allocation)
+			.captureSnapshot(argThat(snapshot -> snapshot.getSnapshotType() == SalesOrchidSnapshotType.OUTBOUND
+					&& snapshot.getCapturedAt().equals(LocalDateTime.of(2026, 8, 12, 1, 2, 3))
+					&& snapshot.getOrchidGroupId().equals(7L)));
 		order.verify(creator).create(date, 4L, drafts);
 		order.verify(salesSlip).assignAuctionShipment(5L);
 		order.verify(inventoryService).outbound(allocations);
 		assertThat(first.getAuctionShipmentLotId()).isEqualTo(900L);
 		assertThat(second.getAuctionShipmentLotId()).isEqualTo(300L);
 	}
+
 }

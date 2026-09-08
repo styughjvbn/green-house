@@ -5,10 +5,8 @@ import com.greenhouse.backend.settlement.domain.PartnerSettlementSettings;
 import com.greenhouse.backend.settlement.dto.PartnerSettlementSettingsRequest;
 import com.greenhouse.backend.settlement.dto.PartnerSettlementSettingsResponse;
 import com.greenhouse.backend.settlement.repository.PartnerSettlementSettingsRepository;
-
-import lombok.RequiredArgsConstructor;
-
 import java.util.List;
+import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -16,8 +14,11 @@ import org.springframework.transaction.annotation.Transactional;
 @Transactional
 @RequiredArgsConstructor
 public class PartnerSettlementSettingsService {
+
 	private final PartnerSettlementSettingsRepository settingsRepository;
+
 	private final BusinessPartnerLock partnerLock;
+
 	private final SettlementAuditSupport auditSupport;
 
 	public PartnerSettlementSettingsResponse getOrCreate(Long partnerId) {
@@ -27,11 +28,14 @@ public class PartnerSettlementSettingsService {
 	public PartnerSettlementSettingsResponse update(Long partnerId, PartnerSettlementSettingsRequest request) {
 		var settings = findOrCreate(partnerId);
 		var before = auditSupport.settingsSnapshot(settings);
-		settings.update(
-				request.settlementUnit(), request.paymentDelayDays(), request.paymentDayMode(),
+		settings.update(request.settlementUnit(), request.paymentDelayDays(), request.paymentDayMode(),
 				request.autoMatchEnabled(), request.autoSettleEnabled(), request.amountTolerance(),
-				request.depositorAliases().stream().map(String::trim).filter(value -> !value.isEmpty()).distinct()
-						.toList(),
+				request.depositorAliases()
+					.stream()
+					.map(String::trim)
+					.filter(value -> !value.isEmpty())
+					.distinct()
+					.toList(),
 				request.allowPrepayment(), request.creditAutoApplyEnabled(), request.ruleJson(),
 				normalize(request.memo()));
 		var saved = settingsRepository.save(settings);
@@ -42,11 +46,12 @@ public class PartnerSettlementSettingsService {
 	private PartnerSettlementSettings findOrCreate(Long partnerId) {
 		var partner = partnerLock.lockAll(List.of(partnerId)).getFirst();
 		return settingsRepository.findByPartnerId(partnerId)
-				.orElseGet(() -> settingsRepository.save(
-						new PartnerSettlementSettings(partner.id(), partner.partnerType())));
+			.orElseGet(
+					() -> settingsRepository.save(new PartnerSettlementSettings(partner.id(), partner.partnerType())));
 	}
 
 	private String normalize(String value) {
 		return value == null || value.isBlank() ? null : value.trim();
 	}
+
 }

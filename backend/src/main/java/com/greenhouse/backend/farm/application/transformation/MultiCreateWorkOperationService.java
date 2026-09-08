@@ -24,30 +24,33 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 /**
- * ORCHID-CUTOVER: LEGACY_RETIRE — Engine 경로와 전환 후 제거할 직접 생성 취소 분기를 함께 가진다.
- * Removal gate: 운영 ACTIVE 안정화 및 writer inventory 승인.
+ * ORCHID-CUTOVER: LEGACY_RETIRE — Engine 경로와 전환 후 제거할 직접 생성 취소 분기를 함께 가진다. Removal gate:
+ * 운영 ACTIVE 안정화 및 writer inventory 승인.
  */
 @Service
 @Transactional
 public class MultiCreateWorkOperationService {
 
 	private final ImmediateWorkExecutionService immediateWorkExecutionService;
+
 	private final WorkOperationQueryService queryService;
+
 	private final OrchidGroupRepository orchidGroupRepository;
+
 	private final List<OrchidGroupUsageInspector> usageInspectors;
+
 	private final OrchidGroupCollectionMemberRepository memberRepository;
+
 	private final OrchidGroupMutationEngine mutationEngine;
+
 	private final OrchidGroupMutationRoutingPolicy mutationRoutingPolicy;
+
 	private final Clock clock;
 
-	public MultiCreateWorkOperationService(
-			ImmediateWorkExecutionService immediateWorkExecutionService,
-			WorkOperationQueryService queryService,
-			OrchidGroupRepository orchidGroupRepository,
-			List<OrchidGroupUsageInspector> usageInspectors,
-			OrchidGroupCollectionMemberRepository memberRepository,
-			OrchidGroupMutationEngine mutationEngine,
-			OrchidGroupMutationRoutingPolicy mutationRoutingPolicy,
+	public MultiCreateWorkOperationService(ImmediateWorkExecutionService immediateWorkExecutionService,
+			WorkOperationQueryService queryService, OrchidGroupRepository orchidGroupRepository,
+			List<OrchidGroupUsageInspector> usageInspectors, OrchidGroupCollectionMemberRepository memberRepository,
+			OrchidGroupMutationEngine mutationEngine, OrchidGroupMutationRoutingPolicy mutationRoutingPolicy,
 			Clock clock) {
 		this.immediateWorkExecutionService = immediateWorkExecutionService;
 		this.queryService = queryService;
@@ -60,10 +63,10 @@ public class MultiCreateWorkOperationService {
 	}
 
 	public MultiCreateWorkOperationResponse create(MultiCreateWorkOperationRequest request) {
-		var operation = immediateWorkExecutionService.execute(
-				normalizeRequired(request.idempotencyKey()), WorkTypeDefinition.MULTI_CREATE.name(),
-				normalizeRequired(request.title()), request.workDate(), normalize(request.worker()),
-				normalize(request.memo()), Map.of("rowCount", request.rows().size()), request);
+		var operation = immediateWorkExecutionService.execute(normalizeRequired(request.idempotencyKey()),
+				WorkTypeDefinition.MULTI_CREATE.name(), normalizeRequired(request.title()), request.workDate(),
+				normalize(request.worker()), normalize(request.memo()), Map.of("rowCount", request.rows().size()),
+				request);
 		return response(operation.id());
 	}
 
@@ -75,19 +78,18 @@ public class MultiCreateWorkOperationService {
 	@Transactional(readOnly = true)
 	public MultiCreateCancellationEligibilityResponse getCancellationEligibility(Long operationId) {
 		if (queryService.get(operationId).status() == WorkOperationStatus.CANCELED) {
-			return new MultiCreateCancellationEligibilityResponse(
-					operationId, false, immediateWorkExecutionService.getResultOrchidGroupIds(operationId),
-					List.of(new MultiCreateCancellationEligibilityResponse.Blocker(
-							"ALREADY_CANCELED", "이미 취소된 다중 생성 작업입니다.", 1)));
+			return new MultiCreateCancellationEligibilityResponse(operationId, false,
+					immediateWorkExecutionService.getResultOrchidGroupIds(operationId),
+					List.of(new MultiCreateCancellationEligibilityResponse.Blocker("ALREADY_CANCELED",
+							"이미 취소된 다중 생성 작업입니다.", 1)));
 		}
 		List<Long> groupIds = immediateWorkExecutionService.getResultOrchidGroupIds(operationId);
 		var idSet = new LinkedHashSet<>(groupIds);
 		var blockers = usageInspectors.stream()
-				.flatMap(inspector -> inspector.inspect(idSet, operationId).stream())
-				.map(MultiCreateCancellationEligibilityResponse.Blocker::from)
-				.toList();
-		return new MultiCreateCancellationEligibilityResponse(
-				operationId, blockers.isEmpty(), groupIds, blockers);
+			.flatMap(inspector -> inspector.inspect(idSet, operationId).stream())
+			.map(MultiCreateCancellationEligibilityResponse.Blocker::from)
+			.toList();
+		return new MultiCreateCancellationEligibilityResponse(operationId, blockers.isEmpty(), groupIds, blockers);
 	}
 
 	public MultiCreateWorkOperationResponse cancel(Long operationId) {
@@ -101,22 +103,19 @@ public class MultiCreateWorkOperationService {
 		}
 		var idSet = new LinkedHashSet<>(groupIds);
 		var blockers = usageInspectors.stream()
-				.flatMap(inspector -> inspector.inspect(idSet, operationId).stream())
-				.toList();
+			.flatMap(inspector -> inspector.inspect(idSet, operationId).stream())
+			.toList();
 		if (!blockers.isEmpty()) {
 			throw new IllegalArgumentException(blockers.getFirst().message());
 		}
 		memberRepository.findByOrchidGroupIdInAndRemovedAtIsNull(groupIds)
-				.forEach(member -> member.remove(TimeConfig.utcNow(clock)));
+			.forEach(member -> member.remove(TimeConfig.utcNow(clock)));
 		if (mutationRoutingPolicy.routesToEngine()) {
-			groups.forEach(group -> mutationEngine.cancelCreation(
-					new CancelOrchidGroupCreationMutationCommand(
-							OrchidGroupMutationSources.work(
-									operationId, "CANCEL_RESULT:" + group.getId()),
-							group.getId(),
-							TimeConfig.farmToday(clock),
-							"다중 생성 작업 취소")));
-		} else {
+			groups.forEach(group -> mutationEngine.cancelCreation(new CancelOrchidGroupCreationMutationCommand(
+					OrchidGroupMutationSources.work(operationId, "CANCEL_RESULT:" + group.getId()), group.getId(),
+					TimeConfig.farmToday(clock), "다중 생성 작업 취소")));
+		}
+		else {
 			groups.forEach(group -> group.cancelCreation());
 		}
 		immediateWorkExecutionService.cancelMultiCreate(operationId);
@@ -127,22 +126,28 @@ public class MultiCreateWorkOperationService {
 		var businessDate = TimeConfig.farmToday(clock);
 		var operation = queryService.get(operationId);
 		var ids = immediateWorkExecutionService.getResultOrchidGroupIds(operationId);
-		var groupsById = orchidGroupRepository.findDetailsByIds(ids).stream()
-				.collect(java.util.stream.Collectors.toMap(group -> group.getId(), group -> group));
-		var groups = ids.stream().filter(groupsById::containsKey)
-				.map(id -> OrchidGroupResponse.from(groupsById.get(id), businessDate)).toList();
+		var groupsById = orchidGroupRepository.findDetailsByIds(ids)
+			.stream()
+			.collect(java.util.stream.Collectors.toMap(group -> group.getId(), group -> group));
+		var groups = ids.stream()
+			.filter(groupsById::containsKey)
+			.map(id -> OrchidGroupResponse.from(groupsById.get(id), businessDate))
+			.toList();
 		return new MultiCreateWorkOperationResponse(operation, groups);
 	}
 
 	private String normalize(String value) {
-		if (value == null) return null;
+		if (value == null)
+			return null;
 		String normalized = value.trim();
 		return normalized.isEmpty() ? null : normalized;
 	}
 
 	private String normalizeRequired(String value) {
 		String normalized = normalize(value);
-		if (normalized == null) throw new IllegalArgumentException("필수 문자열 값은 비워둘 수 없습니다.");
+		if (normalized == null)
+			throw new IllegalArgumentException("필수 문자열 값은 비워둘 수 없습니다.");
 		return normalized;
 	}
+
 }

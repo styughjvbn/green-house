@@ -1,8 +1,6 @@
 package com.greenhouse.backend.farm.application.orchid.mutation;
 
-public record OrchidGroupQuantityMutationItem(
-		Long orchidGroupId,
-		Integer quantity) {
+public record OrchidGroupQuantityMutationItem(Long orchidGroupId, Integer quantity) {
 
 	public OrchidGroupQuantityMutationItem {
 		if (orchidGroupId == null) {

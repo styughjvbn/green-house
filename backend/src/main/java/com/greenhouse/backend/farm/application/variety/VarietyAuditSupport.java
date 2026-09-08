@@ -13,6 +13,7 @@ import org.springframework.stereotype.Component;
 @Component
 @RequiredArgsConstructor
 public class VarietyAuditSupport {
+
 	private final AuditEventWriter auditWriter;
 
 	public Map<String, Object> snapshot(Variety variety) {
@@ -31,7 +32,9 @@ public class VarietyAuditSupport {
 	}
 
 	public Long record(AuditAction action, Variety variety, Map<String, Object> before, Map<String, Object> after) {
-		return auditWriter.record(action, AuditSource.VARIETY_MANAGEMENT, new AuditEvent.Target("VARIETY", variety.getId(),
-				null, null, null, variety.getId()), before, after, Map.of());
+		return auditWriter.record(action, AuditSource.VARIETY_MANAGEMENT,
+				new AuditEvent.Target("VARIETY", variety.getId(), null, null, null, variety.getId()), before, after,
+				Map.of());
 	}
+
 }

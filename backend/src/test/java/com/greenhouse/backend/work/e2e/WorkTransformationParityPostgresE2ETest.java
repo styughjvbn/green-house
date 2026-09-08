@@ -23,12 +23,24 @@ import org.springframework.test.context.bean.override.mockito.MockitoSpyBean;
 @Tag("work-e2e")
 class WorkTransformationParityPostgresE2ETest extends WorkE2ETestBase {
 
-	@Autowired private WorkTestDataSeeder seeder;
-	@Autowired private JdbcTemplate jdbcTemplate;
-	@Autowired private OrchidGroupRepository groupRepository;
-	@Autowired private WorkAppliedEffectRepository effectRepository;
-	@Autowired private OrchidGroupStateChainMigrationService migrationService;
-	@MockitoSpyBean private OrchidGroupMutationRoutingPolicy routingPolicy;
+	@Autowired
+	private WorkTestDataSeeder seeder;
+
+	@Autowired
+	private JdbcTemplate jdbcTemplate;
+
+	@Autowired
+	private OrchidGroupRepository groupRepository;
+
+	@Autowired
+	private WorkAppliedEffectRepository effectRepository;
+
+	@Autowired
+	private OrchidGroupStateChainMigrationService migrationService;
+
+	@MockitoSpyBean
+	private OrchidGroupMutationRoutingPolicy routingPolicy;
+
 	private WorkTestDataSeeder.ContractScenario scenario;
 
 	@BeforeEach
@@ -36,13 +48,13 @@ class WorkTransformationParityPostgresE2ETest extends WorkE2ETestBase {
 		seeder.reset();
 		scenario = seeder.seedContractScenario();
 		jdbcTemplate.update("UPDATE orchid_groups SET status = '관리' WHERE id = ?", scenario.orchidGroupId());
-		OrchidGroupStateChainTestSupport.importCurrentGroups(
-				migrationService, groupRepository, UUID.randomUUID(), LocalDate.of(2026, 8, 20), "1.0.0");
+		OrchidGroupStateChainTestSupport.importCurrentGroups(migrationService, groupRepository, UUID.randomUUID(),
+				LocalDate.of(2026, 8, 20), "1.0.0");
 	}
 
 	@ParameterizedTest
-	@CsvSource({"REPOT,false", "REPOT,true", "DIVIDE,false", "DIVIDE,true",
-			"MERGE,false", "MERGE,true", "MOVEMENT,false", "MOVEMENT,true"})
+	@CsvSource({ "REPOT,false", "REPOT,true", "DIVIDE,false", "DIVIDE,true", "MERGE,false", "MERGE,true",
+			"MOVEMENT,false", "MOVEMENT,true" })
 	void preservesPreChangeAttributesResultOrderAndLineage(String code, boolean engine) throws Exception {
 		when(routingPolicy.routesToEngine()).thenReturn(engine);
 		long operationId = planAndStart(code);
@@ -62,7 +74,7 @@ class WorkTransformationParityPostgresE2ETest extends WorkE2ETestBase {
 		assertThat(details.path("inputQuantity").asInt()).isEqualTo(100);
 		assertThat(details.path("remainingQuantity").asInt()).isZero();
 		assertThat(details.path("sourceInputQuantities").path(scenario.orchidGroupId().toString()).asInt())
-				.isEqualTo(100);
+			.isEqualTo(100);
 		assertThat(details.path("lossQuantity").asInt()).isEqualTo(code.equals("DIVIDE") ? 0 : 2);
 		assertThat(details.path("results")).hasSize(2);
 		List<Long> resultIds = List.of(details.path("results").get(0).path("orchidGroupId").asLong(),
@@ -74,20 +86,21 @@ class WorkTransformationParityPostgresE2ETest extends WorkE2ETestBase {
 			assertThat(group.getPotSizeCode().name()).isEqualTo(code.equals("MOVEMENT") ? "POT_3_5" : "POT_4");
 			assertThat(group.getAgeYear()).isEqualTo(code.equals("MOVEMENT") ? 2 : 3);
 			assertThat(details.path("results").get(index).path("purpose").asText())
-					.isEqualTo(index == 0 || code.equals("MOVEMENT") ? "NORMAL" : "HELD");
+				.isEqualTo(index == 0 || code.equals("MOVEMENT") ? "NORMAL" : "HELD");
 			assertThat(details.path("resultOrchidGroupIds").get(index).asLong()).isEqualTo(resultIds.get(index));
 		}
-		assertThat(jdbcTemplate.queryForObject(
-				"SELECT COUNT(*) FROM orchid_group_lineage WHERE work_operation_id = ?",
-				Long.class, operationId)).isEqualTo(2L);
+		assertThat(jdbcTemplate.queryForObject("SELECT COUNT(*) FROM orchid_group_lineage WHERE work_operation_id = ?",
+				Long.class, operationId))
+			.isEqualTo(2L);
 		assertThat(jdbcTemplate.queryForObject(
 				"SELECT COUNT(*) FROM orchid_group_lineage WHERE work_operation_id = ? AND mutation_id IS NOT NULL",
-				Long.class, operationId)).isEqualTo(engine ? 2L : 0L);
+				Long.class, operationId))
+			.isEqualTo(engine ? 2L : 0L);
 		assertThat(effect.getMutationId() != null).isEqualTo(engine);
 	}
 
 	@ParameterizedTest
-	@ValueSource(booleans = {false, true})
+	@ValueSource(booleans = { false, true })
 	void invalidSecondPlacementRollsBackSourcesResultsLineageAndEffects(boolean engine) throws Exception {
 		when(routingPolicy.routesToEngine()).thenReturn(engine);
 		long operationId = planAndStart("REPOT");
@@ -103,7 +116,7 @@ class WorkTransformationParityPostgresE2ETest extends WorkE2ETestBase {
 		assertThat(effectRepository.findByWorkOperationIdOrderByIdAsc(operationId)).isEmpty();
 		assertThat(jdbcTemplate.queryForObject("SELECT COUNT(*) FROM orchid_group_lineage", Long.class)).isZero();
 		assertThat(jdbcTemplate.queryForObject("SELECT COUNT(*) FROM orchid_group_mutations", Long.class))
-				.isEqualTo(mutationCount);
+			.isEqualTo(mutationCount);
 	}
 
 	private long planAndStart(String code) throws Exception {
@@ -130,4 +143,5 @@ class WorkTransformationParityPostgresE2ETest extends WorkE2ETestBase {
 				""".formatted(scenario.orchidGroupId(), scenario.bedZoneId(), scenario.orchidGroupId(),
 				scenario.bedZoneId(), secondQuantity, scenario.orchidGroupId(), secondStart);
 	}
+
 }

@@ -4,8 +4,8 @@ import com.greenhouse.backend.farm.domain.orchid.mutation.OrchidGroupMutationRel
 import java.util.List;
 import org.springframework.data.jpa.repository.JpaRepository;
 
-public interface OrchidGroupMutationRelationRepository
-		extends JpaRepository<OrchidGroupMutationRelation, Long> {
+public interface OrchidGroupMutationRelationRepository extends JpaRepository<OrchidGroupMutationRelation, Long> {
 
 	List<OrchidGroupMutationRelation> findByMutationIdOrderByIdAsc(Long mutationId);
+
 }

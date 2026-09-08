@@ -27,37 +27,32 @@ import org.springframework.security.web.authentication.AnonymousAuthenticationFi
 @ConditionalOnWebApplication(type = ConditionalOnWebApplication.Type.SERVLET)
 @EnableWebSecurity
 @EnableMethodSecurity
-@EnableConfigurationProperties({AuthProperties.class, DemoProperties.class})
+@EnableConfigurationProperties({ AuthProperties.class, DemoProperties.class })
 public class SecurityConfig {
 
 	@Bean
-	SecurityFilterChain securityFilterChain(
-			HttpSecurity http,
-			AuthProperties authProperties,
-			DemoProperties demoProperties,
-			ErrorResponseWriter errorResponseWriter,
-			Clock clock
-	) throws Exception {
-		http
-				.csrf(AbstractHttpConfigurer::disable)
-				.cors(Customizer.withDefaults())
-				.formLogin(AbstractHttpConfigurer::disable)
-				.httpBasic(AbstractHttpConfigurer::disable)
-				.logout(AbstractHttpConfigurer::disable)
-				.sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.IF_REQUIRED));
+	SecurityFilterChain securityFilterChain(HttpSecurity http, AuthProperties authProperties,
+			DemoProperties demoProperties, ErrorResponseWriter errorResponseWriter, Clock clock) throws Exception {
+		http.csrf(AbstractHttpConfigurer::disable)
+			.cors(Customizer.withDefaults())
+			.formLogin(AbstractHttpConfigurer::disable)
+			.httpBasic(AbstractHttpConfigurer::disable)
+			.logout(AbstractHttpConfigurer::disable)
+			.sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.IF_REQUIRED));
 
 		if (demoProperties.enabled()) {
 			var authenticationFilter = new DemoAuthenticationFilter(demoProperties);
 			var protectionFilter = new DemoProtectionFilter(demoProperties, clock, errorResponseWriter);
-			http
-					.sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
-					.addFilterBefore(authenticationFilter, AnonymousAuthenticationFilter.class)
-					.addFilterAfter(protectionFilter, DemoAuthenticationFilter.class)
-					.authorizeHttpRequests(authorize -> authorize
-							.requestMatchers("/actuator/health", "/api-docs/**", "/swagger-ui/**", "/swagger-ui.html").permitAll()
-							.requestMatchers("/api/**").authenticated()
-							.anyRequest().permitAll()
-					);
+			http.sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+				.addFilterBefore(authenticationFilter, AnonymousAuthenticationFilter.class)
+				.addFilterAfter(protectionFilter, DemoAuthenticationFilter.class)
+				.authorizeHttpRequests(authorize -> authorize
+					.requestMatchers("/actuator/health", "/api-docs/**", "/swagger-ui/**", "/swagger-ui.html")
+					.permitAll()
+					.requestMatchers("/api/**")
+					.authenticated()
+					.anyRequest()
+					.permitAll());
 			return http.build();
 		}
 
@@ -66,20 +61,22 @@ public class SecurityConfig {
 			return http.build();
 		}
 
-		http
-				.exceptionHandling(exceptions -> exceptions
-						.authenticationEntryPoint((request, response, exception) ->
-								errorResponseWriter.write(response, HttpStatus.UNAUTHORIZED.value(), "UNAUTHORIZED", "로그인이 필요합니다."))
-						.accessDeniedHandler((request, response, exception) ->
-								errorResponseWriter.write(response, HttpStatus.FORBIDDEN.value(), "FORBIDDEN", "접근 권한이 없습니다."))
-				)
-				.authorizeHttpRequests(authorize -> authorize
-						.requestMatchers("/api/auth/login", "/api/auth/me", "/api/auth/context").permitAll()
-						.requestMatchers("/actuator/health", "/api-docs/**", "/swagger-ui/**", "/swagger-ui.html").permitAll()
-						.requestMatchers("/api/work-types/**").hasRole(AuthRole.ADMIN.name())
-						.requestMatchers("/api/**").authenticated()
-						.anyRequest().permitAll()
-				);
+		http.exceptionHandling(exceptions -> exceptions
+			.authenticationEntryPoint((request, response, exception) -> errorResponseWriter.write(response,
+					HttpStatus.UNAUTHORIZED.value(), "UNAUTHORIZED", "로그인이 필요합니다."))
+			.accessDeniedHandler((request, response, exception) -> errorResponseWriter.write(response,
+					HttpStatus.FORBIDDEN.value(), "FORBIDDEN", "접근 권한이 없습니다.")))
+			.authorizeHttpRequests(
+					authorize -> authorize.requestMatchers("/api/auth/login", "/api/auth/me", "/api/auth/context")
+						.permitAll()
+						.requestMatchers("/actuator/health", "/api-docs/**", "/swagger-ui/**", "/swagger-ui.html")
+						.permitAll()
+						.requestMatchers("/api/work-types/**")
+						.hasRole(AuthRole.ADMIN.name())
+						.requestMatchers("/api/**")
+						.authenticated()
+						.anyRequest()
+						.permitAll());
 
 		return http.build();
 	}
@@ -90,7 +87,8 @@ public class SecurityConfig {
 	}
 
 	@Bean
-	AuthenticationManager authenticationManager(AuthenticationConfiguration authenticationConfiguration) throws Exception {
+	AuthenticationManager authenticationManager(AuthenticationConfiguration authenticationConfiguration)
+			throws Exception {
 		return authenticationConfiguration.getAuthenticationManager();
 	}
 

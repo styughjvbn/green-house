@@ -28,4 +28,5 @@ public class SessionCookieWriter {
 		response.addHeader(HttpHeaders.SET_COOKIE,
 				"JSESSIONID=%s; Path=/; Max-Age=%d; HttpOnly; SameSite=Lax".formatted(sessionId, maxAgeSeconds));
 	}
+
 }

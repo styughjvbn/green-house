@@ -15,6 +15,7 @@ import tools.jackson.databind.json.JsonMapper;
 class DemoProtectionFilterTests {
 
 	private final Clock clock = Clock.fixed(Instant.parse("2026-07-23T00:00:00Z"), ZoneOffset.UTC);
+
 	private final ErrorResponseWriter errorResponseWriter = new ErrorResponseWriter(JsonMapper.builder().build());
 
 	@Test
@@ -50,4 +51,5 @@ class DemoProtectionFilterTests {
 		filter.doFilter(request, response, new MockFilterChain());
 		return response;
 	}
+
 }

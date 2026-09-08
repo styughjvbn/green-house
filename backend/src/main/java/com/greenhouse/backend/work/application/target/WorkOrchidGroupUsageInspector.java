@@ -11,10 +11,10 @@ import org.springframework.transaction.annotation.Transactional;
 public class WorkOrchidGroupUsageInspector {
 
 	private final WorkOperationTargetRepository targetRepository;
+
 	private final WorkEffectOrchidGroupRepository effectOrchidGroupRepository;
 
-	public WorkOrchidGroupUsageInspector(
-			WorkOperationTargetRepository targetRepository,
+	public WorkOrchidGroupUsageInspector(WorkOperationTargetRepository targetRepository,
 			WorkEffectOrchidGroupRepository effectOrchidGroupRepository) {
 		this.targetRepository = targetRepository;
 		this.effectOrchidGroupRepository = effectOrchidGroupRepository;
@@ -25,7 +25,7 @@ public class WorkOrchidGroupUsageInspector {
 	}
 
 	public long countOtherOperations(Set<Long> orchidGroupIds, Long sourceWorkOperationId) {
-		return targetRepository
-				.countByOrchidGroupIdInAndWorkOperationIdNot(orchidGroupIds, sourceWorkOperationId);
+		return targetRepository.countByOrchidGroupIdInAndWorkOperationIdNot(orchidGroupIds, sourceWorkOperationId);
 	}
+
 }

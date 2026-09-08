@@ -11,9 +11,9 @@ import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
 /**
- * ORCHID-CUTOVER: LEGACY_RETIRE — owns reservation routing and the remaining direct stock changes.
- * Removal gate: 운영 ACTIVE 안정화 및 writer inventory 승인.
- * Returns no Mutation for Legacy writes; callers retain their business history in either mode.
+ * ORCHID-CUTOVER: LEGACY_RETIRE — owns reservation routing and the remaining direct stock
+ * changes. Removal gate: 운영 ACTIVE 안정화 및 writer inventory 승인. Returns no Mutation for
+ * Legacy writes; callers retain their business history in either mode.
  */
 @Service
 @RequiredArgsConstructor
@@ -21,7 +21,9 @@ import org.springframework.transaction.annotation.Transactional;
 public class OrchidGroupReservationService {
 
 	private final OrchidGroupRepository orchidGroupRepository;
+
 	private final OrchidGroupMutationEngine mutationEngine;
+
 	private final OrchidGroupMutationRoutingPolicy routingPolicy;
 
 	public OrchidGroupMutationResult reserve(ReserveOrchidGroupsMutationCommand command) {
@@ -57,9 +59,10 @@ public class OrchidGroupReservationService {
 	}
 
 	private void applyLegacy(List<OrchidGroupQuantityMutationItem> items, BiConsumer<OrchidGroup, Integer> change) {
-		// Typed commands contain distinct IDs in ascending order; lock all rows before changing any.
-		var groups = orchidGroupRepository.findAllForUpdateByIdIn(
-				items.stream().map(OrchidGroupQuantityMutationItem::orchidGroupId).toList());
+		// Typed commands contain distinct IDs in ascending order; lock all rows before
+		// changing any.
+		var groups = orchidGroupRepository
+			.findAllForUpdateByIdIn(items.stream().map(OrchidGroupQuantityMutationItem::orchidGroupId).toList());
 		if (groups.size() != items.size()) {
 			throw new NotFoundException("난 묶음을 찾을 수 없습니다.");
 		}
@@ -67,4 +70,5 @@ public class OrchidGroupReservationService {
 			change.accept(groups.get(index), items.get(index).quantity());
 		}
 	}
+
 }

@@ -7,18 +7,9 @@ import static com.greenhouse.backend.farm.application.orchid.mutation.OrchidGrou
 import com.greenhouse.backend.farm.domain.orchid.PotSizeCode;
 import java.math.BigDecimal;
 
-public record OrchidGroupMutationDetails(
-		Long varietyId,
-		Integer quantity,
-		String potSize,
-		Integer ageYear,
-		String status,
-		String placementType,
-		Integer trayCount,
-		Boolean splitPlacementAllowed,
-		BigDecimal startPosition,
-		BigDecimal endPosition,
-		String memo) {
+public record OrchidGroupMutationDetails(Long varietyId, Integer quantity, String potSize, Integer ageYear,
+		String status, String placementType, Integer trayCount, Boolean splitPlacementAllowed, BigDecimal startPosition,
+		BigDecimal endPosition, String memo) {
 
 	public OrchidGroupMutationDetails {
 		if (varietyId == null) {
@@ -42,20 +33,8 @@ public record OrchidGroupMutationDetails(
 		memo = normalizeText(memo);
 	}
 
-	public OrchidGroupMutationDetails withPlacement(
-			BigDecimal resolvedStartPosition,
-			BigDecimal resolvedEndPosition) {
-		return new OrchidGroupMutationDetails(
-				varietyId,
-				quantity,
-				potSize,
-				ageYear,
-				status,
-				placementType,
-				trayCount,
-				splitPlacementAllowed,
-				resolvedStartPosition,
-				resolvedEndPosition,
-				memo);
+	public OrchidGroupMutationDetails withPlacement(BigDecimal resolvedStartPosition, BigDecimal resolvedEndPosition) {
+		return new OrchidGroupMutationDetails(varietyId, quantity, potSize, ageYear, status, placementType, trayCount,
+				splitPlacementAllowed, resolvedStartPosition, resolvedEndPosition, memo);
 	}
 }

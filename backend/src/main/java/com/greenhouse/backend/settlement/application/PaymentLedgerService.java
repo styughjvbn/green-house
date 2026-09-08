@@ -14,40 +14,30 @@ import org.springframework.transaction.annotation.Transactional;
 @Transactional(propagation = Propagation.MANDATORY)
 @RequiredArgsConstructor
 public class PaymentLedgerService {
+
 	private final PartnerPaymentEventRepository eventRepository;
+
 	private final RequestActorProvider requestActorProvider;
+
 	private final SettlementAuditSupport auditSupport;
 
-	public Long recordManualPayment(
-			Long partnerId,
-			PaymentTargetType targetType,
-			Long targetId,
+	public Long recordManualPayment(Long partnerId, PaymentTargetType targetType, Long targetId,
 			ManualPaymentCommand request) {
-		var received = eventRepository.save(PartnerPaymentEvent.received(
-				partnerId,
-				request.paymentDate(),
-				request.amount(),
-				targetType,
-				targetId,
-				normalize(request.paymentMethod()),
-				normalize(request.depositorName()),
-				externalUid(targetType, targetId, request.idempotencyKey()),
-				normalize(request.memo()),
-				defaultWorker(requestActorProvider.resolve(request.worker()))));
+		var received = eventRepository.save(PartnerPaymentEvent.received(partnerId, request.paymentDate(),
+				request.amount(), targetType, targetId, normalize(request.paymentMethod()),
+				normalize(request.depositorName()), externalUid(targetType, targetId, request.idempotencyKey()),
+				normalize(request.memo()), defaultWorker(requestActorProvider.resolve(request.worker()))));
 		eventRepository.save(PartnerPaymentEvent.manualMatch(received));
 		auditSupport.recordManualPayment(received);
 		return received.getId();
 	}
 
-	public Optional<Long> findManualPayment(
-			PaymentTargetType targetType,
-			Long targetId,
-			ManualPaymentCommand request) {
+	public Optional<Long> findManualPayment(PaymentTargetType targetType, Long targetId, ManualPaymentCommand request) {
 		return eventRepository.findByExternalUid(externalUid(targetType, targetId, request.idempotencyKey()))
-				.map(event -> {
-					event.validateReplay(request.amount(), request.paymentDate());
-					return event.getId();
-				});
+			.map(event -> {
+				event.validateReplay(request.amount(), request.paymentDate());
+				return event.getId();
+			});
 	}
 
 	private String externalUid(PaymentTargetType targetType, Long targetId, String idempotencyKey) {
@@ -61,4 +51,5 @@ public class PaymentLedgerService {
 	private String normalize(String value) {
 		return value == null || value.isBlank() ? null : value.trim();
 	}
+
 }

@@ -17,8 +17,7 @@ public class FarmOrchidGroupUsageInspector implements OrchidGroupUsageInspector 
 	@Override
 	public List<OrchidGroupUsage> inspect(Set<Long> orchidGroupIds, Long sourceWorkOperationId) {
 		long count = inboundRecordRepository.countByCreatedOrchidGroupIdIn(orchidGroupIds);
-		return count == 0
-				? List.of()
-				: List.of(new OrchidGroupUsage("INBOUND", "입고 기록에 연결된 난 묶음이 있습니다.", count));
+		return count == 0 ? List.of() : List.of(new OrchidGroupUsage("INBOUND", "입고 기록에 연결된 난 묶음이 있습니다.", count));
 	}
+
 }

@@ -5,9 +5,9 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 import com.greenhouse.backend.sales.domain.SalesSlip;
+import com.greenhouse.backend.sales.domain.SalesSlipAction;
 import com.greenhouse.backend.sales.domain.SalesSlipItem;
 import com.greenhouse.backend.sales.domain.SalesType;
-import com.greenhouse.backend.sales.domain.SalesSlipAction;
 import com.greenhouse.backend.settlement.application.PaymentEventReader;
 import com.greenhouse.backend.settlement.domain.PaymentTargetType;
 import java.time.LocalDate;
@@ -20,7 +20,9 @@ import org.springframework.test.util.ReflectionTestUtils;
 class SalesSlipActionResolverTest {
 
 	private PaymentEventReader paymentEventReader;
+
 	private AuctionSalesSlipCancellationPolicy auctionCancellationPolicy;
+
 	private SalesSlipActionResolver resolver;
 
 	@BeforeEach
@@ -33,24 +35,19 @@ class SalesSlipActionResolverTest {
 	@Test
 	void allowsEveryDirectDraftActionBeforePayment() {
 		SalesSlip salesSlip = directSalesSlip(1L, SalesSlip.STATUS_DRAFT, 100_000L);
-		when(paymentEventReader.findExistingTargetIds(PaymentTargetType.SALES_SLIP, List.of(1L)))
-				.thenReturn(Set.of());
+		when(paymentEventReader.findExistingTargetIds(PaymentTargetType.SALES_SLIP, List.of(1L))).thenReturn(Set.of());
 
-		assertThat(resolver.resolve(salesSlip)).containsExactly(
-				SalesSlipAction.EDIT,
-				SalesSlipAction.COMPLETE,
-				SalesSlipAction.CANCEL,
-				SalesSlipAction.CONFIRM_PAYMENT);
+		assertThat(resolver.resolve(salesSlip)).containsExactly(SalesSlipAction.EDIT, SalesSlipAction.COMPLETE,
+				SalesSlipAction.CANCEL, SalesSlipAction.CONFIRM_PAYMENT);
 	}
 
 	@Test
 	void blocksEditAndCancelAfterDirectPaymentHistoryExists() {
 		SalesSlip salesSlip = directSalesSlip(1L, SalesSlip.STATUS_DRAFT, 70_000L);
 		when(paymentEventReader.findExistingTargetIds(PaymentTargetType.SALES_SLIP, List.of(1L)))
-				.thenReturn(Set.of(1L));
+			.thenReturn(Set.of(1L));
 
-		assertThat(resolver.resolve(salesSlip)).containsExactly(
-				SalesSlipAction.COMPLETE,
+		assertThat(resolver.resolve(salesSlip)).containsExactly(SalesSlipAction.COMPLETE,
 				SalesSlipAction.CONFIRM_PAYMENT);
 	}
 
@@ -58,8 +55,7 @@ class SalesSlipActionResolverTest {
 	void blocksAuctionCancellationAfterResultOrSettlementProgress() {
 		SalesSlip salesSlip = salesSlip(2L, SalesType.AUCTION, SalesSlip.STATUS_AUCTION_SHIPMENT_COMPLETED);
 		salesSlip.assignAuctionShipment(20L);
-		when(auctionCancellationPolicy.findNonCancelableShipmentIds(List.of(20L)))
-				.thenReturn(Set.of(20L));
+		when(auctionCancellationPolicy.findNonCancelableShipmentIds(List.of(20L))).thenReturn(Set.of(20L));
 
 		assertThat(resolver.resolve(salesSlip)).isEmpty();
 	}
@@ -73,10 +69,11 @@ class SalesSlipActionResolverTest {
 	}
 
 	private SalesSlip salesSlip(Long id, SalesType salesType, String status) {
-		SalesSlip salesSlip = new SalesSlip("ACTION-" + id, LocalDate.of(2026, 8, 1), salesType,
-				null, 1L, "미입금", status, null, null);
+		SalesSlip salesSlip = new SalesSlip("ACTION-" + id, LocalDate.of(2026, 8, 1), salesType, null, 1L, "미입금",
+				status, null, null);
 		ReflectionTestUtils.setField(salesSlip, "id", id);
 		salesSlip.addItem(new SalesSlipItem(null, "카틀레야", null, "A", 10, 10_000, null));
 		return salesSlip;
 	}
+
 }

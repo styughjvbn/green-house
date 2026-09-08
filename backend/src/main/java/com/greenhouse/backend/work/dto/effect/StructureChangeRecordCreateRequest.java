@@ -5,7 +5,6 @@ import com.greenhouse.backend.work.dto.operation.WorkOperationCreateRequest;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotNull;
 
-public record StructureChangeRecordCreateRequest(
-		@NotNull @Valid WorkOperationCreateRequest operation,
+public record StructureChangeRecordCreateRequest(@NotNull @Valid WorkOperationCreateRequest operation,
 		@NotNull @Valid StructureChangeCommand execution) {
 }

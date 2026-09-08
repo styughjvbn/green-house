@@ -14,14 +14,10 @@ import java.util.Map;
  * ORCHID-CUTOVER: TRANSITION_ONLY — profiler 결과를 정상 revision chain으로 적재하는 고정 계약이다.
  * Removal gate: 운영 cutover와 사후 복구용 artifact 보존 정책 확정.
  */
-public record OrchidGroupStateChainMigrationManifest(
-		@JsonProperty("manifest_schema_version") int manifestSchemaVersion,
-		@JsonProperty("generated_from") String generatedFrom,
-		@JsonProperty("migration_ready") boolean migrationReady,
-		@JsonProperty("blocking_issues") List<Map<String, Object>> blockingIssues,
-		Map<String, Object> provenance,
-		@JsonProperty("operational_profile") Map<String, Object> operationalProfile,
-		List<Mutation> mutations) {
+public record OrchidGroupStateChainMigrationManifest(@JsonProperty("manifest_schema_version") int manifestSchemaVersion,
+		@JsonProperty("generated_from") String generatedFrom, @JsonProperty("migration_ready") boolean migrationReady,
+		@JsonProperty("blocking_issues") List<Map<String, Object>> blockingIssues, Map<String, Object> provenance,
+		@JsonProperty("operational_profile") Map<String, Object> operationalProfile, List<Mutation> mutations) {
 
 	public OrchidGroupStateChainMigrationManifest {
 		blockingIssues = blockingIssues == null ? List.of() : List.copyOf(blockingIssues);
@@ -30,16 +26,12 @@ public record OrchidGroupStateChainMigrationManifest(
 		mutations = mutations == null ? List.of() : List.copyOf(mutations);
 	}
 
-	public record Mutation(
-			@JsonProperty("mutation_key") String mutationKey,
+	public record Mutation(@JsonProperty("mutation_key") String mutationKey,
 			@JsonProperty("mutation_type") OrchidGroupMutationType mutationType,
-			@JsonProperty("source_type") String sourceType,
-			@JsonProperty("source_reference") String sourceReference,
+			@JsonProperty("source_type") String sourceType, @JsonProperty("source_reference") String sourceReference,
 			@JsonProperty("occurred_at") Instant occurredAt,
-			@JsonProperty("effective_business_date") LocalDate effectiveBusinessDate,
-			String reason,
-			Map<String, Object> evidence,
-			List<Entry> entries) {
+			@JsonProperty("effective_business_date") LocalDate effectiveBusinessDate, String reason,
+			Map<String, Object> evidence, List<Entry> entries) {
 
 		public Mutation {
 			evidence = evidence == null ? Map.of() : Map.copyOf(evidence);
@@ -47,12 +39,9 @@ public record OrchidGroupStateChainMigrationManifest(
 		}
 	}
 
-	public record Entry(
-			@JsonProperty("orchid_group_id") Long orchidGroupId,
-			@JsonProperty("entry_kind") OrchidGroupMutationEntryKind entryKind,
-			OrchidGroupMutationEntryRole role,
-			@JsonProperty("revision_before") Long revisionBefore,
-			@JsonProperty("revision_after") Long revisionAfter,
+	public record Entry(@JsonProperty("orchid_group_id") Long orchidGroupId,
+			@JsonProperty("entry_kind") OrchidGroupMutationEntryKind entryKind, OrchidGroupMutationEntryRole role,
+			@JsonProperty("revision_before") Long revisionBefore, @JsonProperty("revision_after") Long revisionAfter,
 			@JsonProperty("before_state") OrchidGroupStateSnapshot beforeState,
 			@JsonProperty("after_state") OrchidGroupStateSnapshot afterState) {
 	}

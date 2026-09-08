@@ -21,12 +21,13 @@ import org.springframework.stereotype.Service;
 public class AuthService {
 
 	private final AuthenticationManager authenticationManager;
+
 	private final SessionCookieWriter sessionCookieWriter;
 
-	public AuthenticatedUserResponse login(
-			String username, String password, HttpServletRequest request, HttpServletResponse response) {
-		Authentication authentication = authenticationManager.authenticate(
-				new UsernamePasswordAuthenticationToken(username, password));
+	public AuthenticatedUserResponse login(String username, String password, HttpServletRequest request,
+			HttpServletResponse response) {
+		Authentication authentication = authenticationManager
+			.authenticate(new UsernamePasswordAuthenticationToken(username, password));
 		var context = SecurityContextHolder.createEmptyContext();
 		context.setAuthentication(authentication);
 		SecurityContextHolder.setContext(context);
@@ -47,19 +48,22 @@ public class AuthService {
 
 	public void logout(HttpServletRequest request, HttpServletResponse response) {
 		HttpSession session = request.getSession(false);
-		if (session != null) session.invalidate();
+		if (session != null)
+			session.invalidate();
 		SecurityContextHolder.clearContext();
 		sessionCookieWriter.expire(response);
 	}
 
 	private AuthenticatedUserResponse toResponse(Authentication authentication) {
-		String roleName = authentication.getAuthorities().stream()
-				.map(GrantedAuthority::getAuthority)
-				.filter(authority -> authority.startsWith("ROLE_"))
-				.map(authority -> authority.substring("ROLE_".length()))
-				.findFirst()
-				.orElse(AuthRole.WORKER.name());
+		String roleName = authentication.getAuthorities()
+			.stream()
+			.map(GrantedAuthority::getAuthority)
+			.filter(authority -> authority.startsWith("ROLE_"))
+			.map(authority -> authority.substring("ROLE_".length()))
+			.findFirst()
+			.orElse(AuthRole.WORKER.name());
 
 		return new AuthenticatedUserResponse(authentication.getName(), AuthRole.valueOf(roleName));
 	}
+
 }

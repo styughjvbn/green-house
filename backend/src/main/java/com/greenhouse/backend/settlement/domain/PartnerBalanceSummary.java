@@ -7,16 +7,15 @@ import jakarta.persistence.FetchType;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
-import jakarta.persistence.SequenceGenerator;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.OneToOne;
+import jakarta.persistence.SequenceGenerator;
 import jakarta.persistence.Table;
 import jakarta.persistence.Version;
+import java.util.Map;
+import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
-import lombok.AccessLevel;
-
-import java.util.Map;
 import org.hibernate.annotations.JdbcTypeCode;
 import org.hibernate.type.SqlTypes;
 
@@ -25,9 +24,11 @@ import org.hibernate.type.SqlTypes;
 @Entity
 @Table(name = "partner_balance_summaries")
 public class PartnerBalanceSummary extends BaseEntity {
+
 	@Id
 	@GeneratedValue(strategy = GenerationType.SEQUENCE, generator = "partner_balance_summaries_id_seq")
-	@SequenceGenerator(name = "partner_balance_summaries_id_seq", sequenceName = "partner_balance_summaries_id_seq", allocationSize = 50)
+	@SequenceGenerator(name = "partner_balance_summaries_id_seq", sequenceName = "partner_balance_summaries_id_seq",
+			allocationSize = 50)
 	private Long id;
 
 	@Version
@@ -67,4 +68,5 @@ public class PartnerBalanceSummary extends BaseEntity {
 		if (lastPaymentEvent != null)
 			this.lastPaymentEvent = lastPaymentEvent;
 	}
+
 }

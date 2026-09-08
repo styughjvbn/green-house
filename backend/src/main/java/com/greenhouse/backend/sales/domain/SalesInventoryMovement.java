@@ -26,7 +26,8 @@ public class SalesInventoryMovement extends BaseEntity {
 
 	@Id
 	@GeneratedValue(strategy = GenerationType.SEQUENCE, generator = "sales_inventory_movements_id_seq")
-	@SequenceGenerator(name = "sales_inventory_movements_id_seq", sequenceName = "sales_inventory_movements_id_seq", allocationSize = 50)
+	@SequenceGenerator(name = "sales_inventory_movements_id_seq", sequenceName = "sales_inventory_movements_id_seq",
+			allocationSize = 50)
 	private Long id;
 
 	@Column(name = "orchid_group_id", nullable = false)
@@ -56,13 +57,8 @@ public class SalesInventoryMovement extends BaseEntity {
 	@Column(name = "correlation_id")
 	private UUID correlationId;
 
-	public SalesInventoryMovement(
-			Long orchidGroupId,
-			SalesSlip salesSlip,
-			SalesSlipItem salesSlipItem,
-			SalesInventoryMovementType changeType,
-			Integer quantityDelta,
-			String memo) {
+	public SalesInventoryMovement(Long orchidGroupId, SalesSlip salesSlip, SalesSlipItem salesSlipItem,
+			SalesInventoryMovementType changeType, Integer quantityDelta, String memo) {
 		this.orchidGroupId = orchidGroupId;
 		this.salesSlip = salesSlip;
 		this.salesSlipItem = salesSlipItem;
@@ -81,4 +77,5 @@ public class SalesInventoryMovement extends BaseEntity {
 		this.mutationId = mutationId;
 		this.correlationId = correlationId;
 	}
+
 }

@@ -18,26 +18,24 @@ public interface WorkAppliedEffectRepository extends JpaRepository<WorkAppliedEf
 
 	Optional<WorkAppliedEffect> findByWorkOperationIdAndEffectKey(Long workOperationId, String effectKey);
 
-	@EntityGraph(attributePaths = {"workOperation", "workOperation.workType", "target"})
+	@EntityGraph(attributePaths = { "workOperation", "workOperation.workType", "target" })
 	@Query("""
 			select effect from WorkAppliedEffect effect
 			join effect.target target
 			where target.inboundRecordId = :inboundRecordId
 			  and effect.effectKey = :effectKey
 			""")
-	Optional<WorkAppliedEffect> findInboundPottingEffect(
-			@Param("inboundRecordId") Long inboundRecordId,
+	Optional<WorkAppliedEffect> findInboundPottingEffect(@Param("inboundRecordId") Long inboundRecordId,
 			@Param("effectKey") String effectKey);
 
-	@EntityGraph(attributePaths = {"workOperation", "workOperation.workType", "target"})
+	@EntityGraph(attributePaths = { "workOperation", "workOperation.workType", "target" })
 	@Query("""
 			select effect from WorkAppliedEffect effect
 			join effect.target target
 			where target.inboundRecordId in :inboundRecordIds
 			  and effect.effectKey in :effectKeys
 			""")
-	List<WorkAppliedEffect> findInboundPottingEffects(
-			@Param("inboundRecordIds") Collection<Long> inboundRecordIds,
+	List<WorkAppliedEffect> findInboundPottingEffects(@Param("inboundRecordIds") Collection<Long> inboundRecordIds,
 			@Param("effectKeys") Collection<String> effectKeys);
 
 	@EntityGraph(attributePaths = "workOperation")

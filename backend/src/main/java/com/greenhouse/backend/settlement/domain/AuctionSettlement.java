@@ -29,12 +29,14 @@ import org.hibernate.type.SqlTypes;
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 @Entity
-@Table(name = "auction_settlements", uniqueConstraints = @UniqueConstraint(name = "uk_auction_settlement_house_date", columnNames = {
-		"auction_house_id", "auction_date" }))
+@Table(name = "auction_settlements", uniqueConstraints = @UniqueConstraint(name = "uk_auction_settlement_house_date",
+		columnNames = { "auction_house_id", "auction_date" }))
 public class AuctionSettlement extends BaseEntity {
+
 	@Id
 	@GeneratedValue(strategy = GenerationType.SEQUENCE, generator = "auction_settlements_id_seq")
-	@SequenceGenerator(name = "auction_settlements_id_seq", sequenceName = "auction_settlements_id_seq", allocationSize = 50)
+	@SequenceGenerator(name = "auction_settlements_id_seq", sequenceName = "auction_settlements_id_seq",
+			allocationSize = 50)
 	private Long id;
 
 	@Version
@@ -105,11 +107,11 @@ public class AuctionSettlement extends BaseEntity {
 	}
 
 	public void synchronizeLines(List<AuctionSettlementLine> resultLines, LocalDateTime receivedAt) {
-		Set<Long> resultIds = new HashSet<>(resultLines.stream().map(AuctionSettlementLine::getAuctionResultLineId).toList());
+		Set<Long> resultIds = new HashSet<>(
+				resultLines.stream().map(AuctionSettlementLine::getAuctionResultLineId).toList());
 		lines.removeIf(line -> !resultIds.contains(line.getAuctionResultLineId()));
-		Set<Long> existingIds = new HashSet<>(lines.stream()
-				.map(AuctionSettlementLine::getAuctionResultLineId)
-				.toList());
+		Set<Long> existingIds = new HashSet<>(
+				lines.stream().map(AuctionSettlementLine::getAuctionResultLineId).toList());
 		for (var line : resultLines) {
 			if (existingIds.add(line.getAuctionResultLineId())) {
 				addLine(line);
@@ -143,7 +145,8 @@ public class AuctionSettlement extends BaseEntity {
 		remainingAmount = Math.max(0L, expectedDepositAmount - paidAmount);
 		if (paidAmount > 0) {
 			status = remainingAmount == 0 ? AuctionSettlementStatus.PAID : AuctionSettlementStatus.PARTIALLY_PAID;
-		} else {
+		}
+		else {
 			status = lines.isEmpty() ? AuctionSettlementStatus.CREATED : AuctionSettlementStatus.PAYMENT_WAITING;
 		}
 	}
@@ -152,4 +155,5 @@ public class AuctionSettlement extends BaseEntity {
 		line.setSettlement(this);
 		lines.add(line);
 	}
+
 }

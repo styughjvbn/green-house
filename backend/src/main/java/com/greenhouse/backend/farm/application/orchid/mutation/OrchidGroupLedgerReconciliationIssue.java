@@ -1,10 +1,6 @@
 package com.greenhouse.backend.farm.application.orchid.mutation;
 
-public record OrchidGroupLedgerReconciliationIssue(
-		String code,
-		String domain,
-		String referenceId,
-		String message) {
+public record OrchidGroupLedgerReconciliationIssue(String code, String domain, String referenceId, String message) {
 
 	public OrchidGroupLedgerReconciliationIssue {
 		code = requireText(code, "대사 오류 코드");
@@ -13,12 +9,8 @@ public record OrchidGroupLedgerReconciliationIssue(
 		message = requireText(message, "대사 오류 설명");
 	}
 
-	public static OrchidGroupLedgerReconciliationIssue group(
-			String code,
-			Long orchidGroupId,
-			String message) {
-		return new OrchidGroupLedgerReconciliationIssue(
-				code, "FARM", String.valueOf(orchidGroupId), message);
+	public static OrchidGroupLedgerReconciliationIssue group(String code, Long orchidGroupId, String message) {
+		return new OrchidGroupLedgerReconciliationIssue(code, "FARM", String.valueOf(orchidGroupId), message);
 	}
 
 	private static String requireText(String value, String label) {

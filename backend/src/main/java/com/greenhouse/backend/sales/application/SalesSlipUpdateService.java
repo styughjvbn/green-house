@@ -27,18 +27,26 @@ import org.springframework.transaction.annotation.Transactional;
 public class SalesSlipUpdateService {
 
 	private final SalesSlipRepository salesSlipRepository;
+
 	private final PaymentEventReader paymentEventReader;
+
 	private final BusinessPartnerReader businessPartnerReader;
+
 	private final SalesSlipAllocationFactory salesSlipAllocationFactory;
+
 	private final SalesSlipInventoryService salesSlipInventoryService;
+
 	private final ExpectedPaymentDateCalculator paymentDateCalculator;
+
 	private final PartnerBalanceService partnerBalanceService;
+
 	private final SalesSlipAuditSupport auditSupport;
+
 	private final SalesSlipDocumentAssembler responseAssembler;
 
 	public SalesSlipDocument update(Long salesSlipId, SalesSlipCommand request) {
 		SalesSlip salesSlip = salesSlipRepository.findForUpdateById(salesSlipId)
-				.orElseThrow(() -> new NotFoundException("판매 전표를 찾을 수 없습니다."));
+			.orElseThrow(() -> new NotFoundException("판매 전표를 찾을 수 없습니다."));
 		Long previousPartnerId = salesSlip.getPartnerId();
 		Map<String, Object> before = auditSupport.snapshot(salesSlip);
 
@@ -64,39 +72,28 @@ public class SalesSlipUpdateService {
 			throw new IllegalArgumentException("품목 개수 변경 수정은 아직 지원하지 않습니다.");
 		}
 
-		salesSlip.updateDraftInfo(
-				request.saleDate(),
-				partner.id(),
+		salesSlip.updateDraftInfo(request.saleDate(), partner.id(),
 				SalesTextNormalizer.defaultText(request.paymentStatus(), "미입금"),
-				SalesTextNormalizer.normalize(request.paymentMethod()),
-				SalesTextNormalizer.normalize(request.memo()));
+				SalesTextNormalizer.normalize(request.paymentMethod()), SalesTextNormalizer.normalize(request.memo()));
 		for (int index = 0; index < salesSlip.getItems().size(); index++) {
 			var currentItem = salesSlip.getItems().get(index);
 			var nextItem = items.get(index);
-			currentItem.updateDetails(
-					nextItem.getItemName(),
-					nextItem.getGenus(),
-					nextItem.getSpec(),
-					nextItem.getQuantity(),
-					nextItem.getUnitPrice(),
-					nextItem.getMemo());
-			currentItem.replaceAllocations(nextItem.getAllocations().stream()
-					.map(SalesSlipItemAllocation::copy)
-					.toList());
+			currentItem.updateDetails(nextItem.getItemName(), nextItem.getGenus(), nextItem.getSpec(),
+					nextItem.getQuantity(), nextItem.getUnitPrice(), nextItem.getMemo());
+			currentItem
+				.replaceAllocations(nextItem.getAllocations().stream().map(SalesSlipItemAllocation::copy).toList());
 		}
 		salesSlip.refreshAmounts();
 		salesSlip.updateExpectedPaymentDate(expectedPaymentDate);
 		salesSlipRepository.saveAndFlush(salesSlip);
 		SalesSlip persisted = salesSlipRepository.findWithDetailsById(salesSlipId)
-				.orElseThrow(() -> new NotFoundException("판매 전표를 찾을 수 없습니다."));
+			.orElseThrow(() -> new NotFoundException("판매 전표를 찾을 수 없습니다."));
 		salesSlipInventoryService.reserve(persisted);
-		partnerBalanceService.updateReceivable(
-				partner.id(), salesSlipRepository.sumDirectReceivableByPartnerId(partner.id()), null);
+		partnerBalanceService.updateReceivable(partner.id(),
+				salesSlipRepository.sumDirectReceivableByPartnerId(partner.id()), null);
 		if (!previousPartnerId.equals(partner.id())) {
-			partnerBalanceService.updateReceivable(
-					previousPartnerId,
-					salesSlipRepository.sumDirectReceivableByPartnerId(previousPartnerId),
-					null);
+			partnerBalanceService.updateReceivable(previousPartnerId,
+					salesSlipRepository.sumDirectReceivableByPartnerId(previousPartnerId), null);
 		}
 		auditSupport.record(AuditAction.UPDATED, persisted, before, auditSupport.snapshot(persisted));
 
@@ -107,7 +104,7 @@ public class SalesSlipUpdateService {
 		if (request.salesType() == SalesType.AUCTION) {
 			throw new IllegalArgumentException("경매 판매 전표 수정은 아직 지원하지 않습니다.");
 		}
-		salesSlip.requireEditable(paymentEventReader.existsByTarget(
-				PaymentTargetType.SALES_SLIP, salesSlip.getId()));
+		salesSlip.requireEditable(paymentEventReader.existsByTarget(PaymentTargetType.SALES_SLIP, salesSlip.getId()));
 	}
+
 }

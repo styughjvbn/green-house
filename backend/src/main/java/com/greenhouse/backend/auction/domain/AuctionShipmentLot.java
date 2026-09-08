@@ -1,6 +1,5 @@
 package com.greenhouse.backend.auction.domain;
 
-import java.time.LocalDateTime;
 import com.greenhouse.backend.common.domain.BaseEntity;
 import jakarta.persistence.CascadeType;
 import jakarta.persistence.Column;
@@ -19,6 +18,7 @@ import jakarta.persistence.SequenceGenerator;
 import jakarta.persistence.Table;
 import jakarta.persistence.Version;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
@@ -31,9 +31,11 @@ import lombok.NoArgsConstructor;
 @Entity
 @Table(name = "auction_shipment_lots")
 public class AuctionShipmentLot extends BaseEntity {
+
 	@Id
 	@GeneratedValue(strategy = GenerationType.SEQUENCE, generator = "auction_shipment_lots_id_seq")
-	@SequenceGenerator(name = "auction_shipment_lots_id_seq", sequenceName = "auction_shipment_lots_id_seq", allocationSize = 50)
+	@SequenceGenerator(name = "auction_shipment_lots_id_seq", sequenceName = "auction_shipment_lots_id_seq",
+			allocationSize = 50)
 	private Long id;
 
 	@Version
@@ -107,31 +109,39 @@ public class AuctionShipmentLot extends BaseEntity {
 		attempt.setShipmentLot(this);
 	}
 
-	public void applyResult(Integer sold, Integer returned, boolean failed, boolean returnInferred, LocalDateTime changedAt) {
+	public void applyResult(Integer sold, Integer returned, boolean failed, boolean returnInferred,
+			LocalDateTime changedAt) {
 		soldQuantity += sold;
 		returnedQuantity += returned;
 		waitingQuantity = Math.max(0, shippedQuantity - soldQuantity - returnedQuantity);
 		AuctionLotStatus next;
 		if (soldQuantity + returnedQuantity > shippedQuantity) {
 			next = AuctionLotStatus.QUANTITY_MISMATCH;
-		} else if (returnInferred) {
+		}
+		else if (returnInferred) {
 			next = AuctionLotStatus.RETURN_INFERRED;
-		} else if (returnedQuantity > 0 && waitingQuantity == 0) {
+		}
+		else if (returnedQuantity > 0 && waitingQuantity == 0) {
 			next = AuctionLotStatus.RETURNED;
-		} else if (soldQuantity == shippedQuantity) {
+		}
+		else if (soldQuantity == shippedQuantity) {
 			next = AuctionLotStatus.SOLD;
-		} else if (soldQuantity > 0) {
+		}
+		else if (soldQuantity > 0) {
 			next = AuctionLotStatus.PARTIALLY_SOLD;
-		} else if (failed) {
+		}
+		else if (failed) {
 			next = AuctionLotStatus.REAUCTION_WAITING;
-		} else {
+		}
+		else {
 			next = AuctionLotStatus.IN_PROGRESS;
 		}
 		changeStatus(next, "경매 결과 반영", null, null, changedAt);
 	}
 
 	public void recordResult(LocalDate auctionDate, Integer requestedAttemptNo, AuctionAttemptStatus attemptStatus,
-			List<AuctionResultLineInput> resultLines, String requestedFailedReason, String requestedMemo, LocalDateTime changedAt) {
+			List<AuctionResultLineInput> resultLines, String requestedFailedReason, String requestedMemo,
+			LocalDateTime changedAt) {
 		if (getWaitingQuantity() <= 0)
 			throw new IllegalArgumentException("대기 수량이 없는 lot에는 경매 결과를 추가할 수 없습니다.");
 		int waitingQuantity = getWaitingQuantity();
@@ -140,12 +150,7 @@ public class AuctionShipmentLot extends BaseEntity {
 
 		String failedReason = normalize(requestedFailedReason);
 		String memo = normalize(requestedMemo);
-		var attempt = new AuctionAttempt(
-				auctionDate,
-				attemptNo,
-				attemptStatus,
-				failedReason,
-				memo);
+		var attempt = new AuctionAttempt(auctionDate, attemptNo, attemptStatus, failedReason, memo);
 
 		switch (attemptStatus) {
 			case SOLD -> {
@@ -160,40 +165,23 @@ public class AuctionShipmentLot extends BaseEntity {
 				int soldQuantity = addSoldLines(attempt, resultLines, getShipmentGrade());
 				if (soldQuantity >= waitingQuantity)
 					throw new IllegalArgumentException("부분 낙찰은 대기 수량보다 적어야 합니다.");
-				attempt.addResultLine(new AuctionResultLine(
-						auctionDate,
-						getShipmentGrade(),
-						waitingQuantity - soldQuantity,
-						0,
-						0,
-						failedReason == null ? "잔량 유찰" : failedReason,
-						AuctionInspectionStatus.NORMAL));
+				attempt.addResultLine(
+						new AuctionResultLine(auctionDate, getShipmentGrade(), waitingQuantity - soldQuantity, 0, 0,
+								failedReason == null ? "잔량 유찰" : failedReason, AuctionInspectionStatus.NORMAL));
 				attempt.recalculateStatus();
 				addAttempt(attempt);
 				applyResult(soldQuantity, 0, false, false, changedAt);
 			}
 			case FAILED -> {
-				attempt.addResultLine(new AuctionResultLine(
-						auctionDate,
-						getShipmentGrade(),
-						waitingQuantity,
-						0,
-						0,
-						failedReason == null ? "유찰" : failedReason,
-						AuctionInspectionStatus.NORMAL));
+				attempt.addResultLine(new AuctionResultLine(auctionDate, getShipmentGrade(), waitingQuantity, 0, 0,
+						failedReason == null ? "유찰" : failedReason, AuctionInspectionStatus.NORMAL));
 				attempt.recalculateStatus();
 				addAttempt(attempt);
 				applyResult(0, 0, true, false, changedAt);
 			}
 			case RETURN_INFERRED -> {
-				attempt.addResultLine(new AuctionResultLine(
-						auctionDate,
-						getShipmentGrade(),
-						waitingQuantity,
-						0,
-						0,
-						failedReason == null ? "반환 추정" : failedReason,
-						AuctionInspectionStatus.RETURN_INFERRED));
+				attempt.addResultLine(new AuctionResultLine(auctionDate, getShipmentGrade(), waitingQuantity, 0, 0,
+						failedReason == null ? "반환 추정" : failedReason, AuctionInspectionStatus.RETURN_INFERRED));
 				attempt.recalculateStatus();
 				addAttempt(attempt);
 				applyResult(0, waitingQuantity, false, true, changedAt);
@@ -209,11 +197,10 @@ public class AuctionShipmentLot extends BaseEntity {
 		return getAttempts().stream().map(AuctionAttempt::getAttemptNo).max(Integer::compareTo).orElse(0) + 1;
 	}
 
-	private void validateAttemptNo(LocalDate auctionDate,
-			int attemptNo) {
+	private void validateAttemptNo(LocalDate auctionDate, int attemptNo) {
 		boolean duplicate = getAttempts().stream()
-				.anyMatch(attempt -> Objects.equals(attempt.getAttemptNo(), attemptNo)
-						&& Objects.equals(attempt.getAuctionDate(), auctionDate));
+			.anyMatch(attempt -> Objects.equals(attempt.getAttemptNo(), attemptNo)
+					&& Objects.equals(attempt.getAuctionDate(), auctionDate));
 		if (duplicate)
 			throw new IllegalArgumentException("같은 경매일과 차수의 결과가 이미 등록되어 있습니다.");
 	}
@@ -225,12 +212,9 @@ public class AuctionShipmentLot extends BaseEntity {
 		for (var line : lines) {
 			if (line.unitPrice() < 1)
 				throw new IllegalArgumentException("낙찰 결과 단가는 1원 이상이어야 합니다.");
-			attempt.addResultLine(new AuctionResultLine(
-					attempt.getAuctionDate(),
+			attempt.addResultLine(new AuctionResultLine(attempt.getAuctionDate(),
 					normalize(line.auctionGrade()) == null ? defaultGrade : normalize(line.auctionGrade()),
-					line.quantity(),
-					line.unitPrice(),
-					soldAmount(line.quantity(), line.unitPrice()),
+					line.quantity(), line.unitPrice(), soldAmount(line.quantity(), line.unitPrice()),
 					normalize(line.note()),
 					line.inspectionStatus() == null ? AuctionInspectionStatus.NORMAL : line.inspectionStatus()));
 			soldQuantity += line.quantity();
@@ -241,7 +225,8 @@ public class AuctionShipmentLot extends BaseEntity {
 	private int soldAmount(int quantity, int unitPrice) {
 		try {
 			return Math.multiplyExact(quantity, unitPrice);
-		} catch (ArithmeticException exception) {
+		}
+		catch (ArithmeticException exception) {
 			throw new IllegalArgumentException("낙찰 결과 금액은 2,147,483,647원 이하여야 합니다.");
 		}
 	}
@@ -251,14 +236,17 @@ public class AuctionShipmentLot extends BaseEntity {
 	}
 
 	public void requireReturnConfirmable() {
-		if (!List.of(AuctionLotStatus.REAUCTION_WAITING, AuctionLotStatus.RETURN_INFERRED,
-				AuctionLotStatus.PARTIALLY_RETURNED).contains(getCurrentStatus()))
+		if (!List
+			.of(AuctionLotStatus.REAUCTION_WAITING, AuctionLotStatus.RETURN_INFERRED,
+					AuctionLotStatus.PARTIALLY_RETURNED)
+			.contains(getCurrentStatus()))
 			throw new IllegalArgumentException("재경매대기, 반환추정 또는 부분반환 상태에서만 반환을 확인할 수 있습니다.");
 		if (getReturnConfirmableQuantity() <= 0)
 			throw new IllegalArgumentException("확인할 반환 수량이 없습니다.");
 	}
 
-	public void confirmReturn(Integer quantity, LocalDate returnDate, String worker, String memo, LocalDateTime changedAt) {
+	public void confirmReturn(Integer quantity, LocalDate returnDate, String worker, String memo,
+			LocalDateTime changedAt) {
 		requireReturnConfirmable();
 		if (quantity == null || quantity < 1) {
 			throw new IllegalArgumentException("반환 확인 수량은 1 이상이어야 합니다.");
@@ -274,7 +262,8 @@ public class AuctionShipmentLot extends BaseEntity {
 			int unconfirmedQuantity = returnedQuantity - quantity;
 			returnedQuantity = quantity;
 			waitingQuantity += unconfirmedQuantity;
-		} else {
+		}
+		else {
 			returnedQuantity += quantity;
 			waitingQuantity -= quantity;
 		}
@@ -290,7 +279,8 @@ public class AuctionShipmentLot extends BaseEntity {
 		return waitingQuantity;
 	}
 
-	public void adjustQuantities(Integer sold, Integer waiting, Integer returned, String worker, String memo, LocalDateTime changedAt) {
+	public void adjustQuantities(Integer sold, Integer waiting, Integer returned, String worker, String memo,
+			LocalDateTime changedAt) {
 		if (sold + waiting + returned != shippedQuantity) {
 			throw new IllegalArgumentException("판매/대기/반환 수량 합계가 출하 수량과 일치해야 합니다.");
 		}
@@ -303,7 +293,8 @@ public class AuctionShipmentLot extends BaseEntity {
 		changeStatus(next, "수량 보정", worker, memo, changedAt);
 	}
 
-	public void changeStatus(AuctionLotStatus next, String reason, String worker, String memo, LocalDateTime changedAt) {
+	public void changeStatus(AuctionLotStatus next, String reason, String worker, String memo,
+			LocalDateTime changedAt) {
 		if (currentStatus == next) {
 			return;
 		}
@@ -311,4 +302,5 @@ public class AuctionShipmentLot extends BaseEntity {
 		statusHistory.add(history);
 		currentStatus = next;
 	}
+
 }

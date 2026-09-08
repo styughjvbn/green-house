@@ -28,7 +28,8 @@ public class SalesSlipItemAllocation extends BaseEntity {
 
 	@Id
 	@GeneratedValue(strategy = GenerationType.SEQUENCE, generator = "sales_slip_item_allocations_id_seq")
-	@SequenceGenerator(name = "sales_slip_item_allocations_id_seq", sequenceName = "sales_slip_item_allocations_id_seq", allocationSize = 50)
+	@SequenceGenerator(name = "sales_slip_item_allocations_id_seq", sequenceName = "sales_slip_item_allocations_id_seq",
+			allocationSize = 50)
 	private Long id;
 
 	@ManyToOne(fetch = FetchType.LAZY, optional = false)
@@ -54,7 +55,8 @@ public class SalesSlipItemAllocation extends BaseEntity {
 	}
 
 	public SalesOrchidGroupSnapshot captureSnapshot(SalesOrchidGroupSnapshot snapshot) {
-		if (!orchidGroupId.equals(snapshot.getOrchidGroupId()) || !allocatedQuantity.equals(snapshot.getAllocatedQuantity())) {
+		if (!orchidGroupId.equals(snapshot.getOrchidGroupId())
+				|| !allocatedQuantity.equals(snapshot.getAllocatedQuantity())) {
 			throw new IllegalArgumentException("배분과 스냅샷의 난 묶음·수량이 일치하지 않습니다.");
 		}
 		var existing = findSnapshot(snapshot.getSnapshotType());
@@ -63,9 +65,9 @@ public class SalesSlipItemAllocation extends BaseEntity {
 
 	public SalesOrchidGroupSnapshot findSnapshot(SalesOrchidSnapshotType snapshotType) {
 		return snapshots.stream()
-				.filter(snapshot -> snapshot.getSnapshotType() == snapshotType)
-				.findFirst()
-				.orElse(null);
+			.filter(snapshot -> snapshot.getSnapshotType() == snapshotType)
+			.findFirst()
+			.orElse(null);
 	}
 
 	public SalesSlipItemAllocation copy() {
@@ -79,4 +81,5 @@ public class SalesSlipItemAllocation extends BaseEntity {
 		snapshots.add(snapshot);
 		return snapshot;
 	}
+
 }

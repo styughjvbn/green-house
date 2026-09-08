@@ -1,7 +1,7 @@
 package com.greenhouse.backend.work.application.operation;
 
-import com.greenhouse.backend.common.config.TimeConfig;
 import com.greenhouse.backend.common.application.RequestActorProvider;
+import com.greenhouse.backend.common.config.TimeConfig;
 import java.time.Clock;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -12,6 +12,7 @@ import org.springframework.stereotype.Component;
 public class WorkOperationSupport {
 
 	private final Clock clock;
+
 	private final RequestActorProvider requestActorProvider;
 
 	WorkOperationSupport(Clock clock) {
@@ -66,4 +67,5 @@ public class WorkOperationSupport {
 	public String actor(String requestedActor) {
 		return requestActorProvider.resolve(requestedActor);
 	}
+
 }

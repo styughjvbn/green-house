@@ -13,11 +13,11 @@ import com.greenhouse.backend.settlement.repository.PartnerBalanceSummaryReposit
 import com.greenhouse.backend.settlement.repository.PartnerPaymentEventRepository;
 import jakarta.persistence.EntityManager;
 import java.time.LocalDate;
-import org.springframework.data.domain.PageRequest;
 import java.util.concurrent.atomic.AtomicReference;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.transaction.IllegalTransactionStateException;
 import org.springframework.transaction.PlatformTransactionManager;
@@ -31,28 +31,46 @@ import org.springframework.transaction.support.TransactionTemplate;
 class PaymentLedgerContractIntegrationTest {
 
 	private static final LocalDate PAYMENT_DATE = LocalDate.of(2026, 9, 6);
+
 	private static final Long TARGET_ID = 99123L;
 
-	@Autowired PaymentLedgerService ledger;
-	@Autowired PartnerBalanceService balanceService;
-	@Autowired BusinessPartnerRepository partnerRepository;
-	@Autowired PartnerPaymentEventRepository eventRepository;
-	@Autowired PartnerBalanceSummaryRepository balanceRepository;
-	@Autowired AuditEventRepository auditRepository;
-	@Autowired EntityManager entityManager;
-	@Autowired PlatformTransactionManager transactionManager;
+	@Autowired
+	PaymentLedgerService ledger;
+
+	@Autowired
+	PartnerBalanceService balanceService;
+
+	@Autowired
+	BusinessPartnerRepository partnerRepository;
+
+	@Autowired
+	PartnerPaymentEventRepository eventRepository;
+
+	@Autowired
+	PartnerBalanceSummaryRepository balanceRepository;
+
+	@Autowired
+	AuditEventRepository auditRepository;
+
+	@Autowired
+	EntityManager entityManager;
+
+	@Autowired
+	PlatformTransactionManager transactionManager;
 
 	@Test
 	void recordsTheReceiptMatchBalanceAndAuditWithoutExposingEntities() {
 		var partner = createPartner();
-		var receipt = ledger.recordManualPayment(partner.getId(), PaymentTargetType.SALES_SLIP,
-				TARGET_ID, payment(1_000L, PAYMENT_DATE));
+		var receipt = ledger.recordManualPayment(partner.getId(), PaymentTargetType.SALES_SLIP, TARGET_ID,
+				payment(1_000L, PAYMENT_DATE));
 		balanceService.updateReceivable(partner.getId(), 2_000L, receipt);
 		balanceService.updateReceivable(partner.getId(), 1_500L, null);
 		entityManager.flush();
 		entityManager.clear();
 
-		var events = eventRepository.search(partner.getId(), PaymentTargetType.SALES_SLIP, TARGET_ID, null, PageRequest.of(0, 100)).getContent();
+		var events = eventRepository
+			.search(partner.getId(), PaymentTargetType.SALES_SLIP, TARGET_ID, null, PageRequest.of(0, 100))
+			.getContent();
 		assertThat(events).hasSize(2);
 		assertThat(events.getFirst().getEventType()).isEqualTo(PaymentEventType.MANUAL_MATCH_CONFIRMED);
 		assertThat(events.getFirst().getParentEvent().getId()).isEqualTo(receipt);
@@ -64,15 +82,17 @@ class PaymentLedgerContractIntegrationTest {
 			assertThat(event.getMemo()).isEqualTo("민감 메모");
 		});
 		assertThat(balanceService.getBalance(partner.getId()).receivableBalance()).isEqualTo(1_500L);
-		var lastEventId = (Number) entityManager.createNativeQuery(
-				"select last_payment_event_id from partner_balance_summaries where partner_id = :partnerId")
-				.setParameter("partnerId", partner.getId()).getSingleResult();
+		var lastEventId = (Number) entityManager
+			.createNativeQuery(
+					"select last_payment_event_id from partner_balance_summaries where partner_id = :partnerId")
+			.setParameter("partnerId", partner.getId())
+			.getSingleResult();
 		assertThat(lastEventId.longValue()).isEqualTo(receipt);
-		assertThat(auditRepository.findAll().stream()
-				.filter(event -> event.getEntityType().equals("PAYMENT_EVENT"))
-				.filter(event -> event.getEntityId().equals(receipt)))
-				.singleElement().satisfies(event -> assertThat(event.getAfterData().toString())
-						.doesNotContain("입금자", "민감 메모"));
+		assertThat(auditRepository.findAll()
+			.stream()
+			.filter(event -> event.getEntityType().equals("PAYMENT_EVENT"))
+			.filter(event -> event.getEntityId().equals(receipt))).singleElement()
+			.satisfies(event -> assertThat(event.getAfterData().toString()).doesNotContain("입금자", "민감 메모"));
 	}
 
 	@Test
@@ -82,21 +102,22 @@ class PaymentLedgerContractIntegrationTest {
 		var receipt = ledger.recordManualPayment(partner.getId(), PaymentTargetType.SALES_SLIP, TARGET_ID, command);
 
 		assertThat(ledger.findManualPayment(PaymentTargetType.SALES_SLIP, TARGET_ID, command)).contains(receipt);
-		assertThatThrownBy(() -> ledger.findManualPayment(
-				PaymentTargetType.SALES_SLIP, TARGET_ID, payment(2_000L, PAYMENT_DATE)))
-				.isInstanceOf(IllegalArgumentException.class);
-		assertThatThrownBy(() -> ledger.findManualPayment(
-				PaymentTargetType.SALES_SLIP, TARGET_ID, payment(1_000L, PAYMENT_DATE.plusDays(1))))
-				.isInstanceOf(IllegalArgumentException.class);
-		assertThat(eventRepository.search(partner.getId(), null, null, null, PageRequest.of(0, 100)).getContent()).hasSize(2);
+		assertThatThrownBy(
+				() -> ledger.findManualPayment(PaymentTargetType.SALES_SLIP, TARGET_ID, payment(2_000L, PAYMENT_DATE)))
+			.isInstanceOf(IllegalArgumentException.class);
+		assertThatThrownBy(() -> ledger.findManualPayment(PaymentTargetType.SALES_SLIP, TARGET_ID,
+				payment(1_000L, PAYMENT_DATE.plusDays(1))))
+			.isInstanceOf(IllegalArgumentException.class);
+		assertThat(eventRepository.search(partner.getId(), null, null, null, PageRequest.of(0, 100)).getContent())
+			.hasSize(2);
 	}
 
 	@Test
 	@Transactional(propagation = Propagation.NOT_SUPPORTED)
 	void rejectsLedgerWritesWithoutAnOwningTransaction() {
-		assertThatThrownBy(() -> ledger.recordManualPayment(-1L, PaymentTargetType.SALES_SLIP,
-				TARGET_ID, payment(1_000L, PAYMENT_DATE)))
-				.isInstanceOf(IllegalTransactionStateException.class);
+		assertThatThrownBy(() -> ledger.recordManualPayment(-1L, PaymentTargetType.SALES_SLIP, TARGET_ID,
+				payment(1_000L, PAYMENT_DATE)))
+			.isInstanceOf(IllegalTransactionStateException.class);
 	}
 
 	@Test
@@ -105,27 +126,29 @@ class PaymentLedgerContractIntegrationTest {
 		var partner = createPartner();
 		var receipt = new AtomicReference<Long>();
 		assertThatThrownBy(() -> new TransactionTemplate(transactionManager).executeWithoutResult(status -> {
-			receipt.set(ledger.recordManualPayment(partner.getId(), PaymentTargetType.SALES_SLIP,
-					TARGET_ID, payment(1_000L, PAYMENT_DATE)));
+			receipt.set(ledger.recordManualPayment(partner.getId(), PaymentTargetType.SALES_SLIP, TARGET_ID,
+					payment(1_000L, PAYMENT_DATE)));
 			balanceService.updateReceivable(partner.getId(), 2_000L, receipt.get());
 			entityManager.flush();
 			throw new IllegalStateException("후속 처리 실패");
 		})).isInstanceOf(IllegalStateException.class).hasMessage("후속 처리 실패");
 
-		assertThat(eventRepository.search(partner.getId(), null, null, null, PageRequest.of(0, 100)).getContent()).isEmpty();
+		assertThat(eventRepository.search(partner.getId(), null, null, null, PageRequest.of(0, 100)).getContent())
+			.isEmpty();
 		assertThat(balanceRepository.findByPartnerId(partner.getId())).isEmpty();
-		assertThat(auditRepository.findAll().stream()
-				.filter(event -> event.getEntityType().equals("PAYMENT_EVENT"))
-				.filter(event -> event.getEntityId().equals(receipt.get()))).isEmpty();
+		assertThat(auditRepository.findAll()
+			.stream()
+			.filter(event -> event.getEntityType().equals("PAYMENT_EVENT"))
+			.filter(event -> event.getEntityId().equals(receipt.get()))).isEmpty();
 	}
 
 	private BusinessPartner createPartner() {
-		return partnerRepository.saveAndFlush(new BusinessPartner(
-				"입금 계약 거래처", PartnerType.WHOLESALE, null, null, null, null));
+		return partnerRepository
+			.saveAndFlush(new BusinessPartner("입금 계약 거래처", PartnerType.WHOLESALE, null, null, null, null));
 	}
 
 	private ManualPaymentCommand payment(long amount, LocalDate date) {
-		return new ManualPaymentCommand(amount, date, " contract-payment ",
-				" 계좌이체 ", " 입금자 ", "작성자", " 민감 메모 ");
+		return new ManualPaymentCommand(amount, date, " contract-payment ", " 계좌이체 ", " 입금자 ", "작성자", " 민감 메모 ");
 	}
+
 }

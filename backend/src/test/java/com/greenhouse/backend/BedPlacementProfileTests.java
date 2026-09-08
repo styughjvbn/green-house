@@ -30,9 +30,15 @@ import org.springframework.transaction.annotation.Transactional;
 @Transactional
 class BedPlacementProfileTests {
 
-	@Autowired MockMvc mockMvc;
-	@Autowired EntityManager entityManager;
-	@Autowired BedPlacementProfileService profileService;
+	@Autowired
+	MockMvc mockMvc;
+
+	@Autowired
+	EntityManager entityManager;
+
+	@Autowired
+	BedPlacementProfileService profileService;
+
 	private Long zoneId;
 
 	@BeforeEach
@@ -43,17 +49,15 @@ class BedPlacementProfileTests {
 	@Test
 	void returnsPlacementProfile() throws Exception {
 		mockMvc.perform(get("/api/bed-zones/{bedZoneId}/placement-profile", zoneId))
-				.andExpect(status().isOk())
-				.andExpect(jsonPath("$.data.bedZoneId").value(zoneId))
-				.andExpect(jsonPath("$.data.capacities", hasSize(0)));
+			.andExpect(status().isOk())
+			.andExpect(jsonPath("$.data.bedZoneId").value(zoneId))
+			.andExpect(jsonPath("$.data.capacities", hasSize(0)));
 	}
 
 	@Test
 	void savesIncreasingCapacityModes() {
-		var request = new BedZonePlacementProfileRequest(List.of(
-				capacity(PlacementCapacityMode.SPACIOUS, 3),
-				capacity(PlacementCapacityMode.STANDARD, 4),
-				capacity(PlacementCapacityMode.EXPANDED, 5)));
+		var request = new BedZonePlacementProfileRequest(List.of(capacity(PlacementCapacityMode.SPACIOUS, 3),
+				capacity(PlacementCapacityMode.STANDARD, 4), capacity(PlacementCapacityMode.EXPANDED, 5)));
 
 		var updated = profileService.updateProfile(zoneId, request);
 
@@ -63,42 +67,35 @@ class BedPlacementProfileTests {
 
 	@Test
 	void rejectedReplacementPreservesExistingRules() {
-		profileService.updateProfile(zoneId, new BedZonePlacementProfileRequest(List.of(
-				capacity(PlacementCapacityMode.STANDARD, 5))));
+		profileService.updateProfile(zoneId,
+				new BedZonePlacementProfileRequest(List.of(capacity(PlacementCapacityMode.STANDARD, 5))));
 		entityManager.flush();
 		entityManager.clear();
 
-		assertThatThrownBy(() -> profileService.updateProfile(zoneId, new BedZonePlacementProfileRequest(List.of(
-				capacity(PlacementCapacityMode.SPACIOUS, 8),
-				capacity(PlacementCapacityMode.STANDARD, 5)))))
-				.isInstanceOf(IllegalArgumentException.class);
+		assertThatThrownBy(
+				() -> profileService.updateProfile(zoneId,
+						new BedZonePlacementProfileRequest(List.of(capacity(PlacementCapacityMode.SPACIOUS, 8),
+								capacity(PlacementCapacityMode.STANDARD, 5)))))
+			.isInstanceOf(IllegalArgumentException.class);
 
-		assertThat(profileService.getProfile(zoneId).capacities())
-				.singleElement().satisfies(capacity -> {
-					assertThat(capacity.capacityMode()).isEqualTo(PlacementCapacityMode.STANDARD);
-					assertThat(capacity.capacityValue()).isEqualTo(5);
-				});
+		assertThat(profileService.getProfile(zoneId).capacities()).singleElement().satisfies(capacity -> {
+			assertThat(capacity.capacityMode()).isEqualTo(PlacementCapacityMode.STANDARD);
+			assertThat(capacity.capacityValue()).isEqualTo(5);
+		});
 	}
 
 	@Test
 	void rejectsCapacityThatDecreasesInStrongerMode() {
-		var request = new BedZonePlacementProfileRequest(List.of(
-				capacity(PlacementCapacityMode.STANDARD, 5),
-				capacity(PlacementCapacityMode.EXPANDED, 4)));
+		var request = new BedZonePlacementProfileRequest(
+				List.of(capacity(PlacementCapacityMode.STANDARD, 5), capacity(PlacementCapacityMode.EXPANDED, 4)));
 
 		assertThatThrownBy(() -> profileService.updateProfile(zoneId, request))
-				.isInstanceOf(IllegalArgumentException.class)
-				.hasMessageContaining("작을 수 없습니다");
+			.isInstanceOf(IllegalArgumentException.class)
+			.hasMessageContaining("작을 수 없습니다");
 	}
 
 	private BedZoneCapacityRequest capacity(PlacementCapacityMode mode, int value) {
-		return new BedZoneCapacityRequest(
-				"TRAY_20",
-				null,
-				mode,
-				value,
-				BigDecimal.valueOf(6),
-				true,
-				null);
+		return new BedZoneCapacityRequest("TRAY_20", null, mode, value, BigDecimal.valueOf(6), true, null);
 	}
+
 }

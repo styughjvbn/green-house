@@ -7,7 +7,9 @@ import org.springframework.data.jpa.repository.Query;
 
 public interface MaterialRepository extends JpaRepository<Material, Long>, MaterialRepositoryCustom {
 
-	// PostgreSQL sequence allocation is atomic and is never inferred from a previously read row.
+	// PostgreSQL sequence allocation is atomic and is never inferred from a previously
+	// read row.
 	@Query(value = "select nextval('material_codes_seq')", nativeQuery = true)
 	long nextCodeValue();
+
 }

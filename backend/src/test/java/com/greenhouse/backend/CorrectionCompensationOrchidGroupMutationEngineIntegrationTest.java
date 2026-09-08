@@ -31,54 +31,48 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.transaction.annotation.Transactional;
 
 @Transactional
-class CorrectionCompensationOrchidGroupMutationEngineIntegrationTest
-		extends AbstractBackendIntegrationTest {
+class CorrectionCompensationOrchidGroupMutationEngineIntegrationTest extends AbstractBackendIntegrationTest {
 
-	@Autowired private OrchidGroupMutationEngine mutationEngine;
-	@Autowired private OrchidGroupStateChainMigrationService stateChainMigrationService;
-	@Autowired private OrchidGroupMutationRelationRepository relationRepository;
-	@Autowired private EntityManager entityManager;
+	@Autowired
+	private OrchidGroupMutationEngine mutationEngine;
+
+	@Autowired
+	private OrchidGroupStateChainMigrationService stateChainMigrationService;
+
+	@Autowired
+	private OrchidGroupMutationRelationRepository relationRepository;
+
+	@Autowired
+	private EntityManager entityManager;
 
 	@Test
 	void correctsResultsFromMultipleMutationsAndRecordsManyToManyRelations() {
 		Fixture fixture = createFixture();
 		LocalDate businessDate = LocalDate.of(2026, 8, 20);
 		var firstCreated = mutationEngine.createMany(new CreateOrchidGroupsMutationCommand(
-				farmSource("create-first", "CREATE"),
-				List.of(new CreateOrchidGroupMutationItem(
-						fixture.zone().getId(), details(fixture.variety().getId(), 20, "0", "2"))),
-				businessDate,
-				"첫 번째 생성"));
+				farmSource("create-first", "CREATE"), List.of(new CreateOrchidGroupMutationItem(fixture.zone().getId(),
+						details(fixture.variety().getId(), 20, "0", "2"))),
+				businessDate, "첫 번째 생성"));
 		var secondCreated = mutationEngine.createMany(new CreateOrchidGroupsMutationCommand(
-				farmSource("create-second", "CREATE"),
-				List.of(new CreateOrchidGroupMutationItem(
-						fixture.zone().getId(), details(fixture.variety().getId(), 30, "2", "4"))),
-				businessDate,
-				"두 번째 생성"));
+				farmSource("create-second", "CREATE"), List.of(new CreateOrchidGroupMutationItem(fixture.zone().getId(),
+						details(fixture.variety().getId(), 30, "2", "4"))),
+				businessDate, "두 번째 생성"));
 		Long firstGroupId = firstCreated.entries().getFirst().orchidGroupId();
 		Long secondGroupId = secondCreated.entries().getFirst().orchidGroupId();
 		OrchidGroupMutationSource correctionSource = workSource("correction-current");
 
-		var corrected = mutationEngine.correct(new CorrectOrchidGroupsMutationCommand(
-				correctionSource,
-				List.of(
-						new CorrectOrchidGroupMutationItem(secondGroupId, 27, " 수량 보정 "),
+		var corrected = mutationEngine.correct(new CorrectOrchidGroupsMutationCommand(correctionSource,
+				List.of(new CorrectOrchidGroupMutationItem(secondGroupId, 27, " 수량 보정 "),
 						new CorrectOrchidGroupMutationItem(firstGroupId, 18, "수량 보정")),
-				RelatedOrchidGroupMutations.current(List.of(
-						secondCreated.mutationId(), firstCreated.mutationId())),
-				businessDate,
-				"결과 수량 확인"));
+				RelatedOrchidGroupMutations.current(List.of(secondCreated.mutationId(), firstCreated.mutationId())),
+				businessDate, "결과 수량 확인"));
 		entityManager.flush();
 		entityManager.clear();
-		var replayed = mutationEngine.correct(new CorrectOrchidGroupsMutationCommand(
-				correctionSource,
-				List.of(
-						new CorrectOrchidGroupMutationItem(firstGroupId, 18, "수량 보정"),
+		var replayed = mutationEngine.correct(new CorrectOrchidGroupsMutationCommand(correctionSource,
+				List.of(new CorrectOrchidGroupMutationItem(firstGroupId, 18, "수량 보정"),
 						new CorrectOrchidGroupMutationItem(secondGroupId, 27, "수량 보정")),
-				RelatedOrchidGroupMutations.current(List.of(
-						firstCreated.mutationId(), secondCreated.mutationId())),
-				businessDate,
-				" 결과 수량 확인 "));
+				RelatedOrchidGroupMutations.current(List.of(firstCreated.mutationId(), secondCreated.mutationId())),
+				businessDate, " 결과 수량 확인 "));
 
 		assertThat(replayed.mutationId()).isEqualTo(corrected.mutationId());
 		assertThat(corrected.mutationType()).isEqualTo(OrchidGroupMutationType.CORRECTION);
@@ -89,41 +83,28 @@ class CorrectionCompensationOrchidGroupMutationEngineIntegrationTest
 		});
 		assertGroup(firstGroupId, 18, 2L);
 		assertGroup(secondGroupId, 27, 2L);
-		assertThat(relationRepository.findByMutationIdOrderByIdAsc(corrected.mutationId()))
-				.hasSize(2)
-				.allSatisfy(relation -> assertThat(relation.getRelationType())
-						.isEqualTo(OrchidGroupMutationRelationType.CORRECTS))
-				.extracting(relation -> relation.getRelatedMutation().getId())
-				.containsExactlyInAnyOrder(firstCreated.mutationId(), secondCreated.mutationId());
+		assertThat(relationRepository.findByMutationIdOrderByIdAsc(corrected.mutationId())).hasSize(2)
+			.allSatisfy(relation -> assertThat(relation.getRelationType())
+				.isEqualTo(OrchidGroupMutationRelationType.CORRECTS))
+			.extracting(relation -> relation.getRelatedMutation().getId())
+			.containsExactlyInAnyOrder(firstCreated.mutationId(), secondCreated.mutationId());
 	}
 
 	@Test
 	void correctsALegacyResultWithoutInventingAPastMutationRelation() {
 		Fixture fixture = createFixture();
-		OrchidGroup group = new OrchidGroup(
-				fixture.zone(),
-				fixture.variety().getGenus(),
-				fixture.variety().getName(),
-				20,
-				"4치",
-				2,
-				"정상",
-				1,
-				new BigDecimal("0"),
-				new BigDecimal("2"));
+		OrchidGroup group = new OrchidGroup(fixture.zone(), fixture.variety().getGenus(), fixture.variety().getName(),
+				20, "4치", 2, "정상", 1, new BigDecimal("0"), new BigDecimal("2"));
 		group.assignVariety(fixture.variety());
 		orchidGroupRepository.save(group);
 		UUID cutoverKey = UUID.randomUUID();
 		LocalDate businessDate = LocalDate.of(2026, 8, 20);
-		OrchidGroupStateChainTestSupport.importCurrentGroups(
-				stateChainMigrationService, orchidGroupRepository, cutoverKey, businessDate, "mutation-engine-test");
+		OrchidGroupStateChainTestSupport.importCurrentGroups(stateChainMigrationService, orchidGroupRepository,
+				cutoverKey, businessDate, "mutation-engine-test");
 
-		var corrected = mutationEngine.correct(new CorrectOrchidGroupsMutationCommand(
-				workSource("correction-legacy"),
+		var corrected = mutationEngine.correct(new CorrectOrchidGroupsMutationCommand(workSource("correction-legacy"),
 				List.of(new CorrectOrchidGroupMutationItem(group.getId(), 17, "수량 보정")),
-				RelatedOrchidGroupMutations.legacy(),
-				businessDate,
-				"전환 전 작업 결과 보정"));
+				RelatedOrchidGroupMutations.legacy(), businessDate, "전환 전 작업 결과 보정"));
 
 		assertThat(corrected.mutationType()).isEqualTo(OrchidGroupMutationType.CORRECTION);
 		assertThat(corrected.entries()).singleElement().satisfies(entry -> {
@@ -142,47 +123,24 @@ class CorrectionCompensationOrchidGroupMutationEngineIntegrationTest
 		bed.addBedZone(zone);
 		house.addPhysicalBed(bed);
 		houseRepository.save(house);
-		Variety variety = varietyRepository.save(new Variety(
-				"CORRECTION-MUTATION", "Phalaenopsis", "Correction Mutation", null, "4치",
-				true, true, null, null));
+		Variety variety = varietyRepository.save(new Variety("CORRECTION-MUTATION", "Phalaenopsis",
+				"Correction Mutation", null, "4치", true, true, null, null));
 		return new Fixture(zone, variety);
 	}
 
-	private OrchidGroupMutationDetails details(
-			Long varietyId,
-			int quantity,
-			String startPosition,
-			String endPosition) {
-		return new OrchidGroupMutationDetails(
-				varietyId,
-				quantity,
-				"4치",
-				2,
-				"정상",
-				"POT",
-				null,
-				false,
-				new BigDecimal(startPosition),
-				new BigDecimal(endPosition),
-				null);
+	private OrchidGroupMutationDetails details(Long varietyId, int quantity, String startPosition, String endPosition) {
+		return new OrchidGroupMutationDetails(varietyId, quantity, "4치", 2, "정상", "POT", null, false,
+				new BigDecimal(startPosition), new BigDecimal(endPosition), null);
 	}
 
 	private OrchidGroupMutationSource farmSource(String referenceId, String operationKey) {
-		return new OrchidGroupMutationSource(
-				OrchidGroupMutationSourceDomain.FARM,
-				"ORCHID_GROUP_COMMAND",
-				referenceId,
-				operationKey,
-				UUID.randomUUID());
+		return new OrchidGroupMutationSource(OrchidGroupMutationSourceDomain.FARM, "ORCHID_GROUP_COMMAND", referenceId,
+				operationKey, UUID.randomUUID());
 	}
 
 	private OrchidGroupMutationSource workSource(String referenceId) {
-		return new OrchidGroupMutationSource(
-				OrchidGroupMutationSourceDomain.WORK,
-				"WORK_EFFECT",
-				referenceId,
-				"OPERATION",
-				UUID.randomUUID());
+		return new OrchidGroupMutationSource(OrchidGroupMutationSourceDomain.WORK, "WORK_EFFECT", referenceId,
+				"OPERATION", UUID.randomUUID());
 	}
 
 	private void assertGroup(Long groupId, int quantity, long revision) {
@@ -194,4 +152,5 @@ class CorrectionCompensationOrchidGroupMutationEngineIntegrationTest
 
 	private record Fixture(BedZone zone, Variety variety) {
 	}
+
 }

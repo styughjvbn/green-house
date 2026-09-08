@@ -1,5 +1,6 @@
 package com.greenhouse.backend.work.application.operation;
 
+import com.greenhouse.backend.work.application.operation.WorkOperationView;
 import com.greenhouse.backend.work.application.target.InboundPottingPlanGateway;
 import com.greenhouse.backend.work.application.target.InboundPottingPlanTarget;
 import com.greenhouse.backend.work.domain.operation.WorkOperation;
@@ -9,7 +10,6 @@ import com.greenhouse.backend.work.domain.operation.WorkTypeDefinition;
 import com.greenhouse.backend.work.dto.effect.InboundPottingCandidateResponse;
 import com.greenhouse.backend.work.dto.effect.InboundPottingPlanBatchCreateRequest;
 import com.greenhouse.backend.work.dto.effect.InboundPottingPlanCreateRequest;
-import com.greenhouse.backend.work.application.operation.WorkOperationView;
 import com.greenhouse.backend.work.repository.WorkTargetExecutionRepository;
 import java.util.ArrayList;
 import java.util.Comparator;
@@ -26,17 +26,20 @@ import org.springframework.transaction.annotation.Transactional;
 public class InboundPottingPlanService {
 
 	private final WorkTypeService workTypeService;
+
 	private final WorkTargetExecutionRepository executionRepository;
+
 	private final InboundPottingPlanGateway inboundPottingPlanGateway;
+
 	private final WorkOperationAggregateCreator aggregateCreator;
+
 	private final WorkOperationQueryService queryService;
+
 	private final WorkOperationSupport support;
 
 	@Transactional(readOnly = true)
 	public List<InboundPottingCandidateResponse> getCandidates() {
-		return inboundPottingPlanGateway.findCandidates().stream()
-				.map(InboundPottingCandidateResponse::from)
-				.toList();
+		return inboundPottingPlanGateway.findCandidates().stream().map(InboundPottingCandidateResponse::from).toList();
 	}
 
 	public WorkOperationView create(InboundPottingPlanCreateRequest request) {
@@ -65,28 +68,21 @@ public class InboundPottingPlanService {
 		Map<String, List<Long>> idsByVariety = new LinkedHashMap<>();
 		Map<String, String> namesByVariety = new LinkedHashMap<>();
 		for (InboundPottingPlanTarget record : records) {
-			String key = record.varietyId() == null
-					? "name:" + record.varietyName()
-					: "id:" + record.varietyId();
+			String key = record.varietyId() == null ? "name:" + record.varietyName() : "id:" + record.varietyId();
 			idsByVariety.computeIfAbsent(key, ignored -> new ArrayList<>()).add(record.id());
 			namesByVariety.putIfAbsent(key, record.varietyName());
 		}
 		int varietyCount = idsByVariety.size();
 		Map<Long, InboundPottingPlanTarget> recordsById = records.stream()
-				.collect(java.util.stream.Collectors.toMap(InboundPottingPlanTarget::id, record -> record));
-		List<Long> operationIds = idsByVariety.entrySet().stream()
-				.map(entry -> {
-					var groupedRequest = new InboundPottingPlanCreateRequest(
-						varietyTitle(planRequest.title(), namesByVariety.get(entry.getKey()), varietyCount),
-						planRequest.plannedStartDate(),
-						planRequest.plannedEndDate(),
-						entry.getValue(),
-						planRequest.worker(),
-						planRequest.memo());
-					var groupedRecords = entry.getValue().stream().map(recordsById::get).toList();
-					return createResolved(groupedRequest, entry.getValue(), groupedRecords, workType).getId();
-				})
-				.toList();
+			.collect(java.util.stream.Collectors.toMap(InboundPottingPlanTarget::id, record -> record));
+		List<Long> operationIds = idsByVariety.entrySet().stream().map(entry -> {
+			var groupedRequest = new InboundPottingPlanCreateRequest(
+					varietyTitle(planRequest.title(), namesByVariety.get(entry.getKey()), varietyCount),
+					planRequest.plannedStartDate(), planRequest.plannedEndDate(), entry.getValue(),
+					planRequest.worker(), planRequest.memo());
+			var groupedRecords = entry.getValue().stream().map(recordsById::get).toList();
+			return createResolved(groupedRequest, entry.getValue(), groupedRecords, workType).getId();
+		}).toList();
 		inboundPottingPlanGateway.markPottingPlanned(requestedIds);
 		return queryService.getAll(operationIds);
 	}
@@ -106,26 +102,15 @@ public class InboundPottingPlanService {
 		}
 	}
 
-	private WorkOperation createResolved(
-			InboundPottingPlanCreateRequest request,
-			List<Long> requestedIds,
-			List<InboundPottingPlanTarget> records,
-			WorkType workType) {
-		WorkOperation operation = new WorkOperation(
-				workType,
-				support.normalizeRequired(request.title()),
-				request.plannedStartDate(),
-				request.plannedEndDate(),
-				WorkSourceScopeType.INBOUND_RECORD_SELECTION,
-				null,
-				Map.of("inboundRecordIds", requestedIds),
-				Map.of(),
-				support.actor(request.worker()),
-				support.normalize(request.memo()),
-				support.now());
+	private WorkOperation createResolved(InboundPottingPlanCreateRequest request, List<Long> requestedIds,
+			List<InboundPottingPlanTarget> records, WorkType workType) {
+		WorkOperation operation = new WorkOperation(workType, support.normalizeRequired(request.title()),
+				request.plannedStartDate(), request.plannedEndDate(), WorkSourceScopeType.INBOUND_RECORD_SELECTION,
+				null, Map.of("inboundRecordIds", requestedIds), Map.of(), support.actor(request.worker()),
+				support.normalize(request.memo()), support.now());
 		List<InboundPottingPlanTarget> orderedRecords = records.stream()
-				.sorted(Comparator.comparing(record -> requestedIds.indexOf(record.id())))
-				.toList();
+			.sorted(Comparator.comparing(record -> requestedIds.indexOf(record.id())))
+			.toList();
 		aggregateCreator.createForInboundRecords(operation, orderedRecords);
 		return operation;
 	}
@@ -136,4 +121,5 @@ public class InboundPottingPlanService {
 		}
 		return support.normalizeRequired(baseTitle) + " - " + varietyName;
 	}
+
 }

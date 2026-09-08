@@ -1,13 +1,16 @@
 package com.greenhouse.backend.sales.domain;
 
-/** Compatibility groups for stored free-form labels, not payment eligibility or ledger state. */
+/**
+ * Compatibility groups for stored free-form labels, not payment eligibility or ledger
+ * state.
+ */
 public enum SalesPaymentCategory {
-	PAID,
-	PARTIAL,
-	UNPAID;
+
+	PAID, PARTIAL, UNPAID;
 
 	public static SalesPaymentCategory fromStoredStatus(String status) {
-		// Keep the existing report classification until stored labels have an explicit migration policy.
+		// Keep the existing report classification until stored labels have an explicit
+		// migration policy.
 		if (status.contains("부분")) {
 			return PARTIAL;
 		}
@@ -16,4 +19,5 @@ public enum SalesPaymentCategory {
 		}
 		return UNPAID;
 	}
+
 }

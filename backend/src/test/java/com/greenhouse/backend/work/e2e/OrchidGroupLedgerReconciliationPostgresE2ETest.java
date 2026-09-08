@@ -31,14 +31,29 @@ import org.springframework.transaction.support.TransactionTemplate;
 @Tag("work-e2e")
 class OrchidGroupLedgerReconciliationPostgresE2ETest extends WorkE2ETestBase {
 
-	@Autowired private WorkTestDataSeeder seeder;
-	@Autowired private OrchidGroupLedgerCutoverService cutoverService;
-	@Autowired private OrchidGroupLedgerReconciliationService reconciliationService;
-	@Autowired private OrchidGroupMutationEngine mutationEngine;
-	@Autowired private OrchidGroupStateChainMigrationService stateChainMigrationService;
-	@Autowired private OrchidGroupRepository orchidGroupRepository;
-	@Autowired private JdbcTemplate jdbcTemplate;
-	@Autowired private TransactionTemplate transactionTemplate;
+	@Autowired
+	private WorkTestDataSeeder seeder;
+
+	@Autowired
+	private OrchidGroupLedgerCutoverService cutoverService;
+
+	@Autowired
+	private OrchidGroupLedgerReconciliationService reconciliationService;
+
+	@Autowired
+	private OrchidGroupMutationEngine mutationEngine;
+
+	@Autowired
+	private OrchidGroupStateChainMigrationService stateChainMigrationService;
+
+	@Autowired
+	private OrchidGroupRepository orchidGroupRepository;
+
+	@Autowired
+	private JdbcTemplate jdbcTemplate;
+
+	@Autowired
+	private TransactionTemplate transactionTemplate;
 
 	private WorkTestDataSeeder.ContractScenario scenario;
 
@@ -52,25 +67,19 @@ class OrchidGroupLedgerReconciliationPostgresE2ETest extends WorkE2ETestBase {
 	void rehearsesImportedStateChainAndDetectsAnOutOfLedgerDatabaseUpdate() {
 		var preBaselineReport = reconciliationService.reconcile();
 
-		assertThat(preBaselineReport.stage())
-				.isEqualTo(OrchidGroupLedgerReconciliationStage.PRE_BASELINE);
+		assertThat(preBaselineReport.stage()).isEqualTo(OrchidGroupLedgerReconciliationStage.PRE_BASELINE);
 		assertThat(preBaselineReport.ready()).isTrue();
-		assertThat(jdbcTemplate.queryForObject(
-				"SELECT COUNT(*) FROM orchid_group_ledger_coverages", Long.class)).isZero();
+		assertThat(jdbcTemplate.queryForObject("SELECT COUNT(*) FROM orchid_group_ledger_coverages", Long.class))
+			.isZero();
 
 		UUID cutoverKey = UUID.randomUUID();
 		LocalDate businessDate = LocalDate.of(2026, 8, 20);
-		OrchidGroupStateChainTestSupport.importCurrentGroups(
-				stateChainMigrationService,
-				orchidGroupRepository,
-				cutoverKey,
-				businessDate,
-				"postgres-rehearsal-test");
+		OrchidGroupStateChainTestSupport.importCurrentGroups(stateChainMigrationService, orchidGroupRepository,
+				cutoverKey, businessDate, "postgres-rehearsal-test");
 
 		var baselineReport = reconciliationService.reconcile();
 
-		assertThat(baselineReport.stage())
-				.isEqualTo(OrchidGroupLedgerReconciliationStage.BASELINE_PREPARING);
+		assertThat(baselineReport.stage()).isEqualTo(OrchidGroupLedgerReconciliationStage.BASELINE_PREPARING);
 		assertThat(baselineReport.ready()).isTrue();
 		assertThat(baselineReport.baselineFingerprint()).hasSize(64);
 		assertThatThrownBy(() -> jdbcTemplate.update("""
@@ -78,71 +87,47 @@ class OrchidGroupLedgerReconciliationPostgresE2ETest extends WorkE2ETestBase {
 				  cutover_key, status, engine_schema_version, snapshot_schema_version,
 				  effective_business_date, minimum_writer_version
 				) VALUES (?, 'PREPARING', 1, 1, ?, 'competing-writer')
-				""", UUID.randomUUID(), businessDate))
-				.isInstanceOf(DataIntegrityViolationException.class);
+				""", UUID.randomUUID(), businessDate)).isInstanceOf(DataIntegrityViolationException.class);
 
-		jdbcTemplate.update(
-				"UPDATE orchid_groups SET reserved_quantity = 1 WHERE id = ?",
-				scenario.orchidGroupId());
+		jdbcTemplate.update("UPDATE orchid_groups SET reserved_quantity = 1 WHERE id = ?", scenario.orchidGroupId());
 
 		var corruptedReport = reconciliationService.reconcile();
 
 		assertThat(corruptedReport.ready()).isFalse();
 		assertThat(corruptedReport.issues()).extracting("code")
-				.contains("CURRENT_SNAPSHOT_MISMATCH", "SALES_RESERVATION_MISMATCH");
+			.contains("CURRENT_SNAPSHOT_MISMATCH", "SALES_RESERVATION_MISMATCH");
 	}
 
 	@Test
 	void activatesAfterAnEngineCreatedGroupWhileCoverageIsPreparing() {
 		UUID cutoverKey = UUID.randomUUID();
 		LocalDate businessDate = LocalDate.of(2026, 8, 20);
-		OrchidGroupStateChainTestSupport.importCurrentGroups(
-				stateChainMigrationService,
-				orchidGroupRepository,
-				cutoverKey,
-				businessDate,
-				"1.0.0");
-		Long varietyId = jdbcTemplate.queryForObject(
-				"SELECT variety_id FROM orchid_groups WHERE id = ?",
-				Long.class,
+		OrchidGroupStateChainTestSupport.importCurrentGroups(stateChainMigrationService, orchidGroupRepository,
+				cutoverKey, businessDate, "1.0.0");
+		Long varietyId = jdbcTemplate.queryForObject("SELECT variety_id FROM orchid_groups WHERE id = ?", Long.class,
 				scenario.orchidGroupId());
 
-		var created = transactionTemplate.execute(status -> mutationEngine.create(
-				new CreateOrchidGroupMutationCommand(
-				new OrchidGroupMutationSource(
-						OrchidGroupMutationSourceDomain.WORK,
-						"WORK_EFFECT",
-						"post-baseline-work",
-						"EXECUTION:post-baseline-create",
-						UUID.randomUUID()),
-				scenario.bedZoneId(),
-				new OrchidGroupMutationDetails(
-						varietyId,
-						10,
-						"3.5치",
-						2,
-						"정상",
-						"POT",
-						null,
-						false,
-						new BigDecimal("6"),
-						new BigDecimal("7"),
-						null),
-				businessDate.plusDays(1),
-				"PREPARING smoke test 생성")));
+		var created = transactionTemplate
+			.execute(status -> mutationEngine.create(new CreateOrchidGroupMutationCommand(
+					new OrchidGroupMutationSource(OrchidGroupMutationSourceDomain.WORK, "WORK_EFFECT",
+							"post-baseline-work", "EXECUTION:post-baseline-create", UUID.randomUUID()),
+					scenario.bedZoneId(),
+					new OrchidGroupMutationDetails(varietyId, 10, "3.5치", 2, "정상", "POT", null, false,
+							new BigDecimal("6"), new BigDecimal("7"), null),
+					businessDate.plusDays(1), "PREPARING smoke test 생성")));
 
-		var activated = cutoverService.execute(new OrchidGroupLedgerCutoverCommand(
-				cutoverKey, businessDate, "1.0.0", "1.0.0", true));
+		var activated = cutoverService
+			.execute(new OrchidGroupLedgerCutoverCommand(cutoverKey, businessDate, "1.0.0", "1.0.0", true));
 		var report = activated.reconciliation();
 
-		assertThat(created.entries()).singleElement().satisfies(entry ->
-				assertThat(entry.entryKind()).isEqualTo(OrchidGroupMutationEntryKind.CREATE));
-		assertThat(report.stage())
-				.isEqualTo(OrchidGroupLedgerReconciliationStage.ACTIVE);
+		assertThat(created.entries()).singleElement()
+			.satisfies(entry -> assertThat(entry.entryKind()).isEqualTo(OrchidGroupMutationEntryKind.CREATE));
+		assertThat(report.stage()).isEqualTo(OrchidGroupLedgerReconciliationStage.ACTIVE);
 		assertThat(report.orchidGroupCount()).isEqualTo(2);
 		assertThat(report.baselineGroupCount()).isEqualTo(1);
 		assertThat(activated.activated()).isTrue();
 		assertThat(report.ready()).isTrue();
 		assertThat(report.issues()).isEmpty();
 	}
+
 }

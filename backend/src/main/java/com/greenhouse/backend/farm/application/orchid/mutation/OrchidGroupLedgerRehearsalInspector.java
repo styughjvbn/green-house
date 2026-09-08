@@ -4,6 +4,6 @@ import java.util.List;
 
 public interface OrchidGroupLedgerRehearsalInspector {
 
-	List<OrchidGroupLedgerReconciliationIssue> inspect(
-			List<OrchidGroupLedgerReconciliationGroup> groups);
+	List<OrchidGroupLedgerReconciliationIssue> inspect(List<OrchidGroupLedgerReconciliationGroup> groups);
+
 }

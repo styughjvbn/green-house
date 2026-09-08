@@ -8,12 +8,7 @@ import jakarta.validation.constraints.Size;
 import java.time.LocalDate;
 
 @Schema(name = "ManualPaymentRequest")
-public record ManualPaymentCommand(
-		@NotNull @Positive Long amount,
-		@NotNull LocalDate paymentDate,
-		@NotBlank @Size(max = 100) String idempotencyKey,
-		@Size(max = 30) String paymentMethod,
-		@Size(max = 100) String depositorName,
-		@Size(max = 100) String worker,
-		@Size(max = 1000) String memo) {
+public record ManualPaymentCommand(@NotNull @Positive Long amount, @NotNull LocalDate paymentDate,
+		@NotBlank @Size(max = 100) String idempotencyKey, @Size(max = 30) String paymentMethod,
+		@Size(max = 100) String depositorName, @Size(max = 100) String worker, @Size(max = 1000) String memo) {
 }

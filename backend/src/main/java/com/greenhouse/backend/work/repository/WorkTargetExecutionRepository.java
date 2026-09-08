@@ -22,4 +22,5 @@ public interface WorkTargetExecutionRepository
 			order by execution.id
 			""")
 	List<WorkExecutionReconciliationRow> findReconciliationRows();
+
 }

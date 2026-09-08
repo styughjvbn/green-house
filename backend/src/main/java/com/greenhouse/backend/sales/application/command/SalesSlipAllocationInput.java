@@ -5,7 +5,5 @@ import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotNull;
 
 @Schema(name = "SalesSlipItemAllocationRequest")
-public record SalesSlipAllocationInput(
-		@NotNull Long orchidGroupId,
-		@NotNull @Min(1) Integer quantity) {
+public record SalesSlipAllocationInput(@NotNull Long orchidGroupId, @NotNull @Min(1) Integer quantity) {
 }

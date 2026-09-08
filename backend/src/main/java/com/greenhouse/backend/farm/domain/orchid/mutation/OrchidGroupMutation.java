@@ -23,18 +23,13 @@ import lombok.NoArgsConstructor;
  * ORCHID-CUTOVER: TARGET — 난 묶음 상태 변경 원인을 보존하는 영구 ledger header다.
  */
 @Entity
-@Table(
-		name = "orchid_group_mutations",
-		uniqueConstraints = @UniqueConstraint(
-				name = "uk_orchid_group_mutation_source",
-				columnNames = {"source_domain", "source_type", "source_reference_id", "source_operation_key"}))
+@Table(name = "orchid_group_mutations", uniqueConstraints = @UniqueConstraint(name = "uk_orchid_group_mutation_source",
+		columnNames = { "source_domain", "source_type", "source_reference_id", "source_operation_key" }))
 public class OrchidGroupMutation {
 
 	@Id
 	@GeneratedValue(strategy = GenerationType.SEQUENCE, generator = "orchid_group_mutations_id_seq")
-	@SequenceGenerator(
-			name = "orchid_group_mutations_id_seq",
-			sequenceName = "orchid_group_mutations_id_seq",
+	@SequenceGenerator(name = "orchid_group_mutations_id_seq", sequenceName = "orchid_group_mutations_id_seq",
 			allocationSize = 50)
 	private Long id;
 
@@ -76,36 +71,18 @@ public class OrchidGroupMutation {
 	@Column(name = "schema_version", nullable = false)
 	private Integer schemaVersion;
 
-	public OrchidGroupMutation(
-			OrchidGroupMutationType mutationType,
-			OrchidGroupMutationSource source,
-			String commandFingerprint,
-			Instant recordedAt,
-			LocalDate effectiveBusinessDate,
-			String reason,
+	public OrchidGroupMutation(OrchidGroupMutationType mutationType, OrchidGroupMutationSource source,
+			String commandFingerprint, Instant recordedAt, LocalDate effectiveBusinessDate, String reason,
 			int schemaVersion) {
-		this(
-				mutationType,
-				source,
-				commandFingerprint,
-				recordedAt,
-				recordedAt,
-				effectiveBusinessDate,
-				reason,
+		this(mutationType, source, commandFingerprint, recordedAt, recordedAt, effectiveBusinessDate, reason,
 				schemaVersion);
 	}
 
-	public OrchidGroupMutation(
-			OrchidGroupMutationType mutationType,
-			OrchidGroupMutationSource source,
-			String commandFingerprint,
-			Instant occurredAt,
-			Instant recordedAt,
-			LocalDate effectiveBusinessDate,
-			String reason,
-			int schemaVersion) {
-		if (mutationType == null || source == null || occurredAt == null
-				|| recordedAt == null || effectiveBusinessDate == null) {
+	public OrchidGroupMutation(OrchidGroupMutationType mutationType, OrchidGroupMutationSource source,
+			String commandFingerprint, Instant occurredAt, Instant recordedAt, LocalDate effectiveBusinessDate,
+			String reason, int schemaVersion) {
+		if (mutationType == null || source == null || occurredAt == null || recordedAt == null
+				|| effectiveBusinessDate == null) {
 			throw new IllegalArgumentException("Mutation type, source와 적용 시점이 필요합니다.");
 		}
 		if (commandFingerprint == null || !commandFingerprint.matches("[0-9a-f]{64}")) {
@@ -139,4 +116,5 @@ public class OrchidGroupMutation {
 		String normalized = value.trim();
 		return normalized.isEmpty() ? null : normalized;
 	}
+
 }

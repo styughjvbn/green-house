@@ -1,7 +1,7 @@
 package com.greenhouse.backend.farm.application.variety;
 
-import com.greenhouse.backend.common.api.PageRequests;
 import com.greenhouse.backend.audit.domain.AuditAction;
+import com.greenhouse.backend.common.api.PageRequests;
 import com.greenhouse.backend.common.api.PageResponse;
 import com.greenhouse.backend.common.config.TimeConfig;
 import com.greenhouse.backend.common.exception.NotFoundException;
@@ -31,40 +31,37 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 /**
- * ORCHID-CUTOVER: LEGACY_RETIRE — Engine 경로와 전환 후 제거할 직접 품종 전파 분기를 함께 가진다.
- * Removal gate: 운영 ACTIVE 안정화 및 writer inventory 승인.
+ * ORCHID-CUTOVER: LEGACY_RETIRE — Engine 경로와 전환 후 제거할 직접 품종 전파 분기를 함께 가진다. Removal gate:
+ * 운영 ACTIVE 안정화 및 writer inventory 승인.
  */
 @Service
 @Transactional
 @RequiredArgsConstructor
 public class VarietyService {
+
 	private final VarietyRepository varietyRepository;
+
 	private final OrchidGroupRepository orchidGroupRepository;
+
 	private final InboundRecordRepository inboundRecordRepository;
+
 	private final VarietyResponseAssembler responseAssembler;
+
 	private final VarietyAuditSupport auditSupport;
+
 	private final OrchidGroupMutationEngine mutationEngine;
+
 	private final OrchidGroupMutationRoutingPolicy mutationRoutingPolicy;
+
 	private final Clock clock;
 
 	@Transactional(readOnly = true)
-	public PageResponse<VarietyResponse> getVarieties(
-			String keyword,
-			String genus,
-			Boolean saleEnabled,
-			Boolean active,
-			int page,
-			int size) {
+	public PageResponse<VarietyResponse> getVarieties(String keyword, String genus, Boolean saleEnabled, Boolean active,
+			int page, int size) {
 		PageRequests.validate(page, size);
-		var result = varietyRepository.search(
-				normalize(keyword) == null ? "" : normalize(keyword),
-				normalize(genus) == null ? "" : normalize(genus),
-				saleEnabled,
-				active,
-				PageRequest.of(page, size, Sort.by(
-						Sort.Order.desc("active"),
-						Sort.Order.asc("genus"),
-						Sort.Order.asc("name"))));
+		var result = varietyRepository.search(normalize(keyword) == null ? "" : normalize(keyword),
+				normalize(genus) == null ? "" : normalize(genus), saleEnabled, active, PageRequest.of(page, size,
+						Sort.by(Sort.Order.desc("active"), Sort.Order.asc("genus"), Sort.Order.asc("name"))));
 		return PageResponse.from(responseAssembler.assemble(result));
 	}
 
@@ -75,9 +72,10 @@ public class VarietyService {
 
 	@Transactional(readOnly = true)
 	public VarietyGeneraResponse getGenera() {
-		var varieties = varietyRepository.findActiveNames().stream()
-				.map(variety -> new VarietyNameResponse(variety.id(), variety.genus(), variety.name()))
-				.toList();
+		var varieties = varietyRepository.findActiveNames()
+			.stream()
+			.map(variety -> new VarietyNameResponse(variety.id(), variety.genus(), variety.name()))
+			.toList();
 		return new VarietyGeneraResponse(varietyRepository.findDistinctGenera(), varieties);
 	}
 
@@ -85,16 +83,9 @@ public class VarietyService {
 		String genus = normalizeRequired(request.genus());
 		String name = normalizeRequired(request.name());
 		validateUniqueVariety(genus, name, null);
-		var variety = new Variety(
-				nextCode(),
-				genus,
-				name,
-				normalize(request.alias()),
-				normalize(request.defaultPotSize()),
-				normalizeColor(request.color()),
-				request.saleEnabled() == null || request.saleEnabled(),
-				true,
-				normalize(request.description()),
+		var variety = new Variety(nextCode(), genus, name, normalize(request.alias()),
+				normalize(request.defaultPotSize()), normalizeColor(request.color()),
+				request.saleEnabled() == null || request.saleEnabled(), true, normalize(request.description()),
 				normalize(request.memo()));
 		Variety saved = varietyRepository.save(variety);
 		auditSupport.record(AuditAction.CREATED, saved, null, auditSupport.snapshot(saved));
@@ -103,8 +94,7 @@ public class VarietyService {
 
 	public Variety resolveInboundVariety(Long varietyId, InboundVarietyInput newVariety) {
 		if (varietyId != null) {
-			return varietyRepository.findById(varietyId)
-					.orElseThrow(() -> new NotFoundException("품종을 찾을 수 없습니다."));
+			return varietyRepository.findById(varietyId).orElseThrow(() -> new NotFoundException("품종을 찾을 수 없습니다."));
 		}
 		if (newVariety == null) {
 			throw new IllegalArgumentException("품종을 선택하거나 새 품종을 입력해야 합니다.");
@@ -112,16 +102,8 @@ public class VarietyService {
 		String genus = normalizeRequired(newVariety.genus());
 		String name = normalizeRequired(newVariety.name());
 		return varietyRepository.findByGenusAndName(genus, name)
-				.orElseGet(() -> varietyRepository.save(new Variety(
-						nextCode(),
-						genus,
-						name,
-						null,
-						normalize(newVariety.defaultPotSize()),
-						true,
-						true,
-						null,
-						normalize(newVariety.memo()))));
+			.orElseGet(() -> varietyRepository.save(new Variety(nextCode(), genus, name, null,
+					normalize(newVariety.defaultPotSize()), true, true, null, normalize(newVariety.memo()))));
 	}
 
 	public VarietyResponse update(Long varietyId, VarietyUpdateRequest request) {
@@ -130,45 +112,29 @@ public class VarietyService {
 		String genus = normalizeRequired(request.genus());
 		String name = normalizeRequired(request.name());
 		validateUniqueVariety(genus, name, varietyId);
-		variety.update(
-				genus,
-				name,
-				normalize(request.alias()),
-				normalize(request.defaultPotSize()),
-				normalizeColor(request.color()),
-				request.saleEnabled() == null || request.saleEnabled(),
-				normalize(request.description()),
-				normalize(request.memo()));
+		variety.update(genus, name, normalize(request.alias()), normalize(request.defaultPotSize()),
+				normalizeColor(request.color()), request.saleEnabled() == null || request.saleEnabled(),
+				normalize(request.description()), normalize(request.memo()));
 		var connectedGroups = orchidGroupRepository.findByVarietyIdOrderByLocation(varietyId);
 		UUID correlationId = UUID.randomUUID();
 		var changedGroups = connectedGroups.stream()
-				.filter(group -> !java.util.Objects.equals(group.getGenus(), variety.getGenus())
-						|| !java.util.Objects.equals(group.getVarietyName(), variety.getName()))
-				.toList();
+			.filter(group -> !java.util.Objects.equals(group.getGenus(), variety.getGenus())
+					|| !java.util.Objects.equals(group.getVarietyName(), variety.getName()))
+			.toList();
 		if (mutationRoutingPolicy.routesToEngine()) {
-			changedGroups.forEach(group -> mutationEngine.updateDetails(
-					new UpdateOrchidGroupMutationCommand(
-							OrchidGroupMutationSources.farmBatch(
-									"VARIETY",
-									varietyId.toString(),
-									"PROPAGATE:" + correlationId + ":" + group.getId(),
-									correlationId),
-							group.getId(),
-							new OrchidGroupMutationDetails(
-									varietyId,
-									group.getQuantity(),
-									group.getPotSize(),
-									group.getAgeYear(),
-									group.getStatus(),
-									group.getPlacementType(),
-									group.getTrayCount(),
-									group.getSplitPlacementAllowed(),
-									group.getStartPosition(),
-									group.getEndPosition(),
-									group.getMemo()),
-							TimeConfig.farmToday(clock),
-							"품종 정보 변경 전파")));
-		} else {
+			changedGroups
+				.forEach(
+						group -> mutationEngine.updateDetails(new UpdateOrchidGroupMutationCommand(
+								OrchidGroupMutationSources.farmBatch("VARIETY", varietyId.toString(),
+										"PROPAGATE:" + correlationId + ":" + group.getId(), correlationId),
+								group.getId(),
+								new OrchidGroupMutationDetails(varietyId, group.getQuantity(), group.getPotSize(),
+										group.getAgeYear(), group.getStatus(), group.getPlacementType(),
+										group.getTrayCount(), group.getSplitPlacementAllowed(),
+										group.getStartPosition(), group.getEndPosition(), group.getMemo()),
+								TimeConfig.farmToday(clock), "품종 정보 변경 전파")));
+		}
+		else {
 			changedGroups.forEach(group -> group.assignVariety(variety));
 		}
 		auditSupport.record(AuditAction.UPDATED, variety, before, auditSupport.snapshot(variety));
@@ -200,8 +166,7 @@ public class VarietyService {
 	}
 
 	public Variety findVariety(Long varietyId) {
-		return varietyRepository.findById(varietyId)
-				.orElseThrow(() -> new NotFoundException("품종을 찾을 수 없습니다."));
+		return varietyRepository.findById(varietyId).orElseThrow(() -> new NotFoundException("품종을 찾을 수 없습니다."));
 	}
 
 	private String nextCode() {
@@ -230,11 +195,11 @@ public class VarietyService {
 	}
 
 	private void validateUniqueVariety(String genus, String name, Long currentId) {
-		boolean duplicated = currentId == null
-				? varietyRepository.existsByGenusAndName(genus, name)
+		boolean duplicated = currentId == null ? varietyRepository.existsByGenusAndName(genus, name)
 				: varietyRepository.existsByGenusAndNameAndIdNot(genus, name, currentId);
 		if (duplicated) {
 			throw new IllegalArgumentException("같은 속과 품종명을 가진 품종이 이미 있습니다.");
 		}
 	}
+
 }

@@ -19,28 +19,17 @@ import org.springframework.transaction.annotation.Transactional;
 public class InboundRecordQueryService {
 
 	private final InboundRecordRepository inboundRecordRepository;
+
 	private final InboundRecordFinder inboundRecordFinder;
 
-	public PageResponse<InboundRecordResponse> getInboundRecords(
-			LocalDate from,
-			LocalDate to,
-			InboundType inboundType,
-			InboundStatus status,
-			String varietyKeyword,
-			int page,
-			int size) {
+	public PageResponse<InboundRecordResponse> getInboundRecords(LocalDate from, LocalDate to, InboundType inboundType,
+			InboundStatus status, String varietyKeyword, int page, int size) {
 		PageRequests.validate(page, size);
 		String keyword = normalize(varietyKeyword);
-		return PageResponse.from(inboundRecordRepository.search(
-				from,
-				to,
-				inboundType,
-				status,
-				keyword == null ? "" : keyword,
-				PageRequest.of(page, size, Sort.by(
-						Sort.Order.desc("inboundDate"),
-						Sort.Order.desc("id"))))
-				.map(InboundRecordResponse::from));
+		return PageResponse.from(inboundRecordRepository
+			.search(from, to, inboundType, status, keyword == null ? "" : keyword,
+					PageRequest.of(page, size, Sort.by(Sort.Order.desc("inboundDate"), Sort.Order.desc("id"))))
+			.map(InboundRecordResponse::from));
 	}
 
 	public InboundRecordResponse getInboundRecord(Long inboundRecordId) {
@@ -54,4 +43,5 @@ public class InboundRecordQueryService {
 		String trimmed = value.trim();
 		return trimmed.isEmpty() ? null : trimmed;
 	}
+
 }

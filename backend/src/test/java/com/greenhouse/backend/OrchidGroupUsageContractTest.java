@@ -35,8 +35,11 @@ import org.springframework.transaction.annotation.Transactional;
 @Transactional
 class OrchidGroupUsageContractTest {
 
-	@Autowired List<OrchidGroupUsageInspector> inspectors;
-	@Autowired EntityManager entityManager;
+	@Autowired
+	List<OrchidGroupUsageInspector> inspectors;
+
+	@Autowired
+	EntityManager entityManager;
 
 	@Test
 	void translatesWorkReferencesWithoutBlockingTheSourceOperationItself() {
@@ -50,8 +53,8 @@ class OrchidGroupUsageContractTest {
 		operation(type, group);
 		operation(type, group);
 
-		assertThat(inspect(group.getId(), source.getId())).containsExactly(
-				new OrchidGroupUsage("WORK_OPERATION", "다른 작업에 포함된 난 묶음이 있습니다.", 2));
+		assertThat(inspect(group.getId(), source.getId()))
+			.containsExactly(new OrchidGroupUsage("WORK_OPERATION", "다른 작업에 포함된 난 묶음이 있습니다.", 2));
 	}
 
 	@Test
@@ -60,37 +63,40 @@ class OrchidGroupUsageContractTest {
 		OrchidGroup group = fixtures.orchidGroup(fixtures.layout(985).left(), "SALES-USAGE", 20);
 		var partner = new BusinessPartner("참조 거래처", PartnerType.WHOLESALE, null, null, null, null);
 		entityManager.persist(partner);
-		var slip = new SalesSlip("USAGE-TEST", LocalDate.of(2026, 9, 5), SalesType.DIRECT, null, partner.getId(),
-				"미입금", SalesSlip.STATUS_DRAFT, null, null);
+		var slip = new SalesSlip("USAGE-TEST", LocalDate.of(2026, 9, 5), SalesType.DIRECT, null, partner.getId(), "미입금",
+				SalesSlip.STATUS_DRAFT, null, null);
 		var item = new SalesSlipItem(null, group.getVarietyName(), null, null, 2, 1000, null);
 		item.addAllocation(new SalesSlipItemAllocation(group.getId(), 2));
 		slip.addItem(item);
 		entityManager.persist(slip);
 
-		assertThat(inspect(group.getId(), -1L)).containsExactly(
-				new OrchidGroupUsage("SALES", "판매 또는 재고 이동에 연결된 난 묶음이 있습니다.", 1));
+		assertThat(inspect(group.getId(), -1L))
+			.containsExactly(new OrchidGroupUsage("SALES", "판매 또는 재고 이동에 연결된 난 묶음이 있습니다.", 1));
 
 		var type = new WorkType("USAGE_TEST", "사용 참조", WorkTypeTemplate.MEMO, false, false, true, 1);
 		entityManager.persist(type);
 		operation(type, group);
 		assertThat(inspect(group.getId(), -1L)).extracting(OrchidGroupUsage::code)
-				.containsExactly("SALES", "WORK_OPERATION");
+			.containsExactly("SALES", "WORK_OPERATION");
 	}
 
 	private List<OrchidGroupUsage> inspect(Long groupId, Long sourceOperationId) {
 		entityManager.flush();
-		return inspectors.stream().flatMap(inspector -> inspector.inspect(Set.of(groupId), sourceOperationId).stream()).toList();
+		return inspectors.stream()
+			.flatMap(inspector -> inspector.inspect(Set.of(groupId), sourceOperationId).stream())
+			.toList();
 	}
 
 	private WorkOperation operation(WorkType type, OrchidGroup group) {
 		LocalDate date = LocalDate.of(2026, 9, 5);
 		LocalDateTime timestamp = date.atStartOfDay();
-		var operation = new WorkOperation(type, "참조 작업", date, date, WorkSourceScopeType.ORCHID_GROUP,
-				group.getId(), Map.of(), Map.of(), "worker", null, timestamp);
+		var operation = new WorkOperation(type, "참조 작업", date, date, WorkSourceScopeType.ORCHID_GROUP, group.getId(),
+				Map.of(), Map.of(), "worker", null, timestamp);
 		entityManager.persist(operation);
 		entityManager.persist(new WorkOperationTarget(operation, group.getId(), WorkTargetInclusionSource.DIRECT,
 				group.getId(), group.getVariety().getId(), group.getVarietyName(), group.getAgeYear(),
 				group.getPotSizeCode().name(), group.getPotSize(), group.getQuantity(), Map.of(), timestamp));
 		return operation;
 	}
+
 }

@@ -1,7 +1,7 @@
 package com.greenhouse.backend.auth;
 
 public enum AuthRole {
-	ADMIN,
-	WORKER,
-	DEMO
+
+	ADMIN, WORKER, DEMO
+
 }

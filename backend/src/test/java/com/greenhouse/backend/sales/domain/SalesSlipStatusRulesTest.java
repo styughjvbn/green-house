@@ -14,9 +14,9 @@ class SalesSlipStatusRulesTest {
 	@Test
 	void rejectsCanceledOrWrongTypeStatusAtCreation() {
 		assertThatThrownBy(() -> slip(SalesType.DIRECT, SalesSlip.STATUS_CANCELED))
-				.isInstanceOf(IllegalArgumentException.class);
+			.isInstanceOf(IllegalArgumentException.class);
 		assertThatThrownBy(() -> slip(SalesType.DIRECT, SalesSlip.STATUS_AUCTION_SHIPMENT_COMPLETED))
-				.isInstanceOf(IllegalArgumentException.class);
+			.isInstanceOf(IllegalArgumentException.class);
 	}
 
 	@Test
@@ -24,11 +24,11 @@ class SalesSlipStatusRulesTest {
 		SalesSlip slip = slip(SalesType.AUCTION, SalesSlip.STATUS_DRAFT);
 
 		assertThatThrownBy(() -> slip.updateSalesStatus(SalesSlip.STATUS_DIRECT_OUTBOUND_COMPLETED))
-				.isInstanceOf(IllegalArgumentException.class);
+			.isInstanceOf(IllegalArgumentException.class);
 	}
 
 	@ParameterizedTest
-	@ValueSource(strings = {SalesSlip.STATUS_DRAFT, SalesSlip.STATUS_DIRECT_OUTBOUND_COMPLETED})
+	@ValueSource(strings = { SalesSlip.STATUS_DRAFT, SalesSlip.STATUS_DIRECT_OUTBOUND_COMPLETED })
 	void directPaymentAvailabilityFollowsRemainingAmount(String status) {
 		SalesSlip slip = payableSlip(SalesType.DIRECT, status);
 		assertThat(slip.canConfirmPayment()).isTrue();
@@ -56,14 +56,13 @@ class SalesSlipStatusRulesTest {
 	}
 
 	@ParameterizedTest
-	@ValueSource(strings = {SalesSlip.STATUS_DRAFT, SalesSlip.STATUS_AUCTION_SHIPMENT_COMPLETED})
+	@ValueSource(strings = { SalesSlip.STATUS_DRAFT, SalesSlip.STATUS_AUCTION_SHIPMENT_COMPLETED })
 	void auctionSlipCannotReceiveDirectPayment(String status) {
-		assertPaymentRejected(payableSlip(SalesType.AUCTION, status),
-				"경매 판매전표는 경매장 정산에서 입금을 확인해야 합니다.");
+		assertPaymentRejected(payableSlip(SalesType.AUCTION, status), "경매 판매전표는 경매장 정산에서 입금을 확인해야 합니다.");
 	}
 
 	@ParameterizedTest
-	@ValueSource(longs = {0L, -1L, 100_001L})
+	@ValueSource(longs = { 0L, -1L, 100_001L })
 	void invalidAmountDoesNotChangePaymentState(long amount) {
 		SalesSlip slip = payableSlip(SalesType.DIRECT, SalesSlip.STATUS_DRAFT);
 
@@ -86,10 +85,10 @@ class SalesSlipStatusRulesTest {
 
 	private void assertPaymentRejected(SalesSlip slip, String message) {
 		assertThat(slip.canConfirmPayment()).isFalse();
-		assertThatThrownBy(slip::validatePaymentTarget)
-				.isInstanceOf(IllegalArgumentException.class).hasMessage(message);
-		assertThatThrownBy(() -> slip.recordPayment(30_000L))
-				.isInstanceOf(IllegalArgumentException.class).hasMessage(message);
+		assertThatThrownBy(slip::validatePaymentTarget).isInstanceOf(IllegalArgumentException.class)
+			.hasMessage(message);
+		assertThatThrownBy(() -> slip.recordPayment(30_000L)).isInstanceOf(IllegalArgumentException.class)
+			.hasMessage(message);
 		assertUnpaid(slip);
 	}
 
@@ -106,15 +105,8 @@ class SalesSlipStatusRulesTest {
 	}
 
 	private SalesSlip slip(SalesType salesType, String status) {
-		return new SalesSlip(
-				"STATUS-" + salesType + "-" + status,
-				LocalDate.of(2026, 8, 1),
-				salesType,
-				null,
-				null,
-				"미입금",
-				status,
-				null,
-				null);
+		return new SalesSlip("STATUS-" + salesType + "-" + status, LocalDate.of(2026, 8, 1), salesType, null, null,
+				"미입금", status, null, null);
 	}
+
 }

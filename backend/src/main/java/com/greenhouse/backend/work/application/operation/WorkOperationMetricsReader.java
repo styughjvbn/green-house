@@ -33,10 +33,11 @@ public class WorkOperationMetricsReader {
 		var count = workOperation.id.count();
 		var latestDate = workOperation.plannedStartDate.max();
 		var groups = queryFactory.select(workType.name, workType.template, count, latestDate)
-				.from(workOperation).join(workOperation.workType, workType)
-				.where(completedInPeriod)
-				.groupBy(workType.name, workType.template)
-				.fetch();
+			.from(workOperation)
+			.join(workOperation.workType, workType)
+			.where(completedInPeriod)
+			.groupBy(workType.name, workType.template)
+			.fetch();
 
 		long totalCount = 0;
 		long movementCount = 0;
@@ -58,19 +59,21 @@ public class WorkOperationMetricsReader {
 			}
 			countsByName.merge(group.get(workType.name), groupCount, Long::sum);
 		}
-		var typeCounts = countsByName.entrySet().stream()
-				.map(entry -> new TypeCount(entry.getKey(), entry.getValue()))
-				.sorted(Comparator.comparingLong(TypeCount::count).reversed().thenComparing(TypeCount::name))
-				.toList();
-		var recentRecords = queryFactory.select(Projections.constructor(RecentRecord.class,
-						workOperation.id, workOperation.plannedStartDate, workType.name, workType.template,
-						workOperation.title, workOperation.sourceScopeType, workOperation.worker,
-						workOperation.memo, workOperation.status))
-				.from(workOperation).join(workOperation.workType, workType)
-				.where(completedInPeriod)
-				.orderBy(workOperation.plannedStartDate.desc(), workOperation.id.desc())
-				.limit(10)
-				.fetch();
+		var typeCounts = countsByName.entrySet()
+			.stream()
+			.map(entry -> new TypeCount(entry.getKey(), entry.getValue()))
+			.sorted(Comparator.comparingLong(TypeCount::count).reversed().thenComparing(TypeCount::name))
+			.toList();
+		var recentRecords = queryFactory
+			.select(Projections.constructor(RecentRecord.class, workOperation.id, workOperation.plannedStartDate,
+					workType.name, workType.template, workOperation.title, workOperation.sourceScopeType,
+					workOperation.worker, workOperation.memo, workOperation.status))
+			.from(workOperation)
+			.join(workOperation.workType, workType)
+			.where(completedInPeriod)
+			.orderBy(workOperation.plannedStartDate.desc(), workOperation.id.desc())
+			.limit(10)
+			.fetch();
 		return new Summary(totalCount, movementCount, statusCount, latestWorkDate, typeCounts, recentRecords);
 	}
 
@@ -79,20 +82,16 @@ public class WorkOperationMetricsReader {
 			return Map.of();
 		}
 		var latestWorkDate = workOperation.plannedStartDate.max();
-		return queryFactory
-				.select(workOperationTarget.orchidGroupId, latestWorkDate)
-				.from(workOperationTarget)
-				.join(workOperationTarget.workOperation, workOperation)
-				.where(
-						workOperationTarget.orchidGroupId.in(orchidGroupIds),
-						workOperationTarget.excludedAt.isNull(),
-						completedWorkOperations())
-				.groupBy(workOperationTarget.orchidGroupId)
-				.fetch()
-				.stream()
-				.collect(Collectors.toMap(
-						tuple -> tuple.get(workOperationTarget.orchidGroupId),
-						tuple -> tuple.get(latestWorkDate)));
+		return queryFactory.select(workOperationTarget.orchidGroupId, latestWorkDate)
+			.from(workOperationTarget)
+			.join(workOperationTarget.workOperation, workOperation)
+			.where(workOperationTarget.orchidGroupId.in(orchidGroupIds), workOperationTarget.excludedAt.isNull(),
+					completedWorkOperations())
+			.groupBy(workOperationTarget.orchidGroupId)
+			.fetch()
+			.stream()
+			.collect(Collectors.toMap(tuple -> tuple.get(workOperationTarget.orchidGroupId),
+					tuple -> tuple.get(latestWorkDate)));
 	}
 
 	private BooleanExpression completedWorkOperations() {
@@ -113,4 +112,5 @@ public class WorkOperationMetricsReader {
 	public record RecentRecord(Long id, LocalDate workDate, String workType, WorkTypeTemplate workTypeTemplate,
 			String title, WorkSourceScopeType sourceScopeType, String worker, String memo, WorkOperationStatus status) {
 	}
+
 }

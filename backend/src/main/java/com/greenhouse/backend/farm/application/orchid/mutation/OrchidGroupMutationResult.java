@@ -9,39 +9,21 @@ import com.greenhouse.backend.farm.domain.orchid.mutation.OrchidGroupStateSnapsh
 import java.util.List;
 import java.util.UUID;
 
-public record OrchidGroupMutationResult(
-		Long mutationId,
-		OrchidGroupMutationType mutationType,
-		UUID correlationId,
+public record OrchidGroupMutationResult(Long mutationId, OrchidGroupMutationType mutationType, UUID correlationId,
 		List<Entry> entries) {
 
-	public static OrchidGroupMutationResult from(
-			OrchidGroupMutation mutation,
-			List<OrchidGroupMutationEntry> entries) {
-		return new OrchidGroupMutationResult(
-				mutation.getId(),
-				mutation.getMutationType(),
-				mutation.getCorrelationId(),
+	public static OrchidGroupMutationResult from(OrchidGroupMutation mutation, List<OrchidGroupMutationEntry> entries) {
+		return new OrchidGroupMutationResult(mutation.getId(), mutation.getMutationType(), mutation.getCorrelationId(),
 				entries.stream().map(Entry::from).toList());
 	}
 
-	public record Entry(
-			Long orchidGroupId,
-			OrchidGroupMutationEntryKind entryKind,
-			OrchidGroupMutationEntryRole role,
-			Long stateRevisionBefore,
-			Long stateRevisionAfter,
-			OrchidGroupStateSnapshot beforeState,
+	public record Entry(Long orchidGroupId, OrchidGroupMutationEntryKind entryKind, OrchidGroupMutationEntryRole role,
+			Long stateRevisionBefore, Long stateRevisionAfter, OrchidGroupStateSnapshot beforeState,
 			OrchidGroupStateSnapshot afterState) {
 
 		private static Entry from(OrchidGroupMutationEntry entry) {
-			return new Entry(
-					entry.getOrchidGroupId(),
-					entry.getEntryKind(),
-					entry.getRole(),
-					entry.getStateRevisionBefore(),
-					entry.getStateRevisionAfter(),
-					entry.getBeforeState(),
+			return new Entry(entry.getOrchidGroupId(), entry.getEntryKind(), entry.getRole(),
+					entry.getStateRevisionBefore(), entry.getStateRevisionAfter(), entry.getBeforeState(),
 					entry.getAfterState());
 		}
 	}

@@ -5,11 +5,8 @@ import static com.greenhouse.backend.farm.application.orchid.mutation.OrchidGrou
 import com.greenhouse.backend.farm.domain.orchid.mutation.OrchidGroupMutationSource;
 import java.time.LocalDate;
 
-public record CancelOrchidGroupCreationMutationCommand(
-		OrchidGroupMutationSource source,
-		Long orchidGroupId,
-		LocalDate effectiveBusinessDate,
-		String reason) implements OrchidGroupMutationCommand {
+public record CancelOrchidGroupCreationMutationCommand(OrchidGroupMutationSource source, Long orchidGroupId,
+		LocalDate effectiveBusinessDate, String reason) implements OrchidGroupMutationCommand {
 
 	public CancelOrchidGroupCreationMutationCommand {
 		if (source == null || orchidGroupId == null || effectiveBusinessDate == null) {

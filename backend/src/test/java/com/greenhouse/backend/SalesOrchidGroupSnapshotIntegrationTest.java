@@ -18,13 +18,13 @@ import com.greenhouse.backend.partner.repository.BusinessPartnerRepository;
 import com.greenhouse.backend.sales.application.SalesQueryService;
 import com.greenhouse.backend.sales.application.SalesSlipCreationService;
 import com.greenhouse.backend.sales.application.SalesSlipStatusService;
+import com.greenhouse.backend.sales.application.command.SalesSlipAllocationInput;
+import com.greenhouse.backend.sales.application.command.SalesSlipCommand;
+import com.greenhouse.backend.sales.application.command.SalesSlipItemInput;
 import com.greenhouse.backend.sales.domain.SalesOrchidSnapshotSource;
 import com.greenhouse.backend.sales.domain.SalesOrchidSnapshotType;
 import com.greenhouse.backend.sales.domain.SalesSlip;
 import com.greenhouse.backend.sales.domain.SalesType;
-import com.greenhouse.backend.sales.application.command.SalesSlipCommand;
-import com.greenhouse.backend.sales.application.command.SalesSlipAllocationInput;
-import com.greenhouse.backend.sales.application.command.SalesSlipItemInput;
 import com.greenhouse.backend.sales.dto.SalesSlipStatusUpdateRequest;
 import jakarta.persistence.EntityManager;
 import java.math.BigDecimal;
@@ -42,15 +42,32 @@ import org.springframework.transaction.annotation.Transactional;
 @Transactional
 class SalesOrchidGroupSnapshotIntegrationTest {
 
-	@Autowired SalesSlipCreationService creationService;
-	@Autowired SalesSlipStatusService statusService;
-	@Autowired SalesQueryService queryService;
-	@Autowired HouseRepository houseRepository;
-	@Autowired VarietyRepository varietyRepository;
-	@Autowired OrchidGroupRepository orchidGroupRepository;
-	@Autowired BusinessPartnerRepository partnerRepository;
-	@Autowired AuctionShipmentRepository shipmentRepository;
-	@Autowired EntityManager entityManager;
+	@Autowired
+	SalesSlipCreationService creationService;
+
+	@Autowired
+	SalesSlipStatusService statusService;
+
+	@Autowired
+	SalesQueryService queryService;
+
+	@Autowired
+	HouseRepository houseRepository;
+
+	@Autowired
+	VarietyRepository varietyRepository;
+
+	@Autowired
+	OrchidGroupRepository orchidGroupRepository;
+
+	@Autowired
+	BusinessPartnerRepository partnerRepository;
+
+	@Autowired
+	AuctionShipmentRepository shipmentRepository;
+
+	@Autowired
+	EntityManager entityManager;
 
 	@ParameterizedTest
 	@EnumSource(SalesType.class)
@@ -62,41 +79,19 @@ class SalesOrchidGroupSnapshotIntegrationTest {
 		house.addPhysicalBed(bed);
 		houseRepository.save(house);
 
-		Variety variety = varietyRepository.save(new Variety(
-				"SNAPSHOT-VARIETY", "팔레놉시스", "스냅샷 품종", null, "3.5치", true, true, null, null));
-		OrchidGroup group = new OrchidGroup(
-				zone,
-				variety.getGenus(),
-				variety.getName(),
-				20,
-				"3.5치",
-				2,
-				"정상",
-				1,
-				BigDecimal.ONE,
-				BigDecimal.TEN);
+		Variety variety = varietyRepository
+			.save(new Variety("SNAPSHOT-VARIETY", "팔레놉시스", "스냅샷 품종", null, "3.5치", true, true, null, null));
+		OrchidGroup group = new OrchidGroup(zone, variety.getGenus(), variety.getName(), 20, "3.5치", 2, "정상", 1,
+				BigDecimal.ONE, BigDecimal.TEN);
 		group.assignVariety(variety);
 		group = orchidGroupRepository.save(group);
-		BusinessPartner partner = partnerRepository.save(new BusinessPartner(
-				"스냅샷 거래처", salesType == SalesType.DIRECT ? PartnerType.WHOLESALE : PartnerType.AUCTION_HOUSE,
-				null, null, null, null));
+		BusinessPartner partner = partnerRepository.save(new BusinessPartner("스냅샷 거래처",
+				salesType == SalesType.DIRECT ? PartnerType.WHOLESALE : PartnerType.AUCTION_HOUSE, null, null, null,
+				null));
 
-		var created = creationService.create(new SalesSlipCommand(
-				LocalDate.of(2026, 8, 12),
-				salesType,
-				partner.getId(),
-				null,
-				"미입금",
-				SalesSlip.STATUS_DRAFT,
-				null,
-				null,
-				List.of(new SalesSlipItemInput(
-						variety.getName(),
-						variety.getGenus(),
-						null,
-						2,
-						10_000,
-						null,
+		var created = creationService.create(new SalesSlipCommand(LocalDate.of(2026, 8, 12), salesType, partner.getId(),
+				null, "미입금", SalesSlip.STATUS_DRAFT, null, null,
+				List.of(new SalesSlipItemInput(variety.getName(), variety.getGenus(), null, 2, 10_000, null,
 						List.of(new SalesSlipAllocationInput(group.getId(), 2))))));
 
 		var creationSnapshot = created.items().getFirst().allocations().getFirst().creationSnapshot();
@@ -108,24 +103,14 @@ class SalesOrchidGroupSnapshotIntegrationTest {
 		assertThat(creationSnapshot.houseNumber()).isEqualTo(990);
 		assertThat(created.items().getFirst().allocations().getFirst().outboundSnapshot()).isNull();
 
-		group.updateDetails(
-				group.getGenus(),
-				group.getVarietyName(),
-				18,
-				group.getPotSize(),
-				3,
-				"출하 준비",
-				group.getPlacementType(),
-				group.getTrayCount(),
-				group.getSplitPlacementAllowed(),
-				group.getStartPosition(),
-				group.getEndPosition(),
-				group.getMemo());
+		group.updateDetails(group.getGenus(), group.getVarietyName(), 18, group.getPotSize(), 3, "출하 준비",
+				group.getPlacementType(), group.getTrayCount(), group.getSplitPlacementAllowed(),
+				group.getStartPosition(), group.getEndPosition(), group.getMemo());
 
-		var completed = statusService.updateStatus(
-				created.id(),
+		var completed = statusService.updateStatus(created.id(),
 				new SalesSlipStatusUpdateRequest(salesType == SalesType.DIRECT
-						? SalesSlip.STATUS_DIRECT_OUTBOUND_COMPLETED : SalesSlip.STATUS_AUCTION_SHIPMENT_COMPLETED, null));
+						? SalesSlip.STATUS_DIRECT_OUTBOUND_COMPLETED : SalesSlip.STATUS_AUCTION_SHIPMENT_COMPLETED,
+						null));
 		var snapshots = completed.items().getFirst().allocations().getFirst();
 
 		assertThat(snapshots.creationSnapshot().quantity()).isEqualTo(20);
@@ -163,11 +148,13 @@ class SalesOrchidGroupSnapshotIntegrationTest {
 				assertThat(lot.getVarietyName()).isEqualTo(variety.getName());
 				assertThat(lot.getBoxes()).isNull();
 			});
-			statusService.updateStatus(completed.id(), new SalesSlipStatusUpdateRequest(SalesSlip.STATUS_CANCELED, null));
+			statusService.updateStatus(completed.id(),
+					new SalesSlipStatusUpdateRequest(SalesSlip.STATUS_CANCELED, null));
 			entityManager.flush();
 			entityManager.clear();
 			assertThat(shipmentRepository.findById(completed.auctionShipmentId())).isEmpty();
 			assertThat(orchidGroupRepository.findById(group.getId()).orElseThrow().getQuantity()).isEqualTo(18);
 		}
 	}
+
 }

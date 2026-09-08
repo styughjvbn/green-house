@@ -2,10 +2,7 @@ package com.greenhouse.backend.farm.application.orchid.mutation;
 
 import static com.greenhouse.backend.farm.application.orchid.mutation.OrchidGroupMutationCommandNormalizer.requireText;
 
-public record CorrectOrchidGroupMutationItem(
-		Long orchidGroupId,
-		Integer correctedQuantity,
-		String correctedStatus) {
+public record CorrectOrchidGroupMutationItem(Long orchidGroupId, Integer correctedQuantity, String correctedStatus) {
 
 	public CorrectOrchidGroupMutationItem {
 		if (orchidGroupId == null) {

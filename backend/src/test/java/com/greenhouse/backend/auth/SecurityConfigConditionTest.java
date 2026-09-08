@@ -7,13 +7,9 @@ import org.springframework.boot.test.context.runner.ApplicationContextRunner;
 
 class SecurityConfigConditionTest {
 
-	private final ApplicationContextRunner contextRunner = new ApplicationContextRunner()
-			.withUserConfiguration(
-					SecurityConfig.class,
-					AuthService.class,
-					SessionCookieWriter.class,
-					AuthController.class,
-					SessionCookieRefreshFilter.class);
+	private final ApplicationContextRunner contextRunner = new ApplicationContextRunner().withUserConfiguration(
+			SecurityConfig.class, AuthService.class, SessionCookieWriter.class, AuthController.class,
+			SessionCookieRefreshFilter.class);
 
 	@Test
 	void doesNotLoadServletSecurityInANonWebApplication() {
@@ -25,4 +21,5 @@ class SecurityConfigConditionTest {
 			assertThat(context).doesNotHaveBean(SessionCookieRefreshFilter.class);
 		});
 	}
+
 }

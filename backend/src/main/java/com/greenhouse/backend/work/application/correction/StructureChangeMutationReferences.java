@@ -2,9 +2,7 @@ package com.greenhouse.backend.work.application.correction;
 
 import java.util.List;
 
-public record StructureChangeMutationReferences(
-		boolean legacySource,
-		List<Long> mutationIds) {
+public record StructureChangeMutationReferences(boolean legacySource, List<Long> mutationIds) {
 
 	public StructureChangeMutationReferences {
 		mutationIds = mutationIds == null ? List.of() : List.copyOf(mutationIds);

@@ -10,13 +10,7 @@ public interface SalesSlipRepositoryCustom {
 
 	List<SalesSlip> search(Long partnerId, LocalDate from, LocalDate to, int limit);
 
-	Page<SalesSlip> searchPage(
-			Long partnerId,
-			LocalDate from,
-			LocalDate to,
-			String paymentStatus,
-			String salesStatus,
-			String keyword,
-			List<Long> matchingPartnerIds,
-			Pageable pageable);
+	Page<SalesSlip> searchPage(Long partnerId, LocalDate from, LocalDate to, String paymentStatus, String salesStatus,
+			String keyword, List<Long> matchingPartnerIds, Pageable pageable);
+
 }

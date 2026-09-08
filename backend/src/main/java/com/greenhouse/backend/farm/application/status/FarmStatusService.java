@@ -1,35 +1,33 @@
 package com.greenhouse.backend.farm.application.status;
 
-import java.time.Clock;
-import com.greenhouse.backend.common.exception.NotFoundException;
 import com.greenhouse.backend.common.config.TimeConfig;
-import com.greenhouse.backend.farm.dto.orchid.OrchidGroupResponse;
-import com.greenhouse.backend.farm.domain.status.FarmStatusTargetType;
-import com.greenhouse.backend.farm.domain.status.FarmZoomLevel;
+import com.greenhouse.backend.common.exception.NotFoundException;
 import com.greenhouse.backend.farm.domain.orchid.OrchidGroup;
 import com.greenhouse.backend.farm.domain.orchid.OrchidGroupStatusPolicy;
-import com.greenhouse.backend.farm.dto.structure.BedZoneResponse;
-import com.greenhouse.backend.farm.dto.status.FarmStatusMapResponse;
+import com.greenhouse.backend.farm.domain.status.FarmStatusTargetType;
+import com.greenhouse.backend.farm.domain.status.FarmZoomLevel;
+import com.greenhouse.backend.farm.dto.orchid.OrchidGroupResponse;
+import com.greenhouse.backend.farm.dto.orchid.OrchidManagementBedOrderResponse;
+import com.greenhouse.backend.farm.dto.orchid.OrchidManagementSummaryResponse;
+import com.greenhouse.backend.farm.dto.orchid.OrchidManagementViewportResponse;
 import com.greenhouse.backend.farm.dto.status.FarmStatusMapOrchidGroupResponse;
 import com.greenhouse.backend.farm.dto.status.FarmStatusMapPhysicalBedResponse;
+import com.greenhouse.backend.farm.dto.status.FarmStatusMapResponse;
 import com.greenhouse.backend.farm.dto.status.FarmStatusOrchidGroupItemResponse;
 import com.greenhouse.backend.farm.dto.status.FarmStatusOrchidGroupListResponse;
 import com.greenhouse.backend.farm.dto.status.FarmStatusZoomResponse;
 import com.greenhouse.backend.farm.dto.status.HouseStatusSummaryResponse;
-import com.greenhouse.backend.farm.dto.orchid.OrchidManagementBedOrderResponse;
-import com.greenhouse.backend.farm.dto.orchid.OrchidManagementSummaryResponse;
-import com.greenhouse.backend.farm.dto.orchid.OrchidManagementViewportResponse;
+import com.greenhouse.backend.farm.dto.structure.BedZoneResponse;
 import com.greenhouse.backend.farm.dto.structure.PhysicalBedResponse;
+import com.greenhouse.backend.farm.repository.orchid.OrchidGroupRepository;
 import com.greenhouse.backend.farm.repository.structure.BedZoneRepository;
 import com.greenhouse.backend.farm.repository.structure.HouseRepository;
-import com.greenhouse.backend.farm.repository.orchid.OrchidGroupRepository;
 import com.greenhouse.backend.farm.repository.structure.PhysicalBedRepository;
-
-import lombok.RequiredArgsConstructor;
-
+import java.time.Clock;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
+import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -37,40 +35,42 @@ import org.springframework.transaction.annotation.Transactional;
 @Transactional(readOnly = true)
 @RequiredArgsConstructor
 public class FarmStatusService {
+
 	private final Clock clock;
+
 	private final HouseRepository houseRepository;
+
 	private final PhysicalBedRepository physicalBedRepository;
+
 	private final BedZoneRepository bedZoneRepository;
+
 	private final OrchidGroupRepository orchidGroupRepository;
 
 	public FarmStatusMapResponse getMap() {
 		var businessDate = TimeConfig.farmToday(clock);
 		var mapOrchidGroups = orchidGroupRepository.findMapRows();
-		var groupsByHouseId = mapOrchidGroups.stream().collect(Collectors.groupingBy(
-				group -> group.getHouseId()));
-		var bedsByHouseId = physicalBedRepository.findAllInFarmOrder().stream()
-				.collect(Collectors.groupingBy(bed -> bed.getHouse().getId()));
-		var houses = houseRepository.findAll().stream()
-				.sorted((a, b) -> a.getNumber().compareTo(b.getNumber()))
-				.map(house -> {
-					var houseGroups = groupsByHouseId.getOrDefault(house.getId(), List.of());
-					return new HouseStatusSummaryResponse(
-							house.getId(),
-							house.getNumber(),
-							house.getName(),
-							houseGroups.size(),
-							houseGroups.stream()
-									.filter(group -> OrchidGroupStatusPolicy.isWarning(group.getStatus()))
-									.count(),
-							0,
-							null,
-							bedsByHouseId.getOrDefault(house.getId(), List.of()).stream()
-									.map(FarmStatusMapPhysicalBedResponse::from)
-									.toList());
-				})
-				.toList();
-		return new FarmStatusMapResponse(
-				houses,
+		var groupsByHouseId = mapOrchidGroups.stream().collect(Collectors.groupingBy(group -> group.getHouseId()));
+		var bedsByHouseId = physicalBedRepository.findAllInFarmOrder()
+			.stream()
+			.collect(Collectors.groupingBy(bed -> bed.getHouse().getId()));
+		var houses = houseRepository.findAll()
+			.stream()
+			.sorted((a, b) -> a.getNumber().compareTo(b.getNumber()))
+			.map(house -> {
+				var houseGroups = groupsByHouseId.getOrDefault(house.getId(), List.of());
+				return new HouseStatusSummaryResponse(house.getId(), house.getNumber(), house.getName(),
+						houseGroups.size(),
+						houseGroups.stream()
+							.filter(group -> OrchidGroupStatusPolicy.isWarning(group.getStatus()))
+							.count(),
+						0, null,
+						bedsByHouseId.getOrDefault(house.getId(), List.of())
+							.stream()
+							.map(FarmStatusMapPhysicalBedResponse::from)
+							.toList());
+			})
+			.toList();
+		return new FarmStatusMapResponse(houses,
 				mapOrchidGroups.stream().map(row -> mapGroup(row, businessDate)).toList());
 	}
 
@@ -82,12 +82,7 @@ public class FarmStatusService {
 
 		var allBedRows = physicalBedRepository.findAllOrderRows();
 		if (allBedRows.isEmpty()) {
-			return new OrchidManagementViewportResponse(
-					null,
-					bedCount,
-					List.of(),
-					false,
-					false,
+			return new OrchidManagementViewportResponse(null, bedCount, List.of(), false, false,
 					new OrchidManagementSummaryResponse(0, 0, 0, 0));
 		}
 
@@ -126,31 +121,24 @@ public class FarmStatusService {
 			}
 		}
 
-		return new OrchidManagementViewportResponse(
-				visibleBedRows.getFirst().id(),
-				bedCount,
+		return new OrchidManagementViewportResponse(visibleBedRows.getFirst().id(), bedCount,
 				visibleBeds.stream().map(bed -> PhysicalBedResponse.from(bed, groupsByZoneId, businessDate)).toList(),
-				startIndex > 0,
-				startIndex + bedCount < allBedRows.size(),
-				new OrchidManagementSummaryResponse(
-						orchidGroupCount,
-						totalQuantity,
-						abnormalCount,
-						bedZoneCount));
+				startIndex > 0, startIndex + bedCount < allBedRows.size(),
+				new OrchidManagementSummaryResponse(orchidGroupCount, totalQuantity, abnormalCount, bedZoneCount));
 	}
 
 	public List<OrchidManagementBedOrderResponse> getOrchidManagementBedOrder() {
-		return physicalBedRepository.findAllOrderRows().stream()
-				.map(row -> new OrchidManagementBedOrderResponse(
-						row.id(), row.houseId(), row.houseNumber(), row.number()))
-				.toList();
+		return physicalBedRepository.findAllOrderRows()
+			.stream()
+			.map(row -> new OrchidManagementBedOrderResponse(row.id(), row.houseId(), row.houseNumber(), row.number()))
+			.toList();
 	}
 
 	public FarmStatusOrchidGroupListResponse getOrchidGroups(FarmStatusTargetType targetType, Long targetId) {
 		String targetName = resolveTargetName(targetType, targetId);
 		var items = searchOrchidGroupsByTarget(targetType, targetId).stream()
-				.map(FarmStatusOrchidGroupItemResponse::from)
-				.toList();
+			.map(FarmStatusOrchidGroupItemResponse::from)
+			.toList();
 		return new FarmStatusOrchidGroupListResponse(targetType, targetId, targetName, items);
 	}
 
@@ -161,14 +149,13 @@ public class FarmStatusService {
 				if (houseId == null) {
 					throw new IllegalArgumentException("houseId is required.");
 				}
-				var house = houseRepository.findById(houseId)
-						.orElseThrow(() -> new NotFoundException("동을 찾을 수 없습니다."));
+				var house = houseRepository.findById(houseId).orElseThrow(() -> new NotFoundException("동을 찾을 수 없습니다."));
 				var beds = physicalBedRepository.findByHouseIdOrderByDisplayOrderAsc(houseId);
 				var bedIds = beds.stream().map(bed -> bed.getId()).toList();
 				var groupsByZoneId = loadGroupsByZoneId(bedIds);
 				var responses = beds.stream()
-						.map(bed -> PhysicalBedResponse.from(bed, groupsByZoneId, businessDate))
-						.toList();
+					.map(bed -> PhysicalBedResponse.from(bed, groupsByZoneId, businessDate))
+					.toList();
 				yield new FarmStatusZoomResponse(level, house.getId(), house.getNumber(), responses, List.of());
 			}
 			case BED_ZONE -> {
@@ -176,53 +163,45 @@ public class FarmStatusService {
 					throw new IllegalArgumentException("physicalBedId is required.");
 				}
 				var physicalBed = physicalBedRepository.findWithHouseAndBedZonesById(physicalBedId)
-						.orElseThrow(() -> new NotFoundException("물리 다이를 찾을 수 없습니다."));
+					.orElseThrow(() -> new NotFoundException("물리 다이를 찾을 수 없습니다."));
 				var groupsByZoneId = loadGroupsByZoneId(List.of(physicalBedId));
-				var zones = physicalBed.getBedZones().stream()
-						.map(zone -> BedZoneResponse.from(
-								zone,
-								groupsByZoneId.getOrDefault(zone.getId(), List.of()), businessDate))
-						.toList();
-				yield new FarmStatusZoomResponse(
-						level,
-						physicalBed.getHouse().getId(),
-						physicalBed.getHouse().getNumber(),
-						List.of(),
-						zones);
+				var zones = physicalBed.getBedZones()
+					.stream()
+					.map(zone -> BedZoneResponse.from(zone, groupsByZoneId.getOrDefault(zone.getId(), List.of()),
+							businessDate))
+					.toList();
+				yield new FarmStatusZoomResponse(level, physicalBed.getHouse().getId(),
+						physicalBed.getHouse().getNumber(), List.of(), zones);
 			}
 		};
 	}
 
-	private Map<Long, List<OrchidGroup>> loadGroupsByZoneId(
-			List<Long> physicalBedIds) {
+	private Map<Long, List<OrchidGroup>> loadGroupsByZoneId(List<Long> physicalBedIds) {
 		if (physicalBedIds.isEmpty()) {
 			return Map.of();
 		}
-		return orchidGroupRepository.findByPhysicalBedIdInOrderByLocation(physicalBedIds).stream()
-				.collect(Collectors.groupingBy(
-						group -> group.getBedZone().getId(),
-						java.util.LinkedHashMap::new,
-						Collectors.toList()));
+		return orchidGroupRepository.findByPhysicalBedIdInOrderByLocation(physicalBedIds)
+			.stream()
+			.collect(Collectors.groupingBy(group -> group.getBedZone().getId(), java.util.LinkedHashMap::new,
+					Collectors.toList()));
 	}
 
 	private String resolveTargetName(FarmStatusTargetType targetType, Long targetId) {
 		return switch (targetType) {
 			case HOUSE -> houseRepository.findById(targetId)
-					.map(house -> house.getNumber() + "동")
-					.orElseThrow(() -> new NotFoundException("동을 찾을 수 없습니다."));
+				.map(house -> house.getNumber() + "동")
+				.orElseThrow(() -> new NotFoundException("동을 찾을 수 없습니다."));
 			case PHYSICAL_BED -> physicalBedRepository.findById(targetId)
-					.map(physicalBed -> physicalBed.getHouse().getNumber() + "동 " + physicalBed.getNumber() + "다이")
-					.orElseThrow(() -> new NotFoundException("다이를 찾을 수 없습니다."));
+				.map(physicalBed -> physicalBed.getHouse().getNumber() + "동 " + physicalBed.getNumber() + "다이")
+				.orElseThrow(() -> new NotFoundException("다이를 찾을 수 없습니다."));
 			case BED_ZONE -> bedZoneRepository.findById(targetId)
-					.map(bedZone -> bedZone.getPhysicalBed().getHouse().getNumber() + "동 "
-							+ bedZone.getPhysicalBed().getNumber() + "다이 " + bedZone.getName())
-					.orElseThrow(() -> new NotFoundException("논리 구역을 찾을 수 없습니다."));
+				.map(bedZone -> bedZone.getPhysicalBed().getHouse().getNumber() + "동 "
+						+ bedZone.getPhysicalBed().getNumber() + "다이 " + bedZone.getName())
+				.orElseThrow(() -> new NotFoundException("논리 구역을 찾을 수 없습니다."));
 		};
 	}
 
-	private List<OrchidGroup> searchOrchidGroupsByTarget(
-			FarmStatusTargetType targetType,
-			Long targetId) {
+	private List<OrchidGroup> searchOrchidGroupsByTarget(FarmStatusTargetType targetType, Long targetId) {
 		return switch (targetType) {
 			case HOUSE -> orchidGroupRepository.search(targetId, "", null, null, null);
 			case PHYSICAL_BED -> orchidGroupRepository.search(null, "", targetId, null, null);
@@ -230,13 +209,15 @@ public class FarmStatusService {
 		};
 	}
 
-	private FarmStatusMapOrchidGroupResponse mapGroup(OrchidGroupRepository.MapRow row, java.time.LocalDate businessDate) {
+	private FarmStatusMapOrchidGroupResponse mapGroup(OrchidGroupRepository.MapRow row,
+			java.time.LocalDate businessDate) {
 		var referenceDate = row.getInboundRecordId() != null ? row.getInboundDate()
 				: row.getCreatedAt() == null ? null : TimeConfig.toFarmTime(row.getCreatedAt()).toLocalDate();
-		return new FarmStatusMapOrchidGroupResponse(
-				row.getOrchidGroupId(), row.getHouseId(), row.getPhysicalBedId(), row.getBedZoneId(),
-				row.getStartPosition(), row.getEndPosition(), row.getVarietyId(), row.getVarietyColor(),
-				row.getVarietyName(), row.getQuantity(), row.getStatus(),
-				OrchidGroupResponse.calculateAgeYear(row.getAgeYear(), referenceDate, businessDate), row.getPotSize(), row.getSortOrder());
+		return new FarmStatusMapOrchidGroupResponse(row.getOrchidGroupId(), row.getHouseId(), row.getPhysicalBedId(),
+				row.getBedZoneId(), row.getStartPosition(), row.getEndPosition(), row.getVarietyId(),
+				row.getVarietyColor(), row.getVarietyName(), row.getQuantity(), row.getStatus(),
+				OrchidGroupResponse.calculateAgeYear(row.getAgeYear(), referenceDate, businessDate), row.getPotSize(),
+				row.getSortOrder());
 	}
+
 }

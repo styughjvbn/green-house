@@ -7,9 +7,19 @@ import org.springframework.stereotype.Component;
 @Component
 public class RepotStrategy implements StructureChangeStrategy {
 
-	@Override public String supports() { return WorkTypeDefinition.REPOT.name(); }
-	@Override public String workLabel() { return "분갈이"; }
-	@Override public OrchidGroupLineageRelationType lineageType() {
+	@Override
+	public String supports() {
+		return WorkTypeDefinition.REPOT.name();
+	}
+
+	@Override
+	public String workLabel() {
+		return "분갈이";
+	}
+
+	@Override
+	public OrchidGroupLineageRelationType lineageType() {
 		return OrchidGroupLineageRelationType.REPOTTED_TO;
 	}
+
 }

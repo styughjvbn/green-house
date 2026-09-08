@@ -29,33 +29,40 @@ import org.springframework.test.web.servlet.MockMvc;
 @Import(CustomAccountAuthIntegrationTest.AccountConfiguration.class)
 class CustomAccountAuthIntegrationTest {
 
-	@Autowired MockMvc mockMvc;
-	@Autowired Map<String, UserDetailsService> accountProviders;
+	@Autowired
+	MockMvc mockMvc;
+
+	@Autowired
+	Map<String, UserDetailsService> accountProviders;
 
 	@Test
 	void anotherAccountProviderUsesTheExistingLoginAndSessionFlow() throws Exception {
 		assertThat(accountProviders).hasSize(1).containsKey("testAccountProvider");
-		mockMvc.perform(post("/api/auth/login")
-						.contentType(MediaType.APPLICATION_JSON)
-						.content("""
-								{"username":"external-worker","password":"test-password"}
-								"""))
-				.andExpect(status().isOk())
-				.andExpect(jsonPath("$.data.username").value("external-worker"))
-				.andExpect(jsonPath("$.data.role").value("WORKER"))
-				.andExpect(result -> assertThat(result.getRequest().getSession(false)).isNotNull());
+		mockMvc.perform(post("/api/auth/login").contentType(MediaType.APPLICATION_JSON).content("""
+				{"username":"external-worker","password":"test-password"}
+				"""))
+			.andExpect(status().isOk())
+			.andExpect(jsonPath("$.data.username").value("external-worker"))
+			.andExpect(jsonPath("$.data.role").value("WORKER"))
+			.andExpect(result -> assertThat(result.getRequest().getSession(false)).isNotNull());
 	}
 
 	@TestConfiguration
 	static class AccountConfiguration {
+
 		@Bean
 		UserDetailsService testAccountProvider(PasswordEncoder encoder) {
-			var user = User.withUsername("external-worker").password(encoder.encode("test-password"))
-					.roles("WORKER").build();
+			var user = User.withUsername("external-worker")
+				.password(encoder.encode("test-password"))
+				.roles("WORKER")
+				.build();
 			return username -> {
-				if (!username.equals(user.getUsername())) throw new UsernameNotFoundException(username);
+				if (!username.equals(user.getUsername()))
+					throw new UsernameNotFoundException(username);
 				return user;
 			};
 		}
+
 	}
+
 }

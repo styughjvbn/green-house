@@ -42,10 +42,17 @@ import org.springframework.transaction.annotation.Transactional;
 @Transactional
 class SettlementPartnerQueryTest {
 
-	@Autowired PaymentService paymentService;
-	@Autowired AuctionSettlementService settlementService;
-	@Autowired EntityManager entityManager;
-	@Autowired EntityManagerFactory entityManagerFactory;
+	@Autowired
+	PaymentService paymentService;
+
+	@Autowired
+	AuctionSettlementService settlementService;
+
+	@Autowired
+	EntityManager entityManager;
+
+	@Autowired
+	EntityManagerFactory entityManagerFactory;
 
 	@ParameterizedTest
 	@ValueSource(ints = { 1, 10, 50 })
@@ -64,7 +71,9 @@ class SettlementPartnerQueryTest {
 			shipment.addLot(lot);
 			entityManager.persist(shipment);
 			var settlement = new AuctionSettlement(house.getId(), date);
-			settlement.synchronizeLines(List.of(new AuctionSettlementLine(result.getId(), lot.getId(), 10, 1_000, 10_000L)), LocalDateTime.of(2026, 9, 6, 0, 0));
+			settlement.synchronizeLines(
+					List.of(new AuctionSettlementLine(result.getId(), lot.getId(), 10, 1_000, 10_000L)),
+					LocalDateTime.of(2026, 9, 6, 0, 0));
 			entityManager.persist(settlement);
 			house.update("변경 경매장 " + index, PartnerType.AUCTION_HOUSE, null, null, null, null);
 		}
@@ -112,7 +121,7 @@ class SettlementPartnerQueryTest {
 	@Test
 	void rejectsMissingAuctionHouses() {
 		assertThatThrownBy(() -> settlementService.rebuild(-1L, LocalDate.of(2026, 9, 6)))
-				.isInstanceOf(NotFoundException.class);
+			.isInstanceOf(NotFoundException.class);
 	}
 
 	@Test
@@ -120,7 +129,8 @@ class SettlementPartnerQueryTest {
 		var partner = new BusinessPartner("일반 거래처", PartnerType.WHOLESALE, null, null, null, null);
 		entityManager.persist(partner);
 		assertThatThrownBy(() -> settlementService.rebuild(partner.getId(), LocalDate.of(2026, 9, 6)))
-				.isInstanceOf(IllegalArgumentException.class).hasMessage("경매장 유형 거래처만 정산할 수 있습니다.");
+			.isInstanceOf(IllegalArgumentException.class)
+			.hasMessage("경매장 유형 거래처만 정산할 수 있습니다.");
 	}
 
 	@Test
@@ -132,7 +142,8 @@ class SettlementPartnerQueryTest {
 		var lot = new AuctionShipmentLot("난", "배치 품종", "A", null, 502);
 		var attempt = new AuctionAttempt(date, 1, AuctionAttemptStatus.SOLD, null, null);
 		for (int index = 0; index < 501; index++) {
-			attempt.addResultLine(new AuctionResultLine(date, "A", 1, 1_000, 1_000, null, AuctionInspectionStatus.NORMAL));
+			attempt
+				.addResultLine(new AuctionResultLine(date, "A", 1, 1_000, 1_000, null, AuctionInspectionStatus.NORMAL));
 		}
 		lot.addAttempt(attempt);
 		shipment.addLot(lot);
@@ -141,7 +152,8 @@ class SettlementPartnerQueryTest {
 		assertThat(original.lines()).hasSize(501);
 		var firstResult = attempt.getResultLines().getFirst();
 		Long firstResultId = firstResult.getId();
-		// A later change to a source must not rewrite an already recorded settlement amount.
+		// A later change to a source must not rewrite an already recorded settlement
+		// amount.
 		org.springframework.test.util.ReflectionTestUtils.setField(firstResult, "amount", 9_000);
 		org.springframework.test.util.ReflectionTestUtils.setField(firstResult, "unitPrice", 9_000);
 		var additional = new AuctionResultLine(date, "A", 1, 2_000, 2_000, null, AuctionInspectionStatus.NORMAL);
@@ -154,13 +166,15 @@ class SettlementPartnerQueryTest {
 		assertThat(updated.lines()).hasSize(502);
 		assertThat(updated.grossAmount()).isEqualTo(503_000L);
 		assertThat(updated.lines().stream().filter(line -> line.auctionResultLineId().equals(firstResultId)))
-				.singleElement().satisfies(line -> {
-					assertThat(line.amount()).isEqualTo(1_000L);
-					assertThat(line.unitPrice()).isEqualTo(1_000);
-				});
+			.singleElement()
+			.satisfies(line -> {
+				assertThat(line.amount()).isEqualTo(1_000L);
+				assertThat(line.unitPrice()).isEqualTo(1_000);
+			});
 		var statistics = flushAndResetStatistics();
 		assertThat(settlementService.rebuildExistingResults()).isZero();
-		// Two pages of IDs + two local link checks; no source details or settlements are loaded again.
+		// Two pages of IDs + two local link checks; no source details or settlements are
+		// loaded again.
 		assertThat(statistics.getPrepareStatementCount()).isEqualTo(4);
 	}
 
@@ -204,7 +218,7 @@ class SettlementPartnerQueryTest {
 		// Page + count + partner names; parent identifiers must not load parent events.
 		assertThat(statistics.getPrepareStatementCount()).isEqualTo(3);
 		assertThat(statistics.getEntityStatistics(PartnerPaymentEvent.class.getName()).getLoadCount())
-				.isEqualTo(partnerCount);
+			.isEqualTo(partnerCount);
 	}
 
 	private Statistics flushAndResetStatistics() {
@@ -214,4 +228,5 @@ class SettlementPartnerQueryTest {
 		statistics.clear();
 		return statistics;
 	}
+
 }

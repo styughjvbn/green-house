@@ -42,28 +42,37 @@ import org.springframework.transaction.annotation.Transactional;
 public class OrchidGroupLedgerReconciliationService {
 
 	private static final int BATCH_SIZE = 500;
+
 	private static final BigDecimal MINIMUM_PLACEMENT_SPAN = BigDecimal.ONE;
 
 	private final OrchidGroupLedgerCoverageRepository coverageRepository;
+
 	private final OrchidGroupRepository orchidGroupRepository;
+
 	private final OrchidGroupMutationRepository mutationRepository;
+
 	private final OrchidGroupMutationEntryRepository entryRepository;
+
 	private final OrchidGroupCollectionMemberRepository collectionMemberRepository;
+
 	private final OrchidGroupMutationFingerprint fingerprint;
+
 	private final WorkOrchidGroupLedgerRehearsalInspector workInspector;
+
 	private final List<OrchidGroupLedgerRehearsalInspector> externalInspectors;
+
 	private final Clock clock;
 
 	@Transactional(readOnly = true)
 	public OrchidGroupLedgerReconciliationReport reconcile() {
 		List<OrchidGroupLedgerReconciliationIssue> issues = new ArrayList<>();
 		Optional<OrchidGroupLedgerCoverage> activeCoverage = coverageRepository
-				.findFirstByStatusOrderByIdDesc(OrchidGroupLedgerCoverageStatus.ACTIVE);
+			.findFirstByStatusOrderByIdDesc(OrchidGroupLedgerCoverageStatus.ACTIVE);
 		Optional<OrchidGroupLedgerCoverage> preparingCoverage = coverageRepository
-				.findFirstByStatusOrderByIdDesc(OrchidGroupLedgerCoverageStatus.PREPARING);
+			.findFirstByStatusOrderByIdDesc(OrchidGroupLedgerCoverageStatus.PREPARING);
 		if (coverageRepository.countByStatus(OrchidGroupLedgerCoverageStatus.ACTIVE) > 1) {
-			issues.add(issue("MULTIPLE_ACTIVE_COVERAGES", "COVERAGE", "ACTIVE",
-					"ACTIVE ledger coverage는 하나만 존재해야 합니다."));
+			issues
+				.add(issue("MULTIPLE_ACTIVE_COVERAGES", "COVERAGE", "ACTIVE", "ACTIVE ledger coverage는 하나만 존재해야 합니다."));
 		}
 		if (coverageRepository.countByStatus(OrchidGroupLedgerCoverageStatus.PREPARING) > 1) {
 			issues.add(issue("MULTIPLE_PREPARING_COVERAGES", "COVERAGE", "PREPARING",
@@ -74,8 +83,7 @@ public class OrchidGroupLedgerReconciliationService {
 					"ACTIVE coverage가 있는 동안 새 PREPARING coverage를 둘 수 없습니다."));
 		}
 		OrchidGroupLedgerCoverage coverage = activeCoverage.orElseGet(() -> preparingCoverage.orElse(null));
-		if (coverage != null
-				&& coverage.getStatus() == OrchidGroupLedgerCoverageStatus.ACTIVE
+		if (coverage != null && coverage.getStatus() == OrchidGroupLedgerCoverageStatus.ACTIVE
 				&& coverage.getImportFingerprint() == null) {
 			issues.add(issue("MISSING_IMPORT_FINGERPRINT", "COVERAGE", coverage.getCutoverKey().toString(),
 					"ACTIVE coverage에는 complete state-chain manifest fingerprint가 필요합니다."));
@@ -105,93 +113,63 @@ public class OrchidGroupLedgerReconciliationService {
 		}
 
 		List<BaselineFingerprintEntry> baselineEntries = baselineEntries(coverage, entriesByGroupId);
-		String baselineFingerprint = coverage == null
-				? null
-				: fingerprint.calculate(new BaselineFingerprintPayload(
-						coverage.getCutoverKey(),
-						coverage.getEffectiveBusinessDate(),
-						baselineEntries));
+		String baselineFingerprint = coverage == null ? null
+				: fingerprint.calculate(new BaselineFingerprintPayload(coverage.getCutoverKey(),
+						coverage.getEffectiveBusinessDate(), baselineEntries));
 		if (coverage != null && coverage.getStatus() == OrchidGroupLedgerCoverageStatus.ACTIVE) {
 			if (!Objects.equals(coverage.getBaselineGroupCount(), (long) baselineEntries.size())) {
-				issues.add(issue("BASELINE_GROUP_COUNT_MISMATCH", "COVERAGE",
-						coverage.getCutoverKey().toString(),
+				issues.add(issue("BASELINE_GROUP_COUNT_MISMATCH", "COVERAGE", coverage.getCutoverKey().toString(),
 						"저장된 baseline 그룹 수와 실제 BASELINE Entry 수가 다릅니다."));
 			}
 			if (!Objects.equals(coverage.getBaselineFingerprint(), baselineFingerprint)) {
-				issues.add(issue("BASELINE_FINGERPRINT_MISMATCH", "COVERAGE",
-						coverage.getCutoverKey().toString(),
+				issues.add(issue("BASELINE_FINGERPRINT_MISMATCH", "COVERAGE", coverage.getCutoverKey().toString(),
 						"저장된 baseline fingerprint와 실제 BASELINE snapshot이 다릅니다."));
 			}
 		}
 
 		long revisionedGroupCount = groups.stream().filter(group -> group.stateRevision() != null).count();
-		String currentStateFingerprint = fingerprint.calculate(new CurrentStateFingerprintPayload(
-				groups.stream()
-						.map(group -> new CurrentStateFingerprintEntry(
-								group.orchidGroupId(), group.stateRevision(), group.snapshot()))
-						.toList()));
-		return new OrchidGroupLedgerReconciliationReport(
-				Instant.now(clock),
-				stage,
-				coverage == null ? null : coverage.getCutoverKey(),
-				coverage == null ? null : coverage.getStatus(),
-				groups.size(),
-				revisionedGroupCount,
-				mutationCount,
-				entryCount,
-				baselineEntries.size(),
-				baselineFingerprint,
-				currentStateFingerprint,
-				issues.isEmpty(),
-				List.copyOf(issues));
+		String currentStateFingerprint = fingerprint.calculate(new CurrentStateFingerprintPayload(groups.stream()
+			.map(group -> new CurrentStateFingerprintEntry(group.orchidGroupId(), group.stateRevision(),
+					group.snapshot()))
+			.toList()));
+		return new OrchidGroupLedgerReconciliationReport(Instant.now(clock), stage,
+				coverage == null ? null : coverage.getCutoverKey(), coverage == null ? null : coverage.getStatus(),
+				groups.size(), revisionedGroupCount, mutationCount, entryCount, baselineEntries.size(),
+				baselineFingerprint, currentStateFingerprint, issues.isEmpty(), List.copyOf(issues));
 	}
 
-	private void inspectWorkReferences(
-			List<OrchidGroupLedgerReconciliationGroup> groups,
+	private void inspectWorkReferences(List<OrchidGroupLedgerReconciliationGroup> groups,
 			List<OrchidGroupLedgerReconciliationIssue> issues) {
-		var existingGroupIds = new HashSet<>(groups.stream()
-				.map(OrchidGroupLedgerReconciliationGroup::orchidGroupId)
-				.toList());
+		var existingGroupIds = new HashSet<>(
+				groups.stream().map(OrchidGroupLedgerReconciliationGroup::orchidGroupId).toList());
 		var workReport = workInspector.inspect();
-		workReport.targetOrchidGroupIds().stream()
-				.filter(groupId -> !existingGroupIds.contains(groupId))
-				.forEach(groupId -> issues.add(issue(
-						"DANGLING_WORK_TARGET_GROUP",
-						"WORK",
-						groupId.toString(),
-						"WorkOperationTarget이 존재하지 않는 난 묶음을 참조합니다.")));
-		workReport.effectOrchidGroupIds().stream()
-				.filter(groupId -> !existingGroupIds.contains(groupId))
-				.forEach(groupId -> issues.add(issue(
-						"DANGLING_WORK_EFFECT_GROUP",
-						"WORK",
-						groupId.toString(),
-						"WorkEffectOrchidGroup이 존재하지 않는 난 묶음을 참조합니다.")));
-		workReport.invalidExecutionIds().forEach(executionId -> issues.add(issue(
-				"INVALID_WORK_EXECUTION_PROGRESS",
-				"WORK",
-				executionId.toString(),
-				"processedQuantity, 계획 수량, 상태와 effectAppliedAt이 일치하지 않습니다.")));
-		workReport.incompleteMutationLinkEffectIds().forEach(effectId -> issues.add(issue(
-				"INCOMPLETE_WORK_MUTATION_LINK",
-				"WORK",
-				effectId.toString(),
-				"WorkAppliedEffect의 mutationId와 correlationId가 함께 설정되지 않았습니다.")));
+		workReport.targetOrchidGroupIds()
+			.stream()
+			.filter(groupId -> !existingGroupIds.contains(groupId))
+			.forEach(groupId -> issues.add(issue("DANGLING_WORK_TARGET_GROUP", "WORK", groupId.toString(),
+					"WorkOperationTarget이 존재하지 않는 난 묶음을 참조합니다.")));
+		workReport.effectOrchidGroupIds()
+			.stream()
+			.filter(groupId -> !existingGroupIds.contains(groupId))
+			.forEach(groupId -> issues.add(issue("DANGLING_WORK_EFFECT_GROUP", "WORK", groupId.toString(),
+					"WorkEffectOrchidGroup이 존재하지 않는 난 묶음을 참조합니다.")));
+		workReport.invalidExecutionIds()
+			.forEach(executionId -> issues.add(issue("INVALID_WORK_EXECUTION_PROGRESS", "WORK", executionId.toString(),
+					"processedQuantity, 계획 수량, 상태와 effectAppliedAt이 일치하지 않습니다.")));
+		workReport.incompleteMutationLinkEffectIds()
+			.forEach(effectId -> issues.add(issue("INCOMPLETE_WORK_MUTATION_LINK", "WORK", effectId.toString(),
+					"WorkAppliedEffect의 mutationId와 correlationId가 함께 설정되지 않았습니다.")));
 	}
 
-	private void inspectFarmReferences(
-			List<OrchidGroupLedgerReconciliationGroup> groups,
+	private void inspectFarmReferences(List<OrchidGroupLedgerReconciliationGroup> groups,
 			List<OrchidGroupLedgerReconciliationIssue> issues) {
-		var existingGroupIds = new HashSet<>(groups.stream()
-				.map(OrchidGroupLedgerReconciliationGroup::orchidGroupId)
-				.toList());
-		collectionMemberRepository.findDistinctOrchidGroupIds().stream()
-				.filter(groupId -> !existingGroupIds.contains(groupId))
-				.forEach(groupId -> issues.add(issue(
-						"DANGLING_COLLECTION_GROUP",
-						"FARM",
-						groupId.toString(),
-						"난 묶음 Collection membership이 존재하지 않는 난 묶음을 참조합니다.")));
+		var existingGroupIds = new HashSet<>(
+				groups.stream().map(OrchidGroupLedgerReconciliationGroup::orchidGroupId).toList());
+		collectionMemberRepository.findDistinctOrchidGroupIds()
+			.stream()
+			.filter(groupId -> !existingGroupIds.contains(groupId))
+			.forEach(groupId -> issues.add(issue("DANGLING_COLLECTION_GROUP", "FARM", groupId.toString(),
+					"난 묶음 Collection membership이 존재하지 않는 난 묶음을 참조합니다.")));
 	}
 
 	private List<OrchidGroupLedgerReconciliationGroup> loadGroups() {
@@ -202,56 +180,51 @@ public class OrchidGroupLedgerReconciliationService {
 			if (ids.isEmpty()) {
 				return List.copyOf(result);
 			}
-			Map<Long, OrchidGroup> groupsById = orchidGroupRepository.findDetailsByIds(ids).stream()
-					.collect(Collectors.toMap(OrchidGroup::getId, Function.identity()));
-			ids.stream().map(groupsById::get).filter(Objects::nonNull).forEach(group -> result.add(
-					new OrchidGroupLedgerReconciliationGroup(
-							group.getId(),
-							group.getStateRevision(),
-							canonicalSnapshot(OrchidGroupStateSnapshot.from(group)),
-							group.getBedZone() == null || group.getBedZone().getPhysicalBed() == null
-									? null
-									: group.getBedZone().getPhysicalBed().getPositionUnitCount())));
+			Map<Long, OrchidGroup> groupsById = orchidGroupRepository.findDetailsByIds(ids)
+				.stream()
+				.collect(Collectors.toMap(OrchidGroup::getId, Function.identity()));
+			ids.stream()
+				.map(groupsById::get)
+				.filter(Objects::nonNull)
+				.forEach(group -> result.add(new OrchidGroupLedgerReconciliationGroup(group.getId(),
+						group.getStateRevision(), canonicalSnapshot(OrchidGroupStateSnapshot.from(group)),
+						group.getBedZone() == null || group.getBedZone().getPhysicalBed() == null ? null
+								: group.getBedZone().getPhysicalBed().getPositionUnitCount())));
 			afterId = ids.getLast();
 		}
 	}
 
-	private Map<Long, List<OrchidGroupMutationEntry>> loadEntries(
-			List<OrchidGroupLedgerReconciliationGroup> groups) {
+	private Map<Long, List<OrchidGroupMutationEntry>> loadEntries(List<OrchidGroupLedgerReconciliationGroup> groups) {
 		Map<Long, List<OrchidGroupMutationEntry>> result = new LinkedHashMap<>();
 		for (int offset = 0; offset < groups.size(); offset += BATCH_SIZE) {
-			List<Long> ids = groups.subList(offset, Math.min(offset + BATCH_SIZE, groups.size())).stream()
-					.map(OrchidGroupLedgerReconciliationGroup::orchidGroupId)
-					.toList();
+			List<Long> ids = groups.subList(offset, Math.min(offset + BATCH_SIZE, groups.size()))
+				.stream()
+				.map(OrchidGroupLedgerReconciliationGroup::orchidGroupId)
+				.toList();
 			entryRepository.findStateChainByOrchidGroupIdIn(ids)
-					.forEach(entry -> result.computeIfAbsent(entry.getOrchidGroupId(), ignored -> new ArrayList<>())
-							.add(entry));
+				.forEach(entry -> result.computeIfAbsent(entry.getOrchidGroupId(), ignored -> new ArrayList<>())
+					.add(entry));
 		}
 		return result;
 	}
 
-	private void inspectCurrentState(
-			List<OrchidGroupLedgerReconciliationGroup> groups,
+	private void inspectCurrentState(List<OrchidGroupLedgerReconciliationGroup> groups,
 			List<OrchidGroupLedgerReconciliationIssue> issues) {
 		for (OrchidGroupLedgerReconciliationGroup group : groups) {
 			OrchidGroupStateSnapshot state = group.snapshot();
-			if (state.quantity() == null || state.quantity() < 0
-					|| state.reservedQuantity() == null || state.reservedQuantity() < 0
-					|| state.quantity() != null && state.reservedQuantity() != null
-					&& state.reservedQuantity() > state.quantity()) {
-				issues.add(groupIssue("INVALID_QUANTITY_INVARIANT", group,
-						"수량은 0 이상이고 예약 수량은 전체 수량 이하여야 합니다."));
+			if (state.quantity() == null || state.quantity() < 0 || state.reservedQuantity() == null
+					|| state.reservedQuantity() < 0 || state.quantity() != null && state.reservedQuantity() != null
+							&& state.reservedQuantity() > state.quantity()) {
+				issues.add(groupIssue("INVALID_QUANTITY_INVARIANT", group, "수량은 0 이상이고 예약 수량은 전체 수량 이하여야 합니다."));
 			}
 			if (state.status() == null || state.status().isBlank()) {
 				issues.add(groupIssue("MISSING_STATUS", group, "난 묶음 상태가 비어 있습니다."));
 			}
 			if (state.potSizeCode() == null || PotSizeCode.UNMAPPED.name().equals(state.potSizeCode())) {
-				issues.add(groupIssue("UNMAPPED_POT_SIZE", group,
-						"화분 크기를 canonical code로 변환해야 합니다."));
+				issues.add(groupIssue("UNMAPPED_POT_SIZE", group, "화분 크기를 canonical code로 변환해야 합니다."));
 			}
 			if (state.quantity() != null && state.quantity() > 0 && state.varietyId() == null) {
-				issues.add(groupIssue("ACTIVE_GROUP_WITHOUT_VARIETY", group,
-						"활성 난 묶음에는 품종 연결이 필요합니다."));
+				issues.add(groupIssue("ACTIVE_GROUP_WITHOUT_VARIETY", group, "활성 난 묶음에는 품종 연결이 필요합니다."));
 			}
 			if (state.bedZoneId() == null) {
 				issues.add(groupIssue("MISSING_BED_ZONE", group, "난 묶음에는 논리 구역 연결이 필요합니다."));
@@ -259,37 +232,35 @@ public class OrchidGroupLedgerReconciliationService {
 		}
 	}
 
-	private void inspectPlacement(
-			List<OrchidGroupLedgerReconciliationGroup> groups,
+	private void inspectPlacement(List<OrchidGroupLedgerReconciliationGroup> groups,
 			List<OrchidGroupLedgerReconciliationIssue> issues) {
 		Map<Long, List<OrchidGroupLedgerReconciliationGroup>> activeByZone = groups.stream()
-				.filter(group -> group.snapshot().quantity() != null && group.snapshot().quantity() > 0)
-				.filter(group -> group.snapshot().bedZoneId() != null)
-				.collect(Collectors.groupingBy(group -> group.snapshot().bedZoneId()));
+			.filter(group -> group.snapshot().quantity() != null && group.snapshot().quantity() > 0)
+			.filter(group -> group.snapshot().bedZoneId() != null)
+			.collect(Collectors.groupingBy(group -> group.snapshot().bedZoneId()));
 		for (List<OrchidGroupLedgerReconciliationGroup> zoneGroups : activeByZone.values()) {
 			Map<Integer, List<OrchidGroupLedgerReconciliationGroup>> bySortOrder = zoneGroups.stream()
-					.filter(group -> group.snapshot().sortOrder() != null)
-					.collect(Collectors.groupingBy(group -> group.snapshot().sortOrder()));
-			bySortOrder.values().stream().filter(sameOrder -> sameOrder.size() > 1).forEach(sameOrder ->
-					issues.add(issue(
-							"DUPLICATE_ZONE_SORT_ORDER",
-							"FARM",
-							sameOrder.stream().map(group -> group.orchidGroupId().toString())
-									.collect(Collectors.joining(",")),
-							"같은 구역의 활성 난 묶음 sortOrder가 중복됩니다.")));
+				.filter(group -> group.snapshot().sortOrder() != null)
+				.collect(Collectors.groupingBy(group -> group.snapshot().sortOrder()));
+			bySortOrder.values()
+				.stream()
+				.filter(sameOrder -> sameOrder.size() > 1)
+				.forEach(sameOrder -> issues.add(issue("DUPLICATE_ZONE_SORT_ORDER", "FARM",
+						sameOrder.stream()
+							.map(group -> group.orchidGroupId().toString())
+							.collect(Collectors.joining(",")),
+						"같은 구역의 활성 난 묶음 sortOrder가 중복됩니다.")));
 			List<OrchidGroupLedgerReconciliationGroup> validRanges = new ArrayList<>();
 			for (OrchidGroupLedgerReconciliationGroup group : zoneGroups) {
 				BigDecimal start = group.snapshot().startPosition();
 				BigDecimal end = group.snapshot().endPosition();
-				boolean valid = start != null && end != null
-						&& start.compareTo(BigDecimal.ZERO) >= 0
-						&& end.compareTo(start) > 0
-						&& end.subtract(start).compareTo(MINIMUM_PLACEMENT_SPAN) >= 0
+				boolean valid = start != null && end != null && start.compareTo(BigDecimal.ZERO) >= 0
+						&& end.compareTo(start) > 0 && end.subtract(start).compareTo(MINIMUM_PLACEMENT_SPAN) >= 0
 						&& (group.maximumPosition() == null || end.compareTo(group.maximumPosition()) <= 0);
 				if (!valid) {
-					issues.add(groupIssue("INVALID_PLACEMENT_RANGE", group,
-							"활성 난 묶음의 배치 범위가 구역 또는 배드 범위를 벗어납니다."));
-				} else {
+					issues.add(groupIssue("INVALID_PLACEMENT_RANGE", group, "활성 난 묶음의 배치 범위가 구역 또는 배드 범위를 벗어납니다."));
+				}
+				else {
 					validRanges.add(group);
 				}
 			}
@@ -298,25 +269,19 @@ public class OrchidGroupLedgerReconciliationService {
 				var previous = validRanges.get(index - 1);
 				var current = validRanges.get(index);
 				if (current.snapshot().startPosition().compareTo(previous.snapshot().endPosition()) < 0) {
-					issues.add(issue(
-							"OVERLAPPING_PLACEMENT",
-							"FARM",
-							previous.orchidGroupId() + "," + current.orchidGroupId(),
-							"같은 구역의 활성 난 묶음 배치 범위가 겹칩니다."));
+					issues.add(issue("OVERLAPPING_PLACEMENT", "FARM",
+							previous.orchidGroupId() + "," + current.orchidGroupId(), "같은 구역의 활성 난 묶음 배치 범위가 겹칩니다."));
 				}
 			}
 		}
 	}
 
-	private void inspectLedger(
-			OrchidGroupLedgerReconciliationStage stage,
-			OrchidGroupLedgerCoverage coverage,
+	private void inspectLedger(OrchidGroupLedgerReconciliationStage stage, OrchidGroupLedgerCoverage coverage,
 			List<OrchidGroupLedgerReconciliationGroup> groups,
 			Map<Long, List<OrchidGroupMutationEntry>> entriesByGroupId,
 			List<OrchidGroupLedgerReconciliationIssue> issues) {
 		for (OrchidGroupLedgerReconciliationGroup group : groups) {
-			List<OrchidGroupMutationEntry> entries = entriesByGroupId
-					.getOrDefault(group.orchidGroupId(), List.of());
+			List<OrchidGroupMutationEntry> entries = entriesByGroupId.getOrDefault(group.orchidGroupId(), List.of());
 			if (stage == OrchidGroupLedgerReconciliationStage.PRE_BASELINE) {
 				if (group.stateRevision() != null || !entries.isEmpty()) {
 					issues.add(groupIssue("LEDGER_STATE_BEFORE_COVERAGE", group,
@@ -325,16 +290,14 @@ public class OrchidGroupLedgerReconciliationService {
 				continue;
 			}
 			if (group.stateRevision() == null || entries.isEmpty()) {
-				issues.add(groupIssue("MISSING_LEDGER_CHAIN", group,
-						"Coverage 대상 난 묶음에 revision chain이 없습니다."));
+				issues.add(groupIssue("MISSING_LEDGER_CHAIN", group, "Coverage 대상 난 묶음에 revision chain이 없습니다."));
 				continue;
 			}
 			OrchidGroupMutationEntry previous = null;
 			for (OrchidGroupMutationEntry entry : entries) {
 				if (previous != null) {
 					if (!Objects.equals(previous.getStateRevisionAfter(), entry.getStateRevisionBefore())) {
-						issues.add(groupIssue("REVISION_GAP", group,
-								"MutationEntry revision이 연속되지 않습니다."));
+						issues.add(groupIssue("REVISION_GAP", group, "MutationEntry revision이 연속되지 않습니다."));
 					}
 					if (!sameSnapshot(previous.getAfterState(), entry.getBeforeState())) {
 						issues.add(groupIssue("SNAPSHOT_CHAIN_MISMATCH", group,
@@ -367,15 +330,11 @@ public class OrchidGroupLedgerReconciliationService {
 		}
 	}
 
-	private void inspectDeletedLedger(
-			OrchidGroupLedgerReconciliationStage stage,
-			List<OrchidGroupMutationEntry> orphanEntries,
-			List<OrchidGroupLedgerReconciliationIssue> issues) {
+	private void inspectDeletedLedger(OrchidGroupLedgerReconciliationStage stage,
+			List<OrchidGroupMutationEntry> orphanEntries, List<OrchidGroupLedgerReconciliationIssue> issues) {
 		Map<Long, List<OrchidGroupMutationEntry>> entriesByGroup = orphanEntries.stream()
-				.collect(Collectors.groupingBy(
-						OrchidGroupMutationEntry::getOrchidGroupId,
-						LinkedHashMap::new,
-						Collectors.toList()));
+			.collect(Collectors.groupingBy(OrchidGroupMutationEntry::getOrchidGroupId, LinkedHashMap::new,
+					Collectors.toList()));
 		for (var groupEntries : entriesByGroup.entrySet()) {
 			Long groupId = groupEntries.getKey();
 			List<OrchidGroupMutationEntry> entries = groupEntries.getValue();
@@ -405,42 +364,36 @@ public class OrchidGroupLedgerReconciliationService {
 						"삭제된 난 묶음 chain은 BASELINE 또는 CREATE로 시작해야 합니다."));
 			}
 			OrchidGroupMutationEntry last = entries.getLast();
-			if (last.getEntryKind() != OrchidGroupMutationEntryKind.DELETE
-					|| last.getAfterState() != null) {
+			if (last.getEntryKind() != OrchidGroupMutationEntryKind.DELETE || last.getAfterState() != null) {
 				issues.add(issue("MISSING_DELETE_TOMBSTONE", "FARM", groupId.toString(),
 						"현재 행이 없는 난 묶음 chain은 DELETE로 종료되어야 합니다."));
 			}
 		}
 	}
 
-	private boolean isCoverageBaseline(
-			OrchidGroupMutationEntry entry,
-			OrchidGroupLedgerCoverage coverage) {
-		return coverage != null
-				&& entry.getEntryKind() == OrchidGroupMutationEntryKind.BASELINE
+	private boolean isCoverageBaseline(OrchidGroupMutationEntry entry, OrchidGroupLedgerCoverage coverage) {
+		return coverage != null && entry.getEntryKind() == OrchidGroupMutationEntryKind.BASELINE
 				&& entry.getMutation().getMutationType() == OrchidGroupMutationType.BASELINE_IMPORT
 				&& entry.getMutation().getSourceDomain() == OrchidGroupMutationSourceDomain.MIGRATION
 				&& coverage.getCutoverKey().toString().equals(entry.getMutation().getSourceReferenceId());
 	}
 
-	private List<BaselineFingerprintEntry> baselineEntries(
-			OrchidGroupLedgerCoverage coverage,
+	private List<BaselineFingerprintEntry> baselineEntries(OrchidGroupLedgerCoverage coverage,
 			Map<Long, List<OrchidGroupMutationEntry>> entriesByGroupId) {
 		if (coverage == null) {
 			return List.of();
 		}
-		return entriesByGroupId.values().stream()
-				.flatMap(List::stream)
-				.filter(entry -> isCoverageBaseline(entry, coverage))
-				.sorted(Comparator.comparing(OrchidGroupMutationEntry::getOrchidGroupId))
-				.map(entry -> new BaselineFingerprintEntry(
-						entry.getOrchidGroupId(), canonicalSnapshot(entry.getAfterState())))
-				.toList();
+		return entriesByGroupId.values()
+			.stream()
+			.flatMap(List::stream)
+			.filter(entry -> isCoverageBaseline(entry, coverage))
+			.sorted(Comparator.comparing(OrchidGroupMutationEntry::getOrchidGroupId))
+			.map(entry -> new BaselineFingerprintEntry(entry.getOrchidGroupId(),
+					canonicalSnapshot(entry.getAfterState())))
+			.toList();
 	}
 
-	private boolean sameSnapshot(
-			OrchidGroupStateSnapshot first,
-			OrchidGroupStateSnapshot second) {
+	private boolean sameSnapshot(OrchidGroupStateSnapshot first, OrchidGroupStateSnapshot second) {
 		return Objects.equals(canonicalSnapshot(first), canonicalSnapshot(second));
 	}
 
@@ -451,39 +404,27 @@ public class OrchidGroupLedgerReconciliationService {
 		return snapshot.canonical();
 	}
 
-	private OrchidGroupLedgerReconciliationIssue groupIssue(
-			String code,
-			OrchidGroupLedgerReconciliationGroup group,
+	private OrchidGroupLedgerReconciliationIssue groupIssue(String code, OrchidGroupLedgerReconciliationGroup group,
 			String message) {
 		return OrchidGroupLedgerReconciliationIssue.group(code, group.orchidGroupId(), message);
 	}
 
-	private OrchidGroupLedgerReconciliationIssue issue(
-			String code,
-			String domain,
-			String referenceId,
-			String message) {
+	private OrchidGroupLedgerReconciliationIssue issue(String code, String domain, String referenceId, String message) {
 		return new OrchidGroupLedgerReconciliationIssue(code, domain, referenceId, message);
 	}
 
-	private record BaselineFingerprintPayload(
-			UUID cutoverKey,
-			java.time.LocalDate effectiveBusinessDate,
+	private record BaselineFingerprintPayload(UUID cutoverKey, java.time.LocalDate effectiveBusinessDate,
 			List<BaselineFingerprintEntry> groups) {
 	}
 
-	private record BaselineFingerprintEntry(
-			Long orchidGroupId,
+	private record BaselineFingerprintEntry(Long orchidGroupId, OrchidGroupStateSnapshot snapshot) {
+	}
+
+	private record CurrentStateFingerprintPayload(List<CurrentStateFingerprintEntry> groups) {
+	}
+
+	private record CurrentStateFingerprintEntry(Long orchidGroupId, Long stateRevision,
 			OrchidGroupStateSnapshot snapshot) {
 	}
 
-	private record CurrentStateFingerprintPayload(
-			List<CurrentStateFingerprintEntry> groups) {
-	}
-
-	private record CurrentStateFingerprintEntry(
-			Long orchidGroupId,
-			Long stateRevision,
-			OrchidGroupStateSnapshot snapshot) {
-	}
 }

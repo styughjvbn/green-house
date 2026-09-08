@@ -11,12 +11,9 @@ import org.springframework.context.ConfigurableApplicationContext;
 
 public final class OrchidGroupLedgerReconciliationCli {
 
-	private static final Set<String> PROTECTED_OPTIONS = Set.of(
-			"--spring.flyway.enabled",
-			"--spring.jpa.hibernate.ddl-auto",
-			"--spring.datasource.hikari.read-only",
-			"--app.settlement.rebuild-on-startup",
-			"--app.orchid-ledger.startup-guard-enabled");
+	private static final Set<String> PROTECTED_OPTIONS = Set.of("--spring.flyway.enabled",
+			"--spring.jpa.hibernate.ddl-auto", "--spring.datasource.hikari.read-only",
+			"--app.settlement.rebuild-on-startup", "--app.orchid-ledger.startup-guard-enabled");
 
 	private OrchidGroupLedgerReconciliationCli() {
 	}
@@ -31,14 +28,14 @@ public final class OrchidGroupLedgerReconciliationCli {
 
 		int exitCode;
 		try (ConfigurableApplicationContext context = new SpringApplicationBuilder(BackendApplication.class)
-				.web(WebApplicationType.NONE)
-				.run(args)) {
-			OrchidGroupLedgerReconciliationReport report = context
-					.getBean(OrchidGroupLedgerReconciliationService.class)
-					.reconcile();
+			.web(WebApplicationType.NONE)
+			.run(args)) {
+			OrchidGroupLedgerReconciliationReport report = context.getBean(OrchidGroupLedgerReconciliationService.class)
+				.reconcile();
 			printReport(new ObjectMapper().findAndRegisterModules(), report);
 			exitCode = report.ready() ? 0 : 2;
-		} catch (RuntimeException exception) {
+		}
+		catch (RuntimeException exception) {
 			exception.printStackTrace(System.err);
 			exitCode = 1;
 		}
@@ -47,20 +44,20 @@ public final class OrchidGroupLedgerReconciliationCli {
 
 	private static void rejectUnsafeOverrides(String[] args) {
 		Arrays.stream(args)
-				.filter(argument -> PROTECTED_OPTIONS.stream()
-						.anyMatch(option -> argument.equals(option) || argument.startsWith(option + "=")))
-				.forEach(argument -> {
-					throw new IllegalArgumentException("읽기 전용 옵션은 변경할 수 없습니다: " + argument);
-				});
+			.filter(argument -> PROTECTED_OPTIONS.stream()
+				.anyMatch(option -> argument.equals(option) || argument.startsWith(option + "=")))
+			.forEach(argument -> {
+				throw new IllegalArgumentException("읽기 전용 옵션은 변경할 수 없습니다: " + argument);
+			});
 	}
 
-	private static void printReport(
-			ObjectMapper objectMapper,
-			OrchidGroupLedgerReconciliationReport report) {
+	private static void printReport(ObjectMapper objectMapper, OrchidGroupLedgerReconciliationReport report) {
 		try {
 			System.out.println(objectMapper.writerWithDefaultPrettyPrinter().writeValueAsString(report));
-		} catch (JsonProcessingException exception) {
+		}
+		catch (JsonProcessingException exception) {
 			throw new IllegalStateException("대사 보고서를 JSON으로 출력할 수 없습니다.", exception);
 		}
 	}
+
 }

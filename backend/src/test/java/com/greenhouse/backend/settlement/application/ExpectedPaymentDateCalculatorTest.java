@@ -27,7 +27,9 @@ class ExpectedPaymentDateCalculatorTest {
 
 	private static final LocalDate FRIDAY = LocalDate.of(2026, 7, 3);
 
-	@Mock PartnerSettlementSettingsRepository settingsRepository;
+	@Mock
+	PartnerSettlementSettingsRepository settingsRepository;
+
 	private ExpectedPaymentDateCalculator calculator;
 
 	@BeforeEach
@@ -44,21 +46,21 @@ class ExpectedPaymentDateCalculatorTest {
 	@Test
 	void calendarDaysIncludeWeekends() {
 		when(settingsRepository.findByPartnerId(1L))
-				.thenReturn(Optional.of(settings(1L, 2, PaymentDayMode.CALENDAR_DAY)));
+			.thenReturn(Optional.of(settings(1L, 2, PaymentDayMode.CALENDAR_DAY)));
 		assertThat(calculator.calculate(1L, FRIDAY)).isEqualTo(LocalDate.of(2026, 7, 5));
 	}
 
 	@Test
 	void businessDaysSkipWeekendsAcrossSeveralWeeks() {
 		when(settingsRepository.findByPartnerId(1L))
-				.thenReturn(Optional.of(settings(1L, 6, PaymentDayMode.BUSINESS_DAY)));
+			.thenReturn(Optional.of(settings(1L, 6, PaymentDayMode.BUSINESS_DAY)));
 		assertThat(calculator.calculate(1L, FRIDAY)).isEqualTo(LocalDate.of(2026, 7, 13));
 	}
 
 	@Test
 	void zeroDelayKeepsTheBaseDateEvenOnAWeekend() {
 		when(settingsRepository.findByPartnerId(1L))
-				.thenReturn(Optional.of(settings(1L, 0, PaymentDayMode.BUSINESS_DAY)));
+			.thenReturn(Optional.of(settings(1L, 0, PaymentDayMode.BUSINESS_DAY)));
 		assertThat(calculator.calculate(1L, FRIDAY.plusDays(1))).isEqualTo(FRIDAY.plusDays(1));
 	}
 
@@ -68,12 +70,13 @@ class ExpectedPaymentDateCalculatorTest {
 		var saturday = new PaymentDateTarget(1L, FRIDAY.plusDays(1));
 		var withoutSettings = new PaymentDateTarget(2L, FRIDAY);
 		when(settingsRepository.findByPartnerIdIn(Set.of(1L, 2L)))
-				.thenReturn(List.of(settings(1L, 2, PaymentDayMode.BUSINESS_DAY)));
+			.thenReturn(List.of(settings(1L, 2, PaymentDayMode.BUSINESS_DAY)));
 
 		assertThat(calculator.calculateAll(List.of(friday, saturday, withoutSettings)))
-				.containsEntry(friday, LocalDate.of(2026, 7, 7))
-				.containsEntry(saturday, LocalDate.of(2026, 7, 7))
-				.containsEntry(withoutSettings, FRIDAY).hasSize(3);
+			.containsEntry(friday, LocalDate.of(2026, 7, 7))
+			.containsEntry(saturday, LocalDate.of(2026, 7, 7))
+			.containsEntry(withoutSettings, FRIDAY)
+			.hasSize(3);
 		verify(settingsRepository).findByPartnerIdIn(Set.of(1L, 2L));
 		verifyNoMoreInteractions(settingsRepository);
 	}
@@ -86,8 +89,8 @@ class ExpectedPaymentDateCalculatorTest {
 
 	private PartnerSettlementSettings settings(Long partnerId, int delay, PaymentDayMode mode) {
 		var settings = new PartnerSettlementSettings(partnerId, PartnerType.WHOLESALE);
-		settings.update(SettlementUnit.SALES_SLIP, delay, mode, false, false, 0L,
-				List.of(), false, false, null, null);
+		settings.update(SettlementUnit.SALES_SLIP, delay, mode, false, false, 0L, List.of(), false, false, null, null);
 		return settings;
 	}
+
 }

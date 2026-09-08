@@ -24,9 +24,11 @@ import org.hibernate.type.SqlTypes;
 @Entity
 @Table(name = "auction_settlement_lines")
 public class AuctionSettlementLine extends BaseEntity {
+
 	@Id
 	@GeneratedValue(strategy = GenerationType.SEQUENCE, generator = "auction_settlement_lines_id_seq")
-	@SequenceGenerator(name = "auction_settlement_lines_id_seq", sequenceName = "auction_settlement_lines_id_seq", allocationSize = 50)
+	@SequenceGenerator(name = "auction_settlement_lines_id_seq", sequenceName = "auction_settlement_lines_id_seq",
+			allocationSize = 50)
 	private Long id;
 
 	@Getter(AccessLevel.NONE)
@@ -57,7 +59,8 @@ public class AuctionSettlementLine extends BaseEntity {
 	@JdbcTypeCode(SqlTypes.JSON)
 	private String lineMetaJson;
 
-	public AuctionSettlementLine(Long resultLineId, Long shipmentLotId, Integer quantity, Integer unitPrice, Long amount) {
+	public AuctionSettlementLine(Long resultLineId, Long shipmentLotId, Integer quantity, Integer unitPrice,
+			Long amount) {
 		this.auctionResultLineId = resultLineId;
 		this.auctionShipmentLotId = shipmentLotId;
 		this.quantity = quantity;
@@ -69,4 +72,5 @@ public class AuctionSettlementLine extends BaseEntity {
 	void setSettlement(AuctionSettlement settlement) {
 		this.settlement = settlement;
 	}
+
 }

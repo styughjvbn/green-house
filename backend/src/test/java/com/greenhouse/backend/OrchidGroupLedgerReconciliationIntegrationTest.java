@@ -40,13 +40,26 @@ class OrchidGroupLedgerReconciliationIntegrationTest extends AbstractBackendInte
 
 	private static final LocalDate BUSINESS_DATE = LocalDate.of(2026, 8, 20);
 
-	@Autowired private OrchidGroupLedgerReconciliationService reconciliationService;
-	@Autowired private OrchidGroupLedgerPreparationService preparationService;
-	@Autowired private OrchidGroupLedgerCutoverService cutoverService;
-	@Autowired private OrchidGroupMutationEngine mutationEngine;
-	@Autowired private OrchidGroupStateChainMigrationService stateChainMigrationService;
-	@Autowired private OrchidGroupLedgerCoverageRepository coverageRepository;
-	@Autowired private EntityManager entityManager;
+	@Autowired
+	private OrchidGroupLedgerReconciliationService reconciliationService;
+
+	@Autowired
+	private OrchidGroupLedgerPreparationService preparationService;
+
+	@Autowired
+	private OrchidGroupLedgerCutoverService cutoverService;
+
+	@Autowired
+	private OrchidGroupMutationEngine mutationEngine;
+
+	@Autowired
+	private OrchidGroupStateChainMigrationService stateChainMigrationService;
+
+	@Autowired
+	private OrchidGroupLedgerCoverageRepository coverageRepository;
+
+	@Autowired
+	private EntityManager entityManager;
 
 	@Test
 	void reportsAValidPreBaselineDatabaseWithoutWritingLedgerState() {
@@ -69,13 +82,12 @@ class OrchidGroupLedgerReconciliationIntegrationTest extends AbstractBackendInte
 	void validatesImportedStateChainAndStoredActiveCoverageFingerprint() {
 		OrchidGroup group = createOrchidGroup(952);
 		UUID cutoverKey = UUID.randomUUID();
-		OrchidGroupStateChainTestSupport.importCurrentGroups(
-				stateChainMigrationService, orchidGroupRepository, cutoverKey, BUSINESS_DATE, "rehearsal-test");
+		OrchidGroupStateChainTestSupport.importCurrentGroups(stateChainMigrationService, orchidGroupRepository,
+				cutoverKey, BUSINESS_DATE, "rehearsal-test");
 
 		var preparingReport = reconciliationService.reconcile();
 
-		assertThat(preparingReport.stage())
-				.isEqualTo(OrchidGroupLedgerReconciliationStage.BASELINE_PREPARING);
+		assertThat(preparingReport.stage()).isEqualTo(OrchidGroupLedgerReconciliationStage.BASELINE_PREPARING);
 		assertThat(preparingReport.ready()).isTrue();
 		assertThat(preparingReport.baselineGroupCount()).isEqualTo(1);
 		assertThat(preparingReport.baselineFingerprint()).hasSize(64);
@@ -97,8 +109,8 @@ class OrchidGroupLedgerReconciliationIntegrationTest extends AbstractBackendInte
 	void detectsAStateChangeThatBypassedTheMutationLedger() {
 		OrchidGroup group = createOrchidGroup(953);
 		UUID cutoverKey = UUID.randomUUID();
-		OrchidGroupStateChainTestSupport.importCurrentGroups(
-				stateChainMigrationService, orchidGroupRepository, cutoverKey, BUSINESS_DATE, "rehearsal-test");
+		OrchidGroupStateChainTestSupport.importCurrentGroups(stateChainMigrationService, orchidGroupRepository,
+				cutoverKey, BUSINESS_DATE, "rehearsal-test");
 		group.reserve(1);
 		entityManager.flush();
 		entityManager.clear();
@@ -107,17 +119,16 @@ class OrchidGroupLedgerReconciliationIntegrationTest extends AbstractBackendInte
 
 		assertThat(report.ready()).isFalse();
 		assertThat(report.issues()).extracting("code")
-				.contains("CURRENT_SNAPSHOT_MISMATCH", "SALES_RESERVATION_MISMATCH");
+			.contains("CURRENT_SNAPSHOT_MISMATCH", "SALES_RESERVATION_MISMATCH");
 	}
 
 	@Test
 	void rejectsACompetingPreparingCoverage() {
 		preparationService.prepare(UUID.randomUUID(), BUSINESS_DATE, "rehearsal-test");
 
-		assertThatThrownBy(() -> preparationService.prepare(
-				UUID.randomUUID(), BUSINESS_DATE, "rehearsal-test"))
-				.isInstanceOf(ConflictException.class)
-				.hasMessageContaining("PREPARING");
+		assertThatThrownBy(() -> preparationService.prepare(UUID.randomUUID(), BUSINESS_DATE, "rehearsal-test"))
+			.isInstanceOf(ConflictException.class)
+			.hasMessageContaining("PREPARING");
 	}
 
 	@Test
@@ -125,10 +136,10 @@ class OrchidGroupLedgerReconciliationIntegrationTest extends AbstractBackendInte
 		createOrchidGroup(954);
 		createOrchidGroup(955);
 		UUID cutoverKey = UUID.randomUUID();
-		var first = OrchidGroupStateChainTestSupport.importCurrentGroups(
-				stateChainMigrationService, orchidGroupRepository, cutoverKey, BUSINESS_DATE, "1.0.0");
-		var replayed = OrchidGroupStateChainTestSupport.importCurrentGroups(
-				stateChainMigrationService, orchidGroupRepository, cutoverKey, BUSINESS_DATE, "1.0.0");
+		var first = OrchidGroupStateChainTestSupport.importCurrentGroups(stateChainMigrationService,
+				orchidGroupRepository, cutoverKey, BUSINESS_DATE, "1.0.0");
+		var replayed = OrchidGroupStateChainTestSupport.importCurrentGroups(stateChainMigrationService,
+				orchidGroupRepository, cutoverKey, BUSINESS_DATE, "1.0.0");
 
 		assertThat(first.importedMutationCount()).isEqualTo(1);
 		assertThat(first.reconciliation().baselineGroupCount()).isEqualTo(2);
@@ -137,12 +148,11 @@ class OrchidGroupLedgerReconciliationIntegrationTest extends AbstractBackendInte
 		assertThat(replayed.reconciliation().mutationCount()).isEqualTo(1);
 		assertThat(replayed.reconciliation().entryCount()).isEqualTo(2);
 
-		var activated = cutoverService.execute(new OrchidGroupLedgerCutoverCommand(
-				cutoverKey, BUSINESS_DATE, "1.0.0", "1.1.0", true));
+		var activated = cutoverService
+			.execute(new OrchidGroupLedgerCutoverCommand(cutoverKey, BUSINESS_DATE, "1.0.0", "1.1.0", true));
 
 		assertThat(activated.activated()).isTrue();
-		assertThat(activated.reconciliation().stage())
-				.isEqualTo(OrchidGroupLedgerReconciliationStage.ACTIVE);
+		assertThat(activated.reconciliation().stage()).isEqualTo(OrchidGroupLedgerReconciliationStage.ACTIVE);
 		var coverage = coverageRepository.findByCutoverKey(cutoverKey).orElseThrow();
 		assertThat(coverage.getBaselineGroupCount()).isEqualTo(2);
 		assertThat(coverage.getBaselineFingerprint()).hasSize(64);
@@ -152,37 +162,23 @@ class OrchidGroupLedgerReconciliationIntegrationTest extends AbstractBackendInte
 	void activatesWithoutRebaseliningAnEngineCreatedPreparingGroup() {
 		OrchidGroup baselineGroup = createOrchidGroup(956);
 		UUID cutoverKey = UUID.randomUUID();
-		OrchidGroupStateChainTestSupport.importCurrentGroups(
-				stateChainMigrationService, orchidGroupRepository, cutoverKey, BUSINESS_DATE, "1.0.0");
+		OrchidGroupStateChainTestSupport.importCurrentGroups(stateChainMigrationService, orchidGroupRepository,
+				cutoverKey, BUSINESS_DATE, "1.0.0");
 
-		var created = mutationEngine.create(new CreateOrchidGroupMutationCommand(
-				new OrchidGroupMutationSource(
-						OrchidGroupMutationSourceDomain.FARM,
-						"ORCHID_GROUP_COMMAND",
-						"post-baseline-create",
-						"CREATE",
-						UUID.randomUUID()),
-				baselineGroup.getBedZone().getId(),
-				new OrchidGroupMutationDetails(
-						baselineGroup.getVariety().getId(),
-						10,
-						"3.5치",
-						2,
-						"정상",
-						null,
-						null,
-						false,
-						new BigDecimal("2"),
-						new BigDecimal("3"),
-						null),
-				BUSINESS_DATE,
-				"PREPARING 이후 생성"));
+		var created = mutationEngine.create(
+				new CreateOrchidGroupMutationCommand(
+						new OrchidGroupMutationSource(OrchidGroupMutationSourceDomain.FARM, "ORCHID_GROUP_COMMAND",
+								"post-baseline-create", "CREATE", UUID.randomUUID()),
+						baselineGroup.getBedZone().getId(),
+						new OrchidGroupMutationDetails(baselineGroup.getVariety().getId(), 10, "3.5치", 2, "정상", null,
+								null, false, new BigDecimal("2"), new BigDecimal("3"), null),
+						BUSINESS_DATE, "PREPARING 이후 생성"));
 
-		var activated = cutoverService.execute(new OrchidGroupLedgerCutoverCommand(
-				cutoverKey, BUSINESS_DATE, "1.0.0", "1.1.0", true));
+		var activated = cutoverService
+			.execute(new OrchidGroupLedgerCutoverCommand(cutoverKey, BUSINESS_DATE, "1.0.0", "1.1.0", true));
 
-		assertThat(created.entries()).singleElement().satisfies(entry ->
-				assertThat(entry.stateRevisionAfter()).isEqualTo(1L));
+		assertThat(created.entries()).singleElement()
+			.satisfies(entry -> assertThat(entry.stateRevisionAfter()).isEqualTo(1L));
 		assertThat(activated.activated()).isTrue();
 		assertThat(activated.baselineGroupCount()).isEqualTo(1);
 		assertThat(activated.reconciliation().orchidGroupCount()).isEqualTo(2);
@@ -197,28 +193,12 @@ class OrchidGroupLedgerReconciliationIntegrationTest extends AbstractBackendInte
 		bed.addBedZone(zone);
 		house.addPhysicalBed(bed);
 		houseRepository.save(house);
-		Variety variety = varietyRepository.save(new Variety(
-				"LEDGER-RECONCILIATION-" + houseNumber,
-				"Phalaenopsis",
-				"Ledger Reconciliation " + houseNumber,
-				null,
-				"3.5치",
-				true,
-				true,
-				null,
-				null));
-		OrchidGroup group = new OrchidGroup(
-				zone,
-				variety.getGenus(),
-				variety.getName(),
-				20,
-				"3.5치",
-				2,
-				"정상",
-				1,
-				BigDecimal.ZERO,
-				BigDecimal.ONE);
+		Variety variety = varietyRepository.save(new Variety("LEDGER-RECONCILIATION-" + houseNumber, "Phalaenopsis",
+				"Ledger Reconciliation " + houseNumber, null, "3.5치", true, true, null, null));
+		OrchidGroup group = new OrchidGroup(zone, variety.getGenus(), variety.getName(), 20, "3.5치", 2, "정상", 1,
+				BigDecimal.ZERO, BigDecimal.ONE);
 		group.assignVariety(variety);
 		return orchidGroupRepository.save(group);
 	}
+
 }

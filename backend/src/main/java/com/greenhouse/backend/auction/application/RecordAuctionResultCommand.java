@@ -11,11 +11,7 @@ import java.time.LocalDate;
 import java.util.List;
 
 @Schema(name = "AuctionLotResultRequest")
-public record RecordAuctionResultCommand(
-		@NotNull LocalDate auctionDate,
-		@Min(1) Integer attemptNo,
-		@NotNull AuctionAttemptStatus attemptStatus,
-		@Size(max = 200) String failedReason,
-		@Size(max = 1000) String memo,
-		@Valid List<AuctionResultLineInput> resultLines) {
+public record RecordAuctionResultCommand(@NotNull LocalDate auctionDate, @Min(1) Integer attemptNo,
+		@NotNull AuctionAttemptStatus attemptStatus, @Size(max = 200) String failedReason,
+		@Size(max = 1000) String memo, @Valid List<AuctionResultLineInput> resultLines) {
 }

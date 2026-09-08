@@ -19,64 +19,46 @@ import org.springframework.stereotype.Component;
 public class WorkEffectStore {
 
 	private final WorkAppliedEffectRepository appliedEffectRepository;
+
 	private final WorkEffectOrchidGroupRepository effectOrchidGroupRepository;
 
 	public Optional<WorkExecutionResult> find(Long operationId, String effectKey) {
-		return appliedEffectRepository.findByWorkOperationIdAndEffectKey(operationId, effectKey)
-				.map(this::toResult);
+		return appliedEffectRepository.findByWorkOperationIdAndEffectKey(operationId, effectKey).map(this::toResult);
 	}
 
-	public WorkExecutionResult save(
-			WorkOperation operation,
-			WorkOperationTarget target,
-			WorkEffectCommand command,
-			String effectKey,
-			List<Long> sourceOrchidGroupIds,
-			WorkEffectKind effectKind,
-			WorkExecutionResult result) {
-		WorkAppliedEffect appliedEffect = new WorkAppliedEffect(
-				operation,
-				target,
-				effectKey,
-				effectKind,
-				result.handlerCode(),
-				command.executedAt(),
-				command.worker(),
-				command.resultDetails(),
+	public WorkExecutionResult save(WorkOperation operation, WorkOperationTarget target, WorkEffectCommand command,
+			String effectKey, List<Long> sourceOrchidGroupIds, WorkEffectKind effectKind, WorkExecutionResult result) {
+		WorkAppliedEffect appliedEffect = new WorkAppliedEffect(operation, target, effectKey, effectKind,
+				result.handlerCode(), command.executedAt(), command.worker(), command.resultDetails(),
 				result.resultDetails());
 		if (result.mutationLink() != null) {
-			appliedEffect.linkMutation(
-					result.mutationLink().mutationId(),
-					result.mutationLink().correlationId());
+			appliedEffect.linkMutation(result.mutationLink().mutationId(), result.mutationLink().correlationId());
 		}
 		appliedEffectRepository.save(appliedEffect);
 		var groupLinks = new ArrayList<WorkEffectOrchidGroup>();
 		if (effectKind == WorkEffectKind.STRUCTURE_CHANGE || effectKey.startsWith("EXECUTION:")) {
-			sourceOrchidGroupIds.stream().distinct().forEach(groupId -> groupLinks.add(
-					new WorkEffectOrchidGroup(
-							appliedEffect, groupId, WorkEffectOrchidGroupRelationType.SOURCE)));
+			sourceOrchidGroupIds.stream()
+				.distinct()
+				.forEach(groupId -> groupLinks
+					.add(new WorkEffectOrchidGroup(appliedEffect, groupId, WorkEffectOrchidGroupRelationType.SOURCE)));
 		}
-		WorkEffectOrchidGroupRelationType resultRelation = target == null
-				&& "MULTI_CREATE".equals(result.handlerCode())
-				? WorkEffectOrchidGroupRelationType.CREATED
-				: WorkEffectOrchidGroupRelationType.RESULT;
-		result.resultOrchidGroupIds().forEach(groupId -> groupLinks.add(
-				new WorkEffectOrchidGroup(appliedEffect, groupId, resultRelation)));
+		WorkEffectOrchidGroupRelationType resultRelation = target == null && "MULTI_CREATE".equals(result.handlerCode())
+				? WorkEffectOrchidGroupRelationType.CREATED : WorkEffectOrchidGroupRelationType.RESULT;
+		result.resultOrchidGroupIds()
+			.forEach(groupId -> groupLinks.add(new WorkEffectOrchidGroup(appliedEffect, groupId, resultRelation)));
 		effectOrchidGroupRepository.saveAll(groupLinks);
 		return result;
 	}
 
 	private WorkExecutionResult toResult(WorkAppliedEffect effect) {
-		List<Long> resultIds = effectOrchidGroupRepository
-				.findByWorkAppliedEffectIdOrderByIdAsc(effect.getId())
-				.stream()
-				.filter(link -> link.getRelationType() != WorkEffectOrchidGroupRelationType.SOURCE)
-				.map(WorkEffectOrchidGroup::getOrchidGroupId)
-				.toList();
-		WorkMutationLink mutationLink = effect.getMutationId() == null && effect.getCorrelationId() == null
-				? null
+		List<Long> resultIds = effectOrchidGroupRepository.findByWorkAppliedEffectIdOrderByIdAsc(effect.getId())
+			.stream()
+			.filter(link -> link.getRelationType() != WorkEffectOrchidGroupRelationType.SOURCE)
+			.map(WorkEffectOrchidGroup::getOrchidGroupId)
+			.toList();
+		WorkMutationLink mutationLink = effect.getMutationId() == null && effect.getCorrelationId() == null ? null
 				: new WorkMutationLink(effect.getMutationId(), effect.getCorrelationId());
-		return new WorkExecutionResult(
-				effect.getHandlerCode(), effect.getResultDetails(), resultIds, mutationLink);
+		return new WorkExecutionResult(effect.getHandlerCode(), effect.getResultDetails(), resultIds, mutationLink);
 	}
+
 }

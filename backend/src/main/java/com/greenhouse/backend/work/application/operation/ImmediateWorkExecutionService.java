@@ -3,6 +3,7 @@ package com.greenhouse.backend.work.application.operation;
 import com.greenhouse.backend.common.exception.NotFoundException;
 import com.greenhouse.backend.work.application.effect.WorkEffectCommand;
 import com.greenhouse.backend.work.application.effect.WorkEffectProcessor;
+import com.greenhouse.backend.work.application.operation.WorkOperationView;
 import com.greenhouse.backend.work.application.target.ResolvedWorkTarget;
 import com.greenhouse.backend.work.application.target.WorkTargetResolver;
 import com.greenhouse.backend.work.application.target.WorkTargetSelection;
@@ -11,7 +12,6 @@ import com.greenhouse.backend.work.domain.operation.WorkOperation;
 import com.greenhouse.backend.work.domain.operation.WorkOperationStatus;
 import com.greenhouse.backend.work.domain.operation.WorkSourceScopeType;
 import com.greenhouse.backend.work.domain.operation.WorkTypeDefinition;
-import com.greenhouse.backend.work.application.operation.WorkOperationView;
 import com.greenhouse.backend.work.repository.WorkAppliedEffectRepository;
 import com.greenhouse.backend.work.repository.WorkEffectOrchidGroupRepository;
 import com.greenhouse.backend.work.repository.WorkOperationRepository;
@@ -30,26 +30,27 @@ import org.springframework.transaction.annotation.Transactional;
 public class ImmediateWorkExecutionService {
 
 	private final WorkTypeService workTypeService;
+
 	private final WorkEffectProcessor workEffectProcessor;
+
 	private final WorkOperationRepository operationRepository;
+
 	private final WorkEffectOrchidGroupRepository effectOrchidGroupRepository;
+
 	private final WorkAppliedEffectRepository appliedEffectRepository;
+
 	private final WorkTargetResolver workTargetResolver;
+
 	private final WorkOperationAggregateCreator aggregateCreator;
+
 	private final WorkTargetExecutionRepository executionRepository;
+
 	private final WorkOperationQueryService queryService;
+
 	private final WorkOperationSupport support;
 
-	public WorkOperationView executeForTarget(
-			String requestKey,
-			String workTypeCode,
-			String title,
-			LocalDate workDate,
-			String worker,
-			String memo,
-			Long orchidGroupId,
-			Map<String, Object> details,
-			Object payload) {
+	public WorkOperationView executeForTarget(String requestKey, String workTypeCode, String title, LocalDate workDate,
+			String worker, String memo, Long orchidGroupId, Map<String, Object> details, Object payload) {
 		worker = support.actor(worker);
 		var existing = operationRepository.findByRequestKey(requestKey);
 		if (existing.isPresent()) {
@@ -59,36 +60,24 @@ public class ImmediateWorkExecutionService {
 
 		ResolvedWorkTarget resolved = workTargetResolver.getCurrent(orchidGroupId);
 		WorkTargetSelection targetSelection = WorkTargetSelection.orchidGroup(orchidGroupId);
-		WorkOperation operation = new WorkOperation(
-				workTypeService.getByCode(workTypeCode), title, workDate, workDate,
-				targetSelection.sourceScopeType(), targetSelection.sourceScopeId(),
-				targetSelection.conditionSnapshot(), details, worker, memo,
-				support.now());
+		WorkOperation operation = new WorkOperation(workTypeService.getByCode(workTypeCode), title, workDate, workDate,
+				targetSelection.sourceScopeType(), targetSelection.sourceScopeId(), targetSelection.conditionSnapshot(),
+				details, worker, memo, support.now());
 		operation.assignRequestKey(requestKey);
-		aggregateCreator.createForOrchidGroups(
-				operation, List.of(resolved), targetSelection.inclusionSource(), targetSelection.sourceScopeId());
-		var execution = executionRepository
-				.findByTargetWorkOperationIdOrderByIdAsc(operation.getId()).getFirst();
+		aggregateCreator.createForOrchidGroups(operation, List.of(resolved), targetSelection.inclusionSource(),
+				targetSelection.sourceScopeId());
+		var execution = executionRepository.findByTargetWorkOperationIdOrderByIdAsc(operation.getId()).getFirst();
 		LocalDateTime executedAt = support.now();
 		operation.start(executedAt);
-		var result = workEffectProcessor.apply(
-				operation,
-				execution.getTarget(),
+		var result = workEffectProcessor.apply(operation, execution.getTarget(),
 				new WorkEffectCommand(executedAt, worker, details, payload));
 		execution.completeWithEffect(executedAt, worker, result.resultDetails());
 		operation.complete(executedAt);
 		return queryService.get(operation.getId());
 	}
 
-	public WorkOperationView execute(
-			String requestKey,
-			String workTypeCode,
-			String title,
-			LocalDate workDate,
-			String worker,
-			String memo,
-			Map<String, Object> details,
-			Object payload) {
+	public WorkOperationView execute(String requestKey, String workTypeCode, String title, LocalDate workDate,
+			String worker, String memo, Map<String, Object> details, Object payload) {
 		worker = support.actor(worker);
 		var existing = operationRepository.findByRequestKey(requestKey);
 		if (existing.isPresent()) {
@@ -96,15 +85,13 @@ public class ImmediateWorkExecutionService {
 			return queryService.get(existing.get().getId());
 		}
 
-		WorkOperation operation = new WorkOperation(
-				workTypeService.getByCode(workTypeCode), title, workDate, workDate,
+		WorkOperation operation = new WorkOperation(workTypeService.getByCode(workTypeCode), title, workDate, workDate,
 				WorkSourceScopeType.NONE, null, Map.of(), details, worker, memo, support.now());
 		operation.assignRequestKey(requestKey);
 		operationRepository.save(operation);
 		LocalDateTime executedAt = support.now();
 		operation.start(executedAt);
-		workEffectProcessor.apply(
-				operation, null, new WorkEffectCommand(executedAt, worker, details, payload));
+		workEffectProcessor.apply(operation, null, new WorkEffectCommand(executedAt, worker, details, payload));
 		operation.complete(executedAt);
 		return queryService.get(operation.getId());
 	}
@@ -113,21 +100,25 @@ public class ImmediateWorkExecutionService {
 	public List<Long> getResultOrchidGroupIds(Long operationId) {
 		validateWorkType(operationId, WorkTypeDefinition.MULTI_CREATE.name(), "다중 생성 작업만 생성 결과를 조회할 수 있습니다.");
 		return effectOrchidGroupRepository.findByWorkAppliedEffectWorkOperationIdOrderByIdAsc(operationId)
-				.stream().map(link -> link.getOrchidGroupId()).toList();
+			.stream()
+			.map(link -> link.getOrchidGroupId())
+			.toList();
 	}
 
 	@Transactional(readOnly = true)
 	public List<Long> getStructureChangeResultOrchidGroupIds(Long operationId, String workTypeCode) {
 		validateWorkType(operationId, workTypeCode, "요청한 구조 변경 작업 유형과 일치하지 않습니다.");
 		return effectOrchidGroupRepository
-				.findByWorkAppliedEffectWorkOperationIdAndRelationTypeOrderByIdAsc(
-						operationId, WorkEffectOrchidGroupRelationType.RESULT)
-				.stream().map(link -> link.getOrchidGroupId()).toList();
+			.findByWorkAppliedEffectWorkOperationIdAndRelationTypeOrderByIdAsc(operationId,
+					WorkEffectOrchidGroupRelationType.RESULT)
+			.stream()
+			.map(link -> link.getOrchidGroupId())
+			.toList();
 	}
 
 	public WorkOperationView cancelMultiCreate(Long operationId) {
 		WorkOperation operation = operationRepository.findWithWorkTypeById(operationId)
-				.orElseThrow(() -> new NotFoundException("작업을 찾을 수 없습니다."));
+			.orElseThrow(() -> new NotFoundException("작업을 찾을 수 없습니다."));
 		if (!WorkTypeDefinition.MULTI_CREATE.name().equals(operation.getWorkType().getCode())) {
 			throw new IllegalArgumentException("다중 생성 작업만 결과 취소할 수 있습니다.");
 		}
@@ -136,14 +127,14 @@ public class ImmediateWorkExecutionService {
 		}
 		operation.cancelCompletedStructureChange();
 		appliedEffectRepository.findByWorkOperationIdAndEffectKey(operationId, "OPERATION")
-				.orElseThrow(() -> new NotFoundException("작업 효과를 찾을 수 없습니다."))
-				.cancel(support.now());
+			.orElseThrow(() -> new NotFoundException("작업 효과를 찾을 수 없습니다."))
+			.cancel(support.now());
 		return queryService.get(operationId);
 	}
 
 	private void validateWorkType(Long operationId, String workTypeCode, String message) {
 		WorkOperation operation = operationRepository.findWithWorkTypeById(operationId)
-				.orElseThrow(() -> new NotFoundException("작업을 찾을 수 없습니다."));
+			.orElseThrow(() -> new NotFoundException("작업을 찾을 수 없습니다."));
 		if (!workTypeCode.equals(operation.getWorkType().getCode())) {
 			throw new IllegalArgumentException(message);
 		}
@@ -154,4 +145,5 @@ public class ImmediateWorkExecutionService {
 			throw new IllegalArgumentException("요청 식별자가 다른 작업 유형에서 이미 사용되었습니다.");
 		}
 	}
+
 }

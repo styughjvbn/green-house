@@ -27,19 +27,12 @@ import org.springframework.context.ConfigurableApplicationContext;
  */
 public final class OrchidGroupStateChainMigrationCli {
 
-	private static final Set<String> OPERATOR_OPTIONS = Set.of(
-			"cutover-key",
-			"manifest",
-			"effective-business-date",
-			"minimum-writer-version",
-			"apply",
-			"confirmation");
-	private static final Set<String> PROTECTED_OPTIONS = Set.of(
-			"--spring.flyway.enabled",
-			"--spring.jpa.hibernate.ddl-auto",
-			"--spring.datasource.hikari.read-only",
-			"--app.settlement.rebuild-on-startup",
-			"--app.orchid-ledger.startup-guard-enabled");
+	private static final Set<String> OPERATOR_OPTIONS = Set.of("cutover-key", "manifest", "effective-business-date",
+			"minimum-writer-version", "apply", "confirmation");
+
+	private static final Set<String> PROTECTED_OPTIONS = Set.of("--spring.flyway.enabled",
+			"--spring.jpa.hibernate.ddl-auto", "--spring.datasource.hikari.read-only",
+			"--app.settlement.rebuild-on-startup", "--app.orchid-ledger.startup-guard-enabled");
 
 	private OrchidGroupStateChainMigrationCli() {
 	}
@@ -56,30 +49,23 @@ public final class OrchidGroupStateChainMigrationCli {
 		ObjectMapper objectMapper = new ObjectMapper().findAndRegisterModules();
 		try {
 			byte[] manifestBytes = Files.readAllBytes(parsed.manifestPath());
-			OrchidGroupStateChainMigrationManifest manifest = objectMapper.readValue(
-					manifestBytes, OrchidGroupStateChainMigrationManifest.class);
+			OrchidGroupStateChainMigrationManifest manifest = objectMapper.readValue(manifestBytes,
+					OrchidGroupStateChainMigrationManifest.class);
 			try (ConfigurableApplicationContext context = new SpringApplicationBuilder(BackendApplication.class)
-					.web(WebApplicationType.NONE)
-					.run(parsed.springArguments().toArray(String[]::new))) {
+				.web(WebApplicationType.NONE)
+				.run(parsed.springArguments().toArray(String[]::new))) {
 				OrchidGroupStateChainMigrationService service = context
-						.getBean(OrchidGroupStateChainMigrationService.class);
+					.getBean(OrchidGroupStateChainMigrationService.class);
 				OrchidGroupStateChainMigrationResult result = parsed.apply()
-						? service.importManifest(
-								parsed.cutoverKey(),
-								parsed.effectiveBusinessDate(),
-								parsed.minimumWriterVersion(),
-								sha256(manifestBytes),
-								manifest)
-						: service.validate(
-								parsed.cutoverKey(),
-								parsed.effectiveBusinessDate(),
-								parsed.minimumWriterVersion(),
-								sha256(manifestBytes),
-								manifest);
+						? service.importManifest(parsed.cutoverKey(), parsed.effectiveBusinessDate(),
+								parsed.minimumWriterVersion(), sha256(manifestBytes), manifest)
+						: service.validate(parsed.cutoverKey(), parsed.effectiveBusinessDate(),
+								parsed.minimumWriterVersion(), sha256(manifestBytes), manifest);
 				printResult(objectMapper, result);
 				exitCode = result.reconciliation().ready() ? 0 : 2;
 			}
-		} catch (IOException | RuntimeException exception) {
+		}
+		catch (IOException | RuntimeException exception) {
 			exception.printStackTrace(System.err);
 			exitCode = 1;
 		}
@@ -113,13 +99,9 @@ public final class OrchidGroupStateChainMigrationCli {
 		if (!expectedConfirmation.equals(required(values, "confirmation"))) {
 			throw new IllegalArgumentException("확인 문구가 일치하지 않습니다: " + expectedConfirmation);
 		}
-		return new ParsedArguments(
-				cutoverKey,
-				Path.of(required(values, "manifest")).toAbsolutePath().normalize(),
+		return new ParsedArguments(cutoverKey, Path.of(required(values, "manifest")).toAbsolutePath().normalize(),
 				LocalDate.parse(required(values, "effective-business-date")),
-				required(values, "minimum-writer-version"),
-				apply,
-				List.copyOf(springArguments));
+				required(values, "minimum-writer-version"), apply, List.copyOf(springArguments));
 	}
 
 	private static boolean parseBoolean(String value) {
@@ -142,38 +124,33 @@ public final class OrchidGroupStateChainMigrationCli {
 
 	private static void rejectUnsafeOverrides(String[] args) {
 		Arrays.stream(args)
-				.filter(argument -> PROTECTED_OPTIONS.stream()
-						.anyMatch(option -> argument.equals(option) || argument.startsWith(option + "=")))
-				.forEach(argument -> {
-					throw new IllegalArgumentException("State-chain migration 안전 옵션은 변경할 수 없습니다: "
-							+ argument);
-				});
+			.filter(argument -> PROTECTED_OPTIONS.stream()
+				.anyMatch(option -> argument.equals(option) || argument.startsWith(option + "=")))
+			.forEach(argument -> {
+				throw new IllegalArgumentException("State-chain migration 안전 옵션은 변경할 수 없습니다: " + argument);
+			});
 	}
 
 	private static String sha256(byte[] value) {
 		try {
 			return HexFormat.of().formatHex(MessageDigest.getInstance("SHA-256").digest(value));
-		} catch (NoSuchAlgorithmException exception) {
+		}
+		catch (NoSuchAlgorithmException exception) {
 			throw new IllegalStateException("SHA-256 fingerprint를 사용할 수 없습니다.", exception);
 		}
 	}
 
-	private static void printResult(
-			ObjectMapper objectMapper,
-			OrchidGroupStateChainMigrationResult result) {
+	private static void printResult(ObjectMapper objectMapper, OrchidGroupStateChainMigrationResult result) {
 		try {
 			System.out.println(objectMapper.writerWithDefaultPrettyPrinter().writeValueAsString(result));
-		} catch (JsonProcessingException exception) {
+		}
+		catch (JsonProcessingException exception) {
 			throw new IllegalStateException("State-chain migration 결과를 출력할 수 없습니다.", exception);
 		}
 	}
 
-	record ParsedArguments(
-			UUID cutoverKey,
-			Path manifestPath,
-			LocalDate effectiveBusinessDate,
-			String minimumWriterVersion,
-			boolean apply,
-			List<String> springArguments) {
+	record ParsedArguments(UUID cutoverKey, Path manifestPath, LocalDate effectiveBusinessDate,
+			String minimumWriterVersion, boolean apply, List<String> springArguments) {
 	}
+
 }

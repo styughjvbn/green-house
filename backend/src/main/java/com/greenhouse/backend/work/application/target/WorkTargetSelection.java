@@ -7,10 +7,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 
-public record WorkTargetSelection(
-		WorkSourceScopeType sourceScopeType,
-		Long sourceScopeId,
-		String sourceDerivedGroupKey,
+public record WorkTargetSelection(WorkSourceScopeType sourceScopeType, Long sourceScopeId, String sourceDerivedGroupKey,
 		List<Long> sourceOrchidGroupIds) {
 
 	public WorkTargetSelection {
@@ -18,8 +15,7 @@ public record WorkTargetSelection(
 			throw new IllegalArgumentException("작업 대상 범위 유형이 필요합니다.");
 		}
 		sourceDerivedGroupKey = normalize(sourceDerivedGroupKey);
-		sourceOrchidGroupIds = sourceOrchidGroupIds == null
-				? List.of()
+		sourceOrchidGroupIds = sourceOrchidGroupIds == null ? List.of()
 				: sourceOrchidGroupIds.stream().filter(Objects::nonNull).distinct().toList();
 		switch (sourceScopeType) {
 			case FARM -> {
@@ -50,22 +46,16 @@ public record WorkTargetSelection(
 	}
 
 	public static WorkTargetSelection from(WorkTargetSelectionInput input) {
-		return new WorkTargetSelection(
-				input.sourceScopeType(),
-				input.sourceScopeId(),
-				input.sourceDerivedGroupKey(),
+		return new WorkTargetSelection(input.sourceScopeType(), input.sourceScopeId(), input.sourceDerivedGroupKey(),
 				input.sourceOrchidGroupIds());
 	}
 
-	public static WorkTargetSelection identifiedScope(
-			WorkSourceScopeType sourceScopeType,
-			Long sourceScopeId) {
+	public static WorkTargetSelection identifiedScope(WorkSourceScopeType sourceScopeType, Long sourceScopeId) {
 		return new WorkTargetSelection(sourceScopeType, sourceScopeId, null, List.of());
 	}
 
 	public static WorkTargetSelection manualSelection(List<Long> orchidGroupIds) {
-		return new WorkTargetSelection(
-				WorkSourceScopeType.MANUAL_SELECTION, null, null, orchidGroupIds);
+		return new WorkTargetSelection(WorkSourceScopeType.MANUAL_SELECTION, null, null, orchidGroupIds);
 	}
 
 	public static WorkTargetSelection orchidGroup(Long orchidGroupId) {

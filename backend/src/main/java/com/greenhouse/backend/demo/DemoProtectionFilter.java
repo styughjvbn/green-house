@@ -12,7 +12,9 @@ import org.springframework.web.filter.OncePerRequestFilter;
 public class DemoProtectionFilter extends OncePerRequestFilter {
 
 	private final DemoProperties properties;
+
 	private final DemoRequestLimiter limiter;
+
 	private final ErrorResponseWriter errorResponseWriter;
 
 	public DemoProtectionFilter(DemoProperties properties, Clock clock, ErrorResponseWriter errorResponseWriter) {
@@ -27,11 +29,8 @@ public class DemoProtectionFilter extends OncePerRequestFilter {
 	}
 
 	@Override
-	protected void doFilterInternal(
-			HttpServletRequest request,
-			HttpServletResponse response,
-			FilterChain filterChain
-	) throws ServletException, IOException {
+	protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain)
+			throws ServletException, IOException {
 		if (request.getContentLengthLong() > properties.maxRequestBytes()) {
 			errorResponseWriter.write(response, 413, "DEMO_REQUEST_TOO_LARGE", "데모 환경의 요청 크기 제한을 초과했습니다.");
 			return;
@@ -41,7 +40,8 @@ public class DemoProtectionFilter extends OncePerRequestFilter {
 			return;
 		}
 
-		DemoRequestLimit limit = limiter.record(request.getRemoteAddr(), DemoRequestPolicy.isMutation(request.getMethod()));
+		DemoRequestLimit limit = limiter.record(request.getRemoteAddr(),
+				DemoRequestPolicy.isMutation(request.getMethod()));
 		switch (limit) {
 			case MINUTE_EXCEEDED -> {
 				response.setHeader("Retry-After", "60");
@@ -55,4 +55,5 @@ public class DemoProtectionFilter extends OncePerRequestFilter {
 			case ALLOWED -> filterChain.doFilter(request, response);
 		}
 	}
+
 }

@@ -22,17 +22,24 @@ import org.springframework.transaction.annotation.Transactional;
 public class SalesSlipStatusService {
 
 	private final SalesSlipRepository salesSlipRepository;
+
 	private final AuctionSalesSlipCancellationPolicy auctionSalesSlipCancellationPolicy;
+
 	private final SalesSlipInventoryService salesSlipInventoryService;
+
 	private final SalesSlipOutboundService salesSlipOutboundService;
+
 	private final PaymentEventReader paymentEventReader;
+
 	private final PartnerBalanceService partnerBalanceService;
+
 	private final SalesSlipAuditSupport auditSupport;
+
 	private final SalesSlipDocumentAssembler responseAssembler;
 
 	public SalesSlipDocument updateStatus(Long salesSlipId, SalesSlipStatusUpdateRequest request) {
 		var salesSlip = salesSlipRepository.findForUpdateById(salesSlipId)
-				.orElseThrow(() -> new NotFoundException("판매 전표를 찾을 수 없습니다."));
+			.orElseThrow(() -> new NotFoundException("판매 전표를 찾을 수 없습니다."));
 		String nextStatus = request.salesStatus().trim();
 		if (salesSlip.isCanceled()) {
 			throw new IllegalArgumentException("취소된 전표는 상태를 변경할 수 없습니다.");
@@ -69,7 +76,8 @@ public class SalesSlipStatusService {
 
 		if (salesSlip.isOutboundCompleted()) {
 			salesSlipInventoryService.cancelOutbound(salesSlip);
-		} else {
+		}
+		else {
 			salesSlipInventoryService.cancelReserve(salesSlip);
 		}
 
@@ -79,10 +87,9 @@ public class SalesSlipStatusService {
 
 		salesSlip.updateSalesStatus(SalesSlip.STATUS_CANCELED);
 		if (salesSlip.getSalesType() == SalesType.DIRECT) {
-			partnerBalanceService.updateReceivable(
-					salesSlip.getPartnerId(),
-					salesSlipRepository.sumDirectReceivableByPartnerId(salesSlip.getPartnerId()),
-					null);
+			partnerBalanceService.updateReceivable(salesSlip.getPartnerId(),
+					salesSlipRepository.sumDirectReceivableByPartnerId(salesSlip.getPartnerId()), null);
 		}
 	}
+
 }

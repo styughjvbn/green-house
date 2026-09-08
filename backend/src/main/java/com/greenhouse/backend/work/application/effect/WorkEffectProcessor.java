@@ -14,11 +14,10 @@ import org.springframework.stereotype.Component;
 public class WorkEffectProcessor {
 
 	private final Map<String, WorkEffectHandler> handlers;
+
 	private final WorkEffectStore effectStore;
 
-	public WorkEffectProcessor(
-			List<WorkEffectHandler> handlers,
-			WorkEffectStore effectStore) {
+	public WorkEffectProcessor(List<WorkEffectHandler> handlers, WorkEffectStore effectStore) {
 		this.handlers = new HashMap<>();
 		for (WorkEffectHandler handler : handlers) {
 			WorkEffectHandler duplicate = this.handlers.put(handler.supports(), handler);
@@ -38,58 +37,30 @@ public class WorkEffectProcessor {
 		}
 	}
 
-	public WorkExecutionResult apply(
-			WorkOperation operation,
-			WorkOperationTarget target,
-			WorkEffectCommand command) {
-		return apply(operation, target, command,
-				target == null ? "OPERATION" : "TARGET:" + target.getId(),
-				target != null && target.getOrchidGroupId() != null
-						? List.of(target.getOrchidGroupId())
-						: List.of());
+	public WorkExecutionResult apply(WorkOperation operation, WorkOperationTarget target, WorkEffectCommand command) {
+		return apply(operation, target, command, target == null ? "OPERATION" : "TARGET:" + target.getId(),
+				target != null && target.getOrchidGroupId() != null ? List.of(target.getOrchidGroupId()) : List.of());
 	}
 
-	public WorkExecutionResult applyNew(
-			WorkOperation operation,
-			WorkOperationTarget target,
+	public WorkExecutionResult applyNew(WorkOperation operation, WorkOperationTarget target,
 			WorkEffectCommand command) {
-		return executeAndPersist(
-				operation,
-				target,
-				command,
-				"TARGET:" + target.getId(),
-				target.getOrchidGroupId() == null
-						? List.of()
-						: List.of(target.getOrchidGroupId()));
+		return executeAndPersist(operation, target, command, "TARGET:" + target.getId(),
+				target.getOrchidGroupId() == null ? List.of() : List.of(target.getOrchidGroupId()));
 	}
 
-	public WorkExecutionResult applyBatch(
-			WorkOperation operation,
-			String executionKey,
-			List<Long> sourceOrchidGroupIds,
+	public WorkExecutionResult applyBatch(WorkOperation operation, String executionKey, List<Long> sourceOrchidGroupIds,
 			WorkEffectCommand command) {
 		return apply(operation, null, command, "EXECUTION:" + executionKey, sourceOrchidGroupIds);
 	}
 
-	public WorkExecutionResult applyTargetExecution(
-			WorkOperation operation,
-			WorkOperationTarget target,
-			String executionKey,
-			WorkEffectCommand command) {
-		return apply(
-				operation,
-				target,
-				command,
-				"POTTING:" + executionKey,
+	public WorkExecutionResult applyTargetExecution(WorkOperation operation, WorkOperationTarget target,
+			String executionKey, WorkEffectCommand command) {
+		return apply(operation, target, command, "POTTING:" + executionKey,
 				target.getOrchidGroupId() == null ? List.of() : List.of(target.getOrchidGroupId()));
 	}
 
-	private WorkExecutionResult apply(
-			WorkOperation operation,
-			WorkOperationTarget target,
-			WorkEffectCommand command,
-			String effectKey,
-			List<Long> sourceOrchidGroupIds) {
+	private WorkExecutionResult apply(WorkOperation operation, WorkOperationTarget target, WorkEffectCommand command,
+			String effectKey, List<Long> sourceOrchidGroupIds) {
 		var existing = effectStore.find(operation.getId(), effectKey);
 		if (existing.isPresent()) {
 			return existing.get();
@@ -97,12 +68,8 @@ public class WorkEffectProcessor {
 		return executeAndPersist(operation, target, command, effectKey, sourceOrchidGroupIds);
 	}
 
-	private WorkExecutionResult executeAndPersist(
-			WorkOperation operation,
-			WorkOperationTarget target,
-			WorkEffectCommand command,
-			String effectKey,
-			List<Long> sourceOrchidGroupIds) {
+	private WorkExecutionResult executeAndPersist(WorkOperation operation, WorkOperationTarget target,
+			WorkEffectCommand command, String effectKey, List<Long> sourceOrchidGroupIds) {
 		String handlerCode = operation.getWorkType().handlerCode();
 		WorkEffectHandler handler = handlers.get(handlerCode);
 		if (handler == null) {
@@ -112,7 +79,7 @@ public class WorkEffectProcessor {
 
 		WorkEffectCommand routedCommand = command.withEffectKey(effectKey);
 		WorkExecutionResult result = handler.execute(WorkEffectContext.from(operation, target), routedCommand);
-		return effectStore.save(
-				operation, target, routedCommand, effectKey, sourceOrchidGroupIds, effectKind, result);
+		return effectStore.save(operation, target, routedCommand, effectKey, sourceOrchidGroupIds, effectKind, result);
 	}
+
 }

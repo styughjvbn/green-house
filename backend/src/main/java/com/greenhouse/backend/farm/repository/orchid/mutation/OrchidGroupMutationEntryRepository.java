@@ -12,12 +12,10 @@ public interface OrchidGroupMutationEntryRepository extends JpaRepository<Orchid
 
 	List<OrchidGroupMutationEntry> findByMutationIdOrderByIdAsc(Long mutationId);
 
-	List<OrchidGroupMutationEntry> findByMutationIdInOrderByMutationIdAscIdAsc(
-			Collection<Long> mutationIds);
+	List<OrchidGroupMutationEntry> findByMutationIdInOrderByMutationIdAscIdAsc(Collection<Long> mutationIds);
 
 	@EntityGraph(attributePaths = "mutation")
-	@Query("select entry from OrchidGroupMutationEntry entry "
-			+ "where entry.orchidGroupId in :orchidGroupIds "
+	@Query("select entry from OrchidGroupMutationEntry entry " + "where entry.orchidGroupId in :orchidGroupIds "
 			+ "order by entry.orchidGroupId, entry.stateRevisionAfter")
 	List<OrchidGroupMutationEntry> findStateChainByOrchidGroupIdIn(
 			@Param("orchidGroupIds") Collection<Long> orchidGroupIds);
@@ -29,4 +27,5 @@ public interface OrchidGroupMutationEntryRepository extends JpaRepository<Orchid
 			+ "where not exists (select group.id from OrchidGroup group where group.id = entry.orchidGroupId) "
 			+ "order by entry.orchidGroupId, entry.stateRevisionAfter")
 	List<OrchidGroupMutationEntry> findChainsWithoutCurrentGroup();
+
 }

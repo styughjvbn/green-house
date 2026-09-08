@@ -10,7 +10,9 @@ import com.greenhouse.backend.farm.application.orchid.mutation.OrchidGroupMutati
 import com.greenhouse.backend.farm.application.orchid.mutation.RelatedOrchidGroupMutations;
 import com.greenhouse.backend.farm.domain.orchid.OrchidGroup;
 import com.greenhouse.backend.farm.repository.orchid.OrchidGroupRepository;
+import com.greenhouse.backend.work.application.correction.OrchidGroupCorrectionInput;
 import com.greenhouse.backend.work.application.correction.StructureChangeReferenceReader;
+import com.greenhouse.backend.work.application.correction.WorkCorrectionCommand;
 import com.greenhouse.backend.work.application.correction.WorkOperationDateCorrectionService;
 import com.greenhouse.backend.work.application.effect.WorkEffectCommand;
 import com.greenhouse.backend.work.application.effect.WorkEffectContext;
@@ -19,8 +21,6 @@ import com.greenhouse.backend.work.application.effect.WorkEffectResults;
 import com.greenhouse.backend.work.application.effect.WorkExecutionResult;
 import com.greenhouse.backend.work.application.effect.WorkMutationLink;
 import com.greenhouse.backend.work.domain.effect.WorkEffectKind;
-import com.greenhouse.backend.work.application.correction.OrchidGroupCorrectionInput;
-import com.greenhouse.backend.work.application.correction.WorkCorrectionCommand;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
@@ -31,109 +31,121 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 
 /**
- * ORCHID-CUTOVER: LEGACY_RETIRE — Engine 경로와 전환 후 제거할 직접 보정 분기를 함께 가진다.
- * Removal gate: 운영 ACTIVE 안정화 및 writer inventory 승인.
+ * ORCHID-CUTOVER: LEGACY_RETIRE — Engine 경로와 전환 후 제거할 직접 보정 분기를 함께 가진다. Removal gate: 운영
+ * ACTIVE 안정화 및 writer inventory 승인.
  */
 @Component
 @RequiredArgsConstructor
 public class CorrectionWorkHandler implements WorkEffectHandler {
 
 	private final StructureChangeReferenceReader structureChangeReferenceReader;
+
 	private final WorkOperationDateCorrectionService workOperationDateCorrectionService;
+
 	private final OrchidGroupRepository orchidGroupRepository;
+
 	private final List<OrchidGroupUsageInspector> usageInspectors;
+
 	private final OrchidGroupMutationEngine mutationEngine;
+
 	private final OrchidGroupMutationRoutingPolicy mutationRoutingPolicy;
 
-	@Override public String supports() { return "CORRECTION"; }
-	@Override public WorkEffectKind effectKind() { return WorkEffectKind.ATTRIBUTE_CHANGE; }
+	@Override
+	public String supports() {
+		return "CORRECTION";
+	}
+
+	@Override
+	public WorkEffectKind effectKind() {
+		return WorkEffectKind.ATTRIBUTE_CHANGE;
+	}
 
 	@Override
 	public WorkExecutionResult execute(WorkEffectContext context, WorkEffectCommand command) {
 		var target = context.target();
-		if (target != null) throw new IllegalArgumentException("보정 작업은 작업 단위로 실행해야 합니다.");
+		if (target != null)
+			throw new IllegalArgumentException("보정 작업은 작업 단위로 실행해야 합니다.");
 		WorkCorrectionCommand request = command.payloadAs(WorkCorrectionCommand.class);
 		Long originalOperationId = originalOperationId(command.resultDetails());
 		List<Long> correctableIds = structureChangeReferenceReader
-				.getCorrectableResultOrchidGroupIds(originalOperationId);
-		Set<Long> adjustmentIds = request.orchidGroupAdjustments().stream()
-				.map(OrchidGroupCorrectionInput::orchidGroupId)
-				.collect(Collectors.toCollection(LinkedHashSet::new));
+			.getCorrectableResultOrchidGroupIds(originalOperationId);
+		Set<Long> adjustmentIds = request.orchidGroupAdjustments()
+			.stream()
+			.map(OrchidGroupCorrectionInput::orchidGroupId)
+			.collect(Collectors.toCollection(LinkedHashSet::new));
 		if (adjustmentIds.size() != request.orchidGroupAdjustments().size()) {
 			throw new IllegalArgumentException("같은 난 묶음을 한 보정 작업에서 중복 지정할 수 없습니다.");
 		}
 		if (!new LinkedHashSet<>(correctableIds).containsAll(adjustmentIds)) {
 			throw new IllegalArgumentException("원본 구조 변경 작업이 만든 결과 난 묶음만 보정할 수 있습니다.");
 		}
-		Map<Long, OrchidGroup> groupsById = orchidGroupRepository.findAllForUpdateByIdIn(adjustmentIds).stream()
-				.collect(Collectors.toMap(OrchidGroup::getId, Function.identity()));
+		Map<Long, OrchidGroup> groupsById = orchidGroupRepository.findAllForUpdateByIdIn(adjustmentIds)
+			.stream()
+			.collect(Collectors.toMap(OrchidGroup::getId, Function.identity()));
 		if (groupsById.size() != adjustmentIds.size()) {
 			throw new NotFoundException("보정 대상 난 묶음 일부를 찾을 수 없습니다.");
 		}
-		Set<Long> changedAdjustmentIds = request.orchidGroupAdjustments().stream()
-				.filter(adjustment -> {
-					OrchidGroup group = groupsById.get(adjustment.orchidGroupId());
-					return !group.getQuantity().equals(adjustment.quantity())
-							|| !group.getStatus().equals(adjustment.status().trim());
-				})
-				.map(OrchidGroupCorrectionInput::orchidGroupId)
-				.collect(Collectors.toCollection(LinkedHashSet::new));
+		Set<Long> changedAdjustmentIds = request.orchidGroupAdjustments().stream().filter(adjustment -> {
+			OrchidGroup group = groupsById.get(adjustment.orchidGroupId());
+			return !group.getQuantity().equals(adjustment.quantity())
+					|| !group.getStatus().equals(adjustment.status().trim());
+		}).map(OrchidGroupCorrectionInput::orchidGroupId).collect(Collectors.toCollection(LinkedHashSet::new));
 		boolean workDateChanged = !workOperationDateCorrectionService.getWorkDate(originalOperationId)
-				.equals(request.workDate());
+			.equals(request.workDate());
 		if (changedAdjustmentIds.isEmpty() && !workDateChanged) {
 			throw new IllegalArgumentException("수량, 상태 또는 작업일 중 현재 값과 다른 보정 값이 필요합니다.");
 		}
 		var blockers = usageInspectors.stream()
-				.flatMap(inspector -> inspector.inspect(changedAdjustmentIds, originalOperationId).stream())
-				.toList();
+			.flatMap(inspector -> inspector.inspect(changedAdjustmentIds, originalOperationId).stream())
+			.toList();
 		if (!blockers.isEmpty()) {
 			throw new IllegalArgumentException(blockers.getFirst().message());
 		}
 
-		List<WorkEffectResults.Adjustment> auditRows = request.orchidGroupAdjustments().stream()
-				.filter(adjustment -> changedAdjustmentIds.contains(adjustment.orchidGroupId()))
-				.map(adjustment -> {
-					OrchidGroup group = groupsById.get(adjustment.orchidGroupId());
-					return new WorkEffectResults.Adjustment(group.getId(), group.getQuantity(), group.getStatus(),
-							adjustment.quantity(), adjustment.status().trim());
-				}).toList();
+		List<WorkEffectResults.Adjustment> auditRows = request.orchidGroupAdjustments()
+			.stream()
+			.filter(adjustment -> changedAdjustmentIds.contains(adjustment.orchidGroupId()))
+			.map(adjustment -> {
+				OrchidGroup group = groupsById.get(adjustment.orchidGroupId());
+				return new WorkEffectResults.Adjustment(group.getId(), group.getQuantity(), group.getStatus(),
+						adjustment.quantity(), adjustment.status().trim());
+			})
+			.toList();
 		WorkMutationLink mutationLink = null;
 		if (!changedAdjustmentIds.isEmpty()) {
 			CorrectOrchidGroupsMutationCommand mutationCommand = null;
 			if (mutationRoutingPolicy.routesToEngine()) {
-				var references = structureChangeReferenceReader
-						.getMutationReferences(originalOperationId, changedAdjustmentIds);
-				RelatedOrchidGroupMutations related = references.legacySource()
-						? RelatedOrchidGroupMutations.legacy()
+				var references = structureChangeReferenceReader.getMutationReferences(originalOperationId,
+						changedAdjustmentIds);
+				RelatedOrchidGroupMutations related = references.legacySource() ? RelatedOrchidGroupMutations.legacy()
 						: RelatedOrchidGroupMutations.current(references.mutationIds());
 				mutationCommand = new CorrectOrchidGroupsMutationCommand(
 						OrchidGroupMutationSources.work(context.operationId(), command.effectKey()),
-						request.orchidGroupAdjustments().stream()
-								.filter(adjustment -> changedAdjustmentIds.contains(adjustment.orchidGroupId()))
-								.map(adjustment -> new CorrectOrchidGroupMutationItem(
-										adjustment.orchidGroupId(),
-										adjustment.quantity(),
-										adjustment.status()))
-								.toList(),
-						related,
-						request.workDate(),
-						context.memo());
+						request.orchidGroupAdjustments()
+							.stream()
+							.filter(adjustment -> changedAdjustmentIds.contains(adjustment.orchidGroupId()))
+							.map(adjustment -> new CorrectOrchidGroupMutationItem(adjustment.orchidGroupId(),
+									adjustment.quantity(), adjustment.status()))
+							.toList(),
+						related, request.workDate(), context.memo());
 			}
 			if (mutationRoutingPolicy.routesToEngine()) {
 				var mutation = mutationEngine.correct(mutationCommand);
 				mutationLink = new WorkMutationLink(mutation.mutationId(), mutation.correlationId());
-			} else {
-				request.orchidGroupAdjustments().stream()
-						.filter(adjustment -> changedAdjustmentIds.contains(adjustment.orchidGroupId()))
-						.forEach(adjustment -> groupsById.get(adjustment.orchidGroupId())
-								.correctQuantityAndStatus(adjustment.quantity(), adjustment.status()));
+			}
+			else {
+				request.orchidGroupAdjustments()
+					.stream()
+					.filter(adjustment -> changedAdjustmentIds.contains(adjustment.orchidGroupId()))
+					.forEach(adjustment -> groupsById.get(adjustment.orchidGroupId())
+						.correctQuantityAndStatus(adjustment.quantity(), adjustment.status()));
 			}
 		}
 		var dateCorrection = workOperationDateCorrectionService.correct(originalOperationId, request.workDate());
-		var resultDetails = new WorkEffectResults.Corrected(originalOperationId,
-				dateCorrection.before(), dateCorrection.after(), auditRows).toMap();
-		return new WorkExecutionResult(
-				"CORRECTION", resultDetails, List.copyOf(changedAdjustmentIds), mutationLink);
+		var resultDetails = new WorkEffectResults.Corrected(originalOperationId, dateCorrection.before(),
+				dateCorrection.after(), auditRows)
+			.toMap();
+		return new WorkExecutionResult("CORRECTION", resultDetails, List.copyOf(changedAdjustmentIds), mutationLink);
 	}
 
 	private Long originalOperationId(Map<String, Object> details) {
@@ -143,4 +155,5 @@ public class CorrectionWorkHandler implements WorkEffectHandler {
 		}
 		return number.longValue();
 	}
+
 }

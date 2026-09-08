@@ -90,18 +90,9 @@ public class WorkOperation extends BaseEntity {
 	@Column(nullable = false)
 	private long version;
 
-	public WorkOperation(
-			WorkType workType,
-			String title,
-			LocalDate plannedStartDate,
-			LocalDate plannedEndDate,
-			WorkSourceScopeType sourceScopeType,
-			Long sourceScopeId,
-			Map<String, Object> sourceConditionSnapshot,
-			Map<String, Object> details,
-			String worker,
-			String memo,
-			LocalDateTime targetSnapshotAt) {
+	public WorkOperation(WorkType workType, String title, LocalDate plannedStartDate, LocalDate plannedEndDate,
+			WorkSourceScopeType sourceScopeType, Long sourceScopeId, Map<String, Object> sourceConditionSnapshot,
+			Map<String, Object> details, String worker, String memo, LocalDateTime targetSnapshotAt) {
 		this.workType = workType;
 		this.title = title;
 		this.status = WorkOperationStatus.PLANNED;
@@ -185,8 +176,7 @@ public class WorkOperation extends BaseEntity {
 		if (status == WorkOperationStatus.CANCELED) {
 			return;
 		}
-		if (status != WorkOperationStatus.COMPLETED
-				|| workType.effectKind() != WorkEffectKind.STRUCTURE_CHANGE) {
+		if (status != WorkOperationStatus.COMPLETED || workType.effectKind() != WorkEffectKind.STRUCTURE_CHANGE) {
 			throw new IllegalArgumentException("완료된 구조 변경 작업만 결과 취소할 수 있습니다.");
 		}
 		status = WorkOperationStatus.CANCELED;
@@ -196,8 +186,7 @@ public class WorkOperation extends BaseEntity {
 		if (status == WorkOperationStatus.CANCELED) {
 			return;
 		}
-		if (status != WorkOperationStatus.COMPLETED
-				|| !WorkTypeDefinition.INBOUND.name().equals(workType.getCode())) {
+		if (status != WorkOperationStatus.COMPLETED || !WorkTypeDefinition.INBOUND.name().equals(workType.getCode())) {
 			throw new IllegalArgumentException("완료된 입고 작업만 입고 취소와 함께 취소할 수 있습니다.");
 		}
 		actualEndAt = canceledAt;
@@ -208,8 +197,7 @@ public class WorkOperation extends BaseEntity {
 		if (status == WorkOperationStatus.CORRECTED) {
 			return;
 		}
-		if (status != WorkOperationStatus.COMPLETED
-				|| workType.effectKind() != WorkEffectKind.STRUCTURE_CHANGE) {
+		if (status != WorkOperationStatus.COMPLETED || workType.effectKind() != WorkEffectKind.STRUCTURE_CHANGE) {
 			throw new IllegalArgumentException("완료된 구조 변경 작업만 보정할 수 있습니다.");
 		}
 		status = WorkOperationStatus.CORRECTED;
@@ -223,12 +211,12 @@ public class WorkOperation extends BaseEntity {
 				|| workType.effectKind() != WorkEffectKind.STRUCTURE_CHANGE) {
 			throw new IllegalArgumentException("완료된 구조 변경 작업의 작업일만 보정할 수 있습니다.");
 		}
-		long durationDays = plannedEndDate == null
-				? 0
+		long durationDays = plannedEndDate == null ? 0
 				: Math.max(0, ChronoUnit.DAYS.between(plannedStartDate, plannedEndDate));
 		plannedStartDate = workDate;
 		if (plannedEndDate != null) {
 			plannedEndDate = workDate.plusDays(durationDays);
 		}
 	}
+
 }

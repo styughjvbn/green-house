@@ -20,27 +20,43 @@ import java.util.concurrent.CyclicBarrier;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 import java.util.function.IntFunction;
+import org.flywaydb.core.Flyway;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
-import org.flywaydb.core.Flyway;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.datasource.DriverManagerDataSource;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.test.context.bean.override.mockito.MockitoSpyBean;
 
 @Tag("work-e2e")
 class FarmReferenceDataPostgresE2ETest extends WorkE2ETestBase {
-	@PersistenceContext EntityManager entityManager;
-	@Autowired WorkTestDataSeeder seeder;
-	@Autowired MaterialService materialService;
-	@Autowired VarietyService varietyService;
-	@Autowired JdbcTemplate jdbc;
-	@MockitoSpyBean MaterialRepository materials;
-	@MockitoSpyBean VarietyRepository varieties;
+
+	@PersistenceContext
+	EntityManager entityManager;
+
+	@Autowired
+	WorkTestDataSeeder seeder;
+
+	@Autowired
+	MaterialService materialService;
+
+	@Autowired
+	VarietyService varietyService;
+
+	@Autowired
+	JdbcTemplate jdbc;
+
+	@MockitoSpyBean
+	MaterialRepository materials;
+
+	@MockitoSpyBean
+	VarietyRepository varieties;
 
 	@BeforeEach
-	void reset() { seeder.reset(); }
+	void reset() {
+		seeder.reset();
+	}
 
 	@Test
 	void parallelMaterialCreationDoesNotReuseACode() throws Exception {
@@ -51,9 +67,9 @@ class FarmReferenceDataPostgresE2ETest extends WorkE2ETestBase {
 			entityManager.persist(entity);
 			return entity;
 		}).when(materials).save(any(Material.class));
-		assertThat(parallel(index -> materialService.create(new MaterialCreateRequest(
-				"자재", "동시 자재 " + index, null, null, null, null, null)).code()))
-				.doesNotHaveDuplicates().allMatch(code -> code.matches("MAT-[0-9]{4,}"));
+		assertThat(parallel(index -> materialService
+			.create(new MaterialCreateRequest("자재", "동시 자재 " + index, null, null, null, null, null))
+			.code())).doesNotHaveDuplicates().allMatch(code -> code.matches("MAT-[0-9]{4,}"));
 	}
 
 	@Test
@@ -65,9 +81,9 @@ class FarmReferenceDataPostgresE2ETest extends WorkE2ETestBase {
 			entityManager.persist(entity);
 			return entity;
 		}).when(varieties).save(any(Variety.class));
-		assertThat(parallel(index -> varietyService.create(new VarietyCreateRequest(
-				"팔레놉시스", "동시 품종 " + index, null, null, null, true, null, null)).code()))
-				.doesNotHaveDuplicates().allMatch(code -> code.matches("VAR-[0-9]{4,}"));
+		assertThat(parallel(index -> varietyService
+			.create(new VarietyCreateRequest("팔레놉시스", "동시 품종 " + index, null, null, null, true, null, null))
+			.code())).doesNotHaveDuplicates().allMatch(code -> code.matches("VAR-[0-9]{4,}"));
 	}
 
 	private List<String> parallel(IntFunction<String> action) throws Exception {
@@ -84,12 +100,13 @@ class FarmReferenceDataPostgresE2ETest extends WorkE2ETestBase {
 		var dataSource = new DriverManagerDataSource(url, POSTGRES.getUsername(), POSTGRES.getPassword());
 		Flyway.configure().dataSource(dataSource).target("23").load().migrate();
 		var jdbc = new JdbcTemplate(dataSource);
-		jdbc.update("""
-				INSERT INTO varieties (code, genus, name, sale_enabled, is_active, created_at, updated_at)
-				VALUES ('VAR-008000', '속', '기존 코드', TRUE, TRUE, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP),
-				       ('IMPORTED', '속', '수입 코드', TRUE, TRUE, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP),
-				       ('VAR-999999999999999999999999', '속', '임의 긴 코드', TRUE, TRUE, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
-				""");
+		jdbc.update(
+				"""
+						INSERT INTO varieties (code, genus, name, sale_enabled, is_active, created_at, updated_at)
+						VALUES ('VAR-008000', '속', '기존 코드', TRUE, TRUE, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP),
+						       ('IMPORTED', '속', '수입 코드', TRUE, TRUE, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP),
+						       ('VAR-999999999999999999999999', '속', '임의 긴 코드', TRUE, TRUE, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+						""");
 		jdbc.update("""
 				INSERT INTO materials (code, category, name, is_active, created_at, updated_at)
 				VALUES ('MAT-009000', '분류', '기존 자재', TRUE, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
@@ -97,12 +114,13 @@ class FarmReferenceDataPostgresE2ETest extends WorkE2ETestBase {
 		var upgrade = Flyway.configure().dataSource(dataSource).load();
 		assertThat(upgrade.migrate().migrationsExecuted).isEqualTo(1);
 		assertThat(jdbc.queryForList("SELECT code FROM varieties WHERE genus = '속'", String.class))
-				.containsExactlyInAnyOrder("VAR-008000", "IMPORTED", "VAR-999999999999999999999999");
+			.containsExactlyInAnyOrder("VAR-008000", "IMPORTED", "VAR-999999999999999999999999");
 		assertThat(jdbc.queryForObject("SELECT nextval('variety_codes_seq')", Long.class)).isEqualTo(8001);
 		assertThat(jdbc.queryForObject("SELECT nextval('material_codes_seq')", Long.class)).isEqualTo(9001);
 		try (var connection = dataSource.getConnection()) {
 			connection.setAutoCommit(false);
-			try (var statement = connection.createStatement(); var result = statement.executeQuery("SELECT nextval('variety_codes_seq')")) {
+			try (var statement = connection.createStatement();
+					var result = statement.executeQuery("SELECT nextval('variety_codes_seq')")) {
 				assertThat(result.next()).isTrue();
 				assertThat(result.getLong(1)).isEqualTo(8002);
 			}
@@ -128,7 +146,7 @@ class FarmReferenceDataPostgresE2ETest extends WorkE2ETestBase {
 		assertThat(jdbc.queryForObject("SELECT memo FROM varieties", String.class)).isEqualTo("최초");
 		assertThat(jdbc.queryForObject("SELECT count(*) FROM work_operations", Long.class)).isEqualTo(2);
 		assertThat(jdbc.queryForList("SELECT quantity_snapshot FROM work_operation_targets", Integer.class))
-				.containsExactlyInAnyOrder(20, 20);
+			.containsExactlyInAnyOrder(20, 20);
 	}
 
 	@Test
@@ -144,4 +162,5 @@ class FarmReferenceDataPostgresE2ETest extends WorkE2ETestBase {
 			assertThat(jdbc.queryForObject("SELECT count(*) FROM " + table, Long.class)).as(table).isZero();
 		}
 	}
+
 }

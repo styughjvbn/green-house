@@ -11,6 +11,7 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
 
 class AuctionSettlementPaymentStateTest {
+
 	private static final LocalDateTime NOW = LocalDateTime.of(2026, 9, 6, 0, 0);
 
 	@Test
@@ -48,10 +49,11 @@ class AuctionSettlementPaymentStateTest {
 		settlement.synchronizeLines(List.of(new AuctionSettlementLine(1L, 1L, 1, 100, 100L)), NOW);
 
 		assertThatThrownBy(() -> settlement.recordPayment(amount, "확인자", NOW))
-				.isInstanceOf(IllegalArgumentException.class);
+			.isInstanceOf(IllegalArgumentException.class);
 		assertThat(settlement.getPaidAmount()).isZero();
 		assertThat(settlement.getRemainingAmount()).isEqualTo(100L);
 		assertThat(settlement.getStatus()).isEqualTo(AuctionSettlementStatus.PAYMENT_WAITING);
 		assertThat(settlement.getConfirmedAt()).isNull();
 	}
+
 }

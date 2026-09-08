@@ -47,8 +47,7 @@ public class OrchidGroupCollectionController {
 	}
 
 	@PatchMapping("/orchid-group-collections/{collectionId}")
-	public ApiResponse<OrchidGroupCollectionResponse> update(
-			@PathVariable Long collectionId,
+	public ApiResponse<OrchidGroupCollectionResponse> update(@PathVariable Long collectionId,
 			@Valid @RequestBody OrchidGroupCollectionUpdateRequest request) {
 		return ApiResponse.ok(collectionService.update(collectionId, request));
 	}
@@ -59,22 +58,20 @@ public class OrchidGroupCollectionController {
 	}
 
 	@PostMapping("/orchid-group-collections/{collectionId}/members")
-	public ApiResponse<OrchidGroupCollectionResponse> addMembers(
-			@PathVariable Long collectionId,
+	public ApiResponse<OrchidGroupCollectionResponse> addMembers(@PathVariable Long collectionId,
 			@Valid @RequestBody OrchidGroupCollectionMemberAddRequest request) {
 		return ApiResponse.ok(collectionService.addMembers(collectionId, request));
 	}
 
 	@DeleteMapping("/orchid-group-collections/{collectionId}/members/{orchidGroupId}")
-	public ApiResponse<OrchidGroupCollectionResponse> removeMember(
-			@PathVariable Long collectionId,
+	public ApiResponse<OrchidGroupCollectionResponse> removeMember(@PathVariable Long collectionId,
 			@PathVariable Long orchidGroupId) {
 		return ApiResponse.ok(collectionService.removeMember(collectionId, orchidGroupId));
 	}
 
 	@GetMapping("/orchid-groups/{orchidGroupId}/collections")
-	public ApiResponse<List<OrchidGroupCollectionResponse>> getForOrchidGroup(
-			@PathVariable Long orchidGroupId) {
+	public ApiResponse<List<OrchidGroupCollectionResponse>> getForOrchidGroup(@PathVariable Long orchidGroupId) {
 		return ApiResponse.ok(collectionService.getCollectionsForOrchidGroup(orchidGroupId));
 	}
+
 }

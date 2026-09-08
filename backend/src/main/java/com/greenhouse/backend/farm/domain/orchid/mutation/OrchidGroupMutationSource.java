@@ -2,12 +2,8 @@ package com.greenhouse.backend.farm.domain.orchid.mutation;
 
 import java.util.UUID;
 
-public record OrchidGroupMutationSource(
-		OrchidGroupMutationSourceDomain domain,
-		String type,
-		String referenceId,
-		String operationKey,
-		UUID correlationId) {
+public record OrchidGroupMutationSource(OrchidGroupMutationSourceDomain domain, String type, String referenceId,
+		String operationKey, UUID correlationId) {
 
 	public OrchidGroupMutationSource {
 		if (domain == null) {

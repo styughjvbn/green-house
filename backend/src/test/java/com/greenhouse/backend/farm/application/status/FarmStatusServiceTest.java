@@ -7,35 +7,31 @@ import static org.mockito.Mockito.when;
 
 import com.greenhouse.backend.farm.domain.structure.House;
 import com.greenhouse.backend.farm.domain.structure.PhysicalBed;
+import com.greenhouse.backend.farm.repository.orchid.OrchidGroupRepository;
 import com.greenhouse.backend.farm.repository.structure.BedZoneRepository;
 import com.greenhouse.backend.farm.repository.structure.HouseRepository;
-import com.greenhouse.backend.farm.repository.orchid.OrchidGroupRepository;
-import com.greenhouse.backend.farm.repository.structure.PhysicalBedRepository;
 import com.greenhouse.backend.farm.repository.structure.PhysicalBedOrderRow;
-
+import com.greenhouse.backend.farm.repository.structure.PhysicalBedRepository;
 import java.util.List;
 import org.junit.jupiter.api.Test;
 
 class FarmStatusServiceTest {
 
 	private final HouseRepository houseRepository = mock(HouseRepository.class);
+
 	private final PhysicalBedRepository physicalBedRepository = mock(PhysicalBedRepository.class);
+
 	private final BedZoneRepository bedZoneRepository = mock(BedZoneRepository.class);
+
 	private final OrchidGroupRepository orchidGroupRepository = mock(OrchidGroupRepository.class);
+
 	private final FarmStatusService service = new FarmStatusService(
 			java.time.Clock.fixed(java.time.Instant.parse("2026-09-08T00:00:00Z"), java.time.ZoneOffset.UTC),
-			houseRepository,
-			physicalBedRepository,
-			bedZoneRepository,
-			orchidGroupRepository);
+			houseRepository, physicalBedRepository, bedZoneRepository, orchidGroupRepository);
 
 	@Test
 	void preservesRequestedBedAtTheStartOfTheLastViewport() {
-		var beds = List.of(
-				bed(11L, 1L, 1, 1),
-				bed(12L, 1L, 1, 2),
-				bed(13L, 1L, 1, 3),
-				bed(21L, 2L, 2, 1),
+		var beds = List.of(bed(11L, 1L, 1, 1), bed(12L, 1L, 1, 2), bed(13L, 1L, 1, 3), bed(21L, 2L, 2, 1),
 				bed(22L, 2L, 2, 2));
 		var rows = orderRows(beds);
 		when(physicalBedRepository.findAllOrderRows()).thenReturn(rows);
@@ -52,9 +48,7 @@ class FarmStatusServiceTest {
 
 	@Test
 	void returnsBedOrderSeparatelyFromViewport() {
-		var rows = List.of(
-				new PhysicalBedOrderRow(11L, 1L, 1, 1),
-				new PhysicalBedOrderRow(21L, 2L, 2, 1));
+		var rows = List.of(new PhysicalBedOrderRow(11L, 1L, 1, 1), new PhysicalBedOrderRow(21L, 2L, 2, 1));
 		when(physicalBedRepository.findAllOrderRows()).thenReturn(rows);
 
 		var result = service.getOrchidManagementBedOrder();
@@ -64,10 +58,7 @@ class FarmStatusServiceTest {
 
 	@Test
 	void fallsBackToFirstBedForUnknownStartId() {
-		var beds = List.of(
-				bed(11L, 1L, 1, 1),
-				bed(12L, 1L, 1, 2),
-				bed(13L, 1L, 1, 3));
+		var beds = List.of(bed(11L, 1L, 1, 1), bed(12L, 1L, 1, 2), bed(13L, 1L, 1, 3));
 		var rows = orderRows(beds);
 		when(physicalBedRepository.findAllOrderRows()).thenReturn(rows);
 		when(physicalBedRepository.findAllWithZonesByIdIn(List.of(11L, 12L))).thenReturn(beds.subList(0, 2));
@@ -82,8 +73,8 @@ class FarmStatusServiceTest {
 	@Test
 	void rejectsUnsupportedBedCount() {
 		assertThatThrownBy(() -> service.getOrchidManagementViewport(null, 5))
-				.isInstanceOf(IllegalArgumentException.class)
-				.hasMessageContaining("bedCount");
+			.isInstanceOf(IllegalArgumentException.class)
+			.hasMessageContaining("bedCount");
 	}
 
 	@Test
@@ -95,15 +86,12 @@ class FarmStatusServiceTest {
 		var physicalBed = bed(11L, 1L, 1, 1);
 		when(houseRepository.findAll()).thenReturn(List.of(house));
 		when(physicalBedRepository.findAllInFarmOrder()).thenReturn(List.of(physicalBed));
-		when(orchidGroupRepository.search(null, "", null, null, null))
-				.thenReturn(List.of());
+		when(orchidGroupRepository.search(null, "", null, null, null)).thenReturn(List.of());
 
 		var result = service.getMap();
 
 		assertThat(result.houses()).hasSize(1);
-		assertThat(result.houses().getFirst().physicalBeds())
-				.extracting("id")
-				.containsExactly(11L);
+		assertThat(result.houses().getFirst().physicalBeds()).extracting("id").containsExactly(11L);
 		assertThat(result.orchidGroups()).isEmpty();
 	}
 
@@ -123,11 +111,9 @@ class FarmStatusServiceTest {
 
 	private List<PhysicalBedOrderRow> orderRows(List<PhysicalBed> beds) {
 		return beds.stream()
-				.map(bed -> new PhysicalBedOrderRow(
-						bed.getId(),
-						bed.getHouse().getId(),
-						bed.getHouse().getNumber(),
-						bed.getNumber()))
-				.toList();
+			.map(bed -> new PhysicalBedOrderRow(bed.getId(), bed.getHouse().getId(), bed.getHouse().getNumber(),
+					bed.getNumber()))
+			.toList();
 	}
+
 }

@@ -20,9 +20,13 @@ import org.springframework.transaction.annotation.Transactional;
 @Transactional(readOnly = true)
 @RequiredArgsConstructor
 public class AuctionDataReader {
+
 	private final BusinessPartnerReader partnerReader;
+
 	private final AuctionShipmentRepository shipmentRepository;
+
 	private final AuctionResultLineRepository resultLineRepository;
+
 	private final AuctionShipmentLotRepository lotRepository;
 
 	public Map<Long, String> getMarketNames(Collection<Long> shipmentIds) {
@@ -31,8 +35,9 @@ public class AuctionDataReader {
 		}
 		var shipments = shipmentRepository.findAllById(shipmentIds);
 		var partners = partnerReader.getAllInfo(shipments.stream().map(AuctionShipment::getAuctionHouseId).toList());
-		return shipments.stream().collect(Collectors.toMap(AuctionShipment::getId,
-				shipment -> partners.get(shipment.getAuctionHouseId()).name()));
+		return shipments.stream()
+			.collect(Collectors.toMap(AuctionShipment::getId,
+					shipment -> partners.get(shipment.getAuctionHouseId()).name()));
 	}
 
 	public List<Long> getShipmentIdsNewestFirst(int page, int size) {
@@ -45,10 +50,15 @@ public class AuctionDataReader {
 		}
 		var shipments = shipmentRepository.findAllByIdInOrderByShipmentDateDescIdDesc(shipmentIds);
 		var partners = partnerReader.getAllInfo(shipments.stream().map(AuctionShipment::getAuctionHouseId).toList());
-		return shipments.stream().map(shipment -> new Shipment(shipment.getId(), shipment.getShipmentDate(),
-				shipment.getAuctionHouseId(), partners.get(shipment.getAuctionHouseId()).name(),
-				shipment.getLots().stream().map(lot -> new Lot(lot.getId(), lot.getItemName(), lot.getVarietyName(),
-						lot.getShipmentGrade(), lot.getShippedQuantity())).toList())).toList();
+		return shipments.stream()
+			.map(shipment -> new Shipment(shipment.getId(), shipment.getShipmentDate(), shipment.getAuctionHouseId(),
+					partners.get(shipment.getAuctionHouseId()).name(),
+					shipment.getLots()
+						.stream()
+						.map(lot -> new Lot(lot.getId(), lot.getItemName(), lot.getVarietyName(),
+								lot.getShipmentGrade(), lot.getShippedQuantity()))
+						.toList()))
+			.toList();
 	}
 
 	public List<Result> getSoldResultLines(Long auctionHouseId, LocalDate auctionDate) {
@@ -63,16 +73,19 @@ public class AuctionDataReader {
 		if (resultIds.isEmpty()) {
 			return Map.of();
 		}
-		return resultLineRepository.findAllByIdIn(resultIds).stream().map(Result::from)
-				.collect(Collectors.toMap(Result::id, result -> result));
+		return resultLineRepository.findAllByIdIn(resultIds)
+			.stream()
+			.map(Result::from)
+			.collect(Collectors.toMap(Result::id, result -> result));
 	}
 
 	public Map<Long, Long> getLotShipmentIds(Collection<Long> shipmentIds) {
 		if (shipmentIds.isEmpty()) {
 			return Map.of();
 		}
-		return lotRepository.findAllByShipmentIdIn(shipmentIds).stream()
-				.collect(Collectors.toMap(lot -> lot.getId(), lot -> lot.getShipment().getId()));
+		return lotRepository.findAllByShipmentIdIn(shipmentIds)
+			.stream()
+			.collect(Collectors.toMap(lot -> lot.getId(), lot -> lot.getShipment().getId()));
 	}
 
 	public record Shipment(Long id, LocalDate shipmentDate, Long auctionHouseId, String auctionMarket, List<Lot> lots) {
@@ -84,14 +97,15 @@ public class AuctionDataReader {
 	public record Lot(Long id, String itemName, String varietyName, String shipmentGrade, Integer shippedQuantity) {
 	}
 
-	public record Result(Long id, Long lotId, Long auctionHouseId, LocalDate auctionDate,
-			LocalDate shipmentDate, String varietyName, String shipmentGrade, Integer quantity, Integer unitPrice, Long amount) {
+	public record Result(Long id, Long lotId, Long auctionHouseId, LocalDate auctionDate, LocalDate shipmentDate,
+			String varietyName, String shipmentGrade, Integer quantity, Integer unitPrice, Long amount) {
 		static Result from(AuctionResultLine line) {
 			var lot = line.getAuctionAttempt().getShipmentLot();
 			var shipment = lot.getShipment();
 			return new Result(line.getId(), lot.getId(), shipment.getAuctionHouseId(), line.getAuctionDate(),
-					shipment.getShipmentDate(), lot.getVarietyName(), lot.getShipmentGrade(),
-					line.getQuantity(), line.getUnitPrice(), line.getAmount().longValue());
+					shipment.getShipmentDate(), lot.getVarietyName(), lot.getShipmentGrade(), line.getQuantity(),
+					line.getUnitPrice(), line.getAmount().longValue());
 		}
 	}
+
 }

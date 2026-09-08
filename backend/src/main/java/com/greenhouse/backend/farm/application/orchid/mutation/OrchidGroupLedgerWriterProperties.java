@@ -5,13 +5,12 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.validation.annotation.Validated;
 
 /**
- * ORCHID-CUTOVER: TRANSITION_ONLY — LEGACY와 ENGINE 전환 모드를 제공한다.
- * Removal gate: 모든 환경의 Engine 단일 writer 고정.
+ * ORCHID-CUTOVER: TRANSITION_ONLY — LEGACY와 ENGINE 전환 모드를 제공한다. Removal gate: 모든 환경의
+ * Engine 단일 writer 고정.
  */
 @Validated
 @ConfigurationProperties(prefix = "app.orchid-ledger")
-public record OrchidGroupLedgerWriterProperties(
-		OrchidGroupLedgerWriterMode writerMode,
+public record OrchidGroupLedgerWriterProperties(OrchidGroupLedgerWriterMode writerMode,
 		@NotBlank String writerVersion) {
 
 	public OrchidGroupLedgerWriterProperties {

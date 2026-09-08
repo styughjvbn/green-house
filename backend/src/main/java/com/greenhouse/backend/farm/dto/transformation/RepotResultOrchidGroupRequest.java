@@ -6,15 +6,9 @@ import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
 import java.math.BigDecimal;
 
-public record RepotResultOrchidGroupRequest(
-		@NotNull Long bedZoneId,
-		@NotNull @Min(1) Integer quantity,
-		@Size(max = 50) String potSize,
-		@Min(0) Integer ageYear,
-		@Size(max = 50) String placementType,
-		@Min(0) Integer trayCount,
-		Boolean splitPlacementAllowed,
+public record RepotResultOrchidGroupRequest(@NotNull Long bedZoneId, @NotNull @Min(1) Integer quantity,
+		@Size(max = 50) String potSize, @Min(0) Integer ageYear, @Size(max = 50) String placementType,
+		@Min(0) Integer trayCount, Boolean splitPlacementAllowed,
 		@NotNull @DecimalMin(value = "0.0") BigDecimal startPosition,
-		@NotNull @DecimalMin(value = "0.0", inclusive = false) BigDecimal endPosition,
-		@Size(max = 1000) String memo) {
+		@NotNull @DecimalMin(value = "0.0", inclusive = false) BigDecimal endPosition, @Size(max = 1000) String memo) {
 }

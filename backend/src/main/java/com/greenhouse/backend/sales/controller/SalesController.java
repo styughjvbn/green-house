@@ -37,10 +37,15 @@ import org.springframework.web.bind.annotation.RestController;
 public class SalesController {
 
 	private final SalesQueryService salesQueryService;
+
 	private final SalesSlipCreationService salesSlipCreationService;
+
 	private final SalesSlipUpdateService salesSlipUpdateService;
+
 	private final SalesPaymentService salesPaymentService;
+
 	private final SalesSlipStatusService salesSlipStatusService;
+
 	private final SalesOrchidGroupQueryService salesOrchidGroupQueryService;
 
 	/**
@@ -48,25 +53,19 @@ public class SalesController {
 	 */
 	@Deprecated(since = "2026-08", forRemoval = false)
 	@GetMapping("/sales-slips")
-	public ApiResponse<List<SalesSlipDocument>> getSalesSlips(
-			@RequestParam(required = false) Long partnerId,
-			@RequestParam(required = false) LocalDate from,
-			@RequestParam(required = false) LocalDate to) {
+	public ApiResponse<List<SalesSlipDocument>> getSalesSlips(@RequestParam(required = false) Long partnerId,
+			@RequestParam(required = false) LocalDate from, @RequestParam(required = false) LocalDate to) {
 		return ApiResponse.ok(salesQueryService.getSalesSlips(partnerId, from, to));
 	}
 
 	@GetMapping("/sales-slips/page")
-	public ApiResponse<PageResponse<SalesSlipSummary>> getSalesSlipPage(
-			@RequestParam(required = false) Long partnerId,
-			@RequestParam(required = false) LocalDate from,
-			@RequestParam(required = false) LocalDate to,
-			@RequestParam(required = false) String paymentStatus,
-			@RequestParam(required = false) String salesStatus,
-			@RequestParam(required = false) String keyword,
-			@RequestParam(defaultValue = "0") int page,
+	public ApiResponse<PageResponse<SalesSlipSummary>> getSalesSlipPage(@RequestParam(required = false) Long partnerId,
+			@RequestParam(required = false) LocalDate from, @RequestParam(required = false) LocalDate to,
+			@RequestParam(required = false) String paymentStatus, @RequestParam(required = false) String salesStatus,
+			@RequestParam(required = false) String keyword, @RequestParam(defaultValue = "0") int page,
 			@RequestParam(defaultValue = "10") int size) {
-		return ApiResponse.ok(salesQueryService.getSalesSlipPage(
-				partnerId, from, to, paymentStatus, salesStatus, keyword, page, size));
+		return ApiResponse.ok(salesQueryService.getSalesSlipPage(partnerId, from, to, paymentStatus, salesStatus,
+				keyword, page, size));
 	}
 
 	@GetMapping("/sales-slips/{salesSlipId}")
@@ -81,8 +80,7 @@ public class SalesController {
 
 	@GetMapping("/sales/orchid-groups/search")
 	public ApiResponse<List<SalesOrchidGroupSearchResponse>> searchSalesOrchidGroups(
-			@RequestParam(required = false) String keyword,
-			@RequestParam(required = false) Long varietyId,
+			@RequestParam(required = false) String keyword, @RequestParam(required = false) Long varietyId,
 			@RequestParam(required = false) String status) {
 		return ApiResponse.ok(salesOrchidGroupQueryService.search(keyword, varietyId, status));
 	}
@@ -94,23 +92,21 @@ public class SalesController {
 	}
 
 	@PutMapping("/sales-slips/{salesSlipId}")
-	public ApiResponse<SalesSlipDocument> updateSalesSlip(
-			@PathVariable Long salesSlipId,
+	public ApiResponse<SalesSlipDocument> updateSalesSlip(@PathVariable Long salesSlipId,
 			@Valid @RequestBody SalesSlipCommand request) {
 		return ApiResponse.ok(salesSlipUpdateService.update(salesSlipId, request));
 	}
 
 	@PostMapping("/sales-slips/{salesSlipId}/confirm-payment")
-	public ApiResponse<SalesSlipDocument> confirmPayment(
-			@PathVariable Long salesSlipId,
+	public ApiResponse<SalesSlipDocument> confirmPayment(@PathVariable Long salesSlipId,
 			@Valid @RequestBody ManualPaymentCommand request) {
 		return ApiResponse.ok(salesPaymentService.confirmPayment(salesSlipId, request));
 	}
 
 	@PatchMapping("/sales-slips/{salesSlipId}/sales-status")
-	public ApiResponse<SalesSlipDocument> updateSalesStatus(
-			@PathVariable Long salesSlipId,
+	public ApiResponse<SalesSlipDocument> updateSalesStatus(@PathVariable Long salesSlipId,
 			@Valid @RequestBody SalesSlipStatusUpdateRequest request) {
 		return ApiResponse.ok(salesSlipStatusService.updateStatus(salesSlipId, request));
 	}
+
 }

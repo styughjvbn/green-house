@@ -16,12 +16,12 @@ import org.springframework.web.bind.annotation.RestController;
 @RequestMapping("/api/sales-slips")
 @RequiredArgsConstructor
 public class PrintController {
+
 	private final PrintQueryService printQueryService;
 
 	@GetMapping("/print")
 	public ApiResponse<PageResponse<SalesSlipSummary>> getPrintableSalesSlips(
-			@RequestParam(defaultValue = "0") int page,
-			@RequestParam(defaultValue = "10") int size) {
+			@RequestParam(defaultValue = "0") int page, @RequestParam(defaultValue = "10") int size) {
 		return ApiResponse.ok(printQueryService.getPrintableSalesSlips(page, size));
 	}
 
@@ -29,4 +29,5 @@ public class PrintController {
 	public ApiResponse<SalesSlipDocument> getSalesSlipPrintData(@PathVariable Long salesSlipId) {
 		return ApiResponse.ok(printQueryService.getSalesSlipPrintData(salesSlipId));
 	}
+
 }

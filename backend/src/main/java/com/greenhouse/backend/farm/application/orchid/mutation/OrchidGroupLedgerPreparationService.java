@@ -15,65 +15,51 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 /**
- * ORCHID-CUTOVER: TRANSITION_ONLY — coverage 준비와 최초 활성화를 수행한다.
- * Removal gate: 운영 cutover 완료 및 재수행 불필요 승인.
+ * ORCHID-CUTOVER: TRANSITION_ONLY — coverage 준비와 최초 활성화를 수행한다. Removal gate: 운영 cutover
+ * 완료 및 재수행 불필요 승인.
  */
 @Service
 @RequiredArgsConstructor
 public class OrchidGroupLedgerPreparationService {
 
 	private static final int ENGINE_SCHEMA_VERSION = 1;
+
 	private static final int SNAPSHOT_SCHEMA_VERSION = 1;
 
 	private final OrchidGroupLedgerCoverageRepository coverageRepository;
+
 	private final OrchidGroupWriteFenceRepository writeFenceRepository;
+
 	private final OrchidGroupLedgerReconciliationService reconciliationService;
+
 	private final Clock clock;
 
 	@Transactional
-	public Long prepare(
-			UUID cutoverKey,
-			LocalDate effectiveBusinessDate,
-			String minimumWriterVersion) {
+	public Long prepare(UUID cutoverKey, LocalDate effectiveBusinessDate, String minimumWriterVersion) {
 		coverageRepository.findFirstByStatus(OrchidGroupLedgerCoverageStatus.ACTIVE).ifPresent(active -> {
 			throw new ConflictException("이미 ACTIVE 상태인 OrchidGroup ledger coverage가 있습니다.");
 		});
-		return coverageRepository.findByCutoverKey(cutoverKey)
-				.map(existing -> {
-					if (!existing.hasSamePreparation(
-							ENGINE_SCHEMA_VERSION,
-							SNAPSHOT_SCHEMA_VERSION,
-							effectiveBusinessDate,
-							minimumWriterVersion)) {
-						throw new ConflictException("같은 cutover key를 다른 coverage 설정에 재사용할 수 없습니다.");
-					}
-					return existing.getId();
-				})
-				.orElseGet(() -> {
-					coverageRepository.findFirstByStatus(OrchidGroupLedgerCoverageStatus.PREPARING)
-							.ifPresent(preparing -> {
-								throw new ConflictException(
-										"다른 PREPARING OrchidGroup ledger coverage가 이미 있습니다.");
-							});
-					return coverageRepository.save(new OrchidGroupLedgerCoverage(
-							cutoverKey,
-							ENGINE_SCHEMA_VERSION,
-							SNAPSHOT_SCHEMA_VERSION,
-							effectiveBusinessDate,
-							minimumWriterVersion)).getId();
-				});
+		return coverageRepository.findByCutoverKey(cutoverKey).map(existing -> {
+			if (!existing.hasSamePreparation(ENGINE_SCHEMA_VERSION, SNAPSHOT_SCHEMA_VERSION, effectiveBusinessDate,
+					minimumWriterVersion)) {
+				throw new ConflictException("같은 cutover key를 다른 coverage 설정에 재사용할 수 없습니다.");
+			}
+			return existing.getId();
+		}).orElseGet(() -> {
+			coverageRepository.findFirstByStatus(OrchidGroupLedgerCoverageStatus.PREPARING).ifPresent(preparing -> {
+				throw new ConflictException("다른 PREPARING OrchidGroup ledger coverage가 이미 있습니다.");
+			});
+			return coverageRepository
+				.save(new OrchidGroupLedgerCoverage(cutoverKey, ENGINE_SCHEMA_VERSION, SNAPSHOT_SCHEMA_VERSION,
+						effectiveBusinessDate, minimumWriterVersion))
+				.getId();
+		});
 	}
 
 	@Transactional(readOnly = true)
-	public void validatePreparation(
-			UUID cutoverKey,
-			LocalDate effectiveBusinessDate,
-			String minimumWriterVersion) {
+	public void validatePreparation(UUID cutoverKey, LocalDate effectiveBusinessDate, String minimumWriterVersion) {
 		OrchidGroupLedgerCoverage coverage = findCoverage(cutoverKey);
-		if (!coverage.hasSamePreparation(
-				ENGINE_SCHEMA_VERSION,
-				SNAPSHOT_SCHEMA_VERSION,
-				effectiveBusinessDate,
+		if (!coverage.hasSamePreparation(ENGINE_SCHEMA_VERSION, SNAPSHOT_SCHEMA_VERSION, effectiveBusinessDate,
 				minimumWriterVersion)) {
 			throw new ConflictException("Cutover command와 기존 coverage 설정이 다릅니다.");
 		}
@@ -99,13 +85,11 @@ public class OrchidGroupLedgerPreparationService {
 	}
 
 	@Transactional
-	public OrchidGroupLedgerReconciliationReport activate(
-			UUID cutoverKey,
-			String currentWriterVersion) {
+	public OrchidGroupLedgerReconciliationReport activate(UUID cutoverKey, String currentWriterVersion) {
 		OrchidGroupLedgerCoverage coverage = coverageRepository.findForUpdateByCutoverKey(cutoverKey)
-				.orElseThrow(() -> new NotFoundException("OrchidGroup ledger coverage를 찾을 수 없습니다."));
-		if (!OrchidGroupLedgerWriterVersion.satisfiesMinimum(
-				currentWriterVersion, coverage.getMinimumWriterVersion())) {
+			.orElseThrow(() -> new NotFoundException("OrchidGroup ledger coverage를 찾을 수 없습니다."));
+		if (!OrchidGroupLedgerWriterVersion.satisfiesMinimum(currentWriterVersion,
+				coverage.getMinimumWriterVersion())) {
 			throw new ConflictException("현재 writer version이 coverage 최소 버전보다 낮습니다.");
 		}
 		writeFenceRepository.lockOrchidGroupsForCutover();
@@ -119,14 +103,10 @@ public class OrchidGroupLedgerPreparationService {
 		if (coverage.getStatus() != OrchidGroupLedgerCoverageStatus.PREPARING) {
 			throw new ConflictException("PREPARING coverage만 ACTIVE로 전환할 수 있습니다.");
 		}
-		coverage.activate(
-				Instant.now(clock),
-				report.baselineGroupCount(),
-				report.baselineFingerprint());
+		coverage.activate(Instant.now(clock), report.baselineGroupCount(), report.baselineFingerprint());
 		coverageRepository.flush();
 		OrchidGroupLedgerReconciliationReport activeReport = reconciliationService.reconcile();
-		if (!activeReport.ready()
-				|| activeReport.stage() != OrchidGroupLedgerReconciliationStage.ACTIVE) {
+		if (!activeReport.ready() || activeReport.stage() != OrchidGroupLedgerReconciliationStage.ACTIVE) {
 			throw new ConflictException("ACTIVE 전환 후 ledger 대사가 일치하지 않습니다.");
 		}
 		return activeReport;
@@ -134,6 +114,7 @@ public class OrchidGroupLedgerPreparationService {
 
 	private OrchidGroupLedgerCoverage findCoverage(UUID cutoverKey) {
 		return coverageRepository.findByCutoverKey(cutoverKey)
-				.orElseThrow(() -> new NotFoundException("OrchidGroup ledger coverage를 찾을 수 없습니다."));
+			.orElseThrow(() -> new NotFoundException("OrchidGroup ledger coverage를 찾을 수 없습니다."));
 	}
+
 }

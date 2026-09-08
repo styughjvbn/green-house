@@ -21,22 +21,24 @@ import org.springframework.transaction.annotation.Transactional;
 public class InboundWorkOperationLifecycleService {
 
 	private final WorkTargetExecutionRepository workTargetExecutionRepository;
+
 	private final WorkAppliedEffectRepository workAppliedEffectRepository;
+
 	private final WorkOperationSupport support;
 
 	public void cancelForInboundRecord(Long inboundRecordId) {
 		List<WorkTargetExecution> linkedExecutions = workTargetExecutionRepository
-				.findForUpdateByTargetInboundRecordIdOrderByIdAsc(inboundRecordId);
+			.findForUpdateByTargetInboundRecordIdOrderByIdAsc(inboundRecordId);
 		LocalDateTime canceledAt = support.now();
 		Map<Long, List<WorkTargetExecution>> byOperationId = linkedExecutions.stream()
-				.filter(execution -> isInboundLifecycleWork(execution.getTarget().getWorkOperation()))
-				.collect(Collectors.groupingBy(
-						execution -> execution.getTarget().getWorkOperation().getId()));
+			.filter(execution -> isInboundLifecycleWork(execution.getTarget().getWorkOperation()))
+			.collect(Collectors.groupingBy(execution -> execution.getTarget().getWorkOperation().getId()));
 		for (List<WorkTargetExecution> executions : byOperationId.values()) {
 			WorkOperation operation = executions.getFirst().getTarget().getWorkOperation();
 			if (WorkTypeDefinition.INBOUND.name().equals(operation.getWorkType().getCode())) {
 				cancelInboundRecordOperation(operation, canceledAt);
-			} else {
+			}
+			else {
 				cancelPottingTarget(operation, executions.getFirst(), canceledAt);
 			}
 		}
@@ -49,15 +51,13 @@ public class InboundWorkOperationLifecycleService {
 		if (operation.getStatus() == WorkOperationStatus.COMPLETED) {
 			operation.cancelCompletedInbound(canceledAt);
 			workAppliedEffectRepository.findByWorkOperationIdOrderByIdAsc(operation.getId())
-					.forEach(effect -> effect.cancel(canceledAt));
+				.forEach(effect -> effect.cancel(canceledAt));
 			return;
 		}
 		operation.cancel(canceledAt);
 	}
 
-	private void cancelPottingTarget(
-			WorkOperation operation,
-			WorkTargetExecution linkedExecution,
+	private void cancelPottingTarget(WorkOperation operation, WorkTargetExecution linkedExecution,
 			LocalDateTime canceledAt) {
 		if (!isActive(operation.getStatus())) {
 			return;
@@ -68,12 +68,12 @@ public class InboundWorkOperationLifecycleService {
 			linkedExecution.cancel(canceledAt);
 		}
 		List<WorkTargetExecution> allExecutions = workTargetExecutionRepository
-				.findForUpdateByTargetWorkOperationIdOrderByIdAsc(operation.getId());
+			.findForUpdateByTargetWorkOperationIdOrderByIdAsc(operation.getId());
 		boolean hasCompletedTarget = allExecutions.stream()
-				.anyMatch(execution -> execution.getStatus() == WorkTargetExecutionStatus.COMPLETED);
-		boolean allClosed = allExecutions.stream().allMatch(execution ->
-				execution.getStatus() == WorkTargetExecutionStatus.CANCELED
-						|| execution.getStatus() == WorkTargetExecutionStatus.SKIPPED);
+			.anyMatch(execution -> execution.getStatus() == WorkTargetExecutionStatus.COMPLETED);
+		boolean allClosed = allExecutions.stream()
+			.allMatch(execution -> execution.getStatus() == WorkTargetExecutionStatus.CANCELED
+					|| execution.getStatus() == WorkTargetExecutionStatus.SKIPPED);
 		if (!hasCompletedTarget && allClosed) {
 			operation.cancel(canceledAt);
 		}
@@ -85,8 +85,8 @@ public class InboundWorkOperationLifecycleService {
 	}
 
 	private boolean isActive(WorkOperationStatus status) {
-		return status == WorkOperationStatus.PLANNED
-				|| status == WorkOperationStatus.IN_PROGRESS
+		return status == WorkOperationStatus.PLANNED || status == WorkOperationStatus.IN_PROGRESS
 				|| status == WorkOperationStatus.PAUSED;
 	}
+
 }

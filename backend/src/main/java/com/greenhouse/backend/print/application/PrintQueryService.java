@@ -12,6 +12,7 @@ import org.springframework.transaction.annotation.Transactional;
 @Service
 @RequiredArgsConstructor
 public class PrintQueryService {
+
 	private final SalesQueryService salesQueryService;
 
 	public PageResponse<SalesSlipSummary> getPrintableSalesSlips(int page, int size) {
@@ -21,4 +22,5 @@ public class PrintQueryService {
 	public SalesSlipDocument getSalesSlipPrintData(Long salesSlipId) {
 		return salesQueryService.getSalesSlip(salesSlipId);
 	}
+
 }

@@ -56,8 +56,7 @@ class WorkTestDataSeeder {
 				  100, 1, '정상', 'E2E 난', ?, FALSE, ?, 0, 5, 0)
 				RETURNING id
 				""", Long.class, timestamp(), timestamp(), bedZoneId, varietyId);
-		return new ContractScenario(
-				workTypeId("PESTICIDE"), workTypeId("REPOT"), bedZoneId, orchidGroupId);
+		return new ContractScenario(workTypeId("PESTICIDE"), workTypeId("REPOT"), bedZoneId, orchidGroupId);
 	}
 
 	BenchmarkScenario seedBenchmark(int operationCount, int targetsPerOperation) {
@@ -95,8 +94,7 @@ class WorkTestDataSeeder {
 
 		List<TargetSeed> targets = new ArrayList<>(targetCount);
 		for (int index = 0; index < targetCount; index++) {
-			targets.add(new TargetSeed(
-					operationIds.get(index / targetsPerOperation), orchidGroupIds.get(index)));
+			targets.add(new TargetSeed(operationIds.get(index / targetsPerOperation), orchidGroupIds.get(index)));
 		}
 		batchInsertTargets(targets, varietyId);
 		jdbcTemplate.update("""
@@ -105,8 +103,7 @@ class WorkTestDataSeeder {
 				)
 				SELECT id, 'PENDING', 0, 0, ?, ? FROM work_operation_targets
 				""", timestamp(), timestamp());
-		return new BenchmarkScenario(
-				operationCount, targetCount, operationIds.getFirst(), orchidGroupIds.getFirst());
+		return new BenchmarkScenario(operationCount, targetCount, operationIds.getFirst(), orchidGroupIds.getFirst());
 	}
 
 	private void batchInsertTargets(List<TargetSeed> targets, Long varietyId) {
@@ -118,22 +115,22 @@ class WorkTestDataSeeder {
 				) VALUES (?, ?, 'ORCHID_GROUP', 'MANUAL_ADDITION', ?, ?, '벤치마크 난', 2,
 				          'POT_3_5', '3.5치', 50, CAST(? AS jsonb), ?)
 				""", new BatchPreparedStatementSetter() {
-					@Override
-					public void setValues(PreparedStatement statement, int index) throws SQLException {
-						TargetSeed target = targets.get(index);
-						statement.setLong(1, target.operationId());
-						statement.setLong(2, target.orchidGroupId());
-						statement.setTimestamp(3, timestamp());
-						statement.setLong(4, varietyId);
-						statement.setString(5, "{\"houseNumber\":1,\"bedNumber\":1,\"bedZoneName\":\"좌측\"}");
-						statement.setTimestamp(6, timestamp());
-					}
+			@Override
+			public void setValues(PreparedStatement statement, int index) throws SQLException {
+				TargetSeed target = targets.get(index);
+				statement.setLong(1, target.operationId());
+				statement.setLong(2, target.orchidGroupId());
+				statement.setTimestamp(3, timestamp());
+				statement.setLong(4, varietyId);
+				statement.setString(5, "{\"houseNumber\":1,\"bedNumber\":1,\"bedZoneName\":\"좌측\"}");
+				statement.setTimestamp(6, timestamp());
+			}
 
-					@Override
-					public int getBatchSize() {
-						return targets.size();
-					}
-				});
+			@Override
+			public int getBatchSize() {
+				return targets.size();
+			}
+		});
 	}
 
 	private Long insertVariety(String code, String name) {
@@ -147,8 +144,7 @@ class WorkTestDataSeeder {
 	}
 
 	private Long workTypeId(String code) {
-		return jdbcTemplate.queryForObject(
-				"SELECT id FROM work_types WHERE code = ?", Long.class, code);
+		return jdbcTemplate.queryForObject("SELECT id FROM work_types WHERE code = ?", Long.class, code);
 	}
 
 	private Timestamp timestamp() {
@@ -158,13 +154,10 @@ class WorkTestDataSeeder {
 	record ContractScenario(Long pesticideWorkTypeId, Long repotWorkTypeId, Long bedZoneId, Long orchidGroupId) {
 	}
 
-	record BenchmarkScenario(
-			int operationCount,
-			int targetCount,
-			Long firstOperationId,
-			Long firstOrchidGroupId) {
+	record BenchmarkScenario(int operationCount, int targetCount, Long firstOperationId, Long firstOrchidGroupId) {
 	}
 
 	private record TargetSeed(Long operationId, Long orchidGroupId) {
 	}
+
 }

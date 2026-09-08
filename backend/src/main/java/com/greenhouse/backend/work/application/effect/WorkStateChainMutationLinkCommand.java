@@ -2,10 +2,7 @@ package com.greenhouse.backend.work.application.effect;
 
 import java.util.UUID;
 
-public record WorkStateChainMutationLinkCommand(
-		Long workEffectId,
-		Long mutationId,
-		UUID correlationId) {
+public record WorkStateChainMutationLinkCommand(Long workEffectId, Long mutationId, UUID correlationId) {
 
 	public WorkStateChainMutationLinkCommand {
 		if (workEffectId == null || mutationId == null || correlationId == null) {

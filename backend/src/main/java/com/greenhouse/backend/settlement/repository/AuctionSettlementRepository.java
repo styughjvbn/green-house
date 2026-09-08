@@ -16,6 +16,7 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
 public interface AuctionSettlementRepository extends JpaRepository<AuctionSettlement, Long> {
+
 	String FILTERS = """
 			from AuctionSettlement settlement
 			where (:auctionHouseId is null or settlement.auctionHouseId = :auctionHouseId)
@@ -38,19 +39,13 @@ public interface AuctionSettlementRepository extends JpaRepository<AuctionSettle
 			where settlement.auctionHouseId in :auctionHouseIds
 			  and settlement.auctionDate between :fromDate and :toDate
 			""")
-	List<AuctionSettlement> findAllWithDetailsForRebuild(
-			@Param("auctionHouseIds") Collection<Long> auctionHouseIds,
-			@Param("fromDate") LocalDate fromDate,
-			@Param("toDate") LocalDate toDate);
+	List<AuctionSettlement> findAllWithDetailsForRebuild(@Param("auctionHouseIds") Collection<Long> auctionHouseIds,
+			@Param("fromDate") LocalDate fromDate, @Param("toDate") LocalDate toDate);
 
 	@Query(value = "select settlement " + FILTERS + "order by settlement.auctionDate desc, settlement.id desc",
 			countQuery = "select count(settlement) " + FILTERS)
-	Page<AuctionSettlement> search(
-			@Param("auctionHouseId") Long auctionHouseId,
-			@Param("fromDate") LocalDate from,
-			@Param("toDate") LocalDate to,
-			@Param("status") AuctionSettlementStatus status,
-			Pageable pageable);
+	Page<AuctionSettlement> search(@Param("auctionHouseId") Long auctionHouseId, @Param("fromDate") LocalDate from,
+			@Param("toDate") LocalDate to, @Param("status") AuctionSettlementStatus status, Pageable pageable);
 
 	@Query("select coalesce(sum(settlement.expectedDepositAmount), 0) as expectedDepositAmount, "
 			+ "coalesce(sum(settlement.remainingAmount), 0) as remainingAmount " + FILTERS)
@@ -61,8 +56,11 @@ public interface AuctionSettlementRepository extends JpaRepository<AuctionSettle
 	List<AuctionSettlement> findAllByIdInOrderByAuctionDateDescIdDesc(Collection<Long> ids);
 
 	interface Totals {
+
 		Long getExpectedDepositAmount();
+
 		Long getRemainingAmount();
+
 	}
 
 	@EntityGraph(attributePaths = { "lines" })
@@ -74,4 +72,5 @@ public interface AuctionSettlementRepository extends JpaRepository<AuctionSettle
 	@Lock(LockModeType.PESSIMISTIC_WRITE)
 	@Query("select settlement from AuctionSettlement settlement where settlement.id = :id")
 	Optional<AuctionSettlement> findForUpdateById(@Param("id") Long id);
+
 }

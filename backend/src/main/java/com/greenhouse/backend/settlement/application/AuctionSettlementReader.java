@@ -16,6 +16,7 @@ import org.springframework.transaction.annotation.Transactional;
 public class AuctionSettlementReader {
 
 	private final AuctionSettlementRepository auctionSettlementRepository;
+
 	private final AuctionDataReader auctionReader;
 
 	public boolean existsByAuctionShipmentId(Long shipmentId) {
@@ -30,7 +31,10 @@ public class AuctionSettlementReader {
 		if (shipmentByLotId.isEmpty()) {
 			return Set.of();
 		}
-		return auctionSettlementRepository.findSettledLotIds(shipmentByLotId.keySet()).stream()
-				.map(shipmentByLotId::get).collect(Collectors.toUnmodifiableSet());
+		return auctionSettlementRepository.findSettledLotIds(shipmentByLotId.keySet())
+			.stream()
+			.map(shipmentByLotId::get)
+			.collect(Collectors.toUnmodifiableSet());
 	}
+
 }

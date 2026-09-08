@@ -1,7 +1,7 @@
 package com.greenhouse.backend.farm.application.structure;
 
-import com.greenhouse.backend.farm.domain.structure.BedZone;
 import com.greenhouse.backend.farm.domain.orchid.OrchidGroup;
+import com.greenhouse.backend.farm.domain.structure.BedZone;
 import com.greenhouse.backend.farm.repository.orchid.OrchidGroupRepository;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
@@ -19,9 +19,7 @@ public class OrchidPlacementPolicy {
 
 	private final OrchidGroupRepository orchidGroupRepository;
 
-	public PlacementRange resolveRange(
-			BedZone bedZone,
-			BigDecimal requestedStartPosition,
+	public PlacementRange resolveRange(BedZone bedZone, BigDecimal requestedStartPosition,
 			BigDecimal requestedEndPosition) {
 		if (requestedStartPosition == null && requestedEndPosition == null) {
 			return findFirstAvailableSingleSlot(bedZone);
@@ -39,18 +37,13 @@ public class OrchidPlacementPolicy {
 		return value.setScale(2, RoundingMode.HALF_UP);
 	}
 
-	public void validatePlacement(BedZone bedZone, BigDecimal startPosition, BigDecimal endPosition, Long excludeOrchidGroupId) {
-		validatePlacementExcluding(
-				bedZone,
-				startPosition,
-				endPosition,
+	public void validatePlacement(BedZone bedZone, BigDecimal startPosition, BigDecimal endPosition,
+			Long excludeOrchidGroupId) {
+		validatePlacementExcluding(bedZone, startPosition, endPosition,
 				excludeOrchidGroupId == null ? Set.of() : Set.of(excludeOrchidGroupId));
 	}
 
-	public void validatePlacementExcluding(
-			BedZone bedZone,
-			BigDecimal startPosition,
-			BigDecimal endPosition,
+	public void validatePlacementExcluding(BedZone bedZone, BigDecimal startPosition, BigDecimal endPosition,
 			Set<Long> excludeOrchidGroupIds) {
 		if (startPosition == null || endPosition == null) {
 			throw new IllegalArgumentException("시작 위치와 종료 위치를 모두 입력해야 합니다.");
@@ -75,13 +68,12 @@ public class OrchidPlacementPolicy {
 		}
 
 		BigDecimal cursor = BigDecimal.ZERO.setScale(2);
-		List<OrchidGroup> positionedGroups = orchidGroupRepository.findByBedZoneIdAndQuantityGreaterThanOrderBySortOrderAsc(
-						bedZone.getId(),
-						0)
-				.stream()
-				.filter(group -> group.getStartPosition() != null && group.getEndPosition() != null)
-				.sorted(Comparator.comparing(OrchidGroup::getStartPosition).thenComparing(OrchidGroup::getSortOrder))
-				.toList();
+		List<OrchidGroup> positionedGroups = orchidGroupRepository
+			.findByBedZoneIdAndQuantityGreaterThanOrderBySortOrderAsc(bedZone.getId(), 0)
+			.stream()
+			.filter(group -> group.getStartPosition() != null && group.getEndPosition() != null)
+			.sorted(Comparator.comparing(OrchidGroup::getStartPosition).thenComparing(OrchidGroup::getSortOrder))
+			.toList();
 
 		for (OrchidGroup group : positionedGroups) {
 			BigDecimal start = normalizeNumber(group.getStartPosition());
@@ -101,37 +93,29 @@ public class OrchidPlacementPolicy {
 		throw new IllegalArgumentException("선택한 구역에 1칸 이상 비어 있는 공간이 없습니다.");
 	}
 
-	private void validateNoOverlap(
-			BedZone bedZone,
-			BigDecimal startPosition,
-			BigDecimal endPosition,
+	private void validateNoOverlap(BedZone bedZone, BigDecimal startPosition, BigDecimal endPosition,
 			Set<Long> excludeOrchidGroupIds) {
-		for (OrchidGroup group :
-				orchidGroupRepository.findByBedZoneIdAndQuantityGreaterThanOrderBySortOrderAsc(bedZone.getId(), 0)) {
+		for (OrchidGroup group : orchidGroupRepository
+			.findByBedZoneIdAndQuantityGreaterThanOrderBySortOrderAsc(bedZone.getId(), 0)) {
 			if (excludeOrchidGroupIds.contains(group.getId())) {
 				continue;
 			}
 			if (group.getStartPosition() == null || group.getEndPosition() == null) {
 				continue;
 			}
-			if (isOverlapping(
-					startPosition,
-					endPosition,
-					normalizeNumber(group.getStartPosition()),
+			if (isOverlapping(startPosition, endPosition, normalizeNumber(group.getStartPosition()),
 					normalizeNumber(group.getEndPosition()))) {
 				throw new IllegalArgumentException("선택한 위치가 기존 난 묶음 배치와 겹칩니다.");
 			}
 		}
 	}
 
-	private boolean isOverlapping(
-			BigDecimal candidateStart,
-			BigDecimal candidateEnd,
-			BigDecimal existingStart,
+	private boolean isOverlapping(BigDecimal candidateStart, BigDecimal candidateEnd, BigDecimal existingStart,
 			BigDecimal existingEnd) {
 		return candidateStart.compareTo(existingEnd) < 0 && candidateEnd.compareTo(existingStart) > 0;
 	}
 
 	public record PlacementRange(BigDecimal startPosition, BigDecimal endPosition) {
 	}
+
 }

@@ -50,14 +50,8 @@ public class WorkType extends BaseEntity {
 	@Column(name = "sort_order", nullable = false)
 	private int sortOrder;
 
-	public WorkType(
-			String code,
-			String name,
-			WorkTypeTemplate template,
-			boolean defaultType,
-			boolean systemType,
-			boolean active,
-			int sortOrder) {
+	public WorkType(String code, String name, WorkTypeTemplate template, boolean defaultType, boolean systemType,
+			boolean active, int sortOrder) {
 		this.code = code;
 		this.name = name;
 		this.template = template;
@@ -116,4 +110,5 @@ public class WorkType extends BaseEntity {
 	public String handlerCode() {
 		return definition().handlerCode(template);
 	}
+
 }

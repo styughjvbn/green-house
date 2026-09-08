@@ -1,16 +1,16 @@
 package com.greenhouse.backend.sales.repository;
 
 import com.greenhouse.backend.sales.domain.SalesSlip;
+import jakarta.persistence.LockModeType;
 import java.time.LocalDate;
-import java.util.Optional;
-import java.util.List;
 import java.util.Collection;
+import java.util.List;
+import java.util.Optional;
 import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Lock;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
-import org.springframework.data.jpa.repository.Lock;
-import jakarta.persistence.LockModeType;
 
 public interface SalesSlipRepository extends JpaRepository<SalesSlip, Long>, SalesSlipRepositoryCustom {
 
@@ -43,4 +43,5 @@ public interface SalesSlipRepository extends JpaRepository<SalesSlip, Long>, Sal
 
 	@Query("select count(snapshot) from SalesOrchidGroupSnapshot snapshot")
 	long countOrchidGroupSnapshots();
+
 }

@@ -25,24 +25,18 @@ import org.hibernate.type.SqlTypes;
  * ORCHID-CUTOVER: TARGET — 난 묶음별 연속 revision과 전후 상태를 보존한다.
  */
 @Entity
-@Table(
-		name = "orchid_group_mutation_entries",
+@Table(name = "orchid_group_mutation_entries",
 		uniqueConstraints = {
-				@UniqueConstraint(
-						name = "uk_orchid_group_mutation_entry_group",
-						columnNames = {"mutation_id", "orchid_group_id"}),
-				@UniqueConstraint(
-						name = "uk_orchid_group_mutation_entry_revision",
-						columnNames = {"orchid_group_id", "state_revision_after"})
-		})
+				@UniqueConstraint(name = "uk_orchid_group_mutation_entry_group",
+						columnNames = { "mutation_id", "orchid_group_id" }),
+				@UniqueConstraint(name = "uk_orchid_group_mutation_entry_revision",
+						columnNames = { "orchid_group_id", "state_revision_after" }) })
 public class OrchidGroupMutationEntry {
 
 	@Id
 	@GeneratedValue(strategy = GenerationType.SEQUENCE, generator = "orchid_group_mutation_entries_id_seq")
-	@SequenceGenerator(
-			name = "orchid_group_mutation_entries_id_seq",
-			sequenceName = "orchid_group_mutation_entries_id_seq",
-			allocationSize = 50)
+	@SequenceGenerator(name = "orchid_group_mutation_entries_id_seq",
+			sequenceName = "orchid_group_mutation_entries_id_seq", allocationSize = 50)
 	private Long id;
 
 	@ManyToOne(fetch = FetchType.LAZY, optional = false)
@@ -74,15 +68,9 @@ public class OrchidGroupMutationEntry {
 	@Column(name = "after_state", columnDefinition = "jsonb")
 	private OrchidGroupStateSnapshot afterState;
 
-	private OrchidGroupMutationEntry(
-			OrchidGroupMutation mutation,
-			Long orchidGroupId,
-			OrchidGroupMutationEntryKind entryKind,
-			OrchidGroupMutationEntryRole role,
-			Long stateRevisionBefore,
-			Long stateRevisionAfter,
-			OrchidGroupStateSnapshot beforeState,
-			OrchidGroupStateSnapshot afterState) {
+	private OrchidGroupMutationEntry(OrchidGroupMutation mutation, Long orchidGroupId,
+			OrchidGroupMutationEntryKind entryKind, OrchidGroupMutationEntryRole role, Long stateRevisionBefore,
+			Long stateRevisionAfter, OrchidGroupStateSnapshot beforeState, OrchidGroupStateSnapshot afterState) {
 		if (mutation == null || orchidGroupId == null || entryKind == null || role == null) {
 			throw new IllegalArgumentException("Mutation entry 필수 값이 누락되었습니다.");
 		}
@@ -97,59 +85,37 @@ public class OrchidGroupMutationEntry {
 		this.afterState = afterState;
 	}
 
-	public static OrchidGroupMutationEntry baseline(
-			OrchidGroupMutation mutation,
-			Long orchidGroupId,
+	public static OrchidGroupMutationEntry baseline(OrchidGroupMutation mutation, Long orchidGroupId,
 			OrchidGroupStateSnapshot afterState) {
-		return new OrchidGroupMutationEntry(
-				mutation, orchidGroupId, OrchidGroupMutationEntryKind.BASELINE,
+		return new OrchidGroupMutationEntry(mutation, orchidGroupId, OrchidGroupMutationEntryKind.BASELINE,
 				OrchidGroupMutationEntryRole.AFFECTED, null, 0L, null, afterState);
 	}
 
-	public static OrchidGroupMutationEntry created(
-			OrchidGroupMutation mutation,
-			Long orchidGroupId,
-			OrchidGroupMutationEntryRole role,
-			OrchidGroupStateSnapshot afterState) {
-		return new OrchidGroupMutationEntry(
-				mutation, orchidGroupId, OrchidGroupMutationEntryKind.CREATE,
-				role, null, 1L, null, afterState);
+	public static OrchidGroupMutationEntry created(OrchidGroupMutation mutation, Long orchidGroupId,
+			OrchidGroupMutationEntryRole role, OrchidGroupStateSnapshot afterState) {
+		return new OrchidGroupMutationEntry(mutation, orchidGroupId, OrchidGroupMutationEntryKind.CREATE, role, null,
+				1L, null, afterState);
 	}
 
-	public static OrchidGroupMutationEntry changed(
-			OrchidGroupMutation mutation,
-			Long orchidGroupId,
-			OrchidGroupMutationEntryRole role,
-			long stateRevisionBefore,
-			OrchidGroupStateSnapshot beforeState,
+	public static OrchidGroupMutationEntry changed(OrchidGroupMutation mutation, Long orchidGroupId,
+			OrchidGroupMutationEntryRole role, long stateRevisionBefore, OrchidGroupStateSnapshot beforeState,
 			OrchidGroupStateSnapshot afterState) {
-		return new OrchidGroupMutationEntry(
-				mutation, orchidGroupId, OrchidGroupMutationEntryKind.CHANGE,
-				role, stateRevisionBefore, stateRevisionBefore + 1, beforeState, afterState);
+		return new OrchidGroupMutationEntry(mutation, orchidGroupId, OrchidGroupMutationEntryKind.CHANGE, role,
+				stateRevisionBefore, stateRevisionBefore + 1, beforeState, afterState);
 	}
 
-	public static OrchidGroupMutationEntry deleted(
-			OrchidGroupMutation mutation,
-			Long orchidGroupId,
-			OrchidGroupMutationEntryRole role,
-			long stateRevisionBefore,
-			OrchidGroupStateSnapshot beforeState) {
-		return new OrchidGroupMutationEntry(
-				mutation, orchidGroupId, OrchidGroupMutationEntryKind.DELETE,
-				role, stateRevisionBefore, stateRevisionBefore + 1, beforeState, null);
+	public static OrchidGroupMutationEntry deleted(OrchidGroupMutation mutation, Long orchidGroupId,
+			OrchidGroupMutationEntryRole role, long stateRevisionBefore, OrchidGroupStateSnapshot beforeState) {
+		return new OrchidGroupMutationEntry(mutation, orchidGroupId, OrchidGroupMutationEntryKind.DELETE, role,
+				stateRevisionBefore, stateRevisionBefore + 1, beforeState, null);
 	}
 
-	private void validateState(
-			OrchidGroupMutationEntryKind kind,
-			Long before,
-			Long after,
-			OrchidGroupStateSnapshot beforeState,
-			OrchidGroupStateSnapshot afterState) {
+	private void validateState(OrchidGroupMutationEntryKind kind, Long before, Long after,
+			OrchidGroupStateSnapshot beforeState, OrchidGroupStateSnapshot afterState) {
 		boolean valid = switch (kind) {
-			case BASELINE -> before == null && Long.valueOf(0).equals(after)
-					&& beforeState == null && afterState != null;
-			case CREATE -> before == null && Long.valueOf(1).equals(after)
-					&& beforeState == null && afterState != null;
+			case BASELINE ->
+				before == null && Long.valueOf(0).equals(after) && beforeState == null && afterState != null;
+			case CREATE -> before == null && Long.valueOf(1).equals(after) && beforeState == null && afterState != null;
 			case CHANGE -> before != null && before >= 0 && Long.valueOf(before + 1).equals(after)
 					&& beforeState != null && afterState != null;
 			case DELETE -> before != null && before >= 0 && Long.valueOf(before + 1).equals(after)
@@ -159,4 +125,5 @@ public class OrchidGroupMutationEntry {
 			throw new IllegalArgumentException("Mutation entry revision이 entry kind와 일치하지 않습니다.");
 		}
 	}
+
 }

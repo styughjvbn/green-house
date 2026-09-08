@@ -21,34 +21,28 @@ import org.springframework.stereotype.Component;
 public class SalesSlipAllocationFactory {
 
 	private final OrchidGroupReader orchidGroupReader;
+
 	private final Clock clock;
 
 	public List<SalesSlipItem> createItems(List<SalesSlipItemInput> requests) {
 		requests.forEach(this::validateAllocationSum);
 		List<Long> orchidGroupIds = requests.stream()
-				.flatMap(request -> request.allocations().stream())
-				.map(SalesSlipAllocationInput::orchidGroupId)
-				.distinct()
-				.sorted()
-				.toList();
+			.flatMap(request -> request.allocations().stream())
+			.map(SalesSlipAllocationInput::orchidGroupId)
+			.distinct()
+			.sorted()
+			.toList();
 		var orchidGroups = orchidGroupReader.lockStates(orchidGroupIds);
 
 		LocalDateTime capturedAt = TimeConfig.utcNow(clock);
 		return requests.stream().map(request -> createItem(request, orchidGroups, capturedAt)).toList();
 	}
 
-	private SalesSlipItem createItem(
-			SalesSlipItemInput request,
-			Map<Long, OrchidGroupState> orchidGroups,
+	private SalesSlipItem createItem(SalesSlipItemInput request, Map<Long, OrchidGroupState> orchidGroups,
 			LocalDateTime capturedAt) {
-		var item = new SalesSlipItem(
-				null,
-				SalesTextNormalizer.required(request.itemName()),
-				SalesTextNormalizer.normalize(request.genus()),
-				SalesTextNormalizer.normalize(request.spec()),
-				request.quantity(),
-				request.unitPrice(),
-				SalesTextNormalizer.normalize(request.memo()));
+		var item = new SalesSlipItem(null, SalesTextNormalizer.required(request.itemName()),
+				SalesTextNormalizer.normalize(request.genus()), SalesTextNormalizer.normalize(request.spec()),
+				request.quantity(), request.unitPrice(), SalesTextNormalizer.normalize(request.memo()));
 		for (SalesSlipAllocationInput allocationRequest : mergeAllocations(request.allocations())) {
 			OrchidGroupState orchidGroup = orchidGroups.get(allocationRequest.orchidGroupId());
 			validateItemVariety(request, orchidGroup);
@@ -57,9 +51,7 @@ public class SalesSlipAllocationFactory {
 		return item;
 	}
 
-	private SalesSlipItemAllocation createAllocation(
-			OrchidGroupState orchidGroup,
-			Integer allocatedQuantity,
+	private SalesSlipItemAllocation createAllocation(OrchidGroupState orchidGroup, Integer allocatedQuantity,
 			LocalDateTime capturedAt) {
 		SalesSlipItemAllocation allocation = new SalesSlipItemAllocation(orchidGroup.id(), allocatedQuantity);
 		SalesSlipAllocationBatch.captureSnapshot(allocation, SalesOrchidSnapshotType.CREATION, capturedAt, orchidGroup);
@@ -68,9 +60,12 @@ public class SalesSlipAllocationFactory {
 
 	private List<SalesSlipAllocationInput> mergeAllocations(List<SalesSlipAllocationInput> allocations) {
 		Map<Long, Integer> quantities = new LinkedHashMap<>();
-		allocations.forEach(allocation -> quantities.merge(allocation.orchidGroupId(), allocation.quantity(), Integer::sum));
-		return quantities.entrySet().stream()
-				.map(entry -> new SalesSlipAllocationInput(entry.getKey(), entry.getValue())).toList();
+		allocations
+			.forEach(allocation -> quantities.merge(allocation.orchidGroupId(), allocation.quantity(), Integer::sum));
+		return quantities.entrySet()
+			.stream()
+			.map(entry -> new SalesSlipAllocationInput(entry.getKey(), entry.getValue()))
+			.toList();
 	}
 
 	private void validateAllocationSum(SalesSlipItemInput request) {
@@ -89,4 +84,5 @@ public class SalesSlipAllocationFactory {
 			throw new IllegalArgumentException("난 묶음 품종과 판매 품목명이 일치하지 않습니다.");
 		}
 	}
+
 }

@@ -5,11 +5,8 @@ import static com.greenhouse.backend.farm.application.orchid.mutation.OrchidGrou
 import com.greenhouse.backend.farm.domain.orchid.mutation.OrchidGroupMutationSource;
 import java.time.LocalDate;
 
-public record CreateOrchidGroupMutationCommand(
-		OrchidGroupMutationSource source,
-		Long bedZoneId,
-		OrchidGroupMutationDetails details,
-		LocalDate effectiveBusinessDate,
+public record CreateOrchidGroupMutationCommand(OrchidGroupMutationSource source, Long bedZoneId,
+		OrchidGroupMutationDetails details, LocalDate effectiveBusinessDate,
 		String reason) implements OrchidGroupMutationCommand {
 
 	public CreateOrchidGroupMutationCommand {

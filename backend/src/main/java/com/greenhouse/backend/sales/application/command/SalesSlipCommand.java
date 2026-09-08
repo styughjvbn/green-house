@@ -9,15 +9,7 @@ import java.time.LocalDate;
 import java.util.List;
 
 @Schema(name = "SalesSlipCreateRequest")
-public record SalesSlipCommand(
-	@NotNull LocalDate saleDate,
-	SalesType salesType,
-	Long partnerId,
-	Long auctionShipmentId,
-	@Size(max = 50) String paymentStatus,
-	@Size(max = 50) String salesStatus,
-	@Size(max = 50) String paymentMethod,
-	@Size(max = 1000) String memo,
-	@NotNull List<@Valid SalesSlipItemInput> items
-) {
+public record SalesSlipCommand(@NotNull LocalDate saleDate, SalesType salesType, Long partnerId, Long auctionShipmentId,
+		@Size(max = 50) String paymentStatus, @Size(max = 50) String salesStatus, @Size(max = 50) String paymentMethod,
+		@Size(max = 1000) String memo, @NotNull List<@Valid SalesSlipItemInput> items) {
 }

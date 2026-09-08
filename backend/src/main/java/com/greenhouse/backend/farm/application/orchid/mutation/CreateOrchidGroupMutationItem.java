@@ -1,8 +1,6 @@
 package com.greenhouse.backend.farm.application.orchid.mutation;
 
-public record CreateOrchidGroupMutationItem(
-		Long bedZoneId,
-		OrchidGroupMutationDetails details) {
+public record CreateOrchidGroupMutationItem(Long bedZoneId, OrchidGroupMutationDetails details) {
 
 	public CreateOrchidGroupMutationItem {
 		if (bedZoneId == null || details == null) {

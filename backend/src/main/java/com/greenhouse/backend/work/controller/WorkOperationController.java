@@ -2,43 +2,43 @@ package com.greenhouse.backend.work.controller;
 
 import com.greenhouse.backend.common.api.ApiResponse;
 import com.greenhouse.backend.common.api.PageResponse;
+import com.greenhouse.backend.work.application.correction.WorkCorrectionCommand;
 import com.greenhouse.backend.work.application.correction.WorkOperationCorrectionService;
+import com.greenhouse.backend.work.application.effect.InboundPottingCommand;
+import com.greenhouse.backend.work.application.effect.StructureChangeCommand;
 import com.greenhouse.backend.work.application.operation.InboundPottingOperationService;
 import com.greenhouse.backend.work.application.operation.InboundPottingPlanService;
 import com.greenhouse.backend.work.application.operation.StructureChangeExecutionService;
 import com.greenhouse.backend.work.application.operation.StructureChangeRecordService;
+import com.greenhouse.backend.work.application.operation.WorkOperationDetailService;
 import com.greenhouse.backend.work.application.operation.WorkOperationPlanService;
 import com.greenhouse.backend.work.application.operation.WorkOperationProgressService;
 import com.greenhouse.backend.work.application.operation.WorkOperationQueryService;
-import com.greenhouse.backend.work.application.operation.WorkOperationDetailService;
-import com.greenhouse.backend.work.domain.operation.WorkSourceScopeType;
-import com.greenhouse.backend.work.domain.operation.WorkOperationStatus;
+import com.greenhouse.backend.work.application.operation.WorkOperationView;
 import com.greenhouse.backend.work.domain.operation.WorkOperationSearchView;
+import com.greenhouse.backend.work.domain.operation.WorkOperationStatus;
+import com.greenhouse.backend.work.domain.operation.WorkSourceScopeType;
+import com.greenhouse.backend.work.dto.correction.WorkOperationCorrectionsResponse;
+import com.greenhouse.backend.work.dto.effect.DiscardRecordCreateRequest;
+import com.greenhouse.backend.work.dto.effect.InboundPottingCandidateResponse;
+import com.greenhouse.backend.work.dto.effect.InboundPottingPlanBatchCreateRequest;
+import com.greenhouse.backend.work.dto.effect.InboundPottingPlanCreateRequest;
+import com.greenhouse.backend.work.dto.effect.InboundPottingRecordCreateRequest;
+import com.greenhouse.backend.work.dto.effect.StructureChangeRecordBatchCreateRequest;
+import com.greenhouse.backend.work.dto.effect.StructureChangeRecordCreateRequest;
 import com.greenhouse.backend.work.dto.operation.OrchidGroupWorkHistoryResponse;
 import com.greenhouse.backend.work.dto.operation.WorkHistoryScopeType;
-import com.greenhouse.backend.work.dto.effect.InboundPottingPlanBatchCreateRequest;
-import com.greenhouse.backend.work.dto.effect.InboundPottingCandidateResponse;
-import com.greenhouse.backend.work.dto.effect.InboundPottingPlanCreateRequest;
-import com.greenhouse.backend.work.application.effect.InboundPottingCommand;
-import com.greenhouse.backend.work.dto.operation.WorkOperationCreateRequest;
 import com.greenhouse.backend.work.dto.operation.WorkOperationBatchCreateRequest;
 import com.greenhouse.backend.work.dto.operation.WorkOperationCompleteRequest;
-import com.greenhouse.backend.work.application.correction.WorkCorrectionCommand;
-import com.greenhouse.backend.work.dto.correction.WorkOperationCorrectionsResponse;
-import com.greenhouse.backend.work.application.operation.WorkOperationView;
-import com.greenhouse.backend.work.dto.operation.WorkOperationSummaryResponse;
+import com.greenhouse.backend.work.dto.operation.WorkOperationCreateRequest;
 import com.greenhouse.backend.work.dto.operation.WorkOperationDetailResponse;
+import com.greenhouse.backend.work.dto.operation.WorkOperationSummaryResponse;
+import com.greenhouse.backend.work.dto.target.WorkTargetExecutionRequest;
 import com.greenhouse.backend.work.dto.target.WorkTargetPreviewRequest;
 import com.greenhouse.backend.work.dto.target.WorkTargetPreviewResponse;
-import com.greenhouse.backend.work.dto.target.WorkTargetExecutionRequest;
-import com.greenhouse.backend.work.application.effect.StructureChangeCommand;
-import com.greenhouse.backend.work.dto.effect.StructureChangeRecordCreateRequest;
-import com.greenhouse.backend.work.dto.effect.StructureChangeRecordBatchCreateRequest;
-import com.greenhouse.backend.work.dto.effect.DiscardRecordCreateRequest;
-import com.greenhouse.backend.work.dto.effect.InboundPottingRecordCreateRequest;
 import jakarta.validation.Valid;
-import java.util.List;
 import java.time.LocalDate;
+import java.util.List;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -56,13 +56,21 @@ import org.springframework.web.bind.annotation.RestController;
 public class WorkOperationController {
 
 	private final WorkOperationPlanService planService;
+
 	private final WorkOperationProgressService progressService;
+
 	private final WorkOperationQueryService queryService;
+
 	private final StructureChangeExecutionService structureChangeExecutionService;
+
 	private final StructureChangeRecordService structureChangeRecordService;
+
 	private final InboundPottingPlanService inboundPottingPlanService;
+
 	private final InboundPottingOperationService inboundPottingOperationService;
+
 	private final WorkOperationCorrectionService workOperationCorrectionService;
+
 	private final WorkOperationDetailService workOperationDetailService;
 
 	@PostMapping("/work-operations/target-preview")
@@ -71,7 +79,8 @@ public class WorkOperationController {
 	}
 
 	/**
-	 * @deprecated Use {@code POST /api/work-operations/batch}, which also supports a single work operation.
+	 * @deprecated Use {@code POST /api/work-operations/batch}, which also supports a
+	 * single work operation.
 	 */
 	@Deprecated(since = "2026-08", forRemoval = false)
 	@PostMapping("/work-operations")
@@ -114,8 +123,7 @@ public class WorkOperationController {
 
 	@PostMapping("/work-operations/discard-records")
 	@ResponseStatus(HttpStatus.CREATED)
-	public ApiResponse<WorkOperationView> createDiscardRecord(
-			@Valid @RequestBody DiscardRecordCreateRequest request) {
+	public ApiResponse<WorkOperationView> createDiscardRecord(@Valid @RequestBody DiscardRecordCreateRequest request) {
 		return ApiResponse.ok(structureChangeRecordService.createDiscardRecord(request));
 	}
 
@@ -152,31 +160,25 @@ public class WorkOperationController {
 	@PostMapping("/work-operations/inbound-potting-executions")
 	@Deprecated(since = "2026-08", forRemoval = false)
 	@ResponseStatus(HttpStatus.CREATED)
-	public ApiResponse<WorkOperationView> executeInboundPotting(
-			@Valid @RequestBody InboundPottingCommand request) {
+	public ApiResponse<WorkOperationView> executeInboundPotting(@Valid @RequestBody InboundPottingCommand request) {
 		return ApiResponse.ok(inboundPottingOperationService.executeNow(request));
 	}
 
 	@GetMapping("/work-operations")
 	public ApiResponse<PageResponse<WorkOperationSummaryResponse>> search(
-			@RequestParam(required = false) LocalDate from,
-			@RequestParam(required = false) LocalDate to,
+			@RequestParam(required = false) LocalDate from, @RequestParam(required = false) LocalDate to,
 			@RequestParam(required = false) WorkOperationStatus status,
 			@RequestParam(defaultValue = "ALL") WorkOperationSearchView view,
 			@RequestParam(required = false) WorkSourceScopeType sourceScopeType,
-			@RequestParam(required = false) Long sourceScopeId,
-			@RequestParam(required = false) String keyword,
-			@RequestParam(defaultValue = "0") int page,
-			@RequestParam(defaultValue = "20") int size) {
-		return ApiResponse.ok(queryService.search(
-				from, to, status, view, sourceScopeType, sourceScopeId, keyword, page, size));
+			@RequestParam(required = false) Long sourceScopeId, @RequestParam(required = false) String keyword,
+			@RequestParam(defaultValue = "0") int page, @RequestParam(defaultValue = "20") int size) {
+		return ApiResponse
+			.ok(queryService.search(from, to, status, view, sourceScopeType, sourceScopeId, keyword, page, size));
 	}
 
 	@GetMapping("/work-operations/calendar")
-	public ApiResponse<List<WorkOperationSummaryResponse>> getCalendar(
-			@RequestParam LocalDate from,
-			@RequestParam LocalDate to,
-			@RequestParam(required = false) WorkOperationStatus status,
+	public ApiResponse<List<WorkOperationSummaryResponse>> getCalendar(@RequestParam LocalDate from,
+			@RequestParam LocalDate to, @RequestParam(required = false) WorkOperationStatus status,
 			@RequestParam(defaultValue = "ALL") WorkOperationSearchView view) {
 		return ApiResponse.ok(queryService.getCalendar(from, to, status, view));
 	}
@@ -192,11 +194,10 @@ public class WorkOperationController {
 	}
 
 	@PostMapping("/work-operations/{workOperationId}/complete")
-	public ApiResponse<WorkOperationView> complete(
-			@PathVariable Long workOperationId,
+	public ApiResponse<WorkOperationView> complete(@PathVariable Long workOperationId,
 			@Valid @RequestBody(required = false) WorkOperationCompleteRequest request) {
-		return ApiResponse.ok(progressService.complete(
-				workOperationId, request == null ? null : request.completedDate()));
+		return ApiResponse
+			.ok(progressService.complete(workOperationId, request == null ? null : request.completedDate()));
 	}
 
 	@PostMapping("/work-operations/{workOperationId}/start")
@@ -220,84 +221,71 @@ public class WorkOperationController {
 	}
 
 	@PostMapping("/work-operations/{workOperationId}/targets/{targetId}/start")
-	public ApiResponse<WorkOperationView> startTarget(
-			@PathVariable Long workOperationId,
-			@PathVariable Long targetId,
+	public ApiResponse<WorkOperationView> startTarget(@PathVariable Long workOperationId, @PathVariable Long targetId,
 			@Valid @RequestBody(required = false) WorkTargetExecutionRequest request) {
-		return ApiResponse.ok(progressService.startTarget(
-				workOperationId, targetId,
+		return ApiResponse.ok(progressService.startTarget(workOperationId, targetId,
 				request == null ? new WorkTargetExecutionRequest(null, null, null) : request));
 	}
 
 	@PostMapping("/work-operations/{workOperationId}/targets/{targetId}/complete")
-	public ApiResponse<WorkOperationView> completeTarget(
-			@PathVariable Long workOperationId,
-			@PathVariable Long targetId,
-			@Valid @RequestBody(required = false) WorkTargetExecutionRequest request) {
-		return ApiResponse.ok(progressService.completeTarget(
-				workOperationId, targetId,
+	public ApiResponse<WorkOperationView> completeTarget(@PathVariable Long workOperationId,
+			@PathVariable Long targetId, @Valid @RequestBody(required = false) WorkTargetExecutionRequest request) {
+		return ApiResponse.ok(progressService.completeTarget(workOperationId, targetId,
 				request == null ? new WorkTargetExecutionRequest(null, null, null) : request));
 	}
 
 	@PostMapping("/work-operations/{workOperationId}/targets/{targetId}/skip")
-	public ApiResponse<WorkOperationView> skipTarget(
-			@PathVariable Long workOperationId,
-			@PathVariable Long targetId,
+	public ApiResponse<WorkOperationView> skipTarget(@PathVariable Long workOperationId, @PathVariable Long targetId,
 			@Valid @RequestBody(required = false) WorkTargetExecutionRequest request) {
-		return ApiResponse.ok(progressService.skipTarget(
-				workOperationId, targetId,
+		return ApiResponse.ok(progressService.skipTarget(workOperationId, targetId,
 				request == null ? new WorkTargetExecutionRequest(null, null, null) : request));
 	}
 
 	/**
-	 * @deprecated Use {@code POST /api/work-operations/{workOperationId}/structure-change-executions}.
+	 * @deprecated Use {@code POST
+	 * /api/work-operations/{workOperationId}/structure-change-executions}.
 	 */
 	@Deprecated(since = "2026-08", forRemoval = false)
 	@PostMapping("/work-operations/{workOperationId}/merge/complete")
-	public ApiResponse<WorkOperationView> completeMerge(
-			@PathVariable Long workOperationId,
+	public ApiResponse<WorkOperationView> completeMerge(@PathVariable Long workOperationId,
 			@Valid @RequestBody WorkTargetExecutionRequest request) {
 		return ApiResponse.ok(structureChangeExecutionService.completeMerge(workOperationId, request));
 	}
 
 	@PostMapping("/work-operations/{workOperationId}/structure-change-executions")
 	@ResponseStatus(HttpStatus.CREATED)
-	public ApiResponse<WorkOperationView> executeStructureChange(
-			@PathVariable Long workOperationId,
+	public ApiResponse<WorkOperationView> executeStructureChange(@PathVariable Long workOperationId,
 			@Valid @RequestBody StructureChangeCommand request) {
 		return ApiResponse.ok(structureChangeExecutionService.execute(workOperationId, request));
 	}
 
 	/**
-	 * @deprecated Use {@code GET /api/work-history} with {@code historyScopeType=ORCHID_GROUP}.
+	 * @deprecated Use {@code GET /api/work-history} with
+	 * {@code historyScopeType=ORCHID_GROUP}.
 	 */
 	@Deprecated(since = "2026-08", forRemoval = false)
 	@GetMapping("/orchid-groups/{orchidGroupId}/work-history")
-	public ApiResponse<List<OrchidGroupWorkHistoryResponse>> getOrchidGroupHistory(
-			@PathVariable Long orchidGroupId) {
+	public ApiResponse<List<OrchidGroupWorkHistoryResponse>> getOrchidGroupHistory(@PathVariable Long orchidGroupId) {
 		return ApiResponse.ok(queryService.getOrchidGroupHistory(orchidGroupId));
 	}
 
 	@GetMapping("/work-history")
 	public ApiResponse<PageResponse<OrchidGroupWorkHistoryResponse>> getWorkHistory(
-			@RequestParam WorkHistoryScopeType historyScopeType,
-			@RequestParam Long historyScopeId,
-			@RequestParam(defaultValue = "0") int page,
-			@RequestParam(defaultValue = "20") int size) {
+			@RequestParam WorkHistoryScopeType historyScopeType, @RequestParam Long historyScopeId,
+			@RequestParam(defaultValue = "0") int page, @RequestParam(defaultValue = "20") int size) {
 		return ApiResponse.ok(queryService.getWorkHistory(historyScopeType, historyScopeId, page, size));
 	}
 
 	@PostMapping("/work-operations/{workOperationId}/corrections")
 	@ResponseStatus(HttpStatus.CREATED)
-	public ApiResponse<WorkOperationCorrectionsResponse> createCorrection(
-			@PathVariable Long workOperationId,
+	public ApiResponse<WorkOperationCorrectionsResponse> createCorrection(@PathVariable Long workOperationId,
 			@Valid @RequestBody WorkCorrectionCommand request) {
 		return ApiResponse.ok(workOperationCorrectionService.create(workOperationId, request));
 	}
 
 	@GetMapping("/work-operations/{workOperationId}/corrections")
-	public ApiResponse<WorkOperationCorrectionsResponse> getCorrections(
-			@PathVariable Long workOperationId) {
+	public ApiResponse<WorkOperationCorrectionsResponse> getCorrections(@PathVariable Long workOperationId) {
 		return ApiResponse.ok(workOperationCorrectionService.get(workOperationId));
 	}
+
 }

@@ -9,4 +9,5 @@ public interface WorkEffectHandler {
 	WorkEffectKind effectKind();
 
 	WorkExecutionResult execute(WorkEffectContext context, WorkEffectCommand command);
+
 }

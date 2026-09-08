@@ -24,12 +24,17 @@ import org.springframework.transaction.annotation.Transactional;
 @Transactional
 class OrchidGroupCollectionQueryTest {
 
-	@Autowired OrchidGroupCollectionService service;
-	@Autowired EntityManager entityManager;
-	@Autowired EntityManagerFactory entityManagerFactory;
+	@Autowired
+	OrchidGroupCollectionService service;
+
+	@Autowired
+	EntityManager entityManager;
+
+	@Autowired
+	EntityManagerFactory entityManagerFactory;
 
 	@ParameterizedTest
-	@ValueSource(ints = {1, 10, 50})
+	@ValueSource(ints = { 1, 10, 50 })
 	void loadsCollectionsAndMembersWithABoundedQueryCount(int collectionCount) {
 		var fixtures = new FarmTestFixtures(entityManager);
 		var layout = fixtures.layout(983);
@@ -38,13 +43,16 @@ class OrchidGroupCollectionQueryTest {
 		for (int index = 0; index < collectionCount; index++) {
 			var collection = new OrchidGroupCollection("목록 " + index, null, null, "worker");
 			entityManager.persist(collection);
-			entityManager.persist(new OrchidGroupCollectionMember(collection.getId(), second.getId(), "worker", java.time.LocalDateTime.of(2026, 9, 8, 1, 2)));
-			entityManager.persist(new OrchidGroupCollectionMember(collection.getId(), first.getId(), "worker", java.time.LocalDateTime.of(2026, 9, 8, 1, 2)));
+			entityManager.persist(new OrchidGroupCollectionMember(collection.getId(), second.getId(), "worker",
+					java.time.LocalDateTime.of(2026, 9, 8, 1, 2)));
+			entityManager.persist(new OrchidGroupCollectionMember(collection.getId(), first.getId(), "worker",
+					java.time.LocalDateTime.of(2026, 9, 8, 1, 2)));
 		}
 		var archived = new OrchidGroupCollection("보관", null, null, "worker");
 		archived.archive();
 		entityManager.persist(archived);
-		var removed = new OrchidGroupCollectionMember(archived.getId(), first.getId(), "worker", java.time.LocalDateTime.of(2026, 9, 8, 1, 2));
+		var removed = new OrchidGroupCollectionMember(archived.getId(), first.getId(), "worker",
+				java.time.LocalDateTime.of(2026, 9, 8, 1, 2));
 		removed.remove(java.time.LocalDateTime.of(2026, 9, 8, 2, 3));
 		entityManager.persist(removed);
 		entityManager.flush();
@@ -58,7 +66,7 @@ class OrchidGroupCollectionQueryTest {
 			assertThat(collection.orchidGroupCount()).isEqualTo(2);
 			assertThat(collection.totalQuantity()).isEqualTo(50);
 			assertThat(collection.members()).extracting(OrchidGroupCollectionMemberResponse::orchidGroupId)
-					.containsExactly(second.getId(), first.getId());
+				.containsExactly(second.getId(), first.getId());
 		});
 		assertThat(statistics.getPrepareStatementCount()).isLessThanOrEqualTo(3);
 
@@ -67,7 +75,9 @@ class OrchidGroupCollectionQueryTest {
 		assertThat(service.getCollectionsForOrchidGroup(first.getId())).hasSize(collectionCount);
 		assertThat(statistics.getPrepareStatementCount()).isLessThanOrEqualTo(5);
 		assertThat(service.getCollections(true)).hasSize(collectionCount + 1)
-				.filteredOn(response -> response.id().equals(archived.getId()))
-				.singleElement().satisfies(response -> assertThat(response.members()).isEmpty());
+			.filteredOn(response -> response.id().equals(archived.getId()))
+			.singleElement()
+			.satisfies(response -> assertThat(response.members()).isEmpty());
 	}
+
 }
