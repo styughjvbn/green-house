@@ -14,6 +14,7 @@ public class InboundRecordFinder {
 
 	public InboundRecord find(Long inboundRecordId) {
 		return inboundRecordRepository.findWithDetailsById(inboundRecordId)
-				.orElseThrow(() -> new NotFoundException("입고 기록을 찾을 수 없습니다."));
+			.orElseThrow(() -> new NotFoundException("입고 기록을 찾을 수 없습니다."));
 	}
+
 }

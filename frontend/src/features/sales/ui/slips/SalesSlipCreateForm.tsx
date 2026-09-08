@@ -1,20 +1,17 @@
 import type { SubmitEvent } from "react";
 import { X } from "lucide-react";
-import type {
-  BusinessPartner,
-  SalesOrchidGroupOption,
-} from "@/entities/farm/types";
+import type { SalesOrchidGroupOption } from "@/entities/farm/types";
 import type {
   SalesAllocationForm,
   SalesItemForm,
   SalesSlipForm,
   SalesSlipFormMode,
 } from "../../model/types";
+import { BusinessPartnerSelect } from "../common/BusinessPartnerSelect";
 import { SelectField, TextField } from "../common/FormFields";
 import { SalesSlipItemEditor } from "./SalesSlipItemEditor";
 
 export function SalesSlipCreateForm({
-  partners,
   errorMessage,
   form,
   mode,
@@ -31,7 +28,6 @@ export function SalesSlipCreateForm({
   onSalesTypeChange,
   onUpdateItem,
 }: {
-  partners: BusinessPartner[];
   errorMessage: string | null;
   form: SalesSlipForm;
   mode: SalesSlipFormMode;
@@ -60,13 +56,6 @@ export function SalesSlipCreateForm({
     value: string,
   ) => void;
 }) {
-  const auctionPartners = partners.filter(
-    (partner) => partner.partnerType === "AUCTION_HOUSE",
-  );
-  const directPartners = partners.filter(
-    (partner) => partner.partnerType !== "AUCTION_HOUSE",
-  );
-
   return (
     <div
       className="fixed inset-0 z-[1000] flex items-center justify-center bg-black/35 p-4"
@@ -109,13 +98,13 @@ export function SalesSlipCreateForm({
           <div className="flex w-fit rounded-md border border-[#cfd8cc] bg-[#f6f8f5] p-1">
             <TypeButton
               active={form.salesType === "DIRECT"}
-              disabled={mode === "edit"}
+              disabled={saving || mode === "edit"}
               label="일반 판매"
               onClick={() => onSalesTypeChange("DIRECT")}
             />
             <TypeButton
               active={form.salesType === "AUCTION"}
-              disabled={mode === "edit"}
+              disabled={saving || mode === "edit"}
               label="경매 판매"
               onClick={() => onSalesTypeChange("AUCTION")}
             />
@@ -129,21 +118,15 @@ export function SalesSlipCreateForm({
               value={form.saleDate}
               onChange={(value) => onChange("saleDate", value)}
             />
-            <SelectField
+            <BusinessPartnerSelect
+              key={form.salesType}
               label={form.salesType === "AUCTION" ? "경매장" : "거래처"}
               value={form.partnerId}
               onChange={(value) => onChange("partnerId", value)}
-            >
-              <option value="">선택</option>
-              {(form.salesType === "AUCTION"
-                ? auctionPartners
-                : directPartners
-              ).map((partner) => (
-                <option key={partner.id} value={partner.id}>
-                  {partner.name}
-                </option>
-              ))}
-            </SelectField>
+              auctionHouse={form.salesType === "AUCTION"}
+              activeOnly
+              disabled={saving}
+            />
             <SelectField
               label="입금 상태"
               disabled={mode === "edit"}

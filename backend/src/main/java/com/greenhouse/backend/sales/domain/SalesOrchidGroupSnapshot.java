@@ -1,6 +1,5 @@
 package com.greenhouse.backend.sales.domain;
 
-import com.greenhouse.backend.farm.domain.orchid.OrchidGroup;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
@@ -9,30 +8,30 @@ import jakarta.persistence.FetchType;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
-import jakarta.persistence.SequenceGenerator;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
+import jakarta.persistence.SequenceGenerator;
 import jakarta.persistence.Table;
 import jakarta.persistence.UniqueConstraint;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import lombok.AccessLevel;
+import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 @Entity
-@Table(
-		name = "sales_orchid_group_snapshots",
-		uniqueConstraints = @UniqueConstraint(
-				name = "uk_sales_orchid_snapshot_allocation_type",
+@Table(name = "sales_orchid_group_snapshots",
+		uniqueConstraints = @UniqueConstraint(name = "uk_sales_orchid_snapshot_allocation_type",
 				columnNames = { "sales_slip_item_allocation_id", "snapshot_type" }))
 public class SalesOrchidGroupSnapshot {
 
 	@Id
 	@GeneratedValue(strategy = GenerationType.SEQUENCE, generator = "sales_orchid_group_snapshots_id_seq")
-	@SequenceGenerator(name = "sales_orchid_group_snapshots_id_seq", sequenceName = "sales_orchid_group_snapshots_id_seq", allocationSize = 50)
+	@SequenceGenerator(name = "sales_orchid_group_snapshots_id_seq",
+			sequenceName = "sales_orchid_group_snapshots_id_seq", allocationSize = 50)
 	private Long id;
 
 	@ManyToOne(fetch = FetchType.LAZY, optional = false)
@@ -107,62 +106,35 @@ public class SalesOrchidGroupSnapshot {
 	@Column(name = "end_position", precision = 6, scale = 2)
 	private BigDecimal endPosition;
 
-	SalesOrchidGroupSnapshot(
-			SalesOrchidSnapshotType snapshotType,
-			SalesOrchidSnapshotSource captureSource,
-			LocalDateTime capturedAt,
-			Integer allocatedQuantity,
-			OrchidGroup group) {
-		var zone = group.getBedZone();
-		var bed = zone.getPhysicalBed();
-		var house = bed.getHouse();
+	@Builder(toBuilder = true)
+	private SalesOrchidGroupSnapshot(SalesOrchidSnapshotType snapshotType, SalesOrchidSnapshotSource captureSource,
+			LocalDateTime capturedAt, Long orchidGroupId, Long varietyId, String varietyName, String genus,
+			Integer ageYear, String potSizeCode, String potSize, Integer quantity, Integer reservedQuantity,
+			String status, Integer allocatedQuantity, Long houseId, Integer houseNumber, Long physicalBedId,
+			Integer physicalBedNumber, Long bedZoneId, String bedZoneName, BigDecimal startPosition,
+			BigDecimal endPosition) {
 		this.snapshotType = snapshotType;
 		this.captureSource = captureSource;
 		this.capturedAt = capturedAt;
-		this.orchidGroupId = group.getId();
-		this.varietyId = group.getVariety() == null ? null : group.getVariety().getId();
-		this.varietyName = group.getVarietyName();
-		this.genus = group.getGenus();
-		this.ageYear = group.getAgeYear();
-		this.potSizeCode = group.getPotSizeCode() == null ? null : group.getPotSizeCode().name();
-		this.potSize = group.getPotSize();
-		this.quantity = group.getQuantity();
-		this.reservedQuantity = group.getReservedQuantity();
-		this.status = group.getStatus();
+		this.orchidGroupId = orchidGroupId;
+		this.varietyId = varietyId;
+		this.varietyName = varietyName;
+		this.genus = genus;
+		this.ageYear = ageYear;
+		this.potSizeCode = potSizeCode;
+		this.potSize = potSize;
+		this.quantity = quantity;
+		this.reservedQuantity = reservedQuantity;
+		this.status = status;
 		this.allocatedQuantity = allocatedQuantity;
-		this.houseId = house.getId();
-		this.houseNumber = house.getNumber();
-		this.physicalBedId = bed.getId();
-		this.physicalBedNumber = bed.getNumber();
-		this.bedZoneId = zone.getId();
-		this.bedZoneName = zone.getName();
-		this.startPosition = group.getStartPosition();
-		this.endPosition = group.getEndPosition();
-	}
-
-	private SalesOrchidGroupSnapshot(SalesOrchidGroupSnapshot source) {
-		this.snapshotType = source.snapshotType;
-		this.captureSource = source.captureSource;
-		this.capturedAt = source.capturedAt;
-		this.orchidGroupId = source.orchidGroupId;
-		this.varietyId = source.varietyId;
-		this.varietyName = source.varietyName;
-		this.genus = source.genus;
-		this.ageYear = source.ageYear;
-		this.potSizeCode = source.potSizeCode;
-		this.potSize = source.potSize;
-		this.quantity = source.quantity;
-		this.reservedQuantity = source.reservedQuantity;
-		this.status = source.status;
-		this.allocatedQuantity = source.allocatedQuantity;
-		this.houseId = source.houseId;
-		this.houseNumber = source.houseNumber;
-		this.physicalBedId = source.physicalBedId;
-		this.physicalBedNumber = source.physicalBedNumber;
-		this.bedZoneId = source.bedZoneId;
-		this.bedZoneName = source.bedZoneName;
-		this.startPosition = source.startPosition;
-		this.endPosition = source.endPosition;
+		this.houseId = houseId;
+		this.houseNumber = houseNumber;
+		this.physicalBedId = physicalBedId;
+		this.physicalBedNumber = physicalBedNumber;
+		this.bedZoneId = bedZoneId;
+		this.bedZoneName = bedZoneName;
+		this.startPosition = startPosition;
+		this.endPosition = endPosition;
 	}
 
 	void setAllocation(SalesSlipItemAllocation allocation) {
@@ -170,6 +142,7 @@ public class SalesOrchidGroupSnapshot {
 	}
 
 	SalesOrchidGroupSnapshot copy() {
-		return new SalesOrchidGroupSnapshot(this);
+		return toBuilder().build();
 	}
+
 }

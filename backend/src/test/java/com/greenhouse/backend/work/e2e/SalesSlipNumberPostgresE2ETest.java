@@ -26,20 +26,20 @@ class SalesSlipNumberPostgresE2ETest extends WorkE2ETestBase {
 			for (int index = 0; index < 8; index++) {
 				tasks.add(() -> repository.nextDailySequence(saleDate));
 			}
-			List<Long> values = executor.invokeAll(tasks).stream()
-					.map(future -> {
-						try {
-							return future.get();
-						} catch (Exception exception) {
-							throw new AssertionError(exception);
-						}
-					})
-					.sorted()
-					.toList();
+			List<Long> values = executor.invokeAll(tasks).stream().map(future -> {
+				try {
+					return future.get();
+				}
+				catch (Exception exception) {
+					throw new AssertionError(exception);
+				}
+			}).sorted().toList();
 
 			assertThat(values).containsExactly(1L, 2L, 3L, 4L, 5L, 6L, 7L, 8L);
-		} finally {
+		}
+		finally {
 			executor.shutdownNow();
 		}
 	}
+
 }

@@ -17,7 +17,8 @@ import org.springframework.transaction.annotation.Transactional;
 @Transactional
 class VarietyCompositeKeyTests {
 
-	@Autowired VarietyService varietyService;
+	@Autowired
+	VarietyService varietyService;
 
 	@Test
 	void allowsSameNameWhenGenusIsDifferent() {
@@ -34,8 +35,8 @@ class VarietyCompositeKeyTests {
 		varietyService.create(createRequest("카틀레야", "골드"));
 
 		assertThatThrownBy(() -> varietyService.create(createRequest("카틀레야", "골드")))
-				.isInstanceOf(IllegalArgumentException.class)
-				.hasMessageContaining("같은 속과 품종명");
+			.isInstanceOf(IllegalArgumentException.class)
+			.hasMessageContaining("같은 속과 품종명");
 	}
 
 	@Test
@@ -44,19 +45,19 @@ class VarietyCompositeKeyTests {
 		var target = varietyService.create(createRequest("심비디움", "골드"));
 
 		assertThatThrownBy(() -> varietyService.update(target.id(), updateRequest("카틀레야", "골드")))
-				.isInstanceOf(IllegalArgumentException.class)
-				.hasMessageContaining("같은 속과 품종명");
+			.isInstanceOf(IllegalArgumentException.class)
+			.hasMessageContaining("같은 속과 품종명");
 	}
 
 	@Test
 	void savesColorAsAnOptionalNormalizedHexValue() {
-		var created = varietyService.create(new VarietyCreateRequest(
-				"카틀레야", "색상 품종", null, null, "#aBcDeF", true, null, null));
+		var created = varietyService
+			.create(new VarietyCreateRequest("카틀레야", "색상 품종", null, null, "#aBcDeF", true, null, null));
 
 		assertThat(created.color()).isEqualTo("#ABCDEF");
 
-		var updated = varietyService.update(created.id(), new VarietyUpdateRequest(
-				"카틀레야", "색상 품종", null, null, null, true, null, null));
+		var updated = varietyService.update(created.id(),
+				new VarietyUpdateRequest("카틀레야", "색상 품종", null, null, null, true, null, null));
 
 		assertThat(updated.color()).isNull();
 	}
@@ -68,4 +69,5 @@ class VarietyCompositeKeyTests {
 	private VarietyUpdateRequest updateRequest(String genus, String name) {
 		return new VarietyUpdateRequest(genus, name, null, null, null, true, null, null);
 	}
+
 }

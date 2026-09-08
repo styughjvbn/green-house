@@ -16,7 +16,6 @@ DB_PASSWORD="${DB_PASSWORD:-${PGPASSWORD:-greenhouse}}"
 BACKUP_FILE=""
 ASSUME_YES=false
 START_DB=true
-MIGRATION_PID=""
 MIGRATION_LOG=""
 
 usage() {
@@ -24,7 +23,8 @@ usage() {
 Usage: scripts/reset-dev-db.sh [backup.dump.gz|backup.dump] [options]
 
 Reset the local development database from an operational PostgreSQL custom
-dump, then start the backend temporarily to apply and validate Flyway.
+dump, then run the backend without HTTP to apply and validate Flyway.
+V20 backups require the documented Engine cutover before application startup.
 
 Options:
   --backup FILE   Backup file. Defaults to the newest *.dump.gz or *.dump in temp/.
@@ -92,15 +92,7 @@ stop_local_backends() {
     fi
 }
 
-stop_migration_backend() {
-    if [[ -n "$MIGRATION_PID" ]] && kill -0 "$MIGRATION_PID" 2>/dev/null; then
-        stop_process_tree "$MIGRATION_PID"
-    fi
-    MIGRATION_PID=""
-}
-
 cleanup() {
-    stop_migration_backend
     if [[ -n "$MIGRATION_LOG" && -f "$MIGRATION_LOG" ]]; then
         rm -f "$MIGRATION_LOG"
     fi
@@ -189,60 +181,19 @@ restore_backup() {
     fi
 }
 
-find_available_port() {
-    local port
-    for port in {18080..18099}; do
-        if ! ss -ltnH "sport = :${port}" 2>/dev/null | grep -q .; then
-            echo "$port"
-            return
-        fi
-    done
-    echo "No temporary backend port is available in 18080-18099." >&2
-    exit 1
-}
-
 apply_flyway_and_validate_schema() {
-    local port
-    local deadline
-    local status_code
-
-    port="$(find_available_port)"
     MIGRATION_LOG="$(mktemp)"
-
-    (
+    if ! (
         cd "$BACKEND_DIR"
-        SERVER_PORT="$port" \
-            AUTH_ENABLED=false \
-            DATABASE_URL="jdbc:postgresql://${DB_HOST}:${DB_PORT}/${DB_NAME}" \
+        DATABASE_URL="jdbc:postgresql://${DB_HOST}:${DB_PORT}/${DB_NAME}" \
             DATABASE_USERNAME="$DB_USER" \
             DATABASE_PASSWORD="$DB_PASSWORD" \
-            ./gradlew bootRun --no-daemon
-    ) >"$MIGRATION_LOG" 2>&1 &
-    MIGRATION_PID="$!"
-    deadline=$((SECONDS + 120))
-
-    while ((SECONDS < deadline)); do
-        if ! kill -0 "$MIGRATION_PID" 2>/dev/null; then
-            echo "Backend exited before Flyway/schema validation completed." >&2
-            cat "$MIGRATION_LOG" >&2
-            exit 1
-        fi
-
-        status_code="$(
-            curl --silent --output /dev/null --write-out '%{http_code}' \
-                --max-time 2 "http://127.0.0.1:${port}/actuator/health" 2>/dev/null || true
-        )"
-        if [[ "$status_code" =~ ^[234][0-9][0-9]$ ]]; then
-            stop_migration_backend
-            echo "Flyway migration and Hibernate schema validation passed."
-            return
-        fi
-        sleep 1
-    done
-
-    echo "Backend did not become ready within 120 seconds." >&2
-    cat "$MIGRATION_LOG" >&2
-    exit 1
+            ./gradlew bootRun --no-daemon --args='--spring.main.web-application-type=none --app.orchid-ledger.startup-guard-enabled=false --app.settlement.rebuild-on-startup=false'
+    ) >"$MIGRATION_LOG" 2>&1; then
+        cat "$MIGRATION_LOG" >&2
+        return 1
+    fi
+    echo "Flyway migration and Hibernate schema validation passed (no HTTP server started)."
 }
 
 print_verification() {
@@ -323,7 +274,7 @@ while [[ $# -gt 0 ]]; do
     esac
 done
 
-for command_name in psql pg_restore gzip curl ss pgrep; do
+for command_name in psql pg_restore gzip pgrep; do
     require_command "$command_name"
 done
 
@@ -394,4 +345,11 @@ echo "Backup restored."
 apply_flyway_and_validate_schema
 print_verification
 
-echo "Development database reset completed."
+ledger_pending="$(psql --host "$DB_HOST" --port "$DB_PORT" --username "$DB_USER" \
+    --dbname "$DB_NAME" --tuples-only --no-align --set ON_ERROR_STOP=1 \
+    --command "SELECT (EXISTS (SELECT 1 FROM orchid_groups WHERE state_revision IS NULL) OR EXISTS (SELECT 1 FROM orchid_group_ledger_coverages WHERE status = 'PREPARING'))::int")"
+if [[ "$ledger_pending" != "0" ]]; then
+    echo "Backup restored; Engine cutover is still required. Follow docs/07-deployment.md (state-chain PLAN/IMPORT/VERIFY/ACTIVE)." >&2
+    exit 2
+fi
+echo "Development database reset completed; Engine startup checks still apply."

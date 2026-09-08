@@ -1,9 +1,9 @@
 package com.greenhouse.backend.auction.controller;
 
 import com.greenhouse.backend.auction.application.AuctionTrackingService;
+import com.greenhouse.backend.auction.application.RecordAuctionResultCommand;
 import com.greenhouse.backend.auction.domain.AuctionLotStatus;
 import com.greenhouse.backend.auction.dto.AuctionLotAdjustmentRequest;
-import com.greenhouse.backend.auction.dto.AuctionLotResultRequest;
 import com.greenhouse.backend.auction.dto.AuctionLotResponse;
 import com.greenhouse.backend.auction.dto.AuctionLotReturnRequest;
 import com.greenhouse.backend.auction.dto.AuctionLotStatusRequest;
@@ -11,9 +11,8 @@ import com.greenhouse.backend.auction.dto.AuctionTrackingSummaryResponse;
 import com.greenhouse.backend.common.api.ApiResponse;
 import com.greenhouse.backend.common.api.PageResponse;
 import jakarta.validation.Valid;
-import lombok.RequiredArgsConstructor;
-
 import java.time.LocalDate;
+import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -27,6 +26,7 @@ import org.springframework.web.bind.annotation.RestController;
 @RequestMapping("/api")
 @RequiredArgsConstructor
 public class AuctionTrackingController {
+
 	private final AuctionTrackingService trackingService;
 
 	@GetMapping("/auction-lots")
@@ -70,7 +70,7 @@ public class AuctionTrackingController {
 
 	@PostMapping("/auction-lots/{id}/results")
 	public ApiResponse<AuctionLotResponse> addResult(@PathVariable Long id,
-			@Valid @RequestBody AuctionLotResultRequest request) {
+			@Valid @RequestBody RecordAuctionResultCommand request) {
 		return ApiResponse.ok(trackingService.addResult(id, request));
 	}
 
@@ -79,4 +79,5 @@ public class AuctionTrackingController {
 			@Valid @RequestBody AuctionLotStatusRequest request) {
 		return ApiResponse.ok(trackingService.changeStatus(id, request));
 	}
+
 }

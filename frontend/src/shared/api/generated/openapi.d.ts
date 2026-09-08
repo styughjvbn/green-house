@@ -674,6 +674,10 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
+        /**
+         * @deprecated
+         * @description 호환용 활성 거래처 목록. 이름·ID 순으로 최대 500건을 반환합니다. 관리 목록은 /page, 선택지는 /options를 사용합니다.
+         */
         get: operations["getPartners"];
         put?: never;
         post: operations["create_7"];
@@ -1298,7 +1302,28 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
+        /**
+         * @deprecated
+         * @description 호환용 목록. 입금일·ID 역순으로 최신 500건까지 반환합니다. 운영 화면은 /partner-payment-events/page를 사용합니다.
+         */
         get: operations["getEvents"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/partner-payment-events/page": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description 조건에 맞는 입금 이벤트를 입금일·ID 역순으로 조회합니다. 유형 필터는 페이지 조회 전 적용됩니다. page는 0 이상, size는 1~100으로 보정합니다. */
+        get: operations["getPaymentEventPage"];
         put?: never;
         post?: never;
         delete?: never;
@@ -1516,6 +1541,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/business-partners/{partnerId}/option": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description 검색·페이지 범위 밖의 선택값을 표시합니다. 기존 기록의 비활성 거래처도 반환하며 신규 업무 사용 허용을 뜻하지 않습니다. */
+        get: operations["getOption"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/business-partners/{partnerId}/balance-summary": {
         parameters: {
             query?: never;
@@ -1540,6 +1582,23 @@ export interface paths {
             cookie?: never;
         };
         get: operations["getPartnerPage"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/business-partners/options": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description 거래처 선택지를 이름·ID 순으로 검색합니다. 검색·활성·경매장 여부를 페이지 조회 전 적용하며, 조건 생략 시 전체를 포함합니다. page는 0 이상, size는 1~100으로 보정합니다. */
+        get: operations["getOptions"];
         put?: never;
         post?: never;
         delete?: never;
@@ -1635,6 +1694,10 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
+        /**
+         * @deprecated
+         * @description 호환용 목록. 최신 500건만 반환합니다. 운영 목록은 /page, 전체 합계는 /summary를 사용합니다.
+         */
         get: operations["getSettlements"];
         put?: never;
         post?: never;
@@ -1652,6 +1715,40 @@ export interface paths {
             cookie?: never;
         };
         get: operations["getSettlement"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/auction-settlements/summary": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description 조회 조건에 해당하는 전체 정산의 합계. 페이지 크기와 무관하게 집계합니다. */
+        get: operations["getAuctionSettlementSummary"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/auction-settlements/page": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description 정산 요약의 서버 페이지 목록. page는 0 이상, size는 1~100으로 보정합니다. 상세 행은 단건 API에서 조회합니다. */
+        get: operations["getAuctionSettlementPage"];
         put?: never;
         post?: never;
         delete?: never;
@@ -3514,6 +3611,21 @@ export interface components {
             memo?: string;
             createdBy?: string;
         };
+        ApiResponsePageResponsePartnerPaymentEventResponse: {
+            data?: components["schemas"]["PageResponsePartnerPaymentEventResponse"];
+            message?: string;
+        };
+        PageResponsePartnerPaymentEventResponse: {
+            content?: components["schemas"]["PartnerPaymentEventResponse"][];
+            /** Format: int32 */
+            page?: number;
+            /** Format: int32 */
+            size?: number;
+            /** Format: int64 */
+            totalElements?: number;
+            /** Format: int32 */
+            totalPages?: number;
+        };
         ApiResponseListOrchidGroupWorkHistoryResponse: {
             data?: components["schemas"]["OrchidGroupWorkHistoryResponse"][];
             message?: string;
@@ -3841,6 +3953,16 @@ export interface components {
             data?: components["schemas"]["BusinessPartnerResponse"][];
             message?: string;
         };
+        ApiResponseBusinessPartnerOptionResponse: {
+            data?: components["schemas"]["BusinessPartnerOptionResponse"];
+            message?: string;
+        };
+        BusinessPartnerOptionResponse: {
+            /** Format: int64 */
+            id?: number;
+            name?: string;
+            active?: boolean;
+        };
         ApiResponsePartnerBalanceSummaryResponse: {
             data?: components["schemas"]["PartnerBalanceSummaryResponse"];
             message?: string;
@@ -3862,6 +3984,21 @@ export interface components {
         };
         PageResponseBusinessPartnerResponse: {
             content?: components["schemas"]["BusinessPartnerResponse"][];
+            /** Format: int32 */
+            page?: number;
+            /** Format: int32 */
+            size?: number;
+            /** Format: int64 */
+            totalElements?: number;
+            /** Format: int32 */
+            totalPages?: number;
+        };
+        ApiResponsePageResponseBusinessPartnerOptionResponse: {
+            data?: components["schemas"]["PageResponseBusinessPartnerOptionResponse"];
+            message?: string;
+        };
+        PageResponseBusinessPartnerOptionResponse: {
+            content?: components["schemas"]["BusinessPartnerOptionResponse"][];
             /** Format: int32 */
             page?: number;
             /** Format: int32 */
@@ -3911,6 +4048,48 @@ export interface components {
         ApiResponseListAuctionSettlementResponse: {
             data?: components["schemas"]["AuctionSettlementResponse"][];
             message?: string;
+        };
+        ApiResponseAuctionSettlementSummaryResponse: {
+            data?: components["schemas"]["AuctionSettlementSummaryResponse"];
+            message?: string;
+        };
+        AuctionSettlementSummaryResponse: {
+            /** Format: int64 */
+            expectedDepositAmount?: number;
+            /** Format: int64 */
+            remainingAmount?: number;
+        };
+        ApiResponsePageResponseAuctionSettlementListItemResponse: {
+            data?: components["schemas"]["PageResponseAuctionSettlementListItemResponse"];
+            message?: string;
+        };
+        AuctionSettlementListItemResponse: {
+            /** Format: int64 */
+            id?: number;
+            /** Format: int64 */
+            auctionHouseId?: number;
+            auctionHouseName?: string;
+            /** Format: date */
+            auctionDate?: string;
+            /** Format: int64 */
+            grossAmount?: number;
+            /** Format: int64 */
+            expectedDepositAmount?: number;
+            /** Format: int64 */
+            remainingAmount?: number;
+            /** @enum {string} */
+            status?: "CREATED" | "PAYMENT_WAITING" | "PARTIALLY_PAID" | "PAID" | "AMOUNT_MISMATCH" | "REVIEW_REQUIRED" | "CANCELLED";
+        };
+        PageResponseAuctionSettlementListItemResponse: {
+            content?: components["schemas"]["AuctionSettlementListItemResponse"][];
+            /** Format: int32 */
+            page?: number;
+            /** Format: int32 */
+            size?: number;
+            /** Format: int64 */
+            totalElements?: number;
+            /** Format: int32 */
+            totalPages?: number;
         };
         ApiResponsePageResponseAuctionLotResponse: {
             data?: components["schemas"]["PageResponseAuctionLotResponse"];
@@ -6507,6 +6686,33 @@ export interface operations {
             };
         };
     };
+    getPaymentEventPage: {
+        parameters: {
+            query?: {
+                partnerId?: number;
+                targetType?: "SALES_SLIP" | "AUCTION_SETTLEMENT" | "NONE";
+                targetId?: number;
+                eventType?: "PAYMENT_RECEIVED" | "PAYMENT_ALLOCATED" | "PREPAYMENT_RECEIVED" | "CREDIT_APPLIED" | "CREDIT_REFUND" | "AUTO_MATCH_CANDIDATE" | "AUTO_MATCH_CONFIRMED" | "MANUAL_MATCH_CONFIRMED" | "MATCH_REJECTED" | "PAYMENT_UNLINKED" | "ADJUSTMENT";
+                page?: number;
+                size?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiResponsePageResponsePartnerPaymentEventResponse"];
+                };
+            };
+        };
+    };
     getOrchidGroupHistory: {
         parameters: {
             query?: never;
@@ -6798,6 +7004,28 @@ export interface operations {
             };
         };
     };
+    getOption: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                partnerId: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiResponseBusinessPartnerOptionResponse"];
+                };
+            };
+        };
+    };
     getBalance: {
         parameters: {
             query?: never;
@@ -6842,6 +7070,32 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ApiResponsePageResponseBusinessPartnerResponse"];
+                };
+            };
+        };
+    };
+    getOptions: {
+        parameters: {
+            query?: {
+                keyword?: string;
+                auctionHouse?: boolean;
+                active?: boolean;
+                page?: number;
+                size?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiResponsePageResponseBusinessPartnerOptionResponse"];
                 };
             };
         };
@@ -6994,6 +7248,58 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ApiResponseAuctionSettlementResponse"];
+                };
+            };
+        };
+    };
+    getAuctionSettlementSummary: {
+        parameters: {
+            query?: {
+                auctionHouseId?: number;
+                from?: string;
+                to?: string;
+                status?: "CREATED" | "PAYMENT_WAITING" | "PARTIALLY_PAID" | "PAID" | "AMOUNT_MISMATCH" | "REVIEW_REQUIRED" | "CANCELLED";
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiResponseAuctionSettlementSummaryResponse"];
+                };
+            };
+        };
+    };
+    getAuctionSettlementPage: {
+        parameters: {
+            query?: {
+                auctionHouseId?: number;
+                from?: string;
+                to?: string;
+                status?: "CREATED" | "PAYMENT_WAITING" | "PARTIALLY_PAID" | "PAID" | "AMOUNT_MISMATCH" | "REVIEW_REQUIRED" | "CANCELLED";
+                page?: number;
+                size?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiResponsePageResponseAuctionSettlementListItemResponse"];
                 };
             };
         };

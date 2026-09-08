@@ -8,7 +8,6 @@ import jakarta.persistence.Id;
 import jakarta.persistence.SequenceGenerator;
 import jakarta.persistence.Table;
 import java.time.LocalDateTime;
-import java.time.ZoneOffset;
 import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -21,7 +20,8 @@ public class OrchidGroupCollectionMember {
 
 	@Id
 	@GeneratedValue(strategy = GenerationType.SEQUENCE, generator = "orchid_group_collection_members_id_seq")
-	@SequenceGenerator(name = "orchid_group_collection_members_id_seq", sequenceName = "orchid_group_collection_members_id_seq", allocationSize = 50)
+	@SequenceGenerator(name = "orchid_group_collection_members_id_seq",
+			sequenceName = "orchid_group_collection_members_id_seq", allocationSize = 50)
 	private Long id;
 
 	@Column(name = "collection_id", nullable = false)
@@ -39,16 +39,18 @@ public class OrchidGroupCollectionMember {
 	@Column(name = "created_by", length = 100)
 	private String createdBy;
 
-	public OrchidGroupCollectionMember(Long collectionId, Long orchidGroupId, String createdBy) {
+	public OrchidGroupCollectionMember(Long collectionId, Long orchidGroupId, String createdBy,
+			LocalDateTime joinedAt) {
 		this.collectionId = collectionId;
 		this.orchidGroupId = orchidGroupId;
 		this.createdBy = createdBy;
-		this.joinedAt = LocalDateTime.now(ZoneOffset.UTC);
+		this.joinedAt = joinedAt;
 	}
 
-	public void remove() {
-		if (removedAt == null) {
-			removedAt = LocalDateTime.now(ZoneOffset.UTC);
+	public void remove(LocalDateTime removedAt) {
+		if (this.removedAt == null) {
+			this.removedAt = removedAt;
 		}
 	}
+
 }

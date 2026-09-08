@@ -44,6 +44,7 @@ FRONTEND_ORIGIN_PATTERNS=http://localhost:*,http://127.0.0.1:*
 - `DEMO_MODE=true`이면 세션 없이 모든 API 요청에 `demo`, `ROLE_DEMO` 인증 주체를 적용한다.
 - 요청 본문의 작업자·생성자 값은 데모 환경에서 `demo`로 덮어쓴다.
 - 로그인과 로그아웃, 작업 유형 변경, 거래처 정산 설정 변경은 차단한다.
+- 정산 설정 변경은 실제 `/api/business-partners/{partnerId}/settlement-settings` 경로에서 차단한다. 같은 경로의 조회는 허용한다.
 - 읽기·쓰기 요청 한도와 요청 본문 크기 제한을 적용한다.
 - `AUTH_ENABLED=false`는 데모 모드가 아니라 테스트용 인증 비활성화 설정이다.
 - 프론트엔드는 로그인 화면을 우회하고 상단에 데이터 초기화 안내를 표시한다.
@@ -55,6 +56,9 @@ FRONTEND_ORIGIN_PATTERNS=http://localhost:*,http://127.0.0.1:*
 - `/api/work-types/**`: `ADMIN` 전용
 - 그 외 `/api/**`: 로그인 필요
 - `/actuator/health`, Swagger/OpenAPI 문서: 공개
+
+계정 저장소를 변경할 때는 `UserDetailsService` Bean을 제공한다. 기본 환경변수 계정은
+별도 계정 조회 구현이 없는 경우에만 구성하며, 세션 방식과 업무 모듈은 유지한다.
 
 프론트엔드는 루트 Server Component에서 `/api/auth/context`를 조회하고 모든 입력 폼의
 기본 날짜에 `businessDate`를 사용한다. 브라우저의 UTC 날짜를 업무일자로 사용하지 않는다.

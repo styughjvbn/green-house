@@ -7,9 +7,12 @@ import org.springframework.data.jpa.repository.JpaRepository;
 
 public interface OrchidGroupLineageRepository extends JpaRepository<OrchidGroupLineage, Long> {
 
-	@EntityGraph(attributePaths = {"sourceOrchidGroup", "resultOrchidGroup"})
+	@EntityGraph(attributePaths = { "sourceOrchidGroup", "resultOrchidGroup" })
 	List<OrchidGroupLineage> findBySourceOrchidGroupIdOrderByCreatedAtAscIdAsc(Long orchidGroupId);
 
-	@EntityGraph(attributePaths = {"sourceOrchidGroup", "resultOrchidGroup"})
+	@EntityGraph(attributePaths = { "sourceOrchidGroup", "resultOrchidGroup" })
 	List<OrchidGroupLineage> findByResultOrchidGroupIdOrderByCreatedAtAscIdAsc(Long orchidGroupId);
+
+	long countByMutationIdIsNull();
+
 }

@@ -13,32 +13,32 @@ import java.util.stream.Stream;
 import org.junit.jupiter.api.Test;
 
 class ModularArchitectureTests {
+
 	private static final Path SOURCE_ROOT = Path.of("src/main/java/com/greenhouse/backend");
-	private static final Set<String> MODULES = Set.of(
-		"common", "audit", "farm", "work", "partner", "sales", "auction", "settlement", "dashboard", "print",
-		"analytics", "auth", "demo");
-	private static final Set<String> LAYERED_MODULES = Set.of(
-		"audit", "farm", "work", "partner", "sales", "auction", "settlement", "dashboard", "print", "analytics");
-	private static final Set<String> STANDARD_LAYERS = Set.of(
-		"domain", "repository", "application", "controller", "dto");
-	private static final Map<String, Set<String>> ALLOWED_DEPENDENCIES = Map.ofEntries(
-		Map.entry("common", Set.of()),
-		Map.entry("audit", Set.of("common")),
-		Map.entry("farm", Set.of("common", "work", "audit")),
-		Map.entry("work", Set.of("common")),
-		Map.entry("partner", Set.of("common", "audit")),
-		Map.entry("sales", Set.of("common", "audit", "auction", "farm", "partner", "settlement")),
-		Map.entry("auction", Set.of("common", "partner")),
-		Map.entry("settlement", Set.of("common", "audit", "auction", "partner")),
-		Map.entry("dashboard", Set.of("common", "farm")),
-		Map.entry("print", Set.of("common", "sales")),
-		Map.entry("analytics", Set.of("common", "farm", "partner", "sales", "settlement", "work")),
-		Map.entry("auth", Set.of("common", "demo")),
-		Map.entry("demo", Set.of()));
-	private static final Pattern MODULE_IMPORT = Pattern.compile(
-		"\\bimport\\s+(?:static\\s+)?com\\.greenhouse\\.backend\\.([a-z]+)\\.");
-	private static final Pattern REPOSITORY_IMPORT = Pattern.compile(
-		"\\bimport\\s+(?:static\\s+)?com\\.greenhouse\\.backend\\.([a-z]+)\\.repository\\.");
+
+	private static final Set<String> MODULES = Set.of("common", "audit", "farm", "work", "partner", "sales", "auction",
+			"settlement", "dashboard", "print", "analytics", "auth", "demo");
+
+	private static final Set<String> LAYERED_MODULES = Set.of("audit", "farm", "work", "partner", "sales", "auction",
+			"settlement", "dashboard", "print", "analytics");
+
+	private static final Set<String> STANDARD_LAYERS = Set.of("domain", "repository", "application", "controller",
+			"dto");
+	static final Map<String, Set<String>> ALLOWED_DEPENDENCIES = Map.ofEntries(Map.entry("common", Set.of()),
+			Map.entry("audit", Set.of("common")), Map.entry("farm", Set.of("common", "work", "audit")),
+			Map.entry("work", Set.of("common")), Map.entry("partner", Set.of("common", "audit")),
+			Map.entry("sales", Set.of("common", "audit", "auction", "farm", "partner", "settlement")),
+			Map.entry("auction", Set.of("common", "partner")),
+			Map.entry("settlement", Set.of("common", "audit", "auction", "partner")),
+			Map.entry("dashboard", Set.of("common", "farm")), Map.entry("print", Set.of("common", "sales")),
+			Map.entry("analytics", Set.of("common", "farm", "partner", "sales", "settlement", "work")),
+			Map.entry("auth", Set.of("common", "demo")), Map.entry("demo", Set.of("common")));
+
+	private static final Pattern MODULE_IMPORT = Pattern
+		.compile("\\bimport\\s+(?:static\\s+)?com\\.greenhouse\\.backend\\.([a-z]+)\\.");
+
+	private static final Pattern REPOSITORY_IMPORT = Pattern
+		.compile("\\bimport\\s+(?:static\\s+)?com\\.greenhouse\\.backend\\.([a-z]+)\\.repository\\.");
 
 	@Test
 	void moduleRootsAndLayersAreExplicit() throws IOException {
@@ -46,11 +46,11 @@ class ModularArchitectureTests {
 			Path moduleRoot = SOURCE_ROOT.resolve(module);
 			assertThat(moduleRoot).isDirectory();
 			assertThat(moduleRoot.resolve("package-info.java")).exists();
-			if (!LAYERED_MODULES.contains(module)) continue;
+			if (!LAYERED_MODULES.contains(module))
+				continue;
 
 			try (Stream<Path> files = Files.walk(moduleRoot)) {
-				List<Path> misplaced = files
-					.filter(path -> path.toString().endsWith(".java"))
+				List<Path> misplaced = files.filter(path -> path.toString().endsWith(".java"))
 					.filter(path -> !path.getFileName().toString().equals("package-info.java"))
 					.filter(path -> {
 						Path relative = moduleRoot.relativize(path);
@@ -69,7 +69,8 @@ class ModularArchitectureTests {
 				var matcher = MODULE_IMPORT.matcher(Files.readString(source));
 				while (matcher.find()) {
 					String dependency = matcher.group(1);
-					if (dependency.equals(module)) continue;
+					if (dependency.equals(module))
+						continue;
 					assertThat(ALLOWED_DEPENDENCIES.get(module))
 						.as("Undeclared dependency %s -> %s in %s", module, dependency, source)
 						.contains(dependency);
@@ -87,15 +88,14 @@ class ModularArchitectureTests {
 
 	@Test
 	void farmLayersAreGroupedByFeature() throws IOException {
-		String[] allFeatures = {
-				"structure", "status", "orchid", "collection", "inbound", "variety", "material", "transformation"
-		};
+		String[] allFeatures = { "structure", "status", "orchid", "collection", "inbound", "variety", "material",
+				"transformation" };
 		assertFeaturePackages("farm", "application", allFeatures);
 		assertFeaturePackages("farm", "domain", allFeatures);
 		assertFeaturePackages("farm", "controller", allFeatures);
 		assertFeaturePackages("farm", "dto", allFeatures);
-		assertFeaturePackages("farm", "repository",
-				"structure", "orchid", "collection", "inbound", "variety", "material", "transformation");
+		assertFeaturePackages("farm", "repository", "structure", "orchid", "collection", "inbound", "variety",
+				"material", "transformation");
 	}
 
 	@Test
@@ -128,16 +128,41 @@ class ModularArchitectureTests {
 		assertNoImports("controller", ".repository.");
 	}
 
+	@Test
+	void regressionTestsCannotBeSilentlyDisabled() throws IOException {
+		var disabled = Pattern.compile("@" + "Disabled(?:\\(|\\s)|disabledWithoutDocker\\s*=\\s*true");
+		for (Path source : javaSources(Path.of("src/test/java"))) {
+			assertThat(disabled.matcher(Files.readString(source)).find())
+				.as("Restore deterministic fixtures instead of disabling %s", source)
+				.isFalse();
+		}
+	}
+
+	@Test
+	void javaImportsHaveOneConsistentOrder() throws IOException {
+		for (Path root : List.of(Path.of("src/main/java"), Path.of("src/test/java"))) {
+			for (Path source : javaSources(root)) {
+				var imports = Files.readAllLines(source).stream().filter(line -> line.startsWith("import ")).toList();
+				var ordered = imports.stream()
+					.distinct()
+					.sorted(java.util.Comparator.comparing((String value) -> !value.startsWith("import static "))
+						.thenComparing(java.util.Comparator.naturalOrder()))
+					.toList();
+				assertThat(imports).as("Static imports first, then alphabetical imports: %s", source)
+					.isEqualTo(ordered);
+			}
+		}
+	}
+
 	private void assertNoImports(String layer, String... forbiddenFragments) throws IOException {
 		for (String module : MODULES) {
 			Path layerRoot = SOURCE_ROOT.resolve(module).resolve(layer);
-			if (!Files.isDirectory(layerRoot)) continue;
+			if (!Files.isDirectory(layerRoot))
+				continue;
 			for (Path source : javaSources(layerRoot)) {
 				String content = Files.readString(source);
 				for (String fragment : forbiddenFragments) {
-					assertThat(content)
-						.as("Forbidden %s dependency in %s", fragment, source)
-						.doesNotContain(fragment);
+					assertThat(content).as("Forbidden %s dependency in %s", fragment, source).doesNotContain(fragment);
 				}
 			}
 		}
@@ -147,8 +172,8 @@ class ModularArchitectureTests {
 		Path layerRoot = SOURCE_ROOT.resolve(module).resolve(layer);
 		try (Stream<Path> entries = Files.list(layerRoot)) {
 			assertThat(entries.map(path -> path.getFileName().toString()).toList())
-					.as("Unexpected package in %s/%s", module, layer)
-					.containsExactlyInAnyOrder(expectedPackages);
+				.as("Unexpected package in %s/%s", module, layer)
+				.containsExactlyInAnyOrder(expectedPackages);
 		}
 	}
 
@@ -159,10 +184,13 @@ class ModularArchitectureTests {
 	}
 
 	private boolean reaches(String current, String target, Set<String> visited) {
-		if (!visited.add(current)) return false;
+		if (!visited.add(current))
+			return false;
 		for (String dependency : ALLOWED_DEPENDENCIES.get(current)) {
-			if (dependency.equals(target) || reaches(dependency, target, visited)) return true;
+			if (dependency.equals(target) || reaches(dependency, target, visited))
+				return true;
 		}
 		return false;
 	}
+
 }

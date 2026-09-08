@@ -3,8 +3,8 @@ package com.greenhouse.backend.work.controller;
 import com.greenhouse.backend.common.api.ApiResponse;
 import com.greenhouse.backend.work.application.operation.WorkTypeService;
 import com.greenhouse.backend.work.dto.operation.WorkTypeCreateRequest;
-import com.greenhouse.backend.work.dto.operation.WorkTypeReorderRequest;
 import com.greenhouse.backend.work.dto.operation.WorkTypeMetadataResponse;
+import com.greenhouse.backend.work.dto.operation.WorkTypeReorderRequest;
 import com.greenhouse.backend.work.dto.operation.WorkTypeResponse;
 import com.greenhouse.backend.work.dto.operation.WorkTypeUpdateRequest;
 import jakarta.validation.Valid;
@@ -46,15 +46,14 @@ public class WorkTypeController {
 	}
 
 	@PatchMapping("/{workTypeId}")
-	public ApiResponse<WorkTypeResponse> updateWorkType(
-			@PathVariable Long workTypeId,
+	public ApiResponse<WorkTypeResponse> updateWorkType(@PathVariable Long workTypeId,
 			@Valid @RequestBody WorkTypeUpdateRequest request) {
 		return ApiResponse.ok(workTypeService.update(workTypeId, request));
 	}
 
 	@PatchMapping("/reorder")
-	public ApiResponse<List<WorkTypeResponse>> reorderWorkTypes(
-			@Valid @RequestBody WorkTypeReorderRequest request) {
+	public ApiResponse<List<WorkTypeResponse>> reorderWorkTypes(@Valid @RequestBody WorkTypeReorderRequest request) {
 		return ApiResponse.ok(workTypeService.reorder(request));
 	}
+
 }

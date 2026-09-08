@@ -1,21 +1,16 @@
 package com.greenhouse.backend.sales.domain;
 
-import com.greenhouse.backend.auction.domain.AuctionShipment;
 import com.greenhouse.backend.common.domain.BaseEntity;
-import com.greenhouse.backend.partner.domain.BusinessPartner;
 import jakarta.persistence.CascadeType;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
 import jakarta.persistence.Enumerated;
-import jakarta.persistence.FetchType;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
-import jakarta.persistence.SequenceGenerator;
-import jakarta.persistence.JoinColumn;
-import jakarta.persistence.ManyToOne;
 import jakarta.persistence.OneToMany;
+import jakarta.persistence.SequenceGenerator;
 import jakarta.persistence.Table;
 import jakarta.persistence.Version;
 import java.time.LocalDate;
@@ -30,9 +25,13 @@ import lombok.NoArgsConstructor;
 @Entity
 @Table(name = "sales_slips")
 public class SalesSlip extends BaseEntity {
+
 	public static final String STATUS_DRAFT = "작성중";
+
 	public static final String STATUS_DIRECT_OUTBOUND_COMPLETED = "출고 완료";
+
 	public static final String STATUS_AUCTION_SHIPMENT_COMPLETED = "출하 완료";
+
 	public static final String STATUS_CANCELED = "취소";
 
 	@Id
@@ -54,13 +53,11 @@ public class SalesSlip extends BaseEntity {
 	@Column(name = "sales_type")
 	private SalesType salesType;
 
-	@ManyToOne(fetch = FetchType.LAZY)
-	@JoinColumn(name = "auction_shipment_id", unique = true)
-	private AuctionShipment auctionShipment;
+	@Column(name = "auction_shipment_id", unique = true)
+	private Long auctionShipmentId;
 
-	@ManyToOne(fetch = FetchType.LAZY, optional = false)
-	@JoinColumn(name = "partner_id", nullable = false)
-	private BusinessPartner partner;
+	@Column(name = "partner_id", nullable = false)
+	private Long partnerId;
 
 	@Column(name = "total_amount", nullable = false)
 	private Integer totalAmount;
@@ -89,21 +86,13 @@ public class SalesSlip extends BaseEntity {
 	@OneToMany(mappedBy = "salesSlip", cascade = CascadeType.ALL, orphanRemoval = true)
 	private List<SalesSlipItem> items = new ArrayList<>();
 
-	public SalesSlip(
-			String slipNumber,
-			LocalDate saleDate,
-			SalesType salesType,
-			AuctionShipment auctionShipment,
-			BusinessPartner partner,
-			String paymentStatus,
-			String salesStatus,
-			String paymentMethod,
-			String memo) {
+	public SalesSlip(String slipNumber, LocalDate saleDate, SalesType salesType, Long auctionShipmentId, Long partnerId,
+			String paymentStatus, String salesStatus, String paymentMethod, String memo) {
 		this.slipNumber = slipNumber;
 		this.saleDate = saleDate;
 		this.salesType = salesType;
-		this.auctionShipment = auctionShipment;
-		this.partner = partner;
+		this.auctionShipmentId = auctionShipmentId;
+		this.partnerId = partnerId;
 		this.paymentStatus = paymentStatus;
 		this.salesStatus = validateInitialSalesStatus(salesType, salesStatus);
 		this.paymentMethod = paymentMethod;
@@ -130,14 +119,10 @@ public class SalesSlip extends BaseEntity {
 		recalculateAmounts();
 	}
 
-	public void updateDraftInfo(
-			LocalDate saleDate,
-			BusinessPartner partner,
-			String paymentStatus,
-			String paymentMethod,
+	public void updateDraftInfo(LocalDate saleDate, Long partnerId, String paymentStatus, String paymentMethod,
 			String memo) {
 		this.saleDate = saleDate;
-		this.partner = partner;
+		this.partnerId = partnerId;
 		this.paymentStatus = paymentStatus;
 		this.paymentMethod = paymentMethod;
 		this.memo = memo;
@@ -148,6 +133,7 @@ public class SalesSlip extends BaseEntity {
 	}
 
 	public void recordPayment(Long amount) {
+		validatePaymentTarget();
 		if (amount <= 0) {
 			throw new IllegalArgumentException("입금액은 0보다 커야 합니다.");
 		}
@@ -157,6 +143,52 @@ public class SalesSlip extends BaseEntity {
 		this.paidAmount = getPaidAmount() + amount;
 		this.remainingAmount = Math.max(0L, totalAmount.longValue() - paidAmount);
 		this.paymentStatus = remainingAmount == 0 ? "입금 완료" : "부분입금";
+	}
+
+	public boolean canEdit(boolean hasPaymentEvent) {
+		return editRejectionReason(hasPaymentEvent) == null;
+	}
+
+	public void requireEditable(boolean hasPaymentEvent) {
+		String reason = editRejectionReason(hasPaymentEvent);
+		if (reason != null)
+			throw new IllegalArgumentException(reason);
+	}
+
+	private String editRejectionReason(boolean hasPaymentEvent) {
+		if (salesType != SalesType.DIRECT)
+			return "경매 판매 전표 수정은 아직 지원하지 않습니다.";
+		if (!STATUS_DRAFT.equals(salesStatus))
+			return "작성중 상태 전표만 수정할 수 있습니다.";
+		if (hasPaymentEvent || (paidAmount != null && paidAmount > 0))
+			return "입금 이력이 있는 전표는 수정할 수 없습니다.";
+		return null;
+	}
+
+	public boolean canComplete() {
+		return STATUS_DRAFT.equals(salesStatus);
+	}
+
+	public boolean canConfirmPayment() {
+		return paymentTargetRejectionReason() == null && remainingAmount != null && remainingAmount > 0;
+	}
+
+	// 잔액 검사는 새 입금에만 적용한다. 완납 후에도 기존 입금의 재요청은 확인할 수 있다.
+	public void validatePaymentTarget() {
+		String reason = paymentTargetRejectionReason();
+		if (reason != null) {
+			throw new IllegalArgumentException(reason);
+		}
+	}
+
+	private String paymentTargetRejectionReason() {
+		if (salesType != SalesType.DIRECT) {
+			return "경매 판매전표는 경매장 정산에서 입금을 확인해야 합니다.";
+		}
+		if (isCanceled()) {
+			return "취소된 전표는 입금을 확인할 수 없습니다.";
+		}
+		return null;
 	}
 
 	public void updateSalesStatus(String salesStatus) {
@@ -180,12 +212,12 @@ public class SalesSlip extends BaseEntity {
 		return STATUS_CANCELED.equals(salesStatus);
 	}
 
-	public void assignAuctionShipment(AuctionShipment auctionShipment) {
-		this.auctionShipment = auctionShipment;
+	public void assignAuctionShipment(Long auctionShipmentId) {
+		this.auctionShipmentId = auctionShipmentId;
 	}
 
 	public void clearAuctionShipment() {
-		this.auctionShipment = null;
+		this.auctionShipmentId = null;
 	}
 
 	public boolean isOutboundCompleted() {
@@ -210,9 +242,7 @@ public class SalesSlip extends BaseEntity {
 		if (salesType == null) {
 			throw new IllegalArgumentException("판매 유형이 필요합니다.");
 		}
-		return salesType == SalesType.DIRECT
-				? STATUS_DIRECT_OUTBOUND_COMPLETED
-				: STATUS_AUCTION_SHIPMENT_COMPLETED;
+		return salesType == SalesType.DIRECT ? STATUS_DIRECT_OUTBOUND_COMPLETED : STATUS_AUCTION_SHIPMENT_COMPLETED;
 	}
 
 	private String normalizeStatus(String salesStatus) {
@@ -221,4 +251,5 @@ public class SalesSlip extends BaseEntity {
 		}
 		return salesStatus.trim();
 	}
+
 }

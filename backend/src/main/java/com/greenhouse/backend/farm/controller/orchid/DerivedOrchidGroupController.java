@@ -21,23 +21,19 @@ public class DerivedOrchidGroupController {
 	private final DerivedOrchidGroupService derivedOrchidGroupService;
 
 	@GetMapping
-	public ApiResponse<List<DerivedOrchidGroupResponse>> getGroups(
-			@RequestParam(required = false) Long varietyId,
-			@RequestParam(required = false) Integer ageYear,
-			@RequestParam(required = false) PotSizeCode potSizeCode,
-			@RequestParam(required = false) Long houseId,
-			@RequestParam(required = false) String status,
+	public ApiResponse<List<DerivedOrchidGroupResponse>> getGroups(@RequestParam(required = false) Long varietyId,
+			@RequestParam(required = false) Integer ageYear, @RequestParam(required = false) PotSizeCode potSizeCode,
+			@RequestParam(required = false) Long houseId, @RequestParam(required = false) String status,
 			@RequestParam(required = false) String keyword) {
-		return ApiResponse.ok(derivedOrchidGroupService.getGroups(
-				varietyId, ageYear, potSizeCode, houseId, status, keyword));
+		return ApiResponse
+			.ok(derivedOrchidGroupService.getGroups(varietyId, ageYear, potSizeCode, houseId, status, keyword));
 	}
 
 	@GetMapping("/{groupKey}/members")
-	public ApiResponse<List<OrchidGroupResponse>> getMembers(
-			@PathVariable String groupKey,
-			@RequestParam(required = false) Long houseId,
-			@RequestParam(required = false) String status,
+	public ApiResponse<List<OrchidGroupResponse>> getMembers(@PathVariable String groupKey,
+			@RequestParam(required = false) Long houseId, @RequestParam(required = false) String status,
 			@RequestParam(required = false) String keyword) {
 		return ApiResponse.ok(derivedOrchidGroupService.getMembers(groupKey, houseId, status, keyword));
 	}
+
 }

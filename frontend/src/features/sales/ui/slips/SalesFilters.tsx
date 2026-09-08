@@ -1,6 +1,6 @@
 ﻿"use client";
 
-import type { BusinessPartner } from "@/entities/farm/types";
+import { BusinessPartnerSelect } from "../common/BusinessPartnerSelect";
 import type { SalesFilterState } from "../../model/types";
 import {
   FilterDateRange,
@@ -13,13 +13,11 @@ import {
 } from "@/shared/ui/FilterControls";
 
 export function SalesFilters({
-  partners,
   filters,
   onChange,
   onReset,
   onSearch,
 }: {
-  partners: BusinessPartner[];
   filters: SalesFilterState;
   onChange: <K extends keyof SalesFilterState>(
     field: K,
@@ -38,18 +36,11 @@ export function SalesFilters({
           onToChange={(value) => onChange("to", value)}
         />
 
-        <FilterSelect
+        <BusinessPartnerSelect
           label="거래처"
           value={filters.partnerId}
           onChange={(value) => onChange("partnerId", value)}
-        >
-          <option value="">전체 거래처</option>
-          {partners.map((partner) => (
-            <option key={partner.id} value={partner.id}>
-              {partner.name}
-            </option>
-          ))}
-        </FilterSelect>
+        />
 
         <FilterSelect
           label="판매 상태"

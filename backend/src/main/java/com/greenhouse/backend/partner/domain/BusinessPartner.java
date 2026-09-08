@@ -10,9 +10,9 @@ import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.SequenceGenerator;
 import jakarta.persistence.Table;
+import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
-import lombok.AccessLevel;
 
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
@@ -22,7 +22,8 @@ public class BusinessPartner extends BaseEntity {
 
 	@Id
 	@GeneratedValue(strategy = GenerationType.SEQUENCE, generator = "business_partners_id_seq")
-	@SequenceGenerator(name = "business_partners_id_seq", sequenceName = "business_partners_id_seq", allocationSize = 50)
+	@SequenceGenerator(name = "business_partners_id_seq", sequenceName = "business_partners_id_seq",
+			allocationSize = 50)
 	private Long id;
 
 	@Column(nullable = false)
@@ -46,12 +47,7 @@ public class BusinessPartner extends BaseEntity {
 	@Column(name = "is_active", nullable = false)
 	private boolean active;
 
-	public BusinessPartner(
-			String name,
-			PartnerType partnerType,
-			String ownerName,
-			String phone,
-			String address,
+	public BusinessPartner(String name, PartnerType partnerType, String ownerName, String phone, String address,
 			String memo) {
 		this.name = name;
 		this.partnerType = partnerType;
@@ -62,12 +58,7 @@ public class BusinessPartner extends BaseEntity {
 		this.active = true;
 	}
 
-	public void update(
-			String name,
-			PartnerType partnerType,
-			String ownerName,
-			String phone,
-			String address,
+	public void update(String name, PartnerType partnerType, String ownerName, String phone, String address,
 			String memo) {
 		this.name = name;
 		this.partnerType = partnerType;
@@ -76,4 +67,5 @@ public class BusinessPartner extends BaseEntity {
 		this.address = address;
 		this.memo = memo;
 	}
+
 }

@@ -1,23 +1,21 @@
 package com.greenhouse.backend.settlement.domain;
 
 import com.greenhouse.backend.common.domain.BaseEntity;
-import com.greenhouse.backend.partner.domain.BusinessPartner;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.FetchType;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
-import jakarta.persistence.SequenceGenerator;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.OneToOne;
+import jakarta.persistence.SequenceGenerator;
 import jakarta.persistence.Table;
 import jakarta.persistence.Version;
+import java.util.Map;
+import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
-import lombok.AccessLevel;
-
-import java.util.Map;
 import org.hibernate.annotations.JdbcTypeCode;
 import org.hibernate.type.SqlTypes;
 
@@ -26,18 +24,19 @@ import org.hibernate.type.SqlTypes;
 @Entity
 @Table(name = "partner_balance_summaries")
 public class PartnerBalanceSummary extends BaseEntity {
+
 	@Id
 	@GeneratedValue(strategy = GenerationType.SEQUENCE, generator = "partner_balance_summaries_id_seq")
-	@SequenceGenerator(name = "partner_balance_summaries_id_seq", sequenceName = "partner_balance_summaries_id_seq", allocationSize = 50)
+	@SequenceGenerator(name = "partner_balance_summaries_id_seq", sequenceName = "partner_balance_summaries_id_seq",
+			allocationSize = 50)
 	private Long id;
 
 	@Version
 	@Column(nullable = false)
 	private Long version;
 
-	@OneToOne(fetch = FetchType.LAZY, optional = false)
-	@JoinColumn(name = "partner_id", nullable = false, unique = true)
-	private BusinessPartner partner;
+	@Column(name = "partner_id", nullable = false, unique = true)
+	private Long partnerId;
 
 	@Column(name = "credit_balance", nullable = false)
 	private Long creditBalance;
@@ -57,8 +56,8 @@ public class PartnerBalanceSummary extends BaseEntity {
 	@Column(name = "summary_json", columnDefinition = "jsonb")
 	private Map<String, Object> summaryJson;
 
-	public PartnerBalanceSummary(BusinessPartner partner) {
-		this.partner = partner;
+	public PartnerBalanceSummary(Long partnerId) {
+		this.partnerId = partnerId;
 		this.creditBalance = 0L;
 		this.unappliedPaymentAmount = 0L;
 		this.receivableBalance = 0L;
@@ -69,4 +68,5 @@ public class PartnerBalanceSummary extends BaseEntity {
 		if (lastPaymentEvent != null)
 			this.lastPaymentEvent = lastPaymentEvent;
 	}
+
 }

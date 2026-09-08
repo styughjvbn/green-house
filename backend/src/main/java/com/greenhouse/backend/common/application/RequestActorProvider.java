@@ -7,12 +7,11 @@ import org.springframework.stereotype.Component;
 public class RequestActorProvider {
 
 	private final boolean demoMode;
+
 	private final String demoUsername;
 
-	public RequestActorProvider(
-			@Value("${app.demo.enabled:false}") boolean demoMode,
-			@Value("${app.demo.username:demo}") String demoUsername
-	) {
+	public RequestActorProvider(@Value("${app.demo.enabled:false}") boolean demoMode,
+			@Value("${app.demo.username:demo}") String demoUsername) {
 		this.demoMode = demoMode;
 		this.demoUsername = demoUsername;
 	}
@@ -26,4 +25,5 @@ public class RequestActorProvider {
 		}
 		return requestedActor.trim();
 	}
+
 }

@@ -8,8 +8,9 @@ import org.springframework.data.jpa.repository.JpaRepository;
 
 public interface WorkOperationCorrectionRepository extends JpaRepository<WorkOperationCorrection, Long> {
 
-	@EntityGraph(attributePaths = {"originalWorkOperation", "correctionWorkOperation"})
+	@EntityGraph(attributePaths = { "originalWorkOperation", "correctionWorkOperation" })
 	List<WorkOperationCorrection> findByOriginalWorkOperationIdOrderByCreatedAtAscIdAsc(Long originalWorkOperationId);
 
 	Optional<WorkOperationCorrection> findByCorrectionWorkOperationId(Long correctionWorkOperationId);
+
 }

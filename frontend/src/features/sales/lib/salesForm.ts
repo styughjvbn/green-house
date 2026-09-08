@@ -57,17 +57,11 @@ export function createEmptySalesItem(): SalesItemForm {
   };
 }
 
-export function createInitialSalesForm(
-  partners: BusinessPartner[],
-  businessDate: string,
-): SalesSlipForm {
-  const directPartner = partners.find(
-    (partner) => partner.partnerType !== "AUCTION_HOUSE",
-  );
+export function createInitialSalesForm(businessDate: string): SalesSlipForm {
   return {
     salesType: "DIRECT",
     saleDate: businessDate,
-    partnerId: directPartner ? String(directPartner.id) : "",
+    partnerId: "",
     paymentStatus: "미입금",
     salesStatus: "작성중",
     paymentMethod: "",

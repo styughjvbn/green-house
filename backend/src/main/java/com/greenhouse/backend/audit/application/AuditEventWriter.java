@@ -13,83 +13,43 @@ import org.springframework.stereotype.Component;
 @Component
 @RequiredArgsConstructor
 public class AuditEventWriter {
+
 	private final AuditRecorder auditRecorder;
+
 	private final AuditRequestContext requestContext;
 
-	public Long record(
-			AuditAction action,
-			AuditSource source,
-			String entityType,
-			Long entityId,
-			Map<String, Object> beforeData,
-			Map<String, Object> afterData,
-			Map<String, Object> contextData) {
-		return record(action, source, entityType, entityId, null, null, null, null,
-				beforeData, afterData, contextData);
+	public Long record(AuditAction action, AuditSource source, String entityType, Long entityId,
+			Map<String, Object> before, Map<String, Object> after, Map<String, Object> context) {
+		return record(action, source, new AuditEvent.Target(entityType, entityId), before, after, context);
 	}
 
-	public Long recordWithChangedFields(
-			AuditAction action,
-			AuditSource source,
-			String entityType,
-			Long entityId,
-			List<String> changedFields,
-			Map<String, Object> beforeData,
-			Map<String, Object> afterData,
-			Map<String, Object> contextData) {
-		if (changedFields == null || changedFields.isEmpty()) return null;
-		return write(action, source, entityType, entityId, null, null, null, null,
-				List.copyOf(changedFields), beforeData, afterData, contextData);
+	public Long record(AuditAction action, AuditSource source, AuditEvent.Target target, Map<String, Object> before,
+			Map<String, Object> after, Map<String, Object> context) {
+		return recordChanges(action, source, target, detectChanges(before, after), before, after, context);
 	}
 
-	public Long record(
-			AuditAction action,
-			AuditSource source,
-			String entityType,
-			Long entityId,
-			Long houseId,
-			Long physicalBedId,
-			Long zoneId,
-			Long varietyId,
-			Map<String, Object> beforeData,
-			Map<String, Object> afterData,
-			Map<String, Object> contextData) {
-		List<String> changedFields = detectChanges(beforeData, afterData);
-		if (changedFields.isEmpty()) return null;
-		return write(action, source, entityType, entityId, houseId, physicalBedId, zoneId, varietyId,
-				changedFields, beforeData, afterData, contextData);
-	}
-
-	private Long write(
-			AuditAction action,
-			AuditSource source,
-			String entityType,
-			Long entityId,
-			Long houseId,
-			Long physicalBedId,
-			Long zoneId,
-			Long varietyId,
-			List<String> changedFields,
-			Map<String, Object> beforeData,
-			Map<String, Object> afterData,
-			Map<String, Object> contextData) {
-		var identity = requestContext.current();
-		return auditRecorder.record(new AuditEvent(identity.actorId(), identity.sessionId(),
-				identity.clientInstanceId(), identity.requestId(), action, source, entityType, entityId,
-				houseId, physicalBedId, zoneId, varietyId, changedFields, beforeData, afterData,
-				contextData == null ? Map.of() : contextData));
+	public Long recordChanges(AuditAction action, AuditSource source, AuditEvent.Target target,
+			List<String> changedFields, Object before, Object after, Map<String, Object> context) {
+		if (changedFields == null || changedFields.isEmpty())
+			return null;
+		return auditRecorder.record(new AuditEvent(requestContext.current(), action, source, target, changedFields,
+				before, after, context));
 	}
 
 	public List<String> detectChanges(Map<String, Object> beforeData, Map<String, Object> afterData) {
 		var keys = new LinkedHashSet<String>();
-		if (beforeData != null) keys.addAll(beforeData.keySet());
-		if (afterData != null) keys.addAll(afterData.keySet());
+		if (beforeData != null)
+			keys.addAll(beforeData.keySet());
+		if (afterData != null)
+			keys.addAll(afterData.keySet());
 		var changed = new ArrayList<String>();
 		for (String key : keys) {
 			Object before = beforeData == null ? null : beforeData.get(key);
 			Object after = afterData == null ? null : afterData.get(key);
-			if (!Objects.equals(before, after)) changed.add(key);
+			if (!Objects.equals(before, after))
+				changed.add(key);
 		}
 		return List.copyOf(changed);
 	}
+
 }

@@ -8,20 +8,21 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import com.greenhouse.backend.farm.domain.collection.OrchidGroupCollection;
+import com.greenhouse.backend.farm.domain.collection.OrchidGroupCollectionMember;
+import com.greenhouse.backend.farm.domain.orchid.OrchidGroup;
 import com.greenhouse.backend.farm.domain.structure.BedZone;
 import com.greenhouse.backend.farm.domain.structure.BedZoneSide;
 import com.greenhouse.backend.farm.domain.structure.House;
-import com.greenhouse.backend.farm.domain.orchid.OrchidGroup;
-import com.greenhouse.backend.farm.domain.collection.OrchidGroupCollection;
-import com.greenhouse.backend.farm.domain.collection.OrchidGroupCollectionMember;
-import com.greenhouse.backend.farm.domain.transformation.OrchidGroupLineageRelationType;
 import com.greenhouse.backend.farm.domain.structure.PhysicalBed;
+import com.greenhouse.backend.farm.domain.transformation.OrchidGroupLineageRelationType;
 import com.greenhouse.backend.farm.domain.variety.Variety;
 import com.greenhouse.backend.farm.repository.collection.OrchidGroupCollectionMemberRepository;
 import com.greenhouse.backend.farm.repository.collection.OrchidGroupCollectionRepository;
 import com.greenhouse.backend.farm.repository.transformation.OrchidGroupLineageRepository;
 import com.greenhouse.backend.work.domain.effect.WorkEffectOrchidGroupRelationType;
 import com.greenhouse.backend.work.domain.operation.WorkType;
+import com.greenhouse.backend.work.domain.operation.WorkTypeDefinition;
 import com.greenhouse.backend.work.domain.operation.WorkTypeTemplate;
 import com.greenhouse.backend.work.repository.WorkAppliedEffectRepository;
 import com.greenhouse.backend.work.repository.WorkEffectOrchidGroupRepository;
@@ -38,17 +39,34 @@ import org.springframework.transaction.annotation.Transactional;
 @Transactional
 class RepotWorkOperationIntegrationTests extends AbstractBackendIntegrationTest {
 
-	@Autowired private OrchidGroupLineageRepository lineageRepository;
-	@Autowired private OrchidGroupCollectionRepository collectionRepository;
-	@Autowired private OrchidGroupCollectionMemberRepository memberRepository;
-	@Autowired private WorkEffectOrchidGroupRepository effectOrchidGroupRepository;
-	@Autowired private WorkAppliedEffectRepository appliedEffectRepository;
-	@Autowired private WorkTargetExecutionRepository targetExecutionRepository;
-	@Autowired private WorkOperationTargetRepository operationTargetRepository;
-	@Autowired private WorkOperationRepository operationRepository;
+	@Autowired
+	private OrchidGroupLineageRepository lineageRepository;
+
+	@Autowired
+	private OrchidGroupCollectionRepository collectionRepository;
+
+	@Autowired
+	private OrchidGroupCollectionMemberRepository memberRepository;
+
+	@Autowired
+	private WorkEffectOrchidGroupRepository effectOrchidGroupRepository;
+
+	@Autowired
+	private WorkAppliedEffectRepository appliedEffectRepository;
+
+	@Autowired
+	private WorkTargetExecutionRepository targetExecutionRepository;
+
+	@Autowired
+	private WorkOperationTargetRepository operationTargetRepository;
+
+	@Autowired
+	private WorkOperationRepository operationRepository;
 
 	private BedZone bedZone;
+
 	private Variety variety;
+
 	private WorkType repotType;
 
 	@BeforeEach
@@ -58,6 +76,7 @@ class RepotWorkOperationIntegrationTests extends AbstractBackendIntegrationTest 
 		appliedEffectRepository.deleteAll();
 		targetExecutionRepository.deleteAll();
 		operationTargetRepository.deleteAll();
+		workCommandReceiptRepository.deleteAll();
 		operationRepository.deleteAll();
 		memberRepository.deleteAll();
 		collectionRepository.deleteAll();
@@ -68,8 +87,8 @@ class RepotWorkOperationIntegrationTests extends AbstractBackendIntegrationTest 
 		houseRepository.deleteAll();
 		workTypeRepository.deleteAll();
 
-		repotType = workTypeRepository.save(new WorkType(
-				WorkType.REPOT_CODE, "분갈이", WorkTypeTemplate.REPOT, true, true, true, 1));
+		repotType = workTypeRepository
+			.save(new WorkType(WorkTypeDefinition.REPOT.name(), "분갈이", WorkTypeTemplate.REPOT, true, true, true, 1));
 		House house = new House(1, "1동");
 		PhysicalBed bed = new PhysicalBed(1, 1);
 		bed.updatePositionUnits(new BigDecimal("24"), "칸");
@@ -77,38 +96,36 @@ class RepotWorkOperationIntegrationTests extends AbstractBackendIntegrationTest 
 		bed.addBedZone(bedZone);
 		house.addPhysicalBed(bed);
 		houseRepository.save(house);
-		variety = varietyRepository.save(new Variety(
-				"REPOT-001", "팔레놉시스", "분갈이 테스트", null, "3.5치", true, true, null, null));
+		variety = varietyRepository
+			.save(new Variety("REPOT-001", "팔레놉시스", "분갈이 테스트", null, "3.5치", true, true, null, null));
 	}
 
 	@Test
 	void plansRepotAndAppliesStructureChangeWhenTargetIsCompleted() throws Exception {
 		OrchidGroup source = createSource(40, "0", "2");
-		var created = mockMvc.perform(post("/api/work-operations")
-				.contentType(MediaType.APPLICATION_JSON)
-				.content("""
-						{
-						  "workTypeId": %d,
-						  "title": "계획 분갈이",
-						  "plannedStartDate": "2026-07-16",
-						  "plannedEndDate": "2026-07-18",
-						  "sourceScopeType": "MANUAL_SELECTION",
-						  "sourceOrchidGroupIds": [%d]
-						}
-						""".formatted(repotType.getId(), source.getId())))
-				.andExpect(status().isCreated())
-				.andExpect(jsonPath("$.data.workTypeCode").value("REPOT"))
-				.andExpect(jsonPath("$.data.status").value("PLANNED"))
-				.andReturn();
-		Long operationId = Long.valueOf(created.getResponse().getContentAsString().replaceAll(
-				".*?\\\"data\\\":\\{\\\"id\\\":(\\d+).*", "$1"));
-		Long targetId = operationTargetRepository
-				.findByWorkOperationIdAndExcludedAtIsNullOrderByIdAsc(operationId)
-				.getFirst().getId();
+		var created = mockMvc.perform(post("/api/work-operations").contentType(MediaType.APPLICATION_JSON).content("""
+				{
+				  "workTypeId": %d,
+				  "title": "계획 분갈이",
+				  "plannedStartDate": "2026-07-16",
+				  "plannedEndDate": "2026-07-18",
+				  "sourceScopeType": "MANUAL_SELECTION",
+				  "sourceOrchidGroupIds": [%d]
+				}
+				""".formatted(repotType.getId(), source.getId())))
+			.andExpect(status().isCreated())
+			.andExpect(jsonPath("$.data.workTypeCode").value("REPOT"))
+			.andExpect(jsonPath("$.data.status").value("PLANNED"))
+			.andReturn();
+		Long operationId = Long.valueOf(
+				created.getResponse().getContentAsString().replaceAll(".*?\\\"data\\\":\\{\\\"id\\\":(\\d+).*", "$1"));
+		Long targetId = operationTargetRepository.findByWorkOperationIdAndExcludedAtIsNullOrderByIdAsc(operationId)
+			.getFirst()
+			.getId();
 
-		mockMvc.perform(post("/api/work-operations/{id}/start", operationId))
-				.andExpect(status().isOk());
-		mockMvc.perform(post("/api/work-operations/{id}/targets/{targetId}/complete", operationId, targetId)
+		mockMvc.perform(post("/api/work-operations/{id}/start", operationId)).andExpect(status().isOk());
+		mockMvc
+			.perform(post("/api/work-operations/{id}/targets/{targetId}/complete", operationId, targetId)
 				.contentType(MediaType.APPLICATION_JSON)
 				.content("""
 						{
@@ -133,74 +150,78 @@ class RepotWorkOperationIntegrationTests extends AbstractBackendIntegrationTest 
 						  }
 						}
 						""".formatted(source.getId(), bedZone.getId())))
-				.andExpect(status().isOk())
-				.andExpect(jsonPath("$.data.targets[0].executionStatus").value("COMPLETED"));
+			.andExpect(status().isOk())
+			.andExpect(jsonPath("$.data.targets[0].executionStatus").value("COMPLETED"));
 
 		assertThat(orchidGroupRepository.findById(source.getId()).orElseThrow().getQuantity()).isZero();
-		assertThat(lineageRepository.findBySourceOrchidGroupIdOrderByCreatedAtAscIdAsc(source.getId()))
-				.hasSize(1);
+		assertThat(lineageRepository.findBySourceOrchidGroupIdOrderByCreatedAtAscIdAsc(source.getId())).hasSize(1);
 	}
 
 	@Test
 	void partiallyRepotsAndPreservesLineageHistoryAndSelectedCollections() throws Exception {
 		OrchidGroup source = createSource(100, "0", "2");
-		OrchidGroupCollection collection = collectionRepository.save(
-				new OrchidGroupCollection("우량주", null, null, "테스터"));
-		memberRepository.save(new OrchidGroupCollectionMember(collection.getId(), source.getId(), "테스터"));
+		OrchidGroupCollection collection = collectionRepository
+			.save(new OrchidGroupCollection("우량주", null, null, "테스터"));
+		memberRepository.save(new OrchidGroupCollectionMember(collection.getId(), source.getId(), "테스터",
+				java.time.LocalDateTime.of(2026, 9, 8, 1, 2)));
 
-		mockMvc.perform(post("/api/work-operations/repot")
-				.contentType(MediaType.APPLICATION_JSON)
-				.content(repotRequest(
-						"repot-partial", source.getId(), 40, 2, "작업 중 손상", 38,
-						"2", "4", ", \"inheritCollectionIds\": [" + collection.getId() + "]")))
-				.andExpect(status().isCreated())
-				.andExpect(jsonPath("$.data.operation.status").value("COMPLETED"))
-				.andExpect(jsonPath("$.data.operation.sourceScopeType").value("ORCHID_GROUP"))
-				.andExpect(jsonPath("$.data.sourceOrchidGroup.quantity").value(60))
-				.andExpect(jsonPath("$.data.resultOrchidGroups", hasSize(1)))
-				.andExpect(jsonPath("$.data.resultOrchidGroups[0].quantity").value(38))
-				.andExpect(jsonPath("$.data.lossQuantity").value(2));
+		mockMvc
+			.perform(post("/api/work-operations/repot").contentType(MediaType.APPLICATION_JSON)
+				.content(repotRequest("repot-partial", source.getId(), 40, 2, "작업 중 손상", 38, "2", "4",
+						", \"inheritCollectionIds\": [" + collection.getId() + "]")))
+			.andExpect(status().isCreated())
+			.andExpect(jsonPath("$.data.operation.status").value("COMPLETED"))
+			.andExpect(jsonPath("$.data.operation.sourceScopeType").value("ORCHID_GROUP"))
+			.andExpect(jsonPath("$.data.sourceOrchidGroup.quantity").value(60))
+			.andExpect(jsonPath("$.data.resultOrchidGroups", hasSize(1)))
+			.andExpect(jsonPath("$.data.resultOrchidGroups[0].quantity").value(38))
+			.andExpect(jsonPath("$.data.lossQuantity").value(2));
 
 		Long operationId = operationRepository.findByRequestKey("repot-partial").orElseThrow().getId();
-		Long resultId = orchidGroupRepository.findAll().stream()
-				.map(OrchidGroup::getId).filter(id -> !id.equals(source.getId())).findFirst().orElseThrow();
+		Long resultId = orchidGroupRepository.findAll()
+			.stream()
+			.map(OrchidGroup::getId)
+			.filter(id -> !id.equals(source.getId()))
+			.findFirst()
+			.orElseThrow();
 		var lineage = lineageRepository.findBySourceOrchidGroupIdOrderByCreatedAtAscIdAsc(source.getId());
 		assertThat(lineage).hasSize(1);
 		assertThat(lineage.getFirst().getRelationType()).isEqualTo(OrchidGroupLineageRelationType.REPOTTED_TO);
 		assertThat(lineage.getFirst().getSourceQuantity()).isEqualTo(40);
-		assertThat(memberRepository.findByCollectionIdAndOrchidGroupIdAndRemovedAtIsNull(
-				collection.getId(), resultId)).isPresent();
-		assertThat(effectOrchidGroupRepository
-				.findByWorkAppliedEffectWorkOperationIdAndRelationTypeOrderByIdAsc(
-						operationId, WorkEffectOrchidGroupRelationType.SOURCE)).hasSize(1);
-		assertThat(effectOrchidGroupRepository
-				.findByWorkAppliedEffectWorkOperationIdAndRelationTypeOrderByIdAsc(
-						operationId, WorkEffectOrchidGroupRelationType.RESULT)).hasSize(1);
+		assertThat(memberRepository.findByCollectionIdAndOrchidGroupIdAndRemovedAtIsNull(collection.getId(), resultId))
+			.isPresent();
+		assertThat(effectOrchidGroupRepository.findByWorkAppliedEffectWorkOperationIdAndRelationTypeOrderByIdAsc(
+				operationId, WorkEffectOrchidGroupRelationType.SOURCE))
+			.hasSize(1);
+		assertThat(effectOrchidGroupRepository.findByWorkAppliedEffectWorkOperationIdAndRelationTypeOrderByIdAsc(
+				operationId, WorkEffectOrchidGroupRelationType.RESULT))
+			.hasSize(1);
 
 		mockMvc.perform(get("/api/orchid-groups/{id}/work-history", resultId))
-				.andExpect(status().isOk())
-				.andExpect(jsonPath("$.data", hasSize(1)))
-				.andExpect(jsonPath("$.data[0].workOperationId").value(operationId));
+			.andExpect(status().isOk())
+			.andExpect(jsonPath("$.data", hasSize(1)))
+			.andExpect(jsonPath("$.data[0].workOperationId").value(operationId));
 	}
 
 	@Test
 	void rejectsDeletingOrchidGroupReferencedByWorkEffect() throws Exception {
 		OrchidGroup source = createSource(40, "0", "2");
-		mockMvc.perform(post("/api/work-operations/repot")
-				.contentType(MediaType.APPLICATION_JSON)
+		mockMvc
+			.perform(post("/api/work-operations/repot").contentType(MediaType.APPLICATION_JSON)
 				.content(repotRequest("repot-delete-conflict", source.getId(), 40, 0, null, 40, "2", "4", "")))
-				.andExpect(status().isCreated());
+			.andExpect(status().isCreated());
 
-		Long resultId = orchidGroupRepository.findAll().stream()
-				.map(OrchidGroup::getId)
-				.filter(id -> !id.equals(source.getId()))
-				.findFirst()
-				.orElseThrow();
+		Long resultId = orchidGroupRepository.findAll()
+			.stream()
+			.map(OrchidGroup::getId)
+			.filter(id -> !id.equals(source.getId()))
+			.findFirst()
+			.orElseThrow();
 
 		mockMvc.perform(delete("/api/orchid-groups/{orchidGroupId}", resultId))
-				.andExpect(status().isConflict())
-				.andExpect(jsonPath("$.error.code").value("CONFLICT"))
-				.andExpect(jsonPath("$.error.message").value("작업 이력과 연결된 난 묶음은 삭제할 수 없습니다. 작업 취소, 보정 또는 폐기 작업으로 처리해주세요."));
+			.andExpect(status().isConflict())
+			.andExpect(jsonPath("$.error.code").value("CONFLICT"))
+			.andExpect(jsonPath("$.error.message").value("작업 이력과 연결된 난 묶음은 삭제할 수 없습니다. 작업 취소, 보정 또는 폐기 작업으로 처리해주세요."));
 	}
 
 	@Test
@@ -208,16 +229,14 @@ class RepotWorkOperationIntegrationTests extends AbstractBackendIntegrationTest 
 		OrchidGroup source = createSource(50, "0", "2");
 		String request = repotRequest("repot-full", source.getId(), 50, 0, null, 50, "0", "2", "");
 
-		mockMvc.perform(post("/api/work-operations/repot")
-				.contentType(MediaType.APPLICATION_JSON).content(request))
-				.andExpect(status().isCreated())
-				.andExpect(jsonPath("$.data.sourceOrchidGroup.quantity").value(0))
-				.andExpect(jsonPath("$.data.sourceOrchidGroup.status").value("종료"))
-				.andExpect(jsonPath("$.data.resultOrchidGroups[0].status").value("정상"));
-		mockMvc.perform(post("/api/work-operations/repot")
-				.contentType(MediaType.APPLICATION_JSON).content(request))
-				.andExpect(status().isCreated())
-				.andExpect(jsonPath("$.data.resultOrchidGroups", hasSize(1)));
+		mockMvc.perform(post("/api/work-operations/repot").contentType(MediaType.APPLICATION_JSON).content(request))
+			.andExpect(status().isCreated())
+			.andExpect(jsonPath("$.data.sourceOrchidGroup.quantity").value(0))
+			.andExpect(jsonPath("$.data.sourceOrchidGroup.status").value("종료"))
+			.andExpect(jsonPath("$.data.resultOrchidGroups[0].status").value("정상"));
+		mockMvc.perform(post("/api/work-operations/repot").contentType(MediaType.APPLICATION_JSON).content(request))
+			.andExpect(status().isCreated())
+			.andExpect(jsonPath("$.data.resultOrchidGroups", hasSize(1)));
 
 		assertThat(orchidGroupRepository.count()).isEqualTo(2);
 		assertThat(operationRepository.count()).isEqualTo(1);
@@ -228,11 +247,11 @@ class RepotWorkOperationIntegrationTests extends AbstractBackendIntegrationTest 
 	void calculatesLossFromFinalResultQuantity() throws Exception {
 		OrchidGroup source = createSource(100, "0", "2");
 
-		mockMvc.perform(post("/api/work-operations/repot")
-				.contentType(MediaType.APPLICATION_JSON)
+		mockMvc
+			.perform(post("/api/work-operations/repot").contentType(MediaType.APPLICATION_JSON)
 				.content(repotRequest("repot-invalid", source.getId(), 40, 2, "손실", 37, "2", "4", "")))
-				.andExpect(status().isCreated())
-				.andExpect(jsonPath("$.data.lossQuantity").value(3));
+			.andExpect(status().isCreated())
+			.andExpect(jsonPath("$.data.lossQuantity").value(3));
 
 		assertThat(orchidGroupRepository.findById(source.getId()).orElseThrow().getQuantity()).isEqualTo(60);
 		assertThat(operationRepository.count()).isEqualTo(1);
@@ -240,23 +259,14 @@ class RepotWorkOperationIntegrationTests extends AbstractBackendIntegrationTest 
 	}
 
 	private OrchidGroup createSource(int quantity, String start, String end) {
-		OrchidGroup group = new OrchidGroup(
-				bedZone, variety.getGenus(), variety.getName(), quantity, "3.5치", 2, "정상", 1,
-				new BigDecimal(start), new BigDecimal(end));
+		OrchidGroup group = new OrchidGroup(bedZone, variety.getGenus(), variety.getName(), quantity, "3.5치", 2, "정상",
+				1, new BigDecimal(start), new BigDecimal(end));
 		group.assignVariety(variety);
-		return orchidGroupRepository.save(group);
+		return saveOrchidGroup(group);
 	}
 
-	private String repotRequest(
-			String key,
-			Long sourceId,
-			int inputQuantity,
-			int lossQuantity,
-			String lossReason,
-			int resultQuantity,
-			String start,
-			String end,
-			String extraFields) {
+	private String repotRequest(String key, Long sourceId, int inputQuantity, int lossQuantity, String lossReason,
+			int resultQuantity, String start, String end, String extraFields) {
 		String lossReasonField = lossReason == null ? "" : ", \"lossReason\": \"" + lossReason + "\"";
 		return """
 				{
@@ -276,8 +286,8 @@ class RepotWorkOperationIntegrationTests extends AbstractBackendIntegrationTest 
 				    "endPosition": %s
 				  }]%s
 				}
-				""".formatted(
-				key, sourceId, inputQuantity, lossQuantity, lossReasonField,
-				bedZone.getId(), resultQuantity, start, end, extraFields);
+				""".formatted(key, sourceId, inputQuantity, lossQuantity, lossReasonField, bedZone.getId(),
+				resultQuantity, start, end, extraFields);
 	}
+
 }

@@ -8,25 +8,25 @@ import jakarta.persistence.FetchType;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
-import jakarta.persistence.SequenceGenerator;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.OneToMany;
 import jakarta.persistence.OrderBy;
+import jakarta.persistence.SequenceGenerator;
 import jakarta.persistence.Table;
 import jakarta.persistence.UniqueConstraint;
-import lombok.Getter;
-import lombok.NoArgsConstructor;
-import lombok.AccessLevel;
 import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.List;
+import lombok.AccessLevel;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
 
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 @Entity
-@Table(name = "physical_beds", uniqueConstraints = @UniqueConstraint(name = "uk_physical_beds_house_number", columnNames = {
-		"house_id", "number" }))
+@Table(name = "physical_beds", uniqueConstraints = @UniqueConstraint(name = "uk_physical_beds_house_number",
+		columnNames = { "house_id", "number" }))
 public class PhysicalBed extends BaseEntity {
 
 	@Id
@@ -87,4 +87,5 @@ public class PhysicalBed extends BaseEntity {
 		this.bedZones.add(bedZone);
 		bedZone.setPhysicalBed(this);
 	}
+
 }

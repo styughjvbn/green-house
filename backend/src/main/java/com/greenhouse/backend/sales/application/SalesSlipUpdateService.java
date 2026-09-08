@@ -1,19 +1,22 @@
 package com.greenhouse.backend.sales.application;
 
+import com.greenhouse.backend.audit.domain.AuditAction;
 import com.greenhouse.backend.common.exception.NotFoundException;
 import com.greenhouse.backend.partner.application.BusinessPartnerReader;
 import com.greenhouse.backend.partner.domain.PartnerType;
+import com.greenhouse.backend.sales.application.command.SalesSlipCommand;
+import com.greenhouse.backend.sales.application.document.SalesSlipDocument;
 import com.greenhouse.backend.sales.domain.SalesSlip;
 import com.greenhouse.backend.sales.domain.SalesSlipItem;
+import com.greenhouse.backend.sales.domain.SalesSlipItemAllocation;
 import com.greenhouse.backend.sales.domain.SalesType;
-import com.greenhouse.backend.sales.dto.SalesSlipCreateRequest;
-import com.greenhouse.backend.sales.dto.SalesSlipResponse;
 import com.greenhouse.backend.sales.repository.SalesSlipRepository;
 import com.greenhouse.backend.settlement.application.ExpectedPaymentDateCalculator;
 import com.greenhouse.backend.settlement.application.PartnerBalanceService;
+import com.greenhouse.backend.settlement.application.PaymentEventReader;
+import com.greenhouse.backend.settlement.domain.PaymentTargetType;
 import java.util.List;
 import java.util.Map;
-import com.greenhouse.backend.audit.domain.AuditAction;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -24,18 +27,27 @@ import org.springframework.transaction.annotation.Transactional;
 public class SalesSlipUpdateService {
 
 	private final SalesSlipRepository salesSlipRepository;
-	private final BusinessPartnerReader businessPartnerReader;
-	private final SalesSlipAllocationFactory salesSlipAllocationFactory;
-	private final SalesSlipInventoryService salesSlipInventoryService;
-	private final ExpectedPaymentDateCalculator paymentDateCalculator;
-	private final PartnerBalanceService partnerBalanceService;
-	private final SalesSlipAuditSupport auditSupport;
-	private final SalesSlipResponseAssembler responseAssembler;
 
-	public SalesSlipResponse update(Long salesSlipId, SalesSlipCreateRequest request) {
+	private final PaymentEventReader paymentEventReader;
+
+	private final BusinessPartnerReader businessPartnerReader;
+
+	private final SalesSlipAllocationFactory salesSlipAllocationFactory;
+
+	private final SalesSlipInventoryService salesSlipInventoryService;
+
+	private final ExpectedPaymentDateCalculator paymentDateCalculator;
+
+	private final PartnerBalanceService partnerBalanceService;
+
+	private final SalesSlipAuditSupport auditSupport;
+
+	private final SalesSlipDocumentAssembler responseAssembler;
+
+	public SalesSlipDocument update(Long salesSlipId, SalesSlipCommand request) {
 		SalesSlip salesSlip = salesSlipRepository.findForUpdateById(salesSlipId)
-				.orElseThrow(() -> new NotFoundException("판매 전표를 찾을 수 없습니다."));
-		Long previousPartnerId = salesSlip.getPartner().getId();
+			.orElseThrow(() -> new NotFoundException("판매 전표를 찾을 수 없습니다."));
+		Long previousPartnerId = salesSlip.getPartnerId();
 		Map<String, Object> before = auditSupport.snapshot(salesSlip);
 
 		validateEditable(salesSlip, request);
@@ -46,12 +58,12 @@ public class SalesSlipUpdateService {
 			throw new IllegalArgumentException("일반 판매 품목은 1개 이상 입력해야 합니다.");
 		}
 
-		var partner = businessPartnerReader.getActive(request.partnerId());
-		if (partner.getPartnerType() == PartnerType.AUCTION_HOUSE) {
+		var partner = businessPartnerReader.getActiveInfo(request.partnerId());
+		if (partner.partnerType() == PartnerType.AUCTION_HOUSE) {
 			throw new IllegalArgumentException("경매장 거래처는 경매 판매 전표에서 사용해야 합니다.");
 		}
-		partnerBalanceService.lockPartners(List.of(previousPartnerId, partner.getId()));
-		var expectedPaymentDate = paymentDateCalculator.calculate(partner, request.saleDate());
+		partnerBalanceService.lockPartners(List.of(previousPartnerId, partner.id()));
+		var expectedPaymentDate = paymentDateCalculator.calculate(partner.id(), request.saleDate());
 
 		salesSlipInventoryService.releaseForEdit(salesSlip);
 
@@ -60,54 +72,39 @@ public class SalesSlipUpdateService {
 			throw new IllegalArgumentException("품목 개수 변경 수정은 아직 지원하지 않습니다.");
 		}
 
-		salesSlip.updateDraftInfo(
-				request.saleDate(),
-				partner,
+		salesSlip.updateDraftInfo(request.saleDate(), partner.id(),
 				SalesTextNormalizer.defaultText(request.paymentStatus(), "미입금"),
-				SalesTextNormalizer.normalize(request.paymentMethod()),
-				SalesTextNormalizer.normalize(request.memo()));
+				SalesTextNormalizer.normalize(request.paymentMethod()), SalesTextNormalizer.normalize(request.memo()));
 		for (int index = 0; index < salesSlip.getItems().size(); index++) {
 			var currentItem = salesSlip.getItems().get(index);
 			var nextItem = items.get(index);
-			currentItem.updateDetails(
-					nextItem.getItemName(),
-					nextItem.getGenus(),
-					nextItem.getSpec(),
-					nextItem.getQuantity(),
-					nextItem.getUnitPrice(),
-					nextItem.getMemo());
-			currentItem.replaceAllocations(nextItem.getAllocations().stream()
-					.map(salesSlipAllocationFactory::copyAllocation)
-					.toList());
+			currentItem.updateDetails(nextItem.getItemName(), nextItem.getGenus(), nextItem.getSpec(),
+					nextItem.getQuantity(), nextItem.getUnitPrice(), nextItem.getMemo());
+			currentItem
+				.replaceAllocations(nextItem.getAllocations().stream().map(SalesSlipItemAllocation::copy).toList());
 		}
 		salesSlip.refreshAmounts();
 		salesSlip.updateExpectedPaymentDate(expectedPaymentDate);
 		salesSlipRepository.saveAndFlush(salesSlip);
 		SalesSlip persisted = salesSlipRepository.findWithDetailsById(salesSlipId)
-				.orElseThrow(() -> new NotFoundException("판매 전표를 찾을 수 없습니다."));
+			.orElseThrow(() -> new NotFoundException("판매 전표를 찾을 수 없습니다."));
 		salesSlipInventoryService.reserve(persisted);
-		partnerBalanceService.updateReceivable(
-				partner.getId(), salesSlipRepository.sumDirectReceivableByPartnerId(partner.getId()), null);
-		if (!previousPartnerId.equals(partner.getId())) {
-			partnerBalanceService.updateReceivable(
-					previousPartnerId,
-					salesSlipRepository.sumDirectReceivableByPartnerId(previousPartnerId),
-					null);
+		partnerBalanceService.updateReceivable(partner.id(),
+				salesSlipRepository.sumDirectReceivableByPartnerId(partner.id()), null);
+		if (!previousPartnerId.equals(partner.id())) {
+			partnerBalanceService.updateReceivable(previousPartnerId,
+					salesSlipRepository.sumDirectReceivableByPartnerId(previousPartnerId), null);
 		}
 		auditSupport.record(AuditAction.UPDATED, persisted, before, auditSupport.snapshot(persisted));
 
 		return responseAssembler.assemble(persisted);
 	}
 
-	private void validateEditable(SalesSlip salesSlip, SalesSlipCreateRequest request) {
-		if (salesSlip.getSalesType() != SalesType.DIRECT || request.salesType() == SalesType.AUCTION) {
+	private void validateEditable(SalesSlip salesSlip, SalesSlipCommand request) {
+		if (request.salesType() == SalesType.AUCTION) {
 			throw new IllegalArgumentException("경매 판매 전표 수정은 아직 지원하지 않습니다.");
 		}
-		if (!"작성중".equals(salesSlip.getSalesStatus())) {
-			throw new IllegalArgumentException("작성중 상태 전표만 수정할 수 있습니다.");
-		}
-		if (salesSlip.getPaidAmount() != null && salesSlip.getPaidAmount() > 0) {
-			throw new IllegalArgumentException("입금 이력이 있는 전표는 수정할 수 없습니다.");
-		}
+		salesSlip.requireEditable(paymentEventReader.existsByTarget(PaymentTargetType.SALES_SLIP, salesSlip.getId()));
 	}
+
 }

@@ -1,6 +1,5 @@
 package com.greenhouse.backend.sales.domain;
 
-import com.greenhouse.backend.auction.domain.AuctionShipmentLot;
 import jakarta.persistence.CascadeType;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
@@ -8,10 +7,10 @@ import jakarta.persistence.FetchType;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
-import jakarta.persistence.SequenceGenerator;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.OneToMany;
+import jakarta.persistence.SequenceGenerator;
 import jakarta.persistence.Table;
 import java.util.ArrayList;
 import java.util.List;
@@ -34,9 +33,8 @@ public class SalesSlipItem {
 	@JoinColumn(name = "sales_slip_id", nullable = false)
 	private SalesSlip salesSlip;
 
-	@ManyToOne(fetch = FetchType.LAZY)
-	@JoinColumn(name = "auction_shipment_lot_id", unique = true)
-	private AuctionShipmentLot auctionShipmentLot;
+	@Column(name = "auction_shipment_lot_id", unique = true)
+	private Long auctionShipmentLotId;
 
 	@OneToMany(mappedBy = "salesSlipItem", cascade = CascadeType.ALL, orphanRemoval = true)
 	private List<SalesSlipItemAllocation> allocations = new ArrayList<>();
@@ -60,15 +58,9 @@ public class SalesSlipItem {
 	@Column(columnDefinition = "text")
 	private String memo;
 
-	public SalesSlipItem(
-			AuctionShipmentLot auctionShipmentLot,
-			String itemName,
-			String genus,
-			String spec,
-			Integer quantity,
-			Integer unitPrice,
-			String memo) {
-		this.auctionShipmentLot = auctionShipmentLot;
+	public SalesSlipItem(Long auctionShipmentLotId, String itemName, String genus, String spec, Integer quantity,
+			Integer unitPrice, String memo) {
+		this.auctionShipmentLotId = auctionShipmentLotId;
 		this.itemName = itemName;
 		this.genus = genus;
 		this.spec = spec;
@@ -87,12 +79,7 @@ public class SalesSlipItem {
 		this.allocations.add(allocation);
 	}
 
-	public void updateDetails(
-			String itemName,
-			String genus,
-			String spec,
-			Integer quantity,
-			Integer unitPrice,
+	public void updateDetails(String itemName, String genus, String spec, Integer quantity, Integer unitPrice,
 			String memo) {
 		this.itemName = itemName;
 		this.genus = genus;
@@ -108,11 +95,12 @@ public class SalesSlipItem {
 		allocations.forEach(this::addAllocation);
 	}
 
-	public void assignAuctionShipmentLot(AuctionShipmentLot auctionShipmentLot) {
-		this.auctionShipmentLot = auctionShipmentLot;
+	public void assignAuctionShipmentLot(Long auctionShipmentLotId) {
+		this.auctionShipmentLotId = auctionShipmentLotId;
 	}
 
 	public void clearAuctionShipmentLot() {
-		this.auctionShipmentLot = null;
+		this.auctionShipmentLotId = null;
 	}
+
 }

@@ -1,27 +1,23 @@
 package com.greenhouse.backend.settlement.domain;
 
 import com.greenhouse.backend.common.domain.BaseEntity;
-import com.greenhouse.backend.partner.domain.BusinessPartner;
 import com.greenhouse.backend.partner.domain.PartnerType;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
 import jakarta.persistence.Enumerated;
-import jakarta.persistence.FetchType;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.SequenceGenerator;
-import jakarta.persistence.JoinColumn;
-import jakarta.persistence.OneToOne;
 import jakarta.persistence.Table;
-import lombok.Getter;
-import lombok.NoArgsConstructor;
-import lombok.AccessLevel;
-
+import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import lombok.AccessLevel;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
 import org.hibernate.annotations.JdbcTypeCode;
 import org.hibernate.type.SqlTypes;
 
@@ -30,14 +26,15 @@ import org.hibernate.type.SqlTypes;
 @Entity
 @Table(name = "partner_settlement_settings")
 public class PartnerSettlementSettings extends BaseEntity {
+
 	@Id
 	@GeneratedValue(strategy = GenerationType.SEQUENCE, generator = "partner_settlement_settings_id_seq")
-	@SequenceGenerator(name = "partner_settlement_settings_id_seq", sequenceName = "partner_settlement_settings_id_seq", allocationSize = 50)
+	@SequenceGenerator(name = "partner_settlement_settings_id_seq", sequenceName = "partner_settlement_settings_id_seq",
+			allocationSize = 50)
 	private Long id;
 
-	@OneToOne(fetch = FetchType.LAZY, optional = false)
-	@JoinColumn(name = "partner_id", nullable = false, unique = true)
-	private BusinessPartner partner;
+	@Column(name = "partner_id", nullable = false, unique = true)
+	private Long partnerId;
 
 	@Enumerated(EnumType.STRING)
 	@Column(name = "settlement_unit", nullable = false)
@@ -76,10 +73,9 @@ public class PartnerSettlementSettings extends BaseEntity {
 	@Column(columnDefinition = "text")
 	private String memo;
 
-	public PartnerSettlementSettings(BusinessPartner partner) {
-		this.partner = partner;
-		this.settlementUnit = partner.getPartnerType() == PartnerType.AUCTION_HOUSE
-				? SettlementUnit.AUCTION_DATE
+	public PartnerSettlementSettings(Long partnerId, PartnerType partnerType) {
+		this.partnerId = partnerId;
+		this.settlementUnit = partnerType == PartnerType.AUCTION_HOUSE ? SettlementUnit.AUCTION_DATE
 				: SettlementUnit.SALES_SLIP;
 		this.paymentDelayDays = 0;
 		this.paymentDayMode = PaymentDayMode.CALENDAR_DAY;
@@ -91,18 +87,29 @@ public class PartnerSettlementSettings extends BaseEntity {
 		this.creditAutoApplyEnabled = false;
 	}
 
-	public void update(
-			SettlementUnit settlementUnit,
-			Integer paymentDelayDays,
-			PaymentDayMode paymentDayMode,
-			boolean autoMatchEnabled,
-			boolean autoSettleEnabled,
-			Long amountTolerance,
-			List<String> depositorAliases,
-			boolean allowPrepayment,
-			boolean creditAutoApplyEnabled,
-			Map<String, Object> ruleJson,
-			String memo) {
+	public LocalDate calculateExpectedPaymentDate(LocalDate baseDate) {
+		if (paymentDelayDays == 0) {
+			return baseDate;
+		}
+		if (paymentDayMode == PaymentDayMode.CALENDAR_DAY) {
+			return baseDate.plusDays(paymentDelayDays);
+		}
+		LocalDate result = baseDate;
+		int remainingDays = paymentDelayDays;
+		while (remainingDays > 0) {
+			result = result.plusDays(1);
+			switch (result.getDayOfWeek()) {
+				case SATURDAY, SUNDAY -> {
+				}
+				default -> remainingDays--;
+			}
+		}
+		return result;
+	}
+
+	public void update(SettlementUnit settlementUnit, Integer paymentDelayDays, PaymentDayMode paymentDayMode,
+			boolean autoMatchEnabled, boolean autoSettleEnabled, Long amountTolerance, List<String> depositorAliases,
+			boolean allowPrepayment, boolean creditAutoApplyEnabled, Map<String, Object> ruleJson, String memo) {
 		this.settlementUnit = settlementUnit;
 		this.paymentDelayDays = paymentDelayDays;
 		this.paymentDayMode = paymentDayMode;
@@ -115,4 +122,5 @@ public class PartnerSettlementSettings extends BaseEntity {
 		this.ruleJson = ruleJson;
 		this.memo = memo;
 	}
+
 }

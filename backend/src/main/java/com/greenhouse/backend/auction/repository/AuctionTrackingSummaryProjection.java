@@ -1,6 +1,7 @@
 package com.greenhouse.backend.auction.repository;
 
 public interface AuctionTrackingSummaryProjection {
+
 	Number getLotCount();
 
 	Number getShippedQuantity();
@@ -14,4 +15,5 @@ public interface AuctionTrackingSummaryProjection {
 	Number getReviewRequiredCount();
 
 	Number getTotalAmount();
+
 }

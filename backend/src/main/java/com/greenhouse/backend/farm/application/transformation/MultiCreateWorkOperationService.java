@@ -1,19 +1,24 @@
 package com.greenhouse.backend.farm.application.transformation;
 
+import com.greenhouse.backend.common.config.TimeConfig;
+import com.greenhouse.backend.farm.application.orchid.OrchidGroupUsageInspector;
+import com.greenhouse.backend.farm.application.orchid.mutation.CancelOrchidGroupCreationMutationCommand;
+import com.greenhouse.backend.farm.application.orchid.mutation.OrchidGroupMutationEngine;
+import com.greenhouse.backend.farm.application.orchid.mutation.OrchidGroupMutationSources;
+import com.greenhouse.backend.farm.dto.orchid.OrchidGroupResponse;
+import com.greenhouse.backend.farm.dto.transformation.MultiCreateCancellationEligibilityResponse;
 import com.greenhouse.backend.farm.dto.transformation.MultiCreateWorkOperationRequest;
 import com.greenhouse.backend.farm.dto.transformation.MultiCreateWorkOperationResponse;
-import com.greenhouse.backend.farm.dto.transformation.MultiCreateCancellationEligibilityResponse;
-import com.greenhouse.backend.common.application.OrchidGroupUsageInspector;
-import com.greenhouse.backend.farm.dto.orchid.OrchidGroupResponse;
-import com.greenhouse.backend.farm.repository.orchid.OrchidGroupRepository;
 import com.greenhouse.backend.farm.repository.collection.OrchidGroupCollectionMemberRepository;
-import com.greenhouse.backend.work.domain.operation.WorkOperationStatus;
+import com.greenhouse.backend.farm.repository.orchid.OrchidGroupRepository;
 import com.greenhouse.backend.work.application.operation.ImmediateWorkExecutionService;
 import com.greenhouse.backend.work.application.operation.WorkOperationQueryService;
-import com.greenhouse.backend.work.domain.operation.WorkType;
-import java.util.Map;
-import java.util.List;
+import com.greenhouse.backend.work.domain.operation.WorkOperationStatus;
+import com.greenhouse.backend.work.domain.operation.WorkTypeDefinition;
+import java.time.Clock;
 import java.util.LinkedHashSet;
+import java.util.List;
+import java.util.Map;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -22,29 +27,37 @@ import org.springframework.transaction.annotation.Transactional;
 public class MultiCreateWorkOperationService {
 
 	private final ImmediateWorkExecutionService immediateWorkExecutionService;
+
 	private final WorkOperationQueryService queryService;
+
 	private final OrchidGroupRepository orchidGroupRepository;
+
 	private final List<OrchidGroupUsageInspector> usageInspectors;
+
 	private final OrchidGroupCollectionMemberRepository memberRepository;
 
-	public MultiCreateWorkOperationService(
-			ImmediateWorkExecutionService immediateWorkExecutionService,
-			WorkOperationQueryService queryService,
-			OrchidGroupRepository orchidGroupRepository,
-			List<OrchidGroupUsageInspector> usageInspectors,
-			OrchidGroupCollectionMemberRepository memberRepository) {
+	private final OrchidGroupMutationEngine mutationEngine;
+
+	private final Clock clock;
+
+	public MultiCreateWorkOperationService(ImmediateWorkExecutionService immediateWorkExecutionService,
+			WorkOperationQueryService queryService, OrchidGroupRepository orchidGroupRepository,
+			List<OrchidGroupUsageInspector> usageInspectors, OrchidGroupCollectionMemberRepository memberRepository,
+			OrchidGroupMutationEngine mutationEngine, Clock clock) {
 		this.immediateWorkExecutionService = immediateWorkExecutionService;
 		this.queryService = queryService;
 		this.orchidGroupRepository = orchidGroupRepository;
 		this.usageInspectors = usageInspectors;
 		this.memberRepository = memberRepository;
+		this.mutationEngine = mutationEngine;
+		this.clock = clock;
 	}
 
 	public MultiCreateWorkOperationResponse create(MultiCreateWorkOperationRequest request) {
-		var operation = immediateWorkExecutionService.execute(
-				normalizeRequired(request.idempotencyKey()), WorkType.MULTI_CREATE_CODE,
-				normalizeRequired(request.title()), request.workDate(), normalize(request.worker()),
-				normalize(request.memo()), Map.of("rowCount", request.rows().size()), request);
+		var operation = immediateWorkExecutionService.execute(normalizeRequired(request.idempotencyKey()),
+				WorkTypeDefinition.MULTI_CREATE.name(), normalizeRequired(request.title()), request.workDate(),
+				normalize(request.worker()), normalize(request.memo()), Map.of("rowCount", request.rows().size()),
+				request);
 		return response(operation.id());
 	}
 
@@ -56,19 +69,18 @@ public class MultiCreateWorkOperationService {
 	@Transactional(readOnly = true)
 	public MultiCreateCancellationEligibilityResponse getCancellationEligibility(Long operationId) {
 		if (queryService.get(operationId).status() == WorkOperationStatus.CANCELED) {
-			return new MultiCreateCancellationEligibilityResponse(
-					operationId, false, immediateWorkExecutionService.getResultOrchidGroupIds(operationId),
-					List.of(new MultiCreateCancellationEligibilityResponse.Blocker(
-							"ALREADY_CANCELED", "이미 취소된 다중 생성 작업입니다.", 1)));
+			return new MultiCreateCancellationEligibilityResponse(operationId, false,
+					immediateWorkExecutionService.getResultOrchidGroupIds(operationId),
+					List.of(new MultiCreateCancellationEligibilityResponse.Blocker("ALREADY_CANCELED",
+							"이미 취소된 다중 생성 작업입니다.", 1)));
 		}
 		List<Long> groupIds = immediateWorkExecutionService.getResultOrchidGroupIds(operationId);
 		var idSet = new LinkedHashSet<>(groupIds);
 		var blockers = usageInspectors.stream()
-				.flatMap(inspector -> inspector.inspect(idSet, operationId).stream())
-				.map(MultiCreateCancellationEligibilityResponse.Blocker::from)
-				.toList();
-		return new MultiCreateCancellationEligibilityResponse(
-				operationId, blockers.isEmpty(), groupIds, blockers);
+			.flatMap(inspector -> inspector.inspect(idSet, operationId).stream())
+			.map(MultiCreateCancellationEligibilityResponse.Blocker::from)
+			.toList();
+		return new MultiCreateCancellationEligibilityResponse(operationId, blockers.isEmpty(), groupIds, blockers);
 	}
 
 	public MultiCreateWorkOperationResponse cancel(Long operationId) {
@@ -82,37 +94,47 @@ public class MultiCreateWorkOperationService {
 		}
 		var idSet = new LinkedHashSet<>(groupIds);
 		var blockers = usageInspectors.stream()
-				.flatMap(inspector -> inspector.inspect(idSet, operationId).stream())
-				.toList();
+			.flatMap(inspector -> inspector.inspect(idSet, operationId).stream())
+			.toList();
 		if (!blockers.isEmpty()) {
 			throw new IllegalArgumentException(blockers.getFirst().message());
 		}
 		memberRepository.findByOrchidGroupIdInAndRemovedAtIsNull(groupIds)
-				.forEach(member -> member.remove());
-		groups.forEach(group -> group.cancelCreation());
+			.forEach(member -> member.remove(TimeConfig.utcNow(clock)));
+		groups.forEach(group -> mutationEngine.cancelCreation(new CancelOrchidGroupCreationMutationCommand(
+				OrchidGroupMutationSources.work(operationId, "CANCEL_RESULT:" + group.getId()), group.getId(),
+				TimeConfig.farmToday(clock), "다중 생성 작업 취소")));
+
 		immediateWorkExecutionService.cancelMultiCreate(operationId);
 		return response(operationId);
 	}
 
 	private MultiCreateWorkOperationResponse response(Long operationId) {
+		var businessDate = TimeConfig.farmToday(clock);
 		var operation = queryService.get(operationId);
 		var ids = immediateWorkExecutionService.getResultOrchidGroupIds(operationId);
-		var groupsById = orchidGroupRepository.findDetailsByIds(ids).stream()
-				.collect(java.util.stream.Collectors.toMap(group -> group.getId(), group -> group));
-		var groups = ids.stream().filter(groupsById::containsKey)
-				.map(id -> OrchidGroupResponse.from(groupsById.get(id))).toList();
+		var groupsById = orchidGroupRepository.findDetailsByIds(ids)
+			.stream()
+			.collect(java.util.stream.Collectors.toMap(group -> group.getId(), group -> group));
+		var groups = ids.stream()
+			.filter(groupsById::containsKey)
+			.map(id -> OrchidGroupResponse.from(groupsById.get(id), businessDate))
+			.toList();
 		return new MultiCreateWorkOperationResponse(operation, groups);
 	}
 
 	private String normalize(String value) {
-		if (value == null) return null;
+		if (value == null)
+			return null;
 		String normalized = value.trim();
 		return normalized.isEmpty() ? null : normalized;
 	}
 
 	private String normalizeRequired(String value) {
 		String normalized = normalize(value);
-		if (normalized == null) throw new IllegalArgumentException("필수 문자열 값은 비워둘 수 없습니다.");
+		if (normalized == null)
+			throw new IllegalArgumentException("필수 문자열 값은 비워둘 수 없습니다.");
 		return normalized;
 	}
+
 }

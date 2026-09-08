@@ -2,6 +2,7 @@ plugins {
 	java
 	id("org.springframework.boot") version "4.1.0"
 	id("io.spring.dependency-management") version "1.1.7"
+	id("io.spring.javaformat") version "0.0.48"
 }
 
 group = "com.greenhouse"
@@ -44,6 +45,7 @@ dependencies {
 	testImplementation("org.springframework.boot:spring-boot-starter-validation-test")
 	testImplementation("org.springframework.security:spring-security-test")
 	testImplementation("org.springframework.boot:spring-boot-starter-webmvc-test")
+	testImplementation("com.tngtech.archunit:archunit:1.4.2")
 	testImplementation("org.springframework.boot:spring-boot-testcontainers")
 	testImplementation(platform("org.testcontainers:testcontainers-bom:2.0.5"))
 	testImplementation("org.testcontainers:testcontainers-junit-jupiter")
@@ -73,6 +75,30 @@ tasks.register<JavaExec>("openApiRun") {
 	args("--spring.profiles.active=test")
 }
 
+tasks.register<JavaExec>("orchidLedgerReconcile") {
+	group = "verification"
+	description = "Runs the read-only OrchidGroup ledger rehearsal checks against a restored database."
+	dependsOn(tasks.named("classes"))
+	classpath = sourceSets["main"].runtimeClasspath
+	mainClass.set("com.greenhouse.backend.farm.application.orchid.mutation.OrchidGroupLedgerReconciliationCli")
+}
+
+tasks.register<JavaExec>("orchidLedgerCutover") {
+	group = "verification"
+	description = "Verifies the imported OrchidGroup state-chain and optionally activates it."
+	dependsOn(tasks.named("classes"))
+	classpath = sourceSets["main"].runtimeClasspath
+	mainClass.set("com.greenhouse.backend.farm.application.orchid.mutation.OrchidGroupLedgerCutoverCli")
+}
+
+tasks.register<JavaExec>("orchidStateChainMigrate") {
+	group = "verification"
+	description = "Validates or imports the complete OrchidGroup state-chain manifest."
+	dependsOn(tasks.named("classes"))
+	classpath = sourceSets["main"].runtimeClasspath
+	mainClass.set("com.greenhouse.backend.farm.application.orchid.mutation.OrchidGroupStateChainMigrationCli")
+}
+
 tasks.register<Test>("workE2eTest") {
 	group = "verification"
 	description = "Runs the Work API contract E2E tests against PostgreSQL."
@@ -98,4 +124,12 @@ tasks.register<Test>("workBenchmark") {
 		providers.gradleProperty("workBenchmarkEnforce").orElse("false").get()
 	)
 	shouldRunAfter(tasks.named("workE2eTest"))
+}
+
+// Gradle 9 requires ordering when formatting and verification are requested together.
+tasks.withType<io.spring.javaformat.gradle.tasks.CheckFormat>().configureEach {
+	mustRunAfter(tasks.withType<io.spring.javaformat.gradle.tasks.Format>())
+}
+tasks.withType<JavaCompile>().configureEach {
+	mustRunAfter(tasks.withType<io.spring.javaformat.gradle.tasks.Format>())
 }

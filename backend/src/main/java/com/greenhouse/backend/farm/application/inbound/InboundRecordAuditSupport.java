@@ -1,5 +1,6 @@
 package com.greenhouse.backend.farm.application.inbound;
 
+import com.greenhouse.backend.audit.application.AuditEvent;
 import com.greenhouse.backend.audit.application.AuditEventWriter;
 import com.greenhouse.backend.audit.domain.AuditAction;
 import com.greenhouse.backend.audit.domain.AuditSource;
@@ -12,6 +13,7 @@ import org.springframework.stereotype.Component;
 @Component
 @RequiredArgsConstructor
 public class InboundRecordAuditSupport {
+
 	private final AuditEventWriter auditWriter;
 
 	public Map<String, Object> snapshot(InboundRecord record) {
@@ -39,13 +41,13 @@ public class InboundRecordAuditSupport {
 		return data;
 	}
 
-	public Long record(AuditAction action, InboundRecord record,
-			Map<String, Object> before, Map<String, Object> after) {
+	public Long record(AuditAction action, InboundRecord record, Map<String, Object> before,
+			Map<String, Object> after) {
 		Long zoneId = record.getBedZone() == null ? null : record.getBedZone().getId();
 		Long bedId = record.getBedZone() == null ? null : record.getBedZone().getPhysicalBed().getId();
-		Long houseId = record.getBedZone() == null ? null
-				: record.getBedZone().getPhysicalBed().getHouse().getId();
-		return auditWriter.record(action, AuditSource.INBOUND_MANAGEMENT, "INBOUND_RECORD", record.getId(),
-				houseId, bedId, zoneId, record.getVariety().getId(), before, after, Map.of());
+		Long houseId = record.getBedZone() == null ? null : record.getBedZone().getPhysicalBed().getHouse().getId();
+		return auditWriter.record(action, AuditSource.INBOUND_MANAGEMENT, new AuditEvent.Target("INBOUND_RECORD",
+				record.getId(), houseId, bedId, zoneId, record.getVariety().getId()), before, after, Map.of());
 	}
+
 }

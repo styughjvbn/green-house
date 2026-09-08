@@ -401,7 +401,14 @@ export type OrchidGroupWorkHistory = {
   memo: string | null;
 };
 
-export type PartnerType = "WHOLESALE" | "RETAIL" | "AUCTION_HOUSE";
+export type PartnerType = NonNullable<
+  ApiSchemas["BusinessPartnerResponse"]["partnerType"]
+>;
+
+export type BusinessPartnerOption = Required<
+  ApiSchemas["BusinessPartnerOptionResponse"]
+>;
+export type BusinessPartnerOptionPage = Page<BusinessPartnerOption>;
 
 export type BusinessPartner = {
   id: number;
@@ -642,14 +649,17 @@ export type AuctionTrackingSummary = {
   totalAmount: number;
 };
 
-export type AuctionSettlementStatus =
-  | "CREATED"
-  | "PAYMENT_WAITING"
-  | "PARTIALLY_PAID"
-  | "PAID"
-  | "AMOUNT_MISMATCH"
-  | "REVIEW_REQUIRED"
-  | "CANCELLED";
+export type AuctionSettlementStatus = NonNullable<
+  ApiSchemas["AuctionSettlementResponse"]["status"]
+>;
+
+export type AuctionSettlementListItem = Required<
+  ApiSchemas["AuctionSettlementListItemResponse"]
+>;
+export type AuctionSettlementPage = Page<AuctionSettlementListItem>;
+export type AuctionSettlementSummary = Required<
+  ApiSchemas["AuctionSettlementSummaryResponse"]
+>;
 
 export type AuctionSettlementLine = {
   id: number;
@@ -684,37 +694,13 @@ export type AuctionSettlement = {
   lines: AuctionSettlementLine[];
 };
 
-export type PaymentTargetType = "SALES_SLIP" | "AUCTION_SETTLEMENT" | "NONE";
-
-export type PartnerPaymentEvent = {
-  id: number;
-  partnerId: number;
-  partnerName: string;
-  eventType:
-    | "PAYMENT_RECEIVED"
-    | "PAYMENT_ALLOCATED"
-    | "PREPAYMENT_RECEIVED"
-    | "CREDIT_APPLIED"
-    | "CREDIT_REFUND"
-    | "AUTO_MATCH_CANDIDATE"
-    | "AUTO_MATCH_CONFIRMED"
-    | "MANUAL_MATCH_CONFIRMED"
-    | "MATCH_REJECTED"
-    | "PAYMENT_UNLINKED"
-    | "ADJUSTMENT";
-  eventDate: string;
-  amount: number;
-  unappliedAmount: number;
-  targetType: PaymentTargetType;
-  targetId: number;
-  parentEventId: number | null;
-  paymentMethod: string | null;
-  depositorName: string | null;
-  description: string | null;
-  status: string;
-  memo: string | null;
-  createdBy: string | null;
-};
+export type PaymentTargetType = NonNullable<
+  ApiSchemas["PartnerPaymentEventResponse"]["targetType"]
+>;
+export type PartnerPaymentEvent = Required<
+  ApiSchemas["PartnerPaymentEventResponse"]
+>;
+export type PartnerPaymentEventPage = Page<PartnerPaymentEvent>;
 
 export type PartnerBalanceSummary = {
   partnerId: number;

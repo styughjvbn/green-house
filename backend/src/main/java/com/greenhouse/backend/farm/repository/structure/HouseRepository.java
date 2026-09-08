@@ -11,4 +11,5 @@ public interface HouseRepository extends JpaRepository<House, Long> {
 
 	@EntityGraph(attributePaths = { "physicalBeds" })
 	Optional<House> findWithPhysicalBedsById(Long id);
+
 }

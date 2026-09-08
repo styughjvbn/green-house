@@ -6,7 +6,6 @@ import com.greenhouse.backend.settlement.dto.PartnerSettlementSettingsRequest;
 import com.greenhouse.backend.settlement.dto.PartnerSettlementSettingsResponse;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
-
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PutMapping;
@@ -18,6 +17,7 @@ import org.springframework.web.bind.annotation.RestController;
 @RequestMapping("/api/business-partners/{partnerId}/settlement-settings")
 @RequiredArgsConstructor
 public class PartnerSettlementSettingsController {
+
 	private final PartnerSettlementSettingsService settingsService;
 
 	@GetMapping
@@ -26,9 +26,9 @@ public class PartnerSettlementSettingsController {
 	}
 
 	@PutMapping
-	public ApiResponse<PartnerSettlementSettingsResponse> update(
-			@PathVariable Long partnerId,
+	public ApiResponse<PartnerSettlementSettingsResponse> update(@PathVariable Long partnerId,
 			@Valid @RequestBody PartnerSettlementSettingsRequest request) {
 		return ApiResponse.ok(settingsService.update(partnerId, request));
 	}
+
 }

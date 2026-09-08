@@ -5,9 +5,6 @@ import com.greenhouse.backend.work.domain.operation.WorkSourceScopeType;
 import jakarta.validation.constraints.NotNull;
 import java.util.List;
 
-public record WorkTargetPreviewRequest(
-		@NotNull WorkSourceScopeType sourceScopeType,
-		Long sourceScopeId,
-		String sourceDerivedGroupKey,
-		List<Long> sourceOrchidGroupIds) implements WorkTargetSelectionInput {
+public record WorkTargetPreviewRequest(@NotNull WorkSourceScopeType sourceScopeType, Long sourceScopeId,
+		String sourceDerivedGroupKey, List<Long> sourceOrchidGroupIds) implements WorkTargetSelectionInput {
 }

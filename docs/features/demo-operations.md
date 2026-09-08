@@ -297,6 +297,10 @@ Docker 방식은 임시 DB volume을 자동 삭제한다. 직접 실행 방식�
 
 ## 8. 초기 데이터 복구
 
+데모 배포의 난 묶음 writer는 데모 DB에 별도 baseline과 `ACTIVE` 전환을
+수행하기 전까지 `LEGACY`로 유지한다. 운영 백업을 비식별화해 복원하는 것만으로는
+Engine이 요구하는 revision chain이 생성되지 않는다.
+
 초기화 스크립트는 DB 이름이 정확히 `greenhouse_demo`일 때만 실행된다. 백엔드를
 중지하고 DB를 다시 만든 뒤 dump 복구, 권한 적용, Flyway 시작, health check를
 수행한다.

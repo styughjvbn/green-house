@@ -8,7 +8,6 @@ import com.greenhouse.backend.farm.dto.material.MaterialResponse;
 import com.greenhouse.backend.farm.dto.material.MaterialUpdateRequest;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
-
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -29,12 +28,9 @@ public class MaterialController {
 	private final MaterialService materialService;
 
 	@GetMapping
-	public ApiResponse<PageResponse<MaterialResponse>> getMaterials(
-			@RequestParam(required = false) String keyword,
-			@RequestParam(required = false) String category,
-			@RequestParam(required = false) String manufacturer,
-			@RequestParam(required = false) Boolean active,
-			@RequestParam(defaultValue = "0") int page,
+	public ApiResponse<PageResponse<MaterialResponse>> getMaterials(@RequestParam(required = false) String keyword,
+			@RequestParam(required = false) String category, @RequestParam(required = false) String manufacturer,
+			@RequestParam(required = false) Boolean active, @RequestParam(defaultValue = "0") int page,
 			@RequestParam(defaultValue = "10") int size) {
 		return ApiResponse.ok(materialService.getMaterials(keyword, category, manufacturer, active, page, size));
 	}
@@ -51,8 +47,7 @@ public class MaterialController {
 	}
 
 	@PatchMapping("/{materialId}")
-	public ApiResponse<MaterialResponse> update(
-			@PathVariable Long materialId,
+	public ApiResponse<MaterialResponse> update(@PathVariable Long materialId,
 			@Valid @RequestBody MaterialUpdateRequest request) {
 		return ApiResponse.ok(materialService.update(materialId, request));
 	}
@@ -67,4 +62,5 @@ public class MaterialController {
 		materialService.delete(materialId);
 		return ApiResponse.ok(null);
 	}
+
 }

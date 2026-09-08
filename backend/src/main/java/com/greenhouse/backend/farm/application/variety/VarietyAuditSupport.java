@@ -1,5 +1,6 @@
 package com.greenhouse.backend.farm.application.variety;
 
+import com.greenhouse.backend.audit.application.AuditEvent;
 import com.greenhouse.backend.audit.application.AuditEventWriter;
 import com.greenhouse.backend.audit.domain.AuditAction;
 import com.greenhouse.backend.audit.domain.AuditSource;
@@ -12,6 +13,7 @@ import org.springframework.stereotype.Component;
 @Component
 @RequiredArgsConstructor
 public class VarietyAuditSupport {
+
 	private final AuditEventWriter auditWriter;
 
 	public Map<String, Object> snapshot(Variety variety) {
@@ -30,7 +32,9 @@ public class VarietyAuditSupport {
 	}
 
 	public Long record(AuditAction action, Variety variety, Map<String, Object> before, Map<String, Object> after) {
-		return auditWriter.record(action, AuditSource.VARIETY_MANAGEMENT, "VARIETY", variety.getId(),
-				null, null, null, variety.getId(), before, after, Map.of());
+		return auditWriter.record(action, AuditSource.VARIETY_MANAGEMENT,
+				new AuditEvent.Target("VARIETY", variety.getId(), null, null, null, variety.getId()), before, after,
+				Map.of());
 	}
+
 }

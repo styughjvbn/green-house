@@ -2,9 +2,9 @@ package com.greenhouse.backend.settlement.application;
 
 import com.greenhouse.backend.settlement.domain.PaymentTargetType;
 import com.greenhouse.backend.settlement.repository.PartnerPaymentEventRepository;
-import lombok.RequiredArgsConstructor;
 import java.util.List;
 import java.util.Set;
+import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
 @Service
@@ -23,4 +23,5 @@ public class PaymentEventReader {
 		}
 		return Set.copyOf(partnerPaymentEventRepository.findExistingTargetIds(targetType, targetIds));
 	}
+
 }

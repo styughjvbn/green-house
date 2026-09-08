@@ -8,12 +8,12 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import com.greenhouse.backend.farm.domain.collection.OrchidGroupCollection;
+import com.greenhouse.backend.farm.domain.collection.OrchidGroupCollectionMember;
+import com.greenhouse.backend.farm.domain.orchid.OrchidGroup;
 import com.greenhouse.backend.farm.domain.structure.BedZone;
 import com.greenhouse.backend.farm.domain.structure.BedZoneSide;
 import com.greenhouse.backend.farm.domain.structure.House;
-import com.greenhouse.backend.farm.domain.orchid.OrchidGroup;
-import com.greenhouse.backend.farm.domain.collection.OrchidGroupCollection;
-import com.greenhouse.backend.farm.domain.collection.OrchidGroupCollectionMember;
 import com.greenhouse.backend.farm.domain.structure.PhysicalBed;
 import com.greenhouse.backend.farm.domain.variety.Variety;
 import com.greenhouse.backend.farm.repository.collection.OrchidGroupCollectionMemberRepository;
@@ -32,138 +32,135 @@ class WorkOperationScopeIntegrationTests extends AbstractBackendIntegrationTest 
 
 	@Autowired
 	private OrchidGroupCollectionRepository collectionRepository;
+
 	@Autowired
 	private OrchidGroupCollectionMemberRepository collectionMemberRepository;
+
 	@Autowired
 	private WorkOperationTargetRepository workOperationTargetRepository;
 
 	@Test
 	void resolvesDerivedCollectionAndManualScopesThenPreservesSnapshot() throws Exception {
 		WorkType pesticide = workTypeRepository.findByCode("PESTICIDE")
-				.orElseGet(() -> workTypeRepository.save(new WorkType(
-						"PESTICIDE", "농약", WorkTypeTemplate.PESTICIDE, true, false, true, 1)));
+			.orElseGet(() -> workTypeRepository
+				.save(new WorkType("PESTICIDE", "농약", WorkTypeTemplate.PESTICIDE, true, false, true, 1)));
 		House house = new House(93, "작업 범위 테스트동");
 		PhysicalBed bed = new PhysicalBed(1, 1);
 		BedZone zone = new BedZone("좌측", BedZoneSide.LEFT, 1);
 		bed.addBedZone(zone);
 		house.addPhysicalBed(bed);
 		houseRepository.save(house);
-		Variety variety = varietyRepository.save(new Variety(
-				"WORK-SCOPE-TEST", "팔레놉시스", "작업 범위 테스트 난", null, "3.5\"", true, true, null, null));
+		Variety variety = varietyRepository
+			.save(new Variety("WORK-SCOPE-TEST", "팔레놉시스", "작업 범위 테스트 난", null, "3.5\"", true, true, null, null));
 		OrchidGroup first = saveGroup(zone, variety, 40, "3.5\"", 1);
 		OrchidGroup second = saveGroup(zone, variety, 30, "3.5\"", 2);
 		OrchidGroup third = saveGroup(zone, variety, 20, "4\"", 3);
 
-		OrchidGroupCollection collection = collectionRepository.save(
-				new OrchidGroupCollection("작업 후보", null, "농약", "테스터"));
-		collectionMemberRepository.save(new OrchidGroupCollectionMember(collection.getId(), first.getId(), "테스터"));
-		collectionMemberRepository.save(new OrchidGroupCollectionMember(collection.getId(), third.getId(), "테스터"));
+		OrchidGroupCollection collection = collectionRepository
+			.save(new OrchidGroupCollection("작업 후보", null, "농약", "테스터"));
+		collectionMemberRepository.save(new OrchidGroupCollectionMember(collection.getId(), first.getId(), "테스터",
+				java.time.LocalDateTime.of(2026, 9, 8, 1, 2)));
+		collectionMemberRepository.save(new OrchidGroupCollectionMember(collection.getId(), third.getId(), "테스터",
+				java.time.LocalDateTime.of(2026, 9, 8, 1, 2)));
 
 		String derivedKey = variety.getId() + ":2:POT_3_5";
 		preview("""
 				{"sourceScopeType":"DERIVED_GROUP","sourceDerivedGroupKey":"%s"}
-				""".formatted(derivedKey))
-				.andExpect(status().isOk())
-				.andExpect(jsonPath("$.data.orchidGroupCount").value(2))
-				.andExpect(jsonPath("$.data.totalQuantity").value(70));
+				""".formatted(derivedKey)).andExpect(status().isOk())
+			.andExpect(jsonPath("$.data.orchidGroupCount").value(2))
+			.andExpect(jsonPath("$.data.totalQuantity").value(70));
 		preview("""
 				{"sourceScopeType":"USER_COLLECTION","sourceScopeId":%d}
-				""".formatted(collection.getId()))
-				.andExpect(status().isOk())
-				.andExpect(jsonPath("$.data.orchidGroupCount").value(2))
-				.andExpect(jsonPath("$.data.totalQuantity").value(60));
+				""".formatted(collection.getId())).andExpect(status().isOk())
+			.andExpect(jsonPath("$.data.orchidGroupCount").value(2))
+			.andExpect(jsonPath("$.data.totalQuantity").value(60));
 		preview("""
 				{"sourceScopeType":"MANUAL_SELECTION","sourceOrchidGroupIds":[%d,%d]}
-				""".formatted(second.getId(), third.getId()))
-				.andExpect(status().isOk())
-				.andExpect(jsonPath("$.data.orchidGroupCount").value(2))
-				.andExpect(jsonPath("$.data.totalQuantity").value(50));
+				""".formatted(second.getId(), third.getId())).andExpect(status().isOk())
+			.andExpect(jsonPath("$.data.orchidGroupCount").value(2))
+			.andExpect(jsonPath("$.data.totalQuantity").value(50));
 
-		var result = mockMvc.perform(post("/api/work-operations")
-				.contentType(MediaType.APPLICATION_JSON)
-				.content("""
-						{
-						  "workTypeId": %d,
-						  "title": "자동 그룹 농약 작업",
-						  "plannedStartDate": "2026-07-15",
-						  "sourceScopeType": "DERIVED_GROUP",
-						  "sourceDerivedGroupKey": "%s"
-						}
-						""".formatted(pesticide.getId(), derivedKey)))
-				.andExpect(status().isCreated())
-				.andExpect(jsonPath("$.data.sourceScopeType").value("DERIVED_GROUP"))
-				.andExpect(jsonPath("$.data.sourceScopeId").doesNotExist())
-				.andExpect(jsonPath("$.data.sourceConditionSnapshot.groupKey").value(derivedKey))
-				.andExpect(jsonPath("$.data.targets", hasSize(2)))
-				.andExpect(jsonPath("$.data.targets[*].inclusionSource", everyItem(is("DERIVED_GROUP"))))
-				.andReturn();
-		Long operationId = Long.valueOf(result.getResponse().getContentAsString()
-				.replaceAll(".*?\\\"data\\\":\\{\\\"id\\\":(\\d+).*", "$1"));
+		var result = mockMvc.perform(post("/api/work-operations").contentType(MediaType.APPLICATION_JSON).content("""
+				{
+				  "workTypeId": %d,
+				  "title": "자동 그룹 농약 작업",
+				  "plannedStartDate": "2026-07-15",
+				  "sourceScopeType": "DERIVED_GROUP",
+				  "sourceDerivedGroupKey": "%s"
+				}
+				""".formatted(pesticide.getId(), derivedKey)))
+			.andExpect(status().isCreated())
+			.andExpect(jsonPath("$.data.sourceScopeType").value("DERIVED_GROUP"))
+			.andExpect(jsonPath("$.data.sourceScopeId").doesNotExist())
+			.andExpect(jsonPath("$.data.sourceConditionSnapshot.groupKey").value(derivedKey))
+			.andExpect(jsonPath("$.data.targets", hasSize(2)))
+			.andExpect(jsonPath("$.data.targets[*].inclusionSource", everyItem(is("DERIVED_GROUP"))))
+			.andReturn();
+		Long operationId = Long.valueOf(
+				result.getResponse().getContentAsString().replaceAll(".*?\\\"data\\\":\\{\\\"id\\\":(\\d+).*", "$1"));
 
-		second.updateDetails(
-				variety.getGenus(), variety.getName(), 30, "4\"", 2, "정상", null, null, false,
+		second.updateDetails(variety.getGenus(), variety.getName(), 30, "4\"", 2, "정상", null, null, false,
 				BigDecimal.ONE, BigDecimal.TEN, null);
-		orchidGroupRepository.saveAndFlush(second);
+		saveOrchidGroup(second);
 
 		preview("""
 				{"sourceScopeType":"DERIVED_GROUP","sourceDerivedGroupKey":"%s"}
-				""".formatted(derivedKey))
-				.andExpect(status().isOk())
-				.andExpect(jsonPath("$.data.orchidGroupCount").value(1));
+				""".formatted(derivedKey)).andExpect(status().isOk())
+			.andExpect(jsonPath("$.data.orchidGroupCount").value(1));
 		mockMvc.perform(get("/api/work-operations/{id}", operationId))
-				.andExpect(status().isOk())
-				.andExpect(jsonPath("$.data.targets", hasSize(2)));
+			.andExpect(status().isOk())
+			.andExpect(jsonPath("$.data.targets", hasSize(2)));
 
-		mockMvc.perform(post("/api/work-operations/{id}/complete", operationId))
-				.andExpect(status().isBadRequest());
+		mockMvc.perform(post("/api/work-operations/{id}/complete", operationId)).andExpect(status().isBadRequest());
 		mockMvc.perform(post("/api/work-operations/{id}/start", operationId))
-				.andExpect(status().isOk())
-				.andExpect(jsonPath("$.data.status").value("IN_PROGRESS"));
+			.andExpect(status().isOk())
+			.andExpect(jsonPath("$.data.status").value("IN_PROGRESS"));
 		mockMvc.perform(post("/api/work-operations/{id}/pause", operationId))
-				.andExpect(status().isOk())
-				.andExpect(jsonPath("$.data.status").value("PAUSED"));
+			.andExpect(status().isOk())
+			.andExpect(jsonPath("$.data.status").value("PAUSED"));
 
-		var targets = workOperationTargetRepository
-				.findByWorkOperationIdAndExcludedAtIsNullOrderByIdAsc(operationId);
+		var targets = workOperationTargetRepository.findByWorkOperationIdAndExcludedAtIsNullOrderByIdAsc(operationId);
 		mockMvc.perform(post("/api/work-operations/{id}/targets/{targetId}/start", operationId, targets.get(0).getId()))
-				.andExpect(status().isBadRequest());
+			.andExpect(status().isBadRequest());
 		mockMvc.perform(post("/api/work-operations/{id}/resume", operationId))
-				.andExpect(status().isOk())
-				.andExpect(jsonPath("$.data.status").value("IN_PROGRESS"));
-		mockMvc.perform(post("/api/work-operations/{id}/targets/{targetId}/start", operationId, targets.get(0).getId())
+			.andExpect(status().isOk())
+			.andExpect(jsonPath("$.data.status").value("IN_PROGRESS"));
+		mockMvc
+			.perform(post("/api/work-operations/{id}/targets/{targetId}/start", operationId, targets.get(0).getId())
 				.contentType(MediaType.APPLICATION_JSON)
 				.content("{\"worker\":\"첫 작업자\"}"))
-				.andExpect(status().isOk())
-				.andExpect(jsonPath("$.data.progress.inProgress").value(1));
-		mockMvc.perform(post("/api/work-operations/{id}/targets/{targetId}/complete", operationId, targets.get(0).getId())
+			.andExpect(status().isOk())
+			.andExpect(jsonPath("$.data.progress.inProgress").value(1));
+		mockMvc
+			.perform(post("/api/work-operations/{id}/targets/{targetId}/complete", operationId, targets.get(0).getId())
 				.contentType(MediaType.APPLICATION_JSON)
 				.content("{\"worker\":\"첫 작업자\",\"resultDetails\":{\"memo\":\"완료\"}}"))
-				.andExpect(status().isOk())
-				.andExpect(jsonPath("$.data.targets[0].worker").value("첫 작업자"))
-				.andExpect(jsonPath("$.data.targets[0].resultDetails.memo").value("완료"));
-		mockMvc.perform(post("/api/work-operations/{id}/targets/{targetId}/skip", operationId, targets.get(1).getId())
+			.andExpect(status().isOk())
+			.andExpect(jsonPath("$.data.targets[0].worker").value("첫 작업자"))
+			.andExpect(jsonPath("$.data.targets[0].resultDetails.memo").value("완료"));
+		mockMvc
+			.perform(post("/api/work-operations/{id}/targets/{targetId}/skip", operationId, targets.get(1).getId())
 				.contentType(MediaType.APPLICATION_JSON)
 				.content("{\"worker\":\"둘째 작업자\",\"resultDetails\":{\"reason\":\"대상 제외\"}}"))
-				.andExpect(status().isOk())
-				.andExpect(jsonPath("$.data.progress.completed").value(1))
-				.andExpect(jsonPath("$.data.progress.skipped").value(1))
-				.andExpect(jsonPath("$.data.progress.progressPercent").value(100));
+			.andExpect(status().isOk())
+			.andExpect(jsonPath("$.data.progress.completed").value(1))
+			.andExpect(jsonPath("$.data.progress.skipped").value(1))
+			.andExpect(jsonPath("$.data.progress.progressPercent").value(100));
 		mockMvc.perform(post("/api/work-operations/{id}/complete", operationId))
-				.andExpect(status().isOk())
-				.andExpect(jsonPath("$.data.status").value("COMPLETED"));
+			.andExpect(status().isOk())
+			.andExpect(jsonPath("$.data.status").value("COMPLETED"));
 	}
 
 	private org.springframework.test.web.servlet.ResultActions preview(String content) throws Exception {
-		return mockMvc.perform(post("/api/work-operations/target-preview")
-				.contentType(MediaType.APPLICATION_JSON)
-				.content(content));
+		return mockMvc.perform(
+				post("/api/work-operations/target-preview").contentType(MediaType.APPLICATION_JSON).content(content));
 	}
 
 	private OrchidGroup saveGroup(BedZone zone, Variety variety, int quantity, String potSize, int sortOrder) {
-		OrchidGroup group = new OrchidGroup(
-				zone, variety.getGenus(), variety.getName(), quantity, potSize, 2, "정상", sortOrder,
-				BigDecimal.ONE, BigDecimal.TEN);
+		OrchidGroup group = new OrchidGroup(zone, variety.getGenus(), variety.getName(), quantity, potSize, 2, "정상",
+				sortOrder, BigDecimal.ONE, BigDecimal.TEN);
 		group.assignVariety(variety);
-		return orchidGroupRepository.save(group);
+		return saveOrchidGroup(group);
 	}
+
 }

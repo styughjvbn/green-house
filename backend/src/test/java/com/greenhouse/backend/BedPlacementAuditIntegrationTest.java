@@ -17,7 +17,9 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.MediaType;
 
 class BedPlacementAuditIntegrationTest extends AbstractBackendIntegrationTest {
-	@Autowired AuditEventRepository auditEventRepository;
+
+	@Autowired
+	AuditEventRepository auditEventRepository;
 
 	@Test
 	void recordsChangedProfileAndSkipsIdenticalProfile() throws Exception {
@@ -35,18 +37,19 @@ class BedPlacementAuditIntegrationTest extends AbstractBackendIntegrationTest {
 				""";
 
 		for (int index = 0; index < 2; index++) {
-			mockMvc.perform(put("/api/bed-zones/{id}/placement-profile", zone.getId())
-					.with(user("operator"))
+			mockMvc
+				.perform(put("/api/bed-zones/{id}/placement-profile", zone.getId()).with(user("operator"))
 					.header("X-Request-Id", "bed-profile-" + index)
 					.contentType(MediaType.APPLICATION_JSON)
 					.content(body))
-					.andExpect(status().isOk());
+				.andExpect(status().isOk());
 		}
 
-		var events = auditEventRepository.findAll().stream()
-				.filter(event -> event.getSource() == AuditSource.FARM_STRUCTURE_MANAGEMENT)
-				.filter(event -> event.getEntityId().equals(zone.getId()))
-				.toList();
+		var events = auditEventRepository.findAll()
+			.stream()
+			.filter(event -> event.getSource() == AuditSource.FARM_STRUCTURE_MANAGEMENT)
+			.filter(event -> event.getEntityId().equals(zone.getId()))
+			.toList();
 		assertThat(events).hasSize(1);
 		assertThat(events.getFirst().getAction()).isEqualTo(AuditAction.UPDATED);
 		assertThat(events.getFirst().getEntityType()).isEqualTo("BED_ZONE");
@@ -55,4 +58,5 @@ class BedPlacementAuditIntegrationTest extends AbstractBackendIntegrationTest {
 		assertThat(events.getFirst().getZoneId()).isEqualTo(zone.getId());
 		assertThat(events.getFirst().getChangedFields()).containsExactly("capacities");
 	}
+
 }

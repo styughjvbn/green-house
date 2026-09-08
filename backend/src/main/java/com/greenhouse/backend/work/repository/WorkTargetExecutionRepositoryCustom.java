@@ -1,8 +1,8 @@
 package com.greenhouse.backend.work.repository;
 
 import com.greenhouse.backend.work.domain.target.WorkTargetExecution;
-import java.util.List;
 import java.util.Collection;
+import java.util.List;
 import java.util.Optional;
 
 public interface WorkTargetExecutionRepositoryCustom {
@@ -21,11 +21,8 @@ public interface WorkTargetExecutionRepositoryCustom {
 
 	List<WorkTargetExecution> findForUpdateByTargetWorkOperationIdOrderByIdAsc(Long workOperationId);
 
-	Optional<WorkTargetExecution> findByTargetIdAndTargetWorkOperationId(
-			Long targetId,
-			Long workOperationId);
+	Optional<WorkTargetExecution> findByTargetIdAndTargetWorkOperationId(Long targetId, Long workOperationId);
 
-	Optional<WorkTargetExecution> findForUpdateByTargetIdAndTargetWorkOperationId(
-			Long targetId,
-			Long workOperationId);
+	Optional<WorkTargetExecution> findForUpdateByTargetIdAndTargetWorkOperationId(Long targetId, Long workOperationId);
+
 }

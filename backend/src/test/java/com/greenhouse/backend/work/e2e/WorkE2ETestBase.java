@@ -10,15 +10,15 @@ import java.net.http.HttpResponse;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.web.server.LocalServerPort;
 import org.springframework.boot.testcontainers.service.connection.ServiceConnection;
-import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.annotation.DirtiesContext;
+import org.springframework.test.context.ActiveProfiles;
 import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
 import org.testcontainers.postgresql.PostgreSQLContainer;
 
 @ActiveProfiles("e2e")
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
-@Testcontainers(disabledWithoutDocker = true)
+@Testcontainers
 @DirtiesContext(classMode = DirtiesContext.ClassMode.AFTER_CLASS)
 abstract class WorkE2ETestBase {
 
@@ -27,6 +27,7 @@ abstract class WorkE2ETestBase {
 	static final PostgreSQLContainer POSTGRES = new PostgreSQLContainer("postgres:18-alpine");
 
 	private final HttpClient httpClient = HttpClient.newHttpClient();
+
 	protected final ObjectMapper objectMapper = new ObjectMapper().findAndRegisterModules();
 
 	@LocalServerPort
@@ -38,9 +39,9 @@ abstract class WorkE2ETestBase {
 
 	protected ApiResult post(String path, String body) throws IOException, InterruptedException {
 		return exchange(HttpRequest.newBuilder(uri(path))
-				.header("Content-Type", "application/json")
-				.POST(HttpRequest.BodyPublishers.ofString(body))
-				.build());
+			.header("Content-Type", "application/json")
+			.POST(HttpRequest.BodyPublishers.ofString(body))
+			.build());
 	}
 
 	private ApiResult exchange(HttpRequest request) throws IOException, InterruptedException {
@@ -57,4 +58,5 @@ abstract class WorkE2ETestBase {
 			return body.path("data");
 		}
 	}
+
 }
