@@ -16,7 +16,7 @@ import com.greenhouse.backend.work.application.effect.WorkExecutionResult;
 import com.greenhouse.backend.work.application.effect.WorkMutationLink;
 import com.greenhouse.backend.work.domain.effect.WorkEffectKind;
 import com.greenhouse.backend.work.domain.target.WorkTargetReferenceType;
-import com.greenhouse.backend.work.dto.effect.StructureChangeExecutionRequest;
+import com.greenhouse.backend.work.application.effect.StructureChangeCommand;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
@@ -42,7 +42,7 @@ public class MovementWorkHandler implements WorkEffectHandler {
 	@Override
 	public WorkExecutionResult execute(WorkEffectContext context, WorkEffectCommand command) {
 		var target = context.target();
-		if (command.payload() instanceof StructureChangeExecutionRequest request) {
+		if (command.payload() instanceof StructureChangeCommand request) {
 			return structureChangeExecutor.execute(
 					context, request, command.placementExclusionOrchidGroupIds());
 		}

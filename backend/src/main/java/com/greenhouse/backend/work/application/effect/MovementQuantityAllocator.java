@@ -1,7 +1,7 @@
 package com.greenhouse.backend.work.application.effect;
 
-import com.greenhouse.backend.work.dto.effect.StructureChangeExecutionRequest;
-import com.greenhouse.backend.work.dto.effect.StructureChangeSourceRequest;
+import com.greenhouse.backend.work.application.effect.StructureChangeCommand;
+import com.greenhouse.backend.work.application.effect.StructureChangeSourceInput;
 import java.util.Comparator;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -13,10 +13,10 @@ public final class MovementQuantityAllocator {
 	}
 
 	public static Map<Long, Integer> allocateMovedBySource(
-			StructureChangeExecutionRequest request) {
-		List<StructureChangeSourceRequest> sources =
+			StructureChangeCommand request) {
+		List<StructureChangeSourceInput> sources =
 				request.sources().stream()
-						.sorted(Comparator.comparing(StructureChangeSourceRequest::sourceOrchidGroupId))
+						.sorted(Comparator.comparing(StructureChangeSourceInput::sourceOrchidGroupId))
 						.toList();
 		Map<Long, Integer> inputBySourceId = new LinkedHashMap<>();
 		for (var source : sources) {

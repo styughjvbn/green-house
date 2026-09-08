@@ -12,7 +12,7 @@ import com.greenhouse.backend.work.domain.target.WorkOperationTarget;
 import com.greenhouse.backend.work.domain.target.WorkTargetExecution;
 import com.greenhouse.backend.work.domain.target.WorkTargetExecutionStatus;
 import com.greenhouse.backend.work.domain.target.WorkTargetReferenceType;
-import com.greenhouse.backend.work.dto.operation.WorkOperationResponse;
+import com.greenhouse.backend.work.application.operation.WorkOperationView;
 import com.greenhouse.backend.work.dto.target.WorkTargetExecutionRequest;
 import com.greenhouse.backend.work.repository.WorkOperationRepository;
 import com.greenhouse.backend.work.repository.WorkTargetExecutionRepository;
@@ -37,7 +37,7 @@ public class WorkOperationProgressService {
 	private final WorkOperationQueryService queryService;
 	private final WorkOperationSupport support;
 
-	public WorkOperationResponse complete(Long operationId, LocalDate completedDate) {
+	public WorkOperationView complete(Long operationId, LocalDate completedDate) {
 		WorkOperation operation = findOperation(operationId);
 		List<WorkTargetExecution> executions = executionRepository
 				.findByTargetWorkOperationIdOrderByIdAsc(operationId);
@@ -48,22 +48,22 @@ public class WorkOperationProgressService {
 		return queryService.get(operationId);
 	}
 
-	public WorkOperationResponse start(Long operationId) {
+	public WorkOperationView start(Long operationId) {
 		findOperation(operationId).start(support.now());
 		return queryService.get(operationId);
 	}
 
-	public WorkOperationResponse pause(Long operationId) {
+	public WorkOperationView pause(Long operationId) {
 		findOperation(operationId).pause();
 		return queryService.get(operationId);
 	}
 
-	public WorkOperationResponse resume(Long operationId) {
+	public WorkOperationView resume(Long operationId) {
 		findOperation(operationId).resume();
 		return queryService.get(operationId);
 	}
 
-	public WorkOperationResponse cancel(Long operationId) {
+	public WorkOperationView cancel(Long operationId) {
 		WorkOperation operation = findOperation(operationId);
 		List<WorkTargetExecution> executions = executionRepository
 				.findByTargetWorkOperationIdOrderByIdAsc(operationId);
@@ -77,7 +77,7 @@ public class WorkOperationProgressService {
 		return queryService.get(operationId);
 	}
 
-	public WorkOperationResponse startTarget(
+	public WorkOperationView startTarget(
 			Long operationId, Long targetId, WorkTargetExecutionRequest request) {
 		validateOperationInProgress(operationId);
 		findExecution(operationId, targetId)
@@ -85,12 +85,12 @@ public class WorkOperationProgressService {
 		return queryService.get(operationId);
 	}
 
-	public WorkOperationResponse completeTarget(
+	public WorkOperationView completeTarget(
 			Long operationId, Long targetId, WorkTargetExecutionRequest request) {
 		return completeTarget(operationId, targetId, request, null);
 	}
 
-	WorkOperationResponse completeTarget(
+	WorkOperationView completeTarget(
 			Long operationId,
 			Long targetId,
 			WorkTargetExecutionRequest request,
@@ -117,7 +117,7 @@ public class WorkOperationProgressService {
 		return queryService.get(operationId);
 	}
 
-	public WorkOperationResponse skipTarget(
+	public WorkOperationView skipTarget(
 			Long operationId, Long targetId, WorkTargetExecutionRequest request) {
 		validateOperationInProgress(operationId);
 		WorkTargetExecution execution = findExecution(operationId, targetId);

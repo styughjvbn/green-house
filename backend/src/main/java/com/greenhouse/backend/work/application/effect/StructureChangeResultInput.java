@@ -1,5 +1,6 @@
-package com.greenhouse.backend.work.dto.effect;
+package com.greenhouse.backend.work.application.effect;
 
+import io.swagger.v3.oas.annotations.media.Schema;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.greenhouse.backend.work.domain.effect.StructureChangeResultPurpose;
 import jakarta.validation.constraints.DecimalMin;
@@ -9,7 +10,8 @@ import jakarta.validation.constraints.Size;
 import java.math.BigDecimal;
 
 @JsonIgnoreProperties(ignoreUnknown = true)
-public record StructureChangeResultRequest(
+@Schema(name = "StructureChangeResultRequest")
+public record StructureChangeResultInput(
 		@NotNull Long bedZoneId,
 		@NotNull @Min(1) Integer quantity,
 		Long attributeSourceOrchidGroupId,

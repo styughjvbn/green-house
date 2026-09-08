@@ -6,7 +6,7 @@ import com.greenhouse.backend.work.domain.effect.WorkAppliedEffect;
 import com.greenhouse.backend.work.domain.effect.WorkEffectOrchidGroup;
 import com.greenhouse.backend.work.domain.operation.WorkOperation;
 import com.greenhouse.backend.work.dto.operation.WorkCorrectionDetailResponse;
-import com.greenhouse.backend.work.dto.operation.WorkExecutionLocationResponse;
+import com.greenhouse.backend.work.application.operation.WorkExecutionLocation;
 import com.greenhouse.backend.work.dto.operation.WorkOperationDetailResponse;
 import com.greenhouse.backend.work.dto.operation.WorkOperationDetailSummaryResponse;
 import com.greenhouse.backend.work.repository.WorkAppliedEffectRepository;
@@ -45,7 +45,7 @@ public class WorkOperationDetailService {
 						LinkedHashMap::new,
 						Collectors.toList()));
 		Map<Long, String> resultVarietyNames = resultVarietyNames(effects, linksByEffectId);
-		Map<Long, WorkExecutionLocationResponse> resultLocations = resultLocations(effects);
+		Map<Long, WorkExecutionLocation> resultLocations = resultLocations(effects);
 		return new WorkOperationDetailResponse(
 				WorkOperationDetailSummaryResponse.from(operation),
 				WorkOperationDetailAssembler.fields(operation),
@@ -68,7 +68,7 @@ public class WorkOperationDetailService {
 		return executionReferenceGateway.varietyNames(ids);
 	}
 
-	private Map<Long, WorkExecutionLocationResponse> resultLocations(List<WorkAppliedEffect> effects) {
+	private Map<Long, WorkExecutionLocation> resultLocations(List<WorkAppliedEffect> effects) {
 		var ids = effects.stream().flatMap(effect -> WorkEffectDetailCodec.locationIds(effect).stream())
 				.collect(Collectors.toCollection(LinkedHashSet::new));
 		return executionReferenceGateway.locations(ids);

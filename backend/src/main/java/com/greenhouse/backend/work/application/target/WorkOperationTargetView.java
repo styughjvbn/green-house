@@ -1,5 +1,7 @@
-package com.greenhouse.backend.work.dto.target;
+package com.greenhouse.backend.work.application.target;
 
+import com.greenhouse.backend.work.domain.target.WorkTargetAction;
+import io.swagger.v3.oas.annotations.media.Schema;
 import com.greenhouse.backend.common.config.TimeConfig;
 import com.greenhouse.backend.work.application.target.InboundPottingPlanTarget;
 import com.greenhouse.backend.work.application.target.ResolvedWorkTarget;
@@ -14,7 +16,8 @@ import java.util.ArrayList;
 import java.util.LinkedHashSet;
 import java.util.List;
 
-public record WorkOperationTargetResponse(
+@Schema(name = "WorkOperationTargetResponse")
+public record WorkOperationTargetView(
 		Long id,
 		WorkTargetReferenceType targetReferenceType,
 		Long orchidGroupId,
@@ -37,9 +40,9 @@ public record WorkOperationTargetResponse(
 		List<Long> resultOrchidGroupIds,
 		List<WorkTargetAction> availableActions) {
 
-	public static WorkOperationTargetResponse preview(
+	public static WorkOperationTargetView preview(
 			ResolvedWorkTarget target) {
-		return new WorkOperationTargetResponse(
+		return new WorkOperationTargetView(
 				null,
 				WorkTargetReferenceType.ORCHID_GROUP,
 				target.orchidGroupId(),
@@ -63,13 +66,13 @@ public record WorkOperationTargetResponse(
 				List.of());
 	}
 
-	public static WorkOperationTargetResponse from(
+	public static WorkOperationTargetView from(
 			WorkOperationTarget target,
 			WorkTargetExecution execution) {
 		return from(target, execution, null, List.of());
 	}
 
-	public static WorkOperationTargetResponse from(
+	public static WorkOperationTargetView from(
 			WorkOperationTarget target,
 			WorkTargetExecution execution,
 			InboundPottingPlanTarget currentInbound,
@@ -86,7 +89,7 @@ public record WorkOperationTargetResponse(
 		Map<String, Object> location = currentInbound == null
 				? target.getLocationSnapshot()
 				: inboundLocation(currentInbound);
-		return new WorkOperationTargetResponse(
+		return new WorkOperationTargetView(
 				target.getId(),
 				target.getTargetReferenceType(),
 				target.getOrchidGroupId(),

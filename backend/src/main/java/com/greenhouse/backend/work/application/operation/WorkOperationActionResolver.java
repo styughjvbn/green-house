@@ -5,10 +5,10 @@ import com.greenhouse.backend.work.domain.operation.WorkOperationStatus;
 import com.greenhouse.backend.work.domain.operation.WorkTypeWorkflow;
 import com.greenhouse.backend.work.domain.target.WorkTargetExecution;
 import com.greenhouse.backend.work.domain.target.WorkTargetExecutionStatus;
-import com.greenhouse.backend.work.dto.operation.WorkOperationAction;
-import com.greenhouse.backend.work.dto.operation.WorkOperationProgressResponse;
-import com.greenhouse.backend.work.dto.target.WorkOperationTargetResponse;
-import com.greenhouse.backend.work.dto.target.WorkTargetAction;
+import com.greenhouse.backend.work.domain.operation.WorkOperationAction;
+import com.greenhouse.backend.work.application.operation.WorkOperationProgress;
+import com.greenhouse.backend.work.application.target.WorkOperationTargetView;
+import com.greenhouse.backend.work.domain.target.WorkTargetAction;
 import java.util.ArrayList;
 import java.util.List;
 import org.springframework.stereotype.Component;
@@ -18,13 +18,13 @@ class WorkOperationActionResolver {
 
 	List<WorkOperationAction> resolveOperation(
 			WorkOperation operation,
-			List<WorkOperationTargetResponse> targets) {
-		return resolveOperation(operation, WorkOperationProgressResponse.from(targets));
+			List<WorkOperationTargetView> targets) {
+		return resolveOperation(operation, WorkOperationProgress.from(targets));
 	}
 
 	List<WorkOperationAction> resolveOperation(
 			WorkOperation operation,
-			WorkOperationProgressResponse progress) {
+			WorkOperationProgress progress) {
 		return switch (operation.getStatus()) {
 			case PLANNED -> List.of(WorkOperationAction.START, WorkOperationAction.CANCEL);
 			case PAUSED -> List.of(WorkOperationAction.RESUME, WorkOperationAction.CANCEL);
@@ -58,7 +58,7 @@ class WorkOperationActionResolver {
 		return List.copyOf(actions);
 	}
 
-	private boolean allTargetsClosed(WorkOperationProgressResponse progress) {
+	private boolean allTargetsClosed(WorkOperationProgress progress) {
 		return progress.total() > 0
 				&& progress.pending() == 0
 				&& progress.inProgress() == 0

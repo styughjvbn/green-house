@@ -9,8 +9,8 @@ import com.greenhouse.backend.work.domain.operation.WorkOperation;
 import com.greenhouse.backend.work.domain.operation.WorkOperationStatus;
 import com.greenhouse.backend.work.domain.operation.WorkTypeDefinition;
 import com.greenhouse.backend.work.domain.target.WorkTargetExecution;
-import com.greenhouse.backend.work.dto.effect.StructureChangeExecutionRequest;
-import com.greenhouse.backend.work.dto.operation.WorkOperationResponse;
+import com.greenhouse.backend.work.application.effect.StructureChangeCommand;
+import com.greenhouse.backend.work.application.operation.WorkOperationView;
 import com.greenhouse.backend.work.dto.target.WorkTargetExecutionRequest;
 import com.greenhouse.backend.work.repository.WorkAppliedEffectRepository;
 import com.greenhouse.backend.work.repository.WorkTargetExecutionRepository;
@@ -40,10 +40,10 @@ public class StructureChangeExecutionService {
 	private final ObjectMapper objectMapper = new ObjectMapper().findAndRegisterModules();
 
 	/**
-	 * @deprecated Use {@link #execute(Long, StructureChangeExecutionRequest)}.
+	 * @deprecated Use {@link #execute(Long, StructureChangeCommand)}.
 	 */
 	@Deprecated(since = "2026-08", forRemoval = false)
-	public WorkOperationResponse completeMerge(
+	public WorkOperationView completeMerge(
 			Long operationId, WorkTargetExecutionRequest request) {
 		List<WorkTargetExecution> executions = executionRepository
 				.findForUpdateByTargetWorkOperationIdOrderByIdAsc(operationId);
@@ -76,14 +76,14 @@ public class StructureChangeExecutionService {
 		return queryService.get(operationId);
 	}
 
-	public WorkOperationResponse execute(
-			Long operationId, StructureChangeExecutionRequest request) {
+	public WorkOperationView execute(
+			Long operationId, StructureChangeCommand request) {
 		return execute(operationId, request, Set.of());
 	}
 
-	WorkOperationResponse execute(
+	WorkOperationView execute(
 			Long operationId,
-			StructureChangeExecutionRequest request,
+			StructureChangeCommand request,
 			Set<Long> placementExclusionOrchidGroupIds) {
 		List<WorkTargetExecution> executions = executionRepository
 				.findForUpdateByTargetWorkOperationIdOrderByIdAsc(operationId);
@@ -122,7 +122,7 @@ public class StructureChangeExecutionService {
 
 		LocalDateTime executedAt = support.completionTime(request.completedDate());
 		String worker = support.actor(request.worker());
-		WorkOperationResponse discardOperation = null;
+		WorkOperationView discardOperation = null;
 		if (WorkTypeDefinition.MOVEMENT.name().equals(operation.getWorkType().getCode())) {
 			discardOperation = discardRecordService.createForMovement(
 					operation,
@@ -163,7 +163,7 @@ public class StructureChangeExecutionService {
 	}
 
 	private Map<Long, Integer> movementDiscardQuantities(
-			StructureChangeExecutionRequest request) {
+			StructureChangeCommand request) {
 		Map<Long, Integer> movedBySourceId = MovementQuantityAllocator.allocateMovedBySource(request);
 		Map<Long, Integer> discardQuantities = new LinkedHashMap<>();
 		request.sources().forEach(source -> {

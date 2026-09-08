@@ -10,9 +10,9 @@ import com.greenhouse.backend.work.domain.operation.WorkType;
 import com.greenhouse.backend.work.domain.operation.WorkTypeWorkflow;
 import com.greenhouse.backend.work.domain.target.WorkTargetExecution;
 import com.greenhouse.backend.work.domain.target.WorkTargetExecutionStatus;
-import com.greenhouse.backend.work.dto.operation.WorkOperationAction;
-import com.greenhouse.backend.work.dto.target.WorkOperationTargetResponse;
-import com.greenhouse.backend.work.dto.target.WorkTargetAction;
+import com.greenhouse.backend.work.domain.operation.WorkOperationAction;
+import com.greenhouse.backend.work.application.target.WorkOperationTargetView;
+import com.greenhouse.backend.work.domain.target.WorkTargetAction;
 import java.util.List;
 import org.junit.jupiter.api.Test;
 
@@ -71,8 +71,8 @@ class WorkOperationActionResolverTest {
 		return execution;
 	}
 
-	private WorkOperationTargetResponse target(WorkTargetExecutionStatus status) {
-		WorkOperationTargetResponse target = mock(WorkOperationTargetResponse.class);
+	private WorkOperationTargetView target(WorkTargetExecutionStatus status) {
+		WorkOperationTargetView target = mock(WorkOperationTargetView.class);
 		when(target.executionStatus()).thenReturn(status);
 		return target;
 	}

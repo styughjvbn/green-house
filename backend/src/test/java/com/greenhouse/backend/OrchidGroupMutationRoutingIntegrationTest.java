@@ -50,12 +50,12 @@ import com.greenhouse.backend.work.application.target.WorkTargetSelection;
 import com.greenhouse.backend.work.domain.operation.WorkType;
 import com.greenhouse.backend.work.domain.operation.WorkTypeDefinition;
 import com.greenhouse.backend.work.domain.operation.WorkTypeTemplate;
-import com.greenhouse.backend.work.dto.correction.OrchidGroupCorrectionRequest;
-import com.greenhouse.backend.work.dto.correction.WorkOperationCorrectionCreateRequest;
+import com.greenhouse.backend.work.application.correction.OrchidGroupCorrectionInput;
+import com.greenhouse.backend.work.application.correction.WorkCorrectionCommand;
 import com.greenhouse.backend.work.dto.effect.DiscardRecordCreateRequest;
 import com.greenhouse.backend.work.dto.effect.DiscardRecordResultRequest;
-import com.greenhouse.backend.work.dto.effect.InboundPottingExecutionRequest;
-import com.greenhouse.backend.work.dto.effect.InboundPottingResultRequest;
+import com.greenhouse.backend.work.application.effect.InboundPottingCommand;
+import com.greenhouse.backend.work.application.effect.InboundPottingResultInput;
 import com.greenhouse.backend.work.dto.operation.WorkOperationCreateRequest;
 import com.greenhouse.backend.work.dto.target.WorkTargetExecutionRequest;
 import com.greenhouse.backend.work.repository.WorkAppliedEffectRepository;
@@ -264,14 +264,14 @@ class OrchidGroupMutationRoutingIntegrationTest extends AbstractBackendIntegrati
 
 		var corrections = workOperationCorrectionService.create(
 				operationId,
-				new WorkOperationCorrectionCreateRequest(
+				new WorkCorrectionCommand(
 						"routing-correction-9964",
 						"라우팅 보정",
 						LocalDate.of(2026, 8, 20),
 						"관리자",
 						null,
 						"수량 확인",
-						List.of(new OrchidGroupCorrectionRequest(groupId, 10, "수량 보정"))));
+						List.of(new OrchidGroupCorrectionInput(groupId, 10, "수량 보정"))));
 		Long correctionOperationId = corrections.corrections().getFirst().correctionOperation().id();
 		Long correctionMutationId = workAppliedEffectRepository
 				.findByWorkOperationIdOrderByIdAsc(correctionOperationId).getFirst().getMutationId();
@@ -359,11 +359,11 @@ class OrchidGroupMutationRoutingIntegrationTest extends AbstractBackendIntegrati
 				"입고 담당",
 				null));
 
-		var operation = inboundPottingOperationService.executeNow(new InboundPottingExecutionRequest(
+		var operation = inboundPottingOperationService.executeNow(new InboundPottingCommand(
 				"routing-potting-9966",
 				inbound.id(),
 				LocalDate.of(2026, 8, 20),
-				List.of(new InboundPottingResultRequest(
+				List.of(new InboundPottingResultInput(
 						fixture.zone().getId(), 28, "2인치", 1, "트레이", 2, false,
 						new BigDecimal("0"), new BigDecimal("2"), null)),
 				"유묘",

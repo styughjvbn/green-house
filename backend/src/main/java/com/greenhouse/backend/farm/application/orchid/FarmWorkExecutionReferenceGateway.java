@@ -3,7 +3,7 @@ package com.greenhouse.backend.farm.application.orchid;
 import com.greenhouse.backend.farm.repository.orchid.OrchidGroupRepository;
 import com.greenhouse.backend.farm.repository.structure.BedZoneRepository;
 import com.greenhouse.backend.work.application.target.WorkExecutionReferenceGateway;
-import com.greenhouse.backend.work.dto.operation.WorkExecutionLocationResponse;
+import com.greenhouse.backend.work.application.operation.WorkExecutionLocation;
 import java.util.Collection;
 import java.util.LinkedHashMap;
 import java.util.Map;
@@ -34,14 +34,14 @@ public class FarmWorkExecutionReferenceGateway implements WorkExecutionReference
 	}
 
 	@Override
-	public Map<Long, WorkExecutionLocationResponse> locations(Collection<Long> bedZoneIds) {
+	public Map<Long, WorkExecutionLocation> locations(Collection<Long> bedZoneIds) {
 		if (bedZoneIds.isEmpty()) {
 			return Map.of();
 		}
 		return bedZoneRepository.findLocationRowsByIdIn(bedZoneIds).stream()
 				.collect(Collectors.toMap(
 						row -> row.id(),
-						row -> new WorkExecutionLocationResponse(
+						row -> new WorkExecutionLocation(
 								row.houseNumber(), row.physicalBedNumber(), row.bedZoneName()),
 						(left, right) -> left,
 						LinkedHashMap::new));

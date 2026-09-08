@@ -19,8 +19,8 @@ import com.greenhouse.backend.work.application.effect.WorkEffectResults;
 import com.greenhouse.backend.work.application.effect.WorkExecutionResult;
 import com.greenhouse.backend.work.application.effect.WorkMutationLink;
 import com.greenhouse.backend.work.domain.effect.WorkEffectKind;
-import com.greenhouse.backend.work.dto.correction.OrchidGroupCorrectionRequest;
-import com.greenhouse.backend.work.dto.correction.WorkOperationCorrectionCreateRequest;
+import com.greenhouse.backend.work.application.correction.OrchidGroupCorrectionInput;
+import com.greenhouse.backend.work.application.correction.WorkCorrectionCommand;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
@@ -52,12 +52,12 @@ public class CorrectionWorkHandler implements WorkEffectHandler {
 	public WorkExecutionResult execute(WorkEffectContext context, WorkEffectCommand command) {
 		var target = context.target();
 		if (target != null) throw new IllegalArgumentException("보정 작업은 작업 단위로 실행해야 합니다.");
-		WorkOperationCorrectionCreateRequest request = command.payloadAs(WorkOperationCorrectionCreateRequest.class);
+		WorkCorrectionCommand request = command.payloadAs(WorkCorrectionCommand.class);
 		Long originalOperationId = originalOperationId(command.resultDetails());
 		List<Long> correctableIds = structureChangeReferenceReader
 				.getCorrectableResultOrchidGroupIds(originalOperationId);
 		Set<Long> adjustmentIds = request.orchidGroupAdjustments().stream()
-				.map(OrchidGroupCorrectionRequest::orchidGroupId)
+				.map(OrchidGroupCorrectionInput::orchidGroupId)
 				.collect(Collectors.toCollection(LinkedHashSet::new));
 		if (adjustmentIds.size() != request.orchidGroupAdjustments().size()) {
 			throw new IllegalArgumentException("같은 난 묶음을 한 보정 작업에서 중복 지정할 수 없습니다.");
@@ -76,7 +76,7 @@ public class CorrectionWorkHandler implements WorkEffectHandler {
 					return !group.getQuantity().equals(adjustment.quantity())
 							|| !group.getStatus().equals(adjustment.status().trim());
 				})
-				.map(OrchidGroupCorrectionRequest::orchidGroupId)
+				.map(OrchidGroupCorrectionInput::orchidGroupId)
 				.collect(Collectors.toCollection(LinkedHashSet::new));
 		boolean workDateChanged = !workOperationDateCorrectionService.getWorkDate(originalOperationId)
 				.equals(request.workDate());

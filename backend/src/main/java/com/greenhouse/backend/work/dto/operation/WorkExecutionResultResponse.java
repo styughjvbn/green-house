@@ -1,5 +1,6 @@
 package com.greenhouse.backend.work.dto.operation;
 
+import com.greenhouse.backend.work.application.operation.WorkExecutionLocation;
 import java.math.BigDecimal;
 
 public record WorkExecutionResultResponse(
@@ -15,5 +16,5 @@ public record WorkExecutionResultResponse(
 		Integer trayCount,
 		String memo,
 		String varietyName,
-		WorkExecutionLocationResponse location) {
+		WorkExecutionLocation location) {
 }

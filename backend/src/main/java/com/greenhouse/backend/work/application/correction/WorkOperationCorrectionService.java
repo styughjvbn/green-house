@@ -9,7 +9,7 @@ import com.greenhouse.backend.work.domain.effect.WorkEffectKind;
 import com.greenhouse.backend.work.domain.operation.WorkOperation;
 import com.greenhouse.backend.work.domain.operation.WorkOperationStatus;
 import com.greenhouse.backend.work.domain.operation.WorkTypeDefinition;
-import com.greenhouse.backend.work.dto.correction.WorkOperationCorrectionCreateRequest;
+import com.greenhouse.backend.work.application.correction.WorkCorrectionCommand;
 import com.greenhouse.backend.work.dto.correction.WorkOperationCorrectionItemResponse;
 import com.greenhouse.backend.work.dto.correction.WorkOperationCorrectionsResponse;
 import com.greenhouse.backend.work.repository.WorkAppliedEffectRepository;
@@ -37,7 +37,7 @@ public class WorkOperationCorrectionService {
 
 	public WorkOperationCorrectionsResponse create(
 			Long originalWorkOperationId,
-			WorkOperationCorrectionCreateRequest request) {
+			WorkCorrectionCommand request) {
 		WorkOperation original = findCorrectableOriginal(originalWorkOperationId);
 		String reason = normalizeRequired(request.reason());
 		Map<String, Object> details = new LinkedHashMap<>();

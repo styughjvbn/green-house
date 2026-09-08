@@ -2,7 +2,7 @@ package com.greenhouse.backend.work.dto.correction;
 
 import com.greenhouse.backend.common.config.TimeConfig;
 import com.greenhouse.backend.work.domain.correction.WorkOperationCorrection;
-import com.greenhouse.backend.work.dto.operation.WorkOperationResponse;
+import com.greenhouse.backend.work.application.operation.WorkOperationView;
 import java.time.LocalDateTime;
 import java.util.Map;
 
@@ -10,12 +10,12 @@ public record WorkOperationCorrectionItemResponse(
 		Long id,
 		String reason,
 		LocalDateTime createdAt,
-		WorkOperationResponse correctionOperation,
+		WorkOperationView correctionOperation,
 		Map<String, Object> effectDetails) {
 
 	public static WorkOperationCorrectionItemResponse from(
 			WorkOperationCorrection correction,
-			WorkOperationResponse operation,
+			WorkOperationView operation,
 			Map<String, Object> effectDetails) {
 		return new WorkOperationCorrectionItemResponse(
 				correction.getId(), correction.getReason(), TimeConfig.toFarmTime(correction.getCreatedAt()), operation,

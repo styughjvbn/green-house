@@ -18,9 +18,9 @@ import com.greenhouse.backend.work.application.effect.WorkEffectResults;
 import com.greenhouse.backend.work.application.effect.WorkExecutionResult;
 import com.greenhouse.backend.work.domain.effect.StructureChangeResultPurpose;
 import com.greenhouse.backend.work.domain.effect.WorkEffectKind;
-import com.greenhouse.backend.work.dto.effect.StructureChangeExecutionRequest;
-import com.greenhouse.backend.work.dto.effect.StructureChangeResultRequest;
-import com.greenhouse.backend.work.dto.effect.StructureChangeSourceRequest;
+import com.greenhouse.backend.work.application.effect.StructureChangeCommand;
+import com.greenhouse.backend.work.application.effect.StructureChangeResultInput;
+import com.greenhouse.backend.work.application.effect.StructureChangeSourceInput;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -50,7 +50,7 @@ public class MergeWorkHandler implements WorkEffectHandler {
 	@Override
 	public WorkExecutionResult execute(WorkEffectContext context, WorkEffectCommand command) {
 		var target = context.target();
-		if (command.payload() instanceof com.greenhouse.backend.work.dto.effect.StructureChangeExecutionRequest request) {
+		if (command.payload() instanceof com.greenhouse.backend.work.application.effect.StructureChangeCommand request) {
 			return structureChangeExecutor.execute(
 					context, request, command.placementExclusionOrchidGroupIds());
 		}
@@ -108,23 +108,23 @@ public class MergeWorkHandler implements WorkEffectHandler {
 		return new WorkExecutionResult("MERGE", details, List.of(result.getId()));
 	}
 
-	private StructureChangeExecutionRequest toStructureChangeRequest(
+	private StructureChangeCommand toStructureChangeRequest(
 			WorkEffectCommand command,
 			MergeWorkOperationRequest request) {
 		String executionKey = command.effectKey().startsWith("EXECUTION:")
 				? command.effectKey().substring("EXECUTION:".length())
 				: command.effectKey();
 		var result = request.result();
-		return new StructureChangeExecutionRequest(
+		return new StructureChangeCommand(
 				executionKey,
 				TimeConfig.toFarmTime(command.executedAt()).toLocalDate(),
 				command.worker(),
 				result.memo(),
 				request.sources().stream()
-						.map(source -> new StructureChangeSourceRequest(
+						.map(source -> new StructureChangeSourceInput(
 								source.sourceOrchidGroupId(), source.inputQuantity(), null, null))
 						.toList(),
-				List.of(new StructureChangeResultRequest(
+				List.of(new StructureChangeResultInput(
 						result.bedZoneId(),
 						result.quantity(),
 						null,

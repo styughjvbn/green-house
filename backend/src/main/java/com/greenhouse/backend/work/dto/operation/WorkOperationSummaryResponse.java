@@ -1,5 +1,7 @@
 package com.greenhouse.backend.work.dto.operation;
 
+import com.greenhouse.backend.work.domain.operation.WorkOperationAction;
+import com.greenhouse.backend.work.application.operation.WorkOperationProgress;
 import com.greenhouse.backend.common.config.TimeConfig;
 import com.greenhouse.backend.work.domain.operation.WorkOperation;
 import com.greenhouse.backend.work.domain.operation.WorkOperationStatus;
@@ -31,12 +33,12 @@ public record WorkOperationSummaryResponse(
 		Map<String, Object> details,
 		String worker,
 		String memo,
-		WorkOperationProgressResponse progress,
+		WorkOperationProgress progress,
 		List<WorkOperationAction> availableActions) {
 
 	public static WorkOperationSummaryResponse from(
 			WorkOperation operation,
-			WorkOperationProgressResponse progress,
+			WorkOperationProgress progress,
 			List<WorkOperationAction> availableActions) {
 		return new WorkOperationSummaryResponse(
 				operation.getId(),

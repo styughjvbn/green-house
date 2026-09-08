@@ -2,7 +2,7 @@ package com.greenhouse.backend.farm.application.transformation;
 
 import com.greenhouse.backend.work.application.effect.WorkEffectContext;
 import com.greenhouse.backend.work.application.effect.WorkExecutionResult;
-import com.greenhouse.backend.work.dto.effect.StructureChangeExecutionRequest;
+import com.greenhouse.backend.work.application.effect.StructureChangeCommand;
 import java.util.Set;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
@@ -16,13 +16,13 @@ public class StructureChangeExecutor {
 
 	public WorkExecutionResult execute(
 			WorkEffectContext context,
-			StructureChangeExecutionRequest request) {
+			StructureChangeCommand request) {
 		return execute(context, request, Set.of());
 	}
 
 	public WorkExecutionResult execute(
 			WorkEffectContext context,
-			StructureChangeExecutionRequest request,
+			StructureChangeCommand request,
 			Set<Long> placementExclusionOrchidGroupIds) {
 		StructureChangeStrategy strategy = strategyRegistry.get(context.workTypeCode());
 		strategy.validate(request);

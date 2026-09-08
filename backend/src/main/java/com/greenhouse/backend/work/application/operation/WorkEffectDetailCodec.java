@@ -6,7 +6,7 @@ import com.greenhouse.backend.work.domain.effect.WorkEffectOrchidGroup;
 import com.greenhouse.backend.work.domain.effect.WorkEffectOrchidGroupRelationType;
 import com.greenhouse.backend.work.dto.operation.WorkCorrectionAdjustmentResponse;
 import com.greenhouse.backend.work.dto.operation.WorkExecutionDetailResponse;
-import com.greenhouse.backend.work.dto.operation.WorkExecutionLocationResponse;
+import com.greenhouse.backend.work.application.operation.WorkExecutionLocation;
 import com.greenhouse.backend.work.dto.operation.WorkExecutionResultResponse;
 import com.greenhouse.backend.work.dto.operation.WorkExecutionSourceResponse;
 import java.math.BigDecimal;
@@ -25,7 +25,7 @@ final class WorkEffectDetailCodec {
 			WorkAppliedEffect effect,
 			List<WorkEffectOrchidGroup> links,
 			Map<Long, String> resultVarietyNames,
-			Map<Long, WorkExecutionLocationResponse> resultLocations) {
+			Map<Long, WorkExecutionLocation> resultLocations) {
 		Map<String, Object> command = map(effect.getCommandDetails());
 		Map<String, Object> result = map(effect.getResultDetails());
 		return new WorkExecutionDetailResponse(
@@ -103,7 +103,7 @@ final class WorkEffectDetailCodec {
 			Map<String, Object> result,
 			List<WorkEffectOrchidGroup> links,
 			Map<Long, String> resultVarietyNames,
-			Map<Long, WorkExecutionLocationResponse> resultLocations) {
+			Map<Long, WorkExecutionLocation> resultLocations) {
 		List<Map<String, Object>> commandRows = mapList(command.get("results"));
 		List<Map<String, Object>> resultRows = mapList(result.get("results"));
 		List<Long> resultIds = resultIds(result, links);

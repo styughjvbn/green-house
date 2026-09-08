@@ -11,7 +11,7 @@ import com.greenhouse.backend.work.domain.operation.WorkOperation;
 import com.greenhouse.backend.work.domain.operation.WorkOperationStatus;
 import com.greenhouse.backend.work.domain.operation.WorkSourceScopeType;
 import com.greenhouse.backend.work.domain.operation.WorkTypeDefinition;
-import com.greenhouse.backend.work.dto.operation.WorkOperationResponse;
+import com.greenhouse.backend.work.application.operation.WorkOperationView;
 import com.greenhouse.backend.work.repository.WorkAppliedEffectRepository;
 import com.greenhouse.backend.work.repository.WorkEffectOrchidGroupRepository;
 import com.greenhouse.backend.work.repository.WorkOperationRepository;
@@ -40,7 +40,7 @@ public class ImmediateWorkExecutionService {
 	private final WorkOperationQueryService queryService;
 	private final WorkOperationSupport support;
 
-	public WorkOperationResponse executeForTarget(
+	public WorkOperationView executeForTarget(
 			String requestKey,
 			String workTypeCode,
 			String title,
@@ -80,7 +80,7 @@ public class ImmediateWorkExecutionService {
 		return queryService.get(operation.getId());
 	}
 
-	public WorkOperationResponse execute(
+	public WorkOperationView execute(
 			String requestKey,
 			String workTypeCode,
 			String title,
@@ -125,7 +125,7 @@ public class ImmediateWorkExecutionService {
 				.stream().map(link -> link.getOrchidGroupId()).toList();
 	}
 
-	public WorkOperationResponse cancelMultiCreate(Long operationId) {
+	public WorkOperationView cancelMultiCreate(Long operationId) {
 		WorkOperation operation = operationRepository.findWithWorkTypeById(operationId)
 				.orElseThrow(() -> new NotFoundException("작업을 찾을 수 없습니다."));
 		if (!WorkTypeDefinition.MULTI_CREATE.name().equals(operation.getWorkType().getCode())) {

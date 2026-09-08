@@ -1,7 +1,7 @@
 package com.greenhouse.backend.work.application.operation;
 
 import com.greenhouse.backend.work.domain.operation.WorkOperation;
-import com.greenhouse.backend.work.dto.operation.WorkOperationProgressResponse;
+import com.greenhouse.backend.work.application.operation.WorkOperationProgress;
 import com.greenhouse.backend.work.dto.operation.WorkOperationSummaryResponse;
 import com.greenhouse.backend.work.repository.WorkOperationProgressProjection;
 import com.greenhouse.backend.work.repository.WorkTargetExecutionRepository;
@@ -31,7 +31,7 @@ class WorkOperationSummaryAssembler {
 						Function.identity()));
 		return operations.stream()
 				.map(operation -> {
-					WorkOperationProgressResponse progress = progress(
+					WorkOperationProgress progress = progress(
 							progressByOperationId.get(operation.getId()));
 					return WorkOperationSummaryResponse.from(
 							operation,
@@ -41,11 +41,11 @@ class WorkOperationSummaryAssembler {
 				.toList();
 	}
 
-	private WorkOperationProgressResponse progress(WorkOperationProgressProjection projection) {
+	private WorkOperationProgress progress(WorkOperationProgressProjection projection) {
 		if (projection == null) {
-			return WorkOperationProgressResponse.empty();
+			return WorkOperationProgress.empty();
 		}
-		return WorkOperationProgressResponse.fromCounts(
+		return WorkOperationProgress.fromCounts(
 				projection.total(),
 				projection.pending(),
 				projection.inProgress(),

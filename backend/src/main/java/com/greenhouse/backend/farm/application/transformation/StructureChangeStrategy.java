@@ -1,7 +1,7 @@
 package com.greenhouse.backend.farm.application.transformation;
 
 import com.greenhouse.backend.farm.domain.transformation.OrchidGroupLineageRelationType;
-import com.greenhouse.backend.work.dto.effect.StructureChangeExecutionRequest;
+import com.greenhouse.backend.work.application.effect.StructureChangeCommand;
 import java.util.Map;
 import java.util.stream.Collectors;
 
@@ -26,13 +26,13 @@ public interface StructureChangeStrategy {
 	}
 
 	default Map<Long, Integer> transformedQuantities(
-			StructureChangeExecutionRequest request) {
+			StructureChangeCommand request) {
 		return request.sources().stream().collect(Collectors.toMap(
 				source -> source.sourceOrchidGroupId(),
 				source -> source.inputQuantity()));
 	}
 
-	default void validate(StructureChangeExecutionRequest request) {
+	default void validate(StructureChangeCommand request) {
 		long totalInput = request.sources().stream().mapToLong(source -> source.inputQuantity()).sum();
 		long totalResult = request.results().stream().mapToLong(result -> result.quantity()).sum();
 		if (totalResult > totalInput) {

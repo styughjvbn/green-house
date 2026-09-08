@@ -22,8 +22,8 @@ import com.greenhouse.backend.farm.dto.orchid.OrchidGroupUpdateRequest;
 import com.greenhouse.backend.farm.repository.orchid.OrchidGroupRepository;
 import com.greenhouse.backend.work.application.operation.InboundPottingOperationService;
 import com.greenhouse.backend.work.application.operation.WorkOperationProgressService;
-import com.greenhouse.backend.work.dto.effect.InboundPottingExecutionRequest;
-import com.greenhouse.backend.work.dto.effect.InboundPottingResultRequest;
+import com.greenhouse.backend.work.application.effect.InboundPottingCommand;
+import com.greenhouse.backend.work.application.effect.InboundPottingResultInput;
 import com.greenhouse.backend.work.dto.target.WorkTargetExecutionRequest;
 import com.greenhouse.backend.work.repository.WorkAppliedEffectRepository;
 import jakarta.persistence.EntityManager;
@@ -244,14 +244,14 @@ class OrchidGroupMutationRoutingPostgresE2ETest extends WorkE2ETestBase {
 				null));
 
 		var operation = inboundPottingOperationService.executeNow(
-				new InboundPottingExecutionRequest(
+				new InboundPottingCommand(
 						"active-potting-postgres",
 						inbound.id(),
 						LocalDate.of(2026, 8, 20),
-						List.of(new InboundPottingResultRequest(
+						List.of(new InboundPottingResultInput(
 								scenario.bedZoneId(), 20, "2인치", 1, "트레이", 2, false,
 								new BigDecimal("10"), new BigDecimal("11"), null),
-								new InboundPottingResultRequest(
+								new InboundPottingResultInput(
 										scenario.bedZoneId(), 8, "2인치", 1, "트레이", 1, false,
 										new BigDecimal("11"), new BigDecimal("12"), null)),
 						"유묘",

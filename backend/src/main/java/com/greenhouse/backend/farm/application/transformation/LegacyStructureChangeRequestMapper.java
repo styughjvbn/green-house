@@ -4,9 +4,9 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.greenhouse.backend.farm.dto.transformation.RepotWorkOperationRequest;
 import com.greenhouse.backend.work.application.effect.WorkEffectCommand;
 import com.greenhouse.backend.work.domain.effect.StructureChangeResultPurpose;
-import com.greenhouse.backend.work.dto.effect.StructureChangeExecutionRequest;
-import com.greenhouse.backend.work.dto.effect.StructureChangeResultRequest;
-import com.greenhouse.backend.work.dto.effect.StructureChangeSourceRequest;
+import com.greenhouse.backend.work.application.effect.StructureChangeCommand;
+import com.greenhouse.backend.work.application.effect.StructureChangeResultInput;
+import com.greenhouse.backend.work.application.effect.StructureChangeSourceInput;
 import java.util.List;
 import org.springframework.stereotype.Component;
 
@@ -20,16 +20,16 @@ public class LegacyStructureChangeRequestMapper {
 				: command.payloadAs(RepotWorkOperationRequest.class);
 	}
 
-	public StructureChangeExecutionRequest from(RepotWorkOperationRequest request) {
+	public StructureChangeCommand from(RepotWorkOperationRequest request) {
 		Long sourceId = request.sourceOrchidGroupId();
-		return new StructureChangeExecutionRequest(
+		return new StructureChangeCommand(
 				request.idempotencyKey(),
 				request.workDate(),
 				request.worker(),
 				request.memo(),
-				List.of(new StructureChangeSourceRequest(sourceId, request.inputQuantity(), null, null)),
+				List.of(new StructureChangeSourceInput(sourceId, request.inputQuantity(), null, null)),
 				request.results().stream()
-						.map(result -> new StructureChangeResultRequest(
+						.map(result -> new StructureChangeResultInput(
 								result.bedZoneId(),
 								result.quantity(),
 								sourceId,

@@ -5,7 +5,7 @@ import com.greenhouse.backend.work.dto.effect.DiscardRecordCreateRequest;
 import com.greenhouse.backend.work.dto.effect.InboundPottingRecordCreateRequest;
 import com.greenhouse.backend.work.dto.effect.StructureChangeRecordBatchCreateRequest;
 import com.greenhouse.backend.work.dto.effect.StructureChangeRecordCreateRequest;
-import com.greenhouse.backend.work.dto.operation.WorkOperationResponse;
+import com.greenhouse.backend.work.application.operation.WorkOperationView;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
@@ -31,14 +31,14 @@ public class StructureChangeRecordService {
 	 * @deprecated Use {@link #createStructureChangeRecords(StructureChangeRecordBatchCreateRequest)}.
 	 */
 	@Deprecated(since = "2026-08", forRemoval = false)
-	public WorkOperationResponse createStructureChangeRecord(StructureChangeRecordCreateRequest request) {
+	public WorkOperationView createStructureChangeRecord(StructureChangeRecordCreateRequest request) {
 		return createStructureChangeRecord(request, Set.of());
 	}
 
-	private WorkOperationResponse createStructureChangeRecord(
+	private WorkOperationView createStructureChangeRecord(
 			StructureChangeRecordCreateRequest request,
 			Set<Long> placementExclusionOrchidGroupIds) {
-		WorkOperationResponse planned = planService.create(request.operation());
+		WorkOperationView planned = planService.create(request.operation());
 		if (!WorkTypeDefinition.forCode(planned.workTypeCode()).supportsStructureExecution()) {
 			throw new IllegalArgumentException("분갈이·분주·합식·자리 이동 작업 기록만 이 방식으로 저장할 수 있습니다.");
 		}
@@ -58,7 +58,7 @@ public class StructureChangeRecordService {
 			throw new IllegalArgumentException("작업 기록은 선택한 모든 원본의 전체 수량을 한 번에 처리해야 합니다.");
 		}
 		progressService.start(planned.id());
-		WorkOperationResponse completed = structureChangeExecutionService.execute(
+		WorkOperationView completed = structureChangeExecutionService.execute(
 				planned.id(), request.execution(), placementExclusionOrchidGroupIds);
 		if (!"COMPLETED".equals(completed.status().name())) {
 			throw new IllegalStateException("구조 변경 작업 기록의 모든 대상을 완료하지 못했습니다.");
@@ -66,7 +66,7 @@ public class StructureChangeRecordService {
 		return completed;
 	}
 
-	public List<WorkOperationResponse> createStructureChangeRecords(
+	public List<WorkOperationView> createStructureChangeRecords(
 			StructureChangeRecordBatchCreateRequest request) {
 		List<Long> sourceOrchidGroupIds = request.records().stream()
 				.flatMap(record -> record.execution().sources().stream())
@@ -81,11 +81,11 @@ public class StructureChangeRecordService {
 				.toList();
 	}
 
-	public WorkOperationResponse createDiscardRecord(DiscardRecordCreateRequest request) {
+	public WorkOperationView createDiscardRecord(DiscardRecordCreateRequest request) {
 		return discardRecordService.create(request);
 	}
 
-	public List<WorkOperationResponse> createInboundPottingRecord(InboundPottingRecordCreateRequest request) {
+	public List<WorkOperationView> createInboundPottingRecord(InboundPottingRecordCreateRequest request) {
 		Set<Long> plannedIds = new HashSet<>(request.plan().inboundRecordIds());
 		Set<Long> executionIds = request.executions().stream()
 				.map(execution -> execution.inboundRecordId())

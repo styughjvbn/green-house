@@ -9,7 +9,7 @@ import com.greenhouse.backend.work.domain.operation.WorkTypeDefinition;
 import com.greenhouse.backend.work.dto.effect.InboundPottingCandidateResponse;
 import com.greenhouse.backend.work.dto.effect.InboundPottingPlanBatchCreateRequest;
 import com.greenhouse.backend.work.dto.effect.InboundPottingPlanCreateRequest;
-import com.greenhouse.backend.work.dto.operation.WorkOperationResponse;
+import com.greenhouse.backend.work.application.operation.WorkOperationView;
 import com.greenhouse.backend.work.repository.WorkTargetExecutionRepository;
 import java.util.ArrayList;
 import java.util.Comparator;
@@ -39,7 +39,7 @@ public class InboundPottingPlanService {
 				.toList();
 	}
 
-	public WorkOperationResponse create(InboundPottingPlanCreateRequest request) {
+	public WorkOperationView create(InboundPottingPlanCreateRequest request) {
 		WorkType workType = validatePlan(request);
 		List<Long> requestedIds = request.inboundRecordIds().stream().distinct().toList();
 		List<InboundPottingPlanTarget> records = inboundPottingPlanGateway.resolveForUpdate(requestedIds);
@@ -53,7 +53,7 @@ public class InboundPottingPlanService {
 		return queryService.get(operation.getId());
 	}
 
-	public List<WorkOperationResponse> createBatch(InboundPottingPlanBatchCreateRequest request) {
+	public List<WorkOperationView> createBatch(InboundPottingPlanBatchCreateRequest request) {
 		InboundPottingPlanCreateRequest planRequest = request.plan();
 		List<Long> requestedIds = planRequest.inboundRecordIds().stream().distinct().toList();
 		if (requestedIds.isEmpty()) {

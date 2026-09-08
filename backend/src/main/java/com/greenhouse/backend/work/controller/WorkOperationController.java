@@ -19,19 +19,19 @@ import com.greenhouse.backend.work.dto.operation.WorkHistoryScopeType;
 import com.greenhouse.backend.work.dto.effect.InboundPottingPlanBatchCreateRequest;
 import com.greenhouse.backend.work.dto.effect.InboundPottingCandidateResponse;
 import com.greenhouse.backend.work.dto.effect.InboundPottingPlanCreateRequest;
-import com.greenhouse.backend.work.dto.effect.InboundPottingExecutionRequest;
+import com.greenhouse.backend.work.application.effect.InboundPottingCommand;
 import com.greenhouse.backend.work.dto.operation.WorkOperationCreateRequest;
 import com.greenhouse.backend.work.dto.operation.WorkOperationBatchCreateRequest;
 import com.greenhouse.backend.work.dto.operation.WorkOperationCompleteRequest;
-import com.greenhouse.backend.work.dto.correction.WorkOperationCorrectionCreateRequest;
+import com.greenhouse.backend.work.application.correction.WorkCorrectionCommand;
 import com.greenhouse.backend.work.dto.correction.WorkOperationCorrectionsResponse;
-import com.greenhouse.backend.work.dto.operation.WorkOperationResponse;
+import com.greenhouse.backend.work.application.operation.WorkOperationView;
 import com.greenhouse.backend.work.dto.operation.WorkOperationSummaryResponse;
 import com.greenhouse.backend.work.dto.operation.WorkOperationDetailResponse;
 import com.greenhouse.backend.work.dto.target.WorkTargetPreviewRequest;
 import com.greenhouse.backend.work.dto.target.WorkTargetPreviewResponse;
 import com.greenhouse.backend.work.dto.target.WorkTargetExecutionRequest;
-import com.greenhouse.backend.work.dto.effect.StructureChangeExecutionRequest;
+import com.greenhouse.backend.work.application.effect.StructureChangeCommand;
 import com.greenhouse.backend.work.dto.effect.StructureChangeRecordCreateRequest;
 import com.greenhouse.backend.work.dto.effect.StructureChangeRecordBatchCreateRequest;
 import com.greenhouse.backend.work.dto.effect.DiscardRecordCreateRequest;
@@ -76,20 +76,20 @@ public class WorkOperationController {
 	@Deprecated(since = "2026-08", forRemoval = false)
 	@PostMapping("/work-operations")
 	@ResponseStatus(HttpStatus.CREATED)
-	public ApiResponse<WorkOperationResponse> create(@Valid @RequestBody WorkOperationCreateRequest request) {
+	public ApiResponse<WorkOperationView> create(@Valid @RequestBody WorkOperationCreateRequest request) {
 		return ApiResponse.ok(planService.create(request));
 	}
 
 	@PostMapping("/work-operations/batch")
 	@ResponseStatus(HttpStatus.CREATED)
-	public ApiResponse<List<WorkOperationResponse>> createBatch(
+	public ApiResponse<List<WorkOperationView>> createBatch(
 			@Valid @RequestBody WorkOperationBatchCreateRequest request) {
 		return ApiResponse.ok(planService.createBatch(request));
 	}
 
 	@PostMapping("/work-operations/record")
 	@ResponseStatus(HttpStatus.CREATED)
-	public ApiResponse<WorkOperationResponse> createCompletedRecord(
+	public ApiResponse<WorkOperationView> createCompletedRecord(
 			@Valid @RequestBody WorkOperationCreateRequest request) {
 		return ApiResponse.ok(planService.createCompletedRecord(request));
 	}
@@ -100,28 +100,28 @@ public class WorkOperationController {
 	@Deprecated(since = "2026-08", forRemoval = false)
 	@PostMapping("/work-operations/structure-change-records")
 	@ResponseStatus(HttpStatus.CREATED)
-	public ApiResponse<WorkOperationResponse> createStructureChangeRecord(
+	public ApiResponse<WorkOperationView> createStructureChangeRecord(
 			@Valid @RequestBody StructureChangeRecordCreateRequest request) {
 		return ApiResponse.ok(structureChangeRecordService.createStructureChangeRecord(request));
 	}
 
 	@PostMapping("/work-operations/structure-change-records/batch")
 	@ResponseStatus(HttpStatus.CREATED)
-	public ApiResponse<List<WorkOperationResponse>> createStructureChangeRecords(
+	public ApiResponse<List<WorkOperationView>> createStructureChangeRecords(
 			@Valid @RequestBody StructureChangeRecordBatchCreateRequest request) {
 		return ApiResponse.ok(structureChangeRecordService.createStructureChangeRecords(request));
 	}
 
 	@PostMapping("/work-operations/discard-records")
 	@ResponseStatus(HttpStatus.CREATED)
-	public ApiResponse<WorkOperationResponse> createDiscardRecord(
+	public ApiResponse<WorkOperationView> createDiscardRecord(
 			@Valid @RequestBody DiscardRecordCreateRequest request) {
 		return ApiResponse.ok(structureChangeRecordService.createDiscardRecord(request));
 	}
 
 	@PostMapping("/work-operations/inbound-potting-records")
 	@ResponseStatus(HttpStatus.CREATED)
-	public ApiResponse<List<WorkOperationResponse>> createInboundPottingRecord(
+	public ApiResponse<List<WorkOperationView>> createInboundPottingRecord(
 			@Valid @RequestBody InboundPottingRecordCreateRequest request) {
 		return ApiResponse.ok(structureChangeRecordService.createInboundPottingRecord(request));
 	}
@@ -137,14 +137,14 @@ public class WorkOperationController {
 	@Deprecated(since = "2026-08", forRemoval = false)
 	@PostMapping("/work-operations/inbound-potting-plans")
 	@ResponseStatus(HttpStatus.CREATED)
-	public ApiResponse<WorkOperationResponse> createInboundPottingPlan(
+	public ApiResponse<WorkOperationView> createInboundPottingPlan(
 			@Valid @RequestBody InboundPottingPlanCreateRequest request) {
 		return ApiResponse.ok(inboundPottingPlanService.create(request));
 	}
 
 	@PostMapping("/work-operations/inbound-potting-plans/batch")
 	@ResponseStatus(HttpStatus.CREATED)
-	public ApiResponse<List<WorkOperationResponse>> createInboundPottingPlans(
+	public ApiResponse<List<WorkOperationView>> createInboundPottingPlans(
 			@Valid @RequestBody InboundPottingPlanBatchCreateRequest request) {
 		return ApiResponse.ok(inboundPottingPlanService.createBatch(request));
 	}
@@ -152,8 +152,8 @@ public class WorkOperationController {
 	@PostMapping("/work-operations/inbound-potting-executions")
 	@Deprecated(since = "2026-08", forRemoval = false)
 	@ResponseStatus(HttpStatus.CREATED)
-	public ApiResponse<WorkOperationResponse> executeInboundPotting(
-			@Valid @RequestBody InboundPottingExecutionRequest request) {
+	public ApiResponse<WorkOperationView> executeInboundPotting(
+			@Valid @RequestBody InboundPottingCommand request) {
 		return ApiResponse.ok(inboundPottingOperationService.executeNow(request));
 	}
 
@@ -182,7 +182,7 @@ public class WorkOperationController {
 	}
 
 	@GetMapping("/work-operations/{workOperationId}")
-	public ApiResponse<WorkOperationResponse> get(@PathVariable Long workOperationId) {
+	public ApiResponse<WorkOperationView> get(@PathVariable Long workOperationId) {
 		return ApiResponse.ok(queryService.get(workOperationId));
 	}
 
@@ -192,7 +192,7 @@ public class WorkOperationController {
 	}
 
 	@PostMapping("/work-operations/{workOperationId}/complete")
-	public ApiResponse<WorkOperationResponse> complete(
+	public ApiResponse<WorkOperationView> complete(
 			@PathVariable Long workOperationId,
 			@Valid @RequestBody(required = false) WorkOperationCompleteRequest request) {
 		return ApiResponse.ok(progressService.complete(
@@ -200,27 +200,27 @@ public class WorkOperationController {
 	}
 
 	@PostMapping("/work-operations/{workOperationId}/start")
-	public ApiResponse<WorkOperationResponse> start(@PathVariable Long workOperationId) {
+	public ApiResponse<WorkOperationView> start(@PathVariable Long workOperationId) {
 		return ApiResponse.ok(progressService.start(workOperationId));
 	}
 
 	@PostMapping("/work-operations/{workOperationId}/pause")
-	public ApiResponse<WorkOperationResponse> pause(@PathVariable Long workOperationId) {
+	public ApiResponse<WorkOperationView> pause(@PathVariable Long workOperationId) {
 		return ApiResponse.ok(progressService.pause(workOperationId));
 	}
 
 	@PostMapping("/work-operations/{workOperationId}/resume")
-	public ApiResponse<WorkOperationResponse> resume(@PathVariable Long workOperationId) {
+	public ApiResponse<WorkOperationView> resume(@PathVariable Long workOperationId) {
 		return ApiResponse.ok(progressService.resume(workOperationId));
 	}
 
 	@PostMapping("/work-operations/{workOperationId}/cancel")
-	public ApiResponse<WorkOperationResponse> cancel(@PathVariable Long workOperationId) {
+	public ApiResponse<WorkOperationView> cancel(@PathVariable Long workOperationId) {
 		return ApiResponse.ok(progressService.cancel(workOperationId));
 	}
 
 	@PostMapping("/work-operations/{workOperationId}/targets/{targetId}/start")
-	public ApiResponse<WorkOperationResponse> startTarget(
+	public ApiResponse<WorkOperationView> startTarget(
 			@PathVariable Long workOperationId,
 			@PathVariable Long targetId,
 			@Valid @RequestBody(required = false) WorkTargetExecutionRequest request) {
@@ -230,7 +230,7 @@ public class WorkOperationController {
 	}
 
 	@PostMapping("/work-operations/{workOperationId}/targets/{targetId}/complete")
-	public ApiResponse<WorkOperationResponse> completeTarget(
+	public ApiResponse<WorkOperationView> completeTarget(
 			@PathVariable Long workOperationId,
 			@PathVariable Long targetId,
 			@Valid @RequestBody(required = false) WorkTargetExecutionRequest request) {
@@ -240,7 +240,7 @@ public class WorkOperationController {
 	}
 
 	@PostMapping("/work-operations/{workOperationId}/targets/{targetId}/skip")
-	public ApiResponse<WorkOperationResponse> skipTarget(
+	public ApiResponse<WorkOperationView> skipTarget(
 			@PathVariable Long workOperationId,
 			@PathVariable Long targetId,
 			@Valid @RequestBody(required = false) WorkTargetExecutionRequest request) {
@@ -254,7 +254,7 @@ public class WorkOperationController {
 	 */
 	@Deprecated(since = "2026-08", forRemoval = false)
 	@PostMapping("/work-operations/{workOperationId}/merge/complete")
-	public ApiResponse<WorkOperationResponse> completeMerge(
+	public ApiResponse<WorkOperationView> completeMerge(
 			@PathVariable Long workOperationId,
 			@Valid @RequestBody WorkTargetExecutionRequest request) {
 		return ApiResponse.ok(structureChangeExecutionService.completeMerge(workOperationId, request));
@@ -262,9 +262,9 @@ public class WorkOperationController {
 
 	@PostMapping("/work-operations/{workOperationId}/structure-change-executions")
 	@ResponseStatus(HttpStatus.CREATED)
-	public ApiResponse<WorkOperationResponse> executeStructureChange(
+	public ApiResponse<WorkOperationView> executeStructureChange(
 			@PathVariable Long workOperationId,
-			@Valid @RequestBody StructureChangeExecutionRequest request) {
+			@Valid @RequestBody StructureChangeCommand request) {
 		return ApiResponse.ok(structureChangeExecutionService.execute(workOperationId, request));
 	}
 
@@ -291,7 +291,7 @@ public class WorkOperationController {
 	@ResponseStatus(HttpStatus.CREATED)
 	public ApiResponse<WorkOperationCorrectionsResponse> createCorrection(
 			@PathVariable Long workOperationId,
-			@Valid @RequestBody WorkOperationCorrectionCreateRequest request) {
+			@Valid @RequestBody WorkCorrectionCommand request) {
 		return ApiResponse.ok(workOperationCorrectionService.create(workOperationId, request));
 	}
 

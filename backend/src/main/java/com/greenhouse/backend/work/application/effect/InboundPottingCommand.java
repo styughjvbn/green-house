@@ -1,5 +1,6 @@
-package com.greenhouse.backend.work.dto.effect;
+package com.greenhouse.backend.work.application.effect;
 
+import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotEmpty;
@@ -8,11 +9,12 @@ import jakarta.validation.constraints.Size;
 import java.time.LocalDate;
 import java.util.List;
 
-public record InboundPottingExecutionRequest(
+@Schema(name = "InboundPottingExecutionRequest")
+public record InboundPottingCommand(
 		@NotBlank @Size(max = 80) String idempotencyKey,
 		@NotNull Long inboundRecordId,
 		@NotNull LocalDate pottingDate,
-		@NotEmpty @Size(max = 100) List<@Valid InboundPottingResultRequest> results,
+		@NotEmpty @Size(max = 100) List<@Valid InboundPottingResultInput> results,
 		@Size(max = 100) String growthStage,
 		@Size(max = 50) String worker,
 		@Size(max = 1000) String memo) {

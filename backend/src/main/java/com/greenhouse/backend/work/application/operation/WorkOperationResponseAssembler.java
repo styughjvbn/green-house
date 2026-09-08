@@ -9,9 +9,9 @@ import com.greenhouse.backend.work.domain.target.WorkOperationTarget;
 import com.greenhouse.backend.work.domain.target.WorkTargetExecution;
 import com.greenhouse.backend.work.domain.target.WorkTargetExecutionStatus;
 import com.greenhouse.backend.work.domain.target.WorkTargetReferenceType;
-import com.greenhouse.backend.work.dto.operation.WorkOperationProgressResponse;
-import com.greenhouse.backend.work.dto.operation.WorkOperationResponse;
-import com.greenhouse.backend.work.dto.target.WorkOperationTargetResponse;
+import com.greenhouse.backend.work.application.operation.WorkOperationProgress;
+import com.greenhouse.backend.work.application.operation.WorkOperationView;
+import com.greenhouse.backend.work.application.target.WorkOperationTargetView;
 import com.greenhouse.backend.work.repository.WorkOperationTargetRepository;
 import com.greenhouse.backend.work.repository.WorkTargetExecutionRepository;
 import java.util.LinkedHashMap;
@@ -41,11 +41,11 @@ class WorkOperationResponseAssembler {
 	private final InboundPottingPlanGateway inboundPottingPlanGateway;
 	private final WorkOperationActionResolver actionResolver;
 
-	WorkOperationResponse assemble(WorkOperation operation) {
+	WorkOperationView assemble(WorkOperation operation) {
 		return assembleAll(List.of(operation)).getFirst();
 	}
 
-	List<WorkOperationResponse> assembleAll(List<WorkOperation> operations) {
+	List<WorkOperationView> assembleAll(List<WorkOperation> operations) {
 		if (operations.isEmpty()) {
 			return List.of();
 		}
@@ -65,7 +65,7 @@ class WorkOperationResponseAssembler {
 						Collectors.toList()));
 
 		return operations.stream().map(operation -> {
-			List<WorkOperationTargetResponse> targetResponses = targetsByOperationId
+			List<WorkOperationTargetView> targetResponses = targetsByOperationId
 					.getOrDefault(operation.getId(), List.of())
 					.stream()
 					.map(target -> {
@@ -77,15 +77,15 @@ class WorkOperationResponseAssembler {
 								? target.getQuantitySnapshot()
 								: currentInbound.currentQuantity(target.getQuantitySnapshot());
 						int remainingQuantity = Math.max(0, currentQuantity - execution.getProcessedQuantity());
-						return WorkOperationTargetResponse.from(
+						return WorkOperationTargetView.from(
 								target,
 								execution,
 								currentInbound,
 								actionResolver.resolveTarget(operation, execution, remainingQuantity));
 					})
 					.toList();
-			WorkOperationProgressResponse progress = WorkOperationProgressResponse.from(targetResponses);
-			return WorkOperationResponse.from(
+			WorkOperationProgress progress = WorkOperationProgress.from(targetResponses);
+			return WorkOperationView.from(
 					operation,
 					targetResponses,
 					actionResolver.resolveOperation(operation, progress));

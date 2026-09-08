@@ -6,10 +6,10 @@ import com.greenhouse.backend.work.application.target.InboundPottingPlanGateway;
 import com.greenhouse.backend.work.domain.effect.WorkAppliedEffect;
 import com.greenhouse.backend.work.domain.operation.WorkOperationStatus;
 import com.greenhouse.backend.work.domain.target.WorkTargetExecution;
-import com.greenhouse.backend.work.dto.effect.InboundPottingExecutionRequest;
+import com.greenhouse.backend.work.application.effect.InboundPottingCommand;
 import com.greenhouse.backend.work.dto.effect.InboundPottingPlanBatchCreateRequest;
 import com.greenhouse.backend.work.dto.effect.InboundPottingPlanCreateRequest;
-import com.greenhouse.backend.work.dto.operation.WorkOperationResponse;
+import com.greenhouse.backend.work.application.operation.WorkOperationView;
 import com.greenhouse.backend.work.dto.target.WorkTargetExecutionRequest;
 import com.greenhouse.backend.work.repository.WorkAppliedEffectRepository;
 import com.greenhouse.backend.work.repository.WorkTargetExecutionRepository;
@@ -35,7 +35,7 @@ public class InboundPottingOperationService {
 	private final InboundPottingPlanGateway inboundPottingPlanGateway;
 	private final ObjectMapper objectMapper = new ObjectMapper().findAndRegisterModules();
 
-	public WorkOperationResponse executeNow(InboundPottingExecutionRequest request) {
+	public WorkOperationView executeNow(InboundPottingCommand request) {
 		Long inboundRecordId = request.inboundRecordId();
 		inboundPottingPlanGateway.lockForPottingExecution(List.of(inboundRecordId));
 		return findExistingOperationId(request)
@@ -43,11 +43,11 @@ public class InboundPottingOperationService {
 				.orElseGet(() -> executeActiveOrNewPlan(request));
 	}
 
-	public List<WorkOperationResponse> executeRecord(
+	public List<WorkOperationView> executeRecord(
 			InboundPottingPlanCreateRequest plan,
-			List<InboundPottingExecutionRequest> executions) {
+			List<InboundPottingCommand> executions) {
 		List<Long> inboundRecordIds = executions.stream()
-				.map(InboundPottingExecutionRequest::inboundRecordId)
+				.map(InboundPottingCommand::inboundRecordId)
 				.distinct()
 				.sorted()
 				.toList();
@@ -60,7 +60,7 @@ public class InboundPottingOperationService {
 		Map<Long, WorkTargetExecution> activeExecutions = prepareActiveExecutions(plan, pendingIds);
 
 		LinkedHashSet<Long> operationIds = new LinkedHashSet<>();
-		for (InboundPottingExecutionRequest request : executions) {
+		for (InboundPottingCommand request : executions) {
 			Long existingOperationId = existingOperationIds.get(request.inboundRecordId());
 			if (existingOperationId != null) {
 				operationIds.add(existingOperationId);
@@ -75,7 +75,7 @@ public class InboundPottingOperationService {
 		return queryService.getAll(operationIds);
 	}
 
-	private WorkOperationResponse executeActiveOrNewPlan(InboundPottingExecutionRequest request) {
+	private WorkOperationView executeActiveOrNewPlan(InboundPottingCommand request) {
 		Long inboundRecordId = request.inboundRecordId();
 		List<WorkTargetExecution> activeExecutions = workTargetExecutionRepository
 				.findActiveInboundPottingForUpdate(inboundRecordId);
@@ -85,9 +85,9 @@ public class InboundPottingOperationService {
 		return executeNewPlan(request);
 	}
 
-	private WorkOperationResponse executeNewPlan(InboundPottingExecutionRequest request) {
+	private WorkOperationView executeNewPlan(InboundPottingCommand request) {
 		Long inboundRecordId = request.inboundRecordId();
-		WorkOperationResponse planned = planService.create(
+		WorkOperationView planned = planService.create(
 				new InboundPottingPlanCreateRequest(
 						"입고 #" + inboundRecordId + " 포트 작업",
 						request.pottingDate(),
@@ -95,7 +95,7 @@ public class InboundPottingOperationService {
 						List.of(inboundRecordId),
 						request.worker(),
 						request.memo()));
-		WorkOperationResponse started = progressService.start(planned.id());
+		WorkOperationView started = progressService.start(planned.id());
 		Long targetId = started.targets().stream()
 				.filter(target -> inboundRecordId.equals(target.inboundRecordId()))
 				.findFirst()
@@ -104,21 +104,21 @@ public class InboundPottingOperationService {
 		return executeTarget(started, targetId, request);
 	}
 
-	private Optional<Long> findExistingOperationId(InboundPottingExecutionRequest request) {
+	private Optional<Long> findExistingOperationId(InboundPottingCommand request) {
 		return workAppliedEffectRepository
 				.findInboundPottingEffect(request.inboundRecordId(), effectKey(request))
 				.map(effect -> validatedOperationId(effect, request));
 	}
 
-	private Map<Long, Long> findExistingOperationIds(List<InboundPottingExecutionRequest> requests) {
+	private Map<Long, Long> findExistingOperationIds(List<InboundPottingCommand> requests) {
 		if (requests.isEmpty()) {
 			return Map.of();
 		}
 		List<WorkAppliedEffect> effects = workAppliedEffectRepository.findInboundPottingEffects(
-				requests.stream().map(InboundPottingExecutionRequest::inboundRecordId).distinct().toList(),
+				requests.stream().map(InboundPottingCommand::inboundRecordId).distinct().toList(),
 				requests.stream().map(this::effectKey).distinct().toList());
 		Map<Long, Long> operationIds = new LinkedHashMap<>();
-		for (InboundPottingExecutionRequest request : requests) {
+		for (InboundPottingCommand request : requests) {
 			effects.stream()
 					.filter(effect -> matches(effect, request))
 					.findFirst()
@@ -128,14 +128,14 @@ public class InboundPottingOperationService {
 		return operationIds;
 	}
 
-	private boolean matches(WorkAppliedEffect effect, InboundPottingExecutionRequest request) {
+	private boolean matches(WorkAppliedEffect effect, InboundPottingCommand request) {
 		return request.inboundRecordId().equals(effect.getTarget().getInboundRecordId())
 				&& effectKey(request).equals(effect.getEffectKey());
 	}
 
 	private Long validatedOperationId(
 			WorkAppliedEffect effect,
-			InboundPottingExecutionRequest request) {
+			InboundPottingCommand request) {
 		if (!effect.getCommandDetails().equals(commandDetails(request))) {
 			throw new IllegalArgumentException("같은 멱등 키를 다른 포트 작업 요청에 사용할 수 없습니다.");
 		}
@@ -180,12 +180,12 @@ public class InboundPottingOperationService {
 				plan.memo());
 	}
 
-	private WorkOperationResponse executeActivePlan(
+	private WorkOperationView executeActivePlan(
 			WorkTargetExecution execution,
-			InboundPottingExecutionRequest request) {
+			InboundPottingCommand request) {
 		Long operationId = execution.getTarget().getWorkOperation().getId();
 		WorkOperationStatus status = execution.getTarget().getWorkOperation().getStatus();
-		WorkOperationResponse active = switch (status) {
+		WorkOperationView active = switch (status) {
 			case PLANNED -> progressService.start(operationId);
 			case PAUSED -> progressService.resume(operationId);
 			case IN_PROGRESS -> queryService.get(operationId);
@@ -194,12 +194,12 @@ public class InboundPottingOperationService {
 		return executeTarget(active, execution.getTarget().getId(), request);
 	}
 
-	private WorkOperationResponse executeTarget(
-			WorkOperationResponse operation,
+	private WorkOperationView executeTarget(
+			WorkOperationView operation,
 			Long targetId,
-			InboundPottingExecutionRequest request) {
+			InboundPottingCommand request) {
 		Map<String, Object> resultDetails = commandDetails(request);
-		WorkOperationResponse updated = progressService.completeTarget(
+		WorkOperationView updated = progressService.completeTarget(
 				operation.id(),
 				targetId,
 				new WorkTargetExecutionRequest(request.worker(), resultDetails, request.pottingDate()),
@@ -213,7 +213,7 @@ public class InboundPottingOperationService {
 		return updated;
 	}
 
-	private Map<String, Object> commandDetails(InboundPottingExecutionRequest request) {
+	private Map<String, Object> commandDetails(InboundPottingCommand request) {
 		Map<String, Object> details = new LinkedHashMap<>(objectMapper.convertValue(
 				request, new TypeReference<Map<String, Object>>() {}));
 		details.remove("idempotencyKey");
@@ -221,7 +221,7 @@ public class InboundPottingOperationService {
 		return details;
 	}
 
-	private String effectKey(InboundPottingExecutionRequest request) {
+	private String effectKey(InboundPottingCommand request) {
 		return "POTTING:" + request.idempotencyKey().trim();
 	}
 }

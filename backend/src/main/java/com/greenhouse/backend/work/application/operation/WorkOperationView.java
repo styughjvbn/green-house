@@ -1,18 +1,21 @@
-package com.greenhouse.backend.work.dto.operation;
+package com.greenhouse.backend.work.application.operation;
 
+import com.greenhouse.backend.work.domain.operation.WorkOperationAction;
+import io.swagger.v3.oas.annotations.media.Schema;
 import com.greenhouse.backend.common.config.TimeConfig;
 import com.greenhouse.backend.work.domain.operation.WorkOperation;
 import com.greenhouse.backend.work.domain.operation.WorkOperationStatus;
 import com.greenhouse.backend.work.domain.operation.WorkSourceScopeType;
 import com.greenhouse.backend.work.domain.operation.WorkTypeTemplate;
 import com.greenhouse.backend.work.domain.operation.WorkTypeWorkflow;
-import com.greenhouse.backend.work.dto.target.WorkOperationTargetResponse;
+import com.greenhouse.backend.work.application.target.WorkOperationTargetView;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
 
-public record WorkOperationResponse(
+@Schema(name = "WorkOperationResponse")
+public record WorkOperationView(
 		Long id,
 		Long workTypeId,
 		String workTypeCode,
@@ -32,15 +35,15 @@ public record WorkOperationResponse(
 		Map<String, Object> details,
 		String worker,
 		String memo,
-		WorkOperationProgressResponse progress,
-		List<WorkOperationTargetResponse> targets,
+		WorkOperationProgress progress,
+		List<WorkOperationTargetView> targets,
 		List<WorkOperationAction> availableActions) {
 
-	public static WorkOperationResponse from(
+	public static WorkOperationView from(
 			WorkOperation operation,
-			List<WorkOperationTargetResponse> targets,
+			List<WorkOperationTargetView> targets,
 			List<WorkOperationAction> availableActions) {
-		return new WorkOperationResponse(
+		return new WorkOperationView(
 				operation.getId(),
 				operation.getWorkType().getId(),
 				operation.getWorkType().getCode(),
@@ -60,7 +63,7 @@ public record WorkOperationResponse(
 				operation.getDetails(),
 				operation.getWorker(),
 				operation.getMemo(),
-				WorkOperationProgressResponse.from(targets),
+				WorkOperationProgress.from(targets),
 				targets,
 				availableActions);
 	}

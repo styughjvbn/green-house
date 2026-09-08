@@ -3,7 +3,7 @@ package com.greenhouse.backend.farm.application.transformation;
 import com.greenhouse.backend.farm.domain.transformation.OrchidGroupLineageRelationType;
 import com.greenhouse.backend.work.application.effect.MovementQuantityAllocator;
 import com.greenhouse.backend.work.domain.operation.WorkTypeDefinition;
-import com.greenhouse.backend.work.dto.effect.StructureChangeExecutionRequest;
+import com.greenhouse.backend.work.application.effect.StructureChangeCommand;
 import java.util.Map;
 import org.springframework.stereotype.Component;
 
@@ -19,12 +19,12 @@ public class MovementStrategy implements StructureChangeStrategy {
 	@Override public boolean preservesSourceAttributes() { return true; }
 	@Override
 	public Map<Long, Integer> transformedQuantities(
-			StructureChangeExecutionRequest request) {
+			StructureChangeCommand request) {
 		return MovementQuantityAllocator.allocateMovedBySource(request);
 	}
 
 	@Override
-	public void validate(StructureChangeExecutionRequest request) {
+	public void validate(StructureChangeCommand request) {
 		StructureChangeStrategy.super.validate(request);
 		MovementQuantityAllocator.allocateMovedBySource(request);
 	}

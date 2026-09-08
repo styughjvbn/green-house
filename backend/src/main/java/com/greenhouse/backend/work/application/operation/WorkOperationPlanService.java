@@ -11,8 +11,8 @@ import com.greenhouse.backend.work.domain.operation.WorkTypeDefinition;
 import com.greenhouse.backend.work.domain.target.WorkTargetExecution;
 import com.greenhouse.backend.work.dto.operation.WorkOperationBatchCreateRequest;
 import com.greenhouse.backend.work.dto.operation.WorkOperationCreateRequest;
-import com.greenhouse.backend.work.dto.operation.WorkOperationResponse;
-import com.greenhouse.backend.work.dto.target.WorkOperationTargetResponse;
+import com.greenhouse.backend.work.application.operation.WorkOperationView;
+import com.greenhouse.backend.work.application.target.WorkOperationTargetView;
 import com.greenhouse.backend.work.dto.target.WorkTargetPreviewRequest;
 import com.greenhouse.backend.work.dto.target.WorkTargetPreviewResponse;
 import com.greenhouse.backend.work.repository.WorkTargetExecutionRepository;
@@ -45,19 +45,19 @@ public class WorkOperationPlanService {
 	public WorkTargetPreviewResponse preview(WorkTargetPreviewRequest request) {
 		WorkTargetSelection selection = WorkTargetSelection.from(request);
 		List<ResolvedWorkTarget> groups = workTargetResolver.resolve(selection);
-		var targets = groups.stream().map(WorkOperationTargetResponse::preview).toList();
+		var targets = groups.stream().map(WorkOperationTargetView::preview).toList();
 		return new WorkTargetPreviewResponse(
 				targets.size(),
 				groups.stream().mapToInt(ResolvedWorkTarget::quantity).sum(),
 				targets);
 	}
 
-	public WorkOperationResponse create(WorkOperationCreateRequest request) {
+	public WorkOperationView create(WorkOperationCreateRequest request) {
 		WorkType workType = workTypeService.getActiveForPlan(request.workTypeId());
 		return queryService.get(createOperation(request, workType, resolveIncluded(request)).getId());
 	}
 
-	public List<WorkOperationResponse> createBatch(WorkOperationBatchCreateRequest request) {
+	public List<WorkOperationView> createBatch(WorkOperationBatchCreateRequest request) {
 		WorkOperationCreateRequest operationRequest = request.operation();
 		WorkType workType = workTypeService.getActiveForPlan(operationRequest.workTypeId());
 		ResolvedSelection resolvedSelection = resolveIncluded(operationRequest);
@@ -80,7 +80,7 @@ public class WorkOperationPlanService {
 				.toList();
 	}
 
-	public WorkOperationResponse createCompletedRecord(WorkOperationCreateRequest request) {
+	public WorkOperationView createCompletedRecord(WorkOperationCreateRequest request) {
 		WorkType workType = workTypeService.getActiveForCreate(request.workTypeId());
 		WorkOperation operation = createOperation(request, workType, resolveIncluded(request));
 		LocalDateTime executedAt = support.completionTime(request.plannedStartDate());

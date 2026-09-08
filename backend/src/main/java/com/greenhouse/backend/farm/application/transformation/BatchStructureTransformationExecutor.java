@@ -17,8 +17,8 @@ import com.greenhouse.backend.work.application.effect.WorkEffectResults;
 import com.greenhouse.backend.work.application.effect.WorkExecutionResult;
 import com.greenhouse.backend.work.application.effect.WorkMutationLink;
 import com.greenhouse.backend.work.domain.effect.StructureChangeResultPurpose;
-import com.greenhouse.backend.work.dto.effect.StructureChangeExecutionRequest;
-import com.greenhouse.backend.work.dto.effect.StructureChangeSourceRequest;
+import com.greenhouse.backend.work.application.effect.StructureChangeCommand;
+import com.greenhouse.backend.work.application.effect.StructureChangeSourceInput;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -43,11 +43,11 @@ public class BatchStructureTransformationExecutor {
 
 	public WorkExecutionResult execute(
 			Long operationId,
-			StructureChangeExecutionRequest request,
+			StructureChangeCommand request,
 			StructureChangeStrategy strategy,
 			Set<Long> placementExclusionOrchidGroupIds) {
 		List<Long> sourceIds = request.sources().stream()
-				.map(StructureChangeSourceRequest::sourceOrchidGroupId).sorted().toList();
+				.map(StructureChangeSourceInput::sourceOrchidGroupId).sorted().toList();
 		if (sourceIds.stream().distinct().count() != sourceIds.size()) {
 			throw new IllegalArgumentException("작업 원본 난 묶음은 중복될 수 없습니다.");
 		}
@@ -66,12 +66,12 @@ public class BatchStructureTransformationExecutor {
 			throw new IllegalArgumentException("한 실행 회차에서는 같은 품종의 난 묶음만 함께 처리할 수 있습니다.");
 		}
 
-		Map<Long, StructureChangeSourceRequest> sourceRequests = request.sources().stream().collect(Collectors.toMap(
-				StructureChangeSourceRequest::sourceOrchidGroupId,
+		Map<Long, StructureChangeSourceInput> sourceRequests = request.sources().stream().collect(Collectors.toMap(
+				StructureChangeSourceInput::sourceOrchidGroupId,
 				Function.identity()));
 		Map<Long, Integer> inputBySourceId = sourceRequests.values().stream().collect(Collectors.toMap(
-				StructureChangeSourceRequest::sourceOrchidGroupId,
-				StructureChangeSourceRequest::inputQuantity));
+				StructureChangeSourceInput::sourceOrchidGroupId,
+				StructureChangeSourceInput::inputQuantity));
 		Map<Long, Integer> transformedBySourceId = strategy.transformedQuantities(request);
 		int lossQuantity = Math.max(0, inputBySourceId.values().stream()
 				.mapToInt(Integer::intValue).sum() - request.results().stream().mapToInt(row -> row.quantity()).sum());
@@ -126,7 +126,7 @@ public class BatchStructureTransformationExecutor {
 	}
 
 	private List<ResultPlan> planResults(
-			StructureChangeExecutionRequest request,
+			StructureChangeCommand request,
 			StructureChangeStrategy strategy,
 			Map<Long, OrchidGroup> sources,
 			OrchidGroup first) {
@@ -150,12 +150,12 @@ public class BatchStructureTransformationExecutor {
 
 	private TransformOrchidGroupsMutationCommand mutationCommand(
 			Long operationId,
-			StructureChangeExecutionRequest request,
+			StructureChangeCommand request,
 			Map<Long, Integer> transformedBySourceId,
 			List<ResultPlan> plannedResults,
 			Set<Long> placementExclusionOrchidGroupIds) {
 		List<TransformOrchidGroupMutationSource> mutationSources = request.sources().stream()
-				.sorted(java.util.Comparator.comparing(StructureChangeSourceRequest::sourceOrchidGroupId))
+				.sorted(java.util.Comparator.comparing(StructureChangeSourceInput::sourceOrchidGroupId))
 				.filter(source -> transformedBySourceId.get(source.sourceOrchidGroupId()) > 0)
 				.map(source -> new TransformOrchidGroupMutationSource(source.sourceOrchidGroupId(),
 						transformedBySourceId.get(source.sourceOrchidGroupId()),

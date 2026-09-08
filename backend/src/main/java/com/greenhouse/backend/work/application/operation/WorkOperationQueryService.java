@@ -10,7 +10,7 @@ import com.greenhouse.backend.work.domain.operation.WorkOperationStatus;
 import com.greenhouse.backend.work.domain.operation.WorkSourceScopeType;
 import com.greenhouse.backend.work.dto.operation.OrchidGroupWorkHistoryResponse;
 import com.greenhouse.backend.work.dto.operation.WorkHistoryScopeType;
-import com.greenhouse.backend.work.dto.operation.WorkOperationResponse;
+import com.greenhouse.backend.work.application.operation.WorkOperationView;
 import com.greenhouse.backend.work.dto.operation.WorkOperationSummaryResponse;
 import com.greenhouse.backend.work.repository.WorkEffectOrchidGroupRepository;
 import com.greenhouse.backend.work.repository.WorkOperationRepository;
@@ -44,19 +44,19 @@ public class WorkOperationQueryService {
 	private final WorkOperationSummaryAssembler summaryAssembler;
 	private final Clock clock;
 
-	public WorkOperationResponse get(Long operationId) {
+	public WorkOperationView get(Long operationId) {
 		return responseAssembler.assemble(operationRepository.findWithWorkTypeById(operationId)
 				.orElseThrow(() -> new NotFoundException("작업을 찾을 수 없습니다.")));
 	}
 
-	public List<WorkOperationResponse> getAll(Collection<Long> operationIds) {
+	public List<WorkOperationView> getAll(Collection<Long> operationIds) {
 		if (operationIds.isEmpty()) {
 			return List.of();
 		}
 		var operationsById = responseAssembler
 				.assembleAll(operationRepository.findWithWorkTypeByIdIn(operationIds))
 				.stream()
-				.collect(Collectors.toMap(WorkOperationResponse::id, Function.identity()));
+				.collect(Collectors.toMap(WorkOperationView::id, Function.identity()));
 		return operationIds.stream()
 				.map(operationId -> {
 					var response = operationsById.get(operationId);

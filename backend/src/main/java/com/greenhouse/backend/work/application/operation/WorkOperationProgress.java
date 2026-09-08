@@ -1,10 +1,12 @@
-package com.greenhouse.backend.work.dto.operation;
+package com.greenhouse.backend.work.application.operation;
 
+import io.swagger.v3.oas.annotations.media.Schema;
 import com.greenhouse.backend.work.domain.target.WorkTargetExecutionStatus;
-import com.greenhouse.backend.work.dto.target.WorkOperationTargetResponse;
+import com.greenhouse.backend.work.application.target.WorkOperationTargetView;
 import java.util.List;
 
-public record WorkOperationProgressResponse(
+@Schema(name = "WorkOperationProgressResponse")
+public record WorkOperationProgress(
 		int total,
 		int pending,
 		int inProgress,
@@ -15,11 +17,11 @@ public record WorkOperationProgressResponse(
 		int failed,
 		int progressPercent) {
 
-	public static WorkOperationProgressResponse empty() {
+	public static WorkOperationProgress empty() {
 		return fromCounts(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 	}
 
-	public static WorkOperationProgressResponse fromCounts(
+	public static WorkOperationProgress fromCounts(
 			int total,
 			int pending,
 			int inProgress,
@@ -33,11 +35,11 @@ public record WorkOperationProgressResponse(
 			int skippedQuantity) {
 		int percent = totalQuantity == 0 ? 0
 				: (int) Math.round((processedQuantity + skippedQuantity) * 100.0 / totalQuantity);
-		return new WorkOperationProgressResponse(
+		return new WorkOperationProgress(
 				total, pending, inProgress, partial, completed, skipped, canceled, failed, percent);
 	}
 
-	public static WorkOperationProgressResponse from(List<WorkOperationTargetResponse> targets) {
+	public static WorkOperationProgress from(List<WorkOperationTargetView> targets) {
 		int total = targets.size();
 		int pending = count(targets, WorkTargetExecutionStatus.PENDING);
 		int inProgress = count(targets, WorkTargetExecutionStatus.IN_PROGRESS);
@@ -46,11 +48,11 @@ public record WorkOperationProgressResponse(
 		int skipped = count(targets, WorkTargetExecutionStatus.SKIPPED);
 		int canceled = count(targets, WorkTargetExecutionStatus.CANCELED);
 		int failed = count(targets, WorkTargetExecutionStatus.FAILED);
-		int totalQuantity = targets.stream().mapToInt(WorkOperationTargetResponse::quantitySnapshot).sum();
-		int processedQuantity = targets.stream().mapToInt(WorkOperationTargetResponse::processedQuantity).sum();
+		int totalQuantity = targets.stream().mapToInt(WorkOperationTargetView::quantitySnapshot).sum();
+		int processedQuantity = targets.stream().mapToInt(WorkOperationTargetView::processedQuantity).sum();
 		int skippedQuantity = targets.stream()
 				.filter(target -> target.executionStatus() == WorkTargetExecutionStatus.SKIPPED)
-				.mapToInt(WorkOperationTargetResponse::remainingQuantity).sum();
+				.mapToInt(WorkOperationTargetView::remainingQuantity).sum();
 		return fromCounts(
 				total,
 				pending,
@@ -65,7 +67,7 @@ public record WorkOperationProgressResponse(
 				skippedQuantity);
 	}
 
-	private static int count(List<WorkOperationTargetResponse> targets, WorkTargetExecutionStatus status) {
+	private static int count(List<WorkOperationTargetView> targets, WorkTargetExecutionStatus status) {
 		return (int) targets.stream().filter(target -> target.executionStatus() == status).count();
 	}
 }

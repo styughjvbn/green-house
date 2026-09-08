@@ -1,12 +1,14 @@
-package com.greenhouse.backend.work.dto.effect;
+package com.greenhouse.backend.work.application.effect;
 
+import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.DecimalMin;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
 import java.math.BigDecimal;
 
-public record InboundPottingResultRequest(
+@Schema(name = "InboundPottingResultRequest")
+public record InboundPottingResultInput(
 		@NotNull Long bedZoneId,
 		@NotNull @Min(1) Integer quantity,
 		@Size(max = 50) String potSize,

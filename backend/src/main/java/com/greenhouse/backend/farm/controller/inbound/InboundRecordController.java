@@ -12,8 +12,8 @@ import com.greenhouse.backend.farm.dto.inbound.InboundRecordPottingRequest;
 import com.greenhouse.backend.farm.dto.inbound.InboundRecordResponse;
 import com.greenhouse.backend.farm.dto.inbound.InboundRecordUpdateRequest;
 import com.greenhouse.backend.work.application.operation.InboundPottingOperationService;
-import com.greenhouse.backend.work.dto.effect.InboundPottingExecutionRequest;
-import com.greenhouse.backend.work.dto.effect.InboundPottingResultRequest;
+import com.greenhouse.backend.work.application.effect.InboundPottingCommand;
+import com.greenhouse.backend.work.application.effect.InboundPottingResultInput;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 
@@ -80,11 +80,11 @@ public class InboundRecordController {
 			@PathVariable Long inboundRecordId,
 			@Valid @RequestBody InboundRecordPottingRequest request) {
 		inboundPottingOperationService.executeNow(
-				new InboundPottingExecutionRequest(
+				new InboundPottingCommand(
 						"LEGACY:" + UUID.randomUUID(),
 						inboundRecordId,
 						request.pottingDate(),
-						request.results().stream().map(row -> new InboundPottingResultRequest(
+						request.results().stream().map(row -> new InboundPottingResultInput(
 								row.bedZoneId(), row.quantity(), row.potSize(), row.ageYear(),
 								row.placementType(), row.trayCount(), row.splitPlacementAllowed(),
 								row.startPosition(), row.endPosition(), row.memo())).toList(),
