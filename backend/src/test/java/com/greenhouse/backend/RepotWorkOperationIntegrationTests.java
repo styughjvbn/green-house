@@ -147,7 +147,7 @@ class RepotWorkOperationIntegrationTests extends AbstractBackendIntegrationTest 
 		OrchidGroup source = createSource(100, "0", "2");
 		OrchidGroupCollection collection = collectionRepository.save(
 				new OrchidGroupCollection("우량주", null, null, "테스터"));
-		memberRepository.save(new OrchidGroupCollectionMember(collection.getId(), source.getId(), "테스터"));
+		memberRepository.save(new OrchidGroupCollectionMember(collection.getId(), source.getId(), "테스터", java.time.LocalDateTime.of(2026, 9, 8, 1, 2)));
 
 		mockMvc.perform(post("/api/work-operations/repot")
 				.contentType(MediaType.APPLICATION_JSON)

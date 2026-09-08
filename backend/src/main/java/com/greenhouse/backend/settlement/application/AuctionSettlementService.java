@@ -1,5 +1,6 @@
 package com.greenhouse.backend.settlement.application;
 
+import com.greenhouse.backend.common.api.PageRequests;
 import com.greenhouse.backend.auction.application.AuctionDataReader.Result;
 import com.greenhouse.backend.auction.application.AuctionDataReader;
 import com.greenhouse.backend.common.api.PageResponse;
@@ -61,7 +62,7 @@ public class AuctionSettlementService {
 	public PageResponse<AuctionSettlementListItemResponse> getSettlementPage(Long auctionHouseId, LocalDate from,
 			LocalDate to, AuctionSettlementStatus status, int page, int size) {
 		var result = settlementRepository.search(auctionHouseId, from, to, status,
-				PageRequest.of(Math.max(page, 0), Math.min(Math.max(size, 1), 100)));
+				PageRequests.clamped(page, size));
 		var partners = partnerReader.getAllInfo(result.map(AuctionSettlement::getAuctionHouseId).getContent());
 		return PageResponse.from(result.map(settlement -> AuctionSettlementListItemResponse.from(
 				settlement, partners.get(settlement.getAuctionHouseId()).name())));

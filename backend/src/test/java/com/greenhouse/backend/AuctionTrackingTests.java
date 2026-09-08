@@ -53,9 +53,9 @@ class AuctionTrackingTests extends FarmFixtureIntegrationTest {
 	void tracksFailedThenSoldAuctionsWithPagination() throws Exception {
 		var lot = createLot(LocalDate.of(2026, 6, 1), "태성", "카틀레야 A", "특", 100);
 		addResult(lot, LocalDate.of(2026, 6, 3), 1, 100, 0, "유찰", AuctionAttemptStatus.FAILED);
-		lot.applyResult(0, 0, true, false);
+		lot.applyResult(0, 0, true, false, java.time.LocalDateTime.of(2026, 9, 8, 1, 2));
 		addResult(lot, LocalDate.of(2026, 6, 6), 2, 100, 10_000, null, AuctionAttemptStatus.SOLD);
-		lot.applyResult(100, 0, false, false);
+		lot.applyResult(100, 0, false, false, java.time.LocalDateTime.of(2026, 9, 8, 1, 2));
 		lotRepository.flush();
 
 		var response = trackingService.getLots(null, null, null, null, null, null, null, null, null, null, 0, 20);
@@ -80,7 +80,7 @@ class AuctionTrackingTests extends FarmFixtureIntegrationTest {
 	@Test
 	void confirmsReturnAndAdjustsQuantitiesWithHistory() {
 		var lot = createLot(LocalDate.of(2026, 6, 1), "양재", "심비디움 A", "A", 50);
-		lot.applyResult(0, 50, false, true);
+		lot.applyResult(0, 50, false, true, java.time.LocalDateTime.of(2026, 9, 8, 1, 2));
 		lotRepository.flush();
 
 		var partial = trackingService.confirmReturn(
@@ -111,7 +111,7 @@ class AuctionTrackingTests extends FarmFixtureIntegrationTest {
 	@Test
 	void confirmsReturnFromReauctionWaiting() {
 		var lot = createLot(LocalDate.of(2026, 6, 1), "수원", "카틀레야 B", "A", 30);
-		lot.applyResult(0, 0, true, false);
+		lot.applyResult(0, 0, true, false, java.time.LocalDateTime.of(2026, 9, 8, 1, 2));
 		lotRepository.flush();
 
 		var returned = trackingService.confirmReturn(

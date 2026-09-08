@@ -1,5 +1,6 @@
 package com.greenhouse.backend.farm.application.transformation;
 
+import java.time.Clock;
 import com.greenhouse.backend.common.exception.NotFoundException;
 import com.greenhouse.backend.farm.domain.orchid.OrchidGroup;
 import com.greenhouse.backend.farm.domain.transformation.OrchidGroupLineage;
@@ -23,6 +24,7 @@ import org.springframework.transaction.annotation.Transactional;
 @RequiredArgsConstructor
 public class OrchidGroupLineageService {
 
+	private final Clock clock;
 	private final OrchidGroupLineageRepository lineageRepository;
 	private final OrchidGroupRepository orchidGroupRepository;
 	private final StructureChangeLineageQueryService structureChangeLineageQueryService;
@@ -41,6 +43,7 @@ public class OrchidGroupLineageService {
 
 	@Transactional(readOnly = true)
 	public OrchidGroupLineageResponse getLineage(Long orchidGroupId) {
+		var businessDate = TimeConfig.farmToday(clock);
 		if (!orchidGroupRepository.existsById(orchidGroupId)) {
 			throw new NotFoundException("난 묶음을 찾을 수 없습니다.");
 		}
@@ -61,20 +64,20 @@ public class OrchidGroupLineageService {
 						view.lossQuantity(),
 						TimeConfig.toFarmTime(view.appliedAt()),
 						view.sources().stream().map(group -> new OrchidGroupLineageNodeResponse(
-								group.quantity(), OrchidGroupResponse.from(groupsById.get(group.orchidGroupId())))).toList(),
+								group.quantity(), OrchidGroupResponse.from(groupsById.get(group.orchidGroupId()), businessDate))).toList(),
 						view.results().stream().map(group -> new OrchidGroupLineageNodeResponse(
-								group.quantity(), OrchidGroupResponse.from(groupsById.get(group.orchidGroupId())))).toList()))
+								group.quantity(), OrchidGroupResponse.from(groupsById.get(group.orchidGroupId()), businessDate))).toList()))
 				.toList();
 		var pooledOperationIds = transformations.stream()
 				.map(OrchidGroupLineageTransformationResponse::workOperationId)
 				.collect(Collectors.toSet());
 		var sources = lineageRepository.findByResultOrchidGroupIdOrderByCreatedAtAscIdAsc(orchidGroupId).stream()
 				.filter(lineage -> !pooledOperationIds.contains(lineage.getWorkOperationId()))
-				.map(OrchidGroupLineageItemResponse::from)
+				.map(lineage -> OrchidGroupLineageItemResponse.from(lineage, businessDate))
 				.toList();
 		var results = lineageRepository.findBySourceOrchidGroupIdOrderByCreatedAtAscIdAsc(orchidGroupId).stream()
 				.filter(lineage -> !pooledOperationIds.contains(lineage.getWorkOperationId()))
-				.map(OrchidGroupLineageItemResponse::from)
+				.map(lineage -> OrchidGroupLineageItemResponse.from(lineage, businessDate))
 				.toList();
 		return new OrchidGroupLineageResponse(orchidGroupId, sources, results, transformations);
 	}

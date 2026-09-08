@@ -181,7 +181,7 @@ class OrchidGroupIntegrationTests extends FarmFixtureIntegrationTest {
 						"$1"));
 
 		assertThat(
-				OrchidGroupResponse.from(orchidGroupRepository.findById(createdOrchidGroupId).orElseThrow()).ageYear())
+				OrchidGroupResponse.from(orchidGroupRepository.findById(createdOrchidGroupId).orElseThrow(), com.greenhouse.backend.common.config.TimeConfig.farmToday(java.time.Clock.systemUTC())).ageYear())
 				.isEqualTo(3);
 	}
 

@@ -1,5 +1,6 @@
 package com.greenhouse.backend.partner.application;
 
+import com.greenhouse.backend.common.api.PageRequests;
 import com.greenhouse.backend.common.api.PageResponse;
 import com.greenhouse.backend.common.exception.NotFoundException;
 import com.greenhouse.backend.partner.domain.BusinessPartner;
@@ -13,7 +14,6 @@ import com.greenhouse.backend.partner.repository.BusinessPartnerRepository;
 import lombok.RequiredArgsConstructor;
 
 import java.util.List;
-import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -38,14 +38,14 @@ public class BusinessPartnerService {
 			int page,
 			int size) {
 		return PageResponse.from(repository
-				.searchPage(keyword, partnerType, active, null, pageRequest(page, size))
+				.searchPage(keyword, partnerType, active, null, PageRequests.clamped(page, size))
 				.map(BusinessPartnerResponse::from));
 	}
 
 	@Transactional(readOnly = true)
 	public PageResponse<BusinessPartnerOptionResponse> getOptions(
 			String keyword, Boolean auctionHouse, Boolean active, int page, int size) {
-		return PageResponse.from(repository.searchPage(keyword, null, active, auctionHouse, pageRequest(page, size))
+		return PageResponse.from(repository.searchPage(keyword, null, active, auctionHouse, PageRequests.clamped(page, size))
 				.map(BusinessPartnerOptionResponse::from));
 	}
 
@@ -53,10 +53,6 @@ public class BusinessPartnerService {
 	public BusinessPartnerOptionResponse getOption(Long partnerId) {
 		return repository.findById(partnerId).map(BusinessPartnerOptionResponse::from)
 				.orElseThrow(() -> new NotFoundException("거래처를 찾을 수 없습니다."));
-	}
-
-	private PageRequest pageRequest(int page, int size) {
-		return PageRequest.of(Math.max(page, 0), Math.min(Math.max(size, 1), 100));
 	}
 
 	public BusinessPartnerResponse create(BusinessPartnerCreateRequest request) {

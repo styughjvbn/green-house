@@ -31,7 +31,7 @@ public record OrchidGroupResponse(
 		Integer physicalBedNumber,
 		String bedZoneName) {
 
-	public static OrchidGroupResponse from(OrchidGroup orchidGroup) {
+	public static OrchidGroupResponse from(OrchidGroup orchidGroup, LocalDate businessDate) {
 		var bedZone = orchidGroup.getBedZone();
 		var physicalBed = bedZone.getPhysicalBed();
 		var house = physicalBed.getHouse();
@@ -46,7 +46,7 @@ public record OrchidGroupResponse(
 				orchidGroup.getQuantity(),
 				orchidGroup.getPotSize(),
 				orchidGroup.getPotSizeCode(),
-				calculateAgeYear(orchidGroup),
+				calculateAgeYear(orchidGroup, businessDate),
 				orchidGroup.getStatus(),
 				orchidGroup.getPlacementType(),
 				orchidGroup.getTrayCount(),
@@ -61,7 +61,7 @@ public record OrchidGroupResponse(
 				bedZone.getName());
 	}
 
-	private static Integer calculateAgeYear(OrchidGroup orchidGroup) {
+	private static Integer calculateAgeYear(OrchidGroup orchidGroup, LocalDate businessDate) {
 		Integer baseAgeYear = orchidGroup.getAgeYear();
 		if (baseAgeYear == null) {
 			return null;
@@ -72,16 +72,16 @@ public record OrchidGroupResponse(
 				: orchidGroup.getCreatedAt() != null
 						? TimeConfig.toFarmTime(orchidGroup.getCreatedAt()).toLocalDate()
 						: null;
-		return calculateAgeYear(baseAgeYear, referenceDate);
+		return calculateAgeYear(baseAgeYear, referenceDate, businessDate);
 	}
 
-	public static Integer calculateAgeYear(Integer baseAgeYear, LocalDate referenceDate) {
+	public static Integer calculateAgeYear(Integer baseAgeYear, LocalDate referenceDate, LocalDate businessDate) {
 		if (baseAgeYear == null) return null;
 		if (referenceDate == null) {
 			return baseAgeYear;
 		}
 
-		long elapsedYears = ChronoUnit.YEARS.between(referenceDate, LocalDate.now(TimeConfig.FARM_TIME_ZONE));
+		long elapsedYears = ChronoUnit.YEARS.between(referenceDate, businessDate);
 		return baseAgeYear + Math.max(0, Math.toIntExact(elapsedYears));
 	}
 }

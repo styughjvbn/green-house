@@ -1,5 +1,6 @@
 package com.greenhouse.backend.farm.application.inbound;
 
+import com.greenhouse.backend.common.api.PageRequests;
 import com.greenhouse.backend.common.api.PageResponse;
 import com.greenhouse.backend.farm.domain.inbound.InboundStatus;
 import com.greenhouse.backend.farm.domain.inbound.InboundType;
@@ -28,7 +29,7 @@ public class InboundRecordQueryService {
 			String varietyKeyword,
 			int page,
 			int size) {
-		validatePageRequest(page, size);
+		PageRequests.validate(page, size);
 		String keyword = normalize(varietyKeyword);
 		return PageResponse.from(inboundRecordRepository.search(
 				from,
@@ -52,14 +53,5 @@ public class InboundRecordQueryService {
 		}
 		String trimmed = value.trim();
 		return trimmed.isEmpty() ? null : trimmed;
-	}
-
-	private void validatePageRequest(int page, int size) {
-		if (page < 0) {
-			throw new IllegalArgumentException("페이지 번호는 0 이상이어야 합니다.");
-		}
-		if (size < 1 || size > 100) {
-			throw new IllegalArgumentException("페이지 크기는 1~100이어야 합니다.");
-		}
 	}
 }

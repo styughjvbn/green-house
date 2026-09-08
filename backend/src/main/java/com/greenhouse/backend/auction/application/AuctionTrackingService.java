@@ -1,5 +1,8 @@
 package com.greenhouse.backend.auction.application;
 
+import com.greenhouse.backend.common.api.PageRequests;
+import com.greenhouse.backend.common.config.TimeConfig;
+import java.time.Clock;
 import com.greenhouse.backend.auction.domain.AuctionAttempt;
 import com.greenhouse.backend.auction.domain.AuctionLotSearchCriteria;
 import com.greenhouse.backend.auction.domain.AuctionLotStatus;
@@ -33,6 +36,7 @@ import org.springframework.transaction.annotation.Transactional;
 @Transactional(readOnly = true)
 @RequiredArgsConstructor
 public class AuctionTrackingService {
+	private final Clock clock;
 	private final BusinessPartnerReader partnerReader;
 	private final AuctionShipmentLotRepository lotRepository;
 	private final AuctionAttemptRepository attemptRepository;
@@ -42,10 +46,7 @@ public class AuctionTrackingService {
 	public PageResponse<AuctionLotResponse> getLots(LocalDate from, LocalDate to, String market, String variety, String grade,
 			AuctionLotStatus status, Boolean reviewOnly, Boolean returnOnly, Boolean waitingOnly, String keyword,
 			int page, int size) {
-		if (page < 0)
-			throw new IllegalArgumentException("페이지 번호는 0 이상이어야 합니다.");
-		if (size < 1 || size > 100)
-			throw new IllegalArgumentException("페이지 크기는 1~100이어야 합니다.");
+		PageRequests.validate(page, size);
 		var pageable = PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "id"));
 		String searchText = normalizeOrEmpty(keyword).toLowerCase();
 		var boundaryMarkets = new LinkedHashMap<String, List<Long>>();
@@ -89,7 +90,7 @@ public class AuctionTrackingService {
 		lot.requireReturnConfirmable();
 		int quantity = request.returnedQuantity() == null ? lot.getReturnConfirmableQuantity()
 				: request.returnedQuantity();
-		lot.confirmReturn(quantity, request.returnDate(), requestActorProvider.resolve(request.worker()), normalize(request.memo()));
+		lot.confirmReturn(quantity, request.returnDate(), requestActorProvider.resolve(request.worker()), normalize(request.memo()), TimeConfig.utcNow(clock));
 		return AuctionLotResponse.from(lot, partnerReader.getInfo(lot.getShipment().getAuctionHouseId()).name());
 	}
 
@@ -97,7 +98,7 @@ public class AuctionTrackingService {
 	public AuctionLotResponse adjust(Long id, AuctionLotAdjustmentRequest request) {
 		var lot = findLotForUpdate(id);
 		lot.adjustQuantities(request.soldQuantity(), request.waitingQuantity(), request.returnedQuantity(),
-				requestActorProvider.resolve(request.worker()), normalize(request.memo()));
+				requestActorProvider.resolve(request.worker()), normalize(request.memo()), TimeConfig.utcNow(clock));
 		return AuctionLotResponse.from(lot, partnerReader.getInfo(lot.getShipment().getAuctionHouseId()).name());
 	}
 
@@ -105,7 +106,7 @@ public class AuctionTrackingService {
 	public AuctionLotResponse addResult(Long id, RecordAuctionResultCommand request) {
 		var lot = findLotForUpdate(id);
 		lot.recordResult(request.auctionDate(), request.attemptNo(), request.attemptStatus(),
-				request.resultLines(), request.failedReason(), request.memo());
+				request.resultLines(), request.failedReason(), request.memo(), TimeConfig.utcNow(clock));
 
 		return AuctionLotResponse.from(lot, partnerReader.getInfo(lot.getShipment().getAuctionHouseId()).name());
 	}
@@ -114,7 +115,7 @@ public class AuctionTrackingService {
 	public AuctionLotResponse changeStatus(Long id, AuctionLotStatusRequest request) {
 		var lot = findLotForUpdate(id);
 		lot.changeStatus(request.status(), request.reason().trim(), requestActorProvider.resolve(request.worker()),
-				normalize(request.memo()));
+				normalize(request.memo()), TimeConfig.utcNow(clock));
 		return AuctionLotResponse.from(lot, partnerReader.getInfo(lot.getShipment().getAuctionHouseId()).name());
 	}
 

@@ -1,5 +1,7 @@
 package com.greenhouse.backend.farm.application.transformation;
 
+import com.greenhouse.backend.common.config.TimeConfig;
+import java.time.Clock;
 import com.greenhouse.backend.common.exception.NotFoundException;
 import com.greenhouse.backend.farm.dto.orchid.OrchidGroupResponse;
 import com.greenhouse.backend.farm.dto.transformation.RepotWorkOperationRequest;
@@ -18,6 +20,7 @@ import org.springframework.transaction.annotation.Transactional;
 @Transactional
 public class RepotWorkOperationService {
 
+	private final Clock clock;
 	private final ImmediateWorkExecutionService immediateWorkExecutionService;
 	private final WorkOperationQueryService queryService;
 	private final OrchidGroupRepository orchidGroupRepository;
@@ -25,10 +28,11 @@ public class RepotWorkOperationService {
 	public RepotWorkOperationService(
 			ImmediateWorkExecutionService immediateWorkExecutionService,
 			WorkOperationQueryService queryService,
-			OrchidGroupRepository orchidGroupRepository) {
+			OrchidGroupRepository orchidGroupRepository, Clock clock) {
 		this.immediateWorkExecutionService = immediateWorkExecutionService;
 		this.queryService = queryService;
 		this.orchidGroupRepository = orchidGroupRepository;
+		this.clock = clock;
 	}
 
 	public RepotWorkOperationResponse execute(RepotWorkOperationRequest request) {
@@ -68,6 +72,7 @@ public class RepotWorkOperationService {
 	}
 
 	private RepotWorkOperationResponse response(Long operationId) {
+		var businessDate = TimeConfig.farmToday(clock);
 		var operation = queryService.get(operationId);
 		var resultIds = immediateWorkExecutionService.getStructureChangeResultOrchidGroupIds(
 				operationId, WorkTypeDefinition.REPOT.name());
@@ -78,11 +83,11 @@ public class RepotWorkOperationService {
 				.collect(java.util.stream.Collectors.toMap(group -> group.getId(), group -> group));
 		var results = resultIds.stream()
 				.filter(groupsById::containsKey)
-				.map(id -> OrchidGroupResponse.from(groupsById.get(id)))
+				.map(id -> OrchidGroupResponse.from(groupsById.get(id), businessDate))
 				.toList();
 		return new RepotWorkOperationResponse(
 				operation,
-				OrchidGroupResponse.from(source),
+				OrchidGroupResponse.from(source, businessDate),
 				results,
 				integerDetail(operation.details(), "inputQuantity"),
 				integerDetail(operation.details(), "lossQuantity"));

@@ -1,5 +1,6 @@
 package com.greenhouse.backend.farm.dto.transformation;
 
+import java.time.LocalDate;
 import com.greenhouse.backend.farm.dto.orchid.OrchidGroupResponse;
 import com.greenhouse.backend.common.config.TimeConfig;
 import com.greenhouse.backend.farm.domain.transformation.OrchidGroupLineage;
@@ -16,7 +17,7 @@ public record OrchidGroupLineageItemResponse(
 		OrchidGroupResponse sourceOrchidGroup,
 		OrchidGroupResponse resultOrchidGroup) {
 
-	public static OrchidGroupLineageItemResponse from(OrchidGroupLineage lineage) {
+	public static OrchidGroupLineageItemResponse from(OrchidGroupLineage lineage, LocalDate businessDate) {
 		return new OrchidGroupLineageItemResponse(
 				lineage.getId(),
 				lineage.getRelationType(),
@@ -24,7 +25,7 @@ public record OrchidGroupLineageItemResponse(
 				lineage.getSourceQuantity(),
 				lineage.getResultQuantity(),
 				TimeConfig.toFarmTime(lineage.getCreatedAt()),
-				OrchidGroupResponse.from(lineage.getSourceOrchidGroup()),
-				OrchidGroupResponse.from(lineage.getResultOrchidGroup()));
+				OrchidGroupResponse.from(lineage.getSourceOrchidGroup(), businessDate),
+				OrchidGroupResponse.from(lineage.getResultOrchidGroup(), businessDate));
 	}
 }

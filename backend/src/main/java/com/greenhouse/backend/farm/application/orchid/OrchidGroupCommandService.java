@@ -57,13 +57,14 @@ public class OrchidGroupCommandService {
 	private final Clock clock;
 
 	public OrchidGroupResponse create(OrchidGroupCreateRequest request) {
+		var businessDate = TimeConfig.farmToday(clock);
 		var command = mutationRoutingPolicy.routesToEngine()
 				? new CreateOrchidGroupMutationCommand(
 				OrchidGroupMutationSources.farmRequest(
 						"ORCHID_GROUP_COMMAND", "DIRECT", "CREATE"),
 				request.bedZoneId(),
 				mutationDetails(request),
-				TimeConfig.farmToday(clock),
+				businessDate,
 				"난 묶음 등록")
 				: null;
 		OrchidGroup created = mutationRoutingPolicy.routesToEngine()
@@ -71,7 +72,7 @@ public class OrchidGroupCommandService {
 				: createEntity(request);
 		auditSupport.record(created.getId(), AuditAction.CREATED, AuditSource.ORCHID_GROUP_MANAGEMENT,
 				null, auditSupport.snapshot(created), Map.of("creationMode", "SINGLE"));
-		return OrchidGroupResponse.from(created);
+		return OrchidGroupResponse.from(created, businessDate);
 	}
 
 	public OrchidGroup createEntity(OrchidGroupCreateRequest request) {
@@ -131,6 +132,7 @@ public class OrchidGroupCommandService {
 	}
 
 	private OrchidGroupResponse update(Long orchidGroupId, OrchidGroupUpdateRequest request, String correctionMode) {
+		var businessDate = TimeConfig.farmToday(clock);
 		OrchidGroup orchidGroup = orchidGroupRepository.findById(orchidGroupId)
 				.orElseThrow(() -> new NotFoundException("난 묶음을 찾을 수 없습니다."));
 		OrchidGroupAuditSnapshot before = auditSupport.snapshot(orchidGroup);
@@ -147,7 +149,7 @@ public class OrchidGroupCommandService {
 			auditSupport.record(orchidGroupId, auditSupport.actionForCorrection(before, after),
 					AuditSource.ORCHID_GROUP_CORRECTION, before, after,
 					Map.of("correctionMode", correctionMode));
-			return OrchidGroupResponse.from(updated);
+			return OrchidGroupResponse.from(updated, businessDate);
 		}
 		Variety variety = findVariety(request.varietyId());
 		BigDecimal startPosition = orchidPlacementPolicy.normalizeNumber(request.startPosition());
@@ -171,7 +173,7 @@ public class OrchidGroupCommandService {
 		OrchidGroupAuditSnapshot after = auditSupport.snapshot(orchidGroup);
 		auditSupport.record(orchidGroupId, auditSupport.actionForCorrection(before, after),
 				AuditSource.ORCHID_GROUP_CORRECTION, before, after, Map.of("correctionMode", correctionMode));
-		return OrchidGroupResponse.from(orchidGroup);
+		return OrchidGroupResponse.from(orchidGroup, businessDate);
 	}
 
 	public void delete(Long orchidGroupId) {
@@ -216,6 +218,7 @@ public class OrchidGroupCommandService {
 			Long orchidGroupId,
 			OrchidGroupMoveRequest request,
 			boolean applyRouting) {
+		var businessDate = TimeConfig.farmToday(clock);
 		OrchidGroup orchidGroup = orchidGroupRepository.findById(orchidGroupId)
 				.orElseThrow(() -> new NotFoundException("난 묶음을 찾을 수 없습니다."));
 		BedZone toBedZone = findZone(request.toBedZoneId());
@@ -227,7 +230,7 @@ public class OrchidGroupCommandService {
 		if (fromBedZoneId.equals(toBedZone.getId())
 				&& equalPosition(orchidGroup.getStartPosition(), startPosition)
 				&& equalPosition(orchidGroup.getEndPosition(), endPosition)) {
-			return OrchidGroupResponse.from(orchidGroup);
+			return OrchidGroupResponse.from(orchidGroup, businessDate);
 		}
 		var command = applyRouting && mutationRoutingPolicy.routesToEngine()
 				? new MoveOrchidGroupMutationCommand(
@@ -237,12 +240,12 @@ public class OrchidGroupCommandService {
 					request.toBedZoneId(),
 					startPosition,
 					endPosition,
-					TimeConfig.farmToday(clock),
+					businessDate,
 					request.memo())
 				: null;
 		if (applyRouting && mutationRoutingPolicy.routesToEngine()) {
 			mutationEngine.move(command);
-			return OrchidGroupResponse.from(orchidGroup);
+			return OrchidGroupResponse.from(orchidGroup, businessDate);
 		}
 		if (!fromBedZoneId.equals(toBedZone.getId())) {
 			int nextSortOrder = orchidGroupRepository.findMaxSortOrderByBedZoneId(toBedZone.getId()) + 1;
@@ -250,7 +253,7 @@ public class OrchidGroupCommandService {
 		} else {
 			orchidGroup.moveTo(toBedZone, orchidGroup.getSortOrder(), startPosition, endPosition);
 		}
-		return OrchidGroupResponse.from(orchidGroup);
+		return OrchidGroupResponse.from(orchidGroup, businessDate);
 	}
 
 	private OrchidGroup createWithEngine(CreateOrchidGroupMutationCommand command) {

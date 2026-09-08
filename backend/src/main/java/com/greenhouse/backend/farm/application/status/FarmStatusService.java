@@ -1,5 +1,6 @@
 package com.greenhouse.backend.farm.application.status;
 
+import java.time.Clock;
 import com.greenhouse.backend.common.exception.NotFoundException;
 import com.greenhouse.backend.common.config.TimeConfig;
 import com.greenhouse.backend.farm.dto.orchid.OrchidGroupResponse;
@@ -36,12 +37,14 @@ import org.springframework.transaction.annotation.Transactional;
 @Transactional(readOnly = true)
 @RequiredArgsConstructor
 public class FarmStatusService {
+	private final Clock clock;
 	private final HouseRepository houseRepository;
 	private final PhysicalBedRepository physicalBedRepository;
 	private final BedZoneRepository bedZoneRepository;
 	private final OrchidGroupRepository orchidGroupRepository;
 
 	public FarmStatusMapResponse getMap() {
+		var businessDate = TimeConfig.farmToday(clock);
 		var mapOrchidGroups = orchidGroupRepository.findMapRows();
 		var groupsByHouseId = mapOrchidGroups.stream().collect(Collectors.groupingBy(
 				group -> group.getHouseId()));
@@ -68,10 +71,11 @@ public class FarmStatusService {
 				.toList();
 		return new FarmStatusMapResponse(
 				houses,
-				mapOrchidGroups.stream().map(this::mapGroup).toList());
+				mapOrchidGroups.stream().map(row -> mapGroup(row, businessDate)).toList());
 	}
 
 	public OrchidManagementViewportResponse getOrchidManagementViewport(Long startBedId, int bedCount) {
+		var businessDate = TimeConfig.farmToday(clock);
 		if (bedCount < 2 || bedCount > 4) {
 			throw new IllegalArgumentException("bedCount must be between 2 and 4.");
 		}
@@ -125,7 +129,7 @@ public class FarmStatusService {
 		return new OrchidManagementViewportResponse(
 				visibleBedRows.getFirst().id(),
 				bedCount,
-				visibleBeds.stream().map(bed -> PhysicalBedResponse.from(bed, groupsByZoneId)).toList(),
+				visibleBeds.stream().map(bed -> PhysicalBedResponse.from(bed, groupsByZoneId, businessDate)).toList(),
 				startIndex > 0,
 				startIndex + bedCount < allBedRows.size(),
 				new OrchidManagementSummaryResponse(
@@ -151,6 +155,7 @@ public class FarmStatusService {
 	}
 
 	public FarmStatusZoomResponse getZoom(FarmZoomLevel level, Long houseId, Long physicalBedId) {
+		var businessDate = TimeConfig.farmToday(clock);
 		return switch (level) {
 			case HOUSE, PHYSICAL_BED -> {
 				if (houseId == null) {
@@ -162,7 +167,7 @@ public class FarmStatusService {
 				var bedIds = beds.stream().map(bed -> bed.getId()).toList();
 				var groupsByZoneId = loadGroupsByZoneId(bedIds);
 				var responses = beds.stream()
-						.map(bed -> PhysicalBedResponse.from(bed, groupsByZoneId))
+						.map(bed -> PhysicalBedResponse.from(bed, groupsByZoneId, businessDate))
 						.toList();
 				yield new FarmStatusZoomResponse(level, house.getId(), house.getNumber(), responses, List.of());
 			}
@@ -176,7 +181,7 @@ public class FarmStatusService {
 				var zones = physicalBed.getBedZones().stream()
 						.map(zone -> BedZoneResponse.from(
 								zone,
-								groupsByZoneId.getOrDefault(zone.getId(), List.of())))
+								groupsByZoneId.getOrDefault(zone.getId(), List.of()), businessDate))
 						.toList();
 				yield new FarmStatusZoomResponse(
 						level,
@@ -225,13 +230,13 @@ public class FarmStatusService {
 		};
 	}
 
-	private FarmStatusMapOrchidGroupResponse mapGroup(OrchidGroupRepository.MapRow row) {
+	private FarmStatusMapOrchidGroupResponse mapGroup(OrchidGroupRepository.MapRow row, java.time.LocalDate businessDate) {
 		var referenceDate = row.getInboundRecordId() != null ? row.getInboundDate()
 				: row.getCreatedAt() == null ? null : TimeConfig.toFarmTime(row.getCreatedAt()).toLocalDate();
 		return new FarmStatusMapOrchidGroupResponse(
 				row.getOrchidGroupId(), row.getHouseId(), row.getPhysicalBedId(), row.getBedZoneId(),
 				row.getStartPosition(), row.getEndPosition(), row.getVarietyId(), row.getVarietyColor(),
 				row.getVarietyName(), row.getQuantity(), row.getStatus(),
-				OrchidGroupResponse.calculateAgeYear(row.getAgeYear(), referenceDate), row.getPotSize(), row.getSortOrder());
+				OrchidGroupResponse.calculateAgeYear(row.getAgeYear(), referenceDate, businessDate), row.getPotSize(), row.getSortOrder());
 	}
 }

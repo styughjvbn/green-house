@@ -1,5 +1,6 @@
 package com.greenhouse.backend.settlement.application;
 
+import com.greenhouse.backend.common.api.PageRequests;
 import com.greenhouse.backend.common.api.PageResponse;
 import com.greenhouse.backend.common.application.RequestActorProvider;
 import com.greenhouse.backend.common.config.TimeConfig;
@@ -71,7 +72,7 @@ public class PaymentService {
 	public PageResponse<PartnerPaymentEventResponse> getEventPage(Long partnerId, PaymentTargetType targetType,
 			Long targetId, PaymentEventType eventType, int page, int size) {
 		return PageResponse.from(eventResponses(eventRepository.search(partnerId, targetType, targetId, eventType,
-				PageRequest.of(Math.max(page, 0), Math.min(Math.max(size, 1), 100)))));
+				PageRequests.clamped(page, size))));
 	}
 
 	private Page<PartnerPaymentEventResponse> eventResponses(Page<PartnerPaymentEvent> events) {

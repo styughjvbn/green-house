@@ -107,7 +107,7 @@ public class MultiCreateWorkOperationService {
 			throw new IllegalArgumentException(blockers.getFirst().message());
 		}
 		memberRepository.findByOrchidGroupIdInAndRemovedAtIsNull(groupIds)
-				.forEach(member -> member.remove());
+				.forEach(member -> member.remove(TimeConfig.utcNow(clock)));
 		if (mutationRoutingPolicy.routesToEngine()) {
 			groups.forEach(group -> mutationEngine.cancelCreation(
 					new CancelOrchidGroupCreationMutationCommand(
@@ -124,12 +124,13 @@ public class MultiCreateWorkOperationService {
 	}
 
 	private MultiCreateWorkOperationResponse response(Long operationId) {
+		var businessDate = TimeConfig.farmToday(clock);
 		var operation = queryService.get(operationId);
 		var ids = immediateWorkExecutionService.getResultOrchidGroupIds(operationId);
 		var groupsById = orchidGroupRepository.findDetailsByIds(ids).stream()
 				.collect(java.util.stream.Collectors.toMap(group -> group.getId(), group -> group));
 		var groups = ids.stream().filter(groupsById::containsKey)
-				.map(id -> OrchidGroupResponse.from(groupsById.get(id))).toList();
+				.map(id -> OrchidGroupResponse.from(groupsById.get(id), businessDate)).toList();
 		return new MultiCreateWorkOperationResponse(operation, groups);
 	}
 

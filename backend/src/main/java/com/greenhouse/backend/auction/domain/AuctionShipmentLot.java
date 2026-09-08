@@ -1,5 +1,6 @@
 package com.greenhouse.backend.auction.domain;
 
+import java.time.LocalDateTime;
 import com.greenhouse.backend.common.domain.BaseEntity;
 import jakarta.persistence.CascadeType;
 import jakarta.persistence.Column;
@@ -106,7 +107,7 @@ public class AuctionShipmentLot extends BaseEntity {
 		attempt.setShipmentLot(this);
 	}
 
-	public void applyResult(Integer sold, Integer returned, boolean failed, boolean returnInferred) {
+	public void applyResult(Integer sold, Integer returned, boolean failed, boolean returnInferred, LocalDateTime changedAt) {
 		soldQuantity += sold;
 		returnedQuantity += returned;
 		waitingQuantity = Math.max(0, shippedQuantity - soldQuantity - returnedQuantity);
@@ -126,11 +127,11 @@ public class AuctionShipmentLot extends BaseEntity {
 		} else {
 			next = AuctionLotStatus.IN_PROGRESS;
 		}
-		changeStatus(next, "경매 결과 반영", null, null);
+		changeStatus(next, "경매 결과 반영", null, null, changedAt);
 	}
 
 	public void recordResult(LocalDate auctionDate, Integer requestedAttemptNo, AuctionAttemptStatus attemptStatus,
-			List<AuctionResultLineInput> resultLines, String requestedFailedReason, String requestedMemo) {
+			List<AuctionResultLineInput> resultLines, String requestedFailedReason, String requestedMemo, LocalDateTime changedAt) {
 		if (getWaitingQuantity() <= 0)
 			throw new IllegalArgumentException("대기 수량이 없는 lot에는 경매 결과를 추가할 수 없습니다.");
 		int waitingQuantity = getWaitingQuantity();
@@ -153,7 +154,7 @@ public class AuctionShipmentLot extends BaseEntity {
 					throw new IllegalArgumentException("낙찰 상태에서는 남은 대기 수량 전체를 입력해야 합니다.");
 				attempt.recalculateStatus();
 				addAttempt(attempt);
-				applyResult(soldQuantity, 0, false, false);
+				applyResult(soldQuantity, 0, false, false, changedAt);
 			}
 			case PARTIALLY_SOLD -> {
 				int soldQuantity = addSoldLines(attempt, resultLines, getShipmentGrade());
@@ -169,7 +170,7 @@ public class AuctionShipmentLot extends BaseEntity {
 						AuctionInspectionStatus.NORMAL));
 				attempt.recalculateStatus();
 				addAttempt(attempt);
-				applyResult(soldQuantity, 0, false, false);
+				applyResult(soldQuantity, 0, false, false, changedAt);
 			}
 			case FAILED -> {
 				attempt.addResultLine(new AuctionResultLine(
@@ -182,7 +183,7 @@ public class AuctionShipmentLot extends BaseEntity {
 						AuctionInspectionStatus.NORMAL));
 				attempt.recalculateStatus();
 				addAttempt(attempt);
-				applyResult(0, 0, true, false);
+				applyResult(0, 0, true, false, changedAt);
 			}
 			case RETURN_INFERRED -> {
 				attempt.addResultLine(new AuctionResultLine(
@@ -195,7 +196,7 @@ public class AuctionShipmentLot extends BaseEntity {
 						AuctionInspectionStatus.RETURN_INFERRED));
 				attempt.recalculateStatus();
 				addAttempt(attempt);
-				applyResult(0, waitingQuantity, false, true);
+				applyResult(0, waitingQuantity, false, true, changedAt);
 			}
 			default -> throw new IllegalArgumentException("지원하지 않는 경매 결과 상태입니다.");
 		}
@@ -257,7 +258,7 @@ public class AuctionShipmentLot extends BaseEntity {
 			throw new IllegalArgumentException("확인할 반환 수량이 없습니다.");
 	}
 
-	public void confirmReturn(Integer quantity, LocalDate returnDate, String worker, String memo) {
+	public void confirmReturn(Integer quantity, LocalDate returnDate, String worker, String memo, LocalDateTime changedAt) {
 		requireReturnConfirmable();
 		if (quantity == null || quantity < 1) {
 			throw new IllegalArgumentException("반환 확인 수량은 1 이상이어야 합니다.");
@@ -279,7 +280,7 @@ public class AuctionShipmentLot extends BaseEntity {
 		}
 		returnConfirmedDate = returnDate;
 		AuctionLotStatus next = waitingQuantity == 0 ? AuctionLotStatus.RETURNED : AuctionLotStatus.PARTIALLY_RETURNED;
-		changeStatus(next, next == AuctionLotStatus.RETURNED ? "반환 완료" : "부분반환 확인", worker, memo);
+		changeStatus(next, next == AuctionLotStatus.RETURNED ? "반환 완료" : "부분반환 확인", worker, memo, changedAt);
 	}
 
 	public Integer getReturnConfirmableQuantity() {
@@ -289,7 +290,7 @@ public class AuctionShipmentLot extends BaseEntity {
 		return waitingQuantity;
 	}
 
-	public void adjustQuantities(Integer sold, Integer waiting, Integer returned, String worker, String memo) {
+	public void adjustQuantities(Integer sold, Integer waiting, Integer returned, String worker, String memo, LocalDateTime changedAt) {
 		if (sold + waiting + returned != shippedQuantity) {
 			throw new IllegalArgumentException("판매/대기/반환 수량 합계가 출하 수량과 일치해야 합니다.");
 		}
@@ -299,14 +300,14 @@ public class AuctionShipmentLot extends BaseEntity {
 		AuctionLotStatus next = waiting > 0
 				? (sold > 0 ? AuctionLotStatus.PARTIALLY_SOLD : AuctionLotStatus.REAUCTION_WAITING)
 				: returned > 0 ? AuctionLotStatus.RETURNED : AuctionLotStatus.SOLD;
-		changeStatus(next, "수량 보정", worker, memo);
+		changeStatus(next, "수량 보정", worker, memo, changedAt);
 	}
 
-	public void changeStatus(AuctionLotStatus next, String reason, String worker, String memo) {
+	public void changeStatus(AuctionLotStatus next, String reason, String worker, String memo, LocalDateTime changedAt) {
 		if (currentStatus == next) {
 			return;
 		}
-		var history = new AuctionLotStatusHistory(this, currentStatus, next, reason, worker, memo);
+		var history = new AuctionLotStatusHistory(this, currentStatus, next, reason, worker, memo, changedAt);
 		statusHistory.add(history);
 		currentStatus = next;
 	}

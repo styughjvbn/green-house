@@ -1,5 +1,6 @@
 package com.greenhouse.backend.farm.application.variety;
 
+import com.greenhouse.backend.common.api.PageRequests;
 import com.greenhouse.backend.audit.domain.AuditAction;
 import com.greenhouse.backend.common.api.PageResponse;
 import com.greenhouse.backend.common.config.TimeConfig;
@@ -54,7 +55,7 @@ public class VarietyService {
 			Boolean active,
 			int page,
 			int size) {
-		validatePageRequest(page, size);
+		PageRequests.validate(page, size);
 		var result = varietyRepository.search(
 				normalize(keyword) == null ? "" : normalize(keyword),
 				normalize(genus) == null ? "" : normalize(genus),
@@ -234,15 +235,6 @@ public class VarietyService {
 				: varietyRepository.existsByGenusAndNameAndIdNot(genus, name, currentId);
 		if (duplicated) {
 			throw new IllegalArgumentException("같은 속과 품종명을 가진 품종이 이미 있습니다.");
-		}
-	}
-
-	private void validatePageRequest(int page, int size) {
-		if (page < 0) {
-			throw new IllegalArgumentException("페이지 번호는 0 이상이어야 합니다.");
-		}
-		if (size < 1 || size > 100) {
-			throw new IllegalArgumentException("페이지 크기는 1~100이어야 합니다.");
 		}
 	}
 }

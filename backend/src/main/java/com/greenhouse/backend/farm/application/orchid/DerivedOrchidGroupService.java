@@ -1,5 +1,7 @@
 package com.greenhouse.backend.farm.application.orchid;
 
+import com.greenhouse.backend.common.config.TimeConfig;
+import java.time.Clock;
 import com.greenhouse.backend.common.exception.NotFoundException;
 import com.greenhouse.backend.farm.domain.orchid.OrchidGroup;
 import com.greenhouse.backend.farm.domain.orchid.PotSizeCode;
@@ -22,6 +24,7 @@ public class DerivedOrchidGroupService {
 
 	private static final String UNKNOWN_AGE = "UNSPECIFIED";
 
+	private final Clock clock;
 	private final OrchidGroupRepository orchidGroupRepository;
 
 	public List<DerivedOrchidGroupResponse> getGroups(
@@ -31,10 +34,11 @@ public class DerivedOrchidGroupService {
 			Long houseId,
 			String status,
 			String keyword) {
+		var businessDate = TimeConfig.farmToday(clock);
 		List<OrchidGroup> candidates = findCandidates(varietyId, potSizeCode, houseId, status, keyword);
 		Map<GroupKey, List<OrchidGroupResponse>> groups = new LinkedHashMap<>();
 		for (OrchidGroup candidate : candidates) {
-			OrchidGroupResponse member = OrchidGroupResponse.from(candidate);
+			OrchidGroupResponse member = OrchidGroupResponse.from(candidate, businessDate);
 			if (ageYear != null && !ageYear.equals(member.ageYear())) {
 				continue;
 			}
@@ -54,10 +58,11 @@ public class DerivedOrchidGroupService {
 			Long houseId,
 			String status,
 			String keyword) {
+		var businessDate = TimeConfig.farmToday(clock);
 		GroupKey key = parse(groupKey);
 		List<OrchidGroupResponse> members = findCandidates(
 				key.varietyId(), key.potSizeCode(), houseId, status, keyword).stream()
-				.map(OrchidGroupResponse::from)
+				.map(group -> OrchidGroupResponse.from(group, businessDate))
 				.filter(member -> java.util.Objects.equals(member.ageYear(), key.ageYear()))
 				.toList();
 		if (members.isEmpty()) {

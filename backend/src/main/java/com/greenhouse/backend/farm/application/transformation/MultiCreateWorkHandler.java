@@ -1,5 +1,7 @@
 package com.greenhouse.backend.farm.application.transformation;
 
+import com.greenhouse.backend.common.config.TimeConfig;
+import java.time.Clock;
 import com.greenhouse.backend.common.exception.NotFoundException;
 import com.greenhouse.backend.farm.application.orchid.OrchidGroupCommandService;
 import com.greenhouse.backend.farm.application.orchid.mutation.CreateOrchidGroupMutationItem;
@@ -36,6 +38,7 @@ import org.springframework.stereotype.Component;
 @RequiredArgsConstructor
 public class MultiCreateWorkHandler implements WorkEffectHandler {
 
+	private final Clock clock;
 	private final OrchidGroupCommandService orchidGroupCommandService;
 	private final OrchidGroupCollectionRepository collectionRepository;
 	private final OrchidGroupCollectionMemberRepository memberRepository;
@@ -48,6 +51,7 @@ public class MultiCreateWorkHandler implements WorkEffectHandler {
 
 	@Override
 	public WorkExecutionResult execute(WorkEffectContext context, WorkEffectCommand command) {
+		var joinedAt = TimeConfig.utcNow(clock);
 		var target = context.target();
 		if (target != null) throw new IllegalArgumentException("다중 생성 작업에는 원본 난 묶음 대상이 없어야 합니다.");
 		MultiCreateWorkOperationRequest request = command.payloadAs(MultiCreateWorkOperationRequest.class);
@@ -95,7 +99,7 @@ public class MultiCreateWorkHandler implements WorkEffectHandler {
 			var row = request.rows().get(index);
 			Set<Long> collectionIds = row.collectionIds() == null ? Set.of() : row.collectionIds();
 			memberRepository.saveAll(collectionIds.stream()
-					.map(id -> new OrchidGroupCollectionMember(id, group.getId(), command.worker())).toList());
+					.map(id -> new OrchidGroupCollectionMember(id, group.getId(), command.worker(), joinedAt)).toList());
 		}
 		var resultIds = groups.stream().map(OrchidGroup::getId).toList();
 		var details = new WorkEffectResults.Created(resultIds).toMap();

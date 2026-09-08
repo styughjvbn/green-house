@@ -68,7 +68,7 @@ class FarmQueryPostgresE2ETest extends WorkE2ETestBase {
 		jdbc.update("UPDATE orchid_groups SET quantity = 0 WHERE variety_name = '소진'");
 		jdbc.update("UPDATE varieties SET name = name || ' 변경', color = '#AABBCC'");
 		var expectedMap = transactions.execute(tx -> groups.search(null, "", null, null, null).stream().map(group -> {
-			var detail = OrchidGroupResponse.from(group);
+			var detail = OrchidGroupResponse.from(group, com.greenhouse.backend.common.config.TimeConfig.farmToday(java.time.Clock.systemUTC()));
 			return new FarmStatusMapOrchidGroupResponse(detail.id(), detail.houseId(), group.getBedZone().getPhysicalBed().getId(),
 					detail.bedZoneId(), detail.startPosition(), detail.endPosition(), detail.varietyId(), detail.varietyColor(),
 					detail.varietyName(), detail.quantity(), detail.status(), detail.ageYear(), detail.potSize(), detail.sortOrder());

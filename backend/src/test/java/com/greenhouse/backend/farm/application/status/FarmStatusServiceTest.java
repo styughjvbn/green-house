@@ -23,6 +23,7 @@ class FarmStatusServiceTest {
 	private final BedZoneRepository bedZoneRepository = mock(BedZoneRepository.class);
 	private final OrchidGroupRepository orchidGroupRepository = mock(OrchidGroupRepository.class);
 	private final FarmStatusService service = new FarmStatusService(
+			java.time.Clock.fixed(java.time.Instant.parse("2026-09-08T00:00:00Z"), java.time.ZoneOffset.UTC),
 			houseRepository,
 			physicalBedRepository,
 			bedZoneRepository,

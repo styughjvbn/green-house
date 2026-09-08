@@ -17,7 +17,7 @@ class AuctionResultPolicyTest {
 	void keepsResultRowsQuantitiesAndHistory(AuctionAttemptStatus status) {
 		var lot = new AuctionShipmentLot("난", "품종", "A", null, 10);
 		int sold = status == AuctionAttemptStatus.SOLD ? 10 : status == AuctionAttemptStatus.PARTIALLY_SOLD ? 3 : 0;
-		lot.recordResult(DATE, null, status, List.of(line(sold, 100)), null, " memo ");
+		lot.recordResult(DATE, null, status, List.of(line(sold, 100)), null, " memo ", java.time.LocalDateTime.of(2026, 9, 8, 1, 2));
 		assertThat(lot.getSoldQuantity()).isEqualTo(sold);
 		assertThat(lot.getReturnedQuantity()).isEqualTo(status == AuctionAttemptStatus.RETURN_INFERRED ? 10 : 0);
 		assertThat(lot.getAttempts()).singleElement().satisfies(attempt -> {
@@ -33,11 +33,11 @@ class AuctionResultPolicyTest {
 	@Test
 	void rejectsDuplicateAttemptsAndInvalidTotalsBeforeChangingLot() {
 		var lot = new AuctionShipmentLot("난", "품종", "A", null, 10);
-		assertThatThrownBy(() -> lot.recordResult(DATE, 1, AuctionAttemptStatus.SOLD, List.of(line(9, 100)), null, null))
+		assertThatThrownBy(() -> lot.recordResult(DATE, 1, AuctionAttemptStatus.SOLD, List.of(line(9, 100)), null, null, java.time.LocalDateTime.of(2026, 9, 8, 1, 2)))
 				.isInstanceOf(IllegalArgumentException.class);
 		assertThat(lot.getAttempts()).isEmpty();
-		lot.recordResult(DATE, 1, AuctionAttemptStatus.FAILED, null, null, null);
-		assertThatThrownBy(() -> lot.recordResult(DATE, 1, AuctionAttemptStatus.FAILED, null, null, null))
+		lot.recordResult(DATE, 1, AuctionAttemptStatus.FAILED, null, null, null, java.time.LocalDateTime.of(2026, 9, 8, 1, 2));
+		assertThatThrownBy(() -> lot.recordResult(DATE, 1, AuctionAttemptStatus.FAILED, null, null, null, java.time.LocalDateTime.of(2026, 9, 8, 1, 2)))
 				.isInstanceOf(IllegalArgumentException.class).hasMessageContaining("같은 경매일");
 		assertThat(lot.getAttempts()).hasSize(1);
 		assertThat(lot.getWaitingQuantity()).isEqualTo(10);
@@ -47,11 +47,11 @@ class AuctionResultPolicyTest {
 	void rejectsOverflowAndKeepsPartialReturnRules() {
 		var lot = new AuctionShipmentLot("난", "품종", "A", null, 10);
 		assertThatThrownBy(() -> lot.recordResult(DATE, null, AuctionAttemptStatus.SOLD,
-				List.of(line(10, 1000000000)), null, null)).isInstanceOf(IllegalArgumentException.class);
+				List.of(line(10, 1000000000)), null, null, java.time.LocalDateTime.of(2026, 9, 8, 1, 2))).isInstanceOf(IllegalArgumentException.class);
 		assertThat(lot.getAttempts()).isEmpty();
-		assertThatThrownBy(() -> lot.confirmReturn(1, DATE, null, null)).isInstanceOf(IllegalArgumentException.class);
-		lot.recordResult(DATE, null, AuctionAttemptStatus.RETURN_INFERRED, null, null, null);
-		lot.confirmReturn(4, DATE, "담당자", null);
+		assertThatThrownBy(() -> lot.confirmReturn(1, DATE, null, null, java.time.LocalDateTime.of(2026, 9, 8, 1, 2))).isInstanceOf(IllegalArgumentException.class);
+		lot.recordResult(DATE, null, AuctionAttemptStatus.RETURN_INFERRED, null, null, null, java.time.LocalDateTime.of(2026, 9, 8, 1, 2));
+		lot.confirmReturn(4, DATE, "담당자", null, java.time.LocalDateTime.of(2026, 9, 8, 1, 2));
 		assertThat(lot.getReturnedQuantity()).isEqualTo(4);
 		assertThat(lot.getWaitingQuantity()).isEqualTo(6);
 		assertThat(lot.getCurrentStatus()).isEqualTo(AuctionLotStatus.PARTIALLY_RETURNED);

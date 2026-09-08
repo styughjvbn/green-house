@@ -1,5 +1,7 @@
 package com.greenhouse.backend.farm.application.collection;
 
+import com.greenhouse.backend.common.config.TimeConfig;
+import java.time.Clock;
 import com.greenhouse.backend.audit.domain.AuditAction;
 import com.greenhouse.backend.common.application.RequestActorProvider;
 import com.greenhouse.backend.common.exception.NotFoundException;
@@ -30,6 +32,7 @@ import org.springframework.transaction.annotation.Transactional;
 @RequiredArgsConstructor
 public class OrchidGroupCollectionService {
 
+	private final Clock clock;
 	private final OrchidGroupCollectionRepository collectionRepository;
 	private final OrchidGroupCollectionMemberRepository memberRepository;
 	private final OrchidGroupRepository orchidGroupRepository;
@@ -82,6 +85,7 @@ public class OrchidGroupCollectionService {
 	public OrchidGroupCollectionResponse addMembers(
 			Long collectionId,
 			OrchidGroupCollectionMemberAddRequest request) {
+		var joinedAt = TimeConfig.utcNow(clock);
 		OrchidGroupCollection collection = findEditableCollection(collectionId);
 		List<Long> beforeMemberIds = activeMemberIds(collectionId);
 		Map<String, Object> before = auditSupport.snapshot(collection, beforeMemberIds);
@@ -98,7 +102,7 @@ public class OrchidGroupCollectionService {
 		List<OrchidGroupCollectionMember> additions = requestedIds.stream()
 				.filter(id -> !existingIds.contains(id))
 				.map(id -> new OrchidGroupCollectionMember(
-						collectionId, id, requestActorProvider.resolve(request.createdBy())))
+						collectionId, id, requestActorProvider.resolve(request.createdBy()), joinedAt))
 				.toList();
 		memberRepository.saveAll(additions);
 		List<Long> addedIds = additions.stream().map(OrchidGroupCollectionMember::getOrchidGroupId).sorted().toList();
@@ -116,7 +120,7 @@ public class OrchidGroupCollectionService {
 		OrchidGroupCollectionMember member = memberRepository
 				.findByCollectionIdAndOrchidGroupIdAndRemovedAtIsNull(collectionId, orchidGroupId)
 				.orElseThrow(() -> new NotFoundException("사용자 그룹 소속을 찾을 수 없습니다."));
-		member.remove();
+		member.remove(TimeConfig.utcNow(clock));
 		auditSupport.record(AuditAction.UPDATED, collection, before,
 				auditSupport.snapshot(collection, activeMemberIds(collectionId)),
 				Map.of("membershipChange", "REMOVED", "orchidGroupIds", List.of(orchidGroupId)));

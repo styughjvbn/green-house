@@ -31,10 +31,11 @@ public class OrchidGroupMovementService {
 	private final OrchidGroupAuditSupport auditSupport;
 
 	public OrchidGroupResponse move(Long orchidGroupId, OrchidGroupMoveRequest request) {
+		var businessDate = TimeConfig.farmToday(clock);
 		var orchidGroup = orchidGroupReader.findDetailById(orchidGroupId)
 				.orElseThrow(() -> new NotFoundException("난 묶음을 찾을 수 없습니다."));
 		if (isSamePlacement(orchidGroup, request)) {
-			return OrchidGroupResponse.from(orchidGroup);
+			return OrchidGroupResponse.from(orchidGroup, businessDate);
 		}
 		OrchidGroupAuditSnapshot before = auditSupport.snapshot(orchidGroup);
 
@@ -50,7 +51,7 @@ public class OrchidGroupMovementService {
 				"DIRECT_MOVE:" + UUID.randomUUID(),
 				WorkTypeDefinition.MOVEMENT.name(),
 				"자리 이동",
-				TimeConfig.farmToday(clock),
+				businessDate,
 				worker,
 				request.memo(),
 				orchidGroupId,
@@ -60,7 +61,7 @@ public class OrchidGroupMovementService {
 				.orElseThrow(() -> new NotFoundException("난 묶음을 찾을 수 없습니다."));
 		auditSupport.record(orchidGroupId, AuditAction.MOVED, AuditSource.WORK_RECORD,
 				before, auditSupport.snapshot(moved), Map.of());
-		return OrchidGroupResponse.from(moved);
+		return OrchidGroupResponse.from(moved, businessDate);
 	}
 
 	private boolean isSamePlacement(

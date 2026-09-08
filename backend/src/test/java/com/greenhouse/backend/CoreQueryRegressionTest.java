@@ -108,7 +108,7 @@ class CoreQueryRegressionTest {
 					LocalDate.of(2030, 2, 2), "특", 10, 1_000, 10_000, null,
 					AuctionInspectionStatus.NORMAL));
 			lot.addAttempt(attempt);
-			lot.applyResult(10, 0, false, false);
+			lot.applyResult(10, 0, false, false, java.time.LocalDateTime.of(2026, 9, 8, 1, 2));
 			shipment.addLot(lot);
 		}
 		auctionShipmentRepository.save(shipment);

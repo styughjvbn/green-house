@@ -16,6 +16,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.transaction.annotation.Transactional;
 
 /** Each test owns its data and rolls it back; no application seed or fixed database IDs. */
+@org.springframework.test.context.TestPropertySource(properties = "spring.datasource.url=jdbc:h2:mem:restored-fixtures;MODE=PostgreSQL;DB_CLOSE_DELAY=-1")
 @Transactional
 abstract class FarmFixtureIntegrationTest extends AbstractBackendIntegrationTest {
 	@Autowired protected EntityManager fixtureEntityManager;

@@ -1,5 +1,6 @@
 package com.greenhouse.backend.sales.application;
 
+import com.greenhouse.backend.common.api.PageRequests;
 import com.greenhouse.backend.auction.application.AuctionDataReader;
 import com.greenhouse.backend.common.api.PageResponse;
 import com.greenhouse.backend.common.exception.NotFoundException;
@@ -55,9 +56,7 @@ public class SalesQueryService {
 			String keyword,
 			int page,
 			int size) {
-		PageRequest pageable = PageRequest.of(
-				Math.max(page, 0),
-				Math.min(Math.max(size, 1), 100),
+		PageRequest pageable = PageRequests.clamped(page, size,
 				Sort.by(Sort.Direction.DESC, "saleDate").and(Sort.by(Sort.Direction.DESC, "id")));
 		String normalizedPaymentStatus = blankToNull(paymentStatus);
 		String normalizedSalesStatus = blankToNull(salesStatus);

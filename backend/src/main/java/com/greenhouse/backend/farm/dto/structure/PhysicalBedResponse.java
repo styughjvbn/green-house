@@ -1,5 +1,6 @@
 package com.greenhouse.backend.farm.dto.structure;
 
+import java.time.LocalDate;
 import com.greenhouse.backend.farm.domain.structure.PhysicalBed;
 import com.greenhouse.backend.farm.domain.orchid.OrchidGroup;
 import java.math.BigDecimal;
@@ -21,13 +22,9 @@ public record PhysicalBedResponse(
 		String memo,
 		List<BedZoneResponse> bedZones) {
 
-	public static PhysicalBedResponse from(PhysicalBed physicalBed) {
-		return from(physicalBed, null);
-	}
-
 	public static PhysicalBedResponse from(
 			PhysicalBed physicalBed,
-			Map<Long, List<OrchidGroup>> groupsByZoneId) {
+			Map<Long, List<OrchidGroup>> groupsByZoneId, LocalDate businessDate) {
 		var house = physicalBed.getHouse();
 		return new PhysicalBedResponse(
 				physicalBed.getId(),
@@ -43,9 +40,7 @@ public record PhysicalBedResponse(
 				physicalBed.getPositionUnitLabel(),
 				physicalBed.getMemo(),
 				physicalBed.getBedZones().stream()
-						.map(zone -> groupsByZoneId == null
-								? BedZoneResponse.from(zone)
-								: BedZoneResponse.from(zone, groupsByZoneId.getOrDefault(zone.getId(), List.of())))
+						.map(zone -> BedZoneResponse.from(zone, groupsByZoneId.getOrDefault(zone.getId(), List.of()), businessDate))
 						.toList());
 	}
 }

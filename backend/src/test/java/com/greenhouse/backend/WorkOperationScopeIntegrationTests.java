@@ -56,8 +56,8 @@ class WorkOperationScopeIntegrationTests extends AbstractBackendIntegrationTest 
 
 		OrchidGroupCollection collection = collectionRepository.save(
 				new OrchidGroupCollection("작업 후보", null, "농약", "테스터"));
-		collectionMemberRepository.save(new OrchidGroupCollectionMember(collection.getId(), first.getId(), "테스터"));
-		collectionMemberRepository.save(new OrchidGroupCollectionMember(collection.getId(), third.getId(), "테스터"));
+		collectionMemberRepository.save(new OrchidGroupCollectionMember(collection.getId(), first.getId(), "테스터", java.time.LocalDateTime.of(2026, 9, 8, 1, 2)));
+		collectionMemberRepository.save(new OrchidGroupCollectionMember(collection.getId(), third.getId(), "테스터", java.time.LocalDateTime.of(2026, 9, 8, 1, 2)));
 
 		String derivedKey = variety.getId() + ":2:POT_3_5";
 		preview("""

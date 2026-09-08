@@ -1,5 +1,6 @@
 package com.greenhouse.backend.work.application.operation;
 
+import com.greenhouse.backend.common.api.PageRequests;
 import com.greenhouse.backend.work.application.target.WorkTargetResolver;
 import com.greenhouse.backend.work.application.target.WorkTargetSelection;
 import com.greenhouse.backend.common.api.PageResponse;
@@ -79,7 +80,7 @@ public class WorkOperationQueryService {
 			int page,
 			int size) {
 		validateDates(fromDate, toDate);
-		validatePage(page, size);
+		PageRequests.validate(page, size);
 		if (sourceScopeId != null && sourceScopeType == null) {
 			throw new IllegalArgumentException("대상 범위 ID를 조회하려면 대상 범위 유형이 필요합니다.");
 		}
@@ -126,7 +127,7 @@ public class WorkOperationQueryService {
 			Long historyScopeId,
 			int page,
 			int size) {
-		validatePage(page, size);
+		PageRequests.validate(page, size);
 		ResolvedHistoryScope scope = resolveHistoryScope(historyScopeType, historyScopeId);
 		if (scope.orchidGroupIds().isEmpty()) {
 			return new PageResponse<>(List.of(), page, size, 0, 0);
@@ -230,15 +231,6 @@ public class WorkOperationQueryService {
 	private void validateHistoryScope(WorkHistoryScopeType historyScopeType, Long historyScopeId) {
 		if (historyScopeType == null || historyScopeId == null) {
 			throw new IllegalArgumentException("작업 이력 조회 범위 유형과 ID가 필요합니다.");
-		}
-	}
-
-	private void validatePage(int page, int size) {
-		if (page < 0) {
-			throw new IllegalArgumentException("페이지 번호는 0 이상이어야 합니다.");
-		}
-		if (size < 1 || size > 100) {
-			throw new IllegalArgumentException("페이지 크기는 1~100이어야 합니다.");
 		}
 	}
 
