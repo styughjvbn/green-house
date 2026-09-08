@@ -19,7 +19,7 @@ import com.greenhouse.backend.sales.domain.SalesType;
 import com.greenhouse.backend.sales.dto.SalesSlipCreateRequest;
 import com.greenhouse.backend.sales.dto.SalesSlipItemAllocationRequest;
 import com.greenhouse.backend.sales.dto.SalesSlipItemRequest;
-import com.greenhouse.backend.sales.dto.SalesSlipResponse;
+import com.greenhouse.backend.sales.application.document.SalesSlipDocument;
 import com.greenhouse.backend.sales.dto.SalesSlipStatusUpdateRequest;
 import com.greenhouse.backend.sales.repository.SalesInventoryMovementRepository;
 import java.math.BigDecimal;
@@ -82,7 +82,7 @@ class SalesInventoryMutationContractIntegrationTest extends AbstractBackendInteg
 				created.id(), SalesInventoryMovementType.SALES_OUTBOUND)).isEmpty();
 	}
 
-	private SalesSlipResponse createDraft(Fixture fixture, int quantity) {
+	private SalesSlipDocument createDraft(Fixture fixture, int quantity) {
 		return creationService.create(new SalesSlipCreateRequest(
 				LocalDate.of(2026, 8, 20),
 				SalesType.DIRECT,

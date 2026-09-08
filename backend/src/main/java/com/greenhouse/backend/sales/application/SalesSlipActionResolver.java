@@ -2,7 +2,7 @@ package com.greenhouse.backend.sales.application;
 
 import com.greenhouse.backend.sales.domain.SalesSlip;
 import com.greenhouse.backend.sales.domain.SalesType;
-import com.greenhouse.backend.sales.dto.SalesSlipAction;
+import com.greenhouse.backend.sales.domain.SalesSlipAction;
 import com.greenhouse.backend.settlement.application.PaymentEventReader;
 import com.greenhouse.backend.settlement.domain.PaymentTargetType;
 import java.util.EnumSet;

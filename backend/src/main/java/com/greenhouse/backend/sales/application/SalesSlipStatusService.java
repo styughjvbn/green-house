@@ -2,7 +2,7 @@ package com.greenhouse.backend.sales.application;
 
 import com.greenhouse.backend.common.exception.NotFoundException;
 import com.greenhouse.backend.sales.domain.SalesType;
-import com.greenhouse.backend.sales.dto.SalesSlipResponse;
+import com.greenhouse.backend.sales.application.document.SalesSlipDocument;
 import com.greenhouse.backend.sales.dto.SalesSlipStatusUpdateRequest;
 import com.greenhouse.backend.sales.repository.SalesSlipRepository;
 import com.greenhouse.backend.settlement.application.PaymentEventReader;
@@ -28,9 +28,9 @@ public class SalesSlipStatusService {
 	private final PaymentEventReader paymentEventReader;
 	private final PartnerBalanceService partnerBalanceService;
 	private final SalesSlipAuditSupport auditSupport;
-	private final SalesSlipResponseAssembler responseAssembler;
+	private final SalesSlipDocumentAssembler responseAssembler;
 
-	public SalesSlipResponse updateStatus(Long salesSlipId, SalesSlipStatusUpdateRequest request) {
+	public SalesSlipDocument updateStatus(Long salesSlipId, SalesSlipStatusUpdateRequest request) {
 		var salesSlip = salesSlipRepository.findForUpdateById(salesSlipId)
 				.orElseThrow(() -> new NotFoundException("판매 전표를 찾을 수 없습니다."));
 		String nextStatus = request.salesStatus().trim();

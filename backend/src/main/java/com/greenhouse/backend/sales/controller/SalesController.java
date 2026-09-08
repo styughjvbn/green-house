@@ -11,8 +11,8 @@ import com.greenhouse.backend.sales.application.SalesSlipUpdateService;
 import com.greenhouse.backend.sales.dto.AuctionShipmentOptionResponse;
 import com.greenhouse.backend.sales.dto.SalesOrchidGroupSearchResponse;
 import com.greenhouse.backend.sales.dto.SalesSlipCreateRequest;
-import com.greenhouse.backend.sales.dto.SalesSlipListItemResponse;
-import com.greenhouse.backend.sales.dto.SalesSlipResponse;
+import com.greenhouse.backend.sales.application.document.SalesSlipSummary;
+import com.greenhouse.backend.sales.application.document.SalesSlipDocument;
 import com.greenhouse.backend.sales.dto.SalesSlipStatusUpdateRequest;
 import com.greenhouse.backend.settlement.application.ManualPaymentCommand;
 import jakarta.validation.Valid;
@@ -48,7 +48,7 @@ public class SalesController {
 	 */
 	@Deprecated(since = "2026-08", forRemoval = false)
 	@GetMapping("/sales-slips")
-	public ApiResponse<List<SalesSlipResponse>> getSalesSlips(
+	public ApiResponse<List<SalesSlipDocument>> getSalesSlips(
 			@RequestParam(required = false) Long partnerId,
 			@RequestParam(required = false) LocalDate from,
 			@RequestParam(required = false) LocalDate to) {
@@ -56,7 +56,7 @@ public class SalesController {
 	}
 
 	@GetMapping("/sales-slips/page")
-	public ApiResponse<PageResponse<SalesSlipListItemResponse>> getSalesSlipPage(
+	public ApiResponse<PageResponse<SalesSlipSummary>> getSalesSlipPage(
 			@RequestParam(required = false) Long partnerId,
 			@RequestParam(required = false) LocalDate from,
 			@RequestParam(required = false) LocalDate to,
@@ -70,7 +70,7 @@ public class SalesController {
 	}
 
 	@GetMapping("/sales-slips/{salesSlipId}")
-	public ApiResponse<SalesSlipResponse> getSalesSlip(@PathVariable Long salesSlipId) {
+	public ApiResponse<SalesSlipDocument> getSalesSlip(@PathVariable Long salesSlipId) {
 		return ApiResponse.ok(salesQueryService.getSalesSlip(salesSlipId));
 	}
 
@@ -89,26 +89,26 @@ public class SalesController {
 
 	@PostMapping("/sales-slips")
 	@ResponseStatus(HttpStatus.CREATED)
-	public ApiResponse<SalesSlipResponse> createSalesSlip(@Valid @RequestBody SalesSlipCreateRequest request) {
+	public ApiResponse<SalesSlipDocument> createSalesSlip(@Valid @RequestBody SalesSlipCreateRequest request) {
 		return ApiResponse.ok(salesSlipCreationService.create(request));
 	}
 
 	@PutMapping("/sales-slips/{salesSlipId}")
-	public ApiResponse<SalesSlipResponse> updateSalesSlip(
+	public ApiResponse<SalesSlipDocument> updateSalesSlip(
 			@PathVariable Long salesSlipId,
 			@Valid @RequestBody SalesSlipCreateRequest request) {
 		return ApiResponse.ok(salesSlipUpdateService.update(salesSlipId, request));
 	}
 
 	@PostMapping("/sales-slips/{salesSlipId}/confirm-payment")
-	public ApiResponse<SalesSlipResponse> confirmPayment(
+	public ApiResponse<SalesSlipDocument> confirmPayment(
 			@PathVariable Long salesSlipId,
 			@Valid @RequestBody ManualPaymentCommand request) {
 		return ApiResponse.ok(salesPaymentService.confirmPayment(salesSlipId, request));
 	}
 
 	@PatchMapping("/sales-slips/{salesSlipId}/sales-status")
-	public ApiResponse<SalesSlipResponse> updateSalesStatus(
+	public ApiResponse<SalesSlipDocument> updateSalesStatus(
 			@PathVariable Long salesSlipId,
 			@Valid @RequestBody SalesSlipStatusUpdateRequest request) {
 		return ApiResponse.ok(salesSlipStatusService.updateStatus(salesSlipId, request));

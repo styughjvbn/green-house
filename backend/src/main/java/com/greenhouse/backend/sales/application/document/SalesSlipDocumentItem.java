@@ -1,12 +1,14 @@
-package com.greenhouse.backend.sales.dto;
+package com.greenhouse.backend.sales.application.document;
 
 import com.greenhouse.backend.farm.application.orchid.OrchidGroupState;
 import com.greenhouse.backend.sales.domain.SalesSlipItem;
 import com.greenhouse.backend.sales.domain.SalesSlipItemAllocation;
+import io.swagger.v3.oas.annotations.media.Schema;
 import java.util.List;
 import java.util.Map;
 
-public record SalesSlipItemResponse(
+@Schema(name = "SalesSlipItemResponse")
+public record SalesSlipDocumentItem(
 		Long id,
 		Long auctionShipmentLotId,
 		String itemName,
@@ -16,11 +18,11 @@ public record SalesSlipItemResponse(
 		Integer unitPrice,
 		Integer amount,
 		String memo,
-		List<SalesSlipItemAllocationResponse> allocations) {
+		List<SalesSlipDocumentAllocation> allocations) {
 
-	public static SalesSlipItemResponse from(SalesSlipItem item, List<SalesSlipItemAllocation> allocations,
+	public static SalesSlipDocumentItem from(SalesSlipItem item, List<SalesSlipItemAllocation> allocations,
 			Map<Long, OrchidGroupState> states) {
-		return new SalesSlipItemResponse(
+		return new SalesSlipDocumentItem(
 				item.getId(),
 				item.getAuctionShipmentLotId(),
 				item.getItemName(),
@@ -30,7 +32,7 @@ public record SalesSlipItemResponse(
 				item.getUnitPrice(),
 				item.getAmount(),
 				item.getMemo(),
-				allocations.stream().map(allocation -> SalesSlipItemAllocationResponse.from(
+				allocations.stream().map(allocation -> SalesSlipDocumentAllocation.from(
 						allocation, states.get(allocation.getOrchidGroupId()))).toList());
 	}
 }

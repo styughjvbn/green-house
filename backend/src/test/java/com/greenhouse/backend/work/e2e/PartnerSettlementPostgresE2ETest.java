@@ -24,7 +24,7 @@ import com.greenhouse.backend.sales.application.SalesPaymentService;
 import com.greenhouse.backend.sales.domain.SalesSlip;
 import com.greenhouse.backend.sales.domain.SalesSlipItem;
 import com.greenhouse.backend.sales.domain.SalesType;
-import com.greenhouse.backend.sales.dto.SalesSlipResponse;
+import com.greenhouse.backend.sales.application.document.SalesSlipDocument;
 import com.greenhouse.backend.sales.repository.SalesSlipRepository;
 import com.greenhouse.backend.settlement.application.ManualPaymentCommand;
 import com.greenhouse.backend.settlement.application.PartnerBalanceService;
@@ -135,7 +135,7 @@ class PartnerSettlementPostgresE2ETest extends WorkE2ETestBase {
 		var firstPayment = payment(20_000L, "first");
 		var secondPayment = payment(30_000L, "second");
 
-		List<SalesSlipResponse> paid = concurrently(List.of(
+		List<SalesSlipDocument> paid = concurrently(List.of(
 				() -> salesPaymentService.confirmPayment(first.getId(), firstPayment),
 				() -> salesPaymentService.confirmPayment(second.getId(), secondPayment)));
 		assertThat(paid).extracting(slip -> slip.paidAmount()).containsExactly(20_000L, 30_000L);
@@ -161,7 +161,7 @@ class PartnerSettlementPostgresE2ETest extends WorkE2ETestBase {
 		var slip = createSlip(partner, "S20400102-FULL-PAYMENT-RETRY");
 		var payment = payment(100_000L, "full-payment");
 
-		List<SalesSlipResponse> results = concurrently(List.of(
+		List<SalesSlipDocument> results = concurrently(List.of(
 				() -> salesPaymentService.confirmPayment(slip.getId(), payment),
 				() -> salesPaymentService.confirmPayment(slip.getId(), payment)));
 

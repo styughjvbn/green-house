@@ -1,7 +1,7 @@
 package com.greenhouse.backend.sales.application;
 
 import com.greenhouse.backend.common.exception.NotFoundException;
-import com.greenhouse.backend.sales.dto.SalesSlipResponse;
+import com.greenhouse.backend.sales.application.document.SalesSlipDocument;
 import com.greenhouse.backend.sales.repository.SalesSlipRepository;
 import com.greenhouse.backend.settlement.application.ManualPaymentCommand;
 import com.greenhouse.backend.settlement.application.PartnerBalanceService;
@@ -21,9 +21,9 @@ public class SalesPaymentService {
 	private final PaymentLedgerService paymentLedgerService;
 	private final PartnerBalanceService partnerBalanceService;
 	private final SettlementAuditSupport auditSupport;
-	private final SalesSlipResponseAssembler responseAssembler;
+	private final SalesSlipDocumentAssembler responseAssembler;
 
-	public SalesSlipResponse confirmPayment(Long salesSlipId, ManualPaymentCommand payment) {
+	public SalesSlipDocument confirmPayment(Long salesSlipId, ManualPaymentCommand payment) {
 		var salesSlip = salesSlipRepository.findForUpdateById(salesSlipId)
 				.orElseThrow(() -> new NotFoundException("판매 전표를 찾을 수 없습니다."));
 		salesSlip.validatePaymentTarget();

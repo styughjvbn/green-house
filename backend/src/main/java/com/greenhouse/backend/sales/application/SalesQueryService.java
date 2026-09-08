@@ -6,8 +6,8 @@ import com.greenhouse.backend.common.exception.NotFoundException;
 import com.greenhouse.backend.sales.domain.SalesSlip;
 import com.greenhouse.backend.sales.domain.SalesSlipItemAllocation;
 import com.greenhouse.backend.sales.dto.AuctionShipmentOptionResponse;
-import com.greenhouse.backend.sales.dto.SalesSlipListItemResponse;
-import com.greenhouse.backend.sales.dto.SalesSlipResponse;
+import com.greenhouse.backend.sales.application.document.SalesSlipSummary;
+import com.greenhouse.backend.sales.application.document.SalesSlipDocument;
 import com.greenhouse.backend.sales.repository.SalesSlipItemAllocationRepository;
 import com.greenhouse.backend.sales.repository.SalesSlipRepository;
 import java.time.LocalDate;
@@ -32,17 +32,17 @@ public class SalesQueryService {
 	private final SalesSlipRepository salesSlipRepository;
 	private final SalesSlipItemAllocationRepository allocationRepository;
 	private final AuctionDataReader auctionDataReader;
-	private final SalesSlipResponseAssembler responseAssembler;
+	private final SalesSlipDocumentAssembler responseAssembler;
 
 	/**
 	 * @deprecated Use {@link #getSalesSlipPage(Long, LocalDate, LocalDate, String, String, String, int, int)}.
 	 */
 	@Deprecated(since = "2026-08", forRemoval = false)
-	public List<SalesSlipResponse> getSalesSlips(Long partnerId, LocalDate from, LocalDate to) {
+	public List<SalesSlipDocument> getSalesSlips(Long partnerId, LocalDate from, LocalDate to) {
 		return assembleSalesSlips(salesSlipRepository.search(partnerId, from, to, LEGACY_LIST_LIMIT));
 	}
 
-	public PageResponse<SalesSlipListItemResponse> getSalesSlipPage(
+	public PageResponse<SalesSlipSummary> getSalesSlipPage(
 			Long partnerId,
 			LocalDate from,
 			LocalDate to,
@@ -63,7 +63,7 @@ public class SalesQueryService {
 		return PageResponse.from(responseAssembler.assemblePage(result));
 	}
 
-	public SalesSlipResponse getSalesSlip(Long salesSlipId) {
+	public SalesSlipDocument getSalesSlip(Long salesSlipId) {
 		var salesSlip = salesSlipRepository.findWithDetailsById(salesSlipId)
 				.orElseThrow(() -> new NotFoundException("판매 전표를 찾을 수 없습니다."));
 		return assembleSalesSlips(List.of(salesSlip)).getFirst();
@@ -88,7 +88,7 @@ public class SalesQueryService {
 				.toList();
 	}
 
-	private List<SalesSlipResponse> assembleSalesSlips(List<SalesSlip> salesSlips) {
+	private List<SalesSlipDocument> assembleSalesSlips(List<SalesSlip> salesSlips) {
 		if (salesSlips.isEmpty()) {
 			return List.of();
 		}

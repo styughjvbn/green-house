@@ -1,19 +1,20 @@
-package com.greenhouse.backend.sales.dto;
+package com.greenhouse.backend.sales.application.document;
 
-import com.greenhouse.backend.partner.dto.BusinessPartnerResponse;
 import com.greenhouse.backend.partner.application.BusinessPartnerInfo;
 import com.greenhouse.backend.sales.domain.SalesSlip;
 import com.greenhouse.backend.sales.domain.SalesType;
+import io.swagger.v3.oas.annotations.media.Schema;
 import java.time.LocalDate;
 
-public record SalesSlipListItemResponse(
+@Schema(name = "SalesSlipListItemResponse")
+public record SalesSlipSummary(
 		Long id,
 		String slipNumber,
 		LocalDate saleDate,
 		SalesType salesType,
 		Long auctionShipmentId,
 		String auctionMarket,
-		BusinessPartnerResponse partner,
+		BusinessPartnerInfo partner,
 		Integer totalAmount,
 		LocalDate expectedPaymentDate,
 		Long paidAmount,
@@ -23,15 +24,15 @@ public record SalesSlipListItemResponse(
 		String paymentMethod,
 		String memo) {
 
-	public static SalesSlipListItemResponse from(SalesSlip salesSlip, BusinessPartnerInfo partner, String auctionMarket) {
-		return new SalesSlipListItemResponse(
+	public static SalesSlipSummary from(SalesSlip salesSlip, BusinessPartnerInfo partner, String auctionMarket) {
+		return new SalesSlipSummary(
 				salesSlip.getId(),
 				salesSlip.getSlipNumber(),
 				salesSlip.getSaleDate(),
 				salesSlip.getSalesType(),
 				salesSlip.getAuctionShipmentId(),
 				auctionMarket,
-				BusinessPartnerResponse.from(partner),
+				partner,
 				salesSlip.getTotalAmount(),
 				salesSlip.getExpectedPaymentDate(),
 				salesSlip.getPaidAmount(),

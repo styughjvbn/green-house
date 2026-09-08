@@ -5,7 +5,7 @@ import com.greenhouse.backend.partner.domain.PartnerType;
 import com.greenhouse.backend.sales.domain.SalesSlip;
 import com.greenhouse.backend.sales.domain.SalesType;
 import com.greenhouse.backend.sales.dto.SalesSlipCreateRequest;
-import com.greenhouse.backend.sales.dto.SalesSlipResponse;
+import com.greenhouse.backend.sales.application.document.SalesSlipDocument;
 import com.greenhouse.backend.sales.repository.SalesSlipRepository;
 import com.greenhouse.backend.settlement.application.ExpectedPaymentDateCalculator;
 import com.greenhouse.backend.settlement.application.PartnerBalanceService;
@@ -24,9 +24,9 @@ public class DirectSalesSlipCreator {
 	private final SalesSlipNumberGenerator numberGenerator;
 	private final PartnerBalanceService partnerBalanceService;
 	private final SalesSlipOutboundService salesSlipOutboundService;
-	private final SalesSlipResponseAssembler responseAssembler;
+	private final SalesSlipDocumentAssembler responseAssembler;
 
-	public SalesSlipResponse create(SalesSlipCreateRequest request) {
+	public SalesSlipDocument create(SalesSlipCreateRequest request) {
 		if (request.partnerId() == null) {
 			throw new IllegalArgumentException("일반 판매는 거래처를 선택해야 합니다.");
 		}

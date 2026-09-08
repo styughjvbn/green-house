@@ -9,7 +9,7 @@ import com.greenhouse.backend.sales.domain.SalesSlipItem;
 import com.greenhouse.backend.sales.domain.SalesSlipItemAllocation;
 import com.greenhouse.backend.sales.domain.SalesType;
 import com.greenhouse.backend.sales.dto.SalesSlipCreateRequest;
-import com.greenhouse.backend.sales.dto.SalesSlipResponse;
+import com.greenhouse.backend.sales.application.document.SalesSlipDocument;
 import com.greenhouse.backend.sales.repository.SalesSlipRepository;
 import com.greenhouse.backend.settlement.application.ExpectedPaymentDateCalculator;
 import com.greenhouse.backend.settlement.application.PartnerBalanceService;
@@ -31,9 +31,9 @@ public class SalesSlipUpdateService {
 	private final ExpectedPaymentDateCalculator paymentDateCalculator;
 	private final PartnerBalanceService partnerBalanceService;
 	private final SalesSlipAuditSupport auditSupport;
-	private final SalesSlipResponseAssembler responseAssembler;
+	private final SalesSlipDocumentAssembler responseAssembler;
 
-	public SalesSlipResponse update(Long salesSlipId, SalesSlipCreateRequest request) {
+	public SalesSlipDocument update(Long salesSlipId, SalesSlipCreateRequest request) {
 		SalesSlip salesSlip = salesSlipRepository.findForUpdateById(salesSlipId)
 				.orElseThrow(() -> new NotFoundException("판매 전표를 찾을 수 없습니다."));
 		Long previousPartnerId = salesSlip.getPartnerId();

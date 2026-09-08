@@ -1,13 +1,15 @@
-package com.greenhouse.backend.sales.dto;
+package com.greenhouse.backend.sales.application.document;
 
 import com.greenhouse.backend.common.config.TimeConfig;
 import com.greenhouse.backend.sales.domain.SalesOrchidGroupSnapshot;
 import com.greenhouse.backend.sales.domain.SalesOrchidSnapshotSource;
 import com.greenhouse.backend.sales.domain.SalesOrchidSnapshotType;
+import io.swagger.v3.oas.annotations.media.Schema;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
-public record SalesOrchidGroupSnapshotResponse(
+@Schema(name = "SalesOrchidGroupSnapshotResponse")
+public record SalesOrchidGroupSnapshotData(
 		SalesOrchidSnapshotType snapshotType,
 		SalesOrchidSnapshotSource captureSource,
 		LocalDateTime capturedAt,
@@ -31,11 +33,11 @@ public record SalesOrchidGroupSnapshotResponse(
 		BigDecimal startPosition,
 		BigDecimal endPosition) {
 
-	public static SalesOrchidGroupSnapshotResponse from(SalesOrchidGroupSnapshot snapshot) {
+	public static SalesOrchidGroupSnapshotData from(SalesOrchidGroupSnapshot snapshot) {
 		if (snapshot == null) {
 			return null;
 		}
-		return new SalesOrchidGroupSnapshotResponse(
+		return new SalesOrchidGroupSnapshotData(
 				snapshot.getSnapshotType(),
 				snapshot.getCaptureSource(),
 				TimeConfig.toFarmTime(snapshot.getCapturedAt()),

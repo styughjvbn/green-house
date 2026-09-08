@@ -28,11 +28,5 @@ HTTP_DTO	com.greenhouse.backend.farm.controller.inbound.InboundRecordController	
 HTTP_DTO	com.greenhouse.backend.farm.controller.inbound.InboundRecordController	com.greenhouse.backend.work.dto.effect.InboundPottingResultRequest
 HTTP_DTO	com.greenhouse.backend.farm.dto.transformation.MultiCreateWorkOperationResponse	com.greenhouse.backend.work.dto.operation.WorkOperationResponse
 HTTP_DTO	com.greenhouse.backend.farm.dto.transformation.RepotWorkOperationResponse	com.greenhouse.backend.work.dto.operation.WorkOperationResponse
-HTTP_DTO	com.greenhouse.backend.print.application.PrintQueryService	com.greenhouse.backend.sales.dto.SalesSlipListItemResponse
-HTTP_DTO	com.greenhouse.backend.print.application.PrintQueryService	com.greenhouse.backend.sales.dto.SalesSlipResponse
-HTTP_DTO	com.greenhouse.backend.print.controller.PrintController	com.greenhouse.backend.sales.dto.SalesSlipListItemResponse
-HTTP_DTO	com.greenhouse.backend.print.controller.PrintController	com.greenhouse.backend.sales.dto.SalesSlipResponse
-HTTP_DTO	com.greenhouse.backend.sales.dto.SalesSlipListItemResponse	com.greenhouse.backend.partner.dto.BusinessPartnerResponse
-HTTP_DTO	com.greenhouse.backend.sales.dto.SalesSlipResponse	com.greenhouse.backend.partner.dto.BusinessPartnerResponse
 QUERY_TYPE	com.greenhouse.backend.auction.repository.AuctionShipmentLotRepositoryImpl	com.greenhouse.backend.partner.domain.QBusinessPartner
 QUERY_TYPE	com.greenhouse.backend.sales.repository.SalesSlipRepositoryImpl	com.greenhouse.backend.partner.domain.QBusinessPartner
