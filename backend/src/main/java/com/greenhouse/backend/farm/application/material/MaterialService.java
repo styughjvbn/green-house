@@ -91,10 +91,7 @@ public class MaterialService {
 	}
 
 	private String nextCode() {
-		long next = materialRepository.findTopByOrderByIdDesc()
-				.map(Material::getId)
-				.orElse(0L) + 1;
-		return "MAT-%04d".formatted(next);
+		return "MAT-%04d".formatted(materialRepository.nextCodeValue());
 	}
 
 	private String normalize(String value) {

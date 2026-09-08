@@ -304,10 +304,7 @@ public class InboundRecordService {
 	}
 
 	private String nextVarietyCode() {
-		long next = varietyRepository.findTopByOrderByIdDesc()
-				.map(Variety::getId)
-				.orElse(0L) + 1;
-		return "VAR-%04d".formatted(next);
+		return "VAR-%04d".formatted(varietyRepository.nextCodeValue());
 	}
 
 	private String normalize(String value) {
