@@ -1,5 +1,6 @@
 package com.greenhouse.backend;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.hamcrest.Matchers.hasSize;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
@@ -7,26 +8,27 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
-import static org.assertj.core.api.Assertions.assertThat;
 
+import com.greenhouse.backend.audit.domain.AuditAction;
+import com.greenhouse.backend.audit.domain.AuditSource;
+import com.greenhouse.backend.audit.repository.AuditEventRepository;
+import com.greenhouse.backend.farm.domain.orchid.OrchidGroup;
 import com.greenhouse.backend.farm.domain.structure.BedZone;
 import com.greenhouse.backend.farm.domain.structure.BedZoneSide;
 import com.greenhouse.backend.farm.domain.structure.House;
-import com.greenhouse.backend.farm.domain.orchid.OrchidGroup;
 import com.greenhouse.backend.farm.domain.structure.PhysicalBed;
 import com.greenhouse.backend.farm.domain.variety.Variety;
 import java.math.BigDecimal;
 import org.junit.jupiter.api.Test;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.MediaType;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.beans.factory.annotation.Autowired;
-import com.greenhouse.backend.audit.domain.AuditAction;
-import com.greenhouse.backend.audit.domain.AuditSource;
-import com.greenhouse.backend.audit.repository.AuditEventRepository;
 
 @Transactional
 class OrchidGroupCollectionIntegrationTests extends AbstractBackendIntegrationTest {
-	@Autowired AuditEventRepository auditEventRepository;
+
+	@Autowired
+	AuditEventRepository auditEventRepository;
 
 	@Test
 	void keepsMultipleMembershipsUntilTheyAreExplicitlyRemoved() throws Exception {
@@ -36,82 +38,80 @@ class OrchidGroupCollectionIntegrationTests extends AbstractBackendIntegrationTe
 		bed.addBedZone(zone);
 		house.addPhysicalBed(bed);
 		houseRepository.save(house);
-		Variety variety = varietyRepository.save(new Variety(
-				"COLLECTION-TEST", "팔레놉시스", "그룹 테스트 난", null, "3.5\"", true, true, null, null));
-		OrchidGroup orchidGroup = new OrchidGroup(
-				zone, variety.getGenus(), variety.getName(), 40, "3.5\"", 2, "정상", 1,
+		Variety variety = varietyRepository
+			.save(new Variety("COLLECTION-TEST", "팔레놉시스", "그룹 테스트 난", null, "3.5\"", true, true, null, null));
+		OrchidGroup orchidGroup = new OrchidGroup(zone, variety.getGenus(), variety.getName(), 40, "3.5\"", 2, "정상", 1,
 				BigDecimal.ONE, BigDecimal.TEN);
 		orchidGroup.assignVariety(variety);
-		orchidGroup = orchidGroupRepository.save(orchidGroup);
+		orchidGroup = saveOrchidGroup(orchidGroup);
 
 		Long firstCollectionId = createCollection("우량주 관리");
 		Long secondCollectionId = createCollection("봄 출하 후보");
 
-		addMember(firstCollectionId, orchidGroup.getId())
-				.andExpect(status().isOk())
-				.andExpect(jsonPath("$.data.orchidGroupCount").value(1))
-				.andExpect(jsonPath("$.data.totalQuantity").value(40));
-		addMember(firstCollectionId, orchidGroup.getId())
-				.andExpect(status().isOk())
-				.andExpect(jsonPath("$.data.members", hasSize(1)));
+		addMember(firstCollectionId, orchidGroup.getId()).andExpect(status().isOk())
+			.andExpect(jsonPath("$.data.orchidGroupCount").value(1))
+			.andExpect(jsonPath("$.data.totalQuantity").value(40));
+		addMember(firstCollectionId, orchidGroup.getId()).andExpect(status().isOk())
+			.andExpect(jsonPath("$.data.members", hasSize(1)));
 		addMember(secondCollectionId, orchidGroup.getId()).andExpect(status().isOk());
 
-		orchidGroup.updateDetails(
-				variety.getGenus(), variety.getName(), 35, "4\"", 3, "주의", null, null, false,
+		orchidGroup.updateDetails(variety.getGenus(), variety.getName(), 35, "4\"", 3, "주의", null, null, false,
 				BigDecimal.ONE, BigDecimal.TEN, null);
-		orchidGroupRepository.save(orchidGroup);
+		saveOrchidGroup(orchidGroup);
 
 		mockMvc.perform(get("/api/orchid-groups/{id}/collections", orchidGroup.getId()))
-				.andExpect(status().isOk())
-				.andExpect(jsonPath("$.data", hasSize(2)))
-				.andExpect(jsonPath("$.data[0].members[0].quantity").value(35));
+			.andExpect(status().isOk())
+			.andExpect(jsonPath("$.data", hasSize(2)))
+			.andExpect(jsonPath("$.data[0].members[0].quantity").value(35));
 
 		mockMvc.perform(post("/api/orchid-group-collections/{id}/archive", firstCollectionId))
-				.andExpect(status().isOk())
-				.andExpect(jsonPath("$.data.status").value("ARCHIVED"));
+			.andExpect(status().isOk())
+			.andExpect(jsonPath("$.data.status").value("ARCHIVED"));
 		mockMvc.perform(get("/api/orchid-group-collections"))
-				.andExpect(status().isOk())
-				.andExpect(jsonPath("$.data", hasSize(1)))
-				.andExpect(jsonPath("$.data[0].id").value(secondCollectionId));
+			.andExpect(status().isOk())
+			.andExpect(jsonPath("$.data", hasSize(1)))
+			.andExpect(jsonPath("$.data[0].id").value(secondCollectionId));
 
-		mockMvc.perform(delete("/api/orchid-group-collections/{collectionId}/members/{orchidGroupId}",
-				secondCollectionId, orchidGroup.getId()))
-				.andExpect(status().isOk())
-				.andExpect(jsonPath("$.data.orchidGroupCount").value(0));
+		mockMvc
+			.perform(delete("/api/orchid-group-collections/{collectionId}/members/{orchidGroupId}", secondCollectionId,
+					orchidGroup.getId()))
+			.andExpect(status().isOk())
+			.andExpect(jsonPath("$.data.orchidGroupCount").value(0));
 		mockMvc.perform(get("/api/orchid-groups/{id}/collections", orchidGroup.getId()))
-				.andExpect(status().isOk())
-				.andExpect(jsonPath("$.data", hasSize(1)))
-				.andExpect(jsonPath("$.data[0].status").value("ARCHIVED"));
+			.andExpect(status().isOk())
+			.andExpect(jsonPath("$.data", hasSize(1)))
+			.andExpect(jsonPath("$.data[0].status").value("ARCHIVED"));
 
-		var auditEvents = auditEventRepository.findAll().stream()
-				.filter(event -> event.getSource() == AuditSource.ORCHID_GROUP_COLLECTION)
-				.toList();
+		var auditEvents = auditEventRepository.findAll()
+			.stream()
+			.filter(event -> event.getSource() == AuditSource.ORCHID_GROUP_COLLECTION)
+			.toList();
 		assertThat(auditEvents).extracting(event -> event.getAction())
-				.containsExactly(AuditAction.CREATED, AuditAction.CREATED, AuditAction.UPDATED,
-						AuditAction.UPDATED, AuditAction.DEACTIVATED, AuditAction.UPDATED);
+			.containsExactly(AuditAction.CREATED, AuditAction.CREATED, AuditAction.UPDATED, AuditAction.UPDATED,
+					AuditAction.DEACTIVATED, AuditAction.UPDATED);
 		assertThat(auditEvents.stream()
-				.filter(event -> event.getAction() == AuditAction.UPDATED)
-				.filter(event -> java.util.Arrays.asList(event.getChangedFields()).contains("memberIds")).toList())
-				.allSatisfy(event -> assertThat(event.getChangedFields()).containsExactly("memberIds"));
+			.filter(event -> event.getAction() == AuditAction.UPDATED)
+			.filter(event -> java.util.Arrays.asList(event.getChangedFields()).contains("memberIds"))
+			.toList()).allSatisfy(event -> assertThat(event.getChangedFields()).containsExactly("memberIds"));
 	}
 
 	private Long createCollection(String name) throws Exception {
-		var result = mockMvc.perform(post("/api/orchid-group-collections")
-				.contentType(MediaType.APPLICATION_JSON)
-				.content("""
-						{"name":"%s","purpose":"테스트","createdBy":"테스터"}
-						""".formatted(name)))
-				.andExpect(status().isCreated())
-				.andReturn();
+		var result = mockMvc
+			.perform(post("/api/orchid-group-collections").contentType(MediaType.APPLICATION_JSON).content("""
+					{"name":"%s","purpose":"테스트","createdBy":"테스터"}
+					""".formatted(name)))
+			.andExpect(status().isCreated())
+			.andReturn();
 		return Long.valueOf(result.getResponse().getContentAsString().replaceAll(".*\\\"id\\\":(\\d+).*", "$1"));
 	}
 
 	private org.springframework.test.web.servlet.ResultActions addMember(Long collectionId, Long orchidGroupId)
 			throws Exception {
-		return mockMvc.perform(post("/api/orchid-group-collections/{id}/members", collectionId)
-				.contentType(MediaType.APPLICATION_JSON)
-				.content("""
-						{"orchidGroupIds":[%d],"createdBy":"테스터"}
-						""".formatted(orchidGroupId)));
+		return mockMvc.perform(
+				post("/api/orchid-group-collections/{id}/members", collectionId).contentType(MediaType.APPLICATION_JSON)
+					.content("""
+							{"orchidGroupIds":[%d],"createdBy":"테스터"}
+							""".formatted(orchidGroupId)));
 	}
+
 }

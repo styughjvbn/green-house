@@ -1,20 +1,20 @@
 package com.greenhouse.backend.sales.application;
 
+import com.greenhouse.backend.audit.domain.AuditAction;
 import com.greenhouse.backend.common.exception.NotFoundException;
+import com.greenhouse.backend.sales.application.document.SalesSlipDocument;
+import com.greenhouse.backend.sales.domain.SalesSlip;
 import com.greenhouse.backend.sales.domain.SalesType;
-import com.greenhouse.backend.sales.dto.SalesSlipResponse;
 import com.greenhouse.backend.sales.dto.SalesSlipStatusUpdateRequest;
 import com.greenhouse.backend.sales.repository.SalesSlipRepository;
-import com.greenhouse.backend.settlement.application.PaymentEventReader;
 import com.greenhouse.backend.settlement.application.PartnerBalanceService;
+import com.greenhouse.backend.settlement.application.PaymentEventReader;
 import com.greenhouse.backend.settlement.domain.PaymentTargetType;
+import java.util.List;
+import java.util.Map;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import com.greenhouse.backend.audit.domain.AuditAction;
-import java.util.Map;
-import com.greenhouse.backend.sales.domain.SalesSlip;
-import java.util.List;
 
 @Service
 @Transactional
@@ -22,17 +22,24 @@ import java.util.List;
 public class SalesSlipStatusService {
 
 	private final SalesSlipRepository salesSlipRepository;
-	private final AuctionSalesSlipCancellationPolicy auctionSalesSlipCancellationPolicy;
-	private final SalesSlipInventoryService salesSlipInventoryService;
-	private final SalesSlipOutboundService salesSlipOutboundService;
-	private final PaymentEventReader paymentEventReader;
-	private final PartnerBalanceService partnerBalanceService;
-	private final SalesSlipAuditSupport auditSupport;
-	private final SalesSlipResponseAssembler responseAssembler;
 
-	public SalesSlipResponse updateStatus(Long salesSlipId, SalesSlipStatusUpdateRequest request) {
+	private final AuctionSalesSlipCancellationPolicy auctionSalesSlipCancellationPolicy;
+
+	private final SalesSlipInventoryService salesSlipInventoryService;
+
+	private final SalesSlipOutboundService salesSlipOutboundService;
+
+	private final PaymentEventReader paymentEventReader;
+
+	private final PartnerBalanceService partnerBalanceService;
+
+	private final SalesSlipAuditSupport auditSupport;
+
+	private final SalesSlipDocumentAssembler responseAssembler;
+
+	public SalesSlipDocument updateStatus(Long salesSlipId, SalesSlipStatusUpdateRequest request) {
 		var salesSlip = salesSlipRepository.findForUpdateById(salesSlipId)
-				.orElseThrow(() -> new NotFoundException("판매 전표를 찾을 수 없습니다."));
+			.orElseThrow(() -> new NotFoundException("판매 전표를 찾을 수 없습니다."));
 		String nextStatus = request.salesStatus().trim();
 		if (salesSlip.isCanceled()) {
 			throw new IllegalArgumentException("취소된 전표는 상태를 변경할 수 없습니다.");
@@ -58,9 +65,9 @@ public class SalesSlipStatusService {
 		return responseAssembler.assemble(salesSlip);
 	}
 
-	private void cancel(com.greenhouse.backend.sales.domain.SalesSlip salesSlip) {
+	private void cancel(SalesSlip salesSlip) {
 		if (salesSlip.getSalesType() == SalesType.DIRECT) {
-			partnerBalanceService.lockPartners(List.of(salesSlip.getPartner().getId()));
+			partnerBalanceService.lockPartners(List.of(salesSlip.getPartnerId()));
 		}
 		if (salesSlip.getSalesType() == SalesType.DIRECT
 				&& paymentEventReader.existsByTarget(PaymentTargetType.SALES_SLIP, salesSlip.getId())) {
@@ -69,7 +76,8 @@ public class SalesSlipStatusService {
 
 		if (salesSlip.isOutboundCompleted()) {
 			salesSlipInventoryService.cancelOutbound(salesSlip);
-		} else {
+		}
+		else {
 			salesSlipInventoryService.cancelReserve(salesSlip);
 		}
 
@@ -79,10 +87,9 @@ public class SalesSlipStatusService {
 
 		salesSlip.updateSalesStatus(SalesSlip.STATUS_CANCELED);
 		if (salesSlip.getSalesType() == SalesType.DIRECT) {
-			partnerBalanceService.updateReceivable(
-					salesSlip.getPartner().getId(),
-					salesSlipRepository.sumDirectReceivableByPartnerId(salesSlip.getPartner().getId()),
-					null);
+			partnerBalanceService.updateReceivable(salesSlip.getPartnerId(),
+					salesSlipRepository.sumDirectReceivableByPartnerId(salesSlip.getPartnerId()), null);
 		}
 	}
+
 }

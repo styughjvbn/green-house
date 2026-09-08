@@ -1,13 +1,12 @@
 import type {
   BedZone,
-  FarmStatusMapData,
-  House,
+  OrchidManagementBedOrderItem,
+  OrchidManagementViewport,
   OrchidGroup,
   OrchidGroupWorkHistory,
   SelectedBedZone,
   SelectedOrchidGroup,
   WorkOperation,
-  VisibleBedCount,
 } from "@/entities/farm/types";
 
 export type SelectedHouse = {
@@ -231,10 +230,8 @@ export type DerivedOrchidGroup = {
 };
 
 export type OrchidManagementMapProps = {
-  mapData: FarmStatusMapData;
-  house: House;
-  initialStartBedId: number | null;
-  initialVisibleBedCount: VisibleBedCount;
+  initialViewport: OrchidManagementViewport;
+  initialBedOrder: OrchidManagementBedOrderItem[];
   initialSelectedOrchidGroupId: number | null;
   initialSelectedPhysicalBedId?: number | null;
   initialSelectedBedZoneId?: number | null;

@@ -1,6 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
+import { useQueryClient } from "@tanstack/react-query";
 import { type FormEvent, useEffect, useState } from "react";
 import type { OrchidGroup } from "@/entities/farm/types";
 import { createUuid } from "@/shared/lib/id";
@@ -21,6 +22,7 @@ export default function WorkOperationCorrectionForm({
   onClose: () => void;
 }) {
   const router = useRouter();
+  const queryClient = useQueryClient();
   const { businessDate } = useRuntimeContext();
   const [idempotencyKey, setIdempotencyKey] = useState(createUuid);
   const [title, setTitle] = useState(`${orchidGroup.varietyName} 결과 보정`);
@@ -105,6 +107,9 @@ export default function WorkOperationCorrectionForm({
       );
       setCorrections(result);
       setIdempotencyKey(createUuid());
+      await queryClient.invalidateQueries({
+        queryKey: ["farm-status", "orchid-management-viewport"],
+      });
       router.refresh();
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : "보정하지 못했습니다.");

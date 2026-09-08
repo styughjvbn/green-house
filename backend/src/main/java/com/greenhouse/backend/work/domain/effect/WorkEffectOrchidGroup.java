@@ -8,9 +8,9 @@ import jakarta.persistence.FetchType;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
-import jakarta.persistence.SequenceGenerator;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
+import jakarta.persistence.SequenceGenerator;
 import jakarta.persistence.Table;
 import java.time.LocalDateTime;
 import lombok.AccessLevel;
@@ -26,7 +26,8 @@ public class WorkEffectOrchidGroup {
 
 	@Id
 	@GeneratedValue(strategy = GenerationType.SEQUENCE, generator = "work_effect_orchid_groups_id_seq")
-	@SequenceGenerator(name = "work_effect_orchid_groups_id_seq", sequenceName = "work_effect_orchid_groups_id_seq", allocationSize = 50)
+	@SequenceGenerator(name = "work_effect_orchid_groups_id_seq", sequenceName = "work_effect_orchid_groups_id_seq",
+			allocationSize = 50)
 	private Long id;
 
 	@ManyToOne(fetch = FetchType.LAZY, optional = false)
@@ -44,12 +45,11 @@ public class WorkEffectOrchidGroup {
 	@Column(name = "created_at", nullable = false, updatable = false)
 	private LocalDateTime createdAt;
 
-	public WorkEffectOrchidGroup(
-			WorkAppliedEffect workAppliedEffect,
-			Long orchidGroupId,
+	public WorkEffectOrchidGroup(WorkAppliedEffect workAppliedEffect, Long orchidGroupId,
 			WorkEffectOrchidGroupRelationType relationType) {
 		this.workAppliedEffect = workAppliedEffect;
 		this.orchidGroupId = orchidGroupId;
 		this.relationType = relationType;
 	}
+
 }

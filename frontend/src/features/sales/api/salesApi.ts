@@ -1,8 +1,11 @@
 ﻿import { fetchApi, requestApi } from "@/shared/api/client";
 import type {
   BusinessPartner,
+  BusinessPartnerOption,
+  BusinessPartnerOptionPage,
   BusinessPartnerPage,
-  PartnerPaymentEvent,
+  PartnerPaymentEventPage,
+  PaymentTargetType,
   PartnerSettlementSettings,
   SalesOrchidGroupOption,
   SalesSlip,
@@ -14,7 +17,8 @@ import type {
   AuctionTrackingSummary,
   AuctionShipmentOption,
   AuctionSettlement,
-  AuctionSettlementStatus,
+  AuctionSettlementPage,
+  AuctionSettlementSummary,
 } from "@/entities/farm/types";
 import type {
   AuctionFilterState,
@@ -41,8 +45,34 @@ async function requestJson<T>(
   return requestApi<T>(path, init, fallbackMessage);
 }
 
-export function getBusinessPartners() {
-  return fetchApi<BusinessPartner[]>("/business-partners");
+export function getBusinessPartnerOptions(
+  keyword: string,
+  page: number,
+  auctionHouse?: boolean,
+  active?: boolean,
+  signal?: AbortSignal,
+) {
+  const params = new URLSearchParams({
+    keyword,
+    page: String(page),
+    size: "10",
+  });
+  if (auctionHouse != null) params.set("auctionHouse", String(auctionHouse));
+  if (active != null) params.set("active", String(active));
+  return fetchApi<BusinessPartnerOptionPage>(
+    `/business-partners/options?${params}`,
+    { signal },
+  );
+}
+
+export function getBusinessPartnerOption(
+  partnerId: number,
+  signal?: AbortSignal,
+) {
+  return fetchApi<BusinessPartnerOption>(
+    `/business-partners/${partnerId}/option`,
+    { signal },
+  );
 }
 
 export function getBusinessPartnerPage(
@@ -134,18 +164,29 @@ export function getAuctionTrackingSummary() {
   return fetchApi<AuctionTrackingSummary>("/auction-tracking/summary");
 }
 
-export function getAuctionSettlements(filters?: {
-  auctionHouseId?: number;
-  from?: string;
-  to?: string;
-  status?: AuctionSettlementStatus;
-}) {
-  const params = new URLSearchParams();
-  Object.entries(filters ?? {}).forEach(([key, value]) => {
-    if (value != null && value !== "") params.set(key, String(value));
+export function getAuctionSettlementPage(
+  page: number,
+  size: number,
+  signal?: AbortSignal,
+) {
+  const params = new URLSearchParams({
+    page: String(page),
+    size: String(size),
   });
-  const query = params.size > 0 ? `?${params}` : "";
-  return fetchApi<AuctionSettlement[]>(`/auction-settlements${query}`);
+  return fetchApi<AuctionSettlementPage>(
+    `/auction-settlements/page?${params}`,
+    { signal },
+  );
+}
+
+export function getAuctionSettlementSummary(signal?: AbortSignal) {
+  return fetchApi<AuctionSettlementSummary>("/auction-settlements/summary", {
+    signal,
+  });
+}
+
+export function getAuctionSettlement(id: number, signal?: AbortSignal) {
+  return fetchApi<AuctionSettlement>(`/auction-settlements/${id}`, { signal });
 }
 
 export function rebuildAuctionSettlement(
@@ -195,15 +236,24 @@ export function confirmSalesSlipPayment(
   );
 }
 
-export function getPaymentEvents(
-  targetType: "SALES_SLIP" | "AUCTION_SETTLEMENT",
+export function getReceivedPaymentPage(
+  targetType: PaymentTargetType,
   targetId: number,
+  page: number,
+  size: number,
+  signal?: AbortSignal,
 ) {
   const params = new URLSearchParams({
     targetType,
     targetId: String(targetId),
+    eventType: "PAYMENT_RECEIVED",
+    page: String(page),
+    size: String(size),
   });
-  return fetchApi<PartnerPaymentEvent[]>(`/partner-payment-events?${params}`);
+  return fetchApi<PartnerPaymentEventPage>(
+    `/partner-payment-events/page?${params}`,
+    { signal },
+  );
 }
 
 export function confirmAuctionReturn(

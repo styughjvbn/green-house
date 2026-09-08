@@ -1,5 +1,6 @@
 package com.greenhouse.backend.farm.application.transformation;
 
+import com.greenhouse.backend.common.config.TimeConfig;
 import com.greenhouse.backend.common.exception.NotFoundException;
 import com.greenhouse.backend.farm.dto.orchid.OrchidGroupResponse;
 import com.greenhouse.backend.farm.dto.transformation.RepotWorkOperationRequest;
@@ -7,7 +8,8 @@ import com.greenhouse.backend.farm.dto.transformation.RepotWorkOperationResponse
 import com.greenhouse.backend.farm.repository.orchid.OrchidGroupRepository;
 import com.greenhouse.backend.work.application.operation.ImmediateWorkExecutionService;
 import com.greenhouse.backend.work.application.operation.WorkOperationQueryService;
-import com.greenhouse.backend.work.domain.operation.WorkType;
+import com.greenhouse.backend.work.domain.operation.WorkTypeDefinition;
+import java.time.Clock;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -18,17 +20,20 @@ import org.springframework.transaction.annotation.Transactional;
 @Transactional
 public class RepotWorkOperationService {
 
+	private final Clock clock;
+
 	private final ImmediateWorkExecutionService immediateWorkExecutionService;
+
 	private final WorkOperationQueryService queryService;
+
 	private final OrchidGroupRepository orchidGroupRepository;
 
-	public RepotWorkOperationService(
-			ImmediateWorkExecutionService immediateWorkExecutionService,
-			WorkOperationQueryService queryService,
-			OrchidGroupRepository orchidGroupRepository) {
+	public RepotWorkOperationService(ImmediateWorkExecutionService immediateWorkExecutionService,
+			WorkOperationQueryService queryService, OrchidGroupRepository orchidGroupRepository, Clock clock) {
 		this.immediateWorkExecutionService = immediateWorkExecutionService;
 		this.queryService = queryService;
 		this.orchidGroupRepository = orchidGroupRepository;
+		this.clock = clock;
 	}
 
 	public RepotWorkOperationResponse execute(RepotWorkOperationRequest request) {
@@ -41,15 +46,9 @@ public class RepotWorkOperationService {
 		details.put("inputQuantity", request.inputQuantity());
 		details.put("lossQuantity", lossQuantity);
 		details.put("resultCount", request.results().size());
-		var operation = immediateWorkExecutionService.executeForTarget(
-				normalizeRequired(request.idempotencyKey()),
-				WorkType.REPOT_CODE,
-				normalizeRequired(request.title()),
-				request.workDate(),
-				normalize(request.worker()),
-				normalize(request.memo()),
-				request.sourceOrchidGroupId(),
-				details,
+		var operation = immediateWorkExecutionService.executeForTarget(normalizeRequired(request.idempotencyKey()),
+				WorkTypeDefinition.REPOT.name(), normalizeRequired(request.title()), request.workDate(),
+				normalize(request.worker()), normalize(request.memo()), request.sourceOrchidGroupId(), details,
 				request);
 		return response(operation.id());
 	}
@@ -68,22 +67,20 @@ public class RepotWorkOperationService {
 	}
 
 	private RepotWorkOperationResponse response(Long operationId) {
+		var businessDate = TimeConfig.farmToday(clock);
 		var operation = queryService.get(operationId);
-		var resultIds = immediateWorkExecutionService.getStructureChangeResultOrchidGroupIds(
-				operationId, WorkType.REPOT_CODE);
+		var resultIds = immediateWorkExecutionService.getStructureChangeResultOrchidGroupIds(operationId,
+				WorkTypeDefinition.REPOT.name());
 		var source = orchidGroupRepository.findDetailById(operation.sourceScopeId())
-				.orElseThrow(() -> new NotFoundException(
-						"원본 난 묶음을 찾을 수 없습니다."));
-		var groupsById = orchidGroupRepository.findDetailsByIds(resultIds).stream()
-				.collect(java.util.stream.Collectors.toMap(group -> group.getId(), group -> group));
+			.orElseThrow(() -> new NotFoundException("원본 난 묶음을 찾을 수 없습니다."));
+		var groupsById = orchidGroupRepository.findDetailsByIds(resultIds)
+			.stream()
+			.collect(java.util.stream.Collectors.toMap(group -> group.getId(), group -> group));
 		var results = resultIds.stream()
-				.filter(groupsById::containsKey)
-				.map(id -> OrchidGroupResponse.from(groupsById.get(id)))
-				.toList();
-		return new RepotWorkOperationResponse(
-				operation,
-				OrchidGroupResponse.from(source),
-				results,
+			.filter(groupsById::containsKey)
+			.map(id -> OrchidGroupResponse.from(groupsById.get(id), businessDate))
+			.toList();
+		return new RepotWorkOperationResponse(operation, OrchidGroupResponse.from(source, businessDate), results,
 				integerDetail(operation.details(), "inputQuantity"),
 				integerDetail(operation.details(), "lossQuantity"));
 	}
@@ -94,14 +91,17 @@ public class RepotWorkOperationService {
 	}
 
 	private String normalize(String value) {
-		if (value == null) return null;
+		if (value == null)
+			return null;
 		String normalized = value.trim();
 		return normalized.isEmpty() ? null : normalized;
 	}
 
 	private String normalizeRequired(String value) {
 		String normalized = normalize(value);
-		if (normalized == null) throw new IllegalArgumentException("필수 문자열 값은 비워둘 수 없습니다.");
+		if (normalized == null)
+			throw new IllegalArgumentException("필수 문자열 값은 비워둘 수 없습니다.");
 		return normalized;
 	}
+
 }

@@ -1,8 +1,8 @@
 package com.greenhouse.backend.farm.application.transformation;
 
+import com.greenhouse.backend.work.application.effect.StructureChangeCommand;
+import com.greenhouse.backend.work.application.effect.WorkEffectContext;
 import com.greenhouse.backend.work.application.effect.WorkExecutionResult;
-import com.greenhouse.backend.work.domain.operation.WorkOperation;
-import com.greenhouse.backend.work.dto.effect.StructureChangeExecutionRequest;
 import java.util.Set;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
@@ -12,24 +12,19 @@ import org.springframework.stereotype.Component;
 public class StructureChangeExecutor {
 
 	private final StructureChangeStrategyRegistry strategyRegistry;
+
 	private final BatchStructureTransformationExecutor transformationExecutor;
 
-	public WorkExecutionResult execute(
-			WorkOperation operation,
-			StructureChangeExecutionRequest request) {
-		return execute(operation, request, Set.of());
+	public WorkExecutionResult execute(WorkEffectContext context, StructureChangeCommand request) {
+		return execute(context, request, Set.of());
 	}
 
-	public WorkExecutionResult execute(
-			WorkOperation operation,
-			StructureChangeExecutionRequest request,
+	public WorkExecutionResult execute(WorkEffectContext context, StructureChangeCommand request,
 			Set<Long> placementExclusionOrchidGroupIds) {
-		StructureChangeStrategy strategy = strategyRegistry.get(operation.getWorkType().getCode());
+		StructureChangeStrategy strategy = strategyRegistry.get(context.workTypeCode());
 		strategy.validate(request);
-		return transformationExecutor.execute(
-				operation,
-				request,
-				strategy,
+		return transformationExecutor.execute(context.operationId(), request, strategy,
 				placementExclusionOrchidGroupIds);
 	}
+
 }

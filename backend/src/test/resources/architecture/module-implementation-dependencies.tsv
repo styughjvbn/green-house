@@ -1,0 +1,1 @@
+# No cross-module Entity, Repository, query type, controller or HTTP DTO dependencies.

@@ -1,6 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
+import { useQueryClient } from "@tanstack/react-query";
 import { useCallback, useMemo, useState, useSyncExternalStore } from "react";
 import {
   useWorkRecordInvalidation,
@@ -32,48 +33,51 @@ export function OrchidManagementMap({
   initialSelectedPhysicalBedId,
   initialSelectedBedZoneId,
   initialSearchFilters,
-  initialStartBedId,
-  initialVisibleBedCount,
-  mapData,
-  house,
+  initialViewport,
+  initialBedOrder,
 }: OrchidManagementMapProps) {
   const router = useRouter();
-  const bedViewport = useBedViewport(
-    house.physicalBeds,
-    initialStartBedId,
-    initialVisibleBedCount,
+  const queryClient = useQueryClient();
+  const bedViewport = useBedViewport(initialViewport, initialBedOrder);
+  const currentBedOrder = bedViewport.bedOrder[bedViewport.startBedIndex];
+  const navigationHouse = useMemo(
+    () => ({
+      id: currentBedOrder?.houseId ?? 0,
+      number: currentBedOrder?.houseNumber ?? 0,
+      name: "전체 농장",
+      memo: null,
+      physicalBeds: bedViewport.loadedBeds,
+    }),
+    [bedViewport.loadedBeds, currentBedOrder],
   );
   const scopedHouse = useMemo(
-    () => ({ ...house, physicalBeds: bedViewport.visibleBeds }),
-    [bedViewport.visibleBeds, house],
+    () => ({ ...navigationHouse, physicalBeds: bedViewport.visibleBeds }),
+    [bedViewport.visibleBeds, navigationHouse],
   );
   const orchidManagement = useOrchidManagementMap(
     scopedHouse,
-    house,
+    navigationHouse,
     initialSelectedOrchidGroupId,
     initialSelectedPhysicalBedId ?? null,
     initialSelectedBedZoneId ?? null,
     initialSearchFilters,
   );
   const { invalidateWorkData } = useWorkRecordInvalidation();
-  const multiSelection = useOrchidMultiSelection(house);
+  const multiSelection = useOrchidMultiSelection(navigationHouse);
   const selectedHistoryHouse = useMemo(() => {
     if (orchidManagement.selection?.type !== "HOUSE") return null;
     const selectedHouseId = orchidManagement.selection.houseId;
-    const physicalBeds = house.physicalBeds.filter(
+    const physicalBeds = bedViewport.loadedBeds.filter(
       (bed) => bed.houseId === selectedHouseId,
     );
-    const selectedSummary = mapData.houses.find(
-      (item) => item.houseId === selectedHouseId,
-    );
     return {
-      ...house,
+      ...navigationHouse,
       id: selectedHouseId,
-      number: selectedSummary?.houseNumber ?? physicalBeds[0]?.houseNumber ?? 0,
-      name: selectedSummary?.houseName ?? house.name,
+      number: physicalBeds[0]?.houseNumber ?? 0,
+      name: `${physicalBeds[0]?.houseNumber ?? ""}동`,
       physicalBeds,
     };
-  }, [house, mapData.houses, orchidManagement.selection]);
+  }, [bedViewport.loadedBeds, navigationHouse, orchidManagement.selection]);
   const historyHouse = selectedHistoryHouse ?? scopedHouse;
   const [showScale, setShowScale] = useState(true);
   const [correctionOperationId, setCorrectionOperationId] = useState<
@@ -256,6 +260,9 @@ export function OrchidManagementMap({
           onSaved={() => {
             orchidManagement.actions.invalidateHistory();
             void invalidateWorkData();
+            void queryClient.invalidateQueries({
+              queryKey: ["farm-status", "orchid-management-viewport"],
+            });
             router.refresh();
           }}
         />
@@ -267,8 +274,8 @@ export function OrchidManagementMap({
             !orchidManagement.pasteSourceOrchidGroup
           }
           distinguishVarietyColors={distinguishVarietyColors}
-          houses={mapData.houses}
-          startHouseId={bedViewport.visibleBeds[0]?.houseId ?? null}
+          houses={bedViewport.bedOrder}
+          startHouseId={currentBedOrder?.houseId ?? null}
           visibleBedCount={bedViewport.visibleBedCount}
           hasPreviousHouse={bedViewport.hasPreviousHouse}
           hasNextHouse={bedViewport.hasNextHouse}
@@ -289,7 +296,8 @@ export function OrchidManagementMap({
         />
         <div className="min-h-0 flex-1">
           <ContinuousBedMap
-            beds={house.physicalBeds}
+            bedOrder={bedViewport.bedOrder}
+            bedsById={bedViewport.bedsById}
             startBedIndex={bedViewport.startBedIndex}
             visibleBedCount={bedViewport.visibleBedCount}
             distinguishVarietyColors={distinguishVarietyColors}
@@ -461,15 +469,15 @@ export function OrchidManagementMap({
             }}
             onSelectSearchResult={(orchidGroup) => {
               clearMapCellRangePick();
-              const targetBed = house.physicalBeds.find(
+              const targetBed = bedViewport.bedOrder.find(
                 (bed) =>
                   bed.houseId === orchidGroup.houseId &&
                   bed.number === orchidGroup.physicalBedNumber,
               );
-              const targetBedIsVisible = bedViewport.visibleBeds.some(
-                (bed) => bed.id === targetBed?.id,
-              );
-              if (targetBed && !targetBedIsVisible) {
+              if (
+                targetBed &&
+                !bedViewport.visibleBedIds.includes(targetBed.id)
+              ) {
                 bedViewport.actions.goToBed(targetBed.id);
               }
               orchidManagement.actions.moveToOrchidGroup(orchidGroup);

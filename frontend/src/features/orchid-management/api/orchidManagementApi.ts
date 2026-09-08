@@ -1,8 +1,8 @@
 import { fetchApi, requestApi } from "@/shared/api/client";
 import type {
   BedZonePlacementProfile,
-  FarmStatusMapData,
   House,
+  OrchidManagementBedOrderItem,
   OrchidManagementViewport,
   OrchidGroup,
   VarietyOption,
@@ -131,31 +131,6 @@ export async function saveBedZonePlacementProfile(
   );
 }
 
-export async function getOrchidManagementMap(): Promise<FarmStatusMapData> {
-  const houses = await fetchApi<House[]>("/houses");
-
-  return {
-    houses: houses.map((house) => {
-      const orchidGroups = house.physicalBeds.flatMap((bed) =>
-        bed.bedZones.flatMap((zone) => zone.orchidGroups),
-      );
-      return {
-        houseId: house.id,
-        houseNumber: house.number,
-        houseName: house.name,
-        orchidGroupCount: orchidGroups.length,
-        warningCount: orchidGroups.filter((group) =>
-          ["주의", "이상", "병해충"].includes(group.status),
-        ).length,
-        repotDueCount: 0,
-        latestWorkDate: null,
-        physicalBeds: house.physicalBeds,
-      };
-    }),
-    orchidGroups: [],
-  };
-}
-
 export function getOrchidManagementViewport(
   startBedId: number | null,
   bedCount: 2 | 3 | 4,
@@ -166,6 +141,12 @@ export function getOrchidManagementViewport(
   }
   return fetchApi<OrchidManagementViewport>(
     `/farm-status/orchid-management?${params.toString()}`,
+  );
+}
+
+export function getOrchidManagementBedOrder() {
+  return fetchApi<OrchidManagementBedOrderItem[]>(
+    "/farm-status/orchid-management/bed-order",
   );
 }
 
@@ -226,15 +207,15 @@ export function getHouse(houseId: number) {
 }
 
 export function getWorkHistory(
-  scopeType: "HOUSE" | "PHYSICAL_BED" | "BED_ZONE" | "ORCHID_GROUP",
-  scopeId: number,
+  historyScopeType: "HOUSE" | "PHYSICAL_BED" | "BED_ZONE" | "ORCHID_GROUP",
+  historyScopeId: number,
   page: number,
   size: number,
   signal?: AbortSignal,
 ) {
   const params = new URLSearchParams({
-    scopeType,
-    scopeId: String(scopeId),
+    historyScopeType,
+    historyScopeId: String(historyScopeId),
     page: String(page),
     size: String(size),
   });

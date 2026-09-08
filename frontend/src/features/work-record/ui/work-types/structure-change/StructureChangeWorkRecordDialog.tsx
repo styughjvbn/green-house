@@ -9,6 +9,7 @@ import type {
 } from "@/entities/farm/types";
 import type { FarmPlacementReference } from "@/entities/farm/model/placement";
 import type { CreateWorkOperationPayload } from "../../../model/types";
+import { manualWorkTargetSource } from "../../../model/workTargetSource";
 import type {
   StructureChangeExecutionPayload,
   StructureChangeRecordPayload,
@@ -26,6 +27,11 @@ type VarietyTargetGroup = {
   targets: WorkOperationTarget[];
 };
 
+type ManualCreateWorkOperationPayload = Extract<
+  CreateWorkOperationPayload,
+  { sourceScopeType: "MANUAL_SELECTION" }
+>;
+
 export function StructureChangeWorkRecordDialog({
   baseOperation,
   houses,
@@ -35,7 +41,7 @@ export function StructureChangeWorkRecordDialog({
   onClose,
   onSubmit,
 }: {
-  baseOperation: CreateWorkOperationPayload;
+  baseOperation: ManualCreateWorkOperationPayload;
   houses: House[];
   orchidGroups: OrchidGroup[];
   targets: WorkOperationTarget[];
@@ -76,16 +82,16 @@ export function StructureChangeWorkRecordDialog({
       groups.length > 1
         ? `${baseOperation.title} - ${group.varietyName}`
         : baseOperation.title;
+    const targetSource = manualWorkTargetSource(
+      group.targets.flatMap((target) =>
+        target.orchidGroupId == null ? [] : [target.orchidGroupId],
+      ),
+    );
     return {
       operation: {
         ...baseOperation,
+        ...targetSource,
         title,
-        sourceScopeType: "MANUAL_SELECTION" as const,
-        sourceScopeId: undefined,
-        sourceDerivedGroupKey: undefined,
-        sourceOrchidGroupIds: group.targets.flatMap((target) =>
-          target.orchidGroupId == null ? [] : [target.orchidGroupId],
-        ),
         excludedOrchidGroupIds: [],
       },
       execution,

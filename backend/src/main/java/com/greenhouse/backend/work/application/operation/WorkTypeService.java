@@ -2,6 +2,7 @@ package com.greenhouse.backend.work.application.operation;
 
 import com.greenhouse.backend.common.exception.NotFoundException;
 import com.greenhouse.backend.work.domain.operation.WorkType;
+import com.greenhouse.backend.work.domain.operation.WorkTypeDefinition;
 import com.greenhouse.backend.work.domain.operation.WorkTypeTemplate;
 import com.greenhouse.backend.work.dto.operation.WorkTypeCreateRequest;
 import com.greenhouse.backend.work.dto.operation.WorkTypeMetadataResponse;
@@ -9,12 +10,10 @@ import com.greenhouse.backend.work.dto.operation.WorkTypeReorderRequest;
 import com.greenhouse.backend.work.dto.operation.WorkTypeResponse;
 import com.greenhouse.backend.work.dto.operation.WorkTypeUpdateRequest;
 import com.greenhouse.backend.work.repository.WorkTypeRepository;
-
-import lombok.RequiredArgsConstructor;
-
+import java.util.Arrays;
 import java.util.List;
 import java.util.UUID;
-import java.util.Arrays;
+import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -27,19 +26,15 @@ public class WorkTypeService {
 
 	@Transactional(readOnly = true)
 	public List<WorkTypeResponse> getWorkTypes(boolean includeInactive) {
-		List<WorkType> workTypes = includeInactive
-				? workTypeRepository.findAllByOrderBySortOrderAscIdAsc()
+		List<WorkType> workTypes = includeInactive ? workTypeRepository.findAllByOrderBySortOrderAscIdAsc()
 				: workTypeRepository.findAllByActiveTrueOrderBySortOrderAscIdAsc();
-		return workTypes.stream()
-				.map(WorkTypeResponse::from)
-				.toList();
+		return workTypes.stream().map(WorkTypeResponse::from).toList();
 	}
 
 	@Transactional(readOnly = true)
 	public WorkTypeMetadataResponse getMetadata() {
-		return new WorkTypeMetadataResponse(Arrays.stream(WorkTypeTemplate.values())
-				.filter(WorkTypeTemplate::isCustomTypeAllowed)
-				.toList());
+		return new WorkTypeMetadataResponse(
+				Arrays.stream(WorkTypeTemplate.values()).filter(WorkTypeTemplate::isCustomTypeAllowed).toList());
 	}
 
 	public WorkTypeResponse create(WorkTypeCreateRequest request) {
@@ -47,13 +42,8 @@ public class WorkTypeService {
 		String name = normalizeRequired(request.name());
 		validateUniqueName(name, null);
 		WorkType workType = new WorkType(
-				"CUSTOM_" + UUID.randomUUID().toString().replace("-", "").substring(0, 12).toUpperCase(),
-				name,
-				request.template(),
-				false,
-				false,
-				true,
-				nextSortOrder());
+				"CUSTOM_" + UUID.randomUUID().toString().replace("-", "").substring(0, 12).toUpperCase(), name,
+				request.template(), false, false, true, nextSortOrder());
 		return WorkTypeResponse.from(workTypeRepository.save(workType));
 	}
 
@@ -74,14 +64,12 @@ public class WorkTypeService {
 		for (int index = 0; index < request.orderedIds().size(); index++) {
 			Long id = request.orderedIds().get(index);
 			WorkType workType = workTypes.stream()
-					.filter(candidate -> candidate.getId().equals(id))
-					.findFirst()
-					.orElseThrow(() -> new NotFoundException("Work type not found."));
+				.filter(candidate -> candidate.getId().equals(id))
+				.findFirst()
+				.orElseThrow(() -> new NotFoundException("Work type not found."));
 			workType.changeSortOrder(index + 1);
 		}
-		return workTypeRepository.findAllByOrderBySortOrderAscIdAsc().stream()
-				.map(WorkTypeResponse::from)
-				.toList();
+		return workTypeRepository.findAllByOrderBySortOrderAscIdAsc().stream().map(WorkTypeResponse::from).toList();
 	}
 
 	@Transactional(readOnly = true)
@@ -104,29 +92,28 @@ public class WorkTypeService {
 
 	@Transactional(readOnly = true)
 	public WorkType getMovementType() {
-		return workTypeRepository.findByCode(WorkType.MOVEMENT_CODE)
-				.orElseThrow(() -> new NotFoundException("Movement work type not found."));
+		return workTypeRepository.findByCode(WorkTypeDefinition.MOVEMENT.name())
+			.orElseThrow(() -> new NotFoundException("Movement work type not found."));
 	}
 
 	@Transactional(readOnly = true)
 	public WorkType getByCode(String code) {
-		return workTypeRepository.findByCode(code)
-				.orElseThrow(() -> new NotFoundException("Work type not found."));
+		return workTypeRepository.findByCode(code).orElseThrow(() -> new NotFoundException("Work type not found."));
 	}
 
 	private WorkType getById(Long id) {
 		if (id == null) {
 			throw new IllegalArgumentException("Work type id is required.");
 		}
-		return workTypeRepository.findById(id)
-				.orElseThrow(() -> new NotFoundException("Work type not found."));
+		return workTypeRepository.findById(id).orElseThrow(() -> new NotFoundException("Work type not found."));
 	}
 
 	private int nextSortOrder() {
-		return workTypeRepository.findAllByOrderBySortOrderAscIdAsc().stream()
-				.mapToInt(WorkType::getSortOrder)
-				.max()
-				.orElse(0) + 1;
+		return workTypeRepository.findAllByOrderBySortOrderAscIdAsc()
+			.stream()
+			.mapToInt(WorkType::getSortOrder)
+			.max()
+			.orElse(0) + 1;
 	}
 
 	private void validateCustomTemplate(WorkTypeTemplate template) {
@@ -148,4 +135,5 @@ public class WorkTypeService {
 		}
 		return normalized;
 	}
+
 }

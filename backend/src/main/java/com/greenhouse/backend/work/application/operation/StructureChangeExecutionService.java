@@ -2,16 +2,18 @@ package com.greenhouse.backend.work.application.operation;
 
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.greenhouse.backend.common.exception.ConflictException;
+import com.greenhouse.backend.work.application.effect.MovementQuantityAllocator;
+import com.greenhouse.backend.work.application.effect.StructureChangeCommand;
 import com.greenhouse.backend.work.application.effect.WorkEffectCommand;
 import com.greenhouse.backend.work.application.effect.WorkEffectProcessor;
+import com.greenhouse.backend.work.application.effect.WorkEffectStore;
+import com.greenhouse.backend.work.application.operation.WorkOperationView;
 import com.greenhouse.backend.work.domain.operation.WorkOperation;
 import com.greenhouse.backend.work.domain.operation.WorkOperationStatus;
+import com.greenhouse.backend.work.domain.operation.WorkTypeDefinition;
 import com.greenhouse.backend.work.domain.target.WorkTargetExecution;
-import com.greenhouse.backend.work.domain.operation.WorkType;
-import com.greenhouse.backend.work.dto.effect.StructureChangeExecutionRequest;
-import com.greenhouse.backend.work.dto.operation.WorkOperationResponse;
 import com.greenhouse.backend.work.dto.target.WorkTargetExecutionRequest;
-import com.greenhouse.backend.work.application.effect.MovementQuantityAllocator;
 import com.greenhouse.backend.work.repository.WorkAppliedEffectRepository;
 import com.greenhouse.backend.work.repository.WorkTargetExecutionRepository;
 import java.time.LocalDateTime;
@@ -30,30 +32,43 @@ import org.springframework.transaction.annotation.Transactional;
 @RequiredArgsConstructor
 public class StructureChangeExecutionService {
 
-	private static final Set<String> SUPPORTED_TYPES = Set.of(
-			WorkType.REPOT_CODE,
-			WorkType.DIVIDE_CODE,
-			WorkType.MERGE_CODE,
-			WorkType.MOVEMENT_CODE);
-
 	private final WorkTargetExecutionRepository executionRepository;
+
 	private final WorkAppliedEffectRepository appliedEffectRepository;
+
 	private final WorkEffectProcessor workEffectProcessor;
+
+	private final WorkEffectStore effectStore;
+
 	private final WorkOperationProgressService progressService;
+
 	private final WorkOperationQueryService queryService;
+
 	private final WorkOperationSupport support;
+
 	private final DiscardRecordService discardRecordService;
+
 	private final ObjectMapper objectMapper = new ObjectMapper().findAndRegisterModules();
 
-	public WorkOperationResponse completeMerge(
-			Long operationId, WorkTargetExecutionRequest request) {
+	/**
+	 * @deprecated Use {@link #execute(Long, StructureChangeCommand)}.
+	 */
+	@Deprecated(since = "2026-08", forRemoval = false)
+	public WorkOperationView completeMerge(Long operationId, WorkTargetExecutionRequest request) {
 		List<WorkTargetExecution> executions = executionRepository
-				.findForUpdateByTargetWorkOperationIdOrderByIdAsc(operationId);
+			.findForUpdateByTargetWorkOperationIdOrderByIdAsc(operationId);
 		WorkOperation operation = executions.getFirst().getTarget().getWorkOperation();
-		if (!WorkType.MERGE_CODE.equals(operation.getWorkType().getCode())) {
+		if (!WorkTypeDefinition.MERGE.name().equals(operation.getWorkType().getCode())) {
 			throw new IllegalArgumentException("합식 작업만 일괄 실행할 수 있습니다.");
 		}
 		if (executions.stream().allMatch(WorkTargetExecution::isEffectApplied)) {
+			var existing = appliedEffectRepository
+				.findByWorkOperationIdAndEffectKey(operationId, "EXECUTION:LEGACY_MERGE")
+				.orElseThrow(() -> new ConflictException("IDEMPOTENCY_REPLAY_UNAVAILABLE", "원래 합식 실행 요청을 확인할 수 없습니다."));
+			var completedAt = request.completedDate() == null ? existing.getAppliedAt()
+					: support.completionTime(request.completedDate());
+			effectStore.validateReplay(existing,
+					new WorkEffectCommand(completedAt, support.actor(request.worker()), request.resultDetails(), null));
 			return queryService.get(operationId);
 		}
 		if (executions.stream().anyMatch(WorkTargetExecution::isEffectApplied)) {
@@ -63,55 +78,55 @@ public class StructureChangeExecutionService {
 		LocalDateTime completedAt = support.completionTime(request.completedDate());
 		String worker = support.actor(request.worker());
 		List<Long> sourceOrchidGroupIds = executions.stream()
-				.map(execution -> execution.getTarget().getOrchidGroupId())
-				.filter(java.util.Objects::nonNull)
-				.sorted()
-				.toList();
-		var result = workEffectProcessor.applyBatch(
-				operation,
-				"LEGACY_MERGE",
-				sourceOrchidGroupIds,
+			.map(execution -> execution.getTarget().getOrchidGroupId())
+			.filter(java.util.Objects::nonNull)
+			.sorted()
+			.toList();
+		var result = workEffectProcessor.applyBatch(operation, "LEGACY_MERGE", sourceOrchidGroupIds,
 				new WorkEffectCommand(completedAt, worker, request.resultDetails(), null));
-		executions.forEach(execution ->
-				execution.completeWithEffect(completedAt, worker, result.resultDetails()));
+		executions.forEach(execution -> execution.completeWithEffect(completedAt, worker, result.resultDetails()));
 		progressService.completeIfAllTargetsClosed(operation, completedAt);
 		return queryService.get(operationId);
 	}
 
-	public WorkOperationResponse execute(
-			Long operationId, StructureChangeExecutionRequest request) {
+	public WorkOperationView execute(Long operationId, StructureChangeCommand request) {
 		return execute(operationId, request, Set.of());
 	}
 
-	WorkOperationResponse execute(
-			Long operationId,
-			StructureChangeExecutionRequest request,
+	WorkOperationView execute(Long operationId, StructureChangeCommand request,
 			Set<Long> placementExclusionOrchidGroupIds) {
 		List<WorkTargetExecution> executions = executionRepository
-				.findForUpdateByTargetWorkOperationIdOrderByIdAsc(operationId);
+			.findForUpdateByTargetWorkOperationIdOrderByIdAsc(operationId);
 		if (executions.isEmpty()) {
 			throw new IllegalArgumentException("구조 변경 작업 대상이 없습니다.");
 		}
 		WorkOperation operation = executions.getFirst().getTarget().getWorkOperation();
-		if (!SUPPORTED_TYPES.contains(operation.getWorkType().getCode())) {
+		if (!operation.getWorkType().definition().supportsStructureExecution()) {
 			throw new IllegalArgumentException("분갈이·분주·합식·자리 이동 작업만 회차 실행할 수 있습니다.");
 		}
-		validateInProgress(operation);
+		LocalDateTime executedAt = support.completionTime(request.completedDate());
+		String worker = support.actor(request.worker());
+		Map<String, Object> commandDetails = objectMapper.convertValue(request,
+				new TypeReference<Map<String, Object>>() {
+				});
+		var command = new WorkEffectCommand(executedAt, worker, commandDetails, request,
+				placementExclusionOrchidGroupIds);
 		String effectKey = "EXECUTION:" + request.idempotencyKey();
-		if (appliedEffectRepository.findByWorkOperationIdAndEffectKey(operationId, effectKey).isPresent()) {
+		var existing = appliedEffectRepository.findByWorkOperationIdAndEffectKey(operationId, effectKey);
+		if (existing.isPresent()) {
+			effectStore.validateReplay(existing.get(), command);
 			return queryService.get(operationId);
 		}
+		validateInProgress(operation);
 
 		Map<Long, WorkTargetExecution> executionByGroupId = executions.stream()
-				.filter(execution -> execution.getTarget().getOrchidGroupId() != null)
-				.collect(Collectors.toMap(
-						execution -> execution.getTarget().getOrchidGroupId(),
-						Function.identity()));
-		Set<Long> requestedIds = request.sources().stream()
-				.map(source -> source.sourceOrchidGroupId())
-				.collect(Collectors.toSet());
-		if (requestedIds.size() != request.sources().size()
-				|| !executionByGroupId.keySet().containsAll(requestedIds)) {
+			.filter(execution -> execution.getTarget().getOrchidGroupId() != null)
+			.collect(Collectors.toMap(execution -> execution.getTarget().getOrchidGroupId(), Function.identity()));
+		Set<Long> requestedIds = request.sources()
+			.stream()
+			.map(source -> source.sourceOrchidGroupId())
+			.collect(Collectors.toSet());
+		if (requestedIds.size() != request.sources().size() || !executionByGroupId.keySet().containsAll(requestedIds)) {
 			throw new IllegalArgumentException("실행 원본은 계획에 확정된 난 묶음이어야 하며 중복될 수 없습니다.");
 		}
 		request.sources().forEach(source -> {
@@ -122,29 +137,14 @@ public class StructureChangeExecutionService {
 			}
 		});
 
-		LocalDateTime executedAt = support.completionTime(request.completedDate());
-		String worker = support.actor(request.worker());
-		WorkOperationResponse discardOperation = null;
-		if (WorkType.MOVEMENT_CODE.equals(operation.getWorkType().getCode())) {
-			discardOperation = discardRecordService.createForMovement(
-					operation,
-					request.completedDate(),
-					worker,
-					request.memo(),
-					movementDiscardQuantities(request));
+		WorkOperationView discardOperation = null;
+		if (WorkTypeDefinition.MOVEMENT.name().equals(operation.getWorkType().getCode())) {
+			discardOperation = discardRecordService.createForMovement(operation, request.completedDate(), worker,
+					request.memo(), movementDiscardQuantities(request));
 		}
-		Map<String, Object> commandDetails = objectMapper.convertValue(
-				request, new TypeReference<Map<String, Object>>() {});
-		var result = workEffectProcessor.applyBatch(
-				operation,
-				request.idempotencyKey(),
-				requestedIds.stream().sorted().toList(),
-				new WorkEffectCommand(
-						executedAt,
-						worker,
-						commandDetails,
-						request,
-						placementExclusionOrchidGroupIds));
+
+		var result = workEffectProcessor.applyBatch(operation, request.idempotencyKey(),
+				requestedIds.stream().sorted().toList(), command);
 		Map<String, Object> resultDetails = result.resultDetails();
 		if (discardOperation != null) {
 			resultDetails = new LinkedHashMap<>(resultDetails);
@@ -153,19 +153,14 @@ public class StructureChangeExecutionService {
 		Map<String, Object> completedResultDetails = resultDetails;
 		request.sources().forEach(source -> {
 			WorkTargetExecution execution = executionByGroupId.get(source.sourceOrchidGroupId());
-			execution.recordPartialEffect(
-					source.inputQuantity(),
-					execution.getTarget().getQuantitySnapshot(),
-					executedAt,
-					worker,
-					completedResultDetails);
+			execution.recordPartialEffect(source.inputQuantity(), execution.getTarget().getQuantitySnapshot(),
+					executedAt, worker, completedResultDetails);
 		});
 		progressService.completeIfAllTargetsClosed(operation, executedAt);
 		return queryService.get(operationId);
 	}
 
-	private Map<Long, Integer> movementDiscardQuantities(
-			StructureChangeExecutionRequest request) {
+	private Map<Long, Integer> movementDiscardQuantities(StructureChangeCommand request) {
 		Map<Long, Integer> movedBySourceId = MovementQuantityAllocator.allocateMovedBySource(request);
 		Map<Long, Integer> discardQuantities = new LinkedHashMap<>();
 		request.sources().forEach(source -> {
@@ -183,4 +178,5 @@ public class StructureChangeExecutionService {
 			throw new IllegalArgumentException("진행 중인 구조 변경·자리 이동 작업만 실행할 수 있습니다.");
 		}
 	}
+
 }

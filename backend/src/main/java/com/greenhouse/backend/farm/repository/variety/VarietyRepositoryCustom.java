@@ -12,4 +12,5 @@ public interface VarietyRepositoryCustom {
 	List<String> findDistinctGenera();
 
 	List<VarietyNameProjection> findActiveNames();
+
 }

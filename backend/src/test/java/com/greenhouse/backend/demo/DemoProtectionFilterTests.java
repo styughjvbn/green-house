@@ -2,23 +2,26 @@ package com.greenhouse.backend.demo;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import com.greenhouse.backend.common.api.ErrorResponseWriter;
 import java.time.Clock;
 import java.time.Instant;
 import java.time.ZoneOffset;
-
 import org.junit.jupiter.api.Test;
 import org.springframework.mock.web.MockFilterChain;
 import org.springframework.mock.web.MockHttpServletRequest;
 import org.springframework.mock.web.MockHttpServletResponse;
+import tools.jackson.databind.json.JsonMapper;
 
 class DemoProtectionFilterTests {
 
 	private final Clock clock = Clock.fixed(Instant.parse("2026-07-23T00:00:00Z"), ZoneOffset.UTC);
 
+	private final ErrorResponseWriter errorResponseWriter = new ErrorResponseWriter(JsonMapper.builder().build());
+
 	@Test
 	void limitsRequestsPerClientAndMinute() throws Exception {
 		var properties = new DemoProperties(true, "demo", 1, 10, 100, 1024);
-		var filter = new DemoProtectionFilter(properties, clock);
+		var filter = new DemoProtectionFilter(properties, clock, errorResponseWriter);
 
 		var firstResponse = perform(filter, "GET");
 		var secondResponse = perform(filter, "GET");
@@ -31,7 +34,7 @@ class DemoProtectionFilterTests {
 	@Test
 	void limitsDailyMutations() throws Exception {
 		var properties = new DemoProperties(true, "demo", 10, 10, 1, 1024);
-		var filter = new DemoProtectionFilter(properties, clock);
+		var filter = new DemoProtectionFilter(properties, clock, errorResponseWriter);
 
 		var firstResponse = perform(filter, "POST");
 		var secondResponse = perform(filter, "POST");
@@ -48,4 +51,5 @@ class DemoProtectionFilterTests {
 		filter.doFilter(request, response, new MockFilterChain());
 		return response;
 	}
+
 }

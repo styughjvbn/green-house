@@ -1,12 +1,13 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import type { ColumnDef } from "@tanstack/react-table";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { RefreshCw } from "lucide-react";
 import type {
   AuctionSettlement,
   AuctionSettlementLine,
+  AuctionSettlementListItem,
 } from "@/entities/farm/types";
 import { formatShortDate } from "@/shared/lib/dateFormat";
 import { DataTable } from "@/shared/ui/DataTable";
@@ -14,7 +15,14 @@ import {
   confirmAuctionSettlementPayment,
   rebuildAuctionSettlement,
 } from "../../api/salesApi";
-import { auctionSettlementsQueryOptions } from "../../model/salesQueryOptions";
+import {
+  auctionSettlementPageQueryOptions,
+  auctionSettlementSummaryQueryOptions,
+  auctionSettlementDetailQueryOptions,
+} from "../../model/salesQueryOptions";
+import { useSearchParams } from "next/navigation";
+import { useUrlSearchParamsWriter } from "@/shared/lib/useUrlSearchParamsWriter";
+import { readSettlementRouteState } from "../../lib/salesRouteParams";
 import { salesQueryKeys } from "../../model/salesQueryKeys";
 import { ManualPaymentPanel } from "./ManualPaymentPanel";
 import { TabError, TabSplit, TabStack } from "@/shared/ui/TabLayout";
@@ -67,40 +75,39 @@ const settlementLineColumns: ColumnDef<AuctionSettlementLine, unknown>[] = [
 
 export function AuctionSettlementView() {
   const queryClient = useQueryClient();
-  const settlementsQuery = useQuery(auctionSettlementsQueryOptions());
-  const settlements = useMemo(
-    () => settlementsQuery.data ?? [],
-    [settlementsQuery.data],
-  );
-  const [selectedId, setSelectedId] = useState<number | null>(null);
-  const [page, setPage] = useState(0);
-  const [pageSize, setPageSize] = useState(10);
+  const route = readSettlementRouteState(useSearchParams());
+  const writeUrlParams = useUrlSearchParamsWriter();
+  const settlementsQuery = useQuery(auctionSettlementPageQueryOptions(route));
+  const summaryQuery = useQuery(auctionSettlementSummaryQueryOptions());
+  const pageData = settlementsQuery.data;
+  const selectedId =
+    route.selectedSettlementId ?? pageData?.content[0]?.id ?? null;
+  const detailQuery = useQuery({
+    ...auctionSettlementDetailQueryOptions(selectedId ?? 0),
+    enabled: selectedId != null,
+  });
+  const selected = detailQuery.data ?? null;
   const [mutating, setMutating] = useState(false);
   const [mutationError, setMutationError] = useState<string | null>(null);
-  const selected =
-    settlements.find((settlement) => settlement.id === selectedId) ??
-    settlements[0] ??
-    null;
-  const totals = useMemo(
-    () => ({
-      expected: settlements.reduce(
-        (sum, settlement) => sum + settlement.expectedDepositAmount,
-        0,
-      ),
-      remaining: settlements.reduce(
-        (sum, settlement) => sum + settlement.remainingAmount,
-        0,
-      ),
-    }),
-    [settlements],
-  );
-  const totalPages = Math.max(1, Math.ceil(settlements.length / pageSize));
-  const visiblePage = Math.min(page, totalPages - 1);
-  const paginatedSettlements = useMemo(() => {
-    const start = visiblePage * pageSize;
-    return settlements.slice(start, start + pageSize);
-  }, [pageSize, settlements, visiblePage]);
-  const columns = useMemo<ColumnDef<AuctionSettlement, unknown>[]>(
+  const totalPages = Math.max(1, pageData?.totalPages ?? 1);
+
+  useEffect(() => {
+    if (pageData && route.page >= Math.max(1, pageData.totalPages)) {
+      writeUrlParams((params) =>
+        params.set("page", String(Math.max(0, pageData.totalPages - 1))),
+      );
+    }
+  }, [pageData, route.page, writeUrlParams]);
+
+  function changePage(page: number, size = route.size) {
+    writeUrlParams((params) => {
+      params.set("page", String(page));
+      params.set("size", String(size));
+      params.delete("settlementId");
+      params.delete("paymentPage");
+    }, "push");
+  }
+  const columns = useMemo<ColumnDef<AuctionSettlementListItem, unknown>[]>(
     () => [
       {
         accessorKey: "auctionHouseName",
@@ -158,7 +165,7 @@ export function AuctionSettlementView() {
         selected.auctionHouseId,
         selected.auctionDate,
       );
-      updateSettlement(rebuilt);
+      await updateSettlement(rebuilt);
     } catch (requestError) {
       setMutationError(
         requestError instanceof Error
@@ -170,24 +177,26 @@ export function AuctionSettlementView() {
     }
   }
 
-  function updateSettlement(updated: AuctionSettlement) {
-    queryClient.setQueryData<AuctionSettlement[]>(
-      salesQueryKeys.auction.settlements,
-      (current) =>
-        current?.map((item) => (item.id === updated.id ? updated : item)) ?? [
-          updated,
-        ],
-    );
+  async function updateSettlement(updated: AuctionSettlement) {
+    const queryKey = salesQueryKeys.auction.settlementDetail(updated.id);
+    await queryClient.cancelQueries({ queryKey, exact: true });
+    queryClient.setQueryData(queryKey, updated);
+    await Promise.all([
+      queryClient.invalidateQueries({
+        queryKey: salesQueryKeys.auction.settlementPages,
+      }),
+      queryClient.invalidateQueries({
+        queryKey: salesQueryKeys.auction.settlementSummary,
+      }),
+    ]);
   }
 
-  const loading = settlementsQuery.isFetching || mutating;
+  const loading =
+    settlementsQuery.isFetching || detailQuery.isFetching || mutating;
+  const queryError =
+    settlementsQuery.error ?? summaryQuery.error ?? detailQuery.error;
   const error =
-    mutationError ??
-    (settlementsQuery.error == null
-      ? null
-      : settlementsQuery.error instanceof Error
-        ? settlementsQuery.error.message
-        : "정산 목록을 조회하지 못했습니다.");
+    mutationError ?? (queryError instanceof Error ? queryError.message : null);
 
   return (
     <TabStack>
@@ -199,8 +208,14 @@ export function AuctionSettlementView() {
           </p>
         </div>
         <div className="flex items-center gap-5 text-right">
-          <Summary label="예상 입금액" value={totals.expected} />
-          <Summary label="미입금 잔액" value={totals.remaining} />
+          <Summary
+            label="예상 입금액"
+            value={summaryQuery.data?.expectedDepositAmount}
+          />
+          <Summary
+            label="미입금 잔액"
+            value={summaryQuery.data?.remainingAmount}
+          />
           <button
             className="inline-flex h-9 items-center gap-1.5 rounded-md border border-[#ccd6ca] px-3 text-xs font-semibold disabled:opacity-50"
             type="button"
@@ -223,26 +238,33 @@ export function AuctionSettlementView() {
       >
         <DataTable
           columns={columns}
-          data={paginatedSettlements}
+          data={pageData?.content ?? []}
+          isLoading={settlementsQuery.isPending}
           emptyMessage="생성된 경매 정산이 없습니다."
           getRowId={(row) => String(row.id)}
-          pageIndex={visiblePage}
-          pageSize={pageSize}
+          pageIndex={route.page}
+          pageSize={route.size}
           pageSizeOptions={[10, 20, 50]}
           selectedRowId={selected?.id == null ? null : String(selected.id)}
           settingsKey="sales.settlements"
           title="정산 목록"
-          totalLabel={`총 ${settlements.length.toLocaleString()}건`}
+          totalLabel={`총 ${(pageData?.totalElements ?? 0).toLocaleString()}건`}
           totalPages={totalPages}
-          onPageChange={setPage}
-          onPageSizeChange={(nextPageSize) => {
-            setPageSize(nextPageSize);
-            setPage(0);
-          }}
-          onRowClick={(row) => setSelectedId(row.id)}
+          onPageChange={(page) => changePage(page)}
+          onPageSizeChange={(size) => changePage(0, size)}
+          onRowClick={(row) =>
+            writeUrlParams((params) => {
+              params.set("settlementId", String(row.id));
+              params.delete("paymentPage");
+            }, "push")
+          }
         />
 
-        <SettlementDetail settlement={selected} onUpdate={updateSettlement} />
+        {detailQuery.isFetching && !selected ? (
+          <DetailEmpty>정산 상세를 불러오는 중입니다.</DetailEmpty>
+        ) : (
+          <SettlementDetail settlement={selected} onUpdate={updateSettlement} />
+        )}
       </TabSplit>
     </TabStack>
   );
@@ -253,7 +275,7 @@ function SettlementDetail({
   onUpdate,
 }: {
   settlement: AuctionSettlement | null;
-  onUpdate: (settlement: AuctionSettlement) => void;
+  onUpdate: (settlement: AuctionSettlement) => Promise<void>;
 }) {
   if (!settlement) {
     return <DetailEmpty>확인할 정산을 선택하세요.</DetailEmpty>;
@@ -313,20 +335,31 @@ function SettlementDetail({
         remainingAmount={settlement.remainingAmount}
         expectedPaymentDate={settlement.expectedPaymentDate}
         onConfirm={async (payload) => {
-          onUpdate(
-            await confirmAuctionSettlementPayment(settlement.id, payload),
+          const updated = await confirmAuctionSettlementPayment(
+            settlement.id,
+            payload,
           );
+          await onUpdate(updated);
+          return updated.remainingAmount;
         }}
       />
     </DetailCard>
   );
 }
 
-function Summary({ label, value }: { label: string; value: number }) {
+function Summary({
+  label,
+  value,
+}: {
+  label: string;
+  value: number | undefined;
+}) {
   return (
     <div>
       <p className="text-[11px] text-[#68756c]">{label}</p>
-      <p className="text-sm font-bold">{value.toLocaleString()}원</p>
+      <p className="text-sm font-bold">
+        {value == null ? "-" : `${value.toLocaleString()}원`}
+      </p>
     </div>
   );
 }

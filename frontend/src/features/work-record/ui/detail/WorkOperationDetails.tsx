@@ -1,10 +1,12 @@
 import { useState } from "react";
+import { useQuery } from "@tanstack/react-query";
 import type { WorkOperation } from "@/entities/farm/types";
 import {
   getWorkRecordFieldLabel,
   isVisibleWorkRecordField,
 } from "@/entities/farm/workTypes";
 import { workOperationScopeLabel } from "../../lib/workOperationDisplay";
+import { workOperationDetailsQueryOptions } from "../../model/workRecordQueryOptions";
 import type {
   WorkExecutionDetail,
   WorkExecutionResult,
@@ -59,18 +61,12 @@ const TABS: Array<{ id: DetailTab; label: string }> = [
 
 export function WorkOperationDetails({
   operation,
-  detail,
-  loading,
-  error,
   actionLoading,
   onTargetAction,
   onExecuteTarget,
   onRequestTargetCompletion,
 }: {
   operation: WorkOperation;
-  detail: WorkOperationDetail | null;
-  loading: boolean;
-  error: string | null;
   actionLoading: boolean;
   onTargetAction: (
     targetId: number,
@@ -80,6 +76,17 @@ export function WorkOperationDetails({
   onRequestTargetCompletion: (targetId: number) => void;
 }) {
   const [activeTab, setActiveTab] = useState<DetailTab>("overview");
+  const detailQuery = useQuery({
+    ...workOperationDetailsQueryOptions(operation.id),
+    enabled: activeTab === "execution",
+  });
+  const detail = detailQuery.data ?? null;
+  const detailError =
+    detailQuery.error instanceof Error
+      ? detailQuery.error.message
+      : detailQuery.error
+        ? "완료 상세를 불러오지 못했습니다."
+        : null;
   const details =
     detail?.fields.filter((field) => !isHiddenDetailKey(field.key)) ??
     Object.entries(operation.details ?? {})
@@ -136,8 +143,8 @@ export function WorkOperationDetails({
         {activeTab === "execution" ? (
           <ExecutionTab
             detail={detail}
-            error={error}
-            loading={loading}
+            error={detailError}
+            loading={detailQuery.isPending}
             operation={operation}
           />
         ) : null}

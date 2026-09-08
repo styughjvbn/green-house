@@ -1,0 +1,1487 @@
+[ {
+  "name" : "empty",
+  "command" : null,
+  "result" : null,
+  "expected" : {
+    "summary" : {
+      "id" : 0,
+      "workTypeId" : null,
+      "workTypeCode" : "CUSTOM",
+      "workType" : "작업",
+      "title" : null,
+      "status" : null,
+      "plannedStartDate" : null,
+      "plannedEndDate" : null,
+      "actualStartAt" : null,
+      "actualEndAt" : null,
+      "worker" : null,
+      "memo" : null
+    },
+    "fields" : [ {
+      "key" : "materialName",
+      "label" : "자재명",
+      "value" : "자재"
+    }, {
+      "key" : "quantity",
+      "label" : "사용량",
+      "value" : "3"
+    }, {
+      "key" : "enabled",
+      "label" : "enabled",
+      "value" : "예"
+    }, {
+      "key" : "tags",
+      "label" : "tags",
+      "value" : "가, 2"
+    } ],
+    "executions" : [ {
+      "id" : 10,
+      "executionKey" : "EXECUTION:fixture",
+      "resultType" : "REPOT",
+      "appliedAt" : [ 2026, 8, 20, 9, 0 ],
+      "canceledAt" : null,
+      "worker" : "작업자",
+      "targetId" : null,
+      "inboundRecordId" : null,
+      "sources" : [ {
+        "orchidGroupId" : 1,
+        "inputQuantity" : null,
+        "beforeQuantity" : null,
+        "afterQuantity" : null,
+        "remainingQuantity" : null,
+        "beforeStatus" : null,
+        "afterStatus" : null,
+        "fromBedZoneId" : null,
+        "releasedStartPosition" : null,
+        "releasedEndPosition" : null
+      } ],
+      "results" : [ {
+        "orchidGroupId" : 3,
+        "quantity" : null,
+        "purpose" : null,
+        "bedZoneId" : null,
+        "startPosition" : null,
+        "endPosition" : null,
+        "potSize" : null,
+        "ageYear" : null,
+        "placementType" : null,
+        "trayCount" : null,
+        "memo" : null,
+        "varietyName" : "현재 품종",
+        "location" : null
+      } ],
+      "lossQuantity" : null,
+      "actualQuantity" : null,
+      "reason" : null,
+      "linkedWorkOperationId" : null
+    } ],
+    "corrections" : [ ]
+  }
+}, {
+  "name" : "unknown",
+  "command" : {
+    "future" : {
+      "x" : 1
+    }
+  },
+  "result" : {
+    "future" : [ 1, 2 ]
+  },
+  "expected" : {
+    "summary" : {
+      "id" : 0,
+      "workTypeId" : null,
+      "workTypeCode" : "CUSTOM",
+      "workType" : "작업",
+      "title" : null,
+      "status" : null,
+      "plannedStartDate" : null,
+      "plannedEndDate" : null,
+      "actualStartAt" : null,
+      "actualEndAt" : null,
+      "worker" : null,
+      "memo" : null
+    },
+    "fields" : [ {
+      "key" : "materialName",
+      "label" : "자재명",
+      "value" : "자재"
+    }, {
+      "key" : "quantity",
+      "label" : "사용량",
+      "value" : "3"
+    }, {
+      "key" : "enabled",
+      "label" : "enabled",
+      "value" : "예"
+    }, {
+      "key" : "tags",
+      "label" : "tags",
+      "value" : "가, 2"
+    } ],
+    "executions" : [ {
+      "id" : 10,
+      "executionKey" : "EXECUTION:fixture",
+      "resultType" : "REPOT",
+      "appliedAt" : [ 2026, 8, 20, 9, 0 ],
+      "canceledAt" : null,
+      "worker" : "작업자",
+      "targetId" : null,
+      "inboundRecordId" : null,
+      "sources" : [ {
+        "orchidGroupId" : 1,
+        "inputQuantity" : null,
+        "beforeQuantity" : null,
+        "afterQuantity" : null,
+        "remainingQuantity" : null,
+        "beforeStatus" : null,
+        "afterStatus" : null,
+        "fromBedZoneId" : null,
+        "releasedStartPosition" : null,
+        "releasedEndPosition" : null
+      } ],
+      "results" : [ {
+        "orchidGroupId" : 3,
+        "quantity" : null,
+        "purpose" : null,
+        "bedZoneId" : null,
+        "startPosition" : null,
+        "endPosition" : null,
+        "potSize" : null,
+        "ageYear" : null,
+        "placementType" : null,
+        "trayCount" : null,
+        "memo" : null,
+        "varietyName" : "현재 품종",
+        "location" : null
+      } ],
+      "lossQuantity" : null,
+      "actualQuantity" : null,
+      "reason" : null,
+      "linkedWorkOperationId" : null
+    } ],
+    "corrections" : [ ]
+  }
+}, {
+  "name" : "structure",
+  "command" : {
+    "sources" : [ {
+      "sourceOrchidGroupId" : 1,
+      "inputQuantity" : 10,
+      "releasedStartPosition" : "1.25",
+      "releasedEndPosition" : 2
+    } ],
+    "results" : [ {
+      "bedZoneId" : 9,
+      "quantity" : 8,
+      "purpose" : "NORMAL",
+      "potSize" : "4치",
+      "ageYear" : 2,
+      "placementType" : "TRAY",
+      "trayCount" : 1,
+      "memo" : "저장 메모",
+      "startPosition" : 2,
+      "endPosition" : "3.50"
+    } ]
+  },
+  "result" : {
+    "results" : [ {
+      "orchidGroupId" : 3,
+      "quantity" : 7,
+      "purpose" : "HELD"
+    } ],
+    "resultOrchidGroupIds" : [ 3 ],
+    "lossQuantity" : 3
+  },
+  "expected" : {
+    "summary" : {
+      "id" : 0,
+      "workTypeId" : null,
+      "workTypeCode" : "CUSTOM",
+      "workType" : "작업",
+      "title" : null,
+      "status" : null,
+      "plannedStartDate" : null,
+      "plannedEndDate" : null,
+      "actualStartAt" : null,
+      "actualEndAt" : null,
+      "worker" : null,
+      "memo" : null
+    },
+    "fields" : [ {
+      "key" : "materialName",
+      "label" : "자재명",
+      "value" : "자재"
+    }, {
+      "key" : "quantity",
+      "label" : "사용량",
+      "value" : "3"
+    }, {
+      "key" : "enabled",
+      "label" : "enabled",
+      "value" : "예"
+    }, {
+      "key" : "tags",
+      "label" : "tags",
+      "value" : "가, 2"
+    } ],
+    "executions" : [ {
+      "id" : 10,
+      "executionKey" : "EXECUTION:fixture",
+      "resultType" : "REPOT",
+      "appliedAt" : [ 2026, 8, 20, 9, 0 ],
+      "canceledAt" : null,
+      "worker" : "작업자",
+      "targetId" : null,
+      "inboundRecordId" : null,
+      "sources" : [ {
+        "orchidGroupId" : 1,
+        "inputQuantity" : 10,
+        "beforeQuantity" : null,
+        "afterQuantity" : null,
+        "remainingQuantity" : null,
+        "beforeStatus" : null,
+        "afterStatus" : null,
+        "fromBedZoneId" : null,
+        "releasedStartPosition" : 1.25,
+        "releasedEndPosition" : 2
+      } ],
+      "results" : [ {
+        "orchidGroupId" : 3,
+        "quantity" : 7,
+        "purpose" : "HELD",
+        "bedZoneId" : 9,
+        "startPosition" : 2,
+        "endPosition" : 3.5,
+        "potSize" : "4치",
+        "ageYear" : 2,
+        "placementType" : "TRAY",
+        "trayCount" : 1,
+        "memo" : "저장 메모",
+        "varietyName" : "현재 품종",
+        "location" : null
+      } ],
+      "lossQuantity" : 3,
+      "actualQuantity" : null,
+      "reason" : null,
+      "linkedWorkOperationId" : null
+    } ],
+    "corrections" : [ ]
+  }
+}, {
+  "name" : "correction",
+  "command" : {
+    "sources" : [ {
+      "sourceOrchidGroupId" : 99,
+      "inputQuantity" : 3
+    } ]
+  },
+  "result" : {
+    "adjustments" : [ {
+      "orchidGroupId" : 3,
+      "beforeQuantity" : 10,
+      "afterQuantity" : 8,
+      "beforeStatus" : "관리",
+      "afterStatus" : "정상"
+    } ],
+    "originalWorkOperationId" : 4
+  },
+  "expected" : {
+    "summary" : {
+      "id" : 0,
+      "workTypeId" : null,
+      "workTypeCode" : "CUSTOM",
+      "workType" : "작업",
+      "title" : null,
+      "status" : null,
+      "plannedStartDate" : null,
+      "plannedEndDate" : null,
+      "actualStartAt" : null,
+      "actualEndAt" : null,
+      "worker" : null,
+      "memo" : null
+    },
+    "fields" : [ {
+      "key" : "materialName",
+      "label" : "자재명",
+      "value" : "자재"
+    }, {
+      "key" : "quantity",
+      "label" : "사용량",
+      "value" : "3"
+    }, {
+      "key" : "enabled",
+      "label" : "enabled",
+      "value" : "예"
+    }, {
+      "key" : "tags",
+      "label" : "tags",
+      "value" : "가, 2"
+    } ],
+    "executions" : [ {
+      "id" : 10,
+      "executionKey" : "EXECUTION:fixture",
+      "resultType" : "REPOT",
+      "appliedAt" : [ 2026, 8, 20, 9, 0 ],
+      "canceledAt" : null,
+      "worker" : "작업자",
+      "targetId" : null,
+      "inboundRecordId" : null,
+      "sources" : [ {
+        "orchidGroupId" : 3,
+        "inputQuantity" : null,
+        "beforeQuantity" : 10,
+        "afterQuantity" : 8,
+        "remainingQuantity" : null,
+        "beforeStatus" : "관리",
+        "afterStatus" : "정상",
+        "fromBedZoneId" : null,
+        "releasedStartPosition" : null,
+        "releasedEndPosition" : null
+      } ],
+      "results" : [ {
+        "orchidGroupId" : 3,
+        "quantity" : null,
+        "purpose" : null,
+        "bedZoneId" : null,
+        "startPosition" : null,
+        "endPosition" : null,
+        "potSize" : null,
+        "ageYear" : null,
+        "placementType" : null,
+        "trayCount" : null,
+        "memo" : null,
+        "varietyName" : "현재 품종",
+        "location" : null
+      } ],
+      "lossQuantity" : null,
+      "actualQuantity" : null,
+      "reason" : null,
+      "linkedWorkOperationId" : 4
+    } ],
+    "corrections" : [ ]
+  }
+}, {
+  "name" : "discard",
+  "command" : {
+    "reason" : "요청 사유"
+  },
+  "result" : {
+    "orchidGroupId" : 1,
+    "beforeQuantity" : 10,
+    "discardedQuantity" : 2,
+    "remainingQuantity" : 8,
+    "beforeStatus" : "관리",
+    "status" : "관리",
+    "reason" : "저장 사유"
+  },
+  "expected" : {
+    "summary" : {
+      "id" : 0,
+      "workTypeId" : null,
+      "workTypeCode" : "CUSTOM",
+      "workType" : "작업",
+      "title" : null,
+      "status" : null,
+      "plannedStartDate" : null,
+      "plannedEndDate" : null,
+      "actualStartAt" : null,
+      "actualEndAt" : null,
+      "worker" : null,
+      "memo" : null
+    },
+    "fields" : [ {
+      "key" : "materialName",
+      "label" : "자재명",
+      "value" : "자재"
+    }, {
+      "key" : "quantity",
+      "label" : "사용량",
+      "value" : "3"
+    }, {
+      "key" : "enabled",
+      "label" : "enabled",
+      "value" : "예"
+    }, {
+      "key" : "tags",
+      "label" : "tags",
+      "value" : "가, 2"
+    } ],
+    "executions" : [ {
+      "id" : 10,
+      "executionKey" : "EXECUTION:fixture",
+      "resultType" : "REPOT",
+      "appliedAt" : [ 2026, 8, 20, 9, 0 ],
+      "canceledAt" : null,
+      "worker" : "작업자",
+      "targetId" : null,
+      "inboundRecordId" : null,
+      "sources" : [ {
+        "orchidGroupId" : 1,
+        "inputQuantity" : 2,
+        "beforeQuantity" : 10,
+        "afterQuantity" : 8,
+        "remainingQuantity" : 8,
+        "beforeStatus" : "관리",
+        "afterStatus" : "관리",
+        "fromBedZoneId" : null,
+        "releasedStartPosition" : null,
+        "releasedEndPosition" : null
+      } ],
+      "results" : [ {
+        "orchidGroupId" : 3,
+        "quantity" : null,
+        "purpose" : null,
+        "bedZoneId" : null,
+        "startPosition" : null,
+        "endPosition" : null,
+        "potSize" : null,
+        "ageYear" : null,
+        "placementType" : null,
+        "trayCount" : null,
+        "memo" : null,
+        "varietyName" : "현재 품종",
+        "location" : null
+      } ],
+      "lossQuantity" : null,
+      "actualQuantity" : null,
+      "reason" : "저장 사유",
+      "linkedWorkOperationId" : null
+    } ],
+    "corrections" : [ ]
+  }
+}, {
+  "name" : "move",
+  "command" : {
+    "toBedZoneId" : 8
+  },
+  "result" : {
+    "orchidGroupId" : 1,
+    "fromBedZoneId" : 7,
+    "toBedZoneId" : 9,
+    "startPosition" : "1.2",
+    "endPosition" : 3
+  },
+  "expected" : {
+    "summary" : {
+      "id" : 0,
+      "workTypeId" : null,
+      "workTypeCode" : "CUSTOM",
+      "workType" : "작업",
+      "title" : null,
+      "status" : null,
+      "plannedStartDate" : null,
+      "plannedEndDate" : null,
+      "actualStartAt" : null,
+      "actualEndAt" : null,
+      "worker" : null,
+      "memo" : null
+    },
+    "fields" : [ {
+      "key" : "materialName",
+      "label" : "자재명",
+      "value" : "자재"
+    }, {
+      "key" : "quantity",
+      "label" : "사용량",
+      "value" : "3"
+    }, {
+      "key" : "enabled",
+      "label" : "enabled",
+      "value" : "예"
+    }, {
+      "key" : "tags",
+      "label" : "tags",
+      "value" : "가, 2"
+    } ],
+    "executions" : [ {
+      "id" : 10,
+      "executionKey" : "EXECUTION:fixture",
+      "resultType" : "REPOT",
+      "appliedAt" : [ 2026, 8, 20, 9, 0 ],
+      "canceledAt" : null,
+      "worker" : "작업자",
+      "targetId" : null,
+      "inboundRecordId" : null,
+      "sources" : [ {
+        "orchidGroupId" : 1,
+        "inputQuantity" : null,
+        "beforeQuantity" : null,
+        "afterQuantity" : null,
+        "remainingQuantity" : null,
+        "beforeStatus" : null,
+        "afterStatus" : null,
+        "fromBedZoneId" : 7,
+        "releasedStartPosition" : null,
+        "releasedEndPosition" : null
+      } ],
+      "results" : [ {
+        "orchidGroupId" : 3,
+        "quantity" : null,
+        "purpose" : null,
+        "bedZoneId" : 9,
+        "startPosition" : 1.2,
+        "endPosition" : 3,
+        "potSize" : null,
+        "ageYear" : null,
+        "placementType" : null,
+        "trayCount" : null,
+        "memo" : null,
+        "varietyName" : "현재 품종",
+        "location" : null
+      } ],
+      "lossQuantity" : null,
+      "actualQuantity" : null,
+      "reason" : null,
+      "linkedWorkOperationId" : null
+    } ],
+    "corrections" : [ ]
+  }
+}, {
+  "name" : "potting",
+  "command" : {
+    "results" : [ {
+      "bedZoneId" : 9,
+      "quantity" : 5
+    }, {
+      "bedZoneId" : 8,
+      "quantity" : 6
+    } ]
+  },
+  "result" : {
+    "inboundRecordId" : 10,
+    "createdOrchidGroupIds" : [ 3, 4 ],
+    "actualQuantity" : 11,
+    "resultCount" : 2
+  },
+  "expected" : {
+    "summary" : {
+      "id" : 0,
+      "workTypeId" : null,
+      "workTypeCode" : "CUSTOM",
+      "workType" : "작업",
+      "title" : null,
+      "status" : null,
+      "plannedStartDate" : null,
+      "plannedEndDate" : null,
+      "actualStartAt" : null,
+      "actualEndAt" : null,
+      "worker" : null,
+      "memo" : null
+    },
+    "fields" : [ {
+      "key" : "materialName",
+      "label" : "자재명",
+      "value" : "자재"
+    }, {
+      "key" : "quantity",
+      "label" : "사용량",
+      "value" : "3"
+    }, {
+      "key" : "enabled",
+      "label" : "enabled",
+      "value" : "예"
+    }, {
+      "key" : "tags",
+      "label" : "tags",
+      "value" : "가, 2"
+    } ],
+    "executions" : [ {
+      "id" : 10,
+      "executionKey" : "EXECUTION:fixture",
+      "resultType" : "REPOT",
+      "appliedAt" : [ 2026, 8, 20, 9, 0 ],
+      "canceledAt" : null,
+      "worker" : "작업자",
+      "targetId" : null,
+      "inboundRecordId" : 10,
+      "sources" : [ {
+        "orchidGroupId" : 1,
+        "inputQuantity" : null,
+        "beforeQuantity" : null,
+        "afterQuantity" : null,
+        "remainingQuantity" : null,
+        "beforeStatus" : null,
+        "afterStatus" : null,
+        "fromBedZoneId" : null,
+        "releasedStartPosition" : null,
+        "releasedEndPosition" : null
+      } ],
+      "results" : [ {
+        "orchidGroupId" : 3,
+        "quantity" : 5,
+        "purpose" : null,
+        "bedZoneId" : 9,
+        "startPosition" : null,
+        "endPosition" : null,
+        "potSize" : null,
+        "ageYear" : null,
+        "placementType" : null,
+        "trayCount" : null,
+        "memo" : null,
+        "varietyName" : "현재 품종",
+        "location" : null
+      }, {
+        "orchidGroupId" : 4,
+        "quantity" : 6,
+        "purpose" : null,
+        "bedZoneId" : 8,
+        "startPosition" : null,
+        "endPosition" : null,
+        "potSize" : null,
+        "ageYear" : null,
+        "placementType" : null,
+        "trayCount" : null,
+        "memo" : null,
+        "varietyName" : null,
+        "location" : null
+      } ],
+      "lossQuantity" : null,
+      "actualQuantity" : 11,
+      "reason" : null,
+      "linkedWorkOperationId" : null
+    } ],
+    "corrections" : [ ]
+  }
+}, {
+  "name" : "legacy-single",
+  "command" : { },
+  "result" : {
+    "sourceOrchidGroupId" : "1",
+    "inputQuantity" : 10,
+    "remainingQuantity" : 2,
+    "resultOrchidGroupId" : "3",
+    "totalInputQuantity" : 8,
+    "lossQuantity" : 1
+  },
+  "expected" : {
+    "summary" : {
+      "id" : 0,
+      "workTypeId" : null,
+      "workTypeCode" : "CUSTOM",
+      "workType" : "작업",
+      "title" : null,
+      "status" : null,
+      "plannedStartDate" : null,
+      "plannedEndDate" : null,
+      "actualStartAt" : null,
+      "actualEndAt" : null,
+      "worker" : null,
+      "memo" : null
+    },
+    "fields" : [ {
+      "key" : "materialName",
+      "label" : "자재명",
+      "value" : "자재"
+    }, {
+      "key" : "quantity",
+      "label" : "사용량",
+      "value" : "3"
+    }, {
+      "key" : "enabled",
+      "label" : "enabled",
+      "value" : "예"
+    }, {
+      "key" : "tags",
+      "label" : "tags",
+      "value" : "가, 2"
+    } ],
+    "executions" : [ {
+      "id" : 10,
+      "executionKey" : "EXECUTION:fixture",
+      "resultType" : "REPOT",
+      "appliedAt" : [ 2026, 8, 20, 9, 0 ],
+      "canceledAt" : null,
+      "worker" : "작업자",
+      "targetId" : null,
+      "inboundRecordId" : null,
+      "sources" : [ {
+        "orchidGroupId" : 1,
+        "inputQuantity" : 10,
+        "beforeQuantity" : null,
+        "afterQuantity" : null,
+        "remainingQuantity" : 2,
+        "beforeStatus" : null,
+        "afterStatus" : null,
+        "fromBedZoneId" : null,
+        "releasedStartPosition" : null,
+        "releasedEndPosition" : null
+      } ],
+      "results" : [ {
+        "orchidGroupId" : 3,
+        "quantity" : null,
+        "purpose" : null,
+        "bedZoneId" : null,
+        "startPosition" : null,
+        "endPosition" : null,
+        "potSize" : null,
+        "ageYear" : null,
+        "placementType" : null,
+        "trayCount" : null,
+        "memo" : null,
+        "varietyName" : "현재 품종",
+        "location" : null
+      } ],
+      "lossQuantity" : 1,
+      "actualQuantity" : null,
+      "reason" : null,
+      "linkedWorkOperationId" : null
+    } ],
+    "corrections" : [ ]
+  }
+}, {
+  "name" : "legacy-many",
+  "command" : { },
+  "result" : {
+    "sourceInputQuantities" : {
+      "1" : 4,
+      "2" : 5
+    },
+    "createdOrchidGroupIds" : [ 3, 4 ]
+  },
+  "expected" : {
+    "summary" : {
+      "id" : 0,
+      "workTypeId" : null,
+      "workTypeCode" : "CUSTOM",
+      "workType" : "작업",
+      "title" : null,
+      "status" : null,
+      "plannedStartDate" : null,
+      "plannedEndDate" : null,
+      "actualStartAt" : null,
+      "actualEndAt" : null,
+      "worker" : null,
+      "memo" : null
+    },
+    "fields" : [ {
+      "key" : "materialName",
+      "label" : "자재명",
+      "value" : "자재"
+    }, {
+      "key" : "quantity",
+      "label" : "사용량",
+      "value" : "3"
+    }, {
+      "key" : "enabled",
+      "label" : "enabled",
+      "value" : "예"
+    }, {
+      "key" : "tags",
+      "label" : "tags",
+      "value" : "가, 2"
+    } ],
+    "executions" : [ {
+      "id" : 10,
+      "executionKey" : "EXECUTION:fixture",
+      "resultType" : "REPOT",
+      "appliedAt" : [ 2026, 8, 20, 9, 0 ],
+      "canceledAt" : null,
+      "worker" : "작업자",
+      "targetId" : null,
+      "inboundRecordId" : null,
+      "sources" : [ {
+        "orchidGroupId" : 1,
+        "inputQuantity" : 4,
+        "beforeQuantity" : null,
+        "afterQuantity" : null,
+        "remainingQuantity" : null,
+        "beforeStatus" : null,
+        "afterStatus" : null,
+        "fromBedZoneId" : null,
+        "releasedStartPosition" : null,
+        "releasedEndPosition" : null
+      }, {
+        "orchidGroupId" : 2,
+        "inputQuantity" : 5,
+        "beforeQuantity" : null,
+        "afterQuantity" : null,
+        "remainingQuantity" : null,
+        "beforeStatus" : null,
+        "afterStatus" : null,
+        "fromBedZoneId" : null,
+        "releasedStartPosition" : null,
+        "releasedEndPosition" : null
+      } ],
+      "results" : [ {
+        "orchidGroupId" : 3,
+        "quantity" : null,
+        "purpose" : null,
+        "bedZoneId" : null,
+        "startPosition" : null,
+        "endPosition" : null,
+        "potSize" : null,
+        "ageYear" : null,
+        "placementType" : null,
+        "trayCount" : null,
+        "memo" : null,
+        "varietyName" : "현재 품종",
+        "location" : null
+      }, {
+        "orchidGroupId" : 4,
+        "quantity" : null,
+        "purpose" : null,
+        "bedZoneId" : null,
+        "startPosition" : null,
+        "endPosition" : null,
+        "potSize" : null,
+        "ageYear" : null,
+        "placementType" : null,
+        "trayCount" : null,
+        "memo" : null,
+        "varietyName" : null,
+        "location" : null
+      } ],
+      "lossQuantity" : null,
+      "actualQuantity" : null,
+      "reason" : null,
+      "linkedWorkOperationId" : null
+    } ],
+    "corrections" : [ ]
+  }
+}, {
+  "name" : "id-precedence",
+  "command" : { },
+  "result" : {
+    "resultOrchidGroupIds" : [ "3", "bad", 4 ],
+    "createdOrchidGroupIds" : [ 99 ],
+    "resultOrchidGroupId" : 88
+  },
+  "expected" : {
+    "summary" : {
+      "id" : 0,
+      "workTypeId" : null,
+      "workTypeCode" : "CUSTOM",
+      "workType" : "작업",
+      "title" : null,
+      "status" : null,
+      "plannedStartDate" : null,
+      "plannedEndDate" : null,
+      "actualStartAt" : null,
+      "actualEndAt" : null,
+      "worker" : null,
+      "memo" : null
+    },
+    "fields" : [ {
+      "key" : "materialName",
+      "label" : "자재명",
+      "value" : "자재"
+    }, {
+      "key" : "quantity",
+      "label" : "사용량",
+      "value" : "3"
+    }, {
+      "key" : "enabled",
+      "label" : "enabled",
+      "value" : "예"
+    }, {
+      "key" : "tags",
+      "label" : "tags",
+      "value" : "가, 2"
+    } ],
+    "executions" : [ {
+      "id" : 10,
+      "executionKey" : "EXECUTION:fixture",
+      "resultType" : "REPOT",
+      "appliedAt" : [ 2026, 8, 20, 9, 0 ],
+      "canceledAt" : null,
+      "worker" : "작업자",
+      "targetId" : null,
+      "inboundRecordId" : null,
+      "sources" : [ {
+        "orchidGroupId" : 1,
+        "inputQuantity" : null,
+        "beforeQuantity" : null,
+        "afterQuantity" : null,
+        "remainingQuantity" : null,
+        "beforeStatus" : null,
+        "afterStatus" : null,
+        "fromBedZoneId" : null,
+        "releasedStartPosition" : null,
+        "releasedEndPosition" : null
+      } ],
+      "results" : [ {
+        "orchidGroupId" : 3,
+        "quantity" : null,
+        "purpose" : null,
+        "bedZoneId" : null,
+        "startPosition" : null,
+        "endPosition" : null,
+        "potSize" : null,
+        "ageYear" : null,
+        "placementType" : null,
+        "trayCount" : null,
+        "memo" : null,
+        "varietyName" : "현재 품종",
+        "location" : null
+      }, {
+        "orchidGroupId" : 4,
+        "quantity" : null,
+        "purpose" : null,
+        "bedZoneId" : null,
+        "startPosition" : null,
+        "endPosition" : null,
+        "potSize" : null,
+        "ageYear" : null,
+        "placementType" : null,
+        "trayCount" : null,
+        "memo" : null,
+        "varietyName" : null,
+        "location" : null
+      } ],
+      "lossQuantity" : null,
+      "actualQuantity" : null,
+      "reason" : null,
+      "linkedWorkOperationId" : null
+    } ],
+    "corrections" : [ ]
+  }
+}, {
+  "name" : "invalid-values",
+  "command" : {
+    "sources" : [ null, 3, { }, {
+      "sourceOrchidGroupId" : "bad",
+      "inputQuantity" : "5",
+      "releasedStartPosition" : "bad"
+    } ],
+    "results" : [ null, { }, {
+      "bedZoneId" : "9",
+      "quantity" : "3",
+      "ageYear" : "2",
+      "trayCount" : "1"
+    } ]
+  },
+  "result" : {
+    "results" : [ { }, null, {
+      "orchidGroupId" : "3",
+      "quantity" : "5",
+      "purpose" : true
+    } ],
+    "lossQuantity" : "2"
+  },
+  "expected" : {
+    "summary" : {
+      "id" : 0,
+      "workTypeId" : null,
+      "workTypeCode" : "CUSTOM",
+      "workType" : "작업",
+      "title" : null,
+      "status" : null,
+      "plannedStartDate" : null,
+      "plannedEndDate" : null,
+      "actualStartAt" : null,
+      "actualEndAt" : null,
+      "worker" : null,
+      "memo" : null
+    },
+    "fields" : [ {
+      "key" : "materialName",
+      "label" : "자재명",
+      "value" : "자재"
+    }, {
+      "key" : "quantity",
+      "label" : "사용량",
+      "value" : "3"
+    }, {
+      "key" : "enabled",
+      "label" : "enabled",
+      "value" : "예"
+    }, {
+      "key" : "tags",
+      "label" : "tags",
+      "value" : "가, 2"
+    } ],
+    "executions" : [ {
+      "id" : 10,
+      "executionKey" : "EXECUTION:fixture",
+      "resultType" : "REPOT",
+      "appliedAt" : [ 2026, 8, 20, 9, 0 ],
+      "canceledAt" : null,
+      "worker" : "작업자",
+      "targetId" : null,
+      "inboundRecordId" : null,
+      "sources" : [ {
+        "orchidGroupId" : null,
+        "inputQuantity" : null,
+        "beforeQuantity" : null,
+        "afterQuantity" : null,
+        "remainingQuantity" : null,
+        "beforeStatus" : null,
+        "afterStatus" : null,
+        "fromBedZoneId" : null,
+        "releasedStartPosition" : null,
+        "releasedEndPosition" : null
+      } ],
+      "results" : [ {
+        "orchidGroupId" : 3,
+        "quantity" : null,
+        "purpose" : "true",
+        "bedZoneId" : 9,
+        "startPosition" : null,
+        "endPosition" : null,
+        "potSize" : null,
+        "ageYear" : null,
+        "placementType" : null,
+        "trayCount" : null,
+        "memo" : null,
+        "varietyName" : "현재 품종",
+        "location" : null
+      } ],
+      "lossQuantity" : null,
+      "actualQuantity" : null,
+      "reason" : null,
+      "linkedWorkOperationId" : null
+    } ],
+    "corrections" : [ ]
+  }
+}, {
+  "name" : "null-before",
+  "command" : { },
+  "result" : {
+    "beforeQuantity" : null,
+    "sourceOrchidGroupId" : 1,
+    "orchidGroupId" : 2
+  },
+  "expected" : {
+    "summary" : {
+      "id" : 0,
+      "workTypeId" : null,
+      "workTypeCode" : "CUSTOM",
+      "workType" : "작업",
+      "title" : null,
+      "status" : null,
+      "plannedStartDate" : null,
+      "plannedEndDate" : null,
+      "actualStartAt" : null,
+      "actualEndAt" : null,
+      "worker" : null,
+      "memo" : null
+    },
+    "fields" : [ {
+      "key" : "materialName",
+      "label" : "자재명",
+      "value" : "자재"
+    }, {
+      "key" : "quantity",
+      "label" : "사용량",
+      "value" : "3"
+    }, {
+      "key" : "enabled",
+      "label" : "enabled",
+      "value" : "예"
+    }, {
+      "key" : "tags",
+      "label" : "tags",
+      "value" : "가, 2"
+    } ],
+    "executions" : [ {
+      "id" : 10,
+      "executionKey" : "EXECUTION:fixture",
+      "resultType" : "REPOT",
+      "appliedAt" : [ 2026, 8, 20, 9, 0 ],
+      "canceledAt" : null,
+      "worker" : "작업자",
+      "targetId" : null,
+      "inboundRecordId" : null,
+      "sources" : [ {
+        "orchidGroupId" : 2,
+        "inputQuantity" : null,
+        "beforeQuantity" : null,
+        "afterQuantity" : null,
+        "remainingQuantity" : null,
+        "beforeStatus" : null,
+        "afterStatus" : null,
+        "fromBedZoneId" : null,
+        "releasedStartPosition" : null,
+        "releasedEndPosition" : null
+      } ],
+      "results" : [ {
+        "orchidGroupId" : 3,
+        "quantity" : null,
+        "purpose" : null,
+        "bedZoneId" : null,
+        "startPosition" : null,
+        "endPosition" : null,
+        "potSize" : null,
+        "ageYear" : null,
+        "placementType" : null,
+        "trayCount" : null,
+        "memo" : null,
+        "varietyName" : "현재 품종",
+        "location" : null
+      } ],
+      "lossQuantity" : null,
+      "actualQuantity" : null,
+      "reason" : null,
+      "linkedWorkOperationId" : null
+    } ],
+    "corrections" : [ ]
+  }
+}, {
+  "name" : "partial-results",
+  "command" : {
+    "results" : [ {
+      "bedZoneId" : 9,
+      "quantity" : 8
+    }, {
+      "bedZoneId" : 8,
+      "quantity" : 9
+    } ]
+  },
+  "result" : {
+    "results" : [ {
+      "quantity" : 7
+    } ],
+    "resultOrchidGroupIds" : [ 3, 4, 5 ]
+  },
+  "expected" : {
+    "summary" : {
+      "id" : 0,
+      "workTypeId" : null,
+      "workTypeCode" : "CUSTOM",
+      "workType" : "작업",
+      "title" : null,
+      "status" : null,
+      "plannedStartDate" : null,
+      "plannedEndDate" : null,
+      "actualStartAt" : null,
+      "actualEndAt" : null,
+      "worker" : null,
+      "memo" : null
+    },
+    "fields" : [ {
+      "key" : "materialName",
+      "label" : "자재명",
+      "value" : "자재"
+    }, {
+      "key" : "quantity",
+      "label" : "사용량",
+      "value" : "3"
+    }, {
+      "key" : "enabled",
+      "label" : "enabled",
+      "value" : "예"
+    }, {
+      "key" : "tags",
+      "label" : "tags",
+      "value" : "가, 2"
+    } ],
+    "executions" : [ {
+      "id" : 10,
+      "executionKey" : "EXECUTION:fixture",
+      "resultType" : "REPOT",
+      "appliedAt" : [ 2026, 8, 20, 9, 0 ],
+      "canceledAt" : null,
+      "worker" : "작업자",
+      "targetId" : null,
+      "inboundRecordId" : null,
+      "sources" : [ {
+        "orchidGroupId" : 1,
+        "inputQuantity" : null,
+        "beforeQuantity" : null,
+        "afterQuantity" : null,
+        "remainingQuantity" : null,
+        "beforeStatus" : null,
+        "afterStatus" : null,
+        "fromBedZoneId" : null,
+        "releasedStartPosition" : null,
+        "releasedEndPosition" : null
+      } ],
+      "results" : [ {
+        "orchidGroupId" : 3,
+        "quantity" : 7,
+        "purpose" : null,
+        "bedZoneId" : 9,
+        "startPosition" : null,
+        "endPosition" : null,
+        "potSize" : null,
+        "ageYear" : null,
+        "placementType" : null,
+        "trayCount" : null,
+        "memo" : null,
+        "varietyName" : "현재 품종",
+        "location" : null
+      }, {
+        "orchidGroupId" : 4,
+        "quantity" : 9,
+        "purpose" : null,
+        "bedZoneId" : 8,
+        "startPosition" : null,
+        "endPosition" : null,
+        "potSize" : null,
+        "ageYear" : null,
+        "placementType" : null,
+        "trayCount" : null,
+        "memo" : null,
+        "varietyName" : null,
+        "location" : null
+      }, {
+        "orchidGroupId" : 5,
+        "quantity" : null,
+        "purpose" : null,
+        "bedZoneId" : null,
+        "startPosition" : null,
+        "endPosition" : null,
+        "potSize" : null,
+        "ageYear" : null,
+        "placementType" : null,
+        "trayCount" : null,
+        "memo" : null,
+        "varietyName" : null,
+        "location" : null
+      } ],
+      "lossQuantity" : null,
+      "actualQuantity" : null,
+      "reason" : null,
+      "linkedWorkOperationId" : null
+    } ],
+    "corrections" : [ ]
+  }
+}, {
+  "name" : "direct-zone-without-id",
+  "command" : { },
+  "result" : {
+    "toBedZoneId" : 9,
+    "startPosition" : 0
+  },
+  "expected" : {
+    "summary" : {
+      "id" : 0,
+      "workTypeId" : null,
+      "workTypeCode" : "CUSTOM",
+      "workType" : "작업",
+      "title" : null,
+      "status" : null,
+      "plannedStartDate" : null,
+      "plannedEndDate" : null,
+      "actualStartAt" : null,
+      "actualEndAt" : null,
+      "worker" : null,
+      "memo" : null
+    },
+    "fields" : [ {
+      "key" : "materialName",
+      "label" : "자재명",
+      "value" : "자재"
+    }, {
+      "key" : "quantity",
+      "label" : "사용량",
+      "value" : "3"
+    }, {
+      "key" : "enabled",
+      "label" : "enabled",
+      "value" : "예"
+    }, {
+      "key" : "tags",
+      "label" : "tags",
+      "value" : "가, 2"
+    } ],
+    "executions" : [ {
+      "id" : 10,
+      "executionKey" : "EXECUTION:fixture",
+      "resultType" : "REPOT",
+      "appliedAt" : [ 2026, 8, 20, 9, 0 ],
+      "canceledAt" : null,
+      "worker" : "작업자",
+      "targetId" : null,
+      "inboundRecordId" : null,
+      "sources" : [ {
+        "orchidGroupId" : 1,
+        "inputQuantity" : null,
+        "beforeQuantity" : null,
+        "afterQuantity" : null,
+        "remainingQuantity" : null,
+        "beforeStatus" : null,
+        "afterStatus" : null,
+        "fromBedZoneId" : null,
+        "releasedStartPosition" : null,
+        "releasedEndPosition" : null
+      } ],
+      "results" : [ {
+        "orchidGroupId" : 3,
+        "quantity" : null,
+        "purpose" : null,
+        "bedZoneId" : 9,
+        "startPosition" : 0,
+        "endPosition" : null,
+        "potSize" : null,
+        "ageYear" : null,
+        "placementType" : null,
+        "trayCount" : null,
+        "memo" : null,
+        "varietyName" : "현재 품종",
+        "location" : null
+      } ],
+      "lossQuantity" : null,
+      "actualQuantity" : null,
+      "reason" : null,
+      "linkedWorkOperationId" : null
+    } ],
+    "corrections" : [ ]
+  }
+}, {
+  "name" : "string-integer",
+  "command" : { },
+  "result" : {
+    "orchidGroupId" : "1",
+    "inputQuantity" : "3",
+    "remainingQuantity" : 4.9
+  },
+  "expected" : {
+    "summary" : {
+      "id" : 0,
+      "workTypeId" : null,
+      "workTypeCode" : "CUSTOM",
+      "workType" : "작업",
+      "title" : null,
+      "status" : null,
+      "plannedStartDate" : null,
+      "plannedEndDate" : null,
+      "actualStartAt" : null,
+      "actualEndAt" : null,
+      "worker" : null,
+      "memo" : null
+    },
+    "fields" : [ {
+      "key" : "materialName",
+      "label" : "자재명",
+      "value" : "자재"
+    }, {
+      "key" : "quantity",
+      "label" : "사용량",
+      "value" : "3"
+    }, {
+      "key" : "enabled",
+      "label" : "enabled",
+      "value" : "예"
+    }, {
+      "key" : "tags",
+      "label" : "tags",
+      "value" : "가, 2"
+    } ],
+    "executions" : [ {
+      "id" : 10,
+      "executionKey" : "EXECUTION:fixture",
+      "resultType" : "REPOT",
+      "appliedAt" : [ 2026, 8, 20, 9, 0 ],
+      "canceledAt" : null,
+      "worker" : "작업자",
+      "targetId" : null,
+      "inboundRecordId" : null,
+      "sources" : [ {
+        "orchidGroupId" : 1,
+        "inputQuantity" : null,
+        "beforeQuantity" : null,
+        "afterQuantity" : null,
+        "remainingQuantity" : 4,
+        "beforeStatus" : null,
+        "afterStatus" : null,
+        "fromBedZoneId" : null,
+        "releasedStartPosition" : null,
+        "releasedEndPosition" : null
+      } ],
+      "results" : [ {
+        "orchidGroupId" : 3,
+        "quantity" : null,
+        "purpose" : null,
+        "bedZoneId" : null,
+        "startPosition" : null,
+        "endPosition" : null,
+        "potSize" : null,
+        "ageYear" : null,
+        "placementType" : null,
+        "trayCount" : null,
+        "memo" : null,
+        "varietyName" : "현재 품종",
+        "location" : null
+      } ],
+      "lossQuantity" : null,
+      "actualQuantity" : null,
+      "reason" : null,
+      "linkedWorkOperationId" : null
+    } ],
+    "corrections" : [ ]
+  }
+}, {
+  "name" : "empty-adjustment",
+  "command" : { },
+  "result" : {
+    "adjustments" : [ { }, null, "bad" ],
+    "sourceOrchidGroupId" : 1
+  },
+  "expected" : {
+    "summary" : {
+      "id" : 0,
+      "workTypeId" : null,
+      "workTypeCode" : "CUSTOM",
+      "workType" : "작업",
+      "title" : null,
+      "status" : null,
+      "plannedStartDate" : null,
+      "plannedEndDate" : null,
+      "actualStartAt" : null,
+      "actualEndAt" : null,
+      "worker" : null,
+      "memo" : null
+    },
+    "fields" : [ {
+      "key" : "materialName",
+      "label" : "자재명",
+      "value" : "자재"
+    }, {
+      "key" : "quantity",
+      "label" : "사용량",
+      "value" : "3"
+    }, {
+      "key" : "enabled",
+      "label" : "enabled",
+      "value" : "예"
+    }, {
+      "key" : "tags",
+      "label" : "tags",
+      "value" : "가, 2"
+    } ],
+    "executions" : [ {
+      "id" : 10,
+      "executionKey" : "EXECUTION:fixture",
+      "resultType" : "REPOT",
+      "appliedAt" : [ 2026, 8, 20, 9, 0 ],
+      "canceledAt" : null,
+      "worker" : "작업자",
+      "targetId" : null,
+      "inboundRecordId" : null,
+      "sources" : [ {
+        "orchidGroupId" : 1,
+        "inputQuantity" : null,
+        "beforeQuantity" : null,
+        "afterQuantity" : null,
+        "remainingQuantity" : null,
+        "beforeStatus" : null,
+        "afterStatus" : null,
+        "fromBedZoneId" : null,
+        "releasedStartPosition" : null,
+        "releasedEndPosition" : null
+      } ],
+      "results" : [ {
+        "orchidGroupId" : 3,
+        "quantity" : null,
+        "purpose" : null,
+        "bedZoneId" : null,
+        "startPosition" : null,
+        "endPosition" : null,
+        "potSize" : null,
+        "ageYear" : null,
+        "placementType" : null,
+        "trayCount" : null,
+        "memo" : null,
+        "varietyName" : "현재 품종",
+        "location" : null
+      } ],
+      "lossQuantity" : null,
+      "actualQuantity" : null,
+      "reason" : null,
+      "linkedWorkOperationId" : null
+    } ],
+    "corrections" : [ ]
+  }
+} ]

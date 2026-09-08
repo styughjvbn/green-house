@@ -13,6 +13,7 @@ import org.springframework.stereotype.Component;
 @Component
 @RequiredArgsConstructor
 public class OrchidGroupCollectionAuditSupport {
+
 	private final AuditEventWriter auditWriter;
 
 	public Map<String, Object> snapshot(OrchidGroupCollection collection, List<Long> memberIds) {
@@ -26,9 +27,10 @@ public class OrchidGroupCollectionAuditSupport {
 		return data;
 	}
 
-	public Long record(AuditAction action, OrchidGroupCollection collection,
-			Map<String, Object> before, Map<String, Object> after, Map<String, Object> context) {
+	public Long record(AuditAction action, OrchidGroupCollection collection, Map<String, Object> before,
+			Map<String, Object> after, Map<String, Object> context) {
 		return auditWriter.record(action, AuditSource.ORCHID_GROUP_COLLECTION, "ORCHID_GROUP_COLLECTION",
 				collection.getId(), before, after, context);
 	}
+
 }

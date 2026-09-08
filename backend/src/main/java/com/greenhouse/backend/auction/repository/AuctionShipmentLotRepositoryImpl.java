@@ -4,9 +4,9 @@ import static com.greenhouse.backend.auction.domain.QAuctionAttempt.auctionAttem
 import static com.greenhouse.backend.auction.domain.QAuctionResultLine.auctionResultLine;
 import static com.greenhouse.backend.auction.domain.QAuctionShipment.auctionShipment;
 import static com.greenhouse.backend.auction.domain.QAuctionShipmentLot.auctionShipmentLot;
-import static com.greenhouse.backend.partner.domain.QBusinessPartner.businessPartner;
 
 import com.greenhouse.backend.auction.domain.AuctionInspectionStatus;
+import com.greenhouse.backend.auction.domain.AuctionLotSearchCriteria;
 import com.greenhouse.backend.auction.domain.AuctionLotStatus;
 import com.greenhouse.backend.auction.domain.AuctionShipmentLot;
 import com.querydsl.core.BooleanBuilder;
@@ -24,68 +24,24 @@ import org.springframework.data.domain.Pageable;
 @RequiredArgsConstructor
 public class AuctionShipmentLotRepositoryImpl implements AuctionShipmentLotRepositoryCustom {
 
-	private static final List<AuctionLotStatus> SUMMARY_REVIEW_STATUSES = List.of(
-			AuctionLotStatus.REVIEW_REQUIRED,
-			AuctionLotStatus.QUANTITY_MISMATCH,
-			AuctionLotStatus.RETURN_INFERRED,
-			AuctionLotStatus.PARTIALLY_RETURNED);
-	private static final List<AuctionInspectionStatus> SUMMARY_REVIEW_INSPECTIONS = List.of(
-			AuctionInspectionStatus.MANUAL_REVIEW,
-			AuctionInspectionStatus.MATCH_FAILED,
-			AuctionInspectionStatus.QUANTITY_MISMATCH,
-			AuctionInspectionStatus.RETURN_INFERRED,
-			AuctionInspectionStatus.SOURCE_ERROR);
-
 	private final JPAQueryFactory queryFactory;
 
 	@Override
-	public Page<AuctionShipmentLot> search(
-			LocalDate from,
-			LocalDate to,
-			String market,
-			String variety,
-			String grade,
-			AuctionLotStatus status,
-			boolean reviewOnly,
-			boolean returnOnly,
-			boolean waitingOnly,
-			String keyword,
-			List<AuctionLotStatus> returnStatuses,
-			List<AuctionLotStatus> waitingStatuses,
-			List<AuctionLotStatus> reviewStatuses,
-			List<AuctionInspectionStatus> reviewInspections,
-			Pageable pageable) {
-		BooleanBuilder conditions = conditions(
-				from,
-				to,
-				market,
-				variety,
-				grade,
-				status,
-				reviewOnly,
-				returnOnly,
-				waitingOnly,
-				keyword,
-				returnStatuses,
-				waitingStatuses,
-				reviewStatuses,
-				reviewInspections);
-		List<AuctionShipmentLot> content = queryFactory
-				.selectFrom(auctionShipmentLot)
-				.join(auctionShipmentLot.shipment, auctionShipment).fetchJoin()
-				.join(auctionShipment.auctionHouse, businessPartner).fetchJoin()
-				.where(conditions)
-				.orderBy(auctionShipmentLot.id.desc())
-				.offset(pageable.getOffset())
-				.limit(pageable.getPageSize())
-				.fetch();
-		Long total = queryFactory
-				.select(auctionShipmentLot.id.count())
-				.from(auctionShipmentLot)
-				.join(auctionShipmentLot.shipment, auctionShipment)
-				.join(auctionShipment.auctionHouse, businessPartner)
-				.where(conditions)
-				.fetchOne();
+	public Page<AuctionShipmentLot> search(AuctionLotSearchCriteria criteria, Pageable pageable) {
+		BooleanBuilder conditions = conditions(criteria);
+		List<AuctionShipmentLot> content = queryFactory.selectFrom(auctionShipmentLot)
+			.join(auctionShipmentLot.shipment, auctionShipment)
+			.fetchJoin()
+			.where(conditions)
+			.orderBy(auctionShipmentLot.id.desc())
+			.offset(pageable.getOffset())
+			.limit(pageable.getPageSize())
+			.fetch();
+		Long total = queryFactory.select(auctionShipmentLot.id.count())
+			.from(auctionShipmentLot)
+			.join(auctionShipmentLot.shipment, auctionShipment)
+			.where(conditions)
+			.fetchOne();
 
 		return new PageImpl<>(content, pageable, total == null ? 0 : total);
 	}
@@ -93,60 +49,39 @@ public class AuctionShipmentLotRepositoryImpl implements AuctionShipmentLotRepos
 	@Override
 	public AuctionTrackingSummaryProjection summarize() {
 		Tuple lotSummary = queryFactory
-				.select(
-						auctionShipmentLot.id.count(),
-						auctionShipmentLot.shippedQuantity.sum(),
-						auctionShipmentLot.soldQuantity.sum(),
-						auctionShipmentLot.waitingQuantity.sum(),
-						auctionShipmentLot.returnedQuantity.sum())
-				.from(auctionShipmentLot)
-				.fetchOne();
-		Long reviewRequiredCount = queryFactory
-				.select(auctionShipmentLot.id.count())
-				.from(auctionShipmentLot)
-				.where(reviewRequired(SUMMARY_REVIEW_STATUSES, SUMMARY_REVIEW_INSPECTIONS))
-				.fetchOne();
-		Integer totalAmount = queryFactory
-				.select(auctionResultLine.amount.sum())
-				.from(auctionResultLine)
-				.fetchOne();
+			.select(auctionShipmentLot.id.count(), auctionShipmentLot.shippedQuantity.sum(),
+					auctionShipmentLot.soldQuantity.sum(), auctionShipmentLot.waitingQuantity.sum(),
+					auctionShipmentLot.returnedQuantity.sum())
+			.from(auctionShipmentLot)
+			.fetchOne();
+		Long reviewRequiredCount = queryFactory.select(auctionShipmentLot.id.count())
+			.from(auctionShipmentLot)
+			.where(reviewRequired(AuctionLotStatus.reviewStatuses(), AuctionInspectionStatus.reviewStatuses()))
+			.fetchOne();
+		Integer totalAmount = queryFactory.select(auctionResultLine.amount.sum()).from(auctionResultLine).fetchOne();
 
-		return new SummaryProjection(
-				number(lotSummary, auctionShipmentLot.id.count()),
+		return new SummaryProjection(number(lotSummary, auctionShipmentLot.id.count()),
 				number(lotSummary, auctionShipmentLot.shippedQuantity.sum()),
 				number(lotSummary, auctionShipmentLot.soldQuantity.sum()),
 				number(lotSummary, auctionShipmentLot.waitingQuantity.sum()),
 				number(lotSummary, auctionShipmentLot.returnedQuantity.sum()),
-				reviewRequiredCount == null ? 0 : reviewRequiredCount,
-				totalAmount == null ? 0 : totalAmount);
+				reviewRequiredCount == null ? 0 : reviewRequiredCount, totalAmount == null ? 0 : totalAmount);
 	}
 
-	private BooleanBuilder conditions(
-			LocalDate from,
-			LocalDate to,
-			String market,
-			String variety,
-			String grade,
-			AuctionLotStatus status,
-			boolean reviewOnly,
-			boolean returnOnly,
-			boolean waitingOnly,
-			String keyword,
-			List<AuctionLotStatus> returnStatuses,
-			List<AuctionLotStatus> waitingStatuses,
-			List<AuctionLotStatus> reviewStatuses,
-			List<AuctionInspectionStatus> reviewInspections) {
-		return new BooleanBuilder()
-				.and(shipmentDateGoe(from))
-				.and(shipmentDateLoe(to))
-				.and(marketEq(market))
-				.and(varietyContains(variety))
-				.and(gradeEq(grade))
-				.and(statusEq(status))
-				.and(returnOnly ? auctionShipmentLot.currentStatus.in(returnStatuses) : null)
-				.and(waitingOnly ? auctionShipmentLot.currentStatus.in(waitingStatuses) : null)
-				.and(reviewOnly ? reviewRequired(reviewStatuses, reviewInspections) : null)
-				.and(keywordContains(keyword));
+	private BooleanBuilder conditions(AuctionLotSearchCriteria criteria) {
+		return new BooleanBuilder().and(shipmentDateGoe(criteria.from()))
+			.and(shipmentDateLoe(criteria.to()))
+			.and(criteria.marketIds() == null ? null : auctionShipment.auctionHouseId.in(criteria.marketIds()))
+			.and(varietyContains(criteria.variety()))
+			.and(gradeEq(criteria.grade()))
+			.and(statusEq(criteria.status()))
+			.and(criteria.returnOnly() ? auctionShipmentLot.currentStatus.in(AuctionLotStatus.returnStatuses()) : null)
+			.and(criteria.waitingOnly() ? auctionShipmentLot.currentStatus.in(AuctionLotStatus.waitingStatuses())
+					: null)
+			.and(criteria.reviewOnly()
+					? reviewRequired(AuctionLotStatus.reviewStatuses(), AuctionInspectionStatus.reviewStatuses())
+					: null)
+			.and(keywordContains(criteria));
 	}
 
 	private BooleanExpression shipmentDateGoe(LocalDate from) {
@@ -155,10 +90,6 @@ public class AuctionShipmentLotRepositoryImpl implements AuctionShipmentLotRepos
 
 	private BooleanExpression shipmentDateLoe(LocalDate to) {
 		return to == null ? null : auctionShipment.shipmentDate.loe(to);
-	}
-
-	private BooleanExpression marketEq(String market) {
-		return isBlank(market) ? null : businessPartner.name.equalsIgnoreCase(market);
 	}
 
 	private BooleanExpression varietyContains(String variety) {
@@ -173,32 +104,28 @@ public class AuctionShipmentLotRepositoryImpl implements AuctionShipmentLotRepos
 		return status == null ? null : auctionShipmentLot.currentStatus.eq(status);
 	}
 
-	private BooleanExpression reviewRequired(
-			List<AuctionLotStatus> reviewStatuses,
+	private BooleanExpression reviewRequired(List<AuctionLotStatus> reviewStatuses,
 			List<AuctionInspectionStatus> reviewInspections) {
 		return auctionShipmentLot.currentStatus.in(reviewStatuses)
-				.or(JPAExpressions
-						.selectOne()
-						.from(auctionResultLine)
-						.join(auctionResultLine.auctionAttempt, auctionAttempt)
-						.where(
-								auctionAttempt.shipmentLot.eq(auctionShipmentLot),
-								auctionResultLine.inspectionStatus.in(reviewInspections))
-						.exists());
+			.or(JPAExpressions.selectOne()
+				.from(auctionResultLine)
+				.join(auctionResultLine.auctionAttempt, auctionAttempt)
+				.where(auctionAttempt.shipmentLot.eq(auctionShipmentLot),
+						auctionResultLine.inspectionStatus.in(reviewInspections))
+				.exists());
 	}
 
-	private BooleanBuilder keywordContains(String keyword) {
-		if (isBlank(keyword)) {
+	private BooleanBuilder keywordContains(AuctionLotSearchCriteria criteria) {
+		if (isBlank(criteria.keyword()))
 			return null;
-		}
-		String normalizedKeyword = keyword.trim().toLowerCase();
-		return new BooleanBuilder().and(auctionShipmentLot.itemName
-				.concat(" ")
-				.concat(auctionShipmentLot.varietyName)
-				.concat(" ")
-				.concat(businessPartner.name)
-				.lower()
-				.contains(normalizedKeyword));
+		var text = auctionShipmentLot.itemName.concat(" ").concat(auctionShipmentLot.varietyName).lower();
+		var matches = new BooleanBuilder(text.contains(criteria.keyword()))
+			.or(auctionShipment.auctionHouseId.in(criteria.keywordMarketIds()));
+		// Preserve matches spanning the separator before the market name in the original
+		// concatenated text.
+		criteria.boundaryMarketIds()
+			.forEach((prefix, ids) -> matches.or(text.endsWith(prefix).and(auctionShipment.auctionHouseId.in(ids))));
+		return matches;
 	}
 
 	private Number number(Tuple tuple, com.querydsl.core.types.Expression<? extends Number> expression) {
@@ -213,15 +140,9 @@ public class AuctionShipmentLotRepositoryImpl implements AuctionShipmentLotRepos
 		return value == null || value.isBlank();
 	}
 
-	private record SummaryProjection(
-			Number lotCount,
-			Number shippedQuantity,
-			Number soldQuantity,
-			Number waitingQuantity,
-			Number returnedQuantity,
-			Number reviewRequiredCount,
-			Number totalAmount)
-			implements AuctionTrackingSummaryProjection {
+	private record SummaryProjection(Number lotCount, Number shippedQuantity, Number soldQuantity,
+			Number waitingQuantity, Number returnedQuantity, Number reviewRequiredCount,
+			Number totalAmount) implements AuctionTrackingSummaryProjection {
 		@Override
 		public Number getLotCount() {
 			return lotCount;
@@ -257,4 +178,5 @@ public class AuctionShipmentLotRepositoryImpl implements AuctionShipmentLotRepos
 			return totalAmount;
 		}
 	}
+
 }

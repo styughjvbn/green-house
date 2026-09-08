@@ -1,60 +1,54 @@
 package com.greenhouse.backend.sales.application;
 
 import com.greenhouse.backend.common.exception.NotFoundException;
-import com.greenhouse.backend.sales.domain.SalesType;
-import com.greenhouse.backend.sales.dto.SalesSlipResponse;
+import com.greenhouse.backend.sales.application.document.SalesSlipDocument;
 import com.greenhouse.backend.sales.repository.SalesSlipRepository;
+import com.greenhouse.backend.settlement.application.ManualPaymentCommand;
 import com.greenhouse.backend.settlement.application.PartnerBalanceService;
 import com.greenhouse.backend.settlement.application.PaymentLedgerService;
 import com.greenhouse.backend.settlement.application.SettlementAuditSupport;
 import com.greenhouse.backend.settlement.domain.PaymentTargetType;
-import com.greenhouse.backend.settlement.dto.ManualPaymentRequest;
-
+import java.util.List;
 import lombok.RequiredArgsConstructor;
-
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import java.util.List;
 
 @Service
 @Transactional
 @RequiredArgsConstructor
 public class SalesPaymentService {
-	private final SalesSlipRepository salesSlipRepository;
-	private final PaymentLedgerService paymentLedgerService;
-	private final PartnerBalanceService partnerBalanceService;
-	private final SettlementAuditSupport auditSupport;
-	private final SalesSlipResponseAssembler responseAssembler;
 
-	public SalesSlipResponse confirmPayment(Long salesSlipId, ManualPaymentRequest request) {
+	private final SalesSlipRepository salesSlipRepository;
+
+	private final PaymentLedgerService paymentLedgerService;
+
+	private final PartnerBalanceService partnerBalanceService;
+
+	private final SettlementAuditSupport auditSupport;
+
+	private final SalesSlipDocumentAssembler responseAssembler;
+
+	public SalesSlipDocument confirmPayment(Long salesSlipId, ManualPaymentCommand payment) {
 		var salesSlip = salesSlipRepository.findForUpdateById(salesSlipId)
-				.orElseThrow(() -> new NotFoundException("판매 전표를 찾을 수 없습니다."));
-		if (salesSlip.getSalesType() != SalesType.DIRECT) {
-			throw new IllegalArgumentException("경매 판매전표는 경매장 정산에서 입금을 확인해야 합니다.");
-		}
-		if (salesSlip.isCanceled()) {
-			throw new IllegalArgumentException("취소된 전표는 입금을 확인할 수 없습니다.");
-		}
-		partnerBalanceService.lockPartners(List.of(salesSlip.getPartner().getId()));
-		if (paymentLedgerService.findManualPayment(
-				PaymentTargetType.SALES_SLIP, salesSlipId, request).isPresent()) {
+			.orElseThrow(() -> new NotFoundException("판매 전표를 찾을 수 없습니다."));
+		salesSlip.validatePaymentTarget();
+		partnerBalanceService.lockPartners(List.of(salesSlip.getPartnerId()));
+		if (paymentLedgerService.findManualPayment(PaymentTargetType.SALES_SLIP, salesSlipId, payment).isPresent()) {
 			return responseAssembler.assemble(salesSlip);
 		}
 
 		var before = auditSupport.paymentSnapshot(salesSlip.getPaidAmount(), salesSlip.getRemainingAmount(),
 				salesSlip.getPaymentStatus());
-		salesSlip.recordPayment(request.amount());
+		salesSlip.recordPayment(payment.amount());
 		var saved = salesSlipRepository.save(salesSlip);
-		var received = paymentLedgerService.recordManualPayment(
-				salesSlip.getPartner(), PaymentTargetType.SALES_SLIP, salesSlipId, request);
-		partnerBalanceService.updateReceivable(
-				salesSlip.getPartner().getId(),
-				salesSlipRepository.sumDirectReceivableByPartnerId(salesSlip.getPartner().getId()),
-				received);
-		auditSupport.recordTargetPayment("SALES_SLIP", saved.getId(), saved.getPartner().getId(),
-				PaymentTargetType.SALES_SLIP, before,
-				auditSupport.paymentSnapshot(saved.getPaidAmount(), saved.getRemainingAmount(),
-						saved.getPaymentStatus()));
+		var receivedEventId = paymentLedgerService.recordManualPayment(salesSlip.getPartnerId(),
+				PaymentTargetType.SALES_SLIP, salesSlipId, payment);
+		partnerBalanceService.updateReceivable(salesSlip.getPartnerId(),
+				salesSlipRepository.sumDirectReceivableByPartnerId(salesSlip.getPartnerId()), receivedEventId);
+		auditSupport.recordTargetPayment("SALES_SLIP", saved.getId(), saved.getPartnerId(),
+				PaymentTargetType.SALES_SLIP, before, auditSupport.paymentSnapshot(saved.getPaidAmount(),
+						saved.getRemainingAmount(), saved.getPaymentStatus()));
 		return responseAssembler.assemble(saved);
 	}
+
 }

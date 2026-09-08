@@ -1,14 +1,22 @@
+import type { PaymentTargetType } from "@/entities/farm/types";
 import { queryOptions } from "@tanstack/react-query";
 import {
   getAuctionLots,
-  getAuctionSettlements,
+  getAuctionSettlement,
+  getAuctionSettlementPage,
+  getAuctionSettlementSummary,
   getAuctionTrackingSummary,
   getBusinessPartnerPage,
-  getBusinessPartners,
+  getBusinessPartnerOptions,
+  getBusinessPartnerOption,
+  getReceivedPaymentPage,
   getSalesSlip,
   getSalesSlipPage,
 } from "../api/salesApi";
-import type { SalesRouteState } from "../lib/salesRouteParams";
+import type {
+  SalesRouteState,
+  SettlementRouteState,
+} from "../lib/salesRouteParams";
 import type {
   AuctionFilterState,
   BusinessPartnerFilterState,
@@ -46,10 +54,30 @@ export function businessPartnerPageQueryOptions(
   });
 }
 
-export function businessPartnerLookupQueryOptions() {
+export function businessPartnerOptionsQueryOptions(
+  keyword = "",
+  page = 0,
+  auctionHouse?: boolean,
+  active?: boolean,
+) {
+  const normalized = keyword.trim();
   return queryOptions({
-    queryKey: salesQueryKeys.partners.lookup,
-    queryFn: getBusinessPartners,
+    queryKey: salesQueryKeys.partners.options(
+      normalized,
+      page,
+      auctionHouse,
+      active,
+    ),
+    queryFn: ({ signal }) =>
+      getBusinessPartnerOptions(normalized, page, auctionHouse, active, signal),
+  });
+}
+
+export function businessPartnerOptionQueryOptions(id: number) {
+  return queryOptions({
+    queryKey: salesQueryKeys.partners.option(id),
+    queryFn: ({ signal }) => getBusinessPartnerOption(id, signal),
+    staleTime: 30_000,
   });
 }
 
@@ -73,9 +101,42 @@ export function auctionSummaryQueryOptions() {
   });
 }
 
-export function auctionSettlementsQueryOptions() {
+export function auctionSettlementPageQueryOptions(state: SettlementRouteState) {
   return queryOptions({
-    queryKey: salesQueryKeys.auction.settlements,
-    queryFn: () => getAuctionSettlements(),
+    queryKey: salesQueryKeys.auction.settlementPage(state.page, state.size),
+    queryFn: ({ signal }) =>
+      getAuctionSettlementPage(state.page, state.size, signal),
+  });
+}
+
+export function auctionSettlementSummaryQueryOptions() {
+  return queryOptions({
+    queryKey: salesQueryKeys.auction.settlementSummary,
+    queryFn: ({ signal }) => getAuctionSettlementSummary(signal),
+  });
+}
+
+export function auctionSettlementDetailQueryOptions(id: number) {
+  return queryOptions({
+    queryKey: salesQueryKeys.auction.settlementDetail(id),
+    queryFn: ({ signal }) => getAuctionSettlement(id, signal),
+  });
+}
+
+export function receivedPaymentPageQueryOptions(
+  targetType: PaymentTargetType,
+  targetId: number,
+  page: number,
+) {
+  const size = 10;
+  return queryOptions({
+    queryKey: salesQueryKeys.payments.receivedPage(
+      targetType,
+      targetId,
+      page,
+      size,
+    ),
+    queryFn: ({ signal }) =>
+      getReceivedPaymentPage(targetType, targetId, page, size, signal),
   });
 }

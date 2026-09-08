@@ -2,7 +2,7 @@
 
 import { ChevronLeft, ChevronRight, Palette, Plus, Ruler } from "lucide-react";
 import type {
-  HouseStatusSummary,
+  OrchidManagementBedOrderItem,
   VisibleBedCount,
 } from "@/entities/farm/types";
 import VisibleBedCountSelector from "./VisibleBedCountSelector";
@@ -24,7 +24,7 @@ export default function BedNavigationToolbar({
   onOpenCreate,
   onToggleScale,
 }: {
-  houses: HouseStatusSummary[];
+  houses: OrchidManagementBedOrderItem[];
   startHouseId: number | null;
   visibleBedCount: VisibleBedCount;
   hasPreviousHouse: boolean;
@@ -57,7 +57,7 @@ export default function BedNavigationToolbar({
         value={startHouseId ?? ""}
         onChange={(event) => onGoToHouse(Number(event.target.value))}
       >
-        {houses.map((house) => (
+        {uniqueHouses(houses).map((house) => (
           <option key={house.houseId} value={house.houseId}>
             {house.houseNumber}동으로 이동
           </option>
@@ -112,5 +112,12 @@ export default function BedNavigationToolbar({
         눈금
       </button>
     </section>
+  );
+}
+
+function uniqueHouses(houses: OrchidManagementBedOrderItem[]) {
+  return houses.filter(
+    (house, index) =>
+      index === 0 || houses[index - 1]?.houseId !== house.houseId,
   );
 }

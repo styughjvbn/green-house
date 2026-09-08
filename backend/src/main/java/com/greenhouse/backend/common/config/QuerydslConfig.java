@@ -12,4 +12,5 @@ public class QuerydslConfig {
 	JPAQueryFactory jpaQueryFactory(EntityManager entityManager) {
 		return new JPAQueryFactory(entityManager);
 	}
+
 }

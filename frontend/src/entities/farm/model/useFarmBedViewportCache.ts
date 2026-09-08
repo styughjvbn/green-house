@@ -3,7 +3,11 @@
 import { useQueries, useQuery } from "@tanstack/react-query";
 import { useCallback, useMemo, useState } from "react";
 import { fetchApi } from "@/shared/api/client";
-import type { OrchidManagementViewport, PhysicalBed } from "../types";
+import type {
+  OrchidManagementBedOrderItem,
+  OrchidManagementViewport,
+  PhysicalBed,
+} from "../types";
 
 const VISIBLE_BED_COUNT = 3;
 const BUFFER_BED_COUNT = 3;
@@ -11,10 +15,8 @@ const BUFFER_BED_COUNT = 3;
 export function useFarmBedViewportCache(initialBedId: number | null) {
   const [viewportIndex, setViewportIndex] = useState(0);
   const initialViewport = useQuery(farmBedViewportQueryOptions(initialBedId));
-  const bedOrder = useMemo(
-    () => initialViewport.data?.bedOrder ?? [],
-    [initialViewport.data?.bedOrder],
-  );
+  const bedOrderQuery = useQuery(farmBedOrderQueryOptions());
+  const bedOrder = bedOrderQuery.data ?? [];
   const viewportStartBedIds = useMemo(
     () => bufferStartBedIds(bedOrder, viewportIndex),
     [bedOrder, viewportIndex],
@@ -46,7 +48,19 @@ export function useFarmBedViewportCache(initialBedId: number | null) {
     loadAround,
     loading:
       initialViewport.isLoading ||
+      bedOrderQuery.isLoading ||
       bufferedViewports.some((query) => query.isLoading),
+  };
+}
+
+function farmBedOrderQueryOptions() {
+  return {
+    queryKey: ["farm-status", "orchid-management-bed-order"] as const,
+    queryFn: () =>
+      fetchApi<OrchidManagementBedOrderItem[]>(
+        "/farm-status/orchid-management/bed-order",
+      ),
+    staleTime: 30_000,
   };
 }
 
@@ -74,7 +88,7 @@ function getFarmBedViewport(startBedId: number | null) {
 }
 
 function bufferStartBedIds(
-  bedOrder: OrchidManagementViewport["bedOrder"],
+  bedOrder: OrchidManagementBedOrderItem[],
   viewportIndex: number,
 ) {
   if (bedOrder.length === 0) return [];

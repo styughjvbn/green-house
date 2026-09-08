@@ -8,13 +8,13 @@ import com.greenhouse.backend.sales.application.SalesQueryService;
 import com.greenhouse.backend.sales.application.SalesSlipCreationService;
 import com.greenhouse.backend.sales.application.SalesSlipStatusService;
 import com.greenhouse.backend.sales.application.SalesSlipUpdateService;
+import com.greenhouse.backend.sales.application.command.SalesSlipCommand;
+import com.greenhouse.backend.sales.application.document.SalesSlipDocument;
+import com.greenhouse.backend.sales.application.document.SalesSlipSummary;
 import com.greenhouse.backend.sales.dto.AuctionShipmentOptionResponse;
 import com.greenhouse.backend.sales.dto.SalesOrchidGroupSearchResponse;
-import com.greenhouse.backend.sales.dto.SalesSlipCreateRequest;
-import com.greenhouse.backend.sales.dto.SalesSlipListItemResponse;
-import com.greenhouse.backend.sales.dto.SalesSlipResponse;
 import com.greenhouse.backend.sales.dto.SalesSlipStatusUpdateRequest;
-import com.greenhouse.backend.settlement.dto.ManualPaymentRequest;
+import com.greenhouse.backend.settlement.application.ManualPaymentCommand;
 import jakarta.validation.Valid;
 import java.time.LocalDate;
 import java.util.List;
@@ -37,36 +37,39 @@ import org.springframework.web.bind.annotation.RestController;
 public class SalesController {
 
 	private final SalesQueryService salesQueryService;
+
 	private final SalesSlipCreationService salesSlipCreationService;
+
 	private final SalesSlipUpdateService salesSlipUpdateService;
+
 	private final SalesPaymentService salesPaymentService;
+
 	private final SalesSlipStatusService salesSlipStatusService;
+
 	private final SalesOrchidGroupQueryService salesOrchidGroupQueryService;
 
+	/**
+	 * @deprecated Use {@code GET /api/sales-slips/page}.
+	 */
+	@Deprecated(since = "2026-08", forRemoval = false)
 	@GetMapping("/sales-slips")
-	public ApiResponse<List<SalesSlipResponse>> getSalesSlips(
-			@RequestParam(required = false) Long partnerId,
-			@RequestParam(required = false) LocalDate from,
-			@RequestParam(required = false) LocalDate to) {
+	public ApiResponse<List<SalesSlipDocument>> getSalesSlips(@RequestParam(required = false) Long partnerId,
+			@RequestParam(required = false) LocalDate from, @RequestParam(required = false) LocalDate to) {
 		return ApiResponse.ok(salesQueryService.getSalesSlips(partnerId, from, to));
 	}
 
 	@GetMapping("/sales-slips/page")
-	public ApiResponse<PageResponse<SalesSlipListItemResponse>> getSalesSlipPage(
-			@RequestParam(required = false) Long partnerId,
-			@RequestParam(required = false) LocalDate from,
-			@RequestParam(required = false) LocalDate to,
-			@RequestParam(required = false) String paymentStatus,
-			@RequestParam(required = false) String salesStatus,
-			@RequestParam(required = false) String keyword,
-			@RequestParam(defaultValue = "0") int page,
+	public ApiResponse<PageResponse<SalesSlipSummary>> getSalesSlipPage(@RequestParam(required = false) Long partnerId,
+			@RequestParam(required = false) LocalDate from, @RequestParam(required = false) LocalDate to,
+			@RequestParam(required = false) String paymentStatus, @RequestParam(required = false) String salesStatus,
+			@RequestParam(required = false) String keyword, @RequestParam(defaultValue = "0") int page,
 			@RequestParam(defaultValue = "10") int size) {
-		return ApiResponse.ok(salesQueryService.getSalesSlipPage(
-				partnerId, from, to, paymentStatus, salesStatus, keyword, page, size));
+		return ApiResponse.ok(salesQueryService.getSalesSlipPage(partnerId, from, to, paymentStatus, salesStatus,
+				keyword, page, size));
 	}
 
 	@GetMapping("/sales-slips/{salesSlipId}")
-	public ApiResponse<SalesSlipResponse> getSalesSlip(@PathVariable Long salesSlipId) {
+	public ApiResponse<SalesSlipDocument> getSalesSlip(@PathVariable Long salesSlipId) {
 		return ApiResponse.ok(salesQueryService.getSalesSlip(salesSlipId));
 	}
 
@@ -77,36 +80,33 @@ public class SalesController {
 
 	@GetMapping("/sales/orchid-groups/search")
 	public ApiResponse<List<SalesOrchidGroupSearchResponse>> searchSalesOrchidGroups(
-			@RequestParam(required = false) String keyword,
-			@RequestParam(required = false) Long varietyId,
+			@RequestParam(required = false) String keyword, @RequestParam(required = false) Long varietyId,
 			@RequestParam(required = false) String status) {
 		return ApiResponse.ok(salesOrchidGroupQueryService.search(keyword, varietyId, status));
 	}
 
 	@PostMapping("/sales-slips")
 	@ResponseStatus(HttpStatus.CREATED)
-	public ApiResponse<SalesSlipResponse> createSalesSlip(@Valid @RequestBody SalesSlipCreateRequest request) {
+	public ApiResponse<SalesSlipDocument> createSalesSlip(@Valid @RequestBody SalesSlipCommand request) {
 		return ApiResponse.ok(salesSlipCreationService.create(request));
 	}
 
 	@PutMapping("/sales-slips/{salesSlipId}")
-	public ApiResponse<SalesSlipResponse> updateSalesSlip(
-			@PathVariable Long salesSlipId,
-			@Valid @RequestBody SalesSlipCreateRequest request) {
+	public ApiResponse<SalesSlipDocument> updateSalesSlip(@PathVariable Long salesSlipId,
+			@Valid @RequestBody SalesSlipCommand request) {
 		return ApiResponse.ok(salesSlipUpdateService.update(salesSlipId, request));
 	}
 
 	@PostMapping("/sales-slips/{salesSlipId}/confirm-payment")
-	public ApiResponse<SalesSlipResponse> confirmPayment(
-			@PathVariable Long salesSlipId,
-			@Valid @RequestBody ManualPaymentRequest request) {
+	public ApiResponse<SalesSlipDocument> confirmPayment(@PathVariable Long salesSlipId,
+			@Valid @RequestBody ManualPaymentCommand request) {
 		return ApiResponse.ok(salesPaymentService.confirmPayment(salesSlipId, request));
 	}
 
 	@PatchMapping("/sales-slips/{salesSlipId}/sales-status")
-	public ApiResponse<SalesSlipResponse> updateSalesStatus(
-			@PathVariable Long salesSlipId,
+	public ApiResponse<SalesSlipDocument> updateSalesStatus(@PathVariable Long salesSlipId,
 			@Valid @RequestBody SalesSlipStatusUpdateRequest request) {
 		return ApiResponse.ok(salesSlipStatusService.updateStatus(salesSlipId, request));
 	}
+
 }

@@ -299,12 +299,22 @@ export function potInboundRecord(
   inboundRecordId: number,
   payload: InboundPottingPayload,
 ) {
-  return requestJson<WorkOperation>(
-    "/work-operations/inbound-potting-executions",
+  return requestJson<WorkOperation[]>(
+    "/work-operations/inbound-potting-records",
     {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ inboundRecordId, ...payload }),
+      body: JSON.stringify({
+        plan: {
+          title: `입고 #${inboundRecordId} 포트 작업`,
+          plannedStartDate: payload.pottingDate,
+          plannedEndDate: payload.pottingDate,
+          inboundRecordIds: [inboundRecordId],
+          worker: payload.worker ?? null,
+          memo: payload.memo ?? null,
+        },
+        executions: [{ inboundRecordId, ...payload }],
+      }),
     },
     "포트 작업을 저장하지 못했습니다.",
   );

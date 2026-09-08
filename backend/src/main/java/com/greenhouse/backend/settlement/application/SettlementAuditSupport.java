@@ -15,6 +15,7 @@ import org.springframework.stereotype.Component;
 @Component
 @RequiredArgsConstructor
 public class SettlementAuditSupport {
+
 	private final AuditEventWriter auditWriter;
 
 	public Map<String, Object> settingsSnapshot(PartnerSettlementSettings settings) {
@@ -32,11 +33,10 @@ public class SettlementAuditSupport {
 		return data;
 	}
 
-	public void recordSettingsUpdate(PartnerSettlementSettings settings,
-			Map<String, Object> before, Map<String, Object> after) {
-		auditWriter.record(AuditAction.UPDATED, AuditSource.SETTLEMENT_MANAGEMENT,
-				"PARTNER_SETTLEMENT_SETTINGS", settings.getId(), before, after,
-				Map.of("partnerId", settings.getPartner().getId()));
+	public void recordSettingsUpdate(PartnerSettlementSettings settings, Map<String, Object> before,
+			Map<String, Object> after) {
+		auditWriter.record(AuditAction.UPDATED, AuditSource.SETTLEMENT_MANAGEMENT, "PARTNER_SETTLEMENT_SETTINGS",
+				settings.getId(), before, after, Map.of("partnerId", settings.getPartnerId()));
 	}
 
 	public Map<String, Object> auctionPaymentSnapshot(AuctionSettlement settlement) {
@@ -52,16 +52,15 @@ public class SettlementAuditSupport {
 		return data;
 	}
 
-	public void recordTargetPayment(String entityType, Long entityId, Long partnerId,
-			PaymentTargetType targetType, Map<String, Object> before, Map<String, Object> after) {
-		auditWriter.record(AuditAction.UPDATED, AuditSource.SETTLEMENT_MANAGEMENT,
-				entityType, entityId, before, after,
+	public void recordTargetPayment(String entityType, Long entityId, Long partnerId, PaymentTargetType targetType,
+			Map<String, Object> before, Map<String, Object> after) {
+		auditWriter.record(AuditAction.UPDATED, AuditSource.SETTLEMENT_MANAGEMENT, entityType, entityId, before, after,
 				Map.of("partnerId", partnerId, "targetType", targetType.name()));
 	}
 
 	public void recordManualPayment(PartnerPaymentEvent event) {
 		var after = new LinkedHashMap<String, Object>();
-		after.put("partnerId", event.getPartner().getId());
+		after.put("partnerId", event.getPartnerId());
 		after.put("eventType", event.getEventType());
 		after.put("eventDate", event.getEventDate());
 		after.put("amount", event.getAmount());
@@ -70,9 +69,9 @@ public class SettlementAuditSupport {
 		after.put("paymentMethod", event.getPaymentMethod());
 		after.put("status", event.getStatus());
 		after.put("createdBy", event.getCreatedBy());
-		auditWriter.record(AuditAction.CREATED, AuditSource.SETTLEMENT_MANAGEMENT,
-				"PAYMENT_EVENT", event.getId(), Map.of(), after,
-				Map.of("partnerId", event.getPartner().getId(),
-						"targetType", event.getTargetType().name(), "targetId", event.getTargetId()));
+		auditWriter.record(AuditAction.CREATED, AuditSource.SETTLEMENT_MANAGEMENT, "PAYMENT_EVENT", event.getId(),
+				Map.of(), after, Map.of("partnerId", event.getPartnerId(), "targetType", event.getTargetType().name(),
+						"targetId", event.getTargetId()));
 	}
+
 }

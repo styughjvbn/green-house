@@ -9,9 +9,8 @@ import com.greenhouse.backend.farm.dto.variety.VarietyGeneraResponse;
 import com.greenhouse.backend.farm.dto.variety.VarietyResponse;
 import com.greenhouse.backend.farm.dto.variety.VarietyUpdateRequest;
 import jakarta.validation.Valid;
-import lombok.RequiredArgsConstructor;
-
 import java.util.List;
+import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -28,15 +27,13 @@ import org.springframework.web.bind.annotation.RestController;
 @RequestMapping("/api/varieties")
 @RequiredArgsConstructor
 public class VarietyController {
+
 	private final VarietyService varietyService;
 
 	@GetMapping
-	public ApiResponse<PageResponse<VarietyResponse>> getVarieties(
-			@RequestParam(required = false) String keyword,
-			@RequestParam(required = false) String genus,
-			@RequestParam(required = false) Boolean saleEnabled,
-			@RequestParam(required = false) Boolean active,
-			@RequestParam(defaultValue = "0") int page,
+	public ApiResponse<PageResponse<VarietyResponse>> getVarieties(@RequestParam(required = false) String keyword,
+			@RequestParam(required = false) String genus, @RequestParam(required = false) Boolean saleEnabled,
+			@RequestParam(required = false) Boolean active, @RequestParam(defaultValue = "0") int page,
 			@RequestParam(defaultValue = "10") int size) {
 		return ApiResponse.ok(varietyService.getVarieties(keyword, genus, saleEnabled, active, page, size));
 	}
@@ -58,8 +55,7 @@ public class VarietyController {
 	}
 
 	@PatchMapping("/{varietyId}")
-	public ApiResponse<VarietyResponse> update(
-			@PathVariable Long varietyId,
+	public ApiResponse<VarietyResponse> update(@PathVariable Long varietyId,
 			@Valid @RequestBody VarietyUpdateRequest request) {
 		return ApiResponse.ok(varietyService.update(varietyId, request));
 	}
@@ -79,4 +75,5 @@ public class VarietyController {
 	public ApiResponse<List<VarietyConnectedOrchidGroupResponse>> getOrchidGroups(@PathVariable Long varietyId) {
 		return ApiResponse.ok(varietyService.getOrchidGroups(varietyId));
 	}
+
 }

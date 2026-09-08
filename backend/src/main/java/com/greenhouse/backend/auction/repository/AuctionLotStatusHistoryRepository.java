@@ -15,4 +15,5 @@ public interface AuctionLotStatusHistoryRepository extends JpaRepository<Auction
 			order by history.shipmentLot.id asc, history.changedAt asc
 			""")
 	List<AuctionLotStatusHistory> findAllByLotIdIn(@Param("lotIds") Collection<Long> lotIds);
+
 }

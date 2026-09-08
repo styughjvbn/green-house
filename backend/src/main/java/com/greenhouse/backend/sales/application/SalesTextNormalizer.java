@@ -1,6 +1,7 @@
 package com.greenhouse.backend.sales.application;
 
 final class SalesTextNormalizer {
+
 	private SalesTextNormalizer() {
 	}
 
@@ -22,4 +23,5 @@ final class SalesTextNormalizer {
 			throw new IllegalArgumentException("필수 문자열 값은 비워둘 수 없습니다.");
 		return normalized;
 	}
+
 }

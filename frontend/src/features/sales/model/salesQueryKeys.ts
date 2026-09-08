@@ -1,3 +1,4 @@
+import type { PaymentTargetType } from "@/entities/farm/types";
 import type {
   AuctionFilterState,
   BusinessPartnerFilterState,
@@ -19,13 +20,53 @@ export const salesQueryKeys = {
     pages: ["sales", "businessPartners", "pages"] as const,
     page: (filters: BusinessPartnerFilterState, page: number, size: number) =>
       ["sales", "businessPartners", "pages", filters, page, size] as const,
-    lookup: ["sales", "businessPartners", "lookup"] as const,
+    options: (
+      keyword: string,
+      page: number,
+      auctionHouse?: boolean,
+      active?: boolean,
+    ) =>
+      [
+        "sales",
+        "businessPartners",
+        "options",
+        keyword,
+        page,
+        auctionHouse,
+        active,
+      ] as const,
+    option: (id: number) =>
+      ["sales", "businessPartners", "option", id] as const,
+  },
+  payments: {
+    target: (targetType: PaymentTargetType, targetId: number) =>
+      ["sales", "paymentEvents", targetType, targetId] as const,
+    receivedPage: (
+      targetType: PaymentTargetType,
+      targetId: number,
+      page: number,
+      size: number,
+    ) =>
+      [
+        "sales",
+        "paymentEvents",
+        targetType,
+        targetId,
+        "PAYMENT_RECEIVED",
+        page,
+        size,
+      ] as const,
   },
   auction: {
     all: ["sales", "auctionTracking"] as const,
     lots: (filters: AuctionFilterState, page: number, size: number) =>
       ["sales", "auctionTracking", "lots", filters, page, size] as const,
     summary: ["sales", "auctionTracking", "summary"] as const,
-    settlements: ["sales", "auctionSettlements"] as const,
+    settlementPages: ["sales", "auctionSettlements", "pages"] as const,
+    settlementPage: (page: number, size: number) =>
+      ["sales", "auctionSettlements", "pages", page, size] as const,
+    settlementSummary: ["sales", "auctionSettlements", "summary"] as const,
+    settlementDetail: (id: number) =>
+      ["sales", "auctionSettlements", "detail", id] as const,
   },
 };

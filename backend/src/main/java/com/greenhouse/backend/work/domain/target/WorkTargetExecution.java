@@ -9,9 +9,9 @@ import jakarta.persistence.FetchType;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
-import jakarta.persistence.SequenceGenerator;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.OneToOne;
+import jakarta.persistence.SequenceGenerator;
 import jakarta.persistence.Table;
 import jakarta.persistence.Version;
 import java.time.LocalDateTime;
@@ -30,7 +30,8 @@ public class WorkTargetExecution extends BaseEntity {
 
 	@Id
 	@GeneratedValue(strategy = GenerationType.SEQUENCE, generator = "work_target_executions_id_seq")
-	@SequenceGenerator(name = "work_target_executions_id_seq", sequenceName = "work_target_executions_id_seq", allocationSize = 50)
+	@SequenceGenerator(name = "work_target_executions_id_seq", sequenceName = "work_target_executions_id_seq",
+			allocationSize = 50)
 	private Long id;
 
 	@OneToOne(fetch = FetchType.LAZY, optional = false)
@@ -82,15 +83,11 @@ public class WorkTargetExecution extends BaseEntity {
 		this.status = WorkTargetExecutionStatus.IN_PROGRESS;
 	}
 
-	public void completeWithEffect(
-			LocalDateTime completedAt,
-			String worker,
-			Map<String, Object> resultDetails) {
+	public void completeWithEffect(LocalDateTime completedAt, String worker, Map<String, Object> resultDetails) {
 		if (isEffectApplied()) {
 			return;
 		}
-		if (status != WorkTargetExecutionStatus.PENDING
-				&& status != WorkTargetExecutionStatus.IN_PROGRESS
+		if (status != WorkTargetExecutionStatus.PENDING && status != WorkTargetExecutionStatus.IN_PROGRESS
 				&& status != WorkTargetExecutionStatus.PARTIALLY_COMPLETED) {
 			throw new IllegalArgumentException("완료할 수 없는 작업 대상 상태입니다.");
 		}
@@ -109,12 +106,8 @@ public class WorkTargetExecution extends BaseEntity {
 		return effectAppliedAt != null;
 	}
 
-	public void recordPartialEffect(
-			Integer inputQuantity,
-			Integer plannedQuantity,
-			LocalDateTime executedAt,
-			String worker,
-			Map<String, Object> resultDetails) {
+	public void recordPartialEffect(Integer inputQuantity, Integer plannedQuantity, LocalDateTime executedAt,
+			String worker, Map<String, Object> resultDetails) {
 		if (inputQuantity == null || inputQuantity < 1) {
 			throw new IllegalArgumentException("작업 수량은 1 이상이어야 합니다.");
 		}
@@ -122,12 +115,12 @@ public class WorkTargetExecution extends BaseEntity {
 		if (nextQuantity > plannedQuantity) {
 			throw new IllegalArgumentException("누적 작업 수량은 계획 수량보다 클 수 없습니다.");
 		}
-		if (status != WorkTargetExecutionStatus.PENDING
-				&& status != WorkTargetExecutionStatus.IN_PROGRESS
+		if (status != WorkTargetExecutionStatus.PENDING && status != WorkTargetExecutionStatus.IN_PROGRESS
 				&& status != WorkTargetExecutionStatus.PARTIALLY_COMPLETED) {
 			throw new IllegalArgumentException("추가 실행할 수 없는 작업 대상 상태입니다.");
 		}
-		if (startedAt == null) startedAt = executedAt;
+		if (startedAt == null)
+			startedAt = executedAt;
 		this.processedQuantity = nextQuantity;
 		this.worker = worker;
 		this.resultDetails = resultDetails;
@@ -135,7 +128,8 @@ public class WorkTargetExecution extends BaseEntity {
 		if (nextQuantity == plannedQuantity) {
 			this.completedAt = executedAt;
 			this.status = WorkTargetExecutionStatus.COMPLETED;
-		} else {
+		}
+		else {
 			this.status = WorkTargetExecutionStatus.PARTIALLY_COMPLETED;
 		}
 	}
@@ -144,8 +138,7 @@ public class WorkTargetExecution extends BaseEntity {
 		if (status == WorkTargetExecutionStatus.SKIPPED) {
 			return;
 		}
-		if (status != WorkTargetExecutionStatus.PENDING
-				&& status != WorkTargetExecutionStatus.IN_PROGRESS
+		if (status != WorkTargetExecutionStatus.PENDING && status != WorkTargetExecutionStatus.IN_PROGRESS
 				&& status != WorkTargetExecutionStatus.PARTIALLY_COMPLETED) {
 			throw new IllegalArgumentException("건너뛸 수 없는 작업 대상 상태입니다.");
 		}
@@ -173,8 +166,8 @@ public class WorkTargetExecution extends BaseEntity {
 	}
 
 	public boolean isTerminalForCompletion() {
-		return status == WorkTargetExecutionStatus.COMPLETED
-				|| status == WorkTargetExecutionStatus.SKIPPED
+		return status == WorkTargetExecutionStatus.COMPLETED || status == WorkTargetExecutionStatus.SKIPPED
 				|| status == WorkTargetExecutionStatus.CANCELED;
 	}
+
 }

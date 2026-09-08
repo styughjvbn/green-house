@@ -7,15 +7,16 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import com.greenhouse.backend.farm.domain.orchid.OrchidGroup;
 import com.greenhouse.backend.farm.domain.structure.BedZone;
 import com.greenhouse.backend.farm.domain.structure.BedZoneSide;
 import com.greenhouse.backend.farm.domain.structure.House;
-import com.greenhouse.backend.farm.domain.orchid.OrchidGroup;
-import com.greenhouse.backend.farm.domain.transformation.OrchidGroupLineageRelationType;
 import com.greenhouse.backend.farm.domain.structure.PhysicalBed;
+import com.greenhouse.backend.farm.domain.transformation.OrchidGroupLineageRelationType;
 import com.greenhouse.backend.farm.domain.variety.Variety;
 import com.greenhouse.backend.farm.repository.transformation.OrchidGroupLineageRepository;
 import com.greenhouse.backend.work.domain.operation.WorkType;
+import com.greenhouse.backend.work.domain.operation.WorkTypeDefinition;
 import com.greenhouse.backend.work.domain.operation.WorkTypeTemplate;
 import com.greenhouse.backend.work.repository.WorkAppliedEffectRepository;
 import com.greenhouse.backend.work.repository.WorkEffectOrchidGroupRepository;
@@ -32,18 +33,34 @@ import org.springframework.transaction.annotation.Transactional;
 @Transactional
 class DivideMergeWorkOperationIntegrationTests extends AbstractBackendIntegrationTest {
 
-	@Autowired private OrchidGroupLineageRepository lineageRepository;
-	@Autowired private WorkEffectOrchidGroupRepository effectOrchidGroupRepository;
-	@Autowired private WorkAppliedEffectRepository appliedEffectRepository;
-	@Autowired private WorkTargetExecutionRepository targetExecutionRepository;
-	@Autowired private WorkOperationTargetRepository operationTargetRepository;
-	@Autowired private WorkOperationRepository operationRepository;
+	@Autowired
+	private OrchidGroupLineageRepository lineageRepository;
+
+	@Autowired
+	private WorkEffectOrchidGroupRepository effectOrchidGroupRepository;
+
+	@Autowired
+	private WorkAppliedEffectRepository appliedEffectRepository;
+
+	@Autowired
+	private WorkTargetExecutionRepository targetExecutionRepository;
+
+	@Autowired
+	private WorkOperationTargetRepository operationTargetRepository;
+
+	@Autowired
+	private WorkOperationRepository operationRepository;
 
 	private BedZone sourceZone;
+
 	private BedZone resultZone;
+
 	private Variety variety;
+
 	private WorkType repotType;
+
 	private WorkType divideType;
+
 	private WorkType mergeType;
 
 	@BeforeEach
@@ -53,6 +70,7 @@ class DivideMergeWorkOperationIntegrationTests extends AbstractBackendIntegratio
 		appliedEffectRepository.deleteAll();
 		targetExecutionRepository.deleteAll();
 		operationTargetRepository.deleteAll();
+		workCommandReceiptRepository.deleteAll();
 		operationRepository.deleteAll();
 		orchidGroupRepository.deleteAll();
 		varietyRepository.deleteAll();
@@ -61,12 +79,12 @@ class DivideMergeWorkOperationIntegrationTests extends AbstractBackendIntegratio
 		houseRepository.deleteAll();
 		workTypeRepository.deleteAll();
 
-		repotType = workTypeRepository.save(new WorkType(
-				WorkType.REPOT_CODE, "분갈이", WorkTypeTemplate.REPOT, true, true, true, 1));
-		divideType = workTypeRepository.save(new WorkType(
-				WorkType.DIVIDE_CODE, "분주", WorkTypeTemplate.REPOT, true, true, true, 2));
-		mergeType = workTypeRepository.save(new WorkType(
-				WorkType.MERGE_CODE, "합식", WorkTypeTemplate.REPOT, true, true, true, 3));
+		repotType = workTypeRepository
+			.save(new WorkType(WorkTypeDefinition.REPOT.name(), "분갈이", WorkTypeTemplate.REPOT, true, true, true, 1));
+		divideType = workTypeRepository
+			.save(new WorkType(WorkTypeDefinition.DIVIDE.name(), "분주", WorkTypeTemplate.REPOT, true, true, true, 2));
+		mergeType = workTypeRepository
+			.save(new WorkType(WorkTypeDefinition.MERGE.name(), "합식", WorkTypeTemplate.REPOT, true, true, true, 3));
 		House house = new House(1, "1동");
 		PhysicalBed bed = new PhysicalBed(1, 1);
 		bed.updatePositionUnits(new BigDecimal("24"), "칸");
@@ -76,75 +94,72 @@ class DivideMergeWorkOperationIntegrationTests extends AbstractBackendIntegratio
 		bed.addBedZone(resultZone);
 		house.addPhysicalBed(bed);
 		houseRepository.save(house);
-		variety = varietyRepository.save(new Variety(
-				"STRUCTURE-001", "팔레놉시스", "구조 변경 테스트", null,
-				"3.5치", true, true, null, null));
+		variety = varietyRepository
+			.save(new Variety("STRUCTURE-001", "팔레놉시스", "구조 변경 테스트", null, "3.5치", true, true, null, null));
 	}
 
 	@Test
 	void dividesOneSourceIntoMultipleResultsWithSplitLineage() throws Exception {
 		OrchidGroup source = createSource(30, "0", "3");
 		Long operationId = createPlan(divideType, source.getId());
-		Long targetId = operationTargetRepository
-				.findByWorkOperationIdAndExcludedAtIsNullOrderByIdAsc(operationId).getFirst().getId();
+		Long targetId = operationTargetRepository.findByWorkOperationIdAndExcludedAtIsNullOrderByIdAsc(operationId)
+			.getFirst()
+			.getId();
 
-		mockMvc.perform(post("/api/work-operations/{id}/start", operationId))
-				.andExpect(status().isOk());
-		mockMvc.perform(post("/api/work-operations/{id}/targets/{targetId}/complete", operationId, targetId)
+		mockMvc.perform(post("/api/work-operations/{id}/start", operationId)).andExpect(status().isOk());
+		mockMvc
+			.perform(post("/api/work-operations/{id}/targets/{targetId}/complete", operationId, targetId)
 				.contentType(MediaType.APPLICATION_JSON)
-				.content("""
-						{
-						  "worker": "분주 담당자",
-						  "resultDetails": {
-						    "idempotencyKey": "divide-period-1",
-						    "title": "분주 실행",
-						    "workDate": "2026-07-16",
-						    "sourceOrchidGroupId": %d,
-						    "inputQuantity": 30,
-						    "lossQuantity": 0,
-						    "results": [
-						      {"bedZoneId": %d, "quantity": 10, "potSize": "3치", "ageYear": 1, "startPosition": 0, "endPosition": 1},
-						      {"bedZoneId": %d, "quantity": 20, "potSize": "3치", "ageYear": 1, "startPosition": 1, "endPosition": 2}
-						    ],
-						    "inheritCollectionIds": []
-						  }
-						}
-						""".formatted(source.getId(), resultZone.getId(), resultZone.getId())))
-				.andExpect(status().isOk())
-				.andExpect(jsonPath("$.data.targets[0].executionStatus").value("COMPLETED"));
+				.content(
+						"""
+								{
+								  "worker": "분주 담당자",
+								  "resultDetails": {
+								    "idempotencyKey": "divide-period-1",
+								    "title": "분주 실행",
+								    "workDate": "2026-07-16",
+								    "sourceOrchidGroupId": %d,
+								    "inputQuantity": 30,
+								    "lossQuantity": 0,
+								    "results": [
+								      {"bedZoneId": %d, "quantity": 10, "potSize": "3치", "ageYear": 1, "startPosition": 0, "endPosition": 1},
+								      {"bedZoneId": %d, "quantity": 20, "potSize": "3치", "ageYear": 1, "startPosition": 1, "endPosition": 2}
+								    ],
+								    "inheritCollectionIds": []
+								  }
+								}
+								"""
+							.formatted(source.getId(), resultZone.getId(), resultZone.getId())))
+			.andExpect(status().isOk())
+			.andExpect(jsonPath("$.data.targets[0].executionStatus").value("COMPLETED"));
 
 		assertThat(orchidGroupRepository.findById(source.getId()).orElseThrow().getQuantity()).isZero();
-		assertThat(orchidGroupRepository.findByBedZoneIdAndQuantityGreaterThanOrderBySortOrderAsc(
-				resultZone.getId(), 0))
-				.extracting(OrchidGroup::getStatus)
-				.containsExactly("정상", "정상");
-		assertThat(lineageRepository.findBySourceOrchidGroupIdOrderByCreatedAtAscIdAsc(source.getId()))
-				.hasSize(2)
-				.allMatch(lineage -> lineage.getRelationType() == OrchidGroupLineageRelationType.SPLIT_TO);
+		assertThat(
+				orchidGroupRepository.findByBedZoneIdAndQuantityGreaterThanOrderBySortOrderAsc(resultZone.getId(), 0))
+			.extracting(OrchidGroup::getStatus)
+			.containsExactly("정상", "정상");
+		assertThat(lineageRepository.findBySourceOrchidGroupIdOrderByCreatedAtAscIdAsc(source.getId())).hasSize(2)
+			.allMatch(lineage -> lineage.getRelationType() == OrchidGroupLineageRelationType.SPLIT_TO);
 	}
 
 	@Test
 	void rejectsMixedVarietiesForEachStructureChangePlan() throws Exception {
 		OrchidGroup first = createSource(20, "0", "1");
-		Variety anotherVariety = varietyRepository.save(new Variety(
-				"STRUCTURE-002", "팔레놉시스", "다른 구조 변경 품종", null,
-				"3.5치", true, true, null, null));
+		Variety anotherVariety = varietyRepository
+			.save(new Variety("STRUCTURE-002", "팔레놉시스", "다른 구조 변경 품종", null, "3.5치", true, true, null, null));
 		OrchidGroup second = createSource(anotherVariety, 20, "1", "2");
 		String sourceIds = first.getId() + "," + second.getId();
 
 		for (WorkType workType : java.util.List.of(repotType, divideType, mergeType)) {
-			mockMvc.perform(post("/api/work-operations")
-					.contentType(MediaType.APPLICATION_JSON)
-					.content("""
-							{
-							  "workTypeId": %d,
-							  "title": "혼합 품종 작업",
-							  "plannedStartDate": "2026-07-16",
-							  "sourceScopeType": "MANUAL_SELECTION",
-							  "sourceOrchidGroupIds": [%s]
-							}
-							""".formatted(workType.getId(), sourceIds)))
-					.andExpect(status().isBadRequest());
+			mockMvc.perform(post("/api/work-operations").contentType(MediaType.APPLICATION_JSON).content("""
+					{
+					  "workTypeId": %d,
+					  "title": "혼합 품종 작업",
+					  "plannedStartDate": "2026-07-16",
+					  "sourceScopeType": "MANUAL_SELECTION",
+					  "sourceOrchidGroupIds": [%s]
+					}
+					""".formatted(workType.getId(), sourceIds))).andExpect(status().isBadRequest());
 		}
 		assertThat(operationRepository.count()).isZero();
 	}
@@ -152,65 +167,67 @@ class DivideMergeWorkOperationIntegrationTests extends AbstractBackendIntegratio
 	@Test
 	void createsSeparateCompletedRecordsForMixedVarietiesInOneBatch() throws Exception {
 		OrchidGroup first = createSource(10, "0", "1");
-		Variety anotherVariety = varietyRepository.save(new Variety(
-				"STRUCTURE-002", "팔레놉시스", "다른 구조 변경 품종", null,
-				"3.5치", true, true, null, null));
+		Variety anotherVariety = varietyRepository
+			.save(new Variety("STRUCTURE-002", "팔레놉시스", "다른 구조 변경 품종", null, "3.5치", true, true, null, null));
 		OrchidGroup second = createSource(anotherVariety, 20, "1", "2");
 
-		mockMvc.perform(post("/api/work-operations/structure-change-records/batch")
-				.contentType(MediaType.APPLICATION_JSON)
-				.content("""
-						{
-						  "records": [
-						    {
-						      "operation": {
-						        "workTypeId": %d,
-						        "title": "혼합 분갈이 - 구조 변경 테스트",
-						        "plannedStartDate": "2026-07-16",
-						        "sourceScopeType": "MANUAL_SELECTION",
-						        "sourceOrchidGroupIds": [%d]
-						      },
-						      "execution": {
-						        "idempotencyKey": "mixed-record-first",
-						        "completedDate": "2026-07-16",
-						        "sources": [{"sourceOrchidGroupId": %d, "inputQuantity": 10}],
-						        "lossQuantity": 0,
-						        "results": [
-						          {"bedZoneId": %d, "quantity": 10, "sourceOrchidGroupIds": [%d], "potSize": "4치", "ageYear": 2, "purpose": "NORMAL", "startPosition": 0, "endPosition": 1}
-						        ]
-						      }
-						    },
-						    {
-						      "operation": {
-						        "workTypeId": %d,
-						        "title": "혼합 분갈이 - 다른 구조 변경 품종",
-						        "plannedStartDate": "2026-07-16",
-						        "sourceScopeType": "MANUAL_SELECTION",
-						        "sourceOrchidGroupIds": [%d]
-						      },
-						      "execution": {
-						        "idempotencyKey": "mixed-record-second",
-						        "completedDate": "2026-07-16",
-						        "sources": [{"sourceOrchidGroupId": %d, "inputQuantity": 20}],
-						        "lossQuantity": 0,
-						        "results": [
-						          {"bedZoneId": %d, "quantity": 20, "sourceOrchidGroupIds": [%d], "potSize": "4치", "ageYear": 2, "purpose": "NORMAL", "startPosition": 1, "endPosition": 2}
-						        ]
-						      }
-						    }
-						  ]
-						}
-						""".formatted(
-								repotType.getId(), first.getId(), first.getId(), resultZone.getId(), first.getId(),
-								repotType.getId(), second.getId(), second.getId(), resultZone.getId(), second.getId())))
-				.andExpect(status().isCreated())
-				.andExpect(jsonPath("$.data", hasSize(2)))
-				.andExpect(jsonPath("$.data[0].status").value("COMPLETED"))
-				.andExpect(jsonPath("$.data[1].status").value("COMPLETED"));
+		mockMvc
+			.perform(post("/api/work-operations/structure-change-records/batch").contentType(MediaType.APPLICATION_JSON)
+				.content(
+						"""
+								{
+								  "records": [
+								    {
+								      "operation": {
+								        "workTypeId": %d,
+								        "title": "혼합 분갈이 - 구조 변경 테스트",
+								        "plannedStartDate": "2026-07-16",
+								        "sourceScopeType": "MANUAL_SELECTION",
+								        "sourceOrchidGroupIds": [%d]
+								      },
+								      "execution": {
+								        "idempotencyKey": "mixed-record-first",
+								        "completedDate": "2026-07-16",
+								        "sources": [{"sourceOrchidGroupId": %d, "inputQuantity": 10}],
+								        "lossQuantity": 0,
+								        "results": [
+								          {"bedZoneId": %d, "quantity": 10, "sourceOrchidGroupIds": [%d], "potSize": "4치", "ageYear": 2, "purpose": "NORMAL", "startPosition": 0, "endPosition": 1}
+								        ]
+								      }
+								    },
+								    {
+								      "operation": {
+								        "workTypeId": %d,
+								        "title": "혼합 분갈이 - 다른 구조 변경 품종",
+								        "plannedStartDate": "2026-07-16",
+								        "sourceScopeType": "MANUAL_SELECTION",
+								        "sourceOrchidGroupIds": [%d]
+								      },
+								      "execution": {
+								        "idempotencyKey": "mixed-record-second",
+								        "completedDate": "2026-07-16",
+								        "sources": [{"sourceOrchidGroupId": %d, "inputQuantity": 20}],
+								        "lossQuantity": 0,
+								        "results": [
+								          {"bedZoneId": %d, "quantity": 20, "sourceOrchidGroupIds": [%d], "potSize": "4치", "ageYear": 2, "purpose": "NORMAL", "startPosition": 1, "endPosition": 2}
+								        ]
+								      }
+								    }
+								  ]
+								}
+								"""
+							.formatted(repotType.getId(), first.getId(), first.getId(), resultZone.getId(),
+									first.getId(), repotType.getId(), second.getId(), second.getId(),
+									resultZone.getId(), second.getId())))
+			.andExpect(status().isCreated())
+			.andExpect(jsonPath("$.data", hasSize(2)))
+			.andExpect(jsonPath("$.data[0].status").value("COMPLETED"))
+			.andExpect(jsonPath("$.data[1].status").value("COMPLETED"));
 
 		assertThat(operationRepository.count()).isEqualTo(2);
-		assertThat(orchidGroupRepository.findByBedZoneIdAndQuantityGreaterThanOrderBySortOrderAsc(
-				resultZone.getId(), 0)).hasSize(2);
+		assertThat(
+				orchidGroupRepository.findByBedZoneIdAndQuantityGreaterThanOrderBySortOrderAsc(resultZone.getId(), 0))
+			.hasSize(2);
 	}
 
 	@Test
@@ -219,9 +236,9 @@ class DivideMergeWorkOperationIntegrationTests extends AbstractBackendIntegratio
 		OrchidGroup second = createSource(20, "1", "2");
 		Long operationId = createPlan(mergeType, first.getId(), second.getId());
 
-		mockMvc.perform(post("/api/work-operations/{id}/start", operationId))
-				.andExpect(status().isOk());
-		mockMvc.perform(post("/api/work-operations/{id}/merge/complete", operationId)
+		mockMvc.perform(post("/api/work-operations/{id}/start", operationId)).andExpect(status().isOk());
+		mockMvc
+			.perform(post("/api/work-operations/{id}/merge/complete", operationId)
 				.contentType(MediaType.APPLICATION_JSON)
 				.content("""
 						{
@@ -243,27 +260,26 @@ class DivideMergeWorkOperationIntegrationTests extends AbstractBackendIntegratio
 						  }
 						}
 						""".formatted(first.getId(), second.getId(), resultZone.getId())))
-				.andExpect(status().isOk())
-				.andExpect(jsonPath("$.data.targets", hasSize(2)))
-				.andExpect(jsonPath("$.data.targets[0].executionStatus").value("COMPLETED"))
-				.andExpect(jsonPath("$.data.targets[1].executionStatus").value("COMPLETED"));
+			.andExpect(status().isOk())
+			.andExpect(jsonPath("$.data.targets", hasSize(2)))
+			.andExpect(jsonPath("$.data.targets[0].executionStatus").value("COMPLETED"))
+			.andExpect(jsonPath("$.data.targets[1].executionStatus").value("COMPLETED"));
 
 		assertThat(orchidGroupRepository.findById(first.getId()).orElseThrow().getQuantity()).isZero();
 		assertThat(orchidGroupRepository.findById(second.getId()).orElseThrow().getQuantity()).isZero();
-		var resultGroups = orchidGroupRepository.findByBedZoneIdAndQuantityGreaterThanOrderBySortOrderAsc(
-				resultZone.getId(), 0);
+		var resultGroups = orchidGroupRepository
+			.findByBedZoneIdAndQuantityGreaterThanOrderBySortOrderAsc(resultZone.getId(), 0);
 		assertThat(resultGroups).singleElement().satisfies(result -> {
 			assertThat(result.getQuantity()).isEqualTo(30);
 			assertThat(result.getStatus()).isEqualTo("정상");
-			assertThat(lineageRepository.findByResultOrchidGroupIdOrderByCreatedAtAscIdAsc(result.getId()))
-					.isEmpty();
+			assertThat(lineageRepository.findByResultOrchidGroupIdOrderByCreatedAtAscIdAsc(result.getId())).isEmpty();
 		});
 		mockMvc.perform(get("/api/orchid-groups/{id}/lineage", resultGroups.getFirst().getId()))
-				.andExpect(status().isOk())
-				.andExpect(jsonPath("$.data.transformations", hasSize(1)))
-				.andExpect(jsonPath("$.data.transformations[0].sources", hasSize(2)))
-				.andExpect(jsonPath("$.data.transformations[0].totalInputQuantity").value(30))
-				.andExpect(jsonPath("$.data.transformations[0].totalResultQuantity").value(30));
+			.andExpect(status().isOk())
+			.andExpect(jsonPath("$.data.transformations", hasSize(1)))
+			.andExpect(jsonPath("$.data.transformations[0].sources", hasSize(2)))
+			.andExpect(jsonPath("$.data.transformations[0].totalInputQuantity").value(30))
+			.andExpect(jsonPath("$.data.transformations[0].totalResultQuantity").value(30));
 	}
 
 	@Test
@@ -271,79 +287,86 @@ class DivideMergeWorkOperationIntegrationTests extends AbstractBackendIntegratio
 		OrchidGroup source = createSource(30, "0", "3");
 		Long operationId = createPlan(divideType, source.getId());
 
-		mockMvc.perform(post("/api/work-operations/{id}/start", operationId))
-				.andExpect(status().isOk());
-		mockMvc.perform(post("/api/work-operations/{id}/structure-change-executions", operationId)
+		mockMvc.perform(post("/api/work-operations/{id}/start", operationId)).andExpect(status().isOk());
+		mockMvc
+			.perform(post("/api/work-operations/{id}/structure-change-executions", operationId)
 				.contentType(MediaType.APPLICATION_JSON)
-				.content("""
-						{
-						  "idempotencyKey": "divide-batch-1",
-						  "completedDate": "2026-07-16",
-						  "worker": "분주 담당자",
-						  "sources": [
-						    {"sourceOrchidGroupId": %d, "inputQuantity": 10}
-						  ],
-						  "lossQuantity": 0,
-						  "results": [
-						    {"bedZoneId": %d, "quantity": 6, "sourceOrchidGroupIds": [%d], "potSize": "3.5치", "ageYear": 2, "purpose": "NORMAL", "startPosition": 0, "endPosition": 1},
-						    {"bedZoneId": %d, "quantity": 4, "sourceOrchidGroupIds": [%d], "potSize": "3.5치", "ageYear": 2, "purpose": "DIVIDE_CANDIDATE", "startPosition": 1, "endPosition": 2}
-						  ]
-						}
-						""".formatted(
-								source.getId(), resultZone.getId(), source.getId(), resultZone.getId(), source.getId())))
-				.andExpect(status().isCreated())
-				.andExpect(jsonPath("$.data.targets[0].executionStatus").value("PARTIALLY_COMPLETED"))
-				.andExpect(jsonPath("$.data.targets[0].processedQuantity").value(10))
-				.andExpect(jsonPath("$.data.targets[0].remainingQuantity").value(20))
-				.andExpect(jsonPath("$.data.progress.progressPercent").value(33));
+				.content(
+						"""
+								{
+								  "idempotencyKey": "divide-batch-1",
+								  "completedDate": "2026-07-16",
+								  "worker": "분주 담당자",
+								  "sources": [
+								    {"sourceOrchidGroupId": %d, "inputQuantity": 10}
+								  ],
+								  "lossQuantity": 0,
+								  "results": [
+								    {"bedZoneId": %d, "quantity": 6, "sourceOrchidGroupIds": [%d], "potSize": "3.5치", "ageYear": 2, "purpose": "NORMAL", "startPosition": 0, "endPosition": 1},
+								    {"bedZoneId": %d, "quantity": 4, "sourceOrchidGroupIds": [%d], "potSize": "3.5치", "ageYear": 2, "purpose": "DIVIDE_CANDIDATE", "startPosition": 1, "endPosition": 2}
+								  ]
+								}
+								"""
+							.formatted(source.getId(), resultZone.getId(), source.getId(), resultZone.getId(),
+									source.getId())))
+			.andExpect(status().isCreated())
+			.andExpect(jsonPath("$.data.targets[0].executionStatus").value("PARTIALLY_COMPLETED"))
+			.andExpect(jsonPath("$.data.targets[0].processedQuantity").value(10))
+			.andExpect(jsonPath("$.data.targets[0].remainingQuantity").value(20))
+			.andExpect(jsonPath("$.data.progress.progressPercent").value(33));
 
 		assertThat(orchidGroupRepository.findById(source.getId()).orElseThrow().getQuantity()).isEqualTo(20);
-		assertThat(orchidGroupRepository.findByBedZoneIdAndQuantityGreaterThanOrderBySortOrderAsc(
-				resultZone.getId(), 0))
-				.hasSize(2)
-				.extracting(OrchidGroup::getStatus)
-				.containsExactly("정상", "분주 예정");
+		assertThat(
+				orchidGroupRepository.findByBedZoneIdAndQuantityGreaterThanOrderBySortOrderAsc(resultZone.getId(), 0))
+			.hasSize(2)
+			.extracting(OrchidGroup::getStatus)
+			.containsExactly("정상", "분주 예정");
 		assertThat(appliedEffectRepository.findByWorkOperationIdOrderByIdAsc(operationId)).hasSize(1);
 
-		mockMvc.perform(post("/api/work-operations/{id}/structure-change-executions", operationId)
+		mockMvc
+			.perform(post("/api/work-operations/{id}/structure-change-executions", operationId)
 				.contentType(MediaType.APPLICATION_JSON)
-				.content("""
-						{
-						  "idempotencyKey": "divide-batch-2",
-						  "completedDate": "2026-07-17",
-						  "worker": "분주 담당자",
-						  "sources": [
-						    {"sourceOrchidGroupId": %d, "inputQuantity": 10}
-						  ],
-						  "results": [
-						    {"bedZoneId": %d, "quantity": 10, "sourceOrchidGroupIds": [%d], "potSize": "3.5치", "ageYear": 2, "purpose": "NORMAL", "startPosition": 2, "endPosition": 3}
-						  ]
-						}
-						""".formatted(source.getId(), resultZone.getId(), source.getId())))
-				.andExpect(status().isCreated())
-				.andExpect(jsonPath("$.data.targets[0].processedQuantity").value(20));
+				.content(
+						"""
+								{
+								  "idempotencyKey": "divide-batch-2",
+								  "completedDate": "2026-07-17",
+								  "worker": "분주 담당자",
+								  "sources": [
+								    {"sourceOrchidGroupId": %d, "inputQuantity": 10}
+								  ],
+								  "results": [
+								    {"bedZoneId": %d, "quantity": 10, "sourceOrchidGroupIds": [%d], "potSize": "3.5치", "ageYear": 2, "purpose": "NORMAL", "startPosition": 2, "endPosition": 3}
+								  ]
+								}
+								"""
+							.formatted(source.getId(), resultZone.getId(), source.getId())))
+			.andExpect(status().isCreated())
+			.andExpect(jsonPath("$.data.targets[0].processedQuantity").value(20));
 
 		mockMvc.perform(get("/api/work-operations/{id}/details", operationId))
-				.andExpect(status().isOk())
-				.andExpect(jsonPath("$.data.executions", hasSize(2)))
-				.andExpect(jsonPath("$.data.executions[0].executionKey").value("EXECUTION:divide-batch-1"))
-				.andExpect(jsonPath("$.data.executions[1].executionKey").value("EXECUTION:divide-batch-2"))
-				.andExpect(jsonPath("$.data.executions[0].sources[0].inputQuantity").value(10))
-				.andExpect(jsonPath("$.data.executions[1].results[0].quantity").value(10))
-				.andExpect(jsonPath("$.data.executions[1].results[0].bedZoneId").value(resultZone.getId()))
-				.andExpect(jsonPath("$.data.executions[1].results[0].varietyName").value("구조 변경 테스트"))
-				.andExpect(jsonPath("$.data.executions[1].results[0].location.houseNumber").value(1))
-				.andExpect(jsonPath("$.data.executions[1].results[0].location.physicalBedNumber").value(1))
-				.andExpect(jsonPath("$.data.executions[1].results[0].location.bedZoneName").value("우측"));
+			.andExpect(status().isOk())
+			.andExpect(jsonPath("$.data.executions", hasSize(2)))
+			.andExpect(jsonPath("$.data.executions[0].executionKey").value("EXECUTION:divide-batch-1"))
+			.andExpect(jsonPath("$.data.executions[1].executionKey").value("EXECUTION:divide-batch-2"))
+			.andExpect(jsonPath("$.data.executions[0].sources[0].inputQuantity").value(10))
+			.andExpect(jsonPath("$.data.executions[1].results[0].quantity").value(10))
+			.andExpect(jsonPath("$.data.executions[1].results[0].bedZoneId").value(resultZone.getId()))
+			.andExpect(jsonPath("$.data.executions[1].results[0].varietyName").value("구조 변경 테스트"))
+			.andExpect(jsonPath("$.data.executions[1].results[0].location.houseNumber").value(1))
+			.andExpect(jsonPath("$.data.executions[1].results[0].location.physicalBedNumber").value(1))
+			.andExpect(jsonPath("$.data.executions[1].results[0].location.bedZoneName").value("우측"));
 
-		Long targetId = operationTargetRepository
-				.findByWorkOperationIdAndExcludedAtIsNullOrderByIdAsc(operationId).getFirst().getId();
-		mockMvc.perform(post("/api/work-operations/{id}/targets/{targetId}/skip", operationId, targetId)
+		Long targetId = operationTargetRepository.findByWorkOperationIdAndExcludedAtIsNullOrderByIdAsc(operationId)
+			.getFirst()
+			.getId();
+		mockMvc
+			.perform(post("/api/work-operations/{id}/targets/{targetId}/skip", operationId, targetId)
 				.contentType(MediaType.APPLICATION_JSON)
 				.content("{\"worker\":\"분주 담당자\"}"))
-				.andExpect(status().isOk())
-				.andExpect(jsonPath("$.data.targets[0].executionStatus").value("SKIPPED"))
-				.andExpect(jsonPath("$.data.progress.progressPercent").value(100));
+			.andExpect(status().isOk())
+			.andExpect(jsonPath("$.data.targets[0].executionStatus").value("SKIPPED"))
+			.andExpect(jsonPath("$.data.progress.progressPercent").value(100));
 	}
 
 	@Test
@@ -351,54 +374,54 @@ class DivideMergeWorkOperationIntegrationTests extends AbstractBackendIntegratio
 		OrchidGroup source = createSource(100, "0", "10");
 		Long operationId = createPlan(repotType, source.getId());
 
-		mockMvc.perform(post("/api/work-operations/{id}/start", operationId))
-				.andExpect(status().isOk());
-		mockMvc.perform(post("/api/work-operations/{id}/structure-change-executions", operationId)
-						.contentType(MediaType.APPLICATION_JSON)
-						.content("""
-								{
-								  "idempotencyKey": "repot-reuse-source-tail",
-								  "completedDate": "2026-07-16",
-								  "sources": [
-								    {
-								      "sourceOrchidGroupId": %d,
-								      "inputQuantity": 50,
-								      "releasedStartPosition": 5,
-								      "releasedEndPosition": 10
-								    }
-								  ],
-								  "lossQuantity": 0,
-								  "results": [
-								    {
-								      "bedZoneId": %d,
-								      "quantity": 50,
-								      "sourceOrchidGroupIds": [%d],
-								      "potSize": "4치",
-								      "ageYear": 2,
-								      "purpose": "NORMAL",
-								      "startPosition": 5,
-								      "endPosition": 10
-								    }
-								  ]
-								}
-								""".formatted(source.getId(), sourceZone.getId(), source.getId())))
-				.andExpect(status().isCreated())
-				.andExpect(jsonPath("$.data.targets[0].executionStatus").value("PARTIALLY_COMPLETED"));
+		mockMvc.perform(post("/api/work-operations/{id}/start", operationId)).andExpect(status().isOk());
+		mockMvc
+			.perform(post("/api/work-operations/{id}/structure-change-executions", operationId)
+				.contentType(MediaType.APPLICATION_JSON)
+				.content("""
+						{
+						  "idempotencyKey": "repot-reuse-source-tail",
+						  "completedDate": "2026-07-16",
+						  "sources": [
+						    {
+						      "sourceOrchidGroupId": %d,
+						      "inputQuantity": 50,
+						      "releasedStartPosition": 5,
+						      "releasedEndPosition": 10
+						    }
+						  ],
+						  "lossQuantity": 0,
+						  "results": [
+						    {
+						      "bedZoneId": %d,
+						      "quantity": 50,
+						      "sourceOrchidGroupIds": [%d],
+						      "potSize": "4치",
+						      "ageYear": 2,
+						      "purpose": "NORMAL",
+						      "startPosition": 5,
+						      "endPosition": 10
+						    }
+						  ]
+						}
+						""".formatted(source.getId(), sourceZone.getId(), source.getId())))
+			.andExpect(status().isCreated())
+			.andExpect(jsonPath("$.data.targets[0].executionStatus").value("PARTIALLY_COMPLETED"));
 
 		OrchidGroup remainingSource = orchidGroupRepository.findById(source.getId()).orElseThrow();
 		assertThat(remainingSource.getQuantity()).isEqualTo(50);
 		assertThat(remainingSource.getStartPosition()).isEqualByComparingTo("0");
 		assertThat(remainingSource.getEndPosition()).isEqualByComparingTo("5");
 
-		assertThat(orchidGroupRepository.findByBedZoneIdAndQuantityGreaterThanOrderBySortOrderAsc(
-				sourceZone.getId(), 0))
-				.filteredOn(group -> !group.getId().equals(source.getId()))
-				.singleElement()
-				.satisfies(result -> {
-					assertThat(result.getQuantity()).isEqualTo(50);
-					assertThat(result.getStartPosition()).isEqualByComparingTo("5");
-					assertThat(result.getEndPosition()).isEqualByComparingTo("10");
-				});
+		assertThat(
+				orchidGroupRepository.findByBedZoneIdAndQuantityGreaterThanOrderBySortOrderAsc(sourceZone.getId(), 0))
+			.filteredOn(group -> !group.getId().equals(source.getId()))
+			.singleElement()
+			.satisfies(result -> {
+				assertThat(result.getQuantity()).isEqualTo(50);
+				assertThat(result.getStartPosition()).isEqualByComparingTo("5");
+				assertThat(result.getEndPosition()).isEqualByComparingTo("10");
+			});
 	}
 
 	@Test
@@ -407,125 +430,124 @@ class DivideMergeWorkOperationIntegrationTests extends AbstractBackendIntegratio
 		OrchidGroup second = createSource(12, "1", "2");
 		Long operationId = createPlan(mergeType, first.getId(), second.getId());
 
-		mockMvc.perform(post("/api/work-operations/{id}/start", operationId))
-				.andExpect(status().isOk());
+		mockMvc.perform(post("/api/work-operations/{id}/start", operationId)).andExpect(status().isOk());
 		mockMvc.perform(post("/api/work-operations/{id}/structure-change-executions", operationId)
-				.contentType(MediaType.APPLICATION_JSON)
-				.content("""
-						{
-						  "idempotencyKey": "merge-batch-1",
-						  "completedDate": "2026-07-16",
-						  "sources": [
-						    {"sourceOrchidGroupId": %d, "inputQuantity": 8},
-						    {"sourceOrchidGroupId": %d, "inputQuantity": 12}
-						  ],
-						  "lossQuantity": 0,
-						  "results": [
-						    {"bedZoneId": %d, "quantity": 20, "sourceOrchidGroupIds": [%d, %d], "potSize": "4치", "ageYear": 2, "purpose": "NORMAL", "startPosition": 0, "endPosition": 2}
-						  ]
-						}
-						""".formatted(
-								first.getId(), second.getId(), resultZone.getId(), first.getId(), second.getId())))
-				.andExpect(status().isCreated())
-				.andExpect(jsonPath("$.data.targets[0].executionStatus").value("COMPLETED"))
-				.andExpect(jsonPath("$.data.targets[1].executionStatus").value("COMPLETED"));
+			.contentType(MediaType.APPLICATION_JSON)
+			.content(
+					"""
+							{
+							  "idempotencyKey": "merge-batch-1",
+							  "completedDate": "2026-07-16",
+							  "sources": [
+							    {"sourceOrchidGroupId": %d, "inputQuantity": 8},
+							    {"sourceOrchidGroupId": %d, "inputQuantity": 12}
+							  ],
+							  "lossQuantity": 0,
+							  "results": [
+							    {"bedZoneId": %d, "quantity": 20, "sourceOrchidGroupIds": [%d, %d], "potSize": "4치", "ageYear": 2, "purpose": "NORMAL", "startPosition": 0, "endPosition": 2}
+							  ]
+							}
+							"""
+						.formatted(first.getId(), second.getId(), resultZone.getId(), first.getId(), second.getId())))
+			.andExpect(status().isCreated())
+			.andExpect(jsonPath("$.data.targets[0].executionStatus").value("COMPLETED"))
+			.andExpect(jsonPath("$.data.targets[1].executionStatus").value("COMPLETED"));
 
 		var result = orchidGroupRepository
-				.findByBedZoneIdAndQuantityGreaterThanOrderBySortOrderAsc(resultZone.getId(), 0).getFirst();
+			.findByBedZoneIdAndQuantityGreaterThanOrderBySortOrderAsc(resultZone.getId(), 0)
+			.getFirst();
 		assertThat(result.getStatus()).isEqualTo("정상");
-		assertThat(lineageRepository.findByResultOrchidGroupIdOrderByCreatedAtAscIdAsc(result.getId()))
-				.isEmpty();
+		assertThat(lineageRepository.findByResultOrchidGroupIdOrderByCreatedAtAscIdAsc(result.getId())).isEmpty();
 		mockMvc.perform(get("/api/orchid-groups/{id}/lineage", result.getId()))
-				.andExpect(status().isOk())
-				.andExpect(jsonPath("$.data.transformations", hasSize(1)))
-				.andExpect(jsonPath("$.data.transformations[0].relationType").value("MERGED_TO"))
-				.andExpect(jsonPath("$.data.transformations[0].sources", hasSize(2)))
-				.andExpect(jsonPath("$.data.transformations[0].results", hasSize(1)));
+			.andExpect(status().isOk())
+			.andExpect(jsonPath("$.data.transformations", hasSize(1)))
+			.andExpect(jsonPath("$.data.transformations[0].relationType").value("MERGED_TO"))
+			.andExpect(jsonPath("$.data.transformations[0].sources", hasSize(2)))
+			.andExpect(jsonPath("$.data.transformations[0].results", hasSize(1)));
 	}
 
 	@Test
 	void createsCompletedStructureChangeRecordWithAllResults() throws Exception {
 		OrchidGroup source = createSource(30, "0", "3");
 
-		mockMvc.perform(post("/api/work-operations/structure-change-records")
-				.contentType(MediaType.APPLICATION_JSON)
-				.content("""
-						{
-						  "operation": {
-						    "workTypeId": %d,
-						    "title": "분갈이 작업 기록",
-						    "plannedStartDate": "2026-07-16",
-						    "plannedEndDate": "2026-07-16",
-						    "sourceScopeType": "MANUAL_SELECTION",
-						    "sourceOrchidGroupIds": [%d]
-						  },
-						  "execution": {
-						    "idempotencyKey": "repot-record-1",
-						    "completedDate": "2026-07-16",
-						    "worker": "기록 담당자",
-						    "sources": [
-						      {"sourceOrchidGroupId": %d, "inputQuantity": 30}
-						    ],
-						    "lossQuantity": 0,
-						    "results": [
-						      {"bedZoneId": %d, "quantity": 10, "sourceOrchidGroupIds": [%d], "potSize": "4치", "ageYear": 2, "purpose": "NORMAL", "startPosition": 0, "endPosition": 1},
-						      {"bedZoneId": %d, "quantity": 20, "sourceOrchidGroupIds": [%d], "potSize": "4치", "ageYear": 2, "purpose": "NORMAL", "startPosition": 1, "endPosition": 2}
-						    ]
-						  }
-						}
-						""".formatted(
-								repotType.getId(),
-								source.getId(),
-								source.getId(),
-								resultZone.getId(),
-								source.getId(),
-								resultZone.getId(),
-								source.getId())))
-				.andExpect(status().isCreated())
-				.andExpect(jsonPath("$.data.status").value("COMPLETED"))
-				.andExpect(jsonPath("$.data.targets[0].executionStatus").value("COMPLETED"));
+		mockMvc
+			.perform(post("/api/work-operations/structure-change-records").contentType(MediaType.APPLICATION_JSON)
+				.content(
+						"""
+								{
+								  "operation": {
+								    "workTypeId": %d,
+								    "title": "분갈이 작업 기록",
+								    "plannedStartDate": "2026-07-16",
+								    "plannedEndDate": "2026-07-16",
+								    "sourceScopeType": "MANUAL_SELECTION",
+								    "sourceOrchidGroupIds": [%d]
+								  },
+								  "execution": {
+								    "idempotencyKey": "repot-record-1",
+								    "completedDate": "2026-07-16",
+								    "worker": "기록 담당자",
+								    "sources": [
+								      {"sourceOrchidGroupId": %d, "inputQuantity": 30}
+								    ],
+								    "lossQuantity": 0,
+								    "results": [
+								      {"bedZoneId": %d, "quantity": 10, "sourceOrchidGroupIds": [%d], "potSize": "4치", "ageYear": 2, "purpose": "NORMAL", "startPosition": 0, "endPosition": 1},
+								      {"bedZoneId": %d, "quantity": 20, "sourceOrchidGroupIds": [%d], "potSize": "4치", "ageYear": 2, "purpose": "NORMAL", "startPosition": 1, "endPosition": 2}
+								    ]
+								  }
+								}
+								"""
+							.formatted(repotType.getId(), source.getId(), source.getId(), resultZone.getId(),
+									source.getId(), resultZone.getId(), source.getId())))
+			.andExpect(status().isCreated())
+			.andExpect(jsonPath("$.data.status").value("COMPLETED"))
+			.andExpect(jsonPath("$.data.targets[0].executionStatus").value("COMPLETED"));
 
 		assertThat(operationRepository.count()).isEqualTo(1);
 		assertThat(orchidGroupRepository.findById(source.getId()).orElseThrow().getQuantity()).isZero();
-		assertThat(orchidGroupRepository.findByBedZoneIdAndQuantityGreaterThanOrderBySortOrderAsc(
-				resultZone.getId(), 0)).hasSize(2);
+		assertThat(
+				orchidGroupRepository.findByBedZoneIdAndQuantityGreaterThanOrderBySortOrderAsc(resultZone.getId(), 0))
+			.hasSize(2);
 	}
 
 	@Test
 	void createsDivideRecordWhenResultQuantityExceedsSourceQuantity() throws Exception {
 		OrchidGroup source = createSource(30, "0", "3");
 
-		mockMvc.perform(post("/api/work-operations/structure-change-records")
-				.contentType(MediaType.APPLICATION_JSON)
-				.content("""
-						{
-						  "operation": {
-						    "workTypeId": %d,
-						    "title": "분주 작업 기록",
-						    "plannedStartDate": "2026-07-16",
-						    "sourceScopeType": "MANUAL_SELECTION",
-						    "sourceOrchidGroupIds": [%d]
-						  },
-						  "execution": {
-						    "idempotencyKey": "divide-record-expanded-quantity",
-						    "completedDate": "2026-07-16",
-						    "sources": [{"sourceOrchidGroupId": %d, "inputQuantity": 30}],
-						    "lossQuantity": 0,
-						    "results": [
-						      {"bedZoneId": %d, "quantity": 35, "sourceOrchidGroupIds": [%d], "potSize": "4치", "ageYear": 2, "purpose": "NORMAL", "startPosition": 0, "endPosition": 3}
-						    ]
-						  }
-						}
-						""".formatted(
-								divideType.getId(), source.getId(), source.getId(), resultZone.getId(), source.getId())))
-				.andExpect(status().isCreated())
-				.andExpect(jsonPath("$.data.status").value("COMPLETED"));
+		mockMvc
+			.perform(post("/api/work-operations/structure-change-records").contentType(MediaType.APPLICATION_JSON)
+				.content(
+						"""
+								{
+								  "operation": {
+								    "workTypeId": %d,
+								    "title": "분주 작업 기록",
+								    "plannedStartDate": "2026-07-16",
+								    "sourceScopeType": "MANUAL_SELECTION",
+								    "sourceOrchidGroupIds": [%d]
+								  },
+								  "execution": {
+								    "idempotencyKey": "divide-record-expanded-quantity",
+								    "completedDate": "2026-07-16",
+								    "sources": [{"sourceOrchidGroupId": %d, "inputQuantity": 30}],
+								    "lossQuantity": 0,
+								    "results": [
+								      {"bedZoneId": %d, "quantity": 35, "sourceOrchidGroupIds": [%d], "potSize": "4치", "ageYear": 2, "purpose": "NORMAL", "startPosition": 0, "endPosition": 3}
+								    ]
+								  }
+								}
+								"""
+							.formatted(divideType.getId(), source.getId(), source.getId(), resultZone.getId(),
+									source.getId())))
+			.andExpect(status().isCreated())
+			.andExpect(jsonPath("$.data.status").value("COMPLETED"));
 
 		assertThat(orchidGroupRepository.findById(source.getId()).orElseThrow().getQuantity()).isZero();
-		assertThat(orchidGroupRepository.findByBedZoneIdAndQuantityGreaterThanOrderBySortOrderAsc(
-				resultZone.getId(), 0))
-				.extracting(OrchidGroup::getQuantity)
-				.containsExactly(35);
+		assertThat(
+				orchidGroupRepository.findByBedZoneIdAndQuantityGreaterThanOrderBySortOrderAsc(resultZone.getId(), 0))
+			.extracting(OrchidGroup::getQuantity)
+			.containsExactly(35);
 	}
 
 	@Test
@@ -533,85 +555,83 @@ class DivideMergeWorkOperationIntegrationTests extends AbstractBackendIntegratio
 		OrchidGroup source = createSource(20, "0", "2");
 		Long operationId = createPlan(mergeType, source.getId());
 
-		mockMvc.perform(post("/api/work-operations/{id}/start", operationId))
-				.andExpect(status().isOk());
-		mockMvc.perform(post("/api/work-operations/{id}/structure-change-executions", operationId)
+		mockMvc.perform(post("/api/work-operations/{id}/start", operationId)).andExpect(status().isOk());
+		mockMvc
+			.perform(post("/api/work-operations/{id}/structure-change-executions", operationId)
 				.contentType(MediaType.APPLICATION_JSON)
-				.content("""
-						{
-						  "idempotencyKey": "single-source-merge",
-						  "completedDate": "2026-07-16",
-						  "sources": [{"sourceOrchidGroupId": %d, "inputQuantity": 20}],
-						  "results": [
-						    {"bedZoneId": %d, "quantity": 20, "sourceOrchidGroupIds": [%d], "potSize": "4치", "ageYear": 2, "purpose": "NORMAL", "startPosition": 0, "endPosition": 2}
-						  ]
-						}
-						""".formatted(source.getId(), resultZone.getId(), source.getId())))
-				.andExpect(status().isCreated())
-				.andExpect(jsonPath("$.data.targets[0].executionStatus").value("COMPLETED"));
+				.content(
+						"""
+								{
+								  "idempotencyKey": "single-source-merge",
+								  "completedDate": "2026-07-16",
+								  "sources": [{"sourceOrchidGroupId": %d, "inputQuantity": 20}],
+								  "results": [
+								    {"bedZoneId": %d, "quantity": 20, "sourceOrchidGroupIds": [%d], "potSize": "4치", "ageYear": 2, "purpose": "NORMAL", "startPosition": 0, "endPosition": 2}
+								  ]
+								}
+								"""
+							.formatted(source.getId(), resultZone.getId(), source.getId())))
+			.andExpect(status().isCreated())
+			.andExpect(jsonPath("$.data.targets[0].executionStatus").value("COMPLETED"));
 
-		assertThat(lineageRepository.findBySourceOrchidGroupIdOrderByCreatedAtAscIdAsc(source.getId()))
-				.hasSize(1)
-				.allMatch(lineage -> lineage.getRelationType() == OrchidGroupLineageRelationType.MERGED_TO);
+		assertThat(lineageRepository.findBySourceOrchidGroupIdOrderByCreatedAtAscIdAsc(source.getId())).hasSize(1)
+			.allMatch(lineage -> lineage.getRelationType() == OrchidGroupLineageRelationType.MERGED_TO);
 	}
 
 	@Test
 	void rejectsStructureChangeRecordWhenNotAllSourceQuantityIsProvided() throws Exception {
 		OrchidGroup source = createSource(30, "0", "3");
 
-		mockMvc.perform(post("/api/work-operations/structure-change-records")
-				.contentType(MediaType.APPLICATION_JSON)
-				.content("""
-						{
-						  "operation": {
-						    "workTypeId": %d,
-						    "title": "불완전한 분갈이 기록",
-						    "plannedStartDate": "2026-07-16",
-						    "sourceScopeType": "MANUAL_SELECTION",
-						    "sourceOrchidGroupIds": [%d]
-						  },
-						  "execution": {
-						    "idempotencyKey": "repot-record-incomplete",
-						    "completedDate": "2026-07-16",
-						    "sources": [
-						      {"sourceOrchidGroupId": %d, "inputQuantity": 10}
-						    ],
-						    "lossQuantity": 0,
-						    "results": [
-						      {"bedZoneId": %d, "quantity": 10, "sourceOrchidGroupIds": [%d], "potSize": "4치", "ageYear": 2, "purpose": "NORMAL", "startPosition": 0, "endPosition": 1}
-						    ]
-						  }
-						}
-						""".formatted(
-								repotType.getId(),
-								source.getId(),
-								source.getId(),
-								resultZone.getId(),
-								source.getId())))
-				.andExpect(status().isBadRequest());
+		mockMvc
+			.perform(post("/api/work-operations/structure-change-records").contentType(MediaType.APPLICATION_JSON)
+				.content(
+						"""
+								{
+								  "operation": {
+								    "workTypeId": %d,
+								    "title": "불완전한 분갈이 기록",
+								    "plannedStartDate": "2026-07-16",
+								    "sourceScopeType": "MANUAL_SELECTION",
+								    "sourceOrchidGroupIds": [%d]
+								  },
+								  "execution": {
+								    "idempotencyKey": "repot-record-incomplete",
+								    "completedDate": "2026-07-16",
+								    "sources": [
+								      {"sourceOrchidGroupId": %d, "inputQuantity": 10}
+								    ],
+								    "lossQuantity": 0,
+								    "results": [
+								      {"bedZoneId": %d, "quantity": 10, "sourceOrchidGroupIds": [%d], "potSize": "4치", "ageYear": 2, "purpose": "NORMAL", "startPosition": 0, "endPosition": 1}
+								    ]
+								  }
+								}
+								"""
+							.formatted(repotType.getId(), source.getId(), source.getId(), resultZone.getId(),
+									source.getId())))
+			.andExpect(status().isBadRequest());
 
 		assertThat(orchidGroupRepository.findById(source.getId()).orElseThrow().getQuantity()).isEqualTo(30);
 	}
 
 	private Long createPlan(WorkType workType, Long... sourceIds) throws Exception {
-		String ids = java.util.Arrays.stream(sourceIds).map(String::valueOf)
-				.collect(java.util.stream.Collectors.joining(","));
-		var result = mockMvc.perform(post("/api/work-operations")
-				.contentType(MediaType.APPLICATION_JSON)
-				.content("""
-						{
-						  "workTypeId": %d,
-						  "title": "%s 계획",
-						  "plannedStartDate": "2026-07-16",
-						  "sourceScopeType": "MANUAL_SELECTION",
-						  "sourceOrchidGroupIds": [%s]
-						}
-						""".formatted(workType.getId(), workType.getName(), ids)))
-				.andExpect(status().isCreated())
-				.andExpect(jsonPath("$.data.workTypeCode").value(workType.getCode()))
-				.andReturn();
-		return Long.valueOf(result.getResponse().getContentAsString().replaceAll(
-				".*?\\\"data\\\":\\{\\\"id\\\":(\\d+).*", "$1"));
+		String ids = java.util.Arrays.stream(sourceIds)
+			.map(String::valueOf)
+			.collect(java.util.stream.Collectors.joining(","));
+		var result = mockMvc.perform(post("/api/work-operations").contentType(MediaType.APPLICATION_JSON).content("""
+				{
+				  "workTypeId": %d,
+				  "title": "%s 계획",
+				  "plannedStartDate": "2026-07-16",
+				  "sourceScopeType": "MANUAL_SELECTION",
+				  "sourceOrchidGroupIds": [%s]
+				}
+				""".formatted(workType.getId(), workType.getName(), ids)))
+			.andExpect(status().isCreated())
+			.andExpect(jsonPath("$.data.workTypeCode").value(workType.getCode()))
+			.andReturn();
+		return Long.valueOf(
+				result.getResponse().getContentAsString().replaceAll(".*?\\\"data\\\":\\{\\\"id\\\":(\\d+).*", "$1"));
 	}
 
 	private OrchidGroup createSource(int quantity, String start, String end) {
@@ -619,10 +639,10 @@ class DivideMergeWorkOperationIntegrationTests extends AbstractBackendIntegratio
 	}
 
 	private OrchidGroup createSource(Variety sourceVariety, int quantity, String start, String end) {
-		OrchidGroup group = new OrchidGroup(
-				sourceZone, sourceVariety.getGenus(), sourceVariety.getName(), quantity, "3.5치", 2, "정상", 1,
-				new BigDecimal(start), new BigDecimal(end));
+		OrchidGroup group = new OrchidGroup(sourceZone, sourceVariety.getGenus(), sourceVariety.getName(), quantity,
+				"3.5치", 2, "정상", 1, new BigDecimal(start), new BigDecimal(end));
 		group.assignVariety(sourceVariety);
-		return orchidGroupRepository.save(group);
+		return saveOrchidGroup(group);
 	}
+
 }

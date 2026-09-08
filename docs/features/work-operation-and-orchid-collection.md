@@ -33,6 +33,7 @@
 - 작업 당시 품종, 년생, 화분 표시값, 수량, 위치를 스냅샷으로 보존한다.
 - 자동 그룹은 그룹 키, 사용자 그룹은 그룹 ID, 직접 선택은 난 묶음 ID 목록을 조건 스냅샷으로 함께 보존한다.
 - 포트 작업 계획은 선택한 입고 기록을 잠근 상태에서 활성 계획 중복을 한 번에 확인한다. 품종별 배치 계획도 전체 선택 대상을 같은 트랜잭션에서 확정한다.
+- 작업 관리의 포트 작업 기록과 입고 관리의 즉시 실행은 `inbound-potting-records` 계약을 함께 사용한다. 실행별 멱등 키로 기존 효과를 반환하며, 활성 포트 작업 계획이 있으면 새 작업을 만들지 않고 해당 대상을 완료한다.
 
 ## 3. 자동·사용자 그룹
 
@@ -78,9 +79,18 @@
 - 기존 `work_records`는 마이그레이션 원본과 감사 목적으로 보존하되 운영 이력 조회에는 사용하지 않는다.
 - 사용자 수동 작업 입력은 즉시 완료 `WorkOperation`으로 저장한다.
 - 신규 즉시 완료 작업의 대상 효과는 한 트랜잭션에서 모아 일괄 저장한다. 이미 존재하는 작업을 다시 실행하는 경로에서만 대상별 효과 키를 확인한다.
+- 키가 있는 즉시 실행·구조 변경 기록·포트 기록은 요청 지문과 결과 작업 ID를 같은 트랜잭션에 저장한다. 같은 범위·키의 병렬 요청은 DB 접수 기록으로 직렬화하며 실패하면 접수 기록도 롤백한다. 재요청은 저장된 ID의 현재 상세를 반환하므로 최초 HTTP 응답의 시각 정밀도나 이후 변경 상태까지 고정하는 계약은 아니다.
+- 즉시 실행 키는 작업 유형 전체에서 공유한다. 구조 변경 단건 기록은 별도 범위이며, 일괄 기록의 identity는 입력 순서의 실행 키 목록이다. 포트 단건은 입고 ID와 키, 일괄 포트 기록은 입력 순서의 입고 ID·키 목록으로 구분한다. 키 없는 계획·일반 기록 API에는 새 멱등성 보장을 추가하지 않는다.
+- 요청 지문은 객체 키 순서와 숫자 표기를 정규화한다. 의미 있는 배열 순서·문자열·자유 JSON 내용은 보존하며 컬렉션 소속 ID 집합만 정렬한다. 같은 키로 내용을 바꾸면 HTTP 409 `IDEMPOTENCY_KEY_REUSED`를 반환한다.
+- 작업 효과 identity는 종류와 무관한 `(workOperationId, effectKey)`이며 DB UNIQUE로 고정한다. 완료된 구조 변경 회차도 저장된 원문을 확인한 뒤 재조회한다. 포트 효과는 `POTTING:{inboundRecordId}:{idempotencyKey}`로 기록하고 기존 `POTTING:{idempotencyKey}` 이력도 조회한다.
+- V25 이전 즉시 실행 키는 결과 ID만 이관한다. 원문이 없어 같은 요청인지 확인할 수 없는 재실행은 HTTP 409 `IDEMPOTENCY_REPLAY_UNAVAILABLE`로 거절하며 기존 작업 조회는 유지한다. 과거 상태를 현재 난 묶음에서 역산해 요청 지문을 만들지 않는다.
 - 직접 자리 이동과 입고를 포함한 신규 시스템 작업도 `WorkOperation`으로 기록한다.
 - 난 묶음 이력 API는 `WorkOperationTarget`과 `WorkEffectOrchidGroup` 연결만 조회한다.
 - V8에서 변환된 기존 이력은 변환 결과인 `WorkOperation`을 통해 조회한다.
+- Mutation Engine writer에서는 난 묶음 상태를 바꾸는 효과가 기존 effect key를 그대로 Mutation 원인 키로 사용한다. 효과 저장과 함께 `WorkAppliedEffect.mutationId`, `correlationId`를 기록하며 단일 원본 호환 계보에도 같은 Mutation ID를 연결한다.
+- cutover 이전 상태 변경 Work 효과도 동일한 `(workOperationId, effectKey)` identity로 complete state-chain Mutation에 이관한다. `DISCARD`, `MOVE`, `DIVIDE`, `MOVEMENT`, `REPOT`, `POTTING`만 대상이며 난 묶음 관계는 연속 `CREATE/CHANGE/DELETE` Entry로 연결하고 원본 command/result는 Work 사실 데이터에 보존한다.
+- 전환용 importer는 Work application의 제한된 source 조회와 link API만 사용한다. 이관 후 상태 변경 효과와 대응 Lineage는 같은 Mutation ID로 연결하고, 재실행 시 기존 연결을 반환한다.
+- 기록 전용 효과와 작업일만 바뀐 보정은 난 묶음 상태 변경이 없으므로 Mutation 연결을 만들지 않는다.
 
 ## 7. 작업 모듈 내부 구조
 

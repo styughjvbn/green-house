@@ -1,15 +1,16 @@
 package com.greenhouse.backend.farm.application.orchid;
 
+import com.greenhouse.backend.audit.domain.AuditAction;
+import com.greenhouse.backend.audit.domain.AuditSource;
+import com.greenhouse.backend.common.application.RequestActorProvider;
 import com.greenhouse.backend.common.config.TimeConfig;
 import com.greenhouse.backend.common.exception.NotFoundException;
-import com.greenhouse.backend.common.application.RequestActorProvider;
 import com.greenhouse.backend.farm.domain.orchid.OrchidGroup;
 import com.greenhouse.backend.farm.dto.orchid.OrchidGroupMoveRequest;
 import com.greenhouse.backend.farm.dto.orchid.OrchidGroupResponse;
 import com.greenhouse.backend.work.application.operation.ImmediateWorkExecutionService;
-import com.greenhouse.backend.work.domain.operation.WorkType;
+import com.greenhouse.backend.work.domain.operation.WorkTypeDefinition;
 import java.math.BigDecimal;
-import java.time.LocalDate;
 import java.time.Clock;
 import java.util.LinkedHashMap;
 import java.util.Map;
@@ -17,8 +18,6 @@ import java.util.UUID;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import com.greenhouse.backend.audit.domain.AuditAction;
-import com.greenhouse.backend.audit.domain.AuditSource;
 
 @Service
 @Transactional
@@ -26,16 +25,21 @@ import com.greenhouse.backend.audit.domain.AuditSource;
 public class OrchidGroupMovementService {
 
 	private final ImmediateWorkExecutionService immediateWorkExecutionService;
+
 	private final OrchidGroupReader orchidGroupReader;
+
 	private final Clock clock;
+
 	private final RequestActorProvider requestActorProvider;
+
 	private final OrchidGroupAuditSupport auditSupport;
 
 	public OrchidGroupResponse move(Long orchidGroupId, OrchidGroupMoveRequest request) {
+		var businessDate = TimeConfig.farmToday(clock);
 		var orchidGroup = orchidGroupReader.findDetailById(orchidGroupId)
-				.orElseThrow(() -> new NotFoundException("난 묶음을 찾을 수 없습니다."));
+			.orElseThrow(() -> new NotFoundException("난 묶음을 찾을 수 없습니다."));
 		if (isSamePlacement(orchidGroup, request)) {
-			return OrchidGroupResponse.from(orchidGroup);
+			return OrchidGroupResponse.from(orchidGroup, businessDate);
 		}
 		OrchidGroupAuditSnapshot before = auditSupport.snapshot(orchidGroup);
 
@@ -47,26 +51,17 @@ public class OrchidGroupMovementService {
 		putIfNotNull(details, "worker", worker);
 		putIfNotNull(details, "memo", request.memo());
 
-		immediateWorkExecutionService.executeForTarget(
-				"DIRECT_MOVE:" + UUID.randomUUID(),
-				WorkType.MOVEMENT_CODE,
-				"자리 이동",
-				TimeConfig.farmToday(clock),
-				worker,
-				request.memo(),
-				orchidGroupId,
-				details,
-				request);
+		immediateWorkExecutionService.executeForTarget("DIRECT_MOVE:" + UUID.randomUUID(),
+				WorkTypeDefinition.MOVEMENT.name(), "자리 이동", businessDate, worker, request.memo(), orchidGroupId,
+				details, request);
 		OrchidGroup moved = orchidGroupReader.findDetailById(orchidGroupId)
-				.orElseThrow(() -> new NotFoundException("난 묶음을 찾을 수 없습니다."));
-		auditSupport.record(orchidGroupId, AuditAction.MOVED, AuditSource.WORK_RECORD,
-				before, auditSupport.snapshot(moved), Map.of());
-		return OrchidGroupResponse.from(moved);
+			.orElseThrow(() -> new NotFoundException("난 묶음을 찾을 수 없습니다."));
+		auditSupport.record(orchidGroupId, AuditAction.MOVED, AuditSource.WORK_RECORD, before,
+				auditSupport.snapshot(moved), Map.of());
+		return OrchidGroupResponse.from(moved, businessDate);
 	}
 
-	private boolean isSamePlacement(
-			OrchidGroup orchidGroup,
-			OrchidGroupMoveRequest request) {
+	private boolean isSamePlacement(OrchidGroup orchidGroup, OrchidGroupMoveRequest request) {
 		return orchidGroup.getBedZone().getId().equals(request.toBedZoneId())
 				&& isSameNumber(orchidGroup.getStartPosition(), request.startPosition())
 				&& isSameNumber(orchidGroup.getEndPosition(), request.endPosition());
@@ -84,4 +79,5 @@ public class OrchidGroupMovementService {
 			details.put(key, value);
 		}
 	}
+
 }

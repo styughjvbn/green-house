@@ -22,77 +22,54 @@ public class SalesSlipRepositoryImpl implements SalesSlipRepositoryCustom {
 
 	@Override
 	public List<SalesSlip> search(Long partnerId, LocalDate from, LocalDate to, int limit) {
-		List<Long> salesSlipIds = queryFactory
-				.select(salesSlip.id)
-				.from(salesSlip)
-				.join(salesSlip.partner)
-				.where(conditions(partnerId, from, to, null, null, null))
-				.orderBy(defaultOrder())
-				.limit(limit)
-				.fetch();
+		List<Long> salesSlipIds = queryFactory.select(salesSlip.id)
+			.from(salesSlip)
+			.where(conditions(partnerId, from, to, null, null, null, List.of()))
+			.orderBy(defaultOrder())
+			.limit(limit)
+			.fetch();
 		if (salesSlipIds.isEmpty()) {
 			return List.of();
 		}
-		return baseQuery()
-				.leftJoin(salesSlip.items).fetchJoin()
-				.where(salesSlip.id.in(salesSlipIds))
-				.orderBy(defaultOrder())
-				.distinct()
-				.fetch();
+		return baseQuery().leftJoin(salesSlip.items)
+			.fetchJoin()
+			.where(salesSlip.id.in(salesSlipIds))
+			.orderBy(defaultOrder())
+			.distinct()
+			.fetch();
 	}
 
 	@Override
-	public Page<SalesSlip> searchPage(
-			Long partnerId,
-			LocalDate from,
-			LocalDate to,
-			String paymentStatus,
-			String salesStatus,
-			String keyword,
-			Pageable pageable) {
-		BooleanBuilder conditions = conditions(partnerId, from, to, paymentStatus, salesStatus, keyword);
-		List<SalesSlip> content = baseQuery()
-				.where(conditions)
-				.orderBy(defaultOrder())
-				.offset(pageable.getOffset())
-				.limit(pageable.getPageSize())
-				.fetch();
-		Long total = queryFactory
-				.select(salesSlip.count())
-				.from(salesSlip)
-				.join(salesSlip.partner)
-				.where(conditions)
-				.fetchOne();
+	public Page<SalesSlip> searchPage(Long partnerId, LocalDate from, LocalDate to, String paymentStatus,
+			String salesStatus, String keyword, List<Long> matchingPartnerIds, Pageable pageable) {
+		BooleanBuilder conditions = conditions(partnerId, from, to, paymentStatus, salesStatus, keyword,
+				matchingPartnerIds);
+		List<SalesSlip> content = baseQuery().where(conditions)
+			.orderBy(defaultOrder())
+			.offset(pageable.getOffset())
+			.limit(pageable.getPageSize())
+			.fetch();
+		Long total = queryFactory.select(salesSlip.count()).from(salesSlip).where(conditions).fetchOne();
 
 		return new PageImpl<>(content, pageable, total == null ? 0 : total);
 	}
 
 	private JPAQuery<SalesSlip> baseQuery() {
-		return queryFactory
-				.selectFrom(salesSlip)
-				.join(salesSlip.partner).fetchJoin()
-				.leftJoin(salesSlip.auctionShipment).fetchJoin()
-				.leftJoin(salesSlip.auctionShipment.auctionHouse).fetchJoin();
+		return queryFactory.selectFrom(salesSlip);
 	}
 
-	private BooleanBuilder conditions(
-			Long partnerId,
-			LocalDate from,
-			LocalDate to,
-			String paymentStatus,
-			String salesStatus,
-			String keyword) {
-		return new BooleanBuilder()
-				.and(partnerIdEq(partnerId))
-				.and(saleDateGoe(from))
-				.and(saleDateLoe(to))
-				.and(paymentStatusEq(paymentStatus))
-				.and(salesStatusEq(salesStatus))
-				.and(keywordContains(keyword));
+	private BooleanBuilder conditions(Long partnerId, LocalDate from, LocalDate to, String paymentStatus,
+			String salesStatus, String keyword, List<Long> matchingPartnerIds) {
+		return new BooleanBuilder().and(partnerIdEq(partnerId))
+			.and(saleDateGoe(from))
+			.and(saleDateLoe(to))
+			.and(paymentStatusEq(paymentStatus))
+			.and(salesStatusEq(salesStatus))
+			.and(keywordContains(keyword, matchingPartnerIds));
 	}
 
 	private BooleanExpression partnerIdEq(Long partnerId) {
-		return partnerId == null ? null : salesSlip.partner.id.eq(partnerId);
+		return partnerId == null ? null : salesSlip.partnerId.eq(partnerId);
 	}
 
 	private BooleanExpression saleDateGoe(LocalDate from) {
@@ -111,27 +88,22 @@ public class SalesSlipRepositoryImpl implements SalesSlipRepositoryCustom {
 		return isBlank(salesStatus) ? null : salesSlip.salesStatus.eq(salesStatus);
 	}
 
-	private BooleanBuilder keywordContains(String keyword) {
+	private BooleanBuilder keywordContains(String keyword, List<Long> matchingPartnerIds) {
 		if (isBlank(keyword)) {
 			return null;
 		}
 		String normalizedKeyword = keyword.trim().toLowerCase();
-		return new BooleanBuilder()
-				.or(salesSlip.slipNumber.lower().contains(normalizedKeyword))
-				.or(salesSlip.partner.name.lower().contains(normalizedKeyword))
-				.or(salesSlip.partner.ownerName.lower().contains(normalizedKeyword))
-				.or(salesSlip.partner.phone.lower().contains(normalizedKeyword))
-				.or(salesSlip.memo.lower().contains(normalizedKeyword));
+		return new BooleanBuilder().or(salesSlip.slipNumber.lower().contains(normalizedKeyword))
+			.or(salesSlip.partnerId.in(matchingPartnerIds))
+			.or(salesSlip.memo.lower().contains(normalizedKeyword));
 	}
 
 	private OrderSpecifier<?>[] defaultOrder() {
-		return new OrderSpecifier<?>[] {
-				salesSlip.saleDate.desc(),
-				salesSlip.id.desc()
-		};
+		return new OrderSpecifier<?>[] { salesSlip.saleDate.desc(), salesSlip.id.desc() };
 	}
 
 	private boolean isBlank(String value) {
 		return value == null || value.isBlank();
 	}
+
 }

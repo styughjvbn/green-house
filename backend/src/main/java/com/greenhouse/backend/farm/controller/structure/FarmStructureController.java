@@ -5,10 +5,8 @@ import com.greenhouse.backend.farm.application.structure.FarmQueryService;
 import com.greenhouse.backend.farm.dto.structure.BedZoneResponse;
 import com.greenhouse.backend.farm.dto.structure.HouseResponse;
 import com.greenhouse.backend.farm.dto.structure.PhysicalBedResponse;
-
-import lombok.RequiredArgsConstructor;
-
 import java.util.List;
+import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -43,8 +41,7 @@ public class FarmStructureController {
 	}
 
 	@GetMapping("/bed-zones")
-	public ApiResponse<List<BedZoneResponse>> getBedZones(
-			@RequestParam(required = false) Long houseId,
+	public ApiResponse<List<BedZoneResponse>> getBedZones(@RequestParam(required = false) Long houseId,
 			@RequestParam(required = false) Long physicalBedId) {
 		return ApiResponse.ok(farmQueryService.getBedZones(houseId, physicalBedId));
 	}

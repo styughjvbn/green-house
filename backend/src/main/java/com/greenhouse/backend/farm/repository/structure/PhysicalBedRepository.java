@@ -41,4 +41,5 @@ public interface PhysicalBedRepository extends JpaRepository<PhysicalBed, Long> 
 
 	@EntityGraph(attributePaths = { "house", "bedZones" })
 	Optional<PhysicalBed> findWithHouseAndBedZonesById(Long id);
+
 }

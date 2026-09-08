@@ -18,30 +18,25 @@ public class MaterialRepositoryImpl implements MaterialRepositoryCustom {
 	private final JPAQueryFactory queryFactory;
 
 	@Override
-	public Page<Material> search(String keyword, String category, String manufacturer, Boolean active, Pageable pageable) {
+	public Page<Material> search(String keyword, String category, String manufacturer, Boolean active,
+			Pageable pageable) {
 		BooleanBuilder conditions = conditions(keyword, category, manufacturer, active);
-		List<Material> content = queryFactory
-				.selectFrom(material)
-				.where(conditions)
-				.orderBy(material.active.desc(), material.category.asc(), material.name.asc())
-				.offset(pageable.getOffset())
-				.limit(pageable.getPageSize())
-				.fetch();
-		Long total = queryFactory
-				.select(material.id.count())
-				.from(material)
-				.where(conditions)
-				.fetchOne();
+		List<Material> content = queryFactory.selectFrom(material)
+			.where(conditions)
+			.orderBy(material.active.desc(), material.category.asc(), material.name.asc())
+			.offset(pageable.getOffset())
+			.limit(pageable.getPageSize())
+			.fetch();
+		Long total = queryFactory.select(material.id.count()).from(material).where(conditions).fetchOne();
 
 		return new PageImpl<>(content, pageable, total == null ? 0 : total);
 	}
 
 	private BooleanBuilder conditions(String keyword, String category, String manufacturer, Boolean active) {
-		return new BooleanBuilder()
-				.and(keywordContains(keyword))
-				.and(categoryEq(category))
-				.and(manufacturerContains(manufacturer))
-				.and(activeEq(active));
+		return new BooleanBuilder().and(keywordContains(keyword))
+			.and(categoryEq(category))
+			.and(manufacturerContains(manufacturer))
+			.and(activeEq(active));
 	}
 
 	private BooleanBuilder keywordContains(String keyword) {
@@ -49,9 +44,8 @@ public class MaterialRepositoryImpl implements MaterialRepositoryCustom {
 			return null;
 		}
 		String normalizedKeyword = keyword.trim().toLowerCase();
-		return new BooleanBuilder()
-				.or(material.code.lower().contains(normalizedKeyword))
-				.or(material.name.lower().contains(normalizedKeyword));
+		return new BooleanBuilder().or(material.code.lower().contains(normalizedKeyword))
+			.or(material.name.lower().contains(normalizedKeyword));
 	}
 
 	private BooleanExpression categoryEq(String category) {
@@ -69,4 +63,5 @@ public class MaterialRepositoryImpl implements MaterialRepositoryCustom {
 	private boolean isBlank(String value) {
 		return value == null || value.isBlank();
 	}
+
 }

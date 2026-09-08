@@ -1,0 +1,73 @@
+{
+  "detail" : {
+    "id" : 99,
+    "slipNumber" : "BOUNDARY-001",
+    "saleDate" : "2045-01-02",
+    "salesType" : "DIRECT",
+    "auctionShipmentId" : null,
+    "auctionMarket" : null,
+    "partner" : {
+      "id" : 99,
+      "name" : "Alpha%_ Market",
+      "partnerType" : "AUCTION_HOUSE",
+      "ownerName" : "Owner Needle",
+      "phone" : "010-5555",
+      "address" : "AddressOnly",
+      "memo" : "PrivateMemo",
+      "active" : false
+    },
+    "totalAmount" : 5000,
+    "expectedPaymentDate" : "2045-01-02",
+    "paidAmount" : 0,
+    "remainingAmount" : 5000,
+    "paymentStatus" : "미입금",
+    "salesStatus" : "작성중",
+    "paymentMethod" : "계좌",
+    "memo" : "Slip Memo",
+    "items" : [ {
+      "id" : 99,
+      "auctionShipmentLotId" : null,
+      "itemName" : "Snow White",
+      "genus" : "Orchid",
+      "spec" : "A",
+      "quantity" : 5,
+      "unitPrice" : 1000,
+      "amount" : 5000,
+      "memo" : "item memo",
+      "allocations" : [ ]
+    } ],
+    "availableActions" : [ "EDIT", "COMPLETE", "CANCEL", "CONFIRM_PAYMENT" ]
+  },
+  "list" : {
+    "content" : [ {
+      "id" : 99,
+      "slipNumber" : "BOUNDARY-001",
+      "saleDate" : "2045-01-02",
+      "salesType" : "DIRECT",
+      "auctionShipmentId" : null,
+      "auctionMarket" : null,
+      "partner" : {
+        "id" : 99,
+        "name" : "Alpha%_ Market",
+        "partnerType" : "AUCTION_HOUSE",
+        "ownerName" : "Owner Needle",
+        "phone" : "010-5555",
+        "address" : "AddressOnly",
+        "memo" : "PrivateMemo",
+        "active" : false
+      },
+      "totalAmount" : 5000,
+      "expectedPaymentDate" : "2045-01-02",
+      "paidAmount" : 0,
+      "remainingAmount" : 5000,
+      "paymentStatus" : "미입금",
+      "salesStatus" : "작성중",
+      "paymentMethod" : "계좌",
+      "memo" : "Slip Memo"
+    } ],
+    "page" : 0,
+    "size" : 10,
+    "totalElements" : 1,
+    "totalPages" : 1
+  }
+}

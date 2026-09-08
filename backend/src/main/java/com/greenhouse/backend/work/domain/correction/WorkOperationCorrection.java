@@ -7,9 +7,9 @@ import jakarta.persistence.FetchType;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
-import jakarta.persistence.SequenceGenerator;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
+import jakarta.persistence.SequenceGenerator;
 import jakarta.persistence.Table;
 import jakarta.persistence.UniqueConstraint;
 import java.time.LocalDateTime;
@@ -21,16 +21,15 @@ import org.hibernate.annotations.CreationTimestamp;
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 @Entity
-@Table(
-		name = "work_operation_corrections",
-		uniqueConstraints = @UniqueConstraint(
-				name = "uk_work_operation_correction_operation",
+@Table(name = "work_operation_corrections",
+		uniqueConstraints = @UniqueConstraint(name = "uk_work_operation_correction_operation",
 				columnNames = "correction_work_operation_id"))
 public class WorkOperationCorrection {
 
 	@Id
 	@GeneratedValue(strategy = GenerationType.SEQUENCE, generator = "work_operation_corrections_id_seq")
-	@SequenceGenerator(name = "work_operation_corrections_id_seq", sequenceName = "work_operation_corrections_id_seq", allocationSize = 50)
+	@SequenceGenerator(name = "work_operation_corrections_id_seq", sequenceName = "work_operation_corrections_id_seq",
+			allocationSize = 50)
 	private Long id;
 
 	@ManyToOne(fetch = FetchType.LAZY, optional = false)
@@ -48,12 +47,9 @@ public class WorkOperationCorrection {
 	@Column(name = "created_at", nullable = false, updatable = false)
 	private LocalDateTime createdAt;
 
-	public WorkOperationCorrection(
-			WorkOperation originalWorkOperation,
-			WorkOperation correctionWorkOperation,
+	public WorkOperationCorrection(WorkOperation originalWorkOperation, WorkOperation correctionWorkOperation,
 			String reason) {
-		if (originalWorkOperation == correctionWorkOperation
-				|| originalWorkOperation.getId() != null
+		if (originalWorkOperation == correctionWorkOperation || originalWorkOperation.getId() != null
 				&& originalWorkOperation.getId().equals(correctionWorkOperation.getId())) {
 			throw new IllegalArgumentException("원본 작업과 보정 작업은 달라야 합니다.");
 		}
@@ -64,4 +60,5 @@ public class WorkOperationCorrection {
 		this.correctionWorkOperation = correctionWorkOperation;
 		this.reason = reason.trim();
 	}
+
 }

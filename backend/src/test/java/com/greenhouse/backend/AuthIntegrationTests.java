@@ -1,5 +1,6 @@
 package com.greenhouse.backend;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -11,8 +12,8 @@ import java.time.ZoneOffset;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.TestConfiguration;
+import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Import;
 import org.springframework.context.annotation.Primary;
@@ -36,54 +37,91 @@ class AuthIntegrationTests {
 	@Test
 	void exposesFarmBusinessDateWithoutLogin() throws Exception {
 		mockMvc.perform(get("/api/auth/context"))
-				.andExpect(status().isOk())
-				.andExpect(jsonPath("$.data.businessDate").value("2026-07-22"))
-				.andExpect(jsonPath("$.data.timeZone").value("Asia/Seoul"));
+			.andExpect(status().isOk())
+			.andExpect(jsonPath("$.data.businessDate").value("2026-07-22"))
+			.andExpect(jsonPath("$.data.timeZone").value("Asia/Seoul"));
 	}
 
 	@Test
 	void loginCreatesSession() throws Exception {
-		mockMvc.perform(post("/api/auth/login")
-						.contentType(MediaType.APPLICATION_JSON)
-						.content("""
+		mockMvc.perform(post("/api/auth/login").contentType(MediaType.APPLICATION_JSON).content("""
 								{"username":"admin","password":"admin"}
 				"""))
-				.andExpect(status().isOk())
-				.andExpect(jsonPath("$.data.username").value("admin"))
-				.andExpect(jsonPath("$.data.role").value("ADMIN"))
-				.andExpect(result -> {
-					if (result.getRequest().getSession(false) == null) {
-						throw new AssertionError("No session created");
-					}
-					String setCookie = result.getResponse().getHeader("Set-Cookie");
-					if (setCookie == null || !setCookie.contains("Max-Age=604800")) {
-						throw new AssertionError("Session cookie max age is not seven days");
-					}
-				});
+			.andExpect(status().isOk())
+			.andExpect(jsonPath("$.data.username").value("admin"))
+			.andExpect(jsonPath("$.data.role").value("ADMIN"))
+			.andExpect(result -> {
+				if (result.getRequest().getSession(false) == null) {
+					throw new AssertionError("No session created");
+				}
+				String setCookie = result.getResponse().getHeader("Set-Cookie");
+				if (setCookie == null || !setCookie.contains("Max-Age=604800")) {
+					throw new AssertionError("Session cookie max age is not seven days");
+				}
+			});
+	}
+
+	@Test
+	void doesNotAuthenticateInvalidCredentials() throws Exception {
+		mockMvc.perform(post("/api/auth/login").contentType(MediaType.APPLICATION_JSON).content("""
+				{"username":"admin","password":"wrong-password"}
+				"""))
+			.andExpect(status().isUnauthorized())
+			.andExpect(jsonPath("$.error.code").value("UNAUTHORIZED"))
+			.andExpect(result -> {
+				var session = result.getRequest().getSession(false);
+				if (session != null)
+					assertThat(session.getAttribute("SPRING_SECURITY_CONTEXT")).isNull();
+			});
+	}
+
+	@Test
+	void refreshesTheSessionAndExpiresItOnLogout() throws Exception {
+		var login = mockMvc.perform(post("/api/auth/login").contentType(MediaType.APPLICATION_JSON).content("""
+				{"username":"admin","password":"admin"}
+				""")).andExpect(status().isOk()).andReturn();
+		var session = (MockHttpSession) login.getRequest().getSession(false);
+		session.setMaxInactiveInterval(1);
+
+		mockMvc.perform(get("/api/auth/me").session(session))
+			.andExpect(status().isOk())
+			.andExpect(jsonPath("$.data.username").value("admin"))
+			.andExpect(result -> {
+				assertThat(session.getMaxInactiveInterval()).isEqualTo(604800);
+				assertThat(result.getResponse().getHeaders("Set-Cookie")).singleElement()
+					.asString()
+					.contains("JSESSIONID=" + session.getId(), "Path=/", "Max-Age=604800", "HttpOnly", "SameSite=Lax");
+			});
+
+		mockMvc.perform(post("/api/auth/logout").session(session))
+			.andExpect(status().isOk())
+			.andExpect(result -> assertThat(result.getResponse().getHeaders("Set-Cookie")).singleElement()
+				.asString()
+				.contains("JSESSIONID=;", "Path=/", "Max-Age=0", "HttpOnly", "SameSite=Lax"));
+		assertThat(session.isInvalid()).isTrue();
+		mockMvc.perform(get("/api/auth/me")).andExpect(status().isOk()).andExpect(jsonPath("$.data").doesNotExist());
 	}
 
 	@Test
 	void apiRequiresLogin() throws Exception {
 		mockMvc.perform(get("/api/dashboard/summary"))
-				.andExpect(status().isUnauthorized())
-				.andExpect(jsonPath("$.error.code").value("UNAUTHORIZED"));
+			.andExpect(status().isUnauthorized())
+			.andExpect(jsonPath("$.error.code").value("UNAUTHORIZED"));
 	}
 
 	@Test
 	void workerCannotUseAdminWorkTypeApi() throws Exception {
-		MvcResult loginResult = mockMvc.perform(post("/api/auth/login")
-						.contentType(MediaType.APPLICATION_JSON)
-						.content("""
-								{"username":"worker","password":"worker"}
-								"""))
-				.andExpect(status().isOk())
-				.andReturn();
+		MvcResult loginResult = mockMvc
+			.perform(post("/api/auth/login").contentType(MediaType.APPLICATION_JSON).content("""
+					{"username":"worker","password":"worker"}
+					"""))
+			.andExpect(status().isOk())
+			.andReturn();
 		MockHttpSession session = (MockHttpSession) loginResult.getRequest().getSession(false);
 
-		mockMvc.perform(get("/api/work-types?includeInactive=true")
-						.session(session))
-				.andExpect(status().isForbidden())
-				.andExpect(jsonPath("$.error.code").value("FORBIDDEN"));
+		mockMvc.perform(get("/api/work-types?includeInactive=true").session(session))
+			.andExpect(status().isForbidden())
+			.andExpect(jsonPath("$.error.code").value("FORBIDDEN"));
 	}
 
 	@TestConfiguration
@@ -94,5 +132,7 @@ class AuthIntegrationTests {
 		Clock fixedClock() {
 			return Clock.fixed(Instant.parse("2026-07-21T16:02:03Z"), ZoneOffset.UTC);
 		}
+
 	}
+
 }

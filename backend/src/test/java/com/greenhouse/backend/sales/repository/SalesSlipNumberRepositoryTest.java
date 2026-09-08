@@ -26,4 +26,5 @@ class SalesSlipNumberRepositoryTest {
 		assertThat(repository.nextDailySequence(firstDate)).isEqualTo(2L);
 		assertThat(repository.nextDailySequence(secondDate)).isEqualTo(1L);
 	}
+
 }

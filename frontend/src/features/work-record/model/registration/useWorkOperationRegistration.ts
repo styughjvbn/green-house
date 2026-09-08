@@ -13,18 +13,22 @@ import {
 import type {
   InboundPottingCandidate,
   WorkOperationFormState,
-  WorkTargetSelectionScope,
+  WorkTargetGroupChoice,
   WorkTargetPreviewPayload,
 } from "../types";
 import {
   buildCompletedRecordPayload,
   buildTargetSummary,
-  buildWorkTargetScopePayload,
   countAutoSplitWorks,
   createInitialWorkOperationForm,
   getSaveUnavailableReason,
   type WorkRegistrationMode,
 } from "./workOperationRegistration";
+import {
+  buildWorkTargetSourceFromForm,
+  buildWorkTargetSourceFromGroupChoice,
+  farmWorkTargetSource,
+} from "../workTargetSource";
 import { getIncludedTargets, getRecordTargetIds } from "./targetSelection";
 import { getWorkTypeDefinition } from "../work-types/workTypeDefinition";
 import { deriveWorkTargetSelectionOptions } from "./workTargetSelectionOptions";
@@ -201,9 +205,9 @@ export function useWorkOperationRegistration({
   }
 
   async function loadPreview() {
-    const scopePayload = buildWorkTargetScopePayload(form, manualIds);
-    if (!scopePayload) return;
-    await loadTargetPreview(scopePayload, "대상을 확인하지 못했습니다.");
+    const targetSource = buildWorkTargetSourceFromForm(form, manualIds);
+    if (!targetSource) return;
+    await loadTargetPreview(targetSource, "대상을 확인하지 못했습니다.");
   }
 
   async function selectFarmTarget() {
@@ -218,7 +222,7 @@ export function useWorkOperationRegistration({
     setTargetScopeLabel("농장 전체");
     setExcludedIds(new Set());
     await loadTargetPreview(
-      { scopeType: "FARM" },
+      farmWorkTargetSource(),
       "농장 전체 대상을 확인하지 못했습니다.",
     );
   }
@@ -231,38 +235,36 @@ export function useWorkOperationRegistration({
 
   function confirmManualTargets(
     selectedIds: Set<number>,
-    scope: WorkTargetSelectionScope | null,
+    groupChoice: WorkTargetGroupChoice | null,
   ) {
     setIsDirty(true);
     setManualIds(selectedIds);
-    setTargetScopeLabel(scope?.label ?? null);
-    const scopePayload: WorkTargetPreviewPayload = scope
-      ? scope.type === "DERIVED_GROUP"
-        ? { scopeType: "DERIVED_GROUP", derivedGroupKey: scope.derivedGroupKey }
-        : {
-            scopeType: "USER_COLLECTION",
-            scopeId: scope.collectionId,
-          }
-      : {
-          scopeType: "MANUAL_SELECTION",
-          orchidGroupIds: [...selectedIds],
-        };
+    setTargetScopeLabel(groupChoice?.label ?? null);
+    const targetSource = buildWorkTargetSourceFromGroupChoice(
+      groupChoice,
+      selectedIds,
+    );
+    if (!targetSource) return;
     setForm((current) => ({
       ...current,
-      sourceScopeType: scope?.type ?? "MANUAL_SELECTION",
+      sourceScopeType: groupChoice?.type ?? "MANUAL_SELECTION",
       derivedGroupKey:
-        scope?.type === "DERIVED_GROUP" ? scope.derivedGroupKey : "",
+        groupChoice?.type === "DERIVED_GROUP"
+          ? groupChoice.derivedGroupKey
+          : "",
       collectionId:
-        scope?.type === "USER_COLLECTION" ? String(scope.collectionId) : "",
+        groupChoice?.type === "USER_COLLECTION"
+          ? String(groupChoice.collectionId)
+          : "",
       title:
-        scope && selectedWorkType
-          ? `${scope.label} ${selectedWorkType.name}`
+        groupChoice && selectedWorkType
+          ? `${groupChoice.label} ${selectedWorkType.name}`
           : current.title,
     }));
     setPreview(null);
     setExcludedIds(new Set());
     setTargetSelectorOpen(false);
-    void loadTargetPreview(scopePayload, "작업 대상을 확인하지 못했습니다.");
+    void loadTargetPreview(targetSource, "작업 대상을 확인하지 못했습니다.");
   }
 
   function toggleExcluded(id: number) {
@@ -319,19 +321,16 @@ export function useWorkOperationRegistration({
       return;
     }
     if (!preview || includedTargets.length === 0) return;
-    const scopePayload = buildWorkTargetScopePayload(form, manualIds);
-    if (!scopePayload) return;
+    const targetSource = buildWorkTargetSourceFromForm(form, manualIds);
+    if (!targetSource) return;
     await runSave(
       () =>
         createWorkOperationsBatch({
+          ...targetSource,
           workTypeId: selectedWorkType.id,
           title: form.title.trim(),
           plannedStartDate: form.plannedStartDate,
           plannedEndDate: form.plannedEndDate || null,
-          sourceScopeType: scopePayload.scopeType,
-          sourceScopeId: scopePayload.scopeId,
-          sourceDerivedGroupKey: scopePayload.derivedGroupKey,
-          sourceOrchidGroupIds: scopePayload.orchidGroupIds,
           details: {
             materialName: form.materialName.trim() || null,
             dilutionRatio: form.dilutionRatio.trim() || null,
@@ -386,7 +385,7 @@ export function useWorkOperationRegistration({
   return {
     autoSplitWorkCount,
     bedZones,
-    canPreview: buildWorkTargetScopePayload(form, manualIds) != null,
+    canPreview: buildWorkTargetSourceFromForm(form, manualIds) != null,
     closeRecordResult: () => setRecordResultOpen(false),
     closeTargetSelector: () => setTargetSelectorOpen(false),
     confirmInboundTargets,

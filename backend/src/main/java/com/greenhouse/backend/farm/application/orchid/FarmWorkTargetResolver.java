@@ -2,19 +2,19 @@ package com.greenhouse.backend.farm.application.orchid;
 
 import com.greenhouse.backend.common.config.TimeConfig;
 import com.greenhouse.backend.common.exception.NotFoundException;
-import com.greenhouse.backend.farm.domain.orchid.OrchidGroup;
 import com.greenhouse.backend.farm.domain.collection.OrchidGroupCollectionStatus;
-import com.greenhouse.backend.farm.repository.structure.HouseRepository;
-import com.greenhouse.backend.farm.repository.structure.BedZoneRepository;
+import com.greenhouse.backend.farm.domain.orchid.OrchidGroup;
 import com.greenhouse.backend.farm.repository.collection.OrchidGroupCollectionMemberRepository;
 import com.greenhouse.backend.farm.repository.collection.OrchidGroupCollectionRepository;
 import com.greenhouse.backend.farm.repository.orchid.OrchidGroupRepository;
+import com.greenhouse.backend.farm.repository.structure.BedZoneRepository;
+import com.greenhouse.backend.farm.repository.structure.HouseRepository;
 import com.greenhouse.backend.farm.repository.structure.PhysicalBedRepository;
 import com.greenhouse.backend.work.application.target.ResolvedWorkTarget;
-import com.greenhouse.backend.work.application.target.WorkTargetSelection;
 import com.greenhouse.backend.work.application.target.WorkTargetResolver;
-import java.time.LocalDate;
+import com.greenhouse.backend.work.application.target.WorkTargetSelection;
 import java.time.Clock;
+import java.time.LocalDate;
 import java.time.temporal.ChronoUnit;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -29,28 +29,36 @@ import org.springframework.stereotype.Component;
 public class FarmWorkTargetResolver implements WorkTargetResolver {
 
 	private final HouseRepository houseRepository;
+
 	private final PhysicalBedRepository physicalBedRepository;
+
 	private final BedZoneRepository bedZoneRepository;
+
 	private final OrchidGroupRepository orchidGroupRepository;
+
 	private final OrchidGroupCollectionRepository collectionRepository;
+
 	private final OrchidGroupCollectionMemberRepository collectionMemberRepository;
+
 	private final DerivedOrchidGroupService derivedOrchidGroupService;
+
 	private final Clock clock;
 
 	@Override
 	public List<ResolvedWorkTarget> resolve(WorkTargetSelection selection) {
-		return switch (selection.scopeType()) {
+		return switch (selection.sourceScopeType()) {
 			case FARM -> resolveLocation(null, null);
-			case HOUSE -> resolveHouse(selection.scopeId());
-			case PHYSICAL_BED -> resolvePhysicalBed(selection.scopeId());
-			case BED_ZONE -> resolveBedZone(selection.scopeId());
-			case ORCHID_GROUP -> resolveManual(selection.orchidGroupIds());
-			case DERIVED_GROUP -> resolveActiveIds(derivedOrchidGroupService
-					.getMembers(selection.derivedGroupKey(), null, null, null).stream()
-					.map(member -> member.id())
-					.collect(Collectors.toSet()));
-			case USER_COLLECTION -> resolveCollection(selection.scopeId());
-			case MANUAL_SELECTION -> resolveManual(selection.orchidGroupIds());
+			case HOUSE -> resolveHouse(selection.sourceScopeId());
+			case PHYSICAL_BED -> resolvePhysicalBed(selection.sourceScopeId());
+			case BED_ZONE -> resolveBedZone(selection.sourceScopeId());
+			case ORCHID_GROUP -> resolveManual(selection.sourceOrchidGroupIds());
+			case DERIVED_GROUP -> resolveActiveIds(
+					derivedOrchidGroupService.getMembers(selection.sourceDerivedGroupKey(), null, null, null)
+						.stream()
+						.map(member -> member.id())
+						.collect(Collectors.toSet()));
+			case USER_COLLECTION -> resolveCollection(selection.sourceScopeId());
+			case MANUAL_SELECTION -> resolveManual(selection.sourceOrchidGroupIds());
 			default -> throw new IllegalArgumentException("아직 지원하지 않는 작업 대상 유형입니다.");
 		};
 	}
@@ -58,29 +66,24 @@ public class FarmWorkTargetResolver implements WorkTargetResolver {
 	@Override
 	public ResolvedWorkTarget getCurrent(Long orchidGroupId) {
 		return orchidGroupRepository.findDetailById(orchidGroupId)
-				.map(this::toResolvedTarget)
-				.orElseThrow(() -> new NotFoundException("난 묶음을 찾을 수 없습니다."));
+			.map(this::toResolvedTarget)
+			.orElseThrow(() -> new NotFoundException("난 묶음을 찾을 수 없습니다."));
 	}
 
 	private ResolvedWorkTarget toResolvedTarget(OrchidGroup group) {
-		return new ResolvedWorkTarget(
-				group.getId(),
-				group.getVariety() == null ? null : group.getVariety().getId(),
-				group.getVarietyName(),
-				group.getQuantity(),
-				currentAgeYear(group),
-				group.getPotSize(),
-				group.getPotSizeCode().name(),
-				location(group));
+		return new ResolvedWorkTarget(group.getId(), group.getVariety() == null ? null : group.getVariety().getId(),
+				group.getVarietyName(), group.getQuantity(), currentAgeYear(group), group.getPotSize(),
+				group.getPotSizeCode().name(), location(group));
 	}
 
 	private List<ResolvedWorkTarget> resolveHouse(Long houseId) {
 		if (houseId == null || !houseRepository.existsById(houseId)) {
 			throw new NotFoundException("동을 찾을 수 없습니다.");
 		}
-		return orchidGroupRepository.findActiveWorkTargetsByHouseId(houseId).stream()
-				.map(this::toResolvedTarget)
-				.toList();
+		return orchidGroupRepository.findActiveWorkTargetsByHouseId(houseId)
+			.stream()
+			.map(this::toResolvedTarget)
+			.toList();
 	}
 
 	private List<ResolvedWorkTarget> resolvePhysicalBed(Long physicalBedId) {
@@ -98,9 +101,10 @@ public class FarmWorkTargetResolver implements WorkTargetResolver {
 	}
 
 	private List<ResolvedWorkTarget> resolveLocation(Long physicalBedId, Long bedZoneId) {
-		return orchidGroupRepository.findActiveWorkTargets(physicalBedId, bedZoneId).stream()
-				.map(this::toResolvedTarget)
-				.toList();
+		return orchidGroupRepository.findActiveWorkTargets(physicalBedId, bedZoneId)
+			.stream()
+			.map(this::toResolvedTarget)
+			.toList();
 	}
 
 	private List<ResolvedWorkTarget> resolveCollection(Long collectionId) {
@@ -111,10 +115,10 @@ public class FarmWorkTargetResolver implements WorkTargetResolver {
 		if (collection.getStatus() != OrchidGroupCollectionStatus.ACTIVE) {
 			throw new IllegalArgumentException("보관된 사용자 그룹으로 새 작업을 만들 수 없습니다.");
 		}
-		Set<Long> ids = collectionMemberRepository
-				.findByCollectionIdAndRemovedAtIsNullOrderByJoinedAtAsc(collectionId).stream()
-				.map(member -> member.getOrchidGroupId())
-				.collect(Collectors.toSet());
+		Set<Long> ids = collectionMemberRepository.findByCollectionIdAndRemovedAtIsNullOrderByJoinedAtAsc(collectionId)
+			.stream()
+			.map(member -> member.getOrchidGroupId())
+			.collect(Collectors.toSet());
 		return resolveActiveIds(ids);
 	}
 
@@ -132,17 +136,14 @@ public class FarmWorkTargetResolver implements WorkTargetResolver {
 		if (ids.isEmpty()) {
 			return List.of();
 		}
-		return orchidGroupRepository.findActiveWorkTargetsByIds(ids).stream()
-				.map(this::toResolvedTarget)
-				.toList();
+		return orchidGroupRepository.findActiveWorkTargetsByIds(ids).stream().map(this::toResolvedTarget).toList();
 	}
 
 	private Integer currentAgeYear(OrchidGroup group) {
 		if (group.getAgeYear() == null) {
 			return null;
 		}
-		LocalDate referenceDate = group.getInboundRecord() != null
-				? group.getInboundRecord().getInboundDate()
+		LocalDate referenceDate = group.getInboundRecord() != null ? group.getInboundRecord().getInboundDate()
 				: group.getCreatedAt() == null ? null : TimeConfig.toFarmTime(group.getCreatedAt()).toLocalDate();
 		if (referenceDate == null) {
 			return group.getAgeYear();
@@ -164,4 +165,5 @@ public class FarmWorkTargetResolver implements WorkTargetResolver {
 		location.put("bedZoneName", zone.getName());
 		return location;
 	}
+
 }

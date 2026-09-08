@@ -1,7 +1,7 @@
 package com.greenhouse.backend.work.application.effect;
 
-import com.greenhouse.backend.work.dto.effect.StructureChangeExecutionRequest;
-import com.greenhouse.backend.work.dto.effect.StructureChangeSourceRequest;
+import com.greenhouse.backend.work.application.effect.StructureChangeCommand;
+import com.greenhouse.backend.work.application.effect.StructureChangeSourceInput;
 import java.util.Comparator;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -12,21 +12,18 @@ public final class MovementQuantityAllocator {
 	private MovementQuantityAllocator() {
 	}
 
-	public static Map<Long, Integer> allocateMovedBySource(
-			StructureChangeExecutionRequest request) {
-		List<StructureChangeSourceRequest> sources =
-				request.sources().stream()
-						.sorted(Comparator.comparing(StructureChangeSourceRequest::sourceOrchidGroupId))
-						.toList();
+	public static Map<Long, Integer> allocateMovedBySource(StructureChangeCommand request) {
+		List<StructureChangeSourceInput> sources = request.sources()
+			.stream()
+			.sorted(Comparator.comparing(StructureChangeSourceInput::sourceOrchidGroupId))
+			.toList();
 		Map<Long, Integer> inputBySourceId = new LinkedHashMap<>();
 		for (var source : sources) {
 			if (inputBySourceId.put(source.sourceOrchidGroupId(), source.inputQuantity()) != null) {
 				throw new IllegalArgumentException("작업 원본 난 묶음은 중복될 수 없습니다.");
 			}
 		}
-		int requestedMoved = request.results().stream()
-				.mapToInt(result -> result.quantity())
-				.sum();
+		int requestedMoved = request.results().stream().mapToInt(result -> result.quantity()).sum();
 		int totalInput = inputBySourceId.values().stream().mapToInt(Integer::intValue).sum();
 		if (requestedMoved > totalInput) {
 			throw new IllegalArgumentException("자리 이동 결과 수량은 투입 수량보다 클 수 없습니다.");
@@ -41,4 +38,5 @@ public final class MovementQuantityAllocator {
 		}
 		return movedBySourceId;
 	}
+
 }

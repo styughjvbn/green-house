@@ -1,14 +1,13 @@
 package com.greenhouse.backend.auth;
 
-import java.io.IOException;
-
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.servlet.http.HttpSession;
-
+import java.io.IOException;
 import lombok.RequiredArgsConstructor;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnWebApplication;
 import org.springframework.security.authentication.AnonymousAuthenticationToken;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -16,17 +15,17 @@ import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
 
 @Component
+@ConditionalOnWebApplication(type = ConditionalOnWebApplication.Type.SERVLET)
 @RequiredArgsConstructor
 public class SessionCookieRefreshFilter extends OncePerRequestFilter {
 
 	private final AuthProperties authProperties;
 
+	private final SessionCookieWriter sessionCookieWriter;
+
 	@Override
-	protected void doFilterInternal(
-			HttpServletRequest request,
-			HttpServletResponse response,
-			FilterChain filterChain
-	) throws ServletException, IOException {
+	protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain)
+			throws ServletException, IOException {
 		filterChain.doFilter(request, response);
 
 		if (!authProperties.enabled()) {
@@ -44,12 +43,7 @@ public class SessionCookieRefreshFilter extends OncePerRequestFilter {
 			return;
 		}
 
-		int maxAgeSeconds = Math.toIntExact(authProperties.sessionTimeout().toSeconds());
-		session.setMaxInactiveInterval(maxAgeSeconds);
-		response.addHeader(
-				"Set-Cookie",
-				"JSESSIONID=%s; Path=/; Max-Age=%d; HttpOnly; SameSite=Lax"
-						.formatted(session.getId(), maxAgeSeconds)
-		);
+		sessionCookieWriter.refresh(session, response);
 	}
+
 }

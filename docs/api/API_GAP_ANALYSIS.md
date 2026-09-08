@@ -5,8 +5,7 @@
 ## 기준
 
 - 실제 구현 기준: `docs/api/openapi.yaml`
-- 실제 구현 operations: `122`
-- 실제 구현 path entries: `100`
+- endpoint와 schema의 최신 건수는 생성된 OpenAPI를 기준으로 확인한다.
 
 ## 판단 규칙
 
@@ -109,6 +108,8 @@
 - `PATCH /api/auction-lots/{id}/status`
 - `GET /api/auction-lots/{id}/timeline`
 - `GET /api/auction-settlements`
+- `GET /api/auction-settlements/page`
+- `GET /api/auction-settlements/summary`
 - `POST /api/auction-settlements/rebuild`
 - `GET /api/auction-settlements/{settlementId}`
 - `GET /api/auction-tracking/summary`
@@ -118,6 +119,7 @@
 - `POST /api/auction-settlements/{settlementId}/confirm-payment`
 - `GET /api/business-partners/{partnerId}/balance-summary`
 - `GET /api/partner-payment-events`
+- `GET /api/partner-payment-events/page`
 - `POST /api/sales-slips/{salesSlipId}/confirm-payment`
 
 ## 과거 초안에는 있으나 현재 OpenAPI에 없는 endpoint

@@ -1,71 +1,111 @@
 package com.greenhouse.backend.farm.application.transformation;
 
-import com.greenhouse.backend.farm.application.orchid.OrchidGroupCommandService;
+import com.greenhouse.backend.common.config.TimeConfig;
 import com.greenhouse.backend.common.exception.NotFoundException;
-import com.greenhouse.backend.farm.domain.orchid.OrchidGroup;
+import com.greenhouse.backend.farm.application.orchid.mutation.CreateOrchidGroupMutationItem;
+import com.greenhouse.backend.farm.application.orchid.mutation.CreateOrchidGroupsMutationCommand;
+import com.greenhouse.backend.farm.application.orchid.mutation.OrchidGroupMutationDetails;
+import com.greenhouse.backend.farm.application.orchid.mutation.OrchidGroupMutationEngine;
+import com.greenhouse.backend.farm.application.orchid.mutation.OrchidGroupMutationSources;
 import com.greenhouse.backend.farm.domain.collection.OrchidGroupCollection;
 import com.greenhouse.backend.farm.domain.collection.OrchidGroupCollectionMember;
+import com.greenhouse.backend.farm.domain.orchid.OrchidGroup;
 import com.greenhouse.backend.farm.dto.transformation.MultiCreateWorkOperationRequest;
 import com.greenhouse.backend.farm.repository.collection.OrchidGroupCollectionMemberRepository;
 import com.greenhouse.backend.farm.repository.collection.OrchidGroupCollectionRepository;
+import com.greenhouse.backend.farm.repository.orchid.OrchidGroupRepository;
 import com.greenhouse.backend.work.application.effect.WorkEffectCommand;
+import com.greenhouse.backend.work.application.effect.WorkEffectContext;
 import com.greenhouse.backend.work.application.effect.WorkEffectHandler;
+import com.greenhouse.backend.work.application.effect.WorkEffectResults;
 import com.greenhouse.backend.work.application.effect.WorkExecutionResult;
+import com.greenhouse.backend.work.application.effect.WorkMutationLink;
 import com.greenhouse.backend.work.domain.effect.WorkEffectKind;
-import com.greenhouse.backend.work.domain.operation.WorkOperation;
-import com.greenhouse.backend.work.domain.target.WorkOperationTarget;
+import java.time.Clock;
 import java.util.HashSet;
-import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Set;
+import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 
 @Component
+@RequiredArgsConstructor
 public class MultiCreateWorkHandler implements WorkEffectHandler {
 
-	private final OrchidGroupCommandService orchidGroupCommandService;
+	private final Clock clock;
+
 	private final OrchidGroupCollectionRepository collectionRepository;
+
 	private final OrchidGroupCollectionMemberRepository memberRepository;
 
-	public MultiCreateWorkHandler(
-			OrchidGroupCommandService orchidGroupCommandService,
-			OrchidGroupCollectionRepository collectionRepository,
-			OrchidGroupCollectionMemberRepository memberRepository) {
-		this.orchidGroupCommandService = orchidGroupCommandService;
-		this.collectionRepository = collectionRepository;
-		this.memberRepository = memberRepository;
-	}
+	private final OrchidGroupRepository orchidGroupRepository;
 
-	@Override public String supports() { return "MULTI_CREATE"; }
-	@Override public WorkEffectKind effectKind() { return WorkEffectKind.STRUCTURE_CHANGE; }
+	private final OrchidGroupMutationEngine mutationEngine;
 
 	@Override
-	public WorkExecutionResult execute(
-			WorkOperation operation, WorkOperationTarget target, WorkEffectCommand command) {
-		if (target != null) throw new IllegalArgumentException("다중 생성 작업에는 원본 난 묶음 대상이 없어야 합니다.");
+	public String supports() {
+		return "MULTI_CREATE";
+	}
+
+	@Override
+	public WorkEffectKind effectKind() {
+		return WorkEffectKind.STRUCTURE_CHANGE;
+	}
+
+	@Override
+	public WorkExecutionResult execute(WorkEffectContext context, WorkEffectCommand command) {
+		var joinedAt = TimeConfig.utcNow(clock);
+		var target = context.target();
+		if (target != null)
+			throw new IllegalArgumentException("다중 생성 작업에는 원본 난 묶음 대상이 없어야 합니다.");
 		MultiCreateWorkOperationRequest request = command.payloadAs(MultiCreateWorkOperationRequest.class);
 		validateCollections(request);
-		List<OrchidGroup> groups = request.rows().stream().map(row -> {
-			OrchidGroup group = orchidGroupCommandService.createEntity(row.orchidGroup());
+		List<OrchidGroup> groups;
+		var mutationCommand = new CreateOrchidGroupsMutationCommand(OrchidGroupMutationSources.work(context
+			.operationId(), command.effectKey()), request.rows()
+				.stream()
+				.map(row -> new CreateOrchidGroupMutationItem(row.orchidGroup().bedZoneId(),
+						new OrchidGroupMutationDetails(row.orchidGroup().varietyId(), row.orchidGroup().quantity(),
+								row.orchidGroup().potSize(), row.orchidGroup().ageYear(), row.orchidGroup().status(),
+								row.orchidGroup().placementType(), row.orchidGroup().trayCount(),
+								row.orchidGroup().splitPlacementAllowed(), row.orchidGroup().startPosition(),
+								row.orchidGroup().endPosition(), row.orchidGroup().memo())))
+				.toList(), context.plannedStartDate(), context.memo());
+		var mutation = mutationEngine.createMany(mutationCommand);
+		List<Long> groupIds = mutation.entries().stream().map(entry -> entry.orchidGroupId()).toList();
+		var groupsById = orchidGroupRepository.findAllById(groupIds)
+			.stream()
+			.collect(java.util.stream.Collectors.toMap(OrchidGroup::getId, group -> group));
+		groups = groupIds.stream().map(groupsById::get).toList();
+		var mutationLink = new WorkMutationLink(mutation.mutationId(), mutation.correlationId());
+
+		for (int index = 0; index < groups.size(); index++) {
+			OrchidGroup group = groups.get(index);
+			var row = request.rows().get(index);
 			Set<Long> collectionIds = row.collectionIds() == null ? Set.of() : row.collectionIds();
 			memberRepository.saveAll(collectionIds.stream()
-					.map(id -> new OrchidGroupCollectionMember(id, group.getId(), command.worker())).toList());
-			return group;
-		}).toList();
-		var details = new LinkedHashMap<String, Object>();
-		details.put("createdCount", groups.size());
-		details.put("createdOrchidGroupIds", groups.stream().map(OrchidGroup::getId).toList());
-		return new WorkExecutionResult("MULTI_CREATE", details, groups.stream().map(OrchidGroup::getId).toList());
+				.map(id -> new OrchidGroupCollectionMember(id, group.getId(), command.worker(), joinedAt))
+				.toList());
+		}
+		var resultIds = groups.stream().map(OrchidGroup::getId).toList();
+		var details = new WorkEffectResults.Created(resultIds).toMap();
+		return new WorkExecutionResult("MULTI_CREATE", details, resultIds, mutationLink);
 	}
 
 	private void validateCollections(MultiCreateWorkOperationRequest request) {
 		Set<Long> ids = new HashSet<>();
-		request.rows().forEach(row -> { if (row.collectionIds() != null) ids.addAll(row.collectionIds()); });
-		if (ids.isEmpty()) return;
+		request.rows().forEach(row -> {
+			if (row.collectionIds() != null)
+				ids.addAll(row.collectionIds());
+		});
+		if (ids.isEmpty())
+			return;
 		List<OrchidGroupCollection> collections = collectionRepository.findAllById(ids);
-		if (collections.size() != ids.size()) throw new NotFoundException("지정한 사용자 그룹 중 찾을 수 없는 대상이 있습니다.");
+		if (collections.size() != ids.size())
+			throw new NotFoundException("지정한 사용자 그룹 중 찾을 수 없는 대상이 있습니다.");
 		if (collections.stream().anyMatch(OrchidGroupCollection::isArchived)) {
 			throw new IllegalArgumentException("보관된 사용자 그룹에는 생성 결과를 추가할 수 없습니다.");
 		}
 	}
+
 }

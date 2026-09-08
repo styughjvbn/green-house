@@ -51,7 +51,9 @@ export function useOrchidManagementHistory(
     item: OrchidGroupLineage;
   } | null>(null);
   const scope = useMemo(() => resolveHistoryScope(selection), [selection]);
-  const scopeKey = scope ? `${scope.scopeType}:${scope.scopeId}` : null;
+  const scopeKey = scope
+    ? `${scope.historyScopeType}:${scope.historyScopeId}`
+    : null;
   const currentHistory = useMemo(
     () =>
       scopeKey && summaryState?.key === scopeKey
@@ -98,8 +100,8 @@ export function useOrchidManagementHistory(
       request = {
         controller,
         promise: getWorkHistory(
-          scope.scopeType,
-          scope.scopeId,
+          scope.historyScopeType,
+          scope.historyScopeId,
           0,
           SUMMARY_HISTORY_SIZE,
           controller.signal,
@@ -252,7 +254,7 @@ export function useOrchidManagementHistory(
   const selectedId = selectedOrchidGroup?.id ?? null;
   return {
     history:
-      selectedOrchidGroup && scope?.scopeType === "ORCHID_GROUP"
+      selectedOrchidGroup && scope?.historyScopeType === "ORCHID_GROUP"
         ? currentHistory
         : [],
     historyLoading: Boolean(selectedOrchidGroup) && summaryLoading,
@@ -278,19 +280,31 @@ export function useOrchidManagementHistory(
 }
 
 function resolveHistoryScope(selection: OrchidSelection | null): {
-  scopeType: "HOUSE" | "PHYSICAL_BED" | "BED_ZONE" | "ORCHID_GROUP";
-  scopeId: number;
+  historyScopeType: "HOUSE" | "PHYSICAL_BED" | "BED_ZONE" | "ORCHID_GROUP";
+  historyScopeId: number;
 } | null {
   if (!selection) return null;
   switch (selection.type) {
     case "HOUSE":
-      return { scopeType: "HOUSE", scopeId: selection.houseId };
+      return {
+        historyScopeType: "HOUSE",
+        historyScopeId: selection.houseId,
+      };
     case "PHYSICAL_BED":
-      return { scopeType: "PHYSICAL_BED", scopeId: selection.physicalBedId };
+      return {
+        historyScopeType: "PHYSICAL_BED",
+        historyScopeId: selection.physicalBedId,
+      };
     case "BED_ZONE":
-      return { scopeType: "BED_ZONE", scopeId: selection.bedZoneId };
+      return {
+        historyScopeType: "BED_ZONE",
+        historyScopeId: selection.bedZoneId,
+      };
     case "ORCHID_GROUP":
-      return { scopeType: "ORCHID_GROUP", scopeId: selection.orchidGroupId };
+      return {
+        historyScopeType: "ORCHID_GROUP",
+        historyScopeId: selection.orchidGroupId,
+      };
   }
 }
 

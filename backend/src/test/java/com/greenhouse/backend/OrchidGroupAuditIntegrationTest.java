@@ -24,9 +24,15 @@ import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.mock.web.MockHttpSession;
 
 class OrchidGroupAuditIntegrationTest extends AbstractBackendIntegrationTest {
-	@Autowired AuditEventRepository auditEventRepository;
-	@Autowired JdbcTemplate jdbcTemplate;
+
+	@Autowired
+	AuditEventRepository auditEventRepository;
+
+	@Autowired
+	JdbcTemplate jdbcTemplate;
+
 	private Long zoneId;
+
 	private Long varietyId;
 
 	@BeforeEach
@@ -40,37 +46,42 @@ class OrchidGroupAuditIntegrationTest extends AbstractBackendIntegrationTest {
 		house.addPhysicalBed(bed);
 		houseRepository.saveAndFlush(house);
 		zoneId = zone.getId();
-		varietyId = varietyRepository.saveAndFlush(new Variety(
-				"AUDIT-" + System.nanoTime(), "Phal", "감사품종", null, "4인치", true, true, null, null)).getId();
+		varietyId = varietyRepository
+			.saveAndFlush(
+					new Variety("AUDIT-" + System.nanoTime(), "Phal", "감사품종", null, "4인치", true, true, null, null))
+			.getId();
 	}
 
 	@Test
 	void correctionStoresDataAndRequestIdentityAndNoOpDoesNotStore() throws Exception {
 		MockHttpSession session = new MockHttpSession();
-		var create = mockMvc.perform(post("/api/orchid-groups")
-				.with(user("operator"))
+		var create = mockMvc
+			.perform(post("/api/orchid-groups").with(user("operator"))
 				.session(session)
 				.header("X-Request-Id", "req-create")
 				.header("X-Client-Instance-Id", "browser-1")
 				.contentType(MediaType.APPLICATION_JSON)
 				.content(payload(10)))
-				.andExpect(status().isCreated())
-				.andExpect(header().string("X-Request-Id", "req-create"))
-				.andReturn();
-		Long groupId = Long.valueOf(create.getResponse().getContentAsString().replaceAll(".*\\\"id\\\":(\\d+).*", "$1"));
+			.andExpect(status().isCreated())
+			.andExpect(header().string("X-Request-Id", "req-create"))
+			.andReturn();
+		Long groupId = Long
+			.valueOf(create.getResponse().getContentAsString().replaceAll(".*\\\"id\\\":(\\d+).*", "$1"));
 
-		mockMvc.perform(patch("/api/orchid-groups/{id}", groupId)
-				.with(user("operator"))
+		mockMvc
+			.perform(patch("/api/orchid-groups/{id}", groupId).with(user("operator"))
 				.session(session)
 				.header("X-Request-Id", "req-correction")
 				.header("X-Client-Instance-Id", "browser-1")
 				.contentType(MediaType.APPLICATION_JSON)
 				.content(updatePayload(15)))
-				.andExpect(status().isOk());
+			.andExpect(status().isOk());
 
-		var correction = auditEventRepository.findAll().stream()
-				.filter(event -> event.getSource() == AuditSource.ORCHID_GROUP_CORRECTION)
-				.findFirst().orElseThrow();
+		var correction = auditEventRepository.findAll()
+			.stream()
+			.filter(event -> event.getSource() == AuditSource.ORCHID_GROUP_CORRECTION)
+			.findFirst()
+			.orElseThrow();
 		assertThat(correction.getAction()).isEqualTo(AuditAction.UPDATED);
 		assertThat(correction.getActorId()).isEqualTo("operator");
 		assertThat(correction.getSessionId()).isEqualTo(session.getId());
@@ -81,26 +92,28 @@ class OrchidGroupAuditIntegrationTest extends AbstractBackendIntegrationTest {
 				"select cast(before_data as varchar) || cast(after_data as varchar) from audit_events where id = ?",
 				String.class, correction.getId());
 		assertThat(json).contains("varietyId", "quantity", "houseId", "physicalBedId", "zoneId", "status")
-				.doesNotContain("memo", "reservedQuantity", "createdAt", "updatedAt");
+			.doesNotContain("memo", "reservedQuantity", "createdAt", "updatedAt");
 
 		long eventCount = auditEventRepository.count();
-		mockMvc.perform(patch("/api/orchid-groups/{id}", groupId)
-				.with(user("operator"))
+		mockMvc
+			.perform(patch("/api/orchid-groups/{id}", groupId).with(user("operator"))
 				.contentType(MediaType.APPLICATION_JSON)
 				.content(updatePayload(15)))
-				.andExpect(status().isOk());
+			.andExpect(status().isOk());
 		assertThat(auditEventRepository.count()).isEqualTo(eventCount);
 
-		mockMvc.perform(patch("/api/orchid-groups/{id}", groupId)
-				.with(user("operator"))
+		mockMvc
+			.perform(patch("/api/orchid-groups/{id}", groupId).with(user("operator"))
 				.header("X-Request-Id", "req-deactivate")
 				.header("X-Client-Instance-Id", "browser-1")
 				.contentType(MediaType.APPLICATION_JSON)
 				.content(updatePayload(15, "종료")))
-				.andExpect(status().isOk());
-		var deactivation = auditEventRepository.findAll().stream()
-				.filter(event -> event.getAction() == AuditAction.DEACTIVATED)
-				.findFirst().orElseThrow();
+			.andExpect(status().isOk());
+		var deactivation = auditEventRepository.findAll()
+			.stream()
+			.filter(event -> event.getAction() == AuditAction.DEACTIVATED)
+			.findFirst()
+			.orElseThrow();
 		assertThat(deactivation.getSource()).isEqualTo(AuditSource.ORCHID_GROUP_CORRECTION);
 		assertThat(deactivation.getChangedFields()).containsExactly("status");
 		assertThat(deactivation.getRequestId()).isEqualTo("req-deactivate");
@@ -123,4 +136,5 @@ class OrchidGroupAuditIntegrationTest extends AbstractBackendIntegrationTest {
 				 "status":"%s","startPosition":1,"endPosition":2}
 				""".formatted(varietyId, quantity, status);
 	}
+
 }

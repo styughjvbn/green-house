@@ -24,8 +24,7 @@ public class RepotWorkOperationController {
 
 	@PostMapping("/repot")
 	@ResponseStatus(HttpStatus.CREATED)
-	public ApiResponse<RepotWorkOperationResponse> execute(
-			@Valid @RequestBody RepotWorkOperationRequest request) {
+	public ApiResponse<RepotWorkOperationResponse> execute(@Valid @RequestBody RepotWorkOperationRequest request) {
 		return ApiResponse.ok(service.execute(request));
 	}
 
@@ -33,4 +32,5 @@ public class RepotWorkOperationController {
 	public ApiResponse<RepotWorkOperationResponse> get(@PathVariable Long workOperationId) {
 		return ApiResponse.ok(service.get(workOperationId));
 	}
+
 }
