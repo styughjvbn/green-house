@@ -3,7 +3,6 @@ package com.greenhouse.backend.farm.application.orchid;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.greenhouse.backend.farm.application.orchid.mutation.MoveOrchidGroupMutationCommand;
 import com.greenhouse.backend.farm.application.orchid.mutation.OrchidGroupMutationEngine;
-import com.greenhouse.backend.farm.application.orchid.mutation.OrchidGroupMutationRoutingPolicy;
 import com.greenhouse.backend.farm.application.orchid.mutation.OrchidGroupMutationSources;
 import com.greenhouse.backend.farm.application.transformation.StructureChangeExecutor;
 import com.greenhouse.backend.farm.dto.orchid.OrchidGroupMoveRequest;
@@ -21,23 +20,15 @@ import java.util.List;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 
-/**
- * ORCHID-CUTOVER: LEGACY_RETIRE — Engine 경로와 전환 후 제거할 호환 이동 분기를 함께 가진다. Removal gate: 운영
- * ACTIVE 안정화 및 writer inventory 승인.
- */
 @Component
 @RequiredArgsConstructor
 public class MovementWorkHandler implements WorkEffectHandler {
-
-	private final OrchidGroupCommandService orchidGroupCommandService;
 
 	private final StructureChangeExecutor structureChangeExecutor;
 
 	private final OrchidGroupRepository orchidGroupRepository;
 
 	private final OrchidGroupMutationEngine mutationEngine;
-
-	private final OrchidGroupMutationRoutingPolicy mutationRoutingPolicy;
 
 	private final ObjectMapper objectMapper = new ObjectMapper().findAndRegisterModules();
 
@@ -63,35 +54,21 @@ public class MovementWorkHandler implements WorkEffectHandler {
 		OrchidGroupMoveRequest request = command.payload() == null
 				? objectMapper.convertValue(command.resultDetails(), OrchidGroupMoveRequest.class)
 				: command.payloadAs(OrchidGroupMoveRequest.class);
-		var moved = mutationRoutingPolicy.routesToEngine()
-				? moveWithEngine(context, target.orchidGroupId(), command, request)
-				: moveWithLegacy(target.orchidGroupId(), request);
+		var moved = moveWithEngine(context, target.orchidGroupId(), command, request);
 		var details = new WorkEffectResults.Moved(target.orchidGroupId(), target.locationSnapshot().get("bedZoneId"),
 				moved.bedZoneId(), moved.startPosition(), moved.endPosition())
 			.toMap();
 		return new WorkExecutionResult("MOVE", details, List.of(target.orchidGroupId()), moved.mutationLink());
 	}
 
-	private RoutedMove moveWithLegacy(Long orchidGroupId, OrchidGroupMoveRequest request) {
-		var current = orchidGroupRepository.findById(orchidGroupId)
-			.orElseThrow(() -> new IllegalArgumentException("이동할 난 묶음을 찾을 수 없습니다."));
-		if (current.getBedZone().getId().equals(request.toBedZoneId())
-				&& equalPosition(current.getStartPosition(), request.startPosition())
-				&& equalPosition(current.getEndPosition(), request.endPosition())) {
-			return new RoutedMove(current.getBedZone().getId(), current.getStartPosition(), current.getEndPosition(),
-					null);
-		}
-		return new RoutedMove(orchidGroupCommandService.moveLegacyForOperation(orchidGroupId, request));
-	}
-
-	private RoutedMove moveWithEngine(WorkEffectContext context, Long orchidGroupId, WorkEffectCommand command,
+	private MovedGroup moveWithEngine(WorkEffectContext context, Long orchidGroupId, WorkEffectCommand command,
 			OrchidGroupMoveRequest request) {
 		var current = orchidGroupRepository.findById(orchidGroupId)
 			.orElseThrow(() -> new IllegalArgumentException("이동할 난 묶음을 찾을 수 없습니다."));
 		if (current.getBedZone().getId().equals(request.toBedZoneId())
 				&& equalPosition(current.getStartPosition(), request.startPosition())
 				&& equalPosition(current.getEndPosition(), request.endPosition())) {
-			return new RoutedMove(current.getBedZone().getId(), current.getStartPosition(), current.getEndPosition(),
+			return new MovedGroup(current.getBedZone().getId(), current.getStartPosition(), current.getEndPosition(),
 					null);
 		}
 		var mutation = mutationEngine.move(new MoveOrchidGroupMutationCommand(
@@ -100,7 +77,7 @@ public class MovementWorkHandler implements WorkEffectHandler {
 				request.memo()));
 		var group = orchidGroupRepository.findById(orchidGroupId)
 			.orElseThrow(() -> new IllegalArgumentException("이동한 난 묶음을 찾을 수 없습니다."));
-		return new RoutedMove(group.getBedZone().getId(), group.getStartPosition(), group.getEndPosition(),
+		return new MovedGroup(group.getBedZone().getId(), group.getStartPosition(), group.getEndPosition(),
 				new WorkMutationLink(mutation.mutationId(), mutation.correlationId()));
 	}
 
@@ -111,12 +88,8 @@ public class MovementWorkHandler implements WorkEffectHandler {
 		return current.compareTo(requested) == 0;
 	}
 
-	private record RoutedMove(Long bedZoneId, java.math.BigDecimal startPosition, java.math.BigDecimal endPosition,
+	private record MovedGroup(Long bedZoneId, java.math.BigDecimal startPosition, java.math.BigDecimal endPosition,
 			WorkMutationLink mutationLink) {
-
-		private RoutedMove(com.greenhouse.backend.farm.dto.orchid.OrchidGroupResponse response) {
-			this(response.bedZoneId(), response.startPosition(), response.endPosition(), null);
-		}
 	}
 
 }

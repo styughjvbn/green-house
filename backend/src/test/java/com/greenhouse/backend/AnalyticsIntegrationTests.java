@@ -87,8 +87,8 @@ class AnalyticsIntegrationTests extends AbstractBackendIntegrationTest {
 		houseRepository.save(house);
 		var reserved = new OrchidGroup(zone, "카틀레야", "분석 품종", 20, "3.5치", 2, "정상", 1, null, null);
 		reserved.reserve(7);
-		orchidGroupRepository.save(reserved);
-		orchidGroupRepository.save(new OrchidGroup(zone, "카틀레야", "분석 품종", 10, "3.5치", 2, "주의", 2, null, null));
+		saveOrchidGroup(reserved);
+		saveOrchidGroup(new OrchidGroup(zone, "카틀레야", "분석 품종", 10, "3.5치", 2, "주의", 2, null, null));
 
 		mockMvc.perform(get("/api/analytics/sales").param("from", "2020-01-01").param("to", "2020-01-31"))
 			.andExpect(status().isOk())

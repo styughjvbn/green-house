@@ -30,8 +30,8 @@ class VarietyQueryIntegrationTests extends AbstractBackendIntegrationTest {
 		house.addPhysicalBed(bed);
 		houseRepository.save(house);
 
-		orchidGroupRepository.save(createGroup(zone, firstVariety, 12, 1));
-		orchidGroupRepository.save(createGroup(zone, secondVariety, 7, 2));
+		saveOrchidGroup(createGroup(zone, firstVariety, 12, 1));
+		saveOrchidGroup(createGroup(zone, secondVariety, 7, 2));
 
 		mockMvc.perform(get("/api/varieties").param("keyword", "배치품종").param("page", "0").param("size", "10"))
 			.andExpect(status().isOk())

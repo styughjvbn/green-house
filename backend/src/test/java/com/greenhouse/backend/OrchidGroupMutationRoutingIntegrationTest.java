@@ -69,7 +69,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.transaction.annotation.Transactional;
 
-@SpringBootTest(properties = "app.orchid-ledger.writer-mode=ENGINE")
+@SpringBootTest
 @Transactional
 class OrchidGroupMutationRoutingIntegrationTest extends AbstractBackendIntegrationTest {
 
@@ -308,7 +308,7 @@ class OrchidGroupMutationRoutingIntegrationTest extends AbstractBackendIntegrati
 
 		var effect = workAppliedEffectRepository.findByWorkOperationIdOrderByIdAsc(operation.id())
 			.stream()
-			.filter(item -> item.getEffectKey().equals("POTTING:routing-potting-9966"))
+			.filter(item -> item.getEffectKey().endsWith(":routing-potting-9966"))
 			.findFirst()
 			.orElseThrow();
 		Long groupId = effect.getResultDetails().get("createdOrchidGroupIds") instanceof List<?> ids

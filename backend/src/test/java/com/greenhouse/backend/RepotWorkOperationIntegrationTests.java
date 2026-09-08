@@ -76,6 +76,7 @@ class RepotWorkOperationIntegrationTests extends AbstractBackendIntegrationTest 
 		appliedEffectRepository.deleteAll();
 		targetExecutionRepository.deleteAll();
 		operationTargetRepository.deleteAll();
+		workCommandReceiptRepository.deleteAll();
 		operationRepository.deleteAll();
 		memberRepository.deleteAll();
 		collectionRepository.deleteAll();
@@ -261,7 +262,7 @@ class RepotWorkOperationIntegrationTests extends AbstractBackendIntegrationTest 
 		OrchidGroup group = new OrchidGroup(bedZone, variety.getGenus(), variety.getName(), quantity, "3.5치", 2, "정상",
 				1, new BigDecimal(start), new BigDecimal(end));
 		group.assignVariety(variety);
-		return orchidGroupRepository.save(group);
+		return saveOrchidGroup(group);
 	}
 
 	private String repotRequest(String key, Long sourceId, int inputQuantity, int lossQuantity, String lossReason,

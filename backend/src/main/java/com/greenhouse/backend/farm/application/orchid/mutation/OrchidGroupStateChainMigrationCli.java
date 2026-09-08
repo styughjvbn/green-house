@@ -22,8 +22,8 @@ import org.springframework.boot.builder.SpringApplicationBuilder;
 import org.springframework.context.ConfigurableApplicationContext;
 
 /**
- * ORCHID-CUTOVER: TRANSITION_ONLY — complete state-chain manifest를 검증·적재하는 operator CLI다.
- * Removal gate: 운영 cutover 완료 및 사후 복구 도구 보존 정책 확정.
+ * ORCHID-CUTOVER: RECOVERY — complete state-chain manifest를 검증·적재하는 operator CLI다.
+ * Removal gate: V20 백업 복구 절차를 대체하는 도구가 검증될 때까지 보존.
  */
 public final class OrchidGroupStateChainMigrationCli {
 

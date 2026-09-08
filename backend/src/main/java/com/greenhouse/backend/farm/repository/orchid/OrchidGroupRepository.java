@@ -13,6 +13,8 @@ import org.springframework.data.repository.query.Param;
 
 public interface OrchidGroupRepository extends JpaRepository<OrchidGroup, Long> {
 
+	boolean existsByStateRevisionIsNull();
+
 	@Query("""
 			select g.id as orchidGroupId, h.id as houseId, b.id as physicalBedId, z.id as bedZoneId,
 			       g.startPosition as startPosition, g.endPosition as endPosition,

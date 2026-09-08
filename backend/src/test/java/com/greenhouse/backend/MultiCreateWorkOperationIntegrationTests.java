@@ -67,6 +67,7 @@ class MultiCreateWorkOperationIntegrationTests extends AbstractBackendIntegratio
 		workAppliedEffectRepository.deleteAll();
 		workTargetExecutionRepository.deleteAll();
 		workOperationTargetRepository.deleteAll();
+		workCommandReceiptRepository.deleteAll();
 		workOperationRepository.deleteAll();
 		memberRepository.deleteAll();
 		collectionRepository.deleteAll();

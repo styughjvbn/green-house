@@ -1,6 +1,12 @@
 package com.greenhouse.backend.farm.support;
 
 import com.greenhouse.backend.farm.domain.orchid.OrchidGroup;
+import com.greenhouse.backend.farm.domain.orchid.mutation.OrchidGroupMutation;
+import com.greenhouse.backend.farm.domain.orchid.mutation.OrchidGroupMutationEntry;
+import com.greenhouse.backend.farm.domain.orchid.mutation.OrchidGroupMutationSource;
+import com.greenhouse.backend.farm.domain.orchid.mutation.OrchidGroupMutationSourceDomain;
+import com.greenhouse.backend.farm.domain.orchid.mutation.OrchidGroupMutationType;
+import com.greenhouse.backend.farm.domain.orchid.mutation.OrchidGroupStateSnapshot;
 import com.greenhouse.backend.farm.domain.structure.BedZone;
 import com.greenhouse.backend.farm.domain.structure.BedZoneSide;
 import com.greenhouse.backend.farm.domain.structure.House;
@@ -8,6 +14,9 @@ import com.greenhouse.backend.farm.domain.structure.PhysicalBed;
 import com.greenhouse.backend.farm.domain.variety.Variety;
 import jakarta.persistence.EntityManager;
 import java.math.BigDecimal;
+import java.time.Instant;
+import java.time.LocalDate;
+import java.util.UUID;
 
 /**
  * Small, caller-owned fixtures; no production seeds, fixed IDs, cleanup or committed
@@ -41,7 +50,26 @@ public final class FarmTestFixtures {
 				BigDecimal.ZERO, BigDecimal.TEN);
 		group.assignVariety(variety);
 		entityManager.persist(group);
+		baseline(entityManager, group);
 		return group;
+	}
+
+	/**
+	 * Explicit ledger fixture for tests that exercise the Engine, without cutover
+	 * coverage.
+	 */
+	public static void baseline(EntityManager entityManager, OrchidGroup group) {
+		if (group.getStateRevision() != null) {
+			throw new IllegalArgumentException("이미 원장을 가진 테스트 난 묶음입니다.");
+		}
+		group.establishBaselineRevision();
+		var mutation = new OrchidGroupMutation(OrchidGroupMutationType.BASELINE_IMPORT,
+				new OrchidGroupMutationSource(OrchidGroupMutationSourceDomain.MIGRATION, "TEST_FIXTURE",
+						group.getId().toString(), "BASELINE", UUID.randomUUID()),
+				"f".repeat(64), Instant.parse("2026-07-01T00:00:00Z"), LocalDate.of(2026, 7, 1), "Test fixture", 1);
+		entityManager.persist(mutation);
+		entityManager
+			.persist(OrchidGroupMutationEntry.baseline(mutation, group.getId(), OrchidGroupStateSnapshot.from(group)));
 	}
 
 	public record Layout(House house, PhysicalBed bed, BedZone left, BedZone right) {

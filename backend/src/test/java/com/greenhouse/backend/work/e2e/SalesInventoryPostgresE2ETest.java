@@ -11,7 +11,6 @@ import com.greenhouse.backend.farm.application.orchid.OrchidGroupReader;
 import com.greenhouse.backend.farm.application.orchid.mutation.OrchidGroupLedgerCutoverCommand;
 import com.greenhouse.backend.farm.application.orchid.mutation.OrchidGroupLedgerCutoverService;
 import com.greenhouse.backend.farm.application.orchid.mutation.OrchidGroupLedgerReconciliationService;
-import com.greenhouse.backend.farm.application.orchid.mutation.OrchidGroupMutationRoutingPolicy;
 import com.greenhouse.backend.farm.application.orchid.mutation.OrchidGroupStateChainMigrationService;
 import com.greenhouse.backend.farm.repository.orchid.OrchidGroupRepository;
 import com.greenhouse.backend.partner.domain.BusinessPartner;
@@ -107,9 +106,6 @@ class SalesInventoryPostgresE2ETest extends WorkE2ETestBase {
 	private JdbcTemplate jdbc;
 
 	@MockitoSpyBean
-	private OrchidGroupMutationRoutingPolicy routing;
-
-	@MockitoSpyBean
 	private OrchidGroupReader reader;
 
 	private Long groupId;
@@ -121,13 +117,13 @@ class SalesInventoryPostgresE2ETest extends WorkE2ETestBase {
 	}
 
 	@ParameterizedTest
-	@CsvSource({ "false,DIRECT", "true,DIRECT", "false,AUCTION", "true,AUCTION" })
-	void preservesSnapshotsAndPerAllocationHistoryAcrossCompletionAndCancellation(boolean engine, SalesType type) {
-		activate(engine);
+	@org.junit.jupiter.params.provider.EnumSource(SalesType.class)
+	void preservesSnapshotsAndPerAllocationHistoryAcrossCompletionAndCancellation(SalesType type) {
+		activate();
 		var partner = partner(type);
 		var created = creation.create(request(partner, type, DATE, 3, 2));
 		assertStock(100, 5);
-		assertMovement(created.id(), SalesInventoryMovementType.SALES_RESERVE, engine, 3, 2);
+		assertMovement(created.id(), SalesInventoryMovementType.SALES_RESERVE, 3, 2);
 		assertThat(created.items())
 			.allSatisfy(item -> assertThat(item.allocations()).singleElement().satisfies(line -> {
 				assertThat(line.creationSnapshot().quantity()).isEqualTo(100);
@@ -141,7 +137,7 @@ class SalesInventoryPostgresE2ETest extends WorkE2ETestBase {
 		var completed = statuses.updateStatus(created.id(), new SalesSlipStatusUpdateRequest(completedStatus, null));
 		statuses.updateStatus(created.id(), new SalesSlipStatusUpdateRequest(completedStatus, null));
 		assertStock(95, 0);
-		assertMovement(created.id(), SalesInventoryMovementType.SALES_OUTBOUND, engine, -3, -2);
+		assertMovement(created.id(), SalesInventoryMovementType.SALES_OUTBOUND, -3, -2);
 		assertThat(completed.items()).allSatisfy(item -> {
 			var line = item.allocations().getFirst();
 			assertThat(line.outboundSnapshot().quantity()).isEqualTo(100);
@@ -157,7 +153,7 @@ class SalesInventoryPostgresE2ETest extends WorkE2ETestBase {
 
 		statuses.updateStatus(created.id(), new SalesSlipStatusUpdateRequest(SalesSlip.STATUS_CANCELED, null));
 		assertStock(100, 0);
-		assertMovement(created.id(), SalesInventoryMovementType.SALES_CANCEL_OUTBOUND, engine, 3, 2);
+		assertMovement(created.id(), SalesInventoryMovementType.SALES_CANCEL_OUTBOUND, 3, 2);
 		var canceled = queries.getSalesSlip(created.id());
 		for (int index = 0; index < canceled.items().size(); index++) {
 			var line = canceled.items().get(index).allocations().getFirst();
@@ -167,33 +163,31 @@ class SalesInventoryPostgresE2ETest extends WorkE2ETestBase {
 			assertThat(line.outboundSnapshot())
 				.isEqualTo(persistedCompletion.items().get(index).allocations().getFirst().outboundSnapshot());
 		}
-		if (engine) {
-			Long outboundId = movements
-				.findBySalesSlipIdAndChangeType(created.id(), SalesInventoryMovementType.SALES_OUTBOUND)
-				.getFirst()
-				.getMutationId();
-			Long restoreId = movements
-				.findBySalesSlipIdAndChangeType(created.id(), SalesInventoryMovementType.SALES_CANCEL_OUTBOUND)
-				.getFirst()
-				.getMutationId();
-			assertThat(jdbc.queryForObject(
-					"select count(*) from orchid_group_mutation_relations "
-							+ "where mutation_id = ? and related_mutation_id = ? and relation_type = 'COMPENSATES'",
-					Long.class, restoreId, outboundId))
-				.isEqualTo(1L);
-			assertThat(reconciliation.reconcile().ready()).isTrue();
-		}
+
+		Long outboundId = movements
+			.findBySalesSlipIdAndChangeType(created.id(), SalesInventoryMovementType.SALES_OUTBOUND)
+			.getFirst()
+			.getMutationId();
+		Long restoreId = movements
+			.findBySalesSlipIdAndChangeType(created.id(), SalesInventoryMovementType.SALES_CANCEL_OUTBOUND)
+			.getFirst()
+			.getMutationId();
+		assertThat(jdbc.queryForObject(
+				"select count(*) from orchid_group_mutation_relations "
+						+ "where mutation_id = ? and related_mutation_id = ? and relation_type = 'COMPENSATES'",
+				Long.class, restoreId, outboundId))
+			.isEqualTo(1L);
+		assertThat(reconciliation.reconcile().ready()).isTrue();
 	}
 
-	@ParameterizedTest
-	@ValueSource(booleans = { false, true })
-	void editsReleaseAndReserveTogetherAndFailedEditsRollBack(boolean engine) {
-		activate(engine);
+	@Test
+	void editsReleaseAndReserveTogetherAndFailedEditsRollBack() {
+		activate();
 		var partner = partner(SalesType.DIRECT);
 		var created = creation.create(request(partner, SalesType.DIRECT, DATE, 3, 2));
 		updates.update(created.id(), request(partner, SalesType.DIRECT, DATE, 4, 2));
 		assertStock(100, 6);
-		assertMovement(created.id(), SalesInventoryMovementType.SALES_RELEASE, engine, -3, -2);
+		assertMovement(created.id(), SalesInventoryMovementType.SALES_RELEASE, -3, -2);
 		long before = movements.count();
 		var updated = queries.getSalesSlip(created.id());
 
@@ -205,15 +199,13 @@ class SalesInventoryPostgresE2ETest extends WorkE2ETestBase {
 		assertThat(queries.getSalesSlip(created.id())).isEqualTo(updated);
 		statuses.updateStatus(created.id(), new SalesSlipStatusUpdateRequest(SalesSlip.STATUS_CANCELED, null));
 		assertStock(100, 0);
-		assertMovement(created.id(), SalesInventoryMovementType.SALES_CANCEL_RESERVE, engine, -4, -2);
-		if (engine)
-			assertThat(reconciliation.reconcile().ready()).isTrue();
+		assertMovement(created.id(), SalesInventoryMovementType.SALES_CANCEL_RESERVE, -4, -2);
+		assertThat(reconciliation.reconcile().ready()).isTrue();
 	}
 
-	@ParameterizedTest
-	@ValueSource(booleans = { false, true })
-	void laterFailureRollsBackStockSnapshotsShipmentsAndMovements(boolean engine) {
-		activate(engine);
+	@Test
+	void laterFailureRollsBackStockSnapshotsShipmentsAndMovements() {
+		activate();
 		var created = creation.create(request(partner(SalesType.AUCTION), SalesType.AUCTION, DATE, 3, 2));
 		long before = movements.count();
 		long shipmentsBefore = jdbc.queryForObject("select count(*) from auction_shipments", Long.class);
@@ -229,13 +221,11 @@ class SalesInventoryPostgresE2ETest extends WorkE2ETestBase {
 		assertThat(jdbc.queryForObject("select count(*) from auction_shipments", Long.class))
 			.isEqualTo(shipmentsBefore);
 		assertThat(queries.getSalesSlip(created.id())).isEqualTo(beforeSlip);
-		if (engine)
-			assertThat(reconciliation.reconcile().ready()).isTrue();
+		assertThat(reconciliation.reconcile().ready()).isTrue();
 	}
 
-	@ParameterizedTest
-	@ValueSource(booleans = { false, true })
-	void concurrentReservationsLockGroupsInIdOrderAndRejectOverbooking(boolean engine) throws Exception {
+	@Test
+	void concurrentReservationsLockGroupsInIdOrderAndRejectOverbooking() throws Exception {
 		Long secondId = jdbc.queryForObject(
 				"""
 						insert into orchid_groups (created_at, updated_at, age_year, genus, placement_type, pot_size, pot_size_code,
@@ -246,7 +236,7 @@ class SalesInventoryPostgresE2ETest extends WorkE2ETestBase {
 						from orchid_groups where id = ? returning id
 						""",
 				Long.class, groupId);
-		activate(engine);
+		activate();
 		var first = request(partner(SalesType.DIRECT), List.of(groupId, secondId), DATE);
 		var second = request(partner(SalesType.DIRECT), List.of(secondId, groupId), DATE.plusDays(1));
 		long slipsBefore = slips.count();
@@ -266,20 +256,23 @@ class SalesInventoryPostgresE2ETest extends WorkE2ETestBase {
 		assertThat(groups.findById(secondId).orElseThrow().getReservedQuantity()).isEqualTo(70);
 		assertThat(slips.count()).isEqualTo(slipsBefore + 1);
 		assertThat(movements.count()).isEqualTo(2L);
-		if (engine)
-			assertThat(reconciliation.reconcile().ready()).isTrue();
+		assertThat(reconciliation.reconcile().ready()).isTrue();
 	}
 
 	@Test
 	void restoresPreCutoverOutboundWithoutInventingACompensationLink() {
-		activate(false);
+		activate();
 		var created = creation.create(request(partner(SalesType.DIRECT), SalesType.DIRECT, DATE, 3, 2));
 		statuses.updateStatus(created.id(),
 				new SalesSlipStatusUpdateRequest(SalesSlip.STATUS_DIRECT_OUTBOUND_COMPLETED, null));
-		activate(true);
+		jdbc.update("UPDATE sales_inventory_movements SET mutation_id = NULL, correlation_id = NULL");
+		jdbc.execute(
+				"TRUNCATE orchid_group_mutation_relations, orchid_group_mutation_entries, orchid_group_mutations, orchid_group_ledger_coverages CASCADE");
+		jdbc.update("UPDATE orchid_groups SET state_revision = NULL");
+		activate();
 		statuses.updateStatus(created.id(), new SalesSlipStatusUpdateRequest(SalesSlip.STATUS_CANCELED, null));
 		assertStock(100, 0);
-		assertMovement(created.id(), SalesInventoryMovementType.SALES_CANCEL_OUTBOUND, true, 3, 2);
+		assertMovement(created.id(), SalesInventoryMovementType.SALES_CANCEL_OUTBOUND, 3, 2);
 		var mutationId = movements
 			.findBySalesSlipIdAndChangeType(created.id(), SalesInventoryMovementType.SALES_CANCEL_OUTBOUND)
 			.getFirst()
@@ -292,6 +285,7 @@ class SalesInventoryPostgresE2ETest extends WorkE2ETestBase {
 
 	@Test
 	void salesHttpContractsExposeCurrentValuesSeparatelyFromHistoricalSnapshots() throws Exception {
+		activate();
 		var result = post("/api/sales-slips",
 				objectMapper.writeValueAsString(request(partner(SalesType.DIRECT), SalesType.DIRECT, DATE, 3, 2)));
 		assertThat(result.status()).isEqualTo(201);
@@ -336,12 +330,8 @@ class SalesInventoryPostgresE2ETest extends WorkE2ETestBase {
 		})).isInstanceOf(DataIntegrityViolationException.class).hasMessageContaining("foreign key");
 	}
 
-	private void activate(boolean engine) {
-		// Exercise the same service graph in both rollout modes; ENGINE also runs with
-		// the real PostgreSQL fence.
-		doReturn(engine).when(routing).routesToEngine();
-		if (!engine)
-			return;
+	private void activate() {
+		// Import a pre-cutover fixture, then exercise the real PostgreSQL write fence.
 		assertThat(reconciliation.reconcile().issues()).isEmpty();
 		var key = UUID.randomUUID();
 		OrchidGroupStateChainTestSupport.importCurrentGroups(migration, groups, key, DATE, "1.0.0");
@@ -388,13 +378,13 @@ class SalesInventoryPostgresE2ETest extends WorkE2ETestBase {
 		assertThat(group.getReservedQuantity()).isEqualTo(reserved);
 	}
 
-	private void assertMovement(Long slipId, SalesInventoryMovementType type, boolean engine, Integer... deltas) {
+	private void assertMovement(Long slipId, SalesInventoryMovementType type, Integer... deltas) {
 		var rows = movements.findBySalesSlipIdAndChangeType(slipId, type);
 		assertThat(rows).extracting(SalesInventoryMovement::getQuantityDelta).containsExactlyInAnyOrder(deltas);
 		assertThat(rows).allSatisfy(row -> {
 			assertThat(row.getOrchidGroupId()).isEqualTo(groupId);
-			assertThat(row.getMutationId() != null).isEqualTo(engine);
-			assertThat(row.getCorrelationId() != null).isEqualTo(engine);
+			assertThat(row.getMutationId() != null).isTrue();
+			assertThat(row.getCorrelationId() != null).isTrue();
 		});
 		assertThat(rows.stream().map(SalesInventoryMovement::getMutationId).distinct().count()).isEqualTo(1);
 	}

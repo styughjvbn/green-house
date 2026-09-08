@@ -1,30 +1,21 @@
 package com.greenhouse.backend.farm.application.inbound;
 
 import com.greenhouse.backend.common.application.RequestActorProvider;
-import com.greenhouse.backend.common.exception.NotFoundException;
 import com.greenhouse.backend.farm.application.orchid.mutation.CreateInboundOrchidGroupsMutationCommand;
 import com.greenhouse.backend.farm.application.orchid.mutation.CreateOrchidGroupMutationItem;
 import com.greenhouse.backend.farm.application.orchid.mutation.OrchidGroupMutationDetails;
 import com.greenhouse.backend.farm.application.orchid.mutation.OrchidGroupMutationEngine;
-import com.greenhouse.backend.farm.application.orchid.mutation.OrchidGroupMutationRoutingPolicy;
 import com.greenhouse.backend.farm.application.orchid.mutation.OrchidGroupMutationSources;
-import com.greenhouse.backend.farm.application.structure.OrchidPlacementPolicy;
 import com.greenhouse.backend.farm.domain.orchid.OrchidGroup;
-import com.greenhouse.backend.farm.domain.structure.BedZone;
 import com.greenhouse.backend.farm.dto.inbound.InboundRecordPottingRequest;
 import com.greenhouse.backend.farm.dto.inbound.InboundRecordResponse;
 import com.greenhouse.backend.farm.repository.orchid.OrchidGroupRepository;
-import com.greenhouse.backend.farm.repository.structure.BedZoneRepository;
 import com.greenhouse.backend.work.application.effect.WorkMutationLink;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-/**
- * ORCHID-CUTOVER: LEGACY_RETIRE — Engine 경로와 전환 후 제거할 직접 생성 분기를 함께 가진다. Removal gate: 운영
- * ACTIVE 안정화 및 writer inventory 승인.
- */
 @Service
 @Transactional
 @RequiredArgsConstructor
@@ -34,66 +25,36 @@ public class InboundPottingService {
 
 	private final InboundRecordFinder inboundRecordFinder;
 
-	private final BedZoneRepository bedZoneRepository;
-
 	private final OrchidGroupRepository orchidGroupRepository;
-
-	private final OrchidPlacementPolicy orchidPlacementPolicy;
 
 	private final RequestActorProvider requestActorProvider;
 
 	private final OrchidGroupMutationEngine mutationEngine;
-
-	private final OrchidGroupMutationRoutingPolicy mutationRoutingPolicy;
 
 	public InboundPottingResult potting(Long inboundRecordId, InboundRecordPottingRequest request, Long workOperationId,
 			String effectKey) {
 		var inboundRecord = inboundRecordFinder.find(inboundRecordId);
 		inboundRecord.requirePottingAllowed();
 
-		WorkMutationLink mutationLink = null;
 		List<OrchidGroup> createdGroups;
-		if (mutationRoutingPolicy.routesToEngine()) {
-			var mutationCommand = new CreateInboundOrchidGroupsMutationCommand(
-					OrchidGroupMutationSources.work(workOperationId, effectKey), inboundRecord.getId(),
-					request.results()
-						.stream()
-						.map(row -> new CreateOrchidGroupMutationItem(row.bedZoneId(),
-								new OrchidGroupMutationDetails(inboundRecord.getVariety().getId(), row.quantity(),
-										firstNonBlank(row.potSize(), inboundRecord.getPotSize()), row.ageYear(),
-										DEFAULT_ORCHID_STATUS, row.placementType(), row.trayCount(),
-										row.splitPlacementAllowed(), row.startPosition(), row.endPosition(),
-										row.memo())))
-						.toList(),
-					request.pottingDate(), request.memo());
-			var mutation = mutationEngine.createFromInbound(mutationCommand);
-			List<Long> groupIds = mutation.entries().stream().map(entry -> entry.orchidGroupId()).toList();
-			var groupsById = orchidGroupRepository.findAllById(groupIds)
-				.stream()
-				.collect(java.util.stream.Collectors.toMap(OrchidGroup::getId, group -> group));
-			createdGroups = groupIds.stream().map(groupsById::get).toList();
-			mutationLink = new WorkMutationLink(mutation.mutationId(), mutation.correlationId());
-		}
-		else {
-			createdGroups = request.results().stream().map(row -> {
-				BedZone bedZone = findBedZone(row.bedZoneId());
-				OrchidPlacementPolicy.PlacementRange placementRange = orchidPlacementPolicy.resolveRange(bedZone,
-						row.startPosition(), row.endPosition());
-				OrchidGroup orchidGroup = new OrchidGroup(bedZone, inboundRecord.getVariety().getGenus(),
-						inboundRecord.getVariety().getName(), row.quantity(),
-						firstNonBlank(row.potSize(), inboundRecord.getPotSize()), row.ageYear(), DEFAULT_ORCHID_STATUS,
-						orchidGroupRepository.findMaxSortOrderByBedZoneId(bedZone.getId()) + 1,
-						placementRange.startPosition(), placementRange.endPosition());
-				orchidGroup.updateDetails(inboundRecord.getVariety().getGenus(), inboundRecord.getVariety().getName(),
-						row.quantity(), firstNonBlank(row.potSize(), inboundRecord.getPotSize()), row.ageYear(),
-						DEFAULT_ORCHID_STATUS, normalize(row.placementType()), row.trayCount(),
-						Boolean.TRUE.equals(row.splitPlacementAllowed()), placementRange.startPosition(),
-						placementRange.endPosition(), normalize(row.memo()));
-				orchidGroup.assignVariety(inboundRecord.getVariety());
-				orchidGroup.assignInboundRecord(inboundRecord);
-				return orchidGroupRepository.saveAndFlush(orchidGroup);
-			}).toList();
-		}
+		var mutationCommand = new CreateInboundOrchidGroupsMutationCommand(
+				OrchidGroupMutationSources.work(workOperationId, effectKey), inboundRecord.getId(),
+				request.results()
+					.stream()
+					.map(row -> new CreateOrchidGroupMutationItem(row.bedZoneId(),
+							new OrchidGroupMutationDetails(inboundRecord.getVariety().getId(), row.quantity(),
+									firstNonBlank(row.potSize(), inboundRecord.getPotSize()), row.ageYear(),
+									DEFAULT_ORCHID_STATUS, row.placementType(), row.trayCount(),
+									row.splitPlacementAllowed(), row.startPosition(), row.endPosition(), row.memo())))
+					.toList(),
+				request.pottingDate(), request.memo());
+		var mutation = mutationEngine.createFromInbound(mutationCommand);
+		List<Long> groupIds = mutation.entries().stream().map(entry -> entry.orchidGroupId()).toList();
+		var groupsById = orchidGroupRepository.findAllById(groupIds)
+			.stream()
+			.collect(java.util.stream.Collectors.toMap(OrchidGroup::getId, group -> group));
+		createdGroups = groupIds.stream().map(groupsById::get).toList();
+		var mutationLink = new WorkMutationLink(mutation.mutationId(), mutation.correlationId());
 
 		OrchidGroup representative = createdGroups.getFirst();
 		int actualQuantity = createdGroups.stream().mapToInt(OrchidGroup::getQuantity).sum();
@@ -105,14 +66,6 @@ public class InboundPottingService {
 		inboundRecord.place(representative.getBedZone(), representative, request.pottingDate(), actualQuantity);
 		return new InboundPottingResult(InboundRecordResponse.from(inboundRecordFinder.find(inboundRecord.getId())),
 				createdGroups.stream().map(OrchidGroup::getId).toList(), actualQuantity, mutationLink);
-	}
-
-	private BedZone findBedZone(Long bedZoneId) {
-		if (bedZoneId == null) {
-			throw new IllegalArgumentException("배치 구역이 필요합니다.");
-		}
-		return bedZoneRepository.findWithDetailsById(bedZoneId)
-			.orElseThrow(() -> new NotFoundException("논리 구역을 찾을 수 없습니다."));
 	}
 
 	private String firstNonBlank(String first, String second) {

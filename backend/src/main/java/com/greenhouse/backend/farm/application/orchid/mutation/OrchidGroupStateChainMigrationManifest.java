@@ -11,8 +11,8 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * ORCHID-CUTOVER: TRANSITION_ONLY — profiler 결과를 정상 revision chain으로 적재하는 고정 계약이다.
- * Removal gate: 운영 cutover와 사후 복구용 artifact 보존 정책 확정.
+ * ORCHID-CUTOVER: RECOVERY — profiler 결과를 정상 revision chain으로 적재하는 고정 계약이다. Removal gate:
+ * V20 백업 복구 절차를 대체하는 도구가 검증될 때까지 보존.
  */
 public record OrchidGroupStateChainMigrationManifest(@JsonProperty("manifest_schema_version") int manifestSchemaVersion,
 		@JsonProperty("generated_from") String generatedFrom, @JsonProperty("migration_ready") boolean migrationReady,

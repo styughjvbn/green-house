@@ -18,6 +18,8 @@ import java.util.List;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 
+@org.springframework.test.context.TestPropertySource(
+		properties = "spring.datasource.url=jdbc:h2:mem:orchidgroupbatchupdateintegrationtest;MODE=PostgreSQL;DB_CLOSE_DELAY=-1")
 class OrchidGroupBatchUpdateIntegrationTest extends AbstractBackendIntegrationTest {
 
 	@Autowired
@@ -72,7 +74,7 @@ class OrchidGroupBatchUpdateIntegrationTest extends AbstractBackendIntegrationTe
 		OrchidGroup group = new OrchidGroup(zone, variety.getGenus(), variety.getName(), quantity, "4인치", 2, "정상",
 				start, BigDecimal.valueOf(start), BigDecimal.valueOf(end));
 		group.assignVariety(variety);
-		return orchidGroupRepository.saveAndFlush(group);
+		return saveOrchidGroup(group);
 	}
 
 	private OrchidGroupUpdateRequest update(Long varietyId, int quantity, int start, int end) {

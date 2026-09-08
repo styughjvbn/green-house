@@ -67,7 +67,7 @@ class OrchidGroupStateChainMigrationPostgresE2ETest extends WorkE2ETestBase {
 				ORDER BY installed_rank
 				""", String.class)).containsExactly("21:add orchid group mutation engine",
 				"22:enforce orchid group mutation write fence", "23:normalize legacy orchid group pot sizes",
-				"24:allocate farm reference codes");
+				"24:allocate farm reference codes", "25:add work command receipts", "26:align work effect idempotency");
 
 		assertThat(jdbcTemplate.queryForObject("""
 				SELECT COUNT(*)

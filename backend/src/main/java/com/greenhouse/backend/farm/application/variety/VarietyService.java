@@ -7,7 +7,6 @@ import com.greenhouse.backend.common.config.TimeConfig;
 import com.greenhouse.backend.common.exception.NotFoundException;
 import com.greenhouse.backend.farm.application.orchid.mutation.OrchidGroupMutationDetails;
 import com.greenhouse.backend.farm.application.orchid.mutation.OrchidGroupMutationEngine;
-import com.greenhouse.backend.farm.application.orchid.mutation.OrchidGroupMutationRoutingPolicy;
 import com.greenhouse.backend.farm.application.orchid.mutation.OrchidGroupMutationSources;
 import com.greenhouse.backend.farm.application.orchid.mutation.UpdateOrchidGroupMutationCommand;
 import com.greenhouse.backend.farm.domain.variety.Variety;
@@ -30,10 +29,6 @@ import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-/**
- * ORCHID-CUTOVER: LEGACY_RETIRE — Engine 경로와 전환 후 제거할 직접 품종 전파 분기를 함께 가진다. Removal gate:
- * 운영 ACTIVE 안정화 및 writer inventory 승인.
- */
 @Service
 @Transactional
 @RequiredArgsConstructor
@@ -50,8 +45,6 @@ public class VarietyService {
 	private final VarietyAuditSupport auditSupport;
 
 	private final OrchidGroupMutationEngine mutationEngine;
-
-	private final OrchidGroupMutationRoutingPolicy mutationRoutingPolicy;
 
 	private final Clock clock;
 
@@ -121,10 +114,10 @@ public class VarietyService {
 			.filter(group -> !java.util.Objects.equals(group.getGenus(), variety.getGenus())
 					|| !java.util.Objects.equals(group.getVarietyName(), variety.getName()))
 			.toList();
-		if (mutationRoutingPolicy.routesToEngine()) {
-			changedGroups
-				.forEach(
-						group -> mutationEngine.updateDetails(new UpdateOrchidGroupMutationCommand(
+		changedGroups
+			.forEach(
+					group -> mutationEngine
+						.updateDetails(new UpdateOrchidGroupMutationCommand(
 								OrchidGroupMutationSources.farmBatch("VARIETY", varietyId.toString(),
 										"PROPAGATE:" + correlationId + ":" + group.getId(), correlationId),
 								group.getId(),
@@ -133,10 +126,7 @@ public class VarietyService {
 										group.getTrayCount(), group.getSplitPlacementAllowed(),
 										group.getStartPosition(), group.getEndPosition(), group.getMemo()),
 								TimeConfig.farmToday(clock), "품종 정보 변경 전파")));
-		}
-		else {
-			changedGroups.forEach(group -> group.assignVariety(variety));
-		}
+
 		auditSupport.record(AuditAction.UPDATED, variety, before, auditSupport.snapshot(variety));
 		return responseAssembler.assemble(variety);
 	}

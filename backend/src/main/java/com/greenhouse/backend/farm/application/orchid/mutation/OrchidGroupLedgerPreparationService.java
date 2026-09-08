@@ -15,8 +15,8 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 /**
- * ORCHID-CUTOVER: TRANSITION_ONLY — coverage 준비와 최초 활성화를 수행한다. Removal gate: 운영 cutover
- * 완료 및 재수행 불필요 승인.
+ * ORCHID-CUTOVER: RECOVERY — coverage 준비와 최초 활성화를 수행한다. Removal gate: V20 백업 복구 절차를 대체하는
+ * 도구가 검증될 때까지 보존.
  */
 @Service
 @RequiredArgsConstructor

@@ -43,7 +43,7 @@ class OrchidGroupCollectionIntegrationTests extends AbstractBackendIntegrationTe
 		OrchidGroup orchidGroup = new OrchidGroup(zone, variety.getGenus(), variety.getName(), 40, "3.5\"", 2, "정상", 1,
 				BigDecimal.ONE, BigDecimal.TEN);
 		orchidGroup.assignVariety(variety);
-		orchidGroup = orchidGroupRepository.save(orchidGroup);
+		orchidGroup = saveOrchidGroup(orchidGroup);
 
 		Long firstCollectionId = createCollection("우량주 관리");
 		Long secondCollectionId = createCollection("봄 출하 후보");
@@ -57,7 +57,7 @@ class OrchidGroupCollectionIntegrationTests extends AbstractBackendIntegrationTe
 
 		orchidGroup.updateDetails(variety.getGenus(), variety.getName(), 35, "4\"", 3, "주의", null, null, false,
 				BigDecimal.ONE, BigDecimal.TEN, null);
-		orchidGroupRepository.save(orchidGroup);
+		saveOrchidGroup(orchidGroup);
 
 		mockMvc.perform(get("/api/orchid-groups/{id}/collections", orchidGroup.getId()))
 			.andExpect(status().isOk())

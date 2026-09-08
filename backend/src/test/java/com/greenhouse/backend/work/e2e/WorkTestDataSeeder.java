@@ -1,5 +1,8 @@
 package com.greenhouse.backend.work.e2e;
 
+import com.greenhouse.backend.farm.repository.orchid.OrchidGroupRepository;
+import com.greenhouse.backend.farm.support.FarmTestFixtures;
+import jakarta.persistence.EntityManager;
 import java.sql.PreparedStatement;
 import java.sql.SQLException;
 import java.sql.Timestamp;
@@ -9,6 +12,7 @@ import java.util.List;
 import org.springframework.jdbc.core.BatchPreparedStatementSetter;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Component;
+import org.springframework.transaction.annotation.Transactional;
 
 @Component
 class WorkTestDataSeeder {
@@ -17,8 +21,24 @@ class WorkTestDataSeeder {
 
 	private final JdbcTemplate jdbcTemplate;
 
-	WorkTestDataSeeder(JdbcTemplate jdbcTemplate) {
+	WorkTestDataSeeder(JdbcTemplate jdbcTemplate, EntityManager entityManager, OrchidGroupRepository groups) {
 		this.jdbcTemplate = jdbcTemplate;
+		this.entityManager = entityManager;
+		this.groups = groups;
+	}
+
+	private final EntityManager entityManager;
+
+	private final OrchidGroupRepository groups;
+
+	@Transactional
+	public void baselineGroups() {
+		for (var group : groups.findAll()) {
+			if (group.getStateRevision() == null) {
+				FarmTestFixtures.baseline(entityManager, group);
+			}
+		}
+		entityManager.flush();
 	}
 
 	void reset() {

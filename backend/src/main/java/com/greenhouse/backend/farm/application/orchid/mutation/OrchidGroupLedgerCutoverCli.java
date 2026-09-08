@@ -16,8 +16,8 @@ import org.springframework.boot.builder.SpringApplicationBuilder;
 import org.springframework.context.ConfigurableApplicationContext;
 
 /**
- * ORCHID-CUTOVER: TRANSITION_ONLY — complete state-chain 검증과 ACTIVE 전환을 실행하는 operator
- * CLI다. Removal gate: 운영 cutover 완료 및 재수행 불필요 승인.
+ * ORCHID-CUTOVER: RECOVERY — complete state-chain 검증과 ACTIVE 전환을 실행하는 operator CLI다.
+ * Removal gate: V20 백업 복구 절차를 대체하는 도구가 검증될 때까지 보존.
  */
 public final class OrchidGroupLedgerCutoverCli {
 

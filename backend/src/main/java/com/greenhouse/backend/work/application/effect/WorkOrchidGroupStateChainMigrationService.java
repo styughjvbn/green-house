@@ -13,8 +13,8 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 /**
- * ORCHID-CUTOVER: TRANSITION_ONLY — legacy Work 효과를 complete state-chain Mutation에 연결한다.
- * Removal gate: 운영 cutover 완료 및 사후 복구 도구 보존 정책 확정.
+ * ORCHID-CUTOVER: RECOVERY — legacy Work 효과를 complete state-chain Mutation에 연결한다. Removal
+ * gate: V20 백업 복구 절차를 대체하는 도구가 검증될 때까지 보존.
  */
 @Service
 @RequiredArgsConstructor

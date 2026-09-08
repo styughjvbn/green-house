@@ -2,12 +2,10 @@ package com.greenhouse.backend.farm.application.transformation;
 
 import com.greenhouse.backend.common.config.TimeConfig;
 import com.greenhouse.backend.common.exception.NotFoundException;
-import com.greenhouse.backend.farm.application.orchid.OrchidGroupCommandService;
 import com.greenhouse.backend.farm.application.orchid.mutation.CreateOrchidGroupMutationItem;
 import com.greenhouse.backend.farm.application.orchid.mutation.CreateOrchidGroupsMutationCommand;
 import com.greenhouse.backend.farm.application.orchid.mutation.OrchidGroupMutationDetails;
 import com.greenhouse.backend.farm.application.orchid.mutation.OrchidGroupMutationEngine;
-import com.greenhouse.backend.farm.application.orchid.mutation.OrchidGroupMutationRoutingPolicy;
 import com.greenhouse.backend.farm.application.orchid.mutation.OrchidGroupMutationSources;
 import com.greenhouse.backend.farm.domain.collection.OrchidGroupCollection;
 import com.greenhouse.backend.farm.domain.collection.OrchidGroupCollectionMember;
@@ -30,17 +28,11 @@ import java.util.Set;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 
-/**
- * ORCHID-CUTOVER: LEGACY_RETIRE — Engine 경로와 전환 후 제거할 직접 다중 생성 분기를 함께 가진다. Removal gate:
- * 운영 ACTIVE 안정화 및 writer inventory 승인.
- */
 @Component
 @RequiredArgsConstructor
 public class MultiCreateWorkHandler implements WorkEffectHandler {
 
 	private final Clock clock;
-
-	private final OrchidGroupCommandService orchidGroupCommandService;
 
 	private final OrchidGroupCollectionRepository collectionRepository;
 
@@ -49,8 +41,6 @@ public class MultiCreateWorkHandler implements WorkEffectHandler {
 	private final OrchidGroupRepository orchidGroupRepository;
 
 	private final OrchidGroupMutationEngine mutationEngine;
-
-	private final OrchidGroupMutationRoutingPolicy mutationRoutingPolicy;
 
 	@Override
 	public String supports() {
@@ -70,36 +60,25 @@ public class MultiCreateWorkHandler implements WorkEffectHandler {
 			throw new IllegalArgumentException("다중 생성 작업에는 원본 난 묶음 대상이 없어야 합니다.");
 		MultiCreateWorkOperationRequest request = command.payloadAs(MultiCreateWorkOperationRequest.class);
 		validateCollections(request);
-		WorkMutationLink mutationLink = null;
 		List<OrchidGroup> groups;
-		var mutationCommand = mutationRoutingPolicy.routesToEngine() ? new CreateOrchidGroupsMutationCommand(
-				OrchidGroupMutationSources.work(context.operationId(), command.effectKey()),
-				request.rows()
-					.stream()
-					.map(row -> new CreateOrchidGroupMutationItem(row.orchidGroup().bedZoneId(),
-							new OrchidGroupMutationDetails(row.orchidGroup().varietyId(), row.orchidGroup().quantity(),
-									row.orchidGroup().potSize(), row.orchidGroup().ageYear(),
-									row.orchidGroup().status(), row.orchidGroup().placementType(),
-									row.orchidGroup().trayCount(), row.orchidGroup().splitPlacementAllowed(),
-									row.orchidGroup().startPosition(), row.orchidGroup().endPosition(),
-									row.orchidGroup().memo())))
-					.toList(),
-				context.plannedStartDate(), context.memo()) : null;
-		if (mutationRoutingPolicy.routesToEngine()) {
-			var mutation = mutationEngine.createMany(mutationCommand);
-			List<Long> groupIds = mutation.entries().stream().map(entry -> entry.orchidGroupId()).toList();
-			var groupsById = orchidGroupRepository.findAllById(groupIds)
+		var mutationCommand = new CreateOrchidGroupsMutationCommand(OrchidGroupMutationSources.work(context
+			.operationId(), command.effectKey()), request.rows()
 				.stream()
-				.collect(java.util.stream.Collectors.toMap(OrchidGroup::getId, group -> group));
-			groups = groupIds.stream().map(groupsById::get).toList();
-			mutationLink = new WorkMutationLink(mutation.mutationId(), mutation.correlationId());
-		}
-		else {
-			groups = request.rows()
-				.stream()
-				.map(row -> orchidGroupCommandService.createEntity(row.orchidGroup()))
-				.toList();
-		}
+				.map(row -> new CreateOrchidGroupMutationItem(row.orchidGroup().bedZoneId(),
+						new OrchidGroupMutationDetails(row.orchidGroup().varietyId(), row.orchidGroup().quantity(),
+								row.orchidGroup().potSize(), row.orchidGroup().ageYear(), row.orchidGroup().status(),
+								row.orchidGroup().placementType(), row.orchidGroup().trayCount(),
+								row.orchidGroup().splitPlacementAllowed(), row.orchidGroup().startPosition(),
+								row.orchidGroup().endPosition(), row.orchidGroup().memo())))
+				.toList(), context.plannedStartDate(), context.memo());
+		var mutation = mutationEngine.createMany(mutationCommand);
+		List<Long> groupIds = mutation.entries().stream().map(entry -> entry.orchidGroupId()).toList();
+		var groupsById = orchidGroupRepository.findAllById(groupIds)
+			.stream()
+			.collect(java.util.stream.Collectors.toMap(OrchidGroup::getId, group -> group));
+		groups = groupIds.stream().map(groupsById::get).toList();
+		var mutationLink = new WorkMutationLink(mutation.mutationId(), mutation.correlationId());
+
 		for (int index = 0; index < groups.size(); index++) {
 			OrchidGroup group = groups.get(index);
 			var row = request.rows().get(index);

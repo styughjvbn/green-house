@@ -40,8 +40,8 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 /**
- * ORCHID-CUTOVER: TRANSITION_ONLY — complete state-chain manifest를 원자적으로 적재한다. Removal
- * gate: 운영 cutover 완료 및 사후 복구 도구 보존 정책 확정.
+ * ORCHID-CUTOVER: RECOVERY — complete state-chain manifest를 원자적으로 적재한다. Removal gate: 운영
+ * cutover 완료 및 사후 복구 도구 보존 정책 확정.
  */
 @Service
 @RequiredArgsConstructor

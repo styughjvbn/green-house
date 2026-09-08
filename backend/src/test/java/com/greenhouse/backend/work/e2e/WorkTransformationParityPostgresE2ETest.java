@@ -4,7 +4,6 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.when;
 
 import com.greenhouse.backend.OrchidGroupStateChainTestSupport;
-import com.greenhouse.backend.farm.application.orchid.mutation.OrchidGroupMutationRoutingPolicy;
 import com.greenhouse.backend.farm.application.orchid.mutation.OrchidGroupStateChainMigrationService;
 import com.greenhouse.backend.farm.repository.orchid.OrchidGroupRepository;
 import com.greenhouse.backend.work.repository.WorkAppliedEffectRepository;
@@ -38,9 +37,6 @@ class WorkTransformationParityPostgresE2ETest extends WorkE2ETestBase {
 	@Autowired
 	private OrchidGroupStateChainMigrationService migrationService;
 
-	@MockitoSpyBean
-	private OrchidGroupMutationRoutingPolicy routingPolicy;
-
 	private WorkTestDataSeeder.ContractScenario scenario;
 
 	@BeforeEach
@@ -53,10 +49,8 @@ class WorkTransformationParityPostgresE2ETest extends WorkE2ETestBase {
 	}
 
 	@ParameterizedTest
-	@CsvSource({ "REPOT,false", "REPOT,true", "DIVIDE,false", "DIVIDE,true", "MERGE,false", "MERGE,true",
-			"MOVEMENT,false", "MOVEMENT,true" })
-	void preservesPreChangeAttributesResultOrderAndLineage(String code, boolean engine) throws Exception {
-		when(routingPolicy.routesToEngine()).thenReturn(engine);
+	@ValueSource(strings = { "REPOT", "DIVIDE", "MERGE", "MOVEMENT" })
+	void preservesPreChangeAttributesResultOrderAndLineage(String code) throws Exception {
 		long operationId = planAndStart(code);
 		int secondQuantity = code.equals("DIVIDE") ? 80 : 68;
 		String request = execution(secondQuantity, 6);
@@ -95,14 +89,12 @@ class WorkTransformationParityPostgresE2ETest extends WorkE2ETestBase {
 		assertThat(jdbcTemplate.queryForObject(
 				"SELECT COUNT(*) FROM orchid_group_lineage WHERE work_operation_id = ? AND mutation_id IS NOT NULL",
 				Long.class, operationId))
-			.isEqualTo(engine ? 2L : 0L);
-		assertThat(effect.getMutationId() != null).isEqualTo(engine);
+			.isEqualTo(2L);
+		assertThat(effect.getMutationId() != null).isTrue();
 	}
 
-	@ParameterizedTest
-	@ValueSource(booleans = { false, true })
-	void invalidSecondPlacementRollsBackSourcesResultsLineageAndEffects(boolean engine) throws Exception {
-		when(routingPolicy.routesToEngine()).thenReturn(engine);
+	@org.junit.jupiter.api.Test
+	void invalidSecondPlacementRollsBackSourcesResultsLineageAndEffects() throws Exception {
 		long operationId = planAndStart("REPOT");
 		long mutationCount = jdbcTemplate.queryForObject("SELECT COUNT(*) FROM orchid_group_mutations", Long.class);
 		ApiResult rejected = post("/api/work-operations/%d/structure-change-executions".formatted(operationId),

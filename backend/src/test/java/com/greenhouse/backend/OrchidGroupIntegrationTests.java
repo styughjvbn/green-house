@@ -17,7 +17,7 @@ import org.springframework.transaction.annotation.Transactional;
 class OrchidGroupIntegrationTests extends FarmFixtureIntegrationTest {
 
 	@Test
-	void createsUpdatesAndDeletesOrchidGroup() throws Exception {
+	void createsUpdatesAndCancelsOrchidGroupWithoutDeletingHistory() throws Exception {
 		var sampleHouse = houseRepository.findAll()
 			.stream()
 			.filter(house -> house.getNumber() == 3)
@@ -84,7 +84,10 @@ class OrchidGroupIntegrationTests extends FarmFixtureIntegrationTest {
 			.andExpect(status().isOk())
 			.andExpect(jsonPath("$.data").doesNotExist());
 
-		assertThat(orchidGroupRepository.existsById(createdId)).isFalse();
+		var canceled = orchidGroupRepository.findById(createdId).orElseThrow();
+		assertThat(canceled.getQuantity()).isZero();
+		assertThat(canceled.getStatus()).isEqualTo("생성 취소");
+		assertThat(canceled.getStateRevision()).isEqualTo(3L);
 	}
 
 	@Test

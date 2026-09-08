@@ -305,6 +305,13 @@ domain invariant다.
 
 #### Work 요청 멱등성
 
+2026-09-08 적용 범위: 현재 키가 있는 즉시 실행·구조 변경 기록·포트 기록에 receipt를
+도입했다. 아래의 키 없는 일반 계획·기록까지 확장하는 목표는 요청 계약을 정한 뒤
+적용한다. 현재 receipt는 범위를 포함한 키·지문·결과 ID를 저장하며 request correlation
+전파는 추가하지 않았다. 효과 scope는 기존 key prefix에 유지하고 DB UNIQUE는
+`(work_operation_id, effect_key)`로 맞췄다. `effect_kind`는 identity에서 제외했다.
+
+
 외부 요청의 멱등성은 Work application 계층이 소유한다. 일반 작업 계획과 batch
 생성을 포함해 하나의 요청이 여러 WorkOperation을 만들 수 있으므로 최종적으로
 `requestKey`를 WorkOperation 한 행에만 저장하는 방식에 의존하지 않는다.
@@ -704,16 +711,16 @@ Feature flag는 적용 기준 시점 전의 Legacy/Engine routing에만 사용�
   legacy 직접 writer를 물리적으로 제거한다. 이때 retirement inventory가 비면
   완전 전환이 완료된다.
 
-현재 구현은 `app.orchid-ledger.writer-mode=LEGACY|ENGINE`으로 aggregate
-전체의 실행 모드를 선택한다. 기본값은 `LEGACY`이고, `ENGINE`에서는 다음 운영
-경로가 typed command로 라우팅된다.
+2026-09-08 구현은 라우팅 모드와 Legacy 직접 writer를 제거했다. 다음 운영 경로는
+typed command로 Engine만 호출한다. 위의 단계별 전환 절차는 결정 이력이며, 현재
+배포·복구 기준은 `../features/orchid-group-mutation-transition.md`를 따른다.
 
 - Farm 단건·일괄 생성/수정, 생성 취소, 이동과 품종명 전파
 - Inbound 즉시 배치와 Work 기반 포트 결과 생성
 - Work 폐기, 이동, 분갈이, 분주, 합식, 다중 생성·취소와 보정
 - Sales 예약, 수정 예약 해제·재예약, 출고, 예약 취소와 출고 복구
 
-각 요청은 Legacy 또는 Engine 중 한 writer만 실행한다. Work 효과는 기존 `TARGET:{id}`,
+각 요청은 Engine만 실행한다. Work 효과는 기존 `TARGET:{id}`,
 `EXECUTION:{key}`, `POTTING:{key}`, `OPERATION` identity를 Mutation source operation
 key로 전달하고 `WorkAppliedEffect`와 호환 `OrchidGroupLineage`에 Mutation ID를
 연결한다. Sales는 전표 ID와 전표 version을 포함한 동작별 operation key를 사용하고

@@ -1,10 +1,10 @@
 package com.greenhouse.backend.sales.application;
 
 import com.greenhouse.backend.farm.application.orchid.mutation.ConsumeOrchidGroupReservationsMutationCommand;
+import com.greenhouse.backend.farm.application.orchid.mutation.OrchidGroupMutationEngine;
 import com.greenhouse.backend.farm.application.orchid.mutation.OrchidGroupMutationResult;
 import com.greenhouse.backend.farm.application.orchid.mutation.OrchidGroupMutationSources;
 import com.greenhouse.backend.farm.application.orchid.mutation.OrchidGroupQuantityMutationItem;
-import com.greenhouse.backend.farm.application.orchid.mutation.OrchidGroupReservationService;
 import com.greenhouse.backend.farm.application.orchid.mutation.RelatedOrchidGroupMutations;
 import com.greenhouse.backend.farm.application.orchid.mutation.ReleaseOrchidGroupReservationsMutationCommand;
 import com.greenhouse.backend.farm.application.orchid.mutation.ReserveOrchidGroupsMutationCommand;
@@ -25,14 +25,14 @@ public class SalesSlipInventoryService {
 
 	private final SalesInventoryMovementRepository salesInventoryMovementRepository;
 
-	private final OrchidGroupReservationService reservations;
+	private final OrchidGroupMutationEngine mutationEngine;
 
 	public void reserve(SalesSlip salesSlip) {
 		var allocations = SalesSlipAllocationBatch.from(salesSlip);
 		if (allocations.lines().isEmpty()) {
 			return;
 		}
-		var mutation = reservations.reserve(new ReserveOrchidGroupsMutationCommand(
+		var mutation = mutationEngine.reserve(new ReserveOrchidGroupsMutationCommand(
 				OrchidGroupMutationSources.sales(salesSlip.getId(), "RESERVE:" + salesSlip.getVersion()),
 				mutationItems(allocations), salesSlip.getSaleDate(), salesSlip.getMemo()));
 		recordMovements(allocations, SalesInventoryMovementType.SALES_RESERVE, 1, mutation);
@@ -51,7 +51,7 @@ public class SalesSlipInventoryService {
 		if (allocations.lines().isEmpty()) {
 			return;
 		}
-		var mutation = reservations.releaseReservation(new ReleaseOrchidGroupReservationsMutationCommand(
+		var mutation = mutationEngine.releaseReservation(new ReleaseOrchidGroupReservationsMutationCommand(
 				OrchidGroupMutationSources.sales(salesSlip.getId(), operation + salesSlip.getVersion()),
 				mutationItems(allocations), salesSlip.getSaleDate(), salesSlip.getMemo()));
 		recordMovements(allocations, type, -1, mutation);
@@ -62,7 +62,7 @@ public class SalesSlipInventoryService {
 			return;
 		}
 		var salesSlip = allocations.salesSlip();
-		var mutation = reservations.consumeReservation(new ConsumeOrchidGroupReservationsMutationCommand(
+		var mutation = mutationEngine.consumeReservation(new ConsumeOrchidGroupReservationsMutationCommand(
 				OrchidGroupMutationSources.sales(salesSlip.getId(), "OUTBOUND:" + salesSlip.getVersion()),
 				mutationItems(allocations), salesSlip.getSaleDate(), salesSlip.getMemo()));
 		recordMovements(allocations, SalesInventoryMovementType.SALES_OUTBOUND, -1, mutation);
@@ -73,7 +73,7 @@ public class SalesSlipInventoryService {
 		if (allocations.lines().isEmpty()) {
 			return;
 		}
-		var mutation = reservations.restoreOutbound(
+		var mutation = mutationEngine.restoreOutbound(
 				new RestoreOutboundOrchidGroupsMutationCommand(
 						OrchidGroupMutationSources.sales(salesSlip.getId(),
 								"CANCEL_OUTBOUND:" + salesSlip.getVersion()),
@@ -111,9 +111,7 @@ public class SalesSlipInventoryService {
 		for (var line : allocations.lines()) {
 			var movement = new SalesInventoryMovement(line.orchidGroupId(), salesSlip, line.item(), type,
 					direction * line.allocatedQuantity(), salesSlip.getMemo());
-			if (mutation != null) {
-				movement.linkMutation(mutation.mutationId(), mutation.correlationId());
-			}
+			movement.linkMutation(mutation.mutationId(), mutation.correlationId());
 			salesInventoryMovementRepository.save(movement);
 		}
 	}

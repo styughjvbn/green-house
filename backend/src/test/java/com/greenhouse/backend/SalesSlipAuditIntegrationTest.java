@@ -65,7 +65,7 @@ class SalesSlipAuditIntegrationTest extends AbstractBackendIntegrationTest {
 				BigDecimal.ONE, BigDecimal.TWO);
 		group.assignVariety(variety);
 		group.reserve(2);
-		orchidGroupRepository.saveAndFlush(group);
+		saveOrchidGroup(group);
 		BusinessPartner partner = partnerRepository
 			.saveAndFlush(new BusinessPartner("판매 감사 거래처", PartnerType.WHOLESALE, null, null, null, null));
 		BusinessPartner nextPartner = partnerRepository

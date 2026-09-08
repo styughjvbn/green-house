@@ -43,7 +43,7 @@ import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.support.TransactionTemplate;
 
 @Tag("work-e2e")
-@TestPropertySource(properties = { "app.orchid-ledger.writer-mode=ENGINE", "app.orchid-ledger.writer-version=1.1.0" })
+@TestPropertySource(properties = { "app.orchid-ledger.writer-version=2.0.0" })
 class OrchidGroupMutationRoutingPostgresE2ETest extends WorkE2ETestBase {
 
 	@Autowired
@@ -237,7 +237,7 @@ class OrchidGroupMutationRoutingPostgresE2ETest extends WorkE2ETestBase {
 
 		var effect = workAppliedEffectRepository.findByWorkOperationIdOrderByIdAsc(operation.id())
 			.stream()
-			.filter(item -> item.getEffectKey().equals("POTTING:active-potting-postgres"))
+			.filter(item -> item.getEffectKey().endsWith(":active-potting-postgres"))
 			.findFirst()
 			.orElseThrow();
 		Long groupId = ((Number) ((List<?>) effect.getResultDetails().get("createdOrchidGroupIds")).getFirst())

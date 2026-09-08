@@ -344,7 +344,7 @@ class MovementBatchWorkOperationIntegrationTests extends AbstractBackendIntegrat
 		OrchidGroup group = new OrchidGroup(sourceZone, variety.getGenus(), variety.getName(), quantity,
 				variety.getDefaultPotSize(), 2, "정상", sortOrder, BigDecimal.valueOf(start), BigDecimal.valueOf(end));
 		group.assignVariety(variety);
-		return orchidGroupRepository.save(group);
+		return saveOrchidGroup(group);
 	}
 
 }

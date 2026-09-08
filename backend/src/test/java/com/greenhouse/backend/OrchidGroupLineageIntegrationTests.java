@@ -54,6 +54,7 @@ class OrchidGroupLineageIntegrationTests extends AbstractBackendIntegrationTest 
 		lineageRepository.deleteAll();
 		effectOrchidGroupRepository.deleteAll();
 		appliedEffectRepository.deleteAll();
+		workCommandReceiptRepository.deleteAll();
 		workOperationRepository.deleteAll();
 		orchidGroupRepository.deleteAll();
 		varietyRepository.deleteAll();

@@ -51,6 +51,7 @@ abstract class FarmFixtureIntegrationTest extends AbstractBackendIntegrationTest
 					index + 1, BigDecimal.valueOf(index * 7), BigDecimal.valueOf((index + 1) * 7));
 			group.assignVariety(variety);
 			fixtureEntityManager.persist(group);
+			com.greenhouse.backend.farm.support.FarmTestFixtures.baseline(fixtureEntityManager, group);
 			fixtureEntityManager
 				.persist(new Material("M-FIX-" + index, "자재", "자재 " + index, null, null, null, null, null, true));
 		}

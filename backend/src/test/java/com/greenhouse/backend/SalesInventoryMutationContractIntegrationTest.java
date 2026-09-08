@@ -110,7 +110,7 @@ class SalesInventoryMutationContractIntegrationTest extends AbstractBackendInteg
 		OrchidGroup group = new OrchidGroup(zone, variety.getGenus(), variety.getName(), 20, "4인치", 2, "정상", 1,
 				BigDecimal.ONE, BigDecimal.TWO);
 		group.assignVariety(variety);
-		group = orchidGroupRepository.saveAndFlush(group);
+		group = saveOrchidGroup(group);
 		BusinessPartner partner = partnerRepository
 			.saveAndFlush(new BusinessPartner("판매 특성 거래처 " + suffix, PartnerType.WHOLESALE, null, null, null, null));
 		return new Fixture(variety, group, partner);

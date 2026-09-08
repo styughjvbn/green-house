@@ -122,13 +122,11 @@ demo
 - 전환 전용 importer는 승인된 complete state-chain manifest만 적재한다. Work 효과는 Work application의 제한된 source 조회·연결 API를 사용하고 Lineage 연결은 소유 모듈인 `farm`에서 수행한다. 별도 migration 모듈이나 과거 전용 Entry 모델은 두지 않는다.
 - ledger rehearsal 대사는 `farm`의 현재 상태·revision chain과 모듈별 read-only application 계약을 조합한다. 각 모듈은 Work 진행 상태와 효과 연결, Sales 활성 allocation과 예약 수량처럼 자신이 소유한 정합성만 판정하며 데이터를 자동 보정하지 않는다.
 - ledger coverage가 `ACTIVE`이면 PostgreSQL write fence가 transaction-local Mutation context 없는 `orchid_groups` INSERT·UPDATE와 모든 DELETE를 차단한다. 커밋 시에는 변경 revision에 대응하는 MutationEntry도 확인한다.
-- state-chain 적재가 시작된 `PREPARING`과 `ACTIVE` coverage의 실행 인스턴스는 `minimumWriterVersion` 이상인 `ENGINE` writer mode여야 한다. startup guard는 부분 적재 위의 Legacy 재기동을 거부한다. manifest 적재는 원자적이고 재실행 가능하며 최종 대사를 통과한 경우에만 한 번에 ACTIVE로 전환한다.
-- PREPARING 동안 DB fence는 아직 활성화되지 않으므로 운영 manifest 적재에는 외부 write-stop이 필수다. 모든 write path의 Engine routing이 끝나기 전에는 ACTIVE로 전환하지 않는다.
-- 현재 Farm·Inbound·Work·Sales의 알려진 난 묶음 writer는 `LEGACY|ENGINE` 단일 경로 스위치를 공유한다. `ENGINE` 선택 시 Work 효과와 Sales 재고 이동은 같은 transaction에서 Mutation ID·correlation ID를 연결하며 dual write하지 않는다.
-- PREPARING 전환 코드의 routing flag 호출자, `OrchidGroup` 직접 상태 변경자, 생성자와 repository write 호출자는 실행 가능한 architecture test의 명시적 inventory로 고정한다. 신규 writer는 inventory 허용 항목만 늘리지 않고 먼저 typed Engine command로 편입한다.
-- 기본값은 운영 호환을 위한 `LEGACY`다. 최신 운영 백업을 복원한 격리 DB에서 complete state-chain 적재, ENGINE 시나리오 회귀와 `ACTIVE` 전환 rehearsal을 마친 뒤 aggregate 전체를 한 번에 전환하고, 검증 완료 전에는 운영 `ACTIVE` coverage를 만들지 않는다.
-- 운영 `ACTIVE`에서는 모든 인스턴스를 `ENGINE`으로 고정하고 DB fence로 legacy 실행을 차단한다. 안정화 후 routing flag와 legacy 직접 writer를 제거하며, 기존 Work·Sales·Lineage 사실 데이터는 별도 소비 전환 없이 삭제하지 않는다.
-- 전환 코드의 수명은 `features/orchid-group-mutation-transition.md`의 `TARGET`, `TRANSITION_ONLY`, `LEGACY_RETIRE`, `DATA_RETAIN` inventory를 기준으로 판단한다. 코드 제거 gate와 데이터 보존 기간을 분리하고, writer 호출자 분류는 architecture test로 고정한다.
+- Farm·Inbound·Work·Sales의 상태 변경은 Engine만 호출한다. Work 효과와 Sales 재고 이동은 같은 트랜잭션에 Mutation ID·correlation ID를 연결한다. Legacy 모드·직접 변경 분기·예약 라우팅 래퍼는 제거했다.
+- startup guard는 원장 없는 난 묶음과 PREPARING coverage의 업무 서버 기동을 거부하고 ACTIVE의 최소 writer version을 검사한다. 빈 DB는 Engine에서 신규 생성할 수 있다. 기본 writer version은 `2.0.0`이다.
+- 복구용 importer와 cutover CLI는 V20 백업 복구를 위해 유지한다. PREPARING 동안 DB fence가 활성화되지 않으므로 적재 작업은 외부 쓰기를 중지한 DB에서만 수행한다. 검증을 통과한 전체 원장만 ACTIVE로 전환한다.
+- Entity 직접 상태 변경자는 Engine과 복구 importer, 생성자·Repository 쓰기는 Engine으로 한정하고 architecture test로 검사한다. 신규 업무 변경은 typed Engine command에 편입한다.
+- 과거 Work·Sales·Lineage 데이터와 기존 Flyway 이력은 보존한다. 실행 코드 제거와 복구 도구·데이터 보존 정책은 `features/orchid-group-mutation-transition.md`를 따른다.
 
 `farm`의 각 계층은 동일한 기능 경계를 사용한다.
 

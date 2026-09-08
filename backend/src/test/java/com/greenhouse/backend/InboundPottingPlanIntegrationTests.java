@@ -64,6 +64,7 @@ class InboundPottingPlanIntegrationTests extends AbstractBackendIntegrationTest 
 		appliedEffectRepository.deleteAll();
 		targetExecutionRepository.deleteAll();
 		operationTargetRepository.deleteAll();
+		workCommandReceiptRepository.deleteAll();
 		operationRepository.deleteAll();
 		inboundRecordRepository.deleteAll();
 		orchidGroupRepository.deleteAll();

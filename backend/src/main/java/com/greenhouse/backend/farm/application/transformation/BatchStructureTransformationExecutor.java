@@ -1,10 +1,8 @@
 package com.greenhouse.backend.farm.application.transformation;
 
 import com.greenhouse.backend.common.exception.NotFoundException;
-import com.greenhouse.backend.farm.application.orchid.OrchidGroupCommandService;
 import com.greenhouse.backend.farm.application.orchid.mutation.OrchidGroupMutationDetails;
 import com.greenhouse.backend.farm.application.orchid.mutation.OrchidGroupMutationEngine;
-import com.greenhouse.backend.farm.application.orchid.mutation.OrchidGroupMutationRoutingPolicy;
 import com.greenhouse.backend.farm.application.orchid.mutation.OrchidGroupMutationSources;
 import com.greenhouse.backend.farm.application.orchid.mutation.TransformOrchidGroupMutationResult;
 import com.greenhouse.backend.farm.application.orchid.mutation.TransformOrchidGroupMutationSource;
@@ -27,23 +25,15 @@ import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 
-/**
- * ORCHID-CUTOVER: LEGACY_RETIRE — Engine 경로와 전환 후 제거할 직접 구조 변경 분기를 함께 가진다. Removal gate:
- * 운영 ACTIVE 안정화 및 writer inventory 승인.
- */
 @Component
 @RequiredArgsConstructor
 public class BatchStructureTransformationExecutor {
 
 	private final OrchidGroupRepository orchidGroupRepository;
 
-	private final OrchidGroupCommandService orchidGroupCommandService;
-
 	private final OrchidGroupLineageService lineageService;
 
 	private final OrchidGroupMutationEngine mutationEngine;
-
-	private final OrchidGroupMutationRoutingPolicy mutationRoutingPolicy;
 
 	public WorkExecutionResult execute(Long operationId, StructureChangeCommand request,
 			StructureChangeStrategy strategy, Set<Long> placementExclusionOrchidGroupIds) {
@@ -87,49 +77,29 @@ public class BatchStructureTransformationExecutor {
 				throw new IllegalArgumentException("작업 수량은 원본 난 묶음의 현재 수량보다 클 수 없습니다.");
 			}
 		});
-		// Capture inherited attributes before either writer can end the source groups.
+		// Capture inherited attributes before transforming the source groups.
 		List<ResultPlan> plannedResults = planResults(request, strategy, sources, first);
-		List<OrchidGroup> results;
-		WorkMutationLink mutationLink = null;
-		if (mutationRoutingPolicy.routesToEngine()) {
-			var mutation = mutationEngine.transform(mutationCommand(operationId, request, transformedBySourceId,
-					plannedResults, placementExclusionOrchidGroupIds));
-			List<Long> resultIds = mutation.entries()
-				.stream()
-				.filter(entry -> entry.role() == OrchidGroupMutationEntryRole.RESULT)
-				.map(entry -> entry.orchidGroupId())
-				.toList();
-			Map<Long, OrchidGroup> resultsById = orchidGroupRepository.findAllById(resultIds)
-				.stream()
-				.collect(Collectors.toMap(OrchidGroup::getId, Function.identity()));
-			results = resultIds.stream().map(resultsById::get).toList();
-			mutationLink = new WorkMutationLink(mutation.mutationId(), mutation.correlationId());
-		}
-		else {
-			sourceRequests.forEach((sourceId, sourceRequest) -> {
-				int transformedQuantity = transformedBySourceId.get(sourceId);
-				if (transformedQuantity > 0) {
-					sources.get(sourceId)
-						.applyRepot(transformedQuantity, sourceRequest.releasedStartPosition(),
-								sourceRequest.releasedEndPosition());
-				}
-			});
-			results = plannedResults.stream()
-				.map(plan -> orchidGroupCommandService.createEntity(plan.creation(), placementExclusionOrchidGroupIds))
-				.toList();
-		}
+		var mutation = mutationEngine.transform(mutationCommand(operationId, request, transformedBySourceId,
+				plannedResults, placementExclusionOrchidGroupIds));
+		List<Long> resultIds = mutation.entries()
+			.stream()
+			.filter(entry -> entry.role() == OrchidGroupMutationEntryRole.RESULT)
+			.map(entry -> entry.orchidGroupId())
+			.toList();
+		Map<Long, OrchidGroup> resultsById = orchidGroupRepository.findAllById(resultIds)
+			.stream()
+			.collect(Collectors.toMap(OrchidGroup::getId, Function.identity()));
+		List<OrchidGroup> results = resultIds.stream().map(resultsById::get).toList();
+		var mutationLink = new WorkMutationLink(mutation.mutationId(), mutation.correlationId());
 
 		if (sourceIds.size() == 1) {
 			Long sourceId = sourceIds.getFirst();
 			for (OrchidGroup result : results) {
 				var lineage = lineageService.record(sources.get(sourceId), result, strategy.lineageType(), operationId,
 						transformedBySourceId.get(sourceId), result.getQuantity());
-				if (mutationLink != null) {
-					lineage.linkMutation(mutationLink.mutationId());
-				}
+				lineage.linkMutation(mutationLink.mutationId());
 			}
 		}
-		List<Long> resultIds = results.stream().map(OrchidGroup::getId).toList();
 		var resultRows = java.util.stream.IntStream.range(0, results.size())
 			.mapToObj(index -> new WorkEffectResults.ResultGroup(resultIds.get(index), results.get(index).getQuantity(),
 					plannedResults.get(index).purpose()))

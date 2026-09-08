@@ -29,6 +29,7 @@ class WorkIdempotencyPostgresE2ETest extends WorkE2ETestBase {
 	void prepare() {
 		seeder.reset();
 		scenario = seeder.seedContractScenario();
+		seeder.baselineGroups();
 	}
 
 	@Test
@@ -100,6 +101,7 @@ class WorkIdempotencyPostgresE2ETest extends WorkE2ETestBase {
 	@Test
 	void batchReceiptPreservesTheOrderedOperationIds() throws Exception {
 		long secondId = secondGroup();
+		seeder.baselineGroups();
 		String batch = "{\"records\":[" + record("batch-a", scenario.orchidGroupId(), 6) + ","
 				+ record("batch-b", secondId, 16) + "]}";
 		String path = "/api/work-operations/structure-change-records/batch";
@@ -117,6 +119,7 @@ class WorkIdempotencyPostgresE2ETest extends WorkE2ETestBase {
 	@Test
 	void aFailureInTheSecondBatchRecordRollsBackAllResultsAndTheReceipt() throws Exception {
 		long secondId = secondGroup();
+		seeder.baselineGroups();
 		String batch = "{\"records\":[" + record("rollback-a", scenario.orchidGroupId(), 6) + ","
 				+ record("rollback-b", secondId, 6) + "]}";
 		var result = post("/api/work-operations/structure-change-records/batch", batch);

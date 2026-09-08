@@ -5,7 +5,6 @@ import com.greenhouse.backend.farm.application.orchid.OrchidGroupUsageInspector;
 import com.greenhouse.backend.farm.application.orchid.mutation.CorrectOrchidGroupMutationItem;
 import com.greenhouse.backend.farm.application.orchid.mutation.CorrectOrchidGroupsMutationCommand;
 import com.greenhouse.backend.farm.application.orchid.mutation.OrchidGroupMutationEngine;
-import com.greenhouse.backend.farm.application.orchid.mutation.OrchidGroupMutationRoutingPolicy;
 import com.greenhouse.backend.farm.application.orchid.mutation.OrchidGroupMutationSources;
 import com.greenhouse.backend.farm.application.orchid.mutation.RelatedOrchidGroupMutations;
 import com.greenhouse.backend.farm.domain.orchid.OrchidGroup;
@@ -30,10 +29,6 @@ import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 
-/**
- * ORCHID-CUTOVER: LEGACY_RETIRE — Engine 경로와 전환 후 제거할 직접 보정 분기를 함께 가진다. Removal gate: 운영
- * ACTIVE 안정화 및 writer inventory 승인.
- */
 @Component
 @RequiredArgsConstructor
 public class CorrectionWorkHandler implements WorkEffectHandler {
@@ -47,8 +42,6 @@ public class CorrectionWorkHandler implements WorkEffectHandler {
 	private final List<OrchidGroupUsageInspector> usageInspectors;
 
 	private final OrchidGroupMutationEngine mutationEngine;
-
-	private final OrchidGroupMutationRoutingPolicy mutationRoutingPolicy;
 
 	@Override
 	public String supports() {
@@ -114,32 +107,23 @@ public class CorrectionWorkHandler implements WorkEffectHandler {
 		WorkMutationLink mutationLink = null;
 		if (!changedAdjustmentIds.isEmpty()) {
 			CorrectOrchidGroupsMutationCommand mutationCommand = null;
-			if (mutationRoutingPolicy.routesToEngine()) {
-				var references = structureChangeReferenceReader.getMutationReferences(originalOperationId,
-						changedAdjustmentIds);
-				RelatedOrchidGroupMutations related = references.legacySource() ? RelatedOrchidGroupMutations.legacy()
-						: RelatedOrchidGroupMutations.current(references.mutationIds());
-				mutationCommand = new CorrectOrchidGroupsMutationCommand(
-						OrchidGroupMutationSources.work(context.operationId(), command.effectKey()),
-						request.orchidGroupAdjustments()
-							.stream()
-							.filter(adjustment -> changedAdjustmentIds.contains(adjustment.orchidGroupId()))
-							.map(adjustment -> new CorrectOrchidGroupMutationItem(adjustment.orchidGroupId(),
-									adjustment.quantity(), adjustment.status()))
-							.toList(),
-						related, request.workDate(), context.memo());
-			}
-			if (mutationRoutingPolicy.routesToEngine()) {
-				var mutation = mutationEngine.correct(mutationCommand);
-				mutationLink = new WorkMutationLink(mutation.mutationId(), mutation.correlationId());
-			}
-			else {
-				request.orchidGroupAdjustments()
-					.stream()
-					.filter(adjustment -> changedAdjustmentIds.contains(adjustment.orchidGroupId()))
-					.forEach(adjustment -> groupsById.get(adjustment.orchidGroupId())
-						.correctQuantityAndStatus(adjustment.quantity(), adjustment.status()));
-			}
+			var references = structureChangeReferenceReader.getMutationReferences(originalOperationId,
+					changedAdjustmentIds);
+			RelatedOrchidGroupMutations related = references.legacySource() ? RelatedOrchidGroupMutations.legacy()
+					: RelatedOrchidGroupMutations.current(references.mutationIds());
+			mutationCommand = new CorrectOrchidGroupsMutationCommand(
+					OrchidGroupMutationSources.work(context.operationId(), command.effectKey()),
+					request.orchidGroupAdjustments()
+						.stream()
+						.filter(adjustment -> changedAdjustmentIds.contains(adjustment.orchidGroupId()))
+						.map(adjustment -> new CorrectOrchidGroupMutationItem(adjustment.orchidGroupId(),
+								adjustment.quantity(), adjustment.status()))
+						.toList(),
+					related, request.workDate(), context.memo());
+
+			var mutation = mutationEngine.correct(mutationCommand);
+			mutationLink = new WorkMutationLink(mutation.mutationId(), mutation.correlationId());
+
 		}
 		var dateCorrection = workOperationDateCorrectionService.correct(originalOperationId, request.workDate());
 		var resultDetails = new WorkEffectResults.Corrected(originalOperationId, dateCorrection.before(),

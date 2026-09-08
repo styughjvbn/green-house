@@ -111,7 +111,7 @@ class FarmReferenceDataPostgresE2ETest extends WorkE2ETestBase {
 				INSERT INTO materials (code, category, name, is_active, created_at, updated_at)
 				VALUES ('MAT-009000', '분류', '기존 자재', TRUE, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
 				""");
-		var upgrade = Flyway.configure().dataSource(dataSource).load();
+		var upgrade = Flyway.configure().dataSource(dataSource).target("24").load();
 		assertThat(upgrade.migrate().migrationsExecuted).isEqualTo(1);
 		assertThat(jdbc.queryForList("SELECT code FROM varieties WHERE genus = '속'", String.class))
 			.containsExactlyInAnyOrder("VAR-008000", "IMPORTED", "VAR-999999999999999999999999");

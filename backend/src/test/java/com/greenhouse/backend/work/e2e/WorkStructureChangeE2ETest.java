@@ -27,6 +27,7 @@ class WorkStructureChangeE2ETest extends WorkE2ETestBase {
 	void setUp() {
 		seeder.reset();
 		scenario = seeder.seedContractScenario();
+		seeder.baselineGroups();
 	}
 
 	@Test

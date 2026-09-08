@@ -4,7 +4,6 @@ import com.greenhouse.backend.common.config.TimeConfig;
 import com.greenhouse.backend.farm.application.orchid.OrchidGroupUsageInspector;
 import com.greenhouse.backend.farm.application.orchid.mutation.CancelOrchidGroupCreationMutationCommand;
 import com.greenhouse.backend.farm.application.orchid.mutation.OrchidGroupMutationEngine;
-import com.greenhouse.backend.farm.application.orchid.mutation.OrchidGroupMutationRoutingPolicy;
 import com.greenhouse.backend.farm.application.orchid.mutation.OrchidGroupMutationSources;
 import com.greenhouse.backend.farm.dto.orchid.OrchidGroupResponse;
 import com.greenhouse.backend.farm.dto.transformation.MultiCreateCancellationEligibilityResponse;
@@ -23,10 +22,6 @@ import java.util.Map;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-/**
- * ORCHID-CUTOVER: LEGACY_RETIRE — Engine 경로와 전환 후 제거할 직접 생성 취소 분기를 함께 가진다. Removal gate:
- * 운영 ACTIVE 안정화 및 writer inventory 승인.
- */
 @Service
 @Transactional
 public class MultiCreateWorkOperationService {
@@ -43,22 +38,18 @@ public class MultiCreateWorkOperationService {
 
 	private final OrchidGroupMutationEngine mutationEngine;
 
-	private final OrchidGroupMutationRoutingPolicy mutationRoutingPolicy;
-
 	private final Clock clock;
 
 	public MultiCreateWorkOperationService(ImmediateWorkExecutionService immediateWorkExecutionService,
 			WorkOperationQueryService queryService, OrchidGroupRepository orchidGroupRepository,
 			List<OrchidGroupUsageInspector> usageInspectors, OrchidGroupCollectionMemberRepository memberRepository,
-			OrchidGroupMutationEngine mutationEngine, OrchidGroupMutationRoutingPolicy mutationRoutingPolicy,
-			Clock clock) {
+			OrchidGroupMutationEngine mutationEngine, Clock clock) {
 		this.immediateWorkExecutionService = immediateWorkExecutionService;
 		this.queryService = queryService;
 		this.orchidGroupRepository = orchidGroupRepository;
 		this.usageInspectors = usageInspectors;
 		this.memberRepository = memberRepository;
 		this.mutationEngine = mutationEngine;
-		this.mutationRoutingPolicy = mutationRoutingPolicy;
 		this.clock = clock;
 	}
 
@@ -110,14 +101,10 @@ public class MultiCreateWorkOperationService {
 		}
 		memberRepository.findByOrchidGroupIdInAndRemovedAtIsNull(groupIds)
 			.forEach(member -> member.remove(TimeConfig.utcNow(clock)));
-		if (mutationRoutingPolicy.routesToEngine()) {
-			groups.forEach(group -> mutationEngine.cancelCreation(new CancelOrchidGroupCreationMutationCommand(
-					OrchidGroupMutationSources.work(operationId, "CANCEL_RESULT:" + group.getId()), group.getId(),
-					TimeConfig.farmToday(clock), "다중 생성 작업 취소")));
-		}
-		else {
-			groups.forEach(group -> group.cancelCreation());
-		}
+		groups.forEach(group -> mutationEngine.cancelCreation(new CancelOrchidGroupCreationMutationCommand(
+				OrchidGroupMutationSources.work(operationId, "CANCEL_RESULT:" + group.getId()), group.getId(),
+				TimeConfig.farmToday(clock), "다중 생성 작업 취소")));
+
 		immediateWorkExecutionService.cancelMultiCreate(operationId);
 		return response(operationId);
 	}

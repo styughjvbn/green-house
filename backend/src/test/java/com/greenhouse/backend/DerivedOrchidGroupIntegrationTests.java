@@ -51,7 +51,7 @@ class DerivedOrchidGroupIntegrationTests extends AbstractBackendIntegrationTest 
 
 		second.updateDetails(variety.getGenus(), variety.getName(), 30, "4\"", 2, "정상", null, null, false,
 				BigDecimal.ONE, BigDecimal.TEN, null);
-		orchidGroupRepository.saveAndFlush(second);
+		saveOrchidGroup(second);
 
 		mockMvc.perform(get("/api/orchid-groups/derived-groups").param("varietyId", variety.getId().toString()))
 			.andExpect(status().isOk())
@@ -77,7 +77,7 @@ class DerivedOrchidGroupIntegrationTests extends AbstractBackendIntegrationTest 
 		OrchidGroup group = new OrchidGroup(zone, variety.getGenus(), variety.getName(), quantity, potSize, ageYear,
 				status, sortOrder, BigDecimal.ONE, BigDecimal.TEN);
 		group.assignVariety(variety);
-		return orchidGroupRepository.save(group);
+		return saveOrchidGroup(group);
 	}
 
 }

@@ -2,6 +2,7 @@ package com.greenhouse.backend.farm.application.orchid.mutation;
 
 import com.greenhouse.backend.farm.domain.orchid.mutation.OrchidGroupLedgerCoverage;
 import com.greenhouse.backend.farm.domain.orchid.mutation.OrchidGroupLedgerCoverageStatus;
+import com.greenhouse.backend.farm.repository.orchid.OrchidGroupRepository;
 import com.greenhouse.backend.farm.repository.orchid.mutation.OrchidGroupLedgerCoverageRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.boot.ApplicationArguments;
@@ -11,10 +12,6 @@ import org.springframework.core.Ordered;
 import org.springframework.core.annotation.Order;
 import org.springframework.stereotype.Component;
 
-/**
- * ORCHID-CUTOVER: TRANSITION_ONLY — coverage와 전환 writer mode/version 조합을 검사한다. Removal
- * gate: writer mode 제거 후 Engine 전용 기동 검증으로 대체.
- */
 @Component
 @Order(Ordered.HIGHEST_PRECEDENCE)
 @RequiredArgsConstructor
@@ -25,23 +22,25 @@ public class OrchidGroupLedgerWriterStartupGuard implements ApplicationRunner {
 
 	private final OrchidGroupLedgerWriterProperties properties;
 
+	private final OrchidGroupRepository groupRepository;
+
 	@Override
 	public void run(ApplicationArguments args) {
+		if (groupRepository.existsByStateRevisionIsNull()) {
+			throw new IllegalStateException("상태 원장이 없는 난 묶음이 있습니다. 백업 복원과 state-chain 전환을 먼저 완료해야 합니다.");
+		}
 		var activeCoverage = coverageRepository.findFirstByStatus(OrchidGroupLedgerCoverageStatus.ACTIVE);
 		if (activeCoverage.isPresent()) {
-			requireEngineWriter(activeCoverage.get(), "ACTIVE");
+			requireWriterVersion(activeCoverage.get(), "ACTIVE");
 			return;
 		}
 
-		coverageRepository.findFirstByStatus(OrchidGroupLedgerCoverageStatus.PREPARING)
-			.filter(coverage -> coverage.getImportStartedAt() != null)
-			.ifPresent(coverage -> requireEngineWriter(coverage, "baseline이 시작된 PREPARING"));
+		if (coverageRepository.findFirstByStatus(OrchidGroupLedgerCoverageStatus.PREPARING).isPresent()) {
+			throw new IllegalStateException("PREPARING 원장은 ACTIVE 전환을 먼저 완료해야 합니다.");
+		}
 	}
 
-	private void requireEngineWriter(OrchidGroupLedgerCoverage coverage, String coverageState) {
-		if (properties.writerMode() != OrchidGroupLedgerWriterMode.ENGINE) {
-			throw new IllegalStateException(coverageState + " OrchidGroup ledger에는 ENGINE writer mode가 필요합니다.");
-		}
+	private void requireWriterVersion(OrchidGroupLedgerCoverage coverage, String coverageState) {
 		if (!OrchidGroupLedgerWriterVersion.satisfiesMinimum(properties.writerVersion(),
 				coverage.getMinimumWriterVersion())) {
 			throw new IllegalStateException(

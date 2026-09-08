@@ -85,6 +85,7 @@ class SalesOrchidGroupSnapshotIntegrationTest {
 				BigDecimal.ONE, BigDecimal.TEN);
 		group.assignVariety(variety);
 		group = orchidGroupRepository.save(group);
+		com.greenhouse.backend.farm.support.FarmTestFixtures.baseline(entityManager, group);
 		BusinessPartner partner = partnerRepository.save(new BusinessPartner("스냅샷 거래처",
 				salesType == SalesType.DIRECT ? PartnerType.WHOLESALE : PartnerType.AUCTION_HOUSE, null, null, null,
 				null));

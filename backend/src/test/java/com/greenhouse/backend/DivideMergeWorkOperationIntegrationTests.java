@@ -70,6 +70,7 @@ class DivideMergeWorkOperationIntegrationTests extends AbstractBackendIntegratio
 		appliedEffectRepository.deleteAll();
 		targetExecutionRepository.deleteAll();
 		operationTargetRepository.deleteAll();
+		workCommandReceiptRepository.deleteAll();
 		operationRepository.deleteAll();
 		orchidGroupRepository.deleteAll();
 		varietyRepository.deleteAll();
@@ -641,7 +642,7 @@ class DivideMergeWorkOperationIntegrationTests extends AbstractBackendIntegratio
 		OrchidGroup group = new OrchidGroup(sourceZone, sourceVariety.getGenus(), sourceVariety.getName(), quantity,
 				"3.5치", 2, "정상", 1, new BigDecimal(start), new BigDecimal(end));
 		group.assignVariety(sourceVariety);
-		return orchidGroupRepository.save(group);
+		return saveOrchidGroup(group);
 	}
 
 }

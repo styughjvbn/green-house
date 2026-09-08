@@ -31,6 +31,8 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.MediaType;
 
+@org.springframework.test.context.TestPropertySource(
+		properties = "spring.datasource.url=jdbc:h2:mem:workoperationintegrationtests;MODE=PostgreSQL;DB_CLOSE_DELAY=-1")
 class WorkOperationIntegrationTests extends AbstractBackendIntegrationTest {
 
 	@Autowired
@@ -68,6 +70,7 @@ class WorkOperationIntegrationTests extends AbstractBackendIntegrationTest {
 		workAppliedEffectRepository.deleteAll();
 		workTargetExecutionRepository.deleteAll();
 		workOperationTargetRepository.deleteAll();
+		workCommandReceiptRepository.deleteAll();
 		workOperationRepository.deleteAll();
 		orchidGroupRepository.deleteAll();
 		varietyRepository.deleteAll();
@@ -104,7 +107,7 @@ class WorkOperationIntegrationTests extends AbstractBackendIntegrationTest {
 		targetGroup = new OrchidGroup(sourceZone, variety.getGenus(), variety.getName(), 100, "3.5치", 2, "정상", 1,
 				BigDecimal.ONE, BigDecimal.TEN);
 		targetGroup.assignVariety(variety);
-		targetGroup = orchidGroupRepository.save(targetGroup);
+		targetGroup = saveOrchidGroup(targetGroup);
 	}
 
 	@Test
@@ -163,7 +166,7 @@ class WorkOperationIntegrationTests extends AbstractBackendIntegrationTest {
 		OrchidGroup anotherGroup = new OrchidGroup(targetGroup.getBedZone(), anotherVariety.getGenus(),
 				anotherVariety.getName(), 80, "3.5치", 2, "정상", 2, new BigDecimal("11"), new BigDecimal("12"));
 		anotherGroup.assignVariety(anotherVariety);
-		anotherGroup = orchidGroupRepository.save(anotherGroup);
+		anotherGroup = saveOrchidGroup(anotherGroup);
 
 		mockMvc.perform(post("/api/work-operations/batch").contentType(MediaType.APPLICATION_JSON).content("""
 				{
@@ -227,9 +230,8 @@ class WorkOperationIntegrationTests extends AbstractBackendIntegrationTest {
 						  }
 						}
 						"""))
-			.andExpect(status().isOk())
-			.andExpect(jsonPath("$.data.targets[0].resultDetails.discardedQuantity").value(30))
-			.andExpect(jsonPath("$.data.targets[0].resultDetails.remainingQuantity").value(70));
+			.andExpect(status().isConflict())
+			.andExpect(jsonPath("$.error.code").value("IDEMPOTENCY_KEY_REUSED"));
 
 		OrchidGroup afterDuplicate = orchidGroupRepository.findById(targetGroup.getId()).orElseThrow();
 		org.assertj.core.api.Assertions.assertThat(afterDuplicate.getQuantity()).isEqualTo(70);
@@ -471,10 +473,8 @@ class WorkOperationIntegrationTests extends AbstractBackendIntegrationTest {
 						  "resultDetails": {"weather": "변경 시도"}
 						}
 						"""))
-			.andExpect(status().isOk())
-			.andExpect(jsonPath("$.data.status").value("COMPLETED"))
-			.andExpect(jsonPath("$.data.targets[0].worker").value("첫 작업자"))
-			.andExpect(jsonPath("$.data.targets[0].resultDetails.weather").value("맑음"));
+			.andExpect(status().isConflict())
+			.andExpect(jsonPath("$.error.code").value("IDEMPOTENCY_KEY_REUSED"));
 		org.assertj.core.api.Assertions
 			.assertThat(workAppliedEffectRepository.countByWorkOperationIdAndTargetId(operationId, targetId))
 			.isEqualTo(1);
@@ -658,7 +658,7 @@ class WorkOperationIntegrationTests extends AbstractBackendIntegrationTest {
 		OrchidGroup secondGroup = new OrchidGroup(targetGroup.getBedZone(), targetGroup.getGenus(),
 				targetGroup.getVarietyName(), 80, "3.5치", 2, "정상", 2, BigDecimal.TEN, new BigDecimal("20"));
 		secondGroup.assignVariety(targetGroup.getVariety());
-		secondGroup = orchidGroupRepository.save(secondGroup);
+		secondGroup = saveOrchidGroup(secondGroup);
 
 		var created = mockMvc.perform(post("/api/work-operations").contentType(MediaType.APPLICATION_JSON).content("""
 				{

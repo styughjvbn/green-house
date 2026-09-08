@@ -8,6 +8,7 @@ import static org.mockito.Mockito.when;
 
 import com.greenhouse.backend.farm.domain.orchid.mutation.OrchidGroupLedgerCoverage;
 import com.greenhouse.backend.farm.domain.orchid.mutation.OrchidGroupLedgerCoverageStatus;
+import com.greenhouse.backend.farm.repository.orchid.OrchidGroupRepository;
 import com.greenhouse.backend.farm.repository.orchid.mutation.OrchidGroupLedgerCoverageRepository;
 import java.time.Instant;
 import java.time.LocalDate;
@@ -19,15 +20,6 @@ import org.springframework.boot.ApplicationArguments;
 class OrchidGroupLedgerWriterGuardTest {
 
 	@Test
-	void separatesLegacyAndEngineResponsibilities() {
-		var legacy = new OrchidGroupLedgerWriterProperties(OrchidGroupLedgerWriterMode.LEGACY, "1.0.0");
-		var engine = new OrchidGroupLedgerWriterProperties(OrchidGroupLedgerWriterMode.ENGINE, "1.0.0");
-
-		assertThat(legacy.routesToMutationEngine()).isFalse();
-		assertThat(engine.routesToMutationEngine()).isTrue();
-	}
-
-	@Test
 	void comparesSemanticVersionsAndRequiresExactMatchForOpaqueVersions() {
 		assertThat(OrchidGroupLedgerWriterVersion.satisfiesMinimum("1.3.0", "1.2.9")).isTrue();
 		assertThat(OrchidGroupLedgerWriterVersion.satisfiesMinimum("1.2.8", "1.2.9")).isFalse();
@@ -37,46 +29,39 @@ class OrchidGroupLedgerWriterGuardTest {
 	}
 
 	@Test
-	void rejectsLegacyOrOlderWritersWhenCoverageIsActive() {
-		OrchidGroupLedgerCoverageRepository repository = activeCoverageRepository("1.2.0");
-		ApplicationArguments arguments = mock(ApplicationArguments.class);
-
+	void rejectsOlderWritersWhenCoverageIsActive() {
+		var repository = activeCoverageRepository("2.0.0");
+		var groups = mock(OrchidGroupRepository.class);
 		assertThatThrownBy(() -> new OrchidGroupLedgerWriterStartupGuard(repository,
-				new OrchidGroupLedgerWriterProperties(OrchidGroupLedgerWriterMode.LEGACY, "1.2.0"))
-			.run(arguments)).isInstanceOf(IllegalStateException.class).hasMessageContaining("ENGINE");
-		assertThatThrownBy(() -> new OrchidGroupLedgerWriterStartupGuard(repository,
-				new OrchidGroupLedgerWriterProperties(OrchidGroupLedgerWriterMode.ENGINE, "1.1.9"))
-			.run(arguments)).isInstanceOf(IllegalStateException.class).hasMessageContaining("최소 버전");
+				new OrchidGroupLedgerWriterProperties("1.9.0"), groups)
+			.run(mock(ApplicationArguments.class))).isInstanceOf(IllegalStateException.class)
+			.hasMessageContaining("최소 버전");
 		assertThatCode(() -> new OrchidGroupLedgerWriterStartupGuard(repository,
-				new OrchidGroupLedgerWriterProperties(OrchidGroupLedgerWriterMode.ENGINE, "1.2.1"))
-			.run(arguments)).doesNotThrowAnyException();
-	}
-
-	@Test
-	void rejectsLegacyOrOlderWritersAfterStateChainImportStarts() {
-		OrchidGroupLedgerCoverageRepository repository = preparingCoverageRepository("1.2.0", true);
-		ApplicationArguments arguments = mock(ApplicationArguments.class);
-
-		assertThatThrownBy(() -> new OrchidGroupLedgerWriterStartupGuard(repository,
-				new OrchidGroupLedgerWriterProperties(OrchidGroupLedgerWriterMode.LEGACY, "1.2.0"))
-			.run(arguments)).isInstanceOf(IllegalStateException.class)
-			.hasMessageContaining("PREPARING")
-			.hasMessageContaining("ENGINE");
-		assertThatThrownBy(() -> new OrchidGroupLedgerWriterStartupGuard(repository,
-				new OrchidGroupLedgerWriterProperties(OrchidGroupLedgerWriterMode.ENGINE, "1.1.9"))
-			.run(arguments)).isInstanceOf(IllegalStateException.class).hasMessageContaining("최소 버전");
-		assertThatCode(() -> new OrchidGroupLedgerWriterStartupGuard(repository,
-				new OrchidGroupLedgerWriterProperties(OrchidGroupLedgerWriterMode.ENGINE, "1.2.1"))
-			.run(arguments)).doesNotThrowAnyException();
-	}
-
-	@Test
-	void allowsLegacyBeforeStateChainImportStarts() {
-		OrchidGroupLedgerCoverageRepository repository = preparingCoverageRepository("1.2.0", false);
-
-		assertThatCode(() -> new OrchidGroupLedgerWriterStartupGuard(repository,
-				new OrchidGroupLedgerWriterProperties(OrchidGroupLedgerWriterMode.LEGACY, "1.2.0"))
+				new OrchidGroupLedgerWriterProperties("2.0.0"), groups)
 			.run(mock(ApplicationArguments.class))).doesNotThrowAnyException();
+	}
+
+	@Test
+	void rejectsIncompleteCutover() {
+		for (boolean started : new boolean[] { false, true }) {
+			assertThatThrownBy(
+					() -> new OrchidGroupLedgerWriterStartupGuard(preparingCoverageRepository("2.0.0", started),
+							new OrchidGroupLedgerWriterProperties("2.0.0"), mock(OrchidGroupRepository.class))
+						.run(mock(ApplicationArguments.class)))
+				.isInstanceOf(IllegalStateException.class)
+				.hasMessageContaining("PREPARING");
+		}
+	}
+
+	@Test
+	void rejectsUnmigratedGroupsAndAllowsAnEmptyDatabase() {
+		var groups = mock(OrchidGroupRepository.class);
+		var guard = new OrchidGroupLedgerWriterStartupGuard(mock(OrchidGroupLedgerCoverageRepository.class),
+				new OrchidGroupLedgerWriterProperties("2.0.0"), groups);
+		assertThatCode(() -> guard.run(mock(ApplicationArguments.class))).doesNotThrowAnyException();
+		when(groups.existsByStateRevisionIsNull()).thenReturn(true);
+		assertThatThrownBy(() -> guard.run(mock(ApplicationArguments.class))).isInstanceOf(IllegalStateException.class)
+			.hasMessageContaining("state-chain");
 	}
 
 	@Test

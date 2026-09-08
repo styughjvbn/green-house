@@ -5,8 +5,8 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
 /**
- * ORCHID-CUTOVER: TRANSITION_ONLY — complete state-chain 적재 확인과 ACTIVE 전환을 조율한다. Removal
- * gate: 운영 cutover 완료 및 재수행 불필요 승인.
+ * ORCHID-CUTOVER: RECOVERY — complete state-chain 적재 확인과 ACTIVE 전환을 조율한다. Removal gate:
+ * 운영 cutover 완료 및 재수행 불필요 승인.
  */
 @Service
 @RequiredArgsConstructor

@@ -55,6 +55,7 @@ class WorkOperationCorrectionIntegrationTests extends AbstractBackendIntegration
 		correctionRepository.deleteAll();
 		effectOrchidGroupRepository.deleteAll();
 		appliedEffectRepository.deleteAll();
+		workCommandReceiptRepository.deleteAll();
 		operationRepository.deleteAll();
 		orchidGroupRepository.deleteAll();
 		varietyRepository.deleteAll();
