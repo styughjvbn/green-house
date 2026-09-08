@@ -17,8 +17,8 @@ import com.greenhouse.backend.auction.domain.AuctionResultLine;
 import com.greenhouse.backend.auction.domain.AuctionShipment;
 import com.greenhouse.backend.auction.domain.AuctionShipmentLot;
 import com.greenhouse.backend.auction.dto.AuctionLotAdjustmentRequest;
-import com.greenhouse.backend.auction.dto.AuctionLotResultLineRequest;
-import com.greenhouse.backend.auction.dto.AuctionLotResultRequest;
+import com.greenhouse.backend.auction.domain.AuctionResultLineInput;
+import com.greenhouse.backend.auction.application.RecordAuctionResultCommand;
 import com.greenhouse.backend.auction.dto.AuctionLotReturnRequest;
 import com.greenhouse.backend.auction.repository.AuctionShipmentLotRepository;
 import com.greenhouse.backend.auction.repository.AuctionShipmentRepository;
@@ -358,7 +358,7 @@ class AuctionTrackingTests {
 
 		trackingService.addResult(
 			createdLot.getId(),
-			new AuctionLotResultRequest(
+			new RecordAuctionResultCommand(
 				LocalDate.of(2026, 7, 9),
 				1,
 				AuctionAttemptStatus.FAILED,
@@ -387,15 +387,15 @@ class AuctionTrackingTests {
 
 		var soldResponse = trackingService.addResult(
 			soldLot.getId(),
-			new AuctionLotResultRequest(
+			new RecordAuctionResultCommand(
 				LocalDate.of(2026, 7, 3),
 				null,
 				AuctionAttemptStatus.SOLD,
 				null,
 				"수동 입력",
 				java.util.List.of(
-					new AuctionLotResultLineRequest("특", 60, 12000, null, AuctionInspectionStatus.NORMAL),
-					new AuctionLotResultLineRequest("특", 40, 11500, null, AuctionInspectionStatus.NORMAL)
+					new AuctionResultLineInput("특", 60, 12000, null, AuctionInspectionStatus.NORMAL),
+					new AuctionResultLineInput("특", 40, 11500, null, AuctionInspectionStatus.NORMAL)
 				)
 			)
 		);
@@ -405,14 +405,14 @@ class AuctionTrackingTests {
 
 		var partialResponse = trackingService.addResult(
 			partialLot.getId(),
-			new AuctionLotResultRequest(
+			new RecordAuctionResultCommand(
 				LocalDate.of(2026, 7, 4),
 				1,
 				AuctionAttemptStatus.PARTIALLY_SOLD,
 				"잔량 유찰",
 				null,
 				java.util.List.of(
-					new AuctionLotResultLineRequest("A", 30, 9000, null, AuctionInspectionStatus.NORMAL)
+					new AuctionResultLineInput("A", 30, 9000, null, AuctionInspectionStatus.NORMAL)
 				)
 			)
 		);

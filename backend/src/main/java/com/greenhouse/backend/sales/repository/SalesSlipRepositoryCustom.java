@@ -17,5 +17,6 @@ public interface SalesSlipRepositoryCustom {
 			String paymentStatus,
 			String salesStatus,
 			String keyword,
+			List<Long> matchingPartnerIds,
 			Pageable pageable);
 }

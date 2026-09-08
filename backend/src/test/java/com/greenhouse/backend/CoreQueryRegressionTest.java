@@ -173,7 +173,8 @@ class CoreQueryRegressionTest {
 				assertThat(partner.memo()).isEqualTo("메모");
 			}
 		});
-		assertThat(queries).isEqualTo(3);
+		// One scalar Partner search, followed by the unchanged page/count/detail queries.
+		assertThat(queries).isEqualTo(4);
 		assertThat(salesQueryService.getSalesSlipPage(null, date, date, null, null, "7890", 0, 1).totalElements())
 				.isEqualTo(count);
 		assertThat(salesQueryService.getSalesSlipPage(null, date, date, null, null, "현재 이름", 0, 1).totalElements())
@@ -201,7 +202,8 @@ class CoreQueryRegressionTest {
 				assertThat(page.content().get(index).auctionMarket()).isEqualTo("Market " + (count - index - 1));
 			}
 		});
-		assertThat(queries).isEqualTo(5);
+		// Two scalar Partner matches preserve this phrase across the market-name separator.
+		assertThat(queries).isEqualTo(7);
 	}
 
 	@Test

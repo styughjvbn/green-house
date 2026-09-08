@@ -10,16 +10,17 @@ import jakarta.persistence.FetchType;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
-import jakarta.persistence.SequenceGenerator;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.OneToMany;
 import jakarta.persistence.OrderBy;
+import jakarta.persistence.SequenceGenerator;
 import jakarta.persistence.Table;
 import jakarta.persistence.Version;
 import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
 import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -128,7 +129,136 @@ public class AuctionShipmentLot extends BaseEntity {
 		changeStatus(next, "경매 결과 반영", null, null);
 	}
 
+	public void recordResult(LocalDate auctionDate, Integer requestedAttemptNo, AuctionAttemptStatus attemptStatus,
+			List<AuctionResultLineInput> resultLines, String requestedFailedReason, String requestedMemo) {
+		if (getWaitingQuantity() <= 0)
+			throw new IllegalArgumentException("대기 수량이 없는 lot에는 경매 결과를 추가할 수 없습니다.");
+		int waitingQuantity = getWaitingQuantity();
+		int attemptNo = resolveAttemptNo(requestedAttemptNo);
+		validateAttemptNo(auctionDate, attemptNo);
+
+		String failedReason = normalize(requestedFailedReason);
+		String memo = normalize(requestedMemo);
+		var attempt = new AuctionAttempt(
+				auctionDate,
+				attemptNo,
+				attemptStatus,
+				failedReason,
+				memo);
+
+		switch (attemptStatus) {
+			case SOLD -> {
+				int soldQuantity = addSoldLines(attempt, resultLines, getShipmentGrade());
+				if (soldQuantity != waitingQuantity)
+					throw new IllegalArgumentException("낙찰 상태에서는 남은 대기 수량 전체를 입력해야 합니다.");
+				attempt.recalculateStatus();
+				addAttempt(attempt);
+				applyResult(soldQuantity, 0, false, false);
+			}
+			case PARTIALLY_SOLD -> {
+				int soldQuantity = addSoldLines(attempt, resultLines, getShipmentGrade());
+				if (soldQuantity >= waitingQuantity)
+					throw new IllegalArgumentException("부분 낙찰은 대기 수량보다 적어야 합니다.");
+				attempt.addResultLine(new AuctionResultLine(
+						auctionDate,
+						getShipmentGrade(),
+						waitingQuantity - soldQuantity,
+						0,
+						0,
+						failedReason == null ? "잔량 유찰" : failedReason,
+						AuctionInspectionStatus.NORMAL));
+				attempt.recalculateStatus();
+				addAttempt(attempt);
+				applyResult(soldQuantity, 0, false, false);
+			}
+			case FAILED -> {
+				attempt.addResultLine(new AuctionResultLine(
+						auctionDate,
+						getShipmentGrade(),
+						waitingQuantity,
+						0,
+						0,
+						failedReason == null ? "유찰" : failedReason,
+						AuctionInspectionStatus.NORMAL));
+				attempt.recalculateStatus();
+				addAttempt(attempt);
+				applyResult(0, 0, true, false);
+			}
+			case RETURN_INFERRED -> {
+				attempt.addResultLine(new AuctionResultLine(
+						auctionDate,
+						getShipmentGrade(),
+						waitingQuantity,
+						0,
+						0,
+						failedReason == null ? "반환 추정" : failedReason,
+						AuctionInspectionStatus.RETURN_INFERRED));
+				attempt.recalculateStatus();
+				addAttempt(attempt);
+				applyResult(0, waitingQuantity, false, true);
+			}
+			default -> throw new IllegalArgumentException("지원하지 않는 경매 결과 상태입니다.");
+		}
+
+	}
+
+	private int resolveAttemptNo(Integer attemptNo) {
+		if (attemptNo != null)
+			return attemptNo;
+		return getAttempts().stream().map(AuctionAttempt::getAttemptNo).max(Integer::compareTo).orElse(0) + 1;
+	}
+
+	private void validateAttemptNo(LocalDate auctionDate,
+			int attemptNo) {
+		boolean duplicate = getAttempts().stream()
+				.anyMatch(attempt -> Objects.equals(attempt.getAttemptNo(), attemptNo)
+						&& Objects.equals(attempt.getAuctionDate(), auctionDate));
+		if (duplicate)
+			throw new IllegalArgumentException("같은 경매일과 차수의 결과가 이미 등록되어 있습니다.");
+	}
+
+	private int addSoldLines(AuctionAttempt attempt, List<AuctionResultLineInput> lines, String defaultGrade) {
+		if (lines == null || lines.isEmpty())
+			throw new IllegalArgumentException("낙찰 결과 행을 1개 이상 입력해야 합니다.");
+		int soldQuantity = 0;
+		for (var line : lines) {
+			if (line.unitPrice() < 1)
+				throw new IllegalArgumentException("낙찰 결과 단가는 1원 이상이어야 합니다.");
+			attempt.addResultLine(new AuctionResultLine(
+					attempt.getAuctionDate(),
+					normalize(line.auctionGrade()) == null ? defaultGrade : normalize(line.auctionGrade()),
+					line.quantity(),
+					line.unitPrice(),
+					soldAmount(line.quantity(), line.unitPrice()),
+					normalize(line.note()),
+					line.inspectionStatus() == null ? AuctionInspectionStatus.NORMAL : line.inspectionStatus()));
+			soldQuantity += line.quantity();
+		}
+		return soldQuantity;
+	}
+
+	private int soldAmount(int quantity, int unitPrice) {
+		try {
+			return Math.multiplyExact(quantity, unitPrice);
+		} catch (ArithmeticException exception) {
+			throw new IllegalArgumentException("낙찰 결과 금액은 2,147,483,647원 이하여야 합니다.");
+		}
+	}
+
+	private String normalize(String value) {
+		return value == null || value.isBlank() ? null : value.trim();
+	}
+
+	public void requireReturnConfirmable() {
+		if (!List.of(AuctionLotStatus.REAUCTION_WAITING, AuctionLotStatus.RETURN_INFERRED,
+				AuctionLotStatus.PARTIALLY_RETURNED).contains(getCurrentStatus()))
+			throw new IllegalArgumentException("재경매대기, 반환추정 또는 부분반환 상태에서만 반환을 확인할 수 있습니다.");
+		if (getReturnConfirmableQuantity() <= 0)
+			throw new IllegalArgumentException("확인할 반환 수량이 없습니다.");
+	}
+
 	public void confirmReturn(Integer quantity, LocalDate returnDate, String worker, String memo) {
+		requireReturnConfirmable();
 		if (quantity == null || quantity < 1) {
 			throw new IllegalArgumentException("반환 확인 수량은 1 이상이어야 합니다.");
 		}

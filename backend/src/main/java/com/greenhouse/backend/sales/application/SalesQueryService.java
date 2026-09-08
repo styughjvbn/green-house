@@ -3,16 +3,19 @@ package com.greenhouse.backend.sales.application;
 import com.greenhouse.backend.auction.application.AuctionDataReader;
 import com.greenhouse.backend.common.api.PageResponse;
 import com.greenhouse.backend.common.exception.NotFoundException;
+import com.greenhouse.backend.partner.application.BusinessPartnerReader;
+import com.greenhouse.backend.partner.domain.PartnerTextMatch;
+import com.greenhouse.backend.sales.application.document.SalesSlipDocument;
+import com.greenhouse.backend.sales.application.document.SalesSlipSummary;
 import com.greenhouse.backend.sales.domain.SalesSlip;
 import com.greenhouse.backend.sales.domain.SalesSlipItemAllocation;
 import com.greenhouse.backend.sales.dto.AuctionShipmentOptionResponse;
-import com.greenhouse.backend.sales.application.document.SalesSlipSummary;
-import com.greenhouse.backend.sales.application.document.SalesSlipDocument;
 import com.greenhouse.backend.sales.repository.SalesSlipItemAllocationRepository;
 import com.greenhouse.backend.sales.repository.SalesSlipRepository;
 import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.HashSet;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -30,6 +33,7 @@ public class SalesQueryService {
 	private static final int AUCTION_SHIPMENT_OPTION_LIMIT = 200;
 
 	private final SalesSlipRepository salesSlipRepository;
+	private final BusinessPartnerReader partnerReader;
 	private final SalesSlipItemAllocationRepository allocationRepository;
 	private final AuctionDataReader auctionDataReader;
 	private final SalesSlipDocumentAssembler responseAssembler;
@@ -59,7 +63,9 @@ public class SalesQueryService {
 		String normalizedSalesStatus = blankToNull(salesStatus);
 		String normalizedKeyword = blankToNull(keyword);
 		var result = salesSlipRepository
-				.searchPage(partnerId, from, to, normalizedPaymentStatus, normalizedSalesStatus, normalizedKeyword, pageable);
+				.searchPage(partnerId, from, to, normalizedPaymentStatus, normalizedSalesStatus, normalizedKeyword,
+						normalizedKeyword == null ? List.of() : partnerReader.findMatchingIds(
+								PartnerTextMatch.CONTACT_CONTAINS, normalizedKeyword.toLowerCase()), pageable);
 		return PageResponse.from(responseAssembler.assemblePage(result));
 	}
 
@@ -98,7 +104,7 @@ public class SalesQueryService {
 				.stream()
 				.collect(Collectors.groupingBy(
 						allocation -> allocation.getSalesSlipItem().getId(),
-						java.util.LinkedHashMap::new,
+						LinkedHashMap::new,
 						Collectors.toList()));
 		return responseAssembler.assemble(salesSlips, allocationsByItemId);
 	}

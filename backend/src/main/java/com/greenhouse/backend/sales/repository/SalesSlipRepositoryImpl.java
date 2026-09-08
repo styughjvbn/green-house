@@ -1,8 +1,5 @@
 package com.greenhouse.backend.sales.repository;
 
-import static com.greenhouse.backend.sales.domain.QSalesSlip.salesSlip;
-import static com.greenhouse.backend.partner.domain.QBusinessPartner.businessPartner;
-
 import com.greenhouse.backend.sales.domain.SalesSlip;
 import com.querydsl.core.BooleanBuilder;
 import com.querydsl.core.types.OrderSpecifier;
@@ -15,6 +12,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.Pageable;
+import static com.greenhouse.backend.sales.domain.QSalesSlip.salesSlip;
 
 @RequiredArgsConstructor
 public class SalesSlipRepositoryImpl implements SalesSlipRepositoryCustom {
@@ -26,8 +24,7 @@ public class SalesSlipRepositoryImpl implements SalesSlipRepositoryCustom {
 		List<Long> salesSlipIds = queryFactory
 				.select(salesSlip.id)
 				.from(salesSlip)
-				.join(businessPartner).on(salesSlip.partnerId.eq(businessPartner.id))
-				.where(conditions(partnerId, from, to, null, null, null))
+				.where(conditions(partnerId, from, to, null, null, null, List.of()))
 				.orderBy(defaultOrder())
 				.limit(limit)
 				.fetch();
@@ -50,8 +47,9 @@ public class SalesSlipRepositoryImpl implements SalesSlipRepositoryCustom {
 			String paymentStatus,
 			String salesStatus,
 			String keyword,
+			List<Long> matchingPartnerIds,
 			Pageable pageable) {
-		BooleanBuilder conditions = conditions(partnerId, from, to, paymentStatus, salesStatus, keyword);
+		BooleanBuilder conditions = conditions(partnerId, from, to, paymentStatus, salesStatus, keyword, matchingPartnerIds);
 		List<SalesSlip> content = baseQuery()
 				.where(conditions)
 				.orderBy(defaultOrder())
@@ -61,7 +59,6 @@ public class SalesSlipRepositoryImpl implements SalesSlipRepositoryCustom {
 		Long total = queryFactory
 				.select(salesSlip.count())
 				.from(salesSlip)
-				.join(businessPartner).on(salesSlip.partnerId.eq(businessPartner.id))
 				.where(conditions)
 				.fetchOne();
 
@@ -70,8 +67,7 @@ public class SalesSlipRepositoryImpl implements SalesSlipRepositoryCustom {
 
 	private JPAQuery<SalesSlip> baseQuery() {
 		return queryFactory
-				.selectFrom(salesSlip)
-				.join(businessPartner).on(salesSlip.partnerId.eq(businessPartner.id));
+				.selectFrom(salesSlip);
 	}
 
 	private BooleanBuilder conditions(
@@ -80,14 +76,14 @@ public class SalesSlipRepositoryImpl implements SalesSlipRepositoryCustom {
 			LocalDate to,
 			String paymentStatus,
 			String salesStatus,
-			String keyword) {
+			String keyword, List<Long> matchingPartnerIds) {
 		return new BooleanBuilder()
 				.and(partnerIdEq(partnerId))
 				.and(saleDateGoe(from))
 				.and(saleDateLoe(to))
 				.and(paymentStatusEq(paymentStatus))
 				.and(salesStatusEq(salesStatus))
-				.and(keywordContains(keyword));
+				.and(keywordContains(keyword, matchingPartnerIds));
 	}
 
 	private BooleanExpression partnerIdEq(Long partnerId) {
@@ -110,16 +106,14 @@ public class SalesSlipRepositoryImpl implements SalesSlipRepositoryCustom {
 		return isBlank(salesStatus) ? null : salesSlip.salesStatus.eq(salesStatus);
 	}
 
-	private BooleanBuilder keywordContains(String keyword) {
+	private BooleanBuilder keywordContains(String keyword, List<Long> matchingPartnerIds) {
 		if (isBlank(keyword)) {
 			return null;
 		}
 		String normalizedKeyword = keyword.trim().toLowerCase();
 		return new BooleanBuilder()
 				.or(salesSlip.slipNumber.lower().contains(normalizedKeyword))
-				.or(businessPartner.name.lower().contains(normalizedKeyword))
-				.or(businessPartner.ownerName.lower().contains(normalizedKeyword))
-				.or(businessPartner.phone.lower().contains(normalizedKeyword))
+				.or(salesSlip.partnerId.in(matchingPartnerIds))
 				.or(salesSlip.memo.lower().contains(normalizedKeyword));
 	}
 

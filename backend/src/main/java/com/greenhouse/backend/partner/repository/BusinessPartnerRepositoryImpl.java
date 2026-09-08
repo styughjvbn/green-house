@@ -1,8 +1,7 @@
 package com.greenhouse.backend.partner.repository;
 
-import static com.greenhouse.backend.partner.domain.QBusinessPartner.businessPartner;
-
 import com.greenhouse.backend.partner.domain.BusinessPartner;
+import com.greenhouse.backend.partner.domain.PartnerTextMatch;
 import com.greenhouse.backend.partner.domain.PartnerType;
 import com.querydsl.core.BooleanBuilder;
 import com.querydsl.core.types.dsl.BooleanExpression;
@@ -13,11 +12,27 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.Pageable;
+import static com.greenhouse.backend.partner.domain.QBusinessPartner.businessPartner;
 
 @RequiredArgsConstructor
 public class BusinessPartnerRepositoryImpl implements BusinessPartnerRepositoryCustom {
 
 	private final JPAQueryFactory queryFactory;
+
+	@Override
+	public List<Long> findMatchingIds(PartnerTextMatch match,
+			String value, long afterId, int limit) {
+		var condition = switch (match) {
+			case CONTACT_CONTAINS -> businessPartner.name.lower().contains(value)
+					.or(businessPartner.ownerName.lower().contains(value))
+					.or(businessPartner.phone.lower().contains(value));
+			case NAME_CONTAINS -> businessPartner.name.lower().contains(value);
+			case NAME_PREFIX -> businessPartner.name.lower().startsWith(value);
+			case NAME_EXACT -> businessPartner.name.equalsIgnoreCase(value);
+		};
+		return queryFactory.select(businessPartner.id).from(businessPartner)
+				.where(businessPartner.id.gt(afterId), condition).orderBy(businessPartner.id.asc()).limit(limit).fetch();
+	}
 
 	@Override
 	public List<BusinessPartner> findActiveByName(String keyword, PartnerType partnerType, int limit) {

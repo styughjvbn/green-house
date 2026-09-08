@@ -1,18 +1,18 @@
 package com.greenhouse.backend.partner.application;
 
 import com.greenhouse.backend.common.exception.NotFoundException;
-import com.greenhouse.backend.partner.repository.BusinessPartnerRepository;
+import com.greenhouse.backend.partner.domain.PartnerTextMatch;
 import com.greenhouse.backend.partner.domain.PartnerType;
-
-import lombok.RequiredArgsConstructor;
-
-import java.util.Collection;
+import com.greenhouse.backend.partner.repository.BusinessPartnerRepository;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Map;
 import java.util.function.Function;
 import java.util.stream.Collectors;
+import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -22,6 +22,18 @@ import org.springframework.transaction.annotation.Transactional;
 public class BusinessPartnerReader {
 	private static final int ID_BATCH_SIZE = 500;
 	private final BusinessPartnerRepository partnerRepository;
+
+	/** All matching IDs, read in bounded batches; historical searches include inactive partners. */
+	public List<Long> findMatchingIds(PartnerTextMatch match, String value) {
+		var matches = new ArrayList<Long>();
+		long afterId = 0;
+		while (true) {
+			var batch = partnerRepository.findMatchingIds(match, value, afterId, ID_BATCH_SIZE);
+			matches.addAll(batch);
+			if (batch.size() < ID_BATCH_SIZE) return List.copyOf(matches);
+			afterId = batch.getLast();
+		}
+	}
 
 	public Map<Long, Identity> getIdentities(Collection<Long> partnerIds) {
 		var ids = new ArrayList<>(new HashSet<>(partnerIds));
