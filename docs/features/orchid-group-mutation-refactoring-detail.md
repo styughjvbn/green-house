@@ -127,9 +127,9 @@ Legacy 실행기는 전환 수명 표식을 유지한다. 12개 서비스 각각
 개선: command fingerprint 진입점은 명시적 overload를 우선한다. 공통 속성을 여러 소비자가 필요로 할 때만 닫힌 command 타입을 도입한다.
 기존 semantic payload의 JSON 필드명·정규화·순서·해시값은 유지한다. serializer 변경은 보일러플레이트 정리로 취급하지 않는다.
 
-### F6. Work 효과의 Map 계약 때문에 읽기와 쓰기가 강하게 결합됨 — P1
+### F6. Work 효과의 Map 계약 때문에 읽기와 쓰기가 강하게 결합됨 — P1, 18차 정리
 
-근거: [WorkExecutionResult](../../backend/src/main/java/com/greenhouse/backend/work/application/effect/WorkExecutionResult.java), [WorkOperationDetailService](../../backend/src/main/java/com/greenhouse/backend/work/application/operation/WorkOperationDetailService.java) 408줄.
+기준 코드의 근거: [WorkExecutionResult](../../backend/src/main/java/com/greenhouse/backend/work/application/effect/WorkExecutionResult.java), [WorkOperationDetailService](../../backend/src/main/java/com/greenhouse/backend/work/application/operation/WorkOperationDetailService.java) 408줄.
 
 - 실행 결과는 `Map<String, Object>`이고 읽기는 `sources`, `results`, `adjustments` 등 문자열 키와 다중 fallback으로 형태를 추론한다.
 - 상세 서비스에 DB 조회, 구형 JSON 호환, 수치 파싱, 화면용 label/문자열 변환이 함께 있다.
@@ -139,15 +139,19 @@ Legacy 실행기는 전환 수명 표식을 유지한다. 12개 서비스 각각
 기존 JSON을 일괄 재작성하거나 과거 사실을 현재 Entity 값으로 채우지 않는다.
 화면 label은 우선 응답 assembler로 격리하며, 프론트 이전은 별도 API 변경으로 다룬다.
 
-### F7. 작업 보정 상세에서 명확한 반복 조회가 남아 있음 — P1
+2026-09-07, 백엔드 18차에서 고정 결과를 유형별 내부 값으로 만들고 JSON으로 변환하도록 정리했다. 상세는 조회 없는 codec·표시 assembler와 일괄 조회 service로 분리했다. 기존 구현에서 고정한 16가지 JSON 응답과 쓰기 결과 계약을 검증했다. 상세 service는 408줄에서 89줄로 줄었으며 자유 기록·구형 필드·null·결과 순서의 의미를 유지한다.
 
-근거: [WorkOperationDetailService](../../backend/src/main/java/com/greenhouse/backend/work/application/operation/WorkOperationDetailService.java) `corrections:298`.
+### F7. 작업 보정 상세에서 명확한 반복 조회가 남아 있음 — P1, 18차 해결
+
+기준 코드의 근거: [WorkOperationDetailService](../../backend/src/main/java/com/greenhouse/backend/work/application/operation/WorkOperationDetailService.java) `corrections:298`.
 
 보정 목록의 `.map()` 내부에서 매번 `findByWorkOperationIdAndEffectKey(..., "OPERATION")`를 호출한다.
 보정 건수에 비례해 효과 조회가 늘어난다. Repository에는 이미 `findByWorkOperationIdInAndEffectKey`가 있다.
 
 개선: 보정 작업 ID를 모아 기존 일괄 API로 읽고 ID별 map으로 조립한다.
 correction operation의 lazy loading도 함께 계측한다. 단순히 effect 조회 하나만 줄여 완료 처리하지 않는다.
+
+백엔드 18차에서 기존 보정 작업 ID 일괄 조회로 전환했다. PostgreSQL HTTP 상세 조회에서 보정 0건은 SQL 4회, 1·10·50건은 SQL 5회이며 보정 작업의 lazy loading도 포함한 수치다. 효과 누락·null 결과는 기존처럼 빈 보정 상세로 처리한다. Work 요청 멱등성 보강은 별도 후속이다.
 
 ### F8. importer와 상시 대사의 수명·검증·조회 책임이 한 패키지에 혼재 — P1/P2
 

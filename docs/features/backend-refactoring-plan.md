@@ -2,11 +2,28 @@
 
 - 기준일: 2026-09-05
 - 기준 코드: `feature/orchid-group-mutation-engine`, `3aa8fc54`
-- 상태: 단계별 구현 진행 중. 1~17차 구현 범위와 남은 작업은 아래 실행 기록 참고.
+- 상태: 단계별 구현 진행 중. 1~19차 구현 범위와 남은 작업은 아래 실행 기록 참고.
 - 작업 브랜치: `feature/backend-refactoring`.
 - 범위: **13개 모듈 전체**, Controller·application·domain·Repository·DTO·설정·DB migration·테스트·CI.
 - 목표: **확장에는 열려 있고 수정에는 닫힌 구조(OCP)**. 새 기능을 추가할 때 기존 유스케이스와 타 모듈 내부를 수정하는 범위를 줄인다.
 - 관련 상세: [Mutation Engine 및 호출부](orchid-group-mutation-refactoring-detail.md).
+
+## 작업 묶음별 진행 현황
+
+아래 1~8번은 사용자가 요청한 **남은 범위의 묶음 번호**다. 원래 계획 B-01~17 및 아래 실행 기록의 회차와 구분한다. 실행 회차가 늘어도 묶음 번호를 다시 매기지 않는다.
+
+| 묶음 | 범위 | 진행 |
+|---|---|---|
+| 1 | 구조 변경·Mutation 엔진 중복 정리 | 16차 완료 |
+| 2 | Work 유형 정의·capability 통합 | 17차 완료 |
+| 3 | Work 결과 JSON·상세 조회 정리 | 18차 완료 |
+| 4 | Farm 나머지 조회·입고·기준 정보 정리 | 19차 완료 |
+| 5 | Sales·Auction·Settlement 남은 정책·모듈 경계 | 남음 |
+| 6 | Audit·Print·Dashboard | 남음 |
+| 7 | 공통 시간·페이지·스타일·비활성 테스트 | 남음 |
+| 8 | 전체 회귀·확장성 검증 | 남음 |
+
+별도 후속은 **Work 멱등성 보강**, **운영 전환 안정화 후 Legacy 제거**다. 이번 회귀 실행이 8번의 전체 확장성 검증 완료를 뜻하지 않는다. 기존 실행 기록의 후속 항목은 해당 묶음에서 함께 검토한다.
 
 ## 1. 판단과 전체 범위
 
@@ -916,3 +933,48 @@ command/fingerprint 타입, 결과별 배치 점유 조회 최적화와 이관·
 - `python3 scripts/generate_openapi.py`: **136 operations·115 paths·228 schemas**, 전체 명세와 slice 차이 없음. 임시 명세 서버 종료와 `git diff --check`를 확인했다. API·DB schema·프론트 변경이 없어 생성 TypeScript 갱신, 프론트 검증과 브라우저 E2E는 실행하지 않았다.
 
 요청한 두 범위인 구조 변경·Mutation 중복 정리와 Work 유형 정의·capability 통합을 마쳤다. Work codec·상세 조회·요청 멱등성, Mutation command/fingerprint·배치 조회·대사, 남은 HTTP DTO·Partner Q 경계는 전체 계획의 후속 작업으로 남는다.
+
+## 25. 실행 기록 — 18차 Work 결과 JSON·상세 조회
+
+2026-09-07, `feature/backend-refactoring`. 사용자 요청 묶음 **3번**을 진행했다.
+
+커밋: `4935926c refactor: isolate work result json and batch detail loading`.
+
+- 고정 Work 결과는 유형별 내부 값에서 기존 Map으로 변환한다. 기존 저장 키·생략 조건·null·숫자/날짜 타입과 결과 순서를 유지한다. 자유 기록형 결과는 그대로 보존한다.
+- 상세의 구형 JSON 해석, 필드 라벨·표시 조립, DB 조회를 분리했다. 기존 구현에서 먼저 고정한 16가지 응답 fixture로 구형 필드·수치 변환·fallback·보정 결과를 비교했다. 상세 서비스는 **408 → 89줄**이다.
+- 보정 작업과 효과는 기존 일괄 API로 읽는다. PostgreSQL HTTP 조회는 보정 0건에서 SQL 4회, 1·10·50건에서 SQL 5회다. 효과 누락·null과 중복 효과의 기존 처리도 유지한다.
+- 계보 조회의 숫자 ID 해석과 상세의 문자열 ID 호환 차이는 유지한다. 기존 품종·위치 참조와 저장된 과거 수량·상태의 의미를 새 정책으로 바꾸지 않는다.
+
+복잡성 점검 (`d99c6b1d` 대비): 운영 Java **575 → 578파일, 순증 97줄**, 테스트 Java **109 → 112파일, 순증 192줄**이다. 추가 운영 파일은 결과 값·codec·assembler 세 개이며 새 Spring service·registry·전달 계층은 없다. JSON fixture 증가는 운영 코드 증가와 구분한다. 파일/줄 수 감소를 목표로 한 변경으로 보고하지 않는다. 모듈 구현 의존 38쌍, Entity 예외 0쌍, writer inventory는 유지한다.
+
+검증: `./gradlew test workE2eTest --offline --no-daemon`에서 기본 **434건 중 391건 통과·기존 disabled 43건**, PostgreSQL **80건 전부 통과**. API 재생성은 이어진 19차와 함께 검증한다. Work 요청 멱등성·Legacy 제거는 포함하지 않는다.
+
+## 26. 실행 기록 — 19차 Farm 조회·입고·기준 정보
+
+2026-09-07~08, `feature/backend-refactoring`. 사용자 요청 묶음 **4번**을 진행했다.
+
+- 전체 구조·동·다이·구역 조회에서 lazy collection 순회 대신 root와 난 묶음·참조를 일괄 조회한다. 맵은 JPQL의 필요한 값만 읽고 전체 상세 DTO를 만들지 않는다. 정렬·수량 0 제외·품종 참조/직접 입력·년생 계산은 유지한다.
+- 입고 등록과 Work 기록 입력을 application 명령으로 옮겼다. 같은 입력을 복사하는 DTO를 추가하지 않고 기존 OpenAPI 이름·validation을 유지한다. 입고에서 생성하는 품종은 기존 품종 application의 발급·재사용 경로를 사용한다.
+- 입고 상태 검사와 실제/예상 수량 선택은 Entity로, 자동/명시 배치 범위 검증은 기존 배치 정책으로 모았다. Engine/Legacy 선택은 각 유스케이스에서 한 번만 한다. 생성 시점 스냅샷과 기존 취소 순서·트랜잭션·writer 위치는 유지한다.
+- 기존 `MAX(id) + 1` 코드 발급에서 병렬 품종·자재 생성이 같은 코드를 선택하는 실패를 실제 PostgreSQL에서 재현했다. V24의 독립 sequence로 원자 발급하고 기존 코드 형식·기존 데이터는 보존한다. 새 범용 코드 발급 service는 추가하지 않았다.
+- 기존 collection 일괄 조회·품종 페이지 조립·배치 프로필 순수 정책은 유지한다. 기존 호환 목록의 페이지/상한, 공통 시간 처리와 비활성 테스트 정리는 묶음 7에서 함께 처리한다. Mutation 이관·대사·명령 fingerprint의 잔여 확장 검토는 묶음 8, 운영 전환·Legacy 제거는 별도 후속에 남는다.
+
+목적별 커밋:
+
+- `d50ceddd fix: allocate unique farm reference codes`
+- `5711a0ff refactor: batch farm structure queries and project map data`
+- `83e1527b refactor: consolidate inbound commands and domain rules`
+
+복잡성 점검 (`4935926c` 대비): 운영 Java **578파일 유지, 순증 18줄**, 테스트 Java **112 → 114파일, 순증 255줄**이다. 입고 등록 service는 **329 → 252줄**, 포트 service는 **200 → 174줄**이다. 세 입력 타입은 기존 파일을 이동했으며 새 service·registry·공통 프레임워크는 없다. 모듈 내부 구현 의존은 **38 → 37쌍(HTTP DTO 35·Partner Q 2)**이고 Entity 예외 0쌍, writer inventory는 유지한다.
+
+**18~19차 합계:** 운영 Java **순증 115줄·3파일 증가**, 테스트 Java **순증 447줄·5파일 증가**. V24 SQL·H2 sequence 준비·JSON fixture는 이 Java 지표에 포함하지 않는다. 수치 감소로 포장하지 않고 JSON 해석·표시·조회와 입고 정책의 변경 위치를 모으는 데 필요한 증가로 기록한다.
+
+최종 검증:
+
+- `./gradlew test workE2eTest --offline --no-daemon`: 기본 **434건 중 391건 통과·기존 disabled 43건**, PostgreSQL **88건 전부 통과**, 실패 0건.
+- 다이 1·10·50개와 각 다이의 복수 구역에서 전체 구조·맵 SQL 3회, 다이·구역 목록 및 단건 SQL 2회를 검증했다. 맵의 난 묶음·품종 Entity 로딩은 0건이다. 수량 0 제외, 현재 품종 이름·색상, 직접 입력 품종, 기존 년생과 상세 응답의 동일성을 확인했다.
+- 실제 PostgreSQL 병렬 품종·자재 생성과 V23 데이터가 있는 독립 DB의 V24 업그레이드를 검증했다. 가져온 큰 숫자 코드·비표준 코드 보존, 기존 최댓값 이후 발급, rollback/삭제 후 번호 미재사용과 Flyway 재기동도 확인했다.
+- 입고의 정규화된 동일 품종 재사용·기존 메모 보존·Work 수량 스냅샷과 잘못된 배치의 품종/입고/난 묶음/Work 전체 rollback을 확인했다. 기존 입고 취소·포트·ACTIVE writer·보정·수량·판매·계보 회귀도 통과했다.
+- `python3 scripts/generate_openapi.py`: **136 operations·115 paths·228 schemas**, 전체 명세·slice 차이 없음. API 계약과 프론트 코드가 같아 생성 TypeScript 갱신·프론트 검증·브라우저 E2E는 실행하지 않았다. 임시 명세 서버 종료와 `git diff --check`를 확인했다.
+
+V24 운영 적용 순서는 [배포 문서](../07-deployment.md)에 반영했다. 운영 DB에는 적용하지 않았다. 요청한 묶음 3·4를 완료했으며 **5~8번과 별도 후속 2개**가 남는다.

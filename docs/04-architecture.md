@@ -109,7 +109,9 @@ demo
 - 배드 정밀 설정
 - 자리 이동
 - 입고 조회, 입고 명령, 포트 실행을 별도 application service로 분리한다.
-- 입고 작업 스냅샷과 메모 조립은 전용 factory가 담당한다.
+- 입고 등록은 application 명령을 직접 받고, 입고 작업 스냅샷과 메모 조립은 전용 factory가 Work application 명령으로 전달한다. 같은 필드를 복사하는 HTTP DTO를 추가하지 않는다.
+- 입고 시 품종 선택·재사용·신규 생성은 품종 application이 소유한다. 기존 속·품종명 정규화와 동일 품종 재사용을 유지하고, 입고·난 묶음·Work 기록은 최상위 입고 트랜잭션에서 함께 반영한다.
+- 입고의 수정·취소·삭제·포트 가능 조건과 수량 선택은 입고 Entity가, 자동·명시 배치 범위 검증은 기존 배치 정책이 소유한다.
 - 품종 목록의 난 묶음·최근 입고일·최근 작업일은 페이지 단위로 일괄 조회한다.
 - 난 묶음 계보는 `work` 엔티티를 직접 참조하지 않고 `workOperationId` 값으로 연결한다.
 - 난 묶음 취소·보정의 사용 여부 port는 Farm이 소유한다. Sales는 이 port를 구현하고, Farm adapter는 Work의 개수 조회를 Farm blocker로 변환한다. Work가 Farm에 의존하지 않는다. 차단 사유는 기존 입고→판매→작업 순서를 명시적으로 유지한다.
@@ -281,6 +283,7 @@ Persistence 조회 규칙:
 - Controller는 HTTP 변환과 validation 진입만 담당하고 application service가 유스케이스와 트랜잭션을 소유한다.
 - 수동 입금처럼 HTTP 입력과 유스케이스 입력의 의미·필드가 같으면 application 명령을 그대로 바인딩하고 표준 validation도 해당 명령에 둔다. 값만 복사하는 Request·변환 메서드는 두지 않는다. 기존 OpenAPI 이름은 명시적으로 유지하며, 입력 의미나 변환이 달라지는 경우에만 HTTP DTO를 분리한다.
 - 쓰기 유스케이스는 하나의 public application method를 원자 경계로 삼는다. 중간 service 호출이 별도 트랜잭션을 암묵적으로 만들거나 self invocation에 의존하지 않게 한다.
+- 품종·자재 코드는 각 저장소의 PostgreSQL sequence에서 원자적으로 발급한다. 엔티티 ID와 코드의 sequence는 분리하며, 입고 신규 품종도 같은 품종 발급 경로를 사용한다. 코드는 유일한 식별값이며 삭제·rollback에 따른 번호 공백을 허용한다.
 - PostgreSQL 엔티티 ID는 테이블별 sequence와 `allocationSize = 50`을 사용한다. Hibernate JDBC batch와 insert 정렬을 활성화하며, 대량 저장은 같은 트랜잭션에서 동일 엔티티를 연속 저장해 JDBC batch가 유지되게 한다.
 - Entity는 자기 상태의 불변식과 전이를 지키고 application service는 aggregate 조회, 순서 제어, 모듈 간 조율을 담당한다. 여러 Service에서 같은 상태 조건을 검사하면 Domain Policy 또는 상태 전이 메서드로 모은다.
 - 책임 분리가 기존 구현·중복 정책을 대체하는지 확인한다. 단일 호출을 전달하는 wrapper나 한 필드만 감싼 반환형은 별도 의미가 없으면 만들지 않는다. 같은 유스케이스의 private method로 충분하면 클래스를 추가하지 않으며, 계약 이식이 끝나면 이전 API를 함께 제거한다.
@@ -314,6 +317,7 @@ Persistence 조회 규칙:
 
 - root 목록과 collection을 한 쿼리에 억지로 합치지 않는다. 페이지 또는 제한된 root ID를 먼저 조회하고 연관 데이터를 `IN` 쿼리로 읽어 application 계층에서 조립한다.
 - 출하 선택지는 Auction이 최신 후보 ID를 페이지로 제공하고 Sales가 자기 전표에 연결된 ID를 제외한다. 미사용 200건을 채우거나 후보가 끝날 때까지 확인한 뒤 선택된 출하·lot만 일괄 조회한다. 다른 모듈의 Entity를 JPQL 하위 쿼리에 직접 넣지 않는다.
+- Farm 구조 조회는 동·다이·구역을 읽은 뒤 다이 ID로 난 묶음과 참조를 일괄 조회해 조립한다. 맵은 필요한 값만 JPQL projection으로 읽고 전체 난 묶음 상세 DTO나 Entity graph를 만들지 않는다. 저장소 projection은 Farm application 안에서 응답으로 변환하며 외부 계약으로 노출하지 않는다.
 - DTO mapper가 lazy association을 순회하지 않게 조회 범위를 명시한다. mapper 호출 전 필요한 연관 데이터가 이미 로딩됐는지 확인한다.
 - 경매 정산 페이지는 정산 root와 Partner application API의 일괄 이름 조회만 사용한다. 정산 행과 Auction 결과는 상세 조회에서만 조립한다. 같은 조회 조건의 전체 금액은 DB 집계로 구하고 페이지 크기나 호환 목록 상한을 적용하지 않는다. 호환 목록은 최신 500개의 root를 선택한 뒤 상세를 일괄 조회한다.
 - 입금 이벤트의 거래처 이름도 Partner application API로 일괄 조회한다. 정산 상세 행의 출하일·품종·등급은 Auction application의 결과 값으로 일괄 조립한다. 거래처 이름은 현재 기준 정보이며, 원장의 금액·입금자·날짜나 기존 정산 행의 보존된 값은 다시 계산하지 않는다.
@@ -480,6 +484,7 @@ cd backend
   지정한 경우에만 상한 초과로 실패한다.
 - 전후 비교가 필요하면 각 대상 커밋에서 `clean workE2eTest workBenchmark`를 실행하고 생성된
   `results.json`을 각각 `before.json`, `after.json`으로 별도 보관한다.
+- `FarmQueryPostgresE2ETest`는 다이 1·10·50개와 다이별 복수 구역에서 전체 구조·맵 SQL 3회, 다이·구역 목록 SQL 2회와 맵의 난 묶음·품종 Entity 로딩 0건을 검증한다. Work 상세는 보정 1·10·50건에서 SQL 5회로 고정한다.
 - `CoreQueryRegressionTest`는 기본 테스트에서 농장 viewport 3회, 경매 lot 페이지 5회 이내를 검증한다. 일반 판매 전표 상세는 서로 다른 난 묶음 배분 1·10·50개에서 SQL 5회로 고정되며, 배분·스냅샷·현재 Farm 값·거래처·서버 판정 액션을 일괄 조회한다.
 - 사용자 그룹 목록은 1·10·50개에서 SQL 3회, 난 묶음별 소속 그룹 조회는 5회 이내인지 검증한다. 보관·탈퇴 제외와 소속 순서도 함께 확인한다.
 - 기본 검증과 별도로 CI의 `backend-postgres` job이 Docker 사용 가능 여부와 `workE2eTest`를 실행한다. PostgreSQL 테스트를 실행하지 못한 경우 완료로 취급하지 않는다.
