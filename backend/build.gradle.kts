@@ -2,6 +2,7 @@ plugins {
 	java
 	id("org.springframework.boot") version "4.1.0"
 	id("io.spring.dependency-management") version "1.1.7"
+	id("io.spring.javaformat") version "0.0.48"
 }
 
 group = "com.greenhouse"
@@ -123,4 +124,12 @@ tasks.register<Test>("workBenchmark") {
 		providers.gradleProperty("workBenchmarkEnforce").orElse("false").get()
 	)
 	shouldRunAfter(tasks.named("workE2eTest"))
+}
+
+// Gradle 9 requires ordering when formatting and verification are requested together.
+tasks.withType<io.spring.javaformat.gradle.tasks.CheckFormat>().configureEach {
+	mustRunAfter(tasks.withType<io.spring.javaformat.gradle.tasks.Format>())
+}
+tasks.withType<JavaCompile>().configureEach {
+	mustRunAfter(tasks.withType<io.spring.javaformat.gradle.tasks.Format>())
 }

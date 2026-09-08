@@ -38,7 +38,7 @@ jobs:
           distribution: temurin
           java-version: 21
           cache: gradle
-      - run: ./gradlew test --no-daemon
+      - run: ./gradlew check bootJar --no-daemon
 
   backend-postgres:
     runs-on: ubuntu-latest
@@ -54,7 +54,7 @@ jobs:
           cache: gradle
       - name: Require Docker for PostgreSQL tests
         run: docker info
-      - run: ./gradlew workE2eTest --no-daemon
+      - run: ./gradlew workE2eTest workBenchmark -PworkBenchmarkEnforce=true --no-daemon
 
   api-contract:
     runs-on: ubuntu-latest
