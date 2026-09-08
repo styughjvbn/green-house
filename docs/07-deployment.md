@@ -437,9 +437,8 @@ WHERE (mutation_id IS NULL) <> (correlation_id IS NULL);
 두 조회 결과는 비어 있어야 한다. 기록 전용 Work 효과의 두 값이 모두 `NULL`인 것은
 정상이다. 결과가 있거나 대사 결과가 `ready=false`이면 `issues.code`와 `referenceId`로
 원인을 확인하고 해당 테스트 DB를 보존한다. manifest 교체, ledger 직접 수정,
-`ACTIVE` 전환으로 문제를 덮지 않는다. smoke test 중에도 coverage는 `PREPARING`으로
-유지한다. 이 단계가 통과하면 운영 primary가 아닌 폐기 가능한 DB 사본에서 실제
-전환 절차를 한 번 더 rehearsal한다.
+`ACTIVE` 전환으로 문제를 덮지 않는다. 현재 Engine 전용 HTTP 서버의 smoke test는 다음 ACTIVE 전환을 마친 폐기 가능한
+DB 사본에서 수행한다. PREPARING에서는 유지보수 CLI로 적재·대사만 진행한다.
 
 #### ACTIVE 전환 rehearsal
 
@@ -466,7 +465,7 @@ DATABASE_PASSWORD=greenhouse_rehearsal_test \
 Work/Sales 연결 SQL을 다시 수행하며 성공 기준은 다음과 같다.
 
 - reconciliation의 `stage=ACTIVE`, `ready=true`, `issues=[]`
-- ENGINE 시작 성공과 `LEGACY` 또는 최소 version 미만 인스턴스의 startup guard 실패
+- Engine 시작 성공과 원장 미완성·최소 version 미만 인스턴스의 startup guard 실패
 - Mutation context 없는 `orchid_groups` 직접 INSERT·UPDATE와 모든 DELETE의 DB fence 차단
 - 전환 후 생성·수정과 Work·Sales 효과의 새 revision 및 Mutation 연결 정상
 
@@ -487,7 +486,7 @@ NAMESPACE=green-house
 DEPLOYMENT=green-house-backend
 CUTOVER_KEY='<APPROVED_CUTOVER_UUID>'
 EFFECTIVE_BUSINESS_DATE='<YYYY-MM-DD>'
-WRITER_VERSION='1.1.0'
+WRITER_VERSION='2.0.0'
 RELEASE_IMAGE='ghcr.io/styughjvbn/green-house-backend:sha-<PUBLISHED_COMMIT>'
 export DATABASE_URL='jdbc:postgresql://<PRODUCTION_DB_HOST>:5432/greenhouse'
 export DATABASE_USERNAME='<PRODUCTION_DB_WRITER>'
@@ -507,10 +506,13 @@ kubectl -n "${NAMESPACE}" get configmap green-house-config \
   -o jsonpath='{.data.ORCHID_LEDGER_WRITER_VERSION}{"\n"}'
 ```
 
-전환 전 실행 중인 backend도 위 `RELEASE_IMAGE`여야 하며, `LEGACY`, writer version
-`1.1.0`으로 먼저 배포해 기존 기능을 확인한 상태여야 한다. 운영 DB에서
-`orchidLedgerReconcile`을 read-only로 실행해 `stage=PRE_BASELINE`, `ready=true`,
-`issues=[]`를 확인한다.
+새 이미지는 준비만 하고 아직 업무 서버로 기동하지 않는다. Engine 전용 서버는
+원장 없는 난 묶음이나 PREPARING coverage가 있으면 기동을 거부한다. 기존 서버를
+중지한 뒤 백업·스키마 적용·이력 적재·ACTIVE를 완료하고 새 이미지를 배포한다.
+
+아래 명령은 운영 DB에 접속 가능한 관리 호스트에서 실행한다. JDBC URL과 `PGHOST`,
+`PGPORT`, `PGDATABASE`, `PGUSER`는 반드시 같은 운영 DB를 가리켜야 한다. 예시의
+placeholder를 실제 값으로 바꾸고 명령 실패 시 다음 단계로 진행하지 않는다.
 
 유지보수 시작을 공지하고 backend를 완전히 종료한다. state-chain import 이후에는 Legacy를 다시
 기동하지 않는다.
@@ -532,9 +534,43 @@ WHERE datname = current_database()
   AND xact_start IS NOT NULL;
 ```
 
-이 상태에서 최종 운영 백업을 만들고 `pg_restore --list`로 읽을 수 있는지 확인한 뒤
-SHA-256을 기록한다. 최종 백업으로 profiler schema 1 manifest를 다시 생성·승인하고
-정규화한다. 더 이전 백업의 tracked manifest를 그대로 사용하지 않는다.
+이 상태에서 전환 직전의 DB 전체를 custom dump로 보존한다. PostgreSQL 18을 읽을 수
+있는 클라이언트를 사용한다. 다음 명령은 저장소 루트에서 실행한다.
+
+```bash
+export PGHOST='<PRODUCTION_DB_HOST>' PGPORT=5432 PGDATABASE=greenhouse
+export PGUSER="${DATABASE_USERNAME}"
+export PGPASSWORD="${DATABASE_PASSWORD}"
+BACKUP_DIR="$(pwd)/temp/cutover-production"
+mkdir -p "${BACKUP_DIR}"
+FINAL_BACKUP="${BACKUP_DIR}/before-engine-$(date -u +%Y%m%dT%H%M%SZ).dump"
+pg_dump --format=custom --file="${FINAL_BACKUP}"
+pg_restore --list "${FINAL_BACKUP}" > "${FINAL_BACKUP}.list"
+sha256sum "${FINAL_BACKUP}" > "${FINAL_BACKUP}.sha256"
+```
+
+명령의 종료 코드가 모두 0이고 dump가 정상적으로 읽혀야 한다. 이 파일은 전환 실패
+시점의 복구 지점이므로 운영 DB와 다른 저장 위치에도 보존한다. 파일 checksum은
+백업 파일 무결성 확인용이며, 별도로 생성한 두 dump의 논리 데이터 동일성을 뜻하지 않는다.
+
+2026-08-26 이후 업무 데이터 변경이 없음을 확인했다면 검증된 기존 manifest를 후보로
+사용할 수 있다. 아래 PLAN에서 현재 그룹 ID·최종 상태와 Work/Lineage 근거가 일치하고
+전체 대사를 통과해야 재사용한다. 불일치가 있으면 적재하지 않고 최종 백업을 기준으로
+profiler artifact를 재생성·검토한다. normalizer는 과거 이력을 새로 추론하는 도구가 아니다.
+
+이관 CLI는 Flyway를 자동 실행하지 않는다. 먼저 같은 release checkout의 백엔드를
+**HTTP 없이** 실행해 미적용 스키마를 반영한다. V20이면 V21~V26이 적용되며, 이미
+적용한 버전은 건너뛴다. 업무 서버의 startup guard는 계속 활성화하고, 아래 유지보수
+프로세스에서만 비활성화한다.
+
+```bash
+(cd backend && ./gradlew bootRun --no-daemon --args='--spring.main.web-application-type=none --app.orchid-ledger.startup-guard-enabled=false --app.settlement.rebuild-on-startup=false')
+(cd backend && ./gradlew orchidLedgerReconcile --args='--debug=false --logging.level.org.hibernate.SQL=OFF')
+```
+
+스키마 검증이 성공하고 대사 결과가 `stage=PRE_BASELINE`, `ready=true`, `issues=[]`여야
+한다. 이미 PREPARING 또는 ACTIVE라면 신규 전환으로 취급하지 말고 기존 cutover key와
+manifest로 재개·검증한다.
 
 같은 release checkout에서 plan, import, 재실행과 `ACTIVE`를 순서대로 수행한다. 전체
 과정에서 backend replicas는 계속 0이어야 한다.
@@ -580,8 +616,12 @@ python3 ../scripts/data-audit/normalize_orchid_state_chain_manifest.py \
 ```
 
 import와 VERIFY 결과는 `stage=BASELINE_PREPARING`, 활성화 결과는 `stage=ACTIVE`이고 모두
-`ready=true`, `issues=[]`여야 한다. 그 뒤에만 `k8s/base/configmap.yaml`을 `ENGINE`과
-`1.1.0`으로, backend deployment를 검증한 `RELEASE_IMAGE`로 갱신하여 적용한다.
+`ready=true`, `issues=[]`여야 한다. 0826과 동일한 데이터라면 Mutation 314, Entry 348,
+현존 그룹 269, 삭제 tombstone 그룹 6, 재실행 신규 0·replay 314가 검증 기준이다.
+
+배포 직전에 `orchidLedgerReconcile`을 한 번 더 실행해 `stage=ACTIVE`, `ready=true`,
+`issues=[]`를 확인한다. 그 뒤에만 `k8s/base/configmap.yaml`의 writer version을 `2.0.0`으로,
+backend deployment를 검증한 `RELEASE_IMAGE`로 갱신하여 적용한다. writer mode 설정은 없다.
 ConfigMap만 변경하면 기존 Pod 환경 변수는 갱신되지 않으므로 새 Pod 기동을 반드시
 확인한다. base manifest의 `replicas: 1` 적용이 backend를 다시 기동한다.
 
