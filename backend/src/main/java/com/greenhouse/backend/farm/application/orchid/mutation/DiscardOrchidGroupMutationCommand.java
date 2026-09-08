@@ -8,7 +8,7 @@ public record DiscardOrchidGroupMutationCommand(
 		Long orchidGroupId,
 		Integer quantity,
 		LocalDate effectiveBusinessDate,
-		String reason) {
+		String reason) implements OrchidGroupMutationCommand {
 
 	public DiscardOrchidGroupMutationCommand {
 		if (source == null || orchidGroupId == null || effectiveBusinessDate == null) {

@@ -10,7 +10,7 @@ public record CreateOrchidGroupMutationCommand(
 		Long bedZoneId,
 		OrchidGroupMutationDetails details,
 		LocalDate effectiveBusinessDate,
-		String reason) {
+		String reason) implements OrchidGroupMutationCommand {
 
 	public CreateOrchidGroupMutationCommand {
 		if (source == null || bedZoneId == null || details == null || effectiveBusinessDate == null) {

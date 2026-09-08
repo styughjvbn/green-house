@@ -12,7 +12,7 @@ public record CorrectOrchidGroupsMutationCommand(
 		List<CorrectOrchidGroupMutationItem> items,
 		RelatedOrchidGroupMutations correctedMutations,
 		LocalDate effectiveBusinessDate,
-		String reason) {
+		String reason) implements OrchidGroupMutationCommand {
 
 	public CorrectOrchidGroupsMutationCommand {
 		if (source == null || correctedMutations == null || effectiveBusinessDate == null) {

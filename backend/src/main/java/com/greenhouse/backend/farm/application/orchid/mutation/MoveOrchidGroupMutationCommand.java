@@ -14,7 +14,7 @@ public record MoveOrchidGroupMutationCommand(
 		BigDecimal startPosition,
 		BigDecimal endPosition,
 		LocalDate effectiveBusinessDate,
-		String reason) {
+		String reason) implements OrchidGroupMutationCommand {
 
 	public MoveOrchidGroupMutationCommand {
 		if (source == null || orchidGroupId == null || toBedZoneId == null || effectiveBusinessDate == null) {

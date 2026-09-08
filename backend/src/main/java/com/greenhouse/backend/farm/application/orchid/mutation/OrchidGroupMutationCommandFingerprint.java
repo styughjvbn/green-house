@@ -16,7 +16,7 @@ public class OrchidGroupMutationCommandFingerprint {
 		this.fingerprint = fingerprint;
 	}
 
-	public String calculate(Object command) {
+	public String calculate(OrchidGroupMutationCommand command) {
 		return switch (command) {
 			case CreateOrchidGroupMutationCommand value -> fingerprint.calculate(new CreatePayload(
 					OrchidGroupMutationType.CREATE,
@@ -97,8 +97,6 @@ public class OrchidGroupMutationCommandFingerprint {
 					value.correctedMutations(),
 					value.effectiveBusinessDate(),
 					value.reason()));
-			default -> throw new IllegalArgumentException(
-					"지원하지 않는 OrchidGroup Mutation command입니다: " + command.getClass().getName());
 		};
 	}
 

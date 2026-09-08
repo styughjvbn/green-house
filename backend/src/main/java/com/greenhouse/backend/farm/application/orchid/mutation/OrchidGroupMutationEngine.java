@@ -438,7 +438,7 @@ public class OrchidGroupMutationEngine {
 	}
 
 	private OrchidGroupMutationResult applyQuantityMutation(
-			Object command,
+			OrchidGroupMutationCommand command,
 			OrchidGroupMutationType mutationType,
 			OrchidGroupMutationSource source,
 			List<OrchidGroupQuantityMutationItem> items,

@@ -10,7 +10,7 @@ public record UpdateOrchidGroupMutationCommand(
 		Long orchidGroupId,
 		OrchidGroupMutationDetails details,
 		LocalDate effectiveBusinessDate,
-		String reason) {
+		String reason) implements OrchidGroupMutationCommand {
 
 	public UpdateOrchidGroupMutationCommand {
 		if (source == null || orchidGroupId == null || details == null || effectiveBusinessDate == null) {

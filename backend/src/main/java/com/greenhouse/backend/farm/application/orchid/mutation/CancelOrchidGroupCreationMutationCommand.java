@@ -9,7 +9,7 @@ public record CancelOrchidGroupCreationMutationCommand(
 		OrchidGroupMutationSource source,
 		Long orchidGroupId,
 		LocalDate effectiveBusinessDate,
-		String reason) {
+		String reason) implements OrchidGroupMutationCommand {
 
 	public CancelOrchidGroupCreationMutationCommand {
 		if (source == null || orchidGroupId == null || effectiveBusinessDate == null) {

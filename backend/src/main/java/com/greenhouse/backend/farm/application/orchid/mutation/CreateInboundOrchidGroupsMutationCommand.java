@@ -11,7 +11,7 @@ public record CreateInboundOrchidGroupsMutationCommand(
 		Long inboundRecordId,
 		List<CreateOrchidGroupMutationItem> groups,
 		LocalDate effectiveBusinessDate,
-		String reason) {
+		String reason) implements OrchidGroupMutationCommand {
 
 	public CreateInboundOrchidGroupsMutationCommand {
 		if (source == null || inboundRecordId == null || effectiveBusinessDate == null) {

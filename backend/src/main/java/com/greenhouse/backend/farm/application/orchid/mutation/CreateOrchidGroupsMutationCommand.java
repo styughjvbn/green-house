@@ -10,7 +10,7 @@ public record CreateOrchidGroupsMutationCommand(
 		OrchidGroupMutationSource source,
 		List<CreateOrchidGroupMutationItem> groups,
 		LocalDate effectiveBusinessDate,
-		String reason) {
+		String reason) implements OrchidGroupMutationCommand {
 
 	public CreateOrchidGroupsMutationCommand {
 		if (source == null || effectiveBusinessDate == null) {

@@ -12,7 +12,7 @@ public record RestoreOutboundOrchidGroupsMutationCommand(
 		List<OrchidGroupQuantityMutationItem> items,
 		RelatedOrchidGroupMutations compensatedMutations,
 		LocalDate effectiveBusinessDate,
-		String reason) {
+		String reason) implements OrchidGroupMutationCommand {
 
 	public RestoreOutboundOrchidGroupsMutationCommand {
 		if (source == null || compensatedMutations == null || effectiveBusinessDate == null) {

@@ -14,7 +14,7 @@ public record TransformOrchidGroupsMutationCommand(
 		List<TransformOrchidGroupMutationResult> results,
 		LocalDate effectiveBusinessDate,
 		String reason,
-		Set<Long> placementExclusionOrchidGroupIds) {
+		Set<Long> placementExclusionOrchidGroupIds) implements OrchidGroupMutationCommand {
 
 	public TransformOrchidGroupsMutationCommand(
 			OrchidGroupMutationSource source,

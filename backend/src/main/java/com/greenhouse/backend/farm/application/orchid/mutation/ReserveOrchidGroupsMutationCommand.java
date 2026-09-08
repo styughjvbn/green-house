@@ -11,7 +11,7 @@ public record ReserveOrchidGroupsMutationCommand(
 		OrchidGroupMutationSource source,
 		List<OrchidGroupQuantityMutationItem> items,
 		LocalDate effectiveBusinessDate,
-		String reason) {
+		String reason) implements OrchidGroupMutationCommand {
 
 	public ReserveOrchidGroupsMutationCommand {
 		if (source == null || effectiveBusinessDate == null) {
