@@ -7,7 +7,7 @@ import com.greenhouse.backend.audit.domain.AuditAction;
 import org.junit.jupiter.api.Test;
 
 class OrchidGroupAuditSupportTest {
-	private final OrchidGroupAuditSupport support = new OrchidGroupAuditSupport(null, null);
+	private final OrchidGroupAuditSupport support = new OrchidGroupAuditSupport(null);
 
 	@Test
 	void identicalSnapshotsHaveNoChanges() {

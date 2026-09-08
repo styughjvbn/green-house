@@ -1,9 +1,8 @@
 package com.greenhouse.backend.farm.application.orchid;
 
-import com.greenhouse.backend.audit.domain.AuditAction;
 import com.greenhouse.backend.audit.application.AuditEvent;
-import com.greenhouse.backend.audit.application.AuditRecorder;
-import com.greenhouse.backend.audit.application.AuditRequestContext;
+import com.greenhouse.backend.audit.application.AuditEventWriter;
+import com.greenhouse.backend.audit.domain.AuditAction;
 import com.greenhouse.backend.audit.domain.AuditSource;
 import com.greenhouse.backend.farm.domain.orchid.OrchidGroup;
 import com.greenhouse.backend.farm.domain.orchid.OrchidGroupStatusPolicy;
@@ -19,8 +18,7 @@ import org.springframework.stereotype.Component;
 public class OrchidGroupAuditSupport {
 	private static final List<String> FIELDS = List.of("varietyId", "ageYear", "potSize", "quantity",
 			"houseId", "physicalBedId", "zoneId", "startPosition", "endPosition", "status");
-	private final AuditRecorder auditRecorder;
-	private final AuditRequestContext requestContext;
+	private final AuditEventWriter auditWriter;
 
 	public OrchidGroupAuditSnapshot snapshot(OrchidGroup group) {
 		var zone = group.getBedZone();
@@ -57,11 +55,9 @@ public class OrchidGroupAuditSupport {
 		List<String> changedFields = detectChanges(before, after);
 		if (changedFields.isEmpty()) return null;
 		var location = after != null ? after : before;
-		var identity = requestContext.current();
-		return auditRecorder.record(new AuditEvent(identity.actorId(), identity.sessionId(), identity.clientInstanceId(),
-				identity.requestId(), action, source, "ORCHID_GROUP", entityId, location.houseId(),
-				location.physicalBedId(), location.zoneId(), location.varietyId(), changedFields, before, after,
-				contextData == null ? Map.of() : contextData));
+		return auditWriter.recordChanges(action, source, new AuditEvent.Target("ORCHID_GROUP", entityId,
+				location.houseId(), location.physicalBedId(), location.zoneId(), location.varietyId()),
+				changedFields, before, after, contextData);
 	}
 
 	private Object[] values(OrchidGroupAuditSnapshot value) {

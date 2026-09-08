@@ -13,10 +13,10 @@ import org.springframework.web.context.request.ServletRequestAttributes;
 @Component
 public class AuditRequestContext {
 
-	public AuditIdentity current() {
+	public AuditEvent.Identity current() {
 		var attributes = RequestContextHolder.getRequestAttributes();
 		if (!(attributes instanceof ServletRequestAttributes servletAttributes)) {
-			return new AuditIdentity(null, null, null, MDC.get(RequestIdFilter.MDC_KEY));
+			return new AuditEvent.Identity(null, null, null, MDC.get(RequestIdFilter.MDC_KEY));
 		}
 		HttpServletRequest request = servletAttributes.getRequest();
 		HttpSession session = request.getSession(false);
@@ -24,7 +24,7 @@ public class AuditRequestContext {
 		String actorId = authentication != null && authentication.isAuthenticated()
 				&& !(authentication instanceof AnonymousAuthenticationToken)
 				? authentication.getName() : null;
-		return new AuditIdentity(
+		return new AuditEvent.Identity(
 				actorId,
 				session == null ? null : session.getId(),
 				normalize(request.getHeader("X-Client-Instance-Id"), 100),
@@ -37,6 +37,4 @@ public class AuditRequestContext {
 		return trimmed.length() <= maxLength ? trimmed : trimmed.substring(0, maxLength);
 	}
 
-	public record AuditIdentity(String actorId, String sessionId, String clientInstanceId, String requestId) {
-	}
 }

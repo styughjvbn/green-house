@@ -1,5 +1,6 @@
 package com.greenhouse.backend.farm.application.structure;
 
+import com.greenhouse.backend.audit.application.AuditEvent;
 import com.greenhouse.backend.audit.application.AuditEventWriter;
 import com.greenhouse.backend.audit.domain.AuditAction;
 import com.greenhouse.backend.audit.domain.AuditSource;
@@ -40,7 +41,7 @@ public class BedPlacementAuditSupport {
 
 	public Long record(BedZone zone, Map<String, Object> before, Map<String, Object> after) {
 		var bed = zone.getPhysicalBed();
-		return auditWriter.record(AuditAction.UPDATED, AuditSource.FARM_STRUCTURE_MANAGEMENT, "BED_ZONE",
-				zone.getId(), bed.getHouse().getId(), bed.getId(), zone.getId(), null, before, after, Map.of());
+		return auditWriter.record(AuditAction.UPDATED, AuditSource.FARM_STRUCTURE_MANAGEMENT, new AuditEvent.Target("BED_ZONE",
+				zone.getId(), bed.getHouse().getId(), bed.getId(), zone.getId(), null), before, after, Map.of());
 	}
 }

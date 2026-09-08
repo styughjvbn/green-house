@@ -1,5 +1,6 @@
 package com.greenhouse.backend.farm.application.inbound;
 
+import com.greenhouse.backend.audit.application.AuditEvent;
 import com.greenhouse.backend.audit.application.AuditEventWriter;
 import com.greenhouse.backend.audit.domain.AuditAction;
 import com.greenhouse.backend.audit.domain.AuditSource;
@@ -45,7 +46,7 @@ public class InboundRecordAuditSupport {
 		Long bedId = record.getBedZone() == null ? null : record.getBedZone().getPhysicalBed().getId();
 		Long houseId = record.getBedZone() == null ? null
 				: record.getBedZone().getPhysicalBed().getHouse().getId();
-		return auditWriter.record(action, AuditSource.INBOUND_MANAGEMENT, "INBOUND_RECORD", record.getId(),
-				houseId, bedId, zoneId, record.getVariety().getId(), before, after, Map.of());
+		return auditWriter.record(action, AuditSource.INBOUND_MANAGEMENT, new AuditEvent.Target("INBOUND_RECORD", record.getId(),
+				houseId, bedId, zoneId, record.getVariety().getId()), before, after, Map.of());
 	}
 }

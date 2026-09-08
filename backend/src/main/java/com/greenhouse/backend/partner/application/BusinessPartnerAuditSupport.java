@@ -1,5 +1,6 @@
 package com.greenhouse.backend.partner.application;
 
+import com.greenhouse.backend.audit.application.AuditEvent;
 import com.greenhouse.backend.audit.application.AuditEventWriter;
 import com.greenhouse.backend.audit.domain.AuditAction;
 import com.greenhouse.backend.audit.domain.AuditSource;
@@ -37,8 +38,8 @@ public class BusinessPartnerAuditSupport {
 		List<String> redactedChanges = changedFields.stream().filter(REDACTED_FIELDS::contains).toList();
 		var context = new LinkedHashMap<String, Object>();
 		context.put("redactedFields", redactedChanges);
-		auditWriter.recordWithChangedFields(action, AuditSource.PARTNER_MANAGEMENT,
-				"BUSINESS_PARTNER", partner.getId(), changedFields,
+		auditWriter.recordChanges(action, AuditSource.PARTNER_MANAGEMENT,
+				new AuditEvent.Target("BUSINESS_PARTNER", partner.getId()), changedFields,
 				before == null ? Map.of() : safeData(before), safeData(after), context);
 	}
 
