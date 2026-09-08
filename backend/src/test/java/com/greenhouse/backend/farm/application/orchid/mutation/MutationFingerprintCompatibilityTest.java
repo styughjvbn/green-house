@@ -17,7 +17,7 @@ import org.junit.jupiter.api.Test;
 class MutationFingerprintCompatibilityTest {
 
 	@Test
-	void keepsAllPersistedCommandFingerprints() throws Exception {
+	void keepsStableCommandFingerprints() throws Exception {
 		var source = new OrchidGroupMutationSource(OrchidGroupMutationSourceDomain.WORK, "TEST", "12", "EXECUTE:12",
 				UUID.fromString("00000000-0000-0000-0000-000000000001"));
 		var date = LocalDate.of(2026, 9, 8);
@@ -49,15 +49,13 @@ class MutationFingerprintCompatibilityTest {
 		var calculator = new OrchidGroupMutationCommandFingerprint(new OrchidGroupMutationFingerprint());
 		var hashes = new java.util.TreeMap<String, String>();
 		commands.forEach(command -> hashes.put(command.getClass().getSimpleName(), calculator.calculate(command)));
+		assertThat(hashes.get("TransformOrchidGroupsMutationCommand"))
+			.isEqualTo("d0b0ff8022e25df4b57b63da968e8f922e0d52483529e42902579f72fa72c654");
 		var mapper = JsonMapper.builder().findAndAddModules().build();
 		try (var input = getClass().getResourceAsStream("/farm/mutation-fingerprints.json")) {
 			Map<String, List<String>> existingHashes = mapper.readValue(input, new TypeReference<>() {
 			});
 			assertThat(hashes).containsOnlyKeys(existingHashes.keySet());
-			// Existing Transform payloads serialize Set iteration order. Keep both
-			// observed legacy
-			// encodings until versioned fingerprint migration can normalize existing
-			// stored values.
 			hashes.forEach((command, hash) -> assertThat(hash).as(command).isIn(existingHashes.get(command)));
 		}
 		assertThat(commands.stream().map(Object::getClass).collect(java.util.stream.Collectors.toSet()))

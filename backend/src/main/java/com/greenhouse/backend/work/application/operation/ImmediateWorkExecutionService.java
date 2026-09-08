@@ -49,13 +49,38 @@ public class ImmediateWorkExecutionService {
 
 	private final WorkOperationSupport support;
 
+	private final WorkCommandReceipts receipts;
+
 	public WorkOperationView executeForTarget(String requestKey, String workTypeCode, String title, LocalDate workDate,
 			String worker, String memo, Long orchidGroupId, Map<String, Object> details, Object payload) {
+		String key = WorkCommandReceipts.normalizeKey(requestKey);
+		String actor = support.actor(worker);
+		var command = new ImmediateCommand(workTypeCode, title, workDate, actor, memo, orchidGroupId, details, payload);
+		var ids = receipts.execute("IMMEDIATE", key, command, () -> List
+			.of(executeNewForTarget(key, workTypeCode, title, workDate, actor, memo, orchidGroupId, details, payload)));
+		return queryService.get(ids.getFirst());
+	}
+
+	public WorkOperationView execute(String requestKey, String workTypeCode, String title, LocalDate workDate,
+			String worker, String memo, Map<String, Object> details, Object payload) {
+		String key = WorkCommandReceipts.normalizeKey(requestKey);
+		String actor = support.actor(worker);
+		var command = new ImmediateCommand(workTypeCode, title, workDate, actor, memo, null, details, payload);
+		var ids = receipts.execute("IMMEDIATE", key, command,
+				() -> List.of(executeNew(key, workTypeCode, title, workDate, actor, memo, details, payload)));
+		return queryService.get(ids.getFirst());
+	}
+
+	private record ImmediateCommand(String workTypeCode, String title, LocalDate workDate, String worker, String memo,
+			Long orchidGroupId, Map<String, Object> details, Object payload) {
+	}
+
+	private Long executeNewForTarget(String requestKey, String workTypeCode, String title, LocalDate workDate,
+			String worker, String memo, Long orchidGroupId, Map<String, Object> details, Object payload) {
 		worker = support.actor(worker);
-		var existing = operationRepository.findByRequestKey(requestKey);
-		if (existing.isPresent()) {
-			validateRequestKeyWorkType(existing.get(), workTypeCode);
-			return queryService.get(existing.get().getId());
+		if (operationRepository.findByRequestKey(requestKey).isPresent()) {
+			throw new com.greenhouse.backend.common.exception.ConflictException("IDEMPOTENCY_REPLAY_UNAVAILABLE",
+					"과거 요청 원문이 없어 재실행 내용을 확인할 수 없습니다. 기존 작업을 조회해 주세요.");
 		}
 
 		ResolvedWorkTarget resolved = workTargetResolver.getCurrent(orchidGroupId);
@@ -73,16 +98,15 @@ public class ImmediateWorkExecutionService {
 				new WorkEffectCommand(executedAt, worker, details, payload));
 		execution.completeWithEffect(executedAt, worker, result.resultDetails());
 		operation.complete(executedAt);
-		return queryService.get(operation.getId());
+		return operation.getId();
 	}
 
-	public WorkOperationView execute(String requestKey, String workTypeCode, String title, LocalDate workDate,
-			String worker, String memo, Map<String, Object> details, Object payload) {
+	private Long executeNew(String requestKey, String workTypeCode, String title, LocalDate workDate, String worker,
+			String memo, Map<String, Object> details, Object payload) {
 		worker = support.actor(worker);
-		var existing = operationRepository.findByRequestKey(requestKey);
-		if (existing.isPresent()) {
-			validateRequestKeyWorkType(existing.get(), workTypeCode);
-			return queryService.get(existing.get().getId());
+		if (operationRepository.findByRequestKey(requestKey).isPresent()) {
+			throw new com.greenhouse.backend.common.exception.ConflictException("IDEMPOTENCY_REPLAY_UNAVAILABLE",
+					"과거 요청 원문이 없어 재실행 내용을 확인할 수 없습니다. 기존 작업을 조회해 주세요.");
 		}
 
 		WorkOperation operation = new WorkOperation(workTypeService.getByCode(workTypeCode), title, workDate, workDate,
@@ -93,7 +117,7 @@ public class ImmediateWorkExecutionService {
 		operation.start(executedAt);
 		workEffectProcessor.apply(operation, null, new WorkEffectCommand(executedAt, worker, details, payload));
 		operation.complete(executedAt);
-		return queryService.get(operation.getId());
+		return operation.getId();
 	}
 
 	@Transactional(readOnly = true)
@@ -137,12 +161,6 @@ public class ImmediateWorkExecutionService {
 			.orElseThrow(() -> new NotFoundException("작업을 찾을 수 없습니다."));
 		if (!workTypeCode.equals(operation.getWorkType().getCode())) {
 			throw new IllegalArgumentException(message);
-		}
-	}
-
-	private void validateRequestKeyWorkType(WorkOperation operation, String workTypeCode) {
-		if (!operation.getWorkType().getCode().equals(workTypeCode)) {
-			throw new IllegalArgumentException("요청 식별자가 다른 작업 유형에서 이미 사용되었습니다.");
 		}
 	}
 

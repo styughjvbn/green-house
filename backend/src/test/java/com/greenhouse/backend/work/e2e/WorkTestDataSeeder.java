@@ -24,6 +24,7 @@ class WorkTestDataSeeder {
 	void reset() {
 		jdbcTemplate.execute("""
 				TRUNCATE TABLE
+				  work_command_receipts,
 				  orchid_group_mutation_relations,
 				  orchid_group_mutation_entries,
 				  orchid_group_mutations,

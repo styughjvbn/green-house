@@ -1,8 +1,10 @@
 package com.greenhouse.backend.work.application.operation;
 
+import com.greenhouse.backend.common.exception.ConflictException;
 import com.greenhouse.backend.common.exception.NotFoundException;
 import com.greenhouse.backend.work.application.effect.WorkEffectCommand;
 import com.greenhouse.backend.work.application.effect.WorkEffectProcessor;
+import com.greenhouse.backend.work.application.effect.WorkEffectStore;
 import com.greenhouse.backend.work.application.operation.WorkOperationView;
 import com.greenhouse.backend.work.application.target.InboundPottingPlanGateway;
 import com.greenhouse.backend.work.application.target.InboundPottingPlanTarget;
@@ -14,6 +16,7 @@ import com.greenhouse.backend.work.domain.target.WorkTargetExecution;
 import com.greenhouse.backend.work.domain.target.WorkTargetExecutionStatus;
 import com.greenhouse.backend.work.domain.target.WorkTargetReferenceType;
 import com.greenhouse.backend.work.dto.target.WorkTargetExecutionRequest;
+import com.greenhouse.backend.work.repository.WorkAppliedEffectRepository;
 import com.greenhouse.backend.work.repository.WorkOperationRepository;
 import com.greenhouse.backend.work.repository.WorkTargetExecutionRepository;
 import java.time.LocalDate;
@@ -35,6 +38,10 @@ public class WorkOperationProgressService {
 	private final WorkTargetExecutionRepository executionRepository;
 
 	private final WorkEffectProcessor workEffectProcessor;
+
+	private final WorkEffectStore effectStore;
+
+	private final WorkAppliedEffectRepository appliedEffectRepository;
 
 	private final InboundPottingPlanGateway inboundPottingPlanGateway;
 
@@ -94,6 +101,14 @@ public class WorkOperationProgressService {
 			String executionKey) {
 		WorkTargetExecution execution = findExecutionForUpdate(operationId, targetId);
 		if (execution.isEffectApplied()) {
+			String effectKey = executionKey == null ? "TARGET:" + targetId : "POTTING:" + executionKey;
+			var existing = appliedEffectRepository.findByWorkOperationIdAndEffectKey(operationId, effectKey)
+				.orElseThrow(
+						() -> new ConflictException("IDEMPOTENCY_REPLAY_UNAVAILABLE", "완료된 대상은 원래 실행 API로 재요청해야 합니다."));
+			var completedAt = request.completedDate() == null ? existing.getAppliedAt()
+					: support.completionTime(request.completedDate());
+			effectStore.validateReplay(existing,
+					new WorkEffectCommand(completedAt, support.actor(request.worker()), request.resultDetails(), null));
 			return queryService.get(operationId);
 		}
 		WorkOperation operation = execution.getTarget().getWorkOperation();

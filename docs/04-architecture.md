@@ -164,7 +164,7 @@ application|domain|repository|controller|dto/
 - 분갈이·분주·합식은 공통 구조 변경 실행기와 작업별 Strategy를 사용한다. 기존 분갈이·분주 단일 대상 요청도 변환기를 거쳐 같은 실행 코어로 위임하고, 기존 합식 완료 API만 호환 경로로 남아 있다. 난 묶음 저장소가 필요한 Strategy 구현은 `farm` 모듈에 둔다.
 - 효과 실행과 효과 감사 저장을 분리하고 모든 신규 효과는 공통 저장 컴포넌트를 사용한다. 구조 변경 실행의 `WorkAppliedEffect`는 원본 `SOURCE`와 결과 `RESULT`를 연결하는 계보 노드다.
 - state-chain importer용 Work source 조회와 Mutation link API는 상태 변경 효과만 제한해 제공한다. `farm` importer가 Work Repository나 테이블을 직접 읽지 않게 하는 전환용 모듈 경계다.
-- 신규 즉시 완료 작업은 대상별 멱등성 조회를 반복하지 않고 효과 INSERT와 실행 상태 UPDATE를 모아 JDBC batch로 flush한다. 기존 작업 재실행 경로는 효과 키 조회와 DB UNIQUE 제약으로 멱등성을 유지한다.
+- 신규 즉시 완료 작업은 대상 효과 INSERT와 실행 상태 UPDATE를 JDBC batch로 flush한다. 키가 있는 생성 요청은 Work 접수 기록의 원자 INSERT·행 잠금으로 중복 생성을 막고 요청 지문과 결과 ID를 같은 트랜잭션에 확정한다. 기존 효과 재실행은 원문 지문 비교와 `(workOperationId, effectKey)` DB UNIQUE를 함께 사용한다.
 - DB의 `timestamp without time zone` 시점 값은 UTC로 저장한다. 업무일자는 `Asia/Seoul` 기준으로
   계산하고 API 응답의 시점 값은 UTC에서 `Asia/Seoul`로 변환한다.
 
@@ -306,7 +306,7 @@ Persistence 조회 규칙:
 - Partner 잠금 API는 호출자의 트랜잭션을 필수로 요구하고 거래처 ID 오름차순으로 잠근다. 잠금 획득만 하는 호출이 독립 트랜잭션을 열고 즉시 반환하는 방식은 허용하지 않는다. 잔액 생성·갱신은 거래처 잠금 후 잔액 행 잠금 순서를 유지한다.
 - 판매 예약·해제·출고·복구의 수량 불변식은 Farm Entity가 적용한다. Farm 예약 API는 기존 typed command를 받고 호출자의 트랜잭션을 필수로 요구하며, Engine/Legacy 선택과 실제 재고 변경을 소유한다. Sales는 유스케이스 순서와 배분별 재고 이동·Mutation 연결을 저장한다. Legacy 직접 writer는 Farm 내부로 옮겼으며 제거 gate를 통과하기 전까지 유지한다.
 - 구조 변환은 상태 변경 전에 상속 속성과 결과 목적을 계산하고 Legacy/Engine이 같은 계획과 결과·계보 조립 경로를 사용한다. 각 writer의 기존 입력 정규화는 유지한다. Mutation Engine은 잠금·상태 변경·revision을, 내부 recorder는 header·쓰기 context·Entry·Relation 기록을 담당한다. 새 그룹은 header와 트랜잭션 context 설정 후 저장하며, 잠금 전후의 재실행 확인과 최상위 트랜잭션은 유지한다.
-- Mutation 명령은 닫힌 타입 집합으로 선언하고 fingerprint 계산은 모든 명령을 다루는 switch로 검사한다. 명령 추가 시 지문 처리가 누락되면 컴파일에 실패한다. 기존 payload와 저장 지문은 호환 fixture로 검사한다. 현재 Transform의 제외 ID 집합은 반복 순서에 따라 지문이 달라질 수 있으므로 정규화와 기존 지문 호환 처리는 별도 멱등성 보강에서 함께 해결한다.
+- Mutation 명령은 닫힌 타입 집합으로 선언하고 fingerprint 계산은 모든 명령을 다루는 switch로 검사한다. 명령 추가 시 지문 처리가 누락되면 컴파일에 실패한다. 기존 payload와 저장 지문은 호환 fixture로 검사한다. Transform의 제외 ID 집합은 정렬하여 JVM의 집합 순회 순서와 무관한 지문을 만든다. 이번 전환은 Mutation 원장이 없는 V20 백업에서 원장을 재구성한다. 이전 실험용 Engine 원장의 지문을 수정하거나 그대로 재사용하지 않는다.
 - 정산 설정의 최초 조회도 기본값 생성이 가능한 쓰기 유스케이스다. 거래처를 먼저 잠그고 설정을 다시 조회해 동시 최초 조회의 중복 생성을 막는다. 설정 변경도 같은 거래처 잠금 안에서 변경 전후 감사 값을 저장한다.
 - 수동 입금 원장 API는 거래처 ID와 application 명령을 받고 입금 이벤트 식별자만 반환한다. 원장·잔액 Entity는 Settlement 안에서 관리한다. 원장 처리는 호출 트랜잭션을 필수로 요구해 대상 입금 상태·입금/연결 이벤트·잔액·감사가 함께 반영되거나 rollback되게 한다.
 - 일반 판매의 입금 대상 조건은 전표 도메인이 소유하며 실제 입금과 `CONFIRM_PAYMENT` 판단이 이를 공유한다. application은 대상 검증 후 기존 입금 키를 확인하고 새 입금에만 잔액 검사를 적용해 완납 후 재요청도 재처리 없이 응답한다.

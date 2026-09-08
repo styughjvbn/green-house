@@ -29,6 +29,10 @@ public class InboundPottingOperationService {
 
 	private final InboundPottingPlanService planService;
 
+	private final WorkCommandReceipts receipts;
+
+	private final WorkRequestFingerprint fingerprints;
+
 	private final WorkOperationProgressService progressService;
 
 	private final WorkOperationQueryService queryService;
@@ -42,9 +46,11 @@ public class InboundPottingOperationService {
 	private final ObjectMapper objectMapper = new ObjectMapper().findAndRegisterModules();
 
 	public WorkOperationView executeNow(InboundPottingCommand request) {
-		Long inboundRecordId = request.inboundRecordId();
-		inboundPottingPlanGateway.lockForPottingExecution(List.of(inboundRecordId));
-		return findExistingOperationId(request).map(queryService::get).orElseGet(() -> executeActiveOrNewPlan(request));
+		var ids = receipts.execute("POTTING:" + request.inboundRecordId(), request.idempotencyKey(), request, () -> {
+			inboundPottingPlanGateway.lockForPottingExecution(List.of(request.inboundRecordId()));
+			return List.of(findExistingOperationId(request).orElseGet(() -> executeActiveOrNewPlan(request).id()));
+		});
+		return queryService.get(ids.getFirst());
 	}
 
 	public List<WorkOperationView> executeRecord(InboundPottingPlanCreateRequest plan,
@@ -102,7 +108,9 @@ public class InboundPottingOperationService {
 	}
 
 	private Optional<Long> findExistingOperationId(InboundPottingCommand request) {
-		return workAppliedEffectRepository.findInboundPottingEffect(request.inboundRecordId(), effectKey(request))
+		return workAppliedEffectRepository.findInboundPottingEffects(List.of(request.inboundRecordId()), keys(request))
+			.stream()
+			.findFirst()
 			.map(effect -> validatedOperationId(effect, request));
 	}
 
@@ -112,7 +120,7 @@ public class InboundPottingOperationService {
 		}
 		List<WorkAppliedEffect> effects = workAppliedEffectRepository.findInboundPottingEffects(
 				requests.stream().map(InboundPottingCommand::inboundRecordId).distinct().toList(),
-				requests.stream().map(this::effectKey).distinct().toList());
+				requests.stream().flatMap(request -> keys(request).stream()).distinct().toList());
 		Map<Long, Long> operationIds = new LinkedHashMap<>();
 		for (InboundPottingCommand request : requests) {
 			effects.stream()
@@ -126,12 +134,14 @@ public class InboundPottingOperationService {
 
 	private boolean matches(WorkAppliedEffect effect, InboundPottingCommand request) {
 		return request.inboundRecordId().equals(effect.getTarget().getInboundRecordId())
-				&& effectKey(request).equals(effect.getEffectKey());
+				&& keys(request).contains(effect.getEffectKey());
 	}
 
 	private Long validatedOperationId(WorkAppliedEffect effect, InboundPottingCommand request) {
-		if (!effect.getCommandDetails().equals(commandDetails(request))) {
-			throw new IllegalArgumentException("같은 멱등 키를 다른 포트 작업 요청에 사용할 수 없습니다.");
+		if (!fingerprints.calculate(effect.getCommandDetails())
+			.equals(fingerprints.calculate(commandDetails(request)))) {
+			throw new com.greenhouse.backend.common.exception.ConflictException("IDEMPOTENCY_KEY_REUSED",
+					"같은 멱등 키를 다른 포트 작업 요청에 사용할 수 없습니다.");
 		}
 		return effect.getWorkOperation().getId();
 	}
@@ -182,7 +192,7 @@ public class InboundPottingOperationService {
 		Map<String, Object> resultDetails = commandDetails(request);
 		WorkOperationView updated = progressService.completeTarget(operation.id(), targetId,
 				new WorkTargetExecutionRequest(request.worker(), resultDetails, request.pottingDate()),
-				request.idempotencyKey());
+				request.inboundRecordId() + ":" + request.idempotencyKey());
 		if (updated.progress().pending() == 0 && updated.progress().inProgress() == 0
 				&& updated.progress().partial() == 0 && updated.progress().failed() == 0) {
 			return progressService.complete(updated.id(), request.pottingDate());
@@ -199,8 +209,9 @@ public class InboundPottingOperationService {
 		return details;
 	}
 
-	private String effectKey(InboundPottingCommand request) {
-		return "POTTING:" + request.idempotencyKey().trim();
+	private List<String> keys(InboundPottingCommand request) {
+		return List.of("POTTING:" + request.inboundRecordId() + ":" + request.idempotencyKey(),
+				"POTTING:" + request.idempotencyKey());
 	}
 
 }

@@ -23,7 +23,7 @@ public class GlobalExceptionHandler {
 	@ExceptionHandler(ConflictException.class)
 	ResponseEntity<ErrorResponse> handleConflict(ConflictException exception) {
 		return ResponseEntity.status(HttpStatus.CONFLICT)
-			.body(ErrorResponse.of("CONFLICT", exception.getMessage(), List.of()));
+			.body(ErrorResponse.of(exception.getCode(), exception.getMessage(), List.of()));
 	}
 
 	@ExceptionHandler(NotFoundException.class)

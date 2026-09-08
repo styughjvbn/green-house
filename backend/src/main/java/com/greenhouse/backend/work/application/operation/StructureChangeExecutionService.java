@@ -2,10 +2,12 @@ package com.greenhouse.backend.work.application.operation;
 
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.greenhouse.backend.common.exception.ConflictException;
 import com.greenhouse.backend.work.application.effect.MovementQuantityAllocator;
 import com.greenhouse.backend.work.application.effect.StructureChangeCommand;
 import com.greenhouse.backend.work.application.effect.WorkEffectCommand;
 import com.greenhouse.backend.work.application.effect.WorkEffectProcessor;
+import com.greenhouse.backend.work.application.effect.WorkEffectStore;
 import com.greenhouse.backend.work.application.operation.WorkOperationView;
 import com.greenhouse.backend.work.domain.operation.WorkOperation;
 import com.greenhouse.backend.work.domain.operation.WorkOperationStatus;
@@ -36,6 +38,8 @@ public class StructureChangeExecutionService {
 
 	private final WorkEffectProcessor workEffectProcessor;
 
+	private final WorkEffectStore effectStore;
+
 	private final WorkOperationProgressService progressService;
 
 	private final WorkOperationQueryService queryService;
@@ -58,6 +62,13 @@ public class StructureChangeExecutionService {
 			throw new IllegalArgumentException("합식 작업만 일괄 실행할 수 있습니다.");
 		}
 		if (executions.stream().allMatch(WorkTargetExecution::isEffectApplied)) {
+			var existing = appliedEffectRepository
+				.findByWorkOperationIdAndEffectKey(operationId, "EXECUTION:LEGACY_MERGE")
+				.orElseThrow(() -> new ConflictException("IDEMPOTENCY_REPLAY_UNAVAILABLE", "원래 합식 실행 요청을 확인할 수 없습니다."));
+			var completedAt = request.completedDate() == null ? existing.getAppliedAt()
+					: support.completionTime(request.completedDate());
+			effectStore.validateReplay(existing,
+					new WorkEffectCommand(completedAt, support.actor(request.worker()), request.resultDetails(), null));
 			return queryService.get(operationId);
 		}
 		if (executions.stream().anyMatch(WorkTargetExecution::isEffectApplied)) {
@@ -93,11 +104,20 @@ public class StructureChangeExecutionService {
 		if (!operation.getWorkType().definition().supportsStructureExecution()) {
 			throw new IllegalArgumentException("분갈이·분주·합식·자리 이동 작업만 회차 실행할 수 있습니다.");
 		}
-		validateInProgress(operation);
+		LocalDateTime executedAt = support.completionTime(request.completedDate());
+		String worker = support.actor(request.worker());
+		Map<String, Object> commandDetails = objectMapper.convertValue(request,
+				new TypeReference<Map<String, Object>>() {
+				});
+		var command = new WorkEffectCommand(executedAt, worker, commandDetails, request,
+				placementExclusionOrchidGroupIds);
 		String effectKey = "EXECUTION:" + request.idempotencyKey();
-		if (appliedEffectRepository.findByWorkOperationIdAndEffectKey(operationId, effectKey).isPresent()) {
+		var existing = appliedEffectRepository.findByWorkOperationIdAndEffectKey(operationId, effectKey);
+		if (existing.isPresent()) {
+			effectStore.validateReplay(existing.get(), command);
 			return queryService.get(operationId);
 		}
+		validateInProgress(operation);
 
 		Map<Long, WorkTargetExecution> executionByGroupId = executions.stream()
 			.filter(execution -> execution.getTarget().getOrchidGroupId() != null)
@@ -117,19 +137,14 @@ public class StructureChangeExecutionService {
 			}
 		});
 
-		LocalDateTime executedAt = support.completionTime(request.completedDate());
-		String worker = support.actor(request.worker());
 		WorkOperationView discardOperation = null;
 		if (WorkTypeDefinition.MOVEMENT.name().equals(operation.getWorkType().getCode())) {
 			discardOperation = discardRecordService.createForMovement(operation, request.completedDate(), worker,
 					request.memo(), movementDiscardQuantities(request));
 		}
-		Map<String, Object> commandDetails = objectMapper.convertValue(request,
-				new TypeReference<Map<String, Object>>() {
-				});
+
 		var result = workEffectProcessor.applyBatch(operation, request.idempotencyKey(),
-				requestedIds.stream().sorted().toList(),
-				new WorkEffectCommand(executedAt, worker, commandDetails, request, placementExclusionOrchidGroupIds));
+				requestedIds.stream().sorted().toList(), command);
 		Map<String, Object> resultDetails = result.resultDetails();
 		if (discardOperation != null) {
 			resultDetails = new LinkedHashMap<>(resultDetails);

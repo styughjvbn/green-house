@@ -28,7 +28,8 @@ class WorkEffectStoreTest {
 	private final WorkEffectOrchidGroupRepository effectOrchidGroupRepository = mock(
 			WorkEffectOrchidGroupRepository.class);
 
-	private final WorkEffectStore store = new WorkEffectStore(appliedEffectRepository, effectOrchidGroupRepository);
+	private final WorkEffectStore store = new WorkEffectStore(appliedEffectRepository, effectOrchidGroupRepository,
+			new com.greenhouse.backend.work.application.operation.WorkRequestFingerprint());
 
 	@Test
 	void persistsAndReplaysTheMutationLinkWithoutFarmDomainDependency() {
@@ -57,7 +58,7 @@ class WorkEffectStoreTest {
 			.thenReturn(List.of(new WorkEffectOrchidGroup(savedEffect, 101L, WorkEffectOrchidGroupRelationType.SOURCE),
 					new WorkEffectOrchidGroup(savedEffect, 201L, WorkEffectOrchidGroupRelationType.RESULT)));
 
-		WorkExecutionResult replayed = store.find(11L, "EXECUTION:round-1").orElseThrow();
+		WorkExecutionResult replayed = store.find(11L, "EXECUTION:round-1", command).orElseThrow();
 
 		assertThat(replayed.resultOrchidGroupIds()).containsExactly(201L);
 		assertThat(replayed.mutationLink()).isEqualTo(mutationLink);

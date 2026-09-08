@@ -61,7 +61,7 @@ public class WorkEffectProcessor {
 
 	private WorkExecutionResult apply(WorkOperation operation, WorkOperationTarget target, WorkEffectCommand command,
 			String effectKey, List<Long> sourceOrchidGroupIds) {
-		var existing = effectStore.find(operation.getId(), effectKey);
+		var existing = effectStore.find(operation.getId(), effectKey, command);
 		if (existing.isPresent()) {
 			return existing.get();
 		}

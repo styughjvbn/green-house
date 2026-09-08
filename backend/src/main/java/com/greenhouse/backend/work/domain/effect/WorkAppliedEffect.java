@@ -29,8 +29,8 @@ import org.hibernate.type.SqlTypes;
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 @Entity
 @Table(name = "work_applied_effects",
-		uniqueConstraints = @UniqueConstraint(name = "uk_work_applied_effect_operation_key_kind",
-				columnNames = { "work_operation_id", "effect_key", "effect_kind" }))
+		uniqueConstraints = @UniqueConstraint(name = "uk_work_applied_effect_operation_key",
+				columnNames = { "work_operation_id", "effect_key" }))
 public class WorkAppliedEffect extends BaseEntity {
 
 	@Id
@@ -47,8 +47,11 @@ public class WorkAppliedEffect extends BaseEntity {
 	@JoinColumn(name = "work_operation_target_id")
 	private WorkOperationTarget target;
 
-	@Column(name = "effect_key", nullable = false, length = 100)
+	@Column(name = "effect_key", nullable = false, length = 110)
 	private String effectKey;
+
+	@Column(name = "command_fingerprint", length = 64)
+	private String commandFingerprint;
 
 	@Enumerated(EnumType.STRING)
 	@Column(name = "effect_kind", nullable = false, length = 30)
@@ -98,6 +101,13 @@ public class WorkAppliedEffect extends BaseEntity {
 		if (this.canceledAt == null) {
 			this.canceledAt = canceledAt;
 		}
+	}
+
+	public void recordFingerprint(String fingerprint) {
+		if (commandFingerprint != null || fingerprint == null) {
+			throw new IllegalStateException("작업 효과 지문은 생성 시 한 번만 기록합니다.");
+		}
+		commandFingerprint = fingerprint;
 	}
 
 	public void linkMutation(Long mutationId, UUID correlationId) {

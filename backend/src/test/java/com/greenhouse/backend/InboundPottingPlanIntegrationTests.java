@@ -705,7 +705,8 @@ class InboundPottingPlanIntegrationTests extends AbstractBackendIntegrationTest 
 		mockMvc
 			.perform(post("/api/work-operations/inbound-potting-records").contentType(MediaType.APPLICATION_JSON)
 				.content(executionRequest.replace("\"worker\": \"입고 담당\"", "\"worker\": \"다른 담당\"")))
-			.andExpect(status().isBadRequest());
+			.andExpect(status().isConflict())
+			.andExpect(jsonPath("$.error.code").value("IDEMPOTENCY_KEY_REUSED"));
 
 		assertThat(operationRepository.count()).isEqualTo(1);
 		assertThat(appliedEffectRepository.count()).isEqualTo(1);

@@ -32,13 +32,19 @@ public class StructureChangeRecordService {
 
 	private final DiscardRecordService discardRecordService;
 
+	private final WorkCommandReceipts receipts;
+
+	private final WorkRequestFingerprint fingerprints;
+
 	/**
 	 * @deprecated Use
 	 * {@link #createStructureChangeRecords(StructureChangeRecordBatchCreateRequest)}.
 	 */
 	@Deprecated(since = "2026-08", forRemoval = false)
 	public WorkOperationView createStructureChangeRecord(StructureChangeRecordCreateRequest request) {
-		return createStructureChangeRecord(request, Set.of());
+		var ids = receipts.execute("STRUCTURE_RECORD", request.execution().idempotencyKey(), request,
+				() -> List.of(createStructureChangeRecord(request, Set.of()).id()));
+		return queryService.get(ids.getFirst());
 	}
 
 	private WorkOperationView createStructureChangeRecord(StructureChangeRecordCreateRequest request,
@@ -80,10 +86,17 @@ public class StructureChangeRecordService {
 		if (placementExclusionOrchidGroupIds.size() != sourceOrchidGroupIds.size()) {
 			throw new IllegalArgumentException("품종별 작업 기록에서 같은 원본 난 묶음을 중복 사용할 수 없습니다.");
 		}
-		return request.records()
+		String key = fingerprints
+			.calculate(request.records().stream().map(record -> record.execution().idempotencyKey()).toList());
+		var ids = receipts.execute("STRUCTURE_RECORD_BATCH", key, request,
+				() -> request.records()
+					.stream()
+					.map(record -> createStructureChangeRecord(record, placementExclusionOrchidGroupIds).id())
+					.toList());
+		var byId = queryService.getAll(ids)
 			.stream()
-			.map(record -> createStructureChangeRecord(record, placementExclusionOrchidGroupIds))
-			.toList();
+			.collect(Collectors.toMap(WorkOperationView::id, operation -> operation));
+		return ids.stream().map(byId::get).toList();
 	}
 
 	public WorkOperationView createDiscardRecord(DiscardRecordCreateRequest request) {
@@ -106,7 +119,16 @@ public class StructureChangeRecordService {
 			throw new IllegalArgumentException("포트 작업 기록의 완료일은 작업일과 같아야 합니다.");
 		}
 
-		return inboundPottingOperationService.executeRecord(request.plan(), request.executions());
+		String key = fingerprints.calculate(request.executions()
+			.stream()
+			.map(execution -> List.of(execution.inboundRecordId().toString(), execution.idempotencyKey()))
+			.toList());
+		var ids = receipts.execute("POTTING_RECORD", key, request,
+				() -> inboundPottingOperationService.executeRecord(request.plan(), request.executions())
+					.stream()
+					.map(WorkOperationView::id)
+					.toList());
+		return queryService.getAll(ids);
 	}
 
 }

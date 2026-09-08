@@ -5,6 +5,7 @@ import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.List;
 import java.util.Set;
+import java.util.TreeSet;
 import org.springframework.stereotype.Component;
 
 @Component
@@ -27,9 +28,10 @@ public class OrchidGroupMutationCommandFingerprint {
 			case CreateInboundOrchidGroupsMutationCommand value ->
 				fingerprint.calculate(new CreateInboundPayload(OrchidGroupMutationType.CREATE, value.inboundRecordId(),
 						value.groups(), value.effectiveBusinessDate(), value.reason()));
-			case TransformOrchidGroupsMutationCommand value -> fingerprint
-				.calculate(new TransformPayload(OrchidGroupMutationType.TRANSFORM, value.sources(), value.results(),
-						value.effectiveBusinessDate(), value.reason(), value.placementExclusionOrchidGroupIds()));
+			case TransformOrchidGroupsMutationCommand value ->
+				fingerprint.calculate(new TransformPayload(OrchidGroupMutationType.TRANSFORM, value.sources(),
+						value.results(), value.effectiveBusinessDate(), value.reason(),
+						new TreeSet<>(value.placementExclusionOrchidGroupIds())));
 			case UpdateOrchidGroupMutationCommand value ->
 				fingerprint.calculate(new UpdatePayload(OrchidGroupMutationType.UPDATE_DETAILS, value.orchidGroupId(),
 						value.details(), value.effectiveBusinessDate(), value.reason()));

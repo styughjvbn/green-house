@@ -141,7 +141,7 @@ class WorkEffectProcessorTest {
 		}
 
 		assertThat(executed).isSameAs(result);
-		verify(store).find(11L, effectKey);
+		verify(store).find(11L, effectKey, command);
 		verify(store).save(operation, expectedTarget, command.withEffectKey(effectKey), effectKey, expectedSources,
 				WorkEffectKind.ATTRIBUTE_CHANGE, result);
 		var contextCaptor = ArgumentCaptor.forClass(WorkEffectContext.class);
@@ -166,11 +166,11 @@ class WorkEffectProcessorTest {
 
 	@Test
 	void replayReturnsStoredResultWithoutResolvingHandlerOrCreatingContext() {
-		when(store.find(11L, "EXECUTION:round-1")).thenReturn(Optional.of(result));
+		when(store.find(11L, "EXECUTION:round-1", command)).thenReturn(Optional.of(result));
 
 		assertThat(processor.applyBatch(operation, "round-1", List.of(31L), command)).isSameAs(result);
 
-		verify(store).find(11L, "EXECUTION:round-1");
+		verify(store).find(11L, "EXECUTION:round-1", command);
 		verifyNoMoreInteractions(store);
 		verify(operation, never()).getWorkType();
 		verify(operation, never()).getPlannedStartDate();
@@ -186,7 +186,7 @@ class WorkEffectProcessorTest {
 
 		assertThatThrownBy(() -> processor.apply(operation, null, command)).isInstanceOf(IllegalArgumentException.class)
 			.hasMessageContaining("UNKNOWN");
-		verify(store).find(11L, "OPERATION");
+		verify(store).find(11L, "OPERATION", command);
 		verifyNoMoreInteractions(store);
 	}
 
@@ -197,7 +197,7 @@ class WorkEffectProcessorTest {
 		assertThatThrownBy(() -> processor.apply(operation, null, command)).isInstanceOf(IllegalArgumentException.class)
 			.hasMessage("효과 적용 실패");
 		verify(handler).execute(any(WorkEffectContext.class), eq(command.withEffectKey("OPERATION")));
-		verify(store).find(11L, "OPERATION");
+		verify(store).find(11L, "OPERATION", command);
 		verifyNoMoreInteractions(store);
 	}
 
