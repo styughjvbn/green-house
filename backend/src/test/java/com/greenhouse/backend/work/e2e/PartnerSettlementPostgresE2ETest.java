@@ -327,6 +327,51 @@ class PartnerSettlementPostgresE2ETest extends WorkE2ETestBase {
 		assertThat(salesSlipRepository.findById(slipId).orElseThrow().isCanceled()).isTrue();
 	}
 
+	@Test
+	void concurrentRebuildsAndPaymentKeepOneSettlementAndPreservedPayment() throws Exception {
+		var house = partnerRepository.saveAndFlush(new BusinessPartner(
+				"재구성 경합", PartnerType.AUCTION_HOUSE, null, null, null, null));
+		var date = LocalDate.of(2041, 2, 3);
+		var shipment = new AuctionShipment(date, house.getId(), house.getPartnerType());
+		var lot = new AuctionShipmentLot("난", "카틀레야", "A", 1, 10);
+		var attempt = new AuctionAttempt(date, 1, AuctionAttemptStatus.SOLD, null, null);
+		attempt.addResultLine(new AuctionResultLine(date, "A", 10, 10000, 100000, null, AuctionInspectionStatus.NORMAL));
+		lot.addAttempt(attempt);
+		shipment.addLot(lot);
+		shipmentRepository.saveAndFlush(shipment);
+		List<com.greenhouse.backend.settlement.dto.AuctionSettlementResponse> created = concurrently(List.of(() -> settlementService.rebuild(house.getId(), date),
+				() -> settlementService.rebuild(house.getId(), date)));
+		assertThat(created).extracting(value -> value.id()).containsOnly(created.getFirst().id());
+		Long id = created.getFirst().id();
+		concurrently(List.of(() -> settlementService.rebuild(house.getId(), date),
+				() -> paymentService.confirmAuctionPayment(id, payment(20000L, "rebuild-payment"))));
+		var result = settlementService.getSettlement(id);
+		assertThat(result.paidAmount()).isEqualTo(20000);
+		assertThat(result.remainingAmount()).isEqualTo(80000);
+		assertThat(result.lines()).hasSize(1);
+		assertThat(paymentService.getEventPage(house.getId(), PaymentTargetType.AUCTION_SETTLEMENT, id,
+				PaymentEventType.PAYMENT_RECEIVED, 0, 100).totalElements()).isEqualTo(1);
+	}
+
+	@Test
+	void concurrentInitializersLinkEachResultOnlyOnce() throws Exception {
+		var house = partnerRepository.saveAndFlush(new BusinessPartner(
+				"초기 정산 경합", PartnerType.AUCTION_HOUSE, null, null, null, null));
+		var date = LocalDate.of(2041, 3, 4);
+		var shipment = new AuctionShipment(date, house.getId(), house.getPartnerType());
+		var lot = new AuctionShipmentLot("난", "카틀레야", "A", 1, 10);
+		var attempt = new AuctionAttempt(date, 1, AuctionAttemptStatus.SOLD, null, null);
+		attempt.addResultLine(new AuctionResultLine(date, "A", 10, 10000, 100000, null, AuctionInspectionStatus.NORMAL));
+		lot.addAttempt(attempt);
+		shipment.addLot(lot);
+		shipmentRepository.saveAndFlush(shipment);
+		concurrently(List.of(settlementService::rebuildExistingResults, settlementService::rebuildExistingResults));
+		var settlement = settlementRepository.findByAuctionHouseIdAndAuctionDate(house.getId(), date).orElseThrow();
+		assertThat(settlementService.getSettlement(settlement.getId()).lines()).hasSize(1);
+		assertThat(settlement.getGrossAmount()).isEqualTo(100000);
+		assertThat(settlementService.rebuildExistingResults()).isZero();
+	}
+
 	private BusinessPartner createPartner(String name) {
 		return partnerRepository.saveAndFlush(
 				new BusinessPartner(name, PartnerType.WHOLESALE, null, null, null, null));

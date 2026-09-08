@@ -68,6 +68,9 @@ public interface AuctionSettlementRepository extends JpaRepository<AuctionSettle
 	@EntityGraph(attributePaths = { "lines" })
 	Optional<AuctionSettlement> findWithDetailsById(Long id);
 
+	@Query("select settlement.auctionHouseId from AuctionSettlement settlement where settlement.id = :id")
+	Optional<Long> findAuctionHouseId(@Param("id") Long id);
+
 	@Lock(LockModeType.PESSIMISTIC_WRITE)
 	@Query("select settlement from AuctionSettlement settlement where settlement.id = :id")
 	Optional<AuctionSettlement> findForUpdateById(@Param("id") Long id);

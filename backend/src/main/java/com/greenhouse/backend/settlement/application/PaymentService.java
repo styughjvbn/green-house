@@ -36,6 +36,9 @@ public class PaymentService {
 	private final Clock clock;
 
 	public AuctionSettlementResponse confirmAuctionPayment(Long settlementId, ManualPaymentCommand payment) {
+		Long auctionHouseId = auctionSettlementRepository.findAuctionHouseId(settlementId)
+				.orElseThrow(() -> new NotFoundException("경매 정산을 찾을 수 없습니다."));
+		partnerBalanceService.lockPartners(List.of(auctionHouseId));
 		var settlement = auctionSettlementRepository.findForUpdateById(settlementId)
 				.orElseThrow(() -> new NotFoundException("경매 정산을 찾을 수 없습니다."));
 		if (paymentLedgerService.findManualPayment(

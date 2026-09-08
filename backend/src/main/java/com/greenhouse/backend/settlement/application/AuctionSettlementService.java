@@ -5,6 +5,7 @@ import com.greenhouse.backend.auction.application.AuctionDataReader;
 import com.greenhouse.backend.common.api.PageResponse;
 import com.greenhouse.backend.common.config.TimeConfig;
 import com.greenhouse.backend.common.exception.NotFoundException;
+import com.greenhouse.backend.partner.application.BusinessPartnerLock;
 import com.greenhouse.backend.partner.application.BusinessPartnerReader;
 import com.greenhouse.backend.partner.domain.PartnerType;
 import com.greenhouse.backend.settlement.application.ExpectedPaymentDateCalculator.PaymentDateTarget;
@@ -39,6 +40,7 @@ public class AuctionSettlementService {
 	private final AuctionSettlementRepository settlementRepository;
 	private final AuctionDataReader auctionDataReader;
 	private final BusinessPartnerReader partnerReader;
+	private final BusinessPartnerLock partnerLock;
 	private final ExpectedPaymentDateCalculator paymentDateCalculator;
 	private final AuctionSettlementResponseAssembler responseAssembler;
 	private final Clock clock;
@@ -84,6 +86,7 @@ public class AuctionSettlementService {
 		if (auctionHouse.partnerType() != PartnerType.AUCTION_HOUSE) {
 			throw new IllegalArgumentException("경매장 유형 거래처만 정산할 수 있습니다.");
 		}
+		partnerLock.lockAll(List.of(auctionHouseId));
 		var settlement = settlementRepository.findByAuctionHouseIdAndAuctionDate(auctionHouseId, auctionDate)
 				.orElseGet(() -> new AuctionSettlement(auctionHouseId, auctionDate));
 		settlement.synchronizeLines(auctionDataReader.getSoldResultLines(auctionHouseId, auctionDate).stream()
@@ -99,6 +102,17 @@ public class AuctionSettlementService {
 			return 0;
 		}
 
+		partnerLock.lockAll(grouped.keySet().stream().map(SettlementKey::auctionHouseId).distinct().toList());
+		// Another initializer may have linked these candidates while this transaction waited for the locks.
+		var candidateIds = grouped.values().stream().flatMap(List::stream).map(Result::id).toList();
+		var linkedIds = new HashSet<Long>();
+		for (int start = 0; start < candidateIds.size(); start += RESULT_BATCH_SIZE) {
+			linkedIds.addAll(settlementRepository.findLinkedResultIds(candidateIds.subList(
+					start, Math.min(start + RESULT_BATCH_SIZE, candidateIds.size()))));
+		}
+		grouped.values().forEach(lines -> lines.removeIf(line -> linkedIds.contains(line.id())));
+		grouped.values().removeIf(List::isEmpty);
+		if (grouped.isEmpty()) return 0;
 		var settlementsByKey = loadExistingSettlements(grouped.keySet());
 		var paymentTargets = grouped.keySet().stream()
 				.map(key -> new PaymentDateTarget(key.auctionHouseId(), key.auctionDate()))
