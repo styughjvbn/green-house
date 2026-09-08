@@ -72,6 +72,18 @@ class SalesSlipStatusRulesTest {
 		assertThat(slip.canConfirmPayment()).isTrue();
 	}
 
+	@Test
+	void editCapabilityAndValidationSharePaidAmountAndEventGuards() {
+		var slip = payableSlip(SalesType.DIRECT, SalesSlip.STATUS_DRAFT);
+		assertThat(slip.canEdit(false)).isTrue();
+		assertThatCode(() -> slip.requireEditable(false)).doesNotThrowAnyException();
+		assertThat(slip.canEdit(true)).isFalse();
+		assertThatThrownBy(() -> slip.requireEditable(true)).isInstanceOf(IllegalArgumentException.class);
+		slip.recordPayment(1L);
+		assertThat(slip.canEdit(false)).isFalse();
+		assertThatThrownBy(() -> slip.requireEditable(false)).isInstanceOf(IllegalArgumentException.class);
+	}
+
 	private void assertPaymentRejected(SalesSlip slip, String message) {
 		assertThat(slip.canConfirmPayment()).isFalse();
 		assertThatThrownBy(slip::validatePaymentTarget)

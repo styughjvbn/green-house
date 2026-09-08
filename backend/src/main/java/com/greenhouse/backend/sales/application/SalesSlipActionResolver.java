@@ -1,8 +1,8 @@
 package com.greenhouse.backend.sales.application;
 
 import com.greenhouse.backend.sales.domain.SalesSlip;
-import com.greenhouse.backend.sales.domain.SalesType;
 import com.greenhouse.backend.sales.domain.SalesSlipAction;
+import com.greenhouse.backend.sales.domain.SalesType;
 import com.greenhouse.backend.settlement.application.PaymentEventReader;
 import com.greenhouse.backend.settlement.domain.PaymentTargetType;
 import java.util.EnumSet;
@@ -59,12 +59,11 @@ public class SalesSlipActionResolver {
 
 		EnumSet<SalesSlipAction> actions = EnumSet.noneOf(SalesSlipAction.class);
 		boolean hasPaymentEvent = paidSalesSlipIds.contains(salesSlip.getId());
-		boolean isDraft = SalesSlip.STATUS_DRAFT.equals(salesSlip.getSalesStatus());
 
-		if (salesSlip.getSalesType() == SalesType.DIRECT && isDraft && !hasPaymentEvent) {
+		if (salesSlip.canEdit(hasPaymentEvent)) {
 			actions.add(SalesSlipAction.EDIT);
 		}
-		if (isDraft) {
+		if (salesSlip.canComplete()) {
 			actions.add(SalesSlipAction.COMPLETE);
 		}
 		if (canCancel(salesSlip, hasPaymentEvent, nonCancelableShipmentIds)) {

@@ -4,15 +4,17 @@ import com.greenhouse.backend.audit.domain.AuditAction;
 import com.greenhouse.backend.common.exception.NotFoundException;
 import com.greenhouse.backend.partner.application.BusinessPartnerReader;
 import com.greenhouse.backend.partner.domain.PartnerType;
+import com.greenhouse.backend.sales.application.document.SalesSlipDocument;
 import com.greenhouse.backend.sales.domain.SalesSlip;
 import com.greenhouse.backend.sales.domain.SalesSlipItem;
 import com.greenhouse.backend.sales.domain.SalesSlipItemAllocation;
 import com.greenhouse.backend.sales.domain.SalesType;
 import com.greenhouse.backend.sales.dto.SalesSlipCreateRequest;
-import com.greenhouse.backend.sales.application.document.SalesSlipDocument;
 import com.greenhouse.backend.sales.repository.SalesSlipRepository;
 import com.greenhouse.backend.settlement.application.ExpectedPaymentDateCalculator;
 import com.greenhouse.backend.settlement.application.PartnerBalanceService;
+import com.greenhouse.backend.settlement.application.PaymentEventReader;
+import com.greenhouse.backend.settlement.domain.PaymentTargetType;
 import java.util.List;
 import java.util.Map;
 import lombok.RequiredArgsConstructor;
@@ -25,6 +27,7 @@ import org.springframework.transaction.annotation.Transactional;
 public class SalesSlipUpdateService {
 
 	private final SalesSlipRepository salesSlipRepository;
+	private final PaymentEventReader paymentEventReader;
 	private final BusinessPartnerReader businessPartnerReader;
 	private final SalesSlipAllocationFactory salesSlipAllocationFactory;
 	private final SalesSlipInventoryService salesSlipInventoryService;
@@ -101,14 +104,10 @@ public class SalesSlipUpdateService {
 	}
 
 	private void validateEditable(SalesSlip salesSlip, SalesSlipCreateRequest request) {
-		if (salesSlip.getSalesType() != SalesType.DIRECT || request.salesType() == SalesType.AUCTION) {
+		if (request.salesType() == SalesType.AUCTION) {
 			throw new IllegalArgumentException("경매 판매 전표 수정은 아직 지원하지 않습니다.");
 		}
-		if (!"작성중".equals(salesSlip.getSalesStatus())) {
-			throw new IllegalArgumentException("작성중 상태 전표만 수정할 수 있습니다.");
-		}
-		if (salesSlip.getPaidAmount() != null && salesSlip.getPaidAmount() > 0) {
-			throw new IllegalArgumentException("입금 이력이 있는 전표는 수정할 수 없습니다.");
-		}
+		salesSlip.requireEditable(paymentEventReader.existsByTarget(
+				PaymentTargetType.SALES_SLIP, salesSlip.getId()));
 	}
 }

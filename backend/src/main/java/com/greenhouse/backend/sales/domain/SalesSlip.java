@@ -9,8 +9,8 @@ import jakarta.persistence.Enumerated;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
-import jakarta.persistence.SequenceGenerator;
 import jakarta.persistence.OneToMany;
+import jakarta.persistence.SequenceGenerator;
 import jakarta.persistence.Table;
 import jakarta.persistence.Version;
 import java.time.LocalDate;
@@ -152,6 +152,24 @@ public class SalesSlip extends BaseEntity {
 		this.remainingAmount = Math.max(0L, totalAmount.longValue() - paidAmount);
 		this.paymentStatus = remainingAmount == 0 ? "입금 완료" : "부분입금";
 	}
+
+	public boolean canEdit(boolean hasPaymentEvent) {
+		return editRejectionReason(hasPaymentEvent) == null;
+	}
+
+	public void requireEditable(boolean hasPaymentEvent) {
+		String reason = editRejectionReason(hasPaymentEvent);
+		if (reason != null) throw new IllegalArgumentException(reason);
+	}
+
+	private String editRejectionReason(boolean hasPaymentEvent) {
+		if (salesType != SalesType.DIRECT) return "경매 판매 전표 수정은 아직 지원하지 않습니다.";
+		if (!STATUS_DRAFT.equals(salesStatus)) return "작성중 상태 전표만 수정할 수 있습니다.";
+		if (hasPaymentEvent || (paidAmount != null && paidAmount > 0)) return "입금 이력이 있는 전표는 수정할 수 없습니다.";
+		return null;
+	}
+
+	public boolean canComplete() { return STATUS_DRAFT.equals(salesStatus); }
 
 	public boolean canConfirmPayment() {
 		return paymentTargetRejectionReason() == null && remainingAmount != null && remainingAmount > 0;
