@@ -1,1 +1,1 @@
-# Temporary pre-refactoring dependencies at 3aa8fc54. Delete entries when their callers migrate.
+# No explicit cross-module entity or table references in repository queries.

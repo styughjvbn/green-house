@@ -83,7 +83,7 @@ demo
 
 - 공통 응답
 - MVC 예외 응답과 인증·데모 filter의 실패는 같은 `ErrorResponse`를 사용한다. filter는 공통 JSON writer로 직렬화한다.
-- 페이지 목록 응답은 `PageResponse<T>`로 통일한다.
+- 페이지 목록 응답은 `PageResponse<T>`로 통일한다. 입력 처리는 `PageRequests`를 사용하되 기존 API의 엄격한 검증(잘못된 값은 400)과 범위 보정(페이지 0 이상·크기 1~100)을 유지한다. 둘을 임의로 같은 정책으로 바꾸지 않는다.
 - 예외 처리
 - 공통 유틸
 - 공통 검증
@@ -293,6 +293,7 @@ Persistence 조회 규칙:
 #### 유스케이스와 트랜잭션
 
 - Controller는 HTTP 변환과 validation 진입만 담당하고 application service가 유스케이스와 트랜잭션을 소유한다.
+- Work 구조 변경·포트·보정 입력과 실행·계보 조회값도 application 계약이며 Farm이 Work의 HTTP DTO를 직접 소비하지 않는다. 기존 타입을 이식하고 JSON·OpenAPI 이름을 유지한다.
 - 수동 입금처럼 HTTP 입력과 유스케이스 입력의 의미·필드가 같으면 application 명령을 그대로 바인딩하고 표준 validation도 해당 명령에 둔다. 값만 복사하는 Request·변환 메서드는 두지 않는다. 기존 OpenAPI 이름은 명시적으로 유지하며, 입력 의미나 변환이 달라지는 경우에만 HTTP DTO를 분리한다.
 - 쓰기 유스케이스는 하나의 public application method를 원자 경계로 삼는다. 중간 service 호출이 별도 트랜잭션을 암묵적으로 만들거나 self invocation에 의존하지 않게 한다.
 - 품종·자재 코드는 각 저장소의 PostgreSQL sequence에서 원자적으로 발급한다. 엔티티 ID와 코드의 sequence는 분리하며, 입고 신규 품종도 같은 품종 발급 경로를 사용한다. 코드는 유일한 식별값이며 삭제·rollback에 따른 번호 공백을 허용한다.
@@ -305,6 +306,7 @@ Persistence 조회 규칙:
 - Partner 잠금 API는 호출자의 트랜잭션을 필수로 요구하고 거래처 ID 오름차순으로 잠근다. 잠금 획득만 하는 호출이 독립 트랜잭션을 열고 즉시 반환하는 방식은 허용하지 않는다. 잔액 생성·갱신은 거래처 잠금 후 잔액 행 잠금 순서를 유지한다.
 - 판매 예약·해제·출고·복구의 수량 불변식은 Farm Entity가 적용한다. Farm 예약 API는 기존 typed command를 받고 호출자의 트랜잭션을 필수로 요구하며, Engine/Legacy 선택과 실제 재고 변경을 소유한다. Sales는 유스케이스 순서와 배분별 재고 이동·Mutation 연결을 저장한다. Legacy 직접 writer는 Farm 내부로 옮겼으며 제거 gate를 통과하기 전까지 유지한다.
 - 구조 변환은 상태 변경 전에 상속 속성과 결과 목적을 계산하고 Legacy/Engine이 같은 계획과 결과·계보 조립 경로를 사용한다. 각 writer의 기존 입력 정규화는 유지한다. Mutation Engine은 잠금·상태 변경·revision을, 내부 recorder는 header·쓰기 context·Entry·Relation 기록을 담당한다. 새 그룹은 header와 트랜잭션 context 설정 후 저장하며, 잠금 전후의 재실행 확인과 최상위 트랜잭션은 유지한다.
+- Mutation 명령은 닫힌 타입 집합으로 선언하고 fingerprint 계산은 모든 명령을 다루는 switch로 검사한다. 명령 추가 시 지문 처리가 누락되면 컴파일에 실패한다. 기존 payload와 저장 지문은 호환 fixture로 검사한다. 현재 Transform의 제외 ID 집합은 반복 순서에 따라 지문이 달라질 수 있으므로 정규화와 기존 지문 호환 처리는 별도 멱등성 보강에서 함께 해결한다.
 - 정산 설정의 최초 조회도 기본값 생성이 가능한 쓰기 유스케이스다. 거래처를 먼저 잠그고 설정을 다시 조회해 동시 최초 조회의 중복 생성을 막는다. 설정 변경도 같은 거래처 잠금 안에서 변경 전후 감사 값을 저장한다.
 - 수동 입금 원장 API는 거래처 ID와 application 명령을 받고 입금 이벤트 식별자만 반환한다. 원장·잔액 Entity는 Settlement 안에서 관리한다. 원장 처리는 호출 트랜잭션을 필수로 요구해 대상 입금 상태·입금/연결 이벤트·잔액·감사가 함께 반영되거나 rollback되게 한다.
 - 일반 판매의 입금 대상 조건은 전표 도메인이 소유하며 실제 입금과 `CONFIRM_PAYMENT` 판단이 이를 공유한다. application은 대상 검증 후 기존 입금 키를 확인하고 새 입금에만 잔액 검사를 적용해 완납 후 재요청도 재처리 없이 응답한다.
@@ -356,7 +358,8 @@ Persistence 조회 규칙:
 
 #### 시간, migration, 검증
 
-- DB 시점은 UTC로 저장하고 농장 업무일 계산은 `Asia/Seoul` 기준 `TimeConfig`와 주입된 `Clock`을 사용한다.
+- DB 시점은 UTC로 저장하고 농장 업무일 계산은 `Asia/Seoul` 기준 `TimeConfig`와 주입된 `Clock`을 사용한다. 공통 Entity 생성·수정 시각은 같은 Clock을 읽는 Spring Data JPA auditing provider가 기록한다. 상태 이력과 그룹 가입·탈퇴 시각은 application이 UTC 값을 domain에 전달한다.
+- 난 묶음 응답의 나이 계산은 application에서 한 번 구한 업무일을 전달받는다. 목록 조립 도중 날짜가 바뀌거나 DTO가 시스템 시계를 직접 읽지 않게 한다.
 - 경매 정산의 결과 수신·입금 확인 시각은 application service가 `Clock`에서 UTC 값으로 정해 domain에 전달한다. 일괄 재구성은 같은 처리 시각을 사용하고, 정산에 이미 연결된 결과는 다시 재구성하지 않는다.
 - Flyway migration은 `nullable 추가 → backfill → 제약 적용`처럼 기존 운영 데이터가 통과할 수 있는 순서를 사용한다. 대용량 table 변경은 lock 범위와 운영 적용 시간을 별도로 검토한다.
 - 수량·금액·정산·migration 변경은 정상 흐름뿐 아니라 rollback과 중복 요청을 검증한다. 동시성 보강은 병렬 실행 테스트, N+1 보강은 query count 상한 테스트를 둔다.
@@ -476,10 +479,11 @@ src/
 
 ## 7. 백엔드 리팩터링 검증
 
-`work` 리팩터링 검증은 브라우저 E2E와 분리하고 실제 PostgreSQL을 사용하는 두 Gradle 작업으로 실행한다.
+전체 백엔드 검증은 기본 검사·패키징과 실제 PostgreSQL 회귀·벤치마크로 나눈다. Gradle 작업 이름에는 `work`가 남아 있지만 여러 도메인을 포함하며 브라우저 E2E와는 별도다.
 
 ```bash
 cd backend
+./gradlew check bootJar
 ./gradlew workE2eTest
 ./gradlew workBenchmark
 ./gradlew workBenchmark -PworkBenchmarkEnforce=true
@@ -491,6 +495,7 @@ cd backend
 - `workBenchmark`: 작업 100건과 대상 2,000건을 고정 생성하고 작업 목록·상세·난 묶음 통합 이력
   조회의 쿼리 수를 검증한다. API별 3회 워밍업 후 20회 측정한 median/p95는
   `backend/build/work-benchmark/results.json`에 기록한다.
+- 같은 `workBenchmark`의 거래처 검색 실험은 501개·5,001개의 일치 거래처에서 판매·경매 검색의 전체 건수와 마지막 페이지를 검증한다. `partner-search.json`에 SQL 수·응답 시간·호출 스레드의 할당 바이트를 기록한다. 할당량은 프로세스 전체나 최대 상주 메모리 측정값이 아니다. 500개 단위 식별자 조회 횟수는 항상 검사한다.
 - 기능 결과와 DB 불변식은 자동 실패 조건으로 사용한다. 응답 시간은 실행 환경 영향을 받으므로
   전후 결과를 수동 비교하고 CI의 강한 실패 조건으로 사용하지 않는다. 기본 벤치마크는
   리팩터링 전 기준값도 남길 수 있도록 쿼리 상한을 기록만 하며, `-PworkBenchmarkEnforce=true`를
@@ -501,8 +506,8 @@ cd backend
 - 거래처 검색 경계를 거치는 판매 검색은 1·10·50행에서 SQL 4회, 품종과 경매장 이름에 걸친 경매 문구 검색은 7회다. 각각 기존 3회·5회에서 scalar 검색이 추가된 값이며 행별 반복 조회는 없다. 검색 없는 경매 페이지의 기존 5회 상한은 유지한다.
 - `CoreQueryRegressionTest`는 기본 테스트에서 농장 viewport 3회, 경매 lot 페이지 5회 이내를 검증한다. 일반 판매 전표 상세는 서로 다른 난 묶음 배분 1·10·50개에서 SQL 5회로 고정되며, 배분·스냅샷·현재 Farm 값·거래처·서버 판정 액션을 일괄 조회한다.
 - 사용자 그룹 목록은 1·10·50개에서 SQL 3회, 난 묶음별 소속 그룹 조회는 5회 이내인지 검증한다. 보관·탈퇴 제외와 소속 순서도 함께 확인한다.
-- 기본 검증과 별도로 CI의 `backend-postgres` job이 Docker 사용 가능 여부와 `workE2eTest`를 실행한다. PostgreSQL 테스트를 실행하지 못한 경우 완료로 취급하지 않는다.
-- 백엔드의 편집 기준은 `backend/.editorconfig`를 따른다. 이 설정 자체는 자동 formatter나 CI 포맷 검사가 아니며, 기존 전체 파일을 일괄 포맷하지 않는다.
+- CI의 기본 job은 `check bootJar`, `backend-postgres` job은 Docker 확인 후 `workE2eTest workBenchmark -PworkBenchmarkEnforce=true`를 실행한다. Docker가 없으면 PostgreSQL 검사는 실패하며 조용히 건너뛰지 않는다. 기본 architecture 검사도 테스트 비활성화와 모듈 내부·직접 시간 조회 예외의 재도입을 막는다.
+- 백엔드의 편집 기준은 `backend/.editorconfig`를 따른다. Java는 [Spring Java Format](https://github.com/spring-io/spring-javaformat)의 `./gradlew format`으로 적용하고 `checkFormat`으로 검사한다. `check`는 검사만 수행한다. import는 static 먼저, 각 그룹 내 사전순으로 정렬하며 중복과 순서를 architecture 테스트로 검사한다. 기능 변경과 전체 포맷 적용은 별도 커밋으로 나눈다.
 
 ## 8. 프론트엔드 맵 성능 E2E
 

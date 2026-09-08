@@ -2,7 +2,7 @@
 
 - 기준일: 2026-09-05
 - 기준 코드: `feature/orchid-group-mutation-engine`, `3aa8fc54`
-- 상태: 단계별 구현 진행 중. 1~21차 구현 범위와 남은 작업은 아래 실행 기록 참고.
+- 상태: 구조 리팩터링 묶음 1~8 완료. 1~23차 실행 결과와 별도 후속·검증 한계는 아래 참고.
 - 작업 브랜치: `feature/backend-refactoring`.
 - 범위: **13개 모듈 전체**, Controller·application·domain·Repository·DTO·설정·DB migration·테스트·CI.
 - 목표: **확장에는 열려 있고 수정에는 닫힌 구조(OCP)**. 새 기능을 추가할 때 기존 유스케이스와 타 모듈 내부를 수정하는 범위를 줄인다.
@@ -20,10 +20,10 @@
 | 4 | Farm 나머지 조회·입고·기준 정보 정리 | 19차 완료 |
 | 5 | Sales·Auction·Settlement 남은 정책·모듈 경계 | 20차 완료 |
 | 6 | Audit·Print·Dashboard | 21차 완료 |
-| 7 | 공통 시간·페이지·스타일·비활성 테스트 | 남음 |
-| 8 | 전체 회귀·확장성 검증 | 남음 |
+| 7 | 공통 시간·페이지·스타일·비활성 테스트 | 22차 완료 |
+| 8 | 전체 회귀·확장성 검증 | 23차 완료 |
 
-별도 후속은 **Work 멱등성 보강**, **운영 전환 안정화 후 Legacy 제거**다. 이번 회귀 실행이 8번의 전체 확장성 검증 완료를 뜻하지 않는다. 기존 실행 기록의 후속 항목은 해당 묶음에서 함께 검토한다.
+별도 후속은 **Work 멱등성 보강(이번에 확인한 Mutation 지문 순서 문제 포함)**, **운영 전환 안정화 후 Legacy 제거**다. 구조 정리 완료는 운영 cutover나 모든 규모에서의 성능 보장을 뜻하지 않는다. 기존 실행 기록의 잔여 항목에 대한 최종 판단은 22~23차 기록을 따른다.
 
 ## 1. 판단과 전체 범위
 
@@ -67,7 +67,7 @@ OCP는 모든 미래 요구를 기존 코드 수정 없이 처리한다는 뜻�
 
 - [BusinessPartnerReader](../../backend/src/main/java/com/greenhouse/backend/partner/application/BusinessPartnerReader.java)는 `BusinessPartner`를 반환하고 여러 업무 모듈이 사용한다.
 - [AuctionShipmentCreator](../../backend/src/main/java/com/greenhouse/backend/auction/application/AuctionShipmentCreator.java)는 외부에서 만든 `AuctionShipment`를 받아 저장만 한다.
-- [AuctionShipmentMaterializer](../../backend/src/main/java/com/greenhouse/backend/sales/application/AuctionShipmentMaterializer.java)와 `AuctionShipmentLotFactory`는 Sales에서 Auction Entity를 생성한다.
+- `AuctionShipmentMaterializer`(이후 리팩터링에서 제거)와 `AuctionShipmentLotFactory`는 Sales에서 Auction Entity를 생성한다.
 - [AuctionDataReader](../../backend/src/main/java/com/greenhouse/backend/auction/application/AuctionDataReader.java)는 정산에 `AuctionResultLine` 등 Entity를 제공한다.
 - [OrchidGroupReader](../../backend/src/main/java/com/greenhouse/backend/farm/application/orchid/OrchidGroupReader.java)와 Work handler 계약에도 유사한 의존이 있다.
 
@@ -433,7 +433,7 @@ B-17의 운영 gate가 미충족이어도 나머지 백엔드 리팩터링을 �
 
 ```bash
 cd backend
-./gradlew test --no-daemon
+./gradlew check --no-daemon
 ./gradlew workE2eTest --no-daemon
 ./gradlew workBenchmark -PworkBenchmarkEnforce=true --no-daemon
 ./gradlew bootJar --no-daemon
@@ -1025,3 +1025,112 @@ V24 운영 적용 순서는 [배포 문서](../07-deployment.md)에 반영했다
 - 프론트 코드와 API schema 변경이 없어 생성 TypeScript 갱신·프론트 검증·브라우저 E2E는 실행하지 않았다. 이번 변경에 DB migration은 없으며 운영 적용·대규모 시간/메모리 벤치마크도 수행하지 않았다.
 
 요청한 **묶음 5·6을 완료**했다. 남은 구조 작업은 **7번 공통 시간·페이지·스타일·비활성 테스트**, **8번 전체 회귀·확장성 검증**이다. Work 멱등성 보강과 운영 전환 안정화 후 Legacy 제거는 별도 후속으로 유지한다.
+
+
+## 29. 실행 기록 — 22차 공통 시간·페이지·스타일·테스트 복구
+
+2026-09-08, `feature/backend-refactoring`. 사용자 요청 묶음 **7번**.
+
+- 시드에 의존해 비활성화됐던 Farm 구조·난 묶음·Inventory·판매·경매 테스트 43건을 복구했다. 명시적인 테스트 fixture와 rollback을 사용하며 다른 통합 테스트의 잔여 데이터와 DB를 분리했다. 삭제 제한과 포트 결과 배열처럼 오래된 기대값은 현행 계약에 맞췄고, 빈 요청 validation으로 잘못 통과하던 점유 구역 거절 테스트도 실제 점유 검증까지 도달하게 했다.
+- 공통 Entity 생성·수정 시각은 주입된 Clock을 읽는 JPA auditing으로 이전했다. 경매 상태 이력과 그룹 가입·탈퇴 시각은 application에서 domain에 전달하고, 난 묶음 나이는 한 번 구한 농장 업무일을 응답 조립에 전달한다. 직접 시스템 시계 호출 예외 **4개 클래스 → 0개**. 고정 시계로 UTC 저장·수정, 서울 자정과 재배 나이 경계, 중복 탈퇴의 최초 시각 보존을 확인한다.
+- 반복된 페이지 검증·보정은 작은 `PageRequests` 유틸리티로 모았다. 엄격 검증 API 5개와 보정 API 5개의 기존 400/보정 계약을 HTTP 회귀로 검사한다. 정렬과 내부 200·500건 배치 크기는 유지한다.
+- Java 전체에 표준 formatter와 import 순서를 적용했다. `check`에 포맷 검사가 연결되고 테스트 비활성화와 import 순서 위반도 자동으로 실패한다. Docker 부재로 PostgreSQL 테스트를 조용히 건너뛰는 옵션을 제거했다.
+
+목록 범위 판단:
+
+| 사용 목적 | 이번 판단 |
+|---|---|
+| 판매·거래처·정산·입금 운영 목록 | 기존 페이지 API 및 호환 목록 500건 상한 유지. 오류/보정 정책만 공유 |
+| Work·품종·자재·입고 운영 페이지 | 기존 페이지와 엄격 검증 유지 |
+| 농장 전체 배치·사용자 그룹 선택·기간 캘린더·호환 이력 | 기존 전체/기간 의미 유지. 임의 상한으로 일부를 누락시키지 않음. 누적량 증가 시 페이지 API와 화면 소비자를 함께 전환해야 함 |
+| 전체 집계·순위·검색 총건수 | 화면 페이지 상한을 적용하지 않음 |
+
+위 판단은 기존 전체 목록을 모두 bounded API로 바꿨다는 뜻이 아니다. 신규 무제한 운영 목록을 허용하지 않는 원칙은 유지한다.
+
+## 30. 실행 기록 — 23차 전체 회귀·확장성 검증
+
+2026-09-08, `feature/backend-refactoring`. 사용자 요청 묶음 **8번**.
+
+- 남은 Farm–Work 입력·결과·계보·실행 응답을 기존 application 타입으로 이식했다. 단순 복사 mapper를 추가하지 않고 기존 JSON·validation·OpenAPI schema 이름을 보존했다. 타입에 포함된 action도 소유 도메인으로 옮겨 application 계약의 HTTP DTO 의존을 제거했다.
+- 컴파일된 Entity·Repository·Q 타입·Controller·HTTP DTO 직접 의존 예외 **29 → 0쌍**. 명시적 다른 모듈 쿼리 예외도 0건이다. 모듈 방향·계층·writer 검사와 정확한 빈 목록을 유지한다. 동적 SQL 전체를 파싱하는 검사는 아니므로 코드 검토를 대체하지 않는다.
+- Mutation 명령 13종을 sealed 타입으로 선언해 fingerprint switch의 누락을 컴파일 단계에서 잡는다. 런타임 unsupported 기본 분기를 제거했고 기존 지문 fixture와 명령 집합 완전성을 함께 검사한다. 별도 command registry나 공통 실행 프레임워크는 추가하지 않았다.
+- 테스트 안의 CSV 판매 입력과 경매 결과 행 adapter가 실제 application 명령을 만들어 같은 PostgreSQL 유스케이스를 실행하도록 검증했다. 판매 예약·수량·금액·출력 문서·호출자 rollback과 경매 수량 불일치 거절·정상 결과·상태 이력을 확인했다. 운영용 CSV/외부 연동 기능은 추가하지 않았다.
+
+확장 실험과 유지 판단:
+
+| 확장 축 | 검증·판단 |
+|---|---|
+| Work 유형·효과 | 기존 `WorkEffectProcessorTest`, `WorkTypeCapabilitiesTest`, `StructureChangeStrategyRegistryTest`의 테스트 handler·정의 조합과 누락/중복 검증 유지. 새 효과 모델 자체는 해당 계약을 수정해야 함 |
+| 판매·경매 입력 채널 | `InputChannelExtensionPostgresE2ETest`의 테스트 adapter 2개. 업무 처리기·수량/금액 정책 변경 없이 호출 |
+| 예상 입금일 | `ExpectedPaymentDateCalculatorTest`의 달력일/영업일·여러 설정·주말/0일·일괄 조회 검증. 현재 설정 Entity의 순수 계산 유지. 가상 provider를 만들지 않으며 공휴일 요구가 생기면 소유 정책을 확장 |
+| 감사 대상·실행 경로 | 21차의 새 CLI 대상 fixture·트랜잭션 밖 거절·동일 트랜잭션 rollback 회귀 재실행. DB recorder에 대상별 분기 없음 |
+| 인증 공급자 | `CustomAccountAuthIntegrationTest`의 대체 UserDetailsService로 실제 로그인·세션 검증. 업무 모듈 수정 없음 |
+| Dashboard·Print | 작은 조립 경계를 유지. 실제 Farm 집계 SQL/Entity 로딩과 출력 JSON fixture, 다른 입력 채널에서 생성한 전표의 출력 일치를 검증. 쓰기 유스케이스에 표현 의존 없음. 현존하지 않는 두 번째 renderer/provider를 위한 추상화는 도입하지 않음 |
+| Mutation 이관·대사 | 기존 importer/CLI·state-chain·fence·대사·Legacy/Engine parity의 PostgreSQL 회귀 유지. 운영 전환 승인과 데이터 보존 gate는 변경하지 않음 |
+
+13개 모듈의 최종 판단과 회귀 근거:
+
+| 모듈 | 유지/변경 판단 | 대표 검증 |
+|---|---|---|
+| common | 공통 응답 유지, Clock·페이지 중복 제거 | `ClockPersistenceIntegrationTest`, `PaginationContractIntegrationTest`, 오류/시간 테스트 |
+| audit | 명시적 이벤트·실행 맥락, 호출 트랜잭션 저장 | `AuditEventWriterTest`, 감사 rollback·PostgreSQL CLI 회귀 |
+| auth | 교체 가능한 계정 조회, 세션/쿠키 경계 유지 | `AuthIntegrationTests`, `CustomAccountAuthIntegrationTest` |
+| demo | filter 전달과 경로/한도 정책 분리 유지 | `DemoModeIntegrationTests`, limiter/filter/보호 정책 테스트 |
+| farm | 조회 일괄화·순수 배치 정책·writer 단일 경계, 전환 경로 보존 | Farm query/reference·Mutation·state-chain·routing PostgreSQL 테스트 |
+| work | 유형 정의·handler·codec와 application 값 계약 | Work contract/structure/parity/detail PostgreSQL 테스트, capability·registry 테스트 |
+| partner | 값 조회·정렬 잠금·검색 소유권과 페이지 유지 | partner contract, `PartnerSettlementPostgresE2ETest`, 검색 벤치마크 |
+| sales | 생성·예약·출고 순서 및 도메인 조건 통합, 스냅샷 유지 | Sales inventory/snapshot/number·입력 adapter PostgreSQL 테스트 |
+| auction | 결과·반환 규칙과 이력은 lot 소유, 검색 계약 이식 | `AuctionResultPolicyTest`, sales/auction boundary·입력 adapter 테스트 |
+| settlement | 원장·잔액·잠금 순서, 설정 계산과 조회 책임 유지 | payment ledger·동시 재계산/입금·clock PostgreSQL 회귀 |
+| analytics | 소유 모듈 집계 계약·기간 계산, 표현 조립 분리 유지 | sales analytics/metrics PostgreSQL·date range 테스트 |
+| dashboard | 현재 작은 요약 조립 유지 | `SalesAuctionBoundaryPostgresE2ETest`: 집계 SQL 5회·Entity 로딩 0건 |
+| print | Sales application 문서 공유, 별도 복제 DTO 없음 | 같은 테스트의 출력 상세·목록 JSON fixture와 입력 adapter 문서 비교 |
+
+### 복잡성·성능 기록
+
+기준은 21차 종료 `882b26ff`다.
+
+- 운영 Java **578 → 580파일, 30,404 → 27,828줄(순감 2,576줄)**. 포맷 전 의미 있는 변경은 순증 92줄이고, 나머지 2,668줄 감소는 포맷 적용에 따른다. 새 운영 타입은 페이지 유틸리티와 sealed 명령 인터페이스 두 개다. 타입 이동 시 옛 타입을 제거했고 새 서비스 계층이나 registry는 추가하지 않았다. 줄 수 감소만으로 복잡도 개선을 주장하지 않는다.
+- 테스트 Java **117 → 123파일, 18,876 → 18,839줄(순감 37줄)**. 새 회귀 코드 증가와 전체 포맷 감소를 합친 값이며 JSON fixture·설정·문서는 제외한다.
+- 포맷 전후 운영 **703개 컴파일 클래스의 `javap -p -c -constants` 출력이 동일**하다. 디버그 줄 번호를 제외한 실행 명령·상수 보존을 확인했다.
+
+동일 환경에서 작업 100건·대상 2,000건, 워밍업 3회·측정 20회의 전후 관측값:
+
+| 조회 | SQL 전 → 후 | median ms 전 → 후 | p95 ms 전 → 후 |
+|---|---|---|---|
+| 작업 목록 | 3 → 3 | 26.56 → 22.75 | 48.09 → 34.40 |
+| 작업 상세(대상 20건) | 3 → 3 | 15.28 → 12.61 | 19.42 → 16.18 |
+| 난 묶음 작업 이력 | 3 → 3 | 12.69 → 12.33 | 19.46 → 17.69 |
+
+새 검색 실험은 각 규모에서 한 번 워밍업 후 한 번 측정한다. 마지막 페이지 1건과 전체 검색 건수를 함께 검사한다.
+
+| 일치 거래처 수 | 판매/경매 SQL | 판매/경매 시간 ms | 판매/경매 호출 스레드 할당량 MiB |
+|---|---|---|---|
+| 501 | 5 / 8 | 24.77 / 38.50 | 1.41 / 1.54 |
+| 5,001 | 14 / 17 | 147.73 / 146.27 | 10.25 / 10.31 |
+
+시간은 실행 환경 영향을 받는 관측값이다. 메모리는 호출 스레드의 할당 바이트이며 최대 heap/RSS가 아니다. 행마다 쿼리가 늘지는 않지만 일치 ID를 500개씩 읽으므로 검색 규모에 비례한 비용은 남는다. 현 측정만으로 읽기 모델·캐시·모듈 간 직접 join을 새로 도입하지 않는다. 원시 결과는 `backend/build/work-benchmark/results.json`, `partner-search.json`에 생성한다.
+
+### 최종 검증
+
+- `./gradlew format check workE2eTest workBenchmark bootJar -PworkBenchmarkEnforce=true --offline --no-daemon` 통과. 기본 **459건**, 실제 PostgreSQL **98건**, 벤치마크 **2건**, 모두 실패·skip **0건**. 수량·금액·동시성·감사·snapshot·state-chain migration·write fence·대사·모듈/계층·query count 회귀를 포함한다.
+- OpenAPI 재생성: **136 operations·115 paths·228 schemas**, 전체 명세·slice 차이 없음. TypeScript schema 재생성도 차이 없음. 임시 명세 서버 종료 확인.
+- 프론트 `npm run check` 통과: 포맷·생성 타입 일치·단위 테스트·lint·프로덕션 빌드 포함. 첫 샌드박스 실행은 빌드 단계에서 진단 없이 중단됐고, 실행 권한을 확대한 동일 검사 재실행은 통과했다.
+- 포맷 전후 실행 명령 비교, `git diff --check` 통과. 운영 DB 데이터 및 기존 Flyway 파일 변경 없음.
+
+22~23차 목적별 커밋:
+
+- `080f6f6e test: restore seed-dependent backend regression coverage`
+- `85c035ff refactor: remove remaining farm work http contracts`
+- `830f1cfc refactor: centralize clock and pagination rules`
+- `e5882310 refactor: enforce exhaustive mutation command fingerprints`
+- `9dfe0d1c style: apply consistent backend java formatting`
+- `88c83a96 chore: enforce backend formatting and postgres regression checks`
+- `8748b6a3 test: verify extension contracts and large partner searches`
+
+### 확인한 후속·검증 한계
+
+- **멱등성 보강:** 새 호환성 테스트가 기존 Transform 제외 ID `Set`의 직렬화 순서 문제를 재현했다. 같은 두 ID가 JVM에 따라 두 지문을 만들 수 있다. fixture는 확인한 기존 두 인코딩을 명시적으로 보존한다. 이는 결정성 보장이 아니다. 후속에서 Work 요청 키의 일관성·경합 처리와 함께 순서 정규화 및 기존 저장 지문과의 호환/버전 전환을 해결해야 한다. 단순 정렬만 추가하면 기존 재시도와 충돌할 수 있다.
+- **Legacy 제거:** 실제 운영 DB의 cutover·안정화 여부를 이번 테스트로 대신 판단하지 않는다. 기존 전환 inventory와 데이터 보존 gate를 통과한 후 코드만 제거한다.
+- **규모 확대:** 검색 matching ID 수에 따라 SQL 인자·메모리가 증가한다. 아래 실험은 5,001개까지이며 무제한 확장을 보장하지 않는다. Mutation의 결과별 점유 검증은 앞선 상태 변경을 반영하는 기존 순서를 유지했고 대규모 생성의 일정한 query count를 입증한 것은 아니다. 대규모 입력·목록 계약 변경이 필요할 때 측정 근거와 클라이언트 전환을 함께 다룬다.
+- 이번 작업은 DB migration·운영 배포를 포함하지 않는다. 브라우저 E2E와 실제 운영 데이터 리허설은 실행하지 않았다.

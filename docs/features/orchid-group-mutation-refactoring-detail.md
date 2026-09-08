@@ -2,7 +2,7 @@
 
 - 작성일: 2026-09-05
 - 검토 기준: `feature/orchid-group-mutation-engine`, `3aa8fc54`
-- 상태: 코드·문서 검토 완료, 구현 전 계획
+- 상태: 기준 시점의 진단·제안. 구현 결과는 [전체 계획의 1~23차 실행 기록](backend-refactoring-plan.md)을 따른다.
 - 중심 범위: `farm.orchid.mutation`, 이를 호출하는 Farm·Inbound·Work·Sales
 - 문서 성격: 현재 구현에 대한 진단과 제안. 승인된 정책은 기존 ADR과 기능 문서를 따른다.
 
