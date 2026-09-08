@@ -11,7 +11,7 @@ import com.greenhouse.backend.work.domain.operation.WorkType;
 import com.greenhouse.backend.work.domain.operation.WorkTypeDefinition;
 import com.greenhouse.backend.work.domain.target.WorkOperationTarget;
 import com.greenhouse.backend.work.domain.target.WorkTargetExecution;
-import com.greenhouse.backend.work.dto.operation.InboundWorkOperationCreateRequest;
+import com.greenhouse.backend.work.application.operation.RecordInboundWorkCommand;
 import com.greenhouse.backend.work.repository.WorkOperationRepository;
 import com.greenhouse.backend.work.repository.WorkOperationTargetRepository;
 import com.greenhouse.backend.work.repository.WorkTargetExecutionRepository;
@@ -35,12 +35,12 @@ public class InboundWorkOperationRecorder {
 	private final WorkEffectStore workEffectStore;
 	private final WorkOperationSupport support;
 
-	public void record(InboundWorkOperationCreateRequest request) {
+	public void record(RecordInboundWorkCommand request) {
 		record(request, null);
 	}
 
 	public void record(
-			InboundWorkOperationCreateRequest request,
+			RecordInboundWorkCommand request,
 			WorkMutationLink mutationLink) {
 		WorkType workType = workTypeService.getByCode(WorkTypeDefinition.INBOUND.name());
 		if (!workType.isActive()) {

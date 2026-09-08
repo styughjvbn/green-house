@@ -1,6 +1,7 @@
-package com.greenhouse.backend.farm.dto.inbound;
+package com.greenhouse.backend.farm.application.inbound;
 
 import com.greenhouse.backend.farm.domain.inbound.InboundStatus;
+import com.greenhouse.backend.farm.application.variety.InboundVarietyInput;
 import com.greenhouse.backend.farm.domain.inbound.InboundType;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.Min;
@@ -9,11 +10,12 @@ import jakarta.validation.constraints.Size;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 
-public record InboundRecordCreateRequest(
+@io.swagger.v3.oas.annotations.media.Schema(name = "InboundRecordCreateRequest")
+public record InboundRecordCreateCommand(
 		@NotNull LocalDate inboundDate,
 		@NotNull InboundType inboundType,
 		Long varietyId,
-		@Valid InboundNewVarietyRequest newVariety,
+		@Valid InboundVarietyInput newVariety,
 		@Min(0) Integer bottleCount,
 		@Min(1) Integer estimatedQuantity,
 		@Min(1) Integer actualQuantity,

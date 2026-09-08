@@ -7,7 +7,7 @@ import com.greenhouse.backend.farm.application.inbound.InboundRecordQueryService
 import com.greenhouse.backend.farm.domain.inbound.InboundStatus;
 import com.greenhouse.backend.farm.domain.inbound.InboundType;
 import com.greenhouse.backend.farm.dto.inbound.InboundRecordCancelRequest;
-import com.greenhouse.backend.farm.dto.inbound.InboundRecordCreateRequest;
+import com.greenhouse.backend.farm.application.inbound.InboundRecordCreateCommand;
 import com.greenhouse.backend.farm.dto.inbound.InboundRecordPottingRequest;
 import com.greenhouse.backend.farm.dto.inbound.InboundRecordResponse;
 import com.greenhouse.backend.farm.dto.inbound.InboundRecordUpdateRequest;
@@ -60,7 +60,7 @@ public class InboundRecordController {
 
 	@PostMapping
 	@ResponseStatus(HttpStatus.CREATED)
-	public ApiResponse<InboundRecordResponse> create(@Valid @RequestBody InboundRecordCreateRequest request) {
+	public ApiResponse<InboundRecordResponse> create(@Valid @RequestBody InboundRecordCreateCommand request) {
 		return ApiResponse.ok(inboundRecordService.create(request));
 	}
 

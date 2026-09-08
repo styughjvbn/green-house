@@ -153,6 +153,9 @@ public class InboundRecord extends BaseEntity {
 			Integer trayCount,
 			String worker,
 			String memo) {
+		if (status == InboundStatus.CANCELED) {
+			throw new IllegalArgumentException("취소된 입고 기록은 수정할 수 없습니다.");
+		}
 		this.inboundDate = inboundDate;
 		this.bottleCount = bottleCount;
 		this.estimatedQuantity = estimatedQuantity;
@@ -209,9 +212,45 @@ public class InboundRecord extends BaseEntity {
 	}
 
 	public void cancel(String memo) {
+		requireCancellable();
 		this.status = InboundStatus.CANCELED;
 		if (memo != null && !memo.isBlank()) {
 			this.memo = memo.trim();
 		}
+	}
+
+	public void requireCancellable() {
+		if (createdOrchidGroup != null) {
+			throw new IllegalArgumentException("난 묶음이 생성된 입고 기록은 취소할 수 없습니다.");
+		}
+	}
+
+	public void requireDeletable() {
+		if (status != InboundStatus.CANCELED) {
+			throw new IllegalArgumentException("취소된 입고 기록만 삭제할 수 있습니다.");
+		}
+		if (createdOrchidGroup != null) {
+			throw new IllegalArgumentException("난 묶음이 생성된 입고 기록은 삭제할 수 없습니다.");
+		}
+	}
+
+	public void requirePottingAllowed() {
+		if (inboundType != InboundType.FLASK_SEEDLING) {
+			throw new IllegalArgumentException("유리병 모종 입고만 포트 작업을 등록할 수 있습니다.");
+		}
+		if (status == InboundStatus.CANCELED) {
+			throw new IllegalArgumentException("취소된 입고 기록은 포트 작업을 등록할 수 없습니다.");
+		}
+		if (createdOrchidGroup != null) {
+			throw new IllegalArgumentException("이미 난 묶음이 생성된 입고 기록입니다.");
+		}
+	}
+
+	public static int resolveQuantity(Integer actualQuantity, Integer estimatedQuantity) {
+		Integer resolved = actualQuantity != null ? actualQuantity : estimatedQuantity;
+		if (resolved == null || resolved < 1) {
+			throw new IllegalArgumentException("수량은 1 이상이어야 합니다.");
+		}
+		return resolved;
 	}
 }

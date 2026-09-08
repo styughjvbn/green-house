@@ -1,36 +1,33 @@
 package com.greenhouse.backend.farm.application.inbound;
 
-import com.greenhouse.backend.farm.application.structure.OrchidPlacementPolicy;
+import com.greenhouse.backend.audit.domain.AuditAction;
+import com.greenhouse.backend.common.application.RequestActorProvider;
+import com.greenhouse.backend.common.exception.NotFoundException;
 import com.greenhouse.backend.farm.application.orchid.mutation.CreateInboundOrchidGroupsMutationCommand;
 import com.greenhouse.backend.farm.application.orchid.mutation.CreateOrchidGroupMutationItem;
 import com.greenhouse.backend.farm.application.orchid.mutation.OrchidGroupMutationDetails;
 import com.greenhouse.backend.farm.application.orchid.mutation.OrchidGroupMutationEngine;
 import com.greenhouse.backend.farm.application.orchid.mutation.OrchidGroupMutationRoutingPolicy;
 import com.greenhouse.backend.farm.application.orchid.mutation.OrchidGroupMutationSources;
-import com.greenhouse.backend.common.exception.NotFoundException;
-import com.greenhouse.backend.common.application.RequestActorProvider;
-import com.greenhouse.backend.farm.domain.structure.BedZone;
+import com.greenhouse.backend.farm.application.structure.OrchidPlacementPolicy;
+import com.greenhouse.backend.farm.application.variety.VarietyService;
 import com.greenhouse.backend.farm.domain.inbound.InboundRecord;
 import com.greenhouse.backend.farm.domain.inbound.InboundStatus;
 import com.greenhouse.backend.farm.domain.inbound.InboundType;
 import com.greenhouse.backend.farm.domain.orchid.OrchidGroup;
+import com.greenhouse.backend.farm.domain.structure.BedZone;
 import com.greenhouse.backend.farm.domain.variety.Variety;
-import com.greenhouse.backend.farm.dto.inbound.InboundNewVarietyRequest;
 import com.greenhouse.backend.farm.dto.inbound.InboundRecordCancelRequest;
-import com.greenhouse.backend.farm.dto.inbound.InboundRecordCreateRequest;
 import com.greenhouse.backend.farm.dto.inbound.InboundRecordResponse;
 import com.greenhouse.backend.farm.dto.inbound.InboundRecordUpdateRequest;
-import com.greenhouse.backend.farm.repository.structure.BedZoneRepository;
 import com.greenhouse.backend.farm.repository.inbound.InboundRecordRepository;
 import com.greenhouse.backend.farm.repository.orchid.OrchidGroupRepository;
-import com.greenhouse.backend.farm.repository.variety.VarietyRepository;
-import com.greenhouse.backend.work.application.operation.InboundWorkOperationRecorder;
-import com.greenhouse.backend.work.application.operation.InboundWorkOperationLifecycleService;
+import com.greenhouse.backend.farm.repository.structure.BedZoneRepository;
 import com.greenhouse.backend.work.application.effect.WorkMutationLink;
-import java.math.BigDecimal;
+import com.greenhouse.backend.work.application.operation.InboundWorkOperationLifecycleService;
+import com.greenhouse.backend.work.application.operation.InboundWorkOperationRecorder;
 import java.util.List;
 import java.util.Map;
-import com.greenhouse.backend.audit.domain.AuditAction;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -47,7 +44,7 @@ public class InboundRecordService {
 	private static final String DEFAULT_ORCHID_STATUS = "정상";
 
 	private final InboundRecordRepository inboundRecordRepository;
-	private final VarietyRepository varietyRepository;
+	private final VarietyService varietyService;
 	private final BedZoneRepository bedZoneRepository;
 	private final OrchidGroupRepository orchidGroupRepository;
 	private final InboundWorkOperationRecorder inboundWorkOperationRecorder;
@@ -60,11 +57,11 @@ public class InboundRecordService {
 	private final OrchidGroupMutationEngine mutationEngine;
 	private final OrchidGroupMutationRoutingPolicy mutationRoutingPolicy;
 
-	public InboundRecordResponse create(InboundRecordCreateRequest request) {
-		validateCreate(request, resolveCreateStatus(request));
-		Variety variety = resolveVariety(request.varietyId(), request.newVariety());
-		BedZone bedZone = requiresPlacement(request.inboundType()) ? findBedZone(request.bedZoneId()) : null;
+	public InboundRecordResponse create(InboundRecordCreateCommand request) {
 		InboundStatus status = resolveCreateStatus(request);
+		validateCreate(request, status);
+		Variety variety = varietyService.resolveInboundVariety(request.varietyId(), request.newVariety());
+		BedZone bedZone = requiresPlacement(request.inboundType()) ? findBedZone(request.bedZoneId()) : null;
 		InboundRecord inboundRecord = new InboundRecord(
 				request.inboundDate(),
 				request.inboundType(),
@@ -88,37 +85,35 @@ public class InboundRecordService {
 
 		if (requiresPlacement(request.inboundType())) {
 			OrchidGroup orchidGroup;
-			OrchidPlacementPolicy.PlacementRange placementRange = resolvePlacementRange(
+			OrchidPlacementPolicy.PlacementRange placementRange = orchidPlacementPolicy.resolveRange(
 					bedZone, request.startPosition(), request.endPosition());
-			var mutationCommand = mutationRoutingPolicy.routesToEngine()
-					? new CreateInboundOrchidGroupsMutationCommand(
-					OrchidGroupMutationSources.inbound(saved.getId(), "CREATE_PLACED_GROUP"),
-					saved.getId(),
-					List.of(new CreateOrchidGroupMutationItem(
-							bedZone.getId(),
-							new OrchidGroupMutationDetails(
-									variety.getId(),
-									resolveQuantity(request.actualQuantity(), request.estimatedQuantity()),
-									request.potSize(),
-									request.ageYear(),
-									DEFAULT_ORCHID_STATUS,
-									request.placementType(),
-									request.trayCount(),
-									false,
-									placementRange.startPosition(),
-									placementRange.endPosition(),
-									request.memo()))),
-					request.inboundDate(),
-					"즉시 배치 입고")
-					: null;
 			if (mutationRoutingPolicy.routesToEngine()) {
+				var mutationCommand = new CreateInboundOrchidGroupsMutationCommand(
+						OrchidGroupMutationSources.inbound(saved.getId(), "CREATE_PLACED_GROUP"),
+						saved.getId(),
+						List.of(new CreateOrchidGroupMutationItem(
+								bedZone.getId(),
+								new OrchidGroupMutationDetails(
+										variety.getId(),
+										InboundRecord.resolveQuantity(request.actualQuantity(), request.estimatedQuantity()),
+										request.potSize(),
+										request.ageYear(),
+										DEFAULT_ORCHID_STATUS,
+										request.placementType(),
+										request.trayCount(),
+										false,
+										placementRange.startPosition(),
+										placementRange.endPosition(),
+										request.memo()))),
+						request.inboundDate(),
+						"즉시 배치 입고");
 				var mutation = mutationEngine.createFromInbound(mutationCommand);
 				Long orchidGroupId = mutation.entries().getFirst().orchidGroupId();
 				orchidGroup = orchidGroupRepository.findById(orchidGroupId)
 						.orElseThrow(() -> new NotFoundException("생성된 난 묶음을 찾을 수 없습니다."));
 				mutationLink = new WorkMutationLink(mutation.mutationId(), mutation.correlationId());
 			} else {
-				orchidGroup = createPlacedOrchidGroup(variety, request, bedZone);
+				orchidGroup = createPlacedOrchidGroup(variety, request, bedZone, placementRange);
 				orchidGroup.assignVariety(variety);
 				orchidGroup.assignInboundRecord(saved);
 				orchidGroupRepository.save(orchidGroup);
@@ -127,7 +122,7 @@ public class InboundRecordService {
 					bedZone,
 					orchidGroup,
 					request.inboundDate(),
-					resolveQuantity(request.actualQuantity(), request.estimatedQuantity()));
+					InboundRecord.resolveQuantity(request.actualQuantity(), request.estimatedQuantity()));
 		} else {
 			saved.markPottingPending(status);
 		}
@@ -137,9 +132,6 @@ public class InboundRecordService {
 
 	public InboundRecordResponse update(Long inboundRecordId, InboundRecordUpdateRequest request) {
 		InboundRecord inboundRecord = inboundRecordFinder.find(inboundRecordId);
-		if (inboundRecord.getStatus() == InboundStatus.CANCELED) {
-			throw new IllegalArgumentException("취소된 입고 기록은 수정할 수 없습니다.");
-		}
 		Map<String, Object> before = auditSupport.snapshot(inboundRecord);
 		inboundRecord.updateMetadata(
 				request.inboundDate(),
@@ -161,9 +153,7 @@ public class InboundRecordService {
 
 	public InboundRecordResponse cancel(Long inboundRecordId, InboundRecordCancelRequest request) {
 		InboundRecord inboundRecord = inboundRecordFinder.find(inboundRecordId);
-		if (inboundRecord.getCreatedOrchidGroup() != null) {
-			throw new IllegalArgumentException("난 묶음이 생성된 입고 기록은 취소할 수 없습니다.");
-		}
+		inboundRecord.requireCancellable();
 		Map<String, Object> before = auditSupport.snapshot(inboundRecord);
 		inboundWorkOperationLifecycleService.cancelForInboundRecord(inboundRecordId);
 		inboundRecord.cancel(normalize(request.memo()));
@@ -174,17 +164,12 @@ public class InboundRecordService {
 	public void delete(Long inboundRecordId) {
 		InboundRecord inboundRecord = inboundRecordFinder.find(inboundRecordId);
 		Map<String, Object> before = auditSupport.snapshot(inboundRecord);
-		if (inboundRecord.getStatus() != InboundStatus.CANCELED) {
-			throw new IllegalArgumentException("취소된 입고 기록만 삭제할 수 있습니다.");
-		}
-		if (inboundRecord.getCreatedOrchidGroup() != null) {
-			throw new IllegalArgumentException("난 묶음이 생성된 입고 기록은 삭제할 수 없습니다.");
-		}
+		inboundRecord.requireDeletable();
 		inboundRecordRepository.delete(inboundRecord);
 		auditSupport.record(AuditAction.DELETED, inboundRecord, before, null);
 	}
 
-	private void validateCreate(InboundRecordCreateRequest request, InboundStatus status) {
+	private void validateCreate(InboundRecordCreateCommand request, InboundStatus status) {
 		if (request.varietyId() == null && request.newVariety() == null) {
 			throw new IllegalArgumentException("품종을 선택하거나 새 품종을 입력해야 합니다.");
 		}
@@ -205,7 +190,7 @@ public class InboundRecordService {
 		}
 	}
 
-	private InboundStatus resolveCreateStatus(InboundRecordCreateRequest request) {
+	private InboundStatus resolveCreateStatus(InboundRecordCreateCommand request) {
 		if (request.status() != null) {
 			return request.status();
 		}
@@ -227,39 +212,13 @@ public class InboundRecordService {
 				.orElseThrow(() -> new NotFoundException("논리 구역을 찾을 수 없습니다."));
 	}
 
-	private Variety resolveVariety(Long varietyId, InboundNewVarietyRequest newVariety) {
-		if (varietyId != null) {
-			return varietyRepository.findById(varietyId)
-					.orElseThrow(() -> new NotFoundException("품종을 찾을 수 없습니다."));
-		}
-		if (newVariety == null) {
-			throw new IllegalArgumentException("품종을 선택하거나 새 품종을 입력해야 합니다.");
-		}
-		String genus = normalizeRequired(newVariety.genus());
-		String name = normalizeRequired(newVariety.name());
-		return varietyRepository.findByGenusAndName(genus, name)
-				.orElseGet(() -> varietyRepository.save(new Variety(
-						nextVarietyCode(),
-						genus,
-						name,
-						null,
-						normalize(newVariety.defaultPotSize()),
-						true,
-						true,
-						null,
-						normalize(newVariety.memo()))));
-	}
-
-	private OrchidGroup createPlacedOrchidGroup(Variety variety, InboundRecordCreateRequest request, BedZone bedZone) {
-		OrchidPlacementPolicy.PlacementRange placementRange = resolvePlacementRange(
-				bedZone,
-				request.startPosition(),
-				request.endPosition());
+	private OrchidGroup createPlacedOrchidGroup(Variety variety, InboundRecordCreateCommand request,
+			BedZone bedZone, OrchidPlacementPolicy.PlacementRange placementRange) {
 		OrchidGroup orchidGroup = new OrchidGroup(
 				bedZone,
 				variety.getGenus(),
 				variety.getName(),
-				resolveQuantity(request.actualQuantity(), request.estimatedQuantity()),
+				InboundRecord.resolveQuantity(request.actualQuantity(), request.estimatedQuantity()),
 				normalize(request.potSize()),
 				request.ageYear(),
 				DEFAULT_ORCHID_STATUS,
@@ -269,7 +228,7 @@ public class InboundRecordService {
 		orchidGroup.updateDetails(
 				variety.getGenus(),
 				variety.getName(),
-				resolveQuantity(request.actualQuantity(), request.estimatedQuantity()),
+				InboundRecord.resolveQuantity(request.actualQuantity(), request.estimatedQuantity()),
 				normalize(request.potSize()),
 				request.ageYear(),
 				DEFAULT_ORCHID_STATUS,
@@ -282,45 +241,12 @@ public class InboundRecordService {
 		return orchidGroup;
 	}
 
-	private OrchidPlacementPolicy.PlacementRange resolvePlacementRange(
-			BedZone bedZone,
-			BigDecimal requestedStartPosition,
-			BigDecimal requestedEndPosition) {
-		if (requestedStartPosition == null && requestedEndPosition == null) {
-			return orchidPlacementPolicy.findFirstAvailableSingleSlot(bedZone);
-		}
-		BigDecimal startPosition = orchidPlacementPolicy.normalizeNumber(requestedStartPosition);
-		BigDecimal endPosition = orchidPlacementPolicy.normalizeNumber(requestedEndPosition);
-		orchidPlacementPolicy.validatePlacement(bedZone, startPosition, endPosition, null);
-		return new OrchidPlacementPolicy.PlacementRange(startPosition, endPosition);
-	}
-
-	private int resolveQuantity(Integer actualQuantity, Integer estimatedQuantity) {
-		Integer resolved = actualQuantity != null ? actualQuantity : estimatedQuantity;
-		if (resolved == null || resolved < 1) {
-			throw new IllegalArgumentException("수량은 1 이상이어야 합니다.");
-		}
-		return resolved;
-	}
-
-	private String nextVarietyCode() {
-		return "VAR-%04d".formatted(varietyRepository.nextCodeValue());
-	}
-
 	private String normalize(String value) {
 		if (value == null) {
 			return null;
 		}
 		String trimmed = value.trim();
 		return trimmed.isEmpty() ? null : trimmed;
-	}
-
-	private String normalizeRequired(String value) {
-		String normalized = normalize(value);
-		if (normalized == null) {
-			throw new IllegalArgumentException("필수 문자열 값은 비워둘 수 없습니다.");
-		}
-		return normalized;
 	}
 
 }

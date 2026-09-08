@@ -1,8 +1,9 @@
 package com.greenhouse.backend.farm.application.variety;
 
+import com.greenhouse.backend.audit.domain.AuditAction;
 import com.greenhouse.backend.common.api.PageResponse;
-import com.greenhouse.backend.common.exception.NotFoundException;
 import com.greenhouse.backend.common.config.TimeConfig;
+import com.greenhouse.backend.common.exception.NotFoundException;
 import com.greenhouse.backend.farm.application.orchid.mutation.OrchidGroupMutationDetails;
 import com.greenhouse.backend.farm.application.orchid.mutation.OrchidGroupMutationEngine;
 import com.greenhouse.backend.farm.application.orchid.mutation.OrchidGroupMutationRoutingPolicy;
@@ -18,17 +19,15 @@ import com.greenhouse.backend.farm.dto.variety.VarietyUpdateRequest;
 import com.greenhouse.backend.farm.repository.inbound.InboundRecordRepository;
 import com.greenhouse.backend.farm.repository.orchid.OrchidGroupRepository;
 import com.greenhouse.backend.farm.repository.variety.VarietyRepository;
-import lombok.RequiredArgsConstructor;
-
-import java.util.List;
 import java.time.Clock;
+import java.util.List;
+import java.util.Map;
 import java.util.UUID;
+import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import com.greenhouse.backend.audit.domain.AuditAction;
-import java.util.Map;
 
 /**
  * ORCHID-CUTOVER: LEGACY_RETIRE — Engine 경로와 전환 후 제거할 직접 품종 전파 분기를 함께 가진다.
@@ -99,6 +98,29 @@ public class VarietyService {
 		Variety saved = varietyRepository.save(variety);
 		auditSupport.record(AuditAction.CREATED, saved, null, auditSupport.snapshot(saved));
 		return responseAssembler.assemble(saved);
+	}
+
+	public Variety resolveInboundVariety(Long varietyId, InboundVarietyInput newVariety) {
+		if (varietyId != null) {
+			return varietyRepository.findById(varietyId)
+					.orElseThrow(() -> new NotFoundException("품종을 찾을 수 없습니다."));
+		}
+		if (newVariety == null) {
+			throw new IllegalArgumentException("품종을 선택하거나 새 품종을 입력해야 합니다.");
+		}
+		String genus = normalizeRequired(newVariety.genus());
+		String name = normalizeRequired(newVariety.name());
+		return varietyRepository.findByGenusAndName(genus, name)
+				.orElseGet(() -> varietyRepository.save(new Variety(
+						nextCode(),
+						genus,
+						name,
+						null,
+						normalize(newVariety.defaultPotSize()),
+						true,
+						true,
+						null,
+						normalize(newVariety.memo()))));
 	}
 
 	public VarietyResponse update(Long varietyId, VarietyUpdateRequest request) {

@@ -16,7 +16,7 @@ import com.greenhouse.backend.farm.domain.structure.BedZoneSide;
 import com.greenhouse.backend.farm.domain.structure.House;
 import com.greenhouse.backend.farm.domain.structure.PhysicalBed;
 import com.greenhouse.backend.farm.domain.variety.Variety;
-import com.greenhouse.backend.farm.dto.inbound.InboundRecordCreateRequest;
+import com.greenhouse.backend.farm.application.inbound.InboundRecordCreateCommand;
 import com.greenhouse.backend.farm.dto.orchid.OrchidGroupCreateRequest;
 import com.greenhouse.backend.farm.dto.orchid.OrchidGroupUpdateRequest;
 import com.greenhouse.backend.farm.dto.transformation.MultiCreateOrchidGroupRowRequest;
@@ -105,7 +105,7 @@ class OrchidGroupMutationRoutingIntegrationTest extends AbstractBackendIntegrati
 				fixture.variety().getId(), 18, "4인치", 2, "관리", "단일", null, false,
 				new BigDecimal("0"), new BigDecimal("1"), "상세 수정"));
 
-		var inbound = inboundRecordService.create(new InboundRecordCreateRequest(
+		var inbound = inboundRecordService.create(new InboundRecordCreateCommand(
 				LocalDate.of(2026, 8, 20),
 				InboundType.PRODUCT_POT,
 				fixture.variety().getId(),
@@ -337,7 +337,7 @@ class OrchidGroupMutationRoutingIntegrationTest extends AbstractBackendIntegrati
 		Fixture fixture = createFixture(9966, "라우팅 포트 작업");
 		ensureWorkType(WorkTypeDefinition.INBOUND.name(), "입고", WorkTypeTemplate.MEMO, 6);
 		ensureWorkType(WorkTypeDefinition.POTTING.name(), "포트 작업", WorkTypeTemplate.REPOT, 7);
-		var inbound = inboundRecordService.create(new InboundRecordCreateRequest(
+		var inbound = inboundRecordService.create(new InboundRecordCreateCommand(
 				LocalDate.of(2026, 8, 19),
 				InboundType.FLASK_SEEDLING,
 				fixture.variety().getId(),

@@ -19,6 +19,19 @@ public class OrchidPlacementPolicy {
 
 	private final OrchidGroupRepository orchidGroupRepository;
 
+	public PlacementRange resolveRange(
+			BedZone bedZone,
+			BigDecimal requestedStartPosition,
+			BigDecimal requestedEndPosition) {
+		if (requestedStartPosition == null && requestedEndPosition == null) {
+			return findFirstAvailableSingleSlot(bedZone);
+		}
+		BigDecimal startPosition = normalizeNumber(requestedStartPosition);
+		BigDecimal endPosition = normalizeNumber(requestedEndPosition);
+		validatePlacement(bedZone, startPosition, endPosition, null);
+		return new PlacementRange(startPosition, endPosition);
+	}
+
 	public BigDecimal normalizeNumber(BigDecimal value) {
 		if (value == null) {
 			return null;

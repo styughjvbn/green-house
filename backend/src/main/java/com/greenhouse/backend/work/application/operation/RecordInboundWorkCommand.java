@@ -1,9 +1,9 @@
-package com.greenhouse.backend.work.dto.operation;
+package com.greenhouse.backend.work.application.operation;
 
 import java.time.LocalDate;
 import java.util.Map;
 
-public record InboundWorkOperationCreateRequest(
+public record RecordInboundWorkCommand(
 		Long inboundRecordId,
 		LocalDate workDate,
 		Long varietyId,

@@ -1,5 +1,4 @@
 # Temporary pre-refactoring dependencies at 3aa8fc54. Delete entries when their callers migrate.
-HTTP_DTO	com.greenhouse.backend.farm.application.inbound.InboundWorkOperationRequestFactory	com.greenhouse.backend.work.dto.operation.InboundWorkOperationCreateRequest
 HTTP_DTO	com.greenhouse.backend.farm.application.orchid.FarmWorkExecutionReferenceGateway	com.greenhouse.backend.work.dto.operation.WorkExecutionLocationResponse
 HTTP_DTO	com.greenhouse.backend.farm.application.orchid.MovementWorkHandler	com.greenhouse.backend.work.dto.effect.StructureChangeExecutionRequest
 HTTP_DTO	com.greenhouse.backend.farm.application.transformation.BatchStructureTransformationExecutor	com.greenhouse.backend.work.dto.effect.StructureChangeExecutionRequest

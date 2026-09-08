@@ -4,7 +4,7 @@ import com.greenhouse.backend.farm.domain.structure.BedZone;
 import com.greenhouse.backend.farm.domain.inbound.InboundRecord;
 import com.greenhouse.backend.farm.domain.inbound.InboundStatus;
 import com.greenhouse.backend.farm.domain.inbound.InboundType;
-import com.greenhouse.backend.work.dto.operation.InboundWorkOperationCreateRequest;
+import com.greenhouse.backend.work.application.operation.RecordInboundWorkCommand;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import org.springframework.stereotype.Component;
@@ -12,13 +12,13 @@ import org.springframework.stereotype.Component;
 @Component
 public class InboundWorkOperationRequestFactory {
 
-	public InboundWorkOperationCreateRequest create(InboundRecord record) {
-		return new InboundWorkOperationCreateRequest(
+	public RecordInboundWorkCommand create(InboundRecord record) {
+		return new RecordInboundWorkCommand(
 				record.getId(),
 				record.getInboundDate(),
 				record.getVariety().getId(),
 				record.getVariety().getName(),
-				resolveQuantity(record.getActualQuantity(), record.getEstimatedQuantity()),
+				InboundRecord.resolveQuantity(record.getActualQuantity(), record.getEstimatedQuantity()),
 				record.getPotSize(),
 				locationSnapshot(record),
 				record.getCreatedOrchidGroup() == null ? null : record.getCreatedOrchidGroup().getId(),
@@ -102,14 +102,6 @@ public class InboundWorkOperationRequestFactory {
 		if (value != null) {
 			details.put(key, value);
 		}
-	}
-
-	private int resolveQuantity(Integer actualQuantity, Integer estimatedQuantity) {
-		Integer resolved = actualQuantity != null ? actualQuantity : estimatedQuantity;
-		if (resolved == null || resolved < 1) {
-			throw new IllegalArgumentException("수량은 1 이상이어야 합니다.");
-		}
-		return resolved;
 	}
 
 	private String appendMemo(String base, String extra) {

@@ -17,7 +17,7 @@ import com.greenhouse.backend.farm.application.orchid.mutation.OrchidGroupLedger
 import com.greenhouse.backend.farm.application.orchid.mutation.OrchidGroupStateChainMigrationService;
 import com.greenhouse.backend.farm.domain.inbound.InboundStatus;
 import com.greenhouse.backend.farm.domain.inbound.InboundType;
-import com.greenhouse.backend.farm.dto.inbound.InboundRecordCreateRequest;
+import com.greenhouse.backend.farm.application.inbound.InboundRecordCreateCommand;
 import com.greenhouse.backend.farm.dto.orchid.OrchidGroupUpdateRequest;
 import com.greenhouse.backend.farm.repository.orchid.OrchidGroupRepository;
 import com.greenhouse.backend.work.application.operation.InboundPottingOperationService;
@@ -221,7 +221,7 @@ class OrchidGroupMutationRoutingPostgresE2ETest extends WorkE2ETestBase {
 				.orElseThrow()
 				.getVariety()
 				.getId();
-		var inbound = inboundRecordService.create(new InboundRecordCreateRequest(
+		var inbound = inboundRecordService.create(new InboundRecordCreateCommand(
 				LocalDate.of(2026, 8, 19),
 				InboundType.FLASK_SEEDLING,
 				varietyId,
