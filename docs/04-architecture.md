@@ -94,7 +94,8 @@ demo
 - 업무 데이터 변경 전후 스냅샷과 변경 필드를 PostgreSQL에 동기 저장한다.
 - 도메인 엔티티 대신 독립 이벤트 DTO를 받아 다른 업무 모듈에 의존하지 않는다.
 - 요청 ID, 세션 ID, 인증 계정명, 브라우저 인스턴스 ID를 변경 이벤트와 연결한다.
-- 감사 저장 실패는 같은 트랜잭션의 원본 변경도 롤백한다.
+- 감사 저장 실패는 같은 트랜잭션의 원본 변경도 롤백한다. DB recorder는 호출자의 트랜잭션을 필수로 요구한다.
+- 감사 실행자·세션·요청 맥락과 감사 대상·위치를 별도 값으로 전달한다. HTTP 맥락은 기존 request adapter가 읽고 CLI는 명시적인 실행자 값을 제공한다. 이벤트 생성과 no-op 처리는 공통 writer가, 민감 필드 제외·업무별 변경 필드 순서는 소유 모듈의 snapshot이 담당한다.
 
 ### farm
 
@@ -185,17 +186,26 @@ application|domain|dto/
 
 - 판매 전표
 - 판매 품목
+- 일반·경매 생성은 하나의 application 유스케이스에서 품목 생성→예약→완료 시 출고를 공유한다. 거래처 검증·기본 결제 정보·일반 판매의 잔액 처리 차이는 명시적으로 유지한다. 현재 두 유형을 위해 별도 생성기 registry를 추가하지 않는다.
+- 판매 생성·수정과 경매 결과 입력은 application 명령을 직접 바인딩한다. 새 입력 채널은 같은 유스케이스를 호출하며 기존 HTTP schema 이름과 validation을 유지한다.
+- 수정 capability와 쓰기 검증은 Sales 도메인의 같은 조건을 사용한다. 실제 입금액이나 입금 이벤트가 있으면 수정할 수 없다.
 - A5 출력 데이터
 - 전표 품목 allocation의 신규 생성과 작성중 수정 복사는 `SalesSlipAllocationFactory`의 단일 생성 지점을 사용한다.
 - 출고·출하 완료는 `SalesSlipOutboundService`가 현재 allocation을 고정된 배치로 만든 뒤 난 묶음을 잠그고, 경매 shipment/lot 생성과 재고 차감을 순서대로 조율한다.
 - 출하·lot 생성과 삭제는 Auction application API가 소유하며 호출 트랜잭션에 참여한다. Sales는 출하와 lot ID만 보관한다. 원본 품목 ID로 생성된 lot를 연결하고, 판매 품목 배열과 출하 lot 배열의 순서가 같다고 가정하지 않는다.
 - `SalesOrchidGroupSnapshot`은 allocation 생성 전의 `CREATION`과 잠긴 출하 배치의 재고 차감 전 `OUTBOUND`를 각각 같은 트랜잭션에서 보존한다. Controller나 응답 mapper에서 현재 난 묶음 값으로 재구성하지 않는다.
 
+### print
+
+- 출력과 판매 화면은 Sales application의 문서·요약 값 계약을 공유한다. Print가 Sales HTTP DTO에 의존하거나 같은 문서 필드를 복제하지 않는다.
+- 출력 응답의 금액·스냅샷·현재 거래처 정보·호환 action은 Sales가 제공한다. 기존 HTTP JSON을 유지하기 위해 action 필드도 보존하며 Print에서 업무 판정을 다시 하지 않는다. 문서 종류가 늘기 전 범용 renderer/provider는 만들지 않는다.
+
 ### auction
 
 - 경매 lot
 - 경매 시도
 - 경매 결과 행
+- 결과 입력의 대기 수량·차수 중복·낙찰/부분 낙찰/유찰/반환 추정 계산과 반환 가능 조건은 lot 도메인이 소유한다. application은 행 잠금과 입력 전달·응답 조회를 조율한다. 조회 필터와 요약의 검토 대상 분류도 같은 도메인 정의를 사용한다.
 - 반환 확인
 - 수량 보정
 
@@ -207,6 +217,7 @@ application|domain|dto/
 - 입금 이벤트
 - 거래처 정산 설정
 - 경매 정산과 정산 행
+- 경매 정산 재구성·초기화·입금은 거래처→정산→잔액 순서를 공유한다. 초기화는 후보를 읽은 뒤 거래처를 ID 순서로 잠그고 연결 여부를 다시 확인해 중복 기동 시 같은 결과를 재추가하지 않는다. 수동 재계산의 기존 스냅샷·입금액·상태 계산 정책은 유지한다.
 
 ### auth / demo
 
@@ -222,6 +233,7 @@ application|domain|dto/
 ### dashboard / analytics
 
 - 대시보드 운영 요약
+- Dashboard는 기존 Farm 요약 값만 조립한다. 집계 SQL 5회로 검증하며 별도 provider 계층을 추가하지 않는다. 분갈이 예정·최근 작업은 아직 연결되지 않은 호환 값으로 남는다.
 - 농장·판매·거래처·작업 분석 조회
 - 분석 기간의 기본 종료일은 주입된 Clock의 농장 업무일이며 서버 기본 시간대를 사용하지 않는다.
 
@@ -316,6 +328,7 @@ Persistence 조회 규칙:
 | CTE·Window Function·PostgreSQL 원자 연산 | 근거를 남긴 Native SQL |
 
 - root 목록과 collection을 한 쿼리에 억지로 합치지 않는다. 페이지 또는 제한된 root ID를 먼저 조회하고 연관 데이터를 `IN` 쿼리로 읽어 application 계층에서 조립한다.
+- 거래처 이름·대표자·연락처 검색은 Partner가 scalar ID를 500건씩 조회하고 Sales·Auction은 식별자 조건을 자기 검색에 결합한다. 전체 matching ID를 사용해 최종 페이지와 전체 건수를 계산하며, 거래처 한 페이지의 일부만으로 전표·lot 결과를 자르지 않는다. 경매는 품목·품종·경매장 이름을 연결했던 기존 문구 검색을 유지한다. 검색어가 없으면 추가 거래처 검색은 하지 않는다. 검색 조건과 일치하는 거래처 ID 수가 메모리·SQL 인자 크기를 결정하므로 큰 거래처 집합의 추가 최적화는 측정 후 검토한다.
 - 출하 선택지는 Auction이 최신 후보 ID를 페이지로 제공하고 Sales가 자기 전표에 연결된 ID를 제외한다. 미사용 200건을 채우거나 후보가 끝날 때까지 확인한 뒤 선택된 출하·lot만 일괄 조회한다. 다른 모듈의 Entity를 JPQL 하위 쿼리에 직접 넣지 않는다.
 - Farm 구조 조회는 동·다이·구역을 읽은 뒤 다이 ID로 난 묶음과 참조를 일괄 조회해 조립한다. 맵은 필요한 값만 JPQL projection으로 읽고 전체 난 묶음 상세 DTO나 Entity graph를 만들지 않는다. 저장소 projection은 Farm application 안에서 응답으로 변환하며 외부 계약으로 노출하지 않는다.
 - DTO mapper가 lazy association을 순회하지 않게 조회 범위를 명시한다. mapper 호출 전 필요한 연관 데이터가 이미 로딩됐는지 확인한다.
@@ -485,6 +498,7 @@ cd backend
 - 전후 비교가 필요하면 각 대상 커밋에서 `clean workE2eTest workBenchmark`를 실행하고 생성된
   `results.json`을 각각 `before.json`, `after.json`으로 별도 보관한다.
 - `FarmQueryPostgresE2ETest`는 다이 1·10·50개와 다이별 복수 구역에서 전체 구조·맵 SQL 3회, 다이·구역 목록 SQL 2회와 맵의 난 묶음·품종 Entity 로딩 0건을 검증한다. Work 상세는 보정 1·10·50건에서 SQL 5회로 고정한다.
+- 거래처 검색 경계를 거치는 판매 검색은 1·10·50행에서 SQL 4회, 품종과 경매장 이름에 걸친 경매 문구 검색은 7회다. 각각 기존 3회·5회에서 scalar 검색이 추가된 값이며 행별 반복 조회는 없다. 검색 없는 경매 페이지의 기존 5회 상한은 유지한다.
 - `CoreQueryRegressionTest`는 기본 테스트에서 농장 viewport 3회, 경매 lot 페이지 5회 이내를 검증한다. 일반 판매 전표 상세는 서로 다른 난 묶음 배분 1·10·50개에서 SQL 5회로 고정되며, 배분·스냅샷·현재 Farm 값·거래처·서버 판정 액션을 일괄 조회한다.
 - 사용자 그룹 목록은 1·10·50개에서 SQL 3회, 난 묶음별 소속 그룹 조회는 5회 이내인지 검증한다. 보관·탈퇴 제외와 소속 순서도 함께 확인한다.
 - 기본 검증과 별도로 CI의 `backend-postgres` job이 Docker 사용 가능 여부와 `workE2eTest`를 실행한다. PostgreSQL 테스트를 실행하지 못한 경우 완료로 취급하지 않는다.

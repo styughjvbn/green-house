@@ -2,7 +2,7 @@
 
 - 기준일: 2026-09-05
 - 기준 코드: `feature/orchid-group-mutation-engine`, `3aa8fc54`
-- 상태: 단계별 구현 진행 중. 1~19차 구현 범위와 남은 작업은 아래 실행 기록 참고.
+- 상태: 단계별 구현 진행 중. 1~21차 구현 범위와 남은 작업은 아래 실행 기록 참고.
 - 작업 브랜치: `feature/backend-refactoring`.
 - 범위: **13개 모듈 전체**, Controller·application·domain·Repository·DTO·설정·DB migration·테스트·CI.
 - 목표: **확장에는 열려 있고 수정에는 닫힌 구조(OCP)**. 새 기능을 추가할 때 기존 유스케이스와 타 모듈 내부를 수정하는 범위를 줄인다.
@@ -18,8 +18,8 @@
 | 2 | Work 유형 정의·capability 통합 | 17차 완료 |
 | 3 | Work 결과 JSON·상세 조회 정리 | 18차 완료 |
 | 4 | Farm 나머지 조회·입고·기준 정보 정리 | 19차 완료 |
-| 5 | Sales·Auction·Settlement 남은 정책·모듈 경계 | 남음 |
-| 6 | Audit·Print·Dashboard | 남음 |
+| 5 | Sales·Auction·Settlement 남은 정책·모듈 경계 | 20차 완료 |
+| 6 | Audit·Print·Dashboard | 21차 완료 |
 | 7 | 공통 시간·페이지·스타일·비활성 테스트 | 남음 |
 | 8 | 전체 회귀·확장성 검증 | 남음 |
 
@@ -978,3 +978,50 @@ command/fingerprint 타입, 결과별 배치 점유 조회 최적화와 이관·
 - `python3 scripts/generate_openapi.py`: **136 operations·115 paths·228 schemas**, 전체 명세·slice 차이 없음. API 계약과 프론트 코드가 같아 생성 TypeScript 갱신·프론트 검증·브라우저 E2E는 실행하지 않았다. 임시 명세 서버 종료와 `git diff --check`를 확인했다.
 
 V24 운영 적용 순서는 [배포 문서](../07-deployment.md)에 반영했다. 운영 DB에는 적용하지 않았다. 요청한 묶음 3·4를 완료했으며 **5~8번과 별도 후속 2개**가 남는다.
+
+## 27. 실행 기록 — 20차 Sales·Auction·Settlement 정책·경계
+
+2026-09-08, `feature/backend-refactoring`. 사용자 요청 묶음 **5번**을 진행했다.
+
+- 일반·경매 판매 생성기 두 개를 제거하고 품목 생성·예약·완료 출고 순서를 하나의 유스케이스로 모았다. 일반 판매의 거래처 잠금·예상 입금일·잔액 반영과 유형별 기본 결제 정보는 유지한다. 입력도 기존 DTO를 application 명령으로 이동해 다른 채널이 HTTP 타입에 의존하지 않고 같은 유스케이스를 호출하게 했다.
+- 판매 수정 조건은 도메인에 모아 capability와 쓰기가 공유한다. 과거 데이터에서 입금액과 이벤트 유무가 어긋나도 둘 중 하나가 있으면 수정을 차단한다. 기존 예약·출고·취소·스냅샷·재실행 회귀는 유지한다.
+- 경매 결과 입력을 application 명령으로 옮기고 차수·중복·수량 계산·결과 행 구성·반환 검증을 lot 도메인에 모았다. 유찰 잔량·반환 추정 행, memo·등급 정규화, 상태 변경 이력을 유지한다. 별도로 낙찰 금액 곱셈 overflow를 검출해 잘못된 금액 저장을 거절한다.
+- Auction의 긴 검색 인자 목록은 criteria 값으로 바꿨고 목록·요약의 검토/반환/대기 분류를 같은 정의로 모았다. Sales·Auction의 Partner Q 타입 직접 join을 제거했다. Partner는 이름·대표자·전화번호의 일치 ID를 500건씩 반환하고 소유 모듈은 전체 일치 ID를 자기 검색에 결합한다.
+- 경매 문구의 품목·품종·경매장 이름 경계, 대소문자·공백·literal `%`/`_`, 정확한 경매장 이름 필터와 비활성 거래처 검색을 유지한다. 거래처 501개의 마지막 페이지도 누락 없이 조회한다. Sales의 기존 검색은 거래처 주소·메모를 포함하지 않는다는 차이도 보존한다.
+- 경매 정산 재계산·초기화·입금은 거래처→정산→잔액 순서를 공유한다. 초기화는 잠금 후 결과 연결을 다시 확인하며 서로 다른 초기화가 같은 결과를 중복 추가하지 않는다. 기존 스냅샷·입금액·정산 상태 계산은 유지한다.
+
+조회 비용: 거래처 검색이 있는 판매 페이지는 SQL **3 → 4회**, 품종과 경매장 이름에 걸친 경매 검색은 **5 → 7회**다. 소유 모듈의 scalar 검색 비용이며 1·10·50행에서 고정된다. 검색 없는 경매 페이지·판매 상세의 기존 조회 상한은 유지한다. matching ID 수에 비례하는 메모리와 SQL 인자는 남으며, 대규모 거래처에 대한 최적화는 전체 확장성 검증에서 측정한다.
+
+## 28. 실행 기록 — 21차 Audit·Print·Dashboard
+
+2026-09-08, `feature/backend-refactoring`. 사용자 요청 묶음 **6번**을 진행했다.
+
+- 감사 실행자·세션·요청과 대상·위치를 명시적인 값으로 묶었다. HTTP adapter와 명시적 CLI 실행자가 같은 이벤트 계약을 사용한다. no-op·이벤트 조립은 공통 writer, 민감 필드와 변경 필드 순서는 각 모듈의 snapshot에 유지한다. DB recorder는 호출 트랜잭션을 필수로 요구하며 기존 DB 열·JSON 형식을 유지한다.
+- 기존 판매 상세·품목·배분·보존 스냅샷·요약 응답을 application 문서 계약으로 이동해 Print의 Sales HTTP DTO 의존과 Sales의 Partner HTTP DTO 의존을 제거했다. 문서 필드를 복제하는 출력 DTO나 renderer/provider는 추가하지 않았다. 기존 출력 JSON의 호환 action 필드는 유지하므로 해당 값의 도메인 조회도 계속한다.
+- Dashboard의 28줄 서비스와 Farm 요약 경계는 유지했다. 실제 PostgreSQL에서 집계 SQL 5회·Entity 로딩 0건과 응답을 검증했다. 분갈이 예정·최근 작업의 미연결 상태를 기능 문서에 명시했다. 실제 집계 구현이나 출력 UI 변경은 추가하지 않았다.
+- 검색·출력 경계 이식 전에 PostgreSQL에서 출력 상세·목록 JSON fixture를 고정했고 이식 후 동일성을 비교했다. fixture는 테스트 실행 중 다시 생성하지 않는다. 기존 생성/출고 스냅샷·금액 회귀도 함께 사용한다.
+
+20~21차 목적별 구현·검증 커밋:
+
+- `bbe791ce refactor: consolidate audit context and transactional recording`
+- `8cf77f78 refactor: share sales application documents with print`
+- `a7aec08b refactor: unify sales creation and editing policies`
+- `9cc94dc5 refactor: consolidate auction rules and partner search boundaries`
+- `909b8b09 fix: serialize settlement rebuilds with payments`
+- `79bc2b26 refactor: expose sales application commands`
+
+복잡성 점검 (`b055cf92` 대비):
+
+- 운영 Java **578파일 유지, 30,461 → 30,404줄로 순감 57줄**이다. 두 판매 생성기를 제거했고 기존 입력·문서 타입은 이동했다. 새 값 타입은 검색 조건과 거래처 문자열 일치 방식 두 개이며 별도 service·registry·범용 프레임워크는 추가하지 않았다.
+- 테스트 Java **114 → 117파일, 순증 344줄**이다. 정책·경계·동시성 회귀를 추가했다. 출력 JSON fixture 73줄은 Java 지표에 포함하지 않는다.
+- 모듈 내부 구현 직접 의존은 **37 → 29쌍**이다. 남은 29쌍은 Farm–Work의 HTTP DTO 의존이며 Entity·다른 모듈의 Q 타입 예외는 모두 **0쌍**이다. writer inventory는 유지한다. 남은 DTO 계약 정리는 묶음 8의 전체 경계·확장성 검증에서 추적한다.
+
+최종 검증:
+
+- `./gradlew test workE2eTest --offline --no-daemon`: 기본 **444건 중 401건 통과·기존 disabled 43건**, PostgreSQL **96건 전부 통과**, 실패 0건. 기존 수량·예약·출고·취소·스냅샷·Mutation·모듈 경계·query count 회귀를 포함한다.
+- 동시 정산 재계산의 동일 정산 ID, 재계산과 입금의 입금액·잔액·단일 이벤트 보존, 동시 초기화와 재기동의 결과 중복 방지를 실제 PostgreSQL에서 검증했다. 감사 CLI 이벤트는 호출 트랜잭션 밖의 실패, 명시적 실행자 저장과 전체 rollback을 확인했다.
+- 경매 결과 네 상태의 수량·금액·차수·이력, 중복 차수·수량 불일치·금액 overflow 거절과 부분 반환을 검증했다. 수정 가능 여부의 입금액/이벤트 불일치, 검색 경계·501개 거래처 페이지, 기존 출력 JSON 및 Dashboard 집계도 통과했다.
+- `python3 scripts/generate_openapi.py`: **136 operations·115 paths·228 schemas**, 전체 명세·slice 차이 없음. 기존 schema 이름·validation·필드 순서를 보존했다. 임시 명세 서버 종료와 `git diff --check`를 확인했다.
+- 프론트 코드와 API schema 변경이 없어 생성 TypeScript 갱신·프론트 검증·브라우저 E2E는 실행하지 않았다. 이번 변경에 DB migration은 없으며 운영 적용·대규모 시간/메모리 벤치마크도 수행하지 않았다.
+
+요청한 **묶음 5·6을 완료**했다. 남은 구조 작업은 **7번 공통 시간·페이지·스타일·비활성 테스트**, **8번 전체 회귀·확장성 검증**이다. Work 멱등성 보강과 운영 전환 안정화 후 Legacy 제거는 별도 후속으로 유지한다.
