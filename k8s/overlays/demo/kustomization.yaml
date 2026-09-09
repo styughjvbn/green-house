@@ -4,6 +4,11 @@ namespace: green-house-demo
 resources:
   - ../../base
   - network-policy.yaml
+images:
+  - name: ghcr.io/styughjvbn/green-house-backend
+    newTag: sha-e2a7f8b
+  - name: ghcr.io/styughjvbn/green-house-frontend
+    newTag: sha-e2a7f8b
 patches:
   - target:
       kind: Namespace

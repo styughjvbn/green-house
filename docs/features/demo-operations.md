@@ -102,8 +102,10 @@ WHERE rolname LIKE 'greenhouse_%';
 실제 Pod CIDR로 교체한다.
 
 ```text
-host  greenhouse       greenhouse                 <k3s-pod-cidr>  scram-sha-256
-host  greenhouse_demo  greenhouse                 <k3s-pod-cidr>  scram-sha-256
+host  greenhouse_demo  greenhouse       <k3s-pod-cidr>  reject
+host  greenhouse       greenhouse_demo  <k3s-pod-cidr>  reject
+host  greenhouse       greenhouse       <k3s-pod-cidr>  scram-sha-256
+host  greenhouse_demo  greenhouse_demo  <k3s-pod-cidr>  scram-sha-256
 ```
 
 설정 변경 후 reload하고 허용·거부 조합을 모두 접속 테스트한다.
@@ -153,8 +155,10 @@ kubectl -n green-house-demo rollout status deployment/green-house-frontend
 
 운영 환경에서는 가능하면 비공개 overlay 또는 Secret 관리 도구로 같은 값을 관리한다.
 
-운영에서 검증한 동일 이미지 SHA를 데모에 배포할 때는 공통 배포 스크립트의 namespace와
-URL만 바꾼다.
+데모 overlay는 Engine 전환 릴리스의 backend/frontend SHA를 각각 고정한다. 새 릴리스로
+바꿀 때는 두 `images[].newTag`를 실제 발행된 태그로 갱신하고 렌더링 결과를 먼저 확인한다.
+첫 Engine 전환은 ConfigMap과 이미지가 함께 적용되어야 하므로 공통 배포 스크립트가 아니라
+`kubectl apply -k`를 사용한다. 이후 이미지 교체만 수행할 때 공통 배포 스크립트를 사용한다.
 
 ```bash
 NAMESPACE=green-house-demo \
@@ -186,6 +190,8 @@ read -r DEMO_QUANTITY_FACTOR
 export DEMO_QUANTITY_FACTOR
 read -r DEMO_PRICE_FACTOR
 export DEMO_PRICE_FACTOR
+read -r DEMO_SOURCE_CUTOVER_BUSINESS_DATE
+export DEMO_SOURCE_CUTOVER_BUSINESS_DATE
 
 ./scripts/demo/docker-sanitize.sh \
   /secure/source/greenhouse-production.dump.gz \
@@ -217,8 +223,11 @@ python3 -m pip install -r scripts/demo/requirements.txt
 → 최신 Flyway 적용
 → 스키마 허용 목록 확인
 → 비식별화
+→ 비식별 state-chain manifest 생성
+→ PLAN/IMPORT/replay/VERIFY/ACTIVE
 → 민감정보·외래키·업무 불변식 검사
-→ 허용된 테이블만 custom-format dump
+→ 함수·trigger·sequence를 포함한 public schema custom-format dump
+→ 새 PostgreSQL 14 DB 재복원과 startup guard 확인
 → SHA-256 생성
 ```
 
@@ -255,14 +264,22 @@ read -r DEMO_QUANTITY_FACTOR
 export DEMO_QUANTITY_FACTOR
 read -r DEMO_PRICE_FACTOR
 export DEMO_PRICE_FACTOR
+read -r DEMO_SOURCE_CUTOVER_BUSINESS_DATE
+export DEMO_SOURCE_CUTOVER_BUSINESS_DATE
 
 ./scripts/demo/create-demo-dump.sh \
   /secure/demo/greenhouse_demo_sanitized.dump
+
+./scripts/demo/verify-demo-dump.sh \
+  /secure/demo/greenhouse_demo_sanitized.dump
 ```
 
-생성 결과는 dump와 같은 디렉터리의 `.sha256` 파일이다. Python 변환이나 SQL 검증,
-스키마·민감정보·외래키·수량·판매·정산 검증 중 하나라도 실패하면 dump가 생성되지
-않는다.
+`DEMO_SOURCE_CUTOVER_BUSINESS_DATE`는 입력 V20 백업을 전환한 원본 업무일이다. 날짜 이동을
+같이 적용한 새 데모 cutover key와 업무일은 파이프라인 내부에서만 사용한다.
+
+생성 결과는 dump와 같은 디렉터리의 `.sha256` 파일이다. Python 변환, Engine import와
+replay, SQL 검증, 새 PostgreSQL 14 재복원, Hibernate schema validation, startup guard 중
+하나라도 실패하면 작업은 실패한다.
 비식별화가 시작된 임시 DB에는 내부 완료 마커가 남는다. 같은 임시 DB에 스크립트를
 다시 실행하면 수량과 금액이 중복 변환되므로 실행 전에 차단된다. 실패 후 재시도할
 때도 반드시 운영 원본 dump에서 `greenhouse_demo_sanitize_tmp`를 다시 복구한다.
@@ -285,6 +302,10 @@ export DEMO_PRICE_FACTOR
   없이 결정적으로 배정
 - 난 묶음, 작업 대상 스냅샷, 판매 품목, 경매 lot에도 같은 방식의 실제 속·품종
   조합을 반영
+- complete state-chain의 모든 snapshot에도 같은 품종·수량·날짜 이동을 적용하고
+  Mutation key·source·사유와 manifest/coverage 지문을 데모 전용으로 다시 생성
+- 과거 Work receipt의 원문을 알 수 없는 fingerprint는 `NULL`로 유지하고 key와 결과 ID만
+  보존한다. fingerprint가 이미 있는 post-cutover 입력은 이 V20 파이프라인이 거부
 - 수량과 단가는 외부 주입 배율로 변환하고 연관 금액은 두 배율의 곱으로 변환
 - 품목 금액과 판매·경매·정산 합계는 변환된 수량과 단가에서 다시 계산
 - 전화번호는 고정값, 주소는 데모 주소, 자유 메모와 외부 UID는 제거
@@ -297,13 +318,14 @@ Docker 방식은 임시 DB volume을 자동 삭제한다. 직접 실행 방식�
 
 ## 8. 초기 데이터 복구
 
-데모 배포의 난 묶음 writer는 데모 DB에 별도 baseline과 `ACTIVE` 전환을
-수행하기 전까지 `LEGACY`로 유지한다. 운영 백업을 비식별화해 복원하는 것만으로는
-Engine이 요구하는 revision chain이 생성되지 않는다.
+데모 백엔드도 Engine 단일 writer다. 비식별화 파이프라인이 V20 원본을 V26으로 올린 뒤
+데모 전용 complete state-chain을 적재하고 `ACTIVE`로 전환한 dump만 배포한다. 매일
+초기화에서는 이미 ACTIVE인 dump를 그대로 복원하며 IMPORT나 ACTIVE를 반복하지 않는다.
 
 초기화 스크립트는 DB 이름이 정확히 `greenhouse_demo`일 때만 실행된다. 백엔드를
-중지하고 DB를 다시 만든 뒤 dump 복구, 권한 적용, Flyway 시작, health check를
-수행한다.
+중지하고 DB를 다시 만든 뒤 dump 복구, DB별 role 제한·권한 재적용, schema·민감정보·
+Engine 검증, health check를 수행한다. 복원 또는 검증이 실패하면 백엔드는 중지 상태로
+남는다.
 
 ```bash
 export DEMO_DB_ADMIN_URL='postgresql://<admin>@127.0.0.1:5432/postgres'
@@ -317,6 +339,25 @@ export DEMO_RESET_CONFIRM='greenhouse_demo'
 또는 운영 PC의 안전한 비밀 저장소로 공급한다. 스크립트와 운영 배포는 기본적으로
 `/tmp/green-house-operation.lock`을 공유해 동시에 실행되지 않는다. 운영 PC가 여러
 대라면 로컬 파일 잠금만으로 부족하므로 Kubernetes Lease 잠금을 추가해야 한다.
+
+최초 Engine 전환에서는 구 backend가 ACTIVE dump에 다시 붙지 않도록 아래 순서를 사용한다.
+`DEMO_RESET_RESTART=false`는 복원·검증 후 backend를 0개 상태로 유지하고 health check를
+새 이미지 적용 뒤로 미룬다.
+
+```bash
+kubectl -n green-house-demo scale deployment green-house-backend --replicas=0
+kubectl -n green-house-demo rollout status deployment/green-house-backend
+
+DEMO_RESET_RESTART=false \
+  ./scripts/demo/reset-demo-db.sh /secure/demo/greenhouse_demo_sanitized.dump
+
+kubectl apply -k k8s/overlays/demo
+kubectl -n green-house-demo rollout status deployment/green-house-backend
+kubectl -n green-house-demo rollout status deployment/green-house-frontend
+kubectl -n green-house-demo run demo-engine-smoke --rm -i --restart=Never \
+  --image=curlimages/curl --command -- \
+  curl -fsS http://green-house-backend:8080/actuator/health
+```
 
 Cron 등록 전 동일 명령을 수동 실행하고 복구·health check를 확인한다. 기본 주기는
 하루 1회이며 저사용 시간에 실행한다.
@@ -348,3 +389,5 @@ Cron 등록 전 동일 명령을 수동 실행하고 복구·health check를 확
 - 운영 role의 데모 DB 접속 실패
 - 실제 개인정보·계좌·연락처·자유 메모가 남아 있지 않음
 - 초기화 후 난 묶음, 작업, 판매·경매·정산 관계 정상
+- Engine reconciliation이 `ACTIVE`, `ready=true`, `issues=[]`
+- startup guard 활성 상태로 backend 기동 성공

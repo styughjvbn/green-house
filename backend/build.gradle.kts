@@ -99,6 +99,14 @@ tasks.register<JavaExec>("orchidStateChainMigrate") {
 	mainClass.set("com.greenhouse.backend.farm.application.orchid.mutation.OrchidGroupStateChainMigrationCli")
 }
 
+tasks.register<JavaExec>("orchidLedgerStartupVerify") {
+	group = "verification"
+	description = "Runs Hibernate validation and the OrchidGroup ledger startup guard without HTTP."
+	dependsOn(tasks.named("classes"))
+	classpath = sourceSets["main"].runtimeClasspath
+	mainClass.set("com.greenhouse.backend.farm.application.orchid.mutation.OrchidGroupLedgerStartupVerificationCli")
+}
+
 tasks.register<Test>("workE2eTest") {
 	group = "verification"
 	description = "Runs the Work API contract E2E tests against PostgreSQL."

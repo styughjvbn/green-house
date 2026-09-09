@@ -51,6 +51,7 @@ BEGIN
     SELECT 1
     FROM (
       SELECT worker AS actor FROM auction_lot_status_history
+      UNION ALL SELECT actor_id FROM audit_events
       UNION ALL SELECT confirmed_by FROM auction_settlements
       UNION ALL SELECT worker FROM inbound_records
       UNION ALL SELECT created_by FROM partner_payment_events
@@ -73,6 +74,22 @@ BEGIN
        OR memo IS NOT NULL
   ) THEN
     RAISE EXCEPTION 'Raw payment identifiers or free text remain';
+  END IF;
+
+  IF EXISTS (
+    SELECT 1 FROM audit_events
+    WHERE session_id IS NOT NULL
+       OR client_instance_id IS NOT NULL
+       OR request_id IS NOT NULL
+  ) THEN
+    RAISE EXCEPTION 'Raw audit request identifiers remain';
+  END IF;
+
+  IF EXISTS (
+    SELECT 1 FROM orchid_group_mutations
+    WHERE reason IS NOT NULL AND reason <> '데모 전환 이력'
+  ) THEN
+    RAISE EXCEPTION 'Unsanitized Engine mutation reason remains';
   END IF;
 END
 $block$;
