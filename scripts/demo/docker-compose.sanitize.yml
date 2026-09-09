@@ -33,6 +33,12 @@ services:
       DEMO_DATE_SHIFT_DAYS: ${DEMO_DATE_SHIFT_DAYS:?DEMO_DATE_SHIFT_DAYS is required}
       DEMO_QUANTITY_FACTOR: ${DEMO_QUANTITY_FACTOR:?DEMO_QUANTITY_FACTOR is required}
       DEMO_PRICE_FACTOR: ${DEMO_PRICE_FACTOR:?DEMO_PRICE_FACTOR is required}
+      DEMO_SOURCE_CUTOVER_BUSINESS_DATE: ${DEMO_SOURCE_CUTOVER_BUSINESS_DATE:?DEMO_SOURCE_CUTOVER_BUSINESS_DATE is required}
+      DEMO_STATE_CHAIN_MANIFEST_SOURCE: /workspace/scripts/data-audit/orchid-state-chain-migration-manifest.json
+      DEMO_STATE_CHAIN_MANIFEST_OUTPUT: /tmp/demo-state-chain-manifest.json
+      DEMO_CUTOVER_METADATA_OUTPUT: /tmp/demo-cutover.env
+      SANITIZE_BACKEND_DIR: /opt/green-house/backend
+      ORCHID_LEDGER_WRITER_VERSION: "2.0.0"
     volumes:
       - ../..:/workspace:ro
       - ${SANITIZE_INPUT_DIR:?SANITIZE_INPUT_DIR is required}:/input:ro

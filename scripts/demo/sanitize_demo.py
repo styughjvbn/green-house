@@ -14,9 +14,11 @@ import os
 import re
 import sys
 from dataclasses import dataclass
+from datetime import date, datetime, timedelta
 from pathlib import Path
 from typing import Any, Sequence
 from urllib.parse import urlparse
+from uuid import UUID
 
 
 SCRIPT_DIR = Path(__file__).resolve().parent
@@ -47,6 +49,7 @@ SAFE_WORK_TYPE_NAMES = {
 }
 
 ACTOR_COLUMNS = (
+    ("audit_events", "actor_id"),
     ("auction_lot_status_history", "worker"),
     ("auction_settlements", "confirmed_by"),
     ("inbound_records", "worker"),
@@ -60,6 +63,7 @@ ACTOR_COLUMNS = (
 )
 
 JSON_COLUMNS = {
+    "audit_events": ("before_data", "after_data", "context_data"),
     "auction_settlement_lines": ("line_meta_json",),
     "auction_settlements": ("payment_meta_json",),
     "partner_balance_summaries": ("summary_json",),
@@ -222,6 +226,7 @@ def collect_original_sensitive_values(cursor: Any) -> set[str]:
         ("business_partners", "name"),
         ("business_partners", "owner_name"),
         ("business_partners", "phone"),
+        ("audit_events", "actor_id"),
         ("auction_lot_status_history", "worker"),
         ("auction_settlements", "confirmed_by"),
         ("inbound_records", "worker"),
@@ -331,6 +336,7 @@ def clear_sensitive_data(cursor: Any) -> None:
         "UPDATE partner_settlement_settings SET memo=NULL, depositor_aliases='[]'::jsonb",
         "UPDATE varieties SET description=NULL, memo=NULL",
         "UPDATE orchid_group_collections SET description=NULL, purpose=CASE WHEN purpose IS NULL THEN NULL ELSE '데모 묶음' END",
+        "UPDATE audit_events SET session_id=NULL, client_instance_id=NULL, request_id=NULL",
     )
     for statement in statements:
         cursor.execute(statement)
@@ -440,7 +446,9 @@ def shift_dates(cursor: Any, days: int) -> None:
     )
 
 
-def transform_varieties(cursor: Any, key: str, catalog: Sequence[CatalogPair]) -> None:
+def transform_varieties(
+    cursor: Any, key: str, catalog: Sequence[CatalogPair]
+) -> dict[int, CatalogPair]:
     master_rows = [
         (int(row_id), genus, name)
         for row_id, genus, name in fetch_all(
@@ -490,6 +498,23 @@ def transform_varieties(cursor: Any, key: str, catalog: Sequence[CatalogPair]) -
         target_updates,
     )
 
+    snapshot_rows = fetch_all(
+        cursor,
+        "SELECT id, variety_id, genus, variety_name FROM sales_orchid_group_snapshots ORDER BY id",
+    )
+    snapshot_updates = []
+    for row_id, variety_id, genus, variety_name in snapshot_rows:
+        pair = master_mapping.get(variety_id)
+        if pair is None:
+            pair = catalog_pair_for(
+                catalog, key, "sales-orchid-snapshot", f"{genus or ''}|{variety_name}"
+            )
+        snapshot_updates.append((pair.item, pair.variety, row_id))
+    cursor.executemany(
+        "UPDATE sales_orchid_group_snapshots SET genus=%s, variety_name=%s WHERE id=%s",
+        snapshot_updates,
+    )
+
     for table, item_column, variety_column, namespace in (
         ("auction_shipment_lots", "item_name", "variety_name", "auction-lot"),
         ("sales_slip_items", "genus", "item_name", "sales-item"),
@@ -506,6 +531,7 @@ def transform_varieties(cursor: Any, key: str, catalog: Sequence[CatalogPair]) -
             f"UPDATE {table} SET {item_column}=%s, {variety_column}=%s WHERE id=%s",
             updates,
         )
+    return master_mapping
 
 
 def transform_work_data(cursor: Any, key: str) -> None:
@@ -523,6 +549,37 @@ def transform_work_data(cursor: Any, key: str) -> None:
             (demo_name, row_id, original_name),
         )
         cursor.execute("UPDATE work_types SET name=%s WHERE id=%s", (demo_name, row_id))
+    fingerprinted_receipts = fetch_all(
+        cursor,
+        "SELECT count(*) FROM work_command_receipts WHERE request_fingerprint IS NOT NULL",
+    )[0][0]
+    fingerprinted_effects = fetch_all(
+        cursor,
+        "SELECT count(*) FROM work_applied_effects WHERE command_fingerprint IS NOT NULL",
+    )[0][0]
+    if fingerprinted_receipts or fingerprinted_effects:
+        raise SanitizationError(
+            "The V20 demo pipeline cannot rewrite post-cutover Work fingerprints"
+        )
+    receipt_rows = fetch_all(cursor, "SELECT receipt_key FROM work_command_receipts")
+    operation_requests = {
+        request_key: row_id
+        for row_id, request_key in fetch_all(
+            cursor,
+            "SELECT id, request_key FROM work_operations WHERE request_key IS NOT NULL",
+        )
+    }
+    receipt_updates = []
+    for (receipt_key,) in receipt_rows:
+        if receipt_key.startswith("IMMEDIATE:") and receipt_key[10:] in operation_requests:
+            replacement = f"IMMEDIATE:demo-request-{operation_requests[receipt_key[10:]]}"
+        else:
+            replacement = token(key, "work-receipt", receipt_key, "DEMO-RECEIPT-")
+        receipt_updates.append((replacement, receipt_key))
+    cursor.executemany(
+        "UPDATE work_command_receipts SET receipt_key=%s WHERE receipt_key=%s",
+        receipt_updates,
+    )
     cursor.execute(
         "UPDATE work_operations SET title='데모 작업 ' || lpad(id::text, 4, '0'), "
         "request_key=CASE WHEN request_key IS NULL THEN NULL ELSE 'demo-request-' || id END"
@@ -673,6 +730,7 @@ def scale_business_values(cursor: Any, quantity_factor: int, price_factor: int) 
         "UPDATE orchid_group_lineage SET source_quantity=source_quantity*%s, result_quantity=result_quantity*%s",
         "UPDATE work_operation_targets SET quantity_snapshot=quantity_snapshot*%s",
         "UPDATE work_target_executions SET processed_quantity=processed_quantity*%s",
+        "UPDATE sales_orchid_group_snapshots SET quantity=quantity*%s, reserved_quantity=reserved_quantity*%s, allocated_quantity=allocated_quantity*%s",
         "UPDATE sales_slip_item_allocations SET allocated_quantity=allocated_quantity*%s",
         "UPDATE sales_inventory_movements SET quantity_delta=quantity_delta*%s",
         "UPDATE auction_shipment_lots SET boxes=boxes*%s, returned_quantity=returned_quantity*%s, shipped_quantity=shipped_quantity*%s, sold_quantity=sold_quantity*%s, waiting_quantity=waiting_quantity*%s",
@@ -775,6 +833,168 @@ def sanitize_json_columns(cursor: Any) -> None:
         )
 
 
+def shift_iso_date(value: str, days: int) -> str:
+    return (date.fromisoformat(value) + timedelta(days=days)).isoformat()
+
+
+def shift_iso_instant(value: str, days: int) -> str:
+    parsed = datetime.fromisoformat(value.replace("Z", "+00:00")) + timedelta(days=days)
+    return parsed.isoformat(timespec="microseconds").replace("+00:00", "Z")
+
+
+def demo_uuid(key: str, source: str) -> str:
+    raw = bytearray.fromhex(keyed_digest(key, "demo-cutover", source)[:32])
+    raw[6] = (raw[6] & 0x0F) | 0x40
+    raw[8] = (raw[8] & 0x3F) | 0x80
+    return str(UUID(bytes=bytes(raw)))
+
+
+def transform_manifest_snapshot(
+    snapshot: dict[str, Any] | None,
+    master_mapping: dict[int, CatalogPair],
+    catalog: Sequence[CatalogPair],
+    key: str,
+    quantity_factor: int,
+) -> dict[str, Any] | None:
+    if snapshot is None:
+        return None
+    transformed = dict(snapshot)
+    for field in ("quantity", "reservedQuantity", "trayCount"):
+        if transformed.get(field) is not None:
+            transformed[field] *= quantity_factor
+    variety_id = transformed.get("varietyId")
+    pair = master_mapping.get(int(variety_id)) if variety_id is not None else None
+    if pair is None:
+        pair = catalog_pair_for(
+            catalog,
+            key,
+            "manifest-snapshot",
+            f"{transformed.get('genus') or ''}|{transformed.get('varietyName') or ''}",
+        )
+    transformed["genus"] = pair.item
+    transformed["varietyName"] = pair.variety
+    transformed["memo"] = None
+    return transformed
+
+
+def transform_state_chain_manifest(
+    payload: dict[str, Any],
+    master_mapping: dict[int, CatalogPair],
+    catalog: Sequence[CatalogPair],
+    key: str,
+    date_shift: int,
+    quantity_factor: int,
+) -> tuple[dict[str, Any], str]:
+    transformed_mutations = []
+    for mutation in payload.get("mutations", []):
+        transformed = dict(mutation)
+        transformed["mutation_key"] = token(
+            key, "manifest-mutation", str(mutation["mutation_key"]), "demo-m:"
+        )
+        transformed["source_reference"] = token(
+            key,
+            "manifest-source",
+            str(mutation.get("source_reference") or "none"),
+            "demo-source:",
+        )
+        transformed["occurred_at"] = shift_iso_instant(
+            mutation["occurred_at"], date_shift
+        )
+        transformed["effective_business_date"] = shift_iso_date(
+            mutation["effective_business_date"], date_shift
+        )
+        transformed["reason"] = "데모 전환 이력"
+        evidence = mutation.get("evidence") or {}
+        transformed["evidence"] = {
+            name: evidence[name]
+            for name in ("work_effect_ids", "lineage_ids")
+            if name in evidence
+        }
+        transformed["entries"] = [
+            {
+                **entry,
+                "before_state": transform_manifest_snapshot(
+                    entry.get("before_state"),
+                    master_mapping,
+                    catalog,
+                    key,
+                    quantity_factor,
+                ),
+                "after_state": transform_manifest_snapshot(
+                    entry.get("after_state"),
+                    master_mapping,
+                    catalog,
+                    key,
+                    quantity_factor,
+                ),
+            }
+            for entry in mutation.get("entries", [])
+        ]
+        transformed_mutations.append(transformed)
+    source_hash = hashlib.sha256(
+        json.dumps(payload, ensure_ascii=False, sort_keys=True).encode("utf-8")
+    ).hexdigest()
+    cutover_key = demo_uuid(key, source_hash)
+    return (
+        {
+            "manifest_schema_version": payload.get("manifest_schema_version"),
+            "generated_from": "orchid_state_chain_manifest_normalizer",
+            "migration_ready": True,
+            "blocking_issues": [],
+            "provenance": {"source": "sanitized-demo-state-chain"},
+            "operational_profile": {"name": "sanitized demo Engine transition"},
+            "mutations": transformed_mutations,
+        },
+        cutover_key,
+    )
+
+
+def write_demo_manifest(
+    master_mapping: dict[int, CatalogPair],
+    catalog: Sequence[CatalogPair],
+    key: str,
+    date_shift: int,
+    quantity_factor: int,
+) -> None:
+    source_path = Path(required_env("DEMO_STATE_CHAIN_MANIFEST_SOURCE"))
+    output_path = Path(required_env("DEMO_STATE_CHAIN_MANIFEST_OUTPUT"))
+    metadata_path = Path(required_env("DEMO_CUTOVER_METADATA_OUTPUT"))
+    cutover_business_date = date.fromisoformat(
+        required_env("DEMO_SOURCE_CUTOVER_BUSINESS_DATE")
+    ) + timedelta(days=date_shift)
+    try:
+        source = json.loads(source_path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError) as exc:
+        raise SanitizationError(f"Cannot read state-chain manifest: {exc}") from exc
+    transformed, cutover_key = transform_state_chain_manifest(
+        source, master_mapping, catalog, key, date_shift, quantity_factor
+    )
+    output_path.write_text(
+        json.dumps(transformed, ensure_ascii=False, sort_keys=True, separators=(",", ":")),
+        encoding="utf-8",
+    )
+    metadata_path.write_text(
+        f"DEMO_CUTOVER_KEY={cutover_key}\n"
+        f"DEMO_CUTOVER_BUSINESS_DATE={cutover_business_date.isoformat()}\n",
+        encoding="ascii",
+    )
+    output_path.chmod(0o600)
+    metadata_path.chmod(0o600)
+
+
+def assert_pre_cutover_database(cursor: Any) -> None:
+    checks = (
+        "SELECT count(*) FROM orchid_group_mutations",
+        "SELECT count(*) FROM orchid_group_mutation_entries",
+        "SELECT count(*) FROM orchid_group_ledger_coverages",
+        "SELECT count(*) FROM orchid_groups WHERE state_revision IS NOT NULL",
+    )
+    if any(fetch_all(cursor, query)[0][0] for query in checks):
+        raise SanitizationError(
+            "Demo sanitization requires a migrated V20 database before Engine cutover"
+        )
+
+
 def assert_original_values_removed(cursor: Any, originals: set[str]) -> None:
     columns = fetch_all(
         cursor,
@@ -813,11 +1033,11 @@ def create_marker(cursor: Any) -> None:
         """
     )
     cursor.execute(
-        "INSERT INTO demo_internal.sanitization_marker(pipeline_version) VALUES (2)"
+        "INSERT INTO demo_internal.sanitization_marker(pipeline_version) VALUES (3)"
     )
 
 
-def validate_configuration() -> tuple[str, str, int, int]:
+def validate_configuration() -> tuple[str, str, int, int, int]:
     database_url = required_env("SANITIZE_DB_URL")
     key = required_env("DEMO_ANONYMIZATION_KEY")
     if len(key) < 32:
@@ -827,6 +1047,18 @@ def validate_configuration() -> tuple[str, str, int, int]:
         raise SanitizationError("DEMO_DATE_SHIFT_DAYS must not be zero")
     quantity_factor = parse_int_env("DEMO_QUANTITY_FACTOR", 2, 9)
     price_factor = parse_int_env("DEMO_PRICE_FACTOR", 2, 9)
+    try:
+        date.fromisoformat(required_env("DEMO_SOURCE_CUTOVER_BUSINESS_DATE"))
+    except ValueError as exc:
+        raise SanitizationError(
+            "DEMO_SOURCE_CUTOVER_BUSINESS_DATE must use YYYY-MM-DD"
+        ) from exc
+    for name in (
+        "DEMO_STATE_CHAIN_MANIFEST_SOURCE",
+        "DEMO_STATE_CHAIN_MANIFEST_OUTPUT",
+        "DEMO_CUTOVER_METADATA_OUTPUT",
+    ):
+        required_env(name)
     parsed = urlparse(database_url)
     if parsed.path.lstrip("/") != EXPECTED_DATABASE:
         raise SanitizationError(f"SANITIZE_DB_URL must target {EXPECTED_DATABASE}")
@@ -853,6 +1085,7 @@ def run() -> None:
                 raise SanitizationError(
                     "Temporary database is already sanitized; restore it from the source dump"
                 )
+            assert_pre_cutover_database(cursor)
 
             originals = collect_original_sensitive_values(cursor)
             catalog = catalog_without_original_varieties(cursor, catalog, originals)
@@ -860,7 +1093,7 @@ def run() -> None:
             anonymize_actors(cursor, key)
             anonymize_partners(cursor, key)
             shift_dates(cursor, date_shift)
-            transform_varieties(cursor, key, catalog)
+            master_mapping = transform_varieties(cursor, key, catalog)
             transform_work_data(cursor, key)
             quantity_factor, price_factor = choose_scaling_factors(
                 cursor, requested_quantity, requested_price
@@ -869,6 +1102,10 @@ def run() -> None:
             sanitize_json_columns(cursor)
             assert_original_values_removed(cursor, originals)
             create_marker(cursor)
+
+        write_demo_manifest(
+            master_mapping, catalog, key, date_shift, quantity_factor
+        )
 
     print(f"Sanitized with {len(catalog)} real item-variety pairs.")
     print(

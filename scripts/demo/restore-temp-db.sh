@@ -47,11 +47,11 @@ main() {
   case "${source_dump}" in
     *.dump)
       pg_restore --dbname="${SANITIZE_DB_URL}" --no-owner --no-privileges \
-        --exit-on-error "${source_dump}"
+        --clean --if-exists --exit-on-error "${source_dump}"
       ;;
     *.dump.gz)
       gzip -cd "${source_dump}" | pg_restore --dbname="${SANITIZE_DB_URL}" \
-        --no-owner --no-privileges --exit-on-error
+        --no-owner --no-privileges --clean --if-exists --exit-on-error
       ;;
     *)
       fail "Only .dump and .dump.gz backups are supported"

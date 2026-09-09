@@ -11,6 +11,9 @@ from sanitize_demo import (
     catalog_pair_for,
     load_catalog,
     sanitize_json,
+    shift_iso_date,
+    shift_iso_instant,
+    transform_state_chain_manifest,
     unique_catalog_mapping,
 )
 
@@ -54,6 +57,63 @@ class JsonSanitizationTest(unittest.TestCase):
         self.assertEqual(
             sanitize_json(source),
             {"name": "데모", "status": "COMPLETED", "values": [1, True, "데모"]},
+        )
+
+    def test_manifest_transformation_preserves_links_and_changes_state(self) -> None:
+        payload = {
+            "manifest_schema_version": 2,
+            "mutations": [
+                {
+                    "mutation_key": "source-key",
+                    "mutation_type": "CHANGE",
+                    "source_type": "WORK_EFFECT",
+                    "source_reference": "effect:7",
+                    "occurred_at": "2026-09-01T00:00:00.000000Z",
+                    "effective_business_date": "2026-09-01",
+                    "reason": "원본 사유",
+                    "evidence": {"work_effect_ids": [7], "source_rows": [99]},
+                    "entries": [
+                        {
+                            "orchid_group_id": "3",
+                            "before_state": {
+                                "quantity": 2,
+                                "reservedQuantity": 1,
+                                "trayCount": None,
+                                "varietyId": 5,
+                                "genus": "원본속",
+                                "varietyName": "원본품종",
+                                "memo": "원본 메모",
+                            },
+                            "after_state": None,
+                        }
+                    ],
+                }
+            ],
+        }
+        transformed, cutover_key = transform_state_chain_manifest(
+            payload,
+            {5: CatalogPair("데모속", "데모품종")},
+            [CatalogPair("대체속", "대체품종")],
+            "k" * 32,
+            10,
+            3,
+        )
+        mutation = transformed["mutations"][0]
+        snapshot = mutation["entries"][0]["before_state"]
+        self.assertNotEqual(mutation["mutation_key"], "source-key")
+        self.assertEqual(mutation["evidence"], {"work_effect_ids": [7]})
+        self.assertEqual(mutation["reason"], "데모 전환 이력")
+        self.assertEqual(snapshot["quantity"], 6)
+        self.assertEqual(snapshot["reservedQuantity"], 3)
+        self.assertEqual(snapshot["genus"], "데모속")
+        self.assertIsNone(snapshot["memo"])
+        self.assertRegex(cutover_key, r"^[0-9a-f-]{36}$")
+
+    def test_iso_values_are_shifted_without_losing_utc(self) -> None:
+        self.assertEqual(shift_iso_date("2026-09-01", -2), "2026-08-30")
+        self.assertEqual(
+            shift_iso_instant("2026-09-01T03:04:05.000000Z", 2),
+            "2026-09-03T03:04:05.000000Z",
         )
 
 
