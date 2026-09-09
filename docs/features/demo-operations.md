@@ -144,7 +144,7 @@ kubectl -n green-house-demo create secret generic green-house-secret \
 unset DEMO_APP_PASSWORD
 ```
 
-렌더링과 적용:
+신규 데모 namespace의 최초 렌더링과 적용:
 
 ```bash
 kubectl kustomize k8s/overlays/demo
@@ -155,10 +155,9 @@ kubectl -n green-house-demo rollout status deployment/green-house-frontend
 
 운영 환경에서는 가능하면 비공개 overlay 또는 Secret 관리 도구로 같은 값을 관리한다.
 
-데모 overlay는 Engine 전환 릴리스의 backend/frontend SHA를 각각 고정한다. 새 릴리스로
-바꿀 때는 두 `images[].newTag`를 실제 발행된 태그로 갱신하고 렌더링 결과를 먼저 확인한다.
-첫 Engine 전환은 ConfigMap과 이미지가 함께 적용되어야 하므로 공통 배포 스크립트가 아니라
-`kubectl apply -k`를 사용한다. 이후 이미지 교체만 수행할 때 공통 배포 스크립트를 사용한다.
+데모 overlay에는 릴리스 이미지 태그를 고정하지 않는다. 기존 Deployment의 이미지 교체는
+운영과 동일하게 공통 배포 스크립트가 담당한다. `kubectl apply -k`는 신규 namespace를
+구성할 때 사용하고, 기존 데모의 릴리스 교체에 반복 사용하지 않는다.
 
 ```bash
 NAMESPACE=green-house-demo \
@@ -341,8 +340,10 @@ export DEMO_RESET_CONFIRM='greenhouse_demo'
 대라면 로컬 파일 잠금만으로 부족하므로 Kubernetes Lease 잠금을 추가해야 한다.
 
 최초 Engine 전환에서는 구 backend가 ACTIVE dump에 다시 붙지 않도록 아래 순서를 사용한다.
-`DEMO_RESET_RESTART=false`는 복원·검증 후 backend를 0개 상태로 유지하고 health check를
-새 이미지 적용 뒤로 미룬다.
+`DEMO_RESET_RESTART=false`는 복원·검증 후 backend를 0개 상태로 유지한다. Engine ConfigMap
+값은 기존 ConfigMap에 명시적으로 patch하고, 새 이미지는 공통 배포 스크립트로 교체한다.
+`BACKEND_TARGET_REPLICAS=1`은 0개 상태에서 새 backend를 기동하고,
+`ROLLBACK_ON_FAILURE=false`는 실패 시 구 이미지를 복구하지 않고 중지 상태를 유지한다.
 
 ```bash
 kubectl -n green-house-demo scale deployment green-house-backend --replicas=0
@@ -351,16 +352,19 @@ kubectl -n green-house-demo rollout status deployment/green-house-backend
 DEMO_RESET_RESTART=false \
   ./scripts/demo/reset-demo-db.sh /secure/demo/greenhouse_demo_sanitized.dump
 
-kubectl apply -k k8s/overlays/demo
-kubectl -n green-house-demo rollout status deployment/green-house-backend
-kubectl -n green-house-demo rollout status deployment/green-house-frontend
-kubectl -n green-house-demo run demo-engine-smoke --rm -i --restart=Never \
-  --image=curlimages/curl --command -- \
-  curl -fsS http://green-house-backend:8080/actuator/health
+kubectl -n green-house-demo patch configmap green-house-config --type=merge \
+  --patch '{"data":{"ORCHID_LEDGER_WRITER_VERSION":"2.0.0","ORCHID_LEDGER_STARTUP_GUARD_ENABLED":"true"}}'
+
+NAMESPACE=green-house-demo \
+APP_URL=https://green-house-demo.sjw-project.site \
+BACKEND_TARGET_REPLICAS=1 \
+ROLLBACK_ON_FAILURE=false \
+  ./scripts/deploy/deploy.sh sha-<commit>
 ```
 
-Cron 등록 전 동일 명령을 수동 실행하고 복구·health check를 확인한다. 기본 주기는
-하루 1회이며 저사용 시간에 실행한다.
+초기화 Cron을 등록할 경우 동일 명령을 먼저 수동 실행하고 복구·health check를 확인한다.
+기본 주기는 하루 1회이며 저사용 시간에 실행한다. Cron을 사용하지 않는 환경에서는 이
+단계를 생략한다.
 
 ## 9. 모니터링
 

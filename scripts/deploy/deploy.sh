@@ -15,6 +15,8 @@ set -euo pipefail
 #   - kubectl context must point to mini-pc k3s cluster
 #   - GHCR imagePullSecret must already exist in green-house namespace
 #   - backend/frontend Deployments must already exist
+# Optional for a stopped initial cutover:
+#   BACKEND_TARGET_REPLICAS=1 ROLLBACK_ON_FAILURE=false ./scripts/deploy/deploy.sh <tag>
 
 NAMESPACE="${NAMESPACE:-green-house}"
 
@@ -33,6 +35,9 @@ BACKEND_HEALTH_PATH="${BACKEND_HEALTH_PATH:-/api/dashboard/summary}"
 
 ROLLOUT_TIMEOUT="${ROLLOUT_TIMEOUT:-180s}"
 OPERATION_LOCK_FILE="${GREENHOUSE_OPERATION_LOCK_FILE:-/tmp/green-house-operation.lock}"
+BACKEND_TARGET_REPLICAS="${BACKEND_TARGET_REPLICAS:-}"
+FRONTEND_TARGET_REPLICAS="${FRONTEND_TARGET_REPLICAS:-}"
+ROLLBACK_ON_FAILURE="${ROLLBACK_ON_FAILURE:-true}"
 
 if [[ $# -eq 1 ]]; then
   BACKEND_TAG="$1"
@@ -63,6 +68,15 @@ fail() {
 
 require_command() {
   command -v "$1" >/dev/null 2>&1 || fail "Command not found: $1"
+}
+
+validate_configuration() {
+  [[ -z "${BACKEND_TARGET_REPLICAS}" || "${BACKEND_TARGET_REPLICAS}" =~ ^[0-9]+$ ]] \
+    || fail "BACKEND_TARGET_REPLICAS must be a non-negative integer"
+  [[ -z "${FRONTEND_TARGET_REPLICAS}" || "${FRONTEND_TARGET_REPLICAS}" =~ ^[0-9]+$ ]] \
+    || fail "FRONTEND_TARGET_REPLICAS must be a non-negative integer"
+  [[ "${ROLLBACK_ON_FAILURE}" == "true" || "${ROLLBACK_ON_FAILURE}" == "false" ]] \
+    || fail "ROLLBACK_ON_FAILURE must be true or false"
 }
 
 check_context() {
@@ -110,6 +124,13 @@ wait_rollout_or_rollback() {
     return 0
   fi
 
+  if [[ "${ROLLBACK_ON_FAILURE}" == "false" ]]; then
+    echo
+    echo "[ERROR] ${component} rollout failed. Leaving the deployment stopped." >&2
+    kubectl -n "${NAMESPACE}" scale deployment "${deployment}" --replicas=0 || true
+    return 1
+  fi
+
   echo
   echo "[ERROR] ${component} rollout failed. Rolling back..." >&2
 
@@ -127,6 +148,11 @@ deploy_backend() {
   kubectl -n "${NAMESPACE}" set image "deployment/${BACKEND_DEPLOYMENT}" \
     "${BACKEND_CONTAINER}=${BACKEND_FULL_IMAGE}"
 
+  if [[ -n "${BACKEND_TARGET_REPLICAS}" ]]; then
+    kubectl -n "${NAMESPACE}" scale deployment "${BACKEND_DEPLOYMENT}" \
+      --replicas="${BACKEND_TARGET_REPLICAS}"
+  fi
+
   wait_rollout_or_rollback "${BACKEND_DEPLOYMENT}" "Backend"
 }
 
@@ -135,6 +161,11 @@ deploy_frontend() {
 
   kubectl -n "${NAMESPACE}" set image "deployment/${FRONTEND_DEPLOYMENT}" \
     "${FRONTEND_CONTAINER}=${FRONTEND_FULL_IMAGE}"
+
+  if [[ -n "${FRONTEND_TARGET_REPLICAS}" ]]; then
+    kubectl -n "${NAMESPACE}" scale deployment "${FRONTEND_DEPLOYMENT}" \
+      --replicas="${FRONTEND_TARGET_REPLICAS}"
+  fi
 
   wait_rollout_or_rollback "${FRONTEND_DEPLOYMENT}" "Frontend"
 }
@@ -194,6 +225,7 @@ main() {
   require_command kubectl
   require_command curl
   require_command flock
+  validate_configuration
 
   exec 9>"${OPERATION_LOCK_FILE}"
   flock -n 9 || fail "Another deployment or demo reset is running: ${OPERATION_LOCK_FILE}"
