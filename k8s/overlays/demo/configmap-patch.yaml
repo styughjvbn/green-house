@@ -7,6 +7,7 @@ data:
   DATABASE_URL: jdbc:postgresql://green-house-postgres-host:5432/greenhouse_demo
   DATABASE_USERNAME: greenhouse_demo
   ORCHID_LEDGER_WRITER_VERSION: "2.0.0"
+  ORCHID_LEDGER_STARTUP_GUARD_ENABLED: "true"
   FRONTEND_ORIGIN_PATTERNS: https://green-house-demo.sjw-project.site
   DEMO_MODE: "true"
   DEMO_USERNAME: demo
