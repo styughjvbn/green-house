@@ -6,9 +6,9 @@ resources:
   - network-policy.yaml
 images:
   - name: ghcr.io/styughjvbn/green-house-backend
-    newTag: sha-e2a7f8b
+    newTag: sha-bdfa5cb
   - name: ghcr.io/styughjvbn/green-house-frontend
-    newTag: sha-e2a7f8b
+    newTag: sha-bdfa5cb
 patches:
   - target:
       kind: Namespace
