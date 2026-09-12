@@ -702,8 +702,8 @@ Playwright 실행을 순서대로 수행한다. 결과는
 
 ## 9. CI 검증
 
-`.github/workflows/verify.yml`에서 기본 백엔드 검사·패키징(`./gradlew check bootJar --no-daemon`)과 PostgreSQL 회귀·벤치마크를 별도 job으로 실행한다. 기본 검사는 Java 포맷과 import 순서, 테스트 비활성화 방지 검사도 포함한다.
+`.github/workflows/verify.yml`에서 프론트 format·API 타입·테스트·lint·build, 기본 백엔드 검사·패키징, PostgreSQL 회귀·벤치마크, API 계약 drift를 별도 job으로 실행한다. 각 검사는 독립 단계로 끝까지 실행하고 결과를 Actions Summary에 표로 기록한다. 기본 백엔드 검사는 Java 포맷과 import 순서, 테스트 비활성화 방지 검사도 포함한다.
 PostgreSQL job은 먼저 `docker info`로 실행 환경을 확인하고 Testcontainers가 만든 격리 DB에서
-`./gradlew workE2eTest workBenchmark -PworkBenchmarkEnforce=true --no-daemon`을 실행한다. 운영 DB 접속 정보는 사용하지 않는다.
+`workE2eTest`와 `workBenchmark -PworkBenchmarkEnforce=true`를 각각 실행한다. 운영 DB 접속 정보는 사용하지 않는다. 백엔드 테스트 보고서와 PostgreSQL 테스트·벤치마크 결과는 성공 여부와 관계없이 artifact로 업로드해 14일간 보관한다.
 Docker가 없으면 PostgreSQL 검사는 실패한다. 벤치마크는 결과 의미와 쿼리 상한을 검사하고 시간·할당량은 참고값으로 기록한다.
 포맷 수정은 `backend`에서 `./gradlew format`으로 실행하며 CI는 소스를 자동 수정하지 않는다.
