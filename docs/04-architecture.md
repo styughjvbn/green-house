@@ -504,7 +504,7 @@ cd backend
 - 거래처 검색 경계를 거치는 판매 검색은 1·10·50행에서 SQL 4회, 품종과 경매장 이름에 걸친 경매 문구 검색은 7회다. 각각 기존 3회·5회에서 scalar 검색이 추가된 값이며 행별 반복 조회는 없다. 검색 없는 경매 페이지의 기존 5회 상한은 유지한다.
 - `CoreQueryRegressionTest`는 기본 테스트에서 농장 viewport 3회, 경매 lot 페이지 5회 이내를 검증한다. 일반 판매 전표 상세는 서로 다른 난 묶음 배분 1·10·50개에서 SQL 5회로 고정되며, 배분·스냅샷·현재 Farm 값·거래처·서버 판정 액션을 일괄 조회한다.
 - 사용자 그룹 목록은 1·10·50개에서 SQL 3회, 난 묶음별 소속 그룹 조회는 5회 이내인지 검증한다. 보관·탈퇴 제외와 소속 순서도 함께 확인한다.
-- CI의 기본 job은 `check bootJar`, `backend-postgres` job은 Docker 확인 후 `workE2eTest workBenchmark -PworkBenchmarkEnforce=true`를 실행한다. Docker가 없으면 PostgreSQL 검사는 실패하며 조용히 건너뛰지 않는다. 기본 architecture 검사도 테스트 비활성화와 모듈 내부·직접 시간 조회 예외의 재도입을 막는다.
+- CI의 기본 job은 `check`와 `bootJar`, `backend-postgres` job은 Docker 확인 후 `workE2eTest`와 `workBenchmark -PworkBenchmarkEnforce=true`를 각각 실행한다. Docker가 없으면 PostgreSQL 검사는 실패하며 조용히 건너뛰지 않는다. 검사별 결과는 Actions Summary에 기록하고 테스트·벤치마크 보고서는 14일간 artifact로 보관한다. 기본 architecture 검사도 테스트 비활성화와 모듈 내부·직접 시간 조회 예외의 재도입을 막는다.
 - 백엔드의 편집 기준은 `backend/.editorconfig`를 따른다. Java는 [Spring Java Format](https://github.com/spring-io/spring-javaformat)의 `./gradlew format`으로 적용하고 `checkFormat`으로 검사한다. `check`는 검사만 수행한다. import는 static 먼저, 각 그룹 내 사전순으로 정렬하며 중복과 순서를 architecture 테스트로 검사한다. 기능 변경과 전체 포맷 적용은 별도 커밋으로 나눈다.
 
 ## 8. 프론트엔드 맵 성능 E2E
