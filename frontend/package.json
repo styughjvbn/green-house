@@ -16,7 +16,8 @@
     "e2e:map:install": "playwright install chromium",
     "e2e:map:prepare": "bash ../scripts/e2e/prepare-map-performance-data",
     "e2e:map:baseline": "bash ../scripts/e2e/run-map-performance-baseline",
-    "e2e:map:debug": "MAP_E2E_WARMUP=0 MAP_E2E_ITERATIONS=1 MAP_E2E_CONTINUOUS_STEPS=1 bash ../scripts/e2e/run-map-performance-baseline --reuse-db --headed --debug"
+    "e2e:map:reuse": "bash ../scripts/e2e/run-map-performance-baseline --reuse-db",
+    "e2e:map:debug": "bash ../scripts/e2e/run-map-performance-baseline --reuse-db --headed --debug --warmup 0 --iterations 1 --steps 1"
   },
   "dependencies": {
     "@radix-ui/react-dialog": "^1.1.19",
@@ -32,6 +33,7 @@
     "lucide": "^1.21.0",
     "lucide-react": "^1.21.0",
     "next": "16.2.9",
+    "playwright": "^1.61.1",
     "react": "19.2.4",
     "react-dom": "19.2.4",
     "react-leaflet": "^5.0.0",

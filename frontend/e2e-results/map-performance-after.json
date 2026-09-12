@@ -1,0 +1,626 @@
+{
+  "generatedAt": "2026-07-23T04:10:25.571Z",
+  "environment": {
+    "baseUrl": "http://127.0.0.1:13000",
+    "browserVersion": "149.0.7827.55",
+    "continuousSwipeSteps": 10,
+    "iterations": 5,
+    "viewport": {
+      "width": 1180,
+      "height": 820
+    },
+    "warmups": 1,
+    "workers": 1
+  },
+  "seed": {
+    "bedZoneCount": 90,
+    "houseCount": 15,
+    "orchidGroupCount": 2216,
+    "physicalBedCount": 45,
+    "positionUnitCountSum": 1108
+  },
+  "scenarios": {
+    "houseHistory": {
+      "scenario": "동 이력 표시",
+      "repetitions": 5,
+      "p50": 727.9,
+      "p95": 862.4,
+      "max": 862.4,
+      "apiRequestCount": {
+        "total": 5,
+        "p50": 1,
+        "p95": 1,
+        "max": 1
+      },
+      "apiResponseTimeMs": {
+        "total": 2283.69,
+        "p50": 442.57,
+        "p95": 509,
+        "max": 509
+      },
+      "apiStartDelayMs": {
+        "total": 791.5,
+        "p50": 161.2,
+        "p95": 175.6,
+        "max": 175.6
+      },
+      "responseSizeBytes": {
+        "total": 56872,
+        "p50": 11374,
+        "p95": 11415,
+        "max": 11415
+      },
+      "samples": [
+        {
+          "apiRequestCount": 1,
+          "apiStartDelayMs": 145.7,
+          "clickToRenderMs": 720.5,
+          "payloadBytes": 11334
+        },
+        {
+          "apiRequestCount": 1,
+          "apiStartDelayMs": 175.6,
+          "clickToRenderMs": 862.4,
+          "payloadBytes": 11374
+        },
+        {
+          "apiRequestCount": 1,
+          "apiStartDelayMs": 161.2,
+          "clickToRenderMs": 727.9,
+          "payloadBytes": 11374
+        },
+        {
+          "apiRequestCount": 1,
+          "apiStartDelayMs": 147.3,
+          "clickToRenderMs": 679.5,
+          "payloadBytes": 11375
+        },
+        {
+          "apiRequestCount": 1,
+          "apiStartDelayMs": 161.7,
+          "clickToRenderMs": 826.1,
+          "payloadBytes": 11415
+        }
+      ],
+      "accuracy": {
+        "actualTotalCount": 8800,
+        "directCount": 20,
+        "duplicateCount": 0,
+        "expectedTotalCount": 8800,
+        "houseCount": 0,
+        "physicalBedCount": 0,
+        "propagatedCount": 0,
+        "requestCount": 1,
+        "requestDuplicateCount": 0,
+        "sampleTitles": [
+          "농약260530",
+          "농약260530"
+        ],
+        "passed": true,
+        "violations": [],
+        "zoneCount": 0
+      }
+    },
+    "nextBedCold": {
+      "scenario": "다음 다이 Cold 스와이프",
+      "repetitions": 5,
+      "p50": 448.5,
+      "p95": 475.6,
+      "max": 475.6,
+      "apiRequestCount": {
+        "total": 0,
+        "p50": 0,
+        "p95": 0,
+        "max": 0
+      },
+      "apiResponseTimeMs": {
+        "total": 0,
+        "p50": 0,
+        "p95": 0,
+        "max": 0
+      },
+      "apiStartDelayMs": {
+        "total": 0,
+        "p50": 0,
+        "p95": 0,
+        "max": 0
+      },
+      "responseSizeBytes": {
+        "total": 0,
+        "p50": 0,
+        "p95": 0,
+        "max": 0
+      },
+      "samples": [
+        {
+          "apiRequestCount": 0,
+          "apiStartDelayMs": null,
+          "clickToRenderMs": 427.2,
+          "dataReadyMs": 0,
+          "payloadBytes": 0,
+          "renderReadyMs": 427.2
+        },
+        {
+          "apiRequestCount": 0,
+          "apiStartDelayMs": null,
+          "clickToRenderMs": 450.1,
+          "dataReadyMs": 0,
+          "payloadBytes": 0,
+          "renderReadyMs": 450.1
+        },
+        {
+          "apiRequestCount": 0,
+          "apiStartDelayMs": null,
+          "clickToRenderMs": 475.6,
+          "dataReadyMs": 0,
+          "payloadBytes": 0,
+          "renderReadyMs": 475.6
+        },
+        {
+          "apiRequestCount": 0,
+          "apiStartDelayMs": null,
+          "clickToRenderMs": 448.5,
+          "dataReadyMs": 0,
+          "payloadBytes": 0,
+          "renderReadyMs": 448.5
+        },
+        {
+          "apiRequestCount": 0,
+          "apiStartDelayMs": null,
+          "clickToRenderMs": 398.5,
+          "dataReadyMs": 0,
+          "payloadBytes": 0,
+          "renderReadyMs": 398.5
+        }
+      ]
+    },
+    "previousBedCold": {
+      "scenario": "이전 다이 Cold 스와이프",
+      "repetitions": 5,
+      "p50": 423.6,
+      "p95": 501.2,
+      "max": 501.2,
+      "apiRequestCount": {
+        "total": 0,
+        "p50": 0,
+        "p95": 0,
+        "max": 0
+      },
+      "apiResponseTimeMs": {
+        "total": 0,
+        "p50": 0,
+        "p95": 0,
+        "max": 0
+      },
+      "apiStartDelayMs": {
+        "total": 0,
+        "p50": 0,
+        "p95": 0,
+        "max": 0
+      },
+      "responseSizeBytes": {
+        "total": 0,
+        "p50": 0,
+        "p95": 0,
+        "max": 0
+      },
+      "samples": [
+        {
+          "apiRequestCount": 0,
+          "apiStartDelayMs": null,
+          "clickToRenderMs": 407.8,
+          "dataReadyMs": 0,
+          "payloadBytes": 0,
+          "renderReadyMs": 407.8
+        },
+        {
+          "apiRequestCount": 0,
+          "apiStartDelayMs": null,
+          "clickToRenderMs": 438.3,
+          "dataReadyMs": 0,
+          "payloadBytes": 0,
+          "renderReadyMs": 438.3
+        },
+        {
+          "apiRequestCount": 0,
+          "apiStartDelayMs": null,
+          "clickToRenderMs": 423.6,
+          "dataReadyMs": 0,
+          "payloadBytes": 0,
+          "renderReadyMs": 423.6
+        },
+        {
+          "apiRequestCount": 0,
+          "apiStartDelayMs": null,
+          "clickToRenderMs": 395,
+          "dataReadyMs": 0,
+          "payloadBytes": 0,
+          "renderReadyMs": 395
+        },
+        {
+          "apiRequestCount": 0,
+          "apiStartDelayMs": null,
+          "clickToRenderMs": 501.2,
+          "dataReadyMs": 0,
+          "payloadBytes": 0,
+          "renderReadyMs": 501.2
+        }
+      ]
+    },
+    "warmBedRevisit": {
+      "scenario": "다이 Warm 재방문",
+      "repetitions": 5,
+      "p50": 423.5,
+      "p95": 472.2,
+      "max": 472.2,
+      "apiRequestCount": {
+        "total": 0,
+        "p50": 0,
+        "p95": 0,
+        "max": 0
+      },
+      "apiResponseTimeMs": {
+        "total": 0,
+        "p50": 0,
+        "p95": 0,
+        "max": 0
+      },
+      "apiStartDelayMs": {
+        "total": 0,
+        "p50": 0,
+        "p95": 0,
+        "max": 0
+      },
+      "responseSizeBytes": {
+        "total": 0,
+        "p50": 0,
+        "p95": 0,
+        "max": 0
+      },
+      "samples": [
+        {
+          "apiRequestCount": 0,
+          "apiStartDelayMs": null,
+          "clickToRenderMs": 390.2,
+          "dataReadyMs": 0,
+          "payloadBytes": 0,
+          "renderReadyMs": 390.2
+        },
+        {
+          "apiRequestCount": 0,
+          "apiStartDelayMs": null,
+          "clickToRenderMs": 472.2,
+          "dataReadyMs": 0,
+          "payloadBytes": 0,
+          "renderReadyMs": 472.2
+        },
+        {
+          "apiRequestCount": 0,
+          "apiStartDelayMs": null,
+          "clickToRenderMs": 403.2,
+          "dataReadyMs": 0,
+          "payloadBytes": 0,
+          "renderReadyMs": 403.2
+        },
+        {
+          "apiRequestCount": 0,
+          "apiStartDelayMs": null,
+          "clickToRenderMs": 423.5,
+          "dataReadyMs": 0,
+          "payloadBytes": 0,
+          "renderReadyMs": 423.5
+        },
+        {
+          "apiRequestCount": 0,
+          "apiStartDelayMs": null,
+          "clickToRenderMs": 425.2,
+          "dataReadyMs": 0,
+          "payloadBytes": 0,
+          "renderReadyMs": 425.2
+        }
+      ]
+    },
+    "continuousSwipe": {
+      "scenario": "연속 스와이프",
+      "repetitions": 5,
+      "p50": 6850.3,
+      "p95": 6907.8,
+      "max": 6907.8,
+      "apiRequestCount": {
+        "total": 0,
+        "p50": 0,
+        "p95": 0,
+        "max": 0
+      },
+      "apiResponseTimeMs": {
+        "total": 0,
+        "p50": 0,
+        "p95": 0,
+        "max": 0
+      },
+      "apiStartDelayMs": {
+        "total": 0,
+        "p50": 0,
+        "p95": 0,
+        "max": 0
+      },
+      "responseSizeBytes": {
+        "total": 0,
+        "p50": 0,
+        "p95": 0,
+        "max": 0
+      },
+      "samples": [
+        {
+          "apiRequestCount": 0,
+          "apiStartDelayMs": null,
+          "clickToRenderMs": 6700.1,
+          "payloadBytes": 0
+        },
+        {
+          "apiRequestCount": 0,
+          "apiStartDelayMs": null,
+          "clickToRenderMs": 6827.2,
+          "payloadBytes": 0
+        },
+        {
+          "apiRequestCount": 0,
+          "apiStartDelayMs": null,
+          "clickToRenderMs": 6874,
+          "payloadBytes": 0
+        },
+        {
+          "apiRequestCount": 0,
+          "apiStartDelayMs": null,
+          "clickToRenderMs": 6907.8,
+          "payloadBytes": 0
+        },
+        {
+          "apiRequestCount": 0,
+          "apiStartDelayMs": null,
+          "clickToRenderMs": 6850.3,
+          "payloadBytes": 0
+        }
+      ],
+      "accuracy": {
+        "actualTotalCount": 0,
+        "directCount": 0,
+        "duplicateCount": 0,
+        "expectedTotalCount": 0,
+        "houseCount": 0,
+        "physicalBedCount": 0,
+        "propagatedCount": 0,
+        "requestCount": 0,
+        "requestDuplicateCount": 0,
+        "sampleTitles": [],
+        "passed": true,
+        "violations": [],
+        "zoneCount": 0
+      }
+    },
+    "physicalBedHistory": {
+      "scenario": "다이 이력 표시",
+      "repetitions": 5,
+      "p50": 277.8,
+      "p95": 585.9,
+      "max": 585.9,
+      "apiRequestCount": {
+        "total": 1,
+        "p50": 0,
+        "p95": 1,
+        "max": 1
+      },
+      "apiResponseTimeMs": {
+        "total": 385.22,
+        "p50": 385.22,
+        "p95": 385.22,
+        "max": 385.22
+      },
+      "apiStartDelayMs": {
+        "total": 82.3,
+        "p50": 82.3,
+        "p95": 82.3,
+        "max": 82.3
+      },
+      "responseSizeBytes": {
+        "total": 11274,
+        "p50": 0,
+        "p95": 11274,
+        "max": 11274
+      },
+      "samples": [
+        {
+          "apiRequestCount": 1,
+          "apiStartDelayMs": 82.3,
+          "clickToRenderMs": 585.9,
+          "payloadBytes": 11274
+        },
+        {
+          "apiRequestCount": 0,
+          "apiStartDelayMs": null,
+          "clickToRenderMs": 252.5,
+          "payloadBytes": 0
+        },
+        {
+          "apiRequestCount": 0,
+          "apiStartDelayMs": null,
+          "clickToRenderMs": 271.2,
+          "payloadBytes": 0
+        },
+        {
+          "apiRequestCount": 0,
+          "apiStartDelayMs": null,
+          "clickToRenderMs": 336.3,
+          "payloadBytes": 0
+        },
+        {
+          "apiRequestCount": 0,
+          "apiStartDelayMs": null,
+          "clickToRenderMs": 277.8,
+          "payloadBytes": 0
+        }
+      ],
+      "accuracy": {
+        "actualTotalCount": 2940,
+        "directCount": 20,
+        "duplicateCount": 0,
+        "expectedTotalCount": 2940,
+        "houseCount": 0,
+        "physicalBedCount": 0,
+        "propagatedCount": 0,
+        "requestCount": 1,
+        "requestDuplicateCount": 0,
+        "sampleTitles": [
+          "농약260530",
+          "농약260530"
+        ],
+        "passed": true,
+        "violations": [],
+        "zoneCount": 0
+      }
+    },
+    "orchidGroupHistory": {
+      "scenario": "난 묶음 이력 표시",
+      "repetitions": 5,
+      "p50": 237,
+      "p95": 533.1,
+      "max": 533.1,
+      "apiRequestCount": {
+        "total": 1,
+        "p50": 0,
+        "p95": 1,
+        "max": 1
+      },
+      "apiResponseTimeMs": {
+        "total": 359.01,
+        "p50": 359.01,
+        "p95": 359.01,
+        "max": 359.01
+      },
+      "apiStartDelayMs": {
+        "total": 70.3,
+        "p50": 70.3,
+        "p95": 70.3,
+        "max": 70.3
+      },
+      "responseSizeBytes": {
+        "total": 11211,
+        "p50": 0,
+        "p95": 11211,
+        "max": 11211
+      },
+      "samples": [
+        {
+          "apiRequestCount": 1,
+          "apiStartDelayMs": 70.3,
+          "clickToRenderMs": 533.1,
+          "payloadBytes": 11211
+        },
+        {
+          "apiRequestCount": 0,
+          "apiStartDelayMs": null,
+          "clickToRenderMs": 222.8,
+          "payloadBytes": 0
+        },
+        {
+          "apiRequestCount": 0,
+          "apiStartDelayMs": null,
+          "clickToRenderMs": 219.3,
+          "payloadBytes": 0
+        },
+        {
+          "apiRequestCount": 0,
+          "apiStartDelayMs": null,
+          "clickToRenderMs": 253.2,
+          "payloadBytes": 0
+        },
+        {
+          "apiRequestCount": 0,
+          "apiStartDelayMs": null,
+          "clickToRenderMs": 237,
+          "payloadBytes": 0
+        }
+      ],
+      "accuracy": {
+        "actualTotalCount": 100,
+        "directCount": 60,
+        "duplicateCount": 0,
+        "expectedTotalCount": 100,
+        "houseCount": 10,
+        "physicalBedCount": 10,
+        "propagatedCount": 40,
+        "requestCount": 10,
+        "requestDuplicateCount": 0,
+        "sampleTitles": [
+          "E2E-DIRECT-G2-W0602026-05-30",
+          "E2E-DIRECT-G2-W0592026-05-29"
+        ],
+        "passed": true,
+        "violations": [],
+        "zoneCount": 20
+      }
+    }
+  },
+  "renderingStability": {
+    "dragSelectionBefore": "HOUSE",
+    "dragSelectionAfter": "HOUSE",
+    "dragPreservedSelection": true,
+    "mountedBedsBefore": 9,
+    "mountedBedsAfter": 9,
+    "domGrowth": 0,
+    "visibleBedsAfter": 3,
+    "visibleBedIdsAfter": [
+      22,
+      23,
+      24
+    ],
+    "withinVisibleBedLimit": true,
+    "duplicateHistoryRequestCount": 0,
+    "finalSelectionType": "HOUSE",
+    "finalSelectionId": 8,
+    "finalScopeMatches": true,
+    "finalHistoryReady": true,
+    "mountedBeds": 6,
+    "visibleBeds": 3,
+    "orchidGroupNodes": 288
+  },
+  "consoleErrors": [],
+  "failedRequests": [],
+  "comparisonTable": [
+    {
+      "scenario": "동 이력 표시",
+      "beforeP50": 727.9,
+      "beforeP95": 862.4
+    },
+    {
+      "scenario": "다음 다이 Cold 스와이프",
+      "beforeP50": 448.5,
+      "beforeP95": 475.6
+    },
+    {
+      "scenario": "이전 다이 Cold 스와이프",
+      "beforeP50": 423.6,
+      "beforeP95": 501.2
+    },
+    {
+      "scenario": "다이 Warm 재방문",
+      "beforeP50": 423.5,
+      "beforeP95": 472.2
+    },
+    {
+      "scenario": "연속 스와이프",
+      "beforeP50": 6850.3,
+      "beforeP95": 6907.8
+    },
+    {
+      "scenario": "다이 이력 표시",
+      "beforeP50": 277.8,
+      "beforeP95": 585.9
+    },
+    {
+      "scenario": "난 묶음 이력 표시",
+      "beforeP50": 237,
+      "beforeP95": 533.1
+    }
+  ]
+}
