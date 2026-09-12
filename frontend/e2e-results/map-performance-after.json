@@ -92,10 +92,7 @@
         "propagatedCount": 0,
         "requestCount": 1,
         "requestDuplicateCount": 0,
-        "sampleTitles": [
-          "농약260530",
-          "농약260530"
-        ],
+        "sampleTitles": ["농약260530", "농약260530"],
         "passed": true,
         "violations": [],
         "zoneCount": 0
@@ -470,10 +467,7 @@
         "propagatedCount": 0,
         "requestCount": 1,
         "requestDuplicateCount": 0,
-        "sampleTitles": [
-          "농약260530",
-          "농약260530"
-        ],
+        "sampleTitles": ["농약260530", "농약260530"],
         "passed": true,
         "violations": [],
         "zoneCount": 0
@@ -569,11 +563,7 @@
     "mountedBedsAfter": 9,
     "domGrowth": 0,
     "visibleBedsAfter": 3,
-    "visibleBedIdsAfter": [
-      22,
-      23,
-      24
-    ],
+    "visibleBedIdsAfter": [22, 23, 24],
     "withinVisibleBedLimit": true,
     "duplicateHistoryRequestCount": 0,
     "finalSelectionType": "HOUSE",
