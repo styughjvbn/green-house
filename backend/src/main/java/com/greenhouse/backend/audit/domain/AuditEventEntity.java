@@ -60,6 +60,10 @@ public class AuditEventEntity {
 
 	private Long varietyId;
 
+	/** OrchidGroup 감사 사건을 설명하거나 뒷받침하는 Farm Mutation 식별자. */
+	@Column(name = "mutation_id")
+	private Long mutationId;
+
 	@JdbcTypeCode(SqlTypes.ARRAY)
 	@Column(nullable = false)
 	private String[] changedFields;
