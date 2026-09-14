@@ -67,7 +67,30 @@ class OrchidGroupStateChainMigrationPostgresE2ETest extends WorkE2ETestBase {
 				ORDER BY installed_rank
 				""", String.class)).containsExactly("21:add orchid group mutation engine",
 				"22:enforce orchid group mutation write fence", "23:normalize legacy orchid group pot sizes",
-				"24:allocate farm reference codes", "25:add work command receipts", "26:align work effect idempotency");
+				"24:allocate farm reference codes", "25:add work command receipts", "26:align work effect idempotency",
+				"27:repair orchid group audit provenance");
+
+		assertThat(jdbcTemplate.queryForObject("""
+				SELECT COUNT(*)
+				FROM information_schema.columns
+				WHERE table_schema = 'public'
+				  AND table_name = 'audit_events'
+				  AND column_name = 'mutation_id'
+				""", Long.class)).isOne();
+		assertThat(jdbcTemplate.queryForObject("""
+				SELECT COUNT(*)
+				FROM pg_constraint
+				WHERE conrelid = 'audit_events'::regclass
+				  AND conname = 'fk_audit_events_orchid_group_mutation'
+				""", Long.class)).isOne();
+		assertThat(jdbcTemplate.queryForObject("""
+				SELECT COUNT(*)
+				FROM pg_indexes
+				WHERE schemaname = 'public'
+				  AND tablename = 'audit_events'
+				  AND indexname = 'idx_audit_events_mutation'
+				  AND indexdef LIKE '%WHERE (mutation_id IS NOT NULL)%'
+				""", Long.class)).isOne();
 
 		assertThat(jdbcTemplate.queryForObject("""
 				SELECT COUNT(*)

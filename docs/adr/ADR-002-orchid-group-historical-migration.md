@@ -164,6 +164,32 @@ manifest를 실행했다. 운영 배포본은 같은 최종 스키마를 V20에�
 | VERIFY | `BASELINE_PREPARING`, `ready=true`, `issues=[]` |
 | ACTIVE 전환 후 reconciliation | `ACTIVE`, `ready=true`, `issues=[]` |
 
+## 2026-09-14 Audit provenance 후속 보정
+
+초기 profiler는 `audit_events.entity_id`를 OrchidGroup ID로 연결하지 못해 Audit 5건을
+manifest에 반영하지 않았다. 최종 OrchidGroup 업무 상태는 정확했지만 provenance와 그룹
+272의 중간 상태가 불완전했다.
+
+V27의 확정 연결은 다음과 같다.
+
+| Audit | OrchidGroup | 연결 Mutation | 처리 |
+|---:|---:|---:|---|
+| 1 | 267 | 34 | 기존 synthetic CREATE의 생성 근거로 연결 |
+| 2 | 272 | 신규 Audit CORRECTION | Work CREATE rev1을 `ageYear=null`, `POT_2`로 복구하고 rev1→2 추가 |
+| 3 | 256 | 109 | 기존 수량 CORRECTION에 supporting provenance 연결 |
+| 4 | 252 | 15 | 기존 수량 CORRECTION에 supporting provenance 연결 |
+| 5 | 266 | 137 | variety 변경만 supporting provenance로 연결 |
+
+Audit 5는 기존 Mutation 137에 함께 기록된 memo 삭제를 입증하지 않는다. memo 삭제의
+근거는 기존 snapshot과 운영자 attestation에 남는다. 그룹 272 외 revision은 이동하지
+않으며 현재 행은 `state_revision`만 1에서 2로 증가한다. 269개 current canonical snapshot은
+V27 전후 동일해야 한다.
+
+V27은 운영 cutover ID·fingerprint, 314 Mutation·348 Entry·269 current group·Audit 5건,
+각 Audit payload와 대상 Entry를 모두 확인한다. 불일치 시 같은 Flyway transaction을
+중단한다. 성공 후에는 315 Mutation, 349 Entry, Audit 연결 5건이며 그룹 272 chain은
+Work CREATE rev1 뒤 Audit CORRECTION rev2로 이어진다.
+
 ## 기각한 대안
 
 ### revision 없는 과거 Entry를 같은 테이블에 유지
