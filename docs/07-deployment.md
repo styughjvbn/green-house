@@ -348,6 +348,53 @@ legacy 호환 코드를 먼저 삭제한다는 뜻은 아니다. 호환 분기�
 남겨 둘 수 있지만 모든 실행 인스턴스는 `ENGINE`으로 고정하고 DB fence로 실행을
 차단한다. 안정화 후 routing flag와 legacy 직접 writer를 별도 릴리스에서 제거한다.
 
+### V27 OrchidGroup Audit provenance 보정
+
+V27은 2026-09-14 운영 백업으로 확인한 ACTIVE state-chain만 대상으로 한다. Audit 5건에
+`mutation_id`를 연결하고 그룹 272에 누락된 Audit CORRECTION rev2를 추가한다. 269개
+OrchidGroup의 quantity, status, memo, variety, 위치 등 canonical 업무 상태는 바꾸지 않으며
+그룹 272의 `state_revision`만 1에서 2로 증가한다.
+
+운영 적용 전 최신 custom dump로 복원본 rehearsal을 실행한다.
+
+```bash
+./scripts/data-audit/rehearse-orchid-audit-provenance-migration.sh \
+  temp/green-house_20260914_173317.dump.gz
+```
+
+스크립트는 임시 PostgreSQL 14 container에 백업을 복원하고 release Flyway를 적용한다.
+전후 269개 canonical snapshot SHA-256 동일, Audit 연결, revision·snapshot chain,
+current revision, Work 42건·Lineage 16건 연결, 그룹 272 전후 상태를 검증하고
+`orchidLedgerReconcile`의 `ACTIVE`, `ready=true`, `issues=[]`까지 확인한다.
+
+운영에서는 V27이 포함된 backend 이미지를 배포하면 시작 과정에서 Flyway가 자동 적용한다.
+별도 `bootRun`이나 migration SQL 수동 실행은 하지 않는다.
+
+```bash
+kubectl -n "${NAMESPACE}" scale deployment/"${DEPLOYMENT}" --replicas=0
+# V27 포함 RELEASE_IMAGE로 manifest를 갱신한다.
+kubectl apply -k k8s/base
+kubectl -n "${NAMESPACE}" rollout status deployment/"${DEPLOYMENT}" --timeout=300s
+```
+
+기존 Pod를 모두 종료한 뒤 새 이미지를 기동해야 한다. V27이 실패하면 Flyway transaction은
+전체 rollback되고 새 Pod는 기동하지 못한다. Pod가 정상 기동된 뒤
+`verify-orchid-audit-provenance.sql`과 `orchidLedgerReconcile`을 read-only로 실행한다.
+
+다음 중 하나라도 다르면 V27은 예외로 중단한다.
+
+- cutover ID·import fingerprint·ACTIVE coverage 또는 314/348/269/5 기준 건수 불일치
+- Audit ID·대상·action·before/after payload 불일치
+- 대상 Mutation·Entry·현재 revision 또는 Work/Lineage 연결 불일치
+- 전후 canonical snapshot, revision 연속성, Entry snapshot 연결 불일치
+- 예상 외 Mutation·Entry 변경 또는 Audit 연결 수 불일치
+
+Flyway transaction 실패는 별도 복구 없이 원상태다. V27 commit 후 검증이 실패하면 DB에
+수동 역 SQL을 적용하지 않는다. backend를 계속 중지하고 V27 직전 전체 backup을 새 DB에
+복원한 뒤 V26 application/schema 조합으로 복구한다. 복원 이후 생성된 업무 데이터는
+보존되지 않으므로 V27 검증을 마칠 때까지 writer를 재개하지 않는다. 원인 수정 후 새
+복원본 rehearsal부터 다시 수행한다.
+
 운영 DB의 `--activate=true` 실행 전에는 최신 운영 백업과 배포 후보 코드로 state-chain import,
 ENGINE 전체 회귀·smoke 및 아래 `ACTIVE` 전환 rehearsal까지 통과해야 한다.
 

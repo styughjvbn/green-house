@@ -933,3 +933,22 @@ coverage 시점이 달라지고, 아직 접근되지 않은 행의 직접 변경
 
 Timeline과 과거 시점 replay는 이 완료 조건을 검증한 이후 ledger를 소비하는
 후속 기능이며, 핵심 전환 완료의 선행 조건은 아니다.
+
+## 2026-09-14 Audit provenance 보정 결정
+
+`AuditEvent`는 Audit 모듈의 원본 사실로 유지하고, 이를 설명하거나 일부 필드의 근거를
+보강하는 Farm Mutation ID를 nullable scalar FK로 참조한다. Audit 모듈에서 Farm Entity를
+JPA 연관으로 가져오지 않는다. 한 Audit은 하나의 Mutation을 가리키며, Mutation 하나는
+Work·Lineage 외에 여러 Audit의 근거가 될 수 있다.
+
+운영 profiler가 `audit_events.entity_id`를 OrchidGroup ID로 해석하지 못해 5건을
+`UNSCOPED` 처리했다. 네 사건은 기존 Mutation에 연결만 한다. 그룹 272 사건은 기존 Work
+CREATE snapshot이 Audit 이후 값을 최초 상태로 사용해 중간 revision이 사라졌으므로 새
+Audit CORRECTION을 추가한다.
+
+불변 원장의 일반 UPDATE 허용이나 기존 Mutation 삭제·key 재생성은 채택하지 않는다.
+다만 잘못 적재된 역사적 snapshot을 annotation만으로 남기면 complete state-chain이 계속
+거짓이므로, V27은 검토된 운영 cutover fingerprint와 정확한 행을 확인한 뒤 Work Mutation
+203의 Entry 222와 command fingerprint만 표적 재구성한다. Mutation ID·source identity,
+Work 효과와 Lineage 연결은 유지한다. 이 예외는 Flyway 이력과 Audit 2 연결로 추적하며
+일반 application write API로 제공하지 않는다.
