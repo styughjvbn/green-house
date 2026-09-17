@@ -131,7 +131,7 @@ main() {
     || fail "Set DEMO_REFRESH_CONFIRM=greenhouse_demo:greenhouse_demo_next:greenhouse_demo_prev"
   [[ -n "${DEMO_DB_ADMIN_URL:-}" && -n "${DEMO_DB_URL:-}" && -n "${DEMO_DB_NEXT_URL:-}" ]] \
     || fail "DEMO_DB_ADMIN_URL, DEMO_DB_URL and DEMO_DB_NEXT_URL are required"
-  [[ "$(psql "${DEMO_DB_ADMIN_URL}" -Atqc "SELECT current_database()||':'||rolname||':'||rolsuper||':'||rolcreatedb||':'||pg_has_role(current_user, '${DEMO_DB_OWNER}', 'MEMBER')||':'||pg_has_role(current_user, 'pg_signal_backend', 'MEMBER') FROM pg_roles WHERE rolname=current_user")" == "postgres:${DEMO_DB_ADMIN_ROLE}:f:t:t:t" ]] \
+  [[ "$(psql "${DEMO_DB_ADMIN_URL}" -Atqc "SELECT current_database()||':'||rolname||':'||rolsuper||':'||rolcreatedb||':'||pg_has_role(current_user, '${DEMO_DB_OWNER}', 'MEMBER')||':'||pg_has_role(current_user, 'pg_signal_backend', 'MEMBER') FROM pg_roles WHERE rolname=current_user")" == "postgres:${DEMO_DB_ADMIN_ROLE}:false:true:true:true" ]] \
     || fail "DEMO_DB_ADMIN_URL must target postgres as ${DEMO_DB_ADMIN_ROLE} with CREATEDB, ${DEMO_DB_OWNER}, and pg_signal_backend membership"
   [[ "$(psql "${DEMO_DB_URL}" -Atqc "SELECT current_database()||':'||current_user")" == "${DEMO_DB_NAME}:${DEMO_DB_OWNER}" ]] \
     || fail "DEMO_DB_URL must target ${DEMO_DB_NAME} as ${DEMO_DB_OWNER}"

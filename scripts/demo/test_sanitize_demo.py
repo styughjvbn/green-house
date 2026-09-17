@@ -116,6 +116,7 @@ class PipelineContractTest(unittest.TestCase):
         )
         self.assertIn("greenhouse_demo_refresh", script)
         self.assertIn("pg_signal_backend", script)
+        self.assertIn("false:true:true:true", script)
         self.assertIn("WITH targets AS MATERIALIZED", script)
         self.assertIn("activity.backend_type='client backend'", script)
         self.assertNotIn("must target postgres as a superuser", script)
