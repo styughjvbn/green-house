@@ -115,6 +115,14 @@ class PipelineContractTest(unittest.TestCase):
             script.rindex("  stop_backend\n"),
         )
 
+    def test_candidate_flyway_validation_uses_pinned_docker_image(self) -> None:
+        script = (Path(__file__).parent / "validate-demo-db.sh").read_text(encoding="utf-8")
+        self.assertIn('FLYWAY_IMAGE="redgate/flyway:11"', script)
+        self.assertIn("docker run --rm --network host", script)
+        self.assertIn("--env FLYWAY_PASSWORD", script)
+        self.assertIn('"${MIGRATION_DIR}:/flyway/sql:ro"', script)
+        self.assertNotIn("require_command flyway", script)
+
 
 if __name__ == "__main__":
     unittest.main()

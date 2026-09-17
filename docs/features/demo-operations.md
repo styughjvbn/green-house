@@ -206,7 +206,9 @@ coverage의 ID·FK·행 순서·revision chain·mutation/correlation 연결을 �
 수동 전체 실행:
 
 ```bash
-sudo install -m 600 deploy/systemd/demo-refresh.env.example \
+sudo install -d -o root -g sjw -m 750 /etc/green-house
+sudo install -d -o sjw -g sjw -m 700 /opt/green-house/backups/demo-sanitized
+sudo install -o root -g sjw -m 640 deploy/systemd/demo-refresh.env.example \
   /etc/green-house/demo-refresh.env
 sudoedit /etc/green-house/demo-refresh.env
 
@@ -215,6 +217,9 @@ set -a
 set +a
 ./scripts/demo/scheduled-demo-refresh.sh
 ```
+
+`/opt/green-house/backups/local`의 운영 원본 backup과 비식별 dump를 섞지 않는다. 정기
+리프레시 산출물은 `/opt/green-house/backups/demo-sanitized`에만 저장한다.
 
 생성 단계만 실행하려면 `create-sanitized-demo-dump.sh <output.dump>`, 이미 검증된 dump를
 승격하려면 `refresh-demo-db.sh <dump>`를 사용한다. 후보 복원과 모든 검증은 현재 데모가
@@ -236,16 +241,14 @@ table/sequence `SELECT`와 동일 default privileges를 적용한다. `PUBLIC`�
 ## 8. systemd timer
 
 운영 PC에는 Docker Compose v2, 운영 PostgreSQL과 호환되는 `pg_dump`/`pg_restore`, `psql`,
-Flyway CLI, `kubectl`, `curl`, `flock`이 필요하다. 서비스 계정이 Kubernetes kubeconfig와
-Docker에 접근할 수 있어야 한다. 저장소를 `/opt/green-house`에 배치한 예시는 다음과 같다.
+`kubectl`, `curl`, `flock`이 필요하다. Flyway checksum 검증은 고정된
+`redgate/flyway:11` Docker 이미지로 실행하므로 host Flyway CLI는 설치하지 않는다. 실제 운영
+계정 `sjw`가 Kubernetes kubeconfig와 Docker에 접근하며, 저장소는
+`/home/sjw/projects/green-house`에 있다.
 
 ```bash
-sudo install -d -m 700 /etc/green-house
-sudo install -d -o green-house -g green-house -m 700 /var/lib/green-house/demo-dumps
-sudo install -m 600 deploy/systemd/demo-refresh.env.example /etc/green-house/demo-refresh.env
 sudo install -m 644 deploy/systemd/green-house-demo-refresh.service /etc/systemd/system/
 sudo install -m 644 deploy/systemd/green-house-demo-refresh.timer /etc/systemd/system/
-# /etc/green-house/demo-refresh.env의 CHANGE_ME와 접속 정보를 실제 값으로 수정한다.
 sudo systemctl daemon-reload
 sudo systemctl enable --now green-house-demo-refresh.timer
 sudo systemctl start green-house-demo-refresh.service
@@ -253,11 +256,11 @@ systemctl status green-house-demo-refresh.timer
 journalctl -u green-house-demo-refresh.service -n 200 --no-pager
 ```
 
-service는 `WorkingDirectory=/opt/green-house`, 명시적 `PATH`, `EnvironmentFile`, 2시간 timeout,
-`UMask=0077`을 사용한다. timer는 매주 일요일 03:00(Asia/Seoul)에 실행하고 실패로 놓친 실행을
-`Persistent=true`로 보완한다. `User=green-house`는 이미지 배포를 실행하는 계정과 같아야
-공유 `/tmp/green-house-operation.lock`이 정상 동작한다. 실제 binary 경로가 기본 PATH 밖이면
-service의 PATH를 수정한다.
+service는 `User=sjw`, `WorkingDirectory=/home/sjw/projects/green-house`, snap Docker를 포함한
+명시적 `PATH`, `EnvironmentFile`, 2시간 timeout, `UMask=0077`을 사용한다. timer는 매주 일요일
+04:00(Asia/Seoul)에 실행해 매일 03:00 운영 DB backup과 겹치지 않게 하고, 실패로 놓친 실행을
+`Persistent=true`로 보완한다. 이미지 배포도
+같은 `sjw` 계정으로 실행해야 공유 `/tmp/green-house-operation.lock`이 정상 동작한다.
 
 ## 9. 모니터링
 

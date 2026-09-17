@@ -5,6 +5,7 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_ROOT="$(cd "${SCRIPT_DIR}/../.." && pwd)"
 ALLOWLIST="${SCRIPT_DIR}/schema-allowlist.tsv"
 MIGRATION_DIR="${PROJECT_ROOT}/backend/src/main/resources/db/migration"
+FLYWAY_IMAGE="redgate/flyway:11"
 
 fail() { echo "[ERROR] $*" >&2; exit 1; }
 require_command() { command -v "$1" >/dev/null 2>&1 || fail "Command not found: $1"; }
@@ -20,9 +21,25 @@ schema_allowlist_values() {
   printf '%s' "${values}"
 }
 
+validate_flyway_history() {
+  (
+    export FLYWAY_URL="${DEMO_VALIDATE_FLYWAY_URL}"
+    export FLYWAY_USER="${DEMO_VALIDATE_FLYWAY_USER}"
+    export FLYWAY_PASSWORD="${DEMO_VALIDATE_FLYWAY_PASSWORD}"
+    export FLYWAY_LOCATIONS="filesystem:/flyway/sql"
+    docker run --rm --network host \
+      --env FLYWAY_URL \
+      --env FLYWAY_USER \
+      --env FLYWAY_PASSWORD \
+      --env FLYWAY_LOCATIONS \
+      --volume "${MIGRATION_DIR}:/flyway/sql:ro" \
+      "${FLYWAY_IMAGE}" validate
+  )
+}
+
 main() {
+  require_command docker
   require_command find
-  require_command flyway
   require_command psql
   [[ -n "${DEMO_VALIDATE_DB_URL:-}" ]] || fail "DEMO_VALIDATE_DB_URL is required"
   [[ -n "${DEMO_VALIDATE_FLYWAY_URL:-}" ]] || fail "DEMO_VALIDATE_FLYWAY_URL is required"
@@ -31,11 +48,7 @@ main() {
   [[ "$(psql "${DEMO_VALIDATE_DB_URL}" -Atqc 'SELECT current_database()')" == "${DEMO_VALIDATE_DB_NAME:?DEMO_VALIDATE_DB_NAME is required}" ]] \
     || fail "Validation URL does not target ${DEMO_VALIDATE_DB_NAME}"
 
-  FLYWAY_URL="${DEMO_VALIDATE_FLYWAY_URL}" \
-  FLYWAY_USER="${DEMO_VALIDATE_FLYWAY_USER}" \
-  FLYWAY_PASSWORD="${DEMO_VALIDATE_FLYWAY_PASSWORD}" \
-  FLYWAY_LOCATIONS="filesystem:${MIGRATION_DIR}" \
-    flyway validate
+  validate_flyway_history
 
   local latest applied allowlist_values files=()
   latest="$(find "${MIGRATION_DIR}" -maxdepth 1 -type f -name 'V*__*.sql' -printf '%f\n' \

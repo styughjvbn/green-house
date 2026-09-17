@@ -115,7 +115,7 @@ rollback_swap() {
 
 main() {
   [[ $# -eq 1 ]] || fail "Usage: $0 <sanitized.dump|sanitized.dump.gz>"
-  for command in createdb dropdb find flock flyway gzip kubectl pg_restore psql sha256sum curl; do require_command "${command}"; done
+  for command in createdb docker dropdb find flock gzip kubectl pg_restore psql sha256sum curl; do require_command "${command}"; done
   [[ "${DEMO_DB_NAME}" == "greenhouse_demo" ]] || fail "DEMO_DB_NAME must be exactly greenhouse_demo"
   [[ "${DEMO_DB_NEXT_NAME}" == "greenhouse_demo_next" ]] || fail "DEMO_DB_NEXT_NAME must be exactly greenhouse_demo_next"
   [[ "${DEMO_DB_PREV_NAME}" == "greenhouse_demo_prev" ]] || fail "DEMO_DB_PREV_NAME must be exactly greenhouse_demo_prev"
