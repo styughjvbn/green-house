@@ -104,7 +104,12 @@ class PipelineContractTest(unittest.TestCase):
 
     def test_promotion_uses_fixed_blue_green_names_and_confirmation(self) -> None:
         script = (Path(__file__).parent / "refresh-demo-db.sh").read_text(encoding="utf-8")
-        for value in ("greenhouse_demo", "greenhouse_demo_next", "greenhouse_demo_prev"):
+        for value in (
+            "greenhouse_demo",
+            "greenhouse_demo_next",
+            "greenhouse_demo_prev",
+            "greenhouse_demo_template",
+        ):
             self.assertIn(value, script)
         self.assertIn(
             "greenhouse_demo:greenhouse_demo_next:greenhouse_demo_prev",
@@ -119,6 +124,8 @@ class PipelineContractTest(unittest.TestCase):
         self.assertIn("false:true:true:true", script)
         self.assertIn("WITH targets AS MATERIALIZED", script)
         self.assertIn("activity.backend_type='client backend'", script)
+        self.assertIn('--template="${DEMO_DB_TEMPLATE_NAME}"', script)
+        self.assertIn("public must be owned by", script)
         self.assertNotIn("must target postgres as a superuser", script)
 
     def test_candidate_flyway_validation_uses_pinned_docker_image(self) -> None:

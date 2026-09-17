@@ -5,6 +5,7 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 DEMO_DB_NAME="${DEMO_DB_NAME:-greenhouse_demo}"
 DEMO_DB_NEXT_NAME="${DEMO_DB_NEXT_NAME:-greenhouse_demo_next}"
 DEMO_DB_PREV_NAME="${DEMO_DB_PREV_NAME:-greenhouse_demo_prev}"
+DEMO_DB_TEMPLATE_NAME="${DEMO_DB_TEMPLATE_NAME:-greenhouse_demo_template}"
 DEMO_DB_OWNER="${DEMO_DB_OWNER:-greenhouse_demo}"
 DEMO_DB_ADMIN_ROLE="${DEMO_DB_ADMIN_ROLE:-greenhouse_demo_refresh}"
 PRODUCTION_READ_ROLE="${PRODUCTION_READ_ROLE:-greenhouse}"
@@ -124,6 +125,7 @@ main() {
   [[ "${DEMO_DB_NAME}" == "greenhouse_demo" ]] || fail "DEMO_DB_NAME must be exactly greenhouse_demo"
   [[ "${DEMO_DB_NEXT_NAME}" == "greenhouse_demo_next" ]] || fail "DEMO_DB_NEXT_NAME must be exactly greenhouse_demo_next"
   [[ "${DEMO_DB_PREV_NAME}" == "greenhouse_demo_prev" ]] || fail "DEMO_DB_PREV_NAME must be exactly greenhouse_demo_prev"
+  [[ "${DEMO_DB_TEMPLATE_NAME}" == "greenhouse_demo_template" ]] || fail "DEMO_DB_TEMPLATE_NAME must be exactly greenhouse_demo_template"
   [[ "${DEMO_DB_OWNER}" == "greenhouse_demo" ]] || fail "DEMO_DB_OWNER must be exactly greenhouse_demo"
   [[ "${DEMO_DB_ADMIN_ROLE}" == "greenhouse_demo_refresh" ]] || fail "DEMO_DB_ADMIN_ROLE must be exactly greenhouse_demo_refresh"
   [[ "${PRODUCTION_READ_ROLE}" == "greenhouse" ]] || fail "PRODUCTION_READ_ROLE must be exactly greenhouse"
@@ -133,6 +135,8 @@ main() {
     || fail "DEMO_DB_ADMIN_URL, DEMO_DB_URL and DEMO_DB_NEXT_URL are required"
   [[ "$(psql "${DEMO_DB_ADMIN_URL}" -Atqc "SELECT current_database()||':'||rolname||':'||rolsuper||':'||rolcreatedb||':'||pg_has_role(current_user, '${DEMO_DB_OWNER}', 'MEMBER')||':'||pg_has_role(current_user, 'pg_signal_backend', 'MEMBER') FROM pg_roles WHERE rolname=current_user")" == "postgres:${DEMO_DB_ADMIN_ROLE}:false:true:true:true" ]] \
     || fail "DEMO_DB_ADMIN_URL must target postgres as ${DEMO_DB_ADMIN_ROLE} with CREATEDB, ${DEMO_DB_OWNER}, and pg_signal_backend membership"
+  [[ "$(psql "${DEMO_DB_ADMIN_URL}" -Atqc "SELECT datname||':'||pg_get_userbyid(datdba) FROM pg_database WHERE datname='${DEMO_DB_TEMPLATE_NAME}'")" == "${DEMO_DB_TEMPLATE_NAME}:${DEMO_DB_OWNER}" ]] \
+    || fail "${DEMO_DB_TEMPLATE_NAME} must exist and be owned by ${DEMO_DB_OWNER}"
   [[ "$(psql "${DEMO_DB_URL}" -Atqc "SELECT current_database()||':'||current_user")" == "${DEMO_DB_NAME}:${DEMO_DB_OWNER}" ]] \
     || fail "DEMO_DB_URL must target ${DEMO_DB_NAME} as ${DEMO_DB_OWNER}"
 
@@ -145,9 +149,14 @@ main() {
   fi
 
   dropdb --if-exists --force --maintenance-db="${DEMO_DB_ADMIN_URL}" "${DEMO_DB_NEXT_NAME}"
-  createdb --maintenance-db="${DEMO_DB_ADMIN_URL}" --owner="${DEMO_DB_OWNER}" "${DEMO_DB_NEXT_NAME}"
+  createdb --maintenance-db="${DEMO_DB_ADMIN_URL}" --template="${DEMO_DB_TEMPLATE_NAME}" \
+    --owner="${DEMO_DB_OWNER}" "${DEMO_DB_NEXT_NAME}"
   [[ "$(psql "${DEMO_DB_NEXT_URL}" -Atqc "SELECT current_database()||':'||current_user")" == "${DEMO_DB_NEXT_NAME}:${DEMO_DB_OWNER}" ]] \
     || fail "DEMO_DB_NEXT_URL must target ${DEMO_DB_NEXT_NAME} as ${DEMO_DB_OWNER}"
+  [[ "$(psql "${DEMO_DB_NEXT_URL}" -Atqc "SELECT pg_get_userbyid(nspowner) FROM pg_namespace WHERE nspname='public'")" == "${DEMO_DB_OWNER}" ]] \
+    || fail "${DEMO_DB_NEXT_NAME}.public must be owned by ${DEMO_DB_OWNER}; check ${DEMO_DB_TEMPLATE_NAME}"
+  [[ "$(psql "${DEMO_DB_NEXT_URL}" -Atqc "SELECT (SELECT count(*) FROM pg_namespace WHERE nspname NOT IN ('public','pg_catalog','information_schema') AND nspname !~ '^pg_(toast|temp)') + (SELECT count(*) FROM pg_class c JOIN pg_namespace n ON n.oid=c.relnamespace WHERE n.nspname='public')")" == "0" ]] \
+    || fail "${DEMO_DB_TEMPLATE_NAME} must not contain user schemas or objects"
   restore_dump "${dump}"
   configure_database "${DEMO_DB_NEXT_NAME}" "${DEMO_DB_NEXT_URL}"
   DEMO_VALIDATE_DB_URL="${DEMO_DB_NEXT_URL}" \

@@ -9,8 +9,10 @@
 PostgreSQL instance
 ├─ greenhouse
 │  └─ 기존 운영 계정
-└─ greenhouse_demo
-   └─ greenhouse_demo (DB owner, Flyway, API)
+├─ greenhouse_demo
+│  └─ greenhouse_demo (DB owner, Flyway, API)
+└─ greenhouse_demo_template
+   └─ 빈 후보 DB 생성 전용 template
 
 k3s
 ├─ green-house
@@ -52,9 +54,16 @@ GRANT pg_signal_backend TO greenhouse_demo_refresh;
 
 CREATE DATABASE greenhouse_demo OWNER greenhouse_demo;
 
+-- 다음 명령은 CREATE DATABASE와 분리해서 실행한다.
+CREATE DATABASE greenhouse_demo_template
+  WITH TEMPLATE template0 OWNER greenhouse_demo;
+
 REVOKE ALL ON DATABASE greenhouse_demo FROM PUBLIC;
 GRANT CONNECT ON DATABASE greenhouse_demo TO greenhouse_demo;
 GRANT CONNECT ON DATABASE greenhouse_demo TO greenhouse;
+
+REVOKE ALL ON DATABASE greenhouse_demo_template FROM PUBLIC;
+GRANT CONNECT ON DATABASE greenhouse_demo_template TO greenhouse_demo_refresh;
 
 REVOKE CONNECT ON DATABASE greenhouse FROM PUBLIC;
 GRANT CONNECT ON DATABASE greenhouse TO greenhouse;
@@ -63,6 +72,18 @@ GRANT CONNECT ON DATABASE greenhouse TO greenhouse;
 `greenhouse_demo_refresh`는 DB 생성·이름 교체와 demo connection 종료만 담당하는 자동화
 role이다. PostgreSQL `postgres` role에 LOGIN이나 비밀번호를 추가하지 않는다. 비밀번호는
 SQL 파일이나 shell history에 기록하지 않고 `psql`에서 설정한다.
+
+PostgreSQL 14에서는 새 DB의 `public` schema가 `postgres` 소유로 복제될 수 있다. 후보 DB를
+최소권한 role로 안전하게 초기화할 수 있도록 `greenhouse_demo_template`에 접속해 다음을
+한 번 적용한다. 이 DB에는 업무 table이나 데이터를 만들지 않는다.
+
+```sql
+\connect greenhouse_demo_template
+
+ALTER SCHEMA public OWNER TO greenhouse_demo;
+REVOKE CREATE ON SCHEMA public FROM PUBLIC;
+GRANT USAGE, CREATE ON SCHEMA public TO greenhouse_demo;
+```
 
 ```text
 \password greenhouse_demo
@@ -119,7 +140,7 @@ ALTER ROLE greenhouse_demo IN DATABASE greenhouse_demo
 ```sql
 SELECT datname, datacl
 FROM pg_database
-WHERE datname IN ('greenhouse', 'greenhouse_demo');
+WHERE datname IN ('greenhouse', 'greenhouse_demo', 'greenhouse_demo_template');
 
 SELECT rolname, rolconnlimit, rolsuper, rolcreatedb, rolcreaterole
 FROM pg_roles
