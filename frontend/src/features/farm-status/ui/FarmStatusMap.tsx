@@ -64,7 +64,7 @@ export function FarmStatusMap(props: FarmStatusMapProps) {
         onZoomOut={map.handleZoomOut}
       />
 
-      <div className="pointer-events-none absolute top-14 left-3 z-[1100] w-[min(260px,calc(100%-1.5rem))]">
+      <div className="pointer-events-none absolute top-14 left-3 z-[700] w-[min(260px,calc(100%-1.5rem))]">
         <div className="pointer-events-auto">
           <FarmStatusSearchPanel
             currentSelectedOrchidGroupId={
