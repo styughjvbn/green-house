@@ -69,6 +69,20 @@ SQL 파일이나 shell history에 기록하지 않고 `psql`에서 설정한다.
 \password greenhouse_demo_refresh
 ```
 
+운영 계정 `sjw`의 `/home/sjw/.pgpass`에는 아래 네 접속을 등록하고 mode를 `0600`으로 둔다.
+비밀번호에 `:` 또는 `\`가 있으면 `.pgpass` 형식에 맞게 `\`로 escape한다.
+
+```text
+127.0.0.1:5432:greenhouse:greenhouse:<production-password>
+127.0.0.1:5432:postgres:greenhouse_demo_refresh:<refresh-password>
+127.0.0.1:5432:greenhouse_demo:greenhouse_demo:<demo-password>
+127.0.0.1:5432:greenhouse_demo_next:greenhouse_demo:<demo-password>
+```
+
+```bash
+chmod 600 /home/sjw/.pgpass
+```
+
 데모 DB에 접속해 schema 권한을 설정한다. `greenhouse_demo`가 DB owner이므로
 Flyway와 API 읽기·쓰기에 같은 계정을 사용한다.
 
@@ -255,6 +269,9 @@ table/sequence `SELECT`와 동일 default privileges를 적용한다. `PUBLIC`�
 `redgate/flyway:11` Docker 이미지로 실행하므로 host Flyway CLI는 설치하지 않는다. 실제 운영
 계정 `sjw`가 Kubernetes kubeconfig와 Docker에 접근하며, 저장소는
 `/home/sjw/projects/green-house`에 있다.
+
+libpq 명령은 `PGPASSFILE=/home/sjw/.pgpass`를 사용한다. Flyway Docker 컨테이너는 host
+`.pgpass`를 읽지 않으므로 같은 demo 비밀번호를 `DEMO_DB_PASSWORD`로 EnvironmentFile에 둔다.
 
 ```bash
 sudo install -m 644 deploy/systemd/green-house-demo-refresh.service /etc/systemd/system/
