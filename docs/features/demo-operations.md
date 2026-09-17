@@ -43,6 +43,13 @@ CREATE ROLE greenhouse_demo
   LOGIN NOSUPERUSER NOCREATEDB NOCREATEROLE NOREPLICATION INHERIT
   CONNECTION LIMIT 20;
 
+CREATE ROLE greenhouse_demo_refresh
+  LOGIN NOSUPERUSER CREATEDB NOCREATEROLE NOREPLICATION INHERIT
+  CONNECTION LIMIT 1;
+
+GRANT greenhouse_demo TO greenhouse_demo_refresh;
+GRANT pg_signal_backend TO greenhouse_demo_refresh;
+
 CREATE DATABASE greenhouse_demo OWNER greenhouse_demo;
 
 REVOKE ALL ON DATABASE greenhouse_demo FROM PUBLIC;
@@ -53,10 +60,13 @@ REVOKE CONNECT ON DATABASE greenhouse FROM PUBLIC;
 GRANT CONNECT ON DATABASE greenhouse TO greenhouse;
 ```
 
-비밀번호는 SQL 파일이나 shell history에 기록하지 않고 `psql`에서 설정한다.
+`greenhouse_demo_refresh`는 DB 생성·이름 교체와 demo connection 종료만 담당하는 자동화
+role이다. PostgreSQL `postgres` role에 LOGIN이나 비밀번호를 추가하지 않는다. 비밀번호는
+SQL 파일이나 shell history에 기록하지 않고 `psql`에서 설정한다.
 
 ```text
 \password greenhouse_demo
+\password greenhouse_demo_refresh
 ```
 
 데모 DB에 접속해 schema 권한을 설정한다. `greenhouse_demo`가 DB owner이므로

@@ -6,6 +6,7 @@ DEMO_DB_NAME="${DEMO_DB_NAME:-greenhouse_demo}"
 DEMO_DB_NEXT_NAME="${DEMO_DB_NEXT_NAME:-greenhouse_demo_next}"
 DEMO_DB_PREV_NAME="${DEMO_DB_PREV_NAME:-greenhouse_demo_prev}"
 DEMO_DB_OWNER="${DEMO_DB_OWNER:-greenhouse_demo}"
+DEMO_DB_ADMIN_ROLE="${DEMO_DB_ADMIN_ROLE:-greenhouse_demo_refresh}"
 PRODUCTION_READ_ROLE="${PRODUCTION_READ_ROLE:-greenhouse}"
 DEMO_NAMESPACE="${DEMO_NAMESPACE:-green-house-demo}"
 DEMO_BACKEND_DEPLOYMENT="${DEMO_BACKEND_DEPLOYMENT:-green-house-backend}"
@@ -21,13 +22,17 @@ admin_sql() {
 
 terminate_connections() {
   local name="$1"
-  admin_sql "SELECT pg_terminate_backend(pid) FROM pg_stat_activity WHERE datname='${name}' AND pid<>pg_backend_pid();"
+  admin_sql "WITH targets AS MATERIALIZED (SELECT activity.pid FROM pg_stat_activity activity JOIN pg_roles role ON role.oid=activity.usesysid WHERE activity.datname='${name}' AND activity.backend_type='client backend' AND NOT role.rolsuper AND activity.pid<>pg_backend_pid()) SELECT pg_terminate_backend(pid) FROM targets;"
 }
 
 configure_database() {
   local name="$1" url="$2"
-  admin_sql "ALTER DATABASE ${name} OWNER TO ${DEMO_DB_OWNER}; REVOKE ALL ON DATABASE ${name} FROM PUBLIC; GRANT CONNECT ON DATABASE ${name} TO ${DEMO_DB_OWNER}; GRANT CONNECT ON DATABASE ${name} TO ${PRODUCTION_READ_ROLE}; ALTER ROLE ${DEMO_DB_OWNER} IN DATABASE ${name} SET statement_timeout='15s'; ALTER ROLE ${DEMO_DB_OWNER} IN DATABASE ${name} SET lock_timeout='3s'; ALTER ROLE ${DEMO_DB_OWNER} IN DATABASE ${name} SET idle_in_transaction_session_timeout='60s'; ALTER ROLE ${DEMO_DB_OWNER} IN DATABASE ${name} SET temp_file_limit='128MB';"
+  admin_sql "ALTER DATABASE ${name} OWNER TO ${DEMO_DB_OWNER}; REVOKE ALL ON DATABASE ${name} FROM PUBLIC; GRANT CONNECT ON DATABASE ${name} TO ${DEMO_DB_OWNER}; GRANT CONNECT ON DATABASE ${name} TO ${PRODUCTION_READ_ROLE};"
   psql "${url}" --set=ON_ERROR_STOP=1 --quiet <<SQL
+ALTER ROLE ${DEMO_DB_OWNER} IN DATABASE ${name} SET statement_timeout='15s';
+ALTER ROLE ${DEMO_DB_OWNER} IN DATABASE ${name} SET lock_timeout='3s';
+ALTER ROLE ${DEMO_DB_OWNER} IN DATABASE ${name} SET idle_in_transaction_session_timeout='60s';
+ALTER ROLE ${DEMO_DB_OWNER} IN DATABASE ${name} SET temp_file_limit='128MB';
 ALTER SCHEMA public OWNER TO ${DEMO_DB_OWNER};
 ALTER SCHEMA demo_internal OWNER TO ${DEMO_DB_OWNER};
 REVOKE CREATE ON SCHEMA public FROM PUBLIC;
@@ -120,13 +125,14 @@ main() {
   [[ "${DEMO_DB_NEXT_NAME}" == "greenhouse_demo_next" ]] || fail "DEMO_DB_NEXT_NAME must be exactly greenhouse_demo_next"
   [[ "${DEMO_DB_PREV_NAME}" == "greenhouse_demo_prev" ]] || fail "DEMO_DB_PREV_NAME must be exactly greenhouse_demo_prev"
   [[ "${DEMO_DB_OWNER}" == "greenhouse_demo" ]] || fail "DEMO_DB_OWNER must be exactly greenhouse_demo"
+  [[ "${DEMO_DB_ADMIN_ROLE}" == "greenhouse_demo_refresh" ]] || fail "DEMO_DB_ADMIN_ROLE must be exactly greenhouse_demo_refresh"
   [[ "${PRODUCTION_READ_ROLE}" == "greenhouse" ]] || fail "PRODUCTION_READ_ROLE must be exactly greenhouse"
   [[ "${DEMO_REFRESH_CONFIRM:-}" == "greenhouse_demo:greenhouse_demo_next:greenhouse_demo_prev" ]] \
     || fail "Set DEMO_REFRESH_CONFIRM=greenhouse_demo:greenhouse_demo_next:greenhouse_demo_prev"
   [[ -n "${DEMO_DB_ADMIN_URL:-}" && -n "${DEMO_DB_URL:-}" && -n "${DEMO_DB_NEXT_URL:-}" ]] \
     || fail "DEMO_DB_ADMIN_URL, DEMO_DB_URL and DEMO_DB_NEXT_URL are required"
-  [[ "$(psql "${DEMO_DB_ADMIN_URL}" -Atqc "SELECT current_database()||':'||(SELECT rolsuper FROM pg_roles WHERE rolname=current_user)")" == "postgres:true" ]] \
-    || fail "DEMO_DB_ADMIN_URL must target postgres as a superuser"
+  [[ "$(psql "${DEMO_DB_ADMIN_URL}" -Atqc "SELECT current_database()||':'||rolname||':'||rolsuper||':'||rolcreatedb||':'||pg_has_role(current_user, '${DEMO_DB_OWNER}', 'MEMBER')||':'||pg_has_role(current_user, 'pg_signal_backend', 'MEMBER') FROM pg_roles WHERE rolname=current_user")" == "postgres:${DEMO_DB_ADMIN_ROLE}:f:t:t:t" ]] \
+    || fail "DEMO_DB_ADMIN_URL must target postgres as ${DEMO_DB_ADMIN_ROLE} with CREATEDB, ${DEMO_DB_OWNER}, and pg_signal_backend membership"
   [[ "$(psql "${DEMO_DB_URL}" -Atqc "SELECT current_database()||':'||current_user")" == "${DEMO_DB_NAME}:${DEMO_DB_OWNER}" ]] \
     || fail "DEMO_DB_URL must target ${DEMO_DB_NAME} as ${DEMO_DB_OWNER}"
 

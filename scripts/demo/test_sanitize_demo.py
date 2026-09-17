@@ -114,6 +114,11 @@ class PipelineContractTest(unittest.TestCase):
             script.index('"${SCRIPT_DIR}/validate-demo-db.sh"'),
             script.rindex("  stop_backend\n"),
         )
+        self.assertIn("greenhouse_demo_refresh", script)
+        self.assertIn("pg_signal_backend", script)
+        self.assertIn("WITH targets AS MATERIALIZED", script)
+        self.assertIn("activity.backend_type='client backend'", script)
+        self.assertNotIn("must target postgres as a superuser", script)
 
     def test_candidate_flyway_validation_uses_pinned_docker_image(self) -> None:
         script = (Path(__file__).parent / "validate-demo-db.sh").read_text(encoding="utf-8")
