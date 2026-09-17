@@ -17,6 +17,7 @@ export function FarmStatusSearchPanel({
   loading,
   groupError,
   groupLoading,
+  groupSelectionPending,
   groups,
   results,
   selectedGroupKey,
@@ -31,6 +32,7 @@ export function FarmStatusSearchPanel({
   loading: boolean;
   groupError: string | null;
   groupLoading: boolean;
+  groupSelectionPending: boolean;
   groups: FarmStatusSearchGroup[];
   results: OrchidGroup[];
   selectedGroupKey: string | null;
@@ -50,6 +52,7 @@ export function FarmStatusSearchPanel({
       loading={loading}
       groupError={groupError}
       groupLoading={groupLoading}
+      groupSelectionPending={groupSelectionPending}
       groups={groups}
       placeholder="전체 농장 난 묶음 검색"
       resultDescription="결과가 있는 곳만 강조"

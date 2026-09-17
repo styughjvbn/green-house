@@ -75,6 +75,7 @@ export function FarmStatusMap(props: FarmStatusMapProps) {
             loading={map.searchLoading}
             groupError={map.searchGroupError}
             groupLoading={map.searchGroupLoading}
+            groupSelectionPending={map.searchGroupSelectionPending}
             groups={map.searchGroups}
             results={map.searchResults}
             selectedGroupKey={map.selectedSearchGroupKey}

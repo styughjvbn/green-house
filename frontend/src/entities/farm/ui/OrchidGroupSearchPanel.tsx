@@ -27,6 +27,7 @@ export function OrchidGroupSearchPanel<
   loading,
   groupError,
   groupLoading = false,
+  groupSelectionPending = false,
   groups = [],
   placeholder,
   results,
@@ -48,6 +49,7 @@ export function OrchidGroupSearchPanel<
   loading: boolean;
   groupError?: string | null;
   groupLoading?: boolean;
+  groupSelectionPending?: boolean;
   groups?: OrchidSearchGroupOption[];
   placeholder: string;
   results: OrchidGroup[];
@@ -157,7 +159,7 @@ export function OrchidGroupSearchPanel<
               {groupLoading ? (
                 <p className="text-xs text-[#5d6860]">그룹 검색 중</p>
               ) : (
-                <div className="max-h-[180px] space-y-1 overflow-y-auto">
+                <div className="max-h-[90px] space-y-1 overflow-y-auto">
                   {groups.map((group) => (
                     <button
                       className={`block w-full rounded border px-2 py-1.5 text-left ${
@@ -165,6 +167,7 @@ export function OrchidGroupSearchPanel<
                           ? "border-[#246df2] bg-[#f4f8ff]"
                           : "border-[#e1e6df] bg-white hover:border-[#159447]"
                       }`}
+                      disabled={groupSelectionPending}
                       key={group.key}
                       onClick={() => onSelectGroup?.(group)}
                       type="button"

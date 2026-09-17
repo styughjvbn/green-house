@@ -111,8 +111,7 @@ export function useFarmStatusMap({
     searchFilters.status.trim().length > 0;
   const hasSearchKeyword = searchFilters.keyword.trim().length > 0;
   const searchGroupLoading =
-    searchGroupMemberLoading ||
-    (hasSearchKeyword && !searchGroupOptions && !searchGroupError);
+    hasSearchKeyword && !searchGroupOptions && !searchGroupError;
   const visibleSearchResults = selectedSearchGroupResults ?? searchResults;
   const searchGroups = useMemo(
     () =>
@@ -446,7 +445,9 @@ export function useFarmStatusMap({
   }
 
   async function handleSelectSearchGroup(group: FarmStatusSearchGroup) {
-    if (!searchGroupOptions || searchGroupLoading) return;
+    if (!searchGroupOptions || searchGroupLoading || searchGroupMemberLoading) {
+      return;
+    }
 
     const requestVersion = ++searchGroupRequestVersion.current;
     setSelectedSearchGroupKey(group.key);
@@ -539,6 +540,7 @@ export function useFarmStatusMap({
     searchFilters,
     searchGroupError,
     searchGroupLoading,
+    searchGroupSelectionPending: searchGroupMemberLoading,
     searchGroups,
     searchLoading,
     searchResults: visibleSearchResults,
