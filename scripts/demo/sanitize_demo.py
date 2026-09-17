@@ -14,11 +14,10 @@ import os
 import re
 import sys
 from dataclasses import dataclass
-from datetime import date, datetime, timedelta
+from decimal import Decimal
 from pathlib import Path
 from typing import Any, Sequence
 from urllib.parse import urlparse
-from uuid import UUID
 
 
 SCRIPT_DIR = Path(__file__).resolve().parent
@@ -79,6 +78,57 @@ JSON_COLUMNS = {
     "work_operation_targets": ("location_snapshot",),
     "work_target_executions": ("result_details",),
     "work_applied_effects": ("command_details", "result_details"),
+}
+
+QUANTITY_JSON_FIELDS = {
+    "quantity",
+    "reservedQuantity",
+    "trayCount",
+    "allocatedQuantity",
+    "processedQuantity",
+    "sourceQuantity",
+    "resultQuantity",
+    "quantityDelta",
+}
+PRICE_JSON_FIELDS = {"unitPrice"}
+AMOUNT_JSON_FIELDS = {
+    "amount",
+    "totalAmount",
+    "paidAmount",
+    "remainingAmount",
+    "grossAmount",
+    "feeAmount",
+    "deductionAmount",
+    "expectedDepositAmount",
+    "unappliedAmount",
+}
+SENSITIVE_JSON_FIELDS = {
+    "memo",
+    "reason",
+    "description",
+    "note",
+    "worker",
+    "actorId",
+    "depositorName",
+    "ownerName",
+    "phone",
+    "address",
+    "manufacturer",
+    "storageLocation",
+}
+SAFE_JSON_STRING_FIELDS = {
+    "status",
+    "type",
+    "code",
+    "action",
+    "source",
+    "entryKind",
+    "role",
+    "potSizeCode",
+    "placementType",
+    "mutationType",
+    "sourceDomain",
+    "sourceType",
 }
 
 
@@ -198,14 +248,79 @@ def unique_catalog_mapping(
     return {row[0]: pair for row, pair in zip(ordered_rows, rotated)}
 
 
-def sanitize_json(value: Any) -> Any:
-    if isinstance(value, dict):
-        return {key: sanitize_json(item) for key, item in value.items()}
+def transform_business_json(
+    value: Any,
+    *,
+    key: str,
+    namespace: str,
+    quantity_factor: int,
+    price_factor: int,
+    master_mapping: dict[int, CatalogPair],
+    catalog: Sequence[CatalogPair],
+) -> Any:
+    """Transform business JSON without changing keys, array order, or references."""
     if isinstance(value, list):
-        return [sanitize_json(item) for item in value]
-    if isinstance(value, str) and not re.fullmatch(r"[A-Z][A-Z0-9_:-]{0,49}", value):
-        return "데모"
-    return value
+        return [
+            transform_business_json(
+                item,
+                key=key,
+                namespace=namespace,
+                quantity_factor=quantity_factor,
+                price_factor=price_factor,
+                master_mapping=master_mapping,
+                catalog=catalog,
+            )
+            for item in value
+        ]
+    if isinstance(value, str):
+        return value if SAFE_CODE.fullmatch(value) else "데모"
+    if not isinstance(value, dict):
+        return value
+
+    transformed = dict(value)
+    original_genus = transformed.get("genus")
+    original_variety_name = transformed.get("varietyName")
+    for field, item in list(transformed.items()):
+        if field in QUANTITY_JSON_FIELDS and isinstance(item, (int, float)):
+            transformed[field] = item * quantity_factor
+        elif field in PRICE_JSON_FIELDS and isinstance(item, (int, float)):
+            transformed[field] = item * price_factor
+        elif field in AMOUNT_JSON_FIELDS and isinstance(item, (int, float)):
+            transformed[field] = item * quantity_factor * price_factor
+        elif field in SENSITIVE_JSON_FIELDS and item is not None:
+            transformed[field] = None
+        elif isinstance(item, str):
+            transformed[field] = (
+                item
+                if field in SAFE_JSON_STRING_FIELDS or SAFE_CODE.fullmatch(item)
+                else "데모"
+            )
+        else:
+            transformed[field] = transform_business_json(
+                item,
+                key=key,
+                namespace=f"{namespace}.{field}",
+                quantity_factor=quantity_factor,
+                price_factor=price_factor,
+                master_mapping=master_mapping,
+                catalog=catalog,
+            )
+
+    variety_id = transformed.get("varietyId")
+    if "genus" in transformed or "varietyName" in transformed:
+        pair = master_mapping.get(int(variety_id)) if variety_id is not None else None
+        if pair is None:
+            pair = catalog_pair_for(
+                catalog,
+                key,
+                "business-json-variety",
+                f"{original_genus or ''}|{original_variety_name or ''}",
+            )
+        if "genus" in transformed:
+            transformed["genus"] = pair.item
+        if "varietyName" in transformed:
+            transformed["varietyName"] = pair.variety
+    return transformed
 
 
 def validated_identifier(value: str) -> str:
@@ -258,6 +373,7 @@ def collect_original_sensitive_values(cursor: Any) -> set[str]:
         ("work_records", "cancel_reason"),
         ("work_operation_targets", "exclusion_reason"),
         ("work_operation_corrections", "reason"),
+        ("orchid_group_mutations", "reason"),
     )
     values: set[str] = set()
     safe_names = set(SAFE_WORK_TYPE_NAMES.values())
@@ -270,6 +386,21 @@ def collect_original_sensitive_values(cursor: Any) -> set[str]:
     for code, name in fetch_all(cursor, "SELECT code, name FROM work_types"):
         if SAFE_WORK_TYPE_NAMES.get(code) != name and len(name.strip()) >= 2:
             values.add(name.strip())
+    for column in ("before_state", "after_state"):
+        for field in ("genus", "varietyName", "memo"):
+            for (raw,) in fetch_all(
+                cursor,
+                f"SELECT DISTINCT {column}->>%s FROM orchid_group_mutation_entries "
+                f"WHERE {column}->>%s IS NOT NULL",
+                (field, field),
+            ):
+                value = raw.strip()
+                if (
+                    len(value) >= 2
+                    and not SAFE_CODE.fullmatch(value)
+                    and value not in safe_names
+                ):
+                    values.add(value)
     return values
 
 
@@ -304,7 +435,10 @@ def catalog_without_original_varieties(
     filtered = [
         pair
         for pair in catalog
-        if not any(original_name in pair.variety for original_name in original_names)
+        if not any(
+            original_name in pair.item or original_name in pair.variety
+            for original_name in original_names
+        )
     ]
     if not filtered:
         raise SanitizationError("No catalog varieties remain after excluding source varieties")
@@ -337,6 +471,7 @@ def clear_sensitive_data(cursor: Any) -> None:
         "UPDATE varieties SET description=NULL, memo=NULL",
         "UPDATE orchid_group_collections SET description=NULL, purpose=CASE WHEN purpose IS NULL THEN NULL ELSE '데모 묶음' END",
         "UPDATE audit_events SET session_id=NULL, client_instance_id=NULL, request_id=NULL",
+        "UPDATE orchid_group_mutations SET reason=CASE WHEN reason IS NULL THEN NULL ELSE '데모 이력' END",
     )
     for statement in statements:
         cursor.execute(statement)
@@ -475,7 +610,7 @@ def transform_varieties(
         pair = master_mapping.get(variety_id)
         if pair is None:
             pair = catalog_pair_for(
-                catalog, key, "orchid-group", f"{genus or ''}|{variety_name}"
+                catalog, key, "business-json-variety", f"{genus or ''}|{variety_name}"
             )
         group_updates.append((pair.item, pair.variety, row_id))
     cursor.executemany(
@@ -549,40 +684,8 @@ def transform_work_data(cursor: Any, key: str) -> None:
             (demo_name, row_id, original_name),
         )
         cursor.execute("UPDATE work_types SET name=%s WHERE id=%s", (demo_name, row_id))
-    fingerprinted_receipts = fetch_all(
-        cursor,
-        "SELECT count(*) FROM work_command_receipts WHERE request_fingerprint IS NOT NULL",
-    )[0][0]
-    fingerprinted_effects = fetch_all(
-        cursor,
-        "SELECT count(*) FROM work_applied_effects WHERE command_fingerprint IS NOT NULL",
-    )[0][0]
-    if fingerprinted_receipts or fingerprinted_effects:
-        raise SanitizationError(
-            "The V20 demo pipeline cannot rewrite post-cutover Work fingerprints"
-        )
-    receipt_rows = fetch_all(cursor, "SELECT receipt_key FROM work_command_receipts")
-    operation_requests = {
-        request_key: row_id
-        for row_id, request_key in fetch_all(
-            cursor,
-            "SELECT id, request_key FROM work_operations WHERE request_key IS NOT NULL",
-        )
-    }
-    receipt_updates = []
-    for (receipt_key,) in receipt_rows:
-        if receipt_key.startswith("IMMEDIATE:") and receipt_key[10:] in operation_requests:
-            replacement = f"IMMEDIATE:demo-request-{operation_requests[receipt_key[10:]]}"
-        else:
-            replacement = token(key, "work-receipt", receipt_key, "DEMO-RECEIPT-")
-        receipt_updates.append((replacement, receipt_key))
-    cursor.executemany(
-        "UPDATE work_command_receipts SET receipt_key=%s WHERE receipt_key=%s",
-        receipt_updates,
-    )
     cursor.execute(
-        "UPDATE work_operations SET title='데모 작업 ' || lpad(id::text, 4, '0'), "
-        "request_key=CASE WHEN request_key IS NULL THEN NULL ELSE 'demo-request-' || id END"
+        "UPDATE work_operations SET title='데모 작업 ' || lpad(id::text, 4, '0')"
     )
     material_rows = fetch_all(cursor, "SELECT id, name FROM materials")
     cursor.executemany(
@@ -814,7 +917,14 @@ def scale_business_values(cursor: Any, quantity_factor: int, price_factor: int) 
     )
 
 
-def sanitize_json_columns(cursor: Any) -> None:
+def sanitize_json_columns(
+    cursor: Any,
+    key: str,
+    quantity_factor: int,
+    price_factor: int,
+    master_mapping: dict[int, CatalogPair],
+    catalog: Sequence[CatalogPair],
+) -> None:
     for table, columns in JSON_COLUMNS.items():
         rows = fetch_all(cursor, f"SELECT id, {', '.join(columns)} FROM {table} ORDER BY id")
         if not rows:
@@ -823,8 +933,21 @@ def sanitize_json_columns(cursor: Any) -> None:
         updates = []
         for row in rows:
             values = [
-                json.dumps(sanitize_json(value), ensure_ascii=False) if value is not None else None
-                for value in row[1:]
+                json.dumps(
+                    transform_business_json(
+                        value,
+                        key=key,
+                        namespace=f"{table}.{columns[index]}",
+                        quantity_factor=quantity_factor,
+                        price_factor=price_factor,
+                        master_mapping=master_mapping,
+                        catalog=catalog,
+                    ),
+                    ensure_ascii=False,
+                )
+                if value is not None
+                else None
+                for index, value in enumerate(row[1:])
             ]
             updates.append((*values, row[0]))
         cursor.executemany(
@@ -833,165 +956,121 @@ def sanitize_json_columns(cursor: Any) -> None:
         )
 
 
-def shift_iso_date(value: str, days: int) -> str:
-    return (date.fromisoformat(value) + timedelta(days=days)).isoformat()
-
-
-def shift_iso_instant(value: str, days: int) -> str:
-    parsed = datetime.fromisoformat(value.replace("Z", "+00:00")) + timedelta(days=days)
-    return parsed.isoformat(timespec="microseconds").replace("+00:00", "Z")
-
-
-def demo_uuid(key: str, source: str) -> str:
-    raw = bytearray.fromhex(keyed_digest(key, "demo-cutover", source)[:32])
-    raw[6] = (raw[6] & 0x0F) | 0x40
-    raw[8] = (raw[8] & 0x3F) | 0x80
-    return str(UUID(bytes=bytes(raw)))
-
-
-def transform_manifest_snapshot(
-    snapshot: dict[str, Any] | None,
-    master_mapping: dict[int, CatalogPair],
-    catalog: Sequence[CatalogPair],
+def transform_engine_snapshots(
+    cursor: Any,
     key: str,
     quantity_factor: int,
-) -> dict[str, Any] | None:
-    if snapshot is None:
-        return None
-    transformed = dict(snapshot)
-    for field in ("quantity", "reservedQuantity", "trayCount"):
-        if transformed.get(field) is not None:
-            transformed[field] *= quantity_factor
-    variety_id = transformed.get("varietyId")
-    pair = master_mapping.get(int(variety_id)) if variety_id is not None else None
-    if pair is None:
-        pair = catalog_pair_for(
-            catalog,
-            key,
-            "manifest-snapshot",
-            f"{transformed.get('genus') or ''}|{transformed.get('varietyName') or ''}",
-        )
-    transformed["genus"] = pair.item
-    transformed["varietyName"] = pair.variety
-    transformed["memo"] = None
-    return transformed
-
-
-def transform_state_chain_manifest(
-    payload: dict[str, Any],
+    price_factor: int,
     master_mapping: dict[int, CatalogPair],
     catalog: Sequence[CatalogPair],
-    key: str,
-    date_shift: int,
-    quantity_factor: int,
-) -> tuple[dict[str, Any], str]:
-    transformed_mutations = []
-    for mutation in payload.get("mutations", []):
-        transformed = dict(mutation)
-        transformed["mutation_key"] = token(
-            key, "manifest-mutation", str(mutation["mutation_key"]), "demo-m:"
-        )
-        transformed["source_reference"] = token(
-            key,
-            "manifest-source",
-            str(mutation.get("source_reference") or "none"),
-            "demo-source:",
-        )
-        transformed["occurred_at"] = shift_iso_instant(
-            mutation["occurred_at"], date_shift
-        )
-        transformed["effective_business_date"] = shift_iso_date(
-            mutation["effective_business_date"], date_shift
-        )
-        transformed["reason"] = "데모 전환 이력"
-        evidence = mutation.get("evidence") or {}
-        transformed["evidence"] = {
-            name: evidence[name]
-            for name in ("work_effect_ids", "lineage_ids")
-            if name in evidence
-        }
-        transformed["entries"] = [
-            {
-                **entry,
-                "before_state": transform_manifest_snapshot(
-                    entry.get("before_state"),
-                    master_mapping,
-                    catalog,
-                    key,
-                    quantity_factor,
-                ),
-                "after_state": transform_manifest_snapshot(
-                    entry.get("after_state"),
-                    master_mapping,
-                    catalog,
-                    key,
-                    quantity_factor,
-                ),
-            }
-            for entry in mutation.get("entries", [])
-        ]
-        transformed_mutations.append(transformed)
-    source_hash = hashlib.sha256(
-        json.dumps(payload, ensure_ascii=False, sort_keys=True).encode("utf-8")
-    ).hexdigest()
-    cutover_key = demo_uuid(key, source_hash)
-    return (
-        {
-            "manifest_schema_version": payload.get("manifest_schema_version"),
-            "generated_from": "orchid_state_chain_manifest_normalizer",
-            "migration_ready": True,
-            "blocking_issues": [],
-            "provenance": {"source": "sanitized-demo-state-chain"},
-            "operational_profile": {"name": "sanitized demo Engine transition"},
-            "mutations": transformed_mutations,
-        },
-        cutover_key,
-    )
-
-
-def write_demo_manifest(
-    master_mapping: dict[int, CatalogPair],
-    catalog: Sequence[CatalogPair],
-    key: str,
-    date_shift: int,
-    quantity_factor: int,
 ) -> None:
-    source_path = Path(required_env("DEMO_STATE_CHAIN_MANIFEST_SOURCE"))
-    output_path = Path(required_env("DEMO_STATE_CHAIN_MANIFEST_OUTPUT"))
-    metadata_path = Path(required_env("DEMO_CUTOVER_METADATA_OUTPUT"))
-    cutover_business_date = date.fromisoformat(
-        required_env("DEMO_SOURCE_CUTOVER_BUSINESS_DATE")
-    ) + timedelta(days=date_shift)
-    try:
-        source = json.loads(source_path.read_text(encoding="utf-8"))
-    except (OSError, json.JSONDecodeError) as exc:
-        raise SanitizationError(f"Cannot read state-chain manifest: {exc}") from exc
-    transformed, cutover_key = transform_state_chain_manifest(
-        source, master_mapping, catalog, key, date_shift, quantity_factor
+    rows = fetch_all(
+        cursor,
+        "SELECT id, before_state, after_state FROM orchid_group_mutation_entries ORDER BY id",
     )
-    output_path.write_text(
-        json.dumps(transformed, ensure_ascii=False, sort_keys=True, separators=(",", ":")),
-        encoding="utf-8",
+    updates = []
+    for row_id, before_state, after_state in rows:
+        values = []
+        for label, snapshot in (("before", before_state), ("after", after_state)):
+            transformed = transform_business_json(
+                snapshot,
+                key=key,
+                namespace=f"engine-entry-{row_id}-{label}",
+                quantity_factor=quantity_factor,
+                price_factor=price_factor,
+                master_mapping=master_mapping,
+                catalog=catalog,
+            )
+            values.append(
+                json.dumps(transformed, ensure_ascii=False) if transformed is not None else None
+            )
+        updates.append((*values, row_id))
+    cursor.executemany(
+        "UPDATE orchid_group_mutation_entries "
+        "SET before_state=%s::jsonb, after_state=%s::jsonb WHERE id=%s",
+        updates,
     )
-    metadata_path.write_text(
-        f"DEMO_CUTOVER_KEY={cutover_key}\n"
-        f"DEMO_CUTOVER_BUSINESS_DATE={cutover_business_date.isoformat()}\n",
-        encoding="ascii",
-    )
-    output_path.chmod(0o600)
-    metadata_path.chmod(0o600)
 
 
-def assert_pre_cutover_database(cursor: Any) -> None:
-    checks = (
-        "SELECT count(*) FROM orchid_group_mutations",
-        "SELECT count(*) FROM orchid_group_mutation_entries",
-        "SELECT count(*) FROM orchid_group_ledger_coverages",
-        "SELECT count(*) FROM orchid_groups WHERE state_revision IS NOT NULL",
+def canonical_json(value: Any) -> str:
+    if value is None:
+        return "null"
+    if value is True:
+        return "true"
+    if value is False:
+        return "false"
+    if isinstance(value, str):
+        return json.dumps(value, ensure_ascii=False, separators=(",", ":"))
+    if isinstance(value, (int, Decimal)):
+        return str(value)
+    if isinstance(value, float):
+        return str(value)
+    if isinstance(value, list):
+        return "[" + ",".join(canonical_json(item) for item in value) + "]"
+    if isinstance(value, dict):
+        return "{" + ",".join(
+            f"{canonical_json(str(name))}:{canonical_json(value[name])}"
+            for name in sorted(value)
+        ) + "}"
+    raise SanitizationError(f"Unsupported fingerprint value: {type(value).__name__}")
+
+
+def refresh_baseline_fingerprint(cursor: Any) -> None:
+    coverage_rows = fetch_all(
+        cursor,
+        "SELECT cutover_key::text, effective_business_date::text "
+        "FROM orchid_group_ledger_coverages WHERE status='ACTIVE'",
     )
-    if any(fetch_all(cursor, query)[0][0] for query in checks):
+    if len(coverage_rows) != 1:
+        raise SanitizationError("Cannot refresh fingerprint without one ACTIVE coverage")
+    cutover_key, business_date = coverage_rows[0]
+    business_date_parts = [int(part) for part in business_date.split("-")]
+    entries = fetch_all(
+        cursor,
+        "SELECT entry.orchid_group_id, entry.after_state::text "
+        "FROM orchid_group_mutation_entries entry "
+        "JOIN orchid_group_mutations mutation ON mutation.id=entry.mutation_id "
+        "WHERE entry.entry_kind='BASELINE' "
+        "AND mutation.mutation_type='BASELINE_IMPORT' "
+        "AND mutation.source_domain='MIGRATION' "
+        "AND mutation.source_reference_id=%s "
+        "ORDER BY entry.orchid_group_id",
+        (cutover_key,),
+    )
+    groups = []
+    for group_id, snapshot_text in entries:
+        snapshot = json.loads(snapshot_text, parse_float=Decimal)
+        for field in ("startPosition", "endPosition"):
+            if snapshot.get(field) is not None:
+                snapshot[field] = Decimal(snapshot[field]).quantize(Decimal("0.00"))
+        groups.append({"orchidGroupId": group_id, "snapshot": snapshot})
+    payload = {
+        "cutoverKey": cutover_key,
+        # OrchidGroupMutationFingerprint uses Jackson's default JavaTime
+        # representation, which serializes LocalDate as [year, month, day].
+        "effectiveBusinessDate": business_date_parts,
+        "groups": groups,
+    }
+    fingerprint = hashlib.sha256(canonical_json(payload).encode("utf-8")).hexdigest()
+    cursor.execute(
+        "UPDATE orchid_group_ledger_coverages SET baseline_fingerprint=%s "
+        "WHERE status='ACTIVE'",
+        (fingerprint,),
+    )
+
+
+def assert_active_engine_database(cursor: Any) -> None:
+    active = fetch_all(
+        cursor,
+        "SELECT count(*) FROM orchid_group_ledger_coverages WHERE status='ACTIVE'",
+    )[0][0]
+    coverage = fetch_all(cursor, "SELECT count(*) FROM orchid_group_ledger_coverages")[0][0]
+    missing_revision = fetch_all(
+        cursor, "SELECT count(*) FROM orchid_groups WHERE state_revision IS NULL"
+    )[0][0]
+    if active != 1 or coverage != 1 or missing_revision:
         raise SanitizationError(
-            "Demo sanitization requires a migrated V20 database before Engine cutover"
+            "Demo sanitization requires exactly one complete ACTIVE Engine coverage"
         )
 
 
@@ -1033,8 +1112,41 @@ def create_marker(cursor: Any) -> None:
         """
     )
     cursor.execute(
-        "INSERT INTO demo_internal.sanitization_marker(pipeline_version) VALUES (3)"
+        "INSERT INTO demo_internal.sanitization_marker(pipeline_version) VALUES (4)"
     )
+
+
+def capture_table_counts(cursor: Any) -> dict[str, int]:
+    tables = fetch_all(
+        cursor,
+        "SELECT table_name FROM information_schema.tables "
+        "WHERE table_schema='public' AND table_type='BASE TABLE' "
+        "AND table_name<>'flyway_schema_history' ORDER BY table_name",
+    )
+    return {
+        table: fetch_all(cursor, f"SELECT count(*) FROM {validated_identifier(table)}")[0][0]
+        for (table,) in tables
+    }
+
+
+def assert_table_counts_preserved(cursor: Any, before: dict[str, int]) -> None:
+    after = capture_table_counts(cursor)
+    if before != after:
+        changed = sorted(name for name in set(before) | set(after) if before.get(name) != after.get(name))
+        raise SanitizationError(f"Sanitization changed history row counts: {', '.join(changed)}")
+
+
+def validate_known_constraints(cursor: Any) -> None:
+    for table, constraint in (
+        ("orchid_groups", "ck_orchid_groups_quantity_nonnegative"),
+        ("orchid_groups", "ck_orchid_groups_reserved_quantity"),
+        ("orchid_groups", "ck_orchid_groups_state_revision"),
+        ("sales_slips", "ck_sales_slips_sales_status"),
+    ):
+        cursor.execute(
+            f"ALTER TABLE {validated_identifier(table)} VALIDATE CONSTRAINT "
+            f"{validated_identifier(constraint)}"
+        )
 
 
 def validate_configuration() -> tuple[str, str, int, int, int]:
@@ -1042,23 +1154,13 @@ def validate_configuration() -> tuple[str, str, int, int, int]:
     key = required_env("DEMO_ANONYMIZATION_KEY")
     if len(key) < 32:
         raise SanitizationError("DEMO_ANONYMIZATION_KEY must contain at least 32 characters")
+    if key.startswith("CHANGE_"):
+        raise SanitizationError("DEMO_ANONYMIZATION_KEY placeholder must be replaced")
     date_shift = parse_int_env("DEMO_DATE_SHIFT_DAYS", -100_000, 100_000)
     if date_shift == 0:
         raise SanitizationError("DEMO_DATE_SHIFT_DAYS must not be zero")
     quantity_factor = parse_int_env("DEMO_QUANTITY_FACTOR", 2, 9)
     price_factor = parse_int_env("DEMO_PRICE_FACTOR", 2, 9)
-    try:
-        date.fromisoformat(required_env("DEMO_SOURCE_CUTOVER_BUSINESS_DATE"))
-    except ValueError as exc:
-        raise SanitizationError(
-            "DEMO_SOURCE_CUTOVER_BUSINESS_DATE must use YYYY-MM-DD"
-        ) from exc
-    for name in (
-        "DEMO_STATE_CHAIN_MANIFEST_SOURCE",
-        "DEMO_STATE_CHAIN_MANIFEST_OUTPUT",
-        "DEMO_CUTOVER_METADATA_OUTPUT",
-    ):
-        required_env(name)
     parsed = urlparse(database_url)
     if parsed.path.lstrip("/") != EXPECTED_DATABASE:
         raise SanitizationError(f"SANITIZE_DB_URL must target {EXPECTED_DATABASE}")
@@ -1085,7 +1187,13 @@ def run() -> None:
                 raise SanitizationError(
                     "Temporary database is already sanitized; restore it from the source dump"
                 )
-            assert_pre_cutover_database(cursor)
+            assert_active_engine_database(cursor)
+            table_counts = capture_table_counts(cursor)
+            # The ACTIVE write fence protects runtime writes. This isolated,
+            # single-transaction copy must transform current rows and their
+            # ledger snapshots together; transactional DDL restores triggers
+            # automatically on rollback.
+            cursor.execute("ALTER TABLE orchid_groups DISABLE TRIGGER USER")
 
             originals = collect_original_sensitive_values(cursor)
             catalog = catalog_without_original_varieties(cursor, catalog, originals)
@@ -1099,13 +1207,28 @@ def run() -> None:
                 cursor, requested_quantity, requested_price
             )
             scale_business_values(cursor, quantity_factor, price_factor)
-            sanitize_json_columns(cursor)
+            transform_engine_snapshots(
+                cursor,
+                key,
+                quantity_factor,
+                price_factor,
+                master_mapping,
+                catalog,
+            )
+            sanitize_json_columns(
+                cursor,
+                key,
+                quantity_factor,
+                price_factor,
+                master_mapping,
+                catalog,
+            )
+            refresh_baseline_fingerprint(cursor)
             assert_original_values_removed(cursor, originals)
+            assert_table_counts_preserved(cursor, table_counts)
+            cursor.execute("ALTER TABLE orchid_groups ENABLE TRIGGER USER")
+            validate_known_constraints(cursor)
             create_marker(cursor)
-
-        write_demo_manifest(
-            master_mapping, catalog, key, date_shift, quantity_factor
-        )
 
     print(f"Sanitized with {len(catalog)} real item-variety pairs.")
     print(

@@ -693,12 +693,22 @@ application/config를 함께 복원한다.
 
 ### 데모 환경
 
-데모 환경은 `k8s/overlays/demo`를 사용하며 운영과 동일한 이미지 SHA를 배포한다.
+데모 환경은 `k8s/overlays/demo`를 사용하지만 공개 데모를 운영 배포 사전 검증 환경으로
+사용하지 않는다. overlay YAML에는 demo 이미지 tag를 고정하지 않는다. 이미지 배포는
+데이터 리프레시와 분리해 기존 스크립트로만 수행한다.
+
+```bash
+NAMESPACE=green-house-demo \
+APP_URL=https://green-house-demo.sjw-project.site \
+./scripts/deploy/deploy.sh sha-xxxx
+```
+
 로그인 우회, 데모 인증 주체, 요청 제한은 `DEMO_MODE=true`에서만 활성화된다.
 
-운영 PC의 DB role 생성, Secret 적용, 초기화와 모니터링 절차는
-`docs/features/demo-operations.md`를 따른다. 비식별화가 끝나지 않은 운영 백업을 데모
-DB에 직접 복구하지 않는다.
+운영 Flyway가 완료된 DB의 history를 포함해 dump한 뒤 격리 비식별화, 후보 DB 검증,
+blue/green rename과 자동 rollback을 수행하는 별도 systemd timer 절차는
+`docs/features/demo-operations.md`를 따른다. 운영 원본 dump나 검증 전 dump를 demo DB에
+직접 복구하지 않는다. demo 사용자가 만든 데이터는 정기 리프레시 때 삭제된다.
 
 ## 6. 운영 전 체크리스트
 

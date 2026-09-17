@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
 set -euo pipefail
+umask 077
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 COMPOSE_FILE="${SCRIPT_DIR}/docker-compose.sanitize.yml"
@@ -29,14 +30,14 @@ validate_environment() {
   DEMO_ANONYMIZATION_KEY="${DEMO_ANONYMIZATION_KEY:-}"
   [[ ${#DEMO_ANONYMIZATION_KEY} -ge 32 ]] \
     || fail "DEMO_ANONYMIZATION_KEY must contain at least 32 characters"
+  [[ "${DEMO_ANONYMIZATION_KEY}" != CHANGE_* ]] \
+    || fail "DEMO_ANONYMIZATION_KEY placeholder must be replaced"
   [[ "${DEMO_DATE_SHIFT_DAYS:-}" =~ ^-?[0-9]+$ && "${DEMO_DATE_SHIFT_DAYS}" != "0" ]] \
     || fail "DEMO_DATE_SHIFT_DAYS must be a non-zero integer"
   [[ "${DEMO_QUANTITY_FACTOR:-}" =~ ^[2-9]$ ]] \
     || fail "DEMO_QUANTITY_FACTOR must be an integer from 2 to 9"
   [[ "${DEMO_PRICE_FACTOR:-}" =~ ^[2-9]$ ]] \
     || fail "DEMO_PRICE_FACTOR must be an integer from 2 to 9"
-  [[ "${DEMO_SOURCE_CUTOVER_BUSINESS_DATE:-}" =~ ^[0-9]{4}-[0-9]{2}-[0-9]{2}$ ]] \
-    || fail "DEMO_SOURCE_CUTOVER_BUSINESS_DATE must use YYYY-MM-DD"
 }
 
 main() {
@@ -82,6 +83,10 @@ main() {
   compose run --rm runner ./scripts/demo/restore-temp-db.sh "/input/$(basename "${source_dump}")"
   compose run --rm runner ./scripts/demo/create-demo-dump.sh "/output/$(basename "${output_dump}")"
   compose run --rm runner ./scripts/demo/verify-demo-dump.sh "/output/$(basename "${output_dump}")"
+  compose run --rm --no-deps --entrypoint /bin/chown runner \
+    "$(id -u):$(id -g)" \
+    "/output/$(basename "${output_dump}")" \
+    "/output/$(basename "${output_dump}").sha256"
 
   echo "Docker sanitization completed: ${output_dump}"
   echo "Checksum completed: ${output_dump}.sha256"

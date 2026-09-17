@@ -1,0 +1,17 @@
+[Unit]
+Description=Green House sanitized demo database refresh
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+User=green-house
+Group=green-house
+WorkingDirectory=/opt/green-house
+EnvironmentFile=/etc/green-house/demo-refresh.env
+Environment=PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+ExecStart=/opt/green-house/scripts/demo/scheduled-demo-refresh.sh
+TimeoutStartSec=2h
+UMask=0077
+NoNewPrivileges=true
+PrivateTmp=false
