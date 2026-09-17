@@ -80,6 +80,7 @@ export function OrchidManagementMap({
   }, [bedViewport.loadedBeds, navigationHouse, orchidManagement.selection]);
   const historyHouse = selectedHistoryHouse ?? scopedHouse;
   const [showScale, setShowScale] = useState(true);
+  const [actualPlacement, setActualPlacement] = useState(false);
   const [correctionOperationId, setCorrectionOperationId] = useState<
     number | null
   >(null);
@@ -274,6 +275,7 @@ export function OrchidManagementMap({
             !orchidManagement.pasteSourceOrchidGroup
           }
           distinguishVarietyColors={distinguishVarietyColors}
+          actualPlacement={actualPlacement}
           houses={bedViewport.bedOrder}
           startHouseId={currentBedOrder?.houseId ?? null}
           visibleBedCount={bedViewport.visibleBedCount}
@@ -281,6 +283,9 @@ export function OrchidManagementMap({
           hasNextHouse={bedViewport.hasNextHouse}
           showScale={showScale}
           onToggleVarietyColors={toggleVarietyColors}
+          onToggleActualPlacement={() =>
+            setActualPlacement((current) => !current)
+          }
           onToggleScale={() => setShowScale((current) => !current)}
           onOpenCreate={() => {
             clearMapCellRangePick();
@@ -301,6 +306,7 @@ export function OrchidManagementMap({
             startBedIndex={bedViewport.startBedIndex}
             visibleBedCount={bedViewport.visibleBedCount}
             distinguishVarietyColors={distinguishVarietyColors}
+            actualPlacement={actualPlacement}
             filteredOrchidGroupIds={
               searchGroupOrchidGroupIds ??
               orchidManagement.filteredOrchidGroupIds
