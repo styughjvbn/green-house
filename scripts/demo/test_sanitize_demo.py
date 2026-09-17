@@ -126,6 +126,11 @@ class PipelineContractTest(unittest.TestCase):
         self.assertIn("activity.backend_type='client backend'", script)
         self.assertIn('--template="${DEMO_DB_TEMPLATE_NAME}"', script)
         self.assertIn("public must be owned by", script)
+        self.assertIn("role-level temp_file_limit=128MB", script)
+        self.assertNotIn(
+            "IN DATABASE ${name} SET temp_file_limit",
+            script,
+        )
         self.assertNotIn("must target postgres as a superuser", script)
 
     def test_candidate_flyway_validation_uses_pinned_docker_image(self) -> None:

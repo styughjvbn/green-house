@@ -33,7 +33,6 @@ configure_database() {
 ALTER ROLE ${DEMO_DB_OWNER} IN DATABASE ${name} SET statement_timeout='15s';
 ALTER ROLE ${DEMO_DB_OWNER} IN DATABASE ${name} SET lock_timeout='3s';
 ALTER ROLE ${DEMO_DB_OWNER} IN DATABASE ${name} SET idle_in_transaction_session_timeout='60s';
-ALTER ROLE ${DEMO_DB_OWNER} IN DATABASE ${name} SET temp_file_limit='128MB';
 ALTER SCHEMA public OWNER TO ${DEMO_DB_OWNER};
 ALTER SCHEMA demo_internal OWNER TO ${DEMO_DB_OWNER};
 REVOKE CREATE ON SCHEMA public FROM PUBLIC;
@@ -57,6 +56,8 @@ ALTER DEFAULT PRIVILEGES FOR ROLE ${DEMO_DB_OWNER} IN SCHEMA public GRANT SELECT
 ALTER DEFAULT PRIVILEGES FOR ROLE ${DEMO_DB_OWNER} IN SCHEMA demo_internal GRANT SELECT ON TABLES TO ${PRODUCTION_READ_ROLE};
 ALTER DEFAULT PRIVILEGES FOR ROLE ${DEMO_DB_OWNER} IN SCHEMA demo_internal GRANT SELECT ON SEQUENCES TO ${PRODUCTION_READ_ROLE};
 SQL
+  [[ "$(psql "${url}" -Atqc 'SHOW temp_file_limit')" == "128MB" ]] \
+    || fail "${DEMO_DB_OWNER} must have temp_file_limit=128MB"
 }
 
 restore_dump() {
@@ -135,6 +136,8 @@ main() {
     || fail "DEMO_DB_ADMIN_URL, DEMO_DB_URL and DEMO_DB_NEXT_URL are required"
   [[ "$(psql "${DEMO_DB_ADMIN_URL}" -Atqc "SELECT current_database()||':'||rolname||':'||rolsuper||':'||rolcreatedb||':'||pg_has_role(current_user, '${DEMO_DB_OWNER}', 'MEMBER')||':'||pg_has_role(current_user, 'pg_signal_backend', 'MEMBER') FROM pg_roles WHERE rolname=current_user")" == "postgres:${DEMO_DB_ADMIN_ROLE}:false:true:true:true" ]] \
     || fail "DEMO_DB_ADMIN_URL must target postgres as ${DEMO_DB_ADMIN_ROLE} with CREATEDB, ${DEMO_DB_OWNER}, and pg_signal_backend membership"
+  [[ "$(psql "${DEMO_DB_ADMIN_URL}" -Atqc "SELECT count(*) FROM pg_roles r CROSS JOIN LATERAL unnest(coalesce(r.rolconfig, ARRAY[]::text[])) setting WHERE r.rolname='${DEMO_DB_OWNER}' AND setting='temp_file_limit=128MB'")" == "1" ]] \
+    || fail "${DEMO_DB_OWNER} must have role-level temp_file_limit=128MB; apply it once as postgres"
   [[ "$(psql "${DEMO_DB_ADMIN_URL}" -Atqc "SELECT datname||':'||pg_get_userbyid(datdba) FROM pg_database WHERE datname='${DEMO_DB_TEMPLATE_NAME}'")" == "${DEMO_DB_TEMPLATE_NAME}:${DEMO_DB_OWNER}" ]] \
     || fail "${DEMO_DB_TEMPLATE_NAME} must exist and be owned by ${DEMO_DB_OWNER}"
   [[ "$(psql "${DEMO_DB_URL}" -Atqc "SELECT current_database()||':'||current_user")" == "${DEMO_DB_NAME}:${DEMO_DB_OWNER}" ]] \

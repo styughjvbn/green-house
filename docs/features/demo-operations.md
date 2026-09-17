@@ -52,6 +52,9 @@ CREATE ROLE greenhouse_demo_refresh
 GRANT greenhouse_demo TO greenhouse_demo_refresh;
 GRANT pg_signal_backend TO greenhouse_demo_refresh;
 
+-- superuser 전용 설정이므로 관리자가 role 전체에 최초 1회 적용한다.
+ALTER ROLE greenhouse_demo SET temp_file_limit = '128MB';
+
 CREATE DATABASE greenhouse_demo OWNER greenhouse_demo;
 
 -- 다음 명령은 CREATE DATABASE와 분리해서 실행한다.
@@ -128,9 +131,11 @@ ALTER ROLE greenhouse_demo IN DATABASE greenhouse_demo
   SET lock_timeout = '3s';
 ALTER ROLE greenhouse_demo IN DATABASE greenhouse_demo
   SET idle_in_transaction_session_timeout = '60s';
-ALTER ROLE greenhouse_demo IN DATABASE greenhouse_demo
-  SET temp_file_limit = '128MB';
 ```
+
+`temp_file_limit`은 일반 role이 변경할 수 없는 PostgreSQL superuser 설정이다. 위의 role 전체
+설정을 최초 1회 관리자가 적용하며, 리프레시 스크립트는 값을 변경하지 않고 `128MB`인지
+검증한다. 따라서 새로 만드는 `greenhouse_demo_next`에도 같은 제한이 자동 상속된다.
 
 데모 백엔드는 Pod당 Hikari 연결을 최대 5개만 사용한다. 다만 RollingUpdate 중에는
 구버전·신버전 Pod와 Flyway 연결이 잠시 겹치므로 role 연결 제한은 20개로 둔다.
