@@ -9,8 +9,10 @@
 PostgreSQL instance
 ├─ greenhouse
 │  └─ 기존 운영 계정
-└─ greenhouse_demo
-   └─ greenhouse_demo (DB owner, Flyway, API)
+├─ greenhouse_demo
+│  └─ greenhouse_demo (DB owner, Flyway, API)
+└─ greenhouse_demo_template
+   └─ 빈 후보 DB 생성 전용 template
 
 k3s
 ├─ green-house
@@ -43,20 +45,66 @@ CREATE ROLE greenhouse_demo
   LOGIN NOSUPERUSER NOCREATEDB NOCREATEROLE NOREPLICATION INHERIT
   CONNECTION LIMIT 20;
 
+CREATE ROLE greenhouse_demo_refresh
+  LOGIN NOSUPERUSER CREATEDB NOCREATEROLE NOREPLICATION INHERIT
+  CONNECTION LIMIT 1;
+
+GRANT greenhouse_demo TO greenhouse_demo_refresh;
+GRANT pg_signal_backend TO greenhouse_demo_refresh;
+
+-- superuser 전용 설정이므로 관리자가 role 전체에 최초 1회 적용한다.
+ALTER ROLE greenhouse_demo SET temp_file_limit = '128MB';
+
 CREATE DATABASE greenhouse_demo OWNER greenhouse_demo;
+
+-- 다음 명령은 CREATE DATABASE와 분리해서 실행한다.
+CREATE DATABASE greenhouse_demo_template
+  WITH TEMPLATE template0 OWNER greenhouse_demo;
 
 REVOKE ALL ON DATABASE greenhouse_demo FROM PUBLIC;
 GRANT CONNECT ON DATABASE greenhouse_demo TO greenhouse_demo;
 GRANT CONNECT ON DATABASE greenhouse_demo TO greenhouse;
 
+REVOKE ALL ON DATABASE greenhouse_demo_template FROM PUBLIC;
+GRANT CONNECT ON DATABASE greenhouse_demo_template TO greenhouse_demo_refresh;
+
 REVOKE CONNECT ON DATABASE greenhouse FROM PUBLIC;
 GRANT CONNECT ON DATABASE greenhouse TO greenhouse;
 ```
 
-비밀번호는 SQL 파일이나 shell history에 기록하지 않고 `psql`에서 설정한다.
+`greenhouse_demo_refresh`는 DB 생성·이름 교체와 demo connection 종료만 담당하는 자동화
+role이다. PostgreSQL `postgres` role에 LOGIN이나 비밀번호를 추가하지 않는다. 비밀번호는
+SQL 파일이나 shell history에 기록하지 않고 `psql`에서 설정한다.
+
+PostgreSQL 14에서는 새 DB의 `public` schema가 `postgres` 소유로 복제될 수 있다. 후보 DB를
+최소권한 role로 안전하게 초기화할 수 있도록 `greenhouse_demo_template`에 접속해 다음을
+한 번 적용한다. 이 DB에는 업무 table이나 데이터를 만들지 않는다.
+
+```sql
+\connect greenhouse_demo_template
+
+ALTER SCHEMA public OWNER TO greenhouse_demo;
+REVOKE CREATE ON SCHEMA public FROM PUBLIC;
+GRANT USAGE, CREATE ON SCHEMA public TO greenhouse_demo;
+```
 
 ```text
 \password greenhouse_demo
+\password greenhouse_demo_refresh
+```
+
+운영 계정 `sjw`의 `/home/sjw/.pgpass`에는 아래 네 접속을 등록하고 mode를 `0600`으로 둔다.
+비밀번호에 `:` 또는 `\`가 있으면 `.pgpass` 형식에 맞게 `\`로 escape한다.
+
+```text
+127.0.0.1:5432:greenhouse:greenhouse:<production-password>
+127.0.0.1:5432:postgres:greenhouse_demo_refresh:<refresh-password>
+127.0.0.1:5432:greenhouse_demo:greenhouse_demo:<demo-password>
+127.0.0.1:5432:greenhouse_demo_next:greenhouse_demo:<demo-password>
+```
+
+```bash
+chmod 600 /home/sjw/.pgpass
 ```
 
 데모 DB에 접속해 schema 권한을 설정한다. `greenhouse_demo`가 DB owner이므로
@@ -83,9 +131,11 @@ ALTER ROLE greenhouse_demo IN DATABASE greenhouse_demo
   SET lock_timeout = '3s';
 ALTER ROLE greenhouse_demo IN DATABASE greenhouse_demo
   SET idle_in_transaction_session_timeout = '60s';
-ALTER ROLE greenhouse_demo IN DATABASE greenhouse_demo
-  SET temp_file_limit = '128MB';
 ```
+
+`temp_file_limit`은 일반 role이 변경할 수 없는 PostgreSQL superuser 설정이다. 위의 role 전체
+설정을 최초 1회 관리자가 적용하며, 리프레시 스크립트는 값을 변경하지 않고 `128MB`인지
+검증한다. 따라서 새로 만드는 `greenhouse_demo_next`에도 같은 제한이 자동 상속된다.
 
 데모 백엔드는 Pod당 Hikari 연결을 최대 5개만 사용한다. 다만 RollingUpdate 중에는
 구버전·신버전 Pod와 Flyway 연결이 잠시 겹치므로 role 연결 제한은 20개로 둔다.
@@ -95,7 +145,7 @@ ALTER ROLE greenhouse_demo IN DATABASE greenhouse_demo
 ```sql
 SELECT datname, datacl
 FROM pg_database
-WHERE datname IN ('greenhouse', 'greenhouse_demo');
+WHERE datname IN ('greenhouse', 'greenhouse_demo', 'greenhouse_demo_template');
 
 SELECT rolname, rolconnlimit, rolsuper, rolcreatedb, rolcreaterole
 FROM pg_roles
@@ -198,6 +248,8 @@ coverage의 ID·FK·행 순서·revision chain·mutation/correlation 연결을 �
 거래처·연락처·자유문자열은 제거 또는 결정적 데모 값으로 바꾸며 날짜는 같은 일수만큼,
 연결된 수량·금액과 JSON snapshot은 같은 배율로 바꾼다. opaque fingerprint와 idempotency key는
 참조 안정성을 위해 보존하고 ACTIVE baseline fingerprint는 변환된 snapshot으로 다시 계산한다.
+작업 타입의 code·name과 `work_records.work_type`은 개인정보가 아닌 업무 분류 기준이므로
+사용자 정의 타입을 포함해 원문을 보존한다.
 
 비식별화 key와 날짜 이동값은 실행마다 바꾸지 않는다. 32자 이상의 key, 0이 아닌 날짜 이동,
 수량·가격 배율 2~9를 `/etc/green-house/demo-refresh.env` 같은 root 관리 파일에 고정한다.
@@ -208,6 +260,7 @@ coverage의 ID·FK·행 순서·revision chain·mutation/correlation 연결을 �
 ```bash
 sudo install -d -o root -g sjw -m 750 /etc/green-house
 sudo install -d -o sjw -g sjw -m 700 /opt/green-house/backups/demo-sanitized
+sudo -u sjw install -d -m 700 /home/sjw/green-house-demo-refresh-staging
 sudo install -o root -g sjw -m 640 deploy/systemd/demo-refresh.env.example \
   /etc/green-house/demo-refresh.env
 sudoedit /etc/green-house/demo-refresh.env
@@ -219,7 +272,11 @@ set +a
 ```
 
 `/opt/green-house/backups/local`의 운영 원본 backup과 비식별 dump를 섞지 않는다. 정기
-리프레시 산출물은 `/opt/green-house/backups/demo-sanitized`에만 저장한다.
+리프레시 산출물은 `/opt/green-house/backups/demo-sanitized`에만 저장한다. snap Docker는
+`/opt`를 bind mount할 수 없으므로 원본 dump와 Docker 출력은
+`DEMO_DOCKER_STAGING_DIR=/home/sjw/green-house-demo-refresh-staging`에서 임시 처리한다.
+SHA-256 검증을 마친 비식별 dump만 호스트에서 `/opt`로 게시하며 staging 파일은 성공·실패와
+관계없이 제거한다.
 
 생성 단계만 실행하려면 `create-sanitized-demo-dump.sh <output.dump>`, 이미 검증된 dump를
 승격하려면 `refresh-demo-db.sh <dump>`를 사용한다. 후보 복원과 모든 검증은 현재 데모가
@@ -245,6 +302,9 @@ table/sequence `SELECT`와 동일 default privileges를 적용한다. `PUBLIC`�
 `redgate/flyway:11` Docker 이미지로 실행하므로 host Flyway CLI는 설치하지 않는다. 실제 운영
 계정 `sjw`가 Kubernetes kubeconfig와 Docker에 접근하며, 저장소는
 `/home/sjw/projects/green-house`에 있다.
+
+libpq 명령은 `PGPASSFILE=/home/sjw/.pgpass`를 사용한다. Flyway Docker 컨테이너는 host
+`.pgpass`를 읽지 않으므로 같은 demo 비밀번호를 `DEMO_DB_PASSWORD`로 EnvironmentFile에 둔다.
 
 ```bash
 sudo install -m 644 deploy/systemd/green-house-demo-refresh.service /etc/systemd/system/

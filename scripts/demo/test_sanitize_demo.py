@@ -8,9 +8,12 @@ from pathlib import Path
 
 from sanitize_demo import (
     CatalogPair,
+    PRESERVED_TEXT_COLUMNS,
     SanitizationError,
+    assert_original_values_removed,
     canonical_json,
     catalog_pair_for,
+    collect_original_sensitive_values,
     load_catalog,
     transform_business_json,
     unique_catalog_mapping,
@@ -60,6 +63,9 @@ class JsonSanitizationTest(unittest.TestCase):
             "varietyName": "원본품종",
             "status": "정상",
             "memo": "원본 메모",
+            "workType": "자리 이동",
+            "workTypeCode": "MOVEMENT",
+            "workTypeName": "자리 이동",
         }
         transformed = transform_business_json(
             source,
@@ -77,6 +83,9 @@ class JsonSanitizationTest(unittest.TestCase):
         self.assertEqual(transformed["varietyName"], "데모품종")
         self.assertEqual(transformed["status"], "정상")
         self.assertIsNone(transformed["memo"])
+        self.assertEqual(transformed["workType"], "자리 이동")
+        self.assertEqual(transformed["workTypeCode"], "MOVEMENT")
+        self.assertEqual(transformed["workTypeName"], "자리 이동")
 
     def test_canonical_json_sorts_keys_for_fingerprint(self) -> None:
         self.assertEqual(
@@ -97,6 +106,56 @@ class JsonSanitizationTest(unittest.TestCase):
 
 
 class PipelineContractTest(unittest.TestCase):
+    def test_work_type_columns_are_preserved_without_weakening_sensitive_sources(self) -> None:
+        class Cursor:
+            query = ""
+
+            def execute(self, query: str, params: object = ()) -> None:
+                self.query = query
+
+            def fetchall(self) -> list[tuple[str]]:
+                if "FROM audit_events" in self.query and "actor_id" in self.query:
+                    return [("자리 이동",), ("실제 작업자",)]
+                return []
+
+        values = collect_original_sensitive_values(Cursor())
+        self.assertIn("자리 이동", values)
+        self.assertIn("실제 작업자", values)
+        self.assertEqual(
+            PRESERVED_TEXT_COLUMNS,
+            {("work_types", "name"), ("work_records", "work_type")},
+        )
+
+        script = (Path(__file__).parent / "sanitize_demo.py").read_text(encoding="utf-8")
+        self.assertNotIn("UPDATE work_types SET name=%s", script)
+        self.assertNotIn("UPDATE work_records SET work_type=%s", script)
+
+        class ValidationCursor:
+            query = ""
+            queries: list[str] = []
+
+            def execute(self, query: str, params: object = ()) -> None:
+                self.query = query
+                self.queries.append(query)
+
+            def fetchall(self) -> list[tuple[str, ...]]:
+                if "FROM information_schema.columns" in self.query:
+                    return [
+                        ("work_types", "name"),
+                        ("work_records", "work_type"),
+                        ("audit_events", "actor_id"),
+                    ]
+                if "FROM audit_events" in self.query:
+                    return [("작업자 001",)]
+                return []
+
+        validation_cursor = ValidationCursor()
+        assert_original_values_removed(validation_cursor, {"자리 이동"})
+        self.assertFalse(any("FROM work_types" in query for query in validation_cursor.queries))
+        self.assertFalse(
+            any("FROM work_records" in query for query in validation_cursor.queries)
+        )
+
     def test_restore_validates_but_never_migrates_sanitized_source(self) -> None:
         script = (Path(__file__).parent / "restore-temp-db.sh").read_text(encoding="utf-8")
         self.assertIn("flyway validate", script)
@@ -104,7 +163,12 @@ class PipelineContractTest(unittest.TestCase):
 
     def test_promotion_uses_fixed_blue_green_names_and_confirmation(self) -> None:
         script = (Path(__file__).parent / "refresh-demo-db.sh").read_text(encoding="utf-8")
-        for value in ("greenhouse_demo", "greenhouse_demo_next", "greenhouse_demo_prev"):
+        for value in (
+            "greenhouse_demo",
+            "greenhouse_demo_next",
+            "greenhouse_demo_prev",
+            "greenhouse_demo_template",
+        ):
             self.assertIn(value, script)
         self.assertIn(
             "greenhouse_demo:greenhouse_demo_next:greenhouse_demo_prev",
@@ -114,6 +178,19 @@ class PipelineContractTest(unittest.TestCase):
             script.index('"${SCRIPT_DIR}/validate-demo-db.sh"'),
             script.rindex("  stop_backend\n"),
         )
+        self.assertIn("greenhouse_demo_refresh", script)
+        self.assertIn("pg_signal_backend", script)
+        self.assertIn("false:true:true:true", script)
+        self.assertIn("WITH targets AS MATERIALIZED", script)
+        self.assertIn("activity.backend_type='client backend'", script)
+        self.assertIn('--template="${DEMO_DB_TEMPLATE_NAME}"', script)
+        self.assertIn("public must be owned by", script)
+        self.assertIn("role-level temp_file_limit=128MB", script)
+        self.assertNotIn(
+            "IN DATABASE ${name} SET temp_file_limit",
+            script,
+        )
+        self.assertNotIn("must target postgres as a superuser", script)
 
     def test_candidate_flyway_validation_uses_pinned_docker_image(self) -> None:
         script = (Path(__file__).parent / "validate-demo-db.sh").read_text(encoding="utf-8")
@@ -122,6 +199,19 @@ class PipelineContractTest(unittest.TestCase):
         self.assertIn("--env FLYWAY_PASSWORD", script)
         self.assertIn('"${MIGRATION_DIR}:/flyway/sql:ro"', script)
         self.assertNotIn("require_command flyway", script)
+
+    def test_sanitized_dump_uses_home_staging_before_publication(self) -> None:
+        script = (Path(__file__).parent / "create-sanitized-demo-dump.sh").read_text(
+            encoding="utf-8"
+        )
+        self.assertIn("DEMO_DOCKER_STAGING_DIR", script)
+        self.assertIn('${HOME}/green-house-demo-refresh-staging', script)
+        self.assertIn(
+            '"${SCRIPT_DIR}/docker-sanitize.sh" "${raw_dump}" "${staged_output}"',
+            script,
+        )
+        self.assertIn('sha256sum --check', script)
+        self.assertLess(script.index('sha256sum --check'), script.index('mv -- "${partial_output}"'))
 
 
 if __name__ == "__main__":
