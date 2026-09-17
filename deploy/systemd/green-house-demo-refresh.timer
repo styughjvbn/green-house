@@ -2,7 +2,7 @@
 Description=Run Green House demo refresh weekly
 
 [Timer]
-OnCalendar=Sun *-*-* 03:00:00 Asia/Seoul
+OnCalendar=Sun *-*-* 04:00:00 Asia/Seoul
 Persistent=true
 RandomizedDelaySec=20m
 Unit=green-house-demo-refresh.service

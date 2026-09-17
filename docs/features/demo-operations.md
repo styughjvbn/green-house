@@ -256,7 +256,8 @@ journalctl -u green-house-demo-refresh.service -n 200 --no-pager
 
 service는 `User=sjw`, `WorkingDirectory=/home/sjw/projects/green-house`, snap Docker를 포함한
 명시적 `PATH`, `EnvironmentFile`, 2시간 timeout, `UMask=0077`을 사용한다. timer는 매주 일요일
-03:00(Asia/Seoul)에 실행하고 실패로 놓친 실행을 `Persistent=true`로 보완한다. 이미지 배포도
+04:00(Asia/Seoul)에 실행해 매일 03:00 운영 DB backup과 겹치지 않게 하고, 실패로 놓친 실행을
+`Persistent=true`로 보완한다. 이미지 배포도
 같은 `sjw` 계정으로 실행해야 공유 `/tmp/green-house-operation.lock`이 정상 동작한다.
 
 ## 9. 모니터링
