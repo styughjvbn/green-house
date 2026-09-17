@@ -5,12 +5,12 @@ Wants=network-online.target
 
 [Service]
 Type=oneshot
-User=green-house
-Group=green-house
-WorkingDirectory=/opt/green-house
+User=sjw
+Group=sjw
+WorkingDirectory=/home/sjw/projects/green-house
 EnvironmentFile=/etc/green-house/demo-refresh.env
-Environment=PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
-ExecStart=/opt/green-house/scripts/demo/scheduled-demo-refresh.sh
+Environment=PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/snap/bin
+ExecStart=/home/sjw/projects/green-house/scripts/demo/scheduled-demo-refresh.sh
 TimeoutStartSec=2h
 UMask=0077
 NoNewPrivileges=true
