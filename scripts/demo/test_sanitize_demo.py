@@ -129,6 +129,19 @@ class PipelineContractTest(unittest.TestCase):
         self.assertIn('"${MIGRATION_DIR}:/flyway/sql:ro"', script)
         self.assertNotIn("require_command flyway", script)
 
+    def test_sanitized_dump_uses_home_staging_before_publication(self) -> None:
+        script = (Path(__file__).parent / "create-sanitized-demo-dump.sh").read_text(
+            encoding="utf-8"
+        )
+        self.assertIn("DEMO_DOCKER_STAGING_DIR", script)
+        self.assertIn('${HOME}/green-house-demo-refresh-staging', script)
+        self.assertIn(
+            '"${SCRIPT_DIR}/docker-sanitize.sh" "${raw_dump}" "${staged_output}"',
+            script,
+        )
+        self.assertIn('sha256sum --check', script)
+        self.assertLess(script.index('sha256sum --check'), script.index('mv -- "${partial_output}"'))
+
 
 if __name__ == "__main__":
     unittest.main()
