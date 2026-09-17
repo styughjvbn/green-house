@@ -73,8 +73,16 @@ export function FarmStatusMap(props: FarmStatusMapProps) {
             filters={map.searchFilters}
             hasActiveSearch={map.hasActiveSearch}
             loading={map.searchLoading}
+            groupError={map.searchGroupError}
+            groupLoading={map.searchGroupLoading}
+            groups={map.searchGroups}
             results={map.searchResults}
+            selectedGroupKey={map.selectedSearchGroupKey}
             onClear={map.clearSearch}
+            onSelectGroup={(group) => {
+              setPanelOpen(true);
+              void map.handleSelectSearchGroup(group);
+            }}
             onSelectResult={(orchidGroup) => {
               setPanelOpen(true);
               void map.handleSelectSearchResult(orchidGroup);
