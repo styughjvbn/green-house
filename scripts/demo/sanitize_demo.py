@@ -28,25 +28,6 @@ BIGINT_MAX = 9_223_372_036_854_775_807
 IDENTIFIER = re.compile(r"^[a-z_][a-z0-9_]*$")
 SAFE_CODE = re.compile(r"^[A-Z][A-Z0-9_:-]{1,49}$")
 
-SAFE_WORK_TYPE_NAMES = {
-    "INBOUND": "입고",
-    "POTTING": "포트 작업",
-    "PESTICIDE": "농약",
-    "FERTILIZER": "비료",
-    "REPOT": "분갈이",
-    "STATUS": "상태 기록",
-    "MEMO": "일반 메모",
-    "LEAF_CLEANUP": "잎 정리",
-    "WEED_CLEANUP": "잡초 정리",
-    "FLOWER_CLEANUP": "단화/꽃 정리",
-    "MOVEMENT": "위치 이동",
-    "MULTI_CREATE": "난 묶음 다중 생성",
-    "CORRECTION": "구조 변경 보정",
-    "DIVIDE": "분주",
-    "MERGE": "합식",
-    "DISCARD": "폐기",
-}
-
 ACTOR_COLUMNS = (
     ("audit_events", "actor_id"),
     ("auction_lot_status_history", "worker"),
@@ -129,6 +110,14 @@ SAFE_JSON_STRING_FIELDS = {
     "mutationType",
     "sourceDomain",
     "sourceType",
+    "workType",
+    "workTypeCode",
+    "workTypeName",
+}
+
+PRESERVED_TEXT_COLUMNS = {
+    ("work_records", "work_type"),
+    ("work_types", "name"),
 }
 
 
@@ -376,16 +365,12 @@ def collect_original_sensitive_values(cursor: Any) -> set[str]:
         ("orchid_group_mutations", "reason"),
     )
     values: set[str] = set()
-    safe_names = set(SAFE_WORK_TYPE_NAMES.values())
     for table, column in sources:
         query = f"SELECT DISTINCT {column}::text FROM {table} WHERE {column} IS NOT NULL"
         for (raw,) in fetch_all(cursor, query):
             value = raw.strip()
-            if len(value) >= 2 and not SAFE_CODE.fullmatch(value) and value not in safe_names:
+            if len(value) >= 2 and not SAFE_CODE.fullmatch(value):
                 values.add(value)
-    for code, name in fetch_all(cursor, "SELECT code, name FROM work_types"):
-        if SAFE_WORK_TYPE_NAMES.get(code) != name and len(name.strip()) >= 2:
-            values.add(name.strip())
     for column in ("before_state", "after_state"):
         for field in ("genus", "varietyName", "memo"):
             for (raw,) in fetch_all(
@@ -398,7 +383,6 @@ def collect_original_sensitive_values(cursor: Any) -> set[str]:
                 if (
                     len(value) >= 2
                     and not SAFE_CODE.fullmatch(value)
-                    and value not in safe_names
                 ):
                     values.add(value)
     return values
@@ -673,17 +657,6 @@ def transform_work_data(cursor: Any, key: str) -> None:
     cursor.execute(
         "UPDATE orchid_group_collections SET name='데모 묶음 ' || lpad(id::text, 3, '0')"
     )
-    custom_types = fetch_all(cursor, "SELECT id, code, name FROM work_types")
-    for row_id, code, original_name in custom_types:
-        if SAFE_WORK_TYPE_NAMES.get(code) == original_name:
-            continue
-        demo_name = token(key, "work-type", original_name, "작업유형-")
-        cursor.execute(
-            "UPDATE work_records SET work_type=%s "
-            "WHERE work_type_id=%s OR (work_type_id IS NULL AND work_type=%s)",
-            (demo_name, row_id, original_name),
-        )
-        cursor.execute("UPDATE work_types SET name=%s WHERE id=%s", (demo_name, row_id))
     cursor.execute(
         "UPDATE work_operations SET title='데모 작업 ' || lpad(id::text, 4, '0')"
     )
@@ -1088,6 +1061,8 @@ def assert_original_values_removed(cursor: Any, originals: set[str]) -> None:
     for table, column in columns:
         table = validated_identifier(table)
         column = validated_identifier(column)
+        if (table, column) in PRESERVED_TEXT_COLUMNS:
+            continue
         for (raw,) in fetch_all(
             cursor, f"SELECT {column}::text FROM {table} WHERE {column} IS NOT NULL"
         ):
@@ -1112,7 +1087,7 @@ def create_marker(cursor: Any) -> None:
         """
     )
     cursor.execute(
-        "INSERT INTO demo_internal.sanitization_marker(pipeline_version) VALUES (4)"
+        "INSERT INTO demo_internal.sanitization_marker(pipeline_version) VALUES (5)"
     )
 
 

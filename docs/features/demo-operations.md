@@ -248,6 +248,8 @@ coverage의 ID·FK·행 순서·revision chain·mutation/correlation 연결을 �
 거래처·연락처·자유문자열은 제거 또는 결정적 데모 값으로 바꾸며 날짜는 같은 일수만큼,
 연결된 수량·금액과 JSON snapshot은 같은 배율로 바꾼다. opaque fingerprint와 idempotency key는
 참조 안정성을 위해 보존하고 ACTIVE baseline fingerprint는 변환된 snapshot으로 다시 계산한다.
+작업 타입의 code·name과 `work_records.work_type`은 개인정보가 아닌 업무 분류 기준이므로
+사용자 정의 타입을 포함해 원문을 보존한다.
 
 비식별화 key와 날짜 이동값은 실행마다 바꾸지 않는다. 32자 이상의 key, 0이 아닌 날짜 이동,
 수량·가격 배율 2~9를 `/etc/green-house/demo-refresh.env` 같은 root 관리 파일에 고정한다.
