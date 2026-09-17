@@ -241,8 +241,10 @@ table/sequence `SELECT`와 동일 default privileges를 적용한다. `PUBLIC`�
 ## 8. systemd timer
 
 운영 PC에는 Docker Compose v2, 운영 PostgreSQL과 호환되는 `pg_dump`/`pg_restore`, `psql`,
-Flyway CLI, `kubectl`, `curl`, `flock`이 필요하다. 실제 운영 계정 `sjw`가 Kubernetes
-kubeconfig와 Docker에 접근하며, 저장소는 `/home/sjw/projects/green-house`에 있다.
+`kubectl`, `curl`, `flock`이 필요하다. Flyway checksum 검증은 고정된
+`redgate/flyway:11` Docker 이미지로 실행하므로 host Flyway CLI는 설치하지 않는다. 실제 운영
+계정 `sjw`가 Kubernetes kubeconfig와 Docker에 접근하며, 저장소는
+`/home/sjw/projects/green-house`에 있다.
 
 ```bash
 sudo install -m 644 deploy/systemd/green-house-demo-refresh.service /etc/systemd/system/
