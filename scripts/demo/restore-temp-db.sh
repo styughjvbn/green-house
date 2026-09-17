@@ -5,6 +5,8 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_ROOT="$(cd "${SCRIPT_DIR}/../.." && pwd)"
 TEMP_DB_NAME="${SANITIZE_DB_NAME:-greenhouse_demo_sanitize_tmp}"
 MIGRATION_DIR="${PROJECT_ROOT}/backend/src/main/resources/db/migration"
+LATEST_MIGRATION_VERSION="$(find "${MIGRATION_DIR}" -maxdepth 1 -type f -name 'V*__*.sql' -printf '%f\n' \
+  | sed -E 's/^V([0-9]+)__.*/\1/' | sort -n | tail -1)"
 
 fail() {
   echo "[ERROR] $*" >&2
@@ -65,9 +67,15 @@ main() {
   FLYWAY_USER="${SANITIZE_FLYWAY_USER}" \
   FLYWAY_PASSWORD="${SANITIZE_FLYWAY_PASSWORD}" \
   FLYWAY_LOCATIONS="filesystem:${MIGRATION_DIR}" \
-    flyway migrate
+    flyway validate
 
-  echo "Temporary database restored and migrated: ${TEMP_DB_NAME}"
+  local applied_version
+  applied_version="$(psql "${SANITIZE_DB_URL}" -Atqc \
+    "SELECT version FROM flyway_schema_history WHERE success AND version IS NOT NULL ORDER BY installed_rank DESC LIMIT 1")"
+  [[ "${applied_version}" == "${LATEST_MIGRATION_VERSION}" ]] \
+    || fail "Source dump Flyway version ${applied_version:-<none>} does not match code version ${LATEST_MIGRATION_VERSION}"
+
+  echo "Temporary database restored and Flyway history validated at V${applied_version}: ${TEMP_DB_NAME}"
 }
 
 main "$@"

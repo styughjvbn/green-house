@@ -87,7 +87,7 @@ BEGIN
 
   IF EXISTS (
     SELECT 1 FROM orchid_group_mutations
-    WHERE reason IS NOT NULL AND reason <> '데모 전환 이력'
+    WHERE reason IS NOT NULL AND reason <> '데모 이력'
   ) THEN
     RAISE EXCEPTION 'Unsanitized Engine mutation reason remains';
   END IF;

@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import hashlib
 import tempfile
 import unittest
 from pathlib import Path
@@ -8,12 +9,10 @@ from pathlib import Path
 from sanitize_demo import (
     CatalogPair,
     SanitizationError,
+    canonical_json,
     catalog_pair_for,
     load_catalog,
-    sanitize_json,
-    shift_iso_date,
-    shift_iso_instant,
-    transform_state_chain_manifest,
+    transform_business_json,
     unique_catalog_mapping,
 )
 
@@ -52,68 +51,68 @@ class CatalogTest(unittest.TestCase):
 
 
 class JsonSanitizationTest(unittest.TestCase):
-    def test_structure_and_safe_codes_are_preserved(self) -> None:
-        source = {"name": "홍길동", "status": "COMPLETED", "values": [1, True, "메모"]}
-        self.assertEqual(
-            sanitize_json(source),
-            {"name": "데모", "status": "COMPLETED", "values": [1, True, "데모"]},
-        )
-
-    def test_manifest_transformation_preserves_links_and_changes_state(self) -> None:
-        payload = {
-            "manifest_schema_version": 2,
-            "mutations": [
-                {
-                    "mutation_key": "source-key",
-                    "mutation_type": "CHANGE",
-                    "source_type": "WORK_EFFECT",
-                    "source_reference": "effect:7",
-                    "occurred_at": "2026-09-01T00:00:00.000000Z",
-                    "effective_business_date": "2026-09-01",
-                    "reason": "원본 사유",
-                    "evidence": {"work_effect_ids": [7], "source_rows": [99]},
-                    "entries": [
-                        {
-                            "orchid_group_id": "3",
-                            "before_state": {
-                                "quantity": 2,
-                                "reservedQuantity": 1,
-                                "trayCount": None,
-                                "varietyId": 5,
-                                "genus": "원본속",
-                                "varietyName": "원본품종",
-                                "memo": "원본 메모",
-                            },
-                            "after_state": None,
-                        }
-                    ],
-                }
-            ],
+    def test_active_engine_snapshot_transformation_preserves_shape(self) -> None:
+        source = {
+            "quantity": 2,
+            "reservedQuantity": 1,
+            "varietyId": 5,
+            "genus": "원본속",
+            "varietyName": "원본품종",
+            "status": "정상",
+            "memo": "원본 메모",
         }
-        transformed, cutover_key = transform_state_chain_manifest(
-            payload,
-            {5: CatalogPair("데모속", "데모품종")},
-            [CatalogPair("대체속", "대체품종")],
-            "k" * 32,
-            10,
-            3,
+        transformed = transform_business_json(
+            source,
+            key="k" * 32,
+            namespace="entry-1",
+            quantity_factor=3,
+            price_factor=2,
+            master_mapping={5: CatalogPair("데모속", "데모품종")},
+            catalog=[CatalogPair("대체속", "대체품종")],
         )
-        mutation = transformed["mutations"][0]
-        snapshot = mutation["entries"][0]["before_state"]
-        self.assertNotEqual(mutation["mutation_key"], "source-key")
-        self.assertEqual(mutation["evidence"], {"work_effect_ids": [7]})
-        self.assertEqual(mutation["reason"], "데모 전환 이력")
-        self.assertEqual(snapshot["quantity"], 6)
-        self.assertEqual(snapshot["reservedQuantity"], 3)
-        self.assertEqual(snapshot["genus"], "데모속")
-        self.assertIsNone(snapshot["memo"])
-        self.assertRegex(cutover_key, r"^[0-9a-f-]{36}$")
+        self.assertEqual(set(transformed), set(source))
+        self.assertEqual(transformed["quantity"], 6)
+        self.assertEqual(transformed["reservedQuantity"], 3)
+        self.assertEqual(transformed["genus"], "데모속")
+        self.assertEqual(transformed["varietyName"], "데모품종")
+        self.assertEqual(transformed["status"], "정상")
+        self.assertIsNone(transformed["memo"])
 
-    def test_iso_values_are_shifted_without_losing_utc(self) -> None:
-        self.assertEqual(shift_iso_date("2026-09-01", -2), "2026-08-30")
+    def test_canonical_json_sorts_keys_for_fingerprint(self) -> None:
         self.assertEqual(
-            shift_iso_instant("2026-09-01T03:04:05.000000Z", 2),
-            "2026-09-03T03:04:05.000000Z",
+            canonical_json({"z": 1, "a": {"y": True, "x": None}}),
+            '{"a":{"x":null,"y":true},"z":1}',
+        )
+
+    def test_java_local_date_fingerprint_representation_is_stable(self) -> None:
+        payload = {
+            "cutoverKey": "00000000-0000-0000-0000-000000000001",
+            "effectiveBusinessDate": [2026, 9, 14],
+            "groups": [],
+        }
+        self.assertEqual(
+            hashlib.sha256(canonical_json(payload).encode("utf-8")).hexdigest(),
+            "ccb14952650006f1bb2d72dbe84f7db570d163b55f0c257048587f1885444167",
+        )
+
+
+class PipelineContractTest(unittest.TestCase):
+    def test_restore_validates_but_never_migrates_sanitized_source(self) -> None:
+        script = (Path(__file__).parent / "restore-temp-db.sh").read_text(encoding="utf-8")
+        self.assertIn("flyway validate", script)
+        self.assertNotIn("flyway migrate", script)
+
+    def test_promotion_uses_fixed_blue_green_names_and_confirmation(self) -> None:
+        script = (Path(__file__).parent / "refresh-demo-db.sh").read_text(encoding="utf-8")
+        for value in ("greenhouse_demo", "greenhouse_demo_next", "greenhouse_demo_prev"):
+            self.assertIn(value, script)
+        self.assertIn(
+            "greenhouse_demo:greenhouse_demo_next:greenhouse_demo_prev",
+            script,
+        )
+        self.assertLess(
+            script.index('"${SCRIPT_DIR}/validate-demo-db.sh"'),
+            script.rindex("  stop_backend\n"),
         )
 
 
