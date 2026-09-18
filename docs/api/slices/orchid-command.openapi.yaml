@@ -817,6 +817,9 @@ components:
         lossQuantity:
           type: integer
           format: int32
+        increaseQuantity:
+          type: integer
+          format: int32
     WorkOperationProgressResponse:
       type: object
       properties:

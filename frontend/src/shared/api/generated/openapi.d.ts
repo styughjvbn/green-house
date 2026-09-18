@@ -2476,6 +2476,8 @@ export interface components {
             inputQuantity?: number;
             /** Format: int32 */
             lossQuantity?: number;
+            /** Format: int32 */
+            increaseQuantity?: number;
         };
         MultiCreateOrchidGroupRowRequest: {
             orchidGroup: components["schemas"]["OrchidGroupCreateRequest"];
@@ -3225,6 +3227,8 @@ export interface components {
             /** Format: int32 */
             lossQuantity?: number;
             /** Format: int32 */
+            increaseQuantity?: number;
+            /** Format: int32 */
             actualQuantity?: number;
             reason?: string;
             /** Format: int64 */
@@ -3675,6 +3679,8 @@ export interface components {
             totalResultQuantity?: number;
             /** Format: int32 */
             lossQuantity?: number;
+            /** Format: int32 */
+            increaseQuantity?: number;
             /** Format: date-time */
             createdAt?: string;
             sources?: components["schemas"]["OrchidGroupLineageNodeResponse"][];

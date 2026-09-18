@@ -32,7 +32,8 @@ final class WorkEffectDetailCodec {
 				effect.getWorker(), effect.getTarget() == null ? null : effect.getTarget().getId(),
 				longValue(result.get("inboundRecordId")), sources(command, result, links),
 				results(command, result, links, resultVarietyNames, resultLocations),
-				integerValue(result.get("lossQuantity")), integerValue(result.get("actualQuantity")),
+				integerValue(result.get("lossQuantity")), integerValue(result.get("increaseQuantity")),
+				integerValue(result.get("actualQuantity")),
 				firstString(result.get("reason"), command.get("reason")),
 				firstLong(result.get("discardWorkOperationId"), result.get("originalWorkOperationId")));
 	}

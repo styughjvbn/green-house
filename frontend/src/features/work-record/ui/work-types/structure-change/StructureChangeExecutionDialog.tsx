@@ -69,6 +69,15 @@ export function StructureChangeExecutionDialog({
     recordMode,
   });
   const movement = operation.workTypeCode === "MOVEMENT";
+  const quantityDifference = form.totalResult - form.totalInput;
+  const quantityDifferenceLabel = movement
+    ? "폐기"
+    : quantityDifference > 0
+      ? "증식"
+      : "손실";
+  const quantityDifferenceValue = movement
+    ? Math.max(0, -quantityDifference)
+    : Math.abs(quantityDifference);
 
   return (
     <div
@@ -152,8 +161,8 @@ export function StructureChangeExecutionDialog({
             />
             <div className="rounded-md bg-[#f4f7f3] px-3 py-2 text-sm text-[#526057]">
               투입 {form.totalInput}분 · {movement ? "이동" : "결과"}{" "}
-              {form.totalResult}분 · {movement ? "폐기" : "손실"}{" "}
-              {Math.max(0, form.totalInput - form.totalResult)}분 (자동 계산)
+              {form.totalResult}분 · {quantityDifferenceLabel}{" "}
+              {quantityDifferenceValue}분 (자동 계산)
             </div>
             <TextField
               label="작업자"

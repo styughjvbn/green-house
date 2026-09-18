@@ -4793,6 +4793,9 @@ components:
         lossQuantity:
           type: integer
           format: int32
+        increaseQuantity:
+          type: integer
+          format: int32
     MultiCreateOrchidGroupRowRequest:
       type: object
       properties:
@@ -6643,6 +6646,9 @@ components:
         lossQuantity:
           type: integer
           format: int32
+        increaseQuantity:
+          type: integer
+          format: int32
         actualQuantity:
           type: integer
           format: int32
@@ -7491,6 +7497,9 @@ components:
           type: integer
           format: int32
         lossQuantity:
+          type: integer
+          format: int32
+        increaseQuantity:
           type: integer
           format: int32
         createdAt:

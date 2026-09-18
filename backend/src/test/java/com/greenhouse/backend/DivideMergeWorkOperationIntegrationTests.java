@@ -551,6 +551,52 @@ class DivideMergeWorkOperationIntegrationTests extends AbstractBackendIntegratio
 	}
 
 	@Test
+	void createsRepotRecordWhenResultQuantityExceedsSourceQuantity() throws Exception {
+		OrchidGroup source = createSource(30, "0", "3");
+
+		mockMvc
+			.perform(post("/api/work-operations/structure-change-records").contentType(MediaType.APPLICATION_JSON)
+				.content(
+						"""
+								{
+								  "operation": {
+								    "workTypeId": %d,
+								    "title": "증식 분갈이 기록",
+								    "plannedStartDate": "2026-07-16",
+								    "sourceScopeType": "MANUAL_SELECTION",
+								    "sourceOrchidGroupIds": [%d]
+								  },
+								  "execution": {
+								    "idempotencyKey": "repot-record-expanded-quantity",
+								    "completedDate": "2026-07-16",
+								    "sources": [{"sourceOrchidGroupId": %d, "inputQuantity": 30}],
+								    "results": [
+								      {"bedZoneId": %d, "quantity": 35, "sourceOrchidGroupIds": [%d], "potSize": "4치", "ageYear": 2, "purpose": "NORMAL", "startPosition": 0, "endPosition": 3}
+								    ]
+								  }
+								}
+								"""
+							.formatted(repotType.getId(), source.getId(), source.getId(), resultZone.getId(),
+									source.getId())))
+			.andExpect(status().isCreated())
+			.andExpect(jsonPath("$.data.status").value("COMPLETED"));
+
+		Long operationId = operationRepository.findAll().getFirst().getId();
+		Long resultId = orchidGroupRepository
+			.findByBedZoneIdAndQuantityGreaterThanOrderBySortOrderAsc(resultZone.getId(), 0)
+			.getFirst()
+			.getId();
+		mockMvc.perform(get("/api/work-operations/{id}/details", operationId))
+			.andExpect(status().isOk())
+			.andExpect(jsonPath("$.data.executions[0].lossQuantity").value(0))
+			.andExpect(jsonPath("$.data.executions[0].increaseQuantity").value(5));
+		mockMvc.perform(get("/api/orchid-groups/{id}/lineage", resultId))
+			.andExpect(status().isOk())
+			.andExpect(jsonPath("$.data.transformations[0].lossQuantity").value(0))
+			.andExpect(jsonPath("$.data.transformations[0].increaseQuantity").value(5));
+	}
+
+	@Test
 	void allowsMergeExecutionWithOneSource() throws Exception {
 		OrchidGroup source = createSource(20, "0", "2");
 		Long operationId = createPlan(mergeType, source.getId());
