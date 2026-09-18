@@ -112,6 +112,7 @@ export type WorkExecutionDetail = {
   sources: WorkExecutionSource[];
   results: WorkExecutionResult[];
   lossQuantity: number | null;
+  increaseQuantity: number | null;
   actualQuantity: number | null;
   reason: string | null;
   linkedWorkOperationId: number | null;

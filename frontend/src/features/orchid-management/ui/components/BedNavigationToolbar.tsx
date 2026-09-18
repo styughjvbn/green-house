@@ -1,6 +1,13 @@
 "use client";
 
-import { ChevronLeft, ChevronRight, Palette, Plus, Ruler } from "lucide-react";
+import {
+  ChevronLeft,
+  ChevronRight,
+  Palette,
+  Plus,
+  Rows3,
+  Ruler,
+} from "lucide-react";
 import type {
   OrchidManagementBedOrderItem,
   VisibleBedCount,
@@ -14,6 +21,7 @@ export default function BedNavigationToolbar({
   hasPreviousHouse,
   hasNextHouse,
   distinguishVarietyColors,
+  actualPlacement,
   createActive,
   showScale,
   onPrevious,
@@ -21,6 +29,7 @@ export default function BedNavigationToolbar({
   onGoToHouse,
   onVisibleBedCountChange,
   onToggleVarietyColors,
+  onToggleActualPlacement,
   onOpenCreate,
   onToggleScale,
 }: {
@@ -30,6 +39,7 @@ export default function BedNavigationToolbar({
   hasPreviousHouse: boolean;
   hasNextHouse: boolean;
   distinguishVarietyColors: boolean;
+  actualPlacement: boolean;
   createActive: boolean;
   showScale: boolean;
   onPrevious: () => void;
@@ -37,6 +47,7 @@ export default function BedNavigationToolbar({
   onGoToHouse: (houseId: number) => void;
   onVisibleBedCountChange: (count: VisibleBedCount) => void;
   onToggleVarietyColors: () => void;
+  onToggleActualPlacement: () => void;
   onOpenCreate: () => void;
   onToggleScale: () => void;
 }) {
@@ -99,6 +110,19 @@ export default function BedNavigationToolbar({
       >
         <Palette className="h-4 w-4" />
         색상 구별
+      </button>
+      <button
+        aria-pressed={actualPlacement}
+        className={`inline-flex h-8 items-center gap-2 rounded-md border border-[#dfe5dc] px-3 text-sm font-semibold ${
+          actualPlacement
+            ? "bg-[#159447] text-white"
+            : "bg-white text-[#344138]"
+        }`}
+        onClick={onToggleActualPlacement}
+        type="button"
+      >
+        <Rows3 className="h-4 w-4" />
+        실제 배치
       </button>
       <button
         aria-pressed={showScale}

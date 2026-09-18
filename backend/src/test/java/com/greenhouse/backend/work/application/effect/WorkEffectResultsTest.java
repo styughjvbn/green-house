@@ -14,16 +14,17 @@ class WorkEffectResultsTest {
 	void transformationKeepsSingleSourceCompatibilityAndResultOrder() {
 		var rows = List.of(new WorkEffectResults.ResultGroup(3L, 6, StructureChangeResultPurpose.NORMAL),
 				new WorkEffectResults.ResultGroup(4L, 2, StructureChangeResultPurpose.HELD));
-		var result = new WorkEffectResults.Transformation("round", Map.of(1L, 10), 2, rows, 5).toMap();
+		var result = new WorkEffectResults.Transformation("round", Map.of(1L, 10), 2, 0, rows, 5).toMap();
 		assertThat(result).containsEntry("sourceOrchidGroupId", 1L)
 			.containsEntry("inputQuantity", 10)
 			.containsEntry("remainingQuantity", 5)
 			.containsEntry("lossQuantity", 2)
+			.containsEntry("increaseQuantity", 0)
 			.containsEntry("resultOrchidGroupIds", List.of(3L, 4L));
 		assertThat(result.get("results"))
 			.isEqualTo(List.of(Map.of("orchidGroupId", 3L, "quantity", 6, "purpose", "NORMAL"),
 					Map.of("orchidGroupId", 4L, "quantity", 2, "purpose", "HELD")));
-		assertThat(new WorkEffectResults.Transformation("round", Map.of(1L, 4, 2L, 6), 2, rows, null).toMap())
+		assertThat(new WorkEffectResults.Transformation("round", Map.of(1L, 4, 2L, 6), 2, 0, rows, null).toMap())
 			.doesNotContainKeys("sourceOrchidGroupId", "inputQuantity", "remainingQuantity", "resultOrchidGroupIds");
 	}
 

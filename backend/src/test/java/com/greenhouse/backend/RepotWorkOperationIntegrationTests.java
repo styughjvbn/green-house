@@ -139,7 +139,7 @@ class RepotWorkOperationIntegrationTests extends AbstractBackendIntegrationTest 
 						    "lossQuantity": 0,
 						    "results": [{
 						      "bedZoneId": %d,
-						      "quantity": 40,
+						      "quantity": 45,
 						      "potSize": "4치",
 						      "ageYear": 3,
 						      "splitPlacementAllowed": false,
@@ -155,6 +155,10 @@ class RepotWorkOperationIntegrationTests extends AbstractBackendIntegrationTest 
 
 		assertThat(orchidGroupRepository.findById(source.getId()).orElseThrow().getQuantity()).isZero();
 		assertThat(lineageRepository.findBySourceOrchidGroupIdOrderByCreatedAtAscIdAsc(source.getId())).hasSize(1);
+		mockMvc.perform(get("/api/work-operations/{id}/details", operationId))
+			.andExpect(status().isOk())
+			.andExpect(jsonPath("$.data.executions[0].lossQuantity").value(0))
+			.andExpect(jsonPath("$.data.executions[0].increaseQuantity").value(5));
 	}
 
 	@Test
@@ -201,6 +205,26 @@ class RepotWorkOperationIntegrationTests extends AbstractBackendIntegrationTest 
 			.andExpect(status().isOk())
 			.andExpect(jsonPath("$.data", hasSize(1)))
 			.andExpect(jsonPath("$.data[0].workOperationId").value(operationId));
+	}
+
+	@Test
+	void allowsRepotResultToExceedInputAndRecordsIncreaseQuantity() throws Exception {
+		OrchidGroup source = createSource(40, "0", "2");
+
+		mockMvc
+			.perform(post("/api/work-operations/repot").contentType(MediaType.APPLICATION_JSON)
+				.content(repotRequest("repot-increase", source.getId(), 40, 0, null, 45, "2", "4", "")))
+			.andExpect(status().isCreated())
+			.andExpect(jsonPath("$.data.sourceOrchidGroup.quantity").value(0))
+			.andExpect(jsonPath("$.data.resultOrchidGroups[0].quantity").value(45))
+			.andExpect(jsonPath("$.data.lossQuantity").value(0))
+			.andExpect(jsonPath("$.data.increaseQuantity").value(5));
+
+		Long operationId = operationRepository.findByRequestKey("repot-increase").orElseThrow().getId();
+		mockMvc.perform(get("/api/work-operations/{id}/details", operationId))
+			.andExpect(status().isOk())
+			.andExpect(jsonPath("$.data.executions[0].lossQuantity").value(0))
+			.andExpect(jsonPath("$.data.executions[0].increaseQuantity").value(5));
 	}
 
 	@Test

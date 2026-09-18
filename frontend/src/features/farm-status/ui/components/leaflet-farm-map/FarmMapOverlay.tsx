@@ -35,7 +35,7 @@ export function FarmMapOverlay({
 
   return (
     <>
-      <div className="pointer-events-none absolute top-4 left-4 z-[1000] flex flex-wrap items-center gap-2 rounded-md bg-white/95 px-3 py-2 text-sm font-semibold text-[#29422e] shadow-sm">
+      <div className="pointer-events-none absolute top-4 left-4 z-[700] flex flex-wrap items-center gap-2 rounded-md bg-white/95 px-3 py-2 text-sm font-semibold text-[#29422e] shadow-sm">
         <span>전체 농장 지도</span>
         <span className="rounded-full bg-[#eef6e9] px-2 py-0.5 text-xs text-[#39713d]">
           {zoomLabel(currentLevel)}
@@ -45,7 +45,7 @@ export function FarmMapOverlay({
         </span>
       </div>
 
-      <div className="absolute bottom-16 left-4 z-[1000] flex flex-col gap-2">
+      <div className="absolute bottom-16 left-4 z-[700] flex flex-col gap-2">
         <button
           aria-label="확대"
           className="flex h-9 w-9 items-center justify-center rounded-md bg-white text-xl font-semibold text-[#2b3a2f] shadow transition hover:bg-[#f4f7f2]"
@@ -72,7 +72,7 @@ export function FarmMapOverlay({
         </button>
       </div>
 
-      <div className="absolute top-4 right-4 z-[1000] flex flex-col items-end gap-2">
+      <div className="absolute top-4 right-4 z-[700] flex flex-col items-end gap-2">
         <ToggleGroup
           label="보기"
           options={[
@@ -101,7 +101,7 @@ export function FarmMapOverlay({
         ) : null}
       </div>
 
-      <div className="pointer-events-none absolute bottom-4 left-4 z-[1000] flex max-w-[calc(100%-5rem)] flex-wrap items-center gap-3 rounded-md bg-white/95 px-3 py-2 text-xs shadow">
+      <div className="pointer-events-none absolute bottom-4 left-4 z-[700] flex max-w-[calc(100%-5rem)] flex-wrap items-center gap-3 rounded-md bg-white/95 px-3 py-2 text-xs shadow">
         <span className="font-semibold text-[#63726a]">범례</span>
         {legendItems.map((item) => (
           <LegendItem key={item.label} color={item.color} label={item.label} />

@@ -37,7 +37,9 @@ public class RepotWorkOperationService {
 	}
 
 	public RepotWorkOperationResponse execute(RepotWorkOperationRequest request) {
-		int lossQuantity = calculateLossQuantity(request);
+		int totalResultQuantity = request.results().stream().mapToInt(row -> row.quantity()).sum();
+		int lossQuantity = Math.max(0, request.inputQuantity() - totalResultQuantity);
+		int increaseQuantity = Math.max(0, totalResultQuantity - request.inputQuantity());
 		if (orchidGroupRepository.findAllForUpdateByIdIn(List.of(request.sourceOrchidGroupId())).isEmpty()) {
 			throw new NotFoundException("원본 난 묶음을 찾을 수 없습니다.");
 		}
@@ -45,20 +47,13 @@ public class RepotWorkOperationService {
 		details.put("sourceOrchidGroupId", request.sourceOrchidGroupId());
 		details.put("inputQuantity", request.inputQuantity());
 		details.put("lossQuantity", lossQuantity);
+		details.put("increaseQuantity", increaseQuantity);
 		details.put("resultCount", request.results().size());
 		var operation = immediateWorkExecutionService.executeForTarget(normalizeRequired(request.idempotencyKey()),
 				WorkTypeDefinition.REPOT.name(), normalizeRequired(request.title()), request.workDate(),
 				normalize(request.worker()), normalize(request.memo()), request.sourceOrchidGroupId(), details,
 				request);
 		return response(operation.id());
-	}
-
-	private int calculateLossQuantity(RepotWorkOperationRequest request) {
-		long resultQuantity = request.results().stream().mapToLong(row -> row.quantity()).sum();
-		if (resultQuantity > request.inputQuantity()) {
-			throw new IllegalArgumentException("분갈이 결과 수량은 투입 수량보다 클 수 없습니다.");
-		}
-		return (int) (request.inputQuantity() - resultQuantity);
 	}
 
 	@Transactional(readOnly = true)
@@ -81,8 +76,8 @@ public class RepotWorkOperationService {
 			.map(id -> OrchidGroupResponse.from(groupsById.get(id), businessDate))
 			.toList();
 		return new RepotWorkOperationResponse(operation, OrchidGroupResponse.from(source, businessDate), results,
-				integerDetail(operation.details(), "inputQuantity"),
-				integerDetail(operation.details(), "lossQuantity"));
+				integerDetail(operation.details(), "inputQuantity"), integerDetail(operation.details(), "lossQuantity"),
+				integerDetail(operation.details(), "increaseQuantity"));
 	}
 
 	private Integer integerDetail(Map<String, Object> details, String key) {

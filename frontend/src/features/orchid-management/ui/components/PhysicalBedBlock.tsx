@@ -6,6 +6,7 @@ import BedZoneBlock from "./BedZoneBlock";
 
 export default function PhysicalBedBlock({
   bed,
+  layoutMaxPosition,
   distinguishVarietyColors,
   filteredOrchidGroupIds,
   multiSelectEnabled,
@@ -19,6 +20,7 @@ export default function PhysicalBedBlock({
   onSelectOrchidGroup,
 }: {
   bed: PhysicalBed;
+  layoutMaxPosition: number | null;
   distinguishVarietyColors: boolean;
   filteredOrchidGroupIds: Set<number>;
   multiSelectEnabled: boolean;
@@ -65,6 +67,7 @@ export default function PhysicalBedBlock({
             distinguishVarietyColors={distinguishVarietyColors}
             filteredOrchidGroupIds={filteredOrchidGroupIds}
             maxPosition={bed.positionUnitCount}
+            layoutMaxPosition={layoutMaxPosition}
             showScale={showScale}
             cellRangePick={cellRangePick}
             zone={zone}

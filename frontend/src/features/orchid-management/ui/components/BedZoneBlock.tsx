@@ -14,6 +14,7 @@ const DENSITY_REFERENCE_HEIGHT = 590;
 
 export default function BedZoneBlock({
   maxPosition,
+  layoutMaxPosition,
   distinguishVarietyColors,
   filteredOrchidGroupIds,
   showScale,
@@ -28,6 +29,7 @@ export default function BedZoneBlock({
   onSelectOrchidGroup,
 }: {
   maxPosition: number | null;
+  layoutMaxPosition: number | null;
   distinguishVarietyColors: boolean;
   filteredOrchidGroupIds: Set<number>;
   showScale: boolean;
@@ -42,7 +44,15 @@ export default function BedZoneBlock({
   onSelectOrchidGroup: (orchidGroupId: number) => void;
 }) {
   const resolvedMaxPosition = maxPosition && maxPosition > 0 ? maxPosition : 28;
-  const densityCellHeight = DENSITY_REFERENCE_HEIGHT / resolvedMaxPosition;
+  const resolvedLayoutMaxPosition = Math.max(
+    resolvedMaxPosition,
+    layoutMaxPosition ?? resolvedMaxPosition,
+  );
+  const densityCellHeight =
+    DENSITY_REFERENCE_HEIGHT / resolvedLayoutMaxPosition;
+  const placementHeight = `${
+    (resolvedMaxPosition / resolvedLayoutMaxPosition) * 100
+  }%`;
   const cells = buildCells(resolvedMaxPosition);
   const canRestartPickInAnyZone =
     cellRangePick.active && cellRangePick.completed;
@@ -93,12 +103,13 @@ export default function BedZoneBlock({
       role="button"
       tabIndex={0}
     >
-      <div className="flex min-h-0 flex-1 gap-0">
+      <div className="flex min-h-0 flex-1 items-start gap-0">
         {showScale ? (
           <div
-            className="grid h-full w-3 shrink-0"
+            className="grid w-3 shrink-0"
             style={{
               gridTemplateRows: `repeat(${resolvedMaxPosition}, minmax(0, 1fr))`,
+              height: placementHeight,
             }}
           >
             {cells.map((cell) => (
@@ -126,11 +137,12 @@ export default function BedZoneBlock({
         ) : null}
 
         <div
-          className={`relative grid h-full min-w-0 flex-1 overflow-hidden border border-[#e4e8e4] bg-white ${
+          className={`relative grid min-w-0 flex-1 overflow-hidden border border-[#e4e8e4] bg-white ${
             rangePickActive ? "cursor-crosshair" : ""
           }`}
           style={{
             gridTemplateRows: `repeat(${resolvedMaxPosition}, minmax(0, 1fr))`,
+            height: placementHeight,
           }}
         >
           {cells.map((cell) => {
