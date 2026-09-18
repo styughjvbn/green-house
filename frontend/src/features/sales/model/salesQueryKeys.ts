@@ -35,6 +35,20 @@ export const salesQueryKeys = {
         auctionHouse,
         active,
       ] as const,
+    searchOptions: (
+      keyword: string,
+      auctionHouse?: boolean,
+      active?: boolean,
+    ) =>
+      [
+        "sales",
+        "businessPartners",
+        "options",
+        "search",
+        keyword,
+        auctionHouse,
+        active,
+      ] as const,
     option: (id: number) =>
       ["sales", "businessPartners", "option", id] as const,
   },
