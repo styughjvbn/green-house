@@ -76,8 +76,7 @@ public class RepotWorkOperationService {
 			.map(id -> OrchidGroupResponse.from(groupsById.get(id), businessDate))
 			.toList();
 		return new RepotWorkOperationResponse(operation, OrchidGroupResponse.from(source, businessDate), results,
-				integerDetail(operation.details(), "inputQuantity"),
-				integerDetail(operation.details(), "lossQuantity"),
+				integerDetail(operation.details(), "inputQuantity"), integerDetail(operation.details(), "lossQuantity"),
 				integerDetail(operation.details(), "increaseQuantity"));
 	}
 

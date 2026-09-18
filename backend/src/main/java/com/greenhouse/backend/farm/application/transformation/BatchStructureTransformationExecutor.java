@@ -107,7 +107,8 @@ public class BatchStructureTransformationExecutor {
 					plannedResults.get(index).purpose()))
 			.toList();
 		var details = new WorkEffectResults.Transformation(request.idempotencyKey(), inputBySourceId, lossQuantity,
-				increaseQuantity, resultRows, sourceIds.size() == 1 ? sources.get(sourceIds.getFirst()).getQuantity() : null)
+				increaseQuantity, resultRows,
+				sourceIds.size() == 1 ? sources.get(sourceIds.getFirst()).getQuantity() : null)
 			.toMap();
 		return new WorkExecutionResult(strategy.supports(), details, resultIds, mutationLink);
 	}
