@@ -30,6 +30,13 @@ Linux/macOS에서는 개발 서버를 한 번에 실행할 수 있다.
 ./scripts/dev-start.sh
 ```
 
+백엔드 코드를 변경한 뒤 실행 중인 프론트엔드와 DB는 유지하고 백엔드만 다시
+시작하려면 다음 옵션을 사용한다. 백엔드가 실행 중이 아니면 새로 시작한다.
+
+```bash
+./scripts/dev-start.sh --restart-backend
+```
+
 프론트엔드 렌더링 성능처럼 production build 기준으로 확인해야 할 때는 다음 옵션을
 사용한다. 이 모드는 `npm run build`가 성공한 후 `npm run start`로 프론트엔드를
 실행하며, 기존 3000 포트를 재사용하지 않는다.
