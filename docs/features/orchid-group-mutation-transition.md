@@ -26,7 +26,10 @@ source 표시는 기존 HTTP 계약·이력 해석이며 제거한 직접 writer
 보정·보상 관계를 읽기 전용으로 확인하는 진단 화면이다. 조회 API는 root Mutation을 먼저
 페이지로 읽고 해당 페이지의 Entry와 연결 관계를 일괄 조회한다. `prod`에서는 메뉴와
 페이지, `/api/orchid-group-mutations` API를 모두 비활성화한다. 이 화면은 원장을 수정하거나
-replay하는 운영 도구가 아니며, 복구 CLI와 write fence를 우회하지 않는다.
+replay하는 운영 도구가 아니며, 복구 CLI와 write fence를 우회하지 않는다. 난 묶음 ID를
+선택하면 유형·도메인 필터와 별도로 최신 100개 Entry를 node-edge 그래프로 시각화한다.
+revision 흐름은 실선, 보정·보상·대체 관계는 점선 edge로 구분하고 각 node에서 snapshot의
+수량·상태·구역을 확인한다. 100개를 넘는 이력은 잘림을 명시한다.
 
 ## 제거 완료 범위
 

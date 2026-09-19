@@ -12,6 +12,11 @@ import {
   readMutationLabFilters,
   writeMutationLabFilters,
 } from "../lib/mutationLabUrl";
+import {
+  DOMAIN_LABELS,
+  mutationTypeColor,
+  TYPE_LABELS,
+} from "../lib/mutationLabLabels";
 import { mutationLabQueryOptions } from "../model/mutationLabQueryOptions";
 import type {
   MutationEntry,
@@ -19,31 +24,7 @@ import type {
   MutationState,
   OrchidGroupMutation,
 } from "../model/types";
-
-const TYPE_LABELS: Record<string, string> = {
-  BASELINE_IMPORT: "기준 상태 이관",
-  CREATE: "생성",
-  UPDATE_DETAILS: "상세 수정",
-  MOVE: "이동",
-  RESERVE: "판매 예약",
-  RELEASE_RESERVATION: "예약 해제",
-  CONSUME_RESERVATION: "출고",
-  RESTORE_OUTBOUND: "출고 복구",
-  DISCARD: "폐기",
-  TRANSFORM: "구조 변경",
-  CORRECTION: "보정",
-  COMPENSATION: "보상",
-  CANCEL_CREATION: "생성 취소",
-  DELETE: "삭제",
-};
-
-const DOMAIN_LABELS: Record<string, string> = {
-  FARM: "농장",
-  WORK: "작업",
-  SALES: "판매",
-  INBOUND: "입고",
-  MIGRATION: "이관",
-};
+import { OrchidGroupMutationGraph } from "./OrchidGroupMutationGraph";
 
 export function MutationLabPage() {
   const router = useRouter();
@@ -165,6 +146,10 @@ export function MutationLabPage() {
         </form>
       </section>
 
+      {filters.orchidGroupId != null ? (
+        <OrchidGroupMutationGraph orchidGroupId={filters.orchidGroupId} />
+      ) : null}
+
       <div className="flex flex-wrap items-center justify-between gap-2 px-1 text-sm text-[#5b685f]">
         <span>
           총{" "}
@@ -224,7 +209,7 @@ function MutationCard({
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div className="flex min-w-0 items-center gap-3">
             <span
-              className={`h-10 w-1.5 shrink-0 rounded-full ${typeColor(mutation.mutationType)}`}
+              className={`h-10 w-1.5 shrink-0 rounded-full ${mutationTypeColor(mutation.mutationType)}`}
             />
             <div className="min-w-0">
               <div className="flex flex-wrap items-center gap-2">
@@ -530,17 +515,6 @@ function formatDateTime(value: string) {
     dateStyle: "short",
     timeStyle: "medium",
   }).format(new Date(value));
-}
-
-function typeColor(type: string) {
-  if (["CORRECTION", "COMPENSATION", "RESTORE_OUTBOUND"].includes(type)) {
-    return "bg-[#f59e0b]";
-  }
-  if (["DELETE", "DISCARD", "CANCEL_CREATION"].includes(type)) {
-    return "bg-[#dc5b4d]";
-  }
-  if (["CREATE", "BASELINE_IMPORT"].includes(type)) return "bg-[#3182ce]";
-  return "bg-[#159447]";
 }
 
 const fieldClass =

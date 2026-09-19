@@ -12,6 +12,7 @@ import { DemoEnvironmentBanner } from "@/widgets/demo-environment-banner/DemoEnv
 import "./globals.css";
 import "@/shared/pwa/pwa.css";
 import "leaflet/dist/leaflet.css";
+import "@xyflow/react/dist/style.css";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
