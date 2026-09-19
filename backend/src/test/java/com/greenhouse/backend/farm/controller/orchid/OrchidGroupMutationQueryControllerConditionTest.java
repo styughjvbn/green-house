@@ -3,6 +3,7 @@ package com.greenhouse.backend.farm.controller.orchid;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.mock;
 
+import com.greenhouse.backend.farm.application.orchid.mutation.OrchidGroupMutationGraphQueryService;
 import com.greenhouse.backend.farm.application.orchid.mutation.OrchidGroupMutationQueryService;
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.test.context.runner.ApplicationContextRunner;
@@ -13,6 +14,7 @@ class OrchidGroupMutationQueryControllerConditionTest {
 
 	private final ApplicationContextRunner contextRunner = new ApplicationContextRunner()
 		.withBean(OrchidGroupMutationQueryService.class, () -> mock(OrchidGroupMutationQueryService.class))
+		.withBean(OrchidGroupMutationGraphQueryService.class, () -> mock(OrchidGroupMutationGraphQueryService.class))
 		.withUserConfiguration(TestConfiguration.class);
 
 	@Test

@@ -1,107 +1,118 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { buildOrchidGroupMutationFlow } from "../src/features/mutation-lab/lib/orchidGroupMutationGraph.ts";
+import {
+  buildReadableMutationGraph,
+  layoutMutationGraph,
+} from "../src/features/mutation-lab/lib/orchidGroupMutationGraph.ts";
 
-test("builds one orchid group's graph in revision order", () => {
-  const mutations = [
-    mutation(12, 7, 2, 8, 3, 99),
-    mutation(10, 7, 1, 10, 2, 99),
-    mutation(11, 8, 1, 30, 0, 100),
+test("bundles multiple result edges behind one junction", () => {
+  const nodes = [
+    mutationNode("mutation-12", 12),
+    stateNode("group-8-revision-1", 8, 1),
+    stateNode("group-9-revision-1", 9, 1),
+  ];
+  const edges = [
+    {
+      ...edge("result-8", "mutation-12", "group-8-revision-1", "STATE_OUTPUT"),
+      entryRole: "RESULT",
+      lineageRelationType: "SPLIT_TO",
+    },
+    {
+      ...edge("result-9", "mutation-12", "group-9-revision-1", "STATE_OUTPUT"),
+      entryRole: "RESULT",
+      lineageRelationType: "SPLIT_TO",
+    },
   ];
 
-  const { points, edges } = buildOrchidGroupMutationFlow(mutations, 7);
+  const readable = buildReadableMutationGraph(nodes, edges);
 
-  assert.deepEqual(
-    points.map((point) => ({
-      mutationId: point.mutationId,
-      revision: point.revision,
-      quantity: point.quantity,
-      reservedQuantity: point.reservedQuantity,
-      availableQuantity: point.availableQuantity,
-      bedZoneId: point.bedZoneId,
-    })),
-    [
-      {
-        mutationId: 10,
-        revision: 1,
-        quantity: 10,
-        reservedQuantity: 2,
-        availableQuantity: 8,
-        bedZoneId: 99,
-      },
-      {
-        mutationId: 12,
-        revision: 2,
-        quantity: 8,
-        reservedQuantity: 3,
-        availableQuantity: 5,
-        bedZoneId: 99,
-      },
-    ],
+  assert.ok(
+    readable.nodes.some(
+      (node) =>
+        node.id === "mutation-12-result-junction" &&
+        node.nodeType === "JUNCTION",
+    ),
   );
-  assert.deepEqual(edges, [
-    {
-      id: "revision-10-12",
-      sourceMutationId: 10,
-      targetMutationId: 12,
-      kind: "revision",
-    },
-  ]);
+  assert.equal(
+    readable.edges.filter((item) => item.edgeType === "RESULT_BUNDLE").length,
+    1,
+  );
+  assert.equal(
+    readable.edges.filter((item) => item.edgeType === "RESULT_BRANCH").length,
+    2,
+  );
+  assert.equal(
+    readable.edges.some(
+      (item) =>
+        item.edgeType === "STATE_OUTPUT" && item.sourceNodeId === "mutation-12",
+    ),
+    false,
+  );
 });
 
-test("adds a deduplicated relation edge between visible mutation nodes", () => {
-  const created = mutation(10, 7, 1, 10, 0, 99);
-  const corrected = mutation(12, 7, 2, 8, 0, 99);
-  const relation = {
-    id: 44,
-    mutationId: 12,
-    relatedMutationId: 10,
-    relationType: "CORRECTS",
-  };
-  created.relations = [relation];
-  corrected.relations = [relation];
+test("lays out state and mutation nodes in directed revision order", () => {
+  const nodes = [
+    stateNode("group-7-revision-1", 7, 1),
+    mutationNode("mutation-12", 12),
+    stateNode("group-7-revision-2", 7, 2),
+    stateNode("group-8-revision-1", 8, 1),
+  ];
+  const edges = [
+    edge("input", "group-7-revision-1", "mutation-12", "STATE_INPUT"),
+    edge("source-output", "mutation-12", "group-7-revision-2", "STATE_OUTPUT"),
+    edge("result-output", "mutation-12", "group-8-revision-1", "STATE_OUTPUT"),
+  ];
 
-  const { edges } = buildOrchidGroupMutationFlow([corrected, created], 7);
+  const laidOut = layoutMutationGraph(nodes, edges);
+  const byId = new Map(laidOut.map((node) => [node.id, node.position]));
 
-  assert.deepEqual(edges.at(-1), {
-    id: "relation-44",
-    sourceMutationId: 12,
-    targetMutationId: 10,
-    kind: "relation",
-    relationType: "CORRECTS",
+  assert.ok(byId.get("group-7-revision-1").x < byId.get("mutation-12").x);
+  assert.ok(byId.get("mutation-12").x < byId.get("group-7-revision-2").x);
+  assert.ok(byId.get("mutation-12").x < byId.get("group-8-revision-1").x);
+  assert.notEqual(
+    byId.get("group-7-revision-2").y,
+    byId.get("group-8-revision-1").y,
+  );
+});
+
+test("does not let correction relation edges change the history layout", () => {
+  const nodes = [mutationNode("mutation-1", 1), mutationNode("mutation-2", 2)];
+  const relation = edge(
+    "relation",
+    "mutation-2",
+    "mutation-1",
+    "MUTATION_RELATION",
+  );
+
+  const laidOut = layoutMutationGraph(nodes, [relation]);
+
+  assert.equal(laidOut.length, 2);
+  laidOut.forEach((node) => {
+    assert.equal(Number.isFinite(node.position.x), true);
+    assert.equal(Number.isFinite(node.position.y), true);
   });
-  assert.equal(edges.filter((edge) => edge.kind === "relation").length, 1);
 });
 
-function mutation(id, orchidGroupId, revision, quantity, reserved, bedZoneId) {
+function stateNode(id, orchidGroupId, revision) {
   return {
     id,
-    mutationType: revision === 1 ? "CREATE" : "RESERVE",
-    sourceDomain: revision === 1 ? "FARM" : "SALES",
-    sourceType: "TEST",
-    sourceReferenceId: String(id),
-    sourceOperationKey: "TEST",
-    correlationId: "00000000-0000-0000-0000-000000000000",
-    commandFingerprint: "a".repeat(64),
-    occurredAt: `2026-09-${10 + revision}T00:00:00Z`,
-    recordedAt: `2026-09-${10 + revision}T00:00:00Z`,
-    effectiveBusinessDate: `2026-09-${10 + revision}`,
-    schemaVersion: 1,
-    relations: [],
-    entries: [
-      {
-        id,
-        orchidGroupId,
-        entryKind: revision === 1 ? "CREATE" : "CHANGE",
-        role: "AFFECTED",
-        stateRevisionAfter: revision,
-        afterState: {
-          quantity,
-          reservedQuantity: reserved,
-          status: "NORMAL",
-          bedZoneId,
-        },
-      },
-    ],
+    nodeType: "STATE",
+    orchidGroupId,
+    stateRevision: revision,
+    state: { quantity: 10, reservedQuantity: 0 },
   };
+}
+
+function mutationNode(id, mutationId) {
+  return {
+    id,
+    nodeType: "MUTATION",
+    mutationId,
+    mutationType: "TRANSFORM",
+    sourceDomain: "WORK",
+  };
+}
+
+function edge(id, sourceNodeId, targetNodeId, edgeType) {
+  return { id, sourceNodeId, targetNodeId, edgeType };
 }

@@ -2,6 +2,7 @@ package com.greenhouse.backend;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import com.greenhouse.backend.farm.application.orchid.mutation.OrchidGroupMutationGraphQueryService;
 import com.greenhouse.backend.farm.application.orchid.mutation.OrchidGroupMutationQueryService;
 import com.greenhouse.backend.farm.domain.orchid.mutation.OrchidGroupMutation;
 import com.greenhouse.backend.farm.domain.orchid.mutation.OrchidGroupMutationEntry;
@@ -28,6 +29,9 @@ class OrchidGroupMutationQueryServiceIntegrationTest extends AbstractBackendInte
 
 	@Autowired
 	OrchidGroupMutationQueryService queryService;
+
+	@Autowired
+	OrchidGroupMutationGraphQueryService graphQueryService;
 
 	@Autowired
 	OrchidGroupMutationRepository mutationRepository;
@@ -70,6 +74,51 @@ class OrchidGroupMutationQueryServiceIntegrationTest extends AbstractBackendInte
 
 		var filtered = queryService.getMutations(orchidGroupId, OrchidGroupMutationType.CORRECTION, null, 0, 20);
 		assertThat(filtered.content()).singleElement().extracting("id").isEqualTo(corrected.getId());
+
+		var graph = graphQueryService.getGraph(orchidGroupId, 0, 20);
+		assertThat(graph.truncated()).isFalse();
+		assertThat(graph.nodes()).extracting("id")
+			.containsExactlyInAnyOrder("mutation-" + created.getId(), "mutation-" + corrected.getId(),
+					"group-" + orchidGroupId + "-revision-1", "group-" + orchidGroupId + "-revision-2");
+		assertThat(graph.edges()).extracting("edgeType")
+			.containsExactlyInAnyOrder(
+					com.greenhouse.backend.farm.dto.orchid.OrchidGroupMutationGraphEdgeType.STATE_INPUT,
+					com.greenhouse.backend.farm.dto.orchid.OrchidGroupMutationGraphEdgeType.STATE_OUTPUT,
+					com.greenhouse.backend.farm.dto.orchid.OrchidGroupMutationGraphEdgeType.STATE_OUTPUT,
+					com.greenhouse.backend.farm.dto.orchid.OrchidGroupMutationGraphEdgeType.MUTATION_RELATION);
+	}
+
+	@Test
+	void expandsTransformResultsAndTheirMutationHistoryWithinDepth() {
+		long sourceGroupId = 92_001L;
+		long resultGroupId = 92_002L;
+		var created = saveMutation(OrchidGroupMutationType.CREATE, "CREATE_SOURCE",
+				Instant.parse("2026-09-18T01:00:00Z"));
+		entryRepository.save(OrchidGroupMutationEntry.created(created, sourceGroupId,
+				OrchidGroupMutationEntryRole.RESULT, snapshot(10, 0, "정상")));
+
+		var transformed = saveMutation(OrchidGroupMutationType.TRANSFORM, "DIVIDE",
+				Instant.parse("2026-09-18T02:00:00Z"));
+		entryRepository.save(OrchidGroupMutationEntry.changed(transformed, sourceGroupId,
+				OrchidGroupMutationEntryRole.SOURCE, 1L, snapshot(10, 0, "정상"), snapshot(4, 0, "정상")));
+		entryRepository.save(OrchidGroupMutationEntry.created(transformed, resultGroupId,
+				OrchidGroupMutationEntryRole.RESULT, snapshot(6, 0, "정상")));
+
+		var moved = saveMutation(OrchidGroupMutationType.MOVE, "MOVE_RESULT", Instant.parse("2026-09-18T03:00:00Z"));
+		entryRepository.save(OrchidGroupMutationEntry.changed(moved, resultGroupId,
+				OrchidGroupMutationEntryRole.AFFECTED, 1L, snapshot(6, 0, "정상"), snapshot(6, 0, "이동")));
+
+		var graph = graphQueryService.getGraph(sourceGroupId, 1, 40);
+
+		assertThat(graph.nodes()).extracting("id")
+			.contains("mutation-" + transformed.getId(), "mutation-" + moved.getId(),
+					"group-" + sourceGroupId + "-revision-2", "group-" + resultGroupId + "-revision-1",
+					"group-" + resultGroupId + "-revision-2");
+		assertThat(graph.edges()).anySatisfy(edge -> {
+			assertThat(edge.sourceNodeId()).isEqualTo("mutation-" + transformed.getId());
+			assertThat(edge.targetNodeId()).isEqualTo("group-" + resultGroupId + "-revision-1");
+			assertThat(edge.entryRole()).isEqualTo(OrchidGroupMutationEntryRole.RESULT);
+		});
 	}
 
 	private OrchidGroupMutation saveMutation(OrchidGroupMutationType type, String operation, Instant occurredAt) {

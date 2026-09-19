@@ -1429,6 +1429,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/orchid-group-mutations/graph/{orchidGroupId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["getMutationGraph"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/houses": {
         parameters: {
             query?: never;
@@ -3820,6 +3836,60 @@ export interface components {
             totalElements?: number;
             /** Format: int32 */
             totalPages?: number;
+        };
+        ApiResponseOrchidGroupMutationGraphResponse: {
+            data?: components["schemas"]["OrchidGroupMutationGraphResponse"];
+            message?: string;
+        };
+        OrchidGroupMutationGraphEdgeResponse: {
+            id?: string;
+            sourceNodeId?: string;
+            targetNodeId?: string;
+            /** @enum {string} */
+            edgeType?: "STATE_INPUT" | "STATE_OUTPUT" | "MUTATION_RELATION";
+            /** @enum {string} */
+            entryRole?: "SOURCE" | "RESULT" | "AFFECTED";
+            /** @enum {string} */
+            mutationRelationType?: "CORRECTS" | "COMPENSATES" | "SUPERSEDES";
+            /** @enum {string} */
+            lineageRelationType?: "CREATED_FROM_INBOUND" | "REPOTTED_TO" | "SPLIT_TO" | "MERGED_TO" | "MOVED_TO" | "POTTED_TO" | "CORRECTED_TO";
+        };
+        OrchidGroupMutationGraphNodeResponse: {
+            id?: string;
+            /** @enum {string} */
+            nodeType?: "STATE" | "MUTATION";
+            /** Format: int64 */
+            orchidGroupId?: number;
+            /** Format: int64 */
+            stateRevision?: number;
+            state?: components["schemas"]["OrchidGroupMutationStateResponse"];
+            /** Format: int64 */
+            mutationId?: number;
+            /** @enum {string} */
+            mutationType?: "BASELINE_IMPORT" | "CREATE" | "UPDATE_DETAILS" | "MOVE" | "RESERVE" | "RELEASE_RESERVATION" | "CONSUME_RESERVATION" | "RESTORE_OUTBOUND" | "DISCARD" | "TRANSFORM" | "CORRECTION" | "COMPENSATION" | "CANCEL_CREATION" | "DELETE";
+            /** @enum {string} */
+            sourceDomain?: "FARM" | "WORK" | "SALES" | "INBOUND" | "MIGRATION";
+            sourceType?: string;
+            sourceReferenceId?: string;
+            /** Format: date */
+            effectiveBusinessDate?: string;
+            /** Format: date-time */
+            occurredAt?: string;
+            /** @enum {string} */
+            entryKind?: "BASELINE" | "CREATE" | "CHANGE" | "DELETE";
+            /** @enum {string} */
+            entryRole?: "SOURCE" | "RESULT" | "AFFECTED";
+        };
+        OrchidGroupMutationGraphResponse: {
+            /** Format: int64 */
+            rootOrchidGroupId?: number;
+            /** Format: int32 */
+            depth?: number;
+            /** Format: int32 */
+            maxNodes?: number;
+            truncated?: boolean;
+            nodes?: components["schemas"]["OrchidGroupMutationGraphNodeResponse"][];
+            edges?: components["schemas"]["OrchidGroupMutationGraphEdgeResponse"][];
         };
         ApiResponsePageResponseMaterialResponse: {
             data?: components["schemas"]["PageResponseMaterialResponse"];
@@ -6969,6 +7039,31 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ApiResponsePageResponseOrchidGroupMutationResponse"];
+                };
+            };
+        };
+    };
+    getMutationGraph: {
+        parameters: {
+            query?: {
+                depth?: number;
+                maxNodes?: number;
+            };
+            header?: never;
+            path: {
+                orchidGroupId: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiResponseOrchidGroupMutationGraphResponse"];
                 };
             };
         };

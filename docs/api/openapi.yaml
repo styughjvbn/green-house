@@ -2683,6 +2683,39 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ApiResponsePageResponseOrchidGroupMutationResponse'
+  /api/orchid-group-mutations/graph/{orchidGroupId}:
+    get:
+      tags:
+      - orchid-group-mutation-query-controller
+      operationId: getMutationGraph
+      parameters:
+      - name: orchidGroupId
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: int64
+      - name: depth
+        in: query
+        required: false
+        schema:
+          type: integer
+          format: int32
+          default: 2
+      - name: maxNodes
+        in: query
+        required: false
+        schema:
+          type: integer
+          format: int32
+          default: 120
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponseOrchidGroupMutationGraphResponse'
   /api/houses:
     get:
       tags:
@@ -7821,6 +7854,141 @@ components:
         totalPages:
           type: integer
           format: int32
+    ApiResponseOrchidGroupMutationGraphResponse:
+      type: object
+      properties:
+        data:
+          $ref: '#/components/schemas/OrchidGroupMutationGraphResponse'
+        message:
+          type: string
+    OrchidGroupMutationGraphEdgeResponse:
+      type: object
+      properties:
+        id:
+          type: string
+        sourceNodeId:
+          type: string
+        targetNodeId:
+          type: string
+        edgeType:
+          type: string
+          enum:
+          - STATE_INPUT
+          - STATE_OUTPUT
+          - MUTATION_RELATION
+        entryRole:
+          type: string
+          enum:
+          - SOURCE
+          - RESULT
+          - AFFECTED
+        mutationRelationType:
+          type: string
+          enum:
+          - CORRECTS
+          - COMPENSATES
+          - SUPERSEDES
+        lineageRelationType:
+          type: string
+          enum:
+          - CREATED_FROM_INBOUND
+          - REPOTTED_TO
+          - SPLIT_TO
+          - MERGED_TO
+          - MOVED_TO
+          - POTTED_TO
+          - CORRECTED_TO
+    OrchidGroupMutationGraphNodeResponse:
+      type: object
+      properties:
+        id:
+          type: string
+        nodeType:
+          type: string
+          enum:
+          - STATE
+          - MUTATION
+        orchidGroupId:
+          type: integer
+          format: int64
+        stateRevision:
+          type: integer
+          format: int64
+        state:
+          $ref: '#/components/schemas/OrchidGroupMutationStateResponse'
+        mutationId:
+          type: integer
+          format: int64
+        mutationType:
+          type: string
+          enum:
+          - BASELINE_IMPORT
+          - CREATE
+          - UPDATE_DETAILS
+          - MOVE
+          - RESERVE
+          - RELEASE_RESERVATION
+          - CONSUME_RESERVATION
+          - RESTORE_OUTBOUND
+          - DISCARD
+          - TRANSFORM
+          - CORRECTION
+          - COMPENSATION
+          - CANCEL_CREATION
+          - DELETE
+        sourceDomain:
+          type: string
+          enum:
+          - FARM
+          - WORK
+          - SALES
+          - INBOUND
+          - MIGRATION
+        sourceType:
+          type: string
+        sourceReferenceId:
+          type: string
+        effectiveBusinessDate:
+          type: string
+          format: date
+        occurredAt:
+          type: string
+          format: date-time
+        entryKind:
+          type: string
+          enum:
+          - BASELINE
+          - CREATE
+          - CHANGE
+          - DELETE
+        entryRole:
+          type: string
+          enum:
+          - SOURCE
+          - RESULT
+          - AFFECTED
+    OrchidGroupMutationGraphResponse:
+      type: object
+      properties:
+        rootOrchidGroupId:
+          type: integer
+          format: int64
+        depth:
+          type: integer
+          format: int32
+        maxNodes:
+          type: integer
+          format: int32
+        truncated:
+          type: boolean
+        nodes:
+          type: array
+          items:
+            $ref: '#/components/schemas/OrchidGroupMutationGraphNodeResponse'
+        edges:
+          type: array
+          items:
+            $ref: '#/components/schemas/OrchidGroupMutationGraphEdgeResponse'
     ApiResponsePageResponseMaterialResponse:
       type: object
       properties:

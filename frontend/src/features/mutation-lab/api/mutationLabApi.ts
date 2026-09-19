@@ -1,5 +1,9 @@
 import { fetchApi } from "@/shared/api/client";
-import type { MutationLabFilters, MutationPage } from "../model/types";
+import type {
+  MutationGraph,
+  MutationLabFilters,
+  MutationPage,
+} from "../model/types";
 
 export function getOrchidGroupMutations(
   filters: MutationLabFilters,
@@ -21,4 +25,20 @@ export function getOrchidGroupMutations(
   return fetchApi<MutationPage>(`/orchid-group-mutations?${params}`, {
     signal,
   });
+}
+
+export function getOrchidGroupMutationGraph(
+  orchidGroupId: number,
+  depth: number,
+  maxNodes: number,
+  signal?: AbortSignal,
+) {
+  const params = new URLSearchParams({
+    depth: String(depth),
+    maxNodes: String(maxNodes),
+  });
+  return fetchApi<MutationGraph>(
+    `/orchid-group-mutations/graph/${orchidGroupId}?${params}`,
+    { signal },
+  );
 }

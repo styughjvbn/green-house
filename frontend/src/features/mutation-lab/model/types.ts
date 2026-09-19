@@ -77,6 +77,49 @@ export type OrchidGroupMutation = {
 
 export type MutationPage = Page<OrchidGroupMutation>;
 
+export type MutationGraphNodeType = NonNullable<
+  ApiSchemas["OrchidGroupMutationGraphNodeResponse"]["nodeType"]
+>;
+export type MutationGraphEdgeType = NonNullable<
+  ApiSchemas["OrchidGroupMutationGraphEdgeResponse"]["edgeType"]
+>;
+
+export type MutationGraphNode = {
+  id: string;
+  nodeType: MutationGraphNodeType;
+  orchidGroupId?: number | null;
+  stateRevision?: number | null;
+  state?: MutationState | null;
+  mutationId?: number | null;
+  mutationType?: MutationType | null;
+  sourceDomain?: MutationSourceDomain | null;
+  sourceType?: string | null;
+  sourceReferenceId?: string | null;
+  effectiveBusinessDate?: string | null;
+  occurredAt?: string | null;
+  entryKind?: MutationEntryKind | null;
+  entryRole?: MutationEntryRole | null;
+};
+
+export type MutationGraphEdge = {
+  id: string;
+  sourceNodeId: string;
+  targetNodeId: string;
+  edgeType: MutationGraphEdgeType;
+  entryRole?: MutationEntryRole | null;
+  mutationRelationType?: MutationRelationType | null;
+  lineageRelationType?: string | null;
+};
+
+export type MutationGraph = {
+  rootOrchidGroupId: number;
+  depth: number;
+  maxNodes: number;
+  truncated: boolean;
+  nodes: MutationGraphNode[];
+  edges: MutationGraphEdge[];
+};
+
 export type MutationLabFilters = {
   orchidGroupId: number | null;
   mutationType: MutationType | null;

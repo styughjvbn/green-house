@@ -1,119 +1,131 @@
-import type {
-  MutationEntry,
-  MutationState,
-  OrchidGroupMutation,
-} from "../model/types";
+import dagre from "@dagrejs/dagre";
+import type { MutationGraphEdge, MutationGraphNode } from "../model/types";
 
-export type OrchidGroupMutationGraphPoint = {
-  mutationId: number;
-  mutationType: OrchidGroupMutation["mutationType"];
-  sourceDomain: OrchidGroupMutation["sourceDomain"];
-  occurredAt: string;
-  effectiveBusinessDate: string;
-  revision: number;
-  quantity: number | null;
-  reservedQuantity: number | null;
-  availableQuantity: number | null;
-  status: string | null;
-  bedZoneId: number | null;
-  entry: MutationEntry;
+export type MutationGraphViewNode =
+  | MutationGraphNode
+  | {
+      id: string;
+      nodeType: "JUNCTION";
+      mutationId: number | null;
+    };
+
+export type MutationGraphViewEdge = Omit<MutationGraphEdge, "edgeType"> & {
+  edgeType: MutationGraphEdge["edgeType"] | "RESULT_BUNDLE" | "RESULT_BRANCH";
 };
 
-export type OrchidGroupMutationGraphEdge = {
-  id: string;
-  sourceMutationId: number;
-  targetMutationId: number;
-  kind: "revision" | "relation";
-  relationType?: string;
+export type MutationGraphLayoutNode = MutationGraphViewNode & {
+  position: { x: number; y: number };
 };
 
-export type OrchidGroupMutationGraph = {
-  points: OrchidGroupMutationGraphPoint[];
-  edges: OrchidGroupMutationGraphEdge[];
-};
+const STATE_SIZE = { width: 250, height: 152 };
+const MUTATION_SIZE = { width: 220, height: 112 };
+const JUNCTION_SIZE = { width: 22, height: 22 };
 
-export function buildOrchidGroupMutationFlow(
-  mutations: OrchidGroupMutation[],
-  orchidGroupId: number,
-): OrchidGroupMutationGraph {
-  const points = buildOrchidGroupMutationGraph(mutations, orchidGroupId);
-  const mutationIds = new Set(points.map((point) => point.mutationId));
-  const revisionEdges = points.slice(1).map((point, index) => ({
-    id: `revision-${points[index].mutationId}-${point.mutationId}`,
-    sourceMutationId: points[index].mutationId,
-    targetMutationId: point.mutationId,
-    kind: "revision" as const,
-  }));
-  const relations = new Map<number, OrchidGroupMutation["relations"][number]>();
-  mutations.forEach((mutation) => {
-    mutation.relations.forEach((relation) =>
-      relations.set(relation.id, relation),
+export function buildReadableMutationGraph(
+  nodes: MutationGraphNode[],
+  edges: MutationGraphEdge[],
+) {
+  const resultEdgesByMutation = new Map<string, MutationGraphEdge[]>();
+  edges.forEach((edge) => {
+    if (edge.edgeType === "STATE_OUTPUT" && edge.entryRole === "RESULT") {
+      const resultEdges = resultEdgesByMutation.get(edge.sourceNodeId) ?? [];
+      resultEdges.push(edge);
+      resultEdgesByMutation.set(edge.sourceNodeId, resultEdges);
+    }
+  });
+
+  const bundledEdgeIds = new Set(
+    [...resultEdgesByMutation.values()]
+      .filter((resultEdges) => resultEdges.length > 1)
+      .flatMap((resultEdges) => resultEdges.map((edge) => edge.id)),
+  );
+  const viewNodes: MutationGraphViewNode[] = [...nodes];
+  const viewEdges: MutationGraphViewEdge[] = edges.filter(
+    (edge) => !bundledEdgeIds.has(edge.id),
+  );
+
+  resultEdgesByMutation.forEach((resultEdges, mutationNodeId) => {
+    if (resultEdges.length < 2) return;
+    const junctionId = `${mutationNodeId}-result-junction`;
+    const mutationNode = nodes.find((node) => node.id === mutationNodeId);
+    viewNodes.push({
+      id: junctionId,
+      nodeType: "JUNCTION",
+      mutationId: mutationNode?.mutationId ?? null,
+    });
+    viewEdges.push({
+      id: `${mutationNodeId}-result-bundle`,
+      sourceNodeId: mutationNodeId,
+      targetNodeId: junctionId,
+      edgeType: "RESULT_BUNDLE",
+      entryRole: "RESULT",
+    });
+    resultEdges.forEach((edge) =>
+      viewEdges.push({
+        ...edge,
+        sourceNodeId: junctionId,
+        edgeType: "RESULT_BRANCH",
+      }),
     );
   });
-  const relationEdges = [...relations.values()]
-    .filter(
-      (relation) =>
-        mutationIds.has(relation.mutationId) &&
-        mutationIds.has(relation.relatedMutationId) &&
-        relation.mutationId !== relation.relatedMutationId,
-    )
-    .map((relation) => ({
-      id: `relation-${relation.id}`,
-      sourceMutationId: relation.mutationId,
-      targetMutationId: relation.relatedMutationId,
-      kind: "relation" as const,
-      relationType: relation.relationType,
-    }));
 
-  return { points, edges: [...revisionEdges, ...relationEdges] };
+  return { nodes: viewNodes, edges: viewEdges };
 }
 
-export function buildOrchidGroupMutationGraph(
-  mutations: OrchidGroupMutation[],
-  orchidGroupId: number,
-): OrchidGroupMutationGraphPoint[] {
-  return mutations
-    .flatMap((mutation) =>
-      mutation.entries
-        .filter((entry) => entry.orchidGroupId === orchidGroupId)
-        .map((entry) => toGraphPoint(mutation, entry)),
-    )
-    .sort(
-      (left, right) =>
-        left.revision - right.revision || left.mutationId - right.mutationId,
-    );
+export function layoutMutationGraph(
+  nodes: MutationGraphViewNode[],
+  edges: MutationGraphViewEdge[],
+): MutationGraphLayoutNode[] {
+  const graph = new dagre.graphlib.Graph().setDefaultEdgeLabel(() => ({}));
+  graph.setGraph({
+    rankdir: "LR",
+    ranksep: 80,
+    nodesep: 48,
+    marginx: 28,
+    marginy: 28,
+  });
+
+  nodes.forEach((node) => graph.setNode(node.id, { ...nodeSize(node) }));
+  edges
+    .filter((edge) => edge.edgeType !== "MUTATION_RELATION")
+    .forEach((edge) => graph.setEdge(edge.sourceNodeId, edge.targetNodeId));
+  dagre.layout(graph);
+
+  const positions = new Map(
+    nodes.map((node) => {
+      const size = nodeSize(node);
+      const position = graph.node(node.id) as { x: number; y: number };
+      return [
+        node.id,
+        { x: position.x - size.width / 2, y: position.y - size.height / 2 },
+      ] as const;
+    }),
+  );
+
+  edges
+    .filter((edge) => edge.edgeType === "RESULT_BUNDLE")
+    .forEach((edge) => {
+      const mutationPosition = positions.get(edge.sourceNodeId);
+      const junctionPosition = positions.get(edge.targetNodeId);
+      if (mutationPosition && junctionPosition) {
+        positions.set(edge.targetNodeId, {
+          ...junctionPosition,
+          y:
+            mutationPosition.y +
+            MUTATION_SIZE.height * 0.78 -
+            JUNCTION_SIZE.height / 2,
+        });
+      }
+    });
+
+  return nodes.map((node) => ({
+    ...node,
+    position: positions.get(node.id) ?? { x: 0, y: 0 },
+  }));
 }
 
-function toGraphPoint(
-  mutation: OrchidGroupMutation,
-  entry: MutationEntry,
-): OrchidGroupMutationGraphPoint {
-  const state = entry.afterState;
-  const quantity = stateNumber(state, "quantity");
-  const reservedQuantity = stateNumber(state, "reservedQuantity");
-  return {
-    mutationId: mutation.id,
-    mutationType: mutation.mutationType,
-    sourceDomain: mutation.sourceDomain,
-    occurredAt: mutation.occurredAt,
-    effectiveBusinessDate: mutation.effectiveBusinessDate,
-    revision: entry.stateRevisionAfter,
-    quantity,
-    reservedQuantity,
-    availableQuantity:
-      quantity == null || reservedQuantity == null
-        ? null
-        : quantity - reservedQuantity,
-    status: state?.status ?? null,
-    bedZoneId: state?.bedZoneId ?? null,
-    entry,
-  };
-}
-
-function stateNumber(
-  state: MutationState | null | undefined,
-  key: "quantity" | "reservedQuantity",
-) {
-  const value = state?.[key];
-  return typeof value === "number" ? value : null;
+function nodeSize(node: MutationGraphViewNode) {
+  if (node.nodeType === "STATE") return STATE_SIZE;
+  if (node.nodeType === "MUTATION") return MUTATION_SIZE;
+  return JUNCTION_SIZE;
 }
