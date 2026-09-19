@@ -22,10 +22,11 @@ fallback writer를 추가하지 않는다. 단일 원본 Lineage와 Work 결과 
 조회 소비자가 있으므로 보존한다. `LegacyStructureChangeRequestMapper`와 과거
 source 표시는 기존 HTTP 계약·이력 해석이며 제거한 직접 writer와 구분한다.
 
-`/mutation-lab`은 Mutation 헤더, Entry의 전후 snapshot과 revision, 보정·보상 관계를
-읽기 전용으로 확인하는 진단 화면이다. 조회 API는 root Mutation을 먼저 페이지로 읽고
-해당 페이지의 Entry와 연결 관계를 일괄 조회한다. 이 화면은 원장을 수정하거나 replay하는
-운영 도구가 아니며, 복구 CLI와 write fence를 우회하지 않는다.
+`/mutation-lab`은 `APP_ENV=dev`에서만 Mutation 헤더, Entry의 전후 snapshot과 revision,
+보정·보상 관계를 읽기 전용으로 확인하는 진단 화면이다. 조회 API는 root Mutation을 먼저
+페이지로 읽고 해당 페이지의 Entry와 연결 관계를 일괄 조회한다. `prod`에서는 메뉴와
+페이지, `/api/orchid-group-mutations` API를 모두 비활성화한다. 이 화면은 원장을 수정하거나
+replay하는 운영 도구가 아니며, 복구 CLI와 write fence를 우회하지 않는다.
 
 ## 제거 완료 범위
 

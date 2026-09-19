@@ -2,6 +2,8 @@
 
 set -Eeuo pipefail
 
+export APP_ENV=dev
+
 NO_DB=false
 LAN=false
 FRONTEND_PRODUCTION=false

@@ -4,6 +4,7 @@ import { Geist } from "next/font/google";
 import { DEFAULT_FONT_SCALE, FontScaleInitializer } from "@/features/settings";
 import { QueryProvider } from "@/shared/api/QueryProvider";
 import { getRuntimeContext } from "@/shared/api/runtimeContext";
+import { resolveAppEnvironment } from "@/shared/config/appEnvironment";
 import { PwaRuntime } from "@/shared/pwa";
 import { RuntimeContextProvider } from "@/shared/runtime/RuntimeContext";
 import { AppShell } from "@/widgets/app-shell/AppShell";
@@ -30,6 +31,10 @@ export default async function RootLayout({
   children: React.ReactNode;
 }>) {
   const demoMode = process.env.DEMO_MODE === "true";
+  const appEnvironment = resolveAppEnvironment(
+    process.env.APP_ENV,
+    process.env.NODE_ENV,
+  );
   const runtimeContext = await getRuntimeContext().catch(() => null);
 
   return (
@@ -57,7 +62,9 @@ export default async function RootLayout({
               {demoMode ? <DemoEnvironmentBanner /> : null}
               <div className={demoMode ? "min-h-0 flex-1" : undefined}>
                 <Suspense fallback={null}>
-                  <AppShell demoMode={demoMode}>{children}</AppShell>
+                  <AppShell appEnvironment={appEnvironment} demoMode={demoMode}>
+                    {children}
+                  </AppShell>
                 </Suspense>
               </div>
             </div>

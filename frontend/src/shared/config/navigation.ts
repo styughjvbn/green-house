@@ -32,6 +32,7 @@ export type NavigationItem = {
   label: string;
   icon: LucideIcon;
   children?: NavigationChild[];
+  developmentOnly?: boolean;
 };
 
 export type PageMeta = {
@@ -122,6 +123,7 @@ export const NAVIGATION = [
     href: COMMON_ROUTES.mutationLab,
     label: "Mutation 테스트",
     icon: GitBranch,
+    developmentOnly: true,
   },
   { href: COMMON_ROUTES.settings, label: "설정", icon: Settings },
 ] satisfies NavigationItem[];

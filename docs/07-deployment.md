@@ -16,7 +16,7 @@ docker compose up -d db
 
 # backend 실행
 cd backend
-./gradlew bootRun
+APP_ENV=dev ./gradlew bootRun
 
 # frontend 실행
 cd frontend
@@ -50,6 +50,7 @@ Linux/macOS에서는 개발 서버를 한 번에 실행할 수 있다.
 ### Backend
 
 ```text
+APP_ENV
 DATABASE_URL
 DATABASE_USERNAME
 DATABASE_PASSWORD
@@ -102,10 +103,18 @@ DEMO_MAX_REQUEST_BYTES
 ### Frontend
 
 ```text
+APP_ENV
 BACKEND_API_URL
 API_BASE_URL
 NEXT_PUBLIC_API_BASE_URL
 ```
+
+`APP_ENV`는 실행 환경을 `dev` 또는 `prod`로 명시한다. 로컬 `dev-start.sh`는 `dev`를
+강제하고 Kubernetes와 프론트 Docker 이미지는 `prod`를 명시한다. 값이 없는 프론트는
+Next.js의 `NODE_ENV=development`일 때만 `dev`로 보정하며 그 외에는 `prod`로 처리한다.
+백엔드는 값이 없으면 `prod`로 처리한다. `/mutation-lab` 메뉴·페이지와
+`/api/orchid-group-mutations` 진단 API는 `dev`에서만 활성화된다. `DEMO_MODE`는 이 구분과
+독립적인 데모 인증·제한 설정이다.
 
 ## 3. 초기 데이터
 

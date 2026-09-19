@@ -7,6 +7,7 @@ import com.greenhouse.backend.farm.domain.orchid.mutation.OrchidGroupMutationSou
 import com.greenhouse.backend.farm.domain.orchid.mutation.OrchidGroupMutationType;
 import com.greenhouse.backend.farm.dto.orchid.OrchidGroupMutationResponse;
 import lombok.RequiredArgsConstructor;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
@@ -15,6 +16,7 @@ import org.springframework.web.bind.annotation.RestController;
 @RestController
 @RequestMapping("/api/orchid-group-mutations")
 @RequiredArgsConstructor
+@ConditionalOnProperty(name = "app.environment", havingValue = "dev")
 public class OrchidGroupMutationQueryController {
 
 	private final OrchidGroupMutationQueryService queryService;

@@ -71,6 +71,7 @@ def generate_from_temporary_backend(port: int, timeout_seconds: int) -> dict[str
         {
             "SERVER_PORT": str(port),
             "AUTH_ENABLED": "false",
+            "APP_ENV": "dev",
         }
     )
 

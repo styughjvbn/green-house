@@ -74,7 +74,7 @@ backend/src/main/resources/db/migration/
 
 ```bash
 cd backend
-./gradlew bootRun
+APP_ENV=dev ./gradlew bootRun
 ```
 
 Windows PowerShell:
