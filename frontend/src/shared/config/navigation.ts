@@ -11,6 +11,7 @@ import {
   BarChart3,
   ClipboardList,
   Flower2,
+  GitBranch,
   Home,
   PackageCheck,
   Settings,
@@ -76,6 +77,11 @@ export const PAGE_META = [
     description: "품종과 자재, 비료 정보를 등록하고 관리하세요.",
   },
   {
+    href: COMMON_ROUTES.mutationLab,
+    title: "Mutation 테스트",
+    description: "난 묶음 Mutation 원장의 상태 전이와 연결 관계를 확인하세요.",
+  },
+  {
     href: COMMON_ROUTES.settings,
     title: "설정",
     description: "서비스 설정을 관리하세요.",
@@ -111,6 +117,11 @@ export const NAVIGATION = [
     label: "품종/자재 관리",
     icon: PackageCheck,
     children: INVENTORY_NAV_ITEMS,
+  },
+  {
+    href: COMMON_ROUTES.mutationLab,
+    label: "Mutation 테스트",
+    icon: GitBranch,
   },
   { href: COMMON_ROUTES.settings, label: "설정", icon: Settings },
 ] satisfies NavigationItem[];

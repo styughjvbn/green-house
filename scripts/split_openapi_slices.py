@@ -26,6 +26,7 @@ DOMAIN_MAP = dict(
             "multi-create-work-operation-controller",
             "repot-work-operation-controller",
         ]),
+        ("orchid-mutation", ["orchid-group-mutation-query-controller"]),
         ("inventory", ["variety-controller", "material-controller", "inbound-record-controller"]),
         ("orchid-collection", ["orchid-group-collection-controller"]),
         ("derived-orchid-group", ["derived-orchid-group-controller"]),

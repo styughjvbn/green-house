@@ -35,6 +35,7 @@ npm run api:types
 | `farm-structure.openapi.yaml` | 하우스, 물리 배드, 논리 구역, 난 묶음 조회 |
 | `farm-status.openapi.yaml` | 농장 현황 맵, 선택 범위 조회, 대시보드 요약 |
 | `orchid-command.openapi.yaml` | 난 묶음 생성, 다중 생성·분갈이 작업, 수정, 이동, 배치 |
+| `orchid-mutation.openapi.yaml` | 난 묶음 Mutation 원장의 헤더, Entry 전후 상태와 관계 조회 |
 | `inventory.openapi.yaml` | 품종 CRUD/삭제, 자재 CRUD/삭제, 입고 기록 생성/수정/포트작업/취소/삭제, 목록 페이지네이션 |
 | `orchid-collection.openapi.yaml` | 난 묶음 사용자 그룹과 소속 관리 |
 | `derived-orchid-group.openapi.yaml` | 품종·년생·화분 크기 기준 자동 그룹 조회 |

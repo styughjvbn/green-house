@@ -1413,6 +1413,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/orchid-group-mutations": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["getMutations"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/houses": {
         parameters: {
             query?: never;
@@ -3711,6 +3727,99 @@ export interface components {
             totalQuantity?: number;
             /** Format: int32 */
             locationCount?: number;
+        };
+        ApiResponsePageResponseOrchidGroupMutationResponse: {
+            data?: components["schemas"]["PageResponseOrchidGroupMutationResponse"];
+            message?: string;
+        };
+        OrchidGroupMutationEntryResponse: {
+            /** Format: int64 */
+            id?: number;
+            /** Format: int64 */
+            orchidGroupId?: number;
+            /** @enum {string} */
+            entryKind?: "BASELINE" | "CREATE" | "CHANGE" | "DELETE";
+            /** @enum {string} */
+            role?: "SOURCE" | "RESULT" | "AFFECTED";
+            /** Format: int64 */
+            stateRevisionBefore?: number;
+            /** Format: int64 */
+            stateRevisionAfter?: number;
+            beforeState?: components["schemas"]["OrchidGroupMutationStateResponse"];
+            afterState?: components["schemas"]["OrchidGroupMutationStateResponse"];
+        };
+        OrchidGroupMutationRelationResponse: {
+            /** Format: int64 */
+            id?: number;
+            /** Format: int64 */
+            mutationId?: number;
+            /** Format: int64 */
+            relatedMutationId?: number;
+            /** @enum {string} */
+            relationType?: "CORRECTS" | "COMPENSATES" | "SUPERSEDES";
+        };
+        OrchidGroupMutationResponse: {
+            /** Format: int64 */
+            id?: number;
+            /** @enum {string} */
+            mutationType?: "BASELINE_IMPORT" | "CREATE" | "UPDATE_DETAILS" | "MOVE" | "RESERVE" | "RELEASE_RESERVATION" | "CONSUME_RESERVATION" | "RESTORE_OUTBOUND" | "DISCARD" | "TRANSFORM" | "CORRECTION" | "COMPENSATION" | "CANCEL_CREATION" | "DELETE";
+            /** @enum {string} */
+            sourceDomain?: "FARM" | "WORK" | "SALES" | "INBOUND" | "MIGRATION";
+            sourceType?: string;
+            sourceReferenceId?: string;
+            sourceOperationKey?: string;
+            /** Format: uuid */
+            correlationId?: string;
+            commandFingerprint?: string;
+            /** Format: date-time */
+            occurredAt?: string;
+            /** Format: date-time */
+            recordedAt?: string;
+            /** Format: date */
+            effectiveBusinessDate?: string;
+            reason?: string;
+            /** Format: int32 */
+            schemaVersion?: number;
+            entries?: components["schemas"]["OrchidGroupMutationEntryResponse"][];
+            relations?: components["schemas"]["OrchidGroupMutationRelationResponse"][];
+        };
+        OrchidGroupMutationStateResponse: {
+            /** Format: int32 */
+            quantity?: number;
+            /** Format: int32 */
+            reservedQuantity?: number;
+            status?: string;
+            /** Format: int64 */
+            bedZoneId?: number;
+            /** Format: int32 */
+            sortOrder?: number;
+            startPosition?: number;
+            endPosition?: number;
+            /** Format: int64 */
+            varietyId?: number;
+            genus?: string;
+            varietyName?: string;
+            /** Format: int32 */
+            ageYear?: number;
+            potSizeCode?: string;
+            placementType?: string;
+            /** Format: int32 */
+            trayCount?: number;
+            splitPlacementAllowed?: boolean;
+            /** Format: int64 */
+            inboundRecordId?: number;
+            memo?: string;
+        };
+        PageResponseOrchidGroupMutationResponse: {
+            content?: components["schemas"]["OrchidGroupMutationResponse"][];
+            /** Format: int32 */
+            page?: number;
+            /** Format: int32 */
+            size?: number;
+            /** Format: int64 */
+            totalElements?: number;
+            /** Format: int32 */
+            totalPages?: number;
         };
         ApiResponsePageResponseMaterialResponse: {
             data?: components["schemas"]["PageResponseMaterialResponse"];
@@ -6834,6 +6943,32 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ApiResponseListOrchidGroupResponse"];
+                };
+            };
+        };
+    };
+    getMutations: {
+        parameters: {
+            query?: {
+                orchidGroupId?: number;
+                mutationType?: "BASELINE_IMPORT" | "CREATE" | "UPDATE_DETAILS" | "MOVE" | "RESERVE" | "RELEASE_RESERVATION" | "CONSUME_RESERVATION" | "RESTORE_OUTBOUND" | "DISCARD" | "TRANSFORM" | "CORRECTION" | "COMPENSATION" | "CANCEL_CREATION" | "DELETE";
+                sourceDomain?: "FARM" | "WORK" | "SALES" | "INBOUND" | "MIGRATION";
+                page?: number;
+                size?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiResponsePageResponseOrchidGroupMutationResponse"];
                 };
             };
         };
