@@ -7898,6 +7898,28 @@ components:
           - MOVED_TO
           - POTTED_TO
           - CORRECTED_TO
+    OrchidGroupMutationGraphLocationResponse:
+      type: object
+      properties:
+        houseNumber:
+          type: integer
+          format: int32
+        physicalBedNumber:
+          type: integer
+          format: int32
+        side:
+          type: string
+          enum:
+          - LEFT
+          - RIGHT
+          - CUSTOM
+          - HANGING
+        bedZoneName:
+          type: string
+        startPosition:
+          type: number
+        endPosition:
+          type: number
     OrchidGroupMutationGraphNodeResponse:
       type: object
       properties:
@@ -7916,6 +7938,8 @@ components:
           format: int64
         state:
           $ref: '#/components/schemas/OrchidGroupMutationStateResponse'
+        location:
+          $ref: '#/components/schemas/OrchidGroupMutationGraphLocationResponse'
         mutationId:
           type: integer
           format: int64

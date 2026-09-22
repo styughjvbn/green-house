@@ -17,7 +17,7 @@ export type MutationGraphLayoutNode = MutationGraphViewNode & {
   position: { x: number; y: number };
 };
 
-const STATE_SIZE = { width: 250, height: 152 };
+const STATE_SIZE = { width: 270, height: 176 };
 const MUTATION_SIZE = { width: 220, height: 112 };
 const JUNCTION_SIZE = { width: 22, height: 22 };
 

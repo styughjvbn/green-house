@@ -83,6 +83,16 @@ export type MutationGraphNodeType = NonNullable<
 export type MutationGraphEdgeType = NonNullable<
   ApiSchemas["OrchidGroupMutationGraphEdgeResponse"]["edgeType"]
 >;
+export type MutationGraphLocation = {
+  houseNumber?: number | null;
+  physicalBedNumber?: number | null;
+  side?: NonNullable<
+    ApiSchemas["OrchidGroupMutationGraphLocationResponse"]["side"]
+  > | null;
+  bedZoneName?: string | null;
+  startPosition?: number | null;
+  endPosition?: number | null;
+};
 
 export type MutationGraphNode = {
   id: string;
@@ -90,6 +100,7 @@ export type MutationGraphNode = {
   orchidGroupId?: number | null;
   stateRevision?: number | null;
   state?: MutationState | null;
+  location?: MutationGraphLocation | null;
   mutationId?: number | null;
   mutationType?: MutationType | null;
   sourceDomain?: MutationSourceDomain | null;

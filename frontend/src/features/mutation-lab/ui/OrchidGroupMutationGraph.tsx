@@ -20,6 +20,7 @@ import {
   layoutMutationGraph,
   type MutationGraphViewEdge,
 } from "../lib/orchidGroupMutationGraph";
+import { formatMutationGraphLocation } from "../lib/mutationGraphLocation";
 import { DOMAIN_LABELS, TYPE_LABELS } from "../lib/mutationLabLabels";
 import { mutationGraphQueryOptions } from "../model/mutationLabQueryOptions";
 import type { MutationGraph, MutationGraphNode } from "../model/types";
@@ -130,7 +131,7 @@ function StateNode({ data }: NodeProps<MutationFlowNode>) {
   const root = data.orchidGroupId === data.rootOrchidGroupId;
   return (
     <article
-      className={`w-[250px] overflow-hidden rounded-lg border bg-white text-xs shadow-md ${
+      className={`w-[270px] overflow-hidden rounded-lg border bg-white text-xs shadow-md ${
         root ? "border-[#2f8d4b] ring-2 ring-[#cde8d3]" : "border-[#cad8c9]"
       }`}
     >
@@ -148,8 +149,11 @@ function StateNode({ data }: NodeProps<MutationFlowNode>) {
         </div>
         {state ? (
           <>
+            <p className="mt-1 truncate font-semibold text-[#405247]">
+              품종 {state.varietyName ?? state.genus ?? "정보 없음"}
+            </p>
             <p className="mt-1 truncate text-[#657269]">
-              {state.varietyName ?? "품종 없음"} · {state.status ?? "상태 없음"}
+              상태 {state.status ?? "정보 없음"}
             </p>
             <div className="mt-3 grid grid-cols-3 gap-1.5">
               <Metric label="전체" value={state.quantity} />
@@ -164,8 +168,7 @@ function StateNode({ data }: NodeProps<MutationFlowNode>) {
             </div>
             <p className="mt-3 flex items-center gap-1 border-t border-[#e6ebe4] pt-2 text-[#607067]">
               <MapPin className="h-3 w-3" aria-hidden="true" />
-              구역 {state.bedZoneId ?? "-"} · 위치 {state.startPosition ?? "?"}–
-              {state.endPosition ?? "?"}
+              {formatMutationGraphLocation(data.location)}
             </p>
           </>
         ) : (

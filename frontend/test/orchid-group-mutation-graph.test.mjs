@@ -4,6 +4,25 @@ import {
   buildReadableMutationGraph,
   layoutMutationGraph,
 } from "../src/features/mutation-lab/lib/orchidGroupMutationGraph.ts";
+import {
+  closedCellRange,
+  formatMutationGraphLocation,
+} from "../src/features/mutation-lab/lib/mutationGraphLocation.ts";
+
+test("formats snapshot placement as a closed human-readable cell range", () => {
+  assert.equal(
+    formatMutationGraphLocation({
+      houseNumber: 3,
+      physicalBedNumber: 7,
+      side: "RIGHT",
+      bedZoneName: "오른쪽 구역",
+      startPosition: 0,
+      endPosition: 3,
+    }),
+    "3동 7다이 우측, 1~3칸",
+  );
+  assert.equal(closedCellRange(2.2, 5.1), "3~6칸");
+});
 
 test("bundles multiple result edges behind one junction", () => {
   const nodes = [

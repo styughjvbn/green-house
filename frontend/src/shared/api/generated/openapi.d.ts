@@ -3854,6 +3854,17 @@ export interface components {
             /** @enum {string} */
             lineageRelationType?: "CREATED_FROM_INBOUND" | "REPOTTED_TO" | "SPLIT_TO" | "MERGED_TO" | "MOVED_TO" | "POTTED_TO" | "CORRECTED_TO";
         };
+        OrchidGroupMutationGraphLocationResponse: {
+            /** Format: int32 */
+            houseNumber?: number;
+            /** Format: int32 */
+            physicalBedNumber?: number;
+            /** @enum {string} */
+            side?: "LEFT" | "RIGHT" | "CUSTOM" | "HANGING";
+            bedZoneName?: string;
+            startPosition?: number;
+            endPosition?: number;
+        };
         OrchidGroupMutationGraphNodeResponse: {
             id?: string;
             /** @enum {string} */
@@ -3863,6 +3874,7 @@ export interface components {
             /** Format: int64 */
             stateRevision?: number;
             state?: components["schemas"]["OrchidGroupMutationStateResponse"];
+            location?: components["schemas"]["OrchidGroupMutationGraphLocationResponse"];
             /** Format: int64 */
             mutationId?: number;
             /** @enum {string} */

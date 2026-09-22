@@ -13,6 +13,10 @@ import com.greenhouse.backend.farm.domain.orchid.mutation.OrchidGroupMutationSou
 import com.greenhouse.backend.farm.domain.orchid.mutation.OrchidGroupMutationSourceDomain;
 import com.greenhouse.backend.farm.domain.orchid.mutation.OrchidGroupMutationType;
 import com.greenhouse.backend.farm.domain.orchid.mutation.OrchidGroupStateSnapshot;
+import com.greenhouse.backend.farm.domain.structure.BedZone;
+import com.greenhouse.backend.farm.domain.structure.BedZoneSide;
+import com.greenhouse.backend.farm.domain.structure.House;
+import com.greenhouse.backend.farm.domain.structure.PhysicalBed;
 import com.greenhouse.backend.farm.repository.orchid.mutation.OrchidGroupMutationEntryRepository;
 import com.greenhouse.backend.farm.repository.orchid.mutation.OrchidGroupMutationRelationRepository;
 import com.greenhouse.backend.farm.repository.orchid.mutation.OrchidGroupMutationRepository;
@@ -121,6 +125,34 @@ class OrchidGroupMutationQueryServiceIntegrationTest extends AbstractBackendInte
 		});
 	}
 
+	@Test
+	void resolvesGraphStateLocationFromSnapshotBedZoneInOneStructuredResponse() {
+		var house = new House(991, "그래프 위치 테스트동");
+		var bed = new PhysicalBed(7, 1);
+		var zone = new BedZone("오른쪽 구역", BedZoneSide.RIGHT, 1);
+		bed.addBedZone(zone);
+		house.addPhysicalBed(bed);
+		houseRepository.saveAndFlush(house);
+
+		long orchidGroupId = 93_001L;
+		var created = saveMutation(OrchidGroupMutationType.CREATE, "CREATE_WITH_LOCATION",
+				Instant.parse("2026-09-18T04:00:00Z"));
+		entryRepository
+			.save(OrchidGroupMutationEntry.created(created, orchidGroupId, OrchidGroupMutationEntryRole.RESULT,
+					snapshotAt(10, 0, "정상", zone.getId(), new BigDecimal("2"), new BigDecimal("5"))));
+
+		var graph = graphQueryService.getGraph(orchidGroupId, 0, 20);
+
+		assertThat(graph.nodes()).filteredOn(node -> node.orchidGroupId() != null).singleElement().satisfies(node -> {
+			assertThat(node.state().varietyName()).isEqualTo("테스트 품종");
+			assertThat(node.location().houseNumber()).isEqualTo(991);
+			assertThat(node.location().physicalBedNumber()).isEqualTo(7);
+			assertThat(node.location().side()).isEqualTo(BedZoneSide.RIGHT);
+			assertThat(node.location().startPosition()).isEqualByComparingTo("2");
+			assertThat(node.location().endPosition()).isEqualByComparingTo("5");
+		});
+	}
+
 	private OrchidGroupMutation saveMutation(OrchidGroupMutationType type, String operation, Instant occurredAt) {
 		var source = new OrchidGroupMutationSource(OrchidGroupMutationSourceDomain.FARM, "TEST",
 				UUID.randomUUID().toString(), operation, UUID.randomUUID());
@@ -129,8 +161,13 @@ class OrchidGroupMutationQueryServiceIntegrationTest extends AbstractBackendInte
 	}
 
 	private OrchidGroupStateSnapshot snapshot(int quantity, int reservedQuantity, String status) {
-		return new OrchidGroupStateSnapshot(quantity, reservedQuantity, status, 10L, 1, BigDecimal.ZERO, BigDecimal.ONE,
-				20L, "Cymbidium", "테스트 품종", 2, "POT_4", "POT", null, false, null, null);
+		return snapshotAt(quantity, reservedQuantity, status, 10L, BigDecimal.ZERO, BigDecimal.ONE);
+	}
+
+	private OrchidGroupStateSnapshot snapshotAt(int quantity, int reservedQuantity, String status, Long bedZoneId,
+			BigDecimal startPosition, BigDecimal endPosition) {
+		return new OrchidGroupStateSnapshot(quantity, reservedQuantity, status, bedZoneId, 1, startPosition,
+				endPosition, 20L, "Cymbidium", "테스트 품종", 2, "POT_4", "POT", null, false, null, null);
 	}
 
 }

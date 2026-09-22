@@ -60,7 +60,7 @@ public interface BedZoneRepository extends JpaRepository<BedZone, Long> {
 
 	@Query("""
 			select new com.greenhouse.backend.farm.repository.structure.BedZoneLocationRow(
-				z.id, h.number, b.number, z.name)
+				z.id, h.number, b.number, z.side, z.name)
 			from BedZone z
 			join z.physicalBed b
 			join b.house h
