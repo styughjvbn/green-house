@@ -767,7 +767,6 @@ function resultTypeLabel(resultType: string) {
       REPOT: "분갈이 결과",
       DIVIDE: "분주 결과",
       MERGE: "합식 결과",
-      MULTI_CREATE: "난 묶음 생성 결과",
       CORRECTION: "보정 결과",
     }[resultType] ?? "작업 결과"
   );

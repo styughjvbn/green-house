@@ -85,38 +85,6 @@ public class OrchidGroupMutationEngine {
 		return recorder.created(mutation, List.of(group));
 	}
 
-	public OrchidGroupMutationResult createMany(CreateOrchidGroupsMutationCommand command) {
-		String fingerprint = commandFingerprint.calculate(command);
-		var replay = replayResolver.findExisting(command.source(), fingerprint);
-		if (replay.isPresent()) {
-			return replay.get();
-		}
-
-		Map<Long, BedZone> zones = findZonesForUpdate(
-				command.groups().stream().map(CreateOrchidGroupMutationItem::bedZoneId).collect(Collectors.toSet()));
-		replay = replayResolver.findExisting(command.source(), fingerprint);
-		if (replay.isPresent()) {
-			return replay.get();
-		}
-		Map<Long, Variety> varieties = findVarieties(
-				command.groups().stream().map(item -> item.details().varietyId()).collect(Collectors.toSet()));
-		Map<Long, Integer> nextSortOrderByZoneId = currentMaxSortOrders(zones.keySet());
-		OrchidGroupMutation mutation = recorder.start(OrchidGroupMutationType.CREATE, command.source(), fingerprint,
-				command.effectiveBusinessDate(), command.reason());
-		List<OrchidGroup> groups = new ArrayList<>();
-		for (CreateOrchidGroupMutationItem item : command.groups()) {
-			BedZone zone = zones.get(item.bedZoneId());
-			Variety variety = varieties.get(item.details().varietyId());
-			requireActive(variety);
-			orchidPlacementPolicy.validatePlacement(zone, item.details().startPosition(), item.details().endPosition(),
-					null);
-			int nextSortOrder = nextSortOrderByZoneId.compute(zone.getId(), (id, current) -> current + 1);
-			groups.add(createGroup(zone, variety, item.details(), nextSortOrder));
-		}
-
-		return recorder.created(mutation, groups);
-	}
-
 	public OrchidGroupMutationResult createFromInbound(CreateInboundOrchidGroupsMutationCommand command) {
 		String fingerprint = commandFingerprint.calculate(command);
 		var replay = replayResolver.findExisting(command.source(), fingerprint);

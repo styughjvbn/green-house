@@ -39,8 +39,8 @@ Lineage의 `mutationId`로 분주·합식·분갈이 의미를 결과 edge에 �
 
 ## 제거 완료 범위
 
-Farm·Inbound의 직접 생성·수정·이동·품종 전파, Work 폐기·구조 변경·보정·다중 생성과
-취소, Sales 예약·해제·출고·복구의 Legacy 분기를 제거했다.
+Farm·Inbound의 직접 생성·수정·이동·품종 전파, Work 폐기·구조 변경·보정,
+Sales 예약·해제·출고·복구의 Legacy 분기를 제거했다.
 `OrchidGroupLedgerWriterMode`, `OrchidGroupMutationRoutingPolicy`,
 `OrchidGroupReservationService`, `createEntity`와 미사용 직접 이동 메서드도 제거했다.
 

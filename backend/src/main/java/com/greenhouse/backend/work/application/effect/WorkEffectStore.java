@@ -66,10 +66,9 @@ public class WorkEffectStore {
 				.forEach(groupId -> groupLinks
 					.add(new WorkEffectOrchidGroup(appliedEffect, groupId, WorkEffectOrchidGroupRelationType.SOURCE)));
 		}
-		WorkEffectOrchidGroupRelationType resultRelation = target == null && "MULTI_CREATE".equals(result.handlerCode())
-				? WorkEffectOrchidGroupRelationType.CREATED : WorkEffectOrchidGroupRelationType.RESULT;
 		result.resultOrchidGroupIds()
-			.forEach(groupId -> groupLinks.add(new WorkEffectOrchidGroup(appliedEffect, groupId, resultRelation)));
+			.forEach(groupId -> groupLinks
+				.add(new WorkEffectOrchidGroup(appliedEffect, groupId, WorkEffectOrchidGroupRelationType.RESULT)));
 		effectOrchidGroupRepository.saveAll(groupLinks);
 		return result;
 	}

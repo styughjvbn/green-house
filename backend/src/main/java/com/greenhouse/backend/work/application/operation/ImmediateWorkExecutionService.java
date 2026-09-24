@@ -121,15 +121,6 @@ public class ImmediateWorkExecutionService {
 	}
 
 	@Transactional(readOnly = true)
-	public List<Long> getResultOrchidGroupIds(Long operationId) {
-		validateWorkType(operationId, WorkTypeDefinition.MULTI_CREATE.name(), "다중 생성 작업만 생성 결과를 조회할 수 있습니다.");
-		return effectOrchidGroupRepository.findByWorkAppliedEffectWorkOperationIdOrderByIdAsc(operationId)
-			.stream()
-			.map(link -> link.getOrchidGroupId())
-			.toList();
-	}
-
-	@Transactional(readOnly = true)
 	public List<Long> getStructureChangeResultOrchidGroupIds(Long operationId, String workTypeCode) {
 		validateWorkType(operationId, workTypeCode, "요청한 구조 변경 작업 유형과 일치하지 않습니다.");
 		return effectOrchidGroupRepository
@@ -138,22 +129,6 @@ public class ImmediateWorkExecutionService {
 			.stream()
 			.map(link -> link.getOrchidGroupId())
 			.toList();
-	}
-
-	public WorkOperationView cancelMultiCreate(Long operationId) {
-		WorkOperation operation = operationRepository.findWithWorkTypeById(operationId)
-			.orElseThrow(() -> new NotFoundException("작업을 찾을 수 없습니다."));
-		if (!WorkTypeDefinition.MULTI_CREATE.name().equals(operation.getWorkType().getCode())) {
-			throw new IllegalArgumentException("다중 생성 작업만 결과 취소할 수 있습니다.");
-		}
-		if (operation.getStatus() == WorkOperationStatus.CANCELED) {
-			return queryService.get(operationId);
-		}
-		operation.cancelCompletedStructureChange();
-		appliedEffectRepository.findByWorkOperationIdAndEffectKey(operationId, "OPERATION")
-			.orElseThrow(() -> new NotFoundException("작업 효과를 찾을 수 없습니다."))
-			.cancel(support.now());
-		return queryService.get(operationId);
 	}
 
 	private void validateWorkType(Long operationId, String workTypeCode, String message) {

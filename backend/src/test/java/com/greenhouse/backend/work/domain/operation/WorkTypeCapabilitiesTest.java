@@ -18,7 +18,6 @@ class WorkTypeCapabilitiesTest {
 			Map.entry(WorkTypeTemplate.CLEANUP, "RECORD_ONLY"), Map.entry(WorkTypeTemplate.STATUS, "RECORD_ONLY"),
 			Map.entry(WorkTypeTemplate.MEMO, "RECORD_ONLY"), Map.entry(WorkTypeTemplate.REPOT, "REPOT"),
 			Map.entry(WorkTypeTemplate.MOVEMENT, "MOVE"), Map.entry(WorkTypeTemplate.DISCARD, "DISCARD"),
-			Map.entry(WorkTypeTemplate.MULTI_CREATE, "MULTI_CREATE"),
 			Map.entry(WorkTypeTemplate.CORRECTION, "CORRECTION"),
 			Map.entry(WorkTypeTemplate.RECONCILIATION, "RECONCILIATION"));
 
@@ -30,7 +29,6 @@ class WorkTypeCapabilitiesTest {
 			Map.entry(WorkTypeTemplate.MEMO, WorkEffectKind.RECORD_ONLY),
 			Map.entry(WorkTypeTemplate.CORRECTION, WorkEffectKind.RECORD_ONLY),
 			Map.entry(WorkTypeTemplate.REPOT, WorkEffectKind.STRUCTURE_CHANGE),
-			Map.entry(WorkTypeTemplate.MULTI_CREATE, WorkEffectKind.STRUCTURE_CHANGE),
 			Map.entry(WorkTypeTemplate.DISCARD, WorkEffectKind.ATTRIBUTE_CHANGE),
 			Map.entry(WorkTypeTemplate.MOVEMENT, WorkEffectKind.ATTRIBUTE_CHANGE),
 			Map.entry(WorkTypeTemplate.RECONCILIATION, WorkEffectKind.ATTRIBUTE_CHANGE));
@@ -43,7 +41,6 @@ class WorkTypeCapabilitiesTest {
 			"DIVIDE,STRUCTURE_CHANGE,ORCHID_GROUP,false,true,true,true,DIVIDE",
 			"MERGE,STRUCTURE_CHANGE,ORCHID_GROUP,false,true,true,true,MERGE",
 			"DISCARD,DISCARD,ORCHID_GROUP,false,true,true,false,DISCARD",
-			"MULTI_CREATE,GENERIC,ORCHID_GROUP,false,false,false,false,",
 			"CORRECTION,GENERIC,ORCHID_GROUP,false,false,false,false,",
 			"RECONCILIATION,GENERIC,ORCHID_GROUP,true,false,false,false,",
 			"CUSTOM_CARE,GENERIC,ORCHID_GROUP,false,false,false,false," })

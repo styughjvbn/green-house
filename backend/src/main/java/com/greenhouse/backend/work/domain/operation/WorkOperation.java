@@ -1,7 +1,6 @@
 package com.greenhouse.backend.work.domain.operation;
 
 import com.greenhouse.backend.common.domain.BaseEntity;
-import com.greenhouse.backend.work.domain.effect.WorkEffectKind;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
@@ -182,16 +181,6 @@ public class WorkOperation extends BaseEntity {
 			throw new IllegalArgumentException("완료·보정·무효화된 작업은 취소할 수 없습니다.");
 		}
 		actualEndAt = canceledAt;
-		status = WorkOperationStatus.CANCELED;
-	}
-
-	public void cancelCompletedStructureChange() {
-		if (status == WorkOperationStatus.CANCELED) {
-			return;
-		}
-		if (status != WorkOperationStatus.COMPLETED || workType.effectKind() != WorkEffectKind.STRUCTURE_CHANGE) {
-			throw new IllegalArgumentException("완료된 구조 변경 작업만 결과 취소할 수 있습니다.");
-		}
 		status = WorkOperationStatus.CANCELED;
 	}
 

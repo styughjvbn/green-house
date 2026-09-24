@@ -139,7 +139,7 @@ application|domain|repository|controller|dto/
  ├─ inbound/         입고·포트 실행
  ├─ variety/         품종 기준 정보
  ├─ material/        자재 기준 정보
- └─ transformation/  분갈이·분주·합식·다중 생성·계보
+ └─ transformation/  분갈이·분주·합식·계보
 ```
 
 저장소가 없는 현황 기능처럼 계층에 구현이 필요하지 않은 경우 해당 하위 패키지는 생략한다.

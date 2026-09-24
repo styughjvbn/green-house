@@ -6,8 +6,6 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import com.greenhouse.backend.common.exception.ConflictException;
 import com.greenhouse.backend.farm.application.orchid.mutation.CancelOrchidGroupCreationMutationCommand;
 import com.greenhouse.backend.farm.application.orchid.mutation.CreateOrchidGroupMutationCommand;
-import com.greenhouse.backend.farm.application.orchid.mutation.CreateOrchidGroupMutationItem;
-import com.greenhouse.backend.farm.application.orchid.mutation.CreateOrchidGroupsMutationCommand;
 import com.greenhouse.backend.farm.application.orchid.mutation.DiscardOrchidGroupMutationCommand;
 import com.greenhouse.backend.farm.application.orchid.mutation.MoveOrchidGroupMutationCommand;
 import com.greenhouse.backend.farm.application.orchid.mutation.OrchidGroupMutationDetails;
@@ -220,44 +218,6 @@ class OrchidGroupMutationEngineIntegrationTest extends AbstractBackendIntegratio
 			.hasMessageContaining("다른 command");
 		assertThat(group.getQuantity()).isEqualTo(16);
 		assertThat(group.getStateRevision()).isEqualTo(1L);
-	}
-
-	@Test
-	void createsMultipleGroupsAsOneMutationAndReplaysTheOrderedResults() {
-		FarmFixture fixture = createFarmFixture(904);
-		long groupCountBefore = orchidGroupRepository.count();
-		long mutationCountBefore = mutationRepository.count();
-		long entryCountBefore = entryRepository.count();
-		LocalDate businessDate = LocalDate.of(2026, 8, 20);
-		var source = farmSource("create-many-1", "CREATE_MANY");
-		var command = new CreateOrchidGroupsMutationCommand(source,
-				List.of(new CreateOrchidGroupMutationItem(fixture.sourceZone().getId(),
-						details(fixture.variety().getId(), 11, "3.5치", "0", "2")),
-						new CreateOrchidGroupMutationItem(fixture.sourceZone().getId(),
-								details(fixture.variety().getId(), 13, "4치", "2", "4"))),
-				businessDate, "초기 다중 생성");
-
-		var created = mutationEngine.createMany(command);
-		entityManager.flush();
-		entityManager.clear();
-		var replayed = mutationEngine.createMany(new CreateOrchidGroupsMutationCommand(source,
-				List.of(new CreateOrchidGroupMutationItem(fixture.sourceZone().getId(),
-						details(fixture.variety().getId(), 11, "3.5\"", "0.00", "2.0")),
-						new CreateOrchidGroupMutationItem(fixture.sourceZone().getId(),
-								details(fixture.variety().getId(), 13, "4\"", "2.00", "4.0"))),
-				businessDate, " 초기 다중 생성 "));
-
-		assertThat(replayed.mutationId()).isEqualTo(created.mutationId());
-		assertThat(created.mutationType()).isEqualTo(OrchidGroupMutationType.CREATE);
-		assertThat(created.entries()).hasSize(2).allSatisfy(entry -> {
-			assertThat(entry.entryKind()).isEqualTo(OrchidGroupMutationEntryKind.CREATE);
-			assertThat(entry.role()).isEqualTo(OrchidGroupMutationEntryRole.RESULT);
-			assertThat(entry.stateRevisionAfter()).isEqualTo(1L);
-		});
-		assertThat(created.entries()).extracting(entry -> entry.afterState().quantity()).containsExactly(11, 13);
-		assertThat(orchidGroupRepository.count()).isEqualTo(groupCountBefore + 2);
-		assertThat(mutationRepository.count()).isEqualTo(mutationCountBefore + 1);
-		assertThat(entryRepository.count()).isEqualTo(entryCountBefore + 2);
 	}
 
 	@Test

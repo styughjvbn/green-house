@@ -4,8 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import com.greenhouse.backend.farm.application.orchid.mutation.CorrectOrchidGroupMutationItem;
 import com.greenhouse.backend.farm.application.orchid.mutation.CorrectOrchidGroupsMutationCommand;
-import com.greenhouse.backend.farm.application.orchid.mutation.CreateOrchidGroupMutationItem;
-import com.greenhouse.backend.farm.application.orchid.mutation.CreateOrchidGroupsMutationCommand;
+import com.greenhouse.backend.farm.application.orchid.mutation.CreateOrchidGroupMutationCommand;
 import com.greenhouse.backend.farm.application.orchid.mutation.OrchidGroupMutationDetails;
 import com.greenhouse.backend.farm.application.orchid.mutation.OrchidGroupMutationEngine;
 import com.greenhouse.backend.farm.application.orchid.mutation.OrchidGroupStateChainMigrationService;
@@ -49,14 +48,12 @@ class CorrectionCompensationOrchidGroupMutationEngineIntegrationTest extends Abs
 	void correctsResultsFromMultipleMutationsAndRecordsManyToManyRelations() {
 		Fixture fixture = createFixture();
 		LocalDate businessDate = LocalDate.of(2026, 8, 20);
-		var firstCreated = mutationEngine.createMany(new CreateOrchidGroupsMutationCommand(
-				farmSource("create-first", "CREATE"), List.of(new CreateOrchidGroupMutationItem(fixture.zone().getId(),
-						details(fixture.variety().getId(), 20, "0", "2"))),
-				businessDate, "첫 번째 생성"));
-		var secondCreated = mutationEngine.createMany(new CreateOrchidGroupsMutationCommand(
-				farmSource("create-second", "CREATE"), List.of(new CreateOrchidGroupMutationItem(fixture.zone().getId(),
-						details(fixture.variety().getId(), 30, "2", "4"))),
-				businessDate, "두 번째 생성"));
+		var firstCreated = mutationEngine.create(new CreateOrchidGroupMutationCommand(
+				farmSource("create-first", "CREATE"), fixture.zone().getId(),
+				details(fixture.variety().getId(), 20, "0", "2"), businessDate, "첫 번째 생성"));
+		var secondCreated = mutationEngine.create(new CreateOrchidGroupMutationCommand(
+				farmSource("create-second", "CREATE"), fixture.zone().getId(),
+				details(fixture.variety().getId(), 30, "2", "4"), businessDate, "두 번째 생성"));
 		Long firstGroupId = firstCreated.entries().getFirst().orchidGroupId();
 		Long secondGroupId = secondCreated.entries().getFirst().orchidGroupId();
 		OrchidGroupMutationSource correctionSource = workSource("correction-current");

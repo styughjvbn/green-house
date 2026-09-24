@@ -140,7 +140,6 @@ components:
           - STATUS
           - MEMO
           - MOVEMENT
-          - MULTI_CREATE
           - CORRECTION
           - RECONCILIATION
       required:
@@ -162,7 +161,6 @@ components:
             - STATUS
             - MEMO
             - MOVEMENT
-            - MULTI_CREATE
             - CORRECTION
             - RECONCILIATION
     WorkTypeReorderRequest:
@@ -197,7 +195,6 @@ components:
           - STATUS
           - MEMO
           - MOVEMENT
-          - MULTI_CREATE
           - CORRECTION
           - RECONCILIATION
         defaultType:
@@ -249,7 +246,6 @@ components:
           - STATUS
           - MEMO
           - MOVEMENT
-          - MULTI_CREATE
           - CORRECTION
           - RECONCILIATION
         active:

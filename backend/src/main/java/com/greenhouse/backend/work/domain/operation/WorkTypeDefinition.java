@@ -24,7 +24,6 @@ public enum WorkTypeDefinition {
 	DIVIDE("DIVIDE", WorkTypeWorkflow.STRUCTURE_CHANGE, WorkTargetReferenceType.ORCHID_GROUP, true),
 	MERGE("MERGE", WorkTypeWorkflow.STRUCTURE_CHANGE, WorkTargetReferenceType.ORCHID_GROUP, true),
 	DISCARD("DISCARD", WorkTypeWorkflow.DISCARD, WorkTargetReferenceType.ORCHID_GROUP, true),
-	MULTI_CREATE(null, WorkTypeWorkflow.GENERIC, WorkTargetReferenceType.ORCHID_GROUP, true),
 	CORRECTION(null, WorkTypeWorkflow.GENERIC, WorkTargetReferenceType.ORCHID_GROUP, true),
 	RECONCILIATION(null, WorkTypeWorkflow.GENERIC, WorkTargetReferenceType.ORCHID_GROUP, false);
 

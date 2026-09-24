@@ -22,9 +22,6 @@ public class OrchidGroupMutationCommandFingerprint {
 			case CreateOrchidGroupMutationCommand value ->
 				fingerprint.calculate(new CreatePayload(OrchidGroupMutationType.CREATE, value.bedZoneId(),
 						value.details(), value.effectiveBusinessDate(), value.reason()));
-			case CreateOrchidGroupsMutationCommand value ->
-				fingerprint.calculate(new CreateManyPayload(OrchidGroupMutationType.CREATE, value.groups(),
-						value.effectiveBusinessDate(), value.reason()));
 			case CreateInboundOrchidGroupsMutationCommand value ->
 				fingerprint.calculate(new CreateInboundPayload(OrchidGroupMutationType.CREATE, value.inboundRecordId(),
 						value.groups(), value.effectiveBusinessDate(), value.reason()));
@@ -74,10 +71,6 @@ public class OrchidGroupMutationCommandFingerprint {
 
 	private record CreatePayload(OrchidGroupMutationType mutationType, Long bedZoneId,
 			OrchidGroupMutationDetails details, LocalDate effectiveBusinessDate, String reason) {
-	}
-
-	private record CreateManyPayload(OrchidGroupMutationType mutationType, List<CreateOrchidGroupMutationItem> groups,
-			LocalDate effectiveBusinessDate, String reason) {
 	}
 
 	private record CreateInboundPayload(OrchidGroupMutationType mutationType, Long inboundRecordId,

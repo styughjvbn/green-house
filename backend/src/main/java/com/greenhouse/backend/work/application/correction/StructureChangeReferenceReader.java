@@ -42,8 +42,7 @@ public class StructureChangeReferenceReader {
 		}
 		return workEffectOrchidGroupRepository.findByWorkAppliedEffectWorkOperationIdOrderByIdAsc(operationId)
 			.stream()
-			.filter(link -> link.getRelationType() == WorkEffectOrchidGroupRelationType.CREATED
-					|| link.getRelationType() == WorkEffectOrchidGroupRelationType.RESULT)
+			.filter(link -> link.getRelationType() == WorkEffectOrchidGroupRelationType.RESULT)
 			.map(link -> link.getOrchidGroupId())
 			.distinct()
 			.toList();
@@ -55,8 +54,7 @@ public class StructureChangeReferenceReader {
 		}
 		var links = workEffectOrchidGroupRepository.findByWorkAppliedEffectWorkOperationIdOrderByIdAsc(operationId)
 			.stream()
-			.filter(link -> link.getRelationType() == WorkEffectOrchidGroupRelationType.CREATED
-					|| link.getRelationType() == WorkEffectOrchidGroupRelationType.RESULT)
+			.filter(link -> link.getRelationType() == WorkEffectOrchidGroupRelationType.RESULT)
 			.filter(link -> orchidGroupIds.contains(link.getOrchidGroupId()))
 			.toList();
 		Set<Long> linkedGroupIds = links.stream().map(link -> link.getOrchidGroupId()).collect(Collectors.toSet());

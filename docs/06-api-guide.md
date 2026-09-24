@@ -34,7 +34,7 @@ npm run api:types
 | `auth.openapi.yaml` | 로그인, 로그아웃, 현재 사용자, 농장 업무일자·시간대 조회 |
 | `farm-structure.openapi.yaml` | 하우스, 물리 배드, 논리 구역, 난 묶음 조회 |
 | `farm-status.openapi.yaml` | 농장 현황 맵, 선택 범위 조회, 대시보드 요약 |
-| `orchid-command.openapi.yaml` | 난 묶음 생성, 다중 생성·분갈이 작업, 수정, 이동, 배치 |
+| `orchid-command.openapi.yaml` | 난 묶음 생성, 분갈이 작업, 수정, 이동, 배치 |
 | `orchid-mutation.openapi.yaml` | 난 묶음 Mutation 원장의 헤더, Entry 전후 상태와 관계 조회 |
 | `inventory.openapi.yaml` | 품종 CRUD/삭제, 자재 CRUD/삭제, 입고 기록 생성/수정/포트작업/취소/삭제, 목록 페이지네이션 |
 | `orchid-collection.openapi.yaml` | 난 묶음 사용자 그룹과 소속 관리 |
@@ -169,7 +169,7 @@ SOURCE/RESULT와 무효화 차단 사유를 반환한다. `POST /api/work-operat
 
 신규 입고 등록은 입고 기록 대상을 가진 완료 상태의 `WorkOperation`을 생성한다.
 
-자리 이동·분갈이·분주·합식·입고 포트 작업은 계획 생성 시 대상을 스냅샷으로 확정하되 위치나 구조를 변경하지 않는다. 자리 이동·분갈이·분주·합식 실행 회차는 `POST /api/work-operations/{workOperationId}/structure-change-executions`에서 같은 품종의 계획 대상 일부와 원본별 투입 수량을 하나의 풀로 합친 뒤 복수 결과를 생성하고 누적 작업 수량을 갱신한다. 결과 요청은 직접 원본 ID를 받지 않으며 기존 `sourceOrchidGroupIds` 입력은 호환상 무시한다. `attributeSourceOrchidGroupId`는 기존 결과 속성 상속 기준만 전달하며 수량 배분이나 직접 계보를 뜻하지 않는다. 기존 단일 대상 분갈이·분주 요청은 내부 변환 후 같은 N:M 실행 코어를 사용하고, 기존 합식 완료 API는 이전 클라이언트 호환용이다. 다중 생성은 대상 없는 즉시 구조 변경 API로 유지한다.
+자리 이동·분갈이·분주·합식·입고 포트 작업은 계획 생성 시 대상을 스냅샷으로 확정하되 위치나 구조를 변경하지 않는다. 자리 이동·분갈이·분주·합식 실행 회차는 `POST /api/work-operations/{workOperationId}/structure-change-executions`에서 같은 품종의 계획 대상 일부와 원본별 투입 수량을 하나의 풀로 합친 뒤 복수 결과를 생성하고 누적 작업 수량을 갱신한다. 결과 요청은 직접 원본 ID를 받지 않으며 기존 `sourceOrchidGroupIds` 입력은 호환상 무시한다. `attributeSourceOrchidGroupId`는 기존 결과 속성 상속 기준만 전달하며 수량 배분이나 직접 계보를 뜻하지 않는다. 기존 단일 대상 분갈이·분주 요청은 내부 변환 후 같은 N:M 실행 코어를 사용하고, 기존 합식 완료 API는 이전 클라이언트 호환용이다.
 
 `GET /api/orchid-groups/{orchidGroupId}/lineage`의 `transformations`는 저장된 실행 회차별 원본 목록·결과 목록·총 투입·총 결과·손실을 반환한다. `sources`와 `results`는 단일 원본 및 기존 직접 계보 호환 필드다.
 

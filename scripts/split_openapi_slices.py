@@ -23,7 +23,6 @@ DOMAIN_MAP = dict(
         ("orchid-command", [
             "orchid-group-command-controller",
             "bed-placement-controller",
-            "multi-create-work-operation-controller",
             "repot-work-operation-controller",
         ]),
         ("orchid-mutation", ["orchid-group-mutation-query-controller"]),

@@ -17,9 +17,6 @@
   "CreateOrchidGroupMutationCommand": [
     "d59298f724c80f9614be7488cd181b62113a251413097af820d6b2f4ad84c5d7"
   ],
-  "CreateOrchidGroupsMutationCommand": [
-    "af904368eb0ebbcf2f597d002051c5171f413c5a7605f244cde80b1636eebd5b"
-  ],
   "DiscardOrchidGroupMutationCommand": [
     "6fc28591d5280de272d7a68777e892dcc9d924fdadc6f9a602dd1da14ce746d0"
   ],

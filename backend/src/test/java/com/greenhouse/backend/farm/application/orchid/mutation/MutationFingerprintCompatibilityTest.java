@@ -28,7 +28,6 @@ class MutationFingerprintCompatibilityTest {
 				new OrchidGroupQuantityMutationItem(5L, 1));
 		List<OrchidGroupMutationCommand> commands = List.of(
 				new CreateOrchidGroupMutationCommand(source, 2L, details, date, " reason "),
-				new CreateOrchidGroupsMutationCommand(source, groups, date, " reason "),
 				new CreateInboundOrchidGroupsMutationCommand(source, 4L, groups, date, " reason "),
 				new TransformOrchidGroupsMutationCommand(source,
 						List.of(new TransformOrchidGroupMutationSource(5L, 10, null, null)),

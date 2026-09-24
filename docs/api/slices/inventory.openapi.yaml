@@ -56,7 +56,7 @@ paths:
     post:
       tags:
       - variety-controller
-      operationId: create_2
+      operationId: create_1
       requestBody:
         content:
           application/json:
@@ -120,7 +120,7 @@ paths:
     post:
       tags:
       - material-controller
-      operationId: create_5
+      operationId: create_4
       requestBody:
         content:
           application/json:
@@ -204,7 +204,7 @@ paths:
     post:
       tags:
       - inbound-record-controller
-      operationId: create_6
+      operationId: create_5
       requestBody:
         content:
           application/json:
@@ -248,7 +248,7 @@ paths:
     post:
       tags:
       - inbound-record-controller
-      operationId: cancel_2
+      operationId: cancel_1
       parameters:
       - name: inboundRecordId
         in: path

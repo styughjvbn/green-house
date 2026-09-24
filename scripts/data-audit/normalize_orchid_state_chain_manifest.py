@@ -28,7 +28,6 @@ MUTATION_TYPE_MAP = {
     "DELETE": "DELETE",
     "DISCARD": "DISCARD",
     "MOVE": "MOVE",
-    "MULTI_CREATE": "CREATE",
     "TRANSFORM": "TRANSFORM",
 }
 

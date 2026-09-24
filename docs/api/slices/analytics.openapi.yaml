@@ -286,7 +286,6 @@ components:
           - STATUS
           - MEMO
           - MOVEMENT
-          - MULTI_CREATE
           - CORRECTION
           - RECONCILIATION
         title:

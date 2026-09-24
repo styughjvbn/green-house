@@ -7,14 +7,10 @@ import com.greenhouse.backend.OrchidGroupStateChainTestSupport;
 import com.greenhouse.backend.farm.application.inbound.InboundRecordCreateCommand;
 import com.greenhouse.backend.farm.application.inbound.InboundRecordService;
 import com.greenhouse.backend.farm.application.orchid.OrchidGroupCommandService;
-import com.greenhouse.backend.farm.application.orchid.mutation.CreateOrchidGroupMutationItem;
-import com.greenhouse.backend.farm.application.orchid.mutation.CreateOrchidGroupsMutationCommand;
 import com.greenhouse.backend.farm.application.orchid.mutation.OrchidGroupLedgerCutoverCommand;
 import com.greenhouse.backend.farm.application.orchid.mutation.OrchidGroupLedgerCutoverService;
 import com.greenhouse.backend.farm.application.orchid.mutation.OrchidGroupLedgerReconciliationService;
-import com.greenhouse.backend.farm.application.orchid.mutation.OrchidGroupMutationDetails;
 import com.greenhouse.backend.farm.application.orchid.mutation.OrchidGroupMutationEngine;
-import com.greenhouse.backend.farm.application.orchid.mutation.OrchidGroupMutationSources;
 import com.greenhouse.backend.farm.application.orchid.mutation.OrchidGroupStateChainMigrationService;
 import com.greenhouse.backend.farm.domain.inbound.InboundStatus;
 import com.greenhouse.backend.farm.domain.inbound.InboundType;
@@ -122,32 +118,6 @@ class OrchidGroupMutationRoutingPostgresE2ETest extends WorkE2ETestBase {
 				scenario.orchidGroupId()))
 			.isInstanceOf(DataIntegrityViolationException.class)
 			.hasMessageContaining("Mutation context");
-	}
-
-	@Test
-	void createsMultipleGroupsUnderTheActiveFenceBeforePlacementQueriesCanFlush() {
-		Long varietyId = orchidGroupRepository.findById(scenario.orchidGroupId()).orElseThrow().getVariety().getId();
-		var groups = List.of(5, 6)
-			.stream()
-			.map(start -> new CreateOrchidGroupMutationItem(scenario.bedZoneId(),
-					new OrchidGroupMutationDetails(varietyId, 10, "3.5치", 2, "정상", "POT", null, false,
-							BigDecimal.valueOf(start), BigDecimal.valueOf(start + 1), null)))
-			.toList();
-		var command = new CreateOrchidGroupsMutationCommand(
-				OrchidGroupMutationSources.farmRequest("BATCH_CREATE", "active-batch", "CREATE"), groups,
-				LocalDate.of(2026, 8, 20), "다중 생성");
-		var transaction = new TransactionTemplate(transactionManager);
-		var result = transaction.execute(status -> mutationEngine.createMany(command));
-		var replay = transaction.execute(status -> mutationEngine.createMany(command));
-
-		assertThat(result.entries()).hasSize(2);
-		assertThat(replay.mutationId()).isEqualTo(result.mutationId());
-		assertThat(result.entries()).allSatisfy(entry -> {
-			var group = orchidGroupRepository.findById(entry.orchidGroupId()).orElseThrow();
-			assertThat(group.getQuantity()).isEqualTo(10);
-			assertThat(group.getStateRevision()).isEqualTo(1L);
-		});
-		assertThat(reconciliationService.reconcile().ready()).isTrue();
 	}
 
 	@Test
