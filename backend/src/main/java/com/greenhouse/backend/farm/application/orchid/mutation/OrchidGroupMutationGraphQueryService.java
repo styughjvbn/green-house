@@ -14,6 +14,7 @@ import com.greenhouse.backend.farm.dto.orchid.OrchidGroupMutationGraphNodeRespon
 import com.greenhouse.backend.farm.dto.orchid.OrchidGroupMutationGraphNodeType;
 import com.greenhouse.backend.farm.dto.orchid.OrchidGroupMutationGraphResponse;
 import com.greenhouse.backend.farm.dto.orchid.OrchidGroupMutationStateResponse;
+import com.greenhouse.backend.farm.dto.orchid.OrchidGroupMutationWorkOperationResponse;
 import com.greenhouse.backend.farm.repository.orchid.mutation.OrchidGroupMutationEntryRepository;
 import com.greenhouse.backend.farm.repository.orchid.mutation.OrchidGroupMutationRelationRepository;
 import com.greenhouse.backend.farm.repository.structure.BedZoneLocationRow;
@@ -49,6 +50,8 @@ public class OrchidGroupMutationGraphQueryService {
 	private final OrchidGroupLineageRepository lineageRepository;
 
 	private final BedZoneRepository bedZoneRepository;
+
+	private final OrchidGroupMutationWorkOperationReader workOperationReader;
 
 	public OrchidGroupMutationGraphResponse getGraph(Long rootOrchidGroupId, int depth, int maxNodes) {
 		validate(rootOrchidGroupId, depth, maxNodes);
@@ -109,6 +112,8 @@ public class OrchidGroupMutationGraphQueryService {
 		Map<String, OrchidGroupMutationGraphNodeResponse> nodes = new LinkedHashMap<>();
 		Map<Long, List<OrchidGroupMutationEntry>> visibleEntriesByMutationId = new LinkedHashMap<>();
 		Map<Long, BedZoneLocationRow> locationsByBedZoneId = locations(discovery.entries());
+		Map<Long, OrchidGroupMutationWorkOperationResponse> workOperationsByMutationId = workOperationReader
+			.resolveByMutationId(entriesByMutationId.values().stream().map(entries -> entries.getFirst().getMutation()).toList());
 		boolean truncated = discovery.truncated();
 		for (var mutationEntries : entriesByMutationId.values()) {
 			Set<String> candidateNodeIds = candidateNodeIds(mutationEntries);
@@ -117,7 +122,7 @@ public class OrchidGroupMutationGraphQueryService {
 				truncated = true;
 				continue;
 			}
-			addNodes(nodes, mutationEntries, locationsByBedZoneId);
+			addNodes(nodes, mutationEntries, locationsByBedZoneId, workOperationsByMutationId);
 			visibleEntriesByMutationId.put(mutationEntries.getFirst().getMutation().getId(), mutationEntries);
 		}
 
@@ -154,9 +159,11 @@ public class OrchidGroupMutationGraphQueryService {
 	}
 
 	private void addNodes(Map<String, OrchidGroupMutationGraphNodeResponse> nodes,
-			List<OrchidGroupMutationEntry> entries, Map<Long, BedZoneLocationRow> locationsByBedZoneId) {
+			List<OrchidGroupMutationEntry> entries, Map<Long, BedZoneLocationRow> locationsByBedZoneId,
+			Map<Long, OrchidGroupMutationWorkOperationResponse> workOperationsByMutationId) {
 		OrchidGroupMutation mutation = entries.getFirst().getMutation();
-		nodes.putIfAbsent(mutationNodeId(mutation.getId()), mutationNode(mutation));
+		nodes.putIfAbsent(mutationNodeId(mutation.getId()),
+				mutationNode(mutation, workOperationsByMutationId.get(mutation.getId())));
 		entries.forEach(entry -> {
 			if (entry.getStateRevisionBefore() != null) {
 				nodes.putIfAbsent(stateNodeId(entry.getOrchidGroupId(), entry.getStateRevisionBefore()),
@@ -167,12 +174,13 @@ public class OrchidGroupMutationGraphQueryService {
 		});
 	}
 
-	private OrchidGroupMutationGraphNodeResponse mutationNode(OrchidGroupMutation mutation) {
+	private OrchidGroupMutationGraphNodeResponse mutationNode(OrchidGroupMutation mutation,
+			OrchidGroupMutationWorkOperationResponse workOperation) {
 		return new OrchidGroupMutationGraphNodeResponse(mutationNodeId(mutation.getId()),
 				OrchidGroupMutationGraphNodeType.MUTATION, null, null, null, null, mutation.getId(),
 				mutation.getMutationType(), mutation.getSourceDomain(), mutation.getSourceType(),
-				mutation.getSourceReferenceId(), mutation.getEffectiveBusinessDate(), mutation.getOccurredAt(), null,
-				null);
+				mutation.getSourceReferenceId(), workOperation, mutation.getEffectiveBusinessDate(), mutation.getOccurredAt(),
+				null, null);
 	}
 
 	private OrchidGroupMutationGraphNodeResponse stateNode(OrchidGroupMutationEntry entry, Long revision,
@@ -181,7 +189,7 @@ public class OrchidGroupMutationGraphQueryService {
 		return new OrchidGroupMutationGraphNodeResponse(stateNodeId(entry.getOrchidGroupId(), revision),
 				OrchidGroupMutationGraphNodeType.STATE, entry.getOrchidGroupId(), revision,
 				OrchidGroupMutationStateResponse.from(state), location(locationState, locationsByBedZoneId), null, null,
-				null, null, null, null, null, entry.getEntryKind(), entry.getRole());
+				null, null, null, null, null, null, entry.getEntryKind(), entry.getRole());
 	}
 
 	private Map<Long, BedZoneLocationRow> locations(List<OrchidGroupMutationEntry> entries) {

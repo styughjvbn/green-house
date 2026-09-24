@@ -226,6 +226,15 @@ function MutationCard({
                 {mutation.sourceType} #{mutation.sourceReferenceId} ·{" "}
                 {mutation.sourceOperationKey}
               </p>
+              {mutation.workOperation ? (
+                <p className="mt-1 truncate text-sm font-semibold text-[#365b40]">
+                  {mutation.workOperation.workType} ·{" "}
+                  {mutation.workOperation.title}
+                  <span className="ml-1 text-xs font-normal text-[#718078]">
+                    작업 #{mutation.workOperation.id}
+                  </span>
+                </p>
+              ) : null}
             </div>
           </div>
           <div className="text-right text-xs text-[#657269]">
@@ -358,6 +367,12 @@ function MetadataCard({ mutation }: { mutation: OrchidGroupMutation }) {
           value={`${mutation.sourceDomain} / ${mutation.sourceType}`}
         />
         <Metadata label="Reference" value={mutation.sourceReferenceId} />
+        {mutation.workOperation ? (
+          <Metadata
+            label="원본 작업"
+            value={`${mutation.workOperation.workType} · ${mutation.workOperation.title} (#${mutation.workOperation.id})`}
+          />
+        ) : null}
         <Metadata label="Operation" value={mutation.sourceOperationKey} />
         <Metadata label="Correlation" value={mutation.correlationId} mono />
         <Metadata

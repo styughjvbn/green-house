@@ -2,6 +2,7 @@ package com.greenhouse.backend.work.repository;
 
 import com.greenhouse.backend.work.domain.operation.WorkOperation;
 import java.util.Collection;
+import java.util.List;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.EntityGraph;
@@ -10,6 +11,9 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
 public interface WorkOperationRepository extends JpaRepository<WorkOperation, Long>, WorkOperationRepositoryCustom {
+
+	@EntityGraph(attributePaths = "workType")
+	List<WorkOperation> findByIdIn(Collection<Long> ids);
 
 	@EntityGraph(attributePaths = "workType")
 	@Query(value = """

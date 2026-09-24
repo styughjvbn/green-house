@@ -12,14 +12,16 @@ public record OrchidGroupMutationResponse(Long id, OrchidGroupMutationType mutat
 		OrchidGroupMutationSourceDomain sourceDomain, String sourceType, String sourceReferenceId,
 		String sourceOperationKey, UUID correlationId, String commandFingerprint, Instant occurredAt,
 		Instant recordedAt, LocalDate effectiveBusinessDate, String reason, Integer schemaVersion,
-		List<OrchidGroupMutationEntryResponse> entries, List<OrchidGroupMutationRelationResponse> relations) {
+		OrchidGroupMutationWorkOperationResponse workOperation, List<OrchidGroupMutationEntryResponse> entries,
+		List<OrchidGroupMutationRelationResponse> relations) {
 
 	public static OrchidGroupMutationResponse from(OrchidGroupMutation mutation,
-			List<OrchidGroupMutationEntryResponse> entries, List<OrchidGroupMutationRelationResponse> relations) {
+			OrchidGroupMutationWorkOperationResponse workOperation, List<OrchidGroupMutationEntryResponse> entries,
+			List<OrchidGroupMutationRelationResponse> relations) {
 		return new OrchidGroupMutationResponse(mutation.getId(), mutation.getMutationType(), mutation.getSourceDomain(),
 				mutation.getSourceType(), mutation.getSourceReferenceId(), mutation.getSourceOperationKey(),
 				mutation.getCorrelationId(), mutation.getCommandFingerprint(), mutation.getOccurredAt(),
 				mutation.getRecordedAt(), mutation.getEffectiveBusinessDate(), mutation.getReason(),
-				mutation.getSchemaVersion(), entries, relations);
+				mutation.getSchemaVersion(), workOperation, entries, relations);
 	}
 }

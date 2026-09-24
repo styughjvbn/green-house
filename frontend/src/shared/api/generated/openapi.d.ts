@@ -3796,6 +3796,7 @@ export interface components {
             reason?: string;
             /** Format: int32 */
             schemaVersion?: number;
+            workOperation?: components["schemas"]["OrchidGroupMutationWorkOperationResponse"];
             entries?: components["schemas"]["OrchidGroupMutationEntryResponse"][];
             relations?: components["schemas"]["OrchidGroupMutationRelationResponse"][];
         };
@@ -3825,6 +3826,13 @@ export interface components {
             /** Format: int64 */
             inboundRecordId?: number;
             memo?: string;
+        };
+        OrchidGroupMutationWorkOperationResponse: {
+            /** Format: int64 */
+            id?: number;
+            workTypeCode?: string;
+            workType?: string;
+            title?: string;
         };
         PageResponseOrchidGroupMutationResponse: {
             content?: components["schemas"]["OrchidGroupMutationResponse"][];
@@ -3883,6 +3891,7 @@ export interface components {
             sourceDomain?: "FARM" | "WORK" | "SALES" | "INBOUND" | "MIGRATION";
             sourceType?: string;
             sourceReferenceId?: string;
+            workOperation?: components["schemas"]["OrchidGroupMutationWorkOperationResponse"];
             /** Format: date */
             effectiveBusinessDate?: string;
             /** Format: date-time */

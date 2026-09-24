@@ -20,9 +20,16 @@ import com.greenhouse.backend.farm.domain.structure.PhysicalBed;
 import com.greenhouse.backend.farm.repository.orchid.mutation.OrchidGroupMutationEntryRepository;
 import com.greenhouse.backend.farm.repository.orchid.mutation.OrchidGroupMutationRelationRepository;
 import com.greenhouse.backend.farm.repository.orchid.mutation.OrchidGroupMutationRepository;
+import com.greenhouse.backend.work.domain.operation.WorkOperation;
+import com.greenhouse.backend.work.domain.operation.WorkSourceScopeType;
+import com.greenhouse.backend.work.domain.operation.WorkType;
+import com.greenhouse.backend.work.domain.operation.WorkTypeTemplate;
+import com.greenhouse.backend.work.repository.WorkOperationRepository;
 import java.math.BigDecimal;
 import java.time.Instant;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.util.Map;
 import java.util.UUID;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -45,6 +52,9 @@ class OrchidGroupMutationQueryServiceIntegrationTest extends AbstractBackendInte
 
 	@Autowired
 	OrchidGroupMutationRelationRepository relationRepository;
+
+	@Autowired
+	WorkOperationRepository workOperationRepository;
 
 	@Test
 	void returnsFilteredMutationEntriesAndRelationsInLatestFirstOrder() {
@@ -150,6 +160,38 @@ class OrchidGroupMutationQueryServiceIntegrationTest extends AbstractBackendInte
 			assertThat(node.location().side()).isEqualTo(BedZoneSide.RIGHT);
 			assertThat(node.location().startPosition()).isEqualByComparingTo("2");
 			assertThat(node.location().endPosition()).isEqualByComparingTo("5");
+		});
+	}
+
+	@Test
+	void includesOriginatingWorkOperationInMutationListAndGraph() {
+		long orchidGroupId = 94_001L;
+		var workType = workTypeRepository.save(
+				new WorkType("QUERY_MOVEMENT", "자리 이동", WorkTypeTemplate.MOVEMENT, false, false, true, 900));
+		var operation = workOperationRepository.save(new WorkOperation(workType, "3동 왼쪽 구역으로 이동",
+				LocalDate.of(2026, 9, 18), null, WorkSourceScopeType.ORCHID_GROUP, orchidGroupId, Map.of(), Map.of(),
+				"테스터", null, LocalDateTime.of(2026, 9, 18, 9, 0)));
+		var source = new OrchidGroupMutationSource(OrchidGroupMutationSourceDomain.WORK, "WORK_EFFECT",
+				operation.getId().toString(), "EXECUTION:1", UUID.randomUUID());
+		var mutation = mutationRepository.save(new OrchidGroupMutation(OrchidGroupMutationType.MOVE, source,
+				"b".repeat(64), Instant.parse("2026-09-18T09:00:00Z"), Instant.parse("2026-09-18T09:00:00Z"),
+				LocalDate.of(2026, 9, 18), "이동", 1));
+		entryRepository.save(OrchidGroupMutationEntry.created(mutation, orchidGroupId,
+				OrchidGroupMutationEntryRole.RESULT, snapshot(10, 0, "정상")));
+
+		var page = queryService.getMutations(orchidGroupId, null, OrchidGroupMutationSourceDomain.WORK, 0, 20);
+		assertThat(page.content()).singleElement().satisfies(response -> {
+			assertThat(response.workOperation().id()).isEqualTo(operation.getId());
+			assertThat(response.workOperation().workTypeCode()).isEqualTo("QUERY_MOVEMENT");
+			assertThat(response.workOperation().workType()).isEqualTo("자리 이동");
+			assertThat(response.workOperation().title()).isEqualTo("3동 왼쪽 구역으로 이동");
+		});
+
+		var graph = graphQueryService.getGraph(orchidGroupId, 0, 20);
+		assertThat(graph.nodes()).filteredOn(node -> node.mutationId() != null).singleElement().satisfies(node -> {
+			assertThat(node.workOperation().id()).isEqualTo(operation.getId());
+			assertThat(node.workOperation().workType()).isEqualTo("자리 이동");
+			assertThat(node.workOperation().title()).isEqualTo("3동 왼쪽 구역으로 이동");
 		});
 	}
 

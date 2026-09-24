@@ -57,6 +57,13 @@ export type MutationRelation = {
   relationType: MutationRelationType;
 };
 
+export type MutationWorkOperation = {
+  id: number;
+  workTypeCode: string;
+  workType: string;
+  title: string;
+};
+
 export type OrchidGroupMutation = {
   id: number;
   mutationType: MutationType;
@@ -71,6 +78,7 @@ export type OrchidGroupMutation = {
   effectiveBusinessDate: string;
   reason?: string | null;
   schemaVersion: number;
+  workOperation?: MutationWorkOperation | null;
   entries: MutationEntry[];
   relations: MutationRelation[];
 };
@@ -106,6 +114,7 @@ export type MutationGraphNode = {
   sourceDomain?: MutationSourceDomain | null;
   sourceType?: string | null;
   sourceReferenceId?: string | null;
+  workOperation?: MutationWorkOperation | null;
   effectiveBusinessDate?: string | null;
   occurredAt?: string | null;
   entryKind?: MutationEntryKind | null;

@@ -11,6 +11,6 @@ public record OrchidGroupMutationGraphNodeResponse(String id, OrchidGroupMutatio
 		Long orchidGroupId, Long stateRevision, OrchidGroupMutationStateResponse state,
 		OrchidGroupMutationGraphLocationResponse location, Long mutationId, OrchidGroupMutationType mutationType,
 		OrchidGroupMutationSourceDomain sourceDomain, String sourceType, String sourceReferenceId,
-		LocalDate effectiveBusinessDate, Instant occurredAt, OrchidGroupMutationEntryKind entryKind,
-		OrchidGroupMutationEntryRole entryRole) {
+		OrchidGroupMutationWorkOperationResponse workOperation, LocalDate effectiveBusinessDate, Instant occurredAt,
+		OrchidGroupMutationEntryKind entryKind, OrchidGroupMutationEntryRole entryRole) {
 }

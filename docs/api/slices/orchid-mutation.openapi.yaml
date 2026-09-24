@@ -262,6 +262,8 @@ components:
           type: string
         sourceReferenceId:
           type: string
+        workOperation:
+          $ref: '#/components/schemas/OrchidGroupMutationWorkOperationResponse'
         effectiveBusinessDate:
           type: string
           format: date
@@ -377,6 +379,8 @@ components:
         schemaVersion:
           type: integer
           format: int32
+        workOperation:
+          $ref: '#/components/schemas/OrchidGroupMutationWorkOperationResponse'
         entries:
           type: array
           items:
@@ -429,6 +433,18 @@ components:
           type: integer
           format: int64
         memo:
+          type: string
+    OrchidGroupMutationWorkOperationResponse:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: int64
+        workTypeCode:
+          type: string
+        workType:
+          type: string
+        title:
           type: string
     PageResponseOrchidGroupMutationResponse:
       type: object

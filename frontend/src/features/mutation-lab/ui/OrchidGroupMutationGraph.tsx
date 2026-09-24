@@ -183,7 +183,7 @@ function StateNode({ data }: NodeProps<MutationFlowNode>) {
 
 function MutationNode({ data }: NodeProps<MutationFlowNode>) {
   return (
-    <article className="w-[220px] overflow-hidden rounded-lg border border-[#d7c9a6] bg-[#fffdf7] text-xs shadow-md">
+    <article className="w-[250px] overflow-hidden rounded-lg border border-[#d7c9a6] bg-[#fffdf7] text-xs shadow-md">
       <Handle type="target" position={Position.Left} />
       <Handle type="source" position={Position.Right} />
       <Handle
@@ -211,6 +211,17 @@ function MutationNode({ data }: NodeProps<MutationFlowNode>) {
           {data.effectiveBusinessDate ?? "-"} ·{" "}
           {DOMAIN_LABELS[data.sourceDomain ?? ""] ?? data.sourceDomain}
         </p>
+        {data.workOperation ? (
+          <div className="mt-3 rounded-md border border-[#d9e5d8] bg-[#f3f8f2] px-2 py-2 text-[#31533a]">
+            <p className="font-bold">{data.workOperation.workType}</p>
+            <p className="mt-0.5 line-clamp-2 leading-4">
+              {data.workOperation.title}
+            </p>
+            <p className="mt-1 text-[10px] text-[#718078]">
+              작업 #{data.workOperation.id} · {data.workOperation.workTypeCode}
+            </p>
+          </div>
+        ) : null}
         <p className="mt-3 truncate border-t border-[#eee5d4] pt-2 text-[#6e624e]">
           {data.sourceType} #{data.sourceReferenceId}
         </p>

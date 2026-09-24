@@ -18,7 +18,8 @@ export type MutationGraphLayoutNode = MutationGraphViewNode & {
 };
 
 const STATE_SIZE = { width: 270, height: 176 };
-const MUTATION_SIZE = { width: 220, height: 112 };
+const MUTATION_SIZE = { width: 250, height: 112 };
+const WORK_MUTATION_SIZE = { width: 250, height: 178 };
 const JUNCTION_SIZE = { width: 22, height: 22 };
 
 export function buildReadableMutationGraph(
@@ -107,12 +108,16 @@ export function layoutMutationGraph(
     .forEach((edge) => {
       const mutationPosition = positions.get(edge.sourceNodeId);
       const junctionPosition = positions.get(edge.targetNodeId);
+      const mutationNode = nodes.find((node) => node.id === edge.sourceNodeId);
+      const mutationSize = mutationNode
+        ? nodeSize(mutationNode)
+        : MUTATION_SIZE;
       if (mutationPosition && junctionPosition) {
         positions.set(edge.targetNodeId, {
           ...junctionPosition,
           y:
             mutationPosition.y +
-            MUTATION_SIZE.height * 0.78 -
+            mutationSize.height * 0.78 -
             JUNCTION_SIZE.height / 2,
         });
       }
@@ -126,6 +131,8 @@ export function layoutMutationGraph(
 
 function nodeSize(node: MutationGraphViewNode) {
   if (node.nodeType === "STATE") return STATE_SIZE;
-  if (node.nodeType === "MUTATION") return MUTATION_SIZE;
+  if (node.nodeType === "MUTATION") {
+    return node.workOperation ? WORK_MUTATION_SIZE : MUTATION_SIZE;
+  }
   return JUNCTION_SIZE;
 }

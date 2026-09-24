@@ -31,14 +31,16 @@ public class OrchidGroupMutationQueryService {
 
 	private final OrchidGroupMutationRelationRepository relationRepository;
 
+	private final OrchidGroupMutationWorkOperationReader workOperationReader;
+
 	public PageResponse<OrchidGroupMutationResponse> getMutations(Long orchidGroupId,
 			OrchidGroupMutationType mutationType, OrchidGroupMutationSourceDomain sourceDomain, int page, int size) {
 		PageRequests.validate(page, size);
 		var mutations = mutationRepository.search(orchidGroupId, mutationType, sourceDomain,
 				PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "id")));
 		if (mutations.isEmpty()) {
-			return PageResponse
-				.from(mutations.map(mutation -> OrchidGroupMutationResponse.from(mutation, List.of(), List.of())));
+			return PageResponse.from(
+					mutations.map(mutation -> OrchidGroupMutationResponse.from(mutation, null, List.of(), List.of())));
 		}
 
 		List<Long> mutationIds = mutations.stream().map(mutation -> mutation.getId()).toList();
@@ -57,7 +59,9 @@ public class OrchidGroupMutationQueryService {
 			}
 		});
 
+		var workOperationsByMutationId = workOperationReader.resolveByMutationId(mutations.getContent());
 		return PageResponse.from(mutations.map(mutation -> OrchidGroupMutationResponse.from(mutation,
+				workOperationsByMutationId.get(mutation.getId()),
 				entriesByMutationId.getOrDefault(mutation.getId(), List.of()),
 				relationsByMutationId.getOrDefault(mutation.getId(), List.of()))));
 	}
