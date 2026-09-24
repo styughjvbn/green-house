@@ -51,7 +51,7 @@
 
 ## 4. 상태와 전파
 
-- 전체 상태: `PLANNED`, `IN_PROGRESS`, `PAUSED`, `COMPLETED`, `CANCELED`, `CORRECTED`.
+- 전체 상태: `PLANNED`, `IN_PROGRESS`, `PAUSED`, `COMPLETED`, `CANCELED`, `CORRECTED`, `VOIDED`.
 - 대상 상태: `PENDING`, `IN_PROGRESS`, `COMPLETED`, `SKIPPED`, `CANCELED`, `FAILED`.
 - 전체 작업은 `PLANNED → IN_PROGRESS ↔ PAUSED → COMPLETED` 흐름을 제공한다.
 - 대상은 `PENDING → IN_PROGRESS → COMPLETED` 또는 `SKIPPED`로 처리한다.
@@ -73,6 +73,16 @@
 - 보정 효과는 원본 작업의 작업일과 원본 작업이 만든 결과의 수량·상태를 변경하고 전후 값을 감사 상세로 보존한다.
 - 후속 작업·이동·판매·입고 연결과 예약 수량을 침해하는 보정은 허용하지 않는다.
 - 새 결과 생성이나 기존 계보 교체는 현재 보정 효과 범위에 포함하지 않는다.
+- 현실에서 수행하지 않았는데 완료로 잘못 등록한 구조 변경(자리 이동·분갈이·분주·합식 포함)은 `VOIDED`로 무효화한다. 원본 작업과
+  Mutation은 삭제하지 않고 `COMPENSATION` Mutation을 추가하며 revision은 계속 증가한다.
+- 구조 변경 무효화는 원본 Mutation의 모든 SOURCE와 RESULT가 후속 변경 없이 말단에 있고, 결과 난
+  묶음에 다른 작업·판매·입고 참조가 없을 때만 허용한다. 원본 상태 복원과 모든 결과 생성 취소는 한
+  트랜잭션으로 처리한다.
+- 같은 난 묶음을 여러 실행 회차에서 반복 변경한 작업, 폐기·판매·입금처럼 물리적 또는 외부 효과가
+  있는 작업은 자동 무효화하지 않는다.
+- 현장 실사로 확인한 현재 상태가 시스템과 다르면 `RECONCILIATION` 작업으로 수량·상태·위치를
+  동기화한다. 동기화 전후 snapshot과 사유를 보존하고 과거 작업을 무효화한 것으로 취급하지 않는다.
+- 현장 동기화는 예약 수량보다 작은 수량이나 다른 활성 난 묶음과 겹치는 배치를 허용하지 않는다.
 
 ## 6. 기존 이력
 
@@ -91,6 +101,8 @@
 - cutover 이전 상태 변경 Work 효과도 동일한 `(workOperationId, effectKey)` identity로 complete state-chain Mutation에 이관한다. `DISCARD`, `MOVE`, `DIVIDE`, `MOVEMENT`, `REPOT`, `POTTING`만 대상이며 난 묶음 관계는 연속 `CREATE/CHANGE/DELETE` Entry로 연결하고 원본 command/result는 Work 사실 데이터에 보존한다.
 - 전환용 importer는 Work application의 제한된 source 조회와 link API만 사용한다. 이관 후 상태 변경 효과와 대응 Lineage는 같은 Mutation ID로 연결하고, 재실행 시 기존 연결을 반환한다.
 - 기록 전용 효과와 작업일만 바뀐 보정은 난 묶음 상태 변경이 없으므로 Mutation 연결을 만들지 않는다.
+- 작업 무효화 API는 먼저 영향 범위와 차단 사유를 조회하고 실행 시 같은 조건을 잠금 아래 다시
+  검증한다. 동일 무효화 요청은 기존 결과를 반환하고 다른 요청으로 중복 무효화할 수 없다.
 
 ## 7. 작업 모듈 내부 구조
 

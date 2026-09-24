@@ -102,6 +102,14 @@ export function useWorkOperationActions(operations: WorkOperationSummary[]) {
       );
       void invalidateWorkData();
     },
+    voidSaved(updated: WorkOperation) {
+      setSelectedId(updated.id);
+      queryClient.setQueryData(
+        workRecordQueryKeys.operations.operation(updated.id),
+        updated,
+      );
+      void invalidateWorkData();
+    },
   };
 }
 

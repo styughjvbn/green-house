@@ -362,6 +362,9 @@ export type WorkOperation = {
   details: Record<string, unknown> | null;
   worker: string | null;
   memo: string | null;
+  voidedAt: string | null;
+  voidReason: string | null;
+  voidMutationId: number | null;
   progress: {
     total: number;
     pending: number;
@@ -378,6 +381,19 @@ export type WorkOperation = {
 };
 
 export type WorkOperationSummary = Omit<WorkOperation, "targets">;
+
+export type WorkOperationVoidEligibility = {
+  workOperationId: number;
+  voidable: boolean;
+  mutationIds: number[];
+  sourceOrchidGroupIds: number[];
+  resultOrchidGroupIds: number[];
+  blockers: Array<{
+    code: string;
+    message: string;
+    count: number;
+  }>;
+};
 
 export type OrchidGroupWorkHistory = {
   sourceKind: "WORK_OPERATION" | "WORK_OPERATION_EFFECT";

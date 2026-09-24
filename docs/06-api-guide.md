@@ -143,6 +143,15 @@ npm run api:types
 
 `GET /api/work-operations/{workOperationId}/details`는 완료 작업 화면용 정형 상세를 반환한다. `fields`는 작업 유형별 입력값을 표시용 키·라벨·값으로 변환하고, `executions`는 `WorkAppliedEffect`에 보존된 모든 실행 회차를 원본 투입·결과 난 묶음·수량/상태 변화·손실·위치 필드로 변환한다. `corrections`는 보정 사유와 난 묶음별 수량·상태 전후값을 시간순으로 반환한다. 클라이언트는 저장된 `details`, `commandDetails`, `resultDetails` JSON 키를 직접 해석하지 않는다. 과거 기록에 저장되지 않은 값은 응답에서 `null` 또는 빈 목록으로 유지한다.
 
+`GET /api/work-operations/{workOperationId}/void-eligibility`는 완료된 구조 변경의 원본 Mutation,
+SOURCE/RESULT와 무효화 차단 사유를 반환한다. `POST /api/work-operations/{workOperationId}/void`는 실행
+시 조건을 다시 검증하고 원본 상태 복원과 결과 생성을 함께 보상한다. 성공한 작업은 `VOIDED`가 되며
+응답의 `voidedAt`, `voidReason`, `voidMutationId`로 보상 기록을 추적한다.
+
+`POST /api/orchid-groups/{orchidGroupId}/reconciliations`는 현장에서 확인한 수량·상태·논리 구역·배치를
+현재 상태로 반영한다. 별도 `RECONCILIATION` 작업과 Mutation이 생성되고 전후 snapshot과 사유가 작업
+효과에 보존된다.
+
 대상 완료와 구조 변경 실행에는 `completedDate`를 전달하고, 전체 작업 완료에도 완료 요청 본문의 `completedDate`를 전달한다. 화면 기본값은 농장 기준 오늘이며 오늘 이전 날짜로 수정할 수 있다. 포트 작업은 `pottingDate`를 대상과 전체 작업의 완료일로 함께 사용한다. 기존 호출 호환을 위해 일반 대상·전체 완료에서 날짜를 생략하면 농장 기준 오늘로 처리한다.
 
 `POST /api/work-operations/record`는 농장 전체, 동, 물리 배드, 논리 구역, 난 묶음 범위의 기록형 작업을 대상 스냅샷과 함께 즉시 완료한다. 직접 자리 이동도 완료된 `WorkOperation`과 작업 효과로 기록하며 모든 작업 이력 API는 `WorkOperation` 계약을 사용한다.

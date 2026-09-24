@@ -77,6 +77,11 @@ const TEMPLATE_CONFIG: Record<WorkTypeTemplate, WorkTypeTemplateConfig> = {
     fields: ["worker", "memo"],
     labels: {},
   },
+  RECONCILIATION: {
+    label: "현장 동기화형",
+    fields: ["worker", "memo"],
+    labels: {},
+  },
 };
 
 export const WORK_TYPE_TEMPLATES = Object.keys(

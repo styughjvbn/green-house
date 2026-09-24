@@ -4,6 +4,7 @@ import type {
   OrchidGroup,
   WorkOperation,
   WorkOperationSummary,
+  WorkOperationVoidEligibility,
   WorkTargetPreview,
   WorkType,
 } from "@/entities/farm/types";
@@ -159,6 +160,25 @@ export function getWorkOperation(
   workOperationId: number,
 ): Promise<WorkOperation> {
   return fetchApi<WorkOperation>(`/work-operations/${workOperationId}`);
+}
+
+export function getWorkOperationVoidEligibility(
+  workOperationId: number,
+): Promise<WorkOperationVoidEligibility> {
+  return fetchApi<WorkOperationVoidEligibility>(
+    `/work-operations/${workOperationId}/void-eligibility`,
+  );
+}
+
+export function voidWorkOperation(
+  workOperationId: number,
+  payload: { idempotencyKey: string; reason: string },
+): Promise<WorkOperation> {
+  return requestWorkOperation<WorkOperation>(
+    `/work-operations/${workOperationId}/void`,
+    "POST",
+    payload,
+  );
 }
 
 export function getWorkOperationDetails(

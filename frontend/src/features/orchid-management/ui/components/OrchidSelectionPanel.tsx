@@ -8,6 +8,7 @@ import {
   ListChecks,
   LoaderCircle,
   Move,
+  RefreshCcw,
   Search,
 } from "lucide-react";
 import {
@@ -56,6 +57,7 @@ export default function OrchidSelectionPanel({
   onEdit,
   onOpenEdit,
   onOpenMovementRecord,
+  onOpenReconciliation,
   onOpenPaste,
   onOpenWorkRecord,
   onSelectOrchidGroup,
@@ -90,6 +92,7 @@ export default function OrchidSelectionPanel({
   onEdit: (payload: MutationPayload) => Promise<void>;
   onOpenEdit: (orchidGroupId: number) => void;
   onOpenMovementRecord: () => void;
+  onOpenReconciliation: () => void;
   onOpenPaste: () => void;
   onOpenWorkRecord: () => void;
   onSelectOrchidGroup: (orchidGroupId: number) => void;
@@ -543,6 +546,14 @@ export default function OrchidSelectionPanel({
                     onClick={onOpenMovementRecord}
                     disabled={!selectedOrchidGroup}
                   />
+                  <div className="col-span-2">
+                    <ActionButton
+                      icon={<RefreshCcw className="h-4 w-4" />}
+                      label="현장 상태 동기화"
+                      onClick={onOpenReconciliation}
+                      disabled={!selectedOrchidGroup}
+                    />
+                  </div>
                 </div>
               ) : null}
             </div>

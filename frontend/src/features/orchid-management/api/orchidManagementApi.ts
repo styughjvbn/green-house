@@ -6,6 +6,7 @@ import type {
   OrchidManagementViewport,
   OrchidGroup,
   VarietyOption,
+  WorkOperation,
 } from "@/entities/farm/types";
 import type {
   DerivedOrchidGroup,
@@ -21,6 +22,37 @@ import type {
 export function getOrchidGroupLineage(orchidGroupId: number) {
   return fetchApi<OrchidGroupLineage>(
     `/orchid-groups/${orchidGroupId}/lineage`,
+  );
+}
+
+export function getOrchidManagementHouses(): Promise<House[]> {
+  return fetchApi<House[]>("/houses");
+}
+
+export function reconcileOrchidGroup(
+  orchidGroupId: number,
+  payload: {
+    idempotencyKey: string;
+    title: string;
+    workDate: string;
+    worker: string | null;
+    memo: string | null;
+    reason: string;
+    actualQuantity: number;
+    actualStatus: string;
+    actualBedZoneId: number;
+    actualStartPosition: number;
+    actualEndPosition: number;
+  },
+): Promise<WorkOperation> {
+  return requestApi<WorkOperation>(
+    `/orchid-groups/${orchidGroupId}/reconciliations`,
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    },
+    "현장 상태를 동기화하지 못했습니다.",
   );
 }
 

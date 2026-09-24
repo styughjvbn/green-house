@@ -227,6 +227,7 @@ paths:
           - COMPLETED
           - CANCELED
           - CORRECTED
+          - VOIDED
       - name: view
         in: query
         required: false
@@ -302,6 +303,31 @@ paths:
               schema:
                 $ref: '#/components/schemas/ApiResponseWorkOperationResponse'
       deprecated: true
+  /api/work-operations/{workOperationId}/void:
+    post:
+      tags:
+      - work-operation-void-controller
+      operationId: voidOperation
+      parameters:
+      - name: workOperationId
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: int64
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/WorkOperationVoidRequest'
+        required: true
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponseWorkOperationResponse'
   /api/work-operations/{workOperationId}/targets/{targetId}/start:
     post:
       tags:
@@ -1020,6 +1046,31 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ApiResponseOrchidGroupResponse'
+  /api/orchid-groups/{orchidGroupId}/reconciliations:
+    post:
+      tags:
+      - orchid-group-command-controller
+      operationId: reconcile
+      parameters:
+      - name: orchidGroupId
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: int64
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/OrchidGroupReconciliationRequest'
+        required: true
+      responses:
+        '201':
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponseWorkOperationResponse'
   /api/orchid-group-collections:
     get:
       tags:
@@ -1973,6 +2024,25 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ApiResponseWorkOperationResponse'
+  /api/work-operations/{workOperationId}/void-eligibility:
+    get:
+      tags:
+      - work-operation-void-controller
+      operationId: eligibility
+      parameters:
+      - name: workOperationId
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: int64
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponseWorkOperationVoidEligibilityResponse'
   /api/work-operations/{workOperationId}/repot-results:
     get:
       tags:
@@ -2091,6 +2161,7 @@ paths:
           - COMPLETED
           - CANCELED
           - CORRECTED
+          - VOIDED
       - name: view
         in: query
         required: false
@@ -2648,6 +2719,7 @@ paths:
           - DISCARD
           - TRANSFORM
           - CORRECTION
+          - RECONCILIATION
           - COMPENSATION
           - CANCEL_CREATION
           - DELETE
@@ -4043,6 +4115,7 @@ components:
           - MOVEMENT
           - MULTI_CREATE
           - CORRECTION
+          - RECONCILIATION
       required:
       - name
       - template
@@ -4076,6 +4149,7 @@ components:
           - MOVEMENT
           - MULTI_CREATE
           - CORRECTION
+          - RECONCILIATION
         defaultType:
           type: boolean
         systemType:
@@ -4230,6 +4304,7 @@ components:
           - MOVEMENT
           - MULTI_CREATE
           - CORRECTION
+          - RECONCILIATION
         workTypeWorkflow:
           type: string
           enum:
@@ -4249,6 +4324,7 @@ components:
           - COMPLETED
           - CANCELED
           - CORRECTED
+          - VOIDED
         plannedStartDate:
           type: string
           format: date
@@ -4290,6 +4366,14 @@ components:
           type: string
         memo:
           type: string
+        voidedAt:
+          type: string
+          format: date-time
+        voidReason:
+          type: string
+        voidMutationId:
+          type: integer
+          format: int64
         progress:
           $ref: '#/components/schemas/WorkOperationProgressResponse'
         targets:
@@ -4395,6 +4479,20 @@ components:
             - COMPLETE
             - EXECUTE
             - SKIP
+    WorkOperationVoidRequest:
+      type: object
+      properties:
+        idempotencyKey:
+          type: string
+          maxLength: 100
+          minLength: 0
+        reason:
+          type: string
+          maxLength: 1000
+          minLength: 0
+      required:
+      - idempotencyKey
+      - reason
     WorkTargetExecutionRequest:
       type: object
       properties:
@@ -5298,6 +5396,57 @@ components:
           $ref: '#/components/schemas/OrchidGroupResponse'
         message:
           type: string
+    OrchidGroupReconciliationRequest:
+      type: object
+      properties:
+        idempotencyKey:
+          type: string
+          maxLength: 100
+          minLength: 0
+        title:
+          type: string
+          maxLength: 150
+          minLength: 0
+        workDate:
+          type: string
+          format: date
+        worker:
+          type: string
+          maxLength: 100
+          minLength: 0
+        memo:
+          type: string
+          maxLength: 1000
+          minLength: 0
+        reason:
+          type: string
+          maxLength: 1000
+          minLength: 0
+        actualQuantity:
+          type: integer
+          format: int32
+          minimum: 0
+        actualStatus:
+          type: string
+          maxLength: 50
+          minLength: 0
+        actualBedZoneId:
+          type: integer
+          format: int64
+        actualStartPosition:
+          type: number
+        actualEndPosition:
+          type: number
+      required:
+      - actualBedZoneId
+      - actualEndPosition
+      - actualQuantity
+      - actualStartPosition
+      - actualStatus
+      - idempotencyKey
+      - reason
+      - title
+      - workDate
     OrchidGroupCollectionCreateRequest:
       type: object
       properties:
@@ -6200,6 +6349,7 @@ components:
           - MOVEMENT
           - MULTI_CREATE
           - CORRECTION
+          - RECONCILIATION
         active:
           type: boolean
       required:
@@ -6536,6 +6686,7 @@ components:
             - MOVEMENT
             - MULTI_CREATE
             - CORRECTION
+            - RECONCILIATION
     ApiResponsePageResponseWorkOperationSummaryResponse:
       type: object
       properties:
@@ -6588,6 +6739,7 @@ components:
           - MOVEMENT
           - MULTI_CREATE
           - CORRECTION
+          - RECONCILIATION
         workTypeWorkflow:
           type: string
           enum:
@@ -6607,6 +6759,7 @@ components:
           - COMPLETED
           - CANCELED
           - CORRECTED
+          - VOIDED
         plannedStartDate:
           type: string
           format: date
@@ -6648,6 +6801,14 @@ components:
           type: string
         memo:
           type: string
+        voidedAt:
+          type: string
+          format: date-time
+        voidReason:
+          type: string
+        voidMutationId:
+          type: integer
+          format: int64
         progress:
           $ref: '#/components/schemas/WorkOperationProgressResponse'
         availableActions:
@@ -6660,6 +6821,50 @@ components:
             - RESUME
             - COMPLETE
             - CANCEL
+    ApiResponseWorkOperationVoidEligibilityResponse:
+      type: object
+      properties:
+        data:
+          $ref: '#/components/schemas/WorkOperationVoidEligibilityResponse'
+        message:
+          type: string
+    Blocker:
+      type: object
+      properties:
+        code:
+          type: string
+        message:
+          type: string
+        count:
+          type: integer
+          format: int64
+    WorkOperationVoidEligibilityResponse:
+      type: object
+      properties:
+        workOperationId:
+          type: integer
+          format: int64
+        voidable:
+          type: boolean
+        mutationIds:
+          type: array
+          items:
+            type: integer
+            format: int64
+        sourceOrchidGroupIds:
+          type: array
+          items:
+            type: integer
+            format: int64
+        resultOrchidGroupIds:
+          type: array
+          items:
+            type: integer
+            format: int64
+        blockers:
+          type: array
+          items:
+            $ref: '#/components/schemas/Blocker'
     ApiResponseWorkOperationDetailResponse:
       type: object
       properties:
@@ -6878,6 +7083,7 @@ components:
           - COMPLETED
           - CANCELED
           - CORRECTED
+          - VOIDED
         plannedStartDate:
           type: string
           format: date
@@ -6901,16 +7107,6 @@ components:
           $ref: '#/components/schemas/MultiCreateCancellationEligibilityResponse'
         message:
           type: string
-    Blocker:
-      type: object
-      properties:
-        code:
-          type: string
-        message:
-          type: string
-        count:
-          type: integer
-          format: int64
     MultiCreateCancellationEligibilityResponse:
       type: object
       properties:
@@ -7746,6 +7942,7 @@ components:
           - DISCARD
           - TRANSFORM
           - CORRECTION
+          - RECONCILIATION
           - COMPENSATION
           - CANCEL_CREATION
           - DELETE
@@ -7971,6 +8168,7 @@ components:
           - DISCARD
           - TRANSFORM
           - CORRECTION
+          - RECONCILIATION
           - COMPENSATION
           - CANCEL_CREATION
           - DELETE
@@ -8778,6 +8976,7 @@ components:
           - MOVEMENT
           - MULTI_CREATE
           - CORRECTION
+          - RECONCILIATION
         title:
           type: string
         sourceScopeType:
@@ -8806,6 +9005,7 @@ components:
           - COMPLETED
           - CANCELED
           - CORRECTED
+          - VOIDED
     WorkAnalyticsResponse:
       type: object
       properties:

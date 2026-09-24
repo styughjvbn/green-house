@@ -36,6 +36,7 @@ paths:
           - COMPLETED
           - CANCELED
           - CORRECTED
+          - VOIDED
       - name: view
         in: query
         required: false
@@ -111,6 +112,31 @@ paths:
               schema:
                 $ref: '#/components/schemas/ApiResponseWorkOperationResponse'
       deprecated: true
+  /api/work-operations/{workOperationId}/void:
+    post:
+      tags:
+      - work-operation-void-controller
+      operationId: voidOperation
+      parameters:
+      - name: workOperationId
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: int64
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/WorkOperationVoidRequest'
+        required: true
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponseWorkOperationResponse'
   /api/work-operations/{workOperationId}/targets/{targetId}/start:
     post:
       tags:
@@ -597,6 +623,25 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ApiResponseWorkOperationResponse'
+  /api/work-operations/{workOperationId}/void-eligibility:
+    get:
+      tags:
+      - work-operation-void-controller
+      operationId: eligibility
+      parameters:
+      - name: workOperationId
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: int64
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponseWorkOperationVoidEligibilityResponse'
   /api/work-operations/{workOperationId}/details:
     get:
       tags:
@@ -658,6 +703,7 @@ paths:
           - COMPLETED
           - CANCELED
           - CORRECTED
+          - VOIDED
       - name: view
         in: query
         required: false
@@ -810,6 +856,13 @@ components:
           $ref: '#/components/schemas/WorkOperationResponse'
         message:
           type: string
+    ApiResponseWorkOperationVoidEligibilityResponse:
+      type: object
+      properties:
+        data:
+          $ref: '#/components/schemas/WorkOperationVoidEligibilityResponse'
+        message:
+          type: string
     ApiResponseWorkTargetPreviewResponse:
       type: object
       properties:
@@ -817,6 +870,16 @@ components:
           $ref: '#/components/schemas/WorkTargetPreviewResponse'
         message:
           type: string
+    Blocker:
+      type: object
+      properties:
+        code:
+          type: string
+        message:
+          type: string
+        count:
+          type: integer
+          format: int64
     DiscardRecordCreateRequest:
       type: object
       properties:
@@ -1593,6 +1656,7 @@ components:
           - COMPLETED
           - CANCELED
           - CORRECTED
+          - VOIDED
         plannedStartDate:
           type: string
           format: date
@@ -1665,6 +1729,7 @@ components:
           - MOVEMENT
           - MULTI_CREATE
           - CORRECTION
+          - RECONCILIATION
         workTypeWorkflow:
           type: string
           enum:
@@ -1684,6 +1749,7 @@ components:
           - COMPLETED
           - CANCELED
           - CORRECTED
+          - VOIDED
         plannedStartDate:
           type: string
           format: date
@@ -1725,6 +1791,14 @@ components:
           type: string
         memo:
           type: string
+        voidedAt:
+          type: string
+          format: date-time
+        voidReason:
+          type: string
+        voidMutationId:
+          type: integer
+          format: int64
         progress:
           $ref: '#/components/schemas/WorkOperationProgressResponse'
         targets:
@@ -1767,6 +1841,7 @@ components:
           - MOVEMENT
           - MULTI_CREATE
           - CORRECTION
+          - RECONCILIATION
         workTypeWorkflow:
           type: string
           enum:
@@ -1786,6 +1861,7 @@ components:
           - COMPLETED
           - CANCELED
           - CORRECTED
+          - VOIDED
         plannedStartDate:
           type: string
           format: date
@@ -1827,6 +1903,14 @@ components:
           type: string
         memo:
           type: string
+        voidedAt:
+          type: string
+          format: date-time
+        voidReason:
+          type: string
+        voidMutationId:
+          type: integer
+          format: int64
         progress:
           $ref: '#/components/schemas/WorkOperationProgressResponse'
         availableActions:
@@ -1928,6 +2012,47 @@ components:
             - COMPLETE
             - EXECUTE
             - SKIP
+    WorkOperationVoidEligibilityResponse:
+      type: object
+      properties:
+        workOperationId:
+          type: integer
+          format: int64
+        voidable:
+          type: boolean
+        mutationIds:
+          type: array
+          items:
+            type: integer
+            format: int64
+        sourceOrchidGroupIds:
+          type: array
+          items:
+            type: integer
+            format: int64
+        resultOrchidGroupIds:
+          type: array
+          items:
+            type: integer
+            format: int64
+        blockers:
+          type: array
+          items:
+            $ref: '#/components/schemas/Blocker'
+    WorkOperationVoidRequest:
+      type: object
+      properties:
+        idempotencyKey:
+          type: string
+          maxLength: 100
+          minLength: 0
+        reason:
+          type: string
+          maxLength: 1000
+          minLength: 0
+      required:
+      - idempotencyKey
+      - reason
     WorkTargetExecutionRequest:
       type: object
       properties:

@@ -20,6 +20,7 @@ import BulkOrchidGroupCorrectionPanel from "./components/BulkOrchidGroupCorrecti
 import ContinuousBedMap from "./components/ContinuousBedMap";
 import WorkOperationCorrectionForm from "./components/WorkOperationCorrectionForm";
 import OrchidSelectionPanel from "./components/OrchidSelectionPanel";
+import OrchidGroupReconciliationDialog from "./components/OrchidGroupReconciliationDialog";
 import SelectedOrchidGroupsInfo from "./components/SelectedOrchidGroupsInfo";
 import SelectedZoneInfo from "./components/SelectedZoneInfo";
 
@@ -85,6 +86,9 @@ export function OrchidManagementMap({
     number | null
   >(null);
   const [showBulkCorrection, setShowBulkCorrection] = useState(false);
+  const [reconciliationGroup, setReconciliationGroup] = useState<
+    import("@/entities/farm/types").OrchidGroup | null
+  >(null);
   const [workRegistrationPreset, setWorkRegistrationPreset] = useState<{
     orchidGroupIds: number[];
     workTypeCode?: string;
@@ -258,6 +262,20 @@ export function OrchidManagementMap({
           presetOrchidGroupIds={workRegistrationPreset.orchidGroupIds}
           presetWorkTypeCode={workRegistrationPreset.workTypeCode}
           onClose={() => setWorkRegistrationPreset(null)}
+          onSaved={() => {
+            orchidManagement.actions.invalidateHistory();
+            void invalidateWorkData();
+            void queryClient.invalidateQueries({
+              queryKey: ["farm-status", "orchid-management-viewport"],
+            });
+            router.refresh();
+          }}
+        />
+      ) : null}
+      {reconciliationGroup ? (
+        <OrchidGroupReconciliationDialog
+          orchidGroup={reconciliationGroup}
+          onClose={() => setReconciliationGroup(null)}
           onSaved={() => {
             orchidManagement.actions.invalidateHistory();
             void invalidateWorkData();
@@ -456,6 +474,10 @@ export function OrchidManagementMap({
               if (orchidGroupId) {
                 openWorkRegistration([orchidGroupId], "MOVEMENT");
               }
+            }}
+            onOpenReconciliation={() => {
+              const orchidGroup = orchidManagement.selectedOrchidGroup;
+              if (orchidGroup) setReconciliationGroup(orchidGroup);
             }}
             onOpenPaste={() => {
               clearMapCellRangePick();

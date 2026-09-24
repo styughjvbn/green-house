@@ -3,6 +3,7 @@ import type { WorkOperation } from "@/entities/farm/types";
 import { getWorkExecutionKind } from "../../model/work-types/workTypeDefinition";
 import { WorkCompletionDateDialog } from "./WorkCompletionDateDialog";
 import { WorkOperationDetails } from "./WorkOperationDetails";
+import { WorkOperationVoidDialog } from "./WorkOperationVoidDialog";
 import { operationStatusLabel } from "../common/workOperationLabels";
 
 export function OperationResult({
@@ -13,6 +14,7 @@ export function OperationResult({
   onOperationAction,
   onTargetAction,
   onExecuteTarget,
+  onVoidSaved,
 }: {
   className?: string;
   operation: WorkOperation;
@@ -25,14 +27,17 @@ export function OperationResult({
     completedDate?: string,
   ) => void;
   onExecuteTarget?: (target: WorkOperation["targets"][number]) => void;
+  onVoidSaved: (operation: WorkOperation) => void;
 }) {
   const [completionTargetId, setCompletionTargetId] = useState<
     number | "operation" | null
   >(null);
+  const [voidDialogOpen, setVoidDialogOpen] = useState(false);
   const completed = operation.status === "COMPLETED";
   const canceled = operation.status === "CANCELED";
   const corrected = operation.status === "CORRECTED";
-  const terminal = completed || canceled || corrected;
+  const voided = operation.status === "VOIDED";
+  const terminal = completed || canceled || corrected || voided;
   const executionKind = getWorkExecutionKind(operation.workTypeWorkflow);
   const structureChange =
     executionKind === "STRUCTURE_CHANGE" || executionKind === "MOVEMENT";
@@ -59,15 +64,31 @@ export function OperationResult({
           </p>
         </div>
         {terminal ? (
-          <span
-            className={`rounded-full px-3 py-1.5 text-sm font-semibold ${
-              completed || corrected
-                ? "bg-[#e7f6eb] text-[#10783a]"
-                : "bg-[#f2eeee] text-[#765f5a]"
-            }`}
-          >
-            {corrected ? "보정됨" : completed ? "완료됨" : "취소됨"}
-          </span>
+          <div className="flex flex-wrap items-center gap-2">
+            <span
+              className={`rounded-full px-3 py-1.5 text-sm font-semibold ${
+                completed || corrected
+                  ? "bg-[#e7f6eb] text-[#10783a]"
+                  : "bg-[#f2eeee] text-[#765f5a]"
+              }`}
+            >
+              {voided
+                ? "무효화됨"
+                : corrected
+                  ? "보정됨"
+                  : completed
+                    ? "완료됨"
+                    : "취소됨"}
+            </span>
+            {(completed || corrected) && structureChange ? (
+              <StatusAction
+                label="작업 무효화"
+                danger
+                disabled={loading}
+                onClick={() => setVoidDialogOpen(true)}
+              />
+            ) : null}
+          </div>
         ) : (
           <div className="flex flex-wrap gap-2">
             {operation.availableActions.includes("START") ? (
@@ -127,6 +148,19 @@ export function OperationResult({
         )}
       </div>
 
+      {voided ? (
+        <div className="mt-4 rounded-md border border-[#e1c9c2] bg-[#faf4f2] p-3 text-sm text-[#69483f]">
+          <p className="font-bold">이 작업의 효과는 무효화되었습니다.</p>
+          <p className="mt-1">
+            {operation.voidReason ?? "무효화 사유 없음"}
+            {operation.voidedAt ? ` · ${operation.voidedAt.slice(0, 10)}` : ""}
+            {operation.voidMutationId
+              ? ` · 보상 Mutation #${operation.voidMutationId}`
+              : ""}
+          </p>
+        </div>
+      ) : null}
+
       <WorkOperationDetails
         key={operation.id}
         actionLoading={loading}
@@ -149,6 +183,13 @@ export function OperationResult({
               onTargetAction(completionTargetId, "complete", completedDate);
             }
           }}
+        />
+      ) : null}
+      {voidDialogOpen ? (
+        <WorkOperationVoidDialog
+          operation={operation}
+          onClose={() => setVoidDialogOpen(false)}
+          onSaved={onVoidSaved}
         />
       ) : null}
     </div>

@@ -45,6 +45,7 @@ export function WorkOperationDetailPanel({
             onOperationAction={actions.runOperationAction}
             onTargetAction={actions.runTargetAction}
             onExecuteTarget={actions.openExecution}
+            onVoidSaved={actions.voidSaved}
           />
         ) : actions.detailLoading ? (
           <div className="flex h-full min-h-40 items-center justify-center rounded-md border border-[#dfe5dc] bg-white p-8 text-center text-sm text-[#5c6a60] shadow-sm">

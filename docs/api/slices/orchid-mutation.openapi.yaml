@@ -35,6 +35,7 @@ paths:
           - DISCARD
           - TRANSFORM
           - CORRECTION
+          - RECONCILIATION
           - COMPENSATION
           - CANCEL_CREATION
           - DELETE
@@ -247,6 +248,7 @@ components:
           - DISCARD
           - TRANSFORM
           - CORRECTION
+          - RECONCILIATION
           - COMPENSATION
           - CANCEL_CREATION
           - DELETE
@@ -343,6 +345,7 @@ components:
           - DISCARD
           - TRANSFORM
           - CORRECTION
+          - RECONCILIATION
           - COMPENSATION
           - CANCEL_CREATION
           - DELETE

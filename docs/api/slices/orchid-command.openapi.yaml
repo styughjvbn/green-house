@@ -122,6 +122,31 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ApiResponseOrchidGroupResponse'
+  /api/orchid-groups/{orchidGroupId}/reconciliations:
+    post:
+      tags:
+      - orchid-group-command-controller
+      operationId: reconcile
+      parameters:
+      - name: orchidGroupId
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: int64
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/OrchidGroupReconciliationRequest'
+        required: true
+      responses:
+        '201':
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponseWorkOperationResponse'
   /api/orchid-groups/{orchidGroupId}:
     delete:
       tags:
@@ -315,6 +340,13 @@ components:
       type: object
       properties:
         data: {}
+        message:
+          type: string
+    ApiResponseWorkOperationResponse:
+      type: object
+      properties:
+        data:
+          $ref: '#/components/schemas/WorkOperationResponse'
         message:
           type: string
     BedZoneCapacityRequest:
@@ -591,6 +623,57 @@ components:
           minLength: 0
       required:
       - toBedZoneId
+    OrchidGroupReconciliationRequest:
+      type: object
+      properties:
+        idempotencyKey:
+          type: string
+          maxLength: 100
+          minLength: 0
+        title:
+          type: string
+          maxLength: 150
+          minLength: 0
+        workDate:
+          type: string
+          format: date
+        worker:
+          type: string
+          maxLength: 100
+          minLength: 0
+        memo:
+          type: string
+          maxLength: 1000
+          minLength: 0
+        reason:
+          type: string
+          maxLength: 1000
+          minLength: 0
+        actualQuantity:
+          type: integer
+          format: int32
+          minimum: 0
+        actualStatus:
+          type: string
+          maxLength: 50
+          minLength: 0
+        actualBedZoneId:
+          type: integer
+          format: int64
+        actualStartPosition:
+          type: number
+        actualEndPosition:
+          type: number
+      required:
+      - actualBedZoneId
+      - actualEndPosition
+      - actualQuantity
+      - actualStartPosition
+      - actualStatus
+      - idempotencyKey
+      - reason
+      - title
+      - workDate
     OrchidGroupResponse:
       type: object
       properties:
@@ -876,6 +959,7 @@ components:
           - MOVEMENT
           - MULTI_CREATE
           - CORRECTION
+          - RECONCILIATION
         workTypeWorkflow:
           type: string
           enum:
@@ -895,6 +979,7 @@ components:
           - COMPLETED
           - CANCELED
           - CORRECTED
+          - VOIDED
         plannedStartDate:
           type: string
           format: date
@@ -936,6 +1021,14 @@ components:
           type: string
         memo:
           type: string
+        voidedAt:
+          type: string
+          format: date-time
+        voidReason:
+          type: string
+        voidMutationId:
+          type: integer
+          format: int64
         progress:
           $ref: '#/components/schemas/WorkOperationProgressResponse'
         targets:

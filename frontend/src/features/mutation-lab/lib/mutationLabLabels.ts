@@ -10,6 +10,7 @@ export const TYPE_LABELS: Record<string, string> = {
   DISCARD: "폐기",
   TRANSFORM: "구조 변경",
   CORRECTION: "보정",
+  RECONCILIATION: "현장 동기화",
   COMPENSATION: "보상",
   CANCEL_CREATION: "생성 취소",
   DELETE: "삭제",
@@ -24,7 +25,14 @@ export const DOMAIN_LABELS: Record<string, string> = {
 };
 
 export function mutationTypeColor(type: string) {
-  if (["CORRECTION", "COMPENSATION", "RESTORE_OUTBOUND"].includes(type)) {
+  if (
+    [
+      "CORRECTION",
+      "RECONCILIATION",
+      "COMPENSATION",
+      "RESTORE_OUTBOUND",
+    ].includes(type)
+  ) {
     return "bg-[#f59e0b]";
   }
   if (["DELETE", "DISCARD", "CANCEL_CREATION"].includes(type)) {
