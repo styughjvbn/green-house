@@ -3,6 +3,7 @@ package com.greenhouse.backend.farm.application.transformation;
 import com.greenhouse.backend.common.config.TimeConfig;
 import com.greenhouse.backend.farm.application.orchid.OrchidGroupUsageInspector;
 import com.greenhouse.backend.farm.application.orchid.mutation.CompensateTransformMutationsCommand;
+import com.greenhouse.backend.farm.application.orchid.mutation.OrchidGroupMutationEffectiveHeadPolicy;
 import com.greenhouse.backend.farm.application.orchid.mutation.OrchidGroupMutationEngine;
 import com.greenhouse.backend.farm.application.orchid.mutation.OrchidGroupMutationSources;
 import com.greenhouse.backend.farm.domain.orchid.mutation.OrchidGroupMutationEntry;
@@ -36,6 +37,7 @@ public class FarmStructureChangeVoidAdapter implements StructureChangeVoidPort {
 	private final OrchidGroupCollectionMemberRepository collectionMemberRepository;
 	private final List<OrchidGroupUsageInspector> usageInspectors;
 	private final OrchidGroupMutationEngine mutationEngine;
+	private final OrchidGroupMutationEffectiveHeadPolicy effectiveHeadPolicy;
 	private final Clock clock;
 
 	@Override
@@ -68,12 +70,9 @@ public class FarmStructureChangeVoidAdapter implements StructureChangeVoidPort {
 		}
 		var groups = orchidGroupRepository.findAllById(grouped.keySet()).stream()
 			.collect(Collectors.toMap(group -> group.getId(), group -> group));
-		long changed = entries.stream().filter(entry -> {
-			var group = groups.get(entry.getOrchidGroupId());
-			return group == null || !entry.getStateRevisionAfter().equals(group.getStateRevision());
-		}).count();
+		long changed = effectiveHeadPolicy.countGroupsNotAtEffectiveHead(entries, groups);
 		if (changed > 0) {
-			blockers.add(new Blocker("DOWNSTREAM_MUTATION", "후속 변경이 있는 난 묶음이 있습니다.", changed));
+			blockers.add(new Blocker("DOWNSTREAM_MUTATION", "상쇄되지 않은 후속 변경이 있는 난 묶음이 있습니다.", changed));
 		}
 		List<Long> sourceIds = entries.stream().filter(entry -> entry.getRole() == OrchidGroupMutationEntryRole.SOURCE)
 			.map(OrchidGroupMutationEntry::getOrchidGroupId).distinct().sorted().toList();

@@ -80,6 +80,82 @@ class OrchidGroupRollbackAndReconciliationIntegrationTest extends AbstractBacken
 	}
 
 	@Test
+	void compensatesConsecutiveTransformsFromNewestToOldest() {
+		Fixture fixture = fixture(932);
+		LocalDate date = LocalDate.of(2026, 9, 22);
+		var created = mutationEngine.create(new CreateOrchidGroupMutationCommand(source("stack-create", "CREATE"),
+				fixture.sourceZone().getId(), details(fixture.variety().getId(), 20, "0", "4"), date, "원본 생성"));
+		Long sourceId = created.entries().getFirst().orchidGroupId();
+		var first = mutationEngine.transform(new TransformOrchidGroupsMutationCommand(
+				source("stack-first", "EXECUTION:1"),
+				List.of(new TransformOrchidGroupMutationSource(sourceId, 8, null, null)),
+				List.of(new TransformOrchidGroupMutationResult(fixture.resultZone().getId(),
+						details(fixture.variety().getId(), 8, "0", "2"))),
+				date, "첫 번째 분할", Set.of()));
+		Long firstResultId = first.entries()
+			.stream()
+			.filter(entry -> !entry.orchidGroupId().equals(sourceId))
+			.findFirst()
+			.orElseThrow()
+			.orchidGroupId();
+		var second = mutationEngine.transform(new TransformOrchidGroupsMutationCommand(
+				source("stack-second", "EXECUTION:2"),
+				List.of(new TransformOrchidGroupMutationSource(firstResultId, 3, null, null)),
+				List.of(new TransformOrchidGroupMutationResult(fixture.sourceZone().getId(),
+						details(fixture.variety().getId(), 3, "6", "7"))),
+				date, "두 번째 분할", Set.of()));
+
+		mutationEngine.compensateTransforms(new CompensateTransformMutationsCommand(
+				source("stack-void-second", "VOID:2"), List.of(second.mutationId()), date, "두 번째 작업 취소"));
+		var firstResultAfterSecondUndo = orchidGroupRepository.findById(firstResultId).orElseThrow();
+		assertThat(firstResultAfterSecondUndo.getQuantity()).isEqualTo(8);
+		assertThat(firstResultAfterSecondUndo.getStateRevision()).isEqualTo(3L);
+
+		var firstCompensation = mutationEngine.compensateTransforms(new CompensateTransformMutationsCommand(
+				source("stack-void-first", "VOID:1"), List.of(first.mutationId()), date, "첫 번째 작업 취소"));
+
+		var restoredSource = orchidGroupRepository.findById(sourceId).orElseThrow();
+		var canceledFirstResult = orchidGroupRepository.findById(firstResultId).orElseThrow();
+		assertThat(restoredSource.getQuantity()).isEqualTo(20);
+		assertThat(restoredSource.getStateRevision()).isEqualTo(3L);
+		assertThat(canceledFirstResult.getQuantity()).isZero();
+		assertThat(canceledFirstResult.getStatus()).isEqualTo("생성 취소");
+		assertThat(canceledFirstResult.getStateRevision()).isEqualTo(4L);
+		assertThat(firstCompensation.mutationType()).isEqualTo(OrchidGroupMutationType.COMPENSATION);
+	}
+
+	@Test
+	void rejectsAnOlderTransformWhileANewerTransformRemainsEffective() {
+		Fixture fixture = fixture(933);
+		LocalDate date = LocalDate.of(2026, 9, 22);
+		var created = mutationEngine.create(new CreateOrchidGroupMutationCommand(source("blocked-create", "CREATE"),
+				fixture.sourceZone().getId(), details(fixture.variety().getId(), 20, "0", "4"), date, "원본 생성"));
+		Long sourceId = created.entries().getFirst().orchidGroupId();
+		var first = mutationEngine.transform(new TransformOrchidGroupsMutationCommand(
+				source("blocked-first", "EXECUTION:1"),
+				List.of(new TransformOrchidGroupMutationSource(sourceId, 8, null, null)),
+				List.of(new TransformOrchidGroupMutationResult(fixture.resultZone().getId(),
+						details(fixture.variety().getId(), 8, "0", "2"))),
+				date, "첫 번째 분할", Set.of()));
+		Long firstResultId = first.entries()
+			.stream()
+			.filter(entry -> !entry.orchidGroupId().equals(sourceId))
+			.findFirst()
+			.orElseThrow()
+			.orchidGroupId();
+		mutationEngine.transform(new TransformOrchidGroupsMutationCommand(source("blocked-second", "EXECUTION:2"),
+				List.of(new TransformOrchidGroupMutationSource(firstResultId, 3, null, null)),
+				List.of(new TransformOrchidGroupMutationResult(fixture.sourceZone().getId(),
+						details(fixture.variety().getId(), 3, "6", "7"))),
+				date, "두 번째 분할", Set.of()));
+
+		assertThatThrownBy(() -> mutationEngine.compensateTransforms(new CompensateTransformMutationsCommand(
+				source("blocked-void-first", "VOID:1"), List.of(first.mutationId()), date, "첫 작업부터 취소")))
+			.isInstanceOf(IllegalArgumentException.class)
+			.hasMessageContaining("상쇄되지 않은 후속 변경");
+	}
+
+	@Test
 	void reconcilesObservedQuantityStatusAndLocationAsANewRevision() {
 		Fixture fixture = fixture(931);
 		LocalDate date = LocalDate.of(2026, 9, 22);

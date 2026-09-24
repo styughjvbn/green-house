@@ -57,6 +57,8 @@ public class OrchidGroupMutationEngine {
 
 	private final OrchidGroupMutationRecorder recorder;
 
+	private final OrchidGroupMutationEffectiveHeadPolicy effectiveHeadPolicy;
+
 	public OrchidGroupMutationResult create(CreateOrchidGroupMutationCommand command) {
 		String fingerprint = commandFingerprint.calculate(command);
 		var replay = replayResolver.findExisting(command.source(), fingerprint);
@@ -499,12 +501,8 @@ public class OrchidGroupMutationEngine {
 		if (recorder.alreadyCompensated(command.mutationIds())) {
 			throw new IllegalArgumentException("이미 무효화된 구조 변경 작업입니다.");
 		}
-		for (OrchidGroupMutationEntry entry : entries) {
-			OrchidGroup group = groups.get(entry.getOrchidGroupId());
-			if (!entry.getStateRevisionAfter().equals(group.getStateRevision())
-					|| !entry.getAfterState().canonical().equals(OrchidGroupStateSnapshot.from(group).canonical())) {
-				throw new IllegalArgumentException("후속 변경이 있는 난 묶음은 작업을 무효화할 수 없습니다.");
-			}
+		if (effectiveHeadPolicy.countGroupsNotAtEffectiveHead(entries, groups) > 0) {
+			throw new IllegalArgumentException("상쇄되지 않은 후속 변경이 있는 난 묶음은 작업을 무효화할 수 없습니다.");
 		}
 		Set<Long> excludedIds = entriesByGroup.keySet();
 		for (OrchidGroupMutationEntry entry : entries) {

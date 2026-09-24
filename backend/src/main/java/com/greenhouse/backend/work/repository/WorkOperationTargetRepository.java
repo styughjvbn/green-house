@@ -1,5 +1,6 @@
 package com.greenhouse.backend.work.repository;
 
+import com.greenhouse.backend.work.domain.operation.WorkOperationStatus;
 import com.greenhouse.backend.work.domain.target.WorkOperationTarget;
 import java.util.Collection;
 import java.util.List;
@@ -13,7 +14,15 @@ public interface WorkOperationTargetRepository extends JpaRepository<WorkOperati
 			+ "where target.orchidGroupId is not null order by target.orchidGroupId")
 	List<Long> findDistinctOrchidGroupIds();
 
-	long countByOrchidGroupIdInAndWorkOperationIdNot(Collection<Long> orchidGroupIds, Long workOperationId);
+	@Query("""
+			select count(target) from WorkOperationTarget target
+			where target.orchidGroupId in :orchidGroupIds
+			  and target.workOperation.id <> :workOperationId
+			  and target.workOperation.status not in :ignoredStatuses
+			  and target.excludedAt is null
+			""")
+	long countActiveOtherOperations(Collection<Long> orchidGroupIds, Long workOperationId,
+			Collection<WorkOperationStatus> ignoredStatuses);
 
 	@EntityGraph(attributePaths = { "workOperation", "workOperation.workType" })
 	List<WorkOperationTarget> findByWorkOperationIdAndExcludedAtIsNullOrderByIdAsc(Long workOperationId);

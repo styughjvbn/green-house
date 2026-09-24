@@ -90,7 +90,7 @@ export function WorkOperationVoidDialog({
 
               {data.voidable ? (
                 <p className="rounded-md border border-[#b8ddc1] bg-[#eff9f1] p-3 text-sm text-[#176b35]">
-                  결과 묶음이 모두 리프 상태여서 이 작업을 무효화할 수 있습니다.
+                  상쇄되지 않은 후속 변경이 없어 이 작업을 무효화할 수 있습니다.
                 </p>
               ) : (
                 <section className="rounded-md border border-[#efc4b9] bg-[#fff4ef] p-3">

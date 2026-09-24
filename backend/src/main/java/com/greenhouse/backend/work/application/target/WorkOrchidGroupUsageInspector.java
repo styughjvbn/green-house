@@ -1,5 +1,6 @@
 package com.greenhouse.backend.work.application.target;
 
+import com.greenhouse.backend.work.domain.operation.WorkOperationStatus;
 import com.greenhouse.backend.work.repository.WorkEffectOrchidGroupRepository;
 import com.greenhouse.backend.work.repository.WorkOperationTargetRepository;
 import java.util.Set;
@@ -25,7 +26,8 @@ public class WorkOrchidGroupUsageInspector {
 	}
 
 	public long countOtherOperations(Set<Long> orchidGroupIds, Long sourceWorkOperationId) {
-		return targetRepository.countByOrchidGroupIdInAndWorkOperationIdNot(orchidGroupIds, sourceWorkOperationId);
+		return targetRepository.countActiveOtherOperations(orchidGroupIds, sourceWorkOperationId,
+				Set.of(WorkOperationStatus.CANCELED, WorkOperationStatus.VOIDED));
 	}
 
 }
