@@ -1,6 +1,7 @@
 package com.greenhouse.backend.farm.repository.orchid.mutation;
 
 import com.greenhouse.backend.farm.domain.orchid.mutation.OrchidGroupMutationRelation;
+import com.greenhouse.backend.farm.domain.orchid.mutation.OrchidGroupMutationRelationType;
 import java.util.Collection;
 import java.util.List;
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -17,5 +18,8 @@ public interface OrchidGroupMutationRelationRepository extends JpaRepository<Orc
 			order by relation.id
 			""")
 	List<OrchidGroupMutationRelation> findConnectedToMutationIds(@Param("mutationIds") Collection<Long> mutationIds);
+
+	boolean existsByRelatedMutationIdInAndRelationType(Collection<Long> mutationIds,
+			OrchidGroupMutationRelationType relationType);
 
 }

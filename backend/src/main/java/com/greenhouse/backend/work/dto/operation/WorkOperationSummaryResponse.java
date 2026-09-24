@@ -18,6 +18,7 @@ public record WorkOperationSummaryResponse(Long id, Long workTypeId, String work
 		LocalDate plannedStartDate, LocalDate plannedEndDate, LocalDateTime actualStartAt, LocalDateTime actualEndAt,
 		WorkSourceScopeType sourceScopeType, Long sourceScopeId, Map<String, Object> sourceConditionSnapshot,
 		LocalDateTime targetSnapshotAt, Map<String, Object> details, String worker, String memo,
+		LocalDateTime voidedAt, String voidReason, Long voidMutationId,
 		WorkOperationProgress progress, List<WorkOperationAction> availableActions) {
 
 	public static WorkOperationSummaryResponse from(WorkOperation operation, WorkOperationProgress progress,
@@ -29,6 +30,7 @@ public record WorkOperationSummaryResponse(Long id, Long workTypeId, String work
 				TimeConfig.toFarmTime(operation.getActualStartAt()), TimeConfig.toFarmTime(operation.getActualEndAt()),
 				operation.getSourceScopeType(), operation.getSourceScopeId(), operation.getSourceConditionSnapshot(),
 				TimeConfig.toFarmTime(operation.getTargetSnapshotAt()), operation.getDetails(), operation.getWorker(),
-				operation.getMemo(), progress, availableActions);
+				operation.getMemo(), TimeConfig.toFarmTime(operation.getVoidedAt()), operation.getVoidReason(),
+				operation.getVoidMutationId(), progress, availableActions);
 	}
 }

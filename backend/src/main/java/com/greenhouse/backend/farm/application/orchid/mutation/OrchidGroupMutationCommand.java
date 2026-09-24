@@ -9,7 +9,8 @@ public sealed interface OrchidGroupMutationCommand permits CreateOrchidGroupMuta
 		TransformOrchidGroupsMutationCommand, UpdateOrchidGroupMutationCommand, MoveOrchidGroupMutationCommand,
 		CancelOrchidGroupCreationMutationCommand, DiscardOrchidGroupMutationCommand, ReserveOrchidGroupsMutationCommand,
 		ReleaseOrchidGroupReservationsMutationCommand, ConsumeOrchidGroupReservationsMutationCommand,
-		RestoreOutboundOrchidGroupsMutationCommand, CorrectOrchidGroupsMutationCommand {
+		RestoreOutboundOrchidGroupsMutationCommand, CorrectOrchidGroupsMutationCommand,
+		ReconcileOrchidGroupMutationCommand, CompensateTransformMutationsCommand {
 
 	OrchidGroupMutationSource source();
 

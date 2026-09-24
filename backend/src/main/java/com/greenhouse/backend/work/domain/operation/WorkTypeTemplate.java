@@ -12,7 +12,8 @@ public enum WorkTypeTemplate {
 	DISCARD("DISCARD", WorkEffectKind.ATTRIBUTE_CHANGE, false), STATUS("RECORD_ONLY", WorkEffectKind.RECORD_ONLY, true),
 	MEMO("RECORD_ONLY", WorkEffectKind.RECORD_ONLY, true), MOVEMENT("MOVE", WorkEffectKind.ATTRIBUTE_CHANGE, false),
 	MULTI_CREATE("MULTI_CREATE", WorkEffectKind.STRUCTURE_CHANGE, false),
-	CORRECTION("CORRECTION", WorkEffectKind.RECORD_ONLY, false);
+	CORRECTION("CORRECTION", WorkEffectKind.RECORD_ONLY, false),
+	RECONCILIATION("RECONCILIATION", WorkEffectKind.ATTRIBUTE_CHANGE, false);
 
 	private final String handlerCode;
 

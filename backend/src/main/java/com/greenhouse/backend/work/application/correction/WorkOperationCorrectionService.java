@@ -6,7 +6,6 @@ import com.greenhouse.backend.work.application.correction.WorkCorrectionCommand;
 import com.greenhouse.backend.work.application.operation.ImmediateWorkExecutionService;
 import com.greenhouse.backend.work.application.operation.WorkOperationQueryService;
 import com.greenhouse.backend.work.domain.correction.WorkOperationCorrection;
-import com.greenhouse.backend.work.domain.effect.WorkEffectKind;
 import com.greenhouse.backend.work.domain.operation.WorkOperation;
 import com.greenhouse.backend.work.domain.operation.WorkOperationStatus;
 import com.greenhouse.backend.work.domain.operation.WorkTypeDefinition;
@@ -92,7 +91,7 @@ public class WorkOperationCorrectionService {
 	private WorkOperation findCorrectableOriginal(Long operationId) {
 		WorkOperation operation = workOperationRepository.findWithWorkTypeById(operationId)
 			.orElseThrow(() -> new NotFoundException("원본 작업을 찾을 수 없습니다."));
-		if (operation.getWorkType().effectKind() != WorkEffectKind.STRUCTURE_CHANGE
+		if (!operation.getWorkType().supportsStructureResultManagement()
 				|| operation.getStatus() != WorkOperationStatus.COMPLETED
 						&& operation.getStatus() != WorkOperationStatus.CORRECTED) {
 			throw new IllegalArgumentException("완료된 구조 변경 작업만 보정할 수 있습니다.");

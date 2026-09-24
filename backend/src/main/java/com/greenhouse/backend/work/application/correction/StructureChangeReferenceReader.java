@@ -1,7 +1,6 @@
 package com.greenhouse.backend.work.application.correction;
 
 import com.greenhouse.backend.common.exception.NotFoundException;
-import com.greenhouse.backend.work.domain.effect.WorkEffectKind;
 import com.greenhouse.backend.work.domain.effect.WorkEffectOrchidGroupRelationType;
 import com.greenhouse.backend.work.domain.operation.WorkOperationStatus;
 import com.greenhouse.backend.work.domain.target.WorkOperationTarget;
@@ -36,7 +35,7 @@ public class StructureChangeReferenceReader {
 	public List<Long> getCorrectableResultOrchidGroupIds(Long operationId) {
 		var operation = workOperationRepository.findWithWorkTypeById(operationId)
 			.orElseThrow(() -> new NotFoundException("작업을 찾을 수 없습니다."));
-		if (operation.getWorkType().effectKind() != WorkEffectKind.STRUCTURE_CHANGE
+		if (!operation.getWorkType().supportsStructureResultManagement()
 				|| operation.getStatus() != WorkOperationStatus.COMPLETED
 						&& operation.getStatus() != WorkOperationStatus.CORRECTED) {
 			throw new IllegalArgumentException("완료된 구조 변경 작업의 결과만 보정할 수 있습니다.");

@@ -57,6 +57,12 @@ public class OrchidGroupMutationCommandFingerprint {
 			case CorrectOrchidGroupsMutationCommand value ->
 				fingerprint.calculate(new CorrectionPayload(OrchidGroupMutationType.CORRECTION, value.items(),
 						value.correctedMutations(), value.effectiveBusinessDate(), value.reason()));
+			case ReconcileOrchidGroupMutationCommand value -> fingerprint.calculate(new ReconciliationPayload(
+					OrchidGroupMutationType.RECONCILIATION, value.orchidGroupId(), value.actualQuantity(),
+					value.actualStatus(), value.actualBedZoneId(), value.actualStartPosition(), value.actualEndPosition(),
+					value.effectiveBusinessDate(), value.reason()));
+			case CompensateTransformMutationsCommand value -> fingerprint.calculate(new CompensationPayload(
+					OrchidGroupMutationType.COMPENSATION, value.mutationIds(), value.effectiveBusinessDate(), value.reason()));
 		};
 	}
 
@@ -105,6 +111,15 @@ public class OrchidGroupMutationCommandFingerprint {
 
 	private record CorrectionPayload(OrchidGroupMutationType mutationType, List<CorrectOrchidGroupMutationItem> items,
 			RelatedOrchidGroupMutations correctedMutations, LocalDate effectiveBusinessDate, String reason) {
+	}
+
+	private record ReconciliationPayload(OrchidGroupMutationType mutationType, Long orchidGroupId,
+			Integer actualQuantity, String actualStatus, Long actualBedZoneId, BigDecimal actualStartPosition,
+			BigDecimal actualEndPosition, LocalDate effectiveBusinessDate, String reason) {
+	}
+
+	private record CompensationPayload(OrchidGroupMutationType mutationType, List<Long> mutationIds,
+			LocalDate effectiveBusinessDate, String reason) {
 	}
 
 }

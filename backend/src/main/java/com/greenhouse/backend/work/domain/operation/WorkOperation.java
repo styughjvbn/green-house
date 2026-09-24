@@ -86,6 +86,18 @@ public class WorkOperation extends BaseEntity {
 	@Column(name = "request_key", unique = true, length = 100)
 	private String requestKey;
 
+	@Column(name = "voided_at")
+	private LocalDateTime voidedAt;
+
+	@Column(name = "void_reason", columnDefinition = "text")
+	private String voidReason;
+
+	@Column(name = "void_request_key", unique = true, length = 100)
+	private String voidRequestKey;
+
+	@Column(name = "void_mutation_id")
+	private Long voidMutationId;
+
 	@Version
 	@Column(nullable = false)
 	private long version;
@@ -165,8 +177,9 @@ public class WorkOperation extends BaseEntity {
 		if (status == WorkOperationStatus.CANCELED) {
 			return;
 		}
-		if (status == WorkOperationStatus.COMPLETED || status == WorkOperationStatus.CORRECTED) {
-			throw new IllegalArgumentException("완료되거나 보정된 작업은 취소할 수 없습니다.");
+		if (status == WorkOperationStatus.COMPLETED || status == WorkOperationStatus.CORRECTED
+				|| status == WorkOperationStatus.VOIDED) {
+			throw new IllegalArgumentException("완료·보정·무효화된 작업은 취소할 수 없습니다.");
 		}
 		actualEndAt = canceledAt;
 		status = WorkOperationStatus.CANCELED;
@@ -197,10 +210,30 @@ public class WorkOperation extends BaseEntity {
 		if (status == WorkOperationStatus.CORRECTED) {
 			return;
 		}
-		if (status != WorkOperationStatus.COMPLETED || workType.effectKind() != WorkEffectKind.STRUCTURE_CHANGE) {
+		if (status != WorkOperationStatus.COMPLETED || !workType.supportsStructureResultManagement()) {
 			throw new IllegalArgumentException("완료된 구조 변경 작업만 보정할 수 있습니다.");
 		}
 		status = WorkOperationStatus.CORRECTED;
+	}
+
+	public void voidCompletedStructureChange(LocalDateTime voidedAt, String reason, String requestKey,
+			Long compensationMutationId) {
+		if (status == WorkOperationStatus.VOIDED) {
+			return;
+		}
+		if ((status != WorkOperationStatus.COMPLETED && status != WorkOperationStatus.CORRECTED)
+				|| !workType.supportsStructureResultManagement()) {
+			throw new IllegalArgumentException("완료된 구조 변경 작업만 무효화할 수 있습니다.");
+		}
+		if (reason == null || reason.isBlank() || requestKey == null || requestKey.isBlank()
+				|| compensationMutationId == null) {
+			throw new IllegalArgumentException("작업 무효화 사유와 요청 식별자가 필요합니다.");
+		}
+		this.status = WorkOperationStatus.VOIDED;
+		this.voidedAt = voidedAt;
+		this.voidReason = reason.trim();
+		this.voidRequestKey = requestKey.trim();
+		this.voidMutationId = compensationMutationId;
 	}
 
 	public void correctWorkDate(LocalDate workDate) {
@@ -208,7 +241,7 @@ public class WorkOperation extends BaseEntity {
 			throw new IllegalArgumentException("보정 작업일이 필요합니다.");
 		}
 		if ((status != WorkOperationStatus.COMPLETED && status != WorkOperationStatus.CORRECTED)
-				|| workType.effectKind() != WorkEffectKind.STRUCTURE_CHANGE) {
+				|| !workType.supportsStructureResultManagement()) {
 			throw new IllegalArgumentException("완료된 구조 변경 작업의 작업일만 보정할 수 있습니다.");
 		}
 		long durationDays = plannedEndDate == null ? 0

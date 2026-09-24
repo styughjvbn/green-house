@@ -134,6 +134,15 @@ class OrchidGroupMutationRecorder {
 			.toList());
 	}
 
+	List<OrchidGroupMutationEntry> entries(List<Long> mutationIds) {
+		return entryRepository.findByMutationIdInOrderByMutationIdAscIdAsc(mutationIds);
+	}
+
+	boolean alreadyCompensated(List<Long> mutationIds) {
+		return relationRepository.existsByRelatedMutationIdInAndRelationType(mutationIds,
+				OrchidGroupMutationRelationType.COMPENSATES);
+	}
+
 	record Change(Long groupId, long revisionBefore, OrchidGroupStateSnapshot beforeState,
 			OrchidGroupStateSnapshot afterState) {
 		OrchidGroupMutationEntry entry(OrchidGroupMutation mutation, OrchidGroupMutationEntryRole role) {

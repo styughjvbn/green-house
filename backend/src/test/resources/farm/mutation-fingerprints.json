@@ -5,6 +5,9 @@
   "ConsumeOrchidGroupReservationsMutationCommand": [
     "af90a4a8ef617b562c4efc93221b76090822b3552a1ed970e2de998a57512d5a"
   ],
+  "CompensateTransformMutationsCommand": [
+    "a24516d43d66dd35aa556d4a14232db0f6c845e39535b5e595b3eb8892d8b0db"
+  ],
   "CorrectOrchidGroupsMutationCommand": [
     "cebb59c7405104427be1a59fe0950029c745126bfb692439884464d09411c87b"
   ],
@@ -25,6 +28,9 @@
   ],
   "ReleaseOrchidGroupReservationsMutationCommand": [
     "4c19597ec95ecb9bcf1697d67b7ed9b6c298715809744b073e5947681c5bb83f"
+  ],
+  "ReconcileOrchidGroupMutationCommand": [
+    "ab563ea1718c69748a51ab16401f052cdb17a773f9167b8ee92178d276537838"
   ],
   "ReserveOrchidGroupsMutationCommand": [
     "421e544ceaf32ffca25819d7fccc2465cc77f6c8b5b36ee3045312173d50dc07"

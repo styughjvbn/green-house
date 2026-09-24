@@ -68,7 +68,7 @@ class OrchidGroupStateChainMigrationPostgresE2ETest extends WorkE2ETestBase {
 				""", String.class)).containsExactly("21:add orchid group mutation engine",
 				"22:enforce orchid group mutation write fence", "23:normalize legacy orchid group pot sizes",
 				"24:allocate farm reference codes", "25:add work command receipts", "26:align work effect idempotency",
-				"27:repair orchid group audit provenance");
+				"27:repair orchid group audit provenance", "28:add work void and reconciliation");
 
 		assertThat(jdbcTemplate.queryForObject("""
 				SELECT COUNT(*)

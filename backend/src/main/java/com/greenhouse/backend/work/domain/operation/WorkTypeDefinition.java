@@ -25,7 +25,8 @@ public enum WorkTypeDefinition {
 	MERGE("MERGE", WorkTypeWorkflow.STRUCTURE_CHANGE, WorkTargetReferenceType.ORCHID_GROUP, true),
 	DISCARD("DISCARD", WorkTypeWorkflow.DISCARD, WorkTargetReferenceType.ORCHID_GROUP, true),
 	MULTI_CREATE(null, WorkTypeWorkflow.GENERIC, WorkTargetReferenceType.ORCHID_GROUP, true),
-	CORRECTION(null, WorkTypeWorkflow.GENERIC, WorkTargetReferenceType.ORCHID_GROUP, true);
+	CORRECTION(null, WorkTypeWorkflow.GENERIC, WorkTargetReferenceType.ORCHID_GROUP, true),
+	RECONCILIATION(null, WorkTypeWorkflow.GENERIC, WorkTargetReferenceType.ORCHID_GROUP, false);
 
 	private static final Map<String, WorkTypeDefinition> BY_CODE = Arrays.stream(values())
 		.collect(Collectors.toUnmodifiableMap(Enum::name, Function.identity()));

@@ -12,19 +12,28 @@ import org.junit.jupiter.params.provider.CsvSource;
 
 class WorkTypeCapabilitiesTest {
 
-	private static final Map<WorkTypeTemplate, String> TEMPLATE_HANDLERS = Map.of(WorkTypeTemplate.PESTICIDE,
-			"RECORD_ONLY", WorkTypeTemplate.FERTILIZER, "RECORD_ONLY", WorkTypeTemplate.CLEANUP, "RECORD_ONLY",
-			WorkTypeTemplate.STATUS, "RECORD_ONLY", WorkTypeTemplate.MEMO, "RECORD_ONLY", WorkTypeTemplate.REPOT,
-			"REPOT", WorkTypeTemplate.MOVEMENT, "MOVE", WorkTypeTemplate.DISCARD, "DISCARD",
-			WorkTypeTemplate.MULTI_CREATE, "MULTI_CREATE", WorkTypeTemplate.CORRECTION, "CORRECTION");
+	private static final Map<WorkTypeTemplate, String> TEMPLATE_HANDLERS = Map.ofEntries(
+			Map.entry(WorkTypeTemplate.PESTICIDE, "RECORD_ONLY"),
+			Map.entry(WorkTypeTemplate.FERTILIZER, "RECORD_ONLY"),
+			Map.entry(WorkTypeTemplate.CLEANUP, "RECORD_ONLY"), Map.entry(WorkTypeTemplate.STATUS, "RECORD_ONLY"),
+			Map.entry(WorkTypeTemplate.MEMO, "RECORD_ONLY"), Map.entry(WorkTypeTemplate.REPOT, "REPOT"),
+			Map.entry(WorkTypeTemplate.MOVEMENT, "MOVE"), Map.entry(WorkTypeTemplate.DISCARD, "DISCARD"),
+			Map.entry(WorkTypeTemplate.MULTI_CREATE, "MULTI_CREATE"),
+			Map.entry(WorkTypeTemplate.CORRECTION, "CORRECTION"),
+			Map.entry(WorkTypeTemplate.RECONCILIATION, "RECONCILIATION"));
 
-	private static final Map<WorkTypeTemplate, WorkEffectKind> TEMPLATE_KINDS = Map.of(WorkTypeTemplate.PESTICIDE,
-			WorkEffectKind.RECORD_ONLY, WorkTypeTemplate.FERTILIZER, WorkEffectKind.RECORD_ONLY,
-			WorkTypeTemplate.CLEANUP, WorkEffectKind.RECORD_ONLY, WorkTypeTemplate.STATUS, WorkEffectKind.RECORD_ONLY,
-			WorkTypeTemplate.MEMO, WorkEffectKind.RECORD_ONLY, WorkTypeTemplate.CORRECTION, WorkEffectKind.RECORD_ONLY,
-			WorkTypeTemplate.REPOT, WorkEffectKind.STRUCTURE_CHANGE, WorkTypeTemplate.MULTI_CREATE,
-			WorkEffectKind.STRUCTURE_CHANGE, WorkTypeTemplate.DISCARD, WorkEffectKind.ATTRIBUTE_CHANGE,
-			WorkTypeTemplate.MOVEMENT, WorkEffectKind.ATTRIBUTE_CHANGE);
+	private static final Map<WorkTypeTemplate, WorkEffectKind> TEMPLATE_KINDS = Map.ofEntries(
+			Map.entry(WorkTypeTemplate.PESTICIDE, WorkEffectKind.RECORD_ONLY),
+			Map.entry(WorkTypeTemplate.FERTILIZER, WorkEffectKind.RECORD_ONLY),
+			Map.entry(WorkTypeTemplate.CLEANUP, WorkEffectKind.RECORD_ONLY),
+			Map.entry(WorkTypeTemplate.STATUS, WorkEffectKind.RECORD_ONLY),
+			Map.entry(WorkTypeTemplate.MEMO, WorkEffectKind.RECORD_ONLY),
+			Map.entry(WorkTypeTemplate.CORRECTION, WorkEffectKind.RECORD_ONLY),
+			Map.entry(WorkTypeTemplate.REPOT, WorkEffectKind.STRUCTURE_CHANGE),
+			Map.entry(WorkTypeTemplate.MULTI_CREATE, WorkEffectKind.STRUCTURE_CHANGE),
+			Map.entry(WorkTypeTemplate.DISCARD, WorkEffectKind.ATTRIBUTE_CHANGE),
+			Map.entry(WorkTypeTemplate.MOVEMENT, WorkEffectKind.ATTRIBUTE_CHANGE),
+			Map.entry(WorkTypeTemplate.RECONCILIATION, WorkEffectKind.ATTRIBUTE_CHANGE));
 
 	@ParameterizedTest
 	@CsvSource({ "INBOUND,GENERIC,ORCHID_GROUP,true,false,false,false,",
@@ -36,6 +45,7 @@ class WorkTypeCapabilitiesTest {
 			"DISCARD,DISCARD,ORCHID_GROUP,false,true,true,false,DISCARD",
 			"MULTI_CREATE,GENERIC,ORCHID_GROUP,false,false,false,false,",
 			"CORRECTION,GENERIC,ORCHID_GROUP,false,false,false,false,",
+			"RECONCILIATION,GENERIC,ORCHID_GROUP,true,false,false,false,",
 			"CUSTOM_CARE,GENERIC,ORCHID_GROUP,false,false,false,false," })
 	void preservesExistingCodeTemplateAndFlagCombinations(String code, WorkTypeWorkflow workflow,
 			WorkTargetReferenceType targetSource, boolean managedRegistration, boolean dedicatedPeriodPlan,

@@ -3,11 +3,14 @@ package com.greenhouse.backend.farm.controller.orchid;
 import com.greenhouse.backend.common.api.ApiResponse;
 import com.greenhouse.backend.farm.application.orchid.OrchidGroupCommandService;
 import com.greenhouse.backend.farm.application.orchid.OrchidGroupMovementService;
+import com.greenhouse.backend.farm.application.orchid.OrchidGroupReconciliationService;
 import com.greenhouse.backend.farm.dto.orchid.OrchidGroupBatchUpdateRequest;
 import com.greenhouse.backend.farm.dto.orchid.OrchidGroupCreateRequest;
 import com.greenhouse.backend.farm.dto.orchid.OrchidGroupMoveRequest;
+import com.greenhouse.backend.farm.dto.orchid.OrchidGroupReconciliationRequest;
 import com.greenhouse.backend.farm.dto.orchid.OrchidGroupResponse;
 import com.greenhouse.backend.farm.dto.orchid.OrchidGroupUpdateRequest;
+import com.greenhouse.backend.work.application.operation.WorkOperationView;
 import jakarta.validation.Valid;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
@@ -29,6 +32,8 @@ public class OrchidGroupCommandController {
 	private final OrchidGroupCommandService orchidGroupCommandService;
 
 	private final OrchidGroupMovementService orchidGroupMovementService;
+
+	private final OrchidGroupReconciliationService orchidGroupReconciliationService;
 
 	@PostMapping
 	@ResponseStatus(HttpStatus.CREATED)
@@ -58,6 +63,13 @@ public class OrchidGroupCommandController {
 	public ApiResponse<OrchidGroupResponse> move(@PathVariable Long orchidGroupId,
 			@Valid @RequestBody OrchidGroupMoveRequest request) {
 		return ApiResponse.ok(orchidGroupMovementService.move(orchidGroupId, request));
+	}
+
+	@PostMapping("/{orchidGroupId}/reconciliations")
+	@ResponseStatus(HttpStatus.CREATED)
+	public ApiResponse<WorkOperationView> reconcile(@PathVariable Long orchidGroupId,
+			@Valid @RequestBody OrchidGroupReconciliationRequest request) {
+		return ApiResponse.ok(orchidGroupReconciliationService.reconcile(orchidGroupId, request));
 	}
 
 }
