@@ -1,6 +1,7 @@
 package com.greenhouse.backend.work.repository;
 
 import com.greenhouse.backend.work.domain.operation.WorkOperation;
+import com.greenhouse.backend.work.domain.operation.WorkOperationRelationType;
 import java.util.Collection;
 import java.util.List;
 import org.springframework.data.domain.Page;
@@ -14,6 +15,10 @@ public interface WorkOperationRepository extends JpaRepository<WorkOperation, Lo
 
 	@EntityGraph(attributePaths = "workType")
 	List<WorkOperation> findByIdIn(Collection<Long> ids);
+
+	@EntityGraph(attributePaths = "workType")
+	List<WorkOperation> findByParentOperationIdAndRelationTypeOrderByIdAsc(Long parentOperationId,
+			WorkOperationRelationType relationType);
 
 	@EntityGraph(attributePaths = "workType")
 	@Query(value = """

@@ -362,6 +362,8 @@ export type WorkOperation = {
   details: Record<string, unknown> | null;
   worker: string | null;
   memo: string | null;
+  parentOperationId: number | null;
+  relationType: "MOVEMENT_PRE_DISCARD" | null;
   voidedAt: string | null;
   voidReason: string | null;
   voidMutationId: number | null;
@@ -388,6 +390,7 @@ export type WorkOperationVoidEligibility = {
   mutationIds: number[];
   sourceOrchidGroupIds: number[];
   resultOrchidGroupIds: number[];
+  relatedWorkOperationIds: number[];
   blockers: Array<{
     code: string;
     message: string;

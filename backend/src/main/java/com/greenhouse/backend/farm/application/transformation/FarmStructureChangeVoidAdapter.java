@@ -48,21 +48,22 @@ public class FarmStructureChangeVoidAdapter implements StructureChangeVoidPort {
 				: entryRepository.findByMutationIdInOrderByMutationIdAscIdAsc(mutationIds);
 		if (mutationIds.isEmpty() || entries.stream().map(entry -> entry.getMutation().getId()).distinct().count()
 				!= mutationIds.size()
-				|| entries.stream().anyMatch(entry -> entry.getMutation().getMutationType() != OrchidGroupMutationType.TRANSFORM)) {
+				|| entries.stream().anyMatch(entry -> !isVoidableType(entry.getMutation().getMutationType()))) {
 			blockers.add(new Blocker("MUTATION_NOT_REVERSIBLE",
-					"연속 상태 원장이 있는 구조 변경만 자동 무효화할 수 있습니다.", 1));
+					"연속 상태 원장이 있는 구조 변경과 연관 선별 폐기만 자동 무효화할 수 있습니다.", 1));
 		}
 		if (!mutationIds.isEmpty() && relationRepository.existsByRelatedMutationIdInAndRelationType(mutationIds,
 				OrchidGroupMutationRelationType.COMPENSATES)) {
 			blockers.add(new Blocker("ALREADY_COMPENSATED", "이미 보상된 Mutation이 포함되어 있습니다.", 1));
 		}
-		var grouped = entries.stream().collect(Collectors.groupingBy(OrchidGroupMutationEntry::getOrchidGroupId));
-		if (grouped.values().stream().anyMatch(groupEntries -> groupEntries.size() != 1)) {
+		var grouped = entries.stream().collect(Collectors.groupingBy(OrchidGroupMutationEntry::getOrchidGroupId,
+				java.util.LinkedHashMap::new, Collectors.toList()));
+		if (grouped.values().stream().anyMatch(this::hasBrokenStateChain)) {
 			blockers.add(new Blocker("REPEATED_GROUP_EFFECT",
-					"같은 난 묶음을 여러 실행 회차에서 변경한 작업은 아직 자동 무효화할 수 없습니다.", 1));
+					"같은 난 묶음의 작업 Mutation이 하나의 연속 상태 체인을 이루지 않습니다.", 1));
 		}
-		Set<Long> resultIds = entries.stream().filter(entry -> entry.getRole() == OrchidGroupMutationEntryRole.RESULT)
-			.map(OrchidGroupMutationEntry::getOrchidGroupId)
+		Set<Long> resultIds = grouped.entrySet().stream().filter(entry -> earliest(entry.getValue()).getBeforeState() == null)
+			.map(java.util.Map.Entry::getKey)
 			.collect(Collectors.toCollection(LinkedHashSet::new));
 		if (!resultIds.isEmpty()) {
 			usageInspectors.stream().flatMap(inspector -> inspector.inspect(resultIds, workOperationId).stream())
@@ -70,12 +71,13 @@ public class FarmStructureChangeVoidAdapter implements StructureChangeVoidPort {
 		}
 		var groups = orchidGroupRepository.findAllById(grouped.keySet()).stream()
 			.collect(Collectors.toMap(group -> group.getId(), group -> group));
-		long changed = effectiveHeadPolicy.countGroupsNotAtEffectiveHead(entries, groups);
+		List<OrchidGroupMutationEntry> latestEntries = grouped.values().stream().map(this::latest).toList();
+		long changed = effectiveHeadPolicy.countGroupsNotAtEffectiveHead(latestEntries, groups);
 		if (changed > 0) {
 			blockers.add(new Blocker("DOWNSTREAM_MUTATION", "상쇄되지 않은 후속 변경이 있는 난 묶음이 있습니다.", changed));
 		}
-		List<Long> sourceIds = entries.stream().filter(entry -> entry.getRole() == OrchidGroupMutationEntryRole.SOURCE)
-			.map(OrchidGroupMutationEntry::getOrchidGroupId).distinct().sorted().toList();
+		List<Long> sourceIds = grouped.entrySet().stream().filter(entry -> earliest(entry.getValue()).getBeforeState() != null)
+			.map(java.util.Map.Entry::getKey).sorted().toList();
 		return new Inspection(sourceIds, resultIds.stream().toList(), blockers);
 	}
 
@@ -91,5 +93,35 @@ public class FarmStructureChangeVoidAdapter implements StructureChangeVoidPort {
 		collectionMemberRepository.findByOrchidGroupIdInAndRemovedAtIsNull(inspection.resultOrchidGroupIds())
 			.forEach(member -> member.remove(TimeConfig.utcNow(clock)));
 		return compensation.mutationId();
+	}
+
+	private boolean isVoidableType(OrchidGroupMutationType type) {
+		return type == OrchidGroupMutationType.TRANSFORM || type == OrchidGroupMutationType.DISCARD;
+	}
+
+	private boolean hasBrokenStateChain(List<OrchidGroupMutationEntry> entries) {
+		List<OrchidGroupMutationEntry> ordered = entries.stream()
+			.sorted(java.util.Comparator.comparing(OrchidGroupMutationEntry::getStateRevisionAfter))
+			.toList();
+		for (int index = 1; index < ordered.size(); index++) {
+			var previous = ordered.get(index - 1);
+			var current = ordered.get(index);
+			if (!previous.getStateRevisionAfter().equals(current.getStateRevisionBefore())
+					|| current.getBeforeState() == null || previous.getAfterState() == null
+					|| !previous.getAfterState().canonical().equals(current.getBeforeState().canonical())) {
+				return true;
+			}
+		}
+		return false;
+	}
+
+	private OrchidGroupMutationEntry earliest(List<OrchidGroupMutationEntry> entries) {
+		return entries.stream().min(java.util.Comparator.comparing(OrchidGroupMutationEntry::getStateRevisionAfter))
+			.orElseThrow();
+	}
+
+	private OrchidGroupMutationEntry latest(List<OrchidGroupMutationEntry> entries) {
+		return entries.stream().max(java.util.Comparator.comparing(OrchidGroupMutationEntry::getStateRevisionAfter))
+			.orElseThrow();
 	}
 }

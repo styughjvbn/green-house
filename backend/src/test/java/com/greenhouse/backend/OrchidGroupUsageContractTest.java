@@ -92,7 +92,7 @@ class OrchidGroupUsageContractTest {
 		canceled.cancel(LocalDateTime.of(2026, 9, 5, 1, 0));
 		WorkOperation voided = operation(type, group);
 		voided.complete(LocalDateTime.of(2026, 9, 5, 1, 0));
-		voided.voidCompletedStructureChange(LocalDateTime.of(2026, 9, 5, 2, 0), "잘못 등록", "void-request", 100L);
+		voided.voidCompletedMutationWork(LocalDateTime.of(2026, 9, 5, 2, 0), "잘못 등록", "void-request", 100L);
 
 		assertThat(canceled.getStatus()).isEqualTo(WorkOperationStatus.CANCELED);
 		assertThat(voided.getStatus()).isEqualTo(WorkOperationStatus.VOIDED);

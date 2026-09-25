@@ -59,7 +59,11 @@ export function WorkOperationVoidDialog({
             작업 무효화
           </DialogTitle>
           <DialogDescription className="mt-1 text-sm text-[#657168]">
-            {operation.title}의 구조 변경을 반대 방향 Mutation으로 되돌립니다.
+            {operation.title}의 구조 변경
+            {data?.relatedWorkOperationIds.length
+              ? "과 연관된 이동 전 선별 폐기"
+              : ""}
+            를 반대 방향 Mutation으로 되돌립니다.
           </DialogDescription>
         </header>
 
@@ -86,6 +90,12 @@ export function WorkOperationVoidDialog({
                     value={data.resultOrchidGroupIds.length}
                   />
                 </div>
+                {data.relatedWorkOperationIds.length > 0 ? (
+                  <p className="mt-3 text-xs text-[#526057]">
+                    연관 작업 {data.relatedWorkOperationIds.length}건도 같은
+                    트랜잭션에서 함께 무효화됩니다.
+                  </p>
+                ) : null}
               </section>
 
               {data.voidable ? (

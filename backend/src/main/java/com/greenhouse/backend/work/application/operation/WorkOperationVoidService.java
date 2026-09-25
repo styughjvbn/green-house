@@ -1,6 +1,8 @@
 package com.greenhouse.backend.work.application.operation;
 
 import com.greenhouse.backend.common.exception.NotFoundException;
+import com.greenhouse.backend.work.domain.operation.WorkOperation;
+import com.greenhouse.backend.work.domain.operation.WorkOperationRelationType;
 import com.greenhouse.backend.work.domain.operation.WorkOperationStatus;
 import com.greenhouse.backend.work.dto.operation.WorkOperationVoidEligibilityResponse;
 import com.greenhouse.backend.work.dto.operation.WorkOperationVoidRequest;
@@ -29,8 +31,14 @@ public class WorkOperationVoidService {
 		var operation = operationRepository.findWithWorkTypeById(operationId)
 			.orElseThrow(() -> new NotFoundException("작업을 찾을 수 없습니다."));
 		var blockers = new ArrayList<WorkOperationVoidEligibilityResponse.Blocker>();
+		List<Long> relatedWorkOperationIds = new ArrayList<>();
 		if (operation.getStatus() == WorkOperationStatus.VOIDED) {
 			blockers.add(new WorkOperationVoidEligibilityResponse.Blocker("ALREADY_VOIDED", "이미 무효화된 작업입니다.", 1));
+		}
+		else if (operation.getRelationType() == WorkOperationRelationType.MOVEMENT_PRE_DISCARD) {
+			relatedWorkOperationIds.add(operation.getParentOperation().getId());
+			blockers.add(new WorkOperationVoidEligibilityResponse.Blocker("VOID_WITH_PARENT_MOVEMENT",
+					"이 폐기는 연관된 자리 이동 작업에서 함께 무효화해야 합니다.", 1));
 		}
 		else if ((operation.getStatus() != WorkOperationStatus.COMPLETED
 				&& operation.getStatus() != WorkOperationStatus.CORRECTED)
@@ -38,14 +46,30 @@ public class WorkOperationVoidService {
 			blockers.add(new WorkOperationVoidEligibilityResponse.Blocker("UNSUPPORTED_OPERATION",
 					"완료된 구조 변경 작업만 무효화할 수 있습니다.", 1));
 		}
-		List<Long> mutationIds = effectRepository.findByWorkOperationIdOrderByIdAsc(operationId).stream()
+		var relatedDiscards = operation.getRelationType() == null
+				? operationRepository.findByParentOperationIdAndRelationTypeOrderByIdAsc(operationId,
+						WorkOperationRelationType.MOVEMENT_PRE_DISCARD)
+				: List.<WorkOperation>of();
+		relatedDiscards.forEach(discard -> {
+			relatedWorkOperationIds.add(discard.getId());
+			if (discard.getStatus() != WorkOperationStatus.COMPLETED) {
+				blockers.add(new WorkOperationVoidEligibilityResponse.Blocker("RELATED_DISCARD_NOT_COMPLETED",
+						"연관된 이동 전 선별 폐기 작업의 상태가 완료가 아닙니다.", 1));
+			}
+		});
+		List<Long> targetOperationIds = new ArrayList<>();
+		targetOperationIds.add(operationId);
+		targetOperationIds.addAll(relatedWorkOperationIds);
+		List<Long> mutationIds = targetOperationIds.stream()
+			.flatMap(id -> effectRepository.findByWorkOperationIdOrderByIdAsc(id).stream())
 			.map(effect -> effect.getMutationId()).filter(Objects::nonNull).distinct().sorted().toList();
 		StructureChangeVoidPort.Inspection inspection = structureChangeVoidPort.inspect(operationId, mutationIds);
 		inspection.blockers()
 			.forEach(blocker -> blockers.add(new WorkOperationVoidEligibilityResponse.Blocker(blocker.code(),
 					blocker.message(), blocker.count())));
 		return new WorkOperationVoidEligibilityResponse(operationId, blockers.isEmpty(), mutationIds,
-				inspection.sourceOrchidGroupIds(), inspection.resultOrchidGroupIds(), List.copyOf(blockers));
+				inspection.sourceOrchidGroupIds(), inspection.resultOrchidGroupIds(), List.copyOf(relatedWorkOperationIds),
+				List.copyOf(blockers));
 	}
 
 	public WorkOperationView voidOperation(Long operationId, WorkOperationVoidRequest request) {
@@ -66,8 +90,23 @@ public class WorkOperationVoidService {
 		Long mutationId = structureChangeVoidPort.compensate(operationId, requestKey, eligibility.mutationIds(),
 				operation.getPlannedStartDate(), reason);
 		var now = support.now();
+		List<WorkOperation> relatedDiscards = operationRepository
+			.findByParentOperationIdAndRelationTypeOrderByIdAsc(operationId,
+					WorkOperationRelationType.MOVEMENT_PRE_DISCARD);
+		for (int index = relatedDiscards.size() - 1; index >= 0; index--) {
+			var discard = relatedDiscards.get(index);
+			effectRepository.findByWorkOperationIdOrderByIdAsc(discard.getId())
+				.forEach(effect -> effect.cancel(now));
+			discard.voidCompletedMutationWork(now, reason, relatedRequestKey(requestKey, discard.getId()), mutationId);
+		}
 		effectRepository.findByWorkOperationIdOrderByIdAsc(operationId).forEach(effect -> effect.cancel(now));
-		operation.voidCompletedStructureChange(now, reason, requestKey, mutationId);
+		operation.voidCompletedMutationWork(now, reason, requestKey, mutationId);
 		return queryService.get(operationId);
+	}
+
+	private String relatedRequestKey(String requestKey, Long operationId) {
+		String suffix = "-related-" + operationId;
+		int prefixLength = Math.max(1, 100 - suffix.length());
+		return requestKey.substring(0, Math.min(prefixLength, requestKey.length())) + suffix;
 	}
 }

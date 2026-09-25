@@ -17,7 +17,7 @@ class WorkOperationStructureChangeCapabilityTest {
 		WorkOperation operation = completedOperation(WorkTypeDefinition.MOVEMENT, WorkTypeTemplate.MOVEMENT);
 
 		operation.markCorrected();
-		operation.voidCompletedStructureChange(NOW.plusMinutes(1), "잘못 등록한 이동", "void-movement", 101L);
+		operation.voidCompletedMutationWork(NOW.plusMinutes(1), "잘못 등록한 이동", "void-movement", 101L);
 
 		assertThat(operation.getStatus()).isEqualTo(WorkOperationStatus.VOIDED);
 		assertThat(operation.getVoidMutationId()).isEqualTo(101L);

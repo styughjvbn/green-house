@@ -85,6 +85,14 @@ public class WorkOperation extends BaseEntity {
 	@Column(name = "request_key", unique = true, length = 100)
 	private String requestKey;
 
+	@ManyToOne(fetch = FetchType.LAZY)
+	@JoinColumn(name = "parent_operation_id")
+	private WorkOperation parentOperation;
+
+	@Enumerated(EnumType.STRING)
+	@Column(name = "relation_type", length = 40)
+	private WorkOperationRelationType relationType;
+
 	@Column(name = "voided_at")
 	private LocalDateTime voidedAt;
 
@@ -123,6 +131,20 @@ public class WorkOperation extends BaseEntity {
 			throw new IllegalStateException("요청 식별자는 변경할 수 없습니다.");
 		}
 		this.requestKey = requestKey;
+	}
+
+	public void linkToParent(WorkOperation parentOperation, WorkOperationRelationType relationType) {
+		if (parentOperation == null || relationType == null) {
+			throw new IllegalArgumentException("연관 작업과 관계 유형이 필요합니다.");
+		}
+		if (this.parentOperation != null || this.relationType != null) {
+			throw new IllegalStateException("작업 관계는 변경할 수 없습니다.");
+		}
+		if (parentOperation == this) {
+			throw new IllegalArgumentException("작업은 자기 자신과 연결할 수 없습니다.");
+		}
+		this.parentOperation = parentOperation;
+		this.relationType = relationType;
 	}
 
 	public void complete(LocalDateTime completedAt) {
@@ -205,14 +227,15 @@ public class WorkOperation extends BaseEntity {
 		status = WorkOperationStatus.CORRECTED;
 	}
 
-	public void voidCompletedStructureChange(LocalDateTime voidedAt, String reason, String requestKey,
+	public void voidCompletedMutationWork(LocalDateTime voidedAt, String reason, String requestKey,
 			Long compensationMutationId) {
 		if (status == WorkOperationStatus.VOIDED) {
 			return;
 		}
 		if ((status != WorkOperationStatus.COMPLETED && status != WorkOperationStatus.CORRECTED)
-				|| !workType.supportsStructureResultManagement()) {
-			throw new IllegalArgumentException("완료된 구조 변경 작업만 무효화할 수 있습니다.");
+				|| (!workType.supportsStructureResultManagement()
+						&& relationType != WorkOperationRelationType.MOVEMENT_PRE_DISCARD)) {
+			throw new IllegalArgumentException("완료된 구조 변경 또는 연관 선별 폐기 작업만 무효화할 수 있습니다.");
 		}
 		if (reason == null || reason.isBlank() || requestKey == null || requestKey.isBlank()
 				|| compensationMutationId == null) {

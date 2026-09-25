@@ -449,16 +449,17 @@ public class OrchidGroupMutationEngine {
 				!= command.mutationIds().size()) {
 			throw new NotFoundException("무효화할 구조 변경 Mutation을 모두 찾을 수 없습니다.");
 		}
-		if (entries.stream().anyMatch(entry -> entry.getMutation().getMutationType() != OrchidGroupMutationType.TRANSFORM)) {
-			throw new IllegalArgumentException("구조 변경 Mutation만 자동 무효화할 수 있습니다.");
+		if (entries.stream().anyMatch(entry -> !isVoidableWorkMutation(entry.getMutation().getMutationType()))) {
+			throw new IllegalArgumentException("구조 변경과 연관 선별 폐기 Mutation만 자동 무효화할 수 있습니다.");
 		}
 		if (recorder.alreadyCompensated(command.mutationIds())) {
 			throw new IllegalArgumentException("이미 무효화된 구조 변경 작업입니다.");
 		}
 		Map<Long, List<OrchidGroupMutationEntry>> entriesByGroup = entries.stream()
-				.collect(Collectors.groupingBy(OrchidGroupMutationEntry::getOrchidGroupId));
-		if (entriesByGroup.values().stream().anyMatch(groupEntries -> groupEntries.size() != 1)) {
-			throw new IllegalArgumentException("같은 난 묶음을 여러 회차에서 변경한 작업은 아직 자동 무효화할 수 없습니다.");
+			.collect(Collectors.groupingBy(OrchidGroupMutationEntry::getOrchidGroupId, LinkedHashMap::new,
+					Collectors.toList()));
+		if (entriesByGroup.values().stream().anyMatch(this::hasBrokenCompensationChain)) {
+			throw new IllegalArgumentException("같은 난 묶음의 작업 Mutation이 하나의 연속 상태 체인을 이루지 않습니다.");
 		}
 		Map<Long, OrchidGroup> groups = findGroupsForUpdate(new ArrayList<>(entriesByGroup.keySet()),
 				"무효화 대상 난 묶음을 모두 찾을 수 없습니다.");
@@ -469,12 +470,17 @@ public class OrchidGroupMutationEngine {
 		if (recorder.alreadyCompensated(command.mutationIds())) {
 			throw new IllegalArgumentException("이미 무효화된 구조 변경 작업입니다.");
 		}
-		if (effectiveHeadPolicy.countGroupsNotAtEffectiveHead(entries, groups) > 0) {
+		List<OrchidGroupMutationEntry> latestEntries = entriesByGroup.values()
+			.stream()
+			.map(this::latestEntry)
+			.toList();
+		if (effectiveHeadPolicy.countGroupsNotAtEffectiveHead(latestEntries, groups) > 0) {
 			throw new IllegalArgumentException("상쇄되지 않은 후속 변경이 있는 난 묶음은 작업을 무효화할 수 없습니다.");
 		}
 		Set<Long> excludedIds = entriesByGroup.keySet();
-		for (OrchidGroupMutationEntry entry : entries) {
-			if (entry.getRole() != OrchidGroupMutationEntryRole.SOURCE || entry.getBeforeState().quantity() == 0) {
+		for (List<OrchidGroupMutationEntry> groupEntries : entriesByGroup.values()) {
+			OrchidGroupMutationEntry entry = earliestEntry(groupEntries);
+			if (entry.getBeforeState() == null || entry.getBeforeState().quantity() == 0) {
 				continue;
 			}
 			OrchidGroup source = groups.get(entry.getOrchidGroupId());
@@ -482,11 +488,12 @@ public class OrchidGroupMutationEngine {
 					entry.getBeforeState().endPosition(), excludedIds);
 		}
 		List<OrchidGroupMutationRecorder.Change> changes = new ArrayList<>();
-		for (OrchidGroupMutationEntry entry : entries) {
-			OrchidGroup group = groups.get(entry.getOrchidGroupId());
+		for (var groupEntry : entriesByGroup.entrySet()) {
+			OrchidGroupMutationEntry entry = earliestEntry(groupEntry.getValue());
+			OrchidGroup group = groups.get(groupEntry.getKey());
 			long revisionBefore = group.getStateRevision();
 			OrchidGroupStateSnapshot before = OrchidGroupStateSnapshot.from(group);
-			if (entry.getRole() == OrchidGroupMutationEntryRole.SOURCE) {
+			if (entry.getBeforeState() != null) {
 				OrchidGroupStateSnapshot restored = entry.getBeforeState();
 				group.restoreTransformation(restored.quantity(), restored.status(), restored.endPosition());
 			}
@@ -502,12 +509,42 @@ public class OrchidGroupMutationEngine {
 		}
 		List<OrchidGroupMutation> originals = recorder.findRelated(
 				RelatedOrchidGroupMutations.current(command.mutationIds()), entriesByGroup.keySet(),
-				Set.of(OrchidGroupMutationType.TRANSFORM));
+				Set.of(OrchidGroupMutationType.TRANSFORM, OrchidGroupMutationType.DISCARD));
 		OrchidGroupMutation mutation = recorder.start(OrchidGroupMutationType.COMPENSATION, command.source(), fingerprint,
 				command.effectiveBusinessDate(), command.reason());
 		OrchidGroupMutationResult result = recorder.changed(mutation, changes);
 		recorder.relate(mutation, originals, OrchidGroupMutationRelationType.COMPENSATES);
 		return result;
+	}
+
+	private boolean isVoidableWorkMutation(OrchidGroupMutationType type) {
+		return type == OrchidGroupMutationType.TRANSFORM || type == OrchidGroupMutationType.DISCARD;
+	}
+
+	private boolean hasBrokenCompensationChain(List<OrchidGroupMutationEntry> entries) {
+		List<OrchidGroupMutationEntry> ordered = entries.stream()
+			.sorted(java.util.Comparator.comparing(OrchidGroupMutationEntry::getStateRevisionAfter))
+			.toList();
+		for (int index = 1; index < ordered.size(); index++) {
+			OrchidGroupMutationEntry previous = ordered.get(index - 1);
+			OrchidGroupMutationEntry current = ordered.get(index);
+			if (!previous.getStateRevisionAfter().equals(current.getStateRevisionBefore())
+					|| previous.getAfterState() == null || current.getBeforeState() == null
+					|| !previous.getAfterState().canonical().equals(current.getBeforeState().canonical())) {
+				return true;
+			}
+		}
+		return false;
+	}
+
+	private OrchidGroupMutationEntry earliestEntry(List<OrchidGroupMutationEntry> entries) {
+		return entries.stream().min(java.util.Comparator.comparing(OrchidGroupMutationEntry::getStateRevisionAfter))
+			.orElseThrow();
+	}
+
+	private OrchidGroupMutationEntry latestEntry(List<OrchidGroupMutationEntry> entries) {
+		return entries.stream().max(java.util.Comparator.comparing(OrchidGroupMutationEntry::getStateRevisionAfter))
+			.orElseThrow();
 	}
 
 	private OrchidGroupMutationResult recordChanged(OrchidGroupMutationType mutationType,

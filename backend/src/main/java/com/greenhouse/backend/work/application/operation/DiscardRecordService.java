@@ -3,12 +3,14 @@ package com.greenhouse.backend.work.application.operation;
 import com.greenhouse.backend.work.application.operation.WorkOperationView;
 import com.greenhouse.backend.work.application.target.WorkTargetSelection;
 import com.greenhouse.backend.work.domain.operation.WorkOperation;
+import com.greenhouse.backend.work.domain.operation.WorkOperationRelationType;
 import com.greenhouse.backend.work.domain.operation.WorkType;
 import com.greenhouse.backend.work.domain.operation.WorkTypeDefinition;
 import com.greenhouse.backend.work.dto.effect.DiscardRecordCreateRequest;
 import com.greenhouse.backend.work.dto.effect.DiscardRecordResultRequest;
 import com.greenhouse.backend.work.dto.operation.WorkOperationCreateRequest;
 import com.greenhouse.backend.work.dto.target.WorkTargetExecutionRequest;
+import com.greenhouse.backend.work.repository.WorkOperationRepository;
 import java.time.LocalDate;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
@@ -26,13 +28,17 @@ import org.springframework.transaction.annotation.Transactional;
 @RequiredArgsConstructor
 public class DiscardRecordService {
 
-	private static final String MOVEMENT_DISCARD_REASON = "자리 이동 중 동시 폐기";
+	private static final String MOVEMENT_DISCARD_REASON = "자리 이동 전 선별 폐기";
 
 	private final WorkOperationPlanService planService;
 
 	private final WorkOperationProgressService progressService;
 
 	private final WorkTypeService workTypeService;
+
+	private final WorkOperationRepository operationRepository;
+
+	private final WorkOperationQueryService queryService;
 
 	public WorkOperationView create(DiscardRecordCreateRequest request) {
 		WorkOperationView planned = planService.create(request.operation());
@@ -72,16 +78,20 @@ public class DiscardRecordService {
 		WorkType discardType = workTypeService.getByCode(WorkTypeDefinition.DISCARD.name());
 		List<Long> orchidGroupIds = discardQuantities.keySet().stream().sorted().toList();
 		Map<String, Object> details = Map.of("movementOperationId", movementOperation.getId(), "relation",
-				"MOVEMENT_DISCARD");
-		return create(new DiscardRecordCreateRequest(
+				WorkOperationRelationType.MOVEMENT_PRE_DISCARD.name());
+		WorkOperationView created = create(new DiscardRecordCreateRequest(
 				new WorkOperationCreateRequest(
-						discardType.getId(), movementOperation.getTitle() + " - 동시 폐기", completedDate, completedDate,
+						discardType.getId(), movementOperation.getTitle() + " - 이동 전 선별 폐기", completedDate, completedDate,
 						WorkTargetSelection.manualSelection(orchidGroupIds), details, worker, memo, List.of()),
 				completedDate, worker,
 				orchidGroupIds.stream()
 					.map(groupId -> new DiscardRecordResultRequest(groupId, discardQuantities.get(groupId),
 							MOVEMENT_DISCARD_REASON))
 					.toList()));
+		WorkOperation discardOperation = operationRepository.findById(created.id())
+			.orElseThrow(() -> new IllegalStateException("생성된 폐기 작업을 찾을 수 없습니다."));
+		discardOperation.linkToParent(movementOperation, WorkOperationRelationType.MOVEMENT_PRE_DISCARD);
+		return queryService.get(discardOperation.getId());
 	}
 
 	private String normalize(String value) {

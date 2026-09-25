@@ -2248,6 +2248,10 @@ export interface components {
             };
             worker?: string;
             memo?: string;
+            /** Format: int64 */
+            parentOperationId?: number;
+            /** @enum {string} */
+            relationType?: "MOVEMENT_PRE_DISCARD";
             /** Format: date-time */
             voidedAt?: string;
             voidReason?: string;
@@ -3222,6 +3226,7 @@ export interface components {
             mutationIds?: number[];
             sourceOrchidGroupIds?: number[];
             resultOrchidGroupIds?: number[];
+            relatedWorkOperationIds?: number[];
             blockers?: components["schemas"]["Blocker"][];
         };
         ApiResponseWorkOperationDetailResponse: {

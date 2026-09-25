@@ -847,6 +847,13 @@ components:
           type: string
         memo:
           type: string
+        parentOperationId:
+          type: integer
+          format: int64
+        relationType:
+          type: string
+          enum:
+          - MOVEMENT_PRE_DISCARD
         voidedAt:
           type: string
           format: date-time

@@ -75,7 +75,7 @@ export function StructureChangeResultFields({
           </p>
           <p className="mt-0.5 text-xs text-[#6a766e]">
             {movement
-              ? "이동할 수량과 위치를 지정하세요. 비워지는 원본 자리도 다시 선택할 수 있으며, 이동하지 않은 수량은 폐기로 기록됩니다."
+              ? "이동할 수량과 위치를 지정하세요. 선별 대상과 이동 수량의 차이는 이동 전에 별도 폐기 작업으로 기록됩니다."
               : "원본별 속성·수량·현재 배치를 기본값으로 추론했습니다."}
           </p>
         </div>

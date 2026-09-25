@@ -14,6 +14,7 @@ import com.greenhouse.backend.farm.domain.structure.House;
 import com.greenhouse.backend.farm.domain.structure.PhysicalBed;
 import com.greenhouse.backend.farm.domain.variety.Variety;
 import com.greenhouse.backend.farm.repository.transformation.OrchidGroupLineageRepository;
+import com.greenhouse.backend.work.domain.operation.WorkOperationRelationType;
 import com.greenhouse.backend.work.domain.operation.WorkType;
 import com.greenhouse.backend.work.domain.operation.WorkTypeDefinition;
 import com.greenhouse.backend.work.domain.operation.WorkTypeTemplate;
@@ -134,7 +135,38 @@ class MovementBatchWorkOperationIntegrationTests extends AbstractBackendIntegrat
 		assertThat(discardOperations).hasSize(1);
 		assertThat(discardOperations.getFirst().getStatus().name()).isEqualTo("COMPLETED");
 		assertThat(discardOperations.getFirst().getDetails()).containsEntry("movementOperationId", operationId);
-		assertThat(discardOperations.getFirst().getTitle()).endsWith("동시 폐기");
+		assertThat(discardOperations.getFirst().getTitle()).endsWith("이동 전 선별 폐기");
+		assertThat(discardOperations.getFirst().getParentOperation().getId()).isEqualTo(operationId);
+		assertThat(discardOperations.getFirst().getRelationType())
+			.isEqualTo(WorkOperationRelationType.MOVEMENT_PRE_DISCARD);
+
+		Long discardOperationId = discardOperations.getFirst().getId();
+		mockMvc.perform(get("/api/work-operations/{id}/void-eligibility", discardOperationId))
+			.andExpect(status().isOk())
+			.andExpect(jsonPath("$.data.voidable").value(false))
+			.andExpect(jsonPath("$.data.relatedWorkOperationIds[0]").value(operationId))
+			.andExpect(jsonPath("$.data.blockers[0].code").value("VOID_WITH_PARENT_MOVEMENT"));
+		mockMvc.perform(get("/api/work-operations/{id}/void-eligibility", operationId))
+			.andExpect(status().isOk())
+			.andExpect(jsonPath("$.data.voidable").value(true))
+			.andExpect(jsonPath("$.data.mutationIds", hasSize(2)))
+			.andExpect(jsonPath("$.data.relatedWorkOperationIds[0]").value(discardOperationId));
+		mockMvc.perform(post("/api/work-operations/{id}/void", operationId)
+			.contentType(MediaType.APPLICATION_JSON)
+			.content("""
+					{
+					  "idempotencyKey": "void-movement-with-pre-discard",
+					  "reason": "잘못 등록한 이동과 선별 폐기"
+					}
+					"""))
+			.andExpect(status().isOk())
+			.andExpect(jsonPath("$.data.status").value("VOIDED"));
+
+		assertThat(orchidGroupRepository.findById(first.getId()).orElseThrow().getQuantity()).isEqualTo(10);
+		assertThat(orchidGroupRepository.findById(second.getId()).orElseThrow().getQuantity()).isEqualTo(20);
+		assertThat(orchidGroupRepository.findById(results.getFirst().getId()).orElseThrow().getQuantity()).isZero();
+		assertThat(operationRepository.findById(discardOperationId).orElseThrow().getStatus().name())
+			.isEqualTo("VOIDED");
 	}
 
 	@Test
