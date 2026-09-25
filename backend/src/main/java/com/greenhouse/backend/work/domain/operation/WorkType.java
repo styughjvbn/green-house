@@ -111,6 +111,10 @@ public class WorkType extends BaseEntity {
 		return effectKind() == WorkEffectKind.STRUCTURE_CHANGE || definition().supportsStructureExecution();
 	}
 
+	public boolean supportsMutationVoid() {
+		return definition().supportsMutationVoid();
+	}
+
 	public String handlerCode() {
 		return definition().handlerCode(template);
 	}

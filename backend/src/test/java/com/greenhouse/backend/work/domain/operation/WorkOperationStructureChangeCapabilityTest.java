@@ -24,11 +24,16 @@ class WorkOperationStructureChangeCapabilityTest {
 	}
 
 	@Test
-	void attributeChangeWithoutStructureExecutionCannotBeCorrected() {
+	void discardCannotBeCorrectedButCanBeVoided() {
 		WorkOperation operation = completedOperation(WorkTypeDefinition.DISCARD, WorkTypeTemplate.DISCARD);
 
 		assertThatThrownBy(operation::markCorrected).isInstanceOf(IllegalArgumentException.class)
 			.hasMessage("완료된 구조 변경 작업만 보정할 수 있습니다.");
+
+		operation.voidCompletedMutationWork(NOW.plusMinutes(1), "잘못 등록한 폐기", "void-discard", 102L);
+
+		assertThat(operation.getStatus()).isEqualTo(WorkOperationStatus.VOIDED);
+		assertThat(operation.getVoidMutationId()).isEqualTo(102L);
 	}
 
 	private WorkOperation completedOperation(WorkTypeDefinition definition, WorkTypeTemplate template) {

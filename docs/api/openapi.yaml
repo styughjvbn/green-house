@@ -4319,6 +4319,7 @@ components:
             - RESUME
             - COMPLETE
             - CANCEL
+            - VOID
     WorkOperationTargetResponse:
       type: object
       properties:
@@ -6683,6 +6684,7 @@ components:
             - RESUME
             - COMPLETE
             - CANCEL
+            - VOID
     ApiResponseWorkOperationVoidEligibilityResponse:
       type: object
       properties:

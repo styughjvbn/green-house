@@ -72,6 +72,10 @@ public enum WorkTypeDefinition {
 		return workflow == WorkTypeWorkflow.STRUCTURE_CHANGE || workflow == WorkTypeWorkflow.MOVEMENT;
 	}
 
+	public boolean supportsMutationVoid() {
+		return supportsStructureExecution() || workflow == WorkTypeWorkflow.DISCARD;
+	}
+
 	public static Set<String> requiredHandlerCodes() {
 		return Stream
 			.concat(Arrays.stream(values()).map(definition -> definition.handlerOverride).filter(Objects::nonNull),

@@ -308,6 +308,26 @@ class WorkOperationIntegrationTests extends AbstractBackendIntegrationTest {
 			.andExpect(jsonPath("$.data.executions[0].sources[0].beforeQuantity").value(100))
 			.andExpect(jsonPath("$.data.executions[0].sources[0].inputQuantity").value(25))
 			.andExpect(jsonPath("$.data.executions[0].sources[0].afterQuantity").value(75));
+
+		mockMvc.perform(get("/api/work-operations/{id}", operationId))
+			.andExpect(status().isOk())
+			.andExpect(jsonPath("$.data.availableActions", hasItem("VOID")));
+		mockMvc.perform(get("/api/work-operations/{id}/void-eligibility", operationId))
+			.andExpect(status().isOk())
+			.andExpect(jsonPath("$.data.voidable").value(true));
+		mockMvc.perform(post("/api/work-operations/{id}/void", operationId).contentType(MediaType.APPLICATION_JSON)
+			.content("""
+					{
+					  "idempotencyKey": "void-independent-discard",
+					  "reason": "잘못 등록한 독립 폐기"
+					}
+					"""))
+			.andExpect(status().isOk())
+			.andExpect(jsonPath("$.data.status").value("VOIDED"));
+
+		OrchidGroup restored = orchidGroupRepository.findById(targetGroup.getId()).orElseThrow();
+		org.assertj.core.api.Assertions.assertThat(restored.getQuantity()).isEqualTo(100);
+		org.assertj.core.api.Assertions.assertThat(restored.getStatus()).isEqualTo("정상");
 	}
 
 	private Long createDiscardOperation(String title) throws Exception {

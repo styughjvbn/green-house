@@ -42,9 +42,9 @@ public class WorkOperationVoidService {
 		}
 		else if ((operation.getStatus() != WorkOperationStatus.COMPLETED
 				&& operation.getStatus() != WorkOperationStatus.CORRECTED)
-				|| !operation.getWorkType().supportsStructureResultManagement()) {
+				|| !operation.getWorkType().supportsMutationVoid()) {
 			blockers.add(new WorkOperationVoidEligibilityResponse.Blocker("UNSUPPORTED_OPERATION",
-					"완료된 구조 변경 작업만 무효화할 수 있습니다.", 1));
+					"완료된 구조 변경 또는 폐기 작업만 무효화할 수 있습니다.", 1));
 		}
 		var relatedDiscards = operation.getRelationType() == null
 				? operationRepository.findByParentOperationIdAndRelationTypeOrderByIdAsc(operationId,

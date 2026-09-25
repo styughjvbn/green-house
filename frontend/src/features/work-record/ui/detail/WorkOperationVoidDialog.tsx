@@ -44,6 +44,11 @@ export function WorkOperationVoidDialog({
     },
   });
   const data = eligibility.data;
+  const effectDescription = data?.relatedWorkOperationIds.length
+    ? "구조 변경과 연관된 이동 전 선별 폐기를"
+    : operation.workTypeWorkflow === "DISCARD"
+      ? "폐기 효과를"
+      : "구조 변경을";
   const error =
     eligibility.error instanceof Error
       ? eligibility.error.message
@@ -59,11 +64,8 @@ export function WorkOperationVoidDialog({
             작업 무효화
           </DialogTitle>
           <DialogDescription className="mt-1 text-sm text-[#657168]">
-            {operation.title}의 구조 변경
-            {data?.relatedWorkOperationIds.length
-              ? "과 연관된 이동 전 선별 폐기"
-              : ""}
-            를 반대 방향 Mutation으로 되돌립니다.
+            {operation.title}의 {effectDescription} 반대 방향 Mutation으로
+            되돌립니다.
           </DialogDescription>
         </header>
 

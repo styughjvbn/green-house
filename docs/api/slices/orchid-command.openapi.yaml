@@ -878,6 +878,7 @@ components:
             - RESUME
             - COMPLETE
             - CANCEL
+            - VOID
     WorkOperationTargetResponse:
       type: object
       properties:

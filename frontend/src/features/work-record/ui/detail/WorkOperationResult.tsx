@@ -80,7 +80,8 @@ export function OperationResult({
                     ? "완료됨"
                     : "취소됨"}
             </span>
-            {(completed || corrected) && structureChange ? (
+            {(completed || corrected) &&
+            operation.availableActions.includes("VOID") ? (
               <StatusAction
                 label="작업 무효화"
                 danger

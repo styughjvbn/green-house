@@ -2259,7 +2259,7 @@ export interface components {
             voidMutationId?: number;
             progress?: components["schemas"]["WorkOperationProgressResponse"];
             targets?: components["schemas"]["WorkOperationTargetResponse"][];
-            availableActions?: ("START" | "PAUSE" | "RESUME" | "COMPLETE" | "CANCEL")[];
+            availableActions?: ("START" | "PAUSE" | "RESUME" | "COMPLETE" | "CANCEL" | "VOID")[];
         };
         WorkOperationTargetResponse: {
             /** Format: int64 */
@@ -3207,7 +3207,7 @@ export interface components {
             /** Format: int64 */
             voidMutationId?: number;
             progress?: components["schemas"]["WorkOperationProgressResponse"];
-            availableActions?: ("START" | "PAUSE" | "RESUME" | "COMPLETE" | "CANCEL")[];
+            availableActions?: ("START" | "PAUSE" | "RESUME" | "COMPLETE" | "CANCEL" | "VOID")[];
         };
         ApiResponseWorkOperationVoidEligibilityResponse: {
             data?: components["schemas"]["WorkOperationVoidEligibilityResponse"];
