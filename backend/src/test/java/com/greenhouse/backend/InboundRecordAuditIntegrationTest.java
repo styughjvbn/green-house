@@ -29,7 +29,7 @@ class InboundRecordAuditIntegrationTest extends AbstractBackendIntegrationTest {
 		Variety variety = varietyRepository.saveAndFlush(
 				new Variety("IN-AUDIT-" + System.nanoTime(), "입고감사속", "입고감사품종", null, "4인치", true, true, null, null));
 		InboundRecord inbound = inboundRecordRepository.saveAndFlush(new InboundRecord(LocalDate.of(2026, 8, 1),
-				InboundType.FLASK_SEEDLING, variety, InboundStatus.TEMP_STORED, 2, 80, null, "선반 A", null, null, null,
+				InboundType.FLASK_SEEDLING, variety, InboundStatus.POTTING_PENDING, 2, 80, null, "선반 A", null, null, null,
 				null, null, null, null, "작업자", "최초"));
 
 		mockMvc

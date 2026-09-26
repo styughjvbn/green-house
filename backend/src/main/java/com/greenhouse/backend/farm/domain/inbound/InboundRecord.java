@@ -178,7 +178,7 @@ public class InboundRecord extends BaseEntity {
 		if (status != InboundStatus.POTTING_IN_PROGRESS) {
 			return;
 		}
-		this.status = pottingDueDate == null ? InboundStatus.TEMP_STORED : InboundStatus.POTTING_PENDING;
+		this.status = InboundStatus.POTTING_PENDING;
 	}
 
 	public void cancel(String memo) {

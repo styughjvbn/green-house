@@ -343,7 +343,7 @@ class InboundPottingPlanIntegrationTests extends AbstractBackendIntegrationTest 
 					}
 					""".formatted(inboundRecord.getVariety().getId())))
 			.andExpect(status().isCreated())
-			.andExpect(jsonPath("$.data.status").value("TEMP_STORED"))
+			.andExpect(jsonPath("$.data.status").value("POTTING_PENDING"))
 			.andReturn();
 		Long inboundRecordId = Long.valueOf(createdInbound.getResponse()
 			.getContentAsString()
@@ -394,7 +394,7 @@ class InboundPottingPlanIntegrationTests extends AbstractBackendIntegrationTest 
 	@Test
 	void cancelingOneInboundOnlyCancelsItsTargetInAMultiInboundPlan() throws Exception {
 		InboundRecord secondInbound = inboundRecordRepository.save(new InboundRecord(LocalDate.of(2026, 7, 2),
-				InboundType.FLASK_SEEDLING, inboundRecord.getVariety(), InboundStatus.TEMP_STORED, 4, 60, null, "배양실 B",
+				InboundType.FLASK_SEEDLING, inboundRecord.getVariety(), InboundStatus.POTTING_PENDING, 4, 60, null, "배양실 B",
 				null, "2치", 1, null, null, null, null, "입고 담당", null));
 		var planned = mockMvc
 			.perform(post("/api/work-operations/inbound-potting-plans").contentType(MediaType.APPLICATION_JSON)

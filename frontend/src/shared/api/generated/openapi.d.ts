@@ -2771,7 +2771,7 @@ export interface components {
             startPosition?: number;
             endPosition?: number;
             /** @enum {string} */
-            status?: "TEMP_STORED" | "POTTING_PENDING" | "POTTING_IN_PROGRESS" | "POTTED" | "PLACED" | "CANCELED";
+            status?: "POTTING_PENDING" | "POTTING_IN_PROGRESS" | "POTTED" | "PLACED" | "CANCELED";
             worker?: string;
             memo?: string;
         };
@@ -5652,7 +5652,7 @@ export interface operations {
                 from?: string;
                 to?: string;
                 inboundType?: "FLASK_SEEDLING" | "POTTED_SEEDLING" | "PRODUCT_POT" | "SAMPLE" | "ETC";
-                status?: "TEMP_STORED" | "POTTING_PENDING" | "POTTING_IN_PROGRESS" | "POTTED" | "PLACED" | "CANCELED";
+                status?: "POTTING_PENDING" | "POTTING_IN_PROGRESS" | "POTTED" | "PLACED" | "CANCELED";
                 variety?: string;
                 page?: number;
                 size?: number;

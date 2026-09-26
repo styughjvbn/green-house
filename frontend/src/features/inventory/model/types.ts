@@ -84,7 +84,6 @@ export type InboundType =
   | "ETC";
 
 export type InboundStatus =
-  | "TEMP_STORED"
   | "POTTING_PENDING"
   | "POTTING_IN_PROGRESS"
   | "POTTED"

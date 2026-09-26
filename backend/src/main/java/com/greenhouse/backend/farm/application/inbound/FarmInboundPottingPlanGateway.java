@@ -20,7 +20,7 @@ public class FarmInboundPottingPlanGateway implements InboundPottingPlanGateway 
 	public List<InboundPottingPlanTarget> findCandidates() {
 		return inboundRecordRepository
 			.findByInboundTypeAndStatusInAndCreatedOrchidGroupIsNullOrderByPottingDueDateAscIdAsc(
-					InboundType.FLASK_SEEDLING, List.of(InboundStatus.TEMP_STORED, InboundStatus.POTTING_PENDING))
+					InboundType.FLASK_SEEDLING, List.of(InboundStatus.POTTING_PENDING))
 			.stream()
 			.map(this::toTarget)
 			.toList();

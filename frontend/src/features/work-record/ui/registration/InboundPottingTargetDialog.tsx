@@ -45,7 +45,7 @@ export function InboundPottingTargetDialog({
           <div>
             <h3 className="font-bold text-[#17251b]">포트 작업 대상 선택</h3>
             <p className="mt-1 text-xs text-[#6a766e]">
-              임시 보관 또는 포트 작업 대기 중인 유리병 모종입니다.
+              포트 작업 대기 중인 유리병 모종입니다.
             </p>
           </div>
           <button type="button" aria-label="닫기" onClick={onClose}>

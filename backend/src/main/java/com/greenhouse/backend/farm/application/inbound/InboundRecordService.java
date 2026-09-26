@@ -147,9 +147,6 @@ public class InboundRecordService {
 			if (request.estimatedQuantity() == null) {
 				throw new IllegalArgumentException("유리병 모종은 예상 수량이 필요합니다.");
 			}
-			if (status == InboundStatus.POTTING_PENDING && request.pottingDueDate() == null) {
-				throw new IllegalArgumentException("포트 작업 대기 상태는 예정일이 필요합니다.");
-			}
 			return;
 		}
 		if (request.actualQuantity() == null || request.bedZoneId() == null) {
@@ -162,7 +159,7 @@ public class InboundRecordService {
 			return request.status();
 		}
 		if (request.inboundType() == InboundType.FLASK_SEEDLING) {
-			return request.pottingDueDate() == null ? InboundStatus.TEMP_STORED : InboundStatus.POTTING_PENDING;
+			return InboundStatus.POTTING_PENDING;
 		}
 		return InboundStatus.PLACED;
 	}

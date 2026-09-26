@@ -83,7 +83,6 @@ public class InboundWorkOperationRequestFactory {
 
 	private String formatInboundStatus(InboundStatus status) {
 		return switch (status) {
-			case TEMP_STORED -> "임시보관";
 			case POTTING_PENDING -> "포트작업대기";
 			case POTTING_IN_PROGRESS -> "작업중";
 			case POTTED -> "포트작업완료";

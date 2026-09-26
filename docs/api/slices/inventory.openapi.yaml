@@ -169,7 +169,6 @@ paths:
         schema:
           type: string
           enum:
-          - TEMP_STORED
           - POTTING_PENDING
           - POTTING_IN_PROGRESS
           - POTTED
@@ -683,7 +682,6 @@ components:
         status:
           type: string
           enum:
-          - TEMP_STORED
           - POTTING_PENDING
           - POTTING_IN_PROGRESS
           - POTTED
