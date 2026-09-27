@@ -8,6 +8,9 @@
   "CompensateTransformMutationsCommand": [
     "a24516d43d66dd35aa556d4a14232db0f6c845e39535b5e595b3eb8892d8b0db"
   ],
+  "CompensateCreateMutationsCommand": [
+    "a24516d43d66dd35aa556d4a14232db0f6c845e39535b5e595b3eb8892d8b0db"
+  ],
   "CorrectOrchidGroupsMutationCommand": [
     "cebb59c7405104427be1a59fe0950029c745126bfb692439884464d09411c87b"
   ],

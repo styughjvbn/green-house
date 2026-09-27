@@ -100,7 +100,7 @@ public class OrchidGroupMutationEngine {
 		// The locking query can have started before a competing transaction commits. A
 		// separate statement after acquiring the inbound row lock must re-check the
 		// owning foreign key against the latest READ COMMITTED snapshot.
-		if (orchidGroupRepository.existsByInboundRecordId(inboundRecord.getId())) {
+		if (orchidGroupRepository.existsByInboundRecordIdAndQuantityGreaterThan(inboundRecord.getId(), 0)) {
 			throw new IllegalStateException("이미 난 묶음이 생성된 입고 기록입니다.");
 		}
 		Long inboundVarietyId = inboundRecord.getVariety().getId();
@@ -442,20 +442,32 @@ public class OrchidGroupMutationEngine {
 	}
 
 	public OrchidGroupMutationResult compensateTransforms(CompensateTransformMutationsCommand command) {
+		return compensate(command, command.mutationIds(),
+				Set.of(OrchidGroupMutationType.TRANSFORM, OrchidGroupMutationType.DISCARD),
+				"구조 변경과 연관 선별 폐기 Mutation만 자동 무효화할 수 있습니다.");
+	}
+
+	public OrchidGroupMutationResult compensateCreations(CompensateCreateMutationsCommand command) {
+		return compensate(command, command.mutationIds(), Set.of(OrchidGroupMutationType.CREATE),
+				"포트 작업의 생성 Mutation만 자동 무효화할 수 있습니다.");
+	}
+
+	private OrchidGroupMutationResult compensate(OrchidGroupMutationCommand command, List<Long> mutationIds,
+			Set<OrchidGroupMutationType> allowedTypes, String unsupportedMessage) {
 		String fingerprint = commandFingerprint.calculate(command);
 		var replay = replayResolver.findExisting(command.source(), fingerprint);
 		if (replay.isPresent()) {
 			return replay.get();
 		}
-		List<OrchidGroupMutationEntry> entries = recorder.entries(command.mutationIds());
+		List<OrchidGroupMutationEntry> entries = recorder.entries(mutationIds);
 		if (entries.isEmpty() || entries.stream().map(entry -> entry.getMutation().getId()).distinct().count()
-				!= command.mutationIds().size()) {
+				!= mutationIds.size()) {
 			throw new NotFoundException("무효화할 구조 변경 Mutation을 모두 찾을 수 없습니다.");
 		}
-		if (entries.stream().anyMatch(entry -> !isVoidableWorkMutation(entry.getMutation().getMutationType()))) {
-			throw new IllegalArgumentException("구조 변경과 연관 선별 폐기 Mutation만 자동 무효화할 수 있습니다.");
+		if (entries.stream().anyMatch(entry -> !allowedTypes.contains(entry.getMutation().getMutationType()))) {
+			throw new IllegalArgumentException(unsupportedMessage);
 		}
-		if (recorder.alreadyCompensated(command.mutationIds())) {
+		if (recorder.alreadyCompensated(mutationIds)) {
 			throw new IllegalArgumentException("이미 무효화된 구조 변경 작업입니다.");
 		}
 		Map<Long, List<OrchidGroupMutationEntry>> entriesByGroup = entries.stream()
@@ -470,7 +482,7 @@ public class OrchidGroupMutationEngine {
 		if (replay.isPresent()) {
 			return replay.get();
 		}
-		if (recorder.alreadyCompensated(command.mutationIds())) {
+		if (recorder.alreadyCompensated(mutationIds)) {
 			throw new IllegalArgumentException("이미 무효화된 구조 변경 작업입니다.");
 		}
 		List<OrchidGroupMutationEntry> latestEntries = entriesByGroup.values()
@@ -510,18 +522,13 @@ public class OrchidGroupMutationEngine {
 			group.advanceStateRevision();
 			changes.add(new OrchidGroupMutationRecorder.Change(group.getId(), revisionBefore, before, after));
 		}
-		List<OrchidGroupMutation> originals = recorder.findRelated(
-				RelatedOrchidGroupMutations.current(command.mutationIds()), entriesByGroup.keySet(),
-				Set.of(OrchidGroupMutationType.TRANSFORM, OrchidGroupMutationType.DISCARD));
+		List<OrchidGroupMutation> originals = recorder.findRelated(RelatedOrchidGroupMutations.current(mutationIds),
+				entriesByGroup.keySet(), allowedTypes);
 		OrchidGroupMutation mutation = recorder.start(OrchidGroupMutationType.COMPENSATION, command.source(), fingerprint,
 				command.effectiveBusinessDate(), command.reason());
 		OrchidGroupMutationResult result = recorder.changed(mutation, changes);
 		recorder.relate(mutation, originals, OrchidGroupMutationRelationType.COMPENSATES);
 		return result;
-	}
-
-	private boolean isVoidableWorkMutation(OrchidGroupMutationType type) {
-		return type == OrchidGroupMutationType.TRANSFORM || type == OrchidGroupMutationType.DISCARD;
 	}
 
 	private boolean hasBrokenCompensationChain(List<OrchidGroupMutationEntry> entries) {

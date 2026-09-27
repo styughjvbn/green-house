@@ -30,6 +30,7 @@ public interface OrchidGroupMutationEntryRepository extends JpaRepository<Orchid
 			from OrchidGroupMutationEntry entry
 			join OrchidGroup orchidGroup on orchidGroup.id = entry.orchidGroupId
 			where orchidGroup.inboundRecord.id in :inboundRecordIds
+			  and orchidGroup.quantity > 0
 			  and entry.entryKind = :entryKind
 			group by orchidGroup.inboundRecord.id
 			""")

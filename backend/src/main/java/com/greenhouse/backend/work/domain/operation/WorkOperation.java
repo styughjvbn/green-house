@@ -235,7 +235,7 @@ public class WorkOperation extends BaseEntity {
 		if ((status != WorkOperationStatus.COMPLETED && status != WorkOperationStatus.CORRECTED)
 				|| (!workType.supportsMutationVoid()
 						&& relationType != WorkOperationRelationType.MOVEMENT_PRE_DISCARD)) {
-			throw new IllegalArgumentException("완료된 구조 변경·폐기 또는 연관 선별 폐기 작업만 무효화할 수 있습니다.");
+			throw new IllegalArgumentException("완료된 구조 변경·폐기·포트 또는 연관 선별 폐기 작업만 무효화할 수 있습니다.");
 		}
 		if (reason == null || reason.isBlank() || requestKey == null || requestKey.isBlank()
 				|| compensationMutationId == null) {

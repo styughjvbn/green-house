@@ -48,7 +48,9 @@ export function WorkOperationVoidDialog({
     ? "구조 변경과 연관된 이동 전 선별 폐기를"
     : operation.workTypeWorkflow === "DISCARD"
       ? "폐기 효과를"
-      : "구조 변경을";
+      : operation.workTypeWorkflow === "POTTING"
+        ? "생성된 난 묶음과 입고 상태를"
+        : "구조 변경을";
   const error =
     eligibility.error instanceof Error
       ? eligibility.error.message
@@ -102,7 +104,7 @@ export function WorkOperationVoidDialog({
 
               {data.voidable ? (
                 <p className="rounded-md border border-[#b8ddc1] bg-[#eff9f1] p-3 text-sm text-[#176b35]">
-                  상쇄되지 않은 후속 변경이 없어 이 작업을 무효화할 수 있습니다.
+                  후속 변경이 없어 이 작업을 무효화할 수 있습니다.
                 </p>
               ) : (
                 <section className="rounded-md border border-[#efc4b9] bg-[#fff4ef] p-3">

@@ -514,6 +514,64 @@ class InboundPottingPlanIntegrationTests extends AbstractBackendIntegrationTest 
 			.name()).isEqualTo("COMPLETED");
 		assertThat(appliedEffectRepository.count()).isEqualTo(1);
 		assertThat(effectOrchidGroupRepository.count()).isEqualTo(2);
+
+		Long operationId = operations.getFirst().getId();
+		mockMvc.perform(get("/api/work-operations/{id}/void-eligibility", operationId))
+			.andExpect(status().isOk())
+			.andExpect(jsonPath("$.data.voidable").value(true))
+			.andExpect(jsonPath("$.data.resultOrchidGroupIds", hasSize(2)));
+		mockMvc
+			.perform(post("/api/work-operations/{id}/void", operationId).contentType(MediaType.APPLICATION_JSON)
+				.content("""
+						{
+						  "idempotencyKey": "void-immediate-potting",
+						  "reason": "잘못 등록한 포트 작업"
+						}
+						"""))
+			.andExpect(status().isOk())
+			.andExpect(jsonPath("$.data.status").value("VOIDED"));
+
+		InboundRecord reopened = inboundRecordRepository.findWithDetailsById(inboundRecord.getId()).orElseThrow();
+		assertThat(reopened.getStatus()).isEqualTo(InboundStatus.POTTING_PENDING);
+		assertThat(reopened.getInboundDate()).isEqualTo(LocalDate.of(2026, 7, 1));
+		assertThat(reopened.getEstimatedQuantity()).isEqualTo(120);
+		assertThat(reopened.getWorker()).isEqualTo("입고 담당");
+		assertThat(reopened.getMemo()).isNull();
+		assertThat(reopened.isEditable()).isTrue();
+		assertThat(orchidGroupRepository.findAll()).allSatisfy(group -> {
+			assertThat(group.getQuantity()).isZero();
+			assertThat(group.isVisibleInActiveViews()).isFalse();
+		});
+		mockMvc.perform(get("/api/inbound-records/{id}", inboundRecord.getId()))
+			.andExpect(status().isOk())
+			.andExpect(jsonPath("$.data.status").value("POTTING_PENDING"))
+			.andExpect(jsonPath("$.data.pottingDate").doesNotExist())
+			.andExpect(jsonPath("$.data.createdOrchidGroups", hasSize(0)));
+
+		mockMvc
+			.perform(post("/api/work-operations/inbound-potting-executions").contentType(MediaType.APPLICATION_JSON)
+				.content("""
+						{
+						  "idempotencyKey": "repot-after-potting-undo",
+						  "inboundRecordId": %d,
+						  "pottingDate": "2026-07-17",
+						  "results": [{
+						    "quantity": 100,
+						    "potSize": "2치",
+						    "ageYear": 1,
+						    "bedZoneId": %d,
+						    "startPosition": 0,
+						    "endPosition": 8
+						  }],
+						  "worker": "입고 담당"
+						}
+						""".formatted(inboundRecord.getId(), bedZone.getId())))
+			.andExpect(status().isCreated())
+			.andExpect(jsonPath("$.data.status").value("COMPLETED"));
+		mockMvc.perform(get("/api/inbound-records/{id}", inboundRecord.getId()))
+			.andExpect(status().isOk())
+			.andExpect(jsonPath("$.data.status").value("PLACED"))
+			.andExpect(jsonPath("$.data.createdOrchidGroups", hasSize(1)));
 	}
 
 	@Test
@@ -627,6 +685,25 @@ class InboundPottingPlanIntegrationTests extends AbstractBackendIntegrationTest 
 		assertThat(operationRepository.count()).isEqualTo(1);
 		assertThat(appliedEffectRepository.count()).isEqualTo(2);
 		assertThat(orchidGroupRepository.count()).isEqualTo(2);
+
+		Long operationId = operationRepository.findAll().getFirst().getId();
+		mockMvc
+			.perform(post("/api/work-operations/{id}/void", operationId).contentType(MediaType.APPLICATION_JSON)
+				.content("""
+						{
+						  "idempotencyKey": "void-multiple-potting-record",
+						  "reason": "복수 포트 작업 오등록"
+						}
+						"""))
+			.andExpect(status().isOk())
+			.andExpect(jsonPath("$.data.status").value("VOIDED"));
+		assertThat(inboundRecordRepository.findByIdIn(java.util.Set.of(inboundRecord.getId(), secondInbound.getId())))
+			.allSatisfy(record -> {
+				assertThat(record.getStatus()).isEqualTo(InboundStatus.POTTING_PENDING);
+				assertThat(record.isEditable()).isTrue();
+			});
+		assertThat(orchidGroupRepository.findAll())
+			.allSatisfy(group -> assertThat(group.isVisibleInActiveViews()).isFalse());
 	}
 
 	@Test

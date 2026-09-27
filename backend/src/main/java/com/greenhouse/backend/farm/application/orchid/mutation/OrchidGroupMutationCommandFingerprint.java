@@ -60,6 +60,8 @@ public class OrchidGroupMutationCommandFingerprint {
 					value.effectiveBusinessDate(), value.reason()));
 			case CompensateTransformMutationsCommand value -> fingerprint.calculate(new CompensationPayload(
 					OrchidGroupMutationType.COMPENSATION, value.mutationIds(), value.effectiveBusinessDate(), value.reason()));
+			case CompensateCreateMutationsCommand value -> fingerprint.calculate(new CompensationPayload(
+					OrchidGroupMutationType.COMPENSATION, value.mutationIds(), value.effectiveBusinessDate(), value.reason()));
 		};
 	}
 

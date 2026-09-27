@@ -73,7 +73,8 @@ public enum WorkTypeDefinition {
 	}
 
 	public boolean supportsMutationVoid() {
-		return supportsStructureExecution() || workflow == WorkTypeWorkflow.DISCARD;
+		return supportsStructureExecution() || workflow == WorkTypeWorkflow.DISCARD
+				|| workflow == WorkTypeWorkflow.POTTING;
 	}
 
 	public static Set<String> requiredHandlerCodes() {

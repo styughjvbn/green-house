@@ -4,6 +4,7 @@ import com.greenhouse.backend.common.exception.NotFoundException;
 import com.greenhouse.backend.work.domain.operation.WorkOperation;
 import com.greenhouse.backend.work.domain.operation.WorkOperationRelationType;
 import com.greenhouse.backend.work.domain.operation.WorkOperationStatus;
+import com.greenhouse.backend.work.domain.operation.WorkTypeWorkflow;
 import com.greenhouse.backend.work.dto.operation.WorkOperationVoidEligibilityResponse;
 import com.greenhouse.backend.work.dto.operation.WorkOperationVoidRequest;
 import com.greenhouse.backend.work.repository.WorkAppliedEffectRepository;
@@ -23,6 +24,7 @@ public class WorkOperationVoidService {
 	private final WorkOperationRepository operationRepository;
 	private final WorkAppliedEffectRepository effectRepository;
 	private final StructureChangeVoidPort structureChangeVoidPort;
+	private final PottingVoidPort pottingVoidPort;
 	private final WorkOperationQueryService queryService;
 	private final WorkOperationSupport support;
 
@@ -44,7 +46,7 @@ public class WorkOperationVoidService {
 				&& operation.getStatus() != WorkOperationStatus.CORRECTED)
 				|| !operation.getWorkType().supportsMutationVoid()) {
 			blockers.add(new WorkOperationVoidEligibilityResponse.Blocker("UNSUPPORTED_OPERATION",
-					"완료된 구조 변경 또는 폐기 작업만 무효화할 수 있습니다.", 1));
+					"완료된 구조 변경·폐기·포트 작업만 무효화할 수 있습니다.", 1));
 		}
 		var relatedDiscards = operation.getRelationType() == null
 				? operationRepository.findByParentOperationIdAndRelationTypeOrderByIdAsc(operationId,
@@ -60,16 +62,37 @@ public class WorkOperationVoidService {
 		List<Long> targetOperationIds = new ArrayList<>();
 		targetOperationIds.add(operationId);
 		targetOperationIds.addAll(relatedWorkOperationIds);
-		List<Long> mutationIds = targetOperationIds.stream()
+		var effects = targetOperationIds.stream()
 			.flatMap(id -> effectRepository.findByWorkOperationIdOrderByIdAsc(id).stream())
+			.toList();
+		List<Long> mutationIds = effects.stream()
 			.map(effect -> effect.getMutationId()).filter(Objects::nonNull).distinct().sorted().toList();
-		StructureChangeVoidPort.Inspection inspection = structureChangeVoidPort.inspect(operationId, mutationIds);
-		inspection.blockers()
+		boolean potting = operation.getWorkType().workflow() == WorkTypeWorkflow.POTTING;
+		List<Long> sourceIds;
+		List<Long> resultIds;
+		List<StructureChangeVoidPort.Blocker> inspectionBlockers;
+		if (potting) {
+			var inspection = pottingVoidPort.inspect(operationId,
+					effects.stream()
+						.map(effect -> new PottingVoidPort.Effect(
+								effect.getTarget() == null ? null : effect.getTarget().getInboundRecordId(),
+								effect.getMutationId()))
+						.toList());
+			sourceIds = List.of();
+			resultIds = inspection.resultOrchidGroupIds();
+			inspectionBlockers = inspection.blockers();
+		}
+		else {
+			var inspection = structureChangeVoidPort.inspect(operationId, mutationIds);
+			sourceIds = inspection.sourceOrchidGroupIds();
+			resultIds = inspection.resultOrchidGroupIds();
+			inspectionBlockers = inspection.blockers();
+		}
+		inspectionBlockers
 			.forEach(blocker -> blockers.add(new WorkOperationVoidEligibilityResponse.Blocker(blocker.code(),
 					blocker.message(), blocker.count())));
-		return new WorkOperationVoidEligibilityResponse(operationId, blockers.isEmpty(), mutationIds,
-				inspection.sourceOrchidGroupIds(), inspection.resultOrchidGroupIds(), List.copyOf(relatedWorkOperationIds),
-				List.copyOf(blockers));
+		return new WorkOperationVoidEligibilityResponse(operationId, blockers.isEmpty(), mutationIds, sourceIds,
+				resultIds, List.copyOf(relatedWorkOperationIds), List.copyOf(blockers));
 	}
 
 	public WorkOperationView voidOperation(Long operationId, WorkOperationVoidRequest request) {
@@ -87,8 +110,21 @@ public class WorkOperationVoidService {
 			throw new IllegalArgumentException(eligibility.blockers().getFirst().message());
 		}
 		String reason = support.normalizeRequired(request.reason());
-		Long mutationId = structureChangeVoidPort.compensate(operationId, requestKey, eligibility.mutationIds(),
-				operation.getPlannedStartDate(), reason);
+		Long mutationId;
+		if (operation.getWorkType().workflow() == WorkTypeWorkflow.POTTING) {
+			var effects = effectRepository.findByWorkOperationIdOrderByIdAsc(operationId);
+			mutationId = pottingVoidPort.compensate(operationId, requestKey,
+					effects.stream()
+						.map(effect -> new PottingVoidPort.Effect(
+								effect.getTarget() == null ? null : effect.getTarget().getInboundRecordId(),
+								effect.getMutationId()))
+						.toList(),
+					operation.getPlannedStartDate(), reason);
+		}
+		else {
+			mutationId = structureChangeVoidPort.compensate(operationId, requestKey, eligibility.mutationIds(),
+					operation.getPlannedStartDate(), reason);
+		}
 		var now = support.now();
 		List<WorkOperation> relatedDiscards = operationRepository
 			.findByParentOperationIdAndRelationTypeOrderByIdAsc(operationId,

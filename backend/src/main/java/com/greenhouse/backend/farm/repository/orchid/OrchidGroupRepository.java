@@ -20,6 +20,7 @@ public interface OrchidGroupRepository extends JpaRepository<OrchidGroup, Long> 
 			join fetch b.house
 			join fetch g.inboundRecord inbound
 			where inbound.id in :inboundRecordIds
+			  and g.quantity > 0
 			order by inbound.id, g.id
 			""")
 	List<OrchidGroup> findInboundResultDetailsByInboundRecordIdIn(
@@ -27,7 +28,16 @@ public interface OrchidGroupRepository extends JpaRepository<OrchidGroup, Long> 
 
 	long countByIdInAndInboundRecordIsNotNull(java.util.Collection<Long> orchidGroupIds);
 
-	boolean existsByInboundRecordId(Long inboundRecordId);
+	@Query("""
+			select count(g) from OrchidGroup g
+			where g.id in :orchidGroupIds
+			  and g.inboundRecord is not null
+			  and g.inboundRecord.id not in :allowedInboundRecordIds
+			""")
+	long countInboundReferencesOutside(@Param("orchidGroupIds") java.util.Collection<Long> orchidGroupIds,
+			@Param("allowedInboundRecordIds") java.util.Collection<Long> allowedInboundRecordIds);
+
+	boolean existsByInboundRecordIdAndQuantityGreaterThan(Long inboundRecordId, Integer quantity);
 
 	boolean existsByStateRevisionIsNull();
 

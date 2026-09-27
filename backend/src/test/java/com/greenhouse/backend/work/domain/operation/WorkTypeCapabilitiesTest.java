@@ -96,7 +96,7 @@ class WorkTypeCapabilitiesTest {
 		assertThat(workType.workflow()).isEqualTo(WorkTypeWorkflow.POTTING);
 		assertThat(workType.registrationTargetSource()).isEqualTo(WorkTargetReferenceType.INBOUND_RECORD);
 		assertThat(workType.isSettingsEditable()).isFalse();
-		assertThat(workType.supportsMutationVoid()).isFalse();
+		assertThat(workType.supportsMutationVoid()).isTrue();
 	}
 
 	@Test
@@ -110,6 +110,8 @@ class WorkTypeCapabilitiesTest {
 		assertThat(new WorkType("MERGE", "합식", WorkTypeTemplate.REPOT, true, true, true, 1)
 			.supportsMutationVoid()).isTrue();
 		assertThat(new WorkType("DISCARD", "폐기", WorkTypeTemplate.DISCARD, true, true, true, 1)
+			.supportsMutationVoid()).isTrue();
+		assertThat(new WorkType("POTTING", "포트 작업", WorkTypeTemplate.REPOT, true, true, true, 1)
 			.supportsMutationVoid()).isTrue();
 		assertThat(new WorkType("RECONCILIATION", "현장 상태 동기화", WorkTypeTemplate.RECONCILIATION, true,
 				true, true, 1).supportsMutationVoid()).isFalse();

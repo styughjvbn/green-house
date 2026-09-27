@@ -47,7 +47,8 @@ class MutationFingerprintCompatibilityTest {
 						RelatedOrchidGroupMutations.legacy(), date, " reason "),
 				new ReconcileOrchidGroupMutationCommand(source, 5L, 8, " 정상 ", 2L, BigDecimal.ZERO,
 						new BigDecimal("2.00"), date, " reason "),
-				new CompensateTransformMutationsCommand(source, List.of(11L, 9L), date, " reason "));
+				new CompensateTransformMutationsCommand(source, List.of(11L, 9L), date, " reason "),
+				new CompensateCreateMutationsCommand(source, List.of(11L, 9L), date, " reason "));
 		var calculator = new OrchidGroupMutationCommandFingerprint(new OrchidGroupMutationFingerprint());
 		var hashes = new java.util.TreeMap<String, String>();
 		commands.forEach(command -> hashes.put(command.getClass().getSimpleName(), calculator.calculate(command)));
