@@ -773,6 +773,8 @@ components:
         pottingDate:
           type: string
           format: date
+        editable:
+          type: boolean
         createdOrchidGroups:
           type: array
           items:

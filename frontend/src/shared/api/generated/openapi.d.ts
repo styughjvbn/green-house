@@ -2812,6 +2812,7 @@ export interface components {
             pottingDueDate?: string;
             /** Format: date */
             pottingDate?: string;
+            editable?: boolean;
             createdOrchidGroups?: components["schemas"]["InboundOrchidGroupResponse"][];
             worker?: string;
             memo?: string;

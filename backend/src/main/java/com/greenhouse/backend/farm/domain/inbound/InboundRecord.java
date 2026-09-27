@@ -82,9 +82,7 @@ public class InboundRecord extends BaseEntity {
 
 	public void updateMetadata(LocalDate inboundDate, Integer estimatedQuantity, String tempLocation,
 			LocalDate pottingDueDate, String worker, String memo) {
-		if (status == InboundStatus.CANCELED) {
-			throw new IllegalArgumentException("취소된 입고 기록은 수정할 수 없습니다.");
-		}
+		requireEditable();
 		this.inboundDate = inboundDate;
 		this.estimatedQuantity = estimatedQuantity;
 		this.tempLocation = tempLocation;
@@ -97,6 +95,14 @@ public class InboundRecord extends BaseEntity {
 		this.status = InboundStatus.PLACED;
 	}
 
+	public void completePotting() {
+		if (inboundType != InboundType.FLASK_SEEDLING || status == InboundStatus.CANCELED
+				|| status == InboundStatus.PLACED) {
+			throw new IllegalStateException("포트 작업을 완료할 수 없는 입고 기록입니다.");
+		}
+		markPlaced();
+	}
+
 	public void addCreatedOrchidGroup(OrchidGroup orchidGroup) {
 		if (!createdOrchidGroups.contains(orchidGroup)) {
 			createdOrchidGroups.add(orchidGroup);
@@ -104,7 +110,25 @@ public class InboundRecord extends BaseEntity {
 	}
 
 	public boolean hasCreatedOrchidGroups() {
-		return !createdOrchidGroups.isEmpty();
+		return createdOrchidGroups.stream().anyMatch(OrchidGroup::isVisibleInActiveViews);
+	}
+
+	public void reopenAfterPottingVoid() {
+		if (status != InboundStatus.PLACED || hasCreatedOrchidGroups()) {
+			throw new IllegalStateException("무효화된 포트 작업의 입고 기록만 다시 대기 상태로 전환할 수 있습니다.");
+		}
+		status = InboundStatus.POTTING_PENDING;
+	}
+
+	public boolean isEditable() {
+		return (status == InboundStatus.POTTING_PENDING || status == InboundStatus.POTTING_IN_PROGRESS)
+				&& !hasCreatedOrchidGroups();
+	}
+
+	private void requireEditable() {
+		if (!isEditable()) {
+			throw new IllegalArgumentException("배치 완료 또는 취소된 입고 기록은 수정할 수 없습니다.");
+		}
 	}
 
 	public void markPottingPending(InboundStatus status) {

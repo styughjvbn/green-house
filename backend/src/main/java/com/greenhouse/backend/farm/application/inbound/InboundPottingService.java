@@ -1,6 +1,5 @@
 package com.greenhouse.backend.farm.application.inbound;
 
-import com.greenhouse.backend.common.application.RequestActorProvider;
 import com.greenhouse.backend.farm.application.orchid.mutation.CreateInboundOrchidGroupsMutationCommand;
 import com.greenhouse.backend.farm.application.orchid.mutation.CreateOrchidGroupMutationItem;
 import com.greenhouse.backend.farm.application.orchid.mutation.OrchidGroupMutationDetails;
@@ -26,8 +25,6 @@ public class InboundPottingService {
 	private final InboundRecordFinder inboundRecordFinder;
 
 	private final OrchidGroupRepository orchidGroupRepository;
-
-	private final RequestActorProvider requestActorProvider;
 
 	private final OrchidGroupMutationEngine mutationEngine;
 
@@ -59,24 +56,9 @@ public class InboundPottingService {
 		var mutationLink = new WorkMutationLink(mutation.mutationId(), mutation.correlationId());
 
 		int actualQuantity = createdGroups.stream().mapToInt(OrchidGroup::getQuantity).sum();
-		inboundRecord.updateMetadata(inboundRecord.getInboundDate(), inboundRecord.getEstimatedQuantity(),
-				inboundRecord.getTempLocation(), inboundRecord.getPottingDueDate(),
-				requestActorProvider.resolve(request.worker()), appendMemo(inboundRecord.getMemo(), request.memo()));
-		inboundRecord.markPlaced();
+		inboundRecord.completePotting();
 		return new InboundPottingResult(responseAssembler.assemble(inboundRecordFinder.find(inboundRecord.getId())),
 				createdGroups.stream().map(OrchidGroup::getId).toList(), actualQuantity, mutationLink);
-	}
-
-	private String appendMemo(String base, String extra) {
-		String normalizedBase = normalize(base);
-		String normalizedExtra = normalize(extra);
-		if (normalizedExtra == null) {
-			return normalizedBase;
-		}
-		if (normalizedBase == null) {
-			return normalizedExtra;
-		}
-		return normalizedBase + "\n" + normalizedExtra;
 	}
 
 	private String normalize(String value) {

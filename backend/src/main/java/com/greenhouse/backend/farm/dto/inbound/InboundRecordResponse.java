@@ -9,7 +9,8 @@ import java.util.List;
 
 public record InboundRecordResponse(Long id, LocalDate inboundDate, String inboundType, Long varietyId, String genus,
 		String varietyName, String status, Integer estimatedQuantity, String tempLocation, LocalDate pottingDueDate,
-		LocalDate pottingDate, List<InboundOrchidGroupResponse> createdOrchidGroups, String worker, String memo,
+		LocalDate pottingDate, boolean editable, List<InboundOrchidGroupResponse> createdOrchidGroups, String worker,
+		String memo,
 		LocalDateTime createdAt, LocalDateTime updatedAt) {
 
 	public static InboundRecordResponse from(InboundRecord record, List<OrchidGroup> createdOrchidGroups,
@@ -17,7 +18,7 @@ public record InboundRecordResponse(Long id, LocalDate inboundDate, String inbou
 		return new InboundRecordResponse(record.getId(), record.getInboundDate(), record.getInboundType().name(),
 				record.getVariety().getId(), record.getVariety().getGenus(), record.getVariety().getName(),
 				record.getStatus().name(), record.getEstimatedQuantity(), record.getTempLocation(),
-				record.getPottingDueDate(), pottingDate,
+				record.getPottingDueDate(), pottingDate, record.isEditable(),
 				createdOrchidGroups.stream().map(InboundOrchidGroupResponse::from).toList(),
 				record.getWorker(), record.getMemo(), TimeConfig.toFarmTime(record.getCreatedAt()),
 				TimeConfig.toFarmTime(record.getUpdatedAt()));

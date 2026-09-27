@@ -129,6 +129,7 @@ class InventoryIntegrationTests extends FarmFixtureIntegrationTest {
 					""".formatted(sampleVariety.getId())))
 			.andExpect(status().isCreated())
 			.andExpect(jsonPath("$.data.status").value("POTTING_PENDING"))
+			.andExpect(jsonPath("$.data.editable").value(true))
 			.andExpect(jsonPath("$.data.createdOrchidGroups").isEmpty())
 			.andReturn();
 		var flaskRecordId = Long
@@ -142,16 +143,31 @@ class InventoryIntegrationTests extends FarmFixtureIntegrationTest {
 								{
 								  "pottingDate": "2026-07-12",
 								  "results": [{"quantity": 210, "bedZoneId": %d, "startPosition": 21, "endPosition": 22, "potSize": "3.5치", "ageYear": 1}],
-								  "worker": "관리자",
+								  "worker": "포트 담당",
 								  "memo": "포트 작업 완료"
 								}
 								"""
 							.formatted(sampleZone.getId())))
 			.andExpect(status().isOk())
 			.andExpect(jsonPath("$.data.status").value("PLACED"))
+			.andExpect(jsonPath("$.data.editable").value(false))
 			.andExpect(jsonPath("$.data.pottingDate").value("2026-07-12"))
+			.andExpect(jsonPath("$.data.worker").value("관리자"))
+			.andExpect(jsonPath("$.data.memo").value("유리병 입고"))
 			.andExpect(jsonPath("$.data.createdOrchidGroups[0].quantity").value(210))
 			.andExpect(jsonPath("$.data.createdOrchidGroups[0].id").isNumber());
+
+		mockMvc
+			.perform(patch("/api/inbound-records/{inboundRecordId}", flaskRecordId)
+				.contentType(MediaType.APPLICATION_JSON)
+				.content("""
+						{
+						  "inboundDate": "2026-07-06",
+						  "estimatedQuantity": 260,
+						  "tempLocation": "수정 시도"
+						}
+						"""))
+			.andExpect(status().isBadRequest());
 
 		mockMvc.perform(post("/api/inbound-records").contentType(MediaType.APPLICATION_JSON).content("""
 				{
@@ -172,6 +188,7 @@ class InventoryIntegrationTests extends FarmFixtureIntegrationTest {
 				""".formatted(sampleVariety.getId(), sampleZone.getId())))
 			.andExpect(status().isCreated())
 			.andExpect(jsonPath("$.data.status").value("PLACED"))
+			.andExpect(jsonPath("$.data.editable").value(false))
 			.andExpect(jsonPath("$.data.createdOrchidGroups[0].id").isNumber());
 
 		mockMvc.perform(get("/api/inbound-records").param("status", "PLACED"))

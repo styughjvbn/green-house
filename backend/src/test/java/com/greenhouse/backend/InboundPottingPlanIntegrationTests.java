@@ -235,7 +235,7 @@ class InboundPottingPlanIntegrationTests extends AbstractBackendIntegrationTest 
 	}
 
 	@Test
-	void activePottingUsesCurrentInboundAndCompletedPottingKeepsExecutionSnapshot() throws Exception {
+	void activePottingUsesCurrentInboundAndCompletedPottingRejectsUpdateAndKeepsExecutionSnapshot() throws Exception {
 		var planned = mockMvc
 			.perform(post("/api/work-operations/inbound-potting-plans").contentType(MediaType.APPLICATION_JSON)
 				.content("""
@@ -311,7 +311,7 @@ class InboundPottingPlanIntegrationTests extends AbstractBackendIntegrationTest 
 						  "pottingDueDate": "2026-07-25"
 						}
 						"""))
-			.andExpect(status().isOk());
+			.andExpect(status().isBadRequest());
 
 		mockMvc.perform(get("/api/work-operations/{id}", operationId))
 			.andExpect(status().isOk())

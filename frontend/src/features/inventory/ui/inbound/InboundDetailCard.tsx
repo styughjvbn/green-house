@@ -59,7 +59,7 @@ export function InboundDetailCard({
         title={record.varietyName}
         actions={
           <>
-            {record.status !== "CANCELED" ? (
+            {record.editable ? (
               <DetailActionButton
                 onClick={() =>
                   onToggleEditing(!editing, createInboundEditForm(record))
