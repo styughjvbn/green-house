@@ -61,21 +61,10 @@ type InboundRecordResponse = {
   genus: string;
   varietyName: string;
   status: InboundRecord["status"];
-  bottleCount: number | null;
   estimatedQuantity: number | null;
-  actualQuantity: number | null;
   tempLocation: string | null;
   pottingDueDate: string | null;
-  pottingDate: string | null;
-  potSize: string | null;
-  ageYear: number | null;
-  growthStage: string | null;
-  placementType: string | null;
-  trayCount: number | null;
-  bedZoneId: number | null;
-  currentLocation: string | null;
-  createdOrchidGroupId: number | null;
-  createdOrchidGroupIds: number[];
+  createdOrchidGroups: InboundRecord["createdOrchidGroups"];
   worker: string | null;
   memo: string | null;
   createdAt: string;
@@ -399,21 +388,10 @@ function toInboundRecord(item: InboundRecordResponse): InboundRecord {
     genus: item.genus,
     varietyName: item.varietyName,
     status: item.status,
-    bottleCount: item.bottleCount,
     estimatedQuantity: item.estimatedQuantity,
-    actualQuantity: item.actualQuantity,
     tempLocation: item.tempLocation,
     pottingDueDate: item.pottingDueDate,
-    pottingDate: item.pottingDate,
-    potSize: item.potSize,
-    ageYear: item.ageYear,
-    growthStage: item.growthStage,
-    placementType: item.placementType,
-    trayCount: item.trayCount,
-    bedZoneId: item.bedZoneId,
-    currentLocation: item.currentLocation,
-    createdOrchidGroupId: item.createdOrchidGroupId,
-    createdOrchidGroupIds: item.createdOrchidGroupIds,
+    createdOrchidGroups: item.createdOrchidGroups,
     worker: item.worker,
     memo: item.memo,
     createdAt: item.createdAt,

@@ -324,7 +324,6 @@ export type InboundPottingExecutionPayload = {
     endPosition: number;
     memo?: string;
   }>;
-  growthStage?: string;
   worker?: string;
   memo?: string;
 };

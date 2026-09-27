@@ -18,8 +18,6 @@ import {
   toOptionalNumber,
 } from "../../lib/inboundUi";
 import { DetailRow, Field, inputClass } from "../common/InventoryPrimitives";
-import { PotSizeInput } from "../common/PotSizeInput";
-import { InboundPlacementTypeField } from "./InboundPlacementTypeField";
 
 export function InboundDetailCard({
   record,
@@ -71,13 +69,14 @@ export function InboundDetailCard({
               </DetailActionButton>
             ) : null}
             {record.inboundType === "FLASK_SEEDLING" &&
-            !record.createdOrchidGroupId &&
+            record.createdOrchidGroups.length === 0 &&
             record.status !== "CANCELED" ? (
               <DetailActionButton icon={Scissors} onClick={onOpenPotting}>
                 포트 작업 실행
               </DetailActionButton>
             ) : null}
-            {!record.createdOrchidGroupId && record.status !== "CANCELED" ? (
+            {record.createdOrchidGroups.length === 0 &&
+            record.status !== "CANCELED" ? (
               <DetailActionButton tone="danger" onClick={onOpenCancel}>
                 입고 취소
               </DetailActionButton>
@@ -162,19 +161,6 @@ function InboundEditForm({
           }
         />
       </Field>
-      <Field label="실제 수량">
-        <input
-          className={inputClass}
-          type="number"
-          value={editForm.actualQuantity ?? ""}
-          onChange={(event) =>
-            onChange((current) => ({
-              ...current,
-              actualQuantity: toOptionalNumber(event.target.value),
-            }))
-          }
-        />
-      </Field>
       <Field label="임시 위치">
         <input
           className={inputClass}
@@ -200,38 +186,6 @@ function InboundEditForm({
           }
         />
       </Field>
-      <PotSizeInput
-        label="화분 크기"
-        value={editForm.potSize ?? ""}
-        onChange={(value) =>
-          onChange((current) => ({
-            ...current,
-            potSize: value,
-          }))
-        }
-      />
-      <Field label="초기 년생">
-        <input
-          className={inputClass}
-          type="number"
-          value={editForm.ageYear ?? ""}
-          onChange={(event) =>
-            onChange((current) => ({
-              ...current,
-              ageYear: toOptionalNumber(event.target.value),
-            }))
-          }
-        />
-      </Field>
-      <InboundPlacementTypeField
-        value={editForm.placementType ?? ""}
-        onChange={(value) =>
-          onChange((current) => ({
-            ...current,
-            placementType: value,
-          }))
-        }
-      />
       <Field label="작업자">
         <input
           className={inputClass}
@@ -288,30 +242,47 @@ function InboundDetailView({ record }: { record: InboundRecord }) {
         }
       />
       <DetailRow label="예상 수량" value={record.estimatedQuantity} />
-      <DetailRow label="실제 수량" value={record.actualQuantity} />
       <DetailRow label="임시 위치" value={record.tempLocation} />
-      <DetailRow label="현재 위치" value={record.currentLocation} />
       <DetailRow label="포트 예정일" value={record.pottingDueDate} />
-      <DetailRow label="포트 작업 완료일" value={record.pottingDate} />
-      <DetailRow label="화분 크기" value={record.potSize} />
-      <DetailRow label="초기 년생" value={record.ageYear} />
-      <DetailRow label="배치 규격" value={record.placementType} />
       <DetailRow label="작업자" value={record.worker} />
-      <DetailRow
-        label="생성 난 묶음"
-        value={
-          record.createdOrchidGroupIds.length
-            ? record.createdOrchidGroupIds.join(", ")
-            : "-"
-        }
-      />
       <DetailRow label="메모" value={record.memo} />
+      {record.createdOrchidGroups.length ? (
+        <div className="mt-4 border-t border-[#e2e8e3] pt-4">
+          <dt className="mb-2 text-xs font-semibold text-[#6a766e]">
+            배치된 난 묶음
+          </dt>
+          <dd className="space-y-2">
+            {record.createdOrchidGroups.map((group) => (
+              <div
+                className="rounded-md border border-[#d7ddd8] bg-[#f8faf8] p-3 text-sm"
+                key={group.id}
+              >
+                <div className="flex items-center justify-between gap-3">
+                  <strong>난 묶음 #{group.id}</strong>
+                  <StatusBadge tone="blue" size="compact">
+                    {group.status}
+                  </StatusBadge>
+                </div>
+                <p className="mt-1 text-[#526057]">
+                  {group.quantity}분 · {group.potSize ?? "화분 미지정"} ·{" "}
+                  {group.ageYear == null
+                    ? "년생 미지정"
+                    : `${group.ageYear}년생`}
+                </p>
+                <p className="mt-1 text-xs text-[#6a766e]">
+                  {group.location}
+                  {group.placementType ? ` · ${group.placementType}` : ""}
+                </p>
+              </div>
+            ))}
+          </dd>
+        </div>
+      ) : null}
     </dl>
   );
 }
 
 function inboundStatusTone(status: InboundRecord["status"]) {
-  if (status === "POTTED") return "green";
   if (status === "CANCELED") return "gray";
   return "blue";
 }

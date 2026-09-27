@@ -83,7 +83,7 @@ public class InboundRecordController {
 								row.ageYear(), row.placementType(), row.trayCount(), row.splitPlacementAllowed(),
 								row.startPosition(), row.endPosition(), row.memo()))
 						.toList(),
-					request.growthStage(), request.worker(), request.memo()));
+					request.worker(), request.memo()));
 		return ApiResponse.ok(inboundRecordQueryService.getInboundRecord(inboundRecordId));
 	}
 

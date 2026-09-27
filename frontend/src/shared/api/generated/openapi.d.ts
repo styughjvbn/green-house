@@ -2507,7 +2507,6 @@ export interface components {
             /** Format: date */
             pottingDate: string;
             results: components["schemas"]["InboundPottingResultRequest"][];
-            growthStage?: string;
             worker?: string;
             memo?: string;
         };
@@ -2742,6 +2741,20 @@ export interface components {
             defaultPotSize?: string;
             memo?: string;
         };
+        InboundPlacementInput: {
+            /** Format: int32 */
+            quantity: number;
+            /** Format: int64 */
+            bedZoneId: number;
+            potSize?: string;
+            /** Format: int32 */
+            ageYear?: number;
+            placementType?: string;
+            /** Format: int32 */
+            trayCount?: number;
+            startPosition?: number;
+            endPosition?: number;
+        };
         InboundRecordCreateRequest: {
             /** Format: date */
             inboundDate: string;
@@ -2751,33 +2764,35 @@ export interface components {
             varietyId?: number;
             newVariety?: components["schemas"]["InboundNewVarietyRequest"];
             /** Format: int32 */
-            bottleCount?: number;
-            /** Format: int32 */
             estimatedQuantity?: number;
-            /** Format: int32 */
-            actualQuantity?: number;
             tempLocation?: string;
             /** Format: date */
             pottingDueDate?: string;
-            potSize?: string;
-            /** Format: int32 */
-            ageYear?: number;
-            growthStage?: string;
-            placementType?: string;
-            /** Format: int32 */
-            trayCount?: number;
-            /** Format: int64 */
-            bedZoneId?: number;
-            startPosition?: number;
-            endPosition?: number;
-            /** @enum {string} */
-            status?: "POTTING_PENDING" | "POTTING_IN_PROGRESS" | "POTTED" | "PLACED" | "CANCELED";
+            placement?: components["schemas"]["InboundPlacementInput"];
             worker?: string;
             memo?: string;
         };
         ApiResponseInboundRecordResponse: {
             data?: components["schemas"]["InboundRecordResponse"];
             message?: string;
+        };
+        InboundOrchidGroupResponse: {
+            /** Format: int64 */
+            id?: number;
+            /** Format: int32 */
+            quantity?: number;
+            potSize?: string;
+            /** Format: int32 */
+            ageYear?: number;
+            status?: string;
+            placementType?: string;
+            /** Format: int32 */
+            trayCount?: number;
+            /** Format: int64 */
+            bedZoneId?: number;
+            location?: string;
+            startPosition?: number;
+            endPosition?: number;
         };
         InboundRecordResponse: {
             /** Format: int64 */
@@ -2791,29 +2806,11 @@ export interface components {
             varietyName?: string;
             status?: string;
             /** Format: int32 */
-            bottleCount?: number;
-            /** Format: int32 */
             estimatedQuantity?: number;
-            /** Format: int32 */
-            actualQuantity?: number;
             tempLocation?: string;
             /** Format: date */
             pottingDueDate?: string;
-            /** Format: date */
-            pottingDate?: string;
-            potSize?: string;
-            /** Format: int32 */
-            ageYear?: number;
-            growthStage?: string;
-            placementType?: string;
-            /** Format: int32 */
-            trayCount?: number;
-            /** Format: int64 */
-            bedZoneId?: number;
-            currentLocation?: string;
-            /** Format: int64 */
-            createdOrchidGroupId?: number;
-            createdOrchidGroupIds?: number[];
+            createdOrchidGroups?: components["schemas"]["InboundOrchidGroupResponse"][];
             worker?: string;
             memo?: string;
             /** Format: date-time */
@@ -2825,7 +2822,6 @@ export interface components {
             /** Format: date */
             pottingDate: string;
             results: components["schemas"]["RepotResultOrchidGroupRequest"][];
-            growthStage?: string;
             worker?: string;
             memo?: string;
         };
@@ -3118,21 +3114,10 @@ export interface components {
             /** Format: date */
             inboundDate: string;
             /** Format: int32 */
-            bottleCount?: number;
-            /** Format: int32 */
             estimatedQuantity?: number;
-            /** Format: int32 */
-            actualQuantity?: number;
             tempLocation?: string;
             /** Format: date */
             pottingDueDate?: string;
-            potSize?: string;
-            /** Format: int32 */
-            ageYear?: number;
-            growthStage?: string;
-            placementType?: string;
-            /** Format: int32 */
-            trayCount?: number;
             worker?: string;
             memo?: string;
         };
@@ -5652,7 +5637,7 @@ export interface operations {
                 from?: string;
                 to?: string;
                 inboundType?: "FLASK_SEEDLING" | "POTTED_SEEDLING" | "PRODUCT_POT" | "SAMPLE" | "ETC";
-                status?: "POTTING_PENDING" | "POTTING_IN_PROGRESS" | "POTTED" | "PLACED" | "CANCELED";
+                status?: "POTTING_PENDING" | "POTTING_IN_PROGRESS" | "PLACED" | "CANCELED";
                 variety?: string;
                 page?: number;
                 size?: number;

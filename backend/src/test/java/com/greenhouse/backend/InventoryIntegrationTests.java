@@ -120,7 +120,6 @@ class InventoryIntegrationTests extends FarmFixtureIntegrationTest {
 					  "inboundDate": "2026-07-05",
 					  "inboundType": "FLASK_SEEDLING",
 					  "varietyId": %d,
-					  "bottleCount": 5,
 					  "estimatedQuantity": 250,
 					  "tempLocation": "작업장 선반",
 					  "pottingDueDate": "2026-07-12",
@@ -130,7 +129,7 @@ class InventoryIntegrationTests extends FarmFixtureIntegrationTest {
 					""".formatted(sampleVariety.getId())))
 			.andExpect(status().isCreated())
 			.andExpect(jsonPath("$.data.status").value("POTTING_PENDING"))
-			.andExpect(jsonPath("$.data.createdOrchidGroupId").doesNotExist())
+			.andExpect(jsonPath("$.data.createdOrchidGroups").isEmpty())
 			.andReturn();
 		var flaskRecordId = Long
 			.valueOf(flaskCreateResult.getResponse().getContentAsString().replaceAll(".*\\\"id\\\":(\\d+).*", "$1"));
@@ -143,40 +142,36 @@ class InventoryIntegrationTests extends FarmFixtureIntegrationTest {
 								{
 								  "pottingDate": "2026-07-12",
 								  "results": [{"quantity": 210, "bedZoneId": %d, "startPosition": 21, "endPosition": 22, "potSize": "3.5치", "ageYear": 1}],
-								  "potSize": "3.5치",
-								  "ageYear": 1,
-								  "growthStage": "유묘",
-								  "placementType": "TRAY",
-								  "trayCount": 4,
-								  "bedZoneId": %d,
 								  "worker": "관리자",
 								  "memo": "포트 작업 완료"
 								}
 								"""
-							.formatted(sampleZone.getId(), sampleZone.getId())))
+							.formatted(sampleZone.getId())))
 			.andExpect(status().isOk())
 			.andExpect(jsonPath("$.data.status").value("PLACED"))
-			.andExpect(jsonPath("$.data.actualQuantity").value(210))
-			.andExpect(jsonPath("$.data.createdOrchidGroupId").isNumber());
+			.andExpect(jsonPath("$.data.createdOrchidGroups[0].quantity").value(210))
+			.andExpect(jsonPath("$.data.createdOrchidGroups[0].id").isNumber());
 
 		mockMvc.perform(post("/api/inbound-records").contentType(MediaType.APPLICATION_JSON).content("""
 				{
 				  "inboundDate": "2026-07-04",
 				  "inboundType": "PRODUCT_POT",
 				  "varietyId": %d,
-				  "actualQuantity": 60,
-				  "potSize": "4치",
-				  "ageYear": 2,
-				  "placementType": "TRAY",
-				  "trayCount": 2,
-				  "bedZoneId": %d,
+				  "placement": {
+				    "quantity": 60,
+				    "potSize": "4치",
+				    "ageYear": 2,
+				    "placementType": "TRAY",
+				    "trayCount": 2,
+				    "bedZoneId": %d
+				  },
 				  "worker": "관리자",
 				  "memo": "상품분 입고"
 				}
 				""".formatted(sampleVariety.getId(), sampleZone.getId())))
 			.andExpect(status().isCreated())
 			.andExpect(jsonPath("$.data.status").value("PLACED"))
-			.andExpect(jsonPath("$.data.createdOrchidGroupId").isNumber());
+			.andExpect(jsonPath("$.data.createdOrchidGroups[0].id").isNumber());
 
 		mockMvc.perform(get("/api/inbound-records").param("status", "PLACED"))
 			.andExpect(status().isOk())
@@ -193,7 +188,6 @@ class InventoryIntegrationTests extends FarmFixtureIntegrationTest {
 				    "defaultPotSize": "3치",
 				    "memo": "간이 등록"
 				  },
-				  "bottleCount": 2,
 				  "estimatedQuantity": 80,
 				  "tempLocation": "선반 B",
 				  "worker": "관리자"
@@ -206,7 +200,6 @@ class InventoryIntegrationTests extends FarmFixtureIntegrationTest {
 					  "inboundDate": "2026-07-02",
 					  "inboundType": "FLASK_SEEDLING",
 					  "varietyId": %d,
-					  "bottleCount": 1,
 					  "estimatedQuantity": 40,
 					  "tempLocation": "임시 선반"
 					}
@@ -244,7 +237,6 @@ class InventoryIntegrationTests extends FarmFixtureIntegrationTest {
 					  "inboundDate": "2026-07-01",
 					  "inboundType": "FLASK_SEEDLING",
 					  "varietyId": %d,
-					  "bottleCount": 3,
 					  "estimatedQuantity": 120,
 					  "tempLocation": "기존 위치"
 					}
@@ -261,24 +253,16 @@ class InventoryIntegrationTests extends FarmFixtureIntegrationTest {
 				.content("""
 						{
 						  "inboundDate": "2026-07-02",
-						  "bottleCount": 4,
 						  "estimatedQuantity": 150,
-						  "actualQuantity": 140,
 						  "tempLocation": "수정 위치",
 						  "pottingDueDate": "2026-07-10",
-						  "potSize": "3치",
-						  "ageYear": 1,
-						  "growthStage": "유묘",
-						  "placementType": "TRAY",
-						  "trayCount": 2,
 						  "worker": "관리자",
 						  "memo": "수정 메모"
 						}
 						"""))
 			.andExpect(status().isOk())
 			.andExpect(jsonPath("$.data.inboundDate").value("2026-07-02"))
-			.andExpect(jsonPath("$.data.bottleCount").value(4))
-			.andExpect(jsonPath("$.data.actualQuantity").value(140))
+			.andExpect(jsonPath("$.data.estimatedQuantity").value(150))
 			.andExpect(jsonPath("$.data.tempLocation").value("수정 위치"));
 	}
 
@@ -296,7 +280,6 @@ class InventoryIntegrationTests extends FarmFixtureIntegrationTest {
 					  "inboundDate": "2026-07-08",
 					  "inboundType": "FLASK_SEEDLING",
 					  "varietyId": %d,
-					  "bottleCount": 3,
 					  "estimatedQuantity": 120,
 					  "tempLocation": "삭제 테스트"
 					}

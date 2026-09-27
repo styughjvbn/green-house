@@ -106,15 +106,20 @@ export function InboundCreateDialog({
                   }
                 : undefined,
             estimatedQuantity: toNumber(estimatedQuantity),
-            actualQuantity: toNumber(actualQuantity),
             tempLocation: tempLocation.trim() || undefined,
             pottingDueDate: pottingDueDate || undefined,
-            potSize: potSize.trim() || undefined,
-            ageYear: toNumber(ageYear),
-            placementType: placementType.trim() || undefined,
-            bedZoneId: placement?.bedZoneId,
-            startPosition: placement?.startPosition,
-            endPosition: placement?.endPosition,
+            placement:
+              flaskType || !placement
+                ? undefined
+                : {
+                    quantity: Number(actualQuantity),
+                    potSize: potSize.trim() || undefined,
+                    ageYear: toNumber(ageYear),
+                    placementType: placementType.trim() || undefined,
+                    bedZoneId: placement.bedZoneId,
+                    startPosition: placement.startPosition,
+                    endPosition: placement.endPosition,
+                  },
             worker: worker.trim() || undefined,
             memo: memo.trim() || undefined,
           });
@@ -406,9 +411,9 @@ export function InboundPottingDialog({
       </p>
       <PottingExecutionForm
         houses={houses}
-        initialActualQuantity={record.actualQuantity}
-        initialAgeYear={record.ageYear}
-        initialPotSize={record.potSize}
+        initialActualQuantity={record.estimatedQuantity}
+        initialAgeYear={null}
+        initialPotSize={null}
         initialWorker={record.worker}
         subject={record.varietyName}
         submitLabel="작업 실행 및 완료"

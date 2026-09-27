@@ -10,5 +10,5 @@ import java.util.List;
 
 public record InboundRecordPottingRequest(@NotNull LocalDate pottingDate,
 		@NotEmpty @Size(max = 100) List<@Valid RepotResultOrchidGroupRequest> results,
-		@Size(max = 100) String growthStage, @Size(max = 50) String worker, @Size(max = 1000) String memo) {
+		@Size(max = 50) String worker, @Size(max = 1000) String memo) {
 }

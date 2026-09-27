@@ -17,7 +17,6 @@ export const INBOUND_TYPE_LABELS: Record<InboundType, string> = {
 export const INBOUND_STATUS_LABELS: Record<InboundStatus, string> = {
   POTTING_PENDING: "포트작업대기",
   POTTING_IN_PROGRESS: "작업중",
-  POTTED: "포트작업완료",
   PLACED: "배치완료",
   CANCELED: "취소",
 };
@@ -28,14 +27,8 @@ export function createInboundEditForm(
   return {
     inboundDate: record.inboundDate,
     estimatedQuantity: record.estimatedQuantity ?? undefined,
-    actualQuantity: record.actualQuantity ?? undefined,
     tempLocation: record.tempLocation ?? undefined,
     pottingDueDate: record.pottingDueDate ?? undefined,
-    potSize: record.potSize ?? undefined,
-    ageYear: record.ageYear ?? undefined,
-    growthStage: record.growthStage ?? undefined,
-    placementType: record.placementType ?? undefined,
-    trayCount: record.trayCount ?? undefined,
     worker: record.worker ?? undefined,
     memo: record.memo ?? undefined,
   };

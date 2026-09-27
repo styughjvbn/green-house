@@ -2,6 +2,7 @@ package com.greenhouse.backend;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import com.greenhouse.backend.farm.application.inbound.InboundPlacementInput;
 import com.greenhouse.backend.farm.application.inbound.InboundRecordCreateCommand;
 import com.greenhouse.backend.farm.application.inbound.InboundRecordService;
 import com.greenhouse.backend.farm.application.orchid.OrchidGroupCommandService;
@@ -127,8 +128,9 @@ class OrchidGroupMutationRoutingIntegrationTest extends AbstractBackendIntegrati
 				"4인치", 2, "관리", "단일", null, false, new BigDecimal("0"), new BigDecimal("1"), "상세 수정"));
 
 		var inbound = inboundRecordService.create(new InboundRecordCreateCommand(LocalDate.of(2026, 8, 20),
-				InboundType.PRODUCT_POT, fixture.variety().getId(), null, null, null, 7, null, null, "4인치", 2, null,
-				"단일", null, fixture.zone().getId(), new BigDecimal("2"), new BigDecimal("3"), InboundStatus.PLACED,
+				InboundType.PRODUCT_POT, fixture.variety().getId(), null, null, null, null,
+				new InboundPlacementInput(7, fixture.zone().getId(), "4인치", 2, "단일", null,
+						new BigDecimal("2"), new BigDecimal("3")),
 				"입고 담당", "즉시 배치"));
 		long mutationCountBeforeMetadataUpdate = mutationRepository.count();
 		varietyService.update(fixture.variety().getId(), new VarietyUpdateRequest(fixture.variety().getGenus(),
@@ -139,7 +141,8 @@ class OrchidGroupMutationRoutingIntegrationTest extends AbstractBackendIntegrati
 
 		entityManager.flush();
 		OrchidGroup updated = orchidGroupRepository.findById(created.id()).orElseThrow();
-		OrchidGroup inboundGroup = orchidGroupRepository.findById(inbound.createdOrchidGroupId()).orElseThrow();
+		OrchidGroup inboundGroup = orchidGroupRepository.findById(inbound.createdOrchidGroups().getFirst().id())
+			.orElseThrow();
 		assertThat(updated.getStateRevision()).isEqualTo(3L);
 		assertThat(inboundGroup.getStateRevision()).isEqualTo(2L);
 		assertThat(updated.getVarietyName()).isEqualTo("라우팅 변경 품종");
@@ -244,13 +247,13 @@ class OrchidGroupMutationRoutingIntegrationTest extends AbstractBackendIntegrati
 		ensureWorkType(WorkTypeDefinition.POTTING.name(), "포트 작업", WorkTypeTemplate.REPOT, 7);
 		var inbound = inboundRecordService
 			.create(new InboundRecordCreateCommand(LocalDate.of(2026, 8, 19), InboundType.FLASK_SEEDLING,
-					fixture.variety().getId(), null, 3, 30, null, "배양실", LocalDate.of(2026, 8, 20), "2인치", 1, null,
-					null, null, null, null, null, InboundStatus.POTTING_PENDING, "입고 담당", null));
+					fixture.variety().getId(), null, 30, "배양실", LocalDate.of(2026, 8, 20), null, "입고 담당",
+					null));
 
 		var operation = inboundPottingOperationService.executeNow(new InboundPottingCommand("routing-potting-9966",
 				inbound.id(), LocalDate.of(2026, 8, 20), List.of(new InboundPottingResultInput(fixture.zone().getId(),
 						28, "2인치", 1, "트레이", 2, false, new BigDecimal("0"), new BigDecimal("2"), null)),
-				"유묘", "포트 담당", "포트 완료"));
+				"포트 담당", "포트 완료"));
 
 		var effect = workAppliedEffectRepository.findByWorkOperationIdOrderByIdAsc(operation.id())
 			.stream()

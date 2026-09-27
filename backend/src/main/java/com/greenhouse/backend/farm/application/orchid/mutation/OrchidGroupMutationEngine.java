@@ -97,7 +97,10 @@ public class OrchidGroupMutationEngine {
 		if (replay.isPresent()) {
 			return replay.get();
 		}
-		if (inboundRecord.hasCreatedOrchidGroups()) {
+		// The locking query can have started before a competing transaction commits. A
+		// separate statement after acquiring the inbound row lock must re-check the
+		// owning foreign key against the latest READ COMMITTED snapshot.
+		if (orchidGroupRepository.existsByInboundRecordId(inboundRecord.getId())) {
 			throw new IllegalStateException("이미 난 묶음이 생성된 입고 기록입니다.");
 		}
 		Long inboundVarietyId = inboundRecord.getVariety().getId();

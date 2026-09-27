@@ -964,10 +964,6 @@ components:
             $ref: '#/components/schemas/InboundPottingResultRequest'
           maxItems: 100
           minItems: 0
-        growthStage:
-          type: string
-          maxLength: 100
-          minLength: 0
         worker:
           type: string
           maxLength: 50

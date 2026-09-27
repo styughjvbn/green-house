@@ -29,7 +29,6 @@ const INBOUND_TYPES: InboundType[] = [
 const INBOUND_STATUSES: InboundStatus[] = [
   "POTTING_PENDING",
   "POTTING_IN_PROGRESS",
-  "POTTED",
   "PLACED",
   "CANCELED",
 ];

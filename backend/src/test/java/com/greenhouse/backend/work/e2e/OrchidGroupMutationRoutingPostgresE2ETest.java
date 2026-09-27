@@ -194,8 +194,8 @@ class OrchidGroupMutationRoutingPostgresE2ETest extends WorkE2ETestBase {
 	void completesInboundPottingThroughEngineAfterActiveCutover() {
 		var varietyId = orchidGroupRepository.findById(scenario.orchidGroupId()).orElseThrow().getVariety().getId();
 		var inbound = inboundRecordService.create(new InboundRecordCreateCommand(LocalDate.of(2026, 8, 19),
-				InboundType.FLASK_SEEDLING, varietyId, null, 3, 30, null, "배양실", LocalDate.of(2026, 8, 20), "2인치", 1,
-				null, null, null, null, null, null, InboundStatus.POTTING_PENDING, "입고 담당", null));
+				InboundType.FLASK_SEEDLING, varietyId, null, 30, "배양실", LocalDate.of(2026, 8, 20), null,
+				"입고 담당", null));
 
 		var operation = inboundPottingOperationService
 			.executeNow(new InboundPottingCommand("active-potting-postgres", inbound.id(), LocalDate.of(2026, 8, 20),
@@ -203,7 +203,7 @@ class OrchidGroupMutationRoutingPostgresE2ETest extends WorkE2ETestBase {
 							new BigDecimal("10"), new BigDecimal("11"), null),
 							new InboundPottingResultInput(scenario.bedZoneId(), 8, "2인치", 1, "트레이", 1, false,
 									new BigDecimal("11"), new BigDecimal("12"), null)),
-					"유묘", "포트 담당", "포트 완료"));
+				"포트 담당", "포트 완료"));
 
 		var effect = workAppliedEffectRepository.findByWorkOperationIdOrderByIdAsc(operation.id())
 			.stream()

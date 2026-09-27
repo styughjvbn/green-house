@@ -29,17 +29,16 @@ class InboundRecordAuditIntegrationTest extends AbstractBackendIntegrationTest {
 		Variety variety = varietyRepository.saveAndFlush(
 				new Variety("IN-AUDIT-" + System.nanoTime(), "입고감사속", "입고감사품종", null, "4인치", true, true, null, null));
 		InboundRecord inbound = inboundRecordRepository.saveAndFlush(new InboundRecord(LocalDate.of(2026, 8, 1),
-				InboundType.FLASK_SEEDLING, variety, InboundStatus.POTTING_PENDING, 2, 80, null, "선반 A", null, null, null,
-				null, null, null, null, "작업자", "최초"));
+				InboundType.FLASK_SEEDLING, variety, InboundStatus.POTTING_PENDING, 80, "선반 A", null, "작업자",
+				"최초"));
 
 		mockMvc
 			.perform(patch("/api/inbound-records/{id}", inbound.getId()).with(user("operator"))
 				.header("X-Request-Id", "inbound-update")
 				.contentType(MediaType.APPLICATION_JSON)
 				.content("""
-						{"inboundDate":"2026-08-02","bottleCount":3,"estimatedQuantity":90,
-						 "tempLocation":"선반 B","pottingDueDate":"2026-08-10","potSize":"4인치",
-						 "ageYear":1,"growthStage":"유묘","placementType":"TRAY","trayCount":2,
+						{"inboundDate":"2026-08-02","estimatedQuantity":90,
+						 "tempLocation":"선반 B","pottingDueDate":"2026-08-10",
 						 "worker":"수정자","memo":"수정"}
 						"""))
 			.andExpect(status().isOk());
@@ -58,9 +57,8 @@ class InboundRecordAuditIntegrationTest extends AbstractBackendIntegrationTest {
 			.toList();
 		assertThat(events).extracting(event -> event.getAction())
 			.containsExactly(AuditAction.UPDATED, AuditAction.DEACTIVATED, AuditAction.DELETED);
-		assertThat(events.get(0).getChangedFields()).contains("inboundDate", "bottleCount", "estimatedQuantity",
-				"tempLocation", "pottingDueDate", "potSize", "ageYear", "growthStage", "placementType", "trayCount",
-				"worker", "memo");
+		assertThat(events.get(0).getChangedFields()).contains("inboundDate", "estimatedQuantity", "tempLocation",
+				"pottingDueDate", "worker", "memo");
 		assertThat(events.get(1).getChangedFields()).containsExactly("status", "memo");
 		assertThat(events).allSatisfy(event -> {
 			assertThat(event.getEntityType()).isEqualTo("INBOUND_RECORD");

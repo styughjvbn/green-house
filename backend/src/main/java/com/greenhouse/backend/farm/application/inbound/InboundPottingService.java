@@ -31,6 +31,8 @@ public class InboundPottingService {
 
 	private final OrchidGroupMutationEngine mutationEngine;
 
+	private final InboundRecordResponseAssembler responseAssembler;
+
 	public InboundPottingResult potting(Long inboundRecordId, InboundRecordPottingRequest request, Long workOperationId,
 			String effectKey) {
 		var inboundRecord = inboundRecordFinder.find(inboundRecordId);
@@ -43,7 +45,7 @@ public class InboundPottingService {
 					.stream()
 					.map(row -> new CreateOrchidGroupMutationItem(row.bedZoneId(),
 							new OrchidGroupMutationDetails(inboundRecord.getVariety().getId(), row.quantity(),
-									firstNonBlank(row.potSize(), inboundRecord.getPotSize()), row.ageYear(),
+									normalize(row.potSize()), row.ageYear(),
 									DEFAULT_ORCHID_STATUS, row.placementType(), row.trayCount(),
 									row.splitPlacementAllowed(), row.startPosition(), row.endPosition(), row.memo())))
 					.toList(),
@@ -56,21 +58,13 @@ public class InboundPottingService {
 		createdGroups = groupIds.stream().map(groupsById::get).toList();
 		var mutationLink = new WorkMutationLink(mutation.mutationId(), mutation.correlationId());
 
-		OrchidGroup representative = createdGroups.getFirst();
 		int actualQuantity = createdGroups.stream().mapToInt(OrchidGroup::getQuantity).sum();
-		inboundRecord.updateMetadata(inboundRecord.getInboundDate(), inboundRecord.getBottleCount(),
-				inboundRecord.getEstimatedQuantity(), actualQuantity, inboundRecord.getTempLocation(),
-				inboundRecord.getPottingDueDate(), representative.getPotSize(), representative.getAgeYear(),
-				normalize(request.growthStage()), representative.getPlacementType(), representative.getTrayCount(),
+		inboundRecord.updateMetadata(inboundRecord.getInboundDate(), inboundRecord.getEstimatedQuantity(),
+				inboundRecord.getTempLocation(), inboundRecord.getPottingDueDate(),
 				requestActorProvider.resolve(request.worker()), appendMemo(inboundRecord.getMemo(), request.memo()));
-		inboundRecord.place(representative.getBedZone(), representative, request.pottingDate(), actualQuantity);
-		return new InboundPottingResult(InboundRecordResponse.from(inboundRecordFinder.find(inboundRecord.getId())),
+		inboundRecord.markPlaced();
+		return new InboundPottingResult(responseAssembler.assemble(inboundRecordFinder.find(inboundRecord.getId())),
 				createdGroups.stream().map(OrchidGroup::getId).toList(), actualQuantity, mutationLink);
-	}
-
-	private String firstNonBlank(String first, String second) {
-		String normalizedFirst = normalize(first);
-		return normalizedFirst != null ? normalizedFirst : normalize(second);
 	}
 
 	private String appendMemo(String base, String extra) {

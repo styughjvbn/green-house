@@ -108,25 +108,28 @@ class OrchidGroupIntegrationTests extends FarmFixtureIntegrationTest {
 					  "inboundDate": "2026-07-04",
 					  "inboundType": "PRODUCT_POT",
 					  "varietyId": %d,
-					  "actualQuantity": 60,
-					  "potSize": "4치",
-					  "ageYear": 2,
-					  "placementType": "TRAY",
-					  "trayCount": 2,
-					  "bedZoneId": %d,
+					  "placement": {
+					    "quantity": 60,
+					    "potSize": "4치",
+					    "ageYear": 2,
+					    "placementType": "TRAY",
+					    "trayCount": 2,
+					    "bedZoneId": %d
+					  },
 					  "worker": "관리자",
 					  "memo": "상품분 입고"
 					}
 					""".formatted(sampleVariety.getId(), sampleZone.getId())))
 			.andExpect(status().isCreated())
-			.andExpect(jsonPath("$.data.createdOrchidGroupId").isNumber())
+			.andExpect(jsonPath("$.data.createdOrchidGroups[0].id").isNumber())
 			.andReturn();
 
-		var inboundRecordId = Long
-			.valueOf(createResult.getResponse().getContentAsString().replaceAll(".*\\\"id\\\":(\\d+).*", "$1"));
-		var createdOrchidGroupId = Long.valueOf(createResult.getResponse()
-			.getContentAsString()
-			.replaceAll(".*\\\"createdOrchidGroupId\\\":(\\d+).*", "$1"));
+		Number inboundRecordIdValue = com.jayway.jsonpath.JsonPath.read(createResult.getResponse().getContentAsString(),
+				"$.data.id");
+		Long inboundRecordId = inboundRecordIdValue.longValue();
+		Number createdOrchidGroupIdValue = com.jayway.jsonpath.JsonPath
+			.read(createResult.getResponse().getContentAsString(), "$.data.createdOrchidGroups[0].id");
+		Long createdOrchidGroupId = createdOrchidGroupIdValue.longValue();
 
 		mockMvc.perform(delete("/api/orchid-groups/{orchidGroupId}", createdOrchidGroupId))
 			.andExpect(status().isConflict())
@@ -134,8 +137,7 @@ class OrchidGroupIntegrationTests extends FarmFixtureIntegrationTest {
 
 		assertThat(orchidGroupRepository.existsById(createdOrchidGroupId)).isTrue();
 		assertThat(inboundRecordRepository.findWithDetailsById(inboundRecordId)).get()
-			.extracting(record -> record.getCreatedOrchidGroup())
-			.isNotNull();
+			.satisfies(record -> assertThat(record.getCreatedOrchidGroups()).hasSize(1));
 	}
 
 	@Test
@@ -157,22 +159,24 @@ class OrchidGroupIntegrationTests extends FarmFixtureIntegrationTest {
 					  "inboundDate": "%s",
 					  "inboundType": "PRODUCT_POT",
 					  "varietyId": %d,
-					  "actualQuantity": 40,
-					  "potSize": "4인치",
-					  "ageYear": 1,
-					  "placementType": "TRAY",
-					  "trayCount": 1,
-					  "bedZoneId": %d,
+					  "placement": {
+					    "quantity": 40,
+					    "potSize": "4인치",
+					    "ageYear": 1,
+					    "placementType": "TRAY",
+					    "trayCount": 1,
+					    "bedZoneId": %d
+					  },
 					  "worker": "관리자"
 					}
 					""".formatted(inboundDate, sampleVariety.getId(), sampleZone.getId())))
 			.andExpect(status().isCreated())
-			.andExpect(jsonPath("$.data.createdOrchidGroupId").isNumber())
+			.andExpect(jsonPath("$.data.createdOrchidGroups[0].id").isNumber())
 			.andReturn();
 
-		var createdOrchidGroupId = Long.valueOf(createResult.getResponse()
-			.getContentAsString()
-			.replaceAll(".*\\\"createdOrchidGroupId\\\":(\\d+).*", "$1"));
+		Number createdOrchidGroupIdValue = com.jayway.jsonpath.JsonPath
+			.read(createResult.getResponse().getContentAsString(), "$.data.createdOrchidGroups[0].id");
+		Long createdOrchidGroupId = createdOrchidGroupIdValue.longValue();
 
 		assertThat(OrchidGroupResponse
 			.from(orchidGroupRepository.findById(createdOrchidGroupId).orElseThrow(),
@@ -248,22 +252,24 @@ class OrchidGroupIntegrationTests extends FarmFixtureIntegrationTest {
 					  "inboundDate": "2026-07-04",
 					  "inboundType": "PRODUCT_POT",
 					  "varietyId": %d,
-					  "actualQuantity": 60,
-					  "potSize": "4치",
-					  "ageYear": 2,
-					  "placementType": "TRAY",
-					  "trayCount": 2,
-					  "bedZoneId": %d,
+					  "placement": {
+					    "quantity": 60,
+					    "potSize": "4치",
+					    "ageYear": 2,
+					    "placementType": "TRAY",
+					    "trayCount": 2,
+					    "bedZoneId": %d
+					  },
 					  "worker": "관리자"
 					}
 					""".formatted(sampleVariety.getId(), sampleZone.getId())))
 			.andExpect(status().isCreated())
-			.andExpect(jsonPath("$.data.createdOrchidGroupId").isNumber())
+			.andExpect(jsonPath("$.data.createdOrchidGroups[0].id").isNumber())
 			.andReturn();
 
-		var createdOrchidGroupId = Long.valueOf(createResult.getResponse()
-			.getContentAsString()
-			.replaceAll(".*\\\"createdOrchidGroupId\\\":(\\d+).*", "$1"));
+		Number createdOrchidGroupIdValue = com.jayway.jsonpath.JsonPath
+			.read(createResult.getResponse().getContentAsString(), "$.data.createdOrchidGroups[0].id");
+		Long createdOrchidGroupId = createdOrchidGroupIdValue.longValue();
 		var created = orchidGroupRepository.findById(createdOrchidGroupId).orElseThrow();
 
 		assertThat(created.getStartPosition()).isEqualByComparingTo("21.00");
@@ -302,7 +308,6 @@ class OrchidGroupIntegrationTests extends FarmFixtureIntegrationTest {
 					  "inboundDate": "2026-07-10",
 					  "inboundType": "FLASK_SEEDLING",
 					  "varietyId": %d,
-					  "bottleCount": 10,
 					  "estimatedQuantity": 100,
 					  "tempLocation": "작업장 선반",
 					  "pottingDueDate": "2026-07-12",
@@ -322,16 +327,10 @@ class OrchidGroupIntegrationTests extends FarmFixtureIntegrationTest {
 								{
 								  "pottingDate": "2026-07-12",
 								  "results": [{"quantity": 20, "bedZoneId": %d, "startPosition": 21, "endPosition": 22, "potSize": "3.5치", "ageYear": 1}],
-								  "potSize": "3.5치",
-								  "ageYear": 1,
-								  "growthStage": "유묘",
-								  "placementType": "TRAY",
-								  "trayCount": 1,
-								  "bedZoneId": %d,
 								  "worker": "관리자"
 								}
 								"""
-							.formatted(sampleZone.getId(), sampleZone.getId())))
+							.formatted(sampleZone.getId())))
 			.andExpect(status().isBadRequest())
 			.andExpect(jsonPath("$.error.code").value("VALIDATION_ERROR"));
 	}

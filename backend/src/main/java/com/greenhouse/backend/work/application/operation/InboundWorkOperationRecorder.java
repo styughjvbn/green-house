@@ -50,8 +50,8 @@ public class InboundWorkOperationRecorder {
 			throw new IllegalArgumentException("입고 작업 유형이 비활성화되어 있습니다.");
 		}
 		Map<String, Object> details = new LinkedHashMap<>(request.details());
-		if (request.createdOrchidGroupId() != null) {
-			details.put("orchidGroupId", request.createdOrchidGroupId());
+		if (!request.createdOrchidGroupIds().isEmpty()) {
+			details.put("createdOrchidGroupIds", request.createdOrchidGroupIds());
 		}
 		WorkOperation operation = workOperationRepository
 			.save(new WorkOperation(workType, request.varietyName().trim() + " 입고", request.workDate(),
@@ -68,7 +68,7 @@ public class InboundWorkOperationRecorder {
 		workEffectStore.save(operation, target, new WorkEffectCommand(executedAt, worker, details, request),
 				"TARGET:" + target.getId(), List.of(), WorkEffectKind.RECORD_ONLY,
 				new WorkExecutionResult(workType.handlerCode(), details,
-						request.createdOrchidGroupId() == null ? List.of() : List.of(request.createdOrchidGroupId()),
+						request.createdOrchidGroupIds(),
 						mutationLink));
 		execution.completeWithEffect(executedAt, worker, details);
 		operation.complete(executedAt);

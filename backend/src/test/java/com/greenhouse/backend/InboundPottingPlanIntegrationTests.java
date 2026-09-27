@@ -89,8 +89,8 @@ class InboundPottingPlanIntegrationTests extends AbstractBackendIntegrationTest 
 		Variety variety = varietyRepository
 			.save(new Variety("POT-001", "팔레놉시스", "포트 계획 난", null, "2치", true, true, null, null));
 		inboundRecord = inboundRecordRepository.save(new InboundRecord(LocalDate.of(2026, 7, 1),
-				InboundType.FLASK_SEEDLING, variety, InboundStatus.POTTING_PENDING, 10, 120, null, "배양실 A",
-				LocalDate.of(2026, 7, 16), "2치", 1, null, null, null, null, "입고 담당", null));
+				InboundType.FLASK_SEEDLING, variety, InboundStatus.POTTING_PENDING, 120, "배양실 A",
+				LocalDate.of(2026, 7, 16), "입고 담당", null));
 	}
 
 	@Test
@@ -100,12 +100,14 @@ class InboundPottingPlanIntegrationTests extends AbstractBackendIntegrationTest 
 				  "inboundDate": "2026-07-17",
 				  "inboundType": "PRODUCT_POT",
 				  "varietyId": %d,
-				  "actualQuantity": 20,
-				  "potSize": "2치",
-				  "ageYear": 1,
-				  "bedZoneId": %d,
-				  "startPosition": 8,
-				  "endPosition": 10,
+				  "placement": {
+				    "quantity": 20,
+				    "potSize": "2치",
+				    "ageYear": 1,
+				    "bedZoneId": %d,
+				    "startPosition": 8,
+				    "endPosition": 10
+				  },
 				  "worker": "입고 담당",
 				  "memo": "신규 입고"
 				}
@@ -188,9 +190,9 @@ class InboundPottingPlanIntegrationTests extends AbstractBackendIntegrationTest 
 			.andExpect(jsonPath("$.data.targets[0].resultDetails.createdOrchidGroupIds", hasSize(1)));
 
 		InboundRecord updated = inboundRecordRepository.findWithDetailsById(inboundRecord.getId()).orElseThrow();
-		assertThat(updated.getCreatedOrchidGroup()).isNotNull();
+		assertThat(updated.getCreatedOrchidGroups()).hasSize(1);
 		assertThat(updated.getStatus()).isEqualTo(InboundStatus.PLACED);
-		var createdGroup = orchidGroupRepository.findById(updated.getCreatedOrchidGroup().getId()).orElseThrow();
+		var createdGroup = orchidGroupRepository.findById(updated.getCreatedOrchidGroups().getFirst().getId()).orElseThrow();
 		assertThat(createdGroup.getQuantity()).isEqualTo(100);
 		assertThat(createdGroup.getReservedQuantity()).isZero();
 		assertThat(createdGroup.getStatus()).isEqualTo("정상");
@@ -216,8 +218,8 @@ class InboundPottingPlanIntegrationTests extends AbstractBackendIntegrationTest 
 		Variety anotherVariety = varietyRepository
 			.save(new Variety("POT-002", "팔레놉시스", "다른 포트 계획 난", null, "2치", true, true, null, null));
 		InboundRecord anotherInbound = inboundRecordRepository.save(new InboundRecord(LocalDate.of(2026, 7, 2),
-				InboundType.FLASK_SEEDLING, anotherVariety, InboundStatus.POTTING_PENDING, 5, 80, null, "배양실 B",
-				LocalDate.of(2026, 7, 18), "2치", 1, null, null, null, null, "입고 담당", null));
+				InboundType.FLASK_SEEDLING, anotherVariety, InboundStatus.POTTING_PENDING, 80, "배양실 B",
+				LocalDate.of(2026, 7, 18), "입고 담당", null));
 
 		mockMvc
 			.perform(post("/api/work-operations/inbound-potting-plans").contentType(MediaType.APPLICATION_JSON)
@@ -256,12 +258,9 @@ class InboundPottingPlanIntegrationTests extends AbstractBackendIntegrationTest 
 				.content("""
 						{
 						  "inboundDate": "2026-07-01",
-						  "bottleCount": 10,
 						  "estimatedQuantity": 150,
 						  "tempLocation": "배양실 B",
 						  "pottingDueDate": "2026-07-20",
-						  "potSize": "2.5치",
-						  "ageYear": 1,
 						  "worker": "수정 담당"
 						}
 						"""))
@@ -270,7 +269,7 @@ class InboundPottingPlanIntegrationTests extends AbstractBackendIntegrationTest 
 		mockMvc.perform(get("/api/work-operations/{id}", operationId))
 			.andExpect(status().isOk())
 			.andExpect(jsonPath("$.data.targets[0].quantitySnapshot").value(150))
-			.andExpect(jsonPath("$.data.targets[0].potSizeSnapshot").value("2.5\""))
+			.andExpect(jsonPath("$.data.targets[0].potSizeSnapshot").doesNotExist())
 			.andExpect(jsonPath("$.data.targets[0].locationSnapshot.tempLocation").value("배양실 B"))
 			.andExpect(jsonPath("$.data.targets[0].locationSnapshot.pottingDueDate").value("2026-07-20"));
 		assertThat(storedTarget.getQuantitySnapshot()).isEqualTo(120);
@@ -307,13 +306,9 @@ class InboundPottingPlanIntegrationTests extends AbstractBackendIntegrationTest 
 				.content("""
 						{
 						  "inboundDate": "2026-07-01",
-						  "bottleCount": 10,
 						  "estimatedQuantity": 180,
-						  "actualQuantity": 180,
 						  "tempLocation": "배양실 C",
-						  "pottingDueDate": "2026-07-25",
-						  "potSize": "3치",
-						  "ageYear": 1
+						  "pottingDueDate": "2026-07-25"
 						}
 						"""))
 			.andExpect(status().isOk());
@@ -321,7 +316,7 @@ class InboundPottingPlanIntegrationTests extends AbstractBackendIntegrationTest 
 		mockMvc.perform(get("/api/work-operations/{id}", operationId))
 			.andExpect(status().isOk())
 			.andExpect(jsonPath("$.data.targets[0].quantitySnapshot").value(150))
-			.andExpect(jsonPath("$.data.targets[0].potSizeSnapshot").value("2.5\""))
+			.andExpect(jsonPath("$.data.targets[0].potSizeSnapshot").doesNotExist())
 			.andExpect(jsonPath("$.data.targets[0].locationSnapshot.tempLocation").value("배양실 B"))
 			.andExpect(jsonPath("$.data.targets[0].locationSnapshot.pottingDueDate").value("2026-07-20"));
 		assertThat(storedTarget.getQuantitySnapshot()).isEqualTo(150);
@@ -335,10 +330,8 @@ class InboundPottingPlanIntegrationTests extends AbstractBackendIntegrationTest 
 					  "inboundDate": "2026-07-17",
 					  "inboundType": "FLASK_SEEDLING",
 					  "varietyId": %d,
-					  "bottleCount": 5,
 					  "estimatedQuantity": 80,
 					  "tempLocation": "배양실 C",
-					  "potSize": "2치",
 					  "worker": "입고 담당"
 					}
 					""".formatted(inboundRecord.getVariety().getId())))
@@ -394,8 +387,8 @@ class InboundPottingPlanIntegrationTests extends AbstractBackendIntegrationTest 
 	@Test
 	void cancelingOneInboundOnlyCancelsItsTargetInAMultiInboundPlan() throws Exception {
 		InboundRecord secondInbound = inboundRecordRepository.save(new InboundRecord(LocalDate.of(2026, 7, 2),
-				InboundType.FLASK_SEEDLING, inboundRecord.getVariety(), InboundStatus.POTTING_PENDING, 4, 60, null, "배양실 B",
-				null, "2치", 1, null, null, null, null, "입고 담당", null));
+				InboundType.FLASK_SEEDLING, inboundRecord.getVariety(), InboundStatus.POTTING_PENDING, 60, "배양실 B",
+				null, "입고 담당", null));
 		var planned = mockMvc
 			.perform(post("/api/work-operations/inbound-potting-plans").contentType(MediaType.APPLICATION_JSON)
 				.content("""
@@ -501,12 +494,11 @@ class InboundPottingPlanIntegrationTests extends AbstractBackendIntegrationTest 
 
 		InboundRecord updated = inboundRecordRepository.findWithDetailsById(inboundRecord.getId()).orElseThrow();
 		assertThat(updated.getStatus()).isEqualTo(InboundStatus.PLACED);
-		assertThat(updated.getActualQuantity()).isEqualTo(100);
-		assertThat(updated.getCreatedOrchidGroup()).isNotNull();
+		assertThat(updated.getCreatedOrchidGroups()).hasSize(2);
 		assertThat(orchidGroupRepository.findAll()).hasSize(2);
 		mockMvc.perform(get("/api/inbound-records/{id}", inboundRecord.getId()))
 			.andExpect(status().isOk())
-			.andExpect(jsonPath("$.data.createdOrchidGroupIds", hasSize(2)));
+			.andExpect(jsonPath("$.data.createdOrchidGroups", hasSize(2)));
 
 		var operations = operationRepository.findAll();
 		assertThat(operations).hasSize(1);
@@ -572,8 +564,8 @@ class InboundPottingPlanIntegrationTests extends AbstractBackendIntegrationTest 
 	@Test
 	void createsAndReusesOneCompletedPottingRecordForMultipleInboundRecords() throws Exception {
 		InboundRecord secondInbound = inboundRecordRepository.save(new InboundRecord(LocalDate.of(2026, 7, 2),
-				InboundType.FLASK_SEEDLING, inboundRecord.getVariety(), InboundStatus.POTTING_PENDING, 4, 60, null,
-				"배양실 B", LocalDate.of(2026, 7, 16), "2치", 1, null, null, null, null, "입고 담당", null));
+				InboundType.FLASK_SEEDLING, inboundRecord.getVariety(), InboundStatus.POTTING_PENDING, 60,
+				"배양실 B", LocalDate.of(2026, 7, 16), "입고 담당", null));
 		String request = """
 				{
 				  "plan": {

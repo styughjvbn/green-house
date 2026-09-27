@@ -171,7 +171,6 @@ paths:
           enum:
           - POTTING_PENDING
           - POTTING_IN_PROGRESS
-          - POTTED
           - PLACED
           - CANCELED
       - name: variety
@@ -607,6 +606,69 @@ components:
       required:
       - genus
       - name
+    InboundOrchidGroupResponse:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: int64
+        quantity:
+          type: integer
+          format: int32
+        potSize:
+          type: string
+        ageYear:
+          type: integer
+          format: int32
+        status:
+          type: string
+        placementType:
+          type: string
+        trayCount:
+          type: integer
+          format: int32
+        bedZoneId:
+          type: integer
+          format: int64
+        location:
+          type: string
+        startPosition:
+          type: number
+        endPosition:
+          type: number
+    InboundPlacementInput:
+      type: object
+      properties:
+        quantity:
+          type: integer
+          format: int32
+          minimum: 1
+        bedZoneId:
+          type: integer
+          format: int64
+        potSize:
+          type: string
+          maxLength: 50
+          minLength: 0
+        ageYear:
+          type: integer
+          format: int32
+          minimum: 0
+        placementType:
+          type: string
+          maxLength: 100
+          minLength: 0
+        trayCount:
+          type: integer
+          format: int32
+          minimum: 0
+        startPosition:
+          type: number
+        endPosition:
+          type: number
+      required:
+      - bedZoneId
+      - quantity
     InboundRecordCancelRequest:
       type: object
       properties:
@@ -633,15 +695,7 @@ components:
           format: int64
         newVariety:
           $ref: '#/components/schemas/InboundNewVarietyRequest'
-        bottleCount:
-          type: integer
-          format: int32
-          minimum: 0
         estimatedQuantity:
-          type: integer
-          format: int32
-          minimum: 1
-        actualQuantity:
           type: integer
           format: int32
           minimum: 1
@@ -652,41 +706,8 @@ components:
         pottingDueDate:
           type: string
           format: date
-        potSize:
-          type: string
-          maxLength: 50
-          minLength: 0
-        ageYear:
-          type: integer
-          format: int32
-          minimum: 0
-        growthStage:
-          type: string
-          maxLength: 100
-          minLength: 0
-        placementType:
-          type: string
-          maxLength: 100
-          minLength: 0
-        trayCount:
-          type: integer
-          format: int32
-          minimum: 0
-        bedZoneId:
-          type: integer
-          format: int64
-        startPosition:
-          type: number
-        endPosition:
-          type: number
-        status:
-          type: string
-          enum:
-          - POTTING_PENDING
-          - POTTING_IN_PROGRESS
-          - POTTED
-          - PLACED
-          - CANCELED
+        placement:
+          $ref: '#/components/schemas/InboundPlacementInput'
         worker:
           type: string
           maxLength: 50
@@ -710,10 +731,6 @@ components:
             $ref: '#/components/schemas/RepotResultOrchidGroupRequest'
           maxItems: 100
           minItems: 0
-        growthStage:
-          type: string
-          maxLength: 100
-          minLength: 0
         worker:
           type: string
           maxLength: 50
@@ -745,13 +762,7 @@ components:
           type: string
         status:
           type: string
-        bottleCount:
-          type: integer
-          format: int32
         estimatedQuantity:
-          type: integer
-          format: int32
-        actualQuantity:
           type: integer
           format: int32
         tempLocation:
@@ -759,34 +770,10 @@ components:
         pottingDueDate:
           type: string
           format: date
-        pottingDate:
-          type: string
-          format: date
-        potSize:
-          type: string
-        ageYear:
-          type: integer
-          format: int32
-        growthStage:
-          type: string
-        placementType:
-          type: string
-        trayCount:
-          type: integer
-          format: int32
-        bedZoneId:
-          type: integer
-          format: int64
-        currentLocation:
-          type: string
-        createdOrchidGroupId:
-          type: integer
-          format: int64
-        createdOrchidGroupIds:
+        createdOrchidGroups:
           type: array
           items:
-            type: integer
-            format: int64
+            $ref: '#/components/schemas/InboundOrchidGroupResponse'
         worker:
           type: string
         memo:
@@ -803,15 +790,7 @@ components:
         inboundDate:
           type: string
           format: date
-        bottleCount:
-          type: integer
-          format: int32
-          minimum: 0
         estimatedQuantity:
-          type: integer
-          format: int32
-          minimum: 1
-        actualQuantity:
           type: integer
           format: int32
           minimum: 1
@@ -822,26 +801,6 @@ components:
         pottingDueDate:
           type: string
           format: date
-        potSize:
-          type: string
-          maxLength: 50
-          minLength: 0
-        ageYear:
-          type: integer
-          format: int32
-          minimum: 0
-        growthStage:
-          type: string
-          maxLength: 100
-          minLength: 0
-        placementType:
-          type: string
-          maxLength: 100
-          minLength: 0
-        trayCount:
-          type: integer
-          format: int32
-          minimum: 0
         worker:
           type: string
           maxLength: 50
