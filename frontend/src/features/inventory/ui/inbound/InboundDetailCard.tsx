@@ -28,7 +28,6 @@ export function InboundDetailCard({
   onSubmitUpdate,
   onOpenPotting,
   onOpenCancel,
-  onDelete,
 }: {
   record: InboundRecord;
   editing: boolean;
@@ -45,7 +44,6 @@ export function InboundDetailCard({
   onSubmitUpdate: () => Promise<void>;
   onOpenPotting: () => void;
   onOpenCancel: () => void;
-  onDelete: () => void;
 }) {
   return (
     <DetailCard>
@@ -79,11 +77,6 @@ export function InboundDetailCard({
             record.status !== "CANCELED" ? (
               <DetailActionButton tone="danger" onClick={onOpenCancel}>
                 입고 취소
-              </DetailActionButton>
-            ) : null}
-            {record.status === "CANCELED" ? (
-              <DetailActionButton tone="danger" onClick={onDelete}>
-                삭제
               </DetailActionButton>
             ) : null}
           </>

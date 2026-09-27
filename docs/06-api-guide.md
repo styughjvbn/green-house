@@ -36,7 +36,7 @@ npm run api:types
 | `farm-status.openapi.yaml` | 농장 현황 맵, 선택 범위 조회, 대시보드 요약 |
 | `orchid-command.openapi.yaml` | 난 묶음 생성, 분갈이 작업, 수정, 이동, 배치 |
 | `orchid-mutation.openapi.yaml` | 난 묶음 Mutation 원장의 헤더, Entry 전후 상태와 관계 조회 |
-| `inventory.openapi.yaml` | 품종 CRUD/삭제, 자재 CRUD/삭제, 입고 기록 생성/수정/포트작업/취소/삭제, 목록 페이지네이션 |
+| `inventory.openapi.yaml` | 품종 CRUD/삭제, 자재 CRUD/삭제, 입고 기록 생성/수정/포트작업/취소, 목록 페이지네이션 |
 | `orchid-collection.openapi.yaml` | 난 묶음 사용자 그룹과 소속 관리 |
 | `derived-orchid-group.openapi.yaml` | 품종·년생·화분 크기 기준 자동 그룹 조회 |
 | `work.openapi.yaml` | 작업 유형과 등록·실행 capability metadata |
@@ -179,7 +179,7 @@ SOURCE/RESULT와 무효화 차단 사유를 반환한다. `POST /api/work-operat
 
 유리병 모종 입고는 포트 예정일 유무와 관계없이 `POTTING_PENDING`으로 관리하고, 임시 보관 위치는 `tempLocation`으로 표현한다. 포트 작업 계획에 포함되면 `POTTING_IN_PROGRESS`로 전환하고, 포트 작업을 취소하거나 대상을 건너뛰면 `POTTING_PENDING`으로 복귀한다. 결과 난 묶음이 없는 입고 기록을 취소하면 연결된 입고 작업과 아직 실행되지 않은 포트 작업 대상도 같은 트랜잭션에서 취소한다.
 
-입고 수정은 난 묶음 생성·배치 완료 전에만 허용한다. `InboundRecordResponse.editable`은 서버가 판정한 수정 가능 여부이며, 화면은 상태 조합을 다시 추론하지 않고 이 값을 사용한다.
+입고 수정은 난 묶음 생성·배치 완료 전에만 허용한다. `InboundRecordResponse.editable`은 서버가 판정한 수정 가능 여부이며, 화면은 상태 조합을 다시 추론하지 않고 이 값을 사용한다. 취소된 입고는 물리 삭제하지 않으며, 상태 조건이 없는 전체 목록에도 포함한다. `status=CANCELED`를 지정하면 취소 이력만 조회한다.
 
 즉시 배치 입고의 난 묶음 속성은 입고 최상위 필드가 아닌 `placement`에 전달한다. 입고 응답의 `createdOrchidGroups`는 `OrchidGroup.inboundRecord`로 연결된 결과를 반환하며, 실제 수량·화분·년생·배치 위치는 이 결과를 기준으로 확인한다. 유리병 모종의 `pottingDate`는 입고 컬럼이 아니라 결과 난 묶음 생성 Mutation의 `effectiveBusinessDate`에서 파생하며, 생성 이력이 `BASELINE`만 있는 과거 묶음은 날짜를 추정하지 않는다.
 

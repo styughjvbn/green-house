@@ -2,7 +2,6 @@ package com.greenhouse.backend;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.user;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -25,7 +24,7 @@ class InboundRecordAuditIntegrationTest extends AbstractBackendIntegrationTest {
 	AuditEventRepository auditEventRepository;
 
 	@Test
-	void recordsDirectInboundUpdateCancelAndDelete() throws Exception {
+	void recordsDirectInboundUpdateAndCancel() throws Exception {
 		Variety variety = varietyRepository.saveAndFlush(
 				new Variety("IN-AUDIT-" + System.nanoTime(), "입고감사속", "입고감사품종", null, "4인치", true, true, null, null));
 		InboundRecord inbound = inboundRecordRepository.saveAndFlush(new InboundRecord(LocalDate.of(2026, 8, 1),
@@ -47,16 +46,13 @@ class InboundRecordAuditIntegrationTest extends AbstractBackendIntegrationTest {
 				.contentType(MediaType.APPLICATION_JSON)
 				.content("{\"memo\":\"오입력 취소\"}"))
 			.andExpect(status().isOk());
-		mockMvc.perform(delete("/api/inbound-records/{id}", inbound.getId()).with(user("operator")))
-			.andExpect(status().isOk());
-
 		var events = auditEventRepository.findAll()
 			.stream()
 			.filter(event -> event.getSource() == AuditSource.INBOUND_MANAGEMENT)
 			.filter(event -> event.getEntityId().equals(inbound.getId()))
 			.toList();
 		assertThat(events).extracting(event -> event.getAction())
-			.containsExactly(AuditAction.UPDATED, AuditAction.DEACTIVATED, AuditAction.DELETED);
+			.containsExactly(AuditAction.UPDATED, AuditAction.DEACTIVATED);
 		assertThat(events.get(0).getChangedFields()).contains("inboundDate", "estimatedQuantity", "tempLocation",
 				"pottingDueDate", "worker", "memo");
 		assertThat(events.get(1).getChangedFields()).containsExactly("status", "memo");

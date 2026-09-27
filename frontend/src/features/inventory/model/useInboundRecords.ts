@@ -6,7 +6,6 @@ import { useUrlPagedListState } from "@/shared/api/useUrlPagedListState";
 import {
   cancelInboundRecord,
   createInboundRecord,
-  deleteInboundRecord,
   getInventoryHouses,
   potInboundRecord,
   updateInboundRecord,
@@ -117,14 +116,6 @@ export function useInboundRecords({
       await invalidate();
     },
   });
-  const deleteMutation = useMutation({
-    mutationFn: deleteInboundRecord,
-    onSuccess: async () => {
-      setSelectedId(null);
-      await invalidate();
-    },
-  });
-
   return {
     ...listState,
     query,
@@ -151,16 +142,12 @@ export function useInboundRecords({
     cancel: async (inboundRecordId: number, memo?: string) => {
       await cancelMutation.mutateAsync({ inboundRecordId, memo });
     },
-    remove: async (inboundRecordId: number) => {
-      await deleteMutation.mutateAsync(inboundRecordId);
-    },
     loading:
       query.isFetching ||
       createMutation.isPending ||
       updateMutation.isPending ||
       pottingMutation.isPending ||
-      cancelMutation.isPending ||
-      deleteMutation.isPending,
+      cancelMutation.isPending,
     housesLoading: housesQuery.isFetching,
     housesError: toMessage(housesQuery.error),
     error: toMessage(
@@ -169,8 +156,7 @@ export function useInboundRecords({
         createMutation.error ??
         updateMutation.error ??
         pottingMutation.error ??
-        cancelMutation.error ??
-        deleteMutation.error,
+        cancelMutation.error,
     ),
   };
 }

@@ -123,14 +123,6 @@ public class InboundRecordService {
 		return responseAssembler.assemble(inboundRecord);
 	}
 
-	public void delete(Long inboundRecordId) {
-		InboundRecord inboundRecord = inboundRecordFinder.find(inboundRecordId);
-		Map<String, Object> before = auditSupport.snapshot(inboundRecord);
-		inboundRecord.requireDeletable();
-		inboundRecordRepository.delete(inboundRecord);
-		auditSupport.record(AuditAction.DELETED, inboundRecord, before, null);
-	}
-
 	private void validateCreate(InboundRecordCreateCommand request) {
 		if (request.varietyId() == null && request.newVariety() == null) {
 			throw new IllegalArgumentException("품종을 선택하거나 새 품종을 입력해야 합니다.");

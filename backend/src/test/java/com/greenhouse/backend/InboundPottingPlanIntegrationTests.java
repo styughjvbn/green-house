@@ -704,6 +704,18 @@ class InboundPottingPlanIntegrationTests extends AbstractBackendIntegrationTest 
 			});
 		assertThat(orchidGroupRepository.findAll())
 			.allSatisfy(group -> assertThat(group.isVisibleInActiveViews()).isFalse());
+
+		mockMvc
+			.perform(post("/api/inbound-records/{id}/cancel", inboundRecord.getId())
+				.contentType(MediaType.APPLICATION_JSON)
+				.content("""
+						{
+						  "memo": "오등록 입고 취소"
+						}
+						"""))
+			.andExpect(status().isOk())
+			.andExpect(jsonPath("$.data.status").value("CANCELED"));
+		assertThat(inboundRecordRepository.existsById(inboundRecord.getId())).isTrue();
 	}
 
 	@Test

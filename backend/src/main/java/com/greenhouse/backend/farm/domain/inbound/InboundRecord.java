@@ -163,15 +163,6 @@ public class InboundRecord extends BaseEntity {
 		}
 	}
 
-	public void requireDeletable() {
-		if (status != InboundStatus.CANCELED) {
-			throw new IllegalArgumentException("취소된 입고 기록만 삭제할 수 있습니다.");
-		}
-		if (hasCreatedOrchidGroups()) {
-			throw new IllegalArgumentException("난 묶음이 생성된 입고 기록은 삭제할 수 없습니다.");
-		}
-	}
-
 	public void requirePottingAllowed() {
 		if (inboundType != InboundType.FLASK_SEEDLING) {
 			throw new IllegalArgumentException("유리병 모종 입고만 포트 작업을 등록할 수 있습니다.");

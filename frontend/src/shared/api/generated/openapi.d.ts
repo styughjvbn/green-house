@@ -985,7 +985,7 @@ export interface paths {
         get: operations["getInboundRecord"];
         put?: never;
         post?: never;
-        delete: operations["delete_3"];
+        delete?: never;
         options?: never;
         head?: never;
         patch: operations["update_7"];
@@ -6380,28 +6380,6 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ApiResponseInboundRecordResponse"];
-                };
-            };
-        };
-    };
-    delete_3: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                inboundRecordId: number;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiResponseVoid"];
                 };
             };
         };

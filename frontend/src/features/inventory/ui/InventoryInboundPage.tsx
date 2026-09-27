@@ -70,12 +70,6 @@ export function InventoryInboundPage() {
               editForm={editForm}
               editing={editing}
               record={selected}
-              onDelete={() => {
-                if (!window.confirm("취소된 입고 기록을 삭제할까요?")) {
-                  return;
-                }
-                void inbound.remove(selected.id);
-              }}
               onEditFormChange={(updater) =>
                 setEditForm((current) => updater(current))
               }

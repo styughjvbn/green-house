@@ -238,6 +238,13 @@ class InventoryIntegrationTests extends FarmFixtureIntegrationTest {
 			.andExpect(status().isOk())
 			.andExpect(jsonPath("$.data.status").value("CANCELED"));
 
+		mockMvc.perform(get("/api/inbound-records").param("size", "100"))
+			.andExpect(status().isOk())
+			.andExpect(jsonPath("$.data.content[?(@.id == %d)]".formatted(cancelTargetId)).isNotEmpty());
+		mockMvc.perform(get("/api/inbound-records").param("status", "CANCELED").param("size", "100"))
+			.andExpect(status().isOk())
+			.andExpect(jsonPath("$.data.content[?(@.id == %d)]".formatted(cancelTargetId)).isNotEmpty());
+
 		assertThat(inboundRecordRepository.count()).isGreaterThanOrEqualTo(4);
 	}
 
@@ -285,7 +292,7 @@ class InventoryIntegrationTests extends FarmFixtureIntegrationTest {
 	}
 
 	@Test
-	void deletesCanceledInboundRecord() throws Exception {
+	void keepsCanceledInboundRecordInHistory() throws Exception {
 		var sampleVariety = varietyRepository.findAll()
 			.stream()
 			.filter(variety -> variety.getName().equals("카틀레야 A"))
@@ -319,11 +326,14 @@ class InventoryIntegrationTests extends FarmFixtureIntegrationTest {
 			.andExpect(status().isOk())
 			.andExpect(jsonPath("$.data.status").value("CANCELED"));
 
-		mockMvc.perform(delete("/api/inbound-records/{inboundRecordId}", inboundRecordId))
+		mockMvc.perform(get("/api/inbound-records").param("size", "100"))
 			.andExpect(status().isOk())
-			.andExpect(jsonPath("$.data").doesNotExist());
+			.andExpect(jsonPath("$.data.content[?(@.id == %d)]".formatted(inboundRecordId)).isNotEmpty());
+		mockMvc.perform(get("/api/inbound-records").param("status", "CANCELED").param("size", "100"))
+			.andExpect(status().isOk())
+			.andExpect(jsonPath("$.data.content[?(@.id == %d)]".formatted(inboundRecordId)).isNotEmpty());
 
-		assertThat(inboundRecordRepository.existsById(inboundRecordId)).isFalse();
+		assertThat(inboundRecordRepository.existsById(inboundRecordId)).isTrue();
 	}
 
 	@Test
