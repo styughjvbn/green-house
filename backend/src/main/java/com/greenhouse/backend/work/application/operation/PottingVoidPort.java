@@ -8,7 +8,7 @@ public interface PottingVoidPort {
 	Inspection inspect(Long workOperationId, List<Effect> effects);
 
 	Long compensate(Long workOperationId, String requestKey, List<Effect> effects, LocalDate businessDate,
-			String reason);
+			String reason, boolean reopenInboundRecords);
 
 	record Effect(Long inboundRecordId, Long mutationId) {
 	}

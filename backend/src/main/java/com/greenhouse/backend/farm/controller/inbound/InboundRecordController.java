@@ -9,6 +9,7 @@ import com.greenhouse.backend.farm.domain.inbound.InboundStatus;
 import com.greenhouse.backend.farm.domain.inbound.InboundType;
 import com.greenhouse.backend.farm.dto.inbound.InboundRecordCancelRequest;
 import com.greenhouse.backend.farm.dto.inbound.InboundRecordPottingRequest;
+import com.greenhouse.backend.farm.dto.inbound.InboundRecordPottingVoidRequest;
 import com.greenhouse.backend.farm.dto.inbound.InboundRecordResponse;
 import com.greenhouse.backend.farm.dto.inbound.InboundRecordUpdateRequest;
 import com.greenhouse.backend.work.application.effect.InboundPottingCommand;
@@ -88,9 +89,15 @@ public class InboundRecordController {
 
 	@PostMapping("/{inboundRecordId}/cancel")
 	public ApiResponse<InboundRecordResponse> cancel(@PathVariable Long inboundRecordId,
-			@RequestBody(required = false) InboundRecordCancelRequest request) {
+			@Valid @RequestBody(required = false) InboundRecordCancelRequest request) {
 		return ApiResponse.ok(inboundRecordService.cancel(inboundRecordId,
-				request == null ? new InboundRecordCancelRequest(null) : request));
+				request == null ? new InboundRecordCancelRequest(null, null) : request));
+	}
+
+	@PostMapping("/{inboundRecordId}/potting-void")
+	public ApiResponse<InboundRecordResponse> voidPotting(@PathVariable Long inboundRecordId,
+			@Valid @RequestBody InboundRecordPottingVoidRequest request) {
+		return ApiResponse.ok(inboundRecordService.voidPotting(inboundRecordId, request));
 	}
 
 }

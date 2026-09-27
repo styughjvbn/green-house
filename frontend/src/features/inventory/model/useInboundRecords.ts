@@ -9,7 +9,9 @@ import {
   getInventoryHouses,
   potInboundRecord,
   updateInboundRecord,
+  voidInboundPotting,
 } from "../api/inventoryApi";
+import { createUuid } from "@/shared/lib/id";
 import type { InventoryRouteState } from "../lib/inventoryRouteState";
 import {
   createEmptyInboundFilters,
@@ -107,13 +109,30 @@ export function useInboundRecords({
     mutationFn: ({
       inboundRecordId,
       memo,
+      idempotencyKey,
     }: {
       inboundRecordId: number;
       memo?: string;
-    }) => cancelInboundRecord(inboundRecordId, memo),
+      idempotencyKey: string;
+    }) => cancelInboundRecord(inboundRecordId, idempotencyKey, memo),
     onSuccess: async (updated) => {
       setSelectedId(updated.id);
       await invalidate();
+    },
+  });
+  const voidPottingMutation = useMutation({
+    mutationFn: ({
+      inboundRecordId,
+      reason,
+      idempotencyKey,
+    }: {
+      inboundRecordId: number;
+      reason: string;
+      idempotencyKey: string;
+    }) => voidInboundPotting(inboundRecordId, { idempotencyKey, reason }),
+    onSuccess: async (updated) => {
+      setSelectedId(updated.id);
+      await invalidateRelatedInventory();
     },
   });
   return {
@@ -140,14 +159,31 @@ export function useInboundRecords({
       await pottingMutation.mutateAsync({ inboundRecordId, payload });
     },
     cancel: async (inboundRecordId: number, memo?: string) => {
-      await cancelMutation.mutateAsync({ inboundRecordId, memo });
+      await cancelMutation.mutateAsync({
+        inboundRecordId,
+        memo,
+        idempotencyKey:
+          `inbound-cancel-${inboundRecordId}-${createUuid()}`.slice(0, 100),
+      });
+    },
+    voidPotting: async (inboundRecordId: number, reason: string) => {
+      await voidPottingMutation.mutateAsync({
+        inboundRecordId,
+        reason,
+        idempotencyKey:
+          `inbound-potting-void-${inboundRecordId}-${createUuid()}`.slice(
+            0,
+            100,
+          ),
+      });
     },
     loading:
       query.isFetching ||
       createMutation.isPending ||
       updateMutation.isPending ||
       pottingMutation.isPending ||
-      cancelMutation.isPending,
+      cancelMutation.isPending ||
+      voidPottingMutation.isPending,
     housesLoading: housesQuery.isFetching,
     housesError: toMessage(housesQuery.error),
     error: toMessage(
@@ -156,7 +192,8 @@ export function useInboundRecords({
         createMutation.error ??
         updateMutation.error ??
         pottingMutation.error ??
-        cancelMutation.error,
+        cancelMutation.error ??
+        voidPottingMutation.error,
     ),
   };
 }

@@ -4,6 +4,7 @@ import com.greenhouse.backend.common.exception.NotFoundException;
 import com.greenhouse.backend.work.domain.operation.WorkOperation;
 import com.greenhouse.backend.work.domain.operation.WorkOperationRelationType;
 import com.greenhouse.backend.work.domain.operation.WorkOperationStatus;
+import com.greenhouse.backend.work.domain.operation.WorkTypeDefinition;
 import com.greenhouse.backend.work.domain.operation.WorkTypeWorkflow;
 import com.greenhouse.backend.work.dto.operation.WorkOperationVoidEligibilityResponse;
 import com.greenhouse.backend.work.dto.operation.WorkOperationVoidRequest;
@@ -119,7 +120,7 @@ public class WorkOperationVoidService {
 								effect.getTarget() == null ? null : effect.getTarget().getInboundRecordId(),
 								effect.getMutationId()))
 						.toList(),
-					operation.getPlannedStartDate(), reason);
+					operation.getPlannedStartDate(), reason, true);
 		}
 		else {
 			mutationId = structureChangeVoidPort.compensate(operationId, requestKey, eligibility.mutationIds(),
@@ -138,6 +139,37 @@ public class WorkOperationVoidService {
 		effectRepository.findByWorkOperationIdOrderByIdAsc(operationId).forEach(effect -> effect.cancel(now));
 		operation.voidCompletedMutationWork(now, reason, requestKey, mutationId);
 		return queryService.get(operationId);
+	}
+
+	public void voidInboundRegistration(Long operationId, WorkOperationVoidRequest request) {
+		var operation = operationRepository.findWithWorkTypeById(operationId)
+			.orElseThrow(() -> new NotFoundException("입고 작업을 찾을 수 없습니다."));
+		String requestKey = support.normalizeRequired(request.idempotencyKey());
+		if (operation.getStatus() == WorkOperationStatus.VOIDED) {
+			if (!requestKey.equals(operation.getVoidRequestKey())) {
+				throw new IllegalArgumentException("이미 다른 요청으로 무효화된 입고 작업입니다.");
+			}
+			return;
+		}
+		if (operation.getStatus() != WorkOperationStatus.COMPLETED
+				|| !WorkTypeDefinition.INBOUND.name().equals(operation.getWorkType().getCode())) {
+			throw new IllegalArgumentException("완료된 즉시 배치 입고 작업만 취소할 수 있습니다.");
+		}
+		String reason = support.normalizeRequired(request.reason());
+		var effects = effectRepository.findByWorkOperationIdOrderByIdAsc(operationId);
+		var portEffects = effects.stream()
+			.map(effect -> new PottingVoidPort.Effect(
+					effect.getTarget() == null ? null : effect.getTarget().getInboundRecordId(), effect.getMutationId()))
+			.toList();
+		var inspection = pottingVoidPort.inspect(operationId, portEffects);
+		if (!inspection.blockers().isEmpty()) {
+			throw new IllegalArgumentException(inspection.blockers().getFirst().message());
+		}
+		Long mutationId = pottingVoidPort.compensate(operationId, requestKey, portEffects,
+				operation.getPlannedStartDate(), reason, false);
+		var now = support.now();
+		effects.forEach(effect -> effect.cancel(now));
+		operation.voidCompletedInboundRegistration(now, reason, requestKey, mutationId);
 	}
 
 	private String relatedRequestKey(String requestKey, Long operationId) {

@@ -5,6 +5,7 @@ import com.greenhouse.backend.work.domain.operation.WorkOperationStatus;
 import com.greenhouse.backend.work.domain.operation.WorkTypeDefinition;
 import com.greenhouse.backend.work.domain.target.WorkTargetExecution;
 import com.greenhouse.backend.work.domain.target.WorkTargetExecutionStatus;
+import com.greenhouse.backend.work.dto.operation.WorkOperationVoidRequest;
 import com.greenhouse.backend.work.repository.WorkAppliedEffectRepository;
 import com.greenhouse.backend.work.repository.WorkTargetExecutionRepository;
 import java.time.LocalDateTime;
@@ -26,6 +27,19 @@ public class InboundWorkOperationLifecycleService {
 
 	private final WorkOperationSupport support;
 
+	private final WorkOperationVoidService workOperationVoidService;
+
+	public void voidPottingForInboundRecord(Long inboundRecordId, String requestKey, String reason) {
+		WorkOperation operation = findSingleCompletedOperation(inboundRecordId, WorkTypeDefinition.POTTING);
+		workOperationVoidService.voidOperation(operation.getId(), new WorkOperationVoidRequest(requestKey, reason));
+	}
+
+	public void voidInboundRegistrationForCancellation(Long inboundRecordId, String requestKey, String reason) {
+		WorkOperation operation = findSingleCompletedOperation(inboundRecordId, WorkTypeDefinition.INBOUND);
+		workOperationVoidService
+			.voidInboundRegistration(operation.getId(), new WorkOperationVoidRequest(requestKey, reason));
+	}
+
 	public void cancelForInboundRecord(Long inboundRecordId) {
 		List<WorkTargetExecution> linkedExecutions = workTargetExecutionRepository
 			.findForUpdateByTargetInboundRecordIdOrderByIdAsc(inboundRecordId);
@@ -45,7 +59,8 @@ public class InboundWorkOperationLifecycleService {
 	}
 
 	private void cancelInboundRecordOperation(WorkOperation operation, LocalDateTime canceledAt) {
-		if (operation.getStatus() == WorkOperationStatus.CANCELED) {
+		if (operation.getStatus() == WorkOperationStatus.CANCELED
+				|| operation.getStatus() == WorkOperationStatus.VOIDED) {
 			return;
 		}
 		if (operation.getStatus() == WorkOperationStatus.COMPLETED) {
@@ -55,6 +70,27 @@ public class InboundWorkOperationLifecycleService {
 			return;
 		}
 		operation.cancel(canceledAt);
+	}
+
+	private WorkOperation findSingleCompletedOperation(Long inboundRecordId, WorkTypeDefinition definition) {
+		List<WorkOperation> operations = workTargetExecutionRepository
+			.findForUpdateByTargetInboundRecordIdOrderByIdAsc(inboundRecordId)
+			.stream()
+			.map(execution -> execution.getTarget().getWorkOperation())
+			.filter(operation -> definition.name().equals(operation.getWorkType().getCode()))
+			.filter(operation -> operation.getStatus() == WorkOperationStatus.COMPLETED
+					|| operation.getStatus() == WorkOperationStatus.CORRECTED)
+			.distinct()
+			.toList();
+		if (operations.isEmpty()) {
+			throw new IllegalArgumentException(definition == WorkTypeDefinition.POTTING
+					? "취소할 완료 포트 작업을 찾을 수 없습니다." : "취소할 완료 입고 작업을 찾을 수 없습니다.");
+		}
+		if (operations.size() > 1) {
+			throw new IllegalStateException(definition == WorkTypeDefinition.POTTING
+					? "취소되지 않은 완료 포트 작업이 여러 건입니다." : "완료 입고 작업이 여러 건입니다.");
+		}
+		return operations.getFirst();
 	}
 
 	private void cancelPottingTarget(WorkOperation operation, WorkTargetExecution linkedExecution,

@@ -432,11 +432,13 @@ export function InboundPottingDialog({
 export function CancelDialog({
   open,
   title,
+  description,
   onClose,
   onSubmit,
 }: {
   open: boolean;
   title: string;
+  description?: string;
   onClose: () => void;
   onSubmit: (memo: string) => Promise<void>;
 }) {
@@ -446,6 +448,9 @@ export function CancelDialog({
 
   return (
     <DialogShell title={title} onClose={onClose}>
+      {description ? (
+        <p className="mt-3 text-sm text-[#657168]">{description}</p>
+      ) : null}
       <form
         className="mt-4 space-y-3"
         onSubmit={(event) => {
@@ -456,6 +461,7 @@ export function CancelDialog({
         <label className="space-y-1 text-xs font-semibold text-[#425047]">
           <span>사유</span>
           <textarea
+            required
             className="min-h-24 w-full rounded-md border border-[#d7ddd8] bg-white px-3 py-2 text-sm outline-none focus:border-[#159447] focus:ring-1 focus:ring-[#159447]"
             value={memo}
             onChange={(event) => setMemo(event.target.value)}

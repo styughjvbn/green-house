@@ -28,6 +28,7 @@ export function InboundDetailCard({
   onSubmitUpdate,
   onOpenPotting,
   onOpenCancel,
+  onOpenPottingVoid,
 }: {
   record: InboundRecord;
   editing: boolean;
@@ -44,6 +45,7 @@ export function InboundDetailCard({
   onSubmitUpdate: () => Promise<void>;
   onOpenPotting: () => void;
   onOpenCancel: () => void;
+  onOpenPottingVoid: () => void;
 }) {
   return (
     <DetailCard>
@@ -73,8 +75,12 @@ export function InboundDetailCard({
                 포트 작업 실행
               </DetailActionButton>
             ) : null}
-            {record.createdOrchidGroups.length === 0 &&
-            record.status !== "CANCELED" ? (
+            {record.availableActions.includes("VOID_POTTING") ? (
+              <DetailActionButton tone="danger" onClick={onOpenPottingVoid}>
+                포트 작업 취소
+              </DetailActionButton>
+            ) : null}
+            {record.availableActions.includes("CANCEL") ? (
               <DetailActionButton tone="danger" onClick={onOpenCancel}>
                 입고 취소
               </DetailActionButton>

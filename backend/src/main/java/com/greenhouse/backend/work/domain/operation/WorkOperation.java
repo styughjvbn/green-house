@@ -248,6 +248,26 @@ public class WorkOperation extends BaseEntity {
 		this.voidMutationId = compensationMutationId;
 	}
 
+	public void voidCompletedInboundRegistration(LocalDateTime voidedAt, String reason, String requestKey,
+			Long compensationMutationId) {
+		if (status == WorkOperationStatus.VOIDED) {
+			return;
+		}
+		if (status != WorkOperationStatus.COMPLETED
+				|| !WorkTypeDefinition.INBOUND.name().equals(workType.getCode())) {
+			throw new IllegalArgumentException("완료된 즉시 배치 입고 작업만 무효화할 수 있습니다.");
+		}
+		if (reason == null || reason.isBlank() || requestKey == null || requestKey.isBlank()
+				|| compensationMutationId == null) {
+			throw new IllegalArgumentException("입고 취소 사유와 요청 식별자가 필요합니다.");
+		}
+		this.status = WorkOperationStatus.VOIDED;
+		this.voidedAt = voidedAt;
+		this.voidReason = reason.trim();
+		this.voidRequestKey = requestKey.trim();
+		this.voidMutationId = compensationMutationId;
+	}
+
 	public void correctWorkDate(LocalDate workDate) {
 		if (workDate == null) {
 			throw new IllegalArgumentException("보정 작업일이 필요합니다.");

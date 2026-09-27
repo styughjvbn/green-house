@@ -51,7 +51,7 @@ public class FarmPottingVoidAdapter implements PottingVoidPort {
 
 	@Override
 	public Long compensate(Long workOperationId, String requestKey, List<Effect> effects, LocalDate businessDate,
-			String reason) {
+			String reason, boolean reopenInboundRecords) {
 		List<Long> inboundIds = effects.stream().map(Effect::inboundRecordId).filter(java.util.Objects::nonNull)
 			.distinct().sorted().toList();
 		List<InboundRecord> records = inboundRecordRepository.findAllForUpdateByIdIn(inboundIds);
@@ -66,7 +66,9 @@ public class FarmPottingVoidAdapter implements PottingVoidPort {
 		var compensation = mutationEngine.compensateCreations(new CompensateCreateMutationsCommand(
 				OrchidGroupMutationSources.work(workOperationId, "VOID:" + requestKey), mutationIds, businessDate,
 				reason));
-		records.forEach(InboundRecord::reopenAfterPottingVoid);
+		if (reopenInboundRecords) {
+			records.forEach(InboundRecord::reopenAfterPottingVoid);
+		}
 		return compensation.mutationId();
 	}
 

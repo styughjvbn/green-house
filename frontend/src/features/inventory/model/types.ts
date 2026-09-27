@@ -89,6 +89,8 @@ export type InboundStatus =
   | "PLACED"
   | "CANCELED";
 
+export type InboundRecordAction = "CANCEL" | "VOID_POTTING";
+
 export interface InboundRecord {
   id: number;
   inboundDate: string;
@@ -102,6 +104,7 @@ export interface InboundRecord {
   pottingDueDate: string | null;
   pottingDate: string | null;
   editable: boolean;
+  availableActions: InboundRecordAction[];
   createdOrchidGroups: InboundOrchidGroup[];
   worker: string | null;
   memo: string | null;

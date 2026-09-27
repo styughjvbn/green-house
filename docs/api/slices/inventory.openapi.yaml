@@ -242,6 +242,31 @@ paths:
               schema:
                 $ref: '#/components/schemas/ApiResponseInboundRecordResponse'
       deprecated: true
+  /api/inbound-records/{inboundRecordId}/potting-void:
+    post:
+      tags:
+      - inbound-record-controller
+      operationId: voidPotting
+      parameters:
+      - name: inboundRecordId
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: int64
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/InboundRecordPottingVoidRequest'
+        required: true
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponseInboundRecordResponse'
   /api/inbound-records/{inboundRecordId}/cancel:
     post:
       tags:
@@ -654,6 +679,10 @@ components:
     InboundRecordCancelRequest:
       type: object
       properties:
+        idempotencyKey:
+          type: string
+          maxLength: 100
+          minLength: 0
         memo:
           type: string
           maxLength: 1000
@@ -724,6 +753,20 @@ components:
       required:
       - pottingDate
       - results
+    InboundRecordPottingVoidRequest:
+      type: object
+      properties:
+        idempotencyKey:
+          type: string
+          maxLength: 100
+          minLength: 0
+        reason:
+          type: string
+          maxLength: 1000
+          minLength: 0
+      required:
+      - idempotencyKey
+      - reason
     InboundRecordResponse:
       type: object
       properties:
@@ -757,6 +800,13 @@ components:
           format: date
         editable:
           type: boolean
+        availableActions:
+          type: array
+          items:
+            type: string
+            enum:
+            - CANCEL
+            - VOID_POTTING
         createdOrchidGroups:
           type: array
           items:

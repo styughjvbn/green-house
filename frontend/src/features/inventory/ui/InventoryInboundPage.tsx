@@ -18,9 +18,9 @@ import { InboundList } from "./inbound/InboundList";
 export function InventoryInboundPage() {
   const routeState = readInboundRouteState(useSearchParams());
   const inbound = useInboundRecords({ routeState });
-  const [dialog, setDialog] = useState<"create" | "potting" | "cancel" | null>(
-    null,
-  );
+  const [dialog, setDialog] = useState<
+    "create" | "potting" | "pottingVoid" | "cancel" | null
+  >(null);
   const [editing, setEditing] = useState(false);
   const [editForm, setEditForm] = useState<InboundRecordUpdatePayload>({
     inboundDate: "",
@@ -75,6 +75,7 @@ export function InventoryInboundPage() {
               }
               onOpenCancel={() => setDialog("cancel")}
               onOpenPotting={() => openPlacementDialog("potting")}
+              onOpenPottingVoid={() => setDialog("pottingVoid")}
               onSubmitUpdate={async () => {
                 await inbound.update(selected.id, editForm);
                 setEditing(false);
@@ -125,10 +126,28 @@ export function InventoryInboundPage() {
         <CancelDialog
           open={dialog === "cancel" && !!selected}
           title="입고 기록 취소"
+          description={
+            selected?.inboundType === "FLASK_SEEDLING" &&
+            selected.status === "PLACED"
+              ? "포트 작업 결과를 되돌린 뒤 입고 기록까지 취소합니다. 같은 포트 작업의 다른 입고가 있으면 함께 포트 대기 상태로 돌아갑니다."
+              : "입고로 생성된 난 묶음을 되돌리고 입고 기록을 취소합니다."
+          }
           onClose={() => setDialog(null)}
           onSubmit={async (memo) => {
             if (!selected) return;
             await inbound.cancel(selected.id, memo);
+            setDialog(null);
+          }}
+        />
+
+        <CancelDialog
+          open={dialog === "pottingVoid" && !!selected}
+          title="포트 작업 취소"
+          description="생성된 난 묶음을 되돌리고 입고 기록을 포트 작업 대기 상태로 복원합니다. 같은 포트 작업에 포함된 다른 입고도 함께 복원됩니다."
+          onClose={() => setDialog(null)}
+          onSubmit={async (reason) => {
+            if (!selected) return;
+            await inbound.voidPotting(selected.id, reason);
             setDialog(null);
           }}
         />

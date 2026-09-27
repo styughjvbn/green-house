@@ -66,6 +66,7 @@ type InboundRecordResponse = {
   pottingDueDate: string | null;
   pottingDate: string | null;
   editable: boolean;
+  availableActions: InboundRecord["availableActions"];
   createdOrchidGroups: InboundRecord["createdOrchidGroups"];
   worker: string | null;
   memo: string | null;
@@ -311,15 +312,37 @@ export function potInboundRecord(
   );
 }
 
-export function cancelInboundRecord(inboundRecordId: number, memo?: string) {
+export function cancelInboundRecord(
+  inboundRecordId: number,
+  idempotencyKey: string,
+  memo?: string,
+) {
   return requestJson<InboundRecordResponse>(
     `/inbound-records/${inboundRecordId}/cancel`,
     {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ memo: memo?.trim() || null }),
+      body: JSON.stringify({
+        idempotencyKey,
+        memo: memo?.trim() || null,
+      }),
     },
     "입고 기록을 취소하지 못했습니다.",
+  ).then(toInboundRecord);
+}
+
+export function voidInboundPotting(
+  inboundRecordId: number,
+  payload: { idempotencyKey: string; reason: string },
+) {
+  return requestJson<InboundRecordResponse>(
+    `/inbound-records/${inboundRecordId}/potting-void`,
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    },
+    "포트 작업을 취소하지 못했습니다.",
   ).then(toInboundRecord);
 }
 
@@ -385,6 +408,7 @@ function toInboundRecord(item: InboundRecordResponse): InboundRecord {
     pottingDueDate: item.pottingDueDate,
     pottingDate: item.pottingDate,
     editable: item.editable,
+    availableActions: item.availableActions,
     createdOrchidGroups: item.createdOrchidGroups,
     worker: item.worker,
     memo: item.memo,

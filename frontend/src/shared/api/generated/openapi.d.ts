@@ -651,6 +651,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/inbound-records/{inboundRecordId}/potting-void": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["voidPotting"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/inbound-records/{inboundRecordId}/cancel": {
         parameters: {
             query?: never;
@@ -2813,6 +2829,7 @@ export interface components {
             /** Format: date */
             pottingDate?: string;
             editable?: boolean;
+            availableActions?: ("CANCEL" | "VOID_POTTING")[];
             createdOrchidGroups?: components["schemas"]["InboundOrchidGroupResponse"][];
             worker?: string;
             memo?: string;
@@ -2828,7 +2845,12 @@ export interface components {
             worker?: string;
             memo?: string;
         };
+        InboundRecordPottingVoidRequest: {
+            idempotencyKey: string;
+            reason: string;
+        };
         InboundRecordCancelRequest: {
+            idempotencyKey?: string;
             memo?: string;
         };
         BusinessPartnerCreateRequest: {
@@ -5698,6 +5720,32 @@ export interface operations {
         requestBody: {
             content: {
                 "application/json": components["schemas"]["InboundRecordPottingRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiResponseInboundRecordResponse"];
+                };
+            };
+        };
+    };
+    voidPotting: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                inboundRecordId: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["InboundRecordPottingVoidRequest"];
             };
         };
         responses: {

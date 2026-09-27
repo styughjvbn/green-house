@@ -135,6 +135,134 @@ class InboundPottingPlanIntegrationTests extends AbstractBackendIntegrationTest 
 	}
 
 	@Test
+	void cancelsImmediatelyPlacedInboundWithItsCreatedGroups() throws Exception {
+		var created = mockMvc.perform(post("/api/inbound-records").contentType(MediaType.APPLICATION_JSON).content("""
+				{
+				  "inboundDate": "2026-07-17",
+				  "inboundType": "PRODUCT_POT",
+				  "varietyId": %d,
+				  "placement": {
+				    "quantity": 20,
+				    "potSize": "2치",
+				    "ageYear": 1,
+				    "bedZoneId": %d,
+				    "startPosition": 8,
+				    "endPosition": 10
+				  }
+				}
+				""".formatted(inboundRecord.getVariety().getId(), bedZone.getId())))
+			.andExpect(status().isCreated())
+			.andExpect(jsonPath("$.data.availableActions", hasSize(1)))
+			.andExpect(jsonPath("$.data.availableActions[0]").value("CANCEL"))
+			.andReturn();
+		Long inboundRecordId = Long.valueOf(
+				created.getResponse().getContentAsString().replaceAll(".*?\\\"data\\\":\\{\\\"id\\\":(\\d+).*", "$1"));
+
+		mockMvc
+			.perform(post("/api/inbound-records/{id}/cancel", inboundRecordId).contentType(MediaType.APPLICATION_JSON)
+				.content("""
+						{
+						  "idempotencyKey": "cancel-placed-inbound",
+						  "memo": "즉시 배치 입고 오등록"
+						}
+						"""))
+			.andExpect(status().isOk())
+			.andExpect(jsonPath("$.data.status").value("CANCELED"))
+			.andExpect(jsonPath("$.data.availableActions", hasSize(0)))
+			.andExpect(jsonPath("$.data.createdOrchidGroups", hasSize(0)));
+
+		assertThat(orchidGroupRepository.findAll()).singleElement().satisfies(group -> {
+			assertThat(group.getQuantity()).isZero();
+			assertThat(group.isVisibleInActiveViews()).isFalse();
+		});
+		assertThat(operationRepository.findAll()).singleElement()
+			.satisfies(operation -> assertThat(operation.getStatus().name()).isEqualTo("VOIDED"));
+	}
+
+	@Test
+	void supportsPottingOnlyVoidAndFullInboundCancellationAfterPlacement() throws Exception {
+		var created = mockMvc.perform(post("/api/inbound-records").contentType(MediaType.APPLICATION_JSON).content("""
+				{
+				  "inboundDate": "2026-07-17",
+				  "inboundType": "FLASK_SEEDLING",
+				  "varietyId": %d,
+				  "estimatedQuantity": 20,
+				  "tempLocation": "배양실 A"
+				}
+				""".formatted(inboundRecord.getVariety().getId())))
+			.andExpect(status().isCreated())
+			.andReturn();
+		Long inboundRecordId = Long.valueOf(
+				created.getResponse().getContentAsString().replaceAll(".*?\\\"data\\\":\\{\\\"id\\\":(\\d+).*", "$1"));
+
+		executePotting(inboundRecordId, "first-potting", 8, 10);
+		mockMvc.perform(get("/api/inbound-records/{id}", inboundRecordId))
+			.andExpect(status().isOk())
+			.andExpect(jsonPath("$.data.availableActions", hasSize(2)))
+			.andExpect(jsonPath("$.data.availableActions[0]").value("VOID_POTTING"))
+			.andExpect(jsonPath("$.data.availableActions[1]").value("CANCEL"));
+
+		mockMvc
+			.perform(post("/api/inbound-records/{id}/potting-void", inboundRecordId)
+				.contentType(MediaType.APPLICATION_JSON)
+				.content("""
+						{
+						  "idempotencyKey": "void-potting-from-inbound",
+						  "reason": "포트 작업 오등록"
+						}
+						"""))
+			.andExpect(status().isOk())
+			.andExpect(jsonPath("$.data.status").value("POTTING_PENDING"))
+			.andExpect(jsonPath("$.data.createdOrchidGroups", hasSize(0)));
+
+		executePotting(inboundRecordId, "second-potting", 10, 12);
+		mockMvc
+			.perform(post("/api/inbound-records/{id}/cancel", inboundRecordId).contentType(MediaType.APPLICATION_JSON)
+				.content("""
+						{
+						  "idempotencyKey": "cancel-potted-inbound",
+						  "memo": "입고 자체 오등록"
+						}
+						"""))
+			.andExpect(status().isOk())
+			.andExpect(jsonPath("$.data.status").value("CANCELED"))
+			.andExpect(jsonPath("$.data.createdOrchidGroups", hasSize(0)));
+
+		assertThat(operationRepository.findAll())
+			.filteredOn(operation -> operation.getWorkType().getCode().equals(WorkTypeDefinition.INBOUND.name()))
+			.singleElement()
+			.satisfies(operation -> assertThat(operation.getStatus().name()).isEqualTo("CANCELED"));
+		assertThat(operationRepository.findAll())
+			.filteredOn(operation -> operation.getWorkType().getCode().equals(WorkTypeDefinition.POTTING.name()))
+			.allSatisfy(operation -> assertThat(operation.getStatus().name()).isEqualTo("VOIDED"));
+		assertThat(orchidGroupRepository.findAll())
+			.allSatisfy(group -> assertThat(group.isVisibleInActiveViews()).isFalse());
+	}
+
+	private void executePotting(Long inboundRecordId, String idempotencyKey, int startPosition, int endPosition)
+			throws Exception {
+		mockMvc
+			.perform(post("/api/work-operations/inbound-potting-executions").contentType(MediaType.APPLICATION_JSON)
+				.content("""
+						{
+						  "idempotencyKey": "%s",
+						  "inboundRecordId": %d,
+						  "pottingDate": "2026-07-18",
+						  "results": [{
+						    "quantity": 20,
+						    "potSize": "2치",
+						    "ageYear": 1,
+						    "bedZoneId": %d,
+						    "startPosition": %d,
+						    "endPosition": %d
+						  }]
+						}
+						""".formatted(idempotencyKey, inboundRecordId, bedZone.getId(), startPosition, endPosition)))
+			.andExpect(status().isCreated())
+			.andExpect(jsonPath("$.data.status").value("COMPLETED"));
+	}
+
+	@Test
 	void plansInboundPottingAndCreatesTheOrchidGroupWhenCompleted() throws Exception {
 		mockMvc.perform(get("/api/work-operations/inbound-potting-candidates"))
 			.andExpect(status().isOk())

@@ -125,6 +125,24 @@ public class InboundRecord extends BaseEntity {
 				&& !hasCreatedOrchidGroups();
 	}
 
+	public List<InboundRecordAction> availableActions(boolean hasActiveCreatedGroups) {
+		if (status == InboundStatus.CANCELED) {
+			return List.of();
+		}
+		if (inboundType == InboundType.FLASK_SEEDLING && status == InboundStatus.PLACED
+				&& hasActiveCreatedGroups) {
+			return List.of(InboundRecordAction.VOID_POTTING, InboundRecordAction.CANCEL);
+		}
+		return List.of(InboundRecordAction.CANCEL);
+	}
+
+	public void requirePottingVoidAllowed() {
+		if (inboundType != InboundType.FLASK_SEEDLING || status != InboundStatus.PLACED
+				|| !hasCreatedOrchidGroups()) {
+			throw new IllegalArgumentException("배치 완료된 유리병 모종 입고의 포트 작업만 취소할 수 있습니다.");
+		}
+	}
+
 	private void requireEditable() {
 		if (!isEditable()) {
 			throw new IllegalArgumentException("배치 완료 또는 취소된 입고 기록은 수정할 수 없습니다.");

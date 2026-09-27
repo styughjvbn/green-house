@@ -17,6 +17,7 @@ import com.greenhouse.backend.farm.domain.orchid.OrchidGroup;
 import com.greenhouse.backend.farm.domain.structure.BedZone;
 import com.greenhouse.backend.farm.domain.variety.Variety;
 import com.greenhouse.backend.farm.dto.inbound.InboundRecordCancelRequest;
+import com.greenhouse.backend.farm.dto.inbound.InboundRecordPottingVoidRequest;
 import com.greenhouse.backend.farm.dto.inbound.InboundRecordResponse;
 import com.greenhouse.backend.farm.dto.inbound.InboundRecordUpdateRequest;
 import com.greenhouse.backend.farm.repository.inbound.InboundRecordRepository;
@@ -27,6 +28,7 @@ import com.greenhouse.backend.work.application.operation.InboundWorkOperationLif
 import com.greenhouse.backend.work.application.operation.InboundWorkOperationRecorder;
 import java.util.List;
 import java.util.Map;
+import java.util.UUID;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -115,11 +117,36 @@ public class InboundRecordService {
 
 	public InboundRecordResponse cancel(Long inboundRecordId, InboundRecordCancelRequest request) {
 		InboundRecord inboundRecord = inboundRecordFinder.find(inboundRecordId);
-		inboundRecord.requireCancellable();
+		if (inboundRecord.getStatus() == InboundStatus.CANCELED) {
+			return responseAssembler.assemble(inboundRecord);
+		}
 		Map<String, Object> before = auditSupport.snapshot(inboundRecord);
+		String reason = normalize(request.memo()) == null ? "입고 취소" : normalize(request.memo());
+		String requestKey = resolveRequestKey(request.idempotencyKey(), "inbound-cancel", inboundRecordId);
+		if (inboundRecord.getStatus() == InboundStatus.PLACED) {
+			if (inboundRecord.getInboundType() == InboundType.FLASK_SEEDLING) {
+				inboundWorkOperationLifecycleService.voidPottingForInboundRecord(inboundRecordId,
+						childRequestKey(requestKey, "potting"), reason);
+			}
+			else {
+				inboundWorkOperationLifecycleService.voidInboundRegistrationForCancellation(inboundRecordId,
+						childRequestKey(requestKey, "registration"), reason);
+			}
+		}
+		inboundRecord.requireCancellable();
 		inboundWorkOperationLifecycleService.cancelForInboundRecord(inboundRecordId);
 		inboundRecord.cancel(normalize(request.memo()));
 		auditSupport.record(AuditAction.DEACTIVATED, inboundRecord, before, auditSupport.snapshot(inboundRecord));
+		return responseAssembler.assemble(inboundRecord);
+	}
+
+	public InboundRecordResponse voidPotting(Long inboundRecordId, InboundRecordPottingVoidRequest request) {
+		InboundRecord inboundRecord = inboundRecordFinder.find(inboundRecordId);
+		inboundRecord.requirePottingVoidAllowed();
+		Map<String, Object> before = auditSupport.snapshot(inboundRecord);
+		inboundWorkOperationLifecycleService.voidPottingForInboundRecord(inboundRecordId,
+				resolveRequestKey(request.idempotencyKey(), "inbound-potting-void", inboundRecordId), request.reason());
+		auditSupport.record(AuditAction.UPDATED, inboundRecord, before, auditSupport.snapshot(inboundRecord));
 		return responseAssembler.assemble(inboundRecord);
 	}
 
@@ -166,6 +193,17 @@ public class InboundRecordService {
 		}
 		String trimmed = value.trim();
 		return trimmed.isEmpty() ? null : trimmed;
+	}
+
+	private String resolveRequestKey(String provided, String prefix, Long inboundRecordId) {
+		String normalized = normalize(provided);
+		String generated = prefix + "-" + inboundRecordId + "-" + UUID.randomUUID();
+		return normalized == null ? generated.substring(0, Math.min(100, generated.length())) : normalized;
+	}
+
+	private String childRequestKey(String requestKey, String suffix) {
+		String childSuffix = "-" + suffix;
+		return requestKey.substring(0, Math.min(requestKey.length(), 100 - childSuffix.length())) + childSuffix;
 	}
 
 }
