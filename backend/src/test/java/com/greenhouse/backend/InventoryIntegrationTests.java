@@ -149,6 +149,7 @@ class InventoryIntegrationTests extends FarmFixtureIntegrationTest {
 							.formatted(sampleZone.getId())))
 			.andExpect(status().isOk())
 			.andExpect(jsonPath("$.data.status").value("PLACED"))
+			.andExpect(jsonPath("$.data.pottingDate").value("2026-07-12"))
 			.andExpect(jsonPath("$.data.createdOrchidGroups[0].quantity").value(210))
 			.andExpect(jsonPath("$.data.createdOrchidGroups[0].id").isNumber());
 

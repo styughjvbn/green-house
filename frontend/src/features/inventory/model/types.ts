@@ -100,6 +100,7 @@ export interface InboundRecord {
   estimatedQuantity: number | null;
   tempLocation: string | null;
   pottingDueDate: string | null;
+  pottingDate: string | null;
   createdOrchidGroups: InboundOrchidGroup[];
   worker: string | null;
   memo: string | null;

@@ -244,6 +244,9 @@ function InboundDetailView({ record }: { record: InboundRecord }) {
       <DetailRow label="예상 수량" value={record.estimatedQuantity} />
       <DetailRow label="임시 위치" value={record.tempLocation} />
       <DetailRow label="포트 예정일" value={record.pottingDueDate} />
+      {record.inboundType === "FLASK_SEEDLING" ? (
+        <DetailRow label="포트 작업일" value={record.pottingDate} />
+      ) : null}
       <DetailRow label="작업자" value={record.worker} />
       <DetailRow label="메모" value={record.memo} />
       {record.createdOrchidGroups.length ? (

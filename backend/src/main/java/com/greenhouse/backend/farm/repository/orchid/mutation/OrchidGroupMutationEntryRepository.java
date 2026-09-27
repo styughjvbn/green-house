@@ -1,6 +1,8 @@
 package com.greenhouse.backend.farm.repository.orchid.mutation;
 
 import com.greenhouse.backend.farm.domain.orchid.mutation.OrchidGroupMutationEntry;
+import com.greenhouse.backend.farm.domain.orchid.mutation.OrchidGroupMutationEntryKind;
+import java.time.LocalDate;
 import java.util.Collection;
 import java.util.List;
 import org.springframework.data.domain.Pageable;
@@ -12,7 +14,28 @@ import org.springframework.data.repository.query.Param;
 
 public interface OrchidGroupMutationEntryRepository extends JpaRepository<OrchidGroupMutationEntry, Long> {
 
+	interface InboundPottingDateRow {
+
+		Long getInboundRecordId();
+
+		LocalDate getPottingDate();
+
+	}
+
 	List<OrchidGroupMutationEntry> findByMutationIdOrderByIdAsc(Long mutationId);
+
+	@Query("""
+			select orchidGroup.inboundRecord.id as inboundRecordId,
+			       max(entry.mutation.effectiveBusinessDate) as pottingDate
+			from OrchidGroupMutationEntry entry
+			join OrchidGroup orchidGroup on orchidGroup.id = entry.orchidGroupId
+			where orchidGroup.inboundRecord.id in :inboundRecordIds
+			  and entry.entryKind = :entryKind
+			group by orchidGroup.inboundRecord.id
+			""")
+	List<InboundPottingDateRow> findInboundPottingDates(
+			@Param("inboundRecordIds") Collection<Long> inboundRecordIds,
+			@Param("entryKind") OrchidGroupMutationEntryKind entryKind);
 
 	List<OrchidGroupMutationEntry> findByMutationIdInOrderByMutationIdAscIdAsc(Collection<Long> mutationIds);
 

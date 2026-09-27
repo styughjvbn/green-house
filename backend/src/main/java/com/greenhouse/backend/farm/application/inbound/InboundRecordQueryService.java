@@ -31,8 +31,10 @@ public class InboundRecordQueryService {
 		var records = inboundRecordRepository.search(from, to, inboundType, status, keyword == null ? "" : keyword,
 				PageRequest.of(page, size, Sort.by(Sort.Order.desc("inboundDate"), Sort.Order.desc("id"))));
 		var groupsByInboundId = responseAssembler.resultGroupsByInboundRecordId(records.getContent());
+		var pottingDatesByInboundId = responseAssembler.pottingDatesByInboundRecordId(records.getContent());
 		return PageResponse.from(records.map(record -> InboundRecordResponse.from(record,
-				groupsByInboundId.getOrDefault(record.getId(), java.util.List.of()))));
+				groupsByInboundId.getOrDefault(record.getId(), java.util.List.of()),
+				pottingDatesByInboundId.get(record.getId()))));
 	}
 
 	public InboundRecordResponse getInboundRecord(Long inboundRecordId) {

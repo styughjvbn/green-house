@@ -64,6 +64,7 @@ type InboundRecordResponse = {
   estimatedQuantity: number | null;
   tempLocation: string | null;
   pottingDueDate: string | null;
+  pottingDate: string | null;
   createdOrchidGroups: InboundRecord["createdOrchidGroups"];
   worker: string | null;
   memo: string | null;
@@ -391,6 +392,7 @@ function toInboundRecord(item: InboundRecordResponse): InboundRecord {
     estimatedQuantity: item.estimatedQuantity,
     tempLocation: item.tempLocation,
     pottingDueDate: item.pottingDueDate,
+    pottingDate: item.pottingDate,
     createdOrchidGroups: item.createdOrchidGroups,
     worker: item.worker,
     memo: item.memo,

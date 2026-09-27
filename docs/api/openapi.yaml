@@ -5652,6 +5652,9 @@ components:
         pottingDueDate:
           type: string
           format: date
+        pottingDate:
+          type: string
+          format: date
         createdOrchidGroups:
           type: array
           items:

@@ -2810,6 +2810,8 @@ export interface components {
             tempLocation?: string;
             /** Format: date */
             pottingDueDate?: string;
+            /** Format: date */
+            pottingDate?: string;
             createdOrchidGroups?: components["schemas"]["InboundOrchidGroupResponse"][];
             worker?: string;
             memo?: string;

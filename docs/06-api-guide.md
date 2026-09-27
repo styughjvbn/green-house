@@ -179,7 +179,7 @@ SOURCE/RESULT와 무효화 차단 사유를 반환한다. `POST /api/work-operat
 
 유리병 모종 입고는 포트 예정일 유무와 관계없이 `POTTING_PENDING`으로 관리하고, 임시 보관 위치는 `tempLocation`으로 표현한다. 포트 작업 계획에 포함되면 `POTTING_IN_PROGRESS`로 전환하고, 포트 작업을 취소하거나 대상을 건너뛰면 `POTTING_PENDING`으로 복귀한다. 결과 난 묶음이 없는 입고 기록을 취소하면 연결된 입고 작업과 아직 실행되지 않은 포트 작업 대상도 같은 트랜잭션에서 취소한다.
 
-즉시 배치 입고의 난 묶음 속성은 입고 최상위 필드가 아닌 `placement`에 전달한다. 입고 응답의 `createdOrchidGroups`는 `OrchidGroup.inboundRecord`로 연결된 결과를 반환하며, 실제 수량·화분·년생·배치 위치는 이 결과를 기준으로 확인한다.
+즉시 배치 입고의 난 묶음 속성은 입고 최상위 필드가 아닌 `placement`에 전달한다. 입고 응답의 `createdOrchidGroups`는 `OrchidGroup.inboundRecord`로 연결된 결과를 반환하며, 실제 수량·화분·년생·배치 위치는 이 결과를 기준으로 확인한다. 유리병 모종의 `pottingDate`는 입고 컬럼이 아니라 결과 난 묶음 생성 Mutation의 `effectiveBusinessDate`에서 파생하며, 생성 이력이 `BASELINE`만 있는 과거 묶음은 날짜를 추정하지 않는다.
 
 입고 관리 화면의 즉시 실행은 `POST /api/work-operations/inbound-potting-executions`를 사용한다. 같은 입고 기록이 활성 포트 작업 계획에 포함되어 있으면 해당 계획의 대상을 실행하고, 계획이 없을 때만 단일 대상 `WorkOperation`을 새로 생성한다. 다중 대상 계획은 실행한 대상만 완료하고 나머지 대상을 유지한다. 요청의 `results`에 결과별 수량·화분·년생·배치 위치를 전달하며 한 번의 포트 작업으로 여러 난 묶음을 생성할 수 있다. 기존 `POST /api/inbound-records/{inboundRecordId}/potting`은 호환 응답인 `InboundRecordResponse`를 유지하면서 내부적으로 같은 실행기를 사용한다.
 

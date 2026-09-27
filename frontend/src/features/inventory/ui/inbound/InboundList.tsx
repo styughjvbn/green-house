@@ -101,6 +101,15 @@ export function InboundList({
         cell: ({ row }) => formatShortDate(row.original.pottingDueDate),
         size: 100,
       },
+      {
+        accessorKey: "pottingDate",
+        header: "포트 작업일",
+        cell: ({ row }) =>
+          row.original.inboundType === "FLASK_SEEDLING"
+            ? formatShortDate(row.original.pottingDate)
+            : "-",
+        size: 100,
+      },
     ],
     [],
   );
