@@ -455,11 +455,12 @@ src/
 
 #### 테스트와 변경 완료 기준
 
+- 구현 반복 중에는 변경 코드와 직접 관련된 단위·통합 테스트만 실행한다. 작은 표현 수정마다 전체 `npm run check`나 브라우저 E2E를 반복하지 않는다.
 - URL parser·writer, 날짜·payload 변환, selection coordinator처럼 React와 분리 가능한 규칙은 pure function unit test로 검증한다.
 - 서버 capability와 상태 전이는 백엔드 단위·통합 테스트를 기준으로 검증한다. 프론트 테스트에서 같은 전이 규칙을 다시 구현하지 않는다.
 - mutation과 cache 갱신, back/forward, dialog focus, 지도 연속 선택처럼 경계를 넘는 흐름은 회귀 위험에 따라 integration 또는 E2E 테스트를 추가한다.
 - API contract 변경은 Controller·DTO·테스트 수정 후 OpenAPI와 생성 타입을 갱신한다.
-- 프론트 변경 완료 전 `cd frontend && npm run check`를 실행한다. 실행하지 못한 검증과 기존 경고는 결과에 남긴다.
+- 기능 단위 변경 완료 전 `cd frontend && npm run check`를 한 번 실행한다. 실행하지 못한 검증과 기존 경고는 결과에 남긴다.
 
 ## 6. 데이터 보존 원칙
 
@@ -479,6 +480,14 @@ src/
 ## 7. 백엔드 리팩터링 검증
 
 전체 백엔드 검증은 기본 검사·패키징과 실제 PostgreSQL 회귀·벤치마크로 나눈다. Gradle 작업 이름에는 `work`가 남아 있지만 여러 도메인을 포함하며 브라우저 E2E와는 별도다.
+
+로컬 검증은 다음 단계로 실행한다.
+
+1. 구현 반복: `./gradlew test --tests '변경과 직접 관련된 테스트'`
+2. 기능 단위 완료: `./gradlew test`
+3. PostgreSQL 경계 변경: 관련 기능이 모인 체크포인트에서 `./gradlew workE2eTest`
+
+`workE2eTest`는 PostgreSQL 전용 SQL·Flyway·constraint, 트랜잭션 경계, 멱등 처리, lock·동시성, 수량·금액·정산 변경에 사용한다. 문서·포맷·import·표현 전용 UI 수정에는 실행하지 않는다. CI는 아래 전체 검증을 계속 수행한다.
 
 ```bash
 cd backend

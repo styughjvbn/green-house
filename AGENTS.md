@@ -217,8 +217,11 @@ API를 추가하거나 수정한 경우 다음 순서로 갱신한다.
 
 ## 테스트와 결과 보고
 
-- 빌드 또는 테스트가 가능하면 변경 후 반드시 실행한다.
-- 프론트엔드 검증은 프론트엔드 폴더에서 `npm run check` 를 실행한다.
+- 검증은 `반복 중 집중 검증 → 기능 단위 전체 검증 → DB 위험 변경 E2E` 단계로 나눈다. 작은 수정마다 전체 테스트나 E2E를 반복하지 않는다.
+- 반복 중에는 변경 코드와 직접 관련된 테스트만 실행한다. 백엔드는 `./gradlew test --tests '...Test'`, 프론트 순수 로직은 해당 테스트 파일을 `node --experimental-strip-types --test ...`로 실행한다. 컴파일 영향만 있는 수정은 `compileJava`, `compileTestJava` 또는 타입 검사로 먼저 확인할 수 있다.
+- 하나의 기능 목적이 완료되어 결과를 넘기기 전에는 백엔드 `./gradlew test`, 프론트엔드 `npm run check`를 각각 한 번 실행한다.
+- `workE2eTest`는 PostgreSQL 전용 SQL·Flyway·DB constraint, 트랜잭션 경계, 멱등 처리, lock·동시성, 수량·금액·정산처럼 실제 DB 경계가 바뀐 경우에만 기능 단위 체크포인트에서 실행한다. 문서·포맷·import·표현 전용 UI 수정 뒤에는 다시 실행하지 않는다.
+- 전체 검증 뒤의 변경이 문서·포맷·import처럼 동작을 바꾸지 않는 범위라면 같은 전체 검증을 재실행하지 않고, 마지막 성공 검증과 이후 변경 범위를 결과에 명시한다.
 - URL parser, selection coordinator, 날짜·payload 변환은 pure function 단위 테스트를 우선한다.
 - 서버 상태 갱신, cache invalidation, 주요 dialog 흐름은 integration 또는 E2E 검증이 필요한지 확인한다.
 - 실행하지 못한 테스트는 PR 또는 작업 결과에 명시한다.
