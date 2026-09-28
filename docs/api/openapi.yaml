@@ -7286,6 +7286,8 @@ components:
           type: string
         memo:
           type: string
+        correctable:
+          type: boolean
     PageResponseOrchidGroupWorkHistoryResponse:
       type: object
       properties:

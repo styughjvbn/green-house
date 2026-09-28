@@ -221,10 +221,15 @@ public class WorkOperation extends BaseEntity {
 		if (status == WorkOperationStatus.CORRECTED) {
 			return;
 		}
-		if (status != WorkOperationStatus.COMPLETED || !workType.supportsStructureResultManagement()) {
+		if (!isStructureResultCorrectable()) {
 			throw new IllegalArgumentException("완료된 구조 변경 작업만 보정할 수 있습니다.");
 		}
 		status = WorkOperationStatus.CORRECTED;
+	}
+
+	public boolean isStructureResultCorrectable() {
+		return (status == WorkOperationStatus.COMPLETED || status == WorkOperationStatus.CORRECTED)
+				&& workType.supportsStructureResultManagement();
 	}
 
 	public void voidCompletedMutationWork(LocalDateTime voidedAt, String reason, String requestKey,
@@ -272,8 +277,7 @@ public class WorkOperation extends BaseEntity {
 		if (workDate == null) {
 			throw new IllegalArgumentException("보정 작업일이 필요합니다.");
 		}
-		if ((status != WorkOperationStatus.COMPLETED && status != WorkOperationStatus.CORRECTED)
-				|| !workType.supportsStructureResultManagement()) {
+		if (!isStructureResultCorrectable()) {
 			throw new IllegalArgumentException("완료된 구조 변경 작업의 작업일만 보정할 수 있습니다.");
 		}
 		long durationDays = plannedEndDate == null ? 0

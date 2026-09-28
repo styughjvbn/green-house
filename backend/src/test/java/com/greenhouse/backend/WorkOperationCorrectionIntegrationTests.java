@@ -127,6 +127,13 @@ class WorkOperationCorrectionIntegrationTests extends AbstractBackendIntegration
 			.findFirst()
 			.orElseThrow();
 		assertThat(correctionEffect.getResultDetails()).containsKey("adjustments");
+		Long correctionOperationId = correctionRepository.findAll().getFirst().getCorrectionWorkOperation().getId();
+		mockMvc.perform(get("/api/orchid-groups/{id}/work-history", createdGroupId))
+			.andExpect(status().isOk())
+			.andExpect(jsonPath("$.data[?(@.workOperationId == %d)].correctable".formatted(originalId))
+				.value(org.hamcrest.Matchers.hasItem(true)))
+			.andExpect(jsonPath("$.data[?(@.workOperationId == %d)].correctable".formatted(correctionOperationId))
+				.value(org.hamcrest.Matchers.hasItem(false)));
 	}
 
 	@Test

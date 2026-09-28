@@ -3529,6 +3529,7 @@ export interface components {
             };
             worker?: string;
             memo?: string;
+            correctable?: boolean;
         };
         PageResponseOrchidGroupWorkHistoryResponse: {
             content?: components["schemas"]["OrchidGroupWorkHistoryResponse"][];

@@ -428,6 +428,7 @@ export type OrchidGroupWorkHistory = {
   currentLocation: WorkLocationSnapshot;
   worker: string | null;
   memo: string | null;
+  correctable: boolean;
 };
 
 export type PartnerType = NonNullable<
