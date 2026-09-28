@@ -143,6 +143,11 @@ npm run api:types
 
 `GET /api/work-operations/{workOperationId}/details`는 완료 작업 화면용 정형 상세를 반환한다. `fields`는 작업 유형별 입력값을 표시용 키·라벨·값으로 변환하고, `executions`는 `WorkAppliedEffect`에 보존된 모든 실행 회차를 원본 투입·결과 난 묶음·수량/상태 변화·손실·위치 필드로 변환한다. `corrections`는 보정 사유와 난 묶음별 수량·상태 전후값을 시간순으로 반환한다. 클라이언트는 저장된 `details`, `commandDetails`, `resultDetails` JSON 키를 직접 해석하지 않는다. 과거 기록에 저장되지 않은 값은 응답에서 `null` 또는 빈 목록으로 유지한다.
 
+`GET /api/work-operations/{workOperationId}/graph`는 `detail=WORK|MUTATION|LINEAGE`, `depth`,
+`maxNodes`로 작업 중심 관계 그래프를 반환한다. 기본 `WORK`는 생성 출처·Receipt 형제·명시적 작업
+선후 관계만 포함하고, `MUTATION`은 직접 효과의 상태 revision, `LINEAGE`는 depth 범위의 연결 상태
+체인을 추가한다. 응답은 내부 Receipt key와 사용자 멱등 키를 노출하지 않는다.
+
 `GET /api/work-operations/{workOperationId}/void-eligibility`는 완료된 구조 변경의 원본 Mutation,
 SOURCE/RESULT와 무효화 차단 사유를 반환한다. `POST /api/work-operations/{workOperationId}/void`는 실행
 시 조건을 다시 검증하고 원본 상태 복원과 결과 생성을 함께 보상한다. 성공한 작업은 `VOIDED`가 되며
