@@ -21,6 +21,9 @@ public interface WorkOperationRepository extends JpaRepository<WorkOperation, Lo
 			WorkOperationRelationType relationType);
 
 	@EntityGraph(attributePaths = "workType")
+	List<WorkOperation> findByParentOperationIdInOrderByParentOperationIdAscIdAsc(Collection<Long> parentOperationIds);
+
+	@EntityGraph(attributePaths = "workType")
 	@Query(value = """
 			select o from WorkOperation o
 			where exists (

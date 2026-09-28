@@ -1087,6 +1087,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/work-operations/{workOperationId}/graph": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["getGraph"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/work-operations/{workOperationId}/details": {
         parameters: {
             query?: never;
@@ -3175,6 +3191,14 @@ export interface components {
             /** Format: int32 */
             totalPages?: number;
         };
+        WorkOperationRelationSummaryResponse: {
+            /** @enum {string} */
+            originType?: "INBOUND" | "WORK_MANAGEMENT" | "SYSTEM";
+            inboundRecordIds?: number[];
+            /** Format: int32 */
+            creationBatchSize?: number;
+            hasLinkedOperations?: boolean;
+        };
         WorkOperationSummaryResponse: {
             /** Format: int64 */
             id?: number;
@@ -3216,6 +3240,7 @@ export interface components {
             voidReason?: string;
             /** Format: int64 */
             voidMutationId?: number;
+            relationSummary?: components["schemas"]["WorkOperationRelationSummaryResponse"];
             progress?: components["schemas"]["WorkOperationProgressResponse"];
             availableActions?: ("START" | "PAUSE" | "RESUME" | "COMPLETE" | "CANCEL" | "VOID")[];
         };
@@ -3238,6 +3263,88 @@ export interface components {
             resultOrchidGroupIds?: number[];
             relatedWorkOperationIds?: number[];
             blockers?: components["schemas"]["Blocker"][];
+        };
+        ApiResponseWorkOperationGraphResponse: {
+            data?: components["schemas"]["WorkOperationGraphResponse"];
+            message?: string;
+        };
+        WorkOperationGraphEdgeResponse: {
+            id?: string;
+            sourceNodeId?: string;
+            targetNodeId?: string;
+            /** @enum {string} */
+            edgeType?: "ORIGINATED" | "SAME_COMMAND" | "PRECEDES" | "EFFECT" | "STATE_INPUT" | "STATE_OUTPUT" | "MUTATION_RELATION";
+            relationType?: string;
+        };
+        WorkOperationGraphNodeResponse: {
+            id?: string;
+            /** @enum {string} */
+            nodeType?: "ORIGIN" | "CREATION_BATCH" | "WORK_OPERATION" | "MUTATION" | "STATE" | "JUNCTION";
+            selected?: boolean;
+            /** @enum {string} */
+            originType?: "INBOUND" | "WORK_MANAGEMENT" | "SYSTEM";
+            /** Format: int64 */
+            originReferenceId?: number;
+            /** Format: int32 */
+            creationBatchSize?: number;
+            /** Format: int64 */
+            workOperationId?: number;
+            workTypeCode?: string;
+            workType?: string;
+            title?: string;
+            status?: string;
+            /** Format: date */
+            workDate?: string;
+            orchidGroupIds?: number[];
+            varietyNames?: string[];
+            /** Format: int64 */
+            mutationId?: number;
+            mutationType?: string;
+            /** Format: date */
+            effectiveBusinessDate?: string;
+            /** Format: date-time */
+            occurredAt?: string;
+            /** Format: int64 */
+            orchidGroupId?: number;
+            /** Format: int64 */
+            stateRevision?: number;
+            state?: components["schemas"]["WorkOperationGraphStateResponse"];
+        };
+        WorkOperationGraphResponse: {
+            /** Format: int64 */
+            rootWorkOperationId?: number;
+            /** @enum {string} */
+            detail?: "WORK" | "MUTATION" | "LINEAGE";
+            /** Format: int32 */
+            depth?: number;
+            /** Format: int32 */
+            maxNodes?: number;
+            truncated?: boolean;
+            nodes?: components["schemas"]["WorkOperationGraphNodeResponse"][];
+            edges?: components["schemas"]["WorkOperationGraphEdgeResponse"][];
+        };
+        WorkOperationGraphStateResponse: {
+            /** Format: int32 */
+            quantity?: number;
+            /** Format: int32 */
+            reservedQuantity?: number;
+            status?: string;
+            /** Format: int64 */
+            varietyId?: number;
+            genus?: string;
+            varietyName?: string;
+            /** Format: int32 */
+            ageYear?: number;
+            potSizeCode?: string;
+            /** Format: int64 */
+            bedZoneId?: number;
+            /** Format: int32 */
+            houseNumber?: number;
+            /** Format: int32 */
+            physicalBedNumber?: number;
+            bedZoneName?: string;
+            startPosition?: number;
+            endPosition?: number;
         };
         ApiResponseWorkOperationDetailResponse: {
             data?: components["schemas"]["WorkOperationDetailResponse"];
@@ -6566,6 +6673,32 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ApiResponseRepotWorkOperationResponse"];
+                };
+            };
+        };
+    };
+    getGraph: {
+        parameters: {
+            query?: {
+                detail?: "WORK" | "MUTATION" | "LINEAGE";
+                depth?: number;
+                maxNodes?: number;
+            };
+            header?: never;
+            path: {
+                workOperationId: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiResponseWorkOperationGraphResponse"];
                 };
             };
         };

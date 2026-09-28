@@ -20,6 +20,8 @@ class WorkOperationSummaryAssembler {
 
 	private final WorkOperationActionResolver actionResolver;
 
+	private final WorkOperationRelationSummaryAssembler relationSummaryAssembler;
+
 	List<WorkOperationSummaryResponse> assembleAll(List<WorkOperation> operations) {
 		if (operations.isEmpty()) {
 			return List.of();
@@ -28,9 +30,10 @@ class WorkOperationSummaryAssembler {
 			.findProgressByWorkOperationIdIn(operations.stream().map(WorkOperation::getId).toList())
 			.stream()
 			.collect(Collectors.toMap(WorkOperationProgressProjection::workOperationId, Function.identity()));
+		var relationSummaries = relationSummaryAssembler.assemble(operations);
 		return operations.stream().map(operation -> {
 			WorkOperationProgress progress = progress(progressByOperationId.get(operation.getId()));
-			return WorkOperationSummaryResponse.from(operation, progress,
+			return WorkOperationSummaryResponse.from(operation, relationSummaries.get(operation.getId()), progress,
 					actionResolver.resolveOperation(operation, progress));
 		}).toList();
 	}

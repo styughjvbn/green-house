@@ -1,6 +1,7 @@
 package com.greenhouse.backend.work.repository;
 
 import com.greenhouse.backend.work.domain.correction.WorkOperationCorrection;
+import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 import org.springframework.data.jpa.repository.EntityGraph;
@@ -12,5 +13,10 @@ public interface WorkOperationCorrectionRepository extends JpaRepository<WorkOpe
 	List<WorkOperationCorrection> findByOriginalWorkOperationIdOrderByCreatedAtAscIdAsc(Long originalWorkOperationId);
 
 	Optional<WorkOperationCorrection> findByCorrectionWorkOperationId(Long correctionWorkOperationId);
+
+	@EntityGraph(attributePaths = { "originalWorkOperation", "originalWorkOperation.workType",
+			"correctionWorkOperation", "correctionWorkOperation.workType" })
+	List<WorkOperationCorrection> findByOriginalWorkOperationIdInOrCorrectionWorkOperationIdIn(
+			Collection<Long> originalIds, Collection<Long> correctionIds);
 
 }

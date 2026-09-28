@@ -16,6 +16,9 @@ public interface WorkAppliedEffectRepository extends JpaRepository<WorkAppliedEf
 	@EntityGraph(attributePaths = "target")
 	List<WorkAppliedEffect> findByWorkOperationIdOrderByIdAsc(Long workOperationId);
 
+	@EntityGraph(attributePaths = "workOperation")
+	List<WorkAppliedEffect> findByWorkOperationIdInOrderByWorkOperationIdAscIdAsc(Collection<Long> workOperationIds);
+
 	Optional<WorkAppliedEffect> findByWorkOperationIdAndEffectKey(Long workOperationId, String effectKey);
 
 	@EntityGraph(attributePaths = { "workOperation", "workOperation.workType", "target" })

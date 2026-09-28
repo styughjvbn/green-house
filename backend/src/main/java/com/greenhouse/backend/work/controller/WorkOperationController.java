@@ -11,6 +11,7 @@ import com.greenhouse.backend.work.application.operation.InboundPottingPlanServi
 import com.greenhouse.backend.work.application.operation.StructureChangeExecutionService;
 import com.greenhouse.backend.work.application.operation.StructureChangeRecordService;
 import com.greenhouse.backend.work.application.operation.WorkOperationDetailService;
+import com.greenhouse.backend.work.application.operation.WorkOperationGraphQueryService;
 import com.greenhouse.backend.work.application.operation.WorkOperationPlanService;
 import com.greenhouse.backend.work.application.operation.WorkOperationProgressService;
 import com.greenhouse.backend.work.application.operation.WorkOperationQueryService;
@@ -32,6 +33,8 @@ import com.greenhouse.backend.work.dto.operation.WorkOperationBatchCreateRequest
 import com.greenhouse.backend.work.dto.operation.WorkOperationCompleteRequest;
 import com.greenhouse.backend.work.dto.operation.WorkOperationCreateRequest;
 import com.greenhouse.backend.work.dto.operation.WorkOperationDetailResponse;
+import com.greenhouse.backend.work.dto.operation.WorkOperationGraphDetail;
+import com.greenhouse.backend.work.dto.operation.WorkOperationGraphResponse;
 import com.greenhouse.backend.work.dto.operation.WorkOperationSummaryResponse;
 import com.greenhouse.backend.work.dto.target.WorkTargetExecutionRequest;
 import com.greenhouse.backend.work.dto.target.WorkTargetPreviewRequest;
@@ -72,6 +75,8 @@ public class WorkOperationController {
 	private final WorkOperationCorrectionService workOperationCorrectionService;
 
 	private final WorkOperationDetailService workOperationDetailService;
+
+	private final WorkOperationGraphQueryService workOperationGraphQueryService;
 
 	@PostMapping("/work-operations/target-preview")
 	public ApiResponse<WorkTargetPreviewResponse> preview(@Valid @RequestBody WorkTargetPreviewRequest request) {
@@ -191,6 +196,13 @@ public class WorkOperationController {
 	@GetMapping("/work-operations/{workOperationId}/details")
 	public ApiResponse<WorkOperationDetailResponse> getDetails(@PathVariable Long workOperationId) {
 		return ApiResponse.ok(workOperationDetailService.get(workOperationId));
+	}
+
+	@GetMapping("/work-operations/{workOperationId}/graph")
+	public ApiResponse<WorkOperationGraphResponse> getGraph(@PathVariable Long workOperationId,
+			@RequestParam(defaultValue = "WORK") WorkOperationGraphDetail detail,
+			@RequestParam(defaultValue = "1") int depth, @RequestParam(defaultValue = "120") int maxNodes) {
+		return ApiResponse.ok(workOperationGraphQueryService.get(workOperationId, detail, depth, maxNodes));
 	}
 
 	@PostMapping("/work-operations/{workOperationId}/complete")
