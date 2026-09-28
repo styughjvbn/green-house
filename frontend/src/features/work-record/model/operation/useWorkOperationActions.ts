@@ -2,11 +2,7 @@
 
 import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import type {
-  WorkOperation,
-  WorkOperationSummary,
-  WorkOperationTarget,
-} from "@/entities/farm/types";
+import type { WorkOperation, WorkOperationTarget } from "@/entities/farm/types";
 import {
   completeWorkOperation,
   transitionWorkOperation,
@@ -16,18 +12,16 @@ import { useWorkRecordInvalidation } from "../useWorkRecordInvalidation";
 import { workOperationQueryOptions } from "../workRecordQueryOptions";
 import { workRecordQueryKeys } from "../workRecordQueryKeys";
 
-export function useWorkOperationActions(operations: WorkOperationSummary[]) {
+export function useWorkOperationActions() {
   const { invalidateOperations, invalidateWorkData } =
     useWorkRecordInvalidation();
   const queryClient = useQueryClient();
   const [selectedId, setSelectedId] = useState<number | null>(null);
   const [executionTarget, setExecutionTarget] =
     useState<WorkOperationTarget | null>(null);
-  const selectedSummary =
-    operations.find((operation) => operation.id === selectedId) ?? null;
   const selectedQuery = useQuery({
     ...workOperationQueryOptions(selectedId ?? 0),
-    enabled: selectedSummary != null,
+    enabled: selectedId != null,
   });
   const selected = selectedQuery.data ?? null;
   const actionMutation = useMutation({
@@ -92,7 +86,7 @@ export function useWorkOperationActions(operations: WorkOperationSummary[]) {
     },
     select: setSelectedId,
     selected,
-    selectedId: selectedSummary?.id ?? null,
+    selectedId,
     executionSaved(updated: WorkOperation) {
       setSelectedId(updated.id);
       setExecutionTarget(null);

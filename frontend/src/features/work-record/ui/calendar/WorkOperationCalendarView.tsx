@@ -29,7 +29,7 @@ export function WorkOperationCalendarView({
     workOperationCalendarQueryOptions(routeState),
   );
   const operations = operationsQuery.data ?? [];
-  const actions = useWorkOperationActions(operations);
+  const actions = useWorkOperationActions();
   const month = routeState.month;
   const status = routeState.filters.status;
   const loading = operationsQuery.isFetching || actions.loading;

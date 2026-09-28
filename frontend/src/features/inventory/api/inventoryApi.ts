@@ -260,6 +260,12 @@ export function getInboundRecords(query: InboundQuery = {}) {
   ).then((result) => mapPage(result, toInboundRecord));
 }
 
+export function getInboundRecord(inboundRecordId: number) {
+  return fetchApi<InboundRecordResponse>(
+    `/inbound-records/${inboundRecordId}`,
+  ).then(toInboundRecord);
+}
+
 export function createInboundRecord(payload: InboundRecordPayload) {
   return requestJson<InboundRecordResponse>(
     "/inbound-records",

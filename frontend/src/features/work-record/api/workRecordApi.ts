@@ -16,6 +16,8 @@ import type {
   WorkDerivedGroupOption,
   WorkCollectionOption,
   WorkOperationDetail,
+  WorkOperationGraph,
+  WorkOperationGraphDetail,
   WorkTargetPreviewPayload,
 } from "../model/types";
 import { manualWorkTargetSource } from "../model/workTargetSource";
@@ -186,6 +188,22 @@ export function getWorkOperationDetails(
 ): Promise<WorkOperationDetail> {
   return fetchApi<WorkOperationDetail>(
     `/work-operations/${workOperationId}/details`,
+  );
+}
+
+export function getWorkOperationGraph(
+  workOperationId: number,
+  detail: WorkOperationGraphDetail,
+  depth: number,
+  maxNodes: number,
+): Promise<WorkOperationGraph> {
+  const params = new URLSearchParams({
+    detail,
+    depth: String(depth),
+    maxNodes: String(maxNodes),
+  });
+  return fetchApi<WorkOperationGraph>(
+    `/work-operations/${workOperationId}/graph?${params}`,
   );
 }
 

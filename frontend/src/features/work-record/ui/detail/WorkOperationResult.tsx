@@ -4,6 +4,7 @@ import { getWorkExecutionKind } from "../../model/work-types/workTypeDefinition"
 import { WorkCompletionDateDialog } from "./WorkCompletionDateDialog";
 import { WorkOperationDetails } from "./WorkOperationDetails";
 import { WorkOperationVoidDialog } from "./WorkOperationVoidDialog";
+import { WorkOperationGraph } from "./WorkOperationGraph";
 import { operationStatusLabel } from "../common/workOperationLabels";
 
 export function OperationResult({
@@ -14,6 +15,7 @@ export function OperationResult({
   onOperationAction,
   onTargetAction,
   onExecuteTarget,
+  onSelectOperation,
   onVoidSaved,
 }: {
   className?: string;
@@ -27,6 +29,7 @@ export function OperationResult({
     completedDate?: string,
   ) => void;
   onExecuteTarget?: (target: WorkOperation["targets"][number]) => void;
+  onSelectOperation: (id: number) => void;
   onVoidSaved: (operation: WorkOperation) => void;
 }) {
   const [completionTargetId, setCompletionTargetId] = useState<
@@ -169,6 +172,10 @@ export function OperationResult({
         onExecuteTarget={onExecuteTarget}
         onRequestTargetCompletion={setCompletionTargetId}
         onTargetAction={(targetId, action) => onTargetAction(targetId, action)}
+      />
+      <WorkOperationGraph
+        workOperationId={operation.id}
+        onSelectOperation={onSelectOperation}
       />
       {completionTargetId != null ? (
         <WorkCompletionDateDialog

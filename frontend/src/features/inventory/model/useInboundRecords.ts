@@ -12,7 +12,7 @@ import {
   voidInboundPotting,
 } from "../api/inventoryApi";
 import { createUuid } from "@/shared/lib/id";
-import type { InventoryRouteState } from "../lib/inventoryRouteState";
+import type { InboundRouteState } from "../lib/inventoryRouteState";
 import {
   createEmptyInboundFilters,
   INBOUND_FILTER_KEYS,
@@ -20,11 +20,11 @@ import {
 } from "../lib/inventoryUrlFilters";
 import {
   inboundPageQueryOptions,
+  inboundRecordQueryOptions,
   varietyLookupQueryOptions,
 } from "./inventoryQueryOptions";
 import { inventoryQueryKeys } from "./inventoryQueryKeys";
 import type {
-  InboundFilterState,
   InboundPottingPayload,
   InboundRecord,
   InboundRecordPayload,
@@ -34,7 +34,7 @@ import type {
 export function useInboundRecords({
   routeState,
 }: {
-  routeState: InventoryRouteState<InboundFilterState>;
+  routeState: InboundRouteState;
 }) {
   const queryClient = useQueryClient();
   const query = useQuery(inboundPageQueryOptions(routeState));
@@ -47,11 +47,17 @@ export function useInboundRecords({
   const pageData =
     query.data ??
     createEmptyPage<InboundRecord>(routeState.size, routeState.page);
-  const [selectedId, setSelectedId] = useState<number | null>(null);
+  const [selectedId, setSelectedId] = useState<number | null>(
+    routeState.selectedId,
+  );
+  const selectedInPage =
+    pageData.content.find((item) => item.id === selectedId) ?? null;
+  const selectedQuery = useQuery({
+    ...inboundRecordQueryOptions(selectedId ?? 0),
+    enabled: selectedId != null && selectedInPage == null,
+  });
   const selected =
-    pageData.content.find((item) => item.id === selectedId) ??
-    pageData.content[0] ??
-    null;
+    selectedInPage ?? selectedQuery.data ?? pageData.content[0] ?? null;
   const lookupQuery = useQuery(varietyLookupQueryOptions());
   const [housesEnabled, setHousesEnabled] = useState(false);
   const housesQuery = useQuery<House[]>({
@@ -179,6 +185,7 @@ export function useInboundRecords({
     },
     loading:
       query.isFetching ||
+      selectedQuery.isFetching ||
       createMutation.isPending ||
       updateMutation.isPending ||
       pottingMutation.isPending ||
@@ -188,6 +195,7 @@ export function useInboundRecords({
     housesError: toMessage(housesQuery.error),
     error: toMessage(
       query.error ??
+        selectedQuery.error ??
         lookupQuery.error ??
         createMutation.error ??
         updateMutation.error ??

@@ -12,6 +12,10 @@ export type InventoryRouteState<Filters> = {
   size: number;
 };
 
+export type InboundRouteState = InventoryRouteState<InboundFilterState> & {
+  selectedId: number | null;
+};
+
 export type SearchParamReader = {
   get(name: string): string | null;
 };
@@ -82,7 +86,7 @@ export function readVarietyRouteState(
 
 export function readInboundRouteState(
   params: SearchParamReader,
-): InventoryRouteState<InboundFilterState> {
+): InboundRouteState {
   return {
     filters: {
       inboundType: readEnum(params.get("inboundType"), INBOUND_TYPES),
@@ -91,7 +95,14 @@ export function readInboundRouteState(
     },
     page: readPage(params.get("page")),
     size: readSize(params.get("size")),
+    selectedId: readOptionalId(params.get("inboundId")),
   };
+}
+
+function readOptionalId(value: string | null) {
+  if (value == null) return null;
+  const parsed = Number(value);
+  return Number.isSafeInteger(parsed) && parsed > 0 ? parsed : null;
 }
 
 function normalizeAll(value: string | null) {

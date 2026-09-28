@@ -367,6 +367,7 @@ export type WorkOperation = {
   voidedAt: string | null;
   voidReason: string | null;
   voidMutationId: number | null;
+  relationSummary?: WorkOperationRelationSummary;
   progress: {
     total: number;
     pending: number;
@@ -383,6 +384,15 @@ export type WorkOperation = {
 };
 
 export type WorkOperationSummary = Omit<WorkOperation, "targets">;
+
+export type WorkOperationRelationSummary = {
+  originType: NonNullable<
+    ApiSchemas["WorkOperationRelationSummaryResponse"]["originType"]
+  >;
+  inboundRecordIds: number[];
+  creationBatchSize: number;
+  hasLinkedOperations: boolean;
+};
 
 export type WorkOperationVoidEligibility = {
   workOperationId: number;

@@ -45,6 +45,7 @@ export function WorkOperationDetailPanel({
             onOperationAction={actions.runOperationAction}
             onTargetAction={actions.runTargetAction}
             onExecuteTarget={actions.openExecution}
+            onSelectOperation={actions.select}
             onVoidSaved={actions.voidSaved}
           />
         ) : actions.detailLoading ? (

@@ -69,6 +69,41 @@ test("bundles multiple result edges behind one junction", () => {
   );
 });
 
+test("bundles work graph results that expose RESULT as relationType", () => {
+  const nodes = [
+    mutationNode("mutation-21", 21),
+    stateNode("group-10-revision-1", 10, 1),
+    stateNode("group-11-revision-1", 11, 1),
+  ];
+  const edges = [
+    {
+      ...edge(
+        "result-10",
+        "mutation-21",
+        "group-10-revision-1",
+        "STATE_OUTPUT",
+      ),
+      relationType: "RESULT",
+    },
+    {
+      ...edge(
+        "result-11",
+        "mutation-21",
+        "group-11-revision-1",
+        "STATE_OUTPUT",
+      ),
+      relationType: "RESULT",
+    },
+  ];
+
+  const readable = buildReadableMutationGraph(nodes, edges);
+
+  assert.equal(
+    readable.edges.filter((item) => item.edgeType === "RESULT_BRANCH").length,
+    2,
+  );
+});
+
 test("lays out state and mutation nodes in directed revision order", () => {
   const nodes = [
     stateNode("group-7-revision-1", 7, 1),

@@ -18,7 +18,7 @@ export function WorkOperationListView({
 }) {
   const list = useWorkOperations(routeState);
   const operations = list.pageData.content;
-  const actions = useWorkOperationActions(operations);
+  const actions = useWorkOperationActions();
   const loading = list.query.isFetching || actions.loading;
   const error =
     actions.error ??

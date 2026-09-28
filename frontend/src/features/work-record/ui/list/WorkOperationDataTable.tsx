@@ -58,6 +58,7 @@ export function WorkOperationDataTable({
               {row.original.title}
             </strong>
             <span className="text-[#738077]">{row.original.workType}</span>
+            <RelationBadges operation={row.original} />
           </>
         ),
         size: 150,
@@ -115,6 +116,30 @@ export function WorkOperationDataTable({
       onPageSizeChange={onPageSizeChange}
       onRowClick={(row) => onSelect(row.id)}
     />
+  );
+}
+
+function RelationBadges({ operation }: { operation: WorkOperationSummary }) {
+  const summary = operation.relationSummary;
+  if (!summary) return null;
+  return (
+    <div className="mt-1 flex flex-wrap gap-1">
+      {summary.originType === "INBOUND" ? (
+        <Badge>입고 관리에서 생성</Badge>
+      ) : null}
+      {summary.creationBatchSize > 1 ? (
+        <Badge>함께 등록 {summary.creationBatchSize}건</Badge>
+      ) : null}
+      {summary.hasLinkedOperations ? <Badge>연계 작업 있음</Badge> : null}
+    </div>
+  );
+}
+
+function Badge({ children }: { children: ReactNode }) {
+  return (
+    <span className="rounded bg-[#edf5ed] px-1.5 py-0.5 text-[10px] font-semibold text-[#397046]">
+      {children}
+    </span>
   );
 }
 
