@@ -139,6 +139,8 @@ npm run api:types
 
 작업 목록과 캘린더 응답은 `WorkOperationSummaryResponse`를 사용한다. 진행률과 전체 작업 `availableActions`는 포함하지만 대상 배열은 포함하지 않는다. 사용자가 작업을 선택하면 `GET /api/work-operations/{workOperationId}`로 `WorkOperationResponse`를 조회해 대상별 상태와 action을 표시한다.
 
+`GET /api/work-operations/{workOperationId}/relations?kind=CREATION_BATCH|LINKED`는 배지를 선택했을 때만 생성 묶음 또는 선후 연계 작업 요약을 반환한다. 전체 목록의 필터·정렬·페이지는 변경하지 않는다.
+
 대상 미리보기와 작업 생성 요청에서 `sourceScopeType = DERIVED_GROUP`이면 `sourceDerivedGroupKey`를 사용한다. 이는 품종·년생·화분 크기로 만든 자동 그룹의 복합 식별자이며, `sourceScopeType`의 문자열 표현이나 저장된 범위 Entity의 ID가 아니다. 작업 목록의 `sourceScopeType`·`sourceScopeId`는 저장된 작업 원본 범위를 필터링하고, 작업 이력의 `historyScopeType`·`historyScopeId`는 현재 조회할 농장 구조 또는 난 묶음 범위를 지정한다.
 
 `GET /api/work-operations/{workOperationId}/details`는 완료 작업 화면용 정형 상세를 반환한다. `fields`는 작업 유형별 입력값을 표시용 키·라벨·값으로 변환하고, `executions`는 `WorkAppliedEffect`에 보존된 모든 실행 회차를 원본 투입·결과 난 묶음·수량/상태 변화·손실·위치 필드로 변환한다. `corrections`는 보정 사유와 난 묶음별 수량·상태 전후값을 시간순으로 반환한다. 클라이언트는 저장된 `details`, `commandDetails`, `resultDetails` JSON 키를 직접 해석하지 않는다. 과거 기록에 저장되지 않은 값은 응답에서 `null` 또는 빈 목록으로 유지한다.
