@@ -1087,6 +1087,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/work-operations/{workOperationId}/relations": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["getRelations"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/work-operations/{workOperationId}/graph": {
         parameters: {
             query?: never;
@@ -3264,6 +3280,10 @@ export interface components {
             relatedWorkOperationIds?: number[];
             blockers?: components["schemas"]["Blocker"][];
         };
+        ApiResponseListWorkOperationSummaryResponse: {
+            data?: components["schemas"]["WorkOperationSummaryResponse"][];
+            message?: string;
+        };
         ApiResponseWorkOperationGraphResponse: {
             data?: components["schemas"]["WorkOperationGraphResponse"];
             message?: string;
@@ -3496,10 +3516,6 @@ export interface components {
             /** Format: date */
             pottingDueDate?: string;
             potSize?: string;
-        };
-        ApiResponseListWorkOperationSummaryResponse: {
-            data?: components["schemas"]["WorkOperationSummaryResponse"][];
-            message?: string;
         };
         ApiResponsePageResponseOrchidGroupWorkHistoryResponse: {
             data?: components["schemas"]["PageResponseOrchidGroupWorkHistoryResponse"];
@@ -6674,6 +6690,30 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ApiResponseRepotWorkOperationResponse"];
+                };
+            };
+        };
+    };
+    getRelations: {
+        parameters: {
+            query: {
+                kind: "CREATION_BATCH" | "LINKED";
+            };
+            header?: never;
+            path: {
+                workOperationId: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiResponseListWorkOperationSummaryResponse"];
                 };
             };
         };

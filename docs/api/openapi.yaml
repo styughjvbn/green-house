@@ -2030,6 +2030,33 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ApiResponseRepotWorkOperationResponse'
+  /api/work-operations/{workOperationId}/relations:
+    get:
+      tags:
+      - work-operation-controller
+      operationId: getRelations
+      parameters:
+      - name: workOperationId
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: int64
+      - name: kind
+        in: query
+        required: true
+        schema:
+          type: string
+          enum:
+          - CREATION_BATCH
+          - LINKED
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponseListWorkOperationSummaryResponse'
   /api/work-operations/{workOperationId}/graph:
     get:
       tags:
@@ -6788,6 +6815,15 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/Blocker'
+    ApiResponseListWorkOperationSummaryResponse:
+      type: object
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/WorkOperationSummaryResponse'
+        message:
+          type: string
     ApiResponseWorkOperationGraphResponse:
       type: object
       properties:
@@ -7221,15 +7257,6 @@ components:
           type: string
           format: date
         potSize:
-          type: string
-    ApiResponseListWorkOperationSummaryResponse:
-      type: object
-      properties:
-        data:
-          type: array
-          items:
-            $ref: '#/components/schemas/WorkOperationSummaryResponse'
-        message:
           type: string
     ApiResponsePageResponseOrchidGroupWorkHistoryResponse:
       type: object

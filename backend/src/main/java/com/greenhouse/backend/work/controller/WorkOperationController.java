@@ -15,6 +15,7 @@ import com.greenhouse.backend.work.application.operation.WorkOperationGraphQuery
 import com.greenhouse.backend.work.application.operation.WorkOperationPlanService;
 import com.greenhouse.backend.work.application.operation.WorkOperationProgressService;
 import com.greenhouse.backend.work.application.operation.WorkOperationQueryService;
+import com.greenhouse.backend.work.application.operation.WorkOperationRelationQueryService;
 import com.greenhouse.backend.work.application.operation.WorkOperationView;
 import com.greenhouse.backend.work.domain.operation.WorkOperationSearchView;
 import com.greenhouse.backend.work.domain.operation.WorkOperationStatus;
@@ -35,6 +36,7 @@ import com.greenhouse.backend.work.dto.operation.WorkOperationCreateRequest;
 import com.greenhouse.backend.work.dto.operation.WorkOperationDetailResponse;
 import com.greenhouse.backend.work.dto.operation.WorkOperationGraphDetail;
 import com.greenhouse.backend.work.dto.operation.WorkOperationGraphResponse;
+import com.greenhouse.backend.work.dto.operation.WorkOperationRelationKind;
 import com.greenhouse.backend.work.dto.operation.WorkOperationSummaryResponse;
 import com.greenhouse.backend.work.dto.target.WorkTargetExecutionRequest;
 import com.greenhouse.backend.work.dto.target.WorkTargetPreviewRequest;
@@ -77,6 +79,8 @@ public class WorkOperationController {
 	private final WorkOperationDetailService workOperationDetailService;
 
 	private final WorkOperationGraphQueryService workOperationGraphQueryService;
+
+	private final WorkOperationRelationQueryService workOperationRelationQueryService;
 
 	@PostMapping("/work-operations/target-preview")
 	public ApiResponse<WorkTargetPreviewResponse> preview(@Valid @RequestBody WorkTargetPreviewRequest request) {
@@ -203,6 +207,12 @@ public class WorkOperationController {
 			@RequestParam(defaultValue = "WORK") WorkOperationGraphDetail detail,
 			@RequestParam(defaultValue = "1") int depth, @RequestParam(defaultValue = "120") int maxNodes) {
 		return ApiResponse.ok(workOperationGraphQueryService.get(workOperationId, detail, depth, maxNodes));
+	}
+
+	@GetMapping("/work-operations/{workOperationId}/relations")
+	public ApiResponse<List<WorkOperationSummaryResponse>> getRelations(@PathVariable Long workOperationId,
+			@RequestParam WorkOperationRelationKind kind) {
+		return ApiResponse.ok(workOperationRelationQueryService.get(workOperationId, kind));
 	}
 
 	@PostMapping("/work-operations/{workOperationId}/complete")
