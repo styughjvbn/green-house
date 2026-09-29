@@ -55,7 +55,7 @@ export function WorkOperationGraph({
   );
 
   return (
-    <section className="mt-4 overflow-hidden rounded-md border border-[#d7e1d5] bg-white">
+    <section className="overflow-hidden rounded-md border border-[#d7e1d5] bg-white">
       <header className="flex flex-wrap items-center justify-between gap-3 border-b border-[#e3e9e1] bg-[#f5f8f4] px-3 py-2">
         <div className="flex items-center gap-2 font-bold text-[#285b37]">
           <GitFork className="h-4 w-4" aria-hidden="true" />

@@ -18,6 +18,7 @@ import {
   operationStatusLabel,
   targetStatusLabel,
 } from "../common/workOperationLabels";
+import { WorkOperationGraph } from "./WorkOperationGraph";
 
 const DETAIL_LABELS: Record<string, string> = {
   actualQuantity: "실제 수량",
@@ -51,12 +52,13 @@ const HIDDEN_DETAIL_KEYS = new Set([
   "idempotencyKey",
 ]);
 
-type DetailTab = "overview" | "execution" | "targets";
+type DetailTab = "overview" | "execution" | "targets" | "graph";
 
 const TABS: Array<{ id: DetailTab; label: string }> = [
   { id: "overview", label: "개요" },
   { id: "execution", label: "실행" },
   { id: "targets", label: "대상" },
+  { id: "graph", label: "관계 그래프" },
 ];
 
 export function WorkOperationDetails({
@@ -65,6 +67,7 @@ export function WorkOperationDetails({
   onTargetAction,
   onExecuteTarget,
   onRequestTargetCompletion,
+  onSelectOperation,
 }: {
   operation: WorkOperation;
   actionLoading: boolean;
@@ -74,6 +77,7 @@ export function WorkOperationDetails({
   ) => void;
   onExecuteTarget?: (target: WorkOperation["targets"][number]) => void;
   onRequestTargetCompletion: (targetId: number) => void;
+  onSelectOperation: (id: number) => void;
 }) {
   const [activeTab, setActiveTab] = useState<DetailTab>("overview");
   const detailQuery = useQuery({
@@ -155,6 +159,12 @@ export function WorkOperationDetails({
             onExecuteTarget={onExecuteTarget}
             onRequestTargetCompletion={onRequestTargetCompletion}
             onTargetAction={onTargetAction}
+          />
+        ) : null}
+        {activeTab === "graph" ? (
+          <WorkOperationGraph
+            workOperationId={operation.id}
+            onSelectOperation={onSelectOperation}
           />
         ) : null}
       </div>
