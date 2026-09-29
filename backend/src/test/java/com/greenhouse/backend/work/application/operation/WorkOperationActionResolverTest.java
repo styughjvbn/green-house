@@ -63,7 +63,7 @@ class WorkOperationActionResolverTest {
 
 		assertThat(resolver.resolveOperation(operation, List.of())).containsExactly(WorkOperationAction.VOID);
 
-		when(operation.getRelationType()).thenReturn(WorkOperationRelationType.MOVEMENT_PRE_DISCARD);
+		when(operation.getRelationType()).thenReturn(WorkOperationRelationType.MOVEMENT_DISCARD);
 		assertThat(resolver.resolveOperation(operation, List.of())).isEmpty();
 	}
 

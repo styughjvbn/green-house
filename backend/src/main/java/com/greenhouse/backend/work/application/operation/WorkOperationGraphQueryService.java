@@ -140,7 +140,7 @@ public class WorkOperationGraphQueryService {
 		}
 		operationRepository
 			.findByParentOperationIdAndRelationTypeOrderByIdAsc(root.getId(),
-					WorkOperationRelationType.MOVEMENT_PRE_DISCARD)
+					WorkOperationRelationType.MOVEMENT_DISCARD)
 			.forEach(operation -> result.putIfAbsent(operation.getId(), operation));
 		correctionRepository
 			.findByOriginalWorkOperationIdInOrCorrectionWorkOperationIdIn(List.of(root.getId()), List.of(root.getId()))
@@ -218,10 +218,10 @@ public class WorkOperationGraphQueryService {
 			List<WorkOperationGraphEdgeResponse> edges) {
 		for (WorkOperation operation : operations.values()) {
 			if (operation.getParentOperation() != null && operations.containsKey(operation.getParentOperation().getId())
-					&& operation.getRelationType() == WorkOperationRelationType.MOVEMENT_PRE_DISCARD) {
+					&& operation.getRelationType() == WorkOperationRelationType.MOVEMENT_DISCARD) {
 				edges.add(new WorkOperationGraphEdgeResponse(
-						"precedes-" + operation.getId() + "-" + operation.getParentOperation().getId(),
-						operationNodeId(operation.getId()), operationNodeId(operation.getParentOperation().getId()),
+						"precedes-" + operation.getParentOperation().getId() + "-" + operation.getId(),
+						operationNodeId(operation.getParentOperation().getId()), operationNodeId(operation.getId()),
 						WorkOperationGraphEdgeType.PRECEDES, operation.getRelationType().name()));
 			}
 		}

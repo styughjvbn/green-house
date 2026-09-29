@@ -89,7 +89,7 @@ class WorkOperationGraphQueryServiceTest {
 		when(operationRepository.findWithWorkTypeById(51L)).thenReturn(Optional.of(selected));
 		when(operationRepository.findWithWorkTypeByIdIn(List.of(51L, 52L))).thenReturn(List.of(selected, sibling));
 		when(operationRepository.findByParentOperationIdAndRelationTypeOrderByIdAsc(51L,
-				WorkOperationRelationType.MOVEMENT_PRE_DISCARD))
+				WorkOperationRelationType.MOVEMENT_DISCARD))
 			.thenReturn(List.of());
 		when(membershipRepository.findReceiptKeysByOperationId(51L)).thenReturn(List.of("receipt"));
 		when(receiptRepository.findByReceiptKeyIn(List.of("receipt"))).thenReturn(List.of(receipt));
@@ -112,7 +112,7 @@ class WorkOperationGraphQueryServiceTest {
 		WorkOperation selected = operation(70L, null, null);
 		when(operationRepository.findWithWorkTypeById(70L)).thenReturn(Optional.of(selected));
 		when(operationRepository.findByParentOperationIdAndRelationTypeOrderByIdAsc(70L,
-				WorkOperationRelationType.MOVEMENT_PRE_DISCARD))
+				WorkOperationRelationType.MOVEMENT_DISCARD))
 			.thenReturn(List.of());
 		when(membershipRepository.findReceiptKeysByOperationId(70L)).thenReturn(List.of());
 		when(relationSummaryAssembler.assemble(anyCollection()))
@@ -132,7 +132,7 @@ class WorkOperationGraphQueryServiceTest {
 		when(receipt.getResultOperationIds()).thenReturn(List.of(71L));
 		when(operationRepository.findWithWorkTypeById(71L)).thenReturn(Optional.of(selected));
 		when(operationRepository.findByParentOperationIdAndRelationTypeOrderByIdAsc(71L,
-				WorkOperationRelationType.MOVEMENT_PRE_DISCARD))
+				WorkOperationRelationType.MOVEMENT_DISCARD))
 			.thenReturn(List.of());
 		when(membershipRepository.findReceiptKeysByOperationId(71L)).thenReturn(List.of("single-receipt"));
 		when(receiptRepository.findByReceiptKeyIn(List.of("single-receipt"))).thenReturn(List.of(receipt));
@@ -146,12 +146,12 @@ class WorkOperationGraphQueryServiceTest {
 	}
 
 	@Test
-	void rendersMovementDiscardBeforeMovementAndExpandsLineageThroughFarmPort() {
+	void rendersMovementBeforeDiscardAndExpandsLineageThroughFarmPort() {
 		WorkOperation movement = operation(62L, null, null);
-		WorkOperation discard = operation(61L, movement, WorkOperationRelationType.MOVEMENT_PRE_DISCARD);
+		WorkOperation discard = operation(61L, movement, WorkOperationRelationType.MOVEMENT_DISCARD);
 		when(operationRepository.findWithWorkTypeById(62L)).thenReturn(Optional.of(movement));
 		when(operationRepository.findByParentOperationIdAndRelationTypeOrderByIdAsc(62L,
-				WorkOperationRelationType.MOVEMENT_PRE_DISCARD))
+				WorkOperationRelationType.MOVEMENT_DISCARD))
 			.thenReturn(List.of(discard));
 		when(membershipRepository.findReceiptKeysByOperationId(62L)).thenReturn(List.of());
 		when(relationSummaryAssembler.assemble(anyCollection())).thenReturn(Map.of(62L,
@@ -168,8 +168,8 @@ class WorkOperationGraphQueryServiceTest {
 		assertThat(graph.edges()).filteredOn(edge -> edge.edgeType() == WorkOperationGraphEdgeType.PRECEDES)
 			.singleElement()
 			.satisfies(edge -> {
-				assertThat(edge.sourceNodeId()).isEqualTo("work-operation-61");
-				assertThat(edge.targetNodeId()).isEqualTo("work-operation-62");
+				assertThat(edge.sourceNodeId()).isEqualTo("work-operation-62");
+				assertThat(edge.targetNodeId()).isEqualTo("work-operation-61");
 			});
 		verify(mutationGraphPort).load(eq(List.of()), eq(true), eq(2), anyInt());
 	}
@@ -183,7 +183,7 @@ class WorkOperationGraphQueryServiceTest {
 		WorkAppliedEffect correctionEffect = effect(correction, 112L);
 		when(operationRepository.findWithWorkTypeById(80L)).thenReturn(Optional.of(original));
 		when(operationRepository.findByParentOperationIdAndRelationTypeOrderByIdAsc(80L,
-				WorkOperationRelationType.MOVEMENT_PRE_DISCARD))
+				WorkOperationRelationType.MOVEMENT_DISCARD))
 			.thenReturn(List.of());
 		when(membershipRepository.findReceiptKeysByOperationId(80L)).thenReturn(List.of());
 		when(correctionRepository.findByOriginalWorkOperationIdInOrCorrectionWorkOperationIdIn(anyCollection(),
@@ -222,7 +222,7 @@ class WorkOperationGraphQueryServiceTest {
 		when(operationRepository.findWithWorkTypeById(1L)).thenReturn(Optional.of(operations.getFirst()));
 		when(operationRepository.findWithWorkTypeByIdIn(operationIds)).thenReturn(operations);
 		when(operationRepository.findByParentOperationIdAndRelationTypeOrderByIdAsc(1L,
-				WorkOperationRelationType.MOVEMENT_PRE_DISCARD))
+				WorkOperationRelationType.MOVEMENT_DISCARD))
 			.thenReturn(List.of());
 		when(membershipRepository.findReceiptKeysByOperationId(1L)).thenReturn(List.of("large-receipt"));
 		when(receiptRepository.findByReceiptKeyIn(List.of("large-receipt"))).thenReturn(List.of(receipt));

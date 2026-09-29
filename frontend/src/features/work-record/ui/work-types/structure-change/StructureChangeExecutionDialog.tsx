@@ -16,6 +16,7 @@ import {
   type ResultRow,
   type StructureChangeOperation,
 } from "../../../model/work-types/structure-change/structureChangeExecutionModel";
+import { allocateMovementQuantities } from "../../../model/work-types/structure-change/movementQuantityAllocation";
 import { useStructureChangeExecution } from "../../../model/work-types/structure-change/useStructureChangeExecution";
 
 export function StructureChangeExecutionDialog({
@@ -79,38 +80,24 @@ export function StructureChangeExecutionDialog({
   const quantityDifferenceValue = movement
     ? Math.max(0, -quantityDifference)
     : Math.abs(quantityDifference);
-  const movementBreakdown = [...form.selectedSources]
-    .sort((left, right) => left.group.id - right.group.id)
-    .reduce<{
-      remainingMovement: number;
-      items: Array<{
-        group: OrchidGroup;
-        selectedQuantity: number;
-        movedQuantity: number;
-        discardQuantity: number;
-      }>;
-    }>(
-      (allocation, { group }) => {
-        const selectedQuantity = Number(form.inputQuantities[group.id] || 0);
-        const movedQuantity = Math.min(
-          selectedQuantity,
-          allocation.remainingMovement,
-        );
-        return {
-          remainingMovement: allocation.remainingMovement - movedQuantity,
-          items: [
-            ...allocation.items,
-            {
-              group,
-              selectedQuantity,
-              movedQuantity,
-              discardQuantity: selectedQuantity - movedQuantity,
-            },
-          ],
-        };
-      },
-      { remainingMovement: form.totalResult, items: [] },
-    ).items;
+  const selectedGroupsById = new Map(
+    form.selectedSources.map(({ group }) => [group.id, group]),
+  );
+  const movementBreakdown =
+    movement && quantityDifferenceValue > 0
+      ? allocateMovementQuantities(
+          form.selectedSources.map(({ group }) => ({
+            sourceOrchidGroupId: group.id,
+            inputQuantity: Number(form.inputQuantities[group.id] || 0),
+          })),
+          form.totalResult,
+        ).map((allocation) => ({
+          group: selectedGroupsById.get(allocation.sourceOrchidGroupId)!,
+          selectedQuantity: allocation.inputQuantity,
+          movedQuantity: allocation.movedQuantity,
+          discardQuantity: allocation.discardQuantity,
+        }))
+      : [];
 
   return (
     <div
@@ -206,12 +193,12 @@ export function StructureChangeExecutionDialog({
           </div>
           {movement && quantityDifferenceValue > 0 ? (
             <section className="rounded-md border border-[#e6cda0] bg-[#fff9eb] p-3 text-sm text-[#72531b] sm:col-span-2">
-              <p className="font-bold">이동 전 선별 폐기가 먼저 기록됩니다.</p>
+              <p className="font-bold">이동 후 남은 난은 폐기로 기록됩니다.</p>
               <p className="mt-1 text-xs leading-5">
-                선택한 {form.totalInput}분 중 {quantityDifferenceValue}분을
-                폐기한 다음, 남은 {form.totalResult}분을 이동합니다. 두 작업은
-                하나의 처리 단위로 저장되며 이동 작업을 무효화할 때 함께
-                되돌립니다.
+                상태가 좋은 {form.totalResult}분을 먼저 이동하고, 원래 자리에
+                남은 {quantityDifferenceValue}분을 원본별 선별 수량에 비례해
+                자동 배분하여 폐기합니다. 두 작업은 하나의 처리 단위로 저장되며
+                이동 작업을 무효화할 때 함께 되돌립니다.
               </p>
               <ul className="mt-2 divide-y divide-[#ead9b6] border-t border-[#ead9b6] text-xs">
                 {movementBreakdown.map((item) => (

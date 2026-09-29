@@ -2283,7 +2283,7 @@ export interface components {
             /** Format: int64 */
             parentOperationId?: number;
             /** @enum {string} */
-            relationType?: "MOVEMENT_PRE_DISCARD";
+            relationType?: "MOVEMENT_DISCARD";
             /** Format: date-time */
             voidedAt?: string;
             voidReason?: string;

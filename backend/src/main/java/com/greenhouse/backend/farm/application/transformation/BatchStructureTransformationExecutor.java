@@ -17,6 +17,8 @@ import com.greenhouse.backend.work.application.effect.WorkEffectResults;
 import com.greenhouse.backend.work.application.effect.WorkExecutionResult;
 import com.greenhouse.backend.work.application.effect.WorkMutationLink;
 import com.greenhouse.backend.work.domain.effect.StructureChangeResultPurpose;
+import com.greenhouse.backend.work.domain.operation.WorkTypeDefinition;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -81,8 +83,16 @@ public class BatchStructureTransformationExecutor {
 		});
 		// Capture inherited attributes before transforming the source groups.
 		List<ResultPlan> plannedResults = planResults(request, strategy, sources, first);
+		Set<Long> effectivePlacementExclusions = new HashSet<>(placementExclusionOrchidGroupIds);
+		if (WorkTypeDefinition.MOVEMENT.name().equals(strategy.supports())) {
+			request.sources()
+				.stream()
+				.filter(source -> source.inputQuantity().equals(sources.get(source.sourceOrchidGroupId()).getQuantity()))
+				.map(StructureChangeSourceInput::sourceOrchidGroupId)
+				.forEach(effectivePlacementExclusions::add);
+		}
 		var mutation = mutationEngine.transform(mutationCommand(operationId, request, transformedBySourceId,
-				plannedResults, placementExclusionOrchidGroupIds));
+				plannedResults, effectivePlacementExclusions));
 		List<Long> resultIds = mutation.entries()
 			.stream()
 			.filter(entry -> entry.role() == OrchidGroupMutationEntryRole.RESULT)

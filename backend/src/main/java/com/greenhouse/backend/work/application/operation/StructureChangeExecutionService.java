@@ -137,14 +137,18 @@ public class StructureChangeExecutionService {
 			}
 		});
 
-		WorkOperationView discardOperation = null;
-		if (WorkTypeDefinition.MOVEMENT.name().equals(operation.getWorkType().getCode())) {
-			discardOperation = discardRecordService.createForMovement(operation, request.completedDate(), worker,
-					request.memo(), movementDiscardQuantities(request));
-		}
-
 		var result = workEffectProcessor.applyBatch(operation, request.idempotencyKey(),
 				requestedIds.stream().sorted().toList(), command);
+		WorkOperationView discardOperation = null;
+		if (WorkTypeDefinition.MOVEMENT.name().equals(operation.getWorkType().getCode())) {
+			Map<Long, Integer> inputQuantities = request.sources()
+				.stream()
+				.sorted(java.util.Comparator.comparing(source -> source.sourceOrchidGroupId()))
+				.collect(Collectors.toMap(source -> source.sourceOrchidGroupId(), source -> source.inputQuantity(),
+						(left, right) -> left, LinkedHashMap::new));
+			discardOperation = discardRecordService.createForMovement(operation, request.completedDate(), worker,
+					request.memo(), inputQuantities, movementDiscardQuantities(request));
+		}
 		Map<String, Object> resultDetails = result.resultDetails();
 		if (discardOperation != null) {
 			resultDetails = new LinkedHashMap<>(resultDetails);
@@ -161,16 +165,12 @@ public class StructureChangeExecutionService {
 	}
 
 	private Map<Long, Integer> movementDiscardQuantities(StructureChangeCommand request) {
-		Map<Long, Integer> movedBySourceId = MovementQuantityAllocator.allocateMovedBySource(request);
-		Map<Long, Integer> discardQuantities = new LinkedHashMap<>();
-		request.sources().forEach(source -> {
-			int discardQuantity = source.inputQuantity()
-					- movedBySourceId.getOrDefault(source.sourceOrchidGroupId(), 0);
-			if (discardQuantity > 0) {
-				discardQuantities.put(source.sourceOrchidGroupId(), discardQuantity);
-			}
-		});
-		return discardQuantities;
+		return MovementQuantityAllocator.allocateDiscardBySource(request)
+			.entrySet()
+			.stream()
+			.filter(entry -> entry.getValue() > 0)
+			.collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue, (left, right) -> left,
+					LinkedHashMap::new));
 	}
 
 	private void validateInProgress(WorkOperation operation) {

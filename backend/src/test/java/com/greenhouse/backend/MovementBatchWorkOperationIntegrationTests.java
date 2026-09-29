@@ -18,6 +18,7 @@ import com.greenhouse.backend.work.domain.operation.WorkOperationRelationType;
 import com.greenhouse.backend.work.domain.operation.WorkType;
 import com.greenhouse.backend.work.domain.operation.WorkTypeDefinition;
 import com.greenhouse.backend.work.domain.operation.WorkTypeTemplate;
+import com.greenhouse.backend.work.repository.WorkAppliedEffectRepository;
 import com.greenhouse.backend.work.repository.WorkOperationRepository;
 import java.math.BigDecimal;
 import org.junit.jupiter.api.BeforeEach;
@@ -34,6 +35,9 @@ class MovementBatchWorkOperationIntegrationTests extends AbstractBackendIntegrat
 
 	@Autowired
 	private WorkOperationRepository operationRepository;
+
+	@Autowired
+	private WorkAppliedEffectRepository appliedEffectRepository;
 
 	private BedZone sourceZone;
 
@@ -135,12 +139,23 @@ class MovementBatchWorkOperationIntegrationTests extends AbstractBackendIntegrat
 		assertThat(discardOperations).hasSize(1);
 		assertThat(discardOperations.getFirst().getStatus().name()).isEqualTo("COMPLETED");
 		assertThat(discardOperations.getFirst().getDetails()).containsEntry("movementOperationId", operationId);
-		assertThat(discardOperations.getFirst().getTitle()).endsWith("이동 전 선별 폐기");
+		assertThat(discardOperations.getFirst().getDetails())
+			.containsEntry("allocationMethod", "PROPORTIONAL_BY_INPUT_QUANTITY")
+			.containsEntry("totalDiscardQuantity", 4);
+		assertThat(discardOperations.getFirst().getTitle()).endsWith("이동 후 잔여 난 폐기");
 		assertThat(discardOperations.getFirst().getParentOperation().getId()).isEqualTo(operationId);
 		assertThat(discardOperations.getFirst().getRelationType())
-			.isEqualTo(WorkOperationRelationType.MOVEMENT_PRE_DISCARD);
+			.isEqualTo(WorkOperationRelationType.MOVEMENT_DISCARD);
 
 		Long discardOperationId = discardOperations.getFirst().getId();
+		Long movementMutationId = appliedEffectRepository.findByWorkOperationIdOrderByIdAsc(operationId)
+			.getFirst()
+			.getMutationId();
+		var discardEffects = appliedEffectRepository.findByWorkOperationIdOrderByIdAsc(discardOperationId);
+		assertThat(discardEffects)
+			.extracting(effect -> effect.getResultDetails().get("discardedQuantity"))
+			.containsExactly(1, 3);
+		assertThat(discardEffects).allSatisfy(effect -> assertThat(effect.getMutationId()).isGreaterThan(movementMutationId));
 		mockMvc.perform(get("/api/work-operations/{id}/void-eligibility", discardOperationId))
 			.andExpect(status().isOk())
 			.andExpect(jsonPath("$.data.voidable").value(false))
@@ -149,13 +164,13 @@ class MovementBatchWorkOperationIntegrationTests extends AbstractBackendIntegrat
 		mockMvc.perform(get("/api/work-operations/{id}/void-eligibility", operationId))
 			.andExpect(status().isOk())
 			.andExpect(jsonPath("$.data.voidable").value(true))
-			.andExpect(jsonPath("$.data.mutationIds", hasSize(2)))
+			.andExpect(jsonPath("$.data.mutationIds", hasSize(3)))
 			.andExpect(jsonPath("$.data.relatedWorkOperationIds[0]").value(discardOperationId));
 		mockMvc.perform(post("/api/work-operations/{id}/void", operationId)
 			.contentType(MediaType.APPLICATION_JSON)
 			.content("""
 					{
-					  "idempotencyKey": "void-movement-with-pre-discard",
+				  "idempotencyKey": "void-movement-with-discard",
 					  "reason": "잘못 등록한 이동과 선별 폐기"
 					}
 					"""))

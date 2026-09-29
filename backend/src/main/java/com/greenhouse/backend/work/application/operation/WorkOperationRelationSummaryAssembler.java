@@ -88,7 +88,7 @@ class WorkOperationRelationSummaryAssembler {
 	private WorkOperationOriginType origin(WorkOperation operation, List<Long> inboundIds) {
 		if (!inboundIds.isEmpty())
 			return WorkOperationOriginType.INBOUND;
-		if (operation.getRelationType() == WorkOperationRelationType.MOVEMENT_PRE_DISCARD
+		if (operation.getRelationType() == WorkOperationRelationType.MOVEMENT_DISCARD
 				|| WorkTypeDefinition.CORRECTION.name().equals(operation.getWorkType().getCode())) {
 			return WorkOperationOriginType.SYSTEM;
 		}

@@ -853,7 +853,7 @@ components:
         relationType:
           type: string
           enum:
-          - MOVEMENT_PRE_DISCARD
+          - MOVEMENT_DISCARD
         voidedAt:
           type: string
           format: date-time

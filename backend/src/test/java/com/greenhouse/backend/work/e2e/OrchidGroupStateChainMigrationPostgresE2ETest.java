@@ -70,7 +70,8 @@ class OrchidGroupStateChainMigrationPostgresE2ETest extends WorkE2ETestBase {
 					"24:allocate farm reference codes", "25:add work command receipts", "26:align work effect idempotency",
 					"27:repair orchid group audit provenance", "28:add work void and reconciliation",
 					"29:remove multi create work type", "30:link movement pre discard operations",
-					"31:merge inbound temp stored status", "32:reduce inbound record to receipt");
+					"31:merge inbound temp stored status", "32:reduce inbound record to receipt",
+					"33:normalize work command receipt memberships", "34:rename movement discard relation");
 
 		assertThat(jdbcTemplate.queryForObject("SELECT COUNT(*) FROM work_types WHERE code = 'MULTI_CREATE'", Long.class))
 			.isZero();

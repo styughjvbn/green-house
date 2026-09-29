@@ -109,7 +109,7 @@ class WorkOperationRelationSummaryAssemblerTest {
 		when(operation.getId()).thenReturn(id);
 		when(operation.getParentOperation()).thenReturn(parent);
 		if (parent != null) {
-			when(operation.getRelationType()).thenReturn(WorkOperationRelationType.MOVEMENT_PRE_DISCARD);
+			when(operation.getRelationType()).thenReturn(WorkOperationRelationType.MOVEMENT_DISCARD);
 		}
 		return operation;
 	}

@@ -38,7 +38,7 @@ public class WorkOperationVoidService {
 		if (operation.getStatus() == WorkOperationStatus.VOIDED) {
 			blockers.add(new WorkOperationVoidEligibilityResponse.Blocker("ALREADY_VOIDED", "이미 무효화된 작업입니다.", 1));
 		}
-		else if (operation.getRelationType() == WorkOperationRelationType.MOVEMENT_PRE_DISCARD) {
+		else if (operation.getRelationType() == WorkOperationRelationType.MOVEMENT_DISCARD) {
 			relatedWorkOperationIds.add(operation.getParentOperation().getId());
 			blockers.add(new WorkOperationVoidEligibilityResponse.Blocker("VOID_WITH_PARENT_MOVEMENT",
 					"이 폐기는 연관된 자리 이동 작업에서 함께 무효화해야 합니다.", 1));
@@ -51,13 +51,13 @@ public class WorkOperationVoidService {
 		}
 		var relatedDiscards = operation.getRelationType() == null
 				? operationRepository.findByParentOperationIdAndRelationTypeOrderByIdAsc(operationId,
-						WorkOperationRelationType.MOVEMENT_PRE_DISCARD)
+						WorkOperationRelationType.MOVEMENT_DISCARD)
 				: List.<WorkOperation>of();
 		relatedDiscards.forEach(discard -> {
 			relatedWorkOperationIds.add(discard.getId());
 			if (discard.getStatus() != WorkOperationStatus.COMPLETED) {
 				blockers.add(new WorkOperationVoidEligibilityResponse.Blocker("RELATED_DISCARD_NOT_COMPLETED",
-						"연관된 이동 전 선별 폐기 작업의 상태가 완료가 아닙니다.", 1));
+						"연관된 이동 후 잔여 난 폐기 작업의 상태가 완료가 아닙니다.", 1));
 			}
 		});
 		List<Long> targetOperationIds = new ArrayList<>();
@@ -129,7 +129,7 @@ public class WorkOperationVoidService {
 		var now = support.now();
 		List<WorkOperation> relatedDiscards = operationRepository
 			.findByParentOperationIdAndRelationTypeOrderByIdAsc(operationId,
-					WorkOperationRelationType.MOVEMENT_PRE_DISCARD);
+					WorkOperationRelationType.MOVEMENT_DISCARD);
 		for (int index = relatedDiscards.size() - 1; index >= 0; index--) {
 			var discard = relatedDiscards.get(index);
 			effectRepository.findByWorkOperationIdOrderByIdAsc(discard.getId())

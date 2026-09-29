@@ -13,6 +13,17 @@ public final class MovementQuantityAllocator {
 	}
 
 	public static Map<Long, Integer> allocateMovedBySource(StructureChangeCommand request) {
+		Map<Long, Integer> discardBySourceId = allocateDiscardBySource(request);
+		Map<Long, Integer> movedBySourceId = new LinkedHashMap<>();
+		request.sources()
+			.stream()
+			.sorted(Comparator.comparing(StructureChangeSourceInput::sourceOrchidGroupId))
+			.forEach(source -> movedBySourceId.put(source.sourceOrchidGroupId(),
+					source.inputQuantity() - discardBySourceId.getOrDefault(source.sourceOrchidGroupId(), 0)));
+		return movedBySourceId;
+	}
+
+	public static Map<Long, Integer> allocateDiscardBySource(StructureChangeCommand request) {
 		List<StructureChangeSourceInput> sources = request.sources()
 			.stream()
 			.sorted(Comparator.comparing(StructureChangeSourceInput::sourceOrchidGroupId))
@@ -29,14 +40,24 @@ public final class MovementQuantityAllocator {
 			throw new IllegalArgumentException("자리 이동 결과 수량은 투입 수량보다 클 수 없습니다.");
 		}
 
-		Map<Long, Integer> movedBySourceId = new LinkedHashMap<>();
-		int remainingMoved = requestedMoved;
+		int totalDiscard = totalInput - requestedMoved;
+		Map<Long, Integer> discardBySourceId = new LinkedHashMap<>();
+		Map<Long, Long> remainderBySourceId = new LinkedHashMap<>();
+		int allocatedDiscard = 0;
 		for (var entry : inputBySourceId.entrySet()) {
-			int moved = Math.min(entry.getValue(), remainingMoved);
-			movedBySourceId.put(entry.getKey(), moved);
-			remainingMoved -= moved;
+			long weightedDiscard = (long) totalDiscard * entry.getValue();
+			int discard = totalInput == 0 ? 0 : (int) (weightedDiscard / totalInput);
+			discardBySourceId.put(entry.getKey(), discard);
+			remainderBySourceId.put(entry.getKey(), totalInput == 0 ? 0 : weightedDiscard % totalInput);
+			allocatedDiscard += discard;
 		}
-		return movedBySourceId;
+		int remainingDiscard = totalDiscard - allocatedDiscard;
+		remainderBySourceId.entrySet()
+			.stream()
+			.sorted(Map.Entry.<Long, Long>comparingByValue().reversed().thenComparing(Map.Entry.comparingByKey()))
+			.limit(remainingDiscard)
+			.forEach(entry -> discardBySourceId.compute(entry.getKey(), (key, value) -> value + 1));
+		return discardBySourceId;
 	}
 
 }

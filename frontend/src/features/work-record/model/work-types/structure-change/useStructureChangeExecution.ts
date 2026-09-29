@@ -471,5 +471,5 @@ function resultRowForOperation(
 }
 
 export function movementDiscardConfirmation(discardQuantity: number) {
-  return `이동 전에 ${discardQuantity.toLocaleString()}분을 선별 폐기하고, 남은 수량만 이동합니다.\n폐기와 이동은 별도 작업 이력으로 함께 저장됩니다. 계속할까요?`;
+  return `상태가 좋은 난을 먼저 이동하고, 원래 자리에 남은 ${discardQuantity.toLocaleString()}분을 폐기합니다.\n이동과 폐기는 별도 작업 이력으로 함께 저장됩니다. 계속할까요?`;
 }

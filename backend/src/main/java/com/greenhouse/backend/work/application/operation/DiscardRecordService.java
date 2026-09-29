@@ -28,7 +28,7 @@ import org.springframework.transaction.annotation.Transactional;
 @RequiredArgsConstructor
 public class DiscardRecordService {
 
-	private static final String MOVEMENT_DISCARD_REASON = "자리 이동 전 선별 폐기";
+	private static final String MOVEMENT_DISCARD_REASON = "자리 이동 후 잔여 난 선별 폐기";
 
 	private final WorkOperationPlanService planService;
 
@@ -71,17 +71,22 @@ public class DiscardRecordService {
 	}
 
 	public WorkOperationView createForMovement(WorkOperation movementOperation, LocalDate completedDate, String worker,
-			String memo, Map<Long, Integer> discardQuantities) {
+			String memo, Map<Long, Integer> inputQuantities, Map<Long, Integer> discardQuantities) {
 		if (discardQuantities.isEmpty()) {
 			return null;
 		}
 		WorkType discardType = workTypeService.getByCode(WorkTypeDefinition.DISCARD.name());
 		List<Long> orchidGroupIds = discardQuantities.keySet().stream().sorted().toList();
-		Map<String, Object> details = Map.of("movementOperationId", movementOperation.getId(), "relation",
-				WorkOperationRelationType.MOVEMENT_PRE_DISCARD.name());
+		Map<String, Object> details = new LinkedHashMap<>();
+		details.put("movementOperationId", movementOperation.getId());
+		details.put("relation", WorkOperationRelationType.MOVEMENT_DISCARD.name());
+		details.put("allocationMethod", "PROPORTIONAL_BY_INPUT_QUANTITY");
+		details.put("totalDiscardQuantity",
+				discardQuantities.values().stream().mapToInt(Integer::intValue).sum());
+		details.put("sourceInputQuantities", new LinkedHashMap<>(inputQuantities));
 		WorkOperationView created = create(new DiscardRecordCreateRequest(
 				new WorkOperationCreateRequest(
-						discardType.getId(), movementOperation.getTitle() + " - 이동 전 선별 폐기", completedDate, completedDate,
+						discardType.getId(), movementOperation.getTitle() + " - 이동 후 잔여 난 폐기", completedDate, completedDate,
 						WorkTargetSelection.manualSelection(orchidGroupIds), details, worker, memo, List.of()),
 				completedDate, worker,
 				orchidGroupIds.stream()
@@ -90,7 +95,7 @@ public class DiscardRecordService {
 					.toList()));
 		WorkOperation discardOperation = operationRepository.findById(created.id())
 			.orElseThrow(() -> new IllegalStateException("생성된 폐기 작업을 찾을 수 없습니다."));
-		discardOperation.linkToParent(movementOperation, WorkOperationRelationType.MOVEMENT_PRE_DISCARD);
+		discardOperation.linkToParent(movementOperation, WorkOperationRelationType.MOVEMENT_DISCARD);
 		return queryService.get(discardOperation.getId());
 	}
 

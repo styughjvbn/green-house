@@ -45,7 +45,7 @@ export function WorkOperationVoidDialog({
   });
   const data = eligibility.data;
   const effectDescription = data?.relatedWorkOperationIds.length
-    ? "구조 변경과 연관된 이동 전 선별 폐기를"
+    ? "자리 이동과 연관된 잔여 난 폐기를"
     : operation.workTypeWorkflow === "DISCARD"
       ? "폐기 효과를"
       : operation.workTypeWorkflow === "POTTING"

@@ -363,7 +363,7 @@ export type WorkOperation = {
   worker: string | null;
   memo: string | null;
   parentOperationId: number | null;
-  relationType: "MOVEMENT_PRE_DISCARD" | null;
+  relationType: "MOVEMENT_DISCARD" | null;
   voidedAt: string | null;
   voidReason: string | null;
   voidMutationId: number | null;
