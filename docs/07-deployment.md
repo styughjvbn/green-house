@@ -709,6 +709,9 @@ APP_URL=https://green-house-demo.sjw-project.site \
 blue/green rename과 자동 rollback을 수행하는 별도 systemd timer 절차는
 `docs/features/demo-operations.md`를 따른다. 운영 원본 dump나 검증 전 dump를 demo DB에
 직접 복구하지 않는다. demo 사용자가 만든 데이터는 정기 리프레시 때 삭제된다.
+새 운영 릴리스를 수동으로 데모에 반영할 때는 운영 Flyway 완료 후 데모 DB 리프레시를 먼저
+성공시킨 다음, 동일 릴리스 이미지를 데모 namespace에 배포한다. 상세 명령과 성공 기준은
+`docs/features/demo-operations.md`의 `새 운영 버전 배포 후 수동 데모 갱신`을 따른다.
 
 ## 6. 운영 전 체크리스트
 
