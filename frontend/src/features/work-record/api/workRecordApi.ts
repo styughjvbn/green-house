@@ -20,6 +20,7 @@ import type {
   WorkOperationGraphDetail,
   WorkTargetPreviewPayload,
 } from "../model/types";
+import type { WorkOperationRelationKind } from "../lib/workOperationRelations";
 import { manualWorkTargetSource } from "../model/workTargetSource";
 
 export function getWorkTypes(): Promise<WorkType[]> {
@@ -162,6 +163,16 @@ export function getWorkOperation(
   workOperationId: number,
 ): Promise<WorkOperation> {
   return fetchApi<WorkOperation>(`/work-operations/${workOperationId}`);
+}
+
+export function getWorkOperationRelations(
+  workOperationId: number,
+  kind: WorkOperationRelationKind,
+): Promise<WorkOperationSummary[]> {
+  const params = new URLSearchParams({ kind });
+  return fetchApi<WorkOperationSummary[]>(
+    `/work-operations/${workOperationId}/relations?${params}`,
+  );
 }
 
 export function getWorkOperationVoidEligibility(

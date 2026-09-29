@@ -4,11 +4,13 @@ import {
   getWorkOperation,
   getWorkOperationDetails,
   getWorkOperationGraph,
+  getWorkOperationRelations,
   getWorkHouses,
   getWorkOperations,
   getWorkTypes,
 } from "../api/workRecordApi";
 import type { WorkOperationGraphDetail } from "./types";
+import type { WorkOperationRelationKind } from "../lib/workOperationRelations";
 import type { WorkRecordUrlState } from "../lib/workRecordUrlState";
 import { workRecordQueryKeys } from "./workRecordQueryKeys";
 
@@ -30,6 +32,16 @@ export function workOperationQueryOptions(workOperationId: number) {
   return queryOptions({
     queryKey: workRecordQueryKeys.operations.operation(workOperationId),
     queryFn: () => getWorkOperation(workOperationId),
+  });
+}
+
+export function workOperationRelationsQueryOptions(
+  workOperationId: number,
+  kind: WorkOperationRelationKind,
+) {
+  return queryOptions({
+    queryKey: workRecordQueryKeys.operations.relations(workOperationId, kind),
+    queryFn: () => getWorkOperationRelations(workOperationId, kind),
   });
 }
 
