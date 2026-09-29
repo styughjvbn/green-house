@@ -42,6 +42,35 @@ export type FarmStatusFilterMatches = {
 
 export type FarmStatusSearchResult = OrchidGroup;
 
+export type FarmStatusDerivedGroup = {
+  groupKey: string;
+  varietyName: string;
+  genus: string | null;
+  ageYear: number | null;
+  potSizeCode: OrchidGroup["potSizeCode"];
+  potSize: string | null;
+  orchidGroupCount: number;
+  totalQuantity: number;
+};
+
+export type FarmStatusCollection = {
+  id: number;
+  name: string;
+  description: string | null;
+  purpose: string | null;
+  status: "ACTIVE" | "ARCHIVED";
+  orchidGroupCount: number;
+  totalQuantity: number;
+  members: Array<{ orchidGroupId: number }>;
+};
+
+export type FarmStatusSearchGroup = {
+  key: string;
+  type: "DERIVED" | "COLLECTION";
+  label: string;
+  description: string;
+};
+
 export type FarmStatusMapProps = {
   mapData: FarmStatusMapData;
   initialSelection: FarmStatusOrchidGroupList | null;

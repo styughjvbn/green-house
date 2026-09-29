@@ -650,8 +650,11 @@ function ExecutionContent({ execution }: { execution: WorkExecutionDetail }) {
       {execution.actualQuantity != null ? (
         <p>실제 수량 {execution.actualQuantity}분</p>
       ) : null}
-      {execution.lossQuantity != null ? (
+      {execution.lossQuantity != null && execution.lossQuantity > 0 ? (
         <p>손실 수량 {execution.lossQuantity}분</p>
+      ) : null}
+      {execution.increaseQuantity != null && execution.increaseQuantity > 0 ? (
+        <p>증식 수량 {execution.increaseQuantity}분</p>
       ) : null}
       {execution.reason ? <p>사유: {execution.reason}</p> : null}
       {execution.linkedWorkOperationId != null ? (
@@ -748,6 +751,7 @@ function hasDisplayResult(execution: WorkExecutionDetail) {
       execution.results.length > 0 ||
       execution.actualQuantity != null ||
       execution.lossQuantity != null ||
+      execution.increaseQuantity != null ||
       execution.reason != null ||
       execution.linkedWorkOperationId != null)
   );

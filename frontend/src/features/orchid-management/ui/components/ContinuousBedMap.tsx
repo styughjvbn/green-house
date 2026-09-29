@@ -1,13 +1,14 @@
 "use client";
 
 import useEmblaCarousel from "embla-carousel-react";
-import { useEffect, useRef } from "react";
+import { useEffect, useMemo, useRef } from "react";
 import type {
   OrchidManagementBedOrderItem,
   PhysicalBed,
   VisibleBedCount,
 } from "@/entities/farm/types";
 import type { MapCellRangePick, OrchidSelection } from "../../model/types";
+import { resolveActualPlacementMaxPosition } from "../../lib/bedLayoutUtils";
 import PhysicalBedBlock from "./PhysicalBedBlock";
 
 export default function ContinuousBedMap({
@@ -16,6 +17,7 @@ export default function ContinuousBedMap({
   startBedIndex,
   visibleBedCount,
   distinguishVarietyColors,
+  actualPlacement,
   filteredOrchidGroupIds,
   multiSelectEnabled,
   selectedOrchidGroupIds,
@@ -33,6 +35,7 @@ export default function ContinuousBedMap({
   startBedIndex: number;
   visibleBedCount: VisibleBedCount;
   distinguishVarietyColors: boolean;
+  actualPlacement: boolean;
   filteredOrchidGroupIds: Set<number>;
   multiSelectEnabled: boolean;
   selectedOrchidGroupIds: Set<number>;
@@ -78,6 +81,16 @@ export default function ContinuousBedMap({
     bedOrder.length,
     startBedIndex + visibleBedCount * 2,
   );
+  const actualPlacementMaxPosition = useMemo(() => {
+    if (!actualPlacement) return null;
+    const visibleBedOrder = bedOrder.slice(
+      startBedIndex,
+      startBedIndex + visibleBedCount,
+    );
+    return resolveActualPlacementMaxPosition(
+      visibleBedOrder.map((item) => bedsById.get(item.id)?.positionUnitCount),
+    );
+  }, [actualPlacement, bedOrder, bedsById, startBedIndex, visibleBedCount]);
 
   return (
     <section
@@ -130,6 +143,7 @@ export default function ContinuousBedMap({
                 {bed && index >= renderStartIndex && index < renderEndIndex ? (
                   <PhysicalBedBlock
                     bed={bed}
+                    layoutMaxPosition={actualPlacementMaxPosition}
                     distinguishVarietyColors={distinguishVarietyColors}
                     filteredOrchidGroupIds={filteredOrchidGroupIds}
                     multiSelectEnabled={multiSelectEnabled}

@@ -6,6 +6,10 @@ import type {
   FarmStatusZoomData,
   OrchidGroup,
 } from "@/entities/farm/types";
+import type {
+  FarmStatusCollection,
+  FarmStatusDerivedGroup,
+} from "../model/types";
 
 export async function fetchFarmStatusOrchidGroups(
   type: FarmStatusTargetType,
@@ -66,4 +70,24 @@ export function searchFarmStatusOrchidGroups({
 
   const query = params.toString();
   return fetchApi<OrchidGroup[]>(`/orchid-groups${query ? `?${query}` : ""}`);
+}
+
+export async function getFarmStatusSearchGroups(): Promise<{
+  derivedGroups: FarmStatusDerivedGroup[];
+  collections: FarmStatusCollection[];
+}> {
+  const [derivedGroups, collections] = await Promise.all([
+    fetchApi<FarmStatusDerivedGroup[]>("/orchid-groups/derived-groups"),
+    fetchApi<FarmStatusCollection[]>("/orchid-group-collections"),
+  ]);
+  return {
+    derivedGroups,
+    collections: collections.filter((group) => group.status === "ACTIVE"),
+  };
+}
+
+export function getFarmStatusDerivedGroupMembers(groupKey: string) {
+  return fetchApi<OrchidGroup[]>(
+    `/orchid-groups/derived-groups/${encodeURIComponent(groupKey)}/members`,
+  );
 }

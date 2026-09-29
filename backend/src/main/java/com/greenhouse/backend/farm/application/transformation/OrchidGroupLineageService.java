@@ -58,7 +58,7 @@ public class OrchidGroupLineageService {
 			.map(view -> new OrchidGroupLineageTransformationResponse(view.id(), relationType(view.handlerCode()),
 					view.workOperationId(), view.sources().stream().mapToInt(group -> value(group.quantity())).sum(),
 					view.results().stream().mapToInt(group -> value(group.quantity())).sum(), view.lossQuantity(),
-					TimeConfig.toFarmTime(view.appliedAt()),
+					view.increaseQuantity(), TimeConfig.toFarmTime(view.appliedAt()),
 					view.sources()
 						.stream()
 						.map(group -> new OrchidGroupLineageNodeResponse(group.quantity(),

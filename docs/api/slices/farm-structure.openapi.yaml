@@ -394,6 +394,9 @@ components:
         lossQuantity:
           type: integer
           format: int32
+        increaseQuantity:
+          type: integer
+          format: int32
         createdAt:
           type: string
           format: date-time

@@ -1,6 +1,6 @@
 ﻿"use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import type {
   BedZone,
   FarmStatusOrchidGroupList,
@@ -11,9 +11,12 @@ import type {
   OrchidGroup,
   PhysicalBed,
 } from "@/entities/farm/types";
+import { formatPotSize } from "@/entities/farm/potSizes";
 import {
   fetchFarmStatusHouseZoom,
   fetchFarmStatusOrchidGroups,
+  getFarmStatusDerivedGroupMembers,
+  getFarmStatusSearchGroups,
   searchFarmStatusOrchidGroups,
 } from "../api/farmStatusApi";
 import { getNextZoomLevel, getPreviousZoomLevel } from "../lib/farmStatusView";
@@ -24,6 +27,7 @@ import {
 import type {
   FarmStatusFilterMatches,
   FarmStatusMapProps,
+  FarmStatusSearchGroup,
   FarmStatusSearchState,
   SelectedFarmStatusOrchidGroup,
   SelectedTarget,
@@ -69,10 +73,26 @@ export function useFarmStatusMap({
     status: "",
   });
   const [searchResults, setSearchResults] = useState<OrchidGroup[]>([]);
+  const [selectedSearchGroupKey, setSelectedSearchGroupKey] = useState<
+    string | null
+  >(null);
+  const [selectedSearchGroupResults, setSelectedSearchGroupResults] = useState<
+    OrchidGroup[] | null
+  >(null);
+  const [searchGroupOptions, setSearchGroupOptions] = useState<Awaited<
+    ReturnType<typeof getFarmStatusSearchGroups>
+  > | null>(null);
+  const [allFarmOrchidGroups, setAllFarmOrchidGroups] = useState<
+    OrchidGroup[] | null
+  >(null);
+  const [searchGroupMemberLoading, setSearchGroupMemberLoading] =
+    useState(false);
+  const [searchGroupError, setSearchGroupError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [searchLoading, setSearchLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [requestCoordinator] = useState(createLatestRequestCoordinator);
+  const searchGroupRequestVersion = useRef(0);
 
   const selectedHouse = useMemo(
     () =>
@@ -89,22 +109,54 @@ export function useFarmStatusMap({
   const hasActiveSearch =
     searchFilters.keyword.trim().length > 0 ||
     searchFilters.status.trim().length > 0;
+  const hasSearchKeyword = searchFilters.keyword.trim().length > 0;
+  const searchGroupLoading =
+    hasSearchKeyword && !searchGroupOptions && !searchGroupError;
+  const visibleSearchResults = selectedSearchGroupResults ?? searchResults;
+  const searchGroups = useMemo(
+    () =>
+      buildSearchGroups(searchGroupOptions, searchFilters.keyword).slice(0, 8),
+    [searchFilters.keyword, searchGroupOptions],
+  );
   const filterMatches = useMemo(() => {
     if (!hasActiveSearch) {
       return EMPTY_FILTER_MATCHES;
     }
 
     return {
-      bedZoneIds: new Set(searchResults.map((group) => group.bedZoneId)),
-      houseIds: new Set(searchResults.map((group) => group.houseId)),
-      orchidGroupIds: new Set(searchResults.map((group) => group.id)),
+      bedZoneIds: new Set(visibleSearchResults.map((group) => group.bedZoneId)),
+      houseIds: new Set(visibleSearchResults.map((group) => group.houseId)),
+      orchidGroupIds: new Set(visibleSearchResults.map((group) => group.id)),
       physicalBedKeys: new Set(
-        searchResults.map(
+        visibleSearchResults.map(
           (group) => `${group.houseId}:${group.physicalBedNumber}`,
         ),
       ),
     };
-  }, [hasActiveSearch, searchResults]);
+  }, [hasActiveSearch, visibleSearchResults]);
+
+  useEffect(() => {
+    if (!hasSearchKeyword || searchGroupOptions) return;
+
+    let ignore = false;
+    void getFarmStatusSearchGroups()
+      .then((options) => {
+        if (!ignore) setSearchGroupOptions(options);
+      })
+      .catch((error: unknown) => {
+        if (!ignore) {
+          setSearchGroupError(
+            error instanceof Error
+              ? error.message
+              : "관련 그룹을 불러오지 못했습니다.",
+          );
+        }
+      });
+
+    return () => {
+      ignore = true;
+    };
+  }, [hasSearchKeyword, searchGroupOptions]);
 
   useEffect(() => {
     if (!hasActiveSearch) {
@@ -392,16 +444,85 @@ export function useFarmStatusMap({
     });
   }
 
+  async function handleSelectSearchGroup(group: FarmStatusSearchGroup) {
+    if (!searchGroupOptions || searchGroupLoading || searchGroupMemberLoading) {
+      return;
+    }
+
+    const requestVersion = ++searchGroupRequestVersion.current;
+    setSelectedSearchGroupKey(group.key);
+    setSearchGroupMemberLoading(true);
+    setSearchGroupError(null);
+    try {
+      let members: OrchidGroup[];
+      if (group.type === "DERIVED") {
+        const derivedGroup = searchGroupOptions.derivedGroups.find(
+          (item) => `DERIVED:${item.groupKey}` === group.key,
+        );
+        if (!derivedGroup) return;
+        members = await getFarmStatusDerivedGroupMembers(derivedGroup.groupKey);
+      } else {
+        const collection = searchGroupOptions.collections.find(
+          (item) => `COLLECTION:${item.id}` === group.key,
+        );
+        if (!collection) return;
+        const farmGroups =
+          allFarmOrchidGroups ??
+          (await searchFarmStatusOrchidGroups({ keyword: "", status: "" }));
+        if (!allFarmOrchidGroups) setAllFarmOrchidGroups(farmGroups);
+        const memberIds = new Set(
+          collection.members.map((member) => member.orchidGroupId),
+        );
+        members = farmGroups.filter((item) => memberIds.has(item.id));
+      }
+
+      if (requestVersion !== searchGroupRequestVersion.current) return;
+
+      const mapGroupIds = new Set(
+        mapData.orchidGroups.map((item) => item.orchidGroupId),
+      );
+      const visibleMembers = members.filter(
+        (item) =>
+          mapGroupIds.has(item.id) &&
+          (!searchFilters.status || item.status === searchFilters.status),
+      );
+      setSelectedSearchGroupResults(visibleMembers);
+      if (visibleMembers[0]) await handleSelectSearchResult(visibleMembers[0]);
+    } catch (error) {
+      if (requestVersion !== searchGroupRequestVersion.current) return;
+      setSelectedSearchGroupKey(null);
+      setSelectedSearchGroupResults(null);
+      setSearchGroupError(
+        error instanceof Error
+          ? error.message
+          : "그룹 구성원을 불러오지 못했습니다.",
+      );
+    } finally {
+      if (requestVersion === searchGroupRequestVersion.current) {
+        setSearchGroupMemberLoading(false);
+      }
+    }
+  }
+
   function updateSearchFilter<K extends keyof FarmStatusSearchState>(
     field: K,
     value: FarmStatusSearchState[K],
   ) {
+    searchGroupRequestVersion.current += 1;
+    setSearchGroupMemberLoading(false);
+    setSelectedSearchGroupKey(null);
+    setSelectedSearchGroupResults(null);
     setSearchFilters((current) => ({ ...current, [field]: value }));
   }
 
   function clearSearch() {
+    searchGroupRequestVersion.current += 1;
+    setSearchGroupMemberLoading(false);
     setSearchFilters({ keyword: "", status: "" });
     setSearchResults([]);
+    setSelectedSearchGroupKey(null);
+    setSelectedSearchGroupResults(null);
+    setSearchGroupError(null);
   }
 
   return {
@@ -417,8 +538,13 @@ export function useFarmStatusMap({
     filterMatches,
     hasActiveSearch,
     searchFilters,
+    searchGroupError,
+    searchGroupLoading,
+    searchGroupSelectionPending: searchGroupMemberLoading,
+    searchGroups,
     searchLoading,
-    searchResults,
+    searchResults: visibleSearchResults,
+    selectedSearchGroupKey,
     zoomData,
     zoomLevel,
     clearSearch,
@@ -427,6 +553,7 @@ export function useFarmStatusMap({
     handleSelectOrchidGroup,
     handleSelectPhysicalBed,
     handleSelectSearchResult,
+    handleSelectSearchGroup,
     handleZoomIn,
     handleZoomOut,
     resetToFarm,
@@ -442,6 +569,62 @@ function findPhysicalBedId(
   return houses
     .find((house) => house.houseId === houseId)
     ?.physicalBeds.find((bed) => bed.number === physicalBedNumber)?.id;
+}
+
+function buildSearchGroups(
+  options: Awaited<ReturnType<typeof getFarmStatusSearchGroups>> | null,
+  keyword: string,
+): FarmStatusSearchGroup[] {
+  const normalizedKeyword = keyword.trim().toLocaleLowerCase("ko");
+  if (!options || !normalizedKeyword) return [];
+
+  const derivedGroups: FarmStatusSearchGroup[] = options.derivedGroups
+    .filter((group) =>
+      matchesSearchText(
+        [
+          "자동 그룹",
+          group.varietyName,
+          group.genus,
+          group.ageYear == null ? "년생 미지정" : `${group.ageYear}년생`,
+          formatPotSize(group.potSizeCode, group.potSize),
+        ],
+        normalizedKeyword,
+      ),
+    )
+    .map((group) => ({
+      key: `DERIVED:${group.groupKey}`,
+      type: "DERIVED",
+      label: [
+        group.varietyName,
+        group.ageYear == null ? "년생 미지정" : `${group.ageYear}년생`,
+        formatPotSize(group.potSizeCode, group.potSize),
+      ].join(" "),
+      description: `${group.orchidGroupCount}묶음 ${group.totalQuantity}분`,
+    }));
+  const collections: FarmStatusSearchGroup[] = options.collections
+    .filter((group) =>
+      matchesSearchText(
+        ["사용자 그룹", group.name, group.description, group.purpose],
+        normalizedKeyword,
+      ),
+    )
+    .map((group) => ({
+      key: `COLLECTION:${group.id}`,
+      type: "COLLECTION",
+      label: group.name,
+      description: `${group.orchidGroupCount}묶음 ${group.totalQuantity}분`,
+    }));
+
+  return [...derivedGroups, ...collections];
+}
+
+function matchesSearchText(
+  values: Array<string | null | undefined>,
+  normalizedKeyword: string,
+) {
+  return values.some((value) =>
+    value?.toLocaleLowerCase("ko").includes(normalizedKeyword),
+  );
 }
 
 function findOrchidGroupInZoomData(

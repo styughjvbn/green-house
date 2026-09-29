@@ -5,6 +5,7 @@ import type {
 } from "@/entities/farm/model/placement";
 import { createUuid } from "@/shared/lib/id";
 import type { StructureChangeExecutionPayload } from "../../../api/workRecordApi";
+import { allowsStructureChangeIncrease } from "./structureChangeExecutionPolicy";
 
 export type StructureChangeOperation = Pick<
   WorkOperation,
@@ -137,7 +138,7 @@ export function validateExecution({
     (sum, row) => sum + Number(row.quantity || 0),
     0,
   );
-  if (workTypeCode !== "DIVIDE" && totalResult > totalInput)
+  if (!allowsStructureChangeIncrease(workTypeCode) && totalResult > totalInput)
     return "결과 수량은 투입 수량보다 클 수 없습니다.";
   if (
     rows.length === 0 ||

@@ -23,12 +23,13 @@ public final class WorkEffectResults {
 	}
 
 	public record Transformation(String executionKey, Map<Long, Integer> sourceInputQuantities, int lossQuantity,
-			List<ResultGroup> results, Integer remainingQuantity) {
+			int increaseQuantity, List<ResultGroup> results, Integer remainingQuantity) {
 		public Map<String, Object> toMap() {
 			var json = new LinkedHashMap<String, Object>();
 			json.put("executionKey", executionKey);
 			json.put("sourceInputQuantities", sourceInputQuantities);
 			json.put("lossQuantity", lossQuantity);
+			json.put("increaseQuantity", increaseQuantity);
 			json.put("results", results.stream().map(ResultGroup::toMap).toList());
 			if (sourceInputQuantities.size() == 1) {
 				Long sourceId = sourceInputQuantities.keySet().iterator().next();

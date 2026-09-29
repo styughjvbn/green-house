@@ -277,6 +277,9 @@ function LineageTransformation({
           {transformation.lossQuantity
             ? ` · 손실 ${transformation.lossQuantity}분`
             : ""}
+          {transformation.increaseQuantity
+            ? ` · 증식 ${transformation.increaseQuantity}분`
+            : ""}
         </p>
       </div>
       <div className="mt-2 grid gap-2 lg:grid-cols-[1fr_auto_1fr] lg:items-stretch">

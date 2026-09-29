@@ -70,8 +70,10 @@ public class BatchStructureTransformationExecutor {
 			.collect(Collectors.toMap(StructureChangeSourceInput::sourceOrchidGroupId,
 					StructureChangeSourceInput::inputQuantity));
 		Map<Long, Integer> transformedBySourceId = strategy.transformedQuantities(request);
-		int lossQuantity = Math.max(0, inputBySourceId.values().stream().mapToInt(Integer::intValue).sum()
-				- request.results().stream().mapToInt(row -> row.quantity()).sum());
+		int totalInputQuantity = inputBySourceId.values().stream().mapToInt(Integer::intValue).sum();
+		int totalResultQuantity = request.results().stream().mapToInt(row -> row.quantity()).sum();
+		int lossQuantity = Math.max(0, totalInputQuantity - totalResultQuantity);
+		int increaseQuantity = Math.max(0, totalResultQuantity - totalInputQuantity);
 		transformedBySourceId.forEach((sourceId, transformedQuantity) -> {
 			if (transformedQuantity > sources.get(sourceId).getQuantity()) {
 				throw new IllegalArgumentException("작업 수량은 원본 난 묶음의 현재 수량보다 클 수 없습니다.");
@@ -105,7 +107,8 @@ public class BatchStructureTransformationExecutor {
 					plannedResults.get(index).purpose()))
 			.toList();
 		var details = new WorkEffectResults.Transformation(request.idempotencyKey(), inputBySourceId, lossQuantity,
-				resultRows, sourceIds.size() == 1 ? sources.get(sourceIds.getFirst()).getQuantity() : null)
+				increaseQuantity, resultRows,
+				sourceIds.size() == 1 ? sources.get(sourceIds.getFirst()).getQuantity() : null)
 			.toMap();
 		return new WorkExecutionResult(strategy.supports(), details, resultIds, mutationLink);
 	}

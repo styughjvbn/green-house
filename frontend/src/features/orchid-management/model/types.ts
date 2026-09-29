@@ -154,6 +154,7 @@ export type OrchidGroupLineageTransformation = {
   totalInputQuantity: number;
   totalResultQuantity: number;
   lossQuantity: number | null;
+  increaseQuantity: number | null;
   createdAt: string;
   sources: OrchidGroupLineageNode[];
   results: OrchidGroupLineageNode[];

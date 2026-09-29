@@ -67,6 +67,7 @@ public class StructureChangeLineageQueryService {
 		return new StructureChangeLineageEffectView(effect.getId(), effect.getWorkOperation().getId(),
 				effect.getHandlerCode(), effect.getAppliedAt(),
 				integerValue(effect.getResultDetails().get("lossQuantity")),
+				integerValue(effect.getResultDetails().get("increaseQuantity")),
 				groups(links, WorkEffectOrchidGroupRelationType.SOURCE, sourceQuantities),
 				groups(links, WorkEffectOrchidGroupRelationType.RESULT, resultQuantities));
 	}
