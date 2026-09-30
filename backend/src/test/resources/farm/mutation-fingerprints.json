@@ -26,6 +26,9 @@
   "MoveOrchidGroupMutationCommand": [
     "78f43ede732c495a782b4b9208cdc9bc07a7dda9ea031594ad1816708c3f5b53"
   ],
+  "MoveOrchidGroupsMutationCommand": [
+    "4bdb3a83c06fe21cfc06fe7bd6fde8956ef2f7b6b375529dcc8b725db9782b55"
+  ],
   "ReleaseOrchidGroupReservationsMutationCommand": [
     "4c19597ec95ecb9bcf1697d67b7ed9b6c298715809744b073e5947681c5bb83f"
   ],

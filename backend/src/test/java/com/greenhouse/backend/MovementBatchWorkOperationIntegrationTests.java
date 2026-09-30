@@ -71,6 +71,73 @@ class MovementBatchWorkOperationIntegrationTests extends AbstractBackendIntegrat
 	}
 
 	@Test
+	void preservesGroupIdentityForOneToOneFullQuantityMovementAndRestoresItOnVoid() throws Exception {
+		OrchidGroup first = createSource(firstVariety, 10, 0, 1, 1);
+		OrchidGroup second = createSource(firstVariety, 20, 1, 3, 2);
+
+		var created = mockMvc.perform(post("/api/work-operations").contentType(MediaType.APPLICATION_JSON).content("""
+				{
+				  "workTypeId": %d,
+				  "title": "묶음 유지 자리 교환",
+				  "plannedStartDate": "2026-08-09",
+				  "sourceScopeType": "MANUAL_SELECTION",
+				  "sourceOrchidGroupIds": [%d, %d]
+				}
+				""".formatted(movementType.getId(), first.getId(), second.getId())))
+			.andExpect(status().isCreated())
+			.andReturn();
+		Long operationId = Long.valueOf(
+				created.getResponse().getContentAsString().replaceAll(".*?\\\"data\\\":\\{\\\"id\\\":(\\d+).*", "$1"));
+		mockMvc.perform(post("/api/work-operations/{id}/start", operationId)).andExpect(status().isOk());
+
+		mockMvc.perform(post("/api/work-operations/{id}/structure-change-executions", operationId)
+			.contentType(MediaType.APPLICATION_JSON)
+			.content("""
+					{
+					  "idempotencyKey": "identity-movement-swap",
+					  "completedDate": "2026-08-09",
+					  "sources": [
+					    {"sourceOrchidGroupId": %d, "inputQuantity": 10},
+					    {"sourceOrchidGroupId": %d, "inputQuantity": 20}
+					  ],
+					  "results": [
+					    {"bedZoneId": %d, "quantity": 10, "attributeSourceOrchidGroupId": %d, "purpose": "NORMAL", "startPosition": 1, "endPosition": 3},
+					    {"bedZoneId": %d, "quantity": 20, "attributeSourceOrchidGroupId": %d, "purpose": "NORMAL", "startPosition": 0, "endPosition": 1}
+					  ]
+					}
+					""".formatted(first.getId(), second.getId(), sourceZone.getId(), first.getId(), sourceZone.getId(),
+					second.getId())))
+			.andExpect(status().isCreated())
+			.andExpect(jsonPath("$.data.status").value("COMPLETED"))
+			.andExpect(jsonPath("$.data.targets[0].resultDetails.identityPreserved").value(true));
+
+		assertThat(orchidGroupRepository.findAll()).hasSize(2);
+		assertThat(orchidGroupRepository.findById(first.getId()).orElseThrow()).satisfies(group -> {
+			assertThat(group.getQuantity()).isEqualTo(10);
+			assertThat(group.getStartPosition()).isEqualByComparingTo("1.00");
+			assertThat(group.getEndPosition()).isEqualByComparingTo("3.00");
+		});
+		assertThat(orchidGroupRepository.findById(second.getId()).orElseThrow()).satisfies(group -> {
+			assertThat(group.getQuantity()).isEqualTo(20);
+			assertThat(group.getStartPosition()).isEqualByComparingTo("0.00");
+			assertThat(group.getEndPosition()).isEqualByComparingTo("1.00");
+		});
+		assertThat(lineageRepository.findAll()).isEmpty();
+
+		mockMvc.perform(post("/api/work-operations/{id}/void", operationId)
+			.contentType(MediaType.APPLICATION_JSON)
+			.content("""
+					{"idempotencyKey":"void-identity-movement","reason":"자리 교환 취소"}
+					"""))
+			.andExpect(status().isOk())
+			.andExpect(jsonPath("$.data.status").value("VOIDED"));
+		assertThat(orchidGroupRepository.findById(first.getId()).orElseThrow().getStartPosition())
+			.isEqualByComparingTo("0.00");
+		assertThat(orchidGroupRepository.findById(second.getId()).orElseThrow().getStartPosition())
+			.isEqualByComparingTo("1.00");
+	}
+
+	@Test
 	void movesMultipleSourcesOfOneVarietyAndRecordsDiscardedQuantity() throws Exception {
 		OrchidGroup first = createSource(firstVariety, 10, 0, 1, 1);
 		OrchidGroup second = createSource(firstVariety, 20, 1, 3, 2);
@@ -296,8 +363,8 @@ class MovementBatchWorkOperationIntegrationTests extends AbstractBackendIntegrat
 			.andExpect(jsonPath("$.data[0].status").value("COMPLETED"))
 			.andExpect(jsonPath("$.data[1].status").value("COMPLETED"));
 
-		assertThat(orchidGroupRepository.findById(first.getId()).orElseThrow().getQuantity()).isZero();
-		assertThat(orchidGroupRepository.findById(second.getId()).orElseThrow().getQuantity()).isZero();
+		assertThat(orchidGroupRepository.findById(first.getId()).orElseThrow().getQuantity()).isEqualTo(10);
+		assertThat(orchidGroupRepository.findById(second.getId()).orElseThrow().getQuantity()).isEqualTo(20);
 		var results = orchidGroupRepository.findByBedZoneIdAndQuantityGreaterThanOrderBySortOrderAsc(sourceZone.getId(),
 				0);
 		assertThat(results).hasSize(2);

@@ -7,6 +7,7 @@ import java.time.LocalDate;
 public sealed interface OrchidGroupMutationCommand permits CreateOrchidGroupMutationCommand,
 		CreateInboundOrchidGroupsMutationCommand,
 		TransformOrchidGroupsMutationCommand, UpdateOrchidGroupMutationCommand, MoveOrchidGroupMutationCommand,
+		MoveOrchidGroupsMutationCommand,
 		CancelOrchidGroupCreationMutationCommand, DiscardOrchidGroupMutationCommand, ReserveOrchidGroupsMutationCommand,
 		ReleaseOrchidGroupReservationsMutationCommand, ConsumeOrchidGroupReservationsMutationCommand,
 		RestoreOutboundOrchidGroupsMutationCommand, CorrectOrchidGroupsMutationCommand,

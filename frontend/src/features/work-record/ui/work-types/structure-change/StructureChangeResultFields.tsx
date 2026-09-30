@@ -71,7 +71,7 @@ export function StructureChangeResultFields({
       <div className="flex items-center justify-between gap-3">
         <div>
           <p className="text-sm font-bold">
-            {movement ? "이동 결과 난 묶음" : "결과 난 묶음"}
+            {movement ? "이동 대상과 위치" : "결과 난 묶음"}
           </p>
           <p className="mt-0.5 text-xs text-[#6a766e]">
             {movement
@@ -85,7 +85,7 @@ export function StructureChangeResultFields({
           onClick={onAdd}
         >
           <Plus className="h-3 w-3" aria-hidden="true" />
-          {movement ? "이동 위치 추가" : "결과 분리"}
+          {movement ? "이동 대상 추가" : "결과 분리"}
         </button>
       </div>
       {!movement ? (
@@ -163,7 +163,11 @@ function ResultRowFields({
   return (
     <section className="rounded-md border bg-[#f8faf7] p-3">
       <div className="mb-2 flex items-center justify-between">
-        <p className="text-xs font-bold">결과 {index + 1}</p>
+        <p className="text-xs font-bold">
+          {operation.workTypeCode === "MOVEMENT"
+            ? `이동 대상 ${index + 1}`
+            : `결과 ${index + 1}`}
+        </p>
         {removable ? (
           <button
             className="inline-flex items-center gap-1 text-xs font-semibold text-[#7b4b3e]"
@@ -173,7 +177,7 @@ function ResultRowFields({
             {operation.workTypeCode === "MERGE"
               ? "다른 결과에 합치기"
               : operation.workTypeCode === "MOVEMENT"
-                ? "다른 이동 결과에 합치기"
+                ? "다른 이동 대상에 합치기"
                 : "결과 합치기"}
             <Trash2 className="h-4 w-4 text-[#a33a24]" aria-hidden="true" />
           </button>
@@ -193,8 +197,12 @@ function ResultRowFields({
                 ? "난 묶음을 옮길 새 위치를 지정하세요."
                 : "자동 선택된 위치를 확인하거나 결과 난 묶음의 새 위치를 지정하세요."
             }
-            dialogTitle={`${operation.workType} 결과 ${index + 1} 배치 위치`}
-            fieldLabel="결과 배치"
+            dialogTitle={`${operation.workType} ${operation.workTypeCode === "MOVEMENT" ? "대상" : "결과"} ${index + 1} 배치 위치`}
+            fieldLabel={
+              operation.workTypeCode === "MOVEMENT"
+                ? "이동할 배치"
+                : "결과 배치"
+            }
             excludeOrchidGroupIds={excludeOrchidGroupIds}
             hiddenOrchidGroupIds={hiddenOrchidGroupIds}
             houses={houses}

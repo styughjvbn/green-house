@@ -50,7 +50,7 @@ public class FarmStructureChangeVoidAdapter implements StructureChangeVoidPort {
 				!= mutationIds.size()
 				|| entries.stream().anyMatch(entry -> !isVoidableType(entry.getMutation().getMutationType()))) {
 			blockers.add(new Blocker("MUTATION_NOT_REVERSIBLE",
-					"연속 상태 원장이 있는 구조 변경과 연관 선별 폐기만 자동 무효화할 수 있습니다.", 1));
+					"연속 상태 원장이 있는 구조 변경·자리 이동과 연관 선별 폐기만 자동 무효화할 수 있습니다.", 1));
 		}
 		if (!mutationIds.isEmpty() && relationRepository.existsByRelatedMutationIdInAndRelationType(mutationIds,
 				OrchidGroupMutationRelationType.COMPENSATES)) {
@@ -96,7 +96,8 @@ public class FarmStructureChangeVoidAdapter implements StructureChangeVoidPort {
 	}
 
 	private boolean isVoidableType(OrchidGroupMutationType type) {
-		return type == OrchidGroupMutationType.TRANSFORM || type == OrchidGroupMutationType.DISCARD;
+		return type == OrchidGroupMutationType.TRANSFORM || type == OrchidGroupMutationType.MOVE
+				|| type == OrchidGroupMutationType.DISCARD;
 	}
 
 	private boolean hasBrokenStateChain(List<OrchidGroupMutationEntry> entries) {

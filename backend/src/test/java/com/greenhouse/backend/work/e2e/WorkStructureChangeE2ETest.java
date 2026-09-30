@@ -145,6 +145,85 @@ class WorkStructureChangeE2ETest extends WorkE2ETestBase {
 	}
 
 	@Test
+	void preservesGroupIdsForOneToOneFullQuantityMovementAndRestoresThemOnVoid() throws Exception {
+		WorkTestDataSeeder.MovementScenario movement = seeder.seedMovementScenario();
+		seeder.baselineGroups();
+		ApiResult planned = post("/api/work-operations", """
+				{
+				  "workTypeId": %d,
+				  "title": "E2E 난 묶음 유지 자리 교환",
+				  "plannedStartDate": "2026-07-15",
+				  "sourceScopeType": "MANUAL_SELECTION",
+				  "sourceOrchidGroupIds": [%d, %d]
+				}
+				""".formatted(movement.movementWorkTypeId(), movement.firstOrchidGroupId(),
+				movement.secondOrchidGroupId()));
+		assertThat(planned.status()).isEqualTo(201);
+		long operationId = planned.data().path("id").asLong();
+		assertThat(post("/api/work-operations/%d/start".formatted(operationId), "").status()).isEqualTo(200);
+
+		ApiResult completed = post("/api/work-operations/%d/structure-change-executions".formatted(operationId), """
+				{
+				  "idempotencyKey": "e2e-identity-movement",
+				  "completedDate": "2026-07-15",
+				  "sources": [
+				    {"sourceOrchidGroupId": %d, "inputQuantity": 10},
+				    {"sourceOrchidGroupId": %d, "inputQuantity": 20}
+				  ],
+				  "results": [
+				    {"bedZoneId": %d, "quantity": 10, "attributeSourceOrchidGroupId": %d,
+				     "purpose": "NORMAL", "startPosition": 1, "endPosition": 3},
+				    {"bedZoneId": %d, "quantity": 20, "attributeSourceOrchidGroupId": %d,
+				     "purpose": "NORMAL", "startPosition": 0, "endPosition": 1}
+				  ]
+				}
+				""".formatted(movement.firstOrchidGroupId(), movement.secondOrchidGroupId(), movement.bedZoneId(),
+				movement.firstOrchidGroupId(), movement.bedZoneId(), movement.secondOrchidGroupId()));
+
+		assertThat(completed.status()).as(completed.body().toString()).isEqualTo(201);
+		assertThat(completed.data().path("status").asText()).isEqualTo("COMPLETED");
+		assertThat(completed.data().path("targets").get(0).path("resultDetails").path("identityPreserved").asBoolean())
+			.isTrue();
+		assertThat(count("orchid_groups")).isEqualTo(3L);
+		assertThat(jdbcTemplate.queryForObject("SELECT COUNT(*) FROM orchid_groups WHERE id IN (?, ?)", Long.class,
+				movement.firstOrchidGroupId(), movement.secondOrchidGroupId()))
+			.isEqualTo(2L);
+		assertThat(jdbcTemplate.queryForObject("SELECT quantity FROM orchid_groups WHERE id = ?", Integer.class,
+				movement.firstOrchidGroupId()))
+			.isEqualTo(10);
+		assertThat(jdbcTemplate.queryForObject("SELECT quantity FROM orchid_groups WHERE id = ?", Integer.class,
+				movement.secondOrchidGroupId()))
+			.isEqualTo(20);
+		assertThat(jdbcTemplate.queryForObject("SELECT start_position FROM orchid_groups WHERE id = ?", Double.class,
+				movement.firstOrchidGroupId()))
+			.isEqualTo(1.0);
+		assertThat(jdbcTemplate.queryForObject("SELECT start_position FROM orchid_groups WHERE id = ?", Double.class,
+				movement.secondOrchidGroupId()))
+			.isZero();
+		assertThat(jdbcTemplate.queryForObject("SELECT COUNT(*) FROM orchid_group_lineage WHERE work_operation_id = ?",
+				Long.class, operationId))
+			.isZero();
+		assertThat(jdbcTemplate.queryForObject("""
+				SELECT COUNT(*)
+				FROM orchid_group_mutation_entries entry
+				JOIN orchid_group_mutations mutation ON mutation.id = entry.mutation_id
+				WHERE mutation.source_reference_id = ? AND mutation.mutation_type = 'MOVE'
+				""", Long.class, Long.toString(operationId)))
+			.isEqualTo(2L);
+
+		ApiResult voided = post("/api/work-operations/%d/void".formatted(operationId),
+				"{\"idempotencyKey\":\"e2e-void-identity-movement\",\"reason\":\"자리 교환 취소\"}");
+		assertThat(voided.status()).isEqualTo(200);
+		assertThat(voided.data().path("status").asText()).isEqualTo("VOIDED");
+		assertThat(jdbcTemplate.queryForObject("SELECT start_position FROM orchid_groups WHERE id = ?", Double.class,
+				movement.firstOrchidGroupId()))
+			.isZero();
+		assertThat(jdbcTemplate.queryForObject("SELECT start_position FROM orchid_groups WHERE id = ?", Double.class,
+				movement.secondOrchidGroupId()))
+			.isEqualTo(1.0);
+	}
+
+	@Test
 	void serializesConcurrentTargetCompletionAndAppliesDiscardOnlyOnce() throws Exception {
 		Long discardWorkTypeId = jdbcTemplate.queryForObject("SELECT id FROM work_types WHERE code = 'DISCARD'",
 				Long.class);

@@ -252,11 +252,6 @@ public class OrchidGroup extends BaseEntity {
 		moveTo(actualBedZone, actualSortOrder, actualStartPosition, actualEndPosition);
 	}
 
-	public void restoreTransformation(Integer quantityBefore, String statusBefore, BigDecimal endPositionBefore) {
-		correctQuantityAndStatus(quantityBefore, statusBefore);
-		this.endPosition = endPositionBefore;
-	}
-
 	public void reserve(Integer reserveQuantity) {
 		validatePositiveQuantity(reserveQuantity, "예약 수량");
 		if (getAvailableQuantity() < reserveQuantity) {

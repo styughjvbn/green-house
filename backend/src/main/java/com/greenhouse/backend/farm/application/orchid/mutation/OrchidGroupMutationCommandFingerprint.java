@@ -35,6 +35,9 @@ public class OrchidGroupMutationCommandFingerprint {
 			case MoveOrchidGroupMutationCommand value -> fingerprint
 				.calculate(new MovePayload(OrchidGroupMutationType.MOVE, value.orchidGroupId(), value.toBedZoneId(),
 						value.startPosition(), value.endPosition(), value.effectiveBusinessDate(), value.reason()));
+			case MoveOrchidGroupsMutationCommand value -> fingerprint.calculate(new BatchMovePayload(
+					OrchidGroupMutationType.MOVE, value.items(), value.effectiveBusinessDate(), value.reason(),
+					new TreeSet<>(value.placementExclusionOrchidGroupIds())));
 			case CancelOrchidGroupCreationMutationCommand value ->
 				fingerprint.calculate(new CancelCreationPayload(OrchidGroupMutationType.CANCEL_CREATION,
 						value.orchidGroupId(), value.effectiveBusinessDate(), value.reason()));
@@ -90,6 +93,10 @@ public class OrchidGroupMutationCommandFingerprint {
 
 	private record MovePayload(OrchidGroupMutationType mutationType, Long orchidGroupId, Long toBedZoneId,
 			BigDecimal startPosition, BigDecimal endPosition, LocalDate effectiveBusinessDate, String reason) {
+	}
+
+	private record BatchMovePayload(OrchidGroupMutationType mutationType, List<MoveOrchidGroupMutationItem> items,
+			LocalDate effectiveBusinessDate, String reason, Set<Long> placementExclusionOrchidGroupIds) {
 	}
 
 	private record CancelCreationPayload(OrchidGroupMutationType mutationType, Long orchidGroupId,

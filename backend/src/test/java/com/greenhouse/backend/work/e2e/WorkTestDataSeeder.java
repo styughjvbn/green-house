@@ -80,6 +80,26 @@ class WorkTestDataSeeder {
 		return new ContractScenario(workTypeId("PESTICIDE"), workTypeId("REPOT"), bedZoneId, orchidGroupId);
 	}
 
+	MovementScenario seedMovementScenario() {
+		Long varietyId = insertVariety("E2E-MOVE-001", "E2E 이동 난");
+		Long bedZoneId = jdbcTemplate.queryForObject("SELECT id FROM bed_zones ORDER BY id OFFSET 1 LIMIT 1",
+				Long.class);
+		List<Long> orchidGroupIds = jdbcTemplate.queryForList("""
+				INSERT INTO orchid_groups (
+				  created_at, updated_at, age_year, genus, placement_type, pot_size, pot_size_code,
+				  quantity, sort_order, status, variety_name, bed_zone_id, split_placement_allowed,
+				  variety_id, start_position, end_position, reserved_quantity
+				) VALUES
+				  (?, ?, 2, '팔레놉시스', 'POT', '3.5치', 'POT_3_5',
+				   10, 1, '정상', 'E2E 이동 난', ?, FALSE, ?, 0, 1, 0),
+				  (?, ?, 2, '팔레놉시스', 'POT', '3.5치', 'POT_3_5',
+				   20, 2, '정상', 'E2E 이동 난', ?, FALSE, ?, 1, 3, 0)
+				RETURNING id
+				""", Long.class, timestamp(), timestamp(), bedZoneId, varietyId, timestamp(), timestamp(), bedZoneId,
+				varietyId);
+		return new MovementScenario(workTypeId("MOVEMENT"), bedZoneId, orchidGroupIds.get(0), orchidGroupIds.get(1));
+	}
+
 	BenchmarkScenario seedBenchmark(int operationCount, int targetsPerOperation) {
 		if (operationCount < 1 || targetsPerOperation < 1) {
 			throw new IllegalArgumentException("벤치마크 데이터 크기는 1 이상이어야 합니다.");
@@ -176,6 +196,10 @@ class WorkTestDataSeeder {
 	}
 
 	record BenchmarkScenario(int operationCount, int targetCount, Long firstOperationId, Long firstOrchidGroupId) {
+	}
+
+	record MovementScenario(Long movementWorkTypeId, Long bedZoneId, Long firstOrchidGroupId,
+			Long secondOrchidGroupId) {
 	}
 
 	private record TargetSeed(Long operationId, Long orchidGroupId) {

@@ -34,7 +34,7 @@ green-house/
 - 작업 관리는 URL을 조회 범위·보기 방식·필터·페이지의 단일 기준으로 사용한다. 서버 진입 컴포넌트인 `WorkRecordRoutePage`는 현재 목록 또는 캘린더 query만 prefetch해 hydration하고, 작업 유형과 농장 전체 배치 정보는 등록 또는 실행 다이얼로그를 열 때 조회한다. 클라이언트 `WorkRecordPage`는 보기 전환과 등록 다이얼로그의 열림 상태만 관리하고, 등록 다이얼로그가 자체 참조 데이터의 로딩과 오류를 처리한다. 목록과 캘린더는 공통 작업 동작 훅과 상세 패널을 사용한다. 캘린더는 전용 기간 API를 한 번 호출하고, 작업 등록·실행 후 관련 작업 및 농장 query를 무효화한다.
 - 작업 관리는 조회·상태 변경을 `model/operation`, 등록 상태와 대상 계산을 `model/registration`, 작업 유형별 표현 구성을 `model/work-types`로 구분한다. 화면은 `ui/list`, `ui/calendar`, `ui/detail`, `ui/registration`, `ui/work-types`에서 기능별로 구성한다. 대상 출처, 등록 가능 모드, 실행 workflow는 백엔드 capability를 사용하고 `workTypeDefinition.ts`에는 안내 문구 같은 표현 규칙만 둔다.
 - 작업 중심 그래프는 Work의 read model을 사용한다. Work가 생성 출처와 실행 의미가 있는 작업 선후 관계를 조립하고 Farm은 Work가 정의한 application port로 Mutation·revision·계보 조각을 제공한다. 작업 상세는 직접 Mutation 효과의 SOURCE/RESULT snapshot을 `투입·잔류·결과` 흐름으로 투영하고 Mutation 노드를 숨기며, 개발용 Mutation 테스트만 원본 기술 그래프와 계보 확장을 제공한다. 동일 Receipt에서 생성됐다는 사실은 그래프 관계로 취급하지 않고 목록 관계 조회에서만 사용한다. Receipt JSON은 멱등 결과의 원본 계약으로 유지하고, 역방향 조회는 그 결과만 정규화한 membership 테이블을 사용한다. 그래프들은 `shared/lib/graph`의 dagre layout을 공유한다.
-- 자리 이동 실행은 같은 품종의 원본 선별 수량을 실행 회차에서 합쳐 상태가 좋은 수량을 먼저 이동하고, 원래 자리에 남은 수량을 폐기한다. 연관 폐기 작업은 `MOVEMENT_DISCARD` 관계로 이동 작업에 연결하며 총 폐기 수량은 원본별 선별 수량 비율로 배분한다. 정수 나머지는 최대 나머지 방식을 사용하고 나머지가 같으면 난 묶음 ID 오름차순으로 결정한다.
+- 자리 이동 실행은 명시적인 1:1 전량 위치 변경이면 기존 난 묶음을 일괄 `MOVE`하여 ID를 유지한다. 같은 조건의 과거 `TRANSFORM` 이력은 원본 ID의 상태 체인으로 합치고 후속 참조를 이관하며, 제거 ID 대응은 감사 테이블에 보존한다. 그 외에는 같은 품종의 원본 선별 수량을 실행 회차에서 합쳐 상태가 좋은 수량을 먼저 이동하고, 원래 자리에 남은 수량을 폐기한다. 연관 폐기 작업은 `MOVEMENT_DISCARD` 관계로 이동 작업에 연결하며 총 폐기 수량은 원본별 선별 수량 비율로 배분한다. 정수 나머지는 최대 나머지 방식을 사용하고 나머지가 같으면 난 묶음 ID 오름차순으로 결정한다.
 
 ### Backend
 
