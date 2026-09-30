@@ -8,6 +8,8 @@ import { operationStatusLabel } from "../common/workOperationLabels";
 
 export function OperationResult({
   className = "mt-4",
+  detailInitialTab,
+  detailSelectionKey,
   operation,
   loading,
   onComplete,
@@ -18,6 +20,8 @@ export function OperationResult({
   onVoidSaved,
 }: {
   className?: string;
+  detailInitialTab: "overview" | "graph";
+  detailSelectionKey: number;
   operation: WorkOperation;
   loading: boolean;
   onComplete: (completedDate: string) => void;
@@ -165,8 +169,9 @@ export function OperationResult({
       ) : null}
 
       <WorkOperationDetails
-        key={operation.id}
+        key={`${operation.id}-${detailSelectionKey}`}
         actionLoading={loading}
+        initialTab={detailInitialTab}
         operation={operation}
         onExecuteTarget={onExecuteTarget}
         onRequestTargetCompletion={setCompletionTargetId}

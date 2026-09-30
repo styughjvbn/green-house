@@ -2,7 +2,6 @@ package com.greenhouse.backend.work.application.operation;
 
 import com.greenhouse.backend.common.exception.NotFoundException;
 import com.greenhouse.backend.work.domain.effect.WorkAppliedEffect;
-import com.greenhouse.backend.work.domain.operation.WorkCommandReceipt;
 import com.greenhouse.backend.work.domain.operation.WorkOperation;
 import com.greenhouse.backend.work.domain.operation.WorkOperationRelationType;
 import com.greenhouse.backend.work.domain.target.WorkOperationTarget;
@@ -15,8 +14,6 @@ import com.greenhouse.backend.work.dto.operation.WorkOperationGraphResponse;
 import com.greenhouse.backend.work.dto.operation.WorkOperationGraphStateResponse;
 import com.greenhouse.backend.work.dto.operation.WorkOperationOriginType;
 import com.greenhouse.backend.work.repository.WorkAppliedEffectRepository;
-import com.greenhouse.backend.work.repository.WorkCommandReceiptMembershipRepository;
-import com.greenhouse.backend.work.repository.WorkCommandReceiptRepository;
 import com.greenhouse.backend.work.repository.WorkOperationCorrectionRepository;
 import com.greenhouse.backend.work.repository.WorkOperationRepository;
 import com.greenhouse.backend.work.repository.WorkOperationTargetRepository;
@@ -49,10 +46,6 @@ public class WorkOperationGraphQueryService {
 
 	private final WorkAppliedEffectRepository effectRepository;
 
-	private final WorkCommandReceiptRepository receiptRepository;
-
-	private final WorkCommandReceiptMembershipRepository membershipRepository;
-
 	private final WorkOperationCorrectionRepository correctionRepository;
 
 	private final WorkOperationRelationSummaryAssembler relationSummaryAssembler;
@@ -63,15 +56,13 @@ public class WorkOperationGraphQueryService {
 		validate(operationId, detail, depth, maxNodes);
 		WorkOperation root = operationRepository.findWithWorkTypeById(operationId)
 			.orElseThrow(() -> new NotFoundException("작업을 찾을 수 없습니다."));
-		WorkCommandReceipt receipt = receipts(root.getId()).stream().findFirst().orElse(null);
-		Map<Long, WorkOperation> operations = relatedOperations(root, receipt);
+		Map<Long, WorkOperation> operations = relatedOperations(root);
 		Map<Long, List<WorkOperationTarget>> targets = targets(operations.keySet());
 		var relationSummaries = relationSummaryAssembler.assemble(operations.values());
 		List<WorkOperationGraphNodeResponse> nodes = new ArrayList<>();
 		List<WorkOperationGraphEdgeResponse> edges = new ArrayList<>();
 
 		addOrigin(root, relationSummaries.get(root.getId()), nodes, edges);
-		addCreationBatch(root, receipt, operations.values(), nodes, edges);
 		operations.values()
 			.forEach(operation -> nodes.add(operationNode(operation, operationId.equals(operation.getId()),
 					targets.getOrDefault(operation.getId(), List.of()))));
@@ -127,13 +118,9 @@ public class WorkOperationGraphQueryService {
 				List.copyOf(edges));
 	}
 
-	private Map<Long, WorkOperation> relatedOperations(WorkOperation root, WorkCommandReceipt receipt) {
+	private Map<Long, WorkOperation> relatedOperations(WorkOperation root) {
 		Map<Long, WorkOperation> result = new LinkedHashMap<>();
 		result.put(root.getId(), root);
-		if (receipt != null && receipt.getResultOperationIds() != null && receipt.getResultOperationIds().size() > 1) {
-			operationRepository.findWithWorkTypeByIdIn(receipt.getResultOperationIds())
-				.forEach(operation -> result.putIfAbsent(operation.getId(), operation));
-		}
 		if (root.getParentOperation() != null) {
 			operationRepository.findWithWorkTypeById(root.getParentOperation().getId())
 				.ifPresent(operation -> result.putIfAbsent(operation.getId(), operation));
@@ -182,23 +169,6 @@ public class WorkOperationGraphQueryService {
 				null, null, null, null, null, null, List.of(), List.of(), null, null, null, null, null, null, null);
 	}
 
-	private void addCreationBatch(WorkOperation root, WorkCommandReceipt receipt, Collection<WorkOperation> operations,
-			List<WorkOperationGraphNodeResponse> nodes, List<WorkOperationGraphEdgeResponse> edges) {
-		if (receipt == null || receipt.getResultOperationIds() == null || receipt.getResultOperationIds().size() < 2)
-			return;
-		List<Long> siblingIds = receipt.getResultOperationIds();
-		String batchId = "creation-batch-" + siblingIds.stream().min(Long::compareTo).orElse(root.getId());
-		nodes.add(new WorkOperationGraphNodeResponse(batchId, WorkOperationGraphNodeType.CREATION_BATCH, false, null,
-				null, siblingIds.size(), null, null, null, null, null, null, List.of(), List.of(), null, null, null,
-				null, null, null, null));
-		Set<Long> visibleIds = operations.stream().map(WorkOperation::getId).collect(Collectors.toSet());
-		for (Long siblingId : siblingIds) {
-			if (visibleIds.contains(siblingId))
-				edges.add(new WorkOperationGraphEdgeResponse("same-command-" + batchId + "-" + siblingId, batchId,
-						operationNodeId(siblingId), WorkOperationGraphEdgeType.SAME_COMMAND, null));
-		}
-	}
-
 	private WorkOperationGraphNodeResponse operationNode(WorkOperation operation, boolean selected,
 			List<WorkOperationTarget> targets) {
 		List<Long> groupIds = targets.stream()
@@ -244,11 +214,6 @@ public class WorkOperationGraphQueryService {
 			.stream()
 			.collect(Collectors.toMap(Map.Entry::getKey, entry -> List.copyOf(entry.getValue()), (left, right) -> left,
 					LinkedHashMap::new));
-	}
-
-	private List<WorkCommandReceipt> receipts(Long operationId) {
-		List<String> keys = membershipRepository.findReceiptKeysByOperationId(operationId);
-		return keys.isEmpty() ? List.of() : receiptRepository.findByReceiptKeyIn(keys);
 	}
 
 	private WorkOperationGraphStateResponse state(WorkOperationMutationGraphPort.State state) {

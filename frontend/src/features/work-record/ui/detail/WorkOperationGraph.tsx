@@ -18,6 +18,7 @@ import {
   bundleMutationResults,
   layoutLineageGraph,
 } from "@/shared/lib/graph/lineageGraphLayout";
+import { workOperationGraphEdgeLabel } from "../../lib/workOperationGraphLabels";
 import type {
   WorkOperationGraph as WorkGraph,
   WorkOperationGraphDetail,
@@ -148,7 +149,13 @@ export function WorkOperationGraph({
 }
 
 function toFlow(graph: WorkGraph) {
-  const readable = bundleMutationResults(graph.nodes, graph.edges);
+  const graphNodes = graph.nodes.filter(
+    (node) => node.nodeType !== "CREATION_BATCH",
+  );
+  const graphEdges = graph.edges.filter(
+    (edge) => edge.edgeType !== "SAME_COMMAND",
+  );
+  const readable = bundleMutationResults(graphNodes, graphEdges);
   const laidOut = layoutLineageGraph(readable.nodes, readable.edges, {
     ORIGIN: { width: 210, height: 90 },
     CREATION_BATCH: { width: 220, height: 90 },
@@ -176,7 +183,7 @@ function toFlow(graph: WorkGraph) {
   }));
   const edges: Edge[] = readable.edges.map((edge) => {
     const relation = edge.edgeType === "MUTATION_RELATION";
-    const label = edgeLabel(edge.edgeType, edge.relationType);
+    const label = workOperationGraphEdgeLabel(edge.edgeType, edge.relationType);
     return {
       id: edge.id,
       source: edge.sourceNodeId,
@@ -294,19 +301,6 @@ function Card({ children, tone }: { children: React.ReactNode; tone: string }) {
       {children}
     </article>
   );
-}
-
-function edgeLabel(type: string, relation?: string | null) {
-  if (type === "ORIGINATED") return "생성";
-  if (type === "SAME_COMMAND") return "함께 등록";
-  if (type === "PRECEDES") return "선행";
-  if (type === "EFFECT") return "실행 효과";
-  if (relation === "CORRECTS") return "보정";
-  if (relation === "COMPENSATES") return "보상";
-  if (relation === "SUPERSEDES") return "대체";
-  if (relation === "SOURCE") return "원본";
-  if (relation === "RESULT") return "결과";
-  return undefined;
 }
 
 function Message({ children }: { children: React.ReactNode }) {

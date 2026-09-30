@@ -39,13 +39,15 @@ export function WorkOperationDetailPanel({
         {actions.selected ? (
           <OperationResult
             className="h-full"
+            detailInitialTab={actions.detailInitialTab}
+            detailSelectionKey={actions.detailSelectionKey}
             operation={actions.selected}
             loading={actions.loading || housesQuery.isFetching}
             onComplete={actions.complete}
             onOperationAction={actions.runOperationAction}
             onTargetAction={actions.runTargetAction}
             onExecuteTarget={actions.openExecution}
-            onSelectOperation={actions.select}
+            onSelectOperation={actions.selectFromGraph}
             onVoidSaved={actions.voidSaved}
           />
         ) : actions.detailLoading ? (

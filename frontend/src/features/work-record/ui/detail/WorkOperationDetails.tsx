@@ -64,6 +64,7 @@ const TABS: Array<{ id: DetailTab; label: string }> = [
 export function WorkOperationDetails({
   operation,
   actionLoading,
+  initialTab,
   onTargetAction,
   onExecuteTarget,
   onRequestTargetCompletion,
@@ -71,6 +72,7 @@ export function WorkOperationDetails({
 }: {
   operation: WorkOperation;
   actionLoading: boolean;
+  initialTab: "overview" | "graph";
   onTargetAction: (
     targetId: number,
     action: "start" | "complete" | "skip",
@@ -79,7 +81,7 @@ export function WorkOperationDetails({
   onRequestTargetCompletion: (targetId: number) => void;
   onSelectOperation: (id: number) => void;
 }) {
-  const [activeTab, setActiveTab] = useState<DetailTab>("overview");
+  const [activeTab, setActiveTab] = useState<DetailTab>(initialTab);
   const detailQuery = useQuery({
     ...workOperationDetailsQueryOptions(operation.id),
     enabled: activeTab === "execution",

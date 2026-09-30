@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useCallback, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import type { WorkOperation, WorkOperationTarget } from "@/entities/farm/types";
 import {
@@ -17,6 +17,11 @@ export function useWorkOperationActions() {
     useWorkRecordInvalidation();
   const queryClient = useQueryClient();
   const [selectedId, setSelectedId] = useState<number | null>(null);
+  const [detailSelection, setDetailSelection] = useState<{
+    operationId: number | null;
+    initialTab: "overview" | "graph";
+    revision: number;
+  }>({ operationId: null, initialTab: "overview", revision: 0 });
   const [executionTarget, setExecutionTarget] =
     useState<WorkOperationTarget | null>(null);
   const selectedQuery = useQuery({
@@ -35,6 +40,22 @@ export function useWorkOperationActions() {
       await invalidateOperations();
     },
   });
+  const select = useCallback((operationId: number) => {
+    setSelectedId(operationId);
+    setDetailSelection((current) => ({
+      operationId,
+      initialTab: "overview",
+      revision: current.revision + 1,
+    }));
+  }, []);
+  const selectFromGraph = useCallback((operationId: number) => {
+    setSelectedId(operationId);
+    setDetailSelection((current) => ({
+      operationId,
+      initialTab: "graph",
+      revision: current.revision + 1,
+    }));
+  }, []);
 
   return {
     clearSelection() {
@@ -60,6 +81,11 @@ export function useWorkOperationActions() {
               ? "작업 상세를 불러오지 못했습니다."
               : null,
     detailLoading: selectedQuery.isFetching,
+    detailInitialTab:
+      detailSelection.operationId === selectedId
+        ? detailSelection.initialTab
+        : "overview",
+    detailSelectionKey: detailSelection.revision,
     executionTarget,
     loading: actionMutation.isPending,
     openExecution: setExecutionTarget,
@@ -84,7 +110,8 @@ export function useWorkOperationActions() {
         ),
       );
     },
-    select: setSelectedId,
+    select,
+    selectFromGraph,
     selected,
     selectedId,
     executionSaved(updated: WorkOperation) {
