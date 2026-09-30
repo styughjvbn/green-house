@@ -78,8 +78,6 @@ public class DiscardRecordService {
 		WorkType discardType = workTypeService.getByCode(WorkTypeDefinition.DISCARD.name());
 		List<Long> orchidGroupIds = discardQuantities.keySet().stream().sorted().toList();
 		Map<String, Object> details = new LinkedHashMap<>();
-		details.put("movementOperationId", movementOperation.getId());
-		details.put("relation", WorkOperationRelationType.MOVEMENT_DISCARD.name());
 		details.put("allocationMethod", "PROPORTIONAL_BY_INPUT_QUANTITY");
 		details.put("totalDiscardQuantity",
 				discardQuantities.values().stream().mapToInt(Integer::intValue).sum());

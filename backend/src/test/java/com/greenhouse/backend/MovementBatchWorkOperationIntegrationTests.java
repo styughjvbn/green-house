@@ -138,10 +138,10 @@ class MovementBatchWorkOperationIntegrationTests extends AbstractBackendIntegrat
 			.toList();
 		assertThat(discardOperations).hasSize(1);
 		assertThat(discardOperations.getFirst().getStatus().name()).isEqualTo("COMPLETED");
-		assertThat(discardOperations.getFirst().getDetails()).containsEntry("movementOperationId", operationId);
 		assertThat(discardOperations.getFirst().getDetails())
 			.containsEntry("allocationMethod", "PROPORTIONAL_BY_INPUT_QUANTITY")
-			.containsEntry("totalDiscardQuantity", 4);
+			.containsEntry("totalDiscardQuantity", 4)
+			.doesNotContainKeys("movementOperationId", "relation");
 		assertThat(discardOperations.getFirst().getTitle()).endsWith("이동 후 잔여 난 폐기");
 		assertThat(discardOperations.getFirst().getParentOperation().getId()).isEqualTo(operationId);
 		assertThat(discardOperations.getFirst().getRelationType())
