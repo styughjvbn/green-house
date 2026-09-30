@@ -18,7 +18,7 @@ import {
   type NodeProps,
 } from "@xyflow/react";
 import { GitFork } from "lucide-react";
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { layoutLineageGraph } from "@/shared/lib/graph/lineageGraphLayout";
 import {
   buildWorkOperationFlowGraph,
@@ -48,8 +48,9 @@ export function WorkOperationFlowGraph({
   workOperationId: number;
   onSelectOperation: (id: number) => void;
 }) {
+  const [depth, setDepth] = useState(1);
   const query = useQuery(
-    workOperationGraphQueryOptions(workOperationId, "MUTATION", 1),
+    workOperationGraphQueryOptions(workOperationId, "LINEAGE", depth),
   );
   const flow = useMemo(
     () => (query.data ? toFlow(query.data) : { nodes: [], edges: [] }),
@@ -58,15 +59,31 @@ export function WorkOperationFlowGraph({
 
   return (
     <section className="overflow-hidden rounded-md border border-[#d7e1d5] bg-white">
-      <header className="border-b border-[#e3e9e1] bg-[#f5f8f4] px-4 py-3">
-        <div className="flex items-center gap-2 font-bold text-[#285b37]">
-          <GitFork className="h-4 w-4" aria-hidden="true" />
-          작업 흐름
+      <header className="flex flex-wrap items-start justify-between gap-3 border-b border-[#e3e9e1] bg-[#f5f8f4] px-4 py-3">
+        <div>
+          <div className="flex items-center gap-2 font-bold text-[#285b37]">
+            <GitFork className="h-4 w-4" aria-hidden="true" />
+            작업 흐름
+          </div>
+          <p className="mt-1 text-xs text-[#657269]">
+            투입된 난 묶음과 연결된 작업·결과 흐름입니다.
+          </p>
         </div>
-        <p className="mt-1 text-xs text-[#657269]">
-          투입된 난 묶음과 입고가 작업을 거쳐 잔류·결과 묶음으로 바뀐
-          흐름입니다.
-        </p>
+        <label className="flex items-center gap-2 text-xs font-semibold text-[#4e6254]">
+          연결 깊이
+          <select
+            aria-label="작업 흐름 연결 깊이"
+            className="rounded border border-[#ccd8ca] bg-white px-2 py-1"
+            value={depth}
+            onChange={(event) => setDepth(Number(event.target.value))}
+          >
+            {[1, 2, 3].map((value) => (
+              <option key={value} value={value}>
+                {value}
+              </option>
+            ))}
+          </select>
+        </label>
       </header>
       {query.isPending ? (
         <Message>작업 흐름을 불러오는 중입니다.</Message>

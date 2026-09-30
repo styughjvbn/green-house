@@ -149,6 +149,37 @@ class WorkOperationGraphQueryServiceTest {
 	}
 
 	@Test
+	void includesWorksDiscoveredFromOrchidGroupLineageUpToRequestedDepth() {
+		WorkOperation selected = operation(85L, null, null);
+		WorkOperation related = operation(86L, null, null);
+		WorkAppliedEffect selectedEffect = effect(selected, 115L);
+		WorkAppliedEffect relatedEffect = effect(related, 116L);
+		when(operationRepository.findWithWorkTypeById(85L)).thenReturn(Optional.of(selected));
+		when(operationRepository.findByParentOperationIdAndRelationTypeOrderByIdAsc(85L,
+				WorkOperationRelationType.MOVEMENT_DISCARD))
+			.thenReturn(List.of());
+		when(relationSummaryAssembler.assemble(anyCollection()))
+			.thenReturn(Map.of(85L, summary(WorkOperationOriginType.WORK_MANAGEMENT, 1)));
+		when(effectRepository.findByWorkOperationIdInOrderByWorkOperationIdAscIdAsc(anyCollection()))
+			.thenReturn(List.of(selectedEffect));
+		when(mutationGraphPort.load(eq(List.of(115L)), eq(true), eq(3), anyInt()))
+			.thenReturn(fragment(115L, 116L));
+		when(effectRepository.findByMutationIdInOrderByMutationIdAscIdAsc(List.of(115L, 116L)))
+			.thenReturn(List.of(selectedEffect, relatedEffect));
+
+		var graph = service.get(85L, WorkOperationGraphDetail.LINEAGE, 3, 120);
+
+		assertThat(graph.nodes()).filteredOn(node -> node.nodeType() == WorkOperationGraphNodeType.WORK_OPERATION)
+			.extracting(node -> node.workOperationId())
+			.containsExactly(85L, 86L);
+		assertThat(graph.edges()).filteredOn(edge -> edge.edgeType() == WorkOperationGraphEdgeType.EFFECT)
+			.extracting(edge -> Map.entry(edge.sourceNodeId(), edge.targetNodeId()))
+			.containsExactlyInAnyOrder(Map.entry("work-operation-85", "mutation-115"),
+					Map.entry("work-operation-86", "mutation-116"));
+		verify(mutationGraphPort).load(eq(List.of(115L)), eq(true), eq(3), anyInt());
+	}
+
+	@Test
 	void keepsVoidedWorkGraphFixedToOriginalEffects() {
 		WorkOperation operation = operation(90L, null, null);
 		WorkAppliedEffect originalEffect = effect(operation, 121L);

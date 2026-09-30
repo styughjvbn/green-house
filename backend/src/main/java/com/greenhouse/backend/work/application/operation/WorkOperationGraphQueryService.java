@@ -56,17 +56,31 @@ public class WorkOperationGraphQueryService {
 		validate(operationId, detail, depth, maxNodes);
 		WorkOperation root = operationRepository.findWithWorkTypeById(operationId)
 			.orElseThrow(() -> new NotFoundException("작업을 찾을 수 없습니다."));
-		Map<Long, WorkOperation> operations = relatedOperations(root);
+		Map<Long, WorkOperation> seedOperations = relatedOperations(root);
+		Map<Long, List<Long>> seedMutationIds = detail == WorkOperationGraphDetail.WORK ? Map.of()
+				: mutationIds(seedOperations.values());
+		List<Long> rootMutationIds = seedMutationIds.values()
+			.stream()
+			.flatMap(Collection::stream)
+			.distinct()
+			.toList();
+		WorkOperationMutationGraphPort.Fragment fragment = detail == WorkOperationGraphDetail.WORK
+				? WorkOperationMutationGraphPort.Fragment.empty()
+				: mutationGraphPort.load(rootMutationIds, detail == WorkOperationGraphDetail.LINEAGE, depth, maxNodes);
+		Map<Long, WorkOperation> operations = new LinkedHashMap<>(seedOperations);
+		Map<Long, Set<Long>> operationIdsByMutation = operationIdsByMutation(seedMutationIds);
+		if (detail == WorkOperationGraphDetail.LINEAGE) {
+			addDiscoveredOperations(fragment, operations, operationIdsByMutation);
+		}
 		Map<Long, List<WorkOperationTarget>> targets = targets(operations.keySet());
-		var relationSummaries = relationSummaryAssembler.assemble(operations.values());
+		var rootRelationSummary = relationSummaryAssembler.assemble(List.of(root)).get(root.getId());
 		List<WorkOperationGraphNodeResponse> nodes = new ArrayList<>();
 		List<WorkOperationGraphEdgeResponse> edges = new ArrayList<>();
 
-		addOrigin(root, relationSummaries.get(root.getId()), nodes, edges);
-		operations.values()
+		addOrigin(root, rootRelationSummary, nodes, edges);
+		seedOperations.values()
 			.forEach(operation -> nodes.add(operationNode(operation, operationId.equals(operation.getId()),
 					targets.getOrDefault(operation.getId(), List.of()))));
-		addOperationRelations(operations, edges);
 
 		boolean truncated = nodes.size() > maxNodes;
 		if (truncated) {
@@ -76,46 +90,131 @@ public class WorkOperationGraphQueryService {
 		}
 
 		if (detail != WorkOperationGraphDetail.WORK && nodes.size() < maxNodes) {
-			Map<Long, List<Long>> mutationIdsByOperation = mutationIds(operations.values());
-			List<Long> mutationIds = mutationIdsByOperation.values()
+			truncated |= addMutationFlow(operationId, maxNodes, operations, targets, operationIdsByMutation, fragment,
+					nodes, edges);
+		}
+		Set<Long> visibleOperationIds = nodes.stream()
+			.filter(node -> node.nodeType() == WorkOperationGraphNodeType.WORK_OPERATION)
+			.map(WorkOperationGraphNodeResponse::workOperationId)
+			.collect(Collectors.toCollection(LinkedHashSet::new));
+		Map<Long, WorkOperation> visibleOperations = operations.entrySet()
+			.stream()
+			.filter(entry -> visibleOperationIds.contains(entry.getKey()))
+			.collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue, (left, right) -> left,
+					LinkedHashMap::new));
+		addOperationRelations(visibleOperations, edges);
+
+		return new WorkOperationGraphResponse(operationId, detail, depth, maxNodes, truncated, List.copyOf(nodes),
+				List.copyOf(edges));
+	}
+
+	private void addDiscoveredOperations(WorkOperationMutationGraphPort.Fragment fragment,
+			Map<Long, WorkOperation> operations, Map<Long, Set<Long>> operationIdsByMutation) {
+		List<Long> mutationIds = fragment.mutations()
+			.stream()
+			.map(WorkOperationMutationGraphPort.MutationNode::id)
+			.toList();
+		if (mutationIds.isEmpty()) {
+			return;
+		}
+		effectRepository.findByMutationIdInOrderByMutationIdAscIdAsc(mutationIds).forEach(effect -> {
+			Long mutationId = effect.getMutationId();
+			WorkOperation operation = effect.getWorkOperation();
+			if (mutationId == null || operation == null) {
+				return;
+			}
+			operations.putIfAbsent(operation.getId(), operation);
+			operationIdsByMutation.computeIfAbsent(mutationId, ignored -> new LinkedHashSet<>()).add(operation.getId());
+		});
+	}
+
+	private Map<Long, Set<Long>> operationIdsByMutation(Map<Long, List<Long>> mutationIdsByOperation) {
+		Map<Long, Set<Long>> result = new LinkedHashMap<>();
+		mutationIdsByOperation.forEach((operationId, mutationIds) -> mutationIds.forEach(mutationId -> result
+			.computeIfAbsent(mutationId, ignored -> new LinkedHashSet<>())
+			.add(operationId)));
+		return result;
+	}
+
+	private boolean addMutationFlow(Long selectedOperationId, int maxNodes, Map<Long, WorkOperation> operations,
+			Map<Long, List<WorkOperationTarget>> targets, Map<Long, Set<Long>> operationIdsByMutation,
+			WorkOperationMutationGraphPort.Fragment fragment, List<WorkOperationGraphNodeResponse> nodes,
+			List<WorkOperationGraphEdgeResponse> edges) {
+		Map<String, WorkOperationMutationGraphPort.StateNode> stateById = fragment.states()
+			.stream()
+			.collect(Collectors.toMap(WorkOperationMutationGraphPort.StateNode::id, value -> value));
+		Map<String, List<WorkOperationMutationGraphPort.Edge>> stateEdgesByMutation = fragment.edges()
+			.stream()
+			.filter(edge -> edge.type().equals(WorkOperationGraphEdgeType.STATE_INPUT.name())
+					|| edge.type().equals(WorkOperationGraphEdgeType.STATE_OUTPUT.name()))
+			.collect(Collectors.groupingBy(edge -> edge.type().equals(WorkOperationGraphEdgeType.STATE_INPUT.name())
+					? edge.targetNodeId() : edge.sourceNodeId(), LinkedHashMap::new, Collectors.toList()));
+		Set<String> visibleNodeIds = nodes.stream()
+			.map(WorkOperationGraphNodeResponse::id)
+			.collect(Collectors.toCollection(LinkedHashSet::new));
+		Set<Long> visibleMutationIds = new LinkedHashSet<>();
+		boolean truncated = fragment.truncated();
+
+		for (var mutation : fragment.mutations()) {
+			String mutationNodeId = mutationNodeId(mutation.id());
+			Set<String> stateIds = stateEdgesByMutation.getOrDefault(mutationNodeId, List.of())
 				.stream()
-				.flatMap(Collection::stream)
-				.distinct()
-				.toList();
-			int remaining = maxNodes - nodes.size();
-			var fragment = mutationGraphPort.load(mutationIds, detail == WorkOperationGraphDetail.LINEAGE, depth,
-					remaining);
-			truncated |= fragment.truncated();
-			fragment.mutations()
-				.forEach(mutation -> nodes.add(new WorkOperationGraphNodeResponse(mutationNodeId(mutation.id()),
-						WorkOperationGraphNodeType.MUTATION, false, null, null, null, null, null, null, null, null,
-						null, List.of(), List.of(), mutation.id(), mutation.type(), mutation.effectiveBusinessDate(),
-						mutation.occurredAt(), null, null, null)));
-			fragment.states()
-				.forEach(state -> nodes.add(new WorkOperationGraphNodeResponse(state.id(),
-						WorkOperationGraphNodeType.STATE, false, null, null, null, null, null, null, null, null, null,
-						List.of(state.orchidGroupId()), List.of(), null, null, null, null, state.orchidGroupId(),
-						state.stateRevision(), state(state.state()))));
-			fragment.edges()
-				.forEach(edge -> edges.add(new WorkOperationGraphEdgeResponse(edge.id(), edge.sourceNodeId(),
-						edge.targetNodeId(), WorkOperationGraphEdgeType.valueOf(edge.type()), edge.relationType())));
-			Set<Long> visibleMutationIds = fragment.mutations()
+				.flatMap(edge -> List.of(edge.sourceNodeId(), edge.targetNodeId()).stream())
+				.filter(stateById::containsKey)
+				.collect(Collectors.toCollection(LinkedHashSet::new));
+			Set<Long> newOperationIds = operationIdsByMutation.getOrDefault(mutation.id(), Set.of())
 				.stream()
-				.map(WorkOperationMutationGraphPort.MutationNode::id)
-				.collect(Collectors.toSet());
-			for (var entry : mutationIdsByOperation.entrySet()) {
-				for (Long mutationId : entry.getValue()) {
-					if (visibleMutationIds.contains(mutationId)) {
-						edges.add(new WorkOperationGraphEdgeResponse("effect-" + entry.getKey() + "-" + mutationId,
-								operationNodeId(entry.getKey()), mutationNodeId(mutationId),
-								WorkOperationGraphEdgeType.EFFECT, null));
-					}
+				.filter(id -> !visibleNodeIds.contains(operationNodeId(id)))
+				.collect(Collectors.toCollection(LinkedHashSet::new));
+			long newStateCount = stateIds.stream().filter(id -> !visibleNodeIds.contains(id)).count();
+			int candidateCount = 1 + newOperationIds.size() + Math.toIntExact(newStateCount);
+			if (nodes.size() + candidateCount > maxNodes) {
+				truncated = true;
+				continue;
+			}
+			for (Long operationId : newOperationIds) {
+				WorkOperation operation = operations.get(operationId);
+				if (operation == null) {
+					continue;
+				}
+				nodes.add(operationNode(operation, selectedOperationId.equals(operationId),
+						targets.getOrDefault(operationId, List.of())));
+				visibleNodeIds.add(operationNodeId(operationId));
+			}
+			nodes.add(mutationNode(mutation));
+			visibleNodeIds.add(mutationNodeId);
+			visibleMutationIds.add(mutation.id());
+			for (String stateId : stateIds) {
+				if (visibleNodeIds.add(stateId)) {
+					nodes.add(stateNode(stateById.get(stateId)));
 				}
 			}
 		}
 
-		return new WorkOperationGraphResponse(operationId, detail, depth, maxNodes, truncated, List.copyOf(nodes),
-				List.copyOf(edges));
+		fragment.edges()
+			.stream()
+			.filter(edge -> visibleNodeIds.contains(edge.sourceNodeId()) && visibleNodeIds.contains(edge.targetNodeId()))
+			.forEach(edge -> edges.add(new WorkOperationGraphEdgeResponse(edge.id(), edge.sourceNodeId(),
+					edge.targetNodeId(), WorkOperationGraphEdgeType.valueOf(edge.type()), edge.relationType())));
+		visibleMutationIds.forEach(mutationId -> operationIdsByMutation.getOrDefault(mutationId, Set.of())
+			.stream()
+			.filter(operationId -> visibleNodeIds.contains(operationNodeId(operationId)))
+			.forEach(operationId -> edges.add(new WorkOperationGraphEdgeResponse(
+					"effect-" + operationId + "-" + mutationId, operationNodeId(operationId), mutationNodeId(mutationId),
+					WorkOperationGraphEdgeType.EFFECT, null))));
+		return truncated;
+	}
+
+	private WorkOperationGraphNodeResponse mutationNode(WorkOperationMutationGraphPort.MutationNode mutation) {
+		return new WorkOperationGraphNodeResponse(mutationNodeId(mutation.id()), WorkOperationGraphNodeType.MUTATION,
+				false, null, null, null, null, null, null, null, null, null, List.of(), List.of(), mutation.id(),
+				mutation.type(), mutation.effectiveBusinessDate(), mutation.occurredAt(), null, null, null);
+	}
+
+	private WorkOperationGraphNodeResponse stateNode(WorkOperationMutationGraphPort.StateNode state) {
+		return new WorkOperationGraphNodeResponse(state.id(), WorkOperationGraphNodeType.STATE, false, null, null, null,
+				null, null, null, null, null, null, List.of(state.orchidGroupId()), List.of(), null, null, null, null,
+				state.orchidGroupId(), state.stateRevision(), state(state.state()));
 	}
 
 	private Map<Long, WorkOperation> relatedOperations(WorkOperation root) {
