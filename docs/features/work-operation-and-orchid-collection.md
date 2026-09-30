@@ -16,6 +16,10 @@
 계보는 사용자가 단계를 확장할 때만 Mutation·revision과 depth 제한 계보를 추가한다.
 `sourceScopeType`은 대상 선택 출처이며 작업 생성 출처로 사용하지 않는다.
 
+개발용 Mutation 테스트 화면은 작업 ID를 기준으로 작업·Mutation·revision·계보를 함께 조회하는 기술
+그래프를 제공한다. `WORK`, `MUTATION`, `LINEAGE` 단계와 계보 깊이를 전환해 작업 효과와 내부 Mutation
+연결을 점검한다.
+
 Receipt의 `resultOperationIds`는 동일 생성 요청 판정의 기준으로 유지한다. 작업에서 Receipt를 찾는
 membership은 목록 관계 카드의 역방향 조회용 복제이며, migration도 존재하는 Receipt 결과만 옮기고
 과거 작업의 관계를 휴리스틱으로 보충하지 않는다.

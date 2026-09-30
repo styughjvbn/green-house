@@ -8,11 +8,12 @@ import {
 test("reads valid mutation lab filters and rejects invalid values", () => {
   const filters = readMutationLabFilters(
     new URLSearchParams(
-      "orchidGroupId=42&mutationType=RESERVE&sourceDomain=SALES&page=2&size=50",
+      "orchidGroupId=42&workOperationId=91&mutationType=RESERVE&sourceDomain=SALES&page=2&size=50",
     ),
   );
   assert.deepEqual(filters, {
     orchidGroupId: 42,
+    workOperationId: 91,
     mutationType: "RESERVE",
     sourceDomain: "SALES",
     page: 2,
@@ -22,11 +23,12 @@ test("reads valid mutation lab filters and rejects invalid values", () => {
   assert.deepEqual(
     readMutationLabFilters(
       new URLSearchParams(
-        "orchidGroupId=-1&mutationType=UNKNOWN&sourceDomain=NOPE&page=-2&size=999",
+        "orchidGroupId=-1&workOperationId=0&mutationType=UNKNOWN&sourceDomain=NOPE&page=-2&size=999",
       ),
     ),
     {
       orchidGroupId: null,
+      workOperationId: null,
       mutationType: null,
       sourceDomain: null,
       page: 0,
@@ -40,10 +42,14 @@ test("writes updates while preserving unrelated parameters", () => {
     new URLSearchParams("keep=yes&page=3"),
     {
       orchidGroupId: 7,
+      workOperationId: 9,
       mutationType: "MOVE",
       sourceDomain: null,
       page: 0,
     },
   );
-  assert.equal(query, "keep=yes&page=0&orchidGroupId=7&mutationType=MOVE");
+  assert.equal(
+    query,
+    "keep=yes&page=0&orchidGroupId=7&workOperationId=9&mutationType=MOVE",
+  );
 });

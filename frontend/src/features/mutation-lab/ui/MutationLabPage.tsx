@@ -5,6 +5,7 @@ import { ArrowRight, Database, GitBranch, RefreshCw } from "lucide-react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import type { Route } from "next";
 import type { FormEvent } from "react";
+import { WorkOperationGraph } from "@/features/work-record";
 import { PaginationControls } from "@/shared/ui/PaginationControls";
 import {
   MUTATION_SOURCE_DOMAINS,
@@ -45,8 +46,10 @@ export function MutationLabPage() {
     event.preventDefault();
     const form = new FormData(event.currentTarget);
     const groupValue = String(form.get("orchidGroupId") ?? "").trim();
+    const workOperationValue = String(form.get("workOperationId") ?? "").trim();
     navigate({
       orchidGroupId: groupValue ? Number(groupValue) : null,
+      workOperationId: workOperationValue ? Number(workOperationValue) : null,
       mutationType:
         (String(
           form.get("mutationType") || "",
@@ -88,8 +91,8 @@ export function MutationLabPage() {
         </div>
 
         <form
-          key={`${filters.orchidGroupId}-${filters.mutationType}-${filters.sourceDomain}`}
-          className="mt-4 grid gap-3 md:grid-cols-[1fr_1fr_1fr_auto_auto] md:items-end"
+          key={`${filters.orchidGroupId}-${filters.workOperationId}-${filters.mutationType}-${filters.sourceDomain}`}
+          className="mt-4 grid gap-3 md:grid-cols-[1fr_1fr_1fr_1fr_auto_auto] md:items-end"
           onSubmit={search}
         >
           <FilterField label="난 묶음 ID">
@@ -98,6 +101,16 @@ export function MutationLabPage() {
               defaultValue={filters.orchidGroupId ?? ""}
               min="1"
               name="orchidGroupId"
+              placeholder="전체"
+              type="number"
+            />
+          </FilterField>
+          <FilterField label="작업 ID">
+            <input
+              className={fieldClass}
+              defaultValue={filters.workOperationId ?? ""}
+              min="1"
+              name="workOperationId"
               placeholder="전체"
               type="number"
             />
@@ -148,6 +161,13 @@ export function MutationLabPage() {
 
       {filters.orchidGroupId != null ? (
         <OrchidGroupMutationGraph orchidGroupId={filters.orchidGroupId} />
+      ) : null}
+
+      {filters.workOperationId != null ? (
+        <WorkOperationGraph
+          workOperationId={filters.workOperationId}
+          onSelectOperation={(workOperationId) => navigate({ workOperationId })}
+        />
       ) : null}
 
       <div className="flex flex-wrap items-center justify-between gap-2 px-1 text-sm text-[#5b685f]">

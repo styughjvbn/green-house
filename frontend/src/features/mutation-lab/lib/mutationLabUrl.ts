@@ -35,6 +35,7 @@ export function readMutationLabFilters(
 ): MutationLabFilters {
   return {
     orchidGroupId: positiveNumber(searchParams.get("orchidGroupId")),
+    workOperationId: positiveNumber(searchParams.get("workOperationId")),
     mutationType: enumValue(searchParams.get("mutationType"), MUTATION_TYPES),
     sourceDomain: enumValue(
       searchParams.get("sourceDomain"),

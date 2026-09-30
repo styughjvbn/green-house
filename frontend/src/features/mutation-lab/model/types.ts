@@ -142,6 +142,7 @@ export type MutationGraph = {
 
 export type MutationLabFilters = {
   orchidGroupId: number | null;
+  workOperationId: number | null;
   mutationType: MutationType | null;
   sourceDomain: MutationSourceDomain | null;
   page: number;
