@@ -76,6 +76,41 @@ class MovementIdentityHistoryMigrationPostgresE2ETest extends WorkE2ETestBase {
 		}
 	}
 
+	@Test
+	void restoresSourceMetadataDroppedByTheLegacyOneToOneMovementTransformer() {
+		String database = "movement_metadata_" + UUID.randomUUID().toString().replace("-", "");
+		var admin = new JdbcTemplate(new DriverManagerDataSource(POSTGRES.getJdbcUrl(), POSTGRES.getUsername(),
+				POSTGRES.getPassword()));
+		admin.execute("CREATE DATABASE " + database);
+		String url = POSTGRES.getJdbcUrl().replace("/" + POSTGRES.getDatabaseName(), "/" + database);
+		var dataSource = new DriverManagerDataSource(url, POSTGRES.getUsername(), POSTGRES.getPassword());
+		try {
+			Flyway.configure().dataSource(dataSource).target("36").load().migrate();
+			var jdbc = new JdbcTemplate(dataSource);
+			seedLegacyMetadataLoss(jdbc);
+
+			var upgrade = Flyway.configure().dataSource(dataSource).target("37").load();
+			assertThat(upgrade.migrate().migrationsExecuted).isEqualTo(1);
+			assertThat(jdbc.queryForList("""
+					SELECT id, quantity, status, memo, start_position, end_position
+					FROM orchid_groups WHERE id IN (21, 31)
+					""")).containsExactly(Map.of("id", 21L, "quantity", 10, "status", "정상", "memo", "원본 메모",
+						"start_position", new BigDecimal("5.00"), "end_position", new BigDecimal("6.00")));
+			assertThat(jdbc.queryForObject("SELECT mutation_type FROM orchid_group_mutations WHERE id = 200",
+					String.class)).isEqualTo("MOVE");
+			assertThat(jdbc.queryForObject("""
+					SELECT after_state ->> 'memo' FROM orchid_group_mutation_entries
+					WHERE mutation_id = 200 AND orchid_group_id = 21
+					""", String.class)).isEqualTo("원본 메모");
+			assertThat(jdbc.queryForObject("SELECT result_details FROM work_applied_effects WHERE id = 200",
+					String.class)).contains("\"identityPreserved\": true").contains("\"orchidGroupId\": 21");
+			assertThat(upgrade.migrate().migrationsExecuted).isZero();
+		}
+		finally {
+			admin.execute("DROP DATABASE " + database + " WITH (FORCE)");
+		}
+	}
+
 	private void seedHistoricalMovement(JdbcTemplate jdbc) {
 		Long zoneId = jdbc.queryForObject("SELECT min(id) FROM bed_zones", Long.class);
 		jdbc.execute("ALTER TABLE orchid_groups DISABLE TRIGGER USER");
@@ -187,6 +222,101 @@ class MovementIdentityHistoryMigrationPostgresE2ETest extends WorkE2ETestBase {
 				  (100, 11, 'RESULT', CURRENT_TIMESTAMP), (100, 12, 'RESULT', CURRENT_TIMESTAMP),
 				  (101, 11, 'AFFECTED', CURRENT_TIMESTAMP)
 				""");
+	}
+
+	private void seedLegacyMetadataLoss(JdbcTemplate jdbc) {
+		Long zoneId = jdbc.queryForObject("SELECT min(id) FROM bed_zones", Long.class);
+		String source = metadataState(state(10, zoneId, 1, 0, 1, "정상"))
+			.replace("\"memo\":null", "\"memo\":\"원본 메모\"");
+		String closed = metadataState(state(0, zoneId, 1, 0, 1, "종료"))
+			.replace("\"memo\":null", "\"memo\":\"원본 메모\"");
+		String result = metadataState(state(10, zoneId, 2, 5, 6, "정상"));
+		jdbc.execute("ALTER TABLE orchid_groups DISABLE TRIGGER USER");
+		jdbc.update("""
+				INSERT INTO varieties (id, code, genus, name, sale_enabled, is_active, created_at, updated_at)
+				VALUES (9101, 'MOVE-METADATA-MIGRATION', '속', '메모 품종', TRUE, TRUE,
+				        CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+				""");
+		jdbc.update("""
+				INSERT INTO orchid_groups (
+				  id, bed_zone_id, variety_id, genus, variety_name, quantity, reserved_quantity,
+				  sort_order, status, pot_size_code, version, state_revision, memo,
+				  start_position, end_position, created_at, updated_at
+				) VALUES
+				  (21, ?, 9101, '속', '메모 품종', 0, 0, 1, '종료', 'POT_3', 0, 1, '원본 메모',
+				   0, 1, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP),
+				  (31, ?, 9101, '속', '메모 품종', 10, 0, 2, '정상', 'POT_3', 0, 1, NULL,
+				   5, 6, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+				""", zoneId, zoneId);
+		jdbc.execute("ALTER TABLE orchid_groups ENABLE TRIGGER USER");
+		jdbc.update("""
+				INSERT INTO work_operations (
+				  id, work_type_id, title, status, planned_start_date, actual_start_at, actual_end_at,
+				  source_scope_type, target_snapshot_at, details, version, created_at, updated_at
+				) VALUES
+				  (200, (SELECT id FROM work_types WHERE code = 'MOVEMENT'), '과거 메모 유실 이동', 'COMPLETED',
+				   DATE '2026-09-23', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP, 'MANUAL_SELECTION', CURRENT_TIMESTAMP,
+				   '{}'::jsonb, 0, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+				""");
+		jdbc.update("""
+				INSERT INTO work_operation_targets (
+				  id, work_operation_id, orchid_group_id, target_reference_type, inclusion_source,
+				  included_at, variety_id_snapshot, variety_name_snapshot, quantity_snapshot,
+				  location_snapshot, created_at
+				) VALUES (200, 200, 21, 'ORCHID_GROUP', 'MANUAL', CURRENT_TIMESTAMP, 9101, '메모 품종', 10,
+				          '{}'::jsonb, CURRENT_TIMESTAMP);
+				INSERT INTO work_target_executions (
+				  id, work_operation_target_id, status, result_details, processed_quantity,
+				  version, created_at, updated_at
+				) VALUES (200, 200, 'COMPLETED',
+				          '{"results":[{"orchidGroupId":31,"quantity":10,"purpose":"NORMAL"}]}'::jsonb,
+				          10, 0, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+				""");
+		jdbc.update("""
+				INSERT INTO orchid_group_mutations (
+				  id, mutation_type, source_domain, source_type, source_reference_id, source_operation_key,
+				  correlation_id, command_fingerprint, occurred_at, recorded_at,
+				  effective_business_date, schema_version
+				) VALUES (200, 'TRANSFORM', 'WORK', 'WORK_EFFECT', '200', 'EXECUTION:legacy-memo',
+				          '00000000-0000-0000-0000-000000000200', repeat('3', 64), CURRENT_TIMESTAMP,
+				          CURRENT_TIMESTAMP, DATE '2026-09-23', 1)
+				""");
+		jdbc.update("""
+				INSERT INTO orchid_group_mutation_entries (
+				  id, mutation_id, orchid_group_id, entry_kind, role, state_revision_before,
+				  state_revision_after, before_state, after_state
+				) VALUES
+				  (200, 200, 21, 'CHANGE', 'SOURCE', 0, 1, CAST(? AS jsonb), CAST(? AS jsonb)),
+				  (201, 200, 31, 'CREATE', 'RESULT', NULL, 1, NULL, CAST(? AS jsonb))
+				""", source, closed, result);
+		jdbc.update("""
+				INSERT INTO work_applied_effects (
+				  id, work_operation_id, effect_key, effect_kind, handler_code, applied_at,
+				  command_details, result_details, created_at, updated_at, mutation_id
+				) VALUES (200, 200, 'EXECUTION:legacy-memo', 'TARGET_COMPLETION', 'MOVEMENT', CURRENT_TIMESTAMP,
+				          CAST(? AS jsonb),
+				          '{"results":[{"orchidGroupId":31,"quantity":10,"purpose":"NORMAL"}],
+				            "sourceInputQuantities":{"21":10},"lossQuantity":0}'::jsonb,
+				          CURRENT_TIMESTAMP, CURRENT_TIMESTAMP, 200)
+				""", """
+				{"sources":[{"sourceOrchidGroupId":21,"inputQuantity":10}],
+				 "results":[{"bedZoneId":%d,"quantity":10,"attributeSourceOrchidGroupId":21,
+				             "purpose":"NORMAL","memo":null}]}
+				""".formatted(zoneId));
+		jdbc.update("""
+				INSERT INTO work_effect_orchid_groups
+				  (work_applied_effect_id, orchid_group_id, relation_type, created_at)
+				VALUES (200, 21, 'SOURCE', CURRENT_TIMESTAMP), (200, 31, 'RESULT', CURRENT_TIMESTAMP);
+				INSERT INTO orchid_group_lineage (
+				  source_orchid_group_id, result_orchid_group_id, relation_type, work_operation_id,
+				  source_quantity, result_quantity, created_at, mutation_id
+				) VALUES (21, 31, 'MOVED_TO', 200, 10, 10, CURRENT_TIMESTAMP, 200)
+				""");
+	}
+
+	private String metadataState(String state) {
+		return state.replace("\"varietyId\":9001", "\"varietyId\":9101")
+			.replace("이동 품종", "메모 품종");
 	}
 
 	private String state(int quantity, Long zoneId, int sortOrder, int start, int end, String status) {
