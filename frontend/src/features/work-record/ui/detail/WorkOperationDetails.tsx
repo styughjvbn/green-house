@@ -18,7 +18,7 @@ import {
   operationStatusLabel,
   targetStatusLabel,
 } from "../common/workOperationLabels";
-import { WorkOperationGraph } from "./WorkOperationGraph";
+import { WorkOperationFlowGraph } from "./WorkOperationFlowGraph";
 
 const DETAIL_LABELS: Record<string, string> = {
   actualQuantity: "실제 수량",
@@ -164,7 +164,7 @@ export function WorkOperationDetails({
           />
         ) : null}
         {activeTab === "graph" ? (
-          <WorkOperationGraph
+          <WorkOperationFlowGraph
             workOperationId={operation.id}
             onSelectOperation={onSelectOperation}
           />

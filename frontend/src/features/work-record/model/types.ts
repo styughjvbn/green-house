@@ -192,10 +192,17 @@ export type WorkOperationGraphNode = {
     quantity?: number | null;
     reservedQuantity?: number | null;
     status?: string | null;
+    varietyId?: number | null;
+    genus?: string | null;
     varietyName?: string | null;
+    ageYear?: number | null;
+    potSizeCode?: string | null;
+    bedZoneId?: number | null;
     houseNumber?: number | null;
     physicalBedNumber?: number | null;
     bedZoneName?: string | null;
+    startPosition?: number | null;
+    endPosition?: number | null;
   } | null;
 };
 
