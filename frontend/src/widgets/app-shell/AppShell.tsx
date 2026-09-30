@@ -7,13 +7,13 @@ import { usePathname } from "next/navigation";
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { MouseEventHandler } from "react";
 import { SessionUserPanel } from "@/features/auth";
-import type { AppEnvironment } from "@/shared/config/appEnvironment";
 import {
   NAVIGATION,
   PAGE_META,
   type NavigationChild,
   type NavigationItem,
 } from "@/shared/config/navigation";
+import { useAppEnvironment } from "@/shared/runtime/RuntimeContext";
 import { PageHeader } from "@/widgets/page-header";
 import { PanelLeftClose, PanelLeftOpen, type LucideIcon } from "lucide-react";
 
@@ -158,14 +158,13 @@ function SubNavFlyout({
 }
 
 export function AppShell({
-  appEnvironment,
   children,
   demoMode,
 }: {
-  appEnvironment: AppEnvironment;
   children: React.ReactNode;
   demoMode: boolean;
 }) {
+  const appEnvironment = useAppEnvironment();
   const pathname = usePathname();
   const navigationItems = NAVIGATION.filter(
     (item) => !item.developmentOnly || appEnvironment === "dev",

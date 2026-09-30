@@ -51,7 +51,10 @@ export default async function RootLayout({
       <body className="min-h-full bg-[#f7f8f6] text-[#1f2a24]">
         <FontScaleInitializer />
         <PwaRuntime />
-        <RuntimeContextProvider value={runtimeContext}>
+        <RuntimeContextProvider
+          appEnvironment={appEnvironment}
+          value={runtimeContext}
+        >
           <QueryProvider>
             <div
               className={
@@ -63,9 +66,7 @@ export default async function RootLayout({
               {demoMode ? <DemoEnvironmentBanner /> : null}
               <div className={demoMode ? "min-h-0 flex-1" : undefined}>
                 <Suspense fallback={null}>
-                  <AppShell appEnvironment={appEnvironment} demoMode={demoMode}>
-                    {children}
-                  </AppShell>
+                  <AppShell demoMode={demoMode}>{children}</AppShell>
                 </Suspense>
               </div>
             </div>

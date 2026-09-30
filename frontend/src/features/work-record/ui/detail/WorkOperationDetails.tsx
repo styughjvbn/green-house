@@ -18,6 +18,7 @@ import {
   operationStatusLabel,
   targetStatusLabel,
 } from "../common/workOperationLabels";
+import { useAppEnvironment } from "@/shared/runtime/RuntimeContext";
 import { WorkOperationFlowGraph } from "./WorkOperationFlowGraph";
 
 const DETAIL_LABELS: Record<string, string> = {
@@ -54,12 +55,13 @@ const HIDDEN_DETAIL_KEYS = new Set([
 
 type DetailTab = "overview" | "execution" | "targets" | "graph";
 
-const TABS: Array<{ id: DetailTab; label: string }> = [
-  { id: "overview", label: "개요" },
-  { id: "execution", label: "실행" },
-  { id: "targets", label: "대상" },
-  { id: "graph", label: "관계 그래프" },
-];
+const TABS: Array<{ id: DetailTab; label: string; developmentOnly?: boolean }> =
+  [
+    { id: "overview", label: "개요" },
+    { id: "execution", label: "실행" },
+    { id: "targets", label: "대상" },
+    { id: "graph", label: "관계 그래프", developmentOnly: true },
+  ];
 
 export function WorkOperationDetails({
   operation,
@@ -81,7 +83,14 @@ export function WorkOperationDetails({
   onRequestTargetCompletion: (targetId: number) => void;
   onSelectOperation: (id: number) => void;
 }) {
-  const [activeTab, setActiveTab] = useState<DetailTab>(initialTab);
+  const appEnvironment = useAppEnvironment();
+  const graphEnabled = appEnvironment === "dev";
+  const visibleTabs = TABS.filter(
+    (tab) => !tab.developmentOnly || graphEnabled,
+  );
+  const [activeTab, setActiveTab] = useState<DetailTab>(() =>
+    initialTab === "graph" && !graphEnabled ? "overview" : initialTab,
+  );
   const detailQuery = useQuery({
     ...workOperationDetailsQueryOptions(operation.id),
     enabled: activeTab === "execution",
@@ -116,7 +125,7 @@ export function WorkOperationDetails({
         className="flex border-b border-[#dce4da] bg-white px-2"
         role="tablist"
       >
-        {TABS.map((tab) => (
+        {visibleTabs.map((tab) => (
           <button
             aria-controls={`work-detail-${operation.id}-${tab.id}`}
             aria-selected={activeTab === tab.id}
@@ -163,7 +172,7 @@ export function WorkOperationDetails({
             onTargetAction={onTargetAction}
           />
         ) : null}
-        {activeTab === "graph" ? (
+        {activeTab === "graph" && graphEnabled ? (
           <WorkOperationFlowGraph
             workOperationId={operation.id}
             onSelectOperation={onSelectOperation}
