@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.anyCollection;
 import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -98,8 +99,6 @@ class WorkOperationGraphQueryServiceTest {
 				summary(WorkOperationOriginType.WORK_MANAGEMENT, 1), 61L, summary(WorkOperationOriginType.SYSTEM, 1)));
 		when(effectRepository.findByWorkOperationIdInOrderByWorkOperationIdAscIdAsc(anyCollection()))
 			.thenReturn(List.of());
-		when(movement.getVoidMutationId()).thenReturn(null);
-		when(discard.getVoidMutationId()).thenReturn(null);
 		when(mutationGraphPort.load(anyCollection(), eq(true), anyInt(), anyInt()))
 			.thenReturn(WorkOperationMutationGraphPort.Fragment.empty());
 
@@ -135,8 +134,6 @@ class WorkOperationGraphQueryServiceTest {
 				summary(WorkOperationOriginType.WORK_MANAGEMENT, 1), 81L, summary(WorkOperationOriginType.SYSTEM, 1)));
 		when(effectRepository.findByWorkOperationIdInOrderByWorkOperationIdAscIdAsc(anyCollection()))
 			.thenReturn(List.of(originalEffect, correctionEffect));
-		when(original.getVoidMutationId()).thenReturn(null);
-		when(correction.getVoidMutationId()).thenReturn(null);
 		when(mutationGraphPort.load(eq(List.of(111L, 112L)), eq(false), eq(1), anyInt()))
 			.thenReturn(fragment(111L, 112L));
 
@@ -149,6 +146,37 @@ class WorkOperationGraphQueryServiceTest {
 			.containsExactlyInAnyOrder(Map.entry("work-operation-80", "mutation-111"),
 					Map.entry("work-operation-81", "mutation-112"));
 		verify(mutationGraphPort).load(eq(List.of(111L, 112L)), eq(false), eq(1), anyInt());
+	}
+
+	@Test
+	void keepsVoidedWorkGraphFixedToOriginalEffects() {
+		WorkOperation operation = operation(90L, null, null);
+		WorkAppliedEffect originalEffect = effect(operation, 121L);
+		when(operation.getStatus()).thenReturn(WorkOperationStatus.VOIDED);
+		when(operationRepository.findWithWorkTypeById(90L)).thenReturn(Optional.of(operation));
+		when(operationRepository.findByParentOperationIdAndRelationTypeOrderByIdAsc(90L,
+				WorkOperationRelationType.MOVEMENT_DISCARD))
+			.thenReturn(List.of());
+		when(relationSummaryAssembler.assemble(anyCollection()))
+			.thenReturn(Map.of(90L, summary(WorkOperationOriginType.WORK_MANAGEMENT, 1)));
+		when(effectRepository.findByWorkOperationIdInOrderByWorkOperationIdAscIdAsc(anyCollection()))
+			.thenReturn(List.of(originalEffect));
+		lenient().when(operation.getVoidMutationId()).thenReturn(122L);
+		when(mutationGraphPort.load(eq(List.of(121L)), eq(false), eq(1), anyInt()))
+			.thenReturn(fragment(121L));
+
+		var graph = service.get(90L, WorkOperationGraphDetail.MUTATION, 1, 120);
+
+		assertThat(graph.nodes()).filteredOn(node -> node.nodeType() == WorkOperationGraphNodeType.MUTATION)
+			.extracting(node -> node.mutationId())
+			.containsExactly(121L);
+		assertThat(graph.edges()).filteredOn(edge -> edge.edgeType() == WorkOperationGraphEdgeType.EFFECT)
+			.singleElement()
+			.satisfies(edge -> {
+				assertThat(edge.sourceNodeId()).isEqualTo("work-operation-90");
+				assertThat(edge.targetNodeId()).isEqualTo("mutation-121");
+			});
+		verify(mutationGraphPort).load(eq(List.of(121L)), eq(false), eq(1), anyInt());
 	}
 
 	private WorkOperation operation(Long id, WorkOperation parent, WorkOperationRelationType relationType) {

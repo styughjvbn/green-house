@@ -28,6 +28,7 @@ test("builds input work residual result and linked discard flow without mutation
         nodeType: "WORK_OPERATION",
         selected: true,
         workOperationId: 10,
+        workTypeCode: "MOVEMENT",
         title: "자리 이동 - 청금",
         orchidGroupIds: [1],
         varietyNames: ["청금"],
@@ -37,6 +38,7 @@ test("builds input work residual result and linked discard flow without mutation
         nodeType: "WORK_OPERATION",
         selected: false,
         workOperationId: 11,
+        workTypeCode: "DISCARD",
         title: "이동 후 폐기 - 청금",
         orchidGroupIds: [1],
         varietyNames: ["청금"],
@@ -184,6 +186,285 @@ test("keeps inbound as a direct input to the work", () => {
   });
 
   assert.equal(graph.edges[0].flowLabel, "입고");
+});
+
+test("hides consumed source outputs for replacement transformations", () => {
+  const graph = buildWorkOperationFlowGraph({
+    rootWorkOperationId: 30,
+    detail: "MUTATION",
+    depth: 1,
+    maxNodes: 120,
+    truncated: false,
+    nodes: [
+      {
+        id: "work-operation-30",
+        nodeType: "WORK_OPERATION",
+        selected: true,
+        workOperationId: 30,
+        workTypeCode: "REPOT",
+        title: "분갈이",
+        orchidGroupIds: [1],
+        varietyNames: ["청금"],
+      },
+      {
+        id: "mutation-30",
+        nodeType: "MUTATION",
+        selected: false,
+        orchidGroupIds: [],
+        varietyNames: [],
+      },
+      stateNode("group-1-revision-1", 1, 1, 10),
+      stateNode("group-1-revision-2", 1, 2, 0, "종료"),
+      stateNode("group-2-revision-1", 2, 1, 10),
+    ],
+    edges: [
+      {
+        id: "effect-30-30",
+        sourceNodeId: "work-operation-30",
+        targetNodeId: "mutation-30",
+        edgeType: "EFFECT",
+      },
+      {
+        id: "state-input-50",
+        sourceNodeId: "group-1-revision-1",
+        targetNodeId: "mutation-30",
+        edgeType: "STATE_INPUT",
+        relationType: "SOURCE",
+      },
+      {
+        id: "state-output-50",
+        sourceNodeId: "mutation-30",
+        targetNodeId: "group-1-revision-2",
+        edgeType: "STATE_OUTPUT",
+        relationType: "SOURCE",
+      },
+      {
+        id: "state-output-51",
+        sourceNodeId: "mutation-30",
+        targetNodeId: "group-2-revision-1",
+        edgeType: "STATE_OUTPUT",
+        relationType: "RESULT",
+      },
+    ],
+  });
+
+  assert.deepEqual(
+    graph.nodes
+      .filter((node) => node.nodeType === "GROUP_STATE")
+      .map((node) => [node.id, node.flowRole]),
+    [
+      ["group-1-revision-1", "INPUT"],
+      ["group-2-revision-1", "RESULT"],
+    ],
+  );
+  assert.deepEqual(
+    graph.edges.map((edge) => edge.flowLabel),
+    ["투입", "결과"],
+  );
+});
+
+test("hides a closed legacy movement source while keeping its new result", () => {
+  const graph = buildWorkOperationFlowGraph({
+    rootWorkOperationId: 40,
+    detail: "MUTATION",
+    depth: 1,
+    maxNodes: 120,
+    truncated: false,
+    nodes: [
+      {
+        id: "work-operation-40",
+        nodeType: "WORK_OPERATION",
+        selected: true,
+        workOperationId: 40,
+        workTypeCode: "MOVEMENT",
+        title: "과거 자리 이동",
+        orchidGroupIds: [1],
+        varietyNames: ["청금"],
+      },
+      {
+        id: "mutation-40",
+        nodeType: "MUTATION",
+        selected: false,
+        orchidGroupIds: [],
+        varietyNames: [],
+      },
+      stateNode("group-1-revision-2", 1, 2, 10),
+      stateNode("group-1-revision-3", 1, 3, 0, "종료"),
+      stateNode("group-2-revision-1", 2, 1, 10),
+    ],
+    edges: [
+      {
+        id: "effect-40-40",
+        sourceNodeId: "work-operation-40",
+        targetNodeId: "mutation-40",
+        edgeType: "EFFECT",
+      },
+      {
+        id: "state-input-60",
+        sourceNodeId: "group-1-revision-2",
+        targetNodeId: "mutation-40",
+        edgeType: "STATE_INPUT",
+        relationType: "SOURCE",
+      },
+      {
+        id: "state-output-60",
+        sourceNodeId: "mutation-40",
+        targetNodeId: "group-1-revision-3",
+        edgeType: "STATE_OUTPUT",
+        relationType: "SOURCE",
+      },
+      {
+        id: "state-output-61",
+        sourceNodeId: "mutation-40",
+        targetNodeId: "group-2-revision-1",
+        edgeType: "STATE_OUTPUT",
+        relationType: "RESULT",
+      },
+    ],
+  });
+
+  assert.deepEqual(
+    graph.nodes
+      .filter((node) => node.nodeType === "GROUP_STATE")
+      .map((node) => [node.id, node.flowRole]),
+    [
+      ["group-1-revision-2", "INPUT"],
+      ["group-2-revision-1", "RESULT"],
+    ],
+  );
+  assert.deepEqual(
+    graph.edges.map((edge) => edge.flowLabel),
+    ["투입", "결과"],
+  );
+});
+
+test("marks the input edge to a voided work and dims from the work onward", () => {
+  const graph = buildWorkOperationFlowGraph({
+    rootWorkOperationId: 50,
+    detail: "MUTATION",
+    depth: 2,
+    maxNodes: 120,
+    truncated: false,
+    nodes: [
+      {
+        id: "work-operation-50",
+        nodeType: "WORK_OPERATION",
+        selected: true,
+        workOperationId: 50,
+        workTypeCode: "REPOT",
+        status: "VOIDED",
+        title: "무효화된 분갈이",
+        orchidGroupIds: [1],
+        varietyNames: ["청금"],
+      },
+      {
+        id: "work-operation-51",
+        nodeType: "WORK_OPERATION",
+        selected: false,
+        workOperationId: 51,
+        workTypeCode: "WATERING",
+        status: "COMPLETED",
+        title: "후속 작업",
+        orchidGroupIds: [2],
+        varietyNames: ["청금"],
+      },
+      {
+        id: "mutation-50",
+        nodeType: "MUTATION",
+        selected: false,
+        orchidGroupIds: [],
+        varietyNames: [],
+      },
+      {
+        id: "mutation-51",
+        nodeType: "MUTATION",
+        selected: false,
+        orchidGroupIds: [],
+        varietyNames: [],
+      },
+      stateNode("group-1-revision-1", 1, 1, 10),
+      stateNode("group-2-revision-1", 2, 1, 10),
+      stateNode("group-2-revision-2", 2, 2, 10),
+    ],
+    edges: [
+      {
+        id: "effect-50-50",
+        sourceNodeId: "work-operation-50",
+        targetNodeId: "mutation-50",
+        edgeType: "EFFECT",
+      },
+      {
+        id: "effect-51-51",
+        sourceNodeId: "work-operation-51",
+        targetNodeId: "mutation-51",
+        edgeType: "EFFECT",
+      },
+      {
+        id: "state-input-70",
+        sourceNodeId: "group-1-revision-1",
+        targetNodeId: "mutation-50",
+        edgeType: "STATE_INPUT",
+        relationType: "SOURCE",
+      },
+      {
+        id: "state-output-71",
+        sourceNodeId: "mutation-50",
+        targetNodeId: "group-2-revision-1",
+        edgeType: "STATE_OUTPUT",
+        relationType: "RESULT",
+      },
+      {
+        id: "state-input-72",
+        sourceNodeId: "group-2-revision-1",
+        targetNodeId: "mutation-51",
+        edgeType: "STATE_INPUT",
+        relationType: "SOURCE",
+      },
+      {
+        id: "state-output-72",
+        sourceNodeId: "mutation-51",
+        targetNodeId: "group-2-revision-2",
+        edgeType: "STATE_OUTPUT",
+        relationType: "AFFECTED",
+      },
+    ],
+  });
+
+  assert.equal(
+    graph.nodes.find((node) => node.id === "work-operation-50").dimmed,
+    true,
+  );
+  assert.equal(
+    graph.nodes.find((node) => node.id === "group-1-revision-1").dimmed,
+    undefined,
+  );
+  assert.equal(
+    graph.nodes.find((node) => node.id === "group-2-revision-1").dimmed,
+    true,
+  );
+  assert.equal(
+    graph.nodes.find((node) => node.id === "work-operation-51").dimmed,
+    true,
+  );
+  assert.equal(
+    graph.nodes.find((node) => node.id === "group-2-revision-2").dimmed,
+    true,
+  );
+  const voidedEdge = graph.edges.find(
+    (edge) =>
+      edge.sourceNodeId === "group-1-revision-1" &&
+      edge.targetNodeId === "work-operation-50",
+  );
+  assert.equal(voidedEdge.voided, true);
+  assert.equal(voidedEdge.dimmed, false);
+  assert.equal(
+    graph.edges.find(
+      (edge) =>
+        edge.sourceNodeId === "work-operation-50" &&
+        edge.targetNodeId === "group-2-revision-1",
+    ).dimmed,
+    true,
+  );
 });
 
 test("bundles multiple results of the same kind through one junction", () => {

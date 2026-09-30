@@ -205,11 +205,6 @@ public class WorkOperationGraphQueryService {
 				result.get(effect.getWorkOperation().getId()).add(effect.getMutationId());
 			}
 		});
-		operations.forEach(operation -> {
-			if (operation.getVoidMutationId() != null) {
-				result.get(operation.getId()).add(operation.getVoidMutationId());
-			}
-		});
 		return result.entrySet()
 			.stream()
 			.collect(Collectors.toMap(Map.Entry::getKey, entry -> List.copyOf(entry.getValue()), (left, right) -> left,

@@ -6,6 +6,13 @@ import type {
 
 type State = WorkOperationGraphNode["state"];
 
+const SOURCE_CONSUMING_TRANSFORMATION_TYPES = new Set([
+  "MOVEMENT",
+  "REPOT",
+  "DIVIDE",
+  "MERGE",
+]);
+
 export type WorkFlowRole = "INPUT" | "RESIDUAL" | "RESULT" | "TERMINAL";
 
 export type WorkFlowChange = {
@@ -19,29 +26,37 @@ export type WorkFlowGroupNode = Omit<WorkOperationGraphNode, "nodeType"> & {
   nodeType: "GROUP_STATE";
   flowRole: WorkFlowRole;
   changes: WorkFlowChange[];
+  dimmed?: boolean;
 };
 
 export type WorkFlowJunctionNode = {
   id: string;
   nodeType: "FLOW_JUNCTION";
   flowLabel: string;
+  dimmed?: boolean;
 };
 
 export type WorkFlowNode =
-  | WorkOperationGraphNode
+  | (WorkOperationGraphNode & { dimmed?: boolean })
   | WorkFlowGroupNode
   | WorkFlowJunctionNode;
 
 export type WorkFlowEdge = WorkOperationGraphEdge & {
   flowLabel: string;
   labelVisible?: boolean;
+  voided?: boolean;
+  dimmed?: boolean;
 };
 
 export function buildWorkOperationFlowGraph(graph: WorkOperationGraph) {
   const workNodes = graph.nodes.filter(
     (node) => node.nodeType === "WORK_OPERATION",
   );
-  const workNodeIds = new Set(workNodes.map((node) => node.id));
+  const workNodeById = new Map(workNodes.map((node) => [node.id, node]));
+  const workNodeIds = new Set(workNodeById.keys());
+  const voidedWorkNodeIds = new Set(
+    workNodes.filter((node) => node.status === "VOIDED").map((node) => node.id),
+  );
   const stateNodeById = new Map(
     graph.nodes
       .filter((node) => node.nodeType === "STATE")
@@ -69,13 +84,20 @@ export function buildWorkOperationFlowGraph(graph: WorkOperationGraph) {
     const stateNode = stateNodeById.get(edge.sourceNodeId);
     if (!workNodeId || !stateNode?.orchidGroupId) return;
     upsertGroupNode(groupNodes, stateNode, "INPUT", []);
-    flowEdges.push({ ...edge, targetNodeId: workNodeId, flowLabel: "투입" });
+    flowEdges.push({
+      ...edge,
+      targetNodeId: workNodeId,
+      flowLabel: "투입",
+      voided: voidedWorkNodeIds.has(workNodeId),
+    });
   });
 
   outputEdges.forEach((edge) => {
     const workNodeId = workByMutationId.get(edge.sourceNodeId);
     const stateNode = stateNodeById.get(edge.targetNodeId);
     if (!workNodeId || !stateNode?.orchidGroupId) return;
+    const workNode = workNodeById.get(workNodeId);
+    if (hideConsumedSourceOutput(workNode, edge, stateNode.state)) return;
     const input = matchingInput(edge, inputEdges, stateNodeById);
     const beforeState = input
       ? stateNodeById.get(input.sourceNodeId)?.state
@@ -104,7 +126,13 @@ export function buildWorkOperationFlowGraph(graph: WorkOperationGraph) {
         inboundNodes.some((node) => node.id === edge.sourceNodeId) &&
         workNodeIds.has(edge.targetNodeId),
     )
-    .forEach((edge) => flowEdges.push({ ...edge, flowLabel: "입고" }));
+    .forEach((edge) =>
+      flowEdges.push({
+        ...edge,
+        flowLabel: "입고",
+        voided: voidedWorkNodeIds.has(edge.targetNodeId),
+      }),
+    );
 
   graph.edges
     .filter(
@@ -148,9 +176,50 @@ export function buildWorkOperationFlowGraph(graph: WorkOperationGraph) {
       });
     });
 
-  return bundleParallelFlows(
+  const bundled = bundleParallelFlows(
     [...inboundNodes, ...workNodes, ...groupNodes.values()] as WorkFlowNode[],
     deduplicateEdges(flowEdges),
+  );
+  return dimVoidedBranches(bundled.nodes, bundled.edges);
+}
+
+function dimVoidedBranches(nodes: WorkFlowNode[], edges: WorkFlowEdge[]) {
+  const outgoing = new Map<string, WorkFlowEdge[]>();
+  edges.forEach((edge) => {
+    const values = outgoing.get(edge.sourceNodeId) ?? [];
+    values.push(edge);
+    outgoing.set(edge.sourceNodeId, values);
+  });
+  const dimmedNodeIds = new Set<string>();
+  const pending = edges
+    .filter((edge) => edge.voided)
+    .map((edge) => edge.targetNodeId);
+  while (pending.length) {
+    const nodeId = pending.shift();
+    if (!nodeId || dimmedNodeIds.has(nodeId)) continue;
+    dimmedNodeIds.add(nodeId);
+    outgoing.get(nodeId)?.forEach((edge) => pending.push(edge.targetNodeId));
+  }
+  return {
+    nodes: nodes.map((node) =>
+      dimmedNodeIds.has(node.id) ? { ...node, dimmed: true } : node,
+    ),
+    edges: edges.map((edge) => ({
+      ...edge,
+      dimmed: !edge.voided && dimmedNodeIds.has(edge.sourceNodeId),
+    })),
+  };
+}
+
+function hideConsumedSourceOutput(
+  workNode: WorkOperationGraphNode | undefined,
+  edge: WorkOperationGraphEdge,
+  state: State,
+) {
+  return (
+    edge.relationType === "SOURCE" &&
+    SOURCE_CONSUMING_TRANSFORMATION_TYPES.has(workNode?.workTypeCode ?? "") &&
+    (state == null || state.quantity === 0 || state.status === "종료")
   );
 }
 

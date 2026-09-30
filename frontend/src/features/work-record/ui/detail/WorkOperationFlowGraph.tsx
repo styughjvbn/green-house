@@ -147,29 +147,39 @@ function toFlow(graph: Parameters<typeof buildWorkOperationFlowGraph>[0]) {
     data: node as FlowData,
     style:
       node.nodeType === "ORIGIN"
-        ? { width: 210 }
+        ? { width: 210, opacity: node.dimmed ? 0.32 : 1 }
         : node.nodeType === "WORK_OPERATION"
-          ? { width: 260 }
+          ? { width: 260, opacity: node.dimmed ? 0.32 : 1 }
           : node.nodeType === "GROUP_STATE"
-            ? { width: 250 }
-            : { width: 22, height: 22 },
+            ? { width: 250, opacity: node.dimmed ? 0.32 : 1 }
+            : {
+                width: 22,
+                height: 22,
+                opacity: node.dimmed ? 0.32 : 1,
+              },
   }));
   const edges: Edge[] = readable.edges.map((edge) => {
     const result = ["잔류", "결과", "처리 결과"].includes(edge.flowLabel);
-    const color = result ? "#6b4aa1" : "#6d826f";
+    const color = edge.voided ? "#9b341e" : result ? "#6b4aa1" : "#6d826f";
+    const opacity = edge.dimmed ? 0.28 : 1;
     return {
       id: edge.id,
       source: edge.sourceNodeId,
       target: edge.targetNodeId,
       type: "flow",
-      label: edge.labelVisible === false ? undefined : edge.flowLabel,
+      label:
+        edge.labelVisible === false
+          ? undefined
+          : edge.voided
+            ? "무효화됨"
+            : edge.flowLabel,
       markerEnd: { type: MarkerType.ArrowClosed, color },
-      style: { stroke: color, strokeWidth: 2 },
-      labelStyle: { fill: color, fontSize: 12, fontWeight: 800 },
+      style: { stroke: color, strokeWidth: 2, opacity },
+      labelStyle: { fill: color, fontSize: 12, fontWeight: 800, opacity },
       labelBgStyle: { fill: "#f8faf7" },
       labelBgPadding: [6, 4] as [number, number],
       labelBgBorderRadius: 8,
-      data: { labelColor: color },
+      data: { labelColor: color, labelOpacity: opacity },
     };
   });
   return { nodes, edges };
@@ -213,6 +223,8 @@ function WorkFlowEdge({
       });
   const labelColor =
     typeof data?.labelColor === "string" ? data.labelColor : "#4f6255";
+  const labelOpacity =
+    typeof data?.labelOpacity === "number" ? data.labelOpacity : 1;
   return (
     <>
       <BaseEdge id={id} path={path} markerEnd={markerEnd} style={style} />
@@ -222,6 +234,7 @@ function WorkFlowEdge({
             className="nodrag nopan absolute rounded-lg bg-[#f8faf7] px-1.5 py-0.5 text-xs font-extrabold whitespace-nowrap"
             style={{
               color: labelColor,
+              opacity: labelOpacity,
               transform: `translate(-50%, -50%) translate(${labelX}px, ${labelY}px)`,
             }}
           >
