@@ -227,7 +227,7 @@ class WorkOperationGraphQueryServiceTest {
 	}
 
 	private WorkOperationRelationSummaryResponse summary(WorkOperationOriginType origin, int batchSize) {
-		return new WorkOperationRelationSummaryResponse(origin, List.of(), batchSize, false);
+		return new WorkOperationRelationSummaryResponse(origin, List.of(), batchSize, false, 0);
 	}
 
 	private WorkAppliedEffect effect(WorkOperation operation, Long mutationId) {

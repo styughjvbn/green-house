@@ -392,6 +392,7 @@ export type WorkOperationRelationSummary = {
   inboundRecordIds: number[];
   creationBatchSize: number;
   hasLinkedOperations: boolean;
+  linkedOperationCount: number;
 };
 
 export type WorkOperationVoidEligibility = {

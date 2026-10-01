@@ -14,8 +14,8 @@ import com.greenhouse.backend.work.repository.WorkOperationRepository;
 import com.greenhouse.backend.work.repository.WorkOperationTargetRepository;
 import java.util.Collection;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -59,17 +59,7 @@ class WorkOperationRelationSummaryAssembler {
 			for (Long operationId : receipt.getResultOperationIds())
 				batchSizes.put(operationId, receipt.getResultOperationIds().size());
 		}
-		Set<Long> linked = new HashSet<>();
-		operations.stream()
-			.filter(operation -> operation.getParentOperation() != null)
-			.forEach(operation -> linked.add(operation.getId()));
-		operationRepository.findByParentOperationIdInOrderByParentOperationIdAscIdAsc(ids)
-			.forEach(operation -> linked.add(operation.getParentOperation().getId()));
-		correctionRepository.findByOriginalWorkOperationIdInOrCorrectionWorkOperationIdIn(ids, ids)
-			.forEach(relation -> {
-				linked.add(relation.getOriginalWorkOperation().getId());
-				linked.add(relation.getCorrectionWorkOperation().getId());
-			});
+		Map<Long, Integer> linkedCounts = linkedCounts(operations);
 
 		Map<Long, WorkOperationRelationSummaryResponse> result = new LinkedHashMap<>();
 		for (WorkOperation operation : operations) {
@@ -79,10 +69,62 @@ class WorkOperationRelationSummaryAssembler {
 				.filter(java.util.Objects::nonNull)
 				.distinct()
 				.toList();
+			int linkedCount = linkedCounts.getOrDefault(operation.getId(), 0);
 			result.put(operation.getId(), new WorkOperationRelationSummaryResponse(origin(operation, inboundIds),
-					inboundIds, batchSizes.getOrDefault(operation.getId(), 1), linked.contains(operation.getId())));
+					inboundIds, batchSizes.getOrDefault(operation.getId(), 1), linkedCount > 0, linkedCount));
 		}
 		return result;
+	}
+
+	private Map<Long, Integer> linkedCounts(Collection<WorkOperation> operations) {
+		Map<Long, Set<Long>> groupsByOperationId = new LinkedHashMap<>();
+		Map<Long, Set<Long>> structuralGroups = new LinkedHashMap<>();
+		for (WorkOperation operation : operations) {
+			Long rootId = operation.getParentOperation() == null ? operation.getId()
+					: operation.getParentOperation().getId();
+			structuralGroups.computeIfAbsent(rootId, ignored -> new LinkedHashSet<>()).add(rootId);
+			structuralGroups.get(rootId).add(operation.getId());
+		}
+		operationRepository
+			.findByParentOperationIdInOrderByParentOperationIdAscIdAsc(structuralGroups.keySet().stream().toList())
+			.forEach(operation -> structuralGroups
+				.computeIfAbsent(operation.getParentOperation().getId(), ignored -> new LinkedHashSet<>())
+				.add(operation.getId()));
+		structuralGroups.values().forEach(group -> group.forEach(id -> groupsByOperationId.put(id, group)));
+
+		Set<Long> relationIds = structuralGroups.values()
+			.stream()
+			.flatMap(Collection::stream)
+			.collect(Collectors.toCollection(LinkedHashSet::new));
+		Set<Long> expandedRelationIds = new LinkedHashSet<>();
+		while (true) {
+			List<Long> frontier = relationIds.stream().filter(id -> !expandedRelationIds.contains(id)).toList();
+			if (frontier.isEmpty()) {
+				break;
+			}
+			expandedRelationIds.addAll(frontier);
+			correctionRepository.findByOriginalWorkOperationIdInOrCorrectionWorkOperationIdIn(frontier, frontier)
+				.forEach(relation -> {
+					Long originalId = relation.getOriginalWorkOperation().getId();
+					Long correctionId = relation.getCorrectionWorkOperation().getId();
+					mergeGroups(groupsByOperationId, originalId, correctionId);
+					relationIds.add(originalId);
+					relationIds.add(correctionId);
+				});
+		}
+
+		Map<Long, Integer> result = new LinkedHashMap<>();
+		operations.forEach(operation -> result.put(operation.getId(),
+				Math.max(0, groupsByOperationId.getOrDefault(operation.getId(), Set.of(operation.getId())).size() - 1)));
+		return result;
+	}
+
+	private void mergeGroups(Map<Long, Set<Long>> groupsByOperationId, Long leftId, Long rightId) {
+		Set<Long> merged = new LinkedHashSet<>(groupsByOperationId.getOrDefault(leftId, Set.of(leftId)));
+		merged.addAll(groupsByOperationId.getOrDefault(rightId, Set.of(rightId)));
+		merged.add(leftId);
+		merged.add(rightId);
+		merged.forEach(id -> groupsByOperationId.put(id, merged));
 	}
 
 	private WorkOperationOriginType origin(WorkOperation operation, List<Long> inboundIds) {

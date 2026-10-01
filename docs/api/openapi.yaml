@@ -6656,6 +6656,9 @@ components:
           format: int32
         hasLinkedOperations:
           type: boolean
+        linkedOperationCount:
+          type: integer
+          format: int32
     WorkOperationSummaryResponse:
       type: object
       properties:

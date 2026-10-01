@@ -158,7 +158,7 @@ function RelationBadges({
             operation.id,
             "CREATION_BATCH",
           )}
-          label={`함께 등록 ${summary.creationBatchSize}건`}
+          label={`함께 등록 ${summary.creationBatchSize - 1}건`}
           onClick={() =>
             onShowRelations({
               operationId: operation.id,
@@ -168,7 +168,7 @@ function RelationBadges({
           }
         />
       ) : null}
-      {summary.hasLinkedOperations ? (
+      {summary.linkedOperationCount > 0 ? (
         <RelationBadge
           active={isActive(
             activeRelation,
@@ -176,7 +176,7 @@ function RelationBadges({
             operation.id,
             "LINKED",
           )}
-          label="연계 작업 있음"
+          label={`연관 작업 ${summary.linkedOperationCount}건`}
           onClick={() =>
             onShowRelations({
               operationId: operation.id,

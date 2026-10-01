@@ -62,18 +62,35 @@ public class WorkOperationRelationQueryService {
 	private List<WorkOperation> linkedOperations(WorkOperation root) {
 		Map<Long, WorkOperation> related = new LinkedHashMap<>();
 		related.put(root.getId(), root);
-		if (root.getParentOperation() != null) {
-			operationRepository.findWithWorkTypeById(root.getParentOperation().getId())
-				.ifPresent(operation -> related.putIfAbsent(operation.getId(), operation));
+		Set<Long> expanded = new LinkedHashSet<>();
+		var corrections = new ArrayList<com.greenhouse.backend.work.domain.correction.WorkOperationCorrection>();
+		while (true) {
+			List<Long> frontier = related.keySet().stream().filter(id -> !expanded.contains(id)).toList();
+			if (frontier.isEmpty()) {
+				break;
+			}
+			expanded.addAll(frontier);
+			Set<Long> parentIds = frontier.stream()
+				.map(related::get)
+				.map(WorkOperation::getParentOperation)
+				.filter(java.util.Objects::nonNull)
+				.map(WorkOperation::getId)
+				.filter(id -> !related.containsKey(id))
+				.collect(Collectors.toCollection(LinkedHashSet::new));
+			if (!parentIds.isEmpty()) {
+				operationRepository.findWithWorkTypeByIdIn(parentIds.stream().toList())
+					.forEach(operation -> related.putIfAbsent(operation.getId(), operation));
+			}
+			operationRepository.findByParentOperationIdInOrderByParentOperationIdAscIdAsc(frontier)
+				.forEach(operation -> related.putIfAbsent(operation.getId(), operation));
+			var foundCorrections = correctionRepository
+				.findByOriginalWorkOperationIdInOrCorrectionWorkOperationIdIn(frontier, frontier);
+			corrections.addAll(foundCorrections);
+			foundCorrections.forEach(relation -> {
+				related.putIfAbsent(relation.getOriginalWorkOperation().getId(), relation.getOriginalWorkOperation());
+				related.putIfAbsent(relation.getCorrectionWorkOperation().getId(), relation.getCorrectionWorkOperation());
+			});
 		}
-		operationRepository.findByParentOperationIdInOrderByParentOperationIdAscIdAsc(List.of(root.getId()))
-			.forEach(operation -> related.putIfAbsent(operation.getId(), operation));
-		var corrections = correctionRepository.findByOriginalWorkOperationIdInOrCorrectionWorkOperationIdIn(
-				List.of(root.getId()), List.of(root.getId()));
-		corrections.forEach(relation -> {
-			related.putIfAbsent(relation.getOriginalWorkOperation().getId(), relation.getOriginalWorkOperation());
-			related.putIfAbsent(relation.getCorrectionWorkOperation().getId(), relation.getCorrectionWorkOperation());
-		});
 
 		Map<Long, Long> parentByChild = new LinkedHashMap<>();
 		related.values().forEach(operation -> {

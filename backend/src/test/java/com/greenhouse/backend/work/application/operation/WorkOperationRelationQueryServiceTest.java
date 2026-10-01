@@ -83,6 +83,27 @@ class WorkOperationRelationQueryServiceTest {
 	}
 
 	@Test
+	void returnsTheWholeLinkedGroupWhenOpenedFromAChild() {
+		WorkOperation movement = operation(10L, null);
+		WorkOperation firstDiscard = operation(11L, movement);
+		WorkOperation secondDiscard = operation(12L, movement);
+		when(operationRepository.findWithWorkTypeById(11L)).thenReturn(Optional.of(firstDiscard));
+		when(operationRepository.findWithWorkTypeByIdIn(List.of(10L))).thenReturn(List.of(movement));
+		when(operationRepository.findByParentOperationIdInOrderByParentOperationIdAscIdAsc(List.of(11L)))
+			.thenReturn(List.of());
+		when(operationRepository.findByParentOperationIdInOrderByParentOperationIdAscIdAsc(List.of(10L)))
+			.thenReturn(List.of(firstDiscard, secondDiscard));
+		when(operationRepository.findByParentOperationIdInOrderByParentOperationIdAscIdAsc(List.of(12L)))
+			.thenReturn(List.of());
+		when(correctionRepository.findByOriginalWorkOperationIdInOrCorrectionWorkOperationIdIn(anyCollection(),
+				anyCollection())).thenReturn(List.of());
+
+		service.get(11L, WorkOperationRelationKind.LINKED);
+
+		assertThat(assembledOperations()).containsExactly(movement, firstDiscard, secondDiscard);
+	}
+
+	@Test
 	void returnsCorrectionOriginalBeforeTheCorrectionOperation() {
 		WorkOperation original = operation(20L, null);
 		WorkOperation correction = operation(21L, null);

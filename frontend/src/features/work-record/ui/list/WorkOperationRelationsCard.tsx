@@ -23,7 +23,7 @@ export function WorkOperationRelationsCard({
     workOperationRelationsQueryOptions(selection.operationId, selection.kind),
   );
   const title =
-    selection.kind === "CREATION_BATCH" ? "함께 등록된 작업" : "연계된 작업";
+    selection.kind === "CREATION_BATCH" ? "함께 등록된 작업" : "연관 작업";
 
   return (
     <section

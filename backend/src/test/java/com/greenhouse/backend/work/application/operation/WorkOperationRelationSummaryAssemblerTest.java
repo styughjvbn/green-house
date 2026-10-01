@@ -67,7 +67,7 @@ class WorkOperationRelationSummaryAssemblerTest {
 		WorkCommandReceipt receipt = mock(WorkCommandReceipt.class);
 		when(receipt.getResultOperationIds()).thenReturn(List.of(1L, 4L));
 		when(receiptRepository.findByReceiptKeyIn(List.of("receipt"))).thenReturn(List.of(receipt));
-		when(operationRepository.findByParentOperationIdInOrderByParentOperationIdAscIdAsc(List.of(1L, 2L, 3L, 4L)))
+		when(operationRepository.findByParentOperationIdInOrderByParentOperationIdAscIdAsc(List.of(1L, 2L, 4L)))
 			.thenReturn(List.of(discard));
 		when(correctionRepository.findByOriginalWorkOperationIdInOrCorrectionWorkOperationIdIn(List.of(1L, 2L, 3L, 4L),
 				List.of(1L, 2L, 3L, 4L)))
@@ -79,8 +79,10 @@ class WorkOperationRelationSummaryAssemblerTest {
 		assertThat(summaries.get(1L).inboundRecordIds()).containsExactly(123L);
 		assertThat(summaries.get(1L).creationBatchSize()).isEqualTo(2);
 		assertThat(summaries.get(2L).hasLinkedOperations()).isTrue();
+		assertThat(summaries.get(2L).linkedOperationCount()).isEqualTo(1);
 		assertThat(summaries.get(3L).originType()).isEqualTo(WorkOperationOriginType.SYSTEM);
 		assertThat(summaries.get(3L).hasLinkedOperations()).isTrue();
+		assertThat(summaries.get(3L).linkedOperationCount()).isEqualTo(1);
 		assertThat(summaries.get(4L).originType()).isEqualTo(WorkOperationOriginType.WORK_MANAGEMENT);
 		assertThat(summaries.get(4L).creationBatchSize()).isEqualTo(2);
 	}
@@ -102,6 +104,27 @@ class WorkOperationRelationSummaryAssemblerTest {
 		assertThat(summary.originType()).isEqualTo(WorkOperationOriginType.WORK_MANAGEMENT);
 		assertThat(summary.creationBatchSize()).isEqualTo(1);
 		assertThat(summary.hasLinkedOperations()).isFalse();
+		assertThat(summary.linkedOperationCount()).isZero();
+	}
+
+	@Test
+	void givesParentAndEveryChildTheSameRelatedOperationCount() {
+		WorkOperation parent = operation(10L, null);
+		WorkOperation firstChild = operation(11L, parent);
+		WorkOperation secondChild = operation(12L, parent);
+		workType(parent, "MOVEMENT");
+		when(targetRepository.findByWorkOperationIdInOrderByWorkOperationIdAscIdAsc(List.of(10L, 11L, 12L)))
+			.thenReturn(List.of());
+		when(membershipRepository.findByOperationIdIn(List.of(10L, 11L, 12L))).thenReturn(List.of());
+		when(operationRepository.findByParentOperationIdInOrderByParentOperationIdAscIdAsc(List.of(10L)))
+			.thenReturn(List.of(firstChild, secondChild));
+		when(correctionRepository.findByOriginalWorkOperationIdInOrCorrectionWorkOperationIdIn(
+				List.of(10L, 11L, 12L), List.of(10L, 11L, 12L)))
+			.thenReturn(List.of());
+
+		var summaries = assembler.assemble(List.of(parent, firstChild, secondChild));
+
+		assertThat(summaries.values()).extracting(summary -> summary.linkedOperationCount()).containsOnly(2);
 	}
 
 	private WorkOperation operation(Long id, WorkOperation parent) {

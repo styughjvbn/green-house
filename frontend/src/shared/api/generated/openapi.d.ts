@@ -3214,6 +3214,8 @@ export interface components {
             /** Format: int32 */
             creationBatchSize?: number;
             hasLinkedOperations?: boolean;
+            /** Format: int32 */
+            linkedOperationCount?: number;
         };
         WorkOperationSummaryResponse: {
             /** Format: int64 */
