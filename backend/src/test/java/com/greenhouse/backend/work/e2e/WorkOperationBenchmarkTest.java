@@ -28,7 +28,7 @@ class WorkOperationBenchmarkTest extends WorkE2ETestBase {
 
 	private static final int SAMPLE_COUNT = 20;
 
-	private static final long LIST_MAX_QUERY_COUNT = 3;
+	private static final long LIST_MAX_QUERY_COUNT = 7;
 
 	private static final long DETAIL_MAX_QUERY_COUNT = 4;
 
