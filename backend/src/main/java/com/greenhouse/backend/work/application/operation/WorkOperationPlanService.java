@@ -65,18 +65,17 @@ public class WorkOperationPlanService {
 		WorkOperationCreateRequest operationRequest = request.operation();
 		WorkType workType = workTypeService.getActiveForPlan(operationRequest.workTypeId());
 		ResolvedSelection resolvedSelection = resolveIncluded(operationRequest);
-		if (!workType.definition().supportsStructureExecution()) {
+		if (!workType.definition().requiresVarietySpecificOperation()) {
 			return List.of(queryService.get(createOperation(operationRequest, workType, resolvedSelection).getId()));
 		}
 		List<VarietyTargetGroup> varietyGroups = groupTargetsByVariety(resolvedSelection.included());
 		return varietyGroups.stream()
 			.map(group -> queryService
 				.get(createOperation(batchOperationRequest(operationRequest, group, varietyGroups.size()), workType,
-						new ResolvedSelection(resolvedSelection.selection(), resolvedSelection.resolved(),
-								resolvedSelection.included()
-									.stream()
-									.filter(target -> group.targetIds().contains(target.orchidGroupId()))
-									.toList()))
+						new ResolvedSelection(resolvedSelection.selection(), resolvedSelection.included()
+							.stream()
+							.filter(target -> group.targetIds().contains(target.orchidGroupId()))
+							.toList()))
 					.getId()))
 			.toList();
 	}
@@ -126,16 +125,16 @@ public class WorkOperationPlanService {
 		if (included.isEmpty()) {
 			throw new IllegalArgumentException("작업 대상 난 묶음이 한 개 이상 필요합니다.");
 		}
-		return new ResolvedSelection(selection, resolved, included);
+		return new ResolvedSelection(selection, included);
 	}
 
 	private void validateSingleVariety(String workTypeCode, List<ResolvedWorkTarget> targets) {
-		if (!WorkTypeDefinition.forCode(workTypeCode).supportsStructureExecution()) {
+		if (!WorkTypeDefinition.forCode(workTypeCode).requiresVarietySpecificOperation()) {
 			return;
 		}
 		Long varietyId = targets.getFirst().varietyId();
 		if (varietyId == null || targets.stream().anyMatch(group -> !varietyId.equals(group.varietyId()))) {
-			throw new IllegalArgumentException("자리 이동·분갈이·분주·합식 작업은 하나의 품종만 대상으로 계획할 수 있습니다.");
+			throw new IllegalArgumentException("자리 이동·분갈이·분주·합식·폐기 작업은 하나의 품종만 대상으로 계획할 수 있습니다.");
 		}
 	}
 
@@ -165,8 +164,7 @@ public class WorkOperationPlanService {
 		return support.normalizeRequired(baseTitle) + " - " + varietyName;
 	}
 
-	private record ResolvedSelection(WorkTargetSelection selection, List<ResolvedWorkTarget> resolved,
-			List<ResolvedWorkTarget> included) {
+	private record ResolvedSelection(WorkTargetSelection selection, List<ResolvedWorkTarget> included) {
 	}
 
 	private record VarietyTargetGroup(String varietyName, List<Long> targetIds) {

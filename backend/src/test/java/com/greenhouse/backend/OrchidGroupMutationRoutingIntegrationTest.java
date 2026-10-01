@@ -230,7 +230,8 @@ class OrchidGroupMutationRoutingIntegrationTest extends AbstractBackendIntegrati
 				new WorkOperationCreateRequest(discardType.getId(), "라우팅 폐기", LocalDate.of(2026, 8, 20),
 						LocalDate.of(2026, 8, 20), WorkTargetSelection.orchidGroup(group.id()), java.util.Map.of(),
 						"작업자", null, List.of()),
-				LocalDate.of(2026, 8, 20), "작업자", List.of(new DiscardRecordResultRequest(group.id(), 5, "상태 불량"))));
+				LocalDate.of(2026, 8, 20), "작업자", List.of(new DiscardRecordResultRequest(group.id(), 5, "상태 불량"))))
+			.getFirst();
 
 		var effect = workAppliedEffectRepository.findByWorkOperationIdOrderByIdAsc(operation.id()).getFirst();
 		OrchidGroup discarded = orchidGroupRepository.findById(group.id()).orElseThrow();

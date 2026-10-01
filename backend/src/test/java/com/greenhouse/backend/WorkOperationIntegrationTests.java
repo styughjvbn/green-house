@@ -1,8 +1,10 @@
 package com.greenhouse.backend;
 
 import static org.hamcrest.Matchers.containsInAnyOrder;
+import static org.hamcrest.Matchers.everyItem;
 import static org.hamcrest.Matchers.hasItem;
 import static org.hamcrest.Matchers.hasSize;
+import static org.hamcrest.Matchers.is;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -290,9 +292,10 @@ class WorkOperationIntegrationTests extends AbstractBackendIntegrationTest {
 				}
 				""".formatted(discardType.getId(), targetGroup.getId(), targetGroup.getId())))
 			.andExpect(status().isCreated())
-			.andExpect(jsonPath("$.data.status").value("COMPLETED"))
-			.andExpect(jsonPath("$.data.targets[0].resultDetails.discardedQuantity").value(25))
-			.andExpect(jsonPath("$.data.targets[0].resultDetails.remainingQuantity").value(75));
+			.andExpect(jsonPath("$.data", hasSize(1)))
+			.andExpect(jsonPath("$.data[0].status").value("COMPLETED"))
+			.andExpect(jsonPath("$.data[0].targets[0].resultDetails.discardedQuantity").value(25))
+			.andExpect(jsonPath("$.data[0].targets[0].resultDetails.remainingQuantity").value(75));
 
 		OrchidGroup updated = orchidGroupRepository.findById(targetGroup.getId()).orElseThrow();
 		org.assertj.core.api.Assertions.assertThat(updated.getQuantity()).isEqualTo(75);
@@ -328,6 +331,44 @@ class WorkOperationIntegrationTests extends AbstractBackendIntegrationTest {
 		OrchidGroup restored = orchidGroupRepository.findById(targetGroup.getId()).orElseThrow();
 		org.assertj.core.api.Assertions.assertThat(restored.getQuantity()).isEqualTo(100);
 		org.assertj.core.api.Assertions.assertThat(restored.getStatus()).isEqualTo("정상");
+	}
+
+	@Test
+	void createsSeparateCompletedDiscardRecordsForEachVariety() throws Exception {
+		Variety anotherVariety = varietyRepository
+			.save(new Variety("TEST-003", "카틀레야", "폐기 대상 품종", null, "3.5치", true, true, null, null));
+		OrchidGroup anotherGroup = new OrchidGroup(targetGroup.getBedZone(), anotherVariety.getGenus(),
+				anotherVariety.getName(), 80, "3.5치", 2, "정상", 2, new BigDecimal("11"), new BigDecimal("12"));
+		anotherGroup.assignVariety(anotherVariety);
+		anotherGroup = saveOrchidGroup(anotherGroup);
+
+		mockMvc.perform(post("/api/work-operations/discard-records").contentType(MediaType.APPLICATION_JSON).content("""
+				{
+				  "operation": {
+				    "workTypeId": %d,
+				    "title": "품종별 폐기",
+				    "plannedStartDate": "2026-07-16",
+				    "plannedEndDate": "2026-07-16",
+				    "sourceScopeType": "MANUAL_SELECTION",
+				    "sourceOrchidGroupIds": [%d, %d]
+				  },
+				  "completedDate": "2026-07-16",
+				  "worker": "폐기 담당자",
+				  "results": [
+				    {"orchidGroupId": %d, "discardQuantity": 10, "reason": "상태 불량"},
+				    {"orchidGroupId": %d, "discardQuantity": 20, "reason": "상태 불량"}
+				  ]
+				}
+				""".formatted(discardType.getId(), targetGroup.getId(), anotherGroup.getId(), targetGroup.getId(),
+				anotherGroup.getId())))
+			.andExpect(status().isCreated())
+			.andExpect(jsonPath("$.data", hasSize(2)))
+			.andExpect(jsonPath("$.data[*].title", hasItem("품종별 폐기 - 테스트 난")))
+			.andExpect(jsonPath("$.data[*].title", hasItem("품종별 폐기 - 폐기 대상 품종")))
+			.andExpect(jsonPath("$.data[*].status", everyItem(is("COMPLETED"))))
+			.andExpect(jsonPath("$.data[*].targets", everyItem(hasSize(1))));
+
+		org.assertj.core.api.Assertions.assertThat(workOperationRepository.count()).isEqualTo(2);
 	}
 
 	private Long createDiscardOperation(String title) throws Exception {

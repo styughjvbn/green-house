@@ -134,7 +134,8 @@ public class WorkOperationController {
 
 	@PostMapping("/work-operations/discard-records")
 	@ResponseStatus(HttpStatus.CREATED)
-	public ApiResponse<WorkOperationView> createDiscardRecord(@Valid @RequestBody DiscardRecordCreateRequest request) {
+	public ApiResponse<List<WorkOperationView>> createDiscardRecord(
+			@Valid @RequestBody DiscardRecordCreateRequest request) {
 		return ApiResponse.ok(structureChangeRecordService.createDiscardRecord(request));
 	}
 

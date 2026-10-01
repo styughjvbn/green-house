@@ -171,10 +171,10 @@ SOURCE/RESULT와 무효화 차단 사유를 반환한다. `POST /api/work-operat
 
 - `POST /api/work-operations/structure-change-records`: 분갈이·분주·합식의 전체 원본과 N:M 결과를 즉시 완료
 - `POST /api/work-operations/structure-change-records/batch`: 혼합 품종 원본을 품종별 기록 요청으로 묶어 한 트랜잭션에서 완료
-- `POST /api/work-operations/discard-records`: 선택한 모든 난 묶음의 폐기 수량·사유를 즉시 완료
+- `POST /api/work-operations/discard-records`: 선택한 모든 난 묶음의 폐기 수량·사유를 품종별 완료 작업 목록으로 생성
 - `POST /api/work-operations/inbound-potting-records`: 선택한 모든 입고 기록의 포트 결과를 품종별 완료 작업으로 저장
 
-세 경로는 작업 aggregate 생성과 효과 적용을 하나의 트랜잭션으로 처리한다. 결과 검증이 실패하면 중간 계획을 남기지 않는다.
+각 경로는 작업 aggregate 생성과 효과 적용을 하나의 트랜잭션으로 처리한다. 결과 검증이 실패하면 중간 계획을 남기지 않는다. 자리 이동·분갈이·분주·합식·폐기는 여러 품종이 포함되면 품종별 개별 작업으로 생성한다.
 
 `GET /api/work-history?historyScopeType={historyScopeType}&historyScopeId={historyScopeId}&page={page}&size={size}`는 `HOUSE`, `PHYSICAL_BED`, `BED_ZONE`, `ORCHID_GROUP` 범위의 직접·전파 이력을 서버에서 통합해 페이지로 반환한다. `page`는 0부터 시작하고 `size`는 기본 20, 최대 100이다. 동일 작업은 한 번만 반환하며 최신 작업일과 작업 ID 역순으로 정렬한다. 요약 화면은 첫 페이지 일부만 사용하고 난 묶음 상세는 10건 단위로 페이지를 전환한다. 기존 난 묶음별 전체 이력 경로는 호환용으로 유지한다.
 

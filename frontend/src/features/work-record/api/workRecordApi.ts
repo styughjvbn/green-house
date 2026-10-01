@@ -340,8 +340,8 @@ export function createDiscardRecord(payload: {
     discardQuantity: number;
     reason: string | null;
   }>;
-}): Promise<WorkOperation> {
-  return requestWorkOperation<WorkOperation>(
+}): Promise<WorkOperation[]> {
+  return requestWorkOperation<WorkOperation[]>(
     "/work-operations/discard-records",
     "POST",
     payload,

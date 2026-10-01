@@ -585,7 +585,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ApiResponseWorkOperationResponse'
+                $ref: '#/components/schemas/ApiResponseListWorkOperationResponse'
   /api/work-operations/batch:
     post:
       tags:

@@ -72,6 +72,10 @@ public enum WorkTypeDefinition {
 		return workflow == WorkTypeWorkflow.STRUCTURE_CHANGE || workflow == WorkTypeWorkflow.MOVEMENT;
 	}
 
+	public boolean requiresVarietySpecificOperation() {
+		return supportsStructureExecution() || workflow == WorkTypeWorkflow.DISCARD;
+	}
+
 	public boolean supportsMutationVoid() {
 		return supportsStructureExecution() || workflow == WorkTypeWorkflow.DISCARD
 				|| workflow == WorkTypeWorkflow.POTTING;

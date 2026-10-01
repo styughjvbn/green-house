@@ -5426,7 +5426,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["ApiResponseWorkOperationResponse"];
+                    "application/json": components["schemas"]["ApiResponseListWorkOperationResponse"];
                 };
             };
         };

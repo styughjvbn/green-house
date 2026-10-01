@@ -107,7 +107,7 @@ public class StructureChangeRecordService {
 		return ids.stream().map(byId::get).toList();
 	}
 
-	public WorkOperationView createDiscardRecord(DiscardRecordCreateRequest request) {
+	public List<WorkOperationView> createDiscardRecord(DiscardRecordCreateRequest request) {
 		return discardRecordService.create(request);
 	}
 

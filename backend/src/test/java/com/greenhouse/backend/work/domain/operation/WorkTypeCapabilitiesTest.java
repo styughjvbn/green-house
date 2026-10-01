@@ -118,6 +118,17 @@ class WorkTypeCapabilitiesTest {
 	}
 
 	@Test
+	void requiresVarietySpecificOperationsForStructureChangeAndDiscard() {
+		assertThat(WorkTypeDefinition.MOVEMENT.requiresVarietySpecificOperation()).isTrue();
+		assertThat(WorkTypeDefinition.REPOT.requiresVarietySpecificOperation()).isTrue();
+		assertThat(WorkTypeDefinition.DIVIDE.requiresVarietySpecificOperation()).isTrue();
+		assertThat(WorkTypeDefinition.MERGE.requiresVarietySpecificOperation()).isTrue();
+		assertThat(WorkTypeDefinition.DISCARD.requiresVarietySpecificOperation()).isTrue();
+		assertThat(WorkTypeDefinition.POTTING.requiresVarietySpecificOperation()).isFalse();
+		assertThat(WorkTypeDefinition.GENERIC.requiresVarietySpecificOperation()).isFalse();
+	}
+
+	@Test
 	void doesNotExposeUnsupportedCustomStructureTemplate() {
 		WorkType workType = new WorkType("CUSTOM_REPOT", "사용자 분갈이", WorkTypeTemplate.REPOT, false, false, true, 1);
 
