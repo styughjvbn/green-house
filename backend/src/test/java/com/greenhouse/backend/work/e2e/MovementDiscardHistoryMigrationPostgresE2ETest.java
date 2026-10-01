@@ -22,7 +22,7 @@ class MovementDiscardHistoryMigrationPostgresE2ETest extends WorkE2ETestBase {
 		String url = POSTGRES.getJdbcUrl().replace("/" + POSTGRES.getDatabaseName(), "/" + database);
 		var dataSource = new DriverManagerDataSource(url, POSTGRES.getUsername(), POSTGRES.getPassword());
 		try {
-			Flyway.configure().dataSource(dataSource).target("34").load().migrate();
+			Flyway.configure().dataSource(dataSource).target("33").load().migrate();
 			var jdbc = new JdbcTemplate(dataSource);
 			seedPreDiscardHistory(jdbc);
 
