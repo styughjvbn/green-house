@@ -7,6 +7,7 @@ import {
   completeWorkOperation,
   transitionWorkOperation,
   transitionWorkOperationTarget,
+  updateWorkOperationTitle,
 } from "../../api/workRecordApi";
 import { useWorkRecordInvalidation } from "../useWorkRecordInvalidation";
 import { workOperationQueryOptions } from "../workRecordQueryOptions";
@@ -74,7 +75,7 @@ export function useWorkOperationActions() {
       actionMutation.error instanceof Error
         ? actionMutation.error.message
         : actionMutation.error
-          ? "작업 상태를 변경하지 못했습니다."
+          ? "작업을 변경하지 못했습니다."
           : selectedQuery.error instanceof Error
             ? selectedQuery.error.message
             : selectedQuery.error
@@ -108,6 +109,13 @@ export function useWorkOperationActions() {
           undefined,
           completedDate,
         ),
+      );
+    },
+    updateTitle(title: string) {
+      if (!selected)
+        return Promise.reject(new Error("수정할 작업이 없습니다."));
+      return actionMutation.mutateAsync(() =>
+        updateWorkOperationTitle(selected.id, title),
       );
     },
     select,

@@ -847,6 +847,22 @@ export interface paths {
         patch: operations["reorderWorkTypes"];
         trace?: never;
     };
+    "/api/work-operations/{workOperationId}/title": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch: operations["updateTitle"];
+        trace?: never;
+    };
     "/api/varieties/{varietyId}": {
         parameters: {
             query?: never;
@@ -3101,6 +3117,9 @@ export interface components {
         ApiResponseListWorkTypeResponse: {
             data?: components["schemas"]["WorkTypeResponse"][];
             message?: string;
+        };
+        WorkOperationTitleUpdateRequest: {
+            title: string;
         };
         VarietyUpdateRequest: {
             genus: string;
@@ -6176,6 +6195,32 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ApiResponseListWorkTypeResponse"];
+                };
+            };
+        };
+    };
+    updateTitle: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                workOperationId: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["WorkOperationTitleUpdateRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiResponseWorkOperationResponse"];
                 };
             };
         };

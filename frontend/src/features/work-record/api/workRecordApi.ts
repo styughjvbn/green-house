@@ -165,6 +165,17 @@ export function getWorkOperation(
   return fetchApi<WorkOperation>(`/work-operations/${workOperationId}`);
 }
 
+export function updateWorkOperationTitle(
+  workOperationId: number,
+  title: string,
+): Promise<WorkOperation> {
+  return requestWorkOperation<WorkOperation>(
+    `/work-operations/${workOperationId}/title`,
+    "PATCH",
+    { title },
+  );
+}
+
 export function getWorkOperationRelations(
   workOperationId: number,
   kind: WorkOperationRelationKind,
@@ -377,7 +388,7 @@ export function createInboundPottingRecord(payload: {
 
 async function requestWorkOperation<T>(
   path: string,
-  method: "POST",
+  method: "POST" | "PATCH",
   payload?: unknown,
 ): Promise<T> {
   return requestApi<T>(
@@ -387,6 +398,6 @@ async function requestWorkOperation<T>(
       headers: payload ? { "Content-Type": "application/json" } : undefined,
       body: payload ? JSON.stringify(payload) : undefined,
     },
-    "신규 작업을 처리하지 못했습니다.",
+    "작업을 처리하지 못했습니다.",
   );
 }

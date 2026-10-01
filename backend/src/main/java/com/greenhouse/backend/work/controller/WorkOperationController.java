@@ -38,6 +38,7 @@ import com.greenhouse.backend.work.dto.operation.WorkOperationGraphDetail;
 import com.greenhouse.backend.work.dto.operation.WorkOperationGraphResponse;
 import com.greenhouse.backend.work.dto.operation.WorkOperationRelationKind;
 import com.greenhouse.backend.work.dto.operation.WorkOperationSummaryResponse;
+import com.greenhouse.backend.work.dto.operation.WorkOperationTitleUpdateRequest;
 import com.greenhouse.backend.work.dto.target.WorkTargetExecutionRequest;
 import com.greenhouse.backend.work.dto.target.WorkTargetPreviewRequest;
 import com.greenhouse.backend.work.dto.target.WorkTargetPreviewResponse;
@@ -48,6 +49,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -195,6 +197,12 @@ public class WorkOperationController {
 	@GetMapping("/work-operations/{workOperationId}")
 	public ApiResponse<WorkOperationView> get(@PathVariable Long workOperationId) {
 		return ApiResponse.ok(queryService.get(workOperationId));
+	}
+
+	@PatchMapping("/work-operations/{workOperationId}/title")
+	public ApiResponse<WorkOperationView> updateTitle(@PathVariable Long workOperationId,
+			@Valid @RequestBody WorkOperationTitleUpdateRequest request) {
+		return ApiResponse.ok(progressService.updateTitle(workOperationId, request.title()));
 	}
 
 	@GetMapping("/work-operations/{workOperationId}/details")

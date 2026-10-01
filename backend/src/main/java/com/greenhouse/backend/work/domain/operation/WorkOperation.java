@@ -133,6 +133,17 @@ public class WorkOperation extends BaseEntity {
 		this.requestKey = requestKey;
 	}
 
+	public void updateTitle(String title) {
+		if (title == null || title.isBlank()) {
+			throw new IllegalArgumentException("작업명이 필요합니다.");
+		}
+		String normalized = title.trim();
+		if (normalized.length() > 150) {
+			throw new IllegalArgumentException("작업명은 150자 이하여야 합니다.");
+		}
+		this.title = normalized;
+	}
+
 	public void linkToParent(WorkOperation parentOperation, WorkOperationRelationType relationType) {
 		if (parentOperation == null || relationType == null) {
 			throw new IllegalArgumentException("연관 작업과 관계 유형이 필요합니다.");

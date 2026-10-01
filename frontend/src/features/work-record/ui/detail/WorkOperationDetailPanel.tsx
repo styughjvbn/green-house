@@ -46,6 +46,7 @@ export function WorkOperationDetailPanel({
             onComplete={actions.complete}
             onOperationAction={actions.runOperationAction}
             onTargetAction={actions.runTargetAction}
+            onUpdateTitle={actions.updateTitle}
             onExecuteTarget={actions.openExecution}
             onSelectOperation={actions.selectFromGraph}
             onVoidSaved={actions.voidSaved}

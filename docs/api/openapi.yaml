@@ -1579,6 +1579,31 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ApiResponseListWorkTypeResponse'
+  /api/work-operations/{workOperationId}/title:
+    patch:
+      tags:
+      - work-operation-controller
+      operationId: updateTitle
+      parameters:
+      - name: workOperationId
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: int64
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/WorkOperationTitleUpdateRequest'
+        required: true
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponseWorkOperationResponse'
   /api/varieties/{varietyId}:
     get:
       tags:
@@ -6328,6 +6353,15 @@ components:
             $ref: '#/components/schemas/WorkTypeResponse'
         message:
           type: string
+    WorkOperationTitleUpdateRequest:
+      type: object
+      properties:
+        title:
+          type: string
+          maxLength: 150
+          minLength: 0
+      required:
+      - title
     VarietyUpdateRequest:
       type: object
       properties:
