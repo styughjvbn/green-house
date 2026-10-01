@@ -68,7 +68,33 @@ class OrchidGroupStateChainMigrationPostgresE2ETest extends WorkE2ETestBase {
 				""", String.class)).containsExactly("21:add orchid group mutation engine",
 				"22:enforce orchid group mutation write fence", "23:normalize legacy orchid group pot sizes",
 				"24:allocate farm reference codes", "25:add work command receipts", "26:align work effect idempotency",
-				"27:repair orchid group audit provenance");
+				"27:repair orchid group audit provenance", "28:add work void and reconciliation",
+				"29:remove multi create work type", "30:link movement discard operations",
+				"32:normalize inbound receipt model", "33:normalize work command receipt memberships",
+				"35:normalize movement discard history", "36:preserve identity for historical movements",
+				"37:recover legacy movement source attributes", "38:split multi variety discard operations",
+				"39:normalize work operation titles");
+
+		assertThat(
+				jdbcTemplate.queryForObject("SELECT COUNT(*) FROM work_types WHERE code = 'MULTI_CREATE'", Long.class))
+			.isZero();
+		assertThat(jdbcTemplate.queryForObject("""
+				SELECT COUNT(*)
+				FROM information_schema.columns
+				WHERE table_schema = 'public'
+				  AND table_name = 'inbound_records'
+				  AND column_name IN (
+				    'bottle_count', 'actual_quantity', 'potting_date', 'pot_size', 'age_year',
+				    'growth_stage', 'placement_type', 'tray_count', 'bed_zone_id', 'created_orchid_group_id'
+				  )
+				""", Long.class)).isZero();
+		assertThat(jdbcTemplate.queryForObject("""
+				SELECT COUNT(*)
+				FROM information_schema.columns
+				WHERE table_schema = 'public'
+				  AND table_name = 'work_operations'
+				  AND column_name IN ('parent_operation_id', 'relation_type')
+				""", Long.class)).isEqualTo(2L);
 
 		assertThat(jdbcTemplate.queryForObject("""
 				SELECT COUNT(*)

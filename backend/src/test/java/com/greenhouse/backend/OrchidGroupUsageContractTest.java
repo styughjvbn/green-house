@@ -13,6 +13,7 @@ import com.greenhouse.backend.sales.domain.SalesSlipItem;
 import com.greenhouse.backend.sales.domain.SalesSlipItemAllocation;
 import com.greenhouse.backend.sales.domain.SalesType;
 import com.greenhouse.backend.work.domain.operation.WorkOperation;
+import com.greenhouse.backend.work.domain.operation.WorkOperationStatus;
 import com.greenhouse.backend.work.domain.operation.WorkSourceScopeType;
 import com.greenhouse.backend.work.domain.operation.WorkType;
 import com.greenhouse.backend.work.domain.operation.WorkTypeTemplate;
@@ -78,6 +79,24 @@ class OrchidGroupUsageContractTest {
 		operation(type, group);
 		assertThat(inspect(group.getId(), -1L)).extracting(OrchidGroupUsage::code)
 			.containsExactly("SALES", "WORK_OPERATION");
+	}
+
+	@Test
+	void ignoresCanceledAndVoidedWorkReferences() {
+		var fixtures = new FarmTestFixtures(entityManager);
+		OrchidGroup group = fixtures.orchidGroup(fixtures.layout(986).left(), "VOIDED-WORK-USAGE", 20);
+		var type = new WorkType("MOVEMENT", "자리 이동", WorkTypeTemplate.MOVEMENT, true, true, true, 1);
+		entityManager.persist(type);
+		WorkOperation source = operation(type, group);
+		WorkOperation canceled = operation(type, group);
+		canceled.cancel(LocalDateTime.of(2026, 9, 5, 1, 0));
+		WorkOperation voided = operation(type, group);
+		voided.complete(LocalDateTime.of(2026, 9, 5, 1, 0));
+		voided.voidCompletedMutationWork(LocalDateTime.of(2026, 9, 5, 2, 0), "잘못 등록", "void-request", 100L);
+
+		assertThat(canceled.getStatus()).isEqualTo(WorkOperationStatus.CANCELED);
+		assertThat(voided.getStatus()).isEqualTo(WorkOperationStatus.VOIDED);
+		assertThat(inspect(group.getId(), source.getId())).isEmpty();
 	}
 
 	private List<OrchidGroupUsage> inspect(Long groupId, Long sourceOperationId) {

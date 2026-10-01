@@ -4,6 +4,7 @@ import type {
   OrchidGroup,
   WorkOperation,
   WorkOperationSummary,
+  WorkOperationVoidEligibility,
   WorkTargetPreview,
   WorkType,
 } from "@/entities/farm/types";
@@ -15,8 +16,11 @@ import type {
   WorkDerivedGroupOption,
   WorkCollectionOption,
   WorkOperationDetail,
+  WorkOperationGraph,
+  WorkOperationGraphDetail,
   WorkTargetPreviewPayload,
 } from "../model/types";
+import type { WorkOperationRelationKind } from "../lib/workOperationRelations";
 import { manualWorkTargetSource } from "../model/workTargetSource";
 
 export function getWorkTypes(): Promise<WorkType[]> {
@@ -161,11 +165,67 @@ export function getWorkOperation(
   return fetchApi<WorkOperation>(`/work-operations/${workOperationId}`);
 }
 
+export function updateWorkOperationTitle(
+  workOperationId: number,
+  title: string,
+): Promise<WorkOperation> {
+  return requestWorkOperation<WorkOperation>(
+    `/work-operations/${workOperationId}/title`,
+    "PATCH",
+    { title },
+  );
+}
+
+export function getWorkOperationRelations(
+  workOperationId: number,
+  kind: WorkOperationRelationKind,
+): Promise<WorkOperationSummary[]> {
+  const params = new URLSearchParams({ kind });
+  return fetchApi<WorkOperationSummary[]>(
+    `/work-operations/${workOperationId}/relations?${params}`,
+  );
+}
+
+export function getWorkOperationVoidEligibility(
+  workOperationId: number,
+): Promise<WorkOperationVoidEligibility> {
+  return fetchApi<WorkOperationVoidEligibility>(
+    `/work-operations/${workOperationId}/void-eligibility`,
+  );
+}
+
+export function voidWorkOperation(
+  workOperationId: number,
+  payload: { idempotencyKey: string; reason: string },
+): Promise<WorkOperation> {
+  return requestWorkOperation<WorkOperation>(
+    `/work-operations/${workOperationId}/void`,
+    "POST",
+    payload,
+  );
+}
+
 export function getWorkOperationDetails(
   workOperationId: number,
 ): Promise<WorkOperationDetail> {
   return fetchApi<WorkOperationDetail>(
     `/work-operations/${workOperationId}/details`,
+  );
+}
+
+export function getWorkOperationGraph(
+  workOperationId: number,
+  detail: WorkOperationGraphDetail,
+  depth: number,
+  maxNodes: number,
+): Promise<WorkOperationGraph> {
+  const params = new URLSearchParams({
+    detail,
+    depth: String(depth),
+    maxNodes: String(maxNodes),
+  });
+  return fetchApi<WorkOperationGraph>(
+    `/work-operations/${workOperationId}/graph?${params}`,
   );
 }
 
@@ -280,8 +340,8 @@ export function createDiscardRecord(payload: {
     discardQuantity: number;
     reason: string | null;
   }>;
-}): Promise<WorkOperation> {
-  return requestWorkOperation<WorkOperation>(
+}): Promise<WorkOperation[]> {
+  return requestWorkOperation<WorkOperation[]>(
     "/work-operations/discard-records",
     "POST",
     payload,
@@ -304,7 +364,6 @@ export type InboundPottingExecutionPayload = {
     endPosition: number;
     memo?: string;
   }>;
-  growthStage?: string;
   worker?: string;
   memo?: string;
 };
@@ -329,7 +388,7 @@ export function createInboundPottingRecord(payload: {
 
 async function requestWorkOperation<T>(
   path: string,
-  method: "POST",
+  method: "POST" | "PATCH",
   payload?: unknown,
 ): Promise<T> {
   return requestApi<T>(
@@ -339,6 +398,6 @@ async function requestWorkOperation<T>(
       headers: payload ? { "Content-Type": "application/json" } : undefined,
       body: payload ? JSON.stringify(payload) : undefined,
     },
-    "신규 작업을 처리하지 못했습니다.",
+    "작업을 처리하지 못했습니다.",
   );
 }

@@ -19,8 +19,8 @@ public class FarmInboundPottingPlanGateway implements InboundPottingPlanGateway 
 	@Override
 	public List<InboundPottingPlanTarget> findCandidates() {
 		return inboundRecordRepository
-			.findByInboundTypeAndStatusInAndCreatedOrchidGroupIsNullOrderByPottingDueDateAscIdAsc(
-					InboundType.FLASK_SEEDLING, List.of(InboundStatus.TEMP_STORED, InboundStatus.POTTING_PENDING))
+			.findByInboundTypeAndStatusInOrderByPottingDueDateAscIdAsc(InboundType.FLASK_SEEDLING,
+					List.of(InboundStatus.POTTING_PENDING))
 			.stream()
 			.map(this::toTarget)
 			.toList();
@@ -54,7 +54,7 @@ public class FarmInboundPottingPlanGateway implements InboundPottingPlanGateway 
 		}
 		if (records.stream()
 			.anyMatch(record -> record.getInboundType() != InboundType.FLASK_SEEDLING
-					|| record.getStatus() == InboundStatus.CANCELED || record.getCreatedOrchidGroup() != null)) {
+					|| record.getStatus() == InboundStatus.CANCELED || record.hasCreatedOrchidGroups())) {
 			throw new IllegalArgumentException("포트 작업 대기 중인 유리병 모종만 계획할 수 있습니다.");
 		}
 	}
@@ -84,8 +84,8 @@ public class FarmInboundPottingPlanGateway implements InboundPottingPlanGateway 
 
 	private InboundPottingPlanTarget toTarget(InboundRecord record) {
 		return new InboundPottingPlanTarget(record.getId(), record.getVariety().getId(), record.getVariety().getName(),
-				record.getStatus().name(), record.getEstimatedQuantity(), record.getActualQuantity(),
-				record.getTempLocation(), record.getPottingDueDate(), record.getPotSize());
+				record.getStatus().name(), record.getEstimatedQuantity(), null, record.getTempLocation(),
+				record.getPottingDueDate(), null);
 	}
 
 }

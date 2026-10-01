@@ -1,4 +1,7 @@
 package com.greenhouse.backend.farm.repository.structure;
 
-public record BedZoneLocationRow(Long id, Integer houseNumber, Integer physicalBedNumber, String bedZoneName) {
+import com.greenhouse.backend.farm.domain.structure.BedZoneSide;
+
+public record BedZoneLocationRow(Long id, Integer houseNumber, Integer physicalBedNumber, BedZoneSide side,
+		String bedZoneName) {
 }

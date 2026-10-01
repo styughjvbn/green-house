@@ -310,11 +310,11 @@ class OrchidGroupMutationPostgresE2ETest extends WorkE2ETestBase {
 		Long inboundRecordId = jdbcTemplate.queryForObject("""
 				INSERT INTO inbound_records (
 				  created_at, updated_at, inbound_date, inbound_type, status,
-				  bottle_count, estimated_quantity, temp_location, pot_size, variety_id
+				  estimated_quantity, temp_location, variety_id
 				) VALUES (
 				  TIMESTAMP '2026-08-20 00:00:00', TIMESTAMP '2026-08-20 00:00:00',
 				  DATE '2026-08-20', 'FLASK_SEEDLING', 'POTTING_PENDING',
-				  10, 100, '배양실', '2"', ?
+				  100, '배양실', ?
 				)
 				RETURNING id
 				""", Long.class, varietyId);

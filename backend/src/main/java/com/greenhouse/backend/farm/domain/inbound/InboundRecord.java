@@ -2,8 +2,6 @@ package com.greenhouse.backend.farm.domain.inbound;
 
 import com.greenhouse.backend.common.domain.BaseEntity;
 import com.greenhouse.backend.farm.domain.orchid.OrchidGroup;
-import com.greenhouse.backend.farm.domain.orchid.PotSizeCode;
-import com.greenhouse.backend.farm.domain.structure.BedZone;
 import com.greenhouse.backend.farm.domain.variety.Variety;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
@@ -51,46 +49,14 @@ public class InboundRecord extends BaseEntity {
 	@Column(nullable = false, length = 50)
 	private InboundStatus status;
 
-	@Column(name = "bottle_count")
-	private Integer bottleCount;
-
 	@Column(name = "estimated_quantity")
 	private Integer estimatedQuantity;
-
-	@Column(name = "actual_quantity")
-	private Integer actualQuantity;
 
 	@Column(name = "temp_location")
 	private String tempLocation;
 
 	@Column(name = "potting_due_date")
 	private LocalDate pottingDueDate;
-
-	@Column(name = "potting_date")
-	private LocalDate pottingDate;
-
-	@Column(name = "pot_size")
-	private String potSize;
-
-	@Column(name = "age_year")
-	private Integer ageYear;
-
-	@Column(name = "growth_stage")
-	private String growthStage;
-
-	@Column(name = "placement_type")
-	private String placementType;
-
-	@Column(name = "tray_count")
-	private Integer trayCount;
-
-	@ManyToOne(fetch = FetchType.LAZY)
-	@JoinColumn(name = "bed_zone_id")
-	private BedZone bedZone;
-
-	@ManyToOne(fetch = FetchType.LAZY)
-	@JoinColumn(name = "created_orchid_group_id")
-	private OrchidGroup createdOrchidGroup;
 
 	@OneToMany(mappedBy = "inboundRecord")
 	private List<OrchidGroup> createdOrchidGroups = new ArrayList<>();
@@ -102,55 +68,39 @@ public class InboundRecord extends BaseEntity {
 	private String memo;
 
 	public InboundRecord(LocalDate inboundDate, InboundType inboundType, Variety variety, InboundStatus status,
-			Integer bottleCount, Integer estimatedQuantity, Integer actualQuantity, String tempLocation,
-			LocalDate pottingDueDate, String potSize, Integer ageYear, String growthStage, String placementType,
-			Integer trayCount, BedZone bedZone, String worker, String memo) {
+			Integer estimatedQuantity, String tempLocation, LocalDate pottingDueDate, String worker, String memo) {
 		this.inboundDate = inboundDate;
 		this.inboundType = inboundType;
 		this.variety = variety;
 		this.status = status;
-		this.bottleCount = bottleCount;
 		this.estimatedQuantity = estimatedQuantity;
-		this.actualQuantity = actualQuantity;
 		this.tempLocation = tempLocation;
 		this.pottingDueDate = pottingDueDate;
-		this.potSize = PotSizeCode.fromInput(potSize).getDisplayValue();
-		this.ageYear = ageYear;
-		this.growthStage = growthStage;
-		this.placementType = placementType;
-		this.trayCount = trayCount;
-		this.bedZone = bedZone;
 		this.worker = worker;
 		this.memo = memo;
 	}
 
-	public void updateMetadata(LocalDate inboundDate, Integer bottleCount, Integer estimatedQuantity,
-			Integer actualQuantity, String tempLocation, LocalDate pottingDueDate, String potSize, Integer ageYear,
-			String growthStage, String placementType, Integer trayCount, String worker, String memo) {
-		if (status == InboundStatus.CANCELED) {
-			throw new IllegalArgumentException("취소된 입고 기록은 수정할 수 없습니다.");
-		}
+	public void updateMetadata(LocalDate inboundDate, Integer estimatedQuantity, String tempLocation,
+			LocalDate pottingDueDate, String worker, String memo) {
+		requireEditable();
 		this.inboundDate = inboundDate;
-		this.bottleCount = bottleCount;
 		this.estimatedQuantity = estimatedQuantity;
-		this.actualQuantity = actualQuantity;
 		this.tempLocation = tempLocation;
 		this.pottingDueDate = pottingDueDate;
-		this.potSize = PotSizeCode.fromInput(potSize).getDisplayValue();
-		this.ageYear = ageYear;
-		this.growthStage = growthStage;
-		this.placementType = placementType;
-		this.trayCount = trayCount;
 		this.worker = worker;
 		this.memo = memo;
 	}
 
-	public void place(BedZone bedZone, OrchidGroup createdOrchidGroup, LocalDate pottingDate, Integer actualQuantity) {
-		this.bedZone = bedZone;
-		this.createdOrchidGroup = createdOrchidGroup;
-		this.pottingDate = pottingDate;
-		this.actualQuantity = actualQuantity;
+	public void markPlaced() {
 		this.status = InboundStatus.PLACED;
+	}
+
+	public void completePotting() {
+		if (inboundType != InboundType.FLASK_SEEDLING || status == InboundStatus.CANCELED
+				|| status == InboundStatus.PLACED) {
+			throw new IllegalStateException("포트 작업을 완료할 수 없는 입고 기록입니다.");
+		}
+		markPlaced();
 	}
 
 	public void addCreatedOrchidGroup(OrchidGroup orchidGroup) {
@@ -160,7 +110,41 @@ public class InboundRecord extends BaseEntity {
 	}
 
 	public boolean hasCreatedOrchidGroups() {
-		return createdOrchidGroup != null || !createdOrchidGroups.isEmpty();
+		return createdOrchidGroups.stream().anyMatch(OrchidGroup::isVisibleInActiveViews);
+	}
+
+	public void reopenAfterPottingVoid() {
+		if (status != InboundStatus.PLACED || hasCreatedOrchidGroups()) {
+			throw new IllegalStateException("무효화된 포트 작업의 입고 기록만 다시 대기 상태로 전환할 수 있습니다.");
+		}
+		status = InboundStatus.POTTING_PENDING;
+	}
+
+	public boolean isEditable() {
+		return (status == InboundStatus.POTTING_PENDING || status == InboundStatus.POTTING_IN_PROGRESS)
+				&& !hasCreatedOrchidGroups();
+	}
+
+	public List<InboundRecordAction> availableActions(boolean hasActiveCreatedGroups) {
+		if (status == InboundStatus.CANCELED) {
+			return List.of();
+		}
+		if (inboundType == InboundType.FLASK_SEEDLING && status == InboundStatus.PLACED && hasActiveCreatedGroups) {
+			return List.of(InboundRecordAction.VOID_POTTING, InboundRecordAction.CANCEL);
+		}
+		return List.of(InboundRecordAction.CANCEL);
+	}
+
+	public void requirePottingVoidAllowed() {
+		if (inboundType != InboundType.FLASK_SEEDLING || status != InboundStatus.PLACED || !hasCreatedOrchidGroups()) {
+			throw new IllegalArgumentException("배치 완료된 유리병 모종 입고의 포트 작업만 취소할 수 있습니다.");
+		}
+	}
+
+	private void requireEditable() {
+		if (!isEditable()) {
+			throw new IllegalArgumentException("배치 완료 또는 취소된 입고 기록은 수정할 수 없습니다.");
+		}
 	}
 
 	public void markPottingPending(InboundStatus status) {
@@ -178,7 +162,7 @@ public class InboundRecord extends BaseEntity {
 		if (status != InboundStatus.POTTING_IN_PROGRESS) {
 			return;
 		}
-		this.status = pottingDueDate == null ? InboundStatus.TEMP_STORED : InboundStatus.POTTING_PENDING;
+		this.status = InboundStatus.POTTING_PENDING;
 	}
 
 	public void cancel(String memo) {
@@ -190,17 +174,8 @@ public class InboundRecord extends BaseEntity {
 	}
 
 	public void requireCancellable() {
-		if (createdOrchidGroup != null) {
+		if (hasCreatedOrchidGroups()) {
 			throw new IllegalArgumentException("난 묶음이 생성된 입고 기록은 취소할 수 없습니다.");
-		}
-	}
-
-	public void requireDeletable() {
-		if (status != InboundStatus.CANCELED) {
-			throw new IllegalArgumentException("취소된 입고 기록만 삭제할 수 있습니다.");
-		}
-		if (createdOrchidGroup != null) {
-			throw new IllegalArgumentException("난 묶음이 생성된 입고 기록은 삭제할 수 없습니다.");
 		}
 	}
 
@@ -211,17 +186,9 @@ public class InboundRecord extends BaseEntity {
 		if (status == InboundStatus.CANCELED) {
 			throw new IllegalArgumentException("취소된 입고 기록은 포트 작업을 등록할 수 없습니다.");
 		}
-		if (createdOrchidGroup != null) {
+		if (hasCreatedOrchidGroups()) {
 			throw new IllegalArgumentException("이미 난 묶음이 생성된 입고 기록입니다.");
 		}
-	}
-
-	public static int resolveQuantity(Integer actualQuantity, Integer estimatedQuantity) {
-		Integer resolved = actualQuantity != null ? actualQuantity : estimatedQuantity;
-		if (resolved == null || resolved < 1) {
-			throw new IllegalArgumentException("수량은 1 이상이어야 합니다.");
-		}
-		return resolved;
 	}
 
 }

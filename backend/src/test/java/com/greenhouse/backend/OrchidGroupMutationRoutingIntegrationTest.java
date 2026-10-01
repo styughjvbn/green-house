@@ -2,10 +2,10 @@ package com.greenhouse.backend;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import com.greenhouse.backend.farm.application.inbound.InboundPlacementInput;
 import com.greenhouse.backend.farm.application.inbound.InboundRecordCreateCommand;
 import com.greenhouse.backend.farm.application.inbound.InboundRecordService;
 import com.greenhouse.backend.farm.application.orchid.OrchidGroupCommandService;
-import com.greenhouse.backend.farm.application.transformation.MultiCreateWorkOperationService;
 import com.greenhouse.backend.farm.application.transformation.RepotWorkOperationService;
 import com.greenhouse.backend.farm.application.variety.VarietyService;
 import com.greenhouse.backend.farm.domain.inbound.InboundStatus;
@@ -19,12 +19,9 @@ import com.greenhouse.backend.farm.domain.structure.PhysicalBed;
 import com.greenhouse.backend.farm.domain.variety.Variety;
 import com.greenhouse.backend.farm.dto.orchid.OrchidGroupCreateRequest;
 import com.greenhouse.backend.farm.dto.orchid.OrchidGroupUpdateRequest;
-import com.greenhouse.backend.farm.dto.transformation.MultiCreateOrchidGroupRowRequest;
-import com.greenhouse.backend.farm.dto.transformation.MultiCreateWorkOperationRequest;
 import com.greenhouse.backend.farm.dto.transformation.RepotResultOrchidGroupRequest;
 import com.greenhouse.backend.farm.dto.transformation.RepotWorkOperationRequest;
 import com.greenhouse.backend.farm.dto.variety.VarietyUpdateRequest;
-import com.greenhouse.backend.farm.repository.orchid.mutation.OrchidGroupMutationRelationRepository;
 import com.greenhouse.backend.farm.repository.orchid.mutation.OrchidGroupMutationRepository;
 import com.greenhouse.backend.farm.repository.transformation.OrchidGroupLineageRepository;
 import com.greenhouse.backend.partner.domain.BusinessPartner;
@@ -41,9 +38,6 @@ import com.greenhouse.backend.sales.domain.SalesSlip;
 import com.greenhouse.backend.sales.domain.SalesType;
 import com.greenhouse.backend.sales.dto.SalesSlipStatusUpdateRequest;
 import com.greenhouse.backend.sales.repository.SalesInventoryMovementRepository;
-import com.greenhouse.backend.work.application.correction.OrchidGroupCorrectionInput;
-import com.greenhouse.backend.work.application.correction.WorkCorrectionCommand;
-import com.greenhouse.backend.work.application.correction.WorkOperationCorrectionService;
 import com.greenhouse.backend.work.application.effect.InboundPottingCommand;
 import com.greenhouse.backend.work.application.effect.InboundPottingResultInput;
 import com.greenhouse.backend.work.application.operation.DiscardRecordService;
@@ -83,12 +77,6 @@ class OrchidGroupMutationRoutingIntegrationTest extends AbstractBackendIntegrati
 	private RepotWorkOperationService repotWorkOperationService;
 
 	@Autowired
-	private MultiCreateWorkOperationService multiCreateWorkOperationService;
-
-	@Autowired
-	private WorkOperationCorrectionService workOperationCorrectionService;
-
-	@Autowired
 	private DiscardRecordService discardRecordService;
 
 	@Autowired
@@ -116,9 +104,6 @@ class OrchidGroupMutationRoutingIntegrationTest extends AbstractBackendIntegrati
 	private OrchidGroupMutationRepository mutationRepository;
 
 	@Autowired
-	private OrchidGroupMutationRelationRepository mutationRelationRepository;
-
-	@Autowired
 	private OrchidGroupLineageRepository lineageRepository;
 
 	@Autowired
@@ -143,8 +128,8 @@ class OrchidGroupMutationRoutingIntegrationTest extends AbstractBackendIntegrati
 				"4인치", 2, "관리", "단일", null, false, new BigDecimal("0"), new BigDecimal("1"), "상세 수정"));
 
 		var inbound = inboundRecordService.create(new InboundRecordCreateCommand(LocalDate.of(2026, 8, 20),
-				InboundType.PRODUCT_POT, fixture.variety().getId(), null, null, null, 7, null, null, "4인치", 2, null,
-				"단일", null, fixture.zone().getId(), new BigDecimal("2"), new BigDecimal("3"), InboundStatus.PLACED,
+				InboundType.PRODUCT_POT, fixture.variety().getId(), null, null, null, null, new InboundPlacementInput(7,
+						fixture.zone().getId(), "4인치", 2, "단일", null, new BigDecimal("2"), new BigDecimal("3")),
 				"입고 담당", "즉시 배치"));
 		long mutationCountBeforeMetadataUpdate = mutationRepository.count();
 		varietyService.update(fixture.variety().getId(), new VarietyUpdateRequest(fixture.variety().getGenus(),
@@ -155,7 +140,8 @@ class OrchidGroupMutationRoutingIntegrationTest extends AbstractBackendIntegrati
 
 		entityManager.flush();
 		OrchidGroup updated = orchidGroupRepository.findById(created.id()).orElseThrow();
-		OrchidGroup inboundGroup = orchidGroupRepository.findById(inbound.createdOrchidGroupId()).orElseThrow();
+		OrchidGroup inboundGroup = orchidGroupRepository.findById(inbound.createdOrchidGroups().getFirst().id())
+			.orElseThrow();
 		assertThat(updated.getStateRevision()).isEqualTo(3L);
 		assertThat(inboundGroup.getStateRevision()).isEqualTo(2L);
 		assertThat(updated.getVarietyName()).isEqualTo("라우팅 변경 품종");
@@ -233,55 +219,19 @@ class OrchidGroupMutationRoutingIntegrationTest extends AbstractBackendIntegrati
 	}
 
 	@Test
-	void routesMultiCreateCorrectionAndCreationCancellation() {
-		Fixture fixture = createFixture(9964, "라우팅 다중 생성/보정");
-		ensureWorkType(WorkTypeDefinition.MULTI_CREATE.name(), "난 묶음 다중 생성", WorkTypeTemplate.MULTI_CREATE, 3);
-		ensureWorkType(WorkTypeDefinition.CORRECTION.name(), "구조 변경 보정", WorkTypeTemplate.CORRECTION, 4);
-		var created = multiCreateWorkOperationService.create(new MultiCreateWorkOperationRequest(
-				"routing-multi-create-9964", "라우팅 다중 생성", LocalDate.of(2026, 8, 20), "작업자", null,
-				List.of(new MultiCreateOrchidGroupRowRequest(groupRequest(fixture, 12, "0", "1", "정상"), Set.of()))));
-		Long operationId = created.operation().id();
-		Long groupId = created.createdOrchidGroups().getFirst().id();
-		Long originalMutationId = workAppliedEffectRepository.findByWorkOperationIdOrderByIdAsc(operationId)
-			.getFirst()
-			.getMutationId();
-
-		var corrections = workOperationCorrectionService.create(operationId,
-				new WorkCorrectionCommand("routing-correction-9964", "라우팅 보정", LocalDate.of(2026, 8, 20), "관리자", null,
-						"수량 확인", List.of(new OrchidGroupCorrectionInput(groupId, 10, "수량 보정"))));
-		Long correctionOperationId = corrections.corrections().getFirst().correctionOperation().id();
-		Long correctionMutationId = workAppliedEffectRepository.findByWorkOperationIdOrderByIdAsc(correctionOperationId)
-			.getFirst()
-			.getMutationId();
-
-		assertThat(correctionMutationId).isNotNull();
-		assertThat(mutationRelationRepository.findByMutationIdOrderByIdAsc(correctionMutationId)).singleElement()
-			.satisfies(relation -> assertThat(relation.getRelatedMutation().getId()).isEqualTo(originalMutationId));
-		assertThat(orchidGroupRepository.findById(groupId).orElseThrow().getStateRevision()).isEqualTo(2L);
-
-		var cancelCandidate = multiCreateWorkOperationService.create(new MultiCreateWorkOperationRequest(
-				"routing-multi-cancel-9964", "취소할 다중 생성", LocalDate.of(2026, 8, 20), "작업자", null,
-				List.of(new MultiCreateOrchidGroupRowRequest(groupRequest(fixture, 5, "2", "3", "정상"), Set.of()))));
-		Long canceledGroupId = cancelCandidate.createdOrchidGroups().getFirst().id();
-		multiCreateWorkOperationService.cancel(cancelCandidate.operation().id());
-		OrchidGroup canceled = orchidGroupRepository.findById(canceledGroupId).orElseThrow();
-		assertThat(canceled.getStateRevision()).isEqualTo(2L);
-		assertThat(canceled.getQuantity()).isZero();
-		assertThat(canceled.getStatus()).isEqualTo("생성 취소");
-	}
-
-	@Test
 	void routesDiscardEffectAndLinksItsMutation() {
 		Fixture fixture = createFixture(9965, "라우팅 폐기");
 		ensureWorkType(WorkTypeDefinition.DISCARD.name(), "폐기", WorkTypeTemplate.DISCARD, 5);
 		var group = orchidGroupCommandService.create(groupRequest(fixture, 15, "0", "1", "정상"));
 		WorkType discardType = workTypeRepository.findByCode(WorkTypeDefinition.DISCARD.name()).orElseThrow();
 
-		var operation = discardRecordService.create(new DiscardRecordCreateRequest(
-				new WorkOperationCreateRequest(discardType.getId(), "라우팅 폐기", LocalDate.of(2026, 8, 20),
-						LocalDate.of(2026, 8, 20), WorkTargetSelection.orchidGroup(group.id()), java.util.Map.of(),
-						"작업자", null, List.of()),
-				LocalDate.of(2026, 8, 20), "작업자", List.of(new DiscardRecordResultRequest(group.id(), 5, "상태 불량"))));
+		var operation = discardRecordService
+			.create(new DiscardRecordCreateRequest(
+					new WorkOperationCreateRequest(discardType.getId(), "라우팅 폐기", LocalDate.of(2026, 8, 20),
+							LocalDate.of(2026, 8, 20), WorkTargetSelection.orchidGroup(group.id()), java.util.Map.of(),
+							"작업자", null, List.of()),
+					LocalDate.of(2026, 8, 20), "작업자", List.of(new DiscardRecordResultRequest(group.id(), 5, "상태 불량"))))
+			.getFirst();
 
 		var effect = workAppliedEffectRepository.findByWorkOperationIdOrderByIdAsc(operation.id()).getFirst();
 		OrchidGroup discarded = orchidGroupRepository.findById(group.id()).orElseThrow();
@@ -298,13 +248,12 @@ class OrchidGroupMutationRoutingIntegrationTest extends AbstractBackendIntegrati
 		ensureWorkType(WorkTypeDefinition.POTTING.name(), "포트 작업", WorkTypeTemplate.REPOT, 7);
 		var inbound = inboundRecordService
 			.create(new InboundRecordCreateCommand(LocalDate.of(2026, 8, 19), InboundType.FLASK_SEEDLING,
-					fixture.variety().getId(), null, 3, 30, null, "배양실", LocalDate.of(2026, 8, 20), "2인치", 1, null,
-					null, null, null, null, null, InboundStatus.POTTING_PENDING, "입고 담당", null));
+					fixture.variety().getId(), null, 30, "배양실", LocalDate.of(2026, 8, 20), null, "입고 담당", null));
 
 		var operation = inboundPottingOperationService.executeNow(new InboundPottingCommand("routing-potting-9966",
 				inbound.id(), LocalDate.of(2026, 8, 20), List.of(new InboundPottingResultInput(fixture.zone().getId(),
 						28, "2인치", 1, "트레이", 2, false, new BigDecimal("0"), new BigDecimal("2"), null)),
-				"유묘", "포트 담당", "포트 완료"));
+				"포트 담당", "포트 완료"));
 
 		var effect = workAppliedEffectRepository.findByWorkOperationIdOrderByIdAsc(operation.id())
 			.stream()

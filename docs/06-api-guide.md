@@ -34,8 +34,9 @@ npm run api:types
 | `auth.openapi.yaml` | 로그인, 로그아웃, 현재 사용자, 농장 업무일자·시간대 조회 |
 | `farm-structure.openapi.yaml` | 하우스, 물리 배드, 논리 구역, 난 묶음 조회 |
 | `farm-status.openapi.yaml` | 농장 현황 맵, 선택 범위 조회, 대시보드 요약 |
-| `orchid-command.openapi.yaml` | 난 묶음 생성, 다중 생성·분갈이 작업, 수정, 이동, 배치 |
-| `inventory.openapi.yaml` | 품종 CRUD/삭제, 자재 CRUD/삭제, 입고 기록 생성/수정/포트작업/취소/삭제, 목록 페이지네이션 |
+| `orchid-command.openapi.yaml` | 난 묶음 생성, 분갈이 작업, 수정, 이동, 배치 |
+| `orchid-mutation.openapi.yaml` | 난 묶음 Mutation 원장의 헤더, Entry 전후 상태와 관계 조회 |
+| `inventory.openapi.yaml` | 품종 CRUD/삭제, 자재 CRUD/삭제, 입고 기록 생성/수정/포트작업/취소, 목록 페이지네이션 |
 | `orchid-collection.openapi.yaml` | 난 묶음 사용자 그룹과 소속 관리 |
 | `derived-orchid-group.openapi.yaml` | 품종·년생·화분 크기 기준 자동 그룹 조회 |
 | `work.openapi.yaml` | 작업 유형과 등록·실행 capability metadata |
@@ -138,9 +139,29 @@ npm run api:types
 
 작업 목록과 캘린더 응답은 `WorkOperationSummaryResponse`를 사용한다. 진행률과 전체 작업 `availableActions`는 포함하지만 대상 배열은 포함하지 않는다. 사용자가 작업을 선택하면 `GET /api/work-operations/{workOperationId}`로 `WorkOperationResponse`를 조회해 대상별 상태와 action을 표시한다.
 
+`PATCH /api/work-operations/{workOperationId}/title`은 상태와 관계없이 작업명을 수정한다. 작업명은 공백일 수 없고 최대 150자이며 앞뒤 공백은 제거한다.
+
+`GET /api/work-operations/{workOperationId}/relations?kind=CREATION_BATCH|LINKED`는 배지를 선택했을 때만 생성 묶음 또는 명시적으로 연관된 작업 묶음 요약을 반환한다. `LINKED`는 부모와 자식 중 어느 작업을 기준으로 조회해도 같은 묶음 전체를 반환한다. 전체 목록의 필터·정렬·페이지는 변경하지 않는다.
+
 대상 미리보기와 작업 생성 요청에서 `sourceScopeType = DERIVED_GROUP`이면 `sourceDerivedGroupKey`를 사용한다. 이는 품종·년생·화분 크기로 만든 자동 그룹의 복합 식별자이며, `sourceScopeType`의 문자열 표현이나 저장된 범위 Entity의 ID가 아니다. 작업 목록의 `sourceScopeType`·`sourceScopeId`는 저장된 작업 원본 범위를 필터링하고, 작업 이력의 `historyScopeType`·`historyScopeId`는 현재 조회할 농장 구조 또는 난 묶음 범위를 지정한다.
 
 `GET /api/work-operations/{workOperationId}/details`는 완료 작업 화면용 정형 상세를 반환한다. `fields`는 작업 유형별 입력값을 표시용 키·라벨·값으로 변환하고, `executions`는 `WorkAppliedEffect`에 보존된 모든 실행 회차를 원본 투입·결과 난 묶음·수량/상태 변화·손실·위치 필드로 변환한다. `corrections`는 보정 사유와 난 묶음별 수량·상태 전후값을 시간순으로 반환한다. 클라이언트는 저장된 `details`, `commandDetails`, `resultDetails` JSON 키를 직접 해석하지 않는다. 과거 기록에 저장되지 않은 값은 응답에서 `null` 또는 빈 목록으로 유지한다.
+
+`GET /api/work-operations/{workOperationId}/graph`는 `detail=WORK|MUTATION|LINEAGE`, `depth`,
+`maxNodes`로 작업 중심 관계 그래프를 반환한다. 기본 `WORK`는 생성 출처와 명시적 작업 선후 관계만
+포함하고, `MUTATION`은 직접 효과의 상태 revision, `LINEAGE`는 depth 범위의 연결 상태 체인을 추가한다.
+동일 Receipt에서 생성된 형제 작업은 포함하지 않는다. 작업 상세는 `MUTATION` 응답을 투입·잔류·결과
+난 묶음 흐름으로 변환하며, `LINEAGE`는 개발용 Mutation 테스트에서만 사용한다. 응답은 내부 Receipt
+key와 사용자 멱등 키를 노출하지 않는다.
+
+`GET /api/work-operations/{workOperationId}/void-eligibility`는 완료된 구조 변경의 원본 Mutation,
+SOURCE/RESULT와 무효화 차단 사유를 반환한다. `POST /api/work-operations/{workOperationId}/void`는 실행
+시 조건을 다시 검증하고 원본 상태 복원과 결과 생성을 함께 보상한다. 성공한 작업은 `VOIDED`가 되며
+응답의 `voidedAt`, `voidReason`, `voidMutationId`로 보상 기록을 추적한다.
+
+`POST /api/orchid-groups/{orchidGroupId}/reconciliations`는 현장에서 확인한 수량·상태·논리 구역·배치를
+현재 상태로 반영한다. 별도 `RECONCILIATION` 작업과 Mutation이 생성되고 전후 snapshot과 사유가 작업
+효과에 보존된다.
 
 대상 완료와 구조 변경 실행에는 `completedDate`를 전달하고, 전체 작업 완료에도 완료 요청 본문의 `completedDate`를 전달한다. 화면 기본값은 농장 기준 오늘이며 오늘 이전 날짜로 수정할 수 있다. 포트 작업은 `pottingDate`를 대상과 전체 작업의 완료일로 함께 사용한다. 기존 호출 호환을 위해 일반 대상·전체 완료에서 날짜를 생략하면 농장 기준 오늘로 처리한다.
 
@@ -150,16 +171,16 @@ npm run api:types
 
 - `POST /api/work-operations/structure-change-records`: 분갈이·분주·합식의 전체 원본과 N:M 결과를 즉시 완료
 - `POST /api/work-operations/structure-change-records/batch`: 혼합 품종 원본을 품종별 기록 요청으로 묶어 한 트랜잭션에서 완료
-- `POST /api/work-operations/discard-records`: 선택한 모든 난 묶음의 폐기 수량·사유를 즉시 완료
+- `POST /api/work-operations/discard-records`: 선택한 모든 난 묶음의 폐기 수량·사유를 품종별 완료 작업 목록으로 생성
 - `POST /api/work-operations/inbound-potting-records`: 선택한 모든 입고 기록의 포트 결과를 품종별 완료 작업으로 저장
 
-세 경로는 작업 aggregate 생성과 효과 적용을 하나의 트랜잭션으로 처리한다. 결과 검증이 실패하면 중간 계획을 남기지 않는다.
+각 경로는 작업 aggregate 생성과 효과 적용을 하나의 트랜잭션으로 처리한다. 결과 검증이 실패하면 중간 계획을 남기지 않는다. 자리 이동·분갈이·분주·합식·폐기는 여러 품종이 포함되면 품종별 개별 작업으로 생성한다.
 
 `GET /api/work-history?historyScopeType={historyScopeType}&historyScopeId={historyScopeId}&page={page}&size={size}`는 `HOUSE`, `PHYSICAL_BED`, `BED_ZONE`, `ORCHID_GROUP` 범위의 직접·전파 이력을 서버에서 통합해 페이지로 반환한다. `page`는 0부터 시작하고 `size`는 기본 20, 최대 100이다. 동일 작업은 한 번만 반환하며 최신 작업일과 작업 ID 역순으로 정렬한다. 요약 화면은 첫 페이지 일부만 사용하고 난 묶음 상세는 10건 단위로 페이지를 전환한다. 기존 난 묶음별 전체 이력 경로는 호환용으로 유지한다.
 
 신규 입고 등록은 입고 기록 대상을 가진 완료 상태의 `WorkOperation`을 생성한다.
 
-자리 이동·분갈이·분주·합식·입고 포트 작업은 계획 생성 시 대상을 스냅샷으로 확정하되 위치나 구조를 변경하지 않는다. 자리 이동·분갈이·분주·합식 실행 회차는 `POST /api/work-operations/{workOperationId}/structure-change-executions`에서 같은 품종의 계획 대상 일부와 원본별 투입 수량을 하나의 풀로 합친 뒤 복수 결과를 생성하고 누적 작업 수량을 갱신한다. 결과 요청은 직접 원본 ID를 받지 않으며 기존 `sourceOrchidGroupIds` 입력은 호환상 무시한다. `attributeSourceOrchidGroupId`는 기존 결과 속성 상속 기준만 전달하며 수량 배분이나 직접 계보를 뜻하지 않는다. 기존 단일 대상 분갈이·분주 요청은 내부 변환 후 같은 N:M 실행 코어를 사용하고, 기존 합식 완료 API는 이전 클라이언트 호환용이다. 다중 생성은 대상 없는 즉시 구조 변경 API로 유지한다.
+자리 이동·분갈이·분주·합식·입고 포트 작업은 계획 생성 시 대상을 스냅샷으로 확정하되 위치나 구조를 변경하지 않는다. 자리 이동·분갈이·분주·합식 실행 회차는 `POST /api/work-operations/{workOperationId}/structure-change-executions`에서 같은 품종의 계획 대상 일부와 원본별 투입 수량을 하나의 풀로 합친 뒤 복수 결과를 생성하고 누적 작업 수량을 갱신한다. 결과 요청은 직접 원본 ID를 받지 않으며 기존 `sourceOrchidGroupIds` 입력은 호환상 무시한다. `attributeSourceOrchidGroupId`는 기존 결과 속성 상속 기준만 전달하며 수량 배분이나 직접 계보를 뜻하지 않는다. 기존 단일 대상 분갈이·분주 요청은 내부 변환 후 같은 N:M 실행 코어를 사용하고, 기존 합식 완료 API는 이전 클라이언트 호환용이다.
 
 `GET /api/orchid-groups/{orchidGroupId}/lineage`의 `transformations`는 저장된 실행 회차별 원본 목록·결과 목록·총 투입·총 결과·손실을 반환한다. `sources`와 `results`는 단일 원본 및 기존 직접 계보 호환 필드다.
 
@@ -167,7 +188,13 @@ npm run api:types
 
 입고 포트 작업의 미완료 대상은 입고 기록을 최신 정보의 기준으로 사용한다. 작업 실행 시 최신 입고 정보를 대상 스냅샷으로 확정하며, 완료된 작업은 이후 입고 기록이 수정되어도 실행 시점 정보를 유지한다. 입고 기록을 조회할 수 없으면 기존 대상 스냅샷을 표시한다.
 
-포트 작업 계획에 포함된 입고 기록은 `POTTING_IN_PROGRESS` 상태로 전환해 입고 관리에서 `작업중`으로 표시한다. 포트 작업을 취소하거나 대상을 건너뛰면 예정일 유무에 따라 포트 작업 대기 또는 임시보관 상태로 복귀한다. 결과 난 묶음이 없는 입고 기록을 취소하면 연결된 입고 작업과 아직 실행되지 않은 포트 작업 대상도 같은 트랜잭션에서 취소한다.
+유리병 모종 입고는 포트 예정일 유무와 관계없이 `POTTING_PENDING`으로 관리하고, 임시 보관 위치는 `tempLocation`으로 표현한다. 포트 작업 계획에 포함되면 `POTTING_IN_PROGRESS`로 전환하고, 포트 작업을 취소하거나 대상을 건너뛰면 `POTTING_PENDING`으로 복귀한다. 결과 난 묶음이 없는 입고 기록을 취소하면 연결된 입고 작업과 아직 실행되지 않은 포트 작업 대상도 같은 트랜잭션에서 취소한다.
+
+입고 수정은 난 묶음 생성·배치 완료 전에만 허용한다. `InboundRecordResponse.editable`은 서버가 판정한 수정 가능 여부이며, 화면은 상태 조합을 다시 추론하지 않고 이 값을 사용한다. 취소된 입고는 물리 삭제하지 않으며, 상태 조건이 없는 전체 목록에도 포함한다. `status=CANCELED`를 지정하면 취소 이력만 조회한다.
+
+입고 화면의 취소 동작은 `InboundRecordResponse.availableActions`를 기준으로 표시한다. `VOID_POTTING`은 `POST /api/inbound-records/{inboundRecordId}/potting-void`로 포트 작업의 생성 Mutation을 보상하고 유리병 모종 입고를 `POTTING_PENDING`으로 되돌린다. `CANCEL`은 기존 입고 취소 API를 사용하며, 즉시 배치 입고는 입고 생성 Mutation을 보상하고, 배치 완료 유리병 모종은 포트 작업을 먼저 보상한 뒤 입고를 `CANCELED`로 전환한다. 같은 포트 작업에 여러 입고가 포함되면 포트 작업 보상은 작업 전체에 적용된다. 생성 결과에 후속 작업·판매·다른 외부 참조가 있으면 취소하지 않는다.
+
+즉시 배치 입고의 난 묶음 속성은 입고 최상위 필드가 아닌 `placement`에 전달한다. 입고 응답의 `createdOrchidGroups`는 `OrchidGroup.inboundRecord`로 연결된 결과를 반환하며, 실제 수량·화분·년생·배치 위치는 이 결과를 기준으로 확인한다. 유리병 모종의 `pottingDate`는 입고 컬럼이 아니라 결과 난 묶음 생성 Mutation의 `effectiveBusinessDate`에서 파생하며, 생성 이력이 `BASELINE`만 있는 과거 묶음은 날짜를 추정하지 않는다.
 
 입고 관리 화면의 즉시 실행은 `POST /api/work-operations/inbound-potting-executions`를 사용한다. 같은 입고 기록이 활성 포트 작업 계획에 포함되어 있으면 해당 계획의 대상을 실행하고, 계획이 없을 때만 단일 대상 `WorkOperation`을 새로 생성한다. 다중 대상 계획은 실행한 대상만 완료하고 나머지 대상을 유지한다. 요청의 `results`에 결과별 수량·화분·년생·배치 위치를 전달하며 한 번의 포트 작업으로 여러 난 묶음을 생성할 수 있다. 기존 `POST /api/inbound-records/{inboundRecordId}/potting`은 호환 응답인 `InboundRecordResponse`를 유지하면서 내부적으로 같은 실행기를 사용한다.
 

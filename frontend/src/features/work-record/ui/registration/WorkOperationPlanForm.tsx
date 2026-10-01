@@ -204,12 +204,19 @@ export function WorkOperationPlanForm({
       <section className="rounded-md border border-[#cfe0d2] bg-white p-4">
         <SectionTitle title="작업 정보" />
         <div className="grid gap-3 md:grid-cols-3">
-          <TextField
-            label="작업명"
-            required
-            value={form.title}
-            onChange={(value) => onUpdateForm("title", value)}
-          />
+          {isDedicatedWorkflow ? (
+            <div className="rounded-md border border-[#d8e7d7] bg-[#f4faf3] px-3 py-2 text-sm text-[#36533d]">
+              작업명은 품종명 · 이력 유형 형식으로 자동 생성됩니다. 저장 후
+              상세에서 수정할 수 있습니다.
+            </div>
+          ) : (
+            <TextField
+              label="작업명"
+              required
+              value={form.title}
+              onChange={(value) => onUpdateForm("title", value)}
+            />
+          )}
           <TextField
             label={recordMode ? "작업일" : "시작일"}
             required

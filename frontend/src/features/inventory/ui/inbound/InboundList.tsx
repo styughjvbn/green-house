@@ -58,16 +58,31 @@ export function InboundList({
         meta: { align: "right" },
       },
       {
-        accessorKey: "actualQuantity",
-        header: "실제",
-        cell: ({ row }) => row.original.actualQuantity ?? "-",
+        id: "placedQuantity",
+        header: "배치 수량",
+        cell: ({ row }) =>
+          row.original.createdOrchidGroups.length
+            ? row.original.createdOrchidGroups.reduce(
+                (sum, group) => sum + group.quantity,
+                0,
+              )
+            : "-",
         size: 80,
         meta: { align: "right" },
       },
       {
-        accessorKey: "currentLocation",
-        header: "현재 위치",
-        cell: ({ row }) => row.original.currentLocation ?? "-",
+        id: "locations",
+        header: "배치 위치",
+        cell: ({ row }) => {
+          const locations = [
+            ...new Set(
+              row.original.createdOrchidGroups.map((group) => group.location),
+            ),
+          ];
+          return locations.length
+            ? locations.join(", ")
+            : (row.original.tempLocation ?? "-");
+        },
         size: 150,
       },
       {
@@ -84,6 +99,15 @@ export function InboundList({
         accessorKey: "pottingDueDate",
         header: "예정일",
         cell: ({ row }) => formatShortDate(row.original.pottingDueDate),
+        size: 100,
+      },
+      {
+        accessorKey: "pottingDate",
+        header: "포트 작업일",
+        cell: ({ row }) =>
+          row.original.inboundType === "FLASK_SEEDLING"
+            ? formatShortDate(row.original.pottingDate)
+            : "-",
         size: 100,
       },
     ],
@@ -123,7 +147,6 @@ export function InboundList({
 }
 
 function inboundStatusTone(status: InboundRecord["status"]) {
-  if (status === "POTTED") return "green";
   if (status === "CANCELED") return "gray";
   return "blue";
 }

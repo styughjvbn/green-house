@@ -243,6 +243,15 @@ public class OrchidGroup extends BaseEntity {
 		this.status = correctedStatus.trim();
 	}
 
+	public void reconcile(Integer actualQuantity, String actualStatus, BedZone actualBedZone, Integer actualSortOrder,
+			BigDecimal actualStartPosition, BigDecimal actualEndPosition) {
+		correctQuantityAndStatus(actualQuantity, actualStatus);
+		if (actualBedZone == null || actualSortOrder == null) {
+			throw new IllegalArgumentException("현장 동기화 위치 정보가 필요합니다.");
+		}
+		moveTo(actualBedZone, actualSortOrder, actualStartPosition, actualEndPosition);
+	}
+
 	public void reserve(Integer reserveQuantity) {
 		validatePositiveQuantity(reserveQuantity, "예약 수량");
 		if (getAvailableQuantity() < reserveQuantity) {

@@ -4,7 +4,7 @@ public record CreateOrchidGroupMutationItem(Long bedZoneId, OrchidGroupMutationD
 
 	public CreateOrchidGroupMutationItem {
 		if (bedZoneId == null || details == null) {
-			throw new IllegalArgumentException("다중 생성할 논리 구역과 상세 상태가 필요합니다.");
+			throw new IllegalArgumentException("생성할 논리 구역과 상세 상태가 필요합니다.");
 		}
 	}
 }

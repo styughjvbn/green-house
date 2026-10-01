@@ -1,5 +1,6 @@
 import { queryOptions } from "@tanstack/react-query";
 import {
+  getInboundRecord,
   getInboundRecords,
   getMaterials,
   getVarieties,
@@ -31,6 +32,13 @@ export function materialPageQueryOptions(
         page: state.page,
         size: state.size,
       }),
+  });
+}
+
+export function inboundRecordQueryOptions(inboundRecordId: number) {
+  return queryOptions({
+    queryKey: inventoryQueryKeys.inbound.record(inboundRecordId),
+    queryFn: () => getInboundRecord(inboundRecordId),
   });
 }
 

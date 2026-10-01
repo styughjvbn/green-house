@@ -87,6 +87,11 @@ public class WorkOperationProgressService {
 		return queryService.get(operationId);
 	}
 
+	public WorkOperationView updateTitle(Long operationId, String title) {
+		findOperation(operationId).updateTitle(title);
+		return queryService.get(operationId);
+	}
+
 	public WorkOperationView startTarget(Long operationId, Long targetId, WorkTargetExecutionRequest request) {
 		validateOperationInProgress(operationId);
 		findExecution(operationId, targetId).start(support.now(), support.actor(request.worker()));

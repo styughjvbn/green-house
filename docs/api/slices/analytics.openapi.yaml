@@ -286,8 +286,8 @@ components:
           - STATUS
           - MEMO
           - MOVEMENT
-          - MULTI_CREATE
           - CORRECTION
+          - RECONCILIATION
         title:
           type: string
         sourceScopeType:
@@ -316,6 +316,7 @@ components:
           - COMPLETED
           - CANCELED
           - CORRECTED
+          - VOIDED
     WorkAnalyticsResponse:
       type: object
       properties:

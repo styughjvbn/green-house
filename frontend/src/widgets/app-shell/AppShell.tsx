@@ -13,6 +13,7 @@ import {
   type NavigationChild,
   type NavigationItem,
 } from "@/shared/config/navigation";
+import { useAppEnvironment } from "@/shared/runtime/RuntimeContext";
 import { PageHeader } from "@/widgets/page-header";
 import { PanelLeftClose, PanelLeftOpen, type LucideIcon } from "lucide-react";
 
@@ -163,7 +164,11 @@ export function AppShell({
   children: React.ReactNode;
   demoMode: boolean;
 }) {
+  const appEnvironment = useAppEnvironment();
   const pathname = usePathname();
+  const navigationItems = NAVIGATION.filter(
+    (item) => !item.developmentOnly || appEnvironment === "dev",
+  );
   const [sidebarExpanded, setSidebarExpanded] = useState(true);
   const [compactDesktopHeader, setCompactDesktopHeader] = useState(false);
   const [thinDesktopHeader, setThinDesktopHeader] = useState(false);
@@ -241,7 +246,7 @@ export function AppShell({
   const activeTabPath = pathname.split("/")[2] ?? "";
   const isFarmStatusPage = pathname.startsWith("/farm-status");
   const sidebarCollapsed = !sidebarExpanded;
-  const activeNavigationItem = NAVIGATION.find((item) =>
+  const activeNavigationItem = navigationItems.find((item) =>
     isNavigationActive(pathname, item),
   );
   const activeSubNavigation = activeNavigationItem?.children;
@@ -358,7 +363,7 @@ export function AppShell({
             compactDesktopHeader ? "overflow-visible" : "overflow-y-auto"
           }`}
         >
-          {NAVIGATION.map((item) => {
+          {navigationItems.map((item) => {
             const active = isNavigationActive(pathname, item);
             const subNavItems = item.children;
             const flyoutOpen =
@@ -427,7 +432,7 @@ export function AppShell({
           <p className="text-xl font-semibold">농장 관리</p>
 
           <nav className="mt-3 flex gap-2 overflow-x-auto">
-            {NAVIGATION.map((item) => {
+            {navigationItems.map((item) => {
               const Icon = item.icon;
               const active = isNavigationActive(pathname, item);
 

@@ -2,10 +2,8 @@ package com.greenhouse.backend.work.application.operation;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import com.greenhouse.backend.farm.dto.transformation.MultiCreateOrchidGroupRowRequest;
 import java.math.BigDecimal;
 import java.util.LinkedHashMap;
-import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import org.junit.jupiter.api.Test;
@@ -32,15 +30,6 @@ class WorkRequestFingerprintTest {
 			.isNotEqualTo(fingerprint.calculate(Map.of("memo", "a")));
 		assertThat(fingerprint.calculate(Map.of("details", Map.of("idempotencyKey", "a"))))
 			.isNotEqualTo(fingerprint.calculate(Map.of("details", Map.of("idempotencyKey", "b"))));
-	}
-
-	@Test
-	void collectionMembershipOrderIsNotPartOfTheRequest() {
-		var first = new MultiCreateOrchidGroupRowRequest(null, new LinkedHashSet<>(List.of(9L, 8L)));
-		var second = new MultiCreateOrchidGroupRowRequest(null, new LinkedHashSet<>(List.of(8L, 9L)));
-		assertThat(fingerprint.calculate(first)).isEqualTo(fingerprint.calculate(second));
-		assertThat(fingerprint.calculate(new MultiCreateOrchidGroupRowRequest(null, null)))
-			.isEqualTo(fingerprint.calculate(new MultiCreateOrchidGroupRowRequest(null, java.util.Set.of())));
 	}
 
 }

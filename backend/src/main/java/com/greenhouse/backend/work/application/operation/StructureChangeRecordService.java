@@ -1,11 +1,11 @@
 package com.greenhouse.backend.work.application.operation;
 
-import com.greenhouse.backend.work.application.operation.WorkOperationView;
 import com.greenhouse.backend.work.domain.operation.WorkTypeDefinition;
 import com.greenhouse.backend.work.dto.effect.DiscardRecordCreateRequest;
 import com.greenhouse.backend.work.dto.effect.InboundPottingRecordCreateRequest;
 import com.greenhouse.backend.work.dto.effect.StructureChangeRecordBatchCreateRequest;
 import com.greenhouse.backend.work.dto.effect.StructureChangeRecordCreateRequest;
+import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
@@ -88,18 +88,26 @@ public class StructureChangeRecordService {
 		}
 		String key = fingerprints
 			.calculate(request.records().stream().map(record -> record.execution().idempotencyKey()).toList());
-		var ids = receipts.execute("STRUCTURE_RECORD_BATCH", key, request,
-				() -> request.records()
+		var ids = receipts.execute("STRUCTURE_RECORD_BATCH", key, request, () -> {
+			Set<Long> remainingSourceIds = new HashSet<>(placementExclusionOrchidGroupIds);
+			List<Long> operationIds = new ArrayList<>();
+			for (StructureChangeRecordCreateRequest record : request.records()) {
+				operationIds.add(createStructureChangeRecord(record, remainingSourceIds).id());
+				record.execution()
+					.sources()
 					.stream()
-					.map(record -> createStructureChangeRecord(record, placementExclusionOrchidGroupIds).id())
-					.toList());
+					.map(source -> source.sourceOrchidGroupId())
+					.forEach(remainingSourceIds::remove);
+			}
+			return List.copyOf(operationIds);
+		});
 		var byId = queryService.getAll(ids)
 			.stream()
 			.collect(Collectors.toMap(WorkOperationView::id, operation -> operation));
 		return ids.stream().map(byId::get).toList();
 	}
 
-	public WorkOperationView createDiscardRecord(DiscardRecordCreateRequest request) {
+	public List<WorkOperationView> createDiscardRecord(DiscardRecordCreateRequest request) {
 		return discardRecordService.create(request);
 	}
 

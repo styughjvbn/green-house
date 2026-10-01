@@ -1,6 +1,8 @@
 package com.greenhouse.backend.work.application.operation;
 
 import com.greenhouse.backend.common.config.TimeConfig;
+import com.greenhouse.backend.work.domain.operation.WorkCommandReceiptMembership;
+import com.greenhouse.backend.work.repository.WorkCommandReceiptMembershipRepository;
 import com.greenhouse.backend.work.repository.WorkCommandReceiptRepository;
 import java.time.Clock;
 import java.util.List;
@@ -16,6 +18,8 @@ import org.springframework.transaction.annotation.Transactional;
 public class WorkCommandReceipts {
 
 	private final WorkCommandReceiptRepository repository;
+
+	private final WorkCommandReceiptMembershipRepository membershipRepository;
 
 	private final WorkRequestFingerprint fingerprints;
 
@@ -34,6 +38,11 @@ public class WorkCommandReceipts {
 			throw new IllegalStateException("완료되지 않은 작업 요청 기록입니다.");
 		}
 		receipt.complete(action.get());
+		repository.flush();
+		membershipRepository.saveAll(receipt.getResultOperationIds()
+			.stream()
+			.map(operationId -> new WorkCommandReceiptMembership(identity, operationId))
+			.toList());
 		return receipt.getResultOperationIds();
 	}
 

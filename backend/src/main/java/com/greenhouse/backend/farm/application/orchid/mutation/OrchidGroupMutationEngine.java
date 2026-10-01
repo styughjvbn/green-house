@@ -5,6 +5,8 @@ import com.greenhouse.backend.farm.application.structure.OrchidPlacementPolicy;
 import com.greenhouse.backend.farm.domain.inbound.InboundRecord;
 import com.greenhouse.backend.farm.domain.orchid.OrchidGroup;
 import com.greenhouse.backend.farm.domain.orchid.mutation.OrchidGroupMutation;
+import com.greenhouse.backend.farm.domain.orchid.mutation.OrchidGroupMutationEntry;
+import com.greenhouse.backend.farm.domain.orchid.mutation.OrchidGroupMutationEntryRole;
 import com.greenhouse.backend.farm.domain.orchid.mutation.OrchidGroupMutationRelationType;
 import com.greenhouse.backend.farm.domain.orchid.mutation.OrchidGroupMutationSource;
 import com.greenhouse.backend.farm.domain.orchid.mutation.OrchidGroupMutationType;
@@ -18,6 +20,7 @@ import com.greenhouse.backend.farm.repository.variety.VarietyRepository;
 import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
@@ -55,6 +58,8 @@ public class OrchidGroupMutationEngine {
 
 	private final OrchidGroupMutationRecorder recorder;
 
+	private final OrchidGroupMutationEffectiveHeadPolicy effectiveHeadPolicy;
+
 	public OrchidGroupMutationResult create(CreateOrchidGroupMutationCommand command) {
 		String fingerprint = commandFingerprint.calculate(command);
 		var replay = replayResolver.findExisting(command.source(), fingerprint);
@@ -81,38 +86,6 @@ public class OrchidGroupMutationEngine {
 		return recorder.created(mutation, List.of(group));
 	}
 
-	public OrchidGroupMutationResult createMany(CreateOrchidGroupsMutationCommand command) {
-		String fingerprint = commandFingerprint.calculate(command);
-		var replay = replayResolver.findExisting(command.source(), fingerprint);
-		if (replay.isPresent()) {
-			return replay.get();
-		}
-
-		Map<Long, BedZone> zones = findZonesForUpdate(
-				command.groups().stream().map(CreateOrchidGroupMutationItem::bedZoneId).collect(Collectors.toSet()));
-		replay = replayResolver.findExisting(command.source(), fingerprint);
-		if (replay.isPresent()) {
-			return replay.get();
-		}
-		Map<Long, Variety> varieties = findVarieties(
-				command.groups().stream().map(item -> item.details().varietyId()).collect(Collectors.toSet()));
-		Map<Long, Integer> nextSortOrderByZoneId = currentMaxSortOrders(zones.keySet());
-		OrchidGroupMutation mutation = recorder.start(OrchidGroupMutationType.CREATE, command.source(), fingerprint,
-				command.effectiveBusinessDate(), command.reason());
-		List<OrchidGroup> groups = new ArrayList<>();
-		for (CreateOrchidGroupMutationItem item : command.groups()) {
-			BedZone zone = zones.get(item.bedZoneId());
-			Variety variety = varieties.get(item.details().varietyId());
-			requireActive(variety);
-			orchidPlacementPolicy.validatePlacement(zone, item.details().startPosition(), item.details().endPosition(),
-					null);
-			int nextSortOrder = nextSortOrderByZoneId.compute(zone.getId(), (id, current) -> current + 1);
-			groups.add(createGroup(zone, variety, item.details(), nextSortOrder));
-		}
-
-		return recorder.created(mutation, groups);
-	}
-
 	public OrchidGroupMutationResult createFromInbound(CreateInboundOrchidGroupsMutationCommand command) {
 		String fingerprint = commandFingerprint.calculate(command);
 		var replay = replayResolver.findExisting(command.source(), fingerprint);
@@ -125,7 +98,10 @@ public class OrchidGroupMutationEngine {
 		if (replay.isPresent()) {
 			return replay.get();
 		}
-		if (inboundRecord.hasCreatedOrchidGroups()) {
+		// The locking query can have started before a competing transaction commits. A
+		// separate statement after acquiring the inbound row lock must re-check the
+		// owning foreign key against the latest READ COMMITTED snapshot.
+		if (orchidGroupRepository.existsByInboundRecordIdAndQuantityGreaterThan(inboundRecord.getId(), 0)) {
 			throw new IllegalStateException("이미 난 묶음이 생성된 입고 기록입니다.");
 		}
 		Long inboundVarietyId = inboundRecord.getVariety().getId();
@@ -274,6 +250,52 @@ public class OrchidGroupMutationEngine {
 
 		return recordChanged(OrchidGroupMutationType.MOVE, command.source(), fingerprint,
 				command.effectiveBusinessDate(), command.reason(), group, revisionBefore, beforeState, afterState);
+	}
+
+	public OrchidGroupMutationResult moveAll(MoveOrchidGroupsMutationCommand command) {
+		String fingerprint = commandFingerprint.calculate(command);
+		var replay = replayResolver.findExisting(command.source(), fingerprint);
+		if (replay.isPresent()) {
+			return replay.get();
+		}
+
+		List<Long> groupIds = command.items().stream().map(MoveOrchidGroupMutationItem::orchidGroupId).toList();
+		Map<Long, OrchidGroup> groups = findGroupsForUpdate(groupIds, "이동할 난 묶음을 모두 찾을 수 없습니다.");
+		replay = replayResolver.findExisting(command.source(), fingerprint);
+		if (replay.isPresent()) {
+			return replay.get();
+		}
+		groups.values().forEach(this::requireBaseline);
+		Map<Long, BedZone> zones = findZonesForUpdate(
+				command.items().stream().map(MoveOrchidGroupMutationItem::toBedZoneId).collect(Collectors.toSet()));
+		Set<Long> placementExclusions = new HashSet<>(command.placementExclusionOrchidGroupIds());
+		placementExclusions.addAll(groupIds);
+		validateBatchMovePlacements(command.items(), zones, placementExclusions);
+		Map<Long, Integer> nextSortOrders = currentMaxSortOrders(zones.keySet());
+		List<OrchidGroupMutationRecorder.Change> changes = new ArrayList<>();
+		for (MoveOrchidGroupMutationItem item : command.items()) {
+			OrchidGroup group = groups.get(item.orchidGroupId());
+			BedZone destination = zones.get(item.toBedZoneId());
+			OrchidGroupStateSnapshot before = OrchidGroupStateSnapshot.from(group);
+			if (group.getBedZone().getId().equals(destination.getId())
+					&& equalNumber(group.getStartPosition(), item.startPosition())
+					&& equalNumber(group.getEndPosition(), item.endPosition())) {
+				continue;
+			}
+			long revisionBefore = group.getStateRevision();
+			int sortOrder = group.getBedZone().getId().equals(destination.getId()) ? group.getSortOrder()
+					: nextSortOrders.compute(destination.getId(), (id, current) -> current + 1);
+			group.moveTo(destination, sortOrder, item.startPosition(), item.endPosition());
+			OrchidGroupStateSnapshot after = OrchidGroupStateSnapshot.from(group);
+			group.advanceStateRevision();
+			changes.add(new OrchidGroupMutationRecorder.Change(group.getId(), revisionBefore, before, after));
+		}
+		if (changes.isEmpty()) {
+			throw new IllegalArgumentException("하나 이상의 난 묶음 위치가 변경되어야 합니다.");
+		}
+		OrchidGroupMutation mutation = recorder.start(OrchidGroupMutationType.MOVE, command.source(), fingerprint,
+				command.effectiveBusinessDate(), command.reason());
+		return recorder.changed(mutation, changes);
 	}
 
 	public OrchidGroupMutationResult cancelCreation(CancelOrchidGroupCreationMutationCommand command) {
@@ -436,6 +458,159 @@ public class OrchidGroupMutationEngine {
 		return result;
 	}
 
+	public OrchidGroupMutationResult reconcile(ReconcileOrchidGroupMutationCommand command) {
+		String fingerprint = commandFingerprint.calculate(command);
+		var replay = replayResolver.findExisting(command.source(), fingerprint);
+		if (replay.isPresent()) {
+			return replay.get();
+		}
+		OrchidGroup group = findGroupForUpdate(command.orchidGroupId());
+		BedZone zone = findZoneForUpdate(command.actualBedZoneId());
+		replay = replayResolver.findExisting(command.source(), fingerprint);
+		if (replay.isPresent()) {
+			return replay.get();
+		}
+		requireBaseline(group);
+		if (command.actualQuantity() > 0) {
+			orchidPlacementPolicy.validatePlacement(zone, command.actualStartPosition(), command.actualEndPosition(),
+					group.getId());
+		}
+		long revisionBefore = group.getStateRevision();
+		OrchidGroupStateSnapshot before = OrchidGroupStateSnapshot.from(group);
+		int sortOrder = group.getBedZone().getId().equals(zone.getId()) ? group.getSortOrder()
+				: orchidGroupRepository.findMaxSortOrderByBedZoneId(zone.getId()) + 1;
+		group.reconcile(command.actualQuantity(), command.actualStatus(), zone, sortOrder,
+				command.actualStartPosition(), command.actualEndPosition());
+		OrchidGroupStateSnapshot after = OrchidGroupStateSnapshot.from(group);
+		requireStateChange(before, after);
+		group.advanceStateRevision();
+		return recordChanged(OrchidGroupMutationType.RECONCILIATION, command.source(), fingerprint,
+				command.effectiveBusinessDate(), command.reason(), group, revisionBefore, before, after);
+	}
+
+	public OrchidGroupMutationResult compensateTransforms(CompensateTransformMutationsCommand command) {
+		return compensate(command, command.mutationIds(), Set.of(OrchidGroupMutationType.TRANSFORM,
+				OrchidGroupMutationType.MOVE, OrchidGroupMutationType.DISCARD),
+				"구조 변경·자리 이동과 연관 선별 폐기 Mutation만 자동 무효화할 수 있습니다.");
+	}
+
+	public OrchidGroupMutationResult compensateCreations(CompensateCreateMutationsCommand command) {
+		return compensate(command, command.mutationIds(), Set.of(OrchidGroupMutationType.CREATE),
+				"포트 작업의 생성 Mutation만 자동 무효화할 수 있습니다.");
+	}
+
+	private OrchidGroupMutationResult compensate(OrchidGroupMutationCommand command, List<Long> mutationIds,
+			Set<OrchidGroupMutationType> allowedTypes, String unsupportedMessage) {
+		String fingerprint = commandFingerprint.calculate(command);
+		var replay = replayResolver.findExisting(command.source(), fingerprint);
+		if (replay.isPresent()) {
+			return replay.get();
+		}
+		List<OrchidGroupMutationEntry> entries = recorder.entries(mutationIds);
+		if (entries.isEmpty()
+				|| entries.stream().map(entry -> entry.getMutation().getId()).distinct().count() != mutationIds
+					.size()) {
+			throw new NotFoundException("무효화할 구조 변경 Mutation을 모두 찾을 수 없습니다.");
+		}
+		if (entries.stream().anyMatch(entry -> !allowedTypes.contains(entry.getMutation().getMutationType()))) {
+			throw new IllegalArgumentException(unsupportedMessage);
+		}
+		if (recorder.alreadyCompensated(mutationIds)) {
+			throw new IllegalArgumentException("이미 무효화된 구조 변경 작업입니다.");
+		}
+		Map<Long, List<OrchidGroupMutationEntry>> entriesByGroup = entries.stream()
+			.collect(Collectors.groupingBy(OrchidGroupMutationEntry::getOrchidGroupId, LinkedHashMap::new,
+					Collectors.toList()));
+		if (entriesByGroup.values().stream().anyMatch(this::hasBrokenCompensationChain)) {
+			throw new IllegalArgumentException("같은 난 묶음의 작업 Mutation이 하나의 연속 상태 체인을 이루지 않습니다.");
+		}
+		Map<Long, OrchidGroup> groups = findGroupsForUpdate(new ArrayList<>(entriesByGroup.keySet()),
+				"무효화 대상 난 묶음을 모두 찾을 수 없습니다.");
+		replay = replayResolver.findExisting(command.source(), fingerprint);
+		if (replay.isPresent()) {
+			return replay.get();
+		}
+		if (recorder.alreadyCompensated(mutationIds)) {
+			throw new IllegalArgumentException("이미 무효화된 구조 변경 작업입니다.");
+		}
+		List<OrchidGroupMutationEntry> latestEntries = entriesByGroup.values().stream().map(this::latestEntry).toList();
+		if (effectiveHeadPolicy.countGroupsNotAtEffectiveHead(latestEntries, groups) > 0) {
+			throw new IllegalArgumentException("상쇄되지 않은 후속 변경이 있는 난 묶음은 작업을 무효화할 수 없습니다.");
+		}
+		Set<Long> excludedIds = entriesByGroup.keySet();
+		Map<Long, BedZone> restoreZones = findZonesForUpdate(entriesByGroup.values()
+			.stream()
+			.map(this::earliestEntry)
+			.filter(entry -> entry.getBeforeState() != null)
+			.map(entry -> entry.getBeforeState().bedZoneId())
+			.collect(Collectors.toSet()));
+		for (List<OrchidGroupMutationEntry> groupEntries : entriesByGroup.values()) {
+			OrchidGroupMutationEntry entry = earliestEntry(groupEntries);
+			if (entry.getBeforeState() == null || entry.getBeforeState().quantity() == 0) {
+				continue;
+			}
+			BedZone restoreZone = restoreZones.get(entry.getBeforeState().bedZoneId());
+			orchidPlacementPolicy.validatePlacementExcluding(restoreZone, entry.getBeforeState().startPosition(),
+					entry.getBeforeState().endPosition(), excludedIds);
+		}
+		List<OrchidGroupMutationRecorder.Change> changes = new ArrayList<>();
+		for (var groupEntry : entriesByGroup.entrySet()) {
+			OrchidGroupMutationEntry entry = earliestEntry(groupEntry.getValue());
+			OrchidGroup group = groups.get(groupEntry.getKey());
+			long revisionBefore = group.getStateRevision();
+			OrchidGroupStateSnapshot before = OrchidGroupStateSnapshot.from(group);
+			if (entry.getBeforeState() != null) {
+				OrchidGroupStateSnapshot restored = entry.getBeforeState();
+				group.reconcile(restored.quantity(), restored.status(), restoreZones.get(restored.bedZoneId()),
+						restored.sortOrder(), restored.startPosition(), restored.endPosition());
+			}
+			else if (entry.getRole() == OrchidGroupMutationEntryRole.RESULT) {
+				group.cancelCreation();
+			}
+			else {
+				throw new IllegalArgumentException("구조 변경 Mutation entry 역할이 올바르지 않습니다.");
+			}
+			OrchidGroupStateSnapshot after = OrchidGroupStateSnapshot.from(group);
+			group.advanceStateRevision();
+			changes.add(new OrchidGroupMutationRecorder.Change(group.getId(), revisionBefore, before, after));
+		}
+		List<OrchidGroupMutation> originals = recorder.findRelated(RelatedOrchidGroupMutations.current(mutationIds),
+				entriesByGroup.keySet(), allowedTypes);
+		OrchidGroupMutation mutation = recorder.start(OrchidGroupMutationType.COMPENSATION, command.source(),
+				fingerprint, command.effectiveBusinessDate(), command.reason());
+		OrchidGroupMutationResult result = recorder.changed(mutation, changes);
+		recorder.relate(mutation, originals, OrchidGroupMutationRelationType.COMPENSATES);
+		return result;
+	}
+
+	private boolean hasBrokenCompensationChain(List<OrchidGroupMutationEntry> entries) {
+		List<OrchidGroupMutationEntry> ordered = entries.stream()
+			.sorted(java.util.Comparator.comparing(OrchidGroupMutationEntry::getStateRevisionAfter))
+			.toList();
+		for (int index = 1; index < ordered.size(); index++) {
+			OrchidGroupMutationEntry previous = ordered.get(index - 1);
+			OrchidGroupMutationEntry current = ordered.get(index);
+			if (!previous.getStateRevisionAfter().equals(current.getStateRevisionBefore())
+					|| previous.getAfterState() == null || current.getBeforeState() == null
+					|| !previous.getAfterState().canonical().equals(current.getBeforeState().canonical())) {
+				return true;
+			}
+		}
+		return false;
+	}
+
+	private OrchidGroupMutationEntry earliestEntry(List<OrchidGroupMutationEntry> entries) {
+		return entries.stream()
+			.min(java.util.Comparator.comparing(OrchidGroupMutationEntry::getStateRevisionAfter))
+			.orElseThrow();
+	}
+
+	private OrchidGroupMutationEntry latestEntry(List<OrchidGroupMutationEntry> entries) {
+		return entries.stream()
+			.max(java.util.Comparator.comparing(OrchidGroupMutationEntry::getStateRevisionAfter))
+			.orElseThrow();
+	}
+
 	private OrchidGroupMutationResult recordChanged(OrchidGroupMutationType mutationType,
 			OrchidGroupMutationSource source, String commandFingerprint, LocalDate effectiveBusinessDate, String reason,
 			OrchidGroup group, long revisionBefore, OrchidGroupStateSnapshot beforeState,
@@ -478,6 +653,9 @@ public class OrchidGroupMutationEngine {
 
 	private Map<Long, BedZone> findZonesForUpdate(Collection<Long> bedZoneIds) {
 		List<Long> sortedIds = bedZoneIds.stream().sorted().toList();
+		if (sortedIds.isEmpty()) {
+			return Map.of();
+		}
 		Map<Long, BedZone> zones = bedZoneRepository.findAllForUpdateByIdIn(sortedIds)
 			.stream()
 			.collect(Collectors.toMap(BedZone::getId, Function.identity()));
@@ -503,6 +681,32 @@ public class OrchidGroupMutationEngine {
 		orchidGroupRepository.findMaxSortOrdersByBedZoneIdIn(bedZoneIds)
 			.forEach(row -> maxSortOrders.put(row.bedZoneId(), row.maxSortOrder()));
 		return maxSortOrders;
+	}
+
+	private void validateBatchMovePlacements(List<MoveOrchidGroupMutationItem> items, Map<Long, BedZone> zones,
+			Set<Long> movedGroupIds) {
+		for (MoveOrchidGroupMutationItem item : items) {
+			orchidPlacementPolicy.validatePlacementExcluding(zones.get(item.toBedZoneId()), item.startPosition(),
+					item.endPosition(), movedGroupIds);
+		}
+		for (int leftIndex = 0; leftIndex < items.size(); leftIndex++) {
+			MoveOrchidGroupMutationItem left = items.get(leftIndex);
+			for (int rightIndex = leftIndex + 1; rightIndex < items.size(); rightIndex++) {
+				MoveOrchidGroupMutationItem right = items.get(rightIndex);
+				if (left.toBedZoneId().equals(right.toBedZoneId())
+						&& left.startPosition().compareTo(right.endPosition()) < 0
+						&& right.startPosition().compareTo(left.endPosition()) < 0) {
+					throw new IllegalArgumentException("이동 결과 난 묶음의 배치가 서로 겹칩니다.");
+				}
+			}
+		}
+	}
+
+	private boolean equalNumber(java.math.BigDecimal left, java.math.BigDecimal right) {
+		if (left == null || right == null) {
+			return left == right;
+		}
+		return left.compareTo(right) == 0;
 	}
 
 	private void requireActive(Variety variety) {

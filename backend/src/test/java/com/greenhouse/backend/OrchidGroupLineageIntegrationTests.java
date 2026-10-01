@@ -6,13 +6,14 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
-import com.greenhouse.backend.farm.application.transformation.OrchidGroupLineageService;
+import com.greenhouse.backend.farm.application.orchid.OrchidGroupCommandService;
+import com.greenhouse.backend.farm.domain.orchid.OrchidGroup;
 import com.greenhouse.backend.farm.domain.structure.BedZone;
 import com.greenhouse.backend.farm.domain.structure.BedZoneSide;
 import com.greenhouse.backend.farm.domain.structure.House;
 import com.greenhouse.backend.farm.domain.structure.PhysicalBed;
-import com.greenhouse.backend.farm.domain.transformation.OrchidGroupLineageRelationType;
 import com.greenhouse.backend.farm.domain.variety.Variety;
+import com.greenhouse.backend.farm.dto.orchid.OrchidGroupCreateRequest;
 import com.greenhouse.backend.farm.repository.transformation.OrchidGroupLineageRepository;
 import com.greenhouse.backend.work.domain.operation.WorkType;
 import com.greenhouse.backend.work.domain.operation.WorkTypeDefinition;
@@ -34,9 +35,6 @@ class OrchidGroupLineageIntegrationTests extends AbstractBackendIntegrationTest 
 	private OrchidGroupLineageRepository lineageRepository;
 
 	@Autowired
-	private OrchidGroupLineageService lineageService;
-
-	@Autowired
 	private WorkEffectOrchidGroupRepository effectOrchidGroupRepository;
 
 	@Autowired
@@ -45,9 +43,14 @@ class OrchidGroupLineageIntegrationTests extends AbstractBackendIntegrationTest 
 	@Autowired
 	private WorkOperationRepository workOperationRepository;
 
+	@Autowired
+	private OrchidGroupCommandService orchidGroupCommandService;
+
 	private BedZone bedZone;
 
 	private Variety variety;
+
+	private WorkType repotType;
 
 	@BeforeEach
 	void setUp() {
@@ -63,8 +66,8 @@ class OrchidGroupLineageIntegrationTests extends AbstractBackendIntegrationTest 
 		houseRepository.deleteAll();
 		workTypeRepository.deleteAll();
 
-		workTypeRepository.save(new WorkType(WorkTypeDefinition.MULTI_CREATE.name(), "난 묶음 다중 생성",
-				WorkTypeTemplate.MULTI_CREATE, true, true, true, 1));
+		repotType = workTypeRepository
+			.save(new WorkType(WorkTypeDefinition.REPOT.name(), "분갈이", WorkTypeTemplate.REPOT, true, true, true, 1));
 		House house = new House(1, "1동");
 		PhysicalBed bed = new PhysicalBed(1, 1);
 		bed.updatePositionUnits(new BigDecimal("24"), "칸");
@@ -78,33 +81,40 @@ class OrchidGroupLineageIntegrationTests extends AbstractBackendIntegrationTest 
 
 	@Test
 	void findsSourcesAndResultsFromEitherOrchidGroup() throws Exception {
+		var createdSource = orchidGroupCommandService
+			.create(new OrchidGroupCreateRequest(bedZone.getId(), variety.getId(), 30, "3.5치", 2, "정상", "POT", null,
+					false, new BigDecimal("0"), new BigDecimal("2"), null));
+		OrchidGroup source = orchidGroupRepository.findById(createdSource.id()).orElseThrow();
 		mockMvc
-			.perform(post("/api/work-operations/multi-create").contentType(MediaType.APPLICATION_JSON)
-				.content(multiCreateRequest()))
+			.perform(post("/api/work-operations/structure-change-records").contentType(MediaType.APPLICATION_JSON)
+				.content(structureChangeRequest(source.getId())))
 			.andExpect(status().isCreated());
 
-		var operation = workOperationRepository.findByRequestKey("lineage-test").orElseThrow();
-		var groups = orchidGroupRepository.findAll();
-		var source = groups.get(0);
-		var result = groups.get(1);
-		lineageService.record(source, result, OrchidGroupLineageRelationType.REPOTTED_TO, operation.getId(), 30, 28);
+		var operation = workOperationRepository.findAll().getFirst();
+		var result = orchidGroupRepository.findAll()
+			.stream()
+			.filter(group -> !group.getId().equals(source.getId()))
+			.findFirst()
+			.orElseThrow();
 
 		mockMvc.perform(get("/api/orchid-groups/{id}/lineage", source.getId()))
 			.andExpect(status().isOk())
 			.andExpect(jsonPath("$.data.orchidGroupId").value(source.getId()))
 			.andExpect(jsonPath("$.data.sources", hasSize(0)))
-			.andExpect(jsonPath("$.data.results", hasSize(1)))
-			.andExpect(jsonPath("$.data.results[0].relationType").value("REPOTTED_TO"))
-			.andExpect(jsonPath("$.data.results[0].workOperationId").value(operation.getId()))
-			.andExpect(jsonPath("$.data.results[0].sourceQuantity").value(30))
-			.andExpect(jsonPath("$.data.results[0].resultQuantity").value(28))
-			.andExpect(jsonPath("$.data.results[0].resultOrchidGroup.id").value(result.getId()));
+			.andExpect(jsonPath("$.data.results", hasSize(0)))
+			.andExpect(jsonPath("$.data.transformations", hasSize(1)))
+			.andExpect(jsonPath("$.data.transformations[0].relationType").value("REPOTTED_TO"))
+			.andExpect(jsonPath("$.data.transformations[0].workOperationId").value(operation.getId()))
+			.andExpect(jsonPath("$.data.transformations[0].totalInputQuantity").value(30))
+			.andExpect(jsonPath("$.data.transformations[0].totalResultQuantity").value(28))
+			.andExpect(jsonPath("$.data.transformations[0].sources[0].orchidGroup.id").value(source.getId()))
+			.andExpect(jsonPath("$.data.transformations[0].results[0].orchidGroup.id").value(result.getId()));
 
 		mockMvc.perform(get("/api/orchid-groups/{id}/lineage", result.getId()))
 			.andExpect(status().isOk())
-			.andExpect(jsonPath("$.data.sources", hasSize(1)))
-			.andExpect(jsonPath("$.data.sources[0].sourceOrchidGroup.id").value(source.getId()))
-			.andExpect(jsonPath("$.data.results", hasSize(0)));
+			.andExpect(jsonPath("$.data.sources", hasSize(0)))
+			.andExpect(jsonPath("$.data.results", hasSize(0)))
+			.andExpect(jsonPath("$.data.transformations", hasSize(1)));
 	}
 
 	@Test
@@ -112,26 +122,28 @@ class OrchidGroupLineageIntegrationTests extends AbstractBackendIntegrationTest 
 		mockMvc.perform(get("/api/orchid-groups/{id}/lineage", 999999)).andExpect(status().isNotFound());
 	}
 
-	private String multiCreateRequest() {
+	private String structureChangeRequest(Long sourceId) {
 		return """
 				{
-				  "idempotencyKey": "lineage-test",
-				  "title": "계보 기반 생성",
-				  "workDate": "2026-07-15",
-				  "rows": [
-				    {"orchidGroup": {
-				      "bedZoneId": %d, "varietyId": %d, "quantity": 30,
-				      "potSize": "3.5치", "ageYear": 2, "status": "정상",
-				      "startPosition": 0, "endPosition": 2
-				    }},
-				    {"orchidGroup": {
-				      "bedZoneId": %d, "varietyId": %d, "quantity": 28,
-				      "potSize": "4치", "ageYear": 3, "status": "정상",
-				      "startPosition": 2, "endPosition": 4
-				    }}
-				  ]
+				  "operation": {
+				    "workTypeId": %d,
+				    "title": "계보 기반 분갈이",
+				    "plannedStartDate": "2026-07-15",
+				    "sourceScopeType": "MANUAL_SELECTION",
+				    "sourceOrchidGroupIds": [%d]
+				  },
+				  "execution": {
+				    "idempotencyKey": "lineage-test",
+				    "completedDate": "2026-07-15",
+				    "sources": [{"sourceOrchidGroupId": %d, "inputQuantity": 30}],
+				    "lossQuantity": 2,
+				    "results": [{
+				      "bedZoneId": %d, "quantity": 28, "potSize": "4치", "ageYear": 3,
+				      "purpose": "NORMAL", "startPosition": 0, "endPosition": 2
+				    }]
+				  }
 				}
-				""".formatted(bedZone.getId(), variety.getId(), bedZone.getId(), variety.getId());
+				""".formatted(repotType.getId(), sourceId, sourceId, bedZone.getId());
 	}
 
 }

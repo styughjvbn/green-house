@@ -66,7 +66,7 @@ class WorkTransformationParityPostgresE2ETest extends WorkE2ETestBase {
 		var details = objectMapper.valueToTree(effect.getResultDetails());
 		assertThat(details.path("executionKey").asText()).isEqualTo("parity-round");
 		assertThat(details.path("inputQuantity").asInt()).isEqualTo(100);
-		assertThat(details.path("remainingQuantity").asInt()).isZero();
+		assertThat(details.path("remainingQuantity").asInt()).isEqualTo(code.equals("MOVEMENT") ? 2 : 0);
 		assertThat(details.path("sourceInputQuantities").path(scenario.orchidGroupId().toString()).asInt())
 			.isEqualTo(100);
 		assertThat(details.path("lossQuantity").asInt()).isEqualTo(code.equals("DIVIDE") ? 0 : 2);

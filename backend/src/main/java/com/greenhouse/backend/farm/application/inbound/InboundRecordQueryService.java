@@ -22,18 +22,23 @@ public class InboundRecordQueryService {
 
 	private final InboundRecordFinder inboundRecordFinder;
 
+	private final InboundRecordResponseAssembler responseAssembler;
+
 	public PageResponse<InboundRecordResponse> getInboundRecords(LocalDate from, LocalDate to, InboundType inboundType,
 			InboundStatus status, String varietyKeyword, int page, int size) {
 		PageRequests.validate(page, size);
 		String keyword = normalize(varietyKeyword);
-		return PageResponse.from(inboundRecordRepository
-			.search(from, to, inboundType, status, keyword == null ? "" : keyword,
-					PageRequest.of(page, size, Sort.by(Sort.Order.desc("inboundDate"), Sort.Order.desc("id"))))
-			.map(InboundRecordResponse::from));
+		var records = inboundRecordRepository.search(from, to, inboundType, status, keyword == null ? "" : keyword,
+				PageRequest.of(page, size, Sort.by(Sort.Order.desc("inboundDate"), Sort.Order.desc("id"))));
+		var groupsByInboundId = responseAssembler.resultGroupsByInboundRecordId(records.getContent());
+		var pottingDatesByInboundId = responseAssembler.pottingDatesByInboundRecordId(records.getContent());
+		return PageResponse.from(records.map(record -> InboundRecordResponse.from(record,
+				groupsByInboundId.getOrDefault(record.getId(), java.util.List.of()),
+				pottingDatesByInboundId.get(record.getId()))));
 	}
 
 	public InboundRecordResponse getInboundRecord(Long inboundRecordId) {
-		return InboundRecordResponse.from(inboundRecordFinder.find(inboundRecordId));
+		return responseAssembler.assemble(inboundRecordFinder.find(inboundRecordId));
 	}
 
 	private String normalize(String value) {

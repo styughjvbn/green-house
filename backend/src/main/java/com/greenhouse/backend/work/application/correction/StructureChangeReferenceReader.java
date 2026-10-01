@@ -1,9 +1,7 @@
 package com.greenhouse.backend.work.application.correction;
 
 import com.greenhouse.backend.common.exception.NotFoundException;
-import com.greenhouse.backend.work.domain.effect.WorkEffectKind;
 import com.greenhouse.backend.work.domain.effect.WorkEffectOrchidGroupRelationType;
-import com.greenhouse.backend.work.domain.operation.WorkOperationStatus;
 import com.greenhouse.backend.work.domain.target.WorkOperationTarget;
 import com.greenhouse.backend.work.repository.WorkEffectOrchidGroupRepository;
 import com.greenhouse.backend.work.repository.WorkOperationRepository;
@@ -36,15 +34,12 @@ public class StructureChangeReferenceReader {
 	public List<Long> getCorrectableResultOrchidGroupIds(Long operationId) {
 		var operation = workOperationRepository.findWithWorkTypeById(operationId)
 			.orElseThrow(() -> new NotFoundException("작업을 찾을 수 없습니다."));
-		if (operation.getWorkType().effectKind() != WorkEffectKind.STRUCTURE_CHANGE
-				|| operation.getStatus() != WorkOperationStatus.COMPLETED
-						&& operation.getStatus() != WorkOperationStatus.CORRECTED) {
+		if (!operation.isStructureResultCorrectable()) {
 			throw new IllegalArgumentException("완료된 구조 변경 작업의 결과만 보정할 수 있습니다.");
 		}
 		return workEffectOrchidGroupRepository.findByWorkAppliedEffectWorkOperationIdOrderByIdAsc(operationId)
 			.stream()
-			.filter(link -> link.getRelationType() == WorkEffectOrchidGroupRelationType.CREATED
-					|| link.getRelationType() == WorkEffectOrchidGroupRelationType.RESULT)
+			.filter(link -> link.getRelationType() == WorkEffectOrchidGroupRelationType.RESULT)
 			.map(link -> link.getOrchidGroupId())
 			.distinct()
 			.toList();
@@ -56,8 +51,7 @@ public class StructureChangeReferenceReader {
 		}
 		var links = workEffectOrchidGroupRepository.findByWorkAppliedEffectWorkOperationIdOrderByIdAsc(operationId)
 			.stream()
-			.filter(link -> link.getRelationType() == WorkEffectOrchidGroupRelationType.CREATED
-					|| link.getRelationType() == WorkEffectOrchidGroupRelationType.RESULT)
+			.filter(link -> link.getRelationType() == WorkEffectOrchidGroupRelationType.RESULT)
 			.filter(link -> orchidGroupIds.contains(link.getOrchidGroupId()))
 			.toList();
 		Set<Long> linkedGroupIds = links.stream().map(link -> link.getOrchidGroupId()).collect(Collectors.toSet());

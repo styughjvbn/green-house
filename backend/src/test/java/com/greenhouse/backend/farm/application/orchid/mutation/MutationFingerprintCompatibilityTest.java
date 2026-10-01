@@ -28,7 +28,6 @@ class MutationFingerprintCompatibilityTest {
 				new OrchidGroupQuantityMutationItem(5L, 1));
 		List<OrchidGroupMutationCommand> commands = List.of(
 				new CreateOrchidGroupMutationCommand(source, 2L, details, date, " reason "),
-				new CreateOrchidGroupsMutationCommand(source, groups, date, " reason "),
 				new CreateInboundOrchidGroupsMutationCommand(source, 4L, groups, date, " reason "),
 				new TransformOrchidGroupsMutationCommand(source,
 						List.of(new TransformOrchidGroupMutationSource(5L, 10, null, null)),
@@ -36,6 +35,11 @@ class MutationFingerprintCompatibilityTest {
 				new UpdateOrchidGroupMutationCommand(source, 5L, details, date, " reason "),
 				new MoveOrchidGroupMutationCommand(source, 5L, 2L, BigDecimal.ZERO, new BigDecimal("2.00"), date,
 						" reason "),
+				new MoveOrchidGroupsMutationCommand(source,
+						List.of(new MoveOrchidGroupMutationItem(5L, 2L, BigDecimal.ZERO, new BigDecimal("2.00")),
+								new MoveOrchidGroupMutationItem(7L, 3L, new BigDecimal("2.00"),
+										new BigDecimal("4.00"))),
+						date, " reason ", Set.of(8L, 9L)),
 				new CancelOrchidGroupCreationMutationCommand(source, 5L, date, " reason "),
 				new DiscardOrchidGroupMutationCommand(source, 5L, 2, date, " reason "),
 				new ReserveOrchidGroupsMutationCommand(source, quantities, date, " reason "),
@@ -45,7 +49,11 @@ class MutationFingerprintCompatibilityTest {
 						RelatedOrchidGroupMutations.current(List.of(11L, 9L)), date, " reason "),
 				new CorrectOrchidGroupsMutationCommand(source,
 						List.of(new CorrectOrchidGroupMutationItem(5L, 8, " 정상 ")),
-						RelatedOrchidGroupMutations.legacy(), date, " reason "));
+						RelatedOrchidGroupMutations.legacy(), date, " reason "),
+				new ReconcileOrchidGroupMutationCommand(source, 5L, 8, " 정상 ", 2L, BigDecimal.ZERO,
+						new BigDecimal("2.00"), date, " reason "),
+				new CompensateTransformMutationsCommand(source, List.of(11L, 9L), date, " reason "),
+				new CompensateCreateMutationsCommand(source, List.of(11L, 9L), date, " reason "));
 		var calculator = new OrchidGroupMutationCommandFingerprint(new OrchidGroupMutationFingerprint());
 		var hashes = new java.util.TreeMap<String, String>();
 		commands.forEach(command -> hashes.put(command.getClass().getSimpleName(), calculator.calculate(command)));

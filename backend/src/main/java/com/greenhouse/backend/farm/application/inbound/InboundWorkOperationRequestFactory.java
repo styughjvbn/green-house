@@ -3,25 +3,28 @@ package com.greenhouse.backend.farm.application.inbound;
 import com.greenhouse.backend.farm.domain.inbound.InboundRecord;
 import com.greenhouse.backend.farm.domain.inbound.InboundStatus;
 import com.greenhouse.backend.farm.domain.inbound.InboundType;
+import com.greenhouse.backend.farm.domain.orchid.OrchidGroup;
 import com.greenhouse.backend.farm.domain.structure.BedZone;
 import com.greenhouse.backend.work.application.operation.RecordInboundWorkCommand;
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
 import org.springframework.stereotype.Component;
 
 @Component
 public class InboundWorkOperationRequestFactory {
 
-	public RecordInboundWorkCommand create(InboundRecord record) {
+	public RecordInboundWorkCommand create(InboundRecord record, List<OrchidGroup> createdGroups) {
+		OrchidGroup representative = createdGroups.isEmpty() ? null : createdGroups.getFirst();
+		int quantity = createdGroups.isEmpty() ? record.getEstimatedQuantity()
+				: createdGroups.stream().mapToInt(OrchidGroup::getQuantity).sum();
 		return new RecordInboundWorkCommand(record.getId(), record.getInboundDate(), record.getVariety().getId(),
-				record.getVariety().getName(),
-				InboundRecord.resolveQuantity(record.getActualQuantity(), record.getEstimatedQuantity()),
-				record.getPotSize(), locationSnapshot(record),
-				record.getCreatedOrchidGroup() == null ? null : record.getCreatedOrchidGroup().getId(),
-				record.getWorker(), workMemo(record), workDetails(record));
+				record.getVariety().getName(), quantity, representative == null ? null : representative.getPotSize(),
+				locationSnapshot(record, representative), createdGroups.stream().map(OrchidGroup::getId).toList(),
+				record.getWorker(), workMemo(record), workDetails(record, createdGroups));
 	}
 
-	private Map<String, Object> workDetails(InboundRecord record) {
+	private Map<String, Object> workDetails(InboundRecord record, List<OrchidGroup> createdGroups) {
 		Map<String, Object> details = new LinkedHashMap<>();
 		putDetail(details, "inboundRecordId", record.getId());
 		putDetail(details, "inboundType", record.getInboundType());
@@ -29,26 +32,19 @@ public class InboundWorkOperationRequestFactory {
 		putDetail(details, "varietyId", record.getVariety().getId());
 		putDetail(details, "genus", record.getVariety().getGenus());
 		putDetail(details, "varietyName", record.getVariety().getName());
-		putDetail(details, "bottleCount", record.getBottleCount());
 		putDetail(details, "estimatedQuantity", record.getEstimatedQuantity());
-		putDetail(details, "actualQuantity", record.getActualQuantity());
 		putDetail(details, "tempLocation", record.getTempLocation());
 		putDetail(details, "pottingDueDate", record.getPottingDueDate());
-		putDetail(details, "potSize", record.getPotSize());
-		putDetail(details, "ageYear", record.getAgeYear());
-		putDetail(details, "growthStage", record.getGrowthStage());
-		putDetail(details, "placementType", record.getPlacementType());
-		putDetail(details, "trayCount", record.getTrayCount());
-		putDetail(details, "bedZoneId", record.getBedZone() == null ? null : record.getBedZone().getId());
-		putDetail(details, "orchidGroupId",
-				record.getCreatedOrchidGroup() == null ? null : record.getCreatedOrchidGroup().getId());
+		if (!createdGroups.isEmpty()) {
+			details.put("createdOrchidGroupIds", createdGroups.stream().map(OrchidGroup::getId).toList());
+		}
 		return details;
 	}
 
-	private Map<String, Object> locationSnapshot(InboundRecord record) {
+	private Map<String, Object> locationSnapshot(InboundRecord record, OrchidGroup representative) {
 		Map<String, Object> location = new LinkedHashMap<>();
-		if (record.getBedZone() != null) {
-			BedZone zone = record.getBedZone();
+		if (representative != null) {
+			BedZone zone = representative.getBedZone();
 			putDetail(location, "houseId", zone.getPhysicalBed().getHouse().getId());
 			putDetail(location, "houseNumber", zone.getPhysicalBed().getHouse().getNumber());
 			putDetail(location, "physicalBedId", zone.getPhysicalBed().getId());
@@ -65,9 +61,7 @@ public class InboundWorkOperationRequestFactory {
 
 	private String workMemo(InboundRecord record) {
 		String autoMemo = String.join("\n", "입고 유형: " + formatInboundType(record.getInboundType()),
-				"품종: " + record.getVariety().getName(),
-				"병수: " + (record.getBottleCount() == null ? "-" : record.getBottleCount() + "병"),
-				"상태: " + formatInboundStatus(record.getStatus()));
+				"품종: " + record.getVariety().getName(), "상태: " + formatInboundStatus(record.getStatus()));
 		return appendMemo(record.getMemo(), autoMemo);
 	}
 
@@ -83,10 +77,8 @@ public class InboundWorkOperationRequestFactory {
 
 	private String formatInboundStatus(InboundStatus status) {
 		return switch (status) {
-			case TEMP_STORED -> "임시보관";
 			case POTTING_PENDING -> "포트작업대기";
 			case POTTING_IN_PROGRESS -> "작업중";
-			case POTTED -> "포트작업완료";
 			case PLACED -> "배치완료";
 			case CANCELED -> "취소";
 		};

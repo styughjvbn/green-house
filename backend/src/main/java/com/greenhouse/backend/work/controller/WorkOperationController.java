@@ -11,9 +11,11 @@ import com.greenhouse.backend.work.application.operation.InboundPottingPlanServi
 import com.greenhouse.backend.work.application.operation.StructureChangeExecutionService;
 import com.greenhouse.backend.work.application.operation.StructureChangeRecordService;
 import com.greenhouse.backend.work.application.operation.WorkOperationDetailService;
+import com.greenhouse.backend.work.application.operation.WorkOperationGraphQueryService;
 import com.greenhouse.backend.work.application.operation.WorkOperationPlanService;
 import com.greenhouse.backend.work.application.operation.WorkOperationProgressService;
 import com.greenhouse.backend.work.application.operation.WorkOperationQueryService;
+import com.greenhouse.backend.work.application.operation.WorkOperationRelationQueryService;
 import com.greenhouse.backend.work.application.operation.WorkOperationView;
 import com.greenhouse.backend.work.domain.operation.WorkOperationSearchView;
 import com.greenhouse.backend.work.domain.operation.WorkOperationStatus;
@@ -32,7 +34,11 @@ import com.greenhouse.backend.work.dto.operation.WorkOperationBatchCreateRequest
 import com.greenhouse.backend.work.dto.operation.WorkOperationCompleteRequest;
 import com.greenhouse.backend.work.dto.operation.WorkOperationCreateRequest;
 import com.greenhouse.backend.work.dto.operation.WorkOperationDetailResponse;
+import com.greenhouse.backend.work.dto.operation.WorkOperationGraphDetail;
+import com.greenhouse.backend.work.dto.operation.WorkOperationGraphResponse;
+import com.greenhouse.backend.work.dto.operation.WorkOperationRelationKind;
 import com.greenhouse.backend.work.dto.operation.WorkOperationSummaryResponse;
+import com.greenhouse.backend.work.dto.operation.WorkOperationTitleUpdateRequest;
 import com.greenhouse.backend.work.dto.target.WorkTargetExecutionRequest;
 import com.greenhouse.backend.work.dto.target.WorkTargetPreviewRequest;
 import com.greenhouse.backend.work.dto.target.WorkTargetPreviewResponse;
@@ -42,6 +48,7 @@ import java.util.List;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -72,6 +79,10 @@ public class WorkOperationController {
 	private final WorkOperationCorrectionService workOperationCorrectionService;
 
 	private final WorkOperationDetailService workOperationDetailService;
+
+	private final WorkOperationGraphQueryService workOperationGraphQueryService;
+
+	private final WorkOperationRelationQueryService workOperationRelationQueryService;
 
 	@PostMapping("/work-operations/target-preview")
 	public ApiResponse<WorkTargetPreviewResponse> preview(@Valid @RequestBody WorkTargetPreviewRequest request) {
@@ -123,7 +134,8 @@ public class WorkOperationController {
 
 	@PostMapping("/work-operations/discard-records")
 	@ResponseStatus(HttpStatus.CREATED)
-	public ApiResponse<WorkOperationView> createDiscardRecord(@Valid @RequestBody DiscardRecordCreateRequest request) {
+	public ApiResponse<List<WorkOperationView>> createDiscardRecord(
+			@Valid @RequestBody DiscardRecordCreateRequest request) {
 		return ApiResponse.ok(structureChangeRecordService.createDiscardRecord(request));
 	}
 
@@ -188,9 +200,28 @@ public class WorkOperationController {
 		return ApiResponse.ok(queryService.get(workOperationId));
 	}
 
+	@PatchMapping("/work-operations/{workOperationId}/title")
+	public ApiResponse<WorkOperationView> updateTitle(@PathVariable Long workOperationId,
+			@Valid @RequestBody WorkOperationTitleUpdateRequest request) {
+		return ApiResponse.ok(progressService.updateTitle(workOperationId, request.title()));
+	}
+
 	@GetMapping("/work-operations/{workOperationId}/details")
 	public ApiResponse<WorkOperationDetailResponse> getDetails(@PathVariable Long workOperationId) {
 		return ApiResponse.ok(workOperationDetailService.get(workOperationId));
+	}
+
+	@GetMapping("/work-operations/{workOperationId}/graph")
+	public ApiResponse<WorkOperationGraphResponse> getGraph(@PathVariable Long workOperationId,
+			@RequestParam(defaultValue = "WORK") WorkOperationGraphDetail detail,
+			@RequestParam(defaultValue = "1") int depth, @RequestParam(defaultValue = "120") int maxNodes) {
+		return ApiResponse.ok(workOperationGraphQueryService.get(workOperationId, detail, depth, maxNodes));
+	}
+
+	@GetMapping("/work-operations/{workOperationId}/relations")
+	public ApiResponse<List<WorkOperationSummaryResponse>> getRelations(@PathVariable Long workOperationId,
+			@RequestParam WorkOperationRelationKind kind) {
+		return ApiResponse.ok(workOperationRelationQueryService.get(workOperationId, kind));
 	}
 
 	@PostMapping("/work-operations/{workOperationId}/complete")

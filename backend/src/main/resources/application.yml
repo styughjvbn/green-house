@@ -46,6 +46,7 @@ server:
         same-site: lax
 
 app:
+  environment: ${APP_ENV:prod}
   auth:
     enabled: ${AUTH_ENABLED:true}
     session-timeout: ${SESSION_TIMEOUT:7d}

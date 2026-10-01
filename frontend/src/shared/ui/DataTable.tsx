@@ -235,7 +235,7 @@ export function DataTable<TData>({
             ))}
             <col />
           </colgroup>
-          <thead className="sticky top-0 z-10 bg-[#f7f9f6] text-[#4b584f]">
+          <thead className="sticky top-0 bg-[#f7f9f6] text-[#4b584f]">
             {table.getHeaderGroups().map((headerGroup) => (
               <tr key={headerGroup.id}>
                 {headerGroup.headers.map((header) => {

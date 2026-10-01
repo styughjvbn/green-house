@@ -7,11 +7,14 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import com.greenhouse.backend.farm.application.orchid.OrchidGroupCommandService;
+import com.greenhouse.backend.farm.domain.orchid.OrchidGroup;
 import com.greenhouse.backend.farm.domain.structure.BedZone;
 import com.greenhouse.backend.farm.domain.structure.BedZoneSide;
 import com.greenhouse.backend.farm.domain.structure.House;
 import com.greenhouse.backend.farm.domain.structure.PhysicalBed;
 import com.greenhouse.backend.farm.domain.variety.Variety;
+import com.greenhouse.backend.farm.dto.orchid.OrchidGroupCreateRequest;
 import com.greenhouse.backend.work.domain.operation.WorkOperationStatus;
 import com.greenhouse.backend.work.domain.operation.WorkType;
 import com.greenhouse.backend.work.domain.operation.WorkTypeDefinition;
@@ -42,6 +45,9 @@ class WorkOperationCorrectionIntegrationTests extends AbstractBackendIntegration
 	@Autowired
 	private WorkOperationRepository operationRepository;
 
+	@Autowired
+	private OrchidGroupCommandService orchidGroupCommandService;
+
 	private BedZone bedZone;
 
 	private Variety variety;
@@ -49,6 +55,8 @@ class WorkOperationCorrectionIntegrationTests extends AbstractBackendIntegration
 	private Long createdGroupId;
 
 	private WorkType pesticideType;
+
+	private WorkType repotType;
 
 	@BeforeEach
 	void setUp() {
@@ -64,8 +72,8 @@ class WorkOperationCorrectionIntegrationTests extends AbstractBackendIntegration
 		houseRepository.deleteAll();
 		workTypeRepository.deleteAll();
 
-		workTypeRepository.save(new WorkType(WorkTypeDefinition.MULTI_CREATE.name(), "난 묶음 다중 생성",
-				WorkTypeTemplate.MULTI_CREATE, true, true, true, 1));
+		repotType = workTypeRepository
+			.save(new WorkType(WorkTypeDefinition.REPOT.name(), "분갈이", WorkTypeTemplate.REPOT, true, true, true, 1));
 		workTypeRepository.save(new WorkType(WorkTypeDefinition.CORRECTION.name(), "구조 변경 보정",
 				WorkTypeTemplate.CORRECTION, true, true, true, 2));
 		pesticideType = workTypeRepository
@@ -83,7 +91,7 @@ class WorkOperationCorrectionIntegrationTests extends AbstractBackendIntegration
 
 	@Test
 	void adjustsAnOriginalResultOnceAndPreservesItsAuditHistory() throws Exception {
-		Long originalId = createMultiCreateOperation();
+		Long originalId = createRepotOperation();
 
 		mockMvc
 			.perform(post("/api/work-operations/{id}/corrections", originalId).contentType(MediaType.APPLICATION_JSON)
@@ -119,11 +127,18 @@ class WorkOperationCorrectionIntegrationTests extends AbstractBackendIntegration
 			.findFirst()
 			.orElseThrow();
 		assertThat(correctionEffect.getResultDetails()).containsKey("adjustments");
+		Long correctionOperationId = correctionRepository.findAll().getFirst().getCorrectionWorkOperation().getId();
+		mockMvc.perform(get("/api/orchid-groups/{id}/work-history", createdGroupId))
+			.andExpect(status().isOk())
+			.andExpect(jsonPath("$.data[?(@.workOperationId == %d)].correctable".formatted(originalId))
+				.value(org.hamcrest.Matchers.hasItem(true)))
+			.andExpect(jsonPath("$.data[?(@.workOperationId == %d)].correctable".formatted(correctionOperationId))
+				.value(org.hamcrest.Matchers.hasItem(false)));
 	}
 
 	@Test
 	void rejectsCorrectionOfARecordOnlyCorrectionOperation() throws Exception {
-		Long originalId = createMultiCreateOperation();
+		Long originalId = createRepotOperation();
 		mockMvc
 			.perform(post("/api/work-operations/{id}/corrections", originalId).contentType(MediaType.APPLICATION_JSON)
 				.content(correctionRequest("correction-original")))
@@ -139,7 +154,7 @@ class WorkOperationCorrectionIntegrationTests extends AbstractBackendIntegration
 
 	@Test
 	void correctsOnlyTheOriginalWorkDateAndPreservesItsAuditHistory() throws Exception {
-		Long originalId = createMultiCreateOperation();
+		Long originalId = createRepotOperation();
 
 		mockMvc
 			.perform(post("/api/work-operations/{id}/corrections", originalId).contentType(MediaType.APPLICATION_JSON)
@@ -161,7 +176,7 @@ class WorkOperationCorrectionIntegrationTests extends AbstractBackendIntegration
 
 	@Test
 	void rejectsAdjustmentWhenAResultHasDownstreamWork() throws Exception {
-		Long originalId = createMultiCreateOperation();
+		Long originalId = createRepotOperation();
 		mockMvc.perform(post("/api/work-operations").contentType(MediaType.APPLICATION_JSON).content("""
 				{
 				  "workTypeId": %d,
@@ -181,28 +196,50 @@ class WorkOperationCorrectionIntegrationTests extends AbstractBackendIntegration
 		assertThat(correctionRepository.count()).isZero();
 	}
 
-	private Long createMultiCreateOperation() throws Exception {
-		mockMvc.perform(post("/api/work-operations/multi-create").contentType(MediaType.APPLICATION_JSON).content("""
-				{
-				  "idempotencyKey": "correction-source",
-				  "title": "보정할 다중 생성",
-				  "workDate": "2026-07-15",
-				  "rows": [{"orchidGroup": {
-				    "bedZoneId": %d, "varietyId": %d, "quantity": 30,
-				    "potSize": "3.5치", "ageYear": 2, "status": "정상",
-				    "startPosition": 0, "endPosition": 2
-				  }}]
-				}
-				""".formatted(bedZone.getId(), variety.getId()))).andExpect(status().isCreated());
-		createdGroupId = orchidGroupRepository.findAll().getFirst().getId();
-		return operationRepository.findByRequestKey("correction-source").orElseThrow().getId();
+	private Long createRepotOperation() throws Exception {
+		var createdSource = orchidGroupCommandService
+			.create(new OrchidGroupCreateRequest(bedZone.getId(), variety.getId(), 30, "3.5치", 2, "정상", "POT", null,
+					false, new BigDecimal("0"), new BigDecimal("2"), null));
+		OrchidGroup source = orchidGroupRepository.findById(createdSource.id()).orElseThrow();
+		mockMvc
+			.perform(post("/api/work-operations/structure-change-records").contentType(MediaType.APPLICATION_JSON)
+				.content("""
+						{
+						  "operation": {
+						    "workTypeId": %d,
+						    "title": "보정할 분갈이",
+						    "plannedStartDate": "2026-07-15",
+						    "plannedEndDate": "2026-07-15",
+						    "sourceScopeType": "MANUAL_SELECTION",
+						    "sourceOrchidGroupIds": [%d]
+						  },
+						  "execution": {
+						    "idempotencyKey": "correction-source",
+						    "completedDate": "2026-07-15",
+						    "sources": [{"sourceOrchidGroupId": %d, "inputQuantity": 30}],
+						    "lossQuantity": 0,
+						    "results": [{
+						      "bedZoneId": %d, "quantity": 30, "potSize": "4치", "ageYear": 2,
+						      "purpose": "NORMAL", "startPosition": 0, "endPosition": 2
+						    }]
+						  }
+						}
+						""".formatted(repotType.getId(), source.getId(), source.getId(), bedZone.getId())))
+			.andExpect(status().isCreated());
+		createdGroupId = orchidGroupRepository.findAll()
+			.stream()
+			.filter(group -> !group.getId().equals(source.getId()))
+			.findFirst()
+			.orElseThrow()
+			.getId();
+		return operationRepository.findAll().getFirst().getId();
 	}
 
 	private String correctionRequest(String idempotencyKey) {
 		return """
 				{
 				  "idempotencyKey": "%s",
-				  "title": "다중 생성 결과 보정 확인",
+				  "title": "분갈이 결과 보정 확인",
 				  "workDate": "2026-07-15",
 				  "worker": "관리자",
 				  "reason": "결과 수량 확인 필요",
@@ -219,7 +256,7 @@ class WorkOperationCorrectionIntegrationTests extends AbstractBackendIntegration
 		return """
 				{
 				  "idempotencyKey": "correction-date-only",
-				  "title": "다중 생성 작업일 보정",
+				  "title": "분갈이 작업일 보정",
 				  "workDate": "2026-07-14",
 				  "worker": "관리자",
 				  "reason": "작업일 입력 오류",

@@ -2,9 +2,12 @@
 
 set -Eeuo pipefail
 
+export APP_ENV=dev
+
 NO_DB=false
 LAN=false
 FRONTEND_PRODUCTION=false
+RESTART_BACKEND=false
 
 while [[ $# -gt 0 ]]; do
     case "$1" in
@@ -20,9 +23,13 @@ while [[ $# -gt 0 ]]; do
             NO_DB=true
             shift
             ;;
+        --restart-backend)
+            RESTART_BACKEND=true
+            shift
+            ;;
         *)
             echo "Unknown option: $1" >&2
-            echo "Usage: $0 [--no-db] [--lan] [--frontend-production]" >&2
+            echo "Usage: $0 [--no-db] [--lan] [--frontend-production] [--restart-backend]" >&2
             exit 1
             ;;
     esac
@@ -39,6 +46,72 @@ test_port_listening() {
     local port="$1"
 
     ss -ltnH "sport = :${port}" 2>/dev/null | grep -q .
+}
+
+stop_process_tree() {
+    local pid="$1"
+
+    if ! kill -0 "$pid" 2>/dev/null; then
+        return 0
+    fi
+
+    local child_pid
+
+    while read -r child_pid; do
+        if [[ -n "$child_pid" ]]; then
+            stop_process_tree "$child_pid"
+        fi
+    done < <(pgrep -P "$pid" 2>/dev/null || true)
+
+    kill "$pid" 2>/dev/null || true
+
+    for _ in {1..10}; do
+        if ! kill -0 "$pid" 2>/dev/null; then
+            return 0
+        fi
+
+        sleep 0.5
+    done
+
+    kill -9 "$pid" 2>/dev/null || true
+}
+
+stop_backend() {
+    local pid_file="${PIDS}/backend.pid"
+    local pid=""
+
+    if [[ -f "$pid_file" ]]; then
+        pid="$(cat "$pid_file" 2>/dev/null || true)"
+
+        if [[ "$pid" =~ ^[0-9]+$ ]] && kill -0 "$pid" 2>/dev/null; then
+            stop_process_tree "$pid"
+            echo "Stopped backend process ${pid}"
+        fi
+
+        rm -f "$pid_file"
+    fi
+
+    while read -r pid; do
+        if [[ "$pid" =~ ^[0-9]+$ ]] && kill -0 "$pid" 2>/dev/null; then
+            stop_process_tree "$pid"
+            echo "Stopped backend process ${pid} on port 8080"
+        fi
+    done < <(
+        ss -ltnp "sport = :8080" 2>/dev/null |
+            sed -n 's/.*pid=\([0-9]\+\).*/\1/p' |
+            sort -u
+    )
+
+    for _ in {1..20}; do
+        if ! test_port_listening 8080; then
+            return 0
+        fi
+
+        sleep 0.5
+    done
+
+    echo "Backend port 8080 is still in use." >&2
+    return 1
 }
 
 wait_http_ready() {
@@ -99,6 +172,11 @@ cd "$ROOT"
 if [[ "$NO_DB" == false ]]; then
     echo "Starting PostgreSQL..."
     docker compose up -d db
+fi
+
+if [[ "$RESTART_BACKEND" == true ]]; then
+    echo "Restarting backend..."
+    stop_backend
 fi
 
 if test_port_listening 8080; then

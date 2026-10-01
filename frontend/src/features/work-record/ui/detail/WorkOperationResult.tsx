@@ -3,18 +3,26 @@ import type { WorkOperation } from "@/entities/farm/types";
 import { getWorkExecutionKind } from "../../model/work-types/workTypeDefinition";
 import { WorkCompletionDateDialog } from "./WorkCompletionDateDialog";
 import { WorkOperationDetails } from "./WorkOperationDetails";
+import { WorkOperationVoidDialog } from "./WorkOperationVoidDialog";
 import { operationStatusLabel } from "../common/workOperationLabels";
 
 export function OperationResult({
   className = "mt-4",
+  detailInitialTab,
+  detailSelectionKey,
   operation,
   loading,
   onComplete,
   onOperationAction,
   onTargetAction,
+  onUpdateTitle,
   onExecuteTarget,
+  onSelectOperation,
+  onVoidSaved,
 }: {
   className?: string;
+  detailInitialTab: "overview" | "graph";
+  detailSelectionKey: number;
   operation: WorkOperation;
   loading: boolean;
   onComplete: (completedDate: string) => void;
@@ -24,15 +32,22 @@ export function OperationResult({
     action: "start" | "complete" | "skip",
     completedDate?: string,
   ) => void;
+  onUpdateTitle: (title: string) => Promise<WorkOperation>;
   onExecuteTarget?: (target: WorkOperation["targets"][number]) => void;
+  onSelectOperation: (id: number) => void;
+  onVoidSaved: (operation: WorkOperation) => void;
 }) {
   const [completionTargetId, setCompletionTargetId] = useState<
     number | "operation" | null
   >(null);
+  const [voidDialogOpen, setVoidDialogOpen] = useState(false);
+  const [editingTitle, setEditingTitle] = useState(false);
+  const [titleDraft, setTitleDraft] = useState(operation.title);
   const completed = operation.status === "COMPLETED";
   const canceled = operation.status === "CANCELED";
   const corrected = operation.status === "CORRECTED";
-  const terminal = completed || canceled || corrected;
+  const voided = operation.status === "VOIDED";
+  const terminal = completed || canceled || corrected || voided;
   const executionKind = getWorkExecutionKind(operation.workTypeWorkflow);
   const structureChange =
     executionKind === "STRUCTURE_CHANGE" || executionKind === "MOVEMENT";
@@ -46,8 +61,75 @@ export function OperationResult({
       className={`${className} rounded-md border border-[#cfe0d2] bg-white p-4`}
     >
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <div>
-          <p className="font-bold text-[#17251b]">{operation.title}</p>
+        <div className="min-w-0 flex-1">
+          {editingTitle ? (
+            <form
+              className="relative max-w-lg"
+              onSubmit={async (event) => {
+                event.preventDefault();
+                const title = titleDraft.trim();
+                if (!title || title === operation.title) {
+                  setTitleDraft(operation.title);
+                  setEditingTitle(false);
+                  return;
+                }
+                try {
+                  await onUpdateTitle(title);
+                  setEditingTitle(false);
+                } catch {
+                  // The page-level action error remains visible while editing continues.
+                }
+              }}
+            >
+              <input
+                aria-label="작업명"
+                autoFocus
+                className="h-9 w-full rounded-md border border-[#159447] bg-white pr-24 pl-3 text-sm font-bold text-[#17251b] ring-2 ring-[#159447]/15 outline-none"
+                maxLength={150}
+                value={titleDraft}
+                onChange={(event) => setTitleDraft(event.target.value)}
+                onKeyDown={(event) => {
+                  if (event.key === "Escape") {
+                    event.preventDefault();
+                    setTitleDraft(operation.title);
+                    setEditingTitle(false);
+                  }
+                }}
+              />
+              <div className="absolute top-1/2 right-1 flex -translate-y-1/2 items-center">
+                <button
+                  className="rounded px-2 py-1 text-xs font-bold text-[#68746b] hover:bg-[#f1f3f0]"
+                  type="button"
+                  onClick={() => {
+                    setTitleDraft(operation.title);
+                    setEditingTitle(false);
+                  }}
+                >
+                  취소
+                </button>
+                <button
+                  className="rounded px-2 py-1 text-xs font-bold text-[#10783a] hover:bg-[#edf7ef] disabled:text-[#9aa39c]"
+                  disabled={loading || !titleDraft.trim()}
+                  type="submit"
+                >
+                  확인
+                </button>
+              </div>
+            </form>
+          ) : (
+            <button
+              aria-label={`작업명 수정: ${operation.title}`}
+              className="max-w-full cursor-text rounded text-left font-bold text-[#17251b] hover:bg-[#f1f6f1] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#159447] disabled:cursor-default disabled:opacity-60"
+              disabled={loading}
+              type="button"
+              onClick={() => {
+                setTitleDraft(operation.title);
+                setEditingTitle(true);
+              }}
+            >
+              {operation.title}
+            </button>
+          )}
           <p className="mt-1 text-sm text-[#5c6a60]">
             {operation.plannedStartDate}
             {operation.plannedEndDate
@@ -59,15 +141,32 @@ export function OperationResult({
           </p>
         </div>
         {terminal ? (
-          <span
-            className={`rounded-full px-3 py-1.5 text-sm font-semibold ${
-              completed || corrected
-                ? "bg-[#e7f6eb] text-[#10783a]"
-                : "bg-[#f2eeee] text-[#765f5a]"
-            }`}
-          >
-            {corrected ? "보정됨" : completed ? "완료됨" : "취소됨"}
-          </span>
+          <div className="flex flex-wrap items-center gap-2">
+            <span
+              className={`rounded-full px-3 py-1.5 text-sm font-semibold ${
+                completed || corrected
+                  ? "bg-[#e7f6eb] text-[#10783a]"
+                  : "bg-[#f2eeee] text-[#765f5a]"
+              }`}
+            >
+              {voided
+                ? "무효화됨"
+                : corrected
+                  ? "보정됨"
+                  : completed
+                    ? "완료됨"
+                    : "취소됨"}
+            </span>
+            {(completed || corrected) &&
+            operation.availableActions.includes("VOID") ? (
+              <StatusAction
+                label="작업 무효화"
+                danger
+                disabled={loading}
+                onClick={() => setVoidDialogOpen(true)}
+              />
+            ) : null}
+          </div>
         ) : (
           <div className="flex flex-wrap gap-2">
             {operation.availableActions.includes("START") ? (
@@ -127,12 +226,27 @@ export function OperationResult({
         )}
       </div>
 
+      {voided ? (
+        <div className="mt-4 rounded-md border border-[#e1c9c2] bg-[#faf4f2] p-3 text-sm text-[#69483f]">
+          <p className="font-bold">이 작업의 효과는 무효화되었습니다.</p>
+          <p className="mt-1">
+            {operation.voidReason ?? "무효화 사유 없음"}
+            {operation.voidedAt ? ` · ${operation.voidedAt.slice(0, 10)}` : ""}
+            {operation.voidMutationId
+              ? ` · 보상 Mutation #${operation.voidMutationId}`
+              : ""}
+          </p>
+        </div>
+      ) : null}
+
       <WorkOperationDetails
-        key={operation.id}
+        key={`${operation.id}-${detailSelectionKey}`}
         actionLoading={loading}
+        initialTab={detailInitialTab}
         operation={operation}
         onExecuteTarget={onExecuteTarget}
         onRequestTargetCompletion={setCompletionTargetId}
+        onSelectOperation={onSelectOperation}
         onTargetAction={(targetId, action) => onTargetAction(targetId, action)}
       />
       {completionTargetId != null ? (
@@ -149,6 +263,13 @@ export function OperationResult({
               onTargetAction(completionTargetId, "complete", completedDate);
             }
           }}
+        />
+      ) : null}
+      {voidDialogOpen ? (
+        <WorkOperationVoidDialog
+          operation={operation}
+          onClose={() => setVoidDialogOpen(false)}
+          onSaved={onVoidSaved}
         />
       ) : null}
     </div>

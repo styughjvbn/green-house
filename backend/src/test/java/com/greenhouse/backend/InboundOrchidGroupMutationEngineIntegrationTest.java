@@ -101,9 +101,9 @@ class InboundOrchidGroupMutationEngineIntegrationTest extends AbstractBackendInt
 		houseRepository.save(house);
 		Variety variety = varietyRepository.save(new Variety("INBOUND-MUTATION", "Phalaenopsis", "Inbound Mutation",
 				null, "2치", true, true, null, null));
-		InboundRecord inboundRecord = inboundRecordRepository.save(new InboundRecord(LocalDate.of(2026, 8, 19),
-				InboundType.FLASK_SEEDLING, variety, InboundStatus.POTTING_PENDING, 10, 100, null, "배양실",
-				LocalDate.of(2026, 8, 20), "2치", 1, null, null, null, null, "입고 담당", null));
+		InboundRecord inboundRecord = inboundRecordRepository
+			.save(new InboundRecord(LocalDate.of(2026, 8, 19), InboundType.FLASK_SEEDLING, variety,
+					InboundStatus.POTTING_PENDING, 100, "배양실", LocalDate.of(2026, 8, 20), "입고 담당", null));
 		return new Fixture(bedZone, variety, inboundRecord);
 	}
 

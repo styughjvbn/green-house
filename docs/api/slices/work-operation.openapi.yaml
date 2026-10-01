@@ -36,6 +36,7 @@ paths:
           - COMPLETED
           - CANCELED
           - CORRECTED
+          - VOIDED
       - name: view
         in: query
         required: false
@@ -111,6 +112,31 @@ paths:
               schema:
                 $ref: '#/components/schemas/ApiResponseWorkOperationResponse'
       deprecated: true
+  /api/work-operations/{workOperationId}/void:
+    post:
+      tags:
+      - work-operation-void-controller
+      operationId: voidOperation
+      parameters:
+      - name: workOperationId
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: int64
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/WorkOperationVoidRequest'
+        required: true
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponseWorkOperationResponse'
   /api/work-operations/{workOperationId}/targets/{targetId}/start:
     post:
       tags:
@@ -559,7 +585,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ApiResponseWorkOperationResponse'
+                $ref: '#/components/schemas/ApiResponseListWorkOperationResponse'
   /api/work-operations/batch:
     post:
       tags:
@@ -578,6 +604,31 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ApiResponseListWorkOperationResponse'
+  /api/work-operations/{workOperationId}/title:
+    patch:
+      tags:
+      - work-operation-controller
+      operationId: updateTitle
+      parameters:
+      - name: workOperationId
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: int64
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/WorkOperationTitleUpdateRequest'
+        required: true
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponseWorkOperationResponse'
   /api/work-operations/{workOperationId}:
     get:
       tags:
@@ -597,6 +648,95 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ApiResponseWorkOperationResponse'
+  /api/work-operations/{workOperationId}/void-eligibility:
+    get:
+      tags:
+      - work-operation-void-controller
+      operationId: eligibility
+      parameters:
+      - name: workOperationId
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: int64
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponseWorkOperationVoidEligibilityResponse'
+  /api/work-operations/{workOperationId}/relations:
+    get:
+      tags:
+      - work-operation-controller
+      operationId: getRelations
+      parameters:
+      - name: workOperationId
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: int64
+      - name: kind
+        in: query
+        required: true
+        schema:
+          type: string
+          enum:
+          - CREATION_BATCH
+          - LINKED
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponseListWorkOperationSummaryResponse'
+  /api/work-operations/{workOperationId}/graph:
+    get:
+      tags:
+      - work-operation-controller
+      operationId: getGraph
+      parameters:
+      - name: workOperationId
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: int64
+      - name: detail
+        in: query
+        required: false
+        schema:
+          type: string
+          default: WORK
+          enum:
+          - WORK
+          - MUTATION
+          - LINEAGE
+      - name: depth
+        in: query
+        required: false
+        schema:
+          type: integer
+          format: int32
+          default: 1
+      - name: maxNodes
+        in: query
+        required: false
+        schema:
+          type: integer
+          format: int32
+          default: 120
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponseWorkOperationGraphResponse'
   /api/work-operations/{workOperationId}/details:
     get:
       tags:
@@ -658,6 +798,7 @@ paths:
           - COMPLETED
           - CANCELED
           - CORRECTED
+          - VOIDED
       - name: view
         in: query
         required: false
@@ -803,11 +944,25 @@ components:
           $ref: '#/components/schemas/WorkOperationDetailResponse'
         message:
           type: string
+    ApiResponseWorkOperationGraphResponse:
+      type: object
+      properties:
+        data:
+          $ref: '#/components/schemas/WorkOperationGraphResponse'
+        message:
+          type: string
     ApiResponseWorkOperationResponse:
       type: object
       properties:
         data:
           $ref: '#/components/schemas/WorkOperationResponse'
+        message:
+          type: string
+    ApiResponseWorkOperationVoidEligibilityResponse:
+      type: object
+      properties:
+        data:
+          $ref: '#/components/schemas/WorkOperationVoidEligibilityResponse'
         message:
           type: string
     ApiResponseWorkTargetPreviewResponse:
@@ -817,6 +972,16 @@ components:
           $ref: '#/components/schemas/WorkTargetPreviewResponse'
         message:
           type: string
+    Blocker:
+      type: object
+      properties:
+        code:
+          type: string
+        message:
+          type: string
+        count:
+          type: integer
+          format: int64
     DiscardRecordCreateRequest:
       type: object
       properties:
@@ -901,10 +1066,6 @@ components:
             $ref: '#/components/schemas/InboundPottingResultRequest'
           maxItems: 100
           minItems: 0
-        growthStage:
-          type: string
-          maxLength: 100
-          minLength: 0
         worker:
           type: string
           maxLength: 50
@@ -1080,6 +1241,8 @@ components:
           type: string
         memo:
           type: string
+        correctable:
+          type: boolean
     PageResponseOrchidGroupWorkHistoryResponse:
       type: object
       properties:
@@ -1593,6 +1756,7 @@ components:
           - COMPLETED
           - CANCELED
           - CORRECTED
+          - VOIDED
         plannedStartDate:
           type: string
           format: date
@@ -1609,6 +1773,163 @@ components:
           type: string
         memo:
           type: string
+    WorkOperationGraphEdgeResponse:
+      type: object
+      properties:
+        id:
+          type: string
+        sourceNodeId:
+          type: string
+        targetNodeId:
+          type: string
+        edgeType:
+          type: string
+          enum:
+          - ORIGINATED
+          - SAME_COMMAND
+          - PRECEDES
+          - EFFECT
+          - STATE_INPUT
+          - STATE_OUTPUT
+          - MUTATION_RELATION
+        relationType:
+          type: string
+    WorkOperationGraphNodeResponse:
+      type: object
+      properties:
+        id:
+          type: string
+        nodeType:
+          type: string
+          enum:
+          - ORIGIN
+          - CREATION_BATCH
+          - WORK_OPERATION
+          - MUTATION
+          - STATE
+          - JUNCTION
+        selected:
+          type: boolean
+        originType:
+          type: string
+          enum:
+          - INBOUND
+          - WORK_MANAGEMENT
+          - SYSTEM
+        originReferenceId:
+          type: integer
+          format: int64
+        creationBatchSize:
+          type: integer
+          format: int32
+        workOperationId:
+          type: integer
+          format: int64
+        workTypeCode:
+          type: string
+        workType:
+          type: string
+        title:
+          type: string
+        status:
+          type: string
+        workDate:
+          type: string
+          format: date
+        orchidGroupIds:
+          type: array
+          items:
+            type: integer
+            format: int64
+        varietyNames:
+          type: array
+          items:
+            type: string
+        mutationId:
+          type: integer
+          format: int64
+        mutationType:
+          type: string
+        effectiveBusinessDate:
+          type: string
+          format: date
+        occurredAt:
+          type: string
+          format: date-time
+        orchidGroupId:
+          type: integer
+          format: int64
+        stateRevision:
+          type: integer
+          format: int64
+        state:
+          $ref: '#/components/schemas/WorkOperationGraphStateResponse'
+    WorkOperationGraphResponse:
+      type: object
+      properties:
+        rootWorkOperationId:
+          type: integer
+          format: int64
+        detail:
+          type: string
+          enum:
+          - WORK
+          - MUTATION
+          - LINEAGE
+        depth:
+          type: integer
+          format: int32
+        maxNodes:
+          type: integer
+          format: int32
+        truncated:
+          type: boolean
+        nodes:
+          type: array
+          items:
+            $ref: '#/components/schemas/WorkOperationGraphNodeResponse'
+        edges:
+          type: array
+          items:
+            $ref: '#/components/schemas/WorkOperationGraphEdgeResponse'
+    WorkOperationGraphStateResponse:
+      type: object
+      properties:
+        quantity:
+          type: integer
+          format: int32
+        reservedQuantity:
+          type: integer
+          format: int32
+        status:
+          type: string
+        varietyId:
+          type: integer
+          format: int64
+        genus:
+          type: string
+        varietyName:
+          type: string
+        ageYear:
+          type: integer
+          format: int32
+        potSizeCode:
+          type: string
+        bedZoneId:
+          type: integer
+          format: int64
+        houseNumber:
+          type: integer
+          format: int32
+        physicalBedNumber:
+          type: integer
+          format: int32
+        bedZoneName:
+          type: string
+        startPosition:
+          type: number
+        endPosition:
+          type: number
     WorkOperationProgressResponse:
       type: object
       properties:
@@ -1639,6 +1960,28 @@ components:
         progressPercent:
           type: integer
           format: int32
+    WorkOperationRelationSummaryResponse:
+      type: object
+      properties:
+        originType:
+          type: string
+          enum:
+          - INBOUND
+          - WORK_MANAGEMENT
+          - SYSTEM
+        inboundRecordIds:
+          type: array
+          items:
+            type: integer
+            format: int64
+        creationBatchSize:
+          type: integer
+          format: int32
+        hasLinkedOperations:
+          type: boolean
+        linkedOperationCount:
+          type: integer
+          format: int32
     WorkOperationResponse:
       type: object
       properties:
@@ -1663,8 +2006,8 @@ components:
           - STATUS
           - MEMO
           - MOVEMENT
-          - MULTI_CREATE
           - CORRECTION
+          - RECONCILIATION
         workTypeWorkflow:
           type: string
           enum:
@@ -1684,6 +2027,7 @@ components:
           - COMPLETED
           - CANCELED
           - CORRECTED
+          - VOIDED
         plannedStartDate:
           type: string
           format: date
@@ -1725,6 +2069,21 @@ components:
           type: string
         memo:
           type: string
+        parentOperationId:
+          type: integer
+          format: int64
+        relationType:
+          type: string
+          enum:
+          - MOVEMENT_DISCARD
+        voidedAt:
+          type: string
+          format: date-time
+        voidReason:
+          type: string
+        voidMutationId:
+          type: integer
+          format: int64
         progress:
           $ref: '#/components/schemas/WorkOperationProgressResponse'
         targets:
@@ -1741,6 +2100,7 @@ components:
             - RESUME
             - COMPLETE
             - CANCEL
+            - VOID
     WorkOperationSummaryResponse:
       type: object
       properties:
@@ -1765,8 +2125,8 @@ components:
           - STATUS
           - MEMO
           - MOVEMENT
-          - MULTI_CREATE
           - CORRECTION
+          - RECONCILIATION
         workTypeWorkflow:
           type: string
           enum:
@@ -1786,6 +2146,7 @@ components:
           - COMPLETED
           - CANCELED
           - CORRECTED
+          - VOIDED
         plannedStartDate:
           type: string
           format: date
@@ -1827,6 +2188,16 @@ components:
           type: string
         memo:
           type: string
+        voidedAt:
+          type: string
+          format: date-time
+        voidReason:
+          type: string
+        voidMutationId:
+          type: integer
+          format: int64
+        relationSummary:
+          $ref: '#/components/schemas/WorkOperationRelationSummaryResponse'
         progress:
           $ref: '#/components/schemas/WorkOperationProgressResponse'
         availableActions:
@@ -1839,6 +2210,7 @@ components:
             - RESUME
             - COMPLETE
             - CANCEL
+            - VOID
     WorkOperationTargetResponse:
       type: object
       properties:
@@ -1928,6 +2300,61 @@ components:
             - COMPLETE
             - EXECUTE
             - SKIP
+    WorkOperationTitleUpdateRequest:
+      type: object
+      properties:
+        title:
+          type: string
+          maxLength: 150
+          minLength: 0
+      required:
+      - title
+    WorkOperationVoidEligibilityResponse:
+      type: object
+      properties:
+        workOperationId:
+          type: integer
+          format: int64
+        voidable:
+          type: boolean
+        mutationIds:
+          type: array
+          items:
+            type: integer
+            format: int64
+        sourceOrchidGroupIds:
+          type: array
+          items:
+            type: integer
+            format: int64
+        resultOrchidGroupIds:
+          type: array
+          items:
+            type: integer
+            format: int64
+        relatedWorkOperationIds:
+          type: array
+          items:
+            type: integer
+            format: int64
+        blockers:
+          type: array
+          items:
+            $ref: '#/components/schemas/Blocker'
+    WorkOperationVoidRequest:
+      type: object
+      properties:
+        idempotencyKey:
+          type: string
+          maxLength: 100
+          minLength: 0
+        reason:
+          type: string
+          maxLength: 1000
+          minLength: 0
+      required:
+      - idempotencyKey
+      - reason
     WorkTargetExecutionRequest:
       type: object
       properties:

@@ -32,5 +32,22 @@ export const workRecordQueryKeys = {
       ["workRecords", "operations", workOperationId] as const,
     details: (workOperationId: number) =>
       ["workRecords", "operations", workOperationId, "details"] as const,
+    relations: (workOperationId: number, kind: string) =>
+      [
+        "workRecords",
+        "operations",
+        workOperationId,
+        "relations",
+        kind,
+      ] as const,
+    graph: (workOperationId: number, detail: string, depth: number) =>
+      [
+        "workRecords",
+        "operations",
+        workOperationId,
+        "graph",
+        detail,
+        depth,
+      ] as const,
   },
 };

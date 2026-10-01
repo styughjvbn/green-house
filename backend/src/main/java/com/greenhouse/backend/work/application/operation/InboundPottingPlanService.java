@@ -66,18 +66,14 @@ public class InboundPottingPlanService {
 		List<InboundPottingPlanTarget> records = inboundPottingPlanGateway.resolveForUpdate(requestedIds);
 		validateNoActivePlans(requestedIds);
 		Map<String, List<Long>> idsByVariety = new LinkedHashMap<>();
-		Map<String, String> namesByVariety = new LinkedHashMap<>();
 		for (InboundPottingPlanTarget record : records) {
 			String key = record.varietyId() == null ? "name:" + record.varietyName() : "id:" + record.varietyId();
 			idsByVariety.computeIfAbsent(key, ignored -> new ArrayList<>()).add(record.id());
-			namesByVariety.putIfAbsent(key, record.varietyName());
 		}
-		int varietyCount = idsByVariety.size();
 		Map<Long, InboundPottingPlanTarget> recordsById = records.stream()
 			.collect(java.util.stream.Collectors.toMap(InboundPottingPlanTarget::id, record -> record));
 		List<Long> operationIds = idsByVariety.entrySet().stream().map(entry -> {
-			var groupedRequest = new InboundPottingPlanCreateRequest(
-					varietyTitle(planRequest.title(), namesByVariety.get(entry.getKey()), varietyCount),
+			var groupedRequest = new InboundPottingPlanCreateRequest(planRequest.title(),
 					planRequest.plannedStartDate(), planRequest.plannedEndDate(), entry.getValue(),
 					planRequest.worker(), planRequest.memo());
 			var groupedRecords = entry.getValue().stream().map(recordsById::get).toList();
@@ -104,22 +100,16 @@ public class InboundPottingPlanService {
 
 	private WorkOperation createResolved(InboundPottingPlanCreateRequest request, List<Long> requestedIds,
 			List<InboundPottingPlanTarget> records, WorkType workType) {
-		WorkOperation operation = new WorkOperation(workType, support.normalizeRequired(request.title()),
-				request.plannedStartDate(), request.plannedEndDate(), WorkSourceScopeType.INBOUND_RECORD_SELECTION,
-				null, Map.of("inboundRecordIds", requestedIds), Map.of(), support.actor(request.worker()),
+		String title = support.varietyHistoryTitle(records.getFirst().varietyName(), WorkTypeDefinition.POTTING);
+		WorkOperation operation = new WorkOperation(workType, title, request.plannedStartDate(),
+				request.plannedEndDate(), WorkSourceScopeType.INBOUND_RECORD_SELECTION, null,
+				Map.of("inboundRecordIds", requestedIds), Map.of(), support.actor(request.worker()),
 				support.normalize(request.memo()), support.now());
 		List<InboundPottingPlanTarget> orderedRecords = records.stream()
 			.sorted(Comparator.comparing(record -> requestedIds.indexOf(record.id())))
 			.toList();
 		aggregateCreator.createForInboundRecords(operation, orderedRecords);
 		return operation;
-	}
-
-	private String varietyTitle(String baseTitle, String varietyName, int varietyCount) {
-		if (varietyCount <= 1 || varietyName == null || varietyName.isBlank()) {
-			return support.normalizeRequired(baseTitle);
-		}
-		return support.normalizeRequired(baseTitle) + " - " + varietyName;
 	}
 
 }

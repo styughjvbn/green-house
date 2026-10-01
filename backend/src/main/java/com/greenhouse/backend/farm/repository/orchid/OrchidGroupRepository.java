@@ -13,6 +13,32 @@ import org.springframework.data.repository.query.Param;
 
 public interface OrchidGroupRepository extends JpaRepository<OrchidGroup, Long> {
 
+	@Query("""
+			select g from OrchidGroup g
+			join fetch g.bedZone z
+			join fetch z.physicalBed b
+			join fetch b.house
+			join fetch g.inboundRecord inbound
+			where inbound.id in :inboundRecordIds
+			  and g.quantity > 0
+			order by inbound.id, g.id
+			""")
+	List<OrchidGroup> findInboundResultDetailsByInboundRecordIdIn(
+			@Param("inboundRecordIds") java.util.Collection<Long> inboundRecordIds);
+
+	long countByIdInAndInboundRecordIsNotNull(java.util.Collection<Long> orchidGroupIds);
+
+	@Query("""
+			select count(g) from OrchidGroup g
+			where g.id in :orchidGroupIds
+			  and g.inboundRecord is not null
+			  and g.inboundRecord.id not in :allowedInboundRecordIds
+			""")
+	long countInboundReferencesOutside(@Param("orchidGroupIds") java.util.Collection<Long> orchidGroupIds,
+			@Param("allowedInboundRecordIds") java.util.Collection<Long> allowedInboundRecordIds);
+
+	boolean existsByInboundRecordIdAndQuantityGreaterThan(Long inboundRecordId, Integer quantity);
+
 	boolean existsByStateRevisionIsNull();
 
 	@Query("""

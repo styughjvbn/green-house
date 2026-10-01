@@ -22,9 +22,6 @@ public class OrchidGroupMutationCommandFingerprint {
 			case CreateOrchidGroupMutationCommand value ->
 				fingerprint.calculate(new CreatePayload(OrchidGroupMutationType.CREATE, value.bedZoneId(),
 						value.details(), value.effectiveBusinessDate(), value.reason()));
-			case CreateOrchidGroupsMutationCommand value ->
-				fingerprint.calculate(new CreateManyPayload(OrchidGroupMutationType.CREATE, value.groups(),
-						value.effectiveBusinessDate(), value.reason()));
 			case CreateInboundOrchidGroupsMutationCommand value ->
 				fingerprint.calculate(new CreateInboundPayload(OrchidGroupMutationType.CREATE, value.inboundRecordId(),
 						value.groups(), value.effectiveBusinessDate(), value.reason()));
@@ -38,6 +35,9 @@ public class OrchidGroupMutationCommandFingerprint {
 			case MoveOrchidGroupMutationCommand value -> fingerprint
 				.calculate(new MovePayload(OrchidGroupMutationType.MOVE, value.orchidGroupId(), value.toBedZoneId(),
 						value.startPosition(), value.endPosition(), value.effectiveBusinessDate(), value.reason()));
+			case MoveOrchidGroupsMutationCommand value -> fingerprint.calculate(
+					new BatchMovePayload(OrchidGroupMutationType.MOVE, value.items(), value.effectiveBusinessDate(),
+							value.reason(), new TreeSet<>(value.placementExclusionOrchidGroupIds())));
 			case CancelOrchidGroupCreationMutationCommand value ->
 				fingerprint.calculate(new CancelCreationPayload(OrchidGroupMutationType.CANCEL_CREATION,
 						value.orchidGroupId(), value.effectiveBusinessDate(), value.reason()));
@@ -57,6 +57,17 @@ public class OrchidGroupMutationCommandFingerprint {
 			case CorrectOrchidGroupsMutationCommand value ->
 				fingerprint.calculate(new CorrectionPayload(OrchidGroupMutationType.CORRECTION, value.items(),
 						value.correctedMutations(), value.effectiveBusinessDate(), value.reason()));
+			case ReconcileOrchidGroupMutationCommand value ->
+				fingerprint.calculate(new ReconciliationPayload(OrchidGroupMutationType.RECONCILIATION,
+						value.orchidGroupId(), value.actualQuantity(), value.actualStatus(), value.actualBedZoneId(),
+						value.actualStartPosition(), value.actualEndPosition(), value.effectiveBusinessDate(),
+						value.reason()));
+			case CompensateTransformMutationsCommand value ->
+				fingerprint.calculate(new CompensationPayload(OrchidGroupMutationType.COMPENSATION, value.mutationIds(),
+						value.effectiveBusinessDate(), value.reason()));
+			case CompensateCreateMutationsCommand value ->
+				fingerprint.calculate(new CompensationPayload(OrchidGroupMutationType.COMPENSATION, value.mutationIds(),
+						value.effectiveBusinessDate(), value.reason()));
 		};
 	}
 
@@ -68,10 +79,6 @@ public class OrchidGroupMutationCommandFingerprint {
 
 	private record CreatePayload(OrchidGroupMutationType mutationType, Long bedZoneId,
 			OrchidGroupMutationDetails details, LocalDate effectiveBusinessDate, String reason) {
-	}
-
-	private record CreateManyPayload(OrchidGroupMutationType mutationType, List<CreateOrchidGroupMutationItem> groups,
-			LocalDate effectiveBusinessDate, String reason) {
 	}
 
 	private record CreateInboundPayload(OrchidGroupMutationType mutationType, Long inboundRecordId,
@@ -91,6 +98,10 @@ public class OrchidGroupMutationCommandFingerprint {
 			BigDecimal startPosition, BigDecimal endPosition, LocalDate effectiveBusinessDate, String reason) {
 	}
 
+	private record BatchMovePayload(OrchidGroupMutationType mutationType, List<MoveOrchidGroupMutationItem> items,
+			LocalDate effectiveBusinessDate, String reason, Set<Long> placementExclusionOrchidGroupIds) {
+	}
+
 	private record CancelCreationPayload(OrchidGroupMutationType mutationType, Long orchidGroupId,
 			LocalDate effectiveBusinessDate, String reason) {
 	}
@@ -105,6 +116,15 @@ public class OrchidGroupMutationCommandFingerprint {
 
 	private record CorrectionPayload(OrchidGroupMutationType mutationType, List<CorrectOrchidGroupMutationItem> items,
 			RelatedOrchidGroupMutations correctedMutations, LocalDate effectiveBusinessDate, String reason) {
+	}
+
+	private record ReconciliationPayload(OrchidGroupMutationType mutationType, Long orchidGroupId,
+			Integer actualQuantity, String actualStatus, Long actualBedZoneId, BigDecimal actualStartPosition,
+			BigDecimal actualEndPosition, LocalDate effectiveBusinessDate, String reason) {
+	}
+
+	private record CompensationPayload(OrchidGroupMutationType mutationType, List<Long> mutationIds,
+			LocalDate effectiveBusinessDate, String reason) {
 	}
 
 }

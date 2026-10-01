@@ -21,6 +21,8 @@ export const inventoryQueryKeys = {
   },
   inbound: {
     all: ["inventory", "inbound"] as const,
+    record: (inboundRecordId: number) =>
+      ["inventory", "inbound", "record", inboundRecordId] as const,
     page: (filters: InboundFilterState, page: number, size: number) =>
       ["inventory", "inbound", filters, page, size] as const,
   },

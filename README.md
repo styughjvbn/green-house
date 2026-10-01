@@ -36,6 +36,15 @@ backend:  http://localhost:8080
 .\scripts\dev-stop.ps1
 ```
 
+Linux/macOS에서는 다음 스크립트를 사용합니다. 백엔드 코드 변경 후에는 실행 중인
+프론트엔드와 DB를 유지한 채 백엔드만 재시작할 수 있습니다.
+
+```bash
+./scripts/dev-start.sh
+./scripts/dev-start.sh --restart-backend
+./scripts/dev-stop.sh
+```
+
 로그는 `logs/` 디렉터리에 저장됩니다.
 
 ### 1. PostgreSQL 실행
@@ -65,7 +74,7 @@ backend/src/main/resources/db/migration/
 
 ```bash
 cd backend
-./gradlew bootRun
+APP_ENV=dev ./gradlew bootRun
 ```
 
 Windows PowerShell:

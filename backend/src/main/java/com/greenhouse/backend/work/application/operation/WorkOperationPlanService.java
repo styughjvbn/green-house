@@ -65,19 +65,18 @@ public class WorkOperationPlanService {
 		WorkOperationCreateRequest operationRequest = request.operation();
 		WorkType workType = workTypeService.getActiveForPlan(operationRequest.workTypeId());
 		ResolvedSelection resolvedSelection = resolveIncluded(operationRequest);
-		if (!workType.definition().supportsStructureExecution()) {
+		if (!workType.definition().requiresVarietySpecificOperation()) {
 			return List.of(queryService.get(createOperation(operationRequest, workType, resolvedSelection).getId()));
 		}
 		List<VarietyTargetGroup> varietyGroups = groupTargetsByVariety(resolvedSelection.included());
 		return varietyGroups.stream()
-			.map(group -> queryService
-				.get(createOperation(batchOperationRequest(operationRequest, group, varietyGroups.size()), workType,
-						new ResolvedSelection(resolvedSelection.selection(), resolvedSelection.resolved(),
-								resolvedSelection.included()
-									.stream()
-									.filter(target -> group.targetIds().contains(target.orchidGroupId()))
-									.toList()))
-					.getId()))
+			.map(group -> queryService.get(createOperation(batchOperationRequest(operationRequest), workType,
+					new ResolvedSelection(resolvedSelection.selection(),
+							resolvedSelection.included()
+								.stream()
+								.filter(target -> group.targetIds().contains(target.orchidGroupId()))
+								.toList()))
+				.getId()))
 			.toList();
 	}
 
@@ -103,10 +102,13 @@ public class WorkOperationPlanService {
 		support.validateDates(request.plannedStartDate(), request.plannedEndDate());
 		validateSingleVariety(workType.getCode(), resolvedSelection.included());
 		WorkTargetSelection targetSelection = resolvedSelection.selection();
-		WorkOperation operation = new WorkOperation(workType, support.normalizeRequired(request.title()),
-				request.plannedStartDate(), request.plannedEndDate(), targetSelection.sourceScopeType(),
-				targetSelection.sourceScopeId(), targetSelection.conditionSnapshot(), request.details(),
-				support.actor(request.worker()), support.normalize(request.memo()), support.now());
+		String title = workType.definition().requiresVarietySpecificOperation() ? support
+			.varietyHistoryTitle(resolvedSelection.included().getFirst().varietyName(), workType.definition())
+				: support.normalizeRequired(request.title());
+		WorkOperation operation = new WorkOperation(workType, title, request.plannedStartDate(),
+				request.plannedEndDate(), targetSelection.sourceScopeType(), targetSelection.sourceScopeId(),
+				targetSelection.conditionSnapshot(), request.details(), support.actor(request.worker()),
+				support.normalize(request.memo()), support.now());
 		return aggregateCreator.createForOrchidGroups(operation, resolvedSelection.included(),
 				targetSelection.inclusionSource(), targetSelection.sourceScopeId());
 	}
@@ -126,16 +128,16 @@ public class WorkOperationPlanService {
 		if (included.isEmpty()) {
 			throw new IllegalArgumentException("작업 대상 난 묶음이 한 개 이상 필요합니다.");
 		}
-		return new ResolvedSelection(selection, resolved, included);
+		return new ResolvedSelection(selection, included);
 	}
 
 	private void validateSingleVariety(String workTypeCode, List<ResolvedWorkTarget> targets) {
-		if (!WorkTypeDefinition.forCode(workTypeCode).supportsStructureExecution()) {
+		if (!WorkTypeDefinition.forCode(workTypeCode).requiresVarietySpecificOperation()) {
 			return;
 		}
 		Long varietyId = targets.getFirst().varietyId();
 		if (varietyId == null || targets.stream().anyMatch(group -> !varietyId.equals(group.varietyId()))) {
-			throw new IllegalArgumentException("자리 이동·분갈이·분주·합식 작업은 하나의 품종만 대상으로 계획할 수 있습니다.");
+			throw new IllegalArgumentException("자리 이동·분갈이·분주·합식·폐기 작업은 하나의 품종만 대상으로 계획할 수 있습니다.");
 		}
 	}
 
@@ -143,35 +145,23 @@ public class WorkOperationPlanService {
 		Map<String, VarietyTargetGroup> grouped = new LinkedHashMap<>();
 		for (ResolvedWorkTarget target : targets) {
 			String key = target.varietyId() == null ? "name:" + target.varietyName() : "id:" + target.varietyId();
-			grouped.computeIfAbsent(key, ignored -> new VarietyTargetGroup(target.varietyName()))
-				.targetIds()
-				.add(target.orchidGroupId());
+			grouped.computeIfAbsent(key, ignored -> new VarietyTargetGroup()).targetIds().add(target.orchidGroupId());
 		}
 		return List.copyOf(grouped.values());
 	}
 
-	private WorkOperationCreateRequest batchOperationRequest(WorkOperationCreateRequest request,
-			VarietyTargetGroup group, int varietyCount) {
-		return new WorkOperationCreateRequest(request.workTypeId(),
-				varietyTitle(request.title(), group.varietyName(), varietyCount), request.plannedStartDate(),
+	private WorkOperationCreateRequest batchOperationRequest(WorkOperationCreateRequest request) {
+		return new WorkOperationCreateRequest(request.workTypeId(), request.title(), request.plannedStartDate(),
 				request.plannedEndDate(), WorkTargetSelection.from(request), request.details(), request.worker(),
 				request.memo(), List.of());
 	}
 
-	private String varietyTitle(String baseTitle, String varietyName, int varietyCount) {
-		if (varietyCount <= 1 || varietyName == null || varietyName.isBlank()) {
-			return support.normalizeRequired(baseTitle);
-		}
-		return support.normalizeRequired(baseTitle) + " - " + varietyName;
+	private record ResolvedSelection(WorkTargetSelection selection, List<ResolvedWorkTarget> included) {
 	}
 
-	private record ResolvedSelection(WorkTargetSelection selection, List<ResolvedWorkTarget> resolved,
-			List<ResolvedWorkTarget> included) {
-	}
-
-	private record VarietyTargetGroup(String varietyName, List<Long> targetIds) {
-		private VarietyTargetGroup(String varietyName) {
-			this(varietyName, new ArrayList<>());
+	private record VarietyTargetGroup(List<Long> targetIds) {
+		private VarietyTargetGroup() {
+			this(new ArrayList<>());
 		}
 	}
 

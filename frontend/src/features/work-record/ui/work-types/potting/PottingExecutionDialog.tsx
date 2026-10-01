@@ -24,10 +24,7 @@ export function PottingExecutionDialog({
       target.id,
       "complete",
       values.worker ?? null,
-      {
-        ...values,
-        growthStage: null,
-      },
+      values,
       values.pottingDate,
     );
     onSaved(updated);

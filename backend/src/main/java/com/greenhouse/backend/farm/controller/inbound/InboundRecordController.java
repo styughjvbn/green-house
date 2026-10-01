@@ -9,6 +9,7 @@ import com.greenhouse.backend.farm.domain.inbound.InboundStatus;
 import com.greenhouse.backend.farm.domain.inbound.InboundType;
 import com.greenhouse.backend.farm.dto.inbound.InboundRecordCancelRequest;
 import com.greenhouse.backend.farm.dto.inbound.InboundRecordPottingRequest;
+import com.greenhouse.backend.farm.dto.inbound.InboundRecordPottingVoidRequest;
 import com.greenhouse.backend.farm.dto.inbound.InboundRecordResponse;
 import com.greenhouse.backend.farm.dto.inbound.InboundRecordUpdateRequest;
 import com.greenhouse.backend.work.application.effect.InboundPottingCommand;
@@ -19,7 +20,6 @@ import java.time.LocalDate;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
-import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -83,21 +83,21 @@ public class InboundRecordController {
 								row.ageYear(), row.placementType(), row.trayCount(), row.splitPlacementAllowed(),
 								row.startPosition(), row.endPosition(), row.memo()))
 						.toList(),
-					request.growthStage(), request.worker(), request.memo()));
+					request.worker(), request.memo()));
 		return ApiResponse.ok(inboundRecordQueryService.getInboundRecord(inboundRecordId));
 	}
 
 	@PostMapping("/{inboundRecordId}/cancel")
 	public ApiResponse<InboundRecordResponse> cancel(@PathVariable Long inboundRecordId,
-			@RequestBody(required = false) InboundRecordCancelRequest request) {
+			@Valid @RequestBody(required = false) InboundRecordCancelRequest request) {
 		return ApiResponse.ok(inboundRecordService.cancel(inboundRecordId,
-				request == null ? new InboundRecordCancelRequest(null) : request));
+				request == null ? new InboundRecordCancelRequest(null, null) : request));
 	}
 
-	@DeleteMapping("/{inboundRecordId}")
-	public ApiResponse<Void> delete(@PathVariable Long inboundRecordId) {
-		inboundRecordService.delete(inboundRecordId);
-		return ApiResponse.ok(null);
+	@PostMapping("/{inboundRecordId}/potting-void")
+	public ApiResponse<InboundRecordResponse> voidPotting(@PathVariable Long inboundRecordId,
+			@Valid @RequestBody InboundRecordPottingVoidRequest request) {
+		return ApiResponse.ok(inboundRecordService.voidPotting(inboundRecordId, request));
 	}
 
 }

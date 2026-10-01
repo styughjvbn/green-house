@@ -3,6 +3,9 @@
   OrchidGroup,
   WorkOperationStatus,
 } from "@/entities/farm/types";
+import type { components } from "@/shared/api/generated/openapi";
+
+type ApiSchemas = components["schemas"];
 
 export type WorkOperationFilterState = {
   from: string;
@@ -154,6 +157,74 @@ export type WorkOperationDetail = {
   fields: WorkOperationDetailField[];
   executions: WorkExecutionDetail[];
   corrections: WorkCorrectionDetail[];
+};
+
+export type WorkOperationGraphDetail = NonNullable<
+  ApiSchemas["WorkOperationGraphResponse"]["detail"]
+>;
+
+export type WorkOperationGraphNode = {
+  id: string;
+  nodeType: NonNullable<
+    ApiSchemas["WorkOperationGraphNodeResponse"]["nodeType"]
+  >;
+  selected: boolean;
+  originType?: NonNullable<
+    ApiSchemas["WorkOperationGraphNodeResponse"]["originType"]
+  > | null;
+  originReferenceId?: number | null;
+  creationBatchSize?: number | null;
+  workOperationId?: number | null;
+  workTypeCode?: string | null;
+  workType?: string | null;
+  title?: string | null;
+  status?: string | null;
+  workDate?: string | null;
+  orchidGroupIds: number[];
+  varietyNames: string[];
+  mutationId?: number | null;
+  mutationType?: string | null;
+  effectiveBusinessDate?: string | null;
+  occurredAt?: string | null;
+  orchidGroupId?: number | null;
+  stateRevision?: number | null;
+  state?: {
+    quantity?: number | null;
+    reservedQuantity?: number | null;
+    status?: string | null;
+    varietyId?: number | null;
+    genus?: string | null;
+    varietyName?: string | null;
+    ageYear?: number | null;
+    potSizeCode?: string | null;
+    bedZoneId?: number | null;
+    houseNumber?: number | null;
+    physicalBedNumber?: number | null;
+    bedZoneName?: string | null;
+    startPosition?: number | null;
+    endPosition?: number | null;
+  } | null;
+};
+
+export type WorkOperationGraphEdge = {
+  id: string;
+  sourceNodeId: string;
+  targetNodeId: string;
+  edgeType: NonNullable<
+    ApiSchemas["WorkOperationGraphEdgeResponse"]["edgeType"]
+  >;
+  relationType?: string | null;
+  entryRole?: string | null;
+};
+
+export type WorkOperationGraph = {
+  rootWorkOperationId: number;
+  detail: WorkOperationGraphDetail;
+  depth: number;
+  maxNodes: number;
+  truncated: boolean;
+  nodes: WorkOperationGraphNode[];
+  edges: WorkOperationGraphEdge[];
 };
 
 export type WorkDerivedGroupOption = {

@@ -65,5 +65,20 @@ test("inbound route state accepts only supported enum values", () => {
     },
     page: 0,
     size: 10,
+    selectedId: null,
   });
+});
+
+test("inbound route state reads a valid deep-linked record id", () => {
+  const state = readInboundRouteState(
+    createServerSearchParamReader({ inboundId: "123" }),
+  );
+
+  assert.equal(state.selectedId, 123);
+  assert.equal(
+    readInboundRouteState(
+      createServerSearchParamReader({ inboundId: "invalid" }),
+    ).selectedId,
+    null,
+  );
 });

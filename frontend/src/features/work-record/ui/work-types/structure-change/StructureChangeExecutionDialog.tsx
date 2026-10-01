@@ -11,10 +11,12 @@ import type { StructureChangeExecutionPayload } from "../../../api/workRecordApi
 import { TextField } from "../../common/FormFields";
 import { StructureChangeResultFields } from "./StructureChangeResultFields";
 import { StructureChangeSourceFields } from "./StructureChangeSourceFields";
-import type {
-  ResultRow,
-  StructureChangeOperation,
+import {
+  sourceLocationLabel,
+  type ResultRow,
+  type StructureChangeOperation,
 } from "../../../model/work-types/structure-change/structureChangeExecutionModel";
+import { allocateMovementQuantities } from "../../../model/work-types/structure-change/movementQuantityAllocation";
 import { useStructureChangeExecution } from "../../../model/work-types/structure-change/useStructureChangeExecution";
 
 export function StructureChangeExecutionDialog({
@@ -78,6 +80,24 @@ export function StructureChangeExecutionDialog({
   const quantityDifferenceValue = movement
     ? Math.max(0, -quantityDifference)
     : Math.abs(quantityDifference);
+  const selectedGroupsById = new Map(
+    form.selectedSources.map(({ group }) => [group.id, group]),
+  );
+  const movementBreakdown =
+    movement && quantityDifferenceValue > 0
+      ? allocateMovementQuantities(
+          form.selectedSources.map(({ group }) => ({
+            sourceOrchidGroupId: group.id,
+            inputQuantity: Number(form.inputQuantities[group.id] || 0),
+          })),
+          form.totalResult,
+        ).map((allocation) => ({
+          group: selectedGroupsById.get(allocation.sourceOrchidGroupId)!,
+          selectedQuantity: allocation.inputQuantity,
+          movedQuantity: allocation.movedQuantity,
+          discardQuantity: allocation.discardQuantity,
+        }))
+      : [];
 
   return (
     <div
@@ -105,7 +125,7 @@ export function StructureChangeExecutionDialog({
             </h3>
             <p className="text-xs text-[#6a766e]">
               {movement
-                ? "작업 원본과 이동할 결과 위치를 한 번에 입력하세요. 이동하지 않은 수량은 폐기로 처리됩니다."
+                ? "이동하지 않을 수량을 먼저 선별 폐기한 뒤, 남은 수량을 지정한 위치로 이동합니다."
                 : recordMode
                   ? "선택한 모든 원본과 생성할 결과를 한 번에 입력하세요."
                   : "원본과 결과는 계획 대상에서 자동으로 채웠습니다. 이번 작업의 예외만 수정하세요."}
@@ -160,9 +180,9 @@ export function StructureChangeExecutionDialog({
               onChange={form.setCompletedDate}
             />
             <div className="rounded-md bg-[#f4f7f3] px-3 py-2 text-sm text-[#526057]">
-              투입 {form.totalInput}분 · {movement ? "이동" : "결과"}{" "}
-              {form.totalResult}분 · {quantityDifferenceLabel}{" "}
-              {quantityDifferenceValue}분 (자동 계산)
+              {movement ? "선별 대상" : "투입"} {form.totalInput}분 ·{` `}
+              {quantityDifferenceLabel} {quantityDifferenceValue}분 ·{` `}
+              {movement ? "실제 이동" : "결과"} {form.totalResult}분 (자동 계산)
             </div>
             <TextField
               label="작업자"
@@ -171,6 +191,34 @@ export function StructureChangeExecutionDialog({
             />
             <TextField label="메모" value={form.memo} onChange={form.setMemo} />
           </div>
+          {movement && quantityDifferenceValue > 0 ? (
+            <section className="rounded-md border border-[#e6cda0] bg-[#fff9eb] p-3 text-sm text-[#72531b] sm:col-span-2">
+              <p className="font-bold">이동 후 남은 난은 폐기로 기록됩니다.</p>
+              <p className="mt-1 text-xs leading-5">
+                상태가 좋은 {form.totalResult}분을 먼저 이동하고, 원래 자리에
+                남은 {quantityDifferenceValue}분을 원본별 선별 수량에 비례해
+                자동 배분하여 폐기합니다. 두 작업은 하나의 처리 단위로 저장되며
+                이동 작업을 무효화할 때 함께 되돌립니다.
+              </p>
+              <ul className="mt-2 divide-y divide-[#ead9b6] border-t border-[#ead9b6] text-xs">
+                {movementBreakdown.map((item) => (
+                  <li
+                    className="flex flex-wrap justify-between gap-2 py-1.5"
+                    key={item.group.id}
+                  >
+                    <span>
+                      {item.group.varietyName} ·{" "}
+                      {sourceLocationLabel(item.group)}
+                    </span>
+                    <span className="font-semibold">
+                      선별 {item.selectedQuantity} · 폐기 {item.discardQuantity}{" "}
+                      · 이동 {item.movedQuantity}분
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            </section>
+          ) : null}
           {form.error ? (
             <p className="rounded-md bg-[#fff1ec] p-3 text-sm text-[#9b341e]">
               {form.error}

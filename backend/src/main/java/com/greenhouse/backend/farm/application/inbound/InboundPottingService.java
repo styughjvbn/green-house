@@ -1,6 +1,5 @@
 package com.greenhouse.backend.farm.application.inbound;
 
-import com.greenhouse.backend.common.application.RequestActorProvider;
 import com.greenhouse.backend.farm.application.orchid.mutation.CreateInboundOrchidGroupsMutationCommand;
 import com.greenhouse.backend.farm.application.orchid.mutation.CreateOrchidGroupMutationItem;
 import com.greenhouse.backend.farm.application.orchid.mutation.OrchidGroupMutationDetails;
@@ -27,9 +26,9 @@ public class InboundPottingService {
 
 	private final OrchidGroupRepository orchidGroupRepository;
 
-	private final RequestActorProvider requestActorProvider;
-
 	private final OrchidGroupMutationEngine mutationEngine;
+
+	private final InboundRecordResponseAssembler responseAssembler;
 
 	public InboundPottingResult potting(Long inboundRecordId, InboundRecordPottingRequest request, Long workOperationId,
 			String effectKey) {
@@ -43,9 +42,9 @@ public class InboundPottingService {
 					.stream()
 					.map(row -> new CreateOrchidGroupMutationItem(row.bedZoneId(),
 							new OrchidGroupMutationDetails(inboundRecord.getVariety().getId(), row.quantity(),
-									firstNonBlank(row.potSize(), inboundRecord.getPotSize()), row.ageYear(),
-									DEFAULT_ORCHID_STATUS, row.placementType(), row.trayCount(),
-									row.splitPlacementAllowed(), row.startPosition(), row.endPosition(), row.memo())))
+									normalize(row.potSize()), row.ageYear(), DEFAULT_ORCHID_STATUS, row.placementType(),
+									row.trayCount(), row.splitPlacementAllowed(), row.startPosition(),
+									row.endPosition(), row.memo())))
 					.toList(),
 				request.pottingDate(), request.memo());
 		var mutation = mutationEngine.createFromInbound(mutationCommand);
@@ -56,33 +55,10 @@ public class InboundPottingService {
 		createdGroups = groupIds.stream().map(groupsById::get).toList();
 		var mutationLink = new WorkMutationLink(mutation.mutationId(), mutation.correlationId());
 
-		OrchidGroup representative = createdGroups.getFirst();
 		int actualQuantity = createdGroups.stream().mapToInt(OrchidGroup::getQuantity).sum();
-		inboundRecord.updateMetadata(inboundRecord.getInboundDate(), inboundRecord.getBottleCount(),
-				inboundRecord.getEstimatedQuantity(), actualQuantity, inboundRecord.getTempLocation(),
-				inboundRecord.getPottingDueDate(), representative.getPotSize(), representative.getAgeYear(),
-				normalize(request.growthStage()), representative.getPlacementType(), representative.getTrayCount(),
-				requestActorProvider.resolve(request.worker()), appendMemo(inboundRecord.getMemo(), request.memo()));
-		inboundRecord.place(representative.getBedZone(), representative, request.pottingDate(), actualQuantity);
-		return new InboundPottingResult(InboundRecordResponse.from(inboundRecordFinder.find(inboundRecord.getId())),
+		inboundRecord.completePotting();
+		return new InboundPottingResult(responseAssembler.assemble(inboundRecordFinder.find(inboundRecord.getId())),
 				createdGroups.stream().map(OrchidGroup::getId).toList(), actualQuantity, mutationLink);
-	}
-
-	private String firstNonBlank(String first, String second) {
-		String normalizedFirst = normalize(first);
-		return normalizedFirst != null ? normalizedFirst : normalize(second);
-	}
-
-	private String appendMemo(String base, String extra) {
-		String normalizedBase = normalize(base);
-		String normalizedExtra = normalize(extra);
-		if (normalizedExtra == null) {
-			return normalizedBase;
-		}
-		if (normalizedBase == null) {
-			return normalizedExtra;
-		}
-		return normalizedBase + "\n" + normalizedExtra;
 	}
 
 	private String normalize(String value) {

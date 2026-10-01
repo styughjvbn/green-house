@@ -16,7 +16,7 @@ docker compose up -d db
 
 # backend 실행
 cd backend
-./gradlew bootRun
+APP_ENV=dev ./gradlew bootRun
 
 # frontend 실행
 cd frontend
@@ -28,6 +28,13 @@ Linux/macOS에서는 개발 서버를 한 번에 실행할 수 있다.
 
 ```bash
 ./scripts/dev-start.sh
+```
+
+백엔드 코드를 변경한 뒤 실행 중인 프론트엔드와 DB는 유지하고 백엔드만 다시
+시작하려면 다음 옵션을 사용한다. 백엔드가 실행 중이 아니면 새로 시작한다.
+
+```bash
+./scripts/dev-start.sh --restart-backend
 ```
 
 프론트엔드 렌더링 성능처럼 production build 기준으로 확인해야 할 때는 다음 옵션을
@@ -43,6 +50,7 @@ Linux/macOS에서는 개발 서버를 한 번에 실행할 수 있다.
 ### Backend
 
 ```text
+APP_ENV
 DATABASE_URL
 DATABASE_USERNAME
 DATABASE_PASSWORD
@@ -95,10 +103,18 @@ DEMO_MAX_REQUEST_BYTES
 ### Frontend
 
 ```text
+APP_ENV
 BACKEND_API_URL
 API_BASE_URL
 NEXT_PUBLIC_API_BASE_URL
 ```
+
+`APP_ENV`는 실행 환경을 `dev` 또는 `prod`로 명시한다. 로컬 `dev-start.sh`는 `dev`를
+강제하고 Kubernetes와 프론트 Docker 이미지는 `prod`를 명시한다. 값이 없는 프론트는
+Next.js의 `NODE_ENV=development`일 때만 `dev`로 보정하며 그 외에는 `prod`로 처리한다.
+백엔드는 값이 없으면 `prod`로 처리한다. `/mutation-lab` 메뉴·페이지와
+`/api/orchid-group-mutations` 진단 API는 `dev`에서만 활성화된다. `DEMO_MODE`는 이 구분과
+독립적인 데모 인증·제한 설정이다.
 
 ## 3. 초기 데이터
 
@@ -192,6 +208,8 @@ pg_dump -U greenhouse greenhouse > backup_$(date +%Y%m%d).sql
 - V22는 `ACTIVE` coverage에서 Mutation context 없는 난 묶음 INSERT·UPDATE와 모든 DELETE를 차단하고, 커밋 시 변경 revision에 대응하는 `CREATE` 또는 `CHANGE` Entry를 검증한다. `PREPARING`에서는 차단하지 않는다.
 - V23은 `UNMAPPED`으로 남은 기존 난 묶음 중 의미가 명확한 스마트 따옴표 3·4인치 값만 표준 화분 코드로 보정한다. 다른 `UNMAPPED` 값은 자동 변환하지 않는다.
 - V24는 품종·자재 코드용 sequence를 만든다. 기존 코드와 ID는 바꾸지 않고 기존 ID·숫자 코드의 최댓값 다음에서 발급을 시작한다. 삭제·실패한 트랜잭션으로 번호가 비어도 재사용하지 않는다.
+- V38은 과거 다품종 폐기 작업을 품종별 작업으로 분리하고 대상·효과·Mutation 출처를 함께 재연결한다. 자동 분리가 불명확한 작업 관계가 발견되면 적용을 중단한다.
+- V39는 품종별·시스템 작업 이력 제목을 현재 자동 명명 규칙으로 정규화한다. 여러 품종을 대상으로 할 수 있는 일반 작업 제목은 변경하지 않는다.
 
 V24 전환 시 기존 코드 발급 방식과 새 방식이 동시에 쓰이지 않도록 이전 백엔드 인스턴스의 쓰기를 중지한 후 migration과 새 버전 기동을 진행한다. 신규 코드 생성 후 구버전으로 단순 rollback하지 않는다. 데이터 수입 등으로 코드를 직접 추가하는 운영 변경은 쓰기를 중지하고 코드 sequence가 추가된 숫자 코드보다 큰지 함께 확인한다.
 
@@ -200,6 +218,11 @@ V21~V23은 아직 운영에 배포되지 않은 기존 V21~V28 실험 migration�
 V21~V28을 적용했던 개발·rehearsal DB는 checksum repair나 수동 스키마 변경을 하지
 않고 V20 운영 백업으로 다시 초기화한다. 이 통합본을 운영에 적용한 뒤에는 파일을
 수정하거나 번호를 다시 사용하지 않는다.
+
+V28 이후 migration은 운영 배포 전에 기능 맥락별로 통합했다. 지원하는 신규 경로는
+`V27 → V28, V29, V30, V32, V33, V35~V39`이며 V31·V34·V40은 별도 단계로 존재하지
+않는다. 통합 전 V28 이후 migration을 적용한 개발·rehearsal DB는 checksum repair로
+이어 쓰지 않고 운영 백업 또는 초기 데이터에서 다시 초기화한다.
 
 운영 custom dump로 로컬 개발 DB를 초기화할 때는 다음 스크립트를 사용한다. 백업을 생략하면 `temp/`의 최신 `*.dump.gz` 또는 `*.dump`를 선택한다. 스크립트는 로컬 DB만 허용하며 기존 백엔드를 종료하고, 복원 후 HTTP 서버 없이 Flyway 적용·Hibernate 스키마 검증·작업 V2 무결성 검사를 수행한다. V20 백업처럼 상태 원장이 없거나 PREPARING인 경우 복원 후 종료 코드 2로 전환 필요를 알린다. 아래 PLAN/IMPORT/VERIFY/ACTIVE 절차를 완료한 뒤 업무 서버를 시작한다.
 
@@ -415,9 +438,9 @@ DATABASE_PASSWORD=greenhouse_rehearsal_test \
 
 화면에서 다음 순서로 확인한다.
 
-1. 난 묶음 단건·다중 생성, 상세 수정, 이동과 새로 만든 묶음의 생성 취소
+1. 난 묶음 단건 생성, 상세 수정, 이동과 새로 만든 묶음의 생성 취소
 2. 즉시 배치 입고와 유리병 모종 포트 작업
-3. 폐기, 자리 이동, 분갈이, 분주, 합식, 다중 생성·취소와 완료 결과 보정
+3. 폐기, 자리 이동, 분갈이, 분주, 합식과 완료 결과 보정
 4. 판매 전표 등록, 작성중 예약, 전표 수정·취소, 출고 완료와 출고 완료 취소
 5. 같은 Work 실행 키와 즉시 작업 요청 키 재호출 시 수량·결과가 중복되지 않는지 확인
 

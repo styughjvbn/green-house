@@ -112,7 +112,8 @@ export function DiscardWorkRecordDialog({
           <div>
             <h3 className="font-bold text-[#17251b]">폐기 작업 결과 입력</h3>
             <p className="mt-1 text-xs text-[#6a766e]">
-              선택한 모든 난 묶음의 폐기 수량과 사유를 입력하세요.
+              선택한 모든 난 묶음의 폐기 수량과 사유를 입력하세요. 여러 품종은
+              품종별 작업으로 나뉘어 저장됩니다.
             </p>
           </div>
           <button type="button" aria-label="닫기" onClick={requestClose}>

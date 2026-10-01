@@ -27,7 +27,8 @@
 | 인증·앱 컨텍스트 | `auth.openapi.yaml` | `auth-controller` | `com.greenhouse.backend.auth` | 로그인, 로그아웃, 현재 사용자, 농장 업무일자·시간대 |
 | 농장 구조 | `farm-structure.openapi.yaml` | `farm-structure-controller`, `orchid-group-query-controller` | `com.greenhouse.backend.farm` | 동, 물리 배드, 논리 구역, 난 묶음 조회 |
 | 농장 현황 | `farm-status.openapi.yaml` | `farm-status-controller`, `dashboard-controller` | `com.greenhouse.backend.farm`, `dashboard` | 현황 맵, 줌, 선택 범위, 대시보드 요약 |
-| 난 묶음 명령 | `orchid-command.openapi.yaml` | `orchid-group-command-controller`, `bed-placement-controller`, `multi-create-work-operation-controller`, `repot-work-operation-controller` | `com.greenhouse.backend.farm` | 난 묶음 생성·수정·이동·배치와 구조 변경 호환 API |
+| 난 묶음 명령 | `orchid-command.openapi.yaml` | `orchid-group-command-controller`, `bed-placement-controller`, `repot-work-operation-controller` | `com.greenhouse.backend.farm` | 난 묶음 생성·수정·이동·배치와 구조 변경 호환 API |
+| 난 묶음 Mutation 원장 | `orchid-mutation.openapi.yaml` | `orchid-group-mutation-query-controller` | `com.greenhouse.backend.farm` | Mutation 헤더, Entry 전후 상태·관계와 제한된 Mutation·계보 통합 그래프를 조회하는 진단 API |
 | 품종·입고·자재 | `inventory.openapi.yaml` | `variety-controller`, `material-controller`, `inbound-record-controller` | `com.greenhouse.backend.farm` | 품종, 입고 기록, 자재 관리 |
 | 난 묶음 사용자 그룹 | `orchid-collection.openapi.yaml` | `orchid-group-collection-controller` | `com.greenhouse.backend.farm` | 사용자 그룹과 난 묶음 소속 관리 |
 | 난 묶음 자동 그룹 | `derived-orchid-group.openapi.yaml` | `derived-orchid-group-controller` | `com.greenhouse.backend.farm` | 품종·년생·화분 크기 기준 자동 그룹 |

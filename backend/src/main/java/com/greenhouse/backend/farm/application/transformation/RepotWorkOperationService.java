@@ -8,6 +8,7 @@ import com.greenhouse.backend.farm.dto.transformation.RepotWorkOperationResponse
 import com.greenhouse.backend.farm.repository.orchid.OrchidGroupRepository;
 import com.greenhouse.backend.work.application.operation.ImmediateWorkExecutionService;
 import com.greenhouse.backend.work.application.operation.WorkOperationQueryService;
+import com.greenhouse.backend.work.application.operation.WorkOperationSupport;
 import com.greenhouse.backend.work.domain.operation.WorkTypeDefinition;
 import java.time.Clock;
 import java.util.LinkedHashMap;
@@ -28,21 +29,27 @@ public class RepotWorkOperationService {
 
 	private final OrchidGroupRepository orchidGroupRepository;
 
+	private final WorkOperationSupport workOperationSupport;
+
 	public RepotWorkOperationService(ImmediateWorkExecutionService immediateWorkExecutionService,
-			WorkOperationQueryService queryService, OrchidGroupRepository orchidGroupRepository, Clock clock) {
+			WorkOperationQueryService queryService, OrchidGroupRepository orchidGroupRepository, Clock clock,
+			WorkOperationSupport workOperationSupport) {
 		this.immediateWorkExecutionService = immediateWorkExecutionService;
 		this.queryService = queryService;
 		this.orchidGroupRepository = orchidGroupRepository;
 		this.clock = clock;
+		this.workOperationSupport = workOperationSupport;
 	}
 
 	public RepotWorkOperationResponse execute(RepotWorkOperationRequest request) {
 		int totalResultQuantity = request.results().stream().mapToInt(row -> row.quantity()).sum();
 		int lossQuantity = Math.max(0, request.inputQuantity() - totalResultQuantity);
 		int increaseQuantity = Math.max(0, totalResultQuantity - request.inputQuantity());
-		if (orchidGroupRepository.findAllForUpdateByIdIn(List.of(request.sourceOrchidGroupId())).isEmpty()) {
+		var sourceGroups = orchidGroupRepository.findAllForUpdateByIdIn(List.of(request.sourceOrchidGroupId()));
+		if (sourceGroups.isEmpty()) {
 			throw new NotFoundException("원본 난 묶음을 찾을 수 없습니다.");
 		}
+		var sourceGroup = sourceGroups.getFirst();
 		Map<String, Object> details = new LinkedHashMap<>();
 		details.put("sourceOrchidGroupId", request.sourceOrchidGroupId());
 		details.put("inputQuantity", request.inputQuantity());
@@ -50,9 +57,10 @@ public class RepotWorkOperationService {
 		details.put("increaseQuantity", increaseQuantity);
 		details.put("resultCount", request.results().size());
 		var operation = immediateWorkExecutionService.executeForTarget(normalizeRequired(request.idempotencyKey()),
-				WorkTypeDefinition.REPOT.name(), normalizeRequired(request.title()), request.workDate(),
-				normalize(request.worker()), normalize(request.memo()), request.sourceOrchidGroupId(), details,
-				request);
+				WorkTypeDefinition.REPOT.name(),
+				workOperationSupport.varietyHistoryTitle(sourceGroup.getVarietyName(), WorkTypeDefinition.REPOT),
+				request.workDate(), normalize(request.worker()), normalize(request.memo()),
+				request.sourceOrchidGroupId(), details, request);
 		return response(operation.id());
 	}
 

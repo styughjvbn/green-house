@@ -5,11 +5,12 @@ import java.time.LocalDate;
 
 /** A new mutation command must declare its canonical fingerprint at compile time. */
 public sealed interface OrchidGroupMutationCommand permits CreateOrchidGroupMutationCommand,
-		CreateOrchidGroupsMutationCommand, CreateInboundOrchidGroupsMutationCommand,
-		TransformOrchidGroupsMutationCommand, UpdateOrchidGroupMutationCommand, MoveOrchidGroupMutationCommand,
+		CreateInboundOrchidGroupsMutationCommand, TransformOrchidGroupsMutationCommand,
+		UpdateOrchidGroupMutationCommand, MoveOrchidGroupMutationCommand, MoveOrchidGroupsMutationCommand,
 		CancelOrchidGroupCreationMutationCommand, DiscardOrchidGroupMutationCommand, ReserveOrchidGroupsMutationCommand,
 		ReleaseOrchidGroupReservationsMutationCommand, ConsumeOrchidGroupReservationsMutationCommand,
-		RestoreOutboundOrchidGroupsMutationCommand, CorrectOrchidGroupsMutationCommand {
+		RestoreOutboundOrchidGroupsMutationCommand, CorrectOrchidGroupsMutationCommand,
+		ReconcileOrchidGroupMutationCommand, CompensateTransformMutationsCommand, CompensateCreateMutationsCommand {
 
 	OrchidGroupMutationSource source();
 

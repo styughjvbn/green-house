@@ -61,21 +61,13 @@ type InboundRecordResponse = {
   genus: string;
   varietyName: string;
   status: InboundRecord["status"];
-  bottleCount: number | null;
   estimatedQuantity: number | null;
-  actualQuantity: number | null;
   tempLocation: string | null;
   pottingDueDate: string | null;
   pottingDate: string | null;
-  potSize: string | null;
-  ageYear: number | null;
-  growthStage: string | null;
-  placementType: string | null;
-  trayCount: number | null;
-  bedZoneId: number | null;
-  currentLocation: string | null;
-  createdOrchidGroupId: number | null;
-  createdOrchidGroupIds: number[];
+  editable: boolean;
+  availableActions: InboundRecord["availableActions"];
+  createdOrchidGroups: InboundRecord["createdOrchidGroups"];
   worker: string | null;
   memo: string | null;
   createdAt: string;
@@ -268,6 +260,12 @@ export function getInboundRecords(query: InboundQuery = {}) {
   ).then((result) => mapPage(result, toInboundRecord));
 }
 
+export function getInboundRecord(inboundRecordId: number) {
+  return fetchApi<InboundRecordResponse>(
+    `/inbound-records/${inboundRecordId}`,
+  ).then(toInboundRecord);
+}
+
 export function createInboundRecord(payload: InboundRecordPayload) {
   return requestJson<InboundRecordResponse>(
     "/inbound-records",
@@ -320,26 +318,38 @@ export function potInboundRecord(
   );
 }
 
-export function cancelInboundRecord(inboundRecordId: number, memo?: string) {
+export function cancelInboundRecord(
+  inboundRecordId: number,
+  idempotencyKey: string,
+  memo?: string,
+) {
   return requestJson<InboundRecordResponse>(
     `/inbound-records/${inboundRecordId}/cancel`,
     {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ memo: memo?.trim() || null }),
+      body: JSON.stringify({
+        idempotencyKey,
+        memo: memo?.trim() || null,
+      }),
     },
     "입고 기록을 취소하지 못했습니다.",
   ).then(toInboundRecord);
 }
 
-export function deleteInboundRecord(inboundRecordId: number) {
-  return requestJson<null>(
-    `/inbound-records/${inboundRecordId}`,
+export function voidInboundPotting(
+  inboundRecordId: number,
+  payload: { idempotencyKey: string; reason: string },
+) {
+  return requestJson<InboundRecordResponse>(
+    `/inbound-records/${inboundRecordId}/potting-void`,
     {
-      method: "DELETE",
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
     },
-    "입고 기록을 삭제하지 못했습니다.",
-  );
+    "포트 작업을 취소하지 못했습니다.",
+  ).then(toInboundRecord);
 }
 
 function toVariety(item: VarietyResponse): Variety {
@@ -399,21 +409,13 @@ function toInboundRecord(item: InboundRecordResponse): InboundRecord {
     genus: item.genus,
     varietyName: item.varietyName,
     status: item.status,
-    bottleCount: item.bottleCount,
     estimatedQuantity: item.estimatedQuantity,
-    actualQuantity: item.actualQuantity,
     tempLocation: item.tempLocation,
     pottingDueDate: item.pottingDueDate,
     pottingDate: item.pottingDate,
-    potSize: item.potSize,
-    ageYear: item.ageYear,
-    growthStage: item.growthStage,
-    placementType: item.placementType,
-    trayCount: item.trayCount,
-    bedZoneId: item.bedZoneId,
-    currentLocation: item.currentLocation,
-    createdOrchidGroupId: item.createdOrchidGroupId,
-    createdOrchidGroupIds: item.createdOrchidGroupIds,
+    editable: item.editable,
+    availableActions: item.availableActions,
+    createdOrchidGroups: item.createdOrchidGroups,
     worker: item.worker,
     memo: item.memo,
     createdAt: item.createdAt,

@@ -1,6 +1,8 @@
 package com.greenhouse.backend.farm.application.transformation;
 
 import com.greenhouse.backend.common.exception.NotFoundException;
+import com.greenhouse.backend.farm.application.orchid.mutation.MoveOrchidGroupMutationItem;
+import com.greenhouse.backend.farm.application.orchid.mutation.MoveOrchidGroupsMutationCommand;
 import com.greenhouse.backend.farm.application.orchid.mutation.OrchidGroupMutationDetails;
 import com.greenhouse.backend.farm.application.orchid.mutation.OrchidGroupMutationEngine;
 import com.greenhouse.backend.farm.application.orchid.mutation.OrchidGroupMutationSources;
@@ -12,11 +14,14 @@ import com.greenhouse.backend.farm.domain.orchid.mutation.OrchidGroupMutationEnt
 import com.greenhouse.backend.farm.dto.orchid.OrchidGroupCreateRequest;
 import com.greenhouse.backend.farm.repository.orchid.OrchidGroupRepository;
 import com.greenhouse.backend.work.application.effect.StructureChangeCommand;
+import com.greenhouse.backend.work.application.effect.StructureChangeResultInput;
 import com.greenhouse.backend.work.application.effect.StructureChangeSourceInput;
 import com.greenhouse.backend.work.application.effect.WorkEffectResults;
 import com.greenhouse.backend.work.application.effect.WorkExecutionResult;
 import com.greenhouse.backend.work.application.effect.WorkMutationLink;
 import com.greenhouse.backend.work.domain.effect.StructureChangeResultPurpose;
+import com.greenhouse.backend.work.domain.operation.WorkTypeDefinition;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -79,10 +84,22 @@ public class BatchStructureTransformationExecutor {
 				throw new IllegalArgumentException("작업 수량은 원본 난 묶음의 현재 수량보다 클 수 없습니다.");
 			}
 		});
+		if (isIdentityPreservingMovement(request, strategy, sources, sourceRequests)) {
+			return moveExistingGroups(operationId, request, sources, inputBySourceId, placementExclusionOrchidGroupIds);
+		}
 		// Capture inherited attributes before transforming the source groups.
 		List<ResultPlan> plannedResults = planResults(request, strategy, sources, first);
+		Set<Long> effectivePlacementExclusions = new HashSet<>(placementExclusionOrchidGroupIds);
+		if (WorkTypeDefinition.MOVEMENT.name().equals(strategy.supports())) {
+			request.sources()
+				.stream()
+				.filter(source -> source.inputQuantity()
+					.equals(sources.get(source.sourceOrchidGroupId()).getQuantity()))
+				.map(StructureChangeSourceInput::sourceOrchidGroupId)
+				.forEach(effectivePlacementExclusions::add);
+		}
 		var mutation = mutationEngine.transform(mutationCommand(operationId, request, transformedBySourceId,
-				plannedResults, placementExclusionOrchidGroupIds));
+				plannedResults, effectivePlacementExclusions));
 		List<Long> resultIds = mutation.entries()
 			.stream()
 			.filter(entry -> entry.role() == OrchidGroupMutationEntryRole.RESULT)
@@ -111,6 +128,56 @@ public class BatchStructureTransformationExecutor {
 				sourceIds.size() == 1 ? sources.get(sourceIds.getFirst()).getQuantity() : null)
 			.toMap();
 		return new WorkExecutionResult(strategy.supports(), details, resultIds, mutationLink);
+	}
+
+	private boolean isIdentityPreservingMovement(StructureChangeCommand request, StructureChangeStrategy strategy,
+			Map<Long, OrchidGroup> sources, Map<Long, StructureChangeSourceInput> sourceRequests) {
+		if (!WorkTypeDefinition.MOVEMENT.name().equals(strategy.supports())
+				|| request.results().size() != sourceRequests.size()) {
+			return false;
+		}
+		Set<Long> mappedSourceIds = new HashSet<>();
+		for (StructureChangeResultInput result : request.results()) {
+			Long sourceId = result.attributeSourceOrchidGroupId();
+			OrchidGroup source = sources.get(sourceId);
+			StructureChangeSourceInput sourceRequest = sourceRequests.get(sourceId);
+			if (source == null || sourceRequest == null || !mappedSourceIds.add(sourceId)
+					|| !sourceRequest.inputQuantity().equals(source.getQuantity())
+					|| !result.quantity().equals(source.getQuantity())
+					|| result.purpose() != StructureChangeResultPurpose.NORMAL
+					|| sourceRequest.releasedStartPosition() != null || sourceRequest.releasedEndPosition() != null) {
+				return false;
+			}
+		}
+		return mappedSourceIds.equals(sourceRequests.keySet());
+	}
+
+	private WorkExecutionResult moveExistingGroups(Long operationId, StructureChangeCommand request,
+			Map<Long, OrchidGroup> sources, Map<Long, Integer> inputBySourceId,
+			Set<Long> placementExclusionOrchidGroupIds) {
+		List<MoveOrchidGroupMutationItem> moves = request.results()
+			.stream()
+			.map(result -> new MoveOrchidGroupMutationItem(result.attributeSourceOrchidGroupId(), result.bedZoneId(),
+					result.startPosition(), result.endPosition()))
+			.toList();
+		var mutation = mutationEngine.moveAll(new MoveOrchidGroupsMutationCommand(
+				OrchidGroupMutationSources.work(operationId, "EXECUTION:" + request.idempotencyKey()), moves,
+				request.completedDate(), request.memo(), placementExclusionOrchidGroupIds));
+		List<Long> resultIds = request.results()
+			.stream()
+			.map(StructureChangeResultInput::attributeSourceOrchidGroupId)
+			.toList();
+		List<WorkEffectResults.ResultGroup> resultRows = resultIds.stream()
+			.map(groupId -> new WorkEffectResults.ResultGroup(groupId, sources.get(groupId).getQuantity(),
+					StructureChangeResultPurpose.NORMAL))
+			.toList();
+		Integer remainingQuantity = resultIds.size() == 1 ? sources.get(resultIds.getFirst()).getQuantity() : null;
+		Map<String, Object> details = new WorkEffectResults.Transformation(request.idempotencyKey(), inputBySourceId, 0,
+				0, resultRows, remainingQuantity)
+			.toMap();
+		details.put("identityPreserved", true);
+		return new WorkExecutionResult(WorkTypeDefinition.MOVEMENT.name(), details, resultIds,
+				new WorkMutationLink(mutation.mutationId(), mutation.correlationId()));
 	}
 
 	private List<ResultPlan> planResults(StructureChangeCommand request, StructureChangeStrategy strategy,

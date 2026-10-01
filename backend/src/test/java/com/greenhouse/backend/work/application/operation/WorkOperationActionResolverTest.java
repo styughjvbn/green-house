@@ -7,6 +7,7 @@ import static org.mockito.Mockito.when;
 import com.greenhouse.backend.work.application.target.WorkOperationTargetView;
 import com.greenhouse.backend.work.domain.operation.WorkOperation;
 import com.greenhouse.backend.work.domain.operation.WorkOperationAction;
+import com.greenhouse.backend.work.domain.operation.WorkOperationRelationType;
 import com.greenhouse.backend.work.domain.operation.WorkOperationStatus;
 import com.greenhouse.backend.work.domain.operation.WorkType;
 import com.greenhouse.backend.work.domain.operation.WorkTypeWorkflow;
@@ -53,6 +54,17 @@ class WorkOperationActionResolverTest {
 
 		when(execution.getStatus()).thenReturn(WorkTargetExecutionStatus.COMPLETED);
 		assertThat(resolver.resolveTarget(dedicated, execution, 10)).isEmpty();
+	}
+
+	@Test
+	void exposesVoidForCompletedMutationWork() {
+		WorkOperation operation = operation(WorkOperationStatus.COMPLETED, WorkTypeWorkflow.DISCARD);
+		when(operation.getWorkType().supportsMutationVoid()).thenReturn(true);
+
+		assertThat(resolver.resolveOperation(operation, List.of())).containsExactly(WorkOperationAction.VOID);
+
+		when(operation.getRelationType()).thenReturn(WorkOperationRelationType.MOVEMENT_DISCARD);
+		assertThat(resolver.resolveOperation(operation, List.of())).isEmpty();
 	}
 
 	private WorkOperation operation(WorkOperationStatus status, WorkTypeWorkflow workflow) {

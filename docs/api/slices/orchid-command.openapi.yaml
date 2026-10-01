@@ -49,25 +49,6 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ApiResponseBedZonePlacementProfileResponse'
-  /api/work-operations/{workOperationId}/cancel-created-orchid-groups:
-    post:
-      tags:
-      - multi-create-work-operation-controller
-      operationId: cancel_1
-      parameters:
-      - name: workOperationId
-        in: path
-        required: true
-        schema:
-          type: integer
-          format: int64
-      responses:
-        '200':
-          description: OK
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ApiResponseMultiCreateWorkOperationResponse'
   /api/work-operations/repot:
     post:
       tags:
@@ -86,29 +67,11 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ApiResponseRepotWorkOperationResponse'
-  /api/work-operations/multi-create:
-    post:
-      tags:
-      - multi-create-work-operation-controller
-      operationId: create_1
-      requestBody:
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/MultiCreateWorkOperationRequest'
-        required: true
-      responses:
-        '201':
-          description: Created
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ApiResponseMultiCreateWorkOperationResponse'
   /api/orchid-groups:
     post:
       tags:
       - orchid-group-command-controller
-      operationId: create_3
+      operationId: create_2
       requestBody:
         content:
           application/json:
@@ -122,6 +85,31 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ApiResponseOrchidGroupResponse'
+  /api/orchid-groups/{orchidGroupId}/reconciliations:
+    post:
+      tags:
+      - orchid-group-command-controller
+      operationId: reconcile
+      parameters:
+      - name: orchidGroupId
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: int64
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/OrchidGroupReconciliationRequest'
+        required: true
+      responses:
+        '201':
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponseWorkOperationResponse'
   /api/orchid-groups/{orchidGroupId}:
     delete:
       tags:
@@ -227,44 +215,6 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ApiResponseRepotWorkOperationResponse'
-  /api/work-operations/{workOperationId}/created-orchid-groups:
-    get:
-      tags:
-      - multi-create-work-operation-controller
-      operationId: get_5
-      parameters:
-      - name: workOperationId
-        in: path
-        required: true
-        schema:
-          type: integer
-          format: int64
-      responses:
-        '200':
-          description: OK
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ApiResponseMultiCreateWorkOperationResponse'
-  /api/work-operations/{workOperationId}/cancel-eligibility:
-    get:
-      tags:
-      - multi-create-work-operation-controller
-      operationId: getCancellationEligibility
-      parameters:
-      - name: workOperationId
-        in: path
-        required: true
-        schema:
-          type: integer
-          format: int64
-      responses:
-        '200':
-          description: OK
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ApiResponseMultiCreateCancellationEligibilityResponse'
 components:
   schemas:
     ApiResponseBedZonePlacementProfileResponse:
@@ -281,20 +231,6 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/OrchidGroupResponse'
-        message:
-          type: string
-    ApiResponseMultiCreateCancellationEligibilityResponse:
-      type: object
-      properties:
-        data:
-          $ref: '#/components/schemas/MultiCreateCancellationEligibilityResponse'
-        message:
-          type: string
-    ApiResponseMultiCreateWorkOperationResponse:
-      type: object
-      properties:
-        data:
-          $ref: '#/components/schemas/MultiCreateWorkOperationResponse'
         message:
           type: string
     ApiResponseOrchidGroupResponse:
@@ -315,6 +251,13 @@ components:
       type: object
       properties:
         data: {}
+        message:
+          type: string
+    ApiResponseWorkOperationResponse:
+      type: object
+      properties:
+        data:
+          $ref: '#/components/schemas/WorkOperationResponse'
         message:
           type: string
     BedZoneCapacityRequest:
@@ -414,90 +357,6 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/BedZoneCapacityResponse'
-    Blocker:
-      type: object
-      properties:
-        code:
-          type: string
-        message:
-          type: string
-        count:
-          type: integer
-          format: int64
-    MultiCreateCancellationEligibilityResponse:
-      type: object
-      properties:
-        workOperationId:
-          type: integer
-          format: int64
-        cancelable:
-          type: boolean
-        createdOrchidGroupIds:
-          type: array
-          items:
-            type: integer
-            format: int64
-        blockers:
-          type: array
-          items:
-            $ref: '#/components/schemas/Blocker'
-    MultiCreateOrchidGroupRowRequest:
-      type: object
-      properties:
-        orchidGroup:
-          $ref: '#/components/schemas/OrchidGroupCreateRequest'
-        collectionIds:
-          type: array
-          items:
-            type: integer
-            format: int64
-          maxItems: 20
-          minItems: 0
-          uniqueItems: true
-      required:
-      - orchidGroup
-    MultiCreateWorkOperationRequest:
-      type: object
-      properties:
-        idempotencyKey:
-          type: string
-          maxLength: 100
-          minLength: 0
-        title:
-          type: string
-          maxLength: 150
-          minLength: 0
-        workDate:
-          type: string
-          format: date
-        worker:
-          type: string
-          maxLength: 100
-          minLength: 0
-        memo:
-          type: string
-          maxLength: 1000
-          minLength: 0
-        rows:
-          type: array
-          items:
-            $ref: '#/components/schemas/MultiCreateOrchidGroupRowRequest'
-          maxItems: 100
-          minItems: 0
-      required:
-      - idempotencyKey
-      - rows
-      - title
-      - workDate
-    MultiCreateWorkOperationResponse:
-      type: object
-      properties:
-        operation:
-          $ref: '#/components/schemas/WorkOperationResponse'
-        createdOrchidGroups:
-          type: array
-          items:
-            $ref: '#/components/schemas/OrchidGroupResponse'
     OrchidGroupBatchUpdateItem:
       type: object
       properties:
@@ -591,6 +450,57 @@ components:
           minLength: 0
       required:
       - toBedZoneId
+    OrchidGroupReconciliationRequest:
+      type: object
+      properties:
+        idempotencyKey:
+          type: string
+          maxLength: 100
+          minLength: 0
+        title:
+          type: string
+          maxLength: 150
+          minLength: 0
+        workDate:
+          type: string
+          format: date
+        worker:
+          type: string
+          maxLength: 100
+          minLength: 0
+        memo:
+          type: string
+          maxLength: 1000
+          minLength: 0
+        reason:
+          type: string
+          maxLength: 1000
+          minLength: 0
+        actualQuantity:
+          type: integer
+          format: int32
+          minimum: 0
+        actualStatus:
+          type: string
+          maxLength: 50
+          minLength: 0
+        actualBedZoneId:
+          type: integer
+          format: int64
+        actualStartPosition:
+          type: number
+        actualEndPosition:
+          type: number
+      required:
+      - actualBedZoneId
+      - actualEndPosition
+      - actualQuantity
+      - actualStartPosition
+      - actualStatus
+      - idempotencyKey
+      - reason
+      - title
+      - workDate
     OrchidGroupResponse:
       type: object
       properties:
@@ -874,8 +784,8 @@ components:
           - STATUS
           - MEMO
           - MOVEMENT
-          - MULTI_CREATE
           - CORRECTION
+          - RECONCILIATION
         workTypeWorkflow:
           type: string
           enum:
@@ -895,6 +805,7 @@ components:
           - COMPLETED
           - CANCELED
           - CORRECTED
+          - VOIDED
         plannedStartDate:
           type: string
           format: date
@@ -936,6 +847,21 @@ components:
           type: string
         memo:
           type: string
+        parentOperationId:
+          type: integer
+          format: int64
+        relationType:
+          type: string
+          enum:
+          - MOVEMENT_DISCARD
+        voidedAt:
+          type: string
+          format: date-time
+        voidReason:
+          type: string
+        voidMutationId:
+          type: integer
+          format: int64
         progress:
           $ref: '#/components/schemas/WorkOperationProgressResponse'
         targets:
@@ -952,6 +878,7 @@ components:
             - RESUME
             - COMPLETE
             - CANCEL
+            - VOID
     WorkOperationTargetResponse:
       type: object
       properties:
