@@ -16,7 +16,8 @@ ALTER TABLE work_operations
 INSERT INTO work_types (
     code, name, template, is_active, is_system, is_default, sort_order, created_at, updated_at
 ) VALUES (
-    'RECONCILIATION', '현장 상태 동기화', 'RECONCILIATION', TRUE, TRUE, TRUE, 14,
+    -- TODO: 보류 - 현장 상태 동기화 정책을 재검토한 뒤 활성화한다.
+    'RECONCILIATION', '현장 상태 동기화', 'RECONCILIATION', FALSE, TRUE, TRUE, 14,
     CURRENT_TIMESTAMP, CURRENT_TIMESTAMP
 )
 ON CONFLICT (code) DO UPDATE SET

@@ -1,5 +1,5 @@
--- V34 renamed the relationship, but movement histories recorded before the
--- cutover still have a DISCARD -> TRANSFORM state chain. Preserve the recorded
+-- Movement histories recorded before the cutover still have a
+-- DISCARD -> TRANSFORM state chain. Preserve the recorded
 -- per-source quantities and rewrite only the order and intermediate state to
 -- the current TRANSFORM -> DISCARD model.
 CREATE TEMP TABLE v35_movement_discard_entries ON COMMIT DROP AS
