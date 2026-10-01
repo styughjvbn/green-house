@@ -81,9 +81,9 @@ class OrchidGroupLineageIntegrationTests extends AbstractBackendIntegrationTest 
 
 	@Test
 	void findsSourcesAndResultsFromEitherOrchidGroup() throws Exception {
-		var createdSource = orchidGroupCommandService.create(new OrchidGroupCreateRequest(bedZone.getId(),
-				variety.getId(), 30, "3.5치", 2, "정상", "POT", null, false, new BigDecimal("0"),
-				new BigDecimal("2"), null));
+		var createdSource = orchidGroupCommandService
+			.create(new OrchidGroupCreateRequest(bedZone.getId(), variety.getId(), 30, "3.5치", 2, "정상", "POT", null,
+					false, new BigDecimal("0"), new BigDecimal("2"), null));
 		OrchidGroup source = orchidGroupRepository.findById(createdSource.id()).orElseThrow();
 		mockMvc
 			.perform(post("/api/work-operations/structure-change-records").contentType(MediaType.APPLICATION_JSON)

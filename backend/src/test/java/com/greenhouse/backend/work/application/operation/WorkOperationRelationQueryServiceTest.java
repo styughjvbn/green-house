@@ -75,7 +75,8 @@ class WorkOperationRelationQueryServiceTest {
 		when(operationRepository.findByParentOperationIdInOrderByParentOperationIdAscIdAsc(List.of(10L)))
 			.thenReturn(List.of(discard));
 		when(correctionRepository.findByOriginalWorkOperationIdInOrCorrectionWorkOperationIdIn(List.of(10L),
-				List.of(10L))).thenReturn(List.of());
+				List.of(10L)))
+			.thenReturn(List.of());
 
 		service.get(10L, WorkOperationRelationKind.LINKED);
 
@@ -96,7 +97,8 @@ class WorkOperationRelationQueryServiceTest {
 		when(operationRepository.findByParentOperationIdInOrderByParentOperationIdAscIdAsc(List.of(12L)))
 			.thenReturn(List.of());
 		when(correctionRepository.findByOriginalWorkOperationIdInOrCorrectionWorkOperationIdIn(anyCollection(),
-				anyCollection())).thenReturn(List.of());
+				anyCollection()))
+			.thenReturn(List.of());
 
 		service.get(11L, WorkOperationRelationKind.LINKED);
 
@@ -114,7 +116,8 @@ class WorkOperationRelationQueryServiceTest {
 		when(operationRepository.findByParentOperationIdInOrderByParentOperationIdAscIdAsc(List.of(21L)))
 			.thenReturn(List.of());
 		when(correctionRepository.findByOriginalWorkOperationIdInOrCorrectionWorkOperationIdIn(List.of(21L),
-				List.of(21L))).thenReturn(List.of(relation));
+				List.of(21L)))
+			.thenReturn(List.of(relation));
 
 		service.get(21L, WorkOperationRelationKind.LINKED);
 

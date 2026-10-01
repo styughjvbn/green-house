@@ -89,18 +89,18 @@ public class DiscardRecordService {
 		List<Long> orchidGroupIds = discardQuantities.keySet().stream().sorted().toList();
 		Map<String, Object> details = new LinkedHashMap<>();
 		details.put("allocationMethod", "PROPORTIONAL_BY_INPUT_QUANTITY");
-		details.put("totalDiscardQuantity",
-				discardQuantities.values().stream().mapToInt(Integer::intValue).sum());
+		details.put("totalDiscardQuantity", discardQuantities.values().stream().mapToInt(Integer::intValue).sum());
 		details.put("sourceInputQuantities", new LinkedHashMap<>(inputQuantities));
-		List<WorkOperationView> createdOperations = create(new DiscardRecordCreateRequest(
-				new WorkOperationCreateRequest(
-						discardType.getId(), movementOperation.getTitle() + " - 이동 후 잔여 난 폐기", completedDate, completedDate,
-						WorkTargetSelection.manualSelection(orchidGroupIds), details, worker, memo, List.of()),
-				completedDate, worker,
-				orchidGroupIds.stream()
-					.map(groupId -> new DiscardRecordResultRequest(groupId, discardQuantities.get(groupId),
-							MOVEMENT_DISCARD_REASON))
-					.toList()));
+		List<WorkOperationView> createdOperations = create(
+				new DiscardRecordCreateRequest(
+						new WorkOperationCreateRequest(discardType.getId(),
+								movementOperation.getTitle() + " - 이동 후 잔여 난 폐기", completedDate, completedDate,
+								WorkTargetSelection.manualSelection(orchidGroupIds), details, worker, memo, List.of()),
+						completedDate, worker,
+						orchidGroupIds.stream()
+							.map(groupId -> new DiscardRecordResultRequest(groupId, discardQuantities.get(groupId),
+									MOVEMENT_DISCARD_REASON))
+							.toList()));
 		if (createdOperations.size() != 1) {
 			throw new IllegalStateException("자리 이동 연관 폐기는 하나의 품종별 작업이어야 합니다.");
 		}

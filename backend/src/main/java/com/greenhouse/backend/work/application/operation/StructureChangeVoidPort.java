@@ -21,4 +21,5 @@ public interface StructureChangeVoidPort {
 
 	record Blocker(String code, String message, long count) {
 	}
+
 }

@@ -57,7 +57,9 @@ public class OrchidGroupMutationEffectiveHeadPolicy {
 
 		return targetByGroupId.entrySet().stream().filter(target -> {
 			OrchidGroup current = currentGroups.get(target.getKey());
-			if (current == null || !target.getValue().getAfterState().canonical()
+			if (current == null || !target.getValue()
+				.getAfterState()
+				.canonical()
 				.equals(OrchidGroupStateSnapshot.from(current).canonical())) {
 				return true;
 			}

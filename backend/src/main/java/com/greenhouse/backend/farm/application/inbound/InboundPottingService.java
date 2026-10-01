@@ -42,9 +42,9 @@ public class InboundPottingService {
 					.stream()
 					.map(row -> new CreateOrchidGroupMutationItem(row.bedZoneId(),
 							new OrchidGroupMutationDetails(inboundRecord.getVariety().getId(), row.quantity(),
-									normalize(row.potSize()), row.ageYear(),
-									DEFAULT_ORCHID_STATUS, row.placementType(), row.trayCount(),
-									row.splitPlacementAllowed(), row.startPosition(), row.endPosition(), row.memo())))
+									normalize(row.potSize()), row.ageYear(), DEFAULT_ORCHID_STATUS, row.placementType(),
+									row.trayCount(), row.splitPlacementAllowed(), row.startPosition(),
+									row.endPosition(), row.memo())))
 					.toList(),
 				request.pottingDate(), request.memo());
 		var mutation = mutationEngine.createFromInbound(mutationCommand);

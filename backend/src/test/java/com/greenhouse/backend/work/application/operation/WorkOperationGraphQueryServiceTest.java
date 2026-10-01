@@ -162,8 +162,7 @@ class WorkOperationGraphQueryServiceTest {
 			.thenReturn(Map.of(85L, summary(WorkOperationOriginType.WORK_MANAGEMENT, 1)));
 		when(effectRepository.findByWorkOperationIdInOrderByWorkOperationIdAscIdAsc(anyCollection()))
 			.thenReturn(List.of(selectedEffect));
-		when(mutationGraphPort.load(eq(List.of(115L)), eq(true), eq(3), anyInt()))
-			.thenReturn(fragment(115L, 116L));
+		when(mutationGraphPort.load(eq(List.of(115L)), eq(true), eq(3), anyInt())).thenReturn(fragment(115L, 116L));
 		when(effectRepository.findByMutationIdInOrderByMutationIdAscIdAsc(List.of(115L, 116L)))
 			.thenReturn(List.of(selectedEffect, relatedEffect));
 
@@ -193,8 +192,7 @@ class WorkOperationGraphQueryServiceTest {
 		when(effectRepository.findByWorkOperationIdInOrderByWorkOperationIdAscIdAsc(anyCollection()))
 			.thenReturn(List.of(originalEffect));
 		lenient().when(operation.getVoidMutationId()).thenReturn(122L);
-		when(mutationGraphPort.load(eq(List.of(121L)), eq(false), eq(1), anyInt()))
-			.thenReturn(fragment(121L));
+		when(mutationGraphPort.load(eq(List.of(121L)), eq(false), eq(1), anyInt())).thenReturn(fragment(121L));
 
 		var graph = service.get(90L, WorkOperationGraphDetail.MUTATION, 1, 120);
 

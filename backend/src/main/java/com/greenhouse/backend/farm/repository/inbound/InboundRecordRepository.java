@@ -35,8 +35,8 @@ public interface InboundRecordRepository extends JpaRepository<InboundRecord, Lo
 	List<InboundRecord> findAllForUpdateByIdIn(@Param("ids") Collection<Long> ids);
 
 	@EntityGraph(attributePaths = { "variety", "createdOrchidGroups" })
-	List<InboundRecord> findByInboundTypeAndStatusInOrderByPottingDueDateAscIdAsc(
-			InboundType inboundType, Collection<InboundStatus> statuses);
+	List<InboundRecord> findByInboundTypeAndStatusInOrderByPottingDueDateAscIdAsc(InboundType inboundType,
+			Collection<InboundStatus> statuses);
 
 	@Query("""
 			select record from InboundRecord record

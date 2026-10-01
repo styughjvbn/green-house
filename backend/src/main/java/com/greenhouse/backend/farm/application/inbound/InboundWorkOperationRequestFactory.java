@@ -61,8 +61,7 @@ public class InboundWorkOperationRequestFactory {
 
 	private String workMemo(InboundRecord record) {
 		String autoMemo = String.join("\n", "입고 유형: " + formatInboundType(record.getInboundType()),
-				"품종: " + record.getVariety().getName(),
-				"상태: " + formatInboundStatus(record.getStatus()));
+				"품종: " + record.getVariety().getName(), "상태: " + formatInboundStatus(record.getStatus()));
 		return appendMemo(record.getMemo(), autoMemo);
 	}
 

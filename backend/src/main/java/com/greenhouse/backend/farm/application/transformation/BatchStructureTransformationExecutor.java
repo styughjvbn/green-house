@@ -85,8 +85,7 @@ public class BatchStructureTransformationExecutor {
 			}
 		});
 		if (isIdentityPreservingMovement(request, strategy, sources, sourceRequests)) {
-			return moveExistingGroups(operationId, request, sources, inputBySourceId,
-					placementExclusionOrchidGroupIds);
+			return moveExistingGroups(operationId, request, sources, inputBySourceId, placementExclusionOrchidGroupIds);
 		}
 		// Capture inherited attributes before transforming the source groups.
 		List<ResultPlan> plannedResults = planResults(request, strategy, sources, first);
@@ -94,7 +93,8 @@ public class BatchStructureTransformationExecutor {
 		if (WorkTypeDefinition.MOVEMENT.name().equals(strategy.supports())) {
 			request.sources()
 				.stream()
-				.filter(source -> source.inputQuantity().equals(sources.get(source.sourceOrchidGroupId()).getQuantity()))
+				.filter(source -> source.inputQuantity()
+					.equals(sources.get(source.sourceOrchidGroupId()).getQuantity()))
 				.map(StructureChangeSourceInput::sourceOrchidGroupId)
 				.forEach(effectivePlacementExclusions::add);
 		}
@@ -172,8 +172,9 @@ public class BatchStructureTransformationExecutor {
 					StructureChangeResultPurpose.NORMAL))
 			.toList();
 		Integer remainingQuantity = resultIds.size() == 1 ? sources.get(resultIds.getFirst()).getQuantity() : null;
-		Map<String, Object> details = new WorkEffectResults.Transformation(request.idempotencyKey(), inputBySourceId,
-				0, 0, resultRows, remainingQuantity).toMap();
+		Map<String, Object> details = new WorkEffectResults.Transformation(request.idempotencyKey(), inputBySourceId, 0,
+				0, resultRows, remainingQuantity)
+			.toMap();
 		details.put("identityPreserved", true);
 		return new WorkExecutionResult(WorkTypeDefinition.MOVEMENT.name(), details, resultIds,
 				new WorkMutationLink(mutation.mutationId(), mutation.correlationId()));

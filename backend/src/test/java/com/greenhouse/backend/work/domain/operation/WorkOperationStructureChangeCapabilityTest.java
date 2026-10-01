@@ -43,4 +43,5 @@ class WorkOperationStructureChangeCapabilityTest {
 		operation.complete(NOW);
 		return operation;
 	}
+
 }

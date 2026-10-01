@@ -19,8 +19,8 @@ public class FarmInboundPottingPlanGateway implements InboundPottingPlanGateway 
 	@Override
 	public List<InboundPottingPlanTarget> findCandidates() {
 		return inboundRecordRepository
-			.findByInboundTypeAndStatusInOrderByPottingDueDateAscIdAsc(
-					InboundType.FLASK_SEEDLING, List.of(InboundStatus.POTTING_PENDING))
+			.findByInboundTypeAndStatusInOrderByPottingDueDateAscIdAsc(InboundType.FLASK_SEEDLING,
+					List.of(InboundStatus.POTTING_PENDING))
 			.stream()
 			.map(this::toTarget)
 			.toList();

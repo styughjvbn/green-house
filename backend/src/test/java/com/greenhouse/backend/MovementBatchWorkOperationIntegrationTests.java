@@ -90,23 +90,26 @@ class MovementBatchWorkOperationIntegrationTests extends AbstractBackendIntegrat
 				created.getResponse().getContentAsString().replaceAll(".*?\\\"data\\\":\\{\\\"id\\\":(\\d+).*", "$1"));
 		mockMvc.perform(post("/api/work-operations/{id}/start", operationId)).andExpect(status().isOk());
 
-		mockMvc.perform(post("/api/work-operations/{id}/structure-change-executions", operationId)
-			.contentType(MediaType.APPLICATION_JSON)
-			.content("""
-					{
-					  "idempotencyKey": "identity-movement-swap",
-					  "completedDate": "2026-08-09",
-					  "sources": [
-					    {"sourceOrchidGroupId": %d, "inputQuantity": 10},
-					    {"sourceOrchidGroupId": %d, "inputQuantity": 20}
-					  ],
-					  "results": [
-					    {"bedZoneId": %d, "quantity": 10, "attributeSourceOrchidGroupId": %d, "purpose": "NORMAL", "startPosition": 1, "endPosition": 3},
-					    {"bedZoneId": %d, "quantity": 20, "attributeSourceOrchidGroupId": %d, "purpose": "NORMAL", "startPosition": 0, "endPosition": 1}
-					  ]
-					}
-					""".formatted(first.getId(), second.getId(), sourceZone.getId(), first.getId(), sourceZone.getId(),
-					second.getId())))
+		mockMvc
+			.perform(post("/api/work-operations/{id}/structure-change-executions", operationId)
+				.contentType(MediaType.APPLICATION_JSON)
+				.content(
+						"""
+								{
+								  "idempotencyKey": "identity-movement-swap",
+								  "completedDate": "2026-08-09",
+								  "sources": [
+								    {"sourceOrchidGroupId": %d, "inputQuantity": 10},
+								    {"sourceOrchidGroupId": %d, "inputQuantity": 20}
+								  ],
+								  "results": [
+								    {"bedZoneId": %d, "quantity": 10, "attributeSourceOrchidGroupId": %d, "purpose": "NORMAL", "startPosition": 1, "endPosition": 3},
+								    {"bedZoneId": %d, "quantity": 20, "attributeSourceOrchidGroupId": %d, "purpose": "NORMAL", "startPosition": 0, "endPosition": 1}
+								  ]
+								}
+								"""
+							.formatted(first.getId(), second.getId(), sourceZone.getId(), first.getId(),
+									sourceZone.getId(), second.getId())))
 			.andExpect(status().isCreated())
 			.andExpect(jsonPath("$.data.status").value("COMPLETED"))
 			.andExpect(jsonPath("$.data.targets[0].resultDetails.identityPreserved").value(true));
@@ -124,11 +127,11 @@ class MovementBatchWorkOperationIntegrationTests extends AbstractBackendIntegrat
 		});
 		assertThat(lineageRepository.findAll()).isEmpty();
 
-		mockMvc.perform(post("/api/work-operations/{id}/void", operationId)
-			.contentType(MediaType.APPLICATION_JSON)
-			.content("""
-					{"idempotencyKey":"void-identity-movement","reason":"자리 교환 취소"}
-					"""))
+		mockMvc
+			.perform(post("/api/work-operations/{id}/void", operationId).contentType(MediaType.APPLICATION_JSON)
+				.content("""
+						{"idempotencyKey":"void-identity-movement","reason":"자리 교환 취소"}
+						"""))
 			.andExpect(status().isOk())
 			.andExpect(jsonPath("$.data.status").value("VOIDED"));
 		assertThat(orchidGroupRepository.findById(first.getId()).orElseThrow().getStartPosition())
@@ -219,10 +222,10 @@ class MovementBatchWorkOperationIntegrationTests extends AbstractBackendIntegrat
 			.getFirst()
 			.getMutationId();
 		var discardEffects = appliedEffectRepository.findByWorkOperationIdOrderByIdAsc(discardOperationId);
-		assertThat(discardEffects)
-			.extracting(effect -> effect.getResultDetails().get("discardedQuantity"))
+		assertThat(discardEffects).extracting(effect -> effect.getResultDetails().get("discardedQuantity"))
 			.containsExactly(1, 3);
-		assertThat(discardEffects).allSatisfy(effect -> assertThat(effect.getMutationId()).isGreaterThan(movementMutationId));
+		assertThat(discardEffects)
+			.allSatisfy(effect -> assertThat(effect.getMutationId()).isGreaterThan(movementMutationId));
 		mockMvc.perform(get("/api/work-operations/{id}/void-eligibility", discardOperationId))
 			.andExpect(status().isOk())
 			.andExpect(jsonPath("$.data.voidable").value(false))
@@ -233,14 +236,14 @@ class MovementBatchWorkOperationIntegrationTests extends AbstractBackendIntegrat
 			.andExpect(jsonPath("$.data.voidable").value(true))
 			.andExpect(jsonPath("$.data.mutationIds", hasSize(3)))
 			.andExpect(jsonPath("$.data.relatedWorkOperationIds[0]").value(discardOperationId));
-		mockMvc.perform(post("/api/work-operations/{id}/void", operationId)
-			.contentType(MediaType.APPLICATION_JSON)
-			.content("""
-					{
-				  "idempotencyKey": "void-movement-with-discard",
-					  "reason": "잘못 등록한 이동과 선별 폐기"
-					}
-					"""))
+		mockMvc
+			.perform(post("/api/work-operations/{id}/void", operationId).contentType(MediaType.APPLICATION_JSON)
+				.content("""
+						{
+						 "idempotencyKey": "void-movement-with-discard",
+						  "reason": "잘못 등록한 이동과 선별 폐기"
+						}
+						"""))
 			.andExpect(status().isOk())
 			.andExpect(jsonPath("$.data.status").value("VOIDED"));
 

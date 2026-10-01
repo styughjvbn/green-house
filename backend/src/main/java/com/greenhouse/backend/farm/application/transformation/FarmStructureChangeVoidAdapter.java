@@ -32,12 +32,19 @@ import org.springframework.transaction.annotation.Transactional;
 public class FarmStructureChangeVoidAdapter implements StructureChangeVoidPort {
 
 	private final OrchidGroupMutationEntryRepository entryRepository;
+
 	private final OrchidGroupMutationRelationRepository relationRepository;
+
 	private final OrchidGroupRepository orchidGroupRepository;
+
 	private final OrchidGroupCollectionMemberRepository collectionMemberRepository;
+
 	private final List<OrchidGroupUsageInspector> usageInspectors;
+
 	private final OrchidGroupMutationEngine mutationEngine;
+
 	private final OrchidGroupMutationEffectiveHeadPolicy effectiveHeadPolicy;
+
 	private final Clock clock;
 
 	@Override
@@ -46,38 +53,46 @@ public class FarmStructureChangeVoidAdapter implements StructureChangeVoidPort {
 		var blockers = new ArrayList<Blocker>();
 		List<OrchidGroupMutationEntry> entries = mutationIds.isEmpty() ? List.of()
 				: entryRepository.findByMutationIdInOrderByMutationIdAscIdAsc(mutationIds);
-		if (mutationIds.isEmpty() || entries.stream().map(entry -> entry.getMutation().getId()).distinct().count()
-				!= mutationIds.size()
+		if (mutationIds.isEmpty()
+				|| entries.stream().map(entry -> entry.getMutation().getId()).distinct().count() != mutationIds.size()
 				|| entries.stream().anyMatch(entry -> !isVoidableType(entry.getMutation().getMutationType()))) {
-			blockers.add(new Blocker("MUTATION_NOT_REVERSIBLE",
-					"연속 상태 원장이 있는 구조 변경·자리 이동과 연관 선별 폐기만 자동 무효화할 수 있습니다.", 1));
+			blockers
+				.add(new Blocker("MUTATION_NOT_REVERSIBLE", "연속 상태 원장이 있는 구조 변경·자리 이동과 연관 선별 폐기만 자동 무효화할 수 있습니다.", 1));
 		}
 		if (!mutationIds.isEmpty() && relationRepository.existsByRelatedMutationIdInAndRelationType(mutationIds,
 				OrchidGroupMutationRelationType.COMPENSATES)) {
 			blockers.add(new Blocker("ALREADY_COMPENSATED", "이미 보상된 Mutation이 포함되어 있습니다.", 1));
 		}
-		var grouped = entries.stream().collect(Collectors.groupingBy(OrchidGroupMutationEntry::getOrchidGroupId,
-				java.util.LinkedHashMap::new, Collectors.toList()));
+		var grouped = entries.stream()
+			.collect(Collectors.groupingBy(OrchidGroupMutationEntry::getOrchidGroupId, java.util.LinkedHashMap::new,
+					Collectors.toList()));
 		if (grouped.values().stream().anyMatch(this::hasBrokenStateChain)) {
-			blockers.add(new Blocker("REPEATED_GROUP_EFFECT",
-					"같은 난 묶음의 작업 Mutation이 하나의 연속 상태 체인을 이루지 않습니다.", 1));
+			blockers.add(new Blocker("REPEATED_GROUP_EFFECT", "같은 난 묶음의 작업 Mutation이 하나의 연속 상태 체인을 이루지 않습니다.", 1));
 		}
-		Set<Long> resultIds = grouped.entrySet().stream().filter(entry -> earliest(entry.getValue()).getBeforeState() == null)
+		Set<Long> resultIds = grouped.entrySet()
+			.stream()
+			.filter(entry -> earliest(entry.getValue()).getBeforeState() == null)
 			.map(java.util.Map.Entry::getKey)
 			.collect(Collectors.toCollection(LinkedHashSet::new));
 		if (!resultIds.isEmpty()) {
-			usageInspectors.stream().flatMap(inspector -> inspector.inspect(resultIds, workOperationId).stream())
+			usageInspectors.stream()
+				.flatMap(inspector -> inspector.inspect(resultIds, workOperationId).stream())
 				.forEach(usage -> blockers.add(new Blocker(usage.code(), usage.message(), usage.count())));
 		}
-		var groups = orchidGroupRepository.findAllById(grouped.keySet()).stream()
+		var groups = orchidGroupRepository.findAllById(grouped.keySet())
+			.stream()
 			.collect(Collectors.toMap(group -> group.getId(), group -> group));
 		List<OrchidGroupMutationEntry> latestEntries = grouped.values().stream().map(this::latest).toList();
 		long changed = effectiveHeadPolicy.countGroupsNotAtEffectiveHead(latestEntries, groups);
 		if (changed > 0) {
 			blockers.add(new Blocker("DOWNSTREAM_MUTATION", "상쇄되지 않은 후속 변경이 있는 난 묶음이 있습니다.", changed));
 		}
-		List<Long> sourceIds = grouped.entrySet().stream().filter(entry -> earliest(entry.getValue()).getBeforeState() != null)
-			.map(java.util.Map.Entry::getKey).sorted().toList();
+		List<Long> sourceIds = grouped.entrySet()
+			.stream()
+			.filter(entry -> earliest(entry.getValue()).getBeforeState() != null)
+			.map(java.util.Map.Entry::getKey)
+			.sorted()
+			.toList();
 		return new Inspection(sourceIds, resultIds.stream().toList(), blockers);
 	}
 
@@ -89,7 +104,8 @@ public class FarmStructureChangeVoidAdapter implements StructureChangeVoidPort {
 			throw new IllegalArgumentException(inspection.blockers().getFirst().message());
 		}
 		var compensation = mutationEngine.compensateTransforms(new CompensateTransformMutationsCommand(
-				OrchidGroupMutationSources.work(workOperationId, "VOID:" + requestKey), mutationIds, businessDate, reason));
+				OrchidGroupMutationSources.work(workOperationId, "VOID:" + requestKey), mutationIds, businessDate,
+				reason));
 		collectionMemberRepository.findByOrchidGroupIdInAndRemovedAtIsNull(inspection.resultOrchidGroupIds())
 			.forEach(member -> member.remove(TimeConfig.utcNow(clock)));
 		return compensation.mutationId();
@@ -117,12 +133,15 @@ public class FarmStructureChangeVoidAdapter implements StructureChangeVoidPort {
 	}
 
 	private OrchidGroupMutationEntry earliest(List<OrchidGroupMutationEntry> entries) {
-		return entries.stream().min(java.util.Comparator.comparing(OrchidGroupMutationEntry::getStateRevisionAfter))
+		return entries.stream()
+			.min(java.util.Comparator.comparing(OrchidGroupMutationEntry::getStateRevisionAfter))
 			.orElseThrow();
 	}
 
 	private OrchidGroupMutationEntry latest(List<OrchidGroupMutationEntry> entries) {
-		return entries.stream().max(java.util.Comparator.comparing(OrchidGroupMutationEntry::getStateRevisionAfter))
+		return entries.stream()
+			.max(java.util.Comparator.comparing(OrchidGroupMutationEntry::getStateRevisionAfter))
 			.orElseThrow();
 	}
+
 }

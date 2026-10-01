@@ -16,8 +16,8 @@ class MovementDiscardHistoryMigrationPostgresE2ETest extends WorkE2ETestBase {
 	@Test
 	void convertsPreDiscardHistoryToMovementThenResidualDiscard() throws Exception {
 		String database = "movement_discard_" + UUID.randomUUID().toString().replace("-", "");
-		var admin = new JdbcTemplate(new DriverManagerDataSource(POSTGRES.getJdbcUrl(), POSTGRES.getUsername(),
-				POSTGRES.getPassword()));
+		var admin = new JdbcTemplate(
+				new DriverManagerDataSource(POSTGRES.getJdbcUrl(), POSTGRES.getUsername(), POSTGRES.getPassword()));
 		admin.execute("CREATE DATABASE " + database);
 		String url = POSTGRES.getJdbcUrl().replace("/" + POSTGRES.getDatabaseName(), "/" + database);
 		var dataSource = new DriverManagerDataSource(url, POSTGRES.getUsername(), POSTGRES.getPassword());
@@ -96,26 +96,27 @@ class MovementDiscardHistoryMigrationPostgresE2ETest extends WorkE2ETestBase {
 				SET parent_operation_id = 100, relation_type = 'MOVEMENT_DISCARD'
 				WHERE id = 101;
 				""");
-		jdbc.execute("""
-				INSERT INTO work_operation_targets (
-				    id, work_operation_id, orchid_group_id, target_reference_type, inclusion_source,
-				    included_at, variety_id_snapshot, variety_name_snapshot, quantity_snapshot,
-				    location_snapshot, created_at
-				) VALUES
-				    (100, 100, 1, 'ORCHID_GROUP', 'MANUAL', CURRENT_TIMESTAMP, 9001, '품종', 10,
-				     '{}'::jsonb, CURRENT_TIMESTAMP),
-				    (101, 101, 1, 'ORCHID_GROUP', 'MANUAL', CURRENT_TIMESTAMP, 9001, '품종', 10,
-				     '{}'::jsonb, CURRENT_TIMESTAMP);
-				INSERT INTO work_target_executions (
-				    id, work_operation_target_id, status, result_details, processed_quantity,
-				    version, created_at, updated_at
-				) VALUES
-				    (100, 100, 'COMPLETED', '{"remainingQuantity":0,"discardWorkOperationId":101}'::jsonb,
-				     10, 0, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP),
-				    (101, 101, 'COMPLETED',
-				     '{"reason":"자리 이동 중 동시 폐기","beforeQuantity":10,"discardedQuantity":4,"remainingQuantity":6,"status":"정상"}'::jsonb,
-				     4, 0, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP);
-				""");
+		jdbc.execute(
+				"""
+						INSERT INTO work_operation_targets (
+						    id, work_operation_id, orchid_group_id, target_reference_type, inclusion_source,
+						    included_at, variety_id_snapshot, variety_name_snapshot, quantity_snapshot,
+						    location_snapshot, created_at
+						) VALUES
+						    (100, 100, 1, 'ORCHID_GROUP', 'MANUAL', CURRENT_TIMESTAMP, 9001, '품종', 10,
+						     '{}'::jsonb, CURRENT_TIMESTAMP),
+						    (101, 101, 1, 'ORCHID_GROUP', 'MANUAL', CURRENT_TIMESTAMP, 9001, '품종', 10,
+						     '{}'::jsonb, CURRENT_TIMESTAMP);
+						INSERT INTO work_target_executions (
+						    id, work_operation_target_id, status, result_details, processed_quantity,
+						    version, created_at, updated_at
+						) VALUES
+						    (100, 100, 'COMPLETED', '{"remainingQuantity":0,"discardWorkOperationId":101}'::jsonb,
+						     10, 0, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP),
+						    (101, 101, 'COMPLETED',
+						     '{"reason":"자리 이동 중 동시 폐기","beforeQuantity":10,"discardedQuantity":4,"remainingQuantity":6,"status":"정상"}'::jsonb,
+						     4, 0, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP);
+						""");
 		jdbc.execute("""
 				INSERT INTO orchid_group_mutations (
 				    id, mutation_type, source_domain, source_type, source_reference_id, source_operation_key,
@@ -139,21 +140,22 @@ class MovementDiscardHistoryMigrationPostgresE2ETest extends WorkE2ETestBase {
 				     '{"quantity":6,"status":"정상"}'::jsonb,
 				     '{"quantity":0,"status":"종료"}'::jsonb);
 				""");
-		jdbc.execute("""
-				INSERT INTO work_applied_effects (
-				    id, work_operation_id, work_operation_target_id, effect_key, effect_kind,
-				    handler_code, applied_at, command_details, result_details, created_at, updated_at,
-				    mutation_id
-				) VALUES
-				    (100, 101, 101, 'TARGET:101', 'TARGET_COMPLETION', 'DISCARD', CURRENT_TIMESTAMP,
-				     '{"reason":"자리 이동 중 동시 폐기","discardQuantity":4}'::jsonb,
-				     '{"reason":"자리 이동 중 동시 폐기","beforeQuantity":10,"discardedQuantity":4,"remainingQuantity":6,"status":"정상"}'::jsonb,
-				     CURRENT_TIMESTAMP, CURRENT_TIMESTAMP, 100),
-				    (101, 100, NULL, 'EXECUTION:test', 'TARGET_COMPLETION', 'MOVEMENT', CURRENT_TIMESTAMP,
-				     '{"sources":[{"sourceOrchidGroupId":1,"inputQuantity":10}]}'::jsonb,
-				     '{"sourceInputQuantities":{"1":10},"lossQuantity":4,"remainingQuantity":0}'::jsonb,
-				     CURRENT_TIMESTAMP, CURRENT_TIMESTAMP, 101);
-				""");
+		jdbc.execute(
+				"""
+						INSERT INTO work_applied_effects (
+						    id, work_operation_id, work_operation_target_id, effect_key, effect_kind,
+						    handler_code, applied_at, command_details, result_details, created_at, updated_at,
+						    mutation_id
+						) VALUES
+						    (100, 101, 101, 'TARGET:101', 'TARGET_COMPLETION', 'DISCARD', CURRENT_TIMESTAMP,
+						     '{"reason":"자리 이동 중 동시 폐기","discardQuantity":4}'::jsonb,
+						     '{"reason":"자리 이동 중 동시 폐기","beforeQuantity":10,"discardedQuantity":4,"remainingQuantity":6,"status":"정상"}'::jsonb,
+						     CURRENT_TIMESTAMP, CURRENT_TIMESTAMP, 100),
+						    (101, 100, NULL, 'EXECUTION:test', 'TARGET_COMPLETION', 'MOVEMENT', CURRENT_TIMESTAMP,
+						     '{"sources":[{"sourceOrchidGroupId":1,"inputQuantity":10}]}'::jsonb,
+						     '{"sourceInputQuantities":{"1":10},"lossQuantity":4,"remainingQuantity":0}'::jsonb,
+						     CURRENT_TIMESTAMP, CURRENT_TIMESTAMP, 101);
+						""");
 	}
 
 }

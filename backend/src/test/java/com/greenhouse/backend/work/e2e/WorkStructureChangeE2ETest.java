@@ -208,8 +208,7 @@ class WorkStructureChangeE2ETest extends WorkE2ETestBase {
 				FROM orchid_group_mutation_entries entry
 				JOIN orchid_group_mutations mutation ON mutation.id = entry.mutation_id
 				WHERE mutation.source_reference_id = ? AND mutation.mutation_type = 'MOVE'
-				""", Long.class, Long.toString(operationId)))
-			.isEqualTo(2L);
+				""", Long.class, Long.toString(operationId))).isEqualTo(2L);
 
 		ApiResult voided = post("/api/work-operations/%d/void".formatted(operationId),
 				"{\"idempotencyKey\":\"e2e-void-identity-movement\",\"reason\":\"자리 교환 취소\"}");

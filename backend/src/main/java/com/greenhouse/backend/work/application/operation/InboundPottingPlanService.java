@@ -73,8 +73,7 @@ public class InboundPottingPlanService {
 		Map<Long, InboundPottingPlanTarget> recordsById = records.stream()
 			.collect(java.util.stream.Collectors.toMap(InboundPottingPlanTarget::id, record -> record));
 		List<Long> operationIds = idsByVariety.entrySet().stream().map(entry -> {
-			var groupedRequest = new InboundPottingPlanCreateRequest(
-					planRequest.title(),
+			var groupedRequest = new InboundPottingPlanCreateRequest(planRequest.title(),
 					planRequest.plannedStartDate(), planRequest.plannedEndDate(), entry.getValue(),
 					planRequest.worker(), planRequest.memo());
 			var groupedRecords = entry.getValue().stream().map(recordsById::get).toList();
@@ -102,9 +101,9 @@ public class InboundPottingPlanService {
 	private WorkOperation createResolved(InboundPottingPlanCreateRequest request, List<Long> requestedIds,
 			List<InboundPottingPlanTarget> records, WorkType workType) {
 		String title = support.varietyHistoryTitle(records.getFirst().varietyName(), WorkTypeDefinition.POTTING);
-		WorkOperation operation = new WorkOperation(workType, title,
-				request.plannedStartDate(), request.plannedEndDate(), WorkSourceScopeType.INBOUND_RECORD_SELECTION,
-				null, Map.of("inboundRecordIds", requestedIds), Map.of(), support.actor(request.worker()),
+		WorkOperation operation = new WorkOperation(workType, title, request.plannedStartDate(),
+				request.plannedEndDate(), WorkSourceScopeType.INBOUND_RECORD_SELECTION, null,
+				Map.of("inboundRecordIds", requestedIds), Map.of(), support.actor(request.worker()),
 				support.normalize(request.memo()), support.now());
 		List<InboundPottingPlanTarget> orderedRecords = records.stream()
 			.sorted(Comparator.comparing(record -> requestedIds.indexOf(record.id())))

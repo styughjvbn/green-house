@@ -128,9 +128,8 @@ class OrchidGroupMutationRoutingIntegrationTest extends AbstractBackendIntegrati
 				"4인치", 2, "관리", "단일", null, false, new BigDecimal("0"), new BigDecimal("1"), "상세 수정"));
 
 		var inbound = inboundRecordService.create(new InboundRecordCreateCommand(LocalDate.of(2026, 8, 20),
-				InboundType.PRODUCT_POT, fixture.variety().getId(), null, null, null, null,
-				new InboundPlacementInput(7, fixture.zone().getId(), "4인치", 2, "단일", null,
-						new BigDecimal("2"), new BigDecimal("3")),
+				InboundType.PRODUCT_POT, fixture.variety().getId(), null, null, null, null, new InboundPlacementInput(7,
+						fixture.zone().getId(), "4인치", 2, "단일", null, new BigDecimal("2"), new BigDecimal("3")),
 				"입고 담당", "즉시 배치"));
 		long mutationCountBeforeMetadataUpdate = mutationRepository.count();
 		varietyService.update(fixture.variety().getId(), new VarietyUpdateRequest(fixture.variety().getGenus(),
@@ -226,11 +225,12 @@ class OrchidGroupMutationRoutingIntegrationTest extends AbstractBackendIntegrati
 		var group = orchidGroupCommandService.create(groupRequest(fixture, 15, "0", "1", "정상"));
 		WorkType discardType = workTypeRepository.findByCode(WorkTypeDefinition.DISCARD.name()).orElseThrow();
 
-		var operation = discardRecordService.create(new DiscardRecordCreateRequest(
-				new WorkOperationCreateRequest(discardType.getId(), "라우팅 폐기", LocalDate.of(2026, 8, 20),
-						LocalDate.of(2026, 8, 20), WorkTargetSelection.orchidGroup(group.id()), java.util.Map.of(),
-						"작업자", null, List.of()),
-				LocalDate.of(2026, 8, 20), "작업자", List.of(new DiscardRecordResultRequest(group.id(), 5, "상태 불량"))))
+		var operation = discardRecordService
+			.create(new DiscardRecordCreateRequest(
+					new WorkOperationCreateRequest(discardType.getId(), "라우팅 폐기", LocalDate.of(2026, 8, 20),
+							LocalDate.of(2026, 8, 20), WorkTargetSelection.orchidGroup(group.id()), java.util.Map.of(),
+							"작업자", null, List.of()),
+					LocalDate.of(2026, 8, 20), "작업자", List.of(new DiscardRecordResultRequest(group.id(), 5, "상태 불량"))))
 			.getFirst();
 
 		var effect = workAppliedEffectRepository.findByWorkOperationIdOrderByIdAsc(operation.id()).getFirst();
@@ -248,8 +248,7 @@ class OrchidGroupMutationRoutingIntegrationTest extends AbstractBackendIntegrati
 		ensureWorkType(WorkTypeDefinition.POTTING.name(), "포트 작업", WorkTypeTemplate.REPOT, 7);
 		var inbound = inboundRecordService
 			.create(new InboundRecordCreateCommand(LocalDate.of(2026, 8, 19), InboundType.FLASK_SEEDLING,
-					fixture.variety().getId(), null, 30, "배양실", LocalDate.of(2026, 8, 20), null, "입고 담당",
-					null));
+					fixture.variety().getId(), null, 30, "배양실", LocalDate.of(2026, 8, 20), null, "입고 담당", null));
 
 		var operation = inboundPottingOperationService.executeNow(new InboundPottingCommand("routing-potting-9966",
 				inbound.id(), LocalDate.of(2026, 8, 20), List.of(new InboundPottingResultInput(fixture.zone().getId(),

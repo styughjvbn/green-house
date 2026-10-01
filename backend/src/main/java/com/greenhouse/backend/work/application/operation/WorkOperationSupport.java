@@ -84,7 +84,8 @@ public class WorkOperationSupport {
 		if (prefixLimit < 1) {
 			throw new IllegalArgumentException("자동 이력 제목은 150자 이하여야 합니다.");
 		}
-		String fittedPrefix = prefix.length() <= prefixLimit ? prefix : prefix.substring(0, prefixLimit).stripTrailing();
+		String fittedPrefix = prefix.length() <= prefixLimit ? prefix
+				: prefix.substring(0, prefixLimit).stripTrailing();
 		return fittedPrefix + separator + suffix;
 	}
 

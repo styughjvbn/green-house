@@ -53,12 +53,11 @@ public class InboundWorkOperationRecorder {
 		if (!request.createdOrchidGroupIds().isEmpty()) {
 			details.put("createdOrchidGroupIds", request.createdOrchidGroupIds());
 		}
-		WorkOperation operation = workOperationRepository
-			.save(new WorkOperation(workType,
-					support.varietyHistoryTitle(request.varietyName(), WorkTypeDefinition.INBOUND), request.workDate(),
-					request.workDate(), WorkSourceScopeType.INBOUND_RECORD_SELECTION, null,
-					Map.of("inboundRecordIds", List.of(request.inboundRecordId())), details,
-					support.actor(request.worker()), normalize(request.memo()), support.now()));
+		WorkOperation operation = workOperationRepository.save(new WorkOperation(workType,
+				support.varietyHistoryTitle(request.varietyName(), WorkTypeDefinition.INBOUND), request.workDate(),
+				request.workDate(), WorkSourceScopeType.INBOUND_RECORD_SELECTION, null,
+				Map.of("inboundRecordIds", List.of(request.inboundRecordId())), details,
+				support.actor(request.worker()), normalize(request.memo()), support.now()));
 		WorkOperationTarget target = workOperationTargetRepository.save(WorkOperationTarget.inboundRecord(operation,
 				request.inboundRecordId(), request.varietyId(), request.varietyName(), request.quantity(),
 				request.potSize(), request.locationSnapshot(), support.now()));
@@ -67,10 +66,8 @@ public class InboundWorkOperationRecorder {
 		String worker = support.actor(request.worker());
 		operation.start(executedAt);
 		workEffectStore.save(operation, target, new WorkEffectCommand(executedAt, worker, details, request),
-				"TARGET:" + target.getId(), List.of(), WorkEffectKind.RECORD_ONLY,
-				new WorkExecutionResult(workType.handlerCode(), details,
-						request.createdOrchidGroupIds(),
-						mutationLink));
+				"TARGET:" + target.getId(), List.of(), WorkEffectKind.RECORD_ONLY, new WorkExecutionResult(
+						workType.handlerCode(), details, request.createdOrchidGroupIds(), mutationLink));
 		execution.completeWithEffect(executedAt, worker, details);
 		operation.complete(executedAt);
 	}

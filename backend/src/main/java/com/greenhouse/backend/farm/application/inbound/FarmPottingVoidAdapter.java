@@ -36,11 +36,17 @@ import org.springframework.transaction.annotation.Transactional;
 public class FarmPottingVoidAdapter implements PottingVoidPort {
 
 	private final InboundRecordRepository inboundRecordRepository;
+
 	private final OrchidGroupRepository orchidGroupRepository;
+
 	private final OrchidGroupMutationEntryRepository entryRepository;
+
 	private final OrchidGroupMutationRelationRepository relationRepository;
+
 	private final List<OrchidGroupUsageInspector> usageInspectors;
+
 	private final OrchidGroupMutationEffectiveHeadPolicy effectiveHeadPolicy;
+
 	private final OrchidGroupMutationEngine mutationEngine;
 
 	@Override
@@ -52,8 +58,12 @@ public class FarmPottingVoidAdapter implements PottingVoidPort {
 	@Override
 	public Long compensate(Long workOperationId, String requestKey, List<Effect> effects, LocalDate businessDate,
 			String reason, boolean reopenInboundRecords) {
-		List<Long> inboundIds = effects.stream().map(Effect::inboundRecordId).filter(java.util.Objects::nonNull)
-			.distinct().sorted().toList();
+		List<Long> inboundIds = effects.stream()
+			.map(Effect::inboundRecordId)
+			.filter(java.util.Objects::nonNull)
+			.distinct()
+			.sorted()
+			.toList();
 		List<InboundRecord> records = inboundRecordRepository.findAllForUpdateByIdIn(inboundIds);
 		if (records.size() != inboundIds.size()) {
 			throw new NotFoundException("다시 대기 상태로 전환할 입고 기록을 모두 찾을 수 없습니다.");
@@ -74,8 +84,8 @@ public class FarmPottingVoidAdapter implements PottingVoidPort {
 
 	private Inspection inspectCurrent(Long workOperationId, List<Effect> effects, List<InboundRecord> lockedRecords) {
 		var blockers = new ArrayList<Blocker>();
-		if (effects.isEmpty()
-				|| effects.stream().anyMatch(effect -> effect.inboundRecordId() == null || effect.mutationId() == null)) {
+		if (effects.isEmpty() || effects.stream()
+			.anyMatch(effect -> effect.inboundRecordId() == null || effect.mutationId() == null)) {
 			return new Inspection(List.of(),
 					List.of(new Blocker("POTTING_EFFECT_MISSING", "포트 작업의 입고 또는 Mutation 연결이 없습니다.", 1)));
 		}
@@ -93,9 +103,11 @@ public class FarmPottingVoidAdapter implements PottingVoidPort {
 				OrchidGroupMutationRelationType.COMPENSATES)) {
 			blockers.add(new Blocker("ALREADY_COMPENSATED", "이미 보상된 Mutation이 포함되어 있습니다.", 1));
 		}
-		Set<Long> resultIds = entries.stream().map(OrchidGroupMutationEntry::getOrchidGroupId)
+		Set<Long> resultIds = entries.stream()
+			.map(OrchidGroupMutationEntry::getOrchidGroupId)
 			.collect(Collectors.toCollection(LinkedHashSet::new));
-		Map<Long, OrchidGroup> groups = orchidGroupRepository.findAllById(resultIds).stream()
+		Map<Long, OrchidGroup> groups = orchidGroupRepository.findAllById(resultIds)
+			.stream()
 			.collect(Collectors.toMap(OrchidGroup::getId, Function.identity()));
 		long changed = effectiveHeadPolicy.countGroupsNotAtEffectiveHead(entries, groups);
 		if (changed > 0) {
@@ -110,8 +122,7 @@ public class FarmPottingVoidAdapter implements PottingVoidPort {
 					|| !group.getInboundRecord().getId().equals(expectedInboundId);
 		}).count();
 		if (mismatchedResults > 0) {
-			blockers.add(new Blocker("POTTING_RESULT_MISMATCH", "포트 작업 결과와 입고 기록 연결이 일치하지 않습니다.",
-					mismatchedResults));
+			blockers.add(new Blocker("POTTING_RESULT_MISMATCH", "포트 작업 결과와 입고 기록 연결이 일치하지 않습니다.", mismatchedResults));
 		}
 		Set<Long> inboundIds = effects.stream().map(Effect::inboundRecordId).collect(Collectors.toSet());
 		usageInspectors.stream()
@@ -126,4 +137,5 @@ public class FarmPottingVoidAdapter implements PottingVoidPort {
 		}
 		return new Inspection(resultIds.stream().sorted().toList(), blockers);
 	}
+
 }

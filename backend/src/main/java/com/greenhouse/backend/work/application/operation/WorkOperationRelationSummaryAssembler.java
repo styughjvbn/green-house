@@ -114,8 +114,8 @@ class WorkOperationRelationSummaryAssembler {
 		}
 
 		Map<Long, Integer> result = new LinkedHashMap<>();
-		operations.forEach(operation -> result.put(operation.getId(),
-				Math.max(0, groupsByOperationId.getOrDefault(operation.getId(), Set.of(operation.getId())).size() - 1)));
+		operations.forEach(operation -> result.put(operation.getId(), Math.max(0,
+				groupsByOperationId.getOrDefault(operation.getId(), Set.of(operation.getId())).size() - 1)));
 		return result;
 	}
 

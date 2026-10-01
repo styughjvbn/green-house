@@ -33,16 +33,14 @@ class WorkOperationSupportTests {
 	@Test
 	void formatsVarietyAndFollowUpHistoryTitles() {
 		assertThat(support.varietyHistoryTitle(" 청금 ", WorkTypeDefinition.MOVEMENT)).isEqualTo("청금 · 자리 이동");
-		assertThat(support.followUpHistoryTitle("청금 · 자리 이동", "후 폐기"))
-			.isEqualTo("청금 · 자리 이동 후 폐기");
+		assertThat(support.followUpHistoryTitle("청금 · 자리 이동", "후 폐기")).isEqualTo("청금 · 자리 이동 후 폐기");
 	}
 
 	@Test
 	void keepsAnAutomaticTitleWithinTheDatabaseLimit() {
 		String longVarietyName = "가".repeat(150);
 
-		assertThat(support.varietyHistoryTitle(longVarietyName, WorkTypeDefinition.RECONCILIATION))
-			.hasSize(150)
+		assertThat(support.varietyHistoryTitle(longVarietyName, WorkTypeDefinition.RECONCILIATION)).hasSize(150)
 			.endsWith(" · 현장 상태 조정");
 	}
 

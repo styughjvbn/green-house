@@ -11,9 +11,8 @@ import java.util.List;
 public record InboundRecordResponse(Long id, LocalDate inboundDate, String inboundType, Long varietyId, String genus,
 		String varietyName, String status, Integer estimatedQuantity, String tempLocation, LocalDate pottingDueDate,
 		LocalDate pottingDate, boolean editable, List<InboundRecordAction> availableActions,
-		List<InboundOrchidGroupResponse> createdOrchidGroups, String worker,
-		String memo,
-		LocalDateTime createdAt, LocalDateTime updatedAt) {
+		List<InboundOrchidGroupResponse> createdOrchidGroups, String worker, String memo, LocalDateTime createdAt,
+		LocalDateTime updatedAt) {
 
 	public static InboundRecordResponse from(InboundRecord record, List<OrchidGroup> createdOrchidGroups,
 			LocalDate pottingDate) {
@@ -22,8 +21,8 @@ public record InboundRecordResponse(Long id, LocalDate inboundDate, String inbou
 				record.getStatus().name(), record.getEstimatedQuantity(), record.getTempLocation(),
 				record.getPottingDueDate(), pottingDate, record.isEditable(),
 				record.availableActions(!createdOrchidGroups.isEmpty()),
-				createdOrchidGroups.stream().map(InboundOrchidGroupResponse::from).toList(),
-				record.getWorker(), record.getMemo(), TimeConfig.toFarmTime(record.getCreatedAt()),
+				createdOrchidGroups.stream().map(InboundOrchidGroupResponse::from).toList(), record.getWorker(),
+				record.getMemo(), TimeConfig.toFarmTime(record.getCreatedAt()),
 				TimeConfig.toFarmTime(record.getUpdatedAt()));
 	}
 }

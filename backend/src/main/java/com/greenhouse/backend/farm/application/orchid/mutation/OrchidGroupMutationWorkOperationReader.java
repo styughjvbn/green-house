@@ -20,8 +20,7 @@ class OrchidGroupMutationWorkOperationReader {
 
 	private final WorkOperationMetadataReader workOperationMetadataReader;
 
-	Map<Long, OrchidGroupMutationWorkOperationResponse> resolveByMutationId(
-			Collection<OrchidGroupMutation> mutations) {
+	Map<Long, OrchidGroupMutationWorkOperationResponse> resolveByMutationId(Collection<OrchidGroupMutation> mutations) {
 		Map<Long, Long> workOperationIdByMutationId = new LinkedHashMap<>();
 		Set<Long> workOperationIds = new LinkedHashSet<>();
 		for (OrchidGroupMutation mutation : mutations) {

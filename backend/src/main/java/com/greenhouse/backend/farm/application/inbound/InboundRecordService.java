@@ -109,8 +109,9 @@ public class InboundRecordService {
 	public InboundRecordResponse update(Long inboundRecordId, InboundRecordUpdateRequest request) {
 		InboundRecord inboundRecord = inboundRecordFinder.find(inboundRecordId);
 		Map<String, Object> before = auditSupport.snapshot(inboundRecord);
-		inboundRecord.updateMetadata(request.inboundDate(), request.estimatedQuantity(), normalize(request.tempLocation()),
-				request.pottingDueDate(), requestActorProvider.resolve(request.worker()), normalize(request.memo()));
+		inboundRecord.updateMetadata(request.inboundDate(), request.estimatedQuantity(),
+				normalize(request.tempLocation()), request.pottingDueDate(),
+				requestActorProvider.resolve(request.worker()), normalize(request.memo()));
 		auditSupport.record(AuditAction.UPDATED, inboundRecord, before, auditSupport.snapshot(inboundRecord));
 		return responseAssembler.assemble(inboundRecord);
 	}

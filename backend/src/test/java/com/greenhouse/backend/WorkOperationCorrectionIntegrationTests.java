@@ -197,32 +197,34 @@ class WorkOperationCorrectionIntegrationTests extends AbstractBackendIntegration
 	}
 
 	private Long createRepotOperation() throws Exception {
-		var createdSource = orchidGroupCommandService.create(new OrchidGroupCreateRequest(bedZone.getId(),
-				variety.getId(), 30, "3.5치", 2, "정상", "POT", null, false, new BigDecimal("0"),
-				new BigDecimal("2"), null));
+		var createdSource = orchidGroupCommandService
+			.create(new OrchidGroupCreateRequest(bedZone.getId(), variety.getId(), 30, "3.5치", 2, "정상", "POT", null,
+					false, new BigDecimal("0"), new BigDecimal("2"), null));
 		OrchidGroup source = orchidGroupRepository.findById(createdSource.id()).orElseThrow();
-		mockMvc.perform(post("/api/work-operations/structure-change-records").contentType(MediaType.APPLICATION_JSON).content("""
-				{
-				  "operation": {
-				    "workTypeId": %d,
-				    "title": "보정할 분갈이",
-				    "plannedStartDate": "2026-07-15",
-				    "plannedEndDate": "2026-07-15",
-				    "sourceScopeType": "MANUAL_SELECTION",
-				    "sourceOrchidGroupIds": [%d]
-				  },
-				  "execution": {
-				    "idempotencyKey": "correction-source",
-				    "completedDate": "2026-07-15",
-				    "sources": [{"sourceOrchidGroupId": %d, "inputQuantity": 30}],
-				    "lossQuantity": 0,
-				    "results": [{
-				      "bedZoneId": %d, "quantity": 30, "potSize": "4치", "ageYear": 2,
-				      "purpose": "NORMAL", "startPosition": 0, "endPosition": 2
-				    }]
-				  }
-				}
-				""".formatted(repotType.getId(), source.getId(), source.getId(), bedZone.getId())))
+		mockMvc
+			.perform(post("/api/work-operations/structure-change-records").contentType(MediaType.APPLICATION_JSON)
+				.content("""
+						{
+						  "operation": {
+						    "workTypeId": %d,
+						    "title": "보정할 분갈이",
+						    "plannedStartDate": "2026-07-15",
+						    "plannedEndDate": "2026-07-15",
+						    "sourceScopeType": "MANUAL_SELECTION",
+						    "sourceOrchidGroupIds": [%d]
+						  },
+						  "execution": {
+						    "idempotencyKey": "correction-source",
+						    "completedDate": "2026-07-15",
+						    "sources": [{"sourceOrchidGroupId": %d, "inputQuantity": 30}],
+						    "lossQuantity": 0,
+						    "results": [{
+						      "bedZoneId": %d, "quantity": 30, "potSize": "4치", "ageYear": 2,
+						      "purpose": "NORMAL", "startPosition": 0, "endPosition": 2
+						    }]
+						  }
+						}
+						""".formatted(repotType.getId(), source.getId(), source.getId(), bedZone.getId())))
 			.andExpect(status().isCreated());
 		createdGroupId = orchidGroupRepository.findAll()
 			.stream()

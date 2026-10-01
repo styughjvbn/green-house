@@ -35,9 +35,9 @@ public class OrchidGroupMutationCommandFingerprint {
 			case MoveOrchidGroupMutationCommand value -> fingerprint
 				.calculate(new MovePayload(OrchidGroupMutationType.MOVE, value.orchidGroupId(), value.toBedZoneId(),
 						value.startPosition(), value.endPosition(), value.effectiveBusinessDate(), value.reason()));
-			case MoveOrchidGroupsMutationCommand value -> fingerprint.calculate(new BatchMovePayload(
-					OrchidGroupMutationType.MOVE, value.items(), value.effectiveBusinessDate(), value.reason(),
-					new TreeSet<>(value.placementExclusionOrchidGroupIds())));
+			case MoveOrchidGroupsMutationCommand value -> fingerprint.calculate(
+					new BatchMovePayload(OrchidGroupMutationType.MOVE, value.items(), value.effectiveBusinessDate(),
+							value.reason(), new TreeSet<>(value.placementExclusionOrchidGroupIds())));
 			case CancelOrchidGroupCreationMutationCommand value ->
 				fingerprint.calculate(new CancelCreationPayload(OrchidGroupMutationType.CANCEL_CREATION,
 						value.orchidGroupId(), value.effectiveBusinessDate(), value.reason()));
@@ -57,14 +57,17 @@ public class OrchidGroupMutationCommandFingerprint {
 			case CorrectOrchidGroupsMutationCommand value ->
 				fingerprint.calculate(new CorrectionPayload(OrchidGroupMutationType.CORRECTION, value.items(),
 						value.correctedMutations(), value.effectiveBusinessDate(), value.reason()));
-			case ReconcileOrchidGroupMutationCommand value -> fingerprint.calculate(new ReconciliationPayload(
-					OrchidGroupMutationType.RECONCILIATION, value.orchidGroupId(), value.actualQuantity(),
-					value.actualStatus(), value.actualBedZoneId(), value.actualStartPosition(), value.actualEndPosition(),
-					value.effectiveBusinessDate(), value.reason()));
-			case CompensateTransformMutationsCommand value -> fingerprint.calculate(new CompensationPayload(
-					OrchidGroupMutationType.COMPENSATION, value.mutationIds(), value.effectiveBusinessDate(), value.reason()));
-			case CompensateCreateMutationsCommand value -> fingerprint.calculate(new CompensationPayload(
-					OrchidGroupMutationType.COMPENSATION, value.mutationIds(), value.effectiveBusinessDate(), value.reason()));
+			case ReconcileOrchidGroupMutationCommand value ->
+				fingerprint.calculate(new ReconciliationPayload(OrchidGroupMutationType.RECONCILIATION,
+						value.orchidGroupId(), value.actualQuantity(), value.actualStatus(), value.actualBedZoneId(),
+						value.actualStartPosition(), value.actualEndPosition(), value.effectiveBusinessDate(),
+						value.reason()));
+			case CompensateTransformMutationsCommand value ->
+				fingerprint.calculate(new CompensationPayload(OrchidGroupMutationType.COMPENSATION, value.mutationIds(),
+						value.effectiveBusinessDate(), value.reason()));
+			case CompensateCreateMutationsCommand value ->
+				fingerprint.calculate(new CompensationPayload(OrchidGroupMutationType.COMPENSATION, value.mutationIds(),
+						value.effectiveBusinessDate(), value.reason()));
 		};
 	}
 

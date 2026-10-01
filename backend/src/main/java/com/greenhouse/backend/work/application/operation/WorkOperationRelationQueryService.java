@@ -50,11 +50,12 @@ public class WorkOperationRelationQueryService {
 		List<String> receiptKeys = membershipRepository.findReceiptKeysByOperationId(root.getId());
 		Set<Long> operationIds = new LinkedHashSet<>();
 		(receiptKeys.isEmpty() ? List.<com.greenhouse.backend.work.domain.operation.WorkCommandReceipt>of()
-				: receiptRepository.findByReceiptKeyIn(receiptKeys)).forEach(receipt -> {
-			if (receipt.getResultOperationIds() != null) {
-				operationIds.addAll(receipt.getResultOperationIds());
-			}
-		});
+				: receiptRepository.findByReceiptKeyIn(receiptKeys))
+			.forEach(receipt -> {
+				if (receipt.getResultOperationIds() != null) {
+					operationIds.addAll(receipt.getResultOperationIds());
+				}
+			});
 		operationIds.add(root.getId());
 		return orderedOperations(operationIds);
 	}
@@ -88,14 +89,14 @@ public class WorkOperationRelationQueryService {
 			corrections.addAll(foundCorrections);
 			foundCorrections.forEach(relation -> {
 				related.putIfAbsent(relation.getOriginalWorkOperation().getId(), relation.getOriginalWorkOperation());
-				related.putIfAbsent(relation.getCorrectionWorkOperation().getId(), relation.getCorrectionWorkOperation());
+				related.putIfAbsent(relation.getCorrectionWorkOperation().getId(),
+						relation.getCorrectionWorkOperation());
 			});
 		}
 
 		Map<Long, Long> parentByChild = new LinkedHashMap<>();
 		related.values().forEach(operation -> {
-			if (operation.getParentOperation() != null
-					&& related.containsKey(operation.getParentOperation().getId())) {
+			if (operation.getParentOperation() != null && related.containsKey(operation.getParentOperation().getId())) {
 				parentByChild.put(operation.getId(), operation.getParentOperation().getId());
 			}
 		});
@@ -108,8 +109,7 @@ public class WorkOperationRelationQueryService {
 			.stream()
 			.filter(operation -> !parentByChild.containsKey(operation.getId()))
 			.forEach(operation -> appendTree(operation, related.values(), parentByChild, visited, ordered));
-		related.values()
-			.forEach(operation -> appendTree(operation, related.values(), parentByChild, visited, ordered));
+		related.values().forEach(operation -> appendTree(operation, related.values(), parentByChild, visited, ordered));
 		return ordered;
 	}
 

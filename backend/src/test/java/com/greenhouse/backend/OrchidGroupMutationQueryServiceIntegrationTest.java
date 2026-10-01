@@ -166,8 +166,8 @@ class OrchidGroupMutationQueryServiceIntegrationTest extends AbstractBackendInte
 	@Test
 	void includesOriginatingWorkOperationInMutationListAndGraph() {
 		long orchidGroupId = 94_001L;
-		var workType = workTypeRepository.save(
-				new WorkType("QUERY_MOVEMENT", "자리 이동", WorkTypeTemplate.MOVEMENT, false, false, true, 900));
+		var workType = workTypeRepository
+			.save(new WorkType("QUERY_MOVEMENT", "자리 이동", WorkTypeTemplate.MOVEMENT, false, false, true, 900));
 		var operation = workOperationRepository.save(new WorkOperation(workType, "3동 왼쪽 구역으로 이동",
 				LocalDate.of(2026, 9, 18), null, WorkSourceScopeType.ORCHID_GROUP, orchidGroupId, Map.of(), Map.of(),
 				"테스터", null, LocalDateTime.of(2026, 9, 18, 9, 0)));

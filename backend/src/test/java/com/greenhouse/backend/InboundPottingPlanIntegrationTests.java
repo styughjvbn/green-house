@@ -88,9 +88,9 @@ class InboundPottingPlanIntegrationTests extends AbstractBackendIntegrationTest 
 
 		Variety variety = varietyRepository
 			.save(new Variety("POT-001", "팔레놉시스", "포트 계획 난", null, "2치", true, true, null, null));
-		inboundRecord = inboundRecordRepository.save(new InboundRecord(LocalDate.of(2026, 7, 1),
-				InboundType.FLASK_SEEDLING, variety, InboundStatus.POTTING_PENDING, 120, "배양실 A",
-				LocalDate.of(2026, 7, 16), "입고 담당", null));
+		inboundRecord = inboundRecordRepository
+			.save(new InboundRecord(LocalDate.of(2026, 7, 1), InboundType.FLASK_SEEDLING, variety,
+					InboundStatus.POTTING_PENDING, 120, "배양실 A", LocalDate.of(2026, 7, 16), "입고 담당", null));
 	}
 
 	@Test
@@ -189,9 +189,7 @@ class InboundPottingPlanIntegrationTests extends AbstractBackendIntegrationTest 
 				  "estimatedQuantity": 20,
 				  "tempLocation": "배양실 A"
 				}
-				""".formatted(inboundRecord.getVariety().getId())))
-			.andExpect(status().isCreated())
-			.andReturn();
+				""".formatted(inboundRecord.getVariety().getId()))).andExpect(status().isCreated()).andReturn();
 		Long inboundRecordId = Long.valueOf(
 				created.getResponse().getContentAsString().replaceAll(".*?\\\"data\\\":\\{\\\"id\\\":(\\d+).*", "$1"));
 
@@ -320,7 +318,8 @@ class InboundPottingPlanIntegrationTests extends AbstractBackendIntegrationTest 
 		InboundRecord updated = inboundRecordRepository.findWithDetailsById(inboundRecord.getId()).orElseThrow();
 		assertThat(updated.getCreatedOrchidGroups()).hasSize(1);
 		assertThat(updated.getStatus()).isEqualTo(InboundStatus.PLACED);
-		var createdGroup = orchidGroupRepository.findById(updated.getCreatedOrchidGroups().getFirst().getId()).orElseThrow();
+		var createdGroup = orchidGroupRepository.findById(updated.getCreatedOrchidGroups().getFirst().getId())
+			.orElseThrow();
 		assertThat(createdGroup.getQuantity()).isEqualTo(100);
 		assertThat(createdGroup.getReservedQuantity()).isZero();
 		assertThat(createdGroup.getStatus()).isEqualTo("정상");
@@ -345,9 +344,9 @@ class InboundPottingPlanIntegrationTests extends AbstractBackendIntegrationTest 
 	void rejectsMixedVarietiesInOneInboundPottingPlan() throws Exception {
 		Variety anotherVariety = varietyRepository
 			.save(new Variety("POT-002", "팔레놉시스", "다른 포트 계획 난", null, "2치", true, true, null, null));
-		InboundRecord anotherInbound = inboundRecordRepository.save(new InboundRecord(LocalDate.of(2026, 7, 2),
-				InboundType.FLASK_SEEDLING, anotherVariety, InboundStatus.POTTING_PENDING, 80, "배양실 B",
-				LocalDate.of(2026, 7, 18), "입고 담당", null));
+		InboundRecord anotherInbound = inboundRecordRepository
+			.save(new InboundRecord(LocalDate.of(2026, 7, 2), InboundType.FLASK_SEEDLING, anotherVariety,
+					InboundStatus.POTTING_PENDING, 80, "배양실 B", LocalDate.of(2026, 7, 18), "입고 담당", null));
 
 		mockMvc
 			.perform(post("/api/work-operations/inbound-potting-plans").contentType(MediaType.APPLICATION_JSON)
@@ -514,9 +513,9 @@ class InboundPottingPlanIntegrationTests extends AbstractBackendIntegrationTest 
 
 	@Test
 	void cancelingOneInboundOnlyCancelsItsTargetInAMultiInboundPlan() throws Exception {
-		InboundRecord secondInbound = inboundRecordRepository.save(new InboundRecord(LocalDate.of(2026, 7, 2),
-				InboundType.FLASK_SEEDLING, inboundRecord.getVariety(), InboundStatus.POTTING_PENDING, 60, "배양실 B",
-				null, "입고 담당", null));
+		InboundRecord secondInbound = inboundRecordRepository
+			.save(new InboundRecord(LocalDate.of(2026, 7, 2), InboundType.FLASK_SEEDLING, inboundRecord.getVariety(),
+					InboundStatus.POTTING_PENDING, 60, "배양실 B", null, "입고 담당", null));
 		var planned = mockMvc
 			.perform(post("/api/work-operations/inbound-potting-plans").contentType(MediaType.APPLICATION_JSON)
 				.content("""
@@ -749,9 +748,9 @@ class InboundPottingPlanIntegrationTests extends AbstractBackendIntegrationTest 
 
 	@Test
 	void createsAndReusesOneCompletedPottingRecordForMultipleInboundRecords() throws Exception {
-		InboundRecord secondInbound = inboundRecordRepository.save(new InboundRecord(LocalDate.of(2026, 7, 2),
-				InboundType.FLASK_SEEDLING, inboundRecord.getVariety(), InboundStatus.POTTING_PENDING, 60,
-				"배양실 B", LocalDate.of(2026, 7, 16), "입고 담당", null));
+		InboundRecord secondInbound = inboundRecordRepository
+			.save(new InboundRecord(LocalDate.of(2026, 7, 2), InboundType.FLASK_SEEDLING, inboundRecord.getVariety(),
+					InboundStatus.POTTING_PENDING, 60, "배양실 B", LocalDate.of(2026, 7, 16), "입고 담당", null));
 		String request = """
 				{
 				  "plan": {

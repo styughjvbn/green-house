@@ -57,8 +57,7 @@ public class OrchidGroupMovementService {
 		immediateWorkExecutionService.executeForTarget("DIRECT_MOVE:" + UUID.randomUUID(),
 				WorkTypeDefinition.MOVEMENT.name(),
 				workOperationSupport.varietyHistoryTitle(orchidGroup.getVarietyName(), WorkTypeDefinition.MOVEMENT),
-				businessDate, worker, request.memo(), orchidGroupId,
-				details, request);
+				businessDate, worker, request.memo(), orchidGroupId, details, request);
 		OrchidGroup moved = orchidGroupReader.findDetailById(orchidGroupId)
 			.orElseThrow(() -> new NotFoundException("난 묶음을 찾을 수 없습니다."));
 		auditSupport.record(orchidGroupId, AuditAction.MOVED, AuditSource.WORK_RECORD, before,

@@ -59,11 +59,7 @@ public class WorkOperationGraphQueryService {
 		Map<Long, WorkOperation> seedOperations = relatedOperations(root);
 		Map<Long, List<Long>> seedMutationIds = detail == WorkOperationGraphDetail.WORK ? Map.of()
 				: mutationIds(seedOperations.values());
-		List<Long> rootMutationIds = seedMutationIds.values()
-			.stream()
-			.flatMap(Collection::stream)
-			.distinct()
-			.toList();
+		List<Long> rootMutationIds = seedMutationIds.values().stream().flatMap(Collection::stream).distinct().toList();
 		WorkOperationMutationGraphPort.Fragment fragment = detail == WorkOperationGraphDetail.WORK
 				? WorkOperationMutationGraphPort.Fragment.empty()
 				: mutationGraphPort.load(rootMutationIds, detail == WorkOperationGraphDetail.LINEAGE, depth, maxNodes);
@@ -130,9 +126,8 @@ public class WorkOperationGraphQueryService {
 
 	private Map<Long, Set<Long>> operationIdsByMutation(Map<Long, List<Long>> mutationIdsByOperation) {
 		Map<Long, Set<Long>> result = new LinkedHashMap<>();
-		mutationIdsByOperation.forEach((operationId, mutationIds) -> mutationIds.forEach(mutationId -> result
-			.computeIfAbsent(mutationId, ignored -> new LinkedHashSet<>())
-			.add(operationId)));
+		mutationIdsByOperation.forEach((operationId, mutationIds) -> mutationIds.forEach(
+				mutationId -> result.computeIfAbsent(mutationId, ignored -> new LinkedHashSet<>()).add(operationId)));
 		return result;
 	}
 
@@ -147,8 +142,11 @@ public class WorkOperationGraphQueryService {
 			.stream()
 			.filter(edge -> edge.type().equals(WorkOperationGraphEdgeType.STATE_INPUT.name())
 					|| edge.type().equals(WorkOperationGraphEdgeType.STATE_OUTPUT.name()))
-			.collect(Collectors.groupingBy(edge -> edge.type().equals(WorkOperationGraphEdgeType.STATE_INPUT.name())
-					? edge.targetNodeId() : edge.sourceNodeId(), LinkedHashMap::new, Collectors.toList()));
+			.collect(
+					Collectors.groupingBy(
+							edge -> edge.type().equals(WorkOperationGraphEdgeType.STATE_INPUT.name())
+									? edge.targetNodeId() : edge.sourceNodeId(),
+							LinkedHashMap::new, Collectors.toList()));
 		Set<String> visibleNodeIds = nodes.stream()
 			.map(WorkOperationGraphNodeResponse::id)
 			.collect(Collectors.toCollection(LinkedHashSet::new));
@@ -193,15 +191,16 @@ public class WorkOperationGraphQueryService {
 
 		fragment.edges()
 			.stream()
-			.filter(edge -> visibleNodeIds.contains(edge.sourceNodeId()) && visibleNodeIds.contains(edge.targetNodeId()))
+			.filter(edge -> visibleNodeIds.contains(edge.sourceNodeId())
+					&& visibleNodeIds.contains(edge.targetNodeId()))
 			.forEach(edge -> edges.add(new WorkOperationGraphEdgeResponse(edge.id(), edge.sourceNodeId(),
 					edge.targetNodeId(), WorkOperationGraphEdgeType.valueOf(edge.type()), edge.relationType())));
 		visibleMutationIds.forEach(mutationId -> operationIdsByMutation.getOrDefault(mutationId, Set.of())
 			.stream()
 			.filter(operationId -> visibleNodeIds.contains(operationNodeId(operationId)))
 			.forEach(operationId -> edges.add(new WorkOperationGraphEdgeResponse(
-					"effect-" + operationId + "-" + mutationId, operationNodeId(operationId), mutationNodeId(mutationId),
-					WorkOperationGraphEdgeType.EFFECT, null))));
+					"effect-" + operationId + "-" + mutationId, operationNodeId(operationId),
+					mutationNodeId(mutationId), WorkOperationGraphEdgeType.EFFECT, null))));
 		return truncated;
 	}
 

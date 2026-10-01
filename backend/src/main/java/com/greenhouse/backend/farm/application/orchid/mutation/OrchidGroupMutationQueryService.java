@@ -60,10 +60,10 @@ public class OrchidGroupMutationQueryService {
 		});
 
 		var workOperationsByMutationId = workOperationReader.resolveByMutationId(mutations.getContent());
-		return PageResponse.from(mutations.map(mutation -> OrchidGroupMutationResponse.from(mutation,
-				workOperationsByMutationId.get(mutation.getId()),
-				entriesByMutationId.getOrDefault(mutation.getId(), List.of()),
-				relationsByMutationId.getOrDefault(mutation.getId(), List.of()))));
+		return PageResponse.from(mutations.map(
+				mutation -> OrchidGroupMutationResponse.from(mutation, workOperationsByMutationId.get(mutation.getId()),
+						entriesByMutationId.getOrDefault(mutation.getId(), List.of()),
+						relationsByMutationId.getOrDefault(mutation.getId(), List.of()))));
 	}
 
 	private void addRelation(Map<Long, List<OrchidGroupMutationRelationResponse>> relationsByMutationId,

@@ -118,8 +118,8 @@ class WorkOperationRelationSummaryAssemblerTest {
 		when(membershipRepository.findByOperationIdIn(List.of(10L, 11L, 12L))).thenReturn(List.of());
 		when(operationRepository.findByParentOperationIdInOrderByParentOperationIdAscIdAsc(List.of(10L)))
 			.thenReturn(List.of(firstChild, secondChild));
-		when(correctionRepository.findByOriginalWorkOperationIdInOrCorrectionWorkOperationIdIn(
-				List.of(10L, 11L, 12L), List.of(10L, 11L, 12L)))
+		when(correctionRepository.findByOriginalWorkOperationIdInOrCorrectionWorkOperationIdIn(List.of(10L, 11L, 12L),
+				List.of(10L, 11L, 12L)))
 			.thenReturn(List.of());
 
 		var summaries = assembler.assemble(List.of(parent, firstChild, secondChild));

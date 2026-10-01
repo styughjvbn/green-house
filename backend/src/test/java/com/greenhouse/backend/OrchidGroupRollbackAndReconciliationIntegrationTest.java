@@ -50,13 +50,18 @@ class OrchidGroupRollbackAndReconciliationIntegrationTest extends AbstractBacken
 		var created = mutationEngine.create(new CreateOrchidGroupMutationCommand(source("create", "CREATE"),
 				fixture.sourceZone().getId(), details(fixture.variety().getId(), 20, "0", "4"), date, "원본 생성"));
 		Long sourceId = created.entries().getFirst().orchidGroupId();
-		var transformed = mutationEngine.transform(new TransformOrchidGroupsMutationCommand(
-				source("transform", "EXECUTION:1"),
-				List.of(new TransformOrchidGroupMutationSource(sourceId, 8, null, null)),
-				List.of(new TransformOrchidGroupMutationResult(fixture.resultZone().getId(),
-						details(fixture.variety().getId(), 8, "0", "2"))), date, "분할", Set.of()));
-		Long resultId = transformed.entries().stream().filter(entry -> entry.orchidGroupId() != sourceId)
-			.findFirst().orElseThrow().orchidGroupId();
+		var transformed = mutationEngine
+			.transform(new TransformOrchidGroupsMutationCommand(source("transform", "EXECUTION:1"),
+					List.of(new TransformOrchidGroupMutationSource(sourceId, 8, null, null)),
+					List.of(new TransformOrchidGroupMutationResult(fixture.resultZone().getId(),
+							details(fixture.variety().getId(), 8, "0", "2"))),
+					date, "분할", Set.of()));
+		Long resultId = transformed.entries()
+			.stream()
+			.filter(entry -> entry.orchidGroupId() != sourceId)
+			.findFirst()
+			.orElseThrow()
+			.orchidGroupId();
 
 		var compensation = mutationEngine.compensateTransforms(new CompensateTransformMutationsCommand(
 				source("void", "VOID:1"), List.of(transformed.mutationId()), date, "실수로 등록"));
@@ -76,7 +81,8 @@ class OrchidGroupRollbackAndReconciliationIntegrationTest extends AbstractBacken
 			});
 		assertThatThrownBy(() -> mutationEngine.compensateTransforms(new CompensateTransformMutationsCommand(
 				source("void-again", "VOID:2"), List.of(transformed.mutationId()), date, "중복 무효화")))
-			.isInstanceOf(IllegalArgumentException.class).hasMessageContaining("이미 무효화");
+			.isInstanceOf(IllegalArgumentException.class)
+			.hasMessageContaining("이미 무효화");
 	}
 
 	@Test
@@ -86,24 +92,24 @@ class OrchidGroupRollbackAndReconciliationIntegrationTest extends AbstractBacken
 		var created = mutationEngine.create(new CreateOrchidGroupMutationCommand(source("stack-create", "CREATE"),
 				fixture.sourceZone().getId(), details(fixture.variety().getId(), 20, "0", "4"), date, "원본 생성"));
 		Long sourceId = created.entries().getFirst().orchidGroupId();
-		var first = mutationEngine.transform(new TransformOrchidGroupsMutationCommand(
-				source("stack-first", "EXECUTION:1"),
-				List.of(new TransformOrchidGroupMutationSource(sourceId, 8, null, null)),
-				List.of(new TransformOrchidGroupMutationResult(fixture.resultZone().getId(),
-						details(fixture.variety().getId(), 8, "0", "2"))),
-				date, "첫 번째 분할", Set.of()));
+		var first = mutationEngine
+			.transform(new TransformOrchidGroupsMutationCommand(source("stack-first", "EXECUTION:1"),
+					List.of(new TransformOrchidGroupMutationSource(sourceId, 8, null, null)),
+					List.of(new TransformOrchidGroupMutationResult(fixture.resultZone().getId(),
+							details(fixture.variety().getId(), 8, "0", "2"))),
+					date, "첫 번째 분할", Set.of()));
 		Long firstResultId = first.entries()
 			.stream()
 			.filter(entry -> !entry.orchidGroupId().equals(sourceId))
 			.findFirst()
 			.orElseThrow()
 			.orchidGroupId();
-		var second = mutationEngine.transform(new TransformOrchidGroupsMutationCommand(
-				source("stack-second", "EXECUTION:2"),
-				List.of(new TransformOrchidGroupMutationSource(firstResultId, 3, null, null)),
-				List.of(new TransformOrchidGroupMutationResult(fixture.sourceZone().getId(),
-						details(fixture.variety().getId(), 3, "6", "7"))),
-				date, "두 번째 분할", Set.of()));
+		var second = mutationEngine
+			.transform(new TransformOrchidGroupsMutationCommand(source("stack-second", "EXECUTION:2"),
+					List.of(new TransformOrchidGroupMutationSource(firstResultId, 3, null, null)),
+					List.of(new TransformOrchidGroupMutationResult(fixture.sourceZone().getId(),
+							details(fixture.variety().getId(), 3, "6", "7"))),
+					date, "두 번째 분할", Set.of()));
 
 		mutationEngine.compensateTransforms(new CompensateTransformMutationsCommand(
 				source("stack-void-second", "VOID:2"), List.of(second.mutationId()), date, "두 번째 작업 취소"));
@@ -131,12 +137,12 @@ class OrchidGroupRollbackAndReconciliationIntegrationTest extends AbstractBacken
 		var created = mutationEngine.create(new CreateOrchidGroupMutationCommand(source("blocked-create", "CREATE"),
 				fixture.sourceZone().getId(), details(fixture.variety().getId(), 20, "0", "4"), date, "원본 생성"));
 		Long sourceId = created.entries().getFirst().orchidGroupId();
-		var first = mutationEngine.transform(new TransformOrchidGroupsMutationCommand(
-				source("blocked-first", "EXECUTION:1"),
-				List.of(new TransformOrchidGroupMutationSource(sourceId, 8, null, null)),
-				List.of(new TransformOrchidGroupMutationResult(fixture.resultZone().getId(),
-						details(fixture.variety().getId(), 8, "0", "2"))),
-				date, "첫 번째 분할", Set.of()));
+		var first = mutationEngine
+			.transform(new TransformOrchidGroupsMutationCommand(source("blocked-first", "EXECUTION:1"),
+					List.of(new TransformOrchidGroupMutationSource(sourceId, 8, null, null)),
+					List.of(new TransformOrchidGroupMutationResult(fixture.resultZone().getId(),
+							details(fixture.variety().getId(), 8, "0", "2"))),
+					date, "첫 번째 분할", Set.of()));
 		Long firstResultId = first.entries()
 			.stream()
 			.filter(entry -> !entry.orchidGroupId().equals(sourceId))
@@ -163,9 +169,9 @@ class OrchidGroupRollbackAndReconciliationIntegrationTest extends AbstractBacken
 				fixture.sourceZone().getId(), details(fixture.variety().getId(), 20, "0", "4"), date, "원본 생성"));
 		Long groupId = created.entries().getFirst().orchidGroupId();
 
-		var reconciled = mutationEngine.reconcile(new ReconcileOrchidGroupMutationCommand(
-				source("sync", "RECONCILIATION"), groupId, 17, "실사 조정", fixture.resultZone().getId(),
-				new BigDecimal("2"), new BigDecimal("5"), date, "현장 실사 차이"));
+		var reconciled = mutationEngine
+			.reconcile(new ReconcileOrchidGroupMutationCommand(source("sync", "RECONCILIATION"), groupId, 17, "실사 조정",
+					fixture.resultZone().getId(), new BigDecimal("2"), new BigDecimal("5"), date, "현장 실사 차이"));
 
 		var group = orchidGroupRepository.findById(groupId).orElseThrow();
 		assertThat(reconciled.mutationType()).isEqualTo(OrchidGroupMutationType.RECONCILIATION);
@@ -204,4 +210,5 @@ class OrchidGroupRollbackAndReconciliationIntegrationTest extends AbstractBacken
 
 	private record Fixture(BedZone sourceZone, BedZone resultZone, Variety variety) {
 	}
+
 }

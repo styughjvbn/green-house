@@ -17,8 +17,8 @@ class MovementIdentityHistoryMigrationPostgresE2ETest extends WorkE2ETestBase {
 	@Test
 	void consolidatesHistoricalOneToOneMovementResultsIntoTheirOriginalGroupIds() {
 		String database = "movement_identity_" + UUID.randomUUID().toString().replace("-", "");
-		var admin = new JdbcTemplate(new DriverManagerDataSource(POSTGRES.getJdbcUrl(), POSTGRES.getUsername(),
-				POSTGRES.getPassword()));
+		var admin = new JdbcTemplate(
+				new DriverManagerDataSource(POSTGRES.getJdbcUrl(), POSTGRES.getUsername(), POSTGRES.getPassword()));
 		admin.execute("CREATE DATABASE " + database);
 		String url = POSTGRES.getJdbcUrl().replace("/" + POSTGRES.getDatabaseName(), "/" + database);
 		var dataSource = new DriverManagerDataSource(url, POSTGRES.getUsername(), POSTGRES.getPassword());
@@ -34,12 +34,13 @@ class MovementIdentityHistoryMigrationPostgresE2ETest extends WorkE2ETestBase {
 					SELECT id, quantity, state_revision, start_position, end_position
 					FROM orchid_groups WHERE id IN (1, 2, 11, 12) ORDER BY id
 					""")).containsExactly(
-					Map.of("id", 1L, "quantity", 10, "state_revision", 2L, "start_position",
-							new BigDecimal("20.00"), "end_position", new BigDecimal("21.00")),
-					Map.of("id", 2L, "quantity", 20, "state_revision", 1L, "start_position",
-							new BigDecimal("10.00"), "end_position", new BigDecimal("12.00")));
+					Map.of("id", 1L, "quantity", 10, "state_revision", 2L, "start_position", new BigDecimal("20.00"),
+							"end_position", new BigDecimal("21.00")),
+					Map.of("id", 2L, "quantity", 20, "state_revision", 1L, "start_position", new BigDecimal("10.00"),
+							"end_position", new BigDecimal("12.00")));
 			assertThat(jdbc.queryForObject("SELECT mutation_type FROM orchid_group_mutations WHERE id = 100",
-					String.class)).isEqualTo("MOVE");
+					String.class))
+				.isEqualTo("MOVE");
 			assertThat(jdbc.queryForList("""
 					SELECT orchid_group_id, role, state_revision_before, state_revision_after
 					FROM orchid_group_mutation_entries
@@ -52,13 +53,12 @@ class MovementIdentityHistoryMigrationPostgresE2ETest extends WorkE2ETestBase {
 			assertThat(jdbc.queryForList("""
 					SELECT orchid_group_id, state_revision_before, state_revision_after
 					FROM orchid_group_mutation_entries WHERE mutation_id = 101
-					""")).containsExactly(Map.of("orchid_group_id", 1L, "state_revision_before", 1L,
-						"state_revision_after", 2L));
+					""")).containsExactly(
+					Map.of("orchid_group_id", 1L, "state_revision_before", 1L, "state_revision_after", 2L));
 			assertThat(jdbc.queryForList("""
 					SELECT preserved_orchid_group_id, removed_orchid_group_id
 					FROM orchid_group_identity_migrations ORDER BY removed_orchid_group_id
-					""")).containsExactly(
-					Map.of("preserved_orchid_group_id", 1L, "removed_orchid_group_id", 11L),
+					""")).containsExactly(Map.of("preserved_orchid_group_id", 1L, "removed_orchid_group_id", 11L),
 					Map.of("preserved_orchid_group_id", 2L, "removed_orchid_group_id", 12L));
 			assertThat(jdbc.queryForObject("""
 					SELECT orchid_group_id FROM work_operation_targets WHERE id = 201
@@ -79,8 +79,8 @@ class MovementIdentityHistoryMigrationPostgresE2ETest extends WorkE2ETestBase {
 	@Test
 	void restoresSourceMetadataDroppedByTheLegacyOneToOneMovementTransformer() {
 		String database = "movement_metadata_" + UUID.randomUUID().toString().replace("-", "");
-		var admin = new JdbcTemplate(new DriverManagerDataSource(POSTGRES.getJdbcUrl(), POSTGRES.getUsername(),
-				POSTGRES.getPassword()));
+		var admin = new JdbcTemplate(
+				new DriverManagerDataSource(POSTGRES.getJdbcUrl(), POSTGRES.getUsername(), POSTGRES.getPassword()));
 		admin.execute("CREATE DATABASE " + database);
 		String url = POSTGRES.getJdbcUrl().replace("/" + POSTGRES.getDatabaseName(), "/" + database);
 		var dataSource = new DriverManagerDataSource(url, POSTGRES.getUsername(), POSTGRES.getPassword());
@@ -95,15 +95,18 @@ class MovementIdentityHistoryMigrationPostgresE2ETest extends WorkE2ETestBase {
 					SELECT id, quantity, status, memo, start_position, end_position
 					FROM orchid_groups WHERE id IN (21, 31)
 					""")).containsExactly(Map.of("id", 21L, "quantity", 10, "status", "정상", "memo", "원본 메모",
-						"start_position", new BigDecimal("5.00"), "end_position", new BigDecimal("6.00")));
+					"start_position", new BigDecimal("5.00"), "end_position", new BigDecimal("6.00")));
 			assertThat(jdbc.queryForObject("SELECT mutation_type FROM orchid_group_mutations WHERE id = 200",
-					String.class)).isEqualTo("MOVE");
+					String.class))
+				.isEqualTo("MOVE");
 			assertThat(jdbc.queryForObject("""
 					SELECT after_state ->> 'memo' FROM orchid_group_mutation_entries
 					WHERE mutation_id = 200 AND orchid_group_id = 21
 					""", String.class)).isEqualTo("원본 메모");
-			assertThat(jdbc.queryForObject("SELECT result_details FROM work_applied_effects WHERE id = 200",
-					String.class)).contains("\"identityPreserved\": true").contains("\"orchidGroupId\": 21");
+			assertThat(
+					jdbc.queryForObject("SELECT result_details FROM work_applied_effects WHERE id = 200", String.class))
+				.contains("\"identityPreserved\": true")
+				.contains("\"orchidGroupId\": 21");
 			assertThat(upgrade.migrate().migrationsExecuted).isZero();
 		}
 		finally {
@@ -226,10 +229,8 @@ class MovementIdentityHistoryMigrationPostgresE2ETest extends WorkE2ETestBase {
 
 	private void seedLegacyMetadataLoss(JdbcTemplate jdbc) {
 		Long zoneId = jdbc.queryForObject("SELECT min(id) FROM bed_zones", Long.class);
-		String source = metadataState(state(10, zoneId, 1, 0, 1, "정상"))
-			.replace("\"memo\":null", "\"memo\":\"원본 메모\"");
-		String closed = metadataState(state(0, zoneId, 1, 0, 1, "종료"))
-			.replace("\"memo\":null", "\"memo\":\"원본 메모\"");
+		String source = metadataState(state(10, zoneId, 1, 0, 1, "정상")).replace("\"memo\":null", "\"memo\":\"원본 메모\"");
+		String closed = metadataState(state(0, zoneId, 1, 0, 1, "종료")).replace("\"memo\":null", "\"memo\":\"원본 메모\"");
 		String result = metadataState(state(10, zoneId, 2, 5, 6, "정상"));
 		jdbc.execute("ALTER TABLE orchid_groups DISABLE TRIGGER USER");
 		jdbc.update("""
@@ -315,8 +316,7 @@ class MovementIdentityHistoryMigrationPostgresE2ETest extends WorkE2ETestBase {
 	}
 
 	private String metadataState(String state) {
-		return state.replace("\"varietyId\":9001", "\"varietyId\":9101")
-			.replace("이동 품종", "메모 품종");
+		return state.replace("\"varietyId\":9001", "\"varietyId\":9101").replace("이동 품종", "메모 품종");
 	}
 
 	private String state(int quantity, Long zoneId, int sortOrder, int start, int end, String status) {

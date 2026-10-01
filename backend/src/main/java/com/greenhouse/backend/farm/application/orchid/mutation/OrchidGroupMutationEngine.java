@@ -266,10 +266,8 @@ public class OrchidGroupMutationEngine {
 			return replay.get();
 		}
 		groups.values().forEach(this::requireBaseline);
-		Map<Long, BedZone> zones = findZonesForUpdate(command.items()
-			.stream()
-			.map(MoveOrchidGroupMutationItem::toBedZoneId)
-			.collect(Collectors.toSet()));
+		Map<Long, BedZone> zones = findZonesForUpdate(
+				command.items().stream().map(MoveOrchidGroupMutationItem::toBedZoneId).collect(Collectors.toSet()));
 		Set<Long> placementExclusions = new HashSet<>(command.placementExclusionOrchidGroupIds());
 		placementExclusions.addAll(groupIds);
 		validateBatchMovePlacements(command.items(), zones, placementExclusions);
@@ -491,9 +489,8 @@ public class OrchidGroupMutationEngine {
 	}
 
 	public OrchidGroupMutationResult compensateTransforms(CompensateTransformMutationsCommand command) {
-		return compensate(command, command.mutationIds(),
-				Set.of(OrchidGroupMutationType.TRANSFORM, OrchidGroupMutationType.MOVE,
-						OrchidGroupMutationType.DISCARD),
+		return compensate(command, command.mutationIds(), Set.of(OrchidGroupMutationType.TRANSFORM,
+				OrchidGroupMutationType.MOVE, OrchidGroupMutationType.DISCARD),
 				"구조 변경·자리 이동과 연관 선별 폐기 Mutation만 자동 무효화할 수 있습니다.");
 	}
 
@@ -510,8 +507,9 @@ public class OrchidGroupMutationEngine {
 			return replay.get();
 		}
 		List<OrchidGroupMutationEntry> entries = recorder.entries(mutationIds);
-		if (entries.isEmpty() || entries.stream().map(entry -> entry.getMutation().getId()).distinct().count()
-				!= mutationIds.size()) {
+		if (entries.isEmpty()
+				|| entries.stream().map(entry -> entry.getMutation().getId()).distinct().count() != mutationIds
+					.size()) {
 			throw new NotFoundException("무효화할 구조 변경 Mutation을 모두 찾을 수 없습니다.");
 		}
 		if (entries.stream().anyMatch(entry -> !allowedTypes.contains(entry.getMutation().getMutationType()))) {
@@ -535,10 +533,7 @@ public class OrchidGroupMutationEngine {
 		if (recorder.alreadyCompensated(mutationIds)) {
 			throw new IllegalArgumentException("이미 무효화된 구조 변경 작업입니다.");
 		}
-		List<OrchidGroupMutationEntry> latestEntries = entriesByGroup.values()
-			.stream()
-			.map(this::latestEntry)
-			.toList();
+		List<OrchidGroupMutationEntry> latestEntries = entriesByGroup.values().stream().map(this::latestEntry).toList();
 		if (effectiveHeadPolicy.countGroupsNotAtEffectiveHead(latestEntries, groups) > 0) {
 			throw new IllegalArgumentException("상쇄되지 않은 후속 변경이 있는 난 묶음은 작업을 무효화할 수 없습니다.");
 		}
@@ -581,8 +576,8 @@ public class OrchidGroupMutationEngine {
 		}
 		List<OrchidGroupMutation> originals = recorder.findRelated(RelatedOrchidGroupMutations.current(mutationIds),
 				entriesByGroup.keySet(), allowedTypes);
-		OrchidGroupMutation mutation = recorder.start(OrchidGroupMutationType.COMPENSATION, command.source(), fingerprint,
-				command.effectiveBusinessDate(), command.reason());
+		OrchidGroupMutation mutation = recorder.start(OrchidGroupMutationType.COMPENSATION, command.source(),
+				fingerprint, command.effectiveBusinessDate(), command.reason());
 		OrchidGroupMutationResult result = recorder.changed(mutation, changes);
 		recorder.relate(mutation, originals, OrchidGroupMutationRelationType.COMPENSATES);
 		return result;
@@ -605,12 +600,14 @@ public class OrchidGroupMutationEngine {
 	}
 
 	private OrchidGroupMutationEntry earliestEntry(List<OrchidGroupMutationEntry> entries) {
-		return entries.stream().min(java.util.Comparator.comparing(OrchidGroupMutationEntry::getStateRevisionAfter))
+		return entries.stream()
+			.min(java.util.Comparator.comparing(OrchidGroupMutationEntry::getStateRevisionAfter))
 			.orElseThrow();
 	}
 
 	private OrchidGroupMutationEntry latestEntry(List<OrchidGroupMutationEntry> entries) {
-		return entries.stream().max(java.util.Comparator.comparing(OrchidGroupMutationEntry::getStateRevisionAfter))
+		return entries.stream()
+			.max(java.util.Comparator.comparing(OrchidGroupMutationEntry::getStateRevisionAfter))
 			.orElseThrow();
 	}
 

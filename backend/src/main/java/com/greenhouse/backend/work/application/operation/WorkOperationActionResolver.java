@@ -26,9 +26,9 @@ class WorkOperationActionResolver {
 			case PAUSED -> List.of(WorkOperationAction.RESUME, WorkOperationAction.CANCEL);
 			case IN_PROGRESS -> allTargetsClosed(progress) ? List.of(WorkOperationAction.COMPLETE)
 					: List.of(WorkOperationAction.PAUSE, WorkOperationAction.CANCEL);
-			case COMPLETED, CORRECTED -> operation.getRelationType() == null
-					&& operation.getWorkType().supportsMutationVoid()
-					? List.of(WorkOperationAction.VOID) : List.of();
+			case COMPLETED, CORRECTED ->
+				operation.getRelationType() == null && operation.getWorkType().supportsMutationVoid()
+						? List.of(WorkOperationAction.VOID) : List.of();
 			case CANCELED, VOIDED -> List.of();
 		};
 	}

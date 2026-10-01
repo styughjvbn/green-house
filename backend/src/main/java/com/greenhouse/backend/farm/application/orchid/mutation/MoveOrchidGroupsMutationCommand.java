@@ -8,9 +8,9 @@ import java.util.Comparator;
 import java.util.List;
 import java.util.Set;
 
-public record MoveOrchidGroupsMutationCommand(OrchidGroupMutationSource source,
-		List<MoveOrchidGroupMutationItem> items, LocalDate effectiveBusinessDate,
-		String reason, Set<Long> placementExclusionOrchidGroupIds) implements OrchidGroupMutationCommand {
+public record MoveOrchidGroupsMutationCommand(OrchidGroupMutationSource source, List<MoveOrchidGroupMutationItem> items,
+		LocalDate effectiveBusinessDate, String reason,
+		Set<Long> placementExclusionOrchidGroupIds) implements OrchidGroupMutationCommand {
 
 	public MoveOrchidGroupsMutationCommand(OrchidGroupMutationSource source, List<MoveOrchidGroupMutationItem> items,
 			LocalDate effectiveBusinessDate, String reason) {

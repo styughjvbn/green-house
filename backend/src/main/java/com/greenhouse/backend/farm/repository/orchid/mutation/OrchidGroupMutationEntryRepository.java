@@ -34,8 +34,7 @@ public interface OrchidGroupMutationEntryRepository extends JpaRepository<Orchid
 			  and entry.entryKind = :entryKind
 			group by orchidGroup.inboundRecord.id
 			""")
-	List<InboundPottingDateRow> findInboundPottingDates(
-			@Param("inboundRecordIds") Collection<Long> inboundRecordIds,
+	List<InboundPottingDateRow> findInboundPottingDates(@Param("inboundRecordIds") Collection<Long> inboundRecordIds,
 			@Param("entryKind") OrchidGroupMutationEntryKind entryKind);
 
 	List<OrchidGroupMutationEntry> findByMutationIdInOrderByMutationIdAscIdAsc(Collection<Long> mutationIds);

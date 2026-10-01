@@ -22,6 +22,7 @@ import org.springframework.stereotype.Component;
 public class ReconciliationWorkHandler implements WorkEffectHandler {
 
 	private final OrchidGroupMutationEngine mutationEngine;
+
 	private final OrchidGroupRepository orchidGroupRepository;
 
 	@Override
@@ -41,12 +42,13 @@ public class ReconciliationWorkHandler implements WorkEffectHandler {
 		}
 		OrchidGroupReconciliationRequest request = command.payloadAs(OrchidGroupReconciliationRequest.class);
 		Long groupId = context.target().orchidGroupId();
-		var before = orchidGroupRepository.findById(groupId).map(OrchidGroupStateSnapshot::from)
+		var before = orchidGroupRepository.findById(groupId)
+			.map(OrchidGroupStateSnapshot::from)
 			.orElseThrow(() -> new IllegalArgumentException("현장 동기화 대상 난 묶음을 찾을 수 없습니다."));
 		var mutation = mutationEngine.reconcile(new ReconcileOrchidGroupMutationCommand(
 				OrchidGroupMutationSources.work(context.operationId(), command.effectKey()), groupId,
-				request.actualQuantity(), request.actualStatus(), request.actualBedZoneId(), request.actualStartPosition(),
-				request.actualEndPosition(), request.workDate(), request.reason()));
+				request.actualQuantity(), request.actualStatus(), request.actualBedZoneId(),
+				request.actualStartPosition(), request.actualEndPosition(), request.workDate(), request.reason()));
 		var after = orchidGroupRepository.findById(groupId).map(OrchidGroupStateSnapshot::from).orElseThrow();
 		var details = new LinkedHashMap<String, Object>();
 		details.put("orchidGroupId", groupId);
@@ -56,4 +58,5 @@ public class ReconciliationWorkHandler implements WorkEffectHandler {
 		return new WorkExecutionResult("RECONCILIATION", details, List.of(groupId),
 				new WorkMutationLink(mutation.mutationId(), mutation.correlationId()));
 	}
+
 }

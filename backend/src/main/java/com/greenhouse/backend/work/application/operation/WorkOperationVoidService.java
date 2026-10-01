@@ -23,10 +23,15 @@ import org.springframework.transaction.annotation.Transactional;
 public class WorkOperationVoidService {
 
 	private final WorkOperationRepository operationRepository;
+
 	private final WorkAppliedEffectRepository effectRepository;
+
 	private final StructureChangeVoidPort structureChangeVoidPort;
+
 	private final PottingVoidPort pottingVoidPort;
+
 	private final WorkOperationQueryService queryService;
+
 	private final WorkOperationSupport support;
 
 	@Transactional(readOnly = true)
@@ -49,9 +54,8 @@ public class WorkOperationVoidService {
 			blockers.add(new WorkOperationVoidEligibilityResponse.Blocker("UNSUPPORTED_OPERATION",
 					"완료된 구조 변경·폐기·포트 작업만 무효화할 수 있습니다.", 1));
 		}
-		var relatedDiscards = operation.getRelationType() == null
-				? operationRepository.findByParentOperationIdAndRelationTypeOrderByIdAsc(operationId,
-						WorkOperationRelationType.MOVEMENT_DISCARD)
+		var relatedDiscards = operation.getRelationType() == null ? operationRepository
+			.findByParentOperationIdAndRelationTypeOrderByIdAsc(operationId, WorkOperationRelationType.MOVEMENT_DISCARD)
 				: List.<WorkOperation>of();
 		relatedDiscards.forEach(discard -> {
 			relatedWorkOperationIds.add(discard.getId());
@@ -67,7 +71,11 @@ public class WorkOperationVoidService {
 			.flatMap(id -> effectRepository.findByWorkOperationIdOrderByIdAsc(id).stream())
 			.toList();
 		List<Long> mutationIds = effects.stream()
-			.map(effect -> effect.getMutationId()).filter(Objects::nonNull).distinct().sorted().toList();
+			.map(effect -> effect.getMutationId())
+			.filter(Objects::nonNull)
+			.distinct()
+			.sorted()
+			.toList();
 		boolean potting = operation.getWorkType().workflow() == WorkTypeWorkflow.POTTING;
 		List<Long> sourceIds;
 		List<Long> resultIds;
@@ -89,9 +97,8 @@ public class WorkOperationVoidService {
 			resultIds = inspection.resultOrchidGroupIds();
 			inspectionBlockers = inspection.blockers();
 		}
-		inspectionBlockers
-			.forEach(blocker -> blockers.add(new WorkOperationVoidEligibilityResponse.Blocker(blocker.code(),
-					blocker.message(), blocker.count())));
+		inspectionBlockers.forEach(blocker -> blockers
+			.add(new WorkOperationVoidEligibilityResponse.Blocker(blocker.code(), blocker.message(), blocker.count())));
 		return new WorkOperationVoidEligibilityResponse(operationId, blockers.isEmpty(), mutationIds, sourceIds,
 				resultIds, List.copyOf(relatedWorkOperationIds), List.copyOf(blockers));
 	}
@@ -127,13 +134,11 @@ public class WorkOperationVoidService {
 					operation.getPlannedStartDate(), reason);
 		}
 		var now = support.now();
-		List<WorkOperation> relatedDiscards = operationRepository
-			.findByParentOperationIdAndRelationTypeOrderByIdAsc(operationId,
-					WorkOperationRelationType.MOVEMENT_DISCARD);
+		List<WorkOperation> relatedDiscards = operationRepository.findByParentOperationIdAndRelationTypeOrderByIdAsc(
+				operationId, WorkOperationRelationType.MOVEMENT_DISCARD);
 		for (int index = relatedDiscards.size() - 1; index >= 0; index--) {
 			var discard = relatedDiscards.get(index);
-			effectRepository.findByWorkOperationIdOrderByIdAsc(discard.getId())
-				.forEach(effect -> effect.cancel(now));
+			effectRepository.findByWorkOperationIdOrderByIdAsc(discard.getId()).forEach(effect -> effect.cancel(now));
 			discard.voidCompletedMutationWork(now, reason, relatedRequestKey(requestKey, discard.getId()), mutationId);
 		}
 		effectRepository.findByWorkOperationIdOrderByIdAsc(operationId).forEach(effect -> effect.cancel(now));
@@ -159,7 +164,8 @@ public class WorkOperationVoidService {
 		var effects = effectRepository.findByWorkOperationIdOrderByIdAsc(operationId);
 		var portEffects = effects.stream()
 			.map(effect -> new PottingVoidPort.Effect(
-					effect.getTarget() == null ? null : effect.getTarget().getInboundRecordId(), effect.getMutationId()))
+					effect.getTarget() == null ? null : effect.getTarget().getInboundRecordId(),
+					effect.getMutationId()))
 			.toList();
 		var inspection = pottingVoidPort.inspect(operationId, portEffects);
 		if (!inspection.blockers().isEmpty()) {
@@ -177,4 +183,5 @@ public class WorkOperationVoidService {
 		int prefixLength = Math.max(1, 100 - suffix.length());
 		return requestKey.substring(0, Math.min(prefixLength, requestKey.length())) + suffix;
 	}
+
 }

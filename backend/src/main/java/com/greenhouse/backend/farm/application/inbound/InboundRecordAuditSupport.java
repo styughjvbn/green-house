@@ -32,8 +32,9 @@ public class InboundRecordAuditSupport {
 
 	public Long record(AuditAction action, InboundRecord record, Map<String, Object> before,
 			Map<String, Object> after) {
-		return auditWriter.record(action, AuditSource.INBOUND_MANAGEMENT, new AuditEvent.Target("INBOUND_RECORD",
-				record.getId(), null, null, null, record.getVariety().getId()), before, after, Map.of());
+		return auditWriter.record(action, AuditSource.INBOUND_MANAGEMENT,
+				new AuditEvent.Target("INBOUND_RECORD", record.getId(), null, null, null, record.getVariety().getId()),
+				before, after, Map.of());
 	}
 
 }

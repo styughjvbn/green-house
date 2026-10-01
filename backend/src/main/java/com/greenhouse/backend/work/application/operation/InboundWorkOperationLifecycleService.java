@@ -36,8 +36,8 @@ public class InboundWorkOperationLifecycleService {
 
 	public void voidInboundRegistrationForCancellation(Long inboundRecordId, String requestKey, String reason) {
 		WorkOperation operation = findSingleCompletedOperation(inboundRecordId, WorkTypeDefinition.INBOUND);
-		workOperationVoidService
-			.voidInboundRegistration(operation.getId(), new WorkOperationVoidRequest(requestKey, reason));
+		workOperationVoidService.voidInboundRegistration(operation.getId(),
+				new WorkOperationVoidRequest(requestKey, reason));
 	}
 
 	public void cancelForInboundRecord(Long inboundRecordId) {
@@ -83,12 +83,12 @@ public class InboundWorkOperationLifecycleService {
 			.distinct()
 			.toList();
 		if (operations.isEmpty()) {
-			throw new IllegalArgumentException(definition == WorkTypeDefinition.POTTING
-					? "취소할 완료 포트 작업을 찾을 수 없습니다." : "취소할 완료 입고 작업을 찾을 수 없습니다.");
+			throw new IllegalArgumentException(
+					definition == WorkTypeDefinition.POTTING ? "취소할 완료 포트 작업을 찾을 수 없습니다." : "취소할 완료 입고 작업을 찾을 수 없습니다.");
 		}
 		if (operations.size() > 1) {
-			throw new IllegalStateException(definition == WorkTypeDefinition.POTTING
-					? "취소되지 않은 완료 포트 작업이 여러 건입니다." : "완료 입고 작업이 여러 건입니다.");
+			throw new IllegalStateException(
+					definition == WorkTypeDefinition.POTTING ? "취소되지 않은 완료 포트 작업이 여러 건입니다." : "완료 입고 작업이 여러 건입니다.");
 		}
 		return operations.getFirst();
 	}

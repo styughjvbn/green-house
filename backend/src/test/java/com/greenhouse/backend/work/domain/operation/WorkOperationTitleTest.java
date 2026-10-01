@@ -24,18 +24,15 @@ class WorkOperationTitleTest {
 	void rejectsBlankOrTooLongTitle() {
 		WorkOperation operation = operation();
 
-		assertThatThrownBy(() -> operation.updateTitle("   "))
-			.isInstanceOf(IllegalArgumentException.class)
+		assertThatThrownBy(() -> operation.updateTitle("   ")).isInstanceOf(IllegalArgumentException.class)
 			.hasMessage("작업명이 필요합니다.");
-		assertThatThrownBy(() -> operation.updateTitle("가".repeat(151)))
-			.isInstanceOf(IllegalArgumentException.class)
+		assertThatThrownBy(() -> operation.updateTitle("가".repeat(151))).isInstanceOf(IllegalArgumentException.class)
 			.hasMessage("작업명은 150자 이하여야 합니다.");
 	}
 
 	private WorkOperation operation() {
 		return new WorkOperation(mock(WorkType.class), "기존 작업명", LocalDate.of(2026, 10, 1), null,
-				WorkSourceScopeType.NONE, null, Map.of(), Map.of(), null, null,
-				LocalDateTime.of(2026, 10, 1, 9, 0));
+				WorkSourceScopeType.NONE, null, Map.of(), Map.of(), null, null, LocalDateTime.of(2026, 10, 1, 9, 0));
 	}
 
 }

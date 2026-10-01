@@ -49,8 +49,8 @@ public class InboundRecordResponseAssembler {
 		}
 		return mutationEntryRepository.findInboundPottingDates(flaskInboundIds, OrchidGroupMutationEntryKind.CREATE)
 			.stream()
-			.collect(Collectors.toMap(
-					OrchidGroupMutationEntryRepository.InboundPottingDateRow::getInboundRecordId,
+			.collect(Collectors.toMap(OrchidGroupMutationEntryRepository.InboundPottingDateRow::getInboundRecordId,
 					OrchidGroupMutationEntryRepository.InboundPottingDateRow::getPottingDate));
 	}
+
 }

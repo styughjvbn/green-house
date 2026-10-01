@@ -57,10 +57,10 @@ public class RepotWorkOperationService {
 		details.put("increaseQuantity", increaseQuantity);
 		details.put("resultCount", request.results().size());
 		var operation = immediateWorkExecutionService.executeForTarget(normalizeRequired(request.idempotencyKey()),
-				WorkTypeDefinition.REPOT.name(), workOperationSupport
-					.varietyHistoryTitle(sourceGroup.getVarietyName(), WorkTypeDefinition.REPOT), request.workDate(),
-				normalize(request.worker()), normalize(request.memo()), request.sourceOrchidGroupId(), details,
-				request);
+				WorkTypeDefinition.REPOT.name(),
+				workOperationSupport.varietyHistoryTitle(sourceGroup.getVarietyName(), WorkTypeDefinition.REPOT),
+				request.workDate(), normalize(request.worker()), normalize(request.memo()),
+				request.sourceOrchidGroupId(), details, request);
 		return response(operation.id());
 	}
 

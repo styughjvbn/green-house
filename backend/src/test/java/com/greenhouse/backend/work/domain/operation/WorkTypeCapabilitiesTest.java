@@ -13,8 +13,7 @@ import org.junit.jupiter.params.provider.CsvSource;
 class WorkTypeCapabilitiesTest {
 
 	private static final Map<WorkTypeTemplate, String> TEMPLATE_HANDLERS = Map.ofEntries(
-			Map.entry(WorkTypeTemplate.PESTICIDE, "RECORD_ONLY"),
-			Map.entry(WorkTypeTemplate.FERTILIZER, "RECORD_ONLY"),
+			Map.entry(WorkTypeTemplate.PESTICIDE, "RECORD_ONLY"), Map.entry(WorkTypeTemplate.FERTILIZER, "RECORD_ONLY"),
 			Map.entry(WorkTypeTemplate.CLEANUP, "RECORD_ONLY"), Map.entry(WorkTypeTemplate.STATUS, "RECORD_ONLY"),
 			Map.entry(WorkTypeTemplate.MEMO, "RECORD_ONLY"), Map.entry(WorkTypeTemplate.REPOT, "REPOT"),
 			Map.entry(WorkTypeTemplate.MOVEMENT, "MOVE"), Map.entry(WorkTypeTemplate.DISCARD, "DISCARD"),
@@ -103,18 +102,18 @@ class WorkTypeCapabilitiesTest {
 	void exposesMutationVoidOnlyForSupportedWorkflows() {
 		assertThat(new WorkType("MOVEMENT", "자리 이동", WorkTypeTemplate.MOVEMENT, true, true, true, 1)
 			.supportsMutationVoid()).isTrue();
-		assertThat(new WorkType("REPOT", "분갈이", WorkTypeTemplate.REPOT, true, true, true, 1)
-			.supportsMutationVoid()).isTrue();
-		assertThat(new WorkType("DIVIDE", "분주", WorkTypeTemplate.REPOT, true, true, true, 1)
-			.supportsMutationVoid()).isTrue();
-		assertThat(new WorkType("MERGE", "합식", WorkTypeTemplate.REPOT, true, true, true, 1)
-			.supportsMutationVoid()).isTrue();
-		assertThat(new WorkType("DISCARD", "폐기", WorkTypeTemplate.DISCARD, true, true, true, 1)
-			.supportsMutationVoid()).isTrue();
-		assertThat(new WorkType("POTTING", "포트 작업", WorkTypeTemplate.REPOT, true, true, true, 1)
-			.supportsMutationVoid()).isTrue();
-		assertThat(new WorkType("RECONCILIATION", "현장 상태 동기화", WorkTypeTemplate.RECONCILIATION, true,
-				true, true, 1).supportsMutationVoid()).isFalse();
+		assertThat(new WorkType("REPOT", "분갈이", WorkTypeTemplate.REPOT, true, true, true, 1).supportsMutationVoid())
+			.isTrue();
+		assertThat(new WorkType("DIVIDE", "분주", WorkTypeTemplate.REPOT, true, true, true, 1).supportsMutationVoid())
+			.isTrue();
+		assertThat(new WorkType("MERGE", "합식", WorkTypeTemplate.REPOT, true, true, true, 1).supportsMutationVoid())
+			.isTrue();
+		assertThat(new WorkType("DISCARD", "폐기", WorkTypeTemplate.DISCARD, true, true, true, 1).supportsMutationVoid())
+			.isTrue();
+		assertThat(new WorkType("POTTING", "포트 작업", WorkTypeTemplate.REPOT, true, true, true, 1).supportsMutationVoid())
+			.isTrue();
+		assertThat(new WorkType("RECONCILIATION", "현장 상태 동기화", WorkTypeTemplate.RECONCILIATION, true, true, true, 1)
+			.supportsMutationVoid()).isFalse();
 	}
 
 	@Test

@@ -26,9 +26,11 @@ public class OrchidGroupReconciliationService {
 		var orchidGroup = orchidGroupReader.findDetailById(orchidGroupId)
 			.orElseThrow(() -> new NotFoundException("난 묶음을 찾을 수 없습니다."));
 		return immediateWorkExecutionService.executeForTarget(request.idempotencyKey(),
-				WorkTypeDefinition.RECONCILIATION.name(), workOperationSupport
-					.varietyHistoryTitle(orchidGroup.getVarietyName(), WorkTypeDefinition.RECONCILIATION),
-				request.workDate(), request.worker(),
-				request.memo(), orchidGroupId, Map.of("reason", request.reason().trim()), request);
+				WorkTypeDefinition.RECONCILIATION.name(),
+				workOperationSupport.varietyHistoryTitle(orchidGroup.getVarietyName(),
+						WorkTypeDefinition.RECONCILIATION),
+				request.workDate(), request.worker(), request.memo(), orchidGroupId,
+				Map.of("reason", request.reason().trim()), request);
 	}
+
 }

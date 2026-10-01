@@ -318,13 +318,14 @@ class WorkOperationIntegrationTests extends AbstractBackendIntegrationTest {
 		mockMvc.perform(get("/api/work-operations/{id}/void-eligibility", operationId))
 			.andExpect(status().isOk())
 			.andExpect(jsonPath("$.data.voidable").value(true));
-		mockMvc.perform(post("/api/work-operations/{id}/void", operationId).contentType(MediaType.APPLICATION_JSON)
-			.content("""
-					{
-					  "idempotencyKey": "void-independent-discard",
-					  "reason": "잘못 등록한 독립 폐기"
-					}
-					"""))
+		mockMvc
+			.perform(post("/api/work-operations/{id}/void", operationId).contentType(MediaType.APPLICATION_JSON)
+				.content("""
+						{
+						  "idempotencyKey": "void-independent-discard",
+						  "reason": "잘못 등록한 독립 폐기"
+						}
+						"""))
 			.andExpect(status().isOk())
 			.andExpect(jsonPath("$.data.status").value("VOIDED"));
 
@@ -342,25 +343,27 @@ class WorkOperationIntegrationTests extends AbstractBackendIntegrationTest {
 		anotherGroup.assignVariety(anotherVariety);
 		anotherGroup = saveOrchidGroup(anotherGroup);
 
-		mockMvc.perform(post("/api/work-operations/discard-records").contentType(MediaType.APPLICATION_JSON).content("""
-				{
-				  "operation": {
-				    "workTypeId": %d,
-				    "title": "품종별 폐기",
-				    "plannedStartDate": "2026-07-16",
-				    "plannedEndDate": "2026-07-16",
-				    "sourceScopeType": "MANUAL_SELECTION",
-				    "sourceOrchidGroupIds": [%d, %d]
-				  },
-				  "completedDate": "2026-07-16",
-				  "worker": "폐기 담당자",
-				  "results": [
-				    {"orchidGroupId": %d, "discardQuantity": 10, "reason": "상태 불량"},
-				    {"orchidGroupId": %d, "discardQuantity": 20, "reason": "상태 불량"}
-				  ]
-				}
-				""".formatted(discardType.getId(), targetGroup.getId(), anotherGroup.getId(), targetGroup.getId(),
-				anotherGroup.getId())))
+		mockMvc
+			.perform(post("/api/work-operations/discard-records").contentType(MediaType.APPLICATION_JSON)
+				.content("""
+						{
+						  "operation": {
+						    "workTypeId": %d,
+						    "title": "품종별 폐기",
+						    "plannedStartDate": "2026-07-16",
+						    "plannedEndDate": "2026-07-16",
+						    "sourceScopeType": "MANUAL_SELECTION",
+						    "sourceOrchidGroupIds": [%d, %d]
+						  },
+						  "completedDate": "2026-07-16",
+						  "worker": "폐기 담당자",
+						  "results": [
+						    {"orchidGroupId": %d, "discardQuantity": 10, "reason": "상태 불량"},
+						    {"orchidGroupId": %d, "discardQuantity": 20, "reason": "상태 불량"}
+						  ]
+						}
+						""".formatted(discardType.getId(), targetGroup.getId(), anotherGroup.getId(),
+						targetGroup.getId(), anotherGroup.getId())))
 			.andExpect(status().isCreated())
 			.andExpect(jsonPath("$.data", hasSize(2)))
 			.andExpect(jsonPath("$.data[*].title", hasItem("테스트 난 · 폐기")))

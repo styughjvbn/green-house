@@ -62,18 +62,17 @@ class DiscardRecordServiceTest {
 			.thenReturn(List.of(firstPlan, secondPlan));
 		when(progressService.start(10L)).thenReturn(firstPlan);
 		when(progressService.start(20L)).thenReturn(secondPlan);
-		when(progressService.completeTarget(eq(10L), eq(101L), argThat(request ->
-				Integer.valueOf(3).equals(request.resultDetails().get("discardQuantity"))
+		when(progressService.completeTarget(eq(10L), eq(101L),
+				argThat(request -> Integer.valueOf(3).equals(request.resultDetails().get("discardQuantity"))
 						&& "상태 불량".equals(request.resultDetails().get("reason")))))
 			.thenReturn(firstCompleted);
-		when(progressService.completeTarget(eq(20L), eq(202L), argThat(request ->
-				Integer.valueOf(4).equals(request.resultDetails().get("discardQuantity"))
+		when(progressService.completeTarget(eq(20L), eq(202L),
+				argThat(request -> Integer.valueOf(4).equals(request.resultDetails().get("discardQuantity"))
 						&& request.resultDetails().get("reason") == null)))
 			.thenReturn(secondCompleted);
 
-		var result = service.create(new DiscardRecordCreateRequest(operationRequest, LocalDate.of(2026, 10, 1),
-				"작업자", List.of(new DiscardRecordResultRequest(1L, 3, " 상태 불량 "),
-						new DiscardRecordResultRequest(2L, 4, " "))));
+		var result = service.create(new DiscardRecordCreateRequest(operationRequest, LocalDate.of(2026, 10, 1), "작업자",
+				List.of(new DiscardRecordResultRequest(1L, 3, " 상태 불량 "), new DiscardRecordResultRequest(2L, 4, " "))));
 
 		assertThat(result).containsExactly(firstCompleted, secondCompleted);
 		verify(progressService).start(10L);

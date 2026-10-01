@@ -20,9 +20,8 @@ public record WorkOperationView(Long id, Long workTypeId, String workTypeCode, S
 		WorkTypeTemplate workTypeTemplate, WorkTypeWorkflow workTypeWorkflow, String title, WorkOperationStatus status,
 		LocalDate plannedStartDate, LocalDate plannedEndDate, LocalDateTime actualStartAt, LocalDateTime actualEndAt,
 		WorkSourceScopeType sourceScopeType, Long sourceScopeId, Map<String, Object> sourceConditionSnapshot,
-		LocalDateTime targetSnapshotAt, Map<String, Object> details, String worker, String memo,
-		Long parentOperationId, WorkOperationRelationType relationType, LocalDateTime voidedAt, String voidReason,
-		Long voidMutationId,
+		LocalDateTime targetSnapshotAt, Map<String, Object> details, String worker, String memo, Long parentOperationId,
+		WorkOperationRelationType relationType, LocalDateTime voidedAt, String voidReason, Long voidMutationId,
 		WorkOperationProgress progress, List<WorkOperationTargetView> targets,
 		List<WorkOperationAction> availableActions) {
 
@@ -35,7 +34,8 @@ public record WorkOperationView(Long id, Long workTypeId, String workTypeCode, S
 				TimeConfig.toFarmTime(operation.getActualStartAt()), TimeConfig.toFarmTime(operation.getActualEndAt()),
 				operation.getSourceScopeType(), operation.getSourceScopeId(), operation.getSourceConditionSnapshot(),
 				TimeConfig.toFarmTime(operation.getTargetSnapshotAt()), operation.getDetails(), operation.getWorker(),
-				operation.getMemo(), operation.getParentOperation() == null ? null : operation.getParentOperation().getId(),
+				operation.getMemo(),
+				operation.getParentOperation() == null ? null : operation.getParentOperation().getId(),
 				operation.getRelationType(), TimeConfig.toFarmTime(operation.getVoidedAt()), operation.getVoidReason(),
 				operation.getVoidMutationId(), WorkOperationProgress.from(targets), targets, availableActions);
 	}

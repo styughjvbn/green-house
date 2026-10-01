@@ -249,8 +249,7 @@ public class WorkOperation extends BaseEntity {
 			return;
 		}
 		if ((status != WorkOperationStatus.COMPLETED && status != WorkOperationStatus.CORRECTED)
-				|| (!workType.supportsMutationVoid()
-						&& relationType != WorkOperationRelationType.MOVEMENT_DISCARD)) {
+				|| (!workType.supportsMutationVoid() && relationType != WorkOperationRelationType.MOVEMENT_DISCARD)) {
 			throw new IllegalArgumentException("완료된 구조 변경·폐기·포트 또는 자리 이동 연관 폐기 작업만 무효화할 수 있습니다.");
 		}
 		if (reason == null || reason.isBlank() || requestKey == null || requestKey.isBlank()
@@ -269,8 +268,7 @@ public class WorkOperation extends BaseEntity {
 		if (status == WorkOperationStatus.VOIDED) {
 			return;
 		}
-		if (status != WorkOperationStatus.COMPLETED
-				|| !WorkTypeDefinition.INBOUND.name().equals(workType.getCode())) {
+		if (status != WorkOperationStatus.COMPLETED || !WorkTypeDefinition.INBOUND.name().equals(workType.getCode())) {
 			throw new IllegalArgumentException("완료된 즉시 배치 입고 작업만 무효화할 수 있습니다.");
 		}
 		if (reason == null || reason.isBlank() || requestKey == null || requestKey.isBlank()

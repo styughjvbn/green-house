@@ -8,7 +8,8 @@ import java.time.LocalDate;
 
 public record ReconcileOrchidGroupMutationCommand(OrchidGroupMutationSource source, Long orchidGroupId,
 		Integer actualQuantity, String actualStatus, Long actualBedZoneId, BigDecimal actualStartPosition,
-		BigDecimal actualEndPosition, LocalDate effectiveBusinessDate, String reason) implements OrchidGroupMutationCommand {
+		BigDecimal actualEndPosition, LocalDate effectiveBusinessDate,
+		String reason) implements OrchidGroupMutationCommand {
 
 	public ReconcileOrchidGroupMutationCommand {
 		if (source == null || orchidGroupId == null || actualBedZoneId == null || effectiveBusinessDate == null) {

@@ -31,4 +31,5 @@ public class WorkOperationVoidController {
 			@Valid @RequestBody WorkOperationVoidRequest request) {
 		return ApiResponse.ok(service.voidOperation(workOperationId, request));
 	}
+
 }
