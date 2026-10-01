@@ -81,6 +81,21 @@ public enum WorkTypeDefinition {
 				|| workflow == WorkTypeWorkflow.POTTING;
 	}
 
+	public String historyTitle() {
+		return switch (this) {
+			case INBOUND -> "입고";
+			case POTTING -> "포트 식재";
+			case MOVEMENT -> "자리 이동";
+			case REPOT -> "분갈이";
+			case DIVIDE -> "분주";
+			case MERGE -> "합식";
+			case DISCARD -> "폐기";
+			case CORRECTION -> "보정";
+			case RECONCILIATION -> "현장 상태 조정";
+			case GENERIC -> null;
+		};
+	}
+
 	public static Set<String> requiredHandlerCodes() {
 		return Stream
 			.concat(Arrays.stream(values()).map(definition -> definition.handlerOverride).filter(Objects::nonNull),

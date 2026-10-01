@@ -2,6 +2,7 @@ package com.greenhouse.backend.work.application.operation;
 
 import com.greenhouse.backend.common.application.RequestActorProvider;
 import com.greenhouse.backend.common.config.TimeConfig;
+import com.greenhouse.backend.work.domain.operation.WorkTypeDefinition;
 import java.time.Clock;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -10,6 +11,8 @@ import org.springframework.stereotype.Component;
 
 @Component
 public class WorkOperationSupport {
+
+	private static final int MAX_TITLE_LENGTH = 150;
 
 	private final Clock clock;
 
@@ -62,6 +65,27 @@ public class WorkOperationSupport {
 			throw new IllegalArgumentException("필수 문자열 값은 비워둘 수 없습니다.");
 		}
 		return normalized;
+	}
+
+	public String varietyHistoryTitle(String varietyName, WorkTypeDefinition definition) {
+		String eventTitle = definition == null ? null : definition.historyTitle();
+		if (eventTitle == null) {
+			throw new IllegalArgumentException("자동 이력 제목을 지원하지 않는 작업 유형입니다.");
+		}
+		return joinTitle(normalizeRequired(varietyName), eventTitle, " · ");
+	}
+
+	public String followUpHistoryTitle(String originalTitle, String suffix) {
+		return joinTitle(normalizeRequired(originalTitle), normalizeRequired(suffix), " ");
+	}
+
+	private String joinTitle(String prefix, String suffix, String separator) {
+		int prefixLimit = MAX_TITLE_LENGTH - separator.length() - suffix.length();
+		if (prefixLimit < 1) {
+			throw new IllegalArgumentException("자동 이력 제목은 150자 이하여야 합니다.");
+		}
+		String fittedPrefix = prefix.length() <= prefixLimit ? prefix : prefix.substring(0, prefixLimit).stripTrailing();
+		return fittedPrefix + separator + suffix;
 	}
 
 	public String actor(String requestedActor) {

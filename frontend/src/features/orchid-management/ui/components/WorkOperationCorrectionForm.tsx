@@ -25,7 +25,6 @@ export default function WorkOperationCorrectionForm({
   const queryClient = useQueryClient();
   const { businessDate } = useRuntimeContext();
   const [idempotencyKey, setIdempotencyKey] = useState(createUuid);
-  const [title, setTitle] = useState(`${orchidGroup.varietyName} 결과 보정`);
   const [workDate, setWorkDate] = useState(businessDate);
   const [quantity, setQuantity] = useState(String(orchidGroup.quantity));
   const [status, setStatus] = useState(orchidGroup.status);
@@ -71,8 +70,8 @@ export default function WorkOperationCorrectionForm({
       setError("수량은 0 이상의 정수로 입력해주세요.");
       return;
     }
-    if (!status.trim() || !reason.trim() || !title.trim()) {
-      setError("작업명, 상태, 보정 사유를 입력해주세요.");
+    if (!status.trim() || !reason.trim()) {
+      setError("상태와 보정 사유를 입력해주세요.");
       return;
     }
     if (
@@ -91,7 +90,7 @@ export default function WorkOperationCorrectionForm({
         originalWorkOperationId,
         {
           idempotencyKey,
-          title: title.trim(),
+          title: `${corrections?.originalOperation.title ?? orchidGroup.varietyName} 보정`,
           workDate,
           worker: worker.trim() || null,
           memo: memo.trim() || null,
@@ -149,7 +148,6 @@ export default function WorkOperationCorrectionForm({
 
       <form className="mt-3 space-y-3" onSubmit={submit}>
         <div className="grid grid-cols-2 gap-2">
-          <Field label="보정 작업명" value={title} onChange={setTitle} />
           <Field
             label="보정 후 작업일"
             type="date"

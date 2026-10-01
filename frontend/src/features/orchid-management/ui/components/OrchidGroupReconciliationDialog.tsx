@@ -71,7 +71,7 @@ export default function OrchidGroupReconciliationDialog({
     mutationFn: () =>
       reconcileOrchidGroup(orchidGroup.id, {
         idempotencyKey,
-        title: `${orchidGroup.varietyName} 현장 상태 동기화`,
+        title: `${orchidGroup.varietyName} · 현장 상태 조정`,
         workDate,
         worker: worker.trim() || null,
         memo: memo.trim() || null,

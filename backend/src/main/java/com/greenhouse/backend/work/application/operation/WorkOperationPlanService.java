@@ -71,7 +71,7 @@ public class WorkOperationPlanService {
 		List<VarietyTargetGroup> varietyGroups = groupTargetsByVariety(resolvedSelection.included());
 		return varietyGroups.stream()
 			.map(group -> queryService
-				.get(createOperation(batchOperationRequest(operationRequest, group, varietyGroups.size()), workType,
+				.get(createOperation(batchOperationRequest(operationRequest), workType,
 						new ResolvedSelection(resolvedSelection.selection(), resolvedSelection.included()
 							.stream()
 							.filter(target -> group.targetIds().contains(target.orchidGroupId()))
@@ -102,7 +102,10 @@ public class WorkOperationPlanService {
 		support.validateDates(request.plannedStartDate(), request.plannedEndDate());
 		validateSingleVariety(workType.getCode(), resolvedSelection.included());
 		WorkTargetSelection targetSelection = resolvedSelection.selection();
-		WorkOperation operation = new WorkOperation(workType, support.normalizeRequired(request.title()),
+		String title = workType.definition().requiresVarietySpecificOperation()
+				? support.varietyHistoryTitle(resolvedSelection.included().getFirst().varietyName(), workType.definition())
+				: support.normalizeRequired(request.title());
+		WorkOperation operation = new WorkOperation(workType, title,
 				request.plannedStartDate(), request.plannedEndDate(), targetSelection.sourceScopeType(),
 				targetSelection.sourceScopeId(), targetSelection.conditionSnapshot(), request.details(),
 				support.actor(request.worker()), support.normalize(request.memo()), support.now());
@@ -142,34 +145,25 @@ public class WorkOperationPlanService {
 		Map<String, VarietyTargetGroup> grouped = new LinkedHashMap<>();
 		for (ResolvedWorkTarget target : targets) {
 			String key = target.varietyId() == null ? "name:" + target.varietyName() : "id:" + target.varietyId();
-			grouped.computeIfAbsent(key, ignored -> new VarietyTargetGroup(target.varietyName()))
+			grouped.computeIfAbsent(key, ignored -> new VarietyTargetGroup())
 				.targetIds()
 				.add(target.orchidGroupId());
 		}
 		return List.copyOf(grouped.values());
 	}
 
-	private WorkOperationCreateRequest batchOperationRequest(WorkOperationCreateRequest request,
-			VarietyTargetGroup group, int varietyCount) {
-		return new WorkOperationCreateRequest(request.workTypeId(),
-				varietyTitle(request.title(), group.varietyName(), varietyCount), request.plannedStartDate(),
+	private WorkOperationCreateRequest batchOperationRequest(WorkOperationCreateRequest request) {
+		return new WorkOperationCreateRequest(request.workTypeId(), request.title(), request.plannedStartDate(),
 				request.plannedEndDate(), WorkTargetSelection.from(request), request.details(), request.worker(),
 				request.memo(), List.of());
-	}
-
-	private String varietyTitle(String baseTitle, String varietyName, int varietyCount) {
-		if (varietyCount <= 1 || varietyName == null || varietyName.isBlank()) {
-			return support.normalizeRequired(baseTitle);
-		}
-		return support.normalizeRequired(baseTitle) + " - " + varietyName;
 	}
 
 	private record ResolvedSelection(WorkTargetSelection selection, List<ResolvedWorkTarget> included) {
 	}
 
-	private record VarietyTargetGroup(String varietyName, List<Long> targetIds) {
-		private VarietyTargetGroup(String varietyName) {
-			this(varietyName, new ArrayList<>());
+	private record VarietyTargetGroup(List<Long> targetIds) {
+		private VarietyTargetGroup() {
+			this(new ArrayList<>());
 		}
 	}
 

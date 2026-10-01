@@ -54,7 +54,8 @@ public class InboundWorkOperationRecorder {
 			details.put("createdOrchidGroupIds", request.createdOrchidGroupIds());
 		}
 		WorkOperation operation = workOperationRepository
-			.save(new WorkOperation(workType, request.varietyName().trim() + " 입고", request.workDate(),
+			.save(new WorkOperation(workType,
+					support.varietyHistoryTitle(request.varietyName(), WorkTypeDefinition.INBOUND), request.workDate(),
 					request.workDate(), WorkSourceScopeType.INBOUND_RECORD_SELECTION, null,
 					Map.of("inboundRecordIds", List.of(request.inboundRecordId())), details,
 					support.actor(request.worker()), normalize(request.memo()), support.now()));

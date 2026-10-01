@@ -4,6 +4,7 @@ import com.greenhouse.backend.common.application.RequestActorProvider;
 import com.greenhouse.backend.common.exception.NotFoundException;
 import com.greenhouse.backend.work.application.correction.WorkCorrectionCommand;
 import com.greenhouse.backend.work.application.operation.ImmediateWorkExecutionService;
+import com.greenhouse.backend.work.application.operation.WorkOperationSupport;
 import com.greenhouse.backend.work.application.operation.WorkOperationQueryService;
 import com.greenhouse.backend.work.domain.correction.WorkOperationCorrection;
 import com.greenhouse.backend.work.domain.operation.WorkOperation;
@@ -38,6 +39,8 @@ public class WorkOperationCorrectionService {
 
 	private final RequestActorProvider requestActorProvider;
 
+	private final WorkOperationSupport support;
+
 	public WorkOperationCorrectionsResponse create(Long originalWorkOperationId, WorkCorrectionCommand request) {
 		WorkOperation original = findCorrectableOriginal(originalWorkOperationId);
 		String reason = normalizeRequired(request.reason());
@@ -45,8 +48,9 @@ public class WorkOperationCorrectionService {
 		details.put("originalWorkOperationId", originalWorkOperationId);
 		details.put("reason", reason);
 		var correctionOperation = immediateWorkExecutionService.execute(normalizeRequired(request.idempotencyKey()),
-				WorkTypeDefinition.CORRECTION.name(), normalizeRequired(request.title()), request.workDate(),
-				requestActorProvider.resolve(request.worker()), normalize(request.memo()), details, request);
+				WorkTypeDefinition.CORRECTION.name(), support.followUpHistoryTitle(original.getTitle(), "보정"),
+				request.workDate(), requestActorProvider.resolve(request.worker()), normalize(request.memo()), details,
+				request);
 		WorkOperation correction = workOperationRepository.findWithWorkTypeById(correctionOperation.id())
 			.orElseThrow(() -> new NotFoundException("보정 작업을 찾을 수 없습니다."));
 		correctionRepository.findByCorrectionWorkOperationId(correction.getId())

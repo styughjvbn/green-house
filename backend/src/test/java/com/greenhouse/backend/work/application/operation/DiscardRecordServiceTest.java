@@ -38,12 +38,15 @@ class DiscardRecordServiceTest {
 	@Mock
 	WorkOperationQueryService queryService;
 
+	@Mock
+	WorkOperationSupport support;
+
 	DiscardRecordService service;
 
 	@BeforeEach
 	void setUp() {
 		service = new DiscardRecordService(planService, progressService, workTypeService, operationRepository,
-				queryService);
+				queryService, support);
 	}
 
 	@Test

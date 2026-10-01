@@ -129,6 +129,19 @@ class WorkTypeCapabilitiesTest {
 	}
 
 	@Test
+	void providesStableAutomaticHistoryTitlesForManagedTypes() {
+		assertThat(WorkTypeDefinition.INBOUND.historyTitle()).isEqualTo("입고");
+		assertThat(WorkTypeDefinition.POTTING.historyTitle()).isEqualTo("포트 식재");
+		assertThat(WorkTypeDefinition.MOVEMENT.historyTitle()).isEqualTo("자리 이동");
+		assertThat(WorkTypeDefinition.REPOT.historyTitle()).isEqualTo("분갈이");
+		assertThat(WorkTypeDefinition.DIVIDE.historyTitle()).isEqualTo("분주");
+		assertThat(WorkTypeDefinition.MERGE.historyTitle()).isEqualTo("합식");
+		assertThat(WorkTypeDefinition.DISCARD.historyTitle()).isEqualTo("폐기");
+		assertThat(WorkTypeDefinition.RECONCILIATION.historyTitle()).isEqualTo("현장 상태 조정");
+		assertThat(WorkTypeDefinition.GENERIC.historyTitle()).isNull();
+	}
+
+	@Test
 	void doesNotExposeUnsupportedCustomStructureTemplate() {
 		WorkType workType = new WorkType("CUSTOM_REPOT", "사용자 분갈이", WorkTypeTemplate.REPOT, false, false, true, 1);
 

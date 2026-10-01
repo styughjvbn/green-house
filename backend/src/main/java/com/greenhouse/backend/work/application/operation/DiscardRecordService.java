@@ -42,6 +42,8 @@ public class DiscardRecordService {
 
 	private final WorkOperationQueryService queryService;
 
+	private final WorkOperationSupport support;
+
 	public List<WorkOperationView> create(DiscardRecordCreateRequest request) {
 		List<WorkOperationView> plannedOperations = planService
 			.createBatch(new WorkOperationBatchCreateRequest(request.operation()));
@@ -105,6 +107,9 @@ public class DiscardRecordService {
 		WorkOperationView created = createdOperations.getFirst();
 		WorkOperation discardOperation = operationRepository.findById(created.id())
 			.orElseThrow(() -> new IllegalStateException("생성된 폐기 작업을 찾을 수 없습니다."));
+		discardOperation.updateTitle(support.followUpHistoryTitle(
+				support.varietyHistoryTitle(created.targets().getFirst().varietyName(), WorkTypeDefinition.MOVEMENT),
+				"후 폐기"));
 		discardOperation.linkToParent(movementOperation, WorkOperationRelationType.MOVEMENT_DISCARD);
 		return queryService.get(discardOperation.getId());
 	}

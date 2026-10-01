@@ -183,8 +183,8 @@ class WorkOperationIntegrationTests extends AbstractBackendIntegrationTest {
 				""".formatted(repotType.getId(), targetGroup.getId(), anotherGroup.getId())))
 			.andExpect(status().isCreated())
 			.andExpect(jsonPath("$.data", hasSize(2)))
-			.andExpect(jsonPath("$.data[*].title", hasItem("품종별 분갈이 - 테스트 난")))
-			.andExpect(jsonPath("$.data[*].title", hasItem("품종별 분갈이 - 다른 품종")));
+			.andExpect(jsonPath("$.data[*].title", hasItem("테스트 난 · 분갈이")))
+			.andExpect(jsonPath("$.data[*].title", hasItem("다른 품종 · 분갈이")));
 
 		org.assertj.core.api.Assertions.assertThat(workOperationRepository.count()).isEqualTo(2);
 		org.assertj.core.api.Assertions.assertThat(workOperationTargetRepository.count()).isEqualTo(2);
@@ -363,8 +363,8 @@ class WorkOperationIntegrationTests extends AbstractBackendIntegrationTest {
 				anotherGroup.getId())))
 			.andExpect(status().isCreated())
 			.andExpect(jsonPath("$.data", hasSize(2)))
-			.andExpect(jsonPath("$.data[*].title", hasItem("품종별 폐기 - 테스트 난")))
-			.andExpect(jsonPath("$.data[*].title", hasItem("품종별 폐기 - 폐기 대상 품종")))
+			.andExpect(jsonPath("$.data[*].title", hasItem("테스트 난 · 폐기")))
+			.andExpect(jsonPath("$.data[*].title", hasItem("폐기 대상 품종 · 폐기")))
 			.andExpect(jsonPath("$.data[*].status", everyItem(is("COMPLETED"))))
 			.andExpect(jsonPath("$.data[*].targets", everyItem(hasSize(1))));
 

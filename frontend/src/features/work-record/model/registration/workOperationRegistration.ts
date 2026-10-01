@@ -69,7 +69,8 @@ export function getSaveUnavailableReason({
     return "이 작업 유형은 작업 기록을 지원하지 않습니다.";
   if (registrationMode === "PLAN" && !definition.planSupported)
     return "이 작업 유형은 작업 계획을 지원하지 않습니다.";
-  if (!form.title.trim()) return "작업명을 입력해주세요.";
+  if (definition.workflow === "GENERIC" && !form.title.trim())
+    return "작업명을 입력해주세요.";
   if (!form.plannedStartDate) return "작업일 또는 시작일을 입력해주세요.";
   if (isInboundPotting) {
     return inboundRecordIds.size === 0

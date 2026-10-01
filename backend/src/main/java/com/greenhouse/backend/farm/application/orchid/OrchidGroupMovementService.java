@@ -9,6 +9,7 @@ import com.greenhouse.backend.farm.domain.orchid.OrchidGroup;
 import com.greenhouse.backend.farm.dto.orchid.OrchidGroupMoveRequest;
 import com.greenhouse.backend.farm.dto.orchid.OrchidGroupResponse;
 import com.greenhouse.backend.work.application.operation.ImmediateWorkExecutionService;
+import com.greenhouse.backend.work.application.operation.WorkOperationSupport;
 import com.greenhouse.backend.work.domain.operation.WorkTypeDefinition;
 import java.math.BigDecimal;
 import java.time.Clock;
@@ -34,6 +35,8 @@ public class OrchidGroupMovementService {
 
 	private final OrchidGroupAuditSupport auditSupport;
 
+	private final WorkOperationSupport workOperationSupport;
+
 	public OrchidGroupResponse move(Long orchidGroupId, OrchidGroupMoveRequest request) {
 		var businessDate = TimeConfig.farmToday(clock);
 		var orchidGroup = orchidGroupReader.findDetailById(orchidGroupId)
@@ -52,7 +55,9 @@ public class OrchidGroupMovementService {
 		putIfNotNull(details, "memo", request.memo());
 
 		immediateWorkExecutionService.executeForTarget("DIRECT_MOVE:" + UUID.randomUUID(),
-				WorkTypeDefinition.MOVEMENT.name(), "자리 이동", businessDate, worker, request.memo(), orchidGroupId,
+				WorkTypeDefinition.MOVEMENT.name(),
+				workOperationSupport.varietyHistoryTitle(orchidGroup.getVarietyName(), WorkTypeDefinition.MOVEMENT),
+				businessDate, worker, request.memo(), orchidGroupId,
 				details, request);
 		OrchidGroup moved = orchidGroupReader.findDetailById(orchidGroupId)
 			.orElseThrow(() -> new NotFoundException("난 묶음을 찾을 수 없습니다."));

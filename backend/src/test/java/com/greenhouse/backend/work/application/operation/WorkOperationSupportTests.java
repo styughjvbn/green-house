@@ -3,6 +3,7 @@ package com.greenhouse.backend.work.application.operation;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
+import com.greenhouse.backend.work.domain.operation.WorkTypeDefinition;
 import java.time.Clock;
 import java.time.Instant;
 import java.time.LocalDate;
@@ -27,6 +28,22 @@ class WorkOperationSupportTests {
 		assertThatThrownBy(() -> support.completionTime(LocalDate.of(2026, 7, 22)))
 			.isInstanceOf(IllegalArgumentException.class)
 			.hasMessage("완료일은 오늘 이후로 입력할 수 없습니다.");
+	}
+
+	@Test
+	void formatsVarietyAndFollowUpHistoryTitles() {
+		assertThat(support.varietyHistoryTitle(" 청금 ", WorkTypeDefinition.MOVEMENT)).isEqualTo("청금 · 자리 이동");
+		assertThat(support.followUpHistoryTitle("청금 · 자리 이동", "후 폐기"))
+			.isEqualTo("청금 · 자리 이동 후 폐기");
+	}
+
+	@Test
+	void keepsAnAutomaticTitleWithinTheDatabaseLimit() {
+		String longVarietyName = "가".repeat(150);
+
+		assertThat(support.varietyHistoryTitle(longVarietyName, WorkTypeDefinition.RECONCILIATION))
+			.hasSize(150)
+			.endsWith(" · 현장 상태 조정");
 	}
 
 }

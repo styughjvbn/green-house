@@ -209,7 +209,7 @@ class MovementBatchWorkOperationIntegrationTests extends AbstractBackendIntegrat
 			.containsEntry("allocationMethod", "PROPORTIONAL_BY_INPUT_QUANTITY")
 			.containsEntry("totalDiscardQuantity", 4)
 			.doesNotContainKeys("movementOperationId", "relation");
-		assertThat(discardOperations.getFirst().getTitle()).endsWith("이동 후 잔여 난 폐기");
+		assertThat(discardOperations.getFirst().getTitle()).endsWith("자리 이동 후 폐기");
 		assertThat(discardOperations.getFirst().getParentOperation().getId()).isEqualTo(operationId);
 		assertThat(discardOperations.getFirst().getRelationType())
 			.isEqualTo(WorkOperationRelationType.MOVEMENT_DISCARD);
