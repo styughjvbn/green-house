@@ -1,9 +1,9 @@
 package com.greenhouse.backend.farm.controller.orchid;
 
 import com.greenhouse.backend.common.api.ApiResponse;
+import com.greenhouse.backend.common.exception.ConflictException;
 import com.greenhouse.backend.farm.application.orchid.OrchidGroupCommandService;
 import com.greenhouse.backend.farm.application.orchid.OrchidGroupMovementService;
-import com.greenhouse.backend.farm.application.orchid.OrchidGroupReconciliationService;
 import com.greenhouse.backend.farm.dto.orchid.OrchidGroupBatchUpdateRequest;
 import com.greenhouse.backend.farm.dto.orchid.OrchidGroupCreateRequest;
 import com.greenhouse.backend.farm.dto.orchid.OrchidGroupMoveRequest;
@@ -32,8 +32,6 @@ public class OrchidGroupCommandController {
 	private final OrchidGroupCommandService orchidGroupCommandService;
 
 	private final OrchidGroupMovementService orchidGroupMovementService;
-
-	private final OrchidGroupReconciliationService orchidGroupReconciliationService;
 
 	@PostMapping
 	@ResponseStatus(HttpStatus.CREATED)
@@ -69,7 +67,8 @@ public class OrchidGroupCommandController {
 	@ResponseStatus(HttpStatus.CREATED)
 	public ApiResponse<WorkOperationView> reconcile(@PathVariable Long orchidGroupId,
 			@Valid @RequestBody OrchidGroupReconciliationRequest request) {
-		return ApiResponse.ok(orchidGroupReconciliationService.reconcile(orchidGroupId, request));
+		// TODO: 보류 - 현장 상태 동기화 정책을 재검토한 뒤 다시 활성화한다.
+		throw new ConflictException("FEATURE_ON_HOLD", "현장 상태 동기화 기능은 보류 중입니다.");
 	}
 
 }

@@ -32,6 +32,9 @@ import CopiedOrchidGroupPanel from "./CopiedOrchidGroupPanel";
 import OrchidGroupList from "./OrchidGroupList";
 import OrchidGroupMutationPanel from "./OrchidGroupMutationPanel";
 
+// TODO: 보류 - 현장 상태 동기화 정책을 재검토한 뒤 진입 버튼을 다시 노출한다.
+const RECONCILIATION_ENABLED = false;
+
 export default function OrchidSelectionPanel({
   copiedOrchidGroup,
   errorMessage,
@@ -546,14 +549,16 @@ export default function OrchidSelectionPanel({
                     onClick={onOpenMovementRecord}
                     disabled={!selectedOrchidGroup}
                   />
-                  <div className="col-span-2">
-                    <ActionButton
-                      icon={<RefreshCcw className="h-4 w-4" />}
-                      label="현장 상태 동기화"
-                      onClick={onOpenReconciliation}
-                      disabled={!selectedOrchidGroup}
-                    />
-                  </div>
+                  {RECONCILIATION_ENABLED ? (
+                    <div className="col-span-2">
+                      <ActionButton
+                        icon={<RefreshCcw className="h-4 w-4" />}
+                        label="현장 상태 동기화"
+                        onClick={onOpenReconciliation}
+                        disabled={!selectedOrchidGroup}
+                      />
+                    </div>
+                  ) : null}
                 </div>
               ) : null}
             </div>
