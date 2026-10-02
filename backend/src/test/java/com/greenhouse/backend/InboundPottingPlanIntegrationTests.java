@@ -573,9 +573,9 @@ class InboundPottingPlanIntegrationTests extends AbstractBackendIntegrationTest 
 		Long operationId = Long.valueOf(
 				planned.getResponse().getContentAsString().replaceAll(".*?\\\"data\\\":\\{\\\"id\\\":(\\d+).*", "$1"));
 
-		mockMvc.perform(post("/api/work-operations/{id}/cancel", operationId))
+		mockMvc.perform(post("/api/work-operations/{id}/end-remaining", operationId))
 			.andExpect(status().isOk())
-			.andExpect(jsonPath("$.data.status").value("CANCELED"));
+			.andExpect(jsonPath("$.data.status").value("STOPPED"));
 		mockMvc.perform(get("/api/inbound-records/{id}", inboundRecord.getId()))
 			.andExpect(status().isOk())
 			.andExpect(jsonPath("$.data.status").value("POTTING_PENDING"));
@@ -645,8 +645,9 @@ class InboundPottingPlanIntegrationTests extends AbstractBackendIntegrationTest 
 		Long operationId = operations.getFirst().getId();
 		mockMvc.perform(get("/api/work-operations/{id}/void-eligibility", operationId))
 			.andExpect(status().isOk())
-			.andExpect(jsonPath("$.data.voidable").value(true))
-			.andExpect(jsonPath("$.data.resultOrchidGroupIds", hasSize(2)));
+			.andExpect(jsonPath("$.data.cancellable").value(true))
+			.andExpect(jsonPath("$.data.affectedOrchidGroups", hasSize(2)))
+			.andExpect(jsonPath("$.data.affectedOrchidGroups[0].impactType").value("CREATION_CANCELED"));
 		mockMvc
 			.perform(post("/api/work-operations/{id}/void", operationId).contentType(MediaType.APPLICATION_JSON)
 				.content("""

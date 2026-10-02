@@ -395,13 +395,22 @@ export type WorkOperationRelationSummary = {
   linkedOperationCount: number;
 };
 
-export type WorkOperationVoidEligibility = {
+export type WorkOperationCancellationEligibility = {
   workOperationId: number;
-  voidable: boolean;
-  mutationIds: number[];
-  sourceOrchidGroupIds: number[];
-  resultOrchidGroupIds: number[];
-  relatedWorkOperationIds: number[];
+  cancellable: boolean;
+  affectedOperations: Array<{
+    workOperationId: number;
+    title: string;
+    workTypeName: string;
+    workDate: string;
+    primary: boolean;
+  }>;
+  affectedOrchidGroups: Array<{
+    orchidGroupId: number;
+    varietyName: string | null;
+    quantity: number | null;
+    impactType: "RECORD_CANCELED" | "RESTORED" | "CREATION_CANCELED";
+  }>;
   blockers: Array<{
     code: string;
     message: string;

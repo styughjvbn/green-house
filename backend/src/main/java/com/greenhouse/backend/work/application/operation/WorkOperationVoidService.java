@@ -1,16 +1,23 @@
 package com.greenhouse.backend.work.application.operation;
 
 import com.greenhouse.backend.common.exception.NotFoundException;
+import com.greenhouse.backend.work.application.target.InboundPottingPlanGateway;
 import com.greenhouse.backend.work.domain.operation.WorkOperation;
 import com.greenhouse.backend.work.domain.operation.WorkOperationRelationType;
 import com.greenhouse.backend.work.domain.operation.WorkOperationStatus;
 import com.greenhouse.backend.work.domain.operation.WorkTypeDefinition;
 import com.greenhouse.backend.work.domain.operation.WorkTypeWorkflow;
-import com.greenhouse.backend.work.dto.operation.WorkOperationVoidEligibilityResponse;
-import com.greenhouse.backend.work.dto.operation.WorkOperationVoidRequest;
+import com.greenhouse.backend.work.domain.target.WorkTargetExecution;
+import com.greenhouse.backend.work.domain.target.WorkTargetExecutionStatus;
+import com.greenhouse.backend.work.domain.target.WorkTargetReferenceType;
+import com.greenhouse.backend.work.dto.operation.WorkOperationCancellationEligibilityResponse;
+import com.greenhouse.backend.work.dto.operation.WorkOperationCancellationRequest;
 import com.greenhouse.backend.work.repository.WorkAppliedEffectRepository;
 import com.greenhouse.backend.work.repository.WorkOperationRepository;
+import com.greenhouse.backend.work.repository.WorkOperationTargetRepository;
+import com.greenhouse.backend.work.repository.WorkTargetExecutionRepository;
 import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Objects;
 import lombok.RequiredArgsConstructor;
@@ -26,47 +33,58 @@ public class WorkOperationVoidService {
 
 	private final WorkAppliedEffectRepository effectRepository;
 
+	private final WorkTargetExecutionRepository executionRepository;
+
+	private final WorkOperationTargetRepository targetRepository;
+
 	private final StructureChangeVoidPort structureChangeVoidPort;
 
 	private final PottingVoidPort pottingVoidPort;
+
+	private final InboundPottingPlanGateway inboundPottingPlanGateway;
 
 	private final WorkOperationQueryService queryService;
 
 	private final WorkOperationSupport support;
 
 	@Transactional(readOnly = true)
-	public WorkOperationVoidEligibilityResponse eligibility(Long operationId) {
+	public WorkOperationCancellationEligibilityResponse eligibility(Long operationId) {
 		var operation = operationRepository.findWithWorkTypeById(operationId)
 			.orElseThrow(() -> new NotFoundException("작업을 찾을 수 없습니다."));
-		var blockers = new ArrayList<WorkOperationVoidEligibilityResponse.Blocker>();
-		List<Long> relatedWorkOperationIds = new ArrayList<>();
-		if (operation.getStatus() == WorkOperationStatus.VOIDED) {
-			blockers.add(new WorkOperationVoidEligibilityResponse.Blocker("ALREADY_VOIDED", "이미 무효화된 작업입니다.", 1));
+		return inspectCancellation(operationId, operation).toResponse();
+	}
+
+	private CancellationInspection inspectCancellation(Long operationId, WorkOperation operation) {
+		var blockers = new ArrayList<WorkOperationCancellationEligibilityResponse.Blocker>();
+		if (operation.getStatus() == WorkOperationStatus.STOPPED
+				|| operation.getStatus() == WorkOperationStatus.CANCELED
+				|| operation.getStatus() == WorkOperationStatus.VOIDED) {
+			blockers.add(new WorkOperationCancellationEligibilityResponse.Blocker("ALREADY_CLOSED",
+					"이미 종료되었거나 취소된 작업입니다.", 1));
 		}
 		else if (operation.getRelationType() == WorkOperationRelationType.MOVEMENT_DISCARD) {
-			relatedWorkOperationIds.add(operation.getParentOperation().getId());
-			blockers.add(new WorkOperationVoidEligibilityResponse.Blocker("VOID_WITH_PARENT_MOVEMENT",
-					"이 폐기는 연관된 자리 이동 작업에서 함께 무효화해야 합니다.", 1));
+			blockers.add(new WorkOperationCancellationEligibilityResponse.Blocker("VOID_WITH_PARENT_MOVEMENT",
+					"이 폐기는 연관된 자리 이동 작업에서 함께 취소해야 합니다.", 1));
 		}
-		else if ((operation.getStatus() != WorkOperationStatus.COMPLETED
-				&& operation.getStatus() != WorkOperationStatus.CORRECTED)
-				|| !operation.getWorkType().supportsMutationVoid()) {
-			blockers.add(new WorkOperationVoidEligibilityResponse.Blocker("UNSUPPORTED_OPERATION",
-					"완료된 구조 변경·폐기·포트 작업만 무효화할 수 있습니다.", 1));
+		else if (!cancelableStatus(operation.getStatus()) || !operation.getWorkType().supportsUserCancellation()) {
+			blockers.add(new WorkOperationCancellationEligibilityResponse.Blocker("UNSUPPORTED_OPERATION",
+					"이 상태와 작업 유형은 취소할 수 없습니다.", 1));
+		}
+		if (!blockers.isEmpty()) {
+			return new CancellationInspection(operation, List.of(), List.of(), List.of(), List.copyOf(blockers));
 		}
 		var relatedDiscards = operation.getRelationType() == null ? operationRepository
 			.findByParentOperationIdAndRelationTypeOrderByIdAsc(operationId, WorkOperationRelationType.MOVEMENT_DISCARD)
 				: List.<WorkOperation>of();
 		relatedDiscards.forEach(discard -> {
-			relatedWorkOperationIds.add(discard.getId());
 			if (discard.getStatus() != WorkOperationStatus.COMPLETED) {
-				blockers.add(new WorkOperationVoidEligibilityResponse.Blocker("RELATED_DISCARD_NOT_COMPLETED",
+				blockers.add(new WorkOperationCancellationEligibilityResponse.Blocker("RELATED_DISCARD_NOT_COMPLETED",
 						"연관된 이동 후 잔여 난 폐기 작업의 상태가 완료가 아닙니다.", 1));
 			}
 		});
 		List<Long> targetOperationIds = new ArrayList<>();
 		targetOperationIds.add(operationId);
-		targetOperationIds.addAll(relatedWorkOperationIds);
+		targetOperationIds.addAll(relatedDiscards.stream().map(WorkOperation::getId).toList());
 		var effects = targetOperationIds.stream()
 			.flatMap(id -> effectRepository.findByWorkOperationIdOrderByIdAsc(id).stream())
 			.toList();
@@ -76,9 +94,22 @@ public class WorkOperationVoidService {
 			.distinct()
 			.sorted()
 			.toList();
+		if (mutationIds.isEmpty()) {
+			var groups = new LinkedHashMap<Long, WorkOperationCancellationEligibilityResponse.AffectedOrchidGroup>();
+			targetRepository
+				.findByWorkOperationIdInAndExcludedAtIsNullOrderByWorkOperationIdAscIdAsc(targetOperationIds)
+				.stream()
+				.filter(target -> target.getTargetReferenceType() == WorkTargetReferenceType.ORCHID_GROUP)
+				.forEach(target -> groups.putIfAbsent(target.getOrchidGroupId(),
+						new WorkOperationCancellationEligibilityResponse.AffectedOrchidGroup(target.getOrchidGroupId(),
+								target.getVarietyNameSnapshot(), target.getQuantitySnapshot(),
+								WorkOperationCancellationEligibilityResponse.ImpactType.RECORD_CANCELED)));
+			return new CancellationInspection(operation, relatedDiscards, mutationIds, List.copyOf(groups.values()),
+					List.copyOf(blockers));
+		}
 		boolean potting = operation.getWorkType().workflow() == WorkTypeWorkflow.POTTING;
-		List<Long> sourceIds;
-		List<Long> resultIds;
+		List<StructureChangeVoidPort.OrchidGroupSummary> sourceGroups;
+		List<StructureChangeVoidPort.OrchidGroupSummary> resultGroups;
 		List<StructureChangeVoidPort.Blocker> inspectionBlockers;
 		if (potting) {
 			var inspection = pottingVoidPort.inspect(operationId,
@@ -87,37 +118,64 @@ public class WorkOperationVoidService {
 								effect.getTarget() == null ? null : effect.getTarget().getInboundRecordId(),
 								effect.getMutationId()))
 						.toList());
-			sourceIds = List.of();
-			resultIds = inspection.resultOrchidGroupIds();
+			sourceGroups = List.of();
+			resultGroups = inspection.resultOrchidGroups();
 			inspectionBlockers = inspection.blockers();
 		}
 		else {
 			var inspection = structureChangeVoidPort.inspect(operationId, mutationIds);
-			sourceIds = inspection.sourceOrchidGroupIds();
-			resultIds = inspection.resultOrchidGroupIds();
+			sourceGroups = inspection.sourceOrchidGroups();
+			resultGroups = inspection.resultOrchidGroups();
 			inspectionBlockers = inspection.blockers();
 		}
-		inspectionBlockers.forEach(blocker -> blockers
-			.add(new WorkOperationVoidEligibilityResponse.Blocker(blocker.code(), blocker.message(), blocker.count())));
-		return new WorkOperationVoidEligibilityResponse(operationId, blockers.isEmpty(), mutationIds, sourceIds,
-				resultIds, List.copyOf(relatedWorkOperationIds), List.copyOf(blockers));
+		inspectionBlockers
+			.forEach(blocker -> blockers.add(new WorkOperationCancellationEligibilityResponse.Blocker(blocker.code(),
+					blocker.message(), blocker.count())));
+		List<WorkOperationCancellationEligibilityResponse.AffectedOrchidGroup> affectedGroups = new ArrayList<>();
+		sourceGroups.forEach(group -> affectedGroups
+			.add(toAffectedGroup(group, WorkOperationCancellationEligibilityResponse.ImpactType.RESTORED)));
+		resultGroups.forEach(group -> affectedGroups
+			.add(toAffectedGroup(group, WorkOperationCancellationEligibilityResponse.ImpactType.CREATION_CANCELED)));
+		return new CancellationInspection(operation, relatedDiscards, mutationIds, List.copyOf(affectedGroups),
+				List.copyOf(blockers));
 	}
 
-	public WorkOperationView voidOperation(Long operationId, WorkOperationVoidRequest request) {
+	private WorkOperationCancellationEligibilityResponse.AffectedOrchidGroup toAffectedGroup(
+			StructureChangeVoidPort.OrchidGroupSummary group,
+			WorkOperationCancellationEligibilityResponse.ImpactType impactType) {
+		return new WorkOperationCancellationEligibilityResponse.AffectedOrchidGroup(group.orchidGroupId(),
+				group.varietyName(), group.quantity(), impactType);
+	}
+
+	public WorkOperationView voidOperation(Long operationId, WorkOperationCancellationRequest request) {
+		return cancelOperation(operationId, request);
+	}
+
+	public WorkOperationView cancelOperation(Long operationId, WorkOperationCancellationRequest request) {
 		var operation = operationRepository.findWithWorkTypeById(operationId)
 			.orElseThrow(() -> new NotFoundException("작업을 찾을 수 없습니다."));
 		String requestKey = support.normalizeRequired(request.idempotencyKey());
-		if (operation.getStatus() == WorkOperationStatus.VOIDED) {
+		if (operation.getStatus() == WorkOperationStatus.CANCELED
+				|| operation.getStatus() == WorkOperationStatus.VOIDED) {
 			if (!requestKey.equals(operation.getVoidRequestKey())) {
-				throw new IllegalArgumentException("이미 다른 요청으로 무효화된 작업입니다.");
+				throw new IllegalArgumentException("이미 다른 요청으로 취소된 작업입니다.");
 			}
 			return queryService.get(operationId);
 		}
-		var eligibility = eligibility(operationId);
-		if (!eligibility.voidable()) {
-			throw new IllegalArgumentException(eligibility.blockers().getFirst().message());
+		var inspection = inspectCancellation(operationId, operation);
+		if (!inspection.cancellable()) {
+			throw new IllegalArgumentException(inspection.blockers().getFirst().message());
 		}
 		String reason = support.normalizeRequired(request.reason());
+		var now = support.now();
+		var executions = executionRepository.findByTargetWorkOperationIdOrderByIdAsc(operationId);
+		if (inspection.mutationIds().isEmpty()) {
+			effectRepository.findByWorkOperationIdOrderByIdAsc(operationId).forEach(effect -> effect.cancel(now));
+			cancelOpenExecutions(executions, now);
+			closeInboundPottingPlans(operation, executions);
+			operation.cancelRecordedWork(now, reason, requestKey);
+			return queryService.get(operationId);
+		}
 		Long mutationId;
 		if (operation.getWorkType().workflow() == WorkTypeWorkflow.POTTING) {
 			var effects = effectRepository.findByWorkOperationIdOrderByIdAsc(operationId);
@@ -130,10 +188,11 @@ public class WorkOperationVoidService {
 					operation.getPlannedStartDate(), reason, true);
 		}
 		else {
-			mutationId = structureChangeVoidPort.compensate(operationId, requestKey, eligibility.mutationIds(),
+			mutationId = structureChangeVoidPort.compensate(operationId, requestKey, inspection.mutationIds(),
 					operation.getPlannedStartDate(), reason);
 		}
-		var now = support.now();
+		cancelOpenExecutions(executions, now);
+		closeInboundPottingPlans(operation, executions);
 		List<WorkOperation> relatedDiscards = operationRepository.findByParentOperationIdAndRelationTypeOrderByIdAsc(
 				operationId, WorkOperationRelationType.MOVEMENT_DISCARD);
 		for (int index = relatedDiscards.size() - 1; index >= 0; index--) {
@@ -146,7 +205,36 @@ public class WorkOperationVoidService {
 		return queryService.get(operationId);
 	}
 
-	public void voidInboundRegistration(Long operationId, WorkOperationVoidRequest request) {
+	private boolean cancelableStatus(WorkOperationStatus status) {
+		return status == WorkOperationStatus.PLANNED || status == WorkOperationStatus.IN_PROGRESS
+				|| status == WorkOperationStatus.PAUSED || status == WorkOperationStatus.COMPLETED
+				|| status == WorkOperationStatus.CORRECTED;
+	}
+
+	private void cancelOpenExecutions(List<WorkTargetExecution> executions, java.time.LocalDateTime canceledAt) {
+		executions.stream()
+			.filter(execution -> execution.getStatus() != WorkTargetExecutionStatus.COMPLETED)
+			.filter(execution -> execution.getStatus() != WorkTargetExecutionStatus.SKIPPED)
+			.forEach(execution -> execution.cancel(canceledAt));
+	}
+
+	private void closeInboundPottingPlans(WorkOperation operation, List<WorkTargetExecution> executions) {
+		if (operation.getWorkType().workflow() != WorkTypeWorkflow.POTTING) {
+			return;
+		}
+		List<Long> inboundRecordIds = executions.stream()
+			.filter(execution -> execution.getStatus() != WorkTargetExecutionStatus.COMPLETED)
+			.map(WorkTargetExecution::getTarget)
+			.filter(target -> target.getTargetReferenceType() == WorkTargetReferenceType.INBOUND_RECORD)
+			.map(target -> target.getInboundRecordId())
+			.distinct()
+			.toList();
+		if (!inboundRecordIds.isEmpty()) {
+			inboundPottingPlanGateway.closePottingPlan(inboundRecordIds);
+		}
+	}
+
+	public void voidInboundRegistration(Long operationId, WorkOperationCancellationRequest request) {
 		var operation = operationRepository.findWithWorkTypeById(operationId)
 			.orElseThrow(() -> new NotFoundException("입고 작업을 찾을 수 없습니다."));
 		String requestKey = support.normalizeRequired(request.idempotencyKey());
@@ -182,6 +270,30 @@ public class WorkOperationVoidService {
 		String suffix = "-related-" + operationId;
 		int prefixLength = Math.max(1, 100 - suffix.length());
 		return requestKey.substring(0, Math.min(prefixLength, requestKey.length())) + suffix;
+	}
+
+	private record CancellationInspection(WorkOperation operation, List<WorkOperation> relatedOperations,
+			List<Long> mutationIds,
+			List<WorkOperationCancellationEligibilityResponse.AffectedOrchidGroup> affectedOrchidGroups,
+			List<WorkOperationCancellationEligibilityResponse.Blocker> blockers) {
+
+		private boolean cancellable() {
+			return blockers.isEmpty();
+		}
+
+		private WorkOperationCancellationEligibilityResponse toResponse() {
+			List<WorkOperationCancellationEligibilityResponse.AffectedOperation> affectedOperations = new ArrayList<>();
+			affectedOperations.add(toAffectedOperation(operation, true));
+			relatedOperations.forEach(related -> affectedOperations.add(toAffectedOperation(related, false)));
+			return new WorkOperationCancellationEligibilityResponse(operation.getId(), cancellable(),
+					List.copyOf(affectedOperations), affectedOrchidGroups, blockers);
+		}
+
+		private WorkOperationCancellationEligibilityResponse.AffectedOperation toAffectedOperation(WorkOperation item,
+				boolean primary) {
+			return new WorkOperationCancellationEligibilityResponse.AffectedOperation(item.getId(), item.getTitle(),
+					item.getWorkType().getName(), item.getPlannedStartDate(), primary);
+		}
 	}
 
 }

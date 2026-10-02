@@ -194,6 +194,7 @@ function statusClass(status: WorkOperationStatus) {
     return "bg-[#e7f6eb] text-[#10783a]";
   if (status === "IN_PROGRESS") return "bg-[#e6f0ff] text-[#246df2]";
   if (status === "PAUSED") return "bg-[#fff3d8] text-[#8a5a12]";
-  if (status === "CANCELED") return "bg-[#f2eeee] text-[#765f5a]";
+  if (status === "STOPPED" || status === "CANCELED")
+    return "bg-[#f2eeee] text-[#765f5a]";
   return "bg-[#eef2ed] text-[#435047]";
 }

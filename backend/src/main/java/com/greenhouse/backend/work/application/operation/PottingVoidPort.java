@@ -13,9 +13,10 @@ public interface PottingVoidPort {
 	record Effect(Long inboundRecordId, Long mutationId) {
 	}
 
-	record Inspection(List<Long> resultOrchidGroupIds, List<StructureChangeVoidPort.Blocker> blockers) {
+	record Inspection(List<StructureChangeVoidPort.OrchidGroupSummary> resultOrchidGroups,
+			List<StructureChangeVoidPort.Blocker> blockers) {
 		public Inspection {
-			resultOrchidGroupIds = List.copyOf(resultOrchidGroupIds);
+			resultOrchidGroups = List.copyOf(resultOrchidGroups);
 			blockers = List.copyOf(blockers);
 		}
 	}

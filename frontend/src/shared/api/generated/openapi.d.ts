@@ -246,6 +246,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/work-operations/{workOperationId}/end-remaining": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["endRemaining"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/work-operations/{workOperationId}/corrections": {
         parameters: {
             query?: never;
@@ -287,7 +303,7 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        post: operations["cancel"];
+        post: operations["cancelOperation"];
         delete?: never;
         options?: never;
         head?: never;
@@ -676,7 +692,7 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        post: operations["cancel_1"];
+        post: operations["cancel"];
         delete?: never;
         options?: never;
         head?: never;
@@ -1143,6 +1159,22 @@ export interface paths {
             cookie?: never;
         };
         get: operations["getDetails"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/work-operations/{workOperationId}/cancel-eligibility": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["cancelEligibility"];
         put?: never;
         post?: never;
         delete?: never;
@@ -2289,7 +2321,7 @@ export interface components {
             workTypeWorkflow?: "GENERIC" | "MOVEMENT" | "DISCARD" | "POTTING" | "STRUCTURE_CHANGE";
             title?: string;
             /** @enum {string} */
-            status?: "PLANNED" | "IN_PROGRESS" | "PAUSED" | "COMPLETED" | "CANCELED" | "CORRECTED" | "VOIDED";
+            status?: "PLANNED" | "IN_PROGRESS" | "PAUSED" | "COMPLETED" | "STOPPED" | "CANCELED" | "CORRECTED" | "VOIDED";
             /** Format: date */
             plannedStartDate?: string;
             /** Format: date */
@@ -2323,7 +2355,7 @@ export interface components {
             voidMutationId?: number;
             progress?: components["schemas"]["WorkOperationProgressResponse"];
             targets?: components["schemas"]["WorkOperationTargetResponse"][];
-            availableActions?: ("START" | "PAUSE" | "RESUME" | "COMPLETE" | "CANCEL" | "VOID")[];
+            availableActions?: ("START" | "PAUSE" | "RESUME" | "COMPLETE" | "END_REMAINING" | "CANCEL")[];
         };
         WorkOperationTargetResponse: {
             /** Format: int64 */
@@ -2365,7 +2397,7 @@ export interface components {
             resultOrchidGroupIds?: number[];
             availableActions?: ("START" | "COMPLETE" | "EXECUTE" | "SKIP")[];
         };
-        WorkOperationVoidRequest: {
+        WorkOperationCancellationRequest: {
             idempotencyKey: string;
             reason: string;
         };
@@ -3250,7 +3282,7 @@ export interface components {
             workTypeWorkflow?: "GENERIC" | "MOVEMENT" | "DISCARD" | "POTTING" | "STRUCTURE_CHANGE";
             title?: string;
             /** @enum {string} */
-            status?: "PLANNED" | "IN_PROGRESS" | "PAUSED" | "COMPLETED" | "CANCELED" | "CORRECTED" | "VOIDED";
+            status?: "PLANNED" | "IN_PROGRESS" | "PAUSED" | "COMPLETED" | "STOPPED" | "CANCELED" | "CORRECTED" | "VOIDED";
             /** Format: date */
             plannedStartDate?: string;
             /** Format: date */
@@ -3280,10 +3312,28 @@ export interface components {
             voidMutationId?: number;
             relationSummary?: components["schemas"]["WorkOperationRelationSummaryResponse"];
             progress?: components["schemas"]["WorkOperationProgressResponse"];
-            availableActions?: ("START" | "PAUSE" | "RESUME" | "COMPLETE" | "CANCEL" | "VOID")[];
+            availableActions?: ("START" | "PAUSE" | "RESUME" | "COMPLETE" | "END_REMAINING" | "CANCEL")[];
         };
-        ApiResponseWorkOperationVoidEligibilityResponse: {
-            data?: components["schemas"]["WorkOperationVoidEligibilityResponse"];
+        AffectedOperation: {
+            /** Format: int64 */
+            workOperationId?: number;
+            title?: string;
+            workTypeName?: string;
+            /** Format: date */
+            workDate?: string;
+            primary?: boolean;
+        };
+        AffectedOrchidGroup: {
+            /** Format: int64 */
+            orchidGroupId?: number;
+            varietyName?: string;
+            /** Format: int32 */
+            quantity?: number;
+            /** @enum {string} */
+            impactType?: "RECORD_CANCELED" | "RESTORED" | "CREATION_CANCELED";
+        };
+        ApiResponseWorkOperationCancellationEligibilityResponse: {
+            data?: components["schemas"]["WorkOperationCancellationEligibilityResponse"];
             message?: string;
         };
         Blocker: {
@@ -3292,14 +3342,12 @@ export interface components {
             /** Format: int64 */
             count?: number;
         };
-        WorkOperationVoidEligibilityResponse: {
+        WorkOperationCancellationEligibilityResponse: {
             /** Format: int64 */
             workOperationId?: number;
-            voidable?: boolean;
-            mutationIds?: number[];
-            sourceOrchidGroupIds?: number[];
-            resultOrchidGroupIds?: number[];
-            relatedWorkOperationIds?: number[];
+            cancellable?: boolean;
+            affectedOperations?: components["schemas"]["AffectedOperation"][];
+            affectedOrchidGroups?: components["schemas"]["AffectedOrchidGroup"][];
             blockers?: components["schemas"]["Blocker"][];
         };
         ApiResponseListWorkOperationSummaryResponse: {
@@ -3507,7 +3555,7 @@ export interface components {
             workType?: string;
             title?: string;
             /** @enum {string} */
-            status?: "PLANNED" | "IN_PROGRESS" | "PAUSED" | "COMPLETED" | "CANCELED" | "CORRECTED" | "VOIDED";
+            status?: "PLANNED" | "IN_PROGRESS" | "PAUSED" | "COMPLETED" | "STOPPED" | "CANCELED" | "CORRECTED" | "VOIDED";
             /** Format: date */
             plannedStartDate?: string;
             /** Format: date */
@@ -4492,7 +4540,7 @@ export interface components {
             worker?: string;
             memo?: string;
             /** @enum {string} */
-            status?: "PLANNED" | "IN_PROGRESS" | "PAUSED" | "COMPLETED" | "CANCELED" | "CORRECTED" | "VOIDED";
+            status?: "PLANNED" | "IN_PROGRESS" | "PAUSED" | "COMPLETED" | "STOPPED" | "CANCELED" | "CORRECTED" | "VOIDED";
         };
         WorkAnalyticsResponse: {
             /** Format: int64 */
@@ -4822,7 +4870,7 @@ export interface operations {
             query?: {
                 from?: string;
                 to?: string;
-                status?: "PLANNED" | "IN_PROGRESS" | "PAUSED" | "COMPLETED" | "CANCELED" | "CORRECTED" | "VOIDED";
+                status?: "PLANNED" | "IN_PROGRESS" | "PAUSED" | "COMPLETED" | "STOPPED" | "CANCELED" | "CORRECTED" | "VOIDED";
                 view?: "ALL" | "MANAGEMENT";
                 sourceScopeType?: "NONE" | "FARM" | "HOUSE" | "PHYSICAL_BED" | "BED_ZONE" | "ORCHID_GROUP" | "DERIVED_GROUP" | "USER_COLLECTION" | "MANUAL_SELECTION" | "INBOUND_RECORD_SELECTION";
                 sourceScopeId?: number;
@@ -4882,7 +4930,7 @@ export interface operations {
         };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["WorkOperationVoidRequest"];
+                "application/json": components["schemas"]["WorkOperationCancellationRequest"];
             };
         };
         responses: {
@@ -5096,6 +5144,28 @@ export interface operations {
             };
         };
     };
+    endRemaining: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                workOperationId: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiResponseWorkOperationResponse"];
+                };
+            };
+        };
+    };
     getCorrections: {
         parameters: {
             query?: never;
@@ -5170,7 +5240,7 @@ export interface operations {
             };
         };
     };
-    cancel: {
+    cancelOperation: {
         parameters: {
             query?: never;
             header?: never;
@@ -5179,7 +5249,11 @@ export interface operations {
             };
             cookie?: never;
         };
-        requestBody?: never;
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["WorkOperationCancellationRequest"];
+            };
+        };
         responses: {
             /** @description OK */
             200: {
@@ -5906,7 +5980,7 @@ export interface operations {
             };
         };
     };
-    cancel_1: {
+    cancel: {
         parameters: {
             query?: never;
             header?: never;
@@ -6715,7 +6789,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["ApiResponseWorkOperationVoidEligibilityResponse"];
+                    "application/json": components["schemas"]["ApiResponseWorkOperationCancellationEligibilityResponse"];
                 };
             };
         };
@@ -6814,6 +6888,28 @@ export interface operations {
             };
         };
     };
+    cancelEligibility: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                workOperationId: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiResponseWorkOperationCancellationEligibilityResponse"];
+                };
+            };
+        };
+    };
     getInboundPottingCandidates: {
         parameters: {
             query?: never;
@@ -6839,7 +6935,7 @@ export interface operations {
             query: {
                 from: string;
                 to: string;
-                status?: "PLANNED" | "IN_PROGRESS" | "PAUSED" | "COMPLETED" | "CANCELED" | "CORRECTED" | "VOIDED";
+                status?: "PLANNED" | "IN_PROGRESS" | "PAUSED" | "COMPLETED" | "STOPPED" | "CANCELED" | "CORRECTED" | "VOIDED";
                 view?: "ALL" | "MANAGEMENT";
             };
             header?: never;

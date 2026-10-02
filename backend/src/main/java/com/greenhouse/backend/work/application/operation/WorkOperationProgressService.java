@@ -74,11 +74,11 @@ public class WorkOperationProgressService {
 		return queryService.get(operationId);
 	}
 
-	public WorkOperationView cancel(Long operationId) {
+	public WorkOperationView endRemaining(Long operationId) {
 		WorkOperation operation = findOperation(operationId);
 		List<WorkTargetExecution> executions = executionRepository.findByTargetWorkOperationIdOrderByIdAsc(operationId);
 		LocalDateTime canceledAt = support.now();
-		operation.cancel(canceledAt);
+		operation.stop(canceledAt);
 		executions.stream()
 			.filter(execution -> execution.getStatus() != WorkTargetExecutionStatus.COMPLETED)
 			.filter(execution -> execution.getStatus() != WorkTargetExecutionStatus.SKIPPED)

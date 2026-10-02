@@ -34,6 +34,7 @@ paths:
           - IN_PROGRESS
           - PAUSED
           - COMPLETED
+          - STOPPED
           - CANCELED
           - CORRECTED
           - VOIDED
@@ -128,7 +129,7 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/WorkOperationVoidRequest'
+              $ref: '#/components/schemas/WorkOperationCancellationRequest'
         required: true
       responses:
         '200':
@@ -335,6 +336,25 @@ paths:
               schema:
                 $ref: '#/components/schemas/ApiResponseWorkOperationResponse'
       deprecated: true
+  /api/work-operations/{workOperationId}/end-remaining:
+    post:
+      tags:
+      - work-operation-controller
+      operationId: endRemaining
+      parameters:
+      - name: workOperationId
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: int64
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponseWorkOperationResponse'
   /api/work-operations/{workOperationId}/corrections:
     get:
       tags:
@@ -405,8 +425,8 @@ paths:
   /api/work-operations/{workOperationId}/cancel:
     post:
       tags:
-      - work-operation-controller
-      operationId: cancel
+      - work-operation-void-controller
+      operationId: cancelOperation
       parameters:
       - name: workOperationId
         in: path
@@ -414,6 +434,12 @@ paths:
         schema:
           type: integer
           format: int64
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/WorkOperationCancellationRequest'
+        required: true
       responses:
         '200':
           description: OK
@@ -666,7 +692,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ApiResponseWorkOperationVoidEligibilityResponse'
+                $ref: '#/components/schemas/ApiResponseWorkOperationCancellationEligibilityResponse'
   /api/work-operations/{workOperationId}/relations:
     get:
       tags:
@@ -756,6 +782,25 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ApiResponseWorkOperationDetailResponse'
+  /api/work-operations/{workOperationId}/cancel-eligibility:
+    get:
+      tags:
+      - work-operation-void-controller
+      operationId: cancelEligibility
+      parameters:
+      - name: workOperationId
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: int64
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponseWorkOperationCancellationEligibilityResponse'
   /api/work-operations/inbound-potting-candidates:
     get:
       tags:
@@ -796,6 +841,7 @@ paths:
           - IN_PROGRESS
           - PAUSED
           - COMPLETED
+          - STOPPED
           - CANCELED
           - CORRECTED
           - VOIDED
@@ -880,6 +926,38 @@ paths:
       deprecated: true
 components:
   schemas:
+    AffectedOperation:
+      type: object
+      properties:
+        workOperationId:
+          type: integer
+          format: int64
+        title:
+          type: string
+        workTypeName:
+          type: string
+        workDate:
+          type: string
+          format: date
+        primary:
+          type: boolean
+    AffectedOrchidGroup:
+      type: object
+      properties:
+        orchidGroupId:
+          type: integer
+          format: int64
+        varietyName:
+          type: string
+        quantity:
+          type: integer
+          format: int32
+        impactType:
+          type: string
+          enum:
+          - RECORD_CANCELED
+          - RESTORED
+          - CREATION_CANCELED
     ApiResponseListInboundPottingCandidateResponse:
       type: object
       properties:
@@ -930,6 +1008,13 @@ components:
           $ref: '#/components/schemas/PageResponseWorkOperationSummaryResponse'
         message:
           type: string
+    ApiResponseWorkOperationCancellationEligibilityResponse:
+      type: object
+      properties:
+        data:
+          $ref: '#/components/schemas/WorkOperationCancellationEligibilityResponse'
+        message:
+          type: string
     ApiResponseWorkOperationCorrectionsResponse:
       type: object
       properties:
@@ -956,13 +1041,6 @@ components:
       properties:
         data:
           $ref: '#/components/schemas/WorkOperationResponse'
-        message:
-          type: string
-    ApiResponseWorkOperationVoidEligibilityResponse:
-      type: object
-      properties:
-        data:
-          $ref: '#/components/schemas/WorkOperationVoidEligibilityResponse'
         message:
           type: string
     ApiResponseWorkTargetPreviewResponse:
@@ -1577,6 +1655,40 @@ components:
           $ref: '#/components/schemas/WorkOperationCreateRequest'
       required:
       - operation
+    WorkOperationCancellationEligibilityResponse:
+      type: object
+      properties:
+        workOperationId:
+          type: integer
+          format: int64
+        cancellable:
+          type: boolean
+        affectedOperations:
+          type: array
+          items:
+            $ref: '#/components/schemas/AffectedOperation'
+        affectedOrchidGroups:
+          type: array
+          items:
+            $ref: '#/components/schemas/AffectedOrchidGroup'
+        blockers:
+          type: array
+          items:
+            $ref: '#/components/schemas/Blocker'
+    WorkOperationCancellationRequest:
+      type: object
+      properties:
+        idempotencyKey:
+          type: string
+          maxLength: 100
+          minLength: 0
+        reason:
+          type: string
+          maxLength: 1000
+          minLength: 0
+      required:
+      - idempotencyKey
+      - reason
     WorkOperationCompleteRequest:
       type: object
       properties:
@@ -1756,6 +1868,7 @@ components:
           - IN_PROGRESS
           - PAUSED
           - COMPLETED
+          - STOPPED
           - CANCELED
           - CORRECTED
           - VOIDED
@@ -2027,6 +2140,7 @@ components:
           - IN_PROGRESS
           - PAUSED
           - COMPLETED
+          - STOPPED
           - CANCELED
           - CORRECTED
           - VOIDED
@@ -2101,8 +2215,8 @@ components:
             - PAUSE
             - RESUME
             - COMPLETE
+            - END_REMAINING
             - CANCEL
-            - VOID
     WorkOperationSummaryResponse:
       type: object
       properties:
@@ -2146,6 +2260,7 @@ components:
           - IN_PROGRESS
           - PAUSED
           - COMPLETED
+          - STOPPED
           - CANCELED
           - CORRECTED
           - VOIDED
@@ -2211,8 +2326,8 @@ components:
             - PAUSE
             - RESUME
             - COMPLETE
+            - END_REMAINING
             - CANCEL
-            - VOID
     WorkOperationTargetResponse:
       type: object
       properties:
@@ -2311,52 +2426,6 @@ components:
           minLength: 0
       required:
       - title
-    WorkOperationVoidEligibilityResponse:
-      type: object
-      properties:
-        workOperationId:
-          type: integer
-          format: int64
-        voidable:
-          type: boolean
-        mutationIds:
-          type: array
-          items:
-            type: integer
-            format: int64
-        sourceOrchidGroupIds:
-          type: array
-          items:
-            type: integer
-            format: int64
-        resultOrchidGroupIds:
-          type: array
-          items:
-            type: integer
-            format: int64
-        relatedWorkOperationIds:
-          type: array
-          items:
-            type: integer
-            format: int64
-        blockers:
-          type: array
-          items:
-            $ref: '#/components/schemas/Blocker'
-    WorkOperationVoidRequest:
-      type: object
-      properties:
-        idempotencyKey:
-          type: string
-          maxLength: 100
-          minLength: 0
-        reason:
-          type: string
-          maxLength: 1000
-          minLength: 0
-      required:
-      - idempotencyKey
-      - reason
     WorkTargetExecutionRequest:
       type: object
       properties:

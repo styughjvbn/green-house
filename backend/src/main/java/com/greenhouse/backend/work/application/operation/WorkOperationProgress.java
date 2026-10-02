@@ -1,6 +1,7 @@
 package com.greenhouse.backend.work.application.operation;
 
 import com.greenhouse.backend.work.application.target.WorkOperationTargetView;
+import com.greenhouse.backend.work.domain.operation.WorkOperationStatus;
 import com.greenhouse.backend.work.domain.target.WorkTargetExecutionStatus;
 import io.swagger.v3.oas.annotations.media.Schema;
 import java.util.List;
@@ -38,6 +39,13 @@ public record WorkOperationProgress(int total, int pending, int inProgress, int 
 			.sum();
 		return fromCounts(total, pending, inProgress, partial, completed, skipped, canceled, failed, totalQuantity,
 				processedQuantity, skippedQuantity);
+	}
+
+	public WorkOperationProgress forStatus(WorkOperationStatus status) {
+		if (status != WorkOperationStatus.CANCELED && status != WorkOperationStatus.VOIDED) {
+			return this;
+		}
+		return new WorkOperationProgress(total, pending, inProgress, partial, completed, skipped, canceled, failed, 0);
 	}
 
 	private static int count(List<WorkOperationTargetView> targets, WorkTargetExecutionStatus status) {

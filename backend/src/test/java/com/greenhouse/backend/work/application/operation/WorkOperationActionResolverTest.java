@@ -31,12 +31,15 @@ class WorkOperationActionResolverTest {
 		when(operation.getStatus()).thenReturn(WorkOperationStatus.IN_PROGRESS);
 		assertThat(resolver.resolveOperation(operation, List.of(target(WorkTargetExecutionStatus.PENDING))))
 			.containsExactly(WorkOperationAction.PAUSE, WorkOperationAction.CANCEL);
+		assertThat(resolver.resolveOperation(operation,
+				List.of(target(WorkTargetExecutionStatus.COMPLETED), target(WorkTargetExecutionStatus.PENDING))))
+			.containsExactly(WorkOperationAction.PAUSE, WorkOperationAction.END_REMAINING, WorkOperationAction.CANCEL);
 		assertThat(resolver.resolveOperation(operation, List.of(target(WorkTargetExecutionStatus.COMPLETED))))
-			.containsExactly(WorkOperationAction.COMPLETE);
+			.containsExactly(WorkOperationAction.COMPLETE, WorkOperationAction.CANCEL);
 
 		when(operation.getStatus()).thenReturn(WorkOperationStatus.COMPLETED);
 		assertThat(resolver.resolveOperation(operation, List.of(target(WorkTargetExecutionStatus.COMPLETED))))
-			.isEmpty();
+			.containsExactly(WorkOperationAction.CANCEL);
 	}
 
 	@Test
@@ -57,11 +60,12 @@ class WorkOperationActionResolverTest {
 	}
 
 	@Test
-	void exposesVoidForCompletedMutationWork() {
+	void exposesCancellationForCompletedMutationWork() {
 		WorkOperation operation = operation(WorkOperationStatus.COMPLETED, WorkTypeWorkflow.DISCARD);
 		when(operation.getWorkType().supportsMutationVoid()).thenReturn(true);
 
-		assertThat(resolver.resolveOperation(operation, List.of())).containsExactly(WorkOperationAction.VOID);
+		when(operation.getWorkType().supportsUserCancellation()).thenReturn(true);
+		assertThat(resolver.resolveOperation(operation, List.of())).containsExactly(WorkOperationAction.CANCEL);
 
 		when(operation.getRelationType()).thenReturn(WorkOperationRelationType.MOVEMENT_DISCARD);
 		assertThat(resolver.resolveOperation(operation, List.of())).isEmpty();
@@ -70,6 +74,7 @@ class WorkOperationActionResolverTest {
 	private WorkOperation operation(WorkOperationStatus status, WorkTypeWorkflow workflow) {
 		WorkType workType = mock(WorkType.class);
 		when(workType.workflow()).thenReturn(workflow);
+		when(workType.supportsUserCancellation()).thenReturn(workflow == WorkTypeWorkflow.GENERIC);
 		WorkOperation operation = mock(WorkOperation.class);
 		when(operation.getStatus()).thenReturn(status);
 		when(operation.getWorkType()).thenReturn(workType);

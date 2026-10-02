@@ -225,6 +225,7 @@ paths:
           - IN_PROGRESS
           - PAUSED
           - COMPLETED
+          - STOPPED
           - CANCELED
           - CORRECTED
           - VOIDED
@@ -319,7 +320,7 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/WorkOperationVoidRequest'
+              $ref: '#/components/schemas/WorkOperationCancellationRequest'
         required: true
       responses:
         '200':
@@ -526,6 +527,25 @@ paths:
               schema:
                 $ref: '#/components/schemas/ApiResponseWorkOperationResponse'
       deprecated: true
+  /api/work-operations/{workOperationId}/end-remaining:
+    post:
+      tags:
+      - work-operation-controller
+      operationId: endRemaining
+      parameters:
+      - name: workOperationId
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: int64
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponseWorkOperationResponse'
   /api/work-operations/{workOperationId}/corrections:
     get:
       tags:
@@ -596,8 +616,8 @@ paths:
   /api/work-operations/{workOperationId}/cancel:
     post:
       tags:
-      - work-operation-controller
-      operationId: cancel
+      - work-operation-void-controller
+      operationId: cancelOperation
       parameters:
       - name: workOperationId
         in: path
@@ -605,6 +625,12 @@ paths:
         schema:
           type: integer
           format: int64
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/WorkOperationCancellationRequest'
+        required: true
       responses:
         '200':
           description: OK
@@ -1315,7 +1341,7 @@ paths:
     post:
       tags:
       - inbound-record-controller
-      operationId: cancel_1
+      operationId: cancel
       parameters:
       - name: inboundRecordId
         in: path
@@ -2035,7 +2061,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ApiResponseWorkOperationVoidEligibilityResponse'
+                $ref: '#/components/schemas/ApiResponseWorkOperationCancellationEligibilityResponse'
   /api/work-operations/{workOperationId}/repot-results:
     get:
       tags:
@@ -2144,6 +2170,25 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ApiResponseWorkOperationDetailResponse'
+  /api/work-operations/{workOperationId}/cancel-eligibility:
+    get:
+      tags:
+      - work-operation-void-controller
+      operationId: cancelEligibility
+      parameters:
+      - name: workOperationId
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: int64
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponseWorkOperationCancellationEligibilityResponse'
   /api/work-operations/inbound-potting-candidates:
     get:
       tags:
@@ -2184,6 +2229,7 @@ paths:
           - IN_PROGRESS
           - PAUSED
           - COMPLETED
+          - STOPPED
           - CANCELED
           - CORRECTED
           - VOIDED
@@ -4344,6 +4390,7 @@ components:
           - IN_PROGRESS
           - PAUSED
           - COMPLETED
+          - STOPPED
           - CANCELED
           - CORRECTED
           - VOIDED
@@ -4418,8 +4465,8 @@ components:
             - PAUSE
             - RESUME
             - COMPLETE
+            - END_REMAINING
             - CANCEL
-            - VOID
     WorkOperationTargetResponse:
       type: object
       properties:
@@ -4509,7 +4556,7 @@ components:
             - COMPLETE
             - EXECUTE
             - SKIP
-    WorkOperationVoidRequest:
+    WorkOperationCancellationRequest:
       type: object
       properties:
         idempotencyKey:
@@ -6738,6 +6785,7 @@ components:
           - IN_PROGRESS
           - PAUSED
           - COMPLETED
+          - STOPPED
           - CANCELED
           - CORRECTED
           - VOIDED
@@ -6803,13 +6851,45 @@ components:
             - PAUSE
             - RESUME
             - COMPLETE
+            - END_REMAINING
             - CANCEL
-            - VOID
-    ApiResponseWorkOperationVoidEligibilityResponse:
+    AffectedOperation:
+      type: object
+      properties:
+        workOperationId:
+          type: integer
+          format: int64
+        title:
+          type: string
+        workTypeName:
+          type: string
+        workDate:
+          type: string
+          format: date
+        primary:
+          type: boolean
+    AffectedOrchidGroup:
+      type: object
+      properties:
+        orchidGroupId:
+          type: integer
+          format: int64
+        varietyName:
+          type: string
+        quantity:
+          type: integer
+          format: int32
+        impactType:
+          type: string
+          enum:
+          - RECORD_CANCELED
+          - RESTORED
+          - CREATION_CANCELED
+    ApiResponseWorkOperationCancellationEligibilityResponse:
       type: object
       properties:
         data:
-          $ref: '#/components/schemas/WorkOperationVoidEligibilityResponse'
+          $ref: '#/components/schemas/WorkOperationCancellationEligibilityResponse'
         message:
           type: string
     Blocker:
@@ -6822,34 +6902,22 @@ components:
         count:
           type: integer
           format: int64
-    WorkOperationVoidEligibilityResponse:
+    WorkOperationCancellationEligibilityResponse:
       type: object
       properties:
         workOperationId:
           type: integer
           format: int64
-        voidable:
+        cancellable:
           type: boolean
-        mutationIds:
+        affectedOperations:
           type: array
           items:
-            type: integer
-            format: int64
-        sourceOrchidGroupIds:
+            $ref: '#/components/schemas/AffectedOperation'
+        affectedOrchidGroups:
           type: array
           items:
-            type: integer
-            format: int64
-        resultOrchidGroupIds:
-          type: array
-          items:
-            type: integer
-            format: int64
-        relatedWorkOperationIds:
-          type: array
-          items:
-            type: integer
-            format: int64
+            $ref: '#/components/schemas/AffectedOrchidGroup'
         blockers:
           type: array
           items:
@@ -7243,6 +7311,7 @@ components:
           - IN_PROGRESS
           - PAUSED
           - COMPLETED
+          - STOPPED
           - CANCELED
           - CORRECTED
           - VOIDED
@@ -9133,6 +9202,7 @@ components:
           - IN_PROGRESS
           - PAUSED
           - COMPLETED
+          - STOPPED
           - CANCELED
           - CORRECTED
           - VOIDED

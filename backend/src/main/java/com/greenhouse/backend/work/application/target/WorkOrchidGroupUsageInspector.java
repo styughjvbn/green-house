@@ -27,7 +27,7 @@ public class WorkOrchidGroupUsageInspector {
 
 	public long countOtherOperations(Set<Long> orchidGroupIds, Long sourceWorkOperationId) {
 		return targetRepository.countActiveOtherOperations(orchidGroupIds, sourceWorkOperationId,
-				Set.of(WorkOperationStatus.CANCELED, WorkOperationStatus.VOIDED));
+				Set.of(WorkOperationStatus.STOPPED, WorkOperationStatus.CANCELED, WorkOperationStatus.VOIDED));
 	}
 
 }

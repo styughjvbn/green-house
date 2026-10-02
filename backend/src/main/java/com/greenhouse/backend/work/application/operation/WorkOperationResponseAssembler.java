@@ -77,8 +77,9 @@ class WorkOperationResponseAssembler {
 							actionResolver.resolveTarget(operation, execution, remainingQuantity));
 				})
 				.toList();
-			WorkOperationProgress progress = WorkOperationProgress.from(targetResponses);
-			return WorkOperationView.from(operation, targetResponses,
+			WorkOperationProgress progress = WorkOperationProgress.from(targetResponses)
+				.forStatus(operation.getStatus());
+			return WorkOperationView.from(operation, progress, targetResponses,
 					actionResolver.resolveOperation(operation, progress));
 		}).toList();
 	}

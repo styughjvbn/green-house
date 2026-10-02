@@ -10,13 +10,17 @@ public interface StructureChangeVoidPort {
 	Long compensate(Long workOperationId, String requestKey, List<Long> mutationIds, LocalDate businessDate,
 			String reason);
 
-	record Inspection(List<Long> sourceOrchidGroupIds, List<Long> resultOrchidGroupIds, List<Blocker> blockers) {
+	record Inspection(List<OrchidGroupSummary> sourceOrchidGroups, List<OrchidGroupSummary> resultOrchidGroups,
+			List<Blocker> blockers) {
 
 		public Inspection {
-			sourceOrchidGroupIds = List.copyOf(sourceOrchidGroupIds);
-			resultOrchidGroupIds = List.copyOf(resultOrchidGroupIds);
+			sourceOrchidGroups = List.copyOf(sourceOrchidGroups);
+			resultOrchidGroups = List.copyOf(resultOrchidGroups);
 			blockers = List.copyOf(blockers);
 		}
+	}
+
+	record OrchidGroupSummary(Long orchidGroupId, String varietyName, Integer quantity) {
 	}
 
 	record Blocker(String code, String message, long count) {

@@ -114,7 +114,12 @@ public class WorkOperationRepositoryImpl implements WorkOperationRepositoryCusto
 	}
 
 	private BooleanExpression statusEq(WorkOperationStatus status) {
-		return status == null ? null : workOperation.status.eq(status);
+		if (status == null) {
+			return null;
+		}
+		return status == WorkOperationStatus.CANCELED
+				? workOperation.status.in(WorkOperationStatus.CANCELED, WorkOperationStatus.VOIDED)
+				: workOperation.status.eq(status);
 	}
 
 	private BooleanExpression sourceScopeTypeEq(WorkSourceScopeType sourceScopeType) {

@@ -82,7 +82,7 @@ class OrchidGroupRollbackAndReconciliationIntegrationTest extends AbstractBacken
 		assertThatThrownBy(() -> mutationEngine.compensateTransforms(new CompensateTransformMutationsCommand(
 				source("void-again", "VOID:2"), List.of(transformed.mutationId()), date, "중복 무효화")))
 			.isInstanceOf(IllegalArgumentException.class)
-			.hasMessageContaining("이미 무효화");
+			.hasMessageContaining("이미 취소");
 	}
 
 	@Test

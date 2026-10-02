@@ -78,12 +78,13 @@ membership은 목록 관계 카드의 역방향 조회용 복제이며, migratio
 
 ## 4. 상태와 전파
 
-- 전체 상태: `PLANNED`, `IN_PROGRESS`, `PAUSED`, `COMPLETED`, `CANCELED`, `CORRECTED`, `VOIDED`.
+- 전체 상태: `PLANNED`, `IN_PROGRESS`, `PAUSED`, `COMPLETED`, `STOPPED`, `CANCELED`, `CORRECTED`, `VOIDED`.
 - 대상 상태: `PENDING`, `IN_PROGRESS`, `COMPLETED`, `SKIPPED`, `CANCELED`, `FAILED`.
 - 전체 작업은 `PLANNED → IN_PROGRESS ↔ PAUSED → COMPLETED` 흐름을 제공한다.
 - 대상은 `PENDING → IN_PROGRESS → COMPLETED` 또는 `SKIPPED`로 처리한다.
 - 모든 대상이 완료 또는 건너뜀 상태가 되면 전체 작업은 마지막 실행 완료일 기준으로 자동 완료된다.
-- 일부 대상만 완료된 전체 작업 취소는 완료된 대상과 효과를 유지하고, 미완료 대상만 취소 상태로 닫는다.
+- `남은 작업 종료`는 완료된 대상과 효과를 유지하고 미완료 대상만 닫은 뒤 전체 작업을 `STOPPED`로 전환한다.
+- `작업 취소`는 실행 전 계획, 일반 기록형, 구조 변경형에 공통으로 제공한다. 기록 전용 효과는 취소 시각을 남기고, 구조 변경·폐기·포트 효과는 후속 참조가 없을 때 상태 변경을 되돌린다. 부분 실행 작업은 적용된 모든 효과를 되돌리고 미완료 대상을 같은 트랜잭션에서 닫는다.
 - 모든 대상이 닫힌 진행률 100% 작업은 일시중지, 추가 실행 등록, 취소 대상이 아니다.
 - 상위 작업을 난 묶음별 작업 행으로 복제하지 않는다. `WorkOperationTarget` 연결로 조회한다.
 - 조회 중복 기준은 `workOperationId + orchidGroupId`다.
@@ -130,7 +131,7 @@ membership은 목록 관계 카드의 역방향 조회용 복제이며, migratio
 ## 6. 기존 이력
 
 - 기존 `work_records`는 마이그레이션 원본과 감사 목적으로 보존하되 운영 이력 조회에는 사용하지 않는다.
-- 자리 이동 선행 폐기로 저장된 기존 `WorkOperation`은 이동 후 잔여 폐기 상태 체인으로 이관한다. 당시 원본별 폐기 배분은 과거 사실로 보존하고, 관계는 `parentOperationId`와 `MOVEMENT_DISCARD`만 사용한다. 관계를 중복 표현하던 `details.movementOperationId`와 `details.relation`은 제거한다.
+- 자리 이동 선행 폐기로 저장된 기존 `WorkOperation`은 이동 후 잔여 폐기 상태 체인으로 이관한다. 당시 원본별 폐기 배분은 과거 사실로 보존하고, 대상 수량과 완료 사용량은 이동 후 실제 폐기 수량으로 맞춘다. 관계는 `parentOperationId`와 `MOVEMENT_DISCARD`만 사용하며, 관계를 중복 표현하던 `details.movementOperationId`와 `details.relation`은 제거한다.
 - 과거 `TRANSFORM`으로 저장된 자리 이동 중 원본·결과가 명시적인 1:1 전량 대응이고 위치 외 상태가 같은 이력은 기존 원본 ID를 유지하는 `MOVE` 체인으로 이관한다. 생성됐던 중간 결과 ID의 후속 Mutation·작업·판매 참조는 원본 ID로 연결하고, 제거된 ID와 보존 ID의 대응 및 제거 직전 snapshot은 `orchid_group_identity_migrations`에 감사 기록으로 남긴다. N:M 변환, 부분 수량, 속성 변경, 대응이 불명확한 이력은 변경하지 않는다.
 - 과거 이동 실행기가 1:1 전량 이동 결과를 새로 만들면서 메모·입고 출처 같은 원본 전용 속성을 누락한 경우, 결과 생성 이후 후속 Mutation이 없는 이력에 한해 핵심 품종·수량·상태가 같음을 확인하고 원본 속성을 복원하여 `MOVE`로 이관한다.
 - 과거 하나의 폐기 작업에 여러 품종이 포함된 이력은 품종별 `WorkOperation`으로 분리한다. 대상·실행·효과를 품종별 작업으로 옮기고 Work 효과 Mutation의 source 작업 ID와 correlation ID도 새 작업에 맞춰 갱신한다. 보정·Receipt·부모 관계처럼 자동 분리가 불명확한 연결이 있으면 마이그레이션을 중단한다.
@@ -149,8 +150,10 @@ membership은 목록 관계 카드의 역방향 조회용 복제이며, migratio
 - cutover 이전 상태 변경 Work 효과도 동일한 `(workOperationId, effectKey)` identity로 complete state-chain Mutation에 이관한다. `DISCARD`, `MOVE`, `DIVIDE`, `MOVEMENT`, `REPOT`, `POTTING`만 대상이며 난 묶음 관계는 연속 `CREATE/CHANGE/DELETE` Entry로 연결하고 원본 command/result는 Work 사실 데이터에 보존한다.
 - 전환용 importer는 Work application의 제한된 source 조회와 link API만 사용한다. 이관 후 상태 변경 효과와 대응 Lineage는 같은 Mutation ID로 연결하고, 재실행 시 기존 연결을 반환한다.
 - 기록 전용 효과와 작업일만 바뀐 보정은 난 묶음 상태 변경이 없으므로 Mutation 연결을 만들지 않는다.
-- 작업 무효화 API는 먼저 영향 범위와 차단 사유를 조회하고 실행 시 같은 조건을 잠금 아래 다시
-  검증한다. 동일 무효화 요청은 기존 결과를 반환하고 다른 요청으로 중복 무효화할 수 없다.
+- 작업 취소 API는 먼저 영향 범위와 차단 사유를 조회하고 실행 시 같은 조건을 잠금 아래 다시
+  검증한다. 영향 범위 응답은 내부 Mutation 식별자를 노출하지 않고 함께 취소되는 작업의 제목·유형·작업일과
+  영향받는 난 묶음의 품종·수량·처리 방식(기록만 취소, 작업 전 상태로 복구, 생성 취소)을 제공한다.
+  동일 취소 요청은 기존 결과를 반환하고 다른 요청으로 중복 취소할 수 없다. 기존 `/void` 계약은 호환 경로로 유지한다.
 
 ## 7. 작업 모듈 내부 구조
 

@@ -314,10 +314,13 @@ class WorkOperationIntegrationTests extends AbstractBackendIntegrationTest {
 
 		mockMvc.perform(get("/api/work-operations/{id}", operationId))
 			.andExpect(status().isOk())
-			.andExpect(jsonPath("$.data.availableActions", hasItem("VOID")));
+			.andExpect(jsonPath("$.data.availableActions", hasItem("CANCEL")));
 		mockMvc.perform(get("/api/work-operations/{id}/void-eligibility", operationId))
 			.andExpect(status().isOk())
-			.andExpect(jsonPath("$.data.voidable").value(true));
+			.andExpect(jsonPath("$.data.cancellable").value(true))
+			.andExpect(jsonPath("$.data.affectedOperations[0].workOperationId").value(operationId))
+			.andExpect(jsonPath("$.data.affectedOrchidGroups[0].orchidGroupId").value(targetGroup.getId()))
+			.andExpect(jsonPath("$.data.affectedOrchidGroups[0].impactType").value("RESTORED"));
 		mockMvc
 			.perform(post("/api/work-operations/{id}/void", operationId).contentType(MediaType.APPLICATION_JSON)
 				.content("""
@@ -709,12 +712,12 @@ class WorkOperationIntegrationTests extends AbstractBackendIntegrationTest {
 			.andExpect(status().isOk())
 			.andExpect(jsonPath("$.data.content", hasSize(1)))
 			.andExpect(jsonPath("$.data.content[0].status").value("PLANNED"));
-		mockMvc.perform(post("/api/work-operations/{id}/cancel", operationId)).andExpect(status().isOk());
+		mockMvc.perform(post("/api/work-operations/{id}/end-remaining", operationId)).andExpect(status().isOk());
 
 		mockMvc.perform(get("/api/work-operations").param("view", "MANAGEMENT"))
 			.andExpect(status().isOk())
 			.andExpect(jsonPath("$.data.content", hasSize(1)))
-			.andExpect(jsonPath("$.data.content[0].status").value("CANCELED"));
+			.andExpect(jsonPath("$.data.content[0].status").value("STOPPED"));
 	}
 
 	@Test
@@ -754,9 +757,9 @@ class WorkOperationIntegrationTests extends AbstractBackendIntegrationTest {
 			.andExpect(jsonPath("$.data.progress.completed").value(1))
 			.andExpect(jsonPath("$.data.progress.pending").value(1));
 
-		mockMvc.perform(post("/api/work-operations/{id}/cancel", operationId))
+		mockMvc.perform(post("/api/work-operations/{id}/end-remaining", operationId))
 			.andExpect(status().isOk())
-			.andExpect(jsonPath("$.data.status").value("CANCELED"))
+			.andExpect(jsonPath("$.data.status").value("STOPPED"))
 			.andExpect(jsonPath("$.data.actualEndAt").exists())
 			.andExpect(jsonPath("$.data.progress.completed").value(1))
 			.andExpect(jsonPath("$.data.progress.canceled").value(1))

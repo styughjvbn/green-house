@@ -271,7 +271,7 @@ paths:
     post:
       tags:
       - inbound-record-controller
-      operationId: cancel_1
+      operationId: cancel
       parameters:
       - name: inboundRecordId
         in: path

@@ -137,8 +137,9 @@ class WorkOperationContractE2ETest extends WorkE2ETestBase {
 			.isEqualTo("PAUSED");
 		assertThat(post("/api/work-operations/%d/resume".formatted(operationId), "").data().path("status").asText())
 			.isEqualTo("IN_PROGRESS");
-		assertThat(post("/api/work-operations/%d/cancel".formatted(operationId), "").data().path("status").asText())
-			.isEqualTo("CANCELED");
+		assertThat(
+				post("/api/work-operations/%d/end-remaining".formatted(operationId), "").data().path("status").asText())
+			.isEqualTo("STOPPED");
 
 		ApiResult targetOperation = createOperation("E2E 대상 상태 전이 작업");
 		long targetOperationId = targetOperation.data().path("id").asLong();

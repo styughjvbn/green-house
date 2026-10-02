@@ -25,8 +25,8 @@ public record WorkOperationView(Long id, Long workTypeId, String workTypeCode, S
 		WorkOperationProgress progress, List<WorkOperationTargetView> targets,
 		List<WorkOperationAction> availableActions) {
 
-	public static WorkOperationView from(WorkOperation operation, List<WorkOperationTargetView> targets,
-			List<WorkOperationAction> availableActions) {
+	public static WorkOperationView from(WorkOperation operation, WorkOperationProgress progress,
+			List<WorkOperationTargetView> targets, List<WorkOperationAction> availableActions) {
 		return new WorkOperationView(operation.getId(), operation.getWorkType().getId(),
 				operation.getWorkType().getCode(), operation.getWorkType().getName(),
 				operation.getWorkType().getTemplate(), operation.getWorkType().workflow(), operation.getTitle(),
@@ -37,6 +37,6 @@ public record WorkOperationView(Long id, Long workTypeId, String workTypeCode, S
 				operation.getMemo(),
 				operation.getParentOperation() == null ? null : operation.getParentOperation().getId(),
 				operation.getRelationType(), TimeConfig.toFarmTime(operation.getVoidedAt()), operation.getVoidReason(),
-				operation.getVoidMutationId(), WorkOperationProgress.from(targets), targets, availableActions);
+				operation.getVoidMutationId(), progress, targets, availableActions);
 	}
 }

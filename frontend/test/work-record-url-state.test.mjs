@@ -110,3 +110,12 @@ test("work list filters are written and empty values are removed", () => {
   assert.equal(params.get("status"), "COMPLETED");
   assert.equal(params.get("keyword"), "분주");
 });
+
+test("stopped work remains a valid status filter", () => {
+  const state = readWorkRecordUrlState(
+    new URLSearchParams({ status: "STOPPED" }),
+    "2026-07",
+  );
+
+  assert.equal(state.filters.status, "STOPPED");
+});

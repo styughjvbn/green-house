@@ -5,7 +5,7 @@ import com.greenhouse.backend.work.domain.operation.WorkOperationStatus;
 import com.greenhouse.backend.work.domain.operation.WorkTypeDefinition;
 import com.greenhouse.backend.work.domain.target.WorkTargetExecution;
 import com.greenhouse.backend.work.domain.target.WorkTargetExecutionStatus;
-import com.greenhouse.backend.work.dto.operation.WorkOperationVoidRequest;
+import com.greenhouse.backend.work.dto.operation.WorkOperationCancellationRequest;
 import com.greenhouse.backend.work.repository.WorkAppliedEffectRepository;
 import com.greenhouse.backend.work.repository.WorkTargetExecutionRepository;
 import java.time.LocalDateTime;
@@ -31,13 +31,14 @@ public class InboundWorkOperationLifecycleService {
 
 	public void voidPottingForInboundRecord(Long inboundRecordId, String requestKey, String reason) {
 		WorkOperation operation = findSingleCompletedOperation(inboundRecordId, WorkTypeDefinition.POTTING);
-		workOperationVoidService.voidOperation(operation.getId(), new WorkOperationVoidRequest(requestKey, reason));
+		workOperationVoidService.voidOperation(operation.getId(),
+				new WorkOperationCancellationRequest(requestKey, reason));
 	}
 
 	public void voidInboundRegistrationForCancellation(Long inboundRecordId, String requestKey, String reason) {
 		WorkOperation operation = findSingleCompletedOperation(inboundRecordId, WorkTypeDefinition.INBOUND);
 		workOperationVoidService.voidInboundRegistration(operation.getId(),
-				new WorkOperationVoidRequest(requestKey, reason));
+				new WorkOperationCancellationRequest(requestKey, reason));
 	}
 
 	public void cancelForInboundRecord(Long inboundRecordId) {

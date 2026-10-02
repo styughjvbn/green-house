@@ -18,6 +18,7 @@ import com.greenhouse.backend.farm.repository.orchid.mutation.OrchidGroupMutatio
 import com.greenhouse.backend.farm.repository.orchid.mutation.OrchidGroupMutationRelationRepository;
 import com.greenhouse.backend.work.application.operation.PottingVoidPort;
 import com.greenhouse.backend.work.application.operation.StructureChangeVoidPort.Blocker;
+import com.greenhouse.backend.work.application.operation.StructureChangeVoidPort.OrchidGroupSummary;
 import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.LinkedHashSet;
@@ -87,7 +88,7 @@ public class FarmPottingVoidAdapter implements PottingVoidPort {
 		if (effects.isEmpty() || effects.stream()
 			.anyMatch(effect -> effect.inboundRecordId() == null || effect.mutationId() == null)) {
 			return new Inspection(List.of(),
-					List.of(new Blocker("POTTING_EFFECT_MISSING", "포트 작업의 입고 또는 Mutation 연결이 없습니다.", 1)));
+					List.of(new Blocker("POTTING_EFFECT_MISSING", "포트 작업과 입고 기록의 연결을 확인할 수 없습니다.", 1)));
 		}
 		List<Long> mutationIds = effects.stream().map(Effect::mutationId).distinct().sorted().toList();
 		List<OrchidGroupMutationEntry> entries = entryRepository
@@ -97,11 +98,11 @@ public class FarmPottingVoidAdapter implements PottingVoidPort {
 				|| entries.stream()
 					.anyMatch(entry -> entry.getMutation().getMutationType() != OrchidGroupMutationType.CREATE
 							|| entry.getBeforeState() != null)) {
-			blockers.add(new Blocker("MUTATION_NOT_REVERSIBLE", "포트 작업 생성 Mutation을 확인할 수 없습니다.", 1));
+			blockers.add(new Blocker("MUTATION_NOT_REVERSIBLE", "포트 작업으로 생성된 난 묶음을 확인할 수 없습니다.", 1));
 		}
 		if (relationRepository.existsByRelatedMutationIdInAndRelationType(mutationIds,
 				OrchidGroupMutationRelationType.COMPENSATES)) {
-			blockers.add(new Blocker("ALREADY_COMPENSATED", "이미 보상된 Mutation이 포함되어 있습니다.", 1));
+			blockers.add(new Blocker("ALREADY_COMPENSATED", "이미 취소된 작업 효과가 포함되어 있습니다.", 1));
 		}
 		Set<Long> resultIds = entries.stream()
 			.map(OrchidGroupMutationEntry::getOrchidGroupId)
@@ -135,7 +136,11 @@ public class FarmPottingVoidAdapter implements PottingVoidPort {
 		if (invalidInboundCount > 0) {
 			blockers.add(new Blocker("INBOUND_CHANGED", "배치 완료 상태가 아닌 입고 기록이 있습니다.", invalidInboundCount));
 		}
-		return new Inspection(resultIds.stream().sorted().toList(), blockers);
+		return new Inspection(resultIds.stream().sorted().map(id -> {
+			OrchidGroup group = groups.get(id);
+			return group == null ? new OrchidGroupSummary(id, null, null)
+					: new OrchidGroupSummary(id, group.getVarietyName(), group.getQuantity());
+		}).toList(), blockers);
 	}
 
 }

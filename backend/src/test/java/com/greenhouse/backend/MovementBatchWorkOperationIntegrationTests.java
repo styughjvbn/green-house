@@ -228,14 +228,15 @@ class MovementBatchWorkOperationIntegrationTests extends AbstractBackendIntegrat
 			.allSatisfy(effect -> assertThat(effect.getMutationId()).isGreaterThan(movementMutationId));
 		mockMvc.perform(get("/api/work-operations/{id}/void-eligibility", discardOperationId))
 			.andExpect(status().isOk())
-			.andExpect(jsonPath("$.data.voidable").value(false))
-			.andExpect(jsonPath("$.data.relatedWorkOperationIds[0]").value(operationId))
+			.andExpect(jsonPath("$.data.cancellable").value(false))
+			.andExpect(jsonPath("$.data.affectedOperations[0].workOperationId").value(discardOperationId))
 			.andExpect(jsonPath("$.data.blockers[0].code").value("VOID_WITH_PARENT_MOVEMENT"));
 		mockMvc.perform(get("/api/work-operations/{id}/void-eligibility", operationId))
 			.andExpect(status().isOk())
-			.andExpect(jsonPath("$.data.voidable").value(true))
-			.andExpect(jsonPath("$.data.mutationIds", hasSize(3)))
-			.andExpect(jsonPath("$.data.relatedWorkOperationIds[0]").value(discardOperationId));
+			.andExpect(jsonPath("$.data.cancellable").value(true))
+			.andExpect(jsonPath("$.data.affectedOperations", hasSize(2)))
+			.andExpect(jsonPath("$.data.affectedOperations[1].workOperationId").value(discardOperationId))
+			.andExpect(jsonPath("$.data.affectedOrchidGroups[0].impactType").value("RESTORED"));
 		mockMvc
 			.perform(post("/api/work-operations/{id}/void", operationId).contentType(MediaType.APPLICATION_JSON)
 				.content("""

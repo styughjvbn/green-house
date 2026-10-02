@@ -15,6 +15,6 @@ public record CompensateTransformMutationsCommand(OrchidGroupMutationSource sour
 			throw new IllegalArgumentException("보상할 구조 변경 Mutation과 업무일이 필요합니다.");
 		}
 		mutationIds = mutationIds.stream().distinct().sorted().toList();
-		reason = requireText(reason, "작업 무효화 사유");
+		reason = requireText(reason, "작업 취소 사유");
 	}
 }

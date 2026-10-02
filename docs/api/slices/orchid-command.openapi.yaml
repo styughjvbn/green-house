@@ -803,6 +803,7 @@ components:
           - IN_PROGRESS
           - PAUSED
           - COMPLETED
+          - STOPPED
           - CANCELED
           - CORRECTED
           - VOIDED
@@ -877,8 +878,8 @@ components:
             - PAUSE
             - RESUME
             - COMPLETE
+            - END_REMAINING
             - CANCEL
-            - VOID
     WorkOperationTargetResponse:
       type: object
       properties:

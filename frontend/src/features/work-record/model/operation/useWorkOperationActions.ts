@@ -90,7 +90,7 @@ export function useWorkOperationActions() {
     executionTarget,
     loading: actionMutation.isPending,
     openExecution: setExecutionTarget,
-    runOperationAction(action: "start" | "pause" | "resume" | "cancel") {
+    runOperationAction(action: "start" | "pause" | "resume" | "end-remaining") {
       if (!selected) return;
       actionMutation.mutate(() => transitionWorkOperation(selected.id, action));
     },
